@@ -1,6 +1,6 @@
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_os_freebsd.c 317008 2017-04-16 07:58:41Z mmel $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 
@@ -126,7 +126,10 @@ drm_probe_helper(device_t kdev, const drm_pci_id_list_t *idlist)
 			    device_get_nameunit(kdev), id_entry->name);
 			device_set_desc(kdev, id_entry->name);
 		}
-		return (0);
+#if !defined(__arm__)
+		DRM_OBSOLETE(kdev);
+#endif
+		return (-BUS_PROBE_GENERIC);
 	}
 
 	return (-ENXIO);
@@ -394,8 +397,8 @@ drm_clflush_virt_range(char *addr, unsigned long length)
 {
 
 #if defined(__i386__) || defined(__amd64__)
-	pmap_invalidate_cache_range((vm_offset_t)addr,
-	    (vm_offset_t)addr + length, TRUE);
+	pmap_force_invalidate_cache_range((vm_offset_t)addr,
+	    (vm_offset_t)addr + length);
 #else
 	DRM_ERROR("drm_clflush_virt_range not implemented on this architecture");
 #endif

@@ -1,6 +1,8 @@
 /*	$NetBSD: uchcom.c,v 1.1 2007/09/03 17:57:37 tshiozak Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2007, Takanori Watanabe
  * All rights reserved.
  *
@@ -56,7 +58,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/usb/serial/uchcom.c 335626 2018-06-25 08:56:30Z avg $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for WinChipHead CH341/340, the worst USB-serial chip in the

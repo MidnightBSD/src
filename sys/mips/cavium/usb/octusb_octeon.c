@@ -1,7 +1,9 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/cavium/usb/octusb_octeon.c 349051 2019-06-15 09:26:48Z emaste $");
+__FBSDID("$FreeBSD$");
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007-2008 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

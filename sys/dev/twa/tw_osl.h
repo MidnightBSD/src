@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap.
  * All rights reserved.
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/11/sys/dev/twa/tw_osl.h 331722 2018-03-29 02:50:57Z eadler $
+ *	$FreeBSD$
  */
 
 /*
@@ -54,6 +56,12 @@
 /* Reserve two command packets.  One for ioctls and one for AENs */
 #define TW_OSLI_MAX_NUM_IOS		(TW_OSLI_MAX_NUM_REQUESTS - 2)
 #define TW_OSLI_MAX_NUM_AENS		0x100
+
+#ifdef PAE
+#define	TW_OSLI_DMA_BOUNDARY		(1u << 31)
+#else
+#define	TW_OSLI_DMA_BOUNDARY		((bus_size_t)((uint64_t)1 << 32))
+#endif
 
 /* Possible values of req->state. */
 #define TW_OSLI_REQ_STATE_INIT		0x0	/* being initialized */

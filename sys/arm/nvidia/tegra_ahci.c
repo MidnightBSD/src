@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/nvidia/tegra_ahci.c 332025 2018-04-04 13:23:06Z mmel $");
+__FBSDID("$FreeBSD$");
 
 /*
  * AHCI driver for Tegra SoCs.
@@ -50,7 +50,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/nvidia/tegra_ahci.c 332025 2018-04-04 13:2
 #include <dev/extres/hwreset/hwreset.h>
 #include <dev/extres/phy/phy.h>
 #include <dev/extres/regulator/regulator.h>
-#include <dev/fdt/fdt_common.h>
 #include <dev/fdt/fdt_pinctrl.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>

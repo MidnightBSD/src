@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bwn/if_bwn_util.c 299984 2016-05-16 22:56:45Z adrian $");
+__FBSDID("$FreeBSD$");
 
 /*
  * The Broadcom Wireless LAN controller driver.
@@ -65,9 +65,6 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/bwn/if_bwn_util.c 299984 2016-05-16 22:56:
 
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
-#include <dev/siba/siba_ids.h>
-#include <dev/siba/sibareg.h>
-#include <dev/siba/sibavar.h>
 
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_radiotap.h>
@@ -78,7 +75,6 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/bwn/if_bwn_util.c 299984 2016-05-16 22:56:
 #include <dev/bwn/if_bwnreg.h>
 #include <dev/bwn/if_bwnvar.h>
 
-#include <dev/bwn/if_bwn_chipid.h>
 #include <dev/bwn/if_bwn_debug.h>
 #include <dev/bwn/if_bwn_misc.h>
 #include <dev/bwn/if_bwn_util.h>

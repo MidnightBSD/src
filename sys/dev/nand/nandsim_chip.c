@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2009-2012 Semihalf
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/nand/nandsim_chip.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -90,8 +92,6 @@ nandsim_chip_init(struct nandsim_softc* sc, uint8_t chip_num,
 	int error;
 
 	chip = malloc(sizeof(*chip), M_NANDSIM, M_WAITOK | M_ZERO);
-	if (!chip)
-		return (NULL);
 
 	mtx_init(&chip->ns_lock, "nandsim lock", NULL, MTX_DEF);
 	callout_init(&chip->ns_callout, 1);
@@ -206,9 +206,6 @@ nandsim_blk_state_init(struct nandsim_chip *chip, uint32_t size,
 
 	chip->blk_state = malloc(size * sizeof(struct nandsim_block_state),
 	    M_NANDSIM, M_WAITOK | M_ZERO);
-	if (!chip->blk_state) {
-		return (-1);
-	}
 
 	for (i = 0; i < size; i++) {
 		if (wear_lev)

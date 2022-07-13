@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * ISP Firmware Modules for FreeBSD
  *
  * Copyright (c) 2000, 2001, 2006 by Matthew Jacob
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ispfw/ispfw.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/firmware.h>

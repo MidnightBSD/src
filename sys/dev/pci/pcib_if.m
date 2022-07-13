@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/dev/pci/pcib_if.m 299929 2016-05-16 09:15:50Z andrew $
+# $FreeBSD$
 #
 
 #include <sys/bus.h>
@@ -212,3 +212,12 @@ METHOD void decode_rid {
 	int 		*slot;
 	int 		*func;
 } DEFAULT pcib_decode_rid;
+
+#
+# Request control of PCI features from host firmware, if any.
+#
+METHOD int request_feature {
+	device_t	pcib;
+	device_t	dev;
+	enum pci_feature feature;
+};

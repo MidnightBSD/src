@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2016 Michael Zhilin <mizhka@gmail.com>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bhnd/cores/chipc/chipc_slicer.c 318158 2017-05-10 21:42:12Z marius $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Slicer is required to split firmware images into pieces.

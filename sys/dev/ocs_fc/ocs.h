@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ocs_fc/ocs.h 344054 2019-02-12 17:05:59Z ram $
+ * $FreeBSD$
  */
 
 /**
@@ -65,14 +65,10 @@ typedef struct ocs_intr_ctx_s {
 typedef struct ocs_fc_rport_db_s {
 	uint32_t	node_id;
 	uint32_t	state;
-	uint8_t		is_target;
-	uint8_t		is_initiator;
-
 	uint32_t	port_id;
 	uint64_t	wwnn;
 	uint64_t	wwpn;
 	uint32_t	gone_timer;
-
 } ocs_fc_target_t;
 
 #define OCS_TGT_STATE_NONE		0	/* Empty DB slot */

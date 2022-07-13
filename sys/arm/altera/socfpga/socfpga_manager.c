@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/altera/socfpga/socfpga_manager.c 281085 2015-04-04 21:34:26Z andrew $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -48,7 +48,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/altera/socfpga/socfpga_manager.c 281085 20
 #include <sys/conf.h>
 #include <sys/uio.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/openfirm.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
@@ -378,7 +377,7 @@ fpgamgr_probe(device_t dev)
 	if (!ofw_bus_status_okay(dev))
 		return (ENXIO);
 
-	if (!ofw_bus_is_compatible(dev, "altr,fpga-mgr"))
+	if (!ofw_bus_is_compatible(dev, "altr,socfpga-fpga-mgr"))
 		return (ENXIO);
 
 	device_set_desc(dev, "FPGA Manager");

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-3-Clause
+ *
  * Copyright 2008 by Marco Trillo. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/macio/i2s.c 223554 2011-06-26 00:35:11Z nwhitehorn $
+ * $FreeBSD$
  */
 /*-
  * Copyright (c) 2002, 2003 Tsubai Masanari.  All rights reserved.

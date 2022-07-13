@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/amlogic/aml8726/aml8726_ccm.c 300175 2016-05-18 23:41:58Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -45,7 +45,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/amlogic/aml8726/aml8726_ccm.c 300175 2016-
 
 #include <machine/bus.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
@@ -88,7 +87,7 @@ aml8726_ccm_configure_gates(struct aml8726_ccm_softc *sc)
 
 	node = ofw_bus_get_node(sc->dev);
 
-	len = OF_getprop_alloc(node, "functions", sizeof(char),
+	len = OF_getprop_alloc(node, "functions",
 	    (void **)&functions);
 
 	if (len < 0) {

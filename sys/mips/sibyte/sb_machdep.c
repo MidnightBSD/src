@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007 Bruce M. Simpson.
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/sibyte/sb_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 #include "opt_kdb.h"
@@ -124,7 +126,7 @@ sb_intr_init(int cpuid)
 		 * with any other interrupt source.
 		 */
 		if (intsrc == INTSRC_MAILBOX3) {
-			intrnum = platform_ipi_intrnum();
+			intrnum = platform_ipi_hardintr_num();
 			sb_write_intmap(cpuid, INTSRC_MAILBOX3, intrnum);
 			sb_enable_intsrc(cpuid, INTSRC_MAILBOX3);
 		}
@@ -313,10 +315,17 @@ platform_ipi_clear(void)
 }
 
 int
-platform_ipi_intrnum(void)
+platform_ipi_hardintr_num(void)
 {
 
 	return (4);
+}
+
+int
+platform_ipi_softintr_num(void)
+{
+
+	return (-1);
 }
 
 struct cpu_group *
@@ -344,7 +353,7 @@ platform_init_ap(int cpuid)
 	 * Unmask the clock and ipi interrupts.
 	 */
 	clock_int_mask = hard_int_mask(5);
-	ipi_int_mask = hard_int_mask(platform_ipi_intrnum());
+	ipi_int_mask = hard_int_mask(platform_ipi_hardintr_num());
 	set_intr_mask(ipi_int_mask | clock_int_mask);
 }
 

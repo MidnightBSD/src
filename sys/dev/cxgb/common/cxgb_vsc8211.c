@@ -1,4 +1,5 @@
 /**************************************************************************
+SPDX-License-Identifier: BSD-2-Clause-FreeBSD
 
 Copyright (c) 2007, Chelsio Inc.
 All rights reserved.
@@ -28,7 +29,7 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/cxgb/common/cxgb_vsc8211.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <cxgb_include.h>
 

@@ -25,11 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bhyve/inout.c 336161 2018-07-10 04:26:32Z araujo $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/inout.c 336161 2018-07-10 04:26:32Z araujo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/linker_set.h>

@@ -1,7 +1,9 @@
 /*	$NetBSD: fpu_extern.h,v 1.3 2005/12/11 12:18:42 christos Exp $	*/
-/* $FreeBSD: stable/11/sys/powerpc/fpu/fpu_extern.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1995 The NetBSD Foundation, Inc.
  * All rights reserved.
  *

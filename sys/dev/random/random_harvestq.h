@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2013-2015 Mark R V Murray
+ * Copyright (c) 2013-2015, 2017 Mark R V Murray
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/random/random_harvestq.h 301735 2016-06-09 14:44:05Z sjg $
+ * $FreeBSD$
  */
 
 #ifndef SYS_DEV_RANDOM_RANDOM_HARVESTQ_H_INCLUDED
@@ -38,14 +38,11 @@ struct harvest_event {
 	uint32_t	he_somecounter;		/* fast counter for clock jitter */
 	uint32_t	he_entropy[HARVESTSIZE];/* some harvested entropy */
 	uint8_t		he_size;		/* harvested entropy byte count */
-	uint8_t		he_bits;		/* stats about the entropy */
 	uint8_t		he_destination;		/* destination pool of this entropy */
 	uint8_t		he_source;		/* origin of the entropy */
-} __packed;
+};
 
 void read_rate_increment(u_int);
-
-#define	RANDOM_HARVESTQ_BOOT_ENTROPY_FILE	"/boot/entropy"
 
 #define	RANDOM_HARVEST_INIT_LOCK(x)	mtx_init(&harvest_context.hc_mtx, "entropy harvest mutex", NULL, MTX_SPIN)
 #define	RANDOM_HARVEST_LOCK(x)		mtx_lock_spin(&harvest_context.hc_mtx)

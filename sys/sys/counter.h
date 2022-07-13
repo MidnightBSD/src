@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Gleb Smirnoff <glebius@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/counter.h 349574 2019-07-01 10:09:19Z ae $
+ * $FreeBSD$
  */
 
 #ifndef __SYS_COUNTER_H__
@@ -60,5 +61,31 @@ uint64_t	counter_u64_fetch(counter_u64_t);
 	for (int _i = 0; _i < (n); _i++)			\
 		counter_u64_zero((a)[_i]);			\
 } while (0)
+
+/*
+ * counter(9) based rate checking.
+ */
+struct counter_rate {
+	counter_u64_t	cr_rate;	/* Events since last second */
+	volatile int	cr_lock;	/* Lock to clean the struct */
+	int		cr_ticks;	/* Ticks on last clean */
+	int		cr_over;	/* Over limit since cr_ticks? */
+};
+
+int64_t	counter_ratecheck(struct counter_rate *, int64_t);
+
+#define	COUNTER_U64_SYSINIT(c)					\
+	SYSINIT(c##_counter_sysinit, SI_SUB_COUNTER,		\
+	    SI_ORDER_ANY, counter_u64_sysinit, &c);		\
+	SYSUNINIT(c##_counter_sysuninit, SI_SUB_COUNTER,	\
+	    SI_ORDER_ANY, counter_u64_sysuninit, &c)
+
+#define	COUNTER_U64_DEFINE_EARLY(c)				\
+	counter_u64_t __read_mostly c = EARLY_COUNTER;		\
+	COUNTER_U64_SYSINIT(c)
+
+void counter_u64_sysinit(void *);
+void counter_u64_sysuninit(void *);
+
 #endif	/* _KERNEL */
 #endif	/* ! __SYS_COUNTER_H__ */

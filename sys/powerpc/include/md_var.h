@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1998 Doug Rabson
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/powerpc/include/md_var.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_MD_VAR_H_
@@ -61,6 +63,7 @@ void	decr_init(void);
 void	decr_ap_init(void);
 void	decr_tc_init(void);
 
+void	cpu_feature_setup(void);
 void	cpu_setup(u_int);
 
 struct	trapframe;

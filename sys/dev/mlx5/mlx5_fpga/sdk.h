@@ -29,7 +29,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_fpga/sdk.h 341966 2018-12-12 12:54:43Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef MLX5_FPGA_SDK_H

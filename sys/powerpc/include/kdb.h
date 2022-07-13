@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/powerpc/include/kdb.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_KDB_H_
@@ -37,6 +39,8 @@
 
 void kdb_cpu_clear_singlestep(void);
 void kdb_cpu_set_singlestep(void);
+
+#define KDB_STOPPEDPCB(pc)      &stoppcbs[pc->pc_cpuid]
 
 static __inline void
 kdb_cpu_sync_icache(unsigned char *addr, size_t size)

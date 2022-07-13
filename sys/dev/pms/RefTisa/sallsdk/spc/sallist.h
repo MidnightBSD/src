@@ -18,7 +18,7 @@
 *LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
 *SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 *
-* $FreeBSD: stable/11/sys/dev/pms/RefTisa/sallsdk/spc/sallist.h 285242 2015-07-07 13:17:02Z achim $
+* $FreeBSD$
 *
 ********************************************************************************/
 /*******************************************************************************/
@@ -40,7 +40,7 @@
 /** \brief Structure of Link Data
  *
  *  link data, need to be included at the start (offset 0)
- *  of any strutures that are to be stored in the link list
+ *  of any structures that are to be stored in the link list
  *
  */
 typedef struct _SALINK

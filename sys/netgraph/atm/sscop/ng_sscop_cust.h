@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
  * 	All rights reserved.
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/netgraph/atm/sscop/ng_sscop_cust.h 280785 2015-03-28 12:50:24Z rrs $
+ * $FreeBSD$
  *
  * Customisation of the SSCOP code to ng_sscop.
  */

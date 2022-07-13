@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -11,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -28,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mtio.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: stable/10/sys/sys/mtio.h 280438 2015-03-24 14:36:10Z ken $
+ * $FreeBSD$
  */
 
 #ifndef	_SYS_MTIO_H_
@@ -61,7 +62,7 @@ struct mtop {
 #define MTCACHE		8	/* enable controller cache */
 #define MTNOCACHE	9	/* disable controller cache */
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 /* Set block size for device. If device is a variable size dev		*/
 /* a non zero parameter will change the device to a fixed block size	*/
 /* device with block size set to that of the parameter passed in.	*/
@@ -106,7 +107,7 @@ struct mtop {
 #define	MTIO_DSREG_UNL	45	/* Unloading */
 #define	MTIO_DSREG_LD	46	/* Loading */
 
-#endif	/* __MidnightBSD__ */
+#endif	/* __FreeBSD__ */
 
 /* structure for MTIOCGET - mag tape get status command */
 
@@ -123,7 +124,7 @@ struct mtget {
 	 * more accurate count.
 	 */
 	short	mt_resid;	/* residual count */
-#if defined (__MidnightBSD__)
+#if defined (__FreeBSD__)
 	int32_t mt_blksiz;	/* presently operating blocksize */
 	int32_t mt_density;	/* presently operating density */
 	u_int32_t mt_comp;	/* presently operating compression */

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2016 Michael Zhilin <mizhka@gmail.com>
  * Copyright (c) 2016 Landon Fuller <landonf@FreeBSD.org>
  * All rights reserved.
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bhnd/cores/chipc/chipc_spi.c 302189 2016-06-25 04:33:00Z landonf $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -184,7 +186,9 @@ chipc_spi_wait(struct chipc_spi_softc *sc)
 	if (i > 0)
 		return (0);
 
-	BHND_DEBUG_DEV(sc->sc_dev, "busy");
+	BHND_WARN_DEV(sc->sc_dev, "busy: CTL=0x%x DATA=0x%x",
+	    SPI_READ(sc, CHIPC_SPI_FLASHCTL),
+	    SPI_READ(sc, CHIPC_SPI_FLASHDATA));
 	return (-1);
 }
 

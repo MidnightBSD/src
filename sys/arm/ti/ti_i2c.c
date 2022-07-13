@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 Ben Gray <ben.r.gray@gmail.com>.
  * Copyright (c) 2014 Luiz Otavio O Souza <loos@freebsd.org>.
  * All rights reserved.
@@ -40,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/ti/ti_i2c.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -733,8 +735,6 @@ ti_i2c_deactivate(device_t dev)
 		sc->sc_irq_h = NULL;
 	}
 
-	bus_generic_detach(sc->sc_dev);
-
 	/* Unmap the I2C controller registers. */
 	if (sc->sc_mem_res != NULL) {
 		bus_release_resource(dev, SYS_RES_MEMORY, 0, sc->sc_mem_res);
@@ -905,7 +905,7 @@ ti_i2c_attach(device_t dev)
 	}
 
 	/* Probe and attach the iicbus when interrupts are available. */
-	config_intrhook_oneshot((ich_func_t)bus_generic_attach, dev);
+	err = bus_delayed_attach_children(dev);
 
 out:
 	if (err) {
@@ -923,11 +923,18 @@ ti_i2c_detach(device_t dev)
 	int rv;
 
  	sc = device_get_softc(dev);
-	ti_i2c_deactivate(dev);
-	TI_I2C_LOCK_DESTROY(sc);
-	if (sc->sc_iicbus &&
+
+	if ((rv = bus_generic_detach(dev)) != 0) {
+		device_printf(dev, "cannot detach child devices\n");
+		return (rv);
+	}
+
+    if (sc->sc_iicbus &&
 	    (rv = device_delete_child(dev, sc->sc_iicbus)) != 0)
 		return (rv);
+
+	ti_i2c_deactivate(dev);
+	TI_I2C_LOCK_DESTROY(sc);
 
 	return (0);
 }

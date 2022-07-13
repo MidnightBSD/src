@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/x86/include/vmware.h 278749 2015-02-14 09:00:12Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _X86_VMWARE_H_

@@ -1,6 +1,6 @@
 # ex:ts=8
 #
-# $FreeBSD: stable/11/usr.sbin/amd/Makefile.inc 319119 2017-05-29 10:15:41Z ngie $
+# $FreeBSD$
 #
 # Makefile for amd
 # 	This file is under a "BSD" copyright (c) by David O'Brien 1998.

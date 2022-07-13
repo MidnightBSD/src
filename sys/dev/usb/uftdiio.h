@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2008-2012 - Symmetricom, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *  $FreeBSD: stable/10/sys/dev/usb/uftdiio.h 287035 2015-08-23 16:17:00Z ian $ 
+ *  $FreeBSD$ 
  */
 
 /*

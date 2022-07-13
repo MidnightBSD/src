@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2010, LSI Corp.
  * All rights reserved.
  * Author : Manjunath Ranganathaiah
@@ -33,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/tws/tws.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/tws/tws.h>
 #include <dev/tws/tws_services.h>
@@ -443,7 +445,7 @@ tws_setup_intr(struct tws_softc *sc, int irqs)
         if (!(sc->intr_handle[i])) {
             if ((error = bus_setup_intr(sc->tws_dev, sc->irq_res[i],
                                     INTR_TYPE_CAM | INTR_MPSAFE,
-#if (__MidnightBSD_version >= 4000)
+#if (__FreeBSD_version >= 700000)
                                     NULL, 
 #endif
                                     tws_intr, sc, &sc->intr_handle[i]))) {
@@ -606,21 +608,9 @@ tws_init(struct tws_softc *sc)
 
     sc->reqs = malloc(sizeof(struct tws_request) * tws_queue_depth, M_TWS,
                       M_WAITOK | M_ZERO);
-    if ( sc->reqs == NULL ) {
-        TWS_TRACE_DEBUG(sc, "malloc failed", 0, sc->is64bit);
-        return(ENOMEM);
-    }
     sc->sense_bufs = malloc(sizeof(struct tws_sense) * tws_queue_depth, M_TWS,
                       M_WAITOK | M_ZERO);
-    if ( sc->sense_bufs == NULL ) {
-        TWS_TRACE_DEBUG(sc, "sense malloc failed", 0, sc->is64bit);
-        return(ENOMEM);
-    }
     sc->scan_ccb = malloc(sizeof(union ccb), M_TWS, M_WAITOK | M_ZERO);
-    if ( sc->scan_ccb == NULL ) {
-        TWS_TRACE_DEBUG(sc, "ccb malloc failed", 0, sc->is64bit);
-        return(ENOMEM);
-    }
     if (bus_dmamem_alloc(sc->data_tag, (void **)&sc->ioctl_data_mem,
             (BUS_DMA_NOWAIT | BUS_DMA_ZERO), &sc->ioctl_data_map)) {
         device_printf(sc->tws_dev, "Cannot allocate ioctl data mem\n");
@@ -668,8 +658,6 @@ tws_init_aen_q(struct tws_softc *sc)
     sc->aen_q.overflow=0;
     sc->aen_q.q = malloc(sizeof(struct tws_event_packet)*sc->aen_q.depth, 
                               M_TWS, M_WAITOK | M_ZERO);
-    if ( ! sc->aen_q.q )
-        return(FAILURE);
     return(SUCCESS);
 }
 
@@ -682,8 +670,6 @@ tws_init_trace_q(struct tws_softc *sc)
     sc->trace_q.overflow=0;
     sc->trace_q.q = malloc(sizeof(struct tws_trace_rec)*sc->trace_q.depth,
                               M_TWS, M_WAITOK | M_ZERO);
-    if ( ! sc->trace_q.q )
-        return(FAILURE);
     return(SUCCESS);
 }
 

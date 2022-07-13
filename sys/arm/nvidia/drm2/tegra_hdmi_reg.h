@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/nvidia/drm2/tegra_hdmi_reg.h 310600 2016-12-26 14:36:05Z mmel $
+ * $FreeBSD$
  */
 #ifndef _TEGRA_HDMI_REG_H_
 #define	_TEGRA_HDMI_REG_H_

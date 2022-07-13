@@ -20,7 +20,7 @@
 
 ********************************************************************************/
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/pms/RefTisa/sat/src/smsat.c 300050 2016-05-17 12:52:31Z eadler $");
+__FBSDID("$FreeBSD$");
 #include <dev/pms/config.h>
 
 #include <dev/pms/freebsd/driver/common/osenv.h>

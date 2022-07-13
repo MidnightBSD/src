@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/sys/dev/ubsec/ubsecreg.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*	$OpenBSD: ubsecreg.h,v 1.27 2002/09/11 22:40:31 jason Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2000 Theo de Raadt
  * Copyright (c) 2001 Patrik Lindergren (patrik@ipunplugged.com)
  *

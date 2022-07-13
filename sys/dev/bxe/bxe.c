@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2007-2014 QLogic Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bxe/bxe.c 339881 2018-10-29 21:09:39Z davidcs $");
+__FBSDID("$FreeBSD$");
 
 #define BXE_DRIVER_VERSION "1.78.91"
 
@@ -234,6 +236,8 @@ static devclass_t bxe_devclass;
 MODULE_DEPEND(bxe, pci, 1, 1, 1);
 MODULE_DEPEND(bxe, ether, 1, 1, 1);
 DRIVER_MODULE(bxe, pci, bxe_driver, bxe_devclass, 0, 0);
+
+NETDUMP_DEFINE(bxe);
 
 /* resources needed for unloading a previously loaded device */
 
@@ -5656,7 +5660,7 @@ bxe_tx_start(if_t ifp)
 
     fp = &sc->fp[0];
 
-    if (ifp->if_drv_flags & IFF_DRV_OACTIVE) {
+    if (if_getdrvflags(ifp) & IFF_DRV_OACTIVE) {
         fp->eth_q_stats.tx_queue_full_return++;
         return;
     }
@@ -5701,7 +5705,7 @@ bxe_tx_mq_start_locked(struct bxe_softc    *sc,
         }
     }
 
-    if (!sc->link_vars.link_up || !(ifp->if_drv_flags & IFF_DRV_RUNNING)) {
+    if (!sc->link_vars.link_up || !(if_getdrvflags(ifp) & IFF_DRV_RUNNING)) {
         fp->eth_q_stats.tx_request_link_down_failures++;
         goto bxe_tx_mq_start_locked_exit;
     }
@@ -12071,7 +12075,7 @@ bxe_init_mcast_macs_list(struct bxe_softc                 *sc,
     struct ifmultiaddr *ifma;
     struct ecore_mcast_list_elem *mc_mac;
 
-    TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+    CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
         if (ifma->ifma_addr->sa_family != AF_LINK) {
             continue;
         }
@@ -12094,7 +12098,7 @@ bxe_init_mcast_macs_list(struct bxe_softc                 *sc,
     }
     bzero(mc_mac, (sizeof(*mc_mac) * mc_count));
 
-    TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+    CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
         if (ifma->ifma_addr->sa_family != AF_LINK) {
             continue;
         }
@@ -12197,7 +12201,7 @@ bxe_set_uc_list(struct bxe_softc *sc)
     ifa = if_getifaddr(ifp); /* XXX Is this structure */
     while (ifa) {
         if (ifa->ifa_addr->sa_family != AF_LINK) {
-            ifa = TAILQ_NEXT(ifa, ifa_link);
+            ifa = CK_STAILQ_NEXT(ifa, ifa_link);
             continue;
         }
 
@@ -12217,7 +12221,7 @@ bxe_set_uc_list(struct bxe_softc *sc)
             return (rc);
         }
 
-        ifa = TAILQ_NEXT(ifa, ifa_link);
+        ifa = CK_STAILQ_NEXT(ifa, ifa_link);
     }
 
 #if __FreeBSD_version < 800000
@@ -13088,7 +13092,7 @@ bxe_init_ifnet(struct bxe_softc *sc)
                         CSUM_UDP_IPV6));
 
     capabilities =
-#if __MidnightBSD_version < 4000
+#if __FreeBSD_version < 700000
         (IFCAP_VLAN_MTU       |
          IFCAP_VLAN_HWTAGGING |
          IFCAP_HWCSUM         |
@@ -13119,6 +13123,9 @@ bxe_init_ifnet(struct bxe_softc *sc)
 
     /* attach to the Ethernet interface list */
     ether_ifattach(ifp, sc->link_params.mac_addr);
+
+    /* Attach driver netdump methods. */
+    NETDUMP_SET(ifp, bxe);
 
     return (0);
 }
@@ -16011,7 +16018,7 @@ bxe_sysctl_pauseparam(SYSCTL_HANDLER_ARGS)
                 return (error);
         }
         if ((sc->bxe_pause_param < 0) ||  (sc->bxe_pause_param > 8)) {
-                BLOGW(sc, "invalid pause param (%d) - use intergers between 1 & 8\n",sc->bxe_pause_param);
+                BLOGW(sc, "invalid pause param (%d) - use integers between 1 & 8\n",sc->bxe_pause_param);
                 sc->bxe_pause_param = 8;
         }
 
@@ -17268,7 +17275,7 @@ bxe_init_hw_common(struct bxe_softc *sc)
  *          stay set)
  *      f.  If this is VNIC 3 of a port then also init
  *          first_timers_ilt_entry to zero and last_timers_ilt_entry
- *          to the last enrty in the ILT.
+ *          to the last entry in the ILT.
  *
  *      Notes:
  *      Currently the PF error in the PGLC is non recoverable.
@@ -19525,3 +19532,57 @@ bxe_eioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 
     return (rval);
 }
+
+#ifdef NETDUMP
+static void
+bxe_netdump_init(struct ifnet *ifp, int *nrxr, int *ncl, int *clsize)
+{
+	struct bxe_softc *sc;
+
+	sc = if_getsoftc(ifp);
+	BXE_CORE_LOCK(sc);
+	*nrxr = sc->num_queues;
+	*ncl = NETDUMP_MAX_IN_FLIGHT;
+	*clsize = sc->fp[0].mbuf_alloc_size;
+	BXE_CORE_UNLOCK(sc);
+}
+
+static void
+bxe_netdump_event(struct ifnet *ifp __unused, enum netdump_ev event __unused)
+{
+}
+
+static int
+bxe_netdump_transmit(struct ifnet *ifp, struct mbuf *m)
+{
+	struct bxe_softc *sc;
+	int error;
+
+	sc = if_getsoftc(ifp);
+	if ((if_getdrvflags(ifp) & (IFF_DRV_RUNNING | IFF_DRV_OACTIVE)) !=
+	    IFF_DRV_RUNNING || !sc->link_vars.link_up)
+		return (ENOENT);
+
+	error = bxe_tx_encap(&sc->fp[0], &m);
+	if (error != 0 && m != NULL)
+		m_freem(m);
+	return (error);
+}
+
+static int
+bxe_netdump_poll(struct ifnet *ifp, int count)
+{
+	struct bxe_softc *sc;
+	int i;
+
+	sc = if_getsoftc(ifp);
+	if ((if_getdrvflags(ifp) & IFF_DRV_RUNNING) == 0 ||
+	    !sc->link_vars.link_up)
+		return (ENOENT);
+
+	for (i = 0; i < sc->num_queues; i++)
+		(void)bxe_rxeof(sc, &sc->fp[i]);
+	(void)bxe_txeof(sc, &sc->fp[0]);
+	return (0);
+}
+#endif /* NETDUMP */

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 M. Warner Losh
  * Copyright (c) 2011-2012 Ian Lepore
  * Copyright (c) 2012 Marius Strobl <marius@FreeBSD.org>
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/flash/at45d.c 346557 2019-04-22 15:04:11Z ian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -604,5 +606,6 @@ DRIVER_MODULE(at45d, spibus, at45d_driver, at45d_devclass, NULL, NULL);
 MODULE_DEPEND(at45d, spibus, 1, 1, 1);
 #ifdef FDT
 MODULE_DEPEND(at45d, fdt_slicer, 1, 1, 1);
+SPIBUS_FDT_PNP_INFO(compat_data);
 #endif
 

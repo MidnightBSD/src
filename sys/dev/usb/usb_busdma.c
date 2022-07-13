@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/usb/usb_busdma.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -508,7 +510,7 @@ usb_pc_common_mem_cb(void *arg, bus_dma_segment_t *segs,
 done:
 	owned = mtx_owned(uptag->mtx);
 	if (!owned)
-		mtx_lock(uptag->mtx);
+		USB_MTX_LOCK(uptag->mtx);
 
 	uptag->dma_error = (error ? 1 : 0);
 	if (isload) {
@@ -517,7 +519,7 @@ done:
 		cv_broadcast(uptag->cv);
 	}
 	if (!owned)
-		mtx_unlock(uptag->mtx);
+		USB_MTX_UNLOCK(uptag->mtx);
 }
 
 /*------------------------------------------------------------------------*
@@ -555,7 +557,7 @@ usb_pc_alloc_mem(struct usb_page_cache *pc, struct usb_page *pg,
 		/*
 		 * XXX BUS-DMA workaround - FIXME later:
 		 *
-		 * We assume that that the aligment at this point of
+		 * We assume that that the alignment at this point of
 		 * the code is greater than or equal to the size and
 		 * less than two times the size, so that if we double
 		 * the size, the size will be greater than the
@@ -592,7 +594,7 @@ usb_pc_alloc_mem(struct usb_page_cache *pc, struct usb_page *pg,
 	pc->tag = utag->tag;
 	pc->ismultiseg = (align == 1);
 
-	mtx_lock(uptag->mtx);
+	USB_MTX_LOCK(uptag->mtx);
 
 	/* load memory into DMA */
 	err = bus_dmamap_load(
@@ -603,12 +605,13 @@ usb_pc_alloc_mem(struct usb_page_cache *pc, struct usb_page *pg,
 		cv_wait(uptag->cv, uptag->mtx);
 		err = 0;
 	}
-	mtx_unlock(uptag->mtx);
+	USB_MTX_UNLOCK(uptag->mtx);
 
 	if (err || uptag->dma_error) {
 		bus_dmamem_free(utag->tag, ptr, map);
 		goto error;
 	}
+	pc->isloaded = 1;
 	memset(ptr, 0, size);
 
 	usb_pc_cpu_flush(pc);
@@ -621,6 +624,7 @@ error:
 	pc->page_start = NULL;
 	pc->page_offset_buf = 0;
 	pc->page_offset_end = 0;
+	pc->isloaded = 0;
 	pc->map = NULL;
 	pc->tag = NULL;
 	return (1);
@@ -635,12 +639,13 @@ void
 usb_pc_free_mem(struct usb_page_cache *pc)
 {
 	if (pc && pc->buffer) {
-
-		bus_dmamap_unload(pc->tag, pc->map);
+		if (pc->isloaded)
+			bus_dmamap_unload(pc->tag, pc->map);
 
 		bus_dmamem_free(pc->tag, pc->buffer, pc->map);
 
 		pc->buffer = NULL;
+		pc->isloaded = 0;
 	}
 }
 
@@ -659,7 +664,7 @@ usb_pc_load_mem(struct usb_page_cache *pc, usb_size_t size, uint8_t sync)
 	pc->page_offset_end = size;
 	pc->ismultiseg = 1;
 
-	mtx_assert(pc->tag_parent->mtx, MA_OWNED);
+	USB_MTX_ASSERT(pc->tag_parent->mtx, MA_OWNED);
 
 	if (size > 0) {
 		if (sync) {
@@ -672,7 +677,8 @@ usb_pc_load_mem(struct usb_page_cache *pc, usb_size_t size, uint8_t sync)
 			 * We have to unload the previous loaded DMA
 			 * pages before trying to load a new one!
 			 */
-			bus_dmamap_unload(pc->tag, pc->map);
+			if (pc->isloaded)
+				bus_dmamap_unload(pc->tag, pc->map);
 
 			/*
 			 * Try to load memory into DMA.
@@ -685,6 +691,7 @@ usb_pc_load_mem(struct usb_page_cache *pc, usb_size_t size, uint8_t sync)
 				err = 0;
 			}
 			if (err || uptag->dma_error) {
+				pc->isloaded = 0;
 				return (1);
 			}
 		} else {
@@ -693,7 +700,8 @@ usb_pc_load_mem(struct usb_page_cache *pc, usb_size_t size, uint8_t sync)
 			 * We have to unload the previous loaded DMA
 			 * pages before trying to load a new one!
 			 */
-			bus_dmamap_unload(pc->tag, pc->map);
+			if (pc->isloaded)
+				bus_dmamap_unload(pc->tag, pc->map);
 
 			/*
 			 * Try to load memory into DMA. The callback
@@ -704,6 +712,7 @@ usb_pc_load_mem(struct usb_page_cache *pc, usb_size_t size, uint8_t sync)
 			    &usb_pc_load_mem_cb, pc, BUS_DMA_WAITOK)) {
 			}
 		}
+		pc->isloaded = 1;
 	} else {
 		if (!sync) {
 			/*
@@ -796,6 +805,8 @@ void
 usb_pc_dmamap_destroy(struct usb_page_cache *pc)
 {
 	if (pc && pc->tag) {
+		if (pc->isloaded)
+			bus_dmamap_unload(pc->tag, pc->map);
 		bus_dmamap_destroy(pc->tag, pc->map);
 		pc->tag = NULL;
 		pc->map = NULL;
@@ -917,7 +928,7 @@ usb_bdma_work_loop(struct usb_xfer_queue *pq)
 	xfer = pq->curr;
 	info = xfer->xroot;
 
-	mtx_assert(info->xfer_mtx, MA_OWNED);
+	USB_MTX_ASSERT(info->xfer_mtx, MA_OWNED);
 
 	if (xfer->error) {
 		/* some error happened */
@@ -1041,7 +1052,7 @@ usb_bdma_done_event(struct usb_dma_parent_tag *udpt)
 
 	info = USB_DMATAG_TO_XROOT(udpt);
 
-	mtx_assert(info->xfer_mtx, MA_OWNED);
+	USB_MTX_ASSERT(info->xfer_mtx, MA_OWNED);
 
 	/* copy error */
 	info->dma_error = udpt->dma_error;

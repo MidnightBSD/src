@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0
+ *
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
  *
@@ -49,7 +51,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/isci/scil/sci_memory_descriptor_list.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 #ifndef _SCI_MEMORY_DESCRIPTOR_LIST_H_
 #define _SCI_MEMORY_DESCRIPTOR_LIST_H_
@@ -94,7 +96,7 @@ typedef struct SCI_PHYSICAL_MEMORY_DESCRIPTOR
    void * virtual_address;
 
    /**
-    * This field contains the physical address associated with this desciptor
+    * This field contains the physical address associated with this descriptor 
     * element. This field shall be zero when the descriptor is retrieved from
     * the SCI implementation.  The user shall set this field prior
     * sci_controller_start()

@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/beri/virtio/virtio_block.c 315221 2017-03-14 02:06:03Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -187,7 +187,7 @@ vtblk_proc(struct beri_vtblk_softc *sc, struct vqueue_info *vq)
 		break;
 	case VIRTIO_BLK_T_GET_ID:
 		/* Assume a single buffer */
-		strlcpy(iov[1].iov_base, sc->ident,
+		strncpy(iov[1].iov_base, sc->ident,
 		    MIN(iov[1].iov_len, sizeof(sc->ident)));
 		err = 0;
 		break;
@@ -401,7 +401,7 @@ backend_info(struct beri_vtblk_softc *sc)
 		s+=1;
 	}
 
-	sprintf(sc->ident, "Virtio block backend");
+	strncpy(sc->ident, "Virtio block backend", sizeof(sc->ident));
 
 	return (0);
 }

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 M. Warner Losh.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_bus_acpi.c 340145 2018-11-04 23:28:56Z mmacy $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -38,10 +40,10 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_bus_acpi.c 340145 2018-11-04 23:
 #include <dev/uart/uart.h>
 #include <dev/uart/uart_bus.h>
 #include <dev/uart/uart_cpu_acpi.h>
-
 #include <contrib/dev/acpica/include/acpi.h>
 #include <contrib/dev/acpica/include/accommon.h>
 #include <dev/acpica/acpivar.h>
+
 
 static int uart_acpi_probe(device_t dev);
 
@@ -92,7 +94,7 @@ uart_acpi_probe(device_t dev)
 		if (cd->cd_desc != NULL)
 			device_set_desc(dev, cd->cd_desc);
 		return (uart_bus_probe(dev, cd->cd_regshft, cd->cd_regiowidth,
-			cd->cd_rclk, 0, 0, cd->cd_quirks));
+		    cd->cd_rclk, 0, 0, cd->cd_quirks));
 	}
 	return (ENXIO);
 }

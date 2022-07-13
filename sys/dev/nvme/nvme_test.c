@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2012-2013 Intel Corporation
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/nvme/nvme_test.c 346243 2019-04-15 16:27:53Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -98,7 +100,7 @@ nvme_ns_bio_test(void *arg)
 	idx = atomic_fetchadd_int(&io_test->td_idx, 1);
 	dev = io_test->ns->cdev;
 
-	offset = idx * 2048 * nvme_ns_get_sector_size(io_test->ns);
+	offset = idx * 2048ULL * nvme_ns_get_sector_size(io_test->ns);
 
 	while (1) {
 
@@ -118,6 +120,8 @@ nvme_ns_bio_test(void *arg)
 		} else
 			csw = dev->si_devsw;
 
+		if (csw == NULL)
+			panic("Unable to retrieve device switch");
 		mtx = mtx_pool_find(mtxpool_sleep, bio);
 		mtx_lock(mtx);
 		(*csw->d_strategy)(bio);

@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/random.h 328653 2018-02-01 13:01:44Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _LINUX_RANDOM_H_
@@ -35,12 +35,13 @@
 #include <sys/random.h>
 #include <sys/libkern.h>
 
+#define	get_random_u32() get_random_int()
+
 static inline void
 get_random_bytes(void *buf, int nbytes)
 {
 
-	if (read_random(buf, nbytes) == 0)
-		arc4rand(buf, nbytes, 0);
+	arc4random_buf(buf, nbytes);
 }
 
 static inline u_int
@@ -59,6 +60,12 @@ get_random_long(void)
 
 	get_random_bytes(&val, sizeof(val));
 	return (val);
+}
+
+static inline u32
+prandom_u32_max(u32 max)
+{
+	return (arc4random_uniform(max));
 }
 
 #endif /* _LINUX_RANDOM_H_ */

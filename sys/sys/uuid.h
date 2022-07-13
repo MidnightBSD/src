@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Marcel Moolenaar
  * All rights reserved.
  *
@@ -24,13 +25,13 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/uuid.h 253590 2013-07-24 04:24:21Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_UUID_H_
 #define	_SYS_UUID_H_
 
-#include <sys/cdefs.h>
+#include <sys/types.h>
 
 /* Length of a node address (an IEEE 802 address). */
 #define	_UUID_NODE_LEN		6
@@ -65,7 +66,21 @@ int uuid_ether_del(const uint8_t *);
 int snprintf_uuid(char *, size_t, struct uuid *);
 int printf_uuid(struct uuid *);
 int sbuf_printf_uuid(struct sbuf *, struct uuid *);
+
+/*
+ * validate_uuid will, with no flags passed, validate only the format of the
+ * passed in UUID.  Flags below are available to give it part of or all of the
+ * functionality that parse_uuid has traditionally had: acknowledging an empty
+ * string as valid, and checking the semantics of the UUID as well.
+ */
+int validate_uuid(const char *, size_t, struct uuid *, int);
 int parse_uuid(const char *, struct uuid *);
+
+/* Flags to validate_uuid(). */
+#define	VUUIDF_EMPTYOK		0x0001
+#define	VUUIDF_CHECKSEMANTICS	0x0002
+
+int uuidcmp(const struct uuid *, const struct uuid *);
 
 void be_uuid_dec(void const *buf, struct uuid *uuid);
 void be_uuid_enc(void *buf, struct uuid const *uuid);

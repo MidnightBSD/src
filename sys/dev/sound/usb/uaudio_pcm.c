@@ -1,6 +1,8 @@
-/* $FreeBSD: stable/11/sys/dev/sound/usb/uaudio_pcm.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000-2002 Hiroyuki Aizu <aizu@navi.org>
  * Copyright (c) 2006 Hans Petter Selasky
  *

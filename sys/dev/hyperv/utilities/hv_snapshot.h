@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/hyperv/utilities/hv_snapshot.h 311353 2017-01-05 03:20:00Z sephe $
+ * $FreeBSD$
  */
 
 #ifndef _VSS_H

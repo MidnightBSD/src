@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2005-2006 Atheros Communications, Inc.
  * All rights reserved.
@@ -15,7 +17,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ah_regdomain/ah_rd_freqbands.h 343493 2019-01-27 14:27:53Z avos $
+ * $FreeBSD$
  */
 
 #ifndef	__AH_REGDOMAIN_FREQBANDS_H__
@@ -196,7 +198,6 @@ static REG_DMN_FREQ_BAND regDmn5GhzFreq[] = {
 #define	W2_5825_5825	AFTER(W2_5180_5240)
 };
 
-
 /*
  * 5GHz Turbo (dynamic & static) tags
  */
@@ -371,7 +372,7 @@ static REG_DMN_FREQ_BAND regDmn2Ghz11gFreq[] = {
 #define	G3_2412_2462	AFTER(G2_2412_2462)
 	{ 2412, 2462, 27, 6,  5, 5, NO_DFS, NO_PSCAN },
 #define	G4_2412_2462	AFTER(G3_2412_2462)
-	
+
 	{ 2432, 2442, 20, 0, 20, 5, NO_DFS, NO_PSCAN },
 #define	G1_2432_2442	AFTER(G4_2412_2462)
 

@@ -1,7 +1,7 @@
 # The TP-Link 1043NDv2 is based on the AP135 with a couple of minor
 # differences - well, besides having no 11ac.
 
-# $FreeBSD: stable/11/sys/mips/conf/TL-WR1043NDv2.hints 280948 2015-04-01 06:44:39Z adrian $
+# $FreeBSD$
 
 # QCA955X_ETH_CFG_RGMII_EN (1 << 0)
 hint.qca955x_gmac.0.gmac_cfg=0x1

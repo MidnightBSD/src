@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/evdev/evdev_utils.c 343160 2019-01-18 21:25:46Z wulf $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -39,8 +39,6 @@
 
 #include <dev/evdev/evdev.h>
 #include <dev/evdev/input.h>
-
-#include <dev/kbd/kbdreg.h>
 
 #define	NONE	KEY_RESERVED
 
@@ -148,7 +146,7 @@ static uint16_t evdev_at_set1_scancodes[] = {
 	NONE,		NONE,		NONE,		NONE,
 	NONE,		NONE,		NONE,		NONE,
 	NONE,		NONE,		NONE,		NONE,
-	KEY_KATAKANAHIRAGANA,	NONE,	NONE,		KEY_RO,
+	KEY_KATAKANAHIRAGANA,	KEY_HANGEUL,	KEY_HANJA,	KEY_RO,
 	NONE,		NONE,	KEY_ZENKAKUHANKAKU,	KEY_HIRAGANA,
 	KEY_KATAKANA,	KEY_HENKAN,	NONE,		KEY_MUHENKAN,
 	NONE,		KEY_YEN,	KEY_KPCOMMA,	NONE,
@@ -168,16 +166,16 @@ static uint16_t evdev_at_set1_scancodes[] = {
 	NONE,		NONE,		KEY_VOLUMEDOWN,	NONE,
 	KEY_VOLUMEUP,	NONE,		KEY_HOMEPAGE,	NONE,
 	NONE,		KEY_KPSLASH,	NONE,		KEY_SYSRQ,
-	KEY_RIGHTALT,	NONE,		NONE,		NONE,
-	NONE,		NONE,		NONE,		NONE,
+	KEY_RIGHTALT,	NONE,		NONE,		KEY_F13,
+	KEY_F14,	KEY_F15,	KEY_F16,	KEY_F17,
 	/* 0x40 - 0x5f. 0xE0 prefixed */
-	NONE,		NONE,		NONE,		NONE,
-	NONE,		NONE,		KEY_PAUSE,	KEY_HOME,
+	KEY_F18,	KEY_F19,	KEY_F20,	KEY_F21,
+	KEY_F22,	NONE,		KEY_PAUSE,	KEY_HOME,
 	KEY_UP,		KEY_PAGEUP,	NONE,		KEY_LEFT,
 	NONE,		KEY_RIGHT,	NONE,		KEY_END,
 	KEY_DOWN,	KEY_PAGEDOWN,	KEY_INSERT,	KEY_DELETE,
-	NONE,		NONE,		NONE,		NONE,
-	NONE,		NONE,		NONE,		KEY_LEFTMETA,
+	NONE,		NONE,		NONE,		KEY_F23,
+	KEY_F24,	NONE,		NONE,		KEY_LEFTMETA,
 	KEY_RIGHTMETA,	KEY_MENU,	KEY_POWER,	KEY_SLEEP,
 	/* 0x60 - 0x7f. 0xE0 prefixed */
 	NONE,		NONE,		NONE,		KEY_WAKEUP,
@@ -301,44 +299,4 @@ evdev_push_repeats(struct evdev_dev *evdev, keyboard_t *kbd)
 
 	evdev_push_event(evdev, EV_REP, REP_DELAY, kbd->kb_delay1);
 	evdev_push_event(evdev, EV_REP, REP_PERIOD, kbd->kb_delay2);
-}
-
-void
-evdev_ev_kbd_event(struct evdev_dev *evdev, void *softc, uint16_t type,
-    uint16_t code, int32_t value)
-{
-	keyboard_t *kbd = (keyboard_t *)softc;
-	int delay[2], leds, oleds;
-	size_t i;
-
-	if (type == EV_LED) {
-		leds = oleds = KBD_LED_VAL(kbd);
-		for (i = 0; i < nitems(evdev_led_codes); i++) {
-			if (evdev_led_codes[i] == code) {
-				if (value)
-					leds |= 1 << i;
-				else
-					leds &= ~(1 << i);
-				if (leds != oleds) {
-					mtx_lock(&Giant);
-					kbdd_ioctl(kbd, KDSETLED,
-					    (caddr_t)&leds);
-					mtx_unlock(&Giant);
-				}
-				break;
-			}
-		}
-	} else if (type == EV_REP && code == REP_DELAY) {
-		delay[0] = value;
-		delay[1] = kbd->kb_delay2;
-		mtx_lock(&Giant);
-		kbdd_ioctl(kbd, KDSETREPEAT, (caddr_t)delay);
-		mtx_unlock(&Giant);
-	} else if (type == EV_REP && code == REP_PERIOD) {
-		delay[0] = kbd->kb_delay1;
-		delay[1] = value;
-		mtx_lock(&Giant);
-		kbdd_ioctl(kbd, KDSETREPEAT, (caddr_t)delay);
-		mtx_unlock(&Giant);
-	}
 }

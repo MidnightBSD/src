@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) HighPoint Technologies, Inc.
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/hptrr/hptrr_osm_bsd.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/hptrr/hptrr_config.h>
 /* $Id: osm_bsd.c,v 1.27 2007/11/22 07:35:49 gmm Exp $

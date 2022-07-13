@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_en/mlx5_en_dim.c 347796 2019-05-16 17:09:06Z hselasky $
+ * $FreeBSD$
  */
 
 #include "en.h"

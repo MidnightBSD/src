@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/gpio/gpiopps.c 300811 2016-05-26 23:56:12Z ian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/gpio.h>
@@ -47,6 +47,7 @@ static struct ofw_compat_data compat_data[] = {
 	{"pps-gpio", 	1},
 	{NULL,          0}
 };
+SIMPLEBUS_PNP_INFO(compat_data);
 #endif /* FDT */
 
 static devclass_t pps_devclass;

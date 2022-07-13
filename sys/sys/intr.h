@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2015-2016 Svatopluk Kraus
  * Copyright (c) 2015-2016 Michal Meloun
  * All rights reserved.
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/intr.h 308333 2016-11-05 10:23:02Z mmel $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_INTR_H_
@@ -112,6 +113,7 @@ int intr_pic_deregister(device_t, intptr_t);
 int intr_pic_claim_root(device_t, intptr_t, intr_irq_filter_t *, void *, u_int);
 struct intr_pic *intr_pic_add_handler(device_t, struct intr_pic *,
     intr_child_irq_filter_t *, void *, uintptr_t, uintptr_t);
+bool intr_is_per_cpu(struct resource *);
 
 extern device_t intr_irq_root_dev;
 

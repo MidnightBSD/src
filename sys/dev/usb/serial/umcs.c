@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Lev Serebryakov <lev@FreeBSD.org>.
  * All rights reserved.
  *
@@ -38,7 +40,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/usb/serial/umcs.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>

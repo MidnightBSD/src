@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Middle-level code for Cronyx Tau32-PCI adapters.
  *
@@ -17,14 +16,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/ce/ceddk.c 154899 2006-01-27 09:02:09Z rik $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/cx/machdep.h>
 #include <dev/ce/ceddk.h>
 
 #undef CE_DDK_DEBUG_ENABLED
 #ifdef CE_DDK_DEBUG_ENABLED
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 # define CE_DDK_DEBUG(b,c,s) \
 	do { \
 		if (c) { \
@@ -246,7 +245,7 @@ static void TAU32_CALLBACK_TYPE ce_on_receive
 			c->error (c, CE_OVERRUN);
 	} else {
 		CE_DDK_DEBUG (b, c, ("Another receive error: %x\n", error));
-		/* Do some procesing */
+		/* Do some processing */
 	}
 	
 	CE_ASSERT (!req->pInternal);
@@ -298,7 +297,7 @@ static void TAU32_CALLBACK_TYPE ce_on_transmit
 	} else {
 		CE_DDK_DEBUG (c->board, c, ("Another transmit error: %x\n",
 				error));
-		/* Do some procesing */
+		/* Do some processing */
 	}
 	
 	CE_ENQUEUE (c->tx_queue, req);
@@ -622,10 +621,10 @@ void ce_stop_chan (ce_chan_t *c)
 	TAU32_UserRequest *req;
 	CE_DEQUEUE (b->cr.queue, req);
 
-	/* XXXRIK: This function should be for comleteness, but for now I
-	 * don't use it. So I just start to write and didn't finished it yet.
-	 * It and it is VERY BUGGY!!! Do not use it. If you realy
-	 * need it ask me to fix it or rewrite it by your self.
+	/* XXXRIK: This function should be for completeness, but for now I
+	 * don't use it. I just started to write and haven't finished it yet.
+	 * It is VERY BUGGY!!! Do not use it. If you really need
+	 * it ask me to fix it or rewrite it by yourself.
 	 * Note: most buggy part of it in ce_on_config_stop!
 	 */
 	if (!req) {
@@ -633,8 +632,8 @@ void ce_stop_chan (ce_chan_t *c)
 			      "UserRequest (%s:%d)\n", __FUNCTION__, __LINE__));
 		return;
 	}
-	req->Command = TAU32_Configure_Commit |
-		       TAU32_Tx_Stop | TAU32_Rx_Stop;
+//	req->Command = TAU32_Configure_Commit |
+//		       TAU32_Tx_Stop | TAU32_Rx_Stop;
 	req->Command = 0;
 	req->Io.ChannelNumber = c->num;
 	req->pCallback = ce_on_config_stop;

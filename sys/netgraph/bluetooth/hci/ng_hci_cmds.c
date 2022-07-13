@@ -3,6 +3,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_hci_cmds.c,v 1.4 2003/09/08 18:57:51 max Exp $
- * $FreeBSD: stable/11/sys/netgraph/bluetooth/hci/ng_hci_cmds.c 298813 2016-04-29 21:25:05Z pfg $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -840,7 +842,7 @@ process_le_params(ng_hci_unit_p unit, u_int16_t ocf,
 	case NG_HCI_OCF_LE_RAND:
 	case NG_HCI_OCF_LE_LONG_TERM_KEY_REQUEST_REPLY:
 	case NG_HCI_OCF_LE_LONG_TERM_KEY_REQUEST_NEGATIVE_REPLY:
-	case NG_HCI_OCF_LE_READ_SUPPORTED_STATUS:
+	case NG_HCI_OCF_LE_READ_SUPPORTED_STATES:
 	case NG_HCI_OCF_LE_RECEIVER_TEST:
 	case NG_HCI_OCF_LE_TRANSMITTER_TEST:
 	case NG_HCI_OCF_LE_TEST_END:
@@ -911,7 +913,7 @@ process_le_status(ng_hci_unit_p unit,ng_hci_command_status_ep *ep,
 	case NG_HCI_OCF_LE_RAND:
 	case NG_HCI_OCF_LE_LONG_TERM_KEY_REQUEST_REPLY:
 	case NG_HCI_OCF_LE_LONG_TERM_KEY_REQUEST_NEGATIVE_REPLY:
-	case NG_HCI_OCF_LE_READ_SUPPORTED_STATUS:
+	case NG_HCI_OCF_LE_READ_SUPPORTED_STATES:
 	case NG_HCI_OCF_LE_RECEIVER_TEST:
 	case NG_HCI_OCF_LE_TRANSMITTER_TEST:
 	case NG_HCI_OCF_LE_TEST_END:

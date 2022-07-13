@@ -1,6 +1,8 @@
 /*	$NetBSD: puc.c,v 1.7 2000/07/29 17:43:38 jlam Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-3-Clause
+ *
  * Copyright (c) 2002 JF Hay.  All rights reserved.
  * Copyright (c) 2000 M. Warner Losh.  All rights reserved.
  *
@@ -58,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/puc/puc_pci.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -78,6 +80,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/puc/puc_pci.c 331722 2018-03-29 02:50:57Z 
 
 #include <dev/puc/puc_cfg.h>
 #include <dev/puc/puc_bfe.h>
+#include <dev/puc/pucdata.c>
 
 static int puc_msi_disable;
 SYSCTL_INT(_hw_puc, OID_AUTO, msi_disable, CTLFLAG_RDTUN,
@@ -196,3 +199,5 @@ static driver_t puc_pci_driver = {
 };
 
 DRIVER_MODULE(puc, pci, puc_pci_driver, puc_devclass, 0, 0);
+MODULE_PNP_INFO("U16:vendor;U16:device;U16:#;U16:#;D:#", pci, puc,
+    puc_pci_devices, nitems(puc_pci_devices) - 1);

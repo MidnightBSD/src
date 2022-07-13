@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/linux/linux_emul.c 347521 2019-05-13 11:17:31Z dchagin $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,10 +42,12 @@ __FBSDID("$FreeBSD: stable/11/sys/compat/linux/linux_emul.c 347521 2019-05-13 11
 #include <sys/mutex.h>
 #include <sys/sx.h>
 #include <sys/proc.h>
+#include <sys/resourcevar.h>
 #include <sys/syscallsubr.h>
 #include <sys/sysent.h>
 
 #include <compat/linux/linux_emul.h>
+#include <compat/linux/linux_mib.h>
 #include <compat/linux/linux_misc.h>
 #include <compat/linux/linux_persona.h>
 #include <compat/linux/linux_util.h>
@@ -87,6 +89,32 @@ pem_find(struct proc *p)
 	return (pem);
 }
 
+/*
+ * Linux apps generally expect the soft open file limit to be set
+ * to 1024, often iterating over all the file descriptors up to that
+ * limit instead of using closefrom(2).  Give them what they want,
+ * unless there already is a resource limit in place.
+ */
+static void
+linux_set_default_openfiles(struct thread *td, struct proc *p)
+{
+	struct rlimit rlim;
+	int error;
+
+	if (linux_default_openfiles < 0)
+		return;
+
+	PROC_LOCK(p);
+	lim_rlimit_proc(p, RLIMIT_NOFILE, &rlim);
+	PROC_UNLOCK(p);
+	if (rlim.rlim_cur != rlim.rlim_max ||
+	    rlim.rlim_cur <= linux_default_openfiles)
+		return;
+	rlim.rlim_cur = linux_default_openfiles;
+	error = kern_proc_setrlimit(td, p, RLIMIT_NOFILE, &rlim);
+	KASSERT(error == 0, ("kern_proc_setrlimit failed"));
+}
+
 void
 linux_proc_init(struct thread *td, struct thread *newtd, int flags)
 {
@@ -115,6 +143,8 @@ linux_proc_init(struct thread *td, struct thread *newtd, int flags)
 			p->p_emuldata = pem;
 		}
 		newtd->td_emuldata = em;
+
+		linux_set_default_openfiles(td, p);
 	} else {
 		p = td->td_proc;
 
@@ -226,9 +256,9 @@ linux_common_execve(struct thread *td, struct image_args *eargs)
 	if (error != 0)
 		return (error);
 
-	error = kern_execve(td, eargs, NULL);
+	error = kern_execve(td, eargs, NULL, oldvmspace);
 	post_execve(td, error, oldvmspace);
-	if (error != 0)
+	if (error != EJUSTRETURN)
 		return (error);
 
 	/*
@@ -255,7 +285,7 @@ linux_common_execve(struct thread *td, struct image_args *eargs)
 		free(em, M_TEMP);
 		free(pem, M_LINUX);
 	}
-	return (0);
+	return (EJUSTRETURN);
 }
 
 void

@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/cloudabi64/cloudabi64_thread.c 316574 2017-04-06 15:10:36Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>

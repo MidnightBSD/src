@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/nvidia/tegra124/tegra124_car.h 296936 2016-03-16 13:01:48Z mmel $
+ * $FreeBSD$
  */
 
 #ifndef _TEGRA124_CAR_

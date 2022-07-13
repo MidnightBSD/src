@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/mediatek/uart_dev_mtk.c 297669 2016-04-07 11:16:32Z sgalabov $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 

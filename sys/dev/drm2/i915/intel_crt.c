@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/i915/intel_crt.c 300050 2016-05-17 12:52:31Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm_crtc.h>

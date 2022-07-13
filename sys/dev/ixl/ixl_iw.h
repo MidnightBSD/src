@@ -1,8 +1,8 @@
 /******************************************************************************
 
-  Copyright (c) 2013-2019, Intel Corporation
+  Copyright (c) 2013-2018, Intel Corporation
   All rights reserved.
-
+  
   Redistribution and use in source and binary forms, with or without 
   modification, are permitted provided that the following conditions are met:
   
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/ixl/ixl_iw.h 349163 2019-06-18 00:08:02Z erj $*/
+/*$FreeBSD$*/
 
 #ifndef _IXL_IW_H_
 #define _IXL_IW_H_

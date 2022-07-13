@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007, 2008 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/coretemp/coretemp.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -41,7 +43,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/coretemp/coretemp.c 331722 2018-03-29 02:5
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
 #include <sys/proc.h>	/* for curthread */
-#include <sys/sched.h>
+#include <sys/smp.h>
 
 #include <machine/specialreg.h>
 #include <machine/cpufunc.h>
@@ -143,6 +145,9 @@ coretemp_probe(device_t dev)
 
 	device_set_desc(dev, "CPU On-Die Thermal Sensors");
 
+	if (!bootverbose && device_get_unit(dev) != 0)
+		device_quiet(dev);
+
 	return (BUS_PROBE_GENERIC);
 }
 
@@ -160,7 +165,7 @@ coretemp_attach(device_t dev)
 	sc->sc_dev = dev;
 	pdev = device_get_parent(dev);
 	cpu_model = CPUID_TO_MODEL(cpu_id);
-	cpu_stepping = cpu_id & CPUID_STEPPING;
+	cpu_stepping = CPUID_TO_STEPPING(cpu_id);
 
 	/*
 	 * Some CPUs, namely the PIII, don't have thermal sensors, but
@@ -303,14 +308,32 @@ coretemp_detach(device_t dev)
 	return (0);
 }
 
+struct coretemp_args {
+	u_int		msr;
+	uint64_t	val;
+};
+
+static void
+coretemp_rdmsr(void *arg)
+{
+	struct coretemp_args *args = arg;
+
+	args->val = rdmsr(args->msr);
+}
+
+static void
+coretemp_wrmsr(void *arg)
+{
+	struct coretemp_args *args = arg;
+
+	wrmsr(args->msr, args->val);
+}
+
 static uint64_t
 coretemp_get_thermal_msr(int cpu)
 {
-	uint64_t msr;
-
-	thread_lock(curthread);
-	sched_bind(curthread, cpu);
-	thread_unlock(curthread);
+	struct coretemp_args args;
+	cpuset_t cpus;
 
 	/*
 	 * The digital temperature reading is located at bit 16
@@ -322,27 +345,24 @@ coretemp_get_thermal_msr(int cpu)
 	 * The temperature is computed by subtracting the temperature
 	 * reading by Tj(max).
 	 */
-	msr = rdmsr(MSR_THERM_STATUS);
-
-	thread_lock(curthread);
-	sched_unbind(curthread);
-	thread_unlock(curthread);
-
-	return (msr);
+	args.msr = MSR_THERM_STATUS;
+	CPU_SETOF(cpu, &cpus);
+	smp_rendezvous_cpus(cpus, smp_no_rendezvous_barrier, coretemp_rdmsr,
+	    smp_no_rendezvous_barrier, &args);
+	return (args.val);
 }
 
 static void
 coretemp_clear_thermal_msr(int cpu)
 {
-	thread_lock(curthread);
-	sched_bind(curthread, cpu);
-	thread_unlock(curthread);
+	struct coretemp_args args;
+	cpuset_t cpus;
 
-	wrmsr(MSR_THERM_STATUS, 0);
-
-	thread_lock(curthread);
-	sched_unbind(curthread);
-	thread_unlock(curthread);
+	args.msr = MSR_THERM_STATUS;
+	args.val = 0;
+	CPU_SETOF(cpu, &cpus);
+	smp_rendezvous_cpus(cpus, smp_no_rendezvous_barrier, coretemp_wrmsr,
+	    smp_no_rendezvous_barrier, &args);
 }
 
 static int

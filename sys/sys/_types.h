@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Mike Barcroft <mike@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/_types.h 332135 2018-04-06 19:17:59Z kevans $
+ * $FreeBSD$
  */
 
 #ifndef _SYS__TYPES_H_
@@ -44,13 +45,13 @@ typedef	__uint64_t	__fsblkcnt_t;
 typedef	__uint64_t	__fsfilcnt_t;
 typedef	__uint32_t	__gid_t;
 typedef	__int64_t	__id_t;		/* can hold a gid_t, pid_t, or uid_t */
-typedef	__uint32_t	__ino_t;	/* inode number */
+typedef	__uint64_t	__ino_t;	/* inode number */
 typedef	long		__key_t;	/* IPC key (for Sys V IPC) */
 typedef	__int32_t	__lwpid_t;	/* Thread ID (a.k.a. LWP) */
 typedef	__uint16_t	__mode_t;	/* permissions */
 typedef	int		__accmode_t;	/* access permissions */
 typedef	int		__nl_item;
-typedef	__uint16_t	__nlink_t;	/* link count */
+typedef	__uint64_t	__nlink_t;	/* link count */
 typedef	__int64_t	__off_t;	/* file offset */
 typedef	__int64_t	__off64_t;	/* file offset (alias) */
 typedef	__int32_t	__pid_t;	/* process [group] */
@@ -67,6 +68,7 @@ typedef	unsigned int	__useconds_t;	/* microseconds (unsigned) */
 typedef	int		__cpuwhich_t;	/* which parameter for cpuset. */
 typedef	int		__cpulevel_t;	/* level parameter for cpuset. */
 typedef int		__cpusetid_t;	/* cpuset identifier. */
+typedef __int64_t	__daddr_t;	/* bwrite(3), FIOBMAP2, etc */
 
 /*
  * Unusual type definitions.
@@ -108,7 +110,7 @@ typedef struct {
 #endif
 } __max_align_t;
 
-typedef	__uint32_t	__dev_t;	/* device number */
+typedef	__uint64_t	__dev_t;	/* device number */
 
 typedef	__uint32_t	__fixpt_t;	/* fixed point number */
 
@@ -122,5 +124,27 @@ typedef union {
 } __mbstate_t;
 
 typedef __uintmax_t     __rman_res_t;
+
+/*
+ * Types for varargs. These are all provided by builtin types these
+ * days, so centralize their definition.
+ */
+#ifdef __GNUCLIKE_BUILTIN_VARARGS
+typedef	__builtin_va_list	__va_list;	/* internally known to gcc */
+#else
+#error "No support for your compiler for stdargs"
+#endif
+#if defined(__GNUC_VA_LIST_COMPATIBILITY) && !defined(__GNUC_VA_LIST) \
+    && !defined(__NO_GNUC_VA_LIST)
+#define __GNUC_VA_LIST
+typedef __va_list		__gnuc_va_list;	/* compatibility w/GNU headers*/
+#endif
+
+/*
+ * When the following macro is defined, the system uses 64-bit inode numbers.
+ * Programs can use this to avoid including <sys/param.h>, with its associated
+ * namespace pollution.
+ */
+#define	__INO64
 
 #endif /* !_SYS__TYPES_H_ */

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Seigo Tanimura
  * All rights reserved.
  *
@@ -52,7 +54,7 @@
 
 #include <dev/sound/pci/cs461x_dsp.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/csa.c 339296 2018-10-10 22:49:52Z avatar $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 /* This is the pci device id. */
 #define CS4610_PCI_ID 0x60011013
@@ -466,7 +468,7 @@ csa_setup_intr(device_t bus, device_t child,
 
 	/*
 	 * Look at the function code of the child to determine
-	 * the appropriate hander for it.
+	 * the appropriate handler for it.
 	 */
 	func = device_get_ivars(child);
 	if (func == NULL || irq != resp->irq)
@@ -506,7 +508,7 @@ csa_teardown_intr(device_t bus, device_t child,
 
 	/*
 	 * Look at the function code of the child to determine
-	 * the appropriate hander for it.
+	 * the appropriate handler for it.
 	 */
 	func = device_get_ivars(child);
 	if (func == NULL || irq != resp->irq || cookie != scp)

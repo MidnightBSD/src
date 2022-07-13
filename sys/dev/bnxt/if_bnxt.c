@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bnxt/if_bnxt.c 333364 2018-05-08 15:51:40Z shurd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -300,10 +300,12 @@ static struct if_shared_ctx bnxt_sctx_init = {
 	.isc_nfl = 2,				// Number of Free Lists
 	.isc_flags = IFLIB_HAS_RXCQ | IFLIB_HAS_TXCQ | IFLIB_NEED_ETHER_PAD,
 	.isc_q_align = PAGE_SIZE,
-	.isc_tx_maxsize = BNXT_TSO_SIZE,
-	.isc_tx_maxsegsize = BNXT_TSO_SIZE,
-	.isc_rx_maxsize = BNXT_TSO_SIZE,
-	.isc_rx_maxsegsize = BNXT_TSO_SIZE,
+	.isc_tx_maxsize = BNXT_TSO_SIZE + sizeof(struct ether_vlan_header),
+	.isc_tx_maxsegsize = BNXT_TSO_SIZE + sizeof(struct ether_vlan_header),
+	.isc_tso_maxsize = BNXT_TSO_SIZE + sizeof(struct ether_vlan_header),
+	.isc_tso_maxsegsize = BNXT_TSO_SIZE + sizeof(struct ether_vlan_header),
+	.isc_rx_maxsize = BNXT_TSO_SIZE + sizeof(struct ether_vlan_header),
+	.isc_rx_maxsegsize = BNXT_TSO_SIZE + sizeof(struct ether_vlan_header),
 
 	// Only use a single segment to avoid page size constraints
 	.isc_rx_nsegments = 1,
@@ -313,18 +315,16 @@ static struct if_shared_ctx bnxt_sctx_init = {
 	.isc_nrxd_default = {PAGE_SIZE / sizeof(struct cmpl_base) * 8,
 	    PAGE_SIZE / sizeof(struct rx_prod_pkt_bd),
 	    PAGE_SIZE / sizeof(struct rx_prod_pkt_bd)},
-	.isc_nrxd_max = {INT32_MAX, INT32_MAX, INT32_MAX},
+	.isc_nrxd_max = {BNXT_MAX_RXD, BNXT_MAX_RXD, BNXT_MAX_RXD},
 	.isc_ntxd_min = {16, 16, 16},
 	.isc_ntxd_default = {PAGE_SIZE / sizeof(struct cmpl_base) * 2,
 	    PAGE_SIZE / sizeof(struct tx_bd_short)},
-	.isc_ntxd_max = {INT32_MAX, INT32_MAX, INT32_MAX},
+	.isc_ntxd_max = {BNXT_MAX_TXD, BNXT_MAX_TXD, BNXT_MAX_TXD},
 
 	.isc_admin_intrcnt = 1,
 	.isc_vendor_info = bnxt_vendor_info_array,
 	.isc_driver_version = bnxt_driver_version,
 };
-
-if_shared_ctx_t bnxt_sctx = &bnxt_sctx_init;
 
 /*
  * Device Methods
@@ -333,7 +333,7 @@ if_shared_ctx_t bnxt_sctx = &bnxt_sctx_init;
 static void *
 bnxt_register(device_t dev)
 {
-	return bnxt_sctx;
+	return (&bnxt_sctx_init);
 }
 
 /*
@@ -784,7 +784,7 @@ bnxt_attach_pre(if_ctx_t ctx)
 	scctx->isc_txrx = &bnxt_txrx;
 	scctx->isc_tx_csum_flags = (CSUM_IP | CSUM_TCP | CSUM_UDP |
 	    CSUM_TCP_IPV6 | CSUM_UDP_IPV6 | CSUM_TSO);
-	scctx->isc_capenable =
+	scctx->isc_capabilities = scctx->isc_capenable =
 	    /* These are translated to hwassit bits */
 	    IFCAP_TXCSUM | IFCAP_TXCSUM_IPV6 | IFCAP_TSO4 | IFCAP_TSO6 |
 	    /* These are checked by iflib */
@@ -796,6 +796,9 @@ bnxt_attach_pre(if_ctx_t ctx)
 	    IFCAP_VLAN_HWCSUM | IFCAP_JUMBO_MTU;
 
 	if (bnxt_wol_supported(softc))
+		scctx->isc_capabilities |= IFCAP_WOL_MAGIC;
+	bnxt_get_wol_settings(softc);
+	if (softc->wol)
 		scctx->isc_capenable |= IFCAP_WOL_MAGIC;
 
 	/* Get the queue config */
@@ -804,8 +807,6 @@ bnxt_attach_pre(if_ctx_t ctx)
 		device_printf(softc->dev, "attach: hwrm qportcfg failed\n");
 		goto failed;
 	}
-
-	bnxt_get_wol_settings(softc);
 
 	/* Now perform a function reset */
 	rc = bnxt_hwrm_func_reset(softc);
@@ -1523,7 +1524,7 @@ bnxt_msix_intr_assign(if_ctx_t ctx, int msix)
 	for (i=0; i<softc->scctx->isc_nrxqsets; i++) {
 		snprintf(irq_name, sizeof(irq_name), "rxq%d", i);
 		rc = iflib_irq_alloc_generic(ctx, &softc->rx_cp_rings[i].irq,
-		    softc->rx_cp_rings[i].ring.id + 1, IFLIB_INTR_RX,
+		    softc->rx_cp_rings[i].ring.id + 1, IFLIB_INTR_RXTX,
 		    bnxt_handle_rx_cp, &softc->rx_cp_rings[i], i, irq_name);
 		if (rc) {
 			device_printf(iflib_get_dev(ctx),
@@ -1591,7 +1592,7 @@ bnxt_wol_config(if_ctx_t ctx)
 	if (!bnxt_wol_supported(softc))
 		return -ENOTSUP;
 
-	if (if_getcapabilities(ifp) & IFCAP_WOL_MAGIC) {
+	if (if_getcapenable(ifp) & IFCAP_WOL_MAGIC) {
 		if (!softc->wol) {
 			if (bnxt_hwrm_alloc_wol_fltr(softc))
 				return -EBUSY;

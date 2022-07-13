@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/linprocfs/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/compat/linprocfs
 
@@ -6,5 +6,9 @@ KMOD=	linprocfs
 SRCS=	vnode_if.h \
 	device_if.h bus_if.h \
 	linprocfs.c
+
+.if !defined(KERNBUILDDIR)
+.warning Building Linuxulator outside of a kernel does not make sense
+.endif
 
 .include <bsd.kmod.mk>

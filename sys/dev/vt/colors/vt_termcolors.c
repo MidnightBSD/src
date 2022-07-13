@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -28,15 +30,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/vt/colors/vt_termcolors.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/libkern.h>
 
 #include <dev/vt/colors/vt_termcolors.h>
-
-#define NCOLORS	16
 
 static struct {
 	unsigned char r;	/* Red percentage value. */
@@ -60,16 +60,6 @@ static struct {
 	{100,	0,	100},	/* light magenta */
 	{0,	100,	100},	/* light cyan */
 	{100,	100,	100},	/* white */
-};
-
-/*
- * Between console's palette and VGA's one:
- *   - blue and red are swapped (1 <-> 4)
- *   - yellow ad cyan are swapped (3 <-> 6)
- */
-static const int cons_to_vga_colors[NCOLORS] = {
-	0, 4, 2, 6, 1, 5, 3, 7,
-	0, 4, 2, 6, 1, 5, 3, 7
 };
 
 static int
@@ -169,21 +159,21 @@ vt_generate_cons_palette(uint32_t *palette, int format, uint32_t rmax,
 {
 	int i;
 
-	vt_palette_init();
-
-#define	CF(_f, _i) ((_f ## max * color_def[(_i)]._f / 100) << _f ## offset)
-	for (i = 0; i < NCOLORS; i++) {
-		switch (format) {
-		case COLOR_FORMAT_VGA:
+	switch (format) {
+	case COLOR_FORMAT_VGA:
+		for (i = 0; i < NCOLORS; i++)
 			palette[i] = cons_to_vga_colors[i];
-			break;
-		case COLOR_FORMAT_RGB:
+		break;
+	case COLOR_FORMAT_RGB:
+		vt_palette_init();
+#define	CF(_f, _i) ((_f ## max * color_def[(_i)]._f / 100) << _f ## offset)
+		for (i = 0; i < NCOLORS; i++)
 			palette[i] = CF(r, i) | CF(g, i) | CF(b, i);
-			break;
-		default:
-			return (ENODEV);
-		}
-	}
 #undef	CF
+		break;
+	default:
+		return (ENODEV);
+	}
+
 	return (0);
 }

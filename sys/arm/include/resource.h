@@ -26,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/include/resource.h 291650 2015-12-02 14:24:14Z mmel $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_RESOURCE_H_

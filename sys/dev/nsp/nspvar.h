@@ -1,8 +1,10 @@
-/*	$FreeBSD: stable/11/sys/dev/nsp/nspvar.h 331722 2018-03-29 02:50:57Z eadler $	*/
+/*	$FreeBSD$	*/
 /*	$NecBSD: nspvar.h,v 1.7.14.5 2001/06/29 06:27:54 honda Exp $	*/
 /*	$NetBSD$	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * [NetBSD for NEC PC-98 series]
  *  Copyright (c) 1998, 1999, 2000, 2001
  *	NetBSD/pc98 porting staff. All rights reserved.

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010, Pyun YongHyeon <yongari@FreeBSD.org>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
 /* Driver for DM&P Electronics, Inc, Vortex86 RDC R6040 FastEthernet. */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/vte/if_vte.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1994,7 +1996,7 @@ vte_rxfilter(struct vte_softc *sc)
 
 	nperf = 0;
 	if_maddr_rlock(ifp);
-	TAILQ_FOREACH(ifma, &sc->vte_ifp->if_multiaddrs, ifma_link) {
+	CK_STAILQ_FOREACH(ifma, &sc->vte_ifp->if_multiaddrs, ifma_link) {
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;
 		/*

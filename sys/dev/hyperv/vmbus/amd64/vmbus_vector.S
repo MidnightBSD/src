@@ -23,11 +23,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/hyperv/vmbus/amd64/vmbus_vector.S 329462 2018-02-17 18:00:01Z kib $
+ * $FreeBSD$
  */
 
-#include "assym.s"
+#include "assym.inc"
 
+#include <machine/psl.h>
 #include <machine/asmacros.h>
 #include <machine/specialreg.h>
 

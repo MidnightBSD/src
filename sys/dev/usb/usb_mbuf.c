@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/usb/usb_mbuf.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -76,15 +78,10 @@ usb_alloc_mbufs(struct malloc_type *type, struct usb_ifqueue *ifq,
 		alloc_size = (block_size + sizeof(struct usb_mbuf)) * nblocks;
 
 		free_ptr = malloc(alloc_size, type, M_WAITOK | M_ZERO);
-
-		if (free_ptr == NULL) {
-			goto done;
-		}
 		m_ptr = free_ptr;
 		data_ptr = (void *)(m_ptr + nblocks);
 
 		while (nblocks--) {
-
 			m_ptr->cur_data_ptr =
 			    m_ptr->min_data_ptr = data_ptr;
 
@@ -97,6 +94,5 @@ usb_alloc_mbufs(struct malloc_type *type, struct usb_ifqueue *ifq,
 			data_ptr += block_size;
 		}
 	}
-done:
 	return (free_ptr);
 }

@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-__FBSDID("$FreeBSD: stable/11/sys/dev/ioat/ioat_hw.h 344401 2019-02-21 00:44:26Z mav $");
+__FBSDID("$FreeBSD$");
 
 #ifndef __IOAT_HW_H__
 #define __IOAT_HW_H__

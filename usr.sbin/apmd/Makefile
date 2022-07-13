@@ -1,5 +1,6 @@
-# $FreeBSD: stable/11/usr.sbin/apmd/Makefile 352280 2019-09-13 07:21:06Z bapt $
+# $FreeBSD$
 
+CONFS=	apmd.conf
 PROG=	apmd
 MAN=	apmd.8
 MANSUBDIR= /i386

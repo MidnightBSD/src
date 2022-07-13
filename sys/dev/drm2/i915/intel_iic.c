@@ -27,7 +27,7 @@
  *	Chris Wilson <chris@chris-wilson.co.uk>
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/i915/intel_iic.c 349227 2019-06-20 09:23:03Z avg $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/i915/intel_drv.h>

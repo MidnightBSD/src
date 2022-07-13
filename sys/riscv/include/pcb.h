@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015 Ruslan Bukin <br@bsdpad.com>
+ * Copyright (c) 2015-2016 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
  *
  * Portions of this software were developed by SRI International and the
@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/riscv/include/pcb.h 292407 2015-12-17 18:44:30Z br $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_PCB_H_
@@ -42,16 +42,17 @@
 struct trapframe;
 
 struct pcb {
-	uint64_t	pcb_ra;
-	uint64_t	pcb_sp;
-	uint64_t	pcb_gp;
-	uint64_t	pcb_tp;
-	uint64_t	pcb_t[7];
-	uint64_t	pcb_s[12];
-	uint64_t	pcb_a[8];
-	uint64_t	pcb_sepc;
-	vm_offset_t	pcb_l1addr;	/* L1 page tables base address */
-	vm_offset_t	pcb_onfault;
+	uint64_t	pcb_ra;		/* Return address */
+	uint64_t	pcb_sp;		/* Stack pointer */
+	uint64_t	pcb_gp;		/* Global pointer */
+	uint64_t	pcb_tp;		/* Thread pointer */
+	uint64_t	pcb_s[12];	/* Saved registers */
+	uint64_t	pcb_x[32][2];	/* Floating point registers */
+	uint64_t	pcb_fcsr;	/* Floating point control reg */
+	uint64_t	pcb_fpflags;	/* Floating point flags */
+#define	PCB_FP_STARTED	0x1
+#define	PCB_FP_USERMASK	0x1
+	vm_offset_t	pcb_onfault;	/* Copyinout fault handler */
 };
 
 #ifdef _KERNEL

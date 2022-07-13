@@ -26,7 +26,7 @@
  **************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/ttm/ttm_execbuf_util.c 254864 2013-08-25 14:52:20Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/ttm/ttm_execbuf_util.h>

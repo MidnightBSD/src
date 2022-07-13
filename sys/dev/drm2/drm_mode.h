@@ -23,7 +23,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/drm2/drm_mode.h 280183 2015-03-17 18:50:33Z dumbbell $
+ * $FreeBSD$
  */
 
 #ifndef _DRM_MODE_H

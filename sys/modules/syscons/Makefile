@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/syscons/Makefile 293034 2016-01-01 04:04:40Z des $
+# $FreeBSD$
 
 SUBDIR=	${_apm} \
 	${_beastie} \

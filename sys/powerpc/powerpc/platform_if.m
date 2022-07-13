@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/powerpc/powerpc/platform_if.m 293030 2016-01-01 02:47:40Z jhibbits $
+# $FreeBSD$
 #
 
 #include <sys/param.h>
@@ -84,13 +84,9 @@ CODE {
 	{
 		return;
 	}
-	static void platform_null_idle(platform_t plat, int cpu)
+	static void platform_null_smp_probe_threads(void)
 	{
 		return;
-	}
-	static int platform_null_idle_wakeup(platform_t plat, int cpu)
-	{
-		return (0);
 	}
 };
 
@@ -205,6 +201,13 @@ METHOD void smp_ap_init {
 } DEFAULT platform_null_smp_ap_init;
 
 /**
+ * @brief Probe mp_ncores and smp_threads_per_core for early MI code
+ */
+METHOD void smp_probe_threads {
+	platform_t	_plat;
+} DEFAULT platform_null_smp_probe_threads;
+
+/**
  * @brief Return SMP topology
  */
 METHOD cpu_group_t smp_topo {
@@ -219,25 +222,20 @@ METHOD void reset {
 };
 
 /**
- * @brief Idle a CPU
- */
-METHOD void idle {
-	platform_t	_plat;
-	int		_cpu;
-} DEFAULT platform_null_idle;
-
-/**
- * @brief Wake up an idle CPU
- */
-METHOD int idle_wakeup {
-	platform_t	_plat;
-	int		_cpu;
-} DEFAULT platform_null_idle_wakeup;
-
-/**
  * @brief Suspend the CPU
  */
 METHOD void sleep {
 	platform_t	_plat;
+};
+
+/**
+ * @brief Attempt to synchronize timebase of current CPU with others.
+ * Entered (approximately) simultaneously on all CPUs, including the BSP.
+ * Passed the timebase value on the BSP as of shortly before the call.
+ */
+METHOD void smp_timebase_sync {
+	platform_t	_plat;
+	u_long		_tb;
+	int		_ap;
 };
 

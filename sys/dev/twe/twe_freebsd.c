@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2003 Paul Saab
  * Copyright (c) 2003 Vinod Kashyap
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/twe/twe_freebsd.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * FreeBSD-specific code.
@@ -917,7 +919,7 @@ twe_free_request(struct twe_request *tr)
  * Map/unmap (tr)'s command and data in the controller's addressable space.
  *
  * These routines ensure that the data which the controller is going to try to
- * access is actually visible to the controller, in a machine-independant 
+ * access is actually visible to the controller, in a machine-independent
  * fashion.  Due to a hardware limitation, I/O buffers must be 512-byte aligned
  * and we take care of that here as well.
  */

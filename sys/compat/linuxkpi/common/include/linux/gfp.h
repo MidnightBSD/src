@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/gfp.h 335410 2018-06-20 06:34:31Z hselasky $
+ * $FreeBSD$
  */
 #ifndef	_LINUX_GFP_H_
 #define	_LINUX_GFP_H_
@@ -52,9 +52,11 @@
 #define	__GFP_RETRY_MAYFAIL 0
 #define	__GFP_MOVABLE	0
 #define	__GFP_COMP	0
+#define	__GFP_KSWAPD_RECLAIM 0
 
 #define	__GFP_IO	0
 #define	__GFP_NO_KSWAPD	0
+#define	__GFP_KSWAPD_RECLAIM	0
 #define	__GFP_WAIT	M_WAITOK
 #define	__GFP_DMA32	(1U << 24) /* LinuxKPI only */
 #define	__GFP_BITS_SHIFT 25
@@ -73,6 +75,7 @@
 #define	GFP_TEMPORARY	M_NOWAIT
 #define	GFP_NATIVE_MASK	(M_NOWAIT | M_WAITOK | M_USE_RESERVE | M_ZERO)
 #define	GFP_TRANSHUGE	0
+#define	GFP_TRANSHUGE_LIGHT	0
 
 CTASSERT((__GFP_DMA32 & GFP_NATIVE_MASK) == 0);
 CTASSERT((__GFP_BITS_MASK & GFP_NATIVE_MASK) == GFP_NATIVE_MASK);

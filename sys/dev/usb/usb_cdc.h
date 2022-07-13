@@ -1,7 +1,9 @@
 /*	$NetBSD: usbcdc.h,v 1.9 2004/10/23 13:24:24 augustss Exp $	*/
-/*	$FreeBSD: stable/11/sys/dev/usb/usb_cdc.h 331722 2018-03-29 02:50:57Z eadler $	*/
+/*	$FreeBSD$	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
  *

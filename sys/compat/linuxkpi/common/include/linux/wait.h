@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/wait.h 335426 2018-06-20 06:50:11Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _LINUX_WAIT_H_
@@ -36,6 +36,7 @@
 #include <linux/compiler.h>
 #include <linux/list.h>
 #include <linux/spinlock.h>
+#include <linux/sched.h>
 
 #include <asm/atomic.h>
 
@@ -118,6 +119,8 @@ extern wait_queue_func_t default_wake_function;
 	    NULL, MTX_DEF | MTX_NEW | MTX_NOWITNESS);			\
 	INIT_LIST_HEAD(&(wqh)->task_list);				\
 } while (0)
+
+#define	__init_waitqueue_head(wqh, name, lk) init_waitqueue_head(wqh)
 
 void linux_init_wait_entry(wait_queue_t *, int);
 void linux_wake_up(wait_queue_head_t *, unsigned int, int, bool);

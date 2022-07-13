@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Neelkanth Natu
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
 
 #include <dev/cfe/cfe_api.h>
 
-__FBSDID("$FreeBSD: stable/11/sys/dev/cfe/cfe_env.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #ifndef	CFE_ENV_SIZE
 #define	CFE_ENV_SIZE	PAGE_SIZE	/* default is one page */

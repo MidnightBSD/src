@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/include/disassem.h 295038 2016-01-29 13:06:30Z wma $
+ * $FreeBSD$
  */
 
 #ifndef __DISASSEM_H_

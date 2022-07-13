@@ -1,7 +1,7 @@
 #
 # GXEMUL "oldtestmips" sample kernel configuration.
 #
-# $FreeBSD: stable/11/sys/mips/conf/GXEMUL 274331 2014-11-09 21:33:01Z melifaro $
+# $FreeBSD$
 #
 
 ident		GXEMUL
@@ -30,8 +30,10 @@ options 	KDB
 options 	SMP			# Symmetric MultiProcessor Kernel
 
 options 	SCHED_ULE
+options 	VIMAGE			# Subsystem virtualization, e.g. VNET
 options 	INET			# InterNETworking
 options 	INET6			# IPv6 communications protocols
+options 	TCP_HHOOK		# hhook(9) framework for TCP
 
 options 	FFS			#Berkeley Fast Filesystem
 
@@ -52,7 +54,7 @@ device		gxemul_ether
 device		loop		# Network loopback
 device		random		# Entropy device
 device		ether		# Ethernet support
-device		tun		# Packet tunnel.
+device		tuntap		# Packet tunnel.
 device		md		# Memory "disks"
 device		gif		# IPv6 and IPv4 tunneling
 

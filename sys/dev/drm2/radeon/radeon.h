@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon.h 280183 2015-03-17 18:50:33Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #ifndef __RADEON_H__
 #define __RADEON_H__
@@ -65,7 +65,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon.h 280183 2015-03-17 18:
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon.h 280183 2015-03-17 18:50:33Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

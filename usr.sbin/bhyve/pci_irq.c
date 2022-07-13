@@ -29,7 +29,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/pci_irq.c 336189 2018-07-11 07:16:13Z araujo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <machine/vmm.h>

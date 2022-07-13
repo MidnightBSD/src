@@ -1,6 +1,8 @@
 /*-
  * HighPoint RAID Driver for FreeBSD
  *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2005-2011 HighPoint Technologies, Inc. All Rights Reserved.
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/hpt27xx/hpt27xx_os_bsd.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <dev/hpt27xx/hpt27xx_config.h>

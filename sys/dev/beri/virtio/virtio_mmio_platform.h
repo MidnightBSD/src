@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/beri/virtio/virtio_mmio_platform.h 275647 2014-12-09 16:39:21Z br $
+ * $FreeBSD$
  */
 
 #define	Q_NOTIFY	0x01

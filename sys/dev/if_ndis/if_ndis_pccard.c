@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2003
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
  *
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/if_ndis/if_ndis_pccard.c 343819 2019-02-06 02:06:00Z avos $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/ctype.h>
 #include <sys/param.h>
@@ -301,6 +303,8 @@ ndis_attach_pccard(dev)
 	}
 
 	error = ndis_attach(dev);
+	if (error == 0)
+		gone_in_dev(dev, 13, "ndis removed");
 
 fail:
 	return(error);

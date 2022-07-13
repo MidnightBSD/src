@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/etherdevice.h 331756 2018-03-30 02:04:46Z emaste $
+ * $FreeBSD$
  */
 #ifndef _LINUX_ETHERDEVICE
 #define	_LINUX_ETHERDEVICE
@@ -108,8 +108,7 @@ eth_zero_addr(u8 *pa)
 static inline void
 random_ether_addr(u8 * dst)
 {
-	if (read_random(dst, 6) == 0)
-		arc4rand(dst, 6, 0);
+	arc4random_buf(dst, 6);
 
 	dst[0] &= 0xfe;
 	dst[0] |= 0x02;

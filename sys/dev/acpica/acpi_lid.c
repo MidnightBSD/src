@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/acpi_lid.c 301418 2016-06-05 02:02:51Z adrian $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include "opt_evdev.h"
@@ -112,6 +112,9 @@ acpi_lid_status_update(struct acpi_lid_softc *sc)
 
 	/* range check value */
 	sc->lid_status = lid_status ? 1 : 0;
+
+	/* Send notification via devd */
+	acpi_UserNotify("Lid", sc->lid_handle, sc->lid_status);
 
 #ifdef EVDEV_SUPPORT
 	/* Notify evdev about lid status */

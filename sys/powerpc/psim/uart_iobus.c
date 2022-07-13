@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright 2002 by Peter Grehan. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/powerpc/psim/uart_iobus.c 356020 2019-12-22 19:06:45Z kevans $
+ * $FreeBSD$
  */
 
 /*

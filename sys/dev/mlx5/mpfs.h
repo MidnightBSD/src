@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mpfs.h 353197 2019-10-07 08:47:08Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _MLX5_MPFS_H_

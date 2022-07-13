@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * Copyright (c) 2012, 2013 The FreeBSD Foundation
  * All rights reserved.
@@ -29,7 +31,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/imx/imx51_ipuv3.c 356110 2019-12-27 03:00:18Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

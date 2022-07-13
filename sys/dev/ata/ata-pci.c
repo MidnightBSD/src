@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ata/ata-pci.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -109,8 +111,12 @@ ata_pci_attach(device_t dev)
 					      RF_ACTIVE);
     }
 
-    if (ctlr->chipinit(dev))
+    if (ctlr->chipinit(dev)) {
+	if (ctlr->r_res1)
+	    bus_release_resource(dev, ctlr->r_type1, ctlr->r_rid1,
+				 ctlr->r_res1);
 	return ENXIO;
+    }
 
     /* attach all channels on this controller */
     for (unit = 0; unit < ctlr->channels; unit++) {

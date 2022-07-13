@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2001 David E. O'Brien
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +29,7 @@
  *
  *	@(#)endian.h	8.1 (Berkeley) 6/10/93
  * $NetBSD: endian.h,v 1.7 1999/08/21 05:53:51 simonb Exp $
- * $FreeBSD: stable/11/sys/arm/include/endian.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _ENDIAN_H_

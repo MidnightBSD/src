@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011-2012 Semihalf
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/powerpc/include/machdep.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _POWERPC_MACHDEP_H_
@@ -32,7 +34,6 @@
 void booke_disable_l2_cache(void);
 void booke_enable_l1_cache(void);
 void booke_enable_l2_cache(void);
-void booke_enable_l3_cache(void);
 void booke_enable_bpred(void);
 void booke_init_tlb(vm_paddr_t);
 

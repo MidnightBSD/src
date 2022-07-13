@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mmc/host/dwmmc_reg.h 287258 2015-08-28 15:27:55Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef DEV_MMC_HOST_DWMMC_REG_H

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2016 Solarflare Communications Inc.
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: stable/11/sys/dev/sfxge/common/efx_mcdi.h 350409 2019-07-29 10:41:21Z arybchik $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_EFX_MCDI_H

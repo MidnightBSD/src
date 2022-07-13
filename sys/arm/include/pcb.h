@@ -1,6 +1,8 @@
 /*	$NetBSD: pcb.h,v 1.10 2003/10/13 21:46:39 scw Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2001 Matt Thomas <matt@3am-software.com>.
  * Copyright (c) 1994 Mark Brinicombe.
  * All rights reserved.
@@ -32,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/include/pcb.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_PCB_H_

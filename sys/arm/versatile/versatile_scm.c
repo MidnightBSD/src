@@ -33,7 +33,7 @@
  * SCM - System Control Module
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/versatile/versatile_scm.c 331402 2018-03-23 01:37:31Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

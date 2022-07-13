@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/netgraph/atm/sscop/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 #
 # Author: Harti Brandt <harti@freebsd.org>
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/nvidia/tegra_abpmisc.c 308335 2016-11-05 10:56:32Z mmel $");
+__FBSDID("$FreeBSD$");
 
 /*
  * SoC misc configuration and indentification driver.
@@ -45,7 +45,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/nvidia/tegra_abpmisc.c 308335 2016-11-05 1
 #include <machine/resource.h>
 #include <sys/rman.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 

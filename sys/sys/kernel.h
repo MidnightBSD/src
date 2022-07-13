@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1995 Terrence R. Lambert
  * All rights reserved.
  *
@@ -40,7 +41,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)kernel.h	8.3 (Berkeley) 1/21/94
- * $FreeBSD: stable/11/sys/sys/kernel.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_KERNEL_H_
@@ -52,6 +53,9 @@
 
 /* for intrhook below */
 #include <sys/queue.h>
+
+/* for timestamping SYSINITs; other files may assume this is included here */
+#include <sys/tslog.h>
 
 /* Global variables for the kernel. */
 
@@ -87,7 +91,8 @@ enum sysinit_sub_id {
 	SI_SUB_DONE		= 0x0000001,	/* processed*/
 	SI_SUB_TUNABLES		= 0x0700000,	/* establish tunable values */
 	SI_SUB_COPYRIGHT	= 0x0800001,	/* first use of console*/
-	SI_SUB_VM		= 0x1000000,	/* virtual memory system init*/
+	SI_SUB_VM		= 0x1000000,	/* virtual memory system init */
+	SI_SUB_COUNTER		= 0x1100000,	/* counter(9) is initialized */
 	SI_SUB_KMEM		= 0x1800000,	/* kernel memory*/
 	SI_SUB_HYPERVISOR	= 0x1A40000,	/*
 						 * Hypervisor detection and
@@ -120,6 +125,7 @@ enum sysinit_sub_id {
 	SI_SUB_MBUF		= 0x2700000,	/* mbuf subsystem */
 	SI_SUB_INTR		= 0x2800000,	/* interrupt threads */
 	SI_SUB_TASKQ		= 0x2880000,	/* task queues */
+	SI_SUB_EPOCH		= 0x2888000,	/* epoch subsystem */
 #ifdef EARLY_AP_STARTUP
 	SI_SUB_SMP		= 0x2900000,	/* start the APs*/
 #endif
@@ -232,6 +238,35 @@ struct sysinit {
  * correct warnings when -Wcast-qual is used.
  *
  */
+#ifdef TSLOG
+struct sysinit_tslog {
+	sysinit_cfunc_t func;
+	const void * data;
+	const char * name;
+};
+static inline void
+sysinit_tslog_shim(const void * data)
+{
+	const struct sysinit_tslog * x = data;
+
+	TSRAW(curthread, TS_ENTER, "SYSINIT", x->name);
+	(x->func)(x->data);
+	TSRAW(curthread, TS_EXIT, "SYSINIT", x->name);
+}
+#define	C_SYSINIT(uniquifier, subsystem, order, func, ident)	\
+	static struct sysinit_tslog uniquifier ## _sys_init_tslog = {	\
+		func,						\
+		(ident),					\
+		#uniquifier					\
+	};							\
+	static struct sysinit uniquifier ## _sys_init = {	\
+		subsystem,					\
+		order,						\
+		sysinit_tslog_shim,				\
+		&uniquifier ## _sys_init_tslog			\
+	};							\
+	DATA_WSET(sysinit_set,uniquifier ## _sys_init)
+#else
 #define	C_SYSINIT(uniquifier, subsystem, order, func, ident)	\
 	static struct sysinit uniquifier ## _sys_init = {	\
 		subsystem,					\
@@ -239,7 +274,8 @@ struct sysinit {
 		func,						\
 		(ident)						\
 	};							\
-	DATA_SET(sysinit_set,uniquifier ## _sys_init)
+	DATA_WSET(sysinit_set,uniquifier ## _sys_init)
+#endif
 
 #define	SYSINIT(uniquifier, subsystem, order, func, ident)	\
 	C_SYSINIT(uniquifier, subsystem, order,			\
@@ -255,7 +291,7 @@ struct sysinit {
 		func,						\
 		(ident)						\
 	};							\
-	DATA_SET(sysuninit_set,uniquifier ## _sys_uninit)
+	DATA_WSET(sysuninit_set,uniquifier ## _sys_uninit)
 
 #define	SYSUNINIT(uniquifier, subsystem, order, func, ident)	\
 	C_SYSUNINIT(uniquifier, subsystem, order,		\
@@ -410,12 +446,17 @@ typedef void (*ich_func_t)(void *_arg);
 
 struct intr_config_hook {
 	TAILQ_ENTRY(intr_config_hook) ich_links;
+	uintptr_t	ich_state;
+#define ICHS_QUEUED	0x1
+#define ICHS_RUNNING	0x2
+#define	ICHS_DONE	0x3
 	ich_func_t	ich_func;
 	void		*ich_arg;
 };
 
 int	config_intrhook_establish(struct intr_config_hook *hook);
 void	config_intrhook_disestablish(struct intr_config_hook *hook);
+int	config_intrhook_drain(struct intr_config_hook *hook);
 void	config_intrhook_oneshot(ich_func_t _func, void *_arg);
 
 #endif /* !_SYS_KERNEL_H_*/

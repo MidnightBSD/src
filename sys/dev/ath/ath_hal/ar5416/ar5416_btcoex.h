@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2011 Atheros Communications, Inc.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -13,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5416/ar5416_btcoex.h 237621 2012-06-27 03:00:29Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef	__ATH_AR5416_BTCOEX_H__

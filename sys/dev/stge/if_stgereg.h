@@ -1,6 +1,8 @@
 /*	$NetBSD: if_stgereg.h,v 1.3 2003/02/10 21:10:07 christos Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2001 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/11/sys/dev/stge/if_stgereg.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 /*
  * Sundance Technology PCI vendor ID

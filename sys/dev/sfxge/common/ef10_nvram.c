@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/common/ef10_nvram.c 350409 2019-07-29 10:41:21Z arybchik $");
+__FBSDID("$FreeBSD$");
 
 #include "efx.h"
 #include "efx_impl.h"

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/include/counter.h 328386 2018-01-25 02:45:21Z pkelsey $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_COUNTER_H_
@@ -31,6 +31,8 @@
 
 #include <sys/pcpu.h>
 #include <machine/atomic.h>
+
+#define	EARLY_COUNTER	&__pcpu[0].pc_early_dummy_counter
 
 #define	counter_enter()	do {} while (0)
 #define	counter_exit()	do {} while (0)
@@ -40,7 +42,7 @@ static inline uint64_t
 counter_u64_read_one(uint64_t *p, int cpu)
 {
 
-	return (*(uint64_t *)((char *)p + sizeof(struct pcpu) * cpu));
+	return (*(uint64_t *)((char *)p + UMA_PCPU_ALLOC_SIZE * cpu));
 }
 
 static inline uint64_t
@@ -60,7 +62,7 @@ static void
 counter_u64_zero_one_cpu(void *arg)
 {
 
-	*((uint64_t *)((char *)arg + sizeof(struct pcpu) *
+	*((uint64_t *)((char *)arg + UMA_PCPU_ALLOC_SIZE *
 	    PCPU_GET(cpuid))) = 0;
 }
 

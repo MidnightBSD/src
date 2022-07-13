@@ -1,6 +1,8 @@
-/* $FreeBSD: stable/11/sys/dev/usb/controller/xhcireg.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -122,6 +124,10 @@
 #define	XHCI_PS_PLS_SET(x)	(((x) & 0xF) << 5)	/* RW - port link state */
 #define	XHCI_PS_PP		0x00000200	/* RW - port power */
 #define	XHCI_PS_SPEED_GET(x)	(((x) >> 10) & 0xF)	/* RO - port speed */
+#define	XHCI_PS_SPEED_FULL	0x1			/* Full Speed USB */
+#define	XHCI_PS_SPEED_LOW	0x2			/* Low Speed USB */
+#define	XHCI_PS_SPEED_HIGH	0x3			/* High Speed USB */
+#define	XHCI_PS_SPEED_SS	0x4			/* Super Speed USB */
 #define	XHCI_PS_PIC_GET(x)	(((x) >> 14) & 0x3)	/* RW - port indicator */
 #define	XHCI_PS_PIC_SET(x)	(((x) & 0x3) << 14)	/* RW - port indicator */
 #define	XHCI_PS_LWS		0x00010000	/* RW - port link state write strobe */

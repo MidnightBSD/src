@@ -30,7 +30,7 @@
  *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: stable/11/sys/dev/liquidio/lio_main.c 335293 2018-06-17 17:38:24Z dim $*/
+/*$FreeBSD$*/
 
 #include "lio_bsd.h"
 #include "lio_common.h"

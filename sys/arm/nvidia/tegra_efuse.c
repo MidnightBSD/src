@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/nvidia/tegra_efuse.c 314506 2017-03-01 19:55:04Z ian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,7 +44,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/nvidia/tegra_efuse.c 314506 2017-03-01 19:
 
 #include <dev/extres/clk/clk.h>
 #include <dev/extres/hwreset/hwreset.h>
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 

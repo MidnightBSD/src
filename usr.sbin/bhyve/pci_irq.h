@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bhyve/pci_irq.h 336189 2018-07-11 07:16:13Z araujo $
+ * $FreeBSD$
  */
 
 #ifndef __PCI_IRQ_H__

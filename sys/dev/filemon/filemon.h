@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011, David E. O'Brien.
  * Copyright (c) 2009-2011, Juniper Networks, Inc.
  * All rights reserved.
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/filemon/filemon.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #define FILEMON_SET_FD		_IOWR('S', 1, int)

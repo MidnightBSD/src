@@ -23,14 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/mips/mips/octeon_cop2_swtch.S 229677 2012-01-06 01:23:26Z gonzo $
+ * $FreeBSD$
  */
 
 #include <machine/asm.h>
 #include <machine/cpuregs.h>
 #include <machine/octeon_cop2.h>
 
-#include "assym.s"
+#include "assym.inc"
 
 .set noreorder
 

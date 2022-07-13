@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/uart/uart_dev_snps.c 340145 2018-11-04 23:28:56Z mmacy $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_dev_snps.c 340145 2018-11-04 23:28:56Z mmacy $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -61,6 +61,44 @@ struct snps_softc {
 #endif
 };
 
+/*
+ * To use early printf on 64 bits Allwinner SoC, add to kernel config
+ * options SOCDEV_PA=0x0
+ * options SOCDEV_VA=0x40000000
+ * options EARLY_PRINTF
+ *
+ * To use early printf on 32 bits Allwinner SoC, add to kernel config
+ * options SOCDEV_PA=0x01C00000
+ * options SOCDEV_VA=0x10000000
+ * options EARLY_PRINTF
+ *
+ * remove the if 0
+*/
+#if 0
+#ifdef EARLY_PRINTF
+static void
+uart_snps_early_putc(int c)
+{
+	volatile uint32_t *stat;
+	volatile uint32_t *tx;
+
+#ifdef ALLWINNER_64
+	stat = (uint32_t *) (SOCDEV_VA + 0x1C2807C);
+	tx = (uint32_t *) (SOCDEV_VA + 0x1C28000);
+#endif
+#ifdef ALLWINNER_32
+	stat = (uint32_t *) (SOCDEV_VA + 0x2807C);
+	tx = (uint32_t *) (SOCDEV_VA + 0x28000);
+#endif
+
+	while ((*stat & (1 << 2)) == 0)
+		continue;
+	*tx = c;
+}
+early_putc_t *early_putc = uart_snps_early_putc;
+#endif /* EARLY_PRINTF */
+#endif
+
 static kobj_method_t snps_methods[] = {
 	KOBJMETHOD(uart_probe,		ns8250_bus_probe),
 	KOBJMETHOD(uart_attach,		ns8250_bus_attach),
@@ -89,6 +127,7 @@ struct uart_class uart_snps_class = {
 
 static struct ofw_compat_data compat_data[] = {
 	{ "snps,dw-apb-uart",		(uintptr_t)&uart_snps_class },
+	{ "marvell,armada-38x-uart",	(uintptr_t)&uart_snps_class },
 	{ NULL,				(uintptr_t)NULL }
 };
 UART_FDT_CLASS(compat_data);
@@ -97,9 +136,7 @@ UART_FDT_CLASS(compat_data);
 static int
 snps_get_clocks(device_t dev, clk_t *baudclk, clk_t *apb_pclk)
 {
-	struct snps_softc *sc;
 
-	sc = device_get_softc(dev);
 	*baudclk = NULL;
 	*apb_pclk = NULL;
 

@@ -62,7 +62,7 @@
  *
  * From: sys/arm/include/bus.h
  *
- * $FreeBSD: stable/11/sys/arm64/include/bus.h 281494 2015-04-13 14:43:10Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_BUS_H_

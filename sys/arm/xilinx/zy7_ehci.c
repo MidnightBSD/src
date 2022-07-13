@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012-2013 Thomas Skibo
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/xilinx/zy7_ehci.c 346524 2019-04-22 04:56:41Z ian $
+ * $FreeBSD$
  */
 
 /*
@@ -36,7 +38,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/xilinx/zy7_ehci.c 346524 2019-04-22 04:56:41Z ian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -54,7 +56,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/xilinx/zy7_ehci.c 346524 2019-04-22 04:56:
 #include <machine/resource.h>
 #include <machine/stdarg.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
@@ -326,13 +327,10 @@ zy7_ehci_detach(device_t dev)
 	/* during module unload there are lots of children leftover */
 	device_delete_children(dev);
 	
-	sc->sc_flags &= ~EHCI_SCFLG_DONEINIT;
-
-	if (sc->sc_irq_res && sc->sc_intr_hdl)
-		/* call ehci_detach() after ehci_init() called after
-		 * successful bus_setup_intr().
-		 */
+	if ((sc->sc_flags & EHCI_SCFLG_DONEINIT) != 0) {
 		ehci_detach(sc);
+		sc->sc_flags &= ~EHCI_SCFLG_DONEINIT;
+	}
 
 	if (sc->sc_irq_res) {
 		if (sc->sc_intr_hdl != NULL)

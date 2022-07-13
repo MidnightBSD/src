@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/ttm/ttm_page_alloc_dma.c 298955 2016-05-03 03:41:25Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #define pr_fmt(fmt) "[TTM] " fmt
 

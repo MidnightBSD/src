@@ -1,6 +1,8 @@
 /*	$NetBSD: mii.c,v 1.12 1999/08/03 19:41:49 drochner Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mii/mii.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * MII bus layer, glues MII-capable network interface drivers to sharable
@@ -58,6 +60,7 @@ MODULE_VERSION(miibus, 1);
 #include "miibus_if.h"
 
 static device_attach_t miibus_attach;
+static bus_child_detached_t miibus_child_detached;
 static bus_child_location_str_t miibus_child_location_str;
 static bus_child_pnpinfo_str_t miibus_child_pnpinfo_str;
 static device_detach_t miibus_detach;
@@ -83,6 +86,7 @@ static device_method_t miibus_methods[] = {
 	/* bus interface */
 	DEVMETHOD(bus_print_child,	miibus_print_child),
 	DEVMETHOD(bus_read_ivar,	miibus_read_ivar),
+	DEVMETHOD(bus_child_detached,	miibus_child_detached),
 	DEVMETHOD(bus_child_pnpinfo_str, miibus_child_pnpinfo_str),
 	DEVMETHOD(bus_child_location_str, miibus_child_location_str),
 	DEVMETHOD(bus_hinted_child,	miibus_hinted_child),
@@ -158,13 +162,25 @@ static int
 miibus_detach(device_t dev)
 {
 	struct mii_data		*mii;
+	struct miibus_ivars	*ivars;
 
+	ivars = device_get_ivars(dev);
 	bus_generic_detach(dev);
 	mii = device_get_softc(dev);
 	ifmedia_removeall(&mii->mii_media);
+	free(ivars, M_DEVBUF);
 	mii->mii_ifp = NULL;
 
 	return (0);
+}
+
+static void
+miibus_child_detached(device_t dev, device_t child)
+{
+	struct mii_attach_args *args;
+
+	args = device_get_ivars(child);
+	free(args, M_DEVBUF);
 }
 
 static int

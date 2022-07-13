@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2014 Ruslan Bukin <br@bsdpad.com>
+ * Copyright (c) 2014-2019 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
  *
  * This software was developed by SRI International and the University of
@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mmc/host/dwmmc.c 318197 2017-05-11 20:55:11Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,9 +43,12 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/mmc/host/dwmmc.c 318197 2017-05-11 20:55:1
 #include <sys/module.h>
 #include <sys/malloc.h>
 #include <sys/rman.h>
+#include <sys/queue.h>
+#include <sys/taskqueue.h>
 
 #include <dev/mmc/bridge.h>
 #include <dev/mmc/mmcbrvar.h>
+#include <dev/mmc/mmc_fdt_helpers.h>
 
 #include <dev/fdt/fdt_common.h>
 #include <dev/ofw/openfirm.h>
@@ -56,8 +59,14 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/mmc/host/dwmmc.c 318197 2017-05-11 20:55:1
 #include <machine/cpu.h>
 #include <machine/intr.h>
 
+#ifdef EXT_RESOURCES
+#include <dev/extres/clk/clk.h>
+#endif
+
 #include <dev/mmc/host/dwmmc_reg.h>
 #include <dev/mmc/host/dwmmc_var.h>
+
+#include "opt_mmccam.h"
 
 #include "mmcbr_if.h"
 
@@ -91,16 +100,15 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/mmc/host/dwmmc.c 318197 2017-05-11 20:55:1
 #define	DWMMC_ERR_FLAGS		(DWMMC_DATA_ERR_FLAGS | DWMMC_CMD_ERR_FLAGS \
 				|SDMMC_INTMASK_HLE)
 
-#define	DES0_DIC	(1 << 1)
-#define	DES0_LD		(1 << 2)
-#define	DES0_FS		(1 << 3)
-#define	DES0_CH		(1 << 4)
-#define	DES0_ER		(1 << 5)
-#define	DES0_CES	(1 << 30)
-#define	DES0_OWN	(1 << 31)
+#define	DES0_DIC	(1 << 1)	/* Disable Interrupt on Completion */
+#define	DES0_LD		(1 << 2)	/* Last Descriptor */
+#define	DES0_FS		(1 << 3)	/* First Descriptor */
+#define	DES0_CH		(1 << 4)	/* second address CHained */
+#define	DES0_ER		(1 << 5)	/* End of Ring */
+#define	DES0_CES	(1 << 30)	/* Card Error Summary */
+#define	DES0_OWN	(1 << 31)	/* OWN */
 
-#define	DES1_BS1_MASK	0xfff
-#define	DES1_BS1_SHIFT	0
+#define	DES1_BS1_MASK	0x1fff
 
 struct idmac_desc {
 	uint32_t	des0;	/* control */
@@ -109,9 +117,10 @@ struct idmac_desc {
 	uint32_t	des3;	/* buf2 phys addr or next descr */
 };
 
-#define	DESC_MAX	256
-#define	DESC_SIZE	(sizeof(struct idmac_desc) * DESC_MAX)
+#define	IDMAC_DESC_SEGS	(PAGE_SIZE / (sizeof(struct idmac_desc)))
+#define	IDMAC_DESC_SIZE	(sizeof(struct idmac_desc) * IDMAC_DESC_SEGS)
 #define	DEF_MSIZE	0x2	/* Burst size of multiple transaction */
+#define	IDMAC_MAX_SIZE	4096
 
 static void dwmmc_next_operation(struct dwmmc_softc *);
 static int dwmmc_setup_bus(struct dwmmc_softc *, int);
@@ -119,6 +128,7 @@ static int dma_done(struct dwmmc_softc *, struct mmc_command *);
 static int dma_stop(struct dwmmc_softc *);
 static void pio_read(struct dwmmc_softc *, struct mmc_command *);
 static void pio_write(struct dwmmc_softc *, struct mmc_command *);
+static void dwmmc_handle_card_present(struct dwmmc_softc *sc, bool is_present);
 
 static struct resource_spec dwmmc_spec[] = {
 	{ SYS_RES_MEMORY,	0,	RF_ACTIVE },
@@ -128,13 +138,6 @@ static struct resource_spec dwmmc_spec[] = {
 
 #define	HWTYPE_MASK		(0x0000ffff)
 #define	HWFLAG_MASK		(0xffff << 16)
-
-static struct ofw_compat_data compat_data[] = {
-	{"altr,socfpga-dw-mshc",	HWTYPE_ALTERA},
-	{"samsung,exynos5420-dw-mshc",	HWTYPE_EXYNOS},
-	{"rockchip,rk2928-dw-mshc",	HWTYPE_ROCKCHIP},
-	{NULL,				HWTYPE_NONE},
-};
 
 static void
 dwmmc_get1paddr(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
@@ -160,7 +163,7 @@ dwmmc_ring_setup(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 
 	for (idx = 0; idx < nsegs; idx++) {
 		sc->desc_ring[idx].des0 = (DES0_OWN | DES0_DIC | DES0_CH);
-		sc->desc_ring[idx].des1 = segs[idx].ds_len;
+		sc->desc_ring[idx].des1 = segs[idx].ds_len & DES1_BS1_MASK;
 		sc->desc_ring[idx].des2 = segs[idx].ds_addr;
 
 		if (idx == 0)
@@ -211,8 +214,8 @@ dma_setup(struct dwmmc_softc *sc)
 	    BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
 	    BUS_SPACE_MAXADDR,		/* highaddr */
 	    NULL, NULL,			/* filter, filterarg */
-	    DESC_SIZE, 1, 		/* maxsize, nsegments */
-	    DESC_SIZE,			/* maxsegsize */
+	    IDMAC_DESC_SIZE, 1,		/* maxsize, nsegments */
+	    IDMAC_DESC_SIZE,		/* maxsegsize */
 	    0,				/* flags */
 	    NULL, NULL,			/* lockfunc, lockarg */
 	    &sc->desc_tag);
@@ -232,7 +235,7 @@ dma_setup(struct dwmmc_softc *sc)
 	}
 
 	error = bus_dmamap_load(sc->desc_tag, sc->desc_map,
-	    sc->desc_ring, DESC_SIZE, dwmmc_get1paddr,
+	    sc->desc_ring, IDMAC_DESC_SIZE, dwmmc_get1paddr,
 	    &sc->desc_ring_paddr, 0);
 	if (error != 0) {
 		device_printf(sc->dev,
@@ -240,23 +243,25 @@ dma_setup(struct dwmmc_softc *sc)
 		return (1);
 	}
 
-	for (idx = 0; idx < sc->desc_count; idx++) {
+	for (idx = 0; idx < IDMAC_DESC_SEGS; idx++) {
 		sc->desc_ring[idx].des0 = DES0_CH;
 		sc->desc_ring[idx].des1 = 0;
-		nidx = (idx + 1) % sc->desc_count;
+		nidx = (idx + 1) % IDMAC_DESC_SEGS;
 		sc->desc_ring[idx].des3 = sc->desc_ring_paddr + \
 		    (nidx * sizeof(struct idmac_desc));
 	}
+	sc->desc_ring[idx - 1].des3 = sc->desc_ring_paddr;
+	sc->desc_ring[idx - 1].des0 |= DES0_ER;
 
 	error = bus_dma_tag_create(
 	    bus_get_dma_tag(sc->dev),	/* Parent tag. */
-	    4096, 0,			/* alignment, boundary */
+	    CACHE_LINE_SIZE, 0,		/* alignment, boundary */
 	    BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
 	    BUS_SPACE_MAXADDR,		/* highaddr */
 	    NULL, NULL,			/* filter, filterarg */
-	    sc->desc_count * MMC_SECTOR_SIZE, /* maxsize */
-	    sc->desc_count,		/* nsegments */
-	    MMC_SECTOR_SIZE,		/* maxsegsize */
+	    IDMAC_MAX_SIZE * IDMAC_DESC_SEGS,	/* maxsize */
+	    IDMAC_DESC_SEGS,		/* nsegments */
+	    IDMAC_MAX_SIZE,		/* maxsegsize */
 	    0,				/* flags */
 	    NULL, NULL,			/* lockfunc, lockarg */
 	    &sc->buf_tag);
@@ -346,14 +351,12 @@ dwmmc_intr(void *arg)
 		dprintf("%s 0x%08x\n", __func__, reg);
 
 		if (reg & DWMMC_CMD_ERR_FLAGS) {
-			WRITE4(sc, SDMMC_RINTSTS, DWMMC_CMD_ERR_FLAGS);
 			dprintf("cmd err 0x%08x cmd 0x%08x\n",
 				reg, cmd->opcode);
 			cmd->error = MMC_ERR_TIMEOUT;
 		}
 
 		if (reg & DWMMC_DATA_ERR_FLAGS) {
-			WRITE4(sc, SDMMC_RINTSTS, DWMMC_DATA_ERR_FLAGS);
 			dprintf("data err 0x%08x cmd 0x%08x\n",
 				reg, cmd->opcode);
 			cmd->error = MMC_ERR_FAILED;
@@ -366,24 +369,22 @@ dwmmc_intr(void *arg)
 		if (reg & SDMMC_INTMASK_CMD_DONE) {
 			dwmmc_cmd_done(sc);
 			sc->cmd_done = 1;
-			WRITE4(sc, SDMMC_RINTSTS, SDMMC_INTMASK_CMD_DONE);
 		}
 
-		if (reg & SDMMC_INTMASK_ACD) {
+		if (reg & SDMMC_INTMASK_ACD)
 			sc->acd_rcvd = 1;
-			WRITE4(sc, SDMMC_RINTSTS, SDMMC_INTMASK_ACD);
-		}
 
-		if (reg & SDMMC_INTMASK_DTO) {
+		if (reg & SDMMC_INTMASK_DTO)
 			sc->dto_rcvd = 1;
-			WRITE4(sc, SDMMC_RINTSTS, SDMMC_INTMASK_DTO);
-		}
 
 		if (reg & SDMMC_INTMASK_CD) {
-			/* XXX: Handle card detect */
-			WRITE4(sc, SDMMC_RINTSTS, SDMMC_INTMASK_CD);
+			dwmmc_handle_card_present(sc,
+			    READ4(sc, SDMMC_CDETECT) == 0 ? true : false);
 		}
 	}
+
+	/* Ack interrupts */
+	WRITE4(sc, SDMMC_RINTSTS, reg);
 
 	if (sc->use_pio) {
 		if (reg & (SDMMC_INTMASK_RXDR|SDMMC_INTMASK_DTO)) {
@@ -411,15 +412,75 @@ dwmmc_intr(void *arg)
 	DWMMC_UNLOCK(sc);
 }
 
+static void
+dwmmc_handle_card_present(struct dwmmc_softc *sc, bool is_present)
+{
+	bool was_present;
+
+	was_present = sc->child != NULL;
+
+	if (!was_present && is_present) {
+		taskqueue_enqueue_timeout(taskqueue_swi_giant,
+		  &sc->card_delayed_task, -(hz / 2));
+	} else if (was_present && !is_present) {
+		taskqueue_enqueue(taskqueue_swi_giant, &sc->card_task);
+	}
+}
+
+static void
+dwmmc_card_task(void *arg, int pending __unused)
+{
+	struct dwmmc_softc *sc = arg;
+
+	DWMMC_LOCK(sc);
+
+	if (READ4(sc, SDMMC_CDETECT) == 0) {
+		if (sc->child == NULL) {
+			if (bootverbose)
+				device_printf(sc->dev, "Card inserted\n");
+
+			sc->child = device_add_child(sc->dev, "mmc", -1);
+			DWMMC_UNLOCK(sc);
+			if (sc->child) {
+				device_set_ivars(sc->child, sc);
+				(void)device_probe_and_attach(sc->child);
+			}
+		} else
+			DWMMC_UNLOCK(sc);
+	} else {
+		/* Card isn't present, detach if necessary */
+		if (sc->child != NULL) {
+			if (bootverbose)
+				device_printf(sc->dev, "Card removed\n");
+
+			DWMMC_UNLOCK(sc);
+			device_delete_child(sc->dev, sc->child);
+			sc->child = NULL;
+		} else
+			DWMMC_UNLOCK(sc);
+	}
+}
+
 static int
 parse_fdt(struct dwmmc_softc *sc)
 {
 	pcell_t dts_value[3];
 	phandle_t node;
+	uint32_t bus_hz = 0;
 	int len;
+#ifdef EXT_RESOURCES
+	int error;
+#endif
 
 	if ((node = ofw_bus_get_node(sc->dev)) == -1)
 		return (ENXIO);
+
+	/* Set some defaults for freq and supported mode */
+	sc->host.f_min = 400000;
+	sc->host.f_max = 200000000;
+	sc->host.host_ocr = MMC_OCR_320_330 | MMC_OCR_330_340;
+	sc->host.caps = MMC_CAP_HSPEED | MMC_CAP_SIGNALING_330;
+	mmc_fdt_parse(sc->dev, node, &sc->mmc_helper, &sc->host);
 
 	/* fifo-depth */
 	if ((len = OF_getproplen(node, "fifo-depth")) > 0) {
@@ -427,69 +488,139 @@ parse_fdt(struct dwmmc_softc *sc)
 		sc->fifo_depth = dts_value[0];
 	}
 
-	/* num-slots */
+	/* num-slots (Deprecated) */
 	sc->num_slots = 1;
 	if ((len = OF_getproplen(node, "num-slots")) > 0) {
+		device_printf(sc->dev, "num-slots property is deprecated\n");
 		OF_getencprop(node, "num-slots", dts_value, len);
 		sc->num_slots = dts_value[0];
 	}
 
-	/*
-	 * We need some platform-specific code to know
-	 * what the clock is supplied for our device.
-	 * For now rely on the value specified in FDT.
-	 */
-	if (sc->bus_hz == 0) {
-		if ((len = OF_getproplen(node, "bus-frequency")) <= 0)
-			return (ENXIO);
-		OF_getencprop(node, "bus-frequency", dts_value, len);
-		sc->bus_hz = dts_value[0];
+	/* clock-frequency */
+	if ((len = OF_getproplen(node, "clock-frequency")) > 0) {
+		OF_getencprop(node, "clock-frequency", dts_value, len);
+		bus_hz = dts_value[0];
+	}
+
+#ifdef EXT_RESOURCES
+
+	/* IP block reset is optional */
+	error = hwreset_get_by_ofw_name(sc->dev, 0, "reset", &sc->hwreset);
+	if (error != 0 &&
+	    error != ENOENT &&
+	    error != ENODEV) {
+		device_printf(sc->dev, "Cannot get reset\n");
+		goto fail;
+	}
+
+	/* vmmc regulator is optional */
+	error = regulator_get_by_ofw_property(sc->dev, 0, "vmmc-supply",
+	     &sc->vmmc);
+	if (error != 0 &&
+	    error != ENOENT &&
+	    error != ENODEV) {
+		device_printf(sc->dev, "Cannot get regulator 'vmmc-supply'\n");
+		goto fail;
+	}
+
+	/* vqmmc regulator is optional */
+	error = regulator_get_by_ofw_property(sc->dev, 0, "vqmmc-supply",
+	     &sc->vqmmc);
+	if (error != 0 &&
+	    error != ENOENT &&
+	    error != ENODEV) {
+		device_printf(sc->dev, "Cannot get regulator 'vqmmc-supply'\n");
+		goto fail;
+	}
+
+	/* Assert reset first */
+	if (sc->hwreset != NULL) {
+		error = hwreset_assert(sc->hwreset);
+		if (error != 0) {
+			device_printf(sc->dev, "Cannot assert reset\n");
+			goto fail;
+		}
+	}
+
+	/* BIU (Bus Interface Unit clock) is optional */
+	error = clk_get_by_ofw_name(sc->dev, 0, "biu", &sc->biu);
+	if (error != 0 &&
+	    error != ENOENT &&
+	    error != ENODEV) {
+		device_printf(sc->dev, "Cannot get 'biu' clock\n");
+		goto fail;
+	}
+
+	if (sc->biu) {
+		error = clk_enable(sc->biu);
+		if (error != 0) {
+			device_printf(sc->dev, "cannot enable biu clock\n");
+			goto fail;
+		}
 	}
 
 	/*
-	 * Platform-specific stuff
-	 * XXX: Move to separate file
+	 * CIU (Controller Interface Unit clock) is mandatory
+	 * if no clock-frequency property is given
 	 */
+	error = clk_get_by_ofw_name(sc->dev, 0, "ciu", &sc->ciu);
+	if (error != 0 &&
+	    error != ENOENT &&
+	    error != ENODEV) {
+		device_printf(sc->dev, "Cannot get 'ciu' clock\n");
+		goto fail;
+	}
 
-	if ((sc->hwtype & HWTYPE_MASK) != HWTYPE_EXYNOS)
-		return (0);
+	if (sc->ciu) {
+		if (bus_hz != 0) {
+			error = clk_set_freq(sc->ciu, bus_hz, 0);
+			if (error != 0)
+				device_printf(sc->dev,
+				    "cannot set ciu clock to %u\n", bus_hz);
+		}
+		error = clk_enable(sc->ciu);
+		if (error != 0) {
+			device_printf(sc->dev, "cannot enable ciu clock\n");
+			goto fail;
+		}
+		clk_get_freq(sc->ciu, &sc->bus_hz);
+	}
 
-	if ((len = OF_getproplen(node, "samsung,dw-mshc-ciu-div")) <= 0)
-		return (ENXIO);
-	OF_getencprop(node, "samsung,dw-mshc-ciu-div", dts_value, len);
-	sc->sdr_timing = (dts_value[0] << SDMMC_CLKSEL_DIVIDER_SHIFT);
-	sc->ddr_timing = (dts_value[0] << SDMMC_CLKSEL_DIVIDER_SHIFT);
+	/* Enable regulators */
+	if (sc->vmmc != NULL) {
+		error = regulator_enable(sc->vmmc);
+		if (error != 0) {
+			device_printf(sc->dev, "Cannot enable vmmc regulator\n");
+			goto fail;
+		}
+	}
+	if (sc->vqmmc != NULL) {
+		error = regulator_enable(sc->vqmmc);
+		if (error != 0) {
+			device_printf(sc->dev, "Cannot enable vqmmc regulator\n");
+			goto fail;
+		}
+	}
 
-	if ((len = OF_getproplen(node, "samsung,dw-mshc-sdr-timing")) <= 0)
-		return (ENXIO);
-	OF_getencprop(node, "samsung,dw-mshc-sdr-timing", dts_value, len);
-	sc->sdr_timing |= ((dts_value[0] << SDMMC_CLKSEL_SAMPLE_SHIFT) |
-			  (dts_value[1] << SDMMC_CLKSEL_DRIVE_SHIFT));
+	/* Take dwmmc out of reset */
+	if (sc->hwreset != NULL) {
+		error = hwreset_deassert(sc->hwreset);
+		if (error != 0) {
+			device_printf(sc->dev, "Cannot deassert reset\n");
+			goto fail;
+		}
+	}
+#endif /* EXT_RESOURCES */
 
-	if ((len = OF_getproplen(node, "samsung,dw-mshc-ddr-timing")) <= 0)
-		return (ENXIO);
-	OF_getencprop(node, "samsung,dw-mshc-ddr-timing", dts_value, len);
-	sc->ddr_timing |= ((dts_value[0] << SDMMC_CLKSEL_SAMPLE_SHIFT) |
-			  (dts_value[1] << SDMMC_CLKSEL_DRIVE_SHIFT));
+	if (sc->bus_hz == 0) {
+		device_printf(sc->dev, "No bus speed provided\n");
+		goto fail;
+	}
 
 	return (0);
-}
 
-static int
-dwmmc_probe(device_t dev)
-{
-	uintptr_t hwtype;
-
-	if (!ofw_bus_status_okay(dev))
-		return (ENXIO);
-
-	hwtype = ofw_bus_search_compatible(dev, compat_data)->ocd_data;
-	if (hwtype == HWTYPE_NONE)
-		return (ENXIO);
-
-	device_set_desc(dev, "Synopsys DesignWare Mobile "
-				"Storage Host Controller");
-	return (BUS_PROBE_DEFAULT);
+fail:
+	return (ENXIO);
 }
 
 int
@@ -502,10 +633,6 @@ dwmmc_attach(device_t dev)
 	sc = device_get_softc(dev);
 
 	sc->dev = dev;
-	if (sc->hwtype == HWTYPE_NONE) {
-		sc->hwtype =
-		    ofw_bus_search_compatible(dev, compat_data)->ocd_data;
-	}
 
 	/* Why not to use Auto Stop? It save a hundred of irq per second */
 	sc->use_auto_stop = 1;
@@ -534,22 +661,6 @@ dwmmc_attach(device_t dev)
 	device_printf(dev, "Hardware version ID is %04x\n",
 		READ4(sc, SDMMC_VERID) & 0xffff);
 
-	if (sc->desc_count == 0)
-		sc->desc_count = DESC_MAX;
-
-	if ((sc->hwtype & HWTYPE_MASK) == HWTYPE_ROCKCHIP) {
-		sc->use_pio = 1;
-		sc->pwren_inverted = 1;
-	} else if ((sc->hwtype & HWTYPE_MASK) == HWTYPE_EXYNOS) {
-		WRITE4(sc, EMMCP_MPSBEGIN0, 0);
-		WRITE4(sc, EMMCP_SEND0, 0);
-		WRITE4(sc, EMMCP_CTRL0, (MPSCTRL_SECURE_READ_BIT |
-					 MPSCTRL_SECURE_WRITE_BIT |
-					 MPSCTRL_NON_SECURE_READ_BIT |
-					 MPSCTRL_NON_SECURE_WRITE_BIT |
-					 MPSCTRL_VALID));
-	}
-
 	/* XXX: we support operation for slot index 0 only */
 	slot = 0;
 	if (sc->pwren_inverted) {
@@ -574,6 +685,7 @@ dwmmc_attach(device_t dev)
 	}
 
 	if (!sc->use_pio) {
+		dma_stop(sc);
 		if (dma_setup(sc))
 			return (ENXIO);
 
@@ -605,13 +717,58 @@ dwmmc_attach(device_t dev)
 				   SDMMC_INTMASK_CD));
 	WRITE4(sc, SDMMC_CTRL, SDMMC_CTRL_INT_ENABLE);
 
-	sc->host.f_min = 400000;
-	sc->host.f_max = min(200000000, sc->bus_hz);
-	sc->host.host_ocr = MMC_OCR_320_330 | MMC_OCR_330_340;
-	sc->host.caps = MMC_CAP_4_BIT_DATA;
+	TASK_INIT(&sc->card_task, 0, dwmmc_card_task, sc);
+	TIMEOUT_TASK_INIT(taskqueue_swi_giant, &sc->card_delayed_task, 0,
+		dwmmc_card_task, sc);
 
-	device_add_child(dev, "mmc", -1);
-	return (bus_generic_attach(dev));
+	/* 
+	 * Schedule a card detection as we won't get an interrupt
+	 * if the card is inserted when we attach
+	 */
+	dwmmc_card_task(sc, 0);
+
+	return (0);
+}
+
+int
+dwmmc_detach(device_t dev)
+{
+	struct dwmmc_softc *sc;
+	int ret;
+
+	sc = device_get_softc(dev);
+
+	ret = device_delete_children(dev);
+	if (ret != 0)
+		return (ret);
+
+	taskqueue_drain(taskqueue_swi_giant, &sc->card_task);
+	taskqueue_drain_timeout(taskqueue_swi_giant, &sc->card_delayed_task);
+
+	if (sc->intr_cookie != NULL) {
+		ret = bus_teardown_intr(dev, sc->res[1], sc->intr_cookie);
+		if (ret != 0)
+			return (ret);
+	}
+	bus_release_resources(dev, dwmmc_spec, sc->res);
+
+	DWMMC_LOCK_DESTROY(sc);
+
+#ifdef EXT_RESOURCES
+	if (sc->hwreset != NULL && hwreset_deassert(sc->hwreset) != 0)
+		device_printf(sc->dev, "cannot deassert reset\n");
+	if (sc->biu != NULL && clk_disable(sc->biu) != 0)
+		device_printf(sc->dev, "cannot disable biu clock\n");
+	if (sc->ciu != NULL && clk_disable(sc->ciu) != 0)
+			device_printf(sc->dev, "cannot disable ciu clock\n");
+
+	if (sc->vmmc && regulator_disable(sc->vmmc) != 0)
+		device_printf(sc->dev, "Cannot disable vmmc regulator\n");
+	if (sc->vqmmc && regulator_disable(sc->vqmmc) != 0)
+		device_printf(sc->dev, "Cannot disable vqmmc regulator\n");
+#endif
+
+	return (0);
 }
 
 static int
@@ -673,14 +830,14 @@ dwmmc_update_ios(device_t brdev, device_t reqdev)
 {
 	struct dwmmc_softc *sc;
 	struct mmc_ios *ios;
+	uint32_t reg;
+	int ret = 0;
 
 	sc = device_get_softc(brdev);
 	ios = &sc->host.ios;
 
 	dprintf("Setting up clk %u bus_width %d\n",
 		ios->clock, ios->bus_width);
-
-	dwmmc_setup_bus(sc, ios->clock);
 
 	if (ios->bus_width == bus_width_8)
 		WRITE4(sc, SDMMC_CTYPE, SDMMC_CTYPE_8BIT);
@@ -694,15 +851,22 @@ dwmmc_update_ios(device_t brdev, device_t reqdev)
 		WRITE4(sc, SDMMC_CLKSEL, sc->sdr_timing);
 	}
 
-	/*
-	 * XXX: take care about DDR bit
-	 *
-	 * reg = READ4(sc, SDMMC_UHS_REG);
-	 * reg |= (SDMMC_UHS_REG_DDR);
-	 * WRITE4(sc, SDMMC_UHS_REG, reg);
-	 */
+	/* Set DDR mode */
+	reg = READ4(sc, SDMMC_UHS_REG);
+	if (ios->timing == bus_timing_uhs_ddr50 ||
+	    ios->timing == bus_timing_mmc_ddr52 ||
+	    ios->timing == bus_timing_mmc_hs400)
+		reg |= (SDMMC_UHS_REG_DDR);
+	else
+		reg &= ~(SDMMC_UHS_REG_DDR);
+	WRITE4(sc, SDMMC_UHS_REG, reg);
 
-	return (0);
+	if (sc->update_ios)
+		ret = sc->update_ios(sc, ios);
+
+	dwmmc_setup_bus(sc, ios->clock);
+
+	return (ret);
 }
 
 static int
@@ -749,12 +913,10 @@ static int
 dma_prepare(struct dwmmc_softc *sc, struct mmc_command *cmd)
 {
 	struct mmc_data *data;
-	int len;
 	int err;
 	int reg;
 
 	data = cmd->data;
-	len = data->len;
 
 	reg = READ4(sc, SDMMC_INTMASK);
 	reg &= ~(SDMMC_INTMASK_TXDR | SDMMC_INTMASK_RXDR);
@@ -1098,12 +1260,18 @@ dwmmc_read_ivar(device_t bus, device_t child, int which, uintptr_t *result)
 	case MMCBR_IVAR_VDD:
 		*(int *)result = sc->host.ios.vdd;
 		break;
+	case MMCBR_IVAR_VCCQ:
+		*(int *)result = sc->host.ios.vccq;
+		break;
 	case MMCBR_IVAR_CAPS:
-		sc->host.caps |= MMC_CAP_4_BIT_DATA | MMC_CAP_8_BIT_DATA;
 		*(int *)result = sc->host.caps;
 		break;
 	case MMCBR_IVAR_MAX_DATA:
-		*(int *)result = sc->desc_count;
+		*(int *)result = (IDMAC_MAX_SIZE * IDMAC_DESC_SEGS) / MMC_SECTOR_SIZE;
+		break;
+	case MMCBR_IVAR_TIMING:
+		*(int *)result = sc->host.ios.timing;
+		break;
 	}
 	return (0);
 }
@@ -1142,6 +1310,12 @@ dwmmc_write_ivar(device_t bus, device_t child, int which, uintptr_t value)
 	case MMCBR_IVAR_VDD:
 		sc->host.ios.vdd = value;
 		break;
+	case MMCBR_IVAR_TIMING:
+		sc->host.ios.timing = value;
+		break;
+	case MMCBR_IVAR_VCCQ:
+		sc->host.ios.vccq = value;
+		break;
 	/* These are read-only */
 	case MMCBR_IVAR_CAPS:
 	case MMCBR_IVAR_HOST_OCR:
@@ -1154,9 +1328,6 @@ dwmmc_write_ivar(device_t bus, device_t child, int which, uintptr_t value)
 }
 
 static device_method_t dwmmc_methods[] = {
-	DEVMETHOD(device_probe,		dwmmc_probe),
-	DEVMETHOD(device_attach,	dwmmc_attach),
-
 	/* Bus interface */
 	DEVMETHOD(bus_read_ivar,	dwmmc_read_ivar),
 	DEVMETHOD(bus_write_ivar,	dwmmc_write_ivar),
@@ -1171,14 +1342,5 @@ static device_method_t dwmmc_methods[] = {
 	DEVMETHOD_END
 };
 
-driver_t dwmmc_driver = {
-	"dwmmc",
-	dwmmc_methods,
-	sizeof(struct dwmmc_softc),
-};
-
-static devclass_t dwmmc_devclass;
-
-DRIVER_MODULE(dwmmc, simplebus, dwmmc_driver, dwmmc_devclass, NULL, NULL);
-DRIVER_MODULE(dwmmc, ofwbus, dwmmc_driver, dwmmc_devclass, NULL, NULL);
-MMC_DECLARE_BRIDGE(dwmmc);
+DEFINE_CLASS_0(dwmmc, dwmmc_driver, dwmmc_methods,
+    sizeof(struct dwmmc_softc));

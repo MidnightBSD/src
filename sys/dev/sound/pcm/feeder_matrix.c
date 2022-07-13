@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
  *
@@ -52,7 +54,7 @@
 #define SND_USE_FXDIV
 #include "snd_fxdiv_gen.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pcm/feeder_matrix.c 331722 2018-03-29 02:50:57Z eadler $");
+SND_DECLARE_FILE("$FreeBSD$");
 #endif
 
 #define FEEDMATRIX_RESERVOIR	(SND_CHN_MAX * PCM_32_BPS)
@@ -307,7 +309,7 @@ feed_matrix_setup(struct feed_matrix_info *info, struct pcmchan_matrix *m_in,
 
 	/*
 	 * If both in and out are part of standard matrix and identical, skip
-	 * everything alltogether.
+	 * everything altogether.
 	 */
 	if (m_in->id == m_out->id && !(m_in->id < SND_CHN_MATRIX_BEGIN ||
 	    m_in->id > SND_CHN_MATRIX_END))
@@ -551,7 +553,7 @@ feeder_matrix_setup(struct pcm_feeder *f, struct pcmchan_matrix *m_in,
 
 /*
  * feeder_matrix_default_id(): For a given number of channels, return
- *                             default prefered id (example: both 5.1 and
+ *                             default preferred id (example: both 5.1 and
  *                             6.0 are simply 6 channels, but 5.1 is more
  *                             preferable).
  */
@@ -698,7 +700,7 @@ feeder_matrix_compare(struct pcmchan_matrix *m_in, struct pcmchan_matrix *m_out)
 }
 
 /*
- * XXX 4front intepretation of "surround" is ambigous and sort of
+ * XXX 4front interpretation of "surround" is ambigous and sort of
  *     conflicting with "rear"/"back". Map it to "side". Well.. 
  *     who cares?
  */

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003, David Madole
  * All rights reserved.
  * Copyright (c) 2005, M. Warner Losh.
@@ -31,7 +33,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ed/if_ed_rtl80x9.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ed.h"
 

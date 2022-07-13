@@ -1,6 +1,8 @@
 /*-
  * Core routines and tables shareable across OS platforms.
  *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1994-2002 Justin T. Gibbs.
  * Copyright (c) 2000-2002 Adaptec Inc.
  * All rights reserved.
@@ -46,7 +48,7 @@
 #include "aicasm/aicasm_insformat.h"
 #else
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/aic7xxx/aic7xxx.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 #include <dev/aic7xxx/aic7xxx_osm.h>
 #include <dev/aic7xxx/aic7xxx_inline.h>
 #include <dev/aic7xxx/aicasm/aicasm_insformat.h>
@@ -1279,7 +1281,7 @@ ahc_handle_scsiint(struct ahc_softc *ahc, u_int intstat)
 				printerror = 0;
 			} else if (ahc_sent_msg(ahc, AHCMSG_1B,
 						MSG_BUS_DEV_RESET, TRUE)) {
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 				/*
 				 * Don't mark the user's request for this BDR
 				 * as completing with CAM_BDR_SENT.  CAM3
@@ -3902,7 +3904,7 @@ ahc_alloc(void *platform_arg, char *name)
 	struct  ahc_softc *ahc;
 	int	i;
 
-#ifndef	__MidnightBSD__
+#ifndef	__FreeBSD__
 	ahc = malloc(sizeof(*ahc), M_DEVBUF, M_NOWAIT);
 	if (!ahc) {
 		printf("aic7xxx: cannot malloc softc!\n");
@@ -3916,7 +3918,7 @@ ahc_alloc(void *platform_arg, char *name)
 	ahc->seep_config = malloc(sizeof(*ahc->seep_config),
 				  M_DEVBUF, M_NOWAIT);
 	if (ahc->seep_config == NULL) {
-#ifndef	__MidnightBSD__
+#ifndef	__FreeBSD__
 		free(ahc, M_DEVBUF);
 #endif
 		free(name, M_DEVBUF);
@@ -4109,7 +4111,7 @@ ahc_free(struct ahc_softc *ahc)
 		free(ahc->name, M_DEVBUF);
 	if (ahc->seep_config != NULL)
 		free(ahc->seep_config, M_DEVBUF);
-#ifndef __MidnightBSD__
+#ifndef __FreeBSD__
 	free(ahc, M_DEVBUF);
 #endif
 	return;

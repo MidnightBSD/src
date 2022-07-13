@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Andre Oppermann, Internet Business Solutions AG
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netpfil/ipfw/ip_fw_pfil.c 346210 2019-04-14 12:34:30Z ae $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ipfw.h"
 #include "opt_inet.h"
@@ -68,15 +70,15 @@ __FBSDID("$FreeBSD: stable/11/sys/netpfil/ipfw/ip_fw_pfil.c 346210 2019-04-14 12
 
 #include <machine/in_cksum.h>
 
-static VNET_DEFINE(int, fw_enable) = 1;
+VNET_DEFINE_STATIC(int, fw_enable) = 1;
 #define V_fw_enable	VNET(fw_enable)
 
 #ifdef INET6
-static VNET_DEFINE(int, fw6_enable) = 1;
+VNET_DEFINE_STATIC(int, fw6_enable) = 1;
 #define V_fw6_enable	VNET(fw6_enable)
 #endif
 
-static VNET_DEFINE(int, fwlink_enable) = 0;
+VNET_DEFINE_STATIC(int, fwlink_enable) = 0;
 #define V_fwlink_enable	VNET(fwlink_enable)
 
 int ipfw_chg_hook(SYSCTL_HANDLER_ARGS);

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/x86/x86/ucode.c 347700 2019-05-16 14:42:16Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/cpuset.h>
@@ -260,7 +260,7 @@ restart:
 		goto restart;
 	}
 }
-SYSINIT(ucode_release, SI_SUB_KMEM + 1, SI_ORDER_ANY, ucode_release, NULL);
+SYSINIT(ucode_release, SI_SUB_SMP + 1, SI_ORDER_ANY, ucode_release, NULL);
 
 void
 ucode_load_ap(int cpu)
@@ -357,8 +357,7 @@ ucode_load_bsp(uintptr_t free)
 		if (match != NULL) {
 			addr = map_ucode(free, len);
 			/* We can't use memcpy() before ifunc resolution. */
-			for (i = 0; i < len; i++)
-				addr[i] = ((volatile uint8_t *)match)[i];
+			memcpy_early(addr, match, len);
 			match = addr;
 
 			error = ucode_loader->load(match, false, &nrev, &orev);

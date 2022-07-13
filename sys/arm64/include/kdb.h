@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/include/kdb.h 295321 2016-02-05 15:38:28Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_KDB_H_

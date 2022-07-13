@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/acpi_isab.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD$");
 
 /*
  * ISA Bridge driver for Generic ISA Bus Devices.  See section 10.7 of the

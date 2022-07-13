@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/usb/usb_bus.h 356395 2020-01-06 09:10:13Z hselasky $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008-2019 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

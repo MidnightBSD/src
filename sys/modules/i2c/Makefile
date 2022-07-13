@@ -1,6 +1,7 @@
-# $FreeBSD: stable/11/sys/modules/i2c/Makefile 331503 2018-03-24 23:01:10Z ian $
+# $FreeBSD$
 
 SUBDIR = \
+	ads111x \
 	controllers \
 	cyapa \
 	ds1307 \
@@ -16,7 +17,7 @@ SUBDIR = \
 	isl \
 	isl12xx \
 	jedec_dimm \
-	jedec_ts \
+	mux \
 	nxprtc \
 	rtc8583 \
 	s35390a \

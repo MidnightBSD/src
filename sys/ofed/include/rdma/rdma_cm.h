@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0
+ *
  * Copyright (c) 2005 Voltaire Inc.  All rights reserved.
  * Copyright (c) 2005 Intel Corporation.  All rights reserved.
  *
@@ -30,7 +32,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/ofed/include/rdma/rdma_cm.h 331772 2018-03-30 18:17:33Z hselasky $
+ * $FreeBSD$
  */
 
 #if !defined(RDMA_CM_H)

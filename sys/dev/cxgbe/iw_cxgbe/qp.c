@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2013 Chelsio, Inc. All rights reserved.
  *
  * This software is available to you under a choice of one of two
@@ -30,7 +32,7 @@
  * SOFTWARE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/cxgbe/iw_cxgbe/qp.c 355250 2019-11-30 20:42:18Z np $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 
@@ -667,10 +669,13 @@ static void complete_rq_drain_wr(struct c4iw_qp *qhp, struct ib_recv_wr *wr)
 	spin_unlock_irqrestore(&rchp->comp_handler_lock, flag);
 }
 
-static void build_tpte_memreg(struct fw_ri_fr_nsmr_tpte_wr *fr,
+static int build_tpte_memreg(struct fw_ri_fr_nsmr_tpte_wr *fr,
 		struct ib_reg_wr *wr, struct c4iw_mr *mhp, u8 *len16)
 {
 	__be64 *p = (__be64 *)fr->pbl;
+
+	if (wr->mr->page_size > C4IW_MAX_PAGE_SIZE)
+		return -EINVAL;
 
 	fr->r2 = cpu_to_be32(0);
 	fr->stag = cpu_to_be32(mhp->ibmr.rkey);
@@ -687,8 +692,8 @@ static void build_tpte_memreg(struct fw_ri_fr_nsmr_tpte_wr *fr,
 	fr->tpte.nosnoop_pbladdr = cpu_to_be32(V_FW_RI_TPTE_PBLADDR(
 			      PBL_OFF(&mhp->rhp->rdev, mhp->attr.pbl_addr)>>3));
 	fr->tpte.dca_mwbcnt_pstag = cpu_to_be32(0);
-	fr->tpte.len_hi = cpu_to_be32(0);
-	fr->tpte.len_lo = cpu_to_be32(mhp->ibmr.length);
+	fr->tpte.len_hi = cpu_to_be32(mhp->ibmr.length >> 32);
+	fr->tpte.len_lo = cpu_to_be32(mhp->ibmr.length & 0xffffffff);
 	fr->tpte.va_hi = cpu_to_be32(mhp->ibmr.iova >> 32);
 	fr->tpte.va_lo_fbo = cpu_to_be32(mhp->ibmr.iova & 0xffffffff);
 
@@ -696,6 +701,7 @@ static void build_tpte_memreg(struct fw_ri_fr_nsmr_tpte_wr *fr,
 	p[1] = cpu_to_be64((u64)mhp->mpl[1]);
 
 	*len16 = DIV_ROUND_UP(sizeof(*fr), 16);
+	return 0;
 }
 
 static int build_memreg(struct t4_sq *sq, union t4_wr *wqe,
@@ -710,17 +716,18 @@ static int build_memreg(struct t4_sq *sq, union t4_wr *wqe,
 
 	if (mhp->mpl_len > t4_max_fr_depth(use_dsgl && dsgl_supported))
 		return -EINVAL;
+	if (wr->mr->page_size > C4IW_MAX_PAGE_SIZE)
+		return -EINVAL;
 
 	wqe->fr.qpbinde_to_dcacpu = 0;
 	wqe->fr.pgsz_shift = ilog2(wr->mr->page_size) - 12;
 	wqe->fr.addr_type = FW_RI_VA_BASED_TO;
 	wqe->fr.mem_perms = c4iw_ib_to_tpt_access(wr->access);
-	wqe->fr.len_hi = 0;
-	wqe->fr.len_lo = cpu_to_be32(mhp->ibmr.length);
+	wqe->fr.len_hi = cpu_to_be32(mhp->ibmr.length >> 32);
+	wqe->fr.len_lo = cpu_to_be32(mhp->ibmr.length & 0xffffffff);
 	wqe->fr.stag = cpu_to_be32(wr->key);
 	wqe->fr.va_hi = cpu_to_be32(mhp->ibmr.iova >> 32);
-	wqe->fr.va_lo_fbo = cpu_to_be32(mhp->ibmr.iova &
-			0xffffffff);
+	wqe->fr.va_lo_fbo = cpu_to_be32(mhp->ibmr.iova & 0xffffffff);
 
 	if (dsgl_supported && use_dsgl && (pbllen > max_fr_immd)) {
 		struct fw_ri_dsgl *sglp;
@@ -851,16 +858,16 @@ int c4iw_post_send(struct ib_qp *ibqp, struct ib_send_wr *wr,
 			if (rdev->adap->params.fr_nsmr_tpte_wr_support &&
 					!mhp->attr.state && mhp->mpl_len <= 2) {
 				fw_opcode = FW_RI_FR_NSMR_TPTE_WR;
-				build_tpte_memreg(&wqe->fr_tpte, reg_wr(wr),
+				err = build_tpte_memreg(&wqe->fr_tpte, reg_wr(wr),
 						mhp, &len16);
 			} else {
 				fw_opcode = FW_RI_FR_NSMR_WR;
 				err = build_memreg(&qhp->wq.sq, wqe, reg_wr(wr),
 					mhp, &len16,
 					rdev->adap->params.ulptx_memwrite_dsgl);
-				if (err)
-					break;
 			}
+			if (err)
+				break;
 			mhp->attr.state = 1;
 			break;
 		}
@@ -1415,7 +1422,7 @@ static int rdma_init(struct c4iw_dev *rhp, struct c4iw_qp *qhp)
 	ret = c4iw_wait_for_reply(rdev, &ep->com.wr_wait, ep->hwtid,
 			qhp->wq.sq.qid, ep->com.so, __func__);
 
-	toep->ulp_mode = ULP_MODE_RDMA;
+	toep->params.ulp_mode = ULP_MODE_RDMA;
 	free_ird(rhp, qhp->attr.max_ird);
 
 	return ret;

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Olivier Houchard.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/11/sys/mips/malta/gtvar.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 #ifndef _GTVAR_H_
 #define _GTVAR_H_

@@ -1,8 +1,8 @@
 /******************************************************************************
 
-  Copyright (c) 2013-2019, Intel Corporation
+  Copyright (c) 2013-2018, Intel Corporation
   All rights reserved.
-
+  
   Redistribution and use in source and binary forms, with or without 
   modification, are permitted provided that the following conditions are met:
   
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/ixl/ixl_pf_i2c.c 349163 2019-06-18 00:08:02Z erj $*/
+/*$FreeBSD$*/
 
 #include "ixl_pf.h"
 
@@ -627,7 +627,7 @@ ixl_read_i2c_byte_reg(struct ixl_pf *pf, u8 byte_offset,
 	/* Get data from I2C register */
 	reg = rd32(hw, I40E_GLGEN_I2CCMD(hw->func_caps.mdio_port_num));
 
-	/* Retrieve data readed from EEPROM */
+	/* Retrieve data read from EEPROM */
 	*data = (u8)(reg & 0xff);
 
 	if (status)
@@ -694,7 +694,7 @@ ixl_wait_for_i2c_completion(struct i40e_hw *hw, u8 portnum)
 }
 
 /**
- *  ixl_read_i2c_byte_aq - Reads 8 bit word over I2C using a hardware register
+ *  ixl_read_i2c_byte_aq - Reads 8 bit word over I2C using an AQ command
  **/
 s32
 ixl_read_i2c_byte_aq(struct ixl_pf *pf, u8 byte_offset,
@@ -720,7 +720,7 @@ ixl_read_i2c_byte_aq(struct ixl_pf *pf, u8 byte_offset,
 }
 
 /**
- *  ixl_write_i2c_byte_aq - Writes 8 bit word over I2C using a hardware register
+ *  ixl_write_i2c_byte_aq - Writes 8 bit word over I2C using an AQ command
  **/
 s32
 ixl_write_i2c_byte_aq(struct ixl_pf *pf, u8 byte_offset,

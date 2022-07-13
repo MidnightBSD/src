@@ -31,7 +31,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/ofed/include/rdma/ib.h 331772 2018-03-30 18:17:33Z hselasky $
+ * $FreeBSD$
  */
 
 #if !defined(_RDMA_IB_H)

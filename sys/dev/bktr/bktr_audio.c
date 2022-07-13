@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * 1. Redistributions of source code must retain the
  * Copyright (c) 1997 Amancio Hasty, 1999 Roger Hardiman
  * All rights reserved.
@@ -32,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bktr/bktr_audio.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -54,7 +56,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/bktr/bktr_audio.c 331722 2018-03-29 02:50:
 #include <sys/systm.h>
 #include <sys/kernel.h>
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 
 #if (__FreeBSD_version < 500000)
 #include <machine/clock.h>              /* for DELAY */

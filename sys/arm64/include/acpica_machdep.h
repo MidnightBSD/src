@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/include/acpica_machdep.h 284273 2015-06-11 15:45:33Z andrew $
+ * $FreeBSD$
  */
 
 /******************************************************************************
@@ -39,6 +39,8 @@
 
 #ifdef _KERNEL
 
+#include <machine/_bus.h>
+
 /* Only use the reduced hardware model */
 #define	ACPI_REDUCED_HARDWARE	1
 
@@ -49,6 +51,13 @@ int	acpi_release_global_lock(volatile uint32_t *);
 void	*acpi_map_table(vm_paddr_t pa, const char *sig);
 void	acpi_unmap_table(void *table);
 vm_paddr_t acpi_find_table(const char *sig);
+
+struct acpi_generic_address;
+
+int	acpi_map_addr(struct acpi_generic_address  *, bus_space_tag_t *,
+    bus_space_handle_t *, bus_size_t);
+
+extern int (*apei_nmi)(void);
 
 #endif /* _KERNEL */
 

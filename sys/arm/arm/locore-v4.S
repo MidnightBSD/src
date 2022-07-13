@@ -33,13 +33,13 @@
  *
  */
 
-#include "assym.s"
+#include "assym.inc"
 #include <sys/syscall.h>
 #include <machine/asm.h>
 #include <machine/armreg.h>
 #include <machine/pte-v4.h>
 
-__FBSDID("$FreeBSD: stable/11/sys/arm/arm/locore-v4.S 331890 2018-04-02 22:02:49Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 /* 2K initial stack is plenty, it is only used by initarm() */
 #define INIT_ARM_STACK_SIZE	2048

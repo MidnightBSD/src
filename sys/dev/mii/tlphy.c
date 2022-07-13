@@ -1,6 +1,8 @@
 /*	$NetBSD: tlphy.c,v 1.18 1999/05/14 11:40:28 drochner Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD AND BSD-2-Clause
+ *
  * Copyright (c) 1998, 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -55,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mii/tlphy.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for Texas Instruments's ThunderLAN PHYs

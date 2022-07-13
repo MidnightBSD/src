@@ -1,6 +1,8 @@
 /*	$NetBSD: rpc_generic.c,v 1.4 2000/09/28 09:07:04 kleink Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -33,7 +35,7 @@
 
 /* #pragma ident	"@(#)rpc_generic.c	1.17	94/04/24 SMI" */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/rpc/rpc_generic.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rpc_generic.c, Miscl routines for RPC.
@@ -65,7 +67,7 @@ __FBSDID("$FreeBSD: stable/11/sys/rpc/rpc_generic.c 331722 2018-03-29 02:50:57Z 
 
 extern	u_long sb_max_adj;	/* not defined in socketvar.h */
 
-#if __MidnightBSD_version < 8000
+#if __FreeBSD_version < 700000
 #define strrchr rindex
 #endif
 
@@ -884,3 +886,4 @@ DECLARE_MODULE(krpc, krpc_mod, SI_SUB_VFS, SI_ORDER_ANY);
 
 /* So that loader and kldload(2) can find us, wherever we are.. */
 MODULE_VERSION(krpc, 1);
+MODULE_DEPEND(krpc, xdr, 1, 1, 1);

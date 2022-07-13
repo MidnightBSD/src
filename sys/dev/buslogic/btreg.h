@@ -4,8 +4,9 @@
  * attach routines can be found in:
  * sys/dev/buslogic/bt_isa.c	BT-54X, BT-445 cards
  * sys/dev/buslogic/bt_mca.c	BT-64X, SDC3211B, SDC3211F
- * sys/dev/buslogic/bt_eisa.c	BT-74X, BT-75x cards, SDC3222F
  * sys/dev/buslogic/bt_pci.c	BT-946, BT-948, BT-956, BT-958 cards
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 1998, 1999 Justin T. Gibbs.
  * All rights reserved.
@@ -31,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/buslogic/btreg.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _BTREG_H_
@@ -237,15 +238,6 @@ typedef struct {
 		 period : 3,
 		 sync	: 1;
 } targ_syncinfo_t;
-
-typedef enum {
-	HAB_ISA		= 'A',
-	HAB_MCA		= 'B',
-	HAB_EISA	= 'C',
-	HAB_NUBUS	= 'D',
-	HAB_VESA	= 'E',
-	HAB_PCI		= 'F'
-} ha_type_t;
 
 typedef struct {
 	u_int8_t	initiate_sync	: 1,

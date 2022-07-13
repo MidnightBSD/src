@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0
+ *
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
  *
@@ -51,7 +53,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/isci/scil/scic_sds_port_configuration_agent.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /**
  * @file
@@ -1010,7 +1012,7 @@ void scic_sds_port_configuration_agent_construct(
  *            agent is being initialized.
  *
  * @param[in] port_agent This is the port configuration agent that is being
- *            initialized.  The initialization path is handled differntly
+ *            initialized.  The initialization path is handled differently
  *            for the automatic port configuration agent and the manual port
  *            configuration agent.
  *

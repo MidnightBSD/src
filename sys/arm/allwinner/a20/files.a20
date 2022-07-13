@@ -1,3 +1,4 @@
-# $FreeBSD: stable/11/sys/arm/allwinner/a20/files.a20 298422 2016-04-21 16:49:04Z jmcneill $
+# $FreeBSD$
 
 arm/allwinner/a20/a20_padconf.c		standard
+arm/allwinner/clkng/ccu_a10.c		standard

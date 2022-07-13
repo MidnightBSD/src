@@ -27,11 +27,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/arm/machdep_ptrace.c 317004 2017-04-16 07:21:20Z mmel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>
 #include <sys/ptrace.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 
 #include <machine/machdep.h>

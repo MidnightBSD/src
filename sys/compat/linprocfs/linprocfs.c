@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2000 Dag-Erling Coïdan Smørgrav
  * Copyright (c) 1999 Pierre Beyssac
  * Copyright (c) 1993 Jan-Simon Pendry
@@ -40,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/linprocfs/linprocfs.c 355332 2019-12-03 16:33:35Z cognet $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -64,6 +66,7 @@ __FBSDID("$FreeBSD: stable/11/sys/compat/linprocfs/linprocfs.c 355332 2019-12-03
 #include <sys/resource.h>
 #include <sys/sbuf.h>
 #include <sys/sem.h>
+#include <sys/shm.h>
 #include <sys/smp.h>
 #include <sys/socket.h>
 #include <sys/syscallsubr.h>
@@ -142,41 +145,35 @@ static int
 linprocfs_domeminfo(PFS_FILL_ARGS)
 {
 	unsigned long memtotal;		/* total memory in bytes */
-	unsigned long memused;		/* used memory in bytes */
 	unsigned long memfree;		/* free memory in bytes */
-	unsigned long buffers, cached;	/* buffer / cache memory ??? */
+	unsigned long cached;		/* page cache */
+	unsigned long buffers;		/* buffer cache */
 	unsigned long long swaptotal;	/* total swap space in bytes */
 	unsigned long long swapused;	/* used swap space in bytes */
 	unsigned long long swapfree;	/* free swap space in bytes */
-	int i, j;
+	size_t sz;
+	int error, i, j;
 
 	memtotal = physmem * PAGE_SIZE;
-	/*
-	 * The correct thing here would be:
-	 *
-	memfree = vm_cnt.v_free_count * PAGE_SIZE;
-	memused = memtotal - memfree;
-	 *
-	 * but it might mislead linux binaries into thinking there
-	 * is very little memory left, so we cheat and tell them that
-	 * all memory that isn't wired down is free.
-	 */
-	memused = vm_cnt.v_wire_count * PAGE_SIZE;
-	memfree = memtotal - memused;
+	memfree = (unsigned long)vm_free_count() * PAGE_SIZE;
 	swap_pager_status(&i, &j);
 	swaptotal = (unsigned long long)i * PAGE_SIZE;
 	swapused = (unsigned long long)j * PAGE_SIZE;
 	swapfree = swaptotal - swapused;
+
 	/*
-	 * We'd love to be able to write:
-	 *
-	buffers = bufspace;
-	 *
-	 * but bufspace is internal to vfs_bio.c and we don't feel
-	 * like unstaticizing it just for linprocfs's sake.
+	 * This value may exclude wired pages, but we have no good way of
+	 * accounting for that.
 	 */
-	buffers = 0;
-	cached = vm_cnt.v_inactive_count * PAGE_SIZE;
+	cached =
+	    (vm_active_count() + vm_inactive_count() + vm_laundry_count()) *
+	    PAGE_SIZE;
+
+	sz = sizeof(buffers);
+	error = kernel_sysctlbyname(curthread, "vfs.bufspace", &buffers, &sz,
+	    NULL, 0, 0, 0);
+	if (error != 0)
+		buffers = 0;
 
 	sbuf_printf(sb,
 	    "MemTotal: %9lu kB\n"
@@ -202,21 +199,75 @@ linprocfs_docpuinfo(PFS_FILL_ARGS)
 	char model[128];
 	uint64_t freq;
 	size_t size;
+	u_int cache_size[4];
 	int fqmhz, fqkhz;
-	int i;
+	int i, j;
 
 	/*
 	 * We default the flags to include all non-conflicting flags,
 	 * and the Intel versions of conflicting flags.
 	 */
-	static char *flags[] = {
-		"fpu",	    "vme",     "de",	   "pse",      "tsc",
-		"msr",	    "pae",     "mce",	   "cx8",      "apic",
-		"sep",	    "sep",     "mtrr",	   "pge",      "mca",
-		"cmov",	    "pat",     "pse36",	   "pn",       "b19",
-		"b20",	    "b21",     "mmxext",   "mmx",      "fxsr",
-		"xmm",	    "sse2",    "b27",	   "b28",      "b29",
-		"3dnowext", "3dnow"
+	static char *cpu_feature_names[] = {
+		/*  0 */ "fpu", "vme", "de", "pse",
+		/*  4 */ "tsc", "msr", "pae", "mce",
+		/*  8 */ "cx8", "apic", "", "sep",
+		/* 12 */ "mtrr", "pge", "mca", "cmov",
+		/* 16 */ "pat", "pse36", "pn", "clflush",
+		/* 20 */ "", "dts", "acpi", "mmx",
+		/* 24 */ "fxsr", "sse", "sse2", "ss",
+		/* 28 */ "ht", "tm", "ia64", "pbe"
+	};
+
+	static char *amd_feature_names[] = {
+		/*  0 */ "", "", "", "",
+		/*  4 */ "", "", "", "",
+		/*  8 */ "", "", "", "syscall",
+		/* 12 */ "", "", "", "",
+		/* 16 */ "", "", "", "mp",
+		/* 20 */ "nx", "", "mmxext", "",
+		/* 24 */ "", "fxsr_opt", "pdpe1gb", "rdtscp",
+		/* 28 */ "", "lm", "3dnowext", "3dnow"
+	};
+
+	static char *cpu_feature2_names[] = {
+		/*  0 */ "pni", "pclmulqdq", "dtes64", "monitor",
+		/*  4 */ "ds_cpl", "vmx", "smx", "est",
+		/*  8 */ "tm2", "ssse3", "cid", "sdbg",
+		/* 12 */ "fma", "cx16", "xtpr", "pdcm",
+		/* 16 */ "", "pcid", "dca", "sse4_1",
+		/* 20 */ "sse4_2", "x2apic", "movbe", "popcnt",
+		/* 24 */ "tsc_deadline_timer", "aes", "xsave", "",
+		/* 28 */ "avx", "f16c", "rdrand", "hypervisor"
+	};
+
+	static char *amd_feature2_names[] = {
+		/*  0 */ "lahf_lm", "cmp_legacy", "svm", "extapic",
+		/*  4 */ "cr8_legacy", "abm", "sse4a", "misalignsse",
+		/*  8 */ "3dnowprefetch", "osvw", "ibs", "xop",
+		/* 12 */ "skinit", "wdt", "", "lwp",
+		/* 16 */ "fma4", "tce", "", "nodeid_msr",
+		/* 20 */ "", "tbm", "topoext", "perfctr_core",
+		/* 24 */ "perfctr_nb", "", "bpext", "ptsc",
+		/* 28 */ "perfctr_llc", "mwaitx", "", ""
+	};
+
+	static char *cpu_stdext_feature_names[] = {
+		/*  0 */ "fsgsbase", "tsc_adjust", "", "bmi1",
+		/*  4 */ "hle", "avx2", "", "smep",
+		/*  8 */ "bmi2", "erms", "invpcid", "rtm",
+		/* 12 */ "cqm", "", "mpx", "rdt_a",
+		/* 16 */ "avx512f", "avx512dq", "rdseed", "adx",
+		/* 20 */ "smap", "avx512ifma", "", "clflushopt",
+		/* 24 */ "clwb", "intel_pt", "avx512pf", "avx512er",
+		/* 28 */ "avx512cd", "sha_ni", "avx512bw", "avx512vl"
+	};
+
+	static char *power_flags[] = {
+		"ts",           "fid",          "vid",
+		"ttp",          "tm",           "stc",
+		"100mhzsteps",  "hwpstate",     "",
+		"cpb",          "eff_freq_ro",  "proc_feedback",
+		"acc_power",
 	};
 
 	hw_model[0] = CTL_HW;
@@ -225,45 +276,127 @@ linprocfs_docpuinfo(PFS_FILL_ARGS)
 	size = sizeof(model);
 	if (kernel_sysctl(td, hw_model, 2, &model, &size, 0, 0, 0, 0) != 0)
 		strcpy(model, "unknown");
+#ifdef __i386__
+	switch (cpu_vendor_id) {
+	case CPU_VENDOR_AMD:
+		if (cpu_class < CPUCLASS_686)
+			cpu_feature_names[16] = "fcmov";
+		break;
+	case CPU_VENDOR_CYRIX:
+		cpu_feature_names[24] = "cxmmx";
+		break;
+	}
+#endif
+	if (cpu_exthigh >= 0x80000006)
+		do_cpuid(0x80000006, cache_size);
+	else
+		memset(cache_size, 0, sizeof(cache_size));
 	for (i = 0; i < mp_ncpus; ++i) {
+		fqmhz = 0;
+		fqkhz = 0;
+		freq = atomic_load_acq_64(&tsc_freq);
+		if (freq != 0) {
+			fqmhz = (freq + 4999) / 1000000;
+			fqkhz = ((freq + 4999) / 10000) % 100;
+		}
 		sbuf_printf(sb,
 		    "processor\t: %d\n"
 		    "vendor_id\t: %.20s\n"
 		    "cpu family\t: %u\n"
 		    "model\t\t: %u\n"
 		    "model name\t: %s\n"
-		    "stepping\t: %u\n\n",
+		    "stepping\t: %u\n"
+		    "cpu MHz\t\t: %d.%02d\n"
+		    "cache size\t: %d KB\n"
+		    "physical id\t: %d\n"
+		    "siblings\t: %d\n"
+		    "core id\t\t: %d\n"
+		    "cpu cores\t: %d\n"
+		    "apicid\t\t: %d\n"
+		    "initial apicid\t: %d\n"
+		    "fpu\t\t: %s\n"
+		    "fpu_exception\t: %s\n"
+		    "cpuid level\t: %d\n"
+		    "wp\t\t: %s\n",
 		    i, cpu_vendor, CPUID_TO_FAMILY(cpu_id),
-		    CPUID_TO_MODEL(cpu_id), model, cpu_id & CPUID_STEPPING);
+		    CPUID_TO_MODEL(cpu_id), model, cpu_id & CPUID_STEPPING,
+		    fqmhz, fqkhz,
+		    (cache_size[2] >> 16), 0, mp_ncpus, i, mp_ncpus,
+		    i, i, /*cpu_id & CPUID_LOCAL_APIC_ID ??*/
+		    (cpu_feature & CPUID_FPU) ? "yes" : "no", "yes",
+		    CPUID_TO_FAMILY(cpu_id), "yes");
+		sbuf_cat(sb, "flags\t\t:");
+		for (j = 0; j < nitems(cpu_feature_names); j++)
+			if (cpu_feature & (1 << j) &&
+			    cpu_feature_names[j][0] != '\0')
+				sbuf_printf(sb, " %s", cpu_feature_names[j]);
+		for (j = 0; j < nitems(amd_feature_names); j++)
+			if (amd_feature & (1 << j) &&
+			    amd_feature_names[j][0] != '\0')
+				sbuf_printf(sb, " %s", amd_feature_names[j]);
+		for (j = 0; j < nitems(cpu_feature2_names); j++)
+			if (cpu_feature2 & (1 << j) &&
+			    cpu_feature2_names[j][0] != '\0')
+				sbuf_printf(sb, " %s", cpu_feature2_names[j]);
+		for (j = 0; j < nitems(amd_feature2_names); j++)
+			if (amd_feature2 & (1 << j) &&
+			    amd_feature2_names[j][0] != '\0')
+				sbuf_printf(sb, " %s", amd_feature2_names[j]);
+		for (j = 0; j < nitems(cpu_stdext_feature_names); j++)
+			if (cpu_stdext_feature & (1 << j) &&
+			    cpu_stdext_feature_names[j][0] != '\0')
+				sbuf_printf(sb, " %s",
+				    cpu_stdext_feature_names[j]);
+		sbuf_cat(sb, "\n");
+		sbuf_printf(sb,
+		    "bugs\t\t: %s\n"
+		    "bogomips\t: %d.%02d\n"
+		    "clflush size\t: %d\n"
+		    "cache_alignment\t: %d\n"
+		    "address sizes\t: %d bits physical, %d bits virtual\n",
+#if defined(I586_CPU) && !defined(NO_F00F_HACK)
+		    (has_f00f_bug) ? "Intel F00F" : "",
+#else
+		    "",
+#endif
+		    fqmhz * 2, fqkhz,
+		    cpu_clflush_line_size, cpu_clflush_line_size,
+		    cpu_maxphyaddr,
+		    (cpu_maxphyaddr > 32) ? 48 : 0);
+		sbuf_cat(sb, "power management: ");
+		for (j = 0; j < nitems(power_flags); j++)
+			if (amd_pminfo & (1 << j))
+				sbuf_printf(sb, " %s", power_flags[j]);
+		sbuf_cat(sb, "\n\n");
+
 		/* XXX per-cpu vendor / class / model / id? */
 	}
-
-	sbuf_cat(sb, "flags\t\t:");
-
-#ifdef __i386__
-	switch (cpu_vendor_id) {
-	case CPU_VENDOR_AMD:
-		if (cpu_class < CPUCLASS_686)
-			flags[16] = "fcmov";
-		break;
-	case CPU_VENDOR_CYRIX:
-		flags[24] = "cxmmx";
-		break;
-	}
-#endif
-
-	for (i = 0; i < 32; i++)
-		if (cpu_feature & (1 << i))
-			sbuf_printf(sb, " %s", flags[i]);
 	sbuf_cat(sb, "\n");
-	freq = atomic_load_acq_64(&tsc_freq);
-	if (freq != 0) {
-		fqmhz = (freq + 4999) / 1000000;
-		fqkhz = ((freq + 4999) / 10000) % 100;
+
+	return (0);
+}
+#else
+/* ARM64TODO: implement non-stubbed linprocfs_docpuinfo */
+static int
+linprocfs_docpuinfo(PFS_FILL_ARGS)
+{
+	int i;
+
+	for (i = 0; i < mp_ncpus; ++i) {
 		sbuf_printf(sb,
-		    "cpu MHz\t\t: %d.%02d\n"
-		    "bogomips\t: %d.%02d\n",
-		    fqmhz, fqkhz, fqmhz, fqkhz);
+		    "processor\t: %d\n"
+		    "BogoMIPS\t: %d.%02d\n",
+		    i, 0, 0);
+		sbuf_cat(sb, "Features\t: ");
+		sbuf_cat(sb, "\n");
+		sbuf_printf(sb,
+		    "CPU implementer\t: \n"
+		    "CPU architecture: \n"
+		    "CPU variant\t: 0x%x\n"
+		    "CPU part\t: 0x%x\n"
+		    "CPU revision\t: %d\n",
+		    0, 0, 0);
+		sbuf_cat(sb, "\n");
 	}
 
 	return (0);
@@ -323,6 +456,15 @@ linprocfs_domtab(PFS_FILL_ARGS)
 			mntfrom = fstype = "proc";
 		else if (strcmp(fstype, "procfs") == 0)
 			continue;
+
+		if (strcmp(fstype, "autofs") == 0) {
+			/*
+			 * FreeBSD uses eg "map -hosts", whereas Linux
+			 * expects just "-hosts".
+			 */
+			if (strncmp(mntfrom, "map ", 4) == 0)
+				mntfrom += 4;
+		}
 
 		if (strcmp(fstype, "linsysfs") == 0) {
 			sbuf_printf(sb, "/sys %s sysfs %s", mntto,
@@ -394,9 +536,21 @@ linprocfs_dopartitions(PFS_FILL_ARGS)
 	return (0);
 }
 
-
 /*
  * Filler function for proc/stat
+ *
+ * Output depends on kernel version:
+ *
+ * v2.5.40 <=
+ *   user nice system idle
+ * v2.5.41
+ *   user nice system idle iowait
+ * v2.6.11
+ *   user nice system idle iowait irq softirq steal
+ * v2.6.24
+ *   user nice system idle iowait irq softirq steal guest
+ * v2.6.33 >=
+ *   user nice system idle iowait irq softirq steal guest guest_nice
  */
 static int
 linprocfs_dostat(PFS_FILL_ARGS)
@@ -406,36 +560,68 @@ linprocfs_dostat(PFS_FILL_ARGS)
 	long *cp;
 	struct timeval boottime;
 	int i;
+	char *zero_pad;
+	bool has_intr = true;
+
+	if (linux_kernver(td) >= LINUX_KERNVER(2,6,33)) {
+		zero_pad = " 0 0 0 0\n";
+	} else if (linux_kernver(td) >= LINUX_KERNVER(2,6,24)) {
+		zero_pad = " 0 0 0\n";
+	} else if (linux_kernver(td) >= LINUX_KERNVER(2,6,11)) {
+		zero_pad = " 0 0\n";
+	} else if (linux_kernver(td) >= LINUX_KERNVER(2,5,41)) {
+		has_intr = false;
+		zero_pad = " 0\n";
+	} else {
+		has_intr = false;
+		zero_pad = "\n";
+	}
 
 	read_cpu_time(cp_time);
 	getboottime(&boottime);
-	sbuf_printf(sb, "cpu %ld %ld %ld %ld\n",
+	/* Parameters common to all versions */
+	sbuf_printf(sb, "cpu %lu %lu %lu %lu",
 	    T2J(cp_time[CP_USER]),
 	    T2J(cp_time[CP_NICE]),
-	    T2J(cp_time[CP_SYS] /*+ cp_time[CP_INTR]*/),
+	    T2J(cp_time[CP_SYS]),
 	    T2J(cp_time[CP_IDLE]));
+
+	/* Print interrupt stats if available */
+	if (has_intr) {
+		sbuf_printf(sb, " 0 %lu", T2J(cp_time[CP_INTR]));
+	}
+
+	/* Pad out remaining fields depending on version */
+	sbuf_printf(sb, "%s", zero_pad);
+
 	CPU_FOREACH(i) {
 		pcpu = pcpu_find(i);
 		cp = pcpu->pc_cp_time;
-		sbuf_printf(sb, "cpu%d %ld %ld %ld %ld\n", i,
+		sbuf_printf(sb, "cpu%d %lu %lu %lu %lu", i,
 		    T2J(cp[CP_USER]),
 		    T2J(cp[CP_NICE]),
-		    T2J(cp[CP_SYS] /*+ cp[CP_INTR]*/),
+		    T2J(cp[CP_SYS]),
 		    T2J(cp[CP_IDLE]));
+
+		if (has_intr) {
+			sbuf_printf(sb, " 0 %lu", T2J(cp[CP_INTR]));
+		}
+
+		sbuf_printf(sb, "%s", zero_pad);
 	}
 	sbuf_printf(sb,
 	    "disk 0 0 0 0\n"
-	    "page %u %u\n"
-	    "swap %u %u\n"
-	    "intr %u\n"
-	    "ctxt %u\n"
+	    "page %ju %ju\n"
+	    "swap %ju %ju\n"
+	    "intr %ju\n"
+	    "ctxt %ju\n"
 	    "btime %lld\n",
-	    vm_cnt.v_vnodepgsin,
-	    vm_cnt.v_vnodepgsout,
-	    vm_cnt.v_swappgsin,
-	    vm_cnt.v_swappgsout,
-	    vm_cnt.v_intr,
-	    vm_cnt.v_swtch,
+	    (uintmax_t)VM_CNT_FETCH(v_vnodepgsin),
+	    (uintmax_t)VM_CNT_FETCH(v_vnodepgsout),
+	    (uintmax_t)VM_CNT_FETCH(v_swappgsin),
+	    (uintmax_t)VM_CNT_FETCH(v_swappgsout),
+	    (uintmax_t)VM_CNT_FETCH(v_intr),
+	    (uintmax_t)VM_CNT_FETCH(v_swtch),
 	    (long long)boottime.tv_sec);
 	return (0);
 }
@@ -576,6 +762,32 @@ linprocfs_doloadavg(PFS_FILL_ARGS)
 	return (0);
 }
 
+static int
+linprocfs_get_tty_nr(struct proc *p)
+{
+	struct session *sp;
+	const char *ttyname;
+	int error, major, minor, nr;
+
+	PROC_LOCK_ASSERT(p, MA_OWNED);
+	sx_assert(&proctree_lock, SX_LOCKED);
+
+	if ((p->p_flag & P_CONTROLT) == 0)
+		return (-1);
+
+	sp = p->p_pgrp->pg_session;
+	if (sp == NULL)
+		return (-1);
+
+	ttyname = devtoname(sp->s_ttyp->t_dev);
+	error = linux_driver_get_major_minor(ttyname, &major, &minor);
+	if (error != 0)
+		return (-1);
+
+	nr = makedev(major, minor);
+	return (nr);
+}
+
 /*
  * Filler function for proc/pid/stat
  */
@@ -586,12 +798,14 @@ linprocfs_doprocstat(PFS_FILL_ARGS)
 	struct timeval boottime;
 	char state;
 	static int ratelimit = 0;
+	int tty_nr;
 	vm_offset_t startcode, startdata;
 
 	getboottime(&boottime);
 	sx_slock(&proctree_lock);
 	PROC_LOCK(p);
 	fill_kinfo_proc(p, &kp);
+	tty_nr = linprocfs_get_tty_nr(p);
 	sx_sunlock(&proctree_lock);
 	if (p->p_vmspace) {
 	   startcode = (vm_offset_t)p->p_vmspace->vm_taddr;
@@ -618,10 +832,7 @@ linprocfs_doprocstat(PFS_FILL_ARGS)
 	PS_ADD("pgrp",		"%d",	p->p_pgid);
 	PS_ADD("session",	"%d",	p->p_session->s_sid);
 	PROC_UNLOCK(p);
-	if (kp.ki_tdev == NODEV)
-		PS_ADD("tty",	"%s",	"-1");
-	else
-		PS_ADD("tty",		"%ju",	(uintmax_t)kp.ki_tdev);
+	PS_ADD("tty",		"%d",	tty_nr);
 	PS_ADD("tpgid",		"%d",	kp.ki_tpgid);
 	PS_ADD("flags",		"%u",	0); /* XXX */
 	PS_ADD("minflt",	"%lu",	kp.ki_rusage.ru_minflt);
@@ -756,6 +967,7 @@ linprocfs_doprocstatus(PFS_FILL_ARGS)
 	/*
 	 * Credentials
 	 */
+	sbuf_printf(sb, "Tgid:\t%d\n",		p->p_pid);
 	sbuf_printf(sb, "Pid:\t%d\n",		p->p_pid);
 	sbuf_printf(sb, "PPid:\t%d\n",		kp.ki_ppid );
 	sbuf_printf(sb, "TracerPid:\t%d\n",	kp.ki_tracer );
@@ -954,7 +1166,7 @@ linprocfs_doprocmaps(PFS_FILL_ARGS)
 	vm_map_entry_t entry, tmp_entry;
 	vm_object_t obj, tobj, lobj;
 	vm_offset_t e_start, e_end;
-	vm_ooffset_t off = 0;
+	vm_ooffset_t off;
 	vm_prot_t e_prot;
 	unsigned int last_timestamp;
 	char *name = "", *freename = NULL;
@@ -964,6 +1176,7 @@ linprocfs_doprocmaps(PFS_FILL_ARGS)
 	int error;
 	struct vnode *vp;
 	struct vattr vat;
+	bool private;
 
 	PROC_LOCK(p);
 	error = p_candebug(td, p);
@@ -995,17 +1208,21 @@ linprocfs_doprocmaps(PFS_FILL_ARGS)
 		e_start = entry->start;
 		e_end = entry->end;
 		obj = entry->object.vm_object;
-		for (lobj = tobj = obj; tobj; tobj = tobj->backing_object) {
+		off = entry->offset;
+		for (lobj = tobj = obj; tobj != NULL;
+		    lobj = tobj, tobj = tobj->backing_object) {
 			VM_OBJECT_RLOCK(tobj);
+			off += lobj->backing_object_offset;
 			if (lobj != obj)
 				VM_OBJECT_RUNLOCK(lobj);
-			lobj = tobj;
 		}
+		private = (entry->eflags & MAP_ENTRY_COW) != 0 || obj == NULL ||
+		    ((obj->type == OBJT_DEFAULT || obj->type == OBJT_SWAP) &&
+		    (obj->flags & OBJ_NOSPLIT) == 0);
 		last_timestamp = map->timestamp;
 		vm_map_unlock_read(map);
 		ino = 0;
 		if (lobj) {
-			off = IDX_TO_OFF(lobj->size);
 			vp = vm_object_vnode(lobj);
 			if (vp != NULL)
 				vref(vp);
@@ -1042,12 +1259,12 @@ linprocfs_doprocmaps(PFS_FILL_ARGS)
 		    (e_prot & VM_PROT_READ)?"r":"-",
 		    (e_prot & VM_PROT_WRITE)?"w":"-",
 		    (e_prot & VM_PROT_EXECUTE)?"x":"-",
-		    "p",
+		    private ? "p" : "s",
 		    (u_long)off,
 		    0,
 		    0,
 		    (u_long)ino,
-		    *name ? "     " : " ",
+		    *name ? "     " : "",
 		    name
 		    );
 		if (freename)
@@ -1092,7 +1309,7 @@ linux_ifname(struct ifnet *ifp, char *buffer, size_t buflen)
 
 	/* Determine the (relative) unit number for ethernet interfaces */
 	ethno = 0;
-	TAILQ_FOREACH(ifscan, &V_ifnet, if_link) {
+	CK_STAILQ_FOREACH(ifscan, &V_ifnet, if_link) {
 		if (ifscan == ifp)
 			return (snprintf(buffer, buflen, "eth%d", ethno));
 		if (IFP_IS_ETH(ifscan))
@@ -1120,7 +1337,7 @@ linprocfs_donetdev(PFS_FILL_ARGS)
 
 	CURVNET_SET(TD_TO_VNET(curthread));
 	IFNET_RLOCK();
-	TAILQ_FOREACH(ifp, &V_ifnet, if_link) {
+	CK_STAILQ_FOREACH(ifp, &V_ifnet, if_link) {
 		linux_ifname(ifp, ifname, sizeof ifname);
 		sbuf_printf(sb, "%6.6s: ", ifname);
 		sbuf_printf(sb, "%7ju %7ju %4ju %4ju %4lu %5lu %10lu %9ju ",
@@ -1197,6 +1414,17 @@ linprocfs_doosbuild(PFS_FILL_ARGS)
 }
 
 /*
+ * Filler function for proc/sys/kernel/msgmax
+ */
+static int
+linprocfs_domsgmax(PFS_FILL_ARGS)
+{
+
+	sbuf_printf(sb, "%d\n", msginfo.msgmax);
+	return (0);
+}
+
+/*
  * Filler function for proc/sys/kernel/msgmni
  */
 static int
@@ -1204,6 +1432,17 @@ linprocfs_domsgmni(PFS_FILL_ARGS)
 {
 
 	sbuf_printf(sb, "%d\n", msginfo.msgmni);
+	return (0);
+}
+
+/*
+ * Filler function for proc/sys/kernel/msgmnb
+ */
+static int
+linprocfs_domsgmnb(PFS_FILL_ARGS)
+{
+
+	sbuf_printf(sb, "%d\n", msginfo.msgmnb);
 	return (0);
 }
 
@@ -1227,6 +1466,65 @@ linprocfs_dosem(PFS_FILL_ARGS)
 
 	sbuf_printf(sb, "%d %d %d %d\n", seminfo.semmsl, seminfo.semmns,
 	    seminfo.semopm, seminfo.semmni);
+	return (0);
+}
+
+/*
+ * Filler function for proc/sys/kernel/shmall
+ */
+static int
+linprocfs_doshmall(PFS_FILL_ARGS)
+{
+
+	sbuf_printf(sb, "%lu\n", shminfo.shmall);
+	return (0);
+}
+
+/*
+ * Filler function for proc/sys/kernel/shmmax
+ */
+static int
+linprocfs_doshmmax(PFS_FILL_ARGS)
+{
+
+	sbuf_printf(sb, "%lu\n", shminfo.shmmax);
+	return (0);
+}
+
+/*
+ * Filler function for proc/sys/kernel/shmmni
+ */
+static int
+linprocfs_doshmmni(PFS_FILL_ARGS)
+{
+
+	sbuf_printf(sb, "%lu\n", shminfo.shmmni);
+	return (0);
+}
+
+/*
+ * Filler function for proc/sys/kernel/tainted
+ */
+static int
+linprocfs_dotainted(PFS_FILL_ARGS)
+{
+
+	sbuf_printf(sb, "0\n");
+	return (0);
+}
+
+/*
+ * Filler function for proc/sys/vm/min_free_kbytes
+ *
+ * This mirrors the approach in illumos to return zero for reads. Effectively,
+ * it says, no memory is kept in reserve for "atomic allocations". This class
+ * of allocation can be used at times when a thread cannot be suspended.
+ */
+static int
+linprocfs_dominfree(PFS_FILL_ARGS)
+{
+
+	sbuf_printf(sb, "%d\n", 0);
 	return (0);
 }
 
@@ -1298,22 +1596,22 @@ linprocfs_dofilesystems(PFS_FILL_ARGS)
 	return(0);
 }
 
-#if 0
 /*
  * Filler function for proc/modules
  */
 static int
 linprocfs_domodules(PFS_FILL_ARGS)
 {
+#if 0
 	struct linker_file *lf;
 
 	TAILQ_FOREACH(lf, &linker_files, link) {
 		sbuf_printf(sb, "%-20s%8lu%4d\n", lf->filename,
 		    (unsigned long)lf->size, lf->refs);
 	}
+#endif
 	return (0);
 }
-#endif
 
 /*
  * Filler function for proc/pid/fd
@@ -1422,6 +1720,28 @@ out:
 }
 
 /*
+ * The point of the following two functions is to work around
+ * an assertion in Chromium; see kern/240991 for details.
+ */
+static int
+linprocfs_dotaskattr(PFS_ATTR_ARGS)
+{
+
+	vap->va_nlink = 3;
+	return (0);
+}
+
+/*
+ * Filler function for proc/<pid>/task/.dummy
+ */
+static int
+linprocfs_dotaskdummy(PFS_FILL_ARGS)
+{
+
+	return (0);
+}
+
+/*
  * Filler function for proc/sys/kernel/random/uuid
  */
 static int
@@ -1490,6 +1810,7 @@ linprocfs_init(PFS_INIT_ARGS)
 {
 	struct pfs_node *root;
 	struct pfs_node *dir;
+	struct pfs_node *sys;
 
 	root = pi->pi_root;
 
@@ -1506,10 +1827,8 @@ linprocfs_init(PFS_INIT_ARGS)
 	    NULL, NULL, NULL, PFS_RD);
 	pfs_create_file(root, "meminfo", &linprocfs_domeminfo,
 	    NULL, NULL, NULL, PFS_RD);
-#if 0
 	pfs_create_file(root, "modules", &linprocfs_domodules,
 	    NULL, NULL, NULL, PFS_RD);
-#endif
 	pfs_create_file(root, "mounts", &linprocfs_domtab,
 	    NULL, NULL, NULL, PFS_RD);
 	pfs_create_file(root, "mtab", &linprocfs_domtab,
@@ -1526,6 +1845,11 @@ linprocfs_init(PFS_INIT_ARGS)
 	    NULL, NULL, NULL, PFS_RD);
 	pfs_create_file(root, "version", &linprocfs_doversion,
 	    NULL, NULL, NULL, PFS_RD);
+
+	/* /proc/bus/... */
+	dir = pfs_create_dir(root, "bus", NULL, NULL, NULL, 0);
+	dir = pfs_create_dir(dir, "pci", NULL, NULL, NULL, 0);
+	dir = pfs_create_dir(dir, "devices", NULL, NULL, NULL, 0);
 
 	/* /proc/net/... */
 	dir = pfs_create_dir(root, "net", NULL, NULL, NULL, 0);
@@ -1545,7 +1869,7 @@ linprocfs_init(PFS_INIT_ARGS)
 	pfs_create_file(dir, "maps", &linprocfs_doprocmaps,
 	    NULL, NULL, NULL, PFS_RD);
 	pfs_create_file(dir, "mem", &procfs_doprocmem,
-	    &procfs_attr, &procfs_candebug, NULL, PFS_RDWR|PFS_RAW);
+	    procfs_attr_rw, &procfs_candebug, NULL, PFS_RDWR | PFS_RAW);
 	pfs_create_file(dir, "mounts", &linprocfs_domtab,
 	    NULL, NULL, NULL, PFS_RD);
 	pfs_create_link(dir, "root", &linprocfs_doprocroot,
@@ -1563,6 +1887,11 @@ linprocfs_init(PFS_INIT_ARGS)
 	pfs_create_file(dir, "limits", &linprocfs_doproclimits,
 	    NULL, NULL, NULL, PFS_RD);
 
+	/* /proc/<pid>/task/... */
+	dir = pfs_create_dir(dir, "task", linprocfs_dotaskattr, NULL, NULL, 0);
+	pfs_create_file(dir, ".dummy", &linprocfs_dotaskdummy,
+	    NULL, NULL, NULL, PFS_RD);
+
 	/* /proc/scsi/... */
 	dir = pfs_create_dir(root, "scsi", NULL, NULL, NULL, 0);
 	pfs_create_file(dir, "device_info", &linprocfs_doscsidevinfo,
@@ -1571,25 +1900,43 @@ linprocfs_init(PFS_INIT_ARGS)
 	    NULL, NULL, NULL, PFS_RD);
 
 	/* /proc/sys/... */
-	dir = pfs_create_dir(root, "sys", NULL, NULL, NULL, 0);
+	sys = pfs_create_dir(root, "sys", NULL, NULL, NULL, 0);
+
 	/* /proc/sys/kernel/... */
-	dir = pfs_create_dir(dir, "kernel", NULL, NULL, NULL, 0);
+	dir = pfs_create_dir(sys, "kernel", NULL, NULL, NULL, 0);
 	pfs_create_file(dir, "osrelease", &linprocfs_doosrelease,
 	    NULL, NULL, NULL, PFS_RD);
 	pfs_create_file(dir, "ostype", &linprocfs_doostype,
 	    NULL, NULL, NULL, PFS_RD);
 	pfs_create_file(dir, "version", &linprocfs_doosbuild,
 	    NULL, NULL, NULL, PFS_RD);
+	pfs_create_file(dir, "msgmax", &linprocfs_domsgmax,
+	    NULL, NULL, NULL, PFS_RD);
 	pfs_create_file(dir, "msgmni", &linprocfs_domsgmni,
+	    NULL, NULL, NULL, PFS_RD);
+	pfs_create_file(dir, "msgmnb", &linprocfs_domsgmnb,
 	    NULL, NULL, NULL, PFS_RD);
 	pfs_create_file(dir, "pid_max", &linprocfs_dopid_max,
 	    NULL, NULL, NULL, PFS_RD);
 	pfs_create_file(dir, "sem", &linprocfs_dosem,
 	    NULL, NULL, NULL, PFS_RD);
+	pfs_create_file(dir, "shmall", &linprocfs_doshmall,
+	    NULL, NULL, NULL, PFS_RD);
+	pfs_create_file(dir, "shmmax", &linprocfs_doshmmax,
+	    NULL, NULL, NULL, PFS_RD);
+	pfs_create_file(dir, "shmmni", &linprocfs_doshmmni,
+	    NULL, NULL, NULL, PFS_RD);
+	pfs_create_file(dir, "tainted", &linprocfs_dotainted,
+	    NULL, NULL, NULL, PFS_RD);
 
 	/* /proc/sys/kernel/random/... */
 	dir = pfs_create_dir(dir, "random", NULL, NULL, NULL, 0);
 	pfs_create_file(dir, "uuid", &linprocfs_douuid,
+	    NULL, NULL, NULL, PFS_RD);
+
+	/* /proc/sys/vm/.... */
+	dir = pfs_create_dir(sys, "vm", NULL, NULL, NULL, 0);
+	pfs_create_file(dir, "min_free_kbytes", &linprocfs_dominfree,
 	    NULL, NULL, NULL, PFS_RD);
 
 	return (0);
@@ -1606,8 +1953,8 @@ linprocfs_uninit(PFS_INIT_ARGS)
 	return (0);
 }
 
-PSEUDOFS(linprocfs, 1, PR_ALLOW_MOUNT_LINPROCFS);
-#if defined(__amd64__)
+PSEUDOFS(linprocfs, 1, VFCF_JAIL);
+#if defined(__aarch64__) || defined(__amd64__)
 MODULE_DEPEND(linprocfs, linux_common, 1, 1, 1);
 #else
 MODULE_DEPEND(linprocfs, linux, 1, 1, 1);
@@ -1615,3 +1962,4 @@ MODULE_DEPEND(linprocfs, linux, 1, 1, 1);
 MODULE_DEPEND(linprocfs, procfs, 1, 1, 1);
 MODULE_DEPEND(linprocfs, sysvmsg, 1, 1, 1);
 MODULE_DEPEND(linprocfs, sysvsem, 1, 1, 1);
+MODULE_DEPEND(linprocfs, sysvshm, 1, 1, 1);

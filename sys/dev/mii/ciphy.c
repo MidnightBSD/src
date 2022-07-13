@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2004
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
  *
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mii/ciphy.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for the Cicada/Vitesse CS/VSC8xxx 10/100/1000 copper PHY.

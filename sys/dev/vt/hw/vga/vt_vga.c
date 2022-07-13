@@ -33,7 +33,7 @@
 #include "opt_acpi.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/vt/hw/vga/vt_vga.c 336858 2018-07-29 05:14:26Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -43,13 +43,14 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/vt/hw/vga/vt_vga.c 336858 2018-07-29 05:14
 #include <sys/rman.h>
 
 #include <dev/vt/vt.h>
+#include <dev/vt/colors/vt_termcolors.h>
 #include <dev/vt/hw/vga/vt_vga_reg.h>
 #include <dev/pci/pcivar.h>
 
 #include <machine/bus.h>
-
-#if ((defined(__amd64__) || defined(__i386__)) && defined(DEV_ACPI))
+#if defined(__amd64__) || defined(__i386__)
 #include <contrib/dev/acpica/include/acpi.h>
+#include <machine/md_var.h>
 #endif
 
 struct vga_softc {
@@ -67,6 +68,8 @@ struct vga_softc {
 	bus_space_read_1(sc->vga_fb_tag, sc->vga_fb_handle, ofs)
 #define	MEM_WRITE1(sc, ofs, val) \
 	bus_space_write_1(sc->vga_fb_tag, sc->vga_fb_handle, ofs, val)
+#define	MEM_WRITE2(sc, ofs, val) \
+	bus_space_write_2(sc->vga_fb_tag, sc->vga_fb_handle, ofs, val)
 #define	REG_READ1(sc, reg) \
 	bus_space_read_1(sc->vga_reg_tag, sc->vga_reg_handle, reg)
 #define	REG_WRITE1(sc, reg, val) \
@@ -94,6 +97,7 @@ static vd_probe_t	vga_probe;
 static vd_init_t	vga_init;
 static vd_blank_t	vga_blank;
 static vd_bitblt_text_t	vga_bitblt_text;
+static vd_invalidate_text_t	vga_invalidate_text;
 static vd_bitblt_bmp_t	vga_bitblt_bitmap;
 static vd_drawrect_t	vga_drawrect;
 static vd_setpixel_t	vga_setpixel;
@@ -105,6 +109,7 @@ static const struct vt_driver vt_vga_driver = {
 	.vd_init	= vga_init,
 	.vd_blank	= vga_blank,
 	.vd_bitblt_text	= vga_bitblt_text,
+	.vd_invalidate_text = vga_invalidate_text,
 	.vd_bitblt_bmp	= vga_bitblt_bitmap,
 	.vd_drawrect	= vga_drawrect,
 	.vd_setpixel	= vga_setpixel,
@@ -133,7 +138,7 @@ vga_setwmode(struct vt_device *vd, int wmode)
 
 	switch (wmode) {
 	case 3:
-		/* Re-enable all plans. */
+		/* Re-enable all planes. */
 		REG_WRITE1(sc, VGA_SEQ_ADDRESS, VGA_SEQ_MAP_MASK);
 		REG_WRITE1(sc, VGA_SEQ_DATA, VGA_SEQ_MM_EM3 | VGA_SEQ_MM_EM2 |
 		    VGA_SEQ_MM_EM1 | VGA_SEQ_MM_EM0);
@@ -152,7 +157,7 @@ vga_setfg(struct vt_device *vd, term_color_t color)
 		return;
 
 	REG_WRITE1(sc, VGA_GC_ADDRESS, VGA_GC_SET_RESET);
-	REG_WRITE1(sc, VGA_GC_DATA, color);
+	REG_WRITE1(sc, VGA_GC_DATA, cons_to_vga_colors[color]);
 	sc->vga_curfg = color;
 }
 
@@ -167,7 +172,7 @@ vga_setbg(struct vt_device *vd, term_color_t color)
 		return;
 
 	REG_WRITE1(sc, VGA_GC_ADDRESS, VGA_GC_SET_RESET);
-	REG_WRITE1(sc, VGA_GC_DATA, color);
+	REG_WRITE1(sc, VGA_GC_DATA, cons_to_vga_colors[color]);
 
 	/*
 	 * Write 8 pixels using the background color to an off-screen
@@ -204,6 +209,7 @@ static const struct unicp437 cp437table[] = {
 	{ 0x0020, 0x20, 0x5e }, { 0x00a0, 0x20, 0x00 },
 	{ 0x00a1, 0xad, 0x00 }, { 0x00a2, 0x9b, 0x00 },
 	{ 0x00a3, 0x9c, 0x00 }, { 0x00a5, 0x9d, 0x00 },
+	{ 0x00a6, 0x7c, 0x00 },
 	{ 0x00a7, 0x15, 0x00 }, { 0x00aa, 0xa6, 0x00 },
 	{ 0x00ab, 0xae, 0x00 }, { 0x00ac, 0xaa, 0x00 },
 	{ 0x00b0, 0xf8, 0x00 }, { 0x00b1, 0xf1, 0x00 },
@@ -286,8 +292,8 @@ static const struct unicp437 cp437table[] = {
 	{ 0x2640, 0x0c, 0x00 }, { 0x2642, 0x0b, 0x00 },
 	{ 0x2660, 0x06, 0x00 }, { 0x2663, 0x05, 0x00 },
 	{ 0x2665, 0x03, 0x01 }, { 0x266a, 0x0d, 0x00 },
-	{ 0x266c, 0x0e, 0x00 }, { 0x27e8, 0x3c, 0x00 },
-	{ 0x27e9, 0x3e, 0x00 },
+	{ 0x266c, 0x0e, 0x00 }, { 0x2713, 0xfb, 0x00 },
+	{ 0x27e8, 0x3c, 0x00 }, { 0x27e9, 0x3e, 0x00 },
 };
 
 static uint8_t
@@ -527,21 +533,21 @@ static void
 vga_bitblt_pixels_block_ncolors(struct vt_device *vd, const uint8_t *masks,
     unsigned int x, unsigned int y, unsigned int height)
 {
-	unsigned int i, j, plan, color, offset;
+	unsigned int i, j, plane, color, offset;
 	struct vga_softc *sc;
-	uint8_t mask, plans[height * 4];
+	uint8_t mask, planes[height * 4];
 
 	sc = vd->vd_softc;
 
-	memset(plans, 0, sizeof(plans));
+	memset(planes, 0, sizeof(planes));
 
 	/*
          * To write a group of pixels using 3 or more colors, we select
-         * Write Mode 0 and write one byte to each plan separately.
+         * Write Mode 0 and write one byte to each plane separately.
 	 */
 
 	/*
-	 * We first compute each byte: each plan contains one bit of the
+	 * We first compute each byte: each plane contains one bit of the
 	 * color code for each of the 8 pixels.
 	 *
 	 * For example, if the 8 pixels are like this:
@@ -553,10 +559,10 @@ vga_bitblt_pixels_block_ncolors(struct vt_device *vd, const uint8_t *masks,
 	 *
 	 * The corresponding for bytes are:
 	 *             GBBBBBBY
-	 *     Plan 0: 10000001 = 0x81
-	 *     Plan 1: 10000001 = 0x81
-	 *     Plan 2: 10000000 = 0x80
-	 *     Plan 3: 00000000 = 0x00
+	 *    Plane 0: 10000001 = 0x81
+	 *    Plane 1: 10000001 = 0x81
+	 *    Plane 2: 10000000 = 0x80
+	 *    Plane 3: 00000000 = 0x00
 	 *             |  |   |
 	 *             |  |   +-> 0b0011 (Y)
 	 *             |  +-----> 0b0000 (B)
@@ -574,28 +580,29 @@ vga_bitblt_pixels_block_ncolors(struct vt_device *vd, const uint8_t *masks,
 					continue;
 
 				/* The pixel "j" uses color "color". */
-				for (plan = 0; plan < 4; ++plan)
-					plans[i * 4 + plan] |=
-					    ((color >> plan) & 0x1) << (7 - j);
+				for (plane = 0; plane < 4; ++plane)
+					planes[i * 4 + plane] |=
+					    ((cons_to_vga_colors[color] >>
+					    plane) & 0x1) << (7 - j);
 			}
 		}
 	}
 
 	/*
 	 * The bytes are ready: we now switch to Write Mode 0 and write
-	 * all bytes, one plan at a time.
+	 * all bytes, one plane at a time.
 	 */
 	vga_setwmode(vd, 0);
 
 	REG_WRITE1(sc, VGA_SEQ_ADDRESS, VGA_SEQ_MAP_MASK);
-	for (plan = 0; plan < 4; ++plan) {
-		/* Select plan. */
-		REG_WRITE1(sc, VGA_SEQ_DATA, 1 << plan);
+	for (plane = 0; plane < 4; ++plane) {
+		/* Select plane. */
+		REG_WRITE1(sc, VGA_SEQ_DATA, 1 << plane);
 
-		/* Write all bytes for this plan, from Y to Y+height. */
+		/* Write all bytes for this plane, from Y to Y+height. */
 		for (i = 0; i < height; ++i) {
 			offset = (VT_VGA_WIDTH * (y + i) + x) / 8;
-			MEM_WRITE1(sc, offset, plans[i * 4 + plan]);
+			MEM_WRITE1(sc, offset, planes[i * 4 + plane]);
 		}
 	}
 }
@@ -864,6 +871,7 @@ vga_bitblt_text_txtmode(struct vt_device *vd, const struct vt_window *vw,
 	term_char_t c;
 	term_color_t fg, bg;
 	uint8_t ch, attr;
+	size_t z;
 
 	sc = vd->vd_softc;
 	vb = &vw->vw_buf;
@@ -880,6 +888,15 @@ vga_bitblt_text_txtmode(struct vt_device *vd, const struct vt_window *vw,
 			vt_determine_colors(c, VTBUF_ISCURSOR(vb, row, col),
 			    &fg, &bg);
 
+			z = row * PIXEL_WIDTH(VT_FB_MAX_WIDTH) + col;
+			if (z >= PIXEL_HEIGHT(VT_FB_MAX_HEIGHT) *
+			    PIXEL_WIDTH(VT_FB_MAX_WIDTH))
+				continue;
+			if (vd->vd_drawn && (vd->vd_drawn[z] == c) &&
+			    vd->vd_drawnfg && (vd->vd_drawnfg[z] == fg) &&
+			    vd->vd_drawnbg && (vd->vd_drawnbg[z] == bg))
+				continue;
+
 			/*
 			 * Convert character to CP437, which is the
 			 * character set used by the VGA hardware by
@@ -888,12 +905,19 @@ vga_bitblt_text_txtmode(struct vt_device *vd, const struct vt_window *vw,
 			ch = vga_get_cp437(TCHAR_CHARACTER(c));
 
 			/* Convert colors to VGA attributes. */
-			attr = bg << 4 | fg;
+			attr =
+			    cons_to_vga_colors[bg] << 4 |
+			    cons_to_vga_colors[fg];
 
-			MEM_WRITE1(sc, (row * 80 + col) * 2 + 0,
-			    ch);
-			MEM_WRITE1(sc, (row * 80 + col) * 2 + 1,
-			    attr);
+			MEM_WRITE2(sc, (row * 80 + col) * 2 + 0,
+			    ch + ((uint16_t)(attr) << 8));
+
+			if (vd->vd_drawn)
+				vd->vd_drawn[z] = c;
+			if (vd->vd_drawnfg)
+				vd->vd_drawnfg[z] = fg;
+			if (vd->vd_drawnbg)
+				vd->vd_drawnbg[z] = bg;
 		}
 	}
 }
@@ -907,6 +931,30 @@ vga_bitblt_text(struct vt_device *vd, const struct vt_window *vw,
 		vga_bitblt_text_gfxmode(vd, vw, area);
 	} else {
 		vga_bitblt_text_txtmode(vd, vw, area);
+	}
+}
+
+void
+vga_invalidate_text(struct vt_device *vd, const term_rect_t *area)
+{
+	unsigned int col, row;
+	size_t z;
+
+	for (row = area->tr_begin.tp_row; row < area->tr_end.tp_row; ++row) {
+		for (col = area->tr_begin.tp_col;
+		    col < area->tr_end.tp_col;
+		    ++col) {
+			z = row * PIXEL_WIDTH(VT_FB_MAX_WIDTH) + col;
+			if (z >= PIXEL_HEIGHT(VT_FB_MAX_HEIGHT) *
+			    PIXEL_WIDTH(VT_FB_MAX_WIDTH))
+				continue;
+			if (vd->vd_drawn)
+				vd->vd_drawn[z] = 0;
+			if (vd->vd_drawnfg)
+				vd->vd_drawnfg[z] = 0;
+			if (vd->vd_drawnbg)
+				vd->vd_drawnbg[z] = 0;
+		}
 	}
 }
 
@@ -1114,43 +1162,45 @@ vga_initialize(struct vt_device *vd, int textmode)
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PALETTE(0));
 	REG_WRITE1(sc, VGA_AC_WRITE, 0);
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PALETTE(1));
-	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_R);
+	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_B);
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PALETTE(2));
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_G);
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PALETTE(3));
-	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_SG | VGA_AC_PAL_R);
+	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_G | VGA_AC_PAL_B);
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PALETTE(4));
-	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_B);
+	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_R);
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PALETTE(5));
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_R | VGA_AC_PAL_B);
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PALETTE(6));
-	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_G | VGA_AC_PAL_B);
+	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_SG | VGA_AC_PAL_R);
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PALETTE(7));
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_R | VGA_AC_PAL_G | VGA_AC_PAL_B);
+
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PALETTE(8));
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_SR | VGA_AC_PAL_SG |
 	    VGA_AC_PAL_SB);
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PALETTE(9));
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_SR | VGA_AC_PAL_SG |
-	    VGA_AC_PAL_SB | VGA_AC_PAL_R);
+	    VGA_AC_PAL_SB | VGA_AC_PAL_B);
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PALETTE(10));
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_SR | VGA_AC_PAL_SG |
 	    VGA_AC_PAL_SB | VGA_AC_PAL_G);
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PALETTE(11));
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_SR | VGA_AC_PAL_SG |
-	    VGA_AC_PAL_SB | VGA_AC_PAL_R | VGA_AC_PAL_G);
+	    VGA_AC_PAL_SB | VGA_AC_PAL_G | VGA_AC_PAL_B);
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PALETTE(12));
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_SR | VGA_AC_PAL_SG |
-	    VGA_AC_PAL_SB | VGA_AC_PAL_B);
+	    VGA_AC_PAL_SB | VGA_AC_PAL_R);
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PALETTE(13));
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_SR | VGA_AC_PAL_SG |
 	    VGA_AC_PAL_SB | VGA_AC_PAL_R | VGA_AC_PAL_B);
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PALETTE(14));
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_SR | VGA_AC_PAL_SG |
-	    VGA_AC_PAL_SB | VGA_AC_PAL_G | VGA_AC_PAL_B);
+	    VGA_AC_PAL_SB | VGA_AC_PAL_R | VGA_AC_PAL_G);
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PALETTE(15));
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_PAL_SR | VGA_AC_PAL_SG |
 	    VGA_AC_PAL_SB | VGA_AC_PAL_R | VGA_AC_PAL_G | VGA_AC_PAL_B);
+
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_OVERSCAN_COLOR);
 	REG_WRITE1(sc, VGA_AC_WRITE, 0);
 	REG_WRITE1(sc, VGA_AC_WRITE, VGA_AC_COLOR_PLANE_ENABLE);
@@ -1207,36 +1257,22 @@ vga_initialize(struct vt_device *vd, int textmode)
 static bool
 vga_acpi_disabled(void)
 {
-#if ((defined(__amd64__) || defined(__i386__)) && defined(DEV_ACPI))
-	ACPI_TABLE_FADT *fadt;
-	vm_paddr_t physaddr;
+#if defined(__amd64__) || defined(__i386__)
 	uint16_t flags;
 	int ignore;
 
-	ignore = 0;
+	/*
+	 * Ignore the flag on real hardware: there's a lot of buggy firmware
+	 * that will wrongly set it.
+	 */
+	ignore = (vm_guest == VM_GUEST_NO);
 	TUNABLE_INT_FETCH("hw.vga.acpi_ignore_no_vga", &ignore);
-
-	if (ignore)
-	    return (false);
-
-	physaddr = acpi_find_table(ACPI_SIG_FADT);
-	if (physaddr == 0)
-		return (false);
-
-	fadt = acpi_map_table(physaddr, ACPI_SIG_FADT);
-	if (fadt == NULL) {
-		printf("vt_vga: unable to map FADT ACPI table\n");
-		return (false);
-	}
-
-	flags = fadt->BootFlags;
-	acpi_unmap_table(fadt);
-
-	if (flags & ACPI_FADT_NO_VGA)
-		return (true);
-#endif
-
+	if (ignore || !acpi_get_fadt_bootflags(&flags))
+ 		return (false);
+	return ((flags & ACPI_FADT_NO_VGA) != 0);
+#else
 	return (false);
+#endif
 }
 
 static int

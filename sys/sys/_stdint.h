@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 David E. O'Brien <obrien@FreeBSD.org>
  * Copyright (c) 2001 Mike Barcroft <mike@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/_stdint.h 291134 2015-11-21 16:21:27Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _SYS__STDINT_H_

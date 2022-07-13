@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003-2012 Broadcom Corporation
  * All Rights Reserved
  *
@@ -27,11 +29,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/nlm/dev/net/xlpge.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
+
+#include <sys/param.h>
 #include <sys/endian.h>
 #include <sys/systm.h>
 #include <sys/sockio.h>
-#include <sys/param.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
@@ -175,8 +178,8 @@ static int nlm_xlpge_resume(device_t);
 static int nlm_xlpge_shutdown(device_t);
 
 /* mii override functions */
-static int nlm_xlpge_mii_read(struct device *, int, int);
-static int nlm_xlpge_mii_write(struct device *, int, int, int);
+static int nlm_xlpge_mii_read(device_t, int, int);
+static int nlm_xlpge_mii_write(device_t, int, int, int);
 static void nlm_xlpge_mii_statchg(device_t);
 
 static device_method_t nlm_xlpge_methods[] = {
@@ -1290,7 +1293,7 @@ nlm_xlpge_shutdown(device_t dev)
  * miibus function with custom implementation
  */
 static int
-nlm_xlpge_mii_read(struct device *dev, int phyaddr, int regidx)
+nlm_xlpge_mii_read(device_t dev, int phyaddr, int regidx)
 {
 	struct nlm_xlpge_softc *sc;
 	int val;
@@ -1306,7 +1309,7 @@ nlm_xlpge_mii_read(struct device *dev, int phyaddr, int regidx)
 }
 
 static int
-nlm_xlpge_mii_write(struct device *dev, int phyaddr, int regidx, int val)
+nlm_xlpge_mii_write(device_t dev, int phyaddr, int regidx, int val)
 {
 	struct nlm_xlpge_softc *sc;
 

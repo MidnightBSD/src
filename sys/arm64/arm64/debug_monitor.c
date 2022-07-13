@@ -30,7 +30,7 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm64/arm64/debug_monitor.c 322761 2017-08-21 17:35:04Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>

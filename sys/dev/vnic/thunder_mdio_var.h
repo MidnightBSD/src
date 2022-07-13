@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/vnic/thunder_mdio_var.h 294994 2016-01-28 15:44:14Z zbb $
+ * $FreeBSD$
  *
  */
 

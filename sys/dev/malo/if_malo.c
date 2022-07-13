@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Weongyo Jeong <weongyo@freebsd.org>
  * Copyright (c) 2007 Marvell Semiconductor, Inc.
  * Copyright (c) 2007 Sam Leffler, Errno Consulting
@@ -30,8 +32,8 @@
  */
 
 #include <sys/cdefs.h>
-#ifdef __MidnightBSD__
-__FBSDID("$FreeBSD: stable/11/sys/dev/malo/if_malo.c 344969 2019-03-09 12:54:10Z avos $");
+#ifdef __FreeBSD__
+__FBSDID("$FreeBSD$");
 #endif
 
 #include "opt_malo.h"
@@ -916,10 +918,6 @@ malo_fix2rate(int fix_rate)
 	return (fix_rate < nitems(rates) ? rates[fix_rate] : 0);
 }
 
-/* idiomatic shorthands: MS = mask+shift, SM = shift+mask */
-#define	MS(v,x)			(((v) & x) >> x##_S)
-#define	SM(v,x)			(((v) << x##_S) & x)
-
 /*
  * Process completed xmit descriptors from the specified queue.
  */
@@ -960,7 +958,8 @@ malo_tx_processq(struct malo_softc *sc, struct malo_txq *txq)
 			status = le32toh(ds->status);
 			if (status & MALO_TXD_STATUS_OK) {
 				uint16_t format = le16toh(ds->format);
-				uint8_t txant = MS(format, MALO_TXD_ANTENNA);
+				uint8_t txant =_IEEE80211_MASKSHIFT(
+				    format, MALO_TXD_ANTENNA);
 
 				sc->malo_stats.mst_ant_tx[txant]++;
 				if (status & MALO_TXD_STATUS_OK_RETRY)
@@ -1533,7 +1532,7 @@ malo_setmcastfilter(struct malo_softc *sc)
 
 		ifp = vap->iv_ifp;
 		if_maddr_rlock(ifp);
-		TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 			if (ifma->ifma_addr->sa_family != AF_LINK)
 				continue;
 

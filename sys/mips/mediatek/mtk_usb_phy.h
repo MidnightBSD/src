@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/mips/mediatek/mtk_usb_phy.h 297670 2016-04-07 11:20:03Z sgalabov $
+ * $FreeBSD$
  */
 #ifndef _MTK_USB_PHY_H_
 #define _MTK_USB_PHY_H_

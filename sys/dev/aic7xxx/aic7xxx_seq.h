@@ -5,7 +5,7 @@
  * $Id: //depot/aic7xxx/aic7xxx/aic7xxx.seq#58 $
  * $Id: //depot/aic7xxx/aic7xxx/aic7xxx.reg#40 $
  *
- * $FreeBSD: stable/11/sys/dev/aic7xxx/aic7xxx_seq.h 260401 2014-01-07 19:33:17Z scottl $
+ * $FreeBSD$
  */
 static uint8_t seqprog[] = {
 	0xb2, 0x00, 0x00, 0x08,

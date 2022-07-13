@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1998-1999 Andrew Gallatin
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/ia32/ia32_util.h 321343 2017-07-21 18:06:57Z kib $
+ * $FreeBSD$
  */
 
 #ifndef	_COMPAT_IA32_IA32_UTIL_H

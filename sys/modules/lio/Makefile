@@ -1,4 +1,4 @@
-#$FreeBSD: stable/11/sys/modules/lio/Makefile 325618 2017-11-09 19:52:56Z sbruno $
+#$FreeBSD$
 
 #.PATH:  ${.CURDIR}
 .PATH: ${.CURDIR}/../../dev/liquidio

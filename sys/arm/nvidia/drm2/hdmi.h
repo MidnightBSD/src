@@ -20,7 +20,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/arm/nvidia/drm2/hdmi.h 310600 2016-12-26 14:36:05Z mmel $
+ * $FreeBSD$
  */
 
 #ifndef _HDMI_H_

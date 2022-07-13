@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/xen/evtchn/evtchn_dev.c 318347 2017-05-16 09:39:20Z royger $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -261,9 +261,10 @@ evtchn_read(struct cdev *dev, struct uio *uio, int ioflag)
 
 	sx_xlock(&u->ring_cons_mutex);
 	for (;;) {
-		error = EFBIG;
-		if (u->ring_overflow)
+		if (u->ring_overflow) {
+			error = EFBIG;
 			goto unlock_out;
+		}
 
 		c = u->ring_cons;
 		p = u->ring_prod;
@@ -271,13 +272,13 @@ evtchn_read(struct cdev *dev, struct uio *uio, int ioflag)
 			break;
 
 		if (ioflag & IO_NDELAY) {
-			sx_xunlock(&u->ring_cons_mutex);
-			return (EWOULDBLOCK);
+			error = EWOULDBLOCK;
+			goto unlock_out;
 		}
 
 		error = sx_sleep(u, &u->ring_cons_mutex, PCATCH, "evtchw", 0);
 		if ((error != 0) && (error != EWOULDBLOCK))
-			return (error);
+			goto unlock_out;
 	}
 
 	/* Byte lengths of two chunks. Chunk split (if any) is at ring wrap. */
@@ -474,10 +475,10 @@ evtchn_ioctl(struct cdev *dev, unsigned long cmd, caddr_t arg,
 			error = ENOTCONN;
 			break;
 		}
-
-		xen_intr_unbind(&evtchn->handle);
 		RB_REMOVE(evtchn_tree, &u->evtchns, evtchn);
 		mtx_unlock(&u->bind_mutex);
+
+		xen_intr_unbind(&evtchn->handle);
 		free(evtchn, M_EVTCHN);
 		error = 0;
 		break;

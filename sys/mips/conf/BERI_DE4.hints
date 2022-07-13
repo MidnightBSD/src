@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/mips/conf/BERI_DE4.hints 256912 2013-10-22 15:45:31Z brooks $
+# $FreeBSD$
 
 # Hardwired location of bitfile
 hint.map.0.at="cfid0s.fpga0"

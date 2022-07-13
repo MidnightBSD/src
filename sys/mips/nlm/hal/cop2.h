@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright 2003-2011 Netlogic Microsystems (Netlogic). All rights
  * reserved.
  *
@@ -26,7 +28,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD: stable/11/sys/mips/nlm/hal/cop2.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef __NLM_HAL_COP2_H__

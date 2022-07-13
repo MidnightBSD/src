@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2001 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  *
  *	from NetBSD: bmtphyreg.h,v 1.1 2001/06/02 21:42:10 thorpej Exp
  *
- * $FreeBSD: stable/11/sys/dev/mii/bmtphyreg.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_MII_BMTPHYREG_H_

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -11,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -28,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)syslog.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: stable/10/sys/sys/syslog.h 249311 2013-04-09 16:16:34Z ed $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_SYSLOG_H_

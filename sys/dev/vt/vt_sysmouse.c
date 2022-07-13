@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
  *
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/vt/vt_sysmouse.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_evdev.h"
 
@@ -212,7 +214,7 @@ sysmouse_process_event(mouse_info_t *mi)
 	unsigned char buf[MOUSE_SYS_PACKETSIZE];
 	int x, y, iy, z;
 
-	random_harvest_queue(mi, sizeof *mi, 2, RANDOM_MOUSE);
+	random_harvest_queue(mi, sizeof *mi, RANDOM_MOUSE);
 
 	mtx_lock(&sysmouse_lock);
 	switch (mi->operation) {

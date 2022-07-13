@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005, M. Warner Losh.
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ed/dl100xxreg.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /* Dlink chipset used on some Netgear and Dlink PCMCIA cards */

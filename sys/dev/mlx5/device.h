@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/device.h 353254 2019-10-07 10:21:37Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef MLX5_DEVICE_H
@@ -212,7 +212,7 @@ enum {
 };
 
 enum {
-	MLX5_MKEY_INBOX_PG_ACCESS = 1 << 31
+	MLX5_MKEY_INBOX_PG_ACCESS = 1U << 31
 };
 
 enum {
@@ -236,7 +236,7 @@ enum {
 	MLX5_MKEY_REMOTE_INVAL	= 1 << 24,
 	MLX5_MKEY_FLAG_SYNC_UMR = 1 << 29,
 	MLX5_MKEY_BSF_EN	= 1 << 30,
-	MLX5_MKEY_LEN64		= 1 << 31,
+	MLX5_MKEY_LEN64		= 1U << 31,
 };
 
 enum {
@@ -551,6 +551,13 @@ enum {
 	MLX5_MODULE_EVENT_ERROR_UNSUPPORTED_CABLE                     = 0x5,
 	MLX5_MODULE_EVENT_ERROR_HIGH_TEMPERATURE                      = 0x6,
 	MLX5_MODULE_EVENT_ERROR_CABLE_IS_SHORTED                      = 0x7,
+	MLX5_MODULE_EVENT_ERROR_PMD_TYPE_NOT_ENABLED                  = 0x8,
+	MLX5_MODULE_EVENT_ERROR_LASTER_TEC_FAILURE                    = 0x9,
+	MLX5_MODULE_EVENT_ERROR_HIGH_CURRENT                          = 0xa,
+	MLX5_MODULE_EVENT_ERROR_HIGH_VOLTAGE                          = 0xb,
+	MLX5_MODULE_EVENT_ERROR_PCIE_SYS_POWER_SLOT_EXCEEDED          = 0xc,
+	MLX5_MODULE_EVENT_ERROR_HIGH_POWER                            = 0xd,
+	MLX5_MODULE_EVENT_ERROR_MODULE_STATE_MACHINE_FAULT            = 0xe,
 	MLX5_MODULE_EVENT_ERROR_NUM		                      ,
 };
 
@@ -661,6 +668,8 @@ struct mlx5_cqe64 {
 	u8		signature;
 	u8		op_own;
 };
+
+#define	MLX5_CQE_TSTMP_PTP	(1ULL << 63)
 
 static inline bool get_cqe_lro_timestamp_valid(struct mlx5_cqe64 *cqe)
 {

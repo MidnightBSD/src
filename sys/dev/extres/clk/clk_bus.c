@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/extres/clk/clk_bus.c 297213 2016-03-23 19:21:21Z jmcneill $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -60,11 +60,9 @@ ofw_clkbus_probe(device_t dev)
 static int
 ofw_clkbus_attach(device_t dev)
 {
-	struct ofw_clkbus_softc *sc;
 	phandle_t node, child;
 	device_t cdev;
 
-	sc = device_get_softc(dev);
 	node  = ofw_bus_get_node(dev);
 	simplebus_init(dev, node);
 

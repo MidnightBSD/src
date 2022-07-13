@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2015 Landon Fuller <landon@landonf.org>
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  * 
- * $FreeBSD: stable/11/sys/dev/bhnd/cores/pci/bhnd_pcibvar.h 298479 2016-04-22 16:26:53Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef _BHND_CORES_PCI_BHND_PCIBVAR_H_

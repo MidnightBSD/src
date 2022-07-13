@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2009-2013 The FreeBSD Foundation
  * Copyright (c) 2013-2015 Mariusz Zaborski <oshogbo@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/nv.h 336346 2018-07-16 15:02:21Z kevans $
+ * $FreeBSD$
  */
 
 #ifndef	_NV_H_

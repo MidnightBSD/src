@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/security/mac_bsdextended/ugidfw_internal.h 189533 2009-03-08 12:32:06Z rwatson $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_SECURITY_MAC_BSDEXTENDED_UGIDFW_INTERNAL_H

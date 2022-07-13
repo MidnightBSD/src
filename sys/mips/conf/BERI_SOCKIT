@@ -4,10 +4,10 @@
 # reference configuration.  This kernel configration must be further
 # specialized to include a root filesystem specification.
 #
-# $FreeBSD: stable/11/sys/mips/conf/BERI_SOCKIT 330446 2018-03-05 06:59:30Z eadler $
+# $FreeBSD$
 #
 
-include "BERI_TEMPLATE"
+include "std.BERI"
 
 ident		BERI_SOCKIT
 

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997, Stefan Esser <se@freebsd.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/interrupt.h 340016 2018-11-01 18:34:26Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_INTERRUPT_H_
@@ -32,6 +33,7 @@
 
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
+#include <sys/ck.h>
 
 struct intr_event;
 struct intr_thread;
@@ -51,7 +53,7 @@ struct intr_handler {
 	char		 ih_name[MAXCOMLEN + 1]; /* Name of handler. */
 	struct intr_event *ih_event;	/* Event we are connected to. */
 	int		 ih_need;	/* Needs service. */
-	TAILQ_ENTRY(intr_handler) ih_next; /* Next handler for this event. */
+	CK_SLIST_ENTRY(intr_handler) ih_next; /* Next handler for this event. */
 	u_char		 ih_pri;	/* Priority of this handler. */
 	struct intr_thread *ih_thread;	/* Ithread for filtered handler. */
 };
@@ -60,6 +62,8 @@ struct intr_handler {
 #define	IH_EXCLUSIVE	0x00000002	/* Exclusive interrupt. */
 #define	IH_ENTROPY	0x00000004	/* Device is a good entropy source. */
 #define	IH_DEAD		0x00000008	/* Handler should be removed. */
+#define	IH_SUSP		0x00000010	/* Device is powered down. */
+#define	IH_CHANGED	0x40000000	/* Handler state is changed. */
 #define	IH_MPSAFE	0x80000000	/* Handler does not need Giant. */
 
 /*
@@ -104,7 +108,7 @@ struct intr_handler {
  */
 struct intr_event {
 	TAILQ_ENTRY(intr_event) ie_list;
-	TAILQ_HEAD(, intr_handler) ie_handlers; /* Interrupt handlers. */
+	CK_SLIST_HEAD(, intr_handler) ie_handlers; /* Interrupt handlers. */
 	char		ie_name[MAXCOMLEN + 1]; /* Individual event name. */
 	char		ie_fullname[MAXCOMLEN + 1];
 	struct mtx	ie_lock;
@@ -120,6 +124,8 @@ struct intr_event {
 	struct timeval	ie_warntm;
 	int		ie_irq;		/* Physical irq number if !SOFT. */
 	int		ie_cpu;		/* CPU this event is bound to. */
+	volatile int	ie_phase;	/* Switched to establish a barrier. */
+	volatile int	ie_active[2];	/* Filters in ISR context. */
 };
 
 /* Interrupt event flags kept in ie_flags. */
@@ -127,7 +133,8 @@ struct intr_event {
 #define	IE_ENTROPY	0x000002	/* Interrupt is an entropy source. */
 #define	IE_ADDING_THREAD 0x000004	/* Currently building an ithread. */
 
-/* Flags to pass to sched_swi. */
+/* Flags to pass to swi_sched. */
+#define	SWI_FROMNMI	0x1
 #define	SWI_DELAY	0x2
 
 /*
@@ -178,13 +185,14 @@ int	intr_event_create(struct intr_event **event, void *source,
 int	intr_event_describe_handler(struct intr_event *ie, void *cookie,
 	    const char *descr);
 int	intr_event_destroy(struct intr_event *ie);
-void	intr_event_execute_handlers(struct proc *p, struct intr_event *ie);
 int	intr_event_handle(struct intr_event *ie, struct trapframe *frame);
 int	intr_event_remove_handler(void *cookie);
+int	intr_event_suspend_handler(void *cookie);
+int	intr_event_resume_handler(void *cookie);
 int	intr_getaffinity(int irq, int mode, void *mask);
 void	*intr_handler_source(void *cookie);
 int	intr_setaffinity(int irq, int mode, void *mask);
-void	_intr_drain(int irq);  /* Linux compat only. */
+void	_intr_drain(int irq);  /* LinuxKPI only. */
 int	swi_add(struct intr_event **eventp, const char *name,
 	    driver_intr_t handler, void *arg, int pri, enum intr_type flags,
 	    void **cookiep);

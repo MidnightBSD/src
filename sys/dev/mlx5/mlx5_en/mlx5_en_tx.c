@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_en/mlx5_en_tx.c 347827 2019-05-16 17:34:09Z hselasky $
+ * $FreeBSD$
  */
 
 #include "en.h"
@@ -76,6 +76,47 @@ mlx5e_hash_init(void *arg)
 /* Make kernel call mlx5e_hash_init after the random stack finished initializing */
 SYSINIT(mlx5e_hash_init, SI_SUB_RANDOM, SI_ORDER_ANY, &mlx5e_hash_init, NULL);
 #endif
+
+static struct mlx5e_sq *
+mlx5e_select_queue_by_send_tag(struct ifnet *ifp, struct mbuf *mb)
+{
+	struct mlx5e_snd_tag *ptag;
+	struct mlx5e_sq *sq;
+
+	/* check for route change */
+	if (mb->m_pkthdr.snd_tag->ifp != ifp)
+		return (NULL);
+
+	/* get pointer to sendqueue */
+	ptag = container_of(mb->m_pkthdr.snd_tag,
+	    struct mlx5e_snd_tag, m_snd_tag);
+
+	switch (ptag->type) {
+#ifdef RATELIMIT
+	case IF_SND_TAG_TYPE_RATE_LIMIT:
+		sq = container_of(ptag,
+		    struct mlx5e_rl_channel, tag)->sq;
+		break;
+#endif
+	case IF_SND_TAG_TYPE_UNLIMITED:
+		sq = &container_of(ptag,
+		    struct mlx5e_channel, tag)->sq[0];
+		KASSERT(({
+		    struct mlx5e_priv *priv = ifp->if_softc;
+		    priv->channel_refs > 0; }),
+		    ("mlx5e_select_queue: Channel refs are zero for unlimited tag"));
+		break;
+	default:
+		sq = NULL;
+		break;
+	}
+
+	/* check if valid */
+	if (sq != NULL && READ_ONCE(sq->running) != 0)
+		return (sq);
+
+	return (NULL);
+}
 
 static struct mlx5e_sq *
 mlx5e_select_queue(struct ifnet *ifp, struct mbuf *mb)
@@ -173,22 +214,30 @@ max_inline:
 	return (MIN(mb->m_pkthdr.len, sq->max_inline));
 }
 
+/*
+ * This function parse IPv4 and IPv6 packets looking for TCP and UDP
+ * headers.
+ *
+ * The return value indicates the number of bytes from the beginning
+ * of the packet until the first byte after the TCP or UDP header. If
+ * this function returns zero, the parsing failed.
+ */
 static int
-mlx5e_get_full_header_size(struct mbuf *mb)
+mlx5e_get_full_header_size(const struct mbuf *mb)
 {
-	struct ether_vlan_header *eh;
-	struct tcphdr *th;
-	struct ip *ip;
+	const struct ether_vlan_header *eh;
+	const struct tcphdr *th;
+	const struct ip *ip;
 	int ip_hlen, tcp_hlen;
-	struct ip6_hdr *ip6;
+	const struct ip6_hdr *ip6;
 	uint16_t eth_type;
 	int eth_hdr_len;
 
-	eh = mtod(mb, struct ether_vlan_header *);
-	if (mb->m_len < ETHER_HDR_LEN)
+	eh = mtod(mb, const struct ether_vlan_header *);
+	if (unlikely(mb->m_len < ETHER_HDR_LEN))
 		return (0);
 	if (eh->evl_encap_proto == htons(ETHERTYPE_VLAN)) {
-		if (mb->m_len < (ETHER_HDR_LEN + ETHER_VLAN_ENCAP_LEN))
+		if (unlikely(mb->m_len < (ETHER_HDR_LEN + ETHER_VLAN_ENCAP_LEN)))
 			return (0);
 		eth_type = ntohs(eh->evl_proto);
 		eth_hdr_len = ETHER_HDR_LEN + ETHER_VLAN_ENCAP_LEN;
@@ -198,8 +247,8 @@ mlx5e_get_full_header_size(struct mbuf *mb)
 	}
 	switch (eth_type) {
 	case ETHERTYPE_IP:
-		ip = (struct ip *)(mb->m_data + eth_hdr_len);
-		if (mb->m_len < eth_hdr_len + sizeof(*ip))
+		ip = (const struct ip *)(mb->m_data + eth_hdr_len);
+		if (unlikely(mb->m_len < eth_hdr_len + sizeof(*ip)))
 			return (0);
 		switch (ip->ip_p) {
 		case IPPROTO_TCP:
@@ -215,8 +264,8 @@ mlx5e_get_full_header_size(struct mbuf *mb)
 		}
 		break;
 	case ETHERTYPE_IPV6:
-		ip6 = (struct ip6_hdr *)(mb->m_data + eth_hdr_len);
-		if (mb->m_len < eth_hdr_len + sizeof(*ip6))
+		ip6 = (const struct ip6_hdr *)(mb->m_data + eth_hdr_len);
+		if (unlikely(mb->m_len < eth_hdr_len + sizeof(*ip6)))
 			return (0);
 		switch (ip6->ip6_nxt) {
 		case IPPROTO_TCP:
@@ -232,9 +281,15 @@ mlx5e_get_full_header_size(struct mbuf *mb)
 	default:
 		return (0);
 	}
-	if (mb->m_len < eth_hdr_len + sizeof(*th))
-		return (0);
-	th = (struct tcphdr *)(mb->m_data + eth_hdr_len);
+	if (unlikely(mb->m_len < eth_hdr_len + sizeof(*th))) {
+		const struct mbuf *m_th = mb->m_next;
+		if (unlikely(mb->m_len != eth_hdr_len ||
+		    m_th == NULL || m_th->m_len < sizeof(*th)))
+			return (0);
+		th = (const struct tcphdr *)(m_th->m_data);
+	} else {
+		th = (const struct tcphdr *)(mb->m_data + eth_hdr_len);
+	}
 	tcp_hlen = th->th_off << 2;
 	eth_hdr_len += tcp_hlen;
 done:
@@ -243,7 +298,7 @@ done:
 	 * does not need to reside within the first m_len bytes of
 	 * data:
 	 */
-	if (mb->m_pkthdr.len < eth_hdr_len)
+	if (unlikely(mb->m_pkthdr.len < eth_hdr_len))
 		return (0);
 	return (eth_hdr_len);
 }
@@ -580,11 +635,34 @@ mlx5e_xmit(struct ifnet *ifp, struct mbuf *mb)
 	struct mlx5e_sq *sq;
 	int ret;
 
-	sq = mlx5e_select_queue(ifp, mb);
-	if (unlikely(sq == NULL)) {
-		/* Invalid send queue */
-		m_freem(mb);
-		return (ENXIO);
+	if ((mb->m_pkthdr.csum_flags & CSUM_SND_TAG) != 0 &&
+	    (mb->m_pkthdr.snd_tag != NULL)) {
+		sq = mlx5e_select_queue_by_send_tag(ifp, mb);
+		if (unlikely(sq == NULL)) {
+			/* Check for route change */
+			if (mb->m_pkthdr.snd_tag->ifp != ifp) {
+				/* Free mbuf */
+				m_freem(mb);
+
+				/*
+				 * Tell upper layers about route
+				 * change and to re-transmit this
+				 * packet:
+				 */
+				return (EAGAIN);
+			}
+			goto select_queue;
+		}
+	} else {
+select_queue:
+		sq = mlx5e_select_queue(ifp, mb);
+		if (unlikely(sq == NULL)) {
+			/* Free mbuf */
+			m_freem(mb);
+
+			/* Invalid send queue */
+			return (ENXIO);
+		}
 	}
 
 	mtx_lock(&sq->lock);
@@ -595,7 +673,7 @@ mlx5e_xmit(struct ifnet *ifp, struct mbuf *mb)
 }
 
 void
-mlx5e_tx_cq_comp(struct mlx5_core_cq *mcq)
+mlx5e_tx_cq_comp(struct mlx5_core_cq *mcq, struct mlx5_eqe *eqe __unused)
 {
 	struct mlx5e_sq *sq = container_of(mcq, struct mlx5e_sq, cq.mcq);
 

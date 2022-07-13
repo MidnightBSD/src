@@ -1,6 +1,5 @@
 /*-
- * Copyright (c) 2018 Microsemi Corporation.
- * All rights reserved.
+ * Copyright 2016-2021 Microchip Technology, Inc. and/or its subsidiaries.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/11/sys/dev/smartpqi/smartpqi_includes.h 333019 2018-04-26 16:59:06Z sbruno $ */
+/* $FreeBSD$ */
 
 #ifndef _PQI_INCLUDES_H
 #define _PQI_INCLUDES_H
@@ -37,8 +36,7 @@
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/disk.h>
-#include <sys/cdefs.h>
-#include <sys/types.h>
+#include <sys/eventhandler.h>
 #include <sys/malloc.h>
 #include <sys/rman.h>
 #include <sys/bus.h>

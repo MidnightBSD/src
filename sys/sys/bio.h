@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  * (c) UNIX System Laboratories, Inc.
@@ -16,7 +17,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)buf.h	8.9 (Berkeley) 3/30/95
- * $FreeBSD: stable/11/sys/sys/bio.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_BIO_H_
@@ -120,7 +121,10 @@ struct bio {
 #ifdef DIAGNOSTIC
 	void	*_bio_caller1;
 	void	*_bio_caller2;
-	uint8_t	_bio_cflags;
+	uint16_t _bio_cflags;
+#endif
+#if defined(BUF_TRACKING) || defined(FULL_BUF_TRACKING)
+	struct buf *bio_track_bp;	/* Parent buf for tracking */
 #endif
 
 	/* XXX: these go away when bio chaining is introduced */
@@ -134,6 +138,8 @@ struct bio_queue_head {
 	TAILQ_HEAD(bio_queue, bio) queue;
 	off_t last_offset;
 	struct	bio *insert_point;
+	int total;
+	int batched;
 };
 
 extern struct vm_map *bio_transient_map;
@@ -141,7 +147,24 @@ extern int bio_transient_maxcnt;
 
 void biodone(struct bio *bp);
 void biofinish(struct bio *bp, struct devstat *stat, int error);
-int biowait(struct bio *bp, const char *wchan);
+int biowait(struct bio *bp, const char *wmesg);
+
+#if defined(BUF_TRACKING) || defined(FULL_BUF_TRACKING)
+void biotrack_buf(struct bio *bp, const char *location);
+
+static __inline void
+biotrack(struct bio *bp, const char *location)
+{
+
+	if (bp->bio_track_bp != NULL)
+		biotrack_buf(bp, location);
+}
+#else
+static __inline void
+biotrack(struct bio *bp __unused, const char *location __unused)
+{
+}
+#endif
 
 void bioq_disksort(struct bio_queue_head *ap, struct bio *bp);
 struct bio *bioq_first(struct bio_queue_head *head);
@@ -151,8 +174,6 @@ void bioq_init(struct bio_queue_head *head);
 void bioq_insert_head(struct bio_queue_head *head, struct bio *bp);
 void bioq_insert_tail(struct bio_queue_head *head, struct bio *bp);
 void bioq_remove(struct bio_queue_head *head, struct bio *bp);
-
-void bio_taskqueue(struct bio *bp, bio_task_t *fund, void *arg);
 
 int	physio(struct cdev *dev, struct uio *uio, int ioflag);
 #define physread physio

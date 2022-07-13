@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005,2008 Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
  * All rights reserved.
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_x86.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -246,7 +248,8 @@ pmc_md_initialize()
 	struct pmc_mdep *md;
 
 	/* determine the CPU kind */
-	if (cpu_vendor_id == CPU_VENDOR_AMD)
+	if (cpu_vendor_id == CPU_VENDOR_AMD ||
+	    cpu_vendor_id == CPU_VENDOR_HYGON)
 		md = pmc_amd_initialize();
 	else if (cpu_vendor_id == CPU_VENDOR_INTEL)
 		md = pmc_intel_initialize();
@@ -269,7 +272,8 @@ pmc_md_finalize(struct pmc_mdep *md)
 {
 
 	lapic_disable_pmc();
-	if (cpu_vendor_id == CPU_VENDOR_AMD)
+	if (cpu_vendor_id == CPU_VENDOR_AMD ||
+	    cpu_vendor_id == CPU_VENDOR_HYGON)
 		pmc_amd_finalize(md);
 	else if (cpu_vendor_id == CPU_VENDOR_INTEL)
 		pmc_intel_finalize(md);

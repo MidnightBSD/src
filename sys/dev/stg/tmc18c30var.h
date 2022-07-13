@@ -1,8 +1,10 @@
-/*	$FreeBSD: stable/11/sys/dev/stg/tmc18c30var.h 331722 2018-03-29 02:50:57Z eadler $	*/
+/*	$FreeBSD$	*/
 /*	$NecBSD: tmc18c30var.h,v 1.12.18.2 2001/06/13 05:51:23 honda Exp $	*/
 /*	$NetBSD$	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * [NetBSD for NEC PC-98 series]
  *  Copyright (c) 1996, 1997, 1998, 1999, 2000, 2001
  *	NetBSD/pc98 porting staff. All rights reserved.

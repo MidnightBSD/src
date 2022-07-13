@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_core/transobj.h 329213 2018-02-13 15:18:11Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef __TRANSOBJ_H__

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2007 Stephan Uphoff <ups@FreeBSD.org>
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/rmlock.h 343420 2019-01-25 11:01:11Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_RMLOCK_H_
@@ -47,6 +48,7 @@
 #define	RM_RECURSE	0x00000002
 #define	RM_SLEEPABLE	0x00000004
 #define	RM_NEW		0x00000008
+#define	RM_DUPOK	0x00000010
 
 void	rm_init(struct rmlock *rm, const char *name);
 void	rm_init_flags(struct rmlock *rm, const char *name, int opts);

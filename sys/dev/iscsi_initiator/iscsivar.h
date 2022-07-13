@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2011 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/iscsi_initiator/iscsivar.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*
@@ -276,7 +278,7 @@ XPT_DONE(isc_session_t *sp, union ccb *ccb)
      xpt_done(ccb);
      mtx_unlock(&Giant);
 }
-#elif __MidnightBSD_version >= 4000
+#elif __FreeBSD_version >= 700000
 #define CAM_LOCK(arg)	mtx_lock(&arg->cam_mtx)
 #define CAM_UNLOCK(arg)	mtx_unlock(&arg->cam_mtx)
 

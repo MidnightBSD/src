@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2008-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2008 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar9002/ar9285.c 228517 2011-12-15 00:59:11Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -49,7 +51,6 @@ ar9285GetNoiseFloor(struct ath_hal *ah, int16_t nfarray[])
 	HALDEBUG(ah, HAL_DEBUG_NFCAL,
 	    "NF calibrated [ctl] [chain 0] is %d\n", nf);
 	nfarray[0] = nf;
-
 
 	nf = MS(OS_REG_READ(ah, AR_PHY_EXT_CCA), AR9280_PHY_EXT_MINCCA_PWR);
 	if (nf & 0x100)

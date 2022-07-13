@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/ip_mroute_mod/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/netinet ${SRCTOP}/sys/netinet6
 

@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/dev/bktr/bktr_mem.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 /*
  * This is prt of the Driver for Video Capture Cards (Frame grabbers)
@@ -14,6 +14,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * 1. Redistributions of source code must retain the
  * Copyright (c) 2000 Roger Hardiman
  * All rights reserved.

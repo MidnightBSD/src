@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/idr.h 345917 2019-04-05 11:14:01Z hselasky $
+ * $FreeBSD$
  */
 #ifndef	_LINUX_IDR_H_
 #define	_LINUX_IDR_H_

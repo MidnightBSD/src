@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/11/sys/compat/linux/linux_videodev2_compat.h 221434 2011-05-04 13:09:20Z netchild $
+ * $FreeBSD$
  */
 
 /*

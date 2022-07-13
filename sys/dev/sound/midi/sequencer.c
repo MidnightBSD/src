@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 Mathew Kanner
  * Copyright (c) 1993 Hannu Savolainen
  * All rights reserved.
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/sound/midi/sequencer.c 339720 2018-10-25 14:55:04Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -892,7 +894,7 @@ mseq_read(struct cdev *i_dev, struct uio *uio, int ioflag)
 	/*
 	 * I think the semantics are to return as soon
 	 * as possible.
-	 * Second thought, it doens't seem like midimoutain
+	 * Second thought, it doesn't seem like midimoutain
 	 * expects that at all.
 	 * TODO: Look up in some sort of spec
 	 */
@@ -910,7 +912,7 @@ mseq_read(struct cdev *i_dev, struct uio *uio, int ioflag)
 				goto err1;
 
 			retval = cv_wait_sig(&scp->in_cv, &scp->seq_lock);
-			if (retval == EINTR)
+			if (retval != 0)
 				goto err1;
 		}
 
@@ -975,7 +977,7 @@ mseq_write(struct cdev *i_dev, struct uio *uio, int ioflag)
 		         * We slept, maybe things have changed since last
 		         * dying check
 		         */
-			if (retval == EINTR)
+			if (retval != 0)
 				goto err0;
 #if 0
 			/*
@@ -1092,7 +1094,7 @@ mseq_write(struct cdev *i_dev, struct uio *uio, int ioflag)
 				/*
 			         * For now, try to make midimoutain work by
 			         * forcing these events to be processed
-				 * immediatly.
+				 * immediately.
 			         */
 				seq_processevent(scp, event);
 			} else
@@ -1442,7 +1444,7 @@ mseq_poll(struct cdev *i_dev, int events, struct thread *td)
 
 	ret = 0;
 
-	/* Look up the apropriate queue and select it. */
+	/* Look up the appropriate queue and select it. */
 	if ((events & (POLLOUT | POLLWRNORM)) != 0) {
 		/* Start playing. */
 		scp->playing = 1;

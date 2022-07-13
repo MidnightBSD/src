@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,7 +39,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/solo.c 331722 2018-03-29 02:50:57Z eadler $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 #define SOLO_DEFAULT_BUFSZ 16384
 #define ABS(x) (((x) < 0)? -(x) : (x))

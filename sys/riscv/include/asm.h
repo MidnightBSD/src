@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015 Ruslan Bukin <br@bsdpad.com>
+ * Copyright (c) 2015-2018 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
  *
  * Portions of this software were developed by SRI International and the
@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/riscv/include/asm.h 295258 2016-02-04 14:30:46Z br $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ASM_H_
@@ -47,7 +47,7 @@
 #define	_C_LABEL(x)	x
 
 #define	ENTRY(sym)						\
-	.text; .globl sym; .type sym,@function; .align 2; sym:
+	.text; .globl sym; .type sym,@function; .align 4; sym:
 #define	END(sym) .size sym, . - sym
 
 #define	EENTRY(sym)						\
@@ -59,8 +59,16 @@
 	.set alias,sym
 
 #define	SET_FAULT_HANDLER(handler, tmp)					\
-	ld	tmp, PC_CURTHREAD(gp);					\
+	ld	tmp, PC_CURTHREAD(tp);					\
 	ld	tmp, TD_PCB(tmp);		/* Load the pcb */	\
 	sd	handler, PCB_ONFAULT(tmp)	/* Set the handler */
+
+#define	ENTER_USER_ACCESS(tmp)						\
+	li	tmp, SSTATUS_SUM;					\
+	csrs	sstatus, tmp
+
+#define	EXIT_USER_ACCESS(tmp)						\
+	li	tmp, SSTATUS_SUM;					\
+	csrc	sstatus, tmp
 
 #endif /* _MACHINE_ASM_H_ */

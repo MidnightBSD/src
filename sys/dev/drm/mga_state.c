@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm/mga_state.c 330446 2018-03-05 06:59:30Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

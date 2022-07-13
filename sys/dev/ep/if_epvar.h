@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1993 Herb Peyerl (hpeyerl@novatel.ca) All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -19,7 +21,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ep/if_epvar.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 struct ep_board {
@@ -59,7 +61,6 @@ struct ep_softc {
 #define	F_RX_FIRST		0x001
 #define F_ENADDR_SKIP		0x002
 #define	F_PROMISC		0x008
-#define	F_ACCESS_32_BITS	0x100
 #define	F_HAS_TX_PLL		0x200
 
 	int gone;		/* adapter is not present (for PCCARD) */

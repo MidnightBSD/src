@@ -1,5 +1,5 @@
 /*	$OpenBSD: if_iwm.c,v 1.39 2015/03/23 00:35:19 jsg Exp $	*/
-/*	$FreeBSD: stable/11/sys/dev/iwm/if_iwm_power.h 330201 2018-03-01 06:34:21Z eadler $ */
+/*	$FreeBSD$ */
 
 /*
  * Copyright (c) 2014 genua mbh <info@genua.de>
@@ -90,11 +90,11 @@
 #ifndef	__IF_IWM_POWER_H__
 #define	__IF_IWM_POWER_H__
 
-extern	int iwm_mvm_power_update_device(struct iwm_softc *sc);
-extern	int iwm_mvm_power_update_mac(struct iwm_softc *sc);
-extern	int iwm_mvm_power_update_ps(struct iwm_softc *sc);
-extern	int iwm_mvm_enable_beacon_filter(struct iwm_softc *sc,
-	    struct iwm_node *in);
-extern	int iwm_mvm_disable_beacon_filter(struct iwm_softc *sc);
+extern	int iwm_power_update_device(struct iwm_softc *sc);
+extern	int iwm_power_update_mac(struct iwm_softc *sc);
+extern	int iwm_power_update_ps(struct iwm_softc *sc);
+extern	int iwm_enable_beacon_filter(struct iwm_softc *sc,
+	    struct iwm_vap *ivp);
+extern	int iwm_disable_beacon_filter(struct iwm_softc *sc);
 
 #endif	/* __IF_IWM_POWER_H__ */

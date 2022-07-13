@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/extres/regulator/regulator.h 308328 2016-11-05 04:40:58Z mmel $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_EXTRES_REGULATOR_H_
@@ -31,10 +31,13 @@
 #include "opt_platform.h"
 
 #include <sys/kobj.h>
+#include <sys/sysctl.h>
 #ifdef FDT
 #include <dev/ofw/ofw_bus.h>
 #endif
 #include "regnode_if.h"
+
+SYSCTL_DECL(_hw_regulator);
 
 #define REGULATOR_FLAGS_STATIC		0x00000001  /* Static strings */
 #define REGULATOR_FLAGS_NOT_DISABLE	0x00000002  /* Cannot be disabled */
@@ -113,6 +116,11 @@ int regnode_stop(struct regnode *regnode, int depth);
 int regnode_status(struct regnode *regnode, int *status);
 int regnode_get_voltage(struct regnode *regnode, int *uvolt);
 int regnode_set_voltage(struct regnode *regnode, int min_uvolt, int max_uvolt);
+int regnode_set_constraint(struct regnode *regnode);
+
+/* Standard method that aren't default */
+int regnode_method_check_voltage(struct regnode *regnode, int uvolt);
+
 #ifdef FDT
 phandle_t regnode_get_ofw_node(struct regnode *regnode);
 #endif
@@ -130,6 +138,7 @@ int regulator_stop(regulator_t reg);
 int regulator_status(regulator_t reg, int *status);
 int regulator_get_voltage(regulator_t reg, int *uvolt);
 int regulator_set_voltage(regulator_t reg, int min_uvolt, int max_uvolt);
+int regulator_check_voltage(regulator_t reg, int uvolt);
 
 #ifdef FDT
 int regulator_get_by_ofw_property(device_t dev, phandle_t node, char *name,

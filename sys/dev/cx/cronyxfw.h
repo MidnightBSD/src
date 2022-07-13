@@ -12,7 +12,7 @@
  * all derivative works or modified versions.
  *
  * Cronyx Id: cronyxfw.h,v 1.1.2.1 2003/11/12 17:09:49 rik Exp $
- * $FreeBSD: stable/11/sys/dev/cx/cronyxfw.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD$
  */
 #define CRONYX_DAT_MAGIC 2001107011L	/* firmware file magic */
 

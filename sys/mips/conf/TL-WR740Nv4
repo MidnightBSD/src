@@ -6,13 +6,13 @@
 # * 4MB flash
 # * Integrated 1x1 2GHz wifi and 10/100 bridge
 #
-# $FreeBSD: stable/11/sys/mips/conf/TL-WR740Nv4 345344 2019-03-20 18:49:45Z kib $
+# $FreeBSD$
 #
 
 #NO_UNIVERSE
 
 # Include the default AR933x parameters
-include         "AR933X_BASE"
+include         "std.AR933X"
 
 ident           TL-WR740Nv4
 

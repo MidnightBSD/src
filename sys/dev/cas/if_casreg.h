@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2001 Eduardo Horvath.
  * Copyright (c) 2008 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +29,7 @@
  *	from: NetBSD: gemreg.h,v 1.8 2005/12/11 12:21:26 christos Exp
  *	from: FreeBSD: if_gemreg.h 174987 2007-12-30 01:32:03Z marius
  *
- * $FreeBSD: stable/11/sys/dev/cas/if_casreg.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_IF_CASREG_H

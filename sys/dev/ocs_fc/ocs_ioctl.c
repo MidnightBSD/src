@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ocs_fc/ocs_ioctl.c 335291 2018-06-17 17:32:32Z dim $
+ * $FreeBSD$
  */
 
 #include "ocs.h"
@@ -60,22 +60,12 @@ ocs_firmware_write(ocs_t *ocs, const uint8_t *buf, size_t buf_len, uint8_t *chan
 static int
 ocs_open(struct cdev *cdev, int flags, int fmt, struct thread *td)
 {
-#if 0
-	struct ocs_softc *ocs = cdev->si_drv1;
-
-	device_printf(ocs->dev, "%s\n", __func__);
-#endif
 	return 0;
 }
 
 static int
 ocs_close(struct cdev *cdev, int flag, int fmt, struct thread *td)
 {
-#if 0
-	struct ocs_softc *ocs = cdev->si_drv1;
-
-	device_printf(ocs->dev, "%s\n", __func__);
-#endif
 	return 0;
 }
 
@@ -95,8 +85,8 @@ __ocs_ioctl_mbox_cb(ocs_hw_t *hw, int32_t status, uint8_t *mqe, void *arg)
 }
 
 static int
-ocs_process_sli_config (ocs_t *ocs, ocs_ioctl_elxu_mbox_t *mcmd, ocs_dma_t *dma){
-
+ocs_process_sli_config (ocs_t *ocs, ocs_ioctl_elxu_mbox_t *mcmd, ocs_dma_t *dma)
+{
 	sli4_cmd_sli_config_t *sli_config = (sli4_cmd_sli_config_t *)mcmd->payload;
 
 	if (sli_config->emb) {
@@ -627,7 +617,7 @@ ocs_ioctl(struct cdev *cdev, u_long cmd, caddr_t addr, int flag, struct thread *
 			return -EFAULT;
 		}
 
-		req->result = ocs_mgmt_set(ocs, req->name, req->value);
+		req->result = ocs_mgmt_set(ocs, name, value);
 
 		break;
 	}
@@ -1080,7 +1070,7 @@ ocs_sysctl_init(ocs_t *ocs)
 	struct sysctl_oid *tree = device_get_sysctl_tree(ocs->dev);
 	struct sysctl_oid *vtree; 
 	const char *str = NULL;
-	char sli_intf[16], name[16];
+	char name[16];
 	uint32_t rev, if_type, family, i;
 	ocs_fcport *fcp = NULL;
 
@@ -1120,7 +1110,7 @@ ocs_sysctl_init(ocs_t *ocs)
 			0, "Firmware Revision");
 
 	memset(ocs->sli_intf, 0, sizeof(ocs->sli_intf));
-	snprintf(ocs->sli_intf, sizeof(sli_intf), "%08x",
+	snprintf(ocs->sli_intf, sizeof(ocs->sli_intf), "%08x",
 		 ocs_config_read32(ocs, SLI4_INTF_REG));
 	SYSCTL_ADD_STRING(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
 			  "sli_intf", CTLFLAG_RD,

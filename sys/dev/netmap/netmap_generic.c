@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2013-2016 Vincenzo Maffione
  * Copyright (C) 2013-2016 Luigi Rizzo
  * All rights reserved.
@@ -62,10 +64,10 @@
  *
  */
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 
 #include <sys/cdefs.h> /* prerequisite */
-__FBSDID("$FreeBSD: stable/11/sys/dev/netmap/netmap_generic.c 350007 2019-07-15 20:14:30Z vmaffione $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/errno.h>
@@ -479,7 +481,7 @@ generic_mbuf_destructor(struct mbuf *m)
 	/* Second, wake up clients. They will reclaim the event through
 	 * txsync. */
 	netmap_generic_irq(na, r, NULL);
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #if __FreeBSD_version <= 1200050
 	void_mbuf_dtor(m, NULL, NULL);
 #else  /* __FreeBSD_version >= 1200051 */
@@ -1058,7 +1060,7 @@ generic_netmap_attach(struct ifnet *ifp)
 	int retval;
 	u_int num_tx_desc, num_rx_desc;
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	if (ifp->if_type == IFT_LOOP) {
 		nm_prerr("if_loop is not supported by %s", __func__);
 		return EINVAL;

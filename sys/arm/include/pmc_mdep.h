@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/include/pmc_mdep.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PMC_MDEP_H_
@@ -70,7 +72,9 @@ union pmc_md_pmc {
 /* Build a fake kernel trapframe from current instruction pointer. */
 #define PMC_FAKE_TRAPFRAME(TF)						\
 	do {								\
+	(TF)->tf_spsr = PSR_SVC32_MODE;					\
 	__asm __volatile("mov %0, pc" : "=r" ((TF)->tf_pc));		\
+	__asm __volatile("mov %0, r11" : "=r" ((TF)->tf_r11));		\
 	} while (0)
 
 /*

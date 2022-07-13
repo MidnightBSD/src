@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/smc/if_smc_fdt.c 271377 2014-09-10 10:59:17Z andrew $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -84,17 +84,8 @@ smc_fdt_probe(device_t dev)
 static int
 smc_fdt_attach(device_t dev)
 {
-	int	err;
- 	struct	smc_softc *sc;
 
-	sc = device_get_softc(dev);
-
-	err = smc_attach(dev);
-	if (err) {
-		return (err);
-	}
-
-	return (0);
+	return smc_attach(dev);
 }
 
 static int

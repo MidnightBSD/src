@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/tpm/Makefile 350065 2019-07-16 19:23:47Z eugen $
+# $FreeBSD$
 
 .PATH:	${SRCTOP}/sys/dev/tpm
 

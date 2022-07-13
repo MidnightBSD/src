@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1996 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -42,7 +43,7 @@
  *
  * All that code should go here for service.
  *
- * $FreeBSD: stable/11/sys/sys/clock.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_CLOCK_H_

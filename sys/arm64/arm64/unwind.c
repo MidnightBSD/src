@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm64/arm64/unwind.c 287113 2015-08-24 17:28:19Z andrew $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 
 #include <machine/stack.h>

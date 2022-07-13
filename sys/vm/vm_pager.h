@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990 University of Utah.
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -15,7 +17,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)vm_pager.h	8.4 (Berkeley) 1/12/94
- * $FreeBSD: stable/11/sys/vm/vm_pager.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*
@@ -59,6 +61,7 @@ typedef boolean_t pgo_haspage_t(vm_object_t, vm_pindex_t, int *, int *);
 typedef int pgo_populate_t(vm_object_t, vm_pindex_t, int, vm_prot_t,
     vm_pindex_t *, vm_pindex_t *);
 typedef void pgo_pageunswapped_t(vm_page_t);
+typedef void pgo_writecount_t(vm_object_t, vm_offset_t, vm_offset_t);
 
 struct pagerops {
 	pgo_init_t		*pgo_init;		/* Initialize pager. */
@@ -70,6 +73,9 @@ struct pagerops {
 	pgo_haspage_t		*pgo_haspage;		/* Query page. */
 	pgo_populate_t		*pgo_populate;		/* Bulk spec pagein. */
 	pgo_pageunswapped_t	*pgo_pageunswapped;
+	/* Operations for specialized writecount handling */
+	pgo_writecount_t	*pgo_update_writecount;
+	pgo_writecount_t	*pgo_release_writecount;
 };
 
 extern struct pagerops defaultpagerops;
@@ -190,6 +196,26 @@ vm_pager_page_unswapped(vm_page_t m)
 		(*pagertab[m->object->type]->pgo_pageunswapped)(m);
 }
 
+static __inline void
+vm_pager_update_writecount(vm_object_t object, vm_offset_t start,
+    vm_offset_t end)
+{
+
+	if (pagertab[object->type]->pgo_update_writecount)
+		pagertab[object->type]->pgo_update_writecount(object, start,
+		    end);
+}
+
+static __inline void
+vm_pager_release_writecount(vm_object_t object, vm_offset_t start,
+    vm_offset_t end)
+{
+
+	if (pagertab[object->type]->pgo_release_writecount)
+		pagertab[object->type]->pgo_release_writecount(object, start,
+		    end);
+}
+
 struct cdev_pager_ops {
 	int (*cdev_pg_fault)(vm_object_t vm_obj, vm_ooffset_t offset,
 	    int prot, vm_page_t *mres);
@@ -206,6 +232,23 @@ vm_object_t cdev_pager_allocate(void *handle, enum obj_type tp,
     vm_ooffset_t foff, struct ucred *cred);
 vm_object_t cdev_pager_lookup(void *handle);
 void cdev_pager_free_page(vm_object_t object, vm_page_t m);
+
+struct phys_pager_ops {
+	int (*phys_pg_getpages)(vm_object_t vm_obj, vm_page_t *m, int count,
+	    int *rbehind, int *rahead);
+	int (*phys_pg_populate)(vm_object_t vm_obj, vm_pindex_t pidx,
+	    int fault_type, vm_prot_t max_prot, vm_pindex_t *first,
+	    vm_pindex_t *last);
+	boolean_t (*phys_pg_haspage)(vm_object_t obj,  vm_pindex_t pindex,
+	    int *before, int *after);
+	void (*phys_pg_ctor)(vm_object_t vm_obj, vm_prot_t prot,
+	    vm_ooffset_t foff, struct ucred *cred);
+	void (*phys_pg_dtor)(vm_object_t vm_obj);
+};
+extern struct phys_pager_ops default_phys_pg_ops;
+vm_object_t phys_pager_allocate(void *handle, struct phys_pager_ops *ops,
+    void *data, vm_ooffset_t size, vm_prot_t prot, vm_ooffset_t foff,
+    struct ucred *cred);
 
 #endif				/* _KERNEL */
 #endif				/* _VM_PAGER_ */

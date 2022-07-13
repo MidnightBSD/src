@@ -1,6 +1,8 @@
 /*	$NetBSD: cache.h,v 1.6 2003/02/17 11:35:01 simonb Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright 2001 Wasabi Systems, Inc.
  * All rights reserved.
  *
@@ -34,7 +36,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/mips/include/cache.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_CACHE_H_
@@ -161,6 +163,8 @@ extern struct mips_cache_ops mips_cache_ops;
 /* PRIMARY CACHE VARIABLES */
 extern int mips_picache_linesize;
 extern int mips_pdcache_linesize;
+extern int mips_sdcache_linesize;
+extern int mips_dcache_max_linesize;
 
 #define	__mco_noargs(prefix, x)						\
 do {									\

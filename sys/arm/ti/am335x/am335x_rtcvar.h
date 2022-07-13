@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/ti/am335x/am335x_rtcvar.h 277042 2015-01-12 03:23:16Z loos $
+ * $FreeBSD$
  */
 
 #ifndef _AM335X_RTCVAR_H_

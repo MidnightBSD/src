@@ -3,6 +3,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_btsocket_sco.c,v 1.2 2005/10/31 18:08:51 max Exp $
- * $FreeBSD: stable/11/sys/netgraph/bluetooth/socket/ng_btsocket_sco.c 298813 2016-04-29 21:25:05Z pfg $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -471,20 +473,13 @@ ng_btsocket_sco_process_lp_con_ind(struct ng_mesg *msg,
 
 	pcb = ng_btsocket_sco_pcb_by_addr(&rt->src);
 	if (pcb != NULL) {
-		struct socket	*so1 = NULL;
+		struct socket *so1;
 
 		/* pcb is locked */
 
-		/*
-		 * First check the pending connections queue and if we have
-		 * space then create new socket and set proper source address.
-		 */
-
-		if (pcb->so->so_qlen <= pcb->so->so_qlimit) {
-			CURVNET_SET(pcb->so->so_vnet);
-			so1 = sonewconn(pcb->so, 0);
-			CURVNET_RESTORE();
-		}
+		CURVNET_SET(pcb->so->so_vnet);
+		so1 = sonewconn(pcb->so, 0);
+		CURVNET_RESTORE();
 
 		if (so1 == NULL) {
 			status = 0x0d; /* Rejected due to limited resources */

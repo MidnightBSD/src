@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/vybrid/vf_ehci.c 346524 2019-04-22 04:56:41Z ian $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_bus.h"
 
@@ -54,8 +56,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/freescale/vybrid/vf_ehci.c 346524 2019-04-
 #include <dev/usb/usb_bus.h>
 #include <dev/usb/controller/ehci.h>
 #include <dev/usb/controller/ehcireg.h>
-
-#include <dev/fdt/fdt_common.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>

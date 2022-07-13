@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-3-Clause
+ *
  * Copyright 2008 by Marco Trillo. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/macio/snapper.c 239245 2012-08-14 05:16:35Z andreast $
+ * $FreeBSD$
  */
 /*-
  * Copyright (c) 2002, 2003 Tsubai Masanari.  All rights reserved.

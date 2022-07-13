@@ -1,11 +1,26 @@
 # Standard kernel config items for all ARMv4/v5 systems.
 #
-# $FreeBSD: stable/11/sys/arm/conf/std.arm 303163 2016-07-21 22:13:40Z ian $
+# $FreeBSD$
 
 options 	COMPAT_FREEBSD10	# Compatible with FreeBSD10
+options 	COMPAT_FREEBSD11	# Compatible with FreeBSD11
 
 # Debugging support.  Always need this:
 makeoptions	DEBUG=-g		# Build kernel with gdb(1) debug symbols
 options 	KDB			# Enable kernel debugger support.
 options 	KDB_TRACE		# Print a stack trace for a panic.
+
+# Optional extras, never enabled by default:
+#options 	BOOTVERBOSE
+#options 	DEBUG			# May result in extreme spewage
+#options 	KTR
+#options 	KTR_COMPILE=KTR_ALL
+#options 	KTR_ENTRIES=16384
+#options 	KTR_MASK=(KTR_SPARE2)
+#options 	KTR_VERBOSE=0
+#options 	USB_REQ_DEBUG
+#options 	USB_VERBOSE
+#options 	VERBOSE_SYSINIT		# Enable verbose sysinit messages
+
+
 

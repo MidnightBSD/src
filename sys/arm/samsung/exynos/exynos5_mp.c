@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013-2014 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/samsung/exynos/exynos5_mp.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -40,6 +42,9 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/samsung/exynos/exynos5_mp.c 331722 2018-03
 #include <machine/smp.h>
 #include <machine/fdt.h>
 #include <machine/intr.h>
+#include <machine/platformvar.h>
+
+#include <arm/samsung/exynos/exynos5_mp.h>
 
 #define	EXYNOS_CHIPID		0x10000000
 
@@ -71,7 +76,7 @@ exynos_get_soc_id(void)
 }
 
 void
-platform_mp_setmaxid(void)
+exynos5_mp_setmaxid(platform_t plat)
 {
 
 	if (exynos_get_soc_id() == EXYNOS5420_SOC_ID)
@@ -83,7 +88,7 @@ platform_mp_setmaxid(void)
 }
 
 void
-platform_mp_start_ap(void)
+exynos5_mp_start_ap(platform_t plat)
 {
 	bus_addr_t sysram, pmu;
 	int err, i, j;

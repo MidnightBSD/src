@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/powerpc/include/resource.h 139825 2005-01-07 02:29:27Z imp $ */
+/* $FreeBSD$ */
 /*-
  * Copyright 1998 Massachusetts Institute of Technology
  *

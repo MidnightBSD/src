@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002-2010 Adaptec, Inc.
  * Copyright (c) 2010-2012 PMC-Sierra, Inc.
  * All rights reserved.
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/aacraid/aacraid_cam.c 354965 2019-11-21 14:55:27Z emaste $");
+__FBSDID("$FreeBSD$");
 
 /*
  * CAM front-end for communicating with non-DASD devices
@@ -111,7 +113,7 @@ static void aac_cam_action(struct cam_sim *, union ccb *);
 static void aac_cam_poll(struct cam_sim *);
 static void aac_cam_complete(struct aac_command *);
 static void aac_container_complete(struct aac_command *);
-#if __MidnightBSD_version >= 4000
+#if __FreeBSD_version >= 700000
 static void aac_cam_rescan(struct aac_softc *sc, uint32_t channel,
 	uint32_t target_id);
 #endif
@@ -177,7 +179,7 @@ aac_set_scsi_error(struct aac_softc *sc, union ccb *ccb, u_int8_t status,
 	}
 }
 
-#if __MidnightBSD_version >= 4000
+#if __FreeBSD_version >= 700000
 static void
 aac_cam_rescan(struct aac_softc *sc, uint32_t channel, uint32_t target_id)
 {
@@ -325,7 +327,7 @@ aac_cam_attach(device_t dev)
 		return (EIO);
 	}
 
-#if __MidnightBSD_version >= 4000
+#if __FreeBSD_version >= 700000
 	inf->aac_sc->cam_rescan_cb = aac_cam_rescan;
 #endif
 	mtx_unlock(&inf->aac_sc->aac_io_lock);

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2005 M. Warner Losh.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/fdc/fdcvar.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /* XXX should audit this file to see if additional copyrights needed */
@@ -49,9 +51,7 @@ struct fdc_data {
 #define FDC_KTHREAD_ALIVE	0x2000 /* worker thread is alive */
 	struct	fd_data *fd;	/* The active drive */
 	int	retry;
-#ifndef PC98
 	int	fdout;		/* mirror of the w/o digital output reg */
-#endif
 	u_int	status[7];	/* copy of the registers */
 	enum	fdc_type fdct;	/* chip version of FDC */
 	int	fdc_errs;	/* number of logged errors */

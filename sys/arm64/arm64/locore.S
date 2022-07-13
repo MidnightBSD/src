@@ -23,10 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/arm64/locore.S 331972 2018-04-04 02:22:56Z mmel $
+ * $FreeBSD$
  */
 
-#include "assym.s"
+#include "assym.inc"
 #include "opt_kstack_pages.h"
 #include <sys/syscall.h>
 #include <machine/asm.h>
@@ -132,6 +132,7 @@ virtdone:
 	str	x1,  [x0]	/* modulep */
 	str	x26, [x0, 8]	/* kern_l1pt */
 	str	x29, [x0, 16]	/* kern_delta */
+	adr	x25, initstack
 	str	x25, [x0, 24]	/* kern_stack */
 	str	x24, [x0, 32]	/* kern_l0pt */
 
@@ -182,11 +183,10 @@ ENTRY(mpentry)
 	br	x15
 
 mp_virtdone:
-	ldr	x4, =secondary_stacks
-	mov	x5, #(PAGE_SIZE * KSTACK_PAGES)
-	mul	x5, x0, x5
-	add	sp, x4, x5
-
+	/* Start using the AP boot stack */
+	ldr	x4, =bootstack
+	ldr	x4, [x4]
+	mov	sp, x4
 	b	init_secondary
 END(mpentry)
 #endif
@@ -352,13 +352,13 @@ create_pagetables:
 
 	/* Find the size of the kernel */
 	mov	x6, #(KERNBASE)
-	ldr	x7, .Lend
-	/* Find the end - begin */
-	sub	x8, x7, x6
+	/* Find modulep - begin */
+	sub	x8, x0, x6
+	/* Add two 2MiB pages for the module data and round up */
+	ldr	x7, =(3 * L2_SIZE - 1)
+	add	x8, x8, x7
 	/* Get the number of l2 pages to allocate, rounded down */
 	lsr	x10, x8, #(L2_SHIFT)
-	/* Add 8 MiB for any rounding above and the module data */
-	add	x10, x10, #4
 
 	/* Create the kernel space L2 table */
 	mov	x6, x26
@@ -628,11 +628,12 @@ sctlr_set:
 	/* Bits to set */
 	.quad (SCTLR_LSMAOE | SCTLR_nTLSMD | SCTLR_UCI | SCTLR_SPAN | \
 	    SCTLR_nTWE | SCTLR_nTWI | SCTLR_UCT | SCTLR_DZE | \
-	    SCTLR_I | SCTLR_SED | SCTLR_SA0 | SCTLR_SA | SCTLR_C | SCTLR_M)
+	    SCTLR_I | SCTLR_SED | SCTLR_SA0 | SCTLR_SA | SCTLR_C | \
+	    SCTLR_M | SCTLR_CP15BEN)
 sctlr_clear:
 	/* Bits to clear */
 	.quad (SCTLR_EE | SCTLR_EOE | SCTLR_IESB | SCTLR_WXN | SCTLR_UMA | \
-	    SCTLR_ITD | SCTLR_THEE | SCTLR_CP15BEN | SCTLR_A)
+	    SCTLR_ITD | SCTLR_A)
 
 	.globl abort
 abort:

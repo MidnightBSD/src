@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000, 2001 Michael Smith
  * Copyright (c) 2000 BSDi
  * All rights reserved.
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/11/sys/dev/mly/mly.c 335138 2018-06-14 14:46:20Z mav $
+ *	$FreeBSD$
  */
 
 #include <sys/param.h>
@@ -334,6 +336,8 @@ mly_attach(device_t dev)
  out:
     if (error != 0)
 	mly_free(sc);
+    else
+	gone_in_dev(dev, 14, "mly(4) removed");
     return(error);
 }
 
@@ -1213,7 +1217,6 @@ mly_fetch_event(struct mly_softc *sc)
 {
     struct mly_command		*mc;
     struct mly_command_ioctl	*mci;
-    int				s;
     u_int32_t			event;
 
     debug_called(1);
@@ -1235,14 +1238,11 @@ mly_fetch_event(struct mly_softc *sc)
      * Get an event number to fetch.  It's possible that we've raced with another
      * context for the last event, in which case there will be no more events.
      */
-    s = splcam();
     if (sc->mly_event_counter == sc->mly_event_waiting) {
 	mly_release_command(mc);
-	splx(s);
 	return;
     }
     event = sc->mly_event_counter++;
-    splx(s);
 
     /* 
      * Build the ioctl.

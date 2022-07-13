@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/11/sys/netpfil/ipfw/test/mylist.h 294882 2016-01-27 02:22:31Z luigi $
+ * $FreeBSD$
  *
  * linux-like bidirectional lists
  */

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/spibus/spi.h 300713 2016-05-26 07:02:20Z adrian $
+ * $FreeBSD$
  */
 
 struct spi_command {
@@ -40,3 +40,9 @@ struct spi_command {
 #define	SPI_COMMAND_INITIALIZER	{ 0 }
 
 #define	SPI_CHIP_SELECT_HIGH	0x1		/* Chip select high (else low) */
+
+#ifdef FDT
+#define	SPIBUS_FDT_PNP_INFO(t)	FDTCOMPAT_PNP_INFO(t, spibus)
+#else
+#define	SPIBUS_FDT_PNP_INFO(t)
+#endif

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2005-2006 Atheros Communications, Inc.
  * All rights reserved.
@@ -15,7 +17,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ah_regdomain/ah_rd_regmap.h 343493 2019-01-27 14:27:53Z avos $
+ * $FreeBSD$
  */
 
 #ifndef	__AH_REGDOMAIN_REGMAP_H__

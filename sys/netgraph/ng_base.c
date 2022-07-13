@@ -34,7 +34,7 @@
  * Authors: Julian Elischer <julian@freebsd.org>
  *          Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: stable/11/sys/netgraph/ng_base.c 338333 2018-08-27 03:42:19Z mav $
+ * $FreeBSD$
  * $Whistle: ng_base.c,v 1.39 1999/01/28 23:54:53 julian Exp $
  */
 
@@ -179,12 +179,12 @@ static struct rwlock	ng_typelist_lock;
 
 /* Hash related definitions. */
 LIST_HEAD(nodehash, ng_node);
-static VNET_DEFINE(struct nodehash *, ng_ID_hash);
-static VNET_DEFINE(u_long, ng_ID_hmask);
-static VNET_DEFINE(u_long, ng_nodes);
-static VNET_DEFINE(struct nodehash *, ng_name_hash);
-static VNET_DEFINE(u_long, ng_name_hmask);
-static VNET_DEFINE(u_long, ng_named_nodes);
+VNET_DEFINE_STATIC(struct nodehash *, ng_ID_hash);
+VNET_DEFINE_STATIC(u_long, ng_ID_hmask);
+VNET_DEFINE_STATIC(u_long, ng_nodes);
+VNET_DEFINE_STATIC(struct nodehash *, ng_name_hash);
+VNET_DEFINE_STATIC(u_long, ng_name_hmask);
+VNET_DEFINE_STATIC(u_long, ng_named_nodes);
 #define	V_ng_ID_hash		VNET(ng_ID_hash)
 #define	V_ng_ID_hmask		VNET(ng_ID_hmask)
 #define	V_ng_nodes		VNET(ng_nodes)
@@ -377,7 +377,7 @@ ng_alloc_node(void)
 #define TRAP_ERROR()
 #endif
 
-static VNET_DEFINE(ng_ID_t, nextID) = 1;
+VNET_DEFINE_STATIC(ng_ID_t, nextID) = 1;
 #define	V_nextID			VNET(nextID)
 
 #ifdef INVARIANTS
@@ -786,7 +786,7 @@ ng_rmnode(node_p node, hook_p dummy1, void *dummy2, int dummy3)
 
 /*
  * Remove a reference to the node, possibly the last.
- * deadnode always acts as it it were the last.
+ * deadnode always acts as it were the last.
  */
 void
 ng_unref_node(node_p node)
@@ -835,7 +835,7 @@ ng_ID2noderef(ng_ID_t ID)
 }
 
 ng_ID_t
-ng_node2ID(node_p node)
+ng_node2ID(node_cp node)
 {
 	return (node ? NG_NODE_ID(node) : 0);
 }
@@ -853,6 +853,10 @@ ng_name_node(node_p node, const char *name)
 	uint32_t hash;
 	node_p node2;
 	int i;
+
+	/* Rename without change is a noop */
+	if (strcmp(NG_NODE_NAME(node), name) == 0)
+		return (0);
 
 	/* Check the name is valid */
 	for (i = 0; i < NG_NODESIZ; i++) {
@@ -1179,7 +1183,7 @@ ng_destroy_hook(hook_p hook)
 		/*
 		 * Set the peer to point to ng_deadhook
 		 * from this moment on we are effectively independent it.
-		 * send it an rmhook message of it's own.
+		 * send it an rmhook message of its own.
 		 */
 		peer->hk_peer = &ng_deadhook;	/* They no longer know us */
 		hook->hk_peer = &ng_deadhook;	/* Nor us, them */
@@ -2277,7 +2281,7 @@ ng_snd_item(item_p item, int flags)
 		queue = 1;
 	} else {
 		queue = 0;
-#ifdef GET_STACK_USAGE
+
 		/*
 		 * Most of netgraph nodes have small stack consumption and
 		 * for them 25% of free stack space is more than enough.
@@ -2292,7 +2296,6 @@ ng_snd_item(item_p item, int flags)
 		    ((node->nd_flags & NGF_HI_STACK) || (hook &&
 		    (hook->hk_flags & HK_HI_STACK)))))
 			queue = 1;
-#endif
 	}
 
 	if (queue) {
@@ -2771,7 +2774,7 @@ ng_generic_msg(node_p here, item_p item, hook_p lasthook)
 
 	case NGM_BINARY2ASCII:
 	    {
-		int bufSize = 20 * 1024;	/* XXX hard coded constant */
+		int bufSize = 1024;
 		const struct ng_parse_type *argstype;
 		const struct ng_cmdlist *c;
 		struct ng_mesg *binary, *ascii;
@@ -2785,7 +2788,7 @@ ng_generic_msg(node_p here, item_p item, hook_p lasthook)
 			error = EINVAL;
 			break;
 		}
-
+retry_b2a:
 		/* Get a response message with lots of room */
 		NG_MKRESPONSE(resp, msg, sizeof(*ascii) + bufSize, M_NOWAIT);
 		if (resp == NULL) {
@@ -2827,9 +2830,13 @@ ng_generic_msg(node_p here, item_p item, hook_p lasthook)
 		if (argstype == NULL) {
 			*ascii->data = '\0';
 		} else {
-			if ((error = ng_unparse(argstype,
-			    (u_char *)binary->data,
-			    ascii->data, bufSize)) != 0) {
+			error = ng_unparse(argstype, (u_char *)binary->data,
+			    ascii->data, bufSize);
+			if (error == ERANGE) {
+				NG_FREE_MSG(resp);
+				bufSize *= 2;
+				goto retry_b2a;
+			} else if (error) {
 				NG_FREE_MSG(resp);
 				break;
 			}
@@ -3005,7 +3012,7 @@ void
 ng_free_item(item_p item)
 {
 	/*
-	 * The item may hold resources on it's own. We need to free
+	 * The item may hold resources on its own. We need to free
 	 * these before we can free the item. What they are depends upon
 	 * what kind of item it is. it is important that nodes zero
 	 * out pointers to resources that they remove from the item
@@ -3166,12 +3173,10 @@ vnet_netgraph_uninit(const void *unused __unused)
 		/* Attempt to kill it only if it is a regular node */
 		if (node != NULL) {
 			if (node == last_killed) {
-				/* This should never happen */
-				printf("ng node %s needs NGF_REALLY_DIE\n",
-				    node->nd_name);
 				if (node->nd_flags & NGF_REALLY_DIE)
 					panic("ng node %s won't die",
 					    node->nd_name);
+				/* The node persisted itself.  Try again. */
 				node->nd_flags |= NGF_REALLY_DIE;
 			}
 			ng_rmnode(node, NULL, NULL, 0);
@@ -3442,7 +3447,7 @@ ngthread(void *arg)
 
 /*
  * XXX
- * It's posible that a debugging NG_NODE_REF may need
+ * It's possible that a debugging NG_NODE_REF may need
  * to be outside the mutex zone
  */
 static void
@@ -3577,7 +3582,7 @@ ng_address_hook(node_p here, item_p item, hook_p hook, ng_ID_t retaddr)
 	ITEM_DEBUG_CHECKS;
 	/*
 	 * Quick sanity check..
-	 * Since a hook holds a reference on it's node, once we know
+	 * Since a hook holds a reference on its node, once we know
 	 * that the peer is still connected (even if invalid,) we know
 	 * that the peer node is present, though maybe invalid.
 	 */

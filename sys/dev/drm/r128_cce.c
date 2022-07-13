@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm/r128_cce.c 207067 2010-04-22 18:44:23Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Marcel Moolenaar
  * Copyright (c) 2001 M. Warner Losh
  * All rights reserved.
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_bus_pci.c 340145 2018-11-04 23:28:56Z mmacy $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -45,12 +47,14 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_bus_pci.c 340145 2018-11-04 23:2
 #define	DEFAULT_RCLK	1843200
 
 static int uart_pci_probe(device_t dev);
+static int uart_pci_attach(device_t dev);
+static int uart_pci_detach(device_t dev);
 
 static device_method_t uart_pci_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		uart_pci_probe),
-	DEVMETHOD(device_attach,	uart_bus_attach),
-	DEVMETHOD(device_detach,	uart_bus_detach),
+	DEVMETHOD(device_attach,	uart_pci_attach),
+	DEVMETHOD(device_detach,	uart_pci_detach),
 	DEVMETHOD(device_resume,	uart_bus_resume),
 	DEVMETHOD_END
 };
@@ -121,6 +125,7 @@ static const struct pci_id pci_ns8250_ids[] = {
 	128 * DEFAULT_RCLK, 2},
 { 0x14e4, 0x4344, 0xffff, 0, "Sony Ericsson GC89 PC Card", 0x10},
 { 0x151f, 0x0000, 0xffff, 0, "TOPIC Semiconductor TP560 56k modem", 0x10 },
+{ 0x1d0f, 0x8250, 0x1d0f, 0, "Amazon PCI serial device", 0x10 },
 { 0x1fd4, 0x1999, 0x1fd4, 0x0001, "Sunix SER5xxxx Serial Port", 0x10,
 	8 * DEFAULT_RCLK },
 { 0x8086, 0x0f0a, 0xffff, 0, "Intel ValleyView LPIO1 HSUART#1", 0x10,
@@ -130,17 +135,34 @@ static const struct pci_id pci_ns8250_ids[] = {
 { 0x8086, 0x108f, 0xffff, 0, "Intel AMT - SOL", 0x10 },
 { 0x8086, 0x19d8, 0xffff, 0, "Intel Denverton UART", 0x10 },
 { 0x8086, 0x1c3d, 0xffff, 0, "Intel AMT - KT Controller", 0x10 },
-{ 0x8086, 0x1d3d, 0xffff, 0, "Intel C600/X79 Series Chipset KT Controller", 0x10 },
+{ 0x8086, 0x1d3d, 0xffff, 0, "Intel C600/X79 Series Chipset KT Controller",
+	0x10 },
 { 0x8086, 0x1e3d, 0xffff, 0, "Intel Panther Point KT Controller", 0x10 },
 { 0x8086, 0x228a, 0xffff, 0, "Intel Cherryview SIO HSUART#1", 0x10,
-       24 * DEFAULT_RCLK, 2 },
+	24 * DEFAULT_RCLK, 2 },
 { 0x8086, 0x228c, 0xffff, 0, "Intel Cherryview SIO HSUART#2", 0x10,
-       24 * DEFAULT_RCLK, 2 },
+	24 * DEFAULT_RCLK, 2 },
 { 0x8086, 0x2a07, 0xffff, 0, "Intel AMT - PM965/GM965 KT Controller", 0x10 },
 { 0x8086, 0x2a47, 0xffff, 0, "Mobile 4 Series Chipset KT Controller", 0x10 },
 { 0x8086, 0x2e17, 0xffff, 0, "4 Series Chipset Serial KT Controller", 0x10 },
+{ 0x8086, 0x31bc, 0xffff, 0, "Intel Gemini Lake SIO/LPSS UART 0", 0x10,
+	24 * DEFAULT_RCLK, 2 },
+{ 0x8086, 0x31be, 0xffff, 0, "Intel Gemini Lake SIO/LPSS UART 1", 0x10,
+	24 * DEFAULT_RCLK, 2 },
+{ 0x8086, 0x31c0, 0xffff, 0, "Intel Gemini Lake SIO/LPSS UART 2", 0x10,
+	24 * DEFAULT_RCLK, 2 },
+{ 0x8086, 0x31ee, 0xffff, 0, "Intel Gemini Lake SIO/LPSS UART 3", 0x10,
+	24 * DEFAULT_RCLK, 2 },
 { 0x8086, 0x3b67, 0xffff, 0, "5 Series/3400 Series Chipset KT Controller",
 	0x10 },
+{ 0x8086, 0x5abc, 0xffff, 0, "Intel Apollo Lake SIO/LPSS UART 0", 0x10,
+	24 * DEFAULT_RCLK, 2 },
+{ 0x8086, 0x5abe, 0xffff, 0, "Intel Apollo Lake SIO/LPSS UART 1", 0x10,
+	24 * DEFAULT_RCLK, 2 },
+{ 0x8086, 0x5ac0, 0xffff, 0, "Intel Apollo Lake SIO/LPSS UART 2", 0x10,
+	24 * DEFAULT_RCLK, 2 },
+{ 0x8086, 0x5aee, 0xffff, 0, "Intel Apollo Lake SIO/LPSS UART 3", 0x10,
+	24 * DEFAULT_RCLK, 2 },
 { 0x8086, 0x8811, 0xffff, 0, "Intel EG20T Serial Port 0", 0x10 },
 { 0x8086, 0x8812, 0xffff, 0, "Intel EG20T Serial Port 1", 0x10 },
 { 0x8086, 0x8813, 0xffff, 0, "Intel EG20T Serial Port 2", 0x10 },
@@ -148,6 +170,8 @@ static const struct pci_id pci_ns8250_ids[] = {
 { 0x8086, 0x8c3d, 0xffff, 0, "Intel Lynx Point KT Controller", 0x10 },
 { 0x8086, 0x8cbd, 0xffff, 0, "Intel Wildcat Point KT Controller", 0x10 },
 { 0x8086, 0x9c3d, 0xffff, 0, "Intel Lynx Point-LP HECI KT", 0x10 },
+{ 0x8086, 0xa13d, 0xffff, 0,
+	"100 Series/C230 Series Chipset Family KT Redirection", 0x10 },
 { 0x9710, 0x9820, 0x1000, 1, "NetMos NM9820 Serial Port", 0x10 },
 { 0x9710, 0x9835, 0x1000, 1, "NetMos NM9835 Serial Port", 0x10 },
 { 0x9710, 0x9865, 0xa000, 0x1000, "NetMos NM9865 Serial Port", 0x10 },
@@ -211,6 +235,42 @@ uart_pci_probe(device_t dev)
 	if (id->desc)
 		device_set_desc(dev, id->desc);
 	return (result);
+}
+
+static int
+uart_pci_attach(device_t dev)
+{
+	struct uart_softc *sc;
+	int count;
+
+	sc = device_get_softc(dev);
+
+	/*
+	 * Use MSI in preference to legacy IRQ if available.
+	 * Whilst some PCIe UARTs support >1 MSI vector, use only the first.
+	 */
+	if (pci_msi_count(dev) > 0) {
+		count = 1;
+		if (pci_alloc_msi(dev, &count) == 0) {
+			sc->sc_irid = 1;
+			device_printf(dev, "Using %d MSI message\n", count);
+		}
+	}
+
+	return (uart_bus_attach(dev));
+}
+
+static int
+uart_pci_detach(device_t dev)
+{
+	struct uart_softc *sc;
+
+	sc = device_get_softc(dev);
+
+	if (sc->sc_irid != 0)
+		pci_release_msi(dev);
+
+	return (uart_bus_detach(dev));
 }
 
 DRIVER_MODULE(uart, pci, uart_pci_driver, uart_devclass, NULL, NULL);

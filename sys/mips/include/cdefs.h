@@ -1,6 +1,8 @@
 /*	$NetBSD: cdefs.h,v 1.12 2006/08/27 19:04:30 matt Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: MIT-CMU
+ *
  * Copyright (c) 1995 Carnegie-Mellon University.
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: stable/11/sys/mips/include/cdefs.h 204557 2010-03-02 07:27:30Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MIPS_CDEFS_H_

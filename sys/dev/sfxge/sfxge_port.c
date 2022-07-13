@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010-2016 Solarflare Communications Inc.
  * All rights reserved.
  *
@@ -32,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/sfxge_port.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/limits.h>
@@ -367,7 +369,7 @@ sfxge_mac_multicast_list_set(struct sfxge_softc *sc)
 
 	port->mcast_count = 0;
 	if_maddr_rlock(ifp);
-	TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 		if (ifma->ifma_addr->sa_family == AF_LINK) {
 			if (port->mcast_count == EFX_MAC_MULTICAST_LIST_MAX) {
 				device_printf(sc->dev,

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1993, 1994 by Chris Provenzano, proven@mit.edu
  * Copyright (c) 1995-1998 by John Birrell <jb@cimlogic.com.au>
  * All rights reserved.
@@ -30,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD$
  */
 
 #ifndef _SYS__PTHREADTYPES_H_

@@ -29,7 +29,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_accel/ipsec.h 341572 2018-12-05 14:11:20Z slavash $
+ * $FreeBSD$
  */
 
 #ifndef __MLX5_ACCEL_IPSEC_H__

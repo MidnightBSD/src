@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2010 Atheros Communications, Inc.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -13,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar9002/ar9287_reset.h 222301 2011-05-26 09:15:33Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef	__AR9287_RESET_H__

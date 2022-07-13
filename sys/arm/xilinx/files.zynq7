@@ -1,9 +1,7 @@
 #
 # files.zynq7
 #
-# $FreeBSD: stable/11/sys/arm/xilinx/files.zynq7 291135 2015-11-21 16:23:56Z andrew $
-
-kern/kern_clocksource.c				standard
+# $FreeBSD$
 
 arm/xilinx/zy7_machdep.c			standard
 arm/xilinx/zy7_l2cache.c			standard
@@ -12,7 +10,6 @@ arm/xilinx/zy7_devcfg.c				standard
 arm/xilinx/zy7_mp.c				optional smp
 
 dev/cadence/if_cgem.c				optional cgem
-dev/sdhci/sdhci_fdt.c				optional sdhci
 arm/xilinx/zy7_ehci.c 				optional ehci
 arm/xilinx/uart_dev_cdnc.c			optional uart
 arm/xilinx/zy7_gpio.c				optional gpio

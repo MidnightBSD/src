@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 Scott Long
  * Copyright (c) 2000 BSDi
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/sys/sys/aac_ioctl.h 331637 2018-03-27 17:52:52Z brooks $
+ *	$FreeBSD$
  */
 
 /*

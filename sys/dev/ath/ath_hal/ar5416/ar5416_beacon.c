@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5416/ar5416_beacon.c 265031 2014-04-27 23:35:05Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -153,7 +155,7 @@ ar5416SetStaBeaconTimers(struct ath_hal *ah, const HAL_BEACON_STATE *bs)
 	uint32_t nextTbtt, nextdtim,beaconintval, dtimperiod;
 
 	HALASSERT(bs->bs_intval != 0);
-	
+
 	/* NB: no cfp setting since h/w automatically takes care */
 
 	OS_REG_WRITE(ah, AR_NEXT_TBTT, TU_TO_USEC(bs->bs_nexttbtt));

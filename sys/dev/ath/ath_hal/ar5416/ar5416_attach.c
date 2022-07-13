@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5416/ar5416_attach.c 305614 2016-09-08 15:05:25Z pfg $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -374,7 +376,7 @@ ar5416Attach(uint16_t devid, HAL_SOFTC sc,
 	if (ecode != HAL_OK)
 		goto bad;
 
-	if (!ar5416ChipReset(ah, AH_NULL)) {	/* reset chip */
+	if (!ar5416ChipReset(ah, AH_NULL, HAL_RESET_NORMAL)) {	/* reset chip */
 		HALDEBUG(ah, HAL_DEBUG_ANY, "%s: chip reset failed\n",
 		    __func__);
 		ecode = HAL_EIO;
@@ -719,7 +721,6 @@ ar5416SpurMitigate(struct ath_hal *ah, const struct ieee80211_channel *chan)
         SM(spur_delta_phase, AR_PHY_TIMING11_SPUR_DELTA_PHASE));
     OS_REG_WRITE(ah, AR_PHY_TIMING11, new);
 
-
     /*
      * ============================================
      * pilot mask 1 [31:0] = +6..-26, no 0 bin
@@ -891,7 +892,7 @@ ar5416FillCapabilityInfo(struct ath_hal *ah)
 	struct ath_hal_private *ahpriv = AH_PRIVATE(ah);
 	HAL_CAPABILITIES *pCap = &ahpriv->ah_caps;
 	uint16_t val;
-	
+
 	/* Construct wireless mode from EEPROM */
 	pCap->halWirelessModes = 0;
 	if (ath_hal_eepromGetFlag(ah, AR_EEP_AMODE)) {
@@ -967,7 +968,8 @@ ar5416FillCapabilityInfo(struct ath_hal *ah)
 	pCap->halChanHalfRate = AH_TRUE;
 	pCap->halChanQuarterRate = AH_TRUE;
 
-	pCap->halTstampPrecision = 32;
+	pCap->halTxTstampPrecision = 32;
+	pCap->halRxTstampPrecision = 32;
 	pCap->halHwPhyCounterSupport = AH_TRUE;
 	pCap->halIntrMask = HAL_INT_COMMON
 			| HAL_INT_RX
@@ -1019,8 +1021,6 @@ ar5416FillCapabilityInfo(struct ath_hal *ah)
 	pCap->halGTTSupport = AH_TRUE;
 	pCap->halCSTSupport = AH_TRUE;
 	pCap->halEnhancedDfsSupport = AH_FALSE;
-	/* Hardware supports 32 bit TSF values in the RX descriptor */
-	pCap->halHasLongRxDescTsf = AH_TRUE;
 	/*
 	 * BB Read WAR: this is only for AR5008/AR9001 NICs
 	 * It is also set individually in the AR91xx attach functions.

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ntb/ntb.h 355152 2019-11-28 00:41:42Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _NTB_H_
@@ -64,6 +64,51 @@ void ntb_link_event(device_t ntb);
  * those bits are associated with the vector number.
  */
 void ntb_db_event(device_t ntb, uint32_t vec);
+
+/**
+ * ntb_port_number() - get the local port number
+ * @ntb:        NTB device context.
+ *
+ * Hardware driver returns local port number in compliance with topology.
+ *
+ * Return: the local port number
+ */
+int ntb_port_number(device_t ntb);
+
+/**
+ * ntb_port_count() - get the number of peer device ports
+ * @ntb:        NTB device context.
+ *
+ * By default hardware driver supports just one peer device.
+ *
+ * Return: the number of peer ports
+ */
+int ntb_peer_port_count(device_t ntb);
+
+/**
+ * ntb_peer_port_number() - get the peer port by given index
+ * @ntb:        NTB device context.
+ * @idx:        Peer port index (should be zero for now).
+ *
+ * By default hardware driver supports just one peer device, so this method
+ * shall return the corresponding value.
+ *
+ * Return: the peer device port or an error number
+ */
+int ntb_peer_port_number(device_t ntb, int pidx);
+
+/*
+ * ntb_peer_port_idx() - get the peer device port index by given port
+ *                       number
+ * @ntb:        NTB device context.
+ * @port:       Peer port number
+ *
+ * By default hardware driver supports just one peer device, so given a
+ * valid peer port number, the return value shall be zero.
+ *
+ * Return: the peer port index or an error number
+ */
+int ntb_peer_port_idx(device_t ntb, int port);
 
 /*
  * ntb_link_is_up() - get the current ntb link state

@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  * 
- * $FreeBSD: stable/11/sys/dev/bhnd/siba/siba.h 296077 2016-02-26 03:34:08Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef _SIBA_SIBA_H_
@@ -45,5 +45,6 @@
  */
 
 DECLARE_CLASS(siba_driver);
+DECLARE_CLASS(siba_erom_parser);
 
 #endif /* _SIBA_SIBA_H_ */

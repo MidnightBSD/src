@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/extres/clk/clk.h 331974 2018-04-04 02:31:14Z mmel $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_EXTRES_CLK_H_
@@ -41,13 +41,16 @@
 /* clknode flags. */
 #define	CLK_NODE_STATIC_STRINGS	0x00000001	/* Static name strings */
 #define	CLK_NODE_GLITCH_FREE	0x00000002	/* Freq can change w/o stop */
-#define	CLK_NODE_CANNOT_STOP	0x00000004	/* Clock cannot be disabled */
+#define	CLK_NODE_CANNOT_STOP	0x00000004	/* Cannot be disabled */
+#define	CLK_NODE_LINKED		0x00000008	/* Is linked clock */
+#define	CLK_NODE_REGISTERED	0x00000020	/* Is already registered */
 
 /* Flags passed to clk_set_freq() and clknode_set_freq(). */
 #define	CLK_SET_ROUND(x)	((x) & (CLK_SET_ROUND_UP | CLK_SET_ROUND_DOWN))
 #define	CLK_SET_ROUND_EXACT	0
 #define	CLK_SET_ROUND_UP	0x00000001
 #define	CLK_SET_ROUND_DOWN	0x00000002
+#define	CLK_SET_ROUND_MULTIPLE	0x00000004
 #define	CLK_SET_ROUND_ANY	(CLK_SET_ROUND_UP | CLK_SET_ROUND_DOWN)
 
 #define	CLK_SET_USER_MASK	0x0000FFFF
@@ -131,6 +134,12 @@ int clk_stop(clk_t clk);
 int clk_get_parent(clk_t clk, clk_t *parent);
 int clk_set_parent_by_clk(clk_t clk, clk_t parent);
 const char *clk_get_name(clk_t clk);
+
+static inline uint64_t
+clk_freq_diff(uint64_t x, uint64_t y)
+{
+	return (x >= y ? x - y : y - x);
+}
 
 #ifdef FDT
 int clk_set_assigned(device_t dev, phandle_t node);

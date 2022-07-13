@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
  *
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/an/if_an_pci.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This is a PCI shim for the Aironet PC4500/4800 wireless network
@@ -228,7 +230,8 @@ an_attach_pci(dev)
 	    NULL, an_intr, sc, &sc->irq_handle);
 	if (error)
 		device_printf(dev, "couldn't setup interrupt\n");
-
+	else
+		gone_in_dev(dev, 13, "pccard removed, an doesn't support modern crypto");
 fail:
 	if (error)
 		an_release_resources(dev);
@@ -271,5 +274,7 @@ static driver_t an_pci_driver = {
 static devclass_t an_devclass;
 
 DRIVER_MODULE(an, pci, an_pci_driver, an_devclass, 0, 0);
+MODULE_PNP_INFO("U16:vendor;U16:device;D:#", pci, an,
+    an_devs, nitems(an_devs) - 1);
 MODULE_DEPEND(an, pci, 1, 1, 1);
 MODULE_DEPEND(an, wlan, 1, 1, 1);

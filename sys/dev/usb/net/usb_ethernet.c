@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/usb/net/usb_ethernet.c 334757 2018-06-07 07:32:51Z hselasky $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Andrew Thompson (thompsa@FreeBSD.org)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/usb/net/usb_ethernet.c 334757 2018-06-07 07:32:51Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

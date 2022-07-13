@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/gpio/gpiobacklight.c 299395 2016-05-11 00:26:52Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_platform.h"
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/dpaa/if_dtsec_rm.h 296177 2016-02-29 03:38:00Z jhibbits $
+ * $FreeBSD$
  */
 
 #ifndef IF_DTSEC_RM_H_

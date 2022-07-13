@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (C) 1995, 1996 Wolfgang Solfrank.
  * Copyright (C) 1995, 1996 TooLs GmbH.
  * All rights reserved.
@@ -29,7 +31,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: signal.h,v 1.4 1998/09/14 02:48:34 thorpej Exp $
- * $FreeBSD: stable/11/sys/powerpc/include/signal.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_SIGNAL_H_

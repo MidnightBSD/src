@@ -32,7 +32,7 @@
 #include USB_GLOBAL_INCLUDE_FILE
 #else
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/samsung/exynos/exynos5_pad.c 351675 2019-09-02 00:29:16Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

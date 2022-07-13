@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: stable/11/sys/netgraph/ng_pptpgre.c 341460 2018-12-04 07:48:43Z eugen $
+ * $FreeBSD$
  * $Whistle: ng_pptpgre.c,v 1.7 1999/12/08 00:10:06 archie Exp $
  */
 
@@ -128,7 +128,7 @@ typedef u_int64_t		pptptime_t;
 #define PPTP_REORDER_TIMEOUT	1
 
 /* When we receive a packet, we wait to see if there's an outgoing packet
-   we can piggy-back the ACK off of. These parameters determine the mimimum
+   we can piggy-back the ACK off of. These parameters determine the minimum
    and maxmimum length of time we're willing to wait in order to do that.
    These have no effect unless "enableDelayedAck" is turned on. */
 #define PPTP_MIN_ACK_DELAY	(PPTP_TIME_SCALE / 500)	/* 2 milliseconds */

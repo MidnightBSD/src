@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_ib/mlx5_ib_main.c 353268 2019-10-07 10:33:32Z hselasky $
+ * $FreeBSD$
  */
 
 #include <linux/module.h>
@@ -52,9 +52,9 @@
 
 #define DRIVER_NAME "mlx5ib"
 #ifndef DRIVER_VERSION
-#define DRIVER_VERSION "3.5.2"
+#define DRIVER_VERSION "3.6.0"
 #endif
-#define DRIVER_RELDATE	"September 2019"
+#define DRIVER_RELDATE	"December 2020"
 
 MODULE_DESCRIPTION("Mellanox Connect-IB HCA IB driver");
 MODULE_LICENSE("Dual BSD/GPL");
@@ -199,6 +199,7 @@ static int translate_eth_proto_oper(u32 eth_proto_oper, u8 *active_speed,
 		break;
 	case MLX5E_PROT_MASK(MLX5E_50GBASE_CR2):
 	case MLX5E_PROT_MASK(MLX5E_50GBASE_KR2):
+	case MLX5E_PROT_MASK(MLX5E_50GBASE_KR4):
 	case MLX5E_PROT_MASK(MLX5E_50GBASE_SR2):
 		*active_width = IB_WIDTH_1X;
 		*active_speed = IB_SPEED_HDR;
@@ -2458,7 +2459,7 @@ static void mlx5_ib_handle_internal_error(struct mlx5_ib_dev *ibdev)
 	 * lock/unlock above locks Now need to arm all involved CQs.
 	 */
 	list_for_each_entry(mcq, &cq_armed_list, reset_notify) {
-		mcq->comp(mcq);
+		mcq->comp(mcq, NULL);
 	}
 	spin_unlock_irqrestore(&ibdev->reset_flow_resource_lock, flags);
 }
@@ -2925,7 +2926,7 @@ static int mlx5_enable_roce(struct mlx5_ib_dev *dev)
 	VNET_FOREACH(vnet_iter) {
 		IFNET_RLOCK();
 		CURVNET_SET_QUIET(vnet_iter);
-		TAILQ_FOREACH(idev, &V_ifnet, if_link) {
+		CK_STAILQ_FOREACH(idev, &V_ifnet, if_link) {
 			/* check if network interface belongs to mlx5en */
 			if (!mlx5_netdev_match(idev, dev->mdev, "mce"))
 				continue;
@@ -3200,7 +3201,6 @@ static void *mlx5_ib_add(struct mlx5_core_dev *mdev)
 	dev->ib_dev.get_dma_mr		= mlx5_ib_get_dma_mr;
 	dev->ib_dev.reg_user_mr		= mlx5_ib_reg_user_mr;
 	dev->ib_dev.rereg_user_mr	= mlx5_ib_rereg_user_mr;
-	dev->ib_dev.reg_phys_mr		= mlx5_ib_reg_phys_mr;
 	dev->ib_dev.dereg_mr		= mlx5_ib_dereg_mr;
 	dev->ib_dev.attach_mcast	= mlx5_ib_mcg_attach;
 	dev->ib_dev.detach_mcast	= mlx5_ib_mcg_detach;
@@ -3399,5 +3399,5 @@ mlx5_ib_show_version(void __unused *arg)
 }
 SYSINIT(mlx5_ib_show_version, SI_SUB_DRIVERS, SI_ORDER_ANY, mlx5_ib_show_version, NULL);
 
-module_init_order(mlx5_ib_init, SI_ORDER_THIRD);
-module_exit_order(mlx5_ib_cleanup, SI_ORDER_THIRD);
+module_init_order(mlx5_ib_init, SI_ORDER_SEVENTH);
+module_exit_order(mlx5_ib_cleanup, SI_ORDER_SEVENTH);

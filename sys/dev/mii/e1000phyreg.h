@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/dev/mii/e1000phyreg.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*-
  * Principal Author: Parag Patel
  * Copyright (c) 2001
@@ -31,6 +31,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Derived by information released by Intel under the following license:
  *
  * Copyright (c) 1999 - 2001, Intel Corporation 

@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/arm/allwinner/sunxi_dma_if.m 295635 2016-02-15 19:56:35Z andrew $
+# $FreeBSD$
 #
 
 #include <sys/bus.h>

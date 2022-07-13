@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/cxgbe/cudbg/cudbg_lib.c 330307 2018-03-03 02:30:52Z np $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -576,7 +576,7 @@ static int collect_rss(struct cudbg_init *pdbg_init,
 	u32 size;
 	int rc = 0;
 
-	size = RSS_NENTRIES  * sizeof(u16);
+	size = padap->chip_params->rss_nentries * sizeof(u16);
 	rc = get_scratch_buff(dbg_buff, size, &scratch_buff);
 	if (rc)
 		goto err;
@@ -2027,7 +2027,7 @@ err1:
 err:
 	return rc;
 #endif
-	return (EDOOFUS);
+	return (CUDBG_STATUS_NOT_IMPLEMENTED);
 }
 /* CIM OBQ */
 
@@ -2664,7 +2664,7 @@ err1:
 err:
 	return rc;
 #endif
-	return (EDOOFUS);
+	return (CUDBG_STATUS_NOT_IMPLEMENTED);
 }
 
 static void collect_mem_info(struct cudbg_init *pdbg_init,
@@ -3130,7 +3130,7 @@ err1:
 err:
 	return rc;
 #endif
-	return (EDOOFUS);
+	return (CUDBG_STATUS_NOT_IMPLEMENTED);
 }
 
 static int collect_pbt_tables(struct cudbg_init *pdbg_init,
@@ -4450,5 +4450,5 @@ err1:
 err:
 	return rc;
 #endif
-	return (EDOOFUS);
+	return (CUDBG_STATUS_NOT_IMPLEMENTED);
 }

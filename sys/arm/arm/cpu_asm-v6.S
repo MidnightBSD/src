@@ -24,9 +24,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/arm/cpu_asm-v6.S 300694 2016-05-25 19:44:26Z ian $
+ * $FreeBSD$
  */
-#include "assym.s"
+#include "assym.inc"
 
 #include <machine/asm.h>
 #include <machine/asmacros.h>

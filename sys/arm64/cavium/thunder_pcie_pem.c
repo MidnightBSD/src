@@ -30,7 +30,7 @@
 /* PCIe external MAC root complex driver (PEM) for Cavium Thunder SOC */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm64/cavium/thunder_pcie_pem.c 301031 2016-05-31 09:15:21Z andrew $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_platform.h"
 

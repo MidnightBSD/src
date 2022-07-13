@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/dev/dwc/if_dwc_if.m 288023 2015-09-20 14:13:29Z loos $
+# $FreeBSD$
 #
 
 INTERFACE if_dwc;
@@ -41,13 +41,19 @@ CODE {
 	static int
 	if_dwc_default_mac_type(device_t dev)
 	{
-		return (DWC_GMAC);
+		return (DWC_GMAC_EXT_DESC);
 	}
 
 	static int
 	if_dwc_default_mii_clk(device_t dev)
 	{
 		return (GMAC_MII_CLK_25_35M_DIV16);
+	}
+
+	static int
+	if_dwc_default_set_speed(device_t dev, int speed)
+	{
+		return (0);
 	}
 };
 
@@ -74,3 +80,11 @@ METHOD int mac_type {
 METHOD int mii_clk {
 	device_t dev;
 } DEFAULT if_dwc_default_mii_clk;
+
+#
+# Signal media change to a specific hardware
+#
+METHOD int set_speed {
+	device_t dev;
+	int speed;
+} DEFAULT if_dwc_default_set_speed;

@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ocs_fc/ocs_list.h 331766 2018-03-30 15:28:25Z ken $
+ * $FreeBSD$
  */
 
 /**
@@ -183,7 +183,7 @@ _ocs_list_insert_link(ocs_list_t *a, ocs_list_t *b, ocs_list_t *c)
  * @brief Initialize a list link for debug purposes
  *
  * For debugging a linked list link element has a magic number that is initialized,
- * and the offset value initialzied and used for subsequent assertions.
+ * and the offset value initialized and used for subsequent assertions.
  *
  *
  * @param list Pointer to list head

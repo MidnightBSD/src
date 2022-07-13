@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Seigo Tanimura
  * Copyright (c) 1999 Ville-Pertti Keinonen
  * All rights reserved.
@@ -46,7 +48,7 @@
 #include <isa/isavar.h>
 #include <isa/isa_common.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/isa/gusc.c 331722 2018-03-29 02:50:57Z eadler $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 #define LOGICALID_NOPNP 0
 #define LOGICALID_PCM   0x0000561e
@@ -307,6 +309,7 @@ gusc_attach(device_t dev)
 	sc_p scp;
 	void *ih;
 
+	gone_in_dev(dev, 14, "ISA sound driver");
 	scp = device_get_softc(dev);
 
 	bzero(scp, sizeof(*scp));
@@ -671,5 +674,4 @@ DRIVER_MODULE(snd_gusc, isa, gusc_driver, gusc_devclass, 0, 0);
 DRIVER_MODULE(snd_gusc, acpi, gusc_driver, gusc_devclass, 0, 0);
 MODULE_DEPEND(snd_gusc, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_gusc, 1);
-
-
+ISA_PNP_INFO(gusc_ids);

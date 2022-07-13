@@ -1,6 +1,8 @@
 # AM335x generic configuration
-#$FreeBSD: stable/11/sys/arm/ti/am335x/std.am335x 327658 2018-01-07 00:04:13Z ian $
+#$FreeBSD$
 files		"../ti/am335x/files.am335x"
 include		"../ti/std.ti"
+
+cpu 		CPU_CORTEXA
 
 options		SOC_TI_AM335X

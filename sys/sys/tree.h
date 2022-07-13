@@ -1,9 +1,10 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: tree.h,v 1.8 2004/03/28 19:38:30 provos Exp $	*/
 /*	$OpenBSD: tree.h,v 1.7 2002/10/17 21:51:54 art Exp $	*/
-/* $FreeBSD: stable/10/sys/sys/tree.h 278344 2015-02-07 08:14:20Z kib $ */
+/* $FreeBSD$ */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright 2002 Niels Provos <provos@citi.umich.edu>
  * All rights reserved.
  *

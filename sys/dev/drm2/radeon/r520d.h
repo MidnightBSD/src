@@ -29,7 +29,7 @@
 #define __R520D_H__
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/r520d.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 /* Registers */
 #define R_0000F8_CONFIG_MEMSIZE                      0x0000F8

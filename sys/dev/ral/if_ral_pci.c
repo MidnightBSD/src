@@ -16,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ral/if_ral_pci.c 352563 2019-09-20 19:56:55Z mizhka $");
+__FBSDID("$FreeBSD$");
 
 /*
  * PCI/Cardbus front-end for the Ralink RT2560/RT2561/RT2561S/RT2661 driver.
@@ -44,6 +44,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/ral/if_ral_pci.c 352563 2019-09-20 19:56:5
 
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_radiotap.h>
+#include <net80211/ieee80211_ratectl.h>
 
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
@@ -178,6 +179,8 @@ static driver_t ral_pci_driver = {
 static devclass_t ral_devclass;
 
 DRIVER_MODULE(ral, pci, ral_pci_driver, ral_devclass, NULL, NULL);
+MODULE_PNP_INFO("U16:vendor;U16:device;D:#", pci, ral, ral_pci_ids,
+    nitems(ral_pci_ids) - 1);
 
 static int
 ral_pci_probe(device_t dev)

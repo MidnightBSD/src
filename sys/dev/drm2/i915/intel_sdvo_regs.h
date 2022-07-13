@@ -23,7 +23,7 @@
  * Authors:
  *	Eric Anholt <eric@anholt.net>
  *
- * $FreeBSD: stable/11/sys/dev/drm2/i915/intel_sdvo_regs.h 287496 2015-09-05 23:22:59Z bapt $
+ * $FreeBSD$
  */
 
 /**

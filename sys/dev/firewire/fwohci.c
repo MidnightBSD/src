@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2003 Hidetoshi Shimokawa
  * Copyright (c) 1998-2002 Katsushi Kobayashi and Hidetoshi Shimokawa
  * All rights reserved.
@@ -31,7 +33,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/firewire/fwohci.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  *
  */
 
@@ -2693,7 +2695,7 @@ fwohci_get_plen(struct fwohci_softc *sc, struct fwohci_dbch *dbch, struct fw_pkt
 	info = &tinfo[fp->mode.common.tcode];
 	r = info->hdr_len + sizeof(uint32_t);
 	if ((info->flag & FWTI_BLOCK_ASY) != 0)
-		r += roundup2(fp->mode.wreqb.len, sizeof(uint32_t));
+		r += roundup2((uint32_t)fp->mode.wreqb.len, sizeof(uint32_t));
 
 	if (r == sizeof(uint32_t)) {
 		/* XXX */

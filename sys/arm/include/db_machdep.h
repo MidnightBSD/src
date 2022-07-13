@@ -24,7 +24,7 @@
  * the rights to redistribute these changes.
  *
  *	from: FreeBSD: src/sys/i386/include/db_machdep.h,v 1.16 1999/10/04
- * $FreeBSD: stable/11/sys/arm/include/db_machdep.h 300694 2016-05-25 19:44:26Z ian $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_DB_MACHDEP_H_
@@ -89,16 +89,10 @@ typedef int		db_expr_t;
 
 #define next_instr_address(pc, bd)	((bd) ? (pc) : ((pc) + INSN_SIZE))
 
-#define	DB_SMALL_VALUE_MAX	(0x7fffffff)
-#define	DB_SMALL_VALUE_MIN	(-0x40001)
-
 #define	DB_ELFSIZE		32
 
 int db_validate_address(vm_offset_t);
 
 u_int branch_taken (u_int insn, db_addr_t pc);
 
-#ifdef __ARMEB__
-#define BYTE_MSF	(1)
-#endif
 #endif /* !_MACHINE_DB_MACHDEP_H_ */

@@ -23,9 +23,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: stable/11/sys/dev/netmap/netmap_null.c 344047 2019-02-12 09:26:05Z vmaffione $ */
+/* $FreeBSD$ */
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 #include <sys/cdefs.h> /* prerequisite */
 
 #include <sys/types.h>

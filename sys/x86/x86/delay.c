@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990 The Regents of the University of California.
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -14,7 +16,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/x86/x86/delay.c 340270 2018-11-08 22:42:55Z jhb $");
+__FBSDID("$FreeBSD$");
 
 /* Generic x86 routines to handle delay */
 
@@ -111,10 +113,14 @@ void
 DELAY(int n)
 {
 
-	if (delay_tc(n))
+	TSENTER();
+	if (delay_tc(n)) {
+		TSEXIT();
 		return;
+	}
 
 	init_ops.early_delay(n);
+	TSEXIT();
 }
 
 void

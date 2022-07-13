@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/qlnx/qlnxe/qlnx_os.c 337517 2018-08-09 01:17:35Z davidcs $");
+__FBSDID("$FreeBSD$");
 
 #include "qlnx_os.h"
 #include "bcm_osal.h"
@@ -232,10 +232,9 @@ MODULE_DEPEND(if_qlnxev, ether, 1, 1, 1);
 
 MALLOC_DEFINE(M_QLNXBUF, "qlnxbuf", "Buffers for qlnx driver");
 
-
-static char qlnx_dev_str[128];
-static char qlnx_ver_str[VER_SIZE];
-static char qlnx_name_str[NAME_SIZE];
+char qlnx_dev_str[128];
+char qlnx_ver_str[VER_SIZE];
+char qlnx_name_str[NAME_SIZE];
 
 /*
  * Some PCI Configuration Space Related Defines
@@ -2660,7 +2659,7 @@ qlnx_set_multi(qlnx_host_t *ha, uint32_t add_multi)
 
 	if_maddr_rlock(ifp);
 
-	TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;
@@ -3316,7 +3315,7 @@ qlnx_tso_check(struct qlnx_fastpath *fp, bus_dma_segment_t *segs, int nsegs,
         uint32_t		window;
         bus_dma_segment_t	*s_seg;
 
-        /* If the header spans mulitple segments, skip those segments */
+        /* If the header spans multiple segments, skip those segments */
 
         if (nsegs < ETH_TX_LSO_WINDOW_BDS_NUM)
                 return (0);

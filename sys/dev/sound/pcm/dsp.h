@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Portions Copyright (c) Ryan Beasley <ryan.beasley@gmail.com> - GSoC 2006
  * Copyright (c) 1999 Cameron Grant <cg@FreeBSD.org>
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/sound/pcm/dsp.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _PCMDSP_H_

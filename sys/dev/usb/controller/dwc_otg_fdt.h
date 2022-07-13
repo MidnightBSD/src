@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/usb/controller/dwc_otg_fdt.h 279778 2015-03-08 13:52:07Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _DWC_OTG_FDT_H_
@@ -35,5 +35,6 @@ struct dwc_otg_fdt_softc {
 extern driver_t dwc_otg_driver;
 
 device_attach_t dwc_otg_attach;
+device_attach_t dwc_otg_detach;
 
 #endif

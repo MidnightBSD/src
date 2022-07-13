@@ -23,7 +23,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_vcio.c 290382 2015-11-05 04:16:03Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -68,10 +68,6 @@ vcio_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int mode,
 	if (error != 0)
 		break;
 	property = malloc(size, M_VCIO, M_WAITOK);
-	if (property == NULL) {
-		error = ENOMEM;
-		break;
-	}
 
 	error = copyin(ptr, property, size);
 	if (error) {

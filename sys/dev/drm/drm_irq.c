@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm/drm_irq.c 331409 2018-03-23 02:33:30Z emaste $");
+__FBSDID("$FreeBSD$");
 
 /** @file drm_irq.c
  * Support code for handling setup/teardown of interrupt handlers and

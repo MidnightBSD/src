@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
  *
@@ -32,7 +34,7 @@
 
 #include "feeder_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pcm/feeder_chain.c 331722 2018-03-29 02:50:57Z eadler $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 /* chain state */
 struct feeder_chain_state {
@@ -50,7 +52,7 @@ struct feeder_chain_desc {
 	struct feeder_chain_state current;	/* current state */
 	struct feeder_chain_state target;	/* target state */
 	struct pcm_feederdesc desc;		/* feeder descriptor */
-	uint32_t afmt_ne;			/* prefered native endian */
+	uint32_t afmt_ne;			/* preferred native endian */
 	int mode;				/* chain mode */
 	int use_eq;				/* need EQ? */
 	int use_matrix;				/* need channel matrixing? */
@@ -75,7 +77,7 @@ struct feeder_chain_desc {
 #endif
 
 /*
- * List of prefered formats that might be required during
+ * List of preferred formats that might be required during
  * processing. It will be decided through snd_fmtbest().
  */
 
@@ -650,7 +652,7 @@ feeder_chain(struct pcm_channel *c)
 	}
 
 	/*
-	 * The 'hardware' possibly have different intepretation of channel
+	 * The 'hardware' possibly have different interpretation of channel
 	 * matrixing, so get it first .....
 	 */
 	hwmatrix = CHANNEL_GETMATRIX(c->methods, c->devinfo, hwfmt);

@@ -1,7 +1,7 @@
 /*-
- * BSD LICENSE
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2015-2017 Amazon.com, Inc. or its affiliates.
+ * Copyright (c) 2015-2021 Amazon.com, Inc. or its affiliates.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ena/ena_sysctl.h 320731 2017-07-06 11:45:13Z zbb $
+ * $FreeBSD$
  *
  */
 
@@ -39,6 +39,14 @@
 
 #include "ena.h"
 
-void	ena_sysctl_add_nodes(struct ena_adapter *);
+void	ena_sysctl_add_nodes(struct ena_adapter *adapter);
+void	ena_sysctl_update_queue_node_nb(struct ena_adapter *adapter, int old,
+    int new);
+
+extern int ena_enable_9k_mbufs;
+#define ena_mbuf_sz (ena_enable_9k_mbufs ? MJUM9BYTES : MJUMPAGESIZE)
+
+/* Force the driver to use large LLQ (Low Latency Queue) headers. */
+extern bool ena_force_large_llq_header;
 
 #endif /* !(ENA_SYSCTL_H) */

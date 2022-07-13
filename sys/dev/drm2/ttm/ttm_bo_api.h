@@ -27,7 +27,7 @@
 /*
  * Authors: Thomas Hellstrom <thellstrom-at-vmware-dot-com>
  */
-/* $FreeBSD: stable/11/sys/dev/drm2/ttm/ttm_bo_api.h 247835 2013-03-05 09:49:34Z kib $ */
+/* $FreeBSD$ */
 
 #ifndef _TTM_BO_API_H_
 #define _TTM_BO_API_H_

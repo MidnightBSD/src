@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/iscsi_initiator/iscsi_subr.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_iscsi_initiator.h"
 
@@ -104,7 +106,7 @@ iscsi_r2t(isc_session_t *sp, pduq_t *opq, pduq_t *pq)
 
 			 while((wpq = pdu_alloc(sp->isc, M_NOWAIT)) == NULL) {
 			      sdebug(2, "waiting...");
-#if __MidnightBSD_version >= 4000
+#if __FreeBSD_version >= 700000
 			      pause("isc_r2t", 5*hz);
 #else
 			      tsleep(sp->isc, 0, "isc_r2t", 5*hz);
@@ -469,7 +471,7 @@ scsi_encap(struct cam_sim *sim, union ccb *ccb)
 		 sp->isc->npdu_max, sp->isc->npdu_alloc);
 	  while((pq = pdu_alloc(sp->isc, M_NOWAIT)) == NULL) {
 	       sdebug(2, "waiting...");
-#if __MidnightBSD_version >= 4000
+#if __FreeBSD_version >= 700000
 	       pause("isc_encap", 5*hz);
 #else
 	       tsleep(sp->isc, 0, "isc_encap", 5*hz);

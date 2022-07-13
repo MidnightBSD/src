@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/sound/driver/csa/Makefile 347113 2019-05-04 12:19:02Z avatar $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/dev/sound/pci
 

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1997, 1998
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
  *
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/vr/if_vr.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * VIA Rhine fast ethernet PCI NIC driver
@@ -472,7 +474,7 @@ vr_set_filter(struct vr_softc *sc)
 		 * 32 entries multicast perfect filter.
 		 */
 		cam_mask = 0;
-		TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 			if (ifma->ifma_addr->sa_family != AF_LINK)
 				continue;
 			error = vr_cam_data(sc, VR_MCAST_CAM, mcnt,
@@ -494,7 +496,7 @@ vr_set_filter(struct vr_softc *sc)
 		 * table based filtering.
 		 */
 		mcnt = 0;
-		TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 			if (ifma->ifma_addr->sa_family != AF_LINK)
 				continue;
 			h = ether_crc32_be(LLADDR((struct sockaddr_dl *)
@@ -1919,7 +1921,7 @@ vr_encap(struct vr_softc *sc, struct mbuf **m_head)
 	desc = &sc->vr_rdata.vr_tx_ring[prod];
 
 	/*
-	 * Set EOP on the last desciptor and reuqest Tx completion
+	 * Set EOP on the last descriptor and reuqest Tx completion
 	 * interrupt for every VR_TX_INTR_THRESH-th frames.
 	 */
 	VR_INC(sc->vr_cdata.vr_tx_pkts, VR_TX_INTR_THRESH);

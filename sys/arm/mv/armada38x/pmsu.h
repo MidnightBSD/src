@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/mv/armada38x/pmsu.h 294441 2016-01-20 14:49:16Z zbb $
+ * $FreeBSD$
  */
 
 #include "opt_global.h"

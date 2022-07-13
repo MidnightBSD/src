@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * BSD LICENSE
  *
  * Copyright(c) 2008 - 2011 Intel Corporation. All rights reserved.
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/isci/isci_timer.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/isci/isci.h>
 
@@ -107,7 +109,7 @@ scif_cb_timer_stop(SCI_CONTROLLER_HANDLE_T controller, void *timer)
  *        a handle for this timer for use in further timer interactions.
  *
  * @warning The "timer_callback" method should be executed in a mutually
- *          exlusive manner from the controller completion handler
+ *          exclusive manner from the controller completion handler
  *          handler (refer to scic_controller_get_handler_methods()).
  *
  * @param[in]  timer_callback This parameter specifies the callback method

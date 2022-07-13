@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/acpi_smbat.c 263954 2014-03-30 23:43:36Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -170,7 +170,7 @@ acpi_smbat_info_expired(struct timespec *lastupdated)
 		return (TRUE);
 
 	getnanotime(&curtime);
-	timespecsub(&curtime, lastupdated);
+	timespecsub(&curtime, lastupdated, &curtime);
 	return (curtime.tv_sec < 0 ||
 	    curtime.tv_sec > acpi_battery_get_info_expire());
 }

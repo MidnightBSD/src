@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/time.h 335429 2018-06-20 06:52:32Z hselasky $
+ * $FreeBSD$
  */
 #ifndef _LINUX_TIME_H_
 #define	_LINUX_TIME_H_
@@ -76,9 +76,7 @@ timespec_sub(struct timespec lhs, struct timespec rhs)
 {
 	struct timespec ts;
 
-	ts.tv_sec = lhs.tv_sec;
-	ts.tv_nsec = lhs.tv_nsec;
-	timespecsub(&ts, &rhs);
+	timespecsub(&lhs, &rhs, &ts);
 
 	return ts;
 }

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ntb/ntb.c 355152 2019-11-28 00:41:42Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -248,6 +248,30 @@ ntb_db_event(device_t dev, uint32_t vec)
 			nc->ctx_ops->db_event(nc->ctx, vec);
 		rm_runlock(&nc->ctx_lock, &ctx_tracker);
 	}
+}
+
+int
+ntb_port_number(device_t ntb)
+{
+	return (NTB_PORT_NUMBER(device_get_parent(ntb)));
+}
+
+int
+ntb_peer_port_count(device_t ntb)
+{
+	return (NTB_PEER_PORT_COUNT(device_get_parent(ntb)));
+}
+
+int
+ntb_peer_port_number(device_t ntb, int pidx)
+{
+	return (NTB_PEER_PORT_NUMBER(device_get_parent(ntb), pidx));
+}
+
+int
+ntb_peer_port_idx(device_t ntb, int port)
+{
+	return (NTB_PEER_PORT_IDX(device_get_parent(ntb), port));
 }
 
 bool

@@ -48,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/opencrypto/xform_deflate.c 292963 2015-12-30 22:43:07Z allanjude $");
+__FBSDID("$FreeBSD$");
 
 #include <opencrypto/deflate.h>
 #include <opencrypto/xform_comp.h>

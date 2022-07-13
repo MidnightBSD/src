@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/security/mac/mac_inet.c 258541 2013-11-25 07:38:45Z attilio $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_mac.h"
 
@@ -435,7 +435,7 @@ mac_netinet_firewall_send(struct mbuf *m)
 /*
  * These functions really should be referencing the syncache structure
  * instead of the label.  However, due to some of the complexities associated
- * with exposing this syncache structure we operate directly on it's label
+ * with exposing this syncache structure we operate directly on its label
  * pointer.  This should be OK since we aren't making any access control
  * decisions within this code directly, we are merely allocating and copying
  * label storage so we can properly initialize mbuf labels for any packets

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_modes.c 280814 2015-03-29 18:45:51Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm_crtc.h>

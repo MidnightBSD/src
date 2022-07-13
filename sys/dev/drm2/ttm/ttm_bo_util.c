@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/ttm/ttm_bo_util.c 317008 2017-04-16 07:58:41Z mmel $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/ttm/ttm_bo_driver.h>

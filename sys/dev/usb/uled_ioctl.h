@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Kevin Lo
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/usb/uled_ioctl.h 273882 2014-10-31 07:33:56Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _ULED_IOCTL_H_

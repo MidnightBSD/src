@@ -33,14 +33,38 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/riscv/riscv/clock.c 295041 2016-01-29 15:12:31Z br $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/systm.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
+#include <sys/proc.h>
+#include <sys/sched.h>
+#include <sys/smp.h>
 
 void
 cpu_initclocks(void)
 {
+#ifdef EARLY_AP_STARTUP
+	struct thread *td;
+	int i;
 
+	td = curthread;
 	cpu_initclocks_bsp();
+	CPU_FOREACH(i) {
+		if (i == 0)
+			continue;
+		thread_lock(td);
+		sched_bind(td, i);
+		thread_unlock(td);
+		cpu_initclocks_ap();
+	}
+	thread_lock(td);
+	if (sched_is_bound(td))
+		sched_unbind(td);
+	thread_unlock(td);
+#else
+	cpu_initclocks_bsp();
+#endif
 }

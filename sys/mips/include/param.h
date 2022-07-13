@@ -1,6 +1,8 @@
 /*	$OpenBSD: param.h,v 1.11 1998/08/30 22:05:35 millert Exp $ */
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -17,7 +19,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -36,7 +38,7 @@
  *	from: Utah Hdr: machparam.h 1.11 89/08/14
  *	from: @(#)param.h	8.1 (Berkeley) 6/10/93
  *	JNPR: param.h,v 1.6.2.1 2007/09/10 07:49:36 girish
- * $FreeBSD: stable/11/sys/mips/include/param.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _MIPS_INCLUDE_PARAM_H_
@@ -53,33 +55,36 @@
 
 #define __PCI_REROUTE_INTERRUPT
 
+#if _BYTE_ORDER == _BIG_ENDIAN
+# define _EL_SUFFIX ""
+#else
+# define _EL_SUFFIX "el"
+#endif
+
+#ifdef __mips_n64
+# define _N64_SUFFIX "64"
+#elif defined(__mips_n32)
+# define _N64_SUFFIX "n32"
+#else
+# define _N64_SUFFIX ""
+#endif
+
+#ifdef __mips_hard_float
+# define _HF_SUFFIX "hf"
+#else
+# define _HF_SUFFIX ""
+#endif
+
 #ifndef MACHINE
-#define	MACHINE		"mips"
+# define MACHINE	"mips"
 #endif
 #ifndef MACHINE_ARCH
-#if _BYTE_ORDER == _BIG_ENDIAN
+# define MACHINE_ARCH 	"mips" _N64_SUFFIX _EL_SUFFIX _HF_SUFFIX
+#endif
 #ifdef __mips_n64
-#define	MACHINE_ARCH	"mips64"
-#ifndef	MACHINE_ARCH32
-#define	MACHINE_ARCH32	"mips"
-#endif
-#elif defined(__mips_n32)
-#define	MACHINE_ARCH	"mipsn32"
-#else
-#define	MACHINE_ARCH	"mips"
-#endif
-#else
-#ifdef __mips_n64
-#define	MACHINE_ARCH	"mips64el"
-#ifndef	MACHINE_ARCH32
-#define	MACHINE_ARCH32	"mipsel"
-#endif
-#elif defined(__mips_n32)
-#define	MACHINE_ARCH	"mipsn32el"
-#else
-#define	MACHINE_ARCH	"mipsel"
-#endif
-#endif
+# ifndef MACHINE_ARCH32
+#  define MACHINE_ARCH32 "mips" _EL_SUFFIX _HF_SUFFIX
+# endif
 #endif
 
 /*
@@ -179,9 +184,5 @@
 #define	ptoa(x)			((x) << PAGE_SHIFT)
 
 #define	pgtok(x)		((x) * (PAGE_SIZE / 1024))
-
-#ifdef _KERNEL
-#define	NO_FUEWORD	1
-#endif
 
 #endif /* !_MIPS_INCLUDE_PARAM_H_ */

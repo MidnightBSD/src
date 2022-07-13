@@ -1,8 +1,10 @@
 /*	OpenBSD: lxtphyreg.h,v 1.1 1998/11/11 19:34:47 jason Exp 	*/
 /*	NetBSD: lxtphyreg.h,v 1.1 1998/10/24 00:33:17 thorpej Exp 	*/
-/*	$FreeBSD: stable/11/sys/dev/mii/lxtphyreg.h 331722 2018-03-29 02:50:57Z eadler $	*/
+/*	$FreeBSD$	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
  *

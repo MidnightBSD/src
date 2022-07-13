@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/etherswitch/mtkswitch/mtkswitch.c 299910 2016-05-16 07:00:49Z sgalabov $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -122,6 +122,12 @@ mtkswitch_attach_phys(struct mtkswitch_softc *sc)
 			continue;
 		}
 		sc->ifp[phy] = if_alloc(IFT_ETHER);
+		if (sc->ifp[phy] == NULL) {
+			device_printf(sc->sc_dev, "couldn't allocate ifnet structure\n");
+			err = ENOMEM;
+			break;
+		}
+
 		sc->ifp[phy]->if_softc = sc;
 		sc->ifp[phy]->if_flags |= IFF_UP | IFF_BROADCAST |
 		    IFF_DRV_RUNNING | IFF_SIMPLEX;

@@ -29,7 +29,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_fpga/mlx5_ifc_fpga.h 347797 2019-05-16 17:11:02Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef MLX5_IFC_FPGA_H

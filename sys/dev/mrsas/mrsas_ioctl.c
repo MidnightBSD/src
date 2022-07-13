@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mrsas/mrsas_ioctl.c 299671 2016-05-13 12:21:50Z kadesai $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/mrsas/mrsas.h>
 #include <dev/mrsas/mrsas_ioctl.h>

@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/timer.h 335414 2018-06-20 06:38:03Z hselasky $
+ * $FreeBSD$
  */
 #ifndef _LINUX_TIMER_H_
 #define	_LINUX_TIMER_H_
@@ -78,12 +78,12 @@ extern unsigned long linux_timer_hz_mask;
 	callout_init(&(timer)->callout, 1);			\
 } while (0)
 
-extern void mod_timer(struct timer_list *, int);
+extern int mod_timer(struct timer_list *, int);
 extern void add_timer(struct timer_list *);
 extern void add_timer_on(struct timer_list *, int cpu);
+extern int del_timer(struct timer_list *);
+extern int del_timer_sync(struct timer_list *);
 
-#define	del_timer(timer)	(void)callout_stop(&(timer)->callout)
-#define	del_timer_sync(timer)	(void)callout_drain(&(timer)->callout)
 #define	timer_pending(timer)	callout_pending(&(timer)->callout)
 #define	round_jiffies(j)	\
 	((int)(((j) + linux_timer_hz_mask) & ~linux_timer_hz_mask))

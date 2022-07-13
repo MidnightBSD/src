@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5212/ar2317.c 298939 2016-05-02 19:56:48Z pfg $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -606,7 +608,7 @@ ar2317GetMaxPower(struct ath_hal *ah, const RAW_DATA_PER_CHANNEL_2317 *data)
 	uint32_t ii;
 	uint16_t Pmax=0,numVpd;
 	uint16_t vpdmax;
-	
+
 	for (ii=0; ii< MAX_NUM_PDGAINS_PER_CHANNEL; ii++) {
 		/* work forwards cuase lowest pdGain for highest power */
 		numVpd = data->pDataPerPDGain[ii].numVpd;
@@ -642,7 +644,7 @@ ar2317GetChannelMaxMinPower(struct ath_hal *ah,
 
 	numChannels = pRawDataset->numChannels;
 	data = pRawDataset->pDataPerChannel;
-	
+
 	/* Make sure the channel is in the range of the TP values 
 	 *  (freq piers)
 	 */

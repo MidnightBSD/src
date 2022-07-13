@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 Izumi Tsutsui.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +25,7 @@
  *
  *	$NetBSD: mc146818var.h,v 1.7 2008/05/14 13:29:29 tsutsui Exp $
  *
- * $FreeBSD: stable/11/sys/dev/mc146818/mc146818var.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 struct mc146818_softc {

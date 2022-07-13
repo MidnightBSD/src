@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/include/dump.h 276772 2015-01-07 01:01:39Z markj $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_DUMP_H_

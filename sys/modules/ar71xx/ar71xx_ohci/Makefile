@@ -26,7 +26,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $FreeBSD: stable/11/sys/modules/ar71xx/ar71xx_ohci/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 #
 
 .PATH:	${SRCTOP}/sys/mips/atheros/

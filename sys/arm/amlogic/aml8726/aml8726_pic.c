@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/amlogic/aml8726/aml8726_pic.c 283057 2015-05-18 11:04:07Z andrew $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -53,7 +53,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/amlogic/aml8726/aml8726_pic.c 283057 2015-
 #include <machine/bus.h>
 #include <machine/intr.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 

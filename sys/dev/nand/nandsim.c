@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2009-2012 Semihalf
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
 /* Simulated NAND controller driver */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/nand/nandsim.c 349658 2019-07-03 17:35:23Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

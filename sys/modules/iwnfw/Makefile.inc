@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/iwnfw/Makefile.inc 351876 2019-09-05 17:20:24Z bdrewery $
+# $FreeBSD$
 #
 # Common rules for building firmware.  Note this gets auto-included
 # by the subdir Makefile's as a consequence of included bsd.kmod.mk.

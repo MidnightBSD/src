@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/evdev/cdev.c 324768 2017-10-19 20:16:40Z wulf $
+ * $FreeBSD$
  */
 
 #include "opt_evdev.h"
@@ -407,6 +407,19 @@ evdev_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 	if (client->ec_revoked || evdev == NULL)
 		return (ENODEV);
 
+	/*
+	 * Fix evdev state corrupted with discarding of kdb events.
+	 * EVIOCGKEY and EVIOCGLED ioctls can suffer from this.
+	 */
+	if (evdev->ev_kdb_active) {
+		EVDEV_LOCK(evdev);
+		if (evdev->ev_kdb_active) {
+			evdev->ev_kdb_active = false;
+			evdev_restore_after_kdb(evdev);
+		}
+		EVDEV_UNLOCK(evdev);
+	}
+
 	/* file I/O ioctl handling */
 	switch (cmd) {
 	case FIOSETOWN:
@@ -477,7 +490,7 @@ evdev_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 			return (ENOTSUP);
 
 		ke = (struct input_keymap_entry *)data;
-		evdev->ev_methods->ev_get_keycode(evdev, evdev->ev_softc, ke);
+		evdev->ev_methods->ev_get_keycode(evdev, ke);
 		return (0);
 
 	case EVIOCSKEYCODE:
@@ -490,7 +503,7 @@ evdev_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 			return (ENOTSUP);
 
 		ke = (struct input_keymap_entry *)data;
-		evdev->ev_methods->ev_set_keycode(evdev, evdev->ev_softc, ke);
+		evdev->ev_methods->ev_set_keycode(evdev, ke);
 		return (0);
 
 	case EVIOCGABS(0) ... EVIOCGABS(ABS_MAX):

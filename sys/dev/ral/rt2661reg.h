@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/11/sys/dev/ral/rt2661reg.h 258780 2013-11-30 22:17:27Z eadler $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 2006

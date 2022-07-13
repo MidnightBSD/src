@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1998 Nicolas Souchu
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/iicbus/iiconf.c 350031 2019-07-16 15:02:28Z avg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -38,6 +40,18 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/iicbus/iiconf.c 350031 2019-07-16 15:02:28
 #include <dev/iicbus/iiconf.h>
 #include <dev/iicbus/iicbus.h>
 #include "iicbus_if.h"
+
+/*
+ * Encode a system errno value into the IIC_Exxxxx space by setting the
+ * IIC_ERRNO marker bit, so that iic2errno() can turn it back into a plain
+ * system errno value later.  This lets controller- and bus-layer code get
+ * important system errno values (such as EINTR/ERESTART) back to the caller.
+ */
+int
+errno2iic(int errno)
+{
+	return ((errno == 0) ? 0 : errno | IIC_ERRNO);
+}
 
 /*
  * Translate IIC_Exxxxx status values to vaguely-equivelent errno values.
@@ -57,7 +71,22 @@ iic2errno(int iic_status)
 	case IIC_ENOTSUPP:      return (EOPNOTSUPP);
 	case IIC_ENOADDR:       return (EADDRNOTAVAIL);
 	case IIC_ERESOURCE:     return (ENOMEM);
-	default:                return (EIO);
+	default:
+		/*
+		 * If the high bit is set, that means it's a system errno value
+		 * that was encoded into the IIC_Exxxxxx space by setting the
+		 * IIC_ERRNO marker bit.  If lots of high-order bits are set,
+		 * then it's one of the negative pseudo-errors such as ERESTART
+		 * and we return it as-is.  Otherwise it's a plain "small
+		 * positive integer" errno, so just remove the IIC_ERRNO marker
+		 * bit.  If it's some unknown number without the high bit set,
+		 * there isn't much we can do except call it an I/O error.
+		 */
+		if ((iic_status & IIC_ERRNO) == 0)
+			return (EIO);
+		if ((iic_status & 0xFFFF0000) != 0)
+			return (iic_status);
+		return (iic_status & ~IIC_ERRNO);
 	}
 }
 
@@ -95,7 +124,7 @@ iicbus_poll(struct iicbus_softc *sc, int how)
 		return (IIC_EBUSBSY);
 	}
 
-	return (error);
+	return (errno2iic(error));
 }
 
 /*
@@ -108,6 +137,7 @@ iicbus_poll(struct iicbus_softc *sc, int how)
 int
 iicbus_request_bus(device_t bus, device_t dev, int how)
 {
+	struct iic_reqbus_data reqdata;
 	struct iicbus_softc *sc = (struct iicbus_softc *)device_get_softc(bus);
 	int error = 0;
 
@@ -126,6 +156,18 @@ iicbus_request_bus(device_t bus, device_t dev, int how)
 		++sc->owncount;
 		if (sc->owner == NULL) {
 			sc->owner = dev;
+			/*
+			 * Mark the device busy while it owns the bus, to
+			 * prevent detaching the device, bus, or hardware
+			 * controller, until ownership is relinquished.  If the
+			 * device is doing IO from its probe method before
+			 * attaching, it cannot be busied; mark the bus busy.
+			 */
+			if (device_get_state(dev) < DS_ATTACHING)
+				sc->busydev = bus;
+			else
+				sc->busydev = dev;
+			device_busy(sc->busydev);
 			/* 
 			 * Drop the lock around the call to the bus driver, it
 			 * should be allowed to sleep in the IIC_WAIT case.
@@ -134,14 +176,18 @@ iicbus_request_bus(device_t bus, device_t dev, int how)
 			 */
 			IICBUS_UNLOCK(sc);
 			/* Ask the underlying layers if the request is ok */
+			reqdata.dev = dev;
+			reqdata.bus = bus;
+			reqdata.flags = how | IIC_REQBUS_DEV;
 			error = IICBUS_CALLBACK(device_get_parent(bus),
-			    IIC_REQUEST_BUS, (caddr_t)&how);
+			    IIC_REQUEST_BUS, (caddr_t)&reqdata);
 			IICBUS_LOCK(sc);
 	
 			if (error != 0) {
 				sc->owner = NULL;
 				sc->owncount = 0;
 				wakeup_one(sc);
+				device_unbusy(sc->busydev);
 			}
 		}
 	}
@@ -159,6 +205,7 @@ iicbus_request_bus(device_t bus, device_t dev, int how)
 int
 iicbus_release_bus(device_t bus, device_t dev)
 {
+	struct iic_reqbus_data reqdata;
 	struct iicbus_softc *sc = (struct iicbus_softc *)device_get_softc(bus);
 
 	IICBUS_LOCK(sc);
@@ -171,10 +218,15 @@ iicbus_release_bus(device_t bus, device_t dev)
 	if (--sc->owncount == 0) {
 		/* Drop the lock while informing the low-level driver. */
 		IICBUS_UNLOCK(sc);
-		IICBUS_CALLBACK(device_get_parent(bus), IIC_RELEASE_BUS, NULL);
+		reqdata.dev = dev;
+		reqdata.bus = bus;
+		reqdata.flags = IIC_REQBUS_DEV;
+		IICBUS_CALLBACK(device_get_parent(bus), IIC_RELEASE_BUS,
+		    (caddr_t)&reqdata);
 		IICBUS_LOCK(sc);
 		sc->owner = NULL;
 		wakeup_one(sc);
+		device_unbusy(sc->busydev);
 	}
 	IICBUS_UNLOCK(sc);
 	return (0);
@@ -497,25 +549,47 @@ iicdev_readfrom(device_t slavedev, uint8_t regaddr, void *buffer,
 int iicdev_writeto(device_t slavedev, uint8_t regaddr, void *buffer,
     uint16_t buflen, int waithow)
 {
-	struct iic_msg msgs[2];
-	uint8_t slaveaddr;
+	struct iic_msg msg;
+	uint8_t local_buffer[32];
+	uint8_t *bufptr;
+	size_t bufsize;
+	int error;
 
 	/*
-	 * Two transfers back to back with no stop or start between them; first
-	 * we write the address then we write the data to that address, all in a
-	 * single transfer from two scattered buffers.
+	 * Ideally, we would do two transfers back to back with no stop or start
+	 * between them using an array of 2 iic_msgs; first we'd write the
+	 * address byte using the IIC_M_NOSTOP flag, then we write the data
+	 * using IIC_M_NOSTART, all in a single transfer.  Unfortunately,
+	 * several i2c hardware drivers don't support that (perhaps because the
+	 * hardware itself can't support it).  So instead we gather the
+	 * scattered bytes into a single buffer here before writing them using a
+	 * single iic_msg.  This function is typically used to write a few bytes
+	 * at a time, so we try to use a small local buffer on the stack, but
+	 * fall back to allocating a temporary buffer when necessary.
 	 */
-	slaveaddr = iicbus_get_addr(slavedev);
 
-	msgs[0].slave = slaveaddr;
-	msgs[0].flags = IIC_M_WR | IIC_M_NOSTOP;
-	msgs[0].len   = 1;
-	msgs[0].buf   = &regaddr;
+	bufsize = buflen + 1;
+	if (bufsize <= sizeof(local_buffer)) {
+		bufptr = local_buffer;
+	} else {
+		bufptr = malloc(bufsize, M_DEVBUF,
+		    (waithow & IIC_WAIT) ? M_WAITOK : M_NOWAIT);
+		if (bufptr == NULL)
+			return (errno2iic(ENOMEM));
+	}
 
-	msgs[1].slave = slaveaddr;
-	msgs[1].flags = IIC_M_WR | IIC_M_NOSTART;
-	msgs[1].len   = buflen;
-	msgs[1].buf   = buffer;
+	bufptr[0] = regaddr;
+	memcpy(&bufptr[1], buffer, buflen);
 
-	return (iicbus_transfer_excl(slavedev, msgs, nitems(msgs), waithow));
+	msg.slave = iicbus_get_addr(slavedev);
+	msg.flags = IIC_M_WR;
+	msg.len   = bufsize;
+	msg.buf   = bufptr;
+
+	error = iicbus_transfer_excl(slavedev, &msg, 1, waithow);
+
+	if (bufptr != local_buffer)
+		free(bufptr, M_DEVBUF);
+
+	return (error);
 }

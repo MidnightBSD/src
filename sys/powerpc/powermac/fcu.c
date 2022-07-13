@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Andreas Tobler
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/powerpc/powermac/fcu.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -449,9 +451,9 @@ fcu_fill_fan_prop(device_t dev)
 {
 	phandle_t child;
 	struct fcu_softc *sc;
-	u_int id[8];
-	char location[96];
-	char type[64];
+	u_int id[12];
+	char location[144];
+	char type[96];
 	int i = 0, j, len = 0, prop_len, prev_len = 0;
 
 	sc = device_get_softc(dev);

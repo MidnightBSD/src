@@ -26,27 +26,53 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/lockdep.h 330849 2018-03-13 16:10:11Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _LINUX_LOCKDEP_H_
 #define	_LINUX_LOCKDEP_H_
 
+#include <sys/lock.h>
+
 struct lock_class_key {
 };
 
 #define	lockdep_set_class(lock, key)
+#define	lockdep_set_subclass(lock, sub)
 #define	lockdep_set_class_and_name(lock, key, name)
 #define	lockdep_set_current_reclaim_state(g) do { } while (0)
 #define	lockdep_clear_current_reclaim_state() do { } while (0)
 
-#define	lockdep_assert_held(m)				\
-	sx_assert(&(m)->sx, SA_XLOCKED)
+#ifdef INVARIANTS
+#define	lockdep_assert_held(m) do {					\
+	struct lock_object *__lock = (struct lock_object *)(m);		\
+	LOCK_CLASS(__lock)->lc_assert(__lock, LA_LOCKED);		\
+} while (0)
 
-#define	lockdep_assert_held_once(m)			\
-	sx_assert(&(m)->sx, SA_XLOCKED | SA_NOTRECURSED)
+#define	lockdep_assert_held_once(m) do {				\
+	struct lock_object *__lock = (struct lock_object *)(m);		\
+	LOCK_CLASS(__lock)->lc_assert(__lock, LA_LOCKED | LA_NOTRECURSED); \
+} while (0)
 
-#define	lockdep_is_held(m)	(sx_xholder(&(m)->sx) == curthread)
+static __inline bool
+lockdep_is_held(void *__m)
+{
+	struct lock_object *__lock;
+	struct thread *__td;
+
+	__lock = __m;
+	return (LOCK_CLASS(__lock)->lc_owner(__lock, &__td) != 0);
+}
+#define	lockdep_is_held_type(_m, _t) lockdep_is_held(_m)
+
+#else
+#define	lockdep_assert_held(m) do { } while (0)
+
+#define	lockdep_assert_held_once(m) do { } while (0)
+
+#define	lockdep_is_held(m)	1
+#define	lockdep_is_held_type(_m, _t)	1
+#endif
 
 #define	might_lock(m)	do { } while (0)
 #define	might_lock_read(m) do { } while (0)
@@ -54,5 +80,8 @@ struct lock_class_key {
 #define	lock_acquire(...) do { } while (0)
 #define	lock_release(...) do { } while (0)
 #define	lock_acquire_shared_recursive(...) do { } while (0)
+
+#define	mutex_acquire(...) do { } while (0)
+#define	mutex_release(...) do { } while (0)
 
 #endif /* _LINUX_LOCKDEP_H_ */

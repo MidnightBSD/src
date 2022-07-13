@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Doug Rabson
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/11/sys/rpc/rpcsec_gss.h 253049 2013-07-09 01:05:28Z rmacklem $
+ *	$FreeBSD$
  */
 
 #ifndef _RPCSEC_GSS_H

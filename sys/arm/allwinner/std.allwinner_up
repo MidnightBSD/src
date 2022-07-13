@@ -1,8 +1,8 @@
 # Allwinner Uniprocessor common options
-#$FreeBSD: stable/11/sys/arm/allwinner/std.allwinner_up 327658 2018-01-07 00:04:13Z ian $
+#$FreeBSD$
 
 cpu		CPU_CORTEXA
-machine 	arm armv6
+machine 	arm armv7
 makeoptions	CONF_CFLAGS="-march=armv7a"
 
 files		"../allwinner/files.allwinner_up"

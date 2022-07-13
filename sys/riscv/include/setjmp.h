@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/riscv/include/setjmp.h 300726 2016-05-26 10:03:30Z br $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_SETJMP_H_
@@ -40,7 +40,7 @@
 #include <sys/cdefs.h>
 
 #define	_JBLEN		63	/* sp, ra, [f]s0-11, magic val, sigmask */
-#define	_JB_SIGMASK	21
+#define	_JB_SIGMASK	27
 
 #ifdef	__ASSEMBLER__
 #define	_JB_MAGIC__SETJMP	0xbe87fd8a2910af00

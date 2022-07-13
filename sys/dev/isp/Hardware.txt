@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/dev/isp/Hardware.txt 108533 2003-01-01 18:49:04Z schweikh $ */
+/* $FreeBSD$ */
 
 	Hardware that is Known To or Should Work with This Driver
 

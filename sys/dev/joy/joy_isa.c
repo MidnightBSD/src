@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1995 Jean-Marc Zucconi
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/joy/joy_isa.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -83,3 +85,4 @@ static driver_t joy_isa_driver = {
 
 DRIVER_MODULE(joy, isa, joy_isa_driver, joy_devclass, 0, 0);
 DRIVER_MODULE(joy, acpi, joy_isa_driver, joy_devclass, 0, 0);
+ISA_PNP_INFO(joy_ids);

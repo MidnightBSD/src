@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2000, Boris Popov
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/kldxref/kldxref.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -43,21 +45,24 @@
 #include <sys/stat.h>
 #include <sys/module.h>
 #define FREEBSD_ELF
+
+#include <ctype.h>
 #include <err.h>
+#include <errno.h>
 #include <fts.h>
-#include <string.h>
-#include <machine/elf.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
-#include <errno.h>
+#include <machine/elf.h>
 
 #include "ef.h"
 
 #define	MAXRECSIZE	(64 << 10)	/* 64k */
 #define check(val)	if ((error = (val)) != 0) break
 
-static int dflag;	/* do not create a hint file, only write on stdout */
+static bool dflag;	/* do not create a hint file, only write on stdout */
 static int verbose;
 
 static FILE *fxref;	/* current hints file */
@@ -74,12 +79,14 @@ static int reccnt;	/* total record written to this file so far */
 static void
 intalign(void)
 {
-	recpos = (recpos + sizeof(int) - 1) & ~(sizeof(int) - 1);
+
+	recpos = roundup2(recpos, sizeof(int));
 }
 
 static void
 record_start(void)
 {
+
 	recpos = 0;
 	memset(recbuf, 0, MAXRECSIZE);
 }
@@ -87,22 +94,24 @@ record_start(void)
 static int
 record_end(void)
 {
+
 	if (recpos == 0)
-		return 0;
+		return (0);
 	reccnt++;
 	intalign();
 	fwrite(&recpos, sizeof(recpos), 1, fxref);
-	return fwrite(recbuf, recpos, 1, fxref) != 1 ? errno : 0;
+	return (fwrite(recbuf, recpos, 1, fxref) != 1 ? errno : 0);
 }
 
 static int
-record_buf(const void *buf, int size)
+record_buf(const void *buf, size_t size)
 {
+
 	if (MAXRECSIZE - recpos < size)
 		errx(1, "record buffer overflow");
 	memcpy(recbuf + recpos, buf, size);
 	recpos += size;
-	return 0;
+	return (0);
 }
 
 /*
@@ -111,8 +120,9 @@ record_buf(const void *buf, int size)
 static int
 record_int(int val)
 {
+
 	intalign();
-	return record_buf(&val, sizeof(val));
+	return (record_buf(&val, sizeof(val)));
 }
 
 /*
@@ -121,18 +131,19 @@ record_int(int val)
 static int
 record_string(const char *str)
 {
-	int len, error;
+	int error;
+	size_t len;
 	u_char val;
 	
 	if (dflag)
-		return 0;
+		return (0);
 	val = len = strlen(str);
 	if (len > 255)
 		errx(1, "string %s too long", str);
 	error = record_buf(&val, sizeof(val));
-	if (error)
-		return error;
-	return record_buf(str, len);
+	if (error != 0)
+		return (error);
+	return (record_buf(str, len));
 }
 
 /* From sys/isa/pnp.c */
@@ -153,7 +164,7 @@ pnp_eisaformat(uint32_t id)
 	idbuf[5] = hextoascii[(data[3] >> 4)];
 	idbuf[6] = hextoascii[(data[3] & 0xf)];
 	idbuf[7] = 0;
-	return(idbuf);
+	return (idbuf);
 }
 
 struct pnp_elt
@@ -203,12 +214,12 @@ typedef TAILQ_HEAD(pnp_head, pnp_elt) pnp_list;
  *	type	Output		Meaning
  *	I	uint32_t	Integer equality comparison
  *	J	uint32_t	Pair of uint16_t fields converted to native
-				byte order. The two fields both must match.
+ *				byte order. The two fields both must match.
  *	G	uint32_t	Greater than or equal to
  *	L	uint32_t	Less than or equal to
  *	M	uint32_t	Mask of which fields to test. Fields that
-				take up space increment the count. This
-				field must be first, and resets the count.
+ *				take up space increment the count. This
+ *				field must be first, and resets the count.
  *	D	string		Description of the device this pnp info is for
  *	Z	string		pnp string must match this
  *	T	nothing		T fields set pnp values that must be true for
@@ -221,13 +232,15 @@ typedef TAILQ_HEAD(pnp_head, pnp_elt) pnp_list;
 static int
 parse_pnp_list(const char *desc, char **new_desc, pnp_list *list)
 {
-	const char *walker = desc, *ep = desc + strlen(desc);
+	const char *walker, *ep;
 	const char *colon, *semi;
 	struct pnp_elt *elt;
 	char *nd;
 	char type[8], key[32];
 	int off;
 
+	walker = desc;
+	ep = desc + strlen(desc);
 	off = 0;
 	nd = *new_desc = malloc(strlen(desc) + 1);
 	if (verbose > 1)
@@ -241,12 +254,15 @@ parse_pnp_list(const char *desc, char **new_desc, pnp_list *list)
 			goto err;
 		strncpy(type, walker, colon - walker);
 		type[colon - walker] = '\0';
-		if (semi) {
+		if (semi != NULL) {
 			if (semi - colon >= sizeof(key))
 				goto err;
 			strncpy(key, colon + 1, semi - colon - 1);
 			key[semi - colon - 1] = '\0';
 			walker = semi + 1;
+			/* Fail safe if we have spaces after ; */
+			while (walker < ep && isspace(*walker))
+				walker++;
 		} else {
 			if (strlen(colon + 1) >= sizeof(key))
 				goto err;
@@ -356,7 +372,7 @@ parse_pnp_list(const char *desc, char **new_desc, pnp_list *list)
 		}
 	}
 	*nd++ = '\0';
-	return 0;
+	return (0);
 err:
 	errx(1, "Parse error of description string %s", desc);
 }
@@ -369,11 +385,14 @@ parse_entry(struct mod_metadata *md, const char *cval,
 	struct mod_version mdv;
 	struct mod_pnp_match_info pnp;
 	char descr[1024];
-	Elf_Off data = (Elf_Off)md->md_data;
-	int error = 0, i, len;
+	Elf_Off data;
+	int error, i;
+	size_t len;
 	char *walker;
 	void *table;
 
+	data = (Elf_Off)md->md_data;
+	error = 0;
 	record_start();
 	switch (md->md_type) {
 	case MDT_DEPEND:
@@ -405,7 +424,7 @@ parse_entry(struct mod_metadata *md, const char *cval,
 		break;
 	case MDT_PNP_INFO:
 		check(EF_SEG_READ_REL(ef, data, sizeof(pnp), &pnp));
-		check(EF_SEG_READ(ef, (Elf_Off)pnp.descr, sizeof(descr), descr));
+		check(EF_SEG_READ_STRING(ef, (Elf_Off)pnp.descr, sizeof(descr), descr));
 		descr[sizeof(descr) - 1] = '\0';
 		if (dflag) {
 			printf("  pnp info for bus %s format %s %d entries of %d bytes\n",
@@ -495,7 +514,7 @@ parse_entry(struct mod_metadata *md, const char *cval,
 							ptr = *(char **)(walker + elt->pe_offset);
 							buffer[0] = '\0';
 							if (ptr != NULL) {
-								EF_SEG_READ(ef, (Elf_Off)ptr,
+								EF_SEG_READ_STRING(ef, (Elf_Off)ptr,
 								    sizeof(buffer), buffer);
 								buffer[sizeof(buffer) - 1] = '\0';
 							}
@@ -522,7 +541,7 @@ parse_entry(struct mod_metadata *md, const char *cval,
 	}
 	if (!error)
 		record_end();
-	return error;
+	return (error);
 }
 
 static int
@@ -530,55 +549,82 @@ read_kld(char *filename, char *kldname)
 {
 	struct mod_metadata md;
 	struct elf_file ef;
-	void **p, **orgp;
-	int error, eftype, nmlen;
-	long start, finish, entries;
-	char kldmodname[MAXMODNAME + 1], cval[MAXMODNAME + 1], *cp;
+	void **p;
+	int error, eftype;
+	long start, finish, entries, i;
+	char cval[MAXMODNAME + 1];
 
 	if (verbose || dflag)
 		printf("%s\n", filename);
 	error = ef_open(filename, &ef, verbose);
-	if (error) {
+	if (error != 0) {
 		error = ef_obj_open(filename, &ef, verbose);
-		if (error) {
+		if (error != 0) {
 			if (verbose)
 				warnc(error, "elf_open(%s)", filename);
-			return error;
+			return (error);
 		}
 	}
 	eftype = EF_GET_TYPE(&ef);
 	if (eftype != EFT_KLD && eftype != EFT_KERNEL)  {
 		EF_CLOSE(&ef);
-		return 0;
-	}
-	if (!dflag) {
-		cp = strrchr(kldname, '.');
-		nmlen = (cp != NULL) ? cp - kldname : (int)strlen(kldname);
-		if (nmlen > MAXMODNAME)
-			nmlen = MAXMODNAME;
-		strlcpy(kldmodname, kldname, nmlen);
-/*		fprintf(fxref, "%s:%s:%d\n", kldmodname, kldname, 0);*/
+		return (0);
 	}
 	do {
 		check(EF_LOOKUP_SET(&ef, MDT_SETNAME, &start, &finish,
 		    &entries));
 		check(EF_SEG_READ_ENTRY_REL(&ef, start, sizeof(*p) * entries,
 		    (void *)&p));
-		orgp = p;
-		while(entries--) {
-			check(EF_SEG_READ_REL(&ef, (Elf_Off)*p, sizeof(md),
+		/*
+		 * Do a first pass to find MDT_MODULE.  It is required to be
+		 * ordered first in the output linker.hints stream because it
+		 * serves as an implicit record boundary between distinct klds
+		 * in the stream.  Other MDTs only make sense in the context of
+		 * a specific MDT_MODULE.
+		 *
+		 * Some compilers (e.g., GCC 6.4.0 xtoolchain) or binutils
+		 * (e.g., GNU binutils 2.32 objcopy/ld.bfd) can reorder
+		 * MODULE_METADATA set entries relative to the source ordering.
+		 * This is permitted by the C standard; memory layout of
+		 * file-scope objects is left implementation-defined.  There is
+		 * no requirement that source code ordering is retained.
+		 *
+		 * Handle that here by taking two passes to ensure MDT_MODULE
+		 * records are emitted to linker.hints before other MDT records
+		 * in the same kld.
+		 */
+		for (i = 0; i < entries; i++) {
+			check(EF_SEG_READ_REL(&ef, (Elf_Off)p[i], sizeof(md),
 			    &md));
-			p++;
 			check(EF_SEG_READ_STRING(&ef, (Elf_Off)md.md_cval,
 			    sizeof(cval), cval));
-			parse_entry(&md, cval, &ef, kldname);
+			if (md.md_type == MDT_MODULE) {
+				parse_entry(&md, cval, &ef, kldname);
+				break;
+			}
 		}
-		if (error)
+		if (error != 0) {
 			warnc(error, "error while reading %s", filename);
-		free(orgp);
+			break;
+		}
+
+		/*
+		 * Second pass for all !MDT_MODULE entries.
+		 */
+		for (i = 0; i < entries; i++) {
+			check(EF_SEG_READ_REL(&ef, (Elf_Off)p[i], sizeof(md),
+			    &md));
+			check(EF_SEG_READ_STRING(&ef, (Elf_Off)md.md_cval,
+			    sizeof(cval), cval));
+			if (md.md_type != MDT_MODULE)
+				parse_entry(&md, cval, &ef, kldname);
+		}
+		if (error != 0)
+			warnc(error, "error while reading %s", filename);
+		free(p);
 	} while(0);
 	EF_CLOSE(&ef);
-	return error;
+	return (error);
 }
 
 /*
@@ -596,14 +642,14 @@ maketempfile(char *dest, const char *root)
 	if (snprintf(dest, MAXPATHLEN, "%.*slhint.XXXXXX", n, root) >=
 	    MAXPATHLEN) {
 		errno = ENAMETOOLONG;
-		return NULL;
+		return (NULL);
 	}
 
 	fd = mkstemp(dest);
 	if (fd < 0)
-		return NULL;
+		return (NULL);
 	fchmod(fd, 0644);	/* nothing secret in the file */
-	return fdopen(fd, "w+");
+	return (fdopen(fd, "w+"));
 }
 
 static char xrefname[MAXPATHLEN], tempname[MAXPATHLEN];
@@ -621,11 +667,12 @@ usage(void)
 static int
 compare(const FTSENT *const *a, const FTSENT *const *b)
 {
+
 	if ((*a)->fts_info == FTS_D && (*b)->fts_info != FTS_D)
-		return 1;
+		return (1);
 	if ((*a)->fts_info != FTS_D && (*b)->fts_info == FTS_D)
-		return -1;
-	return strcmp((*a)->fts_name, (*b)->fts_name);
+		return (-1);
+	return (strcmp((*a)->fts_name, (*b)->fts_name));
 }
 
 int
@@ -641,7 +688,7 @@ main(int argc, char *argv[])
 	while ((opt = getopt(argc, argv, "Rdf:v")) != -1) {
 		switch (opt) {
 		case 'd':	/* no hint file, only print on stdout */
-			dflag = 1;
+			dflag = true;
 			break;
 		case 'f':	/* use this name instead of linker.hints */
 			xref_file = optarg;
@@ -664,7 +711,7 @@ main(int argc, char *argv[])
 
 	if (stat(argv[0], &sb) != 0)
 		err(1, "%s", argv[0]);
-	if ((sb.st_mode & S_IFDIR) == 0) {
+	if ((sb.st_mode & S_IFDIR) == 0 && !dflag) {
 		errno = ENOTDIR;
 		err(1, "%s", argv[0]);
 	}
@@ -679,7 +726,7 @@ main(int argc, char *argv[])
 			/* close and rename the current hint file */
 			fclose(fxref);
 			fxref = NULL;
-			if (reccnt) {
+			if (reccnt != 0) {
 				rename(tempname, xrefname);
 			} else {
 				/* didn't find any entry, ignore this file */
@@ -712,5 +759,5 @@ main(int argc, char *argv[])
 		read_kld(p->fts_path, p->fts_name);
 	}
 	fts_close(ftsp);
-	return 0;
+	return (0);
 }

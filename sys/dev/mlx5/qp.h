@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/qp.h 356073 2019-12-25 09:33:37Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef MLX5_QP_H
@@ -156,7 +156,7 @@ enum {
 	MLX5_WQE_FMR_PERM_LOCAL_WRITE	= 1 << 28,
 	MLX5_WQE_FMR_PERM_REMOTE_READ	= 1 << 29,
 	MLX5_WQE_FMR_PERM_REMOTE_WRITE	= 1 << 30,
-	MLX5_WQE_FMR_PERM_ATOMIC	= 1 << 31
+	MLX5_WQE_FMR_PERM_ATOMIC	= 1U << 31
 };
 
 enum {
@@ -586,7 +586,8 @@ int mlx5_core_xrcd_alloc(struct mlx5_core_dev *dev, u32 *xrcdn);
 int mlx5_core_xrcd_dealloc(struct mlx5_core_dev *dev, u32 xrcdn);
 int mlx5_core_create_dct(struct mlx5_core_dev *dev,
 			 struct mlx5_core_dct *dct,
-			 u32 *in);
+			 u32 *in, int inlen,
+			 u32 *out, int outlen);
 int mlx5_core_destroy_dct(struct mlx5_core_dev *dev,
 			  struct mlx5_core_dct *dct);
 int mlx5_core_create_rq_tracked(struct mlx5_core_dev *dev, u32 *in, int inlen,

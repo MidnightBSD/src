@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 The NetBSD Foundation, Inc.
  * Copyright (c) 2001-2003 Thomas Moestl <tmm@FreeBSD.org>.
  * All rights reserved.
@@ -38,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/hme/if_hme.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * HME Ethernet module driver.
@@ -371,6 +373,8 @@ hme_config(struct hme_softc *sc)
 	ifp->if_capabilities |= IFCAP_VLAN_MTU | IFCAP_HWCSUM;
 	ifp->if_hwassist |= sc->sc_csum_features;
 	ifp->if_capenable |= IFCAP_VLAN_MTU | IFCAP_HWCSUM;
+
+	gone_in_dev(sc->sc_dev, 13, "10/100 NIC almost exclusively for sparc64");
 	return (0);
 
 fail_txdesc:
@@ -1721,7 +1725,7 @@ hme_setladrf(struct hme_softc *sc, int reenable)
 	 */
 
 	if_maddr_rlock(ifp);
-	TAILQ_FOREACH(inm, &ifp->if_multiaddrs, ifma_link) {
+	CK_STAILQ_FOREACH(inm, &ifp->if_multiaddrs, ifma_link) {
 		if (inm->ifma_addr->sa_family != AF_LINK)
 			continue;
 		crc = ether_crc32_le(LLADDR((struct sockaddr_dl *)

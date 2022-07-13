@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/bwn/if_bwn_misc.h 299776 2016-05-14 23:20:46Z adrian $
+ * $FreeBSD$
  */
 #ifndef	__IF_BWN_MISC_H__
 #define	__IF_BWN_MISC_H__
@@ -39,6 +39,8 @@
  */
 
 struct bwn_mac;
+
+extern int	bwn_gpio_control(struct bwn_mac *, uint32_t);
 
 extern uint64_t	bwn_hf_read(struct bwn_mac *);
 extern void	bwn_hf_write(struct bwn_mac *, uint64_t);
@@ -59,8 +61,7 @@ extern uint32_t	bwn_shm_read_4(struct bwn_mac *, uint16_t, uint16_t);
 extern void	bwn_shm_write_4(struct bwn_mac *, uint16_t, uint16_t,
 		    uint32_t);
 
-/* This is only for SIBA core */
-extern	void bwn_reset_core(struct bwn_mac *, int g_mode);
+extern int	bwn_reset_core(struct bwn_mac *, int g_mode);
 
 extern void	bwn_psctl(struct bwn_mac *, uint32_t);
 

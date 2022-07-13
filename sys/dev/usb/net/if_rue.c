@@ -25,6 +25,8 @@
  * SUCH DAMAGE.
  */
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause AND BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997, 1998, 1999, 2000
  *	Bill Paul <wpaul@ee.columbia.edu>.  All rights reserved.
  *
@@ -57,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/usb/net/if_rue.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * RealTek RTL8150 USB to fast ethernet controller driver.
@@ -498,7 +500,7 @@ rue_setmulti(struct usb_ether *ue)
 
 	/* now program new ones */
 	if_maddr_rlock(ifp);
-	TAILQ_FOREACH (ifma, &ifp->if_multiaddrs, ifma_link)
+	CK_STAILQ_FOREACH (ifma, &ifp->if_multiaddrs, ifma_link)
 	{
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;

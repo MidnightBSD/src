@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Adrian Chadd
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/ath/if_ath_alq.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 #include "opt_ath.h"

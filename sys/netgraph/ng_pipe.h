@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2008 University of Zagreb
  * Copyright (c) 2007-2008 FreeBSD Foundation
  *
@@ -27,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/netgraph/ng_pipe.h 206360 2010-04-07 16:29:10Z joel $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_PIPE_H_

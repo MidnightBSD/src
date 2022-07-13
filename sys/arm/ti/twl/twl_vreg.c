@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011
  *	Ben Gray <ben.r.gray@gmail.com>.
  * All rights reserved.
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/ti/twl/twl_vreg.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Texas Instruments TWL4030/TWL5030/TWL60x0/TPS659x0 Power Management.

@@ -1,6 +1,8 @@
-/* $FreeBSD: stable/11/sys/dev/mpt/mpt_cam.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*-
  * LSI MPT Host Adapter FreeBSD Wrapper Definitions (CAM version)
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-3-Clause
  *
  * Copyright (c) 2000, 2001 by Greg Ansley, Adam Prewett
  *

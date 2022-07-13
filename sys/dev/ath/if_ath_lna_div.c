@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Adrian Chadd <adrian@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,10 +28,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/ath/if_ath_lna_div.c 332303 2018-04-08 20:50:16Z emaste $
+ * $FreeBSD$
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ath/if_ath_lna_div.c 332303 2018-04-08 20:50:16Z emaste $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This module handles LNA diversity for those chips which implement LNA
@@ -53,7 +55,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/ath/if_ath_lna_div.c 332303 2018-04-08 20:
 #include <sys/bus.h>
 
 #include <sys/socket.h>
- 
+
 #include <net/if.h>
 #include <net/if_var.h>
 #include <net/if_media.h>
@@ -1016,4 +1018,3 @@ div_comb_done:
 	antcomb->main_recv_cnt = 0;
 	antcomb->alt_recv_cnt = 0;
 }
-

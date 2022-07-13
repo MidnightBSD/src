@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (C) 1995, 1996 Wolfgang Solfrank.
  * Copyright (C) 1995, 1996 TooLs GmbH.
  * All rights reserved.
@@ -29,7 +31,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: asm.h,v 1.6.18.1 2000/07/25 08:37:14 kleink Exp $
- * $FreeBSD: stable/11/sys/powerpc/include/asm.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ASM_H_
@@ -128,6 +130,13 @@ name: \
 	.long	0; \
 	.byte	0,0,0,0,0,0,0,0; \
 	END_SIZE(name)
+
+#define	LOAD_ADDR(reg, var) \
+	lis	reg, var@highest; \
+	ori	reg, reg, var@higher; \
+	rldicr	reg, reg, 32, 31; \
+	oris	reg, reg, var@h; \
+	ori	reg, reg, var@l;
 #else /* !__powerpc64__ */
 #define	_ENTRY(name) \
 	.text; \
@@ -136,6 +145,10 @@ name: \
 	.type	name,@function; \
 	name:
 #define	_END(name)
+
+#define	LOAD_ADDR(reg, var) \
+	lis	reg, var@ha; \
+	ori	reg, reg, var@l;
 #endif /* __powerpc64__ */
 
 #if defined(PROF) || (defined(_KERNEL) && defined(GPROF))

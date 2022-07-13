@@ -1,5 +1,5 @@
 
-# $FreeBSD: stable/11/sys/mips/conf/PB47.hints 228988 2011-12-30 09:48:35Z adrian $
+# $FreeBSD$
 
 # There's two interfaces, but only one socket is populated.
 #

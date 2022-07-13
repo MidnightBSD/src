@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-4-Clause
+ *
  * Copyright (c) 2010 Justin T. Gibbs, Spectra Logic Corporation
  * All rights reserved.
  *
@@ -89,7 +91,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/xen/control/control.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /**
  * \file control.c
@@ -111,6 +113,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/xen/control/control.c 331722 2018-03-29 02
 #include <sys/filedesc.h>
 #include <sys/kdb.h>
 #include <sys/module.h>
+#include <sys/mount.h>
 #include <sys/namei.h>
 #include <sys/proc.h>
 #include <sys/reboot.h>
@@ -202,6 +205,7 @@ xctrl_suspend()
 	xs_lock();
 	stop_all_proc();
 	xs_unlock();
+	suspend_all_fs();
 	EVENTHANDLER_INVOKE(power_suspend);
 
 #ifdef EARLY_AP_STARTUP
@@ -217,12 +221,6 @@ xctrl_suspend()
 	}
 #endif
 	KASSERT((PCPU_GET(cpuid) == 0), ("Not running on CPU#0"));
-
-	/*
-	 * Clear our XenStore node so the toolstack knows we are
-	 * responding to the suspend request.
-	 */
-	xs_write(XST_NIL, "control", "shutdown", "");
 
 	/*
 	 * Be sure to hold Giant across DEVICE_SUSPEND/RESUME since non-MPSAFE
@@ -307,7 +305,6 @@ xctrl_suspend()
 	 * Warm up timecounter again and reset system clock.
 	 */
 	timecounter->tc_get_timecount(timecounter);
-	timecounter->tc_get_timecount(timecounter);
 	inittodr(time_second);
 
 #ifdef EARLY_AP_STARTUP
@@ -322,6 +319,7 @@ xctrl_suspend()
 	}
 #endif
 
+	resume_all_fs();
 	resume_all_proc();
 
 	EVENTHANDLER_INVOKE(power_resume);
@@ -364,8 +362,13 @@ xctrl_on_watch_event(struct xs_watch *watch, const char **vec, unsigned int len)
 	
 	error = xs_read(XST_NIL, "control", "shutdown",
 			&result_len, (void **)&result);
-	if (error != 0)
+	if (error != 0 || result_len == 0)
 		return;
+
+	/* Acknowledge the request by writing back an empty string. */
+	error = xs_write(XST_NIL, "control", "shutdown", "");
+	if (error != 0)
+		printf("unable to ack shutdown request, proceeding anyway\n");
 
 	reason = xctrl_shutdown_reasons;
 	last_reason = reason + nitems(xctrl_shutdown_reasons);

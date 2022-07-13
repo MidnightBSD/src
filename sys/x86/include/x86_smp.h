@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: Beerware
+ *
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <phk@FreeBSD.org> wrote this file.  As long as you retain this notice you
@@ -6,7 +8,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: stable/11/sys/x86/include/x86_smp.h 329462 2018-02-17 18:00:01Z kib $
+ * $FreeBSD$
  *
  */
 
@@ -30,6 +32,8 @@ extern int bootAP;
 extern void *dpcpu;
 extern char *bootSTK;
 extern void *bootstacks[];
+extern unsigned int boot_address;
+extern unsigned int bootMP_size;
 extern volatile u_int cpu_ipi_pending[];
 extern volatile int aps_ready;
 extern struct mtx ap_boot_mtx;
@@ -55,7 +59,7 @@ struct cpu_info {
 	int	cpu_disabled:1;
 	int	cpu_hyperthread:1;
 };
-extern struct cpu_info cpu_info[];
+extern struct cpu_info *cpu_info;
 
 #ifdef COUNT_IPIS
 extern u_long *ipi_invltlb_counts[MAXCPU];
@@ -72,15 +76,20 @@ inthand_t
 	IDTVEC(invlrng),	/* TLB shootdowns - page range */
 	IDTVEC(invlcache),	/* Write back and invalidate cache */
 	IDTVEC(ipi_intr_bitmap_handler), /* Bitmap based IPIs */ 
+	IDTVEC(ipi_swi),	/* Runs delayed SWI */
 	IDTVEC(cpustop),	/* CPU stops & waits to be restarted */
 	IDTVEC(cpususpend),	/* CPU suspends & waits to be resumed */
 	IDTVEC(rendezvous);	/* handle CPU rendezvous */
+
+typedef void (*smp_invl_cb_t)(struct pmap *, vm_offset_t addr1,
+    vm_offset_t addr2);
 
 /* functions in x86_mp.c */
 void	assign_cpu_ids(void);
 void	cpu_add(u_int apic_id, char boot_cpu);
 void	cpustop_handler(void);
 void	cpususpend_handler(void);
+void	alloc_ap_trampoline(vm_paddr_t *physmap, unsigned int *physmap_idx);
 void	init_secondary_tail(void);
 void	invltlb_handler(void);
 void	invlpg_handler(void);
@@ -92,14 +101,17 @@ void	ipi_all_but_self(u_int ipi);
 void 	ipi_bitmap_handler(struct trapframe frame);
 void	ipi_cpu(int cpu, u_int ipi);
 int	ipi_nmi_handler(void);
+void	ipi_swi_handler(struct trapframe frame);
 void	ipi_selected(cpuset_t cpus, u_int ipi);
-u_int	mp_bootaddress(u_int);
+void	ipi_self_from_nmi(u_int vector);
 void	set_interrupt_apic_ids(void);
-void	smp_cache_flush(void);
-void	smp_masked_invlpg(cpuset_t mask, vm_offset_t addr, struct pmap *pmap);
+void	smp_cache_flush(smp_invl_cb_t curcpu_cb);
+void	smp_masked_invlpg(cpuset_t mask, vm_offset_t addr, struct pmap *pmap,
+	    smp_invl_cb_t curcpu_cb);
 void	smp_masked_invlpg_range(cpuset_t mask, vm_offset_t startva,
-	    vm_offset_t endva, struct pmap *pmap);
-void	smp_masked_invltlb(cpuset_t mask, struct pmap *pmap);
+	    vm_offset_t endva, struct pmap *pmap, smp_invl_cb_t curcpu_cb);
+void	smp_masked_invltlb(cpuset_t mask, struct pmap *pmap,
+	    smp_invl_cb_t curcpu_cb);
 void	mem_range_AP_init(void);
 void	topo_probe(void);
 void	ipi_send_cpu(int cpu, u_int ipi);

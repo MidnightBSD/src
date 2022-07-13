@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1998-2002,2010 Luigi Rizzo, Universita` di Pisa
  * All rights reserved
  *
@@ -27,13 +29,13 @@
 /*
  * Binary heap and hash tables, used in dummynet
  *
- * $FreeBSD: stable/11/sys/netpfil/ipfw/dn_heap.c 294855 2016-01-26 22:45:05Z luigi $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
 #include <sys/param.h>
 #ifdef _KERNEL
-__FBSDID("$FreeBSD: stable/11/sys/netpfil/ipfw/dn_heap.c 294855 2016-01-26 22:45:05Z luigi $");
+__FBSDID("$FreeBSD$");
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/kernel.h>
@@ -92,7 +94,7 @@ heap_resize(struct dn_heap *h, unsigned int new_size)
 #else
 	new_size = (new_size + HEAP_INCREMENT ) & ~HEAP_INCREMENT;
 #endif
-	p = malloc(new_size * sizeof(*p), M_DN_HEAP, M_NOWAIT);
+	p = mallocarray(new_size, sizeof(*p), M_DN_HEAP, M_NOWAIT);
 	if (p == NULL) {
 		printf("--- %s, resize %d failed\n", __func__, new_size );
 		return 1; /* error */

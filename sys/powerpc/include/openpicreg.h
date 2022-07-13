@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2000 Tsubai Masanari.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +26,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * from NetBSD: openpicreg.h,v 1.3 2001/08/30 03:08:52 briggs Exp
- * $FreeBSD: stable/11/sys/powerpc/include/openpicreg.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/common/ef10_mac.c 342448 2018-12-25 07:31:45Z arybchik $");
+__FBSDID("$FreeBSD$");
 
 #include "efx.h"
 #include "efx_impl.h"

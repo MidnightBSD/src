@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/include/vm.h 319213 2017-05-30 13:56:38Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_VM_H_

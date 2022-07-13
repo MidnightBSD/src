@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/apmd/apmdlex.l 352280 2019-09-13 07:21:06Z bapt $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

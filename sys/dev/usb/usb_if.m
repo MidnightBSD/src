@@ -24,8 +24,8 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/sys/dev/usb/usb_if.m 228483 2011-12-14 00:28:54Z hselasky $
-# $MidnightBSD$
+# $FreeBSD$
+#
 
 # USB interface description
 #

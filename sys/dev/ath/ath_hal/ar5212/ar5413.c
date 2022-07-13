@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5212/ar5413.c 298939 2016-05-02 19:56:48Z pfg $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -239,7 +241,6 @@ ar5413SetRfRegs(struct ath_hal *ah,
 	} else {
         	ar5212ModifyRfBuffer(priv->Bank6Data, ob5GHz, 3, 247, 0);
         	ar5212ModifyRfBuffer(priv->Bank6Data, db5GHz, 3, 244, 0);
-
 	}
 
 	/* Bank 7 Setup */
@@ -666,7 +667,7 @@ ar5413GetMaxPower(struct ath_hal *ah, const RAW_DATA_PER_CHANNEL_2413 *data)
 {
 	uint32_t ii;
 	uint16_t Pmax=0,numVpd;
-	
+
 	for (ii=0; ii< MAX_NUM_PDGAINS_PER_CHANNEL; ii++) {
 		/* work forwards cuase lowest pdGain for highest power */
 		numVpd = data->pDataPerPDGain[ii].numVpd;
@@ -703,7 +704,7 @@ ar5413GetChannelMaxMinPower(struct ath_hal *ah,
 
 	numChannels = pRawDataset->numChannels;
 	data = pRawDataset->pDataPerChannel;
-	
+
 	/* Make sure the channel is in the range of the TP values 
 	 *  (freq piers)
 	 */

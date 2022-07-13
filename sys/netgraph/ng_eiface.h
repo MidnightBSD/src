@@ -3,6 +3,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999-2001, Vitaly V Belekhov
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/netgraph/ng_eiface.h 215673 2010-11-22 12:32:19Z zec $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_NG_EIFACE_H_

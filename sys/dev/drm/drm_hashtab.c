@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
  *
  * Copyright 2006 Tungsten Graphics, Inc., Bismarck, ND. USA.
@@ -28,7 +27,7 @@
  **************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/drm_hashtab.c 207118 2010-04-23 14:48:30Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Simple open hash tab implementation.

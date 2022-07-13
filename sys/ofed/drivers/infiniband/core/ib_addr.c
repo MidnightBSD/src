@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/ofed/drivers/infiniband/core/ib_addr.c 341882 2018-12-12 11:16:32Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <linux/mutex.h>
 #include <linux/inetdevice.h>

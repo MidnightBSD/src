@@ -1,6 +1,8 @@
 /*	$OpenBSD: sab82532reg.h,v 1.2 2002/04/08 17:49:42 jason Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2001 Jason L. Wright (jason@thought.net)
  * All rights reserved.
  *
@@ -34,7 +36,7 @@
  * Agency (DARPA) and Air Force Research Laboratory, Air Force
  * Materiel Command, USAF, under agreement number F30602-01-2-0537.
  *
- * $FreeBSD: stable/11/sys/dev/ic/sab82532.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_IC_SAB82532_H_

@@ -1,6 +1,8 @@
 /*	$OpenBSD: cpu.h,v 1.4 1998/09/15 10:50:12 pefo Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -15,7 +17,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -41,7 +43,7 @@
  *
  *	from: @(#)cpu.h	8.4 (Berkeley) 1/4/94
  *	JNPR: cpu.h,v 1.9.2.2 2007/09/10 08:23:46 girish
- * $FreeBSD: stable/11/sys/mips/include/cpu.h 340270 2018-11-08 22:42:55Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_CPU_H_

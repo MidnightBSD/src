@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/vt/hw/fb/vt_early_fb.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -58,6 +60,7 @@ static struct vt_driver vt_fb_early_driver = {
 	.vd_init = vt_efb_init,
 	.vd_blank = vt_fb_blank,
 	.vd_bitblt_text = vt_fb_bitblt_text,
+	.vd_invalidate_text = vt_fb_invalidate_text,
 	.vd_bitblt_bmp = vt_fb_bitblt_bitmap,
 	.vd_drawrect = vt_fb_drawrect,
 	.vd_setpixel = vt_fb_setpixel,
@@ -222,7 +225,7 @@ vt_efb_init(struct vt_device *vd)
 	 * remapped for us when relocation turns on.
 	 */
 	if (OF_getproplen(node, "address") == sizeof(info->fb_pbase)) {
-	 	/* XXX We assume #address-cells is 1 at this point. */
+		/* XXX We assume #address-cells is 1 at this point. */
 		OF_getencprop(node, "address", &info->fb_pbase,
 		    sizeof(info->fb_pbase));
 

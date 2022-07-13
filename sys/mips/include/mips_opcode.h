@@ -1,6 +1,8 @@
 /*	$OpenBSD: mips_opcode.h,v 1.2 1999/01/27 04:46:05 imp Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -15,7 +17,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,7 +35,7 @@
  *
  *	from: @(#)mips_opcode.h 8.1 (Berkeley) 6/10/93
  *	JNPR: mips_opcode.h,v 1.1 2006/08/07 05:38:57 katta
- * $FreeBSD: stable/11/sys/mips/include/mips_opcode.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_MIPS_OPCODE_H_

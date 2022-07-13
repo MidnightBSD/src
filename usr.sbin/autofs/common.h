@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/autofs/common.h 332597 2018-04-16 16:16:24Z trasz $
+ * $FreeBSD$
  */
 
 #ifndef AUTOMOUNTD_H

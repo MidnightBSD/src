@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2008 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ah_eeprom_v14.h 224519 2011-07-30 13:45:12Z adrian $
+ * $FreeBSD$
  */
 #ifndef _AH_EEPROM_V14_H_
 #define _AH_EEPROM_V14_H_

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2012-2014 Matteo Landi
  * Copyright (C) 2012-2016 Luigi Rizzo
  * Copyright (C) 2012-2016 Giuseppe Lettieri
@@ -34,9 +36,9 @@
 #include "osx_glue.h"
 #endif /* __APPLE__ */
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #include <sys/cdefs.h> /* prerequisite */
-__FBSDID("$FreeBSD: stable/11/sys/dev/netmap/netmap_mem2.c 357278 2020-01-29 22:57:54Z vmaffione $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/malloc.h>
@@ -56,7 +58,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/netmap/netmap_mem2.c 357278 2020-01-29 22:
 MALLOC_DECLARE(M_NETMAP);
 MALLOC_DEFINE(M_NETMAP, "netmap", "Network memory map");
 
-#endif /* __MidnightBSD__ */
+#endif /* __FreeBSD__ */
 
 #ifdef _WIN32
 #include <win_glue.h>
@@ -98,16 +100,17 @@ struct netmap_obj_pool {
 	/* ---------------------------------------------------*/
 	/* these are only meaningful if the pool is finalized */
 	/* (see 'finalized' field in netmap_mem_d)            */
-	u_int objtotal;         /* actual total number of objects. */
-	u_int memtotal;		/* actual total memory space */
-	u_int numclusters;	/* actual number of clusters */
-
-	u_int objfree;          /* number of free objects. */
+	size_t memtotal;	/* actual total memory space */
 
 	struct lut_entry *lut;  /* virt,phys addresses, objtotal entries */
 	uint32_t *bitmap;       /* one bit per buffer, 1 means free */
 	uint32_t *invalid_bitmap;/* one bit per buffer, 1 means invalid */
 	uint32_t bitmap_slots;	/* number of uint32 entries in bitmap */
+
+	u_int objtotal;         /* actual total number of objects. */
+	u_int numclusters;	/* actual number of clusters */
+	u_int objfree;          /* number of free objects. */
+
 	int	alloc_done;	/* we have allocated the memory */
 	/* ---------------------------------------------------*/
 
@@ -157,7 +160,7 @@ struct netmap_mem_ops {
 
 struct netmap_mem_d {
 	NMA_LOCK_T nm_mtx;  /* protect the allocator */
-	u_int nm_totalsize; /* shorthand */
+	size_t nm_totalsize; /* shorthand */
 
 	u_int flags;
 #define NETMAP_MEM_FINALIZED	0x1	/* preallocation done */
@@ -212,7 +215,7 @@ netmap_mem_ofstophys(struct netmap_mem_d *nmd, vm_ooffset_t off)
 {
 	vm_paddr_t pa;
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 	/* This function is called by netmap_dev_pager_fault(), which holds a
 	 * non-sleepable lock since FreeBSD 12. Since we cannot sleep, we
 	 * spin on the trylock. */
@@ -499,7 +502,7 @@ static int
 netmap_mem2_get_lut(struct netmap_mem_d *nmd, struct netmap_lut *lut)
 {
 	lut->lut = nmd->pools[NETMAP_BUF_POOL].lut;
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	lut->plut = lut->lut;
 #endif
 	lut->objtotal = nmd->pools[NETMAP_BUF_POOL].objtotal;
@@ -815,7 +818,7 @@ netmap_mem2_ofstophys(struct netmap_mem_d* nmd, vm_ooffset_t offset)
 		return pa;
 	}
 	/* this is only in case of errors */
-	nm_prerr("invalid ofs 0x%x out of 0x%x 0x%x 0x%x", (u_int)o,
+	nm_prerr("invalid ofs 0x%x out of 0x%zx 0x%zx 0x%zx", (u_int)o,
 		p[NETMAP_IF_POOL].memtotal,
 		p[NETMAP_IF_POOL].memtotal
 			+ p[NETMAP_RING_POOL].memtotal,
@@ -945,7 +948,7 @@ netmap_mem2_get_info(struct netmap_mem_d* nmd, uint64_t* size,
 			*size = 0;
 			for (i = 0; i < NETMAP_POOLS_NR; i++) {
 				struct netmap_obj_pool *p = nmd->pools + i;
-				*size += (p->_numclusters * p->_clustsize);
+				*size += ((size_t)p->_numclusters * (size_t)p->_clustsize);
 			}
 		}
 	}
@@ -1474,9 +1477,9 @@ netmap_finalize_obj_allocator(struct netmap_obj_pool *p)
 #endif
 		}
 	}
-	p->memtotal = p->numclusters * p->_clustsize;
+	p->memtotal = (size_t)p->numclusters * (size_t)p->_clustsize;
 	if (netmap_verbose)
-		nm_prinf("Pre-allocated %d clusters (%d/%dKB) for '%s'",
+		nm_prinf("Pre-allocated %d clusters (%d/%zuKB) for '%s'",
 		    p->numclusters, p->_clustsize >> 10,
 		    p->memtotal >> 10, p->name);
 
@@ -1526,7 +1529,7 @@ netmap_mem_unmap(struct netmap_obj_pool *p, struct netmap_adapter *na)
 		return 0;
 
 	lut = &na->na_lut;
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 	/* On FreeBSD mapping and unmapping is performed by the txsync
 	 * and rxsync routine, packet by packet. */
 	(void)i;
@@ -1562,7 +1565,7 @@ netmap_mem_map(struct netmap_obj_pool *p, struct netmap_adapter *na)
 	if (na->pdev == NULL)
 		return 0;
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 	/* On FreeBSD mapping and unmapping is performed by the txsync
 	 * and rxsync routine, packet by packet. */
 	(void)i;
@@ -1638,7 +1641,7 @@ netmap_mem_finalize_all(struct netmap_mem_d *nmd)
 	nmd->flags |= NETMAP_MEM_FINALIZED;
 
 	if (netmap_verbose)
-		nm_prinf("interfaces %d KB, rings %d KB, buffers %d MB",
+		nm_prinf("interfaces %zd KB, rings %zd KB, buffers %zd MB",
 		    nmd->pools[NETMAP_IF_POOL].memtotal >> 10,
 		    nmd->pools[NETMAP_RING_POOL].memtotal >> 10,
 		    nmd->pools[NETMAP_BUF_POOL].memtotal >> 20);
@@ -2004,13 +2007,16 @@ netmap_mem2_if_new(struct netmap_adapter *na, struct netmap_priv_d *priv)
 	len = sizeof(struct netmap_if) + (ntot * sizeof(ssize_t));
 	nifp = netmap_if_malloc(na->nm_mem, len);
 	if (nifp == NULL) {
-		NMA_UNLOCK(na->nm_mem);
 		return NULL;
 	}
 
 	/* initialize base fields -- override const */
 	*(u_int *)(uintptr_t)&nifp->ni_tx_rings = na->num_tx_rings;
 	*(u_int *)(uintptr_t)&nifp->ni_rx_rings = na->num_rx_rings;
+	*(u_int *)(uintptr_t)&nifp->ni_host_tx_rings =
+		(na->num_host_tx_rings ? na->num_host_tx_rings : 1);
+	*(u_int *)(uintptr_t)&nifp->ni_host_rx_rings =
+		(na->num_host_rx_rings ? na->num_host_rx_rings : 1);
 	strlcpy(nifp->ni_name, na->name, sizeof(nifp->ni_name));
 
 	/*
@@ -2336,8 +2342,8 @@ netmap_mem_ext_create(uint64_t usrptr, struct nmreq_pools_info *pi, int *perror)
 		}
 		p->objtotal = j;
 		p->numclusters = p->objtotal;
-		p->memtotal = j * p->_objsize;
-		nm_prdis("%d memtotal %u", j, p->memtotal);
+		p->memtotal = j * (size_t)p->_objsize;
+		nm_prdis("%d memtotal %zu", j, p->memtotal);
 	}
 
 	netmap_mem_ext_register(nme);
@@ -2441,8 +2447,8 @@ netmap_mem_pt_guest_ifp_del(struct netmap_mem_d *nmd, struct ifnet *ifp)
 			} else {
 				ptnmd->pt_ifs = curr->next;
 			}
-			nm_prinf("removed (ifp=%p,nifp_offset=%u)",
-			  curr->ifp, curr->nifp_offset);
+			nm_prinf("removed (ifp=%s,nifp_offset=%u)",
+			  curr->ifp->if_xname, curr->nifp_offset);
 			nm_os_free(curr);
 			ret = 0;
 			break;
@@ -2568,7 +2574,7 @@ netmap_mem_pt_guest_finalize(struct netmap_mem_d *nmd)
 
 	ptnmd->buf_lut.objtotal = nbuffers;
 	ptnmd->buf_lut.objsize = bufsize;
-	nmd->nm_totalsize = (unsigned int)mem_size;
+	nmd->nm_totalsize = mem_size;
 
 	/* Initialize these fields as are needed by
 	 * netmap_mem_bufsize().

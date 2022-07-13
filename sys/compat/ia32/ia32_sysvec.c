@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Doug Rabson
  * Copyright (c) 2003 Peter Wemm
  * All rights reserved.
@@ -26,9 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/ia32/ia32_sysvec.c 315302 2017-03-15 10:53:40Z kib $");
-
-#include "opt_compat.h"
+__FBSDID("$FreeBSD$");
 
 #define __ELF_WORD_SIZE 32
 
@@ -110,7 +110,6 @@ struct sysentvec ia32_freebsd_sysvec = {
 	.sv_coredump	= elf32_coredump,
 	.sv_imgact_try	= NULL,
 	.sv_minsigstksz	= MINSIGSTKSZ,
-	.sv_pagesize	= IA32_PAGE_SIZE,
 	.sv_minuser	= FREEBSD32_MINUSER,
 	.sv_maxuser	= FREEBSD32_MAXUSER,
 	.sv_usrstack	= FREEBSD32_USRSTACK,
@@ -120,7 +119,7 @@ struct sysentvec ia32_freebsd_sysvec = {
 	.sv_setregs	= ia32_setregs,
 	.sv_fixlimit	= ia32_fixlimit,
 	.sv_maxssiz	= &ia32_maxssiz,
-	.sv_flags	= SV_ABI_FREEBSD | SV_IA32 | SV_ILP32 |
+	.sv_flags	= SV_ABI_FREEBSD | SV_ASLR | SV_IA32 | SV_ILP32 |
 			    SV_SHP | SV_TIMEKEEP,
 	.sv_set_syscall_retval = ia32_set_syscall_retval,
 	.sv_fetch_syscall_args = ia32_fetch_syscall_args,
@@ -130,6 +129,7 @@ struct sysentvec ia32_freebsd_sysvec = {
 	.sv_schedtail	= NULL,
 	.sv_thread_detach = NULL,
 	.sv_trap	= NULL,
+	.sv_stackgap	= elf32_stackgap,
 };
 INIT_SYSENTVEC(elf_ia32_sysvec, &ia32_freebsd_sysvec);
 
@@ -164,6 +164,21 @@ static Elf32_Brandinfo ia32_brand_oinfo = {
 SYSINIT(oia32, SI_SUB_EXEC, SI_ORDER_ANY,
 	(sysinit_cfunc_t) elf32_insert_brand_entry,
 	&ia32_brand_oinfo);
+
+static Elf32_Brandinfo kia32_brand_info = {
+	.brand		= ELFOSABI_FREEBSD,
+	.machine	= EM_386,
+	.compat_3_brand	= "FreeBSD",
+	.emul_path	= NULL,
+	.interp_path	= "/lib/ld.so.1",
+	.sysvec		= &ia32_freebsd_sysvec,
+	.brand_note	= &elf32_kfreebsd_brandnote,
+	.flags		= BI_CAN_EXEC_DYN | BI_BRAND_NOTE_MANDATORY
+};
+
+SYSINIT(kia32, SI_SUB_EXEC, SI_ORDER_ANY,
+	(sysinit_cfunc_t) elf32_insert_brand_entry,
+	&kia32_brand_info);
 
 void
 elf32_dump_thread(struct thread *td, void *dst, size_t *off)

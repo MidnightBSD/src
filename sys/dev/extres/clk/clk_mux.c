@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/extres/clk/clk_mux.c 296905 2016-03-15 15:28:24Z mmel $");
+__FBSDID("$FreeBSD$");
 
 
 #include <sys/param.h>

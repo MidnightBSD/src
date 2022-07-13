@@ -1,5 +1,7 @@
 /*-
- * Copyright (c) 2006 Warner Losh.  All rights reserved.
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
+ * Copyright (c) 2006 M. Warner Losh.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/iicbus/icee.c 346548 2019-04-22 13:51:25Z ian $");
+__FBSDID("$FreeBSD$");
 /*
  * Generic IIC eeprom support, modeled after the AT24C family of products.
  */
@@ -126,10 +128,10 @@ static struct cdevsw icee_cdevsw =
 	.d_write = icee_write
 };
 
-#ifdef FDT
 static int
 icee_probe(device_t dev)
 {
+#ifdef FDT
 	struct eeprom_desc *d;
 
 	if (!ofw_bus_status_okay(dev))
@@ -137,49 +139,42 @@ icee_probe(device_t dev)
 
 	d = (struct eeprom_desc *)
 	    ofw_bus_search_compatible(dev, compat_data)->ocd_data;
-	if (d == NULL)
-		return (ENXIO);
-
-	device_set_desc(dev, d->name);
-	return (BUS_PROBE_DEFAULT);
-}
-
-static void
-icee_init(struct icee_softc *sc)
-{
-	struct eeprom_desc *d;
-
-	d = (struct eeprom_desc *)
-	    ofw_bus_search_compatible(sc->dev, compat_data)->ocd_data;
-	if (d == NULL)
-		return; /* attach will see sc->size == 0 and return error */
-
-	sc->size  = d->size;
-	sc->type  = d->type;
-	sc->wr_sz = d->wr_sz;
-}
-#else /* !FDT */
-static int
-icee_probe(device_t dev)
-{
-
+	if (d != NULL) {
+		device_set_desc(dev, d->name);
+		return (BUS_PROBE_DEFAULT);
+	}
+#endif
 	device_set_desc(dev, "I2C EEPROM");
 	return (BUS_PROBE_NOWILDCARD);
 }
 
-static void
+static int
 icee_init(struct icee_softc *sc)
 {
 	const char *dname;
 	int dunit;
+#ifdef FDT
+	struct eeprom_desc *d;
 
+	d = (struct eeprom_desc *)
+	    ofw_bus_search_compatible(sc->dev, compat_data)->ocd_data;
+	if (d != NULL) {
+		sc->size  = d->size;
+		sc->type  = d->type;
+		sc->wr_sz = d->wr_sz;
+		return (0);
+	}
+#endif
 	dname = device_get_name(sc->dev);
 	dunit = device_get_unit(sc->dev);
-	resource_int_value(dname, dunit, "size", &sc->size);
-	resource_int_value(dname, dunit, "type", &sc->type);
-	resource_int_value(dname, dunit, "wr_sz", &sc->wr_sz);
+	if (resource_int_value(dname, dunit, "type", &sc->type) != 0)
+		return (ENOENT);
+	if (resource_int_value(dname, dunit, "size", &sc->size) != 0)
+		return (ENOENT);
+	if (resource_int_value(dname, dunit, "wr_sz", &sc->wr_sz) != 0)
+		return (ENOENT);
+	return (0);
 }
-#endif /* FDT */
 
 static int
 icee_attach(device_t dev)
@@ -190,13 +185,8 @@ icee_attach(device_t dev)
 
 	sc->dev = dev;
 	sc->addr = iicbus_get_addr(dev);
-	icee_init(sc);
-	if (sc->size == 0 || sc->type == 0 || sc->wr_sz == 0) {
-		device_printf(sc->dev, "Missing config data, "
-		    "these cannot be zero: size %d type %d wr_sz %d\n",
-		    sc->size, sc->type, sc->wr_sz);
+	if (icee_init(sc) != 0)
 		return (EINVAL);
-	}
 	if (bootverbose)
 		device_printf(dev, "size: %d bytes, addressing: %d-bits\n",
 		    sc->size, sc->type);
@@ -390,3 +380,4 @@ static devclass_t icee_devclass;
 DRIVER_MODULE(icee, iicbus, icee_driver, icee_devclass, 0, 0);
 MODULE_VERSION(icee, 1);
 MODULE_DEPEND(icee, iicbus, 1, 1, 1);
+IICBUS_FDT_PNP_INFO(compat_data);

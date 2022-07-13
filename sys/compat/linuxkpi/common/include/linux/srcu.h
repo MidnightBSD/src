@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/srcu.h 345916 2019-04-05 11:11:35Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef	_LINUX_SRCU_H_
@@ -48,5 +48,9 @@ extern void synchronize_srcu(struct srcu_struct *);
 extern void srcu_barrier(struct srcu_struct *);
 extern int init_srcu_struct(struct srcu_struct *);
 extern void cleanup_srcu_struct(struct srcu_struct *);
+
+#define	synchronize_srcu_expedited(srcu) do {	\
+	synchronize_srcu(srcu);			\
+} while (0)
 
 #endif					/* _LINUX_SRCU_H_ */

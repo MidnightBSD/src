@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2015 Landon Fuller <landon@landonf.org>
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  * 
- * $FreeBSD: stable/11/sys/dev/bhnd/bcma/bcma.h 296077 2016-02-26 03:34:08Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef _BCMA_BCMA_H_
@@ -45,5 +47,6 @@
  */
 
 DECLARE_CLASS(bcma_driver);
+DECLARE_CLASS(bcma_erom_parser);
 
 #endif /* _BCMA_BCMA_H_ */

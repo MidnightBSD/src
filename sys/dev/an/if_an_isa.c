@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
  *
@@ -38,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/an/if_an_isa.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 
@@ -125,6 +127,7 @@ an_attach_isa(device_t dev)
 		an_release_resources(dev);
 		return (error);
 	}
+	gone_in_dev(dev, 13, "pccard removed, an doesn't support modern crypto");
 	return (0);
 }
 
@@ -148,3 +151,4 @@ static devclass_t an_isa_devclass;
 DRIVER_MODULE(an, isa, an_isa_driver, an_isa_devclass, 0, 0);
 MODULE_DEPEND(an, isa, 1, 1, 1);
 MODULE_DEPEND(an, wlan, 1, 1, 1);
+ISA_PNP_INFO(an_ids);

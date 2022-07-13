@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)cdefs.h	8.8 (Berkeley) 1/9/95
- * $FreeBSD: stable/11/sys/sys/cdefs.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_SYS_CDEFS_H_
@@ -65,7 +67,7 @@
 
 /*
  * This code has been put in place to help reduce the addition of
- * compiler specific defines in MidnightBSD code.  It helps to aid in
+ * compiler specific defines in FreeBSD code.  It helps to aid in
  * having a compiler-agnostic source tree.
  */
 
@@ -97,16 +99,12 @@
 #define	__GNUCLIKE_BUILTIN_VAALIST 1
 #endif
 
-#if defined(__GNUC__)
 #define	__GNUC_VA_LIST_COMPATIBILITY 1
-#endif
 
 /*
  * Compiler memory barriers, specific to gcc and clang.
  */
-#if defined(__GNUC__)
 #define	__compiler_membar()	__asm __volatile(" " : : : "memory")
-#endif
 
 #ifndef __INTEL_COMPILER
 #define	__GNUCLIKE_BUILTIN_NEXT_ARG 1
@@ -205,18 +203,6 @@
  * for a given compiler, let the compile fail if it is told to use
  * a feature that we cannot live without.
  */
-#ifdef lint
-#define	__dead2
-#define	__pure2
-#define	__unused
-#define	__packed
-#define	__aligned(x)
-#define	__alloc_align(x)
-#define	__alloc_size(x)
-#define	__alloc_size2(n, x)
-#define	__section(x)
-#define	__weak_symbol
-#else
 #define	__weak_symbol	__attribute__((__weak__))
 #if !__GNUC_PREREQ__(2, 5) && !defined(__INTEL_COMPILER)
 #define	__dead2
@@ -250,7 +236,6 @@
 #else
 #define	__alloc_align(x)
 #endif
-#endif /* lint */
 
 #if !__GNUC_PREREQ__(2, 95)
 #define	__alignof(x)	__offsetof(struct { char __a; x __b; }, __b)
@@ -260,7 +245,7 @@
  * Keywords added in C11.
  */
 
-#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 201112L || defined(lint)
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 201112L
 
 #if !__has_extension(c_alignas)
 #if (defined(__cplusplus) && __cplusplus >= 201103L) || \
@@ -279,7 +264,7 @@
 #endif
 
 #if !defined(__cplusplus) && !__has_extension(c_atomic) && \
-    !__has_extension(cxx_atomic)
+	!__has_extension(cxx_atomic) && !__GNUC_PREREQ__(4, 7)
 /*
  * No native support for _Atomic(). Place object in structure to prevent
  * most forms of direct non-atomic access.
@@ -426,7 +411,7 @@
  * software that is unaware of C99 keywords.
  */
 #if !(__GNUC__ == 2 && __GNUC_MINOR__ == 95)
-#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901 || defined(lint)
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901
 #define	__restrict
 #else
 #define	__restrict	restrict
@@ -539,8 +524,8 @@
 	    __attribute__((__format__ (__strftime__, fmtarg, firstvararg)))
 #endif
 
-/* Compiler-dependent macros that rely on MidnightBSD-specific. */
-#if defined(__MidnightBSD_cc_version) && __MidnightBSD_cc_version >= 300001 && \
+/* Compiler-dependent macros that rely on FreeBSD-specific extensions. */
+#if defined(__FreeBSD_cc_version) && __FreeBSD_cc_version >= 300001 && \
     defined(__GNUC__) && !defined(__INTEL_COMPILER)
 #define	__printf0like(fmtarg, firstvararg) \
 	    __attribute__((__format__ (__printf0__, fmtarg, firstvararg)))
@@ -564,7 +549,7 @@
 #define	__sym_compat(sym,impl,verid)	\
 	__asm__(".symver " #impl ", " #sym "@" #verid)
 #define	__sym_default(sym,impl,verid)	\
-	__asm__(".symver " #impl ", " #sym "@@" #verid)
+	__asm__(".symver " #impl ", " #sym "@@@" #verid)
 #else
 #define	__weak_reference(sym,alias)	\
 	__asm__(".weak alias");		\
@@ -576,12 +561,12 @@
 #define	__sym_compat(sym,impl,verid)	\
 	__asm__(".symver impl, sym@verid")
 #define	__sym_default(impl,sym,verid)	\
-	__asm__(".symver impl, sym@@verid")
+	__asm__(".symver impl, sym@@@verid")
 #endif	/* __STDC__ */
 #endif	/* __GNUC__ || __INTEL_COMPILER */
 
-#define	__GLOBL1(sym)	__asm__(".globl " #sym)
-#define	__GLOBL(sym)	__GLOBL1(sym)
+#define	__GLOBL(sym)	__asm__(".globl " __XSTRING(sym))
+#define	__WEAK(sym)	__asm__(".weak " __XSTRING(sym))
 
 #if defined(__GNUC__) || defined(__INTEL_COMPILER)
 #define	__IDSTRING(name,string)	__asm__(".ident\t\"" string "\"")
@@ -595,20 +580,14 @@
 #define	__IDSTRING(name,string)	static const char name[] __unused = string
 #endif
 
-#ifndef	__MBSDID
-#if !defined(lint) && !defined(STRIP_MBSDID)
-#define	__MBSDID(s)	__IDSTRING(__CONCAT(__rcsid_,__LINE__),s)
-#else
-#define	__MBSDID(s)	struct __hack
-#endif
-#endif
-
 /*
  * Embed the rcs id of a source file in the resulting library.  Note that in
  * more recent ELF binutils, we use .ident allowing the ID to be stripped.
+ * Usage:
+ *	__FBSDID("$FreeBSD$");
  */
 #ifndef	__FBSDID
-#if !defined(lint) && !defined(STRIP_FBSDID)
+#if !defined(STRIP_FBSDID)
 #define	__FBSDID(s)	__IDSTRING(__CONCAT(__rcsid_,__LINE__),s)
 #else
 #define	__FBSDID(s)	struct __hack
@@ -741,6 +720,17 @@
 #define	__POSIX_VISIBLE		198808
 #define	__ISO_C_VISIBLE		0
 #endif /* _POSIX_C_SOURCE */
+/*
+ * Both glibc and OpenBSD enable c11 features when _ISOC11_SOURCE is defined, or
+ * when compiling with -stdc=c11. A strict reading of the standard would suggest
+ * doing it only for the former. However, a strict reading also requires C99
+ * mode only, so building with C11 is already undefined. Follow glibc's and
+ * OpenBSD's lead for this non-standard configuration for maximum compatibility.
+ */
+#if _ISOC11_SOURCE || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L)
+#undef __ISO_C_VISIBLE
+#define __ISO_C_VISIBLE		2011
+#endif
 #else
 /*-
  * Deal with _ANSI_SOURCE:
@@ -791,7 +781,7 @@
 #endif
 #endif /* __STDC_WANT_LIB_EXT1__ */
 
-#if defined(__mips) || defined(__powerpc64__) || defined(__riscv__)
+#if defined(__mips) || defined(__powerpc64__) || defined(__riscv)
 #define	__NO_TLS 1
 #endif
 
@@ -826,7 +816,7 @@
  */
 
 #if __has_attribute(__argument_with_type_tag__) && \
-    __has_attribute(__type_tag_for_datatype__) && !defined(lint)
+    __has_attribute(__type_tag_for_datatype__)
 #define	__arg_type_tag(arg_kind, arg_idx, type_tag_idx) \
 	    __attribute__((__argument_with_type_tag__(arg_kind, arg_idx, type_tag_idx)))
 #define	__datatype_type_tag(kind, type) \
@@ -892,5 +882,24 @@
 /* Guard variables and structure members by lock. */
 #define	__guarded_by(x)		__lock_annotate(guarded_by(x))
 #define	__pt_guarded_by(x)	__lock_annotate(pt_guarded_by(x))
+
+/* Alignment builtins for better type checking and improved code generation. */
+/* Provide fallback versions for other compilers (GCC/Clang < 10): */
+#if !__has_builtin(__builtin_is_aligned)
+#define __builtin_is_aligned(x, align)	\
+	(((__uintptr_t)x & ((align) - 1)) == 0)
+#endif
+#if !__has_builtin(__builtin_align_up)
+#define __builtin_align_up(x, align)	\
+	((__typeof__(x))(((__uintptr_t)(x)+((align)-1))&(~((align)-1))))
+#endif
+#if !__has_builtin(__builtin_align_down)
+#define __builtin_align_down(x, align)	\
+	((__typeof__(x))((x)&(~((align)-1))))
+#endif
+
+#define __align_up(x, y) __builtin_align_up(x, y)
+#define __align_down(x, y) __builtin_align_down(x, y)
+#define __is_aligned(x, y) __builtin_is_aligned(x, y)
 
 #endif /* !_SYS_CDEFS_H_ */

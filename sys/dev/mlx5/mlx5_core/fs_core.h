@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_core/fs_core.h 329200 2018-02-13 14:37:21Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _MLX5_FS_CORE_

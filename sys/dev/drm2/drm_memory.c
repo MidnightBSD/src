@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_memory.c 317008 2017-04-16 07:58:41Z mmel $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 

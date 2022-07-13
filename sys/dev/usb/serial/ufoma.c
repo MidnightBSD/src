@@ -1,9 +1,11 @@
 /*	$NetBSD: umodem.c,v 1.45 2002/09/23 05:51:23 simonb Exp $	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/usb/serial/ufoma.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 #define UFOMA_HANDSFREE
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2005, Takanori Watanabe
  * Copyright (c) 2003, M. Warner Losh <imp@FreeBSD.org>.
  * All rights reserved.

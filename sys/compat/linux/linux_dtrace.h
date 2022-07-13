@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008-2012 Alexander Leidinger <netchild@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linux/linux_dtrace.h 292384 2015-12-16 23:39:27Z markj $
+ * $FreeBSD$
  */
 
 #ifndef _LINUX_DTRACE_H_

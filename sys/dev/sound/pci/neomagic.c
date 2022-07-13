@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * All rights reserved.
  *
@@ -38,7 +40,7 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/neomagic.c 331722 2018-03-29 02:50:57Z eadler $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 /* -------------------------------------------------------------------- */
 

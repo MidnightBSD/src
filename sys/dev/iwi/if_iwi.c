@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004, 2005
  *      Damien Bergamini <damien.bergamini@free.fr>. All rights reserved.
  * Copyright (c) 2005-2006 Sam Leffler, Errno Consulting
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/iwi/if_iwi.c 347511 2019-05-12 12:30:45Z avos $");
+__FBSDID("$FreeBSD$");
 
 /*-
  * Intel(R) PRO/Wireless 2200BG/2225BG/2915ABG driver
@@ -1046,12 +1048,15 @@ static int
 iwi_wme_setparams(struct iwi_softc *sc)
 {
 	struct ieee80211com *ic = &sc->sc_ic;
+	struct chanAccParams chp;
 	const struct wmeParams *wmep;
 	int ac;
 
+	ieee80211_wme_ic_getparams(ic, &chp);
+
 	for (ac = 0; ac < WME_NUM_AC; ac++) {
 		/* set WME values for current operating mode */
-		wmep = &ic->ic_wme.wme_chanParams.cap_wmeParams[ac];
+		wmep = &chp.cap_wmeParams[ac];
 		sc->wme[0].aifsn[ac] = wmep->wmep_aifsn;
 		sc->wme[0].cwmin[ac] = IWI_EXP2(wmep->wmep_logcwmin);
 		sc->wme[0].cwmax[ac] = IWI_EXP2(wmep->wmep_logcwmax);
@@ -1767,11 +1772,9 @@ iwi_tx_start(struct iwi_softc *sc, struct mbuf *m0, struct ieee80211_node *ni,
     int ac)
 {
 	struct ieee80211vap *vap = ni->ni_vap;
-	struct ieee80211com *ic = ni->ni_ic;
 	struct iwi_node *in = (struct iwi_node *)ni;
 	const struct ieee80211_frame *wh;
 	struct ieee80211_key *k;
-	const struct chanAccParams *cap;
 	struct iwi_tx_ring *txq = &sc->txq[ac];
 	struct iwi_tx_data *data;
 	struct iwi_tx_desc *desc;
@@ -1793,8 +1796,7 @@ iwi_tx_start(struct iwi_softc *sc, struct mbuf *m0, struct ieee80211_node *ni,
 		flags |= IWI_DATA_FLAG_SHPREAMBLE;
 	if (IEEE80211_QOS_HAS_SEQ(wh)) {
 		xflags |= IWI_DATA_XFLAG_QOS;
-		cap = &ic->ic_wme.wme_chanParams;
-		if (!cap->cap_wmeParams[ac].wmep_noackPolicy)
+		if (ieee80211_wme_vap_ac_is_noack(vap, ac))
 			flags &= ~IWI_DATA_FLAG_NEED_ACK;
 	}
 
@@ -2546,12 +2548,36 @@ iwi_setwepkeys(struct iwi_softc *sc, struct ieee80211vap *vap)
 }
 
 static int
+iwi_set_rateset(struct iwi_softc *sc, const struct ieee80211_rateset *net_rs,
+    int mode, int type)
+{
+	struct iwi_rateset rs;
+
+	memset(&rs, 0, sizeof(rs));
+	rs.mode = mode;
+	rs.type = type;
+	rs.nrates = net_rs->rs_nrates;
+	if (rs.nrates > nitems(rs.rates)) {
+		DPRINTF(("Truncating negotiated rate set from %u\n",
+		    rs.nrates));
+		rs.nrates = nitems(rs.rates);
+	}
+	memcpy(rs.rates, net_rs->rs_rates, rs.nrates);
+	DPRINTF(("Setting .11%c%s %s rates (%u)\n",
+	    mode == IWI_MODE_11A ? 'a' : 'b',
+	    mode == IWI_MODE_11G ? "g" : "",
+	    type == IWI_RATESET_TYPE_SUPPORTED ? "supported" : "negotiated",
+	    rs.nrates));
+
+	return (iwi_cmd(sc, IWI_CMD_SET_RATES, &rs, sizeof(rs)));
+}
+
+static int
 iwi_config(struct iwi_softc *sc)
 {
 	struct ieee80211com *ic = &sc->sc_ic;
 	struct ieee80211vap *vap = TAILQ_FIRST(&ic->ic_vaps);
 	struct iwi_configuration config;
-	struct iwi_rateset rs;
 	struct iwi_txpower power;
 	uint8_t *macaddr;
 	uint32_t data;
@@ -2602,25 +2628,13 @@ iwi_config(struct iwi_softc *sc)
 			return error;
 	}
 
-	memset(&rs, 0, sizeof rs);
-	rs.mode = IWI_MODE_11G;
-	rs.type = IWI_RATESET_TYPE_SUPPORTED;
-	rs.nrates = ic->ic_sup_rates[IEEE80211_MODE_11G].rs_nrates;
-	memcpy(rs.rates, ic->ic_sup_rates[IEEE80211_MODE_11G].rs_rates,
-	    rs.nrates);
-	DPRINTF(("Setting .11bg supported rates (%u)\n", rs.nrates));
-	error = iwi_cmd(sc, IWI_CMD_SET_RATES, &rs, sizeof rs);
+	error = iwi_set_rateset(sc, &ic->ic_sup_rates[IEEE80211_MODE_11G],
+	    IWI_MODE_11G, IWI_RATESET_TYPE_SUPPORTED);
 	if (error != 0)
 		return error;
 
-	memset(&rs, 0, sizeof rs);
-	rs.mode = IWI_MODE_11A;
-	rs.type = IWI_RATESET_TYPE_SUPPORTED;
-	rs.nrates = ic->ic_sup_rates[IEEE80211_MODE_11A].rs_nrates;
-	memcpy(rs.rates, ic->ic_sup_rates[IEEE80211_MODE_11A].rs_rates,
-	    rs.nrates);
-	DPRINTF(("Setting .11a supported rates (%u)\n", rs.nrates));
-	error = iwi_cmd(sc, IWI_CMD_SET_RATES, &rs, sizeof rs);
+	error = iwi_set_rateset(sc, &ic->ic_sup_rates[IEEE80211_MODE_11A],
+	    IWI_MODE_11A, IWI_RATESET_TYPE_SUPPORTED);
 	if (error != 0)
 		return error;
 
@@ -2814,7 +2828,6 @@ iwi_auth_and_assoc(struct iwi_softc *sc, struct ieee80211vap *vap)
 	struct ieee80211_node *ni;
 	struct iwi_configuration config;
 	struct iwi_associate *assoc = &sc->assoc;
-	struct iwi_rateset rs;
 	uint16_t capinfo;
 	uint32_t data;
 	int error, mode;
@@ -2884,18 +2897,8 @@ iwi_auth_and_assoc(struct iwi_softc *sc, struct ieee80211vap *vap)
 		goto done;
 
 	/* the rate set has already been "negotiated" */
-	memset(&rs, 0, sizeof rs);
-	rs.mode = mode;
-	rs.type = IWI_RATESET_TYPE_NEGOTIATED;
-	rs.nrates = ni->ni_rates.rs_nrates;
-	if (rs.nrates > IWI_RATESET_SIZE) {
-		DPRINTF(("Truncating negotiated rate set from %u\n",
-		    rs.nrates));
-		rs.nrates = IWI_RATESET_SIZE;
-	}
-	memcpy(rs.rates, ni->ni_rates.rs_rates, rs.nrates);
-	DPRINTF(("Setting negotiated rates (%u)\n", rs.nrates));
-	error = iwi_cmd(sc, IWI_CMD_SET_RATES, &rs, sizeof rs);
+	error = iwi_set_rateset(sc, &ni->ni_rates, mode,
+	    IWI_RATESET_TYPE_NEGOTIATED);
 	if (error != 0)
 		goto done;
 

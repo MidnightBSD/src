@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/samsung/exynos/chrome_ec.c 297793 2016-04-10 23:07:00Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -225,7 +225,7 @@ configure_i2c_arbitrator(struct ec_softc *sc)
 
 	/* TODO: look for compatible entry instead of hard-coded path */
 	arbitrator = OF_finddevice("/i2c-arbitrator");
-	if (arbitrator > 0 &&
+	if (arbitrator != -1 &&
 	    OF_hasprop(arbitrator, "freebsd,our-gpio") &&
 	    OF_hasprop(arbitrator, "freebsd,ec-gpio")) {
 		sc->have_arbitrator = 1;

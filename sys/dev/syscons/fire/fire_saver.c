@@ -1,5 +1,6 @@
-/* $MidnightBSD: src/sys/dev/syscons/fire/fire_saver.c,v 1.2 2008/12/02 22:43:13 laffer1 Exp $ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Brad Forschinger
  * All rights reserved.
  *
@@ -144,10 +145,6 @@ fire_init(video_adapter_t *adp)
 
 	if (!vidd_get_info(adp, M_VGA_CG320, &info)) {
 		scrmode = M_VGA_CG320;
-	} else if (!vidd_get_info(adp, M_PC98_PEGC640x480, &info)) {
-		scrmode = M_PC98_PEGC640x480;
-	} else if (!vidd_get_info(adp, M_PC98_PEGC640x400, &info)) {
-		scrmode = M_PC98_PEGC640x400;
 	} else {
 		log(LOG_NOTICE,
 		    "%s: the console does not support M_VGA_CG320\n",

@@ -1,4 +1,5 @@
 /**************************************************************************
+SPDX-License-Identifier: BSD-2-Clause-FreeBSD
 
 Copyright (c) 2007-2009, Chelsio Inc.
 All rights reserved.
@@ -28,7 +29,7 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/cxgb/cxgb_sge.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet6.h"
 #include "opt_inet.h"
@@ -41,7 +42,6 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/cxgb/cxgb_sge.c 331722 2018-03-29 02:50:57
 #include <sys/conf.h>
 #include <machine/bus.h>
 #include <machine/resource.h>
-#include <sys/bus_dma.h>
 #include <sys/rman.h>
 #include <sys/queue.h>
 #include <sys/sysctl.h>
@@ -312,19 +312,22 @@ set_wr_hdr(struct work_request_hdr *wrp, uint32_t wr_hi, uint32_t wr_lo)
 struct coalesce_info {
 	int count;
 	int nbytes;
+	int noncoal;
 };
 
 static int
 coalesce_check(struct mbuf *m, void *arg)
 {
 	struct coalesce_info *ci = arg;
-	int *count = &ci->count;
-	int *nbytes = &ci->nbytes;
 
-	if ((*nbytes == 0) || ((*nbytes + m->m_len <= 10500) &&
-		(*count < 7) && (m->m_next == NULL))) {
-		*count += 1;
-		*nbytes += m->m_len;
+	if ((m->m_next != NULL) ||
+	    ((mtod(m, vm_offset_t) & PAGE_MASK) + m->m_len > PAGE_SIZE))
+		ci->noncoal = 1;
+
+	if ((ci->count == 0) || (ci->noncoal == 0 && (ci->count < 7) &&
+	    (ci->nbytes + m->m_len <= 10500))) {
+		ci->count++;
+		ci->nbytes += m->m_len;
 		return (1);
 	}
 	return (0);
@@ -341,7 +344,7 @@ cxgb_dequeue(struct sge_qset *qs)
 		return TXQ_RING_DEQUEUE(qs);
 
 	m_head = m_tail = NULL;
-	ci.count = ci.nbytes = 0;
+	ci.count = ci.nbytes = ci.noncoal = 0;
 	do {
 		m = TXQ_RING_DEQUEUE_COND(qs, coalesce_check, &ci);
 		if (m_head == NULL) {
@@ -389,6 +392,15 @@ reclaim_completed_tx(struct sge_qset *qs, int reclaim_min, int queue)
 
 	return (reclaim);
 }
+
+#ifdef NETDUMP
+int
+cxgb_netdump_poll_tx(struct sge_qset *qs)
+{
+
+	return (reclaim_completed_tx(qs, TX_RECLAIM_MAX, TXQ_ETH));
+}
+#endif
 
 /**
  *	should_restart_tx - are there enough resources to restart a Tx queue?
@@ -1586,6 +1598,23 @@ t3_encap(struct sge_qset *qs, struct mbuf **m)
 	return (0);
 }
 
+#ifdef NETDUMP
+int
+cxgb_netdump_encap(struct sge_qset *qs, struct mbuf **m)
+{
+	int error;
+
+	error = t3_encap(qs, m);
+	if (error == 0)
+		check_ring_tx_db(qs->port->adapter, &qs->txq[TXQ_ETH], 1);
+	else if (*m != NULL) {
+		m_freem(*m);
+		*m = NULL;
+	}
+	return (error);
+}
+#endif
+
 void
 cxgb_tx_watchdog(void *arg)
 {
@@ -2749,6 +2778,7 @@ get_packet(adapter_t *adap, unsigned int drop_thres, struct sge_qset *qs,
 		if (mh->mh_tail == NULL) {
 			log(LOG_ERR, "discarding intermediate descriptor entry\n");
 			m_freem(m);
+			m = NULL;
 			break;
 		}
 		mh->mh_tail->m_next = m;
@@ -2756,7 +2786,7 @@ get_packet(adapter_t *adap, unsigned int drop_thres, struct sge_qset *qs,
 		mh->mh_head->m_pkthdr.len += len;
 		break;
 	}
-	if (cxgb_debug)
+	if (cxgb_debug && m != NULL)
 		printf("len=%d pktlen=%d\n", m->m_len, m->m_pkthdr.len);
 done:
 	if (++fl->cidx == fl->size)
@@ -3014,6 +3044,14 @@ process_responses_gts(adapter_t *adap, struct sge_rspq *rq)
 	return (work);
 }
 
+#ifdef NETDUMP
+int
+cxgb_netdump_poll_rx(adapter_t *adap, struct sge_qset *qs)
+{
+
+	return (process_responses_gts(adap, &qs->rspq));
+}
+#endif
 
 /*
  * Interrupt handler for legacy INTx interrupts for T3B-based cards.

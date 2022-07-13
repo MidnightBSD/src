@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2008 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ah_eeprom_v14.c 224519 2011-07-30 13:45:12Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -247,7 +249,7 @@ static uint16_t
 v14EepromGetSpurChan(struct ath_hal *ah, int ix, HAL_BOOL is2GHz)
 { 
 	HAL_EEPROM_v14 *ee = AH_PRIVATE(ah)->ah_eeprom;
-	
+
 	HALASSERT(0 <= ix && ix <  AR5416_EEPROM_MODAL_SPURS);
 	return ee->ee_base.modalHeader[is2GHz].spurChans[ix].spurChan;
 }
@@ -282,7 +284,7 @@ v14EepromReadCTLInfo(struct ath_hal *ah, HAL_EEPROM_v14 *ee)
 {
 	RD_EDGES_POWER *rep = ee->ee_rdEdgesPower;
 	int i, j;
-	
+
 	HALASSERT(AR5416_NUM_CTLS <= sizeof(ee->ee_rdEdgesPower)/NUM_EDGES);
 
 	for (i = 0; ee->ee_base.ctlIndex[i] != 0 && i < AR5416_NUM_CTLS; i++) {
@@ -340,7 +342,7 @@ ath_hal_v14EepromAttach(struct ath_hal *ah)
 	uint32_t sum;
 
 	HALASSERT(ee == AH_NULL);
- 
+
 	/*
 	 * Don't check magic if we're supplied with an EEPROM block,
 	 * typically this is from Howl but it may also be from later
@@ -396,7 +398,7 @@ ath_hal_v14EepromAttach(struct ath_hal *ah)
 		len = ee->ee_base.baseEepHeader.length;
 	}
 	len = AH_MIN(len, sizeof(struct ar5416eeprom)) / sizeof(uint16_t);
-	
+
 	/* Apply the checksum, done in native eeprom format */
 	/* XXX - Need to check to make sure checksum calculation is done
 	 * in the correct endian format.  Right now, it seems it would

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/le/lebuffer_sbus.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -181,7 +183,7 @@ lebuffer_setup_dinfo(device_t dev, phandle_t node)
 	}
 	resource_list_init(&ldi->ldi_rl);
 	slot = -1;
-	nreg = OF_getprop_alloc(node, "reg", sizeof(*reg), (void **)&reg);
+	nreg = OF_getprop_alloc_multi(node, "reg", sizeof(*reg), (void **)&reg);
 	if (nreg == -1) {
 		device_printf(dev, "<%s>: incomplete\n",
 		    ldi->ldi_obdinfo.obd_name);
@@ -215,7 +217,7 @@ lebuffer_setup_dinfo(device_t dev, phandle_t node)
 	/*
 	 * The `interrupts' property contains the SBus interrupt level.
 	 */
-	nintr = OF_getprop_alloc(node, "interrupts", sizeof(*intr),
+	nintr = OF_getprop_alloc_multi(node, "interrupts", sizeof(*intr),
 	    (void **)&intr);
 	if (nintr != -1) {
 		for (i = 0; i < nintr; i++) {

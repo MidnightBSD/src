@@ -1,4 +1,6 @@
-/*-7
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Stephane E. Potvin <sepotvin@videotron.ca>
  * Copyright (c) 2006 Ariff Abdullah <ariff@FreeBSD.org>
  * Copyright (c) 2008-2012 Alexander Motin <mav@FreeBSD.org>
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/sound/pci/hda/hdaa.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*
@@ -212,6 +214,7 @@ struct hdaa_devinfo {
 	struct hdaa_chan	*chans;
 	struct callout		poll_jack;
 	int			poll_ival;
+	uint32_t		init_clear;
 };
 
 #define HDAA_CHN_RUNNING	0x00000001

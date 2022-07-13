@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/x86/iommu/intel_qi.c 320357 2017-06-26 12:30:39Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 
@@ -56,6 +58,7 @@ __FBSDID("$FreeBSD: stable/11/sys/x86/iommu/intel_qi.c 320357 2017-06-26 12:30:3
 #include <x86/include/busdma_impl.h>
 #include <x86/iommu/intel_reg.h>
 #include <x86/iommu/busdma_dmar.h>
+#include <dev/pci/pcireg.h>
 #include <x86/iommu/intel_dmar.h>
 
 static bool
@@ -396,8 +399,8 @@ dmar_init_qi(struct dmar_unit *unit)
 	unit->inv_queue_avail = unit->inv_queue_size - DMAR_IQ_DESCR_SZ;
 
 	/* The invalidation queue reads by DMARs are always coherent. */
-	unit->inv_queue = kmem_alloc_contig(kernel_arena, unit->inv_queue_size,
-	    M_WAITOK | M_ZERO, 0, dmar_high, PAGE_SIZE, 0, VM_MEMATTR_DEFAULT);
+	unit->inv_queue = kmem_alloc_contig(unit->inv_queue_size, M_WAITOK |
+	    M_ZERO, 0, dmar_high, PAGE_SIZE, 0, VM_MEMATTR_DEFAULT);
 	unit->inv_waitd_seq_hw_phys = pmap_kextract(
 	    (vm_offset_t)&unit->inv_waitd_seq_hw);
 
@@ -442,7 +445,7 @@ dmar_fini_qi(struct dmar_unit *unit)
 	    ("dmar%d: waiters on disabled queue", unit->unit));
 	DMAR_UNLOCK(unit);
 
-	kmem_free(kernel_arena, unit->inv_queue, unit->inv_queue_size);
+	kmem_free(unit->inv_queue, unit->inv_queue_size);
 	unit->inv_queue = 0;
 	unit->inv_queue_size = 0;
 	unit->qi_enabled = 0;

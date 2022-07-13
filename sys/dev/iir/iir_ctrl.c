@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  *       Copyright (c) 2000-03 ICP vortex GmbH
  *       Copyright (c) 2002-03 Intel Corporation
  *       Copyright (c) 2003    Adaptec Inc.
@@ -39,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/iir/iir_ctrl.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

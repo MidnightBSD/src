@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/ofed/drivers/infiniband/core/ib_ucm.c 337096 2018-08-02 08:33:51Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <linux/completion.h>
 #include <linux/fs.h>
@@ -1371,5 +1371,5 @@ static void __exit ib_ucm_cleanup(void)
 	idr_destroy(&ctx_id_table);
 }
 
-module_init_order(ib_ucm_init, SI_ORDER_THIRD);
-module_exit(ib_ucm_cleanup);
+module_init_order(ib_ucm_init, SI_ORDER_FIFTH);
+module_exit_order(ib_ucm_cleanup, SI_ORDER_FIFTH);

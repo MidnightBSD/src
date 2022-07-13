@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/extres/clk/clk_div.h 294660 2016-01-24 11:00:38Z mmel $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_EXTRES_CLK_DIV_H_
@@ -32,6 +32,12 @@
 #include <dev/extres/clk/clk.h>
 
 #define	CLK_DIV_ZERO_BASED	0x0001 /* Zero based divider. */
+#define	CLK_DIV_WITH_TABLE	0x0002 /* Table to lookup the real value */
+
+struct clk_div_table {
+	uint32_t	value;
+	uint32_t	divider;
+};
 
 struct clk_div_def {
 	struct clknode_init_def clkdef;
@@ -41,6 +47,7 @@ struct clk_div_def {
 	uint32_t		f_shift;	/* Fractional divide bits, */
 	uint32_t		f_width;	/* set to 0 for int divider */
 	int			div_flags;	/* Divider-specific flags */
+	struct clk_div_table	*div_table;	/* Divider table */
 };
 
 int clknode_div_register(struct clkdom *clkdom, struct clk_div_def *clkdef);

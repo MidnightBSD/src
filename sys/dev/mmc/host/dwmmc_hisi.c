@@ -26,20 +26,25 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mmc/host/dwmmc_hisi.c 287371 2015-09-01 16:25:12Z andrew $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>
 #include <sys/module.h>
+#include <sys/queue.h>
+#include <sys/taskqueue.h>
 
 #include <machine/bus.h>
 
 #include <dev/mmc/bridge.h>
+#include <dev/mmc/mmc_fdt_helpers.h>
 
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <dev/mmc/host/dwmmc_var.h>
+
+#include "opt_mmccam.h"
 
 static device_probe_t hisi_dwmmc_probe;
 static device_attach_t hisi_dwmmc_attach;
@@ -75,7 +80,6 @@ hisi_dwmmc_attach(device_t dev)
 	 * DMA when the controller is not cache-coherent on arm64.
 	 */
 	sc->use_pio = 1;
-	sc->desc_count = 1;
 
 	return (dwmmc_attach(dev));
 }
@@ -92,5 +96,11 @@ static devclass_t hisi_dwmmc_devclass;
 
 DEFINE_CLASS_1(hisi_dwmmc, hisi_dwmmc_driver, hisi_dwmmc_methods,
     sizeof(struct dwmmc_softc), dwmmc_driver);
+
 DRIVER_MODULE(hisi_dwmmc, simplebus, hisi_dwmmc_driver,
     hisi_dwmmc_devclass, 0, 0);
+DRIVER_MODULE(hisi_dwmmc, ofwbus, hisi_dwmmc_driver, hisi_dwmmc_devclass
+    , NULL, NULL);
+#ifndef MMCCAM
+MMC_DECLARE_BRIDGE(hisi_dwmmc);
+#endif

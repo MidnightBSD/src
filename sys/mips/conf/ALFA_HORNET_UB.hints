@@ -1,7 +1,7 @@
 #
 # This file adds to the values in AR933X_BASE.hints
 #
-# $FreeBSD: stable/11/sys/mips/conf/ALFA_HORNET_UB.hints 257094 2013-10-25 04:06:54Z adrian $
+# $FreeBSD$
 
 # mdiobus on arge1
 hint.argemdio.0.at="nexus0"

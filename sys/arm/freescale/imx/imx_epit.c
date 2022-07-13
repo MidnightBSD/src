@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/imx/imx_epit.c 323418 2017-09-11 02:38:57Z ian $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for imx Enhanced Programmable Interval Timer, a simple free-running
@@ -105,11 +105,6 @@ struct epit_softc {
 	struct eventtimer	et;
 	bool			oneshot;
 };
-
-#ifndef MULTIDELAY
-/* Global softc pointer for use in DELAY(). */
-static struct epit_softc *epit_sc;
-#endif
 
 /*
  * Probe data.  For some reason, the standard linux dts files don't have
@@ -218,11 +213,8 @@ epit_tc_attach(struct epit_softc *sc)
 	tc_init(&sc->tc);
 
 	/* We are the DELAY() implementation. */
-#ifdef MULTIDELAY
 	arm_set_delay(epit_do_delay, sc);
-#else
-	epit_sc = sc;
-#endif
+
 	return (0);
 }
 
@@ -497,32 +489,3 @@ static devclass_t epit_devclass;
 
 EARLY_DRIVER_MODULE(imx_epit, simplebus, epit_driver, epit_devclass, 0,
     0, BUS_PASS_TIMER);
-
-#ifndef MULTIDELAY
-
-/*
- * Hand-calibrated delay-loop counter.  This was calibrated on an i.MX6 running
- * at 792mhz.  It will delay a bit too long on slower processors -- that's
- * better than not delaying long enough.  In practice this is unlikely to get
- * used much since the clock driver is one of the first to start up, and once
- * we're attached the delay loop switches to using the timer hardware.
- */
-static const int epit_delay_count = 78;
-
-void
-DELAY(int usec)
-{
-	uint64_t ticks;
-
-	/* If the timer hardware is not accessible, just use a loop. */
-	if (epit_sc == NULL) {
-		while (usec-- > 0)
-			for (ticks = 0; ticks < epit_delay_count; ++ticks)
-				cpufunc_nullop();
-		return;
-	} else {
-		epit_do_delay(usec, epit_sc);
-	}
-}
-
-#endif

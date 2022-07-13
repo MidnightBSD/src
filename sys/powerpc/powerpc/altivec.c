@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (C) 1996 Wolfgang Solfrank.
  * Copyright (C) 1996 TooLs GmbH.
  * All rights reserved.
@@ -32,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/powerpc/powerpc/altivec.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -56,7 +58,6 @@ save_vec_int(struct thread *td)
 	 */
 	msr = mfmsr();
 	mtmsr(msr | PSL_VEC);
-	isync();
 
 	/*
 	 * Save the vector registers and VSCR to the PCB
@@ -118,7 +119,6 @@ enable_vec(struct thread *td)
 	 */
 	msr = mfmsr();
 	mtmsr(msr | PSL_VEC);
-	isync();
 
 	/*
 	 * Restore VSCR by first loading it into a vector and then into VSCR.

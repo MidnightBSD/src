@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  ***********************************************************************
  *								       *
@@ -19,7 +18,7 @@
  *								       *
  ***********************************************************************
  *
- * $FreeBSD: stable/11/sys/sys/timex.h 298981 2016-05-03 15:14:17Z pfg $
+ * $FreeBSD$
  *
  * This header file defines the Network Time Protocol (NTP) interfaces
  * for user and daemon application programs.
@@ -38,9 +37,9 @@
 
 #define NTP_API		4		/* NTP API version */
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #include <sys/_timespec.h>
-#endif /* __MidnightBSD__ */
+#endif /* __FreeBSD__ */
 
 /*
  * The following defines establish the performance envelope of the
@@ -154,7 +153,7 @@ struct timex {
 	long	stbcnt;			/* stability limit exceeded (ro) */
 };
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 
 #ifdef _KERNEL
 void	ntp_update_second(int64_t *adjustment, time_t *newsec);
@@ -167,6 +166,6 @@ int	ntp_gettime(struct ntptimeval *);
 __END_DECLS
 #endif /* _KERNEL */
 
-#endif /* __MidnightBSD__ */
+#endif /* __FreeBSD__ */
 
 #endif /* !_SYS_TIMEX_H_ */

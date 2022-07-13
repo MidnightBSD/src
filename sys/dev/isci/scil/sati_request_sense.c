@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0
+ *
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
  *
@@ -51,7 +53,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/isci/scil/sati_request_sense.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /**
  * @file
@@ -84,7 +86,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/isci/scil/sati_request_sense.c 331722 2018
  * @retval SATI_SUCCESS indicates that the translation was supported and occurred
  *         without error.
  * @retval SATI_FAILURE_CHECK_RESPONSE_DATA This value is returned if
- *         the SATII is processing a format unit commmand.
+ *         the SATII is processing a format unit command.
  * @retval SATI_COMPLETE indicates that the translation was supported, occurred without
  *         error, and no additional translation is necessary.
  */

@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/dev/bktr/CHANGELOG.TXT 298955 2016-05-03 03:41:25Z pfg $ */
+/* $FreeBSD$ */
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)

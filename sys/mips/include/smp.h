@@ -8,7 +8,7 @@
  *
  *	from: src/sys/alpha/include/smp.h,v 1.8 2005/01/05 20:05:50 imp
  *	JNPR: smp.h,v 1.3 2006/12/02 09:53:41 katta
- * $FreeBSD: stable/11/sys/mips/include/smp.h 298068 2016-04-15 16:05:41Z andrew $
+ * $FreeBSD$
  *
  */
 

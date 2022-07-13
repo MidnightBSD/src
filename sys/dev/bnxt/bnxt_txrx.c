@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bnxt/bnxt_txrx.c 333364 2018-05-08 15:51:40Z shurd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -66,14 +66,14 @@ static int bnxt_isc_rxd_pkt_get(void *sc, if_rxd_info_t ri);
 static int bnxt_intr(void *sc);
 
 struct if_txrx bnxt_txrx  = {
-	bnxt_isc_txd_encap,
-	bnxt_isc_txd_flush,
-	bnxt_isc_txd_credits_update,
-	bnxt_isc_rxd_available,
-	bnxt_isc_rxd_pkt_get,
-	bnxt_isc_rxd_refill,
-	bnxt_isc_rxd_flush,
-	bnxt_intr
+	.ift_txd_encap = bnxt_isc_txd_encap,
+	.ift_txd_flush = bnxt_isc_txd_flush,
+	.ift_txd_credits_update = bnxt_isc_txd_credits_update,
+	.ift_rxd_available = bnxt_isc_rxd_available,
+	.ift_rxd_pkt_get = bnxt_isc_rxd_pkt_get,
+	.ift_rxd_refill = bnxt_isc_rxd_refill,
+	.ift_rxd_flush = bnxt_isc_rxd_flush,
+	.ift_legacy_intr = bnxt_intr
 };
 
 /*
@@ -263,7 +263,6 @@ bnxt_isc_rxd_refill(void *sc, if_rxd_update_t iru)
 	uint32_t pidx;
 	uint8_t flid;
 	uint64_t *paddrs;
-	caddr_t *vaddrs;
 	qidx_t	*frag_idxs;
 
 	rxqid = iru->iru_qsidx;
@@ -271,7 +270,6 @@ bnxt_isc_rxd_refill(void *sc, if_rxd_update_t iru)
 	len = iru->iru_buf_size;
 	pidx = iru->iru_pidx;
 	flid = iru->iru_flidx;
-	vaddrs = iru->iru_vaddrs;
 	paddrs = iru->iru_paddrs;
 	frag_idxs = iru->iru_idxs;
 
@@ -318,10 +316,9 @@ bnxt_isc_rxd_flush(void *sc, uint16_t rxqid, uint8_t flid,
 	if (softc->rx_cp_rings[rxqid].cons != UINT32_MAX)
 		BNXT_CP_IDX_DISABLE_DB(&softc->rx_cp_rings[rxqid].ring,
 		    softc->rx_cp_rings[rxqid].cons);
-	/* We're given the last filled RX buffer here, not the next empty one */
-	BNXT_RX_DB(rx_ring, RING_NEXT(rx_ring, pidx));
+	BNXT_RX_DB(rx_ring, pidx);
 	/* TODO: Cumulus+ doesn't need the double doorbell */
-	BNXT_RX_DB(rx_ring, RING_NEXT(rx_ring, pidx));
+	BNXT_RX_DB(rx_ring, pidx);
 	return;
 }
 
@@ -533,7 +530,6 @@ bnxt_pkt_get_tpa(struct bnxt_softc *softc, if_rxd_info_t ri,
 {
 	struct rx_tpa_end_cmpl *agend =
 	    &((struct rx_tpa_end_cmpl *)cpr->ring.vaddr)[cpr->cons];
-	struct rx_tpa_end_cmpl_hi *agendh;
 	struct rx_abuf_cmpl *acp;
 	struct bnxt_full_tpa_start *tpas;
 	uint32_t flags2;
@@ -566,7 +562,6 @@ bnxt_pkt_get_tpa(struct bnxt_softc *softc, if_rxd_info_t ri,
 	/* Now the second 16-byte BD */
 	NEXT_CP_CONS_V(&cpr->ring, cpr->cons, cpr->v_bit);
 	ri->iri_cidx = RING_NEXT(&cpr->ring, ri->iri_cidx);
-	agendh = &((struct rx_tpa_end_cmpl_hi *)cpr->ring.vaddr)[cpr->cons];
 
 	flags2 = le32toh(tpas->high.flags2);
 	if ((flags2 & RX_TPA_START_CMPL_FLAGS2_META_FORMAT_MASK) ==

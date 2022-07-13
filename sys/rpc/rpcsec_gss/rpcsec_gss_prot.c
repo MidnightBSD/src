@@ -1,6 +1,8 @@
 /*
   rpcsec_gss_prot.c
   
+  SPDX-License-Identifier: BSD-3-Clause
+
   Copyright (c) 2000 The Regents of the University of Michigan.
   All rights reserved.
   
@@ -36,7 +38,7 @@
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/rpc/rpcsec_gss/rpcsec_gss_prot.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

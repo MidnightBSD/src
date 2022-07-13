@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2013 Robert N. M. Watson
  * Copyright (C) 1994 by Rodney W. Grimes, Milwaukie, Oregon  97222
  * All rights reserved.
@@ -30,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/mips/include/bootinfo.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_BOOTINFO_H_

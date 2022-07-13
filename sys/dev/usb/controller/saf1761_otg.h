@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/dev/usb/controller/saf1761_otg.h 275467 2014-12-03 21:48:30Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2014 Hans Petter Selasky <hselasky@FreeBSD.org>
  * All rights reserved.

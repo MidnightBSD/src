@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/arm/locore.S 297682 2016-04-07 18:19:09Z ian $
+ * $FreeBSD$
  */
 
 /*

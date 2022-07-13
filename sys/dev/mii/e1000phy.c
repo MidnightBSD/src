@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Principal Author: Parag Patel
  * Copyright (c) 2001
  * All rights reserved.
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mii/e1000phy.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * driver for the Marvell 88E1000 series external 1000/100/10-BT PHY.

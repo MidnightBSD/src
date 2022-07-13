@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/random/unit_test.h 285422 2015-07-12 18:14:38Z markm $
+ * $FreeBSD$
  */
 
 
@@ -74,9 +74,8 @@ enum random_entropy_source {
 struct harvest_event {
 	uintmax_t			he_somecounter;		/* fast counter for clock jitter */
 	uint32_t			he_entropy[HARVESTSIZE];/* some harvested entropy */
-	u_int				he_size;		/* harvested entropy byte count */
-	u_int				he_bits;		/* stats about the entropy */
-	u_int				he_destination;		/* destination pool of this entropy */
+	uint8_t				he_size;		/* harvested entropy byte count */
+	uint8_t				he_destination;		/* destination pool of this entropy */
 	enum random_entropy_source	he_source;		/* origin of the entropy */
 	void *				he_next;		/* next item on the list */
 };

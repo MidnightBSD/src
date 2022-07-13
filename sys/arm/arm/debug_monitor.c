@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/arm/debug_monitor.c 317976 2017-05-08 20:09:23Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 

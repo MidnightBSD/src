@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007-2016 Solarflare Communications Inc.
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: stable/11/sys/dev/sfxge/common/efx_regs_ef10.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_SYS_EFX_EF10_REGS_H

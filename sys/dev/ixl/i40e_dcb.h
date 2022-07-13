@@ -1,8 +1,8 @@
 /******************************************************************************
 
-  Copyright (c) 2013-2019, Intel Corporation
+  Copyright (c) 2013-2018, Intel Corporation 
   All rights reserved.
-
+  
   Redistribution and use in source and binary forms, with or without 
   modification, are permitted provided that the following conditions are met:
   
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/ixl/i40e_dcb.h 349163 2019-06-18 00:08:02Z erj $*/
+/*$FreeBSD$*/
 
 #ifndef _I40E_DCB_H_
 #define _I40E_DCB_H_
@@ -68,6 +68,11 @@
 #define I40E_LLDP_ADMINSTATUS_ENABLED_RX	1
 #define I40E_LLDP_ADMINSTATUS_ENABLED_TX	2
 #define I40E_LLDP_ADMINSTATUS_ENABLED_RXTX	3
+
+#define I40E_LLDP_CURRENT_STATUS_XL710_OFFSET	0x2B
+#define I40E_LLDP_CURRENT_STATUS_X722_OFFSET	0x31
+#define I40E_LLDP_CURRENT_STATUS_OFFSET		1
+#define I40E_LLDP_CURRENT_STATUS_SIZE		1
 
 /* Defines for LLDP TLV header */
 #define I40E_LLDP_MIB_HLEN		14
@@ -230,5 +235,4 @@ i40e_get_fw_lldp_status(struct i40e_hw *hw,
 enum i40e_status_code i40e_set_dcb_config(struct i40e_hw *hw);
 enum i40e_status_code i40e_dcb_config_to_lldp(u8 *lldpmib, u16 *miblen,
 					      struct i40e_dcbx_config *dcbcfg);
-
 #endif /* _I40E_DCB_H_ */

@@ -1,6 +1,8 @@
 /*-
  * Inline routines shareable across OS platforms.
  *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1994-2001 Justin T. Gibbs.
  * Copyright (c) 2000-2003 Adaptec Inc.
  * All rights reserved.
@@ -39,7 +41,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aic79xx_inline.h#57 $
  *
- * $FreeBSD: stable/11/sys/dev/aic7xxx/aic79xx_inline.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _AIC79XX_INLINE_H_

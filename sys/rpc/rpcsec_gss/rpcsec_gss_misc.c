@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Doug Rabson
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/rpc/rpcsec_gss/rpcsec_gss_misc.c 184588 2008-11-03 10:38:00Z dfr $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kobj.h>

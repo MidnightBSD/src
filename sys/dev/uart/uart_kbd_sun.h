@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2002 Jason L. Wright (jason@thought.net)
  * All rights reserved.
  *
@@ -32,7 +34,7 @@
  * Agency (DARPA) and Air Force Research Laboratory, Air Force
  * Materiel Command, USAF, under agreement number F30602-01-2-0537.
  *
- * $FreeBSD: stable/11/sys/dev/uart/uart_kbd_sun.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /* keyboard commands (host->kbd) */

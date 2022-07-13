@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2004 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5210/ar5210_recv.c 243317 2012-11-19 23:42:46Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -47,7 +49,6 @@ ar5210SetRxDP(struct ath_hal *ah, uint32_t rxdp, HAL_RX_QUEUE qtype)
 	HALASSERT(qtype == HAL_RX_QUEUE_HP);
 	OS_REG_WRITE(ah, AR_RXDP, rxdp);
 }
-
 
 /*
  * Set Receive Enable bits.
@@ -84,7 +85,7 @@ ar5210StopDmaReceive(struct ath_hal *ah)
  * Start Transmit at the PCU engine (unpause receive)
  */
 void
-ar5210StartPcuReceive(struct ath_hal *ah)
+ar5210StartPcuReceive(struct ath_hal *ah, HAL_BOOL is_scanning)
 {
 	ar5210UpdateDiagReg(ah,
 		OS_REG_READ(ah, AR_DIAG_SW) & ~(AR_DIAG_SW_DIS_RX));

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/arm/mv/orion/files.db88f5xxx 239277 2012-08-15 05:15:49Z gonzo $
+# $FreeBSD$
 
 arm/mv/ic.c			standard
 arm/mv/orion/orion.c		standard

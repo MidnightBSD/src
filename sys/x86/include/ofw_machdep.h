@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Juniper Networks, Inc.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/x86/include/ofw_machdep.h 287260 2015-08-28 15:41:09Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_OFW_MACHDEP_H_

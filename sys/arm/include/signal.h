@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1986, 1989, 1991, 1993
  *      The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,7 +31,7 @@
  *      @(#)signal.h    8.1 (Berkeley) 6/11/93
  *	from: FreeBSD: src/sys/i386/include/signal.h,v 1.13 2000/11/09
  *	from: FreeBSD: src/sys/sparc64/include/signal.h,v 1.6 2001/09/30 18:52:17
- * $FreeBSD: stable/11/sys/arm/include/signal.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_SIGNAL_H_

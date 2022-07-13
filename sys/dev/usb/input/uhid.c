@@ -5,9 +5,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/usb/input/uhid.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -68,6 +70,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/usb/input/uhid.c 331722 2018-03-29 02:50:5
 #include <dev/usb/usbdi_util.h>
 #include <dev/usb/usbhid.h>
 #include <dev/usb/usb_ioctl.h>
+#include <dev/usb/usb_generic.h>
 
 #define	USB_DEBUG_VAR uhid_debug
 #include <dev/usb/usb_debug.h>
@@ -141,11 +144,13 @@ static usb_fifo_cmd_t uhid_stop_write;
 static usb_fifo_open_t uhid_open;
 static usb_fifo_close_t uhid_close;
 static usb_fifo_ioctl_t uhid_ioctl;
+static usb_fifo_ioctl_t uhid_ioctl_post;
 
 static struct usb_fifo_methods uhid_fifo_methods = {
 	.f_open = &uhid_open,
 	.f_close = &uhid_close,
 	.f_ioctl = &uhid_ioctl,
+	.f_ioctl_post = &uhid_ioctl_post,
 	.f_start_read = &uhid_start_read,
 	.f_stop_read = &uhid_stop_read,
 	.f_start_write = &uhid_start_write,
@@ -208,6 +213,12 @@ uhid_intr_read_callback(struct usb_xfer *xfer, usb_error_t error)
 				actlen = sc->sc_isize;
 			usb_fifo_put_data(sc->sc_fifo.fp[USB_FIFO_RX], pc,
 			    0, actlen, 1);
+
+			/*
+			 * Do not do read-ahead, because this may lead
+			 * to data loss!
+			 */
+			return;
 		} else {
 			/* ignore it */
 			DPRINTF("ignored transfer, %d bytes\n", actlen);
@@ -448,10 +459,6 @@ uhid_get_report(struct uhid_softc *sc, uint8_t type,
 
 	if (kern_data == NULL) {
 		kern_data = malloc(len, M_USBDEV, M_WAITOK);
-		if (kern_data == NULL) {
-			err = ENOMEM;
-			goto done;
-		}
 		free_data = 1;
 	}
 	err = usbd_req_get_report(sc->sc_udev, NULL, kern_data,
@@ -484,10 +491,6 @@ uhid_set_report(struct uhid_softc *sc, uint8_t type,
 
 	if (kern_data == NULL) {
 		kern_data = malloc(len, M_USBDEV, M_WAITOK);
-		if (kern_data == NULL) {
-			err = ENOMEM;
-			goto done;
-		}
 		free_data = 1;
 		err = copyin(user_data, kern_data, len);
 		if (err) {
@@ -653,6 +656,24 @@ uhid_ioctl(struct usb_fifo *fifo, u_long cmd, void *addr,
 		break;
 
 	default:
+		error = ENOIOCTL;
+		break;
+	}
+	return (error);
+}
+
+static int
+uhid_ioctl_post(struct usb_fifo *fifo, u_long cmd, void *addr,
+    int fflags)
+{
+	int error;
+
+	switch (cmd) {
+	case USB_GET_DEVICEINFO:
+		error = ugen_fill_deviceinfo(fifo, addr);
+		break;
+
+	default:
 		error = EINVAL;
 		break;
 	}
@@ -673,6 +694,8 @@ uhid_probe(device_t dev)
 {
 	struct usb_attach_arg *uaa = device_get_ivars(dev);
 	int error;
+	void *buf;
+	uint16_t len;
 
 	DPRINTFN(11, "\n");
 
@@ -698,6 +721,25 @@ uhid_probe(device_t dev)
 	     ((uaa->info.bInterfaceProtocol == UIPROTO_MOUSE) &&
 	      !usb_test_quirk(uaa, UQ_UMS_IGNORE))))
 		return (ENXIO);
+
+	/* Check for mandatory multitouch usages to give wmt(4) a chance */
+	if (!usb_test_quirk(uaa, UQ_WMT_IGNORE)) {
+		error = usbd_req_get_hid_desc(uaa->device, NULL,
+		    &buf, &len, M_USBDEV, uaa->info.bIfaceIndex);
+		/* Let HID decscriptor-less devices to be handled at attach */
+		if (!error) {
+			if (hid_locate(buf, len,
+			    HID_USAGE2(HUP_DIGITIZERS, HUD_CONTACT_MAX),
+			    hid_feature, 0, NULL, NULL, NULL) &&
+			    hid_locate(buf, len,
+			    HID_USAGE2(HUP_DIGITIZERS, HUD_CONTACTID),
+			    hid_input, 0, NULL, NULL, NULL)) {
+				free(buf, M_USBDEV);
+				return (ENXIO);
+			}
+			free(buf, M_USBDEV);
+		}
+	}
 
 	return (BUS_PROBE_GENERIC);
 }

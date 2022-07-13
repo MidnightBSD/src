@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $FreeBSD: stable/11/sys/dev/ncr/locate.pl 272015 2014-09-23 05:37:17Z rpaulo $
+# $FreeBSD$
 
 use strict;
 

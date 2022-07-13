@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/mlx4/Makefile 331769 2018-03-30 18:06:29Z hselasky $
+# $FreeBSD$
 .PATH:  ${SRCTOP}/sys/dev/mlx4/mlx4_core
 
 KMOD=	mlx4

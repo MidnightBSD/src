@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ocs_fc/version.h 331766 2018-03-30 15:28:25Z ken $
+ * $FreeBSD$
  */
 
 #define STR_BE_BRANCH "0"

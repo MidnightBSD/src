@@ -1,6 +1,8 @@
 /*	$NetBSD: am79900reg.h,v 1.8 2005/12/11 12:21:25 christos Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD AND BSD-3-Clause
+ *
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -63,7 +65,7 @@
  *	@(#)if_lereg.h	8.1 (Berkeley) 6/10/93
  */
 
-/* $FreeBSD: stable/11/sys/dev/le/am79900reg.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 #ifndef _DEV_LE_AM79900REG_H_
 #define	_DEV_LE_AM79900REG_H_

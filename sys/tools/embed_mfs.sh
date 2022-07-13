@@ -1,5 +1,7 @@
 #!/bin/sh
 #
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (C) 2008 The FreeBSD Project. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -23,8 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/tools/embed_mfs.sh 331691 2018-03-28 17:19:04Z emaste $ 
-# $MidnightBSD$
+# $FreeBSD$ 
 #
 # Embed an MFS image into the kernel body or the loader body (expects space
 # reserved via MD_ROOT_SIZE (kernel) or MD_IMAGE_SIZE (loader))

@@ -21,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/atombios.h 300050 2016-05-17 12:52:31Z eadler $");
+__FBSDID("$FreeBSD$");
 
 
 /****************************************************************************/	

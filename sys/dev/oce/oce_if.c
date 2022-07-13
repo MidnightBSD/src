@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 2013 Emulex
  * All rights reserved.
  *
@@ -36,7 +38,7 @@
  * Costa Mesa, CA 92626
  */
 
-/* $FreeBSD: stable/11/sys/dev/oce/oce_if.c 356090 2019-12-26 16:58:11Z markj $ */
+/* $FreeBSD$ */
 
 #include "opt_inet6.h"
 #include "opt_inet.h"
@@ -212,12 +214,6 @@ static driver_t oce_driver = {
 static devclass_t oce_devclass;
 
 
-DRIVER_MODULE(oce, pci, oce_driver, oce_devclass, 0, 0);
-MODULE_DEPEND(oce, pci, 1, 1, 1);
-MODULE_DEPEND(oce, ether, 1, 1, 1);
-MODULE_VERSION(oce, 1);
-
-
 /* global vars */
 const char component_revision[32] = {"///" COMPONENT_REVISION "///"};
 
@@ -239,6 +235,15 @@ static uint32_t supportedDevices[] =  {
 	(PCI_VENDOR_EMULEX << 16) | PCI_PRODUCT_XE201_VF,
 	(PCI_VENDOR_EMULEX << 16) | PCI_PRODUCT_SH
 };
+
+
+DRIVER_MODULE(oce, pci, oce_driver, oce_devclass, 0, 0);
+MODULE_PNP_INFO("W32:vendor/device", pci, oce, supportedDevices,
+    nitems(supportedDevices));
+MODULE_DEPEND(oce, pci, 1, 1, 1);
+MODULE_DEPEND(oce, ether, 1, 1, 1);
+MODULE_VERSION(oce, 1);
+
 
 POCE_SOFTC softc_head = NULL;
 POCE_SOFTC softc_tail = NULL;
@@ -534,6 +539,7 @@ oce_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 			
 			if (IFCAP_TSO & ifp->if_capenable &&
 			    !(IFCAP_TXCSUM & ifp->if_capenable)) {
+				u &= ~IFCAP_TSO;
 				ifp->if_capenable &= ~IFCAP_TSO;
 				ifp->if_hwassist &= ~CSUM_TSO;
 				if_printf(ifp,
@@ -588,27 +594,26 @@ oce_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		if (rc)
 			break;
 
-		if (i2c.dev_addr != PAGE_NUM_A0 &&
-		    i2c.dev_addr != PAGE_NUM_A2) {
+		if (i2c.dev_addr == PAGE_NUM_A0) {
+			offset = i2c.offset;
+		} else if (i2c.dev_addr == PAGE_NUM_A2) {
+			offset = TRANSCEIVER_A0_SIZE + i2c.offset;
+		} else {
 			rc = EINVAL;
 			break;
 		}
 
-		if (i2c.len > sizeof(i2c.data)) {
+		if (i2c.len > sizeof(i2c.data) ||
+		    i2c.len + offset > sizeof(sfp_vpd_dump_buffer)) {
 			rc = EINVAL;
 			break;
 		}
 
 		rc = oce_mbox_read_transrecv_data(sc, i2c.dev_addr);
-		if(rc) {
+		if (rc) {
 			rc = -rc;
 			break;
 		}
-
-		if (i2c.dev_addr == PAGE_NUM_A0)
-			offset = i2c.offset;
-		else
-			offset = TRANSCEIVER_A0_SIZE + i2c.offset;
 
 		memcpy(&i2c.data[0], &sfp_vpd_dump_buffer[offset], i2c.len);
 
@@ -2394,10 +2399,20 @@ oce_eqd_set_periodic(POCE_SOFTC sc)
 			goto modify_eqd;
 		}
 
-		rq = sc->rq[i];
-		rxpkts = rq->rx_stats.rx_pkts;
-		wq = sc->wq[i];
-		tx_reqs = wq->tx_stats.tx_reqs;
+		if (i == 0) {
+			rq = sc->rq[0];
+			rxpkts = rq->rx_stats.rx_pkts;
+		} else
+			rxpkts = 0;
+		if (i + 1 < sc->nrqs) {
+			rq = sc->rq[i + 1];
+			rxpkts += rq->rx_stats.rx_pkts;
+		}
+		if (i < sc->nwqs) {
+			wq = sc->wq[i];
+			tx_reqs = wq->tx_stats.tx_reqs;
+		} else
+			tx_reqs = 0;
 		now = ticks;
 
 		if (!aic->ticks || now < aic->ticks ||

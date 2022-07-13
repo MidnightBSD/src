@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/kernel.h 347791 2019-05-16 17:01:39Z hselasky $
+ * $FreeBSD$
  */
 #ifndef	_LINUX_KERNEL_H_
 #define	_LINUX_KERNEL_H_
@@ -94,6 +94,9 @@
 #define	BUILD_BUG_ON_NOT_POWER_OF_2(x)	BUILD_BUG_ON(!powerof2(x))
 #define	BUILD_BUG_ON_INVALID(expr)	while (0) { (void)(expr); }
 
+extern const volatile int lkpi_build_bug_on_zero;
+#define	BUILD_BUG_ON_ZERO(x)	((x) ? lkpi_build_bug_on_zero : 0)
+
 #define	BUG()			panic("BUG at %s:%d", __FILE__, __LINE__)
 #define	BUG_ON(cond)		do {				\
 	if (cond) {						\
@@ -102,26 +105,31 @@
 	}							\
 } while (0)
 
+extern int linuxkpi_warn_dump_stack;
 #define	WARN_ON(cond) ({					\
-      bool __ret = (cond);					\
-      if (__ret) {						\
+	bool __ret = (cond);					\
+	if (__ret) {						\
 		printf("WARNING %s failed at %s:%d\n",		\
 		    __stringify(cond), __FILE__, __LINE__);	\
-      }								\
-      unlikely(__ret);						\
+		if (linuxkpi_warn_dump_stack)				\
+			linux_dump_stack();				\
+	}								\
+	unlikely(__ret);						\
 })
 
 #define	WARN_ON_SMP(cond)	WARN_ON(cond)
 
 #define	WARN_ON_ONCE(cond) ({					\
-      static bool __warn_on_once;				\
-      bool __ret = (cond);					\
-      if (__ret && !__warn_on_once) {				\
+	static bool __warn_on_once;				\
+	bool __ret = (cond);					\
+	if (__ret && !__warn_on_once) {				\
 		__warn_on_once = 1;				\
 		printf("WARNING %s failed at %s:%d\n",		\
 		    __stringify(cond), __FILE__, __LINE__);	\
-      }								\
-      unlikely(__ret);						\
+		if (linuxkpi_warn_dump_stack)				\
+			linux_dump_stack();				\
+	}								\
+	unlikely(__ret);						\
 })
 
 #define	oops_in_progress	SCHEDULER_STOPPED()
@@ -130,9 +138,11 @@
 #define	ALIGN(x, y)		roundup2((x), (y))
 #undef PTR_ALIGN
 #define	PTR_ALIGN(p, a)		((__typeof(p))ALIGN((uintptr_t)(p), (a)))
+#define	IS_ALIGNED(x, a)	(((x) & ((__typeof(x))(a) - 1)) == 0)
 #define	DIV_ROUND_UP(x, n)	howmany(x, n)
 #define	__KERNEL_DIV_ROUND_UP(x, n)	howmany(x, n)
 #define	DIV_ROUND_UP_ULL(x, n)	DIV_ROUND_UP((unsigned long long)(x), (n))
+#define	DIV_ROUND_DOWN_ULL(x, n) (((unsigned long long)(x) / (n)) * (n))
 #define	FIELD_SIZEOF(t, f)	sizeof(((t *)0)->f)
 
 #define	printk(...)		printf(__VA_ARGS__)
@@ -228,6 +238,8 @@ extern int linuxkpi_debug;
 	log(LOG_CRIT, pr_fmt(fmt), ##__VA_ARGS__)
 #define pr_err(fmt, ...) \
 	log(LOG_ERR, pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_err_once(fmt, ...) \
+	log_once(LOG_ERR, pr_fmt(fmt), ##__VA_ARGS__)
 #define pr_warning(fmt, ...) \
 	log(LOG_WARNING, pr_fmt(fmt), ##__VA_ARGS__)
 #define pr_warn(...) \
@@ -367,6 +379,24 @@ kstrtouint(const char *cp, unsigned int base, unsigned int *res)
 }
 
 static inline int
+kstrtou16(const char *cp, unsigned int base, u16 *res)
+{
+	char *end;
+	unsigned long temp;
+
+	*res = temp = strtoul(cp, &end, base);
+
+	/* skip newline character, if any */
+	if (*end == '\n')
+		end++;
+	if (*cp == 0 || *end != 0)
+		return (-EINVAL);
+	if (temp != (u16)temp)
+		return (-ERANGE);
+	return (0);
+}
+
+static inline int
 kstrtou32(const char *cp, unsigned int base, u32 *res)
 {
 	char *end;
@@ -382,6 +412,21 @@ kstrtou32(const char *cp, unsigned int base, u32 *res)
 	if (temp != (u32)temp)
 		return (-ERANGE);
 	return (0);
+}
+
+static inline int
+kstrtou64(const char *cp, unsigned int base, u64 *res)
+{
+       char *end;
+
+       *res = strtouq(cp, &end, base);
+
+       /* skip newline character, if any */
+       if (*end == '\n')
+               end++;
+       if (*cp == 0 || *end != 0)
+               return (-EINVAL);
+       return (0);
 }
 
 static inline int
@@ -439,6 +484,9 @@ kstrtobool_from_user(const char __user *s, size_t count, bool *res)
 	type __max1 = (x);			\
 	type __max2 = (y);			\
 	__max1 > __max2 ? __max1 : __max2; })
+
+#define offsetofend(t, m)	\
+        (offsetof(t, m) + sizeof((((t *)0)->m)))
 
 #define clamp_t(type, _x, min, max)	min_t(type, max_t(type, _x, min), max)
 #define clamp(x, lo, hi)		min( max(x,lo), hi)
@@ -508,5 +556,46 @@ linux_ratelimited(linux_ratelimit_t *rl)
 {
 	return (ppsratecheck(&rl->lasttime, &rl->counter, 1));
 }
+
+#define	struct_size(ptr, field, num) ({ \
+	const size_t __size = offsetof(__typeof(*(ptr)), field); \
+	const size_t __max = (SIZE_MAX - __size) / sizeof((ptr)->field[0]); \
+	((num) > __max) ? SIZE_MAX : (__size + sizeof((ptr)->field[0]) * (num)); \
+})
+
+#define	__is_constexpr(x) \
+	__builtin_constant_p(x)
+
+/*
+ * The is_signed() macro below returns true if the passed data type is
+ * signed. Else false is returned.
+ */
+#define	is_signed(datatype) (((datatype)-1 / (datatype)2) == (datatype)0)
+
+/*
+ * The type_max() macro below returns the maxium positive value the
+ * passed data type can hold.
+ */
+#define	type_max(datatype) ( \
+  (sizeof(datatype) >= 8) ? (is_signed(datatype) ? INT64_MAX : UINT64_MAX) : \
+  (sizeof(datatype) >= 4) ? (is_signed(datatype) ? INT32_MAX : UINT32_MAX) : \
+  (sizeof(datatype) >= 2) ? (is_signed(datatype) ? INT16_MAX : UINT16_MAX) : \
+			    (is_signed(datatype) ? INT8_MAX : UINT8_MAX) \
+)
+
+/*
+ * The type_min() macro below returns the minimum value the passed
+ * data type can hold. For unsigned types the minimum value is always
+ * zero. For signed types it may vary.
+ */
+#define	type_min(datatype) ( \
+  (sizeof(datatype) >= 8) ? (is_signed(datatype) ? INT64_MIN : 0) : \
+  (sizeof(datatype) >= 4) ? (is_signed(datatype) ? INT32_MIN : 0) : \
+  (sizeof(datatype) >= 2) ? (is_signed(datatype) ? INT16_MIN : 0) : \
+			    (is_signed(datatype) ? INT8_MIN : 0) \
+)
+
+#define	TAINT_WARN	0
+#define	test_taint(x)	(0)
 
 #endif	/* _LINUX_KERNEL_H_ */

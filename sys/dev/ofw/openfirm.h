@@ -1,6 +1,8 @@
 /*	$NetBSD: openfirm.h,v 1.1 1998/05/15 10:16:00 tsubai Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (C) 1995, 1996 Wolfgang Solfrank.
  * Copyright (C) 1995, 1996 TooLs GmbH.
  * All rights reserved.
@@ -54,7 +56,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ofw/openfirm.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_OPENFIRM_H_
@@ -112,10 +114,14 @@ int		OF_hasprop(phandle_t node, const char *propname);
 ssize_t		OF_searchprop(phandle_t node, const char *propname, void *buf,
 		    size_t len);
 ssize_t		OF_searchencprop(phandle_t node, const char *propname,
-		    void *buf, size_t len);
+		    pcell_t *buf, size_t len);
 ssize_t		OF_getprop_alloc(phandle_t node, const char *propname,
+		    void **buf);
+ssize_t		OF_getprop_alloc_multi(phandle_t node, const char *propname,
 		    int elsz, void **buf);
 ssize_t		OF_getencprop_alloc(phandle_t node, const char *propname,
+		    void **buf);
+ssize_t		OF_getencprop_alloc_multi(phandle_t node, const char *propname,
 		    int elsz, void **buf);
 void		OF_prop_free(void *buf);
 int		OF_nextprop(phandle_t node, const char *propname, char *buf,

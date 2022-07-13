@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/bwn/if_bwn_phy_lp.h 298944 2016-05-02 21:06:02Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef	__IF_BWN_PHY_LP_H__

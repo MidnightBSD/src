@@ -78,14 +78,14 @@
  *
  */
 
-#include "assym.s"
+#include "assym.inc"
 
 #include <machine/asm.h>
 #include <machine/asmacros.h>
 #include <machine/armreg.h>
 #include <machine/vfp.h>
 
-__FBSDID("$FreeBSD: stable/11/sys/arm/arm/swtch.S 295066 2016-01-30 08:02:12Z mmel $");
+__FBSDID("$FreeBSD$");
 
 #ifdef VFP
 	.fpu vfp	/* allow VFP instructions */

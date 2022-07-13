@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/inetdevice.h 341880 2018-12-12 11:14:52Z hselasky $
+ * $FreeBSD$
  */
 #ifndef	_LINUX_INETDEVICE_H_
 #define	_LINUX_INETDEVICE_H_
@@ -44,16 +44,17 @@ ip_dev_find(struct vnet *vnet, uint32_t addr)
 	sin.sin_addr.s_addr = addr;
 	sin.sin_len = sizeof(sin);
 	sin.sin_family = AF_INET;
+	NET_EPOCH_ENTER();
 	CURVNET_SET_QUIET(vnet);
 	ifa = ifa_ifwithaddr((struct sockaddr *)&sin);
 	CURVNET_RESTORE();
 	if (ifa) {
 		ifp = ifa->ifa_ifp;
 		if_ref(ifp);
-		ifa_free(ifa);
 	} else {
 		ifp = NULL;
 	}
+	NET_EPOCH_EXIT();
 	return (ifp);
 }
 
@@ -73,16 +74,17 @@ ip6_dev_find(struct vnet *vnet, struct in6_addr addr, uint16_t scope_id)
 		/* embed the IPv6 scope ID */
 		sin6.sin6_addr.s6_addr16[1] = htons(scope_id);
 	}
+	NET_EPOCH_ENTER();
 	CURVNET_SET_QUIET(vnet);
 	ifa = ifa_ifwithaddr((struct sockaddr *)&sin6);
 	CURVNET_RESTORE();
 	if (ifa != NULL) {
 		ifp = ifa->ifa_ifp;
 		if_ref(ifp);
-		ifa_free(ifa);
 	} else {
 		ifp = NULL;
 	}
+	NET_EPOCH_EXIT();
 	return (ifp);
 }
 

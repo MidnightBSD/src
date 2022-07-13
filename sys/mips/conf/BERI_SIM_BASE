@@ -3,10 +3,12 @@
 # Extensible RISC Implementation) FPGA soft core, as configured for
 # simulation.
 #
-# $FreeBSD: stable/11/sys/mips/conf/BERI_SIM_BASE 256912 2013-10-22 15:45:31Z brooks $
+# $FreeBSD$
 #
 
-include "BERI_TEMPLATE"
+#NO_UNIVERSE
+
+include "std.BERI"
 
 options 	FDT
 options 	FDT_DTB_STATIC

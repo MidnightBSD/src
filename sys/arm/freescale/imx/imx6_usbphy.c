@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Ian Lepore <ian@freebsd.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/imx/imx6_usbphy.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * USBPHY driver for Freescale i.MX6 family of SoCs.
@@ -200,9 +202,9 @@ static devclass_t usbphy_devclass;
 
 /*
  * This driver needs to start before the ehci driver, but later than the usual
- * "special" drivers like clocks and cpu.  Ehci starts at DEFAULT so
- * DEFAULT-1000 seems good.
+ * "special" drivers like clocks and cpu.  Ehci starts at DEFAULT so SUPPORTDEV
+ * is where this driver fits most.
  */
 EARLY_DRIVER_MODULE(usbphy, simplebus, usbphy_driver, usbphy_devclass, 0, 0,
-    BUS_PASS_DEFAULT - 1000);
+    BUS_PASS_SUPPORTDEV + BUS_PASS_ORDER_MIDDLE);
 

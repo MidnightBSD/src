@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/isp/isp_ioctl.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997-2006 by Matthew Jacob
  * All rights reserved.
  *

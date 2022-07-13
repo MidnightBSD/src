@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Alcove - Nicolas Souchu <nsouch@freebsd.org>
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/fb/s3_pci.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /* Enable LFB on S3 cards that has only VESA 1.2 BIOS */
 

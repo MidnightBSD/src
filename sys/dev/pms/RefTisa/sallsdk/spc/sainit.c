@@ -26,7 +26,7 @@
  */
 /******************************************************************************/
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/pms/RefTisa/sallsdk/spc/sainit.c 315221 2017-03-14 02:06:03Z pfg $");
+__FBSDID("$FreeBSD$");
 #include <dev/pms/config.h>
 
 #include <dev/pms/RefTisa/sallsdk/spc/saglobal.h>

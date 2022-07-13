@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -11,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -28,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)filedesc.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: stable/11/sys/sys/filedesc.h 339821 2018-10-27 19:08:06Z des $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_FILEDESC_H_
@@ -230,12 +231,14 @@ fdeget_locked(struct filedesc *fdp, int fd)
 	return (fde);
 }
 
+#ifdef CAPABILITIES
 static __inline bool
 fd_modified(struct filedesc *fdp, int fd, seq_t seq)
 {
 
 	return (!seq_consistent(fd_seq(fdp->fd_files, fd), seq));
 }
+#endif
 
 /* cdir/rdir/jdir manipulation functions. */
 void	pwd_chdir(struct thread *td, struct vnode *vp);

@@ -1,8 +1,8 @@
 /******************************************************************************
 
-  Copyright (c) 2013-2019, Intel Corporation
+  Copyright (c) 2013-2018, Intel Corporation
   All rights reserved.
-
+  
   Redistribution and use in source and binary forms, with or without 
   modification, are permitted provided that the following conditions are met:
   
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/ixl/i40e_type.h 349163 2019-06-18 00:08:02Z erj $*/
+/*$FreeBSD$*/
 
 #ifndef _I40E_TYPE_H_
 #define _I40E_TYPE_H_
@@ -95,8 +95,8 @@ typedef void (*I40E_ADMINQ_CALLBACK)(struct i40e_hw *, struct i40e_aq_desc *);
 #define I40E_HI_BYTE(x)		((u8)(((x) >> 8) & 0xFF))
 #define I40E_LO_BYTE(x)		((u8)((x) & 0xFF))
 
-/* Number of Transmit Descriptors must be a multiple of 8. */
-#define I40E_REQ_TX_DESCRIPTOR_MULTIPLE	8
+/* Number of Transmit Descriptors must be a multiple of 32. */
+#define I40E_REQ_TX_DESCRIPTOR_MULTIPLE	32
 /* Number of Receive Descriptors must be a multiple of 32 if
  * the number of descriptors is greater than 32.
  */
@@ -125,6 +125,8 @@ enum i40e_debug_mask {
 	I40E_DEBUG_DCB			= 0x00000400,
 	I40E_DEBUG_DIAG			= 0x00000800,
 	I40E_DEBUG_FD			= 0x00001000,
+
+	I40E_DEBUG_IWARP		= 0x00F00000,
 
 	I40E_DEBUG_AQ_MESSAGE		= 0x01000000,
 	I40E_DEBUG_AQ_DESCRIPTOR	= 0x02000000,
@@ -188,7 +190,6 @@ enum i40e_memcpy_type {
 	I40E_DMA_TO_NONDMA
 };
 
-
 /* These are structs for managing the hardware information and the operations.
  * The structures of function pointers are filled out at init time when we
  * know for sure exactly which hardware we're working with.  This gives us the
@@ -242,6 +243,7 @@ enum i40e_vsi_type {
 	I40E_VSI_MIRROR	= 5,
 	I40E_VSI_SRIOV	= 6,
 	I40E_VSI_FDIR	= 7,
+	I40E_VSI_IWARP	= 8,
 	I40E_VSI_TYPE_UNKNOWN
 };
 
@@ -345,12 +347,8 @@ struct i40e_phy_info {
 					     I40E_PHY_TYPE_OFFSET)
 #define I40E_CAP_PHY_TYPE_25GBASE_ACC BIT_ULL(I40E_PHY_TYPE_25GBASE_ACC + \
 					     I40E_PHY_TYPE_OFFSET)
-/* Offset for 2.5G/5G PHY Types value to bit number conversion */
-#define I40E_PHY_TYPE_OFFSET2 (-10)
-#define I40E_CAP_PHY_TYPE_2_5GBASE_T BIT_ULL(I40E_PHY_TYPE_2_5GBASE_T + \
-					     I40E_PHY_TYPE_OFFSET2)
-#define I40E_CAP_PHY_TYPE_5GBASE_T BIT_ULL(I40E_PHY_TYPE_5GBASE_T + \
-					     I40E_PHY_TYPE_OFFSET2)
+#define I40E_CAP_PHY_TYPE_2_5GBASE_T BIT_ULL(I40E_PHY_TYPE_2_5GBASE_T)
+#define I40E_CAP_PHY_TYPE_5GBASE_T BIT_ULL(I40E_PHY_TYPE_5GBASE_T)
 #define I40E_HW_CAP_MAX_GPIO			30
 #define I40E_HW_CAP_MDIO_PORT_MODE_MDIO		0
 #define I40E_HW_CAP_MDIO_PORT_MODE_I2C		1
@@ -379,6 +377,7 @@ struct i40e_hw_capabilities {
 #define I40E_CLOUD_FILTER_MODE1	0x6
 #define I40E_CLOUD_FILTER_MODE2	0x7
 #define I40E_CLOUD_FILTER_MODE3	0x8
+#define I40E_SWITCH_MODE_MASK	0xF
 
 	u32  management_mode;
 	u32  mng_protocols_over_mctp;
@@ -440,6 +439,7 @@ struct i40e_hw_capabilities {
 	u32 enabled_tcmap;
 	u32 maxtc;
 	u64 wr_csr_prot;
+	bool dis_unused_ports;
 	bool apm_wol_support;
 	enum i40e_acpi_programming_method acpi_prog_method;
 	bool proxy_support;
@@ -754,6 +754,9 @@ struct i40e_hw {
 #define I40E_HW_FLAG_NVM_READ_REQUIRES_LOCK BIT_ULL(3)
 #define I40E_HW_FLAG_FW_LLDP_STOPPABLE	    BIT_ULL(4)
 #define I40E_HW_FLAG_FW_LLDP_PERSISTENT     BIT_ULL(5)
+#define I40E_HW_FLAG_AQ_PHY_ACCESS_EXTENDED BIT_ULL(6)
+#define I40E_HW_FLAG_DROP_MODE		    BIT_ULL(7)
+#define I40E_HW_FLAG_X722_FEC_REQUEST_CAPABLE BIT_ULL(8)
 	u64 flags;
 
 	/* Used in set switch config AQ command */
@@ -969,7 +972,8 @@ enum i40e_rx_l2_ptype {
 	I40E_RX_PTYPE_GRENAT4_MAC_PAY3			= 58,
 	I40E_RX_PTYPE_GRENAT4_MACVLAN_IPV6_ICMP_PAY4	= 87,
 	I40E_RX_PTYPE_GRENAT6_MAC_PAY3			= 124,
-	I40E_RX_PTYPE_GRENAT6_MACVLAN_IPV6_ICMP_PAY4	= 153
+	I40E_RX_PTYPE_GRENAT6_MACVLAN_IPV6_ICMP_PAY4	= 153,
+	I40E_RX_PTYPE_PARSER_ABORTED			= 255
 };
 
 struct i40e_rx_ptype_decoded {
@@ -1490,6 +1494,8 @@ struct i40e_hw_port_stats {
 	u32 rx_lpi_status;
 	u64 tx_lpi_count;		/* etlpic */
 	u64 rx_lpi_count;		/* erlpic */
+	u64 tx_lpi_duration;
+	u64 rx_lpi_duration;
 };
 
 /* Checksum and Shadow RAM pointers */
@@ -1542,6 +1548,10 @@ struct i40e_hw_port_stats {
 #define I40E_SR_FEATURE_CONFIGURATION_PTR	0x49
 #define I40E_SR_CONFIGURATION_METADATA_PTR	0x4D
 #define I40E_SR_IMMEDIATE_VALUES_PTR		0x4E
+#define I40E_SR_5TH_FREE_PROVISION_AREA_PTR	0x50
+#define I40E_SR_PRESERVATION_RULES_PTR		0x70
+#define I40E_FPK_SR_5TH_FREE_PROVISION_AREA_PTR	0x71
+#define I40E_SR_6TH_FREE_PROVISION_AREA_PTR	0x71
 
 /* Auxiliary field, mask and shift definition for Shadow RAM and NVM Flash */
 #define I40E_SR_VPD_MODULE_MAX_SIZE		1024
@@ -1711,6 +1721,8 @@ struct i40e_lldp_variables {
 #define I40E_L4_DST_MASK		(0x1ULL << I40E_L4_DST_SHIFT)
 #define I40E_VERIFY_TAG_SHIFT		31
 #define I40E_VERIFY_TAG_MASK		(0x3ULL << I40E_VERIFY_TAG_SHIFT)
+#define I40E_VLAN_SRC_SHIFT		55
+#define I40E_VLAN_SRC_MASK		(0x1ULL << I40E_VLAN_SRC_SHIFT)
 
 #define I40E_FLEX_50_SHIFT		13
 #define I40E_FLEX_50_MASK		(0x1ULL << I40E_FLEX_50_SHIFT)
@@ -1728,7 +1740,6 @@ struct i40e_lldp_variables {
 #define I40E_FLEX_56_MASK		(0x1ULL << I40E_FLEX_56_SHIFT)
 #define I40E_FLEX_57_SHIFT		6
 #define I40E_FLEX_57_MASK		(0x1ULL << I40E_FLEX_57_SHIFT)
-
 #define I40E_BCM_PHY_PCS_STATUS1_PAGE	0x3
 #define I40E_BCM_PHY_PCS_STATUS1_REG	0x0001
 #define I40E_BCM_PHY_PCS_STATUS1_RX_LPI	BIT(8)

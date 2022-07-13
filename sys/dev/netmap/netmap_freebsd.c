@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2013-2014 Universita` di Pisa. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +25,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/11/sys/dev/netmap/netmap_freebsd.c 350010 2019-07-15 20:38:56Z vmaffione $ */
+/* $FreeBSD$ */
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
@@ -661,6 +663,7 @@ nm_os_vi_detach(struct ifnet *ifp)
 
 #ifdef WITH_EXTMEM
 #include <vm/vm_map.h>
+#include <vm/vm_extern.h>
 #include <vm/vm_kern.h>
 struct nm_os_extmem {
 	vm_object_t obj;
@@ -723,17 +726,18 @@ nm_os_extmem_create(unsigned long p, struct nmreq_pools_info *pi, int *perror)
 			&obj, &index, &prot, &wired);
 	if (rv != KERN_SUCCESS) {
 		nm_prerr("address %lx not found", p);
+		error = vm_mmap_to_errno(rv);
 		goto out_free;
 	}
+	vm_object_reference(obj);
+
 	/* check that we are given the whole vm_object ? */
 	vm_map_lookup_done(map, entry);
 
-	// XXX can we really use obj after releasing the map lock?
 	e->obj = obj;
-	vm_object_reference(obj);
-	/* wire the memory and add the vm_object to the kernel map,
-	 * to make sure that it is not fred even if the processes that
-	 * are mmap()ing it all exit
+	/* Wire the memory and add the vm_object to the kernel map,
+	 * to make sure that it is not freed even if all the processes
+	 * that are mmap()ing should munmap() it.
 	 */
 	e->kva = vm_map_min(kernel_map);
 	e->size = obj->size << PAGE_SHIFT;
@@ -742,12 +746,14 @@ nm_os_extmem_create(unsigned long p, struct nmreq_pools_info *pi, int *perror)
 			VM_PROT_READ | VM_PROT_WRITE, 0);
 	if (rv != KERN_SUCCESS) {
 		nm_prerr("vm_map_find(%zx) failed", (size_t)e->size);
+		error = vm_mmap_to_errno(rv);
 		goto out_rel;
 	}
 	rv = vm_map_wire(kernel_map, e->kva, e->kva + e->size,
 			VM_MAP_WIRE_SYSTEM | VM_MAP_WIRE_NOHOLES);
 	if (rv != KERN_SUCCESS) {
 		nm_prerr("vm_map_wire failed");
+		error = vm_mmap_to_errno(rv);
 		goto out_rem;
 	}
 
@@ -757,9 +763,9 @@ nm_os_extmem_create(unsigned long p, struct nmreq_pools_info *pi, int *perror)
 
 out_rem:
 	vm_map_remove(kernel_map, e->kva, e->kva + e->size);
-	e->obj = NULL;
 out_rel:
 	vm_object_deallocate(e->obj);
+	e->obj = NULL;
 out_free:
 	nm_os_free(e);
 out:

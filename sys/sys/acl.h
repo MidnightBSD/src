@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999-2001 Robert N. M. Watson
  * Copyright (c) 2008 Edward Tomasz Napierała <trasz@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/acl.h 290893 2015-11-15 23:54:34Z ngie $
+ * $FreeBSD$
  */
 /* 
  * Developed by the TrustedBSD Project.

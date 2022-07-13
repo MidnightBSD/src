@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  *       Copyright (c) 2000-03 ICP vortex GmbH
  *       Copyright (c) 2002-03 Intel Corporation
  *       Copyright (c) 2003    Adaptec Inc.
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/iir/iir_pci.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  *  iir_pci.c:  PCI Bus Attachment for Intel Integrated RAID Controller driver
@@ -334,6 +336,7 @@ iir_pci_attach(device_t dev)
     }
 
     gdt_pci_enable_intr(gdt);
+    gone_in_dev(dev, 14, "iir(4) removed");
     return (0);
     
 err:

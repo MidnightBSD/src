@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Juli Mallett <jmallett@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,14 +25,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/mips/mips/freebsd32_machdep.c 341165 2018-11-28 21:19:58Z vangyzen $
+ * $FreeBSD$
  */
 
 /*
  * Based on nwhitehorn's COMPAT_FREEBSD32 support code for PowerPC64.
  */
-
-#include "opt_compat.h"
 
 #define __ELF_WORD_SIZE 32
 
@@ -57,10 +57,12 @@
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 
+#include <machine/cpuinfo.h>
 #include <machine/md_var.h>
 #include <machine/reg.h>
 #include <machine/sigframe.h>
 #include <machine/sysarch.h>
+#include <machine/tls.h>
 
 #include <compat/freebsd32/freebsd32_signal.h>
 #include <compat/freebsd32/freebsd32_util.h>
@@ -88,7 +90,6 @@ struct sysentvec elf32_freebsd_sysvec = {
 	.sv_coredump	= __elfN(coredump),
 	.sv_imgact_try	= NULL,
 	.sv_minsigstksz	= MINSIGSTKSZ,
-	.sv_pagesize	= PAGE_SIZE,
 	.sv_minuser	= VM_MIN_ADDRESS,
 	.sv_maxuser	= ((vm_offset_t)0x80000000),
 	.sv_usrstack	= FREEBSD32_USRSTACK,
@@ -116,7 +117,8 @@ static Elf32_Brandinfo freebsd_brand_info = {
 	.interp_path	= "/libexec/ld-elf.so.1",
 	.sysvec		= &elf32_freebsd_sysvec,
 	.interp_newpath	= "/libexec/ld-elf32.so.1",
-	.flags		= 0
+	.brand_note	= &elf32_freebsd_brandnote,
+	.flags		= BI_CAN_EXEC_DYN | BI_BRAND_NOTE
 };
 
 SYSINIT(elf32, SI_SUB_EXEC, SI_ORDER_FIRST,
@@ -138,6 +140,8 @@ freebsd32_exec_setregs(struct thread *td, struct image_params *imgp, u_long stac
 	 * Clear extended address space bit for userland.
 	 */
 	td->td_frame->sr &= ~MIPS_SR_UX;
+
+	td->td_md.md_tls_tcb_offset = TLS_TP_OFFSET + TLS_TCB_SIZE32;
 }
 
 int
@@ -473,6 +477,17 @@ freebsd32_sysarch(struct thread *td, struct freebsd32_sysarch_args *uap)
 	switch (uap->op) {
 	case MIPS_SET_TLS:
 		td->td_md.md_tls = (void *)(intptr_t)uap->parms;
+
+		/*
+		 * If there is an user local register implementation (ULRI)
+		 * update it as well.  Add the TLS and TCB offsets so the
+		 * value in this register is adjusted like in the case of the
+		 * rdhwr trap() instruction handler.
+		 */
+		if (cpuinfo.userlocal_reg == true) {
+			mips_wr_userlocal((unsigned long)(uap->parms +
+			    td->td_md.md_tls_tcb_offset));
+		}
 		return (0);
 	case MIPS_GET_TLS: 
 		tlsbase = (int32_t)(intptr_t)td->td_md.md_tls;

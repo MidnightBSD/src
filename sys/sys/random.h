@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2000-2015 Mark R. V. Murray
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
+ * Copyright (c) 2000-2015, 2017 Mark R. V. Murray
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,44 +25,70 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/random.h 346725 2019-04-26 01:58:36Z mw $
+ * $FreeBSD$
  */
 
 #ifndef	_SYS_RANDOM_H_
 #define	_SYS_RANDOM_H_
 
-#ifdef _KERNEL
-
 #include <sys/types.h>
 
-#if !defined(KLD_MODULE)
-#if defined(RANDOM_LOADABLE) && defined(RANDOM_YARROW)
-#error "Cannot define both RANDOM_LOADABLE and RANDOM_YARROW"
-#endif
-#endif
+#ifdef _KERNEL
 
 struct uio;
 
+/*
+ * In the loadable random world, there are set of dangling pointers left in the
+ * core kernel:
+ *   * read_random, read_random_uio, is_random_seeded are function pointers,
+ *     rather than functions.
+ *   * p_random_alg_context is a true pointer in loadable random kernels.
+ *
+ * These are initialized at SI_SUB_RANDOM:SI_ORDER_SECOND during boot.  The
+ * read-type pointers are initialized by random_alg_context_init() in
+ * randomdev.c and p_random_alg_context in the algorithm, e.g., fortuna.c's
+ * random_fortuna_init_alg().  The nice thing about function pointers is they
+ * have a similar calling convention to ordinary functions.
+ *
+ * (In !loadable, the read_random, etc, routines are just plain functions;
+ * p_random_alg_context is a macro for the public visibility
+ * &random_alg_context.)
+ */
 #if defined(DEV_RANDOM)
-u_int read_random(void *, u_int);
+#if defined(RANDOM_LOADABLE)
+extern void (*_read_random)(void *, u_int);
+extern int (*_read_random_uio)(struct uio *, bool);
+extern bool (*_is_random_seeded)(void);
+#define	read_random(a, b)	(*_read_random)(a, b)
+#define	read_random_uio(a, b)	(*_read_random_uio)(a, b)
+#define	is_random_seeded()	(*_is_random_seeded)()
+#else
+void read_random(void *, u_int);
 int read_random_uio(struct uio *, bool);
+bool is_random_seeded(void);
+#endif	//RANDOM_LOADABLE
+
 #else
 static __inline int
 read_random_uio(void *a __unused, u_int b __unused)
 {
 	return (0);
 }
-static __inline u_int
+static __inline void
 read_random(void *a __unused, u_int b __unused)
 {
-	return (0);
 }
-#endif
+static __inline bool
+is_random_seeded(void)
+{
+	return (false);
+}
+#endif	//DEV_RANDOM
 
 /*
- * Note: if you add or remove members of random_entropy_source, remember to also update the
- * KASSERT regarding what valid members are in random_harvest_internal(), and remember the
- * strings in the static array random_source_descr[] in random_harvestq.c.
+ * Note: if you add or remove members of random_entropy_source, remember to
+ * also update the strings in the static array random_source_descr[] in
+ * random_harvestq.c.
  *
  * NOTE: complain loudly to markm@ or on the lists if this enum gets more than 32
  * distinct values (0-31)! ENTROPYSOURCE may be == 32, but not > 32.
@@ -82,7 +109,8 @@ enum random_entropy_source {
 	RANDOM_UMA,	/* Special!! UMA/SLAB Allocator */
 	RANDOM_ENVIRONMENTAL_END = RANDOM_UMA,
 	/* Fast hardware random-number sources from here on. */
-	RANDOM_PURE_OCTEON,
+	RANDOM_PURE_START,
+	RANDOM_PURE_OCTEON = RANDOM_PURE_START,
 	RANDOM_PURE_SAFE,
 	RANDOM_PURE_GLXSB,
 	RANDOM_PURE_UBSEC,
@@ -92,28 +120,77 @@ enum random_entropy_source {
 	RANDOM_PURE_RNDTEST,
 	RANDOM_PURE_VIRTIO,
 	RANDOM_PURE_BROADCOM,
+	RANDOM_PURE_CCP,
+	RANDOM_PURE_DARN,
 	RANDOM_PURE_TPM,
 	ENTROPYSOURCE
 };
 
 #define RANDOM_HARVEST_EVERYTHING_MASK ((1 << (RANDOM_ENVIRONMENTAL_END + 1)) - 1)
+#define RANDOM_HARVEST_PURE_MASK (((1 << ENTROPYSOURCE) - 1) & (-1UL << RANDOM_PURE_START))
+
+#define RANDOM_CACHED_BOOT_ENTROPY_MODULE	"boot_entropy_cache"
 
 #if defined(DEV_RANDOM)
-void random_harvest_queue(const void *, u_int, u_int, enum random_entropy_source);
-void random_harvest_fast(const void *, u_int, u_int, enum random_entropy_source);
-void random_harvest_direct(const void *, u_int, u_int, enum random_entropy_source);
+extern u_int hc_source_mask;
+void random_harvest_queue_(const void *, u_int, enum random_entropy_source);
+void random_harvest_fast_(const void *, u_int);
+void random_harvest_direct_(const void *, u_int, enum random_entropy_source);
+
+static __inline void
+random_harvest_queue(const void *entropy, u_int size, enum random_entropy_source origin)
+{
+
+	if (hc_source_mask & (1 << origin))
+		random_harvest_queue_(entropy, size, origin);
+}
+
+static __inline void
+random_harvest_fast(const void *entropy, u_int size, enum random_entropy_source origin)
+{
+
+	if (hc_source_mask & (1 << origin))
+		random_harvest_fast_(entropy, size);
+}
+
+static __inline void
+random_harvest_direct(const void *entropy, u_int size, enum random_entropy_source origin)
+{
+
+	if (hc_source_mask & (1 << origin))
+		random_harvest_direct_(entropy, size, origin);
+}
+
+void random_harvest_register_source(enum random_entropy_source);
+void random_harvest_deregister_source(enum random_entropy_source);
 #else
-#define random_harvest_queue(a, b, c, d) do {} while (0)
-#define random_harvest_fast(a, b, c, d) do {} while (0)
-#define random_harvest_direct(a, b, c, d) do {} while (0)
+#define random_harvest_queue(a, b, c) do {} while (0)
+#define random_harvest_fast(a, b, c) do {} while (0)
+#define random_harvest_direct(a, b, c) do {} while (0)
+#define random_harvest_register_source(a) do {} while (0)
+#define random_harvest_deregister_source(a) do {} while (0)
 #endif
 
 #if defined(RANDOM_ENABLE_UMA)
-#define random_harvest_fast_uma(a, b, c, d)	random_harvest_fast(a, b, c, d)
+#define random_harvest_fast_uma(a, b, c)	random_harvest_fast(a, b, c)
 #else /* !defined(RANDOM_ENABLE_UMA) */
-#define random_harvest_fast_uma(a, b, c, d)	do {} while (0)
+#define random_harvest_fast_uma(a, b, c)	do {} while (0)
 #endif /* defined(RANDOM_ENABLE_UMA) */
 
+#if defined(RANDOM_ENABLE_ETHER)
+#define random_harvest_queue_ether(a, b)	random_harvest_queue(a, b, RANDOM_NET_ETHER)
+#else /* !defined(RANDOM_ENABLE_ETHER) */
+#define random_harvest_queue_ether(a, b)	do {} while (0)
+#endif /* defined(RANDOM_ENABLE_ETHER) */
+
+
 #endif /* _KERNEL */
+
+#define GRND_NONBLOCK	0x1
+#define GRND_RANDOM	0x2
+
+__BEGIN_DECLS
+ssize_t getrandom(void *buf, size_t buflen, unsigned int flags);
+__END_DECLS
 
 #endif /* _SYS_RANDOM_H_ */

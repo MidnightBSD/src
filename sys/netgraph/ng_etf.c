@@ -3,6 +3,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001, FreeBSD Incorporated 
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: stable/11/sys/netgraph/ng_etf.c 298813 2016-04-29 21:25:05Z pfg $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

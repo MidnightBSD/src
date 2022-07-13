@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
  *
@@ -39,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/wi/if_wi_pccard.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -83,7 +85,6 @@ static device_method_t wi_pccard_methods[] = {
 	DEVMETHOD(device_attach,	wi_pccard_attach),
 	DEVMETHOD(device_detach,	wi_detach),
 	DEVMETHOD(device_shutdown,	wi_shutdown),
-
 	{ 0, 0 }
 };
 
@@ -198,6 +199,7 @@ wi_pccard_attach(device_t dev)
 		error = wi_attach(dev);
 		if (error != 0)
 			wi_free(dev);
+		gone_in_dev(dev, 13, "pccard removed, wi doesn't support modern crypto");
 	}
 	return error;
 }

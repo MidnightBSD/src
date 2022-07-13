@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Chelsio Communications, Inc.
  * All rights reserved.
  * Written by: Navdeep Parhar <np@FreeBSD.org>
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/cxgbe/tom/t4_listen.c 355246 2019-11-30 20:04:40Z np $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -339,48 +341,32 @@ release_lctx(struct adapter *sc, struct listen_ctx *lctx)
 }
 
 static void
-send_reset_synqe(struct toedev *tod, struct synq_entry *synqe)
+send_flowc_wr_synqe(struct adapter *sc, struct synq_entry *synqe)
 {
-	struct adapter *sc = tod->tod_softc;
 	struct mbuf *m = synqe->syn;
 	struct ifnet *ifp = m->m_pkthdr.rcvif;
 	struct vi_info *vi = ifp->if_softc;
 	struct port_info *pi = vi->pi;
-	struct l2t_entry *e = &sc->l2t->l2tab[synqe->l2e_idx];
 	struct wrqe *wr;
 	struct fw_flowc_wr *flowc;
-	struct cpl_abort_req *req;
-	int flowclen;
 	struct sge_wrq *ofld_txq;
 	struct sge_ofld_rxq *ofld_rxq;
 	const int nparams = 6;
+	const int flowclen = sizeof(*flowc) + nparams * sizeof(struct fw_flowc_mnemval);
 	const u_int pfvf = sc->pf << S_FW_VIID_PFN;
 
 	INP_WLOCK_ASSERT(synqe->lctx->inp);
+	MPASS((synqe->flags & TPF_FLOWC_WR_SENT) == 0);
 
-	CTR5(KTR_CXGBE, "%s: synqe %p (0x%x), tid %d%s",
-	    __func__, synqe, synqe->flags, synqe->tid,
-	    synqe->flags & TPF_ABORT_SHUTDOWN ?
-	    " (abort already in progress)" : "");
-	if (synqe->flags & TPF_ABORT_SHUTDOWN)
-		return;	/* abort already in progress */
-	synqe->flags |= TPF_ABORT_SHUTDOWN;
+	ofld_txq = &sc->sge.ofld_txq[synqe->params.txq_idx];
+	ofld_rxq = &sc->sge.ofld_rxq[synqe->params.rxq_idx];
 
-	ofld_txq = &sc->sge.ofld_txq[synqe->txqid];
-	ofld_rxq = &sc->sge.ofld_rxq[synqe->rxqid];
-
-	/* The wrqe will have two WRs - a flowc followed by an abort_req */
-	flowclen = sizeof(*flowc) + nparams * sizeof(struct fw_flowc_mnemval);
-
-	wr = alloc_wrqe(roundup2(flowclen, EQ_ESIZE) + sizeof(*req), ofld_txq);
+	wr = alloc_wrqe(roundup2(flowclen, 16), ofld_txq);
 	if (wr == NULL) {
 		/* XXX */
 		panic("%s: allocation failure.", __func__);
 	}
 	flowc = wrtod(wr);
-	req = (void *)((caddr_t)flowc + roundup2(flowclen, EQ_ESIZE));
-
-	/* First the flowc ... */
 	memset(flowc, 0, wr->wr_len);
 	flowc->op_to_nparams = htobe32(V_FW_WR_OP(FW_FLOWC_WR) |
 	    V_FW_FLOWC_WR_NPARAMS(nparams));
@@ -394,19 +380,47 @@ send_reset_synqe(struct toedev *tod, struct synq_entry *synqe)
 	flowc->mnemval[2].val = htobe32(pi->tx_chan);
 	flowc->mnemval[3].mnemonic = FW_FLOWC_MNEM_IQID;
 	flowc->mnemval[3].val = htobe32(ofld_rxq->iq.abs_id);
- 	flowc->mnemval[4].mnemonic = FW_FLOWC_MNEM_SNDBUF;
- 	flowc->mnemval[4].val = htobe32(512);
- 	flowc->mnemval[5].mnemonic = FW_FLOWC_MNEM_MSS;
- 	flowc->mnemval[5].val = htobe32(512);
-	synqe->flags |= TPF_FLOWC_WR_SENT;
+	flowc->mnemval[4].mnemonic = FW_FLOWC_MNEM_SNDBUF;
+	flowc->mnemval[4].val = htobe32(512);
+	flowc->mnemval[5].mnemonic = FW_FLOWC_MNEM_MSS;
+	flowc->mnemval[5].val = htobe32(512);
 
-	/* ... then ABORT request */
+	synqe->flags |= TPF_FLOWC_WR_SENT;
+	t4_wrq_tx(sc, wr);
+}
+
+static void
+send_reset_synqe(struct toedev *tod, struct synq_entry *synqe)
+{
+	struct adapter *sc = tod->tod_softc;
+	struct wrqe *wr;
+	struct cpl_abort_req *req;
+
+	INP_WLOCK_ASSERT(synqe->lctx->inp);
+
+	CTR5(KTR_CXGBE, "%s: synqe %p (0x%x), tid %d%s",
+	    __func__, synqe, synqe->flags, synqe->tid,
+	    synqe->flags & TPF_ABORT_SHUTDOWN ?
+	    " (abort already in progress)" : "");
+	if (synqe->flags & TPF_ABORT_SHUTDOWN)
+		return;	/* abort already in progress */
+	synqe->flags |= TPF_ABORT_SHUTDOWN;
+
+	if (!(synqe->flags & TPF_FLOWC_WR_SENT))
+		send_flowc_wr_synqe(sc, synqe);
+
+	wr = alloc_wrqe(sizeof(*req), &sc->sge.ofld_txq[synqe->params.txq_idx]);
+	if (wr == NULL) {
+		/* XXX */
+		panic("%s: allocation failure.", __func__);
+	}
+	req = wrtod(wr);
 	INIT_TP_WR_MIT_CPL(req, CPL_ABORT_REQ, synqe->tid);
 	req->rsvd0 = 0;	/* don't have a snd_nxt */
 	req->rsvd1 = 1;	/* no data sent yet */
 	req->cmd = CPL_ABORT_SEND_RST;
 
-	t4_l2t_send(sc, wr, e);
+	t4_l2t_send(sc, wr, &sc->l2t->l2tab[synqe->params.l2t_idx]);
 }
 
 static int
@@ -510,8 +524,8 @@ t4_listen_start(struct toedev *tod, struct tcpcb *tp)
 	INP_WLOCK_ASSERT(inp);
 
 	rw_rlock(&sc->policy_lock);
-	settings = *lookup_offload_policy(sc, OPEN_TYPE_LISTEN, NULL, 0xffff,
-	    inp);
+	settings = *lookup_offload_policy(sc, OPEN_TYPE_LISTEN, NULL,
+	    EVL_MAKETAG(0xfff, 0, 0), inp);
 	rw_runlock(&sc->policy_lock);
 	if (!settings.offload)
 		return (0);
@@ -834,7 +848,7 @@ done_with_synqe(struct adapter *sc, struct synq_entry *synqe)
 {
 	struct listen_ctx *lctx = synqe->lctx;
 	struct inpcb *inp = lctx->inp;
-	struct l2t_entry *e = &sc->l2t->l2tab[synqe->l2e_idx];
+	struct l2t_entry *e = &sc->l2t->l2tab[synqe->params.l2t_idx];
 	int ntids;
 
 	INP_WLOCK_ASSERT(inp);
@@ -885,7 +899,10 @@ do_abort_req_synqe(struct sge_iq *iq, const struct rss_header *rss,
 
 	INP_WLOCK(inp);
 
-	ofld_txq = &sc->sge.ofld_txq[synqe->txqid];
+	ofld_txq = &sc->sge.ofld_txq[synqe->params.txq_idx];
+
+	if (!(synqe->flags & TPF_FLOWC_WR_SENT))
+		send_flowc_wr_synqe(sc, synqe);
 
 	/*
 	 * If we'd initiated an abort earlier the reply to it is responsible for
@@ -960,28 +977,6 @@ t4_offload_socket(struct toedev *tod, void *arg, struct socket *so)
 	synqe->flags |= TPF_SYNQE_EXPANDED;
 }
 
-static inline void
-save_qids_in_synqe(struct synq_entry *synqe, struct vi_info *vi,
-    struct offload_settings *s)
-{
-	uint32_t txqid, rxqid;
-
-	if (s->txq >= 0 && s->txq < vi->nofldtxq)
-		txqid = s->txq;
-	else
-		txqid = arc4random() % vi->nofldtxq;
-	txqid += vi->first_ofld_txq;
-
-	if (s->rxq >= 0 && s->rxq < vi->nofldrxq)
-		rxqid = s->rxq;
-	else
-		rxqid = arc4random() % vi->nofldrxq;
-	rxqid += vi->first_ofld_rxq;
-
-	synqe->txqid = txqid;
-	synqe->rxqid = rxqid;
-}
-
 static void
 t4opt_to_tcpopt(const struct tcp_options *t4opt, struct tcpopt *to)
 {
@@ -1004,98 +999,9 @@ t4opt_to_tcpopt(const struct tcp_options *t4opt, struct tcpopt *to)
 		to->to_flags |= TOF_SACKPERM;
 }
 
-/*
- * Options2 for passive open.
- */
-static uint32_t
-calc_opt2p(struct adapter *sc, struct port_info *pi, int rxqid,
-	const struct tcp_options *tcpopt, struct tcphdr *th, int ulp_mode,
-	struct cc_algo *cc, const struct offload_settings *s)
-{
-	struct sge_ofld_rxq *ofld_rxq = &sc->sge.ofld_rxq[rxqid];
-	uint32_t opt2 = 0;
-
-	/*
-	 * rx flow control, rx coalesce, congestion control, and tx pace are all
-	 * explicitly set by the driver.  On T5+ the ISS is also set by the
-	 * driver to the value picked by the kernel.
-	 */
-	if (is_t4(sc)) {
-		opt2 |= F_RX_FC_VALID | F_RX_COALESCE_VALID;
-		opt2 |= F_CONG_CNTRL_VALID | F_PACE_VALID;
-	} else {
-		opt2 |= F_T5_OPT_2_VALID;	/* all 4 valid */
-		opt2 |= F_T5_ISS;		/* ISS provided in CPL */
-	}
-
-	if (tcpopt->sack && (s->sack > 0 || (s->sack < 0 && V_tcp_do_rfc1323)))
-		opt2 |= F_SACK_EN;
-
-	if (tcpopt->tstamp &&
-	    (s->tstamp > 0 || (s->tstamp < 0 && V_tcp_do_rfc1323)))
-		opt2 |= F_TSTAMPS_EN;
-
-	if (tcpopt->wsf < 15 && V_tcp_do_rfc1323)
-		opt2 |= F_WND_SCALE_EN;
-
-	if (th->th_flags & (TH_ECE | TH_CWR) &&
-	    (s->ecn > 0 || (s->ecn < 0 && V_tcp_do_ecn)))
-		opt2 |= F_CCTRL_ECN;
-
-	/* XXX: F_RX_CHANNEL for multiple rx c-chan support goes here. */
-
-	opt2 |= V_TX_QUEUE(sc->params.tp.tx_modq[pi->tx_chan]);
-
-	/* These defaults are subject to ULP specific fixups later. */
-	opt2 |= V_RX_FC_DDP(0) | V_RX_FC_DISABLE(0);
-
-	opt2 |= V_PACE(0);
-
-	if (s->cong_algo >= 0)
-		opt2 |= V_CONG_CNTRL(s->cong_algo);
-	else if (sc->tt.cong_algorithm >= 0)
-		opt2 |= V_CONG_CNTRL(sc->tt.cong_algorithm & M_CONG_CNTRL);
-	else {
-		if (strcasecmp(cc->name, "reno") == 0)
-			opt2 |= V_CONG_CNTRL(CONG_ALG_RENO);
-		else if (strcasecmp(cc->name, "tahoe") == 0)
-			opt2 |= V_CONG_CNTRL(CONG_ALG_TAHOE);
-		if (strcasecmp(cc->name, "newreno") == 0)
-			opt2 |= V_CONG_CNTRL(CONG_ALG_NEWRENO);
-		if (strcasecmp(cc->name, "highspeed") == 0)
-			opt2 |= V_CONG_CNTRL(CONG_ALG_HIGHSPEED);
-		else {
-			/*
-			 * Use newreno in case the algorithm selected by the
-			 * host stack is not supported by the hardware.
-			 */
-			opt2 |= V_CONG_CNTRL(CONG_ALG_NEWRENO);
-		}
-	}
-
-	if (s->rx_coalesce > 0 || (s->rx_coalesce < 0 && sc->tt.rx_coalesce))
-		opt2 |= V_RX_COALESCE(M_RX_COALESCE);
-
-	/* Note that ofld_rxq is already set according to s->rxq. */
-	opt2 |= F_RSS_QUEUE_VALID;
-	opt2 |= V_RSS_QUEUE(ofld_rxq->iq.abs_id);
-
-#ifdef USE_DDP_RX_FLOW_CONTROL
-	if (ulp_mode == ULP_MODE_TCPDDP)
-		opt2 |= F_RX_FC_DDP;
-#endif
-
-	if (ulp_mode == ULP_MODE_TLS) {
-		opt2 &= ~V_RX_COALESCE(M_RX_COALESCE);
-		opt2 |= F_RX_FC_DISABLE;
-	}
-
-	return (htobe32(opt2));
-}
-
 static void
 pass_accept_req_to_protohdrs(struct adapter *sc, const struct mbuf *m,
-    struct in_conninfo *inc, struct tcphdr *th)
+    struct in_conninfo *inc, struct tcphdr *th, uint8_t *iptos)
 {
 	const struct cpl_pass_accept_req *cpl = mtod(m, const void *);
 	const struct ether_header *eh;
@@ -1110,6 +1016,21 @@ pass_accept_req_to_protohdrs(struct adapter *sc, const struct mbuf *m,
 	} else {
 		l3hdr = ((uintptr_t)eh + G_ETH_HDR_LEN(hlen));
 		tcp = (const void *)(l3hdr + G_IP_HDR_LEN(hlen));
+	}
+
+	/* extract TOS (DiffServ + ECN) byte for AccECN */
+	if (iptos) {
+		if (((struct ip *)l3hdr)->ip_v == IPVERSION) {
+			const struct ip *ip = (const void *)l3hdr;
+			*iptos = ip->ip_tos;
+		}
+#ifdef INET6
+		else
+		if (((struct ip *)l3hdr)->ip_v == (IPV6_VERSION >> 4)) {
+			const struct ip6_hdr *ip6 = (const void *)l3hdr;
+			*iptos = (ntohl(ip6->ip6_flow) >> 20) & 0xff;
+		}
+#endif /* INET */
 	}
 
 	if (inc) {
@@ -1187,7 +1108,7 @@ send_synack(struct adapter *sc, struct synq_entry *synqe, uint64_t opt0,
 {
 	struct wrqe *wr;
 	struct cpl_pass_accept_rpl *rpl;
-	struct l2t_entry *e = &sc->l2t->l2tab[synqe->l2e_idx];
+	struct l2t_entry *e = &sc->l2t->l2tab[synqe->params.l2t_idx];
 
 	wr = alloc_wrqe(is_t4(sc) ? sizeof(struct cpl_pass_accept_rpl) :
 	    sizeof(struct cpl_t5_pass_accept_rpl), &sc->sge.ctrlq[0]);
@@ -1252,10 +1173,12 @@ do_pass_accept_req(struct sge_iq *iq, const struct rss_header *rss,
 	struct synq_entry *synqe = NULL;
 	int reject_reason, v, ntids;
 	uint16_t vid, l2info;
+	struct epoch_tracker et;
 #ifdef INVARIANTS
 	unsigned int opcode = G_CPL_OPCODE(be32toh(OPCODE_TID(cpl)));
 #endif
 	struct offload_settings settings;
+	uint8_t iptos;
 
 	KASSERT(opcode == CPL_PASS_ACCEPT_REQ,
 	    ("%s: unexpected opcode 0x%x", __func__, opcode));
@@ -1300,7 +1223,7 @@ found:
 	 * XXX: lagg support, lagg + vlan support.
 	 */
 	vid = EVL_VLANOFTAG(be16toh(cpl->vlan));
-	if (vid != 0xfff) {
+	if (vid != 0xfff && vid != 0) {
 		ifp = VLAN_DEVAT(hw_ifp, vid);
 		if (ifp == NULL)
 			REJECT_PASS_ACCEPT_REQ(true);
@@ -1314,7 +1237,7 @@ found:
 	if (lctx->vnet != ifp->if_vnet)
 		REJECT_PASS_ACCEPT_REQ(true);
 
-	pass_accept_req_to_protohdrs(sc, m, &inc, &th);
+	pass_accept_req_to_protohdrs(sc, m, &inc, &th, &iptos);
 	if (inc.inc_flags & INC_ISIPV6) {
 
 		/* Don't offload if the ifcap isn't enabled */
@@ -1350,12 +1273,12 @@ found:
 		REJECT_PASS_ACCEPT_REQ(true);
 
 	/* Don't offload if the 4-tuple is already in use */
-	INP_INFO_RLOCK(&V_tcbinfo);	/* for 4-tuple check */
+	INP_INFO_RLOCK_ET(&V_tcbinfo, et);	/* for 4-tuple check */
 	if (toe_4tuple_check(&inc, &th, ifp) != 0) {
-		INP_INFO_RUNLOCK(&V_tcbinfo);
+		INP_INFO_RUNLOCK_ET(&V_tcbinfo, et);
 		REJECT_PASS_ACCEPT_REQ(false);
 	}
-	INP_INFO_RUNLOCK(&V_tcbinfo);
+	INP_INFO_RUNLOCK_ET(&V_tcbinfo, et);
 
 	inp = lctx->inp;		/* listening socket, not owned by TOE */
 	INP_WLOCK(inp);
@@ -1367,7 +1290,8 @@ found:
 	}
 	so = inp->inp_socket;
 	rw_rlock(&sc->policy_lock);
-	settings = *lookup_offload_policy(sc, OPEN_TYPE_PASSIVE, m, 0xffff, inp);
+	settings = *lookup_offload_policy(sc, OPEN_TYPE_PASSIVE, m,
+	    EVL_MAKETAG(0xfff, 0, 0), inp);
 	rw_runlock(&sc->policy_lock);
 	if (!settings.offload) {
 		INP_WUNLOCK(inp);
@@ -1381,34 +1305,25 @@ found:
 	}
 	atomic_store_int(&synqe->ok_to_respond, 0);
 
+	init_conn_params(vi, &settings, &inc, so, &cpl->tcpopt, e->idx,
+	    &synqe->params);
+
 	/*
 	 * If all goes well t4_syncache_respond will get called during
 	 * syncache_add.  Note that syncache_add releases the pcb lock.
 	 */
 	t4opt_to_tcpopt(&cpl->tcpopt, &to);
-	toe_syncache_add(&inc, &to, &th, inp, tod, synqe);
+	toe_syncache_add(&inc, &to, &th, inp, tod, synqe, iptos);
 
 	if (atomic_load_int(&synqe->ok_to_respond) > 0) {
 		uint64_t opt0;
 		uint32_t opt2;
-		int rscale, mtu_idx, rx_credits;
 
-		mtu_idx = find_best_mtu_idx(sc, &inc, &settings);
-		rscale = cpl->tcpopt.wsf && V_tcp_do_rfc1323 ?  select_rcv_wscale() : 0;
-		rx_credits = min(select_rcv_wnd(so) >> 10, M_RCV_BUFSIZ);
-
-		save_qids_in_synqe(synqe, vi, &settings);
-		synqe->ulp_mode = select_ulp_mode(so, sc, &settings);
-
-		opt0 = calc_opt0(so, vi, e, mtu_idx, rscale, rx_credits,
-		    synqe->ulp_mode, &settings);
-		opt2 = calc_opt2p(sc, pi, synqe->rxqid, &cpl->tcpopt, &th,
-		    synqe->ulp_mode, CC_ALGO(intotcpcb(inp)), &settings);
+		opt0 = calc_options0(vi, &synqe->params);
+		opt2 = calc_options2(vi, &synqe->params);
 
 		insert_tid(sc, tid, synqe, ntids);
 		synqe->tid = tid;
-		synqe->l2e_idx = e->idx;
-		synqe->rcv_bufsize = rx_credits;
 		synqe->syn = m;
 		m = NULL;
 
@@ -1420,8 +1335,8 @@ found:
 		}
 
 		CTR6(KTR_CXGBE,
-		    "%s: stid %u, tid %u, lctx %p, synqe %p, mode %d, SYNACK",
-		    __func__, stid, tid, lctx, synqe, synqe->ulp_mode);
+		    "%s: stid %u, tid %u, synqe %p, opt0 %#016lx, opt2 %#08x",
+		    __func__, stid, tid, synqe, be64toh(opt0), be32toh(opt2));
 	} else
 		REJECT_PASS_ACCEPT_REQ(false);
 
@@ -1464,9 +1379,10 @@ synqe_to_protohdrs(struct adapter *sc, struct synq_entry *synqe,
     struct tcphdr *th, struct tcpopt *to)
 {
 	uint16_t tcp_opt = be16toh(cpl->tcp_opt);
+	uint8_t iptos;
 
 	/* start off with the original SYN */
-	pass_accept_req_to_protohdrs(sc, synqe->syn, inc, th);
+	pass_accept_req_to_protohdrs(sc, synqe->syn, inc, th, &iptos);
 
 	/* modify parts to make it look like the ACK to our SYN|ACK */
 	th->th_flags = TH_ACK;
@@ -1499,6 +1415,7 @@ do_pass_establish(struct sge_iq *iq, const struct rss_header *rss,
 	struct tcpopt to;
 	struct in_conninfo inc;
 	struct toepcb *toep;
+	struct epoch_tracker et;
 #ifdef INVARIANTS
 	unsigned int opcode = G_CPL_OPCODE(be32toh(OPCODE_TID(cpl)));
 #endif
@@ -1511,7 +1428,7 @@ do_pass_establish(struct sge_iq *iq, const struct rss_header *rss,
 	    ("%s: tid %u (ctx %p) not a synqe", __func__, tid, synqe));
 
 	CURVNET_SET(lctx->vnet);
-	INP_INFO_RLOCK(&V_tcbinfo);	/* for syncache_expand */
+	INP_INFO_RLOCK_ET(&V_tcbinfo, et);	/* for syncache_expand */
 	INP_WLOCK(inp);
 
 	CTR6(KTR_CXGBE,
@@ -1520,30 +1437,31 @@ do_pass_establish(struct sge_iq *iq, const struct rss_header *rss,
 
 	ifp = synqe->syn->m_pkthdr.rcvif;
 	vi = ifp->if_softc;
-	KASSERT(vi->pi->adapter == sc,
+	KASSERT(vi->adapter == sc,
 	    ("%s: vi %p, sc %p mismatch", __func__, vi, sc));
 
 	if (__predict_false(inp->inp_flags & INP_DROPPED)) {
 reset:
 		send_reset_synqe(TOEDEV(ifp), synqe);
 		INP_WUNLOCK(inp);
-		INP_INFO_RUNLOCK(&V_tcbinfo);
+		INP_INFO_RUNLOCK_ET(&V_tcbinfo, et);
 		CURVNET_RESTORE();
 		return (0);
 	}
 
-	KASSERT(synqe->rxqid == iq_to_ofld_rxq(iq) - &sc->sge.ofld_rxq[0],
+	KASSERT(synqe->params.rxq_idx == iq_to_ofld_rxq(iq) - &sc->sge.ofld_rxq[0],
 	    ("%s: CPL arrived on unexpected rxq.  %d %d", __func__,
-	    synqe->rxqid, (int)(iq_to_ofld_rxq(iq) - &sc->sge.ofld_rxq[0])));
+	    synqe->params.rxq_idx,
+	    (int)(iq_to_ofld_rxq(iq) - &sc->sge.ofld_rxq[0])));
 
-	toep = alloc_toepcb(vi, synqe->txqid, synqe->rxqid, M_NOWAIT);
+	toep = alloc_toepcb(vi, M_NOWAIT);
 	if (toep == NULL)
 		goto reset;
 	toep->tid = tid;
-	toep->l2te = &sc->l2t->l2tab[synqe->l2e_idx];
+	toep->l2te = &sc->l2t->l2tab[synqe->params.l2t_idx];
 	toep->vnet = lctx->vnet;
-	set_ulp_mode(toep, synqe->ulp_mode);
-	toep->opt0_rcv_bufsize = synqe->rcv_bufsize;
+	bcopy(&synqe->params, &toep->params, sizeof(toep->params));
+	init_toepcb(vi, toep);
 
 	MPASS(be32toh(cpl->snd_isn) - 1 == synqe->iss);
 	MPASS(be32toh(cpl->rcv_isn) - 1 == synqe->irs);
@@ -1585,7 +1503,7 @@ reset:
 	inp = release_synqe(sc, synqe);
 	if (inp != NULL)
 		INP_WUNLOCK(inp);
-	INP_INFO_RUNLOCK(&V_tcbinfo);
+	INP_INFO_RUNLOCK_ET(&V_tcbinfo, et);
 	CURVNET_RESTORE();
 
 	return (0);

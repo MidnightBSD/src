@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008-2010, 2015 Robert N. M. Watson
  * Copyright (c) 2012 FreeBSD Foundation
  * All rights reserved.
@@ -31,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/capsicum.h 306398 2016-09-28 09:28:26Z kib $
+ * $FreeBSD$
  */
 
 /*
@@ -245,7 +246,12 @@
 /* Process management via process descriptors. */
 /* Allows for pdgetpid(2). */
 #define	CAP_PDGETPID		CAPRIGHT(1, 0x0000000000000200ULL)
-/* Allows for pdwait4(2). */
+/*
+ * Allows for pdwait4(2).
+ *
+ * XXX: this constant was imported unused, but is targeted to be implemented
+ *      in the future (bug 235871).
+ */
 #define	CAP_PDWAIT		CAPRIGHT(1, 0x0000000000000400ULL)
 /* Allows for pdkill(2). */
 #define	CAP_PDKILL		CAPRIGHT(1, 0x0000000000000800ULL)
@@ -343,6 +349,51 @@ __END_DECLS
 #ifdef _KERNEL
 
 #include <sys/systm.h>
+extern cap_rights_t cap_accept_rights;
+extern cap_rights_t cap_bind_rights;
+extern cap_rights_t cap_connect_rights;
+extern cap_rights_t cap_event_rights;
+extern cap_rights_t cap_fchdir_rights;
+extern cap_rights_t cap_fchflags_rights;
+extern cap_rights_t cap_fchmod_rights;
+extern cap_rights_t cap_fchown_rights;
+extern cap_rights_t cap_fcntl_rights;
+extern cap_rights_t cap_fexecve_rights;
+extern cap_rights_t cap_flock_rights;
+extern cap_rights_t cap_fpathconf_rights;
+extern cap_rights_t cap_fstat_rights;
+extern cap_rights_t cap_fstatfs_rights;
+extern cap_rights_t cap_fsync_rights;
+extern cap_rights_t cap_ftruncate_rights;
+extern cap_rights_t cap_futimes_rights;
+extern cap_rights_t cap_getpeername_rights;
+extern cap_rights_t cap_getsockopt_rights;
+extern cap_rights_t cap_getsockname_rights;
+extern cap_rights_t cap_ioctl_rights;
+extern cap_rights_t cap_linkat_source_rights;
+extern cap_rights_t cap_linkat_target_rights;
+extern cap_rights_t cap_listen_rights;
+extern cap_rights_t cap_mkdirat_rights;
+extern cap_rights_t cap_mkfifoat_rights;
+extern cap_rights_t cap_mknodat_rights;
+extern cap_rights_t cap_mmap_rights;
+extern cap_rights_t cap_no_rights;
+extern cap_rights_t cap_pdgetpid_rights;
+extern cap_rights_t cap_pdkill_rights;
+extern cap_rights_t cap_pread_rights;
+extern cap_rights_t cap_pwrite_rights;
+extern cap_rights_t cap_read_rights;
+extern cap_rights_t cap_recv_rights;
+extern cap_rights_t cap_renameat_source_rights;
+extern cap_rights_t cap_renameat_target_rights;
+extern cap_rights_t cap_seek_rights;
+extern cap_rights_t cap_send_rights;
+extern cap_rights_t cap_send_connect_rights;
+extern cap_rights_t cap_setsockopt_rights;
+extern cap_rights_t cap_shutdown_rights;
+extern cap_rights_t cap_symlinkat_rights;
+extern cap_rights_t cap_unlinkat_rights;
+extern cap_rights_t cap_write_rights;
 
 #define IN_CAPABILITY_MODE(td) (((td)->td_ucred->cr_flags & CRED_FLAG_CAPMODE) != 0)
 
@@ -356,20 +407,26 @@ int	cap_check(const cap_rights_t *havep, const cap_rights_t *needp);
 /*
  * Convert capability rights into VM access flags.
  */
-vm_prot_t	cap_rights_to_vmprot(cap_rights_t *havep);
+vm_prot_t	cap_rights_to_vmprot(const cap_rights_t *havep);
 
 /*
  * For the purposes of procstat(1) and similar tools, allow kern_descrip.c to
  * extract the rights from a capability.
+ *
+ * Dereferencing fdep requires filedesc.h, but including it would cause
+ * significant pollution. Instead add a macro for consumers which want it,
+ * most notably kern_descrip.c.
  */
-cap_rights_t	*cap_rights_fde(struct filedescent *fde);
-cap_rights_t	*cap_rights(struct filedesc *fdp, int fd);
+#define cap_rights_fde_inline(fdep)	(&(fdep)->fde_rights)
+
+const cap_rights_t	*cap_rights_fde(const struct filedescent *fde);
+const cap_rights_t	*cap_rights(struct filedesc *fdp, int fd);
 
 int	cap_ioctl_check(struct filedesc *fdp, int fd, u_long cmd);
 int	cap_fcntl_check_fde(struct filedescent *fde, int cmd);
 int	cap_fcntl_check(struct filedesc *fdp, int fd, int cmd);
 
-extern int trap_enotcap;
+extern bool trap_enotcap;
 
 #else /* !_KERNEL */
 

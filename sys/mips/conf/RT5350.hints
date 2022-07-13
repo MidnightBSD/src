@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/mips/conf/RT5350.hints 292712 2015-12-25 00:58:41Z adrian $
+# $FreeBSD$
 # device.hints
 hint.obio.0.at="nexus0"
 hint.obio.0.maddr=0x10000000

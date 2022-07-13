@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linux/linux_signal.h 331755 2018-03-30 01:53:14Z emaste $
+ * $FreeBSD$
  */
 
 #ifndef _LINUX_SIGNAL_H_

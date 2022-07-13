@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Dag-Erling Smørgrav
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/syscons/plasma/fp16.c 294783 2016-01-26 08:55:31Z des $
+ * $FreeBSD$
  */
 
 #ifdef _KERNEL

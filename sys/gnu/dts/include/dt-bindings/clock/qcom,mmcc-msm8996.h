@@ -1,14 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2015, The Linux Foundation. All rights reserved.
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
  */
 
 #ifndef _DT_BINDINGS_CLK_MSM_MMCC_8996_H
@@ -281,5 +273,23 @@
 #define CAMSS_ISPIF_BCR					57
 #define FD_BCR						58
 #define MMSS_SPDM_RM_BCR				59
+
+/* Indexes for GDSCs */
+#define MMAGIC_VIDEO_GDSC	0
+#define MMAGIC_MDSS_GDSC	1
+#define MMAGIC_CAMSS_GDSC	2
+#define GPU_GDSC		3
+#define VENUS_GDSC		4
+#define VENUS_CORE0_GDSC	5
+#define VENUS_CORE1_GDSC	6
+#define CAMSS_GDSC		7
+#define VFE0_GDSC		8
+#define VFE1_GDSC		9
+#define JPEG_GDSC		10
+#define CPP_GDSC		11
+#define FD_GDSC			12
+#define MDSS_GDSC		13
+#define GPU_GX_GDSC		14
+#define MMAGIC_BIMC_GDSC	15
 
 #endif

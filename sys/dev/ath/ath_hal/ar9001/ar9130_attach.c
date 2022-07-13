@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2011 Adrian Chadd, Xenion Pty Ltd
  * Copyright (c) 2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2008 Atheros Communications, Inc.
@@ -15,7 +17,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar9001/ar9130_attach.c 272292 2014-09-30 03:19:29Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -171,7 +173,7 @@ ar9130Attach(uint16_t devid, HAL_SOFTC sc,
 	if (ecode != HAL_OK)
 		goto bad;
 
-	if (!ar5416ChipReset(ah, AH_NULL)) {	/* reset chip */
+	if (!ar5416ChipReset(ah, AH_NULL, HAL_RESET_NORMAL)) {	/* reset chip */
 		HALDEBUG(ah, HAL_DEBUG_ANY, "%s: chip reset failed\n", __func__);
 		ecode = HAL_EIO;
 		goto bad;
@@ -240,7 +242,6 @@ ar9130Attach(uint16_t devid, HAL_SOFTC sc,
 	    ath_hal_eepromGet(ah, AR_EEP_REGDMN_0, AH_NULL);
 	AH_PRIVATE(ah)->ah_currentRDext =
 	    ath_hal_eepromGet(ah, AR_EEP_REGDMN_1, AH_NULL);
-
 
 	/*
 	 * ah_miscMode is populated by ar5416FillCapabilityInfo()

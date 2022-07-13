@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1996, by Peter Wemm and Steve Passe
  * All rights reserved.
  *
@@ -22,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/x86/include/apicreg.h 323608 2017-09-15 09:00:45Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _X86_APICREG_H_

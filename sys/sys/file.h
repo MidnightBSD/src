@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -11,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -28,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)file.h	8.3 (Berkeley) 1/9/95
- * $FreeBSD: stable/11/sys/sys/file.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_FILE_H_
@@ -160,6 +161,7 @@ struct fileops {
  * none	not locked
  */
 
+#if __BSD_VISIBLE
 struct fadvise_info {
 	int		fa_advice;	/* (f) FADV_* type. */
 	off_t		fa_start;	/* (f) Region start. */
@@ -178,7 +180,10 @@ struct file {
 	/*
 	 *  DTYPE_VNODE specific fields.
 	 */
-	int		f_seqcount;	/* (a) Count of sequential accesses. */
+	union {
+		int16_t	f_seqcount;	/* (a) Count of sequential accesses. */
+		int	f_pipegen;
+	};
 	off_t		f_nextoff;	/* next expected read/write offset. */
 	union {
 		struct cdev_privdata *fvn_cdevpriv;
@@ -201,26 +206,34 @@ struct file {
 #define	FOFFSET_LOCKED       0x1
 #define	FOFFSET_LOCK_WAITING 0x2
 #define	FDEVFS_VNODE	     0x4
+#endif /* __BSD_VISIBLE */
 
 #endif /* _KERNEL || _WANT_FILE */
 
 /*
  * Userland version of struct file, for sysctl
  */
+#if __BSD_VISIBLE
 struct xfile {
-	size_t	xf_size;	/* size of struct xfile */
+	ksize_t	xf_size;	/* size of struct xfile */
 	pid_t	xf_pid;		/* owning process */
 	uid_t	xf_uid;		/* effective uid of owning process */
 	int	xf_fd;		/* descriptor number */
-	void	*xf_file;	/* address of struct file */
+	int	_xf_int_pad1;
+	kvaddr_t xf_file;	/* address of struct file */
 	short	xf_type;	/* descriptor type */
+	short	_xf_short_pad1;
 	int	xf_count;	/* reference count */
 	int	xf_msgcount;	/* references from message queue */
+	int	_xf_int_pad2;
 	off_t	xf_offset;	/* file offset */
-	void	*xf_data;	/* file descriptor specific data */
-	void	*xf_vnode;	/* vnode pointer */
+	kvaddr_t xf_data;	/* file descriptor specific data */
+	kvaddr_t xf_vnode;	/* vnode pointer */
 	u_int	xf_flag;	/* flags (see fcntl.h) */
+	int	_xf_int_pad3;
+	int64_t	_xf_int64_pad[6];
 };
+#endif /* __BSD_VISIBLE */
 
 #ifdef _KERNEL
 
@@ -275,8 +288,12 @@ _fnoop(void)
 	return (0);
 }
 
-#define	fhold(fp)							\
-	(refcount_acquire(&(fp)->f_count))
+static __inline __result_use_check bool
+fhold(struct file *fp)
+{
+	return (refcount_acquire_checked(&fp->f_count));
+}
+
 #define	fdrop(fp, td)							\
 	(refcount_release(&(fp)->f_count) ? _fdrop((fp), (td)) : _fnoop())
 

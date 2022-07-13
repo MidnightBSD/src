@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/mips/stdatomic.c 332391 2018-04-10 20:22:36Z cognet $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stdatomic.h>
 #include <sys/types.h>

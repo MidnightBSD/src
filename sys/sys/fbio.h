@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -15,7 +16,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,7 +34,7 @@
  *
  *	@(#)fbio.h	8.2 (Berkeley) 10/30/93
  *
- * $FreeBSD: stable/11/sys/sys/fbio.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_FBIO_H_
@@ -83,7 +84,6 @@
 #define	FBTYPE_CGA		22
 #define	FBTYPE_EGA		23
 #define	FBTYPE_VGA		24
-#define	FBTYPE_PC98		25
 #define	FBTYPE_TGA		26
 #define	FBTYPE_TGA2		27
 
@@ -136,8 +136,8 @@ struct fb_info {
 	fb_leave_t	*leave;
 	fb_setblankmode_t *setblankmode;
 
-	intptr_t	fb_pbase;	/* For FB mmap. */
-	intptr_t	fb_vbase;	/* if NULL, use fb_write/fb_read. */
+	uintptr_t	fb_pbase;	/* For FB mmap. */
+	uintptr_t	fb_vbase;	/* if NULL, use fb_write/fb_read. */
 	void		*fb_priv;	/* First argument for read/write. */
 	const char	*fb_name;
 	uint32_t	fb_flags;
@@ -340,6 +340,7 @@ struct video_info {
 #define V_INFO_LINEAR	(1 << 2)
 #define V_INFO_VESA	(1 << 3)
 #define	V_INFO_NONVGA	(1 << 4)
+#define	V_INFO_CWIDTH9	(1 << 5)
     int			vi_width;
     int			vi_height;
     int			vi_cwidth;
@@ -382,7 +383,6 @@ struct video_adapter {
 #define KD_CGA		3		/* color graphics adapter */
 #define KD_EGA		4		/* enhanced graphics adapter */
 #define KD_VGA		5		/* video graphics adapter */
-#define KD_PC98		6		/* PC-98 display */
 #define KD_TGA		7		/* TGA */
 #define KD_TGA2		8		/* TGA2 */
     char		*va_name;
@@ -403,6 +403,7 @@ struct video_adapter {
 #define V_ADP_REGISTERED (1 << 18)
 #define V_ADP_ATTACHED	(1 << 19)
 #define	V_ADP_DAC8	(1 << 20)
+#define	V_ADP_CWIDTH9	(1 << 21)
     vm_offset_t		va_io_base;
     int			va_io_size;
     vm_offset_t		va_crtc_addr;
@@ -520,12 +521,6 @@ typedef struct video_adapter_info video_adapter_info_t;
 
 #define M_ENH_B80x43	0x70	/* ega black & white 80x43 */
 #define M_ENH_C80x43	0x71	/* ega color 80x43 */
-
-#define M_PC98_80x25		98	/* PC98 text 80x25 */
-#define M_PC98_80x30		99	/* PC98 text 80x30 */
-#define M_PC98_EGC640x400	100	/* PC98 graphic 640x400 16 colors */
-#define M_PC98_PEGC640x400	101	/* PC98 graphic 640x400 256 colors */
-#define M_PC98_PEGC640x480	102	/* PC98 graphic 640x480 256 colors */
 
 #define M_HGC_P0	0xe0	/* hercules graphics - page 0 @ B0000 */
 #define M_HGC_P1	0xe1	/* hercules graphics - page 1 @ B8000 */

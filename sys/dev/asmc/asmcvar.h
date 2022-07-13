@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007, 2008 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/asmc/asmcvar.h 344889 2019-03-07 15:31:32Z dab $
+ * $FreeBSD$
  *
  */
 
@@ -155,6 +157,21 @@ struct asmc_softc {
 				  "Northbridge Point 1", \
 				  "Heatsink 1","Heatsink 2" \
 				  "Memory Bank A", }
+
+#define ASMC_MB71_TEMPS		{ "TB0T", "TB1T", "TB2T", "TC0D", "TC0P", \
+				  "TH0P", "TN0D", "TN0P", "TN0S", "TN1D", \
+				  "TN1E", "TN1F", "TN1G", "TN1S", "Th1H", \
+				  "Ts0P", "Ts0S", NULL }
+
+#define ASMC_MB71_TEMPNAMES	{ "enclosure_bottom0", "battery_1", "battery_2", "cpu_package", "cpu_proximity", \
+				  "hdd_bay", "northbridge0_diode", "northbridge0_proximity", "TN0S", "mpc_die2", \
+				  "TN1E", "TN1F", "TN1G", "TN1S", "heatsink1", \
+				  "palm_rest", "memory_proximity", }
+
+#define ASMC_MB71_TEMPDESCS	{ "Enclosure Bottom 0", "Battery 1", "Battery 2", "CPU Package", "CPU Proximity", \
+				  "HDD Bay", "Northbridge Diode", "Northbridge Proximity", "TN0S", "MPC Die 2", \
+				  "TN1E", "TN1F", "TN1G", "TN1S", "Heatsink 1", \
+				  "Palm Rest", "Memory Proximity", }
 
 #define ASMC_MBP_TEMPS		{ "TB0T", "Th0H", "Th1H", "Tm0P",	\
 				  "TG0H", "TG0P", "TG0T", NULL }

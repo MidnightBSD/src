@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Alexander V. Chernikov <melifaro@ipfw.ru>
  * All rights reserved.
  *
@@ -23,11 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * 	$FreeBSD: stable/11/sys/netgraph/netflow/netflow_v9.c 295126 2016-02-01 17:41:21Z glebius $
+ * 	$FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netgraph/netflow/netflow_v9.c 295126 2016-02-01 17:41:21Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet6.h"
 #include "opt_route.h"

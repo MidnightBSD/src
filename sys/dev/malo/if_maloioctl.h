@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007 Marvell Semiconductor, Inc.
  * Copyright (c) 2007 Sam Leffler, Errno Consulting
  * Copyright (c) 2008 Weongyo Jeong <weongyo@freebsd.org>
@@ -28,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/malo/if_maloioctl.h 345636 2019-03-28 09:50:25Z avos $
+ * $FreeBSD$
  */
 
 /*

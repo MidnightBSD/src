@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/amlogic/aml8726/aml8726_soc.h 281418 2015-04-11 08:34:41Z ganbold $
+ * $FreeBSD$
  */
 
 #ifndef	_ARM_AMLOGIC_AML8726_SOC_H

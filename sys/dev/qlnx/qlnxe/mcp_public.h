@@ -24,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/qlnx/qlnxe/mcp_public.h 337517 2018-08-09 01:17:35Z davidcs $
+ * $FreeBSD$
  *
  */
 
@@ -515,7 +515,7 @@ struct public_global {
 	u32 debug_mb_offset;
 	u32 phymod_dbg_mb_offset;
 	struct couple_mode_teaming cmt;
-	s32 internal_temperature; /* Temperature in Celcius (-255C / +255C), measured every second. */
+	s32 internal_temperature; /* Temperature in Celsius (-255C / +255C), measured every second. */
 	u32 mfw_ver;
 	u32 running_bundle_id;
 	s32 external_temperature;

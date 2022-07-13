@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_arm64.c 283112 2015-05-19 15:25:47Z br $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -323,14 +323,15 @@ arm64_release_pmc(int cpu, int ri, struct pmc *pmc)
 }
 
 static int
-arm64_intr(int cpu, struct trapframe *tf)
+arm64_intr(struct trapframe *tf)
 {
 	struct arm64_cpu *pc;
 	int retval, ri;
 	struct pmc *pm;
 	int error;
-	int reg;
+	int reg, cpu;
 
+	cpu = curcpu;
 	KASSERT(cpu >= 0 && cpu < pmc_cpu_max(),
 	    ("[arm64,%d] CPU %d out of range", __LINE__, cpu));
 
@@ -357,8 +358,7 @@ arm64_intr(int cpu, struct trapframe *tf)
 		if (pm->pm_state != PMC_STATE_RUNNING)
 			continue;
 
-		error = pmc_process_interrupt(cpu, PMC_HR, pm, tf,
-		    TRAPF_USERMODE(tf));
+		error = pmc_process_interrupt(PMC_HR, pm, tf);
 		if (error)
 			arm64_stop_pmc(cpu, ri);
 
@@ -453,6 +453,16 @@ arm64_pcpu_init(struct pmc_mdep *md, int cpu)
 		phw->phw_pmc      = NULL;
 		pc->pc_hwpmcs[i + first_ri] = phw;
 	}
+
+	/*
+	 * Disable all counters and overflow interrupts. Upon reset they are in
+	 * an undefined state.
+	 *
+	 * Don't issue an isb here, just wait for the one in arm64_pmcr_write()
+	 * to make the writes visible.
+	 */
+	WRITE_SPECIALREG(pmcntenclr_el0, 0xffffffff);
+	WRITE_SPECIALREG(pmintenclr_el1, 0xffffffff);
 
 	/* Enable unit */
 	pmcr = arm64_pmcr_read();

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $FreeBSD$ */
 
 #define logo_width 88

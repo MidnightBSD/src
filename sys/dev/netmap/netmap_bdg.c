@@ -56,9 +56,9 @@ ports attached to the switch)
  * is present in netmap_kern.h
  */
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 #include <sys/cdefs.h> /* prerequisite */
-__FBSDID("$FreeBSD: stable/11/sys/dev/netmap/netmap_bdg.c 344047 2019-02-12 09:26:05Z vmaffione $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/errno.h>
@@ -1442,7 +1442,7 @@ put_out:
 
 
 /* nm_bdg_ctl callback for the bwrap.
- * Called on bridge-attach and detach, as an effect of vale-ctl -[ahd].
+ * Called on bridge-attach and detach, as an effect of valectl -[ahd].
  * On attach, it needs to provide a fake netmap_priv_d structure and
  * perform a netmap_do_regif() on the bwrap. This will put both the
  * bwrap and the hwna in netmap mode, with the netmap rings shared
@@ -1477,8 +1477,7 @@ netmap_bwrap_bdg_ctl(struct nmreq_header *hdr, struct netmap_adapter *na)
 		if (npriv == NULL)
 			return ENOMEM;
 		npriv->np_ifp = na->ifp; /* let the priv destructor release the ref */
-		error = netmap_do_regif(npriv, na, req->reg.nr_mode,
-					req->reg.nr_ringid, req->reg.nr_flags);
+		error = netmap_do_regif(npriv, na, hdr);
 		if (error) {
 			netmap_priv_delete(npriv);
 			return error;
@@ -1631,7 +1630,7 @@ netmap_init_bridges(void)
 #ifdef CONFIG_NET_NS
 	return netmap_bns_register();
 #else
-	nm_bridges = netmap_init_bridges2(NM_BRIDGES);
+	nm_bridges = netmap_init_bridges2(vale_max_bridges);
 	if (nm_bridges == NULL)
 		return ENOMEM;
 	return 0;
@@ -1644,6 +1643,6 @@ netmap_uninit_bridges(void)
 #ifdef CONFIG_NET_NS
 	netmap_bns_unregister();
 #else
-	netmap_uninit_bridges2(nm_bridges, NM_BRIDGES);
+	netmap_uninit_bridges2(nm_bridges, vale_max_bridges);
 #endif
 }

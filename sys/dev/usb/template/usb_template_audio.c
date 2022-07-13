@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/usb/template/usb_template_audio.c 332578 2018-04-16 15:48:15Z trasz $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Hans Petter Selasky
  * Copyright (c) 2018 The FreeBSD Foundation
  * All rights reserved.
@@ -76,10 +78,12 @@ enum {
 	AUDIO_MAX_INDEX,
 };
 
+#define	AUDIO_DEFAULT_VENDOR_ID		USB_TEMPLATE_VENDOR
+#define	AUDIO_DEFAULT_PRODUCT_ID	0x27e0
 #define	AUDIO_DEFAULT_MIXER		"Mixer interface"
 #define	AUDIO_DEFAULT_RECORD		"Record interface"
 #define	AUDIO_DEFAULT_PLAYBACK		"Playback interface"
-#define	AUDIO_DEFAULT_MANUFACTURER	"FreeBSD foundation"
+#define	AUDIO_DEFAULT_MANUFACTURER	USB_TEMPLATE_MANUFACTURER
 #define	AUDIO_DEFAULT_PRODUCT		"Audio Test Device"
 #define	AUDIO_DEFAULT_SERIAL_NUMBER	"March 2008"
 
@@ -347,8 +351,8 @@ static const struct usb_temp_interface_desc *audio_interfaces[] = {
 
 static const struct usb_temp_config_desc audio_config_desc = {
 	.ppIfaceDesc = audio_interfaces,
-	.bmAttributes = UC_BUS_POWERED,
-	.bMaxPower = 25,		/* 50 mA */
+	.bmAttributes = 0,
+	.bMaxPower = 0,
 	.iConfiguration = AUDIO_PRODUCT_INDEX,
 };
 
@@ -362,8 +366,8 @@ static usb_temp_get_string_desc_t audio_get_string_desc;
 struct usb_temp_device_desc usb_template_audio = {
 	.getStringDesc = &audio_get_string_desc,
 	.ppConfigDesc = audio_configs,
-	.idVendor = USB_TEMPLATE_VENDOR,
-	.idProduct = 0x000A,
+	.idVendor = AUDIO_DEFAULT_VENDOR_ID,
+	.idProduct = AUDIO_DEFAULT_PRODUCT_ID,
 	.bcdDevice = 0x0100,
 	.bDeviceClass = UDCLASS_COMM,
 	.bDeviceSubClass = 0,

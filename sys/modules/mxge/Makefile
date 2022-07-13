@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/mxge/Makefile 175365 2008-01-15 20:34:49Z gallatin $
+# $FreeBSD$
 
 SUBDIR= mxge
 SUBDIR+=mxge_eth_z8e

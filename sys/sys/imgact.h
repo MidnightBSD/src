@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1993, David Greenman
  * All rights reserved.
  *
@@ -11,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -27,13 +28,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/imgact.h 337046 2018-08-01 17:40:17Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_IMGACT_H_
 #define	_SYS_IMGACT_H_
 
-#include <sys/uio.h>
+#include <sys/_uio.h>
 
 #include <vm/vm.h>
 
@@ -85,8 +86,11 @@ struct image_params {
 	int pagesizeslen;
 	vm_prot_t stack_prot;
 	u_long stack_sz;
+	u_long eff_stack_sz;
 	struct ucred *newcred;		/* new credentials if changing */
 	bool credential_setid;		/* true if becoming setid */
+	bool textset;
+	u_int map_flags;
 };
 
 #ifdef _KERNEL
@@ -94,10 +98,9 @@ struct sysentvec;
 struct thread;
 struct vmspace;
 
-#define IMGACT_CORE_COMPRESS	0x01
-
 int	exec_alloc_args(struct image_args *);
 int	exec_check_permissions(struct image_params *);
+void	exec_cleanup(struct thread *td, struct vmspace *);
 register_t *exec_copyout_strings(struct image_params *);
 void	exec_free_args(struct image_args *);
 int	exec_new_vmspace(struct image_params *, struct sysentvec *);
@@ -107,6 +110,7 @@ int	exec_copyin_args(struct image_args *, char *, enum uio_seg,
 	char **, char **);
 int	exec_copyin_data_fds(struct thread *, struct image_args *, const void *,
 	size_t, const int *, size_t);
+void	exec_stackgap(struct image_params *imgp, uintptr_t *dp);
 int	pre_execve(struct thread *td, struct vmspace **oldvmspace);
 void	post_execve(struct thread *td, int error, struct vmspace *oldvmspace);
 #endif

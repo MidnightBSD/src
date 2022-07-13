@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1997, 1998
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
  *
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/tl/if_tl.c 347962 2019-05-18 20:43:13Z brooks $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Texas Instruments ThunderLAN driver for FreeBSD 2.2.6 and 3.x.
@@ -878,7 +880,8 @@ tl_setmulti(sc)
 	} else {
 		i = 1;
 		if_maddr_rlock(ifp);
-		TAILQ_FOREACH_REVERSE(ifma, &ifp->if_multiaddrs, ifmultihead, ifma_link) {
+		/* XXX want to maintain reverse semantics - pop list and re-add? */
+		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 			if (ifma->ifma_addr->sa_family != AF_LINK)
 				continue;
 			/*

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013-2015 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/x86/iommu/intel_reg.h 306466 2016-09-30 00:31:17Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef __X86_IOMMU_INTEL_REG_H

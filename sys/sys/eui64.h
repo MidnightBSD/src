@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright 2004 The Aerospace Corporation.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/eui64.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 #ifndef _SYS_EUI64_H
 #define _SYS_EUI64_H

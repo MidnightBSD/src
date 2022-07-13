@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/notifier.h 294826 2016-01-26 14:27:00Z hselasky $
+ * $FreeBSD$
  */
 #ifndef	_LINUX_NOTIFIER_H_
 #define	_LINUX_NOTIFIER_H_

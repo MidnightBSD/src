@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *	from: src/sys/i386/include/resource.h,v 1.3 1999/10/14 21:38:30 dfr
  *	JNPR: resource.h,v 1.3 2006/08/07 05:38:57 katta
- * $FreeBSD: stable/11/sys/mips/include/resource.h 297849 2016-04-12 07:18:48Z sgalabov $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_RESOURCE_H_

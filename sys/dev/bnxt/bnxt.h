@@ -27,17 +27,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bnxt/bnxt.h 333364 2018-05-08 15:51:40Z shurd $");
+__FBSDID("$FreeBSD$");
 
 #ifndef _BNXT_H
 #define _BNXT_H
 
-#include <sys/types.h>
-#include <sys/bus.h>
-#include <sys/bus_dma.h>
+#include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/sysctl.h>
 #include <sys/taskqueue.h>
+
+#include <machine/bus.h>
 
 #include <net/ethernet.h>
 #include <net/if.h>
@@ -86,6 +86,11 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/bnxt/bnxt.h 333364 2018-05-08 15:51:40Z sh
 #define NETXTREME_E_VF1	0x16c1
 #define NETXTREME_E_VF2	0x16d3
 #define NETXTREME_E_VF3	0x16dc
+
+/* Maximum numbers of RX and TX descriptors. iflib requires this to be a power
+ * of two. The hardware has no particular limitation. */
+#define BNXT_MAX_RXD	((INT32_MAX >> 1) + 1)
+#define BNXT_MAX_TXD	((INT32_MAX >> 1) + 1)
 
 #define CSUM_OFFLOAD		(CSUM_IP_TSO|CSUM_IP6_TSO|CSUM_IP| \
 				 CSUM_IP_UDP|CSUM_IP_TCP|CSUM_IP_SCTP| \

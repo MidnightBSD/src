@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm/via_dmablit.c 267548 2014-06-16 18:15:27Z attilio $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Unmaps the DMA mappings.

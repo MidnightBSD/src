@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-3-Clause
+ *
  * Copyright 2008 by Marco Trillo. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/sound/macio/tumbler.c 193694 2009-06-08 08:10:52Z ariff $
+ * $FreeBSD$
  */
 /*-
  * Copyright (c) 2002, 2003 Tsubai Masanari.  All rights reserved.

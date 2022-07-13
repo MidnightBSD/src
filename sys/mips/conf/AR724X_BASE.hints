@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/sys/mips/conf/AR724X_BASE.hints 239705 2012-08-26 04:36:59Z adrian $
+# $FreeBSD$
 #
 hint.apb.0.at="nexus0"
 hint.apb.0.irq=4

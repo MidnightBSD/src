@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Thomas Skibo
  * Copyright (c) 2008 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/sdhci/sdhci_fdt.c 343504 2019-01-27 19:04:28Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -50,6 +52,14 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/sdhci/sdhci_fdt.c 343504 2019-01-27 19:04:
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
+#ifdef EXT_RESOURCES
+#include <dev/ofw/ofw_subr.h>
+#include <dev/extres/clk/clk.h>
+#include <dev/extres/clk/clk_fixed.h>
+#include <dev/extres/syscon/syscon.h>
+#include <dev/extres/phy/phy.h>
+#endif
+
 #include <dev/mmc/bridge.h>
 
 #include <dev/sdhci/sdhci.h>
@@ -57,13 +67,49 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/sdhci/sdhci_fdt.c 343504 2019-01-27 19:04:
 #include "mmcbr_if.h"
 #include "sdhci_if.h"
 
-#define	MAX_SLOTS	6
+#include "opt_mmccam.h"
+
+#ifdef EXT_RESOURCES
+#include "clkdev_if.h"
+#include "syscon_if.h"
+#endif
+
+#define	MAX_SLOTS		6
+#define	SDHCI_FDT_ARMADA38X	1
+#define	SDHCI_FDT_GENERIC	2
+#define	SDHCI_FDT_XLNX_ZY7	3
+#define	SDHCI_FDT_QUALCOMM	4
+#define	SDHCI_FDT_RK3399	5
+
+#ifdef EXT_RESOURCES
+#define	RK3399_GRF_EMMCCORE_CON0		0xf000
+#define	 RK3399_CORECFG_BASECLKFREQ		0xff00
+#define	 RK3399_CORECFG_TIMEOUTCLKUNIT		(1 << 7)
+#define	 RK3399_CORECFG_TUNINGCOUNT		0x3f
+#define	RK3399_GRF_EMMCCORE_CON11		0xf02c
+#define	 RK3399_CORECFG_CLOCKMULTIPLIER		0xff
+
+#define	LOWEST_SET_BIT(mask)	((((mask) - 1) & (mask)) ^ (mask))
+#define	SHIFTIN(x, mask)	((x) * LOWEST_SET_BIT(mask))
+
+#define	EMMCCARDCLK_ID		1000
+#endif
+
+static struct ofw_compat_data compat_data[] = {
+	{ "marvell,armada-380-sdhci",	SDHCI_FDT_ARMADA38X },
+	{ "sdhci_generic",		SDHCI_FDT_GENERIC },
+	{ "qcom,sdhci-msm-v4",		SDHCI_FDT_QUALCOMM },
+	{ "rockchip,rk3399-sdhci-5.1",	SDHCI_FDT_RK3399 },
+	{ "xlnx,zy7_sdhci",		SDHCI_FDT_XLNX_ZY7 },
+	{ NULL, 0 }
+};
 
 struct sdhci_fdt_softc {
 	device_t	dev;		/* Controller device */
 	u_int		quirks;		/* Chip specific quirks */
 	u_int		caps;		/* If we override SDHCI_CAPABILITIES */
 	uint32_t	max_clk;	/* Max possible freq */
+	uint8_t		sdma_boundary;	/* If we override the SDMA boundary */
 	struct resource *irq_res;	/* IRQ resource */
 	void		*intrhand;	/* Interrupt handle */
 
@@ -73,7 +119,208 @@ struct sdhci_fdt_softc {
 
 	bool		wp_inverted;	/* WP pin is inverted */
 	bool		no_18v;		/* No 1.8V support */
+
+#ifdef EXT_RESOURCES
+	clk_t		clk_xin;	/* xin24m fixed clock */
+	clk_t		clk_ahb;	/* ahb clock */
+	phy_t		phy;		/* phy to be used */
+#endif
 };
+
+#ifdef EXT_RESOURCES
+struct rk3399_emmccardclk_sc {
+	device_t	clkdev;
+	bus_addr_t	reg;
+};
+
+static int
+rk3399_emmccardclk_init(struct clknode *clk, device_t dev)
+{
+
+	clknode_init_parent_idx(clk, 0);
+	return (0);
+}
+
+static clknode_method_t rk3399_emmccardclk_clknode_methods[] = {
+	/* Device interface */
+	CLKNODEMETHOD(clknode_init,	rk3399_emmccardclk_init),
+	CLKNODEMETHOD_END
+};
+DEFINE_CLASS_1(rk3399_emmccardclk_clknode, rk3399_emmccardclk_clknode_class,
+    rk3399_emmccardclk_clknode_methods, sizeof(struct rk3399_emmccardclk_sc),
+    clknode_class);
+
+static int
+rk3399_ofw_map(struct clkdom *clkdom, uint32_t ncells,
+    phandle_t *cells, struct clknode **clk)
+{
+
+	if (ncells == 0)
+		*clk = clknode_find_by_id(clkdom, EMMCCARDCLK_ID);
+	else
+		return (ERANGE);
+
+	if (*clk == NULL)
+		return (ENXIO);
+	return (0);
+}
+
+static void
+sdhci_init_rk3399_emmccardclk(device_t dev)
+{
+	struct clknode_init_def def;
+	struct rk3399_emmccardclk_sc *sc;
+	struct clkdom *clkdom;
+	struct clknode *clk;
+	clk_t clk_parent;
+	bus_addr_t paddr;
+	bus_size_t psize;
+	const char **clknames;
+	phandle_t node;
+	int i, nclocks, ncells, error;
+
+	node = ofw_bus_get_node(dev);
+
+	if (ofw_reg_to_paddr(node, 0, &paddr, &psize, NULL) != 0) {
+		device_printf(dev, "cannot parse 'reg' property\n");
+		return;
+	}
+
+	error = ofw_bus_parse_xref_list_get_length(node, "clocks",
+	    "#clock-cells", &ncells);
+	if (error != 0 || ncells != 2) {
+		device_printf(dev, "couldn't find parent clocks\n");
+		return;
+	}
+
+	nclocks = ofw_bus_string_list_to_array(node, "clock-output-names",
+	    &clknames);
+	/* No clocks to export */
+	if (nclocks <= 0)
+		return;
+
+	if (nclocks != 1) {
+		device_printf(dev, "Having %d clock instead of 1, aborting\n",
+		    nclocks);
+		return;
+	}
+
+	clkdom = clkdom_create(dev);
+	clkdom_set_ofw_mapper(clkdom, rk3399_ofw_map);
+
+	memset(&def, 0, sizeof(def));
+	def.id = EMMCCARDCLK_ID;
+	def.name = clknames[0];
+	def.parent_names = malloc(sizeof(char *) * ncells, M_OFWPROP, M_WAITOK);
+	for (i = 0; i < ncells; i++) {
+		error = clk_get_by_ofw_index(dev, 0, i, &clk_parent);
+		if (error != 0) {
+			device_printf(dev, "cannot get clock %d\n", error);
+			return;
+		}
+		def.parent_names[i] = clk_get_name(clk_parent);
+		if (bootverbose)
+			device_printf(dev, "clk parent: %s\n",
+			    def.parent_names[i]);
+		clk_release(clk_parent);
+	}
+	def.parent_cnt = ncells;
+
+	clk = clknode_create(clkdom, &rk3399_emmccardclk_clknode_class, &def);
+	if (clk == NULL) {
+		device_printf(dev, "cannot create clknode\n");
+		return;
+	}
+
+	sc = clknode_get_softc(clk);
+	sc->reg = paddr;
+	sc->clkdev = device_get_parent(dev);
+
+	clknode_register(clkdom, clk);
+
+	if (clkdom_finit(clkdom) != 0) {
+		device_printf(dev, "cannot finalize clkdom initialization\n");
+		return;
+	}
+
+	if (bootverbose)
+		clkdom_dump(clkdom);
+}
+
+static int
+sdhci_init_rk3399(device_t dev)
+{
+	struct sdhci_fdt_softc *sc = device_get_softc(dev);
+	struct syscon *grf = NULL;
+	phandle_t node;
+	uint64_t freq;
+	uint32_t mask, val;
+	int error;
+
+	/* Get and activate clocks */
+	error = clk_get_by_ofw_name(dev, 0, "clk_xin", &sc->clk_xin);
+	if (error != 0) {
+		device_printf(dev, "cannot get xin clock\n");
+		return (ENXIO);
+	}
+	error = clk_enable(sc->clk_xin);
+	if (error != 0) {
+		device_printf(dev, "cannot enable xin clock\n");
+		return (ENXIO);
+	}
+	error = clk_get_freq(sc->clk_xin, &freq);
+	if (error != 0) {
+		device_printf(dev, "cannot get xin clock frequency\n");
+		return (ENXIO);
+	}
+	error = clk_get_by_ofw_name(dev, 0, "clk_ahb", &sc->clk_ahb);
+	if (error != 0) {
+		device_printf(dev, "cannot get ahb clock\n");
+		return (ENXIO);
+	}
+	error = clk_enable(sc->clk_ahb);
+	if (error != 0) {
+		device_printf(dev, "cannot enable ahb clock\n");
+		return (ENXIO);
+	}
+
+	/* Register clock */
+	sdhci_init_rk3399_emmccardclk(dev);
+
+	/* Enable PHY */
+	error = phy_get_by_ofw_name(dev, 0, "phy_arasan", &sc->phy);
+	if (error != 0) {
+		device_printf(dev, "Could not get phy\n");
+		return (ENXIO);
+	}
+	error = phy_enable(sc->phy);
+	if (error != 0) {
+		device_printf(dev, "Could not enable phy\n");
+		return (ENXIO);
+	}
+	/* Get syscon */
+	node = ofw_bus_get_node(dev);
+	if (OF_hasprop(node, "arasan,soc-ctl-syscon") &&
+	    syscon_get_by_ofw_property(dev, node,
+	    "arasan,soc-ctl-syscon", &grf) != 0) {
+		device_printf(dev, "cannot get grf driver handle\n");
+		return (ENXIO);
+	}
+
+	/* Disable clock multiplier */
+	mask = RK3399_CORECFG_CLOCKMULTIPLIER;
+	val = 0;
+	SYSCON_WRITE_4(grf, RK3399_GRF_EMMCCORE_CON11, (mask << 16) | val);
+
+	/* Set base clock frequency */
+	mask = RK3399_CORECFG_BASECLKFREQ;
+	val = SHIFTIN((freq + (1000000 / 2)) / 1000000,
+	    RK3399_CORECFG_BASECLKFREQ);
+	SYSCON_WRITE_4(grf, RK3399_GRF_EMMCCORE_CON0, (mask << 16) | val);
+	
+	return (0);
+}
+#endif
 
 static uint8_t
 sdhci_fdt_read_1(device_t dev, struct sdhci_slot *slot, bus_size_t off)
@@ -181,13 +428,30 @@ sdhci_fdt_probe(device_t dev)
 	if (!ofw_bus_status_okay(dev))
 		return (ENXIO);
 
-	if (ofw_bus_is_compatible(dev, "sdhci_generic")) {
+	switch (ofw_bus_search_compatible(dev, compat_data)->ocd_data) {
+	case SDHCI_FDT_ARMADA38X:
+		sc->quirks = SDHCI_QUIRK_BROKEN_AUTO_STOP;
+		device_set_desc(dev, "ARMADA38X SDHCI controller");
+		break;
+	case SDHCI_FDT_GENERIC:
 		device_set_desc(dev, "generic fdt SDHCI controller");
-	} else if (ofw_bus_is_compatible(dev, "xlnx,zy7_sdhci")) {
+		break;
+	case SDHCI_FDT_QUALCOMM:
+		sc->quirks = SDHCI_QUIRK_ALL_SLOTS_NON_REMOVABLE |
+		    SDHCI_QUIRK_BROKEN_SDMA_BOUNDARY;
+		sc->sdma_boundary = SDHCI_BLKSZ_SDMA_BNDRY_4K;
+		device_set_desc(dev, "Qualcomm FDT SDHCI controller");
+		break;
+	case SDHCI_FDT_RK3399:
+		device_set_desc(dev, "Rockchip RK3399 fdt SDHCI controller");
+		break;
+	case SDHCI_FDT_XLNX_ZY7:
 		sc->quirks = SDHCI_QUIRK_DATA_TIMEOUT_USES_SDCLK;
 		device_set_desc(dev, "Zynq-7000 generic fdt SDHCI controller");
-	} else
+		break;
+	default:
 		return (ENXIO);
+	}
 
 	node = ofw_bus_get_node(dev);
 
@@ -224,6 +488,18 @@ sdhci_fdt_attach(device_t dev)
 		return (ENOMEM);
 	}
 
+#ifdef EXT_RESOURCES
+	if (ofw_bus_search_compatible(dev, compat_data)->ocd_data ==
+	    SDHCI_FDT_RK3399) {
+		/* Initialize SDHCI */
+		err = sdhci_init_rk3399(dev);
+		if (err != 0) {
+			device_printf(dev, "Cannot init RK3399 SDHCI\n");
+			return (err);
+		}
+	}
+#endif
+
 	/* Scan all slots. */
 	slots = sc->num_slots;	/* number of slots determined in probe(). */
 	sc->num_slots = 0;
@@ -243,6 +519,7 @@ sdhci_fdt_attach(device_t dev)
 		slot->quirks = sc->quirks;
 		slot->caps = sc->caps;
 		slot->max_clk = sc->max_clk;
+		slot->sdma_boundary = sc->sdma_boundary;
 
 		if (sdhci_init_slot(dev, slot, i) != 0)
 			continue;
@@ -326,4 +603,6 @@ static devclass_t sdhci_fdt_devclass;
 DRIVER_MODULE(sdhci_fdt, simplebus, sdhci_fdt_driver, sdhci_fdt_devclass,
     NULL, NULL);
 SDHCI_DEPEND(sdhci_fdt);
+#ifndef MMCCAM
 MMC_DECLARE_BRIDGE(sdhci_fdt);
+#endif

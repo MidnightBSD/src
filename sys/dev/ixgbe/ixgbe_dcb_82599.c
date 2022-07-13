@@ -1,6 +1,7 @@
 /******************************************************************************
+  SPDX-License-Identifier: BSD-3-Clause
 
-  Copyright (c) 2001-2017, Intel Corporation
+  Copyright (c) 2001-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -30,7 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/ixgbe/ixgbe_dcb_82599.c 331722 2018-03-29 02:50:57Z eadler $*/
+/*$FreeBSD$*/
 
 
 #include "ixgbe_type.h"
@@ -110,7 +111,11 @@ s32 ixgbe_dcb_get_pfc_stats_82599(struct ixgbe_hw *hw,
 /**
  * ixgbe_dcb_config_rx_arbiter_82599 - Config Rx Data arbiter
  * @hw: pointer to hardware structure
- * @dcb_config: pointer to ixgbe_dcb_config structure
+ * @refill: refill credits index by traffic class
+ * @max: max credits index by traffic class
+ * @bwg_id: bandwidth grouping indexed by traffic class
+ * @tsa: transmission selection algorithm indexed by traffic class
+ * @map: priority to tc assignments indexed by priority
  *
  * Configure Rx Packet Arbiter and credits for each traffic class.
  */
@@ -169,7 +174,10 @@ s32 ixgbe_dcb_config_rx_arbiter_82599(struct ixgbe_hw *hw, u16 *refill,
 /**
  * ixgbe_dcb_config_tx_desc_arbiter_82599 - Config Tx Desc. arbiter
  * @hw: pointer to hardware structure
- * @dcb_config: pointer to ixgbe_dcb_config structure
+ * @refill: refill credits index by traffic class
+ * @max: max credits index by traffic class
+ * @bwg_id: bandwidth grouping indexed by traffic class
+ * @tsa: transmission selection algorithm indexed by traffic class
  *
  * Configure Tx Descriptor Arbiter and credits for each traffic class.
  */
@@ -189,7 +197,7 @@ s32 ixgbe_dcb_config_tx_desc_arbiter_82599(struct ixgbe_hw *hw, u16 *refill,
 	for (i = 0; i < IXGBE_DCB_MAX_TRAFFIC_CLASS; i++) {
 		max_credits = max[i];
 		reg = max_credits << IXGBE_RTTDT2C_MCL_SHIFT;
-		reg |= refill[i];
+		reg |= (u32)(refill[i]);
 		reg |= (u32)(bwg_id[i]) << IXGBE_RTTDT2C_BWG_SHIFT;
 
 		if (tsa[i] == ixgbe_dcb_tsa_group_strict_cee)
@@ -214,7 +222,11 @@ s32 ixgbe_dcb_config_tx_desc_arbiter_82599(struct ixgbe_hw *hw, u16 *refill,
 /**
  * ixgbe_dcb_config_tx_data_arbiter_82599 - Config Tx Data arbiter
  * @hw: pointer to hardware structure
- * @dcb_config: pointer to ixgbe_dcb_config structure
+ * @refill: refill credits index by traffic class
+ * @max: max credits index by traffic class
+ * @bwg_id: bandwidth grouping indexed by traffic class
+ * @tsa: transmission selection algorithm indexed by traffic class
+ * @map: priority to tc assignments indexed by priority
  *
  * Configure Tx Packet Arbiter and credits for each traffic class.
  */
@@ -362,6 +374,7 @@ s32 ixgbe_dcb_config_pfc_82599(struct ixgbe_hw *hw, u8 pfc_en, u8 *map)
 /**
  * ixgbe_dcb_config_tc_stats_82599 - Config traffic class statistics
  * @hw: pointer to hardware structure
+ * @dcb_config: pointer to ixgbe_dcb_config structure
  *
  * Configure queue statistics registers, all queues belonging to same traffic
  * class uses a single set of queue statistics counters.
@@ -372,17 +385,17 @@ s32 ixgbe_dcb_config_tc_stats_82599(struct ixgbe_hw *hw,
 	u32 reg = 0;
 	u8  i   = 0;
 	u8 tc_count = 8;
-	bool vt_mode = FALSE;
+	bool vt_mode = false;
 
 	if (dcb_config != NULL) {
 		tc_count = dcb_config->num_tcs.pg_tcs;
 		vt_mode = dcb_config->vt_mode;
 	}
 
-	if (!((tc_count == 8 && vt_mode == FALSE) || tc_count == 4))
+	if (!((tc_count == 8 && vt_mode == false) || tc_count == 4))
 		return IXGBE_ERR_PARAM;
 
-	if (tc_count == 8 && vt_mode == FALSE) {
+	if (tc_count == 8 && vt_mode == false) {
 		/*
 		 * Receive Queues stats setting
 		 * 32 RQSMR registers, each configuring 4 queues.
@@ -422,7 +435,7 @@ s32 ixgbe_dcb_config_tc_stats_82599(struct ixgbe_hw *hw,
 				reg = 0x07070707;
 			IXGBE_WRITE_REG(hw, IXGBE_TQSM(i), reg);
 		}
-	} else if (tc_count == 4 && vt_mode == FALSE) {
+	} else if (tc_count == 4 && vt_mode == false) {
 		/*
 		 * Receive Queues stats setting
 		 * 32 RQSMR registers, each configuring 4 queues.
@@ -459,7 +472,7 @@ s32 ixgbe_dcb_config_tc_stats_82599(struct ixgbe_hw *hw,
 				reg = 0x03030303;
 			IXGBE_WRITE_REG(hw, IXGBE_TQSM(i), reg);
 		}
-	} else if (tc_count == 4 && vt_mode == TRUE) {
+	} else if (tc_count == 4 && vt_mode == true) {
 		/*
 		 * Receive Queues stats setting
 		 * 32 RQSMR registers, each configuring 4 queues.
@@ -572,7 +585,12 @@ s32 ixgbe_dcb_config_82599(struct ixgbe_hw *hw,
 /**
  * ixgbe_dcb_hw_config_82599 - Configure and enable DCB
  * @hw: pointer to hardware structure
- * @dcb_config: pointer to ixgbe_dcb_config structure
+ * @link_speed: unused
+ * @refill: refill credits index by traffic class
+ * @max: max credits index by traffic class
+ * @bwg_id: bandwidth grouping indexed by traffic class
+ * @tsa: transmission selection algorithm indexed by traffic class
+ * @map: priority to tc assignments indexed by priority
  *
  * Configure dcb settings and enable dcb mode.
  */

@@ -235,6 +235,7 @@ typedef struct synapticsinfo {
 	int			 softbutton3_x;
 	int			 max_x;
 	int			 max_y;
+	int			 three_finger_drag;
 	int			 natural_scroll;
 } synapticsinfo_t;
 
@@ -464,6 +465,7 @@ struct psm_softc {		/* Driver status information */
 	int		muxtpbuttons;	/* Touchpad button state */
 	int		muxmsbuttons;	/* Mouse (trackpoint) button state */
 	struct timeval	muxmidtimeout;	/* middle button supression timeout */
+	int		muxsinglesyna;	/* Probe result of single Synaptics */
 #ifdef EVDEV_SUPPORT
 	struct evdev_dev *evdev_a;	/* Absolute reporting device */
 	struct evdev_dev *evdev_r;	/* Relative reporting device */
@@ -512,10 +514,10 @@ static devclass_t psm_devclass;
 /* Tunables */
 static int tap_enabled = -1;
 static int verbose = PSM_DEBUG;
-static int synaptics_support = 0;
-static int trackpoint_support = 0;
-static int elantech_support = 0;
-static int mux_disabled = 0;
+static int synaptics_support = 1;
+static int trackpoint_support = 1;
+static int elantech_support = 1;
+static int mux_disabled = -1;
 
 /* for backward compatibility */
 #define	OLD_MOUSE_GETHWINFO	_IOR('M', 1, old_mousehw_t)
@@ -572,6 +574,7 @@ enum {
 	SYNAPTICS_SYSCTL_SOFTBUTTONS_Y =	SYN_OFFSET(softbuttons_y),
 	SYNAPTICS_SYSCTL_SOFTBUTTON2_X =	SYN_OFFSET(softbutton2_x),
 	SYNAPTICS_SYSCTL_SOFTBUTTON3_X =	SYN_OFFSET(softbutton3_x),
+	SYNAPTICS_SYSCTL_THREE_FINGER_DRAG = 	SYN_OFFSET(three_finger_drag),
 	SYNAPTICS_SYSCTL_NATURAL_SCROLL =	SYN_OFFSET(natural_scroll),
 #define	SYNAPTICS_SYSCTL_LAST	SYNAPTICS_SYSCTL_NATURAL_SCROLL
 };
@@ -663,6 +666,7 @@ static probefunc_t	enable_4dplus;
 static probefunc_t	enable_mmanplus;
 static probefunc_t	enable_synaptics;
 static probefunc_t	enable_synaptics_mux;
+static probefunc_t	enable_single_synaptics_mux;
 static probefunc_t	enable_trackpoint;
 static probefunc_t	enable_versapad;
 static probefunc_t	enable_elantech;
@@ -683,8 +687,10 @@ static struct {
 	 * WARNING: the order of probe is very important.  Don't mess it
 	 * unless you know what you are doing.
 	 */
-	{ MOUSE_MODEL_SYNAPTICS,	/* Synaptics Touchpad on Active Mux */
+	{ MOUSE_MODEL_SYNAPTICS,	/* Synaptics + mouse on Active Mux */
 	  0x00, MOUSE_PS2_PACKETSIZE, enable_synaptics_mux },
+	{ MOUSE_MODEL_SYNAPTICS,	/* Single Synaptics on Active Mux */
+	  0xc0, MOUSE_SYNAPTICS_PACKETSIZE, enable_single_synaptics_mux },
 	{ MOUSE_MODEL_NET,		/* Genius NetMouse */
 	  0x08, MOUSE_PS2INTELLI_PACKETSIZE, enable_gmouse },
 	{ MOUSE_MODEL_NETSCROLL,	/* Genius NetScroll */
@@ -808,9 +814,12 @@ get_mouse_status(KBDC kbdc, int *status, int flag, int len)
 		if (status[i] < 0)
 			break;
 	}
-
-	VLOG(1, (LOG_DEBUG, "psm: %s %02x %02x %02x\n",
-	    (flag == 1) ? "data" : "status", status[0], status[1], status[2]));
+	if (len >= 3) {
+		for (; i < 3; ++i)
+			status[i] = 0;
+		VLOG(1, (LOG_DEBUG, "psm: %s %02x %02x %02x\n",
+		    (flag == 1) ? "data" : "status", status[0], status[1], status[2]));
+	}
 
 	return (i);
 }
@@ -2070,9 +2079,9 @@ psmdetach(device_t dev)
 
 #ifdef EVDEV_SUPPORT
 static int
-psm_ev_open_r(struct evdev_dev *evdev, void *ev_softc)
+psm_ev_open_r(struct evdev_dev *evdev)
 {
-	struct psm_softc *sc = (struct psm_softc *)ev_softc;
+	struct psm_softc *sc = evdev_get_softc(evdev);
 	int err = 0;
 
 	/* Get device data */
@@ -2090,24 +2099,27 @@ psm_ev_open_r(struct evdev_dev *evdev, void *ev_softc)
 	return (err);
 }
 
-static void
-psm_ev_close_r(struct evdev_dev *evdev, void *ev_softc)
+static int
+psm_ev_close_r(struct evdev_dev *evdev)
 {
-	struct psm_softc *sc = (struct psm_softc *)ev_softc;
+	struct psm_softc *sc = evdev_get_softc(evdev);
+	int err = 0;
 
 	sc->state &= ~PSM_EV_OPEN_R;
 
 	if (sc->state & (PSM_OPEN | PSM_EV_OPEN_A))
-		return;
+		return (0);
 
 	if (sc->state & PSM_VALID)
-		psmclose(sc);
+		err = psmclose(sc);
+
+	return (err);
 }
 
 static int
-psm_ev_open_a(struct evdev_dev *evdev, void *ev_softc)
+psm_ev_open_a(struct evdev_dev *evdev)
 {
-	struct psm_softc *sc = (struct psm_softc *)ev_softc;
+	struct psm_softc *sc = evdev_get_softc(evdev);
 	int err = 0;
 
 	/* Get device data */
@@ -2125,18 +2137,21 @@ psm_ev_open_a(struct evdev_dev *evdev, void *ev_softc)
 	return (err);
 }
 
-static void
-psm_ev_close_a(struct evdev_dev *evdev, void *ev_softc)
+static int
+psm_ev_close_a(struct evdev_dev *evdev)
 {
-	struct psm_softc *sc = (struct psm_softc *)ev_softc;
+	struct psm_softc *sc = evdev_get_softc(evdev);
+	int err = 0;
 
 	sc->state &= ~PSM_EV_OPEN_A;
 
 	if (sc->state & (PSM_OPEN | PSM_EV_OPEN_R))
-		return;
+		return (0);
 
 	if (sc->state & PSM_VALID)
-		psmclose(sc);
+		err = psmclose(sc);
+
+	return (err);
 }
 #endif
 
@@ -2607,9 +2622,6 @@ psmioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag,
 	struct psm_softc *sc = dev->si_drv1;
 	mousemode_t mode;
 	mousestatus_t status;
-#if (defined(MOUSE_GETVARS))
-	mousevar_t *var;
-#endif
 	mousedata_t *data;
 	int stat[3];
 	int command_byte;
@@ -2805,21 +2817,6 @@ psmioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag,
 		splx(s);
 		*(mousestatus_t *)addr = status;
 		break;
-
-#if (defined(MOUSE_GETVARS))
-	case MOUSE_GETVARS:
-		var = (mousevar_t *)addr;
-		bzero(var, sizeof(*var));
-		s = spltty();
-		var->var[0] = MOUSE_VARS_PS2_SIG;
-		var->var[1] = sc->config;
-		var->var[2] = sc->flags;
-		splx(s);
-		break;
-
-	case MOUSE_SETVARS:
-		return (ENODEV);
-#endif /* MOUSE_GETVARS */
 
 	case MOUSE_READSTATE:
 	case MOUSE_READDATA:
@@ -3809,6 +3806,7 @@ psmgestures(struct psm_softc *sc, finger_t *fingers, int nfingers,
 		int vscroll_hor_area, vscroll_ver_area;
 		int two_finger_scroll;
 		int max_x, max_y;
+		int three_finger_drag;
 
 		/* Read sysctl. */
 		/* XXX Verify values? */
@@ -3823,7 +3821,7 @@ psmgestures(struct psm_softc *sc, finger_t *fingers, int nfingers,
 		two_finger_scroll = sc->syninfo.two_finger_scroll;
 		max_x = sc->syninfo.max_x;
 		max_y = sc->syninfo.max_y;
-
+		three_finger_drag = sc->syninfo.three_finger_drag;
 		/* Read current absolute position. */
 		x0 = f->x;
 		y0 = f->y;
@@ -3912,8 +3910,8 @@ psmgestures(struct psm_softc *sc, finger_t *fingers, int nfingers,
 				    ~MOUSE_BUTTON1DOWN) | center_button;
 		}
 
-		/* If in tap-hold, add the recorded button. */
-		if (gest->in_taphold)
+		/* If in tap-hold or three fingers, add the recorded button. */
+		if (gest->in_taphold || (nfingers == 3 && three_finger_drag))
 			ms->button |= gest->tap_button;
 
 		/*
@@ -3929,6 +3927,9 @@ psmgestures(struct psm_softc *sc, finger_t *fingers, int nfingers,
 		/* Do we have enough packets to consider this a gesture? */
 		if (queue_len < gest->window_min)
 			return;
+
+		dyp = -1;
+		dxp = -1;
 
 		/* Is a scrolling action occurring? */
 		if (!gest->in_taphold && !ms->button &&
@@ -5776,6 +5777,7 @@ synaptics_sysctl(SYSCTL_HANDLER_ARGS)
 			return (EINVAL);
 		break;
         case SYNAPTICS_SYSCTL_TOUCHPAD_OFF:
+	case SYNAPTICS_SYSCTL_THREE_FINGER_DRAG:
 	case SYNAPTICS_SYSCTL_NATURAL_SCROLL:
 		if (arg < 0 || arg > 1)
 			return (EINVAL);
@@ -6169,6 +6171,14 @@ synaptics_sysctl_create_tree(struct psm_softc *sc, const char *name,
 	    synaptics_sysctl, "I",
 	    "Turn off touchpad");
 
+	sc->syninfo.three_finger_drag = 0;
+	SYSCTL_ADD_PROC(&sc->syninfo.sysctl_ctx,
+	    SYSCTL_CHILDREN(sc->syninfo.sysctl_tree), OID_AUTO,
+	    "three_finger_drag", CTLTYPE_INT|CTLFLAG_RW|CTLFLAG_ANYBODY,
+	    sc, SYNAPTICS_SYSCTL_THREE_FINGER_DRAG,
+	    synaptics_sysctl, "I",
+	    "Enable dragging with three fingers");
+
 	/* hw.psm.synaptics.natural_scroll. */
 	sc->syninfo.natural_scroll = 0;
 	SYSCTL_ADD_PROC(&sc->syninfo.sysctl_ctx,
@@ -6250,7 +6260,10 @@ enable_synaptics_mux(struct psm_softc *sc, enum probearg arg)
 	int active_ports_count = 0;
 	int active_ports_mask = 0;
 
-	if (mux_disabled != 0)
+	sc->muxsinglesyna = FALSE;
+
+	if (mux_disabled == 1 || (mux_disabled == -1 &&
+	    (kbdcp(kbdc)->quirks & KBDC_QUIRK_DISABLE_MUX_PROBE) != 0))
 		return (FALSE);
 
 	version = enable_aux_mux(kbdc);
@@ -6272,18 +6285,16 @@ enable_synaptics_mux(struct psm_softc *sc, enum probearg arg)
 		    active_ports_count);
 
 	/* psm has a special support for GenMouse + SynTouchpad combination */
-	if (active_ports_count >= 2) {
-		for (port = 0; port < KBDC_AUX_MUX_NUM_PORTS; port++) {
-			if ((active_ports_mask & 1 << port) == 0)
-				continue;
-			VLOG(3, (LOG_DEBUG, "aux_mux: probe port %d\n", port));
-			set_active_aux_mux_port(kbdc, port);
-			probe = enable_synaptics(sc, arg);
-			if (probe) {
-				if (arg == PROBE)
-					sc->muxport = port;
-				break;
-			}
+	for (port = 0; port < KBDC_AUX_MUX_NUM_PORTS; port++) {
+		if ((active_ports_mask & 1 << port) == 0)
+			continue;
+		VLOG(3, (LOG_DEBUG, "aux_mux: probe port %d\n", port));
+		set_active_aux_mux_port(kbdc, port);
+		probe = enable_synaptics(sc, arg);
+		if (probe) {
+			if (arg == PROBE)
+				sc->muxport = port;
+			break;
 		}
 	}
 
@@ -6305,7 +6316,17 @@ enable_synaptics_mux(struct psm_softc *sc, enum probearg arg)
 	}
 	empty_both_buffers(kbdc, 10);	/* remove stray data if any */
 
-	return (probe);
+	/* Don't disable syncbit checks if Synaptics is only device on MUX */
+	if (active_ports_count == 1)
+		sc->muxsinglesyna = probe;
+	return (active_ports_count != 1 ? probe : FALSE);
+}
+
+static int
+enable_single_synaptics_mux(struct psm_softc *sc, enum probearg arg)
+{
+	/* Synaptics device is already initialized in enable_synaptics_mux */
+	return (sc->muxsinglesyna);
 }
 
 static int
@@ -6379,6 +6400,15 @@ enable_synaptics(struct psm_softc *sc, enum probearg arg)
 		printf("   infoSimplC: %d\n", synhw.infoSimplC);
 		printf("   infoGeometry: %d\n", synhw.infoGeometry);
 	}
+
+	/*
+	 * Typical bezel limits. Taken from 'Synaptics
+	 * PS/2 * TouchPad Interfacing Guide' p.3.2.3.
+	 */
+	synhw.maximumXCoord = 5472;
+	synhw.maximumYCoord = 4448;
+	synhw.minimumXCoord = 1472;
+	synhw.minimumYCoord = 1408;
 
 	/* Read the extended capability bits. */
 	if (mouse_ext_command(kbdc, SYNAPTICS_READ_CAPABILITIES) == 0)
@@ -6521,13 +6551,6 @@ enable_synaptics(struct psm_softc *sc, enum probearg arg)
 						     ((status[1] & 0x0f) << 1);
 				synhw.maximumYCoord = (status[2] << 5) |
 						     ((status[1] & 0xf0) >> 3);
-			} else {
-				/*
-				 * Typical bezel limits. Taken from 'Synaptics
-				 * PS/2 * TouchPad Interfacing Guide' p.3.2.3.
-				 */
-				synhw.maximumXCoord = 5472;
-				synhw.maximumYCoord = 4448;
 			}
 
 			if (synhw.capReportsMin) {
@@ -6543,13 +6566,6 @@ enable_synaptics(struct psm_softc *sc, enum probearg arg)
 						     ((status[1] & 0x0f) << 1);
 				synhw.minimumYCoord = (status[2] << 5) |
 						     ((status[1] & 0xf0) >> 3);
-			} else {
-				/*
-				 * Typical bezel limits. Taken from 'Synaptics
-				 * PS/2 * TouchPad Interfacing Guide' p.3.2.3.
-				 */
-				synhw.minimumXCoord = 1472;
-				synhw.minimumYCoord = 1408;
 			}
 
 			/*
@@ -7585,5 +7601,5 @@ psmcpnp_attach(device_t dev)
 
 DRIVER_MODULE(psmcpnp, isa, psmcpnp_driver, psmcpnp_devclass, 0, 0);
 DRIVER_MODULE(psmcpnp, acpi, psmcpnp_driver, psmcpnp_devclass, 0, 0);
-
+ISA_PNP_INFO(psmcpnp_ids);
 #endif /* DEV_ISA */

@@ -1,8 +1,8 @@
 /******************************************************************************
 
-  Copyright (c) 2013-2019, Intel Corporation
+  Copyright (c) 2013-2018, Intel Corporation
   All rights reserved.
-
+  
   Redistribution and use in source and binary forms, with or without 
   modification, are permitted provided that the following conditions are met:
   
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/ixl/i40e_osdep.c 349163 2019-06-18 00:08:02Z erj $*/
+/*$FreeBSD$*/
 
 #include <sys/limits.h>
 #include <sys/time.h>
@@ -46,14 +46,13 @@ i40e_dmamap_cb(void *arg, bus_dma_segment_t * segs, int nseg, int error)
         if (error)
                 return;
         *(bus_addr_t *) arg = segs->ds_addr;
-        return;
 }
 
 i40e_status
 i40e_allocate_virt_mem(struct i40e_hw *hw, struct i40e_virt_mem *mem, u32 size)
 {
 	mem->va = malloc(size, M_DEVBUF, M_NOWAIT | M_ZERO);
-	return(mem->va == NULL);
+	return (mem->va == NULL);
 }
 
 i40e_status
@@ -62,7 +61,7 @@ i40e_free_virt_mem(struct i40e_hw *hw, struct i40e_virt_mem *mem)
 	free(mem->va, M_DEVBUF);
 	mem->va = NULL;
 
-	return(0);
+	return (I40E_SUCCESS);
 }
 
 i40e_status
@@ -114,7 +113,7 @@ i40e_allocate_dma_mem(struct i40e_hw *hw, struct i40e_dma_mem *mem,
 	mem->size = size;
 	bus_dmamap_sync(mem->tag, mem->map,
 	    BUS_DMASYNC_PREREAD|BUS_DMASYNC_PREWRITE);
-	return (0);
+	return (I40E_SUCCESS);
 fail_2:
 	bus_dmamem_free(mem->tag, mem->va, mem->map);
 fail_1:
@@ -133,7 +132,7 @@ i40e_free_dma_mem(struct i40e_hw *hw, struct i40e_dma_mem *mem)
 	bus_dmamap_unload(mem->tag, mem->map);
 	bus_dmamem_free(mem->tag, mem->va, mem->map);
 	bus_dma_tag_destroy(mem->tag);
-	return (0);
+	return (I40E_SUCCESS);
 }
 
 void
@@ -261,7 +260,5 @@ i40e_write_pci_cfg(struct i40e_hw *hw, u32 reg, u16 value)
 {
         pci_write_config(((struct i40e_osdep *)hw->back)->dev,
             reg, value, 2);
-
-        return;
 }
 

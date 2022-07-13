@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1993 Herb Peyerl (hpeyerl@novatel.ca) All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -19,7 +21,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ep/if_epreg.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*
@@ -113,7 +115,7 @@
 /**************************************************************************
  *									  *
  * These are the registers for the 3Com 3c509 and their bit patterns when *
- * applicable.  They have been taken out the "EtherLink III Parallel  *
+ * applicable.  They have been taken out the "EtherLink III Parallel      *
  * Tasking EISA and ISA Technical Reference" "Beta Draft 10/30/92" manual *
  * from 3com.								  *
  *									  *

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2008-2009 Sam Leffler, Errno Consulting
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -13,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar9002/ar9280.h 224243 2011-07-21 08:35:10Z adrian $
+ * $FreeBSD$
  */
 #ifndef _ATH_AR9280_H_
 #define _ATH_AR9280_H_

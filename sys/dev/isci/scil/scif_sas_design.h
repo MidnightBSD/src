@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0
+ *
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
  *
@@ -49,7 +51,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/isci/scil/scif_sas_design.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 #ifndef _SCIF_SAS_DESIGN_H_
 #define _SCIF_SAS_DESIGN_H_
@@ -332,7 +334,7 @@ Please refer to these files directly for further design information:
 The SCIF SAS SMP REMOTE DEVICE object represents the expander device and fulfills
 its SMP discover activities. The discover procedure includes a initial discover
 phase and a following SATA spinup_hold release phase, if there are expander attached
-SATA device is discovered and in spinup_hold conditon. The SCIF SAS SMP REMOTE DEVICE
+SATA device is discovered and in spinup_hold condition. The SCIF SAS SMP REMOTE DEVICE
 object also fulfills expander attached device Target Reset (Phy Control) activity.
 
 @image latex Discover Process.eps "SMP Discover Activity Diagram" width=10cm

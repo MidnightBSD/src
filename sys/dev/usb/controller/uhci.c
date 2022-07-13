@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/usb/controller/uhci.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 1998 The NetBSD Foundation, Inc. All rights reserved.
  * Copyright (c) 1998 Lennart Augustsson. All rights reserved.
@@ -2932,7 +2934,7 @@ uhci_xfer_setup(struct usb_setup_params *parm)
 	 * We don't allow alignments of
 	 * less than 8 bytes:
 	 *
-	 * NOTE: Allocating using an aligment
+	 * NOTE: Allocating using an alignment 
 	 * of 1 byte has special meaning!
 	 */
 	if (n < 3) {

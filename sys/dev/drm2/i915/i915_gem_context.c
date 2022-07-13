@@ -86,7 +86,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/i915/i915_gem_context.c 296768 2016-03-12 20:05:23Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/i915/i915_drm.h>

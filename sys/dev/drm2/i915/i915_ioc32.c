@@ -28,9 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/i915/i915_ioc32.c 280183 2015-03-17 18:50:33Z dumbbell $");
-
-#include "opt_compat.h"
+__FBSDID("$FreeBSD$");
 
 #ifdef COMPAT_FREEBSD32
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/etherswitch/mtkswitch/mtkswitch_mt7620.h 300012 2016-05-17 06:30:46Z sgalabov $
+ * $FreeBSD$
  */
 
 #ifndef	__MTKSWITCH_MT7620_H__

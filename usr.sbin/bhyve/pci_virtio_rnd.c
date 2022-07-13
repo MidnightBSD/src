@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/pci_virtio_rnd.c 336189 2018-07-11 07:16:13Z araujo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #ifndef WITHOUT_CAPSICUM
@@ -43,6 +43,9 @@ __FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/pci_virtio_rnd.c 336189 2018-07-11 
 #include <sys/linker_set.h>
 #include <sys/uio.h>
 
+#ifndef WITHOUT_CAPSICUM
+#include <capsicum_helpers.h>
+#endif
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -55,6 +58,7 @@ __FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/pci_virtio_rnd.c 336189 2018-07-11 
 #include <sysexits.h>
 
 #include "bhyverun.h"
+#include "debug.h"
 #include "pci_emul.h"
 #include "virtio.h"
 
@@ -62,8 +66,8 @@ __FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/pci_virtio_rnd.c 336189 2018-07-11 
 
 
 static int pci_vtrnd_debug;
-#define DPRINTF(params) if (pci_vtrnd_debug) printf params
-#define WPRINTF(params) printf params
+#define DPRINTF(params) if (pci_vtrnd_debug) PRINTLN params
+#define WPRINTF(params) PRINTLN params
 
 /*
  * Per-device softc
@@ -99,7 +103,7 @@ pci_vtrnd_reset(void *vsc)
 
 	sc = vsc;
 
-	DPRINTF(("vtrnd: device reset requested !\n"));
+	DPRINTF(("vtrnd: device reset requested !"));
 	vi_reset_dev(&sc->vrsc_vs);
 }
 
@@ -125,7 +129,7 @@ pci_vtrnd_notify(void *vsc, struct vqueue_info *vq)
 
 		len = read(sc->vrsc_fd, iov.iov_base, iov.iov_len);
 
-		DPRINTF(("vtrnd: vtrnd_notify(): %d\r\n", len));
+		DPRINTF(("vtrnd: vtrnd_notify(): %d", len));
 
 		/* Catastrophe if unable to read from /dev/random */
 		assert(len > 0);
@@ -159,7 +163,7 @@ pci_vtrnd_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 
 #ifndef WITHOUT_CAPSICUM
 	cap_rights_init(&rights, CAP_READ);
-	if (cap_rights_limit(fd, &rights) == -1 && errno != ENOSYS)
+	if (caph_rights_limit(fd, &rights) == -1)
 		errx(EX_OSERR, "Unable to apply rights for sandbox");
 #endif
 
@@ -169,6 +173,7 @@ pci_vtrnd_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 	len = read(fd, &v, sizeof(v));
 	if (len <= 0) {
 		WPRINTF(("vtrnd: /dev/random not ready, read(): %d", len));
+		close(fd);
 		return (1);
 	}
 

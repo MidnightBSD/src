@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/common/medford_nic.c 342445 2018-12-25 07:27:45Z arybchik $");
+__FBSDID("$FreeBSD$");
 
 #include "efx.h"
 #include "efx_impl.h"

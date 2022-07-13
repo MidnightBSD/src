@@ -26,7 +26,7 @@
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: stable/11/sys/dev/mps/mpi/mpi2_history.txt 298955 2016-05-03 03:41:25Z pfg $
+ * $FreeBSD$
  */
 
  ==============================

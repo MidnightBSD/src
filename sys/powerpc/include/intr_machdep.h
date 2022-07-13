@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2002 Benno Rice.
  * All rights reserved.
  *
@@ -22,7 +24,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/powerpc/include/intr_machdep.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_INTR_MACHDEP_H_
@@ -30,7 +32,7 @@
 
 #define	INTR_VECTORS	256
 
-#define	MAX_PICS		16
+#define	MAX_PICS		32
 #define	MAP_IRQ(node, pin)	powerpc_get_irq(node, pin)
 
 /*
@@ -46,7 +48,7 @@ driver_filter_t powerpc_ipi_handler;
 
 void	intrcnt_add(const char *name, u_long **countp);
 
-void	powerpc_register_pic(device_t, uint32_t, u_int, u_int, u_int);
+u_int	powerpc_register_pic(device_t, uint32_t, u_int, u_int, u_int);
 u_int	powerpc_get_irq(uint32_t, u_int);
 
 void	powerpc_dispatch_intr(u_int, struct trapframe *);

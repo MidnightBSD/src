@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Neelkanth Natu
  * All rights reserved.
  *
@@ -52,7 +54,7 @@
 #include "sb_bus_space.h"
 #include "sb_scd.h"
 
-__FBSDID("$FreeBSD: stable/11/sys/mips/sibyte/sb_zbpci.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 static struct {
 	vm_offset_t vaddr;
@@ -446,6 +448,7 @@ static device_method_t zbpci_methods[] ={
 	DEVMETHOD(pcib_read_config,	zbpci_read_config),
 	DEVMETHOD(pcib_write_config,	zbpci_write_config),
 	DEVMETHOD(pcib_route_interrupt,	zbpci_route_interrupt),
+	DEVMETHOD(pcib_request_feature,	pcib_request_feature_allow),
 	
 	{ 0, 0 }
 };

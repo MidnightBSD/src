@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Robert N. M. Watson
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/terasic/mtl/terasic_mtl_reg.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -130,6 +132,7 @@ terasic_mtl_reg_mmap(struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
 	sc = dev->si_drv1;
 	error = 0;
 	if (trunc_page(offset) == offset &&
+	    offset + PAGE_SIZE > offset &&
 	    rman_get_size(sc->mtl_reg_res) >= offset + PAGE_SIZE) {
 		*paddr = rman_get_start(sc->mtl_reg_res) + offset;
 		*memattr = VM_MEMATTR_UNCACHEABLE;

@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ocs_fc/ocs_cam.c 344054 2019-02-12 17:05:59Z ram $
+ * $FreeBSD$
  */
 
 /**
@@ -579,12 +579,16 @@ int32_t ocs_scsi_recv_cmd(ocs_io_t *io, uint64_t lun, uint8_t *cdb,
 
 		if (flags & OCS_SCSI_CMD_SIMPLE)
 			atio->tag_action = MSG_SIMPLE_Q_TAG;
-		else if (flags &  FCP_TASK_ATTR_HEAD_OF_QUEUE)
+		else if (flags & OCS_SCSI_CMD_HEAD_OF_QUEUE)
 			atio->tag_action = MSG_HEAD_OF_Q_TAG;
-		else if (flags & FCP_TASK_ATTR_ORDERED)
+		else if (flags & OCS_SCSI_CMD_ORDERED)
 			atio->tag_action = MSG_ORDERED_Q_TAG;
+		else if (flags & OCS_SCSI_CMD_ACA)
+			atio->tag_action = MSG_ACA_TASK;
 		else
-			atio->tag_action = 0;
+			atio->tag_action = CAM_TAG_ACTION_NONE;
+		atio->priority = (flags & OCS_SCSI_PRIORITY_MASK) >>
+		    OCS_SCSI_PRIORITY_SHIFT;
 
 		atio->cdb_len = cdb_len;
 		ocs_memcpy(atio->cdb_io.cdb_bytes, cdb, cdb_len);
@@ -1119,10 +1123,7 @@ ocs_ldt_task(void *arg, int pending)
 			continue;
 		}
 
-		if (tgt->is_target) {
-			tgt->is_target = 0;
-			ocs_delete_target(ocs, fcp, i);
-		}
+		ocs_delete_target(ocs, fcp, i);
 
 		tgt->state = OCS_TGT_STATE_NONE;
 	}
@@ -1484,18 +1485,18 @@ static int32_t ocs_scsi_initiator_io_cb(ocs_io_t *io,
 
 	if (scsi_status == OCS_SCSI_STATUS_CHECK_RESPONSE) {
 		csio->scsi_status = rsp->scsi_status;
-		if (SCSI_STATUS_OK != rsp->scsi_status) {
+		if (SCSI_STATUS_OK != rsp->scsi_status)
 			ccb_status = CAM_SCSI_STATUS_ERROR;
-		}
+		else
+			ccb_status = CAM_REQ_CMP;
 
 		csio->resid = rsp->residual;
-		if (rsp->residual > 0) {
-			uint32_t length = rsp->response_wire_length;
-			/* underflow */
-			if (csio->dxfer_len == (length + csio->resid)) {
-				ccb_status = CAM_REQ_CMP;
-			}
-		} else if (rsp->residual < 0) {
+
+		/*
+		 * If we've already got a SCSI error, prefer that because it
+		 * will have more detail.
+		 */
+		 if ((rsp->residual < 0) && (ccb_status == CAM_REQ_CMP)) {
 			ccb_status = CAM_DATA_RUN_ERR;
 		}
 
@@ -1516,10 +1517,6 @@ static int32_t ocs_scsi_initiator_io_cb(ocs_io_t *io,
 		}
 	} else if (scsi_status != OCS_SCSI_STATUS_GOOD) {
 		ccb_status = CAM_REQ_CMP_ERR;
-		ocs_set_ccb_status(ccb, ccb_status);
-		csio->ccb_h.status |= CAM_DEV_QFRZN;
-		xpt_freeze_devq(csio->ccb_h.path, 1);
-
 	} else {
 		ccb_status = CAM_REQ_CMP;
 	}
@@ -1530,7 +1527,14 @@ static int32_t ocs_scsi_initiator_io_cb(ocs_io_t *io,
 
 	csio->ccb_h.ccb_io_ptr = NULL;
 	csio->ccb_h.ccb_ocs_ptr = NULL;
+
 	ccb->ccb_h.status &= ~CAM_SIM_QUEUED;
+
+	if ((ccb_status != CAM_REQ_CMP) &&
+	    ((ccb->ccb_h.status & CAM_DEV_QFRZN) == 0)) {
+		ccb->ccb_h.status |= CAM_DEV_QFRZN;
+		xpt_freeze_devq(ccb->ccb_h.path, 1);
+	}
 
 	xpt_done(ccb);
 
@@ -1697,7 +1701,7 @@ ocs_target_io(struct ocs_softc *ocs, union ccb *ccb)
 		rc = ocs_scsi_send_resp(io, 0, &resp, ocs_scsi_target_io_cb, ccb);
 
 	} else if (xferlen != 0) {
-		ocs_scsi_sgl_t sgl[OCS_FC_MAX_SGL];
+		ocs_scsi_sgl_t *sgl;
 		int32_t sgl_count = 0;
 
 		io->tgt_io.state = OCS_CAM_IO_DATA;
@@ -1705,7 +1709,9 @@ ocs_target_io(struct ocs_softc *ocs, union ccb *ccb)
 		if (sendstatus)
 			io->tgt_io.sendresp = 1;
 
-		sgl_count = ocs_build_scsi_sgl(ocs, ccb, io, sgl, ARRAY_SIZE(sgl));
+		sgl = io->sgl;
+
+		sgl_count = ocs_build_scsi_sgl(ocs, ccb, io, sgl, io->sgl_allocated);
 		if (sgl_count > 0) {
 			if (cam_dir == CAM_DIR_IN) {
 				rc = ocs_scsi_send_rd_data(io, 0, NULL, sgl,
@@ -1779,8 +1785,8 @@ ocs_initiator_io(struct ocs_softc *ocs, union ccb *ccb)
 	struct ccb_hdr *ccb_h = &csio->ccb_h;
 	ocs_node_t *node = NULL;
 	ocs_io_t *io = NULL;
-	ocs_scsi_sgl_t sgl[OCS_FC_MAX_SGL];
-	int32_t sgl_count;
+	ocs_scsi_sgl_t *sgl;
+	int32_t flags, sgl_count;
 
 	ocs_fcport	*fcp = NULL;
 	fcp = FCPORT(ocs, cam_sim_bus(xpt_path_sim((ccb)->ccb_h.path)));
@@ -1826,8 +1832,9 @@ ocs_initiator_io(struct ocs_softc *ocs, union ccb *ccb)
 
 	csio->ccb_h.ccb_ocs_ptr = ocs;
 	csio->ccb_h.ccb_io_ptr  = io;
+	sgl = io->sgl;
 
-	sgl_count = ocs_build_scsi_sgl(ocs, ccb, io, sgl, ARRAY_SIZE(sgl));
+	sgl_count = ocs_build_scsi_sgl(ocs, ccb, io, sgl, io->sgl_allocated);
 	if (sgl_count < 0) {
 		ocs_scsi_io_free(io);
 		device_printf(ocs->dev, "%s: building SGL failed\n", __func__);
@@ -1842,13 +1849,32 @@ ocs_initiator_io(struct ocs_softc *ocs, union ccb *ccb)
 		io->timeout = ccb->ccb_h.timeout;
 	}
 
+	switch (csio->tag_action) {
+	case MSG_HEAD_OF_Q_TAG:
+		flags = OCS_SCSI_CMD_HEAD_OF_QUEUE;
+		break;
+	case MSG_ORDERED_Q_TAG:
+		flags = OCS_SCSI_CMD_ORDERED;
+		break;
+	case MSG_ACA_TASK:
+		flags = OCS_SCSI_CMD_ACA;
+		break;
+	case CAM_TAG_ACTION_NONE:
+	case MSG_SIMPLE_Q_TAG:
+	default:
+		flags = OCS_SCSI_CMD_SIMPLE;
+		break;
+	}
+	flags |= (csio->priority << OCS_SCSI_PRIORITY_SHIFT) &
+	    OCS_SCSI_PRIORITY_MASK;
+
 	switch (ccb->ccb_h.flags & CAM_DIR_MASK) {
 	case CAM_DIR_NONE:
 		rc = ocs_scsi_send_nodata_io(node, io, ccb_h->target_lun,
 				ccb->ccb_h.flags & CAM_CDB_POINTER ? 
 				csio->cdb_io.cdb_ptr: csio->cdb_io.cdb_bytes,
 				csio->cdb_len,
-				ocs_scsi_initiator_io_cb, ccb);
+				ocs_scsi_initiator_io_cb, ccb, flags);
 		break;
 	case CAM_DIR_IN:
 		rc = ocs_scsi_send_rd_io(node, io, ccb_h->target_lun,
@@ -1857,7 +1883,7 @@ ocs_initiator_io(struct ocs_softc *ocs, union ccb *ccb)
 				csio->cdb_len,
 				NULL,
 				sgl, sgl_count, csio->dxfer_len,
-				ocs_scsi_initiator_io_cb, ccb);
+				ocs_scsi_initiator_io_cb, ccb, flags);
 		break;
 	case CAM_DIR_OUT:
 		rc = ocs_scsi_send_wr_io(node, io, ccb_h->target_lun,
@@ -1866,7 +1892,7 @@ ocs_initiator_io(struct ocs_softc *ocs, union ccb *ccb)
 				csio->cdb_len,
 				NULL,
 				sgl, sgl_count, csio->dxfer_len,
-				ocs_scsi_initiator_io_cb, ccb);
+				ocs_scsi_initiator_io_cb, ccb, flags);
 		break;
 	default:
 		panic("%s invalid data direction %08x\n", __func__, 
@@ -2047,7 +2073,8 @@ ocs_action(struct cam_sim *sim, union ccb *ccb)
 
 		/* Calculate the max IO supported
 		 * Worst case would be an OS page per SGL entry */
-		cpi->maxio = PAGE_SIZE * 
+
+		cpi->maxio = PAGE_SIZE *
 			(ocs_scsi_get_property(ocs, OCS_SCSI_MAX_SGL) - 1);
 
 		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-3-Clause
+ *
  * Copyright (c) 1998, 1999, 2003  Scott Mitchell
  * All rights reserved.
  *
@@ -57,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/xe/if_xe.c 347962 2019-05-18 20:43:13Z brooks $");
+__FBSDID("$FreeBSD$");
 
 /*		
  * FreeBSD device driver for Xircom CreditCard PCMCIA Ethernet adapters.  The
@@ -1394,7 +1396,7 @@ xe_set_multicast(struct xe_softc *scp)
 	/* Iterate over multicast address list */
 	count = 0;
 	if_maddr_rlock(ifp);
-	TAILQ_FOREACH(maddr, &ifp->if_multiaddrs, ifma_link) {
+	CK_STAILQ_FOREACH(maddr, &ifp->if_multiaddrs, ifma_link) {
 		if (maddr->ifma_addr->sa_family != AF_LINK)
 			continue;
 

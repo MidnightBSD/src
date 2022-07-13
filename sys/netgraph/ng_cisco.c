@@ -37,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: stable/11/sys/netgraph/ng_cisco.c 263152 2014-03-14 06:29:43Z glebius $
+ * $FreeBSD$
  * $Whistle: ng_cisco.c,v 1.25 1999/11/01 09:24:51 julian Exp $
  */
 

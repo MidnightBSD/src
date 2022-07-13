@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/usb/controller/xhci.c 356782 2020-01-16 08:52:54Z hselasky $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -428,6 +430,19 @@ xhci_start_controller(struct xhci_softc *sc)
 
 	phwr->hwr_ring_seg[0].qwEvrsTablePtr = htole64(addr);
 	phwr->hwr_ring_seg[0].dwEvrsTableSize = htole32(XHCI_MAX_EVENTS);
+
+	/*
+	 * PR 237666:
+	 *
+	 * According to the XHCI specification, the XWRITE4's to
+	 * XHCI_ERSTBA_LO and _HI lead to the XHCI to copy the
+	 * qwEvrsTablePtr and dwEvrsTableSize values above at that
+	 * time, as the XHCI initializes its event ring support. This
+	 * is before the event ring starts to pay attention to the
+	 * RUN/STOP bit. Thus, make sure the values are observable to
+	 * the XHCI before that point.
+	 */
+	usb_bus_mem_flush_all(&sc->sc_bus, &xhci_iterate_hw_softc);
 
 	DPRINTF("ERDP(0)=0x%016llx\n", (unsigned long long)addr);
 
@@ -2662,23 +2677,6 @@ xhci_configure_device(struct usb_device *udev)
 		    sc->sc_hw.devs[index].nports);
 	}
 
-	switch (udev->speed) {
-	case USB_SPEED_SUPER:
-		switch (sc->sc_hw.devs[index].state) {
-		case XHCI_ST_ADDRESSED:
-		case XHCI_ST_CONFIGURED:
-			/* enable power save */
-			temp |= XHCI_SCTX_1_MAX_EL_SET(sc->sc_exit_lat_max);
-			break;
-		default:
-			/* disable power save */
-			break;
-		}
-		break;
-	default:
-		break;
-	}
-
 	xhci_ctx_set_le32(sc, &pinp->ctx_slot.dwSctx1, temp);
 
 	temp = XHCI_SCTX_2_IRQ_TARGET_SET(0);
@@ -3566,13 +3564,13 @@ xhci_roothub_exec(struct usb_device *udev,
 		i = UPS_PORT_LINK_STATE_SET(XHCI_PS_PLS_GET(v));
 
 		switch (XHCI_PS_SPEED_GET(v)) {
-		case 3:
+		case XHCI_PS_SPEED_HIGH:
 			i |= UPS_HIGH_SPEED;
 			break;
-		case 2:
+		case XHCI_PS_SPEED_LOW:
 			i |= UPS_LOW_SPEED;
 			break;
-		case 1:
+		case XHCI_PS_SPEED_FULL:
 			/* FULL speed */
 			break;
 		default:
@@ -3637,7 +3635,7 @@ xhci_roothub_exec(struct usb_device *udev,
 
 		switch (value) {
 		case UHF_PORT_U1_TIMEOUT:
-			if (XHCI_PS_SPEED_GET(v) != 4) {
+			if (XHCI_PS_SPEED_GET(v) < XHCI_PS_SPEED_SS) {
 				err = USB_ERR_IOERROR;
 				goto done;
 			}
@@ -3648,7 +3646,7 @@ xhci_roothub_exec(struct usb_device *udev,
 			XWRITE4(sc, oper, port, v);
 			break;
 		case UHF_PORT_U2_TIMEOUT:
-			if (XHCI_PS_SPEED_GET(v) != 4) {
+			if (XHCI_PS_SPEED_GET(v) < XHCI_PS_SPEED_SS) {
 				err = USB_ERR_IOERROR;
 				goto done;
 			}
@@ -3673,7 +3671,7 @@ xhci_roothub_exec(struct usb_device *udev,
 		case UHF_PORT_SUSPEND:
 			DPRINTFN(6, "suspend port %u (LPM=%u)\n", index, i);
 			j = XHCI_PS_SPEED_GET(v);
-			if ((j < 1) || (j > 3)) {
+			if (j == 0 || j >= XHCI_PS_SPEED_SS) {
 				/* non-supported speed */
 				err = USB_ERR_IOERROR;
 				goto done;
@@ -3726,13 +3724,11 @@ xhci_xfer_setup(struct usb_setup_params *parm)
 {
 	struct usb_page_search page_info;
 	struct usb_page_cache *pc;
-	struct xhci_softc *sc;
 	struct usb_xfer *xfer;
 	void *last_obj;
 	uint32_t ntd;
 	uint32_t n;
 
-	sc = XHCI_BUS2SC(parm->udev->bus);
 	xfer = parm->curr_xfer;
 
 	/*
@@ -3824,6 +3820,28 @@ alloc_dma_set:
 	}
 }
 
+static uint8_t
+xhci_get_endpoint_state(struct usb_device *udev, uint8_t epno)
+{
+	struct xhci_softc *sc = XHCI_BUS2SC(udev->bus);
+	struct usb_page_search buf_dev;
+	struct xhci_hw_dev *hdev;
+	struct xhci_dev_ctx *pdev;
+	uint32_t temp;
+
+	MPASS(epno != 0);
+
+	hdev =	&sc->sc_hw.devs[udev->controller_slot_id];
+
+	usbd_get_page(&hdev->device_pc, 0, &buf_dev);
+	pdev = buf_dev.buffer;
+	usb_pc_cpu_invalidate(&hdev->device_pc);
+
+	temp = xhci_ctx_get_le32(sc, &pdev->ctx_ep[epno - 1].dwEpCtx0);
+
+	return (XHCI_EPCTX_0_EPSTATE_GET(temp));
+}
+
 static usb_error_t
 xhci_configure_reset_endpoint(struct usb_xfer *xfer)
 {
@@ -3838,6 +3856,7 @@ xhci_configure_reset_endpoint(struct usb_xfer *xfer)
 	uint32_t mask;
 	uint8_t index;
 	uint8_t epno;
+	uint8_t drop;
 
 	pepext = xhci_get_endpoint_ext(xfer->xroot->udev,
 	    xfer->endpoint->edesc);
@@ -3877,16 +3896,26 @@ xhci_configure_reset_endpoint(struct usb_xfer *xfer)
 	 * Get the endpoint into the stopped state according to the
 	 * endpoint context state diagram in the XHCI specification:
 	 */
-
-	err = xhci_cmd_stop_ep(sc, 0, epno, index);
-
-	if (err != 0)
-		DPRINTF("Could not stop endpoint %u\n", epno);
-
-	err = xhci_cmd_reset_ep(sc, 0, epno, index);
-
-	if (err != 0)
-		DPRINTF("Could not reset endpoint %u\n", epno);
+	switch (xhci_get_endpoint_state(udev, epno)) {
+	case XHCI_EPCTX_0_EPSTATE_DISABLED:
+		drop = 0;
+		break;
+	case XHCI_EPCTX_0_EPSTATE_STOPPED:
+		drop = 1;
+		break;
+	case XHCI_EPCTX_0_EPSTATE_HALTED:
+		err = xhci_cmd_reset_ep(sc, 0, epno, index);
+		drop = (err != 0);
+		if (drop)
+			DPRINTF("Could not reset endpoint %u\n", epno);
+		break;
+	default:
+		drop = 1;
+		err = xhci_cmd_stop_ep(sc, 0, epno, index);
+		if (err != 0)
+			DPRINTF("Could not stop endpoint %u\n", epno);
+		break;
+	}
 
 	err = xhci_cmd_set_tr_dequeue_ptr(sc,
 	    (pepext->physaddr + (stream_id * sizeof(struct xhci_trb) *
@@ -3902,11 +3931,36 @@ xhci_configure_reset_endpoint(struct usb_xfer *xfer)
 	 */
 
 	mask = (1U << epno);
+
+	/*
+	 * So-called control and isochronous transfer types have
+	 * predefined data toggles (USB 2.0) or sequence numbers (USB
+	 * 3.0) and does not need to be dropped.
+	 */
+	if (drop != 0 &&
+	    (edesc->bmAttributes & UE_XFERTYPE) != UE_CONTROL &&
+	    (edesc->bmAttributes & UE_XFERTYPE) != UE_ISOCHRONOUS) {
+		/* drop endpoint context to reset data toggle value, if any. */
+		xhci_configure_mask(udev, mask, 1);
+		err = xhci_cmd_configure_ep(sc, buf_inp.physaddr, 0, index);
+		if (err != 0) {
+			DPRINTF("Could not drop "
+			    "endpoint %u at slot %u.\n", epno, index);
+		} else {
+			sc->sc_hw.devs[index].ep_configured &= ~mask;
+		}
+	}
+
+	/*
+	 * Always need to evaluate the slot context, because the maximum
+	 * number of endpoint contexts is stored there.
+	 */
 	xhci_configure_mask(udev, mask | 1U, 0);
 
 	if (!(sc->sc_hw.devs[index].ep_configured & mask)) {
-		sc->sc_hw.devs[index].ep_configured |= mask;
 		err = xhci_cmd_configure_ep(sc, buf_inp.physaddr, 0, index);
+		if (err == 0)
+			sc->sc_hw.devs[index].ep_configured |= mask;
 	} else {
 		err = xhci_cmd_evaluate_ctx(sc, buf_inp.physaddr, index);
 	}
@@ -4027,6 +4081,9 @@ xhci_ep_init(struct usb_device *udev, struct usb_endpoint_descriptor *edesc,
     struct usb_endpoint *ep)
 {
 	struct xhci_endpoint_ext *pepext;
+	struct xhci_softc *sc;
+	uint8_t index;
+	uint8_t epno;
 
 	DPRINTFN(2, "endpoint=%p, addr=%d, endpt=%d, mode=%d\n",
 	    ep, udev->address, edesc->bEndpointAddress, udev->flags.usb_mode);
@@ -4043,6 +4100,18 @@ xhci_ep_init(struct usb_device *udev, struct usb_endpoint_descriptor *edesc,
 	USB_BUS_LOCK(udev->bus);
 	pepext->trb_halted = 1;
 	pepext->trb_running = 0;
+
+	/*
+	 * When doing an alternate setting, except for control
+	 * endpoints, we need to re-configure the XHCI endpoint
+	 * context:
+	 */
+	if ((edesc->bEndpointAddress & UE_ADDR) != 0) {
+		sc = XHCI_BUS2SC(udev->bus);
+		index = udev->controller_slot_id;
+		epno = XHCI_EPNO2EPID(edesc->bEndpointAddress);
+		sc->sc_hw.devs[index].ep_configured &= ~(1U << epno);
+	}
 	USB_BUS_UNLOCK(udev->bus);
 }
 

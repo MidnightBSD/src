@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Tim J. Robbins
  * Copyright (c) 2002 Doug Rabson
  * Copyright (c) 2000 Marcel Moolenaar
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/linux/linux_fork.c 346840 2019-04-28 14:20:29Z dchagin $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 
@@ -72,11 +74,6 @@ linux_fork(struct thread *td, struct linux_fork_args *args)
 	struct proc *p2;
 	struct thread *td2;
 
-#ifdef DEBUG
-	if (ldebug(fork))
-		printf(ARGS(fork, ""));
-#endif
-
 	bzero(&fr, sizeof(fr));
 	fr.fr_flags = RFFDG | RFPROC | RFSTOPPED;
 	fr.fr_procp = &p2;
@@ -107,11 +104,6 @@ linux_vfork(struct thread *td, struct linux_vfork_args *args)
 	int error;
 	struct proc *p2;
 	struct thread *td2;
-
-#ifdef DEBUG
-	if (ldebug(vfork))
-		printf(ARGS(vfork, ""));
-#endif
 
 	bzero(&fr, sizeof(fr));
 	fr.fr_flags = RFFDG | RFPROC | RFMEM | RFPPWAIT | RFSTOPPED;
@@ -146,14 +138,6 @@ linux_clone_proc(struct thread *td, struct linux_clone_args *args)
 	struct thread *td2;
 	int exit_signal;
 	struct linux_emuldata *em;
-
-#ifdef DEBUG
-	if (ldebug(clone)) {
-		printf(ARGS(clone, "flags %x, stack %p, parent tid: %p, "
-		    "child tid: %p"), (unsigned)args->flags,
-		    args->stack, args->parent_tidptr, args->child_tidptr);
-	}
-#endif
 
 	exit_signal = args->flags & 0x000000ff;
 	if (LINUX_SIG_VALID(exit_signal)) {
@@ -210,7 +194,7 @@ linux_clone_proc(struct thread *td, struct linux_clone_args *args)
 		error = copyout(&p2->p_pid, args->parent_tidptr,
 		    sizeof(p2->p_pid));
 		if (error)
-			printf(LMSG("copyout failed!"));
+			linux_msg(td, "copyout p_pid failed!");
 	}
 
 	PROC_LOCK(p2);
@@ -233,17 +217,10 @@ linux_clone_proc(struct thread *td, struct linux_clone_args *args)
 	if (args->flags & LINUX_CLONE_PARENT) {
 		sx_xlock(&proctree_lock);
 		PROC_LOCK(p2);
-		proc_reparent(p2, td->td_proc->p_pptr);
+		proc_reparent(p2, td->td_proc->p_pptr, true);
 		PROC_UNLOCK(p2);
 		sx_xunlock(&proctree_lock);
 	}
-
-#ifdef DEBUG
-	if (ldebug(clone))
-		printf(LMSG("clone: successful rfork to %d, "
-		    "stack %p sig = %d"), (int)p2->p_pid, args->stack,
-		    exit_signal);
-#endif
 
 	/*
 	 * Make this runnable after we are finished with it.
@@ -266,18 +243,12 @@ linux_clone_thread(struct thread *td, struct linux_clone_args *args)
 	struct proc *p;
 	int error;
 
-#ifdef DEBUG
-	if (ldebug(clone)) {
-		printf(ARGS(clone, "thread: flags %x, stack %p, parent tid: %p, "
-		    "child tid: %p"), (unsigned)args->flags,
-		    args->stack, args->parent_tidptr, args->child_tidptr);
-	}
-#endif
-
 	LINUX_CTR4(clone_thread, "thread(%d) flags %x ptid %p ctid %p",
 	    td->td_tid, (unsigned)args->flags,
 	    args->parent_tidptr, args->child_tidptr);
 
+	if ((args->flags & LINUX_CLONE_PARENT) != 0)
+		return (EINVAL);
 	if (args->flags & LINUX_CLONE_PARENT_SETTID)
 		if (args->parent_tidptr == NULL)
 			return (EINVAL);
@@ -307,9 +278,10 @@ linux_clone_thread(struct thread *td, struct linux_clone_args *args)
 
 	bzero(&newtd->td_startzero,
 	    __rangeof(struct thread, td_startzero, td_endzero));
+	newtd->td_pflags2 = 0;
+	newtd->td_errno = 0;
 	bcopy(&td->td_startcopy, &newtd->td_startcopy,
 	    __rangeof(struct thread, td_startcopy, td_endcopy));
-	newtd->td_sa = td->td_sa;
 
 	newtd->td_proc = p;
 	thread_cow_get(newtd, td);
@@ -339,12 +311,8 @@ linux_clone_thread(struct thread *td, struct linux_clone_args *args)
 
 	PROC_LOCK(p);
 	p->p_flag |= P_HADTHREADS;
+	thread_link(newtd, p);
 	bcopy(p->p_comm, newtd->td_name, sizeof(newtd->td_name));
-
-	if (args->flags & LINUX_CLONE_PARENT)
-		thread_link(newtd, p->p_pptr);
-	else
-		thread_link(newtd, p);
 
 	thread_lock(td);
 	/* let the scheduler know about these things. */
@@ -359,12 +327,6 @@ linux_clone_thread(struct thread *td, struct linux_clone_args *args)
 
 	tidhash_add(newtd);
 
-#ifdef DEBUG
-	if (ldebug(clone))
-		printf(ARGS(clone, "successful clone to %d, stack %p"),
-		(int)newtd->td_tid, args->stack);
-#endif
-
 	LINUX_CTR2(clone_thread, "thread(%d) successful clone to %d",
 	    td->td_tid, newtd->td_tid);
 
@@ -372,7 +334,7 @@ linux_clone_thread(struct thread *td, struct linux_clone_args *args)
 		error = copyout(&newtd->td_tid, args->parent_tidptr,
 		    sizeof(newtd->td_tid));
 		if (error)
-			printf(LMSG("clone_thread: copyout failed!"));
+			linux_msg(td, "clone_thread: copyout td_tid failed!");
 	}
 
 	/*

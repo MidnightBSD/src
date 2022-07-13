@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/pflog/Makefile 336087 2018-07-08 10:54:11Z kp $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/netpfil/pf
 

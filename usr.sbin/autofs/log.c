@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/autofs/log.c 332597 2018-04-16 16:16:24Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <stdarg.h>

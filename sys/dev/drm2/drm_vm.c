@@ -34,10 +34,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_vm.c 298955 2016-05-03 03:41:25Z pfg $");
+__FBSDID("$FreeBSD$");
 
 /** @file drm_vm.c
- * Support code for mmaping of DRM maps.
+ * Support code for mapping of DRM maps.
  */
 
 #include <dev/drm2/drmP.h>

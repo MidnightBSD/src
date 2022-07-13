@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/netfpga10g/nf10bmac/if_nf10bmac.c 298955 2016-05-03 03:41:25Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_device_polling.h"
 #include "opt_netfpga.h"

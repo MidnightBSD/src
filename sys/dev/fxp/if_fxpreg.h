@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1995, David Greenman
  * Copyright (c) 2001 Jonathan Lemon <jlemon@freebsd.org>
  * All rights reserved.
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/fxp/if_fxpreg.h 345186 2019-03-15 15:16:31Z markj $
+ * $FreeBSD$
  */
 
 #define FXP_PCI_MMBA	0x10

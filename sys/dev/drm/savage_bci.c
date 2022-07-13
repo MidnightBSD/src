@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm/savage_bci.c 298955 2016-05-03 03:41:25Z pfg $");
+__FBSDID("$FreeBSD$");
 #include "dev/drm/drmP.h"
 #include "dev/drm/savage_drm.h"
 #include "dev/drm/savage_drv.h"

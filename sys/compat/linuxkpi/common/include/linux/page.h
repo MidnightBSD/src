@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/page.h 328653 2018-02-01 13:01:44Z hselasky $
+ * $FreeBSD$
  */
 #ifndef	_LINUX_PAGE_H_
 #define _LINUX_PAGE_H_

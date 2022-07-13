@@ -1,4 +1,7 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 1990 The Regents of the University of California.
+ *
  * Copyright (c) 2008 Doug Rabson
  * All rights reserved.
  *
@@ -61,7 +64,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/rpc/rpcsec_gss/svc_rpcsec_gss.c 355967 2019-12-20 23:08:10Z rmacklem $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

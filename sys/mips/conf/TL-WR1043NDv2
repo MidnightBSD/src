@@ -4,13 +4,13 @@
 # This contains a QCA9558 MIPS74k SoC with on-board 3x3 2GHz wifi,
 # 64MiB RAM and an AR8327 5-port gigabit ethernet switch.
 #
-# $FreeBSD: stable/11/sys/mips/conf/TL-WR1043NDv2 345344 2019-03-20 18:49:45Z kib $
+# $FreeBSD$
 #
 
 #NO_UNIVERSE
 
 # Include the default QCA955x parameters
-include         "QCA955X_BASE"
+include         "std.QCA955X"
 
 ident           TL-WR1043NDv2
 

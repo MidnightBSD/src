@@ -1,6 +1,8 @@
 /*	$NetBSD: if_stge.c,v 1.32 2005/12/11 12:22:49 christos Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2001 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -35,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/stge/if_stge.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
@@ -2545,7 +2547,7 @@ stge_set_multi(struct stge_softc *sc)
 
 	count = 0;
 	if_maddr_rlock(sc->sc_ifp);
-	TAILQ_FOREACH(ifma, &sc->sc_ifp->if_multiaddrs, ifma_link) {
+	CK_STAILQ_FOREACH(ifma, &sc->sc_ifp->if_multiaddrs, ifma_link) {
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;
 		crc = ether_crc32_be(LLADDR((struct sockaddr_dl *)

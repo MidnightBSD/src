@@ -1,6 +1,8 @@
 /*	$NetBSD: mii.h,v 1.18 2014/06/16 14:43:22 msaitoh Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 1997 Manuel Bouyer.  All rights reserved.
  *
  * Modification to match BSD/OS 3.0 MII interface by Jason R. Thorpe,
@@ -26,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mii/mii.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_MII_MII_H_

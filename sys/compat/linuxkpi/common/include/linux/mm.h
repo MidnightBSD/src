@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/mm.h 345927 2019-04-05 11:24:05Z hselasky $
+ * $FreeBSD$
  */
 #ifndef	_LINUX_MM_H_
 #define	_LINUX_MM_H_
@@ -90,6 +90,9 @@ CTASSERT((VM_PROT_ALL & -(1 << 8)) == 0);
 #define	FAULT_FLAG_USER		(1 << 6)
 #define	FAULT_FLAG_REMOTE	(1 << 7)
 #define	FAULT_FLAG_INSTRUCTION	(1 << 8)
+
+#define fault_flag_allow_retry_first(flags) \
+	(((flags) & (FAULT_FLAG_ALLOW_RETRY | FAULT_FLAG_TRIED)) == FAULT_FLAG_ALLOW_RETRY)
 
 typedef int (*pte_fn_t)(linux_pte_t *, pgtable_t, unsigned long addr, void *data);
 
@@ -208,14 +211,6 @@ static inline void
 set_page_dirty(struct vm_page *page)
 {
 	vm_page_dirty(page);
-}
-
-static inline void
-set_page_dirty_lock(struct vm_page *page)
-{
-	vm_page_lock(page);
-	vm_page_dirty(page);
-	vm_page_unlock(page);
 }
 
 static inline void

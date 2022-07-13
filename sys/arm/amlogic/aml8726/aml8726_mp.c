@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/amlogic/aml8726/aml8726_mp.c 307344 2016-10-15 08:27:54Z mmel $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -178,7 +178,7 @@ find_node_for_device(const char *device, const char **compatible)
 	 * Try to access the node directly i.e. through /aliases/.
 	 */
 
-	if ((node = OF_finddevice(device)) != 0)
+	if ((node = OF_finddevice(device)) != -1)
 		for (i = 0; compatible[i]; i++)
 			if (fdt_is_compatible_strict(node, compatible[i]))
 				return node;
@@ -188,7 +188,7 @@ find_node_for_device(const char *device, const char **compatible)
 	 */
 
 	for (i = 0; compatible[i]; i++) {
-		if ((node = OF_finddevice("/soc")) == 0)
+		if ((node = OF_finddevice("/soc")) == -1)
 			return (0);
 
 		if ((node = fdt_find_compatible(node, compatible[i], 1)) != 0)

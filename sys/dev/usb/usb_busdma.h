@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/usb/usb_busdma.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,7 +40,7 @@
 
 #define	USB_PAGE_SIZE PAGE_SIZE		/* use system PAGE_SIZE */
 
-#if (__MidnightBSD_version >= 4000)
+#if (__FreeBSD_version >= 700020)
 #define	USB_GET_DMA_TAG(dev) bus_get_dma_tag(dev)
 #else
 #define	USB_GET_DMA_TAG(dev) NULL	/* XXX */
@@ -100,6 +102,7 @@ struct usb_page_cache {
 					 * from the memory. Else write. */
 	uint8_t	ismultiseg:1;		/* set if we can have multiple
 					 * segments */
+	uint8_t isloaded:1;		/* Set if map is currently loaded. */
 #endif
 };
 

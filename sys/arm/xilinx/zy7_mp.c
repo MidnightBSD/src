@@ -22,8 +22,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "opt_platform.h"
+
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/xilinx/zy7_mp.c 307344 2016-10-15 08:27:54Z mmel $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -38,7 +40,9 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/xilinx/zy7_mp.c 307344 2016-10-15 08:27:54
 #include <machine/smp.h>
 #include <machine/fdt.h>
 #include <machine/intr.h>
+#include <machine/platformvar.h>
 
+#include <arm/xilinx/zy7_machdep.h>
 #include <arm/xilinx/zy7_reg.h>
 
 #define	ZYNQ7_CPU1_ENTRY	0xfffffff0
@@ -47,7 +51,7 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/xilinx/zy7_mp.c 307344 2016-10-15 08:27:54
 #define	   SCU_CONTROL_ENABLE	(1 << 0)
 
 void
-platform_mp_setmaxid(void)
+zynq7_mp_setmaxid(platform_t plat)
 {
 
 	mp_maxid = 1;
@@ -55,7 +59,7 @@ platform_mp_setmaxid(void)
 }
 
 void    
-platform_mp_start_ap(void)
+zynq7_mp_start_ap(platform_t plat)
 {
 	bus_space_handle_t scu_handle;
 	bus_space_handle_t ocm_handle;

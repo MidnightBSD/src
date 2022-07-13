@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/ofed/drivers/infiniband/core/ib_sysfs.c 341862 2018-12-12 10:24:43Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include "core_priv.h"
 

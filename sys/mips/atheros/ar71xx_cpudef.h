@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Adrian Chadd
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/11/sys/mips/atheros/ar71xx_cpudef.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 #ifndef	__AR71XX_CPUDEF_H__
 #define	__AR71XX_CPUDEF_H__

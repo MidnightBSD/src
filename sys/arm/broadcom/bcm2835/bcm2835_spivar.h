@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * Copyright (c) 2013 Luiz Otavio O Souza <loos@freebsd.org>
  * All rights reserved.
@@ -24,23 +26,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_spivar.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_BCM2835_SPIVAR_H_
 #define	_BCM2835_SPIVAR_H_
-
-/*
- * Only the available pins are listed here.
- * i.e. CS2 isn't available.
- */
-uint32_t bcm_spi_pins[] = {
-	7,	/* CS1 */
-	8,	/* CS0 */
-	9,	/* MISO */
-	10,	/* MOSI */
-	11	/* SCLK */
-};
 
 struct bcm_spi_softc {
 	device_t		sc_dev;

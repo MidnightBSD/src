@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 The University of Melbourne
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/_ffcounter.h 227723 2011-11-19 14:10:16Z lstewart $
+ * $FreeBSD$
  */
 
 #ifndef _SYS__FFCOUNTER_H_

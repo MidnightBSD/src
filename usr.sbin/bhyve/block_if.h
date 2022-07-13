@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bhyve/block_if.h 348375 2019-05-29 23:11:07Z jhb $
+ * $FreeBSD$
  */
 
 /*
@@ -50,12 +50,12 @@
 #define	BLOCKIF_RING_MAX	128
 
 struct blockif_req {
-	struct iovec	br_iov[BLOCKIF_IOV_MAX];
 	int		br_iovcnt;
 	off_t		br_offset;
 	ssize_t		br_resid;
 	void		(*br_callback)(struct blockif_req *req, int err);
 	void		*br_param;
+	struct iovec	br_iov[BLOCKIF_IOV_MAX];
 };
 
 struct blockif_ctxt;

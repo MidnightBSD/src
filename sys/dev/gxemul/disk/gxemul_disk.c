@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008-2012 Juli Mallett <jmallett@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,11 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/gxemul/disk/gxemul_disk.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/gxemul/disk/gxemul_disk.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -171,7 +173,7 @@ gxemul_disk_attach_geom(void *arg, int flag)
 	sc->sc_geom = g_new_geomf(&g_gxemul_disk_class, "%s", device_get_nameunit(sc->sc_dev));
 	sc->sc_geom->softc = sc;
 
-	sc->sc_provider = g_new_providerf(sc->sc_geom, sc->sc_geom->name);
+	sc->sc_provider = g_new_providerf(sc->sc_geom, "%s", sc->sc_geom->name);
 	sc->sc_provider->sectorsize = GXEMUL_DISK_DEV_BLOCKSIZE;
 	sc->sc_provider->mediasize = sc->sc_size;
 	g_error_provider(sc->sc_provider, 0);

@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/sys/dev/hifn/hifn7751reg.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*	$OpenBSD: hifn7751reg.h,v 1.35 2002/04/08 17:49:42 jason Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Invertex AEON / Hifn 7751 driver
  * Copyright (c) 1999 Invertex Inc. All rights reserved.
  * Copyright (c) 1999 Theo de Raadt

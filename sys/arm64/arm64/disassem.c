@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm64/arm64/disassem.c 295505 2016-02-11 06:50:11Z wma $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 
 #include <sys/systm.h>

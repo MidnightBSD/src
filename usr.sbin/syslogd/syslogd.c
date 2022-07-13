@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1983, 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -67,7 +69,7 @@ static char sccsid[] = "@(#)syslogd.c	8.3 (Berkeley) 4/4/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/syslogd/syslogd.c 359740 2020-04-09 07:15:27Z ae $");
+__FBSDID("$FreeBSD$");
 
 /*
  *  syslogd -- log system messages
@@ -1294,31 +1296,25 @@ parsemsg(const char *from, char *msg)
 	size_t i;
 	int pri;
 
+	i = -1;
+	pri = DEFUPRI;
+
 	/* Parse PRI. */
-	if (msg[0] != '<' || !isdigit(msg[1])) {
-		dprintf("Invalid PRI from %s\n", from);
-		return;
-	}
-	for (i = 2; i <= 4; i++) {
-		if (msg[i] == '>')
-			break;
-		if (!isdigit(msg[i])) {
-			dprintf("Invalid PRI header from %s\n", from);
-			return;
+	if (msg[0] == '<' && isdigit(msg[1])) {
+	    for (i = 2; i <= 4; i++) {
+	        if (msg[i] == '>') {
+		    errno = 0;
+		    n = strtol(msg + 1, &q, 10);
+		    if (errno == 0 && *q == msg[i] && n >= 0 && n <= INT_MAX) {
+		        pri = n;
+		        msg += i + 1;
+		        i = 0;
+		    }
+		    break;
 		}
+    	    }
 	}
-	if (msg[i] != '>') {
-		dprintf("Invalid PRI header from %s\n", from);
-		return;
-	}
-	errno = 0;
-	n = strtol(msg + 1, &q, 10);
-	if (errno != 0 || *q != msg[i] || n < 0 || n >= INT_MAX) {
-		dprintf("Invalid PRI %ld from %s: %s\n",
-		    n, from, strerror(errno));
-		return;
-	}
-	pri = n;
+
 	if (pri &~ (LOG_FACMASK|LOG_PRIMASK))
 		pri = DEFUPRI;
 
@@ -1331,8 +1327,7 @@ parsemsg(const char *from, char *msg)
 		pri = LOG_MAKEPRI(LOG_USER, LOG_PRI(pri));
 
 	/* Parse VERSION. */
-	msg += i + 1;
-	if (msg[0] == '1' && msg[1] == ' ')
+	if (i == 0 && msg[0] == '1' && msg[1] == ' ')
 		parsemsg_rfc5424(from, pri, msg + 2);
 	else
 		parsemsg_rfc3164(from, pri, msg);
@@ -2224,7 +2219,9 @@ cvthname(struct sockaddr *f)
 	hl = strlen(hname);
 	if (hl > 0 && hname[hl-1] == '.')
 		hname[--hl] = '\0';
-	trimdomain(hname, hl);
+	/* RFC 5424 prefers logging FQDNs. */
+	if (RFC3164OutputFormat)
+		trimdomain(hname, hl);
 	return (hname);
 }
 
@@ -2851,7 +2848,9 @@ cfline(const char *line, const char *prog, const char *host,
 		hl = strlen(f->f_host);
 		if (hl > 0 && f->f_host[hl-1] == '.')
 			f->f_host[--hl] = '\0';
-		trimdomain(f->f_host, hl);
+		/* RFC 5424 prefers logging FQDNs. */
+		if (RFC3164OutputFormat)
+			trimdomain(f->f_host, hl);
 	}
 
 	/* save program name if any */

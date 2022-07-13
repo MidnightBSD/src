@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/printk.h 347792 2019-05-16 17:02:31Z hselasky $
+ * $FreeBSD$
  */
 #ifndef _LINUX_PRINTK_H_
 #define	_LINUX_PRINTK_H_
@@ -68,7 +68,7 @@ print_hex_dump(const char *level, const char *prefix_str,
 			printf("[%p] ", buf);
 			break;
 		case DUMP_PREFIX_OFFSET:
-			printf("[%p] ", (const char *)((const char *)buf -
+			printf("[%#tx] ", ((const char *)buf -
 			    (const char *)buf_old));
 			break;
 		default:

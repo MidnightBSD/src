@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon_fence.c 300050 2016-05-17 12:52:31Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 #include "radeon_reg.h"
@@ -343,7 +343,7 @@ static int radeon_fence_wait_seq(struct radeon_device *rdev, u64 target_seq,
 		    ring, seq);
 
 		if (unlikely(!signaled)) {
-#ifndef __MidnightBSD__
+#ifndef __FreeBSD__
 			/* we were interrupted for some reason and fence
 			 * isn't signaled yet, resume waiting */
 			if (r) {
@@ -542,7 +542,7 @@ static int radeon_fence_wait_any_seq(struct radeon_device *rdev,
 		    ring, target_seq[ring]);
 
 		if (unlikely(!signaled)) {
-#ifndef __MidnightBSD__
+#ifndef __FreeBSD__
 			/* we were interrupted for some reason and fence
 			 * isn't signaled yet, resume waiting */
 			if (r) {

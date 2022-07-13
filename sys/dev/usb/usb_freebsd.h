@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/usb/usb_freebsd.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -51,6 +53,7 @@
 #define	USB_HAVE_FIXED_CONFIG 0
 #define	USB_HAVE_FIXED_PORT 0
 #define	USB_HAVE_DISABLE_ENUM 1
+#define	USB_HAVE_MALLOC_WAITOK 1
 
 /* define zero ticks callout value */
 #define	USB_CALLOUT_ZERO_TICKS 1
@@ -89,6 +92,9 @@
 #define	USB_CS_RESET_LIMIT	20	/* failures = 20 * 50 ms = 1sec */
 
 #define	USB_MAX_AUTO_QUIRK	8	/* maximum number of dynamic quirks */
+
+#define	USB_IN_POLLING_MODE_FUNC() usbd_in_polling_mode()
+#define	USB_IN_POLLING_MODE_VALUE() (SCHEDULER_STOPPED() || kdb_active)
 
 typedef uint32_t usb_timeout_t;		/* milliseconds */
 typedef uint32_t usb_frlength_t;	/* bytes */
