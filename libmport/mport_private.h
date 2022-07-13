@@ -39,6 +39,7 @@
 #if defined(__MidnightBSD__)
 #include <osreldate.h>
 #endif
+#include <ohash.h>
 #include <sqlite3.h>
 #include "bzlib.h"
 
@@ -47,7 +48,7 @@
 #define MPORT_MASTER_VERSION 9
 #define MPORT_BUNDLE_VERSION 5
 #define MPORT_BUNDLE_VERSION_STR "5"
-#define MPORT_VERSION "2.2.1"
+#define MPORT_VERSION "2.2.3"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
@@ -139,7 +140,7 @@ int mport_bundle_read_install_pkg(mportInstance *, mportBundleRead *, mportPacka
 int mport_bundle_read_update_pkg(mportInstance *, mportBundleRead *, mportPackageMeta *);
 
 int mport_install_depends(mportInstance *, const char *, const char *, mportAutomatic);
-int mport_update_down(mportInstance *, mportPackageMeta *);
+int mport_update_down(mportInstance *, mportPackageMeta *, struct ohash_info *, struct ohash *);
 
 /* version compare functions */
 void mport_version_cmp_sqlite(sqlite3_context *, int, sqlite3_value **);

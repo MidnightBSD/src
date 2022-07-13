@@ -84,7 +84,8 @@ enum _AssetListEntryType {
     ASSET_PREEXEC, ASSET_PREUNEXEC, ASSET_POSTEXEC, ASSET_POSTUNEXEC,
     ASSET_FILE_OWNER_MODE, ASSET_DIR_OWNER_MODE, 
     ASSET_SAMPLE_OWNER_MODE, ASSET_LDCONFIG, ASSET_LDCONFIG_LINUX,
-    ASSET_RMEMPTY, ASSET_GLIB_SCHEMAS, ASSET_KLD, ASSET_DESKTOP_FILE_UTILS
+    ASSET_RMEMPTY, ASSET_GLIB_SCHEMAS, ASSET_KLD, ASSET_DESKTOP_FILE_UTILS,
+    ASSET_INFO
 };
 
 typedef enum _AssetListEntryType mportAssetListEntryType;
@@ -179,6 +180,8 @@ int mport_index_search(mportInstance *, mportIndexEntry ***, const char *, ...);
 void mport_index_entry_free_vec(mportIndexEntry **);
 void mport_index_entry_free(mportIndexEntry *);
 
+int mport_index_print_mirror_list(mportInstance *);
+
 /* Index Depends */
 
 typedef struct {
@@ -191,7 +194,6 @@ typedef struct {
 int mport_index_depends_list(mportInstance *, const char *, const char *, mportDependsEntry ***);
 void mport_index_depends_free_vec(mportDependsEntry **);
 void mport_index_depends_free(mportDependsEntry *);
-
 
 /* Info */
 char * mport_info(mportInstance *mport, const char *packageName);

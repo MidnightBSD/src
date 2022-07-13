@@ -197,6 +197,11 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
 
 	system_os_release = (char *) mport_get_osrelease(mport);
 
+	if (system_os_release == NULL) {
+		sqlite3_finalize(stmt);
+		return SET_ERROR(MPORT_ERR_FATAL, "Unable to determine OS release");
+	}
+
 	while (1) {
 		ret = sqlite3_step(stmt);
 
@@ -298,9 +303,13 @@ check_if_older_installed(mportInstance *mport, mportPackageMeta *pkg)
 
 	os_release = mport_get_osrelease(mport);
 
+	if (os_release == NULL)
+		return SET_ERROR(MPORT_ERR_FATAL, "Unable to determine OS release");
+
 	if (mport_db_prepare(mport->db, &stmt,
 	                     "SELECT os_release FROM packages WHERE pkg=%Q and ((mport_version_cmp(version, %Q) < 0 and os_release=%Q) or os_release != %Q)",
 	                     pkg->name, pkg->version, os_release, os_release) != MPORT_OK) {
+		free((char*)os_release);
 		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
 	}
@@ -318,6 +327,8 @@ check_if_older_installed(mportInstance *mport, mportPackageMeta *pkg)
 	}
 
 	sqlite3_finalize(stmt);
+	free((char *)os_release);
+
 	return ret;
 }
 
@@ -330,9 +341,13 @@ check_if_older_os(mportInstance *mport, mportPackageMeta *pkg)
 
 	os_release = mport_get_osrelease(mport);
 
+	if (os_release == NULL)
+		return SET_ERROR(MPORT_ERR_FATAL, "Unable to determine OS release");
+
 	if (mport_db_prepare(mport->db, &stmt,
 	                     "SELECT os_release FROM packages WHERE pkg=%Q and mport_version_cmp(os_release, %Q) < 0",
 	                     pkg->name, os_release) != MPORT_OK) {
+		free((char*)os_release);
 		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
 	}
@@ -350,5 +365,7 @@ check_if_older_os(mportInstance *mport, mportPackageMeta *pkg)
 	}
 
 	sqlite3_finalize(stmt);
+	free((char*) os_release);
+
 	return ret;
 }
