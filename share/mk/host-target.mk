@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/mk/host-target.mk 294744 2016-01-25 18:43:21Z bdrewery $
+# $FreeBSD$
 # RCSid:
 #	$Id: host-target.mk,v 1.11 2015/10/25 00:07:20 sjg Exp $
 
