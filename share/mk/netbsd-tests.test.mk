@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/mk/netbsd-tests.test.mk 291738 2015-12-04 03:17:47Z bdrewery $
+# $FreeBSD$
 
 .if !target(__netbsd_tests.test.mk__)
 __netbsd_tests.test.mk__:
