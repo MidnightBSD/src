@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/share/mk/bsd.mkopt.mk 284705 2015-06-22 19:01:09Z sjg $
+# $FreeBSD$
 #
 # Generic mechanism to deal with WITH and WITHOUT options and turn
 # them into MK_ options.
@@ -11,12 +11,16 @@
 # For each option FOO in __DEFAULT_NO_OPTIONS, MK_FOO is set to "no",
 # unless WITH_FOO is defined, in which case it is set to "yes".
 #
+# For each entry FOO/BAR in __DEFAULT_DEPENDENT_OPTIONS,
+# MK_FOO is set to "no" if WITHOUT_FOO is defined,
+# "yes" if WITH_FOO is defined, otherwise the value of MK_BAR.
+#
 # If both WITH_FOO and WITHOUT_FOO are defined, WITHOUT_FOO wins and
 # MK_FOO is set to "no" regardless of which list it was in.
 #
-# Both __DEFAULT_YES_OPTIONS and __DEFAULT_NO_OPTIONS are undef'd
-# after all this processing, allowing this file to be included
-# multiple times with different lists.
+# All of __DEFAULT_YES_OPTIONS, __DEFAULT_NO_OPTIONS and
+# __DEFAULT_DEPENDENT_OPTIONS are undef'd after all this processing,
+# allowing this file to be included multiple times with different lists.
 #
 # Other parts of the build system will set BROKEN_OPTIONS to a list
 # of options that are broken on this platform. This will not be unset
@@ -32,6 +36,9 @@
 #
 .for var in ${__DEFAULT_YES_OPTIONS}
 .if !defined(MK_${var})
+.if defined(WITH_${var}) && ${WITH_${var}} == "no"
+.warning "Use WITHOUT_${var}=1 insetad of WITH_${var}=no"
+.endif
 .if defined(WITHOUT_${var})			# WITHOUT always wins
 MK_${var}:=	no
 .else
@@ -50,6 +57,9 @@ MK_${var}:=	yes
 #
 .for var in ${__DEFAULT_NO_OPTIONS}
 .if !defined(MK_${var})
+.if defined(WITH_${var}) && ${WITH_${var}} == "no"
+.warning "Use WITHOUT_${var}=1 insetad of WITH_${var}=no"
+.endif
 .if defined(WITH_${var}) && !defined(WITHOUT_${var}) # WITHOUT always wins
 MK_${var}:=	yes
 .else
