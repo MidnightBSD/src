@@ -1,7 +1,10 @@
-# $FreeBSD: stable/11/usr.sbin/wlandebug/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD$
 
 PROG=	wlandebug
 MAN=	wlandebug.8
+MK_PIE:=	no
+
+LIBADD+=	ifconfig
 
 WARNS?=	2
 

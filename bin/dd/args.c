@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -14,7 +16,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,10 +39,11 @@ static char sccsid[] = "@(#)args.c	8.3 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/dd/args.c 338364 2018-08-29 02:18:13Z kevans $");
+__FBSDID("$FreeBSD$");
 
-#include <sys/types.h>
+#include <sys/param.h>
 
+#include <ctype.h>
 #include <err.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -54,6 +57,8 @@ __FBSDID("$FreeBSD: stable/11/bin/dd/args.c 338364 2018-08-29 02:18:13Z kevans $
 
 static int	c_arg(const void *, const void *);
 static int	c_conv(const void *, const void *);
+static int	c_iflag(const void *, const void *);
+static int	c_oflag(const void *, const void *);
 static void	f_bs(char *);
 static void	f_cbs(char *);
 static void	f_conv(char *);
@@ -62,8 +67,10 @@ static void	f_files(char *);
 static void	f_fillchar(char *);
 static void	f_ibs(char *);
 static void	f_if(char *);
+static void	f_iflag(char *);
 static void	f_obs(char *);
 static void	f_of(char *);
+static void	f_oflag(char *);
 static void	f_seek(char *);
 static void	f_skip(char *);
 static void	f_speed(char *);
@@ -74,7 +81,7 @@ static off_t	get_off_t(const char *);
 static const struct arg {
 	const char *name;
 	void (*f)(char *);
-	u_int set, noset;
+	uint64_t set, noset;
 } args[] = {
 	{ "bs",		f_bs,		C_BS,	 C_BS|C_IBS|C_OBS|C_OSYNC },
 	{ "cbs",	f_cbs,		C_CBS,	 C_CBS },
@@ -84,9 +91,11 @@ static const struct arg {
 	{ "fillchar",	f_fillchar,	C_FILL,	 C_FILL },
 	{ "ibs",	f_ibs,		C_IBS,	 C_BS|C_IBS },
 	{ "if",		f_if,		C_IF,	 C_IF },
+	{ "iflag",	f_iflag,	0,	 0 },
 	{ "iseek",	f_skip,		C_SKIP,	 C_SKIP },
 	{ "obs",	f_obs,		C_OBS,	 C_BS|C_OBS },
 	{ "of",		f_of,		C_OF,	 C_OF },
+	{ "oflag",	f_oflag,	0,	 0 },
 	{ "oseek",	f_seek,		C_SEEK,	 C_SEEK },
 	{ "seek",	f_seek,		C_SEEK,	 C_SEEK },
 	{ "skip",	f_skip,		C_SKIP,	 C_SKIP },
@@ -184,7 +193,7 @@ f_bs(char *arg)
 
 	res = get_num(arg);
 	if (res < 1 || res > SSIZE_MAX)
-		errx(1, "bs must be between 1 and %jd", (intmax_t)SSIZE_MAX);
+		errx(1, "bs must be between 1 and %zd", (ssize_t)SSIZE_MAX);
 	in.dbsz = out.dbsz = (size_t)res;
 }
 
@@ -195,22 +204,22 @@ f_cbs(char *arg)
 
 	res = get_num(arg);
 	if (res < 1 || res > SSIZE_MAX)
-		errx(1, "cbs must be between 1 and %jd", (intmax_t)SSIZE_MAX);
+		errx(1, "cbs must be between 1 and %zd", (ssize_t)SSIZE_MAX);
 	cbsz = (size_t)res;
 }
 
 static void
 f_count(char *arg)
 {
-	intmax_t res;
+	uintmax_t res;
 
-	res = (intmax_t)get_num(arg);
-	if (res < 0)
-		errx(1, "count cannot be negative");
+	res = get_num(arg);
+	if (res == UINTMAX_MAX)
+		errc(1, ERANGE, "%s", oper);
 	if (res == 0)
-		cpy_cnt = (uintmax_t)-1;
+		cpy_cnt = UINTMAX_MAX;
 	else
-		cpy_cnt = (uintmax_t)res;
+		cpy_cnt = res;
 }
 
 static void
@@ -219,7 +228,7 @@ f_files(char *arg)
 
 	files_cnt = get_num(arg);
 	if (files_cnt < 1)
-		errx(1, "files must be between 1 and %jd", (uintmax_t)-1);
+		errx(1, "files must be between 1 and %zu", SIZE_MAX);
 }
 
 static void
@@ -240,8 +249,8 @@ f_ibs(char *arg)
 	if (!(ddflags & C_BS)) {
 		res = get_num(arg);
 		if (res < 1 || res > SSIZE_MAX)
-			errx(1, "ibs must be between 1 and %jd",
-			    (intmax_t)SSIZE_MAX);
+			errx(1, "ibs must be between 1 and %zd",
+			    (ssize_t)SSIZE_MAX);
 		in.dbsz = (size_t)res;
 	}
 }
@@ -253,6 +262,39 @@ f_if(char *arg)
 	in.name = arg;
 }
 
+static const struct iflag {
+	const char *name;
+	uint64_t set, noset;
+} ilist[] = {
+	{ "direct",	C_IDIRECT,	0 },
+	{ "fullblock",	C_IFULLBLOCK,	C_SYNC },
+};
+
+static void
+f_iflag(char *arg)
+{
+	struct iflag *ip, tmp;
+
+	while (arg != NULL) {
+		tmp.name = strsep(&arg, ",");
+		ip = bsearch(&tmp, ilist, nitems(ilist), sizeof(struct iflag),
+		    c_iflag);
+		if (ip == NULL)
+			errx(1, "unknown iflag %s", tmp.name);
+		if (ddflags & ip->noset)
+			errx(1, "%s: illegal conversion combination", tmp.name);
+		ddflags |= ip->set;
+	}
+}
+
+static int
+c_iflag(const void *a, const void *b)
+{
+
+	return (strcmp(((const struct iflag *)a)->name,
+	    ((const struct iflag *)b)->name));
+}
+
 static void
 f_obs(char *arg)
 {
@@ -261,8 +303,8 @@ f_obs(char *arg)
 	if (!(ddflags & C_BS)) {
 		res = get_num(arg);
 		if (res < 1 || res > SSIZE_MAX)
-			errx(1, "obs must be between 1 and %jd",
-			    (intmax_t)SSIZE_MAX);
+			errx(1, "obs must be between 1 and %zd",
+			    (ssize_t)SSIZE_MAX);
 		out.dbsz = (size_t)res;
 	}
 }
@@ -311,12 +353,14 @@ f_status(char *arg)
  
 static const struct conv {
 	const char *name;
-	u_int set, noset;
+	uint64_t set, noset;
 	const u_char *ctab;
 } clist[] = {
 	{ "ascii",	C_ASCII,	C_EBCDIC,	e2a_POSIX },
 	{ "block",	C_BLOCK,	C_UNBLOCK,	NULL },
 	{ "ebcdic",	C_EBCDIC,	C_ASCII,	a2e_POSIX },
+	{ "fdatasync",	C_FDATASYNC,	0,		NULL },
+	{ "fsync",	C_FSYNC,	0,		NULL },
 	{ "ibm",	C_EBCDIC,	C_ASCII,	a2ibm_POSIX },
 	{ "lcase",	C_LCASE,	C_UCASE,	NULL },
 	{ "noerror",	C_NOERROR,	0,		NULL },
@@ -331,7 +375,7 @@ static const struct conv {
 	{ "parset",	C_PARSET,	C_PARODD|C_PAREVEN|C_PARNONE, NULL},
 	{ "sparse",	C_SPARSE,	0,		NULL },
 	{ "swab",	C_SWAB,		0,		NULL },
-	{ "sync",	C_SYNC,		0,		NULL },
+	{ "sync",	C_SYNC,		C_IFULLBLOCK,	NULL },
 	{ "ucase",	C_UCASE,	C_LCASE,	NULL },
 	{ "unblock",	C_UNBLOCK,	C_BLOCK,	NULL },
 };
@@ -343,8 +387,8 @@ f_conv(char *arg)
 
 	while (arg != NULL) {
 		tmp.name = strsep(&arg, ",");
-		cp = bsearch(&tmp, clist, sizeof(clist) / sizeof(struct conv),
-		    sizeof(struct conv), c_conv);
+		cp = bsearch(&tmp, clist, nitems(clist), sizeof(struct conv),
+		    c_conv);
 		if (cp == NULL)
 			errx(1, "unknown conversion %s", tmp.name);
 		if (ddflags & cp->noset)
@@ -361,6 +405,38 @@ c_conv(const void *a, const void *b)
 
 	return (strcmp(((const struct conv *)a)->name,
 	    ((const struct conv *)b)->name));
+}
+
+static const struct oflag {
+	const char *name;
+	uint64_t set;
+} olist[] = {
+	{ "direct",	C_ODIRECT },
+	{ "fsync",	C_OFSYNC },
+	{ "sync",	C_OFSYNC },
+};
+
+static void
+f_oflag(char *arg)
+{
+	struct oflag *op, tmp;
+
+	while (arg != NULL) {
+		tmp.name = strsep(&arg, ",");
+		op = bsearch(&tmp, olist, nitems(olist), sizeof(struct oflag),
+		    c_oflag);
+		if (op == NULL)
+			errx(1, "unknown open flag %s", tmp.name);
+		ddflags |= op->set;
+	}
+}
+
+static int
+c_oflag(const void *a, const void *b)
+{
+
+	return (strcmp(((const struct oflag *)a)->name,
+	    ((const struct oflag *)b)->name));
 }
 
 static intmax_t

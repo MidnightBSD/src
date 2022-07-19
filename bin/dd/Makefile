@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
-# $FreeBSD: stable/11/bin/dd/Makefile 338364 2018-08-29 02:18:13Z kevans $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -39,8 +39,7 @@ test: ${PROG} gen
 
 	@rm -f gen 1M_zeroes* obs_zeroes
 
-.if ${MK_TESTS} != "no"
-SUBDIR+=	tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

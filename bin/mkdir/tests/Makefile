@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/mkdir/tests/Makefile 323275 2017-09-07 16:54:47Z asomers $
+# $FreeBSD$
 
 ATF_TESTS_SH+=  mkdir_test
 

@@ -1,5 +1,5 @@
 # $OpenBSD: Makefile,v 1.8 2015/09/09 15:33:18 deraadt Exp $
-# $FreeBSD: stable/11/usr.sbin/ypldap/Makefile 319191 2017-05-30 05:15:09Z ngie $
+# $FreeBSD$
 
 PROG=		ypldap
 SRCS=		parse.y ypldap.c log.c	\
@@ -15,6 +15,6 @@ CFLAGS+=-I${.CURDIR}
 CFLAGS+=-I${SRCTOP}/contrib/pf/libevent
 CFLAGS+=-I${SRCTOP}/lib/libopenbsd
 
-WARNS=	2
+WARNS?=	2
 
 .include <bsd.prog.mk>

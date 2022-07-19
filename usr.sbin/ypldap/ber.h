@@ -1,5 +1,5 @@
 /*	$OpenBSD: ber.h,v 1.2 2008/12/29 15:48:13 aschrijver Exp $ */
-/*	$FreeBSD: stable/11/usr.sbin/ypldap/ber.h 290931 2015-11-16 16:48:43Z rodrigc $ */
+/*	$FreeBSD$ */
 
 /*
  * Copyright (c) 2007 Reyk Floeter <reyk@vantronix.net>

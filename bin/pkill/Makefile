@@ -1,5 +1,5 @@
 #	$NetBSD: Makefile,v 1.1 2002/03/01 11:21:58 ad Exp $
-# $FreeBSD: stable/11/bin/pkill/Makefile 319016 2017-05-28 00:13:44Z rgrimes $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -19,8 +19,7 @@ MLINKS=	pkill.1 pgrep.1
 SYMLINKS=	../..${BINDIR}/pkill /usr/bin/pkill
 SYMLINKS+=	../..${BINDIR}/pgrep /usr/bin/pgrep
 
-.if ${MK_TESTS} != "no"
-SUBDIR+= tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

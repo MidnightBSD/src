@@ -1,4 +1,6 @@
 /*
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1996, 1997
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
  *
@@ -64,7 +66,7 @@ static char *sccsid = "@(#)from: clnt_udp.c	2.2 88/08/01 4.0 RPCSRC";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/ypbind/yp_ping.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * clnt_udp.c, Implements a UDP/IP based, client side RPC.

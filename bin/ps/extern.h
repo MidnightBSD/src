@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -27,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.3 (Berkeley) 4/2/94
- * $FreeBSD: stable/11/bin/ps/extern.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 struct kinfo;
@@ -46,6 +48,7 @@ __BEGIN_DECLS
 char	 *arguments(KINFO *, VARENT *);
 char	 *command(KINFO *, VARENT *);
 char	 *cputime(KINFO *, VARENT *);
+char	 *cpunum(KINFO *, VARENT *);
 int	 donlist(void);
 char	 *elapsed(KINFO *, VARENT *);
 char	 *elapseds(KINFO *, VARENT *);

@@ -25,15 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/setfacl/remove.c 204819 2010-03-07 07:59:05Z joel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/acl.h>
 #include <sys/stat.h>
 
 #include <err.h>
-#include <stdio.h>
-#include <string.h>
 
 #include "setfacl.h"
 
@@ -75,7 +73,7 @@ remove_acl(acl_t acl, acl_t *prev_acl, const char *filename)
 		if (acl_get_tag_type(entry, &tag) == -1)
 			err(1, "%s: acl_get_tag_type() failed", filename);
 		if (tag == ACL_MASK)
-			have_mask++;
+			have_mask = true;
 		if (acl_delete_entry(acl_new, entry) == -1) {
 			carried_error++;
 			warnx("%s: cannot remove non-existent ACL entry",
@@ -124,7 +122,7 @@ remove_by_number(uint entry_number, acl_t *prev_acl, const char *filename)
 		if (acl_get_tag_type(entry, &tag) == -1)
 			err(1, "%s: acl_get_tag_type() failed", filename);
 		if (tag == ACL_MASK)
-			have_mask++;
+			have_mask = true;
 	}
 
 	if (acl_delete_entry_np(acl_new, entry_number) == -1) {

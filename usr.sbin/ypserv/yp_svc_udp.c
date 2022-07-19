@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1996
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
  *
@@ -31,13 +33,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/ypserv/yp_svc_udp.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <rpc/rpc.h>
 #include <rpc/svc_dg.h>
 #include "yp_extern.h"
 
-#define su_data(xprt)	((struct svc_dg_data *)(xprt->xp_p2))
+#define	su_data(xprt)	((struct svc_dg_data *)((xprt)->xp_p2))
 
 /*
  * We need to be able to manually set the transaction ID in the

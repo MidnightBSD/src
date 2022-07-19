@@ -13,7 +13,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)ls.1	8.7 (Berkeley) 7/29/94
-.\" $FreeBSD: stable/11/bin/ls/ls.1 337884 2018-08-16 01:18:20Z kevans $
+.\" $FreeBSD$
 .\"
-.Dd December 1, 2015
+.Dd August 31, 2020
 .Dt LS 1
 .Os
 .Sh NAME
@@ -40,8 +40,8 @@
 .Nd list directory contents
 .Sh SYNOPSIS
 .Nm
-.Op Fl -libxo
-.Op Fl ABCFGHILPRSTUWZabcdfghiklmnopqrstuwxy1,
+.Op Fl ABCFGHILPRSTUWZabcdfghiklmnopqrstuwxy1\&,
+.Op Fl -color Ns = Ns Ar when
 .Op Fl D Ar format
 .Op Ar
 .Sh DESCRIPTION
@@ -69,13 +69,6 @@ lexicographical order.
 .Pp
 The following options are available:
 .Bl -tag -width indent
-.It Fl -libxo
-Generate output via
-.Xr libxo 3
-in a selection of different human and machine readable formats.
-See
-.Xr xo_parse_args 3
-for details on command line arguments.
 .It Fl A
 Include directory entries whose names begin with a
 dot
@@ -96,7 +89,7 @@ where
 .Va xxx
 is the numeric value of the character in octal.
 This option is not defined in
-.St -p1003.1-2001 .
+.St -p1003.1-2008 .
 .It Fl C
 Force multi-column output; this is the default when output is to a terminal.
 .It Fl D Ar format
@@ -115,7 +108,7 @@ This option overrides the
 .Fl T
 option.
 This option is not defined in
-.St -p1003.1-2001 .
+.St -p1003.1-2008 .
 .It Fl F
 Display a slash
 .Pq Ql /
@@ -140,12 +133,15 @@ after each that is a
 Enable colorized output.
 This option is equivalent to defining
 .Ev CLICOLOR
-in the environment.
+or
+.Ev COLORTERM
+in the environment and setting
+.Fl -color Ns = Ns Ar auto .
 (See below.)
 This functionality can be compiled out by removing the definition of
 .Ev COLORLS .
 This option is not defined in
-.St -p1003.1-2001 .
+.St -p1003.1-2008 .
 .It Fl H
 Symbolic links on the command line are followed.
 This option is assumed if
@@ -159,7 +155,7 @@ Prevent
 .Fl A
 from being automatically set for the super-user.
 This option is not defined in
-.St -p1003.1-2001 .
+.St -p1003.1-2008 .
 .It Fl L
 If argument is a symbolic link, list the file or directory the link references
 rather than the link itself.
@@ -188,20 +184,20 @@ The
 .Fl D
 option gives even more control over the output format.
 This option is not defined in
-.St -p1003.1-2001 .
+.St -p1003.1-2008 .
 .It Fl U
 Use time when file was created for sorting or printing.
 This option is not defined in
-.St -p1003.1-2001 .
+.St -p1003.1-2008 .
 .It Fl W
 Display whiteouts when scanning directories.
 This option is not defined in
-.St -p1003.1-2001 .
+.St -p1003.1-2008 .
 .It Fl Z
 Display each file's MAC label; see
 .Xr maclabel 7 .
 This option is not defined in
-.St -p1003.1-2001 .
+.St -p1003.1-2008 .
 .It Fl a
 Include directory entries whose names begin with a
 dot
@@ -213,9 +209,76 @@ but use
 .Tn C
 escape codes whenever possible.
 This option is not defined in
-.St -p1003.1-2001 .
+.St -p1003.1-2008 .
 .It Fl c
 Use time when file status was last changed for sorting or printing.
+.It Fl -color Ns = Ns Ar when
+Output colored escape sequences based on
+.Ar when ,
+which may be set to either
+.Cm always ,
+.Cm auto ,
+or
+.Cm never .
+.Pp
+.Cm always
+will make
+.Nm
+always output color.
+If
+.Ev TERM
+is unset or set to an invalid terminal, then
+.Nm
+will fall back to explicit
+.Tn ANSI
+escape sequences without the help of
+.Xr termcap 5 .
+.Cm always
+is the default if
+.Fl -color
+is specified without an argument.
+.Pp
+.Cm auto
+will make
+.Nm
+output escape sequences based on
+.Xr termcap 5 ,
+but only if
+.Dv stdout
+is a tty and either the
+.Fl G
+flag is specified or the
+.Ev COLORTERM
+environment variable is set and not empty.
+.Pp
+.Cm never
+will disable color regardless of environment variables.
+.Cm never
+is the default when neither
+.Fl -color
+nor
+.Fl G
+is specified.
+.Pp
+For compatibility with GNU coreutils,
+.Nm
+supports
+.Cm yes
+or
+.Cm force
+as equivalent to
+.Cm always ,
+.Cm no
+or
+.Cm none
+as equivalent to
+.Cm never ,
+and
+.Cm tty
+or
+.Cm if-tty
+as equivalent to
+.Cm auto .
 .It Fl d
 Directories are listed as plain files (not searched recursively).
 .It Fl f
@@ -229,7 +292,7 @@ and
 .Fl t
 options.
 As allowed by
-.St -p1003.1-2001 ,
+.St -p1003.1-2008 ,
 this option has no effect on the
 .Fl d ,
 .Fl l ,
@@ -245,7 +308,7 @@ where it was used to display the group name in the long
 .Pq Fl l
 format output.
 This option is incompatible with
-.St -p1003.1-2001 .
+.St -p1003.1-2008 .
 .It Fl h
 When used with the
 .Fl l
@@ -253,7 +316,7 @@ option, use unit suffixes: Byte, Kilobyte, Megabyte, Gigabyte, Terabyte
 and Petabyte in order to reduce the number of digits to four or fewer
 using base 2 for sizes.
 This option is not defined in
-.St -p1003.1-2001 .
+.St -p1003.1-2008 .
 .It Fl i
 For each file, print the file's file serial number (inode number).
 .It Fl k
@@ -280,7 +343,7 @@ Include the file flags in a long
 .Pq Fl l
 output.
 This option is incompatible with
-.St -p1003.1-2001 .
+.St -p1003.1-2008 .
 See
 .Xr chflags 1
 for a list of file flags and their meanings.
@@ -626,7 +689,10 @@ Colorization
 is silently disabled if the output is not directed to a terminal
 unless the
 .Ev CLICOLOR_FORCE
-variable is defined.
+variable is defined or
+.Fl -color
+is set to
+.Dq always .
 .It Ev CLICOLOR_FORCE
 Color sequences are normally disabled if the output is not directed to
 a terminal.
@@ -636,6 +702,10 @@ The
 variable still needs to reference a color capable terminal however
 otherwise it is not possible to determine which color sequences to
 use.
+.It Ev COLORTERM
+See description for
+.Ev CLICOLOR
+above.
 .It Ev COLUMNS
 If this variable contains a string representing a
 decimal integer, it is used as the
@@ -660,7 +730,9 @@ for more information.
 .It Ev LSCOLORS
 The value of this variable describes what color to use for which
 attribute when colors are enabled with
-.Ev CLICOLOR .
+.Ev CLICOLOR
+or
+.Ev COLORTERM .
 This string is a concatenation of pairs of the format
 .Ar f Ns Ar b ,
 where
@@ -767,6 +839,8 @@ option for more details.
 .It Ev TERM
 The
 .Ev CLICOLOR
+and
+.Ev COLORTERM
 functionality depends on a terminal type with color capabilities.
 .It Ev TZ
 The timezone to use when displaying dates.
@@ -805,11 +879,9 @@ specification.
 .Xr getfacl 1 ,
 .Xr sort 1 ,
 .Xr xterm 1 ,
-.Xr libxo 3 ,
 .Xr localeconv 3 ,
 .Xr strftime 3 ,
 .Xr strmode 3 ,
-.Xr xo_parse_args 3 ,
 .Xr termcap 5 ,
 .Xr maclabel 7 ,
 .Xr sticky 7 ,
@@ -823,13 +895,14 @@ and
 the
 .Nm
 utility conforms to
-.St -p1003.1-2001 .
+.St -p1003.1-2001
+and
+.St -p1003.1-2008 .
 The options
 .Fl B , D , G , I , T , U , W , Z , b , h , w , y
 and
 .Fl ,
-are compatible extensions not defined in
-.St -p1003.1-2001 .
+are non-standard extensions.
 .Pp
 The ACL support is compatible with
 .Tn IEEE

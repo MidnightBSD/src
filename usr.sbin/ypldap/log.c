@@ -1,5 +1,5 @@
 /*	$OpenBSD: log.c,v 1.1 2008/06/26 15:10:01 pyr Exp $	*/
-/*	$FreeBSD: stable/11/usr.sbin/ypldap/log.c 290939 2015-11-16 17:08:51Z rodrigc $ */
+/*	$FreeBSD$ */
 
 /*
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>

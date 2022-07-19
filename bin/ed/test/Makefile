@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/ed/test/Makefile 50471 1999-08-27 23:15:48Z peter $
+# $FreeBSD$
 
 SHELL=	/bin/sh
 ED=	${.OBJDIR}/ed

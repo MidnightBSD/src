@@ -11,6 +11,30 @@
 #
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
+# Before you commit changes to this file please check if any entries in
+# tools/build/mk/OptionalObsoleteFiles.inc can be removed. The following
+# command tells which files are listed more than once regardless of some
+# architecture specific conditionals, so you can not blindly trust the
+# output:
+# ( grep '+=' /usr/src/ObsoleteFiles.inc | sort -u ; \
+# grep '+=' /usr/src/tools/build/mk/OptionalObsoleteFiles.inc | sort -u) | \
+# sort | uniq -d
+#
+# To find regular duplicates not dependent on optional components, you can
+# also use something that will not give you false positives, e.g.:
+# for t in `make -V TARGETS universe`; do
+#   __MAKE_CONF=/dev/null make -f Makefile.inc1 TARGET=$t \
+#   -V OLD_FILES -V OLD_LIBS -V OLD_DIRS check-old | \
+#   xargs -n1 | sort | uniq -d;
+# done
+#
+# For optional components, you can use the following to see if some entries
+# in OptionalObsoleteFiles.inc have been obsoleted by ObsoleteFiles.inc
+# for o in tools/build/options/WITH*; do
+#   __MAKE_CONF=/dev/null make -f Makefile.inc1 -D${o##*/} \
+#   -V OLD_FILES -V OLD_LIBS -V OLD_DIRS check-old | \
+#   xargs -n1 | sort | uniq -d;
+# done
 
 # 20220602:
 OLD_FILES+=usr/lib/perl5/5.32.0/bigint.pm
@@ -6880,6 +6904,7 @@ OLD_FILES+=usr/share/isdn/8.al
 OLD_FILES+=usr/share/isdn/9.al
 OLD_FILES+=usr/share/isdn/beep.al
 OLD_FILES+=usr/share/isdn/msg.al
+OLD_DIRS+=usr/share/isdn
 OLD_FILES+=usr/share/man/man1/dtmfdecode.1.gz
 OLD_FILES+=usr/share/man/man1/g711conv.1.gz
 OLD_FILES+=usr/share/man/man4/i4b.4.gz
@@ -7321,6 +7346,10 @@ OLD_FILES+=usr/share/man/man1/sasc.1.gz
 OLD_FILES+=usr/share/man/man1/sgsc.1.gz
 OLD_FILES+=usr/share/man/man4/i386/stl.4.gz
 OLD_FILES+=usr/share/man/man8/raidctl.8.gz
+# 20040229: clean_environment() was removed after 3 days
+OLD_FILES+=usr/share/man/man3/clean_environment.3.gz
+# 20040119: installed as `isdntel' in newer systems
+OLD_FILES+=etc/isdn/isdntel.sh
 # 200XYYZZ: /lib transition clitches
 OLD_FILES+=lib/libalias.so
 OLD_FILES+=lib/libatm.so
@@ -7346,6 +7375,8 @@ OLD_FILES+=lib/libz.so
 OLD_FILES+=bin/cxconfig
 OLD_FILES+=sbin/cxconfig
 OLD_FILES+=usr/share/man/man8/cxconfig.8.gz
+# 20031016: MULTI_DRIVER_MODULE macro removed
+OLD_FILES+=usr/share/man/man9/MULTI_DRIVER_MODULE.9.gz
 # 200309XX
 OLD_FILES+=usr/bin/symorder
 OLD_FILES+=usr/share/man/man1/symorder.1.gz
@@ -7377,6 +7408,7 @@ OLD_FILES+=usr/lib/libskey_p.a
 OLD_FILES+=usr/libexec/tradcpp0
 OLD_FILES+=usr/libexec/cpp0
 # 200304XX: removal of xten
+OLD_FILES+=usr/libexec/xtend
 OLD_FILES+=usr/sbin/xten
 OLD_FILES+=usr/share/man/man1/xten.1.gz
 OLD_FILES+=usr/share/man/man8/xtend.8.gz
@@ -7595,6 +7627,34 @@ OLD_FILES+=usr/sbin/mcon
 OLD_FILES+=usr/sbin/stlstty
 OLD_FILES+=usr/sbin/ispppcontrol
 OLD_FILES+=usr/sbin/rndcontrol
+# 20011001: UUCP migration to ports
+OLD_FILES+=usr/bin/uucp
+OLD_FILES+=usr/bin/uulog
+OLD_FILES+=usr/bin/uuname
+OLD_FILES+=usr/bin/uupick
+OLD_FILES+=usr/bin/uusched
+OLD_FILES+=usr/bin/uustat
+OLD_FILES+=usr/bin/uuto
+OLD_FILES+=usr/bin/uux
+OLD_FILES+=usr/libexec/uucp/uucico
+OLD_FILES+=usr/libexec/uucp/uuxqt
+OLD_FILES+=usr/libexec/uucpd
+OLD_FILES+=usr/share/man/man1/uuconv.1.gz
+OLD_FILES+=usr/share/man/man1/uucp.1.gz
+OLD_FILES+=usr/share/man/man1/uulog.1.gz
+OLD_FILES+=usr/share/man/man1/uuname.1.gz
+OLD_FILES+=usr/share/man/man1/uupick.1.gz
+OLD_FILES+=usr/share/man/man1/uustat.1.gz
+OLD_FILES+=usr/share/man/man1/uuto.1.gz
+OLD_FILES+=usr/share/man/man1/uux.1.gz
+OLD_FILES+=usr/share/man/man8/uuchk.8.gz
+OLD_FILES+=usr/share/man/man8/uucico.8.gz
+OLD_FILES+=usr/share/man/man8/uucpd.8.gz
+OLD_FILES+=usr/share/man/man8/uusched.8.gz
+OLD_FILES+=usr/share/man/man8/uuxqt.8.gz
+# 20010523 mount_portal -> mount_portalfs
+OLD_FILES+=sbin/mount_portal
+OLD_FILES+=usr/share/man/man8/mount_portal.8.gz
 # 200104XX
 OLD_FILES+=usr/lib/libdescrypt.a
 OLD_FILES+=usr/lib/libscrypt.a
@@ -7602,6 +7662,8 @@ OLD_FILES+=usr/lib/libscrypt_p.a
 OLD_FILES+=usr/sbin/pim6stat
 OLD_FILES+=usr/sbin/pim6sd
 OLD_FILES+=usr/sbin/pim6dd
+# 20010217
+OLD_FILES+=usr/share/doc/bind/misc/dns-setup
 # 20001200
 OLD_FILES+=usr/lib/libgcc_r_pic.a
 # 200009XX
@@ -8171,6 +8233,12 @@ OLD_LIBS+=usr/lib/libposix1e.so.2
 OLD_LIBS+=usr/lib/libskey.so.2
 OLD_LIBS+=usr/lib/libusbhid.so.0
 OLD_LIBS+=usr/lib/libvgl.so.2
+# 20030218: OpenSSL 0.9.7 import
+OLD_FILES+=usr/include/des.h
+OLD_FILES+=usr/lib/libdes.a
+OLD_FILES+=usr/lib/libdes.so
+OLD_LIBS+=usr/lib/libdes.so.3
+OLD_FILES+=usr/lib/libdes_p.a
 # 200302XX
 OLD_LIBS+=usr/lib/libacl.so.3
 OLD_LIBS+=usr/lib/libasn1.so.5

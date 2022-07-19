@@ -43,7 +43,7 @@ static const char copyright[] =
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/chio/chio.c 249658 2013-04-19 20:03:51Z ken $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/chio.h> 
@@ -1144,7 +1144,7 @@ find_element(char *voltag, uint16_t *et, uint16_t *eu)
 	/*
 	 * Now search the list the specified <voltag>
 	 */	
-	for (elem = 0; elem <= total_elem; ++elem) {
+	for (elem = 0; elem < total_elem; ++elem) {
 
 		ces = &ch_ces[elem];
 

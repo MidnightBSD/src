@@ -1,5 +1,5 @@
 /* $OpenBSD: ldapclient.c,v 1.31 2014/11/16 23:24:44 tedu Exp $ */
-/* $FreeBSD: stable/11/usr.sbin/ypldap/ldapclient.c 309872 2016-12-12 02:24:54Z araujo $ */
+/* $FreeBSD$ */
 
 /*
  * Copyright (c) 2008 Alexander Schrijver <aschrijver@openbsd.org>

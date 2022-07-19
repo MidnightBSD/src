@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/11/bin/pkill/tests/pkill-j_test.sh 330332 2018-03-03 11:17:05Z eadler $
+# $FreeBSD$
 
 jail_name_to_jid()
 {

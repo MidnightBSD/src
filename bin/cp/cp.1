@@ -13,7 +13,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)cp.1	8.3 (Berkeley) 4/18/94
-.\" $FreeBSD: stable/11/bin/cp/cp.1 284106 2015-06-07 06:30:25Z bdrewery $
+.\" $FreeBSD$
 .\"
-.Dd June 6, 2015
+.Dd February 23, 2022
 .Dt CP 1
 .Os
 .Sh NAME
@@ -54,6 +54,14 @@
 .Oc
 .Op Fl f | i | n
 .Op Fl alpsvx
+.Ar source_file ... target_directory
+.Nm
+.Op Fl f | i | n
+.Op Fl alPpsvx
+.Ar source_file target_file
+.Nm
+.Op Fl f | i | n
+.Op Fl alPpsvx
 .Ar source_file ... target_directory
 .Sh DESCRIPTION
 In the first synopsis form, the
@@ -84,10 +92,10 @@ If the
 .Fl R
 option is specified, all symbolic links are followed.
 .It Fl P
-If the
+No symbolic links are followed.
+This is the default if the
 .Fl R
-option is specified, no symbolic links are followed.
-This is the default.
+option is specified.
 .It Fl R
 If
 .Ar source_file
@@ -300,9 +308,9 @@ differ as they copy special files as normal
 files while recreating a hierarchy.
 .Pp
 The
-.Fl l,
-.Fl s,
-.Fl v,
+.Fl l ,
+.Fl s ,
+.Fl v ,
 .Fl x
 and
 .Fl n

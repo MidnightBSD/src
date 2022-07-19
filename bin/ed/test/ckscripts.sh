@@ -3,7 +3,7 @@
 # and compares their output against the .r files, which contain
 # the correct output
 #
-# $FreeBSD: stable/11/bin/ed/test/ckscripts.sh 50471 1999-08-27 23:15:48Z peter $
+# $FreeBSD$
 
 PATH="/bin:/usr/bin:/usr/local/bin/:."
 ED=$1
