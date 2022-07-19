@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/builtins/case9.0 223186 2011-06-17 13:03:49Z jilles $
+# $FreeBSD$
 
 errors=0
 

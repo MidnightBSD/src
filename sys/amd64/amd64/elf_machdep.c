@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/elf_machdep.c 338867 2018-09-21 20:40:37Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -62,7 +64,6 @@ struct sysentvec elf64_freebsd_sysvec = {
 	.sv_coredump	= __elfN(coredump),
 	.sv_imgact_try	= NULL,
 	.sv_minsigstksz	= MINSIGSTKSZ,
-	.sv_pagesize	= PAGE_SIZE,
 	.sv_minuser	= VM_MIN_ADDRESS,
 	.sv_maxuser	= VM_MAXUSER_ADDRESS,
 	.sv_usrstack	= USRSTACK,
@@ -72,7 +73,8 @@ struct sysentvec elf64_freebsd_sysvec = {
 	.sv_setregs	= exec_setregs,
 	.sv_fixlimit	= NULL,
 	.sv_maxssiz	= NULL,
-	.sv_flags	= SV_ABI_FREEBSD | SV_LP64 | SV_SHP | SV_TIMEKEEP,
+	.sv_flags	= SV_ABI_FREEBSD | SV_ASLR | SV_LP64 | SV_SHP |
+			    SV_TIMEKEEP,
 	.sv_set_syscall_retval = cpu_set_syscall_retval,
 	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
 	.sv_syscallnames = syscallnames,
@@ -81,6 +83,7 @@ struct sysentvec elf64_freebsd_sysvec = {
 	.sv_schedtail	= NULL,
 	.sv_thread_detach = NULL,
 	.sv_trap	= NULL,
+	.sv_stackgap	= elf64_stackgap,
 };
 INIT_SYSENTVEC(elf64_sysvec, &elf64_freebsd_sysvec);
 
@@ -134,6 +137,22 @@ static Elf64_Brandinfo freebsd_brand_oinfo = {
 SYSINIT(oelf64, SI_SUB_EXEC, SI_ORDER_ANY,
 	(sysinit_cfunc_t) elf64_insert_brand_entry,
 	&freebsd_brand_oinfo);
+
+static Elf64_Brandinfo kfreebsd_brand_info = {
+	.brand		= ELFOSABI_FREEBSD,
+	.machine	= EM_X86_64,
+	.compat_3_brand	= "FreeBSD",
+	.emul_path	= NULL,
+	.interp_path	= "/lib/ld-kfreebsd-x86-64.so.1",
+	.sysvec		= &elf64_freebsd_sysvec,
+	.interp_newpath	= NULL,
+	.brand_note	= &elf64_kfreebsd_brandnote,
+	.flags		= BI_CAN_EXEC_DYN | BI_BRAND_NOTE_MANDATORY
+};
+
+SYSINIT(kelf64, SI_SUB_EXEC, SI_ORDER_ANY,
+	(sysinit_cfunc_t) elf64_insert_brand_entry,
+	&kfreebsd_brand_info);
 
 void
 elf64_dump_thread(struct thread *td, void *dst, size_t *off)
@@ -249,7 +268,6 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 			 */
 			printf("kldload: unexpected R_COPY relocation\n");
 			return (-1);
-			break;
 
 		case R_X86_64_GLOB_DAT:	/* S */
 		case R_X86_64_JMP_SLOT:	/* XXX need addend + offset */
@@ -261,7 +279,7 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 			break;
 
 		case R_X86_64_RELATIVE:	/* B + A */
-			addr = relocbase + addend;
+			addr = elf_relocaddr(lf, relocbase + addend);
 			val = addr;
 			if (*where != val)
 				*where = val;

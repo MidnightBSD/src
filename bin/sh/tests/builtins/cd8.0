@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/builtins/cd8.0 230095 2012-01-13 23:32:27Z jilles $
+# $FreeBSD$
 
 # The exact wording of the error message is not standardized, but giving
 # a description of the errno is useful.

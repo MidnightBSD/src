@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/builtins/trap17.0 297360 2016-03-28 18:58:40Z jilles $
+# $FreeBSD$
 # This use-after-free bug probably needs non-default settings to show up.
 
 v1=nothing v2=nothing

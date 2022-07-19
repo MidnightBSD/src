@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2002 David E. O'Brien.  All rights reserved.
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +38,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)param.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/11/sys/amd64/include/param.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 
@@ -89,7 +91,7 @@
  * CACHE_LINE_SIZE is the compile-time maximum cache line size for an
  * architecture.  It should be used with appropriate caution.
  */
-#define	CACHE_LINE_SHIFT	7
+#define	CACHE_LINE_SHIFT	6
 #define	CACHE_LINE_SIZE		(1 << CACHE_LINE_SHIFT)
 
 /* Size of the level 1 page table units */
@@ -151,5 +153,9 @@
 
 #define	INKERNEL(va) (((va) >= DMAP_MIN_ADDRESS && (va) < DMAP_MAX_ADDRESS) \
     || ((va) >= VM_MIN_KERNEL_ADDRESS && (va) < VM_MAX_KERNEL_ADDRESS))
+
+#ifdef SMP
+#define SC_TABLESIZE    1024                     /* Must be power of 2. */
+#endif
 
 #endif /* !_AMD64_INCLUDE_PARAM_H_ */

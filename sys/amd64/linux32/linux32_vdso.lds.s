@@ -3,7 +3,7 @@
  * Copied from Linux kernel arch/x86/vdso/vdso-layout.lds.S
  * and arch/x86/vdso/vdso32/vdso32.lds.S
  *
- * $FreeBSD: stable/11/sys/amd64/linux32/linux32_vdso.lds.s 283410 2015-05-24 15:30:52Z dchagin $
+ * $FreeBSD$
  */
 
 SECTIONS

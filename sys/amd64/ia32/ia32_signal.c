@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2003 Peter Wemm
  * Copyright (c) 1982, 1987, 1990 The Regents of the University of California.
  * All rights reserved.
@@ -14,7 +16,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,9 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/amd64/ia32/ia32_signal.c 341165 2018-11-28 21:19:58Z vangyzen $");
-
-#include "opt_compat.h"
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/exec.h>
@@ -80,6 +80,7 @@ __FBSDID("$FreeBSD: stable/11/sys/amd64/ia32/ia32_signal.c 341165 2018-11-28 21:
 #include <machine/md_var.h>
 #include <machine/pcb.h>
 #include <machine/cpufunc.h>
+#include <machine/trap.h>
 
 #ifdef COMPAT_FREEBSD4
 static void freebsd4_ia32_sendsig(sig_t, ksiginfo_t *, sigset_t *);
@@ -942,15 +943,12 @@ ia32_setregs(struct thread *td, struct image_params *imgp, u_long stack)
 	struct trapframe *regs;
 	struct pcb *pcb;
 	register_t saved_rflags;
-	
-	mtx_lock(&dt_lock);
+
 	regs = td->td_frame;
 	pcb = td->td_pcb;
 
 	if (td->td_proc->p_md.md_ldt != NULL)
 		user_ldt_free(td);
-	else
-		mtx_unlock(&dt_lock);
 #ifdef COMPAT_43
 	setup_lcall_gate();
 #endif
@@ -973,9 +971,10 @@ ia32_setregs(struct thread *td, struct image_params *imgp, u_long stack)
 	regs->tf_gs = _ugssel;
 	regs->tf_flags = TF_HASSEGS;
 
+	x86_clear_dbregs(pcb);
+
 	fpstate_drop(td);
 
 	/* Return via doreti so that we can change to a different %cs */
 	set_pcb_flags(pcb, PCB_32BIT | PCB_FULL_IRET);
-	td->td_retval[1] = 0;
 }

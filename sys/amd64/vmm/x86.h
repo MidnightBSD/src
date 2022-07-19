@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/vmm/x86.h 349958 2019-07-12 22:31:12Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef _X86_H_
@@ -39,6 +41,7 @@
 #define	CPUID_0000_000A	(0xA)
 #define	CPUID_0000_000B	(0xB)
 #define	CPUID_0000_000D	(0xD)
+#define	CPUID_0000_0015	(0x15)
 #define CPUID_8000_0000	(0x80000000)
 #define CPUID_8000_0001	(0x80000001)
 #define CPUID_8000_0002	(0x80000002)

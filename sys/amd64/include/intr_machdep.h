@@ -1,6 +1,7 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/include/intr_machdep.h 339872 2018-10-29 20:21:10Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef __MACHINE_INTR_MACHDEP_H__
@@ -39,5 +40,10 @@ struct nmi_pcpu {
 	register_t	np_pcpu;
 	register_t	__padding;	/* pad to 16 bytes */
 };
+
+#define	DBLFAULT_STACK_SIZE	PAGE_SIZE
+#define	NMI_STACK_SIZE		PAGE_SIZE
+#define	MCE_STACK_SIZE		PAGE_SIZE
+#define	DBG_STACK_SIZE		PAGE_SIZE
 
 #endif	/* !__MACHINE_INTR_MACHDEP_H__ */

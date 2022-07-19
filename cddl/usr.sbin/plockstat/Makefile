@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/cddl/usr.sbin/plockstat/Makefile 321268 2017-07-20 00:53:50Z ngie $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/cmd/plockstat
 

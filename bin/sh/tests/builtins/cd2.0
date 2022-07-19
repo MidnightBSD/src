@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/builtins/cd2.0 216019 2010-11-28 22:49:58Z jilles $
+# $FreeBSD$
 set -e
 
 L=$(getconf PATH_MAX / 2>/dev/null) || L=4096

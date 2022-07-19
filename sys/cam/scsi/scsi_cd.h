@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000, 2002 Kenneth D. Merry
  * All rights reserved.
  *
@@ -41,7 +43,7 @@
  * Ported to run under 386BSD by Julian Elischer (julian@tfs.com) Sept 1992
  *
  *	from: scsi_cd.h,v 1.10 1997/02/22 09:44:28 peter Exp $
- * $FreeBSD: stable/11/sys/cam/scsi/scsi_cd.h 352715 2019-09-25 19:46:52Z avg $
+ * $FreeBSD$
  */
 #ifndef	_SCSI_SCSI_CD_H
 #define _SCSI_SCSI_CD_H 1

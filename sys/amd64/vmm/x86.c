@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,11 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/vmm/x86.c 349962 2019-07-13 00:51:11Z jhb $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/x86.c 349962 2019-07-13 00:51:11Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/pcpu.h>
@@ -89,7 +91,8 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 {
 	const struct xsave_limits *limits;
 	uint64_t cr4;
-	int error, enable_invpcid, level, width, x2apic_id;
+	int error, enable_invpcid, enable_rdpid, enable_rdtscp, level,
+	    width, x2apic_id;
 	unsigned int func, regs[4], logical_cpus;
 	enum x2apic_state x2apic_state;
 	uint16_t cores, maxcpus, sockets, threads;
@@ -133,7 +136,7 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 			break;
 		case CPUID_8000_0008:
 			cpuid_count(*eax, *ecx, regs);
-			if (vmm_is_amd()) {
+			if (vmm_is_svm()) {
 				/*
 				 * As on Intel (0000_0007:0, EDX), mask out
 				 * unsupported or unsafe AMD extended features
@@ -192,11 +195,13 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 			/* Hide mwaitx/monitorx capability from the guest */
 			regs[2] &= ~AMDID2_MWAITX;
 
-			/*
-			 * Hide rdtscp/ia32_tsc_aux until we know how
-			 * to deal with them.
-			 */
-			regs[3] &= ~AMDID_RDTSCP;
+			/* Advertise RDTSCP if it is enabled. */
+			error = vm_get_capability(vm, vcpu_id,
+			    VM_CAP_RDTSCP, &enable_rdtscp);
+			if (error == 0 && enable_rdtscp)
+				regs[3] |= AMDID_RDTSCP;
+			else
+				regs[3] &= ~AMDID_RDTSCP;
 			break;
 
 		case CPUID_8000_0007:
@@ -232,7 +237,7 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 
 		case CPUID_8000_001D:
 			/* AMD Cache topology, like 0000_0004 for Intel. */
-			if (!vmm_is_amd())
+			if (!vmm_is_svm())
 				goto default_leaf;
 
 			/*
@@ -274,8 +279,11 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 			break;
 
 		case CPUID_8000_001E:
-			/* AMD Family 16h+ additional identifiers */
-			if (!vmm_is_amd() || CPUID_TO_FAMILY(cpu_id) < 0x16)
+			/*
+			 * AMD Family 16h+ and Hygon Family 18h additional
+			 * identifiers.
+			 */
+			if (!vmm_is_svm() || CPUID_TO_FAMILY(cpu_id) < 0x16)
 				goto default_leaf;
 
 			vm_get_topology(vm, &sockets, &cores, &threads,
@@ -437,6 +445,12 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 				regs[2] = 0;
 				regs[3] &= CPUID_STDEXT3_MD_CLEAR;
 
+				/* Advertise RDPID if it is enabled. */
+				error = vm_get_capability(vm, vcpu_id,
+				    VM_CAP_RDPID, &enable_rdpid);
+				if (error == 0 && enable_rdpid)
+					regs[2] |= CPUID_STDEXT2_RDPID;
+
 				/* Advertise INVPCID if it is enabled. */
 				error = vm_get_capability(vm, vcpu_id,
 				    VM_CAP_ENABLE_INVPCID, &enable_invpcid);
@@ -552,6 +566,18 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 				}
 				break;
 			}
+			break;
+
+		case CPUID_0000_0015:
+			/*
+			 * Don't report CPU TSC/Crystal ratio and clock
+			 * values since guests may use these to derive the
+			 * local APIC frequency..
+			 */
+			regs[0] = 0;
+			regs[1] = 0;
+			regs[2] = 0;
+			regs[3] = 0;
 			break;
 
 		case 0x40000000:

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/execution/unknown1.0 197820 2009-10-06 22:00:14Z jilles $
+# $FreeBSD$
 
 nosuchtool 2>/dev/null
 [ $? -ne 127 ] && exit 1

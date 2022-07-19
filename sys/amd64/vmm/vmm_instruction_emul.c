@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Sandvine, Inc.
  * Copyright (c) 2012 NetApp, Inc.
  * All rights reserved.
@@ -24,11 +26,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/vmm/vmm_instruction_emul.c 349809 2019-07-07 17:31:13Z markj $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/vmm_instruction_emul.c 349809 2019-07-07 17:31:13Z markj $");
+__FBSDID("$FreeBSD$");
 
 #ifdef _KERNEL
 #include <sys/param.h>
@@ -1951,9 +1953,9 @@ ptp_hold(struct vm *vm, int vcpu, vm_paddr_t ptpphys, size_t len, void **cookie)
 	return (ptr);
 }
 
-int
-vm_gla2gpa(struct vm *vm, int vcpuid, struct vm_guest_paging *paging,
-    uint64_t gla, int prot, uint64_t *gpa, int *guest_fault)
+static int
+_vm_gla2gpa(struct vm *vm, int vcpuid, struct vm_guest_paging *paging,
+    uint64_t gla, int prot, uint64_t *gpa, int *guest_fault, bool check_only)
 {
 	int nlevels, pfcode, ptpshift, ptpindex, retval, usermode, writable;
 	u_int retries;
@@ -1979,7 +1981,8 @@ restart:
 		 * XXX assuming a non-stack reference otherwise a stack fault
 		 * should be generated.
 		 */
-		vm_inject_gp(vm, vcpuid);
+		if (!check_only)
+			vm_inject_gp(vm, vcpuid);
 		goto fault;
 	}
 
@@ -2009,9 +2012,11 @@ restart:
 			if ((pte32 & PG_V) == 0 ||
 			    (usermode && (pte32 & PG_U) == 0) ||
 			    (writable && (pte32 & PG_RW) == 0)) {
-				pfcode = pf_error_code(usermode, prot, 0,
-				    pte32);
-				vm_inject_pf(vm, vcpuid, pfcode, gla);
+				if (!check_only) {
+					pfcode = pf_error_code(usermode, prot, 0,
+					    pte32);
+					vm_inject_pf(vm, vcpuid, pfcode, gla);
+				}
 				goto fault;
 			}
 
@@ -2022,7 +2027,7 @@ restart:
 			 * is only set at the last level providing the guest
 			 * physical address.
 			 */
-			if ((pte32 & PG_A) == 0) {
+			if (!check_only && (pte32 & PG_A) == 0) {
 				if (atomic_cmpset_32(&ptpbase32[ptpindex],
 				    pte32, pte32 | PG_A) == 0) {
 					goto restart;
@@ -2037,7 +2042,7 @@ restart:
 		}
 
 		/* Set the dirty bit in the page table entry if necessary */
-		if (writable && (pte32 & PG_M) == 0) {
+		if (!check_only && writable && (pte32 & PG_M) == 0) {
 			if (atomic_cmpset_32(&ptpbase32[ptpindex],
 			    pte32, pte32 | PG_M) == 0) {
 				goto restart;
@@ -2064,8 +2069,10 @@ restart:
 		pte = ptpbase[ptpindex];
 
 		if ((pte & PG_V) == 0) {
-			pfcode = pf_error_code(usermode, prot, 0, pte);
-			vm_inject_pf(vm, vcpuid, pfcode, gla);
+			if (!check_only) {
+				pfcode = pf_error_code(usermode, prot, 0, pte);
+				vm_inject_pf(vm, vcpuid, pfcode, gla);
+			}
 			goto fault;
 		}
 
@@ -2091,13 +2098,15 @@ restart:
 		if ((pte & PG_V) == 0 ||
 		    (usermode && (pte & PG_U) == 0) ||
 		    (writable && (pte & PG_RW) == 0)) {
-			pfcode = pf_error_code(usermode, prot, 0, pte);
-			vm_inject_pf(vm, vcpuid, pfcode, gla);
+			if (!check_only) {
+				pfcode = pf_error_code(usermode, prot, 0, pte);
+				vm_inject_pf(vm, vcpuid, pfcode, gla);
+			}
 			goto fault;
 		}
 
 		/* Set the accessed bit in the page table entry */
-		if ((pte & PG_A) == 0) {
+		if (!check_only && (pte & PG_A) == 0) {
 			if (atomic_cmpset_64(&ptpbase[ptpindex],
 			    pte, pte | PG_A) == 0) {
 				goto restart;
@@ -2106,8 +2115,11 @@ restart:
 
 		if (nlevels > 0 && (pte & PG_PS) != 0) {
 			if (pgsize > 1 * GB) {
-				pfcode = pf_error_code(usermode, prot, 1, pte);
-				vm_inject_pf(vm, vcpuid, pfcode, gla);
+				if (!check_only) {
+					pfcode = pf_error_code(usermode, prot, 1,
+					    pte);
+					vm_inject_pf(vm, vcpuid, pfcode, gla);
+				}
 				goto fault;
 			}
 			break;
@@ -2117,7 +2129,7 @@ restart:
 	}
 
 	/* Set the dirty bit in the page table entry if necessary */
-	if (writable && (pte & PG_M) == 0) {
+	if (!check_only && writable && (pte & PG_M) == 0) {
 		if (atomic_cmpset_64(&ptpbase[ptpindex], pte, pte | PG_M) == 0)
 			goto restart;
 	}
@@ -2136,6 +2148,24 @@ error:
 fault:
 	*guest_fault = 1;
 	goto done;
+}
+
+int
+vm_gla2gpa(struct vm *vm, int vcpuid, struct vm_guest_paging *paging,
+    uint64_t gla, int prot, uint64_t *gpa, int *guest_fault)
+{
+
+	return (_vm_gla2gpa(vm, vcpuid, paging, gla, prot, gpa, guest_fault,
+	    false));
+}
+
+int
+vm_gla2gpa_nofault(struct vm *vm, int vcpuid, struct vm_guest_paging *paging,
+    uint64_t gla, int prot, uint64_t *gpa, int *guest_fault)
+{
+
+	return (_vm_gla2gpa(vm, vcpuid, paging, gla, prot, gpa, guest_fault,
+	    true));
 }
 
 int

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/builtins/local7.0 294593 2016-01-22 20:10:08Z jilles $
+# $FreeBSD$
 
 f() {
 	local x

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/builtins/command7.0 218356 2011-02-05 23:00:24Z jilles $
+# $FreeBSD$
 
 failures=0
 

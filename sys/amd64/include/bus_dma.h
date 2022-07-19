@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Scott Long
  * All rights reserved.
  *
@@ -23,12 +25,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/include/bus_dma.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _AMD64_BUS_DMA_H_
 #define _AMD64_BUS_DMA_H_
 
-#include <sys/bus_dma.h>
+#include <x86/bus_dma.h> 
 
 #endif /* _AMD64_BUS_DMA_H_ */

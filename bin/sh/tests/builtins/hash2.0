@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/builtins/hash2.0 149791 2005-09-05 09:42:10Z stefanf $
+# $FreeBSD$
 hash
 hash cat
 hash

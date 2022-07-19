@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/builtins/cd9.0 293371 2016-01-07 21:46:07Z jilles $
+# $FreeBSD$
 
 cd /dev
 cd /bin

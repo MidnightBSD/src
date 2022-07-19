@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003-2008 Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
  * All rights reserved.
@@ -27,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/include/pmc_mdep.h 339767 2018-10-26 05:12:56Z mmacy $
+ * $FreeBSD$
  */
 
 /* Machine dependent interfaces */
@@ -41,7 +43,6 @@ struct pmc_mdep;
 
 #include <dev/hwpmc/hwpmc_amd.h>
 #include <dev/hwpmc/hwpmc_core.h>
-#include <dev/hwpmc/hwpmc_piv.h>
 #include <dev/hwpmc/hwpmc_tsc.h>
 #include <dev/hwpmc/hwpmc_uncore.h>
 
@@ -52,7 +53,6 @@ struct pmc_mdep;
  */
 #define	PMC_MDEP_CLASS_INDEX_TSC	1
 #define	PMC_MDEP_CLASS_INDEX_K8		2
-#define PMC_MDEP_CLASS_INDEX_F17H	2
 #define	PMC_MDEP_CLASS_INDEX_P4		2
 #define	PMC_MDEP_CLASS_INDEX_IAP	2
 #define	PMC_MDEP_CLASS_INDEX_IAF	3
@@ -73,11 +73,9 @@ struct pmc_mdep;
 
 union pmc_md_op_pmcallocate  {
 	struct pmc_md_amd_op_pmcallocate	pm_amd;
-	struct pmc_md_iaf_op_pmcallocate	pm_iaf;
 	struct pmc_md_iap_op_pmcallocate	pm_iap;
 	struct pmc_md_ucf_op_pmcallocate	pm_ucf;
 	struct pmc_md_ucp_op_pmcallocate	pm_ucp;
-	struct pmc_md_p4_op_pmcallocate		pm_p4;
 	uint64_t				__pad[4];
 };
 
@@ -93,7 +91,6 @@ union pmc_md_pmc {
 	struct pmc_md_iap_pmc	pm_iap;
 	struct pmc_md_ucf_pmc	pm_ucf;
 	struct pmc_md_ucp_pmc	pm_ucp;
-	struct pmc_md_p4_pmc	pm_p4;
 };
 
 #define	PMC_TRAPFRAME_TO_PC(TF)	((TF)->tf_rip)

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/builtins/kill2.0 263206 2014-03-15 14:58:48Z jilles $
+# $FreeBSD$
 
 sleep 1 | sleep 1 &
 kill %+

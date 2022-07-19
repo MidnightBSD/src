@@ -23,14 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/amd64/sigtramp.S 114349 2003-05-01 01:05:25Z peter $
+ * $FreeBSD$
  */
 
 #include <sys/syscall.h>
 
 #include <machine/asmacros.h>
 
-#include "assym.s"
+#include "assym.inc"
 
 	.text
 /**********************************************************************

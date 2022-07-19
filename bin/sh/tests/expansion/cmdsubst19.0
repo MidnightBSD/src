@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/expansion/cmdsubst19.0 315168 2017-03-12 18:24:45Z jilles $
+# $FreeBSD$
 
 b=200 c=30 d=5 x=4
 r=$(echo a)$(($(echo b) + ${x+$(echo c)} + ${x-$(echo d)}))$(echo e)

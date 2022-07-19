@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/execution/fork1.0 218850 2011-02-19 13:22:18Z jilles $
+# $FreeBSD$
 
 shname=${SH%% *}
 shname=${shname##*/}

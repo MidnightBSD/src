@@ -1,6 +1,6 @@
 # Makefile for syscall tables
 #
-# $FreeBSD: stable/11/sys/amd64/linux/Makefile 357108 2020-01-25 05:47:56Z kevans $
+# $FreeBSD$
 
 GENERATED_PREFIX=	linux_
 

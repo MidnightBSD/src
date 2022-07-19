@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1982, 1986, 1990 The Regents of the University of California.
  * All rights reserved.
@@ -16,7 +18,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/mem.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Memory special file
@@ -183,9 +185,8 @@ memmmap(struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
  * This is basically just an ioctl shim for mem_range_attr_get
  * and mem_range_attr_set.
  */
-/* ARGSUSED */
 int 
-memioctl(struct cdev *dev __unused, u_long cmd, caddr_t data, int flags,
+memioctl_md(struct cdev *dev __unused, u_long cmd, caddr_t data, int flags,
     struct thread *td)
 {
 	int nd, error = 0;

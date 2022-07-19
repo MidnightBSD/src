@@ -1,6 +1,8 @@
 /*-
  * Data structures and definitions for the CAM system.
  *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Justin T. Gibbs.
  * All rights reserved.
  *
@@ -25,14 +27,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cam/cam.h 298810 2016-04-29 21:05:48Z pfg $
+ * $FreeBSD$
  */
 
 #ifndef _CAM_CAM_H
 #define _CAM_CAM_H 1
 
 #ifdef _KERNEL
-#include <opt_cam.h>
+#include "opt_cam.h"
 #endif
 
 #include <sys/cdefs.h>
@@ -290,7 +292,7 @@ typedef enum {
 	/* SIM ready to take more commands */
 	CAM_RELEASE_SIMQ	= 0x100,
 
-	/* SIM has this command in it's queue */
+	/* SIM has this command in its queue */
 	CAM_SIM_QUEUED		= 0x200,
 
 	/* Quality of service data is valid */
@@ -376,6 +378,8 @@ caddr_t	cam_quirkmatch(caddr_t target, caddr_t quirk_table, int num_entries,
 		       int entry_size, cam_quirkmatch_t *comp_func);
 
 void	cam_strvis(u_int8_t *dst, const u_int8_t *src, int srclen, int dstlen);
+void	cam_strvis_flag(u_int8_t *dst, const u_int8_t *src, int srclen,
+			int dstlen, uint32_t flags);
 void	cam_strvis_sbuf(struct sbuf *sb, const u_int8_t *src, int srclen,
 			uint32_t flags);
 

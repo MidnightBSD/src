@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/parameters/exitstatus1.0 185232 2008-11-23 20:27:03Z stefanf $
+# $FreeBSD$
 f() {
 	[ $? = $1 ] || exit 1
 }

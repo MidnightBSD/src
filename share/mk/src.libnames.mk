@@ -505,7 +505,6 @@ LIBLUA?=	${LIBLUADIR}/liblua${PIE_SUFFIX}.a
 LIBPEDIR=	${OBJTOP}/lib/libpe
 LIBPE?=		${LIBPEDIR}/libpe${PIE_SUFFIX}.a
 
-
 LIBOPENBSDDIR=	${OBJTOP}/lib/libopenbsd
 LIBOPENBSD?=	${LIBOPENBSDDIR}/libopenbsd${PIE_SUFFIX}.a
 
@@ -589,8 +588,23 @@ LIBWPAEAP_PEER?=	${LIBWPAEAP_PEERDIR}/libwpaeap_peer${PIE_SUFFIX}.a
 LIBWPAEAP_SERVERDIR=	${OBJTOP}/usr.sbin/wpa/src/eap_server
 LIBWPAEAP_SERVER?=	${LIBWPAEAP_SERVERDIR}/libwpaeap_server${PIE_SUFFIX}.a
 
+LIBWPAEAPOL_AUTHDIR=	${OBJTOP}/usr.sbin/wpa/src/eapol_auth
+LIBWPAEAPOL_AUTH?=	${LIBWPAEAPOL_AUTHDIR}/libwpaeapol_auth${PIE_SUFFIX}.a
 
+LIBWPAEAPOL_SUPPDIR=	${OBJTOP}/usr.sbin/wpa/src/eapol_supp
+LIBWPAEAPOL_SUPP?=	${LIBWPAEAPOL_SUPPDIR}/libwpaeapol_supp${PIE_SUFFIX}.a
+
+LIBWPAL2_PACKETDIR=	${OBJTOP}/usr.sbin/wpa/src/l2_packet
 LIBWPAL2_PACKET?=	${LIBWPAL2_PACKETDIR}/libwpal2_packet${PIE_SUFFIX}.a
+
+LIBWPARADIUSDIR=	${OBJTOP}/usr.sbin/wpa/src/radius
+LIBWPARADIUS?=	${LIBWPARADIUSDIR}/libwparadius${PIE_SUFFIX}.a
+
+LIBWPARSN_SUPPDIR=	${OBJTOP}/usr.sbin/wpa/src/rsn_supp
+LIBWPARSN_SUPP?=	${LIBWPARSN_SUPPDIR}/libwparsn_supp${PIE_SUFFIX}.a
+
+LIBWPATLSDIR=	${OBJTOP}/usr.sbin/wpa/src/tls
+LIBWPATLS?=	${LIBWPATLSDIR}/libwpatls${PIE_SUFFIX}.a
 
 LIBWPAUTILSDIR=	${OBJTOP}/usr.sbin/wpa/src/utils
 LIBWPAUTILS?=	${LIBWPAUTILSDIR}/libwpautils${PIE_SUFFIX}.a

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/cddl/sbin/zfs/Makefile 339118 2018-10-03 02:52:47Z mav $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/cmd/zfs
 

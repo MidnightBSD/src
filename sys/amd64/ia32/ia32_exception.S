@@ -23,12 +23,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/ia32/ia32_exception.S 329462 2018-02-17 18:00:01Z kib $
+ * $FreeBSD$
  */
 
 #include <machine/asmacros.h>
 
-#include "assym.s"
+#include "assym.inc"
 
 	.text
 /*
@@ -70,7 +70,9 @@ int0x80_syscall_common:
 	movq	%r14,TF_R14(%rsp)
 	movq	%r15,TF_R15(%rsp)
 	movl	$TF_HASSEGS,TF_FLAGS(%rsp)
-	cld
+	pushfq
+	andq	$~(PSL_D | PSL_AC),(%rsp)
+	popfq
 	FAKE_MCOUNT(TF_RIP(%rsp))
 	movq	%rsp, %rdi
 	call	ia32_syscall

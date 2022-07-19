@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,11 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/vmm/vmm_stat.c 348271 2019-05-25 11:27:56Z rgrimes $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/vmm_stat.c 348271 2019-05-25 11:27:56Z rgrimes $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -65,7 +67,7 @@ vmm_stat_register(void *arg)
 	if (vst->scope == VMM_STAT_SCOPE_INTEL && !vmm_is_intel())
 		return;
 
-	if (vst->scope == VMM_STAT_SCOPE_AMD && !vmm_is_amd())
+	if (vst->scope == VMM_STAT_SCOPE_AMD && !vmm_is_svm())
 		return;
 
 	if (vst_num_elems + vst->nelems >= MAX_VMM_STAT_ELEMS) {

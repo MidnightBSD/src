@@ -1,4 +1,4 @@
- $FreeBSD: stable/11/sys/amd64/linux32/syscalls.master 346839 2019-04-28 14:19:31Z dchagin $
+ $FreeBSD$
 
 ;	@(#)syscalls.master	8.1 (Berkeley) 7/19/93
 ; System call name/number master file (or rather, slave, from LINUX).
@@ -26,7 +26,6 @@
 ;		function prototype in sys/sysproto.h.  Does add a
 ;		definition to syscall.h besides adding a sysent.
 
-#include "opt_compat.h"
 #include <sys/param.h>
 #include <sys/sysent.h>
 #include <sys/sysproto.h>
@@ -326,9 +325,9 @@
 				    l_sigset_t *newset, \
 				    l_size_t sigsetsize); }
 180	AUE_PREAD	STD	{ int linux_pread(l_uint fd, char *buf, \
-				    l_size_t nbyte, l_loff_t offset); }
+				    l_size_t nbyte, uint32_t offset1, uint32_t offset2); }
 181	AUE_PWRITE	STD	{ int linux_pwrite(l_uint fd, char *buf, \
-				    l_size_t nbyte, l_loff_t offset); }
+				    l_size_t nbyte, uint32_t offset1, uint32_t offset2); }
 182	AUE_CHOWN	STD	{ int linux_chown16(char *path, \
 				    l_uid16_t uid, l_gid16_t gid); }
 183	AUE_GETCWD	STD	{ int linux_getcwd(char *buf, \
@@ -350,9 +349,9 @@
 				    l_ulong prot, l_ulong flags, l_ulong fd, \
 				    l_ulong pgoff); }
 193	AUE_TRUNCATE	STD	{ int linux_truncate64(char *path, \
-				    l_loff_t length); }
+				    uint32_t length1, uint32_t length2); }
 194	AUE_FTRUNCATE	STD	{ int linux_ftruncate64(l_uint fd, \
-				    l_loff_t length); }
+				    uint32_t length1, uint32_t length2); }
 195	AUE_STAT	STD	{ int linux_stat64(const char *filename, \
 				    struct l_stat64 *statbuf); }
 196	AUE_LSTAT	STD	{ int linux_lstat64(const char *filename, \
@@ -390,7 +389,7 @@
 				    char *put_old); }
 218	AUE_MINCORE	STD	{ int linux_mincore(l_ulong start, \
 				    l_size_t len, u_char *vec); }
-219	AUE_MADVISE	NOPROTO	{ int madvise(void *addr, size_t len, \
+219	AUE_MADVISE	STD	{ int linux_madvise(void *addr, size_t len, \
 				    int behav); }
 220	AUE_GETDIRENTRIES	STD { int linux_getdents64(l_uint fd, \
 				    void *dirent, l_uint count); }
@@ -427,7 +426,7 @@
 247	AUE_NULL	UNIMPL	linux_io_getevents
 248	AUE_NULL	UNIMPL	linux_io_submit
 249	AUE_NULL	UNIMPL	linux_io_cancel
-250	AUE_NULL	STD	{ int linux_fadvise64(int fd, l_loff_t offset, \
+250	AUE_NULL	STD	{ int linux_fadvise64(int fd, uint32_t offset1, uint32_t offset2, \
 					l_size_t len, int advice); }
 251	AUE_NULL	UNIMPL
 252	AUE_EXIT	STD	{ int linux_exit_group(int error_code); }
@@ -457,7 +456,8 @@
 271	AUE_UTIMES	STD	{ int linux_utimes(char *fname, \
 					struct l_timeval *tptr); }
 272	AUE_NULL	STD	{ int linux_fadvise64_64(int fd, \
-					l_loff_t offset, l_loff_t len, \
+					uint32_t offset1, uint32_t offset2, \
+					uint32_t len1, uint32_t len2, \
 					int advice); }
 273	AUE_NULL	UNIMPL	vserver
 274	AUE_NULL	STD	{ int linux_mbind(void); }
@@ -524,14 +524,18 @@
 					l_size_t len); }
 312	AUE_NULL	STD	{ int linux_get_robust_list(l_int pid, \
 				    struct linux_robust_list_head **head, l_size_t *len); }
-313	AUE_NULL	STD	{ int linux_splice(void); }
-314	AUE_NULL	STD	{ int linux_sync_file_range(void); }
+313	AUE_NULL	STD	{ int linux_splice(int fd_in, l_loff_t *off_in, \
+				    int fd_out, l_loff_t *off_out, l_size_t len, l_uint flags); }
+314	AUE_NULL	STD	{ int linux_sync_file_range(l_int fd, uint32_t offset1,
+				    uint32_t offset2, uint32_t nbytes1, uint32_t nbytes2,
+				    unsigned int flags); }
 315	AUE_NULL	STD	{ int linux_tee(void); }
 316	AUE_NULL	STD	{ int linux_vmsplice(void); }
 ; Linux 2.6.18:
 317	AUE_NULL	STD	{ int linux_move_pages(void); }
 ; Linux 2.6.19:
-318	AUE_NULL	STD	{ int linux_getcpu(void); }
+318	AUE_NULL	STD	{ int linux_getcpu(l_uint *cpu, l_uint *node,	\
+				    void *cache); }
 319	AUE_NULL	STD	{ int linux_epoll_pwait(l_int epfd, struct epoll_event *events, \
 				    l_int maxevents, l_int timeout, l_sigset_t *mask, \
 				    l_size_t sigsetsize); }
@@ -543,7 +547,8 @@
 323	AUE_NULL	STD	{ int linux_eventfd(l_uint initval); }
 ; Linux 2.6.23:
 324	AUE_NULL	STD	{ int linux_fallocate(l_int fd, l_int mode, \
-				    l_loff_t offset, l_loff_t len); }
+				    uint32_t offset1, uint32_t offset2, uint32_t len1,
+				    uint32_t len2); }
 ; Linux 2.6.25:
 325	AUE_NULL	STD	{ int linux_timerfd_settime(l_int fd, l_int flags,	\
 				    const struct l_itimerspec *new_value,		\
@@ -611,8 +616,8 @@
 352	AUE_NULL	STD	{ int linux_sched_getattr(l_pid_t pid,		\
 				    void *attr, l_uint size, l_uint flags); }
 ; Linux 3.15:
-353	AUE_NULL	STD	{ int linux_renameat2(l_int oldfd,		\
-				    const char *oldname, l_int newfd, 		\
+353	AUE_NULL	STD	{ int linux_renameat2(l_int olddfd,		\
+				    const char *oldname, l_int newdfd, 		\
 				    const char *newname, unsigned int flags); }
 ; Linux 3.17:
 354	AUE_NULL	STD	{ int linux_seccomp(l_uint op, l_uint flags,	\
