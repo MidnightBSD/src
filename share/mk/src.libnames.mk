@@ -503,13 +503,11 @@ LIBLUADIR=	${OBJTOP}/lib/liblua
 LIBLUA?=	${LIBLUADIR}/liblua${PIE_SUFFIX}.a
 
 LIBPEDIR=	${OBJTOP}/lib/libpe
-LIBPE?=		${LIBPEDIR}/libpe.a
+LIBPE?=		${LIBPEDIR}/libpe${PIE_SUFFIX}.a
 
-LIBREADLINEDIR=	${OBJTOP}/gnu/lib/libreadline/readline
-LIBREADLINE?=	${LIBREADLINEDIR}/libreadline.a
 
 LIBOPENBSDDIR=	${OBJTOP}/lib/libopenbsd
-LIBOPENBSD?=	${LIBOPENBSDDIR}/libopenbsd.a
+LIBOPENBSD?=	${LIBOPENBSDDIR}/libopenbsd${PIE_SUFFIX}.a
 
 LIBSMDIR=	${OBJTOP}/lib/libsm
 LIBSM?=		${LIBSMDIR}/libsm${PIE_SUFFIX}.a
@@ -577,7 +575,10 @@ LIBWPACOMMONDIR=	${OBJTOP}/usr.sbin/wpa/src/common
 LIBWPACOMMON?=	${LIBWPACOMMONDIR}/libwpacommon${PIE_SUFFIX}.a
 
 LIBWPACRYPTODIR=	${OBJTOP}/usr.sbin/wpa/src/crypto
+LIBWPACRYPTO?=	${LIBWPACRYPTODIR}/libwpacrypto${PIE_SUFFIX}.a
 
+LIBWPADRIVERSDIR=	${OBJTOP}/usr.sbin/wpa/src/drivers
+LIBWPADRIVERS?=	${LIBWPADRIVERSDIR}/libwpadrivers${PIE_SUFFIX}.a
 
 LIBWPAEAP_COMMONDIR=	${OBJTOP}/usr.sbin/wpa/src/eap_common
 LIBWPAEAP_COMMON?=	${LIBWPAEAP_COMMONDIR}/libwpaeap_common${PIE_SUFFIX}.a
@@ -585,9 +586,14 @@ LIBWPAEAP_COMMON?=	${LIBWPAEAP_COMMONDIR}/libwpaeap_common${PIE_SUFFIX}.a
 LIBWPAEAP_PEERDIR=	${OBJTOP}/usr.sbin/wpa/src/eap_peer
 LIBWPAEAP_PEER?=	${LIBWPAEAP_PEERDIR}/libwpaeap_peer${PIE_SUFFIX}.a
 
+LIBWPAEAP_SERVERDIR=	${OBJTOP}/usr.sbin/wpa/src/eap_server
+LIBWPAEAP_SERVER?=	${LIBWPAEAP_SERVERDIR}/libwpaeap_server${PIE_SUFFIX}.a
 
 
+LIBWPAL2_PACKET?=	${LIBWPAL2_PACKETDIR}/libwpal2_packet${PIE_SUFFIX}.a
 
+LIBWPAUTILSDIR=	${OBJTOP}/usr.sbin/wpa/src/utils
+LIBWPAUTILS?=	${LIBWPAUTILSDIR}/libwpautils${PIE_SUFFIX}.a
 
 LIBWPAWPSDIR=	${OBJTOP}/usr.sbin/wpa/src/wps
 LIBWPAWPS?=	${LIBWPAWPSDIR}/libwpawps${PIE_SUFFIX}.a
