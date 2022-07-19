@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/mk/local.sys.mk 320295 2017-06-23 20:07:56Z bdrewery $
+# $FreeBSD$
 
 .if ${MK_DIRDEPS_BUILD} == "yes" || ${MK_META_MODE} == "yes"
 
