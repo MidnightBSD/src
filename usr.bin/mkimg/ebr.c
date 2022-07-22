@@ -26,30 +26,22 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/mkimg/ebr.c 329059 2018-02-09 09:15:43Z manu $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/errno.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
-#include <sys/diskmbr.h>
+#include <mbr.h>
 
 #include "endian.h"
 #include "image.h"
 #include "mkimg.h"
 #include "scheme.h"
 
-#ifndef DOSPTYP_FAT16B
-#define	DOSPTYP_FAT16B	0x06
-#endif
-#ifndef DOSPTYP_FAT32
-#define	DOSPTYP_FAT32	0x0b
-#endif
-
 static struct mkimg_alias ebr_aliases[] = {
-    {	ALIAS_FAT16B, ALIAS_INT2TYPE(DOSPTYP_FAT16B) },
+    {	ALIAS_FAT16B, ALIAS_INT2TYPE(DOSPTYP_FAT16) },
     {	ALIAS_FAT32, ALIAS_INT2TYPE(DOSPTYP_FAT32) },
     {	ALIAS_MIDNIGHTBSD, ALIAS_INT2TYPE(DOSPTYP_386BSD) },
     {	ALIAS_NONE, 0 }

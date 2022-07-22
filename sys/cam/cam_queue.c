@@ -1,6 +1,8 @@
 /*-
  * CAM request queue management functions.
  *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Justin T. Gibbs.
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cam/cam_queue.c 308352 2016-11-05 20:23:18Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -90,7 +92,7 @@ camq_init(struct camq *camq, int size)
 
 /*
  * Free a camq structure.  This should only be called if a controller
- * driver failes somehow during its attach routine or is unloaded and has
+ * driver fails somehow during its attach routine or is unloaded and has
  * obtained a camq structure.  The XPT should ensure that the queue
  * is empty before calling this routine.
  */

@@ -25,17 +25,16 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/mkimg/gpt.c 345436 2019-03-23 03:37:08Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/errno.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
-#include <sys/diskmbr.h>
-#include <sys/gpt.h>
+#include <gpt.h>
+#include <mbr.h>
 
 #include "endian.h"
 #include "image.h"

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -28,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)utime.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: stable/10/include/utime.h 203964 2010-02-16 19:39:50Z imp $
+ * $FreeBSD$
  */
 
 #ifndef	_UTIME_H_

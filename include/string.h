@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -27,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)string.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: stable/11/include/string.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _STRING_H_
@@ -138,7 +140,7 @@ int	 timingsafe_bcmp(const void *, const void *, size_t);
 int	 timingsafe_memcmp(const void *, const void *, size_t);
 #endif /* __BSD_VISIBLE */
 
-#if __POSIX_VISIBLE >= 200809 || defined(_XLOCALE_H_)
+#if __POSIX_VISIBLE >= 200112 || defined(_XLOCALE_H_)
 #include <xlocale/_string.h>
 #endif
 

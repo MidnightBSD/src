@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992 Henry Spencer.
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)regex.h	8.2 (Berkeley) 1/3/94
- * $FreeBSD: stable/11/include/regex.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _REGEX_H_
@@ -69,6 +71,7 @@ typedef struct {
 #define	REG_NOSPEC	0020
 #define	REG_PEND	0040
 #define	REG_DUMP	0200
+#define	REG_POSIX	0400	/* only POSIX-compliant regex (libregex) */
 
 /* regerror() flags */
 #define	REG_ENOSYS	(-1)

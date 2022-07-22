@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * Copyright (c) 2014-2017 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -37,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cam/ctl/ctl_frontend.c 314754 2017-03-06 06:36:15Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -50,6 +52,8 @@ __FBSDID("$FreeBSD: stable/11/sys/cam/ctl/ctl_frontend.c 314754 2017-03-06 06:36
 #include <sys/endian.h>
 #include <sys/queue.h>
 #include <sys/sysctl.h>
+#include <sys/nv.h>
+#include <sys/dnv.h>
 
 #include <cam/scsi/scsi_all.h>
 #include <cam/scsi/scsi_da.h>
@@ -198,8 +202,8 @@ error:
 	}
 	port->targ_port = port_num;
 	port->ctl_pool_ref = pool;
-	if (port->options.stqh_first == NULL)
-		STAILQ_INIT(&port->options);
+	if (port->options == NULL)
+		port->options = nvlist_create(0);
 	port->stats.item = port_num;
 	mtx_init(&port->port_lock, "CTL port", NULL, MTX_DEF);
 
@@ -238,7 +242,7 @@ ctl_port_deregister(struct ctl_port *port)
 	mtx_unlock(&softc->ctl_lock);
 
 	ctl_pool_free(pool);
-	ctl_free_opts(&port->options);
+	nvlist_destroy(port->options);
 
 	ctl_lun_map_deinit(port);
 	free(port->port_devid, M_CTL);
@@ -331,7 +335,7 @@ ctl_port_online(struct ctl_port *port)
 		port->port_online(port->onoff_arg);
 	mtx_lock(&softc->ctl_lock);
 	if (softc->is_single == 0) {
-		value = ctl_get_opt(&port->options, "ha_shared");
+		value = dnvlist_get_string(port->options, "ha_shared", NULL);
 		if (value != NULL && strcmp(value, "on") == 0)
 			port->status |= CTL_PORT_STATUS_HA_SHARED;
 		else

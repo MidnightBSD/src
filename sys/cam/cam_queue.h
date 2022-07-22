@@ -1,6 +1,8 @@
 /*-
  * CAM request queue management definitions.
  *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Justin T. Gibbs.
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cam/cam_queue.h 308352 2016-11-05 20:23:18Z markj $
+ * $FreeBSD$
  */
 
 #ifndef _CAM_CAM_QUEUE_H

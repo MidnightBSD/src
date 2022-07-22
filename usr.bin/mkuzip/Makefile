@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/mkuzip/Makefile 322983 2017-08-28 20:55:13Z sobomax $
+# $FreeBSD$
 
 PROG=	mkuzip
 MAN=	mkuzip.8

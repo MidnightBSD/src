@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Juniper Networks, Inc.
  * All rights reserved.
@@ -26,19 +25,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/mkimg/format.c 329059 2018-02-09 09:15:43Z manu $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stat.h>
-#include <err.h>
 #include <errno.h>
-#include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "image.h"
 #include "format.h"
-#include "mkimg.h"
 
 static struct mkimg_format *first;
 static struct mkimg_format *format;

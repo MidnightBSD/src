@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -27,7 +29,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)memory.h	8.1 (Berkeley) 6/2/93
- * $MidnightBSD$
+ *
+ * $FreeBSD$
  */
 
 #include <string.h>

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -30,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)runetype.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: stable/11/include/runetype.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_RUNETYPE_H_
@@ -95,9 +97,7 @@ static __inline const _RuneLocale *__getCurrentRuneLocale(void)
 
 	if (_ThreadRuneLocale) 
 		return _ThreadRuneLocale;
-	if (_CurrentRuneLocale) 
-		return _CurrentRuneLocale;
-	return &_DefaultRuneLocale;
+	return _CurrentRuneLocale;
 }
 #endif /* __NO_TLS || __RUNETYPE_INTERNAL */
 #define _CurrentRuneLocale (__getCurrentRuneLocale())

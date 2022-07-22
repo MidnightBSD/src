@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013,2014 Juniper Networks, Inc.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/mkimg/mkimg.c 332952 2018-04-24 17:53:27Z benno $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -152,7 +151,7 @@ usage(const char *why)
 	fprintf(stderr, "\t--schemes\t-  list partition schemes\n");
 	fprintf(stderr, "\t--version\t-  show version information\n");
 	fputc('\n', stderr);
-	fprintf(stderr, "\t-a <num>\t-  mark num'th partion as active\n");
+	fprintf(stderr, "\t-a <num>\t-  mark num'th partition as active\n");
 	fprintf(stderr, "\t-b <file>\t-  file containing boot code\n");
 	fprintf(stderr, "\t-c <num>\t-  minimum capacity (in bytes) of the disk\n");
 	fprintf(stderr, "\t-C <num>\t-  maximum capacity (in bytes) of the disk\n");
@@ -175,8 +174,10 @@ usage(const char *why)
 	fprintf(stderr, "\t<t>[/<l>]::<size>[:[+]<offset>]\t-  "
 	    "empty partition of given size and\n\t\t\t\t\t"
 	    "   optional relative or absolute offset\n");
-	fprintf(stderr, "\t<t>[/<l>]:=<file>\t\t-  partition content and size "
-	    "are\n\t\t\t\t\t   determined by the named file\n");
+	fprintf(stderr, "\t<t>[/<l>]:=<file>[:[+]offset]\t-  partition "
+	    "content and size are\n\t\t\t\t\t"
+	    "   determined by the named file and\n"
+	    "\t\t\t\t\t   optional relative or absolute offset\n");
 	fprintf(stderr, "\t<t>[/<l>]:-<cmd>\t\t-  partition content and size "
 	    "are taken\n\t\t\t\t\t   from the output of the command to run\n");
 	fprintf(stderr, "\t-\t\t\t\t-  unused partition entry\n");
@@ -460,9 +461,11 @@ mkimg(void)
 		/* Look for an offset. Set size too if we can. */
 		switch (part->kind) {
 		case PART_KIND_SIZE:
+		case PART_KIND_FILE:
 			offset = part->contents;
 			size = strsep(&offset, ":");
-			if (expand_number(size, &bytesize) == -1)
+			if (part->kind == PART_KIND_SIZE &&
+			    expand_number(size, &bytesize) == -1)
 				error = errno;
 			if (offset != NULL) {
 				if (*offset != '+')
@@ -477,14 +480,13 @@ mkimg(void)
 
 		/* Work out exactly where the partition starts. */
 		blkoffset = (byteoffset + secsz - 1) / secsz;
-		if (abs_offset) {
-			part->block = scheme_metadata(SCHEME_META_PART_ABSOLUTE,
+		if (abs_offset)
+			block = scheme_metadata(SCHEME_META_PART_ABSOLUTE,
 			    blkoffset);
-		} else {
+		else
 			block = scheme_metadata(SCHEME_META_PART_BEFORE,
 			    block + blkoffset);
-			part->block = block;
-		}
+		part->block = block;
 
 		if (verbose)
 			fprintf(stderr, "partition %d: starting block %llu "
@@ -529,10 +531,8 @@ mkimg(void)
 				    (long long)blkoffset);
 			}
 		}
-		if (!abs_offset) {
-			block = scheme_metadata(SCHEME_META_PART_AFTER,
-			    part->block + part->size);
-		}
+		block = scheme_metadata(SCHEME_META_PART_AFTER,
+		    part->block + part->size);
 	}
 
 	mkimg_validate();
