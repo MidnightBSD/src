@@ -6,7 +6,7 @@
 
 /set type=dir uname=root gname=wheel mode=0755
 .
-    account
+    account             mode=0750
     ..
     at
 /set uname=daemon
@@ -83,6 +83,8 @@
     preserve
     ..
     run
+        dhclient
+        ..
         ppp             gname=network mode=0770
         ..
         wpa_supplicant
