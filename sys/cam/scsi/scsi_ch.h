@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/sys/cam/scsi/scsi_ch.h 298810 2016-04-29 21:05:48Z pfg $ */
+/* $FreeBSD$ */
 /*	$NetBSD: scsi_changer.h,v 1.11 1998/02/13 08:28:32 enami Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1996 Jason R. Thorpe <thorpej@and.com>
  * All rights reserved.
  *
@@ -438,7 +440,7 @@ struct page_element_address_assignment {
 	/* First data transfer element address */
 	u_int8_t	fdtea[2];
 
-	/* Number of data trafer elements */
+	/* Number of data transfer elements */
 	u_int8_t	ndte[2];
 
 	u_int8_t	reserved[2];

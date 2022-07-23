@@ -242,6 +242,7 @@ is_newer() {
 manpath_parse_args() {
 	local cmd_arg
 
+	OPTIND=1
 	while getopts 'Ldq' cmd_arg; do
 		case "${cmd_arg}" in
 		L)	Lflag=Lflag ;;
@@ -425,6 +426,7 @@ man_display_page_groff() {
 
 	if [ -n "$MANROFFSEQ" ]; then
 		set -- -$MANROFFSEQ
+		OPTIND=1
 		while getopts 'egprtv' preproc_arg; do
 			case "${preproc_arg}" in
 			e)	pipeline="$pipeline | $EQN" ;;
@@ -544,6 +546,7 @@ man_find_and_display() {
 man_parse_args() {
 	local IFS cmd_arg
 
+	OPTIND=1
 	while getopts 'M:P:S:adfhkm:op:tw' cmd_arg; do
 		case "${cmd_arg}" in
 		M)	MANPATH=$OPTARG ;;
@@ -932,6 +935,7 @@ trim() {
 # Parse commandline args for whatis and apropos.
 whatis_parse_args() {
 	local cmd_arg
+	OPTIND=1
 	while getopts 'd' cmd_arg; do
 		case "${cmd_arg}" in
 		d)	debug=$(( $debug + 1 )) ;;
@@ -1011,7 +1015,7 @@ STTY=/bin/stty
 SYSCTL=/sbin/sysctl
 
 debug=0
-man_default_sections='1:8:2:3:3lua:n:4:5:6:7:9:l'
+man_default_sections='1:8:2:3:n:4:5:6:7:9:l'
 man_default_path='/usr/share/man:/usr/share/openssl/man:/usr/local/share/man:/usr/local/man'
 cattool='/usr/bin/zcat -f'
 

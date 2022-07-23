@@ -12,8 +12,6 @@ MLINKS+=	apropos.1 whatis.1
 LINKS=	${BINDIR}/mandoc ${BINDIR}/whatis \
 	${BINDIR}/mandoc ${BINDIR}/makewhatis \
 	${BINDIR}/mandoc ${BINDIR}/apropos
-.elif defined(BOOTSTRAPPING)
-.error "MK_MAN_UTILS should be set to yes when bootstrapping"
 .endif
 
 LIBMAN_SRCS=	man.c \
@@ -96,7 +94,6 @@ SRCS=		${LIB_SRCS} \
 
 WARNS?=	3
 CFLAGS+= -DHAVE_CONFIG_H \
-	 -D_WITH_GETLINE \
 	 -I${SRCTOP}/lib/libopenbsd/
 # This can be removed after swtiching to newer gcc
 CFLAGS.gcc+=	-Wno-format

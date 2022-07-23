@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/mkesdb_static/Makefile 296740 2016-03-12 18:54:02Z bdrewery $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../lib/libc/iconv ${.CURDIR}/../mkesdb
+.PATH: ${SRCTOP}/lib/libc/iconv ${SRCTOP}/usr.bin/mkesdb
 
 PROG=	mkesdb_static
 SRCS=	citrus_bcs.c citrus_db_factory.c citrus_db_hash.c \
@@ -12,5 +11,7 @@ NO_WMISSING_VARIABLE_DECLARATIONS=
 
 build-tools: mkesdb_static
 
-.include "${.CURDIR}/../mkesdb/Makefile.inc"
+.include "${SRCTOP}/usr.bin/mkesdb/Makefile.inc"
 .include <bsd.prog.mk>
+
+${PROG}: ${BUILD_TOOLS_META}

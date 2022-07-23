@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/11/lib/libdl/Symbol.map 320872 2017-07-10 14:59:21Z kib $
+ * $FreeBSD$
  */
 
 FBSD_1.0 {

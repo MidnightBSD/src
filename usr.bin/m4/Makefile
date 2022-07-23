@@ -1,5 +1,5 @@
 #	$OpenBSD: Makefile,v 1.13 2014/05/12 19:11:19 espie Exp $
-# $FreeBSD: stable/11/usr.bin/m4/Makefile 352281 2019-09-13 07:22:09Z bapt $
+# $FreeBSD$
 
 # -DEXTENDED 
 # 	if you want the paste & spaste macros.
@@ -14,14 +14,13 @@ NO_WMISSING_VARIABLE_DECLARATIONS=
 
 SRCS=	eval.c expr.c look.c main.c misc.c gnum4.c trace.c parser.y tokenizer.l
 
-WARNS=	3
+WARNS?=	3
 
 tokenizer.o: parser.h
 
 CLEANFILES+=	parser.c parser.h tokenizer.o
 
-.if ${MK_TESTS} != "no"
-SUBDIR+= tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

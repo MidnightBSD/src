@@ -1,3 +1,4 @@
+# $FreeBSD$
 .include <bsd.own.mk>
 
 PACKAGE=lib${LIB}
@@ -97,7 +98,7 @@ sys/elf32.h sys/elf64.h sys/elf_common.h: ${SRCTOP}/sys/${.TARGET} .NOMETA
 	mkdir -p ${.OBJDIR}/sys
 	ln -sf ${.ALLSRC} ${.TARGET}
 
-LIBADD+=	elf
+LIBADD+=	elf z
 
 SHLIB_MAJOR=	4
 

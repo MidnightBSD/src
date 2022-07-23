@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cam/ctl/ctl_tpc.h 278625 2015-02-12 15:46:44Z mav $
+ * $FreeBSD$
  */
 
 #ifndef	_CTL_TPC_H

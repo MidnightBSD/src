@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_util.h#2 $
- * $FreeBSD: stable/11/sys/cam/ctl/ctl_util.h 312846 2017-01-26 21:08:27Z mav $
+ * $FreeBSD$
  */
 /*
  * CAM Target Layer SCSI library interface
