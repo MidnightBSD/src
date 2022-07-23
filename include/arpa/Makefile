@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/include/arpa/Makefile 284345 2015-06-13 19:20:56Z sjg $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

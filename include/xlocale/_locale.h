@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011, 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/include/xlocale/_locale.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _XLOCALE_LOCALE_H
@@ -49,7 +51,7 @@ typedef struct	_xlocale *locale_t;
 #endif
 
 locale_t	 duplocale(locale_t base);
-int		 freelocale(locale_t loc);
+void		 freelocale(locale_t loc);
 locale_t	 newlocale(int mask, const char *locale, locale_t base);
 const char	*querylocale(int mask, locale_t loc);
 locale_t	 uselocale(locale_t loc);
