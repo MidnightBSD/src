@@ -650,13 +650,26 @@ BMAKEENV=	INSTALL="sh ${.CURDIR}/tools/install.sh" \
 		MAKEFLAGS="-m ${.CURDIR}/tools/build/mk ${.MAKEFLAGS}"
 # need to keep this in sync with targets/pseudo/bootstrap-tools/Makefile
 BSARGS= 	DESTDIR= \
+		OBJTOP='${WORLDTMP}/obj-tools' \
+		OBJROOT='$${OBJTOP}/' \
+		MAKEOBJDIRPREFIX= \
 		BOOTSTRAPPING=${OSRELDATE} \
-		SSP_CFLAGS= \
-		MK_HTML=no NO_LINT=yes MK_MAN=no \
-		-DNO_PIC MK_PROFILE=no -DNO_SHARED \
-		-DNO_CPU_CFLAGS MK_WARNS=no MK_CTF=no \
-		MK_CLANG_EXTRAS=no MK_CLANG_FORMAT=no MK_CLANG_FULL=no \
-		MK_LLDB=no MK_TESTS=no \
+		BWPHASE=${.TARGET:C,^_,,} \
+		-DNO_CPU_CFLAGS \
+		-DNO_LINT \
+		-DNO_PIC \
+		-DNO_SHARED \
+		MK_CTF=no \
+		MK_CLANG_EXTRAS=no \
+		MK_CLANG_FORMAT=no \
+		MK_CLANG_FULL=no \
+		MK_HTML=no \
+		MK_MAN=no \
+		MK_PROFILE=no \
+		MK_RETPOLINE=no \
+		MK_SSP=no \
+		MK_TESTS=no \
+		MK_WARNS=no \
 		MK_INCLUDES=yes
 
 BMAKE=		\
@@ -687,26 +700,43 @@ TMAKE=		\
 
 # cross-tools stage
 # TOOLS_PREFIX set in BMAKE
+XMAKE=		${BMAKE} \
 		TARGET=${TARGET} TARGET_ARCH=${TARGET_ARCH} \
-		MK_GDB=no MK_TESTS=no
+		MK_CLANG_IS_CC=${MK_CLANG_BOOTSTRAP} \
+		MK_GDB=no \
+		MK_LLDB=no \
+		MK_LLVM_BINUTILS=no \
+		MK_TESTS=no
 
 # kernel-tools stage
 KTMAKEENV=	INSTALL="sh ${.CURDIR}/tools/install.sh" \
 		PATH=${BPATH}:${PATH} \
 		WORLDTMP=${WORLDTMP}
-KTMAKE=		TOOLS_PREFIX=${WORLDTMP} MAKEOBJDIRPREFIX=${WORLDTMP} \
+KTMAKE=		\
+		TOOLS_PREFIX=${TOOLS_PREFIX_UNDEF:U${WORLDTMP}} \
 		${KTMAKEENV} ${MAKE} ${WORLD_FLAGS} -f Makefile.inc1 \
 		DESTDIR= \
+		OBJTOP='${WORLDTMP}/obj-kernel-tools' \
+		OBJROOT='$${OBJTOP}/' \
+		MAKEOBJDIRPREFIX= \
 		BOOTSTRAPPING=${OSRELDATE} \
-		SSP_CFLAGS= \
-		MK_HTML=no -DNO_LINT MK_MAN=no \
-		-DNO_PIC MK_PROFILE=no -DNO_SHARED \
-		-DNO_CPU_CFLAGS MK_WARNS=no MK_CTF=no
+		-DNO_CPU_CFLAGS \
+		-DNO_LINT \
+		-DNO_PIC \
+		-DNO_SHARED \
+		MK_CTF=no \
+		MK_HTML=no \
+		MK_MAN=no \
+		MK_PROFILE=no \
+		MK_SSP=no \
+		MK_RETPOLINE=no \
+		MK_WARNS=no
 
 # world stage
 WMAKEENV=	${CROSSENV} \
 		INSTALL="sh ${.CURDIR}/tools/install.sh" \
-		PATH=${TMPPATH}
+		PATH=${TMPPATH} \
+		SYSROOT=${WORLDTMP}
 
 # make hierarchy
 HMAKE=		PATH=${TMPPATH} ${MAKE} LOCAL_MTREE=${LOCAL_MTREE:Q}
@@ -716,8 +746,8 @@ HMAKE+=		PATH=${TMPPATH} METALOG=${METALOG} -DNO_ROOT
 
 CROSSENV+=	CC="${XCC} ${XCFLAGS}" CXX="${XCXX} ${XCXXFLAGS} ${XCFLAGS}" \
 		CPP="${XCPP} ${XCFLAGS}" \
-		AS="${XAS}" AR="${XAR}" LD="${XLD}" NM=${XNM} \
-		OBJDUMP=${XOBJDUMP} OBJCOPY="${XOBJCOPY}" \
+		AS="${XAS}" AR="${XAR}" LD="${XLD}" LLVM_LINK="${XLLVM_LINK}" \
+		NM=${XNM} OBJCOPY="${XOBJCOPY}" \
 		RANLIB=${XRANLIB} STRINGS=${XSTRINGS} \
 		SIZE="${XSIZE}"
 
@@ -728,50 +758,93 @@ CROSSENV+=	CC="${XCC} ${XCFLAGS}" CXX="${XCXX} ${XCXXFLAGS} ${XCFLAGS}" \
 BFLAGS+=	-B${CROSS_BINUTILS_PREFIX}
 .endif
 
-# External compiler needs sysroot and target flags.
-.if ${MK_CLANG_BOOTSTRAP} == "no" && ${MK_GCC_BOOTSTRAP} == "no"
+
+# The internal bootstrap compiler has a default sysroot set by TOOLS_PREFIX
+# and target set by TARGET/TARGET_ARCH.  However, there are several needs to
+# always pass an explicit --sysroot and -target.
+# - External compiler needs sysroot and target flags.
+# - External ld needs sysroot.
+# - To be clear about the use of a sysroot when using the internal compiler.
+# - Easier debugging.
+# - Allowing WITH_SYSTEM_COMPILER+WITH_META_MODE to work together due to
+#   the flip-flopping build command when sometimes using external and
+#   sometimes using internal.
+# - Allow using lld which has no support for default paths.
 .if !defined(CROSS_BINUTILS_PREFIX) || !exists(${CROSS_BINUTILS_PREFIX})
 BFLAGS+=	-B${WORLDTMP}/usr/bin
 .endif
-.if ${TARGET} == "arm"
-.if ${TARGET_ARCH:Marmv6*} != "" && ${TARGET_CPUTYPE:M*soft*} == ""
-TARGET_ABI=	gnueabihf
-.else
-TARGET_ABI=	gnueabi
-.endif
-.endif
-.if defined(X_COMPILER_TYPE) && ${X_COMPILER_TYPE} == gcc
-# GCC requires -isystem and -L when using a cross-compiler.  --sysroot
-# won't set header path and -L is used to ensure the base library path
-# is added before the port PREFIX library path.
-XCFLAGS+=	-isystem ${WORLDTMP}/usr/include -L${WORLDTMP}/usr/lib
-# Force using libc++ for external GCC.
-.if ${X_COMPILER_TYPE} == gcc && ${X_COMPILER_VERSION} >= 40800
-XCXXFLAGS+=	-isystem ${WORLDTMP}/usr/include/c++/v1 -std=c++11 \
-		-nostdinc++ -L${WORLDTMP}/../lib/libc++
-.endif
-.else
-TARGET_ABI?=	unknown
-TARGET_TRIPLE?=	${TARGET_ARCH:C/amd64/x86_64/}-${TARGET_ABI}-freebsd11.4
+.if ${WANT_COMPILER_TYPE} == gcc || \
+    (defined(X_COMPILER_TYPE) && ${X_COMPILER_TYPE} == gcc)
+.elif ${WANT_COMPILER_TYPE} == clang || \
+    (defined(X_COMPILER_TYPE) && ${X_COMPILER_TYPE} == clang)
 XCFLAGS+=	-target ${TARGET_TRIPLE}
 .endif
 XCFLAGS+=	--sysroot=${WORLDTMP}
-.endif # ${MK_CLANG_BOOTSTRAP} == "no" && ${MK_GCC_BOOTSTRAP} == "no"
 
 .if !empty(BFLAGS)
 XCFLAGS+=	${BFLAGS}
 .endif
 
 .if ${MK_LIB32} != "no" && (${TARGET_ARCH} == "amd64" || \
-    ${TARGET_ARCH} == "powerpc64")
+    ${TARGET_ARCH} == "powerpc64" || ${TARGET_ARCH:Mmips64*} != "")
 LIBCOMPAT= 32
 .include "Makefile.libcompat"
-.elif ${MK_LIBSOFT} != "no" && ${TARGET_ARCH} == "armv6"
+.elif ${MK_LIBSOFT} != "no" && ${TARGET_ARCH:Marmv[67]*} != ""
 LIBCOMPAT= SOFT
 .include "Makefile.libcompat"
 .endif
 
-WMAKE=		${WMAKEENV} ${MAKE} ${WORLD_FLAGS} -f Makefile.inc1 DESTDIR=${WORLDTMP}
+# META_MODE normally ignores host file changes since every build updates
+# timestamps (see NO_META_IGNORE_HOST in sys.mk).  There are known times
+# when the ABI breaks though that we want to force rebuilding WORLDTMP
+# to get updated host tools.
+.if ${MK_META_MODE} == "yes" && defined(NO_CLEAN) && \
+    !defined(NO_META_IGNORE_HOST) && !defined(NO_META_IGNORE_HOST_HEADERS) && \
+    !defined(_MKSHOWCONFIG)
+# r318736 - ino64 major ABI breakage
+META_MODE_BAD_ABI_VERS+=	1200031
+
+.if !defined(OBJDIR_HOST_OSRELDATE)
+.if exists(${OBJTOP}/host-osreldate.h)
+OBJDIR_HOST_OSRELDATE!=	\
+    awk '/^\#define[[:space:]]*__FreeBSD_version/ { print $$3 }' \
+    ${OBJTOP}/host-osreldate.h
+.elif exists(${WORLDTMP}/usr/include/osreldate.h)
+OBJDIR_HOST_OSRELDATE=	0
+.endif
+.export OBJDIR_HOST_OSRELDATE
+.endif
+
+# Note that this logic is the opposite of normal BOOTSTRAP handling.  We want
+# to compare the WORLDTMP's OSRELDATE to the host's OSRELDATE.  If the WORLDTMP
+# is older than the ABI-breakage OSRELDATE of the HOST then we rebuild.
+.if defined(OBJDIR_HOST_OSRELDATE)
+.for _ver in ${META_MODE_BAD_ABI_VERS}
+.if ${OSRELDATE} >= ${_ver} && ${OBJDIR_HOST_OSRELDATE} < ${_ver}
+_meta_mode_need_rebuild=	${_ver}
+.endif
+.endfor
+.if defined(_meta_mode_need_rebuild)
+.info META_MODE: Rebuilding host tools due to ABI breakage in __FreeBSD_version ${_meta_mode_need_rebuild}.
+NO_META_IGNORE_HOST_HEADERS=	1
+.export NO_META_IGNORE_HOST_HEADERS
+.endif	# defined(_meta_mode_need_rebuild)
+.endif	# defined(OBJDIR_HOST_OSRELDATE)
+.endif	# ${MK_META_MODE} == "yes" && defined(NO_CLEAN) ...
+# This is only used for META_MODE+filemon to track what the oldest
+# __FreeBSD_version is in WORLDTMP.  This purposely does NOT have
+# a make dependency on /usr/include/osreldate.h as the file should
+# only be copied when it is missing or meta mode determines it has changed.
+# Since host files are normally ignored without NO_META_IGNORE_HOST
+# the file will never be updated unless that flag is specified.  This
+# allows tracking the oldest osreldate to force rebuilds via
+# META_MODE_BADABI_REVS above.
+host-osreldate.h: # DO NOT ADD /usr/include/osreldate.h here
+	@cp -f /usr/include/osreldate.h ${.TARGET}
+
+WMAKE=		${WMAKEENV} ${MAKE} ${WORLD_FLAGS} -f Makefile.inc1 \
+		BWPHASE=${.TARGET:C,^_,,} \
+		DESTDIR=${WORLDTMP}
 
 IMAKEENV=	${CROSSENV}
 IMAKE=		${IMAKEENV} ${MAKE} -f Makefile.inc1 \
@@ -784,6 +857,13 @@ IMAKE+=		__MAKE_SHELL=${INSTALLTMP}/sh
 .else
 IMAKEENV+=	PATH=${TMPPATH}:${INSTALLTMP}
 .endif
+
+# When generating install media, do not allow user and group information from
+# the build host to affect the contents of the distribution.
+.if make(distributeworld) || make(distrib-dirs) || make(distribution)
+DB_FROM_SRC=	yes
+.endif
+
 .if defined(DB_FROM_SRC)
 INSTALLFLAGS+=	-N ${.CURDIR}/etc
 MTREEFLAGS+=	-N ${.CURDIR}/etc
@@ -812,8 +892,21 @@ CERTCTLDESTDIR=	${DESTDIR}/${DISTDIR}/base
 CERTCTLDESTDIR=	${DESTDIR}
 .endif
 
+DESTDIR_MTREEFLAGS=	-deU
+# When creating worldtmp we don't need to set the directories as owned by root
+# so we also pass -W
+WORLDTMP_MTREEFLAGS=	-deUW
+.if defined(NO_ROOT)
+# When building with -DNO_ROOT we shouldn't be changing the directories
+# that are created by mtree to be owned by root/wheel.
+DESTDIR_MTREEFLAGS+=	-W
+.endif
+MTREE?=	mtree
+WORLDTMP_MTREE=	${MTREE} ${WORLDTMP_MTREEFLAGS}
+DESTDIR_MTREE=	${MTREE} ${DESTDIR_MTREEFLAGS}
+
 # kernel stage
-KMAKEENV=	${WMAKEENV}
+KMAKEENV=	${WMAKEENV:NSYSROOT=*}
 KMAKE=		${KMAKEENV} ${MAKE} ${.MAKEFLAGS} ${KERNEL_FLAGS} KERNEL=${INSTKERNNAME}
 
 #
@@ -822,25 +915,140 @@ KMAKE=		${KMAKEENV} ${MAKE} ${.MAKEFLAGS} ${KERNEL_FLAGS} KERNEL=${INSTKERNNAME}
 # Attempt to rebuild the entire system, with reasonable chance of
 # success, regardless of how old your existing system is.
 #
-_worldtmp: .PHONY
+_sanity_check: .PHONY .MAKE
 .if ${.CURDIR:C/[^,]//g} != ""
 #	The m4 build of sendmail files doesn't like it if ',' is used
 #	anywhere in the path of it's files.
 	@echo
 	@echo "*** Error: path to source tree contains a comma ','"
 	@echo
-	false
+	@false
+.elif ${.CURDIR:M*\:*} != ""
+#	Using ':' leaks into PATH and breaks finding cross-tools.
+	@echo
+	@echo "*** Error: path to source tree contains a colon ':'"
+	@echo
+	@false
 .endif
+
+# Our current approach to dependency tracking cannot cope with certain source
+# tree changes, particularly with respect to removing source files and
+# replacing generated files.  Handle these cases here in an ad-hoc fashion.
+_cleanobj_fast_depend_hack: .PHONY
+	@echo ">>> Deleting stale dependencies...";
+# Date      SVN Rev  Syscalls/Changes
+# 20170624  r320278  fstat fstatat fstatfs getdirentries getfsstat statfs
+# 20180404  r332048  sigreturn
+# 20180405  r332080  shmat
+# 20180406  r332119  setlogin
+# 20180411  r332443  exect
+# 20180525  r334224  vadvise
+# 20180604  r334626  brk sbrk
+.for f in brk exect fstat fstatat fstatfs getdirentries getfsstat sbrk setlogin shmat sigreturn statfs vadvise
+	@if [ -e "${OBJTOP}/lib/libc/.depend.${f}.o" ] && \
+	    egrep -qw '${f}\.[sS]' ${OBJTOP}/lib/libc/.depend.${f}.o; then \
+		echo "Removing stale dependencies for ${f} syscall wrappers"; \
+		rm -f ${OBJTOP}/lib/libc/.depend.${f}.* \
+		   ${LIBCOMPAT:D${LIBCOMPAT_OBJTOP}/lib/libc/.depend.${f}.*}; \
+	fi
+.endfor
+# 20170607 remove stale dependencies for utimens* wrappers removed in r319663
+.for f in futimens utimensat
+	@if [ -e "${OBJTOP}/lib/libc/.depend.${f}.o" ] && \
+	    egrep -q '/${f}.c' ${OBJTOP}/lib/libc/.depend.${f}.o; then \
+		echo "Removing stale dependencies for ${f} syscall wrappers"; \
+		rm -f ${OBJTOP}/lib/libc/.depend.${f}.* \
+		   ${LIBCOMPAT:D${LIBCOMPAT_OBJTOP}/lib/libc/.depend.${f}.*}; \
+	fi
+.endfor
+# 20170523 remove stale generated asm files for functions which are no longer
+# syscalls after r302092 (pipe) and r318736 (others)
+.for f in getdents lstat mknod pipe stat
+	@if [ -e "${OBJTOP}/lib/libc/${f}.s" ] || \
+	    [ -e "${OBJTOP}/lib/libc/${f}.S" ] ; then \
+		echo "Removing stale generated ${f} syscall files"; \
+		rm -f ${OBJTOP}/lib/libc/${f}.* \
+		    ${OBJTOP}/lib/libc/.depend.${f}.* \
+		    ${LIBCOMPAT:D${LIBCOMPAT_OBJTOP}/lib/libc/${f}.*} \
+		    ${LIBCOMPAT:D${LIBCOMPAT_OBJTOP}/lib/libc/.depend.${f}.*}; \
+	fi
+.endfor
+# 20181013  r339348  bcopy reimplemented as .c
+.for f in bcopy memcpy memmove
+	@if [ -e "${OBJTOP}/lib/libc/.depend.${f}.o" ] && \
+	    egrep -qw 'bcopy\.[sS]' ${OBJTOP}/lib/libc/.depend.${f}.o; then \
+		echo "Removing stale dependencies for bcopy"; \
+		rm -f ${OBJTOP}/lib/libc/.depend.${f}.* \
+		   ${LIBCOMPAT:D${LIBCOMPAT_OBJTOP}/lib/libc/.depend.${f}.*}; \
+	fi
+.endfor
+# 20181115  r340463  bzero reimplemented as .c
+	@if [ -e "${OBJTOP}/lib/libc/.depend.bzero.o" ] && \
+	    egrep -qw 'bzero\.[sS]' ${OBJTOP}/lib/libc/.depend.bzero.o; then \
+		echo "Removing stale dependencies for bzero"; \
+		rm -f ${OBJTOP}/lib/libc/.depend.bzero.* \
+		   ${LIBCOMPAT:D${LIBCOMPAT_OBJTOP}/lib/libc/.depend.bzero.*}; \
+	fi
+# 20181009 track migration from ntp's embedded libevent to updated one
+	@if [ -e "${OBJTOP}/usr.sbin/ntp/libntpevent/.depend.bufferevent_openssl.o" ] && \
+	    egrep -q 'contrib/ntp/sntp/libevent/bufferevent_openssl.c' \
+	    ${OBJTOP}/usr.sbin/ntp/libntpevent/.depend.bufferevent_openssl.o ; then \
+		echo "Removing stale libevent dependencies"; \
+		rm -f ${OBJTOP}/usr.sbin/ntp/libntpevent/.depend.*; \
+	fi
+
+# 20181209  r341759 track migration across wpa update
+	@if [ -e "${OBJTOP}/usr.sbin/wpa/wpa_supplicant/.depend.rrm.o" ] && \
+	    egrep -q 'src/ap/rrm.c' \
+	    ${OBJTOP}/usr.sbin/wpa/wpa_supplicant/.depend.rrm.o; then \
+		echo "Removing stale wpa dependencies"; \
+		rm -f ${OBJTOP}/usr.sbin/wpa/*/.depend*; \
+	fi
+# Syscall stubs rewritten in C and obsolete MD assembly implementations
+# 20191112  r354634  removal of opensolaris_atomic.S
+.if ${MACHINE} != i386
+.for f in opensolaris_atomic
+	@if [ -e "${OBJTOP}/cddl/lib/libzpool/.depend.${f}.o" ] && \
+	    egrep -qw 'opensolaris_atomic\.S' ${OBJTOP}/cddl/lib/libzpool/.depend.${f}.o; then \
+		echo "Removing stale dependencies for opensolaris_atomic"; \
+		rm -f ${OBJTOP}/cddl/lib/libzpool/.depend.${f}.* \
+		   ${LIBCOMPAT:D${LIBCOMPAT_OBJTOP}/cddl/lib/libzpool/.depend.${f}.*}; \
+	fi
+.endfor
+.endif
+# 20200310  r358851  rename of openmp's ittnotify_static.c to .cpp
+.for f in ittnotify_static
+	@if [ -e "${OBJTOP}/lib/libomp/.depend.${f}.pico" ] && \
+	    egrep -qw '${f}\.c' ${OBJTOP}/lib/libomp/.depend.${f}.pico; then \
+		echo "Removing stale dependencies for ${f}"; \
+		rm -f ${OBJTOP}/lib/libomp/.depend.${f}.* \
+		   ${OBJTOP}/obj-lib32/lib/libomp/.depend.${f}.* \
+		   ${LIBCOMPAT:D${LIBCOMPAT_OBJTOP}/lib/libomp/.depend.${f}.*}; \
+	fi
+.endfor
+# 20201224 2afa221f694 Stop sharing pf_ruleset.c with the kernel
+.for f in pf_ruleset
+	@if [ -e "${OBJTOP}"/sbin/pfctl/.depend.${f}.o ] && \
+	    egrep -qw "sys/netpfil/pf/${f}.c" \
+	    "${OBJTOP}"/sbin/pfctl/.depend.${f}.o; then \
+			echo "Removing old ${f} dependency file"; \
+			rm -rf "${OBJTOP}"/sbin/pfctl/.depend.${f}.o; \
+	fi
+.endfor
+
+_worldtmp: .PHONY
 	@echo
 	@echo "--------------------------------------------------------------"
 	@echo ">>> Rebuilding the temporary build tree"
 	@echo "--------------------------------------------------------------"
 .if !defined(NO_CLEAN)
 	rm -rf ${WORLDTMP}
-.if defined(LIBCOMPAT)
-	rm -rf ${LIBCOMPATTMP}
-.endif
 .else
+	${_+_}@if [ -e "${WORLDTMP}" ]; then \
+		echo ">>> Deleting stale files in build tree..."; \
+		cd ${.CURDIR}; ${WMAKE} -DBATCH_DELETE_OLD_FILES \
+		    delete-old delete-old-libs >/dev/null; \
+	fi
 	rm -rf ${WORLDTMP}/legacy/usr/include
 .if ${USING_SYSTEM_COMPILER} == "yes"
 .for cc in cc c++
@@ -850,54 +1058,16 @@ _worldtmp: .PHONY
 	fi
 .endfor
 .endif	# ${USING_SYSTEM_COMPILER} == "yes"
+.if ${USING_SYSTEM_LINKER} == "yes"
+	@rm -f ${WORLDTMP}/usr/bin/ld ${WORLDTMP}/usr/bin/ld.lld
+.endif	# ${USING_SYSTEM_LINKER} == "yes"
 .endif	# !defined(NO_CLEAN)
-.for _dir in \
-    lib lib/casper usr legacy/bin legacy/usr
-	mkdir -p ${WORLDTMP}/${_dir}
-.endfor
-	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.usr.dist \
-	    -p ${WORLDTMP}/legacy/usr >/dev/null
-.if ${MK_GROFF} != "no"
-	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.groff.dist \
-	    -p ${WORLDTMP}/legacy/usr >/dev/null
-.endif
-	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.include.dist \
-	    -p ${WORLDTMP}/legacy/usr/include >/dev/null
-	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.usr.dist \
-	    -p ${WORLDTMP}/usr >/dev/null
-	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.include.dist \
-	    -p ${WORLDTMP}/usr/include >/dev/null
-	ln -sf ${.CURDIR}/sys ${WORLDTMP}
-.if ${MK_DEBUG_FILES} != "no"
-	# We could instead disable debug files for these build stages
-	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.debug.dist \
-	    -p ${WORLDTMP}/legacy/usr/lib >/dev/null
-	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.debug.dist \
-	    -p ${WORLDTMP}/usr/lib >/dev/null
-.endif
-.if defined(LIBCOMPAT)
-	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.lib${libcompat}.dist \
-	    -p ${WORLDTMP}/usr >/dev/null
-.if ${MK_DEBUG_FILES} != "no"
-	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.lib${libcompat}.dist \
-	    -p ${WORLDTMP}/legacy/usr/lib/debug/usr >/dev/null
-	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.lib${libcompat}.dist \
-	    -p ${WORLDTMP}/usr/lib/debug/usr >/dev/null
-.endif
-.endif
-.if ${MK_TESTS} != "no"
-	mkdir -p ${WORLDTMP}${TESTSBASE}
-	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.tests.dist \
-	    -p ${WORLDTMP}${TESTSBASE} >/dev/null
-.if ${MK_DEBUG_FILES} != "no"
-	mkdir -p ${WORLDTMP}/usr/lib/debug/${TESTSBASE}
-	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.tests.dist \
-	    -p ${WORLDTMP}/usr/lib/debug/${TESTSBASE} >/dev/null
-.endif
-.endif
-.for _mtree in ${LOCAL_MTREE}
-	mtree -deU -f ${.CURDIR}/${_mtree} -p ${WORLDTMP} > /dev/null
-.endfor
+	@mkdir -p ${WORLDTMP}
+	@touch ${WORLDTMP}/${.TARGET}
+# We can't use mtree to create the worldtmp directories since it may not be
+# available on the target system (this happens e.g. when building on non-FreeBSD)
+	cd ${.CURDIR}/tools/build; \
+	    ${MAKE} DIRPRFX=tools/build/ DESTDIR=${WORLDTMP}/legacy installdirs
 _legacy:
 	@echo
 	@echo "--------------------------------------------------------------"
@@ -910,6 +1080,19 @@ _bootstrap-tools:
 	@echo ">>> stage 1.2: bootstrap tools"
 	@echo "--------------------------------------------------------------"
 	${_+_}cd ${.CURDIR}; ${BMAKE} bootstrap-tools
+	mkdir -p ${WORLDTMP}/usr ${WORLDTMP}/lib/casper ${WORLDTMP}/lib/geom
+	${WORLDTMP_MTREE} -f ${.CURDIR}/etc/mtree/BSD.usr.dist \
+	    -p ${WORLDTMP}/usr >/dev/null
+	${WORLDTMP_MTREE} -f ${.CURDIR}/etc/mtree/BSD.include.dist \
+	    -p ${WORLDTMP}/usr/include >/dev/null
+	ln -sf ${.CURDIR}/sys ${WORLDTMP}
+.if ${MK_DEBUG_FILES} != "no"
+	${WORLDTMP_MTREE} -f ${.CURDIR}/etc/mtree/BSD.debug.dist \
+	    -p ${WORLDTMP}/usr/lib >/dev/null
+.endif
+.for _mtree in ${LOCAL_MTREE}
+	${WORLDTMP_MTREE} -f ${.CURDIR}/${_mtree} -p ${WORLDTMP} > /dev/null
+.endfor
 _cleanobj:
 .if !defined(NO_CLEAN)
 	@echo
@@ -920,7 +1103,9 @@ _cleanobj:
 .if defined(LIBCOMPAT)
 	${_+_}cd ${.CURDIR}; ${LIBCOMPATWMAKE} -f Makefile.inc1 ${CLEANDIR}
 .endif
-.endif
+.else
+	${_+_}cd ${.CURDIR}; ${WMAKE} _cleanobj_fast_depend_hack
+.endif	# !defined(NO_CLEAN)
 _obj:
 	@echo
 	@echo "--------------------------------------------------------------"
@@ -938,15 +1123,16 @@ _cross-tools:
 	@echo "--------------------------------------------------------------"
 	@echo ">>> stage 3: cross tools"
 	@echo "--------------------------------------------------------------"
-	@rm -f ${OBJTREE}${.CURDIR}/compiler-metadata.mk
+	@rm -f ${OBJTOP}/toolchain-metadata.mk
 	${_+_}cd ${.CURDIR}; ${XMAKE} cross-tools
 	${_+_}cd ${.CURDIR}; ${XMAKE} kernel-tools
-_compiler-metadata:
+_build-metadata:
 	@echo
 	@echo "--------------------------------------------------------------"
-	@echo ">>> stage 3.1: recording compiler metadata"
+	@echo ">>> stage 3.1: recording build metadata"
 	@echo "--------------------------------------------------------------"
-	${_+_}cd ${.CURDIR}; ${WMAKE} compiler-metadata.mk
+	${_+_}cd ${.CURDIR}; ${WMAKE} toolchain-metadata.mk
+	${_+_}cd ${.CURDIR}; ${WMAKE} host-osreldate.h
 _includes:
 	@echo
 	@echo "--------------------------------------------------------------"
@@ -975,13 +1161,22 @@ everything: .PHONY
 	${_+_}cd ${.CURDIR}; _PARALLEL_SUBDIR_OK=1 ${WMAKE} all
 
 WMAKE_TGTS=
-WMAKE_TGTS+=	_worldtmp _legacy
+.if !defined(WORLDFAST)
+WMAKE_TGTS+=	_sanity_check _worldtmp _legacy
 .if empty(SUBDIR_OVERRIDE)
 WMAKE_TGTS+=	_bootstrap-tools
 .endif
-WMAKE_TGTS+=	_cleanobj _obj _build-tools _cross-tools
-WMAKE_TGTS+=	_compiler-metadata
-WMAKE_TGTS+=	_includes _libraries
+WMAKE_TGTS+=	_cleanobj
+.if !defined(NO_OBJWALK)
+WMAKE_TGTS+=	_obj
+.endif
+WMAKE_TGTS+=	_build-tools _cross-tools
+WMAKE_TGTS+=	_build-metadata
+WMAKE_TGTS+=	_includes
+.endif
+.if !defined(NO_LIBS)
+WMAKE_TGTS+=	_libraries
+.endif
 WMAKE_TGTS+=	everything
 .if defined(LIBCOMPAT) && empty(SUBDIR_OVERRIDE)
 WMAKE_TGTS+=	build${libcompat}
@@ -1033,7 +1228,11 @@ buildenv: .PHONY
 
 TOOLCHAIN_TGTS=	${WMAKE_TGTS:Neverything:Nbuild${libcompat}}
 toolchain: ${TOOLCHAIN_TGTS} .PHONY
-kernel-toolchain: ${TOOLCHAIN_TGTS:N_includes:N_libraries} .PHONY
+KERNEL_TOOLCHAIN_TGTS=	${TOOLCHAIN_TGTS:N_obj:N_cleanobj:N_includes:N_libraries}
+.if make(kernel-toolchain)
+.ORDER: ${KERNEL_TOOLCHAIN_TGTS}
+.endif
+kernel-toolchain: ${KERNEL_TOOLCHAIN_TGTS} .PHONY
 
 #
 # installcheck
@@ -1042,7 +1241,13 @@ kernel-toolchain: ${TOOLCHAIN_TGTS:N_includes:N_libraries} .PHONY
 #
 installcheck: _installcheck_world _installcheck_kernel .PHONY
 _installcheck_world: .PHONY
+	@echo "--------------------------------------------------------------"
+	@echo ">>> Install check world"
+	@echo "--------------------------------------------------------------"
 _installcheck_kernel: .PHONY
+	@echo "--------------------------------------------------------------"
+	@echo ">>> Install check kernel"
+	@echo "--------------------------------------------------------------"
 
 #
 # Require DESTDIR to be set if installing for a different architecture or
@@ -1104,7 +1309,7 @@ __installcheck_UGID: .PHONY
     (empty(DESTDIR) || ${DESTDIR} == "/") && empty(BYPASS_INSTALLCHECK_SH)
 _installcheck_world: __installcheck_sh_check
 __installcheck_sh_check: .PHONY
-	@if [ "`${OBJTREE}${.CURDIR}/rescue/rescue/rescue sh -c 'echo OK'`" != \
+	@if [ "`${OBJTOP}/rescue/rescue/rescue sh -c 'echo OK'`" != \
 	    OK ]; then \
 		echo "rescue/sh check failed, installation aborted" >&2; \
 		false; \
@@ -1121,7 +1326,7 @@ _zoneinfo=	zic tzsetup
 ITOOLS=	[ awk cap_mkdb cat chflags chmod chown cmp cp \
 	date echo egrep find grep id install ${_install-info} \
 	ln make mkdir mtree mv pwd_mkdb \
-	rm sed services_mkdb sh strip sysctl test true uname wc ${_zoneinfo} \
+	rm sed services_mkdb sh sort strip sysctl test true uname wc ${_zoneinfo} \
 	${LOCAL_ITOOLS}
 
 # Needed for share/man
@@ -1167,6 +1372,10 @@ distributeworld installworld stageworld: _installcheck_world .PHONY
 	    done); \
 	libs=$$(ldd -f "%o %p\n" -f "%o %p\n" $$progs 2>/dev/null | sort -u | \
 	    while read line; do \
+		case $$line in \
+		"["*"]") \
+			continue;; \
+		esac; \
 		set -- $$line; \
 		if [ "$$2 $$3" != "not found" ]; then \
 			echo $$2; \
@@ -1300,13 +1509,14 @@ makeman: .PHONY
 
 _sysent_dirs=	sys/kern
 _sysent_dirs+=	sys/compat/freebsd32
-_sysent_dirs+=	sys/compat/svr4
 _sysent_dirs+=	sys/compat/cloudabi32	\
 		sys/compat/cloudabi64
 _sysent_dirs+=	sys/i386/ibcs2
 _sysent_dirs+=	sys/amd64/linux		\
 		sys/amd64/linux32	\
+		sys/arm64/linux		\
 		sys/i386/linux
+
 sysent: .PHONY
 .for _dir in ${_sysent_dirs}
 	${_+_}${MAKE} -C ${.CURDIR}/${_dir} sysent
@@ -1969,12 +2179,7 @@ _kerberos5_bootstrap_tools= \
 .ORDER: ${_kerberos5_bootstrap_tools:C/^/${_bt}-/g}
 .endif
 
-# r283777 makewhatis(1) replaced with mandoc version which builds a database.
-.if ${MK_MANDOCDB} != "no"
-_libopenbsd?=	lib/libopenbsd
-_makewhatis=	usr.bin/mandoc
 ${_bt}-usr.bin/mandoc: ${_bt}-lib/libopenbsd
-.endif
 
 bootstrap-tools: .PHONY
 
@@ -2033,6 +2238,20 @@ _rescue=rescue/rescue
 .if ${MK_TCSH} != "no"
 _tcsh=bin/csh
 .endif
+.if ${MK_FILE} != "no"
+_libmagic=lib/libmagic
+.endif
+
+.if ${MK_PMC} != "no" && \
+    (${TARGET_ARCH} == "amd64" || ${TARGET_ARCH} == "i386")
+_jevents=lib/libpmc/pmu-events
+.endif
+
+# kernel-toolchain skips _cleanobj, so handle cleaning up previous
+# build-tools directories if needed.
+.if !defined(NO_CLEAN) && make(kernel-toolchain)
+_bt_clean=	${CLEANDIR}
+.endif
 
 .for _tool in \
     ${_tcsh} \
@@ -2057,23 +2276,14 @@ build-tools_${_tool}: .PHONY
 		${MAKE} DIRPRFX=${_tool}/ build-tools
 build-tools: build-tools_${_tool}
 .endfor
-.for _tool in \
-    ${_gcc_tools}
-build-tools_${_tool}: .PHONY
-	${_+_}@${ECHODIR} "===> ${_tool} (obj,all)"; \
-		cd ${.CURDIR}/${_tool}; \
-		${MAKE} DIRPRFX=${_tool}/ obj; \
-		${MAKE} DIRPRFX=${_tool}/ all
-build-tools: build-tools_${_tool}
-.endfor
 
 #
 # kernel-tools: Build kernel-building tools
 #
 kernel-tools: .PHONY
-	mkdir -p ${MAKEOBJDIRPREFIX}/usr
-	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.usr.dist \
-	    -p ${MAKEOBJDIRPREFIX}/usr >/dev/null
+	mkdir -p ${WORLDTMP}/usr
+	${WORLDTMP_MTREE} -f ${.CURDIR}/etc/mtree/BSD.usr.dist \
+	    -p ${WORLDTMP}/usr >/dev/null
 
 #
 # cross-tools: All the tools needed to build the rest of the system after
@@ -2105,7 +2315,7 @@ _binutils=	gnu/usr.bin/binutils
 .if ${MK_ELFTOOLCHAIN_BOOTSTRAP} != "no"
 _elftctools=	lib/libelftc \
 		lib/libpe \
-		usr.bin/elfcopy \
+		usr.bin/objcopy \
 		usr.bin/nm \
 		usr.bin/size \
 		usr.bin/strings
@@ -2118,7 +2328,7 @@ _elftctools+=	usr.bin/addr2line
 # the target (for at least crunchide).
 _elftctools=	lib/libelftc \
 		lib/libpe \
-		usr.bin/elfcopy
+		usr.bin/objcopy
 .endif
 
 .if ${MK_CLANG_BOOTSTRAP} != "no"
@@ -2139,6 +2349,7 @@ _usb_tools=	stand/usb/tools
 
 cross-tools: .MAKE .PHONY
 .for _tool in \
+    ${LOCAL_XTOOL_DIRS} \
     ${_clang_libs} \
     ${_clang} \
     ${_lld} \
@@ -2147,6 +2358,7 @@ cross-tools: .MAKE .PHONY
     ${_dtrace_tools} \
     ${_gcc} \
     ${_btxld} \
+    ${_elf2aout} \
     ${_usb_tools}
 	${_+_}@${ECHODIR} "===> ${_tool} (obj,all,install)"; \
 		cd ${.CURDIR}/${_tool}; \
