@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -28,7 +30,7 @@
  *
  *	@(#)rwhod.h	8.1 (Berkeley) 6/2/93
  *
- * $FreeBSD: stable/11/include/protocols/rwhod.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _PROTOCOLS_RWHOD_H_

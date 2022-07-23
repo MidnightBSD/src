@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -27,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)limits.h	8.2 (Berkeley) 1/4/94
- * $FreeBSD: stable/11/include/limits.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _LIMITS_H_
@@ -120,7 +122,7 @@
 #endif
 
 #if __XSI_VISIBLE || __POSIX_VISIBLE >= 200809
-#define	NL_ARGMAX		99	/* max # of position args for printf */
+#define	NL_ARGMAX		4096	/* max # of position args for printf */
 #define	NL_MSGMAX		32767
 #define	NL_SETMAX		255
 #define	NL_TEXTMAX		2048

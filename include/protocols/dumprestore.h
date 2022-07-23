@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
  * (c) UNIX System Laboratories, Inc.
@@ -33,7 +35,7 @@
  *
  *	@(#)dumprestore.h	8.2 (Berkeley) 1/21/94
  *
- * $FreeBSD: stable/11/include/protocols/dumprestore.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _PROTOCOLS_DUMPRESTORE_H_
@@ -74,7 +76,7 @@
  */
 typedef uint32_t dump_ino_t;
 
-union u_spcl {
+extern union u_spcl {
 	char dummy[TP_BSIZE];
 	struct	s_spcl {
 		int32_t	c_type;		    /* record type (see below) */
