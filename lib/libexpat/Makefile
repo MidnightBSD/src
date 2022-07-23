@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libexpat/Makefile 313538 2017-02-10 07:32:40Z ngie $
+# $FreeBSD$
 
 PACKAGE=lib${LIB}
 EXPAT=		${SRCTOP}/contrib/expat
@@ -22,10 +22,9 @@ WARNS?=		2
 # BSD-style include guards.  We also want to point it at the new
 # bsdxml_external.h rather than the old expat_external.h file.
 bsdxml.h: expat.h
-	unifdef -U__VMS < ${.ALLSRC} | \
 	sed -e 's/XmlParse_INCLUDED/_BSD_XML_H_/' \
 	    -e 's/COPYING/src\/contrib\/expat\/COPYING/' \
-	    -e 's/expat_external/bsdxml_external/' \
+	    -e 's/expat_external/bsdxml_external/' ${.ALLSRC} \
 		> ${.TARGET}
 
 bsdxml_external.h: expat_external.h

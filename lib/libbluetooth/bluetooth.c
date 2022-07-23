@@ -3,6 +3,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001-2009 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: bluetooth.c,v 1.3 2003/05/20 23:04:30 max Exp $
- * $FreeBSD: stable/11/lib/libbluetooth/bluetooth.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 #define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
