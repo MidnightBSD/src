@@ -1,7 +1,9 @@
-/*	$FreeBSD: stable/11/sys/netipsec/ipcomp_var.h 331722 2018-03-29 02:50:57Z eadler $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: ipcomp.h,v 1.8 2000/09/26 07:55:14 itojun Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 1999 WIDE Project.
  * All rights reserved.
  *

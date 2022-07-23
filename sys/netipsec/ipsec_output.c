@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002, 2003 Sam Leffler, Errno Consulting
  * Copyright (c) 2016 Andrey V. Elsukov <ae@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/netipsec/ipsec_output.c 322966 2017-08-28 10:02:47Z ae $
+ * $FreeBSD$
  */
 
 /*
@@ -69,7 +71,7 @@
 #ifdef INET6
 #include <netinet/icmp6.h>
 #endif
-#ifdef SCTP
+#if defined(SCTP) || defined(SCTP_SUPPORT)
 #include <netinet/sctp_crc32.h>
 #endif
 
@@ -324,7 +326,7 @@ ipsec4_common_output(struct mbuf *m, struct inpcb *inp, int forwarding)
 			in_delayed_cksum(m);
 			m->m_pkthdr.csum_flags &= ~CSUM_DELAY_DATA;
 		}
-#ifdef SCTP
+#if defined(SCTP) || defined(SCTP_SUPPORT)
 		if (m->m_pkthdr.csum_flags & CSUM_SCTP) {
 			struct ip *ip = mtod(m, struct ip *);
 
@@ -619,7 +621,7 @@ ipsec6_common_output(struct mbuf *m, struct inpcb *inp, int forwarding)
 			    sizeof(struct ip6_hdr), sizeof(struct ip6_hdr));
 		m->m_pkthdr.csum_flags &= ~CSUM_DELAY_DATA_IPV6;
 		}
-#ifdef SCTP
+#if defined(SCTP) || defined(SCTP_SUPPORT)
 		if (m->m_pkthdr.csum_flags & CSUM_SCTP_IPV6) {
 			sctp_delayed_cksum(m, sizeof(struct ip6_hdr));
 			m->m_pkthdr.csum_flags &= ~CSUM_SCTP_IPV6;

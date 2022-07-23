@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/dtc/fdt.hh 358206 2020-02-21 04:38:59Z kevans $
+ * $FreeBSD$
  */
 
 #ifndef _FDT_HH_

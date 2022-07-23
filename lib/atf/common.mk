@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/atf/common.mk 273929 2014-11-01 11:17:54Z jmmv $
+# $FreeBSD$
 #
 # Common Makefile code for all components of ATF.
 #

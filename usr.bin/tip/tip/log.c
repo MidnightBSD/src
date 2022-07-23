@@ -1,7 +1,9 @@
 /*	$OpenBSD: log.c,v 1.8 2006/03/16 19:32:46 deraadt Exp $	*/
 /*	$NetBSD: log.c,v 1.4 1994/12/24 17:56:28 cgd Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/tip/tip/log.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 #if 0

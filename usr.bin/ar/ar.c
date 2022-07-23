@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2007 Kai Wang
  * Copyright (c) 2007 Tim Kientzle
  * Copyright (c) 2007 Joseph Koshy
@@ -8,22 +10,22 @@
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 /*-
@@ -59,18 +61,18 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/ar/ar.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/queue.h>
 #include <sys/types.h>
 #include <archive.h>
+#include <err.h>
 #include <errno.h>
 #include <getopt.h>
 #include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sysexits.h>
 
 #include "ar.h"
 
@@ -100,10 +102,11 @@ main(int argc, char **argv)
 	struct bsdar	*bsdar, bsdar_storage;
 	char		*p;
 	size_t		 len;
-	int		 i, opt, Dflag, Uflag;
+	int		 exitcode, i, opt, Dflag, Uflag;
 
 	bsdar = &bsdar_storage;
 	memset(bsdar, 0, sizeof(*bsdar));
+	exitcode = EXIT_SUCCESS;
 	Dflag = 0;
 	Uflag = 0;
 
@@ -149,9 +152,10 @@ main(int argc, char **argv)
 			bsdar->options |= AR_D;
 		bsdar->options |= AR_S;
 		while ((bsdar->filename = *argv++) != NULL)
-			ar_mode_s(bsdar);
+			if (ar_write_archive(bsdar, 's'))
+				exitcode = EXIT_FAILURE;
 
-		exit(EX_OK);
+		exit(exitcode);
 	} else {
 		if (argc < 2)
 			bsdar_usage();
@@ -159,8 +163,7 @@ main(int argc, char **argv)
 		if (*argv[1] != '-') {
 			len = strlen(argv[1]) + 2;
 			if ((p = malloc(len)) == NULL)
-				bsdar_errc(bsdar, EX_SOFTWARE, errno,
-				    "malloc failed");
+				bsdar_errc(bsdar, errno, "malloc failed");
 			*p = '-';
 			(void)strlcpy(p + 1, argv[1], len - 1);
 			argv[1] = p;
@@ -191,7 +194,6 @@ main(int argc, char **argv)
 			Uflag = 0;
 			break;
 		case 'f':
-		case 'T':
 			bsdar->options |= AR_TR;
 			break;
 		case 'j':
@@ -223,6 +225,10 @@ main(int argc, char **argv)
 			break;
 		case 's':
 			bsdar->options |= AR_S;
+			break;
+		case 'T':
+			warnx("-T is deprecated");
+			bsdar->options |= AR_TR;
 			break;
 		case 't':
 			set_mode(bsdar, opt);
@@ -260,24 +266,20 @@ main(int argc, char **argv)
 		bsdar_usage();
 
 	if (bsdar->options & AR_A && bsdar->options & AR_B)
-		bsdar_errc(bsdar, EX_USAGE, 0,
+		bsdar_errc(bsdar, 0,
 		    "only one of -a and -[bi] options allowed");
 
 	if (bsdar->options & AR_J && bsdar->options & AR_Z)
-		bsdar_errc(bsdar, EX_USAGE, 0,
-		    "only one of -j and -z options allowed");
+		bsdar_errc(bsdar, 0, "only one of -j and -z options allowed");
 
 	if (bsdar->options & AR_S && bsdar->options & AR_SS)
-		bsdar_errc(bsdar, EX_USAGE, 0,
-		    "only one of -s and -S options allowed");
+		bsdar_errc(bsdar, 0, "only one of -s and -S options allowed");
 
 	if (bsdar->options & (AR_A | AR_B)) {
 		if (*argv == NULL)
-			bsdar_errc(bsdar, EX_USAGE, 0,
-			    "no position operand specified");
+			bsdar_errc(bsdar, 0, "no position operand specified");
 		if ((bsdar->posarg = basename(*argv)) == NULL)
-			bsdar_errc(bsdar, EX_SOFTWARE, errno,
-			    "basename failed");
+			bsdar_errc(bsdar, errno, "basename failed");
 		argc--;
 		argv++;
 	}
@@ -308,7 +310,7 @@ main(int argc, char **argv)
 
 	if (bsdar->mode == 'M') {
 		ar_mode_script(bsdar);
-		exit(EX_OK);
+		exit(EXIT_SUCCESS);
 	}
 
 	if ((bsdar->filename = *argv) == NULL)
@@ -319,44 +321,32 @@ main(int argc, char **argv)
 
 	if ((!bsdar->mode || strchr("ptx", bsdar->mode)) &&
 	    bsdar->options & AR_S) {
-		ar_mode_s(bsdar);
+		exitcode = ar_write_archive(bsdar, 's');
 		if (!bsdar->mode)
-			exit(EX_OK);
+			exit(exitcode);
 	}
 
 	switch(bsdar->mode) {
-	case 'd':
-		ar_mode_d(bsdar);
+	case 'd': case 'm': case 'q': case 'r':
+		exitcode = ar_write_archive(bsdar, bsdar->mode);
 		break;
-	case 'm':
-		ar_mode_m(bsdar);
-		break;
-	case 'p':
-		ar_mode_p(bsdar);
-		break;
-	case 'q':
-		ar_mode_q(bsdar);
-		break;
-	case 'r':
-		ar_mode_r(bsdar);
-		break;
-	case 't':
-		ar_mode_t(bsdar);
-		break;
-	case 'x':
-		ar_mode_x(bsdar);
+	case 'p': case 't': case 'x':
+		exitcode = ar_read_archive(bsdar, bsdar->mode, stdout);
 		break;
 	default:
 		bsdar_usage();
 		/* NOTREACHED */
 	}
 
-	for (i = 0; i < bsdar->argc; i++)
-		if (bsdar->argv[i] != NULL)
+	for (i = 0; i < bsdar->argc; i++) {
+		if (bsdar->argv[i] != NULL) {
 			bsdar_warnc(bsdar, 0, "%s: not found in archive",
 			    bsdar->argv[i]);
+			exitcode = EXIT_FAILURE;
+		}
+	}
 
-	exit(EX_OK);
+	exit(exitcode);
 }
 
 static void
@@ -364,8 +354,8 @@ set_mode(struct bsdar *bsdar, char opt)
 {
 
 	if (bsdar->mode != '\0' && bsdar->mode != opt)
-		bsdar_errc(bsdar, EX_USAGE, 0,
-		    "Can't specify both -%c and -%c", opt, bsdar->mode);
+		bsdar_errc(bsdar, 0, "Can't specify both -%c and -%c", opt,
+		    bsdar->mode);
 	bsdar->mode = opt;
 }
 
@@ -374,8 +364,8 @@ only_mode(struct bsdar *bsdar, const char *opt, const char *valid_modes)
 {
 
 	if (strchr(valid_modes, bsdar->mode) == NULL)
-		bsdar_errc(bsdar, EX_USAGE, 0,
-		    "Option %s is not permitted in mode -%c", opt, bsdar->mode);
+		bsdar_errc(bsdar, 0, "Option %s is not permitted in mode -%c",
+		    opt, bsdar->mode);
 }
 
 static void
@@ -393,7 +383,7 @@ bsdar_usage(void)
 	(void)fprintf(stderr, "\tar -t [-Tv] archive [file ...]\n");
 	(void)fprintf(stderr, "\tar -x [-CTouv] archive [file ...]\n");
 	(void)fprintf(stderr, "\tar -V\n");
-	exit(EX_USAGE);
+	exit(EXIT_FAILURE);
 }
 
 static void
@@ -402,19 +392,19 @@ ranlib_usage(void)
 
 	(void)fprintf(stderr, "usage:	ranlib [-DtU] archive ...\n");
 	(void)fprintf(stderr, "\tranlib -V\n");
-	exit(EX_USAGE);
+	exit(EXIT_FAILURE);
 }
 
 static void
 bsdar_version(void)
 {
 	(void)printf("BSD ar %s - %s\n", BSDAR_VERSION, archive_version_string());
-	exit(EX_OK);
+	exit(EXIT_SUCCESS);
 }
 
 static void
 ranlib_version(void)
 {
 	(void)printf("ranlib %s - %s\n", BSDAR_VERSION, archive_version_string());
-	exit(EX_OK);
+	exit(EXIT_SUCCESS);
 }

@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/11/usr.bin/fmt/Makefile 140909 2005-01-27 14:52:47Z delphij $
+# $FreeBSD$
 
 PROG=	fmt
 

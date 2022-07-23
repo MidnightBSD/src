@@ -30,13 +30,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/cpuset/cpuset.c 336040 2018-07-06 19:10:11Z jamie $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/cpuset.h>
+#include <sys/domainset.h>
 
 #include <ctype.h>
 #include <err.h>
@@ -56,6 +57,7 @@ static int gflag;
 static int iflag;
 static int jflag;
 static int lflag;
+static int nflag;
 static int pflag;
 static int rflag;
 static int sflag;
@@ -67,30 +69,41 @@ static cpuwhich_t which;
 
 static void usage(void);
 
-static void printset(cpuset_t *mask);
+struct numa_policy {
+	const char 	*name;
+	int		policy;
+};
+
+static struct numa_policy policies[] = {
+	{ "round-robin", DOMAINSET_POLICY_ROUNDROBIN },
+	{ "rr", DOMAINSET_POLICY_ROUNDROBIN },
+	{ "first-touch", DOMAINSET_POLICY_FIRSTTOUCH },
+	{ "ft", DOMAINSET_POLICY_FIRSTTOUCH },
+	{ "prefer", DOMAINSET_POLICY_PREFER },
+	{ "interleave", DOMAINSET_POLICY_INTERLEAVE},
+	{ "il", DOMAINSET_POLICY_INTERLEAVE},
+	{ NULL, DOMAINSET_POLICY_INVALID }
+};
+
+static void printset(struct bitset *mask, int size);
 
 static void
-parselist(char *list, cpuset_t *mask)
+parselist(char *list, struct bitset *mask, int size)
 {
 	enum { NONE, NUM, DASH } state;
 	int lastnum;
 	int curnum;
 	char *l;
 
-	if (strcasecmp(list, "all") == 0) {
-		if (cpuset_getaffinity(CPU_LEVEL_ROOT, CPU_WHICH_PID, -1,
-		    sizeof(*mask), mask) != 0)
-			err(EXIT_FAILURE, "getaffinity");
-		return;
-	}
 	state = NONE;
 	curnum = lastnum = 0;
 	for (l = list; *l != '\0';) {
 		if (isdigit(*l)) {
 			curnum = atoi(l);
-			if (curnum > CPU_SETSIZE)
+			if (curnum >= size)
 				errx(EXIT_FAILURE,
-				    "Only %d cpus supported", CPU_SETSIZE);
+				    "List entry %d exceeds maximum of %d",
+				    curnum, size - 1);
 			while (isdigit(*l))
 				l++;
 			switch (state) {
@@ -100,7 +113,7 @@ parselist(char *list, cpuset_t *mask)
 				break;
 			case DASH:
 				for (; lastnum <= curnum; lastnum++)
-					CPU_SET(lastnum, mask);
+					BIT_SET(size, lastnum, mask);
 				state = NONE;
 				break;
 			case NUM:
@@ -115,7 +128,7 @@ parselist(char *list, cpuset_t *mask)
 			case NONE:
 				break;
 			case NUM:
-				CPU_SET(curnum, mask);
+				BIT_SET(size, curnum, mask);
 				state = NONE;
 				break;
 			case DASH:
@@ -137,29 +150,86 @@ parselist(char *list, cpuset_t *mask)
 		case NONE:
 			break;
 		case NUM:
-			CPU_SET(curnum, mask);
+			BIT_SET(size, curnum, mask);
 			break;
 		case DASH:
 			goto parserr;
 	}
 	return;
 parserr:
-	errx(EXIT_FAILURE, "Malformed cpu-list %s", list);
+	errx(EXIT_FAILURE, "Malformed list %s", list);
 }
 
 static void
-printset(cpuset_t *mask)
+parsecpulist(char *list, cpuset_t *mask)
+{
+
+	if (strcasecmp(list, "all") == 0) {
+		if (cpuset_getaffinity(CPU_LEVEL_ROOT, CPU_WHICH_PID, -1,
+		    sizeof(*mask), mask) != 0)
+			err(EXIT_FAILURE, "getaffinity");
+		return;
+	}
+	parselist(list, (struct bitset *)mask, CPU_SETSIZE);
+}
+
+/*
+ * permissively parse policy:domain list
+ * allow:
+ *	round-robin:0-4		explicit
+ *	round-robin:all		explicit root domains
+ *	0-4			implicit root policy
+ *	round-robin		implicit root domains
+ *	all			explicit root domains and implicit policy
+ */
+static void
+parsedomainlist(char *list, domainset_t *mask, int *policyp)
+{
+	domainset_t rootmask;
+	struct numa_policy *policy;
+	char *l;
+	int p;
+
+	/*
+	 * Use the rootset's policy as the default for unspecified policies.
+	 */
+	if (cpuset_getdomain(CPU_LEVEL_ROOT, CPU_WHICH_PID, -1,
+	    sizeof(rootmask), &rootmask, &p) != 0)
+		err(EXIT_FAILURE, "getdomain");
+
+	l = list;
+	for (policy = &policies[0]; policy->name != NULL; policy++) {
+		if (strncasecmp(l, policy->name, strlen(policy->name)) == 0) {
+			p = policy->policy;
+			l += strlen(policy->name);
+			if (*l != ':' && *l != '\0')
+				errx(EXIT_FAILURE, "Malformed list %s", list);
+			if (*l == ':')
+				l++;
+			break;
+		}
+	}
+	*policyp = p;
+	if (strcasecmp(l, "all") == 0 || *l == '\0') {
+		DOMAINSET_COPY(&rootmask, mask);
+		return;
+	}
+	parselist(l, (struct bitset *)mask, DOMAINSET_SETSIZE);
+}
+
+static void
+printset(struct bitset *mask, int size)
 {
 	int once;
-	int cpu;
+	int bit;
 
-	for (once = 0, cpu = 0; cpu < CPU_SETSIZE; cpu++) {
-		if (CPU_ISSET(cpu, mask)) {
+	for (once = 0, bit = 0; bit < size; bit++) {
+		if (BIT_ISSET(size, bit, mask)) {
 			if (once == 0) {
-				printf("%d", cpu);
+				printf("%d", bit);
 				once = 1;
 			} else
-				printf(", %d", cpu);
+				printf(", %d", bit);
 		}
 	}
 	printf("\n");
@@ -168,17 +238,30 @@ printset(cpuset_t *mask)
 static const char *whichnames[] = { NULL, "tid", "pid", "cpuset", "irq", "jail",
 				    "domain" };
 static const char *levelnames[] = { NULL, " root", " cpuset", "" };
+static const char *policynames[] = { "invalid", "round-robin", "first-touch",
+				    "prefer", "interleave" };
 
 static void
 printaffinity(void)
 {
+	domainset_t domain;
 	cpuset_t mask;
+	int policy;
 
 	if (cpuset_getaffinity(level, which, id, sizeof(mask), &mask) != 0)
 		err(EXIT_FAILURE, "getaffinity");
 	printf("%s %jd%s mask: ", whichnames[which], (intmax_t)id,
 	    levelnames[level]);
-	printset(&mask);
+	printset((struct bitset *)&mask, CPU_SETSIZE);
+	if (dflag || xflag)
+		goto out;
+	if (cpuset_getdomain(level, which, id, sizeof(domain), &domain,
+	    &policy) != 0)
+		err(EXIT_FAILURE, "getdomain");
+	printf("%s %jd%s domain policy: %s mask: ", whichnames[which],
+	    (intmax_t)id, levelnames[level], policynames[policy]);
+	printset((struct bitset *)&domain, DOMAINSET_SETSIZE);
+out:
 	exit(EXIT_SUCCESS);
 }
 
@@ -201,17 +284,21 @@ printsetid(void)
 int
 main(int argc, char *argv[])
 {
+	domainset_t domains;
 	cpusetid_t setid;
 	cpuset_t mask;
+	int policy;
 	lwpid_t tid;
 	pid_t pid;
 	int ch;
 
 	CPU_ZERO(&mask);
+	DOMAINSET_ZERO(&domains);
+	policy = DOMAINSET_POLICY_INVALID;
 	level = CPU_LEVEL_WHICH;
 	which = CPU_WHICH_PID;
 	id = pid = tid = setid = -1;
-	while ((ch = getopt(argc, argv, "Ccd:gij:l:p:rs:t:x:")) != -1) {
+	while ((ch = getopt(argc, argv, "Ccd:gij:l:n:p:rs:t:x:")) != -1) {
 		switch (ch) {
 		case 'C':
 			Cflag = 1;
@@ -240,7 +327,11 @@ main(int argc, char *argv[])
 			break;
 		case 'l':
 			lflag = 1;
-			parselist(optarg, &mask);
+			parsecpulist(optarg, &mask);
+			break;
+		case 'n':
+			nflag = 1;
+			parsedomainlist(optarg, &domains, &policy);
 			break;
 		case 'p':
 			pflag = 1;
@@ -273,7 +364,7 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 	if (gflag) {
-		if (argc || Cflag || lflag)
+		if (argc || Cflag || lflag || nflag)
 			usage();
 		/* Only one identity specifier. */
 		if (dflag + jflag + xflag + sflag + pflag + tflag > 1)
@@ -284,6 +375,7 @@ main(int argc, char *argv[])
 			printaffinity();
 		exit(EXIT_SUCCESS);
 	}
+
 	if (dflag || iflag || rflag)
 		usage();
 	/*
@@ -304,6 +396,11 @@ main(int argc, char *argv[])
 			    -1, sizeof(mask), &mask) != 0)
 				err(EXIT_FAILURE, "setaffinity");
 		}
+		if (nflag) {
+			if (cpuset_setdomain(level, CPU_WHICH_PID,
+			    -1, sizeof(domains), &domains, policy) != 0)
+				err(EXIT_FAILURE, "setdomain");
+		}
 		errno = 0;
 		execvp(*argv, argv);
 		err(errno == ENOENT ? 127 : 126, "%s", *argv);
@@ -313,9 +410,9 @@ main(int argc, char *argv[])
 	 */
 	if (Cflag && (jflag || !pflag || sflag || tflag || xflag))
 		usage();
-	if (!lflag && cflag)
+	if ((!lflag && !nflag) && cflag)
 		usage();
-	if (!lflag && !(Cflag || sflag))
+	if ((!lflag && !nflag) && !(Cflag || sflag))
 		usage();
 	/* You can only set a mask on a thread. */
 	if (tflag && (sflag | pflag | xflag | jflag))
@@ -347,6 +444,11 @@ main(int argc, char *argv[])
 		    &mask) != 0)
 			err(EXIT_FAILURE, "setaffinity");
 	}
+	if (nflag) {
+		if (cpuset_setdomain(level, which, id, sizeof(domains),
+		    &domains, policy) != 0)
+			err(EXIT_FAILURE, "setdomain");
+	}
 
 	exit(EXIT_SUCCESS);
 }
@@ -356,15 +458,16 @@ usage(void)
 {
 
 	fprintf(stderr,
-	    "usage: cpuset [-l cpu-list] [-s setid] cmd ...\n");
+    "usage: cpuset [-l cpu-list] [-n policy:domain-list] [-s setid] cmd ...\n");
 	fprintf(stderr,
-	    "       cpuset [-l cpu-list] [-s setid] -p pid\n");
+    "       cpuset [-l cpu-list] [-n policy:domain-list] [-s setid] -p pid\n");
 	fprintf(stderr,
-	    "       cpuset [-c] [-l cpu-list] -C -p pid\n");
+    "       cpuset [-c] [-l cpu-list] [-n policy:domain-list] -C -p pid\n");
 	fprintf(stderr,
-	    "       cpuset [-c] [-l cpu-list] [-j jailid | -p pid | -t tid | -s setid | -x irq]\n");
+    "       cpuset [-c] [-l cpu-list] [-n policy:domain-list]\n"
+    "              [-j jailid | -p pid | -t tid | -s setid | -x irq]\n");
 	fprintf(stderr,
-	    "       cpuset -g [-cir] [-d domain | -j jailid | -p pid | -t tid | -s setid |\n"
-	    "              -x irq]\n");
+    "       cpuset -g [-cir]\n"
+    "              [-d domain | -j jailid | -p pid | -t tid | -s setid | -x irq]\n");
 	exit(1);
 }

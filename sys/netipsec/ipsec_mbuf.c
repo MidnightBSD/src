@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002, 2003 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
@@ -23,12 +25,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/netipsec/ipsec_mbuf.c 333207 2018-05-03 08:17:12Z ae $
+ * $FreeBSD$
  */
 
 /*
  * IPsec-specific mbuf routines.
  */
+
+#include "opt_ipsec.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>

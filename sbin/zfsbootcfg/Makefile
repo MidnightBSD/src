@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.4 (Berkeley) 6/22/95
-# $FreeBSD: stable/11/sbin/zfsbootcfg/Makefile 308089 2016-10-29 14:09:32Z avg $
+# $FreeBSD$
 
 PROG=	zfsbootcfg
 WARNS?=	1

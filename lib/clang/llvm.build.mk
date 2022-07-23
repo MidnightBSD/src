@@ -29,10 +29,10 @@ CFLAGS+=	-DNDEBUG
 TARGET_ARCH?=	${MACHINE_ARCH}
 BUILD_ARCH?=	${MACHINE_ARCH}
 
-# Armv6 uses hard float abi, unless the CPUTYPE has soft in it.
+# Armv6 and armv7 uses hard float abi, unless the CPUTYPE has soft in it.
 # arm (for armv4 and armv5 CPUs) always uses the soft float ABI.
 # For all other targets, we stick with 'unknown'.
-.if ${TARGET_ARCH:Marmv6*} && (!defined(CPUTYPE) || ${CPUTYPE:M*soft*} == "")
+.if ${TARGET_ARCH:Marmv[67]*} && (!defined(CPUTYPE) || ${CPUTYPE:M*soft*} == "")
 TARGET_ABI=	-gnueabihf
 .elif ${TARGET_ARCH:Marm*}
 TARGET_ABI=	-gnueabi
@@ -40,7 +40,7 @@ TARGET_ABI=	-gnueabi
 TARGET_ABI=
 .endif
 VENDOR=		unknown
-OS_VERSION=	freebsd11.4
+OS_VERSION=	freebsd12.3
 
 LLVM_TARGET_TRIPLE?=	${TARGET_ARCH:C/amd64/x86_64/:C/[hs]f$//:S/mipsn32/mips64/}-${VENDOR}-${OS_VERSION}${TARGET_ABI}
 LLVM_BUILD_TRIPLE?=	${BUILD_ARCH:C/amd64/x86_64/:C/[hs]f$//:S/mipsn32/mips64/}-${VENDOR}-${OS_VERSION}
@@ -106,14 +106,26 @@ CFLAGS+=	-DLLVM_NATIVE_TARGETMC=LLVMInitialize${LLVM_NATIVE_ARCH}TargetMC
 
 CFLAGS+=	-ffunction-sections
 CFLAGS+=	-fdata-sections
+.include "bsd.linker.mk"
+.if ${LINKER_TYPE} == "mac"
+LDFLAGS+=	-Wl,-dead_strip
+.else
 LDFLAGS+=	-Wl,--gc-sections
+.endif
 
-CXXFLAGS+=	-std=c++14
+CXXSTD?=	c++14
 CXXFLAGS+=	-fno-exceptions
 CXXFLAGS+=	-fno-rtti
 CXXFLAGS.clang+= -stdlib=libc++
+.else
+# Building on macOS/Linux needs the real sysctl() not the bootstrap tools stub.
+CFLAGS+=	-DBOOTSTRAPPING_WANT_NATIVE_SYSCTL
+.endif
+.if defined(BOOTSTRAPPING) && ${.MAKE.OS} == "Linux"
+LIBADD+=	dl
+.endif
 
-.if ${MACHINE_CPUARCH} == "arm"
-STATIC_CFLAGS+= -mlong-calls
-STATIC_CXXFLAGS+= -mlong-calls
+.if ${MACHINE_ARCH:Mmips64}
+STATIC_CFLAGS+= -mxgot
+STATIC_CXXFLAGS+= -mxgot
 .endif

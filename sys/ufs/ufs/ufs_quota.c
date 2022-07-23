@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1990, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -157,6 +159,7 @@ chkdq(struct inode *ip, ufs2_daddr_t change, struct ucred *cred, int flags)
 	struct vnode *vp = ITOV(ip);
 	int i, error, warn, do_check;
 
+	MPASS(cred != NOCRED || (flags & FORCE) != 0);
 	/*
 	 * Disk quotas must be turned off for system files.  Currently
 	 * snapshot and quota files.
@@ -309,6 +312,7 @@ chkiq(struct inode *ip, int change, struct ucred *cred, int flags)
 	struct dquot *dq;
 	int i, error, warn, do_check;
 
+	MPASS(cred != NOCRED || (flags & FORCE) != 0);
 #ifdef DIAGNOSTIC
 	if ((flags & CHOWN) == 0)
 		chkdquot(ip);
@@ -558,6 +562,7 @@ quotaon(struct thread *td, struct mount *mp, int type, void *fname)
 	VOP_UNLOCK(vp, 0);
 	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_QUOTA;
+	mp->mnt_stat.f_flags |= MNT_QUOTA;
 	MNT_IUNLOCK(mp);
 
 	vpp = &ump->um_quotas[type];
@@ -613,7 +618,7 @@ again:
 			MNT_VNODE_FOREACH_ALL_ABORT(mp, mvp);
 			goto again;
 		}
-		if (vp->v_type == VNON || vp->v_writecount == 0) {
+		if (vp->v_type == VNON || vp->v_writecount <= 0) {
 			VOP_UNLOCK(vp, 0);
 			vrele(vp);
 			continue;
@@ -760,6 +765,7 @@ quotaoff_inchange(struct thread *td, struct mount *mp, int type)
 	if (i == MAXQUOTAS) {
 		MNT_ILOCK(mp);
 		mp->mnt_flag &= ~MNT_QUOTA;
+		mp->mnt_stat.f_flags &= ~MNT_QUOTA;
 		MNT_IUNLOCK(mp);
 	}
 	UFS_UNLOCK(ump);

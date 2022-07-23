@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: stable/11/sys/nfs/nfs_fha.h 322137 2017-08-07 07:02:51Z mav $ */
+/* $FreeBSD$ */
 
 #ifndef	_NFS_FHA_H
 #define	_NFS_FHA_H 1
