@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-
+__FBSDID("$FreeBSD$");
 
 /*
  * copysign(double x, double y)

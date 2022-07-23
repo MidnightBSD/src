@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1980, 1987, 1988, 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  * Copyright (c) 2002 Networks Associates Technologies, Inc.
@@ -45,7 +47,7 @@ static char sccsid[] = "@(#)login.c	8.4 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/login/login.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * login [ name ]

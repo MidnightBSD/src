@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libdevdctl/Makefile 300906 2016-05-28 17:43:40Z asomers $
+# $FreeBSD$
 
 LIB_CXX=	devdctl
 INCS=	consumer.h		\
@@ -17,5 +17,9 @@ INCSDIR= ${INCLUDEDIR}/devdctl
 WARNS?=	3
 PRIVATELIB=	true
 SHLIB_MAJOR=	0
+
+# Silence warnings about usage of deprecated std::auto_ptr, and various
+# deprecated function objects from <functional>
+CXXWARNFLAGS+=	-Wno-deprecated-declarations
 
 .include <bsd.lib.mk>

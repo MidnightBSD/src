@@ -1,9 +1,9 @@
-# $FreeBSD: stable/11/gnu/lib/libregex/Makefile 276562 2015-01-02 19:05:39Z bapt $
+# $FreeBSD$
 
 LIB=		gnuregex
 SHLIB_MAJOR=	5
 
-REGEXDIR=	${.CURDIR}/../../../contrib/libgnuregex
+REGEXDIR=	${SRCTOP}/contrib/libgnuregex
 .PATH:		${REGEXDIR}
 
 SRCS=		gnuregex.c

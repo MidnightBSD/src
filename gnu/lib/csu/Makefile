@@ -1,11 +1,11 @@
-# $FreeBSD: stable/11/gnu/lib/csu/Makefile 298218 2016-04-18 18:13:58Z bdrewery $
+# $FreeBSD$
 
 .include <src.opts.mk>
 MK_SSP=		no
 
-GCCDIR=	${.CURDIR}/../../../contrib/gcc
-GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
-CCDIR=	${.CURDIR}/../../usr.bin/cc
+GCCDIR=	${SRCTOP}/contrib/gcc
+GCCLIB=	${SRCTOP}/contrib/gcclibs
+CCDIR=	${SRCTOP}/gnu/usr.bin/cc
 .include "${CCDIR}/Makefile.tgt"
 .include "${CCDIR}/cc_tools/Makefile.hdrs"
 
@@ -28,10 +28,6 @@ CRTS_CFLAGS=	-DCRTSTUFFS_O -DSHARED ${PICFLAG}
 CFLAGS+=	-DTARGET_ARM_EABI
 .endif
 
-.if ${MACHINE_CPUARCH} == "powerpc"
-TGTOBJS=	crtsavres.o
-SRCS+=		crtsavres.asm
-.endif
 .if ${MACHINE_CPUARCH} == "sparc64"
 TGTOBJS=	crtfastmath.o
 SRCS+=		crtfastmath.c

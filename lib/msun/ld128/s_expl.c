@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2013 Steven G. Kargl
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/ld128/s_expl.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * ld128 version of s_expl.c.  See ../ld80/s_expl.c for most comments.
@@ -266,13 +268,8 @@ expm1l(long double x)
 	}
 
 	/* Reduce x to (k*ln2 + endpoint[n2] + r1 + r2). */
-	/* Use a specialized rint() to get fn.  Assume round-to-nearest. */
-	fn = (double)x * INV_L + 0x1.8p52 - 0x1.8p52;
-#if defined(HAVE_EFFICIENT_IRINT)
+	fn = rnint((double)x * INV_L);
 	n = irint(fn);
-#else
-	n = (int)fn;
-#endif
 	n2 = (unsigned)n % INTERVALS;
 	k = n >> LOG2_INTERVALS;
 	r1 = x - fn * L1;

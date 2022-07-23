@@ -1,7 +1,7 @@
-# $FreeBSD: stable/11/gnu/lib/libgomp/Makefile 282115 2015-04-27 21:27:51Z pfg $
+# $FreeBSD$
 
-GCCDIR=	${.CURDIR}/../../../contrib/gcc
-GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
+GCCDIR=	${SRCTOP}/contrib/gcc
+GCCLIB=	${SRCTOP}/contrib/gcclibs
 SRCDIR=	${GCCLIB}/libgomp
 
 .PATH: ${SRCDIR} ${SRCDIR}/config/posix
@@ -24,7 +24,7 @@ VERSION_MAP=	${SRCDIR}/libgomp.map
 
 # Target-specific OpenMP configuration
 .if ${MACHINE_CPUARCH} == arm || ${MACHINE_CPUARCH} == i386 || \
-    ${MACHINE_ARCH} == powerpc || \
+    ${MACHINE_ARCH} == powerpc || ${MACHINE_ARCH} == powerpcspe || \
     (${MACHINE_CPUARCH} == mips &&  ${MACHINE_ARCH:Mmips64*} == "")
 OMP_LOCK_ALIGN	=	4
 OMP_LOCK_KIND=		4

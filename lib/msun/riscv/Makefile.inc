@@ -1,6 +1,4 @@
-# $FreeBSD: stable/11/lib/msun/riscv/Makefile.inc 292124 2015-12-11 22:55:23Z br $
+# $FreeBSD$
 
-# RISCVTODO: should be 113
-# compilation problems: gcc generates bltuz instruction, which is not exists
-
-LDBL_PREC = 53
+LDBL_PREC = 113
+SYM_MAPS += ${.CURDIR}/riscv/Symbol.map

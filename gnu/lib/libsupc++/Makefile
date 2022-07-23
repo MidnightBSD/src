@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/gnu/lib/libsupc++/Makefile 291320 2015-11-25 19:44:43Z bdrewery $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

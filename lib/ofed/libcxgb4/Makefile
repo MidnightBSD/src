@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/ofed/libcxgb4/Makefile 335253 2018-06-16 15:05:05Z kib $
+# $FreeBSD$
 
 _spath=	${SRCTOP}/contrib/ofed/libcxgb4
 .PATH: ${_spath}

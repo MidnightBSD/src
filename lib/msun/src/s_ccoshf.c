@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Bruce D. Evans and Steven G. Kargl
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-
+__FBSDID("$FreeBSD$");
 
 #include <complex.h>
 #include <math.h>
@@ -41,7 +43,7 @@ static const float huge = 0x1p127;
 float complex
 ccoshf(float complex z)
 {
-	volatile float x, y, h;
+	float x, y, h;
 	int32_t hx, hy, ix, iy;
 
 	x = crealf(z);
@@ -90,7 +92,8 @@ ccoshf(float complex z)
 		return (CMPLXF(INFINITY * cosf(y), x * sinf(y)));
 	}
 
-	return (CMPLXF((x * x) * (y - y), (x + x) * (y - y)));
+	return (CMPLXF(((long double)x * x) * (y - y),
+	    ((long double)x + x) * (y - y)));
 }
 
 float complex

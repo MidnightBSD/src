@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -33,7 +35,7 @@
 
 /* @(#)log.c	8.2 (Berkeley) 11/30/93 */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/bsdsrc/b_log.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <math.h>
 

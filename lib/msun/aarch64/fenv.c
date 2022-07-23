@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/msun/aarch64/fenv.c 280913 2015-03-31 19:07:28Z andrew $
+ * $FreeBSD$
  */
 
 #define	__fenv_static
