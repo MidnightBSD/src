@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/cddl/compat/opensolaris/misc/zmount.c 324061 2017-09-27 15:06:46Z asomers $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/cddl/usr.bin/ctfconvert/Makefile 327186 2017-12-26 03:59:49Z asomers $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

@@ -1,9 +1,13 @@
-# $FreeBSD: stable/11/gnu/usr.bin/gdb/Makefile 276551 2015-01-02 18:45:03Z bapt $
+# $FreeBSD$
 
-SUBDIR=	libgdb gdb gdbtui kgdb
+.include <src.opts.mk>
 
+SUBDIR=	libgdb gdb kgdb
+
+.if ${MK_GDB_LIBEXEC} == "no"
 .if exists(${.CURDIR}/gdbserver/reg-${MACHINE_CPUARCH}.c)
 SUBDIR+=gdbserver
+.endif
 .endif
 
 .include <bsd.subdir.mk>

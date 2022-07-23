@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libbe/be_info.c 357667 2020-02-07 21:57:27Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/zfs_context.h>
 
@@ -258,7 +258,8 @@ static int
 snapshot_proplist_update(zfs_handle_t *hdl, prop_data_t *data)
 {
 
-	return (zfs_iter_snapshots_sorted(hdl, prop_list_builder_cb, data));
+	return (zfs_iter_snapshots_sorted(hdl, prop_list_builder_cb, data,
+	    0, 0));
 }
 
 
@@ -293,7 +294,7 @@ be_prop_list_free(nvlist_t *be_list)
  * Usage
  */
 int
-be_exists(libbe_handle_t *lbh, char *be)
+be_exists(libbe_handle_t *lbh, const char *be)
 {
 	char buf[BE_MAXPATHLEN];
 

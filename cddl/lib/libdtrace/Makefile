@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/cddl/lib/libdtrace/Makefile 323814 2017-09-20 16:31:06Z gnn $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/lib/libdtrace/common
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/lib/libgen/common
@@ -42,6 +42,7 @@ SRCS=		dt_aggregate.c \
 		dt_string.c \
 		dt_strtab.c \
 		dt_subr.c \
+		dt_sugar.c \
 		dt_work.c \
 		dt_xlator.c \
 		gmatch.c
@@ -50,18 +51,20 @@ DSRCS=		errno.d			\
 		io.d			\
 		ip.d			\
 		psinfo.d		\
+		sctp.d			\
 		siftr.d			\
 		signal.d		\
 		tcp.d			\
 		socket.d		\
 		udp.d			\
+		udplite.d		\
 		unistd.d
 
 FILES=		${DSRCS}
 FILESDIR=	/usr/lib/dtrace
 FILESMODE=	${NOBINMODE}
 
-WARNS?=		0
+WARNS?=		1
 
 CFLAGS+=	-I${.OBJDIR} -I${.CURDIR} \
 		-I${SRCTOP}/sys/cddl/dev/dtrace/${MACHINE_ARCH} \

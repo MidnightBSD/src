@@ -4,7 +4,7 @@
 #
 # $Title: dwatch(8) module for kill(2) [or similar] entry $
 # $Copyright: 2014-2018 Devin Teske. All rights reserved. $
-# $FreeBSD: stable/11/cddl/usr.sbin/dwatch/libexec/kill 333617 2018-05-15 00:00:44Z dteske $
+# $FreeBSD$
 #
 ############################################################ DESCRIPTION
 #

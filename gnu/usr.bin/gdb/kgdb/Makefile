@@ -1,15 +1,16 @@
-# $FreeBSD: stable/11/gnu/usr.bin/gdb/kgdb/Makefile 291738 2015-12-04 03:17:47Z bdrewery $
+# $FreeBSD$
 
 PROG=	kgdb${GDB_SUFFIX}
 SRCS=	main.c kld.c kthr.c trgt.c trgt_${TARGET_CPUARCH}.c
 WARNS?=	2
 
-BULIBS= ${OBJ_BU}/libbfd/libbfd.a ${OBJ_BU}/libopcodes/libopcodes.a \
-	${OBJ_BU}/libiberty/libiberty.a
-GDBLIBS= ${OBJ_GDB}/libgdb/libgdb.a
+BULIBS= ${OBJ_BU}/libbfd/libbfd${PIE_SUFFIX}.a \
+	${OBJ_BU}/libopcodes/libopcodes${PIE_SUFFIX}.a \
+	${OBJ_BU}/libiberty/libiberty${PIE_SUFFIX}.a
+GDBLIBS= ${OBJ_GDB}/libgdb/libgdb${PIE_SUFFIX}.a
 
 DPADD=	${GDBLIBS} ${BULIBS}
 LDADD=	${GDBLIBS} ${BULIBS}
-LIBADD+=	m readline ncursesw gnuregex kvm
+LIBADD+=	m edit ncursesw gnuregex kvm
 
 .include <bsd.prog.mk>

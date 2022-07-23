@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
  * Copyright (c) 1995 Christopher G. Demetriou
@@ -30,11 +32,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/csu/mips/crt1.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/csu/mips/crt1.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <stdlib.h>
 #include "libc_private.h"

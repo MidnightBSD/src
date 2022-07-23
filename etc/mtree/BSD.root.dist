@@ -12,10 +12,16 @@
         defaults
         ..
         dtb
+            allwinner             tags=package=runtime
+            ..
             overlays              tags=package=runtime
+            ..
+            rockchip              tags=package=runtime
             ..
         ..
         firmware
+        ..
+        loader.conf.d             tags=package=bootloader
         ..
         lua
         ..
@@ -34,8 +40,6 @@
         autofs
         ..
         bluetooth
-        ..
-        casper
         ..
         cron.d
         ..
@@ -94,6 +98,8 @@
         casper
         ..
         geom
+        ..
+        nvmecontrol
         ..
     ..
     libexec

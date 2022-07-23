@@ -52,7 +52,7 @@
 #include "vdev.h"
 #include "zfsd_exception.h"
 
-__FBSDID("$FreeBSD: stable/11/cddl/usr.sbin/zfsd/zfsd_exception.cc 300906 2016-05-28 17:43:40Z asomers $");
+__FBSDID("$FreeBSD$");
 /*============================ Namespace Control =============================*/
 using std::endl;
 using std::string;

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/cddl/lib/libzfs_core/Makefile 339118 2018-10-03 02:52:47Z mav $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/cddl/compat/opensolaris/misc
 .PATH: ${SRCTOP}/sys/cddl/contrib/opensolaris/common/zfs

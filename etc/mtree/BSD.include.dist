@@ -88,16 +88,34 @@
             ..
         ..
         v1
+            __algorithm
+            ..
+            __format
+            ..
+            __functional
+            ..
+            __iterator
+            ..
+            __memory
+            ..
+            __random
+            ..
+            __ranges
+            ..
+            __utility
+            ..
+            __variant
+            ..
             experimental
             ..
             ext
-            ..
-            tr1
             ..
         ..
     ..
     cam
         ata
+        ..
+        mmc
         ..
         nvme
         ..
@@ -105,10 +123,6 @@
         ..
     ..
     casper
-    ..
-    clang
-        3.4.1
-        ..
     ..
     crypto
     ..
@@ -135,13 +149,9 @@
         ..
         ic
         ..
-        ieee488
-        ..
         iicbus
         ..
         io
-        ..
-        lmc
         ..
         mfi
         ..
@@ -167,13 +177,17 @@
         ..
         ppbus
         ..
+        pwm
+        ..
         smbus
         ..
         speaker
         ..
+        tcp_log
+        ..
         usb
         ..
-        utopia
+        veriexec
         ..
         vkbd
         ..
@@ -257,7 +271,7 @@
     gssapi
     ..
     infiniband
-        complib 
+        complib
         ..
         iba
         ..
@@ -275,6 +289,8 @@
     krb5
     ..
     lib80211
+    ..
+    libipt
     ..
     libmilter
     ..
@@ -313,8 +329,10 @@
         ..
     ..
     netinet
-      cc
-      ..
+        cc
+        ..
+        netdump
+        ..
     ..
     netinet6
     ..
@@ -342,19 +360,25 @@
     ..
     nfsserver
     ..
-    objc
+    opencsd
+        c_api
+        ..
+        etmv3
+        ..
+        etmv4
+        ..
+        ptm
+        ..
+        stm
+        ..
     ..
     openssl
-    ..
-    os
     ..
     pcap
     ..
     protocols
     ..
     rdma
-    ..
-    readline
     ..
     rpc
     ..
@@ -373,7 +397,8 @@
         ..
         mac_partition
         ..
-    ..
+        mac_veriexec
+        ..
     ssp
     ..
     sys
@@ -397,7 +422,5 @@
     vm
     ..
     xlocale
-    ..
-    xpc
     ..
 ..

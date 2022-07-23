@@ -56,7 +56,7 @@
 #include "vdev_iterator.h"
 #include "zfsd.h"
 
-__FBSDID("$FreeBSD: stable/11/cddl/usr.sbin/zfsd/zfsd_main.cc 300906 2016-05-28 17:43:40Z asomers $");
+__FBSDID("$FreeBSD$");
 
 /*=============================== Program Main ===============================*/
 static void

@@ -65,3 +65,13 @@ static const struct {
 	.name = NOTE_MIDNIGHTBSD_VENDOR,
 	.desc = __MidnightBSD_version
 };
+static const struct {
+	int32_t	namesz;
+	int32_t	descsz;
+	int32_t	type;
+	uint32_t	desc[1];
+} crt_feature_ctl __attribute__ ((section (NOTE_SECTION),
+    aligned(4))) __used = {
+	.descsz = sizeof(uint32_t),
+	.desc = { 0 }
+};
