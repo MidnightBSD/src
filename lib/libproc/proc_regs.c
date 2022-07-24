@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libproc/proc_regs.c 351792 2019-09-03 20:19:43Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #define	_WANT_MIPS_REGNUM
@@ -68,7 +70,7 @@ proc_regget(struct proc_handle *phdl, proc_reg_t reg, unsigned long *regvalue)
 		*regvalue = regs.r_regs[PC];
 #elif defined(__powerpc__)
 		*regvalue = regs.pc;
-#elif defined(__riscv__)
+#elif defined(__riscv)
 		*regvalue = regs.sepc;
 #endif
 		break;
@@ -85,7 +87,7 @@ proc_regget(struct proc_handle *phdl, proc_reg_t reg, unsigned long *regvalue)
 		*regvalue = regs.r_regs[SP];
 #elif defined(__powerpc__)
 		*regvalue = regs.fixreg[1];
-#elif defined(__riscv__)
+#elif defined(__riscv)
 		*regvalue = regs.sp;
 #endif
 		break;
@@ -123,7 +125,7 @@ proc_regset(struct proc_handle *phdl, proc_reg_t reg, unsigned long regvalue)
 		regs.r_regs[PC] = regvalue;
 #elif defined(__powerpc__)
 		regs.pc = regvalue;
-#elif defined(__riscv__)
+#elif defined(__riscv)
 		regs.sepc = regvalue;
 #endif
 		break;
@@ -140,7 +142,7 @@ proc_regset(struct proc_handle *phdl, proc_reg_t reg, unsigned long regvalue)
 		regs.r_regs[PC] = regvalue;
 #elif defined(__powerpc__)
 		regs.fixreg[1] = regvalue;
-#elif defined(__riscv__)
+#elif defined(__riscv)
 		regs.sp = regvalue;
 #endif
 		break;

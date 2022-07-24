@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Alfred Perlstein <alfred@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/netinet/accf_data.c 193272 2009-06-01 21:17:03Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #define ACCEPT_FILTER_MOD
 
@@ -41,20 +42,7 @@ __FBSDID("$FreeBSD: stable/10/sys/netinet/accf_data.c 193272 2009-06-01 21:17:03
 
 static int	sohasdata(struct socket *so, void *arg, int waitflag);
 
-static struct accept_filter accf_data_filter = {
-	"dataready",
-	sohasdata,
-	NULL,
-	NULL
-};
-
-static moduledata_t accf_data_mod = {
-	"accf_data",
-	accept_filt_generic_mod_event,
-	&accf_data_filter
-};
-
-DECLARE_MODULE(accf_data, accf_data_mod, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
+ACCEPT_FILTER_DEFINE(accf_data, "dataready", sohasdata, NULL, NULL, 1);
 
 static int
 sohasdata(struct socket *so, void *arg, int waitflag)

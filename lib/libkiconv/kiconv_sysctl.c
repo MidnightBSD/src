@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Ryuichiro Imura
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libkiconv/kiconv_sysctl.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -57,6 +59,7 @@ kiconv_lookupconv(const char *drvname)
 				free(drivers);
 				return (0);
 			}
+		free(drivers);
 	}
 	return (ENOENT);
 }
@@ -84,6 +87,7 @@ kiconv_lookupcs(const char *tocode, const char *fromcode)
 				return (0);
 			}
 		}
+		free(csi);
 	}
 	return (ENOENT);
 }

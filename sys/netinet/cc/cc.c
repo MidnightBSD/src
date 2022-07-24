@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007-2008
  *	Swinburne University of Technology, Melbourne, Australia.
  * Copyright (c) 2009-2010 Lawrence Stewart <lstewart@freebsd.org>
@@ -47,7 +49,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/cc/cc.c 303671 2016-08-02 18:46:11Z brd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -325,3 +327,14 @@ SYSCTL_PROC(_net_inet_tcp_cc, OID_AUTO, algorithm,
 SYSCTL_PROC(_net_inet_tcp_cc, OID_AUTO, available, CTLTYPE_STRING|CTLFLAG_RD,
     NULL, 0, cc_list_available, "A",
     "List available congestion control algorithms");
+
+VNET_DEFINE(int, cc_do_abe) = 0;
+SYSCTL_INT(_net_inet_tcp_cc, OID_AUTO, abe, CTLFLAG_VNET | CTLFLAG_RW,
+    &VNET_NAME(cc_do_abe), 0,
+    "Enable draft-ietf-tcpm-alternativebackoff-ecn (TCP Alternative Backoff with ECN)");
+
+VNET_DEFINE(int, cc_abe_frlossreduce) = 0;
+SYSCTL_INT(_net_inet_tcp_cc, OID_AUTO, abe_frlossreduce, CTLFLAG_VNET | CTLFLAG_RW,
+    &VNET_NAME(cc_abe_frlossreduce), 0,
+    "Apply standard beta instead of ABE-beta during ECN-signalled congestion "
+    "recovery episodes if loss also needs to be repaired");

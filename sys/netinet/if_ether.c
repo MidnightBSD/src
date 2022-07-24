@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -36,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/if_ether.c 346389 2019-04-19 15:34:21Z bz $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 
@@ -92,13 +94,13 @@ static SYSCTL_NODE(_net_link_ether, PF_INET, inet, CTLFLAG_RW, 0, "");
 static SYSCTL_NODE(_net_link_ether, PF_ARP, arp, CTLFLAG_RW, 0, "");
 
 /* timer values */
-static VNET_DEFINE(int, arpt_keep) = (20*60);	/* once resolved, good for 20
+VNET_DEFINE_STATIC(int, arpt_keep) = (20*60);	/* once resolved, good for 20
 						 * minutes */
-static VNET_DEFINE(int, arp_maxtries) = 5;
-static VNET_DEFINE(int, arp_proxyall) = 0;
-static VNET_DEFINE(int, arpt_down) = 20;	/* keep incomplete entries for
+VNET_DEFINE_STATIC(int, arp_maxtries) = 5;
+VNET_DEFINE_STATIC(int, arp_proxyall) = 0;
+VNET_DEFINE_STATIC(int, arpt_down) = 20;	/* keep incomplete entries for
 						 * 20 seconds */
-static VNET_DEFINE(int, arpt_rexmit) = 1;	/* retransmit arp entries, sec*/
+VNET_DEFINE_STATIC(int, arpt_rexmit) = 1;	/* retransmit arp entries, sec*/
 VNET_PCPUSTAT_DEFINE(struct arpstat, arpstat);  /* ARP statistics, see if_arp.h */
 VNET_PCPUSTAT_SYSINIT(arpstat);
 
@@ -106,7 +108,7 @@ VNET_PCPUSTAT_SYSINIT(arpstat);
 VNET_PCPUSTAT_SYSUNINIT(arpstat);
 #endif /* VIMAGE */
 
-static VNET_DEFINE(int, arp_maxhold) = 1;
+VNET_DEFINE_STATIC(int, arp_maxhold) = 1;
 
 #define	V_arpt_keep		VNET(arpt_keep)
 #define	V_arpt_down		VNET(arpt_down)
@@ -360,7 +362,7 @@ arprequest(struct ifnet *ifp, const struct in_addr *sip,
 		struct ifaddr *ifa;
 
 		IF_ADDR_RLOCK(ifp);
-		TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
+		CK_STAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
 			if (ifa->ifa_addr->sa_family != AF_INET)
 				continue;
 
@@ -692,14 +694,6 @@ arpintr(struct mbuf *m)
 		hlen = ETHER_ADDR_LEN; /* RFC 826 */
 		layer = "ethernet";
 		break;
-	case ARPHRD_IEEE802:
-		hlen = 6; /* RFC 1390, FDDI_ADDR_LEN */
-		layer = "fddi";
-		break;
-	case ARPHRD_ARCNET:
-		hlen = 1; /* RFC 1201, ARC_ADDR_LEN */
-		layer = "arcnet";
-		break;
 	case ARPHRD_INFINIBAND:
 		hlen = 20;	/* RFC 4391, INFINIBAND_ALEN */ 
 		layer = "infiniband";
@@ -892,7 +886,7 @@ in_arpinput(struct mbuf *m)
 	 * as a dummy address for the rest of the function.
 	 */
 	IF_ADDR_RLOCK(ifp);
-	TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link)
+	CK_STAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link)
 		if (ifa->ifa_addr->sa_family == AF_INET &&
 		    (ifa->ifa_carp == NULL ||
 		    (*carp_iamatch_p)(ifa, &enaddr))) {
@@ -907,7 +901,7 @@ in_arpinput(struct mbuf *m)
 	 * If bridging, fall back to using any inet address.
 	 */
 	IN_IFADDR_RLOCK(&in_ifa_tracker);
-	if (!bridged || (ia = TAILQ_FIRST(&V_in_ifaddrhead)) == NULL) {
+	if (!bridged || (ia = CK_STAILQ_FIRST(&V_in_ifaddrhead)) == NULL) {
 		IN_IFADDR_RUNLOCK(&in_ifa_tracker);
 		goto drop;
 	}
@@ -1271,7 +1265,7 @@ arp_mark_lle_reachable(struct llentry *la)
 }
 
 /*
- * Add pernament link-layer record for given interface address.
+ * Add permanent link-layer record for given interface address.
  */
 static __noinline void
 arp_add_ifa_lle(struct ifnet *ifp, const struct sockaddr *dst)
@@ -1455,7 +1449,7 @@ arp_handle_ifllchange(struct ifnet *ifp)
 {
 	struct ifaddr *ifa;
 
-	TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
+	CK_STAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
 		if (ifa->ifa_addr->sa_family == AF_INET)
 			arp_ifinit(ifp, ifa);
 	}
@@ -1467,6 +1461,10 @@ arp_handle_ifllchange(struct ifnet *ifp)
 static void
 arp_iflladdr(void *arg __unused, struct ifnet *ifp)
 {
+	/* if_bridge can update its lladdr during if_vmove(), after we've done
+	 * if_detach_internal()/dom_ifdetach(). */
+	if (ifp->if_afdata[AF_INET] == NULL)
+		return;
 
 	lltable_update_ifaddr(LLTABLE(ifp));
 
