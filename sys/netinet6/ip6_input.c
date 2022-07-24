@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
  *
@@ -41,7 +43,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -61,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet6/ip6_input.c 338617 2018-09-12 18:52:18Z sobomax $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -201,9 +203,6 @@ struct rmlock in6_ifaddr_lock;
 RM_SYSINIT(in6_ifaddr_lock, &in6_ifaddr_lock, "in6_ifaddr_lock");
 
 static int ip6_hopopts_input(u_int32_t *, u_int32_t *, struct mbuf **, int *);
-#ifdef PULLDOWN_TEST
-static struct mbuf *ip6_pullexthdr(struct mbuf *, size_t, int);
-#endif
 
 /*
  * IP6 initialization: fill in IP6 protocol switch table.
@@ -220,7 +219,7 @@ ip6_init(void)
 	TUNABLE_INT_FETCH("net.inet6.ip6.accept_rtadv", &V_ip6_accept_rtadv);
 	TUNABLE_INT_FETCH("net.inet6.ip6.no_radr", &V_ip6_no_radr);
 
-	TAILQ_INIT(&V_in6_ifaddrhead);
+	CK_STAILQ_INIT(&V_in6_ifaddrhead);
 	V_in6_ifaddrhashtbl = hashinit(IN6ADDR_NHASH, M_IFADDR,
 	    &V_in6_ifaddrhmask);
 
@@ -375,10 +374,10 @@ ip6_destroy(void *unused __unused)
 
 	/* Cleanup addresses. */
 	IFNET_RLOCK();
-	TAILQ_FOREACH(ifp, &V_ifnet, if_link) {
+	CK_STAILQ_FOREACH(ifp, &V_ifnet, if_link) {
 		/* Cannot lock here - lock recursion. */
 		/* IF_ADDR_LOCK(ifp); */
-		TAILQ_FOREACH_SAFE(ifa, &ifp->if_addrhead, ifa_link, nifa) {
+		CK_STAILQ_FOREACH_SAFE(ifa, &ifp->if_addrhead, ifa_link, nifa) {
 
 			if (ifa->ifa_addr->sa_family != AF_INET6)
 				continue;
@@ -392,6 +391,7 @@ ip6_destroy(void *unused __unused)
 	}
 	IFNET_RUNLOCK();
 
+	frag6_destroy();
 	nd6_destroy();
 	in6_ifattach_destroy();
 
@@ -439,17 +439,8 @@ ip6_input_hbh(struct mbuf **mp, uint32_t *plen, uint32_t *rtalert, int *off,
 			    (caddr_t)&ip6->ip6_plen - (caddr_t)ip6);
 		goto out;
 	}
-#ifndef PULLDOWN_TEST
 	/* ip6_hopopts_input() ensures that mbuf is contiguous */
 	hbh = (struct ip6_hbh *)(ip6 + 1);
-#else
-	IP6_EXTHDR_GET(hbh, struct ip6_hbh *, m, sizeof(struct ip6_hdr),
-		sizeof(struct ip6_hbh));
-	if (hbh == NULL) {
-		IP6STAT_INC(ip6s_tooshort);
-		goto out;
-	}
-#endif
 	*nxt = hbh->ip6h_nxt;
 
 	/*
@@ -600,7 +591,6 @@ ip6_input(struct mbuf *m)
 	in6_ifstat_inc(rcvif, ifs6_in_receive);
 	IP6STAT_INC(ip6s_total);
 
-#ifndef PULLDOWN_TEST
 	/*
 	 * L2 bridge code and some other code can return mbuf chain
 	 * that does not conform to KAME requirement.  too bad.
@@ -622,9 +612,6 @@ ip6_input(struct mbuf *m)
 		m_freem(m);
 		m = n;
 	}
-	IP6_EXTHDR_CHECK(m, 0, sizeof(struct ip6_hdr), /* nothing */);
-#endif
-
 	if (m->m_len < sizeof(struct ip6_hdr)) {
 		if ((m = m_pullup(m, sizeof(struct ip6_hdr))) == NULL) {
 			IP6STAT_INC(ip6s_toosmall);
@@ -691,11 +678,10 @@ ip6_input(struct mbuf *m)
 	 * and bypass security checks (act as if it was from 127.0.0.1 by using
 	 * IPv6 src ::ffff:127.0.0.1).  Be cautious.
 	 *
-	 * This check chokes if we are in an SIIT cloud.  As none of BSDs
-	 * support IPv4-less kernel compilation, we cannot support SIIT
-	 * environment at all.  So, it makes more sense for us to reject any
-	 * malicious packets for non-SIIT environment, than try to do a
-	 * partial support for SIIT environment.
+	 * We have supported IPv6-only kernels for a few years and this issue
+	 * has not come up.  The world seems to move mostly towards not using
+	 * v4mapped on the wire, so it makes sense for us to keep rejecting
+	 * any such packets.
 	 */
 	if (IN6_IS_ADDR_V4MAPPED(&ip6->ip6_src) ||
 	    IN6_IS_ADDR_V4MAPPED(&ip6->ip6_dst)) {
@@ -913,24 +899,6 @@ passin:
 		return;
 	}
 
-	ip6 = mtod(m, struct ip6_hdr *);
-
-	/*
-	 * Malicious party may be able to use IPv4 mapped addr to confuse
-	 * tcp/udp stack and bypass security checks (act as if it was from
-	 * 127.0.0.1 by using IPv6 src ::ffff:127.0.0.1).  Be cautious.
-	 *
-	 * For SIIT end node behavior, you may want to disable the check.
-	 * However, you will  become vulnerable to attacks using IPv4 mapped
-	 * source.
-	 */
-	if (IN6_IS_ADDR_V4MAPPED(&ip6->ip6_src) ||
-	    IN6_IS_ADDR_V4MAPPED(&ip6->ip6_dst)) {
-		IP6STAT_INC(ip6s_badscope);
-		in6_ifstat_inc(rcvif, ifs6_in_addrerr);
-		goto bad;
-	}
-
 	/*
 	 * Tell launch routine the next header
 	 */
@@ -985,33 +953,33 @@ ip6_hopopts_input(u_int32_t *plenp, u_int32_t *rtalertp,
 	struct ip6_hbh *hbh;
 
 	/* validation of the length of the header */
-#ifndef PULLDOWN_TEST
-	IP6_EXTHDR_CHECK(m, off, sizeof(*hbh), -1);
+	if (m->m_len < off + sizeof(*hbh)) {
+		m = m_pullup(m, off + sizeof(*hbh));
+		if (m == NULL) {
+			IP6STAT_INC(ip6s_exthdrtoolong);
+			*mp = NULL;
+			return (-1);
+		}
+	}
 	hbh = (struct ip6_hbh *)(mtod(m, caddr_t) + off);
 	hbhlen = (hbh->ip6h_len + 1) << 3;
 
-	IP6_EXTHDR_CHECK(m, off, hbhlen, -1);
+	if (m->m_len < off + hbhlen) {
+		m = m_pullup(m, off + hbhlen);
+		if (m == NULL) {
+			IP6STAT_INC(ip6s_exthdrtoolong);
+			*mp = NULL;
+			return (-1);
+		}
+	}
 	hbh = (struct ip6_hbh *)(mtod(m, caddr_t) + off);
-#else
-	IP6_EXTHDR_GET(hbh, struct ip6_hbh *, m,
-		sizeof(struct ip6_hdr), sizeof(struct ip6_hbh));
-	if (hbh == NULL) {
-		IP6STAT_INC(ip6s_tooshort);
-		return -1;
-	}
-	hbhlen = (hbh->ip6h_len + 1) << 3;
-	IP6_EXTHDR_GET(hbh, struct ip6_hbh *, m, sizeof(struct ip6_hdr),
-		hbhlen);
-	if (hbh == NULL) {
-		IP6STAT_INC(ip6s_tooshort);
-		return -1;
-	}
-#endif
 	off += hbhlen;
 	hbhlen -= sizeof(struct ip6_hbh);
 	if (ip6_process_hopopts(m, (u_int8_t *)hbh + sizeof(struct ip6_hbh),
-				hbhlen, rtalertp, plenp) < 0)
+				hbhlen, rtalertp, plenp) < 0) {
+		*mp = NULL;
 		return (-1);
+	}
 
 	*offp = off;
 	*mp = m;
@@ -1196,10 +1164,9 @@ ip6_unknown_opt(u_int8_t *optp, struct mbuf *m, int off)
  * Create the "control" list for this pcb.
  * These functions will not modify mbuf chain at all.
  *
- * With KAME mbuf chain restriction:
  * The routine will be called from upper layer handlers like tcp6_input().
  * Thus the routine assumes that the caller (tcp6_input) have already
- * called IP6_EXTHDR_CHECK() and all the extension headers are located in the
+ * called m_pullup() and all the extension headers are located in the
  * very first mbuf on the mbuf chain.
  *
  * ip6_savecontrol_v4 will handle those options that are possible to be
@@ -1220,42 +1187,96 @@ ip6_savecontrol_v4(struct inpcb *inp, struct mbuf *m, struct mbuf **mp,
 			struct bintime bt;
 			struct timespec ts;
 		} t;
+		struct bintime boottimebin, bt1;
+		struct timespec ts1;
+		bool stamped;
 
+		stamped = false;
 		switch (inp->inp_socket->so_ts_clock) {
 		case SO_TS_REALTIME_MICRO:
-			microtime(&t.tv);
+			if ((m->m_flags & (M_PKTHDR | M_TSTMP)) == (M_PKTHDR |
+			    M_TSTMP)) {
+				mbuf_tstmp2timespec(m, &ts1);
+				timespec2bintime(&ts1, &bt1);
+				getboottimebin(&boottimebin);
+				bintime_add(&bt1, &boottimebin);
+				bintime2timeval(&bt1, &t.tv);
+			} else {
+				microtime(&t.tv);
+			}
 			*mp = sbcreatecontrol((caddr_t) &t.tv, sizeof(t.tv),
 			    SCM_TIMESTAMP, SOL_SOCKET);
-			if (*mp)
+			if (*mp != NULL) {
 				mp = &(*mp)->m_next;
+				stamped = true;
+			}
 			break;
 
 		case SO_TS_BINTIME:
-			bintime(&t.bt);
+			if ((m->m_flags & (M_PKTHDR | M_TSTMP)) == (M_PKTHDR |
+			    M_TSTMP)) {
+				mbuf_tstmp2timespec(m, &ts1);
+				timespec2bintime(&ts1, &t.bt);
+				getboottimebin(&boottimebin);
+				bintime_add(&t.bt, &boottimebin);
+			} else {
+				bintime(&t.bt);
+			}
 			*mp = sbcreatecontrol((caddr_t)&t.bt, sizeof(t.bt),
 			    SCM_BINTIME, SOL_SOCKET);
-			if (*mp)
+			if (*mp != NULL) {
 				mp = &(*mp)->m_next;
+				stamped = true;
+			}
 			break;
 
 		case SO_TS_REALTIME:
-			nanotime(&t.ts);
+			if ((m->m_flags & (M_PKTHDR | M_TSTMP)) == (M_PKTHDR |
+			    M_TSTMP)) {
+				mbuf_tstmp2timespec(m, &t.ts);
+				getboottimebin(&boottimebin);
+				bintime2timespec(&boottimebin, &ts1);
+				timespecadd(&t.ts, &ts1, &t.ts);
+			} else {
+				nanotime(&t.ts);
+			}
 			*mp = sbcreatecontrol((caddr_t)&t.ts, sizeof(t.ts),
 			    SCM_REALTIME, SOL_SOCKET);
-			if (*mp)
+			if (*mp != NULL) {
 				mp = &(*mp)->m_next;
+				stamped = true;
+			}
 			break;
 
 		case SO_TS_MONOTONIC:
-			nanouptime(&t.ts);
+			if ((m->m_flags & (M_PKTHDR | M_TSTMP)) == (M_PKTHDR |
+			    M_TSTMP))
+				mbuf_tstmp2timespec(m, &t.ts);
+			else
+				nanouptime(&t.ts);
 			*mp = sbcreatecontrol((caddr_t)&t.ts, sizeof(t.ts),
 			    SCM_MONOTONIC, SOL_SOCKET);
-			if (*mp)
+			if (*mp != NULL) {
 				mp = &(*mp)->m_next;
+				stamped = true;
+			}
 			break;
 
 		default:
 			panic("unknown (corrupted) so_ts_clock");
+		}
+		if (stamped && (m->m_flags & (M_PKTHDR | M_TSTMP)) ==
+		    (M_PKTHDR | M_TSTMP)) {
+			struct sock_timestamp_info sti;
+
+			bzero(&sti, sizeof(sti));
+			sti.st_info_flags = ST_INFO_HW;
+			if ((m->m_flags & M_TSTMP_HPREC) != 0)
+				sti.st_info_flags |= ST_INFO_HW_HPREC;
+			*mp = sbcreatecontrol((caddr_t)&sti, sizeof(sti),
+			    SCM_TIME_INFO, SOL_SOCKET);
+			if (*mp != NULL)
+				mp = &(*mp)->m_next;
 		}
 	}
 #endif
@@ -1353,15 +1374,16 @@ ip6_savecontrol_v4(struct inpcb *inp, struct mbuf *m, struct mbuf **mp,
 }
 
 void
-ip6_savecontrol(struct inpcb *in6p, struct mbuf *m, struct mbuf **mp)
+ip6_savecontrol(struct inpcb *inp, struct mbuf *m, struct mbuf **mp)
 {
-	struct ip6_hdr *ip6 = mtod(m, struct ip6_hdr *);
+	struct ip6_hdr *ip6;
 	int v4only = 0;
 
-	mp = ip6_savecontrol_v4(in6p, m, mp, &v4only);
+	mp = ip6_savecontrol_v4(inp, m, mp, &v4only);
 	if (v4only)
 		return;
 
+	ip6 = mtod(m, struct ip6_hdr *);
 	/*
 	 * IPV6_HOPOPTS socket option.  Recall that we required super-user
 	 * privilege for the option (see ip6_ctloutput), but it might be too
@@ -1369,7 +1391,7 @@ ip6_savecontrol(struct inpcb *in6p, struct mbuf *m, struct mbuf **mp)
 	 * returned to normal user.
 	 * See also RFC 2292 section 6 (or RFC 3542 section 8).
 	 */
-	if ((in6p->inp_flags & IN6P_HOPOPTS) != 0) {
+	if ((inp->inp_flags & IN6P_HOPOPTS) != 0) {
 		/*
 		 * Check if a hop-by-hop options header is contatined in the
 		 * received packet, and if so, store the options as ancillary
@@ -1379,29 +1401,10 @@ ip6_savecontrol(struct inpcb *in6p, struct mbuf *m, struct mbuf **mp)
 		 */
 		if (ip6->ip6_nxt == IPPROTO_HOPOPTS) {
 			struct ip6_hbh *hbh;
-			int hbhlen = 0;
-#ifdef PULLDOWN_TEST
-			struct mbuf *ext;
-#endif
+			int hbhlen;
 
-#ifndef PULLDOWN_TEST
 			hbh = (struct ip6_hbh *)(ip6 + 1);
 			hbhlen = (hbh->ip6h_len + 1) << 3;
-#else
-			ext = ip6_pullexthdr(m, sizeof(struct ip6_hdr),
-			    ip6->ip6_nxt);
-			if (ext == NULL) {
-				IP6STAT_INC(ip6s_tooshort);
-				return;
-			}
-			hbh = mtod(ext, struct ip6_hbh *);
-			hbhlen = (hbh->ip6h_len + 1) << 3;
-			if (hbhlen != ext->m_len) {
-				m_freem(ext);
-				IP6STAT_INC(ip6s_tooshort);
-				return;
-			}
-#endif
 
 			/*
 			 * XXX: We copy the whole header even if a
@@ -1411,17 +1414,14 @@ ip6_savecontrol(struct inpcb *in6p, struct mbuf *m, struct mbuf **mp)
 			 * Note: this constraint is removed in RFC3542
 			 */
 			*mp = sbcreatecontrol((caddr_t)hbh, hbhlen,
-			    IS2292(in6p, IPV6_2292HOPOPTS, IPV6_HOPOPTS),
+			    IS2292(inp, IPV6_2292HOPOPTS, IPV6_HOPOPTS),
 			    IPPROTO_IPV6);
 			if (*mp)
 				mp = &(*mp)->m_next;
-#ifdef PULLDOWN_TEST
-			m_freem(ext);
-#endif
 		}
 	}
 
-	if ((in6p->inp_flags & (IN6P_RTHDR | IN6P_DSTOPTS)) != 0) {
+	if ((inp->inp_flags & (IN6P_RTHDR | IN6P_DSTOPTS)) != 0) {
 		int nxt = ip6->ip6_nxt, off = sizeof(struct ip6_hdr);
 
 		/*
@@ -1434,9 +1434,6 @@ ip6_savecontrol(struct inpcb *in6p, struct mbuf *m, struct mbuf **mp)
 		while (1) {	/* is explicit loop prevention necessary? */
 			struct ip6_ext *ip6e = NULL;
 			int elen;
-#ifdef PULLDOWN_TEST
-			struct mbuf *ext = NULL;
-#endif
 
 			/*
 			 * if it is not an extension header, don't try to
@@ -1452,7 +1449,6 @@ ip6_savecontrol(struct inpcb *in6p, struct mbuf *m, struct mbuf **mp)
 				goto loopend;
 			}
 
-#ifndef PULLDOWN_TEST
 			if (off + sizeof(*ip6e) > m->m_len)
 				goto loopend;
 			ip6e = (struct ip6_ext *)(mtod(m, caddr_t) + off);
@@ -1462,42 +1458,25 @@ ip6_savecontrol(struct inpcb *in6p, struct mbuf *m, struct mbuf **mp)
 				elen = (ip6e->ip6e_len + 1) << 3;
 			if (off + elen > m->m_len)
 				goto loopend;
-#else
-			ext = ip6_pullexthdr(m, off, nxt);
-			if (ext == NULL) {
-				IP6STAT_INC(ip6s_tooshort);
-				return;
-			}
-			ip6e = mtod(ext, struct ip6_ext *);
-			if (nxt == IPPROTO_AH)
-				elen = (ip6e->ip6e_len + 2) << 2;
-			else
-				elen = (ip6e->ip6e_len + 1) << 3;
-			if (elen != ext->m_len) {
-				m_freem(ext);
-				IP6STAT_INC(ip6s_tooshort);
-				return;
-			}
-#endif
 
 			switch (nxt) {
 			case IPPROTO_DSTOPTS:
-				if (!(in6p->inp_flags & IN6P_DSTOPTS))
+				if (!(inp->inp_flags & IN6P_DSTOPTS))
 					break;
 
 				*mp = sbcreatecontrol((caddr_t)ip6e, elen,
-				    IS2292(in6p,
+				    IS2292(inp,
 					IPV6_2292DSTOPTS, IPV6_DSTOPTS),
 				    IPPROTO_IPV6);
 				if (*mp)
 					mp = &(*mp)->m_next;
 				break;
 			case IPPROTO_ROUTING:
-				if (!(in6p->inp_flags & IN6P_RTHDR))
+				if (!(inp->inp_flags & IN6P_RTHDR))
 					break;
 
 				*mp = sbcreatecontrol((caddr_t)ip6e, elen,
-				    IS2292(in6p, IPV6_2292RTHDR, IPV6_RTHDR),
+				    IS2292(inp, IPV6_2292RTHDR, IPV6_RTHDR),
 				    IPPROTO_IPV6);
 				if (*mp)
 					mp = &(*mp)->m_next;
@@ -1513,9 +1492,6 @@ ip6_savecontrol(struct inpcb *in6p, struct mbuf *m, struct mbuf **mp)
 				 * the code just in case (nxt overwritten or
 				 * other cases).
 				 */
-#ifdef PULLDOWN_TEST
-				m_freem(ext);
-#endif
 				goto loopend;
 
 			}
@@ -1524,16 +1500,12 @@ ip6_savecontrol(struct inpcb *in6p, struct mbuf *m, struct mbuf **mp)
 			off += elen;
 			nxt = ip6e->ip6e_nxt;
 			ip6e = NULL;
-#ifdef PULLDOWN_TEST
-			m_freem(ext);
-			ext = NULL;
-#endif
 		}
 	  loopend:
 		;
 	}
 
-	if (in6p->inp_flags2 & INP_RECVFLOWID) {
+	if (inp->inp_flags2 & INP_RECVFLOWID) {
 		uint32_t flowid, flow_type;
 
 		flowid = m->m_pkthdr.flowid;
@@ -1554,7 +1526,7 @@ ip6_savecontrol(struct inpcb *in6p, struct mbuf *m, struct mbuf **mp)
 	}
 
 #ifdef	RSS
-	if (in6p->inp_flags2 & INP_RECVRSSBUCKETID) {
+	if (inp->inp_flags2 & INP_RECVRSSBUCKETID) {
 		uint32_t flowid, flow_type;
 		uint32_t rss_bucketid;
 
@@ -1607,54 +1579,12 @@ ip6_notify_pmtu(struct inpcb *inp, struct sockaddr_in6 *dst, u_int32_t mtu)
 	so =  inp->inp_socket;
 	if (sbappendaddr(&so->so_rcv, (struct sockaddr *)dst, NULL, m_mtu)
 	    == 0) {
+		soroverflow(so);
 		m_freem(m_mtu);
 		/* XXX: should count statistics */
 	} else
 		sorwakeup(so);
 }
-
-#ifdef PULLDOWN_TEST
-/*
- * pull single extension header from mbuf chain.  returns single mbuf that
- * contains the result, or NULL on error.
- */
-static struct mbuf *
-ip6_pullexthdr(struct mbuf *m, size_t off, int nxt)
-{
-	struct ip6_ext ip6e;
-	size_t elen;
-	struct mbuf *n;
-
-#ifdef DIAGNOSTIC
-	switch (nxt) {
-	case IPPROTO_DSTOPTS:
-	case IPPROTO_ROUTING:
-	case IPPROTO_HOPOPTS:
-	case IPPROTO_AH: /* is it possible? */
-		break;
-	default:
-		printf("ip6_pullexthdr: invalid nxt=%d\n", nxt);
-	}
-#endif
-
-	m_copydata(m, off, sizeof(ip6e), (caddr_t)&ip6e);
-	if (nxt == IPPROTO_AH)
-		elen = (ip6e.ip6e_len + 2) << 2;
-	else
-		elen = (ip6e.ip6e_len + 1) << 3;
-
-	if (elen > MLEN)
-		n = m_getcl(M_NOWAIT, MT_DATA, 0);
-	else
-		n = m_get(M_NOWAIT, MT_DATA);
-	if (n == NULL)
-		return NULL;
-
-	m_copydata(m, off, elen, mtod(n, caddr_t));
-	n->m_len = elen;
-	return n;
-}
-#endif
 
 /*
  * Get pointer to the previous header followed by the header

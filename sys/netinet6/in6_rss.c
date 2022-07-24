@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/11/sys/netinet6/in6_rss.c 290471 2015-11-06 23:07:43Z adrian $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet6.h"
 #include "opt_pcbgroup.h"

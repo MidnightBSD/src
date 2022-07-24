@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 2000 WIDE Project.
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet6/scope6.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -74,7 +76,7 @@ static struct mtx scope6_lock;
 #define	SCOPE6_UNLOCK()		mtx_unlock(&scope6_lock)
 #define	SCOPE6_LOCK_ASSERT()	mtx_assert(&scope6_lock, MA_OWNED)
 
-static VNET_DEFINE(struct scope6_id, sid_default);
+VNET_DEFINE_STATIC(struct scope6_id, sid_default);
 #define	V_sid_default			VNET(sid_default)
 
 #define SID(ifp) \
@@ -417,6 +419,10 @@ in6_setscope(struct in6_addr *in6, struct ifnet *ifp, u_int32_t *ret_id)
 			in6->s6_addr16[1] = htons(zoneid & 0xffff); /* XXX */
 		} else if (scope != IPV6_ADDR_SCOPE_GLOBAL) {
 			IF_AFDATA_RLOCK(ifp);
+			if (ifp->if_afdata[AF_INET6] == NULL) {
+				IF_AFDATA_RUNLOCK(ifp);
+				return (ENETDOWN);
+			}
 			sid = SID(ifp);
 			zoneid = sid->s6id_list[scope];
 			IF_AFDATA_RUNLOCK(ifp);
@@ -451,7 +457,7 @@ in6_clearscope(struct in6_addr *in6)
  * Return the scope identifier or zero.
  */
 uint16_t
-in6_getscope(struct in6_addr *in6)
+in6_getscope(const struct in6_addr *in6)
 {
 
 	if (IN6_IS_SCOPE_LINKLOCAL(in6) || IN6_IS_ADDR_MC_INTFACELOCAL(in6))
