@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/cam/scsi/scsi_enc.h 350793 2019-08-08 21:46:36Z mav $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: (BSD-2-Clause-FreeBSD OR GPL-2.0)
+ *
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.
  *
@@ -128,7 +130,7 @@ typedef enum {
 	"Device Slot",					\
 	"Power Supply",					\
 	"Cooling",					\
-	"Temperature Sensors",				\
+	"Temperature Sensor",				\
 	"Door",						\
 	"Audible alarm",				\
 	"Enclosure Services Controller Electronics",	\
@@ -152,7 +154,9 @@ typedef enum {
 	"SAS Connector"					\
 }
 
+#ifdef _KERNEL
 extern const char *elm_type_names[];
+#endif
 
 typedef struct encioc_element {
 	/* Element Index */

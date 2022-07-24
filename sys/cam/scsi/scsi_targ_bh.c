@@ -1,6 +1,8 @@
 /*-
  * Implementation of the Target Mode 'Black Hole device' for CAM.
  *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Justin T. Gibbs.
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cam/scsi/scsi_targ_bh.c 256843 2013-10-21 12:00:26Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>

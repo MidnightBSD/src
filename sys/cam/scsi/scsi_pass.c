@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997, 1998, 2000 Justin T. Gibbs.
  * Copyright (c) 1997, 1998, 1999 Kenneth D. Merry.
  * All rights reserved.
@@ -26,9 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cam/scsi/scsi_pass.c 350804 2019-08-08 22:16:19Z mav $");
-
-#include "opt_compat.h"
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -398,6 +398,18 @@ passcleanup(struct cam_periph *periph)
 	 */
 	taskqueue_drain(taskqueue_thread, &softc->add_physpath_task);
 
+	/*
+	 * It should be safe to destroy the zones from here, because all
+	 * of the references to this peripheral have been freed, and all
+	 * I/O has been terminated and freed.  We check the zones for NULL
+	 * because they may not have been allocated yet if the device went
+	 * away before any asynchronous I/O has been issued.
+	 */
+	if (softc->pass_zone != NULL)
+		uma_zdestroy(softc->pass_zone);
+	if (softc->pass_io_zone != NULL)
+		uma_zdestroy(softc->pass_io_zone);
+
 	cam_periph_lock(periph);
 
 	free(softc, M_DEVBUF);
@@ -519,7 +531,6 @@ passasync(void *callback_arg, u_int32_t code,
 		buftype = (uintptr_t)arg;
 		if (buftype == CDAI_TYPE_PHYS_PATH) {
 			struct pass_softc *softc;
-			cam_status status;
 
 			softc = (struct pass_softc *)periph->softc;
 			/*
@@ -528,8 +539,7 @@ passasync(void *callback_arg, u_int32_t code,
 			 * a situation where the periph goes away before
 			 * the task queue has a chance to run.
 			 */
-			status = cam_periph_acquire(periph);
-			if (status != CAM_REQ_CMP)
+			if (cam_periph_acquire(periph) != 0)
 				break;
 
 			taskqueue_enqueue(taskqueue_thread,
@@ -627,7 +637,7 @@ passregister(struct cam_periph *periph, void *arg)
 	 * Acquire a reference to the periph that we can release once we've
 	 * cleaned up the kqueue.
 	 */
-	if (cam_periph_acquire(periph) != CAM_REQ_CMP) {
+	if (cam_periph_acquire(periph) != 0) {
 		xpt_print(periph->path, "%s: lost periph during "
 			  "registration!\n", __func__);
 		cam_periph_lock(periph);
@@ -639,7 +649,7 @@ passregister(struct cam_periph *periph, void *arg)
 	 * instance for it.  We'll release this reference once the devfs
 	 * instance has been freed.
 	 */
-	if (cam_periph_acquire(periph) != CAM_REQ_CMP) {
+	if (cam_periph_acquire(periph) != 0) {
 		xpt_print(periph->path, "%s: lost periph during "
 			  "registration!\n", __func__);
 		cam_periph_lock(periph);
@@ -666,7 +676,7 @@ passregister(struct cam_periph *periph, void *arg)
 	 * Hold a reference to the periph before we create the physical
 	 * path alias so it can't go away.
 	 */
-	if (cam_periph_acquire(periph) != CAM_REQ_CMP) {
+	if (cam_periph_acquire(periph) != 0) {
 		xpt_print(periph->path, "%s: lost periph during "
 			  "registration!\n", __func__);
 		cam_periph_lock(periph);
@@ -706,7 +716,7 @@ passopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	int error;
 
 	periph = (struct cam_periph *)dev->si_drv1;
-	if (cam_periph_acquire(periph) != CAM_REQ_CMP)
+	if (cam_periph_acquire(periph) != 0)
 		return (ENXIO);
 
 	cam_periph_lock(periph);
@@ -1078,7 +1088,7 @@ passcreatezone(struct cam_periph *periph)
 		/*
 		 * Set the flags appropriately and notify any other waiters.
 		 */
-		softc->flags &= PASS_FLAG_ZONE_INPROG;
+		softc->flags &= ~PASS_FLAG_ZONE_INPROG;
 		softc->flags |= PASS_FLAG_ZONE_VALID;
 		wakeup(&softc->pass_zone);
 	} else {
@@ -1700,13 +1710,11 @@ static int
 passmemdone(struct cam_periph *periph, struct pass_io_req *io_req)
 {
 	struct pass_softc *softc;
-	union ccb *ccb;
 	int error;
 	int i;
 
 	error = 0;
 	softc = (struct pass_softc *)periph->softc;
-	ccb = &io_req->ccb;
 
 	switch (io_req->data_flags) {
 	case CAM_DATA_VADDR:
@@ -1797,6 +1805,10 @@ passdoioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread 
 		int ccb_malloced;
 
 		inccb = (union ccb *)addr;
+#if defined(BUF_TRACKING) || defined(FULL_BUF_TRACKING)
+		if (inccb->ccb_h.func_code == XPT_SCSI_IO)
+			inccb->csio.bio = NULL;
+#endif
 
 		if (inccb->ccb_h.flags & CAM_UNLOCKED) {
 			error = EINVAL;
@@ -1904,6 +1916,10 @@ passdoioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread 
 				  *user_ccb, ccb, error);
 			goto camioqueue_error;
 		}
+#if defined(BUF_TRACKING) || defined(FULL_BUF_TRACKING)
+		if (ccb->ccb_h.func_code == XPT_SCSI_IO)
+			ccb->csio.bio = NULL;
+#endif
 
 		if (ccb->ccb_h.flags & CAM_UNLOCKED) {
 			error = EINVAL;
@@ -2217,17 +2233,15 @@ passsendccb(struct cam_periph *periph, union ccb *ccb, union ccb *inccb)
 	}
 
 	/*
-	 */
-	ccb->ccb_h.cbfcnp = passdone;
-
-	/*
 	 * Let cam_periph_mapmem do a sanity check on the data pointer format.
 	 * Even if no data transfer is needed, it's a cheap check and it
 	 * simplifies the code.
 	 */
 	fc = ccb->ccb_h.func_code;
 	if ((fc == XPT_SCSI_IO) || (fc == XPT_ATA_IO) || (fc == XPT_SMP_IO)
-	 || (fc == XPT_DEV_MATCH) || (fc == XPT_DEV_ADVINFO)) {
+            || (fc == XPT_DEV_MATCH) || (fc == XPT_DEV_ADVINFO) || (fc == XPT_MMC_IO)
+            || (fc == XPT_NVME_ADMIN) || (fc == XPT_NVME_IO)) {
+
 		bzero(&mapinfo, sizeof(mapinfo));
 
 		/*
@@ -2279,6 +2293,5 @@ passerror(union ccb *ccb, u_int32_t cam_flags, u_int32_t sense_flags)
 	periph = xpt_path_periph(ccb->ccb_h.path);
 	softc = (struct pass_softc *)periph->softc;
 	
-	return(cam_periph_error(ccb, cam_flags, sense_flags, 
-				 &softc->saved_ccb));
+	return(cam_periph_error(ccb, cam_flags, sense_flags));
 }

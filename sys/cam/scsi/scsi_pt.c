@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Implementation of SCSI Processor Target Peripheral driver for CAM.
  *
  * Copyright (c) 1998 Justin T. Gibbs.
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cam/scsi/scsi_pt.c 350804 2019-08-08 22:16:19Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -140,7 +142,7 @@ ptopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	int error = 0;
 
 	periph = (struct cam_periph *)dev->si_drv1;
-	if (cam_periph_acquire(periph) != CAM_REQ_CMP)
+	if (cam_periph_acquire(periph) != 0)
 		return (ENXIO);	
 
 	softc = (struct pt_softc *)periph->softc;
@@ -566,8 +568,7 @@ pterror(union ccb *ccb, u_int32_t cam_flags, u_int32_t sense_flags)
 	periph = xpt_path_periph(ccb->ccb_h.path);
 	softc = (struct pt_softc *)periph->softc;
 
-	return(cam_periph_error(ccb, cam_flags, sense_flags,
-				&softc->saved_ccb));
+	return(cam_periph_error(ccb, cam_flags, sense_flags));
 }
 
 static int

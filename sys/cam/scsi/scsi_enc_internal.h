@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Matthew Jacob
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cam/scsi/scsi_enc_internal.h 350793 2019-08-08 21:46:36Z mav $
+ * $FreeBSD$
  */
 
 /*
@@ -37,16 +39,16 @@
 #include <sys/sysctl.h>
 
 typedef struct enc_element {
-	uint8_t	 elm_idx;		/* index of element */
+	u_int	 elm_idx;		/* index of element */
 	uint8_t	 elm_type;		/* element type */
 	uint8_t	 subenclosure;		/* subenclosure id */
 	uint8_t	 type_elm_idx;		/* index of element within type */
 	uint8_t	 svalid;		/* enclosure information valid */
-	uint16_t priv;			/* private data, per object */
 	uint8_t	 encstat[4];		/* state && stats */
+	u_int	 physical_path_len;	/* Length of device path data. */
 	uint8_t *physical_path;		/* Device physical path data. */
-	u_int    physical_path_len;	/* Length of device path data. */
 	void    *elm_private;		/* per-type object data */
+	uint16_t priv;
 } enc_element_t;
 
 typedef enum {
@@ -161,7 +163,10 @@ struct enc_softc {
 
 	struct enc_fsm_state 	*enc_fsm_states;
 
-	struct intr_config_hook  enc_boot_hold_ch;
+	struct root_hold_token	 enc_rootmount;
+
+#define 	ENC_ANNOUNCE_SZ		400
+	char			announce_buf[ENC_ANNOUNCE_SZ];
 };
 
 static inline enc_cache_t *
