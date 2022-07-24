@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cddl/compat/opensolaris/kern/opensolaris_taskq.c 346699 2019-04-25 18:49:29Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -41,6 +41,8 @@ __FBSDID("$FreeBSD: stable/11/sys/cddl/compat/opensolaris/kern/opensolaris_taskq
 static uma_zone_t taskq_zone;
 
 taskq_t *system_taskq = NULL;
+
+struct proc *system_proc;
 
 static void
 system_taskq_init(void *arg)
@@ -62,9 +64,9 @@ system_taskq_fini(void *arg)
 }
 SYSUNINIT(system_taskq_fini, SI_SUB_CONFIGURE, SI_ORDER_ANY, system_taskq_fini, NULL);
 
-taskq_t *
-taskq_create(const char *name, int nthreads, pri_t pri, int minalloc __unused,
-    int maxalloc __unused, uint_t flags)
+static taskq_t *
+taskq_create_impl(const char *name, int nthreads, pri_t pri, proc_t *proc,
+    uint_t flags)
 {
 	taskq_t *tq;
 
@@ -74,17 +76,24 @@ taskq_create(const char *name, int nthreads, pri_t pri, int minalloc __unused,
 	tq = kmem_alloc(sizeof(*tq), KM_SLEEP);
 	tq->tq_queue = taskqueue_create(name, M_WAITOK, taskqueue_thread_enqueue,
 	    &tq->tq_queue);
-	(void) taskqueue_start_threads(&tq->tq_queue, nthreads, pri, "%s", name);
+	(void) taskqueue_start_threads_in_proc(&tq->tq_queue, nthreads, pri,
+	    proc, "%s", name);
 
 	return ((taskq_t *)tq);
 }
 
 taskq_t *
-taskq_create_proc(const char *name, int nthreads, pri_t pri, int minalloc,
-    int maxalloc, proc_t *proc __unused, uint_t flags)
+taskq_create(const char *name, int nthreads, pri_t pri, int minalloc __unused,
+    int maxalloc __unused, uint_t flags)
 {
+	return (taskq_create_impl(name, nthreads, pri, system_proc, flags));
+}
 
-	return (taskq_create(name, nthreads, pri, minalloc, maxalloc, flags));
+taskq_t *
+taskq_create_proc(const char *name, int nthreads, pri_t pri, int minalloc,
+    int maxalloc, proc_t *proc, uint_t flags)
+{
+	return (taskq_create_impl(name, nthreads, pri, proc, flags));
 }
 
 void

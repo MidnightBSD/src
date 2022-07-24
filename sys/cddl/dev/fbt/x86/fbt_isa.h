@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/11/sys/cddl/dev/fbt/x86/fbt_isa.h 270067 2014-08-16 21:42:55Z markj $
+ * $FreeBSD$
  *
  */
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- $ $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/refstr.h 185029 2008-11-17 20:49:29Z pjd $
+ $ $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_REFSTR_H_

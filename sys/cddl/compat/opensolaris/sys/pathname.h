@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/pathname.h 315842 2017-03-23 08:14:41Z avg $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_PATHNAME_H_

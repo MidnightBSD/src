@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/11/sys/cddl/dev/dtrace/dtrace_unload.c 278166 2015-02-03 19:39:53Z pfg $
+ * $FreeBSD$
  *
  */
 

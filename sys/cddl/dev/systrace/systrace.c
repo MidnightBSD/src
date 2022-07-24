@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cddl/dev/systrace/systrace.c 324282 2017-10-04 15:47:16Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -134,6 +134,8 @@ extern const char *freebsd32_syscallnames[];
 #if ((1 << SYSTRACE_SHIFT) <= MAXSYSCALL)
 #error 1 << SYSTRACE_SHIFT must exceed number of system calls
 #endif
+
+static int systrace_enabled_count;
 
 static void	systrace_load(void *);
 static void	systrace_unload(void *);
@@ -296,9 +298,9 @@ systrace_destroy(void *arg, dtrace_id_t id, void *parg)
 	 * disabled.
 	 */
 	if (SYSTRACE_ISENTRY((uintptr_t)parg)) {
-		ASSERT(sysent[sysnum].sy_entry == 0);
+		ASSERT(sysent[sysnum].sy_entry == DTRACE_IDNONE);
 	} else {
-		ASSERT(sysent[sysnum].sy_return == 0);
+		ASSERT(sysent[sysnum].sy_return == DTRACE_IDNONE);
 	}
 #endif
 }
@@ -308,13 +310,15 @@ systrace_enable(void *arg, dtrace_id_t id, void *parg)
 {
 	int sysnum = SYSTRACE_SYSNUM((uintptr_t)parg);
 
-	if (SYSENT[sysnum].sy_systrace_args_func == NULL)
-		SYSENT[sysnum].sy_systrace_args_func = systrace_args;
+	SYSENT[sysnum].sy_systrace_args_func = systrace_args;
 
 	if (SYSTRACE_ISENTRY((uintptr_t)parg))
 		SYSENT[sysnum].sy_entry = id;
 	else
 		SYSENT[sysnum].sy_return = id;
+	systrace_enabled_count++;
+	if (systrace_enabled_count == 1)
+		systrace_enabled = true;
 }
 
 static void
@@ -322,8 +326,12 @@ systrace_disable(void *arg, dtrace_id_t id, void *parg)
 {
 	int sysnum = SYSTRACE_SYSNUM((uintptr_t)parg);
 
-	SYSENT[sysnum].sy_entry = 0;
-	SYSENT[sysnum].sy_return = 0;
+	SYSENT[sysnum].sy_systrace_args_func = NULL;
+	SYSENT[sysnum].sy_entry = DTRACE_IDNONE;
+	SYSENT[sysnum].sy_return = DTRACE_IDNONE;
+	systrace_enabled_count--;
+	if (systrace_enabled_count == 0)
+		systrace_enabled = false;
 }
 
 static void

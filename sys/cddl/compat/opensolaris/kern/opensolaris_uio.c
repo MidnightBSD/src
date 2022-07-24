@@ -37,7 +37,7 @@
  */
 
 /*
- * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/kern/opensolaris_uio.c 326425 2017-12-01 11:06:51Z avg $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

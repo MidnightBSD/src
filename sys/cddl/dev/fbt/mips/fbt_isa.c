@@ -23,7 +23,7 @@
  * Portions Copyright 2013 Howard Su howardsu@freebsd.org
  * Portions Copyright 2015-2016 Ruslan Bukin <br@bsdpad.com>
  *
- * $FreeBSD: stable/11/sys/cddl/dev/fbt/mips/fbt_isa.c 332566 2018-04-16 14:39:04Z lidl $
+ * $FreeBSD$
  */
 
 /*
@@ -142,7 +142,7 @@ again:
 		fbt->fbtp_id = dtrace_probe_create(fbt_id, modname,
 		    name, FBT_RETURN, 3, fbt);
 	} else {
-		retfbt->fbtp_next = fbt;
+		retfbt->fbtp_probenext = fbt;
 		fbt->fbtp_id = retfbt->fbtp_id;
 	}
 	retfbt = fbt;

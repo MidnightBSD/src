@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/kmem.h 332528 2018-04-16 03:38:37Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_KMEM_H_
@@ -79,9 +79,10 @@ void kmem_reap(void);
 int kmem_debugging(void);
 void *calloc(size_t n, size_t s);
 
-#define	freemem				vm_cnt.v_free_count
+#define	freemem				vm_free_count()
 #define	minfree				vm_cnt.v_free_min
-#define	heap_arena			kmem_arena
+#define	heap_arena			kernel_arena
+#define	zio_arena			NULL
 #define	kmem_alloc(size, kmflags)	zfs_kmem_alloc((size), (kmflags))
 #define	kmem_zalloc(size, kmflags)	zfs_kmem_alloc((size), (kmflags) | M_ZERO)
 #define	kmem_free(buf, size)		zfs_kmem_free((buf), (size))
