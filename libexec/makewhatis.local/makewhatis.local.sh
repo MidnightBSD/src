@@ -31,9 +31,7 @@
 # /usr may kill your NFS server -- all clients start makewhatis at the same
 # time! So use this wrapper instead calling makewhatis directly.
 #
-# PS: this wrapper works also for catman(1)
-#
-# $FreeBSD: stable/11/libexec/makewhatis.local/makewhatis.local.sh 340963 2018-11-26 13:03:34Z eugen $
+# $FreeBSD$
 
 PATH=/bin:/usr/bin:$PATH; export PATH
 opt= dirs= localdirs=

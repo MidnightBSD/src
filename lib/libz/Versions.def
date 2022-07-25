@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libz/Versions.def 313795 2017-02-16 06:16:23Z delphij $
+# $FreeBSD$
 
 ZLIB_1.2.4.0 {
 };
@@ -12,9 +12,12 @@ ZLIB_1.2.7.1 {
 ZLIB_1.2.9 {
 } ZLIB_1.2.7.1;
 
+ZLIB_1.2.12 {
+} ZLIB_1.2.9;
+
 FBSD_1.2 {
 } ZLIB_1.2.4.0;
 
-ZLIBprivate_1.0 {
-} ZLIB_1.2.4.0;
+FBSD_1.6 {
+} FBSD_1.2;
 

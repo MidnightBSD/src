@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2008 Edwin Groothuis. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/libexec/tftpd/tftp-options.c 246139 2013-01-31 00:02:36Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -54,6 +56,7 @@ struct options options[] = {
 	{ "blksize",	NULL, NULL, option_blksize, 1 },
 	{ "blksize2",	NULL, NULL, option_blksize2, 0 },
 	{ "rollover",	NULL, NULL, option_rollover, 0 },
+	{ "windowsize",	NULL, NULL, option_windowsize, 1 },
 	{ NULL,		NULL, NULL, NULL, 0 }
 };
 
@@ -269,6 +272,41 @@ option_blksize2(int peer __unused)
 	if (debug&DEBUG_OPTIONS)
 		tftp_log(LOG_DEBUG, "Setting blksize2 to '%s'",
 		    options[OPT_BLKSIZE2].o_reply);
+
+	return (0);
+}
+
+int
+option_windowsize(int peer)
+{
+	int size;
+
+	if (options[OPT_WINDOWSIZE].o_request == NULL)
+		return (0);
+
+	size = atoi(options[OPT_WINDOWSIZE].o_request);
+	if (size < WINDOWSIZE_MIN || size > WINDOWSIZE_MAX) {
+		if (acting_as_client) {
+			tftp_log(LOG_ERR,
+			    "Invalid windowsize (%d blocks), aborting",
+			    size);
+			send_error(peer, EBADOP);
+			return (1);
+		} else {
+			tftp_log(LOG_WARNING,
+			    "Invalid windowsize (%d blocks), ignoring request",
+			    size);
+			return (0);
+		}
+	}
+
+	/* XXX: Should force a windowsize of 1 for non-seekable files. */
+	asprintf(&options[OPT_WINDOWSIZE].o_reply, "%d", size);
+	windowsize = size;
+
+	if (debug&DEBUG_OPTIONS)
+		tftp_log(LOG_DEBUG, "Setting windowsize to '%s'",
+		    options[OPT_WINDOWSIZE].o_reply);
 
 	return (0);
 }

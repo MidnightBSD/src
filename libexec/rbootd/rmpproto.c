@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1988, 1992 The University of Utah and the Center
  *	for Software Science (CSS).
  * Copyright (c) 1992, 1993
@@ -45,7 +47,7 @@
 static const char sccsid[] = "@(#)rmpproto.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/11/libexec/rbootd/rmpproto.c 357517 2020-02-04 19:19:48Z dim $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
