@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/tests/stdio/open_memstream2_test.c 309468 2016-12-03 02:48:55Z ngie $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <errno.h>

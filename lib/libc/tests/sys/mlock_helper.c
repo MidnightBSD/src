@@ -29,15 +29,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/tests/sys/mlock_helper.c 327855 2018-01-12 00:25:56Z asomers $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
 
 #include <atf-c.h>
 #include <errno.h>
-#include <stdio.h>
 #include <limits.h>
+#include <stdio.h>
 
 #define	VM_MAX_WIRED "vm.max_wired"
 

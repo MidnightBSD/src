@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libc/tests/Makefile 309453 2016-12-03 00:38:35Z ngie $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

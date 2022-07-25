@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libc/tests/hash/Makefile 314818 2017-03-07 01:52:56Z ngie $
+# $FreeBSD$
 
 PACKAGE=	tests
 

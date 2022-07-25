@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libc/tests/string/strerror_test.c 290539 2015-11-08 07:53:31Z ngie $
+ * $FreeBSD$
  */
 
 #include <assert.h>

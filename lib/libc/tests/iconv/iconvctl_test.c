@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2016 Eric van Gyzen
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,13 +24,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/tests/iconv/iconvctl_test.c 299704 2016-05-14 00:35:35Z vangyzen $");
+__FBSDID("$FreeBSD$");
 
 #include <iconv.h>
 
 #include <atf-c.h>
 
-void
+static void
 test_trivialp(const char *src, const char *dst, int expected)
 {
 	iconv_t ic;

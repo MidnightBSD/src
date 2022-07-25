@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/tests/nss/getserv_test.c 353589 2019-10-15 20:04:15Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include <arpa/inet.h>
 #include <errno.h>

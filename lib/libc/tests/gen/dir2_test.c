@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/tests/gen/dir2_test.c 350334 2019-07-25 20:34:50Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include <dirent.h>
 #include <fcntl.h>

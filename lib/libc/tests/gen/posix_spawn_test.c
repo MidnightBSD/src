@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/tests/gen/posix_spawn_test.c 290572 2015-11-09 06:24:11Z ngie $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/wait.h>
 #include <errno.h>
@@ -93,11 +93,47 @@ ATF_TC_BODY(posix_spawn_no_such_command_negative_test, tc)
 	}
 }
 
+ATF_TC_WITHOUT_HEAD(posix_spawnp_enoexec_fallback);
+ATF_TC_BODY(posix_spawnp_enoexec_fallback, tc)
+{
+	char buf[FILENAME_MAX];
+	char *myargs[2];
+	int error, status;
+	pid_t pid, waitres;
+
+	snprintf(buf, sizeof(buf), "%s/spawnp_enoexec.sh",
+	    atf_tc_get_config_var(tc, "srcdir"));
+	myargs[0] = buf;
+	myargs[1] = NULL;
+	error = posix_spawnp(&pid, myargs[0], NULL, NULL, myargs, myenv);
+	ATF_REQUIRE(error == 0);
+	waitres = waitpid(pid, &status, 0);
+	ATF_REQUIRE(waitres == pid);
+	ATF_REQUIRE(WIFEXITED(status) && WEXITSTATUS(status) == 42);
+}
+
+ATF_TC_WITHOUT_HEAD(posix_spawnp_enoexec_fallback_null_argv0);
+ATF_TC_BODY(posix_spawnp_enoexec_fallback_null_argv0, tc)
+{
+	char buf[FILENAME_MAX];
+	char *myargs[1];
+	int error;
+	pid_t pid;
+
+	snprintf(buf, sizeof(buf), "%s/spawnp_enoexec.sh",
+	    atf_tc_get_config_var(tc, "srcdir"));
+	myargs[0] = NULL;
+	error = posix_spawnp(&pid, buf, NULL, NULL, myargs, myenv);
+	ATF_REQUIRE(error == EINVAL);
+}
+
 ATF_TP_ADD_TCS(tp)
 {
 
 	ATF_TP_ADD_TC(tp, posix_spawn_simple_test);
 	ATF_TP_ADD_TC(tp, posix_spawn_no_such_command_negative_test);
+	ATF_TP_ADD_TC(tp, posix_spawnp_enoexec_fallback);
+	ATF_TP_ADD_TC(tp, posix_spawnp_enoexec_fallback_null_argv0);
 
 	return (atf_no_error());
 }

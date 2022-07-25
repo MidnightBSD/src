@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/tests/stdio/freopen_test.c 298312 2016-04-20 00:19:04Z ngie $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <paths.h>

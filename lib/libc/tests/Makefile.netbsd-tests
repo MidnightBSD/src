@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libc/tests/Makefile.netbsd-tests 290851 2015-11-15 05:21:58Z ngie $
+# $FreeBSD$
 
 TESTSRC:=	${SRCTOP}/contrib/netbsd-tests/${RELDIR:C/libc\/tests/libc/}
 

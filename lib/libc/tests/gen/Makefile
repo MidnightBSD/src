@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libc/tests/gen/Makefile 355898 2019-12-19 02:09:16Z kevans $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -10,15 +10,28 @@ ATF_TESTS_C+=		fmtmsg_test
 ATF_TESTS_C+=		fnmatch2_test
 ATF_TESTS_C+=		fpclassify2_test
 ATF_TESTS_C+=		ftw_test
+ATF_TESTS_C+=		getentropy_test
+ATF_TESTS_C+=		getmntinfo_test
+ATF_TESTS_C+=		glob2_test
+ATF_TESTS_C+=		makecontext_test
 ATF_TESTS_C+=		popen_test
 ATF_TESTS_C+=		posix_spawn_test
 ATF_TESTS_C+=		realpath2_test
 ATF_TESTS_C+=		sigsetops_test
 ATF_TESTS_C+=		wordexp_test
 
-# TODO: t_closefrom, t_cpuset, t_fmtcheck, t_randomid,
+# TODO: t_closefrom, t_fmtcheck, t_randomid,
 # TODO: t_siginfo (fixes require further inspection)
 # TODO: t_sethostname_test (consistently screws up the hostname)
+
+FILESGROUPS+=		posix_spawn_test_FILES
+
+posix_spawn_test_FILES=	spawnp_enoexec.sh
+posix_spawn_test_FILESDIR=	${TESTSDIR}
+posix_spawn_test_FILESMODE= 0755
+posix_spawn_test_FILESOWN= root
+posix_spawn_test_FILESGRP= wheel
+posix_spawn_test_FILESPACKAGE=	${PACKAGE}
 
 CFLAGS+=	-DTEST_LONG_DOUBLE
 
@@ -33,6 +46,7 @@ CFLAGS+=	-D__HAVE_LONG_DOUBLE
 NETBSD_ATF_TESTS_C=	alarm_test
 NETBSD_ATF_TESTS_C+=	assert_test
 NETBSD_ATF_TESTS_C+=	basedirname_test
+NETBSD_ATF_TESTS_C+=	cpuset_test
 NETBSD_ATF_TESTS_C+=	dir_test
 NETBSD_ATF_TESTS_C+=	floatunditf_test
 NETBSD_ATF_TESTS_C+=	fnmatch_test
@@ -59,6 +73,8 @@ NETBSD_ATF_TESTS_C+=	vis_test
 
 .include "../Makefile.netbsd-tests"
 
+CFLAGS.getentropy_test+=	-I${SRCTOP}/include
+LIBADD.getentropy_test+=	c
 LIBADD.humanize_number_test+=	util
 
 LIBADD.fpclassify_test+=m

@@ -1,9 +1,13 @@
-# $FreeBSD: stable/11/lib/libc/tests/sys/Makefile 344977 2019-03-10 16:13:00Z ngie $
+# $FreeBSD$
 
 PACKAGE=			tests
 
 .include <bsd.own.mk>
 
+.if ${MACHINE_CPUARCH} != "aarch64" && ${MACHINE_CPUARCH} != "riscv"
+ATF_TESTS_C+=			brk_test
+.endif
+ATF_TESTS_C+=			cpuset_test
 ATF_TESTS_C+=			queue_test
 ATF_TESTS_C+=			sendfile_test
 
@@ -76,12 +80,6 @@ LIBADD.timer_create_test+=	rt
 
 SRCS.mlock_test+=		mlock_helper.c
 SRCS.setrlimit_test+=		mlock_helper.c
-
-.if ${COMPILER_TYPE} == "gcc"
-WARNS?=			3
-.else
-WARNS?=			4
-.endif
 
 FILESGROUPS+=		truncate_test_FILES
 
