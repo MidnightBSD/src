@@ -106,6 +106,7 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 */
 
 #include <__config>
+#include <stddef.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -176,6 +177,6 @@ size_t mbsnrtowcs(wchar_t *__restrict dst, const char **__restrict src,
 size_t wcsnrtombs(char *__restrict dst, const wchar_t **__restrict src,
                   size_t nwc, size_t len, mbstate_t *__restrict ps);
 }  // extern "C++"
-#endif  // __cplusplus && _LIBCPP_MSVCRT
+#endif // __cplusplus && _LIBCPP_MSVCRT
 
-#endif  // _LIBCPP_WCHAR_H
+#endif // _LIBCPP_WCHAR_H

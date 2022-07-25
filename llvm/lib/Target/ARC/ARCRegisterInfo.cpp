@@ -22,9 +22,9 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
@@ -149,11 +149,6 @@ BitVector ARCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 }
 
 bool ARCRegisterInfo::requiresRegisterScavenging(
-    const MachineFunction &MF) const {
-  return true;
-}
-
-bool ARCRegisterInfo::trackLivenessAfterRegAlloc(
     const MachineFunction &MF) const {
   return true;
 }

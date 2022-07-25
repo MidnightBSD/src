@@ -43,7 +43,9 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// "attach" GPR-part to the part that was passed via stack.
   unsigned StByValParamsPadding = 0;
 
-  /// VarArgsRegSaveSize - Size of the register save area for vararg functions.
+  /// ArgsRegSaveSize - Size of the register save area for vararg functions or
+  /// those making guaranteed tail calls that need more stack argument space
+  /// than is provided by this functions incoming parameters.
   ///
   unsigned ArgRegsSaveSize = 0;
 
@@ -57,10 +59,6 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// RestoreSPFromFP - True if epilogue should restore SP from FP. Set by
   /// emitPrologue.
   bool RestoreSPFromFP = false;
-
-  /// LRSpilledForFarJump - True if the LR register has been for spilled to
-  /// enable far jump.
-  bool LRSpilledForFarJump = false;
 
   /// LRSpilled - True if the LR register has been for spilled for
   /// any reason, so it's legal to emit an ARM::tBfar (i.e. "bl").
@@ -87,6 +85,7 @@ class ARMFunctionInfo : public MachineFunctionInfo {
 
   /// GPRCS1Size, GPRCS2Size, DPRCSSize - Sizes of callee saved register spills
   /// areas.
+  unsigned FPCXTSaveSize = 0;
   unsigned GPRCS1Size = 0;
   unsigned GPRCS2Size = 0;
   unsigned DPRCSAlignGapSize = 0;
@@ -109,6 +108,10 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// HasITBlocks - True if IT blocks have been inserted.
   bool HasITBlocks = false;
 
+  // Security Extensions
+  bool IsCmseNSEntry;
+  bool IsCmseNSCall;
+
   /// CPEClones - Track constant pool entries clones created by Constant Island
   /// pass.
   DenseMap<unsigned, unsigned> CPEClones;
@@ -116,6 +119,10 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// ArgumentStackSize - amount of bytes on stack consumed by the arguments
   /// being passed on the stack
   unsigned ArgumentStackSize = 0;
+
+  /// ArgumentStackToRestore - amount of bytes on stack consumed that we must
+  /// restore on return.
+  unsigned ArgumentStackToRestore = 0;
 
   /// CoalescedWeights - mapping of basic blocks to the rolling counter of
   /// coalesced weights.
@@ -144,6 +151,9 @@ public:
   bool isThumb1OnlyFunction() const { return isThumb && !hasThumb2; }
   bool isThumb2Function() const { return isThumb && hasThumb2; }
 
+  bool isCmseNSEntryFunction() const { return IsCmseNSEntry; }
+  bool isCmseNSCallFunction() const { return IsCmseNSCall; }
+
   unsigned getStoredByValParamsPadding() const { return StByValParamsPadding; }
   void setStoredByValParamsPadding(unsigned p) { StByValParamsPadding = p; }
 
@@ -162,9 +172,6 @@ public:
   bool isLRSpilled() const { return LRSpilled; }
   void setLRIsSpilled(bool s) { LRSpilled = s; }
 
-  bool isLRSpilledForFarJump() const { return LRSpilledForFarJump; }
-  void setLRIsSpilledForFarJump(bool s) { LRSpilledForFarJump = s; }
-
   unsigned getFramePtrSpillOffset() const { return FramePtrSpillOffset; }
   void setFramePtrSpillOffset(unsigned o) { FramePtrSpillOffset = o; }
 
@@ -179,11 +186,13 @@ public:
   void setGPRCalleeSavedArea2Offset(unsigned o) { GPRCS2Offset = o; }
   void setDPRCalleeSavedAreaOffset(unsigned o)  { DPRCSOffset = o; }
 
+  unsigned getFPCXTSaveAreaSize() const       { return FPCXTSaveSize; }
   unsigned getGPRCalleeSavedArea1Size() const { return GPRCS1Size; }
   unsigned getGPRCalleeSavedArea2Size() const { return GPRCS2Size; }
   unsigned getDPRCalleeSavedGapSize() const   { return DPRCSAlignGapSize; }
   unsigned getDPRCalleeSavedAreaSize()  const { return DPRCSSize; }
 
+  void setFPCXTSaveAreaSize(unsigned s)       { FPCXTSaveSize = s; }
   void setGPRCalleeSavedArea1Size(unsigned s) { GPRCS1Size = s; }
   void setGPRCalleeSavedArea2Size(unsigned s) { GPRCS2Size = s; }
   void setDPRCalleeSavedGapSize(unsigned s)   { DPRCSAlignGapSize = s; }
@@ -191,6 +200,9 @@ public:
 
   unsigned getArgumentStackSize() const { return ArgumentStackSize; }
   void setArgumentStackSize(unsigned size) { ArgumentStackSize = size; }
+
+  unsigned getArgumentStackToRestore() const { return ArgumentStackToRestore; }
+  void setArgumentStackToRestore(unsigned v) { ArgumentStackToRestore = v; }
 
   void initPICLabelUId(unsigned UId) {
     PICLabelUId = UId;
@@ -252,6 +264,7 @@ public:
   }
 
   DenseMap<unsigned, unsigned> EHPrologueRemappedRegs;
+  DenseMap<unsigned, unsigned> EHPrologueOffsetInRegs;
 
   void setPreservesR0() { PreservesR0 = true; }
   bool getPreservesR0() const { return PreservesR0; }

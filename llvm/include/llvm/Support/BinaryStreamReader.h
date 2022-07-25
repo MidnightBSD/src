@@ -11,14 +11,14 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/type_traits.h"
-
-#include <string>
 #include <type_traits>
 
 namespace llvm {
@@ -89,7 +89,7 @@ public:
   template <typename T> Error readEnum(T &Dest) {
     static_assert(std::is_enum<T>::value,
                   "Cannot call readEnum with non-enum value!");
-    typename std::underlying_type<T>::type N;
+    std::underlying_type_t<T> N;
     if (auto EC = readInteger(N))
       return EC;
     Dest = static_cast<T>(N);

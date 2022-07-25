@@ -1,4 +1,4 @@
-//===-- Memory.cpp ----------------------------------------------*- C++ -*-===//
+//===-- Memory.cpp --------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,7 +26,7 @@ MemoryCache::MemoryCache(Process &process)
       m_L2_cache_line_byte_size(process.GetMemoryCacheLineSize()) {}
 
 // Destructor
-MemoryCache::~MemoryCache() {}
+MemoryCache::~MemoryCache() = default;
 
 void MemoryCache::Clear(bool clear_invalid_ranges) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -116,7 +116,7 @@ bool MemoryCache::RemoveInvalidRange(lldb::addr_t base_addr,
       const InvalidRanges::Entry *entry = m_invalid_ranges.GetEntryAtIndex(idx);
       if (entry->GetRangeBase() == base_addr &&
           entry->GetByteSize() == byte_size)
-        return m_invalid_ranges.RemoveEntrtAtIndex(idx);
+        return m_invalid_ranges.RemoveEntryAtIndex(idx);
     }
   }
   return false;
@@ -232,8 +232,13 @@ size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
         if (process_bytes_read == 0)
           return dst_len - bytes_left;
 
-        if (process_bytes_read != cache_line_byte_size)
+        if (process_bytes_read != cache_line_byte_size) {
+          if (process_bytes_read < data_buffer_heap_up->GetByteSize()) {
+            dst_len -= data_buffer_heap_up->GetByteSize() - process_bytes_read;
+            bytes_left = process_bytes_read;
+          }
           data_buffer_heap_up->SetByteSize(process_bytes_read);
+        }
         m_L2_cache[curr_addr] = DataBufferSP(data_buffer_heap_up.release());
         // We have read data and put it into the cache, continue through the
         // loop again to get the data out of the cache...
@@ -254,7 +259,7 @@ AllocatedBlock::AllocatedBlock(lldb::addr_t addr, uint32_t byte_size,
   assert(byte_size > chunk_size);
 }
 
-AllocatedBlock::~AllocatedBlock() {}
+AllocatedBlock::~AllocatedBlock() = default;
 
 lldb::addr_t AllocatedBlock::ReserveBlock(uint32_t size) {
   // We must return something valid for zero bytes.
@@ -324,7 +329,7 @@ bool AllocatedBlock::FreeBlock(addr_t addr) {
 AllocatedMemoryCache::AllocatedMemoryCache(Process &process)
     : m_process(process), m_mutex(), m_memory_map() {}
 
-AllocatedMemoryCache::~AllocatedMemoryCache() {}
+AllocatedMemoryCache::~AllocatedMemoryCache() = default;
 
 void AllocatedMemoryCache::Clear() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);

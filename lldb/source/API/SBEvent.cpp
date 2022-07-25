@@ -1,4 +1,4 @@
-//===-- SBEvent.cpp ---------------------------------------------*- C++ -*-===//
+//===-- SBEvent.cpp -------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,9 +22,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBEvent::SBEvent() : m_event_sp(), m_opaque_ptr(nullptr) {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBEvent);
-}
+SBEvent::SBEvent() : m_event_sp() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBEvent); }
 
 SBEvent::SBEvent(uint32_t event_type, const char *cstr, uint32_t cstr_len)
     : m_event_sp(new Event(event_type, new EventDataBytes(cstr, cstr_len))),
@@ -58,7 +56,7 @@ const SBEvent &SBEvent::operator=(const SBEvent &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBEvent::~SBEvent() {}
+SBEvent::~SBEvent() = default;
 
 const char *SBEvent::GetDataFlavor() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBEvent, GetDataFlavor);

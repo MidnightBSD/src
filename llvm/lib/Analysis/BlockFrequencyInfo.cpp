@@ -47,6 +47,7 @@ static cl::opt<GVDAGType> ViewBlockFreqPropagationDAG(
                clEnumValN(GVDT_Count, "count", "display a graph using the real "
                                                "profile count if available.")));
 
+namespace llvm {
 cl::opt<std::string>
     ViewBlockFreqFuncName("view-bfi-func-name", cl::Hidden,
                           cl::desc("The option to specify "
@@ -86,6 +87,7 @@ cl::opt<std::string> PrintBlockFreqFuncName(
     "print-bfi-func-name", cl::Hidden,
     cl::desc("The option to specify the name of the function "
              "whose block frequency info is printed."));
+} // namespace llvm
 
 namespace llvm {
 
@@ -98,7 +100,7 @@ static GVDAGType getGVDT() {
 template <>
 struct GraphTraits<BlockFrequencyInfo *> {
   using NodeRef = const BasicBlock *;
-  using ChildIteratorType = succ_const_iterator;
+  using ChildIteratorType = const_succ_iterator;
   using nodes_iterator = pointer_iterator<Function::const_iterator>;
 
   static NodeRef getEntryNode(const BlockFrequencyInfo *G) {
@@ -285,6 +287,11 @@ void BlockFrequencyInfo::releaseMemory() { BFI.reset(); }
 void BlockFrequencyInfo::print(raw_ostream &OS) const {
   if (BFI)
     BFI->print(OS);
+}
+
+void BlockFrequencyInfo::verifyMatch(BlockFrequencyInfo &Other) const {
+  if (BFI)
+    BFI->verifyMatch(*Other.BFI);
 }
 
 INITIALIZE_PASS_BEGIN(BlockFrequencyInfoWrapperPass, "block-freq",

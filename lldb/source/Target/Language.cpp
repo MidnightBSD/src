@@ -1,5 +1,4 @@
-//===-- Language.cpp -------------------------------------------------*- C++
-//-*-===//
+//===-- Language.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -140,13 +139,6 @@ Language::GetPossibleFormattersMatches(ValueObject &valobj,
   return {};
 }
 
-lldb_private::formatters::StringPrinter::EscapingHelper
-Language::GetStringPrinterEscapingHelper(
-    lldb_private::formatters::StringPrinter::GetPrintableElementType
-        elem_type) {
-  return StringPrinter::GetDefaultEscapingHelper(elem_type);
-}
-
 struct language_name_pair {
   const char *name;
   LanguageType type;
@@ -192,7 +184,7 @@ struct language_name_pair language_names[] = {
     {"fortran03", eLanguageTypeFortran03},
     {"fortran08", eLanguageTypeFortran08},
     // Vendor Extensions
-    {"mipsassem", eLanguageTypeMipsAssembler},
+    {"assembler", eLanguageTypeMipsAssembler},
     {"renderscript", eLanguageTypeExtRenderScript},
     // Now synonyms, in arbitrary order
     {"objc", eLanguageTypeObjC},
@@ -204,7 +196,7 @@ static uint32_t num_languages =
 
 LanguageType Language::GetLanguageTypeFromString(llvm::StringRef string) {
   for (const auto &L : language_names) {
-    if (string.equals_lower(L.name))
+    if (string.equals_insensitive(L.name))
       return static_cast<LanguageType>(L.type);
   }
 
@@ -456,7 +448,7 @@ void Language::GetDefaultExceptionResolverDescription(bool catch_on,
            catch_on ? "on" : "off", throw_on ? "on" : "off");
 }
 // Constructor
-Language::Language() {}
+Language::Language() = default;
 
 // Destructor
-Language::~Language() {}
+Language::~Language() = default;

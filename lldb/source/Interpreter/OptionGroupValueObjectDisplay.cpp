@@ -1,4 +1,4 @@
-//===-- OptionGroupValueObjectDisplay.cpp -----------------------*- C++ -*-===//
+//===-- OptionGroupValueObjectDisplay.cpp ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,10 +18,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-
-OptionGroupValueObjectDisplay::OptionGroupValueObjectDisplay() {}
-
-OptionGroupValueObjectDisplay::~OptionGroupValueObjectDisplay() {}
 
 static const OptionDefinition g_option_table[] = {
     {LLDB_OPT_SET_1, false, "dynamic-type", 'd',

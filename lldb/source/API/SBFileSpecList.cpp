@@ -1,4 +1,4 @@
-//===-- SBFileSpecList.cpp --------------------------------------*- C++ -*-===//
+//===-- SBFileSpecList.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Stream.h"
 
-#include <limits.h>
+#include <climits>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -32,7 +32,7 @@ SBFileSpecList::SBFileSpecList(const SBFileSpecList &rhs) : m_opaque_up() {
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
-SBFileSpecList::~SBFileSpecList() {}
+SBFileSpecList::~SBFileSpecList() = default;
 
 const SBFileSpecList &SBFileSpecList::operator=(const SBFileSpecList &rhs) {
   LLDB_RECORD_METHOD(const lldb::SBFileSpecList &,

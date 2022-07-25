@@ -21,6 +21,7 @@
 #include "msan_report.h"
 #include "msan_thread.h"
 #include "msan_poisoning.h"
+#include "sanitizer_common/sanitizer_errno_codes.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
 #include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_common/sanitizer_allocator.h"
@@ -824,34 +825,10 @@ INTERCEPTOR(int, prlimit64, int pid, int resource, void *new_rlimit,
 #define MSAN_MAYBE_INTERCEPT_PRLIMIT64
 #endif
 
-#if SANITIZER_FREEBSD
-// FreeBSD's <sys/utsname.h> define uname() as
-// static __inline int uname(struct utsname *name) {
-//   return __xuname(SYS_NMLN, (void*)name);
-// }
-INTERCEPTOR(int, __xuname, int size, void *utsname) {
-  ENSURE_MSAN_INITED();
-  int res = REAL(__xuname)(size, utsname);
-  if (!res)
-    __msan_unpoison(utsname, __sanitizer::struct_utsname_sz);
-  return res;
-}
-#define MSAN_INTERCEPT_UNAME INTERCEPT_FUNCTION(__xuname)
-#else
-INTERCEPTOR(int, uname, struct utsname *utsname) {
-  ENSURE_MSAN_INITED();
-  int res = REAL(uname)(utsname);
-  if (!res)
-    __msan_unpoison(utsname, __sanitizer::struct_utsname_sz);
-  return res;
-}
-#define MSAN_INTERCEPT_UNAME INTERCEPT_FUNCTION(uname)
-#endif
-
 INTERCEPTOR(int, gethostname, char *name, SIZE_T len) {
   ENSURE_MSAN_INITED();
   int res = REAL(gethostname)(name, len);
-  if (!res) {
+  if (!res || (res == -1 && errno == errno_ENAMETOOLONG)) {
     SIZE_T real_len = REAL(strnlen)(name, len);
     if (real_len < len)
       ++real_len;
@@ -953,7 +930,9 @@ void __sanitizer_dtor_callback(const void *data, uptr size) {
 template <class Mmap>
 static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
                               int prot, int flags, int fd, OFF64_T offset) {
-  if (addr && !MEM_IS_APP(addr)) {
+  SIZE_T rounded_length = RoundUpTo(length, GetPageSize());
+  void *end_addr = (char *)addr + (rounded_length - 1);
+  if (addr && (!MEM_IS_APP(addr) || !MEM_IS_APP(end_addr))) {
     if (flags & map_fixed) {
       errno = errno_EINVAL;
       return (void *)-1;
@@ -962,7 +941,18 @@ static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
     }
   }
   void *res = real_mmap(addr, length, prot, flags, fd, offset);
-  if (res != (void *)-1) __msan_unpoison(res, RoundUpTo(length, GetPageSize()));
+  if (res != (void *)-1) {
+    void *end_res = (char *)res + (rounded_length - 1);
+    if (MEM_IS_APP(res) && MEM_IS_APP(end_res)) {
+      __msan_unpoison(res, rounded_length);
+    } else {
+      // Application has attempted to map more memory than is supported by
+      // MSAN. Act as if we ran out of memory.
+      internal_munmap(res, length);
+      errno = errno_ENOMEM;
+      return (void *)-1;
+    }
+  }
   return res;
 }
 
@@ -1256,10 +1246,10 @@ int OnExit() {
       CHECK_UNPOISONED_0(x, n);                                 \
   } while (0)
 
-#define MSAN_INTERCEPT_FUNC(name)                                        \
-  do {                                                                   \
-    if (!INTERCEPT_FUNCTION(name))                                       \
-      VReport(1, "MemorySanitizer: failed to intercept '%s'\n'", #name); \
+#define MSAN_INTERCEPT_FUNC(name)                                       \
+  do {                                                                  \
+    if (!INTERCEPT_FUNCTION(name))                                      \
+      VReport(1, "MemorySanitizer: failed to intercept '%s'\n", #name); \
   } while (0)
 
 #define MSAN_INTERCEPT_FUNC_VER(name, ver)                                 \
@@ -1268,10 +1258,18 @@ int OnExit() {
       VReport(1, "MemorySanitizer: failed to intercept '%s@@%s'\n", #name, \
               #ver);                                                       \
   } while (0)
+#define MSAN_INTERCEPT_FUNC_VER_UNVERSIONED_FALLBACK(name, ver)             \
+  do {                                                                      \
+    if (!INTERCEPT_FUNCTION_VER(name, ver) && !INTERCEPT_FUNCTION(name))    \
+      VReport(1, "MemorySanitizer: failed to intercept '%s@@%s' or '%s'\n", \
+              #name, #ver, #name);                                          \
+  } while (0)
 
 #define COMMON_INTERCEPT_FUNCTION(name) MSAN_INTERCEPT_FUNC(name)
-#define COMMON_INTERCEPT_FUNCTION_VER(name, ver)                          \
+#define COMMON_INTERCEPT_FUNCTION_VER(name, ver) \
   MSAN_INTERCEPT_FUNC_VER(name, ver)
+#define COMMON_INTERCEPT_FUNCTION_VER_UNVERSIONED_FALLBACK(name, ver) \
+  MSAN_INTERCEPT_FUNC_VER_UNVERSIONED_FALLBACK(name, ver)
 #define COMMON_INTERCEPTOR_UNPOISON_PARAM(count)  \
   UnpoisonParam(count)
 #define COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size) \
@@ -1314,6 +1312,8 @@ int OnExit() {
     if (filename && map)                                                       \
       ForEachMappedRegion(map, __msan_unpoison);                               \
   } while (false)
+
+#define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED (!msan_inited)
 
 #define COMMON_INTERCEPTOR_GET_TLS_RANGE(begin, end)                           \
   if (MsanThread *t = GetCurrentThread()) {                                    \
@@ -1374,11 +1374,14 @@ static int sigaction_impl(int signo, const __sanitizer_sigaction *act,
 static int sigaction_impl(int signo, const __sanitizer_sigaction *act,
                           __sanitizer_sigaction *oldact) {
   ENSURE_MSAN_INITED();
+  if (signo <= 0 || signo >= kMaxSignals) {
+    errno = errno_EINVAL;
+    return -1;
+  }
   if (act) read_sigaction(act);
   int res;
   if (flags()->wrap_signals) {
     SpinMutexLock lock(&sigactions_mu);
-    CHECK_LT(signo, kMaxSignals);
     uptr old_cb = atomic_load(&sigactions[signo], memory_order_relaxed);
     __sanitizer_sigaction new_act;
     __sanitizer_sigaction *pnew_act = act ? &new_act : nullptr;
@@ -1412,8 +1415,11 @@ static int sigaction_impl(int signo, const __sanitizer_sigaction *act,
 
 static uptr signal_impl(int signo, uptr cb) {
   ENSURE_MSAN_INITED();
+  if (signo <= 0 || signo >= kMaxSignals) {
+    errno = errno_EINVAL;
+    return -1;
+  }
   if (flags()->wrap_signals) {
-    CHECK_LT(signo, kMaxSignals);
     SpinMutexLock lock(&sigactions_mu);
     if (cb != __sanitizer::sig_ign && cb != __sanitizer::sig_dfl) {
       atomic_store(&sigactions[signo], cb, memory_order_relaxed);
@@ -1692,7 +1698,6 @@ void InitializeInterceptors() {
   MSAN_MAYBE_INTERCEPT_GETRLIMIT64;
   MSAN_MAYBE_INTERCEPT_PRLIMIT;
   MSAN_MAYBE_INTERCEPT_PRLIMIT64;
-  MSAN_INTERCEPT_UNAME;
   INTERCEPT_FUNCTION(gethostname);
   MSAN_MAYBE_INTERCEPT_EPOLL_WAIT;
   MSAN_MAYBE_INTERCEPT_EPOLL_PWAIT;

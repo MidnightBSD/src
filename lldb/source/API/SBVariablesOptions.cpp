@@ -1,5 +1,4 @@
-//===-- SBVariablesOptions.cpp --------------------------------------*- C++
-//-*-===//
+//===-- SBVariablesOptions.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,9 +21,7 @@ public:
   VariablesOptionsImpl()
       : m_include_arguments(false), m_include_locals(false),
         m_include_statics(false), m_in_scope_only(false),
-        m_include_runtime_support_values(false),
-        m_include_recognized_arguments(eLazyBoolCalculate),
-        m_use_dynamic(lldb::eNoDynamicValues) {}
+        m_include_runtime_support_values(false) {}
 
   VariablesOptionsImpl(const VariablesOptionsImpl &) = default;
 
@@ -76,8 +73,9 @@ private:
   bool m_include_statics : 1;
   bool m_in_scope_only : 1;
   bool m_include_runtime_support_values : 1;
-  LazyBool m_include_recognized_arguments; // can be overridden with a setting
-  lldb::DynamicValueType m_use_dynamic;
+  LazyBool m_include_recognized_arguments =
+      eLazyBoolCalculate; // can be overridden with a setting
+  lldb::DynamicValueType m_use_dynamic = lldb::eNoDynamicValues;
 };
 
 SBVariablesOptions::SBVariablesOptions()
@@ -98,7 +96,7 @@ operator=(const SBVariablesOptions &options) {
       SBVariablesOptions, operator=,(const lldb::SBVariablesOptions &),
       options);
 
-  m_opaque_up.reset(new VariablesOptionsImpl(options.ref()));
+  m_opaque_up = std::make_unique<VariablesOptionsImpl>(options.ref());
   return LLDB_RECORD_RESULT(*this);
 }
 

@@ -55,6 +55,15 @@ int __llvm_profile_is_continuous_mode_enabled(void);
 void __llvm_profile_enable_continuous_mode(void);
 
 /*!
+ * \brief Set the page size.
+ *
+ * This is a pre-requisite for enabling continuous mode. The buffer size
+ * calculation code inside of libprofile cannot simply call getpagesize(), as
+ * it is not allowed to depend on libc.
+ */
+void __llvm_profile_set_page_size(unsigned PageSize);
+
+/*!
  * \brief Get number of bytes necessary to pad the argument to eight
  * byte boundary.
  */
@@ -92,13 +101,13 @@ void __llvm_profile_reset_counters(void);
 /*!
  * \brief Merge profile data from buffer.
  *
- * Read profile data form buffer \p Profile  and merge with
- * in-process profile counters. The client is expected to
- * have checked or already knows the profile data in the
- * buffer matches the in-process counter structure before
- * calling it.
+ * Read profile data form buffer \p Profile  and merge with in-process profile
+ * counters. The client is expected to have checked or already knows the profile
+ * data in the buffer matches the in-process counter structure before calling
+ * it. Returns 0 (success) if the profile data is valid. Upon reading
+ * invalid/corrupted profile data, returns 1 (failure).
  */
-void __llvm_profile_merge_from_buffer(const char *Profile, uint64_t Size);
+int __llvm_profile_merge_from_buffer(const char *Profile, uint64_t Size);
 
 /*! \brief Check if profile in buffer matches the current binary.
  *
@@ -217,6 +226,9 @@ int __llvm_profile_register_write_file_atexit(void);
 
 /*! \brief Initialize file handling. */
 void __llvm_profile_initialize_file(void);
+
+/*! \brief Initialize the profile runtime. */
+void __llvm_profile_initialize(void);
 
 /*!
  * \brief Return path prefix (excluding the base filename) of the profile data.

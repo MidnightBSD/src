@@ -177,7 +177,7 @@ static int PrintSupportedCPUs(std::string TargetStr) {
   // the target machine will handle the mcpu printing
   llvm::TargetOptions Options;
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(TargetStr, "", "+cpuHelp", Options, None));
+      TheTarget->createTargetMachine(TargetStr, "", "+cpuhelp", Options, None));
   return 0;
 }
 
@@ -203,8 +203,14 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
-  bool Success =
-      CompilerInvocation::CreateFromArgs(Clang->getInvocation(), Argv, Diags);
+
+  // Setup round-trip remarks for the DiagnosticsEngine used in CreateFromArgs.
+  if (find(Argv, StringRef("-Rround-trip-cc1-args")) != Argv.end())
+    Diags.setSeverity(diag::remark_cc1_round_trip_generated,
+                      diag::Severity::Remark, {});
+
+  bool Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
+                                                    Argv, Diags, Argv0);
 
   if (Clang->getFrontendOpts().TimeTrace) {
     llvm::timeTraceProfilerInitialize(
@@ -248,17 +254,14 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (llvm::timeTraceProfilerEnabled()) {
     SmallString<128> Path(Clang->getFrontendOpts().OutputFile);
     llvm::sys::path::replace_extension(Path, "json");
-    if (auto profilerOutput =
-            Clang->createOutputFile(Path.str(),
-                                    /*Binary=*/false,
-                                    /*RemoveFileOnSignal=*/false, "",
-                                    /*Extension=*/"json",
-                                    /*useTemporary=*/false)) {
-
+    if (auto profilerOutput = Clang->createOutputFile(
+            Path.str(), /*Binary=*/false, /*RemoveFileOnSignal=*/false,
+            /*useTemporary=*/false)) {
       llvm::timeTraceProfilerWrite(*profilerOutput);
       // FIXME(ibiryukov): make profilerOutput flush in destructor instead.
       profilerOutput->flush();
       llvm::timeTraceProfilerCleanup();
+      Clang->clearOutputFiles(false);
     }
   }
 

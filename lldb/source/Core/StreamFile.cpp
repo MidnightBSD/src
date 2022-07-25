@@ -1,4 +1,4 @@
-//===-- StreamFile.cpp ------------------------------------------*- C++ -*-===//
+//===-- StreamFile.cpp ----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/Log.h"
 
-#include <stdio.h>
+#include <cstdio>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -43,7 +43,7 @@ StreamFile::StreamFile(const char *path, File::OpenOptions options,
   }
 }
 
-StreamFile::~StreamFile() {}
+StreamFile::~StreamFile() = default;
 
 void StreamFile::Flush() { m_file_sp->Flush(); }
 

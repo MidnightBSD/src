@@ -15,6 +15,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -23,8 +24,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SymbolRemappingReader.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/SymbolRemappingReader.h"
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
@@ -40,7 +41,7 @@ using namespace llvm;
 static Expected<std::unique_ptr<MemoryBuffer>>
 setupMemoryBuffer(const Twine &Path) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-      MemoryBuffer::getFileOrSTDIN(Path);
+      MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/true);
   if (std::error_code EC = BufferOrErr.getError())
     return errorCodeToError(EC);
   return std::move(BufferOrErr.get());
@@ -144,7 +145,7 @@ bool TextInstrProfReader::hasFormat(const MemoryBuffer &Buffer) {
   StringRef buffer = Buffer.getBufferStart();
   return count == 0 ||
          std::all_of(buffer.begin(), buffer.begin() + count,
-                     [](char c) { return isPrint(c) || ::isspace(c); });
+                     [](char c) { return isPrint(c) || isSpace(c); });
 }
 
 // Read the profile variant flag from the header: ":FE" means this is a FE
@@ -153,23 +154,29 @@ bool TextInstrProfReader::hasFormat(const MemoryBuffer &Buffer) {
 Error TextInstrProfReader::readHeader() {
   Symtab.reset(new InstrProfSymtab());
   bool IsIRInstr = false;
-  if (!Line->startswith(":")) {
-    IsIRLevelProfile = false;
-    return success();
-  }
-  StringRef Str = (Line)->substr(1);
-  if (Str.equals_lower("ir"))
-    IsIRInstr = true;
-  else if (Str.equals_lower("fe"))
-    IsIRInstr = false;
-  else if (Str.equals_lower("csir")) {
-    IsIRInstr = true;
-    HasCSIRLevelProfile = true;
-  } else
-    return error(instrprof_error::bad_header);
+  bool IsEntryFirst = false;
+  bool IsCS = false;
 
-  ++Line;
+  while (Line->startswith(":")) {
+    StringRef Str = Line->substr(1);
+    if (Str.equals_insensitive("ir"))
+      IsIRInstr = true;
+    else if (Str.equals_insensitive("fe"))
+      IsIRInstr = false;
+    else if (Str.equals_insensitive("csir")) {
+      IsIRInstr = true;
+      IsCS = true;
+    } else if (Str.equals_insensitive("entry_first"))
+      IsEntryFirst = true;
+    else if (Str.equals_insensitive("not_entry_first"))
+      IsEntryFirst = false;
+    else
+      return error(instrprof_error::bad_header);
+    ++Line;
+  }
   IsIRLevelProfile = IsIRInstr;
+  InstrEntryBBEnabled = IsEntryFirst;
+  HasCSIRLevelProfile = IsCS;
   return success();
 }
 
@@ -359,6 +366,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   if (GET_VERSION(Version) != RawInstrProf::Version)
     return error(instrprof_error::unsupported_version);
 
+  BinaryIdsSize = swap(Header.BinaryIdsSize);
   CountersDelta = swap(Header.CountersDelta);
   NamesDelta = swap(Header.NamesDelta);
   auto DataSize = swap(Header.DataSize);
@@ -371,7 +379,8 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   auto DataSizeInBytes = DataSize * sizeof(RawInstrProf::ProfileData<IntPtrT>);
   auto PaddingSize = getNumPaddingBytes(NamesSize);
 
-  ptrdiff_t DataOffset = sizeof(RawInstrProf::Header);
+  // Profile data starts after profile header and binary ids if exist.
+  ptrdiff_t DataOffset = sizeof(RawInstrProf::Header) + BinaryIdsSize;
   ptrdiff_t CountersOffset =
       DataOffset + DataSizeInBytes + PaddingBytesBeforeCounters;
   ptrdiff_t NamesOffset = CountersOffset + (sizeof(uint64_t) * CountersSize) +
@@ -385,6 +394,10 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   Data = reinterpret_cast<const RawInstrProf::ProfileData<IntPtrT> *>(
       Start + DataOffset);
   DataEnd = Data + DataSize;
+
+  // Binary ids start just after the header.
+  BinaryIdsStart =
+      reinterpret_cast<const uint8_t *>(&Header) + sizeof(RawInstrProf::Header);
   CountersStart = reinterpret_cast<const uint64_t *>(Start + CountersOffset);
   NamesStart = Start + NamesOffset;
   ValueDataStart = reinterpret_cast<const uint8_t *>(Start + ValueDataOffset);
@@ -422,11 +435,11 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
 
   // Check bounds. Note that the counter pointer embedded in the data record
   // may itself be corrupt.
-  if (NumCounters > MaxNumCounters)
+  if (MaxNumCounters < 0 || NumCounters > (uint32_t)MaxNumCounters)
     return error(instrprof_error::malformed);
   ptrdiff_t CounterOffset = getCounterOffset(CounterPtr);
   if (CounterOffset < 0 || CounterOffset > MaxNumCounters ||
-      (CounterOffset + NumCounters) > MaxNumCounters)
+      ((uint32_t)CounterOffset + NumCounters) > (uint32_t)MaxNumCounters)
     return error(instrprof_error::malformed);
 
   auto RawCounts = makeArrayRef(getCounter(CounterOffset), NumCounters);
@@ -496,6 +509,33 @@ Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) 
 
   // Iterate.
   advanceData();
+  return success();
+}
+
+template <class IntPtrT>
+Error RawInstrProfReader<IntPtrT>::printBinaryIds(raw_ostream &OS) {
+  if (BinaryIdsSize == 0)
+    return success();
+
+  OS << "Binary IDs: \n";
+  const uint8_t *BI = BinaryIdsStart;
+  while (BI < BinaryIdsStart + BinaryIdsSize) {
+    uint64_t BinaryIdLen = swap(*reinterpret_cast<const uint64_t *>(BI));
+    // Increment by binary id length data type size.
+    BI += sizeof(BinaryIdLen);
+    if (BI > (const uint8_t *)DataBuffer->getBufferEnd())
+      return make_error<InstrProfError>(instrprof_error::malformed);
+
+    for (uint64_t I = 0; I < BinaryIdLen; I++)
+      OS << format("%02x", BI[I]);
+    OS << "\n";
+
+    // Increment by binary id data length.
+    BI += BinaryIdLen;
+    if (BI > (const uint8_t *)DataBuffer->getBufferEnd())
+      return make_error<InstrProfError>(instrprof_error::malformed);
+  }
+
   return success();
 }
 

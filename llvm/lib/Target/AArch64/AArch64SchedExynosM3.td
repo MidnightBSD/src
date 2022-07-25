@@ -25,7 +25,8 @@ def ExynosM3Model : SchedMachineModel {
   let CompleteModel         =   1; // Use the default model otherwise.
 
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
-                                                    PAUnsupported.F);
+                                                    PAUnsupported.F,
+                                                    SMEUnsupported.F);
 }
 
 //===----------------------------------------------------------------------===//
@@ -661,7 +662,7 @@ def : InstRW<[M3WriteNEONY],  (instrs FSQRTv2f64)>;
 
 // ASIMD miscellaneous instructions.
 def : InstRW<[M3WriteNALU1], (instregex "^RBITv")>;
-def : InstRW<[M3WriteNALU1], (instregex "^(BIF|BIT|BSL)v")>;
+def : InstRW<[M3WriteNALU1], (instregex "^(BIF|BIT|BSL|BSP)v")>;
 def : InstRW<[M3WriteNEONB], (instregex "^DUPv.+gpr")>;
 def : InstRW<[M3WriteNSHF1], (instregex "^DUPv.+lane")>;
 def : InstRW<[M3WriteNSHF1], (instregex "^EXTv")>;

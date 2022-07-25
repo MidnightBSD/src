@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_LineEntry_h_
-#define liblldb_LineEntry_h_
+#ifndef LLDB_SYMBOL_LINEENTRY_H
+#define LLDB_SYMBOL_LINEENTRY_H
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Utility/FileSpec.h"
@@ -118,7 +118,7 @@ struct LineEntry {
   /// range.
   ///
   /// If the initial LineEntry this method is called on is a line #0, only the
-  /// range of contiuous LineEntries with line #0 will be included in the
+  /// range of continuous LineEntries with line #0 will be included in the
   /// complete range.
   ///
   /// @param[in] include_inlined_functions
@@ -140,10 +140,12 @@ struct LineEntry {
   FileSpec file; ///< The source file, possibly mapped by the target.source-map
                  ///setting
   FileSpec original_file; ///< The original source file, from debug info.
-  uint32_t line; ///< The source line number, or zero if there is no line number
-                 ///information.
-  uint16_t column; ///< The column number of the source line, or zero if there
-                   ///is no column information.
+  uint32_t line = LLDB_INVALID_LINE_NUMBER; ///< The source line number, or zero
+                                            ///< if there is no line number
+                                            /// information.
+  uint16_t column =
+      0; ///< The column number of the source line, or zero if there
+         /// is no column information.
   uint16_t is_start_of_statement : 1, ///< Indicates this entry is the beginning
                                       ///of a statement.
       is_start_of_basic_block : 1, ///< Indicates this entry is the beginning of
@@ -173,4 +175,4 @@ bool operator<(const LineEntry &lhs, const LineEntry &rhs);
 
 } // namespace lldb_private
 
-#endif // liblldb_LineEntry_h_
+#endif // LLDB_SYMBOL_LINEENTRY_H

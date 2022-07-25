@@ -254,6 +254,10 @@ struct GenBinaryFuncName : CopyStructVisitor<GenBinaryFuncName<IsMove>, IsMove>,
 
   void visitVolatileTrivial(QualType FT, const FieldDecl *FD,
                             CharUnits CurStructOffset) {
+    // Zero-length bit-fields don't need to be copied/assigned.
+    if (FD && FD->isZeroLengthBitField(this->Ctx))
+      return;
+
     // Because volatile fields can be bit-fields and are individually copied,
     // their offset and width are in bits.
     uint64_t OffsetInBits =
@@ -317,6 +321,16 @@ static const CGFunctionInfo &getFunctionInfo(CodeGenModule &CGM,
   return CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy, Args);
 }
 
+template <size_t N, size_t... Ints>
+static std::array<Address, N> getParamAddrs(std::index_sequence<Ints...> IntSeq,
+                                            std::array<CharUnits, N> Alignments,
+                                            FunctionArgList Args,
+                                            CodeGenFunction *CGF) {
+  return std::array<Address, N>{{
+      Address(CGF->Builder.CreateLoad(CGF->GetAddrOfLocalVar(Args[Ints])),
+              Alignments[Ints])...}};
+}
+
 // Template classes that are used as bases for classes that emit special
 // functions.
 template <class Derived> struct GenFuncBase {
@@ -354,7 +368,7 @@ template <class Derived> struct GenFuncBase {
         CGF.Builder.CreateNUWMul(BaseEltSizeVal, NumElts);
     Address BC = CGF.Builder.CreateBitCast(DstAddr, CGF.CGM.Int8PtrTy);
     llvm::Value *DstArrayEnd =
-        CGF.Builder.CreateInBoundsGEP(BC.getPointer(), SizeInBytes);
+        CGF.Builder.CreateInBoundsGEP(CGF.Int8Ty, BC.getPointer(), SizeInBytes);
     DstArrayEnd = CGF.Builder.CreateBitCast(DstArrayEnd, CGF.CGM.Int8PtrPtrTy,
                                             "dstarray.end");
     llvm::BasicBlock *PreheaderBB = CGF.Builder.GetInsertBlock();
@@ -424,9 +438,9 @@ template <class Derived> struct GenFuncBase {
   }
 
   template <size_t N>
-  llvm::Function *
-  getFunction(StringRef FuncName, QualType QT, std::array<Address, N> Addrs,
-              std::array<CharUnits, N> Alignments, CodeGenModule &CGM) {
+  llvm::Function *getFunction(StringRef FuncName, QualType QT,
+                              std::array<CharUnits, N> Alignments,
+                              CodeGenModule &CGM) {
     // If the special function already exists in the module, return it.
     if (llvm::Function *F = CGM.getModule().getFunction(FuncName)) {
       bool WrongType = false;
@@ -439,7 +453,7 @@ template <class Derived> struct GenFuncBase {
       }
 
       if (WrongType) {
-        std::string FuncName = F->getName();
+        std::string FuncName = std::string(F->getName());
         SourceLocation Loc = QT->castAs<RecordType>()->getDecl()->getLocation();
         CGM.Error(Loc, "special function " + FuncName +
                            " for non-trivial C struct has incorrect type");
@@ -456,22 +470,14 @@ template <class Derived> struct GenFuncBase {
         llvm::Function::Create(FuncTy, llvm::GlobalValue::LinkOnceODRLinkage,
                                FuncName, &CGM.getModule());
     F->setVisibility(llvm::GlobalValue::HiddenVisibility);
-    CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, F);
+    CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, F, /*IsThunk=*/false);
     CGM.SetLLVMFunctionAttributesForDefinition(nullptr, F);
-    IdentifierInfo *II = &Ctx.Idents.get(FuncName);
-    FunctionDecl *FD = FunctionDecl::Create(
-        Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
-        II, Ctx.getFunctionType(Ctx.VoidTy, llvm::None, {}), nullptr,
-        SC_PrivateExtern, false, false);
     CodeGenFunction NewCGF(CGM);
     setCGF(&NewCGF);
-    CGF->StartFunction(FD, Ctx.VoidTy, F, FI, Args);
-
-    for (unsigned I = 0; I < N; ++I) {
-      llvm::Value *V = CGF->Builder.CreateLoad(CGF->GetAddrOfLocalVar(Args[I]));
-      Addrs[I] = Address(V, Alignments[I]);
-    }
-
+    CGF->StartFunction(GlobalDecl(), Ctx.VoidTy, F, FI, Args);
+    auto AL = ApplyDebugLocation::CreateArtificial(*CGF);
+    std::array<Address, N> Addrs =
+        getParamAddrs<N>(std::make_index_sequence<N>{}, Alignments, Args, CGF);
     asDerived().visitStructFields(QT, CharUnits::Zero(), Addrs);
     CGF->FinishFunction();
     return F;
@@ -491,7 +497,7 @@ template <class Derived> struct GenFuncBase {
     }
 
     if (llvm::Function *F =
-            getFunction(FuncName, QT, Addrs, Alignments, CallerCGF.CGM))
+            getFunction(FuncName, QT, Alignments, CallerCGF.CGM))
       CallerCGF.EmitNounwindRuntimeCall(F, Ptrs);
   }
 
@@ -543,6 +549,10 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
                             std::array<Address, 2> Addrs) {
     LValue DstLV, SrcLV;
     if (FD) {
+      // No need to copy zero-length bit-fields.
+      if (FD->isZeroLengthBitField(this->CGF->getContext()))
+        return;
+
       QualType RT = QualType(FD->getParent()->getTypeForDecl(), 0);
       llvm::PointerType *PtrTy = this->CGF->ConvertType(RT)->getPointerTo();
       Address DstAddr = this->getAddrWithOffset(Addrs[DstIdx], Offset);
@@ -554,7 +564,7 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
           this->CGF->Builder.CreateBitCast(SrcAddr, PtrTy), FT);
       SrcLV = this->CGF->EmitLValueForField(SrcBase, FD);
     } else {
-      llvm::PointerType *Ty = this->CGF->ConvertType(FT)->getPointerTo();
+      llvm::PointerType *Ty = this->CGF->ConvertTypeForMem(FT)->getPointerTo();
       Address DstAddr = this->CGF->Builder.CreateBitCast(Addrs[DstIdx], Ty);
       Address SrcAddr = this->CGF->Builder.CreateBitCast(Addrs[SrcIdx], Ty);
       DstLV = this->CGF->MakeAddrLValue(DstAddr, FT);
@@ -825,17 +835,6 @@ static void callSpecialFunction(G &&Gen, StringRef FuncName, QualType QT,
   Gen.callFunc(FuncName, QT, Addrs, CGF);
 }
 
-template <size_t N> static std::array<Address, N> createNullAddressArray();
-
-template <> std::array<Address, 1> createNullAddressArray() {
-  return std::array<Address, 1>({{Address(nullptr, CharUnits::Zero())}});
-}
-
-template <> std::array<Address, 2> createNullAddressArray() {
-  return std::array<Address, 2>({{Address(nullptr, CharUnits::Zero()),
-                                  Address(nullptr, CharUnits::Zero())}});
-}
-
 template <class G, size_t N>
 static llvm::Function *
 getSpecialFunction(G &&Gen, StringRef FuncName, QualType QT, bool IsVolatile,
@@ -844,8 +843,7 @@ getSpecialFunction(G &&Gen, StringRef FuncName, QualType QT, bool IsVolatile,
   // The following call requires an array of addresses as arguments, but doesn't
   // actually use them (it overwrites them with the addresses of the arguments
   // of the created function).
-  return Gen.getFunction(FuncName, QT, createNullAddressArray<N>(), Alignments,
-                         CGM);
+  return Gen.getFunction(FuncName, QT, Alignments, CGM);
 }
 
 // Functions to emit calls to the special functions of a non-trivial C struct.

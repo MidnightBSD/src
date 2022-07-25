@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_CompUnit_h_
-#define liblldb_CompUnit_h_
+#ifndef LLDB_SYMBOL_COMPILEUNIT_H
+#define LLDB_SYMBOL_COMPILEUNIT_H
 
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/ModuleChild.h"
+#include "lldb/Core/SourceLocationSpec.h"
 #include "lldb/Symbol/DebugMacros.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/LineTable.h"
@@ -345,29 +346,22 @@ public:
 
   /// Resolve symbol contexts by file and line.
   ///
-  /// Given a file in \a file_spec, and a line number, find all instances and
+  /// Given a file in \a src_location_spec, find all instances and
   /// append them to the supplied symbol context list \a sc_list.
   ///
-  /// \param[in] file_spec
-  ///     A file specification. If \a file_spec contains no directory
-  ///     information, only the basename will be used when matching
-  ///     contexts. If the directory in \a file_spec is valid, a
-  ///     complete file specification match will be performed.
+  /// \param[in] src_location_spec
+  ///     The \a src_location_spec containing the \a file_spec, the line and the
+  ///     column of the symbol to look for. Also hold the inlines and
+  ///     exact_match flags.
   ///
-  /// \param[in] line
-  ///     The line number to match against the compile unit's line
-  ///     tables.
-  ///
-  /// \param[in] check_inlines
-  ///     If \b true this function will also match any inline
+  ///     If check_inlines is \b true, this function will also match any inline
   ///     file and line matches. If \b false, the compile unit's
   ///     file specification must match \a file_spec for any matches
   ///     to be returned.
   ///
-  /// \param[in] exact
-  ///     If true, only resolve the context if \a line exists in the line table.
-  ///     If false, resolve the context to the closest line greater than \a line
-  ///     in the line table.
+  ///     If exact_match is \b true, only resolve the context if \a line and \a
+  ///     column exists in the line table. If \b false, resolve the context to
+  ///     the closest line greater than \a line in the line table.
   ///
   /// \param[in] resolve_scope
   ///     For each matching line entry, this bitfield indicates what
@@ -382,8 +376,7 @@ public:
   ///     entries appended to.
   ///
   /// \see enum SymbolContext::Scope
-  void ResolveSymbolContext(const FileSpec &file_spec, uint32_t line,
-                            bool check_inlines, bool exact,
+  void ResolveSymbolContext(const SourceLocationSpec &src_location_spec,
                             lldb::SymbolContextItem resolve_scope,
                             SymbolContextList &sc_list);
 
@@ -447,9 +440,10 @@ private:
         (1u << 6) ///< Have we parsed the debug macros already?
   };
 
-  DISALLOW_COPY_AND_ASSIGN(CompileUnit);
+  CompileUnit(const CompileUnit &) = delete;
+  const CompileUnit &operator=(const CompileUnit &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_CompUnit_h_
+#endif // LLDB_SYMBOL_COMPILEUNIT_H

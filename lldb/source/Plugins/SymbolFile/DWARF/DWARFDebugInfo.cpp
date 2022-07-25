@@ -1,4 +1,4 @@
-//===-- DWARFDebugInfo.cpp --------------------------------------*- C++ -*-===//
+//===-- DWARFDebugInfo.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,17 +34,18 @@ DWARFDebugInfo::DWARFDebugInfo(SymbolFileDWARF &dwarf,
                                lldb_private::DWARFContext &context)
     : m_dwarf(dwarf), m_context(context), m_units(), m_cu_aranges_up() {}
 
-llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
+const DWARFDebugAranges &DWARFDebugInfo::GetCompileUnitAranges() {
   if (m_cu_aranges_up)
     return *m_cu_aranges_up;
 
   m_cu_aranges_up = std::make_unique<DWARFDebugAranges>();
   const DWARFDataExtractor &debug_aranges_data =
       m_context.getOrLoadArangesData();
-  if (llvm::Error error = m_cu_aranges_up->extract(debug_aranges_data))
-    return std::move(error);
 
-  // Make a list of all CUs represented by the arange data in the file.
+  // Extract what we can from the .debug_aranges first.
+  m_cu_aranges_up->extract(debug_aranges_data);
+
+  // Make a list of all CUs represented by the .debug_aranges data.
   std::set<dw_offset_t> cus_with_data;
   for (size_t n = 0; n < m_cu_aranges_up->GetNumRanges(); n++) {
     dw_offset_t offset = m_cu_aranges_up->OffsetAtIndex(n);
@@ -52,8 +53,7 @@ llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
       cus_with_data.insert(offset);
   }
 
-  // Manually build arange data for everything that wasn't in the
-  // .debug_aranges table.
+  // Manually build arange data for everything that wasn't in .debug_aranges.
   const size_t num_units = GetNumUnits();
   for (size_t idx = 0; idx < num_units; ++idx) {
     DWARFUnit *cu = GetUnitAtIndex(idx);
@@ -74,8 +74,8 @@ void DWARFDebugInfo::ParseUnitsFor(DIERef::Section section) {
                                 : m_context.getOrLoadDebugInfoData();
   lldb::offset_t offset = 0;
   while (data.ValidOffset(offset)) {
-    llvm::Expected<DWARFUnitSP> unit_sp =
-        DWARFUnit::extract(m_dwarf, m_units.size(), data, section, &offset);
+    llvm::Expected<DWARFUnitSP> unit_sp = DWARFUnit::extract(
+        m_dwarf, m_units.size(), data, section, &offset);
 
     if (!unit_sp) {
       // FIXME: Propagate this error up.
@@ -96,12 +96,11 @@ void DWARFDebugInfo::ParseUnitsFor(DIERef::Section section) {
 }
 
 void DWARFDebugInfo::ParseUnitHeadersIfNeeded() {
-  if (!m_units.empty())
-    return;
-
-  ParseUnitsFor(DIERef::Section::DebugInfo);
-  ParseUnitsFor(DIERef::Section::DebugTypes);
-  llvm::sort(m_type_hash_to_unit_index, llvm::less_first());
+  llvm::call_once(m_units_once_flag, [&] {
+    ParseUnitsFor(DIERef::Section::DebugInfo);
+    ParseUnitsFor(DIERef::Section::DebugTypes);
+    llvm::sort(m_type_hash_to_unit_index, llvm::less_first());
+  });
 }
 
 size_t DWARFDebugInfo::GetNumUnits() {
@@ -109,7 +108,7 @@ size_t DWARFDebugInfo::GetNumUnits() {
   return m_units.size();
 }
 
-DWARFUnit *DWARFDebugInfo::GetUnitAtIndex(user_id_t idx) {
+DWARFUnit *DWARFDebugInfo::GetUnitAtIndex(size_t idx) {
   DWARFUnit *cu = nullptr;
   if (idx < GetNumUnits())
     cu = m_units[idx].get();
@@ -191,7 +190,6 @@ DWARFDIE
 DWARFDebugInfo::GetDIE(const DIERef &die_ref) {
   DWARFUnit *cu = GetUnit(die_ref);
   if (cu)
-    return cu->GetDIE(die_ref.die_offset());
+    return cu->GetNonSkeletonUnit().GetDIE(die_ref.die_offset());
   return DWARFDIE(); // Not found
 }
-

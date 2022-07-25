@@ -25,8 +25,19 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
+
 using namespace clang;
 using namespace CodeGen;
+
+#ifndef NDEBUG
+#include "llvm/Support/CommandLine.h"
+// TODO: turn on by default when defined(EXPENSIVE_CHECKS) once check-clang is
+// -verify-type-cache clean.
+static llvm::cl::opt<bool> VerifyTypeCache(
+    "verify-type-cache",
+    llvm::cl::desc("Verify that the type cache matches the computed type"),
+    llvm::cl::init(false), llvm::cl::Hidden);
+#endif
 
 CodeGenTypes::CodeGenTypes(CodeGenModule &cgm)
   : CGM(cgm), Context(cgm.getContext()), TheModule(cgm.getModule()),
@@ -36,8 +47,6 @@ CodeGenTypes::CodeGenTypes(CodeGenModule &cgm)
 }
 
 CodeGenTypes::~CodeGenTypes() {
-  llvm::DeleteContainerSeconds(CGRecordLayouts);
-
   for (llvm::FoldingSet<CGFunctionInfo>::iterator
        I = FunctionInfos.begin(), E = FunctionInfos.end(); I != E; )
     delete &*I++;
@@ -54,20 +63,26 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
   llvm::raw_svector_ostream OS(TypeName);
   OS << RD->getKindName() << '.';
 
+  // FIXME: We probably want to make more tweaks to the printing policy. For
+  // example, we should probably enable PrintCanonicalTypes and
+  // FullyQualifiedNames.
+  PrintingPolicy Policy = RD->getASTContext().getPrintingPolicy();
+  Policy.SuppressInlineNamespace = false;
+
   // Name the codegen type after the typedef name
   // if there is no tag type name available
   if (RD->getIdentifier()) {
     // FIXME: We should not have to check for a null decl context here.
     // Right now we do it because the implicit Obj-C decls don't have one.
     if (RD->getDeclContext())
-      RD->printQualifiedName(OS);
+      RD->printQualifiedName(OS, Policy);
     else
       RD->printName(OS);
   } else if (const TypedefNameDecl *TDD = RD->getTypedefNameForAnonDecl()) {
     // FIXME: We should not have to check for a null decl context here.
     // Right now we do it because the implicit Obj-C decls don't have one.
     if (TDD->getDeclContext())
-      TDD->printQualifiedName(OS);
+      TDD->printQualifiedName(OS, Policy);
     else
       TDD->printName(OS);
   } else
@@ -83,18 +98,26 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
 /// ConvertType in that it is used to convert to the memory representation for
 /// a type.  For example, the scalar representation for _Bool is i1, but the
 /// memory representation is usually i8 or i32, depending on the target.
-llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
+llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
+  if (T->isConstantMatrixType()) {
+    const Type *Ty = Context.getCanonicalType(T).getTypePtr();
+    const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
+    return llvm::ArrayType::get(ConvertType(MT->getElementType()),
+                                MT->getNumRows() * MT->getNumColumns());
+  }
+
   llvm::Type *R = ConvertType(T);
 
-  // If this is a non-bool type, don't map it.
-  if (!R->isIntegerTy(1))
-    return R;
+  // If this is a bool type, or an ExtIntType in a bitfield representation,
+  // map this integer to the target-specified size.
+  if ((ForBitField && T->isExtIntType()) ||
+      (!T->isExtIntType() && R->isIntegerTy(1)))
+    return llvm::IntegerType::get(getLLVMContext(),
+                                  (unsigned)Context.getTypeSize(T));
 
-  // Otherwise, return an integer of the target-specified size.
-  return llvm::IntegerType::get(getLLVMContext(),
-                                (unsigned)Context.getTypeSize(T));
+  // Else, don't map it.
+  return R;
 }
-
 
 /// isRecordLayoutComplete - Return true if the specified type is already
 /// completely laid out.
@@ -295,6 +318,8 @@ static llvm::Type *getTypeForFormat(llvm::LLVMContext &VMContext,
     else
       return llvm::Type::getInt16Ty(VMContext);
   }
+  if (&format == &llvm::APFloat::BFloat())
+    return llvm::Type::getBFloatTy(VMContext);
   if (&format == &llvm::APFloat::IEEEsingle())
     return llvm::Type::getFloatTy(VMContext);
   if (&format == &llvm::APFloat::IEEEdouble())
@@ -368,9 +393,6 @@ llvm::Type *CodeGenTypes::ConvertFunctionTypeInternal(QualType QFT) {
 
   RecordsBeingLaidOut.erase(Ty);
 
-  if (SkippedLayout)
-    TypeCache.clear();
-
   if (RecordsBeingLaidOut.empty())
     while (!DeferredRecords.empty())
       ConvertRecordDeclType(DeferredRecords.pop_back_val());
@@ -383,15 +405,47 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 
   const Type *Ty = T.getTypePtr();
 
+  // For the device-side compilation, CUDA device builtin surface/texture types
+  // may be represented in different types.
+  if (Context.getLangOpts().CUDAIsDevice) {
+    if (T->isCUDADeviceBuiltinSurfaceType()) {
+      if (auto *Ty = CGM.getTargetCodeGenInfo()
+                         .getCUDADeviceBuiltinSurfaceDeviceType())
+        return Ty;
+    } else if (T->isCUDADeviceBuiltinTextureType()) {
+      if (auto *Ty = CGM.getTargetCodeGenInfo()
+                         .getCUDADeviceBuiltinTextureDeviceType())
+        return Ty;
+    }
+  }
+
   // RecordTypes are cached and processed specially.
   if (const RecordType *RT = dyn_cast<RecordType>(Ty))
     return ConvertRecordDeclType(RT->getDecl());
 
-  // See if type is already cached.
-  llvm::DenseMap<const Type *, llvm::Type *>::iterator TCI = TypeCache.find(Ty);
-  // If type is found in map then use it. Otherwise, convert type T.
-  if (TCI != TypeCache.end())
-    return TCI->second;
+  // The LLVM type we return for a given Clang type may not always be the same,
+  // most notably when dealing with recursive structs. We mark these potential
+  // cases with ShouldUseCache below. Builtin types cannot be recursive.
+  // TODO: when clang uses LLVM opaque pointers we won't be able to represent
+  // recursive types with LLVM types, making this logic much simpler.
+  llvm::Type *CachedType = nullptr;
+  bool ShouldUseCache =
+      Ty->isBuiltinType() ||
+      (noRecordsBeingLaidOut() && FunctionsBeingProcessed.empty());
+  if (ShouldUseCache) {
+    llvm::DenseMap<const Type *, llvm::Type *>::iterator TCI =
+        TypeCache.find(Ty);
+    if (TCI != TypeCache.end())
+      CachedType = TCI->second;
+    if (CachedType) {
+#ifndef NDEBUG
+      if (!VerifyTypeCache)
+        return CachedType;
+#else
+      return CachedType;
+#endif
+    }
+  }
 
   // If we don't have it in the cache, convert it now.
   llvm::Type *ResultType = nullptr;
@@ -479,6 +533,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
           Context.getLangOpts().NativeHalfType ||
               !Context.getTargetInfo().useFP16ConversionIntrinsics());
       break;
+    case BuiltinType::BFloat16:
     case BuiltinType::Float:
     case BuiltinType::Double:
     case BuiltinType::LongDouble:
@@ -511,24 +566,77 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     case BuiltinType::OCLReserveID:
       ResultType = CGM.getOpenCLRuntime().convertOpenCLSpecificType(Ty);
       break;
-
-    // TODO: real CodeGen support for SVE types requires more infrastructure
-    // to be added first.  Report an error until then.
-#define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
-    {
-      unsigned DiagID = CGM.getDiags().getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "cannot yet generate code for SVE type '%0'");
-      auto *BT = cast<BuiltinType>(Ty);
-      auto Name = BT->getName(CGM.getContext().getPrintingPolicy());
-      CGM.getDiags().Report(DiagID) << Name;
-      // Return something safe.
-      ResultType = llvm::IntegerType::get(getLLVMContext(), 32);
-      break;
+    case BuiltinType::SveInt8:
+    case BuiltinType::SveUint8:
+    case BuiltinType::SveInt8x2:
+    case BuiltinType::SveUint8x2:
+    case BuiltinType::SveInt8x3:
+    case BuiltinType::SveUint8x3:
+    case BuiltinType::SveInt8x4:
+    case BuiltinType::SveUint8x4:
+    case BuiltinType::SveInt16:
+    case BuiltinType::SveUint16:
+    case BuiltinType::SveInt16x2:
+    case BuiltinType::SveUint16x2:
+    case BuiltinType::SveInt16x3:
+    case BuiltinType::SveUint16x3:
+    case BuiltinType::SveInt16x4:
+    case BuiltinType::SveUint16x4:
+    case BuiltinType::SveInt32:
+    case BuiltinType::SveUint32:
+    case BuiltinType::SveInt32x2:
+    case BuiltinType::SveUint32x2:
+    case BuiltinType::SveInt32x3:
+    case BuiltinType::SveUint32x3:
+    case BuiltinType::SveInt32x4:
+    case BuiltinType::SveUint32x4:
+    case BuiltinType::SveInt64:
+    case BuiltinType::SveUint64:
+    case BuiltinType::SveInt64x2:
+    case BuiltinType::SveUint64x2:
+    case BuiltinType::SveInt64x3:
+    case BuiltinType::SveUint64x3:
+    case BuiltinType::SveInt64x4:
+    case BuiltinType::SveUint64x4:
+    case BuiltinType::SveBool:
+    case BuiltinType::SveFloat16:
+    case BuiltinType::SveFloat16x2:
+    case BuiltinType::SveFloat16x3:
+    case BuiltinType::SveFloat16x4:
+    case BuiltinType::SveFloat32:
+    case BuiltinType::SveFloat32x2:
+    case BuiltinType::SveFloat32x3:
+    case BuiltinType::SveFloat32x4:
+    case BuiltinType::SveFloat64:
+    case BuiltinType::SveFloat64x2:
+    case BuiltinType::SveFloat64x3:
+    case BuiltinType::SveFloat64x4:
+    case BuiltinType::SveBFloat16:
+    case BuiltinType::SveBFloat16x2:
+    case BuiltinType::SveBFloat16x3:
+    case BuiltinType::SveBFloat16x4: {
+      ASTContext::BuiltinVectorTypeInfo Info =
+          Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
+      return llvm::ScalableVectorType::get(ConvertType(Info.ElementType),
+                                           Info.EC.getKnownMinValue() *
+                                               Info.NumVectors);
     }
-
-    case BuiltinType::Dependent:
+#define PPC_VECTOR_TYPE(Name, Id, Size) \
+    case BuiltinType::Id: \
+      ResultType = \
+        llvm::FixedVectorType::get(ConvertType(Context.BoolTy), Size); \
+      break;
+#include "clang/Basic/PPCTypes.def"
+#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
+    {
+      ASTContext::BuiltinVectorTypeInfo Info =
+          Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
+      return llvm::ScalableVectorType::get(ConvertType(Info.ElementType),
+                                           Info.EC.getKnownMinValue() *
+                                           Info.NumVectors);
+    }
+   case BuiltinType::Dependent:
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \
     case BuiltinType::Id:
@@ -560,7 +668,11 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     llvm::Type *PointeeType = ConvertTypeForMem(ETy);
     if (PointeeType->isVoidTy())
       PointeeType = llvm::Type::getInt8Ty(getLLVMContext());
-    unsigned AS = Context.getTargetAddressSpace(ETy);
+
+    unsigned AS = PointeeType->isFunctionTy()
+                      ? getDataLayout().getProgramAddressSpace()
+                      : Context.getTargetAddressSpace(ETy);
+
     ResultType = llvm::PointerType::get(PointeeType, AS);
     break;
   }
@@ -605,8 +717,15 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::ExtVector:
   case Type::Vector: {
     const VectorType *VT = cast<VectorType>(Ty);
-    ResultType = llvm::VectorType::get(ConvertType(VT->getElementType()),
-                                       VT->getNumElements());
+    ResultType = llvm::FixedVectorType::get(ConvertType(VT->getElementType()),
+                                            VT->getNumElements());
+    break;
+  }
+  case Type::ConstantMatrix: {
+    const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
+    ResultType =
+        llvm::FixedVectorType::get(ConvertType(MT->getElementType()),
+                                   MT->getNumRows() * MT->getNumColumns());
     break;
   }
   case Type::FunctionNoProto:
@@ -692,11 +811,24 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     ResultType = CGM.getOpenCLRuntime().getPipeType(cast<PipeType>(Ty));
     break;
   }
+  case Type::ExtInt: {
+    const auto &EIT = cast<ExtIntType>(Ty);
+    ResultType = llvm::Type::getIntNTy(getLLVMContext(), EIT->getNumBits());
+    break;
+  }
   }
 
   assert(ResultType && "Didn't convert a type?");
 
-  TypeCache[Ty] = ResultType;
+#ifndef NDEBUG
+  if (CachedType) {
+    assert(CachedType == ResultType &&
+           "Cached type doesn't match computed type");
+  }
+#endif
+
+  if (ShouldUseCache)
+    TypeCache[Ty] = ResultType;
   return ResultType;
 }
 
@@ -749,8 +881,8 @@ llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
   }
 
   // Layout fields.
-  CGRecordLayout *Layout = ComputeRecordLayout(RD, Ty);
-  CGRecordLayouts[Key] = Layout;
+  std::unique_ptr<CGRecordLayout> Layout = ComputeRecordLayout(RD, Ty);
+  CGRecordLayouts[Key] = std::move(Layout);
 
   // We're done laying out this struct.
   bool EraseResult = RecordsBeingLaidOut.erase(Key); (void)EraseResult;
@@ -776,17 +908,18 @@ const CGRecordLayout &
 CodeGenTypes::getCGRecordLayout(const RecordDecl *RD) {
   const Type *Key = Context.getTagDeclType(RD).getTypePtr();
 
-  const CGRecordLayout *Layout = CGRecordLayouts.lookup(Key);
-  if (!Layout) {
-    // Compute the type information.
-    ConvertRecordDeclType(RD);
+  auto I = CGRecordLayouts.find(Key);
+  if (I != CGRecordLayouts.end())
+    return *I->second;
+  // Compute the type information.
+  ConvertRecordDeclType(RD);
 
-    // Now try again.
-    Layout = CGRecordLayouts.lookup(Key);
-  }
+  // Now try again.
+  I = CGRecordLayouts.find(Key);
 
-  assert(Layout && "Unable to find record layout information for type");
-  return *Layout;
+  assert(I != CGRecordLayouts.end() &&
+         "Unable to find record layout information for type");
+  return *I->second;
 }
 
 bool CodeGenTypes::isPointerZeroInitializable(QualType T) {

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_BreakpointOptions_h_
-#define liblldb_BreakpointOptions_h_
+#ifndef LLDB_BREAKPOINT_BREAKPOINTOPTIONS_H
+#define LLDB_BREAKPOINT_BREAKPOINTOPTIONS_H
 
 #include <memory>
 #include <string>
@@ -43,15 +43,13 @@ public:
                      | eCondition | eAutoContinue)
   };
   struct CommandData {
-    CommandData()
-        : user_source(), script_source(),
-          interpreter(lldb::eScriptLanguageNone), stop_on_error(true) {}
+    CommandData() : user_source(), script_source() {}
 
     CommandData(const StringList &user_source, lldb::ScriptLanguage interp)
         : user_source(user_source), script_source(), interpreter(interp),
           stop_on_error(true) {}
 
-    ~CommandData() = default;
+    virtual ~CommandData() = default;
 
     static const char *GetSerializationKey() { return "BKPTCMDData"; }
 
@@ -63,9 +61,10 @@ public:
 
     StringList user_source;
     std::string script_source;
-    enum lldb::ScriptLanguage
-        interpreter; // eScriptLanguageNone means command interpreter.
-    bool stop_on_error;
+    enum lldb::ScriptLanguage interpreter =
+        lldb::eScriptLanguageNone; // eScriptLanguageNone means command
+                                   // interpreter.
+    bool stop_on_error = true;
 
   private:
     enum class OptionNames : uint32_t {
@@ -406,4 +405,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_BreakpointOptions_h_
+#endif // LLDB_BREAKPOINT_BREAKPOINTOPTIONS_H

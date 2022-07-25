@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_GDBRemoteCommunicationHistory_h_
-#define liblldb_GDBRemoteCommunicationHistory_h_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATIONHISTORY_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATIONHISTORY_H
 
 #include <string>
 #include <vector>
@@ -74,13 +74,13 @@ private:
   }
 
   std::vector<GDBRemotePacket> m_packets;
-  uint32_t m_curr_idx;
-  uint32_t m_total_packet_count;
-  mutable bool m_dumped_to_log;
+  uint32_t m_curr_idx = 0;
+  uint32_t m_total_packet_count = 0;
+  mutable bool m_dumped_to_log = false;
   repro::PacketRecorder *m_recorder = nullptr;
 };
 
 } // namespace process_gdb_remote
 } // namespace lldb_private
 
-#endif // liblldb_GDBRemoteCommunicationHistory_h_
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATIONHISTORY_H

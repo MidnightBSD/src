@@ -1,4 +1,4 @@
-//===-- StackFrameList.cpp --------------------------------------*- C++ -*-===//
+//===-- StackFrameList.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -131,6 +131,9 @@ void StackFrameList::ResetCurrentInlinedDepth() {
   case eStopReasonWatchpoint:
   case eStopReasonException:
   case eStopReasonExec:
+  case eStopReasonFork:
+  case eStopReasonVFork:
+  case eStopReasonVForkDone:
   case eStopReasonSignal:
     // In all these cases we want to stop in the deepest frame.
     m_current_inlined_pc = curr_pc;
@@ -218,17 +221,14 @@ void StackFrameList::SetCurrentInlinedDepth(uint32_t new_depth) {
 }
 
 void StackFrameList::GetOnlyConcreteFramesUpTo(uint32_t end_idx,
-                                               Unwind *unwinder) {
+                                               Unwind &unwinder) {
   assert(m_thread.IsValid() && "Expected valid thread");
   assert(m_frames.size() <= end_idx && "Expected there to be frames to fill");
 
   if (end_idx < m_concrete_frames_fetched)
     return;
 
-  if (!unwinder)
-    return;
-
-  uint32_t num_frames = unwinder->GetFramesUpTo(end_idx);
+  uint32_t num_frames = unwinder.GetFramesUpTo(end_idx);
   if (num_frames <= end_idx + 1) {
     // Done unwinding.
     m_concrete_frames_fetched = UINT32_MAX;
@@ -239,13 +239,22 @@ void StackFrameList::GetOnlyConcreteFramesUpTo(uint32_t end_idx,
   m_frames.resize(num_frames);
 }
 
+/// A sequence of calls that comprise some portion of a backtrace. Each frame
+/// is represented as a pair of a callee (Function *) and an address within the
+/// callee.
+struct CallDescriptor {
+  Function *func;
+  CallEdge::AddrType address_type = CallEdge::AddrType::Call;
+  addr_t address = LLDB_INVALID_ADDRESS;
+};
+using CallSequence = std::vector<CallDescriptor>;
+
 /// Find the unique path through the call graph from \p begin (with return PC
 /// \p return_pc) to \p end. On success this path is stored into \p path, and 
 /// on failure \p path is unchanged.
 static void FindInterveningFrames(Function &begin, Function &end,
                                   ExecutionContext &exe_ctx, Target &target,
-                                  addr_t return_pc,
-                                  std::vector<Function *> &path,
+                                  addr_t return_pc, CallSequence &path,
                                   ModuleList &images, Log *log) {
   LLDB_LOG(log, "Finding frames between {0} and {1}, retn-pc={2:x}",
            begin.GetDisplayName(), end.GetDisplayName(), return_pc);
@@ -278,24 +287,27 @@ static void FindInterveningFrames(Function &begin, Function &end,
   // Fully explore the set of functions reachable from the first edge via tail
   // calls in order to detect ambiguous executions.
   struct DFS {
-    std::vector<Function *> active_path = {};
-    std::vector<Function *> solution_path = {};
+    CallSequence active_path = {};
+    CallSequence solution_path = {};
     llvm::SmallPtrSet<Function *, 2> visited_nodes = {};
     bool ambiguous = false;
     Function *end;
     ModuleList &images;
+    Target &target;
     ExecutionContext &context;
 
-    DFS(Function *end, ModuleList &images, ExecutionContext &context)
-        : end(end), images(images), context(context) {}
+    DFS(Function *end, ModuleList &images, Target &target,
+        ExecutionContext &context)
+        : end(end), images(images), target(target), context(context) {}
 
-    void search(Function &first_callee, std::vector<Function *> &path) {
-      dfs(first_callee);
+    void search(CallEdge &first_edge, Function &first_callee,
+                CallSequence &path) {
+      dfs(first_edge, first_callee);
       if (!ambiguous)
         path = std::move(solution_path);
     }
 
-    void dfs(Function &callee) {
+    void dfs(CallEdge &current_edge, Function &callee) {
       // Found a path to the target function.
       if (&callee == end) {
         if (solution_path.empty())
@@ -315,13 +327,16 @@ static void FindInterveningFrames(Function &begin, Function &end,
       }
 
       // Search the calls made from this callee.
-      active_path.push_back(&callee);
+      active_path.push_back(CallDescriptor{&callee});
       for (const auto &edge : callee.GetTailCallingEdges()) {
         Function *next_callee = edge->GetCallee(images, context);
         if (!next_callee)
           continue;
 
-        dfs(*next_callee);
+        std::tie(active_path.back().address_type, active_path.back().address) =
+            edge->GetCallerAddress(callee, target);
+
+        dfs(*edge, *next_callee);
         if (ambiguous)
           return;
       }
@@ -329,7 +344,7 @@ static void FindInterveningFrames(Function &begin, Function &end,
     }
   };
 
-  DFS(&end, images, exe_ctx).search(*first_callee, path);
+  DFS(&end, images, target, exe_ctx).search(*first_edge, *first_callee, path);
 }
 
 /// Given that \p next_frame will be appended to the frame list, synthesize
@@ -348,6 +363,11 @@ static void FindInterveningFrames(Function &begin, Function &end,
 ///   |    ...     | <- Not-yet-visited frames.
 ///   --------------
 void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
+  // Cannot synthesize tail call frames when the stack is empty (there is no
+  // "previous" frame).
+  if (m_frames.empty())
+    return;
+
   TargetSP target_sp = next_frame.CalculateTarget();
   if (!target_sp)
     return;
@@ -358,7 +378,6 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
 
-  assert(!m_frames.empty() && "Cannot synthesize frames in an empty stack");
   StackFrame &prev_frame = *m_frames.back().get();
 
   // Find the functions prev_frame and next_frame are stopped in. The function
@@ -378,7 +397,7 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
 
   // Try to find the unique sequence of (tail) calls which led from next_frame
   // to prev_frame.
-  std::vector<Function *> path;
+  CallSequence path;
   addr_t return_pc = next_reg_ctx_sp->GetPC();
   Target &target = *target_sp.get();
   ModuleList &images = next_frame.CalculateTarget()->GetImages();
@@ -388,14 +407,17 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
                         path, images, log);
 
   // Push synthetic tail call frames.
-  for (Function *callee : llvm::reverse(path)) {
+  for (auto calleeInfo : llvm::reverse(path)) {
+    Function *callee = calleeInfo.func;
     uint32_t frame_idx = m_frames.size();
     uint32_t concrete_frame_idx = next_frame.GetConcreteFrameIndex();
     addr_t cfa = LLDB_INVALID_ADDRESS;
     bool cfa_is_valid = false;
-    addr_t pc =
-        callee->GetAddressRange().GetBaseAddress().GetLoadAddress(&target);
-    constexpr bool behaves_like_zeroth_frame = false;
+    addr_t pc = calleeInfo.address;
+    // If the callee address refers to the call instruction, we do not want to
+    // subtract 1 from this value.
+    const bool behaves_like_zeroth_frame =
+        calleeInfo.address_type == CallEdge::AddrType::Call;
     SymbolContext sc;
     callee->CalculateSymbolContext(&sc);
     auto synth_frame = std::make_shared<StackFrame>(
@@ -403,7 +425,7 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
         cfa_is_valid, pc, StackFrame::Kind::Artificial,
         behaves_like_zeroth_frame, &sc);
     m_frames.push_back(synth_frame);
-    LLDB_LOG(log, "Pushed frame {0}", callee->GetDisplayName());
+    LLDB_LOG(log, "Pushed frame {0} at {1:x}", callee->GetDisplayName(), pc);
   }
 
   // If any frames were created, adjust next_frame's index.
@@ -421,7 +443,7 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
   if (m_frames.size() > end_idx || GetAllFramesFetched())
     return;
 
-  Unwind *unwinder = m_thread.GetUnwinder();
+  Unwind &unwinder = m_thread.GetUnwinder();
 
   if (!m_show_inlined_frames) {
     GetOnlyConcreteFramesUpTo(end_idx, unwinder);
@@ -459,9 +481,8 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
         RegisterContextSP reg_ctx_sp(m_thread.GetRegisterContext());
 
         if (reg_ctx_sp) {
-          const bool success = unwinder &&
-                               unwinder->GetFrameInfoAtIndex(
-                                   idx, cfa, pc, behaves_like_zeroth_frame);
+          const bool success = unwinder.GetFrameInfoAtIndex(
+              idx, cfa, pc, behaves_like_zeroth_frame);
           // There shouldn't be any way not to get the frame info for frame
           // 0. But if the unwinder can't make one, lets make one by hand
           // with the SP as the CFA and see if that gets any further.
@@ -480,9 +501,8 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
         cfa = unwind_frame_sp->m_id.GetCallFrameAddress();
       }
     } else {
-      const bool success = unwinder &&
-                           unwinder->GetFrameInfoAtIndex(
-                               idx, cfa, pc, behaves_like_zeroth_frame);
+      const bool success =
+          unwinder.GetFrameInfoAtIndex(idx, cfa, pc, behaves_like_zeroth_frame);
       if (!success) {
         // We've gotten to the end of the stack.
         SetAllFramesFetched();
@@ -505,27 +525,10 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
     SymbolContext unwind_sc = unwind_frame_sp->GetSymbolContext(
         eSymbolContextBlock | eSymbolContextFunction);
     Block *unwind_block = unwind_sc.block;
+    TargetSP target_sp = m_thread.CalculateTarget();
     if (unwind_block) {
-      Address curr_frame_address(unwind_frame_sp->GetFrameCodeAddress());
-      TargetSP target_sp = m_thread.CalculateTarget();
-      // Be sure to adjust the frame address to match the address that was
-      // used to lookup the symbol context above. If we are in the first
-      // concrete frame, then we lookup using the current address, else we
-      // decrement the address by one to get the correct location.
-      if (idx > 0) {
-        if (curr_frame_address.GetOffset() == 0) {
-          // If curr_frame_address points to the first address in a section
-          // then after adjustment it will point to an other section. In that
-          // case resolve the address again to the correct section plus
-          // offset form.
-          addr_t load_addr = curr_frame_address.GetOpcodeLoadAddress(
-              target_sp.get(), AddressClass::eCode);
-          curr_frame_address.SetOpcodeLoadAddress(
-              load_addr - 1, target_sp.get(), AddressClass::eCode);
-        } else {
-          curr_frame_address.Slide(-1);
-        }
-      }
+      Address curr_frame_address(
+          unwind_frame_sp->GetFrameCodeAddressForSymbolication());
 
       SymbolContext next_frame_sc;
       Address next_frame_address;
@@ -665,31 +668,28 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
       // GetFramesUpTo.
       frame_sp = m_frames[idx];
     } else {
-      Unwind *unwinder = m_thread.GetUnwinder();
-      if (unwinder) {
-        addr_t pc, cfa;
-        bool behaves_like_zeroth_frame = (idx == 0);
-        if (unwinder->GetFrameInfoAtIndex(idx, cfa, pc,
-                                          behaves_like_zeroth_frame)) {
-          const bool cfa_is_valid = true;
-          frame_sp = std::make_shared<StackFrame>(
-              m_thread.shared_from_this(), idx, idx, cfa, cfa_is_valid, pc,
-              StackFrame::Kind::Regular, behaves_like_zeroth_frame, nullptr);
+      addr_t pc, cfa;
+      bool behaves_like_zeroth_frame = (idx == 0);
+      if (m_thread.GetUnwinder().GetFrameInfoAtIndex(
+              idx, cfa, pc, behaves_like_zeroth_frame)) {
+        const bool cfa_is_valid = true;
+        frame_sp = std::make_shared<StackFrame>(
+            m_thread.shared_from_this(), idx, idx, cfa, cfa_is_valid, pc,
+            StackFrame::Kind::Regular, behaves_like_zeroth_frame, nullptr);
 
-          Function *function =
-              frame_sp->GetSymbolContext(eSymbolContextFunction).function;
-          if (function) {
-            // When we aren't showing inline functions we always use the top
-            // most function block as the scope.
-            frame_sp->SetSymbolContextScope(&function->GetBlock(false));
-          } else {
-            // Set the symbol scope from the symbol regardless if it is nullptr
-            // or valid.
-            frame_sp->SetSymbolContextScope(
-                frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol);
-          }
-          SetFrameAtIndex(idx, frame_sp);
+        Function *function =
+            frame_sp->GetSymbolContext(eSymbolContextFunction).function;
+        if (function) {
+          // When we aren't showing inline functions we always use the top
+          // most function block as the scope.
+          frame_sp->SetSymbolContextScope(&function->GetBlock(false));
+        } else {
+          // Set the symbol scope from the symbol regardless if it is nullptr
+          // or valid.
+          frame_sp->SetSymbolContextScope(
+              frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol);
         }
+        SetFrameAtIndex(idx, frame_sp);
       }
     }
   } else if (original_idx == 0) {
@@ -824,105 +824,6 @@ void StackFrameList::Clear() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_frames.clear();
   m_concrete_frames_fetched = 0;
-}
-
-void StackFrameList::Merge(std::unique_ptr<StackFrameList> &curr_up,
-                           lldb::StackFrameListSP &prev_sp) {
-  std::unique_lock<std::recursive_mutex> current_lock, previous_lock;
-  if (curr_up)
-    current_lock = std::unique_lock<std::recursive_mutex>(curr_up->m_mutex);
-  if (prev_sp)
-    previous_lock = std::unique_lock<std::recursive_mutex>(prev_sp->m_mutex);
-
-#if defined(DEBUG_STACK_FRAMES)
-  StreamFile s(stdout, false);
-  s.PutCString("\n\nStackFrameList::Merge():\nPrev:\n");
-  if (prev_sp)
-    prev_sp->Dump(&s);
-  else
-    s.PutCString("NULL");
-  s.PutCString("\nCurr:\n");
-  if (curr_up)
-    curr_up->Dump(&s);
-  else
-    s.PutCString("NULL");
-  s.EOL();
-#endif
-
-  if (!curr_up || curr_up->GetNumFrames(false) == 0) {
-#if defined(DEBUG_STACK_FRAMES)
-    s.PutCString("No current frames, leave previous frames alone...\n");
-#endif
-    curr_up.release();
-    return;
-  }
-
-  if (!prev_sp || prev_sp->GetNumFrames(false) == 0) {
-#if defined(DEBUG_STACK_FRAMES)
-    s.PutCString("No previous frames, so use current frames...\n");
-#endif
-    // We either don't have any previous frames, or since we have more than one
-    // current frames it means we have all the frames and can safely replace
-    // our previous frames.
-    prev_sp.reset(curr_up.release());
-    return;
-  }
-
-  const uint32_t num_curr_frames = curr_up->GetNumFrames(false);
-
-  if (num_curr_frames > 1) {
-#if defined(DEBUG_STACK_FRAMES)
-    s.PutCString(
-        "We have more than one current frame, so use current frames...\n");
-#endif
-    // We have more than one current frames it means we have all the frames and
-    // can safely replace our previous frames.
-    prev_sp.reset(curr_up.release());
-
-#if defined(DEBUG_STACK_FRAMES)
-    s.PutCString("\nMerged:\n");
-    prev_sp->Dump(&s);
-#endif
-    return;
-  }
-
-  StackFrameSP prev_frame_zero_sp(prev_sp->GetFrameAtIndex(0));
-  StackFrameSP curr_frame_zero_sp(curr_up->GetFrameAtIndex(0));
-  StackID curr_stack_id(curr_frame_zero_sp->GetStackID());
-  StackID prev_stack_id(prev_frame_zero_sp->GetStackID());
-
-#if defined(DEBUG_STACK_FRAMES)
-  const uint32_t num_prev_frames = prev_sp->GetNumFrames(false);
-  s.Printf("\n%u previous frames with one current frame\n", num_prev_frames);
-#endif
-
-  // We have only a single current frame
-  // Our previous stack frames only had a single frame as well...
-  if (curr_stack_id == prev_stack_id) {
-#if defined(DEBUG_STACK_FRAMES)
-    s.Printf("\nPrevious frame #0 is same as current frame #0, merge the "
-             "cached data\n");
-#endif
-
-    curr_frame_zero_sp->UpdateCurrentFrameFromPreviousFrame(
-        *prev_frame_zero_sp);
-    //        prev_frame_zero_sp->UpdatePreviousFrameFromCurrentFrame
-    //        (*curr_frame_zero_sp);
-    //        prev_sp->SetFrameAtIndex (0, prev_frame_zero_sp);
-  } else if (curr_stack_id < prev_stack_id) {
-#if defined(DEBUG_STACK_FRAMES)
-    s.Printf("\nCurrent frame #0 has a stack ID that is less than the previous "
-             "frame #0, insert current frame zero in front of previous\n");
-#endif
-    prev_sp->m_frames.insert(prev_sp->m_frames.begin(), curr_frame_zero_sp);
-  }
-
-  curr_up.release();
-
-#if defined(DEBUG_STACK_FRAMES)
-  s.PutCString("\nMerged:\n");
-  prev_sp->Dump(&s);
-#endif
 }
 
 lldb::StackFrameSP

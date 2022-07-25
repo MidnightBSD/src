@@ -20,7 +20,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpander.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -35,7 +35,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
-#include "llvm/PassSupport.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
@@ -43,6 +42,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 #define DEBUG_TYPE "hardware-loops"
 
@@ -165,7 +165,7 @@ namespace {
     Value *InitLoopCount();
 
     // Insert the set_loop_iteration intrinsic.
-    void InsertIterationSetup(Value *LoopCountInit);
+    Value *InsertIterationSetup(Value *LoopCountInit);
 
     // Insert the loop_decrement intrinsic.
     void InsertLoopDec();
@@ -232,11 +232,9 @@ bool HardwareLoops::runOnFunction(Function &F) {
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   M = F.getParent();
 
-  for (LoopInfo::iterator I = LI->begin(), E = LI->end(); I != E; ++I) {
-    Loop *L = *I;
-    if (!L->getParentLoop())
+  for (Loop *L : *LI)
+    if (L->isOutermost())
       TryConvertLoop(L);
-  }
 
   return MadeChange;
 }
@@ -245,13 +243,16 @@ bool HardwareLoops::runOnFunction(Function &F) {
 // converted and the parent loop doesn't support containing a hardware loop.
 bool HardwareLoops::TryConvertLoop(Loop *L) {
   // Process nested loops first.
-  for (Loop::iterator I = L->begin(), E = L->end(); I != E; ++I) {
-    if (TryConvertLoop(*I)) {
-      reportHWLoopFailure("nested hardware-loops not supported", "HWLoopNested",
-                          ORE, L);
-      return true; // Stop search.
-    }
+  bool AnyChanged = false;
+  for (Loop *SL : *L)
+    AnyChanged |= TryConvertLoop(SL);
+  if (AnyChanged) {
+    reportHWLoopFailure("nested hardware-loops not supported", "HWLoopNested",
+                        ORE, L);
+    return true; // Stop search.
   }
+
+  LLVM_DEBUG(dbgs() << "HWLoops: Loop " << L->getHeader()->getName() << "\n");
 
   HardwareLoopInfo HWLoopInfo(L);
   if (!HWLoopInfo.canAnalyze(*LI)) {
@@ -322,11 +323,11 @@ void HardwareLoop::Create() {
     return;
   }
 
-  InsertIterationSetup(LoopCountInit);
+  Value *Setup = InsertIterationSetup(LoopCountInit);
 
   if (UsePHICounter || ForceHardwareLoopPHI) {
     Instruction *LoopDec = InsertLoopRegDec(LoopCountInit);
-    Value *EltsRem = InsertPHICounter(LoopCountInit, LoopDec);
+    Value *EltsRem = InsertPHICounter(Setup, LoopDec);
     LoopDec->setOperand(0, EltsRem);
     UpdateBranch(LoopDec);
   } else
@@ -399,8 +400,15 @@ Value *HardwareLoop::InitLoopCount() {
 
   BasicBlock *BB = L->getLoopPreheader();
   if (UseLoopGuard && BB->getSinglePredecessor() &&
-      cast<BranchInst>(BB->getTerminator())->isUnconditional())
-    BB = BB->getSinglePredecessor();
+      cast<BranchInst>(BB->getTerminator())->isUnconditional()) {
+    BasicBlock *Predecessor = BB->getSinglePredecessor();
+    // If it's not safe to create a while loop then don't force it and create a
+    // do-while loop instead
+    if (!isSafeToExpandAt(ExitCount, Predecessor->getTerminator(), SE))
+        UseLoopGuard = false;
+    else
+        BB = Predecessor;
+  }
 
   if (!isSafeToExpandAt(ExitCount, BB->getTerminator(), SE)) {
     LLVM_DEBUG(dbgs() << "- Bailing, unsafe to expand ExitCount "
@@ -421,32 +429,42 @@ Value *HardwareLoop::InitLoopCount() {
   UseLoopGuard = UseLoopGuard && CanGenerateTest(L, Count);
   BeginBB = UseLoopGuard ? BB : L->getLoopPreheader();
   LLVM_DEBUG(dbgs() << " - Loop Count: " << *Count << "\n"
-             << " - Expanded Count in " << BB->getName() << "\n"
-             << " - Will insert set counter intrinsic into: "
-             << BeginBB->getName() << "\n");
+                    << " - Expanded Count in " << BB->getName() << "\n"
+                    << " - Will insert set counter intrinsic into: "
+                    << BeginBB->getName() << "\n");
   return Count;
 }
 
-void HardwareLoop::InsertIterationSetup(Value *LoopCountInit) {
+Value* HardwareLoop::InsertIterationSetup(Value *LoopCountInit) {
   IRBuilder<> Builder(BeginBB->getTerminator());
   Type *Ty = LoopCountInit->getType();
-  Intrinsic::ID ID = UseLoopGuard ?
-    Intrinsic::test_set_loop_iterations : Intrinsic::set_loop_iterations;
+  bool UsePhi = UsePHICounter || ForceHardwareLoopPHI;
+  Intrinsic::ID ID = UseLoopGuard
+                         ? (UsePhi ? Intrinsic::test_start_loop_iterations
+                                   : Intrinsic::test_set_loop_iterations)
+                         : (UsePhi ? Intrinsic::start_loop_iterations
+                                   : Intrinsic::set_loop_iterations);
   Function *LoopIter = Intrinsic::getDeclaration(M, ID, Ty);
-  Value *SetCount = Builder.CreateCall(LoopIter, LoopCountInit);
+  Value *LoopSetup = Builder.CreateCall(LoopIter, LoopCountInit);
 
   // Use the return value of the intrinsic to control the entry of the loop.
   if (UseLoopGuard) {
     assert((isa<BranchInst>(BeginBB->getTerminator()) &&
             cast<BranchInst>(BeginBB->getTerminator())->isConditional()) &&
            "Expected conditional branch");
+
+    Value *SetCount =
+        UsePhi ? Builder.CreateExtractValue(LoopSetup, 1) : LoopSetup;
     auto *LoopGuard = cast<BranchInst>(BeginBB->getTerminator());
     LoopGuard->setCondition(SetCount);
     if (LoopGuard->getSuccessor(0) != L->getLoopPreheader())
       LoopGuard->swapSuccessors();
   }
-  LLVM_DEBUG(dbgs() << "HWLoops: Inserted loop counter: "
-             << *SetCount << "\n");
+  LLVM_DEBUG(dbgs() << "HWLoops: Inserted loop counter: " << *LoopSetup
+                    << "\n");
+  if (UsePhi && UseLoopGuard)
+    LoopSetup = Builder.CreateExtractValue(LoopSetup, 0);
+  return !UsePhi ? LoopCountInit : LoopSetup;
 }
 
 void HardwareLoop::InsertLoopDec() {
@@ -476,9 +494,7 @@ Instruction* HardwareLoop::InsertLoopRegDec(Value *EltsRem) {
 
   Function *DecFunc =
       Intrinsic::getDeclaration(M, Intrinsic::loop_decrement_reg,
-                                { EltsRem->getType(), EltsRem->getType(),
-                                  LoopDecrement->getType()
-                                });
+                                { EltsRem->getType() });
   Value *Ops[] = { EltsRem, LoopDecrement };
   Value *Call = CondBuilder.CreateCall(DecFunc, Ops);
 

@@ -118,7 +118,8 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
   const Expr *E = S.Current->getExpr(OpPC);
   QualType Type = E->getType();
   if (S.checkingForUndefinedBehavior()) {
-    auto Trunc = Value.trunc(Result.bitWidth()).toString(10);
+    SmallString<32> Trunc;
+    Value.trunc(Result.bitWidth()).toString(Trunc, 10);
     auto Loc = E->getExprLoc();
     S.report(Loc, diag::warn_integer_constant_overflow) << Trunc << Type;
     return true;
@@ -869,7 +870,7 @@ inline bool ShiftRight(InterpState &S, CodePtr OpPC, const T &V, unsigned RHS) {
 
 template <PrimType TL, PrimType TR, typename T = typename PrimConv<TL>::T>
 inline bool ShiftLeft(InterpState &S, CodePtr OpPC, const T &V, unsigned RHS) {
-  if (V.isSigned() && !S.getLangOpts().CPlusPlus2a) {
+  if (V.isSigned() && !S.getLangOpts().CPlusPlus20) {
     // C++11 [expr.shift]p2: A signed left shift must have a non-negative
     // operand, and must not overflow the corresponding unsigned type.
     // C++2a [expr.shift]p2: E1 << E2 is the unique value congruent to

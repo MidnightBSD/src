@@ -19,7 +19,8 @@ def CycloneModel : SchedMachineModel {
   let CompleteModel = 1;
 
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
-                                                    PAUnsupported.F);
+                                                    PAUnsupported.F,
+                                                    SMEUnsupported.F);
 }
 
 //===----------------------------------------------------------------------===//
@@ -495,7 +496,7 @@ def : InstRW<[CyWriteV3], (instregex "SQRSHLv","UQRSHLv")>;
 // WriteV includes:
 // SHLL,SSHLL,USHLL
 // SLI,SRI
-// BIF,BIT,BSL
+// BIF,BIT,BSL,BSP
 // EXT
 // CLS,CLZ,CNT,RBIT,REV16,REV32,REV64,XTN
 // XTN2

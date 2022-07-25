@@ -1,4 +1,4 @@
-//===-- IRMemoryMap.cpp -----------------------------------------*- C++ -*-===//
+//===-- IRMemoryMap.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -639,7 +639,7 @@ void IRMemoryMap::ReadMemory(uint8_t *bytes, lldb::addr_t process_address,
 
     if (target_sp) {
       Address absolute_address(process_address);
-      target_sp->ReadMemory(absolute_address, false, bytes, size, error);
+      target_sp->ReadMemory(absolute_address, bytes, size, error, true);
       return;
     }
 

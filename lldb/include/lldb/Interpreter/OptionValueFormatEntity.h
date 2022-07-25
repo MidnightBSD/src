@@ -6,19 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_OptionValueFormatEntity_h_
-#define liblldb_OptionValueFormatEntity_h_
+#ifndef LLDB_INTERPRETER_OPTIONVALUEFORMATENTITY_H
+#define LLDB_INTERPRETER_OPTIONVALUEFORMATENTITY_H
 
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Interpreter/OptionValue.h"
 
 namespace lldb_private {
 
-class OptionValueFormatEntity : public OptionValue {
+class OptionValueFormatEntity
+    : public Cloneable<OptionValueFormatEntity, OptionValue> {
 public:
   OptionValueFormatEntity(const char *default_format);
 
-  ~OptionValueFormatEntity() override {}
+  ~OptionValueFormatEntity() override = default;
 
   // Virtual subclass pure virtual overrides
 
@@ -30,13 +31,8 @@ public:
   Status
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
-  Status
-  SetValueFromString(const char *,
-                     VarSetOperationType = eVarSetOperationAssign) = delete;
 
-  bool Clear() override;
-
-  lldb::OptionValueSP DeepCopy() const override;
+  void Clear() override;
 
   void AutoComplete(CommandInterpreter &interpreter,
                     CompletionRequest &request) override;
@@ -64,4 +60,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_OptionValueFormatEntity_h_
+#endif // LLDB_INTERPRETER_OPTIONVALUEFORMATENTITY_H

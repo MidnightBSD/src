@@ -10,13 +10,17 @@
 #define LLD_ELF_CONFIG_H
 
 #include "lld/Common/ErrorHandler.h"
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/GlobPattern.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include <atomic>
 #include <vector>
 
@@ -33,6 +37,10 @@ enum ELFKind {
   ELF64LEKind,
   ELF64BEKind
 };
+
+// For -Bno-symbolic, -Bsymbolic-non-weak-functions, -Bsymbolic-functions,
+// -Bsymbolic.
+enum class BsymbolicKind { None, NonWeakFunctions, Functions, All };
 
 // For --build-id.
 enum class BuildIdKind { None, Fast, Md5, Sha1, Hexstring, Uuid };
@@ -78,7 +86,8 @@ struct SymbolVersion {
 struct VersionDefinition {
   llvm::StringRef name;
   uint16_t id;
-  std::vector<SymbolVersion> patterns;
+  std::vector<SymbolVersion> nonLocalPatterns;
+  std::vector<SymbolVersion> localPatterns;
 };
 
 // This struct contains the global configuration for the linker.
@@ -89,10 +98,13 @@ struct Configuration {
   uint8_t osabi = 0;
   uint32_t andFeatures = 0;
   llvm::CachePruningPolicy thinLTOCachePolicy;
+  llvm::SetVector<llvm::CachedHashString> dependencyFiles; // for --dependency-file
   llvm::StringMap<uint64_t> sectionStartMap;
+  llvm::StringRef bfdname;
   llvm::StringRef chroot;
-  llvm::StringRef dynamicLinker;
+  llvm::StringRef dependencyFile;
   llvm::StringRef dwoDir;
+  llvm::StringRef dynamicLinker;
   llvm::StringRef entry;
   llvm::StringRef emulation;
   llvm::StringRef fini;
@@ -105,14 +117,17 @@ struct Configuration {
   llvm::StringRef mapFile;
   llvm::StringRef outputFile;
   llvm::StringRef optRemarksFilename;
+  llvm::Optional<uint64_t> optRemarksHotnessThreshold = 0;
   llvm::StringRef optRemarksPasses;
   llvm::StringRef optRemarksFormat;
   llvm::StringRef progName;
+  llvm::StringRef printArchiveStats;
   llvm::StringRef printSymbolOrder;
   llvm::StringRef soName;
   llvm::StringRef sysroot;
   llvm::StringRef thinLTOCacheDir;
   llvm::StringRef thinLTOIndexOnlyArg;
+  llvm::StringRef ltoBasicBlockSections;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOPrefixReplace;
   std::string rpath;
@@ -121,6 +136,7 @@ struct Configuration {
   std::vector<llvm::StringRef> filterList;
   std::vector<llvm::StringRef> searchPaths;
   std::vector<llvm::StringRef> symbolOrderingFile;
+  std::vector<llvm::StringRef> thinLTOModulesToCompile;
   std::vector<llvm::StringRef> undefined;
   std::vector<SymbolVersion> dynamicList;
   std::vector<uint8_t> buildIdVector;
@@ -128,18 +144,18 @@ struct Configuration {
                   uint64_t>
       callGraphProfile;
   bool allowMultipleDefinition;
-  bool allowShlibUndefined;
   bool androidPackDynRelocs;
   bool armHasBlx = false;
   bool armHasMovtMovw = false;
   bool armJ1J2BranchEncoding = false;
   bool asNeeded = false;
-  bool bsymbolic;
-  bool bsymbolicFunctions;
+  BsymbolicKind bsymbolic = BsymbolicKind::None;
   bool callGraphProfileSort;
   bool checkSections;
+  bool checkDynamicRelocs;
   bool compressDebugSections;
   bool cref;
+  std::vector<std::pair<llvm::GlobPattern, uint64_t>> deadRelocInNonAlloc;
   bool defineCommon;
   bool demangle = true;
   bool dependentLibraries;
@@ -152,19 +168,22 @@ struct Configuration {
   bool exportDynamic;
   bool fixCortexA53Errata843419;
   bool fixCortexA8;
-  bool forceBTI;
   bool formatBinary = false;
+  bool fortranCommon;
   bool gcSections;
   bool gdbIndex;
   bool gnuHash = false;
   bool gnuUnique;
-  bool hasDynamicList = false;
   bool hasDynSymTab;
   bool ignoreDataAddressEquality;
   bool ignoreFunctionAddressEquality;
   bool ltoCSProfileGenerate;
   bool ltoDebugPassManager;
+  bool ltoEmitAsm;
   bool ltoNewPassManager;
+  bool ltoPseudoProbeForProfiling;
+  bool ltoUniqueBasicBlockSectionNames;
+  bool ltoWholeProgramVisibility;
   bool mergeArmExidx;
   bool mipsN32Abi = false;
   bool mmapOutputFile;
@@ -174,8 +193,10 @@ struct Configuration {
   bool nostdlib;
   bool oFormatBinary;
   bool omagic;
+  bool optEB = false;
+  bool optEL = false;
+  bool optimizeBBJumps;
   bool optRemarksWithHotness;
-  bool pacPlt;
   bool picThunk;
   bool pie;
   bool printGcSections;
@@ -183,25 +204,31 @@ struct Configuration {
   bool relocatable;
   bool relrPackDynRelocs;
   bool saveTemps;
+  std::vector<std::pair<llvm::GlobPattern, uint32_t>> shuffleSections;
   bool singleRoRx;
   bool shared;
+  bool symbolic;
   bool isStatic = false;
   bool sysvHash = false;
   bool target1Rel;
   bool trace;
   bool thinLTOEmitImportsFiles;
   bool thinLTOIndexOnly;
+  bool timeTraceEnabled;
   bool tocOptimize;
+  bool pcRelOptimize;
   bool undefinedVersion;
+  bool unique;
   bool useAndroidRelrTags = false;
   bool warnBackrefs;
+  std::vector<llvm::GlobPattern> warnBackrefsExclude;
   bool warnCommon;
-  bool warnIfuncTextrel;
   bool warnMissingEntry;
   bool warnSymbolOrdering;
   bool writeAddends;
   bool zCombreloc;
   bool zCopyreloc;
+  bool zForceBti;
   bool zForceIbt;
   bool zGlobal;
   bool zHazardplt;
@@ -214,9 +241,12 @@ struct Configuration {
   bool zNodlopen;
   bool zNow;
   bool zOrigin;
+  bool zPacPlt;
   bool zRelro;
   bool zRodynamic;
   bool zShstk;
+  bool zStartStopGC;
+  uint8_t zStartStopVisibility;
   bool zText;
   bool zRetpolineplt;
   bool zWxneeded;
@@ -227,7 +257,9 @@ struct Configuration {
   SortSectionPolicy sortSection;
   StripPolicy strip;
   UnresolvedPolicy unresolvedSymbols;
+  UnresolvedPolicy unresolvedSymbolsInShlib;
   Target2Policy target2;
+  bool Power10Stub;
   ARMVFPArgKind armVFPArgs = ARMVFPArgKind::Default;
   BuildIdKind buildId = BuildIdKind::None;
   SeparateSegmentKind zSeparate;
@@ -241,7 +273,8 @@ struct Configuration {
   unsigned ltoPartitions;
   unsigned ltoo;
   unsigned optimize;
-  unsigned thinLTOJobs;
+  StringRef thinLTOJobs;
+  unsigned timeTraceGranularity;
   int32_t splitStackAdjustSize;
 
   // The following config options do not directly correspond to any
@@ -329,6 +362,12 @@ static inline void errorOrWarn(const Twine &msg) {
   else
     warn(msg);
 }
+
+static inline void internalLinkerError(StringRef loc, const Twine &msg) {
+  errorOrWarn(loc + "internal linker error: " + msg + "\n" +
+              llvm::getBugReportMsg());
+}
+
 } // namespace elf
 } // namespace lld
 

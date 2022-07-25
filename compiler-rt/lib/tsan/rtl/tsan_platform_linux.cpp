@@ -8,9 +8,8 @@
 //
 // This file is a part of ThreadSanitizer (TSan), a race detector.
 //
-// Linux- and FreeBSD-specific code.
+// Linux- and BSD-specific code.
 //===----------------------------------------------------------------------===//
-
 
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD
@@ -22,11 +21,11 @@
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
 #include "sanitizer_common/sanitizer_posix.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
-#include "sanitizer_common/sanitizer_stoptheworld.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
+#include "sanitizer_common/sanitizer_stoptheworld.h"
+#include "tsan_flags.h"
 #include "tsan_platform.h"
 #include "tsan_rtl.h"
-#include "tsan_flags.h"
 
 #include <fcntl.h>
 #include <pthread.h>
@@ -251,6 +250,20 @@ void InitializePlatformEarly() {
     Die();
   }
 # endif
+#elif defined(__mips64)
+# if !SANITIZER_GO
+  if (vmaSize != 40) {
+    Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
+    Printf("FATAL: Found %zd - Supported 40\n", vmaSize);
+    Die();
+  }
+# else
+  if (vmaSize != 47) {
+    Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
+    Printf("FATAL: Found %zd - Supported 47\n", vmaSize);
+    Die();
+  }
+# endif
 #endif
 #endif
 }
@@ -378,22 +391,32 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
   return mangled_sp ^ xor_key;
 #elif defined(__mips__)
   return mangled_sp;
+#elif defined(__s390x__)
+  // tcbhead_t.stack_guard
+  uptr xor_key = ((uptr *)__builtin_thread_pointer())[5];
+  return mangled_sp ^ xor_key;
 #else
   #error "Unknown platform"
 #endif
 }
 
-#ifdef __powerpc__
+#if SANITIZER_NETBSD
+# ifdef __x86_64__
+#  define LONG_JMP_SP_ENV_SLOT 6
+# else
+#  error unsupported
+# endif
+#elif defined(__powerpc__)
 # define LONG_JMP_SP_ENV_SLOT 0
 #elif SANITIZER_FREEBSD
 # define LONG_JMP_SP_ENV_SLOT 2
-#elif SANITIZER_NETBSD
-# define LONG_JMP_SP_ENV_SLOT 6
 #elif SANITIZER_LINUX
 # ifdef __aarch64__
 #  define LONG_JMP_SP_ENV_SLOT 13
 # elif defined(__mips64)
 #  define LONG_JMP_SP_ENV_SLOT 1
+# elif defined(__s390x__)
+#  define LONG_JMP_SP_ENV_SLOT 9
 # else
 #  define LONG_JMP_SP_ENV_SLOT 6
 # endif
@@ -440,14 +463,13 @@ void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
 
 // Note: this function runs with async signals enabled,
 // so it must not touch any tsan state.
-int call_pthread_cancel_with_cleanup(int(*fn)(void *c, void *m,
-    void *abstime), void *c, void *m, void *abstime,
-    void(*cleanup)(void *arg), void *arg) {
+int call_pthread_cancel_with_cleanup(int (*fn)(void *arg),
+                                     void (*cleanup)(void *arg), void *arg) {
   // pthread_cleanup_push/pop are hardcore macros mess.
   // We can't intercept nor call them w/o including pthread.h.
   int res;
   pthread_cleanup_push(cleanup, arg);
-  res = fn(c, m, abstime);
+  res = fn(arg);
   pthread_cleanup_pop(0);
   return res;
 }
@@ -481,7 +503,7 @@ ThreadState *cur_thread() {
         dead_thread_state->fast_state.SetIgnoreBit();
         dead_thread_state->ignore_interceptors = 1;
         dead_thread_state->is_dead = true;
-        *const_cast<int*>(&dead_thread_state->tid) = -1;
+        *const_cast<u32*>(&dead_thread_state->tid) = -1;
         CHECK_EQ(0, internal_mprotect(dead_thread_state, sizeof(ThreadState),
                                       PROT_READ));
       }

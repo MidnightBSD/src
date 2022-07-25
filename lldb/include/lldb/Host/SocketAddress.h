@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_SocketAddress_h_
-#define liblldb_SocketAddress_h_
+#ifndef LLDB_HOST_SOCKETADDRESS_H
+#define LLDB_HOST_SOCKETADDRESS_H
 
-#include <stdint.h>
+#include <cstdint>
 
 #ifdef _WIN32
 #include "lldb/Host/windows/windows.h"
@@ -185,4 +185,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_SocketAddress_h_
+#endif // LLDB_HOST_SOCKETADDRESS_H

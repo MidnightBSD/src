@@ -1,4 +1,4 @@
-//===-- SBQueue.cpp ---------------------------------------------*- C++ -*-===//
+//===-- SBQueue.cpp -------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <inttypes.h>
+#include <cinttypes>
 
 #include "SBReproducerPrivate.h"
 #include "lldb/API/SBQueue.h"
@@ -27,9 +27,7 @@ namespace lldb_private {
 
 class QueueImpl {
 public:
-  QueueImpl()
-      : m_queue_wp(), m_threads(), m_thread_list_fetched(false),
-        m_pending_items(), m_pending_items_fetched(false) {}
+  QueueImpl() : m_queue_wp(), m_threads(), m_pending_items() {}
 
   QueueImpl(const lldb::QueueSP &queue_sp)
       : m_queue_wp(), m_threads(), m_thread_list_fetched(false),
@@ -47,7 +45,7 @@ public:
     m_pending_items_fetched = rhs.m_pending_items_fetched;
   }
 
-  ~QueueImpl() {}
+  ~QueueImpl() = default;
 
   bool IsValid() { return m_queue_wp.lock() != nullptr; }
 
@@ -210,10 +208,11 @@ private:
   lldb::QueueWP m_queue_wp;
   std::vector<lldb::ThreadWP>
       m_threads; // threads currently executing this queue's items
-  bool
-      m_thread_list_fetched; // have we tried to fetch the threads list already?
+  bool m_thread_list_fetched =
+      false; // have we tried to fetch the threads list already?
   std::vector<lldb::QueueItemSP> m_pending_items; // items currently enqueued
-  bool m_pending_items_fetched; // have we tried to fetch the item list already?
+  bool m_pending_items_fetched =
+      false; // have we tried to fetch the item list already?
 };
 }
 
@@ -243,7 +242,7 @@ const lldb::SBQueue &SBQueue::operator=(const lldb::SBQueue &rhs) {
   return LLDB_RECORD_RESULT(*this);
 }
 
-SBQueue::~SBQueue() {}
+SBQueue::~SBQueue() = default;
 
 bool SBQueue::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBQueue, IsValid);

@@ -1,4 +1,4 @@
-//===-- StreamString.cpp ----------------------------------------*- C++ -*-===//
+//===-- StreamString.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ StreamString::StreamString(uint32_t flags, uint32_t addr_size,
                            ByteOrder byte_order)
     : Stream(flags, addr_size, byte_order), m_packet() {}
 
-StreamString::~StreamString() {}
+StreamString::~StreamString() = default;
 
 void StreamString::Flush() {
   // Nothing to do when flushing a buffer based stream...

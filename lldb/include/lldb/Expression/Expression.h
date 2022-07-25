@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Expression_h_
-#define liblldb_Expression_h_
+#ifndef LLDB_EXPRESSION_EXPRESSION_H
+#define LLDB_EXPRESSION_EXPRESSION_H
 
 #include <map>
 #include <string>
@@ -39,7 +39,7 @@ public:
   Expression(ExecutionContextScope &exe_scope);
 
   /// Destructor
-  virtual ~Expression() {}
+  virtual ~Expression() = default;
 
   /// Return the string that the parser should parse.  Must be a full
   /// translation unit.
@@ -51,7 +51,9 @@ public:
 
   /// Return the language that should be used when parsing.  To use the
   /// default, return eLanguageTypeUnknown.
-  virtual lldb::LanguageType Language() { return lldb::eLanguageTypeUnknown; }
+  virtual lldb::LanguageType Language() const {
+    return lldb::eLanguageTypeUnknown;
+  }
 
   /// Return the Materializer that the parser should use when registering
   /// external values.
@@ -101,4 +103,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_Expression_h_
+#endif // LLDB_EXPRESSION_EXPRESSION_H

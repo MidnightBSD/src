@@ -38,7 +38,7 @@ namespace {
 /// 0x1000.
 ///
 /// Type records are only allowed to use type indices smaller than their own, so
-/// a type stream is effectively a topologically sorted DAG. Cycles occuring in
+/// a type stream is effectively a topologically sorted DAG. Cycles occurring in
 /// the type graph of the source program are resolved with forward declarations
 /// of composite types. This class implements the following type stream merging
 /// algorithm, which relies on this DAG structure:
@@ -389,8 +389,7 @@ ArrayRef<uint8_t>
 TypeStreamMerger::remapIndices(const CVType &OriginalType,
                                MutableArrayRef<uint8_t> Storage) {
   unsigned Align = OriginalType.RecordData.size() & 3;
-  unsigned AlignedSize = alignTo(OriginalType.RecordData.size(), 4);
-  assert(Storage.size() == AlignedSize &&
+  assert(Storage.size() == alignTo(OriginalType.RecordData.size(), 4) &&
          "The storage buffer size is not a multiple of 4 bytes which will "
          "cause misalignment in the output TPI stream!");
 

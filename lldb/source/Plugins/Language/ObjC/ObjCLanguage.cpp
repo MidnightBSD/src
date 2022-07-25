@@ -1,4 +1,4 @@
-//===-- ObjCLanguage.cpp ----------------------------------------*- C++ -*-===//
+//===-- ObjCLanguage.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,12 +10,12 @@
 
 #include "ObjCLanguage.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Symbol/ClangASTContext.h"
-#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
@@ -36,6 +36,8 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
+
+LLDB_PLUGIN_DEFINE(ObjCLanguage)
 
 void ObjCLanguage::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "Objective-C Language",
@@ -223,13 +225,16 @@ ConstString ObjCLanguage::MethodName::GetFullNameWithoutCategory(
   return ConstString();
 }
 
-std::vector<ConstString>
+std::vector<Language::MethodNameVariant>
 ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
-  std::vector<ConstString> variant_names;
+  std::vector<Language::MethodNameVariant> variant_names;
   ObjCLanguage::MethodName objc_method(method_name.GetCString(), false);
   if (!objc_method.IsValid(false)) {
     return variant_names;
   }
+
+  variant_names.emplace_back(objc_method.GetSelector(),
+                             lldb::eFunctionNameTypeSelector);
 
   const bool is_class_method =
       objc_method.GetType() == MethodName::eTypeClassMethod;
@@ -240,29 +245,41 @@ ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
 
   if (is_class_method || is_instance_method) {
     if (name_sans_category)
-      variant_names.emplace_back(name_sans_category);
+      variant_names.emplace_back(name_sans_category,
+                                 lldb::eFunctionNameTypeFull);
   } else {
     StreamString strm;
 
     strm.Printf("+%s", objc_method.GetFullName().GetCString());
-    variant_names.emplace_back(strm.GetString());
+    variant_names.emplace_back(ConstString(strm.GetString()),
+                               lldb::eFunctionNameTypeFull);
     strm.Clear();
 
     strm.Printf("-%s", objc_method.GetFullName().GetCString());
-    variant_names.emplace_back(strm.GetString());
+    variant_names.emplace_back(ConstString(strm.GetString()),
+                               lldb::eFunctionNameTypeFull);
     strm.Clear();
 
     if (name_sans_category) {
       strm.Printf("+%s", name_sans_category.GetCString());
-      variant_names.emplace_back(strm.GetString());
+      variant_names.emplace_back(ConstString(strm.GetString()),
+                                 lldb::eFunctionNameTypeFull);
       strm.Clear();
 
       strm.Printf("-%s", name_sans_category.GetCString());
-      variant_names.emplace_back(strm.GetString());
+      variant_names.emplace_back(ConstString(strm.GetString()),
+                                 lldb::eFunctionNameTypeFull);
     }
   }
 
   return variant_names;
+}
+
+bool ObjCLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
+  ConstString demangled_name = mangled.GetDemangledName();
+  if (!demangled_name)
+    return false;
+  return ObjCLanguage::IsPossibleObjCMethodName(demangled_name.GetCString());
 }
 
 static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
@@ -446,6 +463,10 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
                 appkit_flags);
   AddCXXSummary(objc_category_sp,
                 lldb_private::formatters::NSDictionarySummaryProvider<true>,
+                "NSDictionary summary provider", ConstString("__CFDictionary"),
+                appkit_flags);
+  AddCXXSummary(objc_category_sp,
+                lldb_private::formatters::NSDictionarySummaryProvider<true>,
                 "NSDictionary summary provider",
                 ConstString("CFMutableDictionaryRef"), appkit_flags);
 
@@ -464,6 +485,9 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
   AddCXXSummary(objc_category_sp,
                 lldb_private::formatters::NSSetSummaryProvider<false>,
                 "__NSCFSet summary", ConstString("__NSCFSet"), appkit_flags);
+  AddCXXSummary(objc_category_sp,
+                lldb_private::formatters::NSSetSummaryProvider<false>,
+                "__CFSet summary", ConstString("__CFSet"), appkit_flags);
   AddCXXSummary(objc_category_sp,
                 lldb_private::formatters::NSSetSummaryProvider<false>,
                 "__NSSetI summary", ConstString("__NSSetI"), appkit_flags);
@@ -582,6 +606,11 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
       lldb_private::formatters::NSDictionarySyntheticFrontEndCreator,
       "NSDictionary synthetic children", ConstString("CFMutableDictionaryRef"),
       ScriptedSyntheticChildren::Flags());
+  AddCXXSynthetic(
+      objc_category_sp,
+      lldb_private::formatters::NSDictionarySyntheticFrontEndCreator,
+      "NSDictionary synthetic children", ConstString("__CFDictionary"),
+      ScriptedSyntheticChildren::Flags());
 
   AddCXXSynthetic(objc_category_sp,
                   lldb_private::formatters::NSErrorSyntheticFrontEndCreator,
@@ -604,6 +633,15 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
                   lldb_private::formatters::NSSetSyntheticFrontEndCreator,
                   "__NSSetM synthetic children", ConstString("__NSSetM"),
                   ScriptedSyntheticChildren::Flags());
+  AddCXXSynthetic(objc_category_sp,
+                  lldb_private::formatters::NSSetSyntheticFrontEndCreator,
+                  "__NSCFSet synthetic children", ConstString("__NSCFSet"),
+                  ScriptedSyntheticChildren::Flags());
+  AddCXXSynthetic(objc_category_sp,
+                  lldb_private::formatters::NSSetSyntheticFrontEndCreator,
+                  "CFSetRef synthetic children", ConstString("CFSetRef"),
+                  ScriptedSyntheticChildren::Flags());
+
   AddCXXSynthetic(
       objc_category_sp, lldb_private::formatters::NSSetSyntheticFrontEndCreator,
       "NSMutableSet synthetic children", ConstString("NSMutableSet"),
@@ -620,6 +658,10 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
       objc_category_sp, lldb_private::formatters::NSSetSyntheticFrontEndCreator,
       "__NSOrderedSetM synthetic children", ConstString("__NSOrderedSetM"),
       ScriptedSyntheticChildren::Flags());
+  AddCXXSynthetic(objc_category_sp,
+                  lldb_private::formatters::NSSetSyntheticFrontEndCreator,
+                  "__CFSet synthetic children", ConstString("__CFSet"),
+                  ScriptedSyntheticChildren::Flags());
 
   AddCXXSynthetic(objc_category_sp,
                   lldb_private::formatters::NSIndexPathSyntheticFrontEndCreator,
@@ -963,8 +1005,11 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
       bool result = false;
 
       if (auto *target = exe_scope->CalculateTarget().get()) {
-        if (auto *clang_modules_decl_vendor =
-                target->GetClangModulesDeclVendor()) {
+        auto *persistent_vars = llvm::cast<ClangPersistentVariables>(
+            target->GetPersistentExpressionStateForLanguage(
+                lldb::eLanguageTypeC));
+        if (std::shared_ptr<ClangModulesDeclVendor> clang_modules_decl_vendor =
+                persistent_vars->GetClangModulesDeclVendor()) {
           ConstString key_cs(key);
           auto types = clang_modules_decl_vendor->FindTypes(
               key_cs, /*max_matches*/ UINT32_MAX);
@@ -1089,7 +1134,7 @@ bool ObjCLanguage::IsNilReference(ValueObject &valobj) {
 bool ObjCLanguage::IsSourceFile(llvm::StringRef file_path) const {
   const auto suffixes = {".h", ".m", ".M"};
   for (auto suffix : suffixes) {
-    if (file_path.endswith_lower(suffix))
+    if (file_path.endswith_insensitive(suffix))
       return true;
   }
   return false;

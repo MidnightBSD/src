@@ -12,29 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_IR_FLOATINGPOINT_H
-#define LLVM_IR_FLOATINGPOINT_H
+#ifndef LLVM_IR_FPENV_H
+#define LLVM_IR_FPENV_H
 
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringRef.h"
-#include <stdint.h>
 
 namespace llvm {
+class StringRef;
 
 namespace fp {
-
-/// Rounding mode used for floating point operations.
-///
-/// Each of these values correspond to some metadata argument value of a
-/// constrained floating point intrinsic. See the LLVM Language Reference Manual
-/// for details.
-enum RoundingMode : uint8_t {
-  rmDynamic,   ///< This corresponds to "fpround.dynamic".
-  rmToNearest, ///< This corresponds to "fpround.tonearest".
-  rmDownward,  ///< This corresponds to "fpround.downward".
-  rmUpward,    ///< This corresponds to "fpround.upward".
-  rmTowardZero ///< This corresponds to "fpround.tozero".
-};
 
 /// Exception behavior used for floating point operations.
 ///
@@ -52,11 +39,11 @@ enum ExceptionBehavior : uint8_t {
 /// Returns a valid RoundingMode enumerator when given a string
 /// that is valid as input in constrained intrinsic rounding mode
 /// metadata.
-Optional<fp::RoundingMode> StrToRoundingMode(StringRef);
+Optional<RoundingMode> StrToRoundingMode(StringRef);
 
 /// For any RoundingMode enumerator, returns a string valid as input in
 /// constrained intrinsic rounding mode metadata.
-Optional<StringRef> RoundingModeToStr(fp::RoundingMode);
+Optional<StringRef> RoundingModeToStr(RoundingMode);
 
 /// Returns a valid ExceptionBehavior enumerator when given a string
 /// valid as input in constrained intrinsic exception behavior metadata.
@@ -66,5 +53,10 @@ Optional<fp::ExceptionBehavior> StrToExceptionBehavior(StringRef);
 /// input in constrained intrinsic exception behavior metadata.
 Optional<StringRef> ExceptionBehaviorToStr(fp::ExceptionBehavior);
 
+/// Returns true if the exception handling behavior and rounding mode
+/// match what is used in the default floating point environment.
+inline bool isDefaultFPEnvironment(fp::ExceptionBehavior EB, RoundingMode RM) {
+  return EB == fp::ebIgnore && RM == RoundingMode::NearestTiesToEven;
+}
 }
 #endif

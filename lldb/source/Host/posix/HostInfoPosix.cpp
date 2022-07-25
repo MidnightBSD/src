@@ -1,4 +1,4 @@
-//===-- HostInfoPosix.cpp ---------------------------------------*- C++ -*-===//
+//===-- HostInfoPosix.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,11 +15,11 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <climits>
+#include <cstdlib>
 #include <grp.h>
-#include <limits.h>
 #include <mutex>
 #include <pwd.h>
-#include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
 

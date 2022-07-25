@@ -58,7 +58,7 @@ public:
                                      PointerEscapeKind Kind) const;
 
   void printState(raw_ostream &OS, ProgramStateRef State,
-                  const char *NL, const char *Sep) const;
+                  const char *NL, const char *Sep) const override;
 };
 } // end anonymous namespace
 
@@ -147,8 +147,9 @@ void ObjCContainersChecker::checkPreStmt(const CallExpr *CE,
       auto R = std::make_unique<PathSensitiveBugReport>(
           *BT, "Index is out of bounds", N);
       R->addRange(IdxExpr->getSourceRange());
-      bugreporter::trackExpressionValue(
-          N, IdxExpr, *R, bugreporter::TrackingKind::Thorough, false);
+      bugreporter::trackExpressionValue(N, IdxExpr, *R,
+                                        {bugreporter::TrackingKind::Thorough,
+                                         /*EnableNullFPSuppression=*/false});
       C.emitReport(std::move(R));
       return;
     }
@@ -188,6 +189,6 @@ void ento::registerObjCContainersChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCContainersChecker>();
 }
 
-bool ento::shouldRegisterObjCContainersChecker(const LangOptions &LO) {
+bool ento::shouldRegisterObjCContainersChecker(const CheckerManager &mgr) {
   return true;
 }

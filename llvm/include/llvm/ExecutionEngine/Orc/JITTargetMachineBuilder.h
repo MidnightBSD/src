@@ -25,10 +25,16 @@
 #include <vector>
 
 namespace llvm {
+
+class raw_ostream;
+
 namespace orc {
 
 /// A utility class for building TargetMachines for JITs.
 class JITTargetMachineBuilder {
+#ifndef NDEBUG
+  friend class JITTargetMachineBuilderPrinter;
+#endif
 public:
   /// Create a JITTargetMachineBuilder based on the given triple.
   ///
@@ -72,6 +78,9 @@ public:
     this->CPU = std::move(CPU);
     return *this;
   }
+
+  /// Returns the CPU string.
+  const std::string &getCPU() const { return CPU; }
 
   /// Set the relocation model.
   JITTargetMachineBuilder &setRelocationModel(Optional<Reloc::Model> RM) {
@@ -143,8 +152,28 @@ private:
   TargetOptions Options;
   Optional<Reloc::Model> RM;
   Optional<CodeModel::Model> CM;
-  CodeGenOpt::Level OptLevel = CodeGenOpt::None;
+  CodeGenOpt::Level OptLevel = CodeGenOpt::Default;
 };
+
+#ifndef NDEBUG
+class JITTargetMachineBuilderPrinter {
+public:
+  JITTargetMachineBuilderPrinter(JITTargetMachineBuilder &JTMB,
+                                 StringRef Indent)
+      : JTMB(JTMB), Indent(Indent) {}
+  void print(raw_ostream &OS) const;
+
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const JITTargetMachineBuilderPrinter &JTMBP) {
+    JTMBP.print(OS);
+    return OS;
+  }
+
+private:
+  JITTargetMachineBuilder &JTMB;
+  StringRef Indent;
+};
+#endif // NDEBUG
 
 } // end namespace orc
 } // end namespace llvm

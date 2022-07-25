@@ -1,4 +1,4 @@
-//===-- ProcessLauncherPosixFork.cpp ----------------------------*- C++ -*-===//
+//===-- ProcessLauncherPosixFork.cpp --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,7 @@
 #include "lldb/Utility/Log.h"
 #include "llvm/Support/Errno.h"
 
-#include <limits.h>
+#include <climits>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 #include <unistd.h>

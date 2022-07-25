@@ -1,4 +1,4 @@
-//===-- CommandObjectPlugin.cpp ---------------------------------*- C++ -*-===//
+//===-- CommandObjectPlugin.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -50,7 +50,6 @@ protected:
 
     if (argc != 1) {
       result.AppendError("'plugin load' requires one argument");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -63,7 +62,6 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     else {
       result.AppendError(error.AsCString());
-      result.SetStatus(eReturnStatusFailed);
     }
 
     return result.Succeeded();

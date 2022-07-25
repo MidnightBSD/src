@@ -51,7 +51,7 @@ struct OnCreatedArgs {
 
 void ThreadContext::OnCreated(void *arg) {
   thr = 0;
-  if (tid == 0)
+  if (tid == kMainTid)
     return;
   OnCreatedArgs *args = static_cast<OnCreatedArgs *>(arg);
   if (!args->thr)  // GCD workers don't have a parent thread.
@@ -61,8 +61,6 @@ void ThreadContext::OnCreated(void *arg) {
   TraceAddEvent(args->thr, args->thr->fast_state, EventTypeMop, 0);
   ReleaseImpl(args->thr, 0, &sync);
   creation_stack_id = CurrentStackId(args->thr, args->pc);
-  if (reuse_count == 0)
-    StatInc(args->thr, StatThreadMaxTid);
 }
 
 void ThreadContext::OnReset() {
@@ -115,7 +113,6 @@ void ThreadContext::OnStarted(void *arg) {
 
   thr->fast_synch_epoch = epoch0;
   AcquireImpl(thr, 0, &sync);
-  StatInc(thr, StatSyncAcquire);
   sync.Reset(&thr->proc()->clock_cache);
   thr->is_inited = true;
   DPrintf("#%d: ThreadStart epoch=%zu stk_addr=%zx stk_size=%zx "
@@ -145,10 +142,10 @@ void ThreadContext::OnFinished() {
 #if !SANITIZER_GO
   thr->last_sleep_clock.ResetCached(&thr->proc()->clock_cache);
 #endif
-  thr->~ThreadState();
-#if TSAN_COLLECT_STATS
-  StatAggregate(ctx->stat, thr->stat);
+#if !SANITIZER_GO
+  PlatformCleanUpThreadState(thr);
 #endif
+  thr->~ThreadState();
   thr = 0;
 }
 
@@ -176,7 +173,7 @@ static void MaybeReportThreadLeak(ThreadContextBase *tctx_base, void *arg) {
 
 #if !SANITIZER_GO
 static void ReportIgnoresEnabled(ThreadContext *tctx, IgnoreSet *set) {
-  if (tctx->tid == 0) {
+  if (tctx->tid == kMainTid) {
     Printf("ThreadSanitizer: main thread finished with ignores enabled\n");
   } else {
     Printf("ThreadSanitizer: thread T%d %s finished with ignores enabled,"
@@ -207,7 +204,7 @@ static void ThreadCheckIgnore(ThreadState *thr) {}
 void ThreadFinalize(ThreadState *thr) {
   ThreadCheckIgnore(thr);
 #if !SANITIZER_GO
-  if (!flags()->report_thread_leaks)
+  if (!ShouldReport(thr, ReportTypeThreadLeak))
     return;
   ThreadRegistryLock l(ctx->thread_registry);
   Vector<ThreadLeak> leaks;
@@ -229,13 +226,11 @@ int ThreadCount(ThreadState *thr) {
 }
 
 int ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached) {
-  StatInc(thr, StatThreadCreate);
   OnCreatedArgs args = { thr, pc };
   u32 parent_tid = thr ? thr->tid : kInvalidTid;  // No parent for GCD workers.
   int tid =
       ctx->thread_registry->CreateThread(uid, detached, parent_tid, &args);
   DPrintf("#%d: ThreadCreate tid=%d uid=%zu\n", parent_tid, tid, uid);
-  StatSet(thr, StatThreadMaxAlive, ctx->thread_registry->GetMaxAliveThreads());
   return tid;
 }
 
@@ -247,9 +242,10 @@ void ThreadStart(ThreadState *thr, int tid, tid_t os_id,
   uptr tls_size = 0;
 #if !SANITIZER_GO
   if (thread_type != ThreadType::Fiber)
-    GetThreadStackAndTls(tid == 0, &stk_addr, &stk_size, &tls_addr, &tls_size);
+    GetThreadStackAndTls(tid == kMainTid, &stk_addr, &stk_size, &tls_addr,
+                         &tls_size);
 
-  if (tid) {
+  if (tid != kMainTid) {
     if (stk_addr && stk_size)
       MemoryRangeImitateWrite(thr, /*pc=*/ 1, stk_addr, stk_size);
 
@@ -276,7 +272,6 @@ void ThreadStart(ThreadState *thr, int tid, tid_t os_id,
 
 void ThreadFinish(ThreadState *thr) {
   ThreadCheckIgnore(thr);
-  StatInc(thr, StatThreadFinish);
   if (thr->stk_addr && thr->stk_size)
     DontNeedShadowFor(thr->stk_addr, thr->stk_size);
   if (thr->tls_addr && thr->tls_size)
@@ -285,19 +280,34 @@ void ThreadFinish(ThreadState *thr) {
   ctx->thread_registry->FinishThread(thr->tid);
 }
 
-static bool FindThreadByUid(ThreadContextBase *tctx, void *arg) {
-  uptr uid = (uptr)arg;
-  if (tctx->user_id == uid && tctx->status != ThreadStatusInvalid) {
+struct ConsumeThreadContext {
+  uptr uid;
+  ThreadContextBase *tctx;
+};
+
+static bool ConsumeThreadByUid(ThreadContextBase *tctx, void *arg) {
+  ConsumeThreadContext *findCtx = (ConsumeThreadContext *)arg;
+  if (tctx->user_id == findCtx->uid && tctx->status != ThreadStatusInvalid) {
+    if (findCtx->tctx) {
+      // Ensure that user_id is unique. If it's not the case we are screwed.
+      // Something went wrong before, but now there is no way to recover.
+      // Returning a wrong thread is not an option, it may lead to very hard
+      // to debug false positives (e.g. if we join a wrong thread).
+      Report("ThreadSanitizer: dup thread with used id 0x%zx\n", findCtx->uid);
+      Die();
+    }
+    findCtx->tctx = tctx;
     tctx->user_id = 0;
-    return true;
   }
   return false;
 }
 
-int ThreadTid(ThreadState *thr, uptr pc, uptr uid) {
-  int res = ctx->thread_registry->FindThread(FindThreadByUid, (void*)uid);
-  DPrintf("#%d: ThreadTid uid=%zu tid=%d\n", thr->tid, uid, res);
-  return res;
+int ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid) {
+  ConsumeThreadContext findCtx = {uid, nullptr};
+  ctx->thread_registry->FindThread(ConsumeThreadByUid, &findCtx);
+  int tid = findCtx.tctx ? findCtx.tctx->tid : kInvalidTid;
+  DPrintf("#%d: ThreadTid uid=%zu tid=%d\n", thr->tid, uid, tid);
+  return tid;
 }
 
 void ThreadJoin(ThreadState *thr, uptr pc, int tid) {
@@ -353,13 +363,10 @@ void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
   }
 #endif
 
-  StatInc(thr, StatMopRange);
-
   if (*shadow_mem == kShadowRodata) {
     DCHECK(!is_write);
     // Access to .rodata section, no races here.
     // Measurements show that it can be 10-20% of all memory accesses.
-    StatInc(thr, StatMopRangeRodata);
     return;
   }
 

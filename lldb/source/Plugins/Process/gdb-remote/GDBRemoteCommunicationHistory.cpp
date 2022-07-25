@@ -1,4 +1,4 @@
-//===-- GDBRemoteCommunicationHistory.cpp -----------------------*- C++ -*-===//
+//===-- GDBRemoteCommunicationHistory.cpp ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,13 +19,12 @@ using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 
 GDBRemoteCommunicationHistory::GDBRemoteCommunicationHistory(uint32_t size)
-    : m_packets(), m_curr_idx(0), m_total_packet_count(0),
-      m_dumped_to_log(false) {
+    : m_packets() {
   if (size)
     m_packets.resize(size);
 }
 
-GDBRemoteCommunicationHistory::~GDBRemoteCommunicationHistory() {}
+GDBRemoteCommunicationHistory::~GDBRemoteCommunicationHistory() = default;
 
 void GDBRemoteCommunicationHistory::AddPacket(char packet_char,
                                               GDBRemotePacket::Type type,

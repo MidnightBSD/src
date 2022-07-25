@@ -1,4 +1,4 @@
-//===-- XML.cpp -------------------------------------------------*- C++ -*-===//
+//===-- XML.cpp -----------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ using namespace lldb_private;
 
 #pragma mark-- XMLDocument
 
-XMLDocument::XMLDocument() : m_document(nullptr) {}
+XMLDocument::XMLDocument() = default;
 
 XMLDocument::~XMLDocument() { Clear(); }
 
@@ -91,11 +91,11 @@ bool XMLDocument::XMLEnabled() {
 
 #pragma mark-- XMLNode
 
-XMLNode::XMLNode() : m_node(nullptr) {}
+XMLNode::XMLNode() = default;
 
 XMLNode::XMLNode(XMLNodeImpl node) : m_node(node) {}
 
-XMLNode::~XMLNode() {}
+XMLNode::~XMLNode() = default;
 
 void XMLNode::Clear() { m_node = nullptr; }
 
@@ -398,7 +398,7 @@ ApplePropertyList::ApplePropertyList(const char *path)
   ParseFile(path);
 }
 
-ApplePropertyList::~ApplePropertyList() {}
+ApplePropertyList::~ApplePropertyList() = default;
 
 llvm::StringRef ApplePropertyList::GetErrors() const {
   return m_xml_doc.GetErrors();

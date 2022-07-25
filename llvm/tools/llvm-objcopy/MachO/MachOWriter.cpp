@@ -16,9 +16,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <memory>
 
-namespace llvm {
-namespace objcopy {
-namespace macho {
+using namespace llvm;
+using namespace llvm::objcopy::macho;
 
 size_t MachOWriter::headerSize() const {
   return Is64Bit ? sizeof(MachO::mach_header_64) : sizeof(MachO::mach_header);
@@ -89,9 +88,28 @@ size_t MachOWriter::totalSize() const {
                      sizeof(uint32_t) * O.IndirectSymTable.Symbols.size());
   }
 
+  if (O.CodeSignatureCommandIndex) {
+    const MachO::linkedit_data_command &LinkEditDataCommand =
+        O.LoadCommands[*O.CodeSignatureCommandIndex]
+            .MachOLoadCommand.linkedit_data_command_data;
+    if (LinkEditDataCommand.dataoff)
+      Ends.push_back(LinkEditDataCommand.dataoff +
+                     LinkEditDataCommand.datasize);
+  }
+
   if (O.DataInCodeCommandIndex) {
     const MachO::linkedit_data_command &LinkEditDataCommand =
         O.LoadCommands[*O.DataInCodeCommandIndex]
+            .MachOLoadCommand.linkedit_data_command_data;
+
+    if (LinkEditDataCommand.dataoff)
+      Ends.push_back(LinkEditDataCommand.dataoff +
+                     LinkEditDataCommand.datasize);
+  }
+
+  if (O.LinkerOptimizationHintCommandIndex) {
+    const MachO::linkedit_data_command &LinkEditDataCommand =
+        O.LoadCommands[*O.LinkerOptimizationHintCommandIndex]
             .MachOLoadCommand.linkedit_data_command_data;
 
     if (LinkEditDataCommand.dataoff)
@@ -110,12 +128,20 @@ size_t MachOWriter::totalSize() const {
   }
 
   // Otherwise, use the last section / reloction.
-  for (const auto &LC : O.LoadCommands)
-    for (const auto &S : LC.Sections) {
-      Ends.push_back(S.Offset + S.Size);
-      if (S.RelOff)
-        Ends.push_back(S.RelOff +
-                       S.NReloc * sizeof(MachO::any_relocation_info));
+  for (const LoadCommand &LC : O.LoadCommands)
+    for (const std::unique_ptr<Section> &S : LC.Sections) {
+      if (!S->hasValidOffset()) {
+        assert((S->Offset == 0) && "Skipped section's offset must be zero");
+        assert((S->isVirtualSection() || S->Size == 0) &&
+               "Non-zero-fill sections with zero offset must have zero size");
+        continue;
+      }
+      assert((S->Offset != 0) &&
+             "Non-zero-fill section's offset cannot be zero");
+      Ends.push_back(S->Offset + S->Size);
+      if (S->RelOff)
+        Ends.push_back(S->RelOff +
+                       S->NReloc * sizeof(MachO::any_relocation_info));
     }
 
   if (!Ends.empty())
@@ -142,12 +168,13 @@ void MachOWriter::writeHeader() {
 
   auto HeaderSize =
       Is64Bit ? sizeof(MachO::mach_header_64) : sizeof(MachO::mach_header);
-  memcpy(B.getBufferStart(), &Header, HeaderSize);
+  memcpy(Buf->getBufferStart(), &Header, HeaderSize);
 }
 
 void MachOWriter::writeLoadCommands() {
-  uint8_t *Begin = B.getBufferStart() + headerSize();
-  for (const auto &LC : O.LoadCommands) {
+  uint8_t *Begin =
+      reinterpret_cast<uint8_t *>(Buf->getBufferStart()) + headerSize();
+  for (const LoadCommand &LC : O.LoadCommands) {
     // Construct a load command.
     MachO::macho_load_command MLC = LC.MachOLoadCommand;
     switch (MLC.load_command_data.cmd) {
@@ -157,8 +184,8 @@ void MachOWriter::writeLoadCommands() {
       memcpy(Begin, &MLC.segment_command_data, sizeof(MachO::segment_command));
       Begin += sizeof(MachO::segment_command);
 
-      for (const auto &Sec : LC.Sections)
-        writeSectionInLoadCommand<MachO::section>(Sec, Begin);
+      for (const std::unique_ptr<Section> &Sec : LC.Sections)
+        writeSectionInLoadCommand<MachO::section>(*Sec, Begin);
       continue;
     case MachO::LC_SEGMENT_64:
       if (IsLittleEndian != sys::IsLittleEndianHost)
@@ -167,8 +194,8 @@ void MachOWriter::writeLoadCommands() {
              sizeof(MachO::segment_command_64));
       Begin += sizeof(MachO::segment_command_64);
 
-      for (const auto &Sec : LC.Sections)
-        writeSectionInLoadCommand<MachO::section_64>(Sec, Begin);
+      for (const std::unique_ptr<Section> &Sec : LC.Sections)
+        writeSectionInLoadCommand<MachO::section_64>(*Sec, Begin);
       continue;
     }
 
@@ -229,27 +256,31 @@ void MachOWriter::writeSectionInLoadCommand(const Section &Sec, uint8_t *&Out) {
 }
 
 void MachOWriter::writeSections() {
-  for (const auto &LC : O.LoadCommands)
-    for (const auto &Sec : LC.Sections) {
-      if (Sec.isVirtualSection())
+  for (const LoadCommand &LC : O.LoadCommands)
+    for (const std::unique_ptr<Section> &Sec : LC.Sections) {
+      if (!Sec->hasValidOffset()) {
+        assert((Sec->Offset == 0) && "Skipped section's offset must be zero");
+        assert((Sec->isVirtualSection() || Sec->Size == 0) &&
+               "Non-zero-fill sections with zero offset must have zero size");
         continue;
+      }
 
-      assert(Sec.Offset && "Section offset can not be zero");
-      assert((Sec.Size == Sec.Content.size()) && "Incorrect section size");
-      memcpy(B.getBufferStart() + Sec.Offset, Sec.Content.data(),
-             Sec.Content.size());
-      for (size_t Index = 0; Index < Sec.Relocations.size(); ++Index) {
-        auto RelocInfo = Sec.Relocations[Index];
-        if (!RelocInfo.Scattered) {
-          auto *Info =
-              reinterpret_cast<MachO::relocation_info *>(&RelocInfo.Info);
-          Info->r_symbolnum = RelocInfo.Symbol->Index;
+      assert(Sec->Offset && "Section offset can not be zero");
+      assert((Sec->Size == Sec->Content.size()) && "Incorrect section size");
+      memcpy(Buf->getBufferStart() + Sec->Offset, Sec->Content.data(),
+             Sec->Content.size());
+      for (size_t Index = 0; Index < Sec->Relocations.size(); ++Index) {
+        RelocationInfo RelocInfo = Sec->Relocations[Index];
+        if (!RelocInfo.Scattered && !RelocInfo.IsAddend) {
+          const uint32_t SymbolNum = RelocInfo.Extern
+                                         ? (*RelocInfo.Symbol)->Index
+                                         : (*RelocInfo.Sec)->Index;
+          RelocInfo.setPlainRelocationSymbolNum(SymbolNum, IsLittleEndian);
         }
-
         if (IsLittleEndian != sys::IsLittleEndianHost)
           MachO::swapStruct(
               reinterpret_cast<MachO::any_relocation_info &>(RelocInfo.Info));
-        memcpy(B.getBufferStart() + Sec.RelOff +
+        memcpy(Buf->getBufferStart() + Sec->RelOff +
                    Index * sizeof(MachO::any_relocation_info),
                &RelocInfo.Info, sizeof(RelocInfo.Info));
       }
@@ -279,7 +310,7 @@ void MachOWriter::writeStringTable() {
       O.LoadCommands[*O.SymTabCommandIndex]
           .MachOLoadCommand.symtab_command_data;
 
-  uint8_t *StrTable = (uint8_t *)B.getBufferStart() + SymTabCommand.stroff;
+  uint8_t *StrTable = (uint8_t *)Buf->getBufferStart() + SymTabCommand.stroff;
   LayoutBuilder.getStringTableBuilder().write(StrTable);
 }
 
@@ -290,7 +321,7 @@ void MachOWriter::writeSymbolTable() {
       O.LoadCommands[*O.SymTabCommandIndex]
           .MachOLoadCommand.symtab_command_data;
 
-  char *SymTable = (char *)B.getBufferStart() + SymTabCommand.symoff;
+  char *SymTable = (char *)Buf->getBufferStart() + SymTabCommand.symoff;
   for (auto Iter = O.SymTable.Symbols.begin(), End = O.SymTable.Symbols.end();
        Iter != End; Iter++) {
     SymbolEntry *Sym = Iter->get();
@@ -309,7 +340,7 @@ void MachOWriter::writeRebaseInfo() {
   const MachO::dyld_info_command &DyLdInfoCommand =
       O.LoadCommands[*O.DyLdInfoCommandIndex]
           .MachOLoadCommand.dyld_info_command_data;
-  char *Out = (char *)B.getBufferStart() + DyLdInfoCommand.rebase_off;
+  char *Out = (char *)Buf->getBufferStart() + DyLdInfoCommand.rebase_off;
   assert((DyLdInfoCommand.rebase_size == O.Rebases.Opcodes.size()) &&
          "Incorrect rebase opcodes size");
   memcpy(Out, O.Rebases.Opcodes.data(), O.Rebases.Opcodes.size());
@@ -321,7 +352,7 @@ void MachOWriter::writeBindInfo() {
   const MachO::dyld_info_command &DyLdInfoCommand =
       O.LoadCommands[*O.DyLdInfoCommandIndex]
           .MachOLoadCommand.dyld_info_command_data;
-  char *Out = (char *)B.getBufferStart() + DyLdInfoCommand.bind_off;
+  char *Out = (char *)Buf->getBufferStart() + DyLdInfoCommand.bind_off;
   assert((DyLdInfoCommand.bind_size == O.Binds.Opcodes.size()) &&
          "Incorrect bind opcodes size");
   memcpy(Out, O.Binds.Opcodes.data(), O.Binds.Opcodes.size());
@@ -333,7 +364,7 @@ void MachOWriter::writeWeakBindInfo() {
   const MachO::dyld_info_command &DyLdInfoCommand =
       O.LoadCommands[*O.DyLdInfoCommandIndex]
           .MachOLoadCommand.dyld_info_command_data;
-  char *Out = (char *)B.getBufferStart() + DyLdInfoCommand.weak_bind_off;
+  char *Out = (char *)Buf->getBufferStart() + DyLdInfoCommand.weak_bind_off;
   assert((DyLdInfoCommand.weak_bind_size == O.WeakBinds.Opcodes.size()) &&
          "Incorrect weak bind opcodes size");
   memcpy(Out, O.WeakBinds.Opcodes.data(), O.WeakBinds.Opcodes.size());
@@ -345,7 +376,7 @@ void MachOWriter::writeLazyBindInfo() {
   const MachO::dyld_info_command &DyLdInfoCommand =
       O.LoadCommands[*O.DyLdInfoCommandIndex]
           .MachOLoadCommand.dyld_info_command_data;
-  char *Out = (char *)B.getBufferStart() + DyLdInfoCommand.lazy_bind_off;
+  char *Out = (char *)Buf->getBufferStart() + DyLdInfoCommand.lazy_bind_off;
   assert((DyLdInfoCommand.lazy_bind_size == O.LazyBinds.Opcodes.size()) &&
          "Incorrect lazy bind opcodes size");
   memcpy(Out, O.LazyBinds.Opcodes.data(), O.LazyBinds.Opcodes.size());
@@ -357,7 +388,7 @@ void MachOWriter::writeExportInfo() {
   const MachO::dyld_info_command &DyLdInfoCommand =
       O.LoadCommands[*O.DyLdInfoCommandIndex]
           .MachOLoadCommand.dyld_info_command_data;
-  char *Out = (char *)B.getBufferStart() + DyLdInfoCommand.export_off;
+  char *Out = (char *)Buf->getBufferStart() + DyLdInfoCommand.export_off;
   assert((DyLdInfoCommand.export_size == O.Exports.Trie.size()) &&
          "Incorrect export trie size");
   memcpy(Out, O.Exports.Trie.data(), O.Exports.Trie.size());
@@ -372,7 +403,7 @@ void MachOWriter::writeIndirectSymbolTable() {
           .MachOLoadCommand.dysymtab_command_data;
 
   uint32_t *Out =
-      (uint32_t *)(B.getBufferStart() + DySymTabCommand.indirectsymoff);
+      (uint32_t *)(Buf->getBufferStart() + DySymTabCommand.indirectsymoff);
   for (const IndirectSymbolEntry &Sym : O.IndirectSymTable.Symbols) {
     uint32_t Entry = (Sym.Symbol) ? (*Sym.Symbol)->Index : Sym.OriginalIndex;
     if (IsLittleEndian != sys::IsLittleEndianHost)
@@ -381,28 +412,32 @@ void MachOWriter::writeIndirectSymbolTable() {
   }
 }
 
-void MachOWriter::writeDataInCodeData() {
-  if (!O.DataInCodeCommandIndex)
+void MachOWriter::writeLinkData(Optional<size_t> LCIndex, const LinkData &LD) {
+  if (!LCIndex)
     return;
   const MachO::linkedit_data_command &LinkEditDataCommand =
-      O.LoadCommands[*O.DataInCodeCommandIndex]
-          .MachOLoadCommand.linkedit_data_command_data;
-  char *Out = (char *)B.getBufferStart() + LinkEditDataCommand.dataoff;
-  assert((LinkEditDataCommand.datasize == O.DataInCode.Data.size()) &&
-         "Incorrect data in code data size");
-  memcpy(Out, O.DataInCode.Data.data(), O.DataInCode.Data.size());
+      O.LoadCommands[*LCIndex].MachOLoadCommand.linkedit_data_command_data;
+  char *Out = (char *)Buf->getBufferStart() + LinkEditDataCommand.dataoff;
+  assert((LinkEditDataCommand.datasize == LD.Data.size()) &&
+         "Incorrect data size");
+  memcpy(Out, LD.Data.data(), LD.Data.size());
+}
+
+void MachOWriter::writeCodeSignatureData() {
+  return writeLinkData(O.CodeSignatureCommandIndex, O.CodeSignature);
+}
+
+void MachOWriter::writeDataInCodeData() {
+  return writeLinkData(O.DataInCodeCommandIndex, O.DataInCode);
+}
+
+void MachOWriter::writeLinkerOptimizationHint() {
+  return writeLinkData(O.LinkerOptimizationHintCommandIndex,
+                       O.LinkerOptimizationHint);
 }
 
 void MachOWriter::writeFunctionStartsData() {
-  if (!O.FunctionStartsCommandIndex)
-    return;
-  const MachO::linkedit_data_command &LinkEditDataCommand =
-      O.LoadCommands[*O.FunctionStartsCommandIndex]
-          .MachOLoadCommand.linkedit_data_command_data;
-  char *Out = (char *)B.getBufferStart() + LinkEditDataCommand.dataoff;
-  assert((LinkEditDataCommand.datasize == O.FunctionStarts.Data.size()) &&
-         "Incorrect function starts data size");
-  memcpy(Out, O.FunctionStarts.Data.data(), O.FunctionStarts.Data.size());
+  return writeLinkData(O.FunctionStartsCommandIndex, O.FunctionStarts);
 }
 
 void MachOWriter::writeTail() {
@@ -450,6 +485,16 @@ void MachOWriter::writeTail() {
                          &MachOWriter::writeIndirectSymbolTable);
   }
 
+  if (O.CodeSignatureCommandIndex) {
+    const MachO::linkedit_data_command &LinkEditDataCommand =
+        O.LoadCommands[*O.CodeSignatureCommandIndex]
+            .MachOLoadCommand.linkedit_data_command_data;
+
+    if (LinkEditDataCommand.dataoff)
+      Queue.emplace_back(LinkEditDataCommand.dataoff,
+                         &MachOWriter::writeCodeSignatureData);
+  }
+
   if (O.DataInCodeCommandIndex) {
     const MachO::linkedit_data_command &LinkEditDataCommand =
         O.LoadCommands[*O.DataInCodeCommandIndex]
@@ -458,6 +503,16 @@ void MachOWriter::writeTail() {
     if (LinkEditDataCommand.dataoff)
       Queue.emplace_back(LinkEditDataCommand.dataoff,
                          &MachOWriter::writeDataInCodeData);
+  }
+
+  if (O.LinkerOptimizationHintCommandIndex) {
+    const MachO::linkedit_data_command &LinkEditDataCommand =
+        O.LoadCommands[*O.LinkerOptimizationHintCommandIndex]
+            .MachOLoadCommand.linkedit_data_command_data;
+
+    if (LinkEditDataCommand.dataoff)
+      Queue.emplace_back(LinkEditDataCommand.dataoff,
+                         &MachOWriter::writeLinkerOptimizationHint);
   }
 
   if (O.FunctionStartsCommandIndex) {
@@ -481,16 +536,20 @@ void MachOWriter::writeTail() {
 Error MachOWriter::finalize() { return LayoutBuilder.layout(); }
 
 Error MachOWriter::write() {
-  if (Error E = B.allocate(totalSize()))
-    return E;
-  memset(B.getBufferStart(), 0, totalSize());
+  size_t TotalSize = totalSize();
+  Buf = WritableMemoryBuffer::getNewMemBuffer(TotalSize);
+  if (!Buf)
+    return createStringError(errc::not_enough_memory,
+                             "failed to allocate memory buffer of " +
+                                 Twine::utohexstr(TotalSize) + " bytes");
+  memset(Buf->getBufferStart(), 0, totalSize());
   writeHeader();
   writeLoadCommands();
   writeSections();
   writeTail();
-  return B.commit();
-}
 
-} // end namespace macho
-} // end namespace objcopy
-} // end namespace llvm
+  // TODO: Implement direct writing to the output stream (without intermediate
+  // memory buffer Buf).
+  Out.write(Buf->getBufferStart(), Buf->getBufferSize());
+  return Error::success();
+}

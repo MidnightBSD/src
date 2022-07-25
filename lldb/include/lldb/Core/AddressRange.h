@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_AddressRange_h_
-#define liblldb_AddressRange_h_
+#ifndef LLDB_CORE_ADDRESSRANGE_H
+#define LLDB_CORE_ADDRESSRANGE_H
 
 #include "lldb/Core/Address.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 
-#include <stddef.h>
+#include <cstddef>
 
 namespace lldb_private {
 class SectionList;
@@ -94,8 +94,7 @@ public:
   /// \return
   ///     Returns \b true if \a so_addr is contained in this range,
   ///     \b false otherwise.
-  //    bool
-  //    Contains (const Address &so_addr) const;
+  bool Contains(const Address &so_addr) const;
 
   /// Check if a section offset address is contained in this range.
   ///
@@ -240,11 +239,11 @@ public:
 protected:
   // Member variables
   Address m_base_addr;      ///< The section offset base address of this range.
-  lldb::addr_t m_byte_size; ///< The size in bytes of this address range.
+  lldb::addr_t m_byte_size = 0; ///< The size in bytes of this address range.
 };
 
 // bool operator== (const AddressRange& lhs, const AddressRange& rhs);
 
 } // namespace lldb_private
 
-#endif // liblldb_AddressRange_h_
+#endif // LLDB_CORE_ADDRESSRANGE_H

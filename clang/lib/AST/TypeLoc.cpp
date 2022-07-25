@@ -375,6 +375,7 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
   case BuiltinType::SatUShortFract:
   case BuiltinType::SatUFract:
   case BuiltinType::SatULongFract:
+  case BuiltinType::BFloat16:
     llvm_unreachable("Builtin type needs extra local data!");
     // Fall through, if the impossible happens.
 
@@ -402,8 +403,16 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
 #define SVE_TYPE(Name, Id, SingletonId) \
   case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define PPC_VECTOR_TYPE(Name, Id, Size) \
+  case BuiltinType::Id:
+#include "clang/Basic/PPCTypes.def"
+#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
   case BuiltinType::BuiltinFn:
+  case BuiltinType::IncompleteMatrixIdx:
   case BuiltinType::OMPArraySection:
+  case BuiltinType::OMPArrayShaping:
+  case BuiltinType::OMPIterator:
     return TST_unspecified;
   }
 
@@ -578,7 +587,7 @@ void TemplateSpecializationTypeLoc::initializeArgLocs(ASTContext &Context,
         Builder.MakeTrivial(Context, QTN->getQualifier(), Loc);
 
       ArgInfos[i] = TemplateArgumentLocInfo(
-          Builder.getWithLocInContext(Context), Loc,
+          Context, Builder.getWithLocInContext(Context), Loc,
           Args[i].getKind() == TemplateArgument::Template ? SourceLocation()
                                                           : Loc);
       break;

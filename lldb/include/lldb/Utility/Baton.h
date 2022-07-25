@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_Baton_h_
-#define lldb_Baton_h_
+#ifndef LLDB_UTILITY_BATON_H
+#define LLDB_UTILITY_BATON_H
 
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
@@ -34,8 +34,8 @@ namespace lldb_private {
 /// needed resources in their destructors.
 class Baton {
 public:
-  Baton() {}
-  virtual ~Baton() {}
+  Baton() = default;
+  virtual ~Baton() = default;
 
   virtual void *data() = 0;
 
@@ -76,4 +76,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // lldb_Baton_h_
+#endif // LLDB_UTILITY_BATON_H

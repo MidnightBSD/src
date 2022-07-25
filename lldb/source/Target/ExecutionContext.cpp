@@ -1,4 +1,4 @@
-//===-- ExecutionContext.cpp ------------------------------------*- C++ -*-===//
+//===-- ExecutionContext.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -395,8 +395,7 @@ bool ExecutionContext::HasFrameScope() const {
 }
 
 ExecutionContextRef::ExecutionContextRef()
-    : m_target_wp(), m_process_wp(), m_thread_wp(),
-      m_tid(LLDB_INVALID_THREAD_ID), m_stack_id() {}
+    : m_target_wp(), m_process_wp(), m_thread_wp(), m_stack_id() {}
 
 ExecutionContextRef::ExecutionContextRef(const ExecutionContext *exe_ctx)
     : m_target_wp(), m_process_wp(), m_thread_wp(),

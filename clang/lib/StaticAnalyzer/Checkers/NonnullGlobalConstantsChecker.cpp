@@ -89,7 +89,7 @@ void NonnullGlobalConstantsChecker::checkLocation(SVal location, bool isLoad,
 }
 
 /// \param V loaded lvalue.
-/// \return whether {@code val} is a string-like const global.
+/// \return whether @c val is a string-like const global.
 bool NonnullGlobalConstantsChecker::isGlobalConstString(SVal V) const {
   Optional<loc::MemRegionVal> RegionVal = V.getAs<loc::MemRegionVal>();
   if (!RegionVal)
@@ -127,7 +127,7 @@ bool NonnullGlobalConstantsChecker::isGlobalConstString(SVal V) const {
   return false;
 }
 
-/// \return whether {@code type} is extremely unlikely to be null
+/// \return whether @c type is extremely unlikely to be null
 bool NonnullGlobalConstantsChecker::isNonnullType(QualType Ty) const {
 
   if (Ty->isPointerType() && Ty->getPointeeType()->isCharType())
@@ -147,6 +147,6 @@ void ento::registerNonnullGlobalConstantsChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<NonnullGlobalConstantsChecker>();
 }
 
-bool ento::shouldRegisterNonnullGlobalConstantsChecker(const LangOptions &LO) {
+bool ento::shouldRegisterNonnullGlobalConstantsChecker(const CheckerManager &mgr) {
   return true;
 }

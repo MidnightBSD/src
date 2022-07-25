@@ -1,4 +1,4 @@
-//===-- LibCxxMap.cpp -------------------------------------------*- C++ -*-===//
+//===-- LibCxxMap.cpp -----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,10 +8,10 @@
 
 #include "LibCxx.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
@@ -26,7 +26,6 @@ class MapEntry {
 public:
   MapEntry() = default;
   explicit MapEntry(ValueObjectSP entry_sp) : m_entry_sp(entry_sp) {}
-  MapEntry(const MapEntry &rhs) = default;
   explicit MapEntry(ValueObject *entry)
       : m_entry_sp(entry ? entry->GetSP() : ValueObjectSP()) {}
 
@@ -86,9 +85,9 @@ class MapIterator {
 public:
   MapIterator() = default;
   MapIterator(MapEntry entry, size_t depth = 0)
-      : m_entry(entry), m_max_depth(depth), m_error(false) {}
+      : m_entry(std::move(entry)), m_max_depth(depth), m_error(false) {}
   MapIterator(ValueObjectSP entry, size_t depth = 0)
-      : m_entry(entry), m_max_depth(depth), m_error(false) {}
+      : m_entry(std::move(entry)), m_max_depth(depth), m_error(false) {}
   MapIterator(const MapIterator &rhs)
       : m_entry(rhs.m_entry), m_max_depth(rhs.m_max_depth), m_error(false) {}
   MapIterator(ValueObject *entry, size_t depth = 0)
@@ -138,7 +137,7 @@ protected:
   }
 
 private:
-  MapEntry tree_min(MapEntry &&x) {
+  MapEntry tree_min(MapEntry x) {
     if (x.null())
       return MapEntry();
     MapEntry left(x.left());
@@ -298,8 +297,8 @@ void lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset(
       UINT32_MAX) {
     m_skip_size = bit_offset / 8u;
   } else {
-    ClangASTContext *ast_ctx =
-        llvm::dyn_cast_or_null<ClangASTContext>(node_type.GetTypeSystem());
+    TypeSystemClang *ast_ctx =
+        llvm::dyn_cast_or_null<TypeSystemClang>(node_type.GetTypeSystem());
     if (!ast_ctx)
       return;
     CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(

@@ -1,4 +1,4 @@
-//===-- SymbolContext.cpp ---------------------------------------*- C++ -*-===//
+//===-- SymbolContext.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,9 +26,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SymbolContext::SymbolContext()
-    : target_sp(), module_sp(), comp_unit(nullptr), function(nullptr),
-      block(nullptr), line_entry(), symbol(nullptr), variable(nullptr) {}
+SymbolContext::SymbolContext() : target_sp(), module_sp(), line_entry() {}
 
 SymbolContext::SymbolContext(const ModuleSP &m, CompileUnit *cu, Function *f,
                              Block *b, LineEntry *le, Symbol *s)
@@ -53,7 +51,7 @@ SymbolContext::SymbolContext(SymbolContextScope *sc_scope)
   sc_scope->CalculateSymbolContext(this);
 }
 
-SymbolContext::~SymbolContext() {}
+SymbolContext::~SymbolContext() = default;
 
 void SymbolContext::Clear(bool clear_target) {
   if (clear_target)
@@ -117,9 +115,7 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
       Block *inlined_block = block->GetContainingInlinedBlock();
       const InlineFunctionInfo *inlined_block_info =
           inlined_block->GetInlinedFunctionInfo();
-      s->Printf(
-          " [inlined] %s",
-          inlined_block_info->GetName(function->GetLanguage()).GetCString());
+      s->Printf(" [inlined] %s", inlined_block_info->GetName().GetCString());
 
       lldb_private::AddressRange block_range;
       if (inlined_block->GetRangeContainingAddress(addr, block_range)) {
@@ -129,11 +125,18 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
           s->Printf(" + %" PRIu64, inlined_function_offset);
         }
       }
-      const Declaration &call_site = inlined_block_info->GetCallSite();
-      if (call_site.IsValid()) {
+      // "line_entry" will always be valid as GetParentOfInlinedScope(...) will
+      // fill it in correctly with the calling file and line. Previous code
+      // was extracting the calling file and line from inlined_block_info and
+      // using it right away which is not correct. On the first call to this
+      // function "line_entry" will contain the actual line table entry. On
+      // susequent calls "line_entry" will contain the calling file and line
+      // from the previous inline info.
+      if (line_entry.IsValid()) {
         s->PutCString(" at ");
-        call_site.DumpStopContext(s, show_fullpaths);
+        line_entry.DumpStopContext(s, show_fullpaths);
       }
+
       if (show_inlined_frames) {
         s->EOL();
         s->Indent();
@@ -206,7 +209,7 @@ void SymbolContext::GetDescription(Stream *s, lldb::DescriptionLevel level,
     Type *func_type = function->GetType();
     if (func_type) {
       s->Indent("   FuncType: ");
-      func_type->GetDescription(s, level, false);
+      func_type->GetDescription(s, level, false, target);
       s->EOL();
     }
   }
@@ -657,12 +660,12 @@ SymbolContext::GetFunctionName(Mangled::NamePreference preference) const {
         const InlineFunctionInfo *inline_info =
             inlined_block->GetInlinedFunctionInfo();
         if (inline_info)
-          return inline_info->GetName(function->GetLanguage());
+          return inline_info->GetName();
       }
     }
-    return function->GetMangled().GetName(function->GetLanguage(), preference);
+    return function->GetMangled().GetName(preference);
   } else if (symbol && symbol->ValueIsAddress()) {
-    return symbol->GetMangled().GetName(symbol->GetLanguage(), preference);
+    return symbol->GetMangled().GetName(preference);
   } else {
     // No function, return an empty string.
     return ConstString();
@@ -923,7 +926,7 @@ SymbolContextSpecifier::SymbolContextSpecifier(const TargetSP &target_sp)
       m_start_line(0), m_end_line(0), m_function_spec(), m_class_name(),
       m_address_range_up(), m_type(eNothingSpecified) {}
 
-SymbolContextSpecifier::~SymbolContextSpecifier() {}
+SymbolContextSpecifier::~SymbolContextSpecifier() = default;
 
 bool SymbolContextSpecifier::AddLineSpecification(uint32_t line_no,
                                                   SpecificationType type) {
@@ -970,7 +973,7 @@ bool SymbolContextSpecifier::AddSpecification(const char *spec_string,
     // CompUnits can't necessarily be resolved here, since an inlined function
     // might show up in a number of CompUnits.  Instead we just convert to a
     // FileSpec and store it away.
-    m_file_spec_up.reset(new FileSpec(spec_string));
+    m_file_spec_up = std::make_unique<FileSpec>(spec_string);
     m_type |= eFileSpecified;
     break;
   case eLineStartSpecified:
@@ -1012,11 +1015,15 @@ void SymbolContextSpecifier::Clear() {
   m_type = eNothingSpecified;
 }
 
-bool SymbolContextSpecifier::SymbolContextMatches(SymbolContext &sc) {
+bool SymbolContextSpecifier::SymbolContextMatches(const SymbolContext &sc) {
   if (m_type == eNothingSpecified)
     return true;
 
-  if (m_target_sp.get() != sc.target_sp.get())
+  // Only compare targets if this specifier has one and it's not the Dummy
+  // target.  Otherwise if a specifier gets made in the dummy target and
+  // copied over we'll artificially fail the comparision.
+  if (m_target_sp && !m_target_sp->IsDummyTarget() &&
+      m_target_sp != sc.target_sp)
     return false;
 
   if (m_type & eModuleSpecified) {
@@ -1076,19 +1083,17 @@ bool SymbolContextSpecifier::SymbolContextMatches(SymbolContext &sc) {
       if (inline_info != nullptr) {
         was_inlined = true;
         const Mangled &name = inline_info->GetMangled();
-        if (!name.NameMatches(func_name, sc.function->GetLanguage()))
+        if (!name.NameMatches(func_name))
           return false;
       }
     }
     //  If it wasn't inlined, check the name in the function or symbol:
     if (!was_inlined) {
       if (sc.function != nullptr) {
-        if (!sc.function->GetMangled().NameMatches(func_name,
-                                                   sc.function->GetLanguage()))
+        if (!sc.function->GetMangled().NameMatches(func_name))
           return false;
       } else if (sc.symbol != nullptr) {
-        if (!sc.symbol->GetMangled().NameMatches(func_name,
-                                                 sc.symbol->GetLanguage()))
+        if (!sc.symbol->GetMangled().NameMatches(func_name))
           return false;
       }
     }
@@ -1181,7 +1186,7 @@ void SymbolContextSpecifier::GetDescription(
 
 SymbolContextList::SymbolContextList() : m_symbol_contexts() {}
 
-SymbolContextList::~SymbolContextList() {}
+SymbolContextList::~SymbolContextList() = default;
 
 void SymbolContextList::Append(const SymbolContext &sc) {
   m_symbol_contexts.push_back(sc);

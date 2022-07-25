@@ -39,9 +39,20 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
 
   // Handle CPU name is 'native'.
   if (CPU == "native")
-    return llvm::sys::getHostCPUName();
-  else if (CPU.size())
+    return std::string(llvm::sys::getHostCPUName());
+
+  if (CPU.size())
     return CPU;
+
+  if (Triple.isTargetMachineMac() &&
+      Triple.getArch() == llvm::Triple::aarch64) {
+    // Apple Silicon macs default to M1 CPUs.
+    return "apple-m1";
+  }
+
+  // arm64e requires v8.3a and only runs on apple-a12 and later CPUs.
+  if (Triple.isArm64e())
+    return "apple-a12";
 
   // Make sure we pick the appropriate Apple CPU if -arch is used or when
   // targetting a Darwin OS.
@@ -54,7 +65,8 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
 
 // Decode AArch64 features from string like +[no]featureA+[no]featureB+...
 static bool DecodeAArch64Features(const Driver &D, StringRef text,
-                                  std::vector<StringRef> &Features) {
+                                  std::vector<StringRef> &Features,
+                                  llvm::AArch64::ArchKind ArchKind) {
   SmallVector<StringRef, 8> Split;
   text.split(Split, StringRef("+"), -1, false);
 
@@ -66,6 +78,12 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
       D.Diag(clang::diag::err_drv_no_neon_modifier);
     else
       return false;
+
+    // +sve implies +f32mm if the base architecture is v8.6A or v8.7A
+    // it isn't the case in general that sve implies both f64mm and f32mm
+    if ((ArchKind == llvm::AArch64::ArchKind::ARMV8_6A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV8_7A) && Feature == "sve")
+      Features.push_back("+f32mm");
   }
   return true;
 }
@@ -76,6 +94,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
                               std::vector<StringRef> &Features) {
   std::pair<StringRef, StringRef> Split = Mcpu.split("+");
   CPU = Split.first;
+  llvm::AArch64::ArchKind ArchKind = llvm::AArch64::ArchKind::ARMV8A;
 
   if (CPU == "native")
     CPU = llvm::sys::getHostCPUName();
@@ -83,19 +102,20 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
   if (CPU == "generic") {
     Features.push_back("+neon");
   } else {
-    llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseCPUArch(CPU);
+    ArchKind = llvm::AArch64::parseCPUArch(CPU);
     if (!llvm::AArch64::getArchFeatures(ArchKind, Features))
       return false;
 
-    unsigned Extension = llvm::AArch64::getDefaultExtensions(CPU, ArchKind);
+    uint64_t Extension = llvm::AArch64::getDefaultExtensions(CPU, ArchKind);
     if (!llvm::AArch64::getExtensionFeatures(Extension, Features))
       return false;
    }
 
-  if (Split.second.size() && !DecodeAArch64Features(D, Split.second, Features))
-    return false;
+   if (Split.second.size() &&
+       !DecodeAArch64Features(D, Split.second, Features, ArchKind))
+     return false;
 
-  return true;
+   return true;
 }
 
 static bool
@@ -108,7 +128,8 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseArch(Split.first);
   if (ArchKind == llvm::AArch64::ArchKind::INVALID ||
       !llvm::AArch64::getArchFeatures(ArchKind, Features) ||
-      (Split.second.size() && !DecodeAArch64Features(D, Split.second, Features)))
+      (Split.second.size() &&
+       !DecodeAArch64Features(D, Split.second, Features, ArchKind)))
     return false;
 
   return true;
@@ -139,8 +160,9 @@ getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
 
   // Handle CPU name is 'native'.
   if (MtuneLowerCase == "native")
-    MtuneLowerCase = llvm::sys::getHostCPUName();
-  if (MtuneLowerCase == "cyclone" || MtuneLowerCase.find("apple") == 0) {
+    MtuneLowerCase = std::string(llvm::sys::getHostCPUName());
+  if (MtuneLowerCase == "cyclone" ||
+      StringRef(MtuneLowerCase).startswith("apple")) {
     Features.push_back("+zcm");
     Features.push_back("+zcz");
   }
@@ -163,12 +185,25 @@ getAArch64MicroArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
 void aarch64::getAArch64TargetFeatures(const Driver &D,
                                        const llvm::Triple &Triple,
                                        const ArgList &Args,
-                                       std::vector<StringRef> &Features) {
+                                       std::vector<StringRef> &Features,
+                                       bool ForAS) {
   Arg *A;
   bool success = true;
   // Enable NEON by default.
   Features.push_back("+neon");
-  if ((A = Args.getLastArg(options::OPT_march_EQ)))
+  llvm::StringRef WaMArch;
+  if (ForAS)
+    for (const auto *A :
+         Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler))
+      for (StringRef Value : A->getValues())
+        if (Value.startswith("-march="))
+          WaMArch = Value.substr(7);
+  // Call getAArch64ArchFeaturesFromMarch only if "-Wa,-march=" or
+  // "-Xassembler -march" is detected. Otherwise it may return false
+  // and causes Clang to error out.
+  if (!WaMArch.empty())
+    success = getAArch64ArchFeaturesFromMarch(D, WaMArch, Args, Features);
+  else if ((A = Args.getLastArg(options::OPT_march_EQ)))
     success = getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Features);
   else if ((A = Args.getLastArg(options::OPT_mcpu_EQ)))
     success = getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Features);
@@ -187,8 +222,15 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     success = getAArch64MicroArchFeaturesFromMcpu(
         D, getAArch64TargetCPU(Args, Triple, A), Args, Features);
 
-  if (!success)
-    D.Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
+  if (!success) {
+    auto Diag = D.Diag(diag::err_drv_clang_unsupported);
+    // If "-Wa,-march=" is used, 'WaMArch' will contain the argument's value,
+    // while 'A' is uninitialized. Only dereference 'A' in the other case.
+    if (!WaMArch.empty())
+      Diag << "-march=" + WaMArch.str();
+    else
+      Diag << A->getAsString(Args);
+  }
 
   if (Args.getLastArg(options::OPT_mgeneral_regs_only)) {
     Features.push_back("-fp-armv8");
@@ -206,6 +248,53 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
       Features.push_back("+tpidr-el1");
     else if (Mtp != "el0")
       D.Diag(diag::err_drv_invalid_mtp) << A->getAsString(Args);
+  }
+
+  // Enable/disable straight line speculation hardening.
+  if (Arg *A = Args.getLastArg(options::OPT_mharden_sls_EQ)) {
+    StringRef Scope = A->getValue();
+    bool EnableRetBr = false;
+    bool EnableBlr = false;
+    bool DisableComdat = false;
+    if (Scope != "none") {
+      SmallVector<StringRef, 4> Opts;
+      Scope.split(Opts, ",");
+      for (auto Opt : Opts) {
+        Opt = Opt.trim();
+        if (Opt == "all") {
+          EnableBlr = true;
+          EnableRetBr = true;
+          continue;
+        }
+        if (Opt == "retbr") {
+          EnableRetBr = true;
+          continue;
+        }
+        if (Opt == "blr") {
+          EnableBlr = true;
+          continue;
+        }
+        if (Opt == "comdat") {
+          DisableComdat = false;
+          continue;
+        }
+        if (Opt == "nocomdat") {
+          DisableComdat = true;
+          continue;
+        }
+        D.Diag(diag::err_invalid_sls_hardening)
+            << Scope << A->getAsString(Args);
+        break;
+      }
+    }
+
+    if (EnableRetBr)
+      Features.push_back("+harden-sls-retbr");
+    if (EnableBlr)
+      Features.push_back("+harden-sls-blr");
+    if (DisableComdat) {
+      Features.push_back("+harden-sls-nocomdat");
+    }
   }
 
   // En/disable crc
@@ -322,10 +411,16 @@ fp16_fml_fallthrough:
     }
   }
 
+  auto V8_6Pos = llvm::find(Features, "+v8.6a");
+  if (V8_6Pos != std::end(Features))
+    V8_6Pos = Features.insert(std::next(V8_6Pos), {"+i8mm", "+bf16"});
+
   if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
-                               options::OPT_munaligned_access))
+                               options::OPT_munaligned_access)) {
     if (A->getOption().matches(options::OPT_mno_unaligned_access))
       Features.push_back("+strict-align");
+  } else if (Triple.isOSOpenBSD())
+    Features.push_back("+strict-align");
 
   if (Args.hasArg(options::OPT_ffixed_x1))
     Features.push_back("+reserve-x1");
@@ -398,6 +493,9 @@ fp16_fml_fallthrough:
 
   if (Args.hasArg(options::OPT_ffixed_x28))
     Features.push_back("+reserve-x28");
+
+  if (Args.hasArg(options::OPT_ffixed_x30))
+    Features.push_back("+reserve-x30");
 
   if (Args.hasArg(options::OPT_fcall_saved_x8))
     Features.push_back("+call-saved-x8");

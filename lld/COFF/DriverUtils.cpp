@@ -32,6 +32,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/WindowsManifest/WindowsManifestMerger.h"
+#include <limits>
 #include <memory>
 
 using namespace llvm::COFF;
@@ -87,10 +88,10 @@ void parseNumbers(StringRef arg, uint64_t *addr, uint64_t *size) {
 void parseVersion(StringRef arg, uint32_t *major, uint32_t *minor) {
   StringRef s1, s2;
   std::tie(s1, s2) = arg.split('.');
-  if (s1.getAsInteger(0, *major))
+  if (s1.getAsInteger(10, *major))
     fatal("invalid number: " + s1);
   *minor = 0;
-  if (!s2.empty() && s2.getAsInteger(0, *minor))
+  if (!s2.empty() && s2.getAsInteger(10, *minor))
     fatal("invalid number: " + s2);
 }
 
@@ -98,12 +99,18 @@ void parseGuard(StringRef fullArg) {
   SmallVector<StringRef, 1> splitArgs;
   fullArg.split(splitArgs, ",");
   for (StringRef arg : splitArgs) {
-    if (arg.equals_lower("no"))
+    if (arg.equals_insensitive("no"))
       config->guardCF = GuardCFLevel::Off;
-    else if (arg.equals_lower("nolongjmp"))
-      config->guardCF = GuardCFLevel::NoLongJmp;
-    else if (arg.equals_lower("cf") || arg.equals_lower("longjmp"))
-      config->guardCF = GuardCFLevel::Full;
+    else if (arg.equals_insensitive("nolongjmp"))
+      config->guardCF &= ~GuardCFLevel::LongJmp;
+    else if (arg.equals_insensitive("noehcont"))
+      config->guardCF &= ~GuardCFLevel::EHCont;
+    else if (arg.equals_insensitive("cf"))
+      config->guardCF = GuardCFLevel::CF;
+    else if (arg.equals_insensitive("longjmp"))
+      config->guardCF |= GuardCFLevel::CF | GuardCFLevel::LongJmp;
+    else if (arg.equals_insensitive("ehcont"))
+      config->guardCF |= GuardCFLevel::CF | GuardCFLevel::EHCont;
     else
       fatal("invalid argument to /guard: " + arg);
   }
@@ -111,7 +118,7 @@ void parseGuard(StringRef fullArg) {
 
 // Parses a string in the form of "<subsystem>[,<integer>[.<integer>]]".
 void parseSubsystem(StringRef arg, WindowsSubsystem *sys, uint32_t *major,
-                    uint32_t *minor) {
+                    uint32_t *minor, bool *gotVersion) {
   StringRef sysStr, ver;
   std::tie(sysStr, ver) = arg.split(',');
   std::string sysStrLower = sysStr.lower();
@@ -131,6 +138,8 @@ void parseSubsystem(StringRef arg, WindowsSubsystem *sys, uint32_t *major,
     fatal("unknown subsystem: " + sysStr);
   if (!ver.empty())
     parseVersion(ver, major, minor);
+  if (gotVersion)
+    *gotVersion = !ver.empty();
 }
 
 // Parse a string of the form of "<from>=<to>".
@@ -220,7 +229,8 @@ void parseAligncomm(StringRef s) {
     error("/aligncomm: invalid argument: " + s);
     return;
   }
-  config->alignComm[name] = std::max(config->alignComm[name], 1 << v);
+  config->alignComm[std::string(name)] =
+      std::max(config->alignComm[std::string(name)], 1 << v);
 }
 
 // Parses /functionpadmin option argument.
@@ -247,17 +257,17 @@ void parseFunctionPadMin(llvm::opt::Arg *a, llvm::COFF::MachineTypes machine) {
 // Parses a string in the form of "EMBED[,=<integer>]|NO".
 // Results are directly written to Config.
 void parseManifest(StringRef arg) {
-  if (arg.equals_lower("no")) {
+  if (arg.equals_insensitive("no")) {
     config->manifest = Configuration::No;
     return;
   }
-  if (!arg.startswith_lower("embed"))
+  if (!arg.startswith_insensitive("embed"))
     fatal("invalid option " + arg);
   config->manifest = Configuration::Embed;
   arg = arg.substr(strlen("embed"));
   if (arg.empty())
     return;
-  if (!arg.startswith_lower(",id="))
+  if (!arg.startswith_insensitive(",id="))
     fatal("invalid option " + arg);
   arg = arg.substr(strlen(",id="));
   if (arg.getAsInteger(0, config->manifestID))
@@ -267,7 +277,7 @@ void parseManifest(StringRef arg) {
 // Parses a string in the form of "level=<string>|uiAccess=<string>|NO".
 // Results are directly written to Config.
 void parseManifestUAC(StringRef arg) {
-  if (arg.equals_lower("no")) {
+  if (arg.equals_insensitive("no")) {
     config->manifestUAC = false;
     return;
   }
@@ -275,12 +285,12 @@ void parseManifestUAC(StringRef arg) {
     arg = arg.ltrim();
     if (arg.empty())
       return;
-    if (arg.startswith_lower("level=")) {
+    if (arg.startswith_insensitive("level=")) {
       arg = arg.substr(strlen("level="));
       std::tie(config->manifestLevel, arg) = arg.split(" ");
       continue;
     }
-    if (arg.startswith_lower("uiaccess=")) {
+    if (arg.startswith_insensitive("uiaccess=")) {
       arg = arg.substr(strlen("uiaccess="));
       std::tie(config->manifestUIAccess, arg) = arg.split(" ");
       continue;
@@ -295,9 +305,9 @@ void parseSwaprun(StringRef arg) {
   do {
     StringRef swaprun, newArg;
     std::tie(swaprun, newArg) = arg.split(',');
-    if (swaprun.equals_lower("cd"))
+    if (swaprun.equals_insensitive("cd"))
       config->swaprunCD = true;
-    else if (swaprun.equals_lower("net"))
+    else if (swaprun.equals_insensitive("net"))
       config->swaprunNet = true;
     else if (swaprun.empty())
       error("/swaprun: missing argument");
@@ -318,7 +328,7 @@ public:
     SmallString<128> s;
     if (auto ec = sys::fs::createTemporaryFile("lld-" + prefix, extn, s))
       fatal("cannot create a temporary file: " + ec.message());
-    path = s.str();
+    path = std::string(s.str());
 
     if (!contents.empty()) {
       std::error_code ec;
@@ -346,7 +356,7 @@ public:
   // is called (you cannot remove an opened file on Windows.)
   std::unique_ptr<MemoryBuffer> getMemoryBuffer() {
     // IsVolatile=true forces MemoryBuffer to not use mmap().
-    return CHECK(MemoryBuffer::getFile(path, /*FileSize=*/-1,
+    return CHECK(MemoryBuffer::getFile(path, /*IsText=*/false,
                                        /*RequiresNullTerminator=*/false,
                                        /*IsVolatile=*/true),
                  "could not open " + path);
@@ -403,14 +413,14 @@ static std::string createManifestXmlWithInternalMt(StringRef defaultXml) {
             toString(std::move(e)));
   }
 
-  return merger.getMergedManifest().get()->getBuffer();
+  return std::string(merger.getMergedManifest().get()->getBuffer());
 }
 
 static std::string createManifestXmlWithExternalMt(StringRef defaultXml) {
   // Create the default manifest file as a temporary file.
   TemporaryFile Default("defaultxml", "manifest");
   std::error_code ec;
-  raw_fd_ostream os(Default.path, ec, sys::fs::OF_Text);
+  raw_fd_ostream os(Default.path, ec, sys::fs::OF_TextWithCRLF);
   if (ec)
     fatal("failed to open " + Default.path + ": " + ec.message());
   os << defaultXml;
@@ -431,9 +441,10 @@ static std::string createManifestXmlWithExternalMt(StringRef defaultXml) {
   e.add("/out:" + StringRef(user.path));
   e.run();
 
-  return CHECK(MemoryBuffer::getFile(user.path), "could not open " + user.path)
-      .get()
-      ->getBuffer();
+  return std::string(
+      CHECK(MemoryBuffer::getFile(user.path), "could not open " + user.path)
+          .get()
+          ->getBuffer());
 }
 
 static std::string createManifestXml() {
@@ -507,11 +518,11 @@ std::unique_ptr<MemoryBuffer> createManifestRes() {
 }
 
 void createSideBySideManifest() {
-  std::string path = config->manifestFile;
+  std::string path = std::string(config->manifestFile);
   if (path == "")
     path = config->outputFile + ".manifest";
   std::error_code ec;
-  raw_fd_ostream out(path, ec, sys::fs::OF_Text);
+  raw_fd_ostream out(path, ec, sys::fs::OF_TextWithCRLF);
   if (ec)
     fatal("failed to create manifest: " + ec.message());
   out << createManifestXml();
@@ -549,21 +560,21 @@ Export parseExport(StringRef arg) {
   while (!rest.empty()) {
     StringRef tok;
     std::tie(tok, rest) = rest.split(",");
-    if (tok.equals_lower("noname")) {
+    if (tok.equals_insensitive("noname")) {
       if (e.ordinal == 0)
         goto err;
       e.noname = true;
       continue;
     }
-    if (tok.equals_lower("data")) {
+    if (tok.equals_insensitive("data")) {
       e.data = true;
       continue;
     }
-    if (tok.equals_lower("constant")) {
+    if (tok.equals_insensitive("constant")) {
       e.constant = true;
       continue;
     }
-    if (tok.equals_lower("private")) {
+    if (tok.equals_insensitive("private")) {
       e.isPrivate = true;
       continue;
     }
@@ -671,12 +682,15 @@ void fixupExports() {
 
 void assignExportOrdinals() {
   // Assign unique ordinals if default (= 0).
-  uint16_t max = 0;
+  uint32_t max = 0;
   for (Export &e : config->exports)
-    max = std::max(max, e.ordinal);
+    max = std::max(max, (uint32_t)e.ordinal);
   for (Export &e : config->exports)
     if (e.ordinal == 0)
       e.ordinal = ++max;
+  if (max > std::numeric_limits<uint16_t>::max())
+    fatal("too many exported symbols (max " +
+          Twine(std::numeric_limits<uint16_t>::max()) + ")");
 }
 
 // Parses a string in the form of "key=value" and check
@@ -765,6 +779,8 @@ static const llvm::opt::OptTable::Info infoTable[] = {
 
 COFFOptTable::COFFOptTable() : OptTable(infoTable, true) {}
 
+COFFOptTable optTable;
+
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
 static void handleColorDiagnostics(opt::InputArgList &args) {
@@ -810,8 +826,7 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
   // options so we parse here before and ignore all the options but
   // --rsp-quoting and /lldignoreenv.
   // (This means --rsp-quoting can't be added through %LINK%.)
-  opt::InputArgList args = table.ParseArgs(argv, missingIndex, missingCount);
-
+  opt::InputArgList args = optTable.ParseArgs(argv, missingIndex, missingCount);
 
   // Expand response files (arguments in the form of @<filename>) and insert
   // flags from %LINK% and %_LINK_%, and then parse the argument again.
@@ -820,8 +835,8 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
   if (!args.hasArg(OPT_lldignoreenv))
     addLINK(expandedArgv);
   cl::ExpandResponseFiles(saver, getQuotingStyle(args), expandedArgv);
-  args = table.ParseArgs(makeArrayRef(expandedArgv).drop_front(), missingIndex,
-                         missingCount);
+  args = optTable.ParseArgs(makeArrayRef(expandedArgv).drop_front(),
+                            missingIndex, missingCount);
 
   // Print the real command line if response files are expanded.
   if (args.hasArg(OPT_verbose) && argv.size() != expandedArgv.size()) {
@@ -843,9 +858,9 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
 
   handleColorDiagnostics(args);
 
-  for (auto *arg : args.filtered(OPT_UNKNOWN)) {
+  for (opt::Arg *arg : args.filtered(OPT_UNKNOWN)) {
     std::string nearest;
-    if (table.findNearest(arg->getAsString(args), nearest) > 1)
+    if (optTable.findNearest(arg->getAsString(args), nearest) > 1)
       warn("ignoring unknown argument '" + arg->getAsString(args) + "'");
     else
       warn("ignoring unknown argument '" + arg->getAsString(args) +
@@ -859,30 +874,41 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
 }
 
 // Tokenizes and parses a given string as command line in .drective section.
-// /EXPORT options are processed in fastpath.
-std::pair<opt::InputArgList, std::vector<StringRef>>
-ArgParser::parseDirectives(StringRef s) {
-  std::vector<StringRef> exports;
+ParsedDirectives ArgParser::parseDirectives(StringRef s) {
+  ParsedDirectives result;
   SmallVector<const char *, 16> rest;
 
-  for (StringRef tok : tokenize(s)) {
-    if (tok.startswith_lower("/export:") || tok.startswith_lower("-export:"))
-      exports.push_back(tok.substr(strlen("/export:")));
-    else
-      rest.push_back(tok.data());
+  // Handle /EXPORT and /INCLUDE in a fast path. These directives can appear for
+  // potentially every symbol in the object, so they must be handled quickly.
+  SmallVector<StringRef, 16> tokens;
+  cl::TokenizeWindowsCommandLineNoCopy(s, saver, tokens);
+  for (StringRef tok : tokens) {
+    if (tok.startswith_insensitive("/export:") ||
+        tok.startswith_insensitive("-export:"))
+      result.exports.push_back(tok.substr(strlen("/export:")));
+    else if (tok.startswith_insensitive("/include:") ||
+             tok.startswith_insensitive("-include:"))
+      result.includes.push_back(tok.substr(strlen("/include:")));
+    else {
+      // Copy substrings that are not valid C strings. The tokenizer may have
+      // already copied quoted arguments for us, so those do not need to be
+      // copied again.
+      bool HasNul = tok.end() != s.end() && tok.data()[tok.size()] == '\0';
+      rest.push_back(HasNul ? tok.data() : saver.save(tok).data());
+    }
   }
 
   // Make InputArgList from unparsed string vectors.
   unsigned missingIndex;
   unsigned missingCount;
 
-  opt::InputArgList args = table.ParseArgs(rest, missingIndex, missingCount);
+  result.args = optTable.ParseArgs(rest, missingIndex, missingCount);
 
   if (missingCount)
-    fatal(Twine(args.getArgString(missingIndex)) + ": missing argument");
-  for (auto *arg : args.filtered(OPT_UNKNOWN))
-    warn("ignoring unknown argument: " + arg->getAsString(args));
-  return {std::move(args), std::move(exports)};
+    fatal(Twine(result.args.getArgString(missingIndex)) + ": missing argument");
+  for (auto *arg : result.args.filtered(OPT_UNKNOWN))
+    warn("ignoring unknown argument: " + arg->getAsString(result.args));
+  return result;
 }
 
 // link.exe has an interesting feature. If LINK or _LINK_ environment
@@ -907,9 +933,9 @@ std::vector<const char *> ArgParser::tokenize(StringRef s) {
 }
 
 void printHelp(const char *argv0) {
-  COFFOptTable().PrintHelp(lld::outs(),
-                           (std::string(argv0) + " [options] file...").c_str(),
-                           "LLVM Linker", false);
+  optTable.printHelp(lld::outs(),
+                     (std::string(argv0) + " [options] file...").c_str(),
+                     "LLVM Linker", false);
 }
 
 } // namespace coff

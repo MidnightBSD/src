@@ -1,4 +1,4 @@
-//===-- CommandObjectWatchpointCommand.cpp ----------------------*- C++ -*-===//
+//===-- CommandObjectWatchpointCommand.cpp --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,7 +39,7 @@ static constexpr OptionEnumValueElement g_script_option_enumeration[] = {
     {
         eScriptLanguageLua,
         "lua",
-        "Commands are in the Python language.",
+        "Commands are in the Lua language.",
     },
     {
         eSortOrderByName,
@@ -61,7 +61,9 @@ public:
   CommandObjectWatchpointCommandAdd(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "add",
                             "Add a set of LLDB commands to a watchpoint, to be "
-                            "executed whenever the watchpoint is hit.",
+                            "executed whenever the watchpoint is hit.  "
+                            "The commands added to the watchpoint replace any "
+                            "commands previously added to it.",
                             nullptr, eCommandRequiresTarget),
         IOHandlerDelegateMultiline("DONE",
                                    IOHandlerDelegate::Completion::LLDBCommand),
@@ -282,12 +284,12 @@ are no syntax errors may indicate that a function was declared but never called.
       ExecutionContext exe_ctx(context->exe_ctx_ref);
       Target *target = exe_ctx.GetTargetPtr();
       if (target) {
-        CommandReturnObject result;
         Debugger &debugger = target->GetDebugger();
+        CommandReturnObject result(debugger.GetUseColor());
+
         // Rig up the results secondary output stream to the debugger's, so the
         // output will come out synchronously if the debugger is set up that
         // way.
-
         StreamSP output_stream(debugger.GetAsyncOutputStream());
         StreamSP error_stream(debugger.GetAsyncErrorStream());
         result.SetImmediateOutputStream(output_stream);
@@ -301,7 +303,7 @@ are no syntax errors may indicate that a function was declared but never called.
         options.SetPrintErrors(true);
         options.SetAddToHistory(false);
 
-        debugger.GetCommandInterpreter().HandleCommands(commands, &exe_ctx,
+        debugger.GetCommandInterpreter().HandleCommands(commands, exe_ctx,
                                                         options, result);
         result.GetImmediateOutputStream()->Flush();
         result.GetImmediateErrorStream()->Flush();
@@ -312,10 +314,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
   class CommandOptions : public Options {
   public:
-    CommandOptions()
-        : Options(), m_use_commands(false), m_use_script_language(false),
-          m_script_language(eScriptLanguageNone), m_use_one_liner(false),
-          m_one_liner(), m_function_name() {}
+    CommandOptions() : Options(), m_one_liner(), m_function_name() {}
 
     ~CommandOptions() override = default;
 
@@ -327,7 +326,7 @@ are no syntax errors may indicate that a function was declared but never called.
       switch (short_option) {
       case 'o':
         m_use_one_liner = true;
-        m_one_liner = option_arg;
+        m_one_liner = std::string(option_arg);
         break;
 
       case 's':
@@ -359,7 +358,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
       case 'F':
         m_use_one_liner = false;
-        m_function_name.assign(option_arg);
+        m_function_name.assign(std::string(option_arg));
         break;
 
       default:
@@ -385,12 +384,12 @@ are no syntax errors may indicate that a function was declared but never called.
 
     // Instance variables to hold the values for command options.
 
-    bool m_use_commands;
-    bool m_use_script_language;
-    lldb::ScriptLanguage m_script_language;
+    bool m_use_commands = false;
+    bool m_use_script_language = false;
+    lldb::ScriptLanguage m_script_language = eScriptLanguageNone;
 
     // Instance variables to hold the values for one_liner options.
-    bool m_use_one_liner;
+    bool m_use_one_liner = false;
     std::string m_one_liner;
     bool m_stop_on_error;
     std::string m_function_name;
@@ -405,7 +404,6 @@ protected:
 
     if (num_watchpoints == 0) {
       result.AppendError("No watchpoints exist to have commands added");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -420,7 +418,6 @@ protected:
     if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
                                                                valid_wp_ids)) {
       result.AppendError("Invalid watchpoints specification.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -515,14 +512,12 @@ protected:
 
     if (num_watchpoints == 0) {
       result.AppendError("No watchpoints exist to have commands deleted");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
     if (command.GetArgumentCount() == 0) {
       result.AppendError(
           "No watchpoint specified from which to delete the commands");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -530,7 +525,6 @@ protected:
     if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
                                                                valid_wp_ids)) {
       result.AppendError("Invalid watchpoints specification.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -544,7 +538,6 @@ protected:
           wp->ClearCallback();
       } else {
         result.AppendErrorWithFormat("Invalid watchpoint ID: %u.\n", cur_wp_id);
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     }
@@ -587,14 +580,12 @@ protected:
 
     if (num_watchpoints == 0) {
       result.AppendError("No watchpoints exist for which to list commands");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
     if (command.GetArgumentCount() == 0) {
       result.AppendError(
           "No watchpoint specified for which to list the commands");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -602,7 +593,6 @@ protected:
     if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
                                                                valid_wp_ids)) {
       result.AppendError("Invalid watchpoints specification.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -634,7 +624,6 @@ protected:
         } else {
           result.AppendErrorWithFormat("Invalid watchpoint ID: %u.\n",
                                        cur_wp_id);
-          result.SetStatus(eReturnStatusFailed);
         }
       }
     }

@@ -19,6 +19,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -1560,11 +1561,11 @@ class TemplateDiff {
         if (!Tree.HasChildren()) {
           // If we're dealing with a template specialization with zero
           // arguments, there are no children; special-case this.
-          OS << FromTD->getNameAsString() << "<>";
+          OS << FromTD->getDeclName() << "<>";
           return;
         }
 
-        OS << FromTD->getNameAsString() << '<';
+        OS << FromTD->getDeclName() << '<';
         Tree.MoveToChild();
         unsigned NumElideArgs = 0;
         bool AllArgsElided = true;
@@ -1715,15 +1716,16 @@ class TemplateDiff {
                              bool FromDefault, bool ToDefault, bool Same) {
     assert((FromTD || ToTD) && "Only one template argument may be missing.");
 
-    std::string FromName = FromTD ? FromTD->getName() : "(no argument)";
-    std::string ToName = ToTD ? ToTD->getName() : "(no argument)";
+    std::string FromName =
+        std::string(FromTD ? FromTD->getName() : "(no argument)");
+    std::string ToName = std::string(ToTD ? ToTD->getName() : "(no argument)");
     if (FromTD && ToTD && FromName == ToName) {
       FromName = FromTD->getQualifiedNameAsString();
       ToName = ToTD->getQualifiedNameAsString();
     }
 
     if (Same) {
-      OS << "template " << FromTD->getNameAsString();
+      OS << "template " << FromTD->getDeclName();
     } else if (!PrintTree) {
       OS << (FromDefault ? "(default) template " : "template ");
       Bold();
@@ -1755,7 +1757,7 @@ class TemplateDiff {
       if (FromIntType->isBooleanType()) {
         OS << ((FromInt == 0) ? "false" : "true");
       } else {
-        OS << FromInt.toString(10);
+        OS << toString(FromInt, 10);
       }
       return;
     }
@@ -1799,7 +1801,7 @@ class TemplateDiff {
       if (IntType->isBooleanType()) {
         OS << ((Val == 0) ? "false" : "true");
       } else {
-        OS << Val.toString(10);
+        OS << toString(Val, 10);
       }
     } else if (E) {
       PrintExpr(E);
@@ -1833,7 +1835,14 @@ class TemplateDiff {
     if (VD) {
       if (AddressOf)
         OS << "&";
-      OS << VD->getName();
+      else if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(VD)) {
+        // FIXME: Diffing the APValue would be neat.
+        // FIXME: Suppress this and use the full name of the declaration if the
+        // parameter is a pointer or reference.
+        TPO->printAsInit(OS);
+        return;
+      }
+      VD->printName(OS);
       return;
     }
 

@@ -1,4 +1,4 @@
-//===-- CommandObjectVersion.cpp --------------------------------*- C++ -*-===//
+//===-- CommandObjectVersion.cpp ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@ CommandObjectVersion::CommandObjectVersion(CommandInterpreter &interpreter)
     : CommandObjectParsed(interpreter, "version",
                           "Show the LLDB debugger version.", "version") {}
 
-CommandObjectVersion::~CommandObjectVersion() {}
+CommandObjectVersion::~CommandObjectVersion() = default;
 
 bool CommandObjectVersion::DoExecute(Args &args, CommandReturnObject &result) {
   if (args.GetArgumentCount() == 0) {
@@ -28,7 +28,6 @@ bool CommandObjectVersion::DoExecute(Args &args, CommandReturnObject &result) {
     result.SetStatus(eReturnStatusSuccessFinishResult);
   } else {
     result.AppendError("the version command takes no arguments.");
-    result.SetStatus(eReturnStatusFailed);
   }
   return true;
 }

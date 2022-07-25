@@ -1,4 +1,4 @@
-//===-- OptionGroupVariable.cpp -----------------------*- C++ -*-===//
+//===-- OptionGroupVariable.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -67,10 +67,8 @@ static Status ValidateSummaryString(const char *str, void *) {
 }
 
 OptionGroupVariable::OptionGroupVariable(bool show_frame_options)
-    : OptionGroup(), include_frame_options(show_frame_options),
-      summary(ValidateNamedSummary), summary_string(ValidateSummaryString) {}
-
-OptionGroupVariable::~OptionGroupVariable() {}
+    : include_frame_options(show_frame_options), summary(ValidateNamedSummary),
+      summary_string(ValidateSummaryString) {}
 
 Status
 OptionGroupVariable::SetOptionValue(uint32_t option_idx,

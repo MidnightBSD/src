@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SYMBOLFILE_NATIVEPDB_SYMBOLFILENATIVEPDB_H
-#define LLDB_PLUGINS_SYMBOLFILE_NATIVEPDB_SYMBOLFILENATIVEPDB_H
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_SYMBOLFILENATIVEPDB_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_SYMBOLFILENATIVEPDB_H
 
 #include "lldb/Symbol/SymbolFile.h"
 
@@ -100,7 +100,7 @@ public:
   size_t ParseBlocksRecursive(Function &func) override;
 
   void FindGlobalVariables(ConstString name,
-                           const CompilerDeclContext *parent_decl_ctx,
+                           const CompilerDeclContext &parent_decl_ctx,
                            uint32_t max_matches,
                            VariableList &variables) override;
 
@@ -120,8 +120,7 @@ public:
   uint32_t ResolveSymbolContext(const Address &so_addr,
                                 lldb::SymbolContextItem resolve_scope,
                                 SymbolContext &sc) override;
-  uint32_t ResolveSymbolContext(const FileSpec &file_spec, uint32_t line,
-                                bool check_inlines,
+  uint32_t ResolveSymbolContext(const SourceLocationSpec &src_location_spec,
                                 lldb::SymbolContextItem resolve_scope,
                                 SymbolContextList &sc_list) override;
 
@@ -129,14 +128,14 @@ public:
                 TypeList &type_list) override;
 
   void FindFunctions(ConstString name,
-                     const CompilerDeclContext *parent_decl_ctx,
+                     const CompilerDeclContext &parent_decl_ctx,
                      lldb::FunctionNameType name_type_mask,
                      bool include_inlines, SymbolContextList &sc_list) override;
 
   void FindFunctions(const RegularExpression &regex, bool include_inlines,
                      SymbolContextList &sc_list) override;
 
-  void FindTypes(ConstString name, const CompilerDeclContext *parent_decl_ctx,
+  void FindTypes(ConstString name, const CompilerDeclContext &parent_decl_ctx,
                  uint32_t max_matches,
                  llvm::DenseSet<SymbolFile *> &searched_symbol_files,
                  TypeMap &types) override;
@@ -150,7 +149,7 @@ public:
 
   CompilerDeclContext
   FindNamespace(ConstString name,
-                const CompilerDeclContext *parent_decl_ctx) override;
+                const CompilerDeclContext &parent_decl_ctx) override;
 
   ConstString GetPluginName() override;
 
@@ -231,6 +230,7 @@ private:
   lldb::addr_t m_obj_load_address = 0;
   bool m_done_full_type_scan = false;
 
+  std::unique_ptr<llvm::pdb::PDBFile> m_file_up;
   std::unique_ptr<PdbIndex> m_index;
 
   std::unique_ptr<PdbAstBuilder> m_ast;
@@ -246,4 +246,4 @@ private:
 } // namespace npdb
 } // namespace lldb_private
 
-#endif // lldb_Plugins_SymbolFile_PDB_SymbolFilePDB_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_SYMBOLFILENATIVEPDB_H

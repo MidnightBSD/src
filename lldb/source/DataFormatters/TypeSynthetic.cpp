@@ -1,5 +1,4 @@
-//===-- TypeSynthetic.cpp ----------------------------------------*- C++
-//-*-===//
+//===-- TypeSynthetic.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -82,7 +81,7 @@ std::string TypeFilterImpl::GetDescription() {
   }
 
   sstr.Printf("}");
-  return sstr.GetString();
+  return std::string(sstr.GetString());
 }
 
 std::string CXXSyntheticChildren::GetDescription() {
@@ -92,7 +91,7 @@ std::string CXXSyntheticChildren::GetDescription() {
               SkipsReferences() ? " (skip references)" : "",
               m_description.c_str());
 
-  return sstr.GetString();
+  return std::string(sstr.GetString());
 }
 
 lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateValueObjectFromExpression(
@@ -129,7 +128,7 @@ ScriptedSyntheticChildren::FrontEnd::FrontEnd(std::string pclass,
                                               ValueObject &backend)
     : SyntheticChildrenFrontEnd(backend), m_python_class(pclass),
       m_wrapper_sp(), m_interpreter(nullptr) {
-  if (backend == LLDB_INVALID_UID)
+  if (backend.GetID() == LLDB_INVALID_UID)
     return;
 
   TargetSP target_sp = backend.GetTargetSP();
@@ -144,7 +143,7 @@ ScriptedSyntheticChildren::FrontEnd::FrontEnd(std::string pclass,
         m_python_class.c_str(), backend.GetSP());
 }
 
-ScriptedSyntheticChildren::FrontEnd::~FrontEnd() {}
+ScriptedSyntheticChildren::FrontEnd::~FrontEnd() = default;
 
 lldb::ValueObjectSP
 ScriptedSyntheticChildren::FrontEnd::GetChildAtIndex(size_t idx) {
@@ -213,5 +212,5 @@ std::string ScriptedSyntheticChildren::GetDescription() {
               SkipsReferences() ? " (skip references)" : "",
               m_python_class.c_str());
 
-  return sstr.GetString();
+  return std::string(sstr.GetString());
 }

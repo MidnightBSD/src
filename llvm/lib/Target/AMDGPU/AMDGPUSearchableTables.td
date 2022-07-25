@@ -198,6 +198,13 @@ def : SourceOfDivergence<int_r600_read_tidig_y>;
 def : SourceOfDivergence<int_r600_read_tidig_z>;
 def : SourceOfDivergence<int_amdgcn_atomic_inc>;
 def : SourceOfDivergence<int_amdgcn_atomic_dec>;
+def : SourceOfDivergence<int_amdgcn_global_atomic_csub>;
+def : SourceOfDivergence<int_amdgcn_global_atomic_fadd>;
+def : SourceOfDivergence<int_amdgcn_global_atomic_fmin>;
+def : SourceOfDivergence<int_amdgcn_global_atomic_fmax>;
+def : SourceOfDivergence<int_amdgcn_flat_atomic_fadd>;
+def : SourceOfDivergence<int_amdgcn_flat_atomic_fmin>;
+def : SourceOfDivergence<int_amdgcn_flat_atomic_fmax>;
 def : SourceOfDivergence<int_amdgcn_ds_fadd>;
 def : SourceOfDivergence<int_amdgcn_ds_fmin>;
 def : SourceOfDivergence<int_amdgcn_ds_fmax>;
@@ -224,6 +231,9 @@ def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_or>;
 def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_xor>;
 def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_inc>;
 def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_dec>;
+def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_fadd>;
+def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_fmin>;
+def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_fmax>;
 def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_cmpswap>;
 def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_swap>;
 def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_add>;
@@ -237,8 +247,13 @@ def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_or>;
 def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_xor>;
 def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_inc>;
 def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_dec>;
+def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_fadd>;
+def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_fmin>;
+def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_fmax>;
 def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_cmpswap>;
+def : SourceOfDivergence<int_amdgcn_buffer_atomic_csub>;
 def : SourceOfDivergence<int_amdgcn_ps_live>;
+def : SourceOfDivergence<int_amdgcn_live_mask>;
 def : SourceOfDivergence<int_amdgcn_ds_swizzle>;
 def : SourceOfDivergence<int_amdgcn_ds_ordered_add>;
 def : SourceOfDivergence<int_amdgcn_ds_ordered_swap>;
@@ -247,6 +262,7 @@ def : SourceOfDivergence<int_amdgcn_permlanex16>;
 def : SourceOfDivergence<int_amdgcn_mov_dpp>;
 def : SourceOfDivergence<int_amdgcn_mov_dpp8>;
 def : SourceOfDivergence<int_amdgcn_update_dpp>;
+def : SourceOfDivergence<int_amdgcn_writelane>;
 
 def : SourceOfDivergence<int_amdgcn_mfma_f32_4x4x1f32>;
 def : SourceOfDivergence<int_amdgcn_mfma_f32_4x4x1f32>;
@@ -269,6 +285,21 @@ def : SourceOfDivergence<int_amdgcn_mfma_i32_32x32x4i8>;
 def : SourceOfDivergence<int_amdgcn_mfma_i32_32x32x8i8>;
 def : SourceOfDivergence<int_amdgcn_mfma_f32_32x32x2bf16>;
 def : SourceOfDivergence<int_amdgcn_mfma_f32_32x32x4bf16>;
+def : SourceOfDivergence<int_amdgcn_mfma_f32_32x32x4bf16_1k>;
+def : SourceOfDivergence<int_amdgcn_mfma_f32_16x16x4bf16_1k>;
+def : SourceOfDivergence<int_amdgcn_mfma_f32_4x4x4bf16_1k>;
+def : SourceOfDivergence<int_amdgcn_mfma_f32_32x32x8bf16_1k>;
+def : SourceOfDivergence<int_amdgcn_mfma_f32_16x16x16bf16_1k>;
+def : SourceOfDivergence<int_amdgcn_mfma_f64_16x16x4f64>;
+def : SourceOfDivergence<int_amdgcn_mfma_f64_4x4x4f64>;
+
+// The dummy boolean output is divergent from the IR's perspective,
+// but the mask results are uniform. These produce a divergent and
+// uniform result, so the returned struct is collectively divergent.
+// isAlwaysUniform can override the extract of the uniform component.
+def : SourceOfDivergence<int_amdgcn_if>;
+def : SourceOfDivergence<int_amdgcn_else>;
+def : SourceOfDivergence<int_amdgcn_loop>;
 
 foreach intr = AMDGPUImageDimAtomicIntrinsics in
 def : SourceOfDivergence<intr>;

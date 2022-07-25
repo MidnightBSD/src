@@ -1,4 +1,4 @@
-//===-- SelectHelper.cpp ----------------------------------------*- C++ -*-===//
+//===-- SelectHelper.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,7 +25,7 @@
 #include <algorithm>
 #include <chrono>
 
-#include <errno.h>
+#include <cerrno>
 #if defined(_WIN32)
 // Define NOMINMAX to avoid macros that conflict with std::min and std::max
 #define NOMINMAX

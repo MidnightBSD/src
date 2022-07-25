@@ -1,4 +1,4 @@
-//===-- ClangPersistentVariables.cpp ----------------------------*- C++ -*-===//
+//===-- ClangPersistentVariables.cpp --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangPersistentVariables.h"
+#include "ClangASTImporter.h"
+#include "ClangModulesDeclVendor.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
@@ -22,8 +24,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-ClangPersistentVariables::ClangPersistentVariables()
-    : lldb_private::PersistentExpressionState(LLVMCastKind::eKindClang) {}
+ClangPersistentVariables::ClangPersistentVariables(
+    std::shared_ptr<Target> target_sp)
+    : lldb_private::PersistentExpressionState(LLVMCastKind::eKindClang),
+      m_target_sp(target_sp) {}
 
 ExpressionVariableSP ClangPersistentVariables::CreatePersistentVariable(
     const lldb::ValueObjectSP &valobj_sp) {
@@ -82,7 +86,7 @@ ClangPersistentVariables::GetCompilerTypeFromPersistentDecl(
 
 void ClangPersistentVariables::RegisterPersistentDecl(ConstString name,
                                                       clang::NamedDecl *decl,
-                                                      ClangASTContext *ctx) {
+                                                      TypeSystemClang *ctx) {
   PersistentDecl p = {decl, ctx};
   m_persistent_decls.insert(std::make_pair(name.GetCString(), p));
 
@@ -98,4 +102,32 @@ void ClangPersistentVariables::RegisterPersistentDecl(ConstString name,
 clang::NamedDecl *
 ClangPersistentVariables::GetPersistentDecl(ConstString name) {
   return m_persistent_decls.lookup(name.GetCString()).m_decl;
+}
+
+std::shared_ptr<ClangASTImporter>
+ClangPersistentVariables::GetClangASTImporter() {
+  if (!m_ast_importer_sp) {
+    m_ast_importer_sp = std::make_shared<ClangASTImporter>();
+  }
+  return m_ast_importer_sp;
+}
+
+std::shared_ptr<ClangModulesDeclVendor>
+ClangPersistentVariables::GetClangModulesDeclVendor() {
+  if (!m_modules_decl_vendor_sp) {
+    m_modules_decl_vendor_sp.reset(
+        ClangModulesDeclVendor::Create(*m_target_sp.get()));
+  }
+  return m_modules_decl_vendor_sp;
+}
+
+ConstString
+ClangPersistentVariables::GetNextPersistentVariableName(bool is_error) {
+  llvm::SmallString<64> name;
+  {
+    llvm::raw_svector_ostream os(name);
+    os << GetPersistentVariablePrefix(is_error)
+       << m_next_persistent_variable_id++;
+  }
+  return ConstString(name);
 }

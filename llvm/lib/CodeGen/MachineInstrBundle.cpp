@@ -47,11 +47,9 @@ bool UnpackMachineBundles::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   bool Changed = false;
-  for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
-    MachineBasicBlock *MBB = &*I;
-
-    for (MachineBasicBlock::instr_iterator MII = MBB->instr_begin(),
-           MIE = MBB->instr_end(); MII != MIE; ) {
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineBasicBlock::instr_iterator MII = MBB.instr_begin(),
+           MIE = MBB.instr_end(); MII != MIE; ) {
       MachineInstr *MI = &*MII;
 
       // Remove BUNDLE instruction and the InsideBundle flags from bundled
@@ -136,14 +134,14 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       BuildMI(MF, getDebugLoc(FirstMI, LastMI), TII->get(TargetOpcode::BUNDLE));
   Bundle.prepend(MIB);
 
-  SmallVector<unsigned, 32> LocalDefs;
-  SmallSet<unsigned, 32> LocalDefSet;
-  SmallSet<unsigned, 8> DeadDefSet;
-  SmallSet<unsigned, 16> KilledDefSet;
-  SmallVector<unsigned, 8> ExternUses;
-  SmallSet<unsigned, 8> ExternUseSet;
-  SmallSet<unsigned, 8> KilledUseSet;
-  SmallSet<unsigned, 8> UndefUseSet;
+  SmallVector<Register, 32> LocalDefs;
+  SmallSet<Register, 32> LocalDefSet;
+  SmallSet<Register, 8> DeadDefSet;
+  SmallSet<Register, 16> KilledDefSet;
+  SmallVector<Register, 8> ExternUses;
+  SmallSet<Register, 8> ExternUseSet;
+  SmallSet<Register, 8> KilledUseSet;
+  SmallSet<Register, 8> UndefUseSet;
   SmallVector<MachineOperand*, 4> Defs;
   for (auto MII = FirstMI; MII != LastMI; ++MII) {
     for (unsigned i = 0, e = MII->getNumOperands(); i != e; ++i) {
@@ -207,9 +205,9 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
     Defs.clear();
   }
 
-  SmallSet<unsigned, 32> Added;
+  SmallSet<Register, 32> Added;
   for (unsigned i = 0, e = LocalDefs.size(); i != e; ++i) {
-    unsigned Reg = LocalDefs[i];
+    Register Reg = LocalDefs[i];
     if (Added.insert(Reg).second) {
       // If it's not live beyond end of the bundle, mark it dead.
       bool isDead = DeadDefSet.count(Reg) || KilledDefSet.count(Reg);
@@ -219,7 +217,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
   }
 
   for (unsigned i = 0, e = ExternUses.size(); i != e; ++i) {
-    unsigned Reg = ExternUses[i];
+    Register Reg = ExternUses[i];
     bool isKill = KilledUseSet.count(Reg);
     bool isUndef = UndefUseSet.count(Reg);
     MIB.addReg(Reg, getKillRegState(isKill) | getUndefRegState(isUndef) |
@@ -256,8 +254,7 @@ llvm::finalizeBundle(MachineBasicBlock &MBB,
 /// MachineFunction. Return true if any bundles are finalized.
 bool llvm::finalizeBundles(MachineFunction &MF) {
   bool Changed = false;
-  for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
-    MachineBasicBlock &MBB = *I;
+  for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock::instr_iterator MII = MBB.instr_begin();
     MachineBasicBlock::instr_iterator MIE = MBB.instr_end();
     if (MII == MIE)
@@ -279,7 +276,7 @@ bool llvm::finalizeBundles(MachineFunction &MF) {
 }
 
 VirtRegInfo llvm::AnalyzeVirtRegInBundle(
-    MachineInstr &MI, unsigned Reg,
+    MachineInstr &MI, Register Reg,
     SmallVectorImpl<std::pair<MachineInstr *, unsigned>> *Ops) {
   VirtRegInfo RI = {false, false, false};
   for (MIBundleOperands O(MI); O.isValid(); ++O) {
@@ -308,13 +305,12 @@ VirtRegInfo llvm::AnalyzeVirtRegInBundle(
   return RI;
 }
 
-PhysRegInfo llvm::AnalyzePhysRegInBundle(const MachineInstr &MI, unsigned Reg,
+PhysRegInfo llvm::AnalyzePhysRegInBundle(const MachineInstr &MI, Register Reg,
                                          const TargetRegisterInfo *TRI) {
   bool AllDefsDead = true;
   PhysRegInfo PRI = {false, false, false, false, false, false, false, false};
 
-  assert(Register::isPhysicalRegister(Reg) &&
-         "analyzePhysReg not given a physical register!");
+  assert(Reg.isPhysical() && "analyzePhysReg not given a physical register!");
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
     const MachineOperand &MO = *O;
 

@@ -1,4 +1,4 @@
-//===-- OptionValueSInt64.cpp -----------------------------------*- C++ -*-===//
+//===-- OptionValueSInt64.cpp ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -69,8 +69,4 @@ Status OptionValueSInt64::SetValueFromString(llvm::StringRef value_ref,
     break;
   }
   return error;
-}
-
-lldb::OptionValueSP OptionValueSInt64::DeepCopy() const {
-  return OptionValueSP(new OptionValueSInt64(*this));
 }
