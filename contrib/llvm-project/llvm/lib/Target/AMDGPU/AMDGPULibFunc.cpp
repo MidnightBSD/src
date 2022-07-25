@@ -10,20 +10,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPU.h"
 #include "AMDGPULibFunc.h"
-#include <llvm/ADT/SmallString.h>
-#include <llvm/ADT/SmallVector.h>
-#include <llvm/ADT/StringSwitch.h>
-#include "llvm/IR/Attributes.h"
+#include "AMDGPU.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueSymbolTable.h"
-#include <llvm/Support/raw_ostream.h>
-#include <string>
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+
+static cl::opt<bool> EnableOCLManglingMismatchWA(
+    "amdgpu-enable-ocl-mangling-mismatch-workaround", cl::init(true),
+    cl::ReallyHidden,
+    cl::desc("Enable the workaround for OCL name mangling mismatch."));
 
 namespace {
 
@@ -479,8 +483,6 @@ static bool eatTerm(StringRef& mangledName, const char (&str)[N]) {
   return false;
 }
 
-static inline bool isDigit(char c) { return c >= '0' && c <= '9'; }
-
 static int eatNumber(StringRef& s) {
   size_t const savedSize = s.size();
   int n = 0;
@@ -605,7 +607,7 @@ bool ItaniumParamParser::parseItaniumParam(StringRef& param,
 
   // parse type
   char const TC = param.front();
-  if (::isDigit(TC)) {
+  if (isDigit(TC)) {
     res.ArgType = StringSwitch<AMDGPULibFunc::EType>
       (eatLengthPrefixedName(param))
       .Case("ocl_image1darray" , AMDGPULibFunc::IMG1DA)
@@ -830,7 +832,8 @@ public:
       unsigned AS = UseAddrSpace
                         ? AMDGPULibFuncBase::getAddrSpaceFromEPtrKind(p.PtrKind)
                         : 0;
-      if (AS != 0) os << "U3AS" << AS;
+      if (EnableOCLManglingMismatchWA || AS != 0)
+        os << "U3AS" << AS;
       Ptr = p;
       p.PtrKind = 0;
     }
@@ -863,7 +866,7 @@ std::string AMDGPUMangledLibFunc::mangleNameItanium() const {
   Param P;
   while ((P = I.getNextParam()).ArgType != 0)
     Mangler(S, P);
-  return S.str();
+  return std::string(S.str());
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -903,7 +906,7 @@ static Type* getIntrinsicParamType(
     return nullptr;
   }
   if (P.VectorSize > 1)
-    T = VectorType::get(T, P.VectorSize);
+    T = FixedVectorType::get(T, P.VectorSize);
   if (P.PtrKind != AMDGPULibFunc::BYVALUE)
     T = useAddrSpace ? T->getPointerTo((P.PtrKind & AMDGPULibFunc::ADDR_SPACE)
                                        - 1)
@@ -936,7 +939,7 @@ std::string AMDGPUMangledLibFunc::getName() const {
   SmallString<128> Buf;
   raw_svector_ostream OS(Buf);
   writeName(OS);
-  return OS.str();
+  return std::string(OS.str());
 }
 
 Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {

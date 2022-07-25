@@ -1,4 +1,4 @@
-//===-- EmulateInstruction.cpp ----------------------------------*- C++ -*-===//
+//===-- EmulateInstruction.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,8 +30,8 @@
 #include <cstring>
 #include <memory>
 
-#include <inttypes.h>
-#include <stdio.h>
+#include <cinttypes>
+#include <cstdio>
 
 namespace lldb_private {
 class Target;

@@ -23,8 +23,17 @@ typedef __sanitizer::CompactRingBuffer<uptr> StackAllocationsRingBuffer;
 
 class Thread {
  public:
-  void Init(uptr stack_buffer_start, uptr stack_buffer_size);  // Must be called from the thread itself.
+  // These are optional parameters that can be passed to Init.
+  struct InitState;
+
+  void Init(uptr stack_buffer_start, uptr stack_buffer_size,
+            const InitState *state = nullptr);
   void InitRandomState();
+  void InitStackAndTls(const InitState *state = nullptr);
+
+  // Must be called from the thread itself.
+  void InitStackRingBuffer(uptr stack_buffer_start, uptr stack_buffer_size);
+
   void Destroy();
 
   uptr stack_top() { return stack_top_; }
@@ -38,23 +47,14 @@ class Thread {
     return addr >= stack_bottom_ && addr < stack_top_;
   }
 
-  bool InSignalHandler() { return in_signal_handler_; }
-  void EnterSignalHandler() { in_signal_handler_++; }
-  void LeaveSignalHandler() { in_signal_handler_--; }
-
-  bool InSymbolizer() { return in_symbolizer_; }
-  void EnterSymbolizer() { in_symbolizer_++; }
-  void LeaveSymbolizer() { in_symbolizer_--; }
-
   AllocatorCache *allocator_cache() { return &allocator_cache_; }
   HeapAllocationsRingBuffer *heap_allocations() { return heap_allocations_; }
   StackAllocationsRingBuffer *stack_allocations() { return stack_allocations_; }
 
-  tag_t GenerateRandomTag();
+  tag_t GenerateRandomTag(uptr num_bits = kTagBits);
 
   void DisableTagging() { tagging_disabled_++; }
   void EnableTagging() { tagging_disabled_--; }
-  bool TaggingIsDisabled() const { return tagging_disabled_; }
 
   u64 unique_id() const { return unique_id_; }
   void Announce() {
@@ -76,19 +76,12 @@ class Thread {
   uptr tls_begin_;
   uptr tls_end_;
 
-  unsigned in_signal_handler_;
-  unsigned in_symbolizer_;
-
   u32 random_state_;
   u32 random_buffer_;
 
   AllocatorCache allocator_cache_;
   HeapAllocationsRingBuffer *heap_allocations_;
   StackAllocationsRingBuffer *stack_allocations_;
-
-  static void InsertIntoThreadList(Thread *t);
-  static void RemoveFromThreadList(Thread *t);
-  Thread *next_;  // All live threads form a linked list.
 
   u64 unique_id_;  // counting from zero.
 

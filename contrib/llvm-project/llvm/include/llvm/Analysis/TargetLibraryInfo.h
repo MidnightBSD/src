@@ -12,15 +12,15 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
 template <typename T> class ArrayRef;
+class Triple;
 
 /// Describes a possible vectorization of a function.
 /// Function 'VectorFnName' is equivalent to 'ScalarFnName' vectorized
@@ -28,7 +28,7 @@ template <typename T> class ArrayRef;
 struct VecDesc {
   StringRef ScalarFnName;
   StringRef VectorFnName;
-  unsigned VectorizationFactor;
+  ElementCount VectorizationFactor;
 };
 
   enum LibFunc : unsigned {
@@ -52,6 +52,7 @@ class TargetLibraryInfoImpl {
   llvm::DenseMap<unsigned, std::string> CustomNames;
   static StringLiteral const StandardNames[NumLibFuncs];
   bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param;
+  unsigned SizeOfInt;
 
   enum AvailabilityState {
     StandardName = 3, // (memset to all ones)
@@ -86,10 +87,12 @@ public:
   /// addVectorizableFunctionsFromVecLib for filling up the tables of
   /// vectorizable functions.
   enum VectorLibrary {
-    NoLibrary,  // Don't use any vector library.
-    Accelerate, // Use Accelerate framework.
-    MASSV,      // IBM MASS vector library.
-    SVML        // Intel short vector math library.
+    NoLibrary,        // Don't use any vector library.
+    Accelerate,       // Use Accelerate framework.
+    DarwinLibSystemM, // Use Darwin's libsystem_m.
+    LIBMVEC_X86,      // GLIBC Vector Math library.
+    MASSV,            // IBM MASS vector library.
+    SVML              // Intel short vector math library.
   };
 
   TargetLibraryInfoImpl();
@@ -129,7 +132,7 @@ public:
   void setAvailableWithName(LibFunc F, StringRef Name) {
     if (StandardNames[F] != Name) {
       setState(F, CustomName);
-      CustomNames[F] = Name;
+      CustomNames[F] = std::string(Name);
       assert(CustomNames.find(F) != CustomNames.end());
     } else {
       setState(F, StandardName);
@@ -151,7 +154,7 @@ public:
 
   /// Return true if the function F has a vector equivalent with vectorization
   /// factor VF.
-  bool isFunctionVectorizable(StringRef F, unsigned VF) const {
+  bool isFunctionVectorizable(StringRef F, const ElementCount &VF) const {
     return !getVectorizedFunction(F, VF).empty();
   }
 
@@ -161,19 +164,7 @@ public:
 
   /// Return the name of the equivalent of F, vectorized with factor VF. If no
   /// such mapping exists, return the empty string.
-  StringRef getVectorizedFunction(StringRef F, unsigned VF) const;
-
-  /// Return true if the function F has a scalar equivalent, and set VF to be
-  /// the vectorization factor.
-  bool isFunctionScalarizable(StringRef F, unsigned &VF) const {
-    return !getScalarizedFunction(F, VF).empty();
-  }
-
-  /// Return the name of the equivalent of F, scalarized. If no such mapping
-  /// exists, return the empty string.
-  ///
-  /// Set VF to the vectorization factor.
-  StringRef getScalarizedFunction(StringRef F, unsigned &VF) const;
+  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF) const;
 
   /// Set to true iff i32 parameters to library functions should have signext
   /// or zeroext attributes if they correspond to C-level int or unsigned int,
@@ -199,9 +190,25 @@ public:
   /// This queries the 'wchar_size' metadata.
   unsigned getWCharSize(const Module &M) const;
 
+  /// Get size of a C-level int or unsigned int, in bits.
+  unsigned getIntSize() const {
+    return SizeOfInt;
+  }
+
+  /// Initialize the C-level size of an integer.
+  void setIntSize(unsigned Bits) {
+    SizeOfInt = Bits;
+  }
+
   /// Returns the largest vectorization factor used in the list of
   /// vector functions.
-  unsigned getWidestVF(StringRef ScalarF) const;
+  void getWidestVF(StringRef ScalarF, ElementCount &FixedVF,
+                   ElementCount &Scalable) const;
+
+  /// Returns true if call site / callee has cdecl-compatible calling
+  /// conventions.
+  static bool isCallingConvCCompatible(CallBase *CI);
+  static bool isCallingConvCCompatible(Function *Callee);
 };
 
 /// Provides information about what library functions are available for
@@ -260,6 +267,21 @@ public:
     return *this;
   }
 
+  /// Determine whether a callee with the given TLI can be inlined into
+  /// caller with this TLI, based on 'nobuiltin' attributes. When requested,
+  /// allow inlining into a caller with a superset of the callee's nobuiltin
+  /// attributes, which is conservatively correct.
+  bool areInlineCompatible(const TargetLibraryInfo &CalleeTLI,
+                           bool AllowCallerSuperset) const {
+    if (!AllowCallerSuperset)
+      return OverrideAsUnavailable == CalleeTLI.OverrideAsUnavailable;
+    BitVector B = OverrideAsUnavailable;
+    B |= CalleeTLI.OverrideAsUnavailable;
+    // We can inline if the union of the caller and callee's nobuiltin
+    // attributes is no stricter than the caller's nobuiltin attributes.
+    return B == OverrideAsUnavailable;
+  }
+
   /// Searches for a particular function name.
   ///
   /// If it is one of the known library functions, return true and set F to the
@@ -272,11 +294,11 @@ public:
     return Impl->getLibFunc(FDecl, F);
   }
 
-  /// If a callsite does not have the 'nobuiltin' attribute, return if the
+  /// If a callbase does not have the 'nobuiltin' attribute, return if the
   /// called function is a known library function and set F to that function.
-  bool getLibFunc(ImmutableCallSite CS, LibFunc &F) const {
-    return !CS.isNoBuiltin() && CS.getCalledFunction() &&
-           getLibFunc(*(CS.getCalledFunction()), F);
+  bool getLibFunc(const CallBase &CB, LibFunc &F) const {
+    return !CB.isNoBuiltin() && CB.getCalledFunction() &&
+           getLibFunc(*(CB.getCalledFunction()), F);
   }
 
   /// Disables all builtins.
@@ -301,13 +323,13 @@ public:
   bool has(LibFunc F) const {
     return getState(F) != TargetLibraryInfoImpl::Unavailable;
   }
-  bool isFunctionVectorizable(StringRef F, unsigned VF) const {
+  bool isFunctionVectorizable(StringRef F, const ElementCount &VF) const {
     return Impl->isFunctionVectorizable(F, VF);
   }
   bool isFunctionVectorizable(StringRef F) const {
     return Impl->isFunctionVectorizable(F);
   }
-  StringRef getVectorizedFunction(StringRef F, unsigned VF) const {
+  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF) const {
     return Impl->getVectorizedFunction(F, VF);
   }
 
@@ -335,6 +357,7 @@ public:
     case LibFunc_trunc:        case LibFunc_truncf:     case LibFunc_truncl:
     case LibFunc_log2:         case LibFunc_log2f:      case LibFunc_log2l:
     case LibFunc_exp2:         case LibFunc_exp2f:      case LibFunc_exp2l:
+    case LibFunc_memcpy:       case LibFunc_memset:     case LibFunc_memmove:
     case LibFunc_memcmp:       case LibFunc_bcmp:       case LibFunc_strcmp:
     case LibFunc_strcpy:       case LibFunc_stpcpy:     case LibFunc_strlen:
     case LibFunc_strnlen:      case LibFunc_memchr:     case LibFunc_mempcpy:
@@ -378,6 +401,11 @@ public:
     return Impl->getWCharSize(M);
   }
 
+  /// \copydoc TargetLibraryInfoImpl::getIntSize()
+  unsigned getIntSize() const {
+    return Impl->getIntSize();
+  }
+
   /// Handle invalidation from the pass manager.
   ///
   /// If we try to invalidate this info, just return false. It cannot become
@@ -390,11 +418,16 @@ public:
                   FunctionAnalysisManager::Invalidator &) {
     return false;
   }
-
   /// Returns the largest vectorization factor used in the list of
   /// vector functions.
-  unsigned getWidestVF(StringRef ScalarF) const {
-    return Impl->getWidestVF(ScalarF);
+  void getWidestVF(StringRef ScalarF, ElementCount &FixedVF,
+                   ElementCount &ScalableVF) const {
+    Impl->getWidestVF(ScalarF, FixedVF, ScalableVF);
+  }
+
+  /// Check if the function "F" is listed in a library known to LLVM.
+  bool isKnownVectorFunctionInLibrary(StringRef F) const {
+    return this->isFunctionVectorizable(F);
   }
 };
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Mangled_h_
-#define liblldb_Mangled_h_
+#ifndef LLDB_CORE_MANGLED_H
+#define LLDB_CORE_MANGLED_H
 #if defined(__cplusplus)
 
 #include "lldb/lldb-enumerations.h"
@@ -17,8 +17,8 @@
 
 #include "llvm/ADT/StringRef.h"
 
+#include <cstddef>
 #include <memory>
-#include <stddef.h>
 
 namespace lldb_private {
 
@@ -43,7 +43,8 @@ public:
   enum ManglingScheme {
     eManglingSchemeNone = 0,
     eManglingSchemeMSVC,
-    eManglingSchemeItanium
+    eManglingSchemeItanium,
+    eManglingSchemeRustV0
   };
 
   /// Default constructor.
@@ -132,13 +133,13 @@ public:
   ///
   /// \return
   ///     A const reference to the demangled name string object.
-  ConstString GetDemangledName(lldb::LanguageType language) const;
+  ConstString GetDemangledName() const;
 
   /// Display demangled name get accessor.
   ///
   /// \return
   ///     A const reference to the display demangled name string object.
-  ConstString GetDisplayDemangledName(lldb::LanguageType language) const;
+  ConstString GetDisplayDemangledName() const;
 
   void SetDemangledName(ConstString name) { m_demangled = name; }
 
@@ -165,8 +166,7 @@ public:
   ///     A const reference to the preferred name string object if this
   ///     object has a valid name of that kind, else a const reference to the
   ///     other name is returned.
-  ConstString GetName(lldb::LanguageType language,
-                      NamePreference preference = ePreferDemangled) const;
+  ConstString GetName(NamePreference preference = ePreferDemangled) const;
 
   /// Check if "name" matches either the mangled or demangled name.
   ///
@@ -175,13 +175,12 @@ public:
   ///
   /// \return
   ///     \b True if \a name matches either name, \b false otherwise.
-  bool NameMatches(ConstString name, lldb::LanguageType language) const {
+  bool NameMatches(ConstString name) const {
     if (m_mangled == name)
       return true;
-    return GetDemangledName(language) == name;
+    return GetDemangledName() == name;
   }
-  bool NameMatches(const RegularExpression &regex,
-                   lldb::LanguageType language) const;
+  bool NameMatches(const RegularExpression &regex) const;
 
   /// Get the memory cost of this object.
   ///
@@ -282,4 +281,4 @@ Stream &operator<<(Stream &s, const Mangled &obj);
 } // namespace lldb_private
 
 #endif // #if defined(__cplusplus)
-#endif // liblldb_Mangled_h_
+#endif // LLDB_CORE_MANGLED_H

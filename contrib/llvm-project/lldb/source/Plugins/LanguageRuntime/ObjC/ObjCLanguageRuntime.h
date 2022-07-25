@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ObjCLanguageRuntime_h_
-#define liblldb_ObjCLanguageRuntime_h_
+#ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_OBJCLANGUAGERUNTIME_H
+#define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_OBJCLANGUAGERUNTIME_H
 
 #include <functional>
 #include <map>
@@ -17,7 +17,6 @@
 #include "llvm/Support/Casting.h"
 
 #include "lldb/Breakpoint/BreakpointPrecondition.h"
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -29,6 +28,7 @@ class CommandObjectObjC_ClassTable_Dump;
 
 namespace lldb_private {
 
+class TypeSystemClang;
 class UtilityFunction;
 
 class ObjCLanguageRuntime : public LanguageRuntime {
@@ -49,9 +49,7 @@ public:
   // implementations of the runtime, and more might come
   class ClassDescriptor {
   public:
-    ClassDescriptor()
-        : m_is_kvo(eLazyBoolCalculate), m_is_cf(eLazyBoolCalculate),
-          m_type_wp() {}
+    ClassDescriptor() : m_type_wp() {}
 
     virtual ~ClassDescriptor() = default;
 
@@ -87,10 +85,20 @@ public:
 
     virtual bool IsValid() = 0;
 
+    /// There are two routines in the ObjC runtime that tagged pointer clients
+    /// can call to get the value from their tagged pointer, one that retrieves
+    /// it as an unsigned value and one a signed value.  These two
+    /// GetTaggedPointerInfo methods mirror those two ObjC runtime calls.
+    /// @{
     virtual bool GetTaggedPointerInfo(uint64_t *info_bits = nullptr,
                                       uint64_t *value_bits = nullptr,
                                       uint64_t *payload = nullptr) = 0;
 
+    virtual bool GetTaggedPointerInfoSigned(uint64_t *info_bits = nullptr,
+                                            int64_t *value_bits = nullptr,
+                                            uint64_t *payload = nullptr) = 0;
+    /// @}
+ 
     virtual uint64_t GetInstanceSize() = 0;
 
     // use to implement version-specific additional constraints on pointers
@@ -135,8 +143,8 @@ public:
                         bool check_version_specific = false) const;
 
   private:
-    LazyBool m_is_kvo;
-    LazyBool m_is_cf;
+    LazyBool m_is_kvo = eLazyBoolCalculate;
+    LazyBool m_is_cf = eLazyBoolCalculate;
     lldb::TypeWP m_type_wp;
   };
 
@@ -144,12 +152,12 @@ public:
   public:
     virtual ~EncodingToType();
 
-    virtual CompilerType RealizeType(ClangASTContext &ast_ctx, const char *name,
+    virtual CompilerType RealizeType(TypeSystemClang &ast_ctx, const char *name,
                                      bool for_expression) = 0;
     virtual CompilerType RealizeType(const char *name, bool for_expression);
 
   protected:
-    std::unique_ptr<ClangASTContext> m_scratch_ast_ctx_up;
+    std::unique_ptr<TypeSystemClang> m_scratch_ast_ctx_up;
   };
 
   class ObjCExceptionPrecondition : public BreakpointPrecondition {
@@ -186,7 +194,8 @@ public:
     TaggedPointerVendor() = default;
 
   private:
-    DISALLOW_COPY_AND_ASSIGN(TaggedPointerVendor);
+    TaggedPointerVendor(const TaggedPointerVendor &) = delete;
+    const TaggedPointerVendor &operator=(const TaggedPointerVendor &) = delete;
   };
 
   ~ObjCLanguageRuntime() override;
@@ -250,7 +259,8 @@ public:
 
   llvm::Optional<CompilerType> GetRuntimeType(CompilerType base_type) override;
 
-  virtual UtilityFunction *CreateObjectChecker(const char *) = 0;
+  virtual llvm::Expected<std::unique_ptr<UtilityFunction>>
+  CreateObjectChecker(std::string name, ExecutionContext &exe_ctx) = 0;
 
   virtual ObjCRuntimeVersions GetRuntimeVersion() const {
     return ObjCRuntimeVersions::eObjC_VersionUnknown;
@@ -299,7 +309,7 @@ public:
 
   /// Check whether the name is "self" or "_cmd" and should show up in
   /// "frame variable".
-  bool IsWhitelistedRuntimeValue(ConstString name) override;
+  bool IsAllowedRuntimeValue(ConstString name) override;
 
 protected:
   // Classes that inherit from ObjCLanguageRuntime can see and modify these
@@ -417,9 +427,10 @@ protected:
 
   void ReadObjCLibraryIfNeeded(const ModuleList &module_list);
 
-  DISALLOW_COPY_AND_ASSIGN(ObjCLanguageRuntime);
+  ObjCLanguageRuntime(const ObjCLanguageRuntime &) = delete;
+  const ObjCLanguageRuntime &operator=(const ObjCLanguageRuntime &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_ObjCLanguageRuntime_h_
+#endif // LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_OBJC_OBJCLANGUAGERUNTIME_H

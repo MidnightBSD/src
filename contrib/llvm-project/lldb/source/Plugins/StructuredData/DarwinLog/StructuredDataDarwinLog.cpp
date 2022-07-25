@@ -1,4 +1,4 @@
-//===-- StructuredDataDarwinLog.cpp -----------------------------*- C++ -*-===//
+//===-- StructuredDataDarwinLog.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 
 #include "StructuredDataDarwinLog.h"
 
-#include <string.h>
+#include <cstring>
 
 #include <memory>
 #include <sstream>
@@ -35,6 +35,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE(StructuredDataDarwinLog)
 
 #pragma mark -
 #pragma mark Anonymous Namespace
@@ -124,7 +126,7 @@ public:
     m_collection_sp->Initialize(g_darwinlog_properties);
   }
 
-  ~StructuredDataDarwinLogProperties() override {}
+  ~StructuredDataDarwinLogProperties() override = default;
 
   bool GetEnableOnStartup() const {
     const uint32_t idx = ePropertyEnableOnStartup;
@@ -179,7 +181,7 @@ using FilterRuleSP = std::shared_ptr<FilterRule>;
 
 class FilterRule {
 public:
-  virtual ~FilterRule() {}
+  virtual ~FilterRule() = default;
 
   using OperationCreationFunc =
       std::function<FilterRuleSP(bool accept, size_t attribute_index,
@@ -471,13 +473,9 @@ static constexpr OptionDefinition g_enable_option_table[] = {
 class EnableOptions : public Options {
 public:
   EnableOptions()
-      : Options(), m_include_debug_level(false), m_include_info_level(false),
-        m_include_any_process(false),
+      : Options(),
         m_filter_fall_through_accepts(DEFAULT_FILTER_FALLTHROUGH_ACCEPTS),
-        m_echo_to_stderr(false), m_display_timestamp_relative(false),
-        m_display_subsystem(false), m_display_category(false),
-        m_display_activity_chain(false), m_broadcast_events(true),
-        m_live_stream(true), m_filter_rules() {}
+        m_filter_rules() {}
 
   void OptionParsingStarting(ExecutionContext *execution_context) override {
     m_include_debug_level = false;
@@ -664,7 +662,7 @@ private:
     //   regex {search-regex}
 
     // Parse action.
-    auto action_end_pos = rule_text.find(" ");
+    auto action_end_pos = rule_text.find(' ');
     if (action_end_pos == std::string::npos) {
       error.SetErrorStringWithFormat("could not parse filter rule "
                                      "action from \"%s\"",
@@ -706,9 +704,9 @@ private:
         attribute_end_pos + 1, operation_end_pos - (attribute_end_pos + 1));
 
     // add filter spec
-    auto rule_sp =
-        FilterRule::CreateRule(accept, attribute_index, ConstString(operation),
-                               rule_text.substr(operation_end_pos + 1), error);
+    auto rule_sp = FilterRule::CreateRule(
+        accept, attribute_index, ConstString(operation),
+        std::string(rule_text.substr(operation_end_pos + 1)), error);
 
     if (rule_sp && error.Success())
       m_filter_rules.push_back(rule_sp);
@@ -726,17 +724,17 @@ private:
     return -1;
   }
 
-  bool m_include_debug_level;
-  bool m_include_info_level;
-  bool m_include_any_process;
+  bool m_include_debug_level = false;
+  bool m_include_info_level = false;
+  bool m_include_any_process = false;
   bool m_filter_fall_through_accepts;
-  bool m_echo_to_stderr;
-  bool m_display_timestamp_relative;
-  bool m_display_subsystem;
-  bool m_display_category;
-  bool m_display_activity_chain;
-  bool m_broadcast_events;
-  bool m_live_stream;
+  bool m_echo_to_stderr = false;
+  bool m_display_timestamp_relative = false;
+  bool m_display_subsystem = false;
+  bool m_display_category = false;
+  bool m_display_activity_chain = false;
+  bool m_broadcast_events = true;
+  bool m_live_stream = true;
   FilterRules m_filter_rules;
 };
 
@@ -811,7 +809,6 @@ protected:
                        StructuredDataDarwinLog::GetStaticPluginName())) {
       result.AppendError("failed to get StructuredDataPlugin for "
                          "the process");
-      result.SetStatus(eReturnStatusFailed);
     }
     StructuredDataDarwinLog &plugin =
         *static_cast<StructuredDataDarwinLog *>(plugin_sp.get());
@@ -835,7 +832,6 @@ protected:
     // Report results.
     if (!error.Success()) {
       result.AppendError(error.AsCString());
-      result.SetStatus(eReturnStatusFailed);
       // Our configuration failed, so we're definitely disabled.
       plugin.SetEnabled(false);
     } else {
@@ -979,7 +975,7 @@ EnableOptionsSP ParseAutoEnableOptions(Status &error, Debugger &debugger) {
   EnableOptionsSP options_sp(new EnableOptions());
   options_sp->NotifyOptionParsingStarting(&exe_ctx);
 
-  CommandReturnObject result;
+  CommandReturnObject result(debugger.GetUseColor());
 
   // Parse the arguments.
   auto options_property_sp =
@@ -1034,7 +1030,7 @@ bool RunEnableCommand(CommandInterpreter &interpreter) {
   }
 
   // Run the command.
-  CommandReturnObject return_object;
+  CommandReturnObject return_object(interpreter.GetDebugger().GetUseColor());
   interpreter.HandleCommand(command_stream.GetData(), eLazyBoolNo,
                             return_object);
   return return_object.Succeeded();

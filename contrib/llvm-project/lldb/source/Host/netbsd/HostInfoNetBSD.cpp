@@ -1,4 +1,4 @@
-//===-- HostInfoNetBSD.cpp -------------------------------------*- C++ -*-===//
+//===-- HostInfoNetBSD.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,11 +8,11 @@
 
 #include "lldb/Host/netbsd/HostInfoNetBSD.h"
 
-#include <inttypes.h>
-#include <limits.h>
+#include <cinttypes>
+#include <climits>
+#include <cstdio>
+#include <cstring>
 #include <pthread.h>
-#include <stdio.h>
-#include <string.h>
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <sys/utsname.h>

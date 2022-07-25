@@ -13,7 +13,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 #define LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <utility> // for std::pair
 
@@ -24,9 +24,7 @@ class Module;
 class Function;
 class FunctionCallee;
 class GlobalValue;
-class GlobalVariable;
 class Constant;
-class StringRef;
 class Value;
 class Type;
 
@@ -43,6 +41,10 @@ void appendToGlobalDtors(Module &M, Function *F, int Priority,
 
 FunctionCallee declareSanitizerInitFunction(Module &M, StringRef InitName,
                                             ArrayRef<Type *> InitArgTypes);
+
+/// Creates sanitizer constructor function.
+/// \return Returns pointer to constructor.
+Function *createSanitizerCtor(Module &M, StringRef CtorName);
 
 /// Creates sanitizer constructor function, and calls sanitizer's init
 /// function from it.
@@ -65,11 +67,6 @@ std::pair<Function *, FunctionCallee> getOrCreateSanitizerCtorAndInitFunctions(
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
     function_ref<void(Function *, FunctionCallee)> FunctionsCreatedCallback,
     StringRef VersionCheckName = StringRef());
-
-// Creates and returns a sanitizer init function without argument if it doesn't
-// exist, and adds it to the global constructors list. Otherwise it returns the
-// existing function.
-Function *getOrCreateInitFunction(Module &M, StringRef Name);
 
 /// Rename all the anon globals in the module using a hash computed from
 /// the list of public globals in the module.
@@ -118,4 +115,4 @@ void setVectorVariantNames(CallInst *CI,
 } // End VFABI namespace
 } // End llvm namespace
 
-#endif //  LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
+#endif // LLVM_TRANSFORMS_UTILS_MODULEUTILS_H

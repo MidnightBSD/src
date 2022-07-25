@@ -1,4 +1,4 @@
-//===-- CommandObjectStats.cpp ----------------------------------*- C++ -*-===//
+//===-- CommandObjectStats.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,7 +28,6 @@ protected:
 
     if (target.GetCollectingStats()) {
       result.AppendError("statistics already enabled");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -53,7 +52,6 @@ protected:
 
     if (!target.GetCollectingStats()) {
       result.AppendError("need to enable statistics before disabling them");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 

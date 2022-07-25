@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_DWARFBaseDIE_h_
-#define SymbolFileDWARF_DWARFBaseDIE_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFBASEDIE_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFBASEDIE_H
 
 #include "lldb/Core/dwarf.h"
 #include "lldb/lldb-types.h"
@@ -24,7 +24,7 @@ class SymbolFileDWARF;
 
 class DWARFBaseDIE {
 public:
-  DWARFBaseDIE() : m_cu(nullptr), m_die(nullptr) {}
+  DWARFBaseDIE() = default;
 
   DWARFBaseDIE(DWARFUnit *cu, DWARFDebugInfoEntry *die)
       : m_cu(cu), m_die(die) {}
@@ -56,10 +56,6 @@ public:
   DWARFDebugInfoEntry *GetDIE() const { return m_die; }
 
   llvm::Optional<DIERef> GetDIERef() const;
-
-  llvm::Expected<lldb_private::TypeSystem &> GetTypeSystem() const;
-
-  DWARFASTParser *GetDWARFParser() const;
 
   void Set(DWARFUnit *cu, DWARFDebugInfoEntry *die) {
     if (cu && die) {
@@ -98,8 +94,6 @@ public:
 
   const char *GetName() const;
 
-  lldb::LanguageType GetLanguage() const;
-
   lldb::ModuleSP GetModule() const;
 
   // Getting attribute values from the DIE.
@@ -116,14 +110,16 @@ public:
   uint64_t GetAttributeValueAsAddress(const dw_attr_t attr,
                                       uint64_t fail_value) const;
 
-  size_t GetAttributes(DWARFAttributes &attributes, uint32_t depth = 0) const;
+  enum class Recurse : bool { no, yes };
+  size_t GetAttributes(DWARFAttributes &attributes,
+                       Recurse recurse = Recurse::yes) const;
 
 protected:
-  DWARFUnit *m_cu;
-  DWARFDebugInfoEntry *m_die;
+  DWARFUnit *m_cu = nullptr;
+  DWARFDebugInfoEntry *m_die = nullptr;
 };
 
 bool operator==(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs);
 bool operator!=(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs);
 
-#endif // SymbolFileDWARF_DWARFBaseDIE_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFBASEDIE_H

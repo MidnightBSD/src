@@ -1,4 +1,4 @@
-//===-- VMRange.cpp ---------------------------------------------*- C++ -*-===//
+//===-- VMRange.cpp -------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,8 +15,8 @@
 #include <iterator>
 #include <vector>
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 using namespace lldb;
 using namespace lldb_private;

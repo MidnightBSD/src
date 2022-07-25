@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_DATABUFFERLLVM_H
-#define LLDB_CORE_DATABUFFERLLVM_H
+#ifndef LLDB_UTILITY_DATABUFFERLLVM_H
+#define LLDB_UTILITY_DATABUFFERLLVM_H
 
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/lldb-types.h"
 
+#include <cstdint>
 #include <memory>
-#include <stdint.h>
 
 namespace llvm {
 class WritableMemoryBuffer;

@@ -181,8 +181,8 @@ uint64_t lprofGetLoadModuleSignature();
  * Return non zero value if the profile data has already been
  * dumped to the file.
  */
-unsigned lprofProfileDumped();
-void lprofSetProfileDumped();
+unsigned lprofProfileDumped(void);
+void lprofSetProfileDumped(unsigned);
 
 COMPILER_RT_VISIBILITY extern void (*FreeHook)(void *);
 COMPILER_RT_VISIBILITY extern uint8_t *DynamicBufferIOBuffer;
@@ -192,5 +192,11 @@ COMPILER_RT_VISIBILITY extern uint32_t VPMaxNumValsPerSite;
 COMPILER_RT_VISIBILITY extern ValueProfNode *CurrentVNode;
 COMPILER_RT_VISIBILITY extern ValueProfNode *EndVNode;
 extern void (*VPMergeHook)(struct ValueProfData *, __llvm_profile_data *);
+
+/*
+ * Write binary ids into profiles if writer is given.
+ * Return -1 if an error occurs, otherwise, return total size of binary ids.
+ */
+int __llvm_write_binary_ids(ProfDataWriter *Writer);
 
 #endif

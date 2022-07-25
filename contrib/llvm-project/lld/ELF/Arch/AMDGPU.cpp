@@ -17,16 +17,20 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
-
-namespace lld {
-namespace elf {
+using namespace lld;
+using namespace lld::elf;
 
 namespace {
 class AMDGPU final : public TargetInfo {
+private:
+  uint32_t calcEFlagsV3() const;
+  uint32_t calcEFlagsV4() const;
+
 public:
   AMDGPU();
   uint32_t calcEFlags() const override;
-  void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
+  void relocate(uint8_t *loc, const Relocation &rel,
+                uint64_t val) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -41,11 +45,10 @@ AMDGPU::AMDGPU() {
 }
 
 static uint32_t getEFlags(InputFile *file) {
-  return cast<ObjFile<ELF64LE>>(file)->getObj().getHeader()->e_flags;
+  return cast<ObjFile<ELF64LE>>(file)->getObj().getHeader().e_flags;
 }
 
-uint32_t AMDGPU::calcEFlags() const {
-  assert(!objectFiles.empty());
+uint32_t AMDGPU::calcEFlagsV3() const {
   uint32_t ret = getEFlags(objectFiles[0]);
 
   // Verify that all input files have the same e_flags.
@@ -58,8 +61,69 @@ uint32_t AMDGPU::calcEFlags() const {
   return ret;
 }
 
-void AMDGPU::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
-  switch (type) {
+uint32_t AMDGPU::calcEFlagsV4() const {
+  uint32_t retMach = getEFlags(objectFiles[0]) & EF_AMDGPU_MACH;
+  uint32_t retXnack = getEFlags(objectFiles[0]) & EF_AMDGPU_FEATURE_XNACK_V4;
+  uint32_t retSramEcc =
+      getEFlags(objectFiles[0]) & EF_AMDGPU_FEATURE_SRAMECC_V4;
+
+  // Verify that all input files have compatible e_flags (same mach, all
+  // features in the same category are either ANY, ANY and ON, or ANY and OFF).
+  for (InputFile *f : makeArrayRef(objectFiles).slice(1)) {
+    if (retMach != (getEFlags(f) & EF_AMDGPU_MACH)) {
+      error("incompatible mach: " + toString(f));
+      return 0;
+    }
+
+    if (retXnack == EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4 ||
+        (retXnack != EF_AMDGPU_FEATURE_XNACK_ANY_V4 &&
+            (getEFlags(f) & EF_AMDGPU_FEATURE_XNACK_V4)
+                != EF_AMDGPU_FEATURE_XNACK_ANY_V4)) {
+      if (retXnack != (getEFlags(f) & EF_AMDGPU_FEATURE_XNACK_V4)) {
+        error("incompatible xnack: " + toString(f));
+        return 0;
+      }
+    } else {
+      if (retXnack == EF_AMDGPU_FEATURE_XNACK_ANY_V4)
+        retXnack = getEFlags(f) & EF_AMDGPU_FEATURE_XNACK_V4;
+    }
+
+    if (retSramEcc == EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4 ||
+        (retSramEcc != EF_AMDGPU_FEATURE_SRAMECC_ANY_V4 &&
+            (getEFlags(f) & EF_AMDGPU_FEATURE_SRAMECC_V4) !=
+                EF_AMDGPU_FEATURE_SRAMECC_ANY_V4)) {
+      if (retSramEcc != (getEFlags(f) & EF_AMDGPU_FEATURE_SRAMECC_V4)) {
+        error("incompatible sramecc: " + toString(f));
+        return 0;
+      }
+    } else {
+      if (retSramEcc == EF_AMDGPU_FEATURE_SRAMECC_ANY_V4)
+        retSramEcc = getEFlags(f) & EF_AMDGPU_FEATURE_SRAMECC_V4;
+    }
+  }
+
+  return retMach | retXnack | retSramEcc;
+}
+
+uint32_t AMDGPU::calcEFlags() const {
+  assert(!objectFiles.empty());
+
+  uint8_t abiVersion = cast<ObjFile<ELF64LE>>(objectFiles[0])->getObj()
+      .getHeader().e_ident[EI_ABIVERSION];
+  switch (abiVersion) {
+  case ELFABIVERSION_AMDGPU_HSA_V2:
+  case ELFABIVERSION_AMDGPU_HSA_V3:
+    return calcEFlagsV3();
+  case ELFABIVERSION_AMDGPU_HSA_V4:
+    return calcEFlagsV4();
+  default:
+    error("unknown abi version: " + Twine(abiVersion));
+    return 0;
+  }
+}
+
+void AMDGPU::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
+  switch (rel.type) {
   case R_AMDGPU_ABS32:
   case R_AMDGPU_GOTPCREL:
   case R_AMDGPU_GOTPCREL32_LO:
@@ -75,6 +139,12 @@ void AMDGPU::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
   case R_AMDGPU_REL32_HI:
     write32le(loc, val >> 32);
     break;
+  case R_AMDGPU_REL16: {
+    int64_t simm = (static_cast<int64_t>(val) - 4) / 4;
+    checkInt(loc, simm, 16, rel);
+    write16le(loc, simm);
+    break;
+  }
   default:
     llvm_unreachable("unknown relocation");
   }
@@ -90,6 +160,7 @@ RelExpr AMDGPU::getRelExpr(RelType type, const Symbol &s,
   case R_AMDGPU_REL32_LO:
   case R_AMDGPU_REL32_HI:
   case R_AMDGPU_REL64:
+  case R_AMDGPU_REL16:
     return R_PC;
   case R_AMDGPU_GOTPCREL:
   case R_AMDGPU_GOTPCREL32_LO:
@@ -108,10 +179,7 @@ RelType AMDGPU::getDynRel(RelType type) const {
   return R_AMDGPU_NONE;
 }
 
-TargetInfo *getAMDGPUTargetInfo() {
+TargetInfo *elf::getAMDGPUTargetInfo() {
   static AMDGPU target;
   return &target;
 }
-
-} // namespace elf
-} // namespace lld

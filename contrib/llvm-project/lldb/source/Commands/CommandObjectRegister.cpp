@@ -1,4 +1,4 @@
-//===-- CommandObjectRegister.cpp -------------------------------*- C++ -*-===//
+//===-- CommandObjectRegister.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -69,6 +69,17 @@ public:
   }
 
   ~CommandObjectRegisterRead() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_exe_ctx.HasProcessScope())
+      return;
+
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eRegisterCompletion,
+        request, nullptr);
+  }
 
   Options *GetOptions() override { return &m_option_group; }
 
@@ -167,13 +178,11 @@ protected:
                                               llvm::sys::StrError());
               else
                 result.AppendError("unknown error while reading registers.\n");
-              result.SetStatus(eReturnStatusFailed);
               break;
             }
           } else {
             result.AppendErrorWithFormat(
                 "invalid register set index: %" PRIu64 "\n", (uint64_t)set_idx);
-            result.SetStatus(eReturnStatusFailed);
             break;
           }
         }
@@ -192,11 +201,9 @@ protected:
       if (m_command_options.dump_all_sets) {
         result.AppendError("the --all option can't be used when registers "
                            "names are supplied as arguments\n");
-        result.SetStatus(eReturnStatusFailed);
       } else if (m_command_options.set_indexes.GetSize() > 0) {
         result.AppendError("the --set <set> option can't be used when "
                            "registers names are supplied as arguments\n");
-        result.SetStatus(eReturnStatusFailed);
       } else {
         for (auto &entry : command) {
           // in most LLDB commands we accept $rbx as the name for register RBX
@@ -323,6 +330,17 @@ public:
 
   ~CommandObjectRegisterWrite() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_exe_ctx.HasProcessScope() || request.GetCursorIndex() != 0)
+      return;
+
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eRegisterCompletion,
+        request, nullptr);
+  }
+
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     DataExtractor reg_data;
@@ -331,7 +349,6 @@ protected:
     if (command.GetArgumentCount() != 2) {
       result.AppendError(
           "register write takes exactly 2 arguments: <reg-name> <value>");
-      result.SetStatus(eReturnStatusFailed);
     } else {
       auto reg_name = command[0].ref();
       auto value_str = command[1].ref();
@@ -368,11 +385,9 @@ protected:
               "Failed to write register '%s' with value '%s'",
               reg_name.str().c_str(), value_str.str().c_str());
         }
-        result.SetStatus(eReturnStatusFailed);
       } else {
         result.AppendErrorWithFormat("Register not found for '%s'.\n",
                                      reg_name.str().c_str());
-        result.SetStatus(eReturnStatusFailed);
       }
     }
     return result.Succeeded();

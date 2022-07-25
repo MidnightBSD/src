@@ -1,4 +1,4 @@
-//===-- StringExtractor.cpp -------------------------------------*- C++ -*-===//
+//===-- StringExtractor.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/StringExtractor.h"
+#include "llvm/ADT/StringExtras.h"
 
 #include <tuple>
 
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cctype>
+#include <cstdlib>
+#include <cstring>
 
 static inline int xdigit_to_sint(char ch) {
   if (ch >= 'a' && ch <= 'f')
@@ -25,7 +26,7 @@ static inline int xdigit_to_sint(char ch) {
 }
 
 // StringExtractor constructor
-StringExtractor::StringExtractor() : m_packet(), m_index(0) {}
+StringExtractor::StringExtractor() : m_packet() {}
 
 StringExtractor::StringExtractor(llvm::StringRef packet_str)
     : m_packet(), m_index(0) {
@@ -39,7 +40,7 @@ StringExtractor::StringExtractor(const char *packet_cstr)
 }
 
 // Destructor
-StringExtractor::~StringExtractor() {}
+StringExtractor::~StringExtractor() = default;
 
 char StringExtractor::GetChar(char fail_value) {
   if (m_index < m_packet.size()) {
@@ -365,6 +366,6 @@ bool StringExtractor::GetNameColonValue(llvm::StringRef &name,
 
 void StringExtractor::SkipSpaces() {
   const size_t n = m_packet.size();
-  while (m_index < n && isspace(m_packet[m_index]))
+  while (m_index < n && llvm::isSpace(m_packet[m_index]))
     ++m_index;
 }

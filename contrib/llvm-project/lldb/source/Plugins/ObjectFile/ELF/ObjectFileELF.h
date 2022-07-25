@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ObjectFileELF_h_
-#define liblldb_ObjectFileELF_h_
+#ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_ELF_OBJECTFILEELF_H
+#define LLDB_SOURCE_PLUGINS_OBJECTFILE_ELF_OBJECTFILEELF_H
 
-#include <stdint.h>
+#include <cstdint>
 
 #include <vector>
 
@@ -22,13 +22,13 @@
 #include "ELFHeader.h"
 
 struct ELFNote {
-  elf::elf_word n_namesz;
-  elf::elf_word n_descsz;
-  elf::elf_word n_type;
+  elf::elf_word n_namesz = 0;
+  elf::elf_word n_descsz = 0;
+  elf::elf_word n_type = 0;
 
   std::string n_name;
 
-  ELFNote() : n_namesz(0), n_descsz(0), n_type(0) {}
+  ELFNote() = default;
 
   /// Parse an ELFNote entry from the given DataExtractor starting at position
   /// \p offset.
@@ -328,9 +328,6 @@ private:
   /// section index 0 is never valid).
   lldb::user_id_t GetSectionIndexByName(const char *name);
 
-  // Returns the ID of the first section that has the given type.
-  lldb::user_id_t GetSectionIndexByType(unsigned type);
-
   /// Returns the section header with the given id or NULL.
   const ELFSectionHeaderInfo *GetSectionHeaderByIndex(lldb::user_id_t id);
 
@@ -397,4 +394,4 @@ private:
   std::shared_ptr<ObjectFileELF> GetGnuDebugDataObjectFile();
 };
 
-#endif // liblldb_ObjectFileELF_h_
+#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_ELF_OBJECTFILEELF_H

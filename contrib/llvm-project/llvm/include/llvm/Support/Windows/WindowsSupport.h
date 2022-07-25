@@ -37,7 +37,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Config/config.h" // Get build system configuration settings
+#include "llvm/Config/llvm-config.h" // Get build system configuration settings
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Compiler.h"
@@ -236,6 +236,12 @@ namespace windows {
 // UTF-8 regardless of the current code page setting.
 std::error_code GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
                                         BumpPtrAllocator &Alloc);
+
+/// Convert UTF-8 path to a suitable UTF-16 path for use with the Win32 Unicode
+/// File API.
+std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
+                          size_t MaxPathLen = MAX_PATH);
+
 } // end namespace windows
 } // end namespace sys
 } // end namespace llvm.

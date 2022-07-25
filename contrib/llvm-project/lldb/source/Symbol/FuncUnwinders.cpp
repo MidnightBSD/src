@@ -1,4 +1,4 @@
-//===-- FuncUnwinders.cpp ----------------------------------*- C++ -*-===//
+//===-- FuncUnwinders.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -55,7 +55,7 @@ FuncUnwinders::FuncUnwinders(UnwindTable &unwind_table, AddressRange range)
 
 /// destructor
 
-FuncUnwinders::~FuncUnwinders() {}
+FuncUnwinders::~FuncUnwinders() = default;
 
 UnwindPlanSP FuncUnwinders::GetUnwindPlanAtCallSite(Target &target,
                                                     Thread &thread) {
@@ -183,11 +183,11 @@ class RegisterContextToInfo: public SymbolFile::RegisterInfoResolver {
 public:
   RegisterContextToInfo(RegisterContext &ctx) : m_ctx(ctx) {}
 
-  const RegisterInfo *ResolveName(llvm::StringRef name) const {
+  const RegisterInfo *ResolveName(llvm::StringRef name) const override {
     return m_ctx.GetRegisterInfoByName(name);
   }
   const RegisterInfo *ResolveNumber(lldb::RegisterKind kind,
-                                    uint32_t number) const {
+                                    uint32_t number) const override {
     return m_ctx.GetRegisterInfo(kind, number);
   }
 

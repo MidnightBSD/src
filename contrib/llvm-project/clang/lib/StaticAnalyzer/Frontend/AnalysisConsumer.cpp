@@ -12,7 +12,6 @@
 
 #include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
 #include "ModelInjector.h"
-#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -21,10 +20,13 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CallGraph.h"
 #include "clang/Analysis/CodeInjector.h"
+#include "clang/Analysis/MacroExpansionContext.h"
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/StaticAnalyzer/Checkers/LocalCheckers.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -32,7 +34,6 @@
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
-#include "clang/StaticAnalyzer/Frontend/CheckerRegistration.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/FileSystem.h"
@@ -61,114 +62,6 @@ STATISTIC(PercentReachableBlocks, "The % of reachable basic blocks.");
 STATISTIC(MaxCFGSize, "The maximum number of basic blocks in a function.");
 
 //===----------------------------------------------------------------------===//
-// Special PathDiagnosticConsumers.
-//===----------------------------------------------------------------------===//
-
-void ento::createPlistHTMLDiagnosticConsumer(
-    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
-    const std::string &prefix, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
-  createHTMLDiagnosticConsumer(AnalyzerOpts, C,
-                               llvm::sys::path::parent_path(prefix), PP, CTU);
-  createPlistMultiFileDiagnosticConsumer(AnalyzerOpts, C, prefix, PP, CTU);
-}
-
-void ento::createTextPathDiagnosticConsumer(
-    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
-    const std::string &Prefix, const clang::Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
-  llvm_unreachable("'text' consumer should be enabled on ClangDiags");
-}
-
-namespace {
-class ClangDiagPathDiagConsumer : public PathDiagnosticConsumer {
-  DiagnosticsEngine &Diag;
-  bool IncludePath = false, ShouldEmitAsError = false, FixitsAsRemarks = false;
-
-public:
-  ClangDiagPathDiagConsumer(DiagnosticsEngine &Diag)
-      : Diag(Diag) {}
-  ~ClangDiagPathDiagConsumer() override {}
-  StringRef getName() const override { return "ClangDiags"; }
-
-  bool supportsLogicalOpControlFlow() const override { return true; }
-  bool supportsCrossFileDiagnostics() const override { return true; }
-
-  PathGenerationScheme getGenerationScheme() const override {
-    return IncludePath ? Minimal : None;
-  }
-
-  void enablePaths() { IncludePath = true; }
-  void enableWerror() { ShouldEmitAsError = true; }
-  void enableFixitsAsRemarks() { FixitsAsRemarks = true; }
-
-  void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
-                            FilesMade *filesMade) override {
-    unsigned WarnID =
-        ShouldEmitAsError
-            ? Diag.getCustomDiagID(DiagnosticsEngine::Error, "%0")
-            : Diag.getCustomDiagID(DiagnosticsEngine::Warning, "%0");
-    unsigned NoteID = Diag.getCustomDiagID(DiagnosticsEngine::Note, "%0");
-    unsigned RemarkID = Diag.getCustomDiagID(DiagnosticsEngine::Remark, "%0");
-
-    auto reportPiece =
-        [&](unsigned ID, SourceLocation Loc, StringRef String,
-            ArrayRef<SourceRange> Ranges, ArrayRef<FixItHint> Fixits) {
-          if (!FixitsAsRemarks) {
-            Diag.Report(Loc, ID) << String << Ranges << Fixits;
-          } else {
-            Diag.Report(Loc, ID) << String << Ranges;
-            for (const FixItHint &Hint : Fixits) {
-              SourceManager &SM = Diag.getSourceManager();
-              llvm::SmallString<128> Str;
-              llvm::raw_svector_ostream OS(Str);
-              // FIXME: Add support for InsertFromRange and
-              // BeforePreviousInsertion.
-              assert(!Hint.InsertFromRange.isValid() && "Not implemented yet!");
-              assert(!Hint.BeforePreviousInsertions && "Not implemented yet!");
-              OS << SM.getSpellingColumnNumber(Hint.RemoveRange.getBegin())
-                 << "-" << SM.getSpellingColumnNumber(Hint.RemoveRange.getEnd())
-                 << ": '" << Hint.CodeToInsert << "'";
-              Diag.Report(Loc, RemarkID) << OS.str();
-            }
-          }
-        };
-
-    for (std::vector<const PathDiagnostic *>::iterator I = Diags.begin(),
-         E = Diags.end();
-         I != E; ++I) {
-      const PathDiagnostic *PD = *I;
-      reportPiece(WarnID, PD->getLocation().asLocation(),
-                  PD->getShortDescription(), PD->path.back()->getRanges(),
-                  PD->path.back()->getFixits());
-
-      // First, add extra notes, even if paths should not be included.
-      for (const auto &Piece : PD->path) {
-        if (!isa<PathDiagnosticNotePiece>(Piece.get()))
-          continue;
-
-        reportPiece(NoteID, Piece->getLocation().asLocation(),
-                    Piece->getString(), Piece->getRanges(), Piece->getFixits());
-      }
-
-      if (!IncludePath)
-        continue;
-
-      // Then, add the path notes if necessary.
-      PathPieces FlatPath = PD->path.flatten(/*ShouldFlattenMacros=*/true);
-      for (const auto &Piece : FlatPath) {
-        if (isa<PathDiagnosticNotePiece>(Piece.get()))
-          continue;
-
-        reportPiece(NoteID, Piece->getLocation().asLocation(),
-                    Piece->getString(), Piece->getRanges(), Piece->getFixits());
-      }
-    }
-  }
-};
-} // end anonymous namespace
-
-//===----------------------------------------------------------------------===//
 // AnalysisConsumer declaration.
 //===----------------------------------------------------------------------===//
 
@@ -192,7 +85,7 @@ class AnalysisConsumer : public AnalysisASTConsumer,
 
 public:
   ASTContext *Ctx;
-  const Preprocessor &PP;
+  Preprocessor &PP;
   const std::string OutDir;
   AnalyzerOptionsRef Opts;
   ArrayRef<std::string> Plugins;
@@ -205,6 +98,8 @@ public:
   /// The local declaration to all declarations ratio might be very small when
   /// working with a PCH file.
   SetOfDecls LocalTUDecls;
+
+  MacroExpansionContext MacroExpansions;
 
   // Set of PathDiagnosticConsumers.  Owned by AnalysisManager.
   PathDiagnosticConsumers PathConsumers;
@@ -230,9 +125,11 @@ public:
                    CodeInjector *injector)
       : RecVisitorMode(0), RecVisitorBR(nullptr), Ctx(nullptr),
         PP(CI.getPreprocessor()), OutDir(outdir), Opts(std::move(opts)),
-        Plugins(plugins), Injector(injector), CTU(CI) {
+        Plugins(plugins), Injector(injector), CTU(CI),
+        MacroExpansions(CI.getLangOpts()) {
     DigestAnalyzerOptions();
-    if (Opts->PrintStats || Opts->ShouldSerializeStats) {
+    if (Opts->AnalyzerDisplayProgress || Opts->PrintStats ||
+        Opts->ShouldSerializeStats) {
       AnalyzerTimers = std::make_unique<llvm::TimerGroup>(
           "analyzer", "Analyzer timers");
       SyntaxCheckTimer = std::make_unique<llvm::Timer>(
@@ -242,8 +139,14 @@ public:
       BugReporterTimer = std::make_unique<llvm::Timer>(
           "bugreporter", "Path-sensitive report post-processing time",
           *AnalyzerTimers);
+    }
+
+    if (Opts->PrintStats || Opts->ShouldSerializeStats) {
       llvm::EnableStatistics(/* PrintOnExit= */ false);
     }
+
+    if (Opts->ShouldDisplayMacroExpansions)
+      MacroExpansions.registerForPreprocessor(PP);
   }
 
   ~AnalysisConsumer() override {
@@ -253,31 +156,17 @@ public:
   }
 
   void DigestAnalyzerOptions() {
-    if (Opts->AnalysisDiagOpt != PD_NONE) {
-      // Create the PathDiagnosticConsumer.
-      ClangDiagPathDiagConsumer *clangDiags =
-          new ClangDiagPathDiagConsumer(PP.getDiagnostics());
-      PathConsumers.push_back(clangDiags);
-
-      if (Opts->AnalyzerWerror)
-        clangDiags->enableWerror();
-
-      if (Opts->ShouldEmitFixItHintsAsRemarks)
-        clangDiags->enableFixitsAsRemarks();
-
-      if (Opts->AnalysisDiagOpt == PD_TEXT) {
-        clangDiags->enablePaths();
-
-      } else if (!OutDir.empty()) {
-        switch (Opts->AnalysisDiagOpt) {
-        default:
+    switch (Opts->AnalysisDiagOpt) {
+    case PD_NONE:
+      break;
 #define ANALYSIS_DIAGNOSTICS(NAME, CMDFLAG, DESC, CREATEFN)                    \
   case PD_##NAME:                                                              \
-    CREATEFN(*Opts.get(), PathConsumers, OutDir, PP, CTU);                     \
+    CREATEFN(Opts->getDiagOpts(), PathConsumers, OutDir, PP, CTU,              \
+             MacroExpansions);                                                 \
     break;
 #include "clang/StaticAnalyzer/Core/Analyses.def"
-        }
-      }
+    default:
+      llvm_unreachable("Unknown analyzer output type!");
     }
 
     // Create the analyzer component creators.
@@ -298,6 +187,14 @@ public:
     }
   }
 
+  void DisplayTime(llvm::TimeRecord &Time) {
+    if (!Opts->AnalyzerDisplayProgress) {
+      return;
+    }
+    llvm::errs() << " : " << llvm::format("%1.1f", Time.getWallTime() * 1000)
+                 << " ms\n";
+  }
+
   void DisplayFunction(const Decl *D, AnalysisMode Mode,
                        ExprEngine::InliningModes IMode) {
     if (!Opts->AnalyzerDisplayProgress)
@@ -313,30 +210,29 @@ public:
       else if (Mode == AM_Path) {
         llvm::errs() << " (Path, ";
         switch (IMode) {
-          case ExprEngine::Inline_Minimal:
-            llvm::errs() << " Inline_Minimal";
-            break;
-          case ExprEngine::Inline_Regular:
-            llvm::errs() << " Inline_Regular";
-            break;
+        case ExprEngine::Inline_Minimal:
+          llvm::errs() << " Inline_Minimal";
+          break;
+        case ExprEngine::Inline_Regular:
+          llvm::errs() << " Inline_Regular";
+          break;
         }
         llvm::errs() << ")";
-      }
-      else
+      } else
         assert(Mode == (AM_Syntax | AM_Path) && "Unexpected mode!");
 
       llvm::errs() << ": " << Loc.getFilename() << ' '
-                           << getFunctionName(D) << '\n';
+                   << AnalysisDeclContext::getFunctionName(D);
     }
   }
 
   void Initialize(ASTContext &Context) override {
     Ctx = &Context;
-    checkerMgr = createCheckerManager(
-        *Ctx, *Opts, Plugins, CheckerRegistrationFns, PP.getDiagnostics());
+    checkerMgr = std::make_unique<CheckerManager>(*Ctx, *Opts, PP, Plugins,
+                                                  CheckerRegistrationFns);
 
-    Mgr = std::make_unique<AnalysisManager>(*Ctx, PathConsumers, CreateStoreMgr,
-                                            CreateConstraintMgr,
+    Mgr = std::make_unique<AnalysisManager>(*Ctx, PP, PathConsumers,
+                                            CreateStoreMgr, CreateConstraintMgr,
                                             checkerMgr.get(), *Opts, Injector);
   }
 
@@ -469,7 +365,7 @@ private:
 
   /// Print \p S to stderr if \c Opts->AnalyzerDisplayProgress is set.
   void reportAnalyzerProgress(StringRef S);
-};
+}; // namespace
 } // end anonymous namespace
 
 
@@ -502,6 +398,13 @@ static bool shouldSkipFunction(const Decl *D,
                                const SetOfConstDecls &VisitedAsTopLevel) {
   if (VisitedAsTopLevel.count(D))
     return true;
+
+  // Skip analysis of inheriting constructors as top-level functions. These
+  // constructors don't even have a body written down in the code, so even if
+  // we find a bug, we won't be able to display it.
+  if (const auto *CD = dyn_cast<CXXConstructorDecl>(D))
+    if (CD->isInheritingConstructor())
+      return true;
 
   // We want to re-analyse the functions as top level in the following cases:
   // - The 'init' methods should be reanalyzed because
@@ -593,7 +496,7 @@ void AnalysisConsumer::HandleDeclsCallGraph(const unsigned LocalTUDeclsSize) {
 static bool isBisonFile(ASTContext &C) {
   const SourceManager &SM = C.getSourceManager();
   FileID FID = SM.getMainFileID();
-  StringRef Buffer = SM.getBuffer(FID)->getBuffer();
+  StringRef Buffer = SM.getBufferOrFake(FID).getBuffer();
   if (Buffer.startswith("/* A Bison parser, made by"))
     return true;
   return false;
@@ -677,63 +580,10 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
   Mgr.reset();
 }
 
-std::string AnalysisConsumer::getFunctionName(const Decl *D) {
-  std::string Str;
-  llvm::raw_string_ostream OS(Str);
-
-  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-    OS << FD->getQualifiedNameAsString();
-
-    // In C++, there are overloads.
-    if (Ctx->getLangOpts().CPlusPlus) {
-      OS << '(';
-      for (const auto &P : FD->parameters()) {
-        if (P != *FD->param_begin())
-          OS << ", ";
-        OS << P->getType().getAsString();
-      }
-      OS << ')';
-    }
-
-  } else if (isa<BlockDecl>(D)) {
-    PresumedLoc Loc = Ctx->getSourceManager().getPresumedLoc(D->getLocation());
-
-    if (Loc.isValid()) {
-      OS << "block (line: " << Loc.getLine() << ", col: " << Loc.getColumn()
-         << ')';
-    }
-
-  } else if (const ObjCMethodDecl *OMD = dyn_cast<ObjCMethodDecl>(D)) {
-
-    // FIXME: copy-pasted from CGDebugInfo.cpp.
-    OS << (OMD->isInstanceMethod() ? '-' : '+') << '[';
-    const DeclContext *DC = OMD->getDeclContext();
-    if (const auto *OID = dyn_cast<ObjCImplementationDecl>(DC)) {
-      OS << OID->getName();
-    } else if (const auto *OID = dyn_cast<ObjCInterfaceDecl>(DC)) {
-      OS << OID->getName();
-    } else if (const auto *OC = dyn_cast<ObjCCategoryDecl>(DC)) {
-      if (OC->IsClassExtension()) {
-        OS << OC->getClassInterface()->getName();
-      } else {
-        OS << OC->getIdentifier()->getNameStart() << '('
-           << OC->getIdentifier()->getNameStart() << ')';
-      }
-    } else if (const auto *OCD = dyn_cast<ObjCCategoryImplDecl>(DC)) {
-      OS << OCD->getClassInterface()->getName() << '('
-         << OCD->getName() << ')';
-    }
-    OS << ' ' << OMD->getSelector().getAsString() << ']';
-
-  }
-
-  return OS.str();
-}
-
 AnalysisConsumer::AnalysisMode
 AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
   if (!Opts->AnalyzeSpecificFunction.empty() &&
-      getFunctionName(D) != Opts->AnalyzeSpecificFunction)
+      AnalysisDeclContext::getFunctionName(D) != Opts->AnalyzeSpecificFunction)
     return AM_None;
 
   // Unless -analyze-all is specified, treat decls differently depending on
@@ -770,19 +620,26 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
   if (Mgr->getAnalysisDeclContext(D)->isBodyAutosynthesized())
     return;
 
-  DisplayFunction(D, Mode, IMode);
   CFG *DeclCFG = Mgr->getCFG(D);
   if (DeclCFG)
     MaxCFGSize.updateMax(DeclCFG->size());
 
+  DisplayFunction(D, Mode, IMode);
   BugReporter BR(*Mgr);
 
   if (Mode & AM_Syntax) {
-    if (SyntaxCheckTimer)
+    llvm::TimeRecord CheckerStartTime;
+    if (SyntaxCheckTimer) {
+      CheckerStartTime = SyntaxCheckTimer->getTotalTime();
       SyntaxCheckTimer->startTimer();
+    }
     checkerMgr->runCheckersOnASTBody(D, *Mgr, BR);
-    if (SyntaxCheckTimer)
+    if (SyntaxCheckTimer) {
       SyntaxCheckTimer->stopTimer();
+      llvm::TimeRecord CheckerEndTime = SyntaxCheckTimer->getTotalTime();
+      CheckerEndTime -= CheckerStartTime;
+      DisplayTime(CheckerEndTime);
+    }
   }
 
   BR.FlushReports();
@@ -813,12 +670,19 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
   ExprEngine Eng(CTU, *Mgr, VisitedCallees, &FunctionSummaries, IMode);
 
   // Execute the worklist algorithm.
-  if (ExprEngineTimer)
+  llvm::TimeRecord ExprEngineStartTime;
+  if (ExprEngineTimer) {
+    ExprEngineStartTime = ExprEngineTimer->getTotalTime();
     ExprEngineTimer->startTimer();
+  }
   Eng.ExecuteWorkList(Mgr->getAnalysisDeclContextManager().getStackFrame(D),
                       Mgr->options.MaxNodesPerTopLevelFunction);
-  if (ExprEngineTimer)
+  if (ExprEngineTimer) {
     ExprEngineTimer->stopTimer();
+    llvm::TimeRecord ExprEngineEndTime = ExprEngineTimer->getTotalTime();
+    ExprEngineEndTime -= ExprEngineStartTime;
+    DisplayTime(ExprEngineEndTime);
+  }
 
   if (!Mgr->options.DumpExplodedGraphTo.empty())
     Eng.DumpGraph(Mgr->options.TrimGraph, Mgr->options.DumpExplodedGraphTo);

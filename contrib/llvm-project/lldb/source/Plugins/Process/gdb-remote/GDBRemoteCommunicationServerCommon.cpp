@@ -1,4 +1,4 @@
-//===-- GDBRemoteCommunicationServerCommon.cpp ------------------*- C++ -*-===//
+//===-- GDBRemoteCommunicationServerCommon.cpp ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 
 #include "GDBRemoteCommunicationServerCommon.h"
 
-#include <errno.h>
+#include <cerrno>
 
 #ifdef __APPLE__
 #include <TargetConditionals.h>
@@ -60,8 +60,7 @@ GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon(
     const char *comm_name, const char *listener_name)
     : GDBRemoteCommunicationServer(comm_name, listener_name),
       m_process_launch_info(), m_process_launch_error(), m_proc_infos(),
-      m_proc_infos_index(0), m_thread_suffix_supported(false),
-      m_list_threads_in_stop_reply(false) {
+      m_proc_infos_index(0) {
   RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_A,
                                 &GDBRemoteCommunicationServerCommon::Handle_A);
   RegisterMemberFunctionHandler(
@@ -85,9 +84,6 @@ GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon(
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qLaunchSuccess,
       &GDBRemoteCommunicationServerCommon::Handle_qLaunchSuccess);
-  RegisterMemberFunctionHandler(
-      StringExtractorGDBRemote::eServerPacketType_QListThreadsInStopReply,
-      &GDBRemoteCommunicationServerCommon::Handle_QListThreadsInStopReply);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qEcho,
       &GDBRemoteCommunicationServerCommon::Handle_qEcho);
@@ -134,9 +130,6 @@ GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon(
       StringExtractorGDBRemote::eServerPacketType_qSupported,
       &GDBRemoteCommunicationServerCommon::Handle_qSupported);
   RegisterMemberFunctionHandler(
-      StringExtractorGDBRemote::eServerPacketType_QThreadSuffixSupported,
-      &GDBRemoteCommunicationServerCommon::Handle_QThreadSuffixSupported);
-  RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qUserName,
       &GDBRemoteCommunicationServerCommon::Handle_qUserName);
   RegisterMemberFunctionHandler(
@@ -175,7 +168,8 @@ GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon(
 }
 
 // Destructor
-GDBRemoteCommunicationServerCommon::~GDBRemoteCommunicationServerCommon() {}
+GDBRemoteCommunicationServerCommon::~GDBRemoteCommunicationServerCommon() =
+    default;
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
@@ -334,7 +328,7 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_qfProcessInfo(
     StringExtractorGDBRemote &packet) {
   m_proc_infos_index = 0;
-  m_proc_infos.Clear();
+  m_proc_infos.clear();
 
   ProcessInstanceInfoMatch match_info;
   packet.SetFilePos(::strlen("qfProcessInfo"));
@@ -416,10 +410,9 @@ GDBRemoteCommunicationServerCommon::Handle_qfProcessInfo(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_qsProcessInfo(
     StringExtractorGDBRemote &packet) {
-  if (m_proc_infos_index < m_proc_infos.GetSize()) {
+  if (m_proc_infos_index < m_proc_infos.size()) {
     StreamString response;
-    CreateProcessInfoResponse(
-        m_proc_infos.GetProcessInfoAtIndex(m_proc_infos_index), response);
+    CreateProcessInfoResponse(m_proc_infos[m_proc_infos_index], response);
     ++m_proc_infos_index;
     return SendPacketNoLock(response.GetString());
   }
@@ -832,38 +825,10 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_chmod(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_qSupported(
     StringExtractorGDBRemote &packet) {
-  StreamGDBRemote response;
-
-  // Features common to lldb-platform and llgs.
-  uint32_t max_packet_size = 128 * 1024; // 128KBytes is a reasonable max packet
-                                         // size--debugger can always use less
-  response.Printf("PacketSize=%x", max_packet_size);
-
-  response.PutCString(";QStartNoAckMode+");
-  response.PutCString(";QThreadSuffixSupported+");
-  response.PutCString(";QListThreadsInStopReply+");
-  response.PutCString(";qEcho+");
-#if defined(__linux__) || defined(__NetBSD__)
-  response.PutCString(";QPassSignals+");
-  response.PutCString(";qXfer:auxv:read+");
-  response.PutCString(";qXfer:libraries-svr4:read+");
-#endif
-
-  return SendPacketNoLock(response.GetString());
-}
-
-GDBRemoteCommunication::PacketResult
-GDBRemoteCommunicationServerCommon::Handle_QThreadSuffixSupported(
-    StringExtractorGDBRemote &packet) {
-  m_thread_suffix_supported = true;
-  return SendOKResponse();
-}
-
-GDBRemoteCommunication::PacketResult
-GDBRemoteCommunicationServerCommon::Handle_QListThreadsInStopReply(
-    StringExtractorGDBRemote &packet) {
-  m_list_threads_in_stop_reply = true;
-  return SendOKResponse();
+  // Parse client-indicated features.
+  llvm::SmallVector<llvm::StringRef, 4> client_features;
+  packet.GetStringRef().split(client_features, ';');
+  return SendPacketNoLock(llvm::join(HandleFeatures(client_features), ";"));
 }
 
 GDBRemoteCommunication::PacketResult
@@ -1228,7 +1193,7 @@ void GDBRemoteCommunicationServerCommon::
     if (cpu_subtype != 0)
       response.Printf("cpusubtype:%" PRIx32 ";", cpu_subtype);
 
-    const std::string vendor = proc_triple.getVendorName();
+    const std::string vendor = proc_triple.getVendorName().str();
     if (!vendor.empty())
       response.Printf("vendor:%s;", vendor.c_str());
 #else
@@ -1237,7 +1202,7 @@ void GDBRemoteCommunicationServerCommon::
     response.PutStringAsRawHex8(proc_triple.getTriple());
     response.PutChar(';');
 #endif
-    std::string ostype = proc_triple.getOSName();
+    std::string ostype = std::string(proc_triple.getOSName());
     // Adjust so ostype reports ios for Apple/ARM and Apple/ARM64.
     if (proc_triple.getVendor() == llvm::Triple::Apple) {
       switch (proc_triple.getArch()) {
@@ -1310,4 +1275,17 @@ GDBRemoteCommunicationServerCommon::GetModuleInfo(llvm::StringRef module_path,
     return ModuleSpec();
 
   return matched_module_spec;
+}
+
+std::vector<std::string> GDBRemoteCommunicationServerCommon::HandleFeatures(
+    const llvm::ArrayRef<llvm::StringRef> client_features) {
+  // 128KBytes is a reasonable max packet size--debugger can always use less.
+  constexpr uint32_t max_packet_size = 128 * 1024;
+
+  // Features common to platform server and llgs.
+  return {
+      llvm::formatv("PacketSize={0}", max_packet_size),
+      "QStartNoAckMode+",
+      "qEcho+",
+  };
 }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_BreakpointLocationCollection_h_
-#define liblldb_BreakpointLocationCollection_h_
+#ifndef LLDB_BREAKPOINT_BREAKPOINTLOCATIONCOLLECTION_H
+#define LLDB_BREAKPOINT_BREAKPOINTLOCATIONCOLLECTION_H
 
 #include <mutex>
 #include <vector>
@@ -136,7 +136,7 @@ public:
   /// return
   ///     \b true if the collection contains at least one location that
   ///     would be valid for this thread, false otherwise.
-  bool ValidForThisThread(Thread *thread);
+  bool ValidForThisThread(Thread &thread);
 
   /// Tell whether ALL the breakpoints in the location collection are internal.
   ///
@@ -175,4 +175,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // liblldb_BreakpointLocationCollection_h_
+#endif // LLDB_BREAKPOINT_BREAKPOINTLOCATIONCOLLECTION_H

@@ -1,4 +1,4 @@
-//===-- OptionValueBoolean.cpp ----------------------------------*- C++ -*-===//
+//===-- OptionValueBoolean.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -65,10 +65,6 @@ Status OptionValueBoolean::SetValueFromString(llvm::StringRef value_str,
     break;
   }
   return error;
-}
-
-lldb::OptionValueSP OptionValueBoolean::DeepCopy() const {
-  return OptionValueSP(new OptionValueBoolean(*this));
 }
 
 void OptionValueBoolean::AutoComplete(CommandInterpreter &interpreter,

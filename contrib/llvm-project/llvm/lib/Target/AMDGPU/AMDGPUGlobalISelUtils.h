@@ -9,19 +9,21 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUGLOBALISELUTILS_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUGLOBALISELUTILS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/Register.h"
-#include <tuple>
+#include <utility>
 
 namespace llvm {
 
-class MachineInstr;
 class MachineRegisterInfo;
 
 namespace AMDGPU {
 
-/// Returns Base register, constant offset, and offset def point.
-std::tuple<Register, unsigned, MachineInstr *>
+/// Returns base register and constant offset.
+std::pair<Register, unsigned>
 getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg);
+
+bool isLegalVOP3PShuffleMask(ArrayRef<int> Mask);
 
 }
 }

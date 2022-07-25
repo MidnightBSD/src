@@ -6,10 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SBData_h_
-#define LLDB_SBData_h_
+#ifndef LLDB_API_SBDATA_H
+#define LLDB_API_SBDATA_H
 
 #include "lldb/API/SBDefines.h"
+
+namespace lldb_private {
+class ScriptInterpreter;
+} // namespace lldb_private
 
 namespace lldb {
 
@@ -147,9 +151,11 @@ private:
   friend class SBTarget;
   friend class SBValue;
 
+  friend class lldb_private::ScriptInterpreter;
+
   lldb::DataExtractorSP m_opaque_sp;
 };
 
 } // namespace lldb
 
-#endif // LLDB_SBData_h_
+#endif // LLDB_API_SBDATA_H

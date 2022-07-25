@@ -26,8 +26,9 @@ public:
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
-
-  std::string computeSysRoot() const;
+  void
+  addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                           llvm::opt::ArgStringList &CC1Args) const override;
 
   std::string getDynamicLinker(const llvm::opt::ArgList &Args) const override;
 

@@ -1,4 +1,4 @@
-//===-- OptionValueArch.cpp ---------------------------------*- C++ -*-===//
+//===-- OptionValueArch.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -62,10 +62,6 @@ Status OptionValueArch::SetValueFromString(llvm::StringRef value,
     break;
   }
   return error;
-}
-
-lldb::OptionValueSP OptionValueArch::DeepCopy() const {
-  return OptionValueSP(new OptionValueArch(*this));
 }
 
 void OptionValueArch::AutoComplete(CommandInterpreter &interpreter,

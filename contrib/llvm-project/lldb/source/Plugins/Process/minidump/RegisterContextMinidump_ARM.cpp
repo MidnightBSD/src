@@ -1,4 +1,4 @@
-//===-- RegisterContextMinidump_ARM.cpp -------------------------*- C++ -*-===//
+//===-- RegisterContextMinidump_ARM.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@
 #include "lldb/lldb-enumerations.h"
 
 // C includes
-#include <assert.h>
+#include <cassert>
 
 // C++ includes
 

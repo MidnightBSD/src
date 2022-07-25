@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SymbolFileDWARF_SymbolFileDWARFDebugMap_h_
-#define SymbolFileDWARF_SymbolFileDWARFDebugMap_h_
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDEBUGMAP_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDEBUGMAP_H
 
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Utility/RangeMap.h"
@@ -57,11 +57,10 @@ public:
   // Compile Unit function calls
   lldb::LanguageType
   ParseLanguage(lldb_private::CompileUnit &comp_unit) override;
-
+  lldb_private::XcodeSDK
+  ParseXcodeSDK(lldb_private::CompileUnit &comp_unit) override;
   size_t ParseFunctions(lldb_private::CompileUnit &comp_unit) override;
-
   bool ParseLineTable(lldb_private::CompileUnit &comp_unit) override;
-
   bool ParseDebugMacros(lldb_private::CompileUnit &comp_unit) override;
 
   bool ForEachExternalModule(
@@ -98,21 +97,20 @@ public:
   uint32_t ResolveSymbolContext(const lldb_private::Address &so_addr,
                                 lldb::SymbolContextItem resolve_scope,
                                 lldb_private::SymbolContext &sc) override;
-  uint32_t
-  ResolveSymbolContext(const lldb_private::FileSpec &file_spec, uint32_t line,
-                       bool check_inlines,
-                       lldb::SymbolContextItem resolve_scope,
-                       lldb_private::SymbolContextList &sc_list) override;
+  uint32_t ResolveSymbolContext(
+      const lldb_private::SourceLocationSpec &src_location_spec,
+      lldb::SymbolContextItem resolve_scope,
+      lldb_private::SymbolContextList &sc_list) override;
   void
   FindGlobalVariables(lldb_private::ConstString name,
-                      const lldb_private::CompilerDeclContext *parent_decl_ctx,
+                      const lldb_private::CompilerDeclContext &parent_decl_ctx,
                       uint32_t max_matches,
                       lldb_private::VariableList &variables) override;
   void FindGlobalVariables(const lldb_private::RegularExpression &regex,
                            uint32_t max_matches,
                            lldb_private::VariableList &variables) override;
   void FindFunctions(lldb_private::ConstString name,
-                     const lldb_private::CompilerDeclContext *parent_decl_ctx,
+                     const lldb_private::CompilerDeclContext &parent_decl_ctx,
                      lldb::FunctionNameType name_type_mask,
                      bool include_inlines,
                      lldb_private::SymbolContextList &sc_list) override;
@@ -121,7 +119,7 @@ public:
                      lldb_private::SymbolContextList &sc_list) override;
   void
   FindTypes(lldb_private::ConstString name,
-            const lldb_private::CompilerDeclContext *parent_decl_ctx,
+            const lldb_private::CompilerDeclContext &parent_decl_ctx,
             uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             lldb_private::TypeMap &types) override;
@@ -132,7 +130,7 @@ public:
             lldb_private::TypeMap &types) override;
   lldb_private::CompilerDeclContext FindNamespace(
       lldb_private::ConstString name,
-      const lldb_private::CompilerDeclContext *parent_decl_ctx) override;
+      const lldb_private::CompilerDeclContext &parent_decl_ctx) override;
   void GetTypes(lldb_private::SymbolContextScope *sc_scope,
                 lldb::TypeClass type_mask,
                 lldb_private::TypeList &type_list) override;
@@ -172,18 +170,17 @@ protected:
     llvm::sys::TimePoint<> oso_mod_time;
     OSOInfoSP oso_sp;
     lldb::CompUnitSP compile_unit_sp;
-    uint32_t first_symbol_index;
-    uint32_t last_symbol_index;
-    uint32_t first_symbol_id;
-    uint32_t last_symbol_id;
+    uint32_t first_symbol_index = UINT32_MAX;
+    uint32_t last_symbol_index = UINT32_MAX;
+    uint32_t first_symbol_id = UINT32_MAX;
+    uint32_t last_symbol_id = UINT32_MAX;
     FileRangeMap file_range_map;
-    bool file_range_map_valid;
+    bool file_range_map_valid = false;
 
     CompileUnitInfo()
         : so_file(), oso_path(), oso_mod_time(), oso_sp(), compile_unit_sp(),
-          first_symbol_index(UINT32_MAX), last_symbol_index(UINT32_MAX),
-          first_symbol_id(UINT32_MAX), last_symbol_id(UINT32_MAX),
-          file_range_map(), file_range_map_valid(false) {}
+
+          file_range_map() {}
 
     const FileRangeMap &GetFileRangeMap(SymbolFileDWARFDebugMap *exe_symfile);
   };
@@ -254,7 +251,7 @@ protected:
 
   void PrivateFindGlobalVariables(
       lldb_private::ConstString name,
-      const lldb_private::CompilerDeclContext *parent_decl_ctx,
+      const lldb_private::CompilerDeclContext &parent_decl_ctx,
       const std::vector<uint32_t> &name_symbol_indexes, uint32_t max_matches,
       lldb_private::VariableList &variables);
 
@@ -281,8 +278,7 @@ protected:
   // OSOEntry
   class OSOEntry {
   public:
-    OSOEntry()
-        : m_exe_sym_idx(UINT32_MAX), m_oso_file_addr(LLDB_INVALID_ADDRESS) {}
+    OSOEntry() = default;
 
     OSOEntry(uint32_t exe_sym_idx, lldb::addr_t oso_file_addr)
         : m_exe_sym_idx(exe_sym_idx), m_oso_file_addr(oso_file_addr) {}
@@ -300,8 +296,8 @@ protected:
     }
 
   protected:
-    uint32_t m_exe_sym_idx;
-    lldb::addr_t m_oso_file_addr;
+    uint32_t m_exe_sym_idx = UINT32_MAX;
+    lldb::addr_t m_oso_file_addr = LLDB_INVALID_ADDRESS;
   };
 
   typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, OSOEntry>
@@ -379,4 +375,4 @@ protected:
                        DWARFDebugAranges *debug_aranges);
 };
 
-#endif // #ifndef SymbolFileDWARF_SymbolFileDWARFDebugMap_h_
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDEBUGMAP_H

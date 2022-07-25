@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_REMARKS_REMARK_LINKER_H
-#define LLVM_REMARKS_REMARK_LINKER_H
+#ifndef LLVM_REMARKS_REMARKLINKER_H
+#define LLVM_REMARKS_REMARKLINKER_H
 
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Remarks/Remark.h"
@@ -80,8 +80,7 @@ public:
   /// Return a collection of the linked unique remarks to iterate on.
   /// Ex:
   /// for (const Remark &R : RL.remarks() { [...] }
-  using iterator =
-      pointee_iterator<std::set<std::unique_ptr<Remark>>::iterator>;
+  using iterator = pointee_iterator<decltype(Remarks)::const_iterator>;
 
   iterator_range<iterator> remarks() const {
     return {Remarks.begin(), Remarks.end()};
@@ -97,4 +96,4 @@ getRemarksSectionContents(const object::ObjectFile &Obj);
 } // end namespace remarks
 } // end namespace llvm
 
-#endif /* LLVM_REMARKS_REMARK_LINKER_H */
+#endif // LLVM_REMARKS_REMARKLINKER_H

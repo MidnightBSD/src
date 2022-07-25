@@ -1,4 +1,4 @@
-//===-- SBLaunchInfo.cpp ----------------------------------------*- C++ -*-===//
+//===-- SBLaunchInfo.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,8 +9,13 @@
 #include "lldb/API/SBLaunchInfo.h"
 #include "SBReproducerPrivate.h"
 
+#include "lldb/API/SBEnvironment.h"
+#include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBListener.h"
+#include "lldb/API/SBStream.h"
+#include "lldb/API/SBStructuredData.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 
 using namespace lldb;
@@ -43,7 +48,21 @@ SBLaunchInfo::SBLaunchInfo(const char **argv)
     m_opaque_sp->GetArguments().SetArguments(argv);
 }
 
-SBLaunchInfo::~SBLaunchInfo() {}
+SBLaunchInfo::SBLaunchInfo(const SBLaunchInfo &rhs) {
+  LLDB_RECORD_CONSTRUCTOR(SBLaunchInfo, (const lldb::SBLaunchInfo &), rhs);
+
+  m_opaque_sp = rhs.m_opaque_sp;
+}
+
+SBLaunchInfo &SBLaunchInfo::operator=(const SBLaunchInfo &rhs) {
+  LLDB_RECORD_METHOD(SBLaunchInfo &,
+                     SBLaunchInfo, operator=,(const lldb::SBLaunchInfo &), rhs);
+
+  m_opaque_sp = rhs.m_opaque_sp;
+  return LLDB_RECORD_RESULT(*this);
+}
+
+SBLaunchInfo::~SBLaunchInfo() = default;
 
 const lldb_private::ProcessLaunchInfo &SBLaunchInfo::ref() const {
   return *m_opaque_sp;
@@ -168,13 +187,25 @@ const char *SBLaunchInfo::GetEnvironmentEntryAtIndex(uint32_t idx) {
 void SBLaunchInfo::SetEnvironmentEntries(const char **envp, bool append) {
   LLDB_RECORD_METHOD(void, SBLaunchInfo, SetEnvironmentEntries,
                      (const char **, bool), envp, append);
+  SetEnvironment(SBEnvironment(Environment(envp)), append);
+}
 
-  Environment env(envp);
-  if (append)
-    m_opaque_sp->GetEnvironment().insert(env.begin(), env.end());
-  else
-    m_opaque_sp->GetEnvironment() = env;
+void SBLaunchInfo::SetEnvironment(const SBEnvironment &env, bool append) {
+  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetEnvironment,
+                     (const lldb::SBEnvironment &, bool), env, append);
+  Environment &refEnv = env.ref();
+  if (append) {
+    for (auto &KV : refEnv)
+      m_opaque_sp->GetEnvironment().insert_or_assign(KV.first(), KV.second);
+  } else
+    m_opaque_sp->GetEnvironment() = refEnv;
   m_opaque_sp->RegenerateEnvp();
+}
+
+SBEnvironment SBLaunchInfo::GetEnvironment() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBEnvironment, SBLaunchInfo, GetEnvironment);
+  return LLDB_RECORD_RESULT(
+      SBEnvironment(Environment(m_opaque_sp->GetEnvironment())));
 }
 
 void SBLaunchInfo::Clear() {
@@ -316,12 +347,62 @@ bool SBLaunchInfo::GetDetachOnError() const {
   return m_opaque_sp->GetDetachOnError();
 }
 
+const char *SBLaunchInfo::GetScriptedProcessClassName() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBLaunchInfo,
+                                   GetScriptedProcessClassName);
+
+  // Constify this string so that it is saved in the string pool.  Otherwise it
+  // would be freed when this function goes out of scope.
+  ConstString class_name(m_opaque_sp->GetScriptedProcessClassName().c_str());
+  return class_name.AsCString();
+}
+
+void SBLaunchInfo::SetScriptedProcessClassName(const char *class_name) {
+  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetScriptedProcessClassName,
+                     (const char *), class_name);
+
+  m_opaque_sp->SetScriptedProcessClassName(class_name);
+}
+
+lldb::SBStructuredData SBLaunchInfo::GetScriptedProcessDictionary() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBStructuredData, SBLaunchInfo,
+                                   GetScriptedProcessDictionary);
+
+  lldb_private::StructuredData::DictionarySP dict_sp =
+      m_opaque_sp->GetScriptedProcessDictionarySP();
+
+  SBStructuredData data;
+  data.m_impl_up->SetObjectSP(dict_sp);
+
+  return LLDB_RECORD_RESULT(data);
+}
+
+void SBLaunchInfo::SetScriptedProcessDictionary(lldb::SBStructuredData dict) {
+  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetScriptedProcessDictionary,
+                     (lldb::SBStructuredData), dict);
+
+  SBStream stream;
+  SBError error = dict.GetAsJSON(stream);
+
+  if (error.Fail())
+    return;
+
+  StructuredData::DictionarySP dict_sp;
+  llvm::json::OStream s(stream.ref().AsRawOstream());
+  dict_sp->Serialize(s);
+
+  m_opaque_sp->SetScriptedProcessDictionarySP(dict_sp);
+}
+
 namespace lldb_private {
 namespace repro {
 
 template <>
 void RegisterMethods<SBLaunchInfo>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBLaunchInfo, (const char **));
+  LLDB_REGISTER_CONSTRUCTOR(SBLaunchInfo, (const lldb::SBLaunchInfo &));
+  LLDB_REGISTER_METHOD(SBLaunchInfo &,
+                       SBLaunchInfo, operator=,(const lldb::SBLaunchInfo &));
   LLDB_REGISTER_METHOD(lldb::pid_t, SBLaunchInfo, GetProcessID, ());
   LLDB_REGISTER_METHOD(uint32_t, SBLaunchInfo, GetUserID, ());
   LLDB_REGISTER_METHOD(uint32_t, SBLaunchInfo, GetGroupID, ());
@@ -373,6 +454,17 @@ void RegisterMethods<SBLaunchInfo>(Registry &R) {
                              ());
   LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetDetachOnError, (bool));
   LLDB_REGISTER_METHOD_CONST(bool, SBLaunchInfo, GetDetachOnError, ());
+  LLDB_REGISTER_METHOD_CONST(const char *, SBLaunchInfo,
+                             GetScriptedProcessClassName, ());
+  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetScriptedProcessClassName,
+                       (const char *));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBStructuredData, SBLaunchInfo,
+                             GetScriptedProcessDictionary, ());
+  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetScriptedProcessDictionary,
+                       (lldb::SBStructuredData));
+  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetEnvironment,
+                       (const lldb::SBEnvironment &, bool));
+  LLDB_REGISTER_METHOD(lldb::SBEnvironment, SBLaunchInfo, GetEnvironment, ());
 }
 
 }

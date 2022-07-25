@@ -1,4 +1,4 @@
-//===-- SBBroadcaster.cpp ---------------------------------------*- C++ -*-===//
+//===-- SBBroadcaster.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBBroadcaster::SBBroadcaster() : m_opaque_sp(), m_opaque_ptr(nullptr) {
+SBBroadcaster::SBBroadcaster() : m_opaque_sp() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBBroadcaster);
 }
 

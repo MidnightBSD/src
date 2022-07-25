@@ -38,6 +38,21 @@ class ScalarEvolution;
 class Type;
 class Value;
 
+namespace TailPredication {
+  enum Mode {
+    Disabled = 0,
+    EnabledNoReductions,
+    Enabled,
+    ForceEnabledNoReductions,
+    ForceEnabled
+  };
+}
+
+// For controlling conversion of memcpy into Tail Predicated loop.
+namespace TPLoop {
+enum MemTransfer { ForceDisabled = 0, ForceEnabled, Allow };
+}
+
 class ARMTTIImpl : public BasicTTIImplBase<ARMTTIImpl> {
   using BaseT = BasicTTIImplBase<ARMTTIImpl>;
   using TTI = TargetTransformInfo;
@@ -47,13 +62,13 @@ class ARMTTIImpl : public BasicTTIImplBase<ARMTTIImpl> {
   const ARMSubtarget *ST;
   const ARMTargetLowering *TLI;
 
-  // Currently the following features are excluded from InlineFeatureWhitelist.
+  // Currently the following features are excluded from InlineFeaturesAllowed.
   // ModeThumb, FeatureNoARM, ModeSoftFloat, FeatureFP64, FeatureD32
   // Depending on whether they are set or unset, different
   // instructions/registers are available. For example, inlining a callee with
   // -thumb-mode in a caller with +thumb-mode, may cause the assembler to
   // fail if the callee uses ARM only instructions, e.g. in inline asm.
-  const FeatureBitset InlineFeatureWhitelist = {
+  const FeatureBitset InlineFeaturesAllowed = {
       ARM::FeatureVFP2, ARM::FeatureVFP3, ARM::FeatureNEON, ARM::FeatureThumb2,
       ARM::FeatureFP16, ARM::FeatureVFP4, ARM::FeatureFPARMv8,
       ARM::FeatureFullFP16, ARM::FeatureFP16FML, ARM::FeatureHWDivThumb,
@@ -93,11 +108,8 @@ public:
 
   bool enableInterleavedAccessVectorization() { return true; }
 
-  bool shouldFavorBackedgeIndex(const Loop *L) const {
-    if (L->getHeader()->getParent()->hasOptSize())
-      return false;
-    return ST->isMClass() && ST->isThumb2() && L->getNumBlocks() == 1;
-  }
+  TTI::AddressingModeKind
+    getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const;
 
   /// Floating-point computation using ARMv8 AArch32 Advanced
   /// SIMD instructions remains unchanged from ARMv7. Only AArch64 SIMD
@@ -106,16 +118,23 @@ public:
     return !ST->isTargetDarwin() && !ST->hasMVEFloatOps();
   }
 
+  Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
+                                               IntrinsicInst &II) const;
+
   /// \name Scalar TTI Implementations
   /// @{
 
-  int getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
-                            Type *Ty);
+  InstructionCost getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx,
+                                        const APInt &Imm, Type *Ty);
 
   using BaseT::getIntImmCost;
-  int getIntImmCost(const APInt &Imm, Type *Ty);
+  InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
+                                TTI::TargetCostKind CostKind);
 
-  int getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Imm, Type *Ty);
+  InstructionCost getIntImmCostInst(unsigned Opcode, unsigned Idx,
+                                    const APInt &Imm, Type *Ty,
+                                    TTI::TargetCostKind CostKind,
+                                    Instruction *Inst = nullptr);
 
   /// @}
 
@@ -137,75 +156,78 @@ public:
     return 13;
   }
 
-  unsigned getRegisterBitWidth(bool Vector) const {
-    if (Vector) {
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+    switch (K) {
+    case TargetTransformInfo::RGK_Scalar:
+      return TypeSize::getFixed(32);
+    case TargetTransformInfo::RGK_FixedWidthVector:
       if (ST->hasNEON())
-        return 128;
+        return TypeSize::getFixed(128);
       if (ST->hasMVEIntegerOps())
-        return 128;
-      return 0;
+        return TypeSize::getFixed(128);
+      return TypeSize::getFixed(0);
+    case TargetTransformInfo::RGK_ScalableVector:
+      return TypeSize::getScalable(0);
     }
-
-    return 32;
+    llvm_unreachable("Unsupported register kind");
   }
 
   unsigned getMaxInterleaveFactor(unsigned VF) {
     return ST->getMaxInterleaveFactor();
   }
 
-  bool isLegalMaskedLoad(Type *DataTy, MaybeAlign Alignment);
+  bool isProfitableLSRChainElement(Instruction *I);
 
-  bool isLegalMaskedStore(Type *DataTy, MaybeAlign Alignment) {
+  bool isLegalMaskedLoad(Type *DataTy, Align Alignment);
+
+  bool isLegalMaskedStore(Type *DataTy, Align Alignment) {
     return isLegalMaskedLoad(DataTy, Alignment);
   }
 
-  bool isLegalMaskedGather(Type *Ty, MaybeAlign Alignment);
+  bool isLegalMaskedGather(Type *Ty, Align Alignment);
 
-  bool isLegalMaskedScatter(Type *Ty, MaybeAlign Alignment) { return false; }
-
-  int getMemcpyCost(const Instruction *I);
-
-  int getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index, Type *SubTp);
-
-  bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
-                             TTI::ReductionFlags Flags) const;
-
-  bool shouldExpandReduction(const IntrinsicInst *II) const {
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::experimental_vector_reduce_v2_fadd:
-    case Intrinsic::experimental_vector_reduce_v2_fmul:
-      // We don't have legalization support for ordered FP reductions.
-      if (!II->getFastMathFlags().allowReassoc())
-        return true;
-      // Can't legalize reductions with soft floats.
-      return TLI->useSoftFloat() || !TLI->getSubtarget()->hasFPRegs();
-
-    case Intrinsic::experimental_vector_reduce_fmin:
-    case Intrinsic::experimental_vector_reduce_fmax:
-      // Can't legalize reductions with soft floats, and NoNan will create
-      // fminimum which we do not know how to lower.
-      return TLI->useSoftFloat() || !TLI->getSubtarget()->hasFPRegs() ||
-             !II->getFastMathFlags().noNaNs();
-
-    default:
-      // Don't expand anything else, let legalization deal with it.
-      return false;
-    }
+  bool isLegalMaskedScatter(Type *Ty, Align Alignment) {
+    return isLegalMaskedGather(Ty, Alignment);
   }
 
-  int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                       const Instruction *I = nullptr);
+  InstructionCost getMemcpyCost(const Instruction *I);
 
-  int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
-                         const Instruction *I = nullptr);
+  int getNumMemOps(const IntrinsicInst *I) const;
 
-  int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
+  InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
+                                 ArrayRef<int> Mask, int Index,
+                                 VectorType *SubTp);
 
-  int getAddressComputationCost(Type *Val, ScalarEvolution *SE,
-                                const SCEV *Ptr);
+  bool preferInLoopReduction(unsigned Opcode, Type *Ty,
+                             TTI::ReductionFlags Flags) const;
 
-  int getArithmeticInstrCost(
+  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
+                                       TTI::ReductionFlags Flags) const;
+
+  bool shouldExpandReduction(const IntrinsicInst *II) const { return false; }
+
+  InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                                 const Instruction *I = nullptr);
+
+  InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                                   TTI::CastContextHint CCH,
+                                   TTI::TargetCostKind CostKind,
+                                   const Instruction *I = nullptr);
+
+  InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                                     CmpInst::Predicate VecPred,
+                                     TTI::TargetCostKind CostKind,
+                                     const Instruction *I = nullptr);
+
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     unsigned Index);
+
+  InstructionCost getAddressComputationCost(Type *Val, ScalarEvolution *SE,
+                                            const SCEV *Ptr);
+
+  InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueKind Op1Info = TTI::OK_AnyValue,
       TTI::OperandValueKind Op2Info = TTI::OK_AnyValue,
       TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
@@ -213,15 +235,38 @@ public:
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr);
 
-  int getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
-                      unsigned AddressSpace, const Instruction *I = nullptr);
+  InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
+                                  MaybeAlign Alignment, unsigned AddressSpace,
+                                  TTI::TargetCostKind CostKind,
+                                  const Instruction *I = nullptr);
 
-  int getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy, unsigned Factor,
-                                 ArrayRef<unsigned> Indices, unsigned Alignment,
-                                 unsigned AddressSpace,
-                                 bool UseMaskForCond = false,
-                                 bool UseMaskForGaps = false);
+  InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
+                                        Align Alignment, unsigned AddressSpace,
+                                        TTI::TargetCostKind CostKind);
 
+  InstructionCost getInterleavedMemoryOpCost(
+      unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+      Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
+      bool UseMaskForCond = false, bool UseMaskForGaps = false);
+
+  InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
+                                         const Value *Ptr, bool VariableMask,
+                                         Align Alignment,
+                                         TTI::TargetCostKind CostKind,
+                                         const Instruction *I = nullptr);
+
+  InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
+                                             Optional<FastMathFlags> FMF,
+                                             TTI::TargetCostKind CostKind);
+  InstructionCost getExtendedAddReductionCost(bool IsMLA, bool IsUnsigned,
+                                              Type *ResTy, VectorType *ValTy,
+                                              TTI::TargetCostKind CostKind);
+
+  InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                        TTI::TargetCostKind CostKind);
+
+  bool maybeLoweredToCall(Instruction &I);
   bool isLoweredToCall(const Function *F);
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                 AssumptionCache &AC,
@@ -236,17 +281,50 @@ public:
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);
 
+  bool emitGetActiveLaneMask() const;
+
+  void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                             TTI::PeelingPreferences &PP);
   bool shouldBuildLookupTablesForConstant(Constant *C) const {
     // In the ROPI and RWPI relocation models we can't have pointers to global
     // variables or functions in constant data, so don't convert switches to
     // lookup tables if any of the values would need relocation.
     if (ST->isROPI() || ST->isRWPI())
-      return !C->needsRelocation();
+      return !C->needsDynamicRelocation();
 
     return true;
   }
   /// @}
 };
+
+/// isVREVMask - Check if a vector shuffle corresponds to a VREV
+/// instruction with the specified blocksize.  (The order of the elements
+/// within each block of the vector is reversed.)
+inline bool isVREVMask(ArrayRef<int> M, EVT VT, unsigned BlockSize) {
+  assert((BlockSize == 16 || BlockSize == 32 || BlockSize == 64) &&
+         "Only possible block sizes for VREV are: 16, 32, 64");
+
+  unsigned EltSz = VT.getScalarSizeInBits();
+  if (EltSz != 8 && EltSz != 16 && EltSz != 32)
+    return false;
+
+  unsigned BlockElts = M[0] + 1;
+  // If the first shuffle index is UNDEF, be optimistic.
+  if (M[0] < 0)
+    BlockElts = BlockSize / EltSz;
+
+  if (BlockSize <= EltSz || BlockSize != BlockElts * EltSz)
+    return false;
+
+  for (unsigned i = 0, e = M.size(); i < e; ++i) {
+    if (M[i] < 0)
+      continue; // ignore UNDEF indices
+    if ((unsigned)M[i] != (i - i % BlockElts) + (BlockElts - 1 - i % BlockElts))
+      return false;
+  }
+
+  return true;
+}
 
 } // end namespace llvm
 

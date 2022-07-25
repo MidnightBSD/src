@@ -1,4 +1,4 @@
-//===-- EmulationStateARM.cpp -----------------------------------*- C++ -*-===//
+//===-- EmulationStateARM.cpp ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,11 +20,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
-EmulationStateARM::EmulationStateARM() : m_gpr(), m_vfp_regs(), m_memory() {
+EmulationStateARM::EmulationStateARM() : m_vfp_regs(), m_memory() {
   ClearPseudoRegisters();
 }
 
-EmulationStateARM::~EmulationStateARM() {}
+EmulationStateARM::~EmulationStateARM() = default;
 
 bool EmulationStateARM::LoadPseudoRegistersFromFrame(StackFrame &frame) {
   RegisterContext *reg_ctx = frame.GetRegisterContext().get();

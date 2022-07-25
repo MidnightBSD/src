@@ -1,4 +1,4 @@
-//===-- TypeMap.cpp --------------------------------------------*- C++ -*-===//
+//===-- TypeMap.cpp -------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,7 +22,7 @@ using namespace lldb_private;
 TypeMap::TypeMap() : m_types() {}
 
 // Destructor
-TypeMap::~TypeMap() {}
+TypeMap::~TypeMap() = default;
 
 void TypeMap::Insert(const TypeSP &type_sp) {
   // Just push each type on the back for now. We will worry about uniquing
@@ -121,9 +121,9 @@ bool TypeMap::Remove(const lldb::TypeSP &type_sp) {
   return false;
 }
 
-void TypeMap::Dump(Stream *s, bool show_context) {
+void TypeMap::Dump(Stream *s, bool show_context, lldb::DescriptionLevel level) {
   for (iterator pos = m_types.begin(), end = m_types.end(); pos != end; ++pos) {
-    pos->second->Dump(s, show_context);
+    pos->second->Dump(s, show_context, level);
   }
 }
 
@@ -137,7 +137,8 @@ void TypeMap::RemoveMismatchedTypes(const char *qualified_typename,
     type_basename = qualified_typename;
     type_scope = "";
   }
-  return RemoveMismatchedTypes(type_scope, type_basename, type_class,
+  return RemoveMismatchedTypes(std::string(type_scope),
+                               std::string(type_basename), type_class,
                                exact_match);
 }
 

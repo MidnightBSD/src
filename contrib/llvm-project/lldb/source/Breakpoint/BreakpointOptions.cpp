@@ -1,4 +1,4 @@
-//===-- BreakpointOptions.cpp -----------------------------------*- C++ -*-===//
+//===-- BreakpointOptions.cpp ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -154,7 +154,7 @@ BreakpointOptions::BreakpointOptions(const BreakpointOptions &rhs)
       m_ignore_count(rhs.m_ignore_count), m_thread_spec_up(),
       m_auto_continue(rhs.m_auto_continue), m_set_flags(rhs.m_set_flags) {
   if (rhs.m_thread_spec_up != nullptr)
-    m_thread_spec_up.reset(new ThreadSpec(*rhs.m_thread_spec_up));
+    m_thread_spec_up = std::make_unique<ThreadSpec>(*rhs.m_thread_spec_up);
   m_condition_text = rhs.m_condition_text;
   m_condition_text_hash = rhs.m_condition_text_hash;
 }
@@ -170,7 +170,7 @@ operator=(const BreakpointOptions &rhs) {
   m_one_shot = rhs.m_one_shot;
   m_ignore_count = rhs.m_ignore_count;
   if (rhs.m_thread_spec_up != nullptr)
-    m_thread_spec_up.reset(new ThreadSpec(*rhs.m_thread_spec_up));
+    m_thread_spec_up = std::make_unique<ThreadSpec>(*rhs.m_thread_spec_up);
   m_condition_text = rhs.m_condition_text;
   m_condition_text_hash = rhs.m_condition_text_hash;
   m_auto_continue = rhs.m_auto_continue;
@@ -223,7 +223,8 @@ void BreakpointOptions::CopyOverSetOptions(const BreakpointOptions &incoming)
   }
   if (incoming.m_set_flags.Test(eThreadSpec) && incoming.m_thread_spec_up) {
     if (!m_thread_spec_up)
-      m_thread_spec_up.reset(new ThreadSpec(*incoming.m_thread_spec_up));
+      m_thread_spec_up =
+          std::make_unique<ThreadSpec>(*incoming.m_thread_spec_up);
     else
       *m_thread_spec_up = *incoming.m_thread_spec_up;
     m_set_flags.Set(eThreadSpec);
@@ -318,7 +319,7 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
     else {
       ScriptInterpreter *interp = target.GetDebugger().GetScriptInterpreter();
       if (!interp) {
-        error.SetErrorStringWithFormat(
+        error.SetErrorString(
             "Can't set script commands - no script interpreter");
         return nullptr;
       }
@@ -331,7 +332,7 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
       }
       Status script_error;
       script_error =
-          interp->SetBreakpointCommandCallback(bp_options.get(), cmd_data_up);
+          interp->SetBreakpointCommandCallback(*bp_options, cmd_data_up);
       if (script_error.Fail()) {
         error.SetErrorStringWithFormat("Error generating script callback: %s.",
                                        error.AsCString());
@@ -452,8 +453,6 @@ bool BreakpointOptions::InvokeCallback(StoppointCallbackContext *context,
                                           : nullptr,
                       context, break_id, break_loc_id);
     } else if (IsCallbackSynchronous()) {
-      // If a synchronous callback is called at async time, it should not say
-      // to stop.
       return false;
     }
   }
@@ -509,7 +508,7 @@ const ThreadSpec *BreakpointOptions::GetThreadSpecNoCreate() const {
 ThreadSpec *BreakpointOptions::GetThreadSpec() {
   if (m_thread_spec_up == nullptr) {
     m_set_flags.Set(eThreadSpec);
-    m_thread_spec_up.reset(new ThreadSpec());
+    m_thread_spec_up = std::make_unique<ThreadSpec>();
   }
 
   return m_thread_spec_up.get();
@@ -630,11 +629,11 @@ bool BreakpointOptions::BreakpointOptionsCallbackFunction(
     ExecutionContext exe_ctx(context->exe_ctx_ref);
     Target *target = exe_ctx.GetTargetPtr();
     if (target) {
-      CommandReturnObject result;
       Debugger &debugger = target->GetDebugger();
+      CommandReturnObject result(debugger.GetUseColor());
+
       // Rig up the results secondary output stream to the debugger's, so the
       // output will come out synchronously if the debugger is set up that way.
-
       StreamSP output_stream(debugger.GetAsyncOutputStream());
       StreamSP error_stream(debugger.GetAsyncErrorStream());
       result.SetImmediateOutputStream(output_stream);
@@ -648,7 +647,7 @@ bool BreakpointOptions::BreakpointOptionsCallbackFunction(
       options.SetPrintErrors(true);
       options.SetAddToHistory(false);
 
-      debugger.GetCommandInterpreter().HandleCommands(commands, &exe_ctx,
+      debugger.GetCommandInterpreter().HandleCommands(commands, exe_ctx,
                                                       options, result);
       result.GetImmediateOutputStream()->Flush();
       result.GetImmediateErrorStream()->Flush();

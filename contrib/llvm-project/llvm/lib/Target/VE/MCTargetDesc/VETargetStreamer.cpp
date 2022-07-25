@@ -11,8 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VETargetStreamer.h"
-#include "InstPrinter/VEInstPrinter.h"
-#include "llvm/Support/FormattedStream.h"
+#include "VEInstPrinter.h"
 
 using namespace llvm;
 

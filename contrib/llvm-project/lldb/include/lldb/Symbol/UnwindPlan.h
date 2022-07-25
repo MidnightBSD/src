@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_UnwindPlan_h
-#define liblldb_UnwindPlan_h
+#ifndef LLDB_SYMBOL_UNWINDPLAN_H
+#define LLDB_SYMBOL_UNWINDPLAN_H
 
 #include <map>
 #include <memory>
@@ -71,7 +71,7 @@ public:
         isDWARFExpression  // reg = eval(dwarf_expr)
       };
 
-      RegisterLocation() : m_type(unspecified), m_location() {}
+      RegisterLocation() : m_location() {}
 
       bool operator==(const RegisterLocation &rhs) const;
 
@@ -181,7 +181,7 @@ public:
                 const UnwindPlan::Row *row, Thread *thread, bool verbose) const;
 
     private:
-      RestoreType m_type; // How do we locate this register?
+      RestoreType m_type = unspecified; // How do we locate this register?
       union {
         // For m_type == atCFAPlusOffset or m_type == isCFAPlusOffset
         int32_t offset;
@@ -205,7 +205,7 @@ public:
         isRaSearch,             // FA = SP + offset + ???
       };
 
-      FAValue() : m_type(unspecified), m_value() {}
+      FAValue() : m_value() {}
 
       bool operator==(const FAValue &rhs) const;
 
@@ -301,7 +301,7 @@ public:
       void Dump(Stream &s, const UnwindPlan *unwind_plan, Thread *thread) const;
 
     private:
-      ValueType m_type; // How do we compute CFA value?
+      ValueType m_type = unspecified; // How do we compute CFA value?
       union {
         struct {
           // For m_type == isRegisterPlusOffset or m_type ==
@@ -320,10 +320,7 @@ public:
       } m_value;
     }; // class FAValue
 
-  public:
     Row();
-
-    Row(const UnwindPlan::Row &rhs) = default;
 
     bool operator==(const Row &rhs) const;
 
@@ -361,6 +358,25 @@ public:
 
     bool SetRegisterLocationToSame(uint32_t reg_num, bool must_replace);
 
+    // When this UnspecifiedRegistersAreUndefined mode is
+    // set, any register that is not specified by this Row will
+    // be described as Undefined.
+    // This will prevent the unwinder from iterating down the
+    // stack looking for a spill location, or a live register value
+    // at frame 0.
+    // It would be used for an UnwindPlan row where we can't track
+    // spilled registers -- for instance a jitted stack frame where
+    // we have no unwind information or start address -- and registers
+    // MAY have been spilled and overwritten, so providing the
+    // spilled/live value from a newer frame may show an incorrect value.
+    void SetUnspecifiedRegistersAreUndefined(bool unspec_is_undef) {
+      m_unspecified_registers_are_undefined = unspec_is_undef;
+    }
+
+    bool GetUnspecifiedRegistersAreUndefined() {
+      return m_unspecified_registers_are_undefined;
+    }
+
     void Clear();
 
     void Dump(Stream &s, const UnwindPlan *unwind_plan, Thread *thread,
@@ -368,14 +384,14 @@ public:
 
   protected:
     typedef std::map<uint32_t, RegisterLocation> collection;
-    lldb::addr_t m_offset; // Offset into the function for this row
+    lldb::addr_t m_offset = 0; // Offset into the function for this row
 
     FAValue m_cfa_value;
     FAValue m_afa_value;
     collection m_register_locations;
+    bool m_unspecified_registers_are_undefined = false;
   }; // class Row
 
-public:
   typedef std::shared_ptr<Row> RowSP;
 
   UnwindPlan(lldb::RegisterKind reg_kind)
@@ -395,6 +411,7 @@ public:
         m_plan_is_sourced_from_compiler(rhs.m_plan_is_sourced_from_compiler),
         m_plan_is_valid_at_all_instruction_locations(
             rhs.m_plan_is_valid_at_all_instruction_locations),
+        m_plan_is_for_signal_trap(rhs.m_plan_is_for_signal_trap),
         m_lsda_address(rhs.m_lsda_address),
         m_personality_func_addr(rhs.m_personality_func_addr) {
     m_row_list.reserve(rhs.m_row_list.size());
@@ -540,4 +557,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_UnwindPlan_h
+#endif // LLDB_SYMBOL_UNWINDPLAN_H

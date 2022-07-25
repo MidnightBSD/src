@@ -1,4 +1,4 @@
-//===--------------------- ModuleCache.cpp ----------------------*- C++ -*-===//
+//===-- ModuleCache.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 
-#include <assert.h>
+#include <cassert>
 
 #include <cstdio>
 
@@ -169,7 +169,7 @@ ModuleLock::ModuleLock(const FileSpec &root_dir_spec, const UUID &uuid,
     return;
   }
 
-  m_lock.reset(new lldb_private::LockFile(m_file_up->GetDescriptor()));
+  m_lock = std::make_unique<lldb_private::LockFile>(m_file_up->GetDescriptor());
   error = m_lock->WriteLock(0, 1);
   if (error.Fail())
     error.SetErrorStringWithFormat("Failed to lock file: %s",

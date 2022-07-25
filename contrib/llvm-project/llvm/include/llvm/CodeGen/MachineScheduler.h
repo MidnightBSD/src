@@ -74,13 +74,13 @@
 #ifndef LLVM_CODEGEN_MACHINESCHEDULER_H
 #define LLVM_CODEGEN_MACHINESCHEDULER_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/RegisterPressure.h"
@@ -102,6 +102,7 @@ extern cl::opt<bool> ForceTopDown;
 extern cl::opt<bool> ForceBottomUp;
 extern cl::opt<bool> VerifyScheduling;
 
+class AAResults;
 class LiveIntervals;
 class MachineDominatorTree;
 class MachineFunction;
@@ -121,7 +122,7 @@ struct MachineSchedContext {
   const MachineLoopInfo *MLI = nullptr;
   const MachineDominatorTree *MDT = nullptr;
   const TargetPassConfig *PassConfig = nullptr;
-  AliasAnalysis *AA = nullptr;
+  AAResults *AA = nullptr;
   LiveIntervals *LIS = nullptr;
 
   RegisterClassInfo *RegClassInfo;
@@ -185,6 +186,9 @@ struct MachineSchedPolicy {
   // Disable heuristic that tries to fetch nodes from long dependency chains
   // first.
   bool DisableLatencyHeuristic = false;
+
+  // Compute DFSResult for use in scheduling heuristics.
+  bool ComputeDFSResult = false;
 
   MachineSchedPolicy() = default;
 };
@@ -261,7 +265,7 @@ public:
 /// PreRA and PostRA MachineScheduler.
 class ScheduleDAGMI : public ScheduleDAGInstrs {
 protected:
-  AliasAnalysis *AA;
+  AAResults *AA;
   LiveIntervals *LIS;
   std::unique_ptr<MachineSchedStrategy> SchedImpl;
 
@@ -671,6 +675,9 @@ private:
   // it.
   SmallVector<unsigned, 16> ReservedCyclesIndex;
 
+  // For each PIdx, stores the resource group IDs of its subunits
+  SmallVector<APInt, 16> ResourceGroupSubUnitMasks;
+
 #ifndef NDEBUG
   // Remember the greatest possible stall as an upper bound on the number of
   // times we should retry the pending queue because of a hazard.
@@ -748,8 +755,14 @@ public:
   unsigned getNextResourceCycleByInstance(unsigned InstanceIndex,
                                           unsigned Cycles);
 
-  std::pair<unsigned, unsigned> getNextResourceCycle(unsigned PIdx,
+  std::pair<unsigned, unsigned> getNextResourceCycle(const MCSchedClassDesc *SC,
+                                                     unsigned PIdx,
                                                      unsigned Cycles);
+
+  bool isUnbufferedGroup(unsigned PIdx) const {
+    return SchedModel->getProcResource(PIdx)->SubUnitsIdxBegin &&
+           !SchedModel->getProcResource(PIdx)->BufferSize;
+  }
 
   bool checkHazard(SUnit *SU);
 
@@ -772,7 +785,8 @@ public:
 
   void incExecutedResources(unsigned PIdx, unsigned Count);
 
-  unsigned countResource(unsigned PIdx, unsigned Cycles, unsigned ReadyCycle);
+  unsigned countResource(const MCSchedClassDesc *SC, unsigned PIdx,
+                         unsigned Cycles, unsigned ReadyCycle);
 
   void bumpNode(SUnit *SU);
 
@@ -998,7 +1012,7 @@ protected:
                      const RegPressureTracker &RPTracker,
                      RegPressureTracker &TempTracker);
 
-  virtual void tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
+  virtual bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
                             SchedBoundary *Zone) const;
 
   SUnit *pickNodeBidirectional(bool &IsTopNode);
@@ -1061,7 +1075,7 @@ public:
   }
 
 protected:
-  void tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand);
+  virtual bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand);
 
   void pickNodeFromQueue(SchedCandidate &Cand);
 };

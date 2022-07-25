@@ -8,6 +8,9 @@
 
 namespace lldb {
 
+%feature("docstring",
+"Describes how a target or program should be launched."
+) SBLaunchInfo;
 class SBLaunchInfo
 {
 public:
@@ -63,6 +66,12 @@ public:
 
     void
     SetEnvironmentEntries (const char **envp, bool append);
+
+    void
+    SetEnvironment(const SBEnvironment &env, bool append);
+
+    SBEnvironment
+    GetEnvironment();
 
     void
     Clear ();
@@ -126,6 +135,16 @@ public:
 
     void
     SetDetachOnError(bool enable);
+
+    const char *
+    GetScriptedProcessClassName() const;
+
+    void SetScriptedProcessClassName(const char *class_name);
+
+    lldb::SBStructuredData
+    GetScriptedProcessDictionary() const;
+
+    void SetScriptedProcessDictionary(lldb::SBStructuredData dict);
 };
 
 } // namespace lldb

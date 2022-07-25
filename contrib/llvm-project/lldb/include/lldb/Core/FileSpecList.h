@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_FileSpecList_h_
-#define liblldb_FileSpecList_h_
+#ifndef LLDB_CORE_FILESPECLIST_H
+#define LLDB_CORE_FILESPECLIST_H
 #if defined(__cplusplus)
 
 #include "lldb/Utility/FileSpec.h"
 
 #include <vector>
 
-#include <stddef.h>
+#include <cstddef>
 
 namespace lldb_private {
 class Stream;
@@ -204,4 +204,4 @@ protected:
 } // namespace lldb_private
 
 #endif // #if defined(__cplusplus)
-#endif // liblldb_FileSpecList_h_
+#endif // LLDB_CORE_FILESPECLIST_H

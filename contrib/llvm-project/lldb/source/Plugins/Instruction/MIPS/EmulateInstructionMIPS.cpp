@@ -1,4 +1,4 @@
-//===-- EmulateInstructionMIPS.cpp -------------------------------*- C++-*-===//
+//===-- EmulateInstructionMIPS.cpp ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 
 #include "EmulateInstructionMIPS.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Opcode.h"
@@ -39,6 +39,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE_ADV(EmulateInstructionMIPS, InstructionMIPS)
 
 #define UInt(x) ((uint64_t)x)
 #define integer int64_t
@@ -157,8 +159,8 @@ EmulateInstructionMIPS::EmulateInstructionMIPS(
       target->createMCSubtargetInfo(triple.getTriple(), cpu, features));
   assert(m_asm_info.get() && m_subtype_info.get());
 
-  m_context.reset(
-      new llvm::MCContext(m_asm_info.get(), m_reg_info.get(), nullptr));
+  m_context = std::make_unique<llvm::MCContext>(
+      triple, m_asm_info.get(), m_reg_info.get(), m_subtype_info.get());
   assert(m_context.get());
 
   m_disasm.reset(target->createMCDisassembler(*m_subtype_info, *m_context));
@@ -1016,8 +1018,9 @@ bool EmulateInstructionMIPS::SetInstruction(const Opcode &insn_opcode,
 
       const size_t bytes_read =
           target->ReadMemory(next_addr, /* Address of next instruction */
-                             true,      /* prefer_file_cache */
-                             buf, sizeof(uint32_t), error, &load_addr);
+                             buf, sizeof(uint32_t), error, 
+                             false,  /* force_live_memory */
+                             &load_addr);
 
       if (bytes_read == 0)
         return true;

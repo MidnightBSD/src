@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_BreakpointSite_h_
-#define liblldb_BreakpointSite_h_
-
+#ifndef LLDB_BREAKPOINT_BREAKPOINTSITE_H
+#define LLDB_BREAKPOINT_BREAKPOINTSITE_H
 
 #include <list>
 #include <mutex>
 
 
 #include "lldb/Breakpoint/BreakpointLocationCollection.h"
-#include "lldb/Breakpoint/StoppointLocation.h"
+#include "lldb/Breakpoint/StoppointSite.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-forward.h"
 
@@ -33,7 +33,7 @@ namespace lldb_private {
 /// by the process.
 
 class BreakpointSite : public std::enable_shared_from_this<BreakpointSite>,
-                       public StoppointLocation {
+                       public StoppointSite {
 public:
   enum Type {
     eSoftware, // Breakpoint opcode has been written to memory and
@@ -148,7 +148,7 @@ public:
   /// return
   ///     \b true if the collection contains at least one location that
   ///     would be valid for this thread, false otherwise.
-  bool ValidForThisThread(Thread *thread);
+  bool ValidForThisThread(Thread &thread);
 
   /// Print a description of this breakpoint site to the stream \a s.
   /// GetDescription tells you about the breakpoint site's owners. Use
@@ -182,6 +182,12 @@ public:
   ///     \b true if all breakpoint locations are owned by internal breakpoints,
   ///     \b false otherwise.
   bool IsInternal() const;
+
+  bool IsHardware() const override {
+    lldbassert(BreakpointSite::Type::eHardware == GetType() ||
+               !HardwareRequired());
+    return BreakpointSite::Type::eHardware == GetType();
+  }
 
   BreakpointSite::Type GetType() const { return m_type; }
 
@@ -224,9 +230,10 @@ private:
                  const lldb::BreakpointLocationSP &owner, lldb::addr_t m_addr,
                  bool use_hardware);
 
-  DISALLOW_COPY_AND_ASSIGN(BreakpointSite);
+  BreakpointSite(const BreakpointSite &) = delete;
+  const BreakpointSite &operator=(const BreakpointSite &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_BreakpointSite_h_
+#endif // LLDB_BREAKPOINT_BREAKPOINTSITE_H

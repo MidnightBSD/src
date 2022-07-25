@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_VMRange_h_
-#define liblldb_VMRange_h_
+#ifndef LLDB_UTILITY_VMRANGE_H
+#define LLDB_UTILITY_VMRANGE_H
 
 #include "lldb/lldb-types.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 #include <vector>
 
 namespace lldb_private {
@@ -26,13 +26,13 @@ public:
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
 
-  VMRange() : m_base_addr(0), m_byte_size(0) {}
+  VMRange() = default;
 
   VMRange(lldb::addr_t start_addr, lldb::addr_t end_addr)
       : m_base_addr(start_addr),
         m_byte_size(end_addr > start_addr ? end_addr - start_addr : 0) {}
 
-  ~VMRange() {}
+  ~VMRange() = default;
 
   void Clear() {
     m_base_addr = 0;
@@ -88,8 +88,8 @@ public:
                             const VMRange &range);
 
 protected:
-  lldb::addr_t m_base_addr;
-  lldb::addr_t m_byte_size;
+  lldb::addr_t m_base_addr = 0;
+  lldb::addr_t m_byte_size = 0;
 };
 
 bool operator==(const VMRange &lhs, const VMRange &rhs);
@@ -101,4 +101,4 @@ bool operator>=(const VMRange &lhs, const VMRange &rhs);
 
 } // namespace lldb_private
 
-#endif // liblldb_VMRange_h_
+#endif // LLDB_UTILITY_VMRANGE_H

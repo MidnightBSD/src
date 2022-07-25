@@ -1,4 +1,4 @@
-//===-- Property.cpp --------------------------------------------*- C++ -*-===//
+//===-- Property.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,7 +22,7 @@ using namespace lldb_private;
 
 Property::Property(const PropertyDefinition &definition)
     : m_name(definition.name), m_description(definition.description),
-      m_value_sp(), m_is_global(definition.global) {
+      m_is_global(definition.global) {
   switch (definition.type) {
   case OptionValue::eTypeInvalid:
   case OptionValue::eTypeProperties:
@@ -97,6 +97,12 @@ Property::Property(const PropertyDefinition &definition)
         }
       }
     }
+    break;
+
+  case OptionValue::eTypeFileLineColumn:
+    // "definition.default_uint_value" is not used for a
+    // OptionValue::eTypeFileSpecList
+    m_value_sp = std::make_shared<OptionValueFileColonLine>();
     break;
 
   case OptionValue::eTypeFileSpec: {

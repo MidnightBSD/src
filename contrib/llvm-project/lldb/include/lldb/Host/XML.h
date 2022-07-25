@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_XML_h_
-#define liblldb_XML_h_
+#ifndef LLDB_HOST_XML_H
+#define LLDB_HOST_XML_H
 
 #include "lldb/Host/Config.h"
 
@@ -107,7 +107,7 @@ public:
   void ForEachAttribute(AttributeCallback const &callback) const;
 
 protected:
-  XMLNodeImpl m_node;
+  XMLNodeImpl m_node = nullptr;
 };
 
 class XMLDocument {
@@ -138,7 +138,7 @@ public:
   static bool XMLEnabled();
 
 protected:
-  XMLDocumentImpl m_document;
+  XMLDocumentImpl m_document = nullptr;
   StreamString m_errors;
 };
 
@@ -179,4 +179,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_XML_h_
+#endif // LLDB_HOST_XML_H

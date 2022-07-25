@@ -19,6 +19,7 @@
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -195,7 +196,7 @@ static unsigned getSubOpcode(bool Is64Bit, int64_t Amount) {
 }
 
 void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
-  DebugLoc DL = MI->getDebugLoc();
+  const DebugLoc &DL = MI->getDebugLoc();
   MachineBasicBlock *MBB = MI->getParent();
   MachineBasicBlock::iterator I = *MI;
 

@@ -9,7 +9,6 @@
 #ifndef LLVM_MC_MCFIXUP_H
 #define LLVM_MC_MCFIXUP_H
 
-#include "llvm/MC/MCExpr.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
@@ -42,22 +41,17 @@ enum MCFixupKind {
   FK_SecRel_2,    ///< A two-byte section relative fixup.
   FK_SecRel_4,    ///< A four-byte section relative fixup.
   FK_SecRel_8,    ///< A eight-byte section relative fixup.
-  FK_Data_Add_1,  ///< A one-byte add fixup.
-  FK_Data_Add_2,  ///< A two-byte add fixup.
-  FK_Data_Add_4,  ///< A four-byte add fixup.
-  FK_Data_Add_8,  ///< A eight-byte add fixup.
-  FK_Data_Add_6b, ///< A six-bits add fixup.
-  FK_Data_Sub_1,  ///< A one-byte sub fixup.
-  FK_Data_Sub_2,  ///< A two-byte sub fixup.
-  FK_Data_Sub_4,  ///< A four-byte sub fixup.
-  FK_Data_Sub_8,  ///< A eight-byte sub fixup.
-  FK_Data_Sub_6b, ///< A six-bits sub fixup.
 
   FirstTargetFixupKind = 128,
 
-  // Limit range of target fixups, in case we want to pack more efficiently
-  // later.
-  MaxTargetFixupKind = (1 << 8)
+  /// The range [FirstLiteralRelocationKind, MaxTargetFixupKind) is used for
+  /// relocations coming from .reloc directive. Fixup kind
+  /// FirstLiteralRelocationKind+V represents the relocation type with number V.
+  FirstLiteralRelocationKind = 256,
+
+  /// Set limit to accommodate the highest reloc type in use for all Targets,
+  /// currently R_AARCH64_IRELATIVE at 1032, including room for expansion.
+  MaxFixupKind = FirstLiteralRelocationKind + 1032 + 32,
 };
 
 /// Encode information on a single operation to perform on a byte
@@ -92,34 +86,12 @@ class MCFixup {
 public:
   static MCFixup create(uint32_t Offset, const MCExpr *Value,
                         MCFixupKind Kind, SMLoc Loc = SMLoc()) {
-    assert(Kind < MaxTargetFixupKind && "Kind out of range!");
+    assert(Kind <= MaxFixupKind && "Kind out of range!");
     MCFixup FI;
     FI.Value = Value;
     FI.Offset = Offset;
     FI.Kind = Kind;
     FI.Loc = Loc;
-    return FI;
-  }
-
-  /// Return a fixup corresponding to the add half of a add/sub fixup pair for
-  /// the given Fixup.
-  static MCFixup createAddFor(const MCFixup &Fixup) {
-    MCFixup FI;
-    FI.Value = Fixup.getValue();
-    FI.Offset = Fixup.getOffset();
-    FI.Kind = getAddKindForKind(Fixup.getKind());
-    FI.Loc = Fixup.getLoc();
-    return FI;
-  }
-
-  /// Return a fixup corresponding to the sub half of a add/sub fixup pair for
-  /// the given Fixup.
-  static MCFixup createSubFor(const MCFixup &Fixup) {
-    MCFixup FI;
-    FI.Value = Fixup.getValue();
-    FI.Offset = Fixup.getOffset();
-    FI.Kind = getSubKindForKind(Fixup.getKind());
-    FI.Loc = Fixup.getLoc();
     return FI;
   }
 
@@ -165,32 +137,6 @@ public:
       return IsPCRel ? FK_PCRel_4 : FK_Data_4;
     case 64:
       return IsPCRel ? FK_PCRel_8 : FK_Data_8;
-    }
-  }
-
-  /// Return the generic fixup kind for an addition with a given size. It
-  /// is an error to pass an unsupported size.
-  static MCFixupKind getAddKindForKind(MCFixupKind Kind) {
-    switch (Kind) {
-    default: llvm_unreachable("Unknown type to convert!");
-    case FK_Data_1: return FK_Data_Add_1;
-    case FK_Data_2: return FK_Data_Add_2;
-    case FK_Data_4: return FK_Data_Add_4;
-    case FK_Data_8: return FK_Data_Add_8;
-    case FK_Data_6b: return FK_Data_Add_6b;
-    }
-  }
-
-  /// Return the generic fixup kind for an subtraction with a given size. It
-  /// is an error to pass an unsupported size.
-  static MCFixupKind getSubKindForKind(MCFixupKind Kind) {
-    switch (Kind) {
-    default: llvm_unreachable("Unknown type to convert!");
-    case FK_Data_1: return FK_Data_Sub_1;
-    case FK_Data_2: return FK_Data_Sub_2;
-    case FK_Data_4: return FK_Data_Sub_4;
-    case FK_Data_8: return FK_Data_Sub_8;
-    case FK_Data_6b: return FK_Data_Sub_6b;
     }
   }
 

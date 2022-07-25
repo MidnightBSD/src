@@ -1,4 +1,4 @@
-//===-- DomainSocket.cpp ----------------------------------------*- C++ -*-===//
+//===-- DomainSocket.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 
-#include <stddef.h>
+#include <cstddef>
 #include <sys/socket.h>
 #include <sys/un.h>
 
@@ -146,10 +146,10 @@ std::string DomainSocket::GetSocketName() const {
 
 std::string DomainSocket::GetRemoteConnectionURI() const {
   if (m_socket != kInvalidSocketValue) {
-    return llvm::formatv("{0}://{1}",
-                         GetNameOffset() == 0 ? "unix-connect"
-                                              : "unix-abstract-connect",
-                         GetSocketName());
+    return std::string(llvm::formatv(
+        "{0}://{1}",
+        GetNameOffset() == 0 ? "unix-connect" : "unix-abstract-connect",
+        GetSocketName()));
   }
   return "";
 }

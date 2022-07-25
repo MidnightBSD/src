@@ -1,4 +1,4 @@
-//===-- LibCxxBitset.cpp ----------------------------------------*- C++ -*-===//
+//===-- LibCxxBitset.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "LibCxx.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Target.h"
 
 using namespace lldb;
@@ -85,7 +85,7 @@ ValueObjectSP BitsetFrontEnd::GetChildAtIndex(size_t idx) {
   CompilerType type;
   ValueObjectSP chunk;
   // For small bitsets __first_ is not an array, but a plain size_t.
-  if (m_first->GetCompilerType().IsArrayType(&type, nullptr, nullptr)) {
+  if (m_first->GetCompilerType().IsArrayType(&type)) {
     llvm::Optional<uint64_t> bit_size =
         type.GetBitSize(ctx.GetBestExecutionContextScope());
     if (!bit_size || *bit_size == 0)

@@ -269,9 +269,13 @@ private:
   }
 
   ErrorInfoBase *getPtr() const {
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     return reinterpret_cast<ErrorInfoBase*>(
              reinterpret_cast<uintptr_t>(Payload) &
              ~static_cast<uintptr_t>(0x1));
+#else
+    return Payload;
+#endif
   }
 
   void setPtr(ErrorInfoBase *EI) {
@@ -294,10 +298,12 @@ private:
   }
 
   void setChecked(bool V) {
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     Payload = reinterpret_cast<ErrorInfoBase*>(
                 (reinterpret_cast<uintptr_t>(Payload) &
                   ~static_cast<uintptr_t>(0x1)) |
                   (V ? 0 : 1));
+#endif
   }
 
   std::unique_ptr<ErrorInfoBase> takePayload() {
@@ -430,25 +436,58 @@ inline Error joinErrors(Error E1, Error E2) {
 /// Error cannot be copied, this class replaces getError() with
 /// takeError(). It also adds an bool errorIsA<ErrT>() method for testing the
 /// error class type.
+///
+/// Example usage of 'Expected<T>' as a function return type:
+///
+///   @code{.cpp}
+///     Expected<int> myDivide(int A, int B) {
+///       if (B == 0) {
+///         // return an Error
+///         return createStringError(inconvertibleErrorCode(),
+///                                  "B must not be zero!");
+///       }
+///       // return an integer
+///       return A / B;
+///     }
+///   @endcode
+///
+///   Checking the results of to a function returning 'Expected<T>':
+///   @code{.cpp}
+///     if (auto E = Result.takeError()) {
+///       // We must consume the error. Typically one of:
+///       // - return the error to our caller
+///       // - toString(), when logging
+///       // - consumeError(), to silently swallow the error
+///       // - handleErrors(), to distinguish error types
+///       errs() << "Problem with division " << toString(std::move(E)) << "\n";
+///       return;
+///     }
+///     // use the result
+///     outs() << "The answer is " << *Result << "\n";
+///   @endcode
+///
+///  For unit-testing a function returning an 'Expceted<T>', see the
+///  'EXPECT_THAT_EXPECTED' macros in llvm/Testing/Support/Error.h
+
 template <class T> class LLVM_NODISCARD Expected {
   template <class T1> friend class ExpectedAsOutParameter;
   template <class OtherT> friend class Expected;
 
-  static const bool isRef = std::is_reference<T>::value;
+  static constexpr bool isRef = std::is_reference<T>::value;
 
-  using wrap = std::reference_wrapper<typename std::remove_reference<T>::type>;
+  using wrap = std::reference_wrapper<std::remove_reference_t<T>>;
 
   using error_type = std::unique_ptr<ErrorInfoBase>;
 
 public:
-  using storage_type = typename std::conditional<isRef, wrap, T>::type;
+  using storage_type = std::conditional_t<isRef, wrap, T>;
   using value_type = T;
 
 private:
-  using reference = typename std::remove_reference<T>::type &;
-  using const_reference = const typename std::remove_reference<T>::type &;
-  using pointer = typename std::remove_reference<T>::type *;
-  using const_pointer = const typename std::remove_reference<T>::type *;
+  using reference = std::remove_reference_t<T> &;
+  using const_reference = const std::remove_reference_t<T> &;
+  using pointer = std::remove_reference_t<T> *;
+  using const_pointer = const std::remove_reference_t<T> *;
 
 public:
   /// Create an Expected<T> error value from the given Error.
@@ -472,12 +511,12 @@ public:
   /// must be convertible to T.
   template <typename OtherT>
   Expected(OtherT &&Val,
-           typename std::enable_if<std::is_convertible<OtherT, T>::value>::type
-               * = nullptr)
+           std::enable_if_t<std::is_convertible<OtherT, T>::value> * = nullptr)
       : HasError(false)
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
         // Expected is unchecked upon construction in Debug builds.
-        , Unchecked(true)
+        ,
+        Unchecked(true)
 #endif
   {
     new (getStorage()) storage_type(std::forward<OtherT>(Val));
@@ -489,9 +528,9 @@ public:
   /// Move construct an Expected<T> value from an Expected<OtherT>, where OtherT
   /// must be convertible to T.
   template <class OtherT>
-  Expected(Expected<OtherT> &&Other,
-           typename std::enable_if<std::is_convertible<OtherT, T>::value>::type
-               * = nullptr) {
+  Expected(
+      Expected<OtherT> &&Other,
+      std::enable_if_t<std::is_convertible<OtherT, T>::value> * = nullptr) {
     moveConstruct(std::move(Other));
   }
 
@@ -500,8 +539,7 @@ public:
   template <class OtherT>
   explicit Expected(
       Expected<OtherT> &&Other,
-      typename std::enable_if<!std::is_convertible<OtherT, T>::value>::type * =
-          nullptr) {
+      std::enable_if_t<!std::is_convertible<OtherT, T>::value> * = nullptr) {
     moveConstruct(std::move(Other));
   }
 
@@ -587,7 +625,7 @@ private:
   }
 
   template <class T1, class T2>
-  static bool compareThisIfSameType(const T1 &a, const T2 &b) {
+  static bool compareThisIfSameType(const T1 &, const T2 &) {
     return false;
   }
 
@@ -624,22 +662,22 @@ private:
 
   storage_type *getStorage() {
     assert(!HasError && "Cannot get value when an error exists!");
-    return reinterpret_cast<storage_type *>(TStorage.buffer);
+    return reinterpret_cast<storage_type *>(&TStorage);
   }
 
   const storage_type *getStorage() const {
     assert(!HasError && "Cannot get value when an error exists!");
-    return reinterpret_cast<const storage_type *>(TStorage.buffer);
+    return reinterpret_cast<const storage_type *>(&TStorage);
   }
 
   error_type *getErrorStorage() {
     assert(HasError && "Cannot get error when a value exists!");
-    return reinterpret_cast<error_type *>(ErrorStorage.buffer);
+    return reinterpret_cast<error_type *>(&ErrorStorage);
   }
 
   const error_type *getErrorStorage() const {
     assert(HasError && "Cannot get error when a value exists!");
-    return reinterpret_cast<const error_type *>(ErrorStorage.buffer);
+    return reinterpret_cast<const error_type *>(&ErrorStorage);
   }
 
   // Used by ExpectedAsOutParameter to reset the checked flag.
@@ -665,7 +703,7 @@ private:
   }
 #endif
 
-  void assertIsChecked() {
+  void assertIsChecked() const {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
     if (LLVM_UNLIKELY(Unchecked))
       fatalUncheckedExpected();

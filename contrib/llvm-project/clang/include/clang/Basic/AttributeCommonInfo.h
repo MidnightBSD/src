@@ -134,6 +134,11 @@ public:
   const IdentifierInfo *getScopeName() const { return ScopeName; }
   SourceLocation getScopeLoc() const { return ScopeLoc; }
 
+  /// Gets the normalized full name, which consists of both scope and name and
+  /// with surrounding underscores removed as appropriate (e.g.
+  /// __gnu__::__attr__ will be normalized to gnu::attr).
+  std::string getNormalizedFullName() const;
+
   bool isDeclspecAttribute() const { return SyntaxUsed == AS_Declspec; }
   bool isMicrosoftAttribute() const { return SyntaxUsed == AS_Microsoft; }
 
@@ -149,6 +154,12 @@ public:
   }
 
   bool isC2xAttribute() const { return SyntaxUsed == AS_C2x; }
+
+  /// The attribute is spelled [[]] in either C or C++ mode, including standard
+  /// attributes spelled with a keyword, like alignas.
+  bool isStandardAttributeSyntax() const {
+    return isCXX11Attribute() || isC2xAttribute();
+  }
 
   bool isKeywordAttribute() const {
     return SyntaxUsed == AS_Keyword || SyntaxUsed == AS_ContextSensitiveKeyword;

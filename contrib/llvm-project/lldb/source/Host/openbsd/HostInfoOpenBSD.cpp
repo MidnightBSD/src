@@ -1,4 +1,4 @@
-//===-- HostInfoOpenBSD.cpp -------------------------------------*- C++ -*-===//
+//===-- HostInfoOpenBSD.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,8 +8,8 @@
 
 #include "lldb/Host/openbsd/HostInfoOpenBSD.h"
 
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
