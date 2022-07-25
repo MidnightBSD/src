@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2013 The NetBSD Foundation, Inc.
  * Copyright (c) 2013 Andrew Turner
  * All rights reserved.
@@ -32,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/arm/gen/arm_initfini.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * To properly implement setjmp/longjmp for the ARM AAPCS ABI, it has to be

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libssp/fortify_stubs.c 356775 2020-01-16 03:38:06Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 

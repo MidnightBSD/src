@@ -28,7 +28,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/aarch64/sys/syscall.S 281197 2015-04-07 09:52:14Z andrew $");
+__FBSDID("$FreeBSD$");
 
 #include "SYS.h"
 

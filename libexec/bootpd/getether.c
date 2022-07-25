@@ -7,7 +7,7 @@
  * If you figure out how to do this on another system,
  * please let me know.  <gwr@mc.com>
  *
- * $FreeBSD: stable/11/libexec/bootpd/getether.c 297865 2016-04-12 18:18:26Z pfg $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -110,7 +110,7 @@ getether(ifname, eap)
 #endif /* SUNOS */
 
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__MidnightBSD__)
+#if defined(__FreeBSD__) || defined(__NetBSD__)
 /* Thanks to John Brezak <brezak@ch.hp.com> for this code. */
 #include <sys/ioctl.h>
 #include <sys/time.h>

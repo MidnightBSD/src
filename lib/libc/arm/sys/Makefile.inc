@@ -1,10 +1,8 @@
-# $FreeBSD: stable/11/lib/libc/arm/sys/Makefile.inc 305329 2016-09-03 09:03:40Z kib $
+# $FreeBSD$
 
 SRCS+=	__vdso_gettc.c
 
-MDASM= Ovfork.S brk.S cerror.S sbrk.S shmat.S sigreturn.S syscall.S
+MDASM= Ovfork.S cerror.S syscall.S
 
 # Don't generate default code for these syscalls:
-NOASM=	break.o exit.o getlogin.o openbsd_poll.o sstk.o vfork.o yield.o
-
-PSEUDO= _exit.o _getlogin.o
+NOASM+=	sbrk.o vfork.o

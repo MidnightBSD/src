@@ -1,7 +1,7 @@
 /* 
  * hwaddr.h
  *
- * $FreeBSD: stable/11/libexec/bootpd/hwaddr.h 97417 2002-05-28 18:36:43Z alfred $
+ * $FreeBSD$
  */
 
 #ifndef	HWADDR_H

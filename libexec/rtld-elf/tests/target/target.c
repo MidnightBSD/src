@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/libexec/rtld-elf/tests/target/target.c 267679 2014-06-20 17:14:59Z jonathan $
+ * $FreeBSD$
  */
 
 #include "pythagoras.h"

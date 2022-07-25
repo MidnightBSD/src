@@ -1,9 +1,9 @@
-/*	$NetBSD: targparam.h,v 1.3 2002/01/31 23:31:34 he Exp $	*/
+/*	$NetBSD: flt_rounds.c,v 1.4.10.3 2002/03/22 20:41:53 nathanw Exp $	*/
 
 /*
- * Copyright (c) 1994, 1995 Jochen Pohl
- * All Rights Reserved.
- * 
+ * Copyright (c) 2016 Justin Hibbits
+ * All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -14,10 +14,10 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by Jochen Pohl for
- *	The NetBSD Project.
+ *      This product includes software developed by Mark Brinicombe
+ *	for the NetBSD Project.
  * 4. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
+ *    derived from this software without specific prior written permission
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -29,27 +29,29 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/usr.bin/xlint/arch/sparc64/targparam.h 280387 2015-03-23 18:45:29Z pfg $
  */
 
-/*
- * Machine-dependent target parameters for lint1.
- */
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
-#include "lp64.h"
+#include <sys/types.h>
+#include <machine/float.h>
+#include <machine/spr.h>
 
-/*    
- * Should be set to 1 if the difference of two pointers is of type long
- * or the value of sizeof is of type unsigned long.  Note this MUST be
- * kept in sync with the compiler!
- */     
+#ifndef _SOFT_FLOAT
+static const int map[] = {
+	1,	/* round to nearest */
+	0,	/* round to zero */
+	2,	/* round to positive infinity */
+	3	/* round to negative infinity */
+};
 
-#define	PTRDIFF_IS_LONG		1
-#define	SIZEOF_IS_ULONG		1
+int
+__flt_rounds()
+{
+	uint32_t fpscr;
 
-#define	FLOAT_SIZE		(4 * CHAR_BIT)
-#define	DOUBLE_SIZE		(8 * CHAR_BIT)
-#define	LDOUBLE_SIZE		(16 * CHAR_BIT)
-
-#define	ENUM_SIZE		(4 * CHAR_BIT)
+	__asm__ __volatile("mfspr %0, %1" : "=r"(fpscr) : "K"(SPR_SPEFSCR));
+	return map[(fpscr & 0x03)];
+}
+#endif

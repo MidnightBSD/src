@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/11/lib/libc/powerpc64/Symbol.map 297418 2016-03-30 14:42:09Z emaste $
+ * $FreeBSD$
  */
 
 /*
@@ -33,7 +33,6 @@ FBSD_1.0 {
 	ntohl;
 	ntohs;
 	brk;
-	exect;
 	sbrk;
 	vfork;
 };
@@ -51,5 +50,4 @@ FBSDprivate_1.0 {
 	signalcontext;
 	__signalcontext;
 	__syncicache;
-	_end;
 };

@@ -1,6 +1,8 @@
 /*	$NetBSD: fpsetmask.c,v 1.3 2002/01/13 21:45:48 thorpej Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/powerpc64/gen/fpsetmask.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <ieeefp.h>
@@ -41,11 +43,11 @@ fp_except_t
 fpsetmask(fp_except_t mask)
 {
 	u_int64_t fpscr;
-	fp_rnd_t old;
+	fp_except_t old;
 
 	__asm__("mffs %0" : "=f"(fpscr));
-	old = (fp_rnd_t)((fpscr >> 3) & 0x1f);
-	fpscr = (fpscr & 0xffffff07) | (mask << 3);
+	old = (fp_except_t)((fpscr >> 3) & 0x1f);
+	fpscr = (fpscr & 0xffffff07) | ((mask & 0x1f) << 3);
 	__asm__ __volatile("mtfsf 0xff,%0" :: "f"(fpscr));
 	return (old);
 }

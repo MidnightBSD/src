@@ -1,10 +1,6 @@
-/*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
- *
- * Copyright (c) 2019 The FreeBSD Foundation
- *
- * This software was developed by Konstantin Belousov <kib@FreeBSD.org>
- * under sponsorship from the FreeBSD Foundation.
+/*
+ * Copyright (c) 2016 Justin Hibbits
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -18,7 +14,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -26,21 +22,18 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/lib/libthr/arch/sparc64/include/pthread_tls.h 346156 2019-04-12 15:15:27Z kib $
  */
 
-#ifndef _ARCH_SPARC64_PTHREAD_TLS_H
-#define	_ARCH_SPARC64_PTHREAD_TLS_H
+#include <machine/asm.h>
+__FBSDID("$FreeBSD$");
 
-static __inline uintptr_t
-_get_static_tls_base(struct pthread *thr, size_t offset)
-{
-	uintptr_t tlsbase;
+/*
+ * double fabs(double)
+ */
+ENTRY(fabs)
+	/* arg is split in two words, clear sign bit only, in r3. */
+	clrlwi	%r3,%r3,1
+	blr
+END(fabs)
 
-	tlsbase = (uintptr_t)thr->tcb;
-	tlsbase -= offset;
-	return (tlsbase);
-}
-
-#endif
+	.section .note.GNU-stack,"",%progbits

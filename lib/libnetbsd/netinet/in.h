@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/lib/libnetbsd/netinet/in.h 273482 2014-10-22 21:04:54Z ngie $ */
+/* $FreeBSD$ */
 
 /*
  * Copyright (c) 1982, 1986, 1990, 1993

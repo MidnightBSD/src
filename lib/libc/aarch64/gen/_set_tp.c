@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/aarch64/gen/_set_tp.c 288019 2015-09-20 04:59:01Z rodrigc $");
+__FBSDID("$FreeBSD$");
 
 #include <string.h>
 #include <sys/types.h>

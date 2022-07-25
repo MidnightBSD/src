@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/lib/libxo/xo_config.h 334458 2018-05-31 23:55:59Z gjb $ */
+/* $FreeBSD$ */
 /* libxo/xo_config.h.  Generated from xo_config.h.in by configure.  */
 /* libxo/xo_config.h.in.  Generated from configure.ac by autoheader.  */
 

@@ -33,18 +33,19 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/riscv/gen/_set_tp.c 294227 2016-01-17 15:21:23Z br $");
+__FBSDID("$FreeBSD$");
 
 #include <string.h>
 #include <sys/types.h>
 
-#include <machine/sysarch.h>
-
 #include <stdlib.h>
+
+/* NB: size of 'struct tcb'. */
+#define	TP_OFFSET	(sizeof(void *) * 2)
 
 void
 _set_tp(void *tp)
 {
 
-	__asm __volatile("mv  tp, %0" :: "r"((char*)tp + 0x10));
+	__asm __volatile("addi  tp, %0, %1" :: "r" (tp), "I" (TP_OFFSET));
 }

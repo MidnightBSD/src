@@ -4,7 +4,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libssp_nonshared/libssp_nonshared.c 356356 2020-01-04 20:19:25Z kevans $");
+__FBSDID("$FreeBSD$");
 
 void __stack_chk_fail(void);
 void __stack_chk_fail_local(void);

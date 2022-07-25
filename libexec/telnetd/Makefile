@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/libexec/telnetd/Makefile 321269 2017-07-20 00:58:19Z ngie $
+# $FreeBSD$
 
 # Do not define -DKLUDGELINEMODE, as it does not interact well with many
 # telnet implementations.
@@ -26,8 +26,6 @@ CFLAGS+=	-DINET6
 
 CFLAGS+=	-I${TELNETDIR}
 CFLAGS+=	-I${TELNETDIR}/telnet
-
-LIBTELNET=	${OBJTOP}/lib/libtelnet/libtelnet.a
 
 LIBADD=		telnet util ncursesw
 

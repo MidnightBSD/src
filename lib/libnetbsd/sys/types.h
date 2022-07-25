@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libnetbsd/sys/types.h 314021 2017-02-21 03:46:43Z ngie $ *
+ * $FreeBSD$ *
  */
 
 #ifndef _LIBNETBSD_SYS_TYPES_H_

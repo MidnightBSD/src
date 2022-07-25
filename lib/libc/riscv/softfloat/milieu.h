@@ -1,13 +1,20 @@
+/* $FreeBSD$ */
 
 /*
 ===============================================================================
 
-This C source file is part of TestFloat, Release 2a, a package of programs
-for testing the correctness of floating-point arithmetic complying to the
-IEC/IEEE Standard for Floating-Point.
+This C header file is part of the SoftFloat IEC/IEEE Floating-point
+Arithmetic Package, Release 2a.
 
-Written by John R. Hauser.  More information is available through the Web
-page `http://HTTP.CS.Berkeley.EDU/~jhauser/arithmetic/TestFloat.html'.
+Written by John R. Hauser.  This work was made possible in part by the
+International Computer Science Institute, located at Suite 600, 1947 Center
+Street, Berkeley, California 94704.  Funding was partially provided by the
+National Science Foundation under grant MIP-9311980.  The original version
+of this code was written as part of a project to build a fixed-point vector
+processor in collaboration with the University of California at Berkeley,
+overseen by Profs. Nelson Morgan and John Wawrzynek.  More information
+is available through the Web page `http://HTTP.CS.Berkeley.EDU/~jhauser/
+arithmetic/SoftFloat.html'.
 
 THIS SOFTWARE IS DISTRIBUTED AS IS, FOR FREE.  Although reasonable effort
 has been made to avoid it, THIS SOFTWARE MAY CONTAIN FAULTS THAT WILL AT
@@ -23,32 +30,19 @@ this code that are retained.
 ===============================================================================
 */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/tools/test/testfloat/sparc64/systmodes.c 207151 2010-04-24 12:11:41Z marius $");
-
-#include <ieeefp.h>
-#include "milieu.h"
-#include "systmodes.h"
+/*
+-------------------------------------------------------------------------------
+Include common integer types and flags.
+-------------------------------------------------------------------------------
+*/
+#include "riscv-gcc.h"
 
 /*
 -------------------------------------------------------------------------------
-Sets the system's IEC/IEEE floating-point rounding mode.
+Symbolic Boolean literals.
 -------------------------------------------------------------------------------
 */
-void syst_float_set_rounding_mode( int8 roundingMode )
-{
-
-    (void) fpsetround( roundingMode );
-
-}
-
-/*
--------------------------------------------------------------------------------
-Does nothing.
--------------------------------------------------------------------------------
-*/
-void syst_float_set_rounding_precision( int8 precision )
-{
-
-}
-
+enum {
+    FALSE = 0,
+    TRUE  = 1
+};

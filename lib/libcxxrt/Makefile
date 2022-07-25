@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libcxxrt/Makefile 350400 2019-07-29 06:13:22Z dim $
+# $FreeBSD$
 
 PACKAGE=	clibs
 SRCDIR=		${SRCTOP}/contrib/libcxxrt
@@ -10,21 +10,19 @@ SHLIBDIR?=	/lib
 
 LIB=		cxxrt
 
-SRCS+=		libelftc_dem_gnu3.c\
-		terminate.cc\
-		dynamic_cast.cc\
-		memory.cc\
-		auxhelper.cc\
-		exception.cc\
-		stdexcept.cc\
-		typeinfo.cc\
-		guard.cc
+SRCS+=		auxhelper.cc
+SRCS+=		dynamic_cast.cc
+SRCS+=		exception.cc
+SRCS+=		guard.cc
+SRCS+=		libelftc_dem_gnu3.c
+SRCS+=		memory.cc
+SRCS+=		stdexcept.cc
+SRCS+=		terminate.cc
+SRCS+=		typeinfo.cc
 
-WARNS=		0
+WARNS?=		0
 CFLAGS+=	-isystem ${SRCDIR} -nostdinc++
-.if empty(CXXFLAGS:M-std=*)
-CXXFLAGS+=	-std=c++14
-.endif
+CXXSTD?=	c++14
 VERSION_MAP=	${.CURDIR}/Version.map
 
 .include <bsd.lib.mk>

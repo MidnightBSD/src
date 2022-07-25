@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
  *
@@ -22,22 +24,24 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/libexec/rtld-elf/xmalloc.c 262334 2014-02-22 11:06:48Z davidxu $
+ * $FreeBSD$
  */
 
+#include <sys/param.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include "rtld.h"
 #include "rtld_printf.h"
+#include "rtld_malloc.h"
 
 void *
 xcalloc(size_t number, size_t size)
 {
 	void *p;
 
-	p = calloc(number, size);
+	p = __crt_calloc(number, size);
 	if (p == NULL) {
 		rtld_fdputstr(STDERR_FILENO, "Out of memory\n");
 		_exit(1);
@@ -48,12 +52,15 @@ xcalloc(size_t number, size_t size)
 void *
 xmalloc(size_t size)
 {
-    void *p = malloc(size);
-    if (p == NULL) {
-	rtld_fdputstr(STDERR_FILENO, "Out of memory\n");
-	_exit(1);
-    }
-    return p;
+
+	void *p;
+
+	p = __crt_malloc(size);
+	if (p == NULL) {
+		rtld_fdputstr(STDERR_FILENO, "Out of memory\n");
+		_exit(1);
+	}
+	return (p);
 }
 
 char *
@@ -69,16 +76,21 @@ xstrdup(const char *str)
 }
 
 void *
-malloc_aligned(size_t size, size_t align)
+malloc_aligned(size_t size, size_t align, size_t offset)
 {
-	void *mem, *res;
+	char *mem, *res;
+	uintptr_t x;
 
+	offset &= align - 1;
 	if (align < sizeof(void *))
 		align = sizeof(void *);
 
-	mem = xmalloc(size + sizeof(void *) + align - 1);
-	res = (void *)round((uintptr_t)mem + sizeof(void *), align);
-	*(void **)((uintptr_t)res - sizeof(void *)) = mem;
+	mem = xmalloc(size + 3 * align + offset);
+	x = roundup((uintptr_t)mem + sizeof(void *), align);
+	x += offset;
+	res = (void *)x;
+	x -= sizeof(void *);
+	memcpy((void *)x, &mem, sizeof(mem));
 	return (res);
 }
 
@@ -92,6 +104,6 @@ free_aligned(void *ptr)
 		return;
 	x = (uintptr_t)ptr;
 	x -= sizeof(void *);
-	mem = *(void **)x;
+	memcpy(&mem, (void *)x, sizeof(mem));
 	free(mem);
 }

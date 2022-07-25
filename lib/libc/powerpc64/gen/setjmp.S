@@ -26,7 +26,7 @@
 /*      $NetBSD: setjmp.S,v 1.3 1998/10/03 12:30:38 tsubai Exp $        */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/powerpc64/gen/setjmp.S 279784 2015-03-08 19:37:08Z nwhitehorn $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/syscall.h>
 	

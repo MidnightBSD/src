@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright 1996, 1997, 1998, 1999 John D. Polstra.
  * All rights reserved.
  *
@@ -22,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/libexec/rtld-elf/amd64/reloc.c 340937 2018-11-26 10:53:17Z kib $
+ * $FreeBSD$
  */
 
 /*
@@ -66,7 +68,7 @@ do_copy_relocations(Obj_Entry *dstobj)
 
     assert(dstobj->mainprog);	/* COPY relocations are invalid elsewhere */
 
-    relalim = (const Elf_Rela *) ((caddr_t) dstobj->rela + dstobj->relasize);
+    relalim = (const Elf_Rela *)((const char *) dstobj->rela + dstobj->relasize);
     for (rela = dstobj->rela;  rela < relalim;  rela++) {
 	if (ELF_R_TYPE(rela->r_info) == R_X86_64_COPY) {
 	    void *dstaddr;
@@ -79,7 +81,7 @@ do_copy_relocations(Obj_Entry *dstobj)
 	    SymLook req;
 	    int res;
 
-	    dstaddr = (void *) (dstobj->relocbase + rela->r_offset);
+	    dstaddr = (void *)(dstobj->relocbase + rela->r_offset);
 	    dstsym = dstobj->symtab + ELF_R_SYM(rela->r_info);
 	    name = dstobj->strtab + dstsym->st_name;
 	    size = dstsym->st_size;
@@ -103,7 +105,7 @@ do_copy_relocations(Obj_Entry *dstobj)
 		return -1;
 	    }
 
-	    srcaddr = (const void *) (defobj->relocbase + srcsym->st_value);
+	    srcaddr = (const void *)(defobj->relocbase + srcsym->st_value);
 	    memcpy(dstaddr, srcaddr, size);
 	}
     }
@@ -149,7 +151,7 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld, int flags,
 	} else
 		cache = NULL;
 
-	relalim = (const Elf_Rela *)((caddr_t)obj->rela + obj->relasize);
+	relalim = (const Elf_Rela *)((const char*)obj->rela + obj->relasize);
 	for (rela = obj->rela;  rela < relalim;  rela++) {
 		/*
 		 * First, resolve symbol for relocations which
@@ -256,7 +258,8 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld, int flags,
 			 * of space, we generate an error.
 			 */
 			if (!defobj->tls_done) {
-				if (!allocate_tls_offset((Obj_Entry*) defobj)) {
+				if (!allocate_tls_offset(
+				    __DECONST(Obj_Entry *, defobj))) {
 					_rtld_error("%s: No space available "
 					    "for static Thread Local Storage",
 					    obj->path);
@@ -276,7 +279,8 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld, int flags,
 			 * of space, we generate an error.
 			 */
 			if (!defobj->tls_done) {
-				if (!allocate_tls_offset((Obj_Entry*) defobj)) {
+				if (!allocate_tls_offset(
+				    __DECONST(Obj_Entry *, defobj))) {
 					_rtld_error("%s: No space available "
 					    "for static Thread Local Storage",
 					    obj->path);
@@ -299,6 +303,10 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld, int flags,
 		case R_X86_64_RELATIVE:
 			*where = (Elf_Addr)(obj->relocbase + rela->r_addend);
 			break;
+		case R_X86_64_IRELATIVE:
+			obj->irelative_nonplt = true;
+			break;
+
 		/*
 		 * missing:
 		 * R_X86_64_GOTPCREL, R_X86_64_32, R_X86_64_32S, R_X86_64_16,
@@ -319,12 +327,12 @@ done:
 
 /* Process the PLT relocations. */
 int
-reloc_plt(Obj_Entry *obj)
+reloc_plt(Obj_Entry *obj, int flags __unused, RtldLockState *lockstate __unused)
 {
     const Elf_Rela *relalim;
     const Elf_Rela *rela;
 
-    relalim = (const Elf_Rela *)((char *)obj->pltrela + obj->pltrelasize);
+    relalim = (const Elf_Rela *)((const char *)obj->pltrela + obj->pltrelasize);
     for (rela = obj->pltrela;  rela < relalim;  rela++) {
 	Elf_Addr *where;
 
@@ -357,7 +365,7 @@ reloc_jmpslots(Obj_Entry *obj, int flags, RtldLockState *lockstate)
 
     if (obj->jmpslots_done)
 	return 0;
-    relalim = (const Elf_Rela *)((char *)obj->pltrela + obj->pltrelasize);
+    relalim = (const Elf_Rela *)((const char *)obj->pltrela + obj->pltrelasize);
     for (rela = obj->pltrela;  rela < relalim;  rela++) {
 	Elf_Addr *where, target;
 	const Elf_Sym *def;
@@ -394,8 +402,9 @@ reloc_jmpslots(Obj_Entry *obj, int flags, RtldLockState *lockstate)
 /* Fixup the jump slot at "where" to transfer control to "target". */
 Elf_Addr
 reloc_jmpslot(Elf_Addr *where, Elf_Addr target,
-    const struct Struct_Obj_Entry *obj, const struct Struct_Obj_Entry *refobj,
-    const Elf_Rel *rel)
+    const struct Struct_Obj_Entry *obj  __unused,
+    const struct Struct_Obj_Entry *refobj  __unused,
+    const Elf_Rel *rel  __unused)
 {
 #ifdef dbg
 	dbg("reloc_jmpslot: *%p = %p", where, (void *)target);
@@ -405,34 +414,53 @@ reloc_jmpslot(Elf_Addr *where, Elf_Addr target,
 	return (target);
 }
 
+static void
+reloc_iresolve_one(Obj_Entry *obj, const Elf_Rela *rela,
+    RtldLockState *lockstate)
+{
+	Elf_Addr *where, target, *ptr;
+
+	ptr = (Elf_Addr *)(obj->relocbase + rela->r_addend);
+	where = (Elf_Addr *)(obj->relocbase + rela->r_offset);
+	lock_release(rtld_bind_lock, lockstate);
+	target = call_ifunc_resolver(ptr);
+	wlock_acquire(rtld_bind_lock, lockstate);
+	*where = target;
+}
+
 int
 reloc_iresolve(Obj_Entry *obj, RtldLockState *lockstate)
 {
-    const Elf_Rela *relalim;
-    const Elf_Rela *rela;
+	const Elf_Rela *relalim;
+	const Elf_Rela *rela;
 
-    if (!obj->irelative)
-	return (0);
-    relalim = (const Elf_Rela *)((char *)obj->pltrela + obj->pltrelasize);
-    for (rela = obj->pltrela;  rela < relalim;  rela++) {
-	Elf_Addr *where, target, *ptr;
-
-	switch (ELF_R_TYPE(rela->r_info)) {
-	case R_X86_64_JMP_SLOT:
-	  break;
-
-	case R_X86_64_IRELATIVE:
-	  ptr = (Elf_Addr *)(obj->relocbase + rela->r_addend);
-	  where = (Elf_Addr *)(obj->relocbase + rela->r_offset);
-	  lock_release(rtld_bind_lock, lockstate);
-	  target = call_ifunc_resolver(ptr);
-	  wlock_acquire(rtld_bind_lock, lockstate);
-	  *where = target;
-	  break;
+	if (!obj->irelative)
+		return (0);
+	obj->irelative = false;
+	relalim = (const Elf_Rela *)((const char *)obj->pltrela +
+	    obj->pltrelasize);
+	for (rela = obj->pltrela;  rela < relalim;  rela++) {
+		if (ELF_R_TYPE(rela->r_info) == R_X86_64_IRELATIVE)
+			reloc_iresolve_one(obj, rela, lockstate);
 	}
-    }
-    obj->irelative = false;
-    return (0);
+	return (0);
+}
+
+int
+reloc_iresolve_nonplt(Obj_Entry *obj, RtldLockState *lockstate)
+{
+	const Elf_Rela *relalim;
+	const Elf_Rela *rela;
+
+	if (!obj->irelative_nonplt)
+		return (0);
+	obj->irelative_nonplt = false;
+	relalim = (const Elf_Rela *)((const char *)obj->rela + obj->relasize);
+	for (rela = obj->rela;  rela < relalim;  rela++) {
+		if (ELF_R_TYPE(rela->r_info) == R_X86_64_IRELATIVE)
+			reloc_iresolve_one(obj, rela, lockstate);
+	}
+	return (0);
 }
 
 int
@@ -443,7 +471,7 @@ reloc_gnu_ifunc(Obj_Entry *obj, int flags, RtldLockState *lockstate)
 
     if (!obj->gnu_ifunc)
 	return (0);
-    relalim = (const Elf_Rela *)((char *)obj->pltrela + obj->pltrelasize);
+    relalim = (const Elf_Rela *)((const char *)obj->pltrela + obj->pltrelasize);
     for (rela = obj->pltrela;  rela < relalim;  rela++) {
 	Elf_Addr *where, target;
 	const Elf_Sym *def;
@@ -523,4 +551,34 @@ void *__tls_get_addr(tls_index *ti)
     __asm __volatile("movq %%fs:0, %0" : "=r" (segbase));
 
     return tls_get_addr_common(&segbase[1], ti->ti_module, ti->ti_offset);
+}
+
+size_t
+calculate_first_tls_offset(size_t size, size_t align, size_t offset)
+{
+	size_t res;
+
+	res = roundup(size, align);
+	offset &= align - 1;
+	if (offset != 0)
+		res += align - offset;
+	return (res);
+}
+
+size_t
+calculate_tls_offset(size_t prev_offset, size_t prev_size __unused, size_t size,
+    size_t align, size_t offset)
+{
+	size_t res;
+
+	res = roundup(prev_offset + size, align);
+	offset &= align - 1;
+	if (offset != 0)
+		res += align - offset;
+	return (res);
+}
+size_t
+calculate_tls_end(size_t off, size_t size __unused)
+{
+	return (off);
 }

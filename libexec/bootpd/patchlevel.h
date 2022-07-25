@@ -1,7 +1,7 @@
 /* 
  * patchlevel.h 
  *
- * $FreeBSD: stable/11/libexec/bootpd/patchlevel.h 50476 1999-08-28 00:22:10Z peter $
+ * $FreeBSD$
  */
 
 #define VERSION 	"2.4"

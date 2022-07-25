@@ -1,9 +1,10 @@
 #
-# $FreeBSD: stable/11/lib/libwrap/Makefile 313431 2017-02-08 08:34:59Z ngie $
+# $FreeBSD$
 #
 
 .include <src.opts.mk>
 
+CONFS=	hosts.allow
 PACKAGE=lib${LIB}
 LIB=	wrap
 SHLIB_MAJOR= 6

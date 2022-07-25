@@ -29,6 +29,7 @@ SUBDIR=	${_atf} \
 	mport.version_cmp \
 	msearch.index \
 	${_pppoed} \
+	rc \
 	revnetgroup \
 	${_rlogind} \
 	rpc.rquotad \
@@ -62,6 +63,7 @@ SUBDIR+=	bootpd
 SUBDIR+=	fingerd
 .endif
 
+_phttpget=	phttpget
 .if ${MK_FTP} != "no"
 SUBDIR+=	ftpd
 .endif
