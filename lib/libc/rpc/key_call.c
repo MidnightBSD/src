@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -31,7 +33,7 @@
 
 #ident	"@(#)key_call.c	1.25	94/04/24 SMI"
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/key_call.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * key_call.c, Interface to keyserver
@@ -351,7 +353,7 @@ getkeyserv_handle(int vers)
 		return ((CLIENT *) NULL);
 	}
         tpconf = NULL;
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 	if (uname(&u) == -1)
 #else
 #if defined(i386)

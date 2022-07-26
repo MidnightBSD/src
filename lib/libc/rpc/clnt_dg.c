@@ -1,6 +1,8 @@
 /*	$NetBSD: clnt_dg.c,v 1.4 2000/07/14 08:40:41 fvdl Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -36,7 +38,7 @@
 static char sccsid[] = "@(#)clnt_dg.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/clnt_dg.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Implements a connectionless client side RPC.
@@ -90,9 +92,9 @@ static void clnt_dg_destroy(CLIENT *);
  *	This machinery implements per-fd locks for MT-safety.  It is not
  *	sufficient to do per-CLIENT handle locks for MT-safety because a
  *	user may create more than one CLIENT handle with the same fd behind
- *	it.  Therfore, we allocate an array of flags (dg_fd_locks), protected
+ *	it.  Therefore, we allocate an array of flags (dg_fd_locks), protected
  *	by the clnt_fd_lock mutex, and an array (dg_cv) of condition variables
- *	similarly protected.  Dg_fd_lock[fd] == 1 => a call is activte on some
+ *	similarly protected.  Dg_fd_lock[fd] == 1 => a call is active on some
  *	CLIENT handle created for that fd.
  *	The current implementation holds locks across the entire RPC and reply,
  *	including retransmissions.  Yes, this is silly, and as soon as this

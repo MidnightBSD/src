@@ -1,6 +1,8 @@
 /*	$NetBSD: getnetpath.c,v 1.3 2000/07/06 03:10:34 christos Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -32,7 +34,7 @@
 static char sccsid[] = "@(#)getnetpath.c	1.11 91/12/19 SMI";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/getnetpath.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Copyright (c) 1989 by Sun Microsystems, Inc.
@@ -133,7 +135,7 @@ failed:
  * NULL and sets errno in case of an error (e.g., setnetpath was not called
  * previously).
  * getnetpath() silently ignores invalid NETPATH components.  A NETPATH
- * compnent is invalid if there is no corresponding entry in the netconfig
+ * component is invalid if there is no corresponding entry in the netconfig
  * database.
  * If the NETPATH variable is unset, getnetpath() behaves as if NETPATH
  * were set to the sequence of default or visible networks in the netconfig
