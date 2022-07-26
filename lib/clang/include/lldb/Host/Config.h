@@ -1,3 +1,4 @@
+// $FreeBSD$
 //===-- Config.h -----------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -20,6 +21,8 @@
 
 #define HAVE_PPOLL 1
 
+#define HAVE_PTSNAME_R 1
+
 #define HAVE_SIGACTION 1
 
 #define HAVE_PROCESS_VM_READV 0
@@ -38,13 +41,17 @@
 
 #define LLDB_ENABLE_CURSES 1
 
+#define CURSES_HAVE_NCURSES_CURSES_H 0
+
 #define LLDB_ENABLE_LIBEDIT 1
 
 #define LLDB_ENABLE_LIBXML2 0
 
-#define LLDB_ENABLE_LUA 0
+#define LLDB_ENABLE_LUA 1
 
 #define LLDB_ENABLE_PYTHON 0
+
+#define LLDB_EMBED_PYTHON_HOME 0
 
 /* #undef LLDB_PYTHON_HOME */
 

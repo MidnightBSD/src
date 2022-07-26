@@ -13,7 +13,7 @@
 # 2. Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in the
 #    documentation and/or other materials provided with the distribution.
-# 4. Neither the name of the University nor the names of its contributors
+# 3. Neither the name of the University nor the names of its contributors
 #    may be used to endorse or promote products derived from this software
 #    without specific prior written permission.
 #
@@ -30,7 +30,7 @@
 # SUCH DAMAGE.
 #
 #	@(#)nodetypes	8.2 (Berkeley) 5/4/95
-# $FreeBSD: stable/11/bin/sh/nodetypes 278820 2015-02-15 21:47:43Z jilles $
+# $FreeBSD$
 
 # This file describes the nodes used in parse trees.  Unindented lines
 # contain a node type followed by a structure tag.  Subsequent indented
@@ -64,7 +64,7 @@ NPIPE npipe			# a pipeline
 	backgnd	  int			# set to run pipeline in background
 	cmdlist	  nodelist		# the commands in the pipeline
 
-NREDIR nredir			# redirection (of a compex command)
+NREDIR nredir			# redirection (of a complex command)
 	type	  int
 	n	  nodeptr		# the command
 	redirect  nodeptr		# list of file redirections

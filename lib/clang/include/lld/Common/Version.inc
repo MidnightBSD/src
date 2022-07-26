@@ -1,4 +1,3 @@
-#define LLD_VERSION 10.0.1
-#define LLD_VERSION_STRING "10.0.1"
-#define LLD_VERSION_MAJOR 10
-#define LLD_VERSION_MINOR 0
+// $FreeBSD$
+
+#define LLD_VERSION_STRING "13.0.0"

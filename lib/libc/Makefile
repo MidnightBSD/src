@@ -39,6 +39,7 @@ CFLAGS+=-DNLS
 .endif
 CLEANFILES+=tags
 INSTALL_PIC_ARCHIVE=
+BUILD_NOSSP_PIC_ARCHIVE=
 PRECIOUSLIB=
 
 .ifndef NO_THREAD_STACK_UNWIND
@@ -107,12 +108,14 @@ NOASM=
 .include "${LIBC_SRCTOP}/uuid/Makefile.inc"
 .include "${LIBC_SRCTOP}/xdr/Makefile.inc"
 .if (${LIBC_ARCH} == "arm" && \
-	(${MACHINE_ARCH:Marmv6*} == "" || (defined(CPUTYPE) && ${CPUTYPE:M*soft*}))) || \
-     ${LIBC_ARCH} == "mips"
+	(${MACHINE_ARCH:Marmv[67]*} == "" || (defined(CPUTYPE) && ${CPUTYPE:M*soft*}))) || \
+    (${LIBC_ARCH} == "mips" && ${MACHINE_ARCH:Mmips*hf} == "") || \
+    (${LIBC_ARCH} == "riscv" && ${MACHINE_ARCH:Mriscv*sf} != "")
 .include "${LIBC_SRCTOP}/softfloat/Makefile.inc"
 .endif
 .if ${LIBC_ARCH} == "i386" || ${LIBC_ARCH} == "amd64"
 .include "${LIBC_SRCTOP}/x86/sys/Makefile.inc"
+.include "${LIBC_SRCTOP}/x86/gen/Makefile.inc"
 .endif
 .if ${MK_NIS} != "no"
 CFLAGS+= -DYP
@@ -169,11 +172,16 @@ libkern.${LIBC_ARCH}:: ${KMSRCS}
 	${CP} ${.ALLSRC} ${DESTDIR}/sys/libkern/${LIBC_ARCH}
 .endif
 
-.if ${MK_TESTS} != "no"
-SUBDIR+=	tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.lib.mk>
+
+.if (${LIBC_ARCH} == amd64 || ${LIBC_ARCH} == i386) && \
+    ${.TARGETS:Mall} == all && \
+    defined(LINKER_FEATURES) && ${LINKER_FEATURES:Mifunc} == ""
+.error ${LIBC_ARCH} libc requires linker ifunc support
+.endif
 
 .if !defined(_SKIP_BUILD)
 # We need libutil.h, get it directly to avoid
@@ -195,10 +203,6 @@ GENDIRDEPS_FILTER+= N${RELDIR:H}/msun
 
 # Disable warnings in contributed sources.
 CWARNFLAGS:=	${.IMPSRC:Ngdtoa_*.c:C/^.+$/${CWARNFLAGS}/:C/^$/-w/}
-# XXX For now, we don't allow libc to be compiled with
-# -fstack-protector-all because it breaks rtld.  We may want to make a librtld
-# in the future to circumvent this.
-SSP_CFLAGS:=	${SSP_CFLAGS:S/^-fstack-protector-all$/-fstack-protector/}
 # Disable stack protection for SSP symbols.
 SSP_CFLAGS:=	${.IMPSRC:N*/stack_protector.c:C/^.+$/${SSP_CFLAGS}/}
 # Generate stack unwinding tables for cancellation points
