@@ -22,8 +22,8 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/lib/libc/locale/mbsrtowcs.3 140081 2005-01-11 20:50:51Z ru $
-.Dd July 21, 2004
+.\" $FreeBSD$
+.Dd August 7, 2020
 .Dt MBSRTOWCS 3
 .Os
 .Sh NAME
@@ -98,15 +98,29 @@ except that conversion stops after reading at most
 bytes from the buffer pointed to by
 .Fa src .
 .Sh RETURN VALUES
-The
+If successful, and
+.Fa dst
+is not NULL, the
 .Fn mbsrtowcs
 and
 .Fn mbsnrtowcs
 functions return the number of wide characters stored in
 the array pointed to by
+.Fa dst .
+.Pp
+If
 .Fa dst
-if successful, otherwise it returns
-.Po Vt size_t Pc Ns \-1 .
+was NULL then the functions
+.Fn mbsrtowcs
+and
+.Fn mbsnrtowcs
+return the number of wide characters that would have been stored where
+.Fa dst
+points to an infinitely large array.
+.Pp
+If either one of the functions is not successful then
+.Po Vt size_t Pc Ns \-1
+is returned.
 .Sh ERRORS
 The
 .Fn mbsrtowcs
