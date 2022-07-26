@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -57,7 +59,7 @@
 static char sccsid[] = 	"@(#)rtime.c	2.2 88/08/10 4.0 RPCSRC; from 1.8 88/02/08 SMI";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/rtime.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 extern int _rpc_dtablesize( void );
 

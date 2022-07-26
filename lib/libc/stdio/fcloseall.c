@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2006 Daniel M. Eischen.  All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/stdio/fcloseall.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include "local.h"

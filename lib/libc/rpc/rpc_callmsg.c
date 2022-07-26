@@ -1,6 +1,8 @@
 /*	$NetBSD: rpc_callmsg.c,v 1.16 2000/07/14 08:40:42 fvdl Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -33,7 +35,7 @@ static char *sccsid2 = "@(#)rpc_callmsg.c 1.4 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)rpc_callmsg.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/rpc_callmsg.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rpc_callmsg.c

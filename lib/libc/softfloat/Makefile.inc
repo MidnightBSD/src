@@ -1,5 +1,5 @@
 #	$NetBSD: Makefile.inc,v 1.10 2011/07/04 02:53:15 mrg Exp $
-# $FreeBSD: stable/11/lib/libc/softfloat/Makefile.inc 262722 2014-03-04 02:19:39Z marcel $
+# $FreeBSD$
 
 SOFTFLOAT_BITS?=64
 .PATH:		${LIBC_ARCH}/softfloat \
@@ -12,8 +12,11 @@ CFLAGS+=	-DSOFTFLOAT_FOR_GCC
 
 SRCS+=		softfloat.c
 
+# Deprecated FPU control interface
+.if ${LIBC_ARCH} != "riscv"
 SRCS+=		fpgetround.c fpsetround.c fpgetmask.c fpsetmask.c \
 		fpgetsticky.c
+.endif
 
 SRCS+=		eqsf2.c nesf2.c gtsf2.c gesf2.c ltsf2.c lesf2.c negsf2.c \
 		eqdf2.c nedf2.c gtdf2.c gedf2.c ltdf2.c ledf2.c negdf2.c \
