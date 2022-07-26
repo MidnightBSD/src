@@ -25,9 +25,9 @@
 .\" OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 .\" ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/lib/libc/string/strlcpy.3 296128 2016-02-26 22:14:19Z bdrewery $
+.\" $FreeBSD$
 .\"
-.Dd February 26, 2016
+.Dd May 1, 2020
 .Dt STRLCPY 3
 .Os
 .Sh NAME
@@ -189,6 +189,16 @@ As a matter of fact, the first version of this manual page got it wrong.
 .Xr strncat 3 ,
 .Xr strncpy 3 ,
 .Xr wcslcpy 3
+.Rs
+.%A Todd C. Miller
+.%A Theo de Raadt
+.%T strlcpy and strlcat -- Consistent, Safe, String Copy and Concatenation
+.%I USENIX Association
+.%B Proceedings of the FREENIX Track: 1999 USENIX Annual Technical Conference
+.%D June 6-11, 1999
+.%U http://www.usenix.org/publications/library/proceedings/usenix99/
+.%U full_papers/millert/millert.pdf
+.Re
 .Sh HISTORY
 The
 .Fn strlcpy

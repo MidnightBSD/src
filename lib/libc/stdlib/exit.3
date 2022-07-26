@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)exit.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/11/lib/libc/stdlib/exit.3 276006 2014-12-21 12:36:36Z brueffer $
+.\" $FreeBSD$
 .\"
-.Dd September 9, 2002
+.Dd March 22, 2020
 .Dt EXIT 3
 .Os
 .Sh NAME
@@ -116,6 +116,7 @@ functions
 never return.
 .Sh SEE ALSO
 .Xr _exit 2 ,
+.Xr abort2 2 ,
 .Xr wait 2 ,
 .Xr at_quick_exit 3 ,
 .Xr atexit 3 ,
@@ -130,3 +131,8 @@ and
 .Fn _Exit
 functions conform to
 .St -isoC-99 .
+.Sh HISTORY
+The
+.Fn exit
+function appeared in
+.At v1 .

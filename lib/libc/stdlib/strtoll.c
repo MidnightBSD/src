@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -37,7 +38,7 @@
 static char sccsid[] = "@(#)strtoq.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/strtoll.c 251672 2013-06-13 00:19:30Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <limits.h>
 #include <errno.h>

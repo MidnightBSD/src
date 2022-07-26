@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libc/stdlib/heapsort_b.c 264042 2014-04-02 16:07:48Z theraven $
+ * $FreeBSD$
  */
 #define I_AM_HEAPSORT_B
 #include "heapsort.c"

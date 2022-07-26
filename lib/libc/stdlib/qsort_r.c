@@ -2,7 +2,7 @@
  * This file is in the public domain.  Originally written by Garrett
  * A. Wollman.
  *
- * $FreeBSD: stable/11/lib/libc/stdlib/qsort_r.c 264143 2014-04-05 08:17:48Z theraven $
+ * $FreeBSD$
  */
 #include "block_abi.h"
 #define I_AM_QSORT_R

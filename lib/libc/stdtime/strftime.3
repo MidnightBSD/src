@@ -13,7 +13,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)strftime.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/11/lib/libc/stdtime/strftime.3 267618 2014-06-18 18:31:35Z wblock $
+.\" $FreeBSD$
 .\"
 .Dd June 25, 2012
 .Dt STRFTIME 3
@@ -87,7 +87,7 @@ terminating NUL.
 Otherwise, zero is returned and the buffer contents are indeterminate.
 .Pp
 The conversion specifications are copied to the buffer after expansion
-as follows:-
+as follows:
 .Bl -tag -width "xxxx"
 .It Cm \&%A
 is replaced by national representation of the full weekday name.
@@ -274,7 +274,8 @@ The peculiar week number and year in the replacements of
 .Ql %g
 and
 .Ql \&%V
-are defined in ISO 8601: 1988.
+are defined in
+.St -iso8601 .
 The
 .Fn strftime_l
 function conforms to

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 Alexey Zelkin <phantom@FreeBSD.org>
  * All rights reserved.
  *
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/stdlib/strfmon.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <ctype.h>
@@ -634,7 +636,7 @@ __format_grouped_double(double value, int *flags,
 		memset(bufend, pad_char, padded);
 	}
 
-	bufsize = bufsize - (bufend - rslt) + 1;
+	bufsize = rslt + bufsize - bufend;
 	memmove(rslt, bufend, bufsize);
 	free(avalue);
 	return (rslt);
