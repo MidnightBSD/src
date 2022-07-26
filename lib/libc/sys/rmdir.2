@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)rmdir.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/11/lib/libc/sys/rmdir.2 165903 2007-01-09 00:28:16Z imp $
+.\" $FreeBSD$
 .\"
-.Dd December 9, 2006
+.Dd March 30, 2020
 .Dt RMDIR 2
 .Os
 .Sh NAME
@@ -100,6 +100,8 @@ for a mounted file system.
 .It Bq Er EIO
 An I/O error occurred while deleting the directory entry
 or deallocating the inode.
+.It Bq Er EINTEGRITY
+Corrupted data was detected while reading from the file system.
 .It Bq Er EROFS
 The directory entry to be removed resides on a read-only file system.
 .It Bq Er EFAULT

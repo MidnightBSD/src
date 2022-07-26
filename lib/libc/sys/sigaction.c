@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/sys/sigaction.c 287292 2015-08-29 14:25:01Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <signal.h>

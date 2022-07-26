@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)unlink.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/11/lib/libc/sys/unlink.2 285990 2015-07-28 22:48:58Z bdrewery $
+.\" $FreeBSD$
 .\"
-.Dd July 28, 2015
+.Dd February 23, 2021
 .Dt UNLINK 2
 .Os
 .Sh NAME
@@ -89,6 +89,15 @@ Remove the directory entry specified by
 and
 .Fa path
 as a directory, not a normal file.
+.It Dv AT_RESOLVE_BENEATH
+Only walk paths below the directory specified by the
+.Ar fd
+descriptor.
+See the description of the
+.Dv O_RESOLVE_BENEATH
+flag in the
+.Xr open 2
+manual page.
 .El
 .Pp
 If
@@ -144,6 +153,8 @@ are owned by the effective user ID.
 .It Bq Er EIO
 An I/O error occurred while deleting the directory entry
 or deallocating the inode.
+.It Bq Er EINTEGRITY
+Corrupted data was detected while reading from the file system.
 .It Bq Er EROFS
 The named file resides on a read-only file system.
 .It Bq Er EFAULT
@@ -200,6 +211,15 @@ argument is not an absolute path and
 is neither
 .Dv AT_FDCWD
 nor a file descriptor associated with a directory.
+.It Bq Er ENOTCAPABLE
+.Fa path
+is an absolute path,
+or contained a ".." component leading to a
+directory outside of the directory hierarchy specified by
+.Fa fd ,
+and the process is in capability mode or the
+.Dv AT_RESOLVE_BENEATH
+flag was specified.
 .El
 .Sh SEE ALSO
 .Xr chflags 2 ,
@@ -215,7 +235,7 @@ system call follows The Open Group Extended API Set 2 specification.
 The
 .Fn unlink
 function appeared in
-.At v6 .
+.At v1 .
 The
 .Fn unlinkat
 system call appeared in

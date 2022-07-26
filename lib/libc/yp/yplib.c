@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992/3 Theo de Raadt <deraadt@fsa.ca>
  * Copyright (c) 1998 Bill Paul <wpaul@ctr.columbia.edu>
  * All rights reserved.
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/yp/yplib.c 352616 2019-09-23 07:23:29Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include "reentrant.h"

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/sys/setcontext.c 276630 2015-01-03 18:38:46Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <ucontext.h>
@@ -42,7 +42,6 @@ __sym_compat(setcontext, __impl_setcontext, FBSD_1.0);
 __weak_reference(setcontext, __impl_setcontext);
 __sym_default(setcontext, setcontext, FBSD_1.2);
 
-#pragma weak setcontext
 int
 setcontext(const ucontext_t *uc)
 {

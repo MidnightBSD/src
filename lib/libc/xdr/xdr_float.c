@@ -1,6 +1,8 @@
 /*	$NetBSD: xdr_float.c,v 1.23 2000/07/17 04:59:51 matt Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2010, Oracle America, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,7 +38,7 @@ static char *sccsid2 = "@(#)xdr_float.c 1.12 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)xdr_float.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/xdr/xdr_float.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * xdr_float.c, Generic XDR routines implementation.

@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)send.2	8.2 (Berkeley) 2/21/94
-.\" $FreeBSD: stable/11/lib/libc/sys/send.2 295039 2016-01-29 14:12:12Z kib $
+.\" $FreeBSD$
 .\"
-.Dd January 29, 2016
+.Dd April 27, 2020
 .Dt SEND 2
 .Os
 .Sh NAME
@@ -40,7 +40,6 @@
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
-.In sys/types.h
 .In sys/socket.h
 .Ft ssize_t
 .Fn send "int s" "const void *msg" "size_t len" "int flags"
@@ -70,18 +69,35 @@ The
 function
 may be used only when the socket is in a
 .Em connected
-state, while
+state.
+The functions
 .Fn sendto ,
 .Fn sendmsg
 and
 .Fn sendmmsg
-may be used at any time.
+may be used at any time if the socket is connectionless-mode.
+If the socket is connection-mode, the protocol
+must support implied connect (currently
+.Xr tcp 4
+is the only protocol with support) or the socket must be in a
+connected state before use.
 .Pp
 The address of the target is given by
 .Fa to
 with
 .Fa tolen
-specifying its size.
+specifying its size, or the equivalent
+.Fa msg_name
+and
+.Fa msg_namelen
+in
+.Fa struct msghdr .
+If the socket is in a connected state, the target address passed to
+.Fn sendto ,
+.Fn sendmsg
+or
+.Fn sendmmsg
+is ignored.
 The length of the message is given by
 .Fa len .
 If the message is too long to pass atomically through the
@@ -122,7 +138,8 @@ argument may include one or more of the following:
 .Bd -literal
 #define	MSG_OOB		0x00001 /* process out-of-band data */
 #define	MSG_DONTROUTE	0x00004 /* bypass routing, use direct interface */
-#define MSG_EOR		0x00008 /* data completes record */
+#define	MSG_EOR		0x00008 /* data completes record */
+#define	MSG_DONTWAIT	0x00080 /* do not block */
 #define	MSG_EOF		0x00100 /* data completes transaction */
 #define	MSG_NOSIGNAL	0x20000 /* do not generate SIGPIPE on EOF */
 .Ed
@@ -139,6 +156,9 @@ data.
 .Dv MSG_EOR
 is used to indicate a record mark for protocols which support the
 concept.
+The
+.Dv MSG_DONTWAIT
+flag request the call to return when it would block otherwise.
 .Dv MSG_EOF
 requests that the sender side of a socket be shut down, and that an
 appropriate indication be sent at the end of the specified data;
@@ -192,6 +212,8 @@ An invalid descriptor was specified.
 The destination address is a broadcast address, and
 .Dv SO_BROADCAST
 has not been set on the socket.
+.It Bq Er ENOTCONN
+The socket is connection-mode but is not connected.
 .It Bq Er ENOTSOCK
 The argument
 .Fa s
@@ -202,8 +224,9 @@ An invalid user space address was specified for an argument.
 The socket requires that message be sent atomically,
 and the size of the message to be sent made this impossible.
 .It Bq Er EAGAIN
-The socket is marked non-blocking and the requested operation
-would block.
+The socket is marked non-blocking, or
+.Dv MSG_DONTWAIT
+is specified, and the requested operation would block.
 .It Bq Er ENOBUFS
 The system was unable to allocate an internal buffer.
 The operation may succeed when buffers become available.
@@ -238,12 +261,14 @@ This typically means that the socket
 is not connected.
 .El
 .Sh SEE ALSO
+.Xr connect 2 ,
 .Xr fcntl 2 ,
 .Xr getsockopt 2 ,
 .Xr recv 2 ,
 .Xr select 2 ,
 .Xr socket 2 ,
-.Xr write 2
+.Xr write 2 ,
+.Xr CMSG_DATA 3
 .Sh HISTORY
 The
 .Fn send
