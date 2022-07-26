@@ -10,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/in_fib.c 294706 2016-01-25 06:33:15Z melifaro $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_route.h"
@@ -37,7 +37,7 @@ __FBSDID("$FreeBSD: stable/11/sys/netinet/in_fib.c 294706 2016-01-25 06:33:15Z m
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/lock.h>
-#include <sys/rwlock.h>
+#include <sys/rmlock.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/socket.h>
@@ -134,6 +134,7 @@ int
 fib4_lookup_nh_basic(uint32_t fibnum, struct in_addr dst, uint32_t flags,
     uint32_t flowid, struct nhop4_basic *pnh4)
 {
+	RIB_RLOCK_TRACKER;
 	struct rib_head *rh;
 	struct radix_node *rn;
 	struct sockaddr_in sin;
@@ -182,6 +183,7 @@ int
 fib4_lookup_nh_ext(uint32_t fibnum, struct in_addr dst, uint32_t flags,
     uint32_t flowid, struct nhop4_extended *pnh4)
 {
+	RIB_RLOCK_TRACKER;
 	struct rib_head *rh;
 	struct radix_node *rn;
 	struct sockaddr_in sin;

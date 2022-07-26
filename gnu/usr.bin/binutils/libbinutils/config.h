@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/gnu/usr.bin/binutils/libbinutils/config.h 218822 2011-02-18 20:54:12Z dim $ */
+/* $FreeBSD$ */
 
 /* FreeBSD isn't any form of AIX. */
 #define bin_dummy_emulation bin_vanilla_emulation
@@ -104,7 +104,7 @@
 #define HAVE_MKSTEMP 1
 
 /* Define to 1 if you have the `sbrk' function. */
-#define HAVE_SBRK 1
+/* #undef HAVE_SBRK */
 
 /* Define to 1 if you have the `setmode' function. */
 #define HAVE_SETMODE 1

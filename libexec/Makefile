@@ -28,6 +28,7 @@ SUBDIR=	${_atf} \
 	mport.updepends \
 	mport.version_cmp \
 	msearch.index \
+	${_phttpget} \
 	${_pppoed} \
 	rc \
 	revnetgroup \
@@ -63,7 +64,10 @@ SUBDIR+=	bootpd
 SUBDIR+=	fingerd
 .endif
 
+if ${MK_MIDNIGHTBSD_UPDATE} != "no" || ${MK_PORTSNAP} != "no"
 _phttpget=	phttpget
+.endif
+
 .if ${MK_FTP} != "no"
 SUBDIR+=	ftpd
 .endif

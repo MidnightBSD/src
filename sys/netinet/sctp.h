@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
  * Copyright (c) 2008-2012, by Michael Tuexen. All rights reserved.
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/sctp.h 347673 2019-05-16 09:20:54Z tuexen $");
+__FBSDID("$FreeBSD$");
 
 #ifndef _NETINET_SCTP_H_
 #define _NETINET_SCTP_H_
@@ -489,7 +491,6 @@ struct sctp_error_auth_invalid_hmac {
 					 * time */
 #define SCTP_SAT_NETWORK_BURST_INCR  2	/* how many times to multiply maxburst
 					 * in sat */
-#define SCTP_MAX_SENDALL_LIMIT 1024
 
 /* Data Chuck Specific Flags */
 #define SCTP_DATA_FRAG_MASK        0x03
@@ -583,8 +584,10 @@ struct sctp_error_auth_invalid_hmac {
 #define SCTP_MOBILITY_PRIM_DELETED       0x00000004
 
 
-#define SCTP_SMALLEST_PMTU 512	/* smallest pmtu allowed when disabling PMTU
-				 * discovery */
+/* Smallest PMTU allowed when disabling PMTU discovery */
+#define SCTP_SMALLEST_PMTU 512
+/* Largest PMTU allowed when disabling PMTU discovery */
+#define SCTP_LARGEST_PMTU  65536
 
 #undef SCTP_PACKED
 
@@ -602,6 +605,7 @@ struct sctp_error_auth_invalid_hmac {
  */
 #define SCTP_MAX_SACK_DELAY 500	/* per RFC4960 */
 #define SCTP_MAX_HB_INTERVAL 14400000	/* 4 hours in ms */
+#define SCTP_MIN_COOKIE_LIFE     1000	/* 1 second in ms */
 #define SCTP_MAX_COOKIE_LIFE  3600000	/* 1 hour in ms */
 
 

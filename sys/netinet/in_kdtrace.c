@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Mark Johnston <markj@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,11 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/netinet/in_kdtrace.c 328660 2018-02-01 14:36:24Z markj $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/in_kdtrace.c 328660 2018-02-01 14:36:24Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -36,6 +38,7 @@ __FBSDID("$FreeBSD: stable/11/sys/netinet/in_kdtrace.c 328660 2018-02-01 14:36:2
 SDT_PROVIDER_DEFINE(ip);
 SDT_PROVIDER_DEFINE(tcp);
 SDT_PROVIDER_DEFINE(udp);
+SDT_PROVIDER_DEFINE(udplite);
 
 SDT_PROBE_DEFINE6_XLATE(ip, , , receive,
     "void *", "pktinfo_t *",
@@ -153,3 +156,17 @@ SDT_PROBE_DEFINE5_XLATE(udp, , , send,
     "uint8_t *", "ipinfo_t *",
     "struct inpcb *", "udpsinfo_t *",
     "struct udphdr *", "udpinfo_t *");
+
+SDT_PROBE_DEFINE5_XLATE(udplite, , , receive,
+    "void *", "pktinfo_t *",
+    "struct inpcb *", "csinfo_t *",
+    "uint8_t *", "ipinfo_t *",
+    "struct inpcb *", "udplitesinfo_t *",
+    "struct udphdr *", "udpliteinfo_t *");
+
+SDT_PROBE_DEFINE5_XLATE(udplite, , , send,
+    "void *", "pktinfo_t *",
+    "struct inpcb *", "csinfo_t *",
+    "uint8_t *", "ipinfo_t *",
+    "struct inpcb *", "udplitesinfo_t *",
+    "struct udphdr *", "udpliteinfo_t *");

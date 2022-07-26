@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007-2009
  * 	Swinburne University of Technology, Melbourne, Australia.
  * Copyright (c) 2009-2010, The FreeBSD Foundation
@@ -59,7 +61,7 @@
  ******************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/siftr.c 343273 2019-01-21 19:33:05Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/alq.h>
@@ -264,12 +266,13 @@ struct siftr_stats
 	uint32_t nskip_out_dejavu;
 };
 
-static DPCPU_DEFINE(struct siftr_stats, ss);
+DPCPU_DEFINE_STATIC(struct siftr_stats, ss);
 
 static volatile unsigned int siftr_exit_pkt_manager_thread = 0;
 static unsigned int siftr_enabled = 0;
 static unsigned int siftr_pkts_per_log = 1;
 static unsigned int siftr_generate_hashes = 0;
+static uint16_t     siftr_port_filter = 0;
 /* static unsigned int siftr_binary_log = 0; */
 static char siftr_logfile[PATH_MAX] = "/var/log/siftr.log";
 static char siftr_logfile_shadow[PATH_MAX] = "/var/log/siftr.log";
@@ -314,6 +317,10 @@ SYSCTL_UINT(_net_inet_siftr, OID_AUTO, ppl, CTLFLAG_RW,
 SYSCTL_UINT(_net_inet_siftr, OID_AUTO, genhashes, CTLFLAG_RW,
     &siftr_generate_hashes, 0,
     "enable packet hash generation");
+
+SYSCTL_U16(_net_inet_siftr, OID_AUTO, port_filter, CTLFLAG_RW,
+    &siftr_port_filter, 0,
+    "enable packet filter on a TCP port");
 
 /* XXX: TODO
 SYSCTL_UINT(_net_inet_siftr, OID_AUTO, binary, CTLFLAG_RW,
@@ -706,7 +713,7 @@ siftr_findinpcb(int ipver, struct ip *ip, struct mbuf *m, uint16_t sport,
 	struct inpcb *inp;
 
 	/* We need the tcbinfo lock. */
-	INP_INFO_UNLOCK_ASSERT(&V_tcbinfo);
+	INP_INFO_WUNLOCK_ASSERT(&V_tcbinfo);
 
 	if (dir == PFIL_IN)
 		inp = (ipver == INP_IPV4 ?
@@ -905,6 +912,16 @@ siftr_chkpkt(void *arg, struct mbuf **m, struct ifnet *ifp, int dir,
 		goto inp_unlock;
 	}
 
+	/*
+	 * Only pkts selected by the tcp port filter
+	 * can be inserted into the pkt_queue
+	 */
+	if ((siftr_port_filter != 0) &&
+	    (siftr_port_filter != ntohs(inp->inp_lport)) &&
+	    (siftr_port_filter != ntohs(inp->inp_fport))) {
+		goto inp_unlock;
+	}
+
 	pn = malloc(sizeof(struct pkt_node), M_SIFTR_PKTNODE, M_NOWAIT|M_ZERO);
 
 	if (pn == NULL) {
@@ -1081,6 +1098,16 @@ siftr_chkpkt6(void *arg, struct mbuf **m, struct ifnet *ifp, int dir,
 		goto inp_unlock6;
 	}
 
+	/*
+	 * Only pkts selected by the tcp port filter
+	 * can be inserted into the pkt_queue
+	 */
+	if ((siftr_port_filter != 0) && 
+	    (siftr_port_filter != ntohs(inp->inp_lport)) &&
+	    (siftr_port_filter != ntohs(inp->inp_fport))) {
+		goto inp_unlock6;
+	}
+
 	pn = malloc(sizeof(struct pkt_node), M_SIFTR_PKTNODE, M_NOWAIT|M_ZERO);
 
 	if (pn == NULL) {
@@ -1197,10 +1224,10 @@ siftr_manage_ops(uint8_t action)
 	struct timeval tval;
 	struct flow_hash_node *counter, *tmp_counter;
 	struct sbuf *s;
-	int i, key_index, ret, error;
+	int i, key_index, error;
 	uint32_t bytes_to_write, total_skipped_pkts;
 	uint16_t lport, fport;
-	uint8_t *key, ipver;
+	uint8_t *key, ipver __unused;
 
 #ifdef SIFTR_IPV6
 	uint32_t laddr[4];
@@ -1231,7 +1258,7 @@ siftr_manage_ops(uint8_t action)
 
 		siftr_exit_pkt_manager_thread = 0;
 
-		ret = kthread_add(&siftr_pkt_manager_thread, NULL, NULL,
+		kthread_add(&siftr_pkt_manager_thread, NULL, NULL,
 		    &siftr_pkt_manager_thr, RFNOWAIT, 0,
 		    "siftr_pkt_manager_thr");
 

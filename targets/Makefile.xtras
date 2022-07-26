@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/targets/Makefile.xtras 297433 2016-03-30 22:26:14Z bdrewery $
+# $FreeBSD$
 #
 # Makefile.xtras - non-build targets
 

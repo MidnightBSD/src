@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/ip_input.c 340960 2018-11-26 12:41:49Z eugen $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_bootp.h"
 #include "opt_ipstealth.h"
@@ -107,8 +109,11 @@ SYSCTL_INT(_net_inet_ip, IPCTL_FORWARDING, forwarding, CTLFLAG_VNET | CTLFLAG_RW
     &VNET_NAME(ipforwarding), 0,
     "Enable IP forwarding between interfaces");
 
-static VNET_DEFINE(int, ipsendredirects) = 1;	/* XXX */
-#define	V_ipsendredirects	VNET(ipsendredirects)
+/*
+ * Respond with an ICMP host redirect when we forward a packet out of
+ * the same interface on which it was received.  See RFC 792.
+ */
+VNET_DEFINE(int, ipsendredirects) = 1;
 SYSCTL_INT(_net_inet_ip, IPCTL_SENDREDIRECTS, redirect, CTLFLAG_VNET | CTLFLAG_RW,
     &VNET_NAME(ipsendredirects), 0,
     "Enable sending IP redirects");
@@ -126,7 +131,7 @@ SYSCTL_INT(_net_inet_ip, IPCTL_SENDREDIRECTS, redirect, CTLFLAG_VNET | CTLFLAG_R
  * to the loopback interface instead of the interface where the
  * packets for those addresses are received.
  */
-static VNET_DEFINE(int, ip_checkinterface);
+VNET_DEFINE_STATIC(int, ip_checkinterface);
 #define	V_ip_checkinterface	VNET(ip_checkinterface)
 SYSCTL_INT(_net_inet_ip, OID_AUTO, check_interface, CTLFLAG_VNET | CTLFLAG_RW,
     &VNET_NAME(ip_checkinterface), 0,
@@ -302,7 +307,7 @@ ip_init(void)
 	struct protosw *pr;
 	int i;
 
-	TAILQ_INIT(&V_in_ifaddrhead);
+	CK_STAILQ_INIT(&V_in_ifaddrhead);
 	V_in_ifaddrhashtbl = hashinit(INADDR_NHASH, M_IFADDR, &V_in_ifaddrhmask);
 
 	/* Initialize IP reassembly queue. */
@@ -397,7 +402,7 @@ ip_destroy(void *unused __unused)
 
 	/* Make sure the IPv4 routes are gone as well. */
 	IFNET_RLOCK();
-	TAILQ_FOREACH(ifp, &V_ifnet, if_link)
+	CK_STAILQ_FOREACH(ifp, &V_ifnet, if_link)
 		rt_flushifroutes_af(ifp, AF_INET);
 	IFNET_RUNLOCK();
 
@@ -499,10 +504,10 @@ ip_input(struct mbuf *m)
 
 	IP_PROBE(receive, NULL, NULL, ip, m->m_pkthdr.rcvif, ip, NULL);
 
-	/* 127/8 must not appear on wire - RFC1122 */
+	/* IN_LOOPBACK must not appear on the wire - RFC1122 */
 	ifp = m->m_pkthdr.rcvif;
-	if ((ntohl(ip->ip_dst.s_addr) >> IN_CLASSA_NSHIFT) == IN_LOOPBACKNET ||
-	    (ntohl(ip->ip_src.s_addr) >> IN_CLASSA_NSHIFT) == IN_LOOPBACKNET) {
+	if (IN_LOOPBACK(ntohl(ip->ip_dst.s_addr)) ||
+	    IN_LOOPBACK(ntohl(ip->ip_src.s_addr))) {
 		if ((ifp->if_flags & IFF_LOOPBACK) == 0) {
 			IPSTAT_INC(ips_badaddr);
 			goto bad;
@@ -564,7 +569,7 @@ tooshort:
 	 * case skip another inbound firewall processing and update
 	 * ip pointer.
 	 */
-	if (V_ipforwarding != 0 && V_ipsendredirects == 0
+	if (V_ipforwarding != 0
 #if defined(IPSEC) || defined(IPSEC_SUPPORT)
 	    && (!IPSEC_ENABLED(ipv4) ||
 	    IPSEC_CAPS(ipv4, m, IPSEC_CAP_OPERABLE) == 0)
@@ -651,7 +656,7 @@ passin:
 	 * we receive might be for us (and let the upper layers deal
 	 * with it).
 	 */
-	if (TAILQ_EMPTY(&V_in_ifaddrhead) &&
+	if (CK_STAILQ_EMPTY(&V_in_ifaddrhead) &&
 	    (m->m_flags & (M_MCAST|M_BCAST)) == 0)
 		goto ours;
 
@@ -708,7 +713,7 @@ passin:
 	 */
 	if (ifp != NULL && ifp->if_flags & IFF_BROADCAST) {
 		IF_ADDR_RLOCK(ifp);
-	        TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
+		CK_STAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
 			if (ifa->ifa_addr->sa_family != AF_INET)
 				continue;
 			ia = ifatoia(ifa);
@@ -733,14 +738,12 @@ passin:
 		IF_ADDR_RUNLOCK(ifp);
 		ia = NULL;
 	}
-	/* RFC 3927 2.7: Do not forward datagrams for 169.254.0.0/16. */
-	if (IN_LINKLOCAL(ntohl(ip->ip_dst.s_addr))) {
-		IPSTAT_INC(ips_cantforward);
-		m_freem(m);
-		return;
-	}
 	if (IN_MULTICAST(ntohl(ip->ip_dst.s_addr))) {
-		if (V_ip_mrouter) {
+		/*
+		 * RFC 3927 2.7: Do not forward multicast packets from
+		 * IN_LINKLOCAL.
+		 */
+		if (V_ip_mrouter && !IN_LINKLOCAL(ntohl(ip->ip_src.s_addr))) {
 			/*
 			 * If we are acting as a multicast router, all
 			 * incoming multicast packets are passed to the
@@ -775,6 +778,13 @@ passin:
 		goto ours;
 	if (ip->ip_dst.s_addr == INADDR_ANY)
 		goto ours;
+	/* RFC 3927 2.7: Do not forward packets to or from IN_LINKLOCAL. */
+	if (IN_LINKLOCAL(ntohl(ip->ip_dst.s_addr)) ||
+	    IN_LINKLOCAL(ntohl(ip->ip_src.s_addr))) {
+		IPSTAT_INC(ips_cantforward);
+		m_freem(m);
+		return;
+	}
 
 	/*
 	 * Not for us; forward if possible and desirable.
@@ -978,9 +988,9 @@ ip_forward(struct mbuf *m, int srcrt)
 #else
 	in_rtalloc_ign(&ro, 0, M_GETFIB(m));
 #endif
+	NET_EPOCH_ENTER();
 	if (ro.ro_rt != NULL) {
 		ia = ifatoia(ro.ro_rt->rt_ifa);
-		ifa_ref(&ia->ia_ifa);
 	} else
 		ia = NULL;
 	/*
@@ -994,7 +1004,7 @@ ip_forward(struct mbuf *m, int srcrt)
 	 * because unnecessary, or because rate limited), so we are
 	 * really we are wasting a lot of work here.
 	 *
-	 * We don't use m_copy() because it might return a reference
+	 * We don't use m_copym() because it might return a reference
 	 * to a shared cluster. Both this function and ip_output()
 	 * assume exclusive access to the IP header in `m', so any
 	 * data in a cluster may change before we reach icmp_error().
@@ -1026,7 +1036,7 @@ ip_forward(struct mbuf *m, int srcrt)
 			m_freem(mcopy);
 			if (error != EINPROGRESS)
 				IPSTAT_INC(ips_cantforward);
-			return;
+			goto out;
 		}
 		/* No IPsec processing required */
 	}
@@ -1079,16 +1089,12 @@ ip_forward(struct mbuf *m, int srcrt)
 		else {
 			if (mcopy)
 				m_freem(mcopy);
-			if (ia != NULL)
-				ifa_free(&ia->ia_ifa);
-			return;
+			goto out;
 		}
 	}
-	if (mcopy == NULL) {
-		if (ia != NULL)
-			ifa_free(&ia->ia_ifa);
-		return;
-	}
+	if (mcopy == NULL)
+		goto out;
+
 
 	switch (error) {
 
@@ -1130,13 +1136,11 @@ ip_forward(struct mbuf *m, int srcrt)
 	case ENOBUFS:
 	case EACCES:			/* ipfw denied packet */
 		m_freem(mcopy);
-		if (ia != NULL)
-			ifa_free(&ia->ia_ifa);
-		return;
+		goto out;
 	}
-	if (ia != NULL)
-		ifa_free(&ia->ia_ifa);
 	icmp_error(mcopy, type, code, dest.s_addr, mtu);
+ out:
+	NET_EPOCH_EXIT();
 }
 
 #define	CHECK_SO_CT(sp, ct) \
@@ -1146,40 +1150,96 @@ void
 ip_savecontrol(struct inpcb *inp, struct mbuf **mp, struct ip *ip,
     struct mbuf *m)
 {
+	bool stamped;
 
+	stamped = false;
 	if ((inp->inp_socket->so_options & SO_BINTIME) ||
 	    CHECK_SO_CT(inp->inp_socket, SO_TS_BINTIME)) {
-		struct bintime bt;
+		struct bintime boottimebin, bt;
+		struct timespec ts1;
 
-		bintime(&bt);
+		if ((m->m_flags & (M_PKTHDR | M_TSTMP)) == (M_PKTHDR |
+		    M_TSTMP)) {
+			mbuf_tstmp2timespec(m, &ts1);
+			timespec2bintime(&ts1, &bt);
+			getboottimebin(&boottimebin);
+			bintime_add(&bt, &boottimebin);
+		} else {
+			bintime(&bt);
+		}
 		*mp = sbcreatecontrol((caddr_t)&bt, sizeof(bt),
 		    SCM_BINTIME, SOL_SOCKET);
-		if (*mp)
+		if (*mp != NULL) {
 			mp = &(*mp)->m_next;
+			stamped = true;
+		}
 	}
 	if (CHECK_SO_CT(inp->inp_socket, SO_TS_REALTIME_MICRO)) {
+		struct bintime boottimebin, bt1;
+		struct timespec ts1;;
 		struct timeval tv;
 
-		microtime(&tv);
+		if ((m->m_flags & (M_PKTHDR | M_TSTMP)) == (M_PKTHDR |
+		    M_TSTMP)) {
+			mbuf_tstmp2timespec(m, &ts1);
+			timespec2bintime(&ts1, &bt1);
+			getboottimebin(&boottimebin);
+			bintime_add(&bt1, &boottimebin);
+			bintime2timeval(&bt1, &tv);
+		} else {
+			microtime(&tv);
+		}
 		*mp = sbcreatecontrol((caddr_t)&tv, sizeof(tv),
 		    SCM_TIMESTAMP, SOL_SOCKET);
-		if (*mp)
+		if (*mp != NULL) {
 			mp = &(*mp)->m_next;
+			stamped = true;
+		}
 	} else if (CHECK_SO_CT(inp->inp_socket, SO_TS_REALTIME)) {
-		struct timespec ts;
+		struct bintime boottimebin;
+		struct timespec ts, ts1;
 
-		nanotime(&ts);
+		if ((m->m_flags & (M_PKTHDR | M_TSTMP)) == (M_PKTHDR |
+		    M_TSTMP)) {
+			mbuf_tstmp2timespec(m, &ts);
+			getboottimebin(&boottimebin);
+			bintime2timespec(&boottimebin, &ts1);
+			timespecadd(&ts, &ts1, &ts);
+		} else {
+			nanotime(&ts);
+		}
 		*mp = sbcreatecontrol((caddr_t)&ts, sizeof(ts),
 		    SCM_REALTIME, SOL_SOCKET);
-		if (*mp)
+		if (*mp != NULL) {
 			mp = &(*mp)->m_next;
+			stamped = true;
+		}
 	} else if (CHECK_SO_CT(inp->inp_socket, SO_TS_MONOTONIC)) {
 		struct timespec ts;
 
-		nanouptime(&ts);
+		if ((m->m_flags & (M_PKTHDR | M_TSTMP)) == (M_PKTHDR |
+		    M_TSTMP))
+			mbuf_tstmp2timespec(m, &ts);
+		else
+			nanouptime(&ts);
 		*mp = sbcreatecontrol((caddr_t)&ts, sizeof(ts),
 		    SCM_MONOTONIC, SOL_SOCKET);
-		if (*mp)
+		if (*mp != NULL) {
+			mp = &(*mp)->m_next;
+			stamped = true;
+		}
+	}
+	if (stamped && (m->m_flags & (M_PKTHDR | M_TSTMP)) == (M_PKTHDR |
+	    M_TSTMP)) {
+		struct sock_timestamp_info sti;
+
+		bzero(&sti, sizeof(sti));
+		sti.st_info_flags = ST_INFO_HW;
+		if ((m->m_flags & M_TSTMP_HPREC) != 0)
+			sti.st_info_flags |= ST_INFO_HW_HPREC;
+		*mp = sbcreatecontrol((caddr_t)&sti, sizeof(sti), SCM_TIME_INFO,
+		    SOL_SOCKET);
+		if (*mp != NULL)
 			mp = &(*mp)->m_next;
 	}
 	if (inp->inp_flags & INP_RECVDSTADDR) {
@@ -1298,7 +1358,7 @@ makedummy:
  * locking.  This code remains in ip_input.c as ip_mroute.c is optionally
  * compiled.
  */
-static VNET_DEFINE(int, ip_rsvp_on);
+VNET_DEFINE_STATIC(int, ip_rsvp_on);
 VNET_DEFINE(struct socket *, ip_rsvpd);
 
 #define	V_ip_rsvp_on		VNET(ip_rsvp_on)

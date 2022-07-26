@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2002 Andre Oppermann, Internet Business Solutions AG
  * All rights reserved.
  *
@@ -63,7 +65,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/tcp_hostcache.c 315456 2017-03-17 14:54:10Z vangyzen $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet6.h"
 
@@ -110,10 +112,10 @@ __FBSDID("$FreeBSD: stable/11/sys/netinet/tcp_hostcache.c 315456 2017-03-17 14:5
 #define TCP_HOSTCACHE_EXPIRE		60*60	/* one hour */
 #define TCP_HOSTCACHE_PRUNE		5*60	/* every 5 minutes */
 
-static VNET_DEFINE(struct tcp_hostcache, tcp_hostcache);
+VNET_DEFINE_STATIC(struct tcp_hostcache, tcp_hostcache);
 #define	V_tcp_hostcache		VNET(tcp_hostcache)
 
-static VNET_DEFINE(struct callout, tcp_hc_callout);
+VNET_DEFINE_STATIC(struct callout, tcp_hc_callout);
 #define	V_tcp_hc_callout	VNET(tcp_hc_callout)
 
 static struct hc_metrics *tcp_hc_lookup(struct in_conninfo *);
@@ -158,7 +160,7 @@ SYSCTL_INT(_net_inet_tcp_hostcache, OID_AUTO, prune, CTLFLAG_VNET | CTLFLAG_RW,
 
 SYSCTL_INT(_net_inet_tcp_hostcache, OID_AUTO, purge, CTLFLAG_VNET | CTLFLAG_RW,
     &VNET_NAME(tcp_hostcache.purgeall), 0,
-    "Expire all entires on next purge run");
+    "Expire all entries on next purge run");
 
 SYSCTL_PROC(_net_inet_tcp_hostcache, OID_AUTO, list,
     CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_SKIP, 0, 0,
@@ -194,7 +196,7 @@ tcp_hc_init(void)
 	/*
 	 * Initialize hostcache structures.
 	 */
-	V_tcp_hostcache.cache_count = 0;
+	atomic_store_int(&V_tcp_hostcache.cache_count, 0);
 	V_tcp_hostcache.hashsize = TCP_HOSTCACHE_HASHSIZE;
 	V_tcp_hostcache.bucket_limit = TCP_HOSTCACHE_BUCKETLIMIT;
 	V_tcp_hostcache.expire = TCP_HOSTCACHE_EXPIRE;
@@ -369,7 +371,7 @@ tcp_hc_insert(struct in_conninfo *inc)
 	 * If the bucket limit is reached, reuse the least-used element.
 	 */
 	if (hc_head->hch_length >= V_tcp_hostcache.bucket_limit ||
-	    V_tcp_hostcache.cache_count >= V_tcp_hostcache.cache_limit) {
+	    atomic_load_int(&V_tcp_hostcache.cache_count) >= V_tcp_hostcache.cache_limit) {
 		hc_entry = TAILQ_LAST(&hc_head->hch_bucket, hc_qhead);
 		/*
 		 * At first we were dropping the last element, just to
@@ -386,7 +388,7 @@ tcp_hc_insert(struct in_conninfo *inc)
 		}
 		TAILQ_REMOVE(&hc_head->hch_bucket, hc_entry, rmx_q);
 		V_tcp_hostcache.hashbase[hash].hch_length--;
-		V_tcp_hostcache.cache_count--;
+		atomic_subtract_int(&V_tcp_hostcache.cache_count, 1);
 		TCPSTAT_INC(tcps_hc_bucketoverflow);
 #if 0
 		uma_zfree(V_tcp_hostcache.zone, hc_entry);
@@ -419,7 +421,7 @@ tcp_hc_insert(struct in_conninfo *inc)
 	 */
 	TAILQ_INSERT_HEAD(&hc_head->hch_bucket, hc_entry, rmx_q);
 	V_tcp_hostcache.hashbase[hash].hch_length++;
-	V_tcp_hostcache.cache_count++;
+	atomic_add_int(&V_tcp_hostcache.cache_count, 1);
 	TCPSTAT_INC(tcps_hc_added);
 
 	return hc_entry;
@@ -435,8 +437,10 @@ tcp_hc_get(struct in_conninfo *inc, struct hc_metrics_lite *hc_metrics_lite)
 {
 	struct hc_metrics *hc_entry;
 
-	if (!V_tcp_use_hostcache)
+	if (!V_tcp_use_hostcache) {
+		bzero(hc_metrics_lite, sizeof(*hc_metrics_lite));
 		return;
+	}
 
 	/*
 	 * Find the right bucket.
@@ -472,11 +476,11 @@ tcp_hc_get(struct in_conninfo *inc, struct hc_metrics_lite *hc_metrics_lite)
  * discovered path MTU.  Returns 0 if no entry is found or value is not
  * set.
  */
-u_long
+uint32_t
 tcp_hc_getmtu(struct in_conninfo *inc)
 {
 	struct hc_metrics *hc_entry;
-	u_long mtu;
+	uint32_t mtu;
 
 	if (!V_tcp_use_hostcache)
 		return 0;
@@ -498,7 +502,7 @@ tcp_hc_getmtu(struct in_conninfo *inc)
  * Creates a new entry if none was found.
  */
 void
-tcp_hc_updatemtu(struct in_conninfo *inc, u_long mtu)
+tcp_hc_updatemtu(struct in_conninfo *inc, uint32_t mtu)
 {
 	struct hc_metrics *hc_entry;
 
@@ -560,16 +564,16 @@ tcp_hc_update(struct in_conninfo *inc, struct hc_metrics_lite *hcml)
 		if (hc_entry->rmx_rtt == 0)
 			hc_entry->rmx_rtt = hcml->rmx_rtt;
 		else
-			hc_entry->rmx_rtt =
-			    (hc_entry->rmx_rtt + hcml->rmx_rtt) / 2;
+			hc_entry->rmx_rtt = ((uint64_t)hc_entry->rmx_rtt +
+			    (uint64_t)hcml->rmx_rtt) / 2;
 		TCPSTAT_INC(tcps_cachedrtt);
 	}
 	if (hcml->rmx_rttvar != 0) {
 	        if (hc_entry->rmx_rttvar == 0)
 			hc_entry->rmx_rttvar = hcml->rmx_rttvar;
 		else
-			hc_entry->rmx_rttvar =
-			    (hc_entry->rmx_rttvar + hcml->rmx_rttvar) / 2;
+			hc_entry->rmx_rttvar = ((uint64_t)hc_entry->rmx_rttvar +
+			    (uint64_t)hcml->rmx_rttvar) / 2;
 		TCPSTAT_INC(tcps_cachedrttvar);
 	}
 	if (hcml->rmx_ssthresh != 0) {
@@ -584,8 +588,8 @@ tcp_hc_update(struct in_conninfo *inc, struct hc_metrics_lite *hcml)
 		if (hc_entry->rmx_cwnd == 0)
 			hc_entry->rmx_cwnd = hcml->rmx_cwnd;
 		else
-			hc_entry->rmx_cwnd =
-			    (hc_entry->rmx_cwnd + hcml->rmx_cwnd) / 2;
+			hc_entry->rmx_cwnd = ((uint64_t)hc_entry->rmx_cwnd +
+			    (uint64_t)hcml->rmx_cwnd) / 2;
 		/* TCPSTAT_INC(tcps_cachedcwnd); */
 	}
 	if (hcml->rmx_sendpipe != 0) {
@@ -593,7 +597,8 @@ tcp_hc_update(struct in_conninfo *inc, struct hc_metrics_lite *hcml)
 			hc_entry->rmx_sendpipe = hcml->rmx_sendpipe;
 		else
 			hc_entry->rmx_sendpipe =
-			    (hc_entry->rmx_sendpipe + hcml->rmx_sendpipe) /2;
+			    ((uint64_t)hc_entry->rmx_sendpipe +
+			    (uint64_t)hcml->rmx_sendpipe) /2;
 		/* TCPSTAT_INC(tcps_cachedsendpipe); */
 	}
 	if (hcml->rmx_recvpipe != 0) {
@@ -601,7 +606,8 @@ tcp_hc_update(struct in_conninfo *inc, struct hc_metrics_lite *hcml)
 			hc_entry->rmx_recvpipe = hcml->rmx_recvpipe;
 		else
 			hc_entry->rmx_recvpipe =
-			    (hc_entry->rmx_recvpipe + hcml->rmx_recvpipe) /2;
+			    ((uint64_t)hc_entry->rmx_recvpipe +
+			    (uint64_t)hcml->rmx_recvpipe) /2;
 		/* TCPSTAT_INC(tcps_cachedrecvpipe); */
 	}
 
@@ -619,7 +625,7 @@ sysctl_tcp_hc_list(SYSCTL_HANDLER_ARGS)
 {
 	const int linesize = 128;
 	struct sbuf sb;
-	int i, error;
+	int i, error, len;
 	struct hc_metrics *hc_entry;
 	char ip4buf[INET_ADDRSTRLEN];
 #ifdef INET6
@@ -629,12 +635,26 @@ sysctl_tcp_hc_list(SYSCTL_HANDLER_ARGS)
 	if (jailed_without_vnet(curthread->td_ucred) != 0)
 		return (EPERM);
 
-	sbuf_new(&sb, NULL, linesize * (V_tcp_hostcache.cache_count + 1),
-		SBUF_INCLUDENUL);
+	/* Optimize Buffer length query by sbin/sysctl */
+	if (req->oldptr == NULL) {
+		len = (atomic_load_int(&V_tcp_hostcache.cache_count) + 1) *
+			linesize;
+		return (SYSCTL_OUT(req, NULL, len));
+	}
+
+	error = sysctl_wire_old_buffer(req, 0);
+	if (error != 0) {
+		return(error);
+	}
+
+	/* Use a buffer sized for one full bucket */
+	sbuf_new_for_sysctl(&sb, NULL, V_tcp_hostcache.bucket_limit *
+		linesize, req);
 
 	sbuf_printf(&sb,
-	        "\nIP address        MTU  SSTRESH      RTT   RTTVAR "
+		"\nIP address        MTU  SSTRESH      RTT   RTTVAR "
 		"    CWND SENDPIPE RECVPIPE HITS  UPD  EXP\n");
+	sbuf_drain(&sb);
 
 #define msec(u) (((u) + 500) / 1000)
 	for (i = 0; i < V_tcp_hostcache.hashsize; i++) {
@@ -642,7 +662,7 @@ sysctl_tcp_hc_list(SYSCTL_HANDLER_ARGS)
 		TAILQ_FOREACH(hc_entry, &V_tcp_hostcache.hashbase[i].hch_bucket,
 			      rmx_q) {
 			sbuf_printf(&sb,
-			    "%-15s %5lu %8lu %6lums %6lums %8lu %8lu %8lu %4lu "
+			    "%-15s %5u %8u %6lums %6lums %8u %8u %8u %4lu "
 			    "%4lu %4i\n",
 			    hc_entry->ip4.s_addr ?
 			        inet_ntoa_r(hc_entry->ip4, ip4buf) :
@@ -653,9 +673,9 @@ sysctl_tcp_hc_list(SYSCTL_HANDLER_ARGS)
 #endif
 			    hc_entry->rmx_mtu,
 			    hc_entry->rmx_ssthresh,
-			    msec(hc_entry->rmx_rtt *
+			    msec((u_long)hc_entry->rmx_rtt *
 				(RTM_RTTUNIT / (hz * TCP_RTT_SCALE))),
-			    msec(hc_entry->rmx_rttvar *
+			    msec((u_long)hc_entry->rmx_rttvar *
 				(RTM_RTTUNIT / (hz * TCP_RTTVAR_SCALE))),
 			    hc_entry->rmx_cwnd,
 			    hc_entry->rmx_sendpipe,
@@ -665,11 +685,10 @@ sysctl_tcp_hc_list(SYSCTL_HANDLER_ARGS)
 			    hc_entry->rmx_expire);
 		}
 		THC_UNLOCK(&V_tcp_hostcache.hashbase[i].hch_mtx);
+		sbuf_drain(&sb);
 	}
 #undef msec
 	error = sbuf_finish(&sb);
-	if (error == 0)
-		error = SYSCTL_OUT(req, sbuf_data(&sb), sbuf_len(&sb));
 	sbuf_delete(&sb);
 	return(error);
 }
@@ -692,7 +711,7 @@ tcp_hc_purge_internal(int all)
 					      hc_entry, rmx_q);
 				uma_zfree(V_tcp_hostcache.zone, hc_entry);
 				V_tcp_hostcache.hashbase[i].hch_length--;
-				V_tcp_hostcache.cache_count--;
+				atomic_subtract_int(&V_tcp_hostcache.cache_count, 1);
 			} else
 				hc_entry->rmx_expire -= V_tcp_hostcache.prune;
 		}

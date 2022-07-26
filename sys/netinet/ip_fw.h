@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002-2009 Luigi Rizzo, Universita` di Pisa
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/netinet/ip_fw.h 349573 2019-07-01 10:03:38Z ae $
+ * $FreeBSD$
  */
 
 #ifndef _IPFW2_H
@@ -548,6 +550,8 @@ struct nat44_cfg_nat {
 	struct in_addr	ip;		/* nat IPv4 address */
 	uint32_t	mode;		/* aliasing mode */
 	uint32_t	redir_cnt;	/* number of entry in spool chain */
+	u_short		alias_port_lo;	/* low range for port aliasing */
+	u_short		alias_port_hi;	/* high range for port aliasing */
 };
 
 /* Nat command. */

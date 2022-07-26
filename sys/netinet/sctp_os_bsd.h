@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2006-2007, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
  * Copyright (c) 2008-2012, by Michael Tuexen. All rights reserved.
@@ -31,22 +33,24 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/sctp_os_bsd.h 332189 2018-04-07 17:59:08Z tuexen $");
+__FBSDID("$FreeBSD$");
 
 #ifndef _NETINET_SCTP_OS_BSD_H_
 #define _NETINET_SCTP_OS_BSD_H_
 /*
  * includes
  */
-#include "opt_compat.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
 #include "opt_sctp.h"
 
 #include <sys/param.h>
+#include <sys/domain.h>
+#include <sys/eventhandler.h>
 #include <sys/ktr.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
+#include <sys/module.h>
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
 #include <sys/mbuf.h>
@@ -82,7 +86,6 @@ __FBSDID("$FreeBSD: stable/11/sys/netinet/sctp_os_bsd.h 332189 2018-04-07 17:59:
 #include <netinet/icmp_var.h>
 
 #ifdef INET6
-#include <sys/domain.h>
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
 #include <netinet6/in6_pcb.h>
@@ -96,9 +99,6 @@ __FBSDID("$FreeBSD: stable/11/sys/netinet/sctp_os_bsd.h 332189 2018-04-07 17:59:
 #include <crypto/sha1.h>
 #include <crypto/sha2/sha256.h>
 
-#ifndef in6pcb
-#define in6pcb		inpcb
-#endif
 /* Declare all the malloc names for all the various mallocs */
 MALLOC_DECLARE(SCTP_M_MAP);
 MALLOC_DECLARE(SCTP_M_STRMI);
@@ -266,12 +266,17 @@ typedef struct callout sctp_os_timer_t;
 
 
 #define SCTP_OS_TIMER_INIT(tmr)	callout_init(tmr, 1)
-#define SCTP_OS_TIMER_START	callout_reset
-#define SCTP_OS_TIMER_STOP	callout_stop
-#define SCTP_OS_TIMER_STOP_DRAIN callout_drain
-#define SCTP_OS_TIMER_PENDING	callout_pending
-#define SCTP_OS_TIMER_ACTIVE	callout_active
-#define SCTP_OS_TIMER_DEACTIVATE callout_deactivate
+/*
+ * NOTE: The next two shouldn't be called directly outside of sctp_timer_start()
+ * and sctp_timer_stop(), since they don't handle incrementing/decrementing
+ * relevant reference counts.
+ */
+#define SCTP_OS_TIMER_START		callout_reset
+#define SCTP_OS_TIMER_STOP		callout_stop
+#define SCTP_OS_TIMER_STOP_DRAIN	callout_drain
+#define SCTP_OS_TIMER_PENDING		callout_pending
+#define SCTP_OS_TIMER_ACTIVE		callout_active
+#define SCTP_OS_TIMER_DEACTIVATE	callout_deactivate
 
 #define sctp_get_tick_count() (ticks)
 
@@ -294,6 +299,8 @@ typedef struct callout sctp_os_timer_t;
 
 #define SCTP_ALIGN_TO_END(m, len) M_ALIGN(m, len)
 
+#define SCTP_SNPRINTF(...) snprintf(__VA_ARGS__)
+
 /* We make it so if you have up to 4 threads
  * writing based on the default size of
  * the packet log 65 k, that would be
@@ -312,11 +319,6 @@ typedef struct callout sctp_os_timer_t;
                                               if (rt != NULL) \
                                                  rt->rt_mtu = mtu; \
                                            } while(0)
-
-/* (de-)register interface event notifications */
-#define SCTP_REGISTER_INTERFACE(ifhandle, af)
-#define SCTP_DEREGISTER_INTERFACE(ifhandle, af)
-
 
 /*************************/
 /* These are for logging */
@@ -367,10 +369,10 @@ typedef struct callout sctp_os_timer_t;
  */
 
 /* get the v6 hop limit */
-#define SCTP_GET_HLIM(inp, ro)	in6_selecthlim((struct in6pcb *)&inp->ip_inp.inp, (ro ? (ro->ro_rt ? (ro->ro_rt->rt_ifp) : (NULL)) : (NULL)));
+#define SCTP_GET_HLIM(inp, ro)	in6_selecthlim(&inp->ip_inp.inp, (ro ? (ro->ro_rt ? (ro->ro_rt->rt_ifp) : (NULL)) : (NULL)));
 
 /* is the endpoint v6only? */
-#define SCTP_IPV6_V6ONLY(inp)	(((struct inpcb *)inp)->inp_flags & IN6P_IPV6_V6ONLY)
+#define SCTP_IPV6_V6ONLY(sctp_inpcb)	((sctp_inpcb)->ip_inp.inp.inp_flags & IN6P_IPV6_V6ONLY)
 /* is the socket non-blocking? */
 #define SCTP_SO_IS_NBIO(so)	((so)->so_state & SS_NBIO)
 #define SCTP_SET_SO_NBIO(so)	((so)->so_state |= SS_NBIO)
@@ -392,8 +394,8 @@ typedef struct callout sctp_os_timer_t;
 	(sb).sb_mb = NULL;	\
 	(sb).sb_mbcnt = 0;
 
-#define SCTP_SB_LIMIT_RCV(so) so->so_rcv.sb_hiwat
-#define SCTP_SB_LIMIT_SND(so) so->so_snd.sb_hiwat
+#define SCTP_SB_LIMIT_RCV(so) (SOLISTENING(so) ? so->sol_sbrcv_hiwat : so->so_rcv.sb_hiwat)
+#define SCTP_SB_LIMIT_SND(so) (SOLISTENING(so) ? so->sol_sbsnd_hiwat : so->so_snd.sb_hiwat)
 
 /*
  * routes, output, etc.
@@ -430,7 +432,7 @@ typedef struct rtentry sctp_rtentry_t;
 	m_clrprotoflags(o_pak); \
 	if (local_stcb && local_stcb->sctp_ep) \
 		result = ip6_output(o_pak, \
-				    ((struct in6pcb *)(local_stcb->sctp_ep))->in6p_outputopts, \
+				    ((struct inpcb *)(local_stcb->sctp_ep))->in6p_outputopts, \
 				    (ro), 0, 0, ifp, NULL); \
 	else \
 		result = ip6_output(o_pak, NULL, (ro), 0, 0, ifp, NULL); \
@@ -444,7 +446,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 /*
  * SCTP AUTH
  */
-#define SCTP_READ_RANDOM(buf, len)	read_random(buf, len)
+#define SCTP_READ_RANDOM(buf, len)	arc4rand(buf, len, 0)
 
 /* map standard crypto API names */
 #define SCTP_SHA1_CTX		SHA1_CTX
@@ -456,8 +458,6 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #define SCTP_SHA256_INIT	SHA256_Init
 #define SCTP_SHA256_UPDATE	SHA256_Update
 #define SCTP_SHA256_FINAL(x,y)	SHA256_Final((caddr_t)x, y)
-
-#endif
 
 #define SCTP_DECREMENT_AND_CHECK_REFCOUNT(addr) (atomic_fetchadd_int(addr, -1) == 1)
 #if defined(INVARIANTS)
@@ -478,4 +478,11 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 		*addr = 0; \
 	} \
 }
+#endif
+
+#define SCTP_IS_LISTENING(inp) ((inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING) != 0)
+
+int sctp_syscalls_init(void);
+int sctp_syscalls_uninit(void);
+
 #endif

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/targets/pseudo/stage/Makefile 296700 2016-03-11 23:45:28Z bdrewery $
+# $FreeBSD$
 
 # this makefile gets hooked into everyone's dependencies so that
 # distrib-dirs can be done in STAGE_OBJTOP

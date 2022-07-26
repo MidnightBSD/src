@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/ip_divert.c 340923 2018-11-25 18:00:50Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -67,12 +69,11 @@ __FBSDID("$FreeBSD: stable/11/sys/netinet/ip_divert.c 340923 2018-11-25 18:00:50
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
 #endif
-#ifdef SCTP
+#if defined(SCTP) || defined(SCTP_SUPPORT)
 #include <netinet/sctp_crc32.h>
 #endif
 
 #include <security/mac/mac_framework.h>
-
 /*
  * Divert sockets
  */
@@ -110,8 +111,8 @@ __FBSDID("$FreeBSD: stable/11/sys/netinet/ip_divert.c 340923 2018-11-25 18:00:50
  */
 
 /* Internal variables. */
-static VNET_DEFINE(struct inpcbhead, divcb);
-static VNET_DEFINE(struct inpcbinfo, divcbinfo);
+VNET_DEFINE_STATIC(struct inpcbhead, divcb);
+VNET_DEFINE_STATIC(struct inpcbinfo, divcbinfo);
 
 #define	V_divcb				VNET(divcb)
 #define	V_divcbinfo			VNET(divcbinfo)
@@ -141,14 +142,6 @@ div_inpcb_init(void *mem, int size, int flags)
 }
 
 static void
-div_inpcb_fini(void *mem, int size)
-{
-	struct inpcb *inp = mem;
-
-	INP_LOCK_DESTROY(inp);
-}
-
-static void
 div_init(void)
 {
 
@@ -158,7 +151,7 @@ div_init(void)
 	 * place for hashbase == NULL.
 	 */
 	in_pcbinfo_init(&V_divcbinfo, "div", &V_divcb, 1, 1, "divcb",
-	    div_inpcb_init, div_inpcb_fini, 0, IPI_HASHFIELDS_NONE);
+	    div_inpcb_init, IPI_HASHFIELDS_NONE);
 }
 
 static void
@@ -199,6 +192,7 @@ divert_packet(struct mbuf *m, int incoming)
 	u_int16_t nport;
 	struct sockaddr_in divsrc;
 	struct m_tag *mtag;
+	struct epoch_tracker et;
 
 	mtag = m_tag_locate(m, MTAG_IPFW_RULE, 0, NULL);
 	if (mtag == NULL) {
@@ -216,12 +210,25 @@ divert_packet(struct mbuf *m, int incoming)
 		in_delayed_cksum(m);
 		m->m_pkthdr.csum_flags &= ~CSUM_DELAY_DATA;
 	}
-#ifdef SCTP
+#if defined(SCTP) || defined(SCTP_SUPPORT)
 	if (m->m_pkthdr.csum_flags & CSUM_SCTP) {
 		sctp_delayed_cksum(m, (uint32_t)(ip->ip_hl << 2));
 		m->m_pkthdr.csum_flags &= ~CSUM_SCTP;
 	}
 #endif
+#ifdef INET6
+	if (m->m_pkthdr.csum_flags & CSUM_DELAY_DATA_IPV6) {
+		in6_delayed_cksum(m, m->m_pkthdr.len -
+		    sizeof(struct ip6_hdr), sizeof(struct ip6_hdr));
+		m->m_pkthdr.csum_flags &= ~CSUM_DELAY_DATA_IPV6;
+	}
+#if defined(SCTP) || defined(SCTP_SUPPORT)
+	if (m->m_pkthdr.csum_flags & CSUM_SCTP_IPV6) {
+		sctp_delayed_cksum(m, sizeof(struct ip6_hdr));
+		m->m_pkthdr.csum_flags &= ~CSUM_SCTP_IPV6;
+	}
+#endif
+#endif /* INET6 */
 	bzero(&divsrc, sizeof(divsrc));
 	divsrc.sin_len = sizeof(divsrc);
 	divsrc.sin_family = AF_INET;
@@ -241,7 +248,7 @@ divert_packet(struct mbuf *m, int incoming)
 		/* Find IP address for receive interface */
 		ifp = m->m_pkthdr.rcvif;
 		if_addr_rlock(ifp);
-		TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
+		CK_STAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
 			if (ifa->ifa_addr->sa_family != AF_INET)
 				continue;
 			divsrc.sin_addr =
@@ -279,17 +286,21 @@ divert_packet(struct mbuf *m, int incoming)
 	/* Put packet on socket queue, if any */
 	sa = NULL;
 	nport = htons((u_int16_t)(((struct ipfw_rule_ref *)(mtag+1))->info));
-	INP_INFO_RLOCK(&V_divcbinfo);
-	LIST_FOREACH(inp, &V_divcb, inp_list) {
+	INP_INFO_RLOCK_ET(&V_divcbinfo, et);
+	CK_LIST_FOREACH(inp, &V_divcb, inp_list) {
 		/* XXX why does only one socket match? */
 		if (inp->inp_lport == nport) {
 			INP_RLOCK(inp);
+			if (__predict_false(inp->inp_flags2 & INP_FREED)) {
+				INP_RUNLOCK(inp);
+				continue;
+			}
 			sa = inp->inp_socket;
 			SOCKBUF_LOCK(&sa->so_rcv);
 			if (sbappendaddr_locked(&sa->so_rcv,
 			    (struct sockaddr *)&divsrc, m,
 			    (struct mbuf *)0) == 0) {
-				SOCKBUF_UNLOCK(&sa->so_rcv);
+				soroverflow_locked(sa);
 				sa = NULL;	/* force mbuf reclaim below */
 			} else
 				sorwakeup_locked(sa);
@@ -297,7 +308,7 @@ divert_packet(struct mbuf *m, int incoming)
 			break;
 		}
 	}
-	INP_INFO_RUNLOCK(&V_divcbinfo);
+	INP_INFO_RUNLOCK_ET(&V_divcbinfo, et);
 	if (sa == NULL) {
 		m_freem(m);
 		KMOD_IPSTAT_INC(ips_noproto);
@@ -475,13 +486,15 @@ div_output(struct socket *so, struct mbuf *m, struct sockaddr_in *sin,
 
 			bzero(sin->sin_zero, sizeof(sin->sin_zero));
 			sin->sin_port = 0;
+			NET_EPOCH_ENTER();
 			ifa = ifa_ifwithaddr((struct sockaddr *) sin);
 			if (ifa == NULL) {
 				error = EADDRNOTAVAIL;
+				NET_EPOCH_EXIT();
 				goto cantsend;
 			}
 			m->m_pkthdr.rcvif = ifa->ifa_ifp;
-			ifa_free(ifa);
+			NET_EPOCH_EXIT();
 		}
 #ifdef MAC
 		mac_socket_create_mbuf(so, m);
@@ -639,6 +652,7 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 	struct inpcb *inp, **inp_list;
 	inp_gen_t gencnt;
 	struct xinpgen xig;
+	struct epoch_tracker et;
 
 	/*
 	 * The process of preparing the TCB list is too time-consuming and
@@ -657,10 +671,10 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 	/*
 	 * OK, now we're committed to doing something.
 	 */
-	INP_INFO_RLOCK(&V_divcbinfo);
+	INP_INFO_WLOCK(&V_divcbinfo);
 	gencnt = V_divcbinfo.ipi_gencnt;
 	n = V_divcbinfo.ipi_count;
-	INP_INFO_RUNLOCK(&V_divcbinfo);
+	INP_INFO_WUNLOCK(&V_divcbinfo);
 
 	error = sysctl_wire_old_buffer(req,
 	    2 * sizeof(xig) + n*sizeof(struct xinpcb));
@@ -680,9 +694,9 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 	if (inp_list == NULL)
 		return ENOMEM;
 	
-	INP_INFO_RLOCK(&V_divcbinfo);
-	for (inp = LIST_FIRST(V_divcbinfo.ipi_listhead), i = 0; inp && i < n;
-	     inp = LIST_NEXT(inp, inp_list)) {
+	INP_INFO_RLOCK_ET(&V_divcbinfo, et);
+	for (inp = CK_LIST_FIRST(V_divcbinfo.ipi_listhead), i = 0; inp && i < n;
+	     inp = CK_LIST_NEXT(inp, inp_list)) {
 		INP_WLOCK(inp);
 		if (inp->inp_gencnt <= gencnt &&
 		    cr_canseeinpcb(req->td->td_ucred, inp) == 0) {
@@ -691,7 +705,7 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 		}
 		INP_WUNLOCK(inp);
 	}
-	INP_INFO_RUNLOCK(&V_divcbinfo);
+	INP_INFO_RUNLOCK_ET(&V_divcbinfo, et);
 	n = i;
 
 	error = 0;
@@ -700,12 +714,8 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 		INP_RLOCK(inp);
 		if (inp->inp_gencnt <= gencnt) {
 			struct xinpcb xi;
-			bzero(&xi, sizeof(xi));
-			xi.xi_len = sizeof xi;
-			/* XXX should avoid extra copy */
-			bcopy(inp, &xi.xi_inp, sizeof *inp);
-			if (inp->inp_socket)
-				sotoxsocket(inp->inp_socket, &xi.xi_socket);
+
+			in_pcbtoxinpcb(inp, &xi);
 			INP_RUNLOCK(inp);
 			error = SYSCTL_OUT(req, &xi, sizeof xi);
 		} else
@@ -721,6 +731,7 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 	INP_INFO_WUNLOCK(&V_divcbinfo);
 
 	if (!error) {
+		struct epoch_tracker et;
 		/*
 		 * Give the user an updated idea of our state.
 		 * If the generation differs from what we told
@@ -728,11 +739,11 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 		 * while we were processing this request, and it
 		 * might be necessary to retry.
 		 */
-		INP_INFO_RLOCK(&V_divcbinfo);
+		INP_INFO_RLOCK_ET(&V_divcbinfo, et);
 		xig.xig_gen = V_divcbinfo.ipi_gencnt;
 		xig.xig_sogen = so_gencnt;
 		xig.xig_count = V_divcbinfo.ipi_count;
-		INP_INFO_RUNLOCK(&V_divcbinfo);
+		INP_INFO_RUNLOCK_ET(&V_divcbinfo, et);
 		error = SYSCTL_OUT(req, &xig, sizeof xig);
 	}
 	free(inp_list, M_TEMP);

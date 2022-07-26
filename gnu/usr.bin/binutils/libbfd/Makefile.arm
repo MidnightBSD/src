@@ -1,6 +1,6 @@
-# $FreeBSD: stable/11/gnu/usr.bin/binutils/libbfd/Makefile.arm 239272 2012-08-15 03:21:56Z gonzo $
+# $FreeBSD$
 
-.if ${TARGET_ARCH} == "armeb" || ${TARGET_ARCH} == "armv6eb"
+.if ${TARGET_ARCH:Marm*eb} != ""
 DEFAULT_VECTOR=	bfd_elf32_bigarm_vec
 .else
 DEFAULT_VECTOR=	bfd_elf32_littlearm_vec
@@ -14,7 +14,7 @@ SRCS+=	cpu-arm.c \
 	elflink.c
 
 VECS+=	${DEFAULT_VECTOR}
-.if ${TARGET_ARCH} == "armeb" || ${TARGET_ARCH} == "armv6eb"
+.if ${TARGET_ARCH:Marm*eb} != ""
 VECS+=	bfd_elf32_littlearm_vec
 .else
 VECS+=	bfd_elf32_bigarm_vec

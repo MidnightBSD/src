@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/targets/Makefile.inc 275339 2014-11-30 18:45:46Z sjg $
+# $FreeBSD$
 
 .if !target(__${_this}__)
 __${_this}__:
@@ -20,11 +20,12 @@ PKG_METHOD = no
 .endif
 .endif
 
+.MAIN: all
+
 # The makefile in subdirs should set this to something useful
 # the default should do nothing.
 PKG_METHOD ?= none
-
-.MAIN: all
+none:
 
 .if ${build-*:${M_L_TARGETS}} != ""
 # just build the bits, skip packaging
