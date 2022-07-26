@@ -64,7 +64,7 @@ SUBDIR+=	bootpd
 SUBDIR+=	fingerd
 .endif
 
-if ${MK_MIDNIGHTBSD_UPDATE} != "no" || ${MK_PORTSNAP} != "no"
+.if ${MK_MIDNIGHTBSD_UPDATE} != "no" || ${MK_PORTSNAP} != "no"
 _phttpget=	phttpget
 .endif
 
