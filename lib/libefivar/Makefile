@@ -22,7 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/lib/libefivar/Makefile 332123 2018-04-06 18:10:38Z kevans $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -43,10 +43,9 @@ MAN=		efivar.3
 
 CFLAGS+=	-I${EFIBOOT}/include
 CFLAGS+=	-I${.CURDIR} -I${EDK2INC}
+CFLAGS+=	-fno-strict-aliasing
 
-CFLAGS.efivar-dp-format.c=-Wno-unused-parameter
-
-MLINKS+=efivar.3 efi_set_variables_supported.3 \
+MLINKS+=efivar.3 efi_variables_supported.3 \
 	efivar.3 efi_del_variable.3 \
 	efivar.3 efi_get_variable.3 \
 	efivar.3 efi_get_variable_attributes.3 \
@@ -65,4 +64,9 @@ WARNS?=		9
 
 .include <bsd.lib.mk>
 
-CFLAGS+= -fno-strict-aliasing -Wno-cast-align -Wno-unused-parameter
+CWARNFLAGS+=	-Wno-cast-align
+CWARNFLAGS+=	-Wno-unused-parameter
+
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 130000
+CWARNFLAGS+=	-Wno-unused-but-set-variable
+.endif

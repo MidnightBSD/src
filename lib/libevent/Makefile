@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libevent/Makefile 313538 2017-02-10 07:32:40Z ngie $
+# $FreeBSD$
 
 PACKAGE=lib${LIB}
 .PATH:	${SRCTOP}/contrib/pf/libevent
@@ -10,7 +10,7 @@ SHLIB_MAJOR=	1
 PRIVATELIB=
 
 SRCS=	buffer.c evbuffer.c event.c kqueue.c log.c poll.c select.c signal.c
-HDRS=	event.h
+INCS=	event.h
 
 CFLAGS+= -I${.CURDIR} \
 	-DHAVE_CLOCK_GETTIME \

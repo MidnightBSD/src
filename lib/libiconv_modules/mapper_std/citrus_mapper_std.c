@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/lib/libiconv_modules/mapper_std/citrus_mapper_std.c 336322 2018-07-16 00:20:18Z pfg $ */
+/* $FreeBSD$ */
 /*	$NetBSD: citrus_mapper_std.c,v 1.11 2018/06/11 18:03:38 kamil Exp $ */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c)2003, 2006 Citrus Project,
  * All rights reserved.
  *

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Doug Rabson
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/11/lib/libgssapi/gss_duplicate_name.c 331722 2018-03-29 02:50:57Z eadler $
+ *	$FreeBSD$
  */
 
 #include <gssapi/gssapi.h>
@@ -60,7 +62,7 @@ OM_uint32 gss_duplicate_name(OM_uint32 *minor_status,
 
 		SLIST_FOREACH(mn, &name->gn_mn, gmn_link) {
 			struct _gss_mechanism_name *mn2;
-			_gss_find_mn(minor_status, new_name, 
+			_gss_find_mn(minor_status, new_name,
 			    mn->gmn_mech_oid, &mn2);
 		}
 	} else {
@@ -75,7 +77,7 @@ OM_uint32 gss_duplicate_name(OM_uint32 *minor_status,
 
 		SLIST_FOREACH(mn, &name->gn_mn, gmn_link) {
 			struct _gss_mechanism_name *new_mn;
-			
+
 			new_mn = malloc(sizeof(*new_mn));
 			if (!new_mn) {
 				*minor_status = ENOMEM;
@@ -83,8 +85,8 @@ OM_uint32 gss_duplicate_name(OM_uint32 *minor_status,
 			}
 			new_mn->gmn_mech = mn->gmn_mech;
 			new_mn->gmn_mech_oid = mn->gmn_mech_oid;
-			
-			major_status = 
+
+			major_status =
 			    mn->gmn_mech->gm_duplicate_name(minor_status,
 				mn->gmn_name, &new_mn->gmn_name);
 			if (major_status != GSS_S_COMPLETE) {

@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/lib/libiconv_modules/DECHanyu/citrus_dechanyu.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /* $NetBSD: citrus_dechanyu.c,v 1.4 2011/11/19 18:20:13 tnozaki Exp $ */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c)2007 Citrus Project,
  * All rights reserved.
  *

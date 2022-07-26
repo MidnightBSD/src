@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Doug Rabson
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/11/lib/libgssapi/gss_mech_switch.c 331722 2018-03-29 02:50:57Z eadler $
+ *	$FreeBSD$
  */
 
 #include <gssapi/gssapi.h>
@@ -70,7 +72,7 @@ _gss_string_to_oid(const char* s, gss_OID oid)
 		if (q) q = q + 1;
 		number_count++;
 	}
-	
+
 	/*
 	 * The first two numbers are in the first byte and each
 	 * subsequent number is encoded in a variable byte sequence.
@@ -134,7 +136,7 @@ _gss_string_to_oid(const char* s, gss_OID oid)
 				while (bytes) {
 					if (res) {
 						int bit = 7*(bytes-1);
-						
+
 						*res = (number >> bit) & 0x7f;
 						if (bytes != 1)
 							*res |= 0x80;
@@ -235,7 +237,7 @@ _gss_load_mech(void)
 			free(m);
 			continue;
 		}
-		
+
 		prefix_fn = (const char *(*)(void))
 			dlsym(so, "_gss_name_prefix");
 		if (prefix_fn)

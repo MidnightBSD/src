@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2017 Netflix, Inc.
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libefivar/uefi-dputil.c 332123 2018-04-06 18:10:38Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <efivar.h>
 #include <limits.h>
