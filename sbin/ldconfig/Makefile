@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sbin/ldconfig/Makefile 319185 2017-05-30 04:17:22Z ngie $
+# $FreeBSD$
 
 PACKAGE=runtime
 PROG=	ldconfig

@@ -1,12 +1,15 @@
-# $FreeBSD: stable/11/sbin/ipfw/Makefile 346212 2019-04-14 12:39:09Z ae $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
 PACKAGE=ipfw
 PROG=	ipfw
+
+LINKS=	${BINDIR}/ipfw ${BINDIR}/dnctl
+MLINKS=	ipfw.8 dnctl.8
+
 SRCS=	ipfw2.c dummynet.c ipv6.c main.c nat.c tables.c
 SRCS+=	nat64clat.c nat64lsn.c nat64stl.c nptv6.c
-WARNS?=	2
 
 .if ${MK_PF} != "no"
 SRCS+=	altq.c
@@ -17,3 +20,5 @@ LIBADD=	jail util
 MAN=	ipfw.8
 
 .include <bsd.prog.mk>
+
+CWARNFLAGS+= -Wno-cast-align

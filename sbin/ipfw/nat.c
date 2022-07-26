@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (c) 2002-2003 Luigi Rizzo
  * Copyright (c) 1996 Alex Nash, Paul Traina, Poul-Henning Kamp
  * Copyright (c) 1994 Ugen J.S.Antsilevich
@@ -17,7 +17,7 @@
  *
  * NEW command line interface for IP firewall facility
  *
- * $FreeBSD: stable/11/sbin/ipfw/nat.c 359695 2020-04-07 16:29:11Z eugen $
+ * $FreeBSD$
  *
  * In-kernel nat support
  */
@@ -65,6 +65,7 @@ static struct _s_x nat_params[] = {
  	{ "reset",		TOK_RESET_ADDR },
  	{ "reverse",		TOK_ALIAS_REV },
  	{ "proxy_only",		TOK_PROXY_ONLY },
+	{ "port_range",		TOK_PORT_ALIAS },
 	{ "redirect_addr",	TOK_REDIR_ADDR },
 	{ "redirect_port",	TOK_REDIR_PORT },
 	{ "redirect_proto",	TOK_REDIR_PROTO },
@@ -117,7 +118,7 @@ set_addr_dynamic(const char *ifn, struct nat44_cfg_nat *n)
 		ifm = (struct if_msghdr *)next;
 		next += ifm->ifm_msglen;
 		if (ifm->ifm_version != RTM_VERSION) {
-			if (co.verbose)
+			if (g_co.verbose)
 				warnx("routing message version %d "
 				    "not understood", ifm->ifm_version);
 			continue;
@@ -141,7 +142,7 @@ set_addr_dynamic(const char *ifn, struct nat44_cfg_nat *n)
 		ifam = (struct ifa_msghdr *)next;
 		next += ifam->ifam_msglen;
 		if (ifam->ifam_version != RTM_VERSION) {
-			if (co.verbose)
+			if (g_co.verbose)
 				warnx("routing message version %d "
 				    "not understood", ifam->ifam_version);
 			continue;
@@ -623,7 +624,7 @@ setup_redir_proto(char *buf, int *ac, char ***av)
 }
 
 static void
-nat_show_log(struct nat44_cfg_nat *n, void *arg)
+nat_show_log(struct nat44_cfg_nat *n, void *arg __unused)
 {
 	char *buf;
 
@@ -633,13 +634,14 @@ nat_show_log(struct nat44_cfg_nat *n, void *arg)
 }
 
 static void
-nat_show_cfg(struct nat44_cfg_nat *n, void *arg)
+nat_show_cfg(struct nat44_cfg_nat *n, void *arg __unused)
 {
-	int i, cnt, off;
 	struct nat44_cfg_redir *t;
 	struct nat44_cfg_spool *s;
 	caddr_t buf;
 	struct protoent *p;
+	uint32_t cnt;
+	int i, off;
 
 	buf = (caddr_t)n;
 	off = sizeof(*n);
@@ -752,12 +754,35 @@ nat_show_cfg(struct nat44_cfg_nat *n, void *arg)
 	printf("\n");
 }
 
+static int
+nat_port_alias_parse(char *str, u_short *lpout, u_short *hpout) {
+	long lp, hp;
+	char *ptr;
+	/* Lower port parsing */
+	lp = (long) strtol(str, &ptr, 10);
+	if (lp < 1024 || lp > 65535)
+		return 0;
+	if (!ptr || *ptr != '-')
+		return 0;
+	/* Upper port parsing */
+	hp = (long) strtol(ptr, &ptr, 10);
+	if (hp < 1024 || hp > 65535)
+		return 0;
+	if (ptr)
+		return 0;
+
+	*lpout = (u_short) lp;
+	*hpout = (u_short) hp;
+	return 1;
+}
+
 void
 ipfw_config_nat(int ac, char **av)
 {
 	ipfw_obj_header *oh;
 	struct nat44_cfg_nat *n;		/* Nat instance configuration. */
 	int i, off, tok, ac1;
+	u_short lp, hp;
 	char *id, *buf, **av1, *end;
 	size_t len;
 
@@ -785,6 +810,7 @@ ipfw_config_nat(int ac, char **av)
 		switch (tok) {
 		case TOK_IP:
 		case TOK_IF:
+		case TOK_PORT_ALIAS:
 			ac1--;
 			av1++;
 			break;
@@ -924,14 +950,30 @@ ipfw_config_nat(int ac, char **av)
 			n->redir_cnt++;
 			off += i;
 			break;
+		case TOK_PORT_ALIAS:
+			if (ac == 0)
+				errx(EX_DATAERR, "missing option");
+			if (!nat_port_alias_parse(av[0], &lp, &hp))
+				errx(EX_DATAERR,
+				    "You need a range of port(s) from 1024 <= x < 65536");
+			if (lp >= hp)
+				errx(EX_DATAERR,
+				    "Upper port has to be greater than lower port");
+			n->alias_port_lo = lp;
+			n->alias_port_hi = hp;
+			ac--;
+			av++;
+			break;
 		}
 	}
+	if (n->mode & PKT_ALIAS_SAME_PORTS && n->alias_port_lo)
+		errx(EX_DATAERR, "same_ports and port_range cannot both be selected");
 
 	i = do_set3(IP_FW_NAT44_XCONFIG, &oh->opheader, len);
 	if (i != 0)
 		err(1, "setsockopt(%s)", "IP_FW_NAT44_XCONFIG");
 
-	if (!co.do_quiet) {
+	if (!g_co.do_quiet) {
 		/* After every modification, we show the resultant rule. */
 		int _ac = 3;
 		const char *_av[] = {"show", "config", id};
@@ -960,7 +1002,7 @@ ipfw_delete_nat(int i)
 	nat_fill_ntlv(&oh.ntlv, i);
 	ret = do_set3(IP_FW_NAT44_DESTROY, &oh.opheader, sizeof(oh));
 	if (ret == -1) {
-		if (!co.do_quiet)
+		if (!g_co.do_quiet)
 			warn("nat %u not available", i);
 		return (EX_UNAVAILABLE);
 	}
@@ -1012,10 +1054,10 @@ nat_show_data(struct nat44_cfg_nat *cfg, void *arg)
 static int
 natname_cmp(const void *a, const void *b)
 {
-	struct nat44_cfg_nat *ia, *ib;
+	const struct nat44_cfg_nat *ia, *ib;
 
-	ia = (struct nat44_cfg_nat *)a;
-	ib = (struct nat44_cfg_nat *)b;
+	ia = (const struct nat44_cfg_nat *)a;
+	ib = (const struct nat44_cfg_nat *)b;
 
 	return (stringnum_cmp(ia->name, ib->name));
 }
@@ -1031,7 +1073,8 @@ nat_foreach(nat_cb_t *f, void *arg, int sort)
 	ipfw_obj_lheader *olh;
 	struct nat44_cfg_nat *cfg;
 	size_t sz;
-	int i, error;
+	uint32_t i;
+	int error;
 
 	/* Start with reasonable default */
 	sz = sizeof(*olh) + 16 * sizeof(struct nat44_cfg_nat);
@@ -1110,7 +1153,7 @@ ipfw_show_nat(int ac, char **av)
 	ac--;
 	av++;
 
-	if (co.test_only)
+	if (g_co.test_only)
 		return;
 
 	/* Parse parameters. */

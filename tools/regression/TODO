@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/tools/regression/TODO 137587 2004-11-11 19:47:55Z nik $
+$FreeBSD$
 ---
 
 A lot of the tests written in C use assert(), only printing 'ok' at the end

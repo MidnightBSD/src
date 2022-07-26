@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/regression/sockets/kqueue/kqueue.c 281356 2015-04-10 08:01:49Z ngie $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

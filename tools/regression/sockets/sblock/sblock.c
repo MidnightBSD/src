@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/regression/sockets/sblock/sblock.c 281393 2015-04-11 03:13:09Z ngie $
+ * $FreeBSD$
  */
 
 /*

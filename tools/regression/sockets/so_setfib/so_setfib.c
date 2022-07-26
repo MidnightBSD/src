@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/regression/sockets/so_setfib/so_setfib.c 298881 2016-05-01 16:20:14Z pfg $
+ * $FreeBSD$
  */
 
 /*

@@ -1,7 +1,7 @@
-/* $FreeBSD: stable/11/tools/regression/pthread/unwind/Test.cpp 213155 2010-09-25 04:26:40Z davidxu $ */
+/* $FreeBSD$ */
 
-int destructed;
-int destructed2;
+static int destructed;
+static int destructed2;
 
 class Test {
 public:
@@ -10,7 +10,7 @@ public:
 };
 
 void
-cleanup_handler(void *arg)
+cleanup_handler(void *arg __unused)
 {
 	destructed2 = 1;
 	printf("%s()\n", __func__);

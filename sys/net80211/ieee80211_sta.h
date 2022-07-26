@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
@@ -22,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/net80211/ieee80211_sta.h 244060 2012-12-09 22:56:29Z adrian $
+ * $FreeBSD$
  */
 #ifndef _NET80211_IEEE80211_STA_H_
 #define _NET80211_IEEE80211_STA_H_
@@ -38,5 +40,12 @@ void	ieee80211_sta_vattach(struct ieee80211vap *);
  * Used by the adhoc/mesh/tdma paths.
  */
 extern	int ieee80211_parse_wmeparams(struct ieee80211vap *vap, uint8_t *frm,
-	    const struct ieee80211_frame *wh);
+	    const struct ieee80211_frame *wh, uint8_t *qosinfo);
+
+/*
+ * Used in the hostap path.
+ */
+extern	int ieee80211_parse_wmeie(uint8_t *frm,
+	    const struct ieee80211_frame *wh, struct ieee80211_node *ni);
+
 #endif /* !_NET80211_IEEE80211_STA_H_ */

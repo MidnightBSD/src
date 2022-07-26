@@ -1,4 +1,4 @@
-#	$FreeBSD: stable/11/sbin/ipf/ipmon/Makefile 349715 2019-07-04 03:04:41Z cy $
+#	$FreeBSD$
 
 PACKAGE=	ipf
 PROG=		ipmon
@@ -14,7 +14,6 @@ CLEANFILES+=	${GENHDRS} ipmon_y.c ipmon_l.c
 ipmon_y.c: ipmon_y.y
 	${YACC} -d ${.ALLSRC}
 	sed -e 's/yy/ipmon_yy/g' \
-	    -e 's/"ipmon_y.y"/"..\/tools\/ipmon_y.y"/' \
 	    y.tab.c > ${.TARGET}
 	sed -e 's/yy/ipmon_yy/g' \
 	    y.tab.h > ${.TARGET:.c=.h}

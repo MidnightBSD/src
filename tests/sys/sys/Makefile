@@ -1,9 +1,15 @@
-# $FreeBSD: stable/11/tests/sys/sys/Makefile 299094 2016-05-04 23:20:53Z ngie $
+# $FreeBSD$
+
+.include <bsd.compiler.mk>
 
 TESTSDIR=	${TESTSBASE}/sys/sys
 
 ATF_TESTS_C=	bitstring_test
 
 WARNS?=	5
+
+.if ${COMPILER_TYPE} == "gcc"
+CFLAGS.bitstring_test=	-fno-strict-overflow
+.endif
 
 .include <bsd.test.mk>

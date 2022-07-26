@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (c) 2002-2003,2010 Luigi Rizzo
  * Copyright (c) 1996 Alex Nash, Paul Traina, Poul-Henning Kamp
  * Copyright (c) 1994 Ugen J.S.Antsilevich
@@ -17,7 +17,7 @@
  *
  * Command line interface for IP firewall facility
  *
- * $FreeBSD: stable/11/sbin/ipfw/main.c 359695 2020-04-07 16:29:11Z eugen $
+ * $FreeBSD$
  */
 
 #include <sys/wait.h>
@@ -36,7 +36,8 @@
 static void
 help(void)
 {
-	fprintf(stderr,
+	if (is_ipfw()) {
+		fprintf(stderr,
 "ipfw syntax summary (but please do read the ipfw(8) manpage):\n\n"
 "\tipfw [-abcdefhnNqStTv] <command>\n\n"
 "where <command> is one of the following:\n\n"
@@ -45,7 +46,8 @@ help(void)
 "[pipe|queue] {zero|delete|show} [N{,N}]\n"
 "nat N config {ip IPADDR|if IFNAME|log|deny_in|same_ports|unreg_only|unreg_cgn|\n"
 "		reset|reverse|proxy_only|redirect_addr linkspec|\n"
-"		redirect_port linkspec|redirect_proto linkspec}\n"
+"		redirect_port linkspec|redirect_proto linkspec|\n"
+"		port_range lower-upper}\n"
 "set [disable N... enable N...] | move [rule] X to Y | swap X Y | show\n"
 "set N {show|list|zero|resetlog|delete} [N{,N}] | flush\n"
 "table N {add ip[/bits] [value] | delete ip[/bits] | flush | list}\n"
@@ -75,6 +77,16 @@ help(void)
 "	setup | {tcpack|tcpseq|tcpwin} NN | tcpflags SPEC | tcpoptions SPEC |\n"
 "	tcpdatalen LIST | verrevpath | versrcreach | antispoof\n"
 );
+	} else {
+		fprintf(stderr,
+"dnctl syntax summary (but please do read the dnctl(8) manpage):\n\n"
+"\tdnctl [-hnsv] <command>\n\n"
+"where <command> is one of the following:\n\n"
+"[pipe|queue|sched] N config PIPE-BODY\n"
+"[pipe|queue|sched] {delete|list|show} [N{,N}]\n"
+"\n"
+);
+	}
 
 	exit(0);
 }
@@ -226,11 +238,12 @@ ipfw_main(int oldac, char **oldav)
 	av[ac] = NULL;
 
 	/* Set the force flag for non-interactive processes */
-	if (!co.do_force)
-		co.do_force = !isatty(STDIN_FILENO);
+	if (!g_co.do_force)
+		g_co.do_force = !isatty(STDIN_FILENO);
 
 #ifdef EMULATE_SYSCTL /* sysctl emulation */
-	if ( ac >= 2 && !strcmp(av[1], "sysctl")) {
+	if (is_ipfw() && ac >= 2 &&
+	    !strcmp(av[1], "sysctl")) {
 		char *s;
 		int i;
 
@@ -262,87 +275,115 @@ ipfw_main(int oldac, char **oldav)
 	save_av = av;
 
 	optind = optreset = 1;	/* restart getopt() */
-	while ((ch = getopt(ac, av, "abcdDefhinNp:qs:STtv")) != -1)
-		switch (ch) {
-		case 'a':
-			do_acct = 1;
-			break;
+	if (is_ipfw()) {
+		while ((ch = getopt(ac, av, "abcdDefhinNp:qs:STtv")) != -1)
+			switch (ch) {
+			case 'a':
+				do_acct = 1;
+				break;
 
-		case 'b':
-			co.comment_only = 1;
-			co.do_compact = 1;
-			break;
+			case 'b':
+				g_co.comment_only = 1;
+				g_co.do_compact = 1;
+				break;
 
-		case 'c':
-			co.do_compact = 1;
-			break;
+			case 'c':
+				g_co.do_compact = 1;
+				break;
 
-		case 'd':
-			co.do_dynamic = 1;
-			break;
+			case 'd':
+				g_co.do_dynamic = 1;
+				break;
 
-		case 'D':
-			co.do_dynamic = 2;
-			break;
+			case 'D':
+				g_co.do_dynamic = 2;
+				break;
 
-		case 'e':
-			/* nop for compatibility */
-			break;
+			case 'e':
+				/* nop for compatibility */
+				break;
 
-		case 'f':
-			co.do_force = 1;
-			break;
+			case 'f':
+				g_co.do_force = 1;
+				break;
 
-		case 'h': /* help */
-			free(save_av);
-			help();
-			break;	/* NOTREACHED */
+			case 'h': /* help */
+				free(save_av);
+				help();
+				break;	/* NOTREACHED */
 
-		case 'i':
-			co.do_value_as_ip = 1;
-			break;
+			case 'i':
+				g_co.do_value_as_ip = 1;
+				break;
 
-		case 'n':
-			co.test_only = 1;
-			break;
+			case 'n':
+				g_co.test_only = 1;
+				break;
 
-		case 'N':
-			co.do_resolv = 1;
-			break;
+			case 'N':
+				g_co.do_resolv = 1;
+				break;
 
-		case 'p':
-			errx(EX_USAGE, "An absolute pathname must be used "
-			    "with -p option.");
-			/* NOTREACHED */
+			case 'p':
+				errx(EX_USAGE, "An absolute pathname must be used "
+				    "with -p option.");
+				/* NOTREACHED */
 
-		case 'q':
-			co.do_quiet = 1;
-			break;
+			case 'q':
+				g_co.do_quiet = 1;
+				break;
 
-		case 's': /* sort */
-			co.do_sort = atoi(optarg);
-			break;
+			case 's': /* sort */
+				g_co.do_sort = atoi(optarg);
+				break;
 
-		case 'S':
-			co.show_sets = 1;
-			break;
+			case 'S':
+				g_co.show_sets = 1;
+				break;
 
-		case 't':
-			co.do_time = TIMESTAMP_STRING;
-			break;
+			case 't':
+				g_co.do_time = TIMESTAMP_STRING;
+				break;
 
-		case 'T':
-			co.do_time = TIMESTAMP_NUMERIC;
-			break;
+			case 'T':
+				g_co.do_time = TIMESTAMP_NUMERIC;
+				break;
 
-		case 'v': /* verbose */
-			co.verbose = 1;
-			break;
+			case 'v': /* verbose */
+				g_co.verbose = 1;
+				break;
 
-		default:
-			free(save_av);
-			return 1;
-		}
+			default:
+				free(save_av);
+				return 1;
+			}
+	} else {
+		while ((ch = getopt(ac, av, "hns:v")) != -1)
+			switch (ch) {
+
+			case 'h': /* help */
+				free(save_av);
+				help();
+				break;	/* NOTREACHED */
+
+			case 'n':
+				g_co.test_only = 1;
+				break;
+
+			case 's': /* sort */
+				g_co.do_sort = atoi(optarg);
+				break;
+
+			case 'v': /* verbose */
+				g_co.verbose = 1;
+				break;
+
+			default:
+				free(save_av);
+				return 1;
+			}
+
+	}
 
 	ac -= optind;
 	av += optind;
@@ -363,31 +404,31 @@ ipfw_main(int oldac, char **oldav)
 	/*
 	 * Optional: pipe, queue or nat.
 	 */
-	co.do_nat = 0;
-	co.do_pipe = 0;
-	co.use_set = 0;
-	if (!strncmp(*av, "nat", strlen(*av)))
- 		co.do_nat = 1;
- 	else if (!strncmp(*av, "pipe", strlen(*av)))
-		co.do_pipe = 1;
+	g_co.do_nat = 0;
+	g_co.do_pipe = 0;
+	g_co.use_set = 0;
+	if (is_ipfw() && !strncmp(*av, "nat", strlen(*av)))
+		g_co.do_nat = 1;
+	else if (!strncmp(*av, "pipe", strlen(*av)))
+		g_co.do_pipe = 1;
 	else if (_substrcmp(*av, "queue") == 0)
-		co.do_pipe = 2;
+		g_co.do_pipe = 2;
 	else if (_substrcmp(*av, "flowset") == 0)
-		co.do_pipe = 2;
+		g_co.do_pipe = 2;
 	else if (_substrcmp(*av, "sched") == 0)
-		co.do_pipe = 3;
-	else if (!strncmp(*av, "set", strlen(*av))) {
+		g_co.do_pipe = 3;
+	else if (is_ipfw() && !strncmp(*av, "set", strlen(*av))) {
 		if (ac > 1 && isdigit(av[1][0])) {
-			co.use_set = strtonum(av[1], 0, resvd_set_number,
+			g_co.use_set = strtonum(av[1], 0, resvd_set_number,
 					&errstr);
 			if (errstr)
 				errx(EX_DATAERR,
 				    "invalid set number %s\n", av[1]);
-			ac -= 2; av += 2; co.use_set++;
+			ac -= 2; av += 2; g_co.use_set++;
 		}
 	}
 
-	if (co.do_pipe || co.do_nat) {
+	if (g_co.do_pipe || g_co.do_nat) {
 		ac--;
 		av++;
 	}
@@ -398,59 +439,63 @@ ipfw_main(int oldac, char **oldav)
 	 * but the code is easier to parse as 'nat|pipe config NN'
 	 * so we swap the two arguments.
 	 */
-	if ((co.do_pipe || co.do_nat) && ac > 1 && isdigit(*av[0])) {
+	if ((g_co.do_pipe || g_co.do_nat) && ac > 1 && isdigit(*av[0])) {
 		char *p = av[0];
 
 		av[0] = av[1];
 		av[1] = p;
 	}
 
-	if (co.use_set == 0) {
-		if (_substrcmp(*av, "add") == 0)
+	if (! is_ipfw() && g_co.do_pipe == 0) {
+		help();
+	}
+
+	if (g_co.use_set == 0) {
+		if (is_ipfw() && _substrcmp(*av, "add") == 0)
 			ipfw_add(av);
-		else if (co.do_nat && _substrcmp(*av, "show") == 0)
+		else if (g_co.do_nat && _substrcmp(*av, "show") == 0)
  			ipfw_show_nat(ac, av);
-		else if (co.do_pipe && _substrcmp(*av, "config") == 0)
+		else if (g_co.do_pipe && _substrcmp(*av, "config") == 0)
 			ipfw_config_pipe(ac, av);
-		else if (co.do_nat && _substrcmp(*av, "config") == 0)
+		else if (g_co.do_nat && _substrcmp(*av, "config") == 0)
  			ipfw_config_nat(ac, av);
-		else if (_substrcmp(*av, "set") == 0)
+		else if (is_ipfw() && _substrcmp(*av, "set") == 0)
 			ipfw_sets_handler(av);
-		else if (_substrcmp(*av, "table") == 0)
+		else if (is_ipfw() && _substrcmp(*av, "table") == 0)
 			ipfw_table_handler(ac, av);
-		else if (_substrcmp(*av, "enable") == 0)
+		else if (is_ipfw() && _substrcmp(*av, "enable") == 0)
 			ipfw_sysctl_handler(av, 1);
-		else if (_substrcmp(*av, "disable") == 0)
+		else if (is_ipfw() && _substrcmp(*av, "disable") == 0)
 			ipfw_sysctl_handler(av, 0);
 		else
 			try_next = 1;
 	}
 
-	if (co.use_set || try_next) {
+	if (g_co.use_set || try_next) {
 		if (_substrcmp(*av, "delete") == 0)
 			ipfw_delete(av);
-		else if (!strncmp(*av, "nat64clat", strlen(*av)))
+		else if (is_ipfw() && !strncmp(*av, "nat64clat", strlen(*av)))
 			ipfw_nat64clat_handler(ac, av);
-		else if (!strncmp(*av, "nat64stl", strlen(*av)))
+		else if (is_ipfw() && !strncmp(*av, "nat64stl", strlen(*av)))
 			ipfw_nat64stl_handler(ac, av);
-		else if (!strncmp(*av, "nat64lsn", strlen(*av)))
+		else if (is_ipfw() && !strncmp(*av, "nat64lsn", strlen(*av)))
 			ipfw_nat64lsn_handler(ac, av);
-		else if (!strncmp(*av, "nptv6", strlen(*av)))
+		else if (is_ipfw() && !strncmp(*av, "nptv6", strlen(*av)))
 			ipfw_nptv6_handler(ac, av);
 		else if (_substrcmp(*av, "flush") == 0)
-			ipfw_flush(co.do_force);
-		else if (_substrcmp(*av, "zero") == 0)
+			ipfw_flush(g_co.do_force);
+		else if (is_ipfw() && _substrcmp(*av, "zero") == 0)
 			ipfw_zero(ac, av, 0 /* IP_FW_ZERO */);
-		else if (_substrcmp(*av, "resetlog") == 0)
+		else if (is_ipfw() && _substrcmp(*av, "resetlog") == 0)
 			ipfw_zero(ac, av, 1 /* IP_FW_RESETLOG */);
 		else if (_substrcmp(*av, "print") == 0 ||
 			 _substrcmp(*av, "list") == 0)
 			ipfw_list(ac, av, do_acct);
 		else if (_substrcmp(*av, "show") == 0)
 			ipfw_list(ac, av, 1 /* show counters */);
-		else if (_substrcmp(*av, "table") == 0)
+		else if (is_ipfw() && _substrcmp(*av, "table") == 0)
 			ipfw_table_handler(ac, av);
-		else if (_substrcmp(*av, "internal") == 0)
+		else if (is_ipfw() && _substrcmp(*av, "internal") == 0)
 			ipfw_internal_handler(ac, av);
 		else
 			errx(EX_USAGE, "bad command `%s'", *av);
@@ -477,19 +522,19 @@ ipfw_readfile(int ac, char *av[])
 	while ((c = getopt(ac, av, "cfNnp:qS")) != -1) {
 		switch(c) {
 		case 'c':
-			co.do_compact = 1;
+			g_co.do_compact = 1;
 			break;
 
 		case 'f':
-			co.do_force = 1;
+			g_co.do_force = 1;
 			break;
 
 		case 'N':
-			co.do_resolv = 1;
+			g_co.do_resolv = 1;
 			break;
 
 		case 'n':
-			co.test_only = 1;
+			g_co.test_only = 1;
 			break;
 
 		case 'p':
@@ -518,11 +563,11 @@ ipfw_readfile(int ac, char *av[])
 			break;
 
 		case 'q':
-			co.do_quiet = 1;
+			g_co.do_quiet = 1;
 			break;
 
 		case 'S':
-			co.show_sets = 1;
+			g_co.show_sets = 1;
 			break;
 
 		default:
@@ -619,12 +664,22 @@ main(int ac, char *av[])
 		}
 	}
 #endif
+
+	if (strcmp(av[0], "dnctl") == 0)
+		g_co.prog = cmdline_prog_dnctl;
+	else
+		g_co.prog = cmdline_prog_ipfw;
+
 	/*
 	 * If the last argument is an absolute pathname, interpret it
 	 * as a file to be preprocessed.
 	 */
 
 	if (ac > 1 && av[ac - 1][0] == '/') {
+		if (! is_ipfw())
+			errx(EX_USAGE, "usage: dnctl [options]\n"
+			    "do \"dnctl -h\" for details");
+
 		if (access(av[ac - 1], R_OK) == 0)
 			ipfw_readfile(ac, av);
 		else
@@ -632,8 +687,9 @@ main(int ac, char *av[])
 	} else {
 		if (ipfw_main(ac, av)) {
 			errx(EX_USAGE,
-			    "usage: ipfw [options]\n"
-			    "do \"ipfw -h\" or \"man ipfw\" for details");
+			    "usage: %s [options]\n"
+			    "do \"%s -h\" or \"man %s\" for details", av[0],
+			    av[0], av[0]);
 		}
 	}
 	return EX_OK;

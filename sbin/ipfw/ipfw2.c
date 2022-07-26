@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (c) 2002-2003 Luigi Rizzo
  * Copyright (c) 1996 Alex Nash, Paul Traina, Poul-Henning Kamp
  * Copyright (c) 1994 Ugen J.S.Antsilevich
@@ -17,7 +17,7 @@
  *
  * NEW command line interface for IP firewall facility
  *
- * $FreeBSD: stable/11/sbin/ipfw/ipfw2.c 359649 2020-04-06 06:38:54Z ae $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -57,7 +57,7 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 
-struct cmdline_opts co;	/* global options */
+struct cmdline_opts g_co;	/* global options */
 
 struct format_opts {
 	int bcwidth;
@@ -74,7 +74,7 @@ struct format_opts {
 
 int resvd_set_number = RESVD_SET;
 
-int ipfw_socket = -1;
+static int ipfw_socket = -1;
 
 #define	CHECK_LENGTH(v, len) do {				\
 	if ((v) < (len))					\
@@ -166,6 +166,14 @@ static struct _s_x f_iptos[] = {
 	{ "ecntransport", IPTOS_ECN_ECT0},
 	{ "ip tos option", 0},
 	{ NULL,	0 }
+};
+
+static struct _s_x f_ipoff[] = {
+	{ "rf", IP_RF >> 8 },
+	{ "df", IP_DF >> 8 },
+	{ "mf", IP_MF >> 8 },
+	{ "offset", 0x1 },
+	{ NULL, 0}
 };
 
 struct _s_x f_ipdscp[] = {
@@ -395,13 +403,19 @@ static int ipfw_show_config(struct cmdline_opts *co, struct format_opts *fo,
 static void ipfw_list_tifaces(void);
 
 struct tidx;
-static uint16_t pack_object(struct tidx *tstate, char *name, int otype);
-static uint16_t pack_table(struct tidx *tstate, char *name);
+static uint16_t pack_object(struct tidx *tstate, const char *name, int otype);
+static uint16_t pack_table(struct tidx *tstate, const char *name);
 
 static char *table_search_ctlv(ipfw_obj_ctlv *ctlv, uint16_t idx);
 static void object_sort_ctlv(ipfw_obj_ctlv *ctlv);
 static char *object_search_ctlv(ipfw_obj_ctlv *ctlv, uint16_t idx,
     uint16_t type);
+
+int
+is_ipfw(void)
+{
+	return (g_co.prog == cmdline_prog_ipfw);
+}
 
 /*
  * Simple string buffer API.
@@ -456,7 +470,7 @@ bp_flush(struct buf_pr *b)
  * Returns number of bytes that should have been printed.
  */
 int
-bprintf(struct buf_pr *b, char *format, ...)
+bprintf(struct buf_pr *b, const char *format, ...)
 {
 	va_list args;
 	int i;
@@ -466,7 +480,7 @@ bprintf(struct buf_pr *b, char *format, ...)
 	i = vsnprintf(b->ptr, b->avail, format, args);
 	va_end(args);
 
-	if (i > b->avail || i < 0) {
+	if (i < 0 || (size_t)i > b->avail) {
 		/* Overflow or print error */
 		b->avail = 0;
 	} else {
@@ -501,7 +515,7 @@ bprint_uint_arg(struct buf_pr *bp, const char *str, uint32_t arg)
  * otherwise, return the required width.
  */
 int
-pr_u64(struct buf_pr *b, uint64_t *pd, int width)
+pr_u64(struct buf_pr *b, void *pd, int width)
 {
 #ifdef TCC
 #define U64_FMT "I64"
@@ -569,7 +583,7 @@ do_cmd(int optname, void *optval, uintptr_t optlen)
 {
 	int i;
 
-	if (co.test_only)
+	if (g_co.test_only)
 		return 0;
 
 	if (ipfw_socket == -1)
@@ -606,7 +620,7 @@ int
 do_set3(int optname, ip_fw3_opheader *op3, size_t optlen)
 {
 
-	if (co.test_only)
+	if (g_co.test_only)
 		return (0);
 
 	if (ipfw_socket == -1)
@@ -635,7 +649,7 @@ do_get3(int optname, ip_fw3_opheader *op3, size_t *optlen)
 	int error;
 	socklen_t len;
 
-	if (co.test_only)
+	if (g_co.test_only)
 		return (0);
 
 	if (ipfw_socket == -1)
@@ -725,7 +739,8 @@ match_value(struct _s_x *p, int value)
 }
 
 size_t
-concat_tokens(char *buf, size_t bufsize, struct _s_x *table, char *delimiter)
+concat_tokens(char *buf, size_t bufsize, struct _s_x *table,
+    const char *delimiter)
 {
 	struct _s_x *pt;
 	int l;
@@ -788,7 +803,7 @@ print_flags_buffer(char *buf, size_t sz, struct _s_x *list, uint32_t set)
 		
 		set &= ~list[i].x;
 		l = snprintf(buf, sz, "%s%s", comma, list[i].s);
-		if (l >= sz)
+		if (l < 0 || (size_t)l >= sz)
 			return;
 		comma = ",";
 		buf += l;
@@ -856,13 +871,13 @@ print_port(struct buf_pr *bp, int proto, uint16_t port)
 	if (proto == IPPROTO_ETHERTYPE) {
 		char const *s;
 
-		if (co.do_resolv && (s = match_value(ether_types, port)) )
+		if (g_co.do_resolv && (s = match_value(ether_types, port)) )
 			bprintf(bp, "%s", s);
 		else
 			bprintf(bp, "0x%04x", port);
 	} else {
 		struct servent *se = NULL;
-		if (co.do_resolv) {
+		if (g_co.do_resolv) {
 			struct protoent *pe = getprotobynumber(proto);
 
 			se = getservbyport(htons(port), pe ? pe->p_name : NULL);
@@ -893,9 +908,9 @@ static struct _s_x _port_name[] = {
  * XXX todo: add support for mask.
  */
 static void
-print_newports(struct buf_pr *bp, ipfw_insn_u16 *cmd, int proto, int opcode)
+print_newports(struct buf_pr *bp, const ipfw_insn_u16 *cmd, int proto, int opcode)
 {
-	uint16_t *p = cmd->ports;
+	const uint16_t *p = cmd->ports;
 	int i;
 	char const *sep;
 
@@ -906,7 +921,7 @@ print_newports(struct buf_pr *bp, ipfw_insn_u16 *cmd, int proto, int opcode)
 		bprintf(bp, " %s", sep);
 	}
 	sep = " ";
-	for (i = F_LEN((ipfw_insn *)cmd) - 1; i > 0; i--, p += 2) {
+	for (i = F_LEN((const ipfw_insn *)cmd) - 1; i > 0; i--, p += 2) {
 		bprintf(bp, "%s", sep);
 		print_port(bp, proto, p[0]);
 		if (p[0] != p[1]) {
@@ -1134,7 +1149,7 @@ print_reject_code(struct buf_pr *bp, uint16_t code)
  * len is the max length in bits.
  */
 int
-contigmask(uint8_t *p, int len)
+contigmask(const uint8_t *p, int len)
 {
 	int i, n;
 
@@ -1152,7 +1167,7 @@ contigmask(uint8_t *p, int len)
  * There is a specialized check for f_tcpflags.
  */
 static void
-print_flags(struct buf_pr *bp, char const *name, ipfw_insn *cmd,
+print_flags(struct buf_pr *bp, char const *name, const ipfw_insn *cmd,
     struct _s_x *list)
 {
 	char const *comma = "";
@@ -1185,12 +1200,13 @@ print_flags(struct buf_pr *bp, char const *name, ipfw_insn *cmd,
  * Print the ip address contained in a command.
  */
 static void
-print_ip(struct buf_pr *bp, const struct format_opts *fo, ipfw_insn_ip *cmd)
+print_ip(struct buf_pr *bp, const struct format_opts *fo,
+    const ipfw_insn_ip *cmd)
 {
 	struct hostent *he = NULL;
-	struct in_addr *ia;
-	uint32_t len = F_LEN((ipfw_insn *)cmd);
-	uint32_t *a = ((ipfw_insn_u32 *)cmd)->d;
+	const struct in_addr *ia;
+	const uint32_t *a = ((const ipfw_insn_u32 *)cmd)->d;
+	uint32_t len = F_LEN((const ipfw_insn *)cmd);
 	char *t;
 
 	bprintf(bp, " ");
@@ -1200,7 +1216,8 @@ print_ip(struct buf_pr *bp, const struct format_opts *fo, ipfw_insn_ip *cmd)
 
 		if (d < sizeof(lookup_key)/sizeof(lookup_key[0]))
 			arg = match_value(rule_options, lookup_key[d]);
-		t = table_search_ctlv(fo->tstate, ((ipfw_insn *)cmd)->arg1);
+		t = table_search_ctlv(fo->tstate,
+		    ((const ipfw_insn *)cmd)->arg1);
 		bprintf(bp, "lookup %s %s", arg, t);
 		return;
 	}
@@ -1210,7 +1227,8 @@ print_ip(struct buf_pr *bp, const struct format_opts *fo, ipfw_insn_ip *cmd)
 	}
 	if (cmd->o.opcode == O_IP_SRC_LOOKUP ||
 	    cmd->o.opcode == O_IP_DST_LOOKUP) {
-		t = table_search_ctlv(fo->tstate, ((ipfw_insn *)cmd)->arg1);
+		t = table_search_ctlv(fo->tstate,
+		    ((const ipfw_insn *)cmd)->arg1);
 		bprintf(bp, "table(%s", t);
 		if (len == F_INSN_SIZE(ipfw_insn_u32))
 			bprintf(bp, ",%u", *a);
@@ -1218,16 +1236,18 @@ print_ip(struct buf_pr *bp, const struct format_opts *fo, ipfw_insn_ip *cmd)
 		return;
 	}
 	if (cmd->o.opcode == O_IP_SRC_SET || cmd->o.opcode == O_IP_DST_SET) {
-		uint32_t x, *map = (uint32_t *)&(cmd->mask);
+		const uint32_t *map = (const uint32_t *)&cmd->mask;
+		struct in_addr addr;
+		uint32_t x;
 		int i, j;
 		char comma = '{';
 
 		x = cmd->o.arg1 - 1;
-		x = htonl( ~x );
-		cmd->addr.s_addr = htonl(cmd->addr.s_addr);
-		bprintf(bp, "%s/%d", inet_ntoa(cmd->addr),
-			contigmask((uint8_t *)&x, 32));
-		x = cmd->addr.s_addr = htonl(cmd->addr.s_addr);
+		x = htonl(~x);
+		addr.s_addr = htonl(cmd->addr.s_addr);
+		bprintf(bp, "%s/%d", inet_ntoa(addr),
+		    contigmask((uint8_t *)&x, 32));
+		x = cmd->addr.s_addr;
 		x &= 0xff; /* base */
 		/*
 		 * Print bits and ranges.
@@ -1258,19 +1278,19 @@ print_ip(struct buf_pr *bp, const struct format_opts *fo, ipfw_insn_ip *cmd)
     for (len = len / 2; len > 0; len--, a += 2) {
 	int mb =	/* mask length */
 	    (cmd->o.opcode == O_IP_SRC || cmd->o.opcode == O_IP_DST) ?
-		32 : contigmask((uint8_t *)&(a[1]), 32);
-	if (mb == 32 && co.do_resolv)
-		he = gethostbyaddr((char *)&(a[0]), sizeof(in_addr_t),
+		32 : contigmask((const uint8_t *)&(a[1]), 32);
+	if (mb == 32 && g_co.do_resolv)
+		he = gethostbyaddr((const char *)&(a[0]), sizeof(in_addr_t),
 		    AF_INET);
 	if (he != NULL)		/* resolved to name */
 		bprintf(bp, "%s", he->h_name);
 	else if (mb == 0)	/* any */
 		bprintf(bp, "any");
 	else {		/* numeric IP followed by some kind of mask */
-		ia = (struct in_addr *)&a[0];
+		ia = (const struct in_addr *)&a[0];
 		bprintf(bp, "%s", inet_ntoa(*ia));
 		if (mb < 0) {
-			ia = (struct in_addr *)&a[1];
+			ia = (const struct in_addr *)&a[1];
 			bprintf(bp, ":%s", inet_ntoa(*ia));
 		} else if (mb < 32)
 			bprintf(bp, "/%d", mb);
@@ -1284,7 +1304,7 @@ print_ip(struct buf_pr *bp, const struct format_opts *fo, ipfw_insn_ip *cmd)
  * prints a MAC address/mask pair
  */
 static void
-format_mac(struct buf_pr *bp, uint8_t *addr, uint8_t *mask)
+format_mac(struct buf_pr *bp, const uint8_t *addr, const uint8_t *mask)
 {
 	int l = contigmask(mask, 48);
 
@@ -1303,7 +1323,7 @@ format_mac(struct buf_pr *bp, uint8_t *addr, uint8_t *mask)
 }
 
 static void
-print_mac(struct buf_pr *bp, ipfw_insn_mac *mac)
+print_mac(struct buf_pr *bp, const ipfw_insn_mac *mac)
 {
 
 	bprintf(bp, " MAC");
@@ -1336,7 +1356,7 @@ fill_icmptypes(ipfw_insn_u32 *cmd, char *av)
 }
 
 static void
-print_icmptypes(struct buf_pr *bp, ipfw_insn_u32 *cmd)
+print_icmptypes(struct buf_pr *bp, const ipfw_insn_u32 *cmd)
 {
 	int i;
 	char sep= ' ';
@@ -1351,12 +1371,12 @@ print_icmptypes(struct buf_pr *bp, ipfw_insn_u32 *cmd)
 }
 
 static void
-print_dscp(struct buf_pr *bp, ipfw_insn_u32 *cmd)
+print_dscp(struct buf_pr *bp, const ipfw_insn_u32 *cmd)
 {
-	int i = 0;
-	uint32_t *v;
-	char sep= ' ';
+	const uint32_t *v;
 	const char *code;
+	int i = 0;
+	char sep= ' ';
 
 	bprintf(bp, " dscp");
 	v = cmd->d;
@@ -1374,7 +1394,7 @@ print_dscp(struct buf_pr *bp, ipfw_insn_u32 *cmd)
 	}
 }
 
-#define	insntod(cmd, type)	((ipfw_insn_ ## type *)(cmd))
+#define	insntod(cmd, type)	((const ipfw_insn_ ## type *)(cmd))
 struct show_state {
 	struct ip_fw_rule	*rule;
 	const ipfw_insn		*eaction;
@@ -1443,7 +1463,7 @@ print_limit_mask(struct buf_pr *bp, const ipfw_insn_limit *limit)
 
 static int
 print_instruction(struct buf_pr *bp, const struct format_opts *fo,
-    struct show_state *state, ipfw_insn *cmd)
+    struct show_state *state, const ipfw_insn *cmd)
 {
 	struct protoent *pe;
 	struct passwd *pwd;
@@ -1525,7 +1545,7 @@ print_instruction(struct buf_pr *bp, const struct format_opts *fo,
 		    IPPROTO_ETHERTYPE, cmd->opcode);
 		break;
 	case O_FRAG:
-		bprintf(bp, " frag");
+		print_flags(bp, "frag", cmd, f_ipoff);
 		break;
 	case O_FIB:
 		bprintf(bp, " fib %u", cmd->arg1);
@@ -1688,7 +1708,7 @@ print_instruction(struct buf_pr *bp, const struct format_opts *fo,
 		bprintf(bp, " ipsec");
 		break;
 	case O_NOP:
-		bprintf(bp, " // %s", (char *)(cmd + 1));
+		bprintf(bp, " // %s", (const char *)(cmd + 1));
 		break;
 	case O_KEEP_STATE:
 		if (state->flags & HAVE_PROBE_STATE)
@@ -1780,8 +1800,8 @@ static void
 print_fwd(struct buf_pr *bp, const ipfw_insn *cmd)
 {
 	char buf[INET6_ADDRSTRLEN + IF_NAMESIZE + 2];
-	ipfw_insn_sa6 *sa6;
-	ipfw_insn_sa *sa;
+	const ipfw_insn_sa6 *sa6;
+	const ipfw_insn_sa *sa;
 	uint16_t port;
 
 	if (cmd->opcode == O_FORWARD_IP) {
@@ -2059,7 +2079,7 @@ print_proto(struct buf_pr *bp, struct format_opts *fo,
 static int
 match_opcode(int opcode, const int opcodes[], size_t nops)
 {
-	int i;
+	size_t i;
 
 	for (i = 0; i < nops; i++)
 		if (opcode == opcodes[i])
@@ -2141,10 +2161,10 @@ static void
 show_static_rule(struct cmdline_opts *co, struct format_opts *fo,
     struct buf_pr *bp, struct ip_fw_rule *rule, struct ip_fw_bcounter *cntr)
 {
+	static int twidth = 0;
 	struct show_state state;
 	ipfw_insn *cmd;
-	static int twidth = 0;
-	int i;
+	size_t i;
 
 	/* Print # DISABLED or skip the rule */
 	if ((fo->set_mask & (1 << rule->set)) == 0) {
@@ -2160,32 +2180,35 @@ show_static_rule(struct cmdline_opts *co, struct format_opts *fo,
 	}
 	bprintf(bp, "%05u ", rule->rulenum);
 
-	/* Print counters if enabled */
-	if (fo->pcwidth > 0 || fo->bcwidth > 0) {
-		pr_u64(bp, &cntr->pcnt, fo->pcwidth);
-		pr_u64(bp, &cntr->bcnt, fo->bcwidth);
-	}
-
-	/* Print timestamp */
-	if (co->do_time == TIMESTAMP_NUMERIC)
-		bprintf(bp, "%10u ", cntr->timestamp);
-	else if (co->do_time == TIMESTAMP_STRING) {
-		char timestr[30];
-		time_t t = (time_t)0;
-
-		if (twidth == 0) {
-			strcpy(timestr, ctime(&t));
-			*strchr(timestr, '\n') = '\0';
-			twidth = strlen(timestr);
+	/* only if counters are available */
+	if (cntr != NULL) {
+		/* Print counters if enabled */
+		if (fo->pcwidth > 0 || fo->bcwidth > 0) {
+			pr_u64(bp, &cntr->pcnt, fo->pcwidth);
+			pr_u64(bp, &cntr->bcnt, fo->bcwidth);
 		}
-		if (cntr->timestamp > 0) {
-			t = _long_to_time(cntr->timestamp);
 
-			strcpy(timestr, ctime(&t));
-			*strchr(timestr, '\n') = '\0';
-			bprintf(bp, "%s ", timestr);
-		} else {
-			bprintf(bp, "%*s", twidth, " ");
+		/* Print timestamp */
+		if (co->do_time == TIMESTAMP_NUMERIC)
+			bprintf(bp, "%10u ", cntr->timestamp);
+		else if (co->do_time == TIMESTAMP_STRING) {
+			char timestr[30];
+			time_t t = (time_t)0;
+
+			if (twidth == 0) {
+				strcpy(timestr, ctime(&t));
+				*strchr(timestr, '\n') = '\0';
+				twidth = strlen(timestr);
+			}
+			if (cntr->timestamp > 0) {
+				t = _long_to_time(cntr->timestamp);
+
+				strcpy(timestr, ctime(&t));
+				*strchr(timestr, '\n') = '\0';
+				bprintf(bp, "%s ", timestr);
+			} else {
+				bprintf(bp, "%*s", twidth + 1, " ");
+			}
 		}
 	}
 
@@ -2364,7 +2387,7 @@ void
 ipfw_sets_handler(char *av[])
 {
 	ipfw_range_tlv rt;
-	char *msg;
+	const char *msg;
 	size_t size;
 	uint32_t masks[2];
 	int i;
@@ -2381,7 +2404,7 @@ ipfw_sets_handler(char *av[])
 		ipfw_cfg_lheader *cfg;
 
 		memset(&fo, 0, sizeof(fo));
-		if (ipfw_get_config(&co, &fo, &cfg, &size) != 0)
+		if (ipfw_get_config(&g_co, &fo, &cfg, &size) != 0)
 			err(EX_OSERR, "requesting config failed");
 
 		for (i = 0, msg = "disable"; i < RESVD_SET; i++)
@@ -2510,7 +2533,7 @@ typedef void state_cb(struct cmdline_opts *co, struct format_opts *fo,
 
 static void
 prepare_format_dyn(struct cmdline_opts *co, struct format_opts *fo,
-    void *arg, void *_state)
+    void *arg __unused, void *_state)
 {
 	ipfw_dyn_rule *d;
 	int width;
@@ -2704,11 +2727,11 @@ ipfw_list(int ac, char *av[], int show_counters)
 	uint32_t rnum;
 	char *endptr;
 
-	if (co.test_only) {
+	if (g_co.test_only) {
 		fprintf(stderr, "Testing only, list disabled\n");
 		return;
 	}
-	if (co.do_pipe) {
+	if (g_co.do_pipe) {
 		dummynet_list(ac, av, show_counters);
 		return;
 	}
@@ -2734,17 +2757,17 @@ ipfw_list(int ac, char *av[], int show_counters)
 	/* get configuraion from kernel */
 	cfg = NULL;
 	sfo.show_counters = show_counters;
-	sfo.show_time = co.do_time;
-	if (co.do_dynamic != 2)
+	sfo.show_time = g_co.do_time;
+	if (g_co.do_dynamic != 2)
 		sfo.flags |= IPFW_CFG_GET_STATIC;
-	if (co.do_dynamic != 0)
+	if (g_co.do_dynamic != 0)
 		sfo.flags |= IPFW_CFG_GET_STATES;
 	if ((sfo.show_counters | sfo.show_time) != 0)
 		sfo.flags |= IPFW_CFG_GET_COUNTERS;
-	if (ipfw_get_config(&co, &sfo, &cfg, &sz) != 0)
+	if (ipfw_get_config(&g_co, &sfo, &cfg, &sz) != 0)
 		err(EX_OSERR, "retrieving config failed");
 
-	error = ipfw_show_config(&co, &sfo, cfg, sz, ac, av);
+	error = ipfw_show_config(&g_co, &sfo, cfg, sz, ac, av);
 
 	free(cfg);
 
@@ -2977,7 +3000,8 @@ ipfw_check_object_name(const char *name)
 	return (0);
 }
 
-static char *default_state_name = "default";
+static const char *default_state_name = "default";
+
 static int
 state_check_name(const char *name)
 {
@@ -3003,10 +3027,10 @@ eaction_check_name(const char *name)
 }
 
 static uint16_t
-pack_object(struct tidx *tstate, char *name, int otype)
+pack_object(struct tidx *tstate, const char *name, int otype)
 {
-	int i;
 	ipfw_obj_ntlv *ntlv;
+	uint32_t i;
 
 	for (i = 0; i < tstate->count; i++) {
 		if (strcmp(tstate->idx[i].name, name) != 0)
@@ -3040,7 +3064,7 @@ pack_object(struct tidx *tstate, char *name, int otype)
 }
 
 static uint16_t
-pack_table(struct tidx *tstate, char *name)
+pack_table(struct tidx *tstate, const char *name)
 {
 
 	if (table_check_name(name) != 0)
@@ -3119,7 +3143,7 @@ fill_ip(ipfw_insn_ip *cmd, char *av, int cblen, struct tidx *tstate)
 	int masklen;
 	char md, nd = '\0';
 
-	CHECK_LENGTH(cblen, F_INSN_SIZE(ipfw_insn) + 2 + len);
+	CHECK_LENGTH(cblen, (int)F_INSN_SIZE(ipfw_insn) + 2 + len);
 
 	if (p) {
 		md = *p;
@@ -3317,7 +3341,7 @@ ipfw_delete(char *av[])
 		/* Do not allow using the following syntax:
 		 *	ipfw set N delete set M
 		 */
-		if (co.use_set)
+		if (g_co.use_set)
 			errx(EX_DATAERR, "invalid syntax");
 		do_set = 1;	/* delete set */
 		av++;
@@ -3330,10 +3354,10 @@ ipfw_delete(char *av[])
 		if (*sep== '-')
 			j = strtol(sep + 1, NULL, 10);
 		av++;
-		if (co.do_nat) {
+		if (g_co.do_nat) {
 			exitval = ipfw_delete_nat(i);
-		} else if (co.do_pipe) {
-			exitval = ipfw_delete_pipe(co.do_pipe, i);
+		} else if (g_co.do_pipe) {
+			exitval = ipfw_delete_pipe(g_co.do_pipe, i);
 		} else {
 			memset(&rt, 0, sizeof(rt));
 			if (do_set != 0) {
@@ -3346,24 +3370,24 @@ ipfw_delete(char *av[])
 					rt.flags |= IPFW_RCFLAG_ALL;
 				else
 					rt.flags |= IPFW_RCFLAG_RANGE;
-				if (co.use_set != 0) {
-					rt.set = co.use_set - 1;
+				if (g_co.use_set != 0) {
+					rt.set = g_co.use_set - 1;
 					rt.flags |= IPFW_RCFLAG_SET;
 				}
 			}
-			if (co.do_dynamic == 2)
+			if (g_co.do_dynamic == 2)
 				rt.flags |= IPFW_RCFLAG_DYNAMIC;
 			i = do_range_cmd(IP_FW_XDEL, &rt);
 			if (i != 0) {
 				exitval = EX_UNAVAILABLE;
-				if (co.do_quiet)
+				if (g_co.do_quiet)
 					continue;
 				warn("rule %u: setsockopt(IP_FW_XDEL)",
 				    rt.start_rule);
 			} else if (rt.new_set == 0 && do_set == 0 &&
-			    co.do_dynamic != 2) {
+			    g_co.do_dynamic != 2) {
 				exitval = EX_UNAVAILABLE;
-				if (co.do_quiet)
+				if (g_co.do_quiet)
 					continue;
 				if (rt.start_rule != rt.end_rule)
 					warnx("no rules rules in %u-%u range",
@@ -3374,7 +3398,7 @@ ipfw_delete(char *av[])
 			}
 		}
 	}
-	if (exitval != EX_OK && co.do_force == 0)
+	if (exitval != EX_OK && g_co.do_force == 0)
 		exit(exitval);
 }
 
@@ -3699,7 +3723,7 @@ add_src(ipfw_insn *cmd, char *av, u_char proto, int cblen, struct tidx *tstate)
 	struct in6_addr a;
 	char *host, *ch, buf[INET6_ADDRSTRLEN];
 	ipfw_insn *ret = NULL;
-	int len;
+	size_t len;
 
 	/* Copy first address in set if needed */
 	if ((ch = strpbrk(av, "/,")) != NULL) {
@@ -3730,7 +3754,7 @@ add_dst(ipfw_insn *cmd, char *av, u_char proto, int cblen, struct tidx *tstate)
 	struct in6_addr a;
 	char *host, *ch, buf[INET6_ADDRSTRLEN];
 	ipfw_insn *ret = NULL;
-	int len;
+	size_t len;
 
 	/* Copy first address in set if needed */
 	if ((ch = strpbrk(av, "/,")) != NULL) {
@@ -3767,7 +3791,7 @@ add_dst(ipfw_insn *cmd, char *av, u_char proto, int cblen, struct tidx *tstate)
  * various match patterns, log/altq actions, and the actual action.
  *
  */
-void
+static void
 compile_rule(char *av[], uint32_t *rbuf, int *rbufsize, struct tidx *tstate)
 {
 	/*
@@ -3993,8 +4017,7 @@ chkarg:
 		 *	IPv4 a.b.c.d,port
 		 *	IPv4 a.b.c.d:port
 		 *	IPv6 w:x:y::z,port
-		 * The ':' can only be used with hostname and IPv4 address.
-		 * XXX-BZ Should we also support [w:x:y::z]:port?
+		 *	IPv6 [w:x:y::z]:port
 		 */
 		struct sockaddr_storage result;
 		struct addrinfo *res;
@@ -4004,18 +4027,34 @@ chkarg:
 
 		NEED1("missing forward address[:port]");
 
+		if (strncmp(*av, "tablearg", 8) == 0 &&
+		    ((*av)[8] == '\0' || (*av)[8] == ',' || (*av)[8] == ':'))
+			memcpy(++(*av), "0.0.0.0", 7);
+
+		/*
+		 * Are we an bracket-enclosed IPv6 address?
+		 */
+		if (strchr(*av, '['))
+			(*av)++;
+
 		/*
 		 * locate the address-port separator (':' or ',')
 		 */
 		s = strchr(*av, ',');
 		if (s == NULL) {
+			s = strchr(*av, ']');
+			/* Prevent erroneous parsing on brackets. */
+			if (s != NULL)
+				*(s++) = '\0';
+			else
+				s = *av;
+
 			/* Distinguish between IPv4:port and IPv6 cases. */
-			s = strchr(*av, ':');
+			s = strchr(s, ':');
 			if (s && strchr(s+1, ':'))
 				s = NULL; /* no port */
 		}
 
-		port_number = 0;
 		if (s != NULL) {
 			/* Terminate host portion and set s to start of port. */
 			*(s++) = '\0';
@@ -4026,22 +4065,16 @@ chkarg:
 			port_number = (u_short)i;
 		}
 
-		if (_substrcmp(*av, "tablearg") == 0) {
-			family = PF_INET;
-			((struct sockaddr_in*)&result)->sin_addr.s_addr =
-			    INADDR_ANY;
-		} else {
-			/*
-			 * Resolve the host name or address to a family and a
-			 * network representation of the address.
-			 */
-			if (getaddrinfo(*av, NULL, NULL, &res))
-				errx(EX_DATAERR, NULL);
-			/* Just use the first host in the answer. */
-			family = res->ai_family;
-			memcpy(&result, res->ai_addr, res->ai_addrlen);
-			freeaddrinfo(res);
-		}
+		/*
+		 * Resolve the host name or address to a family and a
+		 * network representation of the address.
+		 */
+		if (getaddrinfo(*av, NULL, NULL, &res))
+			errx(EX_DATAERR, NULL);
+		/* Just use the first host in the answer. */
+		family = res->ai_family;
+		memcpy(&result, res->ai_addr, res->ai_addrlen);
+		freeaddrinfo(res);
 
  		if (family == PF_INET) {
 			ipfw_insn_sa *p = (ipfw_insn_sa *)action;
@@ -4100,7 +4133,7 @@ chkarg:
 		        action->arg1 = strtoul(*av, NULL, 10);
 			if (sysctlbyname("net.fibs", &numfibs, &intsize,
 			    NULL, 0) == -1)
-				errx(EX_DATAERR, "fibs not suported.\n");
+				errx(EX_DATAERR, "fibs not supported.\n");
 			if (action->arg1 >= numfibs)  /* Temporary */
 				errx(EX_DATAERR, "fib too large.\n");
 			/* Add high-order bit to fib to make room for tablearg*/
@@ -4242,7 +4275,7 @@ chkarg:
 				len = sizeof(c->max_log);
 				if (sysctlbyname("net.inet.ip.fw.verbose_limit",
 				    &c->max_log, &len, NULL, 0) == -1) {
-					if (co.test_only) {
+					if (g_co.test_only) {
 						c->max_log = 0;
 						break;
 					}
@@ -4534,9 +4567,24 @@ read_options:
 			fill_cmd(cmd, O_DIVERTED, 0, 2);
 			break;
 
-		case TOK_FRAG:
-			fill_cmd(cmd, O_FRAG, 0, 0);
+		case TOK_FRAG: {
+			uint32_t set = 0, clear = 0;
+
+			if (*av != NULL && fill_flags(f_ipoff, *av, NULL,
+			    &set, &clear) == 0)
+				av++;
+			else {
+				/*
+				 * Compatibility: no argument after "frag"
+				 * keyword equals to "frag offset".
+				 */
+				set = 0x01;
+				clear = 0;
+			}
+			fill_cmd(cmd, O_FRAG, 0,
+			    (set & 0xff) | ( (clear & 0xff) << 8));
 			break;
+		}
 
 		case TOK_LAYER2:
 			fill_cmd(cmd, O_LAYER2, 0, 0);
@@ -4920,6 +4968,7 @@ read_options:
 			break;
 
 		case TOK_EXT6HDR:
+			NEED1("missing extension header");
 			fill_ext6hdr( cmd, *av );
 			av++;
 			break;
@@ -5130,10 +5179,10 @@ done:
 static int
 compare_ntlv(const void *_a, const void *_b)
 {
-	ipfw_obj_ntlv *a, *b;
+	const ipfw_obj_ntlv *a, *b;
 
-	a = (ipfw_obj_ntlv *)_a;
-	b = (ipfw_obj_ntlv *)_b;
+	a = (const ipfw_obj_ntlv *)_a;
+	b = (const ipfw_obj_ntlv *)_b;
 
 	if (a->set < b->set)
 		return (-1);
@@ -5170,11 +5219,11 @@ struct object_kt {
 static int
 compare_object_kntlv(const void *k, const void *v)
 {
-	ipfw_obj_ntlv *ntlv;
+	const ipfw_obj_ntlv *ntlv;
 	struct object_kt key;
 
-	key = *((struct object_kt *)k);
-	ntlv = (ipfw_obj_ntlv *)v;
+	key = *((const struct object_kt *)k);
+	ntlv = (const ipfw_obj_ntlv *)v;
 
 	if (key.uidx < ntlv->idx)
 		return (-1);
@@ -5310,14 +5359,14 @@ ipfw_add(char *av[])
 	if (do_get3(IP_FW_XADD, op3, &sz) != 0)
 		err(EX_UNAVAILABLE, "getsockopt(%s)", "IP_FW_XADD");
 
-	if (!co.do_quiet) {
+	if (!g_co.do_quiet) {
 		struct format_opts sfo;
 		struct buf_pr bp;
 		memset(&sfo, 0, sizeof(sfo));
 		sfo.tstate = tstate;
 		sfo.set_mask = (uint32_t)(-1);
 		bp_alloc(&bp, 4096);
-		show_static_rule(&co, &sfo, &bp, rule, NULL);
+		show_static_rule(&g_co, &sfo, &bp, rule, NULL);
 		printf("%s", bp.buf);
 		bp_free(&bp);
 	}
@@ -5353,7 +5402,7 @@ ipfw_zero(int ac, char *av[], int optname)
 		rt.flags = IPFW_RCFLAG_ALL;
 		if (do_range_cmd(optname, &rt) < 0)
 			err(EX_UNAVAILABLE, "setsockopt(IP_FW_X%s)", name);
-		if (!co.do_quiet)
+		if (!g_co.do_quiet)
 			printf("%s.\n", optname == IP_FW_XZERO ?
 			    "Accounting cleared":"Logging counts reset");
 
@@ -5371,8 +5420,8 @@ ipfw_zero(int ac, char *av[], int optname)
 			rt.start_rule = arg;
 			rt.end_rule = arg;
 			rt.flags |= IPFW_RCFLAG_RANGE;
-			if (co.use_set != 0) {
-				rt.set = co.use_set - 1;
+			if (g_co.use_set != 0) {
+				rt.set = g_co.use_set - 1;
 				rt.flags |= IPFW_RCFLAG_SET;
 			}
 			if (do_range_cmd(optname, &rt) != 0) {
@@ -5382,7 +5431,7 @@ ipfw_zero(int ac, char *av[], int optname)
 			} else if (rt.new_set == 0) {
 				printf("Entry %d not found\n", arg);
 				failed = EX_UNAVAILABLE;
-			} else if (!co.do_quiet)
+			} else if (!g_co.do_quiet)
 				printf("Entry %d %s.\n", arg,
 				    optname == IP_FW_XZERO ?
 					"cleared" : "logging count reset");
@@ -5400,7 +5449,7 @@ ipfw_flush(int force)
 {
 	ipfw_range_tlv rt;
 
-	if (!force && !co.do_quiet) { /* need to ask user */
+	if (!force && !g_co.do_quiet) { /* need to ask user */
 		int c;
 
 		printf("Are you sure? [yn] ");
@@ -5415,21 +5464,21 @@ ipfw_flush(int force)
 		if (c == 'N')	/* user said no */
 			return;
 	}
-	if (co.do_pipe) {
+	if (g_co.do_pipe) {
 		dummynet_flush();
 		return;
 	}
 	/* `ipfw set N flush` - is the same that `ipfw delete set N` */
 	memset(&rt, 0, sizeof(rt));
-	if (co.use_set != 0) {
-		rt.set = co.use_set - 1;
+	if (g_co.use_set != 0) {
+		rt.set = g_co.use_set - 1;
 		rt.flags = IPFW_RCFLAG_SET;
 	} else
 		rt.flags = IPFW_RCFLAG_ALL;
 	if (do_range_cmd(IP_FW_XDEL, &rt) != 0)
 			err(EX_UNAVAILABLE, "setsockopt(IP_FW_XDEL)");
-	if (!co.do_quiet)
-		printf("Flushed all %s.\n", co.do_pipe ? "pipes" : "rules");
+	if (!g_co.do_quiet)
+		printf("Flushed all %s.\n", g_co.do_pipe ? "pipes" : "rules");
 }
 
 static struct _s_x intcmds[] = {
@@ -5465,13 +5514,13 @@ lookup_eaction_name(ipfw_obj_ntlv *ntlv, int cnt, uint16_t type)
 }
 
 static void
-ipfw_list_objects(int ac, char *av[])
+ipfw_list_objects(int ac __unused, char *av[] __unused)
 {
 	ipfw_obj_lheader req, *olh;
 	ipfw_obj_ntlv *ntlv;
 	const char *name;
 	size_t sz;
-	int i;
+	uint32_t i;
 
 	memset(&req, 0, sizeof(req));
 	sz = sizeof(req);
@@ -5569,10 +5618,10 @@ ipfw_get_tracked_ifaces(ipfw_obj_lheader **polh)
 static int
 ifinfo_cmp(const void *a, const void *b)
 {
-	ipfw_iface_info *ia, *ib;
+	const ipfw_iface_info *ia, *ib;
 
-	ia = (ipfw_iface_info *)a;
-	ib = (ipfw_iface_info *)b;
+	ia = (const ipfw_iface_info *)a;
+	ib = (const ipfw_iface_info *)b;
 
 	return (stringnum_cmp(ia->ifname, ib->ifname));
 }
@@ -5583,11 +5632,12 @@ ifinfo_cmp(const void *a, const void *b)
  * Returns 0 on success.
  */
 static void
-ipfw_list_tifaces()
+ipfw_list_tifaces(void)
 {
 	ipfw_obj_lheader *olh = NULL;
 	ipfw_iface_info *info;
-	int i, error;
+	uint32_t i;
+	int error;
 
 	if ((error = ipfw_get_tracked_ifaces(&olh)) != 0)
 		err(EX_OSERR, "Unable to request ipfw tracked interface list");

@@ -1,3 +1,5 @@
-# $FreeBSD: stable/11/tests/sys/Makefile.inc 313236 2017-02-04 17:02:54Z ngie $
+# $FreeBSD$
 
 WARNS?=		6
+
+.include "${SRCTOP}/tests/Makefile.inc0"

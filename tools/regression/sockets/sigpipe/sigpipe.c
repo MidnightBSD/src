@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/regression/sockets/sigpipe/sigpipe.c 281397 2015-04-11 03:24:49Z ngie $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/regression/sockets/rtsocket/rtsocket.c 294125 2016-01-16 02:02:50Z ngie $
+ * $FreeBSD$
  */
 
 /*

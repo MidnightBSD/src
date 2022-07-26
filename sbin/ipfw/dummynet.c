@@ -1,4 +1,4 @@
-/*
+/*-
  * Codel/FQ_Codel and PIE/FQ_PIE Code:
  * Copyright (C) 2016 Centre for Advanced Internet Architectures,
  *  Swinburne University of Technology, Melbourne, Australia.
@@ -17,7 +17,7 @@
  *
  * This software is provided ``AS IS'' without any warranties of any kind.
  *
- * $FreeBSD: stable/11/sbin/ipfw/dummynet.c 331194 2018-03-19 07:28:54Z eadler $
+ * $FreeBSD$
  *
  * dummynet support
  */
@@ -167,8 +167,8 @@ enum {
 #define PIE_SCALE (1L<<PIE_FIX_POINT_BITS)
 
 /* integer to time */
-void 
-us_to_time(int t,char *strt)
+static void
+us_to_time(int t, char *strt)
 {
 	if (t < 0)
 		strt[0]='\0';
@@ -222,7 +222,7 @@ time_to_us(const char *s)
 
  
 /* Get AQM or scheduler extra parameters  */
-void
+static void
 get_extra_parms(uint32_t nr, char *out, int subtype)
 { 
 	struct dn_extra_parms *ep;
@@ -498,7 +498,7 @@ print_flowset_parms(struct dn_fs *fs, char *prefix)
 		    fs->max_th,
 		    1.0 * fs->max_p / (double)(1 << SCALE_RED));
 		if (fs->flags & DN_IS_ECN)
-			strncat(red, " (ecn)", 6);
+			strlcat(red, " (ecn)", sizeof(red));
 #ifdef NEW_AQM
 	/* get AQM parameters */
 	} else if (fs->flags & DN_IS_AQM) {
@@ -587,7 +587,7 @@ list_pipes(struct dn_id *oid, struct dn_id *end)
 		break;
 	    }
 	case DN_CMD_GET:
-	    if (co.verbose)
+	    if (g_co.verbose)
 		printf("answer for cmd %d, len %d\n", oid->type, oid->id);
 	    break;
 	case DN_SCH: {
@@ -637,7 +637,7 @@ list_pipes(struct dn_id *oid, struct dn_id *end)
 		sprintf(bwbuf, "%7.3f bit/s ", b);
 
 	    if (humanize_number(burst, sizeof(burst), p->burst,
-		    "", HN_AUTOSCALE, 0) < 0 || co.verbose)
+		    "", HN_AUTOSCALE, 0) < 0 || g_co.verbose)
 		sprintf(burst, "%d", (int)p->burst);
 	    sprintf(buf, "%05d: %s %4d ms burst %s",
 		p->link_nr % DN_MAX_ID, bwbuf, p->delay, burst);
@@ -797,7 +797,7 @@ is_valid_number(const char *s)
 static void
 read_bandwidth(char *arg, uint32_t *bandwidth, char *if_name, int namelen)
 {
-	if (*bandwidth != -1)
+	if (*bandwidth != (uint32_t)-1)
 		warnx("duplicate token, override bandwidth value!");
 
 	if (arg[0] >= 'a' && arg[0] <= 'z') {
@@ -1318,7 +1318,7 @@ ipfw_config_pipe(int ac, char **av)
 	o_next(&buf, sizeof(struct dn_id), DN_CMD_CONFIG);
 	base->id = DN_API_VERSION;
 
-	switch (co.do_pipe) {
+	switch (g_co.do_pipe) {
 	case 1: /* "pipe N config ..." */
 		/* Allocate space for the WF2Q+ scheduler, its link
 		 * and the FIFO flowset. Set the number, but leave
@@ -1738,7 +1738,7 @@ end_mask:
 	if (p) {
 		if (p->delay > 10000)
 			errx(EX_DATAERR, "delay must be < 10000");
-		if (p->bandwidth == -1)
+		if (p->bandwidth == (uint32_t)-1)
 			p->bandwidth = 0;
 	}
 	if (fs) {
@@ -1894,7 +1894,7 @@ parse_range(int ac, char *av[], uint32_t *v, int len)
 		}
 		n++;
 		/* translate if 'pipe list' */
-		if (co.do_pipe == 1) {
+		if (g_co.do_pipe == 1) {
 			v[0] += DN_MAX_ID;
 			v[1] += DN_MAX_ID;
 		}
@@ -1948,7 +1948,7 @@ dummynet_list(int ac, char *av[], int show_counters)
 	if (max_size < sizeof(struct dn_flow))
 		max_size = sizeof(struct dn_flow);
 
-	switch (co.do_pipe) {
+	switch (g_co.do_pipe) {
 	case 1:
 		oid->subtype = DN_LINK;	/* list pipe */
 		break;

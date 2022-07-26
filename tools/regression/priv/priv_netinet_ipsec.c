@@ -23,7 +23,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/regression/priv/priv_netinet_ipsec.c 196172 2009-08-13 09:11:47Z bz $
+ * $FreeBSD$
  */
 
 /*

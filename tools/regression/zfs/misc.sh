@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tools/regression/zfs/misc.sh 273628 2014-10-25 05:31:18Z ngie $
+# $FreeBSD$
 
 ntest=1
 os=`uname -s`

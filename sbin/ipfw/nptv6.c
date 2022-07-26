@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/ipfw/nptv6.c 316444 2017-04-03 07:30:47Z ae $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -89,8 +89,8 @@ ipfw_nptv6_handler(int ac, char *av[])
 	int tcmd;
 	uint8_t set;
 
-	if (co.use_set != 0)
-		set = co.use_set - 1;
+	if (g_co.use_set != 0)
+		set = g_co.use_set - 1;
 	else
 		set = 0;
 	ac--; av++;
@@ -152,6 +152,7 @@ static struct _s_x nptv6newcmds[] = {
       { "int_prefix",	TOK_INTPREFIX },
       { "ext_prefix",	TOK_EXTPREFIX },
       { "prefixlen",	TOK_PREFIXLEN },
+      { "ext_if",	TOK_EXTIF },
       { NULL, 0 }
 };
 
@@ -192,7 +193,7 @@ nptv6_create(const char *name, uint8_t set, int ac, char *av[])
 	ipfw_nptv6_cfg *cfg;
 	ipfw_obj_lheader *olh;
 	int tcmd, flags, plen;
-	char *p = "\0";
+	char *p;
 
 	plen = 0;
 	memset(buf, 0, sizeof(buf));
@@ -214,11 +215,26 @@ nptv6_create(const char *name, uint8_t set, int ac, char *av[])
 			ac--; av++;
 			break;
 		case TOK_EXTPREFIX:
+			if (flags & NPTV6_HAS_EXTPREFIX)
+				errx(EX_USAGE,
+				    "Only one ext_prefix or ext_if allowed");
 			NEED1("IPv6 prefix required");
 			nptv6_parse_prefix(*av, &cfg->external, &plen);
 			flags |= NPTV6_HAS_EXTPREFIX;
 			if (plen > 0)
 				goto check_prefix;
+			ac--; av++;
+			break;
+		case TOK_EXTIF:
+			if (flags & NPTV6_HAS_EXTPREFIX)
+				errx(EX_USAGE,
+				    "Only one ext_prefix or ext_if allowed");
+			NEED1("Interface name required");
+			if (strlen(*av) >= sizeof(cfg->if_name))
+				errx(EX_USAGE, "Invalid interface name");
+			flags |= NPTV6_HAS_EXTPREFIX;
+			cfg->flags |= NPTV6_DYNAMIC_PREFIX;
+			strncpy(cfg->if_name, *av, sizeof(cfg->if_name));
 			ac--; av++;
 			break;
 		case TOK_PREFIXLEN:
@@ -245,13 +261,14 @@ check_prefix:
 	if ((flags & NPTV6_HAS_INTPREFIX) != NPTV6_HAS_INTPREFIX)
 		errx(EX_USAGE, "int_prefix required");
 	if ((flags & NPTV6_HAS_EXTPREFIX) != NPTV6_HAS_EXTPREFIX)
-		errx(EX_USAGE, "ext_prefix required");
+		errx(EX_USAGE, "ext_prefix or ext_if required");
 	if ((flags & NPTV6_HAS_PREFIXLEN) != NPTV6_HAS_PREFIXLEN)
 		errx(EX_USAGE, "prefixlen required");
 
 	n2mask(&mask, cfg->plen);
 	APPLY_MASK(&cfg->internal, &mask);
-	APPLY_MASK(&cfg->external, &mask);
+	if ((cfg->flags & NPTV6_DYNAMIC_PREFIX) == 0)
+		APPLY_MASK(&cfg->external, &mask);
 
 	olh->count = 1;
 	olh->objsize = sizeof(*cfg);
@@ -309,7 +326,7 @@ nptv6_stats(const char *name, uint8_t set)
 	if (nptv6_get_stats(name, set, &stats) != 0)
 		err(EX_OSERR, "Error retrieving stats");
 
-	if (co.use_set != 0 || set != 0)
+	if (g_co.use_set != 0 || set != 0)
 		printf("set %u ", set);
 	printf("nptv6 %s\n", name);
 	printf("\t%ju packets translated (internal to external)\n",
@@ -343,23 +360,28 @@ nptv6_show_cb(ipfw_nptv6_cfg *cfg, const char *name, uint8_t set)
 	if (name != NULL && strcmp(cfg->name, name) != 0)
 		return (ESRCH);
 
-	if (co.use_set != 0 && cfg->set != set)
+	if (g_co.use_set != 0 && cfg->set != set)
 		return (ESRCH);
 
-	if (co.use_set != 0 || cfg->set != 0)
+	if (g_co.use_set != 0 || cfg->set != 0)
 		printf("set %u ", cfg->set);
 	inet_ntop(AF_INET6, &cfg->internal, abuf, sizeof(abuf));
 	printf("nptv6 %s int_prefix %s ", cfg->name, abuf);
-	inet_ntop(AF_INET6, &cfg->external, abuf, sizeof(abuf));
-	printf("ext_prefix %s prefixlen %u\n", abuf, cfg->plen);
+	if (cfg->flags & NPTV6_DYNAMIC_PREFIX)
+		printf("ext_if %s ", cfg->if_name);
+	else {
+		inet_ntop(AF_INET6, &cfg->external, abuf, sizeof(abuf));
+		printf("ext_prefix %s ", abuf);
+	}
+	printf("prefixlen %u\n", cfg->plen);
 	return (0);
 }
 
 static int
-nptv6_destroy_cb(ipfw_nptv6_cfg *cfg, const char *name, uint8_t set)
+nptv6_destroy_cb(ipfw_nptv6_cfg *cfg, const char *name __unused, uint8_t set)
 {
 
-	if (co.use_set != 0 && cfg->set != set)
+	if (g_co.use_set != 0 && cfg->set != set)
 		return (ESRCH);
 
 	nptv6_destroy(cfg->name, cfg->set);
@@ -374,10 +396,10 @@ nptv6_destroy_cb(ipfw_nptv6_cfg *cfg, const char *name, uint8_t set)
 static int
 nptv6name_cmp(const void *a, const void *b)
 {
-	ipfw_nptv6_cfg *ca, *cb;
+	const ipfw_nptv6_cfg *ca, *cb;
 
-	ca = (ipfw_nptv6_cfg *)a;
-	cb = (ipfw_nptv6_cfg *)b;
+	ca = (const ipfw_nptv6_cfg *)a;
+	cb = (const ipfw_nptv6_cfg *)b;
 
 	if (ca->set > cb->set)
 		return (1);
@@ -397,7 +419,8 @@ nptv6_foreach(nptv6_cb_t *f, const char *name, uint8_t set, int sort)
 	ipfw_obj_lheader *olh;
 	ipfw_nptv6_cfg *cfg;
 	size_t sz;
-	int i, error;
+	uint32_t i;
+	int error;
 
 	/* Start with reasonable default */
 	sz = sizeof(*olh) + 16 * sizeof(*cfg);

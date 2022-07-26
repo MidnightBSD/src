@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * Obtained from: $NetBSD: shmtest.c,v 1.3 2002/07/20 08:36:26 grant Exp $
- * $FreeBSD: stable/11/tools/regression/sysvshm/shmtest.c 280232 2015-03-18 22:05:15Z kib $
+ * $FreeBSD$
  */
 
 /*

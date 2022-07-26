@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/tools/regression/pthread/unwind/cond_wait_cancel.cpp 213155 2010-09-25 04:26:40Z davidxu $ */
+/* $FreeBSD$ */
 /* Test stack unwinding for pthread_cond_wait function */
 
 #include <pthread.h>
@@ -8,11 +8,11 @@
 
 #include "Test.cpp"
 
-pthread_mutex_t mtx;
-pthread_cond_t cv;
+static pthread_mutex_t mtx;
+static pthread_cond_t cv;
 
-void *
-thr(void *arg)
+static void *
+thr(void *arg __unused)
 {
 	Test t;
 

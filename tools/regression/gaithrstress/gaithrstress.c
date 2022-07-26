@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/regression/gaithrstress/gaithrstress.c 282062 2015-04-27 07:28:41Z ngie $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
