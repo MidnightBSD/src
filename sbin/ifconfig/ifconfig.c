@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -38,7 +40,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)ifconfig.c	8.2 (Berkeley) 2/16/94";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/11/sbin/ifconfig/ifconfig.c 347557 2019-05-14 02:00:12Z kevans $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -61,6 +63,7 @@ static const char rcsid[] =
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#include <fnmatch.h>
 #include <ifaddrs.h>
 #include <ctype.h>
 #include <err.h>
@@ -98,16 +101,21 @@ int	printifname = 0;
 
 int	supmedia = 0;
 int	printkeys = 0;		/* Print keying material for interfaces. */
+int	exit_code = 0;
 
 /* Formatter Strings */
 char	*f_inet, *f_inet6, *f_ether, *f_addr;
 
+static	bool group_member(const char *ifname, const char *match,
+		const char *nomatch);
 static	int ifconfig(int argc, char *const *argv, int iscreate,
 		const struct afswtch *afp);
 static	void status(const struct afswtch *afp, const struct sockaddr_dl *sdl,
 		struct ifaddrs *ifa);
 static	void tunnel_status(int s);
 static _Noreturn void usage(void);
+
+static int getifflags(const char *ifname, int us);
 
 static struct afswtch *af_getbyname(const char *name);
 static struct afswtch *af_getbyfamily(int af);
@@ -131,8 +139,16 @@ static struct module_map_entry {
 	const char *kldname;
 } module_map[] = {
 	{
+		.ifname = "tun",
+		.kldname = "if_tuntap",
+	},
+	{
+		.ifname = "tap",
+		.kldname = "if_tuntap",
+	},
+	{
 		.ifname = "vmnet",
-		.kldname = "if_tap",
+		.kldname = "if_tuntap",
 	},
 	{
 		.ifname = "ipsec",
@@ -180,6 +196,19 @@ usage(void)
 	"       ifconfig %s[-d] [-m] [-u] [-v]\n",
 		options, options, options);
 	exit(1);
+}
+
+void
+ioctl_ifcreate(int s, struct ifreq *ifr)
+{
+	if (ioctl(s, SIOCIFCREATE2, ifr) < 0) {
+		switch (errno) {
+		case EEXIST:
+			errx(1, "interface %s already exists", ifr->ifr_name);
+		default:
+			err(1, "SIOCIFCREATE2");
+		}
+	}
 }
 
 #define ORDERS_SIZE(x) sizeof(x) / sizeof(x[0])
@@ -389,12 +418,14 @@ main(int argc, char *argv[])
 	char options[1024], *cp, *envformat, *namecp = NULL;
 	struct ifa_queue q = TAILQ_HEAD_INITIALIZER(q);
 	struct ifa_order_elt *cur, *tmp;
-	const char *ifname;
+	const char *ifname, *matchgroup, *nogroup;
 	struct option *p;
 	size_t iflen;
+	int flags;
 
 	all = downonly = uponly = namesonly = noload = verbose = 0;
 	f_inet = f_inet6 = f_ether = f_addr = NULL;
+	matchgroup = nogroup = NULL;
 
 	envformat = getenv("IFCONFIG_FORMAT");
 	if (envformat != NULL)
@@ -407,7 +438,7 @@ main(int argc, char *argv[])
 	atexit(printifnamemaybe);
 
 	/* Parse leading line options */
-	strlcpy(options, "f:adklmnuv", sizeof(options));
+	strlcpy(options, "G:adf:klmnuv", sizeof(options));
 	for (p = opts; p != NULL; p = p->next)
 		strlcat(options, p->opt, sizeof(options));
 	while ((c = getopt(argc, argv, options)) != -1) {
@@ -422,6 +453,11 @@ main(int argc, char *argv[])
 			if (optarg == NULL)
 				usage();
 			setformat(optarg);
+			break;
+		case 'G':
+			if (optarg == NULL || all == 0)
+				usage();
+			nogroup = optarg;
 			break;
 		case 'k':
 			printkeys++;
@@ -441,6 +477,14 @@ main(int argc, char *argv[])
 		case 'v':
 			verbose++;
 			break;
+		case 'g':
+			if (all) {
+				if (optarg == NULL)
+					usage();
+				matchgroup = optarg;
+				break;
+			}
+			/* FALLTHROUGH */
 		default:
 			for (p = opts; p != NULL; p = p->next)
 				if (p->opt[0] == c) {
@@ -509,7 +553,7 @@ main(int argc, char *argv[])
 					errx(1, "%s: cloning name too long",
 					    ifname);
 				ifconfig(argc, argv, 1, NULL);
-				exit(0);
+				exit(exit_code);
 			}
 #ifdef JAIL
 			/*
@@ -523,7 +567,7 @@ main(int argc, char *argv[])
 					errx(1, "%s: interface name too long",
 					    ifname);
 				ifconfig(argc, argv, 0, NULL);
-				exit(0);
+				exit(exit_code);
 			}
 #endif
 			errx(1, "interface %s does not exist", ifname);
@@ -547,6 +591,25 @@ main(int argc, char *argv[])
 		afp = af_getbyname(*argv);
 		if (afp != NULL)
 			argc--, argv++;
+	}
+
+	/*
+	 * Check for a requested configuration action on a single interface,
+	 * which doesn't require building, sorting, and searching the entire
+	 * system address list
+	 */
+	if ((argc > 0) && (ifname != NULL)) {
+		iflen = strlcpy(name, ifname, sizeof(name));
+		if (iflen >= sizeof(name)) {
+			warnx("%s: interface name too long, skipping", ifname);
+		} else {
+			flags = getifflags(name, -1);
+			if (!(((flags & IFF_CANTCONFIG) != 0) ||
+				(downonly && (flags & IFF_UP) != 0) ||
+				(uponly && (flags & IFF_UP) == 0)))
+				ifconfig(argc, argv, 0, afp);
+		}
+		goto done;
 	}
 
 	if (getifaddrs(&ifap) != 0)
@@ -593,6 +656,8 @@ main(int argc, char *argv[])
 			continue;
 		if (uponly && (ifa->ifa_flags & IFF_UP) == 0)
 			continue;
+		if (!group_member(ifa->ifa_name, matchgroup, nogroup))
+			continue;
 		/*
 		 * Are we just listing the interfaces?
 		 */
@@ -632,8 +697,77 @@ main(int argc, char *argv[])
 		printf("\n");
 	freeifaddrs(ifap);
 
+done:
 	freeformat();
-	exit(0);
+	exit(exit_code);
+}
+
+/*
+ * Returns true if an interface should be listed because any its groups
+ * matches shell pattern "match" and none of groups matches pattern "nomatch".
+ * If any pattern is NULL, corresponding condition is skipped.
+ */
+static bool
+group_member(const char *ifname, const char *match, const char *nomatch)
+{
+	static int		 sock = -1;
+
+	struct ifgroupreq	 ifgr;
+	struct ifg_req		*ifg;
+	int			 len;
+	bool			 matched, nomatched;
+
+	/* Sanity checks. */
+	if (match == NULL && nomatch == NULL)
+		return (true);
+	if (ifname == NULL)
+		return (false);
+
+	memset(&ifgr, 0, sizeof(ifgr));
+	strlcpy(ifgr.ifgr_name, ifname, IFNAMSIZ);
+
+	/* The socket is opened once. Let _exit() close it. */
+	if (sock == -1) {
+		sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
+    		if (sock == -1)
+            	    errx(1, "%s: socket(AF_LOCAL,SOCK_DGRAM)", __func__);
+	}
+
+	/* Determine amount of memory for the list of groups. */
+	if (ioctl(sock, SIOCGIFGROUP, (caddr_t)&ifgr) == -1) {
+		if (errno == EINVAL || errno == ENOTTY)
+			return (false);
+		else
+			errx(1, "%s: SIOCGIFGROUP", __func__);
+	}
+
+	/* Obtain the list of groups. */
+	len = ifgr.ifgr_len;
+	ifgr.ifgr_groups =
+	    (struct ifg_req *)calloc(len / sizeof(*ifg), sizeof(*ifg));
+
+	if (ifgr.ifgr_groups == NULL)
+		errx(1, "%s: no memory", __func__);
+	if (ioctl(sock, SIOCGIFGROUP, (caddr_t)&ifgr) == -1)
+		errx(1, "%s: SIOCGIFGROUP", __func__);
+
+	/* Perform matching. */
+	matched = false;
+	nomatched = true;
+	for (ifg = ifgr.ifgr_groups; ifg && len >= sizeof(*ifg); ifg++) {
+		len -= sizeof(struct ifg_req);
+		if (match)
+			matched |= !fnmatch(match, ifg->ifgrq_group, 0);
+		if (nomatch)
+			nomatched &= fnmatch(nomatch, ifg->ifgrq_group, 0);
+	}
+	free(ifgr.ifgr_groups);
+
+	if (match && !nomatch)
+		return (matched);
+	if (!match && nomatch)
+		return (nomatched);
+	return (matched && nomatched);
 }
 
 static struct afswtch *afs = NULL;
@@ -1043,6 +1177,28 @@ setifdstaddr(const char *addr, int param __unused, int s,
 		afp->af_getaddr(addr, DSTADDR);
 }
 
+static int
+getifflags(const char *ifname, int us)
+{
+	struct ifreq my_ifr;
+	int s;
+	
+	memset(&my_ifr, 0, sizeof(my_ifr));
+	(void) strlcpy(my_ifr.ifr_name, ifname, sizeof(my_ifr.ifr_name));
+	if (us < 0) {
+		if ((s = socket(AF_LOCAL, SOCK_DGRAM, 0)) < 0)
+			err(1, "socket(family AF_LOCAL,SOCK_DGRAM");
+	} else
+		s = us;
+ 	if (ioctl(s, SIOCGIFFLAGS, (caddr_t)&my_ifr) < 0) {
+ 		Perror("ioctl (SIOCGIFFLAGS)");
+ 		exit(1);
+ 	}
+	if (us < 0)
+		close(s);
+	return ((my_ifr.ifr_flags & 0xffff) | (my_ifr.ifr_flagshigh << 16));
+}
+
 /*
  * Note: doing an SIOCIGIFFLAGS scribbles on the union portion
  * of the ifreq structure, which may confuse other parts of ifconfig.
@@ -1054,20 +1210,14 @@ setifflags(const char *vname, int value, int s, const struct afswtch *afp)
 	struct ifreq		my_ifr;
 	int flags;
 
-	memset(&my_ifr, 0, sizeof(my_ifr));
-	(void) strlcpy(my_ifr.ifr_name, name, sizeof(my_ifr.ifr_name));
-
- 	if (ioctl(s, SIOCGIFFLAGS, (caddr_t)&my_ifr) < 0) {
- 		Perror("ioctl (SIOCGIFFLAGS)");
- 		exit(1);
- 	}
-	flags = (my_ifr.ifr_flags & 0xffff) | (my_ifr.ifr_flagshigh << 16);
-
+	flags = getifflags(name, s);
 	if (value < 0) {
 		value = -value;
 		flags &= ~value;
 	} else
 		flags |= value;
+	memset(&my_ifr, 0, sizeof(my_ifr));
+	(void) strlcpy(my_ifr.ifr_name, name, sizeof(my_ifr.ifr_name));
 	my_ifr.ifr_flags = flags & 0xffff;
 	my_ifr.ifr_flagshigh = flags >> 16;
 	if (ioctl(s, SIOCSIFFLAGS, (caddr_t)&my_ifr) < 0)
@@ -1207,7 +1357,8 @@ unsetifdescr(const char *val, int value, int s, const struct afswtch *afp)
 "\020\1RXCSUM\2TXCSUM\3NETCONS\4VLAN_MTU\5VLAN_HWTAGGING\6JUMBO_MTU\7POLLING" \
 "\10VLAN_HWCSUM\11TSO4\12TSO6\13LRO\14WOL_UCAST\15WOL_MCAST\16WOL_MAGIC" \
 "\17TOE4\20TOE6\21VLAN_HWFILTER\23VLAN_HWTSO\24LINKSTATE\25NETMAP" \
-"\26RXCSUM_IPV6\27TXCSUM_IPV6"
+"\26RXCSUM_IPV6\27TXCSUM_IPV6\31TXRTLMT\32HWRXTSTMP" \
+"\36VXLAN_HWCSUM\37VXLAN_HWTSO"
 
 /*
  * Print the status of the interface.  If an address family was
@@ -1541,6 +1692,10 @@ static struct cmd basic_cmds[] = {
 	DEF_CMD("-wol_mcast",	-IFCAP_WOL_MCAST,	setifcap),
 	DEF_CMD("wol_magic",	IFCAP_WOL_MAGIC,	setifcap),
 	DEF_CMD("-wol_magic",	-IFCAP_WOL_MAGIC,	setifcap),
+	DEF_CMD("txrtlmt",	IFCAP_TXRTLMT,	setifcap),
+	DEF_CMD("-txrtlmt",	-IFCAP_TXRTLMT,	setifcap),
+	DEF_CMD("hwrxtstmp",	IFCAP_HWRXTSTMP,	setifcap),
+	DEF_CMD("-hwrxtstmp",	-IFCAP_HWRXTSTMP,	setifcap),
 	DEF_CMD("normal",	-IFF_LINK0,	setifflags),
 	DEF_CMD("compress",	IFF_LINK0,	setifflags),
 	DEF_CMD("noicmp",	IFF_LINK1,	setifflags),

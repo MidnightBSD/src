@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/hastd/hooks.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -312,7 +312,7 @@ hook_check(void)
 		}
 
 		/*
-		 * Skip proccesses younger than 1 minute.
+		 * Skip processes younger than 1 minute.
 		 */
 		if (now - hp->hp_lastreport < REPORT_INTERVAL)
 			continue;

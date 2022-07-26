@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sbin/ggate/ggatec/ggatec.c 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
+#include <inttypes.h>
 #include <libgen.h>
 #include <pthread.h>
 #include <signal.h>
@@ -188,8 +189,9 @@ send_thread(void *arg __unused)
 				pthread_kill(recvtd, SIGUSR1);
 				break;
 			}
-			g_gate_log(LOG_DEBUG, "Sent %zd bytes (offset=%llu, "
-			    "size=%u).", data, hdr.gh_offset, hdr.gh_length);
+			g_gate_log(LOG_DEBUG, "Sent %zd bytes (offset=%"
+			    PRIu64 ", length=%" PRIu32 ").", data,
+			    hdr.gh_offset, hdr.gh_length);
 		}
 	}
 	g_gate_log(LOG_DEBUG, "%s: Died.", __func__);
@@ -249,9 +251,9 @@ recv_thread(void *arg __unused)
 				pthread_kill(sendtd, SIGUSR1);
 				break;
 			}
-			g_gate_log(LOG_DEBUG, "Received %d bytes (offset=%ju, "
-			    "size=%zu).", data, (uintmax_t)hdr.gh_offset,
-			    (size_t)hdr.gh_length);
+			g_gate_log(LOG_DEBUG, "Received %d bytes (offset=%"
+			    PRIu64 ", length=%" PRIu32 ").", data,
+			    hdr.gh_offset, hdr.gh_length);
 		}
 
 		g_gate_ioctl(G_GATE_CMD_DONE, &ggio);

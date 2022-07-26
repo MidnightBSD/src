@@ -1,17 +1,26 @@
-# $FreeBSD: stable/11/tests/sys/opencrypto/Makefile 350209 2019-07-22 08:27:44Z lwhsu $
+# $FreeBSD$
 
 PACKAGE=	tests
 
 TESTSDIR=	${TESTSBASE}/sys/opencrypto
 BINDIR=		${TESTSDIR}
 
-PLAIN_TESTS_SH=	runtests
+CFLAGS+=	-I${SRCTOP}/tests
+CFLAGS.blake2_test.c	+= -I${SRCTOP}/sys/opencrypto
+CFLAGS.blake2_test.c	+= -I${SRCTOP}/sys/contrib/libb2
+CFLAGS.poly1305_test.c	+= -I${SRCTOP}/sys/opencrypto
 
-TEST_METADATA.runtests+= required_programs="python2"
+ATF_TESTS_C+=	blake2_test poly1305_test
+
+TAP_TESTS_SH+=	runtests
+
+TEST_METADATA.runtests+= required_programs="python3"
 TEST_METADATA.runtests+= required_user="root"
 
-PYMODULES=	cryptodev.py cryptodevh.py cryptotest.py dpkt.py
+PYMODULES=	cryptodev.py cryptodevh.py cryptotest.py
 
 ${PACKAGE}FILES+=	${PYMODULES}
+
+WARNS?=	6
 
 .include <bsd.test.mk>

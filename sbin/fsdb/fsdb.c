@@ -32,7 +32,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/11/sbin/fsdb/fsdb.c 359754 2020-04-09 20:38:36Z kevans $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -232,8 +232,8 @@ cmdloop(void)
     EditLine *elptr;
     HistEvent he;
 
-    curinode = ginode(ROOTINO);
-    curinum = ROOTINO;
+    curinode = ginode(UFS_ROOTINO);
+    curinum = UFS_ROOTINO;
     printactive(0);
 
     hist = history_init();
@@ -300,11 +300,11 @@ union dinode *curinode;
 ino_t curinum, ocurrent;
 
 #define GETINUM(ac,inum)    inum = strtoul(argv[ac], &cp, 0); \
-    if (inum < ROOTINO || inum > maxino || cp == argv[ac] || *cp != '\0' ) { \
+if (inum < UFS_ROOTINO || inum > maxino || cp == argv[ac] || *cp != '\0' ) { \
 	printf("inode %ju out of range; range is [%ju,%ju]\n",		\
-	    (uintmax_t)inum, (uintmax_t)ROOTINO, (uintmax_t)maxino);	\
+	    (uintmax_t)inum, (uintmax_t)UFS_ROOTINO, (uintmax_t)maxino);\
 	return 1; \
-    }
+}
 
 /*
  * Focus on given inode number
@@ -475,7 +475,7 @@ CMDFUNCSTART(findblk)
 	 */
 	inum = c * sblock.fs_ipg;
 	/* Read cylinder group. */
-	cgbp = cgget(c);
+	cgbp = cglookup(c);
 	cgp = cgbp->b_un.b_cg;
 	/*
 	 * Get a highest used inode number for a given cylinder group.
@@ -487,8 +487,8 @@ CMDFUNCSTART(findblk)
 	    inosused = sblock.fs_ipg;
 
 	for (; inosused > 0; inum++, inosused--) {
-	    /* Skip magic inodes: 0, WINO, ROOTINO. */
-	    if (inum < ROOTINO)
+	    /* Skip magic inodes: 0, UFS_WINO, UFS_ROOTINO. */
+	    if (inum < UFS_ROOTINO)
 		continue;
 	    /*
 	     * Check if the block we are looking for is just an inode block.
@@ -532,10 +532,10 @@ CMDFUNCSTART(findblk)
 	    }
 	    /* Look through direct data blocks. */
 	    if (is_ufs2 ?
-		find_blks64(curinode->dp2.di_db, NDADDR, wantedblk64) :
-		find_blks32(curinode->dp1.di_db, NDADDR, wantedblk32))
+		find_blks64(curinode->dp2.di_db, UFS_NDADDR, wantedblk64) :
+		find_blks32(curinode->dp1.di_db, UFS_NDADDR, wantedblk32))
 		goto end;
-	    for (i = 0; i < NIADDR; i++) {
+	    for (i = 0; i < UFS_NIADDR; i++) {
 		/*
 		 * Does the block we are looking for belongs to the
 		 * indirect blocks?
@@ -564,6 +564,10 @@ CMDFUNCSTART(findblk)
 end:
     curinum = ocurrent;
     curinode = ginode(curinum);
+    if (is_ufs2)
+	free(wantedblk64);
+    else
+	free(wantedblk32);
     return 0;
 }
 
@@ -727,8 +731,8 @@ CMDFUNCSTART(focusname)
     ocurrent = curinum;
     
     if (argv[1][0] == '/') {
-	curinum = ROOTINO;
-	curinode = ginode(ROOTINO);
+	curinum = UFS_ROOTINO;
+	curinode = ginode(UFS_ROOTINO);
     } else {
 	if (!checkactivedir())
 	    return 1;
