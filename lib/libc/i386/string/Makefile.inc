@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libc/i386/string/Makefile.inc 315044 2017-03-11 02:51:29Z brooks $
+# $FreeBSD$
 
 MDSRCS+= \
 	bcmp.S \

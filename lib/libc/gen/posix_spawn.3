@@ -32,7 +32,7 @@
 .\" the referee document.  The original Standard can be obtained online at
 .\"	http://www.opengroup.org/unix/online.html.
 .\"
-.\" $FreeBSD: stable/11/lib/libc/gen/posix_spawn.3 293204 2016-01-05 16:21:20Z jilles $
+.\" $FreeBSD$
 .\"
 .Dd January 5, 2016
 .Dt POSIX_SPAWN 3
@@ -269,14 +269,14 @@ If the
 flag is set in the spawn-flags attribute of the object referenced by
 .Fa attrp ,
 the signals specified in the spawn-sigdefault attribute of the same
-object is set to their default actions in the child process.
-Signals set to the default action in the parent process is set to
+object are set to their default actions in the child process.
+Signals set to the default action in the parent process are set to
 the default action in the child process.
 .Pp
-Signals set to be caught by the calling process is set to the
+Signals set to be caught by the calling process are set to the
 default action in the child process.
 .Pp
-Signals set to be ignored by the calling process image is set to
+Signals set to be ignored by the calling process image are set to
 be ignored by the child process, unless otherwise specified by the
 .Dv POSIX_SPAWN_SETSIGDEF
 flag being set in the spawn-flags attribute of the object referenced by
@@ -300,7 +300,9 @@ had been called to create a child process and then
 .Fn execve
 had been called by the child process to execute the new process image.
 .Pp
-The implementation uses vfork(), thus the fork handlers are not run when
+The implementation uses
+.Fn vfork ,
+thus the fork handlers are not run when
 .Fn posix_spawn
 or
 .Fn posix_spawnp

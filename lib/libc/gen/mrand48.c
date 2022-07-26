@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/gen/mrand48.c 310319 2016-12-20 07:42:15Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <stdint.h>
 

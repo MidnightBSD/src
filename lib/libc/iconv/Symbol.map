@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/11/lib/libc/iconv/Symbol.map 258283 2013-11-17 22:52:17Z peter $
+ * $FreeBSD$
  */
 
 FBSD_1.3 {

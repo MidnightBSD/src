@@ -1,6 +1,7 @@
 /*-
- * Copyright (c) 2011 Xin Li <delphij@FreeBSD.org>
- * All rights reserved.
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
+ * Copyright (c) 2011 Xin LI <delphij@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,11 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libc/gen/libc_dlopen.c 349678 2019-07-03 19:23:20Z kib $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/gen/libc_dlopen.c 349678 2019-07-03 19:23:20Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <dlfcn.h>
 #include <stddef.h>
