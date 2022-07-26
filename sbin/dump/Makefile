@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: stable/11/sbin/dump/Makefile 298107 2016-04-16 07:45:30Z gjb $
+# $FreeBSD$
 
 #	dump.h			header file
 #	itime.c			reads /etc/dumpdates
@@ -15,10 +15,15 @@
 
 PACKAGE=runtime
 PROG=	dump
+CONFS=	/dev/null
+CONFSGRP=	operator
+CONFSMODE=	664
+CONFSNAME_/dev/null=	dumpdates
 LINKS=	${BINDIR}/dump ${BINDIR}/rdump
 CFLAGS+=-DRDUMP
 SRCS=	itime.c main.c optr.c dumprmt.c tape.c traverse.c unctime.c cache.c
 MAN=	dump.8
+LIBADD=	ufs
 MLINKS=	dump.8 rdump.8
 WARNS?=	2
 

@@ -1,6 +1,8 @@
 /*	$OpenBSD: dhcpd.h,v 1.33 2004/05/06 22:29:15 deraadt Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2004 Henning Brauer <henning@openbsd.org>
  * Copyright (c) 1995, 1996, 1997, 1998, 1999
  * The Internet Software Consortium.    All rights reserved.
@@ -38,7 +40,7 @@
  * see ``http://www.vix.com/isc''.  To learn more about Vixie
  * Enterprises, see ``http://www.vix.com''.
  *
- * $FreeBSD: stable/11/sbin/dhclient/dhcpd.h 332602 2018-04-16 16:23:32Z asomers $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -72,6 +74,9 @@
 #include <syslog.h>
 #include <time.h>
 #include <unistd.h>
+
+#include <libcasper.h>
+#include <casper/cap_syslog.h>
 
 #include "dhcp.h"
 #include "tree.h"
@@ -154,6 +159,7 @@ struct client_config {
 	u_int8_t		 required_options[256];
 	u_int8_t		 requested_options[256];
 	int			 requested_option_count;
+	u_int			 vlan_pcp;
 	time_t			 timeout;
 	time_t			 initial_interval;
 	time_t			 retry_interval;
@@ -260,7 +266,7 @@ void do_packet(struct interface_info *, struct dhcp_packet *,
 
 /* errwarn.c */
 extern int warnings_occurred;
-void error(const char *, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
+void error(const char *, ...) __attribute__ ((__format__ (__printf__, 1, 2))) __dead2;
 int warning(const char *, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
 int note(const char *, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
 int debug(const char *, ...) __attribute__ ((__format__ (__printf__, 1, 2)));
@@ -353,6 +359,7 @@ int addr_eq(struct iaddr, struct iaddr);
 char *piaddr(struct iaddr);
 
 /* dhclient.c */
+extern cap_channel_t *capsyslog;
 extern const char *path_dhclient_conf;
 extern char *path_dhclient_db;
 extern time_t cur_time;
@@ -362,6 +369,8 @@ extern int log_perror;
 extern struct client_config top_level_config;
 
 extern struct pidfh *pidfile;
+
+extern struct interface_info *ifi;
 
 void dhcpoffer(struct packet *);
 void dhcpack(struct packet *);

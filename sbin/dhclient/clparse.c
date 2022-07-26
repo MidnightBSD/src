@@ -2,7 +2,9 @@
 
 /* Parser for dhclient config and lease files... */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1997 The Internet Software Consortium.
  * All rights reserved.
  *
@@ -41,16 +43,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/dhclient/clparse.c 332602 2018-04-16 16:23:32Z asomers $");
+__FBSDID("$FreeBSD$");
 
 #include "dhcpd.h"
 #include "dhctoken.h"
 
 struct client_config top_level_config;
-struct interface_info *dummy_interfaces;
-extern struct interface_info *ifi;
+static struct interface_info *dummy_interfaces;
 
-char client_script_name[] = "/sbin/dhclient-script";
+static char client_script_name[] = "/sbin/dhclient-script";
 
 /*
  * client-conf-file :== client-declarations EOF
@@ -75,6 +76,7 @@ read_client_conf(void)
 	memset(&top_level_config, 0, sizeof(top_level_config));
 
 	/* Set some defaults... */
+	top_level_config.vlan_pcp = 0;
 	top_level_config.timeout = 60;
 	top_level_config.select_interval = 0;
 	top_level_config.reboot_timeout = 10;
@@ -200,6 +202,7 @@ parse_client_statement(FILE *cfile, struct interface_info *ip,
 	int		 token;
 	char		*val;
 	struct option	*option;
+	time_t		 tmp;
 
 	switch (next_token(&val, cfile)) {
 	case SEND:
@@ -258,6 +261,10 @@ parse_client_statement(FILE *cfile, struct interface_info *ip,
 		return;
 	case REBOOT:
 		parse_lease_time(cfile, &config->reboot_timeout);
+		return;
+	case VLAN_PCP:
+		parse_lease_time(cfile, &tmp);
+		config->vlan_pcp = (u_int)tmp;
 		return;
 	case BACKOFF_CUTOFF:
 		parse_lease_time(cfile, &config->backoff_cutoff);

@@ -41,7 +41,7 @@
  * see ``http://www.vix.com/isc''.  To learn more about Vixie
  * Enterprises, see ``http://www.vix.com''.
  *
- * $FreeBSD: stable/11/sbin/dhclient/dhctoken.h 330897 2018-03-14 03:19:51Z eadler $
+ * $FreeBSD$
  */
 
 #define SEMI ';'
@@ -133,6 +133,7 @@
 #define AUTHORITATIVE	333
 #define TOKEN_NOT	334
 #define ALWAYS_REPLY_RFC1048 335
+#define VLAN_PCP	336
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) != STRING &&	\

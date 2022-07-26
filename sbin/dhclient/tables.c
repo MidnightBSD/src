@@ -2,7 +2,9 @@
 
 /* Tables of information... */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1995, 1996 The Internet Software Consortium.
  * All rights reserved.
  *
@@ -41,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/dhclient/tables.c 332602 2018-04-16 16:23:32Z asomers $");
+__FBSDID("$FreeBSD$");
 
 #include "dhcpd.h"
 
@@ -400,6 +402,7 @@ unsigned char dhcp_option_default_priority_list[] = {
 	DHO_IRC_SERVER,
 	DHO_STREETTALK_SERVER,
 	DHO_STREETTALK_DA_SERVER,
+	DHO_DHCP_USER_CLASS_ID,
 	DHO_DOMAIN_SEARCH,
 
 	/* Presently-undefined options... */

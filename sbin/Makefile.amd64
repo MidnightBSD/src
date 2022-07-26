@@ -1,5 +1,4 @@
-# $FreeBSD: stable/11/sbin/Makefile.amd64 240621 2012-09-17 21:41:38Z jimharris $
+# $FreeBSD$
 
 SUBDIR += bsdlabel
 SUBDIR += fdisk
-SUBDIR += nvmecontrol

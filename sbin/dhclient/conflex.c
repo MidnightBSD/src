@@ -2,7 +2,9 @@
 
 /* Lexical scanner for dhcpd config file... */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
  * All rights reserved.
  *
@@ -41,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/dhclient/conflex.c 332602 2018-04-16 16:23:32Z asomers $");
+__FBSDID("$FreeBSD$");
 
 #include <ctype.h>
 
@@ -51,8 +53,8 @@ __FBSDID("$FreeBSD: stable/11/sbin/dhclient/conflex.c 332602 2018-04-16 16:23:32
 int lexline;
 int lexchar;
 char *token_line;
-char *prev_line;
-char *cur_line;
+static char *prev_line;
+static char *cur_line;
 const char *tlname;
 int eol_token;
 
@@ -345,6 +347,7 @@ intern(char *atom, int dfv)
 			return (BOOTING);
 		if (!strcasecmp(atom + 1, "oot-unknown-clients"))
 			return (BOOT_UNKNOWN_CLIENTS);
+		break;
 	case 'c':
 		if (!strcasecmp(atom + 1, "lass"))
 			return (CLASS);
@@ -521,6 +524,8 @@ intern(char *atom, int dfv)
 	case 'v':
 		if (!strcasecmp(atom + 1, "endor-class"))
 			return (VENDOR_CLASS);
+		if (!strcasecmp(atom + 1, "lan-pcp"))
+			return (VLAN_PCP);
 		break;
 	case 'y':
 		if (!strcasecmp(atom + 1, "iaddr"))

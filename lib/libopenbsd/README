@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/lib/libopenbsd/README 290378 2015-11-05 01:54:38Z rodrigc $
+$FreeBSD$
 
 libopenbsd is a thin compatibility layer intended to allow a limited
 set of OpenBSD software to compile as part of the FreeBSD build with

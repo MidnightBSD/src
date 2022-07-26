@@ -2,7 +2,9 @@
 
 /* Routines for manipulating hash tables... */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
@@ -41,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/dhclient/hash.c 332602 2018-04-16 16:23:32Z asomers $");
+__FBSDID("$FreeBSD$");
 
 #include "dhcpd.h"
 

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999, Matthew Dillon.  All Rights Reserved.
  * Copyright (c) 2001, Thomas Moestl.  All Rights Reserved.
  *
@@ -25,12 +27,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libkvm/kvm_getswapinfo.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <sys/blist.h>
+#include <sys/queue.h>
 #include <sys/sysctl.h>
 
 #include <vm/swap_pager.h>
@@ -112,8 +115,7 @@ int
 kvm_getswapinfo_kvm(kvm_t *kd, struct kvm_swap *swap_ary, int swap_max,
     int flags)
 {
-	int i;
-	swblk_t ttl;
+	int i, ttl;
 	TAILQ_HEAD(, swdevt) swtailq;
 	struct swdevt *sp, swinfo;
 	struct kvm_swap tot;
@@ -164,8 +166,7 @@ int
 kvm_getswapinfo_sysctl(kvm_t *kd, struct kvm_swap *swap_ary, int swap_max,
     int flags)
 {
-	int ti;
-	swblk_t ttl;
+	int ti, ttl;
 	size_t mibi, len;
 	int soid[SWI_MAXMIB];
 	struct xswdev xsd;

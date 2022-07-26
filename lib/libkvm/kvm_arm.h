@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2015 John H. Baldwin <jhb@FreeBSD.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libkvm/kvm_arm.h 295801 2016-02-19 09:23:32Z skra $
+ * $FreeBSD$
  */
 
 #ifndef __KVM_ARM_H__
@@ -53,6 +52,19 @@ typedef uint32_t	arm_pt_entry_t;
 #define	ARM_L2_S_OFFSET	(ARM_L2_S_SIZE - 1)
 #define	ARM_L2_S_FRAME	(~ARM_L2_S_OFFSET)
 #define	ARM_L2_S_SHIFT	12
+#define	ARM_L2_TEX1	0x00000080
+#define	ARM_PTE2_RO	ARM_L2_TEX1
+#define	ARM_L2_NX	0x00000001
+#define	ARM_PTE2_NX	ARM_L2_NX
+
+/*
+ * Note: L2_S_PROT_W differs depending on whether the system is generic or
+ *       xscale.  This isn't easily accessible in this context, so use an
+ *       approximation of 'xscale' which is a subset of 'generic'.
+ */
+#define	ARM_L2_AP0(x)	((x) << 4)
+#define	ARM_AP_W	0x01
+#define	ARM_L2_S_PROT_W	(ARM_L2_AP0(ARM_AP_W))
 
 #define	ARM_L1_TYPE_INV	0x00		/* Invalid (fault) */
 #define	ARM_L1_TYPE_C	0x01		/* Coarse L2 */

@@ -2,7 +2,9 @@
 
 /* Packet assembly code, originally contributed by Archie Cobbs. */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1995, 1996, 1999 The Internet Software Consortium.
  * All rights reserved.
  *
@@ -41,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/dhclient/packet.c 349631 2019-07-03 00:35:14Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include "dhcpd.h"
 
