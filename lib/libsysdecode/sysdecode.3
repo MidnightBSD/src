@@ -1,6 +1,5 @@
 .\"
 .\" Copyright (c) 2015 John Baldwin <jhb@FreeBSD.org>
-.\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -23,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/lib/libsysdecode/sysdecode.3 332247 2018-04-07 21:03:46Z tuexen $
+.\" $FreeBSD$
 .\"
-.Dd January 14, 2018
+.Dd April 26, 2018
 .Dt SYSDECODE 3
 .Os
 .Sh NAME
@@ -57,13 +56,16 @@ Supported on all platforms.
 Supported on amd64 and powerpc64.
 .It Li SYSDECODE_ABI_LINUX
 Linux binaries of the same platform.
-Supported on amd64 and i386.
+Supported on amd64, i386, and arm64.
 .It Li SYSDECODE_ABI_LINUX32
 32-bit Linux binaries.
 Supported on amd64.
+.It Li SYSDECODE_ABI_CLOUDABI32
+32-bit CloudABI binaries.
+Supported on all platforms.
 .It Li SYSDECODE_ABI_CLOUDABI64
 64-bit CloudABI binaries.
-Supported on aarch64 and amd64.
+Supported on all platforms.
 .It Li SYSDECODE_ABI_UNKNOWN
 A placeholder for use when the ABI is not known.
 .El

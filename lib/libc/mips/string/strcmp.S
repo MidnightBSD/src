@@ -33,7 +33,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/mips/string/strcmp.S 209231 2010-06-16 12:55:14Z jchandra $");
+__FBSDID("$FreeBSD$");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 	ASMSTR("from: @(#)strcmp.s	8.1 (Berkeley) 6/4/93")

@@ -1,5 +1,7 @@
-/*
+/*-
  * session.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2003 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: session.c,v 1.2 2003/09/04 22:12:13 max Exp $
- * $FreeBSD: stable/11/lib/libsdp/session.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 #define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
@@ -177,4 +179,26 @@ sdp_error(void *xss)
 	sdp_session_p	ss = (sdp_session_p) xss;
 
 	return ((ss != NULL)? ss->error : EINVAL);
+}
+
+int32_t
+sdp_get_lcaddr(void *xss, bdaddr_t *l)
+{
+	sdp_session_p		ss = (sdp_session_p) xss;
+	struct sockaddr_l2cap	sa;
+	socklen_t		size;
+
+	if (l == NULL || ss == NULL || ss->flags & SDP_SESSION_LOCAL) {
+		ss->error = EINVAL;
+		goto fail;
+	}
+
+	size = sizeof(sa);
+	if (getsockname(ss->s, (struct sockaddr *)&sa, &size) == 0) {
+		bdaddr_copy(l, &sa.l2cap_bdaddr);
+		ss->error = 0;
+	} else
+		ss->error = errno;
+fail:
+	return ((ss->error == 0) ? 0 : -1);
 }

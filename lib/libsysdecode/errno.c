@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2015 John H. Baldwin <jhb@FreeBSD.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libsysdecode/errno.c 346827 2019-04-28 13:40:17Z dchagin $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/acl.h>
@@ -36,12 +35,11 @@ __FBSDID("$FreeBSD: stable/11/lib/libsysdecode/errno.c 346827 2019-04-28 13:40:1
 #include <stdio.h>
 #include <sysdecode.h>
 
-#if defined(__i386__) || defined(__amd64__)
+#if defined(__aarch64__) || defined(__amd64__) || defined(__i386__)
 static
 #include <compat/linux/linux_errno.inc>
 #endif
 
-#if defined(__aarch64__) || defined(__amd64__)
 #include <contrib/cloudabi/cloudabi_types_common.h>
 
 static const int cloudabi_errno_table[] = {
@@ -122,7 +120,6 @@ static const int cloudabi_errno_table[] = {
 	[CLOUDABI_EXDEV]		= EXDEV,
 	[CLOUDABI_ENOTCAPABLE]		= ENOTCAPABLE,
 };
-#endif
 
 int
 sysdecode_abi_to_freebsd_errno(enum sysdecode_abi abi, int error)
@@ -132,7 +129,7 @@ sysdecode_abi_to_freebsd_errno(enum sysdecode_abi abi, int error)
 	case SYSDECODE_ABI_FREEBSD:
 	case SYSDECODE_ABI_FREEBSD32:
 		return (error);
-#if defined(__i386__) || defined(__amd64__)
+#if defined(__aarch64__) || defined(__amd64__) || defined(__i386__)
 	case SYSDECODE_ABI_LINUX:
 	case SYSDECODE_ABI_LINUX32: {
 		unsigned int i;
@@ -148,13 +145,12 @@ sysdecode_abi_to_freebsd_errno(enum sysdecode_abi abi, int error)
 		break;
 	}
 #endif
-#if defined(__aarch64__) || defined(__amd64__)
+	case SYSDECODE_ABI_CLOUDABI32:
 	case SYSDECODE_ABI_CLOUDABI64:
 		if (error >= 0 &&
 		    (unsigned int)error < nitems(cloudabi_errno_table))
 			return (cloudabi_errno_table[error]);
 		break;
-#endif
 	default:
 		break;
 	}
@@ -169,14 +165,14 @@ sysdecode_freebsd_to_abi_errno(enum sysdecode_abi abi, int error)
 	case SYSDECODE_ABI_FREEBSD:
 	case SYSDECODE_ABI_FREEBSD32:
 		return (error);
-#if defined(__i386__) || defined(__amd64__)
+#if defined(__aarch64__) || defined(__amd64__) || defined(__i386__)
 	case SYSDECODE_ABI_LINUX:
 	case SYSDECODE_ABI_LINUX32:
 		if (error >= 0 && error <= ELAST)
 			return (linux_errtbl[error]);
 		break;
 #endif
-#if defined(__aarch64__) || defined(__amd64__)
+	case SYSDECODE_ABI_CLOUDABI32:
 	case SYSDECODE_ABI_CLOUDABI64: {
 		unsigned int i;
 
@@ -186,7 +182,6 @@ sysdecode_freebsd_to_abi_errno(enum sysdecode_abi abi, int error)
 		}
 		break;
 	}
-#endif
 	default:
 		break;
 	}

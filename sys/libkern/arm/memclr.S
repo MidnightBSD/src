@@ -26,7 +26,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/sys/libkern/arm/memclr.S 288073 2015-09-21 18:35:32Z andrew $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This implements

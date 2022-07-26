@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_pshared.c 297141 2016-03-21 06:52:35Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/mman.h>

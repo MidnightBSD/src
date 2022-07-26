@@ -33,7 +33,9 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1995-1998 John Birrell <jb@cimlogic.com.au>
  * All rights reserved.
  *
@@ -64,7 +66,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_syscalls.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -685,6 +687,7 @@ __thr_interpose_libc(void)
 	SLOT(map_stacks_exec);
 	SLOT(fdatasync);
 	SLOT(clock_nanosleep);
+	SLOT(pdfork);
 #undef SLOT
 	*(__libc_interposing_slot(
 	    INTERPOS__pthread_mutex_init_calloc_cb)) =

@@ -1,6 +1,6 @@
 /*
  * 
- * $FreeBSD: stable/11/stand/powerpc/kboot/host_syscall.S 329183 2018-02-12 20:51:28Z kevans $
+ * $FreeBSD$
  */
 
 #include <machine/asm.h>

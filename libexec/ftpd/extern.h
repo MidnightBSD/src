@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -27,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.2 (Berkeley) 4/4/94
- * $FreeBSD: stable/11/libexec/ftpd/extern.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -57,9 +59,6 @@ char   *renamefrom(char *);
 void	reply(int, const char *, ...) __printflike(2, 3);
 void	retrieve(char *, char *);
 void	send_file_list(char *);
-#ifdef OLD_SETPROCTITLE
-void	setproctitle(const char *, ...);
-#endif
 void	statcmd(void);
 void	statfilecmd(char *);
 void	store(char *, char *, int);

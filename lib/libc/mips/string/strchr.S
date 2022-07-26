@@ -33,7 +33,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/mips/string/strchr.S 229571 2012-01-05 10:32:53Z ed $");
+__FBSDID("$FreeBSD$");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 	ASMSTR("from: @(#)index.s	8.1 (Berkeley) 6/4/93")
@@ -44,7 +44,12 @@ __FBSDID("$FreeBSD: stable/11/lib/libc/mips/string/strchr.S 229571 2012-01-05 10
 	.abicalls
 #endif
 
+/*
+ * char *
+ * strchr(const char *s, int c);
+ */
 LEAF(strchr)
+	and		a1, a1, 0xff
 1:
 	lbu		a2, 0(a0)		# get a byte
 	PTR_ADDU	a0, a0, 1

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1995 John Birrell <jb@cimlogic.com.au>.
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_self.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <pthread.h>
@@ -36,10 +38,11 @@ __FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_self.c 331722 2018-03-29 02:
 
 #include "thr_private.h"
 
-__weak_reference(_pthread_self, pthread_self);
+__weak_reference(_Tthr_self, pthread_self);
+__weak_reference(_Tthr_self, _pthread_self);
 
 pthread_t
-_pthread_self(void)
+_Tthr_self(void)
 {
 	_thr_check_init();
 

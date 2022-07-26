@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/powerpc/kboot/hostcons.c 276410 2014-12-30 14:50:03Z nwhitehorn $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include "bootstrap.h"

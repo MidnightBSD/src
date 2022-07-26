@@ -1,5 +1,9 @@
-# $FreeBSD: stable/11/stand/mips/beri/Makefile.inc 329146 2018-02-12 01:17:06Z kevans $
+# $FreeBSD$
 
 LDFLAGS+=	-nostdlib
+
+# BERI boot loader is built with '-mno-abicalls' flag,
+# which is incompatible with PIE
+MK_PIE=		no
 
 .include "../Makefile.inc"

@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/libsa/mips/_setjmp.S 351792 2019-09-03 20:19:43Z kevans $
+ * $FreeBSD$
  */
 
 #include <machine/asm.h>

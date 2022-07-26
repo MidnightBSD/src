@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/mips/uboot/ldscript.mips 317145 2017-04-19 15:33:24Z emaste $ */
+/* $FreeBSD$ */
 
 OUTPUT_ARCH(mips)
 ENTRY(_start)

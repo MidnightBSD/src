@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/powerpc/uboot/conf.c 346482 2019-04-21 04:26:02Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 #include "bootstrap.h"

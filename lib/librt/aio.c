@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/librt/aio.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  *
  */
 
@@ -39,15 +41,10 @@
 #include "sigev_thread.h"
 #include "un-namespace.h"
 
-__weak_reference(__aio_read, _aio_read);
 __weak_reference(__aio_read, aio_read);
-__weak_reference(__aio_write, _aio_write);
 __weak_reference(__aio_write, aio_write);
-__weak_reference(__aio_return, _aio_return);
 __weak_reference(__aio_return, aio_return);
-__weak_reference(__aio_waitcomplete, _aio_waitcomplete);
 __weak_reference(__aio_waitcomplete, aio_waitcomplete);
-__weak_reference(__aio_fsync, _aio_fsync);
 __weak_reference(__aio_fsync, aio_fsync);
 __weak_reference(__lio_listio, lio_listio);
 

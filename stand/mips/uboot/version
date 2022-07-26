@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/stand/mips/uboot/version 296183 2016-02-29 07:47:04Z sgalabov $
+$FreeBSD$
 
 NOTE ANY CHANGES YOU MAKE TO THE BOOTBLOCKS HERE.  The format of this
 file is important.  Make sure the current version number is on line 6.

@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libsbuf/tests/sbuf_test_common.h 346920 2019-04-29 19:36:46Z ngie $
+ * $FreeBSD$
  */
 
 #ifndef	__LIBSBUF_TEST_COMMON_H__
@@ -30,7 +30,7 @@
 
 #include <sys/param.h>
 
-#if __MidnightBSD_version > 200000
+#if __FreeBSD_version > 1100064
 #define	HAVE_SBUF_GET_FLAGS
 #define	HAVE_SBUF_CLEAR_FLAGS
 #define	HAVE_SBUF_SET_FLAGS

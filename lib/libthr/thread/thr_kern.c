@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
  * Copyright (C) 2003 Daniel M. Eischen <deischen@freebsd.org>
  * All rights reserved.
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_kern.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/signalvar.h>

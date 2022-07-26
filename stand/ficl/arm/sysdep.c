@@ -7,7 +7,7 @@
 **
 *******************************************************************/
 
-/* $FreeBSD: stable/11/stand/ficl/arm/sysdep.c 332154 2018-04-06 21:37:25Z kevans $ */
+/* $FreeBSD$ */
 
 #ifdef TESTMAIN
 #include <stdio.h>

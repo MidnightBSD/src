@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/mips/beri/common/sdcard.c 329176 2018-02-12 18:30:20Z kevans $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
