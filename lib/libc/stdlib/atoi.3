@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)atoi.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/11/lib/libc/stdlib/atoi.3 251069 2013-05-28 20:57:40Z emaste $
+.\" $FreeBSD$
 .\"
-.Dd June 4, 1993
+.Dd April 1, 2020
 .Dt ATOI 3
 .Os
 .Sh NAME
@@ -57,7 +57,7 @@ representation.
 .Pp
 It is equivalent to:
 .Bd -literal -offset indent
-(int)strtol(nptr, (char **)NULL, 10);
+(int)strtol(nptr, NULL, 10);
 .Ed
 .Pp
 The
@@ -85,3 +85,8 @@ function conforms to
 .St -isoC ,
 and
 .St -isoC-99 .
+.Sh HISTORY
+The
+.Fn atoi
+function appeared in
+.At v1 .
