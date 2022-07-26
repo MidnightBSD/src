@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libc/gen/gen-private.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _GEN_PRIVATE_H_
@@ -47,12 +49,16 @@ struct _dirdesc {
 	long	dd_size;	/* amount of data returned by getdirentries */
 	char	*dd_buf;	/* data buffer */
 	int	dd_len;		/* size of data buffer */
-	long	dd_seek;	/* magic cookie returned by getdirentries */
+	off_t	dd_seek;	/* magic cookie returned by getdirentries */
 	int	dd_flags;	/* flags for readdir */
 	struct pthread_mutex	*dd_lock;	/* lock */
 	struct _telldir *dd_td;	/* telldir position recording */
+	void	*dd_compat_de;	/* compat dirent */
 };
 
 #define	_dirfd(dirp)	((dirp)->dd_fd)
+
+struct dirent;
+int __readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 
 #endif /* !_GEN_PRIVATE_H_ */
