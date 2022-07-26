@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)mmap.2	8.4 (Berkeley) 5/11/95
-.\" $FreeBSD: stable/11/lib/libc/sys/mmap.2 320887 2017-07-11 05:33:07Z kib $
+.\" $FreeBSD$
 .\"
-.Dd June 22, 2017
+.Dd December 24, 2020
 .Dt MMAP 2
 .Os
 .Sh NAME
@@ -79,7 +79,7 @@ If
 references a device file, the interpretation of the
 .Fa offset
 value is device specific and defined by the device driver.
-The virtual memory subsystem does not impose any restrictitions on the
+The virtual memory subsystem does not impose any restrictions on the
 .Fa offset
 value in this case, passing it unchanged to the driver.
 .Pp
@@ -335,6 +335,8 @@ Stacks created with
 automatically grow.
 Guards prevent inadvertent use of the regions into which those
 stacks can grow without requiring mapping the whole stack in advance.
+The size of the guard, in pages, is specified by sysctl
+.Dv security.bsd.stack_guard_page .
 .El
 .Pp
 The
@@ -435,6 +437,11 @@ or
 .Dv MAP_STACK
 was specified.
 At least one of these flags must be included.
+.It Bq Er EINVAL
+.Dv MAP_STACK
+was specified and
+.Va len
+is less than or equal to the guard size.
 .It Bq Er EINVAL
 .Dv MAP_FIXED
 was specified and the

@@ -1,7 +1,6 @@
 /*
  * Copyright (c) 2017 Eric van Gyzen
  * Copyright (c) 2014 The FreeBSD Foundation.
- * All rights reserved.
  *
  * Portions of this software were developed by Konstantin Belousov
  * under sponsorship from the FreeBSD Foundation.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/sys/clock_nanosleep.c 317618 2017-05-01 01:36:54Z vangyzen $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <time.h>

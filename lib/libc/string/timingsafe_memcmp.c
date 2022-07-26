@@ -16,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/string/timingsafe_memcmp.c 319292 2017-05-31 06:47:56Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include <limits.h>
 #include <string.h>

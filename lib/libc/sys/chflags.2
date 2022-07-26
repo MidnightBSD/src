@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)chflags.2	8.3 (Berkeley) 5/2/95
-.\" $FreeBSD: stable/11/lib/libc/sys/chflags.2 260556 2014-01-11 22:00:16Z jilles $
+.\" $FreeBSD$
 .\"
-.Dd March 22, 2013
+.Dd February 23, 2021
 .Dt CHFLAGS 2
 .Os
 .Sh NAME
@@ -94,6 +94,15 @@ defined in
 If
 .Fa path
 names a symbolic link, then the flags of the symbolic link are changed.
+.It Dv AT_RESOLVE_BENEATH
+Only walk paths below the directory specified by the
+.Ar fd
+descriptor.
+See the description of the
+.Dv O_RESOLVE_BENEATH
+flag in the
+.Xr open 2
+manual page.
 .El
 .Pp
 If
@@ -256,6 +265,8 @@ points outside the process's allocated address space.
 An
 .Tn I/O
 error occurred while reading from or writing to the file system.
+.It Bq Er EINTEGRITY
+Corrupted data was detected while reading from the file system.
 .It Bq Er EOPNOTSUPP
 The underlying file system does not support file flags, or
 does not support all of the flags set in
@@ -298,10 +309,21 @@ The file resides on a read-only file system.
 An
 .Tn I/O
 error occurred while reading from or writing to the file system.
+.It Bq Er EINTEGRITY
+Corrupted data was detected while reading from the file system.
 .It Bq Er EOPNOTSUPP
 The underlying file system does not support file flags, or
 does not support all of the flags set in
 .Fa flags .
+.It Bq Er ENOTCAPABLE
+.Fa path
+is an absolute path,
+or contained a ".." component leading to a
+directory outside of the directory hierarchy specified by
+.Fa fd ,
+and the process is in capability mode or the
+.Dv AT_RESOLVE_BENEATH
+flag was specified.
 .El
 .Sh SEE ALSO
 .Xr chflags 1 ,

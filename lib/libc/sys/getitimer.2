@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)getitimer.2	8.3 (Berkeley) 5/16/95
-.\" $FreeBSD: stable/11/lib/libc/sys/getitimer.2 208914 2010-06-08 16:48:59Z uqs $
+.\" $FreeBSD$
 .\"
-.Dd May 16, 1995
+.Dd May 1, 2020 
 .Dt GETITIMER 2
 .Os
 .Sh NAME
@@ -173,6 +173,21 @@ to be handled.
 .Xr select 2 ,
 .Xr sigaction 2 ,
 .Xr clocks 7
+.Sh STANDARDS
+The
+.Fn getitimer
+and
+.Fn setitimer
+functions conform to
+.St -p1003.1-2001 .
+The later
+.St -p1003.1-2008
+revision however marked both functions as obsolescent,
+recommending the use of
+.Xr timer_gettime 2
+and
+.Xr timer_settime 2
+instead.
 .Sh HISTORY
 The
 .Fn getitimer

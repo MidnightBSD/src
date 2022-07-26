@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libc/sys/pipe.c 302092 2016-06-22 21:11:27Z brooks $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
