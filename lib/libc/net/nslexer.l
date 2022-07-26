@@ -2,6 +2,8 @@
 /*	$NetBSD: nslexer.l,v 1.3 1999/01/25 00:16:17 lukem Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1997, 1998, 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -33,7 +35,7 @@
 #include <sys/cdefs.h>
 #if defined(LIBC_SCCS) && !defined(lint)
 static char *rcsid = 
-  "$FreeBSD: stable/11/lib/libc/net/nslexer.l 331722 2018-03-29 02:50:57Z eadler $";
+  "$FreeBSD$";
 #endif /* LIBC_SCCS and not lint */
 
 #include "namespace.h"
@@ -48,6 +50,7 @@ static char *rcsid =
 
 %}
 
+%option never-interactive
 %option noinput
 %option nounput
 %option yylineno
