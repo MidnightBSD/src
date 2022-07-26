@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/lib/libc/iconv/citrus_stdenc_template.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /* $NetBSD: citrus_stdenc_template.h,v 1.4 2008/02/09 14:56:20 junyoung Exp $ */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c)2003 Citrus Project,
  * All rights reserved.
  *

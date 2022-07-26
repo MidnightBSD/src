@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright 2013 Garrett D'Amore <garrett@damore.org>
  * Copyright 2010 Nexenta Systems, Inc.  All rights reserved.
  * Copyright (c) 2004 Tim J. Robbins. All rights reserved.
@@ -33,7 +35,7 @@
  */
 
 #include <sys/param.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/locale/gb2312.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <runetype.h>

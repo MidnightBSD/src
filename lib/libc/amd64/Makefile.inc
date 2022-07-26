@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libc/amd64/Makefile.inc 315044 2017-03-11 02:51:29Z brooks $
+# $FreeBSD$
 #
 # Machine dependent definitions for the amd64 architecture.
 #

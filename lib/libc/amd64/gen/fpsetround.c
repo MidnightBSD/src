@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/lib/libc/amd64/gen/fpsetround.c 117864 2003-07-22 06:46:17Z peter $ */
+/* $FreeBSD$ */
 #define __IEEEFP_NOINLINES__ 1
 #include <ieeefp.h>
 

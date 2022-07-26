@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/lib/libc/iconv/citrus_prop.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /* $NetBSD: citrus_prop.c,v 1.4 2011/03/30 08:22:01 jruoho Exp $ */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c)2006 Citrus Project,
  * All rights reserved.
  *

@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/lib/libc/iconv/citrus_memstream.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*	$NetBSD: citrus_memstream.c,v 1.5 2012/03/13 21:13:31 christos Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c)2003 Citrus Project,
  * All rights reserved.
  *

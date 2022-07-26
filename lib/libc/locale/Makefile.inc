@@ -1,5 +1,5 @@
 #	from @(#)Makefile.inc	8.1 (Berkeley) 6/4/93
-# $FreeBSD: stable/11/lib/libc/locale/Makefile.inc 291296 2015-11-25 09:12:30Z ngie $
+# $FreeBSD$
 
 # locale sources
 .PATH: ${LIBC_SRCTOP}/${LIBC_ARCH}/locale ${LIBC_SRCTOP}/locale

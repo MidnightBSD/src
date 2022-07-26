@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1998,1999 by Internet Software Consortium.
  *
@@ -19,7 +21,7 @@
 static const char rcsid[] = "$Id: inet_cidr_pton.c,v 1.6 2005/04/27 04:56:19 sra Exp $";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/inet/inet_cidr_pton.c 269867 2014-08-12 12:36:06Z ume $");
+__FBSDID("$FreeBSD$");
 
 #include "port_before.h"
 
@@ -44,10 +46,9 @@ __FBSDID("$FreeBSD: stable/11/lib/libc/inet/inet_cidr_pton.c 269867 2014-08-12 1
 # define SPRINTF(x) ((size_t)sprintf x)
 #endif
 
-static int	inet_cidr_pton_ipv4 __P((const char *src, u_char *dst,
-					 int *bits, int ipv6));
-static int	inet_cidr_pton_ipv6 __P((const char *src, u_char *dst,
-					 int *bits));
+static int	inet_cidr_pton_ipv4 (const char *src, u_char *dst, int *bits,
+				     int ipv6);
+static int	inet_cidr_pton_ipv6 (const char *src, u_char *dst, int *bits);
 
 static int	getbits(const char *, int ipv6);
 

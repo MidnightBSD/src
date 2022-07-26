@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 Daniel Eischen <deischen@FreeBSD.org>.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libc/include/un-namespace.h 338405 2018-08-31 05:21:33Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _UN_NAMESPACE_H_
@@ -117,6 +119,7 @@
 #undef		pthread_getaffinity_np
 #undef		pthread_getconcurrency
 #undef		pthread_getcpuclockid
+#undef		pthread_getname_np
 #undef		pthread_getprio
 #undef		pthread_getschedparam
 #undef		pthread_getspecific
@@ -170,6 +173,7 @@
 #undef		pthread_setcancelstate
 #undef		pthread_setcanceltype
 #undef		pthread_setconcurrency
+#undef		pthread_setname_np
 #undef		pthread_setprio
 #undef		pthread_setschedparam
 #undef		pthread_setspecific
