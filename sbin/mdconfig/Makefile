@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sbin/mdconfig/Makefile 298107 2016-04-16 07:45:30Z gjb $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -8,8 +8,7 @@ MAN=		mdconfig.8
 
 LIBADD=		util geom
 
-.if ${MK_TESTS} != "no"
-SUBDIR+=    tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

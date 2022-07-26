@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/usr.sbin/jail/jail.8 360112 2020-04-20 08:15:36Z eugen $
+.\" $FreeBSD$
 .\"
-.Dd April 17, 2020
+.Dd April 4, 2021
 .Dt JAIL 8
 .Os
 .Sh NAME
@@ -58,7 +58,7 @@
 .Op Fl U Ar username
 .Op Fl n Ar jailname
 .Op Fl s Ar securelevel
-.Op Ar path hostname [ Ar ip Ns [ Ns Ar ,... Ns ]] Ar command ...
+.Ar path hostname ip Ns [ Ns Ar ,... Ns ] Ar command ...
 .Nm
 .Op Fl f Ar conf_file
 .Fl e
@@ -498,7 +498,9 @@ and uname -K.
 Some restrictions of the jail environment may be set on a per-jail
 basis.
 With the exception of
-.Va allow.set_hostname ,
+.Va allow.set_hostname
+and
+.Va allow.reserved_ports ,
 these boolean parameters are off by default.
 .Bl -tag -width indent
 .It Va allow.set_hostname
@@ -558,9 +560,59 @@ is set to a value lower than 2.
 The devfs ruleset should be restricted from the default by using the
 .Va devfs_ruleset
 option.
+.It Va allow.quotas
+The jail root may administer quotas on the jail's filesystem(s).
+This includes filesystems that the jail may share with other jails or
+with non-jailed parts of the system.
+.It Va allow.read_msgbuf
+Jailed users may read the kernel message buffer.
+If the
+.Va security.bsd.unprivileged_read_msgbuf
+MIB entry is zero, this will be restricted to the root user.
+.It Va allow.socket_af
+Sockets within a jail are normally restricted to IPv4, IPv6, local
+(UNIX), and route.  This allows access to other protocol stacks that
+have not had jail functionality added to them.
+.It Va allow.mlock
+Locking or unlocking physical pages in memory are normally not available
+within a jail.
+When this parameter is set, users may
+.Xr mlock 2
+or
+.Xr munlock 2
+memory subject to
+.Va security.bsd.unprivileged_mlock
+and resource limits.
+.It Va allow.reserved_ports
+The jail root may bind to ports lower than 1024.
+.El
+.El
+.Pp
+Kernel modules may add their own parameters, which only exist when the
+module is loaded.
+These are typically headed under a parameter named after the module,
+with values of
+.Dq inherit
+to give the jail full use of the module,
+.Dq new
+to encapsulate the jail in some module-specific way,
+and
+.Dq disable
+to make the module unavailable to the jail.
+There also may be other parameters to define jail behavior within the module.
+Module-specific parameters include:
+.Bl -tag -width indent
 .It Va allow.mount.fdescfs
 privileged users inside the jail will be able to mount and unmount the
 fdescfs file system.
+This permission is effective only together with
+.Va allow.mount
+and only when
+.Va enforce_statfs
+is set to a value lower than 2.
+.It Va allow.mount.fusefs
+privileged users inside the jail will be able to mount and unmount 
+fuse-based file systems.
 This permission is effective only together with
 .Va allow.mount
 and only when
@@ -618,43 +670,19 @@ See
 .Xr zfs 8
 for information on how to configure the ZFS filesystem to operate from
 within a jail.
-.It Va allow.quotas
-The jail root may administer quotas on the jail's filesystem(s).
-This includes filesystems that the jail may share with other jails or
-with non-jailed parts of the system.
-.It Va allow.read_msgbuf
-Jailed users may read the kernel message buffer.
-If the
-.Va security.bsd.unprivileged_read_msgbuf
-MIB entry is zero, this will be restricted to the root user.
-.It Va allow.socket_af
-Sockets within a jail are normally restricted to IPv4, IPv6, local
-(UNIX), and route.  This allows access to other protocol stacks that
-have not had jail functionality added to them.
-.El
-.El
-.Pp
-Kernel modules may add their own parameters, which only exist when the
-module is loaded.
-These are typically headed under a parameter named after the module,
-with values of
-.Dq inherit
-to give the jail full use of the module,
-.Dq new
-to encapsulate the jail in some module-specific way,
-and
-.Dq disable
-to make the module unavailable to the jail.
-There also may be other parameters to define jail behavior within the module.
-Module-specific parameters include:
-.Bl -tag -width indent
+.It Va allow.vmm
+The jail may access
+.Xr vmm 4 .
+This flag is only available when the
+.Xr vmm 4
+kernel module is loaded.
 .It Va linux
 Determine how a jail's Linux emulation environment appears.
 A value of
 .Dq inherit
 will keep the same environment, and
 .Dq new
-will give the jail it's own environment (still originally inherited when
+will give the jail its own environment (still originally inherited when
 the jail is created).
 .It Va linux.osname , linux.osrelease , linux.oss_version
 The Linux OS name, OS release, and OSS version associated with this jail.
@@ -696,8 +724,16 @@ not be created or removed, as appropriate.
 .Pp
 The pseudo-parameters are:
 .Bl -tag -width indent
+.It Va exec.prepare
+Command(s) to run in the system environment to prepare a jail for creation.
+These commands are executed before assigning IP addresses and mounting
+filesystems, so they may be used to create a new jail filesystem if it does
+not already exist.
 .It Va exec.prestart
 Command(s) to run in the system environment before a jail is created.
+.It Va exec.created
+Command(s) to run in the system environment right after a jail has been
+created, but before commands (or services) get executed in the jail.
 .It Va exec.start
 Command(s) to run in the jail environment when a jail is created.
 A typical command to run is
@@ -724,9 +760,14 @@ and after any
 .Va exec.prestop
 commands have completed.
 A typical command to run is
-.Dq sh /etc/rc.shutdown .
+.Dq sh /etc/rc.shutdown jail .
 .It Va exec.poststop
 Command(s) to run in the system environment after a jail is removed.
+.It Va exec.release
+Command(s) to run in the system environment after all other actions are done.
+These commands are executed after unmounting filesystems and removing IP
+addresses, so they may be used to remove a jail filesystem if it is no longer
+needed.
 .It Va exec.clean
 Run commands in a clean environment.
 The environment is discarded except for
@@ -1022,7 +1063,7 @@ jail -c path=/data/jail/testjail mount.devfs \\
 .Pp
 Assuming no errors, you will end up with a shell prompt within the jail.
 You can now run
-.Pa /usr/sbin/sysinstall
+.Xr bsdconfig 8
 and do the post-install configuration to set various configuration options,
 or perform these actions manually by editing
 .Pa /etc/rc.conf ,
@@ -1073,7 +1114,7 @@ testjail {
 	ip4.addr = 192.0.2.100;
 	interface = ed0;
 	exec.start = "/bin/sh /etc/rc";
-	exec.stop = "/bin/sh /etc/rc.shutdown";
+	exec.stop = "/bin/sh /etc/rc.shutdown jail";
 }
 .Ed
 .Pp
@@ -1292,6 +1333,7 @@ environment of the first jail.
 .Xr ps 1 ,
 .Xr quota 1 ,
 .Xr jail_set 2 ,
+.Xr vmm 4 ,
 .Xr devfs 5 ,
 .Xr fdescfs 5 ,
 .Xr jail.conf 5 ,
@@ -1300,6 +1342,7 @@ environment of the first jail.
 .Xr procfs 5 ,
 .Xr rc.conf 5 ,
 .Xr sysctl.conf 5 ,
+.Xr bsdconfig 8 ,
 .Xr chroot 8 ,
 .Xr devfs 8 ,
 .Xr halt 8 ,

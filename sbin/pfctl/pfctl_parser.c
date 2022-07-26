@@ -50,6 +50,8 @@ __FBSDID("$FreeBSD$");
 #include <net/pfvar.h>
 #include <arpa/inet.h>
 
+#include <assert.h>
+#include <search.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -72,13 +74,12 @@ void		 print_fromto(struct pf_rule_addr *, pf_osfp_t,
 		    struct pf_rule_addr *, u_int8_t, u_int8_t, int, int);
 int		 ifa_skip_if(const char *filter, struct node_host *p);
 
-struct node_host	*ifa_grouplookup(const char *, int);
 struct node_host	*host_if(const char *, int);
 struct node_host	*host_v4(const char *, int);
 struct node_host	*host_v6(const char *, int);
 struct node_host	*host_dns(const char *, int, int);
 
-const char *tcpflags = "FSRPAUEW";
+const char * const tcpflags = "FSRPAUEW";
 
 static const struct icmptypeent icmp_type[] = {
 	{ "echoreq",	ICMP_ECHO },
@@ -208,6 +209,19 @@ const struct pf_timeout pf_timeouts[] = {
 	{ "src.track",		PFTM_SRC_NODE },
 	{ NULL,			0 }
 };
+
+static struct hsearch_data isgroup_map;
+
+static __attribute__((constructor)) void
+pfctl_parser_init(void)
+{
+	/*
+	 * As hdestroy() will never be called on these tables, it will be
+	 * safe to use references into the stored data as keys.
+	 */
+	if (hcreate_r(0, &isgroup_map) == 0)
+		err(1, "Failed to create interface group query response map");
+}
 
 const struct icmptypeent *
 geticmptypebynumber(u_int8_t type, sa_family_t af)
@@ -399,7 +413,7 @@ print_fromto(struct pf_rule_addr *src, pf_osfp_t osfp, struct pf_rule_addr *dst,
 }
 
 void
-print_pool(struct pf_pool *pool, u_int16_t p1, u_int16_t p2,
+print_pool(struct pfctl_pool *pool, u_int16_t p1, u_int16_t p2,
     sa_family_t af, int id)
 {
 	struct pf_pooladdr	*pooladdr;
@@ -473,16 +487,20 @@ print_pool(struct pf_pool *pool, u_int16_t p1, u_int16_t p2,
 		printf(" sticky-address");
 	if (id == PF_NAT && p1 == 0 && p2 == 0)
 		printf(" static-port");
+	if (pool->mape.offset > 0)
+		printf(" map-e-portset %u/%u/%u",
+		    pool->mape.offset, pool->mape.psidlen, pool->mape.psid);
 }
 
-const char	*pf_reasons[PFRES_MAX+1] = PFRES_NAMES;
-const char	*pf_lcounters[LCNT_MAX+1] = LCNT_NAMES;
-const char	*pf_fcounters[FCNT_MAX+1] = FCNT_NAMES;
-const char	*pf_scounters[FCNT_MAX+1] = FCNT_NAMES;
+const char	* const pf_reasons[PFRES_MAX+1] = PFRES_NAMES;
+const char	* const pf_lcounters[LCNT_MAX+1] = LCNT_NAMES;
+const char	* const pf_fcounters[FCNT_MAX+1] = FCNT_NAMES;
+const char	* const pf_scounters[FCNT_MAX+1] = FCNT_NAMES;
 
 void
-print_status(struct pf_status *s, int opts)
+print_status(struct pfctl_status *s, struct pfctl_syncookies *cookies, int opts)
 {
+	struct pfctl_status_counter	*c;
 	char			statline[80], *running;
 	time_t			runtime;
 	int			i;
@@ -523,7 +541,7 @@ print_status(struct pf_status *s, int opts)
 	}
 
 	if (opts & PF_OPT_VERBOSE) {
-		printf("Hostid:   0x%08x\n", ntohl(s->hostid));
+		printf("Hostid:   0x%08x\n", s->hostid);
 
 		for (i = 0; i < PF_MD5_DIGEST_LENGTH; i++) {
 			buf[i + i] = hex[s->pf_chksum[i] >> 4];
@@ -558,64 +576,57 @@ print_status(struct pf_status *s, int opts)
 		    (unsigned long long)s->pcounters[1][1][PF_DROP]);
 	}
 	printf("%-27s %14s %16s\n", "State Table", "Total", "Rate");
-	printf("  %-25s %14u %14s\n", "current entries", s->states, "");
-	for (i = 0; i < FCNT_MAX; i++) {
-		printf("  %-25s %14llu ", pf_fcounters[i],
-			    (unsigned long long)s->fcounters[i]);
+	printf("  %-25s %14ju %14s\n", "current entries", s->states, "");
+	TAILQ_FOREACH(c, &s->fcounters, entry) {
+		printf("  %-25s %14ju ", c->name, c->counter);
 		if (runtime > 0)
 			printf("%14.1f/s\n",
-			    (double)s->fcounters[i] / (double)runtime);
+			    (double)c->counter / (double)runtime);
 		else
 			printf("%14s\n", "");
 	}
 	if (opts & PF_OPT_VERBOSE) {
 		printf("Source Tracking Table\n");
-		printf("  %-25s %14u %14s\n", "current entries",
+		printf("  %-25s %14ju %14s\n", "current entries",
 		    s->src_nodes, "");
-		for (i = 0; i < SCNT_MAX; i++) {
-			printf("  %-25s %14lld ", pf_scounters[i],
-#ifdef __FreeBSD__
-				    (long long)s->scounters[i]);
-#else
-				    s->scounters[i]);
-#endif
+		TAILQ_FOREACH(c, &s->scounters, entry) {
+			printf("  %-25s %14ju ", c->name, c->counter);
 			if (runtime > 0)
 				printf("%14.1f/s\n",
-				    (double)s->scounters[i] / (double)runtime);
+				    (double)c->counter / (double)runtime);
 			else
 				printf("%14s\n", "");
 		}
 	}
 	printf("Counters\n");
-	for (i = 0; i < PFRES_MAX; i++) {
-		printf("  %-25s %14llu ", pf_reasons[i],
-		    (unsigned long long)s->counters[i]);
+	TAILQ_FOREACH(c, &s->counters, entry) {
+		printf("  %-25s %14ju ", c->name, c->counter);
 		if (runtime > 0)
 			printf("%14.1f/s\n",
-			    (double)s->counters[i] / (double)runtime);
+			    (double)c->counter / (double)runtime);
 		else
 			printf("%14s\n", "");
 	}
 	if (opts & PF_OPT_VERBOSE) {
 		printf("Limit Counters\n");
-		for (i = 0; i < LCNT_MAX; i++) {
-			printf("  %-25s %14lld ", pf_lcounters[i],
-#ifdef __FreeBSD__
-				    (unsigned long long)s->lcounters[i]);
-#else
-				    s->lcounters[i]);
-#endif
+		TAILQ_FOREACH(c, &s->lcounters, entry) {
+			printf("  %-25s %14ju ", c->name, c->counter);
 			if (runtime > 0)
 				printf("%14.1f/s\n",
-				    (double)s->lcounters[i] / (double)runtime);
+				    (double)c->counter / (double)runtime);
 			else
 				printf("%14s\n", "");
 		}
+
+		printf("Syncookies\n");
+		assert(cookies->mode <= PFCTL_SYNCOOKIES_ADAPTIVE);
+		printf("  %-25s %s\n", "mode",
+		    PFCTL_SYNCOOKIES_MODE_NAMES[cookies->mode]);
 	}
 }
 
 void
-print_running(struct pf_status *status)
+print_running(struct pfctl_status *status)
 {
 	printf("%s\n", status->running ? "Enabled" : "Disabled");
 }
@@ -681,7 +692,7 @@ print_src_node(struct pf_src_node *sn, int opts)
 }
 
 void
-print_rule(struct pf_rule *r, const char *anchor_call, int verbose, int numeric)
+print_rule(struct pfctl_rule *r, const char *anchor_call, int verbose, int numeric)
 {
 	static const char *actiontypes[] = { "pass", "block", "scrub",
 	    "no scrub", "nat", "no nat", "binat", "no binat", "rdr", "no rdr" };
@@ -692,7 +703,9 @@ print_rule(struct pf_rule *r, const char *anchor_call, int verbose, int numeric)
 
 	if (verbose)
 		printf("@%d ", r->nr);
-	if (r->action > PF_NORDR)
+	if (r->action == PF_MATCH)
+		printf("match");
+	else if (r->action > PF_NORDR)
 		printf("action(%d)", r->action);
 	else if (anchor_call[0]) {
 		if (anchor_call[0] == '_') {
@@ -786,12 +799,8 @@ print_rule(struct pf_rule *r, const char *anchor_call, int verbose, int numeric)
 			printf(" reply-to");
 		else if (r->rt == PF_DUPTO)
 			printf(" dup-to");
-		else if (r->rt == PF_FASTROUTE)
-			printf(" fastroute");
-		if (r->rt != PF_FASTROUTE) {
-			printf(" ");
-			print_pool(&r->rpool, 0, 0, r->af, PF_PASS);
-		}
+		printf(" ");
+		print_pool(&r->rpool, 0, 0, r->af, PF_PASS);
 	}
 	if (r->af) {
 		if (r->af == AF_INET)
@@ -800,10 +809,10 @@ print_rule(struct pf_rule *r, const char *anchor_call, int verbose, int numeric)
 			printf(" inet6");
 	}
 	if (r->proto) {
-		struct protoent	*p;
+		const char *protoname;
 
-		if ((p = getprotobynumber(r->proto)) != NULL)
-			printf(" proto %s", p->p_name);
+		if ((protoname = pfctl_proto2name(r->proto)) != NULL)
+			printf(" proto %s", protoname);
 		else
 			printf(" proto %u", r->proto);
 	}
@@ -1007,8 +1016,11 @@ print_rule(struct pf_rule *r, const char *anchor_call, int verbose, int numeric)
 
 		printf(" fragment reassemble");
 	}
-	if (r->label[0])
-		printf(" label \"%s\"", r->label);
+	i = 0;
+	while (r->label[i][0])
+		printf(" label \"%s\"", r->label[i++]);
+	if (r->ridentifier)
+		printf(" ridentifier %u", r->ridentifier);
 	if (r->qname[0] && r->pqname[0])
 		printf(" queue(%s, %s)", r->qname, r->pqname);
 	else if (r->qname[0])
@@ -1155,7 +1167,72 @@ check_netmask(struct node_host *h, sa_family_t af)
 
 /* interface lookup routines */
 
-struct node_host	*iftab;
+static struct node_host	*iftab;
+
+/*
+ * Retrieve the list of groups this interface is a member of and make sure
+ * each group is in the group map.
+ */
+static void
+ifa_add_groups_to_map(char *ifa_name)
+{
+	int			 s, len;
+	struct ifgroupreq	 ifgr;
+	struct ifg_req		*ifg;
+
+	s = get_query_socket();
+
+	/* Get size of group list for this interface */
+	memset(&ifgr, 0, sizeof(ifgr));
+	strlcpy(ifgr.ifgr_name, ifa_name, IFNAMSIZ);
+	if (ioctl(s, SIOCGIFGROUP, (caddr_t)&ifgr) == -1)
+		err(1, "SIOCGIFGROUP");
+
+	/* Retrieve group list for this interface */
+	len = ifgr.ifgr_len;
+	ifgr.ifgr_groups =
+	    (struct ifg_req *)calloc(len / sizeof(struct ifg_req),
+		sizeof(struct ifg_req));
+	if (ifgr.ifgr_groups == NULL)
+		err(1, "calloc");
+	if (ioctl(s, SIOCGIFGROUP, (caddr_t)&ifgr) == -1)
+		err(1, "SIOCGIFGROUP");
+
+	ifg = ifgr.ifgr_groups;
+	for (; ifg && len >= sizeof(struct ifg_req); ifg++) {
+		len -= sizeof(struct ifg_req);
+		if (strcmp(ifg->ifgrq_group, "all")) {
+			ENTRY	 		 item;
+			ENTRY			*ret_item;
+			int			*answer;
+	
+			item.key = ifg->ifgrq_group;
+			if (hsearch_r(item, FIND, &ret_item, &isgroup_map) == 0) {
+				struct ifgroupreq	 ifgr2;
+
+				/* Don't know the answer yet */
+				if ((answer = malloc(sizeof(int))) == NULL)
+					err(1, "malloc");
+
+				bzero(&ifgr2, sizeof(ifgr2));
+				strlcpy(ifgr2.ifgr_name, ifg->ifgrq_group,
+				    sizeof(ifgr2.ifgr_name));
+				if (ioctl(s, SIOCGIFGMEMB, (caddr_t)&ifgr2) == 0)
+					*answer = ifgr2.ifgr_len;
+				else
+					*answer = 0;
+
+				item.key = strdup(ifg->ifgrq_group);
+				item.data = answer;
+				if (hsearch_r(item, ENTER, &ret_item,
+					&isgroup_map) == 0)
+					err(1, "interface group query response"
+					    " map insert");
+			}
+		}
+	}
+	free(ifgr.ifgr_groups);
+}
 
 void
 ifa_load(void)
@@ -1224,6 +1301,8 @@ ifa_load(void)
 				    sizeof(struct in6_addr));
 			n->ifindex = ((struct sockaddr_in6 *)
 			    ifa->ifa_addr)->sin6_scope_id;
+		} else if (n->af == AF_LINK) {
+			ifa_add_groups_to_map(ifa->ifa_name);
 		}
 		if ((n->ifname = strdup(ifa->ifa_name)) == NULL)
 			err(1, "ifa_load: strdup");
@@ -1241,7 +1320,7 @@ ifa_load(void)
 	freeifaddrs(ifap);
 }
 
-int
+static int
 get_socket_domain(void)
 {
 	int sdom;
@@ -1261,31 +1340,52 @@ get_socket_domain(void)
 	return (sdom);
 }
 
+int
+get_query_socket(void)
+{
+	static int s = -1;
+
+	if (s == -1) {
+		if ((s = socket(get_socket_domain(), SOCK_DGRAM, 0)) == -1)
+			err(1, "socket");
+	}
+
+	return (s);
+}
+
+/*
+ * Returns the response len if the name is a group, otherwise returns 0.
+ */
+static int
+is_a_group(char *name)
+{
+	ENTRY	 		 item;
+	ENTRY			*ret_item;
+	
+	item.key = name;
+	if (hsearch_r(item, FIND, &ret_item, &isgroup_map) == 0)
+		return (0);
+
+	return (*(int *)ret_item->data);
+}
+
 struct node_host *
-ifa_exists(const char *ifa_name)
+ifa_exists(char *ifa_name)
 {
 	struct node_host	*n;
-	struct ifgroupreq	ifgr;
-	int			s;
 
 	if (iftab == NULL)
 		ifa_load();
 
-	/* check wether this is a group */
-	if ((s = socket(get_socket_domain(), SOCK_DGRAM, 0)) == -1)
-		err(1, "socket");
-	bzero(&ifgr, sizeof(ifgr));
-	strlcpy(ifgr.ifgr_name, ifa_name, sizeof(ifgr.ifgr_name));
-	if (ioctl(s, SIOCGIFGMEMB, (caddr_t)&ifgr) == 0) {
+	/* check whether this is a group */
+	if (is_a_group(ifa_name)) {
 		/* fake a node_host */
 		if ((n = calloc(1, sizeof(*n))) == NULL)
 			err(1, "calloc");
 		if ((n->ifname = strdup(ifa_name)) == NULL)
 			err(1, "strdup");
-		close(s);
 		return (n);
 	}
-	close(s);
 
 	for (n = iftab; n; n = n->next) {
 		if (n->af == AF_LINK && !strncmp(n->ifname, ifa_name, IFNAMSIZ))
@@ -1296,23 +1396,20 @@ ifa_exists(const char *ifa_name)
 }
 
 struct node_host *
-ifa_grouplookup(const char *ifa_name, int flags)
+ifa_grouplookup(char *ifa_name, int flags)
 {
 	struct ifg_req		*ifg;
 	struct ifgroupreq	 ifgr;
 	int			 s, len;
 	struct node_host	*n, *h = NULL;
 
-	if ((s = socket(get_socket_domain(), SOCK_DGRAM, 0)) == -1)
-		err(1, "socket");
+	s = get_query_socket();
+	len = is_a_group(ifa_name);
+	if (len == 0)
+		return (NULL);
 	bzero(&ifgr, sizeof(ifgr));
 	strlcpy(ifgr.ifgr_name, ifa_name, sizeof(ifgr.ifgr_name));
-	if (ioctl(s, SIOCGIFGMEMB, (caddr_t)&ifgr) == -1) {
-		close(s);
-		return (NULL);
-	}
-
-	len = ifgr.ifgr_len;
+	ifgr.ifgr_len = len;
 	if ((ifgr.ifgr_groups = calloc(1, len)) == NULL)
 		err(1, "calloc");
 	if (ioctl(s, SIOCGIFGMEMB, (caddr_t)&ifgr) == -1)
@@ -1331,26 +1428,26 @@ ifa_grouplookup(const char *ifa_name, int flags)
 		}
 	}
 	free(ifgr.ifgr_groups);
-	close(s);
 
 	return (h);
 }
 
 struct node_host *
-ifa_lookup(const char *ifa_name, int flags)
+ifa_lookup(char *ifa_name, int flags)
 {
 	struct node_host	*p = NULL, *h = NULL, *n = NULL;
 	int			 got4 = 0, got6 = 0;
 	const char		 *last_if = NULL;
+
+	/* first load iftab and isgroup_map */
+	if (iftab == NULL)
+		ifa_load();
 
 	if ((h = ifa_grouplookup(ifa_name, flags)) != NULL)
 		return (h);
 
 	if (!strncmp(ifa_name, "self", IFNAMSIZ))
 		ifa_name = NULL;
-
-	if (iftab == NULL)
-		ifa_load();
 
 	for (p = iftab; p; p = p->next) {
 		if (ifa_skip_if(ifa_name, p))

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/iscsid/chap.c 332616 2018-04-16 17:14:42Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
 #include <stdlib.h>

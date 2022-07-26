@@ -1,13 +1,36 @@
-# $FreeBSD: stable/11/sbin/devd/Makefile 352280 2019-09-13 07:21:06Z bapt $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
+WARNS?= 3
 PACKAGE=runtime
+CONFGROUPS=	CONFS DEVD
+CONFS=	devd.conf
+DEVD=	devmatch.conf
+DEVDDIR=	/etc/devd
+.if ${MK_ACPI} != "no"
+DEVD+=	asus.conf
+.endif
+
+.if ${MK_HYPERV} != "no"
+DEVD+=	hyperv.conf
+.endif
+
+.if ${MK_USB} != "no"
+DEVD+=	uath.conf ulpt.conf
+.endif
+
+.if ${MACHINE_ARCH} == "powerpc"
+DEVD+=	apple.conf
+.endif
+
+.if ${MK_ZFS} != "no"
+DEVD+=	zfs.conf
+.endif
+
 PROG_CXX=devd
 SRCS=	devd.cc token.l parse.y y.tab.h
 MAN=	devd.8 devd.conf.5
-
-WARNS?=	3
 
 NO_SHARED?=YES
 
@@ -15,11 +38,13 @@ LIBADD=	util
 
 YFLAGS+=-v
 CFLAGS+=-I. -I${.CURDIR}
+CFLAGS.clang += -Wno-missing-variable-declarations
+CFLAGS.gcc = -Wno-redundant-decls
+CXXFLAGS.gcc = -Wno-redundant-decls
 
-CLEANFILES= y.output
+CLEANFILES= y.output y.tab.i
 
-.if ${MK_TESTS} != "no"
-SUBDIR+=    tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

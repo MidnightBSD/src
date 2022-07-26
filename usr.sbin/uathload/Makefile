@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/uathload/Makefile 319191 2017-05-30 05:15:09Z ngie $
+# $FreeBSD$
 
 PROG=	uathload
 MAN=	uathload.8

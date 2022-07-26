@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/nvmecontrol/reset.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/ioccom.h>
@@ -37,37 +37,50 @@ __FBSDID("$FreeBSD: stable/11/sbin/nvmecontrol/reset.c 330449 2018-03-05 07:26:0
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sysexits.h>
 #include <unistd.h>
 
 #include "nvmecontrol.h"
 
+static struct options {
+	const char *dev;
+} opt = {
+	.dev = NULL
+};
+
+static const struct args args[] = {
+	{ arg_string, &opt.dev, "controller-id|namespace-id" },
+	{ arg_none, NULL, NULL },
+};
+
 static void
-reset_usage(void)
+reset(const struct cmd *f, int argc, char *argv[])
 {
-	fprintf(stderr, "usage:\n");
-	fprintf(stderr, RESET_USAGE);
-	exit(1);
-}
+	int	fd;
+	char	*path;
+	uint32_t nsid;
 
-void
-reset(int argc, char *argv[])
-{
-	int	ch, fd;
-
-	while ((ch = getopt(argc, argv, "")) != -1) {
-		switch ((char)ch) {
-		default:
-			reset_usage();
-		}
+	if (arg_parse(argc, argv, f))
+		return;
+	open_dev(opt.dev, &fd, 1, 1);
+	get_nsid(fd, &path, &nsid);
+	if (nsid != 0) {
+		close(fd);
+		open_dev(path, &fd, 1, 1);
 	}
+	free(path);
 
-	/* Check that a controller was specified. */
-	if (optind >= argc)
-		reset_usage();
-
-	open_dev(argv[optind], &fd, 1, 1);
 	if (ioctl(fd, NVME_RESET_CONTROLLER) < 0)
-		err(1, "reset request to %s failed", argv[optind]);
+		err(EX_IOERR, "reset request to %s failed", opt.dev);
 
 	exit(0);
 }
+
+static struct cmd reset_cmd = {
+	.name = "reset",
+	.fn = reset,
+	.descr = "Perform a controller-level reset",
+	.args = args,
+};
+
+CMD_COMMAND(reset_cmd);

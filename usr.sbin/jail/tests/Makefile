@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/jail/tests/Makefile 352263 2019-09-12 18:53:29Z mizhka $
+# $FreeBSD$
 
 PACKAGE=        tests
 

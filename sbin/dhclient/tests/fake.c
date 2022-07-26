@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sbin/dhclient/tests/fake.c 332602 2018-04-16 16:23:32Z asomers $ */
+/* $FreeBSD$ */
 
 #include <setjmp.h>
 #include <stdarg.h>
@@ -33,7 +33,7 @@ warning(const char *fmt, ...)
 
 	/*
 	 * The original warning() would return "ret" here. We do this to
-	 * check warnings explicitely.
+	 * check warnings explicitly.
 	 */
 	longjmp(env, 1);
 }

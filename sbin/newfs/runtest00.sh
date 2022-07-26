@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/11/sbin/newfs/runtest00.sh 92722 2002-03-19 21:05:29Z phk $
+# $FreeBSD$
 
 set -e
 
@@ -10,7 +10,7 @@ do
 	(
 	mdconfig -d -u $MD || true
 	mdconfig -a -t malloc -s $s -u $MD
-	disklabel -r -w md$MD auto
+	disklabel -w md$MD auto
 	./newfs -R /dev/md${MD}c
 	) 1>&2
 	md5 < /dev/md${MD}c

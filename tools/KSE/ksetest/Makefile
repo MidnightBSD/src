@@ -1,7 +1,7 @@
-# $FreeBSD: src/tools/KSE/ksetest/Makefile,v 1.4 2004/12/21 08:47:20 ru Exp $
+# $FreeBSD$
 
 PROG=		ksetest
-NO_MAN=
+MAN=
 CFLAGS+=	-g -Wall
 SRCS=		kse_asm.S kse_threads_test.c 
 

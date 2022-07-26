@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/usr.sbin/usbconfig/dump.c 356401 2020-01-06 09:24:47Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
