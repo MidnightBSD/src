@@ -14,7 +14,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/i386/include/frame.h 285354 2015-07-10 09:15:06Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _I386_FRAME_H_
@@ -40,5 +40,9 @@
 
 #define	CS_SECURE(cs)		(ISPL(cs) == SEL_UPL)
 #define	EFL_SECURE(ef, oef)	((((ef) ^ (oef)) & ~PSL_USERCHANGE) == 0)
+
+#define	TRAMP_STACK_SZ		4096
+#define	TRAMP_COPYOUT_SZ	128
+#define	VM86_STACK_SPACE	16
 
 #endif	/* _I386_FRAME_H_ */

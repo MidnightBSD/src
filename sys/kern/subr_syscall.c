@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (C) 1994, David Greenman
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -41,7 +43,7 @@
 #include "opt_capsicum.h"
 #include "opt_ktrace.h"
 
-__FBSDID("$FreeBSD: stable/11/sys/kern/subr_syscall.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/capsicum.h>
 #include <sys/ktr.h>
@@ -52,14 +54,14 @@ __FBSDID("$FreeBSD: stable/11/sys/kern/subr_syscall.c 331722 2018-03-29 02:50:57
 #endif
 #include <security/audit/audit.h>
 
-static inline int
+static inline void
 syscallenter(struct thread *td)
 {
 	struct proc *p;
 	struct syscall_args *sa;
 	int error, traced;
 
-	PCPU_INC(cnt.v_syscall);
+	VM_CNT_INC(v_syscall);
 	p = td->td_proc;
 	sa = &td->td_sa;
 
@@ -83,67 +85,87 @@ syscallenter(struct thread *td)
 	    (uintptr_t)td, "pid:%d", td->td_proc->p_pid, "arg0:%p", sa->args[0],
 	    "arg1:%p", sa->args[1], "arg2:%p", sa->args[2]);
 
-	if (error == 0) {
+	if (error != 0) {
+		td->td_errno = error;
+		goto retval;
+	}
 
-		STOPEVENT(p, S_SCE, sa->narg);
-		if (p->p_flag & P_TRACED) {
-			PROC_LOCK(p);
-			if (p->p_ptevents & PTRACE_SCE)
-				ptracestop((td), SIGTRAP, NULL);
-			PROC_UNLOCK(p);
-		}
-		if (td->td_dbgflags & TDB_USERWR) {
-			/*
-			 * Reread syscall number and arguments if
-			 * debugger modified registers or memory.
-			 */
-			error = (p->p_sysent->sv_fetch_syscall_args)(td);
+	STOPEVENT(p, S_SCE, sa->narg);
+	if ((p->p_flag & P_TRACED) != 0) {
+		PROC_LOCK(p);
+		if (p->p_ptevents & PTRACE_SCE)
+			ptracestop((td), SIGTRAP, NULL);
+		PROC_UNLOCK(p);
+	}
+	if ((td->td_dbgflags & TDB_USERWR) != 0) {
+		/*
+		 * Reread syscall number and arguments if debugger
+		 * modified registers or memory.
+		 */
+		error = (p->p_sysent->sv_fetch_syscall_args)(td);
 #ifdef KTRACE
-			if (KTRPOINT(td, KTR_SYSCALL))
-				ktrsyscall(sa->code, sa->narg, sa->args);
+		if (KTRPOINT(td, KTR_SYSCALL))
+			ktrsyscall(sa->code, sa->narg, sa->args);
 #endif
-			if (error != 0)
-				goto retval;
+		if (error != 0) {
+			td->td_errno = error;
+			goto retval;
 		}
+	}
 
 #ifdef CAPABILITY_MODE
-		/*
-		 * In capability mode, we only allow access to system calls
-		 * flagged with SYF_CAPENABLED.
-		 */
-		if (IN_CAPABILITY_MODE(td) &&
-		    !(sa->callp->sy_flags & SYF_CAPENABLED)) {
-			error = ECAPMODE;
-			goto retval;
-		}
-#endif
-
-		error = syscall_thread_enter(td, sa->callp);
-		if (error != 0)
-			goto retval;
-
-#ifdef KDTRACE_HOOKS
-		/* Give the syscall:::entry DTrace probe a chance to fire. */
-		if (systrace_probe_func != NULL && sa->callp->sy_entry != 0)
-			(*systrace_probe_func)(sa, SYSTRACE_ENTRY, 0);
-#endif
-
-		AUDIT_SYSCALL_ENTER(sa->code, td);
-		error = (sa->callp->sy_call)(td, sa->args);
-		AUDIT_SYSCALL_EXIT(error, td);
-
-		/* Save the latest error return value. */
-		if ((td->td_pflags & TDP_NERRNO) == 0)
-			td->td_errno = error;
-
-#ifdef KDTRACE_HOOKS
-		/* Give the syscall:::return DTrace probe a chance to fire. */
-		if (systrace_probe_func != NULL && sa->callp->sy_return != 0)
-			(*systrace_probe_func)(sa, SYSTRACE_RETURN,
-			    error ? -1 : td->td_retval[0]);
-#endif
-		syscall_thread_exit(td, sa->callp);
+	/*
+	 * In capability mode, we only allow access to system calls
+	 * flagged with SYF_CAPENABLED.
+	 */
+	if (IN_CAPABILITY_MODE(td) &&
+	    !(sa->callp->sy_flags & SYF_CAPENABLED)) {
+		td->td_errno = error = ECAPMODE;
+		goto retval;
 	}
+#endif
+
+	error = syscall_thread_enter(td, sa->callp);
+	if (error != 0) {
+		td->td_errno = error;
+		goto retval;
+	}
+
+#ifdef KDTRACE_HOOKS
+	/* Give the syscall:::entry DTrace probe a chance to fire. */
+	if (__predict_false(systrace_enabled && sa->callp->sy_entry != 0))
+		(*systrace_probe_func)(sa, SYSTRACE_ENTRY, 0);
+#endif
+
+	/* Let system calls set td_errno directly. */
+	td->td_pflags &= ~TDP_NERRNO;
+
+	AUDIT_SYSCALL_ENTER(sa->code, td);
+	error = (sa->callp->sy_call)(td, sa->args);
+
+	/*
+	 * Note that some syscall implementations (e.g., sys_execve)
+	 * will commit the audit record just before their final return.
+	 * These were done under the assumption that nothing of interest
+	 * would happen between their return and here, where we would
+	 * normally commit the audit record.  These assumptions will
+	 * need to be revisited should any substantial logic be added
+	 * above.
+	 */
+	AUDIT_SYSCALL_EXIT(error, td);
+
+	/* Save the latest error return value. */
+	if ((td->td_pflags & TDP_NERRNO) == 0)
+		td->td_errno = error;
+
+#ifdef KDTRACE_HOOKS
+	/* Give the syscall:::return DTrace probe a chance to fire. */
+	if (__predict_false(systrace_enabled && sa->callp->sy_return != 0))
+		(*systrace_probe_func)(sa, SYSTRACE_RETURN,
+		    error ? -1 : td->td_retval[0]);
+#endif
+	syscall_thread_exit(td, sa->callp);
+
  retval:
 	KTR_STOP4(KTR_SYSC, "syscall", syscallname(p, sa->code),
 	    (uintptr_t)td, "pid:%d", td->td_proc->p_pid, "error:%d", error,
@@ -155,16 +177,15 @@ syscallenter(struct thread *td)
 		PROC_UNLOCK(p);
 	}
 	(p->p_sysent->sv_set_syscall_retval)(td, error);
-	return (error);
 }
 
 static inline void
-syscallret(struct thread *td, int error)
+syscallret(struct thread *td)
 {
 	struct proc *p, *p2;
 	struct syscall_args *sa;
 	ksiginfo_t ksi;
-	int traced, error1;
+	int traced;
 
 	KASSERT((td->td_pflags & TDP_FORKING) == 0,
 	    ("fork() did not clear TDP_FORKING upon completion"));
@@ -173,12 +194,10 @@ syscallret(struct thread *td, int error)
 	sa = &td->td_sa;
 	if ((trap_enotcap || (p->p_flag2 & P2_TRAPCAP) != 0) &&
 	    IN_CAPABILITY_MODE(td)) {
-		error1 = (td->td_pflags & TDP_NERRNO) == 0 ? error :
-		    td->td_errno;
-		if (error1 == ENOTCAPABLE || error1 == ECAPMODE) {
+		if (td->td_errno == ENOTCAPABLE || td->td_errno == ECAPMODE) {
 			ksiginfo_init_trap(&ksi);
 			ksi.ksi_signo = SIGTRAP;
-			ksi.ksi_errno = error1;
+			ksi.ksi_errno = td->td_errno;
 			ksi.ksi_code = TRAP_CAP;
 			trapsignal(td, &ksi);
 		}
@@ -191,11 +210,9 @@ syscallret(struct thread *td, int error)
 
 #ifdef KTRACE
 	if (KTRPOINT(td, KTR_SYSRET)) {
-		ktrsysret(sa->code, (td->td_pflags & TDP_NERRNO) == 0 ?
-		    error : td->td_errno, td->td_retval[0]);
+		ktrsysret(sa->code, td->td_errno, td->td_retval[0]);
 	}
 #endif
-	td->td_pflags &= ~TDP_NERRNO;
 
 	if (p->p_flag & P_TRACED) {
 		traced = 1;

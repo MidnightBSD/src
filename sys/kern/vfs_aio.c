@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 John S. Dyson.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -19,9 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/vfs_aio.c 345393 2019-03-21 22:18:22Z asomers $");
-
-#include "opt_compat.h"
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -248,8 +248,8 @@ struct aioproc {
  */
 struct aioliojob {
 	int	lioj_flags;			/* (a) listio flags */
-	int	lioj_count;			/* (a) listio flags */
-	int	lioj_finished_count;		/* (a) listio flags */
+	int	lioj_count;			/* (a) count of jobs */
+	int	lioj_finished_count;		/* (a) count of finished jobs */
 	struct	sigevent lioj_signal;		/* (a) signal on all I/O done */
 	TAILQ_ENTRY(aioliojob) lioj_list;	/* (a) lio list */
 	struct	knlist klist;			/* (a) list of knotes */
@@ -466,7 +466,7 @@ aio_init_aioinfo(struct proc *p)
 }
 
 static int
-aio_sendsig(struct proc *p, struct sigevent *sigev, ksiginfo_t *ksi)
+aio_sendsig(struct proc *p, struct sigevent *sigev, ksiginfo_t *ksi, bool ext)
 {
 	struct thread *td;
 	int error;
@@ -477,7 +477,7 @@ aio_sendsig(struct proc *p, struct sigevent *sigev, ksiginfo_t *ksi)
 	if (!KSI_ONQ(ksi)) {
 		ksiginfo_set_sigev(ksi, sigev);
 		ksi->ksi_code = SI_ASYNCIO;
-		ksi->ksi_flags |= KSI_EXT | KSI_INS;
+		ksi->ksi_flags |= ext ? (KSI_EXT | KSI_INS) : 0;
 		tdsendsignal(p, td, ksi->ksi_signo, ksi);
 	}
 	PROC_UNLOCK(p);
@@ -896,7 +896,7 @@ aio_bio_done_notify(struct proc *userp, struct kaiocb *job)
 
 	if (job->uaiocb.aio_sigevent.sigev_notify == SIGEV_SIGNAL ||
 	    job->uaiocb.aio_sigevent.sigev_notify == SIGEV_THREAD_ID)
-		aio_sendsig(userp, &job->uaiocb.aio_sigevent, &job->ksi);
+		aio_sendsig(userp, &job->uaiocb.aio_sigevent, &job->ksi, true);
 
 	KNOTE_LOCKED(&job->klist, 1);
 
@@ -905,11 +905,12 @@ aio_bio_done_notify(struct proc *userp, struct kaiocb *job)
 			lj->lioj_flags |= LIOJ_KEVENT_POSTED;
 			KNOTE_LOCKED(&lj->klist, 1);
 		}
-		if ((lj->lioj_flags & (LIOJ_SIGNAL|LIOJ_SIGNAL_POSTED))
-		    == LIOJ_SIGNAL
-		    && (lj->lioj_signal.sigev_notify == SIGEV_SIGNAL ||
-		        lj->lioj_signal.sigev_notify == SIGEV_THREAD_ID)) {
-			aio_sendsig(userp, &lj->lioj_signal, &lj->lioj_ksi);
+		if ((lj->lioj_flags & (LIOJ_SIGNAL | LIOJ_SIGNAL_POSTED))
+		    == LIOJ_SIGNAL &&
+		    (lj->lioj_signal.sigev_notify == SIGEV_SIGNAL ||
+		    lj->lioj_signal.sigev_notify == SIGEV_THREAD_ID)) {
+			aio_sendsig(userp, &lj->lioj_signal, &lj->lioj_ksi,
+			    true);
 			lj->lioj_flags |= LIOJ_SIGNAL_POSTED;
 		}
 	}
@@ -960,7 +961,6 @@ aio_schedule_fsync(void *context, int pending)
 bool
 aio_cancel_cleared(struct kaiocb *job)
 {
-	struct kaioinfo *ki;
 
 	/*
 	 * The caller should hold the same queue lock held when
@@ -968,7 +968,6 @@ aio_cancel_cleared(struct kaiocb *job)
 	 * ensuring this check sees an up-to-date value.  However,
 	 * there is no way to assert that.
 	 */
-	ki = job->userproc->p_aioinfo;
 	return ((job->jobflags & KAIOCB_CLEARED) != 0);
 }
 
@@ -1280,7 +1279,6 @@ aio_qbio(struct proc *p, struct kaiocb *job)
 	bp->bio_length = cb->aio_nbytes;
 	bp->bio_bcount = cb->aio_nbytes;
 	bp->bio_done = aio_biowakeup;
-	bp->bio_data = (void *)(uintptr_t)cb->aio_buf;
 	bp->bio_offset = cb->aio_offset;
 	bp->bio_cmd = cb->aio_lio_opcode == LIO_WRITE ? BIO_WRITE : BIO_READ;
 	bp->bio_dev = dev;
@@ -1290,7 +1288,7 @@ aio_qbio(struct proc *p, struct kaiocb *job)
 	if (cb->aio_lio_opcode == LIO_READ)
 		prot |= VM_PROT_WRITE;	/* Less backwards than it looks */
 	job->npages = vm_fault_quick_hold_pages(&curproc->p_vmspace->vm_map,
-	    (vm_offset_t)bp->bio_data, bp->bio_length, prot, job->pages,
+	    (vm_offset_t)cb->aio_buf, bp->bio_length, prot, job->pages,
 	    nitems(job->pages));
 	if (job->npages < 0) {
 		error = EFAULT;
@@ -1452,7 +1450,6 @@ aio_aqueue(struct thread *td, struct aiocb *ujob, struct aioliojob *lj,
     int type, struct aiocb_ops *ops)
 {
 	struct proc *p = td->td_proc;
-	cap_rights_t rights;
 	struct file *fp;
 	struct kaiocb *job;
 	struct kaioinfo *ki;
@@ -1530,21 +1527,19 @@ aio_aqueue(struct thread *td, struct aiocb *ujob, struct aioliojob *lj,
 	fd = job->uaiocb.aio_fildes;
 	switch (opcode) {
 	case LIO_WRITE:
-		error = fget_write(td, fd,
-		    cap_rights_init(&rights, CAP_PWRITE), &fp);
+		error = fget_write(td, fd, &cap_pwrite_rights, &fp);
 		break;
 	case LIO_READ:
-		error = fget_read(td, fd,
-		    cap_rights_init(&rights, CAP_PREAD), &fp);
+		error = fget_read(td, fd, &cap_pread_rights, &fp);
 		break;
 	case LIO_SYNC:
-		error = fget(td, fd, cap_rights_init(&rights, CAP_FSYNC), &fp);
+		error = fget(td, fd, &cap_fsync_rights, &fp);
 		break;
 	case LIO_MLOCK:
 		fp = NULL;
 		break;
 	case LIO_NOP:
-		error = fget(td, fd, cap_rights_init(&rights), &fp);
+		error = fget(td, fd, &cap_no_rights, &fp);
 		break;
 	default:
 		error = EINVAL;
@@ -1600,7 +1595,7 @@ aio_aqueue(struct thread *td, struct aiocb *ujob, struct aioliojob *lj,
 	kev.flags = EV_ADD | EV_ENABLE | EV_FLAG1 | evflags;
 	kev.data = (intptr_t)job;
 	kev.udata = job->uaiocb.aio_sigevent.sigev_value.sival_ptr;
-	error = kqfd_register(kqfd, &kev, td, 1);
+	error = kqfd_register(kqfd, &kev, td, M_WAITOK);
 	if (error)
 		goto aqueue_fail;
 
@@ -1621,7 +1616,7 @@ no_kqueue:
 	else
 		error = fo_aio_queue(fp, job);
 	if (error)
-		goto aqueue_fail;
+		goto err4;
 
 	AIO_LOCK(ki);
 	job->jobflags &= ~KAIOCB_QUEUEING;
@@ -1642,6 +1637,8 @@ no_kqueue:
 	AIO_UNLOCK(ki);
 	return (0);
 
+err4:
+	crfree(job->cred);
 aqueue_fail:
 	knlist_delete(&job->klist, curthread, 0);
 	if (fp)
@@ -1694,7 +1691,6 @@ aio_cancel_sync(struct kaiocb *job)
 int
 aio_queue_file(struct file *fp, struct kaiocb *job)
 {
-	struct aioliojob *lj;
 	struct kaioinfo *ki;
 	struct kaiocb *job2;
 	struct vnode *vp;
@@ -1702,7 +1698,6 @@ aio_queue_file(struct file *fp, struct kaiocb *job)
 	int error;
 	bool safe;
 
-	lj = job->lio;
 	ki = job->userproc->p_aioinfo;
 	error = aio_qbio(job->userproc, job);
 	if (error >= 0)
@@ -1963,14 +1958,13 @@ sys_aio_cancel(struct thread *td, struct aio_cancel_args *uap)
 	struct kaioinfo *ki;
 	struct kaiocb *job, *jobn;
 	struct file *fp;
-	cap_rights_t rights;
 	int error;
 	int cancelled = 0;
 	int notcancelled = 0;
 	struct vnode *vp;
 
 	/* Lookup file object. */
-	error = fget(td, uap->fd, cap_rights_init(&rights), &fp);
+	error = fget(td, uap->fd, &cap_no_rights, &fp);
 	if (error)
 		return (error);
 
@@ -2171,7 +2165,8 @@ kern_lio_listio(struct thread *td, int mode, struct aiocb * const *uacb_list,
 			/* pass user defined sigval data */
 			kev.udata = lj->lioj_signal.sigev_value.sival_ptr;
 			error = kqfd_register(
-			    lj->lioj_signal.sigev_notify_kqueue, &kev, td, 1);
+			    lj->lioj_signal.sigev_notify_kqueue, &kev, td,
+			    M_WAITOK);
 			if (error) {
 				uma_zfree(aiolio_zone, lj);
 				return (error);
@@ -2236,12 +2231,12 @@ kern_lio_listio(struct thread *td, int mode, struct aiocb * const *uacb_list,
 				lj->lioj_flags |= LIOJ_KEVENT_POSTED;
 				KNOTE_LOCKED(&lj->klist, 1);
 			}
-			if ((lj->lioj_flags & (LIOJ_SIGNAL|LIOJ_SIGNAL_POSTED))
-			    == LIOJ_SIGNAL
-			    && (lj->lioj_signal.sigev_notify == SIGEV_SIGNAL ||
+			if ((lj->lioj_flags & (LIOJ_SIGNAL |
+			    LIOJ_SIGNAL_POSTED)) == LIOJ_SIGNAL &&
+			    (lj->lioj_signal.sigev_notify == SIGEV_SIGNAL ||
 			    lj->lioj_signal.sigev_notify == SIGEV_THREAD_ID)) {
-				aio_sendsig(p, &lj->lioj_signal,
-					    &lj->lioj_ksi);
+				aio_sendsig(p, &lj->lioj_signal, &lj->lioj_ksi,
+				    lj->lioj_count != 1);
 				lj->lioj_flags |= LIOJ_SIGNAL_POSTED;
 			}
 		}
@@ -2491,7 +2486,9 @@ sys_aio_fsync(struct thread *td, struct aio_fsync_args *uap)
 static int
 filt_aioattach(struct knote *kn)
 {
-	struct kaiocb *job = (struct kaiocb *)kn->kn_sdata;
+	struct kaiocb *job;
+
+	job = (struct kaiocb *)(uintptr_t)kn->kn_sdata;
 
 	/*
 	 * The job pointer must be validated before using it, so
@@ -2539,7 +2536,9 @@ filt_aio(struct knote *kn, long hint)
 static int
 filt_lioattach(struct knote *kn)
 {
-	struct aioliojob * lj = (struct aioliojob *)kn->kn_sdata;
+	struct aioliojob *lj;
+
+	lj = (struct aioliojob *)(uintptr_t)kn->kn_sdata;
 
 	/*
 	 * The aioliojob pointer must be validated before using it, so
