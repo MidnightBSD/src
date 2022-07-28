@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/syscons/keymaps/uk.iso-ctrl.kbd 270153 2014-08-18 20:58:17Z se $
+# $FreeBSD$
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock
 # code  base   shift  cntrl  shift  alt    shift  cntrl  shift state

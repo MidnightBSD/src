@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/syscons/keymaps/colemak.iso15.acc.kbd 179542 2008-06-04 12:22:03Z philip $
+# $FreeBSD$
 #
 # Colemak Layout for FreeBSD console
 # 2006-01-01 Shai Coleman, http://colemak.com/ . Public domain.

@@ -1,6 +1,6 @@
 #	@(#)README	8.1 (Berkeley) 6/8/93
 #
-#	$FreeBSD: stable/11/share/termcap/README 275687 2014-12-10 20:40:03Z ngie $
+#	$FreeBSD$
 
 << 12 May 1983 >>
 To install this directory on your system:
