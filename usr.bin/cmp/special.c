@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,10 +36,11 @@ static char sccsid[] = "@(#)special.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/cmp/special.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
+#include <capsicum_helpers.h>
 #include <err.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -46,12 +49,19 @@ __FBSDID("$FreeBSD: stable/11/usr.bin/cmp/special.c 331722 2018-03-29 02:50:57Z 
 
 void
 c_special(int fd1, const char *file1, off_t skip1,
-    int fd2, const char *file2, off_t skip2)
+    int fd2, const char *file2, off_t skip2, off_t limit)
 {
 	int ch1, ch2;
 	off_t byte, line;
 	FILE *fp1, *fp2;
 	int dfound;
+
+	if (caph_limit_stream(fd1, CAPH_READ) < 0)
+		err(ERR_EXIT, "caph_limit_stream(%s)", file1);
+	if (caph_limit_stream(fd2, CAPH_READ) < 0)
+		err(ERR_EXIT, "caph_limit_stream(%s)", file2);
+	if (caph_enter() < 0)
+		err(ERR_EXIT, "unable to enter capability mode");
 
 	if ((fp1 = fdopen(fd1, "r")) == NULL)
 		err(ERR_EXIT, "%s", file1);
@@ -66,7 +76,7 @@ c_special(int fd1, const char *file1, off_t skip1,
 		if (getc(fp2) == EOF)
 			goto eof;
 
-	for (byte = line = 1;; ++byte) {
+	for (byte = line = 1; limit == 0 || byte <= limit; ++byte) {
 		ch1 = getc(fp1);
 		ch2 = getc(fp2);
 		if (ch1 == EOF || ch2 == EOF)
@@ -78,10 +88,15 @@ c_special(int fd1, const char *file1, off_t skip1,
 				    (long long)byte - 1, ch1, ch2);
 			} else if (lflag) {
 				dfound = 1;
-				(void)printf("%6lld %3o %3o\n",
-				    (long long)byte, ch1, ch2);
+				if (bflag)
+					(void)printf("%6lld %3o %c %3o %c\n",
+					    (long long)byte, ch1, ch1, ch2,
+					    ch2);
+				else
+					(void)printf("%6lld %3o %3o\n",
+					    (long long)byte, ch1, ch2);
 			} else {
-				diffmsg(file1, file2, byte, line);
+				diffmsg(file1, file2, byte, line, ch1, ch2);
 				/* NOTREACHED */
 			}
 		}

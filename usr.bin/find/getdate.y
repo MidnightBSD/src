@@ -13,7 +13,7 @@
 /* SUPPRESS 288 on yyerrlab *//* Label unused */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/find/getdate.y 235789 2012-05-22 16:33:10Z bapt $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <ctype.h>
@@ -23,22 +23,11 @@ __FBSDID("$FreeBSD: stable/11/usr.bin/find/getdate.y 235789 2012-05-22 16:33:10Z
    tricks are need, but defaults to using the gettimeofday system call.
    Include <sys/time.h> if that will be used.  */
 
-#if	defined(vms)
-# include <types.h>
-#else /* defined(vms) */
 # include <sys/types.h>
 # include <sys/time.h>
-#endif	/* !defined(vms) */
 
 #if defined (__STDC__) || defined (USG)
 #include <string.h>
-#endif
-
-/* Some old versions of bison generate parsers that use bcopy.
-   That loses on systems that don't provide the function, so we have
-   to redefine it here.  */
-#if !defined (HAVE_BCOPY) && defined (HAVE_MEMCPY) && !defined (bcopy)
-#define bcopy(from, to, len) memcpy ((to), (from), (len))
 #endif
 
 #if defined (__STDC__)

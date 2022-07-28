@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/lex/Makefile 357521 2020-02-04 19:42:57Z dim $
+# $FreeBSD$
 #
 # By default, flex will be configured to generate 8-bit scanners only if the
 # -8 flag is given.  If you want it to always generate 8-bit scanners, add
@@ -30,7 +30,7 @@ MLINKS+=	lex.1 flex.1
 MLINKS+=	lex.1 flex++.1
 MLINKS+=	lex.1 lex++.1
 
-WARNS?=		0
+WARNS?=		3
 
 NO_WMISLEADING_INDENTATION=
 

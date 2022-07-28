@@ -24,7 +24,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.bin/cpio/tests/functional_test.sh 288977 2015-10-07 06:08:55Z ngie $
+# $FreeBSD$
 
 SRCDIR=$(atf_get_srcdir)
 TESTER="${SRCDIR}/bsdcpio_test"

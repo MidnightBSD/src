@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/etdump/etdump.h 332947 2018-04-24 17:35:13Z benno $
+ * $FreeBSD$
  */
 
 #ifndef	_ETDUMP_H_

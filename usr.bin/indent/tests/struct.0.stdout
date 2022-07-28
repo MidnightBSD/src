@@ -1,4 +1,7 @@
-/* $FreeBSD: stable/11/usr.bin/indent/tests/struct.0.stdout 313544 2017-02-10 09:31:39Z pstef $ */
+/* $FreeBSD$ */
+
+int		f(struct x *a);
+
 /* See r303485 */
 void
 t(void)
@@ -10,4 +13,11 @@ t(void)
 		{D, E},
 		{F, G}
 	};
+}
+
+void
+u(struct x a)
+{
+	int		b;
+	struct y	c = (struct y *)&a;
 }

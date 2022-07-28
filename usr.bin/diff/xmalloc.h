@@ -15,7 +15,7 @@
  * incompatible with the protocol description in the RFC file, it must be
  * called by a name other than "ssh" or "Secure Shell".
  *
- * $FreeBSD: stable/11/usr.bin/diff/xmalloc.h 315051 2017-03-11 05:01:29Z bapt $
+ * $FreeBSD$
  */
 
 #ifndef XMALLOC_H

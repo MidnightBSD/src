@@ -1,3 +1,4 @@
+# $FreeBSD$
 #	$NetBSD: Makefile,v 1.15 1997/10/18 15:31:20 lukem Exp $
 #	from: @(#)Makefile	8.2 (Berkeley) 4/3/94
 
@@ -18,15 +19,8 @@ SRCS=	cmds.c cmdtab.c complete.c domacro.c fetch.c ftp.c main.c \
 CFLAGS+= -DINET6
 .endif
 
-.if ${MK_OPENSSL} != "no"
-CFLAGS+=        -DWITH_SSL
-LIBADD+=	ssl crypto
-SRCS+=		ssl.c
-.endif
-
-
 CFLAGS+= -I${.CURDIR} -I${TNFTP}
-LIBADD+=	edit termcap util
+LIBADD=	edit
 
 WARNS?=	2
 

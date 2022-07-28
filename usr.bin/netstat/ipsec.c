@@ -1,6 +1,8 @@
 /*	$KAME: ipsec.c,v 1.33 2003/07/25 09:54:32 itojun Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2005 NTT Multimedia Communications Laboratories, Inc.
  * All rights reserved.
  *
@@ -65,7 +67,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -89,7 +91,7 @@ static char sccsid[] = "@(#)inet.c	8.5 (Berkeley) 5/24/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/netstat/ipsec.c 351362 2019-08-21 23:44:46Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -145,7 +147,7 @@ static struct val2str ipsec_espnames[] = {
 	{ SADB_EALG_NULL, "null", },
 	{ SADB_X_EALG_CAST128CBC, "cast128-cbc", },
 	{ SADB_X_EALG_BLOWFISHCBC, "blowfish-cbc", },
-	{ SADB_X_EALG_RIJNDAELCBC, "rijndael-cbc", },
+	{ SADB_X_EALG_AESCBC, "aes-cbc", },
 	{ SADB_X_EALG_CAMELLIACBC, "camellia-cbc", },
 	{ SADB_X_EALG_AESCTR, "aes-ctr", },
 	{ SADB_X_EALG_AESGCM16, "aes-gcm-16", },
@@ -170,6 +172,8 @@ print_ipsecstats(const struct ipsecstat *ipsecstat)
 
 #define	p(f, m) if (ipsecstat->f || sflag <= 1) \
 	xo_emit(m, (uintmax_t)ipsecstat->f, plural(ipsecstat->f))
+#define	p2(f, m) if (ipsecstat->f || sflag <= 1) \
+	xo_emit(m, (uintmax_t)ipsecstat->f, plurales(ipsecstat->f))
 
 	p(ips_in_polvio, "\t{:dropped-policy-violation/%ju} "
 	    "{N:/inbound packet%s violated process security policy}\n");
@@ -189,14 +193,15 @@ print_ipsecstats(const struct ipsecstat *ipsecstat)
 	    "{N:/invalid outbound packet%s}\n");
 	p(ips_out_bundlesa, "\t{:send-bundled-sa/%ju} "
 	    "{N:/outbound packet%s with bundled SAs}\n");
-	p(ips_mbcoalesced, "\t{:mbufs-coalesced-during-clone/%ju} "
-	    "{N:/mbuf%s coalesced during clone}\n");
-	p(ips_clcoalesced, "\t{:clusters-coalesced-during-clone/%ju} "
-	    "{N:/cluster%s coalesced during clone}\n");
+	p(ips_spdcache_hits, "\t{:spdcache-hits/%ju} "
+	    "{N:/spd cache hit%s}\n");
+	p2(ips_spdcache_misses, "\t{:spdcache-misses/%ju} "
+	    "{N:/spd cache miss%s}\n");
 	p(ips_clcopied, "\t{:clusters-copied-during-clone/%ju} "
 	    "{N:/cluster%s copied during clone}\n");
 	p(ips_mbinserted, "\t{:mbufs-inserted/%ju} "
 	    "{N:/mbuf%s inserted during makespace}\n");
+#undef p2
 #undef p
 	xo_close_container("ipsec-statistics");
 }
@@ -354,7 +359,7 @@ print_espstats(const struct espstat *espstat)
 	p(esps_input, "received-packets", "packet%s in");
 	p(esps_output, "sent-packets", "packet%s out");
 	p(esps_invalid, "dropped-bad-tdb", "packet%s dropped; invalid TDB");
-	p(esps_ibytes, "receieve-bytes", "byte%s in");
+	p(esps_ibytes, "receive-bytes", "byte%s in");
 	p(esps_obytes, "sent-bytes", "byte%s out");
 	p(esps_toobig, "dropped-too-large",
 	    "packet%s dropped; larger than IP_MAXPACKET");
@@ -405,10 +410,10 @@ print_ipcompstats(const struct ipcompstat *ipcompstat)
 	p(ipcomps_noxform, "dropped-no-transform",
 	    "packet%s dropped; no transform");
 	p(ipcomps_wrap, "replay-counter-wraps", "replay counter wrap%s");
-	p(ipcomps_input, "receieve-packets", "packet%s in");
+	p(ipcomps_input, "receive-packets", "packet%s in");
 	p(ipcomps_output, "sent-packets", "packet%s out");
 	p(ipcomps_invalid, "dropped-bad-tdb", "packet%s dropped; invalid TDB");
-	p(ipcomps_ibytes, "receieved-bytes", "byte%s in");
+	p(ipcomps_ibytes, "received-bytes", "byte%s in");
 	p(ipcomps_obytes, "sent-bytes", "byte%s out");
 	p(ipcomps_toobig, "dropped-too-large",
 	    "packet%s dropped; larger than IP_MAXPACKET");

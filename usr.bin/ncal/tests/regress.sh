@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/ncal/tests/regress.sh 262962 2014-03-09 22:16:39Z jmmv $
+# $FreeBSD$
 
 CAL_BIN="ncal"
 CAL="${CAL_BIN} -C"

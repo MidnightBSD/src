@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/m4/tests/regress.sh 263227 2014-03-16 08:04:06Z jmmv $
+# $FreeBSD$
 
 echo 1..21
 

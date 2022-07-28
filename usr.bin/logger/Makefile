@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/11/usr.bin/logger/Makefile 265420 2014-05-06 04:22:01Z imp $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

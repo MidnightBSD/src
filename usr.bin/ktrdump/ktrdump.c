@@ -28,14 +28,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/ktrdump/ktrdump.c 342706 2019-01-02 19:48:17Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
+#include <sys/capsicum.h>
 #include <sys/ktr.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 
+#include <capsicum_helpers.h>
 #include <err.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <kvm.h>
 #include <limits.h>
@@ -53,11 +56,11 @@ __FBSDID("$FreeBSD: stable/11/usr.bin/ktrdump/ktrdump.c 342706 2019-01-02 19:48:
 static void usage(void);
 
 static struct nlist nl[] = {
-	{ "_ktr_version" },
-	{ "_ktr_entries" },
-	{ "_ktr_idx" },
-	{ "_ktr_buf" },
-	{ NULL }
+	{ .n_name = "_ktr_version" },
+	{ .n_name = "_ktr_entries" },
+	{ .n_name = "_ktr_idx" },
+	{ .n_name = "_ktr_buf" },
+	{ .n_name = NULL }
 };
 
 static int cflag;
@@ -73,6 +76,7 @@ static int hflag;
 
 static char corefile[PATH_MAX];
 static char execfile[PATH_MAX];
+static char outfile[PATH_MAX] = "stdout";
 
 static char desc[SBUFLEN];
 static char errbuf[_POSIX2_LINE_MAX];
@@ -90,6 +94,7 @@ main(int ac, char **av)
 	struct ktr_entry *buf;
 	uintmax_t tlast, tnow;
 	unsigned long bufptr;
+	cap_rights_t rights;
 	struct stat sb;
 	kvm_t *kd;
 	FILE *out;
@@ -126,6 +131,10 @@ main(int ac, char **av)
 			iflag = 1;
 			if ((in = open(optarg, O_RDONLY)) == -1)
 				err(1, "%s", optarg);
+			cap_rights_init(&rights, CAP_FSTAT, CAP_MMAP_R);
+			if (caph_rights_limit(in, &rights) < 0)
+				err(1, "unable to limit rights for %s",
+				    optarg);
 			break;
 		case 'l':
 			lflag = 1;
@@ -140,6 +149,7 @@ main(int ac, char **av)
 		case 'o':
 			if ((out = fopen(optarg, "w")) == NULL)
 				err(1, "%s", optarg);
+			strlcpy(outfile, optarg, sizeof(outfile));
 			break;
 		case 'q':
 			qflag++;
@@ -162,6 +172,11 @@ main(int ac, char **av)
 	if (ac != 0)
 		usage();
 
+	if (caph_limit_stream(fileno(out), CAPH_WRITE) < 0)
+		err(1, "unable to limit rights for %s", outfile);
+	if (caph_limit_stderr() < 0)
+		err(1, "unable to limit rights for stderr");
+
 	/*
 	 * Open our execfile and corefile, resolve needed symbols and read in
 	 * the trace buffer.
@@ -169,6 +184,13 @@ main(int ac, char **av)
 	if ((kd = kvm_openfiles(Nflag ? execfile : NULL,
 	    Mflag ? corefile : NULL, NULL, O_RDONLY, errbuf)) == NULL)
 		errx(1, "%s", errbuf);
+
+	/*
+	 * Cache NLS data, for strerror, for err(3), before entering capability
+	 * mode.
+	 */
+	caph_cache_catpages();
+
 	count = kvm_nlist(kd, nl);
 	if (count == -1)
 		errx(1, "%s", kvm_geterr(kd));
@@ -178,6 +200,16 @@ main(int ac, char **av)
 		errx(1, "%s", kvm_geterr(kd));
 	if (version != KTR_VERSION)
 		errx(1, "ktr version mismatch");
+
+	/*
+	 * Enter Capsicum sandbox.
+	 *
+	 * kvm_nlist() above uses kldsym(2) for native kernels, and that isn't
+	 * allowed in the sandbox.
+	 */
+	if (caph_enter() < 0)
+		err(1, "unable to enter capability mode");
+
 	if (iflag) {
 		if (fstat(in, &sb) == -1)
 			errx(1, "stat");
@@ -230,7 +262,7 @@ main(int ac, char **av)
 		fprintf(out, "\n");
 	}
 
-	tlast = -1;
+	tlast = UINTPTR_MAX;
 	/*
 	 * Now tear through the trace buffer.
 	 *
@@ -295,7 +327,7 @@ next:			if ((c = *p++) == '\0')
 		if (tflag) {
 			tnow = (uintmax_t)buf[i].ktr_timestamp;
 			if (rflag) {
-				if (tlast == -1)
+				if (tlast == UINTPTR_MAX)
 					tlast = tnow;
 				fprintf(out, "%16ju ", !iflag ? tlast - tnow :
 				    tnow - tlast);

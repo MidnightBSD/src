@@ -29,7 +29,7 @@
  * The split of ipcs.c into ipcs.c and ipc.c to accommodate the
  * changes in ipcrm.c was done by Edwin Groothuis <edwin@FreeBSD.org>
  *
- * $FreeBSD: stable/11/usr.bin/ipcs/ipc.h 347995 2019-05-20 16:31:45Z kib $
+ * $FreeBSD$
  */
 
 /* Part of struct nlist symbols[] */

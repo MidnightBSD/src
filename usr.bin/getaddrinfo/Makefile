@@ -1,5 +1,5 @@
 #	$NetBSD: Makefile,v 1.2 2014/04/29 01:21:02 christos Exp $
-#	$FreeBSD: stable/11/usr.bin/getaddrinfo/Makefile 317653 2017-05-01 16:59:54Z brooks $
+#	$FreeBSD$
 .include <bsd.own.mk>
 
 PROG=	getaddrinfo

@@ -1,9 +1,14 @@
-# $FreeBSD: stable/11/usr.bin/cmp/tests/Makefile 314427 2017-02-28 22:49:41Z asomers $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
+PACKAGE=	tests
+
 ATF_TESTS_SH+=		cmp_test2
 NETBSD_ATF_TESTS_SH=	cmp_test
+
+${PACKAGE}FILES+=	b_flag.out
+${PACKAGE}FILES+=	bl_flag.out
 
 .include <netbsd-tests.test.mk>
 

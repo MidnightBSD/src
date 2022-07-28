@@ -1,5 +1,10 @@
-# $FreeBSD: stable/11/usr.bin/csplit/Makefile 95927 2002-05-02 07:54:04Z tjr $
+# $FreeBSD$
+
+.include <src.opts.mk>
 
 PROG=	csplit
+
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

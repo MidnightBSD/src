@@ -1,4 +1,4 @@
-dnl $FreeBSD: stable/11/usr.bin/m4/tests/redef.m4 234852 2012-04-30 22:00:34Z bapt $
+dnl $FreeBSD$
 dnl $OpenBSD: src/regress/usr.bin/m4/redef.m4,v 1.2 2001/09/27 22:40:58 espie Exp $
 dnl check all properties of builtin are passed on, including args behavior
 define(`mybuiltin',defn(`builtin'))dnl

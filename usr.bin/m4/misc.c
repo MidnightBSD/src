@@ -1,7 +1,9 @@
 /*	$OpenBSD: misc.c,v 1.47 2017/06/15 13:48:42 bcallah Exp $	*/
 /*	$NetBSD: misc.c,v 1.6 1995/09/28 05:37:41 tls Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -34,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/m4/misc.c 352281 2019-09-13 07:22:09Z bapt $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <errno.h>

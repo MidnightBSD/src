@@ -1,6 +1,7 @@
 #
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (c) 2017 Kyle Evans <kevans@FreeBSD.org>
-# All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -23,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.bin/grep/tests/grep_freebsd_test.sh 354628 2019-11-11 19:54:08Z kevans $
+# $FreeBSD$
 
 # What grep(1) are we working with?
 # - 0 : bsdgrep

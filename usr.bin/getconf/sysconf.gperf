@@ -2,7 +2,7 @@
 /*
  * Copyright is disclaimed as to the contents of this file.
  *
- * $FreeBSD: stable/11/usr.bin/getconf/sysconf.gperf 345015 2019-03-11 18:17:12Z ngie $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

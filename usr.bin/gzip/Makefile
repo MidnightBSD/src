@@ -1,5 +1,5 @@
 #	$NetBSD: Makefile,v 1.18 2013/11/13 11:12:24 pettai Exp $
-# $FreeBSD: stable/11/usr.bin/gzip/Makefile 327020 2017-12-20 07:43:32Z delphij $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -29,8 +29,7 @@ LINKS+=		${BINDIR}/gzip ${BINDIR}/gunzip \
 		${BINDIR}/zdiff ${BINDIR}/xzdiff \
 		${BINDIR}/zdiff ${BINDIR}/zcmp
 
-.if ${MK_TESTS} != "no"
-SUBDIR+=	tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

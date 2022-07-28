@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/getconf/tests/Makefile 318436 2017-05-18 01:43:30Z ngie $
+# $FreeBSD$
 
 ATF_TESTS_SH+=	getconf_test
 

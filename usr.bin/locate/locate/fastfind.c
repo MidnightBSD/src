@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1995 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +36,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/locate/locate/fastfind.c 229403 2012-01-03 18:51:58Z ed $
+ * $FreeBSD$
  */
 
 

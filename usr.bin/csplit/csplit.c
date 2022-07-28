@@ -45,7 +45,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/csplit/csplit.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -401,8 +401,10 @@ do_rexp(const char *expr)
 		first = 0;
 	}
 
-	if (p == NULL)
+	if (p == NULL) {
+		toomuch(NULL, 0);
 		errx(1, "%s: no match", re);
+	}
 
 	if (ofs <= 0) {
 		/*

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,7 +35,7 @@ static char sccsid[] = "@(#)getname.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/mail/getname.c 336953 2018-07-31 00:37:25Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include "rcv.h"
 #include <pwd.h>
@@ -45,7 +47,7 @@ __FBSDID("$FreeBSD: stable/11/usr.bin/mail/getname.c 336953 2018-07-31 00:37:25Z
  * Search the passwd file for a uid. Return name on success, NULL on failure.
  */
 char *
-getname(int uid)
+getname(uid_t uid)
 {
 	struct passwd *pw;
 
@@ -58,7 +60,7 @@ getname(int uid)
  * Convert the passed name to a user id and return it.  Return -1
  * on error.
  */
-int
+uid_t
 getuserid(char name[])
 {
 	struct passwd *pw;

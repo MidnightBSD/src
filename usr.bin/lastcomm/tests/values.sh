@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/11/usr.bin/lastcomm/tests/values.sh 263226 2014-03-16 04:09:22Z jmmv $
+# $FreeBSD$
 #
 
 ACCT=acct

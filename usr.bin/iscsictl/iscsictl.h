@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/iscsictl/iscsictl.h 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef ISCSICTL_H
@@ -78,6 +78,7 @@ struct target {
 	int			t_session_type;
 	int			t_enable;
 	int			t_protocol;
+	int			t_dscp;
 	char			*t_offload;
 	char			*t_user;
 	char			*t_secret;

@@ -27,7 +27,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/fstat/fuser.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/queue.h>
 #include <sys/stat.h>
@@ -92,8 +92,8 @@ struct consumer {
 	STAILQ_ENTRY(consumer)	next;
 };
 struct reqfile {
-	uint32_t	fsid;
-	uint64_t	fileid;
+	dev_t		fsid;
+	ino_t		fileid;
 	const char	*name;
 	STAILQ_HEAD(, consumer) consumers;
 };

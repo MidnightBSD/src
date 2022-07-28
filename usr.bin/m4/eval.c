@@ -1,7 +1,9 @@
 /*	$OpenBSD: eval.c,v 1.78 2019/06/28 05:35:34 deraadt Exp $	*/
 /*	$NetBSD: eval.c,v 1.7 1996/11/10 21:21:29 pk Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -34,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/m4/eval.c 352281 2019-09-13 07:22:09Z bapt $");
+__FBSDID("$FreeBSD$");
 
 
 /*
