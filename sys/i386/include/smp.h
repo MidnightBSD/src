@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: stable/11/sys/i386/include/smp.h 291949 2015-12-07 17:41:20Z kib $
+ * $FreeBSD$
  *
  */
 
@@ -26,9 +26,6 @@
 #include <machine/intr_machdep.h>
 #include <x86/apicvar.h>
 #include <machine/pcb.h>
-
-/* global data in mpboot.s */
-extern int bootMP_size;
 
 /* functions in mpboot.s */
 void bootMP(void);

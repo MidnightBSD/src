@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/net/toeplitz.h 277331 2015-01-18 18:06:40Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_TOEPLITZ_H_

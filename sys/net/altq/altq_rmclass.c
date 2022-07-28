@@ -35,7 +35,7 @@
  *
  * @(#)rm_class.c  1.48     97/12/05 SMI
  * $KAME: altq_rmclass.c,v 1.19 2005/04/13 03:44:25 suz Exp $
- * $FreeBSD: stable/11/sys/net/altq/altq_rmclass.c 287009 2015-08-21 22:02:22Z loos $
+ * $FreeBSD$
  */
 #include "opt_altq.h"
 #include "opt_inet.h"
@@ -1567,7 +1567,9 @@ rmc_restart(struct rm_class *cl)
 	int		 s;
 
 	s = splnet();
+	NET_EPOCH_ENTER();
 	IFQ_LOCK(ifd->ifq_);
+	CURVNET_SET(ifd->ifq_->altq_ifp->if_vnet);
 	if (cl->sleeping_) {
 		cl->sleeping_ = 0;
 		cl->undertime_.tv_sec = 0;
@@ -1577,7 +1579,9 @@ rmc_restart(struct rm_class *cl)
 			(ifd->restart)(ifd->ifq_);
 		}
 	}
+	CURVNET_RESTORE();
 	IFQ_UNLOCK(ifd->ifq_);
+	NET_EPOCH_EXIT();
 	splx(s);
 }
 

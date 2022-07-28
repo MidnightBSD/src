@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 The FreeBSD Project.
  * Copyright (c) 2015 Andrey V. Elsukov <ae@FreeBSD.org>
  * All rights reserved.
@@ -25,11 +27,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/net/if_enc.c 332513 2018-04-15 15:22:28Z kp $
+ * $FreeBSD$
  */
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
+#include "opt_ipsec.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -84,9 +87,9 @@ struct enchdr {
 struct enc_softc {
 	struct	ifnet *sc_ifp;
 };
-static VNET_DEFINE(struct enc_softc *, enc_sc);
+VNET_DEFINE_STATIC(struct enc_softc *, enc_sc);
 #define	V_enc_sc	VNET(enc_sc)
-static VNET_DEFINE(struct if_clone *, enc_cloner);
+VNET_DEFINE_STATIC(struct if_clone *, enc_cloner);
 #define	V_enc_cloner	VNET(enc_cloner)
 
 static int	enc_ioctl(struct ifnet *, u_long, caddr_t);
@@ -109,10 +112,10 @@ static const char encname[] = "enc";
  * some changes to the packet, e.g. address translation. If PFIL hook
  * consumes mbuf, nothing will be captured.
  */
-static VNET_DEFINE(int, filter_mask_in) = IPSEC_ENC_BEFORE;
-static VNET_DEFINE(int, bpf_mask_in) = IPSEC_ENC_BEFORE;
-static VNET_DEFINE(int, filter_mask_out) = IPSEC_ENC_BEFORE;
-static VNET_DEFINE(int, bpf_mask_out) = IPSEC_ENC_BEFORE | IPSEC_ENC_AFTER;
+VNET_DEFINE_STATIC(int, filter_mask_in) = IPSEC_ENC_BEFORE;
+VNET_DEFINE_STATIC(int, bpf_mask_in) = IPSEC_ENC_BEFORE;
+VNET_DEFINE_STATIC(int, filter_mask_out) = IPSEC_ENC_BEFORE;
+VNET_DEFINE_STATIC(int, bpf_mask_out) = IPSEC_ENC_BEFORE | IPSEC_ENC_AFTER;
 #define	V_filter_mask_in	VNET(filter_mask_in)
 #define	V_bpf_mask_in		VNET(bpf_mask_in)
 #define	V_filter_mask_out	VNET(filter_mask_out)

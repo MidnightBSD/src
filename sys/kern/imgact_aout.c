@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1993, David Greenman
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/imgact_aout.c 293613 2016-01-09 20:18:53Z dchagin $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/exec.h>
@@ -65,7 +67,12 @@ __FBSDID("$FreeBSD: stable/11/sys/kern/imgact_aout.c 293613 2016-01-09 20:18:53Z
 static int	exec_aout_imgact(struct image_params *imgp);
 static int	aout_fixup(register_t **stack_base, struct image_params *imgp);
 
+#define	AOUT32_USRSTACK		0xbfc00000
+
 #if defined(__i386__)
+
+#define	AOUT32_PS_STRINGS	(AOUT32_USRSTACK - sizeof(struct ps_strings))
+
 struct sysentvec aout_sysvec = {
 	.sv_size	= SYS_MAXSYSCALL,
 	.sv_table	= sysent,
@@ -77,15 +84,14 @@ struct sysentvec aout_sysvec = {
 	.sv_sendsig	= sendsig,
 	.sv_sigcode	= sigcode,
 	.sv_szsigcode	= &szsigcode,
-	.sv_name	= "MidnightBSD a.out",
+	.sv_name	= "FreeBSD a.out",
 	.sv_coredump	= NULL,
 	.sv_imgact_try	= NULL,
 	.sv_minsigstksz	= MINSIGSTKSZ,
-	.sv_pagesize	= PAGE_SIZE,
 	.sv_minuser	= VM_MIN_ADDRESS,
-	.sv_maxuser	= VM_MAXUSER_ADDRESS,
-	.sv_usrstack	= USRSTACK,
-	.sv_psstrings	= PS_STRINGS,
+	.sv_maxuser	= AOUT32_USRSTACK,
+	.sv_usrstack	= AOUT32_USRSTACK,
+	.sv_psstrings	= AOUT32_PS_STRINGS,
 	.sv_stackprot	= VM_PROT_ALL,
 	.sv_copyout_strings	= exec_copyout_strings,
 	.sv_setregs	= exec_setregs,
@@ -102,10 +108,9 @@ struct sysentvec aout_sysvec = {
 
 #elif defined(__amd64__)
 
-#define	AOUT32_USRSTACK	0xbfc00000
 #define	AOUT32_PS_STRINGS \
     (AOUT32_USRSTACK - sizeof(struct freebsd32_ps_strings))
-#define	AOUT32_MINUSER	FREEBSD32_MINUSER
+#define	AOUT32_MINUSER		FREEBSD32_MINUSER
 
 extern const char *freebsd32_syscallnames[];
 extern u_long ia32_maxssiz;
@@ -121,11 +126,10 @@ struct sysentvec aout_sysvec = {
 	.sv_sendsig	= ia32_sendsig,
 	.sv_sigcode	= ia32_sigcode,
 	.sv_szsigcode	= &sz_ia32_sigcode,
-	.sv_name	= "MidnightBSD a.out",
+	.sv_name	= "FreeBSD a.out",
 	.sv_coredump	= NULL,
 	.sv_imgact_try	= NULL,
 	.sv_minsigstksz	= MINSIGSTKSZ,
-	.sv_pagesize	= IA32_PAGE_SIZE,
 	.sv_minuser	= AOUT32_MINUSER,
 	.sv_maxuser	= AOUT32_USRSTACK,
 	.sv_usrstack	= AOUT32_USRSTACK,
@@ -245,8 +249,8 @@ exec_aout_imgact(struct image_params *imgp)
 	    /* data + bss can't exceed rlimit */
 	    a_out->a_data + bss_size > lim_cur_proc(imgp->proc, RLIMIT_DATA) ||
 	    racct_set(imgp->proc, RACCT_DATA, a_out->a_data + bss_size) != 0) {
-			PROC_UNLOCK(imgp->proc);
-			return (ENOMEM);
+		PROC_UNLOCK(imgp->proc);
+		return (ENOMEM);
 	}
 	PROC_UNLOCK(imgp->proc);
 
@@ -265,7 +269,7 @@ exec_aout_imgact(struct image_params *imgp)
 	 */
 	error = exec_new_vmspace(imgp, &aout_sysvec);
 
-	vn_lock(imgp->vp, LK_EXCLUSIVE | LK_RETRY);
+	vn_lock(imgp->vp, LK_SHARED | LK_RETRY);
 	if (error)
 		return (error);
 
@@ -284,12 +288,13 @@ exec_aout_imgact(struct image_params *imgp)
 		file_offset,
 		virtual_offset, text_end,
 		VM_PROT_READ | VM_PROT_EXECUTE, VM_PROT_ALL,
-		MAP_COPY_ON_WRITE | MAP_PREFAULT);
+		MAP_COPY_ON_WRITE | MAP_PREFAULT | MAP_VN_EXEC);
 	if (error) {
 		vm_map_unlock(map);
 		vm_object_deallocate(object);
 		return (error);
 	}
+	VOP_SET_TEXT_CHECKED(imgp->vp);
 	data_end = text_end + a_out->a_data;
 	if (a_out->a_data) {
 		vm_object_reference(object);
@@ -297,12 +302,13 @@ exec_aout_imgact(struct image_params *imgp)
 			file_offset + a_out->a_text,
 			text_end, data_end,
 			VM_PROT_ALL, VM_PROT_ALL,
-			MAP_COPY_ON_WRITE | MAP_PREFAULT);
+			MAP_COPY_ON_WRITE | MAP_PREFAULT | MAP_VN_EXEC);
 		if (error) {
 			vm_map_unlock(map);
 			vm_object_deallocate(object);
 			return (error);
 		}
+		VOP_SET_TEXT_CHECKED(imgp->vp);
 	}
 
 	if (bss_size) {
@@ -335,5 +341,8 @@ exec_aout_imgact(struct image_params *imgp)
 /*
  * Tell kern_execve.c about it, with a little help from the linker.
  */
-static struct execsw aout_execsw = { exec_aout_imgact, "a.out" };
+static struct execsw aout_execsw = {
+	.ex_imgact = exec_aout_imgact,
+	.ex_name = "a.out"
+};
 EXEC_SET(aout, aout_execsw);

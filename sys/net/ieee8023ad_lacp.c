@@ -1,6 +1,8 @@
 /*	$NetBSD: ieee8023ad_lacp.c,v 1.3 2005/12/11 12:24:54 christos Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c)2005 YAMAMOTO Takashi,
  * Copyright (c)2008 Andrew Thompson <thompsa@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +30,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/net/ieee8023ad_lacp.c 338871 2018-09-21 23:31:04Z erj $");
+__FBSDID("$FreeBSD$");
+
+#include "opt_ratelimit.h"
 
 #include <sys/param.h>
 #include <sys/callout.h>
@@ -44,11 +48,13 @@ __FBSDID("$FreeBSD: stable/11/sys/net/ieee8023ad_lacp.c 338871 2018-09-21 23:31:
 #include <sys/lock.h>
 #include <sys/rwlock.h>
 #include <sys/taskqueue.h>
+#include <sys/time.h>
 
 #include <net/if.h>
 #include <net/if_var.h>
 #include <net/if_dl.h>
 #include <net/ethernet.h>
+#include <net/infiniband.h>
 #include <net/if_media.h>
 #include <net/if_types.h>
 
@@ -190,13 +196,13 @@ static const char *lacp_format_portid(const struct lacp_portid *, char *,
 static void	lacp_dprintf(const struct lacp_port *, const char *, ...)
 		    __attribute__((__format__(__printf__, 2, 3)));
 
-static VNET_DEFINE(int, lacp_debug);
+VNET_DEFINE_STATIC(int, lacp_debug);
 #define	V_lacp_debug	VNET(lacp_debug)
 SYSCTL_NODE(_net_link_lagg, OID_AUTO, lacp, CTLFLAG_RD, 0, "ieee802.3ad");
 SYSCTL_INT(_net_link_lagg_lacp, OID_AUTO, debug, CTLFLAG_RWTUN | CTLFLAG_VNET,
     &VNET_NAME(lacp_debug), 0, "Enable LACP debug logging (1=debug, 2=trace)");
 
-static VNET_DEFINE(int, lacp_default_strict_mode) = 1;
+VNET_DEFINE_STATIC(int, lacp_default_strict_mode) = 1;
 SYSCTL_INT(_net_link_lagg_lacp, OID_AUTO, default_strict_mode,
     CTLFLAG_RWTUN | CTLFLAG_VNET, &VNET_NAME(lacp_default_strict_mode), 0,
     "LACP strict protocol compliance default");
@@ -707,6 +713,8 @@ lacp_disable_distributing(struct lacp_port *lp)
 	}
 
 	lp->lp_state &= ~LACP_STATE_DISTRIBUTING;
+	if_link_state_change(sc->sc_ifp,
+	    sc->sc_active ? LINK_STATE_UP : LINK_STATE_DOWN);
 }
 
 static void
@@ -741,6 +749,9 @@ lacp_enable_distributing(struct lacp_port *lp)
 	} else
 		/* try to become the active aggregator */
 		lacp_select_active_aggregator(lsc);
+
+	if_link_state_change(sc->sc_ifp,
+	    sc->sc_active ? LINK_STATE_UP : LINK_STATE_DOWN);
 }
 
 static void
@@ -852,6 +863,35 @@ lacp_select_tx_port(struct lagg_softc *sc, struct mbuf *m)
 
 	return (lp->lp_lagg);
 }
+
+#ifdef RATELIMIT
+struct lagg_port *
+lacp_select_tx_port_by_hash(struct lagg_softc *sc, uint32_t flowid)
+{
+	struct lacp_softc *lsc = LACP_SOFTC(sc);
+	struct lacp_portmap *pm;
+	struct lacp_port *lp;
+	uint32_t hash;
+
+	if (__predict_false(lsc->lsc_suppress_distributing)) {
+		LACP_DPRINTF((NULL, "%s: waiting transit\n", __func__));
+		return (NULL);
+	}
+
+	pm = &lsc->lsc_pmap[lsc->lsc_activemap];
+	if (pm->pm_count == 0) {
+		LACP_DPRINTF((NULL, "%s: no active aggregator\n", __func__));
+		return (NULL);
+	}
+
+	hash = flowid >> sc->flowid_shift;
+	hash %= pm->pm_count;
+	lp = pm->pm_map[hash];
+
+	return (lp->lp_lagg);
+}
+#endif
+
 /*
  * lacp_suppress_distributing: drop transmit packets for a while
  * to preserve packet ordering.
@@ -1115,6 +1155,7 @@ lacp_compose_key(struct lacp_port *lp)
 		case IFM_50G_PCIE:
 		case IFM_50G_CR2:
 		case IFM_50G_KR2:
+		case IFM_50G_KR4:
 		case IFM_50G_SR2:
 		case IFM_50G_LR2:
 		case IFM_50G_LAUI2_AC:
@@ -1664,6 +1705,7 @@ lacp_sm_rx(struct lacp_port *lp, const struct lacpdu *du)
 	 * EXPIRED, DEFAULTED, CURRENT -> CURRENT
 	 */
 
+	microuptime(&lp->lp_last_lacpdu_rx);
 	lacp_sm_rx_update_selected(lp, du);
 	lacp_sm_rx_update_ntt(lp, du);
 	lacp_sm_rx_record_pdu(lp, du);
@@ -1873,14 +1915,26 @@ static void
 lacp_run_timers(struct lacp_port *lp)
 {
 	int i;
+	struct timeval time_diff;
 
 	for (i = 0; i < LACP_NTIMER; i++) {
 		KASSERT(lp->lp_timer[i] >= 0,
 		    ("invalid timer value %d", lp->lp_timer[i]));
 		if (lp->lp_timer[i] == 0) {
 			continue;
-		} else if (--lp->lp_timer[i] <= 0) {
-			if (lacp_timer_funcs[i]) {
+		} else {
+			if (i == LACP_TIMER_CURRENT_WHILE) {
+				microuptime(&time_diff);
+				timevalsub(&time_diff, &lp->lp_last_lacpdu_rx);
+				if (time_diff.tv_sec) {
+					/* At least one sec has elapsed since last LACP packet. */
+					--lp->lp_timer[i];
+				}
+			} else {
+				--lp->lp_timer[i];
+			}
+
+			if ((lp->lp_timer[i] <= 0) && (lacp_timer_funcs[i])) {
 				(*lacp_timer_funcs[i])(lp);
 			}
 		}

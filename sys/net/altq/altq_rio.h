@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  *
  * $KAME: altq_rio.h,v 1.9 2003/07/10 12:07:49 kjc Exp $
- * $FreeBSD: stable/11/sys/net/altq/altq_rio.h 281613 2015-04-16 20:22:40Z glebius $
+ * $FreeBSD$
  */
 
 #ifndef _ALTQ_ALTQ_RIO_H_

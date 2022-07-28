@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2007 Nate Lawson (SDG)
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/kern_cpu.c 299746 2016-05-14 18:22:52Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -57,7 +59,7 @@ __FBSDID("$FreeBSD: stable/11/sys/kern/kern_cpu.c 299746 2016-05-14 18:22:52Z jh
  * Number of levels we can handle.  Levels are synthesized from settings
  * so for M settings and N drivers, there may be M*N levels.
  */
-#define CF_MAX_LEVELS	64
+#define CF_MAX_LEVELS	256
 
 struct cf_saved_freq {
 	struct cf_level			level;
@@ -243,6 +245,7 @@ cf_set_method(device_t dev, const struct cf_level *level, int priority)
 	struct cf_saved_freq *saved_freq, *curr_freq;
 	struct pcpu *pc;
 	int error, i;
+	u_char pri;
 
 	sc = device_get_softc(dev);
 	error = 0;
@@ -330,7 +333,15 @@ cf_set_method(device_t dev, const struct cf_level *level, int priority)
 
 		/* Bind to the target CPU before switching. */
 		pc = cpu_get_pcpu(set->dev);
+
+		/* Skip settings if CPU is not started. */
+		if (pc == NULL) {
+			error = 0;
+			goto out;
+		}
 		thread_lock(curthread);
+		pri = curthread->td_priority;
+		sched_prio(curthread, PRI_MIN);
 		sched_bind(curthread, pc->pc_cpuid);
 		thread_unlock(curthread);
 		CF_DEBUG("setting abs freq %d on %s (cpu %d)\n", set->freq,
@@ -338,6 +349,7 @@ cf_set_method(device_t dev, const struct cf_level *level, int priority)
 		error = CPUFREQ_DRV_SET(set->dev, set);
 		thread_lock(curthread);
 		sched_unbind(curthread);
+		sched_prio(curthread, pri);
 		thread_unlock(curthread);
 		if (error) {
 			goto out;
@@ -355,6 +367,8 @@ cf_set_method(device_t dev, const struct cf_level *level, int priority)
 		/* Bind to the target CPU before switching. */
 		pc = cpu_get_pcpu(set->dev);
 		thread_lock(curthread);
+		pri = curthread->td_priority;
+		sched_prio(curthread, PRI_MIN);
 		sched_bind(curthread, pc->pc_cpuid);
 		thread_unlock(curthread);
 		CF_DEBUG("setting rel freq %d on %s (cpu %d)\n", set->freq,
@@ -362,6 +376,7 @@ cf_set_method(device_t dev, const struct cf_level *level, int priority)
 		error = CPUFREQ_DRV_SET(set->dev, set);
 		thread_lock(curthread);
 		sched_unbind(curthread);
+		sched_prio(curthread, pri);
 		thread_unlock(curthread);
 		if (error) {
 			/* XXX Back out any successful setting? */
@@ -671,7 +686,7 @@ cpufreq_insert_abs(struct cpufreq_softc *sc, struct cf_setting *sets,
 {
 	struct cf_level_lst *list;
 	struct cf_level *level, *search;
-	int i;
+	int i, inserted;
 
 	CF_MTX_ASSERT(&sc->lock);
 
@@ -684,6 +699,7 @@ cpufreq_insert_abs(struct cpufreq_softc *sc, struct cf_setting *sets,
 		level->total_set = sets[i];
 		level->total_set.dev = NULL;
 		sc->all_count++;
+		inserted = 0;
 
 		if (TAILQ_EMPTY(list)) {
 			CF_DEBUG("adding abs setting %d at head\n",
@@ -692,15 +708,26 @@ cpufreq_insert_abs(struct cpufreq_softc *sc, struct cf_setting *sets,
 			continue;
 		}
 
-		TAILQ_FOREACH_REVERSE(search, list, cf_level_lst, link) {
+		TAILQ_FOREACH_REVERSE(search, list, cf_level_lst, link)
 			if (sets[i].freq <= search->total_set.freq) {
 				CF_DEBUG("adding abs setting %d after %d\n",
 				    sets[i].freq, search->total_set.freq);
 				TAILQ_INSERT_AFTER(list, search, level, link);
+				inserted = 1;
 				break;
 			}
+
+		if (inserted == 0) {
+			TAILQ_FOREACH(search, list, link)
+				if (sets[i].freq >= search->total_set.freq) {
+					CF_DEBUG("adding abs setting %d before %d\n",
+					    sets[i].freq, search->total_set.freq);
+					TAILQ_INSERT_BEFORE(search, level, link);
+					break;
+				}
 		}
 	}
+
 	return (0);
 }
 

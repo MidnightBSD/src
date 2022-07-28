@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -32,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/geom/geom.h 347378 2019-05-09 03:51:34Z kevans $
+ * $FreeBSD$
  */
 
 #ifndef _GEOM_GEOM_H_
@@ -120,6 +122,15 @@ struct g_class {
 	LIST_HEAD(,g_geom)	geom;
 };
 
+/*
+ * The g_geom_alias is a list node for aliases for the geom name
+ * for device node creation.
+ */
+struct g_geom_alias {
+	LIST_ENTRY(g_geom_alias) ga_next;
+	const char		*ga_alias;
+};
+
 #define G_VERSION_00	0x19950323
 #define G_VERSION_01	0x20041207	/* add fflag to g_ioctl_t */
 #define G_VERSION	G_VERSION_01
@@ -152,6 +163,7 @@ struct g_geom {
 #define	G_GEOM_VOLATILE_BIO	0x02
 #define	G_GEOM_IN_ACCESS	0x04
 #define	G_GEOM_ACCESS_WAIT	0x08
+	LIST_HEAD(,g_geom_alias) aliases;
 };
 
 /*
@@ -243,11 +255,18 @@ void g_dev_physpath_changed(void);
 struct g_provider *g_dev_getprovider(struct cdev *dev);
 
 /* geom_dump.c */
-void g_trace(int level, const char *, ...);
-#	define G_T_TOPOLOGY	1
-#	define G_T_BIO		2
-#	define G_T_ACCESS	4
-
+void (g_trace)(int level, const char *, ...) __printflike(2, 3);
+#define	G_T_TOPOLOGY		0x01
+#define	G_T_BIO			0x02
+#define	G_T_ACCESS		0x04
+extern int g_debugflags;
+#define	G_F_FOOTSHOOTING	0x10
+#define	G_F_DISKIOCTL		0x40
+#define	G_F_CTLDUMP		0x80
+#define	g_trace(level, fmt, ...) do {				\
+	if (__predict_false(g_debugflags & (level)))		\
+		(g_trace)(level, fmt, ## __VA_ARGS__);		\
+} while (0)
 
 /* geom_event.c */
 typedef void g_event_t(void *, int flag);
@@ -271,6 +290,7 @@ void g_destroy_provider(struct g_provider *pp);
 void g_detach(struct g_consumer *cp);
 void g_error_provider(struct g_provider *pp, int error);
 struct g_provider *g_provider_by_name(char const *arg);
+void g_geom_add_alias(struct g_geom *gp, const char *alias);
 int g_getattr__(const char *attr, struct g_consumer *cp, void *var, int len);
 #define g_getattr(a, c, v) g_getattr__((a), (c), (v), sizeof *(v))
 int g_handleattr(struct bio *bp, const char *attribute, const void *val,
@@ -333,6 +353,8 @@ void * g_read_data(struct g_consumer *cp, off_t offset, off_t length, int *error
 int g_write_data(struct g_consumer *cp, off_t offset, void *ptr, off_t length);
 int g_delete_data(struct g_consumer *cp, off_t offset, off_t length);
 void g_print_bio(struct bio *bp);
+int g_use_g_read_data(void *, off_t, void **, int);
+int g_use_g_write_data(void *, off_t, void *, int);
 
 /* geom_kern.c / geom_kernsim.c */
 

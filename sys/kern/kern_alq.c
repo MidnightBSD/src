@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002, Jeffrey Roberson <jeff@freebsd.org>
  * Copyright (c) 2008-2009, Lawrence Stewart <lstewart@freebsd.org>
  * Copyright (c) 2009-2010, The FreeBSD Foundation
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/kern_alq.c 296688 2016-03-11 23:18:06Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_mac.h"
 

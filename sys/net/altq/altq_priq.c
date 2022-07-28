@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  *
  * $KAME: altq_priq.c,v 1.11 2003/09/17 14:23:25 kjc Exp $
- * $FreeBSD: stable/11/sys/net/altq/altq_priq.c 287009 2015-08-21 22:02:22Z loos $
+ * $FreeBSD$
  */
 /*
  * priority queue
@@ -118,12 +118,11 @@ priq_pfattach(struct pf_altq *a)
 }
 
 int
-priq_add_altq(struct pf_altq *a)
+priq_add_altq(struct ifnet * ifp, struct pf_altq *a)
 {
 	struct priq_if	*pif;
-	struct ifnet	*ifp;
 
-	if ((ifp = ifunit(a->ifname)) == NULL)
+	if (ifp == NULL)
 		return (EINVAL);
 	if (!ALTQ_IS_READY(&ifp->if_snd))
 		return (ENODEV);
@@ -199,7 +198,7 @@ priq_remove_queue(struct pf_altq *a)
 }
 
 int
-priq_getqstats(struct pf_altq *a, void *ubuf, int *nbytes)
+priq_getqstats(struct pf_altq *a, void *ubuf, int *nbytes, int version)
 {
 	struct priq_if *pif;
 	struct priq_class *cl;

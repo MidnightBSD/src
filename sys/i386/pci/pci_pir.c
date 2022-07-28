@@ -1,9 +1,11 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997, Stefan Esser <se@freebsd.org>
  * Copyright (c) 2000, Michael Smith <msmith@freebsd.org>
  * Copyright (c) 2000, BSDi
- * Copyright (c) 2004, John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
+ * Copyright (c) 2004, John Baldwin <jhb@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/i386/pci/pci_pir.c 354058 2019-10-25 00:16:57Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -108,13 +110,8 @@ static int pir_interrupt_weight[NUM_ISA_INTERRUPTS];
 SYSCTL_DECL(_hw_pci);
 
 /* XXX this likely should live in a header file */
-#ifdef PC98
-/* IRQs 3, 5, 7, 9, 10, 11, 12, 13 */
-#define PCI_IRQ_OVERRIDE_MASK 0x3e68
-#else
 /* IRQs 3, 4, 5, 6, 7, 9, 10, 11, 12, 14, 15 */
 #define PCI_IRQ_OVERRIDE_MASK 0xdef8
-#endif
 
 static uint32_t pci_irq_override_mask = PCI_IRQ_OVERRIDE_MASK;
 SYSCTL_INT(_hw_pci, OID_AUTO, irq_override_mask, CTLFLAG_RDTUN,

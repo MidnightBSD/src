@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010-2013 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/kern_clocksource.c 335656 2018-06-26 08:31:08Z avg $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Common routines to manage event timers hardware.
@@ -124,7 +126,7 @@ struct pcpu_state {
 	int		idle;		/* This CPU is in idle mode. */
 };
 
-static DPCPU_DEFINE(struct pcpu_state, timerstate);
+DPCPU_DEFINE_STATIC(struct pcpu_state, timerstate);
 DPCPU_DEFINE(sbintime_t, hardclocktime);
 
 /*
@@ -181,7 +183,7 @@ handleevents(sbintime_t now, int fake)
 		hct = DPCPU_PTR(hardclocktime);
 		*hct = state->nexthard - tick_sbt;
 		if (fake < 2) {
-			hardclock_cnt(runs, usermode);
+			hardclock(runs, usermode);
 			done = 1;
 		}
 	}
@@ -191,7 +193,7 @@ handleevents(sbintime_t now, int fake)
 		runs++;
 	}
 	if (runs && fake < 2) {
-		statclock_cnt(runs, usermode);
+		statclock(runs, usermode);
 		done = 1;
 	}
 	if (profiling) {
@@ -201,7 +203,7 @@ handleevents(sbintime_t now, int fake)
 			runs++;
 		}
 		if (runs && !fake) {
-			profclock_cnt(runs, usermode, TRAPF_PC(frame));
+			profclock(runs, usermode, TRAPF_PC(frame));
 			done = 1;
 		}
 	} else
@@ -842,6 +844,8 @@ cpu_new_callout(int cpu, sbintime_t bt, sbintime_t bt_opt)
 	CTR6(KTR_SPARE2, "new co at %d:    on %d at %d.%08x - %d.%08x",
 	    curcpu, cpu, (int)(bt_opt >> 32), (u_int)(bt_opt & 0xffffffff),
 	    (int)(bt >> 32), (u_int)(bt & 0xffffffff));
+
+	KASSERT(!CPU_ABSENT(cpu), ("Absent CPU %d", cpu));
 	state = DPCPU_ID_PTR(cpu, timerstate);
 	ET_HW_LOCK(state);
 
