@@ -31,7 +31,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tests/sys/kern/execve/good_aout.c 281464 2015-04-12 12:29:34Z ngie $
+ * $FreeBSD$
  */
 
 #include <stdio.h>

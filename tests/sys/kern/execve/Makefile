@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tests/sys/kern/execve/Makefile 299094 2016-05-04 23:20:53Z ngie $
+# $FreeBSD$
 
 TESTSDIR=	${TESTSBASE}/sys/kern/execve
 
@@ -10,6 +10,7 @@ ATF_TESTS_SH+=	execve_test
 
 PROGS+=		good_aout
 PROGS+=		execve_helper
+PROGS+=		execve_argc_helper
 
 LDFLAGS.goodaout+=	-static
 

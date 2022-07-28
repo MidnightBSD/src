@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/vt/keymaps/Makefile 342254 2018-12-19 22:48:27Z dab $
+# $FreeBSD$
 
 FILES=	INDEX.keymaps \
 	am.kbd \
@@ -48,8 +48,6 @@ FILES=	INDEX.keymaps \
 	it.kbd \
 	jp.capsctrl.kbd \
 	jp.kbd \
-	jp.pc98.iso.kbd \
-	jp.pc98.kbd \
 	kz.io.kbd \
 	kz.kst.kbd \
 	latinamerican.acc.kbd \
@@ -86,6 +84,7 @@ FILES=	INDEX.keymaps \
 	us.dvorakx.kbd \
 	us.emacs.kbd \
 	us.kbd \
+	us.macbook.kbd \
 	us.unix.kbd \
 
 FILESDIR= ${SHAREDIR}/vt/keymaps

@@ -3,7 +3,7 @@
 #
 # Version 1.0 - 1999-03-18
 #
-# $FreeBSD: stable/11/share/vt/keymaps/centraleuropean.kbd 270229 2014-08-20 17:00:47Z se $
+# $FreeBSD$
 #
 # This map uses a QWERTZ keyboard for its basic layout.
 # It adds a "third row" to the top of the PC keyboard. To
