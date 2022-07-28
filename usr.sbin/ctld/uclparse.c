@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/ctld/uclparse.c 332595 2018-04-16 16:14:05Z trasz $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>
@@ -39,6 +39,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ucl.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
 
 #include "ctld.h"
 
@@ -607,7 +609,70 @@ uclparse_portal_group(const char *name, const ucl_object_t *top)
 				    ucl_object_tostring_forced(tmp));
 			}
 		}
-	}	
+
+		if (!strcmp(key, "dscp")) {
+			if ((obj->type != UCL_STRING) && (obj->type != UCL_INT)) {
+				log_warnx("\"dscp\" property of portal group "
+				    "\"%s\" is not a string or integer", portal_group->pg_name);
+				return(1);
+			}
+			if (obj->type == UCL_INT)
+				portal_group->pg_dscp = ucl_object_toint(obj);
+			else {
+				key = ucl_object_tostring(obj);
+				if (strcmp(key, "0x") == 0)
+					portal_group->pg_dscp = strtol(key + 2, NULL, 16);
+				else if (strcmp(key, "be") || strcmp(key, "cs0"))
+					portal_group->pg_dscp = IPTOS_DSCP_CS0 >> 2;
+				else if (strcmp(key, "ef"))
+					portal_group->pg_dscp = IPTOS_DSCP_EF >> 2;
+				else if (strcmp(key, "cs0"))
+					portal_group->pg_dscp = IPTOS_DSCP_CS0 >> 2;
+				else if (strcmp(key, "cs1"))
+					portal_group->pg_dscp = IPTOS_DSCP_CS1 >> 2;
+				else if (strcmp(key, "cs2"))
+					portal_group->pg_dscp = IPTOS_DSCP_CS2 >> 2;
+				else if (strcmp(key, "cs3"))
+					portal_group->pg_dscp = IPTOS_DSCP_CS3 >> 2;
+				else if (strcmp(key, "cs4"))
+					portal_group->pg_dscp = IPTOS_DSCP_CS4 >> 2;
+				else if (strcmp(key, "cs5"))
+					portal_group->pg_dscp = IPTOS_DSCP_CS5 >> 2;
+				else if (strcmp(key, "cs6"))
+					portal_group->pg_dscp = IPTOS_DSCP_CS6 >> 2;
+				else if (strcmp(key, "cs7"))
+					portal_group->pg_dscp = IPTOS_DSCP_CS7 >> 2;
+				else if (strcmp(key, "af11"))
+					portal_group->pg_dscp = IPTOS_DSCP_AF11 >> 2;
+				else if (strcmp(key, "af12"))
+					portal_group->pg_dscp = IPTOS_DSCP_AF12 >> 2;
+				else if (strcmp(key, "af13"))
+					portal_group->pg_dscp = IPTOS_DSCP_AF13 >> 2;
+				else if (strcmp(key, "af21"))
+					portal_group->pg_dscp = IPTOS_DSCP_AF21 >> 2;
+				else if (strcmp(key, "af22"))
+					portal_group->pg_dscp = IPTOS_DSCP_AF22 >> 2;
+				else if (strcmp(key, "af23"))
+					portal_group->pg_dscp = IPTOS_DSCP_AF23 >> 2;
+				else if (strcmp(key, "af31"))
+					portal_group->pg_dscp = IPTOS_DSCP_AF31 >> 2;
+				else if (strcmp(key, "af32"))
+					portal_group->pg_dscp = IPTOS_DSCP_AF32 >> 2;
+				else if (strcmp(key, "af33"))
+					portal_group->pg_dscp = IPTOS_DSCP_AF33 >> 2;
+				else if (strcmp(key, "af41"))
+					portal_group->pg_dscp = IPTOS_DSCP_AF41 >> 2;
+				else if (strcmp(key, "af42"))
+					portal_group->pg_dscp = IPTOS_DSCP_AF42 >> 2;
+				else if (strcmp(key, "af43"))
+					portal_group->pg_dscp = IPTOS_DSCP_AF43 >> 2;
+				else {
+					log_warnx("\"dscp\" property value is not a supported textual value");
+					return (1);
+				}
+			}
+		}
+	}
 
 	return (0);
 }
@@ -758,6 +823,19 @@ uclparse_target(const char *name, const ucl_object_t *top)
 			struct pport *pp;
 			struct port *tp;
 			const char *value = ucl_object_tostring(obj);
+			int ret, i_pp, i_vp = 0;
+
+			ret = sscanf(value, "ioctl/%d/%d", &i_pp, &i_vp);
+			if (ret > 0) {
+				tp = port_new_ioctl(conf, target, i_pp, i_vp);
+				if (tp == NULL) {
+					log_warnx("can't create new ioctl port "
+					    "for target \"%s\"", target->t_name);
+					return (1);
+				}
+
+				return (0);
+			}
 
 			pp = pport_find(conf, value);
 			if (pp == NULL) {
@@ -901,6 +979,7 @@ int
 uclparse_conf(struct conf *newconf, const char *path)
 {
 	struct ucl_parser *parser;
+	ucl_object_t *top;
 	int error; 
 
 	conf = newconf;
@@ -909,10 +988,14 @@ uclparse_conf(struct conf *newconf, const char *path)
 	if (!ucl_parser_add_file(parser, path)) {
 		log_warn("unable to parse configuration file %s: %s", path,
 		    ucl_parser_get_error(parser));
+		ucl_parser_free(parser);
 		return (1);
 	}
 
-	error = uclparse_toplevel(ucl_parser_get_object(parser));
+	top = ucl_parser_get_object(parser);
+	error = uclparse_toplevel(top);
+	ucl_object_unref(top);
+	ucl_parser_free(parser);
 
 	return (error);
 }

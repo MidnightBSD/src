@@ -26,7 +26,7 @@
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
 --
--- $FreeBSD: stable/11/stand/lua/core.lua 355661 2019-12-12 18:51:32Z kevans $
+-- $FreeBSD$
 --
 
 local config = require("config")
@@ -238,14 +238,18 @@ function core.kernelList()
 	-- Automatically detect other bootable kernel directories using a
 	-- heuristic.  Any directory in /boot that contains an ordinary file
 	-- named "kernel" is considered eligible.
-	for file in lfs.dir("/boot") do
+	for file, ftype in lfs.dir("/boot") do
 		local fname = "/boot/" .. file
 
 		if file == "." or file == ".." then
 			goto continue
 		end
 
-		if lfs.attributes(fname, "mode") ~= "directory" then
+		if ftype then
+			if ftype ~= lfs.DT_DIR then
+				goto continue
+			end
+		elseif lfs.attributes(fname, "mode") ~= "directory" then
 			goto continue
 		end
 
@@ -327,6 +331,12 @@ function core.isSingleUserBoot()
 	return single_user ~= nil and single_user:lower() == "yes"
 end
 
+function core.isUEFIBoot()
+	local efiver = loader.getenv("efi-version")
+
+	return efiver ~= nil
+end
+
 function core.isZFSBoot()
 	local c = loader.getenv("currdev")
 
@@ -339,7 +349,10 @@ end
 function core.isSerialConsole()
 	local c = loader.getenv("console")
 	if c ~= nil then
-		if c:find("comconsole") ~= nil then
+		-- serial console is comconsole, but also userboot.
+		-- userboot is there, because we have no way to know
+		-- if the user terminal can draw unicode box chars or not.
+		if c:find("comconsole") ~= nil or c:find("userboot") ~= nil then
 			return true
 		end
 	end
@@ -402,6 +415,40 @@ function core.popFrontTable(tbl)
 	end
 
 	return first_value, new_tbl
+end
+
+function core.getConsoleName()
+	if loader.getenv("boot_multicons") ~= nil then
+		if loader.getenv("boot_serial") ~= nil then
+			return "Dual (Serial primary)"
+		else
+			return "Dual (Video primary)"
+		end
+	else
+		if loader.getenv("boot_serial") ~= nil then
+			return "Serial"
+		else
+			return "Video"
+		end
+	end
+end
+
+function core.nextConsoleChoice()
+	if loader.getenv("boot_multicons") ~= nil then
+		if loader.getenv("boot_serial") ~= nil then
+			loader.unsetenv("boot_serial")
+		else
+			loader.unsetenv("boot_multicons")
+			loader.setenv("boot_serial", "YES")
+		end
+	else
+		if loader.getenv("boot_serial") ~= nil then
+			loader.unsetenv("boot_serial")
+		else
+			loader.setenv("boot_multicons", "YES")
+			loader.setenv("boot_serial", "YES")
+		end
+	end
 end
 
 recordDefaults()

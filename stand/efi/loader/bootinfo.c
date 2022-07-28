@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/efi/loader/bootinfo.c 346483 2019-04-21 04:35:49Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 #include <string.h>
@@ -61,8 +61,6 @@ __FBSDID("$FreeBSD: stable/11/stand/efi/loader/bootinfo.c 346483 2019-04-21 04:3
 #endif
 
 int bi_load(char *args, vm_offset_t *modulep, vm_offset_t *kernendp);
-
-extern EFI_SYSTEM_TABLE	*ST;
 
 static int
 bi_getboothowto(char *kargs)

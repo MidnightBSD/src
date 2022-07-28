@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/include/efigop.h 293724 2016-01-12 02:17:39Z smh $ */
+/* $FreeBSD$ */
 /*++
 
 Copyright (c)  1999 - 2002 Intel Corporation. All rights reserved

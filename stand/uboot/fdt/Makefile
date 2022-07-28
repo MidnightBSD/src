@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/uboot/fdt/Makefile 332131 2018-04-06 19:01:08Z kevans $
+# $FreeBSD$
 
 .include <bsd.init.mk>
 

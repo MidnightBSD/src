@@ -29,14 +29,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/efi/boot1/ufs_module.c 334444 2018-05-31 20:01:58Z gjb $
+ * $FreeBSD$
  */
 
 #include <stdarg.h>
 #include <stdbool.h>
 #include <sys/cdefs.h>
 #include <sys/param.h>
-#include <sys/disklabel.h>
+#include <sys/disk/bsd.h>
 #include <efi.h>
 
 #include "boot_module.h"
@@ -73,12 +73,12 @@ dskread(void *buf, uint64_t lba, int nblk)
 
 #include "ufsread.c"
 
-static struct dmadat __dmadat;
+static struct dmadat __dmadat __aligned(512);
+static char ufs_buffer[BSD_LABEL_BUFFER] __aligned(512);
 
 static int
 init_dev(dev_info_t* dev)
 {
-	char buffer[BSD_LABEL_BUFFER];
 	struct disklabel *dl;
 	uint64_t bs;
 	int ok;
@@ -109,15 +109,15 @@ init_dev(dev_info_t* dev)
 	 * will retry fsread(0) only if there's a label found with a non-zero
 	 * offset.
 	 */
-	if (dskread(buffer, 0, BSD_LABEL_BUFFER / DEV_BSIZE) != 0)
+	if (dskread(ufs_buffer, 0, BSD_LABEL_BUFFER / DEV_BSIZE) != 0)
 		return (-1);
 	dl = NULL;
 	bs = devinfo->dev->Media->BlockSize;
 	if (bs != 0 && bs <= BSD_LABEL_BUFFER / 2)
-		dl = (struct disklabel *)&buffer[bs];
-	if (dl == NULL || dl->d_magic != DISKMAGIC || dl->d_magic2 != DISKMAGIC)
-		dl = (struct disklabel *)&buffer[BSD_LABEL_OFFSET];
-	if (dl->d_magic != DISKMAGIC || dl->d_magic2 != DISKMAGIC ||
+		dl = (struct disklabel *)&ufs_buffer[bs];
+	if (dl == NULL || dl->d_magic != BSD_MAGIC || dl->d_magic2 != BSD_MAGIC)
+		dl = (struct disklabel *)&ufs_buffer[BSD_LABEL_OFFSET];
+	if (dl->d_magic != BSD_MAGIC || dl->d_magic2 != BSD_MAGIC ||
 	    dl->d_partitions[0].p_offset == 0)
 		return (-1);
 	devinfo->partoff = dl->d_partitions[0].p_offset;
@@ -140,7 +140,6 @@ static EFI_STATUS
 load(const char *filepath, dev_info_t *dev, void **bufp, size_t *bufsize)
 {
 	ufs_ino_t ino;
-	EFI_STATUS status;
 	size_t size;
 	ssize_t read;
 	void *buf;
@@ -148,7 +147,7 @@ load(const char *filepath, dev_info_t *dev, void **bufp, size_t *bufsize)
 #ifdef EFI_DEBUG
 	{
 		CHAR16 *text = efi_devpath_name(dev->devpath);
-		DPRINTF("Loading '%s' from %S\n", filepath, text);
+		DPRINTF("UFS Loading '%s' from %S\n", filepath, text);
 		efi_free_devpath_name(text);
 	}
 #endif
@@ -167,18 +166,18 @@ load(const char *filepath, dev_info_t *dev, void **bufp, size_t *bufsize)
 		return (EFI_INVALID_PARAMETER);
 	}
 
-	if ((status = BS->AllocatePool(EfiLoaderData, size, &buf)) !=
-	    EFI_SUCCESS) {
-		printf("Failed to allocate read buffer %zu for '%s' (%lu)\n",
-		    size, filepath, EFI_ERROR_CODE(status));
-		return (status);
+	buf = malloc(size);
+	if (buf == NULL) {
+		printf("Failed to allocate read buffer %zu for '%s'\n",
+		    size, filepath);
+		return (EFI_OUT_OF_RESOURCES);
 	}
 
 	read = fsread(ino, buf, size);
 	if ((size_t)read != size) {
 		printf("Failed to read '%s' (%zd != %zu)\n", filepath, read,
 		    size);
-		(void)BS->FreePool(buf);
+		free(buf);
 		return (EFI_INVALID_PARAMETER);
 	}
 

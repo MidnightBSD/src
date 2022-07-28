@@ -26,6 +26,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #ifndef REGRESSION
 #include "stand.h"
@@ -339,6 +340,9 @@ bzf_seek(struct open_file *f, off_t offset, int where)
 	    target - bzf->bzf_bzstream.total_out_lo32), NULL);
 	if (errno)
 	    return(-1);
+	/* Break out of loop if end of file has been reached. */
+	if (bzf->bzf_endseen)
+	    break;
     }
     /* This is where we are (be honest if we overshot) */
     return(bzf->bzf_bzstream.total_out_lo32);
@@ -359,7 +363,7 @@ bzf_stat(struct open_file *f, struct stat *sb)
 void
 bz_internal_error(int errorcode)
 {
-    panic("bzipfs: critical error %d in bzip2 library occured", errorcode);
+    panic("bzipfs: critical error %d in bzip2 library occurred", errorcode);
 }
 
 #ifdef REGRESSION

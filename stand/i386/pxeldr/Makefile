@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/i386/pxeldr/Makefile 344413 2019-02-21 03:18:12Z kevans $
+# $FreeBSD$
 
 .include <bsd.init.mk>
 
@@ -31,7 +31,7 @@ CLEANFILES+= ${BOOT}.tmp
 
 ${BOOT}: ${LDR} ${LOADER}
 	cat ${LDR} ${LOADER} > ${.TARGET}.tmp
-	${DD} if=${.TARGET}.tmp of=${.TARGET} obs=2k conv=osync
+	${DD} if=${.TARGET}.tmp of=${.TARGET} bs=2048 conv=sync
 	rm ${.TARGET}.tmp
 
 LDFLAGS+=${LDFLAGS_BIN}
@@ -43,6 +43,3 @@ ${LOADER}: ${LOADERBIN} ${BTXLDR} ${BTXKERN}
 	    -b ${BTXKERN} ${LOADERBIN}
 
 .include <bsd.prog.mk>
-
-# XXX: clang integrated-as doesn't grok .codeNN directives yet
-CFLAGS.pxeldr.S=	${CLANG_NO_IAS}

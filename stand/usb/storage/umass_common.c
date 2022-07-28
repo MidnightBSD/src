@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/usb/storage/umass_common.c 291401 2015-11-27 18:16:10Z zbb $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2014 Hans Petter Selasky <hselasky@FreeBSD.org>
  * All rights reserved.

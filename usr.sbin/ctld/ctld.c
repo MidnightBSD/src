@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/ctld/ctld.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -304,7 +304,7 @@ auth_name_new(struct auth_group *ag, const char *name)
 	if (an == NULL)
 		log_err(1, "calloc");
 	an->an_auth_group = ag;
-	an->an_initator_name = checked_strdup(name);
+	an->an_initiator_name = checked_strdup(name);
 	TAILQ_INSERT_TAIL(&ag->ag_names, an, an_next);
 	return (an);
 }
@@ -314,7 +314,7 @@ auth_name_delete(struct auth_name *an)
 {
 	TAILQ_REMOVE(&an->an_auth_group->ag_names, an, an_next);
 
-	free(an->an_initator_name);
+	free(an->an_initiator_name);
 	free(an);
 }
 
@@ -332,7 +332,7 @@ auth_name_find(const struct auth_group *ag, const char *name)
 	const struct auth_name *auth_name;
 
 	TAILQ_FOREACH(auth_name, &ag->ag_names, an_next) {
-		if (strcmp(auth_name->an_initator_name, name) == 0)
+		if (strcmp(auth_name->an_initiator_name, name) == 0)
 			return (auth_name);
 	}
 
@@ -362,7 +362,7 @@ auth_portal_new(struct auth_group *ag, const char *portal)
 	if (ap == NULL)
 		log_err(1, "calloc");
 	ap->ap_auth_group = ag;
-	ap->ap_initator_portal = checked_strdup(portal);
+	ap->ap_initiator_portal = checked_strdup(portal);
 	mask = str = checked_strdup(portal);
 	net = strsep(&mask, "/");
 	if (net[0] == '[')
@@ -414,7 +414,7 @@ auth_portal_delete(struct auth_portal *ap)
 {
 	TAILQ_REMOVE(&ap->ap_auth_group->ag_portals, ap, ap_next);
 
-	free(ap->ap_initator_portal);
+	free(ap->ap_initiator_portal);
 	free(ap);
 }
 
@@ -624,6 +624,7 @@ portal_group_new(struct conf *conf, const char *name)
 	TAILQ_INIT(&pg->pg_ports);
 	pg->pg_conf = conf;
 	pg->pg_tag = 0;		/* Assigned later in conf_apply(). */
+	pg->pg_dscp = -1;
 	TAILQ_INSERT_TAIL(&conf->conf_portal_groups, pg, pg_next);
 
 	return (pg);
@@ -1234,11 +1235,57 @@ port_new(struct conf *conf, struct target *target, struct portal_group *pg)
 		log_err(1, "calloc");
 	port->p_conf = conf;
 	port->p_name = name;
+	port->p_ioctl_port = 0;
 	TAILQ_INSERT_TAIL(&conf->conf_ports, port, p_next);
 	TAILQ_INSERT_TAIL(&target->t_ports, port, p_ts);
 	port->p_target = target;
 	TAILQ_INSERT_TAIL(&pg->pg_ports, port, p_pgs);
 	port->p_portal_group = pg;
+	return (port);
+}
+
+struct port *
+port_new_ioctl(struct conf *conf, struct target *target, int pp, int vp)
+{
+	struct pport *pport;
+	struct port *port;
+	char *pname;
+	char *name;
+	int ret;
+
+	ret = asprintf(&pname, "ioctl/%d/%d", pp, vp);
+	if (ret <= 0) {
+		log_err(1, "asprintf");
+		return (NULL);
+	}
+
+	pport = pport_find(conf, pname);
+	if (pport != NULL) {
+		free(pname);
+		return (port_new_pp(conf, target, pport));
+	}
+
+	ret = asprintf(&name, "%s-%s", pname, target->t_name);
+	free(pname);
+
+	if (ret <= 0)
+		log_err(1, "asprintf");
+	if (port_find(conf, name) != NULL) {
+		log_warnx("duplicate port \"%s\"", name);
+		free(name);
+		return (NULL);
+	}
+	port = calloc(1, sizeof(*port));
+	if (port == NULL)
+		log_err(1, "calloc");
+	port->p_conf = conf;
+	port->p_name = name;
+	port->p_ioctl_port = 1;
+	port->p_ioctl_pp = pp;
+	port->p_ioctl_vp = vp;
+	TAILQ_INSERT_TAIL(&conf->conf_ports, port, p_next);
+	TAILQ_INSERT_TAIL(&target->t_ports, port, p_ts);
+	port->p_target = target;
 	return (port);
 }
 
@@ -1595,8 +1642,10 @@ connection_new(struct portal *portal, int fd, const char *host,
 	/*
 	 * Default values, from RFC 3720, section 12.
 	 */
-	conn->conn_max_data_segment_length = 8192;
+	conn->conn_max_recv_data_segment_length = 8192;
+	conn->conn_max_send_data_segment_length = 8192;
 	conn->conn_max_burst_length = 262144;
+	conn->conn_first_burst_length = 65536;
 	conn->conn_immediate_data = true;
 
 	return (conn);
@@ -1624,10 +1673,10 @@ conf_print(struct conf *conf)
 			    auth->a_mutual_user, auth->a_mutual_secret);
 		TAILQ_FOREACH(auth_name, &ag->ag_names, an_next)
 			fprintf(stderr, "\t initiator-name %s\n",
-			    auth_name->an_initator_name);
-		TAILQ_FOREACH(auth_portal, &ag->ag_portals, an_next)
+			    auth_name->an_initiator_name);
+		TAILQ_FOREACH(auth_portal, &ag->ag_portals, ap_next)
 			fprintf(stderr, "\t initiator-portal %s\n",
-			    auth_portal->an_initator_portal);
+			    auth_portal->ap_initiator_portal);
 		fprintf(stderr, "}\n");
 	}
 	TAILQ_FOREACH(pg, &conf->conf_portal_groups, pg_next) {
@@ -1641,7 +1690,7 @@ conf_print(struct conf *conf)
 		fprintf(stderr, "\t\tpath %s\n", lun->l_path);
 		TAILQ_FOREACH(o, &lun->l_options, o_next)
 			fprintf(stderr, "\t\toption %s %s\n",
-			    lo->o_name, lo->o_value);
+			    o->o_name, o->o_value);
 		fprintf(stderr, "\t}\n");
 	}
 	TAILQ_FOREACH(targ, &conf->conf_targets, t_next) {
@@ -2131,6 +2180,32 @@ conf_apply(struct conf *oldconf, struct conf *newconf)
 				newp->p_socket = 0;
 				cumulated_error++;
 				continue;
+			}
+			if (newpg->pg_dscp != -1) {
+				struct sockaddr sa;
+				int len = sizeof(sa);
+				getsockname(newp->p_socket, &sa, &len);
+				/*
+				 * Only allow the 6-bit DSCP
+				 * field to be modified
+				 */
+				int tos = newpg->pg_dscp << 2;
+				if (sa.sa_family == AF_INET) {
+					if (setsockopt(newp->p_socket,
+					    IPPROTO_IP, IP_TOS,
+					    &tos, sizeof(tos)) == -1)
+						log_warn("setsockopt(IP_TOS) "
+						    "failed for %s",
+						    newp->p_listen);
+				} else
+				if (sa.sa_family == AF_INET6) {
+					if (setsockopt(newp->p_socket,
+					    IPPROTO_IPV6, IPV6_TCLASS,
+					    &tos, sizeof(tos)) == -1)
+						log_warn("setsockopt(IPV6_TCLASS) "
+						    "failed for %s",
+						    newp->p_listen);
+				}
 			}
 			error = bind(newp->p_socket, newp->p_ai->ai_addr,
 			    newp->p_ai->ai_addrlen);

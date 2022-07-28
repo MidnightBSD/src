@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/kshim/sysinit.h 269541 2014-08-04 23:00:13Z brooks $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2013 Hans Petter Selasky. All rights reserved.
  *

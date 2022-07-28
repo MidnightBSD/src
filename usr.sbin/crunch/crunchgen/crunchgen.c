@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1994 University of Maryland
  * All Rights Reserved.
@@ -33,17 +32,20 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/crunch/crunchgen/crunchgen.c 246346 2013-02-05 02:57:59Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
 
 #include <ctype.h>
 #include <err.h>
+#include <fcntl.h>
 #include <paths.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sysexits.h>
 #include <unistd.h>
 
 #define CRUNCH_VERSION	"0.2"
@@ -83,26 +85,28 @@ typedef struct prog {
 
 /* global state */
 
-strlst_t *buildopts = NULL;
-strlst_t *srcdirs   = NULL;
-strlst_t *libs      = NULL;
-strlst_t *libs_so   = NULL;
-prog_t   *progs     = NULL;
+static strlst_t *buildopts = NULL;
+static strlst_t *srcdirs   = NULL;
+static strlst_t *libs      = NULL;
+static strlst_t *libs_so   = NULL;
+static prog_t   *progs     = NULL;
 
-char confname[MAXPATHLEN], infilename[MAXPATHLEN];
-char outmkname[MAXPATHLEN], outcfname[MAXPATHLEN], execfname[MAXPATHLEN];
-char tempfname[MAXPATHLEN], cachename[MAXPATHLEN], curfilename[MAXPATHLEN];
-char outhdrname[MAXPATHLEN] ;	/* user-supplied header for *.mk */
-char *objprefix;		/* where are the objects ? */
-char *path_make;
-int linenum = -1;
-int goterror = 0;
+static char confname[MAXPATHLEN], infilename[MAXPATHLEN];
+static char outmkname[MAXPATHLEN], outcfname[MAXPATHLEN], execfname[MAXPATHLEN];
+static char tempfname[MAXPATHLEN], cachename[MAXPATHLEN];
+static char curfilename[MAXPATHLEN];
+static bool tempfname_initialized = false;
+static char outhdrname[MAXPATHLEN] ;	/* user-supplied header for *.mk */
+static const char *objprefix;		/* where are the objects ? */
+static const char *path_make;
+static int linenum = -1;
+static int goterror = 0;
 
-int verbose, readcache;		/* options */
-int reading_cache;
-int makeobj = 0;		/* add 'make obj' rules to the makefile */
+static int verbose, readcache;	/* options */
+static int reading_cache;
+static int makeobj = 0;		/* add 'make obj' rules to the makefile */
 
-int list_mode;
+static int list_mode;
 
 /* general library routines */
 
@@ -120,7 +124,7 @@ void usage(void);
 void parse_conf_file(void);
 void gen_outputs(void);
 
-extern char *crunched_skel[];
+extern const char *crunched_skel[];
 
 
 int
@@ -217,6 +221,7 @@ main(int argc, char **argv)
 	snprintf(cachename, sizeof(cachename), "%s.cache", confname);
 	snprintf(tempfname, sizeof(tempfname), "%s/crunchgen_%sXXXXXX",
 	getenv("TMPDIR") ? getenv("TMPDIR") : _PATH_TMP, confname);
+	tempfname_initialized = false;
 
 	parse_conf_file();
 	if (list_mode)
@@ -649,8 +654,7 @@ fillin_program(prog_t *p)
 
 	/* Determine the actual srcdir (maybe symlinked). */
 	if (p->srcdir) {
-		snprintf(line, MAXLINELEN, "cd %s && echo -n `/bin/pwd`",
-		    p->srcdir);
+		snprintf(line, MAXLINELEN, "cd %s && pwd -P", p->srcdir);
 		f = popen(line,"r");
 		if (!f)
 			errx(1, "Can't execute: %s\n", line);
@@ -663,6 +667,8 @@ fillin_program(prog_t *p)
 		if (!*path)
 			errx(1, "Can't perform pwd on: %s\n", p->srcdir);
 
+		/* Chop off trailing newline. */
+		path[strlen(path) - 1] = '\0';
 		p->realsrcdir = strdup(path);
 	}
 
@@ -671,8 +677,13 @@ fillin_program(prog_t *p)
 	* an object directory already exists.
 	*/
 	if (!makeobj && !p->objdir && p->srcdir) {
+		char *auto_obj;
+
+		auto_obj = NULL;
 		snprintf(line, sizeof line, "%s/%s", objprefix, p->realsrcdir);
-		if (is_dir(line)) {
+		if (is_dir(line) ||
+		    ((auto_obj = getenv("MK_AUTO_OBJ")) != NULL &&
+		    strcmp(auto_obj, "yes") == 0)) {
 			if ((p->objdir = strdup(line)) == NULL)
 			out_of_memory();
 		} else
@@ -711,20 +722,32 @@ fillin_program_objs(prog_t *p, char *path)
 	char *obj, *cp;
 	int fd, rc;
 	FILE *f;
-	char *objvar="OBJS";
+	const char *objvar="OBJS";
 	strlst_t *s;
 	char line[MAXLINELEN];
 
 	/* discover the objs from the srcdir Makefile */
 
-	if ((fd = mkstemp(tempfname)) == -1) {
-		perror(tempfname);
-		exit(1);
+	/*
+	 * We reuse the same temporary file name for multiple objects. However,
+	 * some libc implementations (such as glibc) return EINVAL if there
+	 * are no XXXXX characters in the template. This happens after the
+	 * first call to mkstemp since the argument is modified in-place.
+	 * To avoid this error we use open() instead of mkstemp() after the
+	 * call to mkstemp().
+	 */
+	if (tempfname_initialized) {
+		if ((fd = open(tempfname, O_CREAT | O_EXCL | O_RDWR, 0600)) == -1) {
+			err(EX_OSERR, "open(%s)", tempfname);
+		}
+	} else if ((fd = mkstemp(tempfname)) == -1) {
+		err(EX_OSERR, "mkstemp(%s)", tempfname);
 	}
+	tempfname_initialized = true;
 	if ((f = fdopen(fd, "w")) == NULL) {
-		warn("%s", tempfname);
+		warn("fdopen(%s)", tempfname);
 		goterror = 1;
-		return;
+		goto out;
 	}
 	if (p->objvar)
 		objvar = p->objvar;
@@ -759,14 +782,14 @@ fillin_program_objs(prog_t *p, char *path)
 	if ((f = popen(line, "r")) == NULL) {
 		warn("submake pipe");
 		goterror = 1;
-		return;
+		goto out;
 	}
 
 	while(fgets(line, MAXLINELEN, f)) {
 		if (strncmp(line, "OBJS= ", 6)) {
 			warnx("make error: %s", line);
 			goterror = 1;
-			continue;
+			goto out;
 		}
 
 		cp = line + 6;
@@ -789,7 +812,7 @@ fillin_program_objs(prog_t *p, char *path)
 		warnx("make error: make returned %d", rc);
 		goterror = 1;
 	}
-
+out:
 	unlink(tempfname);
 }
 
@@ -890,7 +913,7 @@ gen_output_makefile(void)
 void
 gen_output_cfile(void)
 {
-	char **cp;
+	const char **cp;
 	FILE *outcf;
 	prog_t *p;
 	strlst_t *s;
@@ -914,7 +937,9 @@ gen_output_cfile(void)
 		fprintf(outcf, "%s\n", *cp);
 
 	for (p = progs; p != NULL; p = p->next)
-		fprintf(outcf, "extern int _crunched_%s_stub();\n", p->ident);
+		fprintf(outcf,
+		    "extern crunched_stub_t _crunched_%s_stub;\n",
+		    p->ident);
 
 	fprintf(outcf, "\nstruct stub entry_points[] = {\n");
 	for (p = progs; p != NULL; p = p->next) {
@@ -1028,7 +1053,6 @@ top_makefile_rules(FILE *outmk)
 	fprintf(outmk, "\t$(CC) -static -o %s %s.o $(CRUNCHED_OBJS) $(LIBS)\n",
 	    execfname, execfname);
 	fprintf(outmk, ".endif\n");
-	fprintf(outmk, "\tstrip %s\n", execfname);
 	fprintf(outmk, "realclean: clean subclean\n");
 	fprintf(outmk, "clean:\n\trm -f %s *.lo *.o *_stub.c\n", execfname);
 	fprintf(outmk, "subclean: $(SUBCLEAN_TARGETS)\n");
@@ -1059,6 +1083,7 @@ prog_makefile_rules(FILE *outmk, prog_t *p)
 		}
 		fprintf(outmk, "\n");
 	}
+	fprintf(outmk, "$(%s_OBJPATHS): .NOMETA\n", p->ident);
 
 	if (p->srcdir && p->objs) {
 		fprintf(outmk, "%s_SRCDIR=%s\n", p->ident, p->srcdir);
@@ -1101,16 +1126,18 @@ prog_makefile_rules(FILE *outmk, prog_t *p)
 
 	fprintf(outmk, "%s_stub.c:\n", p->name);
 	fprintf(outmk, "\techo \""
+	    "extern int main(int argc, char **argv, char **envp); "
+	    "int _crunched_%s_stub(int argc, char **argv, char **envp);"
 	    "int _crunched_%s_stub(int argc, char **argv, char **envp)"
 	    "{return main(argc,argv,envp);}\" >%s_stub.c\n",
-	    p->ident, p->name);
+	    p->ident, p->ident, p->name);
 	fprintf(outmk, "%s.lo: %s_stub.o $(%s_OBJPATHS)",
 	    p->name, p->name, p->ident);
 	if (p->libs)
 		fprintf(outmk, " $(%s_LIBS)", p->ident);
 
 	fprintf(outmk, "\n");
-	fprintf(outmk, "\t$(LD) -dc -r -o %s.lo %s_stub.o $(%s_OBJPATHS)",
+	fprintf(outmk, "\t$(CC) -nostdlib -r -o %s.lo %s_stub.o $(%s_OBJPATHS)",
 	    p->name, p->name, p->ident);
 	if (p->libs)
 		fprintf(outmk, " $(%s_LIBS)", p->ident);

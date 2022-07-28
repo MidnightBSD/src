@@ -3,6 +3,8 @@
  * Copyright (c) 2006 Marcel Moolenaar
  * All rights reserved.
  *
+ * Copyright (c) 2016-2019 Netflix, Inc. written by M. Warner Losh
+ * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/efi/loader/main.c 358208 2020-02-21 04:42:16Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 
@@ -34,23 +36,26 @@ __FBSDID("$FreeBSD: stable/11/stand/efi/loader/main.c 358208 2020-02-21 04:42:16
 #include <sys/param.h>
 #include <sys/reboot.h>
 #include <sys/boot.h>
+#include <paths.h>
+#include <netinet/in.h>
+#include <netinet/in_systm.h>
 #include <stdint.h>
 #include <string.h>
 #include <setjmp.h>
 #include <disk.h>
+#include <dev_net.h>
+#include <net.h>
 
 #include <efi.h>
 #include <efilib.h>
+#include <efichar.h>
 
 #include <uuid.h>
 
 #include <bootstrap.h>
 #include <smbios.h>
 
-#ifdef EFI_ZFS_BOOT
-#include <libzfs.h>
 #include "efizfs.h"
-#endif
 
 #include "loader_efi.h"
 
@@ -82,6 +87,16 @@ EFI_GUID inputid = SIMPLE_TEXT_INPUT_PROTOCOL;
  * well.
  */
 static int fail_timeout = 5;
+
+/*
+ * Current boot variable
+ */
+UINT16 boot_current;
+
+/*
+ * Image that we booted from.
+ */
+EFI_LOADED_IMAGE *boot_img;
 
 static bool
 has_keyboard(void)
@@ -117,7 +132,7 @@ has_keyboard(void)
 	 */
 	hin_end = &hin[sz / sizeof(*hin)];
 	for (walker = hin; walker < hin_end; walker++) {
-		status = BS->HandleProtocol(*walker, &devid, (VOID **)&path);
+		status = OpenProtocolByHandle(*walker, &devid, (void **)&path);
 		if (EFI_ERROR(status))
 			continue;
 
@@ -218,12 +233,12 @@ set_currdev_pdinfo(pdinfo_t *dp)
 		currdev.dd.d_dev = dp->pd_devsw;
 		if (dp->pd_parent == NULL) {
 			currdev.dd.d_unit = dp->pd_unit;
-			currdev.d_slice = -1;
-			currdev.d_partition = -1;
+			currdev.d_slice = D_SLICENONE;
+			currdev.d_partition = D_PARTNONE;
 		} else {
 			currdev.dd.d_unit = dp->pd_parent->pd_unit;
 			currdev.d_slice = dp->pd_unit;
-			currdev.d_partition = 255;	/* Assumes GPT */
+			currdev.d_partition = D_PARTISGPT; /* XXX Assumes GPT */
 		}
 		set_currdev_devdesc((struct devdesc *)&currdev);
 	} else {
@@ -236,8 +251,11 @@ sanity_check_currdev(void)
 {
 	struct stat st;
 
-	return (stat("/boot/defaults/loader.conf", &st) == 0 ||
-	    stat("/boot/kernel/kernel", &st) == 0);
+	return (stat(PATH_DEFAULTS_LOADER_CONF, &st) == 0 ||
+#ifdef PATH_BOOTABLE_TOKEN
+	    stat(PATH_BOOTABLE_TOKEN, &st) == 0 || /* non-standard layout */
+#endif
+	    stat(PATH_KERNEL, &st) == 0);
 }
 
 #ifdef EFI_ZFS_BOOT
@@ -246,6 +264,8 @@ probe_zfs_currdev(uint64_t guid)
 {
 	char *devname;
 	struct zfs_devdesc currdev;
+	char *buf = NULL;
+	bool rv;
 
 	currdev.dd.d_dev = &zfs_dev;
 	currdev.dd.d_unit = 0;
@@ -255,7 +275,33 @@ probe_zfs_currdev(uint64_t guid)
 	devname = efi_fmtdev(&currdev);
 	init_zfs_bootenv(devname);
 
-	return (sanity_check_currdev());
+	rv = sanity_check_currdev();
+	if (rv) {
+		buf = malloc(VDEV_PAD_SIZE);
+		if (buf != NULL) {
+			if (zfs_nextboot(&currdev, buf, VDEV_PAD_SIZE) == 0) {
+				printf("zfs nextboot: %s\n", buf);
+				set_currdev(buf);
+			}
+			free(buf);
+		}
+	}
+	return (rv);
+}
+#endif
+
+#ifdef MD_IMAGE_SIZE
+static bool
+probe_md_currdev(void)
+{
+	extern struct devsw md_dev;
+	bool rv;
+
+	set_currdev_devsw(&md_dev, 0);
+	rv = sanity_check_currdev();
+	if (!rv)
+		printf("MD not present\n");
+	return (rv);
 }
 #endif
 
@@ -283,8 +329,177 @@ try_as_currdev(pdinfo_t *hd, pdinfo_t *pp)
 	return (sanity_check_currdev());
 }
 
+/*
+ * Sometimes we get filenames that are all upper case
+ * and/or have backslashes in them. Filter all this out
+ * if it looks like we need to do so.
+ */
+static void
+fix_dosisms(char *p)
+{
+	while (*p) {
+		if (isupper(*p))
+			*p = tolower(*p);
+		else if (*p == '\\')
+			*p = '/';
+		p++;
+	}
+}
+
+#define SIZE(dp, edp) (size_t)((intptr_t)(void *)edp - (intptr_t)(void *)dp)
+
+enum { BOOT_INFO_OK = 0, BAD_CHOICE = 1, NOT_SPECIFIC = 2  };
 static int
-find_currdev(EFI_LOADED_IMAGE *img)
+match_boot_info(char *boot_info, size_t bisz)
+{
+	uint32_t attr;
+	uint16_t fplen;
+	size_t len;
+	char *walker, *ep;
+	EFI_DEVICE_PATH *dp, *edp, *first_dp, *last_dp;
+	pdinfo_t *pp;
+	CHAR16 *descr;
+	char *kernel = NULL;
+	FILEPATH_DEVICE_PATH  *fp;
+	struct stat st;
+	CHAR16 *text;
+
+	/*
+	 * FreeBSD encodes its boot loading path into the boot loader
+	 * BootXXXX variable. We look for the last one in the path
+	 * and use that to load the kernel. However, if we only find
+	 * one DEVICE_PATH, then there's nothing specific and we should
+	 * fall back.
+	 *
+	 * In an ideal world, we'd look at the image handle we were
+	 * passed, match up with the loader we are and then return the
+	 * next one in the path. This would be most flexible and cover
+	 * many chain booting scenarios where you need to use this
+	 * boot loader to get to the next boot loader. However, that
+	 * doesn't work. We rarely have the path to the image booted
+	 * (just the device) so we can't count on that. So, we do the
+	 * next best thing: we look through the device path(s) passed
+	 * in the BootXXXX variable. If there's only one, we return
+	 * NOT_SPECIFIC. Otherwise, we look at the last one and try to
+	 * load that. If we can, we return BOOT_INFO_OK. Otherwise we
+	 * return BAD_CHOICE for the caller to sort out.
+	 */
+	if (bisz < sizeof(attr) + sizeof(fplen) + sizeof(CHAR16))
+		return NOT_SPECIFIC;
+	walker = boot_info;
+	ep = walker + bisz;
+	memcpy(&attr, walker, sizeof(attr));
+	walker += sizeof(attr);
+	memcpy(&fplen, walker, sizeof(fplen));
+	walker += sizeof(fplen);
+	descr = (CHAR16 *)(intptr_t)walker;
+	len = ucs2len(descr);
+	walker += (len + 1) * sizeof(CHAR16);
+	last_dp = first_dp = dp = (EFI_DEVICE_PATH *)walker;
+	edp = (EFI_DEVICE_PATH *)(walker + fplen);
+	if ((char *)edp > ep)
+		return NOT_SPECIFIC;
+	while (dp < edp && SIZE(dp, edp) > sizeof(EFI_DEVICE_PATH)) {
+		text = efi_devpath_name(dp);
+		if (text != NULL) {
+			printf("   BootInfo Path: %S\n", text);
+			efi_free_devpath_name(text);
+		}
+		last_dp = dp;
+		dp = (EFI_DEVICE_PATH *)((char *)dp + efi_devpath_length(dp));
+	}
+
+	/*
+	 * If there's only one item in the list, then nothing was
+	 * specified. Or if the last path doesn't have a media
+	 * path in it. Those show up as various VenHw() nodes
+	 * which are basically opaque to us. Don't count those
+	 * as something specifc.
+	 */
+	if (last_dp == first_dp) {
+		printf("Ignoring Boot%04x: Only one DP found\n", boot_current);
+		return NOT_SPECIFIC;
+	}
+	if (efi_devpath_to_media_path(last_dp) == NULL) {
+		printf("Ignoring Boot%04x: No Media Path\n", boot_current);
+		return NOT_SPECIFIC;
+	}
+
+	/*
+	 * OK. At this point we either have a good path or a bad one.
+	 * Let's check.
+	 */
+	pp = efiblk_get_pdinfo_by_device_path(last_dp);
+	if (pp == NULL) {
+		printf("Ignoring Boot%04x: Device Path not found\n", boot_current);
+		return BAD_CHOICE;
+	}
+	set_currdev_pdinfo(pp);
+	if (!sanity_check_currdev()) {
+		printf("Ignoring Boot%04x: sanity check failed\n", boot_current);
+		return BAD_CHOICE;
+	}
+
+	/*
+	 * OK. We've found a device that matches, next we need to check the last
+	 * component of the path. If it's a file, then we set the default kernel
+	 * to that. Otherwise, just use this as the default root.
+	 *
+	 * Reminder: we're running very early, before we've parsed the defaults
+	 * file, so we may need to have a hack override.
+	 */
+	dp = efi_devpath_last_node(last_dp);
+	if (DevicePathType(dp) !=  MEDIA_DEVICE_PATH ||
+	    DevicePathSubType(dp) != MEDIA_FILEPATH_DP) {
+		printf("Using Boot%04x for root partition\n", boot_current);
+		return (BOOT_INFO_OK);		/* use currdir, default kernel */
+	}
+	fp = (FILEPATH_DEVICE_PATH *)dp;
+	ucs2_to_utf8(fp->PathName, &kernel);
+	if (kernel == NULL) {
+		printf("Not using Boot%04x: can't decode kernel\n", boot_current);
+		return (BAD_CHOICE);
+	}
+	if (*kernel == '\\' || isupper(*kernel))
+		fix_dosisms(kernel);
+	if (stat(kernel, &st) != 0) {
+		free(kernel);
+		printf("Not using Boot%04x: can't find %s\n", boot_current,
+		    kernel);
+		return (BAD_CHOICE);
+	}
+	setenv("kernel", kernel, 1);
+	free(kernel);
+	text = efi_devpath_name(last_dp);
+	if (text) {
+		printf("Using Boot%04x %S + %s\n", boot_current, text,
+		    kernel);
+		efi_free_devpath_name(text);
+	}
+
+	return (BOOT_INFO_OK);
+}
+
+/*
+ * Look at the passed-in boot_info, if any. If we find it then we need
+ * to see if we can find ourselves in the boot chain. If we can, and
+ * there's another specified thing to boot next, assume that the file
+ * is loaded from / and use that for the root filesystem. If can't
+ * find the specified thing, we must fail the boot. If we're last on
+ * the list, then we fallback to looking for the first available /
+ * candidate (ZFS, if there's a bootable zpool, otherwise a UFS
+ * partition that has either /boot/defaults/loader.conf on it or
+ * /boot/kernel/kernel (the default kernel) that we can use.
+ *
+ * We always fail if we can't find the right thing. However, as
+ * a concession to buggy UEFI implementations, like u-boot, if
+ * we have determined that the host is violating the UEFI boot
+ * manager protocol, we'll signal the rest of the program that
+ * a drop to the OK boot loader prompt is possible.
+ */
+static int
+find_currdev(bool do_bootmgr, bool is_last,
+    char *boot_info, size_t boot_info_sz)
 {
 	pdinfo_t *dp, *pp;
 	EFI_DEVICE_PATH *devpath, *copy;
@@ -293,13 +508,59 @@ find_currdev(EFI_LOADED_IMAGE *img)
 	struct devsw *dev;
 	int unit;
 	uint64_t extra;
+	int rv;
 	char *rootdev;
 
+	/*
+	 * First choice: if rootdev is already set, use that, even if
+	 * it's wrong.
+	 */
 	rootdev = getenv("rootdev");
 	if (rootdev != NULL) {
-		printf("Setting currdev to configured rootdev %s\n", rootdev);
+		printf("    Setting currdev to configured rootdev %s\n",
+		    rootdev);
 		set_currdev(rootdev);
 		return (0);
+	}
+
+	/*
+	 * Second choice: If uefi_rootdev is set, translate that UEFI device
+	 * path to the loader's internal name and use that.
+	 */
+	do {
+		rootdev = getenv("uefi_rootdev");
+		if (rootdev == NULL)
+			break;
+		devpath = efi_name_to_devpath(rootdev);
+		if (devpath == NULL)
+			break;
+		dp = efiblk_get_pdinfo_by_device_path(devpath);
+		efi_devpath_free(devpath);
+		if (dp == NULL)
+			break;
+		printf("    Setting currdev to UEFI path %s\n",
+		    rootdev);
+		set_currdev_pdinfo(dp);
+		return (0);
+	} while (0);
+
+	/*
+	 * Third choice: If we can find out image boot_info, and there's
+	 * a follow-on boot image in that boot_info, use that. In this
+	 * case root will be the partition specified in that image and
+	 * we'll load the kernel specified by the file path. Should there
+	 * not be a filepath, we use the default. This filepath overrides
+	 * loader.conf.
+	 */
+	if (do_bootmgr) {
+		rv = match_boot_info(boot_info, boot_info_sz);
+		switch (rv) {
+		case BOOT_INFO_OK:	/* We found it */
+			return (0);
+		case BAD_CHOICE:	/* specified file not found -> error */
+			/* XXX do we want to have an escape hatch for last in boot order? */
+			return (ENOENT);
+		} /* Nothing specified, try normal match */
 	}
 
 #ifdef EFI_ZFS_BOOT
@@ -317,6 +578,15 @@ find_currdev(EFI_LOADED_IMAGE *img)
 	}
 #endif /* EFI_ZFS_BOOT */
 
+#ifdef MD_IMAGE_SIZE
+	/*
+	 * If there is an embedded MD, try to use that.
+	 */
+	printf("Trying MD\n");
+	if (probe_md_currdev())
+		return (0);
+#endif /* MD_IMAGE_SIZE */
+
 	/*
 	 * Try to find the block device by its handle based on the
 	 * image we're booting. If we can't find a sane partition,
@@ -325,7 +595,7 @@ find_currdev(EFI_LOADED_IMAGE *img)
 	 * boot protocol to do so. We fail and let UEFI go on to
 	 * the next candidate.
 	 */
-	dp = efiblk_get_pdinfo_by_handle(img->DeviceHandle);
+	dp = efiblk_get_pdinfo_by_handle(boot_img->DeviceHandle);
 	if (dp != NULL) {
 		text = efi_devpath_name(dp->pd_devpath);
 		if (text != NULL) {
@@ -336,13 +606,22 @@ find_currdev(EFI_LOADED_IMAGE *img)
 		if (sanity_check_currdev())
 			return (0);
 		if (dp->pd_parent != NULL) {
+			pdinfo_t *espdp = dp;
 			dp = dp->pd_parent;
 			STAILQ_FOREACH(pp, &dp->pd_part, pd_link) {
+				/* Already tried the ESP */
+				if (espdp == pp)
+					continue;
 				/*
 				 * Roll up the ZFS special case
 				 * for those partitions that have
-				 * zpools on them 
+				 * zpools on them.
 				 */
+				text = efi_devpath_name(pp->pd_devpath);
+				if (text != NULL) {
+					printf("Trying: %S\n", text);
+					efi_free_devpath_name(text);
+				}
 				if (try_as_currdev(dp, pp))
 					return (0);
 			}
@@ -355,7 +634,7 @@ find_currdev(EFI_LOADED_IMAGE *img)
 	 * any of the nodes in that path match one of the enumerated
 	 * handles. Currently, this handle list is only for netboot.
 	 */
-	if (efi_handle_lookup(img->DeviceHandle, &dev, &unit, &extra) == 0) {
+	if (efi_handle_lookup(boot_img->DeviceHandle, &dev, &unit, &extra) == 0) {
 		set_currdev_devsw(dev, unit);
 		if (sanity_check_currdev())
 			return (0);
@@ -474,11 +753,18 @@ parse_uefi_con_out(void)
 	how = 0;
 	sz = sizeof(buf);
 	rv = efi_global_getenv("ConOut", buf, &sz);
-	if (rv != EFI_SUCCESS)
+	if (rv != EFI_SUCCESS) {
+		/* If we don't have any ConOut default to serial */
+		how = RB_SERIAL;
 		goto out;
+	}
 	ep = buf + sz;
 	node = (EFI_DEVICE_PATH *)buf;
 	while ((char *)node < ep) {
+		if (IsDevicePathEndType(node)) {
+			if (pci_pending && vid_seen == 0)
+				vid_seen = ++seen;
+		}
 		pci_pending = false;
 		if (DevicePathType(node) == ACPI_DEVICE_PATH &&
 		    DevicePathSubType(node) == ACPI_DP) {
@@ -509,10 +795,8 @@ parse_uefi_con_out(void)
 			 */
 			pci_pending = true;
 		}
-		node = NextDevicePathNode(node); /* Skip the end node */
+		node = NextDevicePathNode(node);
 	}
-	if (pci_pending && vid_seen == 0)
-		vid_seen = ++seen;
 
 	/*
 	 * Truth table for RB_MULTIPLE | RB_SERIAL
@@ -539,63 +823,175 @@ out:
 	return (how);
 }
 
+void
+parse_loader_efi_config(EFI_HANDLE h, const char *env_fn)
+{
+	pdinfo_t *dp;
+	struct stat st;
+	int fd = -1;
+	char *env = NULL;
+
+	dp = efiblk_get_pdinfo_by_handle(h);
+	if (dp == NULL)
+		return;
+	set_currdev_pdinfo(dp);
+	if (stat(env_fn, &st) != 0)
+		return;
+	fd = open(env_fn, O_RDONLY);
+	if (fd == -1)
+		return;
+	env = malloc(st.st_size + 1);
+	if (env == NULL)
+		goto out;
+	if (read(fd, env, st.st_size) != st.st_size)
+		goto out;
+	env[st.st_size] = '\0';
+	boot_parse_cmdline(env);
+out:
+	free(env);
+	close(fd);
+}
+
+static void
+read_loader_env(const char *name, char *def_fn, bool once)
+{
+	UINTN len;
+	char *fn, *freeme = NULL;
+
+	len = 0;
+	fn = def_fn;
+	if (efi_freebsd_getenv(name, NULL, &len) == EFI_BUFFER_TOO_SMALL) {
+		freeme = fn = malloc(len + 1);
+		if (fn != NULL) {
+			if (efi_freebsd_getenv(name, fn, &len) != EFI_SUCCESS) {
+				free(fn);
+				fn = NULL;
+				printf(
+			    "Can't fetch FreeBSD::%s we know is there\n", name);
+			} else {
+				/*
+				 * if tagged as 'once' delete the env variable so we
+				 * only use it once.
+				 */
+				if (once)
+					efi_freebsd_delenv(name);
+				/*
+				 * We malloced 1 more than len above, then redid the call.
+				 * so now we have room at the end of the string to NUL terminate
+				 * it here, even if the typical idium would have '- 1' here to
+				 * not overflow. len should be the same on return both times.
+				 */
+				fn[len] = '\0';
+			}
+		} else {
+			printf(
+		    "Can't allocate %d bytes to fetch FreeBSD::%s env var\n",
+			    len, name);
+		}
+	}
+	if (fn) {
+		printf("    Reading loader env vars from %s\n", fn);
+		parse_loader_efi_config(boot_img->DeviceHandle, fn);
+	}
+}
+
+caddr_t
+ptov(uintptr_t x)
+{
+	return ((caddr_t)x);
+}
+
 EFI_STATUS
 main(int argc, CHAR16 *argv[])
 {
 	EFI_GUID *guid;
 	int howto, i, uhowto;
 	UINTN k;
-	bool has_kbd;
+	bool has_kbd, is_last;
 	char *s;
 	EFI_DEVICE_PATH *imgpath;
 	CHAR16 *text;
-	EFI_STATUS status;
-	UINT16 boot_current;
-	size_t sz;
+	EFI_STATUS rv;
+	size_t sz, bosz = 0, bisz = 0;
 	UINT16 boot_order[100];
-	EFI_LOADED_IMAGE *img;
+	char boot_info[4096];
+	char buf[32];
+	bool uefi_boot_mgr;
 
 	archsw.arch_autoload = efi_autoload;
 	archsw.arch_getdev = efi_getdev;
 	archsw.arch_copyin = efi_copyin;
 	archsw.arch_copyout = efi_copyout;
-	archsw.arch_readin = efi_readin;
-#ifdef EFI_ZFS_BOOT
-	/* Note this needs to be set before ZFS init. */
-	archsw.arch_zfs_probe = efi_zfs_probe;
+#ifdef __amd64__
+	archsw.arch_hypervisor = x86_hypervisor;
 #endif
+	archsw.arch_readin = efi_readin;
+	archsw.arch_zfs_probe = efi_zfs_probe;
 
         /* Get our loaded image protocol interface structure. */
-	BS->HandleProtocol(IH, &imgid, (VOID**)&img);
-
-#ifdef EFI_ZFS_BOOT
-	/* Tell ZFS probe code where we booted from */
-	efizfs_set_preferred(img->DeviceHandle);
-#endif
-	/* Init the time source */
-	efi_time_init();
-
-	has_kbd = has_keyboard();
+	(void) OpenProtocolByHandle(IH, &imgid, (void **)&boot_img);
 
 	/*
-	 * XXX Chicken-and-egg problem; we want to have console output
-	 * early, but some console attributes may depend on reading from
-	 * eg. the boot device, which we can't do yet.  We can use
-	 * printf() etc. once this is done.
+	 * Chicken-and-egg problem; we want to have console output early, but
+	 * some console attributes may depend on reading from eg. the boot
+	 * device, which we can't do yet.  We can use printf() etc. once this is
+	 * done. So, we set it to the efi console, then call console init. This
+	 * gets us printf early, but also primes the pump for all future console
+	 * changes to take effect, regardless of where they come from.
 	 */
 	setenv("console", "efi", 1);
 	cons_probe();
+
+	/* Init the time source */
+	efi_time_init();
 
 	/*
 	 * Initialise the block cache. Set the upper limit.
 	 */
 	bcache_init(32768, 512);
 
+	/*
+	 * Scan the BLOCK IO MEDIA handles then
+	 * march through the device switch probing for things.
+	 */
+	i = efipart_inithandles();
+	if (i != 0 && i != ENOENT) {
+		printf("efipart_inithandles failed with ERRNO %d, expect "
+		    "failures\n", i);
+	}
+
+	for (i = 0; devsw[i] != NULL; i++)
+		if (devsw[i]->dv_init != NULL)
+			(devsw[i]->dv_init)();
+
+	/*
+	 * Detect console settings two different ways: one via the command
+	 * args (eg -h) or via the UEFI ConOut variable.
+	 */
+	has_kbd = has_keyboard();
 	howto = parse_args(argc, argv);
 	if (!has_kbd && (howto & RB_PROBE))
 		howto |= RB_SERIAL | RB_MULTIPLE;
 	howto &= ~RB_PROBE;
 	uhowto = parse_uefi_con_out();
+
+	/*
+	 * Read additional environment variables from the boot device's
+	 * "LoaderEnv" file. Any boot loader environment variable may be set
+	 * there, which are subtly different than loader.conf variables. Only
+	 * the 'simple' ones may be set so things like foo_load="YES" won't work
+	 * for two reasons.  First, the parser is simplistic and doesn't grok
+	 * quotes.  Second, because the variables that cause an action to happen
+	 * are parsed by the lua, 4th or whatever code that's not yet
+	 * loaded. This is relative to the root directory when loader.efi is
+	 * loaded off the UFS root drive (when chain booted), or from the ESP
+	 * when directly loaded by the BIOS.
+	 *
+	 * We also read in NextLoaderEnv if it was specified. This allows next boot
+	 * functionality to be implemented and to override anything in LoaderEnv.
+	 */
+	read_loader_env("LoaderEnv", "/efi/freebsd/loader.env", false);
+	read_loader_env("NextLoaderEnv", NULL, true);
 
 	/*
 	 * We now have two notions of console. howto should be viewed as
@@ -610,17 +1006,15 @@ main(int argc, CHAR16 *argv[])
 		if ((howto & CON_MASK) == 0) {
 			/* No override, uhowto is controlling and efi cons is perfect */
 			howto = howto | (uhowto & CON_MASK);
-			setenv("console", "efi", 1);
 		} else if ((howto & CON_MASK) == (uhowto & CON_MASK)) {
 			/* override matches what UEFI told us, efi console is perfect */
-			setenv("console", "efi", 1);
 		} else if ((uhowto & (CON_MASK)) != 0) {
 			/*
 			 * We detected a serial console on ConOut. All possible
 			 * overrides include serial. We can't really override what efi
 			 * gives us, so we use it knowing it's the best choice.
 			 */
-			setenv("console", "efi", 1);
+			/* Do nothing */
 		} else {
 			/*
 			 * We detected some kind of serial in the override, but ConOut
@@ -640,6 +1034,7 @@ main(int argc, CHAR16 *argv[])
 			}
 		}
 	}
+
 	/*
 	 * howto is set now how we want to export the flags to the kernel, so
 	 * set the env based on it.
@@ -654,42 +1049,29 @@ main(int argc, CHAR16 *argv[])
 	if ((s = getenv("fail_timeout")) != NULL)
 		fail_timeout = strtol(s, NULL, 10);
 
-	/*
-	 * Scan the BLOCK IO MEDIA handles then
-	 * march through the device switch probing for things.
-	 */
-	i = efipart_inithandles();
-	if (i != 0 && i != ENOENT) {
-		printf("efipart_inithandles failed with ERRNO %d, expect "
-		    "failures\n", i);
-	}
-
-	for (i = 0; devsw[i] != NULL; i++)
-		if (devsw[i]->dv_init != NULL)
-			(devsw[i]->dv_init)();
-
 	printf("%s\n", bootprog_info);
 	printf("   Command line arguments:");
 	for (i = 0; i < argc; i++)
 		printf(" %S", argv[i]);
 	printf("\n");
 
+	printf("   Image base: 0x%lx\n", (unsigned long)boot_img->ImageBase);
 	printf("   EFI version: %d.%02d\n", ST->Hdr.Revision >> 16,
 	    ST->Hdr.Revision & 0xffff);
 	printf("   EFI Firmware: %S (rev %d.%02d)\n", ST->FirmwareVendor,
 	    ST->FirmwareRevision >> 16, ST->FirmwareRevision & 0xffff);
-
+	printf("   Console: %s (%#x)\n", getenv("console"), howto);
 
 	/* Determine the devpath of our image so we can prefer it. */
-	text = efi_devpath_name(img->FilePath);
+	text = efi_devpath_name(boot_img->FilePath);
 	if (text != NULL) {
 		printf("   Load Path: %S\n", text);
 		efi_setenv_freebsd_wcs("LoaderPath", text);
 		efi_free_devpath_name(text);
 	}
 
-	status = BS->HandleProtocol(img->DeviceHandle, &devid, (void **)&imgpath);
-	if (status == EFI_SUCCESS) {
+	rv = OpenProtocolByHandle(boot_img->DeviceHandle, &devid, (void **)&imgpath);
+	if (rv == EFI_SUCCESS) {
 		text = efi_devpath_name(imgpath);
 		if (text != NULL) {
 			printf("   Load Device: %S\n", text);
@@ -698,18 +1080,58 @@ main(int argc, CHAR16 *argv[])
 		}
 	}
 
-	boot_current = 0;
-	sz = sizeof(boot_current);
-	efi_global_getenv("BootCurrent", &boot_current, &sz);
-	printf("   BootCurrent: %04x\n", boot_current);
+	if (getenv("uefi_ignore_boot_mgr") != NULL) {
+		printf("    Ignoring UEFI boot manager\n");
+		uefi_boot_mgr = false;
+	} else {
+		uefi_boot_mgr = true;
+		boot_current = 0;
+		sz = sizeof(boot_current);
+		rv = efi_global_getenv("BootCurrent", &boot_current, &sz);
+		if (rv == EFI_SUCCESS)
+			printf("   BootCurrent: %04x\n", boot_current);
+		else {
+			boot_current = 0xffff;
+			uefi_boot_mgr = false;
+		}
 
-	sz = sizeof(boot_order);
-	efi_global_getenv("BootOrder", &boot_order, &sz);
-	printf("   BootOrder:");
-	for (i = 0; i < sz / sizeof(boot_order[0]); i++)
-		printf(" %04x%s", boot_order[i],
-		    boot_order[i] == boot_current ? "[*]" : "");
-	printf("\n");
+		sz = sizeof(boot_order);
+		rv = efi_global_getenv("BootOrder", &boot_order, &sz);
+		if (rv == EFI_SUCCESS) {
+			printf("   BootOrder:");
+			for (i = 0; i < sz / sizeof(boot_order[0]); i++)
+				printf(" %04x%s", boot_order[i],
+				    boot_order[i] == boot_current ? "[*]" : "");
+			printf("\n");
+			is_last = boot_order[(sz / sizeof(boot_order[0])) - 1] == boot_current;
+			bosz = sz;
+		} else if (uefi_boot_mgr) {
+			/*
+			 * u-boot doesn't set BootOrder, but otherwise participates in the
+			 * boot manager protocol. So we fake it here and don't consider it
+			 * a failure.
+			 */
+			bosz = sizeof(boot_order[0]);
+			boot_order[0] = boot_current;
+			is_last = true;
+		}
+	}
+
+	/*
+	 * Next, find the boot info structure the UEFI boot manager is
+	 * supposed to setup. We need this so we can walk through it to
+	 * find where we are in the booting process and what to try to
+	 * boot next.
+	 */
+	if (uefi_boot_mgr) {
+		snprintf(buf, sizeof(buf), "Boot%04X", boot_current);
+		sz = sizeof(boot_info);
+		rv = efi_global_getenv(buf, &boot_info, &sz);
+		if (rv == EFI_SUCCESS)
+			bisz = sz;
+		else
+			uefi_boot_mgr = false;
+	}
 
 	/*
 	 * Disable the watchdog timer. By default the boot manager sets
@@ -723,14 +1145,26 @@ main(int argc, CHAR16 *argv[])
 	BS->SetWatchdogTimer(0, 0, 0, NULL);
 
 	/*
+	 * Initialize the trusted/forbidden certificates from UEFI.
+	 * They will be later used to verify the manifest(s),
+	 * which should contain hashes of verified files.
+	 * This needs to be initialized before any configuration files
+	 * are loaded.
+	 */
+#ifdef EFI_SECUREBOOT
+	ve_efi_init();
+#endif
+
+	/*
 	 * Try and find a good currdev based on the image that was booted.
 	 * It might be desirable here to have a short pause to allow falling
 	 * through to the boot loader instead of returning instantly to follow
 	 * the boot protocol and also allow an escape hatch for users wishing
 	 * to try something different.
 	 */
-	if (find_currdev(img) != 0)
-		if (!interactive_interrupt("Failed to find bootable partition"))
+	if (find_currdev(uefi_boot_mgr, is_last, boot_info, bisz) != 0)
+		if (uefi_boot_mgr &&
+		    !interactive_interrupt("Failed to find bootable partition"))
 			return (EFI_NOT_FOUND);
 
 	efi_init_environment();
@@ -965,7 +1399,7 @@ command_lsefi(int argc __unused, char *argv[] __unused)
 	EFI_HANDLE handle;
 	UINTN bufsz = 0, i, j;
 	EFI_STATUS status;
-	int ret;
+	int ret = 0;
 
 	status = BS->LocateHandle(AllHandles, NULL, NULL, &bufsz, buffer);
 	if (status != EFI_BUFFER_TOO_SMALL) {
@@ -1071,6 +1505,14 @@ command_chain(int argc, char *argv[])
 		return (CMD_ERROR);
 	}
 
+#ifdef LOADER_VERIEXEC
+	if (verify_file(fd, name, 0, VE_MUST, __func__) < 0) {
+		sprintf(command_errbuf, "can't verify: %s", name);
+		close(fd);
+		return (CMD_ERROR);
+	}
+#endif
+
 	if (fstat(fd, &st) < -1) {
 		command_errmsg = "stat failed";
 		close(fd);
@@ -1096,7 +1538,7 @@ command_chain(int argc, char *argv[])
 		command_errmsg = "LoadImage failed";
 		return (CMD_ERROR);
 	}
-	status = BS->HandleProtocol(loaderhandle, &LoadedImageGUID,
+	status = OpenProtocolByHandle(loaderhandle, &LoadedImageGUID,
 	    (void **)&loaded_image);
 
 	if (argc > 2) {
@@ -1172,3 +1614,34 @@ command_chain(int argc, char *argv[])
 }
 
 COMMAND_SET(chain, "chain", "chain load file", command_chain);
+
+extern struct in_addr servip;
+static int
+command_netserver(int argc, char *argv[])
+{
+	char *proto;
+	n_long rootaddr;
+
+	if (argc > 2) {
+		command_errmsg = "wrong number of arguments";
+		return (CMD_ERROR);
+	}
+	if (argc < 2) {
+		proto = netproto == NET_TFTP ? "tftp://" : "nfs://";
+		printf("Netserver URI: %s%s%s\n", proto, intoa(rootip.s_addr),
+		    rootpath);
+		return (CMD_OK);
+	}
+	if (argc == 2) {
+		strncpy(rootpath, argv[1], sizeof(rootpath));
+		rootpath[sizeof(rootpath) -1] = '\0';
+		if ((rootaddr = net_parse_rootpath()) != INADDR_NONE)
+			servip.s_addr = rootip.s_addr = rootaddr;
+		return (CMD_OK);
+	}
+	return (CMD_ERROR);	/* not reached */
+
+}
+
+COMMAND_SET(netserver, "netserver", "change or display netserver URI",
+    command_netserver);

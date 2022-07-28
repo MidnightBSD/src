@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/crunch/crunchide/Makefile 292423 2015-12-18 03:06:39Z emaste $
+# $FreeBSD$
 
 PROG=   crunchide
 SRCS=	crunchide.c exec_elf32.c exec_elf64.c

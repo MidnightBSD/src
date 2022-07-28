@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2017 Netflix, Inc.
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,11 +22,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/efivar/efiutil.h 332123 2018-04-06 18:10:38Z kevans $
+ * $FreeBSD$
  */
 
 /*
- * differnt routines to dump data.
+ * different routines to dump data.
  */
 
 void asciidump(uint8_t *data, size_t datalen);

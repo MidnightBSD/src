@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/include/efidef.h 346482 2019-04-21 04:26:02Z kevans $ */
+/* $FreeBSD$ */
 #ifndef _EFI_DEF_H
 #define _EFI_DEF_H
 
@@ -63,6 +63,7 @@ typedef VOID            *EFI_EVENT;
     #define IN
     #define OUT
     #define OPTIONAL
+    #define CONST const
 #endif
 
 

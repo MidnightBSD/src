@@ -1,7 +1,4 @@
-# $MidnightBSD$
-# $MidnightBSD$
-
-NO_OBJ=
+# $FreeBSD$
 
 FILESDIR=	${SHAREDIR}/bsdconfig/usermgmt
 FILES=		group.subr group_input.subr user.subr user_input.subr

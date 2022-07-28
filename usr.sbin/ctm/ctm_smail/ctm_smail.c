@@ -11,7 +11,7 @@
  * In return you should think about all the nice people who give away software.
  * Maybe you should write some free software too.
  *
- * $FreeBSD: stable/11/usr.sbin/ctm/ctm_smail/ctm_smail.c 202918 2010-01-24 11:54:32Z mckay $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
@@ -190,13 +190,13 @@ chop_and_send(FILE *dfp, char *delta, long msg_size, int npieces,
  * Construct the tmp queue file name of a delta piece.
  */
 #define mk_tmp_name(fn,qd,p) \
-    sprintf((fn), "%s/.%08ld.%03d", (qd), (long)getpid(), (p))
+    snprintf((fn), sizeof(fn), "%s/.%08ld.%03d", (qd), (long)getpid(), (p))
 
 /*
  * Construct the final queue file name of a delta piece.
  */
 #define mk_queue_name(fn,qd,d,p,n) \
-    sprintf((fn), "%s/%s+%03d-%03d", (qd), (d), (p), (n))
+    snprintf((fn), sizeof(fn), "%s/%s+%03d-%03d", (qd), (d), (p), (n))
 
 /*
  * Carve our CTM delta into pieces, encode them, and queue them.

@@ -16,7 +16,7 @@
  */
 
 #if !defined(lint) && !defined(LINT)
-static char rcsid[] = "$FreeBSD: stable/11/usr.sbin/cron/lib/compat.c 69793 2000-12-09 09:35:55Z obrien $";
+static char rcsid[] = "$FreeBSD$";
 #endif
 
 /* vix 30dec93 [broke this out of misc.c - see RCS log for history]

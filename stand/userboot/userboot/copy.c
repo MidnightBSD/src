@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/userboot/userboot/copy.c 239057 2012-08-05 11:59:46Z ae $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 
@@ -48,7 +48,7 @@ userboot_copyout(vm_offset_t va, void *dst, size_t len)
 }
 
 ssize_t
-userboot_readin(int fd, vm_offset_t va, size_t len)
+userboot_readin(readin_handle_t fd, vm_offset_t va, size_t len)
 {
 	ssize_t res, s;
 	size_t sz;
@@ -59,7 +59,7 @@ userboot_readin(int fd, vm_offset_t va, size_t len)
 		sz = len;
 		if (sz > sizeof(buf))
 			sz = sizeof(buf);
-		s = read(fd, buf, sz);
+		s = VECTX_READ(fd, buf, sz);
 		if (s == 0)
 			break;
 		if (s < 0)

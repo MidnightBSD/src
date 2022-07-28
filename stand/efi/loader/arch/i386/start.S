@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/11/stand/efi/loader/arch/i386/start.S 282728 2015-05-10 13:30:21Z ian $
+ *	$FreeBSD$
  */
 
 	.text

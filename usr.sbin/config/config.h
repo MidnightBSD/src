@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -27,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)config.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/11/usr.sbin/config/config.h 337333 2018-08-04 21:57:17Z kevans $
+ * $FreeBSD$
  */
 
 /*
@@ -84,6 +86,7 @@ struct files_name {
 struct device {
 	int	d_done;			/* processed */
 	char	*d_name;		/* name of device (e.g. rk11) */
+	char	*yyfile;		/* name of the file that first include the device */
 #define	UNKNOWN -2	/* -2 means not set yet */
 	STAILQ_ENTRY(device) d_next;	/* Next one in list */
 };
@@ -123,6 +126,7 @@ struct opt {
 	char	*op_name;
 	char	*op_value;
 	int	op_ownfile;	/* true = own file, false = makefile */
+	char	*yyfile;	/* name of the file that first include the option */
 	SLIST_ENTRY(opt) op_next;
 	SLIST_ENTRY(opt) op_append;
 };

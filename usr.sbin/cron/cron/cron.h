@@ -17,7 +17,7 @@
 
 /* cron.h - header for vixie's cron
  *
- * $FreeBSD: stable/11/usr.sbin/cron/cron/cron.h 353134 2019-10-06 03:56:02Z kevans $
+ * $FreeBSD$
  *
  * vix 14nov88 [rest of log is in RCS]
  * vix 14jan87 [0 or 7 can be sunday; thanks, mwm@berkeley]

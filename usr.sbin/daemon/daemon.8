@@ -24,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/usr.sbin/daemon/daemon.8 346051 2019-04-09 12:28:12Z grembo $
+.\" $FreeBSD$
 .\"
-.Dd March 25, 2019
+.Dd September 22, 2020
 .Dt DAEMON 8
 .Os
 .Sh NAME
@@ -34,7 +34,7 @@
 .Nd run detached from the controlling terminal
 .Sh SYNOPSIS
 .Nm
-.Op Fl cfrS
+.Op Fl cfHrS
 .Op Fl p Ar child_pidfile
 .Op Fl P Ar supervisor_pidfile
 .Op Fl t Ar title
@@ -63,15 +63,34 @@ Change the current working directory to the root
 .It Fl f
 Redirect standard input, standard output and standard error to
 .Pa /dev/null .
+When this option is used together with any of the options related to file
+or syslog output, the standard file descriptors are first redirected to
+.Pa /dev/null ,
+then stdout and/or stderr is redirected to a file or to syslog as
+specified by the other options.
+.It Fl H
+Close
+.Pa output_file
+and re-open it when signal SIGHUP is received, for interoperability with
+.Xr newsyslog 1
+and similar log rotation / archival mechanisms.  If
+.Fa o
+is not specified, this flag is ignored.
 .It Fl S
 Enable syslog output.
 This is implicitly applied if other syslog parameters are provided.
-The default values are daemon, notice, and daemon for facility, priority, and 
+The default values are daemon, notice, and daemon for facility, priority, and
 tag, respectively.
 .It Fl o Ar output_file
 Append output from the daemonized process to
 .Pa output_file .
 If the file does not exist, it is created with permissions 0600.
+When this option is used together with options
+.Fl c and
+.Fl H
+the absolute path needs to be provided to ensure
+.Nm
+can re-open the file after a SIGHUP.
 .It Fl m Ar output_mask
 Redirect output from the child process stdout (1), stderr (2), or both (3).
 This value specifies what is sent to syslog and the log file.
@@ -117,7 +136,7 @@ option is used or not.
 .It Fl r
 Supervise and restart the program after a one-second delay if it has
 been terminated.
-.It Fl R restart_delay_seconds
+.It Fl R Ar restart_delay_seconds
 Supervise and restart the program after the specified delay
 if it has been terminated.
 .It Fl t Ar title

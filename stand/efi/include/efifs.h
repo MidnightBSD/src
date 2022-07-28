@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/include/efifs.h 292625 2015-12-22 20:40:34Z emaste $ */
+/* $FreeBSD$ */
 #ifndef _EFI_FS_H
 #define _EFI_FS_H
 

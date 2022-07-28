@@ -26,10 +26,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/liblua/lstd.c 344220 2019-02-17 02:39:17Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include "lstd.h"
 #include "math.h"
+
+#ifdef LOADER_VERIEXEC
+#include <verify_file.h>
+#endif
 
 FILE *
 fopen(const char *filename, const char *mode)
@@ -75,6 +79,17 @@ fopen(const char *filename, const char *mode)
 		close(fd);
 		return (NULL);
 	}
+
+#ifdef LOADER_VERIEXEC
+	/* only regular files and only reading makes sense */
+	if (S_ISREG(st.st_mode) && !(m & O_WRONLY)) {
+		if (verify_file(fd, filename, 0, VE_GUESS, __func__) < 0) {
+			free(f);
+			close(fd);
+			return (NULL);
+		}
+	}
+#endif
 
 	f->fd = fd;
 	f->offset = 0;

@@ -25,23 +25,34 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/efi/loader/conf.c 329114 2018-02-11 02:27:50Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 #include <bootstrap.h>
 #include <efi.h>
 #include <efilib.h>
-#ifdef EFI_ZFS_BOOT
-#include <libzfs.h>
+#include <efizfs.h>
+
+extern struct devsw vdisk_dev;
+
+#ifdef MD_IMAGE_SIZE
+extern struct devsw md_dev;
 #endif
 
 struct devsw *devsw[] = {
 	&efipart_fddev,
 	&efipart_cddev,
 	&efipart_hddev,
+	&efihttp_dev, /* ordering with efinet_dev matters */
+#if defined(LOADER_NET_SUPPORT)
 	&efinet_dev,
+#endif
+	&vdisk_dev,
 #ifdef EFI_ZFS_BOOT
 	&zfs_dev,
+#endif
+#ifdef MD_IMAGE_SIZE
+	&md_dev,
 #endif
 	NULL
 };
@@ -53,6 +64,7 @@ struct fs_ops *file_system[] = {
 	&dosfs_fsops,
 	&ufs_fsops,
 	&cd9660_fsops,
+	&efihttp_fsops,
 	&tftp_fsops,
 	&nfs_fsops,
 	&gzipfs_fsops,
@@ -61,7 +73,9 @@ struct fs_ops *file_system[] = {
 };
 
 struct netif_driver *netif_drivers[] = {
+#if defined(LOADER_NET_SUPPORT)
 	&efinetif,
+#endif
 	NULL
 };
 

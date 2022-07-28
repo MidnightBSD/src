@@ -26,7 +26,7 @@
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
 --
--- $FreeBSD: stable/11/stand/lua/drawer.lua 352349 2019-09-15 02:48:15Z kevans $
+-- $FreeBSD$
 --
 
 local color = require("color")
@@ -61,6 +61,35 @@ local function menuEntryName(drawing_menu, entry)
 	return entry.name
 end
 
+local function processFile(gfxname)
+	if gfxname == nil then
+		return false, "Missing filename"
+	end
+
+	local ret = try_include('gfx-' .. gfxname)
+	if ret == nil then
+		return false, "Failed to include gfx-" .. gfxname
+	end
+
+	-- Legacy format
+	if type(ret) ~= "table" then
+		return true
+	end
+
+	for gfxtype, def in pairs(ret) do
+		if gfxtype == "brand" then
+			drawer.addBrand(gfxname, def)
+		elseif gfxtype == "logo" then
+			drawer.addLogo(gfxname, def)
+		else
+			return false, "Unknown graphics type '" .. gfxtype ..
+			    "'"
+		end
+	end
+
+	return true
+end
+
 local function getBranddef(brand)
 	if brand == nil then
 		return nil
@@ -70,7 +99,18 @@ local function getBranddef(brand)
 
 	-- Try to pull it in
 	if branddef == nil then
-		try_include('brand-' .. brand)
+		local res, err = processFile(brand)
+		if not res then
+			-- This fallback should go away after FreeBSD 13.
+			try_include('brand-' .. brand)
+			-- If the fallback also failed, print whatever error
+			-- we encountered in the original processing.
+			if branddefs[brand] == nil then
+				print(err)
+				return nil
+			end
+		end
+
 		branddef = branddefs[brand]
 	end
 
@@ -86,7 +126,18 @@ local function getLogodef(logo)
 
 	-- Try to pull it in
 	if logodef == nil then
-		try_include('logo-' .. logo)
+		local res, err = processFile(logo)
+		if not res then
+			-- This fallback should go away after FreeBSD 13.
+			try_include('logo-' .. logo)
+			-- If the fallback also failed, print whatever error
+			-- we encountered in the original processing.
+			if logodefs[logo] == nil then
+				print(err)
+				return nil
+			end
+		end
+
 		logodef = logodefs[logo]
 	end
 
@@ -214,10 +265,13 @@ local function drawbox()
 		end
 	end
 	if menu_header_x == nil then
-		menu_header_x = x + (w / 2) - (#menu_header / 2)
+		menu_header_x = x + (w // 2) - (#menu_header // 2)
 	end
-	screen.setcursor(menu_header_x, y)
-	printc(menu_header)
+	screen.setcursor(menu_header_x - 1, y)
+	if menu_header ~= "" then
+		printc(" " .. menu_header .. " ")
+	end
+
 end
 
 local function drawbrand()
@@ -236,6 +290,11 @@ local function drawbrand()
 
 	x = x + shift.x
 	y = y + shift.y
+	if branddef.shift ~= nil then
+		x = x +	branddef.shift.x
+		y = y + branddef.shift.y
+	end
+
 	draw(x, y, graphic)
 end
 
@@ -257,6 +316,11 @@ local function drawlogo()
 			logodef = getLogodef(drawer.default_color_logodef)
 		else
 			logodef = getLogodef(drawer.default_bw_logodef)
+		end
+
+		-- Something has gone terribly wrong.
+		if logodef == nil then
+			logodef = getLogodef(drawer.default_fallback_logodef)
 		end
 	end
 
@@ -355,7 +419,12 @@ shift = default_shift
 drawer.default_brand = 'fbsd'
 drawer.default_color_logodef = 'orb'
 drawer.default_bw_logodef = 'orbbw'
+-- For when things go terribly wrong; this def should be present here in the
+-- drawer module in case it's a filesystem issue.
+drawer.default_fallback_logodef = 'none'
 
+-- These should go away after FreeBSD 13; only available for backwards
+-- compatibility with old logo- files.
 function drawer.addBrand(name, def)
 	branddefs[name] = def
 end

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1997 Christopher G. Demetriou.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,7 +36,7 @@
 __RCSID("$NetBSD: exec_elf32.c,v 1.6 1999/09/20 04:12:16 christos Exp $");
 #endif
 #endif
-__FBSDID("$FreeBSD: stable/10/usr.sbin/crunch/crunchide/exec_elf32.c 309077 2016-11-24 00:46:34Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #ifndef ELFSIZE
 #define ELFSIZE         32
@@ -154,7 +155,7 @@ xrealloc(void *ptr, size_t size, const char *fn, const char *use)
 }
 
 int
-ELFNAMEEND(check)(int fd, const char *fn)
+ELFNAMEEND(check)(int fd, const char *fn __unused)
 {
 	Elf_Ehdr eh;
 	struct stat sb;
@@ -184,7 +185,6 @@ ELFNAMEEND(check)(int fd, const char *fn)
 #endif
 	case EM_AARCH64: break;
 	case EM_ARM: break;
-	case EM_IA_64: break;
 	case EM_MIPS: break;
 	case /* EM_MIPS_RS3_LE */ EM_MIPS_RS4_BE: break;
 	case EM_PPC: break;
@@ -193,6 +193,7 @@ ELFNAMEEND(check)(int fd, const char *fn)
 #define	EM_RISCV	243
 #endif
 	case EM_RISCV: break;
+	case EM_S390: break;
 	case EM_SPARCV9: break;
 	case EM_X86_64: break;
 /*        ELFDEFNNAME(MACHDEP_ID_CASES) */
@@ -434,12 +435,12 @@ ELFNAMEEND(hide)(int fd, const char *fn)
 	 * update section header table in ascending order of offset
 	 */
 	for (i = strtabidx + 1; i < shnum; i++) {
-		Elf_Off off, align;
-		off = xewtoh(layoutp[i - 1].shdr->sh_offset) +
+		Elf_Off soff, align;
+		soff = xewtoh(layoutp[i - 1].shdr->sh_offset) +
 		    xewtoh(layoutp[i - 1].shdr->sh_size);
 		align = xewtoh(layoutp[i].shdr->sh_addralign);
-		off = (off + (align - 1)) & ~(align - 1);
-		layoutp[i].shdr->sh_offset = htoxew(off);
+		soff = (soff + (align - 1)) & ~(align - 1);
+		layoutp[i].shdr->sh_offset = htoxew(soff);
 	}
 
 	/*

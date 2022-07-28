@@ -1,6 +1,4 @@
-# $MidnightBSD$
-
-NO_OBJ=
+# $FreeBSD$
 
 FILESDIR=	${LIBEXECDIR}/bsdconfig/includes/include
 FILES=		messages.subr

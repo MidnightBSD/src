@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/efi/loader/arch/i386/i386_copy.c 281322 2015-04-09 19:48:42Z emaste $");
+__FBSDID("$FreeBSD$");
 
 /*
  * MD primitives supporting placement of module data
@@ -51,9 +51,8 @@ i386_copyout(const vm_offset_t src, void *dest, const size_t len)
     return(len);
 }
 
-
 ssize_t
-i386_readin(const int fd, vm_offset_t dest, const size_t len)
+i386_readin(readin_handle_t fd, vm_offset_t dest, const size_t len)
 {
-    return (read(fd, PTOV(dest), len));
+    return (VECTX_READ(fd, PTOV(dest), len));
 }

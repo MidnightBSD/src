@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Netflix. All Rights Reserved.
+ * Copyright (c) 2018 Netflix, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,6 +24,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 

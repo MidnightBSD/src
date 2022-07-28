@@ -1,8 +1,13 @@
-# $FreeBSD: stable/11/usr.sbin/daemon/Makefile 275054 2014-11-25 16:57:27Z bapt $
+# $FreeBSD$
 
 PROG=	daemon
 MAN=	daemon.8
 
 LIBADD=	util
+
+.include <src.opts.mk>
+
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

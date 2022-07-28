@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/cpucontrol/Makefile 308761 2016-11-17 15:17:01Z avg $
+# $FreeBSD$
 
 PROG=	cpucontrol
 MAN=	cpucontrol.8

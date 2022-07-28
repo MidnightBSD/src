@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/include/Protocol/EdidDiscovered.h 342742 2019-01-03 20:27:50Z tsoome $ */
+/* $FreeBSD$ */
 /** @file
   EDID Discovered Protocol from the UEFI 2.0 specification.
 

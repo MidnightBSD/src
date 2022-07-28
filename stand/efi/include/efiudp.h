@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/include/efiudp.h 346482 2019-04-21 04:26:02Z kevans $ */
+/* $FreeBSD$ */
 #ifndef _EFI_UDP_H
 #define _EFI_UDP_H
 

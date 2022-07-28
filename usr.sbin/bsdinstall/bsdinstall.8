@@ -1,7 +1,6 @@
-.\" $MidnightBSD$
 .\"-
-.\" Copyright (c) 2011-2013 Nathan Whitehorn <nwhitehorn@FreeBSD.org>
-.\" All rights reserved.
+.\" Copyright (c) 2011-2013 Nathan Whitehorn <nwhitehorn@FreeBSD.org> All rights reserved.
+.\" Copyright (c) 2018 Roberto Fernandez Cueto <roberfern@gmail.com>
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -24,9 +23,9 @@
 .\" ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/usr.sbin/bsdinstall/bsdinstall.8 321181 2017-07-19 02:50:06Z ngie $
+.\" $FreeBSD$
 .\"
-.Dd May 23, 2017
+.Dd February 6, 2020
 .Dt BSDINSTALL 8
 .Os
 .Sh NAME
@@ -119,6 +118,8 @@ is set, also configures the network interfaces of the current system to match.
 Provides the installer's interactive guided disk partitioner for single-disk
 installations.
 Defaults to UFS.
+.It Cm bootconfig
+Detects an appropriate partition and installs UEFI boot loader files.
 .It Cm zfsboot
 Provides an alternative ZFS-only automatic interactive disk partitioner.
 Creates a single
@@ -132,7 +133,7 @@ with separate datasets for
 and
 .Pa /var .
 Optionally can set up
-.Xr geli 8 
+.Xr geli 8
 to encrypt the disk.
 .It Cm partedit
 Provides the installer's interactive manual disk partitioner with an interface
@@ -261,13 +262,22 @@ Others are set by various interactive user prompts, and can be usefully
 overridden when making scripted or customized installers.
 .Bl -tag -width ".Ev BSDINSTALL_DISTSITE"
 .It Ev DISTRIBUTIONS
-The set of distributions to install, e.g., "base kernel ports".
-Default: none
+The set of distributions to install, e.g., "base.txz kernel.txz ports.txz".
+Default: unset
+.It Ev PARTITIONS
+The partitioning of the disk onto which the system is being installed.
+See
+.Cm scriptedpart
+of
+the
+.Sx TARGETS
+section for format details.
+Default: unset
 .It Ev BSDINSTALL_DISTDIR
 The directory in which the distribution files can be found (or to which they
 should be downloaded).
 Default:
-.Pa /usr/midnightbsd-dist
+.Dq Pa /usr/freebsd-dist
 .It Ev BSDINSTALL_DISTSITE
 URL from which the distribution files should be downloaded if they are not
 already present in the directory defined by
