@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1989, 1994, 1995
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -15,7 +17,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -35,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/cd9660/cd9660_node.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -309,14 +311,21 @@ cd9660_tstamp_conv17(pi,pu)
 	return cd9660_tstamp_conv7(buf, pu, ISO_FTYPE_DEFAULT);
 }
 
-ino_t
+cd_ino_t
 isodirino(isodir, imp)
 	struct iso_directory_record *isodir;
 	struct iso_mnt *imp;
 {
-	ino_t ino;
+	cd_ino_t ino;
 
-	ino = (isonum_733(isodir->extent) + isonum_711(isodir->ext_attr_length))
-	      << imp->im_bshift;
-	return (ino);
+	/*
+	 * Note there is an inverse calculation in
+	 * cd9660_vfsops.c:cd9660_vget_internal():
+	 *   ip->iso_start = ino >> imp->im_bshift;
+	 * and also a calculation of the isodir pointer
+	 * from an inode in cd9660_vnops.c:cd9660_readlink()
+	 */
+	ino = ((cd_ino_t)isonum_733(isodir->extent) +
+		isonum_711(isodir->ext_attr_length)) << imp->im_bshift;
+	return ino;
 }

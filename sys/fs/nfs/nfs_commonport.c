@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/nfs/nfs_commonport.c 356161 2019-12-28 22:32:14Z rmacklem $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Functions that need to be different for different versions of BSD
@@ -40,7 +42,10 @@ __FBSDID("$FreeBSD: stable/11/sys/fs/nfs/nfs_commonport.c 356161 2019-12-28 22:3
  * to this BSD variant.
  */
 #include <fs/nfs/nfsport.h>
+#include <sys/smp.h>
 #include <sys/sysctl.h>
+#include <sys/taskqueue.h>
+#include <rpc/rpc_com.h>
 #include <vm/vm.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
@@ -64,8 +69,13 @@ int nfscl_debuglevel = 0;
 char nfsv4_callbackaddr[INET6_ADDRSTRLEN];
 struct callout newnfsd_callout;
 int nfsrv_lughashsize = 100;
+struct mtx nfsrv_dslock_mtx;
+struct nfsdevicehead nfsrv_devidhead;
+volatile int nfsrv_devidcnt = 0;
 void (*nfsd_call_servertimer)(void) = NULL;
 void (*ncl_call_invalcaches)(struct vnode *) = NULL;
+
+int nfs_pnfsio(task_fn_t *, void *);
 
 static int nfs_realign_test;
 static int nfs_realign_count;
@@ -83,6 +93,9 @@ SYSCTL_INT(_vfs_nfs, OID_AUTO, debuglevel, CTLFLAG_RW, &nfscl_debuglevel,
     0, "Debug level for NFS client");
 SYSCTL_INT(_vfs_nfs, OID_AUTO, userhashsize, CTLFLAG_RDTUN, &nfsrv_lughashsize,
     0, "Size of hash tables for uid/name mapping");
+int nfs_pnfsiothreads = -1;
+SYSCTL_INT(_vfs_nfs, OID_AUTO, pnfsiothreads, CTLFLAG_RW, &nfs_pnfsiothreads,
+    0, "Number of pNFS mirror I/O threads");
 
 /*
  * Defines for malloc
@@ -106,7 +119,7 @@ MALLOC_DEFINE(M_NEWNFSCLLOCKOWNER, "NFSCL lckown", "NFSCL Lock Owner");
 MALLOC_DEFINE(M_NEWNFSCLLOCK, "NFSCL lck", "NFSCL Lock");
 MALLOC_DEFINE(M_NEWNFSV4NODE, "NEWNFSnode", "NFS vnode");
 MALLOC_DEFINE(M_NEWNFSDIRECTIO, "NEWdirectio", "NFS Direct IO buffer");
-MALLOC_DEFINE(M_NEWNFSDIROFF, "NFSCL diroffdiroff",
+MALLOC_DEFINE(M_NEWNFSDIROFF, "NFSCL diroff",
     "NFS directory offset data");
 MALLOC_DEFINE(M_NEWNFSDROLLBACK, "NFSD rollback",
     "NFS local lock rollback");
@@ -306,7 +319,7 @@ nfsvno_getfs(struct nfsfsinfo *sip, int isdgram)
  * Do the pathconf vnode op.
  */
 int
-nfsvno_pathconf(struct vnode *vp, int flag, register_t *retf,
+nfsvno_pathconf(struct vnode *vp, int flag, long *retf,
     struct ucred *cred, struct thread *p)
 {
 	int error;
@@ -321,7 +334,7 @@ nfsvno_pathconf(struct vnode *vp, int flag, register_t *retf,
 		 */
 		switch (flag) {
 		case _PC_LINK_MAX:
-			*retf = LINK_MAX;
+			*retf = NFS_LINK_MAX;
 			break;
 		case _PC_NAME_MAX:
 			*retf = NAME_MAX;
@@ -348,7 +361,7 @@ nfsvno_pathconf(struct vnode *vp, int flag, register_t *retf,
 
 /* Fake nfsrv_atroot. Just return 0 */
 int
-nfsrv_atroot(struct vnode *vp, long *retp)
+nfsrv_atroot(struct vnode *vp, uint64_t *retp)
 {
 
 	return (0);
@@ -672,7 +685,7 @@ int
 nfs_supportsnfsv4acls(struct vnode *vp)
 {
 	int error;
-	register_t retval;
+	long retval;
 
 	ASSERT_VOP_LOCKED(vp, "nfs supports nfsv4acls");
 
@@ -682,6 +695,52 @@ nfs_supportsnfsv4acls(struct vnode *vp)
 	if (error == 0 && retval != 0)
 		return (1);
 	return (0);
+}
+
+/*
+ * These are the first fields of all the context structures passed into
+ * nfs_pnfsio().
+ */
+struct pnfsio {
+	int		done;
+	int		inprog;
+	struct task	tsk;
+};
+
+/*
+ * Do a mirror I/O on a pNFS thread.
+ */
+int
+nfs_pnfsio(task_fn_t *func, void *context)
+{
+	struct pnfsio *pio;
+	int ret;
+	static struct taskqueue *pnfsioq = NULL;
+
+	pio = (struct pnfsio *)context;
+	if (pnfsioq == NULL) {
+		if (nfs_pnfsiothreads == 0)
+			return (EPERM);
+		if (nfs_pnfsiothreads < 0)
+			nfs_pnfsiothreads = mp_ncpus * 4;
+		pnfsioq = taskqueue_create("pnfsioq", M_WAITOK,
+		    taskqueue_thread_enqueue, &pnfsioq);
+		if (pnfsioq == NULL)
+			return (ENOMEM);
+		ret = taskqueue_start_threads(&pnfsioq, nfs_pnfsiothreads,
+		    0, "pnfsiot");
+		if (ret != 0) {
+			taskqueue_free(pnfsioq);
+			pnfsioq = NULL;
+			return (ret);
+		}
+	}
+	pio->inprog = 1;
+	TASK_INIT(&pio->tsk, 0, func, context);
+	ret = taskqueue_enqueue(pnfsioq, &pio->tsk);
+	if (ret != 0)
+		pio->inprog = 0;
+	return (ret);
 }
 
 extern int (*nfsd_call_nfscommon)(struct thread *, struct nfssvc_args *);
@@ -706,6 +765,8 @@ nfscommon_modevent(module_t mod, int type, void *data)
 		mtx_init(&nfs_req_mutex, "nfs_req_mutex", NULL, MTX_DEF);
 		mtx_init(&nfsrv_nfsuserdsock.nr_mtx, "nfsuserd", NULL,
 		    MTX_DEF);
+		mtx_init(&nfsrv_dslock_mtx, "nfs4ds", NULL, MTX_DEF);
+		TAILQ_INIT(&nfsrv_devidhead);
 		callout_init(&newnfsd_callout, 1);
 		newnfs_init();
 		nfsd_call_nfscommon = nfssvc_nfscommon;
@@ -732,6 +793,7 @@ nfscommon_modevent(module_t mod, int type, void *data)
 		mtx_destroy(&nfs_slock_mutex);
 		mtx_destroy(&nfs_req_mutex);
 		mtx_destroy(&nfsrv_nfsuserdsock.nr_mtx);
+		mtx_destroy(&nfsrv_dslock_mtx);
 		loaded = 0;
 		break;
 	default:

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Poul-Henning Kamp.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/fs/devfs/devfs_int.h 278283 2015-02-05 20:49:13Z hselasky $
+ * $FreeBSD$
  */
 
 /*
@@ -69,6 +70,8 @@ struct cdev_priv {
 	void			*cdp_dtr_cb_arg;
 
 	LIST_HEAD(, cdev_privdata) cdp_fdpriv;
+
+	struct mtx		cdp_threadlock;
 };
 
 #define	cdev2priv(c)	__containerof(c, struct cdev_priv, cdp_c)

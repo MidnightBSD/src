@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -31,7 +33,7 @@
  *
  *	@(#)fdesc_vnops.c	8.9 (Berkeley) 1/21/94
  *
- * $FreeBSD: stable/11/sys/fs/fdescfs/fdesc_vnops.c 341074 2018-11-27 16:51:18Z markj $
+ * $FreeBSD$
  */
 
 /*
@@ -284,7 +286,6 @@ fdesc_lookup(struct vop_lookup_args *ap)
 	struct thread *td = cnp->cn_thread;
 	struct file *fp;
 	struct fdesc_get_ino_args arg;
-	cap_rights_t rights;
 	int nlen = cnp->cn_namelen;
 	u_int fd, fd1;
 	int error;
@@ -329,7 +330,7 @@ fdesc_lookup(struct vop_lookup_args *ap)
 	/*
 	 * No rights to check since 'fp' isn't actually used.
 	 */
-	if ((error = fget(td, fd, cap_rights_init(&rights), &fp)) != 0)
+	if ((error = fget(td, fd, &cap_no_rights, &fp)) != 0)
 		goto bad;
 
 	/* Check if we're looking up ourselves. */
@@ -418,7 +419,7 @@ fdesc_pathconf(struct vop_pathconf_args *ap)
 		vref(vp);
 		VOP_UNLOCK(vp, 0);
 		error = kern_fpathconf(curthread, VTOFDESC(vp)->fd_fd,
-		    ap->a_name);
+		    ap->a_name, ap->a_retval);
 		vn_lock(vp, LK_SHARED | LK_RETRY);
 		vunref(vp);
 		return (error);
@@ -521,7 +522,7 @@ fdesc_setattr(struct vop_setattr_args *ap)
 	return (error);
 }
 
-#define UIO_MX 16
+#define UIO_MX _GENERIC_DIRLEN(10) /* number of symbols in INT_MAX printout */
 
 static int
 fdesc_readdir(struct vop_readdir_args *ap)
@@ -574,6 +575,8 @@ fdesc_readdir(struct vop_readdir_args *ap)
 			dirent_terminate(dp);
 			break;
 		}
+		/* NOTE: d_off is the offset of the *next* entry. */
+		dp->d_off = UIO_MX * (i + 1);
 		if (dp->d_namlen != 0) {
 			/*
 			 * And ship to userland
@@ -612,7 +615,6 @@ static int
 fdesc_readlink(struct vop_readlink_args *va)
 {
 	struct vnode *vp, *vn;
-	cap_rights_t rights;
 	struct thread *td;
 	struct uio *uio;
 	struct file *fp;
@@ -630,7 +632,7 @@ fdesc_readlink(struct vop_readlink_args *va)
 	VOP_UNLOCK(vn, 0);
 
 	td = curthread;
-	error = fget_cap(td, fd_fd, cap_rights_init(&rights), &fp, NULL);
+	error = fget_cap(td, fd_fd, &cap_no_rights, &fp, NULL);
 	if (error != 0)
 		goto out;
 

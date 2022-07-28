@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010-2012 Semihalf.
  * All rights reserved.
  *
@@ -25,13 +27,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/nandfs/nandfs_segment.c 297793 2016-04-10 23:07:00Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
+#include <sys/gsb_crc32.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000-2004
  *	Poul-Henning Kamp.  All rights reserved.
  * Copyright (c) 1989, 1992-1993, 1995
@@ -31,7 +33,7 @@
  *	@(#)kernfs_vnops.c	8.15 (Berkeley) 5/21/95
  * From: FreeBSD: src/sys/miscfs/kernfs/kernfs_vnops.c 1.43
  *
- * $FreeBSD: stable/11/sys/fs/devfs/devfs_vnops.c 353722 2019-10-18 08:39:10Z kib $
+ * $FreeBSD$
  */
 
 /*
@@ -49,6 +51,7 @@
 #include <sys/filio.h>
 #include <sys/jail.h>
 #include <sys/kernel.h>
+#include <sys/limits.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mman.h>
@@ -744,47 +747,61 @@ devfs_getattr(struct vop_getattr_args *ap)
 static int
 devfs_ioctl_f(struct file *fp, u_long com, void *data, struct ucred *cred, struct thread *td)
 {
-	struct cdev *dev;
-	struct cdevsw *dsw;
-	struct vnode *vp;
-	struct vnode *vpold;
-	int error, i, ref;
-	const char *p;
-	struct fiodgname_arg *fgn;
 	struct file *fpop;
+	int error;
 
 	fpop = td->td_fpop;
-	error = devfs_fp_check(fp, &dev, &dsw, &ref);
-	if (error != 0) {
-		error = vnops.fo_ioctl(fp, com, data, cred, td);
-		return (error);
-	}
+	td->td_fpop = fp;
+	error = vnops.fo_ioctl(fp, com, data, cred, td);
+	td->td_fpop = fpop;
+	return (error);
+}
+
+static int
+devfs_ioctl(struct vop_ioctl_args *ap)
+{
+	struct fiodgname_arg *fgn;
+	struct vnode *vpold, *vp;
+	struct cdevsw *dsw;
+	struct thread *td;
+	struct cdev *dev;
+	int error, ref, i;
+	const char *p;
+	u_long com;
+
+	vp = ap->a_vp;
+	com = ap->a_command;
+	td = ap->a_td;
+
+	dsw = devvn_refthread(vp, &dev, &ref);
+	if (dsw == NULL)
+		return (ENXIO);
+	KASSERT(dev->si_refcount > 0,
+	    ("devfs: un-referenced struct cdev *(%s)", devtoname(dev)));
 
 	if (com == FIODTYPE) {
-		*(int *)data = dsw->d_flags & D_TYPEMASK;
-		td->td_fpop = fpop;
-		dev_relthread(dev, ref);
-		return (0);
+		*(int *)ap->a_data = dsw->d_flags & D_TYPEMASK;
+		error = 0;
+		goto out;
 	} else if (com == FIODGNAME) {
-		fgn = data;
+		fgn = ap->a_data;
 		p = devtoname(dev);
 		i = strlen(p) + 1;
 		if (i > fgn->len)
 			error = EINVAL;
 		else
 			error = copyout(p, fgn->buf, i);
-		td->td_fpop = fpop;
-		dev_relthread(dev, ref);
-		return (error);
+		goto out;
 	}
-	error = dsw->d_ioctl(dev, com, data, fp->f_flag, td);
-	td->td_fpop = NULL;
+
+	error = dsw->d_ioctl(dev, com, ap->a_data, ap->a_fflag, td);
+
+out:
 	dev_relthread(dev, ref);
 	if (error == ENOIOCTL)
 		error = ENOTTY;
-	if (error == 0 && com == TIOCSCTTY) {
-		vp = fp->f_vnode;
 
+	if (error == 0 && com == TIOCSCTTY) {
 		/*
 		 * Do nothing if reassigning same control tty, or if the
 		 * control tty has already disappeared.  If it disappeared,
@@ -1168,7 +1185,7 @@ devfs_pathconf(struct vop_pathconf_args *ap)
 		*ap->a_retval = NAME_MAX;
 		return (0);
 	case _PC_LINK_MAX:
-		*ap->a_retval = LINK_MAX;
+		*ap->a_retval = INT_MAX;
 		return (0);
 	case _PC_SYMLINK_MAX:
 		*ap->a_retval = MAXPATHLEN;
@@ -1195,7 +1212,7 @@ devfs_pathconf(struct vop_pathconf_args *ap)
 #ifdef MAC
 		/*
 		 * If MAC is enabled, devfs automatically supports
-		 * trivial non-persistant label storage.
+		 * trivial non-persistent label storage.
 		 */
 		*ap->a_retval = 1;
 #else
@@ -1331,9 +1348,12 @@ devfs_readdir(struct vop_readdir_args *ap)
 		else
 			de = dd;
 		dp = dd->de_dirent;
+		MPASS(dp->d_reclen == GENERIC_DIRSIZ(dp));
 		if (dp->d_reclen > uio->uio_resid)
 			break;
 		dp->d_fileno = de->de_inode;
+		/* NOTE: d_off is the offset for the *next* entry. */
+		dp->d_off = off + dp->d_reclen;
 		if (off >= uio->uio_offset) {
 			error = vfs_read_dirent(ap, dp, off);
 			if (error)
@@ -1870,6 +1890,7 @@ static struct fileops devfs_ops_f = {
 	.fo_flags =	DFLAG_PASSABLE | DFLAG_SEEKABLE
 };
 
+/* Vops for non-CHR vnodes in /dev. */
 static struct vop_vector devfs_vnodeops = {
 	.vop_default =		&default_vnodeops,
 
@@ -1893,6 +1914,7 @@ static struct vop_vector devfs_vnodeops = {
 	.vop_vptocnp =		devfs_vptocnp,
 };
 
+/* Vops for VCHR vnodes in /dev. */
 static struct vop_vector devfs_specops = {
 	.vop_default =		&default_vnodeops,
 
@@ -1902,6 +1924,7 @@ static struct vop_vector devfs_specops = {
 	.vop_create =		VOP_PANIC,
 	.vop_fsync =		vop_stdfsync,
 	.vop_getattr =		devfs_getattr,
+	.vop_ioctl =		devfs_ioctl,
 	.vop_link =		VOP_PANIC,
 	.vop_mkdir =		VOP_PANIC,
 	.vop_mknod =		VOP_PANIC,

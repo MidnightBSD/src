@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1992, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
  * Copyright (c) 2000
@@ -32,7 +33,7 @@
  *	@(#)kernfs_vfsops.c	8.10 (Berkeley) 5/14/95
  * From: FreeBSD: src/sys/miscfs/kernfs/kernfs_vfsops.c 1.36
  *
- * $FreeBSD: stable/10/sys/fs/devfs/devfs_vfsops.c 297523 2016-04-03 14:38:02Z mav $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -81,9 +82,6 @@ devfs_mount(struct mount *mp)
 
 	if (mp->mnt_flag & MNT_ROOTFS)
 		return (EOPNOTSUPP);
-
-	if (!prison_allow(td->td_ucred, PR_ALLOW_MOUNT_DEVFS))
-		return (EPERM);
 
 	rsnum = 0;
 	injail = jailed(td->td_ucred);

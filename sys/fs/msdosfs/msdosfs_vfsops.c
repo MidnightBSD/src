@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/sys/fs/msdosfs/msdosfs_vfsops.c 308545 2016-11-11 19:40:34Z kib $ */
+/* $FreeBSD$ */
 /*	$NetBSD: msdosfs_vfsops.c,v 1.51 1997/11/17 15:36:58 ws Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (C) 1994, 1995, 1997 Wolfgang Solfrank.
  * Copyright (C) 1994, 1995, 1997 TooLs GmbH.
  * All rights reserved.
@@ -75,6 +77,10 @@
 #include <fs/msdosfs/fat.h>
 #include <fs/msdosfs/msdosfsmount.h>
 
+#ifdef MSDOSFS_DEBUG
+#include <sys/rwlock.h>
+#endif
+
 static const char msdosfs_lock_msg[] = "fatlk";
 
 /* Mount options that we support. */
@@ -82,7 +88,7 @@ static const char *msdosfs_opts[] = {
 	"async", "noatime", "noclusterr", "noclusterw",
 	"export", "force", "from", "sync",
 	"cs_dos", "cs_local", "cs_win", "dirmask",
-	"gid", "kiconv", "large", "longname",
+	"gid", "kiconv", "longname",
 	"longnames", "mask", "shortname", "shortnames",
 	"uid", "win95", "nowin95",
 	NULL
@@ -242,35 +248,30 @@ msdosfs_mount(struct mount *mp)
 	 */
 	if (mp->mnt_flag & MNT_UPDATE) {
 		pmp = VFSTOMSDOSFS(mp);
-		if (vfs_flagopt(mp->mnt_optnew, "export", NULL, 0)) {
-			/*
-			 * Forbid export requests if filesystem has
-			 * MSDOSFS_LARGEFS flag set.
-			 */
-			if ((pmp->pm_flags & MSDOSFS_LARGEFS) != 0) {
-				vfs_mount_error(mp,
-				    "MSDOSFS_LARGEFS flag set, cannot export");
-				return (EOPNOTSUPP);
-			}
-		}
 		if (!(pmp->pm_flags & MSDOSFSMNT_RONLY) &&
 		    vfs_flagopt(mp->mnt_optnew, "ro", NULL, 0)) {
-			error = VFS_SYNC(mp, MNT_WAIT);
-			if (error)
+			if ((error = vn_start_write(NULL, &mp, V_WAIT)) != 0)
 				return (error);
+			error = vfs_write_suspend_umnt(mp);
+			if (error != 0)
+				return (error);
+
 			flags = WRITECLOSE;
 			if (mp->mnt_flag & MNT_FORCE)
 				flags |= FORCECLOSE;
 			error = vflush(mp, 0, flags, td);
-			if (error)
+			if (error != 0) {
+				vfs_write_resume(mp, 0);
 				return (error);
+			}
 
 			/*
 			 * Now the volume is clean.  Mark it so while the
 			 * device is still rw.
 			 */
 			error = markvoldirty(pmp, 0);
-			if (error) {
+			if (error != 0) {
+				vfs_write_resume(mp, 0);
 				(void)markvoldirty(pmp, 1);
 				return (error);
 			}
@@ -280,6 +281,7 @@ msdosfs_mount(struct mount *mp)
 			error = g_access(pmp->pm_cp, 0, -1, 0);
 			g_topology_unlock();
 			if (error) {
+				vfs_write_resume(mp, 0);
 				(void)markvoldirty(pmp, 1);
 				return (error);
 			}
@@ -293,6 +295,7 @@ msdosfs_mount(struct mount *mp)
 			MNT_ILOCK(mp);
 			mp->mnt_flag |= MNT_RDONLY;
 			MNT_IUNLOCK(mp);
+			vfs_write_resume(mp, 0);
 		} else if ((pmp->pm_flags & MSDOSFSMNT_RONLY) &&
 		    !vfs_flagopt(mp->mnt_optnew, "ro", NULL, 0)) {
 			/*
@@ -325,7 +328,7 @@ msdosfs_mount(struct mount *mp)
 			/* Now that the volume is modifiable, mark it dirty. */
 			error = markvoldirty(pmp, 1);
 			if (error)
-				return (error); 
+				return (error);
 		}
 	}
 	/*
@@ -398,7 +401,7 @@ mountmsdosfs(struct vnode *devvp, struct mount *mp)
 	struct byte_bpb33 *b33;
 	struct byte_bpb50 *b50;
 	struct byte_bpb710 *b710;
-	u_int8_t SecPerClust;
+	uint8_t SecPerClust;
 	u_long clusters;
 	int ronly, error;
 	struct g_consumer *cp;
@@ -467,20 +470,6 @@ mountmsdosfs(struct vnode *devvp, struct mount *mp)
 	    S_IRUSR | S_IRGRP | S_IROTH | S_IWUSR;
 
 	/*
-	 * Experimental support for large MS-DOS filesystems.
-	 * WARNING: This uses at least 32 bytes of kernel memory (which is not
-	 * reclaimed until the FS is unmounted) for each file on disk to map
-	 * between the 32-bit inode numbers used by VFS and the 64-bit
-	 * pseudo-inode numbers used internally by msdosfs. This is only
-	 * safe to use in certain controlled situations (e.g. read-only FS
-	 * with less than 1 million files).
-	 * Since the mappings do not persist across unmounts (or reboots), these
-	 * filesystems are not suitable for exporting through NFS, or any other
-	 * application that requires fixed inode numbers.
-	 */
-	vfs_flagopt(mp->mnt_optnew, "large", &pmp->pm_flags, MSDOSFS_LARGEFS);
-
-	/*
 	 * Compute several useful quantities from the bpb in the
 	 * bootsector.  Copy in the dos 5 variant of the bpb then fix up
 	 * the fields that are different between dos 5 and dos 3.3.
@@ -520,20 +509,6 @@ mountmsdosfs(struct vnode *devvp, struct mount *mp)
 	} else {
 		pmp->pm_HiddenSects = getushort(b33->bpbHiddenSecs);
 		pmp->pm_HugeSectors = pmp->pm_Sectors;
-	}
-	if (!(pmp->pm_flags & MSDOSFS_LARGEFS)) {
-		if (pmp->pm_HugeSectors > 0xffffffff /
-		    (pmp->pm_BytesPerSec / sizeof(struct direntry)) + 1) {
-			/*
-			 * We cannot deal currently with this size of disk
-			 * due to fileid limitations (see msdosfs_getattr and
-			 * msdosfs_readdir)
-			 */
-			error = EINVAL;
-			vfs_mount_error(mp,
-			    "Disk too big, try '-o large' mount option");
-			goto error_exit;
-		}
 	}
 
 	if (pmp->pm_RootDirEnts == 0) {
@@ -604,7 +579,7 @@ mountmsdosfs(struct vnode *devvp, struct mount *mp)
 		    <= ((CLUST_RSRVD - CLUST_FIRST) & FAT12_MASK)) {
 			/*
 			 * This will usually be a floppy disk. This size makes
-			 * sure that one fat entry will not be split across
+			 * sure that one FAT entry will not be split across
 			 * multiple blocks.
 			 */
 			pmp->pm_fatmask = FAT12_MASK;
@@ -717,9 +692,9 @@ mountmsdosfs(struct vnode *devvp, struct mount *mp)
 		goto error_exit;
 
 	/*
-	 * If they want fat updates to be synchronous then let them suffer
+	 * If they want FAT updates to be synchronous then let them suffer
 	 * the performance degradation in exchange for the on disk copy of
-	 * the fat being correct just about all the time.  I suppose this
+	 * the FAT being correct just about all the time.  I suppose this
 	 * would be a good thing to turn on if the kernel is still flakey.
 	 */
 	if (mp->mnt_flag & MNT_SYNCHRONOUS)
@@ -745,10 +720,7 @@ mountmsdosfs(struct vnode *devvp, struct mount *mp)
 	mp->mnt_kern_flag |= MNTK_USES_BCACHE | MNTK_NO_IOPF;
 	MNT_IUNLOCK(mp);
 
-	if (pmp->pm_flags & MSDOSFS_LARGEFS)
-		msdosfs_fileno_init(mp);
-
-	return 0;
+	return (0);
 
 error_exit:
 	if (bp)
@@ -777,21 +749,31 @@ msdosfs_unmount(struct mount *mp, int mntflags)
 {
 	struct msdosfsmount *pmp;
 	int error, flags;
+	bool susp;
 
 	error = flags = 0;
 	pmp = VFSTOMSDOSFS(mp);
-	if ((pmp->pm_flags & MSDOSFSMNT_RONLY) == 0)
-		error = msdosfs_sync(mp, MNT_WAIT);
+	susp = (pmp->pm_flags & MSDOSFSMNT_RONLY) == 0;
+
+	if (susp) {
+		error = vfs_write_suspend_umnt(mp);
+		if (error != 0)
+			return (error);
+	}
+
 	if ((mntflags & MNT_FORCE) != 0)
 		flags |= FORCECLOSE;
-	else if (error != 0)
-		return (error);
 	error = vflush(mp, 0, flags, curthread);
-	if (error != 0 && error != ENXIO)
+	if (error != 0 && error != ENXIO) {
+		if (susp)
+			vfs_write_resume(mp, VR_START_WRITE);
 		return (error);
-	if ((pmp->pm_flags & MSDOSFSMNT_RONLY) == 0) {
+	}
+	if (susp) {
 		error = markvoldirty(pmp, 0);
-		if (error && error != ENXIO) {
+		if (error != 0 && error != ENXIO) {
+			if (susp)
+				vfs_write_resume(mp, VR_START_WRITE);
 			(void)markvoldirty(pmp, 1);
 			return (error);
 		}
@@ -828,6 +810,9 @@ msdosfs_unmount(struct mount *mp, int mntflags)
 		BO_UNLOCK(bo);
 	}
 #endif
+	if (susp)
+		vfs_write_resume(mp, VR_START_WRITE);
+
 	g_topology_lock();
 	g_vfs_close(pmp->pm_cp);
 	g_topology_unlock();
@@ -835,8 +820,6 @@ msdosfs_unmount(struct mount *mp, int mntflags)
 	vrele(pmp->pm_devvp);
 	dev_rel(pmp->pm_dev);
 	free(pmp->pm_inusemap, M_MSDOSFSFAT);
-	if (pmp->pm_flags & MSDOSFS_LARGEFS)
-		msdosfs_fileno_free(mp);
 	lockdestroy(&pmp->pm_fatlock);
 	free(pmp, M_MSDOSFSMNT);
 	mp->mnt_data = NULL;
@@ -925,14 +908,14 @@ msdosfs_sync(struct mount *mp, int waitfor)
 	td = curthread;
 
 	/*
-	 * If we ever switch to not updating all of the fats all the time,
+	 * If we ever switch to not updating all of the FATs all the time,
 	 * this would be the place to update them from the first one.
 	 */
 	if (pmp->pm_fmod != 0) {
 		if (pmp->pm_flags & MSDOSFSMNT_RONLY)
 			panic("msdosfs_sync: rofs mod");
 		else {
-			/* update fats here */
+			/* update FATs here */
 		}
 	}
 	/*
@@ -979,6 +962,12 @@ loop:
 	error = msdosfs_fsiflush(pmp, waitfor);
 	if (error != 0)
 		allerror = error;
+
+	if (allerror == 0 && waitfor == MNT_SUSPEND) {
+		MNT_ILOCK(mp);
+		mp->mnt_kern_flag |= MNTK_SUSPEND2 | MNTK_SUSPENDED;
+		MNT_IUNLOCK(mp);
+	}
 	return (allerror);
 }
 
@@ -1000,6 +989,11 @@ msdosfs_fhtovp(struct mount *mp, struct fid *fhp, int flags, struct vnode **vpp)
 	return (0);
 }
 
+static void
+msdosfs_susp_clean(struct mount *mp __unused)
+{
+}
+
 static struct vfsops msdosfs_vfsops = {
 	.vfs_fhtovp =		msdosfs_fhtovp,
 	.vfs_mount =		msdosfs_mount,
@@ -1008,6 +1002,7 @@ static struct vfsops msdosfs_vfsops = {
 	.vfs_statfs =		msdosfs_statfs,
 	.vfs_sync =		msdosfs_sync,
 	.vfs_unmount =		msdosfs_unmount,
+	.vfs_susp_clean =	msdosfs_susp_clean,
 };
 
 VFS_SET(msdosfs_vfsops, msdosfs, 0);

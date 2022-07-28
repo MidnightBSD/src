@@ -5,6 +5,8 @@
  *  University of Utah, Department of Computer Science
  */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -16,7 +18,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_extern.h	8.3 (Berkeley) 4/16/94
- * $FreeBSD: stable/11/sys/fs/ext2fs/ext2_extern.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _FS_EXT2FS_EXT2_EXTERN_H_
@@ -41,6 +43,7 @@
 
 struct ext2fs_dinode;
 struct ext2fs_direct_2;
+struct ext2fs_direct_tail;
 struct ext2fs_searchslot;
 struct indir;
 struct inode;
@@ -51,7 +54,7 @@ struct vnode;
 int	ext2_add_entry(struct vnode *, struct ext2fs_direct_2 *);
 int	ext2_alloc(struct inode *, daddr_t, e4fs_daddr_t, int,
 	    struct ucred *, e4fs_daddr_t *);
-daddr_t ext2_allocfacl(struct inode *ip);
+e4fs_daddr_t ext2_alloc_meta(struct inode *ip);
 int	ext2_balloc(struct inode *,
 	    e2fs_lbn_t, int, struct ucred *, struct buf **, int);
 int	ext2_blkatoff(struct vnode *, off_t, char **, struct buf **);
@@ -60,10 +63,11 @@ e4fs_daddr_t	ext2_blkpref(struct inode *, e2fs_lbn_t, int, e2fs_daddr_t *,
 	    e2fs_daddr_t);
 int	ext2_bmap(struct vop_bmap_args *);
 int	ext2_bmaparray(struct vnode *, daddr_t, daddr_t *, int *, int *);
-void	ext2_clusteracct(struct m_ext2fs *, char *, int, daddr_t, int);
+int	ext4_bmapext(struct vnode *, int32_t, int64_t *, int *, int *);
+int	ext2_bmap_seekdata(struct vnode *, off_t *);
+void	ext2_clusteracct(struct m_ext2fs *, char *, int, e4fs_daddr_t, int);
 void	ext2_dirbad(struct inode *ip, doff_t offset, char *how);
-void	ext2_fserr(struct m_ext2fs *, uid_t, char *);
-void	ext2_ei2i(struct ext2fs_dinode *, struct inode *);
+int	ext2_ei2i(struct ext2fs_dinode *, struct inode *);
 int	ext2_getlbns(struct vnode *, daddr_t, struct indir *, int *);
 int	ext2_i2ei(struct inode *, struct ext2fs_dinode *);
 void	ext2_itimes(struct vnode *vp);
@@ -76,7 +80,7 @@ int	ext2_vfree(struct vnode *, ino_t, int);
 int	ext2_vinit(struct mount *, struct vop_vector *, struct vnode **vpp);
 int	ext2_lookup(struct vop_cachedlookup_args *);
 int	ext2_readdir(struct vop_readdir_args *);
-#ifdef EXT2FS_DEBUG
+#ifdef EXT2FS_PRINT_EXTENTS
 void	ext2_print_inode(struct inode *);
 #endif
 int	ext2_direnter(struct inode *, 
@@ -87,6 +91,7 @@ int	ext2_dirrewrite(struct inode *,
 int	ext2_dirempty(struct inode *, ino_t, struct ucred *);
 int	ext2_checkpath(struct inode *, struct inode *, struct ucred *);
 int	ext2_cg_has_sb(struct m_ext2fs *fs, int cg);
+uint64_t	ext2_cg_number_gdb(struct m_ext2fs *fs, int cg);
 int	ext2_inactive(struct vop_inactive_args *);
 int	ext2_htree_add_entry(struct vnode *, struct ext2fs_direct_2 *,
 	    struct componentname *);
@@ -99,12 +104,44 @@ int	ext2_htree_lookup(struct inode *, const char *, int, struct buf **,
 	    int *, doff_t *, doff_t *, doff_t *, struct ext2fs_searchslot *);
 int	ext2_search_dirblock(struct inode *, void *, int *, const char *, int,
 	    int *, doff_t *, doff_t *, doff_t *, struct ext2fs_searchslot *);
-int	ext2_gd_csum_verify(struct m_ext2fs *fs, struct cdev *dev);
-void	ext2_gd_csum_set(struct m_ext2fs *fs);
-
+uint32_t	e2fs_gd_get_ndirs(struct ext2_gd *gd);
+uint64_t	e2fs_gd_get_b_bitmap(struct ext2_gd *);
+uint64_t	e2fs_gd_get_i_bitmap(struct ext2_gd *);
+uint64_t	e2fs_gd_get_i_tables(struct ext2_gd *);
+void	ext2_sb_csum_set_seed(struct m_ext2fs *);
+int	ext2_sb_csum_verify(struct m_ext2fs *);
+void	ext2_sb_csum_set(struct m_ext2fs *);
+int	ext2_extattr_blk_csum_verify(struct inode *, struct buf *);
+void	ext2_extattr_blk_csum_set(struct inode *, struct buf *);
+int	ext2_dir_blk_csum_verify(struct inode *, struct buf *);
+struct ext2fs_direct_tail	*ext2_dirent_get_tail(struct inode *ip,
+    struct ext2fs_direct_2 *ep);
+void	ext2_dirent_csum_set(struct inode *, struct ext2fs_direct_2 *);
+int	ext2_dirent_csum_verify(struct inode *ip, struct ext2fs_direct_2 *ep);
+void	ext2_dx_csum_set(struct inode *, struct ext2fs_direct_2 *);
+int	ext2_dx_csum_verify(struct inode *ip, struct ext2fs_direct_2 *ep);
+int	ext2_extent_blk_csum_verify(struct inode *, void *);
+void	ext2_extent_blk_csum_set(struct inode *, void *);
+void	ext2_init_dirent_tail(struct ext2fs_direct_tail *);
+int	ext2_is_dirent_tail(struct inode *, struct ext2fs_direct_2 *);
+int	ext2_gd_i_bitmap_csum_verify(struct m_ext2fs *, int, struct buf *);
+void	ext2_gd_i_bitmap_csum_set(struct m_ext2fs *, int, struct buf *);
+int	ext2_gd_b_bitmap_csum_verify(struct m_ext2fs *, int, struct buf *);
+void	ext2_gd_b_bitmap_csum_set(struct m_ext2fs *, int, struct buf *);
+int	ext2_ei_csum_verify(struct inode *, struct ext2fs_dinode *);
+void	ext2_ei_csum_set(struct inode *, struct ext2fs_dinode *);
+int	ext2_gd_csum_verify(struct m_ext2fs *, struct cdev *);
+void	ext2_gd_csum_set(struct m_ext2fs *);
 
 /* Flags to low-level allocation routines.
  * The low 16-bits are reserved for IO_ flags from vnode.h.
+ *
+ * The BA_CLRBUF flag specifies that the existing content of the block
+ * will not be completely overwritten by the caller, so buffers for new
+ * blocks must be cleared and buffers for existing blocks must be read.
+ * When BA_CLRBUF is not set the buffer will be completely overwritten
+ * and there is no reason to clear them or to spend I/O fetching existing
+ * data. The BA_CLRBUF flag is handled in the ext2_balloc() functions.
  */
 #define	BA_CLRBUF	0x00010000	/* Clear invalid areas of buffer. */
 #define	BA_SEQMASK	0x7F000000	/* Bits holding seq heuristic. */

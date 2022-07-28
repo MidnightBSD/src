@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/autofs/autofs_vnops.c 341074 2018-11-27 16:51:18Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -354,13 +354,11 @@ autofs_readdir_one(struct uio *uio, const char *name, int fileno,
     size_t *reclenp)
 {
 	struct dirent dirent;
-	size_t namlen, padded_namlen, reclen;
+	size_t namlen, reclen;
 	int error;
 
 	namlen = strlen(name);
-	padded_namlen = roundup2(namlen + 1, __alignof(struct dirent));
-	KASSERT(padded_namlen <= MAXNAMLEN, ("%zd > MAXNAMLEN", padded_namlen));
-	reclen = offsetof(struct dirent, d_name) + padded_namlen;
+	reclen = _GENERIC_DIRLEN(namlen);
 	if (reclenp != NULL)
 		*reclenp = reclen;
 
@@ -371,6 +369,7 @@ autofs_readdir_one(struct uio *uio, const char *name, int fileno,
 		return (EINVAL);
 
 	dirent.d_fileno = fileno;
+	dirent.d_off = uio->uio_offset + reclen;
 	dirent.d_reclen = reclen;
 	dirent.d_type = DT_DIR;
 	dirent.d_namlen = namlen;
