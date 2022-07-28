@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/examples/tests/tests/plain/Makefile 321647 2017-07-28 03:32:36Z ngie $
+# $FreeBSD$
 
 # The release package to use for the tests contained within the directory
 #

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/i18n/esdb/ISO-2022/ISO-2022-JP.src 219019 2011-02-25 00:04:39Z gabor $ 
+# $FreeBSD$ 
 # $NetBSD: ISO-2022-JP.src,v 1.2 2003/07/16 06:57:35 tshiozak Exp $
 
 NAME		"ISO-2022-JP"

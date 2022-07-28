@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/share/examples/ses/srcs/eltsub.c 242647 2012-11-06 01:29:26Z mav $ */
+/* $FreeBSD$ */
 /*
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.
@@ -62,7 +62,7 @@ geteltnm(int type)
 		sprintf(rbuf, "Cooling");
 		break;
 	case ELMTYP_THERM:
-		sprintf(rbuf, "Temperature Sensors");
+		sprintf(rbuf, "Temperature Sensor");
 		break;
 	case ELMTYP_DOORLOCK:
 		sprintf(rbuf, "Door Lock");

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/share/examples/hwpmc/overhead.c 269345 2014-07-31 18:02:38Z gnn $
+ * $FreeBSD$
  *
  * Author: George V. Neville-Neil
  *
@@ -65,7 +65,7 @@ main(int argc, char **argv)
 	if (pmc_init() != 0)
 		err(EX_OSERR, "hwpmc(4) not loaded, kldload or update your kernel");
 
-	if (pmc_allocate(counter_name, PMC_MODE_SC, 0, 0, &pmcid) < 0)
+	if (pmc_allocate(counter_name, PMC_MODE_SC, 0, 0, &pmcid, 64*1024) < 0)
 		err(EX_OSERR, "failed to allocate %s as a system counter in counting mode",
 		    counter_name);
 

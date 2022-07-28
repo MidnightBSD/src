@@ -1,5 +1,7 @@
 #!/bin/sh
 #
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (c) 2013 NetApp, Inc.
 # All rights reserved.
 #
@@ -24,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/share/examples/bhyve/vmrun.sh 335698 2018-06-27 07:18:54Z kib $
+# $FreeBSD$
 #
 
 LOADER=/usr/sbin/bhyveload
@@ -73,7 +75,7 @@ usage() {
 	echo "       -E: Use UEFI mode"
 	echo "       -f: Use a specific UEFI firmware"
 	echo "       -F: Use a custom UEFI GOP framebuffer size" \
-	    "(default: ${DEFAULT_VNCSIZE}"
+	    "(default: ${DEFAULT_VNCSIZE})"
 	echo "       -g: listen for connection from kgdb at <gdbport>"
 	echo "       -H: host filesystem to export to the loader"
 	echo "       -i: force boot of the Installation CDROM image"

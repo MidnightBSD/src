@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/i18n/csmapper/CNS/UCS@BMP%CNS11643-7.src 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 # $NetBSD: UCS@BMP%CNS11643-7.src,v 1.1 2007/03/05 16:57:14 tnozaki Exp $
 
 TYPE		ROWCOL

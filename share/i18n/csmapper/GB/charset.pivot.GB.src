@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/i18n/csmapper/GB/charset.pivot.GB.src 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 # $NetBSD: charset.pivot.GB.src,v 1.5 2006/11/23 03:25:24 tnozaki Exp $
 
 GB12345			UCS			1

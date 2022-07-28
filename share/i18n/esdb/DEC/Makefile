@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/i18n/esdb/DEC/Makefile 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 # $NetBSD: Makefile.inc,v 1.2 2008/10/25 22:27:36 apb Exp $
 
 CODE=	DEC

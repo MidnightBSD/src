@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/i18n/csmapper/BIG5/UCS%Big5EXT@Plus.src 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 # $NetBSD: UCS%Big5EXT@Plus.src,v 1.1 2006/06/19 17:28:25 tnozaki Exp $
 
 TYPE		ROWCOL

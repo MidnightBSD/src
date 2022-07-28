@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/i18n/csmapper/KAZAKH/mapper.dir.KAZAKH.src 219019 2011-02-25 00:04:39Z gabor $ 
+# $FreeBSD$ 
 # $NetBSD: mapper.dir.KAZAKH.src,v 1.1 2007/03/13 16:34:38 tnozaki Exp $
 
 KZ1048/UCS		mapper_std	KAZAKH/KZ1048%UCS.mps

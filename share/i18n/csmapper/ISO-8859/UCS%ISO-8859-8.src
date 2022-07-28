@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/i18n/csmapper/ISO-8859/UCS%ISO-8859-8.src 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 # $NetBSD: UCS%ISO-8859-8.src,v 1.4 2005/03/09 11:31:41 tshiozak Exp $
 
 TYPE		ROWCOL
