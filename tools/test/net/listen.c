@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/test/net/listen.c 290089 2015-10-28 03:43:24Z gnn $
+ * $FreeBSD$
  */
 
 #include <err.h>

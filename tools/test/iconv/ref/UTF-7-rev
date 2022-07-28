@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/tools/test/iconv/ref/UTF-7-rev 219019 2011-02-25 00:04:39Z gabor $
+$FreeBSD$
 0x00 = 0x41412B
 0x01 = 0x41412B
 0x02 = 0x41412B

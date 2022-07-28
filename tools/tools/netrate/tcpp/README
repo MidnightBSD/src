@@ -105,4 +105,4 @@ ifconfig cxgb0 -tso
 ifconfig cxgb0 mtu 1500
 
 
-$MidnightBSD$
+$FreeBSD$

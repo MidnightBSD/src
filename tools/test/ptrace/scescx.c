@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/tools/test/ptrace/scescx.c 321346 2017-07-21 18:14:06Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/ptrace.h>
@@ -196,16 +196,17 @@ wait_info(int pid, int status, struct ptrace_lwpinfo *lwpinfo)
 			    (caddr_t)args, lwpinfo->pl_syscall_narg *
 			    sizeof(long));
 			if (error == 0) {
+				printf("(");
 				for (i = 0; i < (int)lwpinfo->pl_syscall_narg;
 				    i++) {
-					printf("%c%#lx", i == 0 ? '(' : ',',
+					printf("%s%#lx", i == 0 ? "" : ",",
 					    args[i]);
 				}
+				printf(")");
 			} else {
 				fprintf(stderr, "PT_GET_SC_ARGS failed: %s",
 				    strerror(errno));
 			}
-			printf(")");
 			free(args);
 		}
 	}

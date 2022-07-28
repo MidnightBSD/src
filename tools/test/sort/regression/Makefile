@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tools/test/sort/regression/Makefile 235274 2012-05-11 16:04:55Z gabor $
+# $FreeBSD$
 
 TESTFILE= test01 test02 test03 test04 test05 test06 test07 test08 \
 	test09 test10 test11 test12 test13 test14 test15 test16 test17 \

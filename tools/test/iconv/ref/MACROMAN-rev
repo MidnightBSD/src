@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/tools/test/iconv/ref/MACROMAN-rev 219019 2011-02-25 00:04:39Z gabor $
+$FreeBSD$
 0x00 = 0x00
 0x01 = 0x01
 0x02 = 0x02

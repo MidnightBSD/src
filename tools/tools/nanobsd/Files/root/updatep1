@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/tools/tools/nanobsd/Files/root/updatep1,v 1.2 2005/09/21 09:40:45 phk Exp $
+# $FreeBSD$
 #
 # Script to update partition 1 on a NanoBSD system.
 #
@@ -51,4 +51,4 @@ dd of=/dev/${NANO_DRIVE}s1 obs=64k
 # Check that it worked
 fsck_ffs -n /dev/${NANO_DRIVE}s1a
 
-boot0cfg -s 1 -v ${NANO_DRIVE}
+gpart set -a active -i 1 ${NANO_DRIVE}

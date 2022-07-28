@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/tools/tools/locale/etc/charmaps/eucCN.TXT 286434 2015-08-08 00:28:23Z bapt $
+# $FreeBSD$
 #
 #	Name:             eucCN-80 to Unicode table (complete, hex format)
 #	Based on the GB2312.TXT
