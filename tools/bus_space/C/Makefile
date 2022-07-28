@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tools/bus_space/C/Makefile 284228 2015-06-10 16:00:09Z marcel $
+# $FreeBSD$
 
 LIB=		bus
 SHLIB_MAJOR=	0

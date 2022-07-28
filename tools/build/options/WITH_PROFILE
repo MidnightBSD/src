@@ -1,3 +1,5 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITH_PROFILE 320718 2017-07-06 05:51:23Z ngie $
+.\" $FreeBSD$
 Set to build profiled libraries for use with
 .Xr gprof 8 .
+This option is deprecated and may not be present in a future version of
+.Fx .

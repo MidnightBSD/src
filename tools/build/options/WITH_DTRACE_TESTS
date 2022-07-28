@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITH_DTRACE_TESTS 286174 2015-08-02 00:37:33Z markj $
+.\" $FreeBSD$
 Set to build and install the DTrace test suite in
 .Pa /usr/tests/cddl/usr.sbin/dtrace .
 This test suite is considered experimental on architectures other than

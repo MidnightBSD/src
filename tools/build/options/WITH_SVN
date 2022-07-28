@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITH_SVN 252561 2013-07-03 12:36:47Z zeising $
+.\" $FreeBSD$
 Set to install
 .Xr svnlite 1
 as

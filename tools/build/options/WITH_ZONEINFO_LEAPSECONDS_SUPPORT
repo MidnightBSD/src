@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITH_ZONEINFO_LEAPSECONDS_SUPPORT 322099 2017-08-05 16:44:31Z ngie $
+.\" $FreeBSD$
 Set to build leapsecond information in to the timezone database.

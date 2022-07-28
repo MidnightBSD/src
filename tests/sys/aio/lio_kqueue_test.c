@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tests/sys/aio/lio_kqueue_test.c 326677 2017-12-08 05:20:54Z asomers $
+ * $FreeBSD$
  */
 
 /*

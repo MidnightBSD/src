@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # This file is in the public domain.
-# $FreeBSD: stable/11/tools/build/options/makeman 339282 2018-10-10 13:12:52Z emaste $
+# $FreeBSD$
 #
 # This script creates the src.conf.5 man page using template text contained
 # herein and the contents of the WITH_* and WITHOUT_* files in the same
@@ -22,7 +22,7 @@ set -o errexit
 export LC_ALL=C
 
 t=$(mktemp -d -t makeman)
-# trap 'test -d $t && rm -rf $t' exit
+trap 'test -d $t && rm -rf $t' exit
 
 srcdir=$(realpath ../../..)
 make="make -C $srcdir -m $srcdir/share/mk"
@@ -44,7 +44,7 @@ no_targets()
 
 show_options()
 {
-	ALL_TARGETS=$(echo $(${make} targets | tail -n +2))
+	ALL_TARGETS=$(echo $(${make} targets MK_AUTO_OBJ=no | tail -n +2))
 	rm -f $t/settings
 	for target in ${ALL_TARGETS} ; do
 		prev_opt=
@@ -154,7 +154,8 @@ main()
 .Sh DESCRIPTION
 The
 .Nm
-file contains settings that will apply to every build involving the
+file contains variables that control what components will be generated during
+the build process of the
 .Fx
 source tree; see
 .Xr build 7 .
@@ -218,12 +219,10 @@ variable, which defaults to
 Some examples that may only be set in this file are
 .Va WITH_DIRDEPS_BUILD ,
 and
-.Va WITH_META_MODE
-as they are environment-only variables.
-Note that
+.Va WITH_META_MODE ,
+and
 .Va MAKEOBJDIRPREFIX
-may be set here only when using
-.Va WITH_DIRDEPS_BUILD .
+as they are environment-only variables.
 .Pp
 The values of variables are ignored regardless of their setting;
 even if they would be set to
@@ -246,7 +245,7 @@ EOF
 	show with SRC_ENV_CONF=/dev/null | sort | sed 's/$/=/' > $t/src.conf
 	show settings SRC_ENV_CONF=$t/src.conf | sort > $t/config_WITH_ALL
 	show without SRC_ENV_CONF=/dev/null | sort > $t/config_WITHOUT_ALL
-	env_only_options="$(${make} -V __ENV_ONLY_OPTIONS)"
+	env_only_options="$(${make} MK_AUTO_OBJ=no -V __ENV_ONLY_OPTIONS)"
 
 	show_options |
 	while read opt targets ; do
@@ -279,14 +278,6 @@ EOF
 		show settings SRC_ENV_CONF=/dev/null -D${opt} | sort > $t/config_${opt}
 		comm -13 $t/config_default $t/config_${opt} | sed -n "/^${opt}$/!p" |
 		comm -13 $t/deps - > $t/deps2
-
-		# Work around BIND_UTILS=no being the default when every WITH_
-		# option is enabled.
-		if [ "$(cat $t/deps2)" = WITHOUT_BIND_UTILS ]; then
-			sort $t/deps $t/deps2 > $t/_deps
-			mv $t/_deps $t/deps
-			:> $t/deps2
-		fi
 
 		havedeps=0
 		if [ -s $t/deps ] ; then

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tests/sys/file/newfileops_on_fork_test.c 319300 2017-05-31 08:36:43Z ngie $
+ * $FreeBSD$
  */
 
 /*
@@ -50,7 +50,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifndef PORT
 #define	PORT	9000
+#endif
 
 static int listen_fd;
 

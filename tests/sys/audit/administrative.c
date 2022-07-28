@@ -22,7 +22,7 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tests/sys/audit/administrative.c 339092 2018-10-02 17:38:58Z asomers $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -377,6 +377,8 @@ ATF_TC_HEAD(acct_success, tc)
 {
 	atf_tc_set_md_var(tc, "descr", "Tests the audit of a successful "
 					"acct(2) call");
+	atf_tc_set_md_var(tc, "require.files",
+	    "/etc/rc.d/accounting /etc/rc.d/auditd");
 }
 
 ATF_TC_BODY(acct_success, tc)

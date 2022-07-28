@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITH_EXTRA_TCP_STACKS 302247 2016-06-28 13:37:01Z jtl $
+.\" $FreeBSD$
 Set to build extra TCP stack modules.

@@ -1,10 +1,9 @@
-# $FreeBSD: src/tools/diag/dumpvfscache/Makefile,v 1.4 2004/12/21 08:47:20 ru Exp $
+# $FreeBSD$
 
 PROG=	dumpvfscache
-DPADD=	${LIBKVM}
-LDADD=	-lkvm
+LIBADD=	kvm
 
-NO_MAN=
+MAN=
 
 test:	${PROG}
 	./${PROG} > a

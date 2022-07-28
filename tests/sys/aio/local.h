@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tests/sys/aio/local.h 319172 2017-05-30 03:05:22Z ngie $
+ * $FreeBSD$
  */
 
 #ifndef _AIO_TEST_LOCAL_H_

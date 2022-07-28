@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITH_GCC_BOOTSTRAP 264660 2014-04-18 17:03:58Z imp $
+.\" $FreeBSD$
 Set to build gcc and g++ as part of the bootstrap process.

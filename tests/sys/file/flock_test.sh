@@ -28,7 +28,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/tests/sys/file/flock_test.sh 324404 2017-10-07 23:10:16Z ngie $
+# $FreeBSD$
 
 # Testcase # 11 is racy; uses an undocumented kernel interface for testing
 #            locking

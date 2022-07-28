@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITH_STAGING_MAN 319247 2017-05-30 18:04:55Z ngie $
+.\" $FreeBSD$
 Enable staging of man pages to stage tree.
