@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/tools/test/iconv/ref/ISO-IR-165-rev 219019 2011-02-25 00:04:39Z gabor $
+$FreeBSD$
 0x0021 = 0x212A
 0x0022 = 0x222A
 0x0023 = 0x232A
