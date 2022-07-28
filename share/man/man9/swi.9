@@ -1,5 +1,4 @@
 .\" Copyright (c) 2000-2001 John H. Baldwin <jhb@FreeBSD.org>
-.\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -22,9 +21,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man9/swi.9 234465 2012-04-19 16:13:15Z pluknet $
+.\" $FreeBSD$
 .\"
-.Dd April 19, 2012
+.Dd July 25, 2020
 .Dt SWI 9
 .Os
 .Sh NAME
@@ -133,7 +132,7 @@ The
 .Fa flags
 argument specifies how and when the handler should be run and is a mask of one
 or more of the following flags:
-.Bl -tag -width SWI_DELAY
+.Bl -tag -width SWI_FROMNMI
 .It Dv SWI_DELAY
 Specifies that the kernel should mark the specified handler as needing to run,
 but the kernel should not schedule the software interrupt thread to run.
@@ -147,6 +146,13 @@ functionality performed by
 .Fn setdelayed
 in earlier versions of
 .Fx .
+.It Dv SWI_FROMNMI
+Specifies that
+.Fn swi_sched
+is called from NMI context and should be careful about used KPIs.
+On platforms allowing IPI sending from NMI context it immediately wakes
+.Va clk_intr_event
+via the IPI, otherwise it works just like SWI_DELAY.
 .El
 .Pp
 The

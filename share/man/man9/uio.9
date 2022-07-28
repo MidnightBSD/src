@@ -23,7 +23,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man9/uio.9 323395 2017-09-10 20:13:20Z ian $
+.\" $FreeBSD$
 .\"
 .Dd March 11, 2017
 .Dt UIO 9
@@ -149,7 +149,7 @@ transfers when the request partially overlaps the buffer.
 When
 .Va uio_offset
 is greater than or equal to the buffer size, the result is success
-with no bytes transfered, effectively signaling EOF.
+with no bytes transferred, effectively signaling EOF.
 .Sh RETURN VALUES
 On success
 .Fn uiomove ,

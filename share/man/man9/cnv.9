@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man9/cnv.9 336346 2018-07-16 15:02:21Z kevans $
+.\" $FreeBSD$
 .\"
 .Dd June 18, 2018
 .Dt CNV 9
@@ -85,7 +85,7 @@
 .Fn cnvlist_take_nvlist_array "void *cookie" "size_t *nitemsp"
 .Ft int
 .Fn cnvlist_take_descriptor "void *cookie"
-.Ft "const int *'
+.Ft "const int *"
 .Fn cnvlist_take_descriptor_array "void *cookie" "size_t *nitemsp"
 .\"
 .Ft void
@@ -204,11 +204,11 @@ nvlist_destroy(nvl);
 return (0);
 .Ed
 .Sh SEE ALSO
-.Xr nv 9 ,
 .Xr close 2 ,
-.Xr free 3
+.Xr free 3 ,
+.Xr nv 9
 .Sh AUTHORS
-.An -nosplit
 The
 .Nm cnv
 API was created during the Google Summer Of Code 2016 by
+.An Adam Starak .

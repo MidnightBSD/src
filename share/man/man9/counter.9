@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man9/counter.9 321231 2017-07-19 19:02:06Z ngie $
+.\" $FreeBSD$
 .\"
-.Dd March 22, 2017
+.Dd March 6, 2020
 .Dt COUNTER 9
 .Os
 .Sh NAME
@@ -51,6 +51,10 @@
 .Fn counter_u64_fetch "counter_u64_t c"
 .Ft void
 .Fn counter_u64_zero "counter_u64_t c"
+.Ft int64_t
+.Fn counter_ratecheck "struct counter_rate *cr" "int64_t limit"
+.Fn COUNTER_U64_SYSINIT "counter_u64_t c"
+.Fn COUNTER_U64_DEFINE_EARLY "counter_u64_t c"
 .In sys/sysctl.h
 .Fn SYSCTL_COUNTER_U64 parent nbr name access ptr descr
 .Fn SYSCTL_ADD_COUNTER_U64 ctx parent nbr name access ptr descr
@@ -128,6 +132,32 @@ value for any moment.
 Clear the counter
 .Fa c
 and set it to zero.
+.It Fn counter_ratecheck cr limit
+The function is a multiprocessor-friendly version of
+.Fn ppsratecheck
+which uses
+.Nm
+internally.
+Returns non-negative value if the rate is not yet reached during the current
+second, and a negative value otherwise.
+If the limit was reached on previous second, but was just reset back to zero,
+then
+.Fn counter_ratecheck
+returns number of events since previous reset.
+.It Fn COUNTER_U64_SYSINIT c
+Define a
+.Xr SYSINIT 9
+initializer for the global counter
+.Fa c .
+.It Fn COUNTER_U64_DEFINE_EARLY c
+Define and initialize a global counter
+.Fa c .
+It is always safe to increment
+.Fa c ,
+though updates prior to the
+.Dv SI_SUB_COUNTER
+.Xr SYSINIT 9
+event are lost.
 .It Fn SYSCTL_COUNTER_U64 parent nbr name access ptr descr
 Declare a static
 .Xr sysctl 9
@@ -229,7 +259,9 @@ SYSCTL_COUNTER_U64_ARRAY(_debug, OID_AUTO, counter_array, CTLFLAG_RW,
 .Xr critical 9 ,
 .Xr locking 9 ,
 .Xr malloc 9 ,
+.Xr ratecheck 9 ,
 .Xr sysctl 9 ,
+.Xr SYSINIT 9 ,
 .Xr uma 9
 .Sh HISTORY
 The
