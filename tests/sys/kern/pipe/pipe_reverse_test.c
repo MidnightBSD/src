@@ -35,7 +35,7 @@ SUCH DAMAGE.
 #include <unistd.h>
 
 /*
- * $FreeBSD: stable/11/tests/sys/kern/pipe/pipe_reverse_test.c 290914 2015-11-16 05:38:40Z ngie $
+ * $FreeBSD$
  * This program simply tests writing through the reverse direction of
  * a pipe.  Nothing too fancy, it's only needed because most pipe-using
  * programs never touch the reverse direction (it doesn't exist on

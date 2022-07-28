@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_RADIUS_SUPPORT 278182 2015-02-04 06:53:45Z ngie $
+.\" $FreeBSD$
 Set to not build radius support into various applications, like
 .Xr pam_radius 8
 and

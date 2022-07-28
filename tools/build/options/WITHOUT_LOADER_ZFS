@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_LOADER_ZFS 344399 2019-02-20 23:55:35Z kevans $
+.\" $FreeBSD$
 Set to not build ZFS file system boot loader support.

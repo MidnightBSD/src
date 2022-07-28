@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_INCLUDES 275138 2014-11-26 20:43:09Z gjb $
+.\" $FreeBSD$
 Set to not install header files.
 This option used to be spelled
 .Va NO_INCS .

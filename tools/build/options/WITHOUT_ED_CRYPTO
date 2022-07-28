@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_ED_CRYPTO 235660 2012-05-19 20:05:27Z marcel $
+.\" $FreeBSD$
 Set to build
 .Xr ed 1
 without support for encryption/decryption.

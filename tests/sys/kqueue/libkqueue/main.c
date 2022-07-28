@@ -13,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/tests/sys/kqueue/libkqueue/main.c 341275 2018-11-30 02:06:30Z dab $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -207,13 +207,18 @@ kevent_to_str(struct kevent *kev)
     char *fflags_str = kevent_fflags_dump(kev);
 
     snprintf(&buf[0], sizeof(buf), 
-            "[ident=%ju, filter=%d, %s, %s, data=%jd, udata=%p]",
+            "[ident=%ju, filter=%d, %s, %s, data=%jd, udata=%p, "
+            "ext=[%jx %jx %jx %jx]",
             (uintmax_t) kev->ident,
             kev->filter,
             flags_str,
             fflags_str,
-	    (uintmax_t)kev->data,
-            kev->udata);
+            (uintmax_t)kev->data,
+            kev->udata,
+            (uintmax_t)kev->ext[0],
+            (uintmax_t)kev->ext[1],
+            (uintmax_t)kev->ext[2],
+            (uintmax_t)kev->ext[3]);
 
     free(flags_str);
     free(fflags_str);
@@ -255,7 +260,11 @@ kevent_cmp(struct kevent *k1, struct kevent *k2)
     if (k1->flags & EV_ADD)
         k2->flags |= EV_ADD;
 #endif
-    if (memcmp(k1, k2, sizeof(*k1)) != 0) {
+    if (k1->ident != k2->ident || k1->filter != k2->filter ||
+      k1->flags != k2->flags || k1->fflags != k2->fflags ||
+      k1->data != k2->data || k1->udata != k2->udata ||
+      k1->ext[0] != k2->ext[0] || k1->ext[1] != k2->ext[1] ||
+      k1->ext[0] != k2->ext[2] || k1->ext[0] != k2->ext[3]) {
         kev1_str = kevent_to_str(k1);
         kev2_str = kevent_to_str(k2);
         printf("kevent_cmp: mismatch:\n  %s !=\n  %s\n", 

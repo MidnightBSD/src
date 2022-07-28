@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_ASSERT_DEBUG 162215 2006-09-11 13:55:27Z ru $
+.\" $FreeBSD$
 Set to compile programs and libraries without the
 .Xr assert 3
 checks.

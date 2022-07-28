@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_BSNMP 183306 2008-09-23 16:15:42Z sam $
+.\" $FreeBSD$
 Set to not build or install
 .Xr bsnmpd 1
 and related libraries and data files.

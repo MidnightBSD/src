@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_LLVM_TARGET_RISCV 346891 2019-04-29 16:14:24Z mhorne $
+.\" $FreeBSD$
 Set to not build LLVM target support for RISC-V.
 The
 .Va LLVM_TARGET_ALL

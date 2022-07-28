@@ -1,7 +1,3 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_BINUTILS_BOOTSTRAP 295490 2016-02-10 23:57:09Z emaste $
-Set to not build binutils (as, ld, objcopy and objdump)
+.\" $FreeBSD$
+Do not build GNU binutils
 as part of the bootstrap process.
-.Bf -symbolic
-The option does not work for build targets unless some alternative
-toolchain is provided.
-.Ef

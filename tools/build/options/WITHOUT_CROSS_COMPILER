@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_CROSS_COMPILER 319247 2017-05-30 18:04:55Z ngie $
+.\" $FreeBSD$
 Set to not build any cross compiler in the cross-tools stage of buildworld.
 When compiling a different version of
 .Fx

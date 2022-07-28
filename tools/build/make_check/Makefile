@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tools/build/make_check/Makefile 270190 2014-08-20 00:33:37Z ian $
+# $FreeBSD$
 
 .MAKE.MODE=	normal
 
