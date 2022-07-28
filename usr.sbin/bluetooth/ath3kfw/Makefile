@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/bluetooth/ath3kfw/Makefile 301537 2016-06-07 04:22:18Z adrian $
+# $FreeBSD$
 
 PROG=		ath3kfw
 MAN=		ath3kfw.8

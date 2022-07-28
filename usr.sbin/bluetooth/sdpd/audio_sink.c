@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bluetooth/sdpd/audio_sink.c 343901 2019-02-08 10:27:02Z hselasky $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1986, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -40,7 +42,7 @@ static char sccsid[] = "@(#)vmstat.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/vmstat/vmstat.c 357134 2020-01-26 04:54:17Z nyan $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -54,6 +56,7 @@ __FBSDID("$FreeBSD: stable/11/usr.bin/vmstat/vmstat.c 357134 2020-01-26 04:54:17
 #include <sys/sysctl.h>
 #include <sys/time.h>
 #include <sys/user.h>
+#define	_WANT_VMMETER
 #include <sys/vmmeter.h>
 #include <sys/pcpu.h>
 
@@ -110,7 +113,58 @@ static int num_devices, num_devices_specified;
 static int num_matches, num_selected, num_selections;
 static char **specified_devices;
 
-static struct	vmmeter sum, osum;
+static struct __vmmeter {
+	uint64_t v_swtch;
+	uint64_t v_trap;
+	uint64_t v_syscall;
+	uint64_t v_intr;
+	uint64_t v_soft;
+	uint64_t v_vm_faults;
+	uint64_t v_io_faults;
+	uint64_t v_cow_faults;
+	uint64_t v_cow_optim;
+	uint64_t v_zfod;
+	uint64_t v_ozfod;
+	uint64_t v_swapin;
+	uint64_t v_swapout;
+	uint64_t v_swappgsin;
+	uint64_t v_swappgsout;
+	uint64_t v_vnodein;
+	uint64_t v_vnodeout;
+	uint64_t v_vnodepgsin;
+	uint64_t v_vnodepgsout;
+	uint64_t v_intrans;
+	uint64_t v_reactivated;
+	uint64_t v_pdwakeups;
+	uint64_t v_pdpages;
+	uint64_t v_pdshortfalls;
+	uint64_t v_dfree;
+	uint64_t v_pfree;
+	uint64_t v_tfree;
+	uint64_t v_forks;
+	uint64_t v_vforks;
+	uint64_t v_rforks;
+	uint64_t v_kthreads;
+	uint64_t v_forkpages;
+	uint64_t v_vforkpages;
+	uint64_t v_rforkpages;
+	uint64_t v_kthreadpages;
+	u_int v_page_size;
+	u_int v_page_count;
+	u_int v_free_reserved;
+	u_int v_free_target;
+	u_int v_free_min;
+	u_int v_free_count;
+	u_int v_wire_count;
+	u_long v_user_wire_count;
+	u_int v_active_count;
+	u_int v_inactive_target;
+	u_int v_inactive_count;
+	u_int v_laundry_count;
+	u_int v_pageout_free_min;
+	u_int v_interrupt_free_min;
+	u_int v_free_severe;
+} sum, osum;
 
 #define	VMSTAT_DEFAULT_LINES	20	/* Default number of `winlines'. */
 static volatile sig_atomic_t wresized;		/* Tty resized when non-zero. */
@@ -161,7 +215,8 @@ main(int argc, char *argv[])
 {
 	char *bp, *buf, *memf, *nlistf;
 	float f;
-	int bufsize, c, len, reps, todo;
+	int bufsize, c, reps, todo;
+	size_t len;
 	unsigned int interval;
 	char errbuf[_POSIX2_LINE_MAX];
 
@@ -253,7 +308,8 @@ main(int argc, char *argv[])
 retry_nlist:
 	if (kd != NULL && (c = kvm_nlist(kd, namelist)) != 0) {
 		if (c > 0) {
-			bufsize = 0, len = 0;
+			bufsize = 0;
+			len = 0;
 
 			/*
 			 * 'cnt' was renamed to 'vm_cnt'.  If 'vm_cnt' is not
@@ -344,12 +400,11 @@ nlist_ok:
 }
 
 static int
-mysysctl(const char *name, void *oldp, size_t *oldlenp,
-    void *newp, size_t newlen)
+mysysctl(const char *name, void *oldp, size_t *oldlenp)
 {
 	int error;
 
-	error = sysctlbyname(name, oldp, oldlenp, newp, newlen);
+	error = sysctlbyname(name, oldp, oldlenp, NULL, 0);
 	if (error != 0 && errno != ENOMEM)
 		xo_err(1, "sysctl(%s)", name);
 	return (error);
@@ -376,8 +431,11 @@ getdrivedata(char **argv)
 		if (isdigit(**argv))
 			break;
 		num_devices_specified++;
-		specified_devices = realloc(specified_devices,
+		specified_devices = reallocf(specified_devices,
 		    sizeof(char *) * num_devices_specified);
+		if (specified_devices == NULL) {
+			xo_errx(1, "%s", "reallocf (specified_devices)");
+		}
 		specified_devices[num_devices_specified - 1] = *argv;
 	}
 	dev_select = NULL;
@@ -428,96 +486,50 @@ getuptime(void)
 }
 
 static void
-fill_pcpu(struct pcpu ***pcpup, int* maxcpup)
+fill_vmmeter(struct __vmmeter *vmmp)
 {
-	struct pcpu **pcpu;
-	int maxcpu, i;
-
-	*pcpup = NULL;
-	*maxcpup = 0;
-
-	if (kd == NULL)
-		return;
-
-	maxcpu = kvm_getmaxcpu(kd);
-	if (maxcpu < 0)
-		xo_errx(1, "kvm_getmaxcpu: %s", kvm_geterr(kd));
-
-	pcpu = calloc(maxcpu, sizeof(struct pcpu *));
-	if (pcpu == NULL)
-		xo_err(1, "calloc");
-
-	for (i = 0; i < maxcpu; i++) {
-		pcpu[i] = kvm_getpcpu(kd, i);
-		if (pcpu[i] == (struct pcpu *)-1)
-			xo_errx(1, "kvm_getpcpu: %s", kvm_geterr(kd));
-	}
-
-	*maxcpup = maxcpu;
-	*pcpup = pcpu;
-}
-
-static void
-free_pcpu(struct pcpu **pcpu, int maxcpu)
-{
-	int i;
-
-	for (i = 0; i < maxcpu; i++)
-		free(pcpu[i]);
-	free(pcpu);
-}
-
-static void
-fill_vmmeter(struct vmmeter *vmmp)
-{
-	struct pcpu **pcpu;
-	int maxcpu, i;
+	struct vmmeter vm_cnt;
 	size_t size;
 
 	if (kd != NULL) {
-		kread(X_SUM, vmmp, sizeof(*vmmp));
-		fill_pcpu(&pcpu, &maxcpu);
-		for (i = 0; i < maxcpu; i++) {
-			if (pcpu[i] == NULL)
-				continue;
-#define ADD_FROM_PCPU(i, name) \
-			vmmp->name += pcpu[i]->pc_cnt.name
-			ADD_FROM_PCPU(i, v_swtch);
-			ADD_FROM_PCPU(i, v_trap);
-			ADD_FROM_PCPU(i, v_syscall);
-			ADD_FROM_PCPU(i, v_intr);
-			ADD_FROM_PCPU(i, v_soft);
-			ADD_FROM_PCPU(i, v_vm_faults);
-			ADD_FROM_PCPU(i, v_io_faults);
-			ADD_FROM_PCPU(i, v_cow_faults);
-			ADD_FROM_PCPU(i, v_cow_optim);
-			ADD_FROM_PCPU(i, v_zfod);
-			ADD_FROM_PCPU(i, v_ozfod);
-			ADD_FROM_PCPU(i, v_swapin);
-			ADD_FROM_PCPU(i, v_swapout);
-			ADD_FROM_PCPU(i, v_swappgsin);
-			ADD_FROM_PCPU(i, v_swappgsout);
-			ADD_FROM_PCPU(i, v_vnodein);
-			ADD_FROM_PCPU(i, v_vnodeout);
-			ADD_FROM_PCPU(i, v_vnodepgsin);
-			ADD_FROM_PCPU(i, v_vnodepgsout);
-			ADD_FROM_PCPU(i, v_intrans);
-			ADD_FROM_PCPU(i, v_tfree);
-			ADD_FROM_PCPU(i, v_forks);
-			ADD_FROM_PCPU(i, v_vforks);
-			ADD_FROM_PCPU(i, v_rforks);
-			ADD_FROM_PCPU(i, v_kthreads);
-			ADD_FROM_PCPU(i, v_forkpages);
-			ADD_FROM_PCPU(i, v_vforkpages);
-			ADD_FROM_PCPU(i, v_rforkpages);
-			ADD_FROM_PCPU(i, v_kthreadpages);
-#undef ADD_FROM_PCPU
-		}
-		free_pcpu(pcpu, maxcpu);
+		kread(X_SUM, &vm_cnt, sizeof(vm_cnt));
+#define	GET_COUNTER(name) \
+		vmmp->name = kvm_counter_u64_fetch(kd, (u_long)vm_cnt.name)
+		GET_COUNTER(v_swtch);
+		GET_COUNTER(v_trap);
+		GET_COUNTER(v_syscall);
+		GET_COUNTER(v_intr);
+		GET_COUNTER(v_soft);
+		GET_COUNTER(v_vm_faults);
+		GET_COUNTER(v_io_faults);
+		GET_COUNTER(v_cow_faults);
+		GET_COUNTER(v_cow_optim);
+		GET_COUNTER(v_zfod);
+		GET_COUNTER(v_ozfod);
+		GET_COUNTER(v_swapin);
+		GET_COUNTER(v_swapout);
+		GET_COUNTER(v_swappgsin);
+		GET_COUNTER(v_swappgsout);
+		GET_COUNTER(v_vnodein);
+		GET_COUNTER(v_vnodeout);
+		GET_COUNTER(v_vnodepgsin);
+		GET_COUNTER(v_vnodepgsout);
+		GET_COUNTER(v_intrans);
+		GET_COUNTER(v_tfree);
+		GET_COUNTER(v_forks);
+		GET_COUNTER(v_vforks);
+		GET_COUNTER(v_rforks);
+		GET_COUNTER(v_kthreads);
+		GET_COUNTER(v_forkpages);
+		GET_COUNTER(v_vforkpages);
+		GET_COUNTER(v_rforkpages);
+		GET_COUNTER(v_kthreadpages);
+#undef GET_COUNTER
 	} else {
-		size = sizeof(unsigned int);
-#define GET_VM_STATS(cat, name) \
-	mysysctl("vm.stats." #cat "." #name, &vmmp->name, &size, NULL, 0)
+#define GET_VM_STATS(cat, name)	do {					\
+	size = sizeof(vmmp->name);					\
+	mysysctl("vm.stats." #cat "." #name, &vmmp->name, &size);	\
+} while (0)
 		/* sys */
 		GET_VM_STATS(sys, v_swtch);
 		GET_VM_STATS(sys, v_trap);
@@ -555,6 +567,7 @@ fill_vmmeter(struct vmmeter *vmmp)
 		GET_VM_STATS(vm, v_free_min);
 		GET_VM_STATS(vm, v_free_count);
 		GET_VM_STATS(vm, v_wire_count);
+		GET_VM_STATS(vm, v_user_wire_count);
 		GET_VM_STATS(vm, v_active_count);
 		GET_VM_STATS(vm, v_inactive_target);
 		GET_VM_STATS(vm, v_inactive_count);
@@ -584,7 +597,7 @@ fill_vmtotal(struct vmtotal *vmtp)
 		xo_errx(1, "not implemented");
 	} else {
 		size = sizeof(*vmtp);
-		mysysctl("vm.vmtotal", vmtp, &size, NULL, 0);
+		mysysctl("vm.vmtotal", vmtp, &size);
 		if (size != sizeof(*vmtp))
 			xo_errx(1, "vm.total size mismatch");
 	}
@@ -604,14 +617,14 @@ getcpuinfo(u_long *maskp, int *maxidp)
 	mask = 0;
 	ncpus = 0;
 	size = sizeof(maxcpu);
-	mysysctl("kern.smp.maxcpus", &maxcpu, &size, NULL, 0);
+	mysysctl("kern.smp.maxcpus", &maxcpu, &size);
 	if (size != sizeof(maxcpu))
 		xo_errx(1, "sysctl kern.smp.maxcpus");
 	size = sizeof(long) * maxcpu * CPUSTATES;
 	times = malloc(size);
 	if (times == NULL)
 		xo_err(1, "malloc %zd bytes", size);
-	mysysctl("kern.cp_times", times, &size, NULL, 0);
+	mysysctl("kern.cp_times", times, &size);
 	maxid = (size / CPUSTATES / sizeof(long)) - 1;
 	for (i = 0; i <= maxid; i++) {
 		empty = 1;
@@ -695,7 +708,7 @@ dovmstat(unsigned int interval, int reps)
 			kread(X_HZ, &hz, sizeof(hz));
 	} else {
 		size = sizeof(clockrate);
-		mysysctl("kern.clockrate", &clockrate, &size, NULL, 0);
+		mysysctl("kern.clockrate", &clockrate, &size);
 		if (size != sizeof(clockrate))
 			xo_errx(1, "clockrate size mismatch");
 		hz = clockrate.hz;
@@ -715,13 +728,13 @@ dovmstat(unsigned int interval, int reps)
 				xo_errx(1, "kvm_getcptime: %s", kvm_geterr(kd));
 		} else {
 			size = sizeof(cur.cp_time);
-			mysysctl("kern.cp_time", &cur.cp_time, &size, NULL, 0);
+			mysysctl("kern.cp_time", &cur.cp_time, &size);
 			if (size != sizeof(cur.cp_time))
 				xo_errx(1, "cp_time size mismatch");
 		}
 		if (Pflag) {
 			size = size_cp_times;
-			mysysctl("kern.cp_times", cur_cp_times, &size, NULL, 0);
+			mysysctl("kern.cp_times", cur_cp_times, &size);
 			if (size != size_cp_times)
 				xo_errx(1, "cp_times mismatch");
 		}
@@ -776,7 +789,7 @@ dovmstat(unsigned int interval, int reps)
 		    total.t_pw, total.t_sw);
 		xo_close_container("processes");
 		xo_open_container("memory");
-#define vmstat_pgtok(a) ((a) * (sum.v_page_size >> 10))
+#define vmstat_pgtok(a) ((uintmax_t)(a) * (sum.v_page_size >> 10))
 #define	rate(x)	(((x) * rate_adj + halfuptime) / uptime)	/* round */
 		if (hflag) {
 			xo_emit("");
@@ -788,10 +801,10 @@ dovmstat(unsigned int interval, int reps)
 			xo_emit(" ");
 		} else {
 			xo_emit(" ");
-			xo_emit("{:available-memory/%7d}",
+			xo_emit("{:available-memory/%7ju}",
 			    vmstat_pgtok(total.t_avm));
 			xo_emit(" ");
-			xo_emit("{:free-memory/%7d}",
+			xo_emit("{:free-memory/%7ju}",
 			    vmstat_pgtok(total.t_free));
 			xo_emit(" ");
 		}
@@ -1000,7 +1013,7 @@ dosum(void)
 	    sum.v_vnodepgsin);
 	xo_emit("{:vnode-page-outs/%9u} {N:vnode pager pageouts}\n",
 	    sum.v_vnodeout);
-	xo_emit("{:vnode-page-outs/%9u} {N:vnode pager pages paged out}\n",
+	xo_emit("{:vnode-page-out-pages/%9u} {N:vnode pager pages paged out}\n",
 	    sum.v_vnodepgsout);
 	xo_emit("{:page-daemon-wakeups/%9u} {N:page daemon wakeups}\n",
 	    sum.v_pdwakeups);
@@ -1046,6 +1059,8 @@ dosum(void)
 	    sum.v_laundry_count);
 	xo_emit("{:wired-pages/%9u} {N:pages wired down}\n",
 	    sum.v_wire_count);
+	xo_emit("{:virtual-user-wired-pages/%9lu} {N:virtual user pages wired "
+	    "down}\n", sum.v_user_wire_count);
 	xo_emit("{:free-pages/%9u} {N:pages free}\n",
 	    sum.v_free_count);
 	xo_emit("{:bytes-per-page/%9u} {N:bytes per page}\n", sum.v_page_size);
@@ -1053,7 +1068,7 @@ dosum(void)
 		kread(X_NCHSTATS, &lnchstats, sizeof(lnchstats));
 	} else {
 		size = sizeof(lnchstats);
-		mysysctl("vfs.cache.nchstats", &lnchstats, &size, NULL, 0);
+		mysysctl("vfs.cache.nchstats", &lnchstats, &size);
 		if (size != sizeof(lnchstats))
 			xo_errx(1, "vfs.cache.nchstats size mismatch");
 	}
@@ -1169,7 +1184,7 @@ cpustats(void)
 	total = 0;
 	for (state = 0; state < CPUSTATES; ++state)
 		total += cur.cp_time[state];
-	if (total)
+	if (total > 0)
 		lpct = 100.0 / total;
 	else
 		lpct = 0.0;
@@ -1248,8 +1263,7 @@ read_intrcnts(unsigned long **intrcnts)
 			*intrcnts = reallocf(*intrcnts, intrcntlen);
 			if (*intrcnts == NULL)
 				err(1, "reallocf()");
-			if (mysysctl("hw.intrcnt",
-			    *intrcnts, &intrcntlen, NULL, 0) == 0)
+			if (mysysctl("hw.intrcnt", *intrcnts, &intrcntlen) == 0)
 				break;
 		}
 	}
@@ -1274,7 +1288,7 @@ print_intrcnts(unsigned long *intrcnts, unsigned long *old_intrcnts,
 	for (i = 0, intrcnt=intrcnts, old_intrcnt=old_intrcnts; i < nintr; i++) {
 		if (intrname[0] != '\0' && (*intrcnt != 0 || aflag)) {
 			count = *intrcnt - *old_intrcnt;
-			rate = (count * 1000 + period_ms / 2) / period_ms;
+			rate = ((uint64_t)count * 1000 + period_ms / 2) / period_ms;
 			xo_open_instance("interrupt");
 			xo_emit("{d:name/%-*s}{ket:name/%s} "
 			    "{:total/%20lu} {:rate/%10lu}\n",
@@ -1321,8 +1335,7 @@ dointr(unsigned int interval, int reps)
 		for (intrnames = NULL, inamlen = 1024; ; inamlen *= 2) {
 			if ((intrnames = reallocf(intrnames, inamlen)) == NULL)
 				xo_err(1, "reallocf()");
-			if (mysysctl("hw.intrnames",
-			    intrnames, &inamlen, NULL, 0) == 0)
+			if (mysysctl("hw.intrnames", intrnames, &inamlen) == 0)
 				break;
 		}
 	}
@@ -1505,9 +1518,9 @@ display_object(struct kinfo_vmobject *kvo)
 	const char *str;
 
 	xo_open_instance("object");
-        xo_emit("{:resident/%5jd} ", (uintmax_t)kvo->kvo_resident);
-	xo_emit("{:active/%5jd} ", (uintmax_t)kvo->kvo_active);
-	xo_emit("{:inactive/%5jd} ", (uintmax_t)kvo->kvo_inactive);
+	xo_emit("{:resident/%5ju} ", (uintmax_t)kvo->kvo_resident);
+	xo_emit("{:active/%5ju} ", (uintmax_t)kvo->kvo_active);
+	xo_emit("{:inactive/%5ju} ", (uintmax_t)kvo->kvo_inactive);
 	xo_emit("{:refcount/%3d} ", kvo->kvo_ref_count);
 	xo_emit("{:shadowcount/%3d} ", kvo->kvo_shadow_count);
 	switch (kvo->kvo_memattr) {
@@ -1596,6 +1609,9 @@ display_object(struct kinfo_vmobject *kvo)
 	case KVME_TYPE_SG:
 		str = "sg";
 		break;
+	case KVME_TYPE_MGTDEVICE:
+		str = "md";
+		break;
 	case KVME_TYPE_UNKNOWN:
 	default:
 		str = "??";
@@ -1664,7 +1680,7 @@ kreadptr(uintptr_t addr, void *buf, size_t size)
 		xo_errx(1, "%s", kvm_geterr(kd));
 }
 
-static void
+static void __dead2
 usage(void)
 {
 	xo_error("%s%s",

@@ -24,7 +24,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.bin/xo/tests/functional_test.sh 322172 2017-08-07 17:23:44Z phil $
+# $FreeBSD$
 
 SRCDIR=$(atf_get_srcdir)
 
@@ -42,7 +42,7 @@ check()
 
 	atf_check -s exit:0 -e file:${err_file} -o file:${out_file} \
 	    env LC_ALL=en_US.UTF-8 \
-		TZ="EST" "${SRCDIR}/${tc}" \
+	        TZ="EST" "${SRCDIR}/${tc}" \
 		"${XO} --libxo:W${xo_fmt}"
 }
 

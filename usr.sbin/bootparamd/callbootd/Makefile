@@ -1,5 +1,5 @@
 #	from: @(#)Makefile	5.8 (Berkeley) 7/28/90
-# $FreeBSD: stable/11/usr.sbin/bootparamd/callbootd/Makefile 264400 2014-04-13 05:21:56Z imp $
+# $FreeBSD$
 
 PROG=	callbootd
 MAN=
@@ -10,7 +10,7 @@ CFLAGS+= -I.
 
 CLEANFILES= ${GENSRCS}
 
-RPCSRC=	${DESTDIR}/usr/include/rpcsvc/bootparam_prot.x
+RPCSRC=	${SYSROOT:U${DESTDIR}}/usr/include/rpcsvc/bootparam_prot.x
 
 bootparam_prot_clnt.c: ${RPCSRC}
 	RPCGEN_CPP=${CPP:Q} rpcgen -C -l -o ${.TARGET} ${RPCSRC}

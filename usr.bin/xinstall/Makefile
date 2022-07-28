@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/11/usr.bin/xinstall/Makefile 319186 2017-05-30 04:27:05Z ngie $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -11,11 +11,11 @@ MAN=		install.1
 .PATH:		${SRCTOP}/contrib/mtree
 CFLAGS+=	-I${SRCTOP}/contrib/mtree
 CFLAGS+=	-I${SRCTOP}/lib/libnetbsd
+CFLAGS+=	-DHAVE_STRUCT_STAT_ST_FLAGS=1
 
 LIBADD=	md
 
-.if ${MK_TESTS} != "no"
-SUBDIR+=	tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

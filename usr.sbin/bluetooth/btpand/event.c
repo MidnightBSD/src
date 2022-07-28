@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/11/usr.sbin/bluetooth/btpand/event.c 330449 2018-03-05 07:26:05Z eadler $ */
+/* $FreeBSD$ */
 
 /*
  * Hack to provide libevent (see devel/libevent port) like API.

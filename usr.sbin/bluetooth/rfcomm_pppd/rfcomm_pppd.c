@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: rfcomm_pppd.c,v 1.5 2003/09/07 18:32:11 max Exp $
- * $FreeBSD: stable/11/usr.sbin/bluetooth/rfcomm_pppd/rfcomm_pppd.c 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 #define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>

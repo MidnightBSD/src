@@ -24,7 +24,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/whereis/pathnames.h 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 /* Where to look for libexec */
@@ -43,7 +43,7 @@
 "/usr/src/games"
 
 /* Each subdirectory of PATH_PORTS will be appended to PATH_SOURCES. */
-#define PATH_PORTS "/usr/mports"
+#define PATH_PORTS "/usr/ports"
 
 /* How to query the current manpath. */
 #define MANPATHCMD "manpath -q"

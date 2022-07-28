@@ -7,10 +7,8 @@ use and modify. Please send modifications and/or suggestions + bug fixes to
 
 */
 
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD: stable/11/usr.sbin/bootparamd/bootparamd/main.c 290645 2015-11-10 11:19:36Z ngie $";
-#endif /* not lint */
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <ctype.h>
 #include <err.h>
@@ -30,11 +28,16 @@ static const char rcsid[] =
 #include <arpa/inet.h>
 #include "bootparam_prot.h"
 
+extern int debug, dolog;
+extern in_addr_t route_addr;
+extern const char *bootpfile;
+
 int debug = 0;
 int dolog = 0;
 in_addr_t route_addr = -1;
-struct sockaddr_in my_addr;
-char *bootpfile = "/etc/bootparams";
+const char *bootpfile = "/etc/bootparams";
+
+static struct sockaddr_in my_addr;
 
 static void usage(void);
 

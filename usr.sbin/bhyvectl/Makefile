@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/usr.sbin/bhyvectl/Makefile 319119 2017-05-29 10:15:41Z ngie $
+# $FreeBSD$
 #
 
 PROG=	bhyvectl

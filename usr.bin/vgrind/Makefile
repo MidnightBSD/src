@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/9/93
-# $FreeBSD: stable/11/usr.bin/vgrind/Makefile 291348 2015-11-26 01:14:40Z bdrewery $
+# $FreeBSD$
 
 PROG=	vfontedpr
 SRCS=	regexp.c vfontedpr.c
@@ -19,13 +19,6 @@ SCRIPTSDIR=/usr/bin
 CLEANFILES= vgrindefs.src.db
 
 .include <bsd.endian.mk>
-.if ${TARGET_ENDIANNESS} == "1234"
-CAP_MKDB_ENDIAN= -l
-.elif ${TARGET_ENDIANNESS} == "4321"
-CAP_MKDB_ENDIAN= -b
-.else
-CAP_MKDB_ENDIAN=
-.endif
 
 vgrindefs.src.db: vgrindefs.src
 	cap_mkdb ${CAP_MKDB_ENDIAN} -f vgrindefs.src ${.ALLSRC}

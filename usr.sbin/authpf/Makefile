@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/authpf/Makefile 319119 2017-05-29 10:15:41Z ngie $
+# $FreeBSD$
 
 .PATH:	${SRCTOP}/contrib/pf/authpf
 
@@ -12,8 +12,9 @@ SRCS=   authpf.c
 
 # XXX ALTQ:
 CFLAGS+= -DENABLE_ALTQ
+CFLAGS+= -I${SRCTOP}/lib/libpfctl -I${OBJTOP}/lib/libpfctl
 
-LIBADD=	m util
+LIBADD=	m util pfctl
 
 WARNS?=	3
 

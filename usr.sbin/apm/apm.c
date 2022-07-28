@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD$");
 
 #include <sys/file.h>
 #include <sys/ioctl.h>
@@ -38,7 +38,7 @@ __MBSDID("$MidnightBSD$");
 #define xl(a)	((a) & 0xff)
 #define APMERR(a) xh(a)
 
-static int cmos_wall = 0;	/* True when wall time is in cmos clock, else UTC */
+static int cmos_wall = 0; /* True when wall time is in cmos clock, else UTC */
 
 static void
 usage(void)
