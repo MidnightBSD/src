@@ -1,3 +1,5 @@
+# $FreeBSD$
+
 .include "${.CURDIR}/../Makefile.inc"
 
 .PATH:	${SVNDIR}/libsvn_subr ${SVNDIR}/libsvn_subr/lz4

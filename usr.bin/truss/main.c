@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright 1997 Sean Eric Fagan
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/truss/main.c 342708 2019-01-02 20:49:41Z jhb $");
+__FBSDID("$FreeBSD$");
 
 /*
  * The main module for truss.  Surprisingly simple, but, then, the other

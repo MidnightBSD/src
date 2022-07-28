@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/11/usr.bin/units/tests/basics_test.sh 269084 2014-07-25 01:29:22Z jmmv $
+# $FreeBSD$
 
 base=`basename $0`
 

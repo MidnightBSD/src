@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/procstat/Makefile 324932 2017-10-23 18:25:21Z bdrewery $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -13,17 +13,26 @@ SRCS=	procstat.c		\
 	procstat_cs.c		\
 	procstat_files.c	\
 	procstat_kstack.c	\
+	procstat_penv.c		\
 	procstat_ptlwpinfo.c	\
+	procstat_pwdx.c		\
 	procstat_rlimit.c	\
 	procstat_rusage.c	\
 	procstat_sigs.c		\
 	procstat_threads.c	\
 	procstat_vm.c
 
+MLINKS+=	procstat.1 pargs.1
+MLINKS+=	procstat.1 penv.1
+MLINKS+=	procstat.1 pwdx.1
+
 LIBADD+=	procstat xo util sbuf
 
-.if ${MK_TESTS} != "no"
-SUBDIR+=	tests
-.endif
+LINKS+=		${BINDIR}/procstat ${BINDIR}/pargs
+LINKS+=		${BINDIR}/procstat ${BINDIR}/penv
+LINKS+=		${BINDIR}/procstat ${BINDIR}/pwdx
+
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

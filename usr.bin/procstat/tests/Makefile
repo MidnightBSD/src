@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/procstat/tests/Makefile 318325 2017-05-15 22:52:25Z ngie $
+# $FreeBSD$
 
 ATF_TESTS_SH+=	procstat_test
 

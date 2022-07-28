@@ -25,9 +25,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/usr.bin/procstat/procstat_files.c 341779 2018-12-10 01:39:40Z kib $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/capsicum.h>
@@ -305,7 +306,8 @@ procstat_files(struct procstat *procstat, struct kinfo_proc *kipp)
 	 */
 	capwidth = 0;
 	head = procstat_getfiles(procstat, kipp, 0);
-	if (head != NULL && Cflag) {
+	if (head != NULL &&
+	    (procstat_opts & PS_OPT_CAPABILITIES) != 0) {
 		STAILQ_FOREACH(fst, head, next) {
 			width = width_capability(&fst->fs_cap_rights);
 			if (width > capwidth)
@@ -315,8 +317,8 @@ procstat_files(struct procstat *procstat, struct kinfo_proc *kipp)
 			capwidth = strlen("CAPABILITIES");
 	}
 
-	if (!hflag) {
-		if (Cflag)
+	if ((procstat_opts & PS_OPT_NOHEADER) == 0) {
+		if ((procstat_opts & PS_OPT_CAPABILITIES) != 0)
 			xo_emit("{T:/%5s %-16s %5s %1s %-8s %-*s "
 			    "%-3s %-12s}\n", "PID", "COMM", "FD", "T",
 			    "FLAGS", capwidth, "CAPABILITIES", "PRO",
@@ -424,7 +426,7 @@ procstat_files(struct procstat *procstat, struct kinfo_proc *kipp)
 			break;
 		}
 		xo_emit("{d:fd_type/%1s/%s} ", str);
-		if (!Cflag) {
+		if ((procstat_opts & PS_OPT_CAPABILITIES) == 0) {
 			str = "-";
 			if (fst->fs_type == PS_FST_TYPE_VNODE) {
 				error = procstat_get_vnode_info(procstat, fst,
@@ -521,7 +523,7 @@ procstat_files(struct procstat *procstat, struct kinfo_proc *kipp)
 			xo_emit("{elq:fd_flags/lock_held}");
 		xo_close_list("fd_flags");
 
-		if (!Cflag) {
+		if ((procstat_opts & PS_OPT_CAPABILITIES) == 0) {
 			if (fst->fs_ref_count > -1)
 				xo_emit("{:ref_count/%3d/%d} ",
 				    fst->fs_ref_count);
@@ -533,7 +535,7 @@ procstat_files(struct procstat *procstat, struct kinfo_proc *kipp)
 			else
 				xo_emit("{q:offset/%7c/%c} ", '-');
 		}
-		if (Cflag) {
+		if ((procstat_opts & PS_OPT_CAPABILITIES) != 0) {
 			print_capability(&fst->fs_cap_rights, capwidth);
 			xo_emit(" ");
 		}
@@ -546,6 +548,12 @@ procstat_files(struct procstat *procstat, struct kinfo_proc *kipp)
 			xo_emit("{:protocol/%-3s/%s} ",
 			    protocol_to_string(sock.dom_family,
 			    sock.type, sock.proto));
+			if (sock.proto == IPPROTO_TCP ||
+			    sock.proto == IPPROTO_SCTP ||
+			    sock.type == SOCK_STREAM) {
+				xo_emit("{:sendq/%u} ", sock.sendq);
+				xo_emit("{:recvq/%u} ", sock.recvq);
+			}
 			/*
 			 * While generally we like to print two addresses,
 			 * local and peer, for sockets, it turns out to be

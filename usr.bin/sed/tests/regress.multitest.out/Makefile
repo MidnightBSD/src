@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/sed/tests/regress.multitest.out/Makefile 299094 2016-05-04 23:20:53Z ngie $
+# $FreeBSD$
 
 PACKAGE=	tests
 
@@ -38,6 +38,7 @@ ${PACKAGE}FILES+=		2.2
 ${PACKAGE}FILES+=		2.20
 ${PACKAGE}FILES+=		2.21
 ${PACKAGE}FILES+=		2.22
+${PACKAGE}FILES+=		2.23
 ${PACKAGE}FILES+=		2.3
 ${PACKAGE}FILES+=		2.4
 ${PACKAGE}FILES+=		2.5

@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/procstat/procstat.h 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 #include <libxo/xo.h>
@@ -37,7 +37,20 @@
 
 #define PROCSTAT_XO_VERSION "1"
 
-extern int	hflag, nflag, Cflag, Hflag;
+enum {
+	PS_OPT_CAPABILITIES	= 0x01,
+	PS_OPT_NOHEADER		= 0x02,
+	PS_OPT_PERTHREAD	= 0x04,
+	PS_OPT_SIGNUM		= 0x08,
+	PS_OPT_VERBOSE		= 0x10,
+	PS_MODE_COMPAT		= 0x20,
+};
+
+#define PS_SUBCOMMAND_OPTS			\
+	(PS_OPT_CAPABILITIES | PS_OPT_SIGNUM |	\
+	    PS_OPT_PERTHREAD | PS_OPT_VERBOSE)
+
+extern int	procstat_opts;
 
 struct kinfo_proc;
 void	kinfo_proc_sort(struct kinfo_proc *kipp, int count);
@@ -45,15 +58,17 @@ const char *	kinfo_proc_thread_name(const struct kinfo_proc *kipp);
 
 void	procstat_args(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_auxv(struct procstat *prstat, struct kinfo_proc *kipp);
-void	procstat_basic(struct kinfo_proc *kipp);
+void	procstat_basic(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_bin(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_cred(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_cs(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_env(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_files(struct procstat *prstat, struct kinfo_proc *kipp);
-void	procstat_kstack(struct procstat *prstat, struct kinfo_proc *kipp,
-    int kflag);
-void	procstat_ptlwpinfo(struct procstat *prstat);
+void	procstat_kstack(struct procstat *prstat, struct kinfo_proc *kipp);
+void	procstat_pargs(struct procstat *prstat, struct kinfo_proc *kipp);
+void	procstat_penv(struct procstat *prstat, struct kinfo_proc *kipp);
+void	procstat_ptlwpinfo(struct procstat *prstat, struct kinfo_proc *kipp);
+void	procstat_pwdx(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_rlimit(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_rusage(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_sigs(struct procstat *prstat, struct kinfo_proc *kipp);

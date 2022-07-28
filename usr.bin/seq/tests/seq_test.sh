@@ -22,7 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.bin/seq/tests/seq_test.sh 330086 2018-02-27 22:01:40Z cem $
+# $FreeBSD$
 
 atf_test_case float_rounding
 float_rounding_head()

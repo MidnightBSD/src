@@ -1,5 +1,5 @@
 /*	$OpenBSD: extern.h,v 1.5 2009/06/07 13:29:50 ray Exp $ */
-/*	$FreeBSD: stable/11/usr.bin/sdiff/extern.h 298823 2016-04-29 23:27:15Z bapt $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Written by Raymond Lai <ray@cyth.net>.

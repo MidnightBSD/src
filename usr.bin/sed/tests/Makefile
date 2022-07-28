@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/sed/tests/Makefile 321208 2017-07-19 15:58:27Z ngie $
+# $FreeBSD$
 
 PACKAGE=	tests
 

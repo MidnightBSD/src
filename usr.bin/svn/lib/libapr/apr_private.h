@@ -145,7 +145,7 @@
 
 /* Define to 1 if you have the declaration of `SYS_getrandom', and to 0 if you
    don't. */
-#define HAVE_DECL_SYS_GETRANDOM 0
+#define HAVE_DECL_SYS_GETRANDOM 1
 
 /* Define to 1 if you have the declaration of `sys_siglist', and to 0 if you
    don't. */
@@ -236,7 +236,7 @@
 #define HAVE_GETPWUID_R 1
 
 /* Define to 1 if you have the `getrandom' function. */
-/* #undef HAVE_GETRANDOM */
+#define HAVE_GETRANDOM 1
 
 /* Define to 1 if you have the `getrlimit' function. */
 #define HAVE_GETRLIMIT 1
@@ -884,7 +884,7 @@
 /* #undef SYSVSEM_IS_GLOBAL */
 
 /* Define system call of random */
-#define SYS_RANDOM "arc4random"
+#define SYS_RANDOM "getrandom"
 
 /* Define if use of generic atomics is requested */
 /* #undef USE_ATOMICS_GENERIC */

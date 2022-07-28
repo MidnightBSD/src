@@ -25,9 +25,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/usr.bin/procstat/procstat_basic.c 330449 2018-03-05 07:26:05Z eadler $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -41,10 +42,10 @@
 #include "procstat.h"
 
 void
-procstat_basic(struct kinfo_proc *kipp)
+procstat_basic(struct procstat *procstat __unused, struct kinfo_proc *kipp)
 {
 
-	if (!hflag)
+	if ((procstat_opts & PS_OPT_NOHEADER) == 0)
 		xo_emit("{T:/%5s %5s %5s %5s %5s %3s %-8s %-9s %-13s %-12s}\n",
 		    "PID", "PPID", "PGID", "SID", "TSID", "THR", "LOGIN",
 		    "WCHAN", "EMUL", "COMM");

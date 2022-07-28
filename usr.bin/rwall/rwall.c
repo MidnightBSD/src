@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1993 Christopher G. Demetriou
  * Copyright (c) 1988, 1990 Regents of the University of California.
  * All rights reserved.
@@ -43,7 +45,7 @@ static const char sccsid[] = "from: @(#)wall.c	5.14 (Berkeley) 3/2/91";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD$");
 
 /*
  * This program is not related to David Wall, whose Stanford Ph.D. thesis

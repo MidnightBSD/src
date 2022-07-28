@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)rpc_main.c 1.30 89/03/30 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/rpcgen/rpc_main.c 353939 2019-10-23 17:28:35Z brooks $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rpc_main.c, Top level of the RPC protocol compiler.
@@ -467,7 +467,9 @@ generate_guard(const char *pathname)
 			;
 		strcpy(guard, tmp);
 	}
+	tmp = guard;
 	guard = extendfile(guard, "_H_RPCGEN");
+	free(tmp);
 	return (guard);
 }
 
@@ -485,13 +487,14 @@ h_output(const char *infile, const char *define, int extend, const char *outfile
 	const char *guard;
 	list *l;
 	xdrfunc *xdrfuncp;
+	void *tmp = NULL;
 
 	open_input(infile, define);
 	outfilename =  extend ? extendfile(infile, outfile) : outfile;
 	open_output(infile, outfilename);
 	add_warning();
 	if (outfilename || infile){
-		guard = generate_guard(outfilename ? outfilename: infile);
+		guard = tmp = generate_guard(outfilename ? outfilename: infile);
 	} else
 		guard = "STDIN_";
 
@@ -557,6 +560,7 @@ h_output(const char *infile, const char *define, int extend, const char *outfile
 	f_print(fout, "#endif\n");
 
 	f_print(fout, "\n#endif /* !_%s */\n", guard);
+	free(tmp);
 }
 
 /*

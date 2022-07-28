@@ -23,9 +23,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/usr.bin/procstat/procstat_cs.c 310120 2016-12-15 16:51:33Z vangyzen $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/cpuset.h>
@@ -52,7 +53,7 @@ procstat_cs(struct procstat *procstat, struct kinfo_proc *kipp)
 	unsigned int count, i;
 	int once, twice, lastcpu, cpu;
 
-	if (!hflag)
+	if ((procstat_opts & PS_OPT_NOHEADER) == 0)
 		xo_emit("{T:/%5s %6s %-19s %-19s %2s %4s %-7s}\n", "PID",
 		    "TID", "COMM", "TDNAME", "CPU", "CSID", "CPU MASK");
 

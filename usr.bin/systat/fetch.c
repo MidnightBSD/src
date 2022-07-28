@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,7 +31,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/11/usr.bin/systat/fetch.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #ifdef lint
 static const char sccsid[] = "@(#)fetch.c	8.1 (Berkeley) 6/6/93";
@@ -58,17 +60,18 @@ kvm_ckread(void *a, void *b, int l)
 		return (1);
 }
 
-void getsysctl(const char *name, void *ptr, size_t len)
+void
+getsysctl(const char *name, void *ptr, size_t len)
 {
 	size_t nlen = len;
+
 	if (sysctlbyname(name, ptr, &nlen, NULL, 0) != 0) {
 		error("sysctl(%s...) failed: %s", name,
 		    strerror(errno));
 	}
 	if (nlen != len) {
-		error("sysctl(%s...) expected %lu, got %lu", name,
-		    (unsigned long)len, (unsigned long)nlen);
-    }
+		error("sysctl(%s...) expected %zu, got %zu", name, len, nlen);
+	}
 }
 
 /*

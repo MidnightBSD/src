@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/truss/syscall.h 332249 2018-04-07 21:05:39Z tuexen $
+ * $FreeBSD$
  */
 
 /*
@@ -43,6 +43,7 @@
  * BinString -- pointer to an array of chars, printed via strvisx().
  * Ptr -- pointer to some unspecified structure.  Just print as hex for now.
  * Stat -- a pointer to a stat buffer.  Prints a couple fields.
+ * Stat11 -- a pointer to a freebsd 11 stat buffer.  Prints a couple fields.
  * StatFs -- a pointer to a statfs buffer.  Prints a few fields.
  * Ioctl -- an ioctl command.  Woefully limited.
  * Quad -- a double-word value.  e.g., lseek(int, offset_t, int)
@@ -68,31 +69,144 @@
  * IN (meaning that the data is passed *into* the system call).
  */
 
-enum Argtype { None = 1, Hex, Octal, Int, UInt, LongHex, Name, Ptr, Stat, Ioctl,
-	Quad, Signal, Sockaddr, StringArray, Timespec, Timeval, Itimerval,
-	Pollfd, Fd_set, Sigaction, Fcntl, Mprot, Mmapflags, Whence, Readlinkres,
-	Sigset, Sigprocmask, StatFs, Kevent, Sockdomain, Socktype, Open,
-	Fcntlflag, Rusage, RusageWho, BinString, Shutdown, Resource, Rlimit,
-	Timeval2, Pathconf, Rforkflags, ExitStatus, Waitoptions, Idtype, Procctl,
-	LinuxSockArgs, Umtxop, Atfd, Atflags, Timespec2, Accessmode, Long,
-	Sysarch, ExecArgs, ExecEnv, PipeFds, QuadHex, Utrace, IntArray, Pipe2,
-	CapFcntlRights, Fadvice, FileFlags, Flockop, Getfsstatmode, Kldsymcmd,
-	Kldunloadflags, Sizet, Madvice, Socklent, Sockprotocol, Sockoptlevel,
-	Sockoptname, Msgflags, CapRights, PUInt, PQuadHex, Acltype,
-	Extattrnamespace, Minherit, Mlockall, Mountflags, Msync, Priowhich,
-	Ptraceop, Quotactlcmd, Reboothowto, Rtpriofunc, Schedpolicy, Schedparam,
-	PSig, Siginfo, Kevent11, Iovec, Sctpsndrcvinfo, Msghdr,
+enum Argtype {
+	None = 1,
 
-	CloudABIAdvice, CloudABIClockID, ClouduABIFDSFlags,
-	CloudABIFDStat, CloudABIFileStat, CloudABIFileType,
-	CloudABIFSFlags, CloudABILookup, CloudABIMFlags, CloudABIMProt,
-	CloudABIMSFlags, CloudABIOFlags, CloudABISDFlags,
-	CloudABISignal, CloudABISockStat, CloudABISSFlags,
-	CloudABITimestamp, CloudABIULFlags, CloudABIWhence };
+	/* Scalar integers. */
+	Socklent,
+	Octal,
+	Int,
+	UInt,
+	Hex,
+	Long,
+	LongHex,
+	Sizet,
+	Quad,
+	QuadHex,
+
+	/* Encoded scalar values. */
+	Accessmode,
+	Acltype,
+	Atfd,
+	Atflags,
+	CapFcntlRights,
+	Extattrnamespace,
+	Fadvice,
+	Fcntl,
+	Fcntlflag,
+	FileFlags,
+	Flockop,
+	Getfsstatmode,
+	Idtype,
+	Ioctl,
+	Kldsymcmd,
+	Kldunloadflags,
+	Madvice,
+	Minherit,
+	Msgflags,
+	Mlockall,
+	Mmapflags,
+	Mountflags,
+	Mprot,
+	Msync,
+	Open,
+	Pathconf,
+	Pipe2,
+	Procctl,
+	Priowhich,
+	Ptraceop,
+	Quotactlcmd,
+	Reboothowto,
+	Resource,
+	Rforkflags,
+	Rtpriofunc,
+	RusageWho,
+	Schedpolicy,
+	Shutdown,
+	Signal,
+	Sigprocmask,
+	Sockdomain,
+	Sockoptlevel,
+	Sockoptname,
+	Sockprotocol,
+	Socktype,
+	Sysarch,
+	Sysctl,
+	Umtxop,
+	Waitoptions,
+	Whence,
+
+	/* Pointers to non-structures. */
+	Ptr,
+	BinString,
+	CapRights,
+	ExecArgs,
+	ExecEnv,
+	ExitStatus,
+	Fd_set,
+	IntArray,
+	Iovec,
+	Name,
+	PipeFds,
+	PSig,
+	PQuadHex,
+	PUInt,
+	Readlinkres,
+	StringArray,
+
+	/* Pointers to structures. */
+	Itimerval,
+	Kevent,
+	Kevent11,
+	LinuxSockArgs,
+	Msghdr,
+	Pollfd,
+	Rlimit,
+	Rusage,
+	Schedparam,
+	Sctpsndrcvinfo,
+	Sigaction,
+	Siginfo,
+	Sigset,
+	Sockaddr,
+	Stat,
+	Stat11,
+	StatFs,
+	Timespec,
+	Timespec2,
+	Timeval,
+	Timeval2,
+	Utrace,
+
+	CloudABIAdvice,
+	CloudABIClockID,
+	CloudABIFDSFlags,
+	CloudABIFDStat,
+	CloudABIFileStat,
+	CloudABIFileType,
+	CloudABIFSFlags,
+	CloudABILookup,
+	CloudABIMFlags,
+	CloudABIMProt,
+	CloudABIMSFlags,
+	CloudABIOFlags,
+	CloudABISDFlags,
+	CloudABISignal,
+	CloudABISockStat,
+	CloudABISSFlags,
+	CloudABITimestamp,
+	CloudABIULFlags,
+	CloudABIWhence,
+
+	MAX_ARG_TYPE,
+};
 
 #define	ARG_MASK	0xff
 #define	OUT	0x100
 #define	IN	/*0x20*/0
+
+_Static_assert(ARG_MASK > MAX_ARG_TYPE,
+    "ARG_MASK overlaps with Argtype values");
 
 struct syscall_args {
 	enum Argtype type;
@@ -113,7 +227,8 @@ struct syscall {
 };
 
 struct syscall *get_syscall(struct threadinfo *, u_int, u_int);
-char *print_arg(struct syscall_args *, unsigned long*, long *, struct trussinfo *);
+char *print_arg(struct syscall_args *, unsigned long*, register_t *,
+    struct trussinfo *);
 
 /*
  * Linux Socket defines
@@ -157,5 +272,5 @@ struct linux_socketcall_args {
 
 void init_syscalls(void);
 void print_syscall(struct trussinfo *);
-void print_syscall_ret(struct trussinfo *, int, long *);
+void print_syscall_ret(struct trussinfo *, int, register_t *);
 void print_summary(struct trussinfo *trussinfo);

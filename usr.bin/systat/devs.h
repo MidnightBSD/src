@@ -2,6 +2,7 @@
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 1998 David E. O'Brien
+ *               2015 Yoshihiro Ota
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,8 +26,21 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/systat/devs.h 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
-int dsinit(int, struct statinfo *, struct statinfo *, struct statinfo *);
+#ifndef DEVS_H
+#define DEVS_H
+
+#include <devstat.h>
+
+int dsinit(int);
+void dsgetinfo(struct statinfo *);
 int dscmd(const char *, const char *, int, struct statinfo *);
+
+void dslabel(int, int, int);
+void dsshow(int, int, int, struct statinfo *, struct statinfo *);
+
+extern struct statinfo cur_dev, last_dev, run_dev;
+
+#endif

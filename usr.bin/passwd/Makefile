@@ -1,5 +1,5 @@
 # From:	@(#)Makefile	8.3 (Berkeley) 4/2/94
-# $FreeBSD: stable/11/usr.bin/passwd/Makefile 319016 2017-05-28 00:13:44Z rgrimes $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

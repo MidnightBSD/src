@@ -25,9 +25,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/usr.bin/procstat/procstat_kstack.c 330449 2018-03-05 07:26:05Z eadler $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -68,7 +69,7 @@ kstack_nextstate(enum trace_state ts)
 		return (TS_OFF);
 
 	case TS_OFF:
-		return TS_FRAMENUM;
+		return (TS_FRAMENUM);
 
 	default:
 		errx(-1, "kstack_nextstate");
@@ -164,7 +165,7 @@ kinfo_kstack_sort(struct kinfo_kstack *kkstp, int count)
 
 
 void
-procstat_kstack(struct procstat *procstat, struct kinfo_proc *kipp, int kflag)
+procstat_kstack(struct procstat *procstat, struct kinfo_proc *kipp)
 {
 	struct kinfo_kstack *kkstp, *kkstp_free;
 	struct kinfo_proc *kip, *kip_free;
@@ -172,7 +173,7 @@ procstat_kstack(struct procstat *procstat, struct kinfo_proc *kipp, int kflag)
 	unsigned int i, j;
 	unsigned int kip_count, kstk_count;
 
-	if (!hflag)
+	if ((procstat_opts & PS_OPT_NOHEADER) == 0)
 		xo_emit("{T:/%5s %6s %-19s %-19s %-29s}\n", "PID", "TID", "COMM",
 		    "TDNAME", "KSTACK");
 
@@ -236,9 +237,11 @@ procstat_kstack(struct procstat *procstat, struct kinfo_proc *kipp, int kflag)
 		 * entries, but for a more compact view, we convert carriage
 		 * returns to spaces.
 		 */
-		kstack_cleanup(kkstp->kkst_trace, trace, kflag);
+		kstack_cleanup(kkstp->kkst_trace, trace,
+		    (procstat_opts & PS_OPT_VERBOSE) != 0 ? 2 : 1);
 		xo_open_list("trace");
-		kstack_cleanup_encoded(kkstp->kkst_trace, encoded_trace, kflag);
+		kstack_cleanup_encoded(kkstp->kkst_trace, encoded_trace,
+		    (procstat_opts & PS_OPT_VERBOSE) != 0 ? 2 : 1);
 		xo_close_list("trace");
 		xo_emit("{d:trace/%-29s}\n", trace);
 	}

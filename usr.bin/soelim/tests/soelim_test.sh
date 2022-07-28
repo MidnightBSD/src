@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/soelim/tests/soelim_test.sh 316256 2017-03-30 06:20:24Z ngie $
+# $FreeBSD$
 
 atf_test_case stdin
 stdin_head()

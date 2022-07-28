@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -10,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -27,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)uname.1	8.3 (Berkeley) 4/8/94
-.\" $FreeBSD: stable/10/usr.bin/uname/uname.1 258394 2013-11-20 17:46:23Z peter $
+.\" $FreeBSD$
 .\"
-.Dd November 20, 2013
+.Dd November 13, 2020
 .Dt UNAME 1
 .Os
 .Sh NAME
@@ -58,10 +57,15 @@ were specified.
 Write the kernel ident to standard output.
 .It Fl K
 Write the
-.Mx
+.Fx
 version of the kernel.
 .It Fl m
 Write the type of the current hardware platform to standard output.
+.Po Xr make 1
+uses it to set the
+.Va MACHINE
+variable.
+.Pc
 .It Fl n
 Write the name of the system to standard output.
 .It Fl o
@@ -70,6 +74,11 @@ This is a synonym for the
 option, for compatibility with other systems.
 .It Fl p
 Write the type of the machine processor architecture to standard output.
+.Po Xr make 1
+uses it to set the
+.Va MACHINE_ARCH
+variable.
+.Pc
 .It Fl r
 Write the current release level of the operating system
 to standard output.
@@ -77,7 +86,7 @@ to standard output.
 Write the name of the operating system implementation to standard output.
 .It Fl U
 Write the
-.Mx
+.Fx
 version of the user environment.
 .It Fl v
 Write the version level of this release of the operating system
@@ -94,7 +103,7 @@ The
 and
 .Fl U
 flags are intended to be used for fine grain differentiation of incremental
-.Mx
+.Fx
 development and user visible changes.
 .Sh ENVIRONMENT
 An environment variable composed of the string
@@ -105,8 +114,24 @@ utility (except for
 .Fl a )
 will allow the corresponding data to be set to the contents
 of the environment variable.
+See
+.Xr uname 3
+for more information.
 .Sh EXIT STATUS
 .Ex -std
+.Sh EXAMPLES
+The hardware platform
+.Pq Fl m
+can be different from the machine's processor architecture
+.Pq Fl p ,
+e.g., on 64-bit PowerPC,
+.Fl m
+would return
+.Va powerpc
+and
+.Fl p
+would return
+.Va powerpc64 .
 .Sh SEE ALSO
 .Xr feature_present 3 ,
 .Xr getosreldate 3 ,
@@ -122,11 +147,15 @@ specification.
 .Sh HISTORY
 The
 .Nm
-command appeared in PWB UNIX.
+command appeared in PWB UNIX 1.0, however
+.Bx 4.4
+was the first Berkeley release with the
+.Nm
+command.
 .Pp
 The
 .Fl K
 and
 .Fl U
 extension flags appeared in
-.Mx 1.0 .
+.Fx 10.0 .

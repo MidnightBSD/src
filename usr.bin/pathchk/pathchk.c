@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Tim J. Robbins.
  * All rights reserved.
  *
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/pathchk/pathchk.c 270890 2014-08-31 20:34:06Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -90,7 +91,7 @@ static void
 usage(void)
 {
 
-	fprintf(stderr, "usage: pathchk [-p] pathname ...\n");
+	fprintf(stderr, "usage: pathchk [-Pp] pathname ...\n");
 	exit(1);
 }
 

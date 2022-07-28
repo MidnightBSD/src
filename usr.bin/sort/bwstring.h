@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/11/usr.bin/sort/bwstring.h 330449 2018-03-05 07:26:05Z eadler $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD

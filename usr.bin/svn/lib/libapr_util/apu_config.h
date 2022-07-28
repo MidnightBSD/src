@@ -41,9 +41,6 @@
 /* Define if expat.h is available */
 #define HAVE_EXPAT_H 1
 
-/* Define if explicit_bzero function is supported */
-#define HAVE_EXPLICIT_BZERO 1
-
 /* Define to 1 if you have the <iconv.h> header file. */
 /* #undef HAVE_ICONV_H */
 

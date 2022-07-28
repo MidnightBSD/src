@@ -25,14 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/soelim/soelim.c 283197 2015-05-21 08:26:24Z bapt $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
 #include <ctype.h>
 #include <err.h>
 #include <limits.h>
-#define _WITH_GETLINE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
