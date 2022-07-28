@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/fs/nfsclient/nfsnode.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _NFSCLIENT_NFSNODE_H_
@@ -85,7 +87,7 @@ struct nfs_accesscache {
  * An nfsnode is 'named' by its file handle. (nget/nfs_node.c)
  * If this structure exceeds 256 bytes (it is currently 256 using 4.4BSD-Lite
  * type definitions), file handles of > 32 bytes should probably be split out
- * into a separate MALLOC()'d data structure. (Reduce the size of nfsfh_t by
+ * into a separate malloc()'d data structure. (Reduce the size of nfsfh_t by
  * changing the definition in nfsproto.h of NFS_SMALLFH.)
  * NB: Hopefully the current order of the fields is such that everything will
  *     be well aligned and, therefore, tightly packed.
@@ -126,6 +128,7 @@ struct nfsnode {
 	u_int64_t		 n_change;	/* old Change attribute */
 	struct nfsv4node	*n_v4;		/* extra V4 stuff */
 	struct ucred		*n_writecred;	/* Cred. for putpages */
+	struct timespec		n_localmodtime;	/* Last local modify */
 };
 
 #define	n_atim		n_un1.nf_atim
@@ -161,6 +164,7 @@ struct nfsnode {
 #define	NWRITEOPENED	0x00040000  /* Has been opened for writing */
 #define	NHASBEENLOCKED	0x00080000  /* Has been file locked. */
 #define	NDSCOMMIT	0x00100000  /* Commit is done via the DS. */
+#define	NVNSETSZSKIP	0x00200000  /* Skipped vnode_pager_setsize() */
 
 /*
  * Convert between nfsnode pointers and vnode pointers

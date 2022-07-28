@@ -1,6 +1,8 @@
 /*	$NetBSD: tmpfs_fifoops.h,v 1.4 2005/12/03 17:34:44 christos Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2005 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/fs/tmpfs/tmpfs_fifoops.h 268605 2014-07-14 08:17:11Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _FS_TMPFS_TMPFS_FIFOOPS_H_

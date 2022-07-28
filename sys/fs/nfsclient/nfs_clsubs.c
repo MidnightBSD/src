@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/nfsclient/nfs_clsubs.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * These functions support the macros and help fiddle mbuf chains for
@@ -100,7 +102,7 @@ ncl_uninit(struct vfsconf *vfsp)
 	 * Tell all nfsiod processes to exit. Clear ncl_iodmax, and wakeup
 	 * any sleeping nfsiods so they check ncl_iodmax and exit.
 	 */
-	mtx_lock(&ncl_iod_mutex);
+	NFSLOCKIOD();
 	ncl_iodmax = 0;
 	for (i = 0; i < ncl_numasync; i++)
 		if (ncl_iodwant[i] == NFSIOD_AVAILABLE)
@@ -108,7 +110,7 @@ ncl_uninit(struct vfsconf *vfsp)
 	/* The last nfsiod to exit will wake us up when ncl_numasync hits 0 */
 	while (ncl_numasync)
 		msleep(&ncl_numasync, &ncl_iod_mutex, PWAIT, "ioddie", 0);
-	mtx_unlock(&ncl_iod_mutex);
+	NFSUNLOCKIOD();
 	ncl_nhuninit();
 	return (0);
 #else
@@ -116,23 +118,23 @@ ncl_uninit(struct vfsconf *vfsp)
 #endif
 }
 
+/* Returns with NFSLOCKNODE() held. */
 void 
 ncl_dircookie_lock(struct nfsnode *np)
 {
-	mtx_lock(&np->n_mtx);
+	NFSLOCKNODE(np);
 	while (np->n_flag & NDIRCOOKIELK)
 		(void) msleep(&np->n_flag, &np->n_mtx, PZERO, "nfsdirlk", 0);
 	np->n_flag |= NDIRCOOKIELK;
-	mtx_unlock(&np->n_mtx);
 }
 
 void 
 ncl_dircookie_unlock(struct nfsnode *np)
 {
-	mtx_lock(&np->n_mtx);
+	NFSLOCKNODE(np);
 	np->n_flag &= ~NDIRCOOKIELK;
 	wakeup(&np->n_flag);
-	mtx_unlock(&np->n_mtx);
+	NFSUNLOCKNODE(np);
 }
 
 bool
@@ -183,12 +185,14 @@ ncl_getattrcache(struct vnode *vp, struct vattr *vaper)
 	struct vattr *vap;
 	struct nfsmount *nmp;
 	int timeo, mustflush;
+	u_quad_t nsize;
+	bool setnsize;
 	
 	np = VTONFS(vp);
 	vap = &np->n_vattr.na_vattr;
 	nmp = VFSTONFS(vp->v_mount);
 	mustflush = nfscl_mustflush(vp);	/* must be before mtx_lock() */
-	mtx_lock(&np->n_mtx);
+	NFSLOCKNODE(np);
 	/* XXX n_mtime doesn't seem to be updated on a miss-and-reload */
 	timeo = (time_second - np->n_mtime.tv_sec) / 10;
 
@@ -223,11 +227,12 @@ ncl_getattrcache(struct vnode *vp, struct vattr *vaper)
 	if ((time_second - np->n_attrstamp) >= timeo &&
 	    (mustflush != 0 || np->n_attrstamp == 0)) {
 		nfsstatsv1.attrcache_misses++;
-		mtx_unlock(&np->n_mtx);
+		NFSUNLOCKNODE(np);
 		KDTRACE_NFS_ATTRCACHE_GET_MISS(vp);
 		return( ENOENT);
 	}
 	nfsstatsv1.attrcache_hits++;
+	setnsize = false;
 	if (vap->va_size != np->n_size) {
 		if (vap->va_type == VREG) {
 			if (np->n_flag & NMODIFIED) {
@@ -238,7 +243,7 @@ ncl_getattrcache(struct vnode *vp, struct vattr *vaper)
 			} else {
 				np->n_size = vap->va_size;
 			}
-			vnode_pager_setsize(vp, np->n_size);
+			setnsize = ncl_pager_setsize(vp, &nsize);
 		} else {
 			np->n_size = vap->va_size;
 		}
@@ -250,7 +255,9 @@ ncl_getattrcache(struct vnode *vp, struct vattr *vaper)
 		if (np->n_flag & NUPD)
 			vaper->va_mtime = np->n_mtim;
 	}
-	mtx_unlock(&np->n_mtx);
+	NFSUNLOCKNODE(np);
+	if (setnsize)
+		vnode_pager_setsize(vp, nsize);
 	KDTRACE_NFS_ATTRCACHE_GET_HIT(vp, vap);
 	return (0);
 }
@@ -276,7 +283,7 @@ ncl_getcookie(struct nfsnode *np, off_t off, int add)
 	dp = LIST_FIRST(&np->n_cookies);
 	if (!dp) {
 		if (add) {
-			MALLOC(dp, struct nfsdmap *, sizeof (struct nfsdmap),
+			dp = malloc(sizeof (struct nfsdmap),
 				M_NFSDIROFF, M_WAITOK);
 			dp->ndm_eocookie = 0;
 			LIST_INSERT_HEAD(&np->n_cookies, dp, ndm_list);
@@ -291,7 +298,7 @@ ncl_getcookie(struct nfsnode *np, off_t off, int add)
 				goto out;
 			dp = LIST_NEXT(dp, ndm_list);
 		} else if (add) {
-			MALLOC(dp2, struct nfsdmap *, sizeof (struct nfsdmap),
+			dp2 = malloc(sizeof (struct nfsdmap),
 				M_NFSDIROFF, M_WAITOK);
 			dp2->ndm_eocookie = 0;
 			LIST_INSERT_AFTER(dp, dp2, ndm_list);
@@ -323,6 +330,7 @@ ncl_invaldir(struct vnode *vp)
 	KASSERT(vp->v_type == VDIR, ("nfs: invaldir not dir"));
 	ncl_dircookie_lock(np);
 	np->n_direofoffset = 0;
+	NFSUNLOCKNODE(np);
 	np->n_cookieverf.nfsuquad[0] = 0;
 	np->n_cookieverf.nfsuquad[1] = 0;
 	if (LIST_FIRST(&np->n_cookies))

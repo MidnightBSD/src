@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Copyright (c) 2013 Spectra Logic Corporation
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/nfsserver/nfs_fha_new.c 322137 2017-08-07 07:02:51Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <fs/nfs/nfsport.h>
 

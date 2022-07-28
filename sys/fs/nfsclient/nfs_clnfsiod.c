@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/nfsclient/nfs_clnfsiod.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -41,7 +43,6 @@ __FBSDID("$FreeBSD: stable/11/sys/fs/nfsclient/nfs_clnfsiod.c 331722 2018-03-29 
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
 #include <sys/file.h>
-#include <sys/filedesc.h>
 #include <sys/vnode.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
@@ -105,7 +106,7 @@ sysctl_iodmin(SYSCTL_HANDLER_ARGS)
 	error = sysctl_handle_int(oidp, &newmin, 0, req);
 	if (error || (req->newptr == NULL))
 		return (error);
-	mtx_lock(&ncl_iod_mutex);
+	NFSLOCKIOD();
 	if (newmin > ncl_iodmax) {
 		error = EINVAL;
 		goto out;
@@ -120,7 +121,7 @@ sysctl_iodmin(SYSCTL_HANDLER_ARGS)
 	for (i = nfs_iodmin - ncl_numasync; i > 0; i--)
 		nfs_nfsiodnew_sync();
 out:
-	mtx_unlock(&ncl_iod_mutex);	
+	NFSUNLOCKIOD();	
 	return (0);
 }
 SYSCTL_PROC(_vfs_nfs, OID_AUTO, iodmin, CTLTYPE_UINT | CTLFLAG_RW, 0,
@@ -139,7 +140,7 @@ sysctl_iodmax(SYSCTL_HANDLER_ARGS)
 		return (error);
 	if (newmax > NFS_MAXASYNCDAEMON)
 		return (EINVAL);
-	mtx_lock(&ncl_iod_mutex);
+	NFSLOCKIOD();
 	ncl_iodmax = newmax;
 	if (ncl_numasync <= ncl_iodmax)
 		goto out;
@@ -156,7 +157,7 @@ sysctl_iodmax(SYSCTL_HANDLER_ARGS)
 		iod--;
 	}
 out:
-	mtx_unlock(&ncl_iod_mutex);
+	NFSUNLOCKIOD();
 	return (0);
 }
 SYSCTL_PROC(_vfs_nfs, OID_AUTO, iodmax, CTLTYPE_UINT | CTLFLAG_RW, 0,
@@ -168,7 +169,7 @@ nfs_nfsiodnew_sync(void)
 {
 	int error, i;
 
-	mtx_assert(&ncl_iod_mutex, MA_OWNED);
+	NFSASSERTIOD();
 	for (i = 0; i < ncl_iodmax; i++) {
 		if (nfs_asyncdaemon[i] == 0) {
 			nfs_asyncdaemon[i] = 1;
@@ -177,10 +178,10 @@ nfs_nfsiodnew_sync(void)
 	}
 	if (i == ncl_iodmax)
 		return (0);
-	mtx_unlock(&ncl_iod_mutex);
+	NFSUNLOCKIOD();
 	error = kproc_create(nfssvc_iod, nfs_asyncdaemon + i, NULL,
 	    RFHIGHPID, 0, "newnfs %d", i);
-	mtx_lock(&ncl_iod_mutex);
+	NFSLOCKIOD();
 	if (error == 0) {
 		ncl_numasync++;
 		ncl_iodwant[i] = NFSIOD_AVAILABLE;
@@ -193,19 +194,19 @@ void
 ncl_nfsiodnew_tq(__unused void *arg, int pending)
 {
 
-	mtx_lock(&ncl_iod_mutex);
+	NFSLOCKIOD();
 	while (pending > 0) {
 		pending--;
 		nfs_nfsiodnew_sync();
 	}
-	mtx_unlock(&ncl_iod_mutex);
+	NFSUNLOCKIOD();
 }
 
 void
 ncl_nfsiodnew(void)
 {
 
-	mtx_assert(&ncl_iod_mutex, MA_OWNED);
+	NFSASSERTIOD();
 	taskqueue_enqueue(taskqueue_thread, &ncl_nfsiodnew_task);
 }
 
@@ -216,7 +217,7 @@ nfsiod_setup(void *dummy)
 
 	TUNABLE_INT_FETCH("vfs.nfs.iodmin", &nfs_iodmin);
 	nfscl_init();
-	mtx_lock(&ncl_iod_mutex);
+	NFSLOCKIOD();
 	/* Silently limit the start number of nfsiod's */
 	if (nfs_iodmin > NFS_MAXASYNCDAEMON)
 		nfs_iodmin = NFS_MAXASYNCDAEMON;
@@ -226,7 +227,7 @@ nfsiod_setup(void *dummy)
 		if (error == -1)
 			panic("nfsiod_setup: nfs_nfsiodnew failed");
 	}
-	mtx_unlock(&ncl_iod_mutex);
+	NFSUNLOCKIOD();
 }
 SYSINIT(newnfsiod, SI_SUB_KTHREAD_IDLE, SI_ORDER_ANY, nfsiod_setup, NULL);
 
@@ -247,7 +248,7 @@ nfssvc_iod(void *instance)
 	int myiod, timo;
 	int error = 0;
 
-	mtx_lock(&ncl_iod_mutex);
+	NFSLOCKIOD();
 	myiod = (int *)instance - nfs_asyncdaemon;
 	/*
 	 * Main loop
@@ -290,7 +291,7 @@ nfssvc_iod(void *instance)
 		    nmp->nm_bufqwant = 0;
 		    wakeup(&nmp->nm_bufq);
 		}
-		mtx_unlock(&ncl_iod_mutex);
+		NFSUNLOCKIOD();
 		if (bp->b_flags & B_DIRECT) {
 			KASSERT((bp->b_iocmd == BIO_WRITE), ("nfscvs_iod: BIO_WRITE not set"));
 			(void)ncl_doio_directwrite(bp);
@@ -302,7 +303,7 @@ nfssvc_iod(void *instance)
 				(void) ncl_doio(bp->b_vp, bp, bp->b_wcred,
 				    NULL, 0);
 		}
-		mtx_lock(&ncl_iod_mutex);
+		NFSLOCKIOD();
 		/*
 		 * Make sure the nmp hasn't been dismounted as soon as
 		 * ncl_doio() completes for the last buffer.
@@ -334,7 +335,7 @@ finish:
 	/* Someone may be waiting for the last nfsiod to terminate. */
 	if (--ncl_numasync == 0)
 		wakeup(&ncl_numasync);
-	mtx_unlock(&ncl_iod_mutex);
+	NFSUNLOCKIOD();
 	if ((error == 0) || (error == EWOULDBLOCK))
 		kproc_exit(0);
 	/* Abnormal termination */
