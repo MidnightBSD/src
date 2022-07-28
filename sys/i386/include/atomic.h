@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1998 Doug Rabson
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/i386/include/atomic.h 338588 2018-09-11 15:56:06Z hselasky $
+ * $FreeBSD$
  */
 #ifndef _MACHINE_ATOMIC_H_
 #define	_MACHINE_ATOMIC_H_
@@ -47,7 +49,7 @@
  * avoid a dependency on sys/pcpu.h in machine/atomic.h consumers.
  * An assertion in i386/vm_machdep.c ensures that the value is correct.
  */
-#define	__OFFSETOF_MONITORBUF	0x180
+#define	__OFFSETOF_MONITORBUF	0x80
 
 static __inline void
 __mbk(void)
@@ -102,7 +104,7 @@ __mbu(void)
  * Kernel modules call real functions which are built into the kernel.
  * This allows kernel modules to be portable between UP and SMP systems.
  */
-#if defined(KLD_MODULE) || !defined(__GNUCLIKE_ASM)
+#if !defined(__GNUCLIKE_ASM)
 #define	ATOMIC_ASM(NAME, TYPE, OP, CONS, V)			\
 void atomic_##NAME##_##TYPE(volatile u_##TYPE *p, u_##TYPE v);	\
 void atomic_##NAME##_barr_##TYPE(volatile u_##TYPE *p, u_##TYPE v)
@@ -142,7 +144,7 @@ void		atomic_subtract_64(volatile uint64_t *, uint64_t);
  * For userland, always use lock prefixes so that the binaries will run
  * on both SMP and !SMP systems.
  */
-#if defined(SMP) || !defined(_KERNEL)
+#if defined(SMP) || !defined(_KERNEL) || defined(KLD_MODULE)
 #define	MPLOCKED	"lock ; "
 #else
 #define	MPLOCKED
@@ -301,7 +303,7 @@ atomic_testandclear_int(volatile u_int *p, u_int v)
  */
 
 #if defined(_KERNEL)
-#if defined(SMP)
+#if defined(SMP) || defined(KLD_MODULE)
 #define	__storeload_barrier()	__mbk()
 #else /* _KERNEL && UP */
 #define	__storeload_barrier()	__compiler_membar()
@@ -365,8 +367,6 @@ atomic_thread_fence_seq_cst(void)
 #ifdef WANT_FUNCTIONS
 int		atomic_cmpset_64_i386(volatile uint64_t *, uint64_t, uint64_t);
 int		atomic_cmpset_64_i586(volatile uint64_t *, uint64_t, uint64_t);
-int		atomic_fcmpset_64_i386(volatile uint64_t *, uint64_t *, uint64_t);
-int		atomic_fcmpset_64_i586(volatile uint64_t *, uint64_t *, uint64_t);
 uint64_t	atomic_load_acq_64_i386(volatile uint64_t *);
 uint64_t	atomic_load_acq_64_i586(volatile uint64_t *);
 void		atomic_store_rel_64_i386(volatile uint64_t *, uint64_t);
@@ -880,6 +880,7 @@ u_long	atomic_swap_long(volatile u_long *p, u_long v);
 #define	atomic_testandset_32	atomic_testandset_int
 #define	atomic_testandclear_32	atomic_testandclear_int
 
+#ifdef _KERNEL
 /* Operations on 64-bit quad words. */
 #define	atomic_cmpset_acq_64 atomic_cmpset_64
 #define	atomic_cmpset_rel_64 atomic_cmpset_64
@@ -891,6 +892,9 @@ u_long	atomic_swap_long(volatile u_long *p, u_long v);
 #define	atomic_add_rel_64 atomic_add_64
 #define	atomic_subtract_acq_64 atomic_subtract_64
 #define	atomic_subtract_rel_64 atomic_subtract_64
+#define	atomic_load_64 atomic_load_acq_64
+#define	atomic_store_64 atomic_store_rel_64
+#endif
 
 /* Operations on pointers. */
 #define	atomic_set_ptr(p, v) \

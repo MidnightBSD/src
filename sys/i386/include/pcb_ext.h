@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Jonathan Lemon
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/i386/include/pcb_ext.h 333626 2018-05-15 11:25:10Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _I386_PCB_EXT_H_

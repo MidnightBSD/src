@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1991 Regents of the University of California.
  * All rights reserved.
  *
@@ -14,7 +16,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -38,7 +40,7 @@
  *
  *	from: hp300: @(#)pmap.h	7.2 (Berkeley) 12/16/90
  *	from: @(#)pmap.h	7.4 (Berkeley) 5/12/91
- * $FreeBSD: stable/11/sys/i386/include/pmap.h 344053 2019-02-12 16:56:10Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PMAP_H_
@@ -110,12 +112,10 @@
  * For PAE, the page table page unit size is 2MB.  This means that 512 pages
  * is 1 Gigabyte.  Double everything.  It must be a multiple of 8 for PAE.
  */
-#ifndef KVA_PAGES
 #if defined(PAE) || defined(PAE_TABLES)
-#define KVA_PAGES	512
+#define KVA_PAGES	(512*4)
 #else
-#define KVA_PAGES	256
-#endif
+#define KVA_PAGES	(256*4)
 #endif
 
 /*
@@ -125,7 +125,7 @@
 
 /*
  * The initial number of kernel page table pages that are constructed
- * by locore must be sufficient to map vm_page_array.  That number can
+ * by pmap_cold() must be sufficient to map vm_page_array[].  That number can
  * be calculated as follows:
  *     max_phys / PAGE_SIZE * sizeof(struct vm_page) / NBPDR
  * PAE:      max_phys 16G, sizeof(vm_page) 76, NBPDR 2M, 152 page table pages.
@@ -148,12 +148,13 @@
 
 /*
  * The *PTDI values control the layout of virtual memory
- *
- * XXX This works for now, but I am not real happy with it, I'll fix it
- * right after I fix locore.s and the magic 28K hole
  */
-#define	KPTDI		(NPDEPTD-NKPDE)	/* start of kernel virtual pde's */
-#define	PTDPTDI		(KPTDI-NPGPTD)	/* ptd entry that points to ptd! */
+#define	KPTDI		0		/* start of kernel virtual pde's */
+#define	LOWPTDI		1		/* low memory map pde */
+#define	KERNPTDI	2		/* start of kernel text pde */
+#define	PTDPTDI		(NPDEPTD - 1 - NPGPTD)	/* ptd entry that points
+						   to ptd! */
+#define	TRPTDI		(NPDEPTD - 1)	/* u/k trampoline ptd */
 
 /*
  * XXX doesn't really belong here I guess...
@@ -229,7 +230,7 @@ extern pd_entry_t *IdlePTD;	/* physical address of "Idle" state directory */
  * a kernel page table page after the corresponding virtual addresses have
  * been promoted to a 2/4MB page mapping.
  *
- * KPTmap is first initialized by locore to support just NPKT page table
+ * KPTmap is first initialized by pmap_cold() to support just NPKT page table
  * pages.  Later, it is reinitialized by pmap_bootstrap() to allow for
  * expansion of the kernel page table.
  */
@@ -241,20 +242,7 @@ extern pt_entry_t *KPTmap;
 #define	pte_load_store(ptep, pte)	atomic_swap_64_i586(ptep, pte)
 #define	pte_load_clear(ptep)		atomic_swap_64_i586(ptep, 0)
 #define	pte_store(ptep, pte)		atomic_store_rel_64_i586(ptep, pte)
-static __inline uint64_t
-pte_load(pt_entry_t *p)
-{
-	uint64_t res;
-
-	__asm __volatile(
-	"	movl	%%ebx,%%eax ;	"
-	"	movl	%%ecx,%%edx ;	"
-	"	lock; cmpxchg8b %1"
-	: "=&A" (res),			/* 0 */
-	  "+m" (*p)			/* 1 */
-	: : "memory", "cc");
-	return (res);
-}
+#define	pte_load(ptep)			atomic_load_acq_64_i586(ptep)
 
 extern pt_entry_t pg_nx;
 
@@ -326,6 +314,7 @@ struct pmap {
 						   table */
 #endif
 	struct vm_radix		pm_root;	/* spare page table pages */
+	vm_page_t		pm_ptdpg[NPGPTD];
 };
 
 typedef struct pmap	*pmap_t;
@@ -371,12 +360,10 @@ struct pv_chunk {
 
 #ifdef	_KERNEL
 
-extern caddr_t	CADDR3;
+extern caddr_t CADDR3;
 extern pt_entry_t *CMAP3;
 extern vm_paddr_t phys_avail[];
 extern vm_paddr_t dump_avail[];
-extern int pseflag;
-extern int pgeflag;
 extern char *ptvmmap;		/* poor name! */
 extern vm_offset_t virtual_avail;
 extern vm_offset_t virtual_end;
@@ -385,6 +372,13 @@ extern vm_offset_t virtual_end;
 #define	pmap_page_is_write_mapped(m)	(((m)->aflags & PGA_WRITEABLE) != 0)
 #define	pmap_unmapbios(va, sz)	pmap_unmapdev((va), (sz))
 
+static inline int
+pmap_vmspace_copy(pmap_t dst_pmap __unused, pmap_t src_pmap __unused)
+{
+
+	return (0);
+}
+
 /*
  * Only the following functions or macros may be used before pmap_bootstrap()
  * is called: pmap_kenter(), pmap_kextract(), pmap_kremove(), vtophys(), and
@@ -392,7 +386,7 @@ extern vm_offset_t virtual_end;
  */
 void	pmap_activate_boot(pmap_t pmap);
 void	pmap_bootstrap(vm_paddr_t);
-int	pmap_cache_bits(int mode, boolean_t is_pde);
+int	pmap_cache_bits(pmap_t, int mode, boolean_t is_pde);
 int	pmap_change_attr(vm_offset_t, vm_size_t, int);
 void	pmap_init_pat(void);
 void	pmap_kenter(vm_offset_t va, vm_paddr_t pa);
@@ -403,6 +397,7 @@ void	*pmap_mapdev(vm_paddr_t, vm_size_t);
 void	*pmap_mapdev_attr(vm_paddr_t, vm_size_t, int);
 boolean_t pmap_page_is_mapped(vm_page_t m);
 void	pmap_page_set_memattr(vm_page_t m, vm_memattr_t ma);
+bool	pmap_ps_enabled(pmap_t pmap);
 void	pmap_unmapdev(vm_offset_t, vm_size_t);
 pt_entry_t *pmap_pte(pmap_t, vm_offset_t) __pure2;
 void	pmap_invalidate_page(pmap_t, vm_offset_t);
@@ -410,8 +405,10 @@ void	pmap_invalidate_range(pmap_t, vm_offset_t, vm_offset_t);
 void	pmap_invalidate_all(pmap_t);
 void	pmap_invalidate_cache(void);
 void	pmap_invalidate_cache_pages(vm_page_t *pages, int count);
-void	pmap_invalidate_cache_range(vm_offset_t sva, vm_offset_t eva,
-	    boolean_t force);
+void	pmap_invalidate_cache_range(vm_offset_t sva, vm_offset_t eva);
+void	pmap_force_invalidate_cache_range(vm_offset_t sva, vm_offset_t eva);
+void	*pmap_trm_alloc(size_t size, int flags);
+void	pmap_trm_free(void *addr, size_t size);
 
 void	invltlb_glob(void);
 

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -16,7 +18,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -36,10 +38,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/kern_sysctl.c 351358 2019-08-21 22:42:08Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_capsicum.h"
-#include "opt_compat.h"
 #include "opt_ktrace.h"
 
 #include <sys/param.h>
@@ -108,6 +109,7 @@ static int sysctl_root(SYSCTL_HANDLER_ARGS);
 /* Root list */
 struct sysctl_oid_list sysctl__children = SLIST_HEAD_INITIALIZER(&sysctl__children);
 
+static char*	sysctl_escape_name(const char*);
 static int	sysctl_remove_oid_locked(struct sysctl_oid *oidp, int del,
 		    int recurse);
 static int	sysctl_old_kernel(struct sysctl_req *, const void *, size_t);
@@ -321,6 +323,91 @@ sysctl_load_tunable_by_oid_locked(struct sysctl_oid *oidp)
 		freeenv(penv);
 }
 
+static int
+sbuf_printf_drain(void *arg __unused, const char *data, int len)
+{
+
+	return (printf("%.*s", len, data));
+}
+
+/*
+ * Locate the path to a given oid.  Returns the length of the resulting path,
+ * or -1 if the oid was not found.  nodes must have room for CTL_MAXNAME
+ * elements and be NULL initialized.
+ */
+static int
+sysctl_search_oid(struct sysctl_oid **nodes, struct sysctl_oid *needle)
+{
+	int indx;
+
+	SYSCTL_ASSERT_LOCKED();
+	indx = 0;
+	while (indx < CTL_MAXNAME && indx >= 0) {
+		if (nodes[indx] == NULL && indx == 0)
+			nodes[indx] = SLIST_FIRST(&sysctl__children);
+		else if (nodes[indx] == NULL)
+			nodes[indx] = SLIST_FIRST(&nodes[indx - 1]->oid_children);
+		else
+			nodes[indx] = SLIST_NEXT(nodes[indx], oid_link);
+
+		if (nodes[indx] == needle)
+			return (indx + 1);
+
+		if (nodes[indx] == NULL) {
+			indx--;
+			continue;
+		}
+
+		if ((nodes[indx]->oid_kind & CTLTYPE) == CTLTYPE_NODE) {
+			indx++;
+			continue;
+		}
+	}
+	return (-1);
+}
+
+static void
+sysctl_warn_reuse(const char *func, struct sysctl_oid *leaf)
+{
+	struct sysctl_oid *nodes[CTL_MAXNAME];
+	char buf[128];
+	struct sbuf sb;
+	int rc, i;
+
+	(void)sbuf_new(&sb, buf, sizeof(buf), SBUF_FIXEDLEN | SBUF_INCLUDENUL);
+	sbuf_set_drain(&sb, sbuf_printf_drain, NULL);
+
+	sbuf_printf(&sb, "%s: can't re-use a leaf (", __func__);
+
+	memset(nodes, 0, sizeof(nodes));
+	rc = sysctl_search_oid(nodes, leaf);
+	if (rc > 0) {
+		for (i = 0; i < rc; i++)
+			sbuf_printf(&sb, "%s%.*s", nodes[i]->oid_name,
+			    i != (rc - 1), ".");
+	} else {
+		sbuf_printf(&sb, "%s", leaf->oid_name);
+	}
+	sbuf_printf(&sb, ")!\n");
+
+	(void)sbuf_finish(&sb);
+}
+
+#ifdef SYSCTL_DEBUG
+static int
+sysctl_reuse_test(SYSCTL_HANDLER_ARGS)
+{
+	struct rm_priotracker tracker;
+
+	SYSCTL_RLOCK(&tracker);
+	sysctl_warn_reuse(__func__, oidp);
+	SYSCTL_RUNLOCK(&tracker);
+	return (0);
+}
+SYSCTL_PROC(_sysctl, 0, reuse_test, CTLTYPE_STRING|CTLFLAG_RD|CTLFLAG_MPSAFE,
+	0, 0, sysctl_reuse_test, "-", "");
+#endif
+
 void
 sysctl_register_oid(struct sysctl_oid *oidp)
 {
@@ -341,7 +428,7 @@ sysctl_register_oid(struct sysctl_oid *oidp)
 			p->oid_refcnt++;
 			return;
 		} else {
-			printf("can't re-use a leaf (%s)!\n", p->oid_name);
+			sysctl_warn_reuse(__func__, p);
 			return;
 		}
 	}
@@ -648,6 +735,45 @@ sysctl_remove_name(struct sysctl_oid *parent, const char *name,
 	return (error);
 }
 
+/*
+ * Duplicate the provided string, escaping any illegal characters.  The result
+ * must be freed when no longer in use.
+ *
+ * The list of illegal characters is ".".
+ */
+static char*
+sysctl_escape_name(const char* orig)
+{
+	int i, s = 0, d = 0, nillegals = 0;
+	char *new;
+
+	/* First count the number of illegal characters */
+	for (i = 0; orig[i] != '\0'; i++) {
+		if (orig[i] == '.')
+			nillegals++;
+	}
+
+	/* Allocate storage for new string */
+	new = malloc(i + 2 * nillegals + 1, M_SYSCTLOID, M_WAITOK);
+
+	/* Copy the name, escaping characters as we go */
+	while (orig[s] != '\0') {
+		if (orig[s] == '.') {
+			/* %25 is the hexadecimal representation of '.' */
+			new[d++] = '%';
+			new[d++] = '2';
+			new[d++] = '5';
+			s++;
+		} else {
+			new[d++] = orig[s++];
+		}
+	}
+
+	/* Finally, nul-terminate */
+	new[d] = '\0';
+
+	return (new);
+}
 
 static int
 sysctl_remove_oid_locked(struct sysctl_oid *oidp, int del, int recurse)
@@ -710,6 +836,9 @@ sysctl_remove_oid_locked(struct sysctl_oid *oidp, int del, int recurse)
 			if (oidp->oid_descr)
 				free(__DECONST(char *, oidp->oid_descr),
 				    M_SYSCTLOID);
+			if (oidp->oid_label)
+				free(__DECONST(char *, oidp->oid_label),
+				    M_SYSCTLOID);
 			free(__DECONST(char *, oidp->oid_name), M_SYSCTLOID);
 			free(oidp, M_SYSCTLOID);
 		}
@@ -723,17 +852,21 @@ sysctl_remove_oid_locked(struct sysctl_oid *oidp, int del, int recurse)
 struct sysctl_oid *
 sysctl_add_oid(struct sysctl_ctx_list *clist, struct sysctl_oid_list *parent,
 	int number, const char *name, int kind, void *arg1, intmax_t arg2,
-	int (*handler)(SYSCTL_HANDLER_ARGS), const char *fmt, const char *descr)
+	int (*handler)(SYSCTL_HANDLER_ARGS), const char *fmt, const char *descr,
+	const char *label)
 {
 	struct sysctl_oid *oidp;
+	char *escaped;
 
 	/* You have to hook up somewhere.. */
 	if (parent == NULL)
 		return(NULL);
+	escaped = sysctl_escape_name(name);
 	/* Check if the node already exists, otherwise create it */
 	SYSCTL_WLOCK();
-	oidp = sysctl_find_oidname(name, parent);
+	oidp = sysctl_find_oidname(escaped, parent);
 	if (oidp != NULL) {
+		free(escaped, M_SYSCTLOID);
 		if ((oidp->oid_kind & CTLTYPE) == CTLTYPE_NODE) {
 			oidp->oid_refcnt++;
 			/* Update the context */
@@ -742,8 +875,8 @@ sysctl_add_oid(struct sysctl_ctx_list *clist, struct sysctl_oid_list *parent,
 			SYSCTL_WUNLOCK();
 			return (oidp);
 		} else {
+			sysctl_warn_reuse(__func__, oidp);
 			SYSCTL_WUNLOCK();
-			printf("can't re-use a leaf (%s)!\n", name);
 			return (NULL);
 		}
 	}
@@ -752,7 +885,7 @@ sysctl_add_oid(struct sysctl_ctx_list *clist, struct sysctl_oid_list *parent,
 	SLIST_INIT(&oidp->oid_children);
 	oidp->oid_number = number;
 	oidp->oid_refcnt = 1;
-	oidp->oid_name = strdup(name, M_SYSCTLOID);
+	oidp->oid_name = escaped;
 	oidp->oid_handler = handler;
 	oidp->oid_kind = CTLFLAG_DYN | kind;
 	oidp->oid_arg1 = arg1;
@@ -760,6 +893,8 @@ sysctl_add_oid(struct sysctl_ctx_list *clist, struct sysctl_oid_list *parent,
 	oidp->oid_fmt = fmt;
 	if (descr != NULL)
 		oidp->oid_descr = strdup(descr, M_SYSCTLOID);
+	if (label != NULL)
+		oidp->oid_label = strdup(label, M_SYSCTLOID);
 	/* Update the context, if used */
 	if (clist != NULL)
 		sysctl_ctx_entry_add(clist, oidp);
@@ -842,12 +977,21 @@ SYSINIT(sysctl, SI_SUB_KMEM, SI_ORDER_FIRST, sysctl_register_all, NULL);
  * (be aware though, that the proper interface isn't as obvious as it
  * may seem, there are various conflicting requirements.
  *
- * {0,0}	printf the entire MIB-tree.
- * {0,1,...}	return the name of the "..." OID.
- * {0,2,...}	return the next OID.
- * {0,3}	return the OID of the name in "new"
- * {0,4,...}	return the kind & format info for the "..." OID.
- * {0,5,...}	return the description the "..." OID.
+ * {CTL_SYSCTL, CTL_SYSCTL_DEBUG}		printf the entire MIB-tree.
+ * {CTL_SYSCTL, CTL_SYSCTL_NAME, ...}		return the name of the "..."
+ *						OID.
+ * {CTL_SYSCTL, CTL_SYSCTL_NEXT, ...}		return the next OID, honoring
+ *						CTLFLAG_SKIP.
+ * {CTL_SYSCTL, CTL_SYSCTL_NAME2OID}		return the OID of the name in
+ *						"new"
+ * {CTL_SYSCTL, CTL_SYSCTL_OIDFMT, ...}		return the kind & format info
+ *						for the "..." OID.
+ * {CTL_SYSCTL, CTL_SYSCTL_OIDDESCR, ...}	return the description of the
+ *						"..." OID.
+ * {CTL_SYSCTL, CTL_SYSCTL_OIDLABEL, ...}	return the aggregation label of
+ *						the "..." OID.
+ * {CTL_SYSCTL, CTL_SYSCTL_NEXTNOSKIP, ...}	return the next OID, ignoring
+ *						CTLFLAG_SKIP.
  */
 
 #ifdef SYSCTL_DEBUG
@@ -915,8 +1059,8 @@ sysctl_sysctl_debug(SYSCTL_HANDLER_ARGS)
 	return (ENOENT);
 }
 
-SYSCTL_PROC(_sysctl, 0, debug, CTLTYPE_STRING|CTLFLAG_RD|CTLFLAG_MPSAFE,
-	0, 0, sysctl_sysctl_debug, "-", "");
+SYSCTL_PROC(_sysctl, CTL_SYSCTL_DEBUG, debug, CTLTYPE_STRING | CTLFLAG_RD |
+    CTLFLAG_MPSAFE, 0, 0, sysctl_sysctl_debug, "-", "");
 #endif
 
 static int
@@ -924,11 +1068,15 @@ sysctl_sysctl_name(SYSCTL_HANDLER_ARGS)
 {
 	int *name = (int *) arg1;
 	u_int namelen = arg2;
-	int error = 0;
+	int error;
 	struct sysctl_oid *oid;
 	struct sysctl_oid_list *lsp = &sysctl__children, *lsp2;
 	struct rm_priotracker tracker;
 	char buf[10];
+
+	error = sysctl_wire_old_buffer(req, 0);
+	if (error)
+		return (error);
 
 	SYSCTL_RLOCK(&tracker);
 	while (namelen) {
@@ -981,12 +1129,16 @@ sysctl_sysctl_name(SYSCTL_HANDLER_ARGS)
  * XXXRW/JA: Shouldn't return name data for nodes that we don't permit in
  * capability mode.
  */
-static SYSCTL_NODE(_sysctl, 1, name, CTLFLAG_RD | CTLFLAG_MPSAFE | CTLFLAG_CAPRD,
-    sysctl_sysctl_name, "");
+static SYSCTL_NODE(_sysctl, CTL_SYSCTL_NAME, name, CTLFLAG_RD |
+    CTLFLAG_MPSAFE | CTLFLAG_CAPRD, sysctl_sysctl_name, "");
 
+/*
+ * Walk the sysctl subtree at lsp until we find the given name,
+ * and return the next name in order by oid_number.
+ */
 static int
 sysctl_sysctl_next_ls(struct sysctl_oid_list *lsp, int *name, u_int namelen, 
-	int *next, int *len, int level, struct sysctl_oid **oidpp)
+    int *next, int *len, int level, bool honor_skip)
 {
 	struct sysctl_oid *oidp;
 
@@ -994,54 +1146,95 @@ sysctl_sysctl_next_ls(struct sysctl_oid_list *lsp, int *name, u_int namelen,
 	*len = level;
 	SLIST_FOREACH(oidp, lsp, oid_link) {
 		*next = oidp->oid_number;
-		*oidpp = oidp;
 
-		if ((oidp->oid_kind & (CTLFLAG_SKIP | CTLFLAG_DORMANT)) != 0)
+		if ((oidp->oid_kind & CTLFLAG_DORMANT) != 0)
 			continue;
 
-		if (!namelen) {
+		if (honor_skip && (oidp->oid_kind & CTLFLAG_SKIP) != 0)
+			continue;
+
+		if (namelen == 0) {
+			/*
+			 * We have reached a node with a full name match and are
+			 * looking for the next oid in its children.
+			 *
+			 * For CTL_SYSCTL_NEXTNOSKIP we are done.
+			 *
+			 * For CTL_SYSCTL_NEXT we skip CTLTYPE_NODE (unless it
+			 * has a handler) and move on to the children.
+			 */
+			if (!honor_skip)
+				return (0);
 			if ((oidp->oid_kind & CTLTYPE) != CTLTYPE_NODE) 
 				return (0);
 			if (oidp->oid_handler) 
-				/* We really should call the handler here...*/
 				return (0);
 			lsp = SYSCTL_CHILDREN(oidp);
-			if (!sysctl_sysctl_next_ls(lsp, 0, 0, next+1, 
-				len, level+1, oidpp))
+			if (!sysctl_sysctl_next_ls(lsp, NULL, 0, next + 1, len,
+			    level + 1, honor_skip))
 				return (0);
+			/*
+			 * There were no useable children in this node.
+			 * Continue searching for the next oid at this level.
+			 */
 			goto emptynode;
 		}
 
+		/*
+		 * No match yet. Continue seeking the given name.
+		 *
+		 * We are iterating in order by oid_number, so skip oids lower
+		 * than the one we are looking for.
+		 *
+		 * When the current oid_number is higher than the one we seek,
+		 * that means we have reached the next oid in the sequence and
+		 * should return it.
+		 *
+		 * If the oid_number matches the name at this level then we
+		 * have to find a node to continue searching at the next level.
+		 */
 		if (oidp->oid_number < *name)
 			continue;
-
 		if (oidp->oid_number > *name) {
+			/*
+			 * We have reached the next oid.
+			 *
+			 * For CTL_SYSCTL_NEXTNOSKIP we are done.
+			 *
+			 * For CTL_SYSCTL_NEXT we skip CTLTYPE_NODE (unless it
+			 * has a handler) and move on to the children.
+			 */
+			if (!honor_skip)
+				return (0);
 			if ((oidp->oid_kind & CTLTYPE) != CTLTYPE_NODE)
 				return (0);
 			if (oidp->oid_handler)
 				return (0);
 			lsp = SYSCTL_CHILDREN(oidp);
-			if (!sysctl_sysctl_next_ls(lsp, name+1, namelen-1, 
-				next+1, len, level+1, oidpp))
+			if (!sysctl_sysctl_next_ls(lsp, name + 1, namelen - 1,
+			    next + 1, len, level + 1, honor_skip))
 				return (0);
 			goto next;
 		}
 		if ((oidp->oid_kind & CTLTYPE) != CTLTYPE_NODE)
 			continue;
-
 		if (oidp->oid_handler)
 			continue;
-
 		lsp = SYSCTL_CHILDREN(oidp);
-		if (!sysctl_sysctl_next_ls(lsp, name+1, namelen-1, next+1, 
-			len, level+1, oidpp))
+		if (!sysctl_sysctl_next_ls(lsp, name + 1, namelen - 1,
+		    next + 1, len, level + 1, honor_skip))
 			return (0);
 	next:
+		/*
+		 * There were no useable children in this node.
+		 * Continue searching for the next oid at the root level.
+		 */
 		namelen = 1;
 	emptynode:
+		/* Reset len in case a failed recursive call changed it. */
 		*len = level;
 	}
-	return (1);
+	return (ENOENT);
 }
 
 static int
@@ -1049,18 +1242,18 @@ sysctl_sysctl_next(SYSCTL_HANDLER_ARGS)
 {
 	int *name = (int *) arg1;
 	u_int namelen = arg2;
-	int i, j, error;
-	struct sysctl_oid *oid;
+	int len, error;
 	struct sysctl_oid_list *lsp = &sysctl__children;
 	struct rm_priotracker tracker;
-	int newoid[CTL_MAXNAME];
+	int next[CTL_MAXNAME];
 
 	SYSCTL_RLOCK(&tracker);
-	i = sysctl_sysctl_next_ls(lsp, name, namelen, newoid, &j, 1, &oid);
+	error = sysctl_sysctl_next_ls(lsp, name, namelen, next, &len, 1,
+	    oidp->oid_number == CTL_SYSCTL_NEXT);
 	SYSCTL_RUNLOCK(&tracker);
-	if (i)
-		return (ENOENT);
-	error = SYSCTL_OUT(req, newoid, j * sizeof (int));
+	if (error)
+		return (error);
+	error = SYSCTL_OUT(req, next, len * sizeof (int));
 	return (error);
 }
 
@@ -1068,8 +1261,11 @@ sysctl_sysctl_next(SYSCTL_HANDLER_ARGS)
  * XXXRW/JA: Shouldn't return next data for nodes that we don't permit in
  * capability mode.
  */
-static SYSCTL_NODE(_sysctl, 2, next, CTLFLAG_RD | CTLFLAG_MPSAFE | CTLFLAG_CAPRD,
-    sysctl_sysctl_next, "");
+static SYSCTL_NODE(_sysctl, CTL_SYSCTL_NEXT, next, CTLFLAG_RD |
+    CTLFLAG_MPSAFE | CTLFLAG_CAPRD, sysctl_sysctl_next, "");
+
+static SYSCTL_NODE(_sysctl, CTL_SYSCTL_NEXTNOSKIP, nextnoskip, CTLFLAG_RD |
+    CTLFLAG_MPSAFE | CTLFLAG_CAPRD, sysctl_sysctl_next, "");
 
 static int
 name2oid(char *name, int *oid, int *len, struct sysctl_oid **oidpp)
@@ -1155,9 +1351,9 @@ sysctl_sysctl_name2oid(SYSCTL_HANDLER_ARGS)
  * XXXRW/JA: Shouldn't return name2oid data for nodes that we don't permit in
  * capability mode.
  */
-SYSCTL_PROC(_sysctl, 3, name2oid,
-    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_ANYBODY | CTLFLAG_MPSAFE
-    | CTLFLAG_CAPRW, 0, 0, sysctl_sysctl_name2oid, "I", "");
+SYSCTL_PROC(_sysctl, CTL_SYSCTL_NAME2OID, name2oid, CTLTYPE_INT | CTLFLAG_RW |
+    CTLFLAG_ANYBODY | CTLFLAG_MPSAFE | CTLFLAG_CAPRW, 0, 0,
+    sysctl_sysctl_name2oid, "I", "");
 
 static int
 sysctl_sysctl_oidfmt(SYSCTL_HANDLER_ARGS)
@@ -1165,6 +1361,10 @@ sysctl_sysctl_oidfmt(SYSCTL_HANDLER_ARGS)
 	struct sysctl_oid *oid;
 	struct rm_priotracker tracker;
 	int error;
+
+	error = sysctl_wire_old_buffer(req, 0);
+	if (error)
+		return (error);
 
 	SYSCTL_RLOCK(&tracker);
 	error = sysctl_find_oid(arg1, arg2, &oid, NULL, req);
@@ -1185,8 +1385,8 @@ sysctl_sysctl_oidfmt(SYSCTL_HANDLER_ARGS)
 }
 
 
-static SYSCTL_NODE(_sysctl, 4, oidfmt, CTLFLAG_RD|CTLFLAG_MPSAFE|CTLFLAG_CAPRD,
-    sysctl_sysctl_oidfmt, "");
+static SYSCTL_NODE(_sysctl, CTL_SYSCTL_OIDFMT, oidfmt, CTLFLAG_RD |
+    CTLFLAG_MPSAFE | CTLFLAG_CAPRD, sysctl_sysctl_oidfmt, "");
 
 static int
 sysctl_sysctl_oiddescr(SYSCTL_HANDLER_ARGS)
@@ -1194,6 +1394,10 @@ sysctl_sysctl_oiddescr(SYSCTL_HANDLER_ARGS)
 	struct sysctl_oid *oid;
 	struct rm_priotracker tracker;
 	int error;
+
+	error = sysctl_wire_old_buffer(req, 0);
+	if (error)
+		return (error);
 
 	SYSCTL_RLOCK(&tracker);
 	error = sysctl_find_oid(arg1, arg2, &oid, NULL, req);
@@ -1210,8 +1414,37 @@ sysctl_sysctl_oiddescr(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
-static SYSCTL_NODE(_sysctl, 5, oiddescr, CTLFLAG_RD|CTLFLAG_MPSAFE|CTLFLAG_CAPRD,
-    sysctl_sysctl_oiddescr, "");
+static SYSCTL_NODE(_sysctl, CTL_SYSCTL_OIDDESCR, oiddescr, CTLFLAG_RD |
+    CTLFLAG_MPSAFE|CTLFLAG_CAPRD, sysctl_sysctl_oiddescr, "");
+
+static int
+sysctl_sysctl_oidlabel(SYSCTL_HANDLER_ARGS)
+{
+	struct sysctl_oid *oid;
+	struct rm_priotracker tracker;
+	int error;
+
+	error = sysctl_wire_old_buffer(req, 0);
+	if (error)
+		return (error);
+
+	SYSCTL_RLOCK(&tracker);
+	error = sysctl_find_oid(arg1, arg2, &oid, NULL, req);
+	if (error)
+		goto out;
+
+	if (oid->oid_label == NULL) {
+		error = ENOENT;
+		goto out;
+	}
+	error = SYSCTL_OUT(req, oid->oid_label, strlen(oid->oid_label) + 1);
+ out:
+	SYSCTL_RUNLOCK(&tracker);
+	return (error);
+}
+
+static SYSCTL_NODE(_sysctl, CTL_SYSCTL_OIDLABEL, oidlabel, CTLFLAG_RD |
+    CTLFLAG_MPSAFE | CTLFLAG_CAPRD, sysctl_sysctl_oidlabel, "");
 
 /*
  * Default "handler" functions.
@@ -1691,8 +1924,8 @@ kernel_sysctlbyname(struct thread *td, char *name, void *old, size_t *oldlenp,
         size_t oidlen, plen;
 	int error;
 
-	oid[0] = 0;		/* sysctl internal magic */
-	oid[1] = 3;		/* name2oid */
+	oid[0] = CTL_SYSCTL;
+	oid[1] = CTL_SYSCTL_NAME2OID;
 	oidlen = sizeof(oid);
 
 	error = kernel_sysctl(td, oid, 2, oid, &oidlen,
@@ -1979,6 +2212,68 @@ sys___sysctl(struct thread *td, struct sysctl_args *uap)
 	return (error);
 }
 
+int
+kern___sysctlbyname(struct thread *td, const char *oname, size_t namelen,
+    void *old, size_t *oldlenp, void *new, size_t newlen, size_t *retval,
+    int flags, bool inkernel)
+{
+	int oid[CTL_MAXNAME];
+	char namebuf[16];
+	char *name;
+	size_t oidlen;
+	int error;
+
+	if (namelen > MAXPATHLEN || namelen == 0)
+		return (EINVAL);
+	name = namebuf;
+	if (namelen > sizeof(namebuf))
+		name = malloc(namelen, M_SYSCTL, M_WAITOK);
+	error = copyin(oname, name, namelen);
+	if (error != 0)
+		goto out;
+
+	oid[0] = CTL_SYSCTL;
+	oid[1] = CTL_SYSCTL_NAME2OID;
+	oidlen = sizeof(oid);
+	error = kernel_sysctl(td, oid, 2, oid, &oidlen, (void *)name, namelen,
+	    retval, flags);
+	if (error != 0)
+		goto out;
+	error = userland_sysctl(td, oid, *retval / sizeof(int), old, oldlenp,
+	    inkernel, new, newlen, retval, flags);
+
+out:
+	if (namelen > sizeof(namebuf))
+		free(name, M_SYSCTL);
+	return (error);
+}
+
+#ifndef	_SYS_SYSPROTO_H_
+struct __sysctlbyname_args {
+	const char	*name;
+	size_t	namelen;
+	void	*old;
+	size_t	*oldlenp;
+	void	*new;
+	size_t	newlen;
+};
+#endif
+int
+sys___sysctlbyname(struct thread *td, struct __sysctlbyname_args *uap)
+{
+	size_t rv;
+	int error;
+
+	error = kern___sysctlbyname(td, uap->name, uap->namelen, uap->old,
+	    uap->oldlenp, uap->new, uap->newlen, &rv, 0, 0);
+	if (error != 0)
+		return (error);
+	if (uap->oldlenp != NULL)
+		error = copyout(&rv, uap->oldlenp, sizeof(rv));
+
+	return (error);
+}
+
 /*
  * This is used from various compatibility syscalls too.  That's why name
  * must be in kernel space.
@@ -2021,12 +2316,11 @@ userland_sysctl(struct thread *td, int *name, u_int namelen, void *old,
 	if (KTRPOINT(curthread, KTR_SYSCTL))
 		ktrsysctl(name, namelen);
 #endif
-
-	if (req.oldptr && req.oldlen > PAGE_SIZE) {
+	memlocked = 0;
+	if (req.oldptr && req.oldlen > 4 * PAGE_SIZE) {
 		memlocked = 1;
 		sx_xlock(&sysctlmemlock);
-	} else
-		memlocked = 0;
+	}
 	CURVNET_SET(TD_TO_VNET(td));
 
 	for (;;) {

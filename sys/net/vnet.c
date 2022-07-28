@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2009 University of Zagreb
  * Copyright (c) 2006-2009 FreeBSD Foundation
  * All rights reserved.
@@ -34,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/net/vnet.c 340051 2018-11-02 14:07:06Z bz $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 #include "opt_kdb.h"
@@ -176,7 +178,7 @@ static MALLOC_DEFINE(M_VNET_DATA, "vnet_data", "VNET data");
  * Space to store virtualized global variables from loadable kernel modules,
  * and the free list to manage it.
  */
-static VNET_DEFINE(char, modspace[VNET_MODMIN]);
+VNET_DEFINE_STATIC(char, modspace[VNET_MODMIN] __aligned(__alignof(void *)));
 
 /*
  * Global lists of subsystem constructor and destructors for vnets.  They are
@@ -279,7 +281,9 @@ vnet_destroy(struct vnet *vnet)
 	VNET_LIST_WUNLOCK();
 
 	CURVNET_SET_QUIET(vnet);
+	sx_xlock(&ifnet_detach_sxlock);
 	vnet_sysuninit();
+	sx_xunlock(&ifnet_detach_sxlock);
 	CURVNET_RESTORE();
 
 	/*
@@ -312,9 +316,8 @@ static void
 vnet0_init(void *arg __unused)
 {
 
-	/* Warn people before take off - in case we crash early. */
-	printf("WARNING: VIMAGE (virtualized network stack) is a highly "
-	    "experimental feature.\n");
+	if (bootverbose)
+		printf("VIMAGE (virtualized network stack) enabled\n");
 
 	/*
 	 * We MUST clear curvnet in vi_init_done() before going SMP,

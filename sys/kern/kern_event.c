@@ -1569,10 +1569,8 @@ findkn:
 	}
 	
 	if (kev->flags & EV_DELETE) {
-		kn->kn_status |= KN_INFLUX;
+		kn_enter_flux(kn);
 		KQ_UNLOCK(kq);
-		if (!(kn->kn_status & KN_DETACHED))
-			kn->kn_fop->f_detach(kn);
 		knote_drop(kn, td);
 		goto done;
 	}
@@ -1592,7 +1590,8 @@ findkn:
 	 * but doing so will not reset any filter which has already been
 	 * triggered.
 	 */
-	kn->kn_status |= KN_INFLUX | KN_SCAN;
+	kn->kn_status |= KN_SCAN;
+	kn_enter_flux(kn);
 	KQ_UNLOCK(kq);
 	knl = kn_list_lock(kn);
 	kn->kn_kevent.udata = kev->udata;
@@ -1625,7 +1624,8 @@ done_ev_add:
 	if ((kn->kn_status & (KN_ACTIVE | KN_DISABLED | KN_QUEUED)) ==
 	    KN_ACTIVE)
 		knote_enqueue(kn);
-	kn->kn_status &= ~(KN_INFLUX | KN_SCAN);
+	kn->kn_status &= ~KN_SCAN;
+	kn_leave_flux(kn);
 	kn_list_unlock(knl);
 	KQ_UNLOCK_FLUX(kq);
 
@@ -1696,19 +1696,14 @@ kqueue_schedtask(struct kqueue *kq)
  * Expand the kq to make sure we have storage for fops/ident pair.
  *
  * Return 0 on success (or no work necessary), return errno on failure.
- *
- * Not calling hashinit w/ waitok (proper malloc flag) should be safe.
- * If kqueue_register is called from a non-fd context, there usually/should
- * be no locks held.
  */
 static int
 kqueue_expand(struct kqueue *kq, struct filterops *fops, uintptr_t ident,
-	int waitok)
+    int mflag)
 {
 	struct klist *list, *tmp_knhash, *to_free;
 	u_long tmp_knhashmask;
 	int error, fd, size;
-	int mflag = waitok ? M_WAITOK : M_NOWAIT;
 
 	KQ_NOTOWNED(kq);
 
@@ -1746,8 +1741,9 @@ kqueue_expand(struct kqueue *kq, struct filterops *fops, uintptr_t ident,
 		}
 	} else {
 		if (kq->kq_knhashmask == 0) {
-			tmp_knhash = hashinit(KN_HASHSIZE, M_KQUEUE,
-			    &tmp_knhashmask);
+			tmp_knhash = hashinit_flags(KN_HASHSIZE, M_KQUEUE,
+			    &tmp_knhashmask, (mflag & M_WAITOK) != 0 ?
+			    HASH_WAITOK : HASH_NOWAIT);
 			if (tmp_knhash == NULL)
 				return (ENOMEM);
 			KQ_LOCK(kq);
@@ -1793,7 +1789,7 @@ kqueue_task(void *arg, int pending)
 
 /*
  * Scan, update kn_data (if not ONESHOT), and copyout triggered events.
- * We treat KN_MARKER knotes as if they are INFLUX.
+ * We treat KN_MARKER knotes as if they are in flux.
  */
 static int
 kqueue_scan(struct kqueue *kq, int maxevents, struct kevent_copyops *k_ops,
@@ -1836,7 +1832,7 @@ kqueue_scan(struct kqueue *kq, int maxevents, struct kevent_copyops *k_ops,
 			asbt = -1;
 	} else
 		asbt = 0;
-	marker = knote_alloc(1);
+	marker = knote_alloc(M_WAITOK);
 	marker->kn_status = KN_MARKER;
 	KQ_LOCK(kq);
 
@@ -1867,7 +1863,7 @@ retry:
 		kn = TAILQ_FIRST(&kq->kq_head);
 
 		if ((kn->kn_status == KN_MARKER && kn != marker) ||
-		    (kn->kn_status & KN_INFLUX) == KN_INFLUX) {
+		    kn_in_flux(kn)) {
 			if (influx) {
 				influx = 0;
 				KQ_FLUX_WAKEUP(kq);
@@ -1890,40 +1886,37 @@ retry:
 				goto retry;
 			goto done;
 		}
-		KASSERT((kn->kn_status & KN_INFLUX) == 0,
-		    ("KN_INFLUX set when not suppose to be"));
+		KASSERT(!kn_in_flux(kn),
+		    ("knote %p is unexpectedly in flux", kn));
 
 		if ((kn->kn_flags & EV_DROP) == EV_DROP) {
 			kn->kn_status &= ~KN_QUEUED;
-			kn->kn_status |= KN_INFLUX;
+			kn_enter_flux(kn);
 			kq->kq_count--;
 			KQ_UNLOCK(kq);
 			/*
-			 * We don't need to lock the list since we've marked
-			 * it _INFLUX.
+			 * We don't need to lock the list since we've
+			 * marked it as in flux.
 			 */
-			if (!(kn->kn_status & KN_DETACHED))
-				kn->kn_fop->f_detach(kn);
 			knote_drop(kn, td);
 			KQ_LOCK(kq);
 			continue;
 		} else if ((kn->kn_flags & EV_ONESHOT) == EV_ONESHOT) {
 			kn->kn_status &= ~KN_QUEUED;
-			kn->kn_status |= KN_INFLUX;
+			kn_enter_flux(kn);
 			kq->kq_count--;
 			KQ_UNLOCK(kq);
 			/*
-			 * We don't need to lock the list since we've marked
-			 * it _INFLUX.
+			 * We don't need to lock the list since we've
+			 * marked the knote as being in flux.
 			 */
 			*kevp = kn->kn_kevent;
-			if (!(kn->kn_status & KN_DETACHED))
-				kn->kn_fop->f_detach(kn);
 			knote_drop(kn, td);
 			KQ_LOCK(kq);
 			kn = NULL;
 		} else {
-			kn->kn_status |= KN_INFLUX | KN_SCAN;
+			kn->kn_status |= KN_SCAN;
+			kn_enter_flux(kn);
 			KQ_UNLOCK(kq);
 			if ((kn->kn_status & KN_KQUEUE) == KN_KQUEUE)
 				KQ_GLOBAL_LOCK(&kq_global, haskqglobal);
@@ -1931,9 +1924,9 @@ retry:
 			if (kn->kn_fop->f_event(kn, 0) == 0) {
 				KQ_LOCK(kq);
 				KQ_GLOBAL_UNLOCK(&kq_global, haskqglobal);
-				kn->kn_status &=
-				    ~(KN_QUEUED | KN_ACTIVE | KN_INFLUX |
+				kn->kn_status &= ~(KN_QUEUED | KN_ACTIVE |
 				    KN_SCAN);
+				kn_leave_flux(kn);
 				kq->kq_count--;
 				kn_list_unlock(knl);
 				influx = 1;
@@ -1963,7 +1956,8 @@ retry:
 			} else
 				TAILQ_INSERT_TAIL(&kq->kq_head, kn, kn_tqe);
 			
-			kn->kn_status &= ~(KN_INFLUX | KN_SCAN);
+			kn->kn_status &= ~KN_SCAN;
+			kn_leave_flux(kn);
 			kn_list_unlock(knl);
 			influx = 1;
 		}
@@ -2111,15 +2105,13 @@ kqueue_drain(struct kqueue *kq, struct thread *td)
 
 	for (i = 0; i < kq->kq_knlistsize; i++) {
 		while ((kn = SLIST_FIRST(&kq->kq_knlist[i])) != NULL) {
-			if ((kn->kn_status & KN_INFLUX) == KN_INFLUX) {
+			if (kn_in_flux(kn)) {
 				kq->kq_state |= KQ_FLUXWAIT;
 				msleep(kq, &kq->kq_lock, PSOCK, "kqclo1", 0);
 				continue;
 			}
-			kn->kn_status |= KN_INFLUX;
+			kn_enter_flux(kn);
 			KQ_UNLOCK(kq);
-			if (!(kn->kn_status & KN_DETACHED))
-				kn->kn_fop->f_detach(kn);
 			knote_drop(kn, td);
 			KQ_LOCK(kq);
 		}
@@ -2127,16 +2119,14 @@ kqueue_drain(struct kqueue *kq, struct thread *td)
 	if (kq->kq_knhashmask != 0) {
 		for (i = 0; i <= kq->kq_knhashmask; i++) {
 			while ((kn = SLIST_FIRST(&kq->kq_knhash[i])) != NULL) {
-				if ((kn->kn_status & KN_INFLUX) == KN_INFLUX) {
+				if (kn_in_flux(kn)) {
 					kq->kq_state |= KQ_FLUXWAIT;
 					msleep(kq, &kq->kq_lock, PSOCK,
 					       "kqclo2", 0);
 					continue;
 				}
-				kn->kn_status |= KN_INFLUX;
+				kn_enter_flux(kn);
 				KQ_UNLOCK(kq);
-				if (!(kn->kn_status & KN_DETACHED))
-					kn->kn_fop->f_detach(kn);
 				knote_drop(kn, td);
 				KQ_LOCK(kq);
 			}
@@ -2257,7 +2247,6 @@ knote(struct knlist *list, long hint, int lockflags)
 	struct kqueue *kq;
 	struct knote *kn, *tkn;
 	int error;
-	bool own_influx;
 
 	if (list == NULL)
 		return;
@@ -2268,7 +2257,7 @@ knote(struct knlist *list, long hint, int lockflags)
 		list->kl_lock(list->kl_lockarg); 
 
 	/*
-	 * If we unlock the list lock (and set KN_INFLUX), we can
+	 * If we unlock the list lock (and enter influx), we can
 	 * eliminate the kqueue scheduling, but this will introduce
 	 * four lock/unlock's for each knote to test.  Also, marker
 	 * would be needed to keep iteration position, since filters
@@ -2277,7 +2266,7 @@ knote(struct knlist *list, long hint, int lockflags)
 	SLIST_FOREACH_SAFE(kn, &list->kl_list, kn_selnext, tkn) {
 		kq = kn->kn_kq;
 		KQ_LOCK(kq);
-		if ((kn->kn_status & (KN_INFLUX | KN_SCAN)) == KN_INFLUX) {
+		if (kn_in_flux(kn) && (kn->kn_status & KN_SCAN) == 0) {
 			/*
 			 * Do not process the influx notes, except for
 			 * the influx coming from the kq unlock in the
@@ -2288,22 +2277,17 @@ knote(struct knlist *list, long hint, int lockflags)
 			 */
 			KQ_UNLOCK(kq);
 		} else if ((lockflags & KNF_NOKQLOCK) != 0) {
-			own_influx = (kn->kn_status & KN_INFLUX) == 0;
-			if (own_influx)
-				kn->kn_status |= KN_INFLUX;
+			kn_enter_flux(kn);
 			KQ_UNLOCK(kq);
 			error = kn->kn_fop->f_event(kn, hint);
 			KQ_LOCK(kq);
-			if (own_influx)
-				kn->kn_status &= ~KN_INFLUX;
+			kn_leave_flux(kn);
 			if (error)
 				KNOTE_ACTIVATE(kn, 1);
 			KQ_UNLOCK_FLUX(kq);
 		} else {
-			kn->kn_status |= KN_HASKQLOCK;
 			if (kn->kn_fop->f_event(kn, hint))
 				KNOTE_ACTIVATE(kn, 1);
-			kn->kn_status &= ~KN_HASKQLOCK;
 			KQ_UNLOCK(kq);
 		}
 	}
@@ -2317,10 +2301,12 @@ knote(struct knlist *list, long hint, int lockflags)
 void
 knlist_add(struct knlist *knl, struct knote *kn, int islocked)
 {
+
 	KNL_ASSERT_LOCK(knl, islocked);
 	KQ_NOTOWNED(kn->kn_kq);
-	KASSERT((kn->kn_status & (KN_INFLUX|KN_DETACHED)) ==
-	    (KN_INFLUX|KN_DETACHED), ("knote not KN_INFLUX and KN_DETACHED"));
+	KASSERT(kn_in_flux(kn), ("knote %p not in flux", kn));
+	KASSERT((kn->kn_status & KN_DETACHED) != 0,
+	    ("knote %p was not detached", kn));
 	if (!islocked)
 		knl->kl_lock(knl->kl_lockarg);
 	SLIST_INSERT_HEAD(&knl->kl_list, kn, kn_selnext);
@@ -2336,12 +2322,13 @@ static void
 knlist_remove_kq(struct knlist *knl, struct knote *kn, int knlislocked,
     int kqislocked)
 {
-	KASSERT(!(!!kqislocked && !knlislocked), ("kq locked w/o knl locked"));
+
+	KASSERT(!kqislocked || knlislocked, ("kq locked w/o knl locked"));
 	KNL_ASSERT_LOCK(knl, knlislocked);
 	mtx_assert(&kn->kn_kq->kq_lock, kqislocked ? MA_OWNED : MA_NOTOWNED);
-	if (!kqislocked)
-		KASSERT((kn->kn_status & (KN_INFLUX|KN_DETACHED)) == KN_INFLUX,
-    ("knlist_remove called w/o knote being KN_INFLUX or already removed"));
+	KASSERT(kqislocked || kn_in_flux(kn), ("knote %p not in flux", kn));
+	KASSERT((kn->kn_status & KN_DETACHED) == 0,
+	    ("knote %p was already detached", kn));
 	if (!knlislocked)
 		knl->kl_lock(knl->kl_lockarg);
 	SLIST_REMOVE(&knl->kl_list, kn, knote, kn_selnext);
@@ -2534,30 +2521,29 @@ again:		/* need to reacquire lock since we have dropped it */
 	SLIST_FOREACH_SAFE(kn, &knl->kl_list, kn_selnext, kn2) {
 		kq = kn->kn_kq;
 		KQ_LOCK(kq);
-		if ((kn->kn_status & KN_INFLUX)) {
+		if (kn_in_flux(kn)) {
 			KQ_UNLOCK(kq);
 			continue;
 		}
 		knlist_remove_kq(knl, kn, 1, 1);
 		if (killkn) {
-			kn->kn_status |= KN_INFLUX | KN_DETACHED;
+			kn_enter_flux(kn);
 			KQ_UNLOCK(kq);
-			knote_drop(kn, td);
+			knote_drop_detached(kn, td);
 		} else {
 			/* Make sure cleared knotes disappear soon */
-			kn->kn_flags |= (EV_EOF | EV_ONESHOT);
+			kn->kn_flags |= EV_EOF | EV_ONESHOT;
 			KQ_UNLOCK(kq);
 		}
 		kq = NULL;
 	}
 
 	if (!SLIST_EMPTY(&knl->kl_list)) {
-		/* there are still KN_INFLUX remaining */
+		/* there are still in flux knotes remaining */
 		kn = SLIST_FIRST(&knl->kl_list);
 		kq = kn->kn_kq;
 		KQ_LOCK(kq);
-		KASSERT(kn->kn_status & KN_INFLUX,
-		    ("knote removed w/o list lock"));
+		KASSERT(kn_in_flux(kn), ("knote removed w/o list lock"));
 		knl->kl_unlock(knl->kl_lockarg);
 		kq->kq_state |= KQ_FLUXWAIT;
 		msleep(kq, &kq->kq_lock, PSOCK | PDROP, "kqkclr", 0);
@@ -2599,7 +2585,7 @@ again:
 		influx = 0;
 		while (kq->kq_knlistsize > fd &&
 		    (kn = SLIST_FIRST(&kq->kq_knlist[fd])) != NULL) {
-			if (kn->kn_status & KN_INFLUX) {
+			if (kn_in_flux(kn)) {
 				/* someone else might be waiting on our knote */
 				if (influx)
 					wakeup(kq);
@@ -2607,12 +2593,10 @@ again:
 				msleep(kq, &kq->kq_lock, PSOCK, "kqflxwt", 0);
 				goto again;
 			}
-			kn->kn_status |= KN_INFLUX;
+			kn_enter_flux(kn);
 			KQ_UNLOCK(kq);
-			if (!(kn->kn_status & KN_DETACHED))
-				kn->kn_fop->f_detach(kn);
-			knote_drop(kn, td);
 			influx = 1;
+			knote_drop(kn, td);
 			KQ_LOCK(kq);
 		}
 		KQ_UNLOCK_FLUX(kq);
@@ -2624,7 +2608,7 @@ knote_attach(struct knote *kn, struct kqueue *kq)
 {
 	struct klist *list;
 
-	KASSERT(kn->kn_status & KN_INFLUX, ("knote not marked INFLUX"));
+	KASSERT(kn_in_flux(kn), ("knote %p not marked influx", kn));
 	KQ_OWNED(kq);
 
 	if ((kq->kq_state & KQ_CLOSING) != 0)
@@ -2642,24 +2626,31 @@ knote_attach(struct knote *kn, struct kqueue *kq)
 	return (0);
 }
 
-/*
- * knote must already have been detached using the f_detach method.
- * no lock need to be held, it is assumed that the KN_INFLUX flag is set
- * to prevent other removal.
- */
 static void
 knote_drop(struct knote *kn, struct thread *td)
+{
+
+	if ((kn->kn_status & KN_DETACHED) == 0)
+		kn->kn_fop->f_detach(kn);
+	knote_drop_detached(kn, td);
+}
+
+static void
+knote_drop_detached(struct knote *kn, struct thread *td)
 {
 	struct kqueue *kq;
 	struct klist *list;
 
 	kq = kn->kn_kq;
 
+	KASSERT((kn->kn_status & KN_DETACHED) != 0,
+	    ("knote %p still attached", kn));
 	KQ_NOTOWNED(kq);
-	KASSERT((kn->kn_status & KN_INFLUX) == KN_INFLUX,
-	    ("knote_drop called without KN_INFLUX set in kn_status"));
 
 	KQ_LOCK(kq);
+	KASSERT(kn->kn_influx == 1,
+	    ("knote_drop called on %p with influx %d", kn, kn->kn_influx));
+
 	if (kn->kn_fop->f_isfd)
 		list = &kq->kq_knlist[kn->kn_id];
 	else

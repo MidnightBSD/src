@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -26,11 +28,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/kern/kern_rctl.c 335536 2018-06-22 09:18:38Z avg $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/kern_rctl.c 335536 2018-06-22 09:18:38Z avg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -593,6 +595,11 @@ rctl_enforce(struct proc *p, int resource, uint64_t amount)
 		case RCTL_ACTION_THROTTLE:
 			if (p->p_state != PRS_NORMAL)
 				continue;
+
+			if (rule->rr_amount == 0) {
+				racct_proc_throttle(p, rctl_throttle_max);
+				continue;
+			}
 
 			/*
 			 * Make the process sleep for a fraction of second

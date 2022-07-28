@@ -1,7 +1,6 @@
-/* $MidnightBSD$ */
 /*-
  * This file is in the public domain.
  */
-/* $FreeBSD: stable/10/sys/i386/include/_inttypes.h 217157 2011-01-08 18:09:48Z tijl $ */
+/* $FreeBSD$ */
 
 #include <x86/_inttypes.h>
