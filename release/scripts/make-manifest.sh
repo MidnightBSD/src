@@ -34,11 +34,12 @@ desc_tests="${tests}"
 
 default_doc=off
 default_src=off
+default_ports=off
 default_tests=off
 default_base_dbg=off
 default_lib32_dbg=off
 default_kernel_alt=off
-default_kernel_dbg=off
+default_kernel_dbg=on
 default_kernel_alt_dbg=off
 
 for i in ${*}; do
@@ -52,6 +53,9 @@ for i in ${*}; do
 	desc="$(eval echo \"\${desc_${distname}}\")"
 
 	case ${i} in
+		doc.txz)
+			continue
+			;;
 		kernel-dbg.txz)
 			desc="${desc_kernel_dbg}"
 			;;

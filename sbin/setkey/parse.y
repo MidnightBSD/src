@@ -1,7 +1,9 @@
-/*	$FreeBSD: stable/11/sbin/setkey/parse.y 331722 2018-03-29 02:50:57Z eadler $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: parse.y,v 1.83 2004/05/18 08:48:23 sakane Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 1995, 1996, 1997, 1998, and 1999 WIDE Project.
  * All rights reserved.
  *

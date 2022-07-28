@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007 Robert N. M. Watson
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/ddb/db_capture.c 283248 2015-05-21 15:16:18Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 

@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.4 (Berkeley) 6/22/95
 #
-# $FreeBSD: stable/11/sbin/umount/Makefile 319185 2017-05-30 04:17:22Z ngie $
+# $FreeBSD$
 
 PACKAGE=runtime
 PROG=	umount

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: MIT-CMU
+ *
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
  * All Rights Reserved.
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/ddb/db_variables.c 298354 2016-04-20 16:19:44Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -134,6 +136,17 @@ db_set_cmd(db_expr_t dummy1, bool dummy2, db_expr_t dummy3, char *dummy4)
 	int t;
 
 	t = db_read_token();
+	if (t == tEOL) {
+		for (vp = db_vars; vp < db_evars; vp++) {
+			if (!db_read_variable(vp, &value)) {
+				db_printf("$%s\n", vp->name);
+				continue;
+			}
+			db_printf("$%-8s = %ld\n",
+			    vp->name, (unsigned long)value);
+		}
+		return;
+	}
 	if (t != tDOLLAR) {
 		db_error("Unknown variable\n");
 		return;
