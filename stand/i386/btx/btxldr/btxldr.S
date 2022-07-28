@@ -12,7 +12,7 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $FreeBSD: stable/11/stand/i386/btx/btxldr/btxldr.S 329010 2018-02-08 02:44:21Z kevans $
+ * $FreeBSD$
  */
 
 #include <bootargs.h>

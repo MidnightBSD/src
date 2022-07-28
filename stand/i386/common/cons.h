@@ -12,7 +12,7 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $FreeBSD: stable/11/stand/i386/common/cons.h 299655 2016-05-13 10:59:46Z ngie $
+ * $FreeBSD$
  */
 
 #ifndef _CONS_H_

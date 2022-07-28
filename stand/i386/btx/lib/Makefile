@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/i386/btx/lib/Makefile 329183 2018-02-12 20:51:28Z kevans $
+# $FreeBSD$
 
 .include <bsd.init.mk>
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/userboot/userboot/host.c 332138 2018-04-06 19:21:36Z kevans $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Read from the host filesystem
@@ -84,16 +84,8 @@ host_seek(struct open_file *f, off_t offset, int where)
 static int
 host_stat(struct open_file *f, struct stat *sb)
 {
-	int mode;
-	int uid;
-	int gid;
-	uint64_t size;
-
-	CALLBACK(stat, f->f_fsdata, &mode, &uid, &gid, &size);
-	sb->st_mode = mode;
-	sb->st_uid = uid;
-	sb->st_gid = gid;
-	sb->st_size = size;
+	
+	CALLBACK(stat, f->f_fsdata, sb);
 	return (0);
 }
 

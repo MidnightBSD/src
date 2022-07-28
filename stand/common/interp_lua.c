@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/common/interp_lua.c 358442 2020-02-28 18:35:36Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 #include "bootstrap.h"
@@ -95,6 +95,7 @@ static const luaL_Reg loadedlibs[] = {
   {"io", luaopen_io},
   {"lfs", luaopen_lfs},
   {"loader", luaopen_loader},
+  {"pager", luaopen_pager},
   {NULL, NULL}
 };
 
@@ -126,7 +127,7 @@ interp_init(void)
 	if (interp_include(filename) != 0) {
 		const char *errstr = lua_tostring(luap, -1);
 		errstr = errstr == NULL ? "unknown" : errstr;
-		printf("Startup error in %s:\nLUA ERROR: %s.\n", filename, errstr);
+		printf("ERROR: %s.\n", errstr);
 		lua_pop(luap, 1);
 		setenv("autoboot_delay", "NO", 1);
 	}

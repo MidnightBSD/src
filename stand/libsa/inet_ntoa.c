@@ -10,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -28,6 +28,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)inet_ntoa.c	8.1 (Berkeley) 6/4/93";
@@ -44,8 +45,7 @@ static char sccsid[] = "@(#)inet_ntoa.c	8.1 (Berkeley) 6/4/93";
  * to base 256 d.d.d.d representation.
  */
 char *
-inet_ntoa(in)
-	struct in_addr in;
+inet_ntoa(struct in_addr in)
 {
 	static const char fmt[] = "%u.%u.%u.%u";
 	static char ret[sizeof "255.255.255.255"];

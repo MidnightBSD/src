@@ -1,8 +1,10 @@
-# $FreeBSD: stable/11/usr.bin/calendar/tests/Makefile 299094 2016-05-04 23:20:53Z ngie $
+# $FreeBSD$
 
 PACKAGE=	tests
 
 TAP_TESTS_SH=	legacy_test
+
+TEST_METADATA.legacy_test+=	timeout="600"
 
 ${PACKAGE}FILES+=		calendar.calibrate
 ${PACKAGE}FILES+=		regress.a1.out

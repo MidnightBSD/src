@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/loader.mk 355345 2019-12-03 18:25:16Z kevans $
+# $FreeBSD$
 
 .PATH: ${LDRSRC} ${BOOTSRC}/libsa
 
@@ -28,7 +28,8 @@ SRCS+=	metadata.c
 .endif
 
 .if ${LOADER_DISK_SUPPORT:Uyes} == "yes"
-SRCS+=	disk.c part.c
+CFLAGS.part.c+= -DHAVE_MEMCPY -I${SRCTOP}/sys/contrib/zlib
+SRCS+=	disk.c part.c vdisk.c
 .endif
 
 .if ${LOADER_NET_SUPPORT:Uno} == "yes"
@@ -46,7 +47,7 @@ SRCS+=	md.c
 CLEANFILES+=	md.o
 .endif
 
-# Machine-independant ISA PnP
+# Machine-independent ISA PnP
 .if defined(HAVE_ISABUS)
 SRCS+=	isapnp.c
 .endif
@@ -69,6 +70,17 @@ LDR_INTERP32=	${LIBFICL32}
 SRCS+=	interp_simple.c
 .else
 .error Unknown interpreter ${LOADER_INTERP}
+.endif
+
+.if ${MK_LOADER_VERIEXEC} != "no"
+CFLAGS+= -DLOADER_VERIEXEC -I${SRCTOP}/lib/libsecureboot/h
+.if ${MK_LOADER_VERIEXEC_VECTX} != "no"
+CFLAGS+= -DLOADER_VERIEXEC_VECTX
+.endif
+.endif
+
+.if ${MK_LOADER_VERIEXEC_PASS_MANIFEST} != "no"
+CFLAGS+= -DLOADER_VERIEXEC_PASS_MANIFEST -I${SRCTOP}/lib/libsecureboot/h
 .endif
 
 .if defined(BOOT_PROMPT_123)
@@ -127,6 +139,7 @@ CFLAGS+= -DLOADER_MBR_SUPPORT
 CFLAGS+=	-DLOADER_ZFS_SUPPORT
 CFLAGS+=	-I${ZFSSRC}
 CFLAGS+=	-I${SYSDIR}/cddl/boot/zfs
+CFLAGS+=	-I${SYSDIR}/cddl/contrib/opensolaris/uts/common
 SRCS+=		zfs_cmd.c
 .endif
 
@@ -152,10 +165,6 @@ REPRO_FLAG=	-r
 vers.c: ${LDRSRC}/newvers.sh ${VERSION_FILE}
 	sh ${LDRSRC}/newvers.sh ${REPRO_FLAG} ${VERSION_FILE} \
 	    ${NEWVERSWHAT}
-
-.if ${MK_LOADER_VERBOSE} != "no"
-CFLAGS+=	-DELF_VERBOSE
-.endif
 
 .if !empty(HELP_FILES)
 HELP_FILES+=	${LDRSRC}/help.common

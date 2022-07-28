@@ -13,7 +13,7 @@
  * 
  * ISBN 3-924521-59-X
  * 
- * $FreeBSD: stable/11/usr.bin/calendar/calendars/de_DE.ISO8859-1/calendar.geschichte 331156 2018-03-19 02:44:42Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _de_DE_ISO8859_1_geschichte_

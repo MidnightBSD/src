@@ -1,7 +1,7 @@
 /*
  * Jours fériés
  *
- * $FreeBSD: stable/11/usr.bin/calendar/calendars/fr_FR.ISO8859-1/calendar.jferies 157720 2006-04-13 12:14:44Z flz $
+ * $FreeBSD$
  */
 
 #ifndef _fr_FR_ISO8859_1_jferies_

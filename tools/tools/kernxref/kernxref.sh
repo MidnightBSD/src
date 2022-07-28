@@ -1,5 +1,7 @@
 :
 #
+# SPDX-License-Identifier: Beerware
+#
 # ----------------------------------------------------------------------------
 # "THE BEER-WARE LICENSE" (Revision 42):
 # <phk@FreeBSD.org> wrote this file.  As long as you retain this notice you
@@ -9,7 +11,7 @@
 #
 # Sort options by "Matthew Emmerton" <matt@gsicomp.on.ca>
 #
-# $FreeBSD: src/tools/tools/kernxref/kernxref.sh,v 1.20 2005/02/10 12:47:55 phk Exp $
+# $FreeBSD$
 #
 # This shell script will make a cross reference of the symbols of a kernel.
 #

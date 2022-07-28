@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/common/boot.c 344378 2019-02-20 19:19:24Z kevans $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Loading modules, booting the system
@@ -105,6 +105,13 @@ command_boot(int argc, char *argv[])
 	/* Hook for platform-specific autoloading of modules */
 	if (archsw.arch_autoload() != 0)
 		return(CMD_ERROR);
+
+#ifdef LOADER_VERIEXEC
+	verify_pcr_export();		/* for measured boot */
+#ifdef LOADER_VERIEXEC_PASS_MANIFEST
+	pass_manifest_export_envs();
+#endif
+#endif
 
 	/* Call the exec handler from the loader matching the kernel */
 	file_formats[fp->f_loader]->l_exec(fp);
@@ -195,8 +202,9 @@ autoboot(int timeout, char *prompt)
 	}
 
 	if (timeout >= 0) {
-		otime = time(NULL);
-		when = otime + timeout;	/* when to boot */
+		otime = -1;
+		ntime = time(NULL);
+		when = ntime + timeout;	/* when to boot */
 
 		yes = 0;
 
@@ -299,7 +307,7 @@ getbootfile(int try)
 
 /*
  * Try to find the /etc/fstab file on the filesystem (rootdev),
- * which should be be the root filesystem, and parse it to find
+ * which should be the root filesystem, and parse it to find
  * out what the kernel ought to think the root filesystem is.
  *
  * If we're successful, set vfs.root.mountfrom to <vfstype>:<path>

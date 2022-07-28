@@ -26,10 +26,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/common/isapnp.c 332154 2018-04-06 21:37:25Z kevans $");
+__FBSDID("$FreeBSD$");
 
 /*
- * Machine-independant ISA PnP enumerator implementing a subset of the
+ * Machine-independent ISA PnP enumerator implementing a subset of the
  * ISA PnP specification.
  */
 #include <stand.h>

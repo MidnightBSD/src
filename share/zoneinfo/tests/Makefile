@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/zoneinfo/tests/Makefile 360290 2020-04-25 05:51:58Z delphij $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

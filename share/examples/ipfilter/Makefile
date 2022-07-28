@@ -1,12 +1,10 @@
-# $FreeBSD: stable/11/share/examples/ipfilter/Makefile 299293 2016-05-10 00:51:50Z gjb $
+# $FreeBSD$
 
 PACKAGE=examples
 FILES=	README
 
 # dist sample files
-.PATH: ${.CURDIR}/../../../contrib/ipfilter/rules \
-       ${.CURDIR}/../../../contrib/ipfilter \
-       ${.CURDIR}/../../../contrib/ipfilter/man
+.PATH: ${.CURDIR}/rules
 FILES+=	BASIC.NAT BASIC_1.FW BASIC_2.FW \
 	example.1 example.2 example.3 example.4 example.5 \
 	example.6 example.7 example.8 example.9 example.10 \

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/i386/libi386/amd64_tramp.S 298826 2016-04-30 00:26:38Z pfg $
+ * $FreeBSD$
  */
 
 /*

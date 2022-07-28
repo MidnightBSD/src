@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/arm64/libarm64/cache.h 281526 2015-04-14 13:55:01Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _CACHE_H_

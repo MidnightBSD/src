@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/i386/gptboot/gptldr.S 357354 2020-01-31 21:20:22Z dim $
+ * $FreeBSD$
  *
  * Partly from: src/sys/boot/i386/boot2/boot1.S 1.31
  */

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/i386/libi386/i386_copy.c 153589 2005-12-21 02:17:58Z sobomax $");
+__FBSDID("$FreeBSD$");
 
 /*
  * MD primitives supporting placement of module data 
@@ -40,36 +40,36 @@ __FBSDID("$FreeBSD: stable/11/stand/i386/libi386/i386_copy.c 153589 2005-12-21 0
 ssize_t
 i386_copyin(const void *src, vm_offset_t dest, const size_t len)
 {
-    if (dest + len >= memtop) {
-	errno = EFBIG;
-	return(-1);
-    }
+	if (dest + len >= memtop) {
+		errno = EFBIG;
+		return (-1);
+	}
 
-    bcopy(src, PTOV(dest), len);
-    return(len);
+	bcopy(src, PTOV(dest), len);
+	return (len);
 }
 
 ssize_t
 i386_copyout(const vm_offset_t src, void *dest, const size_t len)
 {
-    if (src + len >= memtop) {
-	errno = EFBIG;
-	return(-1);
-    }
-    
-    bcopy(PTOV(src), dest, len);
-    return(len);
+	if (src + len >= memtop) {
+		errno = EFBIG;
+		return (-1);
+	}
+
+	bcopy(PTOV(src), dest, len);
+	return (len);
 }
 
 
 ssize_t
-i386_readin(const int fd, vm_offset_t dest, const size_t len)
+i386_readin(readin_handle_t fd, vm_offset_t dest, const size_t len)
 {
 
-    if (dest + len >= memtop_copyin) {
-	errno = EFBIG;
-	return(-1);
-    }
+	if (dest + len >= memtop_copyin) {
+		errno = EFBIG;
+		return (-1);
+	}
 
-    return (read(fd, PTOV(dest), len));
+	return (VECTX_READ(fd, PTOV(dest), len));
 }

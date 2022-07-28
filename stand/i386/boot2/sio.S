@@ -12,7 +12,7 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $FreeBSD: stable/11/stand/i386/boot2/sio.S 242804 2012-11-08 23:21:02Z dim $
+ * $FreeBSD$
  */
 
 		.set SIO_PRT,SIOPRT		# Base port

@@ -1,14 +1,13 @@
-# Common defines for all of /stand/i386/
+# Common defines for all of stand/i386/
 #
 # $FreeBSD$
 
-.sinclude <bsd.linker.mk>
+.include "bsd.linker.mk"
 
 LOADER_ADDRESS?=0x200000
 LDFLAGS+=	-nostdlib
-.if defined(LINKER_TYPE) && ${LINKER_TYPE} == "lld"
-LDFLAGS+=	-Wl,--no-rosegment
-.endif
+LDFLAGS.lld+=	-Wl,--no-rosegment
+MK_PIE:=	no
 
 # BTX components
 BTXDIR=		${BOOTOBJ}/i386/btx
@@ -25,6 +24,9 @@ CFLAGS+=	-I${BTXLIB}
 LDSCRIPT=	${BOOTSRC}/i386/boot.ldscript
 LDFLAGS_ORG=	-Wl,--defsym,ORG=${ORG},-T,${LDSCRIPT}
 LDFLAGS_BIN=	-e start ${LDFLAGS_ORG} -Wl,-N,-S,--oformat,binary
+.if ${LINKER_FEATURES:Mbuild-id} != ""
+LDFLAGS_BIN+=	-Wl,--build-id=none
+.endif
 LD_FLAGS_BIN=	-static -N --gc-sections
 
 .if ${MACHINE_CPUARCH} == "amd64"

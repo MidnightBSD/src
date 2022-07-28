@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/common/interp.c 329183 2018-02-12 20:51:28Z kevans $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Simple commandline interpreter, toplevel and misc.
@@ -45,8 +45,17 @@ __FBSDID("$FreeBSD: stable/11/stand/common/interp.c 329183 2018-02-12 20:51:28Z 
 void
 interact(void)
 {
-	static char	input[256];			/* big enough? */
+	static char		input[256];		/* big enough? */
+	const char * volatile	interp_identifier;
 
+	/*
+	 * Because interp_identifier is volatile, it cannot be optimized out by
+	 * the compiler as it's considered an externally observable event.  This
+	 * prevents the compiler from optimizing out our carefully placed
+	 * $Interpreter:4th string that userboot may use to determine that
+	 * we need to switch interpreters.
+	 */
+	interp_identifier = bootprog_interp;
 	interp_init();
 
 	printf("\n");

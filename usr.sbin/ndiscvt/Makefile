@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/ndiscvt/Makefile 352280 2019-09-13 07:21:06Z bapt $
+# $FreeBSD$
 
 .PATH:	${SRCTOP}/sys/compat/ndis
 

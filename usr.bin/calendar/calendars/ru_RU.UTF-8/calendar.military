@@ -1,7 +1,7 @@
 /*
  * Дни воинской славы России
  *
- * $FreeBSD: stable/11/usr.bin/calendar/calendars/ru_RU.UTF-8/calendar.military 304343 2016-08-18 08:52:55Z ache $
+ * $FreeBSD$
  */
 
 #ifndef _ru_RU_UTF_8_military_

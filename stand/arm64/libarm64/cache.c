@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/arm64/libarm64/cache.c 293724 2016-01-12 02:17:39Z smh $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 

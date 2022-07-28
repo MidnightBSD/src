@@ -1,7 +1,7 @@
 /*
  * Computer
  *
- * $FreeBSD: stable/11/usr.bin/calendar/calendars/calendar.computer 285028 2015-07-02 12:08:05Z brueffer $
+ * $FreeBSD$
  */
 
 #ifndef _calendar_computer_

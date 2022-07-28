@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/i386/boot0sio/Makefile 128725 2004-04-28 21:31:21Z ru $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../boot0
 

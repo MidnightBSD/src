@@ -1,13 +1,17 @@
-# $FreeBSD: stable/11/stand/libsa/zfs/Makefile.inc 336084 2018-07-08 07:42:49Z imp $
+# $FreeBSD$
 
 .PATH:		${ZFSSRC}
-SRCS+=		zfs.c skein.c skein_block.c
-# Do not unroll skein loops, reduce code size
-CFLAGS+=	-DSKEIN_LOOP=111
+SRCS+=		zfs.c nvlist.c skein.c skein_block.c list.c
 .PATH:		${SYSDIR}/crypto/skein
+.PATH:		${SYSDIR}/cddl/contrib/opensolaris/uts/common/os
 
 CFLAGS+=	-I${LDRSRC}
 CFLAGS+=	-I${SYSDIR}/cddl/boot/zfs
+CFLAGS+=	-I${SYSDIR}/cddl/contrib/opensolaris/uts/common
 CFLAGS+=	-I${SYSDIR}/crypto/skein
+
+# Do not unroll skein loops, reduce code size
+CFLAGS.skein_block.c+=	-DSKEIN_LOOP=111
+CFLAGS.zfs.c+=	-I${SRCTOP}/sys/cddl/contrib/opensolaris/common/lz4
 
 CFLAGS+=	-Wformat -Wall

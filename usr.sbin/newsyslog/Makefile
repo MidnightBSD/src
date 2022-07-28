@@ -1,13 +1,15 @@
-# $FreeBSD: stable/11/usr.sbin/newsyslog/Makefile 265420 2014-05-06 04:22:01Z imp $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
+CONFS=	newsyslog.conf
 PROG=	newsyslog
 MAN=	newsyslog.8 newsyslog.conf.5
 SRCS=	newsyslog.c ptimes.c
+LIBADD=	sbuf
 
-.if ${MK_TESTS} != "no"
-SUBDIR+=	tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
+SUBDIR+=	newsyslog.conf.d
 
 .include <bsd.prog.mk>

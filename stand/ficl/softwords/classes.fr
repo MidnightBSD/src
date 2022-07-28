@@ -4,7 +4,7 @@
 \ john sadler  1 sep 98
 \ Needs oop.fr
 \
-\ $FreeBSD: stable/11/stand/ficl/softwords/classes.fr 76116 2001-04-29 02:36:36Z dcs $
+\ $FreeBSD$
 
 also oop definitions
 

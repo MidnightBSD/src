@@ -4,7 +4,6 @@
  * Copyright (c) 2000 Paul Saab <ps@freebsd.org>
  * All rights reserved.
  * Copyright (c) 2000 John Baldwin <jhb@freebsd.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/i386/libi386/pxe.h 338078 2018-08-20 00:50:11Z kevans $
+ * $FreeBSD$
  */
 
 /*
@@ -245,7 +244,6 @@ typedef struct {
 #	define ETHER_TYPE	1
 #	define EXP_ETHER_TYPE	2
 #	define IEEE_TYPE	6
-#	define ARCNET_TYPE	7
 
 	uint16_t	HwAddrLen;		/* Length of hardware address */
 	MAC_ADDR	CurrentNodeAddress;	/* Current hardware address */
