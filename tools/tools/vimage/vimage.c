@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2004 Marko Zec <zec@fer.hr>
  * Copyright (c) 2009 University of Zagreb
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/tools/tools/vimage/vimage.c 196421 2009-08-21 11:13:56Z zec $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

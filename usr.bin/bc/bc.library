@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/11/usr.bin/bc/bc.library 264573 2014-04-16 23:14:05Z delphij $							*/
+/*	$FreeBSD$							*/
 /*      $OpenBSD: bc.library,v 1.4 2012/03/14 07:35:53 otto Exp $	*/
 
 /*

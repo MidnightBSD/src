@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tools/tools/locale/Makefile 298116 2016-04-16 17:36:02Z bapt $
+# $FreeBSD$
 # See https://wiki.freebsd.org/LocaleNewApproach
 # Taken from FreeBSD svn [base]/user/edwin/locale/cldr
 #
@@ -7,20 +7,30 @@
 #
 # Modified by John Marino to suit DragonFly needs
 #
-
-.if !defined(CLDRDIR)
-CLDRDIR!=	grep ^cldr etc/unicode.conf | cut -f 2 -d " "
+.if ${.CURDIR} == ${.OBJDIR}
+.error Do make obj first.
 .endif
-.if !defined(UNIDATADIR)
-UNIDATADIR!=	grep ^unidata etc/unicode.conf | cut -f 2 -d " "
-.endif
-PASSON=		CLDRDIR="${CLDRDIR}" UNIDATADIR="${UNIDATADIR}"
 
-ETCDIR=		${.CURDIR}/etc
+LOCALESRCDIR?=	${DESTDIR}/usr/src/share
+TMPDIR?=	/tmp
 
-KNOWN=		monetdef numericdef msgdef timedef colldef ctypedef
+BASEDIR=	${.CURDIR}
+ETCDIR=		${BASEDIR}/etc
+TOOLSDIR=	${BASEDIR}/tools
+PATCHDIR=	${BASEDIR}/patch
+UNIDIR=		${.OBJDIR:tA}/unicode
+
+PKGS=	openjdk8 \
+	apache-ant \
+	p5-XML-Parser \
+	p5-Tie-IxHash \
+	p5-Text-Iconv
+tools-test:
+	pkg info -e ${PKGS}
+	@echo tools ok.
+
+KNOWN=		monetdef numericdef msgdef colldef ctypedef # timedef
 TYPES?=		${KNOWN}
-LOCALE_DESTDIR?=	/tmp/generated-locales/
 
 COLLATION_SPECIAL?= \
 	cs_CZ ISO8859-2 \
@@ -31,79 +41,94 @@ COLLATION_SPECIAL?= \
 	nb_NO ISO8859-1 \
 	nb_NO ISO8859-15 \
 	sk_SK ISO8859-2 \
+	sr_Latn_RS ISO8859-2 \
+	sr_Cyrl_RS ISO8859-5 \
 	zh_Hans_CN GB2312 \
 	zh_Hans_CN eucCN \
+	zh_Hant_TW Big5 \
+	zh_Hans_CN GB18030 \
+	zh_Hans_CN GBK \
+	ja_JP eucJP \
+	nn_NO ISO8859-15 \
+	nn_NO ISO8859-1
 
 .for area enc in ${COLLATION_SPECIAL}
 COLLATIONS_SPECIAL_ENV+=	${area}.${enc}
 .endfor
-PASSON+=	COLLATIONS_SPECIAL="${COLLATIONS_SPECIAL_ENV}"
+SETENV=	env -i \
+	PATH="${PATH}" \
+	TMPDIR="${TMPDIR}" \
+	COLLATIONS_SPECIAL="${COLLATIONS_SPECIAL_ENV}" \
+	UNIDIR="${UNIDIR}" \
+	BASEDIR="${BASEDIR}" \
+	TOOLSDIR="${TOOLSDIR}" \
+	ETCDIR="${ETCDIR}"
 
-.if defined(LC)
-LC:=	--lc=${LC}
-.endif
+all: posix build afterbuild
+.ORDER: posix build afterbuild
 
-all:
-	cp ${ETCDIR}/common.UTF-8.src ${CLDRDIR}/posix/xx_Comm_US.UTF-8.src
-.for t in ${TYPES}
-.  if ${KNOWN:M${t}}
-	test -d ${t} || mkdir ${t}
-	make build-${t}
-.  endif
-.endfor
+afterbuild: build
 	@echo ""
 	@find . -name *failed
+
+.for t in ${TYPES}
+.  if ${KNOWN:M${t}}
+build: build-${t}
+.ORDER: build-${t} afterbuild
+.  endif
+.endfor
+
+diff:
+.for t in ${TYPES}
+.  if ${KNOWN:M${t}}
+diff: diff-${t}
+diff-${t}:
+	-/usr/bin/diff -ruN -x Makefile -x Makefile.depend \
+	    ${LOCALESRCDIR}/${t} ${t}
+.  endif
+.endfor
 
 install:
 .for t in ${TYPES}
 .  if ${KNOWN:M${t}}
-	rm -rf ${.CURDIR}/${t}.draft
-	rm -rf ${.CURDIR}/../../../share/${t}
-	mv ${.CURDIR}/${t} ${.CURDIR}/../../../share/${t}
+install: install-${t}
+install-${t}:
+	cd ${LOCALESRCDIR}/${t} && \
+	    rm -f Makefile *.src && \
+	    cd ${.OBJDIR} && \
+	    install -c ${t}/* ${LOCALESRCDIR}/${t}
 .  endif
 .endfor
 
 post-install:
 .for t in ${TYPES}
 .  if ${KNOWN:M${t}}
-	(cd ${.CURDIR}/../../../share/${t} && \
-		make && make install && make clean)
+	cd ${LOCALSRCDIR}/${t} && \
+	    make && make install && make clean
 .  endif
 .endfor
 
 .for t in ${TYPES}
-gen-${t}:
-	mkdir -p ${t} ${t}.draft
-	perl -I tools tools/cldr2def.pl \
-		--cldr=$$(realpath ${CLDRDIR}) \
-		--unidata=$$(realpath ${UNIDATADIR}) \
-		--etc=$$(realpath ${ETCDIR}) \
-		--type=${t} ${LC}
+CLEANDIRS+=	${t} ${t}.draft
+${t}:
+	mkdir -p ${t} ${t}.draft && \
+	perl -I ${TOOLSDIR} ${TOOLSDIR}/cldr2def.pl \
+		--unidir=${UNIDIR:tA} \
+		--etc=${ETCDIR:tA} \
+		--type=${t}
 
-build-${t}: gen-${t}
-	env ${PASSON} tools/finalize ${t}
+build-${t}: ${t}
+	${SETENV} OUTBASEDIR="${.OBJDIR}/${t}" ${TOOLSDIR}/finalize ${t}
 .endfor
 
-gen-ctypedef:	transfer-rollup
-static-colldef: gen-colldef
+static-colldef: colldef
 build-colldef:	static-colldef
 
 static-colldef:
 .for area enc in ${COLLATION_SPECIAL}
-	awk -f tools/extract-colldef.awk ${CLDRDIR}/posix/${area}.${enc}.src > colldef/${area}.${enc}.src
-.endfor
-
-transfer-rollup:
-	cp ${ETCDIR}/common.UTF-8.src ${CLDRDIR}/posix/xx_Comm_US.UTF-8.src
-
-rollup:
-	perl -I tools tools/utf8-rollup.pl \
-		--cldr=$$(realpath ${CLDRDIR}) \
-		--etc=$$(realpath ${ETCDIR})
-
-clean:
-.for t in ${TYPES}
-	rm -rf ${t} ${t}.draft
+colldef.draft/${area}.${enc}.src: posix/${area}.${enc}.src
+	awk -f ${TOOLSDIR}/extract-colldef.awk \
+	    ${.ALLSRC} > ${.TARGET} || (rm -f ${.TARGET} && false)
 .endfor
 
 BASE_LOCALES_OF_INTEREST?= \
@@ -112,12 +137,12 @@ BASE_LOCALES_OF_INTEREST?= \
 	cs_CZ da_DK de_AT de_CH de_DE el_GR en_AU en_CA \
 	en_GB en_HK en_IE en_NZ en_PH en_SG en_US en_ZA \
 	es_AR es_CR es_ES es_MX et_EE eu_ES fi_FI fr_BE \
-	fr_CA fr_CH fr_FR he_IL hi_IN hr_HR hu_HU hy_AM \
+	fr_CA fr_CH fr_FR ga_IE he_IL hi_IN hr_HR hu_HU hy_AM \
 	is_IS it_CH it_IT ja_JP ko_KR lt_LT lv_LV \
 	nb_NO nl_BE nl_NL nn_NO pl_PL pt_BR pt_PT ro_RO \
 	ru_RU se_FI se_NO sk_SK sl_SI sv_FI sv_SE tr_TR \
 	uk_UA \
-	kk_Cyrl_KZ mn_Cyrl_MN sr_Cyrl_RS sr_Latn_RS \
+	kk_KZ mn_MN sr_Cyrl_RS sr_Latn_RS \
 	zh_Hans_CN zh_Hant_HK zh_Hant_TW \
 	bn_IN gu_IN or_IN ta_IN te_IN kn_IN ml_IN si_LK \
 	th_TH lo_LA bo_IN my_MM pa_Guru_IN ka_GE chr_US \
@@ -144,37 +169,89 @@ ENCODINGS=	Big5 \
 		KOI8-U \
 		SJIS \
 		US-ASCII \
-		UTF-8 \
+		UTF-8
 
+# CLDR files
+CLDRFILES_CORE= https://unicode.org/Public/cldr/35/core.zip
+CLDRFILES_KEY=	https://unicode.org/Public/cldr/35/keyboards.zip
+CLDRFILES_TOOLS=https://unicode.org/Public/cldr/35/tools.zip
+CLDRFILES_UCD=	http://www.unicode.org/Public/zipped/latest/UCD.zip
 
-POSIX:
-.if exists (${CLDRDIR}/tools/java/cldr.jar)
-	mkdir -p ${CLDRDIR}/posix
-.  for area in ${BASE_LOCALES_OF_INTEREST}
-.    if !exists(${CLDRDIR}/posix/${area}.UTF-8.src)
-	java -DCLDR_DIR=${CLDRDIR:Q} -jar ${CLDRDIR}/tools/java/cldr.jar \
-		org.unicode.cldr.posix.GeneratePOSIX \
-		-d ${CLDRDIR}/posix -m ${area} -c UTF-8
-.    endif
-.  endfor
-.  for area encoding in ${COLLATION_SPECIAL}
-.    if !exists(${CLDRDIR}/posix/${area}.${encoding}.src)
-	java -DCLDR_DIR=${CLDRDIR:Q} -jar ${CLDRDIR}/tools/java/cldr.jar \
-		org.unicode.cldr.posix.GeneratePOSIX \
-		-d ${CLDRDIR}/posix -m ${area} -c ${encoding}
-.    endif
-.  endfor
-.  for enc in ${ENCODINGS}
-.  if !exists(${CLDRDIR}/posix/${enc}.cm)
-	java -DCLDR_DIR=${CLDRDIR:Q} -jar ${CLDRDIR}/tools/java/cldr.jar \
-		org.unicode.cldr.posix.GenerateCharmap \
-		-d ${CLDRDIR}/posix -c ${enc}
-.  endif
-.  endfor
-.else
-	@echo "Please install CLDR toolset for the desired release"
-	@echo "It should go at ${CLDRDIR}/tools"
+# fetch and extract targets
+${UNIDIR}:
+	mkdir -p ${UNIDIR}
+.for N in CORE KEY TOOLS UCD
+${CLDRFILES_${N}:T}:
+	fetch ${CLDRFILES_${N}}
+fetch: ${CLDRFILES_${N}:T}
+extract-${CLDRFILES_${N}:T}:: ${CLDRFILES_${N}:T} ${UNIDIR}
+	cd ${UNIDIR} && unzip -o ../${CLDRFILES_${N}:T}
+extract: extract-${CLDRFILES_${N}:T}
+.endfor
+patch::
+.if exists(${PATCHDIR})
+	cd ${UNIDIR} && cat ${PATCHDIR}/patch-* | patch
 .endif
 
-clean-POSIX:
-	rm -f {CLDRDIR}/posix/*
+.if !exists(${UNIDIR}/tools/java/cldr.jar)
+.ORDER: extract patch
+build-tools: extract patch tools-test ${UNIDIR}
+	cd ${UNIDIR}/tools/java && ${SETENV} ant all jar
+.else
+build-tools:
+	@echo cldr.jar is ready.
+.endif
+
+JAVA_CLDR= java -DCLDR_DIR=${UNIDIR:Q} -jar ${UNIDIR}/tools/java/cldr.jar
+
+posix: posixcm post-posixcm posixsrc posixcol
+.ORDER: posixcm post-posixcm posixsrc posixcol
+${UNIDIR}/posix:
+	ln -s -f ../posix ${.TARGET}
+clean-posix:
+	rm -rf posix ${UNIDIR}/posix
+post-posixcm: ${UNIDIR}/posix
+	perl -I ${TOOLSDIR} ${TOOLSDIR}/utf8-rollup.pl \
+	    --unidir=${UNIDIR}
+.for enc in ${ENCODINGS}
+posixcm: build-tools posix/${enc}.cm
+.ORDER: build-tools posix/${enc}.cm
+posix/${enc}.cm:
+	mkdir -p posix && \
+	    ${JAVA_CLDR} org.unicode.cldr.posix.GenerateCharmap \
+		-d posix -c ${enc}
+.endfor
+.for area in ${BASE_LOCALES_OF_INTEREST}
+posixsrc: build-tools posix/${area}.UTF-8.src
+.ORDER: build-tools posix/${area}.UTF-8.src
+posix/${area}.UTF-8.src:
+	mkdir -p posix && \
+	    ${JAVA_CLDR} org.unicode.cldr.posix.GeneratePOSIX \
+		-d posix -m ${area} -c UTF-8
+.endfor
+.for area encoding in ${COLLATION_SPECIAL}
+posixcol: build-tools posix/${area}.${encoding}.src
+.ORDER: build-tools posix/${area}.${encoding}.src
+posix/${area}.${encoding}.src:
+	mkdir -p posix && \
+	    ${JAVA_CLDR} org.unicode.cldr.posix.GeneratePOSIX \
+		-d posix -m ${area} -c ${encoding}
+.endfor
+
+# generate widths.txt using the data from libut8proc
+GETWIDTHS=${TOOLSDIR}/getwidths
+MKWIDTHS=${TOOLSDIR}/mkwidths.pl
+WIDTHS=	${ETCDIR}/final-maps/widths.txt
+
+U8CFLAGS!=pkgconf --cflags libutf8proc
+U8LIBS!=pkgconf --libs libutf8proc
+CFLAGS+=${U8CFLAGS}
+LDFLAGS+=${U8LIBS}
+
+CLEANFILES+=${TOOLSDIR}/getwidths
+
+widths:	${WIDTHS}
+${WIDTHS}: posixcm ${GETWIDTHS}
+	${GETWIDTHS} | ${MKWIDTHS} ${.OBJDIR}/posix/UTF-8.cm ${.TARGET}
+
+.include <bsd.obj.mk>

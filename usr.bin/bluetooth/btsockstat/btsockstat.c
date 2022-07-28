@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: btsockstat.c,v 1.8 2003/05/21 22:40:25 max Exp $
- * $FreeBSD: stable/11/usr.bin/bluetooth/btsockstat/btsockstat.c 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -37,6 +37,7 @@
 #include <sys/protosw.h>
 #include <sys/queue.h>
 #include <sys/socket.h>
+#define	_WANT_SOCKET
 #include <sys/socketvar.h>
 
 #include <net/if.h>

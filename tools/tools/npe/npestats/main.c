@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -27,15 +26,17 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/tools/tools/npe/npestats/main.c 192661 2009-05-23 19:16:34Z sam $
+ * $FreeBSD$
  */
 
+#include <sys/param.h>
+
+#include <err.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
 #include <strings.h>
 #include <unistd.h>
-#include <err.h>
 
 #include "npestats.h"
 
@@ -51,13 +52,11 @@ static struct {
 static const char *
 getfmt(const char *tag)
 {
-#define	N(a)	(sizeof(a)/sizeof(a[0]))
 	int i;
-	for (i = 0; i < N(tags); i++)
+	for (i = 0; i < nitems(tags); i++)
 		if (strcasecmp(tags[i].tag, tag) == 0)
 			return tags[i].fmt;
 	return tag;
-#undef N
 }
 
 static int signalled;

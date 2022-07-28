@@ -18,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/bc/scan.l 264609 2014-04-17 14:15:53Z bz $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <errno.h>

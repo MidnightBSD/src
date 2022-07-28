@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2002-2006 Bruce M. Simpson.
  * All rights reserved
  *
@@ -29,7 +30,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/tools/tools/pirtool/pirtool.c,v 1.7 2007/01/11 05:00:30 imp Exp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>

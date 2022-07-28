@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/tools/tools/vt/keymaps/LANG.map 270131 2014-08-18 09:40:19Z se $
+# $FreeBSD$
 bg bg ISO8859-5
 cs cs ISO8859-2
 da da ISO8859-15
