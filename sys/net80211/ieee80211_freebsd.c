@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/net80211/ieee80211_freebsd.c 343817 2019-02-06 01:47:22Z avos $");
+__FBSDID("$FreeBSD$");
 
 /*
  * IEEE 802.11 support (FreeBSD-specific code)
@@ -39,6 +41,7 @@ __FBSDID("$FreeBSD: stable/11/sys/net80211/ieee80211_freebsd.c 343817 2019-02-06
 #include <sys/malloc.h>
 #include <sys/mbuf.h>   
 #include <sys/module.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/sysctl.h>
 
@@ -69,6 +72,42 @@ SYSCTL_INT(_net_wlan, OID_AUTO, debug, CTLFLAG_RW, &ieee80211_debug,
 static const char wlanname[] = "wlan";
 static struct if_clone *wlan_cloner;
 
+/*
+ * priv(9) NET80211 checks.
+ * Return 0 if operation is allowed, E* (usually EPERM) otherwise.
+ */
+int
+ieee80211_priv_check_vap_getkey(u_long cmd __unused,
+     struct ieee80211vap *vap __unused, struct ifnet *ifp __unused)
+{
+
+	return (priv_check(curthread, PRIV_NET80211_VAP_GETKEY));
+}
+
+int
+ieee80211_priv_check_vap_manage(u_long cmd __unused,
+     struct ieee80211vap *vap __unused, struct ifnet *ifp __unused)
+{
+
+	return (priv_check(curthread, PRIV_NET80211_VAP_MANAGE));
+}
+
+int
+ieee80211_priv_check_vap_setmac(u_long cmd __unused,
+     struct ieee80211vap *vap __unused, struct ifnet *ifp __unused)
+{
+
+	return (priv_check(curthread, PRIV_NET80211_VAP_SETMAC));
+}
+
+int
+ieee80211_priv_check_create_vap(u_long cmd __unused,
+    struct ieee80211vap *vap __unused, struct ifnet *ifp __unused)
+{
+
+	return (priv_check(curthread, PRIV_NET80211_CREATE_VAP));
+}
+
 static int
 wlan_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 {
@@ -76,6 +115,10 @@ wlan_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	struct ieee80211vap *vap;
 	struct ieee80211com *ic;
 	int error;
+
+	error = ieee80211_priv_check_create_vap(0, NULL, NULL);
+	if (error)
+		return error;
 
 	error = copyin(params, &cp, sizeof(cp));
 	if (error)
@@ -132,13 +175,12 @@ int
 ieee80211_sysctl_msecs_ticks(SYSCTL_HANDLER_ARGS)
 {
 	int msecs = ticks_to_msecs(*(int *)arg1);
-	int error, t;
+	int error;
 
 	error = sysctl_handle_int(oidp, &msecs, 0, req);
 	if (error || !req->newptr)
 		return error;
-	t = msecs_to_ticks(msecs);
-	*(int *)arg1 = (t < 1) ? 1 : t;
+	*(int *)arg1 = msecs_to_ticks(msecs);
 	return 0;
 }
 
@@ -303,7 +345,6 @@ ieee80211_sysctl_vdetach(struct ieee80211vap *vap)
 	}
 }
 
-#define	MS(_v, _f)	(((_v) & _f##_M) >> _f##_S)
 int
 ieee80211_com_vincref(struct ieee80211vap *vap)
 {
@@ -316,7 +357,8 @@ ieee80211_com_vincref(struct ieee80211vap *vap)
 		return (ENETDOWN);
 	}
 
-	if (MS(ostate, IEEE80211_COM_REF) == IEEE80211_COM_REF_MAX) {
+	if (_IEEE80211_MASKSHIFT(ostate, IEEE80211_COM_REF) ==
+	    IEEE80211_COM_REF_MAX) {
 		atomic_subtract_32(&vap->iv_com_state, IEEE80211_COM_REF_ADD);
 		return (EOVERFLOW);
 	}
@@ -331,7 +373,7 @@ ieee80211_com_vdecref(struct ieee80211vap *vap)
 
 	ostate = atomic_fetchadd_32(&vap->iv_com_state, -IEEE80211_COM_REF_ADD);
 
-	KASSERT(MS(ostate, IEEE80211_COM_REF) != 0,
+	KASSERT(_IEEE80211_MASKSHIFT(ostate, IEEE80211_COM_REF) != 0,
 	    ("com reference counter underflow"));
 
 	(void) ostate;
@@ -343,14 +385,11 @@ ieee80211_com_vdetach(struct ieee80211vap *vap)
 	int sleep_time;
 
 	sleep_time = msecs_to_ticks(250);
-	if (sleep_time == 0)
-		sleep_time = 1;
-
 	atomic_set_32(&vap->iv_com_state, IEEE80211_COM_DETACHED);
-	while (MS(atomic_load_32(&vap->iv_com_state), IEEE80211_COM_REF) != 0)
+	while (_IEEE80211_MASKSHIFT(atomic_load_32(&vap->iv_com_state),
+	    IEEE80211_COM_REF) != 0)
 		pause("comref", sleep_time);
 }
-#undef	MS
 
 int
 ieee80211_node_dectestref(struct ieee80211_node *ni)
@@ -602,6 +641,57 @@ ieee80211_get_rx_params(struct mbuf *m, struct ieee80211_rx_stats *rxs)
 	return (0);
 }
 
+const struct ieee80211_rx_stats *
+ieee80211_get_rx_params_ptr(struct mbuf *m)
+{
+	struct m_tag *mtag;
+	struct ieee80211_rx_params *rx;
+
+	mtag = m_tag_locate(m, MTAG_ABI_NET80211, NET80211_TAG_RECV_PARAMS,
+	    NULL);
+	if (mtag == NULL)
+		return (NULL);
+	rx = (struct ieee80211_rx_params *)(mtag + 1);
+	return (&rx->params);
+}
+
+
+/*
+ * Add TOA parameters to the given mbuf.
+ */
+int
+ieee80211_add_toa_params(struct mbuf *m, const struct ieee80211_toa_params *p)
+{
+	struct m_tag *mtag;
+	struct ieee80211_toa_params *rp;
+
+	mtag = m_tag_alloc(MTAG_ABI_NET80211, NET80211_TAG_TOA_PARAMS,
+	    sizeof(struct ieee80211_toa_params), M_NOWAIT);
+	if (mtag == NULL)
+		return (0);
+
+	rp = (struct ieee80211_toa_params *)(mtag + 1);
+	memcpy(rp, p, sizeof(*rp));
+	m_tag_prepend(m, mtag);
+	return (1);
+}
+
+int
+ieee80211_get_toa_params(struct mbuf *m, struct ieee80211_toa_params *p)
+{
+	struct m_tag *mtag;
+	struct ieee80211_toa_params *rp;
+
+	mtag = m_tag_locate(m, MTAG_ABI_NET80211, NET80211_TAG_TOA_PARAMS,
+	    NULL);
+	if (mtag == NULL)
+		return (0);
+	rp = (struct ieee80211_toa_params *)(mtag + 1);
+	if (p != NULL)
+		memcpy(p, rp, sizeof(*p));
+	return (1);
+}
+
 /*
  * Transmit a frame to the parent interface.
  */
@@ -739,8 +829,11 @@ ieee80211_notify_replay_failure(struct ieee80211vap *vap,
 	struct ifnet *ifp = vap->iv_ifp;
 
 	IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_CRYPTO, wh->i_addr2,
-	    "%s replay detected tid %d <rsc %ju, csc %ju, keyix %u rxkeyix %u>",
-	    k->wk_cipher->ic_name, tid, (intmax_t) rsc,
+	    "%s replay detected tid %d <rsc %ju (%jx), csc %ju (%jx), keyix %u rxkeyix %u>",
+	    k->wk_cipher->ic_name, tid,
+	    (intmax_t) rsc,
+	    (intmax_t) rsc,
+	    (intmax_t) k->wk_keyrsc[tid],
 	    (intmax_t) k->wk_keyrsc[tid],
 	    k->wk_keyix, k->wk_rxkeyix);
 
@@ -913,6 +1006,19 @@ ieee80211_notify_radio(struct ieee80211com *ic, int state)
 }
 
 void
+ieee80211_notify_ifnet_change(struct ieee80211vap *vap)
+{
+	struct ifnet *ifp = vap->iv_ifp;
+
+	IEEE80211_DPRINTF(vap, IEEE80211_MSG_DEBUG, "%s\n",
+	    "interface state change");
+
+	CURVNET_SET(ifp->if_vnet);
+	rt_ifmsg(ifp);
+	CURVNET_RESTORE();
+}
+
+void
 ieee80211_load_module(const char *modname)
 {
 
@@ -965,6 +1071,20 @@ wlan_iflladdr(void *arg __unused, struct ifnet *ifp)
 
 		IEEE80211_ADDR_COPY(vap->iv_myaddr, IF_LLADDR(ifp));
 	}
+}
+
+/*
+ * Fetch the VAP name.
+ *
+ * This returns a const char pointer suitable for debugging,
+ * but don't expect it to stick around for much longer.
+ */
+const char *
+ieee80211_get_vap_ifname(struct ieee80211vap *vap)
+{
+	if (vap->iv_ifp == NULL)
+		return "(none)";
+	return vap->iv_ifp->if_xname;
 }
 
 /*

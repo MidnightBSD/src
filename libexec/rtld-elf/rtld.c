@@ -5294,13 +5294,13 @@ check_object_provided_version(Obj_Entry *refobj, const Obj_Entry *depobj,
 	}
 	if (vna->vna_hash == vd->vd_hash) {
 	    const Elf_Verdaux *aux = (const Elf_Verdaux *)
-		((char *)vd + vd->vd_aux);
+		((const char *)vd + vd->vd_aux);
 	    if (strcmp(vername, depobj->strtab + aux->vda_name) == 0)
 		return (0);
 	}
 	if (vd->vd_next == 0)
 	    break;
-	vd = (const Elf_Verdef *) ((char *)vd + vd->vd_next);
+	vd = (const Elf_Verdef *)((const char *)vd + vd->vd_next);
     }
     if (vna->vna_flags & VER_FLG_WEAK)
 	return (0);
@@ -5336,18 +5336,18 @@ rtld_verify_object_versions(Obj_Entry *obj)
 		obj->path, vn->vn_version);
 	    return (-1);
 	}
-	vna = (const Elf_Vernaux *) ((char *)vn + vn->vn_aux);
+	vna = (const Elf_Vernaux *)((const char *)vn + vn->vn_aux);
 	for (;;) {
 	    vernum = VER_NEED_IDX(vna->vna_other);
 	    if (vernum > maxvernum)
 		maxvernum = vernum;
 	    if (vna->vna_next == 0)
 		 break;
-	    vna = (const Elf_Vernaux *) ((char *)vna + vna->vna_next);
+	    vna = (const Elf_Vernaux *)((const char *)vna + vna->vna_next);
 	}
 	if (vn->vn_next == 0)
 	    break;
-	vn = (const Elf_Verneed *) ((char *)vn + vn->vn_next);
+	vn = (const Elf_Verneed *)((const char *)vn + vn->vn_next);
     }
 
     vd = obj->verdef;
@@ -5362,7 +5362,7 @@ rtld_verify_object_versions(Obj_Entry *obj)
 		maxvernum = vernum;
 	if (vd->vd_next == 0)
 	    break;
-	vd = (const Elf_Verdef *) ((char *)vd + vd->vd_next);
+	vd = (const Elf_Verdef *)((const char *)vd + vd->vd_next);
     }
 
     if (maxvernum == 0)
@@ -5381,7 +5381,7 @@ rtld_verify_object_versions(Obj_Entry *obj)
 	if ((vd->vd_flags & VER_FLG_BASE) == 0) {
 	    vernum = VER_DEF_IDX(vd->vd_ndx);
 	    assert(vernum <= maxvernum);
-	    vda = (const Elf_Verdaux *)((char *)vd + vd->vd_aux);
+	    vda = (const Elf_Verdaux *)((const char *)vd + vd->vd_aux);
 	    obj->vertab[vernum].hash = vd->vd_hash;
 	    obj->vertab[vernum].name = obj->strtab + vda->vda_name;
 	    obj->vertab[vernum].file = NULL;
@@ -5389,7 +5389,7 @@ rtld_verify_object_versions(Obj_Entry *obj)
 	}
 	if (vd->vd_next == 0)
 	    break;
-	vd = (const Elf_Verdef *) ((char *)vd + vd->vd_next);
+	vd = (const Elf_Verdef *)((const char *)vd + vd->vd_next);
     }
 
     vn = obj->verneed;
@@ -5397,7 +5397,7 @@ rtld_verify_object_versions(Obj_Entry *obj)
 	depobj = locate_dependency(obj, obj->strtab + vn->vn_file);
 	if (depobj == NULL)
 	    return (-1);
-	vna = (const Elf_Vernaux *) ((char *)vn + vn->vn_aux);
+	vna = (const Elf_Vernaux *)((const char *)vn + vn->vn_aux);
 	for (;;) {
 	    if (check_object_provided_version(obj, depobj, vna))
 		return (-1);
@@ -5410,11 +5410,11 @@ rtld_verify_object_versions(Obj_Entry *obj)
 		VER_INFO_HIDDEN : 0;
 	    if (vna->vna_next == 0)
 		 break;
-	    vna = (const Elf_Vernaux *) ((char *)vna + vna->vna_next);
+	    vna = (const Elf_Vernaux *)((const char *)vna + vna->vna_next);
 	}
 	if (vn->vn_next == 0)
 	    break;
-	vn = (const Elf_Verneed *) ((char *)vn + vn->vn_next);
+	vn = (const Elf_Verneed *)((const char *)vn + vn->vn_next);
     }
     return 0;
 }
@@ -5580,19 +5580,22 @@ static int
 open_binary_fd(const char *argv0, bool search_in_path,
     const char **binpath_res)
 {
-	char *pathenv, *pe, *binpath;
+	char *binpath, *pathenv, *pe, *res1;
+	const char *res;
 	int fd;
 
+	binpath = NULL;
+	res = NULL;
 	if (search_in_path && strchr(argv0, '/') == NULL) {
 		binpath = xmalloc(PATH_MAX);
 		pathenv = getenv("PATH");
 		if (pathenv == NULL) {
-			rtld_printf("-p and no PATH environment variable\n");
+			_rtld_error("-p and no PATH environment variable");
 			rtld_die();
 		}
 		pathenv = strdup(pathenv);
 		if (pathenv == NULL) {
-			rtld_printf("Cannot allocate memory\n");
+			_rtld_error("Cannot allocate memory");
 			rtld_die();
 		}
 		fd = -1;
@@ -5607,22 +5610,31 @@ open_binary_fd(const char *argv0, bool search_in_path,
 				continue;
 			fd = open(binpath, O_RDONLY | O_CLOEXEC | O_VERIFY);
 			if (fd != -1 || errno != ENOENT) {
-				*binpath_res = binpath;
+				res = binpath;
 				break;
 			}
 		}
 		free(pathenv);
 	} else {
 		fd = open(argv0, O_RDONLY | O_CLOEXEC | O_VERIFY);
-		*binpath_res = argv0;
+		res = argv0;
 	}
-	/* XXXKIB Use getcwd() to resolve relative binpath to absolute. */
 
 	if (fd == -1) {
-		rtld_printf("Opening %s: %s\n", argv0,
-		    rtld_strerror(errno));
+		_rtld_error("Cannot open %s: %s", argv0, rtld_strerror(errno));
 		rtld_die();
 	}
+	if (res != NULL && res[0] != '/') {
+		res1 = xmalloc(PATH_MAX);
+		if (realpath(res, res1) != NULL) {
+			if (res != argv0)
+				free(__DECONST(char *, res));
+			res = res1;
+		} else {
+			free(res1);
+		}
+	}
+	*binpath_res = res;
 	return (fd);
 }
 
@@ -5630,15 +5642,20 @@ open_binary_fd(const char *argv0, bool search_in_path,
  * Parse a set of command-line arguments.
  */
 static int
-parse_args(char* argv[], int argc, bool *use_pathp, int *fdp)
+parse_args(char* argv[], int argc, bool *use_pathp, int *fdp,
+    const char **argv0)
 {
 	const char *arg;
-	int fd, i, j, arglen;
+	char machine[64];
+	size_t sz;
+	int arglen, fd, i, j, mib[2];
 	char opt;
+	bool seen_b, seen_f;
 
 	dbg("Parsing command-line arguments");
 	*use_pathp = false;
 	*fdp = -1;
+	seen_b = seen_f = false;
 
 	for (i = 1; i < argc; i++ ) {
 		arg = argv[i];
@@ -5664,38 +5681,59 @@ parse_args(char* argv[], int argc, bool *use_pathp, int *fdp)
 			opt = arg[j];
 			if (opt == 'h') {
 				print_usage(argv[0]);
-				rtld_die();
+				_exit(0);
+			} else if (opt == 'b') {
+				if (seen_f) {
+					_rtld_error("Both -b and -f specified");
+					rtld_die();
+				}
+				i++;
+				*argv0 = argv[i];
+				seen_b = true;
+				break;
 			} else if (opt == 'f') {
-			/*
-			 * -f XX can be used to specify a descriptor for the
-			 * binary named at the command line (i.e., the later
-			 * argument will specify the process name but the
-			 * descriptor is what will actually be executed)
-			 */
-			if (j != arglen - 1) {
-				/* -f must be the last option in, e.g., -abcf */
-				_rtld_error("invalid options: %s", arg);
-				rtld_die();
-			}
-			i++;
-			fd = parse_integer(argv[i]);
-			if (fd == -1) {
-				_rtld_error("invalid file descriptor: '%s'",
-				    argv[i]);
-				rtld_die();
-			}
-			*fdp = fd;
-			break;
+				if (seen_b) {
+					_rtld_error("Both -b and -f specified");
+					rtld_die();
+				}
+
+				/*
+				 * -f XX can be used to specify a
+				 * descriptor for the binary named at
+				 * the command line (i.e., the later
+				 * argument will specify the process
+				 * name but the descriptor is what
+				 * will actually be executed).
+				 *
+				 * -f must be the last option in, e.g., -abcf.
+				 */
+				if (j != arglen - 1) {
+					_rtld_error("Invalid options: %s", arg);
+					rtld_die();
+				}
+				i++;
+				fd = parse_integer(argv[i]);
+				if (fd == -1) {
+					_rtld_error(
+					    "Invalid file descriptor: '%s'",
+					    argv[i]);
+					rtld_die();
+				}
+				*fdp = fd;
+				seen_f = true;
+				break;
 			} else if (opt == 'p') {
 				*use_pathp = true;
 			} else {
-				rtld_printf("invalid argument: '%s'\n", arg);
+				_rtld_error("Invalid argument: '%s'", arg);
 				print_usage(argv[0]);
 				rtld_die();
 			}
 		}
 	}
 
+	if (!seen_b)
+		*argv0 = argv[i];
 	return (i);
 }
 
@@ -5730,15 +5768,18 @@ static void
 print_usage(const char *argv0)
 {
 
-	rtld_printf("Usage: %s [-h] [-f <FD>] [--] <binary> [<args>]\n"
-		"\n"
-		"Options:\n"
-		"  -h        Display this help message\n"
-		"  -p        Search in PATH for named binary\n"
-		"  -f <FD>   Execute <FD> instead of searching for <binary>\n"
-		"  --        End of RTLD options\n"
-		"  <binary>  Name of process to execute\n"
-		"  <args>    Arguments to the executed process\n", argv0);
+	rtld_printf(
+	    "Usage: %s [-h] [-b <exe>] [-f <FD>] [-p] [--] <binary> [<args>]\n"
+	    "\n"
+	    "Options:\n"
+	    "  -h        Display this help message\n"
+	    "  -b <exe>  Execute <exe> instead of <binary>, arg0 is <binary>\n"
+	    "  -f <FD>   Execute <FD> instead of searching for <binary>\n"
+	    "  -p        Search in PATH for named binary\n"
+	    "  -v        Display identification information\n"
+	    "  --        End of RTLD options\n"
+	    "  <binary>  Name of process to execute\n"
+	    "  <args>    Arguments to the executed process\n", argv0);
 }
 
 /*
@@ -5780,25 +5821,8 @@ int _thread_autoinit_dummy_decl = 1;
  * No unresolved symbols for rtld.
  */
 void
-__pthread_cxa_finalize(struct dl_phdr_info *a)
+__pthread_cxa_finalize(struct dl_phdr_info *a __unused)
 {
-}
-
-void
-__stack_chk_fail(void)
-{
-
-	_rtld_error("stack overflow detected; terminated");
-	rtld_die();
-}
-__weak_reference(__stack_chk_fail, __stack_chk_fail_local);
-
-void
-__chk_fail(void)
-{
-
-	_rtld_error("buffer overflow detected; terminated");
-	rtld_die();
 }
 
 const char *
@@ -5831,3 +5855,38 @@ bzero(void *dest, size_t len)
 	for (i = 0; i < len; i++)
 		((char *)dest)[i] = 0;
 }
+
+/* malloc */
+void *
+malloc(size_t nbytes)
+{
+
+	return (__crt_malloc(nbytes));
+}
+
+void *
+calloc(size_t num, size_t size)
+{
+
+	return (__crt_calloc(num, size));
+}
+
+void
+free(void *cp)
+{
+
+	__crt_free(cp);
+}
+
+void *
+realloc(void *cp, size_t nbytes)
+{
+
+	return (__crt_realloc(cp, nbytes));
+}
+
+extern int _rtld_version__FreeBSD_version __exported;
+int _rtld_version__FreeBSD_version = __FreeBSD_version;
+
+extern char _rtld_version_laddr_offset __exported;
+char _rtld_version_laddr_offset;

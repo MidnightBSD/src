@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
@@ -24,8 +26,8 @@
  */
 
 #include <sys/cdefs.h>
-#ifdef __MidnightBSD__
-__FBSDID("$FreeBSD: stable/11/sys/net80211/ieee80211_monitor.c 283535 2015-05-25 16:37:41Z adrian $");
+#ifdef __FreeBSD__
+__FBSDID("$FreeBSD$");
 #endif
 
 /*
