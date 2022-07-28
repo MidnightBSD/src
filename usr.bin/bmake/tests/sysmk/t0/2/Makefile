@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/bmake/tests/sysmk/t0/2/Makefile 299094 2016-05-04 23:20:53Z ngie $
+# $FreeBSD$
 
 TESTSDIR=	${TESTSBASE}/usr.bin/bmake/sysmk/t0/2
 

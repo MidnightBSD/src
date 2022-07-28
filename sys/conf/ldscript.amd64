@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/conf/ldscript.amd64 331689 2018-03-28 16:58:24Z emaste $ */
+/* $FreeBSD$ */
 OUTPUT_FORMAT("elf64-x86-64-freebsd", "elf64-x86-64-freebsd", "elf64-x86-64-freebsd")
 OUTPUT_ARCH(i386:x86-64)
 ENTRY(btext)
@@ -74,12 +74,18 @@ SECTIONS
   PROVIDE (etext = .);
   .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
   .rodata1        : { *(.rodata1) }
+  .note.gnu.build-id : {
+    PROVIDE (__build_id_start = .);
+    *(.note.gnu.build-id)
+    PROVIDE (__build_id_end = .);
+  }
   .eh_frame_hdr : { *(.eh_frame_hdr) }
   .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) }
   .gcc_except_table   : ONLY_IF_RO { *(.gcc_except_table .gcc_except_table.*) }
   /* Adjust the address for the data segment.  We want to adjust up to
      the same address within the page on the next page up.  */
   . = ALIGN (CONSTANT (MAXPAGESIZE)) - ((CONSTANT (MAXPAGESIZE) - .) & (CONSTANT (MAXPAGESIZE) - 1)); . = DATA_SEGMENT_ALIGN (CONSTANT (MAXPAGESIZE), CONSTANT (COMMONPAGESIZE));
+  PROVIDE (brwsection = .);
   /* Exception handling  */
   .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) }
   .gcc_except_table   : ONLY_IF_RW { *(.gcc_except_table .gcc_except_table.*) }
@@ -145,21 +151,21 @@ SECTIONS
   .got            : { *(.got) }
   . = DATA_SEGMENT_RELRO_END (24, .);
   .got.plt        : { *(.got.plt) }
-  . = ALIGN(64);
+  . = ALIGN(128);
   .data.read_frequently :
   {
-    *(.data.read_frequently)
+    *(SORT_BY_ALIGNMENT(.data.read_frequently))
   }
   .data.read_mostly :
   {
     *(.data.read_mostly)
   }
-  . = ALIGN(64);
+  . = ALIGN(128);
   .data.exclusive_cache_line :
   {
     *(.data.exclusive_cache_line)
   }
-  . = ALIGN(64);
+  . = ALIGN(128);
   .data           :
   {
     *(.data .data.* .gnu.linkonce.d.*)

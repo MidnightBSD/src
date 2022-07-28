@@ -1,5 +1,5 @@
 #! /bin/sh
-# $FreeBSD: stable/11/usr.bin/bmake/tests/basic/t2/legacy_test.sh 263346 2014-03-19 12:29:20Z jmmv $
+# $FreeBSD$
 
 . $(dirname $0)/../../common.sh
 
