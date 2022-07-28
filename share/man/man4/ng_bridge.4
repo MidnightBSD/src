@@ -32,9 +32,9 @@
 .\"
 .\" Author: Archie Cobbs <archie@FreeBSD.org>
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/ng_bridge.4 301589 2016-06-08 08:50:35Z trasz $
+.\" $FreeBSD$
 .\"
-.Dd May 5, 2010
+.Dd May 13, 2021
 .Dt NG_BRIDGE 4
 .Os
 .Sh NAME
@@ -76,9 +76,7 @@ Processing of IP packets via the
 .Xr ipfirewall 4
 mechanism on a per-link basis is not yet implemented.
 .Sh HOOKS
-This node type supports up to
-.Dv NG_BRIDGE_MAX_LINKS
-hooks.
+This node type supports an unlimited number of hooks.
 Each connected hook represents a bridged link.
 The hooks are named
 .Dv link0 ,
@@ -94,6 +92,39 @@ To connect the host machine to a bridged network, simply connect the
 hook of an
 .Xr ng_ether 4
 node to the bridge node.
+.Pp
+Instead of naming a hook
+.Dv linkX
+the hook might be also named
+.Dv uplinkX .
+The node does not learn MAC addresses on uplink hooks, which keeps
+the internal address table small.
+This way it is desirable to connect the
+.Dv lower
+hook of an
+.Xr ng_ether 4
+node to an
+.Dv uplink
+hook of the bridge, and ignore the complexity of the outside world.
+Frames with unknown MACs are always sent out to
+.Dv uplink
+hooks, so no functionality is lost.
+.Pp
+Frames with unknown destination MAC addresses are replicated to any
+available hook, unless the first connected hook is an
+.Ar uplink
+hook.
+In this case the node assumes, that all unknown MAC addresses are
+located soley on the
+.Ar uplink
+hooks and only those hooks will be used to send out frames with
+unknown destination MACs.
+If the first connected hook is an
+.Ar link
+hook, the node will replicate such frames to all types of hooks,
+even if
+.Ar uplink
+hooks are connected later.
 .Sh CONTROL MESSAGES
 This node type supports the generic control messages, plus the
 following:
@@ -106,7 +137,6 @@ as an argument:
 .Bd -literal -offset 0n
 /* Node configuration structure */
 struct ng_bridge_config {
-  u_char      ipfw[NG_BRIDGE_MAX_LINKS]; /* enable ipfw */
   u_char      debugLevel;           /* debug level */
   uint32_t    loopTimeout;          /* link loopback mute time */
   uint32_t    maxStaleness;         /* max host age before nuking */
@@ -114,11 +144,6 @@ struct ng_bridge_config {
 };
 .Ed
 .Pp
-The
-.Dv ipfw
-array enables
-.Xr ipfirewall 4
-processing of IP packets received on the corresponding links.
 The
 .Dv debugLevel
 field sets the debug level on the node.
@@ -149,8 +174,9 @@ The node configuration is not changed.
 This command takes a four byte link number as an argument and
 returns a
 .Dv "struct ng_bridge_link_stats"
-containing statistics for the corresponding link, which must be
-currently connected:
+containing statistics for the corresponding
+.Dv link ,
+which must be currently connected:
 .Bd -literal -offset 0n
 /* Statistics structure (one for each link) */
 struct ng_bridge_link_stats {
@@ -170,6 +196,12 @@ struct ng_bridge_link_stats {
   uint64_t   memoryFailures; /* times couldn't get mem or mbuf */
 };
 .Ed
+.Pp
+Negative numbers refer to the
+.Dv uplink
+hooks.
+So querying for -7 will get the statistics for hook
+.Dv uplink7 .
 .It Dv NGM_BRIDGE_CLR_STATS Pq Ic clrstats
 This command takes a four byte link number as an argument and
 clears the statistics for that link.
@@ -182,6 +214,32 @@ Returns the current host mapping table used to direct packets, in a
 .Dv "struct ng_bridge_host_ary" .
 .It Dv NGM_BRIDGE_SET_PERSISTENT Pq Ic setpersistent
 This command sets the persistent flag on the node, and takes no arguments.
+.It Dv NGM_BRIDGE_MOVE_HOST Pq Ar movehost
+This command takes a
+.Vt "struct ng_bridge_move_host"
+as an argument.
+It assigns the MAC
+.Va addr
+to the
+.Va hook .
+If the
+.Va hook
+is the empty string, the incoming hook of the control message is
+used as fallback.
+.Pp
+If necessary, the MAC is removed from the currently assigned hook and
+moved to the new one.
+If the MAC is moved faster than
+.Va minStableAge ,
+the hook is considered as a loop and will block traffic for
+.Va loopTimeout
+seconds.
+.Bd -literal -offset 0n
+struct ng_bridge_move_host {
+  u_char  addr[ETHER_ADDR_LEN];	/* ethernet address */
+  char    hook[NG_HOOKSIZ];	/* link where addr can be found */
+};
+.Ed
 .El
 .Sh SHUTDOWN
 This node shuts down upon receipt of a

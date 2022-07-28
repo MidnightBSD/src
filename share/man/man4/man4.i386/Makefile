@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/man/man4/man4.i386/Makefile 298107 2016-04-16 07:45:30Z gjb $
+# $FreeBSD$
 
 PACKAGE=runtime-manuals
 
@@ -8,7 +8,6 @@ MAN=	aic.4 \
 	cp.4 \
 	CPU_ELAN.4 \
 	cs.4 \
-	ct.4 \
 	ctau.4 \
 	cx.4 \
 	ep.4 \
@@ -16,7 +15,6 @@ MAN=	aic.4 \
 	fe.4 \
 	glxiic.4 \
 	glxsb.4 \
-	ie.4 \
 	longrun.4 \
 	mse.4 \
 	npx.4 \
@@ -27,12 +25,8 @@ MAN=	aic.4 \
 	pnpbios.4 \
 	sbni.4 \
 	smapi.4 \
-	snc.4 \
-	streams.4 \
-	svr4.4 \
 	vpd.4 \
-	vx.4 \
-	wl.4
+	vx.4
 
 MLINKS=	CPU_ELAN.4 CPU_SOEKRIS.4
 MLINKS+=pae.4 PAE.4

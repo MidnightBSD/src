@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/hv_vss.4 323203 2017-09-06 02:05:19Z emaste $
+.\" $FreeBSD$
 .Dd October 12, 2016
 .Dt HV_VSS 4
 .Os
@@ -352,9 +352,10 @@ main(int argc, char* argv[]) {
 	}
 	return 0;
 }
+.Ed
 .Sh SEE ALSO
-.Xr hv_vss_daemon 8 ,
-.Xr hv_utils 4
+.Xr hv_utils 4 ,
+.Xr hv_vss_daemon 8
 .Sh HISTORY
 The daemon was introduced in October 2016 and developed by Microsoft Corp.
 .Sh AUTHORS

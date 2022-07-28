@@ -27,9 +27,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/hme.4 267938 2014-06-26 21:46:14Z bapt $
+.\" $FreeBSD$
 .\"
-.Dd June 14, 2009
+.Dd February 12, 2020
 .Dt HME 4
 .Os
 .Sh NAME
@@ -50,6 +50,14 @@ module at boot time, place the following line in
 .Bd -literal -offset indent
 if_hme_load="YES"
 .Ed
+.Sh DEPRECATION NOTICE
+The
+.Nm
+driver is not present in
+.Fx 13.0
+and later.
+See https://github.com/freebsd/fcp/blob/master/fcp-0101.md for more
+information.
 .Sh DESCRIPTION
 The
 .Nm

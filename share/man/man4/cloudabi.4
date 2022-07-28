@@ -1,4 +1,4 @@
-.\" Copyright (c) 2015-2016 Nuxi, https://nuxi.nl/
+.\" Copyright (c) 2015-2017 Nuxi, https://nuxi.nl/
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -21,8 +21,8 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/cloudabi.4 307144 2016-10-12 12:17:41Z ed $
-.Dd September 22, 2016
+.\" $FreeBSD$
+.Dd November 30, 2017
 .Dt CLOUDABI 4
 .Os
 .Sh NAME
@@ -51,6 +51,10 @@ cloudabi_load="YES"
 cloudabi32_load="YES"
 cloudabi64_load="YES"
 .Ed
+.Sh DEPRECATION NOTICE
+.Nm
+support is not present in
+.Fx 14.0 .
 .Sh DESCRIPTION
 CloudABI is a POSIX-like pure capability-based runtime environment,
 similar to
@@ -84,7 +88,7 @@ module can be loaded on any architecture supported by
 .Fx ,
 the
 .Nm cloudabi32
-module is only available on amd64, armv6 and i386.
+module is only available on amd64, arm64, armv6, armv7 and i386.
 The same holds for the
 .Nm cloudabi64
 module,

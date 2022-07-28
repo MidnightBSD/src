@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)netintro.4	8.2 (Berkeley) 11/30/93
-.\" $FreeBSD: stable/11/share/man/man4/netintro.4 263142 2014-03-14 03:07:51Z eadler $
+.\" $FreeBSD$
 .\"
-.Dd January 26, 2012
+.Dd October 14, 2020
 .Dt NETINTRO 4
 .Os
 .Sh NAME
@@ -349,6 +349,13 @@ multiple masks or destination addresses, and also adopts the
 convention that specification of the default address means
 to delete the first address for the interface belonging to
 the address family in which the original socket was opened.
+.It Dv SIOCGIFALIAS
+This request provides means to get additional addresses
+together with netmask and broadcast/destination from an
+interface.
+It also uses the
+.Vt ifaliasreq
+structure.
 .It Dv SIOCGIFCONF
 Get interface configuration list.
 This request takes an

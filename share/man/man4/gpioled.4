@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/gpioled.4 349208 2019-06-19 20:12:00Z avg $
+.\" $FreeBSD$
 .\"
 .Dd May 23, 2019
 .Dt GPIOLED 4
@@ -71,6 +71,8 @@ to create for
 Which pin on the GPIO interface to map to this instance.
 Please note that this mask should only ever have one bit set
 (any other bits - i.e., pins - will be ignored).
+.It Va hint.gpioled.%d.invert
+If set to 1, the pin will be set to 0 to light the LED, and 1 to clear it.
 .It Va hint.gpioled.%d.state
 The initial state of the LED when the driver takes control over it.
 If set to 1 or 0, the LED will be on or off correspondingly.
@@ -136,7 +138,7 @@ The only restriction is that a GPIO pin cannot be mapped by two different
 For more details about the
 .Va gpios
 property, please consult
-.Pa /usr/src/sys/boot/fdt/dts/bindings-gpio.txt .
+.Pa /usr/src/sys/dts/bindings-gpio.txt .
 .Pp
 The property
 .Va name

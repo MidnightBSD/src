@@ -25,9 +25,9 @@
 .\" This document is derived in part from the enet man page (enet.4)
 .\" distributed with 4.3BSD Unix.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/netmap.4 357961 2020-02-15 12:05:11Z vmaffione $
+.\" $FreeBSD$
 .\"
-.Dd February 6, 2020
+.Dd March 6, 2022
 .Dt NETMAP 4
 .Os
 .Sh NAME
@@ -933,6 +933,11 @@ Batch size used when moving packets across a
 switch.
 Values above 64 generally guarantee good
 performance.
+.It Va dev.netmap.max_bridges: 8
+Max number of
+.Nm VALE
+switches that can be created. This tunable can be specified
+at loader time.
 .It Va dev.netmap.ptnet_vnet_hdr: 1
 Allow ptnet devices to use virtio-net headers
 .El
@@ -1051,7 +1056,7 @@ void receiver(void)
     for (;;) {
 	poll(&fds, 1, -1);
         while ( (buf = nm_nextpkt(d, &h)) )
-	    consume_pkt(buf, h->len);
+	    consume_pkt(buf, h.len);
     }
     nm_close(d);
 }
@@ -1100,14 +1105,14 @@ changing port names, e.g.,
 .Pp
 The following command attaches an interface and the host stack
 to a switch:
-.Dl vale-ctl -h vale2:em0
+.Dl valectl -h vale2:em0
 Other
 .Nm
 clients attached to the same switch can now communicate
 with the network card or the host.
 .Sh SEE ALSO
 .Xr vale 4 ,
-.Xr vale-ctl 4 ,
+.Xr valectl 8 ,
 .Xr bridge 8 ,
 .Xr lb 8 ,
 .Xr nmreplay 8 ,

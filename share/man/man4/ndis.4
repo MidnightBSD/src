@@ -28,7 +28,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/ndis.4 267938 2014-06-26 21:46:14Z bapt $
+.\" $FreeBSD$
 .\"
 .Dd March 14, 2010
 .Dt NDIS 4
@@ -120,6 +120,9 @@ driver-specific registry keys to control the media setting
 which can be configured via the
 .Xr sysctl 8
 command.
+.Sh DEPRECATION NOTICE
+This driver is scheduled for removal prior to the release of
+.Fx 14.0
 .Sh DIAGNOSTICS
 .Bl -diag
 .It "ndis%d: watchdog timeout"

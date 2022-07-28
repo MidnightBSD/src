@@ -14,9 +14,9 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/lagg.4 342585 2018-12-29 00:42:11Z eugen $
+.\" $FreeBSD$
 .\"
-.Dd January 23, 2016
+.Dd October 21, 2020
 .Dt LAGG 4
 .Os
 .Sh NAME
@@ -86,8 +86,6 @@ This constraint can be relaxed by setting the
 .Xr sysctl 8
 variable to a nonzero value,
 which is useful for certain bridged network setups.
-.Ic loadbalance
-mode.
 .It Ic lacp
 Supports the IEEE 802.1AX (formerly 802.3ad) Link Aggregation Control Protocol
 (LACP) and the Marker Protocol.
@@ -168,7 +166,7 @@ Gigabit Ethernet interfaces:
 .Pp
 Create a link aggregation using ROUNDROBIN with two
 .Xr bge 4
-Gigabit Ethernet interfaces and set the limit of 500 packets
+Gigabit Ethernet interfaces and set a stride of 500 packets
 per interface:
 .Bd -literal -offset indent
 # ifconfig bge0 up
@@ -194,6 +192,15 @@ device will be used:
 .Pp
 (Note the mac address of the wireless device is forced to match the wired
 device as a workaround.)
+.Pp
+The following example shows how to create an infiniband failover interface.
+.Bd -literal -offset indent
+# ifconfig ib0 up
+# ifconfig ib1 up
+# ifconfig lagg0 create laggtype infiniband
+# ifconfig lagg0 laggproto failover laggport ib0 laggport ib1 \e
+	1.1.1.1 netmask 255.255.255.0
+.Ed
 .Sh SEE ALSO
 .Xr ng_one2many 4 ,
 .Xr ifconfig 8 ,
