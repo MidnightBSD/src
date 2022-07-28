@@ -24,9 +24,9 @@
 .\" ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/ubsec.4 192220 2009-05-16 21:38:55Z brueffer $
+.\" $FreeBSD$
 .\"
-.Dd May 16, 2009
+.Dd May 14, 2020
 .Dt UBSEC 4
 .Os
 .Sh NAME
@@ -48,6 +48,15 @@ module at boot time, place the following line in
 .Bd -literal -offset indent
 ubsec_load="YES"
 .Ed
+.Sh DEPRECATION NOTICE
+The
+.Nm
+driver is not present in
+.Fx 13.0
+and later.
+The majority of crypto algorithms supported by this driver are no longer
+used by the kernel in
+.Fx 13.0 .
 .Sh DESCRIPTION
 The
 .Nm

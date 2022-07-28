@@ -14,9 +14,9 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/run.4 340369 2018-11-12 16:43:53Z bz $
+.\" $FreeBSD$
 .\"
-.Dd November 8, 2018
+.Dd May 23, 2021
 .Dt RUN 4
 .Os
 .Sh NAME
@@ -125,6 +125,7 @@ driver supports the following wireless adapters:
 .It Airlink101 AWLL6090
 .It ASUS USB-N11
 .It ASUS USB-N13 ver. A1
+.It ASUS USB-N14
 .It ASUS USB-N66
 .It ASUS WL-160N
 .It Belkin F5D8051 ver 3000
@@ -144,6 +145,7 @@ driver supports the following wireless adapters:
 .It Corega CG-WLUSB300AGN
 .It Corega CG-WLUSB300GNM
 .It D-Link DWA-130 rev B1
+.It D-Link DWA-130 rev F1
 .It D-Link DWA-140 rev B1, B2, B3, \&D1
 .It D-Link DWA-160 rev B2
 .It D-Link DWA-162
@@ -164,6 +166,7 @@ driver supports the following wireless adapters:
 .It Linksys WUSB600N
 .It Logitec LAN-W150N/U2
 .It Mvix Nubbin MS-811N
+.It Panda Wireless PAU06
 .It Planex GW-USMicroN
 .It Planex GW-US300MiniS
 .It Sitecom WL-182
@@ -250,5 +253,5 @@ driver was written by
 .Sh CAVEATS
 The
 .Nm
-driver does not support any of the 802.11n capabilities offered by the
+driver supports some of the 11n capabilities found in the
 RT2800, RT3000 and RT3900 chipsets.

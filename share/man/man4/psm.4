@@ -24,9 +24,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/psm.4 349541 2019-06-29 12:54:27Z wulf $
+.\" $FreeBSD$
 .\"
-.Dd September 26, 2016
+.Dd June 2, 2020
 .Dt PSM 4
 .Os
 .Sh NAME
@@ -361,6 +361,15 @@ the sysctl with the same name and by restarting
 .Xr moused 8
 using
 .Pa /etc/rc.d/moused .
+.Pp
+Active multiplexing support can be disabled by setting
+.Va hw.psm.mux_disabled
+to
+.Em 1
+at boot-time.
+This will prevent
+.Nm
+from enabling active multiplexing mode needed for some Synaptics touchpads.
 .Sh IOCTLS
 There are a few
 .Xr ioctl 2
@@ -591,12 +600,6 @@ You may also put zero in
 and
 .Dv rate ,
 and the default value for the fields will be selected.
-.\" .Pp
-.\" .It Dv MOUSE_GETVARS Ar mousevar_t *vars
-.\" .It Dv MOUSE_SETVARS Ar mousevar_t *vars
-.\" These commands are not supported by the
-.\" .Nm
-.\" driver.
 .Pp
 .It Dv MOUSE_READDATA Ar mousedata_t *data
 .\" The command reads the raw data from the device.
@@ -868,11 +871,6 @@ unless the X server is accessing the mouse via
 .Xr moused 8 .
 Clicking any button without moving the mouse may also work.
 .Sh BUGS
-The ioctl command
-.Dv MOUSEIOCREAD
-has been removed.
-It was never functional anyway.
-.Pp
 Enabling the extended support for Synaptics touchpads has been reported to
 cause problems with responsivity on some (newer) models of Synaptics
 hardware, particularly those with guest devices.

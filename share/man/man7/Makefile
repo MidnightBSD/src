@@ -23,13 +23,14 @@ MAN=	adding_user.7 \
 	hostname.7 \
 	intro.7 \
 	maclabel.7 \
-	mailaddr.7 \
 	mports.7 \
 	operator.7 \
+	orders.7 \
 	release.7 \
 	sdoc.7 \
 	security.7 \
 	sprog.7 \
+	stats.7 \
 	stdint.7 \
 	sticky.7 \
 	tests.7 \
@@ -43,7 +44,7 @@ MLINKS+= c99.7 c89.7
 MLINKS+= c99.7 c90.7
 
 .if ${MK_TESTS} != "no"
-ATF=	${.CURDIR}/../../../contrib/atf
+ATF=	${SRCTOP}/contrib/atf
 .PATH:	${ATF}/doc
 MAN+=	atf.7
 

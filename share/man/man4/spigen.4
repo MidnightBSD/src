@@ -23,9 +23,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/spigen.4 332942 2018-04-24 17:00:08Z ian $
+.\" $FreeBSD$
 .\"
-.Dd April 7, 2018
+.Dd August 21, 2020
 .Dt SPIGEN 4
 .Os
 .Sh NAME
@@ -57,8 +57,8 @@ device is associated with a single chip-select
 line on the bus, and all I/O performed through that instance is done
 with that chip-select line asserted.
 .Pp
-SPI data transfers are inherently bi-directional; there are not separate
-read and write operations. 
+SPI data transfers are inherently bi-directional; there are no separate
+read and write operations.
 When commands and data are sent to a device, data also comes back from
 the device, although in some cases the data may not be useful (or even
 documented or predictable for some devices).
@@ -117,7 +117,7 @@ Set the maximum clock speed (bus frequency in Hertz) to be used
 when communicating with this slave device.
 The setting remains in effect for subsequent transfers; it
 is not necessary to reset this before each transfer.
-The actual bus frequency may be lower due to hardware limitiations
+The actual bus frequency may be lower due to hardware limitations
 of the SPI bus controller device.
 .It Dv SPIGENIOC_GET_SPI_MODE Pq Vt uint32_t
 Get the SPI mode (clock polarity and phase) to be used
@@ -195,7 +195,8 @@ Empty property indicating the slave device requires chip select active high.
 .El
 .Sh SEE ALSO
 .Xr fdt 4 ,
-.Xr device.hints 5
+.Xr device.hints 5 ,
+.Xr spi 8
 .Sh HISTORY
 The
 .Nm

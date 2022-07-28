@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/vt.4 336805 2018-07-28 07:37:01Z eadler $
+.\" $FreeBSD$
 .\"
-.Dd December 28, 2017
+.Dd March 17, 2022
 .Dt "VT" 4
 .Os
 .Sh NAME
@@ -145,11 +145,11 @@ In effect, this makes the right-hand mouse button perform a paste.
 These options are checked in the order shown.
 .It Dv SC_NO_CUTPASTE
 Disable mouse support.
-.It VT_FB_DEFAULT_WIDTH=X
-Set the default width to
+.It VT_FB_MAX_WIDTH=X
+Set the maximum width to
 .Fa X .
-.It VT_FB_DEFAULT_HEIGHT=Y
-Set the default height to
+.It VT_FB_MAX_HEIGHT=Y
+Set the maximum height to
 .Fa Y .
 .El
 .Sh BACKWARDS COMPATIBILITY
@@ -197,20 +197,27 @@ prompt or in
 Set to 1 to use virtual terminals in text mode instead of graphics mode.
 Features that require graphics mode, like loadable fonts, will be
 disabled.
+.Pp
+If a KMS driver is loaded the console will switch to (and remain in)
+graphics mode.
 .It Va hw.vga.acpi_ignore_no_vga
 Set to 1 to force the usage of the VGA driver regardless of whether
 ACPI IAPC_BOOT_ARCH signals no VGA support.
 Can be used to workaround firmware bugs in the ACPI tables.
+Note no VGA support is only acknowledged when running virtualized.
+There is too many broken firmware that wrongly reports no VGA support on
+physical hardware.
 .It Va kern.vty
 Set this value to
 .Ql vt
 or
 .Ql sc
 to choose a specific system console, overriding the default.
-If not set, the default in the
+The
 .Pa GENERIC
-kernel is
-.Nm .
+kernel uses
+.Nm
+when this value is not set.
 .It Va kern.vt.color. Ns Ar colornum Ns Va .rgb
 Set this value to override default palette entry for color
 .Pa colornum
@@ -221,6 +228,10 @@ HTML-like hex triplet.
 See
 .Sx EXAMPLES
 below.
+.Pp
+Note: The
+.Nm
+VGA hardware driver does not support palette configuration.
 .It Va kern.vt.fb.default_mode
 Set this value to a graphic mode to override the default mode picked by the
 .Nm
@@ -265,7 +276,7 @@ command.
 Enable halt keyboard combination.
 .It Va kern.vt.kbd_poweroff
 Enable power off key combination.
-.It Va kern.vt.kbd_reboot.
+.It Va kern.vt.kbd_reboot
 Enable reboot key combination, usually Ctrl+Alt+Del.
 .It Va kern.vt.kbd_debug
 Enable debug request key combination, usually Ctrl+Alt+Esc.

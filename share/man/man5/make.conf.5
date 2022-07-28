@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man5/make.conf.5 329145 2018-02-12 01:08:44Z kevans $
+.\" $FreeBSD$
 .\"
-.Dd March 29, 2016
+.Dd September 27, 2018
 .Dt MAKE.CONF 5
 .Os
 .Sh NAME
@@ -86,14 +86,14 @@ which are usually found in
 .Pa /usr/src ,
 .Pa /usr/doc ,
 and
-.Pa /usr/mports .
+.Pa /usr/ports .
 As a rule, the system administrator creates
 .Nm
 when the values of certain control variables need to be changed
 from their defaults.
 .Pp
 The system build procedures occur in four broad areas:
-the world, the kernel, documentation and mports.
+the world, the kernel, documentation and ports.
 Variables set in
 .Nm
 may be applicable in one, two, or all four of these areas.
@@ -104,6 +104,13 @@ option of
 .Xr make 1
 or in
 .Xr environ 7 .
+In the case of world and kernel builds it is possible to put these variables
+into
+.Xr src.conf 5
+instead of
+.Nm .
+This way the environment for documentation and ports builds is not polluted
+by unrelated variables.
 .Pp
 The following lists provide a name and short description for each
 variable you can use during the indicated builds.
@@ -176,6 +183,11 @@ value, use
 .Dq Li +=
 instead of
 .Dq Li = .
+.It Va DTC
+.Pq Vt str
+Select the compiler for DTS (Device Tree Syntax) file.
+.Va DTC
+is initially set to the value of dtc
 .It Va INSTALL
 .Pq Vt str
 the default install command.
@@ -223,18 +235,19 @@ Set this to not update the doc tree during
 .Dq Li "make update" .
 .It Va NO_PORTSUPDATE
 .Pq Vt bool
-Set this to not update the mports tree during
+Set this to not update the ports tree during
 .Dq Li "make update" .
 .It Va SVN_UPDATE
 .Pq Vt bool
 Set this to use
 .Xr svn 1
+or
+.Xr svnlite 1
 to update your
 .Pa src
 tree with
 .Dq Li "make update" .
-Note that since a subversion client is not included in the base system,
-you will need to set
+Note that you can set
 .Va SVN
 to the full path of a
 .Xr svn 1
@@ -304,7 +317,7 @@ during
 .Pq Vt bool
 Set to not build modules with the kernel.
 .It Va PORTS_MODULES
-Set this to the list of mports you wish to rebuild every time the kernel
+Set this to the list of ports you wish to rebuild every time the kernel
 is built.
 .It Va WITHOUT_MODULES
 .Pq Vt str
@@ -388,12 +401,14 @@ console driver to
 and allow access over FireWire(IEEE1394) using
 .Xr dconschat 8 .
 Currently, only i386 and amd64 are supported.
-.It Va MALLOC_PRODUCTION
-.Pq Vt bool
-Set this to disable assertions and statistics gathering in
-.Xr malloc 3 .
-It also defaults the A and J runtime options to off.
-Disabled by default on -CURRENT.
+.It Va MAN_ARCH
+.Pq Vt str
+Space-delimited list of one or more MACHINE and/or MACHINE_ARCH values
+for which section 4 man pages will be installed.
+The special value
+.Sq all
+installs all available architectures.
+The default is the MACHINE and MACHINE_ARCH being built.
 .It Va MODULES_WITH_WORLD
 .Pq Vt bool
 Set to build modules with the system instead of the kernel.
@@ -633,7 +648,7 @@ for postscript or graphics printers with a ghostscript
 filter, or both.
 .El
 .Ss "BUILDING PORTS"
-Several make variables can be set that affect the building of mports.
+Several make variables can be set that affect the building of ports.
 These variables and their effects are documented in
 .Xr ports 7 ,
 .Pa ${PORTSDIR}/Mk/*
@@ -644,7 +659,7 @@ Porter's Handbook.
 .Bl -tag -width ".Pa /usr/share/examples/etc/make.conf" -compact
 .It Pa /etc/make.conf
 .It Pa /usr/doc/Makefile
-.It Pa /usr/mports/Makefile
+.It Pa /usr/ports/Makefile
 .It Pa /usr/share/examples/etc/make.conf
 .It Pa /usr/share/mk/sys.mk
 .It Pa /usr/src/Makefile
@@ -655,6 +670,7 @@ Porter's Handbook.
 .Xr install 1 ,
 .Xr make 1 ,
 .Xr src.conf 5 ,
+.Xr style.Makefile 5 ,
 .Xr environ 7 ,
 .Xr ports 7 ,
 .Xr sendmail 8

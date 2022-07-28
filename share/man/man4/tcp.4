@@ -32,9 +32,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)tcp.4	8.1 (Berkeley) 6/5/93
-.\" $FreeBSD: stable/11/share/man/man4/tcp.4 337391 2018-08-06 18:46:09Z jtl $
+.\" $FreeBSD$
 .\"
-.Dd August 6, 2018
+.Dd June 27, 2021
 .Dt TCP 4
 .Os
 .Sh NAME
@@ -148,6 +148,54 @@ connection.
 See
 .Xr mod_cc 4
 for details.
+.It Dv TCP_FASTOPEN
+Enable or disable TCP Fast Open (TFO).
+To use this option, the kernel must be built with the
+.Dv TCP_RFC7413
+option.
+.Pp
+This option can be set on the socket either before or after the
+.Xr listen 2
+is invoked.
+Clearing this option on a listen socket after it has been set has no effect on
+existing TFO connections or TFO connections in progress; it only prevents new
+TFO connections from being established.
+.Pp
+For passively-created sockets, the
+.Dv TCP_FASTOPEN
+socket option can be queried to determine whether the connection was established
+using TFO.
+Note that connections that are established via a TFO
+.Tn SYN ,
+but that fall back to using a non-TFO
+.Tn SYN|ACK
+will have the
+.Dv TCP_FASTOPEN
+socket option set.
+.Pp
+In addition to the facilities defined in RFC7413, this implementation supports a
+pre-shared key (PSK) mode of operation in which the TFO server requires the
+client to be in posession of a shared secret in order for the client to be able
+to successfully open TFO connections with the server.
+This is useful, for example, in environments where TFO servers are exposed to
+both internal and external clients and only wish to allow TFO connections from
+internal clients.
+.Pp
+In the PSK mode of operation, the server generates and sends TFO cookies to
+requesting clients as usual.
+However, when validating cookies received in TFO SYNs from clients, the server
+requires the client-supplied cookie to equal
+.Bd -literal -offset left
+SipHash24(key=\fI16-byte-psk\fP, msg=\fIcookie-sent-to-client\fP)
+.Ed
+.Pp
+Multiple concurrent valid pre-shared keys are supported so that time-based
+rolling PSK invalidation policies can be implemented in the system.
+The default number of concurrent pre-shared keys is 2.
+.Pp
+This can be adjusted with the
+.Dv TCP_RFC7413_MAX_PSKS
+kernel option.
 .It Dv TCP_FUNCTION_BLK
 Select or query the set of functions that TCP will use for this connection.
 This allows a user to select an alternate TCP stack.
@@ -333,8 +381,19 @@ MIB.
 .Bl -tag -width ".Va TCPCTL_DO_RFC1323"
 .It Dv TCPCTL_DO_RFC1323
 .Pq Va rfc1323
-Implement the window scaling and timestamp options of RFC 1323
+Implement the window scaling and timestamp options of RFC 1323/RFC 7323
 (default is true).
+.It Va tolerate_missing_ts
+Tolerate the missing of timestamps (RFC 1323/RFC 7323) for
+.Tn TCP
+segments belonging to
+.Tn TCP
+connections for which support of
+.Tn TCP
+timestamps has been negotiated.
+As of June 2021, several TCP stacks are known to violate RFC 7323, including
+modern widely deployed ones.
+Therefore the default is 1, i.e., the missing of timestamps is tolerated.
 .It Dv TCPCTL_MSSDFLT
 .Pq Va mssdflt
 The default value used for the maximum segment size
@@ -459,7 +518,7 @@ The actual limit applied to a session's reassembly queue will be the lower of
 the system-calculated automatic limit and the user-specified
 .Va reass.maxqueuelen
 limit.
-.It Va rexmit_min , rexmit_slop
+.It Va rexmit_initial , rexmit_min , rexmit_slop
 Adjust the retransmit timer calculation for
 .Tn TCP .
 The slop is
@@ -481,6 +540,7 @@ code.
 For this reason, we use 200ms of slop and a near-0
 minimum, which gives us an effective minimum of 200ms (similar to
 .Tn Linux ) .
+The initial value is used before an RTT measurement has been performed.
 .It Va initcwnd_segments
 Enable the ability to specify initial congestion window in number of segments.
 The default value is 10 as suggested by RFC 6928.
@@ -492,6 +552,9 @@ The value should be relative to the link capacity.
 Start with small values for lower-capacity links.
 Large bursts can cause buffer overruns and packet drops if routers have small
 buffers or the link is experiencing congestion.
+.It Va rfc6675_pipe
+Calculate the bytes in flight using the algorithm described in RFC 6675, and
+is also a prerequisite to enable Proportional Rate Reduction.
 .It Va rfc3042
 Enable the Limited Transmit algorithm as described in RFC 3042.
 It helps avoid timeouts on lossy links and also when the congestion window
@@ -569,37 +632,141 @@ specific connection.
 This is needed to help with connection establishment
 when a broken firewall is in the network path.
 .It Va pmtud_blackhole_detection
-Turn on automatic path MTU blackhole detection.
-In case of retransmits OS will
-lower the MSS to check if it's MTU problem.
-If current MSS is greater than
-configured value to try, it will be set to configured value, otherwise,
-MSS will be set to default values
+Enable automatic path MTU blackhole detection.
+In case of retransmits of MSS sized segments,
+the OS will lower the MSS to check if it's an MTU problem.
+If the current MSS is greater than the configured value to try
+.Po Va net.inet.tcp.pmtud_blackhole_mss
+and
+.Va net.inet.tcp.v6pmtud_blackhole_mss
+.Pc ,
+it will be set to this value, otherwise,
+the MSS will be set to the default values
 .Po Va net.inet.tcp.mssdflt
 and
 .Va net.inet.tcp.v6mssdflt
 .Pc .
+Settings:
+.Bl -tag -compact
+.It 0
+Disable path MTU blackhole detection.
+.It 1
+Enable path MTU blackhole detection for IPv4 and IPv6.
+.It 2
+Enable path MTU blackhole detection only for IPv4.
+.It 3
+Enable path MTU blackhole detection only for IPv6.
+.El
 .It Va pmtud_blackhole_mss
 MSS to try for IPv4 if PMTU blackhole detection is turned on.
 .It Va v6pmtud_blackhole_mss
 MSS to try for IPv6 if PMTU blackhole detection is turned on.
-.It Va pmtud_blackhole_activated
-Number of times configured values were used in an attempt to downshift.
-.It Va pmtud_blackhole_activated_min_mss
-Number of times default MSS was used in an attempt to downshift.
-.It Va pmtud_blackhole_failed
-Number of connections for which retransmits continued even after MSS
-downshift.
+.It Va fastopen.acceptany
+When non-zero, all client-supplied TFO cookies will be considered to be valid.
+The default is 0.
+.It Va fastopen.autokey
+When this and
+.Va net.inet.tcp.fastopen.server_enable
+are non-zero, a new key will be automatically generated after this specified
+seconds.
+The default is 120.
+.It Va fastopen.ccache_bucket_limit
+The maximum number of entries in a client cookie cache bucket.
+The default value can be tuned with the
+.Dv TCP_FASTOPEN_CCACHE_BUCKET_LIMIT_DEFAULT
+kernel option or by setting
+.Va net.inet.tcp.fastopen_ccache_bucket_limit
+in the
+.Xr loader 8 .
+.It Va fastopen.ccache_buckets
+The number of client cookie cache buckets.
+Read-only.
+The value can be tuned with the
+.Dv TCP_FASTOPEN_CCACHE_BUCKETS_DEFAULT
+kernel option or by setting
+.Va fastopen.ccache_buckets
+in the
+.Xr loader 8 .
+.It Va fastopen.ccache_list
+Print the client cookie cache.
+Read-only.
+.It Va fastopen.client_enable
+When zero, no new active (i.e., client) TFO connections can be created.
+On the transition from enabled to disabled, the client cookie cache is cleared
+and disabled.
+The transition from enabled to disabled does not affect any active TFO
+connections in progress; it only prevents new ones from being established.
+The default is 0.
+.It Va fastopen.keylen
+The key length in bytes.
+Read-only.
+.It Va fastopen.maxkeys
+The maximum number of keys supported.
+Read-only,
+.It Va fastopen.maxpsks
+The maximum number of pre-shared keys supported.
+Read-only.
+.It Va fastopen.numkeys
+The current number of keys installed.
+Read-only.
+.It Va fastopen.numpsks
+The current number of pre-shared keys installed.
+Read-only.
+.It Va fastopen.path_disable_time
+When a failure occurs while trying to create a new active (i.e., client) TFO
+connection, new active connections on the same path, as determined by the tuple
+.Brq client_ip, server_ip, server_port ,
+will be forced to be non-TFO for this many seconds.
+Note that the path disable mechanism relies on state stored in client cookie
+cache entries, so it is possible for the disable time for a given path to be
+reduced if the corresponding client cookie cache entry is reused due to resource
+pressure before the disable period has elapsed.
+The default is
+.Dv TCP_FASTOPEN_PATH_DISABLE_TIME_DEFAULT .
+.It Va fastopen.psk_enable
+When non-zero, pre-shared key (PSK) mode is enabled for all TFO servers.
+On the transition from enabled to disabled, all installed pre-shared keys are
+removed.
+The default is 0.
+.It Va fastopen.server_enable
+When zero, no new passive (i.e., server) TFO connections can be created.
+On the transition from enabled to disabled, all installed keys and pre-shared
+keys are removed.
+On the transition from disabled to enabled, if
+.Va fastopen.autokey
+is non-zero and there are no keys installed, a new key will be generated
+immediately.
+The transition from enabled to disabled does not affect any passive TFO
+connections in progress; it only prevents new ones from being established.
+The default is 0.
+.It Va fastopen.setkey
+Install a new key by writing
+.Va net.inet.tcp.fastopen.keylen
+bytes to this sysctl.
+.It Va fastopen.setpsk
+Install a new pre-shared key by writing
+.Va net.inet.tcp.fastopen.keylen
+bytes to this sysctl.
 .It Va functions_available
 List of available TCP function blocks (TCP stacks).
 .It Va functions_default
 The default TCP function block (TCP stack).
+.It Va functions_inherit_listen_socket_stack
+Determines whether to inherit listen socket's tcp stack or use the current
+system default tcp stack, as defined by
+.Va functions_default
+.Pc .
+Default is true.
 .It Va insecure_rst
 Use criteria defined in RFC793 instead of RFC5961 for accepting RST segments.
 Default is false.
 .It Va insecure_syn
 Use criteria defined in RFC793 instead of RFC5961 for accepting SYN segments.
 Default is false.
+.It Va ts_offset_per_conn
+When initializing the TCP timestamps, use a per connection offset instead of a
+per host pair offset.
+Default is to use per connection offsets as recommended in RFC 7323.
 .El
 .Sh ERRORS
 A socket operation may fail with one of the following errors returned:
@@ -607,7 +774,7 @@ A socket operation may fail with one of the following errors returned:
 .It Bq Er EISCONN
 when trying to establish a connection on a socket which
 already has one;
-.It Bq Er ENOBUFS
+.It Bo Er ENOBUFS Bc or Bo Er ENOMEM Bc
 when the system runs out of memory for
 an internal data structure;
 .It Bq Er ETIMEDOUT
@@ -647,13 +814,22 @@ when trying to use a TCP function block that is not available;
 .Xr mod_cc 4 ,
 .Xr siftr 4 ,
 .Xr syncache 4 ,
-.Xr setkey 8
+.Xr setkey 8 ,
+.Xr tcp_functions 9
 .Rs
 .%A "V. Jacobson"
-.%A "R. Braden"
+.%A "B. Braden"
 .%A "D. Borman"
 .%T "TCP Extensions for High Performance"
 .%O "RFC 1323"
+.Re
+.Rs
+.%A "D. Borman"
+.%A "B. Braden"
+.%A "V. Jacobson"
+.%A "R. Scheffenegger"
+.%T "TCP Extensions for High Performance"
+.%O "RFC 7323"
 .Re
 .Rs
 .%A "A. Heffernan"

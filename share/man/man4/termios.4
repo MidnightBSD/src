@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)termios.4	8.4 (Berkeley) 4/19/94
-.\" $FreeBSD: stable/11/share/man/man4/termios.4 263142 2014-03-14 03:07:51Z eadler $
+.\" $FreeBSD$
 .\"
 .Dd December 26, 2009
 .Dt TERMIOS 4
@@ -58,9 +58,7 @@ a connection being present.
 In practice, applications
 seldom open these files; they are opened by special programs, such
 as
-.Xr getty 8
-or
-.Xr rlogind 8 ,
+.Xr getty 8 ,
 and become
 an application's standard input, output, and error files.
 .Ss Job Control in a Nutshell
@@ -1577,6 +1575,7 @@ the values in the header
 .Sh SEE ALSO
 .Xr stty 1 ,
 .Xr tcgetsid 3 ,
+.Xr tcgetwinsize 3,
 .Xr tcsendbreak 3 ,
 .Xr tcsetattr 3 ,
 .Xr tcsetsid 3 ,

@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man9/BUS_CONFIG_INTR.9 267936 2014-06-26 21:44:30Z bapt $
+.\" $FreeBSD$
 .\"
-.Dd January 6, 2005
+.Dd January 15, 2017
 .Dt BUS_CONFIG_INTR 9
 .Os
 .\"
@@ -45,7 +45,7 @@
 The
 .Fn BUS_CONFIG_INTR
 method allows bus or device drivers to provide interrupt polarity and trigger
-mode to parent busses.
+mode to parent buses.
 This typically bubbles all the way up to the root bus (e.g.\& nexus) where the
 necessary actions are taken to actually program the hardware.
 Since the

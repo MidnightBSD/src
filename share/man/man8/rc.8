@@ -29,7 +29,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)rc.8	8.2 (Berkeley) 12/11/93
-.\" $FreeBSD: stable/11/share/man/man8/rc.8 351207 2019-08-19 07:42:09Z avg $
+.\" $FreeBSD$
 .\"
 .Dd August 7, 2019
 .Dt RC 8
@@ -189,6 +189,14 @@ also exists (because it was created by a script), then delete it and reboot.
 .Ss Operation of Nm rc.shutdown
 .Bl -enum
 .It
+Set
+.Va rc_shutdown
+to the value of the first argument passed to
+.Nm rc.shutdown
+or to
+.Dq Li unspecified
+if no argument was passed.
+.It
 Source
 .Pa /etc/rc.subr
 to load various
@@ -319,6 +327,21 @@ If the script starts a process (rather than performing a one-off
 operation), show the status of the process.
 Otherwise it is not necessary to support this argument.
 Defaults to displaying the process ID of the program (if running).
+.It Cm enable
+Enable the service in
+.Xr rc.conf 5 .
+.It Cm disable
+Disable the service in
+.Xr rc.conf 5 .
+.It Cm delete
+Remove the service from
+.Xr rc.conf 5 .
+If
+.Ql Li service_delete_empty
+is set to
+.Dq Li YES ,
+.Pa /etc/rc.conf.d/$servicename
+will be deleted if empty after modification.
 .It Cm describe
 Print a short description of what the script does.
 .It Cm extracommands
@@ -450,15 +473,6 @@ disables the loading of firewall rules
 .It Ar filename
 will load the rules in the given filename (full path required).
 .El
-.Pp
-The
-.Pa /etc/rc.d/atm*
-scripts are used to configure ATM network interfaces.
-The interfaces are configured in three passes.
-The first pass performs the initial interface configuration.
-The second pass completes the interface configuration and defines PVCs and
-permanent ATMARP entries.
-The third pass starts any ATM daemons.
 .Pp
 Most daemons, including network related daemons, have their own script in
 .Pa /etc/rc.d/ ,
