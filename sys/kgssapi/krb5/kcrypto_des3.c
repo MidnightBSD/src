@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
  * Developed with Red Inc: Alfred Perlstein <alfred@freebsd.org>
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kgssapi/krb5/kcrypto_des3.c 351358 2019-08-21 22:42:08Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -46,7 +48,7 @@ __FBSDID("$FreeBSD: stable/11/sys/kgssapi/krb5/kcrypto_des3.c 351358 2019-08-21 
 
 struct des3_state {
 	struct mtx	ds_lock;
-	uint64_t	ds_session;
+	crypto_session_t ds_session;
 };
 
 static void
@@ -156,7 +158,7 @@ des3_crypto_cb(struct cryptop *crp)
 	int error;
 	struct des3_state *ds = (struct des3_state *) crp->crp_opaque;
 	
-	if (CRYPTO_SESID2CAPS(ds->ds_session) & CRYPTOCAP_F_SYNC)
+	if (crypto_ses2caps(ds->ds_session) & CRYPTOCAP_F_SYNC)
 		return (0);
 
 	error = crp->crp_etype;
@@ -193,7 +195,7 @@ des3_encrypt_1(const struct krb5_key_state *ks, struct mbuf *inout,
 	crd->crd_next = NULL;
 	crd->crd_alg = CRYPTO_3DES_CBC;
 
-	crp->crp_sid = ds->ds_session;
+	crp->crp_session = ds->ds_session;
 	crp->crp_flags = CRYPTO_F_IMBUF | CRYPTO_F_CBIFSYNC;
 	crp->crp_buf = (void *) inout;
 	crp->crp_opaque = (void *) ds;
@@ -201,7 +203,7 @@ des3_encrypt_1(const struct krb5_key_state *ks, struct mbuf *inout,
 
 	error = crypto_dispatch(crp);
 
-	if ((CRYPTO_SESID2CAPS(ds->ds_session) & CRYPTOCAP_F_SYNC) == 0) {
+	if ((crypto_ses2caps(ds->ds_session) & CRYPTOCAP_F_SYNC) == 0) {
 		mtx_lock(&ds->ds_lock);
 		if (!error && !(crp->crp_flags & CRYPTO_F_DONE))
 			error = msleep(crp, &ds->ds_lock, 0, "gssdes3", 0);
@@ -246,7 +248,7 @@ des3_checksum(const struct krb5_key_state *ks, int usage,
 	crd->crd_next = NULL;
 	crd->crd_alg = CRYPTO_SHA1_HMAC;
 
-	crp->crp_sid = ds->ds_session;
+	crp->crp_session = ds->ds_session;
 	crp->crp_ilen = inlen;
 	crp->crp_olen = 20;
 	crp->crp_etype = 0;
@@ -257,7 +259,7 @@ des3_checksum(const struct krb5_key_state *ks, int usage,
 
 	error = crypto_dispatch(crp);
 
-	if ((CRYPTO_SESID2CAPS(ds->ds_session) & CRYPTOCAP_F_SYNC) == 0) {
+	if ((crypto_ses2caps(ds->ds_session) & CRYPTOCAP_F_SYNC) == 0) {
 		mtx_lock(&ds->ds_lock);
 		if (!error && !(crp->crp_flags & CRYPTO_F_DONE))
 			error = msleep(crp, &ds->ds_lock, 0, "gssdes3", 0);

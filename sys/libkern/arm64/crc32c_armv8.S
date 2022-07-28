@@ -26,7 +26,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/sys/libkern/arm64/crc32c_armv8.S 321593 2017-07-26 23:14:21Z emaste $");
+__FBSDID("$FreeBSD$");
 .arch armv8-a+crc
 
 /*

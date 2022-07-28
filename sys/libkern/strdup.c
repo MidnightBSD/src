@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 Networks Associates Technology, Inc.
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/libkern/strdup.c 116189 2003-06-11 05:37:42Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -38,13 +40,22 @@ __FBSDID("$FreeBSD: stable/11/sys/libkern/strdup.c 116189 2003-06-11 05:37:42Z o
 #include <sys/malloc.h>
 
 char *
-strdup(const char *string, struct malloc_type *type)
+strdup_flags(const char *string, struct malloc_type *type, int flags)
 {
 	size_t len;
 	char *copy;
 
 	len = strlen(string) + 1;
-	copy = malloc(len, type, M_WAITOK);
+	copy = malloc(len, type, flags);
+	if (copy == NULL)
+		return (NULL);
 	bcopy(string, copy, len);
 	return (copy);
+}
+
+char *
+strdup(const char *string, struct malloc_type *type)
+{
+
+	return (strdup_flags(string, type, M_WAITOK));
 }

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -27,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_types.h	8.3 (Berkeley) 4/28/95
- * $FreeBSD: stable/11/sys/net/if_types.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  * $NetBSD: if_types.h,v 1.16 2000/04/19 06:30:53 itojun Exp $
  */
 
@@ -113,7 +115,7 @@ typedef enum {
 	IFT_QLLC	= 0x44,		/* SNA QLLC			*/
 	IFT_FASTETHERFX	= 0x45,		/* Fast Ethernet (100BaseFX)	*/
 	IFT_CHANNEL	= 0x46,		/* channel			*/
-	IFT_IEEE80211	= 0x47,		/* radio spread spectrum	*/
+	IFT_IEEE80211	= 0x47,		/* radio spread spectrum (unused) */
 	IFT_IBM370PARCHAN = 0x48,	/* IBM System 360/370 OEMI Channel */
 	IFT_ESCON	= 0x49,		/* IBM Enterprise Systems Connection */
 	IFT_DLSW	= 0x4a,		/* Data Link Switching */
@@ -205,7 +207,7 @@ typedef enum {
 	IFT_USB		= 0xa0,		/* USB Interface */
 	IFT_IEEE8023ADLAG = 0xa1,	/* IEEE 802.3ad Link Aggregate*/
 	IFT_BGPPOLICYACCOUNTING = 0xa2,	/* BGP Policy Accounting */
-	IFT_FRF16MFRBUNDLE = 0xa3,	/* FRF.16 Multilik Frame Relay*/
+	IFT_FRF16MFRBUNDLE = 0xa3,	/* FRF.16 Multilink Frame Relay*/
 	IFT_H323GATEKEEPER = 0xa4,	/* H323 Gatekeeper */
 	IFT_H323PROXY	= 0xa5,		/* H323 Voice and Video Proxy */
 	IFT_MPLS	= 0xa6,		/* MPLS */
@@ -240,6 +242,7 @@ typedef enum {
 	IFT_OPTICALCHANNEL = 0xc3,	/* Optical Channel */
 	IFT_OPTICALTRANSPORT = 0xc4,	/* Optical Transport */
 	IFT_INFINIBAND	= 0xc7,		/* Infiniband */
+	IFT_INFINIBANDLAG = 0xc8,	/* Infiniband Link Aggregate */
 	IFT_BRIDGE	= 0xd1,		/* Transparent bridge interface */
 	IFT_STF		= 0xd7,		/* 6to4 interface */
 

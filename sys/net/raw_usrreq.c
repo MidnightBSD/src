@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.
  * All rights reserved.
@@ -11,7 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -28,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)raw_usrreq.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/11/sys/net/raw_usrreq.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -95,13 +97,13 @@ raw_input_ext(struct mbuf *m0, struct sockproto *proto, struct sockaddr *src,
 			continue;
 		if (last) {
 			struct mbuf *n;
-			n = m_copy(m, 0, (int)M_COPYALL);
+			n = m_copym(m, 0, M_COPYALL, M_NOWAIT);
 			if (n) {
 				if (sbappendaddr(&last->so_rcv, src,
-				    n, (struct mbuf *)0) == 0)
-					/* should notify about lost packet */
+				    n, (struct mbuf *)0) == 0) {
+					soroverflow(last);
 					m_freem(n);
-				else
+				} else
 					sorwakeup(last);
 			}
 		}
@@ -109,9 +111,10 @@ raw_input_ext(struct mbuf *m0, struct sockproto *proto, struct sockaddr *src,
 	}
 	if (last) {
 		if (sbappendaddr(&last->so_rcv, src,
-		    m, (struct mbuf *)0) == 0)
+		    m, (struct mbuf *)0) == 0) {
+			soroverflow(last);
 			m_freem(m);
-		else
+		} else
 			sorwakeup(last);
 	} else
 		m_freem(m);
@@ -225,9 +228,10 @@ raw_usend(struct socket *so, int flags, struct mbuf *m, struct sockaddr *nam,
 	KASSERT(sotorawcb(so) != NULL, ("raw_usend: rp == NULL"));
 
 	if ((flags & PRUS_OOB) || (control && control->m_len)) {
-		/* XXXRW: Should control also be freed here? */
 		if (m != NULL)
 			m_freem(m);
+		if (control != NULL)
+			m_freem(control);
 		return (EOPNOTSUPP);
 	}
 

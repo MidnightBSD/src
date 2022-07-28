@@ -1,7 +1,9 @@
-/*	$FreeBSD: stable/11/sys/net/if_stf.c 340951 2018-11-26 11:17:12Z eugen $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: if_stf.c,v 1.73 2001/12/03 11:08:30 keiichi Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 2000 WIDE Project.
  * All rights reserved.
  *
@@ -83,7 +85,6 @@
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/module.h>
-#include <sys/protosw.h>
 #include <sys/proc.h>
 #include <sys/queue.h>
 #include <sys/rmlock.h>
@@ -149,19 +150,7 @@ static const char stfname[] = "stf";
 static MALLOC_DEFINE(M_STF, stfname, "6to4 Tunnel Interface");
 static const int ip_stf_ttl = 40;
 
-extern  struct domain inetdomain;
-static int in_stf_input(struct mbuf **, int *, int);
-static struct protosw in_stf_protosw = {
-	.pr_type =		SOCK_RAW,
-	.pr_domain =		&inetdomain,
-	.pr_protocol =		IPPROTO_IPV6,
-	.pr_flags =		PR_ATOMIC|PR_ADDR,
-	.pr_input =		in_stf_input,
-	.pr_output =		rip_output,
-	.pr_ctloutput =		rip_ctloutput,
-	.pr_usrreqs =		&rip_usrreqs
-};
-
+static int in_stf_input(struct mbuf *, int, int, void *);
 static char *stfnames[] = {"stf0", "stf", "6to4", NULL};
 
 static int stfmodevent(module_t, int, void *);
@@ -179,7 +168,16 @@ static int stf_ioctl(struct ifnet *, u_long, caddr_t);
 static int stf_clone_match(struct if_clone *, const char *);
 static int stf_clone_create(struct if_clone *, char *, size_t, caddr_t);
 static int stf_clone_destroy(struct if_clone *, struct ifnet *);
-static struct if_clone *stf_cloner;
+VNET_DEFINE_STATIC(struct if_clone *, stf_cloner);
+#define V_stf_cloner	VNET(stf_cloner)
+
+static const struct encap_config ipv4_encap_cfg = {
+	.proto = IPPROTO_IPV6,
+	.min_length = sizeof(struct ip),
+	.exact_match = (sizeof(in_addr_t) << 3) + 8,
+	.check = stf_encapcheck,
+	.input = in_stf_input
+};
 
 static int
 stf_clone_match(struct if_clone *ifc, const char *name)
@@ -248,8 +246,7 @@ stf_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 	ifp->if_dname = stfname;
 	ifp->if_dunit = IF_DUNIT_NONE;
 
-	sc->encap_cookie = encap_attach_func(AF_INET, IPPROTO_IPV6,
-	    stf_encapcheck, &in_stf_protosw, sc);
+	sc->encap_cookie = ip_encap_attach(&ipv4_encap_cfg, sc, M_WAITOK);
 	if (sc->encap_cookie == NULL) {
 		if_printf(ifp, "attach failed\n");
 		free(sc, M_STF);
@@ -270,9 +267,9 @@ static int
 stf_clone_destroy(struct if_clone *ifc, struct ifnet *ifp)
 {
 	struct stf_softc *sc = ifp->if_softc;
-	int err;
+	int err __unused;
 
-	err = encap_detach(sc->encap_cookie);
+	err = ip_encap_detach(sc->encap_cookie);
 	KASSERT(err == 0, ("Unexpected error detaching encap_cookie"));
 	bpfdetach(ifp);
 	if_detach(ifp);
@@ -284,17 +281,33 @@ stf_clone_destroy(struct if_clone *ifc, struct ifnet *ifp)
 	return (0);
 }
 
+static void
+vnet_stf_init(const void *unused __unused)
+{
+	V_stf_cloner = if_clone_advanced(stfname, 0, stf_clone_match,
+	    stf_clone_create, stf_clone_destroy);
+}
+VNET_SYSINIT(vnet_stf_init, SI_SUB_PSEUDO, SI_ORDER_ANY, vnet_stf_init, NULL);
+
+static void
+vnet_stf_uninit(const void *unused __unused)
+{
+	if_clone_detach(V_stf_cloner);
+	V_stf_cloner = NULL;
+}
+VNET_SYSUNINIT(vnet_stf_uninit, SI_SUB_PSEUDO, SI_ORDER_ANY, vnet_stf_uninit,
+    NULL);
+
 static int
 stfmodevent(module_t mod, int type, void *data)
 {
 
 	switch (type) {
 	case MOD_LOAD:
-		stf_cloner = if_clone_advanced(stfname, 0, stf_clone_match,
-		    stf_clone_create, stf_clone_destroy);
+		/* Done in vnet_stf_init() */
 		break;
 	case MOD_UNLOAD:
-		if_clone_detach(stf_cloner);
+		/* Done in vnet_stf_uninit() */
 		break;
 	default:
 		return (EOPNOTSUPP);
@@ -321,23 +334,22 @@ stf_encapcheck(const struct mbuf *m, int off, int proto, void *arg)
 
 	sc = (struct stf_softc *)arg;
 	if (sc == NULL)
-		return 0;
+		return (0);
 
 	if ((STF2IFP(sc)->if_flags & IFF_UP) == 0)
-		return 0;
+		return (0);
 
 	/* IFF_LINK0 means "no decapsulation" */
 	if ((STF2IFP(sc)->if_flags & IFF_LINK0) != 0)
-		return 0;
+		return (0);
 
 	if (proto != IPPROTO_IPV6)
-		return 0;
+		return (0);
 
-	/* LINTED const cast */
-	m_copydata((struct mbuf *)(uintptr_t)m, 0, sizeof(ip), (caddr_t)&ip);
+	m_copydata(m, 0, sizeof(ip), (caddr_t)&ip);
 
 	if (ip.ip_v != 4)
-		return 0;
+		return (0);
 
 	if (stf_getsrcifa6(STF2IFP(sc), &addr6, &mask6) != 0)
 		return (0);
@@ -348,7 +360,7 @@ stf_encapcheck(const struct mbuf *m, int off, int proto, void *arg)
 	 * success on: dst = 10.1.1.1, ia6->ia_addr = 2002:0a01:0101:...
 	 */
 	if (bcmp(GET_V4(&addr6), &ip.ip_dst, sizeof(ip.ip_dst)) != 0)
-		return 0;
+		return (0);
 
 	/*
 	 * check if IPv4 src matches the IPv4 address derived from the
@@ -363,10 +375,10 @@ stf_encapcheck(const struct mbuf *m, int off, int proto, void *arg)
 	b = ip.ip_src;
 	b.s_addr &= mask.s_addr;
 	if (a.s_addr != b.s_addr)
-		return 0;
+		return (0);
 
 	/* stf interface makes single side match only */
-	return 32;
+	return (32);
 }
 
 static int
@@ -380,7 +392,7 @@ stf_getsrcifa6(struct ifnet *ifp, struct in6_addr *addr, struct in6_addr *mask)
 	struct in_addr in;
 
 	if_addr_rlock(ifp);
-	TAILQ_FOREACH(ia, &ifp->if_addrhead, ifa_link) {
+	CK_STAILQ_FOREACH(ia, &ifp->if_addrhead, ifa_link) {
 		if (ia->ifa_addr->sa_family != AF_INET6)
 			continue;
 		sin6 = (struct sockaddr_in6 *)ia->ifa_addr;
@@ -437,7 +449,7 @@ stf_output(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
 	if ((ifp->if_flags & IFF_UP) == 0) {
 		m_freem(m);
 		if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
-		return ENETDOWN;
+		return (ENETDOWN);
 	}
 
 	/*
@@ -448,14 +460,14 @@ stf_output(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
 	if (stf_getsrcifa6(ifp, &addr6, &mask6) != 0) {
 		m_freem(m);
 		if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
-		return ENETDOWN;
+		return (ENETDOWN);
 	}
 
 	if (m->m_len < sizeof(*ip6)) {
 		m = m_pullup(m, sizeof(*ip6));
 		if (!m) {
 			if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
-			return ENOBUFS;
+			return (ENOBUFS);
 		}
 	}
 	ip6 = mtod(m, struct ip6_hdr *);
@@ -473,7 +485,7 @@ stf_output(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
 	else {
 		m_freem(m);
 		if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
-		return ENETUNREACH;
+		return (ENETUNREACH);
 	}
 	bcopy(ptr, &in4, sizeof(in4));
 
@@ -492,7 +504,7 @@ stf_output(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
 	M_PREPEND(m, sizeof(struct ip), M_NOWAIT);
 	if (m == NULL) {
 		if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
-		return ENOBUFS;
+		return (ENOBUFS);
 	}
 	ip = mtod(m, struct ip *);
 
@@ -512,7 +524,7 @@ stf_output(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
 	if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 	error = ip_output(m, NULL, NULL, 0, NULL, NULL);
 
-	return error;
+	return (error);
 }
 
 static int
@@ -526,9 +538,9 @@ isrfc1918addr(struct in_addr *in)
 	    (ntohl(in->s_addr) & 0xff000000) >> 24 == 10 ||
 	    (ntohl(in->s_addr) & 0xfff00000) >> 16 == 172 * 256 + 16 ||
 	    (ntohl(in->s_addr) & 0xffff0000) >> 16 == 192 * 256 + 168))
-		return 1;
+		return (1);
 
-	return 0;
+	return (0);
 }
 
 static int
@@ -542,10 +554,10 @@ stf_checkaddr4(struct stf_softc *sc, struct in_addr *in, struct ifnet *inifp)
 	 * 224.0.0.0/4 0.0.0.0/8 127.0.0.0/8 255.0.0.0/8
 	 */
 	if (IN_MULTICAST(ntohl(in->s_addr)))
-		return -1;
+		return (-1);
 	switch ((ntohl(in->s_addr) & 0xff000000) >> 24) {
 	case 0: case 127: case 255:
-		return -1;
+		return (-1);
 	}
 
 	/*
@@ -553,18 +565,18 @@ stf_checkaddr4(struct stf_softc *sc, struct in_addr *in, struct ifnet *inifp)
 	 * (requirement from RFC3056 section 2 1st paragraph)
 	 */
 	if (isrfc1918addr(in))
-		return -1;
+		return (-1);
 
 	/*
 	 * reject packets with broadcast
 	 */
 	IN_IFADDR_RLOCK(&in_ifa_tracker);
-	TAILQ_FOREACH(ia4, &V_in_ifaddrhead, ia_link) {
+	CK_STAILQ_FOREACH(ia4, &V_in_ifaddrhead, ia_link) {
 		if ((ia4->ia_ifa.ifa_ifp->if_flags & IFF_BROADCAST) == 0)
 			continue;
 		if (in->s_addr == ia4->ia_broadaddr.sin_addr.s_addr) {
 			IN_IFADDR_RUNLOCK(&in_ifa_tracker);
-			return -1;
+			return (-1);
 		}
 	}
 	IN_IFADDR_RUNLOCK(&in_ifa_tracker);
@@ -582,7 +594,7 @@ stf_checkaddr4(struct stf_softc *sc, struct in_addr *in, struct ifnet *inifp)
 			return (-1);
 	}
 
-	return 0;
+	return (0);
 }
 
 static int
@@ -594,7 +606,7 @@ stf_checkaddr6(struct stf_softc *sc, struct in6_addr *in6, struct ifnet *inifp)
 	if (IN6_IS_ADDR_6TO4(in6)) {
 		struct in_addr in4;
 		bcopy(GET_V4(in6), &in4, sizeof(in4));
-		return stf_checkaddr4(sc, &in4, inifp);
+		return (stf_checkaddr4(sc, &in4, inifp));
 	}
 
 	/*
@@ -604,24 +616,19 @@ stf_checkaddr6(struct stf_softc *sc, struct in6_addr *in6, struct ifnet *inifp)
 	 * (2) to be safe against future ip6_input change.
 	 */
 	if (IN6_IS_ADDR_V4COMPAT(in6) || IN6_IS_ADDR_V4MAPPED(in6))
-		return -1;
+		return (-1);
 
-	return 0;
+	return (0);
 }
 
 static int
-in_stf_input(struct mbuf **mp, int *offp, int proto)
+in_stf_input(struct mbuf *m, int off, int proto, void *arg)
 {
-	struct stf_softc *sc;
+	struct stf_softc *sc = arg;
 	struct ip *ip;
 	struct ip6_hdr *ip6;
-	struct mbuf *m;
 	u_int8_t otos, itos;
 	struct ifnet *ifp;
-	int off;
-
-	m = *mp;
-	off = *offp;
 
 	if (proto != IPPROTO_IPV6) {
 		m_freem(m);
@@ -629,9 +636,6 @@ in_stf_input(struct mbuf **mp, int *offp, int proto)
 	}
 
 	ip = mtod(m, struct ip *);
-
-	sc = (struct stf_softc *)encap_getarg(m);
-
 	if (sc == NULL || (STF2IFP(sc)->if_flags & IFF_UP) == 0) {
 		m_freem(m);
 		return (IPPROTO_DONE);
@@ -682,7 +686,7 @@ in_stf_input(struct mbuf **mp, int *offp, int proto)
 	ip6->ip6_flow |= htonl((u_int32_t)itos << 20);
 
 	m->m_pkthdr.rcvif = ifp;
-	
+
 	if (bpf_peers_present(ifp->if_bpf)) {
 		/*
 		 * We need to prepend the address family as
@@ -737,6 +741,7 @@ stf_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		}
 
 		ifp->if_flags |= IFF_UP;
+		ifp->if_drv_flags |= IFF_DRV_RUNNING;
 		break;
 
 	case SIOCADDMULTI:
@@ -765,5 +770,5 @@ stf_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		break;
 	}
 
-	return error;
+	return (error);
 }
