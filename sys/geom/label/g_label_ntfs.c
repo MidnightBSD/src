@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Takanori Watanabe
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/geom/label/g_label_ntfs.c 250264 2013-05-05 08:00:16Z stas $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -99,7 +101,8 @@ g_label_ntfs_taste(struct g_consumer *cp, char *label, size_t size)
 	struct ntfs_filerec *fr;
 	struct ntfs_attr *atr;
 	off_t voloff;
-	char *filerecp, *ap;
+	size_t recoff;
+	char *filerecp;
 	int8_t mftrecsz;
 	char vnchar;
 	int recsize, j;
@@ -115,8 +118,9 @@ g_label_ntfs_taste(struct g_consumer *cp, char *label, size_t size)
 		goto done;
 
 	mftrecsz = bf->bf_mftrecsz;
-	recsize = (mftrecsz > 0) ? (mftrecsz * bf->bf_bps * bf->bf_spc) : (1 << -mftrecsz);
-	if (recsize == 0 || recsize % pp->sectorsize != 0)
+	recsize = (mftrecsz > 0) ? (mftrecsz * bf->bf_bps * bf->bf_spc) :
+	    (1 << -mftrecsz);
+	if (recsize <= 0 || recsize > MAXPHYS || recsize % pp->sectorsize != 0)
 		goto done;
 
 	voloff = bf->bf_mftcn * bf->bf_spc * bf->bf_bps +
@@ -128,24 +132,33 @@ g_label_ntfs_taste(struct g_consumer *cp, char *label, size_t size)
 	if (filerecp == NULL)
 		goto done;
 	fr = (struct ntfs_filerec *)filerecp;
-
 	if (fr->fr_hdrmagic != NTFS_FILEMAGIC)
 		goto done;
 
-	for (ap = filerecp + fr->fr_attroff;
-	    atr = (struct ntfs_attr *)ap, atr->a_type != -1;
-	    ap += atr->reclen) {
+	for (recoff = fr->fr_attroff;
+	    recoff <= recsize - 2 * sizeof(uint32_t);
+	    recoff += atr->reclen) {
+		atr = (struct ntfs_attr *)(filerecp + recoff);
+		if (atr->a_type == -1)
+			break;
+		if (atr->reclen < sizeof(*atr))
+			break;
+		if (recsize - recoff < atr->reclen)
+			break;
 		if (atr->a_type == NTFS_A_VOLUMENAME) {
-			if(atr->a_datalen >= size *2){
-				label[0] = 0;
-				goto done;
-			}
+			if (atr->a_dataoff > atr->reclen ||
+			    atr->a_datalen > atr->reclen - atr->a_dataoff)
+				break;
+
 			/*
-			 *UNICODE to ASCII.
+			 * UNICODE to ASCII.
 			 * Should we need to use iconv(9)?
 			 */
+			if (atr->a_datalen >= size * 2 ||
+			    atr->a_datalen % 2 != 0)
+				break;
 			for (j = 0; j < atr->a_datalen; j++) {
-				vnchar = *(ap + atr->a_dataoff + j);
+				vnchar = ((char *)atr)[atr->a_dataoff + j];
 				if (j & 1) {
 					if (vnchar) {
 						label[0] = 0;

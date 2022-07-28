@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Andrey V. Elsukov <ae@FreeBSD.org>
  * All rights reserved.
@@ -26,10 +25,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/geom/part/g_part_bsd64.c 332640 2018-04-17 02:18:04Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bio.h>
+#include <sys/gsb_crc32.h>
 #include <sys/disklabel.h>
 #include <sys/endian.h>
 #include <sys/gpt.h>
@@ -409,11 +409,11 @@ g_part_bsd64_dumpconf(struct g_part_table *basetable,
 		if (!EQUUID(&bsd64_uuid_unused, &entry->type_uuid)) {
 			sbuf_printf(sb, "%s<type_uuid>", indent);
 			sbuf_printf_uuid(sb, &entry->type_uuid);
-			sbuf_printf(sb, "</type_uuid>\n");
+			sbuf_cat(sb, "</type_uuid>\n");
 		}
 		sbuf_printf(sb, "%s<stor_uuid>", indent);
 		sbuf_printf_uuid(sb, &entry->stor_uuid);
-		sbuf_printf(sb, "</stor_uuid>\n");
+		sbuf_cat(sb, "</stor_uuid>\n");
 	} else {
 		/* confxml: scheme information */
 		table = (struct g_part_bsd64_table *)basetable;
@@ -424,12 +424,12 @@ g_part_bsd64_dumpconf(struct g_part_table *basetable,
 			    indent, (uintmax_t)table->d_abase);
 		sbuf_printf(sb, "%s<stor_uuid>", indent);
 		sbuf_printf_uuid(sb, &table->d_stor_uuid);
-		sbuf_printf(sb, "</stor_uuid>\n");
+		sbuf_cat(sb, "</stor_uuid>\n");
 		sbuf_printf(sb, "%s<label>", indent);
 		strncpy(buf, table->d_packname, sizeof(buf) - 1);
 		buf[sizeof(buf) - 1] = '\0';
-		g_conf_printf_escaped(sb, "%s", buf);
-		sbuf_printf(sb, "</label>\n");
+		g_conf_cat_escaped(sb, buf);
+		sbuf_cat(sb, "</label>\n");
 	}
 }
 

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004, 2007 Lukas Ertl
  * Copyright (c) 2007, 2009 Ulf Lilleengen
  * All rights reserved.
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/geom/vinum/geom_vinum_init.c 197767 2009-10-05 08:44:31Z lulf $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/bio.h>
 #include <sys/libkern.h>

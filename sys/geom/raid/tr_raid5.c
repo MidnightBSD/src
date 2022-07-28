@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/geom/raid/tr_raid5.c 326744 2017-12-10 13:44:58Z eugen $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -342,10 +344,8 @@ static void
 g_raid_tr_iostart_raid5(struct g_raid_tr_object *tr, struct bio *bp)
 {
 	struct g_raid_volume *vol;
-	struct g_raid_tr_raid5_object *trs;
 
 	vol = tr->tro_volume;
-	trs = (struct g_raid_tr_raid5_object *)tr;
 	if (vol->v_state < G_RAID_VOLUME_S_SUBOPTIMAL) {
 		g_raid_iodone(bp, EIO);
 		return;

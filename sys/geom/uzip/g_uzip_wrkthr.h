@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/geom/uzip/g_uzip_wrkthr.h 295943 2016-02-23 23:59:08Z sobomax $
+ * $FreeBSD$
  */
 
 void g_uzip_wrkthr(void *);

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: Beerware
+ *
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <phk@FreeBSD.org> wrote this file.  As long as you retain this notice you
@@ -39,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/i386/i386/elan-mmcr.c 214346 2010-10-25 15:28:03Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_cpu.h"
 #include <sys/param.h>

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2009 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/geom/mirror/g_mirror_ctl.c 327988 2018-01-15 01:09:10Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -850,7 +852,7 @@ g_mirror_ctl_resize(struct gctl_req *req, struct g_class *mp)
 		return;
 	}
 	/* Deny shrinking of an opened provider */
-	if ((g_debugflags & 16) == 0 && sc->sc_provider_open > 0) {
+	if ((g_debugflags & G_F_FOOTSHOOTING) == 0 && sc->sc_provider_open > 0) {
 		if (sc->sc_mediasize > mediasize) {
 			gctl_error(req, "Device %s is busy.",
 			    sc->sc_provider->name);

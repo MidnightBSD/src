@@ -23,7 +23,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/geom/part/g_part_if.m 298808 2016-04-29 20:56:58Z pfg $
+# $FreeBSD$
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -114,7 +114,7 @@ METHOD void dumpconf {
 	const char *indent;
 };
 
-# dumpto() - return whether the partiton can be used for kernel dumps.
+# dumpto() - return whether the partition can be used for kernel dumps.
 METHOD int dumpto {
 	struct g_part_table *table;
 	struct g_part_entry *entry;

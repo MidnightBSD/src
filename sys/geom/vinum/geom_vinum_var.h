@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2004, 2007 Lukas Ertl
  * Copyright (c) 1997, 1998, 1999
  *      Nan Yang Computer Services Limited.  All rights reserved.
@@ -7,7 +9,7 @@
  * Parts written by Greg Lehey.
  *
  *  This software is distributed under the so-called ``Berkeley
- *  License'':                                                                   *
+ *  License'':                                                                    *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -35,7 +37,7 @@
  * otherwise) arising in any way out of the use of this software, even if
  * advised of the possibility of such damage.
  *  
- * $FreeBSD: stable/11/sys/geom/vinum/geom_vinum_var.h 356577 2020-01-10 00:42:05Z mav $
+ * $FreeBSD$
  */
 
 #ifndef	_GEOM_VINUM_VAR_H_
