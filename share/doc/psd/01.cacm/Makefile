@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/8/93
-# $FreeBSD: stable/11/share/doc/psd/01.cacm/Makefile 136910 2004-10-24 15:33:08Z ru $
+# $FreeBSD$
 
 VOLUME=		psd/01.cacm
 SRCS=		stubs p.mac p1 p2 p3 p4 p5 p6

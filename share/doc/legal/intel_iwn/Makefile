@@ -1,6 +1,6 @@
-# $FreeBSD: stable/11/share/doc/legal/intel_iwn/Makefile 289399 2015-10-16 00:38:05Z bdrewery $
+# $FreeBSD$
 
-FILES=		${.CURDIR}/../../../../sys/contrib/dev/iwn/LICENSE
+FILES=		${SRCTOP}/sys/contrib/dev/iwn/LICENSE
 FILESDIR=	${SHAREDIR}/doc/legal
 FILESNAME=	intel_iwn.LICENSE
 

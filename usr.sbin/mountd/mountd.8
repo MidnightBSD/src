@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)mountd.8	8.4 (Berkeley) 4/28/95
-.\" $FreeBSD: stable/11/usr.sbin/mountd/mountd.8 308450 2016-11-08 21:15:50Z rmacklem $
+.\" $FreeBSD$
 .\"
-.Dd October 24, 2016
+.Dd October 11, 2020
 .Dt MOUNTD 8
 .Os
 .Sh NAME
@@ -38,7 +38,7 @@
 mount requests
 .Sh SYNOPSIS
 .Nm
-.Op Fl 2delnrS
+.Op Fl 2delnRrS
 .Op Fl h Ar bindip
 .Op Fl p Ar port
 .Op Ar exportsfile ...
@@ -54,7 +54,7 @@ server specification; see
 .%T "Network File System Protocol Specification" ,
 RFC1094, Appendix A and
 .%T "NFS: Network File System Version 3 Protocol Specification" ,
-Appendix I.
+RFC1813, Appendix I.
 .Pp
 The following options are available:
 .Bl -tag -width indent
@@ -112,6 +112,17 @@ If
 .Nm
 cannot bind to this port, an appropriate error will be recorded in
 the system log, and the daemon will then exit.
+.It Fl R
+Do not support the Mount protocol and do not register with
+.Xr rpcbind 8 .
+This can be done for NFSv4 only servers, since the Mount protocol is not
+used by NFSv4.
+Useful for NFSv4 only servers that do not wish to run
+.Xr rpcbind 8 .
+.Xr showmount 8
+will not work, however since NFSv4 mounts are not shown by
+.Xr showmount 8 ,
+this should not be an issue for an NFSv4 only server.
 .It Fl r
 Allow mount RPCs requests for regular files to be served.
 Although this seems to violate the mount protocol specification,

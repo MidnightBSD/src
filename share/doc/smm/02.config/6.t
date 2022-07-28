@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)6.t	8.1 (Berkeley) 6/8/93
-.\" $FreeBSD: stable/11/share/doc/smm/02.config/6.t 263142 2014-03-14 03:07:51Z eadler $
+.\" $FreeBSD$
 .\"
 .\".ds RH "Adding New Devices
 .ne 2i

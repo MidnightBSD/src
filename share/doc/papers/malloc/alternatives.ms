@@ -6,7 +6,7 @@
 .\" this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
 .\" ----------------------------------------------------------------------------
 .\"
-.\" $FreeBSD: stable/11/share/doc/papers/malloc/alternatives.ms 93151 2002-03-25 14:12:49Z phk $
+.\" $FreeBSD$
 .\"
 .ds RH Alternative implementations
 .NH

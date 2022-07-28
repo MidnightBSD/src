@@ -1,11 +1,13 @@
 /* 08 Nov 1998*/
-/*
+/*-
  * testmisc.c
  *
  * Test program to call the sample loaded kld device driver.
  *
  * 05 Jun 93	Rajesh Vaidheeswarran		Original
  *
+ *
+ * SPDX-License-Identifier: BSD-4-Clause
  *
  * Copyright (c) 1993 Rajesh Vaidheeswarran.
  * All rights reserved.
@@ -68,7 +70,7 @@
  * SUCH DAMAGE.
  *
  *
- * $FreeBSD: stable/11/share/examples/kld/cdev/test/testcdev.c 202603 2010-01-18 23:13:22Z wkoszek $
+ * $FreeBSD$
  */
 #include <sys/types.h>
 #include <sys/ioccom.h>

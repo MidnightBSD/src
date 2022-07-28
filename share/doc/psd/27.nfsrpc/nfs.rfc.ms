@@ -2,7 +2,7 @@
 .\" Must use  --  tbl  --  with this one
 .\"
 .\" @(#)nfs.rfc.ms	2.2 88/08/05 4.0 RPCSRC
-.\" $FreeBSD: stable/11/share/doc/psd/27.nfsrpc/nfs.rfc.ms 226436 2011-10-16 14:30:28Z eadler $
+.\" $FreeBSD$
 .\"
 .de BT
 .if \\n%=1 .tl ''- % -''

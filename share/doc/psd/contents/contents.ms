@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)00.contents	8.1 (Berkeley) 6/8/93
-.\" $FreeBSD: stable/11/share/doc/psd/contents/contents.ms 263142 2014-03-14 03:07:51Z eadler $
+.\" $FreeBSD$
 .\"
 .OH '''PSD Contents'
 .EH 'PSD Contents'''
@@ -143,17 +143,6 @@ How to debug programs using the assembly-language level \fIadb\fP debugger.
 .QP
 Indispensable tool for making sure large programs are properly
 compiled with minimal effort. 
-.sp
-.IP
-.tl 'An Introduction to the Revision Control System''PSD:13'
-.if \n(.U \{\
-.br
-.>> <a href="13.rcs/paper.html">13.rcs/paper.html</a>
-.\}
-.QP
-RCS is a user-contributed tool for working together with other people
-without stepping on each other's toes.
-An alternative to \fIsccs\fR for controlling software changes.
 .sp
 .IP
 .tl 'An Introduction to the Source Code Control System''PSD:14'

@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)0.t	5.1 (Berkeley) 4/17/91
-.\" $FreeBSD: stable/11/share/doc/papers/relengr/0.t 263142 2014-03-14 03:07:51Z eadler $
+.\" $FreeBSD$
 .\"
 .rm CM
 .nr PO 1.25i

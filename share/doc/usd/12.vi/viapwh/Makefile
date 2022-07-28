@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/doc/usd/12.vi/viapwh/Makefile 106146 2002-10-29 15:01:59Z ru $
+# $FreeBSD$
 
 DOC=	viapwh
 SRCS=	vi.apwh.ms

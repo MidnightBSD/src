@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/examples/jails/README 295542 2016-02-11 18:37:02Z dteske $
+# $FreeBSD$
 
 The below 4 samples require a VIMAGE enabled kernel:
 
@@ -7,6 +7,16 @@ The below 4 samples require a VIMAGE enabled kernel:
 	$ cd /usr/src
 	$ make KERNCONF=VIMAGE kernel
 	$ reboot
+
+FreeBSD 12 has VIMAGE enabled in GENERIC on amd64.
+In that case, for jng simply load the ng_ether module first
+(ng_bridge and ng_eiface will load on demand):
+
+	# (as root)
+	# Load the ng_ether module at boot:
+	$ sysrc kld_list+=ng_ether
+	# Load ng_ether at once without rebooting:
+	$ kldload ng_ether
 
 Sample 1: jail.conf(5)
 

@@ -39,7 +39,7 @@
 .\" 
 .\"	@(#)implement	8.1 (Berkeley) 6/8/93
 .\"
-.\" $FreeBSD: stable/11/share/doc/psd/02.implement/implement 106202 2002-10-30 13:07:34Z ru $
+.\" $FreeBSD$
 .EH 'PSD:2-%''UNIX Implementation'
 .OH 'UNIX Implementation''PSD:2-%'
 .de P1

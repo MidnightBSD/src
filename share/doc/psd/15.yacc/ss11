@@ -36,7 +36,7 @@
 .\"
 .\"	@(#)ssB	8.1 (Berkeley) 6/8/93
 .\"
-.\" $FreeBSD: stable/11/share/doc/psd/15.yacc/ss11 210167 2010-07-16 17:01:36Z emaste $
+.\" $FreeBSD$
 .SH
 11: Acknowledgements
 .PP

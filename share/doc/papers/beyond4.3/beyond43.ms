@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)beyond43.ms	5.1 (Berkeley) 6/5/90
-.\" $FreeBSD: stable/11/share/doc/papers/beyond4.3/beyond43.ms 263142 2014-03-14 03:07:51Z eadler $
+.\" $FreeBSD$
 .\"
 .\" *troff -ms
 .rm CM
