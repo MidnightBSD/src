@@ -35,7 +35,7 @@ rm ${1}/etc/rc.conf.local
 
 mkimg -s gpt \
     -p efi:=${1}/boot/boot1.efifat \
-    -p freebsd:=${2}.part \
+    -p mnbsd-ufs:=${2}.part \
     -o ${2}
 rm ${2}.part
 
