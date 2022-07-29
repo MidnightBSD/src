@@ -1930,12 +1930,15 @@ create-world-package-${pkgname}: .PHONY
 	@awk -F\" ' \
 		/^name/ { printf("===> Creating %s-", $$2); next } \
 		/^version/ { print $$2; next } \
-		' ${WSTAGEDIR}/${pkgname}.ucl ; \
-	${PKG_CMD} -o ABI_FILE=${WSTAGEDIR}/bin/sh -o ALLOW_BASE_SHLIBS=yes \
+		' ${WSTAGEDIR}/${pkgname}.ucl
+	@if [ "${pkgname}" == "runtime" ]; then \
+		sed -i '' -e "s/%VCS_REVISION%/${VCS_REVISION}/" ${WSTAGEDIR}/${pkgname}.ucl ; \
+	fi
+	${PKG_CMD} -o ABI_FILE=${WSTAGEDIR}/usr/bin/uname -o ALLOW_BASE_SHLIBS=yes \
 		create -M ${WSTAGEDIR}/${pkgname}.ucl \
 		-p ${WSTAGEDIR}/${pkgname}.plist \
 		-r ${WSTAGEDIR} \
-		-o ${REPODIR}/$$(${PKG_CMD} -o ABI_FILE=${WSTAGEDIR}/bin/sh config ABI)/${PKG_VERSION}
+		-o ${REPODIR}/$$(${PKG_CMD} -o ABI_FILE=${WSTAGEDIR}/usr/bin/uname config ABI)/${PKG_VERSION}
 .endfor
 
 _default_flavor=	-default
@@ -2108,7 +2111,7 @@ legacy: .PHONY
 _bt=		_bootstrap-tools
 
 .if ${MK_GAMES} != "no"
-_strfile=	games/fortune/strfile
+_strfile=	usr.bin/fortune/strfile
 .endif
 
 .if ${MK_GCC} != "no" && ${MK_CXX} != "no"
@@ -2182,11 +2185,14 @@ _localedef=	usr.bin/localedef
     ${MK_LLDB} != "no" || ${MK_LLVM_BINUTILS} != "no"
 _clang_tblgen= \
 	lib/clang/libllvmminimal \
-	usr.bin/clang/llvm-tblgen \
-	usr.bin/clang/clang-tblgen \
-	usr.bin/clang/lldb-tblgen
-# XXX: lldb-tblgen is not needed, if top-level MK_LLDB=no
-
+	usr.bin/clang/llvm-tblgen
+.if ${MK_CLANG_BOOTSTRAP} != "no" || ${MK_CLANG} != "no" || \
+    ${MK_LLDB} != "no"
+_clang_tblgen+=	usr.bin/clang/clang-tblgen
+.endif
+.if ${MK_LLDB} != "no"
+_clang_tblgen+=	usr.bin/clang/lldb-tblgen
+.endif
 ${_bt}-usr.bin/clang/clang-tblgen: ${_bt}-lib/clang/libllvmminimal
 ${_bt}-usr.bin/clang/llvm-tblgen: ${_bt}-lib/clang/libllvmminimal
 ${_bt}-usr.bin/clang/lldb-tblgen: ${_bt}-lib/clang/libllvmminimal
