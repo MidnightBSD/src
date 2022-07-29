@@ -39,7 +39,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -1542,7 +1541,10 @@ digest_notes(Obj_Entry *obj, Elf_Addr note_start, Elf_Addr note_end)
 			continue;
 		if (note->n_type != NT_FREEBSD_ABI_TAG &&
 		    note->n_type != NT_FREEBSD_FEATURE_CTL &&
-		    note->n_type != NT_FREEBSD_NOINIT_TAG)
+		    note->n_type != NT_FREEBSD_NOINIT_TAG && 
+			note->n_type != NT_MIDNIGHTBSD_ABI_TAG &&
+		    note->n_type != NT_MIDNIGHTBSD_FEATURE_CTL &&
+		    note->n_type != NT_MIDNIGHTBSD_NOINIT_TAG)
 			continue;
 		note_name = (const char *)(note + 1);
 		if (strncmp(NOTE_MIDNIGHTBSD_VENDOR, note_name,
@@ -1550,6 +1552,7 @@ digest_notes(Obj_Entry *obj, Elf_Addr note_start, Elf_Addr note_end)
 			continue;
 		switch (note->n_type) {
 		case NT_FREEBSD_ABI_TAG:
+		case NT_MIDNIGHTBSD_ABI_TAG:
 			/* MidnightBSD osrel note */
 			p = (uintptr_t)(note + 1);
 			p += roundup2(note->n_namesz, sizeof(Elf32_Addr));
@@ -1557,13 +1560,15 @@ digest_notes(Obj_Entry *obj, Elf_Addr note_start, Elf_Addr note_end)
 			dbg("note osrel %d", obj->osrel);
 			break;
 		case NT_FREEBSD_FEATURE_CTL:
-			/* FreeBSD ABI feature control note */
+		case NT_MIDNIGHTBSD_FEATURE_CTL:
+			/* MidnightBSD ABI feature control note */
 			p = (uintptr_t)(note + 1);
 			p += roundup2(note->n_namesz, sizeof(Elf32_Addr));
 			obj->fctl0 = *(const uint32_t *)(p);
 			dbg("note fctl0 %#x", obj->fctl0);
 			break;
 		case NT_FREEBSD_NOINIT_TAG:
+		case NT_MIDNIGHTBSD_NOINIT_TAG:
 			/* MidnightBSD 'crt does not call init' note */
 			obj->crt_no_init = true;
 			dbg("note crt_no_init");
@@ -5724,6 +5729,24 @@ parse_args(char* argv[], int argc, bool *use_pathp, int *fdp,
 				break;
 			} else if (opt == 'p') {
 				*use_pathp = true;
+			} else if (opt == 'v') {
+				machine[0] = '\0';
+				mib[0] = CTL_HW;
+				mib[1] = HW_MACHINE;
+				sz = sizeof(machine);
+				sysctl(mib, nitems(mib), machine, &sz, NULL, 0);
+				rtld_printf(
+				    "MidnightBSD ld-elf.so.1 %s\n"
+				    "MidnightBSD_version %d\n"
+				    "Default lib path %s\n"
+				    "Env prefix %s\n"
+				    "Hint file %s\n"
+				    "libmap file %s\n",
+				    machine,
+				    __MidnightBSD_version, ld_standard_library_path,
+				    ld_env_prefix, ld_elf_hints_default,
+				    ld_path_libmap_conf);
+				_exit(0);
 			} else {
 				_rtld_error("Invalid argument: '%s'", arg);
 				print_usage(argv[0]);
@@ -5885,8 +5908,8 @@ realloc(void *cp, size_t nbytes)
 	return (__crt_realloc(cp, nbytes));
 }
 
-extern int _rtld_version__FreeBSD_version __exported;
-int _rtld_version__FreeBSD_version = __FreeBSD_version;
+extern int _rtld_version__MidnightBSD_version __exported;
+int _rtld_version__MidnightBSD_version = __MidnightBSD_version;
 
 extern char _rtld_version_laddr_offset __exported;
 char _rtld_version_laddr_offset;

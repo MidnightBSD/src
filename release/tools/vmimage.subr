@@ -23,22 +23,21 @@ write_partition_layout() {
 		amd64:amd64 | i386:i386)
 			ESP=yes
 			SCHEME=gpt
-				-p mnbsd-boot/bootfs:=${BOOTFILES}/i386/gptboot/gptboot \
-				${SWAPOPT} \
-				-p mnbsd-ufs/rootfs:=${VMBASE} \
-				-o ${VMIMAGE}
+			BOOTPARTS="-b ${BOOTFILES}/i386/pmbr/pmbr \
+				   -p mnbsd-boot/bootfs:=${BOOTFILES}/i386/gptboot/gptboot"
+			ROOTFSPART="-p mnbsd-ufs/rootfs:=${VMBASE}"
 			;;
 		arm64:aarch64)
 			ESP=yes
 			SCHEME=gpt
 			BOOTPARTS=
-				-o ${VMIMAGE}
+			ROOTFSPART="-p mnbsd-ufs/rootfs:=${VMBASE}"
 			;;
 		powerpc:powerpc*)
 			ESP=no
 			SCHEME=apm
 			BOOTPARTS="-p apple-boot/bootfs:=${BOOTFILES}/powerpc/boot1.chrp/boot1.hfs"
-			ROOTFSPART="-p freebsd-ufs/rootfs:=${VMBASE}"
+			ROOTFSPART="-p mnbsd-ufs/rootfs:=${VMBASE}"
 			;;
 		*)
 			echo "vmimage.subr: unsupported target '${TARGET}:${TARGET_ARCH}'" >&2
