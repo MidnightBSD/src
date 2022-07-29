@@ -7,8 +7,6 @@
 .
     bin
     ..
-    games
-    ..
     include
         private
             bsdstat
@@ -37,7 +35,7 @@
         aout
         ..
         clang
-            10.0.1
+            13.0.0
                 include
                     cuda_wrappers
                     ..

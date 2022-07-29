@@ -27,11 +27,9 @@
         usr
             bin
             ..
-            games
-            ..
             lib
                 clang
-                    8.0.1
+                    13.0.0
                         lib
                             freebsd
                             ..
