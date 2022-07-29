@@ -1,6 +1,10 @@
 <!doctype refentry PUBLIC "-//OASIS//DTD DocBook V4.1//EN">
 
 <refentry>
+  <refentryinfo>
+    <date>07 August 2019</date>
+  </refentryinfo>
+
   <refmeta>
     <refentrytitle>wpa_passphrase</refentrytitle>
     <manvolnum>8</manvolnum>
@@ -18,7 +22,7 @@
   </refsynopsisdiv>
 
   <refsect1>
-    <title>Overview</title> 
+    <title>Overview</title>
 
     <para><command>wpa_passphrase</command> pre-computes PSK entries for
     network configuration blocks of a
@@ -62,7 +66,7 @@
   </refsect1>
   <refsect1>
     <title>Legal</title>
-    <para>wpa_supplicant is copyright (c) 2003-2012,
+    <para>wpa_supplicant is copyright (c) 2003-2022,
     Jouni Malinen <email>j@w1.fi</email> and
     contributors.
     All Rights Reserved.</para>

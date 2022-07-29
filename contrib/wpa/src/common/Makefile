@@ -1,8 +1,16 @@
-all:
-	@echo Nothing to be made.
+CFLAGS += -DCONFIG_IEEE80211R
+CFLAGS += -DCONFIG_HS20
+CFLAGS += -DCONFIG_SAE
+CFLAGS += -DCONFIG_SUITE
+CFLAGS += -DCONFIG_SUITEB
+CFLAGS += -DCONFIG_PTKSA_CACHE
 
-clean:
-	rm -f *~ *.o *.d
+LIB_OBJS= \
+	gas.o \
+	hw_features_common.o \
+	ieee802_11_common.o \
+	sae.o \
+	ptksa_cache.o \
+	wpa_common.o
 
-install:
-	@echo Nothing to be made.
+include ../lib.rules

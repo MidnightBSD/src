@@ -1,8 +1,2 @@
-all:
-	@echo Nothing to be made.
-
-clean:
-	rm -f *~ *.o *.d
-
-install:
-	@echo Nothing to be made.
+LIB_OBJS = eapol_auth_sm.o eapol_auth_dump.o
+include ../lib.rules

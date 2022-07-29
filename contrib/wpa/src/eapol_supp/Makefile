@@ -1,8 +1,5 @@
-all:
-	@echo Nothing to be made.
+CFLAGS += -DIEEE8021X_EAPOL
 
-clean:
-	rm -f *~ *.o *.d
+LIB_OBJS = eapol_supp_sm.o
 
-install:
-	@echo Nothing to be made.
+include ../lib.rules

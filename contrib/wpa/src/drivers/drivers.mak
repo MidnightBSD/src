@@ -15,34 +15,48 @@ DRV_AP_LIBS =
 ifdef CONFIG_DRIVER_WIRED
 DRV_CFLAGS += -DCONFIG_DRIVER_WIRED
 DRV_OBJS += ../src/drivers/driver_wired.o
+NEED_DRV_WIRED_COMMON=1
+endif
+
+ifdef CONFIG_DRIVER_MACSEC_LINUX
+DRV_CFLAGS += -DCONFIG_DRIVER_MACSEC_LINUX
+DRV_OBJS += ../src/drivers/driver_macsec_linux.o
+NEED_DRV_WIRED_COMMON=1
+NEED_LIBNL=y
+CONFIG_LIBNL3_ROUTE=y
+endif
+
+ifdef CONFIG_DRIVER_NL80211_BRCM
+DRV_CFLAGS += -DCONFIG_DRIVER_NL80211_BRCM
+endif
+
+ifdef CONFIG_DRIVER_MACSEC_QCA
+DRV_CFLAGS += -DCONFIG_DRIVER_MACSEC_QCA
+DRV_OBJS += ../src/drivers/driver_macsec_qca.o
+NEED_DRV_WIRED_COMMON=1
+endif
+
+ifdef NEED_DRV_WIRED_COMMON
+DRV_OBJS += ../src/drivers/driver_wired_common.o
 endif
 
 ifdef CONFIG_DRIVER_NL80211
 DRV_CFLAGS += -DCONFIG_DRIVER_NL80211
 DRV_OBJS += ../src/drivers/driver_nl80211.o
-DRV_OBJS += ../src/utils/radiotap.o
+DRV_OBJS += ../src/drivers/driver_nl80211_capa.o
+DRV_OBJS += ../src/drivers/driver_nl80211_event.o
+DRV_OBJS += ../src/drivers/driver_nl80211_monitor.o
+DRV_OBJS += ../src/drivers/driver_nl80211_scan.o
+ifdef CONFIG_DRIVER_NL80211_QCA
+DRV_CFLAGS += -DCONFIG_DRIVER_NL80211_QCA
+endif
 NEED_SME=y
 NEED_AP_MLME=y
 NEED_NETLINK=y
 NEED_LINUX_IOCTL=y
 NEED_RFKILL=y
-
-ifdef CONFIG_LIBNL32
-  DRV_LIBS += -lnl-3
-  DRV_LIBS += -lnl-genl-3
-  DRV_CFLAGS += -DCONFIG_LIBNL20 -I/usr/include/libnl3
-else
-  ifdef CONFIG_LIBNL_TINY
-    DRV_LIBS += -lnl-tiny
-  else
-    DRV_LIBS += -lnl
-  endif
-
-  ifdef CONFIG_LIBNL20
-    DRV_LIBS += -lnl-genl
-    DRV_CFLAGS += -DCONFIG_LIBNL20
-  endif
-endif
+NEED_RADIOTAP=y
+NEED_LIBNL=y
 endif
 
 ifdef CONFIG_DRIVER_BSD
@@ -55,10 +69,12 @@ CONFIG_L2_FREEBSD=y
 CONFIG_DNET_PCAP=y
 endif
 
-ifdef CONFIG_DRIVER_TEST
-DRV_CFLAGS += -DCONFIG_DRIVER_TEST
-DRV_OBJS += ../src/drivers/driver_test.o
-NEED_AP_MLME=y
+ifdef CONFIG_DRIVER_OPENBSD
+ifndef CONFIG_L2_PACKET
+CONFIG_L2_PACKET=freebsd
+endif
+DRV_CFLAGS += -DCONFIG_DRIVER_OPENBSD
+DRV_OBJS += ../src/drivers/driver_openbsd.o
 endif
 
 ifdef CONFIG_DRIVER_NONE
@@ -77,21 +93,15 @@ NEED_NETLINK=y
 NEED_LINUX_IOCTL=y
 endif
 
-ifdef CONFIG_DRIVER_MADWIFI
-DRV_AP_CFLAGS += -DCONFIG_DRIVER_MADWIFI
-DRV_AP_OBJS += ../src/drivers/driver_madwifi.o
-CONFIG_WIRELESS_EXTENSION=y
-CONFIG_L2_PACKET=linux
-NEED_NETLINK=y
-NEED_LINUX_IOCTL=y
-endif
-
 ifdef CONFIG_DRIVER_ATHEROS
 DRV_AP_CFLAGS += -DCONFIG_DRIVER_ATHEROS
 DRV_AP_OBJS += ../src/drivers/driver_atheros.o
 CONFIG_L2_PACKET=linux
 NEED_NETLINK=y
 NEED_LINUX_IOCTL=y
+ifdef ATH_GCM_SUPPORT
+CFLAGS += -DATH_GCM_SUPPORT
+endif
 endif
 
 ##### PURE CLIENT DRIVERS
@@ -134,34 +144,61 @@ ifdef NEED_NETLINK
 DRV_OBJS += ../src/drivers/netlink.o
 endif
 
-ifdef NEED_LINUX_IOCTL
-DRV_OBJS += ../src/drivers/linux_ioctl.o
-endif
-
 ifdef NEED_RFKILL
 DRV_OBJS += ../src/drivers/rfkill.o
 endif
 
-ifdef CONFIG_VLAN_NETLINK
+ifdef NEED_RADIOTAP
+DRV_OBJS += ../src/utils/radiotap.o
+endif
+
 ifdef CONFIG_FULL_DYNAMIC_VLAN
+NEED_LINUX_IOCTL=y
+ifdef CONFIG_VLAN_NETLINK
+NEED_LIBNL=y
+CONFIG_LIBNL3_ROUTE=y
+endif
+endif
+
+ifdef NEED_LINUX_IOCTL
+DRV_OBJS += ../src/drivers/linux_ioctl.o
+endif
+
+ifdef NEED_LIBNL
+ifndef CONFIG_LIBNL32
+ifndef CONFIG_LIBNL20
+ifndef CONFIG_LIBNL_TINY
+PKG_CONFIG ?= pkg-config
+HAVE_LIBNL3 := $(shell $(PKG_CONFIG) --exists libnl-3.0; echo $$?)
+ifeq ($(HAVE_LIBNL3),0)
+CONFIG_LIBNL32=y
+endif
+endif
+endif
+endif
+
 ifdef CONFIG_LIBNL32
   DRV_LIBS += -lnl-3
   DRV_LIBS += -lnl-genl-3
-  DRV_LIBS += -lnl-route-3
-  DRV_CFLAGS += -DCONFIG_LIBNL20
+  ifdef LIBNL_INC
+    DRV_CFLAGS += -I$(LIBNL_INC)
+  else
+    PKG_CONFIG ?= pkg-config
+    DRV_CFLAGS += $(shell $(PKG_CONFIG) --cflags libnl-3.0)
+  endif
+  ifdef CONFIG_LIBNL3_ROUTE
+    DRV_LIBS += -lnl-route-3
+    DRV_CFLAGS += -DCONFIG_LIBNL3_ROUTE
+  endif
 else
   ifdef CONFIG_LIBNL_TINY
     DRV_LIBS += -lnl-tiny
   else
-    DRV_LIBS += -lnl
+    ifndef CONFIG_OSX
+      DRV_LIBS += -lnl
+      DRV_LIBS += -lnl-genl
+    endif
   endif
-
-  ifdef CONFIG_LIBNL20
-    DRV_LIBS += -lnl-genl
-    DRV_LIBS += -lnl-route
-    DRV_CFLAGS += -DCONFIG_LIBNL20
-  endif
-endif
 endif
 endif
 

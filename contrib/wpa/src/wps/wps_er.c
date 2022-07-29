@@ -897,7 +897,7 @@ static struct wpabuf * wps_er_soap_hdr(const struct wpabuf *msg,
 				       const struct sockaddr_in *dst,
 				       char **len_ptr, char **body_ptr)
 {
-	unsigned char *encoded;
+	char *encoded;
 	size_t encoded_len;
 	struct wpabuf *buf;
 
@@ -939,7 +939,7 @@ static struct wpabuf * wps_er_soap_hdr(const struct wpabuf *msg,
 	wpabuf_put_str(buf, "\">\n");
 	if (encoded) {
 		wpabuf_printf(buf, "<%s>%s</%s>\n",
-			      arg_name, (char *) encoded, arg_name);
+			      arg_name, encoded, arg_name);
 		os_free(encoded);
 	}
 
@@ -1298,7 +1298,7 @@ wps_er_init(struct wps_context *wps, const char *ifname, const char *filter)
 			   "with %s", filter);
 	}
 	if (get_netif_info(er->ifname, &er->ip_addr, &er->ip_addr_text,
-			   er->mac_addr)) {
+			   NULL, er->mac_addr)) {
 		wpa_printf(MSG_INFO, "WPS UPnP: Could not get IP/MAC address "
 			   "for %s. Does it have IP address?", er->ifname);
 		wps_er_deinit(er, NULL, NULL);

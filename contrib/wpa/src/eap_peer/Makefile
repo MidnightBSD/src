@@ -1,11 +1,7 @@
-all:
-	@echo Nothing to be made.
+CFLAGS += -DIEEE8021X_EAPOL
 
-clean:
-	rm -f *~ *.o *.so *.d
+LIB_OBJS= \
+	eap.o \
+	eap_methods.o
 
-install:
-	if ls *.so >/dev/null 2>&1; then \
-		install -d $(DESTDIR)$(LIBDIR)/wpa_supplicant && \
-		cp *.so $(DESTDIR)$(LIBDIR)/wpa_supplicant \
-	; fi
+include ../lib.rules

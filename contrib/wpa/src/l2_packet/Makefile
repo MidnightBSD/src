@@ -1,8 +1,3 @@
-all:
-	@echo Nothing to be made.
+LIB_OBJS = l2_packet_linux.o
 
-clean:
-	rm -f *~ *.o *.d
-
-install:
-	@echo Nothing to be made.
+include ../lib.rules
