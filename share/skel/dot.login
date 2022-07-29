@@ -8,4 +8,5 @@
 # Query terminal size; useful for serial lines.
 if ( -x /usr/bin/resizewin ) /usr/bin/resizewin -z
 
-if ( -x /usr/games/fortune ) /usr/games/fortune fortunes
+# Display a random cookie on each login.
+if ( -x /usr/bin/fortune ) /usr/bin/fortune fortunes

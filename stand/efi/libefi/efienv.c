@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/efi/libefi/efienv.c 346483 2019-04-21 04:35:49Z kevans $");
 
 #include <stand.h>
 #include <efi.h>
@@ -89,7 +88,7 @@ efi_setenv(EFI_GUID *guid, const char *varname, UINT32 attr, void *data, __size_
 }
 
 EFI_STATUS
-efi_setenv_freebsd_wcs(const char *varname, CHAR16 *valstr)
+efi_setenv_midnightbsd_wcs(const char *varname, CHAR16 *valstr)
 {
 	CHAR16 *var = NULL;
 	size_t len;
@@ -97,7 +96,7 @@ efi_setenv_freebsd_wcs(const char *varname, CHAR16 *valstr)
 
 	if (utf8_to_ucs2(varname, &var, &len) != 0)
 		return (EFI_OUT_OF_RESOURCES);
-	rv = RS->SetVariable(var, &FreeBSDBootVarGUID,
+	rv = RS->SetVariable(var, &MidnightBSDBootVarGUID,
 	    EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
 	    (ucs2len(valstr) + 1) * sizeof(efi_char), valstr);
 	free(var);
@@ -121,4 +120,10 @@ efi_delenv(EFI_GUID *guid, const char *name)
 	rv = RS->SetVariable(var, guid, 0, 0, NULL);
 	free(var);
 	return (rv);
+}
+
+EFI_STATUS
+efi_midnightbsd_delenv(const char *name)
+{
+	return (efi_delenv(&MidnightBSDBootVarGUID, name));
 }

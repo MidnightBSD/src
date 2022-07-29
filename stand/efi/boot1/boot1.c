@@ -20,7 +20,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <machine/elf.h>
@@ -196,7 +195,7 @@ efi_main(EFI_HANDLE Ximage, EFI_SYSTEM_TABLE *Xsystab)
 	conout->EnableCursor(conout, TRUE);
 	conout->ClearScreen(conout);
 
-	printf("\n>> FreeBSD EFI boot block\n");
+	printf("\n>> MidnightBSD EFI boot block\n");
 	printf("   Loader path: %s\n\n", PATH_LOADER_EFI);
 	printf("   Initializing modules:");
 	for (i = 0; i < num_boot_modules; i++) {
@@ -227,7 +226,7 @@ efi_main(EFI_HANDLE Ximage, EFI_SYSTEM_TABLE *Xsystab)
 		text = efi_devpath_name(img->FilePath);
 		if (text != NULL) {
 			printf("   Load Path: %S\n", text);
-			efi_setenv_freebsd_wcs("Boot1Path", text);
+			efi_setenv_midnightbsd_wcs("Boot1Path", text);
 			efi_free_devpath_name(text);
 		}
 
@@ -240,7 +239,7 @@ efi_main(EFI_HANDLE Ximage, EFI_SYSTEM_TABLE *Xsystab)
 			text = efi_devpath_name(imgpath);
 			if (text != NULL) {
 				printf("   Load Device: %S\n", text);
-				efi_setenv_freebsd_wcs("Boot1Dev", text);
+				efi_setenv_midnightbsd_wcs("Boot1Dev", text);
 				efi_free_devpath_name(text);
 			}
 		}

@@ -1,5 +1,3 @@
-# $FreeBSD$
-#
 # The include file <src.libnames.mk> define library names suitable
 # for INTERNALLIB and PRIVATELIB definition
 
@@ -161,6 +159,7 @@ _LIBRARIES=	\
 		ncurses \
 		ncursesw \
 		netgraph \
+		netmap \
 		netpgp \
 		ngatm \
 		nv \
@@ -387,9 +386,11 @@ _DP_zfs=	md pthread umem util uutil m nvpair avl bsdxml geom nvpair z \
 _DP_zfs_core=	nvpair
 _DP_zpool=	md pthread z nvpair avl umem
 _DP_be=		zfs nvpair
-_DP_mj=		bz2 crypto z
-_DP_netpgp=	bz2 crypto mj z
 _DP_dns_sd=	pthread
+_DP_mj=		bz2 crypto z
+_DP_netmap=
+_DP_netpgp=	bz2 crypto mj z
+_DP_pfctl=	nv
 
 # OFED support
 .if ${MK_OFED} != "no"

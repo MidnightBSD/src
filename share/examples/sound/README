@@ -12,7 +12,7 @@ configuring sample rate, bit depth and all other configuring of the device
 ioctl is used. As devices can support multiple sample rates and formats, what
 specific application should do in case there's an error issuing ioctl, as not
 all errors are fatal, is upon the developer to decide. As a general guideline
-Official OSS development howto should be used. FreeBSD OSS and virtual_oss are
+Official OSS development howto should be used. BSD OSS and virtual_oss are
 different to a small degree.
 
 For more advanced OSS and real-time applications, developers need to handle
@@ -34,7 +34,7 @@ samples. For example, 24bit sample will be represented with 3 bytes. If you're
 porting audio app from Linux, you should be aware that 24 bit samples are
 represented with 4 bytes (usually int).
 
-FreeBSD kernel will round up max_fragments and size of fragment/buffer, so the
+BSD kernel will round up max_fragments and size of fragment/buffer, so the
 last thing any OSS code should do is get info about buffer with audio_buf_info
 and SNDCTL_DSP_GETOSPACE. That also means that not all values of max_fragments
 are permitted.

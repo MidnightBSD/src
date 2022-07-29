@@ -41,7 +41,7 @@ __FBSDID("$FreeBSD$");
 
 #include "gpt.h"
 #include <sys/gpt.h>
-static const uuid_t freebsd_ufs_uuid = GPT_ENT_TYPE_FREEBSD_UFS;
+static const uuid_t midnightbsd_ufs_uuid = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
 static char secbuf[4096] __aligned(4096);
 static struct dsk dsk;
 static dev_info_t *devices = NULL;
@@ -256,7 +256,7 @@ choice_protocol(EFI_HANDLE *handles, UINTN nhandles, EFI_DEVICE_PATH *imgpath)
 	// But since we don't parse anything at all, hard wire the partition
 	// to be -1 (meaning look for the next one).
 	parts = 0;
-	while (gptfind(&freebsd_ufs_uuid, &dsk, -1) != -1) {
+	while (gptfind(&midnightbsd_ufs_uuid, &dsk, -1) != -1) {
 		parts++;
 		bootdev = find_partition(dsk.part);
 		if (bootdev == NULL) {
