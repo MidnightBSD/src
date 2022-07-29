@@ -61,17 +61,22 @@ static const struct {
 } abitag __attribute__ ((section (NOTE_SECTION), aligned(4))) __used = {
 	.namesz = sizeof(NOTE_MIDNIGHTBSD_VENDOR),
 	.descsz = sizeof(int32_t),
-	.type = ABI_NOTETYPE,
+	.type = NT_MIDNIGHTBSD_ABI_TAG,
 	.name = NOTE_MIDNIGHTBSD_VENDOR,
 	.desc = __MidnightBSD_version
 };
+
 static const struct {
 	int32_t	namesz;
 	int32_t	descsz;
 	int32_t	type;
+	char	name[sizeof(NOTE_MIDNIGHTBSD_VENDOR)];
 	uint32_t	desc[1];
 } crt_feature_ctl __attribute__ ((section (NOTE_SECTION),
     aligned(4))) __used = {
+	.namesz = sizeof(NOTE_MIDNIGHTBSD_VENDOR),
 	.descsz = sizeof(uint32_t),
+	.type = NT_MIDNIGHTBSD_FEATURE_CTL,
+	.name = NOTE_MIDNIGHTBSD_VENDOR,
 	.desc = { 0 }
 };

@@ -25,11 +25,17 @@ LIBC_ARCH=${MACHINE_CPUARCH}
 # excluded as a space-saving measure.  To produce a library that does
 # not contain these strings, add -DSTRIP_MBSDID (see <sys/cdefs.h>) to CFLAGS
 # below.  Note: there are no IDs for syscall stubs whose sources are generated.
-# To include legacy CSRG sccsid strings, add -DLIBC_SCCS and -DSYSLIBC_SCCS
-# to CFLAGS below.  -DSYSLIBC_SCCS affects just the system call stubs.
+# To include legacy CSRG SCCS ID strings, remove -DNO__SCCSID from CFLAGS.
+# To include RCS ID strings from other BSD projects, remove -DNO__RCSID from CFLAGS.
+CFLAGS+=-DNO__SCCSID -DNO__RCSID
+
 LIB=c
 SHLIB_MAJOR= 7
+.if ${MK_SSP} != "no"
 SHLIB_LDSCRIPT=libc.ldscript
+.else
+SHLIB_LDSCRIPT=libc_nossp.ldscript
+.endif
 SHLIB_LDSCRIPT_LINKS=libxnet.so
 WARNS?=	2
 CFLAGS+=-I${LIBC_SRCTOP}/include -I${SRCTOP}/include

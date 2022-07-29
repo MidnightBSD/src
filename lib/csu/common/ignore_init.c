@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/elf.h>
@@ -154,7 +153,7 @@ static const struct {
     aligned(4))) __used = {
 	.namesz = sizeof(NOTE_MIDNIGHTBSD_VENDOR),
 	.descsz = sizeof(uint32_t),
-	.type = CRT_NOINIT_NOTETYPE,
+	.type = NT_MIDNIGHTBSD_NOINIT_TAG,
 	.name = NOTE_MIDNIGHTBSD_VENDOR,
 	.desc = 0
 };
