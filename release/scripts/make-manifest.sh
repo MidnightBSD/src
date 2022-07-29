@@ -7,11 +7,10 @@
 # The output file looks like this (tab-delimited):
 #  foo1.txz SHA256-checksum Number-of-files foo1 Description Install-by-default
 #
-# $FreeBSD: stable/11/release/scripts/make-manifest.sh 303027 2016-07-19 16:22:50Z gjb $
+# $FreeBSD$
 
 base="Base system"
 doc="Additional Documentation"
-games="Games (fortune, etc.)"
 kernel="Kernel"
 ports="Ports tree"
 src="System source tree"
@@ -21,7 +20,6 @@ tests="Test suite"
 desc_base="${base} (MANDATORY)"
 desc_base_dbg="${base} (Debugging)"
 desc_doc="${doc}"
-desc_games="${games}"
 desc_kernel="${kernel} (MANDATORY)"
 desc_kernel_dbg="${kernel} (Debugging)"
 desc_kernel_alt="Alternate ${kernel}"

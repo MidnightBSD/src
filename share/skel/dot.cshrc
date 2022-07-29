@@ -28,6 +28,7 @@ if ($?prompt) then
 	endif
 	set prompt = "%n@%m:%~ %# "
 	set promptchars = "%#"
+
 	set filec
 	set history = 1000
 	set savehist = (1000 merge)
