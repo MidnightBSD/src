@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/11/usr.sbin/lpr/lprm/Makefile 321276 2017-07-20 01:07:15Z ngie $
+# $FreeBSD$
 
 .PATH: ${.CURDIR:H}/common_source
 

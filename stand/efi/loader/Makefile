@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/efi/loader/Makefile 344413 2019-02-21 03:18:12Z kevans $
+# $FreeBSD$
 
 LOADER_NET_SUPPORT?=	yes
 LOADER_MSDOS_SUPPORT?=	yes
@@ -22,7 +22,6 @@ SRCS=	autoload.c \
 	framebuffer.c \
 	main.c \
 	self_reloc.c \
-	smbios.c \
 	vers.c
 
 CFLAGS+=	-I${.CURDIR}/../loader
@@ -45,8 +44,6 @@ CWARNFLAGS.main.c+=	-Wno-format
 
 .PATH: ${.CURDIR}/../loader
 .PATH: ${.CURDIR}/../loader/arch/${MACHINE}
-# For smbios.c XXX need to abstract properly
-.PATH: ${BOOTSRC}/i386/libi386
 .include "${.CURDIR}/../loader/arch/${MACHINE}/Makefile.inc"
 
 CFLAGS+=	-I${.CURDIR}
@@ -55,19 +52,7 @@ CFLAGS+=	-I${EFISRC}/include
 CFLAGS+=	-I${EFISRC}/include/${MACHINE}
 CFLAGS+=	-I${SYSDIR}/contrib/dev/acpica/include
 CFLAGS+=	-I${BOOTSRC}/i386/libi386
-CFLAGS+=	-DNO_PCI -DEFI
-
-.if !defined(BOOT_HIDE_SERIAL_NUMBERS)
-# Export serial numbers, UUID, and asset tag from loader.
-CFLAGS+= -DSMBIOS_SERIAL_NUMBERS
-.if defined(BOOT_LITTLE_ENDIAN_UUID)
-# Use little-endian UUID format as defined in SMBIOS 2.6.
-CFLAGS+= -DSMBIOS_LITTLE_ENDIAN_UUID
-.elif defined(BOOT_NETWORK_ENDIAN_UUID)
-# Use network-endian UUID format for backward compatibility.
-CFLAGS+= -DSMBIOS_NETWORK_ENDIAN_UUID
-.endif
-.endif
+CFLAGS+=	-DEFI
 
 .if defined(HAVE_FDT) && ${MK_FDT} != "no"
 .include	"${BOOTSRC}/fdt.mk"
@@ -79,6 +64,10 @@ HAVE_BCACHE=    yes
 
 .if defined(EFI_STAGING_SIZE)
 CFLAGS+=	-DEFI_STAGING_SIZE=${EFI_STAGING_SIZE}
+.endif
+
+.if ${MK_LOADER_EFI_SECUREBOOT} != "no"
+CFLAGS+= -DEFI_SECUREBOOT
 .endif
 
 NEWVERSWHAT=	"EFI loader" ${MACHINE}
@@ -95,7 +84,7 @@ LINKS+=		${BINDIR}/${LOADER}.efi ${BINDIR}/loader.efi
 .endif
 
 LDSCRIPT=	${.CURDIR}/../loader/arch/${MACHINE}/ldscript.${MACHINE}
-LDFLAGS+=	-Wl,-T${LDSCRIPT},-Bsymbolic,-znotext -shared
+LDFLAGS+=	-Wl,-T${LDSCRIPT},-Bsymbolic,-znotext -pie
 
 CLEANFILES+=	loader.efi
 

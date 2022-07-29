@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/pmcstat/pmcpl_gprof.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -77,6 +77,9 @@ __FBSDID("$FreeBSD: stable/11/usr.sbin/pmcstat/pmcpl_gprof.c 330449 2018-03-05 0
 #include "pmcpl_gprof.h"
 
 typedef	uint64_t	WIDEHISTCOUNTER;
+
+#define	min(A,B)		((A) < (B) ? (A) : (B))
+#define	max(A,B)		((A) > (B) ? (A) : (B))
 
 #define	WIDEHISTCOUNTER_MAX		UINT64_MAX
 #define	HISTCOUNTER_MAX			USHRT_MAX
@@ -438,7 +441,7 @@ pmcpl_gmon_process(struct pmcstat_process *pp, struct pmcstat_pmcrecord *pmcr,
 	 * this executable image, try determine its parameters.
 	 */
 	if (image->pi_type == PMCSTAT_IMAGE_UNKNOWN)
-		pmcstat_image_determine_type(image);
+		pmcstat_image_determine_type(image, &args);
 
 	assert(image->pi_type != PMCSTAT_IMAGE_UNKNOWN);
 

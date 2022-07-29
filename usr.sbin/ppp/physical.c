@@ -16,7 +16,7 @@
  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: stable/11/usr.sbin/ppp/physical.c 230349 2012-01-20 01:37:49Z eadler $
+ * $FreeBSD$
  *
  */
 
@@ -102,9 +102,6 @@
 #include "ether.h"
 #include "netgraph.h"
 #endif
-#ifndef NOATM
-#include "atm.h"
-#endif
 #include "tcpmss.h"
 
 static int physical_DescriptorWrite(struct fdescriptor *, struct bundle *,
@@ -132,10 +129,6 @@ struct {
 #ifdef EXPERIMENTAL_NETGRAPH
   { ng_Create, ng_iov2device, ng_DeviceSize },
 #endif
-#endif
-#ifndef NOATM
-  /* Ditto for ATM devices */
-  { atm_Create, atm_iov2device, atm_DeviceSize },
 #endif
   { tcp_Create, tcp_iov2device, tcp_DeviceSize },
   { udp_Create, udp_iov2device, udp_DeviceSize },

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/pmcstat/pmcpl_calltree.h 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_PMCSTAT_PL_CALLTREE_H_
@@ -37,7 +37,7 @@ void pmcpl_ct_shutdown(FILE *mf);
 void pmcpl_ct_process(
     struct pmcstat_process *pp, struct pmcstat_pmcrecord *pmcr,
     uint32_t nsamples, uintfptr_t *cc, int usermode, uint32_t cpu);
-int pmcpl_ct_topkeypress(int c, WINDOW *w);
+int pmcpl_ct_topkeypress(int c, void *w);
 void pmcpl_ct_topdisplay(void);
 int pmcpl_ct_configure(char *opt);
 

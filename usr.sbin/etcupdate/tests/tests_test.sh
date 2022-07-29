@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.sbin/etcupdate/tests/tests_test.sh 281887 2015-04-23 14:22:20Z jhb $
+# $FreeBSD$
 
 # Various regression tests to run for the 'update' command.
 

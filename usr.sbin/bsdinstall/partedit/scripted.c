@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Nathan Whitehorn
  * All rights reserved.
  *
@@ -86,7 +87,7 @@ part_config(char *disk, const char *scheme, char *config)
 	LIST_FOREACH(classp, &mesh.lg_class, lg_class)
 		if (strcmp(classp->lg_name, "PART") == 0)
 			break;
-        if (classp != NULL) {
+	if (classp != NULL) {
 		LIST_FOREACH(gpart, &classp->lg_geom, lg_geom)
 		if (strcmp(gpart->lg_name, disk) == 0)
 			break;
@@ -95,11 +96,11 @@ part_config(char *disk, const char *scheme, char *config)
 		gpart_destroy(gpart);
 	gpart_partition(disk, scheme);
 
-	if (strcmp(scheme, "PC98") == 0 || strcmp(scheme, "MBR") == 0) {
+	if (strcmp(scheme, "MBR") == 0) {
 		struct gmesh submesh;
 		geom_gettree(&submesh);
 		gpart_create(provider_for_name(&submesh, disk),
-		    "midnightbsd", NULL, NULL, &disk, 0);
+		    "freebsd", NULL, NULL, &disk, 0);
 		geom_deletetree(&submesh);
 	} else {
 		disk= strdup(disk);

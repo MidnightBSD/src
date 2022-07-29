@@ -6,6 +6,8 @@
 #  system installations, as well as calls which a front-end can use
 #  to retrive information about the system
 #####################################################################
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright 2010 iXsystems
 # All rights reserved
 #
@@ -30,7 +32,7 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.sbin/pc-sysinstall/pc-sysinstall/pc-sysinstall.sh 218800 2011-02-18 15:00:25Z jpaetzel $
+# $FreeBSD$
 #####################################################################
 
 # User-editable configuration variables

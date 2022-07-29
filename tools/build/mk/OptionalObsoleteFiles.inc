@@ -56,6 +56,7 @@ OLD_FILES+=usr/share/man/man8/iasl.8.gz
 
 .if ${MK_AMD} == no
 OLD_FILES+=etc/amd.map
+OLD_FILES+=etc/newsyslog.conf.d/amd.conf
 OLD_FILES+=etc/rc.d/amd
 OLD_FILES+=usr/bin/pawd
 OLD_FILES+=usr/sbin/amd
@@ -66,7 +67,6 @@ OLD_FILES+=usr/sbin/hlfsd
 OLD_FILES+=usr/sbin/mk-amd-map
 OLD_FILES+=usr/sbin/wire-test
 OLD_FILES+=usr/share/examples/etc/amd.map
-OLD_FILES+=usr/share/info/am-utils.info.gz
 OLD_FILES+=usr/share/man/man1/pawd.1.gz
 OLD_FILES+=usr/share/man/man5/amd.conf.5.gz
 OLD_FILES+=usr/share/man/man8/amd.8.gz
@@ -103,13 +103,7 @@ OLD_FILES+=usr/share/man/man8/atrun.8.gz
 .endif
 
 .if ${MK_ATM} == no
-OLD_FILES+=etc/rc.d/atm1
-OLD_FILES+=etc/rc.d/atm2
-OLD_FILES+=etc/rc.d/atm3
-OLD_FILES+=rescue/atmconfig
-OLD_FILES+=sbin/atmconfig
 OLD_FILES+=usr/bin/sscop
-OLD_FILES+=usr/include/bsnmp/snmp_atm.h
 OLD_FILES+=usr/include/netnatm/addr.h
 OLD_FILES+=usr/include/netnatm/api/atmapi.h
 OLD_FILES+=usr/include/netnatm/api/ccatm.h
@@ -137,33 +131,24 @@ OLD_FILES+=usr/lib/libngatm.a
 OLD_FILES+=usr/lib/libngatm.so
 OLD_LIBS+=usr/lib/libngatm.so.4
 OLD_FILES+=usr/lib/libngatm_p.a
-OLD_FILES+=usr/lib/snmp_atm.so
-OLD_LIBS+=usr/lib/snmp_atm.so.6
 .if ${TARGET_ARCH} == "amd64" || ${TARGET_ARCH} == "powerpc64"
 OLD_FILES+=usr/lib32/libngatm.a
 OLD_FILES+=usr/lib32/libngatm.so
 OLD_LIBS+=usr/lib32/libngatm.so.4
 OLD_FILES+=usr/lib32/libngatm_p.a
 .endif
-OLD_FILES+=usr/share/doc/atm/atmconfig.help
-OLD_FILES+=usr/share/doc/atm/atmconfig_device.help
-OLD_DIRS+=usr/share/doc/atm
 OLD_FILES+=usr/share/man/man1/sscop.1.gz
 OLD_FILES+=usr/share/man/man3/libngatm.3.gz
-OLD_FILES+=usr/share/man/man3/snmp_atm.3.gz
 OLD_FILES+=usr/share/man/man3/uniaddr.3.gz
 OLD_FILES+=usr/share/man/man3/unifunc.3.gz
 OLD_FILES+=usr/share/man/man3/unimsg.3.gz
 OLD_FILES+=usr/share/man/man3/unisap.3.gz
 OLD_FILES+=usr/share/man/man3/unistruct.3.gz
-OLD_FILES+=usr/share/man/man8/atmconfig.8.gz
-OLD_FILES+=usr/share/snmp/defs/atm_freebsd.def
-OLD_FILES+=usr/share/snmp/defs/atm_tree.def
-OLD_FILES+=usr/share/snmp/mibs/BEGEMOT-ATM-FREEBSD-MIB.txt
-OLD_FILES+=usr/share/snmp/mibs/BEGEMOT-ATM.txt
 .endif
 
 .if ${MK_AUDIT} == no
+OLD_FILES+=etc/rc.d/auditd
+OLD_FILES+=etc/rc.d/auditdistd
 OLD_FILES+=usr/sbin/audit
 OLD_FILES+=usr/sbin/auditd
 OLD_FILES+=usr/sbin/auditdistd
@@ -175,6 +160,22 @@ OLD_FILES+=usr/share/man/man5/auditdistd.conf.5.gz
 OLD_FILES+=usr/share/man/man8/audit.8.gz
 OLD_FILES+=usr/share/man/man8/auditd.8.gz
 OLD_FILES+=usr/share/man/man8/auditdistd.8.gz
+OLD_FILES+=usr/tests/sys/audit/process-control
+OLD_FILES+=usr/tests/sys/audit/open
+OLD_FILES+=usr/tests/sys/audit/network
+OLD_FILES+=usr/tests/sys/audit/miscellaneous
+OLD_FILES+=usr/tests/sys/audit/Kyuafile
+OLD_FILES+=usr/tests/sys/audit/ioctl
+OLD_FILES+=usr/tests/sys/audit/inter-process
+OLD_FILES+=usr/tests/sys/audit/file-write
+OLD_FILES+=usr/tests/sys/audit/file-read
+OLD_FILES+=usr/tests/sys/audit/file-delete
+OLD_FILES+=usr/tests/sys/audit/file-create
+OLD_FILES+=usr/tests/sys/audit/file-close
+OLD_FILES+=usr/tests/sys/audit/file-attribute-modify
+OLD_FILES+=usr/tests/sys/audit/file-attribute-access
+OLD_FILES+=usr/tests/sys/audit/administrative
+OLD_DIRS+=usr/tests/sys/audit
 .endif
 
 .if ${MK_AUTHPF} == no

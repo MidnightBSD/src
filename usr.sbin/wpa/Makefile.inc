@@ -1,5 +1,7 @@
 # $FreeBSD: stable/11/usr.sbin/wpa/Makefile.inc 346981 2019-05-01 01:43:17Z cy $
 
+.include <src.opts.mk>
+
 BINDIR?=	/usr/sbin
 
 WPA_DISTDIR?= 		${SRCTOP}/contrib/wpa/

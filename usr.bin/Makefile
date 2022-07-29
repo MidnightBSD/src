@@ -46,12 +46,13 @@ SUBDIR+=alias \
 	csplit \
 	ctlstat \
 	cut \
-	deroff \
+	diff \
 	dirname \
 	dns-sd \
 	doas \
 	du \
 	elf2aout \
+	elfctl \
 	elfdump \
 	enigma \
 	env \
@@ -75,6 +76,7 @@ SUBDIR+=alias \
 	head \
 	hexdump \
 	id \
+	ident \
 	ipcrm \
 	ipcs \
 	join \
@@ -136,9 +138,11 @@ SUBDIR+=alias \
 	patch \
 	pathchk \
 	perror \
+	posixshmcontrol \
 	pr \
 	printenv \
 	printf \
+	proccontrol \
 	procstat \
 	progress \
 	protect \
@@ -211,7 +215,8 @@ SUBDIR+=alias \
 	xo \
 	xz \
 	xzdec \
-	yes
+	yes \
+	zstd
 
 # NB: keep these sorted by MK_* knobs
 
@@ -220,23 +225,35 @@ SUBDIR.${MK_ATM}+=	atm
 SUBDIR.${MK_BLUETOOTH}+=	bluetooth
 SUBDIR.${MK_BSD_CPIO}+=	cpio
 SUBDIR.${MK_CALENDAR}+=	calendar
-SUBDIR.${MK_CLANG}+=	clang
+.if ${MK_CLANG} != "no" || ${MK_LLVM_BINUTILS} != "no" || \
+    ${MK_LLD} != "no" || ${MK_LLDB} != "no"
+SUBDIR+=	clang
+.endif
 SUBDIR.${MK_DIALOG}+=	dpv
 SUBDIR.${MK_EE}+=	ee
 SUBDIR.${MK_FILE}+=	file
 SUBDIR.${MK_FINGER}+=	finger
 SUBDIR.${MK_FTP}+=	ftp
-
-.if ${MK_GNU_DIFF} == "no"
-SUBDIR+=	diff
-.endif 
-
+SUBDIR.${MK_GAMES}+=	caesar
+SUBDIR.${MK_GAMES}+=	factor
+SUBDIR.${MK_GAMES}+=	fortune
+SUBDIR.${MK_GAMES}+=	grdc
+SUBDIR.${MK_GAMES}+=	morse
+SUBDIR.${MK_GAMES}+=	number
+SUBDIR.${MK_GAMES}+=	pom
+SUBDIR.${MK_GAMES}+=	primes
+SUBDIR.${MK_GAMES}+=	random
 .if ${MK_GPL_DTC} != "yes"
+.if ${COMPILER_FEATURES:Mc++11}
 SUBDIR+=	dtc
 .endif
-
-SUBDIR.${MK_MAKE}+=   bmake
-SUBDIR.${MK_GROFF}+=	vgrind
+.endif
+.if ${MK_GH_BC} == "yes"
+SUBDIR+=		gh-bc
+.else
+SUBDIR.${MK_OPENSSL}+=	bc
+SUBDIR.${MK_OPENSSL}+=	dc
+.endif
 SUBDIR.${MK_HESIOD}+=	hesinfo
 SUBDIR.${MK_ICONV}+=	iconv
 SUBDIR.${MK_ICONV}+=	mkcsmapper
@@ -254,10 +271,6 @@ SUBDIR.${MK_MAIL}+=	from
 SUBDIR.${MK_MAIL}+=	mail
 SUBDIR.${MK_MAIL}+=	msgs
 SUBDIR.${MK_MAKE}+=	bmake
-SUBDIR.${MK_MAN_UTILS}+=	catman
-.if ${MK_MANDOCDB} == "no"	# AND
-SUBDIR.${MK_MAN_UTILS}+=	makewhatis
-.endif
 SUBDIR.${MK_MAN_UTILS}+=	man
 SUBDIR.${MK_NETCAT}+=	nc
 SUBDIR.${MK_NIS}+=	ypcat
@@ -269,8 +282,6 @@ SUBDIR.${MK_OPENSSL}+=	chkey
 SUBDIR.${MK_OPENSSL}+=	dc
 SUBDIR.${MK_OPENSSL}+=	newkey
 SUBDIR.${MK_QUOTAS}+=	quota
-SUBDIR.${MK_RCMDS}+=	rlogin
-SUBDIR.${MK_RCMDS}+=	rsh
 SUBDIR.${MK_SENDMAIL}+=	vacation
 SUBDIR.${MK_TALK}+=	talk
 SUBDIR.${MK_TELNET}+=	telnet
@@ -279,13 +290,21 @@ SUBDIR.${MK_TEXTPROC}+=	checknr
 SUBDIR.${MK_TEXTPROC}+=	colcrt
 SUBDIR.${MK_TEXTPROC}+=	ul
 SUBDIR.${MK_TFTP}+=	tftp
+.if ${MK_LLVM_BINUTILS} == "no"
+# Only build the elftoolchain tools if we aren't using the LLVM ones.
 SUBDIR.${MK_TOOLCHAIN}+=	addr2line
 SUBDIR.${MK_TOOLCHAIN}+=	ar
+SUBDIR.${MK_TOOLCHAIN}+=	nm
+SUBDIR.${MK_TOOLCHAIN}+=	objcopy
+SUBDIR.${MK_TOOLCHAIN}+=	readelf
+SUBDIR.${MK_TOOLCHAIN}+=	size
+.endif
 SUBDIR.${MK_TOOLCHAIN}+=	c89
 SUBDIR.${MK_TOOLCHAIN}+=	c99
 SUBDIR.${MK_TOOLCHAIN}+=	ctags
+.if ${MK_LLVM_CXXFILT} == "no"
 SUBDIR.${MK_TOOLCHAIN}+=	cxxfilt
-SUBDIR.${MK_TOOLCHAIN}+=	elfcopy
+.endif
 SUBDIR.${MK_TOOLCHAIN}+=	file2c
 # ARM64TODO gprof does not build
 # RISCVTODO gprof does not build
@@ -295,14 +314,8 @@ SUBDIR.${MK_TOOLCHAIN}+=	gprof
 SUBDIR.${MK_TOOLCHAIN}+=	indent
 SUBDIR.${MK_TOOLCHAIN}+=	lex
 SUBDIR.${MK_TOOLCHAIN}+=	mkstr
-SUBDIR.${MK_TOOLCHAIN}+=	nm
-SUBDIR.${MK_TOOLCHAIN}+=	readelf
 SUBDIR.${MK_TOOLCHAIN}+=	rpcgen
 SUBDIR.${MK_TOOLCHAIN}+=	unifdef
-SUBDIR.${MK_TOOLCHAIN}+=	size
-.if ${MK_LINT} != "no" && ${MACHINE_ARCH} != "aarch64" # ARM64TODO xlint does not build
-SUBDIR.${MK_TOOLCHAIN}+=	xlint
-.endif
 SUBDIR.${MK_TOOLCHAIN}+=	xstr
 SUBDIR.${MK_TOOLCHAIN}+=	yacc
 SUBDIR.${MK_VI}+=	vi
@@ -310,7 +323,7 @@ SUBDIR.${MK_VT}+=	vtfontcvt
 SUBDIR.${MK_USB}+=	usbhidaction
 SUBDIR.${MK_USB}+=	usbhidctl
 SUBDIR.${MK_UTMPX}+=	last
-.if ${MACHINE_CPUARCH} != "riscv" # RISCVTODO users does not build
+.if ${MK_CXX} != "no"
 SUBDIR.${MK_UTMPX}+=	users
 .endif
 SUBDIR.${MK_UTMPX}+=	who

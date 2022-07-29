@@ -21,7 +21,7 @@
  *
  * From: Header: /local/src/local.lib/SRC/ipfwpcap/RCS/ipfwpcap.c,v 1.4 2004/01/15 16:19:07 pkern Exp
  *
- * $FreeBSD: stable/11/usr.sbin/ipfwpcap/ipfwpcap.c 229403 2012-01-03 18:51:58Z ed $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
@@ -40,6 +40,8 @@
 
 #include <netinet/in_systm.h>	/* for IP_MAXPACKET */
 #include <netinet/ip.h>		/* for IP_MAXPACKET */
+
+#include <net/bpf.h>
 
 /* XXX normally defined in config.h */
 #define HAVE_STRLCPY 1

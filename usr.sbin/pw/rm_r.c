@@ -28,7 +28,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/11/usr.sbin/pw/rm_r.c 359588 2020-04-03 05:06:08Z bapt $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/stat.h>
@@ -57,6 +57,10 @@ rm_r(int rootfd, const char *path, uid_t uid)
 	}
 
 	d = fdopendir(dirfd);
+	if (d == NULL) {
+		(void)close(dirfd);
+		return;
+	}
 	while ((e = readdir(d)) != NULL) {
 		if (strcmp(e->d_name, ".") == 0 || strcmp(e->d_name, "..") == 0)
 			continue;

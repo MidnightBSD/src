@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/fifolog/lib/Makefile 291735 2015-12-04 03:17:17Z bdrewery $
+# $FreeBSD$
 
 LIB=	fifolog
 INTERNALLIB=	# API not published or supported.

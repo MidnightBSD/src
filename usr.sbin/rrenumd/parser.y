@@ -1,6 +1,8 @@
 /*	$KAME: parser.y,v 1.8 2000/11/08 03:03:34 jinmei Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/rrenumd/parser.y 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 %{
@@ -139,7 +141,7 @@ statement:
 debug_statement:
 		DEBUG_CMD flag EOS
 		{
-#ifdef YYDEBUG
+#if YYDEBUG
 			yydebug = $2;
 #endif /* YYDEBUG */
 		}
@@ -336,8 +338,8 @@ match_prefix_definition:
 			struct icmp6_router_renum *irr;
 			struct rr_pco_match *rpm;
 
-			irr = (struct icmp6_router_renum *)&ple_cur.pl_irr;
-			rpm = (struct rr_pco_match *)(irr + 1);
+			irr = &ple_cur.pl_irr;
+			rpm = &ple_cur.pl_rpm;
 			memset(rpm, 0, sizeof(*rpm));
 
 			rpm->rpm_code = $1;

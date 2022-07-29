@@ -31,7 +31,7 @@
 
 #ifndef lint
 static const char rcs_id[] =
-    "@(#) $FreeBSD: stable/11/usr.sbin/flowctl/flowctl.c 330449 2018-03-05 07:26:05Z eadler $";
+    "@(#) $FreeBSD$";
 #endif
 
 #include <sys/types.h>

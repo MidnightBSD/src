@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2007 Yahoo!, Inc.
  * All rights reserved.
  * Written by: John Baldwin <jhb@FreeBSD.org>
@@ -30,7 +32,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/11/usr.sbin/pciconf/cap.c 331722 2018-03-29 02:50:57Z eadler $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -387,6 +389,30 @@ link_speed_string(uint8_t speed)
 		return ("5.0");
 	case 3:
 		return ("8.0");
+	case 4:
+		return ("16.0");
+	default:
+		return ("undef");
+	}
+}
+
+static const char *
+max_read_string(u_int max_read)
+{
+
+	switch (max_read) {
+	case 0x0:
+		return ("128");
+	case 0x1:
+		return ("256");
+	case 0x2:
+		return ("512");
+	case 0x3:
+		return ("1024");
+	case 0x4:
+		return ("2048");
+	case 0x5:
+		return ("4096");
 	default:
 		return ("undef");
 	}
@@ -494,6 +520,8 @@ cap_express(int fd, struct pci_conf *p, uint8_t ptr)
 			    (ctl & PCIEM_CTL2_ARI) ? "enabled" : "disabled");
 		}
 	}
+	printf("\n                 max read %s", max_read_string((ctl &
+	    PCIEM_CTL_MAX_READ_REQUEST) >> 12));
 	cap = read_config(fd, &p->pc_sel, ptr + PCIER_LINK_CAP, 4);
 	sta = read_config(fd, &p->pc_sel, ptr + PCIER_LINK_STA, 2);
 	if (cap == 0 && sta == 0)
@@ -510,6 +538,11 @@ cap_express(int fd, struct pci_conf *p, uint8_t ptr)
 		ctl = read_config(fd, &p->pc_sel, ptr + PCIER_LINK_CTL, 2);
 		printf(" ASPM %s(%s)", aspm_string(ctl & PCIEM_LINK_CTL_ASPMC),
 		    aspm_string((cap & PCIEM_LINK_CAP_ASPM) >> 10));
+	}
+	if ((cap & PCIEM_LINK_CAP_CLOCK_PM) != 0) {
+		ctl = read_config(fd, &p->pc_sel, ptr + PCIER_LINK_CTL, 2);
+		printf(" ClockPM %s", (ctl & PCIEM_LINK_CTL_ECPM) ?
+		    "enabled" : "disabled");
 	}
 	if (!(flags & PCIEM_FLAGS_SLOT))
 		return;
@@ -821,8 +854,10 @@ ecap_aer(int fd, struct pci_conf *p, uint16_t ptr, uint8_t ver)
 	uint32_t sta, mask;
 
 	printf("AER %d", ver);
-	if (ver < 1)
+	if (ver < 1) {
+		printf("\n");
 		return;
+	}
 	sta = read_config(fd, &p->pc_sel, ptr + PCIR_AER_UC_STATUS, 4);
 	mask = read_config(fd, &p->pc_sel, ptr + PCIR_AER_UC_SEVERITY, 4);
 	printf(" %d fatal", bitcount32(sta & mask));
@@ -837,8 +872,10 @@ ecap_vc(int fd, struct pci_conf *p, uint16_t ptr, uint8_t ver)
 	uint32_t cap1;
 
 	printf("VC %d", ver);
-	if (ver < 1)
+	if (ver < 1) {
+		printf("\n");
 		return;
+	}
 	cap1 = read_config(fd, &p->pc_sel, ptr + PCIR_VC_CAP1, 4);
 	printf(" max VC%d", cap1 & PCIM_VC_CAP1_EXT_COUNT);
 	if ((cap1 & PCIM_VC_CAP1_LOWPRI_EXT_COUNT) != 0)
@@ -853,8 +890,10 @@ ecap_sernum(int fd, struct pci_conf *p, uint16_t ptr, uint8_t ver)
 	uint32_t high, low;
 
 	printf("Serial %d", ver);
-	if (ver < 1)
+	if (ver < 1) {
+		printf("\n");
 		return;
+	}
 	low = read_config(fd, &p->pc_sel, ptr + PCIR_SERIAL_LOW, 4);
 	high = read_config(fd, &p->pc_sel, ptr + PCIR_SERIAL_HIGH, 4);
 	printf(" %08x%08x\n", high, low);
@@ -878,8 +917,10 @@ ecap_sec_pcie(int fd, struct pci_conf *p, uint16_t ptr, uint8_t ver)
 	uint32_t val;
 
 	printf("PCIe Sec %d", ver);
-	if (ver < 1)
+	if (ver < 1) {
+		printf("\n");
 		return;
+	}
 	val = read_config(fd, &p->pc_sel, ptr + 8, 4);
 	printf(" lane errors %#x\n", val);
 }

@@ -31,7 +31,7 @@ static const char copyright[] =
 	"Copyright (C) 1997, Massachusetts Institute of Technology\r\n";
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: stable/11/usr.sbin/lpr/chkprintcap/chkprintcap.c 297795 2016-04-10 23:47:40Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/queue.h>
@@ -113,8 +113,13 @@ main(int argc, char **argv)
 	 * the printcap file.
 	*/
 	skres = skim_printcap(pcap_fname, verbosity);
-	if (skres->fatalerr)
-		return (skres->fatalerr);
+	if (skres == NULL) {
+		problems = 1;
+		goto main_ret;
+	} else if (skres->fatalerr) {
+		problems = skres->fatalerr;
+		goto main_ret;
+	}
 
 	/*
 	 * Now use the standard capability-db routines to check the values
@@ -156,6 +161,9 @@ next:
 		warnx("WARNING:  but only found %d queues to process!",
 		    queuecnt);
 	}
+
+main_ret:
+	free(pcap_fname);
 	return (problems);
 }
 

@@ -1,6 +1,5 @@
 /*-
- * Copyright (c) 2014, 2015 Netflix Inc.
- * All rights reserved.
+ * Copyright (c) 2014-2015 Netflix, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +35,7 @@
 #include <sys/wait.h>
 #include <getopt.h>
 #include "eval_expr.h"
-__FBSDID("$FreeBSD: stable/11/usr.sbin/pmcstudy/pmcstudy.c 303675 2016-08-02 20:18:43Z bdrewery $");
+__FBSDID("$FreeBSD$");
 
 static int max_pmc_counters = 1;
 static int run_all = 0;
@@ -2860,7 +2859,7 @@ main(int argc, char **argv)
 			       argv[0]);
 			printf("-i inputfile -- use source as inputfile not stdin (if stdin collect)\n");
 			printf("-v -- verbose dump debug type things -- you don't want this\n");
-			printf("-m N -- maximum to collect is N measurments\n");
+			printf("-m N -- maximum to collect is N measurements\n");
 			printf("-e expr-name -- Do expression expr-name\n");
 			printf("-E 'your expression' -- Do your expression\n");
 			printf("-h -- Don't do the expression I put in -e xxx just explain what it does and exit\n");

@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/usr.sbin/sesutil/eltsub.h 321287 2017-07-20 08:11:06Z bapt $ */
+/* $FreeBSD$ */
 /*
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.

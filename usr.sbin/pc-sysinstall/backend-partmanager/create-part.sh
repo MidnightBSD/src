@@ -1,5 +1,7 @@
 #!/bin/sh
 #-
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (c) 2010 iXsystems, Inc.  All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -23,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.sbin/pc-sysinstall/backend-partmanager/create-part.sh 232889 2012-03-12 20:41:36Z jpaetzel $
+# $FreeBSD$
 
 # Create partitions on a target disk
 #############################
@@ -60,7 +62,6 @@ case $TYPE in
 	apm|APM) ;;
 	bsd|BSD) ;;
 	ebr|EBR) ;;
-      pc98|pc98) ;;
 	gpt|GPT) ;;
 	mbr|MBR) ;;
     vtoc8|VTOC8) ;;
