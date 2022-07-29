@@ -1,4 +1,4 @@
-/*	$NetBSD: dir.c,v 1.71 2017/04/16 21:14:47 riastradh Exp $	*/
+/*	$NetBSD: dir.c,v 1.76 2020/07/03 08:13:23 rillig Exp $	*/
 
 /*
  * Copyright (c) 1988, 1989, 1990 The Regents of the University of California.
@@ -70,14 +70,14 @@
  */
 
 #ifndef MAKE_NATIVE
-static char rcsid[] = "$NetBSD: dir.c,v 1.71 2017/04/16 21:14:47 riastradh Exp $";
+static char rcsid[] = "$NetBSD: dir.c,v 1.76 2020/07/03 08:13:23 rillig Exp $";
 #else
 #include <sys/cdefs.h>
 #ifndef lint
 #if 0
 static char sccsid[] = "@(#)dir.c	8.2 (Berkeley) 1/2/94";
 #else
-__RCSID("$NetBSD: dir.c,v 1.71 2017/04/16 21:14:47 riastradh Exp $");
+__RCSID("$NetBSD: dir.c,v 1.76 2020/07/03 08:13:23 rillig Exp $");
 #endif
 #endif /* not lint */
 #endif
@@ -112,7 +112,7 @@ __RCSID("$NetBSD: dir.c,v 1.71 2017/04/16 21:14:47 riastradh Exp $");
  *	Dir_FindHereOrAbove Search for a path in the current directory and
  *			    then all the directories above it in turn until
  *			    the path is found or we reach the root ("/").
- * 
+ *
  *	Dir_MTime 	    Return the modification time of a node. The file
  *	    	  	    is searched for along the default search path.
  *	    	  	    The path and mtime fields of the node are filled
@@ -263,20 +263,12 @@ static char *DirLookupAbs(Path *, const char *, const char *);
  * mtime and mode are all we care about.
  */
 struct cache_st {
-    time_t mtime;
+    time_t lmtime;			/* lstat */
+    time_t mtime;			/* stat */
     mode_t  mode;
 };
 
 /* minimize changes below */
-static time_t
-Hash_GetTimeValue(Hash_Entry *entry)
-{
-    struct cache_st *cst;
-
-    cst = entry->clientPtr;
-    return cst->mtime;
-}
-
 #define CST_LSTAT 1
 #define CST_UPDATE 2
 
@@ -296,9 +288,15 @@ cached_stats(Hash_Table *htp, const char *pathname, struct stat *st, int flags)
 	cst = entry->clientPtr;
 
 	memset(st, 0, sizeof(*st));
-	st->st_mtime = cst->mtime;
 	st->st_mode = cst->mode;
-	return 0;
+	st->st_mtime = (flags & CST_LSTAT) ? cst->lmtime : cst->mtime;
+	if (st->st_mtime) {
+	    if (DEBUG(DIR)) {
+		fprintf(debug_file, "Using cached time %s for %s\n",
+			Targ_FmtTime(st->st_mtime), pathname);
+	    }
+	    return 0;
+	}
     }
 
     rc = (flags & CST_LSTAT) ? lstat(pathname, st) : stat(pathname, st);
@@ -310,11 +308,21 @@ cached_stats(Hash_Table *htp, const char *pathname, struct stat *st, int flags)
 
     if (!entry)
 	entry = Hash_CreateEntry(htp, pathname, NULL);
-    if (!entry->clientPtr)
+    if (!entry->clientPtr) {
 	entry->clientPtr = bmake_malloc(sizeof(*cst));
+	memset(entry->clientPtr, 0, sizeof(*cst));
+    }
     cst = entry->clientPtr;
-    cst->mtime = st->st_mtime;
+    if ((flags & CST_LSTAT)) {
+	cst->lmtime = st->st_mtime;
+    } else {
+	cst->mtime = st->st_mtime;
+    }
     cst->mode = st->st_mode;
+    if (DEBUG(DIR)) {
+	fprintf(debug_file, "   Caching %s for %s\n",
+	    Targ_FmtTime(st->st_mtime), pathname);
+    }
 
     return 0;
 }
@@ -369,7 +377,7 @@ void
 Dir_InitCur(const char *cdname)
 {
     Path *p;
-    
+
     if (cdname != NULL) {
 	/*
 	 * Our build directory is not the same as our source directory.
@@ -472,7 +480,7 @@ Dir_SetPATH(void)
     Boolean	  hasLastDot = FALSE;	/* true we should search dot last */
 
     Var_Delete(".PATH", VAR_GLOBAL);
-    
+
     if (Lst_Open(dirSearchPath) == SUCCESS) {
 	if ((ln = Lst_First(dirSearchPath)) != NULL) {
 	    p = (Path *)Lst_Datum(ln);
@@ -529,7 +537,7 @@ Dir_SetPATH(void)
 static int
 DirFindName(const void *p, const void *dname)
 {
-    return (strcmp(((const Path *)p)->name, dname));
+    return strcmp(((const Path *)p)->name, dname);
 }
 
 /*-
@@ -537,7 +545,7 @@ DirFindName(const void *p, const void *dname)
  * Dir_HasWildcards  --
  *	see if the given name has any wildcard characters in it
  *	be careful not to expand unmatching brackets or braces.
- *	XXX: This code is not 100% correct. ([^]] fails etc.) 
+ *	XXX: This code is not 100% correct. ([^]] fails etc.)
  *	I really don't think that make(1) should be expanding
  *	patterns, because then you have to set a mechanism for
  *	escaping the expansion!
@@ -636,7 +644,7 @@ DirMatchFiles(const char *pattern, Path *p, Lst expansions)
 					STR_ADDSLASH)));
 	}
     }
-    return (0);
+    return 0;
 }
 
 /*-
@@ -939,7 +947,7 @@ Dir_Expand(const char *word, Lst path, Lst expansions)
  *-----------------------------------------------------------------------
  */
 static char *
-DirLookup(Path *p, const char *name MAKE_ATTR_UNUSED, const char *cp, 
+DirLookup(Path *p, const char *name MAKE_ATTR_UNUSED, const char *cp,
           Boolean hasSlash MAKE_ATTR_UNUSED)
 {
     char *file;		/* the current filename to check */
@@ -995,16 +1003,8 @@ DirLookupSubdir(Path *p, const char *name)
     }
 
     if (cached_stat(file, &stb) == 0) {
-	/*
-	 * Save the modification time so if it's needed, we don't have
-	 * to fetch it again.
-	 */
-	if (DEBUG(DIR)) {
-	    fprintf(debug_file, "   Caching %s for %s\n", Targ_FmtTime(stb.st_mtime),
-		    file);
-	}
 	nearmisses += 1;
-	return (file);
+	return file;
     }
     free(file);
     return NULL;
@@ -1061,7 +1061,7 @@ DirLookupAbs(Path *p, const char *name, const char *cp)
 	if (DEBUG(DIR)) {
 		fprintf(debug_file, "   returning %s\n", name);
 	}
-	return (bmake_strdup(name));
+	return bmake_strdup(name);
 }
 
 /*-
@@ -1087,7 +1087,7 @@ DirFindDot(Boolean hasSlash MAKE_ATTR_UNUSED, const char *name, const char *cp)
 	    }
 	    hits += 1;
 	    dot->hits += 1;
-	    return (bmake_strdup(name));
+	    return bmake_strdup(name);
 	}
 	if (cur &&
 	    Hash_FindEntry(&cur->files, cp) != NULL) {
@@ -1134,7 +1134,6 @@ Dir_FindFile(const char *name, Lst path)
     Boolean	  hasLastDot = FALSE;	/* true we should search dot last */
     Boolean	  hasSlash;		/* true if 'name' contains a / */
     struct stat	  stb;			/* Buffer for stat, if necessary */
-    Hash_Entry	  *entry;		/* Entry for mtimes table */
     const char   *trailing_dot = ".";
 
     /*
@@ -1186,7 +1185,7 @@ Dir_FindFile(const char *name, Lst path)
 	     * is found, we concatenate the directory name and the final
 	     * component and return the resulting string. If we don't find any
 	     * such thing, we go on to phase two...
-	     * 
+	     *
 	     * No matter what, we always look for the file in the current
 	     * directory before anywhere else (unless we found the magic
 	     * DOTLAST path, in which case we search it last) and we *do not*
@@ -1385,7 +1384,7 @@ Dir_FindFile(const char *name, Lst path)
     }
 
     if (Hash_FindEntry(&p->files, cp) != NULL) {
-	return (bmake_strdup(name));
+	return bmake_strdup(name);
     } else {
 	return NULL;
     }
@@ -1395,24 +1394,14 @@ Dir_FindFile(const char *name, Lst path)
     }
 
     bigmisses += 1;
-    entry = Hash_FindEntry(&mtimes, name);
-    if (entry != NULL) {
-	if (DEBUG(DIR)) {
-	    fprintf(debug_file, "   got it (in mtime cache)\n");
-	}
-	return(bmake_strdup(name));
-    } else if (cached_stat(name, &stb) == 0) {
-	if (DEBUG(DIR)) {
-	    fprintf(debug_file, "   Caching %s for %s\n", Targ_FmtTime(stb.st_mtime),
-		    name);
-	}
-	return (bmake_strdup(name));
-    } else {
-	if (DEBUG(DIR)) {
-	    fprintf(debug_file, "   failed. Returning NULL\n");
-	}
-	return NULL;
+    if (cached_stat(name, &stb) == 0) {
+	return bmake_strdup(name);
     }
+
+    if (DEBUG(DIR)) {
+	fprintf(debug_file, "   failed. Returning NULL\n");
+    }
+    return NULL;
 #endif /* notdef */
 }
 
@@ -1420,14 +1409,14 @@ Dir_FindFile(const char *name, Lst path)
 /*-
  *-----------------------------------------------------------------------
  * Dir_FindHereOrAbove  --
- *	search for a path starting at a given directory and then working 
+ *	search for a path starting at a given directory and then working
  *	our way up towards the root.
  *
  * Input:
  *	here		starting directory
  *	search_path	the path we are looking for
  *	result		the result of a successful search is placed here
- *	rlen		the length of the result buffer 
+ *	rlen		the length of the result buffer
  *			(typically MAXPATHLEN + 1)
  *
  * Results:
@@ -1437,7 +1426,7 @@ Dir_FindFile(const char *name, Lst path)
  * Side Effects:
  *-----------------------------------------------------------------------
  */
-int 
+int
 Dir_FindHereOrAbove(char *here, char *search_path, char *result, int rlen) {
 
 	struct stat st;
@@ -1462,7 +1451,7 @@ Dir_FindHereOrAbove(char *here, char *search_path, char *result, int rlen) {
 				try_end = try + strlen(try);
 				while (try_end > try && *try_end != '/')
 					try_end--;
-				if (try_end > try) 
+				if (try_end > try)
 					*try_end = 0;	/* chop! */
 			}
 
@@ -1470,10 +1459,10 @@ Dir_FindHereOrAbove(char *here, char *search_path, char *result, int rlen) {
 			 * done!
 			 */
 			snprintf(result, rlen, "%s", try);
-			return(1);
+			return 1;
 		}
 
-		/* 
+		/*
 		 * nope, we didn't find it.  if we used up dirbase we've
 		 * reached the root and failed.
 		 */
@@ -1490,9 +1479,9 @@ Dir_FindHereOrAbove(char *here, char *search_path, char *result, int rlen) {
 	} /* while (1) */
 
 	/*
-	 * we failed... 
+	 * we failed...
 	 */
-	return(0);
+	return 0;
 }
 
 /*-
@@ -1518,7 +1507,6 @@ Dir_MTime(GNode *gn, Boolean recheck)
 {
     char          *fullName;  /* the full pathname of name */
     struct stat	  stb;	      /* buffer for finding the mod time */
-    Hash_Entry	  *entry;
 
     if (gn->type & OP_ARCHV) {
 	return Arch_MTime(gn);
@@ -1541,7 +1529,7 @@ Dir_MTime(GNode *gn, Boolean recheck)
 		     * see if we can find it via the current .PATH
 		     */
 		    cp++;
-			
+
 		    fullName = Dir_FindFile(cp, Suff_FindPath(gn));
 		    if (fullName) {
 			/*
@@ -1569,17 +1557,7 @@ Dir_MTime(GNode *gn, Boolean recheck)
 	fullName = bmake_strdup(gn->name);
     }
 
-    if (!recheck)
-	entry = Hash_FindEntry(&mtimes, fullName);
-    else
-	entry = NULL;
-    if (entry != NULL) {
-	stb.st_mtime = Hash_GetTimeValue(entry);
-	if (DEBUG(DIR)) {
-	    fprintf(debug_file, "Using cached time %s for %s\n",
-		    Targ_FmtTime(stb.st_mtime), fullName);
-	}
-    } else if (cached_stats(&mtimes, fullName, &stb, recheck ? CST_UPDATE : 0) < 0) {
+    if (cached_stats(&mtimes, fullName, &stb, recheck ? CST_UPDATE : 0) < 0) {
 	if (gn->type & OP_MEMBER) {
 	    if (fullName != gn->path)
 		free(fullName);
@@ -1594,7 +1572,7 @@ Dir_MTime(GNode *gn, Boolean recheck)
     }
 
     gn->mtime = stb.st_mtime;
-    return (gn->mtime);
+    return gn->mtime;
 }
 
 /*-
@@ -1699,7 +1677,7 @@ Dir_CopyDir(void *p)
 {
     ((Path *)p)->refCount += 1;
 
-    return (p);
+    return p;
 }
 
 /*-
@@ -1744,7 +1722,7 @@ Dir_MakeFlags(const char *flag, Lst path)
 	Lst_Close(path);
     }
 
-    return (str);
+    return str;
 }
 
 /*-
