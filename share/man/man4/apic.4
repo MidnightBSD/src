@@ -32,14 +32,14 @@
 .Nd Advanced Programmable Interrupt Controller (APIC) driver
 .Sh SYNOPSIS
 This driver is a mandatory part of amd64 kernel.
-To compile this driver into i386 or pc98 kernel,
+To compile this driver into i386 kernel,
 place the following line in your
 kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device apic"
 .Ed
 .Pp
-The following tunable is settable from the
+The following tunables are settable from the
 .Xr loader 8 :
 .Bl -ohang
 .It Va hint.apic. Ns Ar X Ns Va .clock

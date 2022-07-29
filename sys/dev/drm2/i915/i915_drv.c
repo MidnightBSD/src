@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/i915/i915_drv.c 317609 2017-04-30 18:39:31Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm_pciids.h>
@@ -1110,7 +1110,7 @@ static struct drm_driver driver = {
 	.gem_free_object = i915_gem_free_object,
 #if defined(__linux__)
 	.gem_vm_ops = &i915_gem_vm_ops,
-#elif defined(__MidnightBSD__)
+#elif defined(__FreeBSD__)
 	.gem_pager_ops	= &i915_gem_pager_ops,
 #endif
 
@@ -1132,7 +1132,7 @@ static struct drm_driver driver = {
 #ifdef __linux__
 	.fops = &i915_driver_fops,
 #endif
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	.sysctl_init	= i915_sysctl_init,
 	.sysctl_cleanup	= i915_sysctl_cleanup,
 #endif
@@ -1236,6 +1236,8 @@ MODULE_DEPEND(i915kms, agp, 1, 1, 1);
 MODULE_DEPEND(i915kms, iicbus, 1, 1, 1);
 MODULE_DEPEND(i915kms, iic, 1, 1, 1);
 MODULE_DEPEND(i915kms, iicbb, 1, 1, 1);
+MODULE_PNP_INFO("U32:vendor;U32:device;P:#;D:#", vgapci, i915, pciidlist,
+    nitems(pciidlist) - 1);
 
 /* We give fast paths for the really cool registers */
 #define NEEDS_FORCE_WAKE(dev_priv, reg) \

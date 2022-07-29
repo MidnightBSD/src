@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: MIT-CMU
+ *
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
  * All Rights Reserved.
@@ -23,7 +25,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: stable/11/sys/ddb/db_lex.h 299970 2016-05-16 19:42:38Z pfg $
+ * $FreeBSD$
  */
 
 #ifndef _DDB_DB_LEX_H_

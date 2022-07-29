@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/share/dtrace/hotopen 267924 2014-06-26 17:27:36Z rpaulo $
+ * $FreeBSD$
  *
  * The hotopen D script periodically outputs  table of which UIDs
  * are opening files.   This is a very quick way to find out if

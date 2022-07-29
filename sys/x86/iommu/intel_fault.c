@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/x86/iommu/intel_fault.c 309882 2016-12-12 09:43:48Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 

@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libthread_db/arch/riscv/libpthread_md.c 294908 2016-01-27 10:34:07Z br $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <string.h>
@@ -80,15 +80,21 @@ pt_ucontext_to_reg(const ucontext_t *uc, struct reg *r)
 void
 pt_fpreg_to_ucontext(const struct fpreg *r __unused, ucontext_t *uc __unused)
 {
+	mcontext_t *mc = &uc->uc_mcontext;
 
-	/* RISCVTODO */
+	memcpy(&mc->mc_fpregs, r, sizeof(*r));
+	mc->mc_flags |= _MC_FP_VALID;
 }
 
 void
 pt_ucontext_to_fpreg(const ucontext_t *uc __unused, struct fpreg *r __unused)
 {
+	const mcontext_t *mc = &uc->uc_mcontext;
 
-	/* RISCVTODO */
+	if (mc->mc_flags & _MC_FP_VALID)
+		memcpy(r, &mc->mc_fpregs, sizeof(*r));
+	else
+		memset(r, 0, sizeof(*r));
 }
 
 void

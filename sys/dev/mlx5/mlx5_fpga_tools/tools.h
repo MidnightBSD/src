@@ -29,7 +29,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_fpga_tools/tools.h 341573 2018-12-05 14:17:22Z slavash $
+ * $FreeBSD$
  */
 
 #ifndef __TOOLS_H__

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/mkimg/image.c 329059 2018-02-09 09:15:43Z manu $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -305,12 +305,20 @@ image_chunk_copyin(lba_t blk, void *buf, size_t sz, off_t ofs, int fd)
  */
 
 static void *
-image_file_map(int fd, off_t ofs, size_t sz)
+image_file_map(int fd, off_t ofs, size_t sz, off_t *iofp)
 {
 	void *ptr;
 	size_t unit;
 	int flags, prot;
+	off_t x;
 
+	/* On Linux anyway ofs must also be page aligned */
+	if ((x = (ofs % image_swap_pgsz)) != 0) {
+	    ofs -= x;
+	    sz += x;
+	    *iofp = x;
+	} else
+	    *iofp = 0;
 	unit = (secsz > image_swap_pgsz) ? secsz : image_swap_pgsz;
 	assert((unit & (unit - 1)) == 0);
 
@@ -348,6 +356,7 @@ image_copyin_stream(lba_t blk, int fd, uint64_t *sizep)
 	size_t iosz;
 	ssize_t rdsz;
 	int error;
+	off_t iof;
 
 	/*
 	 * This makes sure we're doing I/O in multiples of the page
@@ -362,12 +371,12 @@ image_copyin_stream(lba_t blk, int fd, uint64_t *sizep)
 		swofs = image_swap_alloc(iosz);
 		if (swofs == -1LL)
 			return (errno);
-		buffer = image_file_map(image_swap_fd, swofs, iosz);
+		buffer = image_file_map(image_swap_fd, swofs, iosz, &iof);
 		if (buffer == NULL)
 			return (errno);
-		rdsz = read(fd, buffer, iosz);
+		rdsz = read(fd, &buffer[iof], iosz);
 		if (rdsz > 0)
-			error = image_chunk_copyin(blk, buffer, rdsz, swofs,
+			error = image_chunk_copyin(blk, &buffer[iof], rdsz, swofs,
 			    image_swap_fd);
 		else if (rdsz < 0)
 			error = errno;
@@ -390,8 +399,9 @@ image_copyin_stream(lba_t blk, int fd, uint64_t *sizep)
 static int
 image_copyin_mapped(lba_t blk, int fd, uint64_t *sizep)
 {
-	off_t cur, data, end, hole, pos;
-	void *buf;
+	off_t cur, data, end, hole, pos, iof;
+	void *mp;
+	char *buf;
 	uint64_t bytesize;
 	size_t iosz, sz;
 	int error;
@@ -451,11 +461,12 @@ image_copyin_mapped(lba_t blk, int fd, uint64_t *sizep)
 				sz = (pos - data > (off_t)iosz)
 				    ? iosz : (size_t)(pos - data);
 
-				buf = image_file_map(fd, data, sz);
-				if (buf != NULL) {
+				buf = mp = image_file_map(fd, data, sz, &iof);
+				if (mp != NULL) {
+					buf += iof;
 					error = image_chunk_copyin(blk, buf,
 					    sz, data, fd);
-					image_file_unmap(buf, sz);
+					image_file_unmap(mp, sz);
 				} else
 					error = errno;
 
@@ -565,19 +576,22 @@ image_copyout_zeroes(int fd, size_t count)
 static int
 image_copyout_file(int fd, size_t size, int ifd, off_t iofs)
 {
-	void *buf;
+	void *mp;
+	char *buf;
 	size_t iosz, sz;
 	int error;
+	off_t iof;
 
 	iosz = secsz * image_swap_pgsz;
 
 	while (size > 0) {
 		sz = (size > iosz) ? iosz : size;
-		buf = image_file_map(ifd, iofs, sz);
+		buf = mp = image_file_map(ifd, iofs, sz, &iof);
 		if (buf == NULL)
 			return (errno);
+		buf += iof;
 		error = image_copyout_memory(fd, sz, buf);
-		image_file_unmap(buf, sz);
+		image_file_unmap(mp, sz);
 		if (error)
 			return (error);
 		size -= sz;

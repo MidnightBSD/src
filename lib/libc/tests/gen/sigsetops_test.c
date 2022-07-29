@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/tests/gen/sigsetops_test.c 355898 2019-12-19 02:09:16Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <signal.h>

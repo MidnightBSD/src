@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/riscv/riscv/genassym.c 298580 2016-04-25 14:47:51Z br $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -63,15 +63,14 @@ ASSYM(TDF_ASTPENDING, TDF_ASTPENDING);
 ASSYM(TDF_NEEDRESCHED, TDF_NEEDRESCHED);
 
 ASSYM(PCB_ONFAULT, offsetof(struct pcb, pcb_onfault));
-ASSYM(PCB_L1ADDR, offsetof(struct pcb, pcb_l1addr));
 ASSYM(PCB_SIZE, sizeof(struct pcb));
 ASSYM(PCB_RA, offsetof(struct pcb, pcb_ra));
 ASSYM(PCB_SP, offsetof(struct pcb, pcb_sp));
 ASSYM(PCB_GP, offsetof(struct pcb, pcb_gp));
 ASSYM(PCB_TP, offsetof(struct pcb, pcb_tp));
-ASSYM(PCB_T, offsetof(struct pcb, pcb_t));
 ASSYM(PCB_S, offsetof(struct pcb, pcb_s));
-ASSYM(PCB_A, offsetof(struct pcb, pcb_a));
+ASSYM(PCB_X, offsetof(struct pcb, pcb_x));
+ASSYM(PCB_FCSR, offsetof(struct pcb, pcb_fcsr));
 
 ASSYM(SF_UC, offsetof(struct sigframe, sf_uc));
 
@@ -94,6 +93,6 @@ ASSYM(TF_T, offsetof(struct trapframe, tf_t));
 ASSYM(TF_S, offsetof(struct trapframe, tf_s));
 ASSYM(TF_A, offsetof(struct trapframe, tf_a));
 ASSYM(TF_SEPC, offsetof(struct trapframe, tf_sepc));
-ASSYM(TF_SBADADDR, offsetof(struct trapframe, tf_sbadaddr));
+ASSYM(TF_STVAL, offsetof(struct trapframe, tf_stval));
 ASSYM(TF_SCAUSE, offsetof(struct trapframe, tf_scause));
 ASSYM(TF_SSTATUS, offsetof(struct trapframe, tf_sstatus));

@@ -29,7 +29,7 @@
  *
  * Authors: Alan Somers         (Spectra Logic Corporation)
  *
- * $FreeBSD: stable/11/lib/libdevdctl/guid.h 360302 2020-04-25 13:03:37Z dim $
+ * $FreeBSD$
  */
 
 /**

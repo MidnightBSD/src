@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Portions Copyright (c) Ryan Beasley <ryan.beasley@gmail.com> - GSoC 2006
  * Copyright (c) 1999 Cameron Grant <cg@FreeBSD.org>
@@ -42,7 +44,7 @@
 
 #include "feeder_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pcm/sound.c 331722 2018-03-29 02:50:57Z eadler $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 devclass_t pcm_devclass;
 
@@ -1269,8 +1271,8 @@ pcm_unregister(device_t dev)
 void
 sound_oss_sysinfo(oss_sysinfo *si)
 {
-	static char si_product[] = "MidnightBSD native OSS ABI";
-	static char si_version[] = __XSTRING(__MidnightBSD_version);
+	static char si_product[] = "FreeBSD native OSS ABI";
+	static char si_version[] = __XSTRING(__FreeBSD_version);
 	static char si_license[] = "BSD";
 	static int intnbits = sizeof(int) * 8;	/* Better suited as macro?
 						   Must pester a C guru. */

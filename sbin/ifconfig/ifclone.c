@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,7 +31,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/11/sbin/ifconfig/ifclone.c 331722 2018-03-29 02:50:57Z eadler $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -122,6 +124,7 @@ ifclonecreate(int s, void *arg)
 	struct ifreq ifr;
 	struct clone_defcb *dcp;
 	clone_callback_func *clone_cb = NULL;
+	const char *ifr_name = strchr(name, '.') ? "vlan" : name;
 
 	memset(&ifr, 0, sizeof(ifr));
 	(void) strlcpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
@@ -129,7 +132,7 @@ ifclonecreate(int s, void *arg)
 	if (clone_cb == NULL) {
 		/* Try to find a default callback */
 		SLIST_FOREACH(dcp, &clone_defcbh, next) {
-			if (strncmp(dcp->ifprefix, ifr.ifr_name,
+			if (strncmp(dcp->ifprefix, ifr_name,
 			    strlen(dcp->ifprefix)) == 0) {
 				clone_cb = dcp->clone_cb;
 				break;
@@ -138,8 +141,7 @@ ifclonecreate(int s, void *arg)
 	}
 	if (clone_cb == NULL) {
 		/* NB: no parameters */
-		if (ioctl(s, SIOCIFCREATE2, &ifr) < 0)
-			err(1, "SIOCIFCREATE2");
+	  	ioctl_ifcreate(s, &ifr);
 	} else {
 		clone_cb(s, &ifr);
 	}
@@ -179,7 +181,7 @@ static void
 clone_Copt_cb(const char *optarg __unused)
 {
 	list_cloners();
-	exit(0);
+	exit(exit_code);
 }
 static struct option clone_Copt = { .opt = "C", .opt_usage = "[-C]", .cb = clone_Copt_cb };
 

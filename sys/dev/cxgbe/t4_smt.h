@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/cxgbe/t4_smt.h 346866 2019-04-29 01:15:22Z np $
+ * $FreeBSD$
  *
  */
 

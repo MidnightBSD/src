@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/allwinner/aw_if_dwc.c 308324 2016-11-05 04:17:32Z mmel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -72,7 +72,7 @@ a20_if_dwc_init(device_t dev)
 	node = ofw_bus_get_node(dev);
 
 	/* Configure PHY for MII or RGMII mode */
-	if (OF_getprop_alloc(node, "phy-mode", 1, (void **)&phy_type)) {
+	if (OF_getprop_alloc(node, "phy-mode", (void **)&phy_type)) {
 		error = clk_get_by_ofw_name(dev, 0, "allwinner_gmac_tx", &clk_tx);
 		if (error != 0) {
 			device_printf(dev, "could not get tx clk\n");
@@ -114,7 +114,7 @@ static int
 a20_if_dwc_mac_type(device_t dev)
 {
 
-	return (DWC_GMAC_ALT_DESC);
+	return (DWC_GMAC_NORMAL_DESC);
 }
 
 static int

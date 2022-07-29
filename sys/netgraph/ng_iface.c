@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: stable/11/sys/netgraph/ng_iface.c 324175 2017-10-01 19:39:27Z eugen $
+ * $FreeBSD$
  * $Whistle: ng_iface.c,v 1.33 1999/11/01 09:24:51 julian Exp $
  */
 
@@ -68,6 +68,7 @@
 #include <sys/rmlock.h>
 #include <sys/sockio.h>
 #include <sys/socket.h>
+#include <sys/sysctl.h>
 #include <sys/syslog.h>
 #include <sys/libkern.h>
 
@@ -92,6 +93,13 @@ static MALLOC_DEFINE(M_NETGRAPH_IFACE, "netgraph_iface", "netgraph iface node");
 #define M_NETGRAPH_IFACE M_NETGRAPH
 #endif
 
+static SYSCTL_NODE(_net_graph, OID_AUTO, iface, CTLFLAG_RW, 0,
+    "Point to point netgraph interface");
+VNET_DEFINE_STATIC(int, ng_iface_max_nest) = 2;
+#define	V_ng_iface_max_nest	VNET(ng_iface_max_nest)
+SYSCTL_INT(_net_graph_iface, OID_AUTO, max_nesting, CTLFLAG_VNET | CTLFLAG_RW,
+    &VNET_NAME(ng_iface_max_nest), 0, "Max nested tunnels");
+
 /* This struct describes one address family */
 struct iffam {
 	sa_family_t	family;		/* Address family */
@@ -103,8 +111,6 @@ typedef const struct iffam *iffam_p;
 const static struct iffam gFamilies[] = {
 	{ AF_INET,	NG_IFACE_HOOK_INET	},
 	{ AF_INET6,	NG_IFACE_HOOK_INET6	},
-	{ AF_ATM,	NG_IFACE_HOOK_ATM	},
-	{ AF_NATM,	NG_IFACE_HOOK_NATM	},
 };
 #define	NUM_FAMILIES		nitems(gFamilies)
 
@@ -199,7 +205,7 @@ static struct ng_type typestruct = {
 };
 NETGRAPH_INIT(iface, &typestruct);
 
-static VNET_DEFINE(struct unrhdr *, ng_iface_unit);
+VNET_DEFINE_STATIC(struct unrhdr *, ng_iface_unit);
 #define	V_ng_iface_unit			VNET(ng_iface_unit)
 
 /************************************************************************
@@ -344,7 +350,6 @@ static int
 ng_iface_output(struct ifnet *ifp, struct mbuf *m,
 	const struct sockaddr *dst, struct route *ro)
 {
-	struct m_tag *mtag;
 	uint32_t af;
 	int error;
 
@@ -356,22 +361,12 @@ ng_iface_output(struct ifnet *ifp, struct mbuf *m,
 	}
 
 	/* Protect from deadly infinite recursion. */
-	mtag = NULL;
-	while ((mtag = m_tag_locate(m, MTAG_NGIF, MTAG_NGIF_CALLED, mtag))) {
-		if (*(struct ifnet **)(mtag + 1) == ifp) {
-			log(LOG_NOTICE, "Loop detected on %s\n", ifp->if_xname);
-			m_freem(m);
-			return (EDEADLK);
-		}
-	}
-	mtag = m_tag_alloc(MTAG_NGIF, MTAG_NGIF_CALLED, sizeof(struct ifnet *),
-	    M_NOWAIT);
-	if (mtag == NULL) {
+	error = if_tunnel_check_nesting(ifp, m, NGM_IFACE_COOKIE,
+	    V_ng_iface_max_nest);
+	if (error) {
 		m_freem(m);
-		return (ENOMEM);
+		return (error);
 	}
-	*(struct ifnet **)(mtag + 1) = ifp;
-	m_tag_prepend(m, mtag);
 
 	/* BPF writes need to be handled specially. */
 	if (dst->sa_family == AF_UNSPEC)
@@ -732,9 +727,11 @@ ng_iface_rcvdata(hook_p hook, item_p item)
 		m_freem(m);
 		return (EAFNOSUPPORT);
 	}
-	random_harvest_queue(m, sizeof(*m), 2, RANDOM_NET_NG);
+	random_harvest_queue(m, sizeof(*m), RANDOM_NET_NG);
 	M_SETFIB(m, ifp->if_fib);
+	CURVNET_SET(ifp->if_vnet);
 	netisr_dispatch(isr, m);
+	CURVNET_RESTORE();
 	return (0);
 }
 

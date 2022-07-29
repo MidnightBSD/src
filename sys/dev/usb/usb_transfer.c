@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/usb/usb_transfer.c 356680 2020-01-13 11:30:07Z hselasky $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,7 +47,6 @@
 #include <sys/callout.h>
 #include <sys/malloc.h>
 #include <sys/priv.h>
-#include <sys/proc.h>
 
 #include <dev/usb/usb.h>
 #include <dev/usb/usbdi.h>
@@ -356,12 +357,12 @@ usbd_transfer_setup_sub_malloc(struct usb_setup_params *parm,
 			pc->buffer = USB_ADD_BYTES(buf, y * size);
 			pc->page_start = pg;
 
-			mtx_lock(pc->tag_parent->mtx);
+			USB_MTX_LOCK(pc->tag_parent->mtx);
 			if (usb_pc_load_mem(pc, size, 1 /* synchronous */ )) {
-				mtx_unlock(pc->tag_parent->mtx);
+				USB_MTX_UNLOCK(pc->tag_parent->mtx);
 				return (1);	/* failure */
 			}
-			mtx_unlock(pc->tag_parent->mtx);
+			USB_MTX_UNLOCK(pc->tag_parent->mtx);
 		}
 	    }
 	}
@@ -371,6 +372,81 @@ usbd_transfer_setup_sub_malloc(struct usb_setup_params *parm,
 	return (0);
 }
 #endif
+
+/*------------------------------------------------------------------------*
+ *	usbd_get_max_frame_length
+ *
+ * This function returns the maximum single frame length as computed by
+ * usbd_transfer_setup(). It is useful when computing buffer sizes for
+ * devices having multiple alternate settings. The SuperSpeed endpoint
+ * companion pointer is allowed to be NULL.
+ *------------------------------------------------------------------------*/
+uint32_t
+usbd_get_max_frame_length(const struct usb_endpoint_descriptor *edesc,
+    const struct usb_endpoint_ss_comp_descriptor *ecomp,
+    enum usb_dev_speed speed)
+{
+	uint32_t max_packet_size;
+	uint32_t max_packet_count;
+	uint8_t type;
+
+	max_packet_size = UGETW(edesc->wMaxPacketSize);
+	max_packet_count = 1;
+	type = (edesc->bmAttributes & UE_XFERTYPE);
+
+	switch (speed) {
+	case USB_SPEED_HIGH:
+		switch (type) {
+		case UE_ISOCHRONOUS:
+		case UE_INTERRUPT:
+			max_packet_count +=
+			    (max_packet_size >> 11) & 3;
+
+			/* check for invalid max packet count */
+			if (max_packet_count > 3)
+				max_packet_count = 3;
+			break;
+		default:
+			break;
+		}
+		max_packet_size &= 0x7FF;
+		break;
+	case USB_SPEED_SUPER:
+		max_packet_count += (max_packet_size >> 11) & 3;
+
+		if (ecomp != NULL)
+			max_packet_count += ecomp->bMaxBurst;
+
+		if ((max_packet_count == 0) || 
+		    (max_packet_count > 16))
+			max_packet_count = 16;
+
+		switch (type) {
+		case UE_CONTROL:
+			max_packet_count = 1;
+			break;
+		case UE_ISOCHRONOUS:
+			if (ecomp != NULL) {
+				uint8_t mult;
+
+				mult = UE_GET_SS_ISO_MULT(
+				    ecomp->bmAttributes) + 1;
+				if (mult > 3)
+					mult = 3;
+
+				max_packet_count *= mult;
+			}
+			break;
+		default:
+			break;
+		}
+		max_packet_size &= 0x7FF;
+		break;
+	default:
+		break;
+	}
+	return (max_packet_size * max_packet_count);
+}
 
 /*------------------------------------------------------------------------*
  *	usbd_transfer_setup_sub - transfer setup subroutine
@@ -1266,14 +1342,15 @@ usbd_transfer_setup(struct usb_device *udev,
 
 		/* allocate zeroed memory */
 		buf = malloc(parm->size[0], M_USB, M_WAITOK | M_ZERO);
-
+#if (USB_HAVE_MALLOC_WAITOK == 0)
 		if (buf == NULL) {
 			parm->err = USB_ERR_NOMEM;
 			DPRINTFN(0, "cannot allocate memory block for "
 			    "configuration (%d bytes)\n",
 			    parm->size[0]);
 			goto done;
-		}
+                }
+#endif
 		parm->dma_tag_p = USB_ADD_BYTES(buf, parm->size[1]);
 		parm->dma_page_ptr = USB_ADD_BYTES(buf, parm->size[3]);
 		parm->dma_page_cache_ptr = USB_ADD_BYTES(buf, parm->size[4]);
@@ -2290,14 +2367,14 @@ usb_callback_proc(struct usb_proc_msg *_pm)
 	 * We exploit the fact that the mutex is the same for all
 	 * callbacks that will be called from this thread:
 	 */
-	mtx_lock(info->xfer_mtx);
+	USB_MTX_LOCK(info->xfer_mtx);
 	USB_BUS_LOCK(info->bus);
 
 	/* Continue where we lost track */
 	usb_command_wrapper(&info->done_q,
 	    info->done_q.curr);
 
-	mtx_unlock(info->xfer_mtx);
+	USB_MTX_UNLOCK(info->xfer_mtx);
 }
 
 /*------------------------------------------------------------------------*
@@ -2350,7 +2427,7 @@ usbd_callback_wrapper(struct usb_xfer_queue *pq)
 
 	USB_BUS_LOCK_ASSERT(info->bus, MA_OWNED);
 	if ((pq->recurse_3 != 0 || mtx_owned(info->xfer_mtx) == 0) &&
-	    SCHEDULER_STOPPED() == 0) {
+	    USB_IN_POLLING_MODE_FUNC() == 0) {
 		/*
 	       	 * Cases that end up here:
 		 *
@@ -3335,7 +3412,9 @@ usbd_transfer_poll(struct usb_xfer **ppxfer, uint16_t max)
 	struct usb_xfer_root *xroot;
 	struct usb_device *udev;
 	struct usb_proc_msg *pm;
+	struct usb_bus *bus;
 	uint16_t n;
+	uint16_t drop_bus_spin;
 	uint16_t drop_bus;
 	uint16_t drop_xfer;
 
@@ -3350,36 +3429,47 @@ usbd_transfer_poll(struct usb_xfer **ppxfer, uint16_t max)
 		udev = xroot->udev;
 		if (udev == NULL)
 			continue;	/* no USB device */
-		if (udev->bus == NULL)
+		bus = udev->bus;
+		if (bus == NULL)
 			continue;	/* no BUS structure */
-		if (udev->bus->methods == NULL)
+		if (bus->methods == NULL)
 			continue;	/* no BUS methods */
-		if (udev->bus->methods->xfer_poll == NULL)
+		if (bus->methods->xfer_poll == NULL)
 			continue;	/* no poll method */
 
-		/* make sure that the BUS mutex is not locked */
+		drop_bus_spin = 0;
 		drop_bus = 0;
-		while (mtx_owned(&xroot->udev->bus->bus_mtx) && !SCHEDULER_STOPPED()) {
-			mtx_unlock(&xroot->udev->bus->bus_mtx);
-			drop_bus++;
-		}
-
-		/* make sure that the transfer mutex is not locked */
 		drop_xfer = 0;
-		while (mtx_owned(xroot->xfer_mtx) && !SCHEDULER_STOPPED()) {
-			mtx_unlock(xroot->xfer_mtx);
-			drop_xfer++;
+
+		if (USB_IN_POLLING_MODE_FUNC() == 0) {
+			/* make sure that the BUS spin mutex is not locked */
+			while (mtx_owned(&bus->bus_spin_lock)) {
+				mtx_unlock_spin(&bus->bus_spin_lock);
+				drop_bus_spin++;
+			}
+		
+			/* make sure that the BUS mutex is not locked */
+			while (mtx_owned(&bus->bus_mtx)) {
+				mtx_unlock(&bus->bus_mtx);
+				drop_bus++;
+			}
+
+			/* make sure that the transfer mutex is not locked */
+			while (mtx_owned(xroot->xfer_mtx)) {
+				mtx_unlock(xroot->xfer_mtx);
+				drop_xfer++;
+			}
 		}
 
 		/* Make sure cv_signal() and cv_broadcast() is not called */
-		USB_BUS_CONTROL_XFER_PROC(udev->bus)->up_msleep = 0;
-		USB_BUS_EXPLORE_PROC(udev->bus)->up_msleep = 0;
-		USB_BUS_GIANT_PROC(udev->bus)->up_msleep = 0;
-		USB_BUS_NON_GIANT_ISOC_PROC(udev->bus)->up_msleep = 0;
-		USB_BUS_NON_GIANT_BULK_PROC(udev->bus)->up_msleep = 0;
+		USB_BUS_CONTROL_XFER_PROC(bus)->up_msleep = 0;
+		USB_BUS_EXPLORE_PROC(bus)->up_msleep = 0;
+		USB_BUS_GIANT_PROC(bus)->up_msleep = 0;
+		USB_BUS_NON_GIANT_ISOC_PROC(bus)->up_msleep = 0;
+		USB_BUS_NON_GIANT_BULK_PROC(bus)->up_msleep = 0;
 
 		/* poll USB hardware */
-		(udev->bus->methods->xfer_poll) (udev->bus);
+		(bus->methods->xfer_poll) (bus);
 
 		USB_BUS_LOCK(xroot->bus);
 
@@ -3407,7 +3497,11 @@ usbd_transfer_poll(struct usb_xfer **ppxfer, uint16_t max)
 
 		/* restore BUS mutex */
 		while (drop_bus--)
-			mtx_lock(&xroot->udev->bus->bus_mtx);
+			mtx_lock(&bus->bus_mtx);
+
+		/* restore BUS spin mutex */
+		while (drop_bus_spin--)
+			mtx_lock_spin(&bus->bus_spin_lock);
 	}
 }
 

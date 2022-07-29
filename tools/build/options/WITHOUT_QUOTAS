@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_QUOTAS 296264 2016-03-01 11:36:10Z trasz $
+.\" $FreeBSD$
 Set to not build
 .Xr quota 1
 and related programs.

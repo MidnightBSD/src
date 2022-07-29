@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1998-2000 Doug Rabson
  * Copyright (c) 2004 Peter Wemm
  * All rights reserved.
@@ -26,22 +28,23 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/link_elf_obj.c 350354 2019-07-26 10:30:45Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/fcntl.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
+#include <sys/linker.h>
 #include <sys/mutex.h>
 #include <sys/mount.h>
-#include <sys/proc.h>
 #include <sys/namei.h>
-#include <sys/fcntl.h>
+#include <sys/proc.h>
+#include <sys/rwlock.h>
 #include <sys/vnode.h>
-#include <sys/linker.h>
 
 #include <machine/elf.h>
 
@@ -51,16 +54,18 @@ __FBSDID("$FreeBSD: stable/11/sys/kern/link_elf_obj.c 350354 2019-07-26 10:30:45
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
-#include <vm/vm_object.h>
-#include <vm/vm_kern.h>
-#include <vm/vm_extern.h>
 #include <vm/pmap.h>
+#include <vm/vm_extern.h>
+#include <vm/vm_kern.h>
 #include <vm/vm_map.h>
+#include <vm/vm_object.h>
+#include <vm/vm_page.h>
+#include <vm/vm_pager.h>
 
 #include <sys/link_elf.h>
 
 #ifdef DDB_CTF
-#include <sys/zlib.h>
+#include <contrib/zlib/zlib.h>
 #endif
 
 #include "linker_if.h"
@@ -68,8 +73,8 @@ __FBSDID("$FreeBSD: stable/11/sys/kern/link_elf_obj.c 350354 2019-07-26 10:30:45
 typedef struct {
 	void		*addr;
 	Elf_Off		size;
-	int		flags;
-	int		sec;	/* Original section */
+	int		flags;	/* Section flags. */
+	int		sec;	/* Original section number. */
 	char		*name;
 } Elf_progent;
 
@@ -95,10 +100,10 @@ typedef struct elf_file {
 	Elf_Shdr	*e_shdr;
 
 	Elf_progent	*progtab;
-	int		nprogtab;
+	u_int		nprogtab;
 
 	Elf_relaent	*relatab;
-	int		nrelatab;
+	u_int		nrelatab;
 
 	Elf_relent	*reltab;
 	int		nreltab;
@@ -161,7 +166,7 @@ static kobj_method_t link_elf_methods[] = {
 	KOBJMETHOD(linker_ctf_get,		link_elf_ctf_get),
 	KOBJMETHOD(linker_symtab_get, 		link_elf_symtab_get),
 	KOBJMETHOD(linker_strtab_get, 		link_elf_strtab_get),
-	{ 0, 0 }
+	KOBJMETHOD_END
 };
 
 static struct linker_class link_elf_class = {
@@ -193,6 +198,119 @@ link_elf_init(void *arg)
 }
 
 SYSINIT(link_elf_obj, SI_SUB_KLD, SI_ORDER_SECOND, link_elf_init, NULL);
+
+static void
+link_elf_protect_range(elf_file_t ef, vm_offset_t start, vm_offset_t end,
+    vm_prot_t prot)
+{
+	int error __unused;
+
+	KASSERT(start <= end && start >= (vm_offset_t)ef->address &&
+	    end <= round_page((vm_offset_t)ef->address + ef->lf.size),
+	    ("link_elf_protect_range: invalid range %#jx-%#jx",
+	    (uintmax_t)start, (uintmax_t)end));
+
+	if (start == end)
+		return;
+	error = vm_map_protect(kernel_map, start, end, prot, FALSE);
+	KASSERT(error == KERN_SUCCESS,
+	    ("link_elf_protect_range: vm_map_protect() returned %d", error));
+}
+
+/*
+ * Restrict permissions on linker file memory based on section flags.
+ * Sections need not be page-aligned, so overlap within a page is possible.
+ */
+static void
+link_elf_protect(elf_file_t ef)
+{
+	vm_offset_t end, segend, segstart, start;
+	vm_prot_t gapprot, prot, segprot;
+	int i;
+
+	/*
+	 * If the file was preloaded, the last page may contain other preloaded
+	 * data which may need to be writeable.  ELF files are always
+	 * page-aligned, but other preloaded data, such as entropy or CPU
+	 * microcode may be loaded with a smaller alignment.
+	 */
+	gapprot = ef->preloaded ? VM_PROT_RW : VM_PROT_READ;
+
+	start = end = (vm_offset_t)ef->address;
+	prot = VM_PROT_READ;
+	for (i = 0; i < ef->nprogtab; i++) {
+		/*
+		 * VNET and DPCPU sections have their memory allocated by their
+		 * respective subsystems.
+		 */
+		if (ef->progtab[i].name != NULL && (
+#ifdef VIMAGE
+		    strcmp(ef->progtab[i].name, VNET_SETNAME) == 0 ||
+#endif
+		    strcmp(ef->progtab[i].name, DPCPU_SETNAME) == 0))
+			continue;
+
+		segstart = trunc_page((vm_offset_t)ef->progtab[i].addr);
+		segend = round_page((vm_offset_t)ef->progtab[i].addr +
+		    ef->progtab[i].size);
+		segprot = VM_PROT_READ;
+		if ((ef->progtab[i].flags & SHF_WRITE) != 0)
+			segprot |= VM_PROT_WRITE;
+		if ((ef->progtab[i].flags & SHF_EXECINSTR) != 0)
+			segprot |= VM_PROT_EXECUTE;
+
+		if (end <= segstart) {
+			/*
+			 * Case 1: there is no overlap between the previous
+			 * segment and this one.  Apply protections to the
+			 * previous segment, and protect the gap between the
+			 * previous and current segments, if any.
+			 */
+			link_elf_protect_range(ef, start, end, prot);
+			link_elf_protect_range(ef, end, segstart, gapprot);
+
+			start = segstart;
+			end = segend;
+			prot = segprot;
+		} else if (start < segstart && end == segend) {
+			/*
+			 * Case 2: the current segment is a subrange of the
+			 * previous segment.  Apply protections to the
+			 * non-overlapping portion of the previous segment.
+			 */
+			link_elf_protect_range(ef, start, segstart, prot);
+
+			start = segstart;
+			prot |= segprot;
+		} else if (end < segend) {
+			/*
+			 * Case 3: there is partial overlap between the previous
+			 * and current segments.  Apply protections to the
+			 * non-overlapping portion of the previous segment, and
+			 * then the overlap, which must use the union of the two
+			 * segments' protections.
+			 */
+			link_elf_protect_range(ef, start, segstart, prot);
+			link_elf_protect_range(ef, segstart, end,
+			    prot | segprot);
+			start = end;
+			end = segend;
+			prot = segprot;
+		} else {
+			/*
+			 * Case 4: the two segments reside in the same page.
+			 */
+			prot |= segprot;
+		}
+	}
+
+	/*
+	 * Fix up the last unprotected segment and trailing data.
+	 */
+	link_elf_protect_range(ef, start, end, prot);
+	link_elf_protect_range(ef, end,
+	    round_page((vm_offset_t)ef->address + ef->lf.size), gapprot);
+}
 
 static int
 link_elf_link_preload(linker_class_t cls, const char *filename,
@@ -356,6 +474,7 @@ link_elf_link_preload(linker_class_t cls, const char *filename,
 			else
 				ef->progtab[pb].name = "<<NOBITS>>";
 			ef->progtab[pb].size = shdr[i].sh_size;
+			ef->progtab[pb].flags = shdr[i].sh_flags;
 			ef->progtab[pb].sec = i;
 			if (ef->shstrtab && shdr[i].sh_name != 0)
 				ef->progtab[pb].name =
@@ -509,7 +628,7 @@ static int
 link_elf_load_file(linker_class_t cls, const char *filename,
     linker_file_t *result)
 {
-	struct nameidata nd;
+	struct nameidata *nd;
 	struct thread *td = curthread;	/* XXX */
 	Elf_Ehdr *hdr;
 	Elf_Shdr *shdr;
@@ -534,18 +653,21 @@ link_elf_load_file(linker_class_t cls, const char *filename,
 	mapsize = 0;
 	hdr = NULL;
 
-	NDINIT(&nd, LOOKUP, FOLLOW, UIO_SYSSPACE, filename, td);
+	nd = malloc(sizeof(struct nameidata), M_TEMP, M_WAITOK);
+	NDINIT(nd, LOOKUP, FOLLOW, UIO_SYSSPACE, filename, td);
 	flags = FREAD;
-	error = vn_open(&nd, &flags, 0, NULL);
-	if (error)
+	error = vn_open(nd, &flags, 0, NULL);
+	if (error) {
+		free(nd, M_TEMP);
 		return error;
-	NDFREE(&nd, NDF_ONLY_PNBUF);
-	if (nd.ni_vp->v_type != VREG) {
+	}
+	NDFREE(nd, NDF_ONLY_PNBUF);
+	if (nd->ni_vp->v_type != VREG) {
 		error = ENOEXEC;
 		goto out;
 	}
 #ifdef MAC
-	error = mac_kld_check_load(td->td_ucred, nd.ni_vp);
+	error = mac_kld_check_load(td->td_ucred, nd->ni_vp);
 	if (error) {
 		goto out;
 	}
@@ -553,7 +675,7 @@ link_elf_load_file(linker_class_t cls, const char *filename,
 
 	/* Read the elf header from the file. */
 	hdr = malloc(sizeof(*hdr), M_LINKER, M_WAITOK);
-	error = vn_rdwr(UIO_READ, nd.ni_vp, (void *)hdr, sizeof(*hdr), 0,
+	error = vn_rdwr(UIO_READ, nd->ni_vp, (void *)hdr, sizeof(*hdr), 0,
 	    UIO_SYSSPACE, IO_NODELOCKED, td->td_ucred, NOCRED,
 	    &resid, td);
 	if (error)
@@ -610,8 +732,9 @@ link_elf_load_file(linker_class_t cls, const char *filename,
 	}
 	shdr = malloc(nbytes, M_LINKER, M_WAITOK);
 	ef->e_shdr = shdr;
-	error = vn_rdwr(UIO_READ, nd.ni_vp, (caddr_t)shdr, nbytes, hdr->e_shoff,
-	    UIO_SYSSPACE, IO_NODELOCKED, td->td_ucred, NOCRED, &resid, td);
+	error = vn_rdwr(UIO_READ, nd->ni_vp, (caddr_t)shdr, nbytes,
+	    hdr->e_shoff, UIO_SYSSPACE, IO_NODELOCKED, td->td_ucred,
+	    NOCRED, &resid, td);
 	if (error)
 		goto out;
 	if (resid) {
@@ -666,7 +789,8 @@ link_elf_load_file(linker_class_t cls, const char *filename,
 	}
 	if (nsym != 1) {
 		/* Only allow one symbol table for now */
-		link_elf_error(filename, "file has no valid symbol table");
+		link_elf_error(filename,
+		    "file must have exactly one symbol table");
 		error = ENOEXEC;
 		goto out;
 	}
@@ -696,7 +820,7 @@ link_elf_load_file(linker_class_t cls, const char *filename,
 	/* Allocate space for and load the symbol table */
 	ef->ddbsymcnt = shdr[symtabindex].sh_size / sizeof(Elf_Sym);
 	ef->ddbsymtab = malloc(shdr[symtabindex].sh_size, M_LINKER, M_WAITOK);
-	error = vn_rdwr(UIO_READ, nd.ni_vp, (void *)ef->ddbsymtab,
+	error = vn_rdwr(UIO_READ, nd->ni_vp, (void *)ef->ddbsymtab,
 	    shdr[symtabindex].sh_size, shdr[symtabindex].sh_offset,
 	    UIO_SYSSPACE, IO_NODELOCKED, td->td_ucred, NOCRED,
 	    &resid, td);
@@ -710,7 +834,7 @@ link_elf_load_file(linker_class_t cls, const char *filename,
 	/* Allocate space for and load the symbol strings */
 	ef->ddbstrcnt = shdr[symstrindex].sh_size;
 	ef->ddbstrtab = malloc(shdr[symstrindex].sh_size, M_LINKER, M_WAITOK);
-	error = vn_rdwr(UIO_READ, nd.ni_vp, ef->ddbstrtab,
+	error = vn_rdwr(UIO_READ, nd->ni_vp, ef->ddbstrtab,
 	    shdr[symstrindex].sh_size, shdr[symstrindex].sh_offset,
 	    UIO_SYSSPACE, IO_NODELOCKED, td->td_ucred, NOCRED,
 	    &resid, td);
@@ -729,7 +853,7 @@ link_elf_load_file(linker_class_t cls, const char *filename,
 		ef->shstrcnt = shdr[shstrindex].sh_size;
 		ef->shstrtab = malloc(shdr[shstrindex].sh_size, M_LINKER,
 		    M_WAITOK);
-		error = vn_rdwr(UIO_READ, nd.ni_vp, ef->shstrtab,
+		error = vn_rdwr(UIO_READ, nd->ni_vp, ef->shstrtab,
 		    shdr[shstrindex].sh_size, shdr[shstrindex].sh_offset,
 		    UIO_SYSSPACE, IO_NODELOCKED, td->td_ucred, NOCRED,
 		    &resid, td);
@@ -767,18 +891,19 @@ link_elf_load_file(linker_class_t cls, const char *filename,
 	 * This stuff needs to be in a single chunk so that profiling etc
 	 * can get the bounds and gdb can associate offsets with modules
 	 */
-	ef->object = vm_object_allocate(OBJT_DEFAULT,
-	    round_page(mapsize) >> PAGE_SHIFT);
+	ef->object = vm_pager_allocate(OBJT_PHYS, NULL, round_page(mapsize),
+	    VM_PROT_ALL, 0, thread0.td_ucred);
 	if (ef->object == NULL) {
 		error = ENOMEM;
 		goto out;
 	}
-	ef->address = (caddr_t) vm_map_min(kernel_map);
 
 	/*
 	 * In order to satisfy amd64's architectural requirements on the
 	 * location of code and data in the kernel's address space, request a
-	 * mapping that is above the kernel.  
+	 * mapping that is above the kernel.
+	 *
+	 * Protections will be restricted once relocations are applied.
 	 */
 #ifdef __amd64__
 	mapbase = KERNBASE;
@@ -788,9 +913,10 @@ link_elf_load_file(linker_class_t cls, const char *filename,
 	error = vm_map_find(kernel_map, ef->object, 0, &mapbase,
 	    round_page(mapsize), 0, VMFS_OPTIMAL_SPACE, VM_PROT_ALL,
 	    VM_PROT_ALL, 0);
-	if (error) {
+	if (error != KERN_SUCCESS) {
 		vm_object_deallocate(ef->object);
-		ef->object = 0;
+		ef->object = NULL;
+		error = ENOMEM;
 		goto out;
 	}
 
@@ -878,13 +1004,14 @@ link_elf_load_file(linker_class_t cls, const char *filename,
 				goto out;
 			}
 			ef->progtab[pb].size = shdr[i].sh_size;
+			ef->progtab[pb].flags = shdr[i].sh_flags;
 			ef->progtab[pb].sec = i;
 			if (shdr[i].sh_type == SHT_PROGBITS
 #ifdef __amd64__
 			    || shdr[i].sh_type == SHT_X86_64_UNWIND
 #endif
 			    ) {
-				error = vn_rdwr(UIO_READ, nd.ni_vp,
+				error = vn_rdwr(UIO_READ, nd->ni_vp,
 				    ef->progtab[pb].addr,
 				    shdr[i].sh_size, shdr[i].sh_offset,
 				    UIO_SYSSPACE, IO_NODELOCKED, td->td_ucred,
@@ -927,7 +1054,7 @@ link_elf_load_file(linker_class_t cls, const char *filename,
 			    M_WAITOK);
 			ef->reltab[rl].nrel = shdr[i].sh_size / sizeof(Elf_Rel);
 			ef->reltab[rl].sec = shdr[i].sh_info;
-			error = vn_rdwr(UIO_READ, nd.ni_vp,
+			error = vn_rdwr(UIO_READ, nd->ni_vp,
 			    (void *)ef->reltab[rl].rel,
 			    shdr[i].sh_size, shdr[i].sh_offset,
 			    UIO_SYSSPACE, IO_NODELOCKED, td->td_ucred, NOCRED,
@@ -948,7 +1075,7 @@ link_elf_load_file(linker_class_t cls, const char *filename,
 			ef->relatab[ra].nrela =
 			    shdr[i].sh_size / sizeof(Elf_Rela);
 			ef->relatab[ra].sec = shdr[i].sh_info;
-			error = vn_rdwr(UIO_READ, nd.ni_vp,
+			error = vn_rdwr(UIO_READ, nd->ni_vp,
 			    (void *)ef->relatab[ra].rela,
 			    shdr[i].sh_size, shdr[i].sh_offset,
 			    UIO_SYSSPACE, IO_NODELOCKED, td->td_ucred, NOCRED,
@@ -994,9 +1121,9 @@ link_elf_load_file(linker_class_t cls, const char *filename,
 		goto out;
 
 	/* Pull in dependencies */
-	VOP_UNLOCK(nd.ni_vp, 0);
+	VOP_UNLOCK(nd->ni_vp, 0);
 	error = linker_load_dependencies(lf);
-	vn_lock(nd.ni_vp, LK_EXCLUSIVE | LK_RETRY);
+	vn_lock(nd->ni_vp, LK_EXCLUSIVE | LK_RETRY);
 	if (error)
 		goto out;
 
@@ -1017,14 +1144,14 @@ link_elf_load_file(linker_class_t cls, const char *filename,
 		goto out;
 #endif
 
-	/* Invoke .ctors */
+	link_elf_protect(ef);
 	link_elf_invoke_ctors(lf->ctors_addr, lf->ctors_size);
-
 	*result = lf;
 
 out:
-	VOP_UNLOCK(nd.ni_vp, 0);
-	vn_close(nd.ni_vp, FREAD, td->td_ucred, td);
+	VOP_UNLOCK(nd->ni_vp, 0);
+	vn_close(nd->ni_vp, FREAD, td->td_ucred, td);
+	free(nd, M_TEMP);
 	if (error && lf)
 		linker_file_unload(lf, LINKER_UNLOAD_FORCE);
 	free(hdr, M_LINKER);
@@ -1036,7 +1163,7 @@ static void
 link_elf_unload_file(linker_file_t file)
 {
 	elf_file_t ef = (elf_file_t) file;
-	int i;
+	u_int i;
 
 	/* Notify MD code that a module is being unloaded. */
 	elf_cpu_unload_file(file);
@@ -1077,11 +1204,9 @@ link_elf_unload_file(linker_file_t file)
 	free(ef->relatab, M_LINKER);
 	free(ef->progtab, M_LINKER);
 
-	if (ef->object) {
-		vm_map_remove(kernel_map, (vm_offset_t) ef->address,
-		    (vm_offset_t) ef->address +
-		    (ef->object->size << PAGE_SHIFT));
-	}
+	if (ef->object != NULL)
+		vm_map_remove(kernel_map, (vm_offset_t)ef->address,
+		    (vm_offset_t)ef->address + ptoa(ef->object->size));
 	free(ef->e_shdr, M_LINKER);
 	free(ef->ddbsymtab, M_LINKER);
 	free(ef->ddbstrtab, M_LINKER);
@@ -1119,7 +1244,7 @@ findbase(elf_file_t ef, int sec)
 }
 
 static int
-relocate_file(elf_file_t ef)
+relocate_file1(elf_file_t ef, bool ifuncs)
 {
 	const Elf_Rel *rellim;
 	const Elf_Rel *rel;
@@ -1153,6 +1278,9 @@ relocate_file(elf_file_t ef)
 			/* Local relocs are already done */
 			if (ELF_ST_BIND(sym->st_info) == STB_LOCAL)
 				continue;
+			if ((ELF_ST_TYPE(sym->st_info) == STT_GNU_IFUNC ||
+			    elf_is_ifunc_reloc(rel->r_info)) != ifuncs)
+				continue;
 			if (elf_reloc(&ef->lf, base, rel, ELF_RELOC_REL,
 			    elf_obj_lookup)) {
 				symname = symbol_name(ef, rel->r_info);
@@ -1185,6 +1313,9 @@ relocate_file(elf_file_t ef)
 			/* Local relocs are already done */
 			if (ELF_ST_BIND(sym->st_info) == STB_LOCAL)
 				continue;
+			if ((ELF_ST_TYPE(sym->st_info) == STT_GNU_IFUNC ||
+			    elf_is_ifunc_reloc(rela->r_info)) != ifuncs)
+				continue;
 			if (elf_reloc(&ef->lf, base, rela, ELF_RELOC_RELA,
 			    elf_obj_lookup)) {
 				symname = symbol_name(ef, rela->r_info);
@@ -1203,6 +1334,17 @@ relocate_file(elf_file_t ef)
 	elf_obj_cleanup_globals_cache(ef);
 
 	return (0);
+}
+
+static int
+relocate_file(elf_file_t ef)
+{
+	int error;
+
+	error = relocate_file1(ef, false);
+	if (error == 0)
+		error = relocate_file1(ef, true);
+	return (error);
 }
 
 static int
@@ -1535,9 +1677,11 @@ link_elf_reloc_local(linker_file_t lf, bool ifuncs)
 			if (ELF_ST_BIND(sym->st_info) != STB_LOCAL)
 				continue;
 			if ((ELF_ST_TYPE(sym->st_info) == STT_GNU_IFUNC ||
-			    elf_is_ifunc_reloc(rel->r_info)) == ifuncs)
-				elf_reloc_local(lf, base, rel, ELF_RELOC_REL,
-				    elf_obj_lookup);
+			    elf_is_ifunc_reloc(rel->r_info)) != ifuncs)
+				continue;
+			if (elf_reloc_local(lf, base, rel, ELF_RELOC_REL,
+			    elf_obj_lookup) != 0)
+				return (ENOEXEC);
 		}
 	}
 
@@ -1563,9 +1707,11 @@ link_elf_reloc_local(linker_file_t lf, bool ifuncs)
 			if (ELF_ST_BIND(sym->st_info) != STB_LOCAL)
 				continue;
 			if ((ELF_ST_TYPE(sym->st_info) == STT_GNU_IFUNC ||
-			    elf_is_ifunc_reloc(rela->r_info)) == ifuncs)
-				elf_reloc_local(lf, base, rela, ELF_RELOC_RELA,
-				    elf_obj_lookup);
+			    elf_is_ifunc_reloc(rela->r_info)) != ifuncs)
+				continue;
+			if (elf_reloc_local(lf, base, rela, ELF_RELOC_RELA,
+			    elf_obj_lookup) != 0)
+				return (ENOEXEC);
 		}
 	}
 	return (0);

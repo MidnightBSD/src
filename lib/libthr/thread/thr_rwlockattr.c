@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1998 Alex Nash
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_rwlockattr.c 338707 2018-09-17 02:51:08Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <errno.h>

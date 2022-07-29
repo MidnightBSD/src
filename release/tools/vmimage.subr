@@ -14,42 +14,46 @@ write_partition_layout() {
 		SWAPOPT="-p mnbsd-swap/swapfs::${SWAPSIZE}"
 	fi
 
-	_OBJDIR="$(make -C ${WORLDDIR} -V .OBJDIR)"
-	_OBJDIR="$(realpath ${_OBJDIR})"
-	_WORLDDIR="$(realpath ${WORLDDIR})"
-	if [ -d "${_OBJDIR%%${_WORLDDIR}}/${TARGET}.${TARGET_ARCH}" ]; then
-		BOOTFILES="/${_OBJDIR%%${_WORLDDIR}}/${TARGET}.${TARGET_ARCH}${_WORLDDIR}/stand"
-	else
-		BOOTFILES="/${_OBJDIR}/stand"
-	fi
+	BOOTFILES="$(env TARGET=${TARGET} TARGET_ARCH=${TARGET_ARCH} \
+		WITH_UNIFIED_OBJDIR=yes \
+		make -C ${WORLDDIR}/stand -V .OBJDIR)"
+	BOOTFILES="$(realpath ${BOOTFILES})"
 
 	case "${TARGET}:${TARGET_ARCH}" in
 		amd64:amd64 | i386:i386)
-			mkimg -s gpt -f ${VMFORMAT} \
-				-b ${BOOTFILES}/i386/pmbr/pmbr \
-				-p mnbsd-boot/bootfs:=${BOOTFILES}/i386/gptboot/gptboot \
-				${SWAPOPT} \
-				-p mnbsd-ufs/rootfs:=${VMBASE} \
-				-o ${VMIMAGE}
+			ESP=yes
+			SCHEME=gpt
+			BOOTPARTS="-b ${BOOTFILES}/i386/pmbr/pmbr \
+				   -p mnbsd-boot/bootfs:=${BOOTFILES}/i386/gptboot/gptboot"
+			ROOTFSPART="-p mnbsd-ufs/rootfs:=${VMBASE}"
 			;;
 		arm64:aarch64)
-			mkimg -s mbr -f ${VMFORMAT} \
-				-p efi:=${BOOTFILES}/efi/boot1/boot1.efifat \
-				-p midnightbsd:=${VMBASE} \
-				-o ${VMIMAGE}
+			ESP=yes
+			SCHEME=gpt
+			BOOTPARTS=
+			ROOTFSPART="-p mnbsd-ufs/rootfs:=${VMBASE}"
 			;;
 		powerpc:powerpc*)
-			mkimg -s apm -f ${VMFORMAT} \
-				-p apple-boot/bootfs:=${BOOTFILES}/powerpc/boot1.chrp/boot1.hfs \
-				${SWAPOPT} \
-				-p mnbsd-ufs/rootfs:=${VMBASE} \
-				-o ${VMIMAGE}
+			ESP=no
+			SCHEME=apm
+			BOOTPARTS="-p apple-boot/bootfs:=${BOOTFILES}/powerpc/boot1.chrp/boot1.hfs"
+			ROOTFSPART="-p mnbsd-ufs/rootfs:=${VMBASE}"
 			;;
 		*)
-			# ENOTSUPP
-			return 1
+			echo "vmimage.subr: unsupported target '${TARGET}:${TARGET_ARCH}'" >&2
+			exit 1
 			;;
 	esac
+
+	if [ ${ESP} = "yes" ]; then
+		BOOTPARTS="${BOOTPARTS} -p efi:=${BOOTFILES}/efi/boot1/boot1.efifat"
+	fi
+
+	mkimg -s ${SCHEME} -f ${VMFORMAT} \
+		${BOOTPARTS} \
+		${SWAPOPT} \
+		${ROOTFSPART} \
+		-o ${VMIMAGE}
 
 	return 0
 }

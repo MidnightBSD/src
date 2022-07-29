@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/include/ucontext.h 285313 2015-07-09 12:51:50Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_UCONTEXT_H_

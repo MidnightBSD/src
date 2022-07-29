@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013,2014 Juniper Networks, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/mkimg/scheme.h 332952 2018-04-24 17:53:27Z benno $
+ * $FreeBSD$
  */
 
 #ifndef _MKIMG_SCHEME_H_

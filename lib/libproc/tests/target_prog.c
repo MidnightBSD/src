@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libproc/tests/target_prog.c 271937 2014-09-21 21:25:41Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <signal.h>
@@ -42,9 +42,32 @@ usr1(int sig __unused)
 	saw = 1;
 }
 
+void	foo(void);
+void	qux(void);
+
+void
+foo(void)
+{
+}
+__weak_reference(foo, _foo);
+
+static void
+bar(void)
+{
+}
+__strong_reference(bar, baz);
+
+void
+qux(void)
+{
+}
+__strong_reference(qux, $qux);
+
 int
 main(int argc, char **argv)
 {
+
+	bar(); /* force the symbol to be emitted */
 
 	if (argc == 1)
 		return (EXIT_SUCCESS);

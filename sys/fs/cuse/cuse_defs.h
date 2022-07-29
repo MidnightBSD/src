@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/fs/cuse/cuse_defs.h 346666 2019-04-25 11:57:34Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2010-2012 Hans Petter Selasky. All rights reserved.
  *

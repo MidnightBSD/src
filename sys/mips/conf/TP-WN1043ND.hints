@@ -1,7 +1,7 @@
 #
 # This file adds to the values in AR91XX_BASE.hints.
 #
-# $FreeBSD: stable/11/sys/mips/conf/TP-WN1043ND.hints 260392 2014-01-07 13:09:35Z loos $
+# $FreeBSD$
 
 # Hard-code the PHY for now, until there's switch phy support.
 # hint.arge.0.phymask=0x000c

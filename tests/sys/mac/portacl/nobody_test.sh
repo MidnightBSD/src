@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/11/tests/sys/mac/portacl/nobody_test.sh 324404 2017-10-07 23:10:16Z ngie $
+# $FreeBSD$
 
 dir=`dirname $0`
 . ${dir}/misc.sh

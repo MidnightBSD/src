@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $FreeBSD: stable/11/tools/test/sort/bigtest/kcmd 235274 2012-05-11 16:04:55Z gabor $
+# $FreeBSD$
 
 rm -rf siks
 mkdir -p siks

@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/share/examples/ses/srcs/setencstat.c 235911 2012-05-24 14:07:44Z mav $ */
+/* $FreeBSD$ */
 /*
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.

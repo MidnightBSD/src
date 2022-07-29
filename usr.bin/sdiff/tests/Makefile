@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/sdiff/tests/Makefile 316256 2017-03-30 06:20:24Z ngie $
+# $FreeBSD$
 
 PACKAGE=	tests
 

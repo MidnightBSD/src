@@ -23,11 +23,11 @@
 .\" IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/usr.sbin/portsnap/portsnap/portsnap.8 296280 2016-03-01 22:13:20Z jgh $
+.\" $FreeBSD$
 .\"
-.Dd March 1, 2016
+.Dd July 1, 2018
 .Dt PORTSNAP 8
-.Os FreeBSD
+.Os MidnightBSD
 .Sh NAME
 .Nm portsnap
 .Nd fetch and extract compressed snapshots of the ports tree
@@ -47,9 +47,9 @@ The
 .Nm
 tool is used to fetch and update compressed snapshots
 of the
-.Fx
-ports tree, and extract and update an
-uncompressed ports tree.
+.Mx
+mports tree, and extract and update an
+uncompressed mports tree.
 .Pp
 In a normal update operation,
 .Nm
@@ -72,7 +72,7 @@ Read the configuration from
 .It Fl I
 For the
 .Cm update
-command, update INDEX files, but not the rest of the ports tree.
+command, update INDEX files, but not the rest of the mports tree.
 .It Fl k Ar KEY
 Expect a public key with given SHA256 hash.
 (default: read value from configuration file.)
@@ -89,16 +89,16 @@ When extracting or updating an uncompressed snapshot,
 operate on the directory
 .Ar portsdir .
 (default:
-.Pa /usr/ports/ ,
+.Pa /usr/mports/ ,
 or as given in the configuration file.)
 .It Fl s Ar server
 Fetch files from the specified server or server pool.
-(default: portsnap.FreeBSD.org, or as given in the
+(default: portsnap.MidnightBSD.org, or as given in the
 configuration file.)
 .It path
 For
 .Cm extract
-command only, operate only on parts of the ports tree starting with
+command only, operate only on parts of the mports tree starting with
 .Ar path .
 (e.g.\&
 .Nm
@@ -119,7 +119,7 @@ The
 can be any one of the following:
 .Bl -tag -width "-f conffile"
 .It fetch
-Fetch a compressed snapshot of the ports tree, or update
+Fetch a compressed snapshot of the mports tree, or update
 the existing snapshot.
 This command should only be used interactively; for
 non-interactive use, you should use the
@@ -137,29 +137,29 @@ the random delay serves to minimize the probability that
 a large number of machines will simultaneously attempt to
 fetch updates.
 .It extract
-Extract a ports tree, replacing existing files and directories.
+Extract a mports tree, replacing existing files and directories.
 NOTE: This will remove anything occupying the location where
 files or directories are being extracted; in particular, any
-changes made locally to the ports tree (for example, adding new
+changes made locally to the mports tree (for example, adding new
 patches) will be silently obliterated.
 .Pp
 Only run this command to initialize your portsnap-maintained
-ports tree for the first time, if you wish to start over with
+mports tree for the first time, if you wish to start over with
 a clean, completely unmodified tree, or if you wish to extract
 a specific part of the tree (using the
 .Ar path
 option).
 .It update
-Update a ports tree extracted using the
+Update a mports tree extracted using the
 .Cm extract
 command.
-You must run this command to apply changes to your ports tree
+You must run this command to apply changes to your mports tree
 after downloading updates via the
 .Cm fetch
 or
 .Cm cron
 commands.
-Again, note that in the parts of the ports tree which are being
+Again, note that in the parts of the mports tree which are being
 updated, any local changes or additions will be removed.
 .It auto
 Run
@@ -184,9 +184,9 @@ If your clock is set to local time, adding the line
 to
 .Pa /etc/crontab
 is a good way to make sure you always have
-an up-to-date snapshot of the ports tree available which
+an up-to-date snapshot of the mports tree available which
 can quickly be extracted into
-.Pa /usr/ports .
+.Pa /usr/mports .
 If your clock is set to UTC, please pick a random time other
 than 3AM, to avoid overly imposing an uneven load on the
 server(s) hosting the snapshots.
@@ -206,7 +206,7 @@ The
 .Nm
 .Cm update
 command is normally run by hand at a time when you are sure that
-no one is manually working in the ports tree.
+no one is manually working in the mports tree.
 .It
 Running
 .Nm
@@ -251,10 +251,10 @@ will make its public IP address and the list of files it fetches
 available to the server from which it fetches updates.
 Using these it may be possible to recognize a machine over an extended
 period of time, determine when it is updated, and identify which
-portions of the FreeBSD ports tree, if any, are being ignored using
+portions of the MidnightBSD ports tree, if any, are being ignored using
 "REFUSE" directives in
 .Pa portsnap.conf .
-In addition, the FreeBSD release level is transmitted to the server.
+In addition, the MidnightBSD release level is transmitted to the server.
 .Pp
 Statistical data generated from information collected in this manner
 may be published, but only in aggregate and after anonymizing the
@@ -265,15 +265,23 @@ individual systems.
 Default location of the portsnap configuration file.
 .It Pa /var/db/portsnap
 Default location where compressed snapshots are stored.
-.It Pa /usr/ports
+.It Pa /usr/mports
 Default location where the ports tree is extracted.
 .El
+.Sh EXAMPLES
+Fetch the snapshots and create the
+.Xr mports 7
+tree under
+.Pa /usr/mports :
+.Dl Nm Ar fetch Ar extract
+.Pp
+Update the mports tree:
+.Dl Nm Ar fetch Ar update
 .Sh SEE ALSO
 .Xr fetch 1 ,
 .Xr sha256 1 ,
 .Xr fetch 3 ,
 .Xr portsnap.conf 5 ,
-.Xr pkg 7 ,
-.Xr pkg-version 8
+.Xr mport 7 ,
 .Sh AUTHORS
 .An Colin Percival Aq Mt cperciva@FreeBSD.org

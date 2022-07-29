@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/ofed/drivers/infiniband/core/ib_umem_rbtree.c 337096 2018-08-02 08:33:51Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <linux/kernel.h>
 #include <linux/module.h>

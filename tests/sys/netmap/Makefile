@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tests/sys/netmap/Makefile 346256 2019-04-16 01:03:32Z ngie $
+# $FreeBSD$
 
 PACKAGE=	tests
 

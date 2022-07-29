@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)getpagesize.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/11/lib/libc/gen/getpagesize.3 321250 2017-07-19 20:58:45Z ngie $
+.\" $FreeBSD$
 .\"
-.Dd April 26, 2017
+.Dd June 1, 2022
 .Dt GETPAGESIZE 3
 .Os
 .Sh NAME
@@ -51,9 +51,17 @@ management calls.
 The page size is a system
 page size and may not be the same as the underlying
 hardware page size.
+.Pp
+.St -p1003.1-2001
+removed
+.Nm .
+Portable applications should use
+.Ql sysconf(_SC_PAGESIZE)
+instead.
 .Sh SEE ALSO
 .Xr pagesize 1 ,
-.Xr sbrk 2
+.Xr sbrk 2 ,
+.Xr sysconf 3
 .Sh HISTORY
 The
 .Fn getpagesize

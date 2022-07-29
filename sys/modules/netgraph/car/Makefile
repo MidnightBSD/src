@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/netgraph/car/Makefile 169580 2007-05-15 16:24:50Z mav $
+# $FreeBSD$
 
 KMOD=	ng_car
 SRCS= 	ng_car.c

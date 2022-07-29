@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/isp/ispvar.h 347894 2019-05-16 22:03:25Z ken $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  *  Copyright (c) 2009-2018 Alexander Motin <mav@FreeBSD.org>
  *  Copyright (c) 1997-2009 by Matthew Jacob
  *  All rights reserved.
@@ -38,7 +40,7 @@
 #include <dev/ic/isp_stds.h>
 #include <dev/ic/ispmbox.h>
 #endif
-#ifdef	__MidnightBSD__
+#ifdef	__FreeBSD__
 #include <dev/isp/isp_stds.h>
 #include <dev/isp/ispmbox.h>
 #endif
@@ -544,8 +546,8 @@ struct ispsoftc {
 	uint32_t		isp_maxluns;	/* maximum luns supported */
 
 	uint32_t		isp_clock	: 8,	/* input clock */
-						: 5,
-				isp_port	: 1,	/* 23XX/24XX only */
+						: 4,
+				isp_port	: 2,	/* 23XX/24XX only */
 				isp_bustype	: 1,	/* SBus or PCI */
 				isp_loaded_fw	: 1,	/* loaded firmware */
 				isp_dblev	: 16;	/* debug log mask */
@@ -1034,6 +1036,7 @@ void isp_async(ispsoftc_t *, ispasync_t, ...);
  *	XS_SNSASCQ(xs)		dereferences XS_SNSP to get the current stored Additional Sense Code Qualifier
  *	XS_TAG_P(xs)		predicate of whether this command should be tagged
  *	XS_TAG_TYPE(xs)		which type of tag to use
+ *	XS_PRIORITY(xs)		command priority for SIMPLE tag
  *	XS_SETERR(xs)		set error state
  *
  *		HBA_NOERROR	command has no erros

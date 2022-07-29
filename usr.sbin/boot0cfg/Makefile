@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/boot0cfg/Makefile 275054 2014-11-25 16:57:27Z bapt $
+# $FreeBSD$
 
 PROG=	boot0cfg
 MAN=	boot0cfg.8

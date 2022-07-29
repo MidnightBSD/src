@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (C) 2003
  * 	Hidetoshi Shimokawa. All rights reserved.
  * 
@@ -32,7 +34,7 @@
  * SUCH DAMAGE.
  * 
  * $Id: dcons_crom.c,v 1.8 2003/10/23 15:47:21 simokawa Exp $
- * $FreeBSD: stable/11/sys/dev/dcons/dcons_crom.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -107,7 +109,11 @@ dcons_crom_expose_idt(struct dcons_crom_softc *sc)
 	static off_t idt_paddr;
 
 	/* XXX */
+#ifdef __amd64__
 	idt_paddr = (char *)idt - (char *)KERNBASE;
+#else /* __i386__ */
+	idt_paddr = (off_t)pmap_kextract((vm_offset_t)idt);
+#endif
 
 	crom_add_entry(&sc->unit, DCONS_CSR_KEY_RESET_HI, ADDR_HI(idt_paddr));
 	crom_add_entry(&sc->unit, DCONS_CSR_KEY_RESET_LO, ADDR_LO(idt_paddr));

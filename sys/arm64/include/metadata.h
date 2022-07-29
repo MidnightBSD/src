@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/include/metadata.h 329140 2018-02-11 20:58:00Z kevans $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_METADATA_H_

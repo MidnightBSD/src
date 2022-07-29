@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2000 Andrzej Bialecki <abial@freebsd.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *     $FreeBSD: stable/11/share/examples/kld/dyn_sysctl/dyn_sysctl.c 241394 2012-10-10 08:36:38Z kevlo $
+ *     $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -70,12 +72,10 @@ load(module_t mod, int cmd, void *arg)
 		 * to different contexts.
 		 */
 		printf("TREE		ROOT		  NAME\n");
-		a_root = SYSCTL_ADD_NODE(&clist,
-			SYSCTL_STATIC_CHILDREN(/* top of sysctl tree */),
+		a_root = SYSCTL_ADD_ROOT_NODE(&clist,
 			OID_AUTO, "dyn_sysctl", CTLFLAG_RW, 0,
 			"dyn_sysctl root node");
-		a_root = SYSCTL_ADD_NODE(&clist1,
-			SYSCTL_STATIC_CHILDREN(/* top of sysctl tree */),
+		a_root = SYSCTL_ADD_ROOT_NODE(&clist1,
 			OID_AUTO, "dyn_sysctl", CTLFLAG_RW, 0,
 			"dyn_sysctl root node");
 		if (a_root == NULL) {

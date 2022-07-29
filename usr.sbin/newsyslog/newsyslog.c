@@ -54,12 +54,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/newsyslog/newsyslog.c 344881 2019-03-07 13:10:48Z dab $");
+__FBSDID("$FreeBSD$");
 
 #define	OSF
 
 #include <sys/param.h>
 #include <sys/queue.h>
+#include <sys/sbuf.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 
@@ -87,31 +88,15 @@ __FBSDID("$FreeBSD: stable/11/usr.sbin/newsyslog/newsyslog.c 344881 2019-03-07 1
 #include "extern.h"
 
 /*
- * Compression suffixes
- */
-#ifndef	COMPRESS_SUFFIX_GZ
-#define	COMPRESS_SUFFIX_GZ	".gz"
-#endif
-
-#ifndef	COMPRESS_SUFFIX_BZ2
-#define	COMPRESS_SUFFIX_BZ2	".bz2"
-#endif
-
-#ifndef	COMPRESS_SUFFIX_XZ
-#define	COMPRESS_SUFFIX_XZ	".xz"
-#endif
-
-#define	COMPRESS_SUFFIX_MAXLEN	MAX(MAX(sizeof(COMPRESS_SUFFIX_GZ),sizeof(COMPRESS_SUFFIX_BZ2)),sizeof(COMPRESS_SUFFIX_XZ))
-
-/*
  * Compression types
  */
-#define	COMPRESS_TYPES  4	/* Number of supported compression types */
+#define	COMPRESS_TYPES  5	/* Number of supported compression types */
 
 #define	COMPRESS_NONE	0
 #define	COMPRESS_GZIP	1
 #define	COMPRESS_BZIP2	2
 #define	COMPRESS_XZ	3
+#define COMPRESS_ZSTD	4
 
 /*
  * Bit-values for the 'flags' parsed from a config-file entry.
@@ -129,7 +114,8 @@ __FBSDID("$FreeBSD: stable/11/usr.sbin/newsyslog/newsyslog.c 344881 2019-03-07 1
 #define	CE_PID2CMD	0x0400	/* Replace PID file with a shell command.*/
 #define	CE_PLAIN0	0x0800	/* Do not compress zero'th history file */
 #define	CE_RFC5424	0x1000	/* Use RFC5424 format rotation message */
-
+#define CE_NOEMPTY	0x2000	/* Do not rotate the file when its size */
+				/* is zero */
 #define	MIN_PID         5	/* Don't touch pids lower than this */
 #define	MAX_PID		99999	/* was lower, see /usr/include/sys/proc.h */
 
@@ -146,13 +132,21 @@ struct compress_types {
 	const char *flag;	/* Flag in configuration file */
 	const char *suffix;	/* Compression suffix */
 	const char *path;	/* Path to compression program */
+	const char **flags;	/* Compression program flags */
+	int nflags;		/* Program flags count */
 };
 
+static const char *gzip_flags[] = { "-f" };
+#define bzip2_flags gzip_flags
+#define xz_flags gzip_flags
+static const char *zstd_flags[] = { "-q", "--rm" };
+
 static const struct compress_types compress_type[COMPRESS_TYPES] = {
-	{ "", "", "" },					/* no compression */
-	{ "Z", COMPRESS_SUFFIX_GZ, _PATH_GZIP },	/* gzip compression */
-	{ "J", COMPRESS_SUFFIX_BZ2, _PATH_BZIP2 },	/* bzip2 compression */
-	{ "X", COMPRESS_SUFFIX_XZ, _PATH_XZ }		/* xz compression */
+	{ "", "", "", NULL, 0 },
+	{ "Z", ".gz", _PATH_GZIP, gzip_flags, nitems(gzip_flags) },
+	{ "J", ".bz2", _PATH_BZIP2, bzip2_flags, nitems(bzip2_flags) },
+	{ "X", ".xz", _PATH_XZ, xz_flags, nitems(xz_flags) },
+	{ "Y", ".zst", _PATH_ZSTD, zstd_flags, nitems(zstd_flags) }
 };
 
 struct conf_entry {
@@ -538,6 +532,11 @@ do_entry(struct conf_entry * ent)
 			printf("does not exist, skipped%s.\n", temp_reason);
 		}
 	} else {
+		if (ent->flags & CE_NOEMPTY && ent->fsize == 0) {
+			if (verbose)
+				printf("--> Not rotating empty file\n");
+			return (free_or_keep);
+		}
 		if (ent->flags & CE_TRIMAT && !force && !rotatereq &&
 		    !oversized) {
 			diffsecs = ptimeget_diff(timenow, ent->trim_at);
@@ -1085,9 +1084,11 @@ parse_file(FILE *cf, struct cflist *work_p, struct cflist *glob_p,
 
 		q = parse = missing_field(sob(line), errline);
 		parse = son(line);
-		if (!*parse)
-			errx(1, "malformed line (missing fields):\n%s",
+		if (!*parse) {
+			warnx("malformed line (missing fields):\n%s",
 			    errline);
+			continue;
+		}
 		*parse = '\0';
 
 		/*
@@ -1139,22 +1140,24 @@ parse_file(FILE *cf, struct cflist *work_p, struct cflist *glob_p,
 			continue;
 		}
 
+#define badline(msg, ...) do {		\
+	warnx(msg, __VA_ARGS__);	\
+	goto cleanup;			\
+} while (0)
+
 		special = 0;
 		working = init_entry(q, NULL);
 		if (strcasecmp(DEFAULT_MARKER, q) == 0) {
 			special = 1;
-			if (*defconf_p != NULL) {
-				warnx("Ignoring duplicate entry for %s!", q);
-				free_entry(working);
-				continue;
-			}
+			if (*defconf_p != NULL)
+				badline("Ignoring duplicate entry for %s!", q);
 			*defconf_p = working;
 		}
 
 		q = parse = missing_field(sob(parse + 1), errline);
 		parse = son(parse);
 		if (!*parse)
-			errx(1, "malformed line (missing fields):\n%s",
+			badline("malformed line (missing fields):\n%s",
 			    errline);
 		*parse = '\0';
 		if ((group = strchr(q, ':')) != NULL ||
@@ -1163,7 +1166,7 @@ parse_file(FILE *cf, struct cflist *work_p, struct cflist *glob_p,
 			if (*q) {
 				if (!(isnumberstr(q))) {
 					if ((pwd = getpwnam(q)) == NULL)
-						errx(1,
+						badline(
 				     "error in config file; unknown user:\n%s",
 						    errline);
 					working->uid = pwd->pw_uid;
@@ -1176,7 +1179,7 @@ parse_file(FILE *cf, struct cflist *work_p, struct cflist *glob_p,
 			if (*q) {
 				if (!(isnumberstr(q))) {
 					if ((grp = getgrnam(q)) == NULL)
-						errx(1,
+						badline(
 				    "error in config file; unknown group:\n%s",
 						    errline);
 					working->gid = grp->gr_gid;
@@ -1188,7 +1191,7 @@ parse_file(FILE *cf, struct cflist *work_p, struct cflist *glob_p,
 			q = parse = missing_field(sob(parse + 1), errline);
 			parse = son(parse);
 			if (!*parse)
-				errx(1, "malformed line (missing fields):\n%s",
+				badline("malformed line (missing fields):\n%s",
 				    errline);
 			*parse = '\0';
 		} else {
@@ -1197,23 +1200,29 @@ parse_file(FILE *cf, struct cflist *work_p, struct cflist *glob_p,
 		}
 
 		if (!sscanf(q, "%o", &working->permissions))
-			errx(1, "error in config file; bad permissions:\n%s",
+			badline("error in config file; bad permissions:\n%s",
 			    errline);
+		if ((working->permissions & ~DEFFILEMODE) != 0) {
+			warnx("File mode bits 0%o changed to 0%o in line:\n%s",
+			    working->permissions,
+			    working->permissions & DEFFILEMODE, errline);
+			working->permissions &= DEFFILEMODE;
+		}
 
 		q = parse = missing_field(sob(parse + 1), errline);
 		parse = son(parse);
 		if (!*parse)
-			errx(1, "malformed line (missing fields):\n%s",
+			badline("malformed line (missing fields):\n%s",
 			    errline);
 		*parse = '\0';
 		if (!sscanf(q, "%d", &working->numlogs) || working->numlogs < 0)
-			errx(1, "error in config file; bad value for count of logs to save:\n%s",
+			badline("error in config file; bad value for count of logs to save:\n%s",
 			    errline);
 
 		q = parse = missing_field(sob(parse + 1), errline);
 		parse = son(parse);
 		if (!*parse)
-			errx(1, "malformed line (missing fields):\n%s",
+			badline("malformed line (missing fields):\n%s",
 			    errline);
 		*parse = '\0';
 		if (isdigitch(*q))
@@ -1242,14 +1251,14 @@ parse_file(FILE *cf, struct cflist *work_p, struct cflist *glob_p,
 			else if (*ep == '*')
 				working->hours = -1;
 			else if (ul > INT_MAX)
-				errx(1, "interval is too large:\n%s", errline);
+				badline("interval is too large:\n%s", errline);
 			else
 				working->hours = ul;
 
 			if (*ep == '\0' || strcmp(ep, "*") == 0)
 				goto no_trimat;
 			if (*ep != '@' && *ep != '$')
-				errx(1, "malformed interval/at:\n%s", errline);
+				badline("malformed interval/at:\n%s", errline);
 
 			working->flags |= CE_TRIMAT;
 			working->trim_at = ptime_init(NULL);
@@ -1260,10 +1269,10 @@ parse_file(FILE *cf, struct cflist *work_p, struct cflist *glob_p,
 			res = ptime_relparse(working->trim_at, ptm_opts,
 			    ptimeget_secs(timenow), ep + 1);
 			if (res == -2)
-				errx(1, "nonexistent time for 'at' value:\n%s",
+				badline("nonexistent time for 'at' value:\n%s",
 				    errline);
 			else if (res < 0)
-				errx(1, "malformed 'at' value:\n%s", errline);
+				badline("malformed 'at' value:\n%s", errline);
 		}
 no_trimat:
 
@@ -1287,6 +1296,9 @@ no_trimat:
 				break;
 			case 'd':
 				working->flags |= CE_NODUMP;
+				break;
+			case 'e':
+				working->flags |= CE_NOEMPTY;
 				break;
 			case 'g':
 				working->flags |= CE_GLOB;
@@ -1315,6 +1327,9 @@ no_trimat:
 			case 'x':
 				working->compress = COMPRESS_XZ;
 				break;
+			case 'y':
+				working->compress = COMPRESS_ZSTD;
+				break;
 			case 'z':
 				working->compress = COMPRESS_GZIP;
 				break;
@@ -1323,7 +1338,7 @@ no_trimat:
 			case 'f':	/* Used by OpenBSD for "CE_FOLLOW" */
 			case 'm':	/* Used by OpenBSD for "CE_MONITOR" */
 			default:
-				errx(1, "illegal flag in config file -- %c",
+				badline("illegal flag in config file -- %c",
 				    *q);
 			}
 		}
@@ -1345,7 +1360,7 @@ no_trimat:
 			else if (isalnum(*q))
 				goto got_sig;
 			else {
-				errx(1,
+				badline(
 			"illegal pid file or signal in config file:\n%s",
 				    errline);
 			}
@@ -1363,7 +1378,7 @@ no_trimat:
 got_sig:
 			working->sig = parse_signal(q);
 			if (working->sig < 1 || working->sig >= sys_nsig) {
-				errx(1,
+				badline(
 				    "illegal signal in config file:\n%s",
 				    errline);
 			}
@@ -1414,7 +1429,11 @@ got_sig:
 		} else {
 			STAILQ_INSERT_TAIL(work_p, working, cf_nextp);
 		}
-	}
+		continue;
+cleanup:
+		free_entry(working);
+#undef badline
+	} /* while (fgets(line, BUFSIZ, cf)) */
 	if (errline != NULL)
 		free(errline);
 }
@@ -1526,11 +1545,11 @@ validate_old_timelog(int fd, const struct dirent *dp, const char *logfname,
 static void
 delete_oldest_timelog(const struct conf_entry *ent, const char *archive_dir)
 {
-	char *logfname, *s, *dir, errbuf[80];
+	char *basebuf, *dirbuf, errbuf[80];
+	const char *base, *dir;
 	int dir_fd, i, logcnt, max_logcnt;
 	struct oldlog_entry *oldlogs;
 	struct dirent *dp;
-	const char *cdir;
 	struct tm tm;
 	DIR *dirp;
 
@@ -1538,19 +1557,19 @@ delete_oldest_timelog(const struct conf_entry *ent, const char *archive_dir)
 	max_logcnt = MAX_OLDLOGS;
 	logcnt = 0;
 
-	if (archive_dir != NULL && archive_dir[0] != '\0')
-		cdir = archive_dir;
-	else
-		if ((cdir = dirname(ent->log)) == NULL)
-			err(1, "dirname()");
-	if ((dir = strdup(cdir)) == NULL)
-		err(1, "strdup()");
+	if (archive_dir != NULL && archive_dir[0] != '\0') {
+		dirbuf = NULL;
+		dir = archive_dir;
+	} else {
+		if ((dirbuf = strdup(ent->log)) == NULL)
+			err(1, "strdup()");
+		dir = dirname(dirbuf);
+	}
 
-	if ((s = basename(ent->log)) == NULL)
-		err(1, "basename()");
-	if ((logfname = strdup(s)) == NULL)
+	if ((basebuf = strdup(ent->log)) == NULL)
 		err(1, "strdup()");
-	if (strcmp(logfname, "/") == 0)
+	base = basename(basebuf);
+	if (strcmp(base, "/") == 0)
 		errx(1, "Invalid log filename - became '/'");
 
 	if (verbose > 2)
@@ -1561,7 +1580,7 @@ delete_oldest_timelog(const struct conf_entry *ent, const char *archive_dir)
 		err(1, "Cannot open log directory '%s'", dir);
 	dir_fd = dirfd(dirp);
 	while ((dp = readdir(dirp)) != NULL) {
-		if (validate_old_timelog(dir_fd, dp, logfname, &tm) == 0)
+		if (validate_old_timelog(dir_fd, dp, base, &tm) == 0)
 			continue;
 
 		/*
@@ -1626,8 +1645,8 @@ delete_oldest_timelog(const struct conf_entry *ent, const char *archive_dir)
 		free(oldlogs[i].fname);
 	}
 	free(oldlogs);
-	free(logfname);
-	free(dir);
+	free(dirbuf);
+	free(basebuf);
 }
 
 /*
@@ -1827,17 +1846,23 @@ do_rotate(const struct conf_entry *ent)
 		else {
 			/* XXX - Ought to be checking for failure! */
 			(void)rename(zfile1, zfile2);
-			change_attrs(zfile2, ent);
-			if (ent->compress && !strlen(logfile_suffix)) {
-				/* compress old rotation */
-				struct zipwork_entry zwork;
+		}
+		change_attrs(zfile2, ent);
+		if (ent->compress && strlen(logfile_suffix) == 0) {
+			/* compress old rotation */
+			struct zipwork_entry *zwork;
+			size_t sz;
 
-				memset(&zwork, 0, sizeof(zwork));
-				zwork.zw_conf = ent;
-				zwork.zw_fsize = sizefile(zfile2);
-				strcpy(zwork.zw_fname, zfile2);
-				do_zipwork(&zwork);
-			}
+			sz = sizeof(*zwork) + strlen(zfile2) + 1;
+			zwork = calloc(1, sz);
+			if (zwork == NULL)
+				err(1, "calloc");
+
+			zwork->zw_conf = ent;
+			zwork->zw_fsize = sizefile(zfile2);
+			strcpy(zwork->zw_fname, zfile2);
+			do_zipwork(zwork);
+			free(zwork);
 		}
 	}
 
@@ -2001,34 +2026,17 @@ do_sigwork(struct sigwork_entry *swork)
 static void
 do_zipwork(struct zipwork_entry *zwork)
 {
-	const char *pgm_name, *pgm_path;
-	int errsav, fcount, zstatus;
+	const struct compress_types *ct;
+	struct sbuf *command;
 	pid_t pidzip, wpid;
-	char zresult[MAXPATHLEN];
-	int c;
+	int c, errsav, fcount, zstatus;
+	const char **args, *pgm_name, *pgm_path;
+	char *zresult;
 
 	assert(zwork != NULL);
-	pgm_path = NULL;
-	strlcpy(zresult, zwork->zw_fname, sizeof(zresult));
-	if (zwork->zw_conf != NULL &&
-	    zwork->zw_conf->compress > COMPRESS_NONE)
-		for (c = 1; c < COMPRESS_TYPES; c++) {
-			if (zwork->zw_conf->compress == c) {
-				pgm_path = compress_type[c].path;
-				(void) strlcat(zresult,
-				    compress_type[c].suffix, sizeof(zresult));
-				break;
-			}
-		}
-	if (pgm_path == NULL) {
-		warnx("invalid entry for %s in do_zipwork", zwork->zw_fname);
-		return;
-	}
-	pgm_name = strrchr(pgm_path, '/');
-	if (pgm_name == NULL)
-		pgm_name = pgm_path;
-	else
-		pgm_name++;
+	assert(zwork->zw_conf != NULL);
+	assert(zwork->zw_conf->compress > COMPRESS_NONE);
+	assert(zwork->zw_conf->compress < COMPRESS_TYPES);
 
 	if (zwork->zw_swork != NULL && zwork->zw_swork->sw_runcmd == 0 &&
 	    zwork->zw_swork->sw_pidok <= 0) {
@@ -2039,10 +2047,52 @@ do_zipwork(struct zipwork_entry *zwork)
 		return;
 	}
 
+	ct = &compress_type[zwork->zw_conf->compress];
+
+	/*
+	 * execv will be called with the array [ program, flags ... ,
+	 * filename, NULL ] so allocate nflags+3 elements for the array.
+	 */
+	args = calloc(ct->nflags + 3, sizeof(*args));
+	if (args == NULL)
+		err(1, "calloc");
+
+	pgm_path = ct->path;
+	pgm_name = strrchr(pgm_path, '/');
+	if (pgm_name == NULL)
+		pgm_name = pgm_path;
+	else
+		pgm_name++;
+
+	/* Build the argument array. */
+	args[0] = pgm_name;
+	for (c = 0; c < ct->nflags; c++)
+		args[c + 1] = ct->flags[c];
+	args[c + 1] = zwork->zw_fname;
+
+	/* Also create a space-delimited version if we need to print it. */
+	if ((command = sbuf_new_auto()) == NULL)
+		errx(1, "sbuf_new");
+	sbuf_cpy(command, pgm_path);
+	for (c = 1; args[c] != NULL; c++) {
+		sbuf_putc(command, ' ');
+		sbuf_cat(command, args[c]);
+	}
+	if (sbuf_finish(command) == -1)
+		err(1, "sbuf_finish");
+
+	/* Determine the filename of the compressed file. */
+	asprintf(&zresult, "%s%s", zwork->zw_fname, ct->suffix);
+	if (zresult == NULL)
+		errx(1, "asprintf");
+
+	if (verbose)
+		printf("Executing: %s\n", sbuf_data(command));
+
 	if (noaction) {
 		printf("\t%s %s\n", pgm_name, zwork->zw_fname);
 		change_attrs(zresult, zwork->zw_conf);
-		return;
+		goto out;
 	}
 
 	fcount = 1;
@@ -2062,36 +2112,40 @@ do_zipwork(struct zipwork_entry *zwork)
 	}
 	if (!pidzip) {
 		/* The child process executes the compression command */
-		execl(pgm_path, pgm_path, "-f", zwork->zw_fname, (char *)0);
-		err(1, "execl(`%s -f %s')", pgm_path, zwork->zw_fname);
+		execv(pgm_path, __DECONST(char *const*, args));
+		err(1, "execv(`%s')", sbuf_data(command));
 	}
 
 	wpid = waitpid(pidzip, &zstatus, 0);
 	if (wpid == -1) {
 		/* XXX - should this be a fatal error? */
 		warn("%s: waitpid(%d)", pgm_path, pidzip);
-		return;
+		goto out;
 	}
 	if (!WIFEXITED(zstatus)) {
-		warnx("`%s -f %s' did not terminate normally", pgm_name,
-		    zwork->zw_fname);
-		return;
+		warnx("`%s' did not terminate normally", sbuf_data(command));
+		goto out;
 	}
 	if (WEXITSTATUS(zstatus)) {
-		warnx("`%s -f %s' terminated with a non-zero status (%d)",
-		    pgm_name, zwork->zw_fname, WEXITSTATUS(zstatus));
-		return;
+		warnx("`%s' terminated with a non-zero status (%d)",
+		    sbuf_data(command), WEXITSTATUS(zstatus));
+		goto out;
 	}
 
 	/* Compression was successful, set file attributes on the result. */
 	change_attrs(zresult, zwork->zw_conf);
+
+out:
+	sbuf_delete(command);
+	free(args);
+	free(zresult);
 }
 
 /*
  * Save information on any process we need to signal.  Any single
  * process may need to be sent different signal-values for different
  * log files, but usually a single signal-value will cause the process
- * to close and re-open all of it's log files.
+ * to close and re-open all of its log files.
  */
 static struct sigwork_entry *
 save_sigwork(const struct conf_entry *ent)
@@ -2340,26 +2394,29 @@ mtime_old_timelog(const char *file)
 	time_t t;
 	struct dirent *dp;
 	DIR *dirp;
-	char *s, *logfname, *dir;
+	char *logfname, *logfnamebuf, *dir, *dirbuf;
 
 	t = -1;
 
-	if ((dir = dirname(file)) == NULL) {
-		warn("dirname() of '%s'", file);
+	if ((dirbuf = strdup(file)) == NULL) {
+		warn("strdup() of '%s'", file);
 		return (t);
 	}
-	if ((s = basename(file)) == NULL) {
-		warn("basename() of '%s'", file);
+	dir = dirname(dirbuf);
+	if ((logfnamebuf = strdup(file)) == NULL) {
+		warn("strdup() of '%s'", file);
+		free(dirbuf);
 		return (t);
-	} else if (s[0] == '/') {
-		warnx("Invalid log filename '%s'", s);
-		return (t);
-	} else if ((logfname = strdup(s)) == NULL)
-		err(1, "strdup()");
+	}
+	logfname = basename(logfnamebuf);
+	if (logfname[0] == '/') {
+		warnx("Invalid log filename '%s'", logfname);
+		goto out;
+	}
 
 	if ((dirp = opendir(dir)) == NULL) {
 		warn("Cannot open log directory '%s'", dir);
-		return (t);
+		goto out;
 	}
 	dir_fd = dirfd(dirp);
 	/* Open the archive dir and find the most recent archive of logfname. */
@@ -2376,6 +2433,9 @@ mtime_old_timelog(const char *file)
 	}
 	closedir(dirp);
 
+out:
+	free(dirbuf);
+	free(logfnamebuf);
 	return (t);
 }
 
@@ -2385,34 +2445,46 @@ age_old_log(const char *file)
 {
 	struct stat sb;
 	const char *logfile_suffix;
-	char tmp[MAXPATHLEN + sizeof(".0") + COMPRESS_SUFFIX_MAXLEN + 1];
+	static unsigned int suffix_maxlen = 0;
+	char *tmp;
+	size_t tmpsiz;
 	time_t mtime;
+	int c;
+
+	if (suffix_maxlen == 0) {
+		for (c = 0; c < COMPRESS_TYPES; c++)
+			suffix_maxlen = MAX(suffix_maxlen,
+			    strlen(compress_type[c].suffix));
+	}
+
+	tmpsiz = MAXPATHLEN + sizeof(".0") + suffix_maxlen + 1;
+	tmp = alloca(tmpsiz);
 
 	if (archtodir) {
 		char *p;
 
 		/* build name of archive directory into tmp */
 		if (*archdirname == '/') {	/* absolute */
-			strlcpy(tmp, archdirname, sizeof(tmp));
+			strlcpy(tmp, archdirname, tmpsiz);
 		} else {	/* relative */
 			/* get directory part of logfile */
-			strlcpy(tmp, file, sizeof(tmp));
+			strlcpy(tmp, file, tmpsiz);
 			if ((p = strrchr(tmp, '/')) == NULL)
 				tmp[0] = '\0';
 			else
 				*(p + 1) = '\0';
-			strlcat(tmp, archdirname, sizeof(tmp));
+			strlcat(tmp, archdirname, tmpsiz);
 		}
 
-		strlcat(tmp, "/", sizeof(tmp));
+		strlcat(tmp, "/", tmpsiz);
 
 		/* get filename part of logfile */
 		if ((p = strrchr(file, '/')) == NULL)
-			strlcat(tmp, file, sizeof(tmp));
+			strlcat(tmp, file, tmpsiz);
 		else
-			strlcat(tmp, p + 1, sizeof(tmp));
+			strlcat(tmp, p + 1, tmpsiz);
 	} else {
-		(void) strlcpy(tmp, file, sizeof(tmp));
+		(void) strlcpy(tmp, file, tmpsiz);
 	}
 
 	if (timefnamefmt != NULL) {
@@ -2420,11 +2492,11 @@ age_old_log(const char *file)
 		if (mtime == -1)
 			return (-1);
 	} else {
-		strlcat(tmp, ".0", sizeof(tmp));
+		strlcat(tmp, ".0", tmpsiz);
 		logfile_suffix = get_logfile_suffix(tmp);
 		if (logfile_suffix == NULL)
 			return (-1);
-		(void) strlcat(tmp, logfile_suffix, sizeof(tmp));
+		(void) strlcat(tmp, logfile_suffix, tmpsiz);
 		if (stat(tmp, &sb) < 0)
 			return (-1);
 		mtime = sb.st_mtime;

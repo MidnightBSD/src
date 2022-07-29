@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/include/efiprot.h 329114 2018-02-11 02:27:50Z kevans $ */
+/* $FreeBSD$ */
 #ifndef _EFI_PROT_H
 #define _EFI_PROT_H
 

@@ -23,16 +23,19 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/preempt.h 328653 2018-02-01 13:01:44Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _LINUX_PREEMPT_H_
 #define	_LINUX_PREEMPT_H_
 
+#include <linux/hardirq.h>
 #include <linux/list.h>
 
 #define	in_interrupt() \
 	(curthread->td_intr_nesting_level || curthread->td_critnest)
+
+#define	in_task() (curthread->td_priority >= PI_SOFT)
 
 #define	preempt_disable()	critical_enter()
 #define	preempt_enable()	critical_exit()

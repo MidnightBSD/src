@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Paolo Pisati <piso@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/netinet/libalias/alias_mod.h 259859 2013-12-25 03:24:20Z glebius $
+ * $FreeBSD$
  */
 
 /*
@@ -39,8 +41,9 @@ MALLOC_DECLARE(M_ALIAS);
 
 /* Use kernel allocator. */
 #if defined(_SYS_MALLOC_H_)
+#undef malloc
 #define	malloc(x)	malloc(x, M_ALIAS, M_NOWAIT|M_ZERO)
-#define	calloc(x, n)	malloc(x*n)
+#define	calloc(n, x)	mallocarray((n), (x), M_ALIAS, M_NOWAIT|M_ZERO)
 #define	free(x)		free(x, M_ALIAS)
 #endif
 #endif

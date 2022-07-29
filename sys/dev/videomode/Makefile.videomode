@@ -1,5 +1,5 @@
 #	$NetBSD: Makefile.videomode,v 1.1 2006/03/04 02:34:27 gdamore Exp $
-#	$FreeBSD: stable/11/sys/dev/videomode/Makefile.videomode 278798 2015-02-15 11:37:40Z hselasky $
+#	$FreeBSD$
 #
 # As per tron@NetBSD.org, the proper procedure is
 #

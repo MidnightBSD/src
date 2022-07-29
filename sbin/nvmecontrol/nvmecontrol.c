@@ -27,13 +27,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/nvmecontrol/nvmecontrol.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/ioccom.h>
 #include <sys/stat.h>
 
 #include <ctype.h>
+#include <dlfcn.h>
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -43,54 +44,10 @@ __FBSDID("$FreeBSD: stable/11/sbin/nvmecontrol/nvmecontrol.c 330449 2018-03-05 0
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sysexits.h>
 #include <unistd.h>
 
 #include "nvmecontrol.h"
-
-
-static struct nvme_function funcs[] = {
-	{"devlist",	devlist,	DEVLIST_USAGE},
-	{"identify",	identify,	IDENTIFY_USAGE},
-	{"perftest",	perftest,	PERFTEST_USAGE},
-	{"reset",	reset,		RESET_USAGE},
-	{"logpage",	logpage,	LOGPAGE_USAGE},
-	{"firmware",	firmware,	FIRMWARE_USAGE},
-	{"power",	power,		POWER_USAGE},
-	{"wdc",		wdc,		WDC_USAGE},
-	{NULL,		NULL,		NULL},
-};
-
-void
-gen_usage(struct nvme_function *f)
-{
-
-	fprintf(stderr, "usage:\n");
-	while (f->name != NULL) {
-		fprintf(stderr, "%s", f->usage);
-		f++;
-	}
-	exit(1);
-}
-
-void
-dispatch(int argc, char *argv[], struct nvme_function *tbl)
-{
-	struct nvme_function *f = tbl;
-
-	if (argv[1] == NULL) {
-		gen_usage(tbl);
-		return;
-	}
-
-	while (f->name != NULL) {
-		if (strcmp(argv[1], f->name) == 0)
-			f->fn(argc-1, &argv[1]);
-		f++;
-	}
-
-	fprintf(stderr, "Unknown command: %s\n", argv[1]);
-	gen_usage(tbl);
-}
 
 static void
 print_bytes(void *data, uint32_t length)
@@ -140,67 +97,65 @@ print_hex(void *data, uint32_t length)
 		print_bytes(data, length);
 }
 
-void
+int
 read_controller_data(int fd, struct nvme_controller_data *cdata)
 {
 	struct nvme_pt_command	pt;
 
 	memset(&pt, 0, sizeof(pt));
 	pt.cmd.opc = NVME_OPC_IDENTIFY;
-	pt.cmd.cdw10 = 1;
+	pt.cmd.cdw10 = htole32(1);
 	pt.buf = cdata;
 	pt.len = sizeof(*cdata);
 	pt.is_read = 1;
 
 	if (ioctl(fd, NVME_PASSTHROUGH_CMD, &pt) < 0)
-		err(1, "identify request failed");
+		return (errno);
+
+	/* Convert data to host endian */
+	nvme_controller_data_swapbytes(cdata);
 
 	if (nvme_completion_is_error(&pt.cpl))
-		errx(1, "identify request returned error");
+		return (EIO);
+	return (0);
 }
 
-void
-read_namespace_data(int fd, int nsid, struct nvme_namespace_data *nsdata)
+int
+read_namespace_data(int fd, uint32_t nsid, struct nvme_namespace_data *nsdata)
 {
 	struct nvme_pt_command	pt;
 
 	memset(&pt, 0, sizeof(pt));
 	pt.cmd.opc = NVME_OPC_IDENTIFY;
-	pt.cmd.nsid = nsid;
+	pt.cmd.nsid = htole32(nsid);
+	pt.cmd.cdw10 = htole32(0);
 	pt.buf = nsdata;
 	pt.len = sizeof(*nsdata);
 	pt.is_read = 1;
 
 	if (ioctl(fd, NVME_PASSTHROUGH_CMD, &pt) < 0)
-		err(1, "identify request failed");
+		return (errno);
+
+	/* Convert data to host endian */
+	nvme_namespace_data_swapbytes(nsdata);
 
 	if (nvme_completion_is_error(&pt.cpl))
-		errx(1, "identify request returned error");
+		return (EIO);
+	return (0);
 }
 
 int
-open_dev(const char *str, int *fd, int show_error, int exit_on_error)
+open_dev(const char *str, int *fd, int write, int exit_on_error)
 {
 	char		full_path[64];
 
-	if (!strnstr(str, NVME_CTRLR_PREFIX, strlen(NVME_CTRLR_PREFIX))) {
-		if (show_error)
-			warnx("controller/namespace ids must begin with '%s'",
-			    NVME_CTRLR_PREFIX);
-		if (exit_on_error)
-			exit(1);
-		else
-			return (EINVAL);
-	}
-
 	snprintf(full_path, sizeof(full_path), _PATH_DEV"%s", str);
-	*fd = open(full_path, O_RDWR);
+	*fd = open(full_path, write ? O_RDWR : O_RDONLY);
 	if (*fd < 0) {
-		if (show_error)
-			warn("could not open %s", full_path);
-		if (exit_on_error)
-			exit(1);
-		else
+		if (exit_on_error) {
+			err(EX_OSFILE, "could not open %s%s", full_path,
+			    write ? " for write" : "");
+		} else
 			return (errno);
 	}
 
@@ -208,36 +163,28 @@ open_dev(const char *str, int *fd, int show_error, int exit_on_error)
 }
 
 void
-parse_ns_str(const char *ns_str, char *ctrlr_str, int *nsid)
+get_nsid(int fd, char **ctrlr_str, uint32_t *nsid)
 {
-	char	*nsloc;
+	struct nvme_get_nsid gnsid;
 
-	/*
-	 * Pull the namespace id from the string. +2 skips past the "ns" part
-	 *  of the string.  Don't search past 10 characters into the string,
-	 *  otherwise we know it is malformed.
-	 */
-	nsloc = strnstr(ns_str, NVME_NS_PREFIX, 10);
-	if (nsloc != NULL)
-		*nsid = strtol(nsloc + 2, NULL, 10);
-	if (nsloc == NULL || (*nsid == 0 && errno != 0))
-		errx(1, "invalid namespace ID '%s'", ns_str);
-
-	/*
-	 * The controller string will include only the nvmX part of the
-	 *  nvmeXnsY string.
-	 */
-	snprintf(ctrlr_str, nsloc - ns_str + 1, "%s", ns_str);
+	if (ioctl(fd, NVME_GET_NSID, &gnsid) < 0)
+		err(EX_OSERR, "NVME_GET_NSID ioctl failed");
+	if (ctrlr_str != NULL)
+		*ctrlr_str = strndup(gnsid.cdev, sizeof(gnsid.cdev));
+	if (nsid != NULL)
+		*nsid = gnsid.nsid;
 }
 
 int
 main(int argc, char *argv[])
 {
 
-	if (argc < 2)
-		gen_usage(funcs);
+	cmd_init();
 
-	dispatch(argc, argv, funcs);
+	cmd_load_dir("/lib/nvmecontrol", NULL, NULL);
+	cmd_load_dir("/usr/local/lib/nvmecontrol", NULL, NULL);
+
+	cmd_dispatch(argc, argv, NULL);
 
 	return (0);
 }

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/freescale/imx/imx6_src.h 290807 2015-11-13 23:47:41Z gonzo $
+ * $FreeBSD$
  */
 
 #ifndef	__IMX6_SRC_H__

@@ -19,7 +19,7 @@ PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
 ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
 SOFTWARE.
 
- $FreeBSD: stable/11/libexec/bootpd/hash.c 297865 2016-04-12 18:18:26Z pfg $
+ $FreeBSD$
 
 ************************************************************************/
 
@@ -37,14 +37,7 @@ SOFTWARE.
 
 #include <sys/types.h>
 #include <stdlib.h>
-
-#ifndef USE_BFUNCS
-#include <memory.h>
-/* Yes, memcpy is OK here (no overlapped copies). */
-#define bcopy(a,b,c)    memcpy(b,a,c)
-#define bzero(p,l)      memset(p,0,l)
-#define bcmp(a,b,c)     memcmp(a,b,c)
-#endif
+#include <strings.h>
 
 #include "hash.h"
 

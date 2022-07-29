@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)strncat.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/libkern/strncat.c 298714 2016-04-27 19:09:21Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/libkern.h>
 
@@ -53,11 +53,11 @@ strncat(char *dst, const char *src, size_t n)
 		while (*d != 0)
 			d++;
 		do {
-			if ((*d = *s++) == 0)
+			if ((*d = *s++) == '\0')
 				break;
 			d++;
 		} while (--n != 0);
-		*d = 0;
+		*d = '\0';
 	}
 	return (dst);
 }

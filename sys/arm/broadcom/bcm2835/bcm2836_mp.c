@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2836_mp.c 331894 2018-04-02 23:30:21Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -144,43 +144,3 @@ bcm2836_mp_start_ap(platform_t plat)
 		CPU_SET(i, &all_cpus);
 	}
 }
-
-#ifndef INTRNG
-void
-pic_ipi_send(cpuset_t cpus, u_int ipi)
-{
-	int i;
-
-	dsb();
-	for (i = 0; i < mp_ncpus; i++) {
-		if (CPU_ISSET(i, &cpus))
-			BSWR4(MBOX0SET_CORE(i), 1 << ipi);
-	}
-	wmb();
-}
-
-int
-pic_ipi_read(int i)
-{
-	uint32_t val;
-	int cpu, ipi;
-
-	cpu = PCPU_GET(cpuid);
-	dsb();
-	if (i != -1) {
-		val = BSRD4(MBOX0CLR_CORE(cpu));
-		if (val == 0)
-			return (0);
-		ipi = ffs(val) - 1;
-		BSWR4(MBOX0CLR_CORE(cpu), 1 << ipi);
-		dsb();
-		return (ipi);
-	}
-	return (0x3ff);
-}
-
-void
-pic_ipi_clear(int ipi)
-{
-}
-#endif

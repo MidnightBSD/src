@@ -1,9 +1,9 @@
 #
-# $FreeBSD: stable/11/sys/modules/cxgbe/if_cxgbe/Makefile 346934 2019-04-29 22:16:33Z np $
+# $FreeBSD$
 #
 
 CXGBE=	${SRCTOP}/sys/dev/cxgbe
-.PATH: ${CXGBE} ${CXGBE}/common ${CXGBE}/cudbg
+.PATH: ${CXGBE} ${CXGBE}/common ${CXGBE}/crypto ${CXGBE}/cudbg
 
 KMOD=	if_cxgbe
 SRCS=	bus_if.h
@@ -12,6 +12,7 @@ SRCS+=	opt_ddb.h
 SRCS+=	opt_inet.h
 SRCS+=	opt_inet6.h
 SRCS+=	opt_ofed.h
+SRCS+=	opt_ratelimit.h
 SRCS+=	opt_rss.h
 SRCS+=	pci_if.h pci_iov_if.h
 SRCS+=	t4_clip.c
@@ -19,6 +20,7 @@ SRCS+=	t4_filter.c
 SRCS+=	t4_hw.c
 SRCS+=	t4_if.c t4_if.h
 SRCS+=	t4_iov.c
+SRCS+=	t4_keyctx.c
 SRCS+=	t4_l2t.c
 SRCS+=	t4_main.c
 SRCS+=	t4_mp_ring.c
@@ -33,9 +35,6 @@ SRCS+=  cudbg_lib.c
 SRCS+=  cudbg_wtp.c
 SRCS+=  fastlz_api.c
 SRCS+=  fastlz.c
-
-# Provide the timestamp of a packet in its header mbuf.
-#CFLAGS+= -DT4_PKT_TIMESTAMP
 
 CFLAGS+= -I${CXGBE}
 

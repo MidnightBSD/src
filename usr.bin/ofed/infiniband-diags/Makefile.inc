@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/ofed/infiniband-diags/Makefile.inc 335253 2018-06-16 15:05:05Z kib $
+# $FreeBSD$
 
 _spath=	${SRCTOP}/contrib/ofed/infiniband-diags
 .PATH: ${_spath}/src ${_spath}/man

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sbin/ifconfig/ifpfsync.c 345397 2019-03-21 22:40:05Z asomers $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -178,7 +178,7 @@ setpfsync_defer(const char *val, int d, int s, const struct afswtch *rafp)
 	if (ioctl(s, SIOCGETPFSYNC, (caddr_t)&ifr) == -1)
 		err(1, "SIOCGETPFSYNC");
 
-	preq.pfsyncr_defer = d;
+	preq.pfsyncr_defer = d ? PFSYNCF_DEFER : 0;
 	if (ioctl(s, SIOCSETPFSYNC, (caddr_t)&ifr) == -1)
 		err(1, "SIOCSETPFSYNC");
 }
@@ -206,7 +206,10 @@ pfsync_status(int s)
 	if (preq.pfsyncr_syncdev[0] != '\0' ||
 	    preq.pfsyncr_syncpeer.s_addr != htonl(INADDR_PFSYNC_GROUP)) {
 		printf("maxupd: %d ", preq.pfsyncr_maxupdates);
-		printf("defer: %s\n", preq.pfsyncr_defer ? "on" : "off");
+		printf("defer: %s\n",
+		    (preq.pfsyncr_defer & PFSYNCF_DEFER) ? "on" : "off");
+		printf("\tsyncok: %d\n",
+		    (preq.pfsyncr_defer & PFSYNCF_OK) ? 1 : 0);
 	}
 }
 

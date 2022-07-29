@@ -2,7 +2,9 @@
 
 /* DHCP options parsing and reassembly. */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
@@ -41,15 +43,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/dhclient/options.c 349633 2019-07-03 00:36:34Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include <ctype.h>
 
 #define DHCP_OPTION_DATA
 #include "dhcpd.h"
 
-int bad_options = 0;
-int bad_options_max = 5;
+static int bad_options = 0;
+static int bad_options_max = 5;
 
 void	parse_options(struct packet *);
 void	parse_option_buffer(struct packet *, unsigned char *, int);

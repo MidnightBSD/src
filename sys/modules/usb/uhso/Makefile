@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/sys/modules/usb/uhso/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 #
 # Copyright (c) 2010 Andrew Thompson. All rights reserved.
 #

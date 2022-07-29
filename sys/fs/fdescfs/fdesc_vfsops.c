@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -31,7 +33,7 @@
  *
  *	@(#)fdesc_vfsops.c	8.4 (Berkeley) 1/21/94
  *
- * $FreeBSD: stable/11/sys/fs/fdescfs/fdesc_vfsops.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*
@@ -79,12 +81,8 @@ static int
 fdesc_mount(struct mount *mp)
 {
 	struct fdescmount *fmp;
-	struct thread *td = curthread;
 	struct vnode *rvp;
 	int error;
-
-	if (!prison_allow(td->td_ucred, PR_ALLOW_MOUNT_FDESCFS))
-		return (EPERM);
 
 	/*
 	 * Update is a no-op

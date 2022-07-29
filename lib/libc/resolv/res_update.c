@@ -2,7 +2,9 @@
 static const char rcsid[] = "$Id: res_update.c,v 1.13 2005/04/27 04:56:43 sra Exp $";
 #endif /* not lint */
 
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-1999 by Internet Software Consortium.
  *
@@ -26,7 +28,7 @@ static const char rcsid[] = "$Id: res_update.c,v 1.13 2005/04/27 04:56:43 sra Ex
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/resolv/res_update.c 269867 2014-08-12 12:36:06Z ume $");
+__FBSDID("$FreeBSD$");
 
 #include "port_before.h"
 

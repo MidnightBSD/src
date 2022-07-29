@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2013 Chelsio, Inc. All rights reserved.
  *
  * This software is available to you under a choice of one of two
@@ -29,7 +31,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/cxgbe/iw_cxgbe/user.h 331769 2018-03-30 18:06:29Z hselasky $
+ * $FreeBSD$
  */
 #ifndef __C4IW_USER_H__
 #define __C4IW_USER_H__

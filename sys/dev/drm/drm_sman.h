@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**************************************************************************
  *
  * Copyright 2006 Tungsten Graphics, Inc., Bismarck, ND., USA.
@@ -28,7 +27,7 @@
  **************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/drm_sman.h 203287 2010-01-31 14:25:29Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Simple memory MANager interface that keeps track on allocate regions on a

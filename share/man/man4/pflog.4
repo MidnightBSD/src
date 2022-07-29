@@ -23,9 +23,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/pflog.4 276259 2014-12-26 22:30:18Z bapt $
+.\" $FreeBSD$
 .\"
-.Dd May 31, 2007
+.Dd October 29, 2021
 .Dt PFLOG 4
 .Os
 .Sh NAME
@@ -79,6 +79,7 @@ struct pfloghdr {
 	pid_t		rule_pid;
 	u_int8_t	dir;
 	u_int8_t	pad[3];
+	u_int32_t	ridentifier;
 };
 .Ed
 .Sh EXAMPLES

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 Jake Burkholder.
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/mips/sc_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -78,9 +80,6 @@ sc_get_softc(int unit, int flags)
 void
 sc_get_bios_values(bios_values_t *values)
 {
-	values->cursor_start = 0;
-	values->cursor_end = 32;
-	values->shift_state = 0;
 }
 
 int

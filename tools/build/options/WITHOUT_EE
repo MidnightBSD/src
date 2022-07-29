@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_EE 277663 2015-01-25 00:03:44Z ngie $
+.\" $FreeBSD$
 Set to not build and install
 .Xr edit 1 ,
 .Xr ee 1 ,

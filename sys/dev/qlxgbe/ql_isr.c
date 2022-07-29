@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
  *
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/qlxgbe/ql_isr.c 351677 2019-09-02 00:31:05Z emaste $");
+__FBSDID("$FreeBSD$");
 
 
 #include "ql_os.h"

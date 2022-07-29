@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/netpfil/ipfw/nat64/nat64_translate.h 346211 2019-04-14 12:35:58Z ae $
+ * $FreeBSD$
  */
 
 #ifndef	_IP_FW_NAT64_TRANSLATE_H_
@@ -123,14 +123,9 @@ static inline int
 nat64_check_ip4(in_addr_t ia)
 {
 
-	/* IN_LOOPBACK */
-	if ((ia & htonl(0xff000000)) == htonl(0x7f000000))
-		return (1);
-	/* IN_LINKLOCAL */
-	if ((ia & htonl(0xffff0000)) == htonl(0xa9fe0000))
-		return (1);
-	/* IN_MULTICAST & IN_EXPERIMENTAL */
-	if ((ia & htonl(0xe0000000)) == htonl(0xe0000000))
+	/* These checks are ordered from most likely to least */
+	if (IN_MULTICAST(ntohl(ia)) || IN_LOOPBACK(ntohl(ia)) ||
+	    IN_LINKLOCAL(ntohl(ia)) || IN_EXPERIMENTAL(ntohl(ia)))
 		return (1);
 	return (0);
 }

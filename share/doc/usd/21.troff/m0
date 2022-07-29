@@ -37,7 +37,7 @@
 .\"
 .\"	@(#)m0	8.1 (Berkeley) 8/14/93
 .\"
-.\" $FreeBSD: stable/11/share/doc/usd/21.troff/m0 96903 2002-05-19 04:01:02Z grog $
+.\" $FreeBSD$
 .br
 .rs
 .sp |1.0i

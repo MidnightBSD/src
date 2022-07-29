@@ -1,6 +1,8 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 2002-2003 NetGroup, Politecnico di Torino (Italy)
- * Copyright (C) 2005-2009 Jung-uk Kim <jkim@FreeBSD.org>
+ * Copyright (C) 2005-2017 Jung-uk Kim <jkim@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/net/bpf_jitter.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #ifdef _KERNEL
 #include "opt_bpf.h"
@@ -49,8 +51,6 @@ __FBSDID("$FreeBSD: stable/11/sys/net/bpf_jitter.c 331722 2018-03-29 02:50:57Z e
 
 #include <net/bpf.h>
 #include <net/bpf_jitter.h>
-
-bpf_filter_func	bpf_jit_compile(struct bpf_insn *, u_int, size_t *);
 
 static u_int	bpf_jit_accept_all(u_char *, u_int, u_int);
 

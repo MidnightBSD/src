@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bhyve/bhyverun.h 348269 2019-05-25 10:17:03Z rgrimes $
+ * $FreeBSD$
  */
 
 #ifndef	_FBSDRUN_H_

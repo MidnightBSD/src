@@ -1,5 +1,5 @@
 #	$OpenBSD: Makefile,v 1.4 2005/05/16 15:22:46 espie Exp $
-# $FreeBSD: stable/11/usr.bin/patch/Makefile 355351 2019-12-03 18:55:09Z kevans $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

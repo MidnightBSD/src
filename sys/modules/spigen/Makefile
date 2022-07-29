@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/spigen/Makefile 350066 2019-07-16 19:40:23Z eugen $
+# $FreeBSD$
 
 .PATH:	${SRCTOP}/sys/dev/spibus
 KMOD=	spigen

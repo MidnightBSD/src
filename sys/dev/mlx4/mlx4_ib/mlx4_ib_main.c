@@ -64,9 +64,9 @@
 
 #define DRV_NAME	MLX4_IB_DRV_NAME
 #ifndef DRV_VERSION
-#define DRV_VERSION	"3.5.1"
+#define DRV_VERSION	"3.6.0"
 #endif
-#define DRV_RELDATE	"April 2019"
+#define DRV_RELDATE	"December 2020"
 
 #define MLX4_IB_FLOW_MAX_PRIO 0xFFF
 #define MLX4_IB_FLOW_QPN_MASK 0xFFFFFF
@@ -371,8 +371,13 @@ static int mlx4_ib_del_gid(struct ib_device *device,
 		if (!gids) {
 			ret = -ENOMEM;
 		} else {
-			for (i = 0; i < MLX4_MAX_PORT_GIDS; i++)
-				memcpy(&gids[i].gid, &port_gid_table->gids[i].gid, sizeof(union ib_gid));
+			for (i = 0; i < MLX4_MAX_PORT_GIDS; i++) {
+				memcpy(&gids[i].gid,
+				       &port_gid_table->gids[i].gid,
+				       sizeof(union ib_gid));
+				gids[i].gid_type =
+				    port_gid_table->gids[i].gid_type;
+			}
 		}
 	}
 	spin_unlock_bh(&iboe->lock);
@@ -2626,7 +2631,6 @@ static void *mlx4_ib_add(struct mlx4_dev *dev)
 	ibdev->ib_dev.get_dma_mr	= mlx4_ib_get_dma_mr;
 	ibdev->ib_dev.reg_user_mr	= mlx4_ib_reg_user_mr;
 	ibdev->ib_dev.rereg_user_mr	= mlx4_ib_rereg_user_mr;
-	ibdev->ib_dev.reg_phys_mr	= mlx4_ib_reg_phys_mr;
 	ibdev->ib_dev.dereg_mr		= mlx4_ib_dereg_mr;
 	ibdev->ib_dev.alloc_mr		= mlx4_ib_alloc_mr;
 	ibdev->ib_dev.map_mr_sg		= mlx4_ib_map_mr_sg;
@@ -3320,8 +3324,8 @@ static void __exit mlx4_ib_cleanup(void)
 	destroy_workqueue(wq);
 }
 
-module_init_order(mlx4_ib_init, SI_ORDER_THIRD);
-module_exit(mlx4_ib_cleanup);
+module_init_order(mlx4_ib_init, SI_ORDER_SEVENTH);
+module_exit_order(mlx4_ib_cleanup, SI_ORDER_SEVENTH);
 
 static int
 mlx4ib_evhand(module_t mod, int event, void *arg)

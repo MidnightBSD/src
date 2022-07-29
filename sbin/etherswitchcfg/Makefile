@@ -1,5 +1,5 @@
 #	@(#)Makefile	5.4 (Berkeley) 6/5/91
-# $FreeBSD: stable/11/sbin/etherswitchcfg/Makefile 319185 2017-05-30 04:17:22Z ngie $
+# $FreeBSD$
 
 PACKAGE=runtime
 PROG=	etherswitchcfg

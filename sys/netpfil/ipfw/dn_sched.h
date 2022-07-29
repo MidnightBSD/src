@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Riccardo Panicucci, Luigi Rizzo, Universita` di Pisa
  * All rights reserved
  *
@@ -27,11 +29,13 @@
 /*
  * The API to write a packet scheduling algorithm for dummynet.
  *
- * $FreeBSD: stable/11/sys/netpfil/ipfw/dn_sched.h 302054 2016-06-21 13:48:49Z bz $
+ * $FreeBSD$
  */
 
 #ifndef _DN_SCHED_H
 #define _DN_SCHED_H
+
+#include <sys/ck.h>
 
 #define	DN_MULTIQUEUE	0x01
 /*
@@ -139,7 +143,7 @@ struct dn_alg {
 
 	/* run-time fields */
 	int ref_count;      /* XXX number of instances in the system */
-	SLIST_ENTRY(dn_alg) next; /* Next scheduler in the list */
+	CK_LIST_ENTRY(dn_alg) next; /* Next scheduler in the list */
 };
 
 /* MSVC does not support initializers so we need this ugly macro */
@@ -185,7 +189,7 @@ dn_dequeue(struct dn_queue *q)
 		q->_si->ni.len_bytes -= m->m_pkthdr.len;
 	}
 	if (q->ni.length == 0) /* queue is now idle */
-		q->q_time = dn_cfg.curr_time;
+		q->q_time = V_dn_cfg.curr_time;
 	return m;
 }
 

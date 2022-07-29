@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tests/sys/geom/class/nop/Makefile 312829 2017-01-26 20:15:14Z asomers $
+# $FreeBSD$
 
 PACKAGE=	tests
 

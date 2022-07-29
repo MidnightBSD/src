@@ -2,6 +2,7 @@
  * Copyright (c) 2009 Yahoo! Inc.
  * Copyright (c) 2011-2015 LSI Corp.
  * Copyright (c) 2013-2016 Avago Technologies
+ * Copyright 2000-2020 Broadcom Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,26 +26,27 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
+ * Broadcom Inc. (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: stable/11/sys/dev/mpr/mprvar.h 331903 2018-04-03 02:29:17Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _MPRVAR_H
 #define _MPRVAR_H
 
-#define MPR_DRIVER_VERSION	"18.03.00.00-fbsd"
+#define MPR_DRIVER_VERSION	"23.00.00.00-fbsd"
 
 #define MPR_DB_MAX_WAIT		2500
 
-#define MPR_REQ_FRAMES		1024
+#define MPR_REQ_FRAMES		2048
 #define MPR_PRI_REQ_FRAMES	128
 #define MPR_EVT_REPLY_FRAMES	32
 #define MPR_REPLY_FRAMES	MPR_REQ_FRAMES
-#define MPR_CHAIN_FRAMES	2048
+#define MPR_CHAIN_FRAMES	16384
 #define MPR_MAXIO_PAGES		(-1)
 #define MPR_SENSE_LEN		SSD_FULL_SIZE
-#define MPR_MSI_COUNT		1
+#define MPR_MSI_MAX		1
+#define MPR_MSIX_MAX		96
 #define MPR_SGE64_SIZE		12
 #define MPR_SGE32_SIZE		8
 #define MPR_SGC_SIZE		8
@@ -75,7 +77,6 @@
 #define	IFAULT_IOP_OVER_TEMP_THRESHOLD_EXCEEDED	0x2810
 
 #define MPR_SCSI_RI_INVALID_FRAME	(0x00000002)
-#define MPR_STRING_LENGTH               64
 
 #define DEFAULT_SPINUP_WAIT	3	/* seconds to wait for spinup */
 
@@ -96,6 +97,38 @@ typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
+
+typedef struct _MPI2_CONFIG_PAGE_MAN_11
+{
+    MPI2_CONFIG_PAGE_HEADER             Header;         	/* 0x00 */
+    U8					FlashTime;		/* 0x04 */
+    U8					NVTime;			/* 0x05 */
+    U16					Flag;			/* 0x06 */
+    U8					RFIoTimeout;		/* 0x08 */
+    U8					EEDPTagMode;		/* 0x09 */
+    U8					AWTValue;		/* 0x0A */
+    U8					Reserve1;		/* 0x0B */
+    U8					MaxCmdFrames;		/* 0x0C */
+    U8					Reserve2;		/* 0x0D */
+    U16					AddlFlags;		/* 0x0E */
+    U32					SysRefClk;		/* 0x10 */
+    U64					Reserve3[3];		/* 0x14 */
+    U16					AddlFlags2;		/* 0x2C */
+    U8					AddlFlags3;		/* 0x2E */
+    U8					Reserve4;		/* 0x2F */
+    U64					opDebugEnable;		/* 0x30 */
+    U64					PlDebugEnable;		/* 0x38 */
+    U64					IrDebugEnable;		/* 0x40 */
+    U32					BoardPowerRequirement;	/* 0x48 */
+    U8					NVMeAbortTO;		/* 0x4C */
+    U8					Reserve5;		/* 0x4D */
+    U16					Reserve6;		/* 0x4E */
+    U32					Reserve7[3];		/* 0x50 */
+} MPI2_CONFIG_PAGE_MAN_11,
+  MPI2_POINTER PTR_MPI2_CONFIG_PAGE_MAN_11,
+  Mpi2ManufacturingPage11_t, MPI2_POINTER pMpi2ManufacturingPage11_t;
+
+#define MPI2_MAN_PG11_ADDLFLAGS2_CUSTOM_TM_HANDLING_MASK	(0x0010)
 
 /**
  * struct dev_mapping_table - device mapping information
@@ -239,10 +272,12 @@ struct mpr_command {
 #define	MPR_CM_FLAGS_ERROR_MASK		MPR_CM_FLAGS_CHAIN_FAILED
 #define	MPR_CM_FLAGS_USE_CCB		(1 << 9)
 #define	MPR_CM_FLAGS_SATA_ID_TIMEOUT	(1 << 10)
+#define MPR_CM_FLAGS_ON_RECOVERY	(1 << 12)
+#define MPR_CM_FLAGS_TIMEDOUT		(1 << 13)
 	u_int				cm_state;
 #define MPR_CM_STATE_FREE		0
 #define MPR_CM_STATE_BUSY		1
-#define MPR_CM_STATE_TIMEDOUT		2
+#define MPR_CM_STATE_INQUEUE		2
 	bus_dmamap_t			cm_dmamap;
 	struct scsi_sense_data		*cm_sense;
 	uint64_t			*nvme_error_response;
@@ -251,6 +286,7 @@ struct mpr_command {
 	uint32_t			cm_req_busaddr;
 	bus_addr_t			cm_sense_busaddr;
 	struct callout			cm_callout;
+	mpr_command_callback_t		*cm_timeout_handler;
 };
 
 struct mpr_column_map {
@@ -265,6 +301,36 @@ struct mpr_event_handle {
 	uint8_t				mask[16];
 };
 
+struct mpr_busdma_context {
+	int				completed;
+	int				abandoned;
+	int				error;
+	bus_addr_t			*addr;
+	struct mpr_softc		*softc;
+	bus_dmamap_t			buffer_dmamap;
+	bus_dma_tag_t			buffer_dmat;
+};
+
+struct mpr_queue {
+	struct mpr_softc		*sc;
+	int				qnum;
+	MPI2_REPLY_DESCRIPTORS_UNION	*post_queue;
+	int				replypostindex;
+#ifdef notyet
+	ck_ring_buffer_t		*ringmem;
+	ck_ring_buffer_t		*chainmem;
+	ck_ring_t			req_ring;
+	ck_ring_t			chain_ring;
+#endif
+	bus_dma_tag_t			buffer_dmat;
+	int				io_cmds_highwater;
+	int				chain_free_lowwater;
+	int				chain_alloc_fail;
+	struct resource			*irq;
+	void				*intrhand;
+	int				irq_rid;
+};
+
 struct mpr_softc {
 	device_t			mpr_dev;
 	struct cdev			*mpr_cdev;
@@ -277,10 +343,11 @@ struct mpr_softc {
 #define	MPR_FLAGS_ATTACH_DONE	(1 << 5)
 #define	MPR_FLAGS_GEN35_IOC	(1 << 6)
 #define	MPR_FLAGS_REALLOCATED	(1 << 7)
+#define	MPR_FLAGS_SEA_IOC	(1 << 8)
 	u_int				mpr_debug;
-	u_int				disable_msix;
-	u_int				disable_msi;
 	int				msi_msgs;
+	u_int				reqframesz;
+	u_int				replyframesz;
 	u_int				atomic_desc_capable;
 	int				tm_cmds_active;
 	int				io_cmds_active;
@@ -291,7 +358,6 @@ struct mpr_softc {
 	u_int				maxio;
 	int				chain_free_lowwater;
 	uint32_t			chain_frame_size;
-	uint16_t			chain_seg_size;
 	int				prp_buffer_size;
 	int				prp_pages_free;
 	int				prp_pages_free_lowwater;
@@ -308,9 +374,9 @@ struct mpr_softc {
 	struct mpr_prp_page		*prps;
 	struct callout			periodic;
 	struct callout			device_check_callout;
+	struct mpr_queue		*queues;
 
 	struct mprsas_softc		*sassc;
-	char            tmp_string[MPR_STRING_LENGTH];
 	TAILQ_HEAD(, mpr_command)	req_list;
 	TAILQ_HEAD(, mpr_command)	high_priority_req_list;
 	TAILQ_HEAD(, mpr_chain)		chain_list;
@@ -331,6 +397,7 @@ struct mpr_softc {
 	int				num_reqs;
 	int				num_prireqs;
 	int				num_replies;
+	int				num_chains;
 	int				fqdepth;	/* Free queue */
 	int				pqdepth;	/* Post queue */
 
@@ -340,9 +407,6 @@ struct mpr_softc {
 
 	struct mtx			mpr_mtx;
 	struct intr_config_hook		mpr_ich;
-	struct resource			*mpr_irq[MPR_MSI_COUNT];
-	void				*mpr_intrhand[MPR_MSI_COUNT];
-	int				mpr_irq_rid[MPR_MSI_COUNT];
 
 	uint8_t				*req_frames;
 	bus_addr_t			req_busaddr;
@@ -360,7 +424,6 @@ struct mpr_softc {
 	bus_dmamap_t			sense_map;
 
 	uint8_t				*chain_frames;
-	bus_addr_t			chain_busaddr;
 	bus_dma_tag_t			chain_dmat;
 	bus_dmamap_t			chain_map;
 
@@ -432,8 +495,19 @@ struct mpr_softc {
 	uint32_t			SSU_refcount;
 	uint8_t				SSU_started;
 
+	/* Configuration tunables */
+	u_int				disable_msix;
+	u_int				disable_msi;
+	u_int				max_msix;
+	u_int				max_reqframes;
+	u_int				max_prireqframes;
+	u_int				max_replyframes;
+	u_int				max_evtframes;
 	char				exclude_ids[80];
+
 	struct timeval			lastfail;
+	uint8_t				custom_nvme_tm_handling;
+	uint8_t				nvme_abort_timeout;
 };
 
 struct mpr_config_params {
@@ -458,7 +532,14 @@ struct scsi_read_capacity_eedp
 static __inline uint32_t
 mpr_regread(struct mpr_softc *sc, uint32_t offset)
 {
-	return (bus_space_read_4(sc->mpr_btag, sc->mpr_bhandle, offset));
+	uint32_t ret_val, i = 0;
+	do {
+		ret_val =
+		    bus_space_read_4(sc->mpr_btag, sc->mpr_bhandle, offset);
+	} while((sc->mpr_flags & MPR_FLAGS_SEA_IOC) &&
+	    (ret_val == 0) && (++i < 3));
+
+	return ret_val;
 }
 
 static __inline void
@@ -532,6 +613,8 @@ mpr_free_command(struct mpr_softc *sc, struct mpr_command *cm)
 	struct mpr_chain *chain, *chain_temp;
 	struct mpr_prp_page *prp_page, *prp_page_temp;
 
+	KASSERT(cm->cm_state == MPR_CM_STATE_BUSY, ("state not busy\n"));
+
 	if (cm->cm_reply != NULL)
 		mpr_free_reply(sc, cm->cm_reply_data);
 	cm->cm_reply = NULL;
@@ -570,10 +653,12 @@ mpr_alloc_command(struct mpr_softc *sc)
 	if (cm == NULL)
 		return (NULL);
 
+	KASSERT(cm->cm_state == MPR_CM_STATE_FREE,
+	    ("mpr: Allocating busy command\n"));
+
 	TAILQ_REMOVE(&sc->req_list, cm, cm_link);
-	KASSERT(cm->cm_state == MPR_CM_STATE_FREE, ("mpr: Allocating busy "
-	    "command\n"));
 	cm->cm_state = MPR_CM_STATE_BUSY;
+	cm->cm_timeout_handler = NULL;
 	return (cm);
 }
 
@@ -581,6 +666,8 @@ static __inline void
 mpr_free_high_priority_command(struct mpr_softc *sc, struct mpr_command *cm)
 {
 	struct mpr_chain *chain, *chain_temp;
+
+	KASSERT(cm->cm_state == MPR_CM_STATE_BUSY, ("state not busy\n"));
 
 	if (cm->cm_reply != NULL)
 		mpr_free_reply(sc, cm->cm_reply_data);
@@ -608,10 +695,14 @@ mpr_alloc_high_priority_command(struct mpr_softc *sc)
 	if (cm == NULL)
 		return (NULL);
 
+	KASSERT(cm->cm_state == MPR_CM_STATE_FREE,
+	    ("mpr: Allocating busy command\n"));
+
 	TAILQ_REMOVE(&sc->high_priority_req_list, cm, cm_link);
-	KASSERT(cm->cm_state == MPR_CM_STATE_FREE, ("mpr: Allocating busy "
-	    "command\n"));
 	cm->cm_state = MPR_CM_STATE_BUSY;
+	cm->cm_timeout_handler = NULL;
+	cm->cm_desc.HighPriority.RequestFlags =
+	    MPI2_REQ_DESCRIPT_FLAGS_HIGH_PRIORITY;
 	return (cm);
 }
 
@@ -669,6 +760,10 @@ do {							\
 	mpr_printf((sc), tag "\n")
 #define MPR_PRINTFIELD(sc, facts, attr, fmt)	\
 	mpr_print_field((sc), #attr ": " #fmt "\n", (facts)->attr)
+#define MPR_PRINTFIELD_16(sc, facts, attr, fmt)	\
+	mpr_print_field((sc), #attr ": " #fmt "\n", le16toh((facts)->attr))
+#define MPR_PRINTFIELD_32(sc, facts, attr, fmt)	\
+	mpr_print_field((sc), #attr ": " #fmt "\n", le32toh((facts)->attr))
 
 static __inline void
 mpr_from_u64(uint64_t data, U64 *mpr)
@@ -704,6 +799,7 @@ mpr_unmask_intr(struct mpr_softc *sc)
 }
 
 int mpr_pci_setup_interrupts(struct mpr_softc *sc);
+void mpr_pci_free_interrupts(struct mpr_softc *sc);
 int mpr_pci_restore(struct mpr_softc *sc);
 
 void mpr_get_tunables(struct mpr_softc *sc);
@@ -728,6 +824,7 @@ int mpr_detach_sas(struct mpr_softc *sc);
 int mpr_read_config_page(struct mpr_softc *, struct mpr_config_params *);
 int mpr_write_config_page(struct mpr_softc *, struct mpr_config_params *);
 void mpr_memaddr_cb(void *, bus_dma_segment_t *, int , int );
+void mpr_memaddr_wait_cb(void *, bus_dma_segment_t *, int , int );
 void mpr_init_sge(struct mpr_command *cm, void *req, void *sge);
 int mpr_attach_user(struct mpr_softc *);
 void mpr_detach_user(struct mpr_softc *);
@@ -763,7 +860,9 @@ int mpr_config_get_volume_wwid(struct mpr_softc *sc, u16 volume_handle,
 int mpr_config_get_raid_pd_pg0(struct mpr_softc *sc,
     Mpi2ConfigReply_t *mpi_reply, Mpi2RaidPhysDiskPage0_t *config_page,
     u32 page_address);
-void mprsas_ir_shutdown(struct mpr_softc *sc);
+int mpr_config_get_man_pg11(struct mpr_softc *sc, Mpi2ConfigReply_t *mpi_reply,
+    Mpi2ManufacturingPage11_t *config_page);
+void mprsas_ir_shutdown(struct mpr_softc *sc, int howto);
 
 int mpr_reinit(struct mpr_softc *sc);
 void mprsas_handle_reinit(struct mpr_softc *sc);
@@ -810,16 +909,6 @@ int mprsas_send_reset(struct mpr_softc *sc, struct mpr_command *tm,
 SYSCTL_DECL(_hw_mpr);
 
 /* Compatibility shims for different OS versions */
-#if __FreeBSD_version >= 800001
-#define mpr_kproc_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg) \
-    kproc_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg)
-#define mpr_kproc_exit(arg)	kproc_exit(arg)
-#else
-#define mpr_kproc_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg) \
-    kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg)
-#define mpr_kproc_exit(arg)	kthread_exit(arg)
-#endif
-
 #if defined(CAM_PRIORITY_XPT)
 #define MPR_PRIORITY_XPT	CAM_PRIORITY_XPT
 #else

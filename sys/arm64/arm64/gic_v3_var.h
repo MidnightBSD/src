@@ -26,11 +26,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/arm64/gic_v3_var.h 305529 2016-09-07 12:10:30Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _GIC_V3_VAR_H_
 #define _GIC_V3_VAR_H_
+
+#include <arm/arm/gic_common.h>
 
 #define	GIC_V3_DEVSTR	"ARM Generic Interrupt Controller v3.0"
 
@@ -38,10 +40,10 @@ DECLARE_CLASS(gic_v3_driver);
 
 struct gic_v3_irqsrc;
 
-struct redist_lpis {
-	vm_offset_t		conf_base;
-	vm_offset_t		pend_base[MAXCPU];
-	uint64_t		flags;
+struct redist_pcpu {
+	struct resource		res;		/* mem resource for redist */
+	vm_offset_t		pend_base;
+	bool			lpi_enabled;	/* redist LPI configured? */
 };
 
 struct gic_redists {
@@ -53,10 +55,8 @@ struct gic_redists {
 	struct resource **	regions;
 	/* Number of Re-Distributor regions */
 	u_int			nregions;
-	/* Per-CPU Re-Distributor handler */
-	struct resource *	pcpu[MAXCPU];
-	/* LPIs data */
-	struct redist_lpis	lpis;
+	/* Per-CPU Re-Distributor data */
+	struct redist_pcpu	*pcpu[MAXCPU];
 };
 
 struct gic_v3_softc {
@@ -67,6 +67,9 @@ struct gic_v3_softc {
 	struct resource *	gic_dist;
 	/* Re-Distributors */
 	struct gic_redists	gic_redists;
+
+	uint32_t		gic_pidr2;
+	u_int			gic_bus;
 
 	u_int			gic_nirqs;
 	u_int			gic_idbits;
@@ -79,18 +82,24 @@ struct gic_v3_softc {
 	struct gic_v3_irqsrc	*gic_irqs;
 };
 
+
+struct gic_v3_devinfo {
+	int gic_domain;
+	int msi_xref;
+};
+
 #define GIC_INTR_ISRC(sc, irq)	(&sc->gic_irqs[irq].gi_isrc)
 
 MALLOC_DECLARE(M_GIC_V3);
 
 /* ivars */
-enum {
-	GICV3_IVAR_NIRQS,
-	GICV3_IVAR_REDIST_VADDR,
-};
+#define	GICV3_IVAR_NIRQS	1000
+#define	GICV3_IVAR_REDIST_VADDR	1001
+#define	GICV3_IVAR_REDIST	1002
 
 __BUS_ACCESSOR(gicv3, nirqs, GICV3, NIRQS, u_int);
 __BUS_ACCESSOR(gicv3, redist_vaddr, GICV3, REDIST_VADDR, void *);
+__BUS_ACCESSOR(gicv3, redist, GICV3, REDIST, void *);
 
 /* Device methods */
 int gic_v3_attach(device_t dev);
@@ -122,7 +131,7 @@ void gic_r_write_8(device_t, bus_size_t, uint64_t var);
 	u_int cpu = PCPU_GET(cpuid);		\
 						\
 	bus_read_##len(				\
-	    sc->gic_redists.pcpu[cpu],		\
+	    &sc->gic_redists.pcpu[cpu]->res,	\
 	    reg);				\
 })
 
@@ -131,7 +140,7 @@ void gic_r_write_8(device_t, bus_size_t, uint64_t var);
 	u_int cpu = PCPU_GET(cpuid);		\
 						\
 	bus_write_##len(			\
-	    sc->gic_redists.pcpu[cpu],		\
+	    &sc->gic_redists.pcpu[cpu]->res,	\
 	    reg, val);				\
 })
 

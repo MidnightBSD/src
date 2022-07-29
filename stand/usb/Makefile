@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/stand/usb/Makefile 329146 2018-02-12 01:17:06Z kevans $
+# $FreeBSD$
 #
 # Copyright (c) 2013 Hans Petter Selasky.
 # Copyright (c) 2014 SRI International

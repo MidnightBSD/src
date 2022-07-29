@@ -28,10 +28,10 @@
 .\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-.\" $FreeBSD: stable/11/lib/libc/sys/msgrcv.2 195656 2009-07-13 12:53:43Z trasz $
+.\" $FreeBSD$
 .\"
 .\"/
-.Dd July 9, 2009
+.Dd July 28, 2016
 .Dt MSGRCV 2
 .Os
 .Sh NAME
@@ -43,7 +43,7 @@
 .In sys/types.h
 .In sys/ipc.h
 .In sys/msg.h
-.Ft int
+.Ft ssize_t
 .Fn msgrcv "int msqid" "void *msgp" "size_t msgsz" "long msgtyp" "int msgflg"
 .Sh DESCRIPTION
 The

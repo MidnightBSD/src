@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -39,7 +41,7 @@ static char sccsid[] = "@(#)from: main.c	8.1 (Berkeley) 6/20/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/libexec/getty/main.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -91,23 +93,22 @@ struct termios omode;
 /* current mode */
 struct termios tmode;
 
-int crmod, digit, lower, upper;
+static int crmod, digit, lower, upper;
 
 char	hostname[MAXHOSTNAMELEN];
-char	name[MAXLOGNAME*3];
-char	dev[] = _PATH_DEV;
-char	ttyn[32];
+static char	name[MAXLOGNAME*3];
+static char	ttyn[32];
 
 #define	OBUFSIZ		128
 #define	TABBUFSIZ	512
 
-char	defent[TABBUFSIZ];
-char	tabent[TABBUFSIZ];
-const	char *tname;
+static char	defent[TABBUFSIZ];
+static char	tabent[TABBUFSIZ];
+static const char	*tname;
 
-char	*env[128];
+static char	*env[128];
 
-char partab[] = {
+static char partab[] = {
 	0001,0201,0201,0001,0201,0001,0001,0201,
 	0202,0004,0003,0205,0005,0206,0201,0001,
 	0201,0001,0001,0201,0001,0201,0201,0001,
@@ -144,11 +145,11 @@ static void	putf(const char *);
 static void	putpad(const char *);
 static void	puts(const char *);
 static void	timeoverrun(int);
-static char	*getline(int);
+static char	*get_line(int);
 static void	setttymode(int);
 static int	opentty(const char *, int);
 
-jmp_buf timeout;
+static jmp_buf timeout;
 
 static void
 dingdong(int signo __unused)
@@ -157,7 +158,7 @@ dingdong(int signo __unused)
 	longjmp(timeout, 1);
 }
 
-jmp_buf	intrupt;
+static jmp_buf	intrupt;
 
 static void
 interrupt(int signo __unused)
@@ -179,7 +180,6 @@ timeoverrun(int signo __unused)
 int
 main(int argc, char *argv[])
 {
-	extern	char **environ;
 	int first_sleep = 1, first_time = 1;
 	struct rlimit limit;
 	int rval;
@@ -217,8 +217,8 @@ main(int argc, char *argv[])
 	if (argc <= 2 || strcmp(argv[2], "-") == 0)
 	    strcpy(ttyn, ttyname(STDIN_FILENO));
 	else {
-	    strcpy(ttyn, dev);
-	    strncat(ttyn, argv[2], sizeof(ttyn)-sizeof(dev));
+	    strcpy(ttyn, _PATH_DEV);
+	    strlcat(ttyn, argv[2], sizeof(ttyn));
 	    if (strcmp(argv[0], "+") != 0) {
 		chown(ttyn, 0, 0);
 		chmod(ttyn, 0600);
@@ -251,14 +251,15 @@ main(int argc, char *argv[])
 		}
 
 		if (AC) {
-			int i, rfds;
+			fd_set rfds;
 			struct timeval to;
+			int i;
 
-        		rfds = 1 << 0;	/* FD_SET */
+			FD_ZERO(&rfds);
+			FD_SET(0, &rfds);
         		to.tv_sec = RT;
         		to.tv_usec = 0;
-        		i = select(32, (fd_set*)&rfds, (fd_set*)NULL,
-        			       (fd_set*)NULL, RT ? &to : NULL);
+			i = select(32, &rfds, NULL, NULL, RT ? &to : NULL);
         		if (i < 0) {
 				syslog(LOG_ERR, "select %s: %m", ttyn);
 			} else if (i == 0) {
@@ -316,7 +317,7 @@ main(int argc, char *argv[])
 			if ((fd = open(IF, O_RDONLY)) != -1) {
 				char * cp;
 
-				while ((cp = getline(fd)) != NULL) {
+				while ((cp = get_line(fd)) != NULL) {
 					  putf(cp);
 				}
 				close(fd);
@@ -425,15 +426,17 @@ main(int argc, char *argv[])
 static int
 opentty(const char *tty, int flags)
 {
-	int i;
-	int failopenlogged = 0;
+	int failopenlogged = 0, i, saved_errno;
 
 	while ((i = open(tty, flags)) == -1)
 	{
+		saved_errno = errno;
 		if (!failopenlogged) {
 			syslog(LOG_ERR, "open %s: %m", tty);
 			failopenlogged = 1;
 		}
+		if (saved_errno == ENOENT)
+			return 0;
 		sleep(60);
 	}
 	if (login_tty(i) < 0) { 
@@ -664,8 +667,8 @@ puts(const char *s)
 		putchr(*s++);
 }
 
-char	outbuf[OBUFSIZ];
-int	obufcnt = 0;
+static char	outbuf[OBUFSIZ];
+static int	obufcnt = 0;
 
 static void
 putchr(int cc)
@@ -705,9 +708,9 @@ prompt(void)
 
 
 static char *
-getline(int fd)
+get_line(int fd)
 {
-	int i = 0;
+	size_t i = 0;
 	static char linebuf[512];
 
 	/*
@@ -731,7 +734,6 @@ getline(int fd)
 static void
 putf(const char *cp)
 {
-	extern char editedhost[];
 	time_t t;
 	char *slash, db[100];
 

@@ -3,7 +3,7 @@
 # Configure and run this script to create the files for regression testing
 # for a new architecture/configuration.
 #
-# $FreeBSD: stable/11/usr.sbin/sa/tests/prime.sh 263226 2014-03-16 04:09:22Z jmmv $
+# $FreeBSD$
 #
 
 TZ=UTC; export TZ

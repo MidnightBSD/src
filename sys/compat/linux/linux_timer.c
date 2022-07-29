@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/linux/linux_timer.c 292744 2015-12-26 09:09:49Z dchagin $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 

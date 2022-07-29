@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/lib/libc/iconv/_strtoul.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /* $NetBSD: _strtoul.h,v 1.1 2008/08/20 12:42:26 joerg Exp $ */
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
  *

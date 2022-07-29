@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/11/usr.sbin/rtadvd/advcap.h 330449 2018-03-05 07:26:05Z eadler $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: advcap.h,v 1.5 2003/06/09 05:40:54 t-momose Exp $	*/
 
 /*-

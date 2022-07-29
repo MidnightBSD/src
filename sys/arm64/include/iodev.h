@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/include/iodev.h 284273 2015-06-11 15:45:33Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_IODEV_H_

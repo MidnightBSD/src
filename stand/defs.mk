@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/defs.mk 355345 2019-12-03 18:25:16Z kevans $
+# $FreeBSD$
 
 .if !defined(__BOOT_DEFS_MK__)
 __BOOT_DEFS_MK__=${MFILE}
@@ -16,6 +16,14 @@ MAN=
 NO_PIC=
 INTERNALLIB=
 .endif
+# Should be NO_CPU_FLAGS, but bsd.cpu.mk is included too early in bsd.init.mk
+# via the early include of bsd.opts.mk. Moving Makefile.inc include earlier in
+# that file causes weirdness, so this is the next best thing. We need to do this
+# because the loader needs very specific flags to work right, and things like
+# CPUTYPE?=native prevent that, and introduce an endless game of whack-a-mole
+# to disable more and more features. Boot loader performance is never improved
+# enough to make that hassle worth chasing.
+_CPUCFLAGS=
 
 .include <src.opts.mk>
 
@@ -29,6 +37,7 @@ FDTSRC=		${BOOTSRC}/fdt
 FICLSRC=	${BOOTSRC}/ficl
 LDRSRC=		${BOOTSRC}/common
 LIBLUASRC=	${BOOTSRC}/liblua
+LIBOFWSRC=	${BOOTSRC}/libofw
 LUASRC=		${SRCTOP}/contrib/lua/src
 SASRC=		${BOOTSRC}/libsa
 SYSDIR=		${SRCTOP}/sys
@@ -54,6 +63,11 @@ LIBSA32=	${BOOTOBJ}/libsa32/libsa32.a
 
 # Standard options:
 CFLAGS+=	-nostdinc
+# Allow CFLAGS_EARLY.file/target so that code that needs specific stack
+# of include paths can set them up before our include paths. Normally
+# the only thing that should be there are -I directives, and as few of
+# those as possible.
+CFLAGS+=	${CFLAGS_EARLY} ${CFLAGS_EARLY.${.IMPSRC:T}} ${CFLAGS_EARLY.${.TARGET:T}}
 .if ${MACHINE_ARCH} == "amd64" && ${DO32:U0} == 1
 CFLAGS+=	-I${BOOTOBJ}/libsa32
 .else
@@ -70,6 +84,7 @@ CFLAGS+=	-Ddouble=jagged-little-pill -Dfloat=floaty-mcfloatface
 # Experience has shown that problems arise between ~520k to ~530k.
 CFLAGS.clang+=	-Oz
 CFLAGS.gcc+=	-Os
+CFLAGS+=	-ffunction-sections -fdata-sections
 .endif
 
 # GELI Support, with backward compat hooks (mostly)
@@ -111,14 +126,12 @@ LD_FLAGS+=	-m elf_i386_fbsd
 AFLAGS+=	--32
 .endif
 
-SSP_CFLAGS=
-
 # Add in the no float / no SIMD stuff and announce we're freestanding
 # aarch64 and riscv don't have -msoft-float, but all others do. riscv
 # currently has no /boot/loader, but may soon.
 CFLAGS+=	-ffreestanding ${CFLAGS_NO_SIMD}
 .if ${MACHINE_CPUARCH} == "aarch64"
-CFLAGS+=	-mgeneral-regs-only -fPIC
+CFLAGS+=	-mgeneral-regs-only -ffixed-x18 -fPIC
 .elif ${MACHINE_CPUARCH} == "riscv"
 CFLAGS+=	-march=rv64imac -mabi=lp64
 .else
@@ -171,12 +184,10 @@ CFLAGS+=	-mlittle-endian
 #
 # Have a sensible default
 #
-# XXX Do not change the ordering of this chain in this branch.  4th must remain
-# the default for the lifetime of stable/11.
-.if ${MK_FORTH} == "yes"
-LOADER_DEFAULT_INTERP?=4th
-.elif ${MK_LOADER_LUA} == "yes"
+.if ${MK_LOADER_LUA} == "yes"
 LOADER_DEFAULT_INTERP?=lua
+.elif ${MK_FORTH} == "yes"
+LOADER_DEFAULT_INTERP?=4th
 .else
 LOADER_DEFAULT_INTERP?=simp
 .endif
@@ -188,14 +199,15 @@ CFLAGS+=-I.
 all: ${PROG}
 
 .if !defined(NO_OBJ)
-_ILINKS=machine
+_ILINKS=include/machine
 .if ${MACHINE} != ${MACHINE_CPUARCH} && ${MACHINE} != "arm64"
-_ILINKS+=${MACHINE_CPUARCH}
+_ILINKS+=include/${MACHINE_CPUARCH}
 .endif
 .if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
-_ILINKS+=x86
+_ILINKS+=include/x86
 .endif
-CLEANFILES+=${_ILINKS}
+CFLAGS+= -Iinclude
+CLEANDIRS+= include
 
 beforedepend: ${_ILINKS}
 beforebuild: ${_ILINKS}
@@ -210,8 +222,8 @@ ${OBJS}:       ${_link}
 
 .NOPATH: ${_ILINKS}
 
-${_ILINKS}:
-	@case ${.TARGET} in \
+${_ILINKS}: .NOMETA
+	@case ${.TARGET:T} in \
 	machine) \
 		if [ ${DO32:U0} -eq 0 ]; then \
 			path=${SYSDIR}/${MACHINE}/include ; \
@@ -221,8 +233,11 @@ ${_ILINKS}:
 	*) \
 		path=${SYSDIR}/${.TARGET:T}/include ;; \
 	esac ; \
+	case ${.TARGET} in \
+	*/*) mkdir -p ${.TARGET:H};; \
+	esac ; \
 	path=`(cd $$path && /bin/pwd)` ; \
-	${ECHO} ${.TARGET:T} "->" $$path ; \
-	ln -fhs $$path ${.TARGET:T}
+	${ECHO} ${.TARGET} "->" $$path ; \
+	ln -fns $$path ${.TARGET}
 .endif # !NO_OBJ
 .endif # __BOOT_DEFS_MK__

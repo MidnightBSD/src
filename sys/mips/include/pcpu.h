@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Luoqi Chen <luoqi@freebsd.org>
  * Copyright (c) Peter Wemm <peter@netplex.com.au>
  * All rights reserved.
@@ -25,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: src/sys/alpha/include/pcpu.h,v 1.15 2004/11/05 19:16:44 jhb
- * $FreeBSD: stable/11/sys/mips/include/pcpu.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PCPU_H_
@@ -39,16 +41,17 @@
 	struct	pmap	*pc_curpmap;		/* pmap of curthread */	\
 	u_int32_t	pc_next_asid;		/* next ASID to alloc */ \
 	u_int32_t	pc_asid_generation;	/* current ASID generation */ \
-	u_int		pc_pending_ipis;	/* IPIs pending to this CPU */
+	u_int		pc_pending_ipis;	/* IPIs pending to this CPU */ \
+	struct	pcpu	*pc_self;		/* globally-uniqe self pointer */
 
 #ifdef	__mips_n64
 #define	PCPU_MD_MIPS64_FIELDS						\
 	PCPU_MD_COMMON_FIELDS						\
-	char		__pad[61]
+	char		__pad[245]
 #else
 #define	PCPU_MD_MIPS32_FIELDS						\
 	PCPU_MD_COMMON_FIELDS						\
-	char		__pad[133]
+	char		__pad[125]
 #endif
 
 #ifdef	__mips_n64
@@ -64,6 +67,13 @@ extern char pcpu_space[MAXCPU][PAGE_SIZE * 2];
 
 extern struct pcpu *pcpup;
 #define	PCPUP	pcpup
+
+/*
+ * Since we use a wired TLB entry to map the same VA to a different
+ * physical page for each CPU, get_pcpu() must use the pc_self
+ * field to obtain a globally-unique pointer.
+ */
+#define	get_pcpu()		(PCPUP->pc_self)
 
 #define	PCPU_ADD(member, value)	(PCPUP->pc_ ## member += (value))
 #define	PCPU_GET(member)	(PCPUP->pc_ ## member)

@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.bin/fold/tests/fold_test.sh 326289 2017-11-27 20:01:58Z asomers $
+# $FreeBSD$
 #
 
 atf_test_case b_flag

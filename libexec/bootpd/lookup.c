@@ -1,7 +1,7 @@
 /*
  * lookup.c - Lookup IP address, HW address, netmask
  *
- * $FreeBSD: stable/11/libexec/bootpd/lookup.c 50476 1999-08-28 00:22:10Z peter $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -17,13 +17,8 @@ extern int ether_hostton();
 #endif
 
 #include <netdb.h>
+#include <strings.h>
 #include <syslog.h>
-
-#ifndef USE_BFUNCS
-#include <memory.h>
-/* Yes, memcpy is OK here (no overlapped copies). */
-#define bcopy(a,b,c)    memcpy(b,a,c)
-#endif
 
 #include "bootp.h"
 #include "lookup.h"

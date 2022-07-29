@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ocs_fc/ocs_os.c 333991 2018-05-21 18:59:34Z ken $
+ * $FreeBSD$
  */
 
 /**
@@ -881,13 +881,12 @@ ocs_pci_model(uint16_t vendor, uint16_t device)
 	return "unknown";
 }
 
-int32_t
+void
 ocs_get_bus_dev_func(ocs_t *ocs, uint8_t* bus, uint8_t* dev, uint8_t* func)
 {
 	*bus = pci_get_bus(ocs->dev);
 	*dev = pci_get_slot(ocs->dev);
 	*func= pci_get_function(ocs->dev);
-	return 0;
 }
 
 /**

@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/cddl/dev/dtrace/dtrace_hacks.c 281916 2015-04-24 03:19:30Z markj $ */
+/* $FreeBSD$ */
 /* XXX Hacks.... */
 
 dtrace_cacheid_t dtrace_predcache_id;

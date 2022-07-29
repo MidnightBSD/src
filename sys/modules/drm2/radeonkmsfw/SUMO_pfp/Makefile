@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/drm2/radeonkmsfw/SUMO_pfp/Makefile 254885 2013-08-25 19:37:15Z dumbbell $
+# $FreeBSD$
 
 KMOD=	radeonkmsfw_SUMO_pfp
 IMG=	SUMO_pfp

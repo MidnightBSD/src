@@ -1,7 +1,9 @@
 /*	$OpenBSD: acu.c,v 1.12 2006/03/17 14:43:06 moritz Exp $	*/
 /*	$NetBSD: acu.c,v 1.4 1996/12/29 10:34:03 cgd Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/tip/tip/acu.c 353589 2019-10-15 20:04:15Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 #if 0

@@ -10,7 +10,7 @@
 .\"
 .\"     @(#)vi.ref	8.88 (Berkeley) 10/19/96
 .\"
-.\" $FreeBSD: stable/11/share/doc/usd/13.viref/vi.ref 298094 2016-04-16 03:44:50Z gjb $
+.\" $FreeBSD$
 .\"
 .so ref.so
 .tp

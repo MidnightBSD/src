@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,14 +25,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/vmm/vmm_host.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_VMM_HOST_H_
 #define	_VMM_HOST_H_
 
 #ifndef	_KERNEL
-#error "no user-servicable parts inside"
+#error "no user-serviceable parts inside"
 #endif
 
 struct xsave_limits {
@@ -70,14 +72,11 @@ vmm_get_host_gdtrbase(void)
 	return ((uint64_t)&gdt[NGDT * curcpu]);
 }
 
-struct pcpu;
-extern struct pcpu __pcpu[];
-
 static __inline uint64_t
 vmm_get_host_gsbase(void)
 {
 
-	return ((uint64_t)&__pcpu[curcpu]);
+	return ((uint64_t)get_pcpu());
 }
 
 #endif

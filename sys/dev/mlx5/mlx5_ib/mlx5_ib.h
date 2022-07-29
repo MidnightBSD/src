@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_ib/mlx5_ib.h 353187 2019-10-07 08:39:12Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef MLX5_IB_H
@@ -509,6 +509,7 @@ struct mlx5_ib_mr {
 	int			live;
 	void			*descs_alloc;
 	int			access_flags; /* Needed for rereg MR */
+	struct mlx5_async_work	cb_work;
 };
 
 struct mlx5_ib_mw {
@@ -693,6 +694,8 @@ struct mlx5_ib_dev {
 	/* Array with num_ports elements */
 	struct mlx5_ib_port	*port;
 	struct mlx5_ib_congestion congestion;
+
+	struct mlx5_async_ctx	async_ctx;
 };
 
 static inline struct mlx5_ib_cq *to_mibcq(struct mlx5_core_cq *mcq)
@@ -839,11 +842,6 @@ int mlx5_ib_update_mtt(struct mlx5_ib_mr *mr, u64 start_page_index,
 int mlx5_ib_rereg_user_mr(struct ib_mr *ib_mr, int flags, u64 start,
 			  u64 length, u64 virt_addr, int access_flags,
 			  struct ib_pd *pd, struct ib_udata *udata);
-struct ib_mr *mlx5_ib_reg_phys_mr(struct ib_pd *pd,
-				  struct ib_phys_buf *buffer_list,
-				  int num_phys_buf,
-				  int access_flags,
-				  u64 *virt_addr);
 int mlx5_ib_dereg_mr(struct ib_mr *ibmr);
 struct ib_mr *mlx5_ib_alloc_mr(struct ib_pd *pd,
 			       enum ib_mr_type mr_type,

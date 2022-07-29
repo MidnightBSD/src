@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003-2012 Broadcom Corporation
  * All Rights Reserved
  *
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/nlm/xlp_pci.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -39,6 +41,11 @@ __FBSDID("$FreeBSD: stable/11/sys/mips/nlm/xlp_pci.c 331722 2018-03-29 02:50:57Z
 #include <sys/endian.h>
 #include <sys/rman.h>
 #include <sys/pciio.h>
+
+#include <machine/bus.h>
+#include <machine/md_var.h>
+#include <machine/intr_machdep.h>
+#include <machine/cpuregs.h>
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -56,11 +63,6 @@ __FBSDID("$FreeBSD: stable/11/sys/mips/nlm/xlp_pci.c 331722 2018-03-29 02:50:57Z
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
-#include <machine/bus.h>
-#include <machine/md_var.h>
-#include <machine/intr_machdep.h>
-#include <machine/cpuregs.h>
-
 #include <mips/nlm/hal/haldefs.h>
 #include <mips/nlm/interrupt.h>
 #include <mips/nlm/hal/iomap.h>
@@ -73,6 +75,7 @@ __FBSDID("$FreeBSD: stable/11/sys/mips/nlm/xlp_pci.c 331722 2018-03-29 02:50:57Z
 #include <mips/nlm/xlp.h>
 
 #include "pcib_if.h"
+#include <dev/pci/pcib_private.h>
 #include "pci_if.h"
 
 static int
@@ -557,6 +560,7 @@ static device_method_t xlp_pcib_methods[] = {
 	DEVMETHOD(pcib_read_config, xlp_pcib_read_config),
 	DEVMETHOD(pcib_write_config, xlp_pcib_write_config),
 	DEVMETHOD(pcib_route_interrupt, mips_pcib_route_interrupt),
+	DEVMETHOD(pcib_request_feature,	pcib_request_feature_allow),
 
 	DEVMETHOD(pcib_alloc_msi, xlp_alloc_msi),
 	DEVMETHOD(pcib_release_msi, xlp_release_msi),

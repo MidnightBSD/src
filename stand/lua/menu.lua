@@ -26,7 +26,7 @@
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
 --
--- $FreeBSD: stable/11/stand/lua/menu.lua 345882 2019-04-04 17:29:43Z kevans $
+-- $FreeBSD$
 --
 
 local cli = require("cli")
@@ -241,6 +241,7 @@ menu.welcome = {
 			boot_entry_2,
 			menu_entries.prompt,
 			menu_entries.reboot,
+			menu_entries.console,
 			{
 				entry_type = core.MENU_SEPARATOR,
 			},
@@ -279,6 +280,16 @@ menu.welcome = {
 				core.boot()
 			end,
 			alias = {"s", "S"},
+		},
+		console = {
+			entry_type = core.MENU_ENTRY,
+			name = function()
+				return color.highlight("C") .. "ons: " .. core.getConsoleName()
+			end,
+			func = function()
+				core.nextConsoleChoice()
+			end,
+			alias = {"c", "C"},
 		},
 		prompt = {
 			entry_type = core.MENU_RETURN,
@@ -474,8 +485,7 @@ function menu.autoboot(delay)
 			last = time
 			screen.setcursor(x, y)
 			print("Autoboot in " .. time ..
-			    " seconds, hit [Enter] to boot" ..
-			    " or any other key to stop     ")
+			    " seconds. [Space] to pause")
 			screen.defcursor()
 		end
 		if io.ischar() then

@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ocs_fc/ocs_unsol.c 331766 2018-03-30 15:28:25Z ken $
+ * $FreeBSD$
  */
 
 /**
@@ -693,7 +693,7 @@ ocs_node_dispatch_frame(void *arg, ocs_hw_sequence_t *seq)
 			break;
 
 		case FC_RCTL_BLS:
-			if (sit_set) {
+			if ((sit_set) && (hdr->info == FC_INFO_ABTS)) {
 				rc = ocs_node_recv_abts_frame(node, seq);
 			}else {
 				rc = ocs_node_recv_bls_no_sit(node, seq);
@@ -857,6 +857,7 @@ ocs_get_flags_fcp_cmd(fcp_cmnd_iu_t *cmnd)
 		flags |= OCS_SCSI_CMD_UNTAGGED;
 		break;
 	}
+	flags |= (uint32_t)cmnd->command_priority << OCS_SCSI_PRIORITY_SHIFT;
 	if (cmnd->wrdata)
 		flags |= OCS_SCSI_CMD_DIR_IN;
 	if (cmnd->rddata)

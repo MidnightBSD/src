@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/sys/modules/cxgbe/Makefile 345040 2019-03-11 23:16:10Z jhb $
+# $FreeBSD$
 #
 
 SYSDIR?=${SRCTOP}/sys

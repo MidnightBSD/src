@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/localedef/Makefile 319186 2017-05-30 04:27:05Z ngie $
+# $FreeBSD$
 
 PROG=	localedef
 SRCS=	charmap.c \
@@ -13,7 +13,7 @@ SRCS=	charmap.c \
 	time.c \
 	wide.c
 
-WARNS=	3
+WARNS?=	3
 ${SRCS:M*.c}: parser.h
 parser.h: parser.y
 

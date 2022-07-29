@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/arm/nvidia/tegra_soctherm_if.m 296936 2016-03-16 13:01:48Z mmel $
+# $FreeBSD$
 #
 
 #include <machine/bus.h>

@@ -1,6 +1,8 @@
 /*-
  * Generic utility routines for the Common Access Method layer.
  *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Justin T. Gibbs.
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cam/cam.c 326782 2017-12-11 20:47:26Z asomers $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #ifdef _KERNEL
@@ -120,38 +122,19 @@ SYSCTL_INT(_kern_cam, OID_AUTO, sort_io_queues, CTLFLAG_RWTUN,
 void
 cam_strvis(u_int8_t *dst, const u_int8_t *src, int srclen, int dstlen)
 {
+	cam_strvis_flag(dst, src, srclen, dstlen,
+	    CAM_STRVIS_FLAG_NONASCII_ESC);
+}
 
-	/* Trim leading/trailing spaces, nulls. */
-	while (srclen > 0 && src[0] == ' ')
-		src++, srclen--;
-	while (srclen > 0
-	    && (src[srclen-1] == ' ' || src[srclen-1] == '\0'))
-		srclen--;
+void
+cam_strvis_flag(u_int8_t *dst, const u_int8_t *src, int srclen, int dstlen,
+		uint32_t flags)
+{
+	struct sbuf sb;
 
-	while (srclen > 0 && dstlen > 1) {
-		u_int8_t *cur_pos = dst;
-
-		if (*src < 0x20 || *src >= 0x80) {
-			/* SCSI-II Specifies that these should never occur. */
-			/* non-printable character */
-			if (dstlen > 4) {
-				*cur_pos++ = '\\';
-				*cur_pos++ = ((*src & 0300) >> 6) + '0';
-				*cur_pos++ = ((*src & 0070) >> 3) + '0';
-				*cur_pos++ = ((*src & 0007) >> 0) + '0';
-			} else {
-				*cur_pos++ = '?';
-			}
-		} else {
-			/* normal character */
-			*cur_pos++ = *src;
-		}
-		src++;
-		srclen--;
-		dstlen -= cur_pos - dst;
-		dst = cur_pos;
-	}
-	*dst = '\0';
+	sbuf_new(&sb, dst, dstlen, SBUF_FIXEDLEN);
+	cam_strvis_sbuf(&sb, src, srclen, flags);
+	sbuf_finish(&sb);
 }
 
 void
@@ -413,7 +396,6 @@ cam_error_string(struct cam_device *device, union ccb *ccb, char *str,
 		switch (ccb->ccb_h.func_code) {
 		case XPT_ATA_IO:
 			ata_command_sbuf(&ccb->ataio, &sb);
-			sbuf_printf(&sb, "\n");
 			break;
 		case XPT_SCSI_IO:
 #ifdef _KERNEL
@@ -421,17 +403,22 @@ cam_error_string(struct cam_device *device, union ccb *ccb, char *str,
 #else /* !_KERNEL */
 			scsi_command_string(device, &ccb->csio, &sb);
 #endif /* _KERNEL/!_KERNEL */
-			sbuf_printf(&sb, "\n");
 			break;
 		case XPT_SMP_IO:
 			smp_command_sbuf(&ccb->smpio, &sb, path_str, 79 -
 					 strlen(path_str), (proto_flags &
 					 CAM_ESMF_PRINT_FULL_CMD) ? 79 : 0);
-			sbuf_printf(&sb, "\n");
+			break;
+		case XPT_NVME_IO:
+		case XPT_NVME_ADMIN:
+			nvme_command_sbuf(&ccb->nvmeio, &sb);
 			break;
 		default:
+			sbuf_printf(&sb, "CAM func %#x",
+			    ccb->ccb_h.func_code);
 			break;
 		}
+		sbuf_printf(&sb, "\n");
 	}
 
 	if (flags & CAM_ESF_CAM_STATUS) {

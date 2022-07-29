@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/expansion/export1.0 238430 2012-07-13 22:29:02Z jilles $
+# $FreeBSD$
 
 w='@ vv=6'
 

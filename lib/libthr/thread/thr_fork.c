@@ -25,7 +25,9 @@
  * SUCH DAMAGE.
  */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1995-1998 John Birrell <jb@cimlogic.com.au>
  * All rights reserved.
  *
@@ -56,7 +58,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_fork.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/syscall.h>
 #include "namespace.h"
@@ -73,10 +75,11 @@ __FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_fork.c 331722 2018-03-29 02:
 #include "rtld_lock.h"
 #include "thr_private.h"
 
-__weak_reference(_pthread_atfork, pthread_atfork);
+__weak_reference(_thr_atfork, _pthread_atfork);
+__weak_reference(_thr_atfork, pthread_atfork);
 
 int
-_pthread_atfork(void (*prepare)(void), void (*parent)(void),
+_thr_atfork(void (*prepare)(void), void (*parent)(void),
     void (*child)(void))
 {
 	struct pthread *curthread;
@@ -129,10 +132,19 @@ __pthread_cxa_finalize(struct dl_phdr_info *phdr_info)
 	_thr_sigact_unload(phdr_info);
 }
 
-__weak_reference(__thr_fork, _fork);
+enum thr_fork_mode {
+	MODE_FORK,
+	MODE_PDFORK,
+};
 
-pid_t
-__thr_fork(void)
+struct thr_fork_args {
+	enum thr_fork_mode mode;
+	void *fdp;
+	int flags;
+};
+
+static pid_t
+thr_fork_impl(const struct thr_fork_args *a)
 {
 	struct pthread *curthread;
 	struct pthread_atfork *af;
@@ -141,8 +153,17 @@ __thr_fork(void)
 	int was_threaded;
 	int rtld_locks[MAX_RTLD_LOCKS];
 
-	if (!_thr_is_inited())
-		return (__sys_fork());
+	if (!_thr_is_inited()) {
+		switch (a->mode) {
+		case MODE_FORK:
+			return (__sys_fork());
+		case MODE_PDFORK:
+			return (__sys_pdfork(a->fdp, a->flags));
+		default:
+			errno = EDOOFUS;
+			return (-1);
+		}
+	}
 
 	curthread = _get_curthread();
 	cancelsave = curthread->no_cancel;
@@ -168,6 +189,7 @@ __thr_fork(void)
 	 */
 	if (_thr_isthreaded() != 0) {
 		was_threaded = 1;
+		__thr_malloc_prefork(curthread);
 		_malloc_prefork();
 		__thr_pshared_atfork_pre();
 		_rtld_atfork_pre(rtld_locks);
@@ -182,7 +204,19 @@ __thr_fork(void)
 	 * indirection, the syscall symbol is resolved in
 	 * _thr_rtld_init() with side-effect free call.
 	 */
-	ret = syscall(SYS_fork);
+	switch (a->mode) {
+	case MODE_FORK:
+		ret = syscall(SYS_fork);
+		break;
+	case MODE_PDFORK:
+		ret = syscall(SYS_pdfork, a->fdp, a->flags);
+		break;
+	default:
+		ret = -1;
+		errno = EDOOFUS;
+		break;
+	}
+
 	if (ret == 0) {
 		/* Child process */
 		errsave = errno;
@@ -194,6 +228,10 @@ __thr_fork(void)
 		 * _libpthread_init(), it will add us back to list.
 		 */
 		curthread->tlflags &= ~TLFLAGS_IN_TDLIST;
+
+		/* before thr_self() */
+		if (was_threaded)
+			__thr_malloc_postfork(curthread);
 
 		/* child is a new kernel thread. */
 		thr_self(&curthread->tid);
@@ -239,6 +277,7 @@ __thr_fork(void)
 		_thr_signal_postfork();
 
 		if (was_threaded) {
+			__thr_malloc_postfork(curthread);
 			_rtld_atfork_post(rtld_locks);
 			__thr_pshared_atfork_post();
 			_malloc_postfork();
@@ -262,4 +301,26 @@ __thr_fork(void)
 	errno = errsave;
 
 	return (ret);
+}
+
+__weak_reference(__thr_fork, _fork);
+
+pid_t
+__thr_fork(void)
+{
+	struct thr_fork_args a;
+
+	a.mode = MODE_FORK;
+	return (thr_fork_impl(&a));
+}
+
+pid_t
+__thr_pdfork(int *fdp, int flags)
+{
+	struct thr_fork_args a;
+
+	a.mode = MODE_PDFORK;
+	a.fdp = fdp;
+	a.flags = flags;
+	return (thr_fork_impl(&a));
 }

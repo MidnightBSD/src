@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)mount_nfs.8	8.3 (Berkeley) 3/29/95
-.\" $FreeBSD: stable/11/sbin/mount_nfs/mount_nfs.8 317521 2017-04-27 20:21:29Z rmacklem $
+.\" $FreeBSD$
 .\"
-.Dd April 13, 2017
+.Dd January 11, 2022
 .Dt MOUNT_NFS 8
 .Os
 .Sh NAME
@@ -127,6 +127,18 @@ trying the mount in the background.
 Useful for
 .Xr fstab 5 ,
 where the file system mount is not critical to multiuser operation.
+.It Cm bgnow
+Like
+.Cm bg ,
+fork off a child to keep trying the mount in the background,
+but do not attempt to mount in the foreground first.
+This eliminates a
+60+ second timeout when the server is not responding.
+Useful for speeding up the boot process of a client when the server is
+likely to be unavailable.
+This is often the case for interdependent servers
+such as cross-mounted servers (each of two servers is an NFS client of
+the other) and for cluster nodes that must boot before the file servers.
 .It Cm deadthresh Ns = Ns Aq Ar value
 Set the
 .Dq "dead server threshold"
@@ -157,7 +169,16 @@ should be specified without instance or domain and is typically
 .Dq "host" ,
 .Dq "nfs"
 or
-.Dq "root" .
+.Dq "root" ,
+although the form
+.Sm off
+.Aq Ar service
+@
+.Aq Ar fqdn
+.Sm on
+can also be used if the local system's
+.Xr gethostname 3
+value does not match the host-based principal in the keytab.
 .It Cm hard
 Same as not specifying
 .Cm soft .
@@ -183,8 +204,8 @@ for positive name cache entries.
 If this is set to 0 it disables positive name caching for the mount point.
 .It Cm negnametimeo Ns = Ns Aq Ar value
 Override the default of NFS_DEFAULT_NEGNAMETIMEO for the timeout (in seconds)
-for negative name cache entries. If this is set to 0 it disables negative
-name caching for the mount point.
+for negative name cache entries.
+If this is set to 0 it disables negative name caching for the mount point.
 .It Cm nfsv2
 Use the NFS Version 2 protocol (the default is to try version 3 first
 then version 2).
@@ -206,9 +227,30 @@ Make a minor version 1 of the NFS Version 4 protocol mount use a single OpenOwne
 for all Opens.
 This may be useful for a server with a very low limit on OpenOwners, such as
 AmazonEFS.
-It can only be used with an NFSv4.1 mount.
+It may be required when an accumulation of NFS version 4 Opens occurs,
+as indicated by the
+.Dq Opens
+count displayed by
+.Xr nfsstat 8
+with the
+.Fl c
+and
+.Fl E
+command-line options.
+A common case for an accumulation of Opens is a shared library within
+the NFS mount that is used by several
+processes, where at least one of these processes is always running.
+This option cannot be used for an NFS Version 4, minor version 0 mount.
+As such, this option requires the
+.Cm minorversion
+option be specified with a value of 1 for AmazonEFS.
 It may not work correctly when Delegations are being issued by a server,
 but note that the AmazonEFS server does not issued delegations at this time.
+This option is only meaningful when used with the
+.Cm nfsv4
+and
+.Cm minorversion
+options.
 .It Cm pnfs
 Enable support for parallel NFS (pNFS) for minor version 1 of the
 NFS Version 4 protocol.
@@ -270,7 +312,7 @@ such that the dirty byte range becomes a superset of the bytes
 that are dirty.
 This reduces the number of writes significantly for software
 builds.
-The merging of byte ranges isn't done if the file has been file
+The merging of byte ranges is not done if the file has been file
 locked, since most applications modifying a file from multiple
 clients will use file locking.
 As such, this option could result in a corrupted file for the
@@ -279,8 +321,9 @@ clients concurrently without using file locking.
 .It Cm principal
 For the RPCSEC_GSS security flavors, such as krb5, krb5i and krb5p,
 this option sets the name of the host based principal name expected
-by the server. This option overrides the default, which will be
-``nfs@<server-fqdn>'' and should normally be sufficient.
+by the server.
+This option overrides the default, which will be ``nfs@<server-fqdn>''
+and should normally be sufficient.
 .It Cm noresvport
 Do
 .Em not
@@ -523,6 +566,11 @@ Same as
 .Xr nfsd 8 ,
 .Xr nfsiod 8 ,
 .Xr showmount 8
+.Sh HISTORY
+A version of the
+.Nm
+utility appeared in
+.Bx 4.4 .
 .Sh BUGS
 Since nfsv4 performs open/lock operations that have their ordering strictly
 enforced by the server, the options

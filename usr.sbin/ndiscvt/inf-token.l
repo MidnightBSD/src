@@ -1,5 +1,7 @@
 %{
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2003
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
  *
@@ -32,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/ndiscvt/inf-token.l 352280 2019-09-13 07:21:06Z bapt $");
+__FBSDID("$FreeBSD$");
 
 #include <regex.h>
 #include <ctype.h>

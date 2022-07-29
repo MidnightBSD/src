@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012, Bryan Venteicher <bryanv@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/virtio/scsi/virtio_scsivar.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _VIRTIO_SCSIVAR_H
@@ -201,11 +203,6 @@ struct vtscsi_request {
  * as TM commands (e.g. aborting timedout commands).
  */
 #define VTSCSI_RESERVED_REQUESTS	10
-
-/*
- * Specification doesn't say, use traditional SCSI default.
- */
-#define VTSCSI_INITIATOR_ID	7
 
 /*
  * How to wait (or not) for request completion.

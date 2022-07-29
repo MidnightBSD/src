@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/nvidia/tegra_ehci.c 332025 2018-04-04 13:23:06Z mmel $");
+__FBSDID("$FreeBSD$");
 
 /*
  * EHCI driver for Tegra SoCs.

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/net/mp_ring.h 344093 2019-02-13 14:25:05Z marius $
+ * $FreeBSD$
  *
  */
 
@@ -67,7 +67,7 @@ struct ifmp_ring {
 int ifmp_ring_alloc(struct ifmp_ring **, int, void *, mp_ring_drain_t,
     mp_ring_can_drain_t, struct malloc_type *, int);
 void ifmp_ring_free(struct ifmp_ring *);
-int ifmp_ring_enqueue(struct ifmp_ring *, void **, int, int);
+int ifmp_ring_enqueue(struct ifmp_ring *, void **, int, int, int);
 void ifmp_ring_check_drainage(struct ifmp_ring *, int);
 void ifmp_ring_reset_stats(struct ifmp_ring *);
 int ifmp_ring_is_idle(struct ifmp_ring *);

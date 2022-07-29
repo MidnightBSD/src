@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/imx/imx_spi.c 346558 2019-04-22 15:06:56Z ian $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for imx Enhanced Configurable SPI; master-mode only.
@@ -566,9 +566,7 @@ spi_attach(device_t dev)
 	 * their attach. We can't do IO until timers and interrupts are working.
 	 */
 	sc->spibus = device_add_child(dev, "spibus", -1);
-	config_intrhook_oneshot((ich_func_t)bus_generic_attach, dev);
-
-	return (0);
+	return (bus_delayed_attach_children(dev));
 }
 
 static int

@@ -1,4 +1,7 @@
-# $FreeBSD: stable/11/sys/mips/conf/BCM.hints 302190 2016-06-25 04:34:54Z landonf $
+# $FreeBSD$
 hint.bhnd.0.at="nexus0"
 hint.bhnd.0.maddr="0x18000000" 
 hint.bhnd.0.msize="0x00100000"
+
+# NVRAM via CFE
+hint.bhnd_nvram.0.at="nexus0"

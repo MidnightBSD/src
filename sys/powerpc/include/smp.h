@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Marcel Moolenaar
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/powerpc/include/smp.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_SMP_H_
@@ -40,6 +42,7 @@
 
 #ifndef LOCORE
 
+#include <machine/pcb.h>
 #include <sys/_cpuset.h>
 
 void	ipi_all_but_self(int ipi);
@@ -56,6 +59,8 @@ void	cpudep_ap_early_bootstrap(void);
 uintptr_t cpudep_ap_bootstrap(void);
 void	cpudep_ap_setup(void);
 void	machdep_ap_bootstrap(void);
+
+extern struct pcb stoppcbs[];
 
 #endif /* !LOCORE */
 #endif /* _KERNEL */

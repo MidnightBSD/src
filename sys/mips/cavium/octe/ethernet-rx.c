@@ -1,4 +1,6 @@
 /*************************************************************************
+SPDX-License-Identifier: BSD-3-Clause
+
 Copyright (c) 2003-2007  Cavium Networks (support@cavium.com). All rights
 reserved.
 
@@ -28,7 +30,7 @@ AND WITH ALL FAULTS AND CAVIUM  NETWORKS MAKES NO PROMISES, REPRESENTATIONS OR W
 *************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/cavium/octe/ethernet-rx.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -55,8 +57,6 @@ extern struct ifnet *cvm_oct_device[];
 static struct task cvm_oct_task;
 static struct taskqueue *cvm_oct_taskq;
 
-static int cvm_oct_rx_active;
-
 /**
  * Interrupt handler. The interrupt occurs whenever the POW
  * transitions from 0->1 packets in our group.
@@ -75,10 +75,9 @@ int cvm_oct_do_interrupt(void *dev_id)
 		cvmx_write_csr(CVMX_POW_WQ_INT, 0x10001<<pow_receive_group);
 
 	/*
-	 * Schedule task if there isn't one running.
+	 * Schedule task.
 	 */
-	if (atomic_cmpset_int(&cvm_oct_rx_active, 0, 1))
-		taskqueue_enqueue(cvm_oct_taskq, &cvm_oct_task);
+	taskqueue_enqueue(cvm_oct_taskq, &cvm_oct_task);
 
 	return FILTER_HANDLED;
 }
@@ -170,7 +169,6 @@ void cvm_oct_tasklet_rx(void *context, int pending)
 	int                 num_freed;
 	int                 packet_not_copied;
 
-	sched_pin();
 	coreid = cvmx_get_core_num();
 
 	/* Prefetch cvm_oct_device since we know we need it soon */
@@ -341,12 +339,6 @@ void cvm_oct_tasklet_rx(void *context, int pending)
 	 */
 	if (INTERRUPT_LIMIT != 0 && rx_count == MAX_RX_PACKETS) {
 		taskqueue_enqueue(cvm_oct_taskq, &cvm_oct_task);
-	} else {
-		/*
-		 * No more packets, all done.
-		 */
-		if (!atomic_cmpset_int(&cvm_oct_rx_active, 1, 0))
-			panic("%s: inconsistent rx active state.", __func__);
 	}
 
 	/* Restore the original POW group mask */
@@ -368,20 +360,25 @@ void cvm_oct_tasklet_rx(void *context, int pending)
 					      number_to_free - num_freed);
 		}
 	}
-	sched_unpin();
 }
 
 
 
 void cvm_oct_rx_initialize(void)
 {
+	int cpu;
 	TASK_INIT(&cvm_oct_task, 0, cvm_oct_tasklet_rx, NULL);
 
 	cvm_oct_taskq = taskqueue_create_fast("oct_rx", M_NOWAIT,
 					      taskqueue_thread_enqueue,
 					      &cvm_oct_taskq);
-	taskqueue_start_threads(&cvm_oct_taskq, min(mp_ncpus, MAXCPU),
-				PI_NET, "octe taskq");
+
+	CPU_FOREACH(cpu) {
+		cpuset_t cpu_mask;
+		CPU_SETOF(cpu, &cpu_mask);
+		taskqueue_start_threads_cpuset(&cvm_oct_taskq, 1, PI_NET,
+		    &cpu_mask, "octe taskq");
+	}
 }
 
 void cvm_oct_rx_shutdown(void)

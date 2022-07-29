@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tools/regression/netinet/tcpconnect/README.tcp-md5 174032 2007-11-28 20:33:58Z bz $
+# $FreeBSD$
 
 To test tcp-md5 do:
 

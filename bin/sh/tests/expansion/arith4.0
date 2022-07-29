@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/expansion/arith4.0 206167 2010-04-04 16:29:48Z jilles $
+# $FreeBSD$
 
 failures=0
 

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/services_mkdb/services_mkdb.c 358903 2020-03-12 03:03:38Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -42,7 +42,6 @@ __FBSDID("$FreeBSD: stable/11/usr.sbin/services_mkdb/services_mkdb.c 358903 2020
 #include <err.h>
 #include <fcntl.h>
 #include <netdb.h>
-#define _WITH_GETLINE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

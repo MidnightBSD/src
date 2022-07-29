@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/lib/libusb/libusb20_int.h 356398 2020-01-06 09:21:15Z hselasky $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

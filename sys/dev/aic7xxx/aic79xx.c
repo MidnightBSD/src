@@ -1,6 +1,8 @@
 /*-
  * Core routines and tables shareable across OS platforms.
  *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1994-2002, 2004 Justin T. Gibbs.
  * Copyright (c) 2000-2003 Adaptec Inc.
  * All rights reserved.
@@ -46,7 +48,7 @@
 #include "aicasm/aicasm_insformat.h"
 #else
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/aic7xxx/aic79xx.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 #include <dev/aic7xxx/aic79xx_osm.h>
 #include <dev/aic7xxx/aic79xx_inline.h>
 #include <dev/aic7xxx/aicasm/aicasm_insformat.h>
@@ -2261,7 +2263,7 @@ ahd_handle_nonpkt_busfree(struct ahd_softc *ahd)
 			printerror = 0;
 		} else if (ahd_sent_msg(ahd, AHDMSG_1B,
 					MSG_BUS_DEV_RESET, TRUE)) {
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 			/*
 			 * Don't mark the user's request for this BDR
 			 * as completing with CAM_BDR_SENT.  CAM3
@@ -5263,7 +5265,7 @@ ahd_alloc(void *platform_arg, char *name)
 {
 	struct  ahd_softc *ahd;
 
-#ifndef	__MidnightBSD__
+#ifndef	__FreeBSD__
 	ahd = malloc(sizeof(*ahd), M_DEVBUF, M_NOWAIT);
 	if (!ahd) {
 		printf("aic7xxx: cannot malloc softc!\n");
@@ -5277,7 +5279,7 @@ ahd_alloc(void *platform_arg, char *name)
 	ahd->seep_config = malloc(sizeof(*ahd->seep_config),
 				  M_DEVBUF, M_NOWAIT);
 	if (ahd->seep_config == NULL) {
-#ifndef	__MidnightBSD__
+#ifndef	__FreeBSD__
 		free(ahd, M_DEVBUF);
 #endif
 		free(name, M_DEVBUF);
@@ -5463,7 +5465,7 @@ ahd_free(struct ahd_softc *ahd)
 		free(ahd->seep_config, M_DEVBUF);
 	if (ahd->saved_stack != NULL)
 		free(ahd->saved_stack, M_DEVBUF);
-#ifndef __MidnightBSD__
+#ifndef __FreeBSD__
 	free(ahd, M_DEVBUF);
 #endif
 	return;
@@ -5522,7 +5524,7 @@ ahd_reset(struct ahd_softc *ahd, int reinit)
 		 * does not disable its parity logic prior to
 		 * the start of the reset.  This may cause a
 		 * parity error to be detected and thus a
-		 * spurious SERR or PERR assertion.  Disble
+		 * spurious SERR or PERR assertion.  Disable
 		 * PERR and SERR responses during the CHIPRST.
 		 */
 		mod_cmd = cmd & ~(PCIM_CMD_PERRESPEN|PCIM_CMD_SERRESPEN);

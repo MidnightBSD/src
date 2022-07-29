@@ -4,7 +4,7 @@
 # 
 # July 4, 1999
 #
-# $FreeBSD: stable/11/share/syscons/keymaps/fr_CA.iso.acc.kbd 74119 2001-03-11 23:41:19Z ache $
+# $FreeBSD$
 
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock

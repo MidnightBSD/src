@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5212/ar5212_xmit.c 243169 2012-11-17 02:02:36Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -104,7 +106,6 @@ ar5212GetTxQueueProps(struct ath_hal *ah, int q, HAL_TXQ_INFO *qInfo)
 {
 	struct ath_hal_5212 *ahp = AH5212(ah);
 	HAL_CAPABILITIES *pCap = &AH_PRIVATE(ah)->ah_caps;
-
 
 	if (q >= pCap->halTotalQueues) {
 		HALDEBUG(ah, HAL_DEBUG_ANY, "%s: invalid queue num %u\n",
@@ -344,7 +345,7 @@ ar5212ResetTxQueue(struct ath_hal *ah, u_int q)
 			  SM(qi->tqi_readyTime, AR_Q_RDYTIMECFG_INT)
 			| AR_Q_RDYTIMECFG_ENA);
 	}
-	
+
 	OS_REG_WRITE(ah, AR_DCHNTIME(q),
 		  SM(qi->tqi_burstTime, AR_D_CHNTIME_DUR)
 		| (qi->tqi_burstTime ? AR_D_CHNTIME_EN : 0));
@@ -471,7 +472,7 @@ ar5212ResetTxQueue(struct ath_hal *ah, u_int q)
 			     OS_REG_READ(ah, AR_Q0_MISC + 4*q)
 			     | AR_Q_MISC_QCU_COMP_EN);
 	}
-	
+
 	/*
 	 * Always update the secondary interrupt mask registers - this
 	 * could be a new queue getting enabled in a running system or

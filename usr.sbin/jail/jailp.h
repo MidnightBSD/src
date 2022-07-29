@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/jail/jailp.h 341790 2018-12-10 13:47:05Z eugen $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -87,8 +87,11 @@ enum intparam {
 	IP_EXEC_JAIL_USER,	/* Run jailed commands as this user */
 	IP_EXEC_POSTSTART,	/* Commands run outside jail after creating */
 	IP_EXEC_POSTSTOP,	/* Commands run outside jail after removing */
+	IP_EXEC_PREPARE,	/* Commands run outside jail before addrs and mounting */
 	IP_EXEC_PRESTART,	/* Commands run outside jail before creating */
 	IP_EXEC_PRESTOP,	/* Commands run outside jail before removing */
+	IP_EXEC_RELEASE,	/* Commands run outside jail after addrs and unmounted */
+	IP_EXEC_CREATED,	/* Commands run outside jail right after it was started */
 	IP_EXEC_START,		/* Commands run inside jail on creation */
 	IP_EXEC_STOP,		/* Commands run inside jail on removal */
 	IP_EXEC_SYSTEM_JAIL_USER,/* Get jail_user from system passwd file */
@@ -120,7 +123,6 @@ enum intparam {
 	KP_ALLOW_SOCKET_AF,
 	KP_ALLOW_SYSVIPC,
 	KP_DEVFS_RULESET,
-	KP_ENFORCE_STATFS,
 	KP_HOST_HOSTNAME,
 #ifdef INET
 	KP_IP4_ADDR,

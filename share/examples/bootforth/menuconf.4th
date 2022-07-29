@@ -1,7 +1,7 @@
 \ Simple greeting screen, presenting basic options.
 \ XXX This is far too trivial - I don't have time now to think
 \ XXX about something more fancy... :-/
-\ $FreeBSD: stable/11/share/examples/bootforth/menuconf.4th 65480 2000-09-05 16:30:09Z dcs $
+\ $FreeBSD$
 
 : title
 	f_single

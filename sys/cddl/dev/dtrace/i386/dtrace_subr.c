@@ -19,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/11/sys/cddl/dev/dtrace/i386/dtrace_subr.c 345868 2019-04-04 02:07:24Z markj $
+ * $FreeBSD$
  *
  */
 /*
@@ -45,13 +45,18 @@
 #include <machine/cpufunc.h>
 #include <machine/frame.h>
 #include <machine/psl.h>
+#include <machine/trap.h>
 #include <vm/pmap.h>
 
 extern uintptr_t 	kernelbase;
 
 extern void dtrace_getnanotime(struct timespec *tsp);
+extern int (*dtrace_invop_jump_addr)(struct trapframe *);
 
-int dtrace_invop(uintptr_t, struct trapframe *, uintptr_t);
+int	dtrace_invop(uintptr_t, struct trapframe *, uintptr_t);
+int	dtrace_invop_start(struct trapframe *frame);
+void	dtrace_invop_init(void);
+void	dtrace_invop_uninit(void);
 
 typedef struct dtrace_invop_hdlr {
 	int (*dtih_func)(uintptr_t, struct trapframe *, uintptr_t);
@@ -109,6 +114,20 @@ dtrace_invop_remove(int (*func)(uintptr_t, struct trapframe *, uintptr_t))
 	}
 
 	kmem_free(hdlr, 0);
+}
+
+void
+dtrace_invop_init(void)
+{
+
+	dtrace_invop_jump_addr = dtrace_invop_start;
+}
+
+void
+dtrace_invop_uninit(void)
+{
+
+	dtrace_invop_jump_addr = NULL;
 }
 
 void

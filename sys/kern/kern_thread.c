@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2001 Julian Elischer <julian@freebsd.org>.
  *  All rights reserved.
  *
@@ -30,7 +32,7 @@
 #include "opt_hwpmc_hooks.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/kern_thread.c 337242 2018-08-03 14:05:22Z asomers $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -62,7 +64,6 @@ __FBSDID("$FreeBSD: stable/11/sys/kern/kern_thread.c 337242 2018-08-03 14:05:22Z
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
 #include <vm/uma.h>
-#include <vm/vm_domain.h>
 #include <sys/eventhandler.h>
 
 /*
@@ -76,43 +77,43 @@ __FBSDID("$FreeBSD: stable/11/sys/kern/kern_thread.c 337242 2018-08-03 14:05:22Z
  * structures.
  */
 #ifdef __amd64__
-_Static_assert(offsetof(struct thread, td_flags) == 0xe4,
+_Static_assert(offsetof(struct thread, td_flags) == 0xfc,
     "struct thread KBI td_flags");
-_Static_assert(offsetof(struct thread, td_pflags) == 0xec,
+_Static_assert(offsetof(struct thread, td_pflags) == 0x104,
     "struct thread KBI td_pflags");
-_Static_assert(offsetof(struct thread, td_frame) == 0x418,
+_Static_assert(offsetof(struct thread, td_frame) == 0x470,
     "struct thread KBI td_frame");
-_Static_assert(offsetof(struct thread, td_emuldata) == 0x4c0,
+_Static_assert(offsetof(struct thread, td_emuldata) == 0x528,
     "struct thread KBI td_emuldata");
 _Static_assert(offsetof(struct proc, p_flag) == 0xb0,
     "struct proc KBI p_flag");
 _Static_assert(offsetof(struct proc, p_pid) == 0xbc,
     "struct proc KBI p_pid");
-_Static_assert(offsetof(struct proc, p_filemon) == 0x3c0,
+_Static_assert(offsetof(struct proc, p_filemon) == 0x3d0,
     "struct proc KBI p_filemon");
-_Static_assert(offsetof(struct proc, p_comm) == 0x3d0,
+_Static_assert(offsetof(struct proc, p_comm) == 0x3e4,
     "struct proc KBI p_comm");
-_Static_assert(offsetof(struct proc, p_emuldata) == 0x4a0,
+_Static_assert(offsetof(struct proc, p_emuldata) == 0x4b8,
     "struct proc KBI p_emuldata");
 #endif
 #ifdef __i386__
-_Static_assert(offsetof(struct thread, td_flags) == 0x8c,
+_Static_assert(offsetof(struct thread, td_flags) == 0x98,
     "struct thread KBI td_flags");
-_Static_assert(offsetof(struct thread, td_pflags) == 0x94,
+_Static_assert(offsetof(struct thread, td_pflags) == 0xa0,
     "struct thread KBI td_pflags");
-_Static_assert(offsetof(struct thread, td_frame) == 0x2c0,
+_Static_assert(offsetof(struct thread, td_frame) == 0x2e8,
     "struct thread KBI td_frame");
-_Static_assert(offsetof(struct thread, td_emuldata) == 0x30c,
+_Static_assert(offsetof(struct thread, td_emuldata) == 0x334,
     "struct thread KBI td_emuldata");
 _Static_assert(offsetof(struct proc, p_flag) == 0x68,
     "struct proc KBI p_flag");
 _Static_assert(offsetof(struct proc, p_pid) == 0x74,
     "struct proc KBI p_pid");
-_Static_assert(offsetof(struct proc, p_filemon) == 0x268,
+_Static_assert(offsetof(struct proc, p_filemon) == 0x27c,
     "struct proc KBI p_filemon");
-_Static_assert(offsetof(struct proc, p_comm) == 0x274,
+_Static_assert(offsetof(struct proc, p_comm) == 0x28c,
     "struct proc KBI p_comm");
-_Static_assert(offsetof(struct proc, p_emuldata) == 0x2f4,
+_Static_assert(offsetof(struct proc, p_emuldata) == 0x318,
     "struct proc KBI p_emuldata");
 #endif
 
@@ -195,7 +196,7 @@ thread_ctor(void *mem, int size, void *arg, int flags)
 
 	td = (struct thread *)mem;
 	td->td_state = TDS_INACTIVE;
-	td->td_oncpu = NOCPU;
+	td->td_lastcpu = td->td_oncpu = NOCPU;
 
 	td->td_tid = tid_alloc();
 
@@ -411,7 +412,6 @@ thread_alloc(int pages)
 		return (NULL);
 	}
 	cpu_thread_alloc(td);
-	vm_domain_policy_init(&td->td_vm_dom_policy);
 	return (td);
 }
 
@@ -441,7 +441,6 @@ thread_free(struct thread *td)
 	cpu_thread_free(td);
 	if (td->td_kstack != 0)
 		vm_thread_dispose(td);
-	vm_domain_policy_cleanup(&td->td_vm_dom_policy);
 	callout_drain(&td->td_slpcallout);
 	uma_zfree(thread_zone, td);
 }
@@ -584,8 +583,11 @@ thread_exit(void)
 	 * If this thread is part of a process that is being tracked by hwpmc(4),
 	 * inform the module of the thread's impending exit.
 	 */
-	if (PMC_PROC_IS_USING_PMCS(td->td_proc))
+	if (PMC_PROC_IS_USING_PMCS(td->td_proc)) {
 		PMC_SWITCH_CONTEXT(td, PMC_FN_CSW_OUT);
+		PMC_CALL_HOOK_UNLOCKED(td, PMC_FN_THR_EXIT, NULL);
+	} else if (PMC_SYSTEM_SAMPLING_ACTIVE())
+		PMC_CALL_HOOK_UNLOCKED(td, PMC_FN_THR_EXIT_LOG, NULL);
 #endif
 	PROC_UNLOCK(p);
 	PROC_STATLOCK(p);
@@ -599,7 +601,7 @@ thread_exit(void)
 	td->td_incruntime += runtime;
 	PCPU_SET(switchtime, new_switchtime);
 	PCPU_SET(switchticks, ticks);
-	PCPU_INC(cnt.v_swtch);
+	VM_CNT_INC(v_swtch);
 
 	/* Save our resource usage in our process. */
 	td->td_ru.ru_nvcsw++;
@@ -1042,6 +1044,49 @@ thread_suspend_check(int return_instead)
 	return (0);
 }
 
+/*
+ * Check for possible stops and suspensions while executing a
+ * casueword or similar transiently failing operation.
+ *
+ * The sleep argument controls whether the function can handle a stop
+ * request itself or it should return ERESTART and the request is
+ * proceed at the kernel/user boundary in ast.
+ *
+ * Typically, when retrying due to casueword(9) failure (rv == 1), we
+ * should handle the stop requests there, with exception of cases when
+ * the thread owns a kernel resource, for instance busied the umtx
+ * key, or when functions return immediately if thread_check_susp()
+ * returned non-zero.  On the other hand, retrying the whole lock
+ * operation, we better not stop there but delegate the handling to
+ * ast.
+ *
+ * If the request is for thread termination P_SINGLE_EXIT, we cannot
+ * handle it at all, and simply return EINTR.
+ */
+int
+thread_check_susp(struct thread *td, bool sleep)
+{
+	struct proc *p;
+	int error;
+
+	/*
+	 * The check for TDF_NEEDSUSPCHK is racy, but it is enough to
+	 * eventually break the lockstep loop.
+	 */
+	if ((td->td_flags & TDF_NEEDSUSPCHK) == 0)
+		return (0);
+	error = 0;
+	p = td->td_proc;
+	PROC_LOCK(p);
+	if (p->p_flag & P_SINGLE_EXIT)
+		error = EINTR;
+	else if (P_SHOULDSTOP(p) ||
+	    ((p->p_flag & P_TRACED) && (td->td_dbgflags & TDB_SUSPEND)))
+		error = sleep ? thread_suspend_check(0) : ERESTART;
+	PROC_UNLOCK(p);
+	return (error);
+}
+
 void
 thread_suspend_switch(struct thread *td, struct proc *p)
 {
@@ -1214,6 +1259,14 @@ tdfind(lwpid_t tid, pid_t pid)
 #define RUN_THRESH	16
 	struct thread *td;
 	int run = 0;
+
+	td = curthread;
+	if (td->td_tid == tid) {
+		if (pid != -1 && td->td_proc->p_pid != pid)
+			return (NULL);
+		PROC_LOCK(td->td_proc);
+		return (td);
+	}
 
 	rw_rlock(&tidhash_lock);
 	LIST_FOREACH(td, TIDHASH(tid), td_hash) {

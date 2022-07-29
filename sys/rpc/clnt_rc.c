@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
  * Developed with Red Inc: Alfred Perlstein <alfred@freebsd.org>
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/rpc/clnt_rc.c 317466 2017-04-26 22:04:55Z rmacklem $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -106,6 +108,8 @@ clnt_reconnect_create(
 	rc->rc_closed = FALSE;
 	rc->rc_ucred = crdup(curthread->td_ucred);
 	rc->rc_client = NULL;
+	rc->rc_reconcall = NULL;
+	rc->rc_reconarg = NULL;
 
 	cl->cl_refs = 1;
 	cl->cl_ops = &clnt_reconnect_ops;
@@ -172,10 +176,29 @@ clnt_reconnect_connect(CLIENT *cl)
 		newclient = clnt_dg_create(so,
 		    (struct sockaddr *) &rc->rc_addr, rc->rc_prog, rc->rc_vers,
 		    rc->rc_sendsz, rc->rc_recvsz);
-	else
+	else {
+		/*
+		 * I do not believe a timeout of less than 1sec would make
+		 * sense here since short delays can occur when a server is
+		 * temporarily overloaded.
+		 */
+		if (rc->rc_timeout.tv_sec > 0 && rc->rc_timeout.tv_usec >= 0) {
+			error = so_setsockopt(so, SOL_SOCKET, SO_SNDTIMEO,
+			    &rc->rc_timeout, sizeof(struct timeval));
+			if (error != 0) {
+				stat = rpc_createerr.cf_stat = RPC_CANTSEND;
+				rpc_createerr.cf_error.re_errno = error;
+				td->td_ucred = oldcred;
+				goto out;
+			}
+		}
 		newclient = clnt_vc_create(so,
 		    (struct sockaddr *) &rc->rc_addr, rc->rc_prog, rc->rc_vers,
 		    rc->rc_sendsz, rc->rc_recvsz, rc->rc_intr);
+		if (newclient != NULL && rc->rc_reconcall != NULL)
+			(*rc->rc_reconcall)(newclient, rc->rc_reconarg,
+			    rc->rc_ucred);
+	}
 	td->td_ucred = oldcred;
 
 	if (!newclient) {
@@ -367,6 +390,7 @@ clnt_reconnect_control(CLIENT *cl, u_int request, void *info)
 {
 	struct rc_data *rc = (struct rc_data *)cl->cl_private;
 	SVCXPRT *xprt;
+	struct rpc_reconupcall *upcp;
 
 	if (info == NULL) {
 		return (FALSE);
@@ -454,6 +478,12 @@ clnt_reconnect_control(CLIENT *cl, u_int request, void *info)
 		rc->rc_backchannel = info;
 		break;
 
+	case CLSET_RECONUPCALL:
+		upcp = (struct rpc_reconupcall *)info;
+		rc->rc_reconcall = upcp->call;
+		rc->rc_reconarg = upcp->arg;
+		break;
+
 	default:
 		return (FALSE);
 	}
@@ -496,11 +526,14 @@ clnt_reconnect_destroy(CLIENT *cl)
 		CLNT_DESTROY(rc->rc_client);
 	if (rc->rc_backchannel) {
 		xprt = (SVCXPRT *)rc->rc_backchannel;
+		KASSERT(xprt->xp_socket == NULL,
+		    ("clnt_reconnect_destroy: xp_socket not NULL"));
 		xprt_unregister(xprt);
 		SVC_RELEASE(xprt);
 	}
 	crfree(rc->rc_ucred);
 	mtx_destroy(&rc->rc_lock);
+	mem_free(rc->rc_reconarg, 0);
 	mem_free(rc, sizeof(*rc));
 	mem_free(cl, sizeof (CLIENT));
 }

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet6/ip6_fastfwd.c 334438 2018-05-31 16:00:03Z tuexen $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet6.h"
 #include "opt_ipstealth.h"

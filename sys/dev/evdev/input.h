@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/evdev/input.h 337290 2018-08-04 12:40:59Z wulf $
+ * $FreeBSD$
  */
 
 #ifndef	_EVDEV_INPUT_H
@@ -148,10 +148,11 @@ struct input_keymap_entry {
 /*
  * MT_TOOL types
  */
-#define	MT_TOOL_FINGER		0
-#define	MT_TOOL_PEN		1
-#define	MT_TOOL_PALM		2
-#define	MT_TOOL_MAX		2
+#define	MT_TOOL_FINGER		0x00
+#define	MT_TOOL_PEN		0x01
+#define	MT_TOOL_PALM		0x02
+#define	MT_TOOL_DIAL		0x0a
+#define	MT_TOOL_MAX		0x0f
 
 /*
  * Values describing the status of a force-feedback effect

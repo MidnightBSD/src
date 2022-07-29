@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * Copyright (c) 2012, 2013 The FreeBSD Foundation
  * All rights reserved.
@@ -29,7 +31,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_fbd.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,7 +45,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_fbd.c 331722 2018
 #include <vm/vm.h>
 #include <vm/pmap.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
@@ -84,7 +85,13 @@ bcm_fb_init(struct bcmsc_softc *sc, struct bcm2835_fb_config *fb)
 	memset(fb, 0, sizeof(*fb));
 	if (bcm2835_mbox_fb_get_w_h(fb) != 0)
 		return (ENXIO);
-	fb->bpp = FB_DEPTH;
+	if (bcm2835_mbox_fb_get_bpp(fb) != 0)
+		return (ENXIO);
+	if (fb->bpp < FB_DEPTH) {
+		device_printf(sc->dev, "changing fb bpp from %d to %d\n", fb->bpp, FB_DEPTH);
+		fb->bpp = FB_DEPTH;
+	} else
+		device_printf(sc->dev, "keeping existing fb bpp of %d\n", fb->bpp);
 
 	fb->vxres = fb->xres;
 	fb->vyres = fb->yres;
@@ -222,7 +229,7 @@ bcm_fb_attach(device_t dev)
 	/* Newer firmware versions needs an inverted color palette. */
 	sc->fbswap = 0;
 	chosen = OF_finddevice("/chosen");
-	if (chosen != 0 &&
+	if (chosen != -1 &&
 	    OF_getprop(chosen, "bootargs", &bootargs, sizeof(bootargs)) > 0) {
 		p = bootargs;
 		while ((v = strsep(&p, " ")) != NULL) {

@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_DMAGENT 319247 2017-05-30 18:04:55Z ngie $
+.\" $FreeBSD$
 Set to not build dma Mail Transport Agent.

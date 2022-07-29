@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Vadim Goncharov <vadimnuclight@tpu.ru>
  * All rights reserved.
  * 
@@ -27,7 +29,7 @@
  * Portions Copyright (c) 1999 Whistle Communications, Inc.
  * (ng_bpf by Archie Cobbs <archie@freebsd.org>)
  *
- * $FreeBSD: stable/11/sys/netgraph/ng_tag.c 230272 2012-01-17 18:10:25Z glebius $
+ * $FreeBSD$
  */
 
 /*
@@ -361,9 +363,8 @@ ng_tag_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			hook_p hook;
 
 			/* Sanity check. */
-			if (msg->header.arglen < sizeof(*hp)
-			    || msg->header.arglen !=
-			    NG_TAG_HOOKIN_SIZE(hp->tag_len))
+			if (msg->header.arglen < sizeof(*hp) ||
+			    msg->header.arglen < NG_TAG_HOOKIN_SIZE(hp->tag_len))
 				ERROUT(EINVAL);
 
 			/* Find hook. */
@@ -383,9 +384,8 @@ ng_tag_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			hook_p hook;
 
 			/* Sanity check. */
-			if (msg->header.arglen < sizeof(*hp)
-			    || msg->header.arglen !=
-			    NG_TAG_HOOKOUT_SIZE(hp->tag_len))
+			if (msg->header.arglen < sizeof(*hp) ||
+			    msg->header.arglen < NG_TAG_HOOKOUT_SIZE(hp->tag_len))
 				ERROUT(EINVAL);
 
 			/* Find hook. */

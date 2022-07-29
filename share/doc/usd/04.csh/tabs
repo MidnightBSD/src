@@ -10,7 +10,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -27,6 +27,6 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)tabs	8.1 (Berkeley) 6/8/93
-.\" $FreeBSD: stable/11/share/doc/usd/04.csh/tabs 216178 2010-12-04 10:11:20Z uqs $
+.\" $FreeBSD$
 .\"
 .ta 5n 10n 15n 20n 25n 30n 35n 40n 45n 50n 55n 60n 65n 70n 75n 80n

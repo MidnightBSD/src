@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_acos.c 181074 2008-07-31 22:41:26Z das $");
+__FBSDID("$FreeBSD$");
 
 /* __ieee754_acos(x)
  * Method :                  

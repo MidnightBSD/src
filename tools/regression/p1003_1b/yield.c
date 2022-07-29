@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1996-1999
  *	HD Associates, Inc.  All rights reserved.
  *
@@ -28,7 +30,7 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- * $FreeBSD: stable/11/tools/regression/p1003_1b/yield.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  *
  */
 #include <sys/types.h>

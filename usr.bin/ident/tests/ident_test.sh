@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/ident/tests/ident_test.sh 316256 2017-03-30 06:20:24Z ngie $
+# $FreeBSD$
 
 atf_test_case ident
 ident_body() {

@@ -1,5 +1,4 @@
-# $FreeBSD: stable/11/sys/arm/freescale/imx/files.imx5 331506 2018-03-24 23:23:31Z ian $
-kern/kern_clocksource.c			standard
+# $FreeBSD$
 
 # Init
 arm/freescale/imx/imx_common.c		standard
@@ -8,7 +7,7 @@ arm/freescale/imx/imx51_machdep.c	optional	soc_imx51
 arm/freescale/imx/imx53_machdep.c	optional	soc_imx53
 
 # Special serial console for debuging early boot code
-#arm/freescale/imx/console.c		standard
+#arm/freescale/imx/imx_console.c	standard
 
 # UART driver (includes serial console support)
 dev/uart/uart_dev_imx.c			optional uart

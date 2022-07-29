@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/efivar/Makefile 332123 2018-04-06 18:10:38Z kevans $
+# $FreeBSD$
 
 PROG=	efivar
 MAN=	efivar.8

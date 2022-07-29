@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/vnic/thunder_mdio.c 300294 2016-05-20 11:00:06Z wma $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -208,7 +208,7 @@ thunder_mdio_set_mode(struct thunder_mdio_softc *sc,
 		smi_clk |= SMI_CLK_MODE;
 	/* Enable sending 32 bit preable on SMI transactions */
 	smi_clk |= SMI_CLK_PREAMBLE;
-	/* Saved setings */
+	/* Saved settings */
 	mdio_reg_write(sc, SMI_CLK, smi_clk);
 	sc->mode = mode;
 }

@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/unzip/unzip.c 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  *
  * This file would be much shorter if we didn't care about command-line
  * compatibility with Info-ZIP's UnZip, which requires us to duplicate
@@ -51,6 +51,7 @@
 
 #include <archive.h>
 #include <archive_entry.h>
+#include <readpassphrase.h>
 
 /* command-line options */
 static int		 a_opt;		/* convert EOL */
@@ -63,6 +64,7 @@ static int		 L_opt;		/* lowercase names */
 static int		 n_opt;		/* never overwrite */
 static int		 o_opt;		/* always overwrite */
 static int		 p_opt;		/* extract to stdout, quiet */
+static char		*P_arg;		/* passphrase */
 static int		 q_opt;		/* quiet */
 static int		 t_opt;		/* test */
 static int		 u_opt;		/* update */
@@ -95,6 +97,9 @@ static int		 tty;
  */
 static int noeol;
 
+/* for an interactive passphrase input */
+static char *passphrase_buf;
+
 /* fatal error message + errno */
 static void
 error(const char *fmt, ...)
@@ -109,7 +114,7 @@ error(const char *fmt, ...)
 	vfprintf(stderr, fmt, ap);
 	va_end(ap);
 	fprintf(stderr, ": %s\n", strerror(errno));
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 /* fatal error message, no errno */
@@ -126,7 +131,7 @@ errorx(const char *fmt, ...)
 	vfprintf(stderr, fmt, ap);
 	va_end(ap);
 	fprintf(stderr, "\n");
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 /* non-fatal error message + errno */
@@ -205,6 +210,9 @@ pathdup(const char *path)
 {
 	char *str;
 	size_t i, len;
+
+	if (path == NULL || path[0] == '\0')
+		return (NULL);
 
 	len = strlen(path);
 	while (len && path[len - 1] == '/')
@@ -385,6 +393,13 @@ extract_dir(struct archive *a, struct archive_entry *e, const char *path)
 {
 	int mode;
 
+	/*
+	 * Dropbox likes to create '/' directory entries, just ignore
+	 * such junk.
+	 */
+	if (*path == '\0')
+		return;
+
 	mode = archive_entry_mode(e) & 0777;
 	if (mode == 0)
 		mode = 0755;
@@ -451,7 +466,7 @@ handle_existing_file(char **path)
 			free(*path);
 			*path = NULL;
 			alen = 0;
-			len = getdelim(path, &alen, '\n', stdin);
+			len = getline(path, &alen, stdin);
 			if ((*path)[len - 1] == '\n')
 				(*path)[len - 1] = '\0';
 			return 0;
@@ -601,7 +616,7 @@ recheck:
 	if (lstat(*path, &sb) == 0) {
 		if (u_opt || f_opt) {
 			/* check if up-to-date */
-			if ((S_ISREG(sb.st_mode) || S_ISLNK(sb.st_mode)) &&
+			if (S_ISREG(sb.st_mode) &&
 			    (sb.st_mtim.tv_sec > mtime.tv_sec ||
 			    (sb.st_mtim.tv_sec == mtime.tv_sec &&
 			    sb.st_mtim.tv_nsec >= mtime.tv_nsec)))
@@ -685,7 +700,11 @@ extract(struct archive *a, struct archive_entry *e)
 	mode_t filetype;
 	char *p, *q;
 
-	pathname = pathdup(archive_entry_pathname(e));
+	if ((pathname = pathdup(archive_entry_pathname(e))) == NULL) {
+		warningx("skipping empty or unreadable filename entry");
+		ac(archive_read_data_skip(a));
+		return;
+	}
 	filetype = archive_entry_filetype(e);
 
 	/* sanity checks */
@@ -748,7 +767,11 @@ extract_stdout(struct archive *a, struct archive_entry *e)
 	char *pathname;
 	mode_t filetype;
 
-	pathname = pathdup(archive_entry_pathname(e));
+	if ((pathname = pathdup(archive_entry_pathname(e))) == NULL) {
+		warningx("skipping empty or unreadable filename entry");
+		ac(archive_read_data_skip(a));
+		return;
+	}
 	filetype = archive_entry_filetype(e);
 
 	/* I don't think this can happen in a zipfile.. */
@@ -848,6 +871,36 @@ test(struct archive *a, struct archive_entry *e)
 }
 
 /*
+ * Callback function for reading passphrase.
+ * Originally from cpio.c and passphrase.c, libarchive.
+ */
+#define PPBUFF_SIZE 1024
+static const char *
+passphrase_callback(struct archive *a, void *_client_data)
+{
+	char *p;
+
+	(void)a; /* UNUSED */
+	(void)_client_data; /* UNUSED */
+
+	if (passphrase_buf == NULL) {
+		passphrase_buf = malloc(PPBUFF_SIZE);
+		if (passphrase_buf == NULL) {
+			errno = ENOMEM;
+			error("malloc()");
+		}
+	}
+
+	p = readpassphrase("\nEnter password: ", passphrase_buf,
+		PPBUFF_SIZE, RPP_ECHO_OFF);
+
+	if (p == NULL && errno != EINTR)
+		error("Error reading password");
+
+	return p;
+}
+
+/*
  * Main loop: open the zipfile, iterate over its contents and decide what
  * to do with each entry.
  */
@@ -863,6 +916,13 @@ unzip(const char *fn)
 		error("archive_read_new failed");
 
 	ac(archive_read_support_format_zip(a));
+
+	if (P_arg)
+		archive_read_add_passphrase(a, P_arg);
+	else
+		archive_read_set_passphrase_callback(a, NULL,
+			&passphrase_callback);
+
 	ac(archive_read_open_filename(a, fn, 8192));
 
 	if (!zipinfo_mode) {
@@ -916,8 +976,12 @@ unzip(const char *fn)
 		}
 	}
 
-	ac(archive_read_close(a));
-	(void)archive_read_free(a);
+	ac(archive_read_free(a));
+
+	if (passphrase_buf != NULL) {
+		memset_s(passphrase_buf, PPBUFF_SIZE, 0, PPBUFF_SIZE);
+		free(passphrase_buf);
+	}
 
 	if (t_opt) {
 		if (error_count > 0) {
@@ -934,9 +998,9 @@ static void
 usage(void)
 {
 
-	fprintf(stderr, "Usage: unzip [-aCcfjLlnopqtuvyZ1] [-d dir] [-x pattern] "
-		"zipfile\n");
-	exit(1);
+	fprintf(stderr, "Usage: unzip [-aCcfjLlnopqtuvyZ1] [-d dir] "
+		"[-x pattern] [-P password] zipfile\n");
+	exit(EXIT_FAILURE);
 }
 
 static int
@@ -945,7 +1009,7 @@ getopts(int argc, char *argv[])
 	int opt;
 
 	optreset = optind = 1;
-	while ((opt = getopt(argc, argv, "aCcd:fjLlnopqtuvx:yZ1")) != -1)
+	while ((opt = getopt(argc, argv, "aCcd:fjLlnopP:qtuvx:yZ1")) != -1)
 		switch (opt) {
 		case '1':
 			Z1_opt = 1;
@@ -984,6 +1048,9 @@ getopts(int argc, char *argv[])
 			break;
 		case 'p':
 			p_opt = 1;
+			break;
+		case 'P':
+			P_arg = optarg;
 			break;
 		case 'q':
 			q_opt = 1;
@@ -1041,7 +1108,7 @@ main(int argc, char *argv[])
 	 */
 	if (zipinfo_mode && !Z1_opt) {
 		printf("Zipinfo mode needs additional options\n");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (argc <= nopts)
@@ -1062,5 +1129,5 @@ main(int argc, char *argv[])
 
 	unzip(zipfile);
 
-	exit(0);
+	exit(EXIT_SUCCESS);
 }

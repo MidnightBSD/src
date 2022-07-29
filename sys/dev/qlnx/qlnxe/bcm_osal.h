@@ -24,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/qlnx/qlnxe/bcm_osal.h 337517 2018-08-09 01:17:35Z davidcs $
+ * $FreeBSD$
  */
 
 #ifndef __BCM_OSAL_ECORE_PACKAGE
@@ -34,11 +34,13 @@
 #include "ecore_status.h"
 #include <sys/bitstring.h>
 
+#include <linux/types.h>
+
 #if __FreeBSD_version >= 1200032
-#include <compat/linuxkpi/common/include/linux/bitops.h>
+#include <linux/bitmap.h>
 #else
 #if __FreeBSD_version >= 1100090
-#include <linux/bitmap.h>
+#include <compat/linuxkpi/common/include/linux/bitops.h>
 #else
 #include <ofed/include/linux/bitops.h>
 #endif
@@ -112,11 +114,6 @@ extern void qlnx_vf_flr_update(void *p_hwfn);
 #define s32 uint32_t
 
 #ifndef QLNX_RDMA
-
-typedef uint16_t __le16;
-typedef uint32_t __le32;
-typedef uint16_t __be16;
-typedef uint32_t __be32;
 
 static __inline unsigned long
 roundup_pow_of_two(unsigned long x)

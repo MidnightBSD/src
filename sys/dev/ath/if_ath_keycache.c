@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ath/if_ath_keycache.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for the Atheros Wireless LAN controller.
@@ -449,7 +451,8 @@ ath_key_alloc(struct ieee80211vap *vap, struct ieee80211_key *k,
 			 * have no way to check if they've already
 			 * been allocated.
 			 */
-			*keyix = *rxkeyix = k - vap->iv_nw_keys;
+			*keyix = *rxkeyix =
+			    ieee80211_crypto_get_key_wepidx(vap, k);
 			return 1;
 		}
 		/*

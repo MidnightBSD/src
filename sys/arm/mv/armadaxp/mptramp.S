@@ -27,7 +27,7 @@
 #include <machine/asm.h>
 #include <machine/armreg.h>
 
-__FBSDID("$FreeBSD: stable/11/sys/arm/mv/armadaxp/mptramp.S 267130 2014-06-05 21:37:04Z zbb $");
+__FBSDID("$FreeBSD$");
 
 .global _C_LABEL(mptramp_pmu_boot)
 

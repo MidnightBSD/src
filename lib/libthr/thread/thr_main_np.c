@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 Alfred Perlstein
  * Author: Alfred Perlstein <alfred@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_main_np.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <pthread.h>
@@ -35,13 +37,14 @@ __FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_main_np.c 331722 2018-03-29 
 
 #include "thr_private.h"
 
-__weak_reference(_pthread_main_np, pthread_main_np);
+__weak_reference(_thr_main_np, pthread_main_np);
+__weak_reference(_thr_main_np, _pthread_main_np);
 
 /*
  * Provide the equivalent to Solaris thr_main() function.
  */
 int
-_pthread_main_np(void)
+_thr_main_np(void)
 {
 
 	if (!_thr_initial)

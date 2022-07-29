@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/KSE/ksetest/kse_threads_test.c,v 1.6 2003/02/20 08:24:22 davidxu Exp $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -418,7 +418,7 @@ uts(struct kse_mailbox *km)
 
 	simplelock_lock(&data->runq->lock);
 	/*
-	 * Process any signals we've recieved (but only if we have
+	 * Process any signals we've received (but only if we have
 	 * somewhere to deliver them to).
 	 */
 	if ((data->runq->head != NULL) && SIGNOTEMPTY(km->km_sigscaught)) {

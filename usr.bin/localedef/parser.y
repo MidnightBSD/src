@@ -1,5 +1,5 @@
 %{
-/*
+/*-
  * Copyright 2010 Nexenta Systems, Inc.  All rights reserved.
  * Copyright 2015 John Marino <draco@marino.st>
  *
@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/localedef/parser.y 308330 2016-11-05 09:46:48Z bapt $
+ * $FreeBSD$
  */
 
 /*

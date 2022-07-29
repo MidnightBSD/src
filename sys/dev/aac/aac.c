@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
  * Copyright (c) 2000 BSDi
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/aac/aac.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for the Adaptec 'FSA' family of PCI/SCSI RAID adapters.
@@ -36,7 +38,6 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/aac/aac.c 331722 2018-03-29 02:50:57Z eadl
 #define AAC_DRIVERNAME			"aac"
 
 #include "opt_aac.h"
-#include "opt_compat.h"
 
 /* #include <stddef.h> */
 #include <sys/param.h>
@@ -58,7 +59,6 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/aac/aac.c 331722 2018-03-29 02:50:57Z eadl
 #include <sys/rman.h>
 
 #include <machine/bus.h>
-#include <sys/bus_dma.h>
 #include <machine/resource.h>
 
 #include <dev/pci/pcireg.h>

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2018 Mellanox Technologies. All rights reserved.
+ * Copyright (c) 2018-2019 Mellanox Technologies. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_en/port_buffer.h 353236 2019-10-07 09:40:57Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef __MLX5_EN_PORT_BUFFER_H__

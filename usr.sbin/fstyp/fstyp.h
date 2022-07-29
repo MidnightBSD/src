@@ -26,13 +26,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/fstyp/fstyp.h 316470 2017-04-03 21:04:14Z trasz $
+ * $FreeBSD$
  */
 
 #ifndef FSTYP_H
 #define	FSTYP_H
 
+#include <stdbool.h>
+
 #define	MIN(a,b) (((a)<(b))?(a):(b))
+
+/* The spec doesn't seem to permit UTF-16 surrogates; definitely LE. */
+#define	EXFAT_ENC	"UCS-2LE"
+
+extern bool	show_label;	/* -l flag */
 
 void	*read_buf(FILE *fp, off_t off, size_t len);
 char	*checked_strdup(const char *s);

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/netinet/in_rss.h 287277 2015-08-29 06:58:30Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_IN_RSS_H_

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/expansion/arith8.0 216547 2010-12-18 23:03:51Z jilles $
+# $FreeBSD$
 
 v=$( (eval ': $((08))') 2>&1 >/dev/null)
 [ $? -ne 0 ] && [ -n "$v" ]

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/include/efi.h 338592 2018-09-11 18:31:57Z kib $
+ * $FreeBSD$
  */
 
 #ifndef __AMD64_INCLUDE_EFI_H_
@@ -51,6 +51,28 @@
 #define	EFI_TIME_LOCK()		mtx_lock(&atrtc_time_lock)
 #define	EFI_TIME_UNLOCK()	mtx_unlock(&atrtc_time_lock)
 #define	EFI_TIME_OWNED()	mtx_assert(&atrtc_time_lock, MA_OWNED)
+
+#define	EFI_RT_HANDLE_FAULTS_DEFAULT	1
 #endif
+
+struct efirt_callinfo {
+	const char	*ec_name;
+	register_t	ec_efi_status;
+	register_t	ec_fptr;
+	register_t	ec_argcnt;
+	register_t	ec_arg1;
+	register_t	ec_arg2;
+	register_t	ec_arg3;
+	register_t	ec_arg4;
+	register_t	ec_arg5;
+	register_t	ec_rbx;
+	register_t	ec_rsp;
+	register_t	ec_rbp;
+	register_t	ec_r12;
+	register_t	ec_r13;
+	register_t	ec_r14;
+	register_t	ec_r15;
+	register_t	ec_rflags;
+};
 
 #endif /* __AMD64_INCLUDE_EFI_H_ */

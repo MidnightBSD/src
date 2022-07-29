@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/dev/bktr/bktr_card.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -15,6 +15,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * 1. Redistributions of source code must retain the
  * Copyright (c) 1997 Amancio Hasty, 1999 Roger Hardiman
  * All rights reserved.
@@ -82,7 +84,8 @@
 #define CARD_PIXELVIEW_PLAYTV_PAK	20
 #define CARD_TERRATVALUE	21
 #define	CARD_PIXELVIEW_PLAYTV_PRO_REV_4C	22
-#define Bt848_MAX_CARD		23
+#define CARD_LEADTEK_WINFAST_2000_XP    23
+#define Bt848_MAX_CARD		24
  
 #define CARD_IO_GV		CARD_IO_BCTV2
 

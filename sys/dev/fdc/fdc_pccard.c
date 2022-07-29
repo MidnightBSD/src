@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2005 M. Warner Losh.
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/fdc/fdc_pccard.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -47,6 +49,7 @@ static int fdc_pccard_attach(device_t);
 
 static const struct pccard_product fdc_pccard_products[] = {
 	PCMCIA_CARD(YEDATA, EXTERNAL_FDD),
+	{ NULL }
 };
 	
 static int
@@ -108,9 +111,10 @@ fdc_pccard_attach(device_t dev)
 		device_set_flags(child, 0x24);
 		error = bus_generic_attach(dev);
 	}
-	if (error == 0)
+	if (error == 0) {
+		gone_in_dev(dev, 13, "pccard removed");
 		fdc_start_worker(dev);
-	else
+	} else
 		fdc_release_resources(fdc);
 	return (error);
 }

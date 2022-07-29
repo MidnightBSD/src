@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1994 by Andrew A. Chernov, Moscow, Russia.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/share/syscons/scrnmaps/mkscrfil.c 66834 2000-10-08 21:34:00Z phk $
+ * $FreeBSD$
  */
 
 #include <sys/ioctl.h>

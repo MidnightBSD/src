@@ -2,7 +2,7 @@
 .\" Must use --  eqn -- with this one
 .\"
 .\" @(#)xdr.nts.ms	2.2 88/08/05 4.0 RPCSRC
-.\" $FreeBSD: stable/11/share/doc/psd/24.xdr/xdr.nts.ms 226436 2011-10-16 14:30:28Z eadler $
+.\" $FreeBSD$
 .\"
 .EQ
 delim $$

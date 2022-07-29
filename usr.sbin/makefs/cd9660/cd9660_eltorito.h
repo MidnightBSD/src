@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/makefs/cd9660/cd9660_eltorito.h 332983 2018-04-25 01:59:15Z benno $
+ * $FreeBSD$
  */
 
 #ifndef _CD9660_ELTORITO_H_

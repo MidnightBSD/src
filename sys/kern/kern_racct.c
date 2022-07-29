@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -26,11 +28,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/kern/kern_racct.c 335536 2018-06-22 09:18:38Z avg $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/kern_racct.c 335536 2018-06-22 09:18:38Z avg $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_sched.h"
 
@@ -443,12 +445,8 @@ racct_sub_racct(struct racct *dest, const struct racct *src)
 		}
 		if (RACCT_CAN_DROP(i)) {
 			dest->r_resources[i] -= src->r_resources[i];
-			if (dest->r_resources[i] < 0) {
-				KASSERT(RACCT_IS_SLOPPY(i) ||
-				    RACCT_IS_DECAYING(i),
-				    ("%s: resource %d usage < 0", __func__, i));
+			if (dest->r_resources[i] < 0)
 				dest->r_resources[i] = 0;
-			}
 		}
 	}
 }
@@ -537,7 +535,7 @@ racct_adjust_resource(struct racct *racct, int resource,
 	 * many processes terminated in a short time span, the ucred %cpu
 	 * resource could grow too much.  Also, the 4BSD scheduler sometimes
 	 * returns for a thread more than 100% cpu usage. So we set a sane
-	 * boundary here to 100% * the maxumum number of CPUs.
+	 * boundary here to 100% * the maximum number of CPUs.
 	 */
 	if ((resource == RACCT_PCTCPU) &&
 	    (racct->r_resources[RACCT_PCTCPU] > 100 * 1000000 * (int64_t)MAXCPU))

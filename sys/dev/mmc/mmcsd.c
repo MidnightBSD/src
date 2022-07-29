@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Bernd Walter.  All rights reserved.
  * Copyright (c) 2006 M. Warner Losh.  All rights reserved.
  * Copyright (c) 2017 Marius Strobl <marius@FreeBSD.org>
@@ -52,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mmc/mmcsd.c 338637 2018-09-13 10:18:47Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -359,7 +361,7 @@ mmcsd_attach(device_t dev)
 			sc->enh_size = size;
 			sc->enh_base =
 			    le32dec(&ext_csd[EXT_CSD_ENH_START_ADDR]) *
-			    (sc->high_cap != 0 ? MMC_SECTOR_SIZE : 1);
+			    (sc->high_cap == 0 ? MMC_SECTOR_SIZE : 1);
 		} else if (bootverbose)
 			device_printf(dev,
 			    "enhanced user data area spans entire device\n");
@@ -573,7 +575,7 @@ mmcsd_add_part(struct mmcsd_softc *sc, u_int type, const char *name, u_int cnt,
 		    speed / 1000000, (speed / 100000) % 10,
 		    mmcsd_bus_bit_width(dev), sc->max_data);
 	} else if (type == EXT_CSD_PART_CONFIG_ACC_RPMB) {
-		printf("%s: %ju%sB partion %d%s at %s\n", part->name, bytes,
+		printf("%s: %ju%sB partition %d%s at %s\n", part->name, bytes,
 		    unit, type, ro ? " (read-only)" : "",
 		    device_get_nameunit(dev));
 	} else {
@@ -609,12 +611,12 @@ mmcsd_add_part(struct mmcsd_softc *sc, u_int type, const char *name, u_int cnt,
 			}
 		}
 		if (ext == NULL)
-			printf("%s%d: %ju%sB partion %d%s%s at %s\n",
+			printf("%s%d: %ju%sB partition %d%s%s at %s\n",
 			    part->name, cnt, bytes, unit, type, enh ?
 			    " enhanced" : "", ro ? " (read-only)" : "",
 			    device_get_nameunit(dev));
 		else
-			printf("%s%d: %ju%sB partion %d extended 0x%x "
+			printf("%s%d: %ju%sB partition %d extended 0x%x "
 			    "(%s)%s at %s\n", part->name, cnt, bytes, unit,
 			    type, extattr, ext, ro ? " (read-only)" : "",
 			    device_get_nameunit(dev));
@@ -799,11 +801,9 @@ mmcsd_close(struct disk *dp)
 static void
 mmcsd_strategy(struct bio *bp)
 {
-	struct mmcsd_softc *sc;
 	struct mmcsd_part *part;
 
 	part = bp->bio_disk->d_drv1;
-	sc = part->sc;
 	MMCSD_DISK_LOCK(part);
 	if (part->running > 0 || part->suspend > 0) {
 		bioq_disksort(&part->bio_queue, bp);

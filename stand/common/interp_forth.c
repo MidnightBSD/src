@@ -25,9 +25,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/common/interp_forth.c 346483 2019-04-21 04:35:49Z kevans $");
+__FBSDID("$FreeBSD$");
 
-#include <sys/param.h>		/* to pick up __MidnightBSD_version */
+#include <sys/param.h>		/* to pick up __FreeBSD_version */
 #include <string.h>
 #include <stand.h>
 #include "bootstrap.h"
@@ -41,7 +41,7 @@ INTERP_DEFINE("4th");
 #ifdef BFORTH_DEBUG
 #define	DPRINTF(fmt, args...)	printf("%s: " fmt "\n" , __func__ , ## args)
 #else
-#define	DPRINTF(fmt, args...)
+#define	DPRINTF(fmt, args...)	((void)0)
 #endif
 
 /*
@@ -52,7 +52,7 @@ INTERP_DEFINE("4th");
 #define BF_PARSE 100
 
 /*
- * BSD loader default dictionary cells
+ * FreeBSD loader default dictionary cells
  */
 #ifndef	BF_DICTSIZE
 #define	BF_DICTSIZE	10000
@@ -278,11 +278,17 @@ bf_init(void)
 	ficlExec(bf_vm, "only forth definitions");
 
 	/* Export some version numbers so that code can detect the loader/host version */
-	ficlSetEnv(bf_sys, "MidnightBSD_version", __MidnightBSD_version);
+	ficlSetEnv(bf_sys, "FreeBSD_version", __FreeBSD_version);
 	ficlSetEnv(bf_sys, "loader_version", bootprog_rev);
 
 	/* try to load and run init file if present */
 	if ((fd = open("/boot/boot.4th", O_RDONLY)) != -1) {
+#ifdef LOADER_VERIEXEC
+		if (verify_file(fd, "/boot/boot.4th", 0, VE_GUESS, __func__) < 0) {
+			close(fd);
+			return;
+		}
+#endif
 		(void)ficlExecFD(bf_vm, fd);
 		close(fd);
 	}
@@ -379,6 +385,13 @@ interp_include(const char *filename)
 		return(CMD_ERROR);
 	}
 
+#ifdef LOADER_VERIEXEC
+	if (verify_file(fd, filename, 0, VE_GUESS, __func__) < 0) {
+		close(fd);
+		sprintf(command_errbuf,"can't verify '%s'", filename);
+		return(CMD_ERROR);
+	}
+#endif
 	/*
 	 * Read the script into memory.
 	 */

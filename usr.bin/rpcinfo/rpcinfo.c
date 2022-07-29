@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: rpcinfo.c,v 1.15 2000/10/04 20:09:05 mjl Exp $	*/
 
 /*
@@ -43,7 +42,7 @@ static char sccsid[] = "@(#)rpcinfo.c 1.16 89/04/05 Copyr 1986 Sun Micro";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/rpcinfo/rpcinfo.c 319256 2017-05-30 21:58:53Z asomers $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rpcinfo: ping a particular rpc program
@@ -564,7 +563,8 @@ get_inet_address(struct sockaddr_in *addr, char *host)
 
 	(void) memset((char *)addr, 0, sizeof (*addr));
 	addr->sin_addr.s_addr = inet_addr(host);
-	if (addr->sin_addr.s_addr == -1 || addr->sin_addr.s_addr == 0) {
+	if (addr->sin_addr.s_addr == INADDR_NONE ||
+	    addr->sin_addr.s_addr == INADDR_ANY) {
 		if ((nconf = __rpc_getconfip("udp")) == NULL &&
 		    (nconf = __rpc_getconfip("tcp")) == NULL)
 			errx(1, "couldn't find a suitable transport");
@@ -609,12 +609,13 @@ reply_proc(void *res, struct netbuf *who, struct netconfig *nconf)
 	} else {
 		hostname = hostbuf;
 	}
-	if (!(uaddr = taddr2uaddr(nconf, who))) {
-		uaddr = UNKNOWN;
-	}
-	printf("%s\t%s\n", uaddr, hostname);
-	if (strcmp(uaddr, UNKNOWN))
+	uaddr = taddr2uaddr(nconf, who);
+	if (uaddr == NULL) {
+		printf("%s\t%s\n", UNKNOWN, hostname);
+	} else {
+		printf("%s\t%s\n", uaddr, hostname);
 		free((char *)uaddr);
+	}
 	return (FALSE);
 }
 

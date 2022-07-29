@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2017, Fedor Uporov
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/fs/ext2fs/ext2_acl.h 322711 2017-08-20 01:08:23Z pfg $
+ * $FreeBSD$
  */
 
 #ifndef _FS_EXT2FS_EXT2_ACL_H_

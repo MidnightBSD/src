@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -41,7 +43,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)mount_null.c	8.6 (Berkeley) 4/26/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/11/sbin/mount_nullfs/mount_nullfs.c 331722 2018-03-29 02:50:57Z eadler $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -65,7 +67,7 @@ main(int argc, char *argv[])
 {
 	struct iovec *iov;
 	char *p, *val;
-	char source[MAXPATHLEN];
+	char mountpoint[MAXPATHLEN];
 	char target[MAXPATHLEN];
 	char errmsg[255];
 	int ch, iovlen;
@@ -96,25 +98,25 @@ main(int argc, char *argv[])
 	if (argc != 2)
 		usage();
 
-	/* resolve target and source with realpath(3) */
+	/* resolve target and mountpoint with realpath(3) */
 	if (checkpath(argv[0], target) != 0)
 		err(EX_USAGE, "%s", target);
-	if (checkpath(argv[1], source) != 0)
-		err(EX_USAGE, "%s", source);
+	if (checkpath(argv[1], mountpoint) != 0)
+		err(EX_USAGE, "%s", mountpoint);
 
-	if (subdir(target, source) || subdir(source, target))
+	if (subdir(target, mountpoint) || subdir(mountpoint, target))
 		errx(EX_USAGE, "%s (%s) and %s are not distinct paths",
 		    argv[0], target, argv[1]);
 
 	build_iovec(&iov, &iovlen, "fstype", nullfs, (size_t)-1);
-	build_iovec(&iov, &iovlen, "fspath", source, (size_t)-1);
+	build_iovec(&iov, &iovlen, "fspath", mountpoint, (size_t)-1);
 	build_iovec(&iov, &iovlen, "target", target, (size_t)-1);
 	build_iovec(&iov, &iovlen, "errmsg", errmsg, sizeof(errmsg));
 	if (nmount(iov, iovlen, 0) < 0) {
 		if (errmsg[0] != 0)
-			err(1, "%s: %s", source, errmsg);
+			err(1, "%s: %s", mountpoint, errmsg);
 		else
-			err(1, "%s", source);
+			err(1, "%s", mountpoint);
 	}
 	exit(0);
 }

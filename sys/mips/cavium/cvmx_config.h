@@ -1,4 +1,6 @@
 /***********************license start***************
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2003-2008 Cavium Networks (support@cavium.com). All rights
  * reserved.
  *
@@ -35,7 +37,7 @@
  * For any questions regarding licensing please contact marketing@caviumnetworks.com
  *
  ***********************license end**************************************/
-/* $FreeBSD: stable/11/sys/mips/cavium/cvmx_config.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 #ifndef	_CVMX_CONFIG_H
 #define	_CVMX_CONFIG_H

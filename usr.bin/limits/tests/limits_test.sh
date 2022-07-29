@@ -24,7 +24,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.bin/limits/tests/limits_test.sh 290567 2015-11-09 01:05:31Z ngie $
+# $FreeBSD$
 #
 
 # Make sure time(1) is consistent with the FreeBSD time command and not the

@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/usb/serial/umcs.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Lev Serebryakov <lev@FreeBSD.org>.
  * All rights reserved.
  *
@@ -43,7 +45,7 @@
  *   All these registers are documented only in full datasheet,
  * which can be requested from MosChip tech support.
  */
-#define	MCS7840_DEV_REG_SP1		0x00	/* Options for for UART 1, R/W */
+#define	MCS7840_DEV_REG_SP1		0x00	/* Options for UART 1, R/W */
 #define	MCS7840_DEV_REG_CONTROL1	0x01	/* Control bits for UART 1,
 						 * R/W */
 #define	MCS7840_DEV_REG_PINPONGHIGH	0x02	/* High bits of ping-pong
@@ -54,13 +56,13 @@
 #define	MCS7840_DEV_REG_GPIO		0x07	/* GPIO_0 and GPIO_1 bits,
 						 * undocumented, see notes
 						 * below R/W */
-#define	MCS7840_DEV_REG_SP2		0x08	/* Options for for UART 2, R/W */
+#define	MCS7840_DEV_REG_SP2		0x08	/* Options for UART 2, R/W */
 #define	MCS7840_DEV_REG_CONTROL2	0x09	/* Control bits for UART 2,
 						 * R/W */
-#define	MCS7840_DEV_REG_SP3		0x0a	/* Options for for UART 3, R/W */
+#define	MCS7840_DEV_REG_SP3		0x0a	/* Options for UART 3, R/W */
 #define	MCS7840_DEV_REG_CONTROL3	0x0b	/* Control bits for UART 3,
 						 * R/W */
-#define	MCS7840_DEV_REG_SP4		0x0c	/* Options for for UART 4, R/W */
+#define	MCS7840_DEV_REG_SP4		0x0c	/* Options for UART 4, R/W */
 #define	MCS7840_DEV_REG_CONTROL4	0x0d	/* Control bits for UART 4,
 						 * R/W */
 #define	MCS7840_DEV_REG_PLL_DIV_M	0x0e	/* Pre-diviedr for PLL, R/W */

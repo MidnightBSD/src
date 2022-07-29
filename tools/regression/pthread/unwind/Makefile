@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tools/regression/pthread/unwind/Makefile 213155 2010-09-25 04:26:40Z davidxu $
+# $FreeBSD$
 all: main_thread_exit thread_normal_exit sem_wait_cancel \
      cond_wait_cancel cond_wait_cancel2 catch_pthread_exit
 

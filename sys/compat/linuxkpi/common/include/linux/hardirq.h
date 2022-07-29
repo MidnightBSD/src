@@ -26,12 +26,13 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/hardirq.h 290135 2015-10-29 08:28:39Z hselasky $
+ * $FreeBSD$
  */
 #ifndef _LINUX_HARDIRQ_H_
 #define	_LINUX_HARDIRQ_H_
 
 #include <linux/types.h>
+#include <linux/lockdep.h>
 
 #include <sys/param.h>
 #include <sys/bus.h>

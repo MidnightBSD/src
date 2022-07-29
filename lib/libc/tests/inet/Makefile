@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libc/tests/inet/Makefile 309466 2016-12-03 02:47:16Z ngie $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 

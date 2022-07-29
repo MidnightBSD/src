@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/usb/usb_generic.c 356395 2020-01-06 09:10:13Z hselasky $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -107,8 +109,6 @@ static int	ugen_set_interface(struct usb_fifo *, uint8_t, uint8_t);
 static int	ugen_get_cdesc(struct usb_fifo *, struct usb_gen_descriptor *);
 static int	ugen_get_sdesc(struct usb_fifo *, struct usb_gen_descriptor *);
 static int	ugen_get_iface_driver(struct usb_fifo *f, struct usb_gen_descriptor *ugd);
-static int	usb_gen_fill_deviceinfo(struct usb_fifo *,
-		    struct usb_device_info *);
 static int	ugen_re_enumerate(struct usb_fifo *);
 static int	ugen_iface_ioctl(struct usb_fifo *, u_long, void *, int);
 static uint8_t	ugen_fs_get_complete(struct usb_fifo *, uint8_t *);
@@ -239,7 +239,7 @@ ugen_open_pipe_write(struct usb_fifo *f)
 	struct usb_endpoint *ep = usb_fifo_softc(f);
 	struct usb_endpoint_descriptor *ed = ep->edesc;
 
-	mtx_assert(f->priv_mtx, MA_OWNED);
+	USB_MTX_ASSERT(f->priv_mtx, MA_OWNED);
 
 	if (f->xfer[0] || f->xfer[1]) {
 		/* transfers are already opened */
@@ -308,7 +308,7 @@ ugen_open_pipe_read(struct usb_fifo *f)
 	struct usb_endpoint *ep = usb_fifo_softc(f);
 	struct usb_endpoint_descriptor *ed = ep->edesc;
 
-	mtx_assert(f->priv_mtx, MA_OWNED);
+	USB_MTX_ASSERT(f->priv_mtx, MA_OWNED);
 
 	if (f->xfer[0] || f->xfer[1]) {
 		/* transfers are already opened */
@@ -815,7 +815,7 @@ ugen_get_iface_driver(struct usb_fifo *f, struct usb_gen_descriptor *ugd)
 }
 
 /*------------------------------------------------------------------------*
- *	usb_gen_fill_deviceinfo
+ *	ugen_fill_deviceinfo
  *
  * This function dumps information about an USB device to the
  * structure pointed to by the "di" argument.
@@ -824,8 +824,8 @@ ugen_get_iface_driver(struct usb_fifo *f, struct usb_gen_descriptor *ugd)
  *    0: Success
  * Else: Failure
  *------------------------------------------------------------------------*/
-static int
-usb_gen_fill_deviceinfo(struct usb_fifo *f, struct usb_device_info *di)
+int
+ugen_fill_deviceinfo(struct usb_fifo *f, struct usb_device_info *di)
 {
 	struct usb_device *udev;
 	struct usb_device *hub;
@@ -2214,7 +2214,7 @@ ugen_ioctl_post(struct usb_fifo *f, u_long cmd, void *addr, int fflags)
 
 	case USB_DEVICEINFO:
 	case USB_GET_DEVICEINFO:
-		error = usb_gen_fill_deviceinfo(f, addr);
+		error = ugen_fill_deviceinfo(f, addr);
 		break;
 
 	case USB_DEVICESTATS:
@@ -2336,11 +2336,6 @@ ugen_ioctl_post(struct usb_fifo *f, u_long cmd, void *addr, int fflags)
 		}
 		f->fs_xfer = malloc(sizeof(f->fs_xfer[0]) *
 		    u.pinit->ep_index_max, M_USB, M_WAITOK | M_ZERO);
-		if (f->fs_xfer == NULL) {
-			usb_fifo_free_buffer(f);
-			error = ENOMEM;
-			break;
-		}
 		f->fs_ep_max = u.pinit->ep_index_max;
 		f->fs_ep_ptr = u.pinit->pEndpoints;
 		break;

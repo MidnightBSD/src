@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/delay.h 330851 2018-03-13 16:17:36Z hselasky $
+ * $FreeBSD$
  */
 #ifndef _LINUX_DELAY_H_
 #define	_LINUX_DELAY_H_

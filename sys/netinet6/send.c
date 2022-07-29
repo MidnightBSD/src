@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2010 Ana Kukec <anchie@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet6/send.c 295126 2016-02-01 17:41:21Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -37,7 +39,6 @@ __FBSDID("$FreeBSD: stable/11/sys/netinet6/send.c 295126 2016-02-01 17:41:21Z gl
 #include <sys/sdt.h>
 #include <sys/systm.h>
 #include <sys/socket.h>
-#include <sys/sockstate.h>
 #include <sys/sockbuf.h>
 #include <sys/socketvar.h>
 #include <sys/types.h>
@@ -63,7 +64,7 @@ static MALLOC_DEFINE(M_SEND, "send", "Secure Neighbour Discovery");
 /*
  * The socket used to communicate with the SeND daemon.
  */
-static VNET_DEFINE(struct socket *, send_so);
+VNET_DEFINE_STATIC(struct socket *, send_so);
 #define	V_send_so	VNET(send_so)
 
 u_long	send_sendspace	= 8 * (1024 + sizeof(struct sockaddr_send));
@@ -290,7 +291,7 @@ send_input(struct mbuf *m, struct ifnet *ifp, int direction, int msglen __unused
 	SOCKBUF_LOCK(&V_send_so->so_rcv);
 	if (sbappendaddr_locked(&V_send_so->so_rcv,
 	    (struct sockaddr *)&sendsrc, m, NULL) == 0) {
-		SOCKBUF_UNLOCK(&V_send_so->so_rcv);
+		soroverflow_locked(V_send_so);
 		/* XXX stats. */
 		m_freem(m);
 	} else {

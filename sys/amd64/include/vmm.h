@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/include/vmm.h 351753 2019-09-03 16:23:46Z emaste $
+ * $FreeBSD$
  */
 
 #ifndef _VMM_H_
@@ -93,6 +95,7 @@ enum vm_reg_name {
 	VM_REG_GUEST_DR2,
 	VM_REG_GUEST_DR3,
 	VM_REG_GUEST_DR6,
+	VM_REG_GUEST_ENTRY_INST_LENGTH,
 	VM_REG_LAST
 };
 
@@ -240,8 +243,11 @@ int vm_get_x2apic_state(struct vm *vm, int vcpu, enum x2apic_state *state);
 int vm_set_x2apic_state(struct vm *vm, int vcpu, enum x2apic_state state);
 int vm_apicid2vcpuid(struct vm *vm, int apicid);
 int vm_activate_cpu(struct vm *vm, int vcpu);
+int vm_suspend_cpu(struct vm *vm, int vcpu);
+int vm_resume_cpu(struct vm *vm, int vcpu);
 struct vm_exit *vm_exitinfo(struct vm *vm, int vcpuid);
 void vm_exit_suspended(struct vm *vm, int vcpuid, uint64_t rip);
+void vm_exit_debug(struct vm *vm, int vcpuid, uint64_t rip);
 void vm_exit_rendezvous(struct vm *vm, int vcpuid, uint64_t rip);
 void vm_exit_astpending(struct vm *vm, int vcpuid, uint64_t rip);
 void vm_exit_reqidle(struct vm *vm, int vcpuid, uint64_t rip);
@@ -262,9 +268,10 @@ void vm_exit_reqidle(struct vm *vm, int vcpuid, uint64_t rip);
  * forward progress when the rendezvous is in progress.
  */
 typedef void (*vm_rendezvous_func_t)(struct vm *vm, int vcpuid, void *arg);
-void vm_smp_rendezvous(struct vm *vm, int vcpuid, cpuset_t dest,
+int vm_smp_rendezvous(struct vm *vm, int vcpuid, cpuset_t dest,
     vm_rendezvous_func_t func, void *arg);
 cpuset_t vm_active_cpus(struct vm *vm);
+cpuset_t vm_debug_cpus(struct vm *vm);
 cpuset_t vm_suspended_cpus(struct vm *vm);
 #endif	/* _SYS__CPUSET_H_ */
 
@@ -288,6 +295,8 @@ vcpu_reqidle(struct vm_eventinfo *info)
 
 	return (*info->iptr);
 }
+
+int vcpu_debugged(struct vm *vm, int vcpuid);
 
 /*
  * Return true if device indicated by bus/slot/func is supposed to be a
@@ -426,6 +435,9 @@ enum vm_cap_type {
 	VM_CAP_PAUSE_EXIT,
 	VM_CAP_UNRESTRICTED_GUEST,
 	VM_CAP_ENABLE_INVPCID,
+	VM_CAP_BPT_EXIT,
+	VM_CAP_RDPID,
+	VM_CAP_RDTSCP,
 	VM_CAP_MAX
 };
 
@@ -549,7 +561,9 @@ enum vm_exitcode {
 	VM_EXITCODE_MWAIT,
 	VM_EXITCODE_SVM,
 	VM_EXITCODE_REQIDLE,
+	VM_EXITCODE_DEBUG,
 	VM_EXITCODE_VMINSN,
+	VM_EXITCODE_BPT,
 	VM_EXITCODE_MAX
 };
 
@@ -636,6 +650,9 @@ struct vm_exit {
 			uint64_t	exitinfo1;
 			uint64_t	exitinfo2;
 		} svm;
+		struct {
+			int		inst_length;
+		} bpt;
 		struct {
 			uint32_t	code;		/* ecx value */
 			uint64_t	wval;

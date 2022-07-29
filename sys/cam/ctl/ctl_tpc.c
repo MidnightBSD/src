@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cam/ctl/ctl_tpc.c 314766 2017-03-06 06:46:21Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -39,6 +41,8 @@ __FBSDID("$FreeBSD: stable/11/sys/cam/ctl/ctl_tpc.c 314766 2017-03-06 06:46:21Z 
 #include <sys/conf.h>
 #include <sys/queue.h>
 #include <sys/sysctl.h>
+#include <sys/nv.h>
+#include <sys/dnv.h>
 #include <machine/atomic.h>
 
 #include <cam/cam.h>
@@ -755,12 +759,12 @@ tpc_resolve(struct tpc_list *list, uint16_t idx, uint32_t *ss,
 {
 
 	if (idx == 0xffff) {
-		if (ss && list->lun->be_lun)
+		if (ss)
 			*ss = list->lun->be_lun->blocksize;
-		if (pb && list->lun->be_lun)
+		if (pb)
 			*pb = list->lun->be_lun->blocksize <<
 			    list->lun->be_lun->pblockexp;
-		if (pbo && list->lun->be_lun)
+		if (pbo)
 			*pbo = list->lun->be_lun->blocksize *
 			    list->lun->be_lun->pblockoff;
 		return (list->lun->lun);
@@ -1624,7 +1628,7 @@ tpc_done(union ctl_io *io)
 			io->io_hdr.flags &= ~CTL_FLAG_ABORT;
 			io->io_hdr.flags &= ~CTL_FLAG_SENT_2OTHER_SC;
 			if (tpcl_queue(io, tio->lun) != CTL_RETVAL_COMPLETE) {
-				printf("%s: error returned from ctl_queue()!\n",
+				printf("%s: error returned from tpcl_queue()!\n",
 				       __func__);
 				io->io_hdr.status = old_status;
 			} else
@@ -1666,7 +1670,7 @@ ctl_extended_copy_lid1(struct ctl_scsiio *ctsio)
 	struct scsi_ec_segment *seg;
 	struct tpc_list *list, *tlist;
 	uint8_t *ptr;
-	char *value;
+	const char *value;
 	int len, off, lencscd, lenseg, leninl, nseg;
 
 	CTL_DEBUG_PRINT(("ctl_extended_copy_lid1\n"));
@@ -1729,7 +1733,7 @@ ctl_extended_copy_lid1(struct ctl_scsiio *ctsio)
 
 	list = malloc(sizeof(struct tpc_list), M_CTL, M_WAITOK | M_ZERO);
 	list->service_action = cdb->service_action;
-	value = ctl_get_opt(&lun->be_lun->options, "insecure_tpc");
+	value = dnvlist_get_string(lun->be_lun->options, "insecure_tpc", NULL);
 	if (value != NULL && strcmp(value, "on") == 0)
 		list->init_port = -1;
 	else
@@ -1820,7 +1824,7 @@ ctl_extended_copy_lid4(struct ctl_scsiio *ctsio)
 	struct scsi_ec_segment *seg;
 	struct tpc_list *list, *tlist;
 	uint8_t *ptr;
-	char *value;
+	const char *value;
 	int len, off, lencscd, lenseg, leninl, nseg;
 
 	CTL_DEBUG_PRINT(("ctl_extended_copy_lid4\n"));
@@ -1883,7 +1887,7 @@ ctl_extended_copy_lid4(struct ctl_scsiio *ctsio)
 
 	list = malloc(sizeof(struct tpc_list), M_CTL, M_WAITOK | M_ZERO);
 	list->service_action = cdb->service_action;
-	value = ctl_get_opt(&lun->be_lun->options, "insecure_tpc");
+	value = dnvlist_get_string(lun->be_lun->options, "insecure_tpc", NULL);
 	if (value != NULL && strcmp(value, "on") == 0)
 		list->init_port = -1;
 	else

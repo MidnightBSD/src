@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/usr.sbin/vidcontrol/path.h 266836 2014-05-29 13:09:48Z ray $ */
+/* $FreeBSD$ */
 
 #define KEYMAP_PATH	"/usr/share/syscons/keymaps/"
 #define FONT_PATH	"/usr/share/syscons/fonts/"

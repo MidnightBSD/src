@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/share/examples/jails/jib 295587 2016-02-13 00:28:48Z dteske $
+# $FreeBSD$
 #
 ############################################################ IDENT(1)
 #
@@ -51,7 +51,7 @@
 # 	#     arguments given to `jib addm xxx' in exec.prestart value.
 # 	#
 # 	vnet;
-# 	vnet.interface = "e0b_xxx e1b_xxx ...";
+# 	vnet.interface = e0b_xxx, e1b_xxx, ...;
 # 
 # 	exec.clean;
 # 	exec.system_user = "root";
@@ -67,7 +67,7 @@
 # 
 # 	# Standard recipe
 # 	exec.start += "/bin/sh /etc/rc";
-# 	exec.stop = "/bin/sh /etc/rc.shutdown";
+# 	exec.stop = "/bin/sh /etc/rc.shutdown jail";
 # 	exec.consolelog = "/var/log/jail_xxx_console.log";
 # 	mount.devfs;
 #

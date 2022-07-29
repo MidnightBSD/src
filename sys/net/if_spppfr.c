@@ -20,12 +20,12 @@
  * works or modified versions.
  *
  * $Cronyx Id: if_spppfr.c,v 1.1.2.10 2004/06/29 09:02:30 rik Exp $
- * $FreeBSD: stable/11/sys/net/if_spppfr.c 271867 2014-09-19 10:39:58Z glebius $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #endif
@@ -44,7 +44,7 @@
 #include <sys/sockio.h>
 #include <sys/socket.h>
 #include <sys/syslog.h>
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 #include <sys/random.h>
 #endif
 #include <sys/malloc.h>
@@ -78,7 +78,7 @@
 #include <netinet/tcp.h>
 #endif
 
-#if defined (__FreeBSD__) || defined (__OpenBSD__) || defined(__MidnightBSD__)
+#if defined (__FreeBSD__) || defined (__OpenBSD__)
 #  include <netinet/if_ether.h>
 #else
 #  include <net/ethertypes.h>

@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)getlogin.2	8.1 (Berkeley) 6/9/93
-.\" $FreeBSD: stable/11/lib/libc/sys/getlogin.2 165903 2007-01-09 00:28:16Z imp $
+.\" $FreeBSD$
 .\"
-.Dd June 9, 1993
+.Dd September 9, 2020
 .Dt GETLOGIN 2
 .Os
 .Sh NAME
@@ -44,7 +44,7 @@
 .Fn getlogin void
 .In sys/param.h
 .Ft int
-.Fn getlogin_r "char *name" "int len"
+.Fn getlogin_r "char *name" "size_t len"
 .Ft int
 .Fn setlogin "const char *name"
 .Sh DESCRIPTION
@@ -161,7 +161,7 @@ Login names are limited to
 .Dv MAXLOGNAME
 (from
 .In sys/param.h )
-characters, currently 17 including null.
+characters, currently 33 including null.
 .It Bq Er EPERM
 The caller tried to set the login name and was not the super-user.
 .It Bq Er ERANGE

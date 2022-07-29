@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/ckdist/Makefile 319119 2017-05-29 10:15:41Z ngie $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/usr.bin/cksum
 

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet6/nd6_nbr.c 332819 2018-04-20 14:21:37Z jtl $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -97,7 +99,7 @@ static void nd6_na_output_fib(struct ifnet *, const struct in6_addr *,
 static void nd6_ns_output_fib(struct ifnet *, const struct in6_addr *,
     const struct in6_addr *, const struct in6_addr *, uint8_t *, u_int);
 
-static VNET_DEFINE(int, dad_enhanced) = 1;
+VNET_DEFINE_STATIC(int, dad_enhanced) = 1;
 #define	V_dad_enhanced			VNET(dad_enhanced)
 
 SYSCTL_DECL(_net_inet6_ip6);
@@ -105,7 +107,7 @@ SYSCTL_INT(_net_inet6_ip6, OID_AUTO, dad_enhanced, CTLFLAG_VNET | CTLFLAG_RW,
     &VNET_NAME(dad_enhanced), 0,
     "Enable Enhanced DAD, which adds a random nonce to NS messages for DAD.");
 
-static VNET_DEFINE(int, dad_maxtry) = 15;	/* max # of *tries* to
+VNET_DEFINE_STATIC(int, dad_maxtry) = 15;	/* max # of *tries* to
 						   transmit DAD packet */
 #define	V_dad_maxtry			VNET(dad_maxtry)
 
@@ -118,52 +120,52 @@ static VNET_DEFINE(int, dad_maxtry) = 15;	/* max # of *tries* to
 void
 nd6_ns_input(struct mbuf *m, int off, int icmp6len)
 {
-	struct ifnet *ifp = m->m_pkthdr.rcvif;
-	struct ip6_hdr *ip6 = mtod(m, struct ip6_hdr *);
+	struct ifnet *ifp;
+	struct ip6_hdr *ip6;
 	struct nd_neighbor_solicit *nd_ns;
-	struct in6_addr saddr6 = ip6->ip6_src;
-	struct in6_addr daddr6 = ip6->ip6_dst;
-	struct in6_addr taddr6;
-	struct in6_addr myaddr6;
-	char *lladdr = NULL;
-	struct ifaddr *ifa = NULL;
-	int lladdrlen = 0;
-	int anycast = 0, proxy = 0, tentative = 0;
-	int tlladdr;
-	int rflag;
-	union nd_opts ndopts;
+	struct in6_addr daddr6, myaddr6, saddr6, taddr6;
+	struct ifaddr *ifa;
 	struct sockaddr_dl proxydl;
+	union nd_opts ndopts;
 	char ip6bufs[INET6_ADDRSTRLEN], ip6bufd[INET6_ADDRSTRLEN];
+	char *lladdr;
+	int anycast, lladdrlen, proxy, rflag, tentative, tlladdr;
+
+	ifa = NULL;
 
 	/* RFC 6980: Nodes MUST silently ignore fragments */
 	if(m->m_flags & M_FRAGMENTED)
 		goto freeit;
 
-	rflag = (V_ip6_forwarding) ? ND_NA_FLAG_ROUTER : 0;
-	if (ND_IFINFO(ifp)->flags & ND6_IFF_ACCEPT_RTADV && V_ip6_norbit_raif)
-		rflag = 0;
-#ifndef PULLDOWN_TEST
-	IP6_EXTHDR_CHECK(m, off, icmp6len,);
-	nd_ns = (struct nd_neighbor_solicit *)((caddr_t)ip6 + off);
-#else
-	IP6_EXTHDR_GET(nd_ns, struct nd_neighbor_solicit *, m, off, icmp6len);
-	if (nd_ns == NULL) {
-		ICMP6STAT_INC(icp6s_tooshort);
-		return;
-	}
-#endif
-	ip6 = mtod(m, struct ip6_hdr *); /* adjust pointer for safety */
-	taddr6 = nd_ns->nd_ns_target;
-	if (in6_setscope(&taddr6, ifp, NULL) != 0)
-		goto bad;
-
+	ifp = m->m_pkthdr.rcvif;
+	ip6 = mtod(m, struct ip6_hdr *);
 	if (ip6->ip6_hlim != 255) {
 		nd6log((LOG_ERR,
 		    "nd6_ns_input: invalid hlim (%d) from %s to %s on %s\n",
 		    ip6->ip6_hlim, ip6_sprintf(ip6bufs, &ip6->ip6_src),
 		    ip6_sprintf(ip6bufd, &ip6->ip6_dst), if_name(ifp)));
-		goto bad;
+		goto bads;
 	}
+
+	if (m->m_len < off + icmp6len) {
+		m = m_pullup(m, off + icmp6len);
+		if (m == NULL) {
+			IP6STAT_INC(ip6s_exthdrtoolong);
+			return;
+		}
+	}
+	ip6 = mtod(m, struct ip6_hdr *);
+	nd_ns = (struct nd_neighbor_solicit *)((caddr_t)ip6 + off);
+
+	saddr6 = ip6->ip6_src;
+	daddr6 = ip6->ip6_dst;
+	taddr6 = nd_ns->nd_ns_target;
+	if (in6_setscope(&taddr6, ifp, NULL) != 0)
+		goto bad;
+
+	rflag = (V_ip6_forwarding) ? ND_NA_FLAG_ROUTER : 0;
+	if (ND_IFINFO(ifp)->flags & ND6_IFF_ACCEPT_RTADV && V_ip6_norbit_raif)
+		rflag = 0;
 
 	if (IN6_IS_ADDR_UNSPECIFIED(&saddr6)) {
 		/* dst has to be a solicited node multicast address. */
@@ -212,6 +214,8 @@ nd6_ns_input(struct mbuf *m, int off, int icmp6len)
 		goto freeit;
 	}
 
+	lladdr = NULL;
+	lladdrlen = 0;
 	if (ndopts.nd_opts_src_lladdr) {
 		lladdr = (char *)(ndopts.nd_opts_src_lladdr + 1);
 		lladdrlen = ndopts.nd_opts_src_lladdr->nd_opt_len << 3;
@@ -251,6 +255,7 @@ nd6_ns_input(struct mbuf *m, int off, int icmp6len)
 		ifa = (struct ifaddr *)in6ifa_ifpwithaddr(ifp, &taddr6);
 
 	/* (2) check. */
+	proxy = 0;
 	if (ifa == NULL) {
 		struct sockaddr_dl rt_gateway;
 		struct rt_addrinfo info;
@@ -377,6 +382,7 @@ nd6_ns_input(struct mbuf *m, int off, int icmp6len)
 		ip6_sprintf(ip6bufs, &daddr6)));
 	nd6log((LOG_ERR, "nd6_ns_input: tgt=%s\n",
 		ip6_sprintf(ip6bufs, &taddr6)));
+ bads:
 	ICMP6STAT_INC(icp6s_badns);
 	if (ifa != NULL)
 		ifa_free(ifa);
@@ -611,32 +617,32 @@ nd6_ns_output(struct ifnet *ifp, const struct in6_addr *saddr6,
 void
 nd6_na_input(struct mbuf *m, int off, int icmp6len)
 {
-	struct ifnet *ifp = m->m_pkthdr.rcvif;
-	struct ip6_hdr *ip6 = mtod(m, struct ip6_hdr *);
-	struct nd_neighbor_advert *nd_na;
-	struct in6_addr daddr6 = ip6->ip6_dst;
-	struct in6_addr taddr6;
-	int flags;
-	int is_router;
-	int is_solicited;
-	int is_override;
-	char *lladdr = NULL;
-	int lladdrlen = 0;
-	int checklink = 0;
+	struct ifnet *ifp;
+	struct ip6_hdr *ip6;
 	struct ifaddr *ifa;
-	struct llentry *ln = NULL;
-	union nd_opts ndopts;
-	struct mbuf *chain = NULL;
+	struct llentry *ln;
+	struct mbuf *chain;
+	struct nd_neighbor_advert *nd_na;
+	struct in6_addr daddr6, taddr6;
 	struct sockaddr_in6 sin6;
+	union nd_opts ndopts;
 	u_char linkhdr[LLE_MAX_LINKHDR];
-	size_t linkhdrsize;
-	int lladdr_off;
 	char ip6bufs[INET6_ADDRSTRLEN], ip6bufd[INET6_ADDRSTRLEN];
+	char *lladdr;
+	size_t linkhdrsize;
+	int flags, is_override, is_router, is_solicited;
+	int lladdr_off, lladdrlen, checklink;
+
+	chain = NULL;
+	ln = NULL;
+	checklink = 0;
 
 	/* RFC 6980: Nodes MUST silently ignore fragments */
 	if(m->m_flags & M_FRAGMENTED)
 		goto freeit;
 
+	ifp = m->m_pkthdr.rcvif;
+	ip6 = mtod(m, struct ip6_hdr *);
 	if (ip6->ip6_hlim != 255) {
 		nd6log((LOG_ERR,
 		    "nd6_na_input: invalid hlim (%d) from %s to %s on %s\n",
@@ -645,22 +651,20 @@ nd6_na_input(struct mbuf *m, int off, int icmp6len)
 		goto bad;
 	}
 
-#ifndef PULLDOWN_TEST
-	IP6_EXTHDR_CHECK(m, off, icmp6len,);
-	nd_na = (struct nd_neighbor_advert *)((caddr_t)ip6 + off);
-#else
-	IP6_EXTHDR_GET(nd_na, struct nd_neighbor_advert *, m, off, icmp6len);
-	if (nd_na == NULL) {
-		ICMP6STAT_INC(icp6s_tooshort);
-		return;
+	if (m->m_len < off + icmp6len) {
+		m = m_pullup(m, off + icmp6len);
+		if (m == NULL) {
+			IP6STAT_INC(ip6s_exthdrtoolong);
+			return;
+		}
 	}
-#endif
+	ip6 = mtod(m, struct ip6_hdr *);
+	nd_na = (struct nd_neighbor_advert *)((caddr_t)ip6 + off);
 
 	flags = nd_na->nd_na_flags_reserved;
 	is_router = ((flags & ND_NA_FLAG_ROUTER) != 0);
 	is_solicited = ((flags & ND_NA_FLAG_SOLICITED) != 0);
 	is_override = ((flags & ND_NA_FLAG_OVERRIDE) != 0);
-	memset(&sin6, 0, sizeof(sin6));
 
 	taddr6 = nd_na->nd_na_target;
 	if (in6_setscope(&taddr6, ifp, NULL))
@@ -672,6 +676,8 @@ nd6_na_input(struct mbuf *m, int off, int icmp6len)
 		    ip6_sprintf(ip6bufs, &taddr6)));
 		goto bad;
 	}
+
+	daddr6 = ip6->ip6_dst;
 	if (IN6_IS_ADDR_MULTICAST(&daddr6))
 		if (is_solicited) {
 			nd6log((LOG_ERR,
@@ -688,6 +694,8 @@ nd6_na_input(struct mbuf *m, int off, int icmp6len)
 		goto freeit;
 	}
 
+	lladdr = NULL;
+	lladdrlen = 0;
 	if (ndopts.nd_opts_tgt_lladdr) {
 		lladdr = (char *)(ndopts.nd_opts_tgt_lladdr + 1);
 		lladdrlen = ndopts.nd_opts_tgt_lladdr->nd_opt_len << 3;
@@ -891,14 +899,16 @@ nd6_na_input(struct mbuf *m, int off, int icmp6len)
 	 *  rt->rt_flags &= ~RTF_REJECT;
 	 */
 	ln->la_asked = 0;
-	if (ln->la_hold != NULL)
+	if (ln->la_hold != NULL) {
+		memset(&sin6, 0, sizeof(sin6));
 		nd6_grab_holdchain(ln, &chain, &sin6);
+	}
  freeit:
 	if (ln != NULL)
 		LLE_WUNLOCK(ln);
 
 	if (chain != NULL)
-		nd6_flush_holdchain(ifp, ifp, chain, &sin6);
+		nd6_flush_holdchain(ifp, chain, &sin6);
 
 	if (checklink)
 		pfxlist_onlink_check();
@@ -1094,15 +1104,11 @@ caddr_t
 nd6_ifptomac(struct ifnet *ifp)
 {
 	switch (ifp->if_type) {
-	case IFT_ARCNET:
 	case IFT_ETHER:
-	case IFT_FDDI:
 	case IFT_IEEE1394:
 	case IFT_L2VLAN:
-	case IFT_IEEE80211:
 	case IFT_INFINIBAND:
 	case IFT_BRIDGE:
-	case IFT_ISO88025:
 		return IF_LLADDR(ifp);
 	default:
 		return NULL;
@@ -1128,8 +1134,8 @@ struct dadq {
 	bool dad_ondadq;	/* on dadq? Protected by DADQ_WLOCK. */
 };
 
-static VNET_DEFINE(TAILQ_HEAD(, dadq), dadq);
-static VNET_DEFINE(struct rwlock, dad_rwlock);
+VNET_DEFINE_STATIC(TAILQ_HEAD(, dadq), dadq);
+VNET_DEFINE_STATIC(struct rwlock, dad_rwlock);
 #define	V_dadq			VNET(dadq)
 #define	V_dad_rwlock		VNET(dad_rwlock)
 
@@ -1240,40 +1246,26 @@ nd6_dad_start(struct ifaddr *ifa, int delay)
 	struct dadq *dp;
 	char ip6buf[INET6_ADDRSTRLEN];
 
+	KASSERT((ia->ia6_flags & IN6_IFF_TENTATIVE) != 0,
+	    ("starting DAD on non-tentative address %p", ifa));
+
 	/*
 	 * If we don't need DAD, don't do it.
 	 * There are several cases:
-	 * - DAD is disabled (ip6_dad_count == 0)
+	 * - DAD is disabled globally or on the interface
 	 * - the interface address is anycast
 	 */
-	if (!(ia->ia6_flags & IN6_IFF_TENTATIVE)) {
-		log(LOG_DEBUG,
-			"nd6_dad_start: called with non-tentative address "
-			"%s(%s)\n",
-			ip6_sprintf(ip6buf, &ia->ia_addr.sin6_addr),
-			ifa->ifa_ifp ? if_name(ifa->ifa_ifp) : "???");
-		return;
-	}
-	if (ia->ia6_flags & IN6_IFF_ANYCAST) {
+	if ((ia->ia6_flags & IN6_IFF_ANYCAST) != 0 ||
+	    V_ip6_dad_count == 0 ||
+	    (ND_IFINFO(ifa->ifa_ifp)->flags & ND6_IFF_NO_DAD) != 0) {
 		ia->ia6_flags &= ~IN6_IFF_TENTATIVE;
 		return;
 	}
-	if (!V_ip6_dad_count) {
-		ia->ia6_flags &= ~IN6_IFF_TENTATIVE;
+	if ((ifa->ifa_ifp->if_flags & IFF_UP) == 0 ||
+	    (ifa->ifa_ifp->if_drv_flags & IFF_DRV_RUNNING) == 0 ||
+	    (ND_IFINFO(ifa->ifa_ifp)->flags & ND6_IFF_IFDISABLED) != 0)
 		return;
-	}
-	if (ifa->ifa_ifp == NULL)
-		panic("nd6_dad_start: ifa->ifa_ifp == NULL");
-	if (ND_IFINFO(ifa->ifa_ifp)->flags & ND6_IFF_NO_DAD) {
-		ia->ia6_flags &= ~IN6_IFF_TENTATIVE;
-		return;
-	}
-	if (!(ifa->ifa_ifp->if_flags & IFF_UP) ||
-	    !(ifa->ifa_ifp->if_drv_flags & IFF_DRV_RUNNING) ||
-	    (ND_IFINFO(ifa->ifa_ifp)->flags & ND6_IFF_IFDISABLED)) {
-		ia->ia6_flags |= IN6_IFF_TENTATIVE;
-		return;
-	}
+
 	if ((dp = nd6_dad_find(ifa, NULL)) != NULL) {
 		/*
 		 * DAD is already in progress.  Let the existing entry
@@ -1347,11 +1339,8 @@ nd6_dad_timer(struct dadq *dp)
 	struct in6_ifaddr *ia = (struct in6_ifaddr *)ifa;
 	char ip6buf[INET6_ADDRSTRLEN];
 
-	/* Sanity check */
-	if (ia == NULL) {
-		log(LOG_ERR, "nd6_dad_timer: called with null parameter\n");
-		goto err;
-	}
+	KASSERT(ia != NULL, ("DAD entry %p with no address", dp));
+
 	if (ND_IFINFO(ifp)->flags & ND6_IFF_IFDISABLED) {
 		/* Do not need DAD for ifdisabled interface. */
 		log(LOG_ERR, "nd6_dad_timer: cancel DAD on %s because of "
@@ -1489,10 +1478,8 @@ nd6_dad_duplicated(struct ifaddr *ifa, struct dadq *dp)
 		 */
 		switch (ifp->if_type) {
 		case IFT_ETHER:
-		case IFT_FDDI:
 		case IFT_ATM:
 		case IFT_IEEE1394:
-		case IFT_IEEE80211:
 		case IFT_INFINIBAND:
 			in6 = ia->ia_addr.sin6_addr;
 			if (in6_get_hw_ifid(ifp, &in6) == 0 &&
@@ -1542,17 +1529,11 @@ nd6_dad_ns_output(struct dadq *dp)
 static void
 nd6_dad_ns_input(struct ifaddr *ifa, struct nd_opt_nonce *ndopt_nonce)
 {
-	struct in6_ifaddr *ia;
-	struct ifnet *ifp;
-	const struct in6_addr *taddr6;
 	struct dadq *dp;
 
 	if (ifa == NULL)
 		panic("ifa == NULL in nd6_dad_ns_input");
 
-	ia = (struct in6_ifaddr *)ifa;
-	ifp = ifa->ifa_ifp;
-	taddr6 = &ia->ia_addr.sin6_addr;
 	/* Ignore Nonce option when Enhanced DAD is disabled. */
 	if (V_dad_enhanced == 0)
 		ndopt_nonce = NULL;

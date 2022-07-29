@@ -1,6 +1,8 @@
 /*	$NetBSD: asm.h,v 1.5 2003/08/07 16:26:53 agc Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
  *
@@ -33,7 +35,7 @@
  *
  *	from: @(#)asm.h	5.5 (Berkeley) 5/7/91
  *
- * $FreeBSD: stable/11/sys/arm/include/asm.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ASM_H_
@@ -193,6 +195,7 @@
 
 #if defined (_HAVE_ARMv7_INSTRUCTIONS) || defined (__ARM_ARCH_6__) || \
 	defined (__ARM_ARCH_6J__) || defined (__ARM_ARCH_6K__) || \
+	defined (__ARM_ARCH_6KZ__) || \
 	defined (__ARM_ARCH_6Z__) || defined (__ARM_ARCH_6ZK__)
 #define _ARM_ARCH_6
 #define _HAVE_ARMv6_INSTRUCTIONS 1
@@ -235,6 +238,15 @@
 #define DSB	dsb
 #define DMB	dmb
 #define WFI	wfi
+
+#if defined(__ARM_ARCH_7VE__) || defined(__clang__)
+#define	MSR_ELR_HYP(regnum)	msr	elr_hyp, lr
+#define	ERET	eret
+#else
+#define MSR_ELR_HYP(regnum) .word (0xe12ef300 | regnum)
+#define ERET .word 0xe160006e
+#endif
+
 #elif __ARM_ARCH == 6
 #define ISB	mcr CP15_CP15ISB
 #define DSB	mcr CP15_CP15DSB

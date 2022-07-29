@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -40,7 +42,7 @@ static char sccsid[] = "@(#)whois.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/whois/whois.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -115,23 +117,50 @@ static struct {
 	WHOIS_REFERRAL("Whois Server:"),
 	WHOIS_REFERRAL("Registrar WHOIS Server:"), /* corporatedomains.com */
 	WHOIS_REFERRAL("ReferralServer:  whois://"), /* ARIN */
+	WHOIS_REFERRAL("ReferralServer:  rwhois://"), /* ARIN */
 	WHOIS_REFERRAL("descr:          region. Please query"), /* AfriNIC */
 	{ NULL, 0 }
 };
 
+/*
+ * We have a list of patterns for RIRs that assert ignorance rather than
+ * providing referrals. If that happens, we guess that ARIN will be more
+ * helpful. But, before following a referral to an RIR, we check if we have
+ * asked that RIR already, and if so we make another guess.
+ */
 static const char *actually_arin[] = {
 	"netname:        ERX-NETBLOCK\n", /* APNIC */
 	"netname:        NON-RIPE-NCC-MANAGED-ADDRESS-BLOCK\n",
 	NULL
 };
 
+static struct {
+	int loop;
+	const char *host;
+} try_rir[] = {
+	{ 0, ANICHOST },
+	{ 0, RNICHOST },
+	{ 0, PNICHOST },
+	{ 0, FNICHOST },
+	{ 0, LNICHOST },
+	{ 0, NULL }
+};
+
+static void
+reset_rir(void) {
+	int i;
+
+	for (i = 0; try_rir[i].host != NULL; i++)
+		try_rir[i].loop = 0;
+}
+
 static const char *port = DEFAULT_PORT;
 
 static const char *choose_server(char *);
-static struct addrinfo *gethostinfo(char const *host, int exitnoname);
+static struct addrinfo *gethostinfo(const char *, const char *, int);
 static void s_asprintf(char **ret, const char *format, ...) __printflike(2, 3);
 static void usage(void);
-static void whois(const char *, const char *, int);
+static void whois(const char *, const char *, const char *, int);
 
 int
 main(int argc, char *argv[])
@@ -227,11 +256,12 @@ main(int argc, char *argv[])
 		if (country != NULL) {
 			char *qnichost;
 			s_asprintf(&qnichost, "%s%s", country, QNICHOST_TAIL);
-			whois(*argv, qnichost, flags);
+			whois(*argv, qnichost, port, flags);
 			free(qnichost);
 		} else
 			whois(*argv, host != NULL ? host :
-			      choose_server(*argv), flags);
+			      choose_server(*argv), port, flags);
+		reset_rir();
 		argv++;
 	}
 	exit(0);
@@ -254,7 +284,7 @@ choose_server(char *domain)
 }
 
 static struct addrinfo *
-gethostinfo(char const *host, int exit_on_noname)
+gethostinfo(const char *host, const char *hport, int exit_on_noname)
 {
 	struct addrinfo hints, *res;
 	int error;
@@ -264,7 +294,7 @@ gethostinfo(char const *host, int exit_on_noname)
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	res = NULL;
-	error = getaddrinfo(host, port, &hints, &res);
+	error = getaddrinfo(host, hport, &hints, &res);
 	if (error && (exit_on_noname || error != EAI_NONAME))
 		err(EX_NOHOST, "%s: %s", host, gai_strerror(error));
 	return (res);
@@ -415,15 +445,15 @@ done:
 }
 
 static void
-whois(const char *query, const char *hostname, int flags)
+whois(const char *query, const char *hostname, const char *hostport, int flags)
 {
 	FILE *fp;
 	struct addrinfo *hostres;
-	char *buf, *host, *nhost, *p;
-	int s, f;
+	char *buf, *host, *nhost, *nport, *p;
+	int comment, s, f;
 	size_t len, i;
 
-	hostres = gethostinfo(hostname, 1);
+	hostres = gethostinfo(hostname, hostport, 1);
 	s = connect_to_any_host(hostres);
 	if (s == -1)
 		err(EX_OSERR, "connect()");
@@ -467,12 +497,28 @@ whois(const char *query, const char *hostname, int flags)
 		fprintf(fp, "%s\r\n", query);
 	fflush(fp);
 
+	comment = 0;
+	if (!(flags & WHOIS_SPAM_ME) &&
+	    (strcasecmp(hostname, ANICHOST) == 0 ||
+	     strcasecmp(hostname, RNICHOST) == 0)) {
+		comment = 2;
+	}
+
 	nhost = NULL;
 	while ((buf = fgetln(fp, &len)) != NULL) {
 		/* Nominet */
 		if (!(flags & WHOIS_SPAM_ME) &&
 		    len == 5 && strncmp(buf, "-- \r\n", 5) == 0)
 			break;
+		/* RIRs */
+		if (comment == 1 && buf[0] == '#')
+			break;
+		else if (comment == 2) {
+			if (strchr("#%\r\n", buf[0]) != NULL)
+				continue;
+			else
+				comment = 1;
+		}
 
 		printf("%.*s", (int)len, buf);
 
@@ -487,15 +533,35 @@ whois(const char *query, const char *hostname, int flags)
 				SCAN(p, buf+len, *p == ' ');
 				host = p;
 				SCAN(p, buf+len, ishost(*p));
-				/* avoid loops */
-				if (strncmp(hostname, host, p - host) != 0)
+				if (p > host) {
+					char *pstr;
+
 					s_asprintf(&nhost, "%.*s",
 						   (int)(p - host), host);
+
+					if (*p != ':') {
+						s_asprintf(&nport, "%s", port);
+						break;
+					}
+
+					pstr = ++p;
+					SCAN(p, buf+len, isdigit(*p));
+					if (p > pstr && (p - pstr) < 6) {
+						s_asprintf(&nport, "%.*s",
+						    (int)(p - pstr), pstr);
+						break;
+					}
+
+					/* Invalid port; don't recurse */
+					free(nhost);
+					nhost = NULL;
+				}
 				break;
 			}
 			for (i = 0; actually_arin[i] != NULL; i++) {
 				if (strncmp(buf, actually_arin[i], len) == 0) {
 					s_asprintf(&nhost, "%s", ANICHOST);
+					s_asprintf(&nport, "%s", port);
 					break;
 				}
 			}
@@ -511,9 +577,41 @@ whois(const char *query, const char *hostname, int flags)
 	}
 	fclose(fp);
 	freeaddrinfo(hostres);
+
+	f = 0;
+	for (i = 0; try_rir[i].host != NULL; i++) {
+		/* Remember visits to RIRs */
+		if (try_rir[i].loop == 0 &&
+		    strcasecmp(try_rir[i].host, hostname) == 0)
+			try_rir[i].loop = 1;
+		/* Do we need to find an alternative RIR? */
+		if (try_rir[i].loop != 0 && nhost != NULL &&
+		    strcasecmp(try_rir[i].host, nhost) == 0) {
+			free(nhost);
+			nhost = NULL;
+			free(nport);
+			nport = NULL;
+			f = 1;
+		}
+	}
+	if (f) {
+		/* Find a replacement RIR */
+		for (i = 0; try_rir[i].host != NULL; i++) {
+			if (try_rir[i].loop == 0) {
+				s_asprintf(&nhost, "%s", try_rir[i].host);
+				s_asprintf(&nport, "%s", port);
+				break;
+			}
+		}
+	}
 	if (nhost != NULL) {
-		whois(query, nhost, flags);
+		/* Ignore self-referrals */
+		if (strcasecmp(hostname, nhost) != 0) {
+			printf("# %s\n\n", nhost);
+			whois(query, nhost, nport, flags);
+		}
 		free(nhost);
+		free(nport);
 	}
 }
 

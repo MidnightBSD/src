@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
  * Developed with Red Inc: Alfred Perlstein <alfred@freebsd.org>
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kgssapi/gss_impl.c 346768 2019-04-26 21:34:08Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -54,39 +56,33 @@ MALLOC_DEFINE(M_GSSAPI, "GSS-API", "GSS-API");
 /*
  * Syscall hooks
  */
-static int gssd_syscall_offset = SYS_gssd_syscall;
-static struct sysent gssd_syscall_prev_sysent;
-MAKE_SYSENT(gssd_syscall);
-static bool_t gssd_syscall_registered = FALSE;
+static struct syscall_helper_data gssd_syscalls[] = {
+	SYSCALL_INIT_HELPER(gssd_syscall),
+	SYSCALL_INIT_LAST
+};
 
 struct kgss_mech_list kgss_mechs;
 CLIENT *kgss_gssd_handle;
 struct mtx kgss_gssd_lock;
 
-static void
-kgss_init(void *dummy)
+static int
+kgss_load(void)
 {
 	int error;
 
 	LIST_INIT(&kgss_mechs);
-	error = syscall_register(&gssd_syscall_offset, &gssd_syscall_sysent,
-	    &gssd_syscall_prev_sysent, SY_THR_STATIC_KLD);
-	if (error)
-		printf("Can't register GSSD syscall\n");
-	else
-		gssd_syscall_registered = TRUE;
+	error = syscall_helper_register(gssd_syscalls, SY_THR_STATIC_KLD);
+	if (error != 0)
+		return (error);
+	return (0);
 }
-SYSINIT(kgss_init, SI_SUB_LOCK, SI_ORDER_FIRST, kgss_init, NULL);
 
 static void
-kgss_uninit(void *dummy)
+kgss_unload(void)
 {
 
-	if (gssd_syscall_registered)
-		syscall_deregister(&gssd_syscall_offset,
-		    &gssd_syscall_prev_sysent);
+	syscall_helper_unregister(gssd_syscalls);
 }
-SYSUNINIT(kgss_uninit, SI_SUB_LOCK, SI_ORDER_FIRST, kgss_uninit, NULL);
 
 int
 sys_gssd_syscall(struct thread *td, struct gssd_syscall_args *uap)
@@ -324,8 +320,11 @@ kgssapi_modevent(module_t mod, int type, void *data)
 		rpc_gss_entries.rpc_gss_svc_max_data_length =
 		    rpc_gss_svc_max_data_length;
 		mtx_init(&kgss_gssd_lock, "kgss_gssd_lock", NULL, MTX_DEF);
+		error = kgss_load();
 		break;
 	case MOD_UNLOAD:
+		kgss_unload();
+		mtx_destroy(&kgss_gssd_lock);
 		/*
 		 * Unloading of the kgssapi module is not currently supported.
 		 * If somebody wants this, we would need to keep track of
@@ -343,5 +342,6 @@ static moduledata_t kgssapi_mod = {
 	NULL,
 };
 DECLARE_MODULE(kgssapi, kgssapi_mod, SI_SUB_VFS, SI_ORDER_ANY);
+MODULE_DEPEND(kgssapi, xdr, 1, 1, 1);
 MODULE_DEPEND(kgssapi, krpc, 1, 1, 1);
 MODULE_VERSION(kgssapi, 1);

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/vfs.h 297513 2016-04-02 16:25:46Z avg $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_VFS_H_

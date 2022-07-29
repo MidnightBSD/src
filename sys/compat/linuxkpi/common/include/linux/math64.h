@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/math64.h 335415 2018-06-20 06:38:46Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _LINUX_MATH64_H
@@ -90,5 +90,14 @@ mul_u32_u32(uint32_t a, uint32_t b)
 
 	return ((uint64_t)a * b);
 }
+
+static inline uint64_t
+div64_u64_round_up(uint64_t dividend, uint64_t divisor)
+{
+	return ((dividend + divisor - 1) / divisor);
+}
+
+#define	DIV64_U64_ROUND_UP(...) \
+	div64_u64_round_up(__VA_ARGS__)
 
 #endif /* _LINUX_MATH64_H */

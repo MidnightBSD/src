@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_LLD_BOOTSTRAP 318472 2017-05-18 17:40:30Z emaste $
+.\" $FreeBSD$
 Set to not build the LLD linker during the bootstrap phase of
 the build.
 To be able to build the system, either Binutils or LLD bootstrap must be

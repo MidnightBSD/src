@@ -1,6 +1,9 @@
 # $Id: Makefile,v 1.8 2003/08/14 20:06:20 max Exp $
-# $FreeBSD: stable/11/usr.sbin/bluetooth/hcsecd/Makefile 275054 2014-11-25 16:57:27Z bapt $
+# $FreeBSD$
 
+CONFS=		hcsecd.conf
+CONFSDIR=	/etc/bluetooth
+CONFSMODE_hcsecd.conf=	600
 PROG=		hcsecd
 MAN=		hcsecd.8 hcsecd.conf.5
 SRCS=		hcsecd.c lexer.l parser.y

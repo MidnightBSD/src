@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/expansion/trim9.0 292758 2015-12-26 22:27:48Z jilles $
+# $FreeBSD$
 
 # POSIX does not specify these but they occasionally occur in the wild.
 # This just serves to keep working what currently works.

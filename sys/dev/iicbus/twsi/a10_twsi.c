@@ -1,6 +1,5 @@
 /*-
- * Copyright (c) 2016 Emmanuel Vadot <manu@freebsd.org>
- * All rights reserved.
+ * Copyright (c) 2016-2019 Emmanuel Vadot <manu@freebsd.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/iicbus/twsi/a10_twsi.c 331182 2018-03-19 06:40:11Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -88,7 +87,6 @@ static int
 a10_twsi_attach(device_t dev)
 {
 	struct twsi_softc *sc;
-	clk_t clk;
 	hwreset_t rst;
 	int error;
 
@@ -104,12 +102,12 @@ a10_twsi_attach(device_t dev)
 	}
 
 	/* Activate clock */
-	error = clk_get_by_ofw_index(dev, 0, 0, &clk);
+	error = clk_get_by_ofw_index(dev, 0, 0, &sc->clk_core);
 	if (error != 0) {
 		device_printf(dev, "could not find clock\n");
 		return (error);
 	}
-	error = clk_enable(clk);
+	error = clk_enable(sc->clk_core);
 	if (error != 0) {
 		device_printf(dev, "could not enable clock\n");
 		return (error);
@@ -123,11 +121,9 @@ a10_twsi_attach(device_t dev)
 	sc->reg_baud_rate = TWI_CCR;
 	sc->reg_soft_reset = TWI_SRST;
 
-	/* Setup baud rate params */
-	sc->baud_rate[IIC_SLOW].param = TWSI_BAUD_RATE_PARAM(11, 2);
-	sc->baud_rate[IIC_FAST].param = TWSI_BAUD_RATE_PARAM(11, 2);
-	sc->baud_rate[IIC_FASTEST].param = TWSI_BAUD_RATE_PARAM(2, 2);
-
+	if (ofw_bus_is_compatible(dev, "allwinner,sun6i-a31-i2c") ||
+	    ofw_bus_is_compatible(dev, "allwinner,sun6i-a83t-i2c"))
+		sc->iflag_w1c = true;
 	return (twsi_attach(dev));
 }
 
@@ -154,7 +150,8 @@ DEFINE_CLASS_1(iichb, a10_twsi_driver, a10_twsi_methods,
 static devclass_t a10_twsi_devclass;
 
 EARLY_DRIVER_MODULE(a10_twsi, simplebus, a10_twsi_driver, a10_twsi_devclass,
-    0, 0, BUS_PASS_BUS + BUS_PASS_ORDER_MIDDLE);
+    0, 0, BUS_PASS_INTERRUPT + BUS_PASS_ORDER_LATE);
 EARLY_DRIVER_MODULE(iicbus, a10_twsi, iicbus_driver, iicbus_devclass,
-    0, 0, BUS_PASS_BUS + BUS_PASS_ORDER_MIDDLE);
+    0, 0, BUS_PASS_INTERRUPT + BUS_PASS_ORDER_LATE);
 MODULE_DEPEND(a10_twsi, iicbus, 1, 1, 1);
+SIMPLEBUS_PNP_INFO(compat_data);

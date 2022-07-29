@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_LIB32 274664 2014-11-18 17:06:48Z imp $
+.\" $FreeBSD$
 On 64-bit platforms, set to not build 32-bit library set and a
 .Nm ld-elf32.so.1
 runtime linker.

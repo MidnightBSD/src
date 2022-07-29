@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015 Ruslan Bukin <br@bsdpad.com>
+ * Copyright (c) 2015-2016 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
  *
  * Portions of this software were developed by SRI International and the
@@ -33,30 +33,31 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/riscv/gen/flt_rounds.c 294227 2016-01-17 15:21:23Z br $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
 #include <fenv.h>
 #include <float.h>
 
+#ifdef __riscv_float_abi_soft
+#include "softfloat-for-gcc.h"
+#include "milieu.h"
+#include "softfloat.h"
+#endif
+
 int
 __flt_rounds(void)
 {
-#if 0
-	uint64_t fcsr;
-#endif
-	int mode;
+	uint64_t mode;
 
-#if 0
-	__asm __volatile("csrr    %0, fcsr" : "=r" (fcsr));
-	mode = (fcsr & _ROUND_MASK);
+#ifdef __riscv_float_abi_soft
+	mode = __softfloat_float_rounding_mode;
+#else
+	__asm __volatile("csrr %0, fcsr" : "=r" (mode));
 #endif
 
-	/* RISCVTODO */
-	mode = FE_TOWARDZERO; /* softfloat rounding mode */
-
-	switch (mode) {
+	switch (mode & _ROUND_MASK) {
 	case FE_TOWARDZERO:
 		return (0);
 	case FE_TONEAREST:

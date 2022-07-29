@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libc/tests/locale/Makefile 299094 2016-05-04 23:20:53Z ngie $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -20,7 +20,8 @@ ATF_TESTS_C+=		wcsrtombs_test
 ATF_TESTS_C+=		wcstombs_test
 ATF_TESTS_C+=		wctomb_2_test
 
-NETBSD_ATF_TESTS_C=	io_test
+# Note: io_test requires zh_TW.Big5 locale (see ^/head@r315568)
+#NETBSD_ATF_TESTS_C=	io_test
 NETBSD_ATF_TESTS_C+=	mbrtowc_test
 NETBSD_ATF_TESTS_C+=	mbstowcs_test
 NETBSD_ATF_TESTS_C+=	mbsnrtowcs_test

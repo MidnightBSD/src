@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/mips/atheros/ar934x_nfcreg.h 263295 2014-03-18 12:18:35Z adrian $
+ * $FreeBSD$
  */
 /*
  * Register definitions for the built-in NAND controller

@@ -14,7 +14,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,7 +32,7 @@
  *
  *	from: @(#)fp.s	8.1 (Berkeley) 6/10/93
  *	JNPR: fp.S,v 1.1 2006/08/07 05:38:57 katta
- * $FreeBSD: stable/11/sys/mips/mips/fp.S 287116 2015-08-24 19:09:56Z adrian $
+ * $FreeBSD$
  */
 
 /*
@@ -43,7 +43,7 @@
 #include <machine/regnum.h>
 #include <machine/cpuregs.h>
 
-#include "assym.s"
+#include "assym.inc"
 
 #define	SEXP_INF	0xff
 #define	DEXP_INF	0x7ff

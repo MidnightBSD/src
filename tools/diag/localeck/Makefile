@@ -1,7 +1,7 @@
-# $FreeBSD: src/tools/diag/localeck/Makefile,v 1.5 2004/12/21 08:47:20 ru Exp $
+# $FreeBSD$
 
 PROG=	localeck
-NO_MAN=
+MAN=
 WARNS?=	4
 
 LOCALEDIR?= /usr/share/locale

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/nfsclient/nfs_clnode.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -109,13 +111,13 @@ ncl_nget(struct mount *mntp, u_int8_t *fhp, int fhsize, struct nfsnode **npp,
 
 	hash = fnv_32_buf(fhp, fhsize, FNV1_32_INIT);
 
-	MALLOC(nfhp, struct nfsfh *, sizeof (struct nfsfh) + fhsize,
+	nfhp = malloc(sizeof (struct nfsfh) + fhsize,
 	    M_NFSFH, M_WAITOK);
 	bcopy(fhp, &nfhp->nfh_fh[0], fhsize);
 	nfhp->nfh_len = fhsize;
 	error = vfs_hash_get(mntp, hash, lkflags,
 	    td, &nvp, newnfs_vncmpf, nfhp);
-	FREE(nfhp, M_NFSFH);
+	free(nfhp, M_NFSFH);
 	if (error)
 		return (error);
 	if (nvp != NULL) {
@@ -160,15 +162,17 @@ ncl_nget(struct mount *mntp, u_int8_t *fhp, int fhsize, struct nfsnode **npp,
 			vp->v_type = VDIR;
 		vp->v_vflag |= VV_ROOT;
 	}
+
+	vp->v_vflag |= VV_VMSIZEVNLOCK;
 	
-	MALLOC(np->n_fhp, struct nfsfh *, sizeof (struct nfsfh) + fhsize,
+	np->n_fhp = malloc(sizeof (struct nfsfh) + fhsize,
 	    M_NFSFH, M_WAITOK);
 	bcopy(fhp, np->n_fhp->nfh_fh, fhsize);
 	np->n_fhp->nfh_len = fhsize;
 	error = insmntque(vp, mntp);
 	if (error != 0) {
 		*npp = NULL;
-		FREE((caddr_t)np->n_fhp, M_NFSFH);
+		free(np->n_fhp, M_NFSFH);
 		mtx_destroy(&np->n_mtx);
 		lockdestroy(&np->n_excl);
 		uma_zfree(newnfsnode_zone, np);
@@ -210,14 +214,14 @@ ncl_releasesillyrename(struct vnode *vp, struct thread *td)
 
 	ASSERT_VOP_ELOCKED(vp, "releasesillyrename");
 	np = VTONFS(vp);
-	mtx_assert(&np->n_mtx, MA_OWNED);
+	NFSASSERTNODE(np);
 	if (vp->v_type != VDIR) {
 		sp = np->n_sillyrename;
 		np->n_sillyrename = NULL;
 	} else
 		sp = NULL;
 	if (sp != NULL) {
-		mtx_unlock(&np->n_mtx);
+		NFSUNLOCKNODE(np);
 		(void) ncl_vinvalbuf(vp, 0, td, 1);
 		/*
 		 * Remove the silly file that was rename'd earlier
@@ -226,7 +230,7 @@ ncl_releasesillyrename(struct vnode *vp, struct thread *td)
 		crfree(sp->s_cred);
 		TASK_INIT(&sp->s_task, 0, nfs_freesillyrename, sp);
 		taskqueue_enqueue(taskqueue_thread, &sp->s_task);
-		mtx_lock(&np->n_mtx);
+		NFSLOCKNODE(np);
 	}
 }
 
@@ -258,7 +262,7 @@ ncl_inactive(struct vop_inactive_args *ap)
 	}
 
 	np = VTONFS(vp);
-	mtx_lock(&np->n_mtx);
+	NFSLOCKNODE(np);
 	ncl_releasesillyrename(vp, ap->a_td);
 
 	/*
@@ -269,7 +273,7 @@ ncl_inactive(struct vop_inactive_args *ap)
 	 * None of the other flags are meaningful after the vnode is unused.
 	 */
 	np->n_flag &= (NMODIFIED | NDSCOMMIT);
-	mtx_unlock(&np->n_mtx);
+	NFSUNLOCKNODE(np);
 	return (0);
 }
 
@@ -282,6 +286,9 @@ ncl_reclaim(struct vop_reclaim_args *ap)
 	struct vnode *vp = ap->a_vp;
 	struct nfsnode *np = VTONFS(vp);
 	struct nfsdmap *dp, *dp2;
+	struct mount *mp;
+
+	mp = vp->v_mount;
 
 	/*
 	 * If the NLM is running, give it a chance to abort pending
@@ -290,16 +297,16 @@ ncl_reclaim(struct vop_reclaim_args *ap)
 	if (nfs_reclaim_p != NULL)
 		nfs_reclaim_p(ap);
 
-	mtx_lock(&np->n_mtx);
+	NFSLOCKNODE(np);
 	ncl_releasesillyrename(vp, ap->a_td);
-	mtx_unlock(&np->n_mtx);
+	NFSUNLOCKNODE(np);
 
 	/*
 	 * Destroy the vm object and flush associated pages.
 	 */
 	vnode_destroy_vobject(vp);
 
-	if (NFS_ISV4(vp) && vp->v_type == VREG)
+	if (NFS_ISV4(vp) && vp->v_type == VREG) {
 		/*
 		 * We can now safely close any remaining NFSv4 Opens for
 		 * this file. Most opens will have already been closed by
@@ -307,6 +314,19 @@ ncl_reclaim(struct vop_reclaim_args *ap)
 		 * called, so we need to do it again here.
 		 */
 		(void) nfsrpc_close(vp, 1, ap->a_td);
+		/*
+		 * It it unlikely a delegation will still exist, but
+		 * if one does, it must be returned before calling
+		 * vfs_hash_remove(), since it cannot be recalled once the
+		 * nfs node is no longer available.
+		 */
+		MNT_ILOCK(mp);
+		if ((mp->mnt_kern_flag & MNTK_UNMOUNTF) == 0) {
+			MNT_IUNLOCK(mp);
+			nfscl_delegreturnvp(vp, ap->a_td);
+		} else
+			MNT_IUNLOCK(mp);
+	}
 
 	vfs_hash_remove(vp);
 
@@ -327,14 +347,14 @@ ncl_reclaim(struct vop_reclaim_args *ap)
 		while (dp) {
 			dp2 = dp;
 			dp = LIST_NEXT(dp, ndm_list);
-			FREE((caddr_t)dp2, M_NFSDIROFF);
+			free(dp2, M_NFSDIROFF);
 		}
 	}
 	if (np->n_writecred != NULL)
 		crfree(np->n_writecred);
-	FREE((caddr_t)np->n_fhp, M_NFSFH);
+	free(np->n_fhp, M_NFSFH);
 	if (np->n_v4 != NULL)
-		FREE((caddr_t)np->n_v4, M_NFSV4NODE);
+		free(np->n_v4, M_NFSV4NODE);
 	mtx_destroy(&np->n_mtx);
 	lockdestroy(&np->n_excl);
 	uma_zfree(newnfsnode_zone, vp->v_data);
@@ -351,11 +371,11 @@ ncl_invalcaches(struct vnode *vp)
 	struct nfsnode *np = VTONFS(vp);
 	int i;
 
-	mtx_lock(&np->n_mtx);
+	NFSLOCKNODE(np);
 	for (i = 0; i < NFS_ACCESSCACHESIZE; i++)
 		np->n_accesscache[i].stamp = 0;
 	KDTRACE_NFS_ACCESSCACHE_FLUSH_DONE(vp);
 	np->n_attrstamp = 0;
 	KDTRACE_NFS_ATTRCACHE_FLUSH_DONE(vp);
-	mtx_unlock(&np->n_mtx);
+	NFSUNLOCKNODE(np);
 }

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/userboot/userboot/main.c 344413 2019-02-21 03:18:12Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 #include <string.h>
@@ -67,6 +67,18 @@ delay(int usec)
 {
 
 	CALLBACK(delay, usec);
+}
+
+time_t
+getsecs(void)
+{
+
+	/*
+	 * userboot can't do netboot, so this implementation isn't strictly
+	 * required.  Defining it avoids issues with BIND_NOW, and it doesn't
+	 * hurt to do it.
+	 */
+	return (time(NULL));
 }
 
 void
@@ -240,15 +252,15 @@ extract_currdev(void)
 	if (userboot_disk_maxunit > 0) {
 		dev.dd.d_dev = &userboot_disk;
 		dev.dd.d_unit = 0;
-		dev.d_slice = 0;
-		dev.d_partition = 0;
+		dev.d_slice = D_SLICEWILD;
+		dev.d_partition = D_PARTWILD;
 		/*
 		 * If we cannot auto-detect the partition type then
 		 * access the disk as a raw device.
 		 */
 		if (dev.dd.d_dev->dv_open(NULL, &dev)) {
-			dev.d_slice = -1;
-			dev.d_partition = -1;
+			dev.d_slice = D_SLICENONE;
+			dev.d_partition = D_PARTNONE;
 		}
 		dd = &dev.dd;
 	} else {

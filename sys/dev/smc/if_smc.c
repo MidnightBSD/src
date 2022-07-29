@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Benno Rice.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/smc/if_smc.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for SMSC LAN91C111, may work for older variants.
@@ -1214,7 +1216,6 @@ smc_stop(struct smc_softc *sc)
 #ifdef DEVICE_POLLING
 	ether_poll_deregister(sc->smc_ifp);
 	sc->smc_ifp->if_capenable &= ~IFCAP_POLLING;
-	sc->smc_ifp->if_capenable &= ~IFCAP_POLLING_NOCOUNT;
 #endif
 
 	/*
@@ -1274,7 +1275,6 @@ smc_init_locked(struct smc_softc *sc)
 	ether_poll_register(smc_poll, ifp);
 	SMC_LOCK(sc);
 	ifp->if_capenable |= IFCAP_POLLING;
-	ifp->if_capenable |= IFCAP_POLLING_NOCOUNT;
 #endif
 }
 

@@ -11,7 +11,7 @@
 # + 64MB RAM
 # + uboot environment
 
-# $FreeBSD: stable/11/sys/mips/conf/DIR-825B1 345344 2019-03-20 18:49:45Z kib $
+# $FreeBSD$
 
 #NO_UNIVERSE
 
@@ -44,13 +44,6 @@ nodevice umass
 nodevice ath_rate_sample
 
 nooptions	INET6
-
-# Don't include the SCSI/CAM strings in the default build
-options 	SCSI_NO_SENSE_STRINGS
-options 	SCSI_NO_OP_STRINGS
-
-# .. And no sysctl strings
-options 	NO_SYSCTL_DESCR
 
 # GEOM modules
 device		geom_map	# to get access to the SPI flash partitions

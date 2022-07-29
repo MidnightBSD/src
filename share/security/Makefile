@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/security/Makefile 291347 2015-11-26 01:14:27Z bdrewery $
+# $FreeBSD$
 
 FILES=	lomac-policy.contexts
 FILESDIR=	${BINDIR}/security

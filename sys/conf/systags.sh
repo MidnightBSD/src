@@ -1,5 +1,7 @@
 #! /bin/sh
 #
+# SPDX-License-Identifier: BSD-3-Clause
+#
 # Copyright (c) 1992, 1993
 #	The Regents of the University of California.  All rights reserved.
 #
@@ -11,7 +13,7 @@
 # 2. Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in the
 #    documentation and/or other materials provided with the distribution.
-# 4. Neither the name of the University nor the names of its contributors
+# 3. Neither the name of the University nor the names of its contributors
 #    may be used to endorse or promote products derived from this software
 #    without specific prior written permission.
 #
@@ -28,7 +30,7 @@
 # SUCH DAMAGE.
 #
 #	@(#)systags.sh	8.1 (Berkeley) 6/10/93
-# $FreeBSD: stable/11/sys/conf/systags.sh 357332 2020-01-31 12:39:51Z nyan $
+# $FreeBSD$
 #
 # systags.sh - construct a system tags file using dependence relations
 #	in a .depend file

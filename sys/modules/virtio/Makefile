@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/sys/modules/virtio/Makefile 273515 2014-10-23 04:47:32Z bryanv $
+# $FreeBSD$
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions

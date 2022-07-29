@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-4-Clause
+ *
  * Copyright (c) 2001 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -84,7 +86,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/powerpc/aim/mmu_oea.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Manages physical address maps.
@@ -301,7 +303,6 @@ void moea_remove_write(mmu_t, vm_page_t);
 void moea_unwire(mmu_t, pmap_t, vm_offset_t, vm_offset_t);
 void moea_zero_page(mmu_t, vm_page_t);
 void moea_zero_page_area(mmu_t, vm_page_t, int, int);
-void moea_zero_page_idle(mmu_t, vm_page_t);
 void moea_activate(mmu_t, struct thread *);
 void moea_deactivate(mmu_t, struct thread *);
 void moea_cpu_bootstrap(mmu_t, int);
@@ -319,6 +320,11 @@ void moea_dumpsys_map(mmu_t mmu, vm_paddr_t pa, size_t sz, void **va);
 void moea_scan_init(mmu_t mmu);
 vm_offset_t moea_quick_enter_page(mmu_t mmu, vm_page_t m);
 void moea_quick_remove_page(mmu_t mmu, vm_offset_t addr);
+static int moea_map_user_ptr(mmu_t mmu, pmap_t pm,
+    volatile const void *uaddr, void **kaddr, size_t ulen, size_t *klen);
+static int moea_decode_kernel_ptr(mmu_t mmu, vm_offset_t addr,
+    int *is_user, vm_offset_t *decoded_addr);
+
 
 static mmu_method_t moea_methods[] = {
 	MMUMETHOD(mmu_clear_modify,	moea_clear_modify),
@@ -351,7 +357,6 @@ static mmu_method_t moea_methods[] = {
 	MMUMETHOD(mmu_unwire,		moea_unwire),
 	MMUMETHOD(mmu_zero_page,       	moea_zero_page),
 	MMUMETHOD(mmu_zero_page_area,	moea_zero_page_area),
-	MMUMETHOD(mmu_zero_page_idle,	moea_zero_page_idle),
 	MMUMETHOD(mmu_activate,		moea_activate),
 	MMUMETHOD(mmu_deactivate,      	moea_deactivate),
 	MMUMETHOD(mmu_page_set_memattr,	moea_page_set_memattr),
@@ -370,6 +375,8 @@ static mmu_method_t moea_methods[] = {
 	MMUMETHOD(mmu_dev_direct_mapped,moea_dev_direct_mapped),
 	MMUMETHOD(mmu_scan_init,	moea_scan_init),
 	MMUMETHOD(mmu_dumpsys_map,	moea_dumpsys_map),
+	MMUMETHOD(mmu_map_user_ptr,	moea_map_user_ptr),
+	MMUMETHOD(mmu_decode_kernel_ptr, moea_decode_kernel_ptr),
 
 	{ 0, 0 }
 };
@@ -411,6 +418,32 @@ moea_calc_wimg(vm_paddr_t pa, vm_memattr_t ma)
 	}
 
 	return pte_lo;
+}
+
+/*
+ * Translate OFW translations into VM attributes.
+ */
+static __inline vm_memattr_t
+moea_bootstrap_convert_wimg(uint32_t mode)
+{
+
+	switch (mode) {
+	case (PTE_I | PTE_G):
+		/* PCI device memory */
+		return VM_MEMATTR_UNCACHEABLE;
+	case (PTE_M):
+		/* Explicitly coherent */
+		return VM_MEMATTR_CACHEABLE;
+	case 0: /* Default claim */
+	case 2: /* Alternate PP bits set by OF for the original payload */
+		/* "Normal" memory. */
+		return VM_MEMATTR_DEFAULT;
+
+	default:
+		/* Err on the side of caution for unknowns */
+		/* XXX should we panic instead? */
+		return VM_MEMATTR_UNCACHEABLE;
+	}
 }
 
 static void
@@ -663,13 +696,6 @@ moea_bootstrap(mmu_t mmup, vm_offset_t kernelstart, vm_offset_t kernelend)
 	vm_size_t	size, physsz, hwphyssz;
 	vm_offset_t	pa, va, off;
 	void		*dpcpu;
-	register_t	msr;
-
-        /*
-         * Set up BAT0 to map the lowest 256 MB area
-         */
-        battable[0x0].batl = BATL(0x00000000, BAT_M, BAT_PP_RW);
-        battable[0x0].batu = BATU(0x00000000, BAT_BL_256M, BAT_Vs);
 
 	/*
 	 * Map PCI memory space.
@@ -686,24 +712,7 @@ moea_bootstrap(mmu_t mmup, vm_offset_t kernelstart, vm_offset_t kernelend)
 	battable[0xb].batl = BATL(0xb0000000, BAT_I|BAT_G, BAT_PP_RW);
 	battable[0xb].batu = BATU(0xb0000000, BAT_BL_256M, BAT_Vs);
 
-	/*
-	 * Map obio devices.
-	 */
-	battable[0xf].batl = BATL(0xf0000000, BAT_I|BAT_G, BAT_PP_RW);
-	battable[0xf].batu = BATU(0xf0000000, BAT_BL_256M, BAT_Vs);
-
-	/*
-	 * Use an IBAT and a DBAT to map the bottom segment of memory
-	 * where we are. Turn off instruction relocation temporarily
-	 * to prevent faults while reprogramming the IBAT.
-	 */
-	msr = mfmsr();
-	mtmsr(msr & ~PSL_IR);
-	__asm (".balign 32; \n"
-	       "mtibatu 0,%0; mtibatl 0,%1; isync; \n"
-	       "mtdbatu 0,%0; mtdbatl 0,%1; isync"
-	    :: "r"(battable[0].batu), "r"(battable[0].batl));
-	mtmsr(msr);
+	powerpc_sync();
 
 	/* map pci space */
 	__asm __volatile("mtdbatu 1,%0" :: "r"(battable[8].batu));
@@ -903,15 +912,22 @@ moea_bootstrap(mmu_t mmup, vm_offset_t kernelstart, vm_offset_t kernelend)
 			/*
 			 * If the mapping is 1:1, let the RAM and device
 			 * on-demand BAT tables take care of the translation.
+			 *
+			 * However, always enter mappings for segment 16,
+			 * which is mixed-protection and therefore not
+			 * compatible with a BAT entry.
 			 */
-			if (translations[i].om_va == translations[i].om_pa)
-				continue;
+			if ((translations[i].om_va >> ADDR_SR_SHFT) != 0xf &&
+				translations[i].om_va == translations[i].om_pa)
+					continue;
 
 			/* Enter the pages */
 			for (off = 0; off < translations[i].om_len;
 			    off += PAGE_SIZE)
-				moea_kenter(mmup, translations[i].om_va + off,
-					    translations[i].om_pa + off);
+				moea_kenter_attr(mmup,
+				    translations[i].om_va + off,
+				    translations[i].om_pa + off,
+				    moea_bootstrap_convert_wimg(translations[i].om_mode));
 		}
 	}
 
@@ -1083,13 +1099,6 @@ moea_zero_page_area(mmu_t mmu, vm_page_t m, int off, int size)
 	bzero(va, size);
 }
 
-void
-moea_zero_page_idle(mmu_t mmu, vm_page_t m)
-{
-
-	moea_zero_page(mmu, m);
-}
-
 vm_offset_t
 moea_quick_enter_page(mmu_t mmu, vm_page_t m)
 {
@@ -1124,7 +1133,7 @@ moea_enter(mmu_t mmu, pmap_t pmap, vm_offset_t va, vm_page_t m, vm_prot_t prot,
 		if ((flags & PMAP_ENTER_NOSLEEP) != 0)
 			return (KERN_RESOURCE_SHORTAGE);
 		VM_OBJECT_ASSERT_UNLOCKED(m->object);
-		VM_WAIT;
+		vm_wait(NULL);
 	}
 }
 
@@ -1552,6 +1561,70 @@ moea_kremove(mmu_t mmu, vm_offset_t va)
 }
 
 /*
+ * Provide a kernel pointer corresponding to a given userland pointer.
+ * The returned pointer is valid until the next time this function is
+ * called in this thread. This is used internally in copyin/copyout.
+ */
+int
+moea_map_user_ptr(mmu_t mmu, pmap_t pm, volatile const void *uaddr,
+    void **kaddr, size_t ulen, size_t *klen)
+{
+	size_t l;
+	register_t vsid;
+
+	*kaddr = (char *)USER_ADDR + ((uintptr_t)uaddr & ~SEGMENT_MASK);
+	l = ((char *)USER_ADDR + SEGMENT_LENGTH) - (char *)(*kaddr);
+	if (l > ulen)
+		l = ulen;
+	if (klen)
+		*klen = l;
+	else if (l != ulen)
+		return (EFAULT);
+
+	vsid = va_to_vsid(pm, (vm_offset_t)uaddr);
+ 
+	/* Mark segment no-execute */
+	vsid |= SR_N;
+ 
+	/* If we have already set this VSID, we can just return */
+	if (curthread->td_pcb->pcb_cpu.aim.usr_vsid == vsid)
+		return (0);
+ 
+	__asm __volatile("isync");
+	curthread->td_pcb->pcb_cpu.aim.usr_segm =
+	    (uintptr_t)uaddr >> ADDR_SR_SHFT;
+	curthread->td_pcb->pcb_cpu.aim.usr_vsid = vsid;
+	__asm __volatile("mtsr %0,%1; isync" :: "n"(USER_SR), "r"(vsid));
+
+	return (0);
+}
+
+/*
+ * Figure out where a given kernel pointer (usually in a fault) points
+ * to from the VM's perspective, potentially remapping into userland's
+ * address space.
+ */
+static int
+moea_decode_kernel_ptr(mmu_t mmu, vm_offset_t addr, int *is_user,
+    vm_offset_t *decoded_addr)
+{
+	vm_offset_t user_sr;
+
+	if ((addr >> ADDR_SR_SHFT) == (USER_ADDR >> ADDR_SR_SHFT)) {
+		user_sr = curthread->td_pcb->pcb_cpu.aim.usr_segm;
+		addr &= ADDR_PIDX | ADDR_POFF;
+		addr |= user_sr << ADDR_SR_SHFT;
+		*decoded_addr = addr;
+		*is_user = 1;
+	} else {
+		*decoded_addr = addr;
+		*is_user = 0;
+	}
+
+	return (0);
+}
+
+/*
  * Map a range of physical addresses into kernel virtual address space.
  *
  * The value passed in *virt is a suggested virtual address for the mapping.
@@ -1663,7 +1736,7 @@ moea_pinit(mmu_t mmu, pmap_t pmap)
 		u_int	hash, n;
 
 		/*
-		 * Create a new value by mutiplying by a prime and adding in
+		 * Create a new value by multiplying by a prime and adding in
 		 * entropy from the timebase register.  This is to make the
 		 * VSID more random so that the PT hash function collides
 		 * less often.  (Note that the prime casues gcc to do shifts
@@ -2056,23 +2129,26 @@ moea_pvo_remove(struct pvo_entry *pvo, int pteidx)
 		pvo->pvo_pmap->pm_stats.wired_count--;
 
 	/*
+	 * Remove this PVO from the PV and pmap lists.
+	 */
+	LIST_REMOVE(pvo, pvo_vlink);
+	RB_REMOVE(pvo_tree, &pvo->pvo_pmap->pmap_pvo, pvo);
+
+	/*
 	 * Save the REF/CHG bits into their cache if the page is managed.
+	 * Clear PGA_WRITEABLE if all mappings of the page have been removed.
 	 */
 	if ((pvo->pvo_vaddr & PVO_MANAGED) == PVO_MANAGED) {
-		struct	vm_page *pg;
+		struct vm_page *pg;
 
 		pg = PHYS_TO_VM_PAGE(pvo->pvo_pte.pte.pte_lo & PTE_RPGN);
 		if (pg != NULL) {
 			moea_attr_save(pg, pvo->pvo_pte.pte.pte_lo &
 			    (PTE_REF | PTE_CHG));
+			if (LIST_EMPTY(&pg->md.mdpg_pvoh))
+				vm_page_aflag_clear(pg, PGA_WRITEABLE);
 		}
 	}
-
-	/*
-	 * Remove this PVO from the PV and pmap lists.
-	 */
-	LIST_REMOVE(pvo, pvo_vlink);
-	RB_REMOVE(pvo_tree, &pvo->pvo_pmap->pmap_pvo, pvo);
 
 	/*
 	 * Remove this from the overflow list and return it to the pool
@@ -2615,6 +2691,7 @@ moea_unmapdev(mmu_t mmu, vm_offset_t va, vm_size_t size)
 		base = trunc_page(va);
 		offset = va & PAGE_MASK;
 		size = roundup(offset + size, PAGE_SIZE);
+		moea_qremove(mmu, base, atop(size));
 		kva_free(base, size);
 	}
 }

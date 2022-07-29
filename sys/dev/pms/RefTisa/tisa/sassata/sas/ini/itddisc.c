@@ -26,7 +26,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/pms/RefTisa/tisa/sassata/sas/ini/itddisc.c 285242 2015-07-07 13:17:02Z achim $");
+__FBSDID("$FreeBSD$");
 #include <dev/pms/config.h>
 
 #include <dev/pms/freebsd/driver/common/osenv.h>
@@ -1089,7 +1089,7 @@ osGLOBAL void tiIniGetDirectSataSasAddr(tiRoot_t * tiRoot, bit32 phyId, bit8 **s
  	}
 	if(status == IOCTL_CALL_FAIL)
 	{
-#if !(defined(__MidnightBSD__))
+#if !(defined(__FreeBSD__))
 	   printk("Error getting Adapter WWN\n");
 #else
 	   printf("Error getting Adapter WWN\n");

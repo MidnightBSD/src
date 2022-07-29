@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libssp/Versions.def 356356 2020-01-04 20:19:25Z kevans $
+# $FreeBSD$
 
 LIBSSP_1.0 {
 };

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/execution/subshell2.0 245383 2013-01-13 19:39:13Z jilles $
+# $FreeBSD$
 
 f() {
 	x=2

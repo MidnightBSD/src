@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/tests/stdio/printbasic_test.c 313722 2017-02-14 04:49:06Z ngie $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <limits.h>

@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/11/sys/cddl/dev/fbt/mips/fbt_isa.h 299118 2016-05-05 13:54:50Z br $
+ * $FreeBSD$
  *
  */
 

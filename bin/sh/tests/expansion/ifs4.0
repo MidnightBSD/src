@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/expansion/ifs4.0 222361 2011-05-27 15:56:13Z jilles $
+# $FreeBSD$
 
 c=: e= s=' '
 failures=''

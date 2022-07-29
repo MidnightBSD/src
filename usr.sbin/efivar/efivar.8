@@ -1,5 +1,5 @@
-.\" Copyright (c) 2017 Netflix, Inc
-.\" All rights reserved.
+.\"
+.\" Copyright (c) 2017 Netflix, Inc.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/usr.sbin/efivar/efivar.8 332123 2018-04-06 18:10:38Z kevans $
+.\" $FreeBSD$
 .\"
-.Dd May 22, 2017
+.Dd June 18, 2020
 .Dt EFIVAR 8
 .Os
 .Sh NAME
@@ -122,9 +122,10 @@ may be specified.
 Interpret the variables printed as UEFI device paths and print the
 UEFI standard string representation.
 .It Fl g Fl -guid
-flag is specified, guids are converted to names if they are known (and
-show up in
-.Fl -list-guids ).
+Convert GUIDs to names if they are known
+.Po and show them up in
+.Fl -list-guids
+.Pc .
 .It Fl H Fl -hex
 List variable data as a hex dump.
 .It Fl L Fl -list-guids

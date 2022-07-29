@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/share/dtrace/tcptrack 279739 2015-03-07 19:16:09Z gnn $
+ * $FreeBSD$
  *
  * The tcptrack D script shows various information about TCP
  * connections including acceptance and refusal of inbound and

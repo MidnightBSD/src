@@ -1,6 +1,6 @@
 #pt.iso.acc.kbd
 #by: pm@dee.uc.pt
-# $FreeBSD: stable/11/share/vt/keymaps/pt.acc.kbd 293047 2016-01-02 04:42:53Z emaste $
+# $FreeBSD$
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock
 # code  base   shift  cntrl  shift  alt    shift  cntrl  shift state

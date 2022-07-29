@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/tools/test/iconv/ref/JIS_X0208-1990-rev 219019 2011-02-25 00:04:39Z gabor $
+$FreeBSD$
 0x00A2 = 0x7121
 0x00A3 = 0x7221
 0x00A7 = 0x7821

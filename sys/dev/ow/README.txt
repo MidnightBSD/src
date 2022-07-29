@@ -16,4 +16,4 @@ responsibility of the client device drivers to implement.
 Client drivers may only call the own(9) interface. The ow(4) driver
 calls the owll(9) interface and implements the own(9).
 
-$FreeBSD: stable/11/sys/dev/ow/README.txt 287225 2015-08-27 23:33:38Z imp $
+$FreeBSD$

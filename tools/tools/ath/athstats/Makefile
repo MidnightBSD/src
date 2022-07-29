@@ -1,17 +1,41 @@
-# $FreeBSD: src/tools/tools/ath/athstats/Makefile,v 1.4 2007/02/02 02:39:56 sam Exp $
+# $FreeBSD$
+
+MAN=
+
+.include <bsd.own.mk>
+
+.PATH:	${.CURDIR}/../../../../sys/dev/ath/ath_hal
 
 PROG=	athstats
-BINDIR=	/usr/local/bin
-NO_MAN=
 
-SRCS=	main.c statfoo.c athstats.c
+SRCS=	main.c athstats.c opt_ah.h ah_osdep.h
 
-.include <bsd.prog.mk>
+CFLAGS+=	-I${.CURDIR}/../common/
+.PATH.c: ${.CURDIR}/../common/
+SRCS+=	ctrl.c
 
-CFLAGS+= -I.
-CLEANFILES+= opt_ah.h
+CLEANFILES+=	opt_ah.h
 
-athstats.o: opt_ah.h
+.include <../Makefile.inc>
+
+CFLAGS+=-DATH_SUPPORT_ANI
+CFLAGS+=-DATH_SUPPORT_TDMA
+
+CFLAGS+=-I${.CURDIR}/../../../../lib/libbsdstat/
+
+CFLAGS.clang+= -fbracket-depth=512
+
+LIBADD=	bsdstat
 
 opt_ah.h:
-	touch opt_ah.h
+	echo "#define AH_DEBUG 1" > opt_ah.h
+	echo "#define AH_DEBUG_COUNTRY 1" >> opt_ah.h
+	echo "#define AH_SUPPORT_AR5416 1" >> opt_ah.h
+
+ah_osdep.h:
+	echo 'typedef void *HAL_SOFTC;' >ah_osdep.h
+	echo 'typedef int HAL_BUS_TAG;' >>ah_osdep.h
+	echo 'typedef void *HAL_BUS_HANDLE;' >>ah_osdep.h
+	echo 'typedef uint32_t HAL_DMA_ADDR;' >>ah_osdep.h
+
+.include <bsd.prog.mk>

@@ -39,14 +39,14 @@ __FBSDID("$FreeBSD: stable/11/stand/common/part.c 346483 2019-04-21 04:35:49Z ke
 
 #include <fs/cd9660/iso.h>
 
-#include <crc32.h>
+#include <zlib.h>
 #include <part.h>
 #include <uuid.h>
 
 #ifdef PART_DEBUG
 #define	DPRINTF(fmt, args...) printf("%s: " fmt "\n", __func__, ## args)
 #else
-#define	DPRINTF(fmt, args...)
+#define	DPRINTF(fmt, args...)	((void)0)
 #endif
 
 #ifdef LOADER_GPT_SUPPORT
@@ -61,6 +61,7 @@ static const uuid_t gpt_uuid_midnightbsd_nandfs = GPT_ENT_TYPE_MIDNIGHTBSD_NANDF
 static const uuid_t gpt_uuid_midnightbsd_swap = GPT_ENT_TYPE_MIDNIGHTBSD_SWAP;
 static const uuid_t gpt_uuid_midnightbsd_zfs = GPT_ENT_TYPE_MIDNIGHTBSD_ZFS;
 static const uuid_t gpt_uuid_midnightbsd_vinum = GPT_ENT_TYPE_MIDNIGHTBSD_VINUM;
+static const uuid_t gpt_uuid_apple_apfs = GPT_ENT_TYPE_APPLE_APFS;
 #endif
 
 struct pentry {
@@ -100,6 +101,7 @@ static struct parttypes {
 	{ PART_LINUX_SWAP,	"Linux swap" },
 	{ PART_DOS,		"DOS/Windows" },
 	{ PART_ISO9660,		"ISO9660" },
+	{ PART_APFS,		"APFS" },
 };
 
 const char *
@@ -145,6 +147,8 @@ gpt_parttype(uuid_t type)
 		return (PART_MIDNIGHTBSD_NANDFS);
 	else if (uuid_equal(&type, &gpt_uuid_midnightbsd, NULL))
 		return (PART_MIDNIGHTBSD);
+	else if (uuid_equal(&type, &gpt_uuid_apple_apfs, NULL))
+		return (PART_APFS);
 	return (PART_UNKNOWN);
 }
 
@@ -164,8 +168,8 @@ gpt_checkhdr(struct gpt_hdr *hdr, uint64_t lba_self, uint64_t lba_last,
 		return (NULL);
 	}
 	crc = le32toh(hdr->hdr_crc_self);
-	hdr->hdr_crc_self = 0;
-	if (crc32(hdr, sz) != crc) {
+	hdr->hdr_crc_self = crc32(0, Z_NULL, 0);
+	if (crc32(hdr->hdr_crc_self, (const Bytef *)hdr, sz) != crc) {
 		DPRINTF("GPT header's CRC doesn't match");
 		return (NULL);
 	}
@@ -213,7 +217,7 @@ gpt_checktbl(const struct gpt_hdr *hdr, uint8_t *tbl, size_t size,
 		cnt = hdr->hdr_entries;
 		/* Check CRC only when buffer size is enough for table. */
 		if (hdr->hdr_crc_table !=
-		    crc32(tbl, hdr->hdr_entries * hdr->hdr_entsz)) {
+		    crc32(0, tbl, hdr->hdr_entries * hdr->hdr_entsz)) {
 			DPRINTF("GPT table's CRC doesn't match");
 			return (-1);
 		}
@@ -651,13 +655,13 @@ ptable_open(void *dev, uint64_t sectors, uint16_t sectorsize,
 	struct dos_partition *dp;
 	struct ptable *table;
 	uint8_t *buf;
-	int i, count;
 #ifdef LOADER_MBR_SUPPORT
 	struct pentry *entry;
 	uint32_t start, end;
 	int has_ext;
 #endif
 	table = NULL;
+	dp = NULL;
 	buf = malloc(sectorsize);
 	if (buf == NULL)
 		return (NULL);
@@ -712,29 +716,28 @@ ptable_open(void *dev, uint64_t sectors, uint16_t sectorsize,
 		goto out;
 	}
 	/* Check that we have PMBR. Also do some validation. */
-	dp = (struct dos_partition *)(buf + DOSPARTOFF);
-	for (i = 0, count = 0; i < NDOSPART; i++) {
+	dp = malloc(NDOSPART * sizeof(struct dos_partition));
+	if (dp == NULL)
+		goto out;
+	bcopy(buf + DOSPARTOFF, dp, NDOSPART * sizeof(struct dos_partition));
+
+	/*
+	 * In mac we can have PMBR partition in hybrid MBR;
+	 * that is, MBR partition which has DOSPTYP_PMBR entry defined as
+	 * start sector 1. After DOSPTYP_PMBR, there may be other partitions.
+	 * UEFI compliant PMBR has no other partitions.
+	 */
+	for (int i = 0; i < NDOSPART; i++) {
 		if (dp[i].dp_flag != 0 && dp[i].dp_flag != 0x80) {
 			DPRINTF("invalid partition flag %x", dp[i].dp_flag);
 			goto out;
 		}
 #ifdef LOADER_GPT_SUPPORT
-		if (dp[i].dp_typ == DOSPTYP_PMBR) {
+		if (dp[i].dp_typ == DOSPTYP_PMBR && dp[i].dp_start == 1) {
 			table->type = PTABLE_GPT;
 			DPRINTF("PMBR detected");
 		}
 #endif
-		if (dp[i].dp_typ != 0)
-			count++;
-	}
-	/* Do we have some invalid values? */
-	if (table->type == PTABLE_GPT && count > 1) {
-		if (dp[1].dp_typ != DOSPTYP_HFS) {
-			table->type = PTABLE_NONE;
-			DPRINTF("Incorrect PMBR, ignore it");
-		} else {
-			DPRINTF("Bootcamp detected");
-		}
 	}
 #ifdef LOADER_GPT_SUPPORT
 	if (table->type == PTABLE_GPT) {
@@ -746,7 +749,7 @@ ptable_open(void *dev, uint64_t sectors, uint16_t sectorsize,
 	/* Read MBR. */
 	DPRINTF("MBR detected");
 	table->type = PTABLE_MBR;
-	for (i = has_ext = 0; i < NDOSPART; i++) {
+	for (int i = has_ext = 0; i < NDOSPART; i++) {
 		if (dp[i].dp_typ == 0)
 			continue;
 		start = le32dec(&(dp[i].dp_start));
@@ -779,6 +782,7 @@ ptable_open(void *dev, uint64_t sectors, uint16_t sectorsize,
 #endif /* LOADER_MBR_SUPPORT */
 #endif /* LOADER_MBR_SUPPORT || LOADER_GPT_SUPPORT */
 out:
+	free(dp);
 	free(buf);
 	return (table);
 }
@@ -902,38 +906,6 @@ ptable_getbestpart(const struct ptable *table, struct ptable_entry *part)
 				pref = PREF_NONE;
 		}
 #endif /* LOADER_GPT_SUPPORT */
-#ifdef LOADER_PC98_SUPPORT
-		if (table->type == PTABLE_PC98) {
-			switch(entry->part.type & PC98_MID_MASK) {
-			case PC98_MID_386BSD:		/* BSD */
-				if ((entry->part.type & PC98_MID_BOOTABLE) &&
-				    (preflevel > PREF_MBSD_ACT)) {
-					pref = i;
-					preflevel = PREF_MBSD_ACT;
-				} else if (preflevel > PREF_MBSD) {
-					pref = i;
-					preflevel = PREF_MBSD;
-				}
-				break;
-
-			case 0x11:			/* DOS/Windows */
-			case 0x20:
-			case 0x21:
-			case 0x22:
-			case 0x23:
-			case 0x63:
-				if ((entry->part.type & PC98_MID_BOOTABLE) &&
-				    (preflevel > PREF_DOS_ACT)) {
-					pref = i;
-					preflevel = PREF_DOS_ACT;
-				} else if (preflevel > PREF_DOS) {
-					pref = i;
-					preflevel = PREF_DOS;
-				}
-				break;
-			}
-		}
-#endif /* LOADER_PC98_SUPPORT */
 		if (pref < preflevel) {
 			preflevel = pref;
 			best = entry;

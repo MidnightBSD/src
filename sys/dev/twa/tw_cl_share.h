@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap
  * All rights reserved.
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/11/sys/dev/twa/tw_cl_share.h 331722 2018-03-29 02:50:57Z eadler $
+ *	$FreeBSD$
  */
 
 /*
@@ -68,7 +70,7 @@
 #define TW_CL_MAX_NUM_UNITS		32	/* max # of units we support */
 #endif /* TW_OSL_ENCLOSURE_SUPPORT */
 
-#define TW_CL_MAX_NUM_LUNS		16	/* max # of LUN's we support */
+#define TW_CL_MAX_NUM_LUNS		255	/* max # of LUN's we support */
 #define TW_CL_MAX_IO_SIZE		0x20000	/* 128K */
 
 /*

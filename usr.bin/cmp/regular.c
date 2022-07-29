@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,12 +36,13 @@ static char sccsid[] = "@(#)regular.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/cmp/regular.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 
+#include <capsicum_helpers.h>
 #include <err.h>
 #include <limits.h>
 #include <signal.h>
@@ -57,14 +60,15 @@ static void segv_handler(int);
 
 void
 c_regular(int fd1, const char *file1, off_t skip1, off_t len1,
-    int fd2, const char *file2, off_t skip2, off_t len2)
+    int fd2, const char *file2, off_t skip2, off_t len2, off_t limit)
 {
+	struct sigaction act, oact;
+	cap_rights_t rights;
 	u_char ch, *p1, *p2, *m1, *m2, *e1, *e2;
 	off_t byte, length, line;
-	int dfound;
 	off_t pagemask, off1, off2;
 	size_t pagesize;
-	struct sigaction act, oact;
+	int dfound;
 
 	if (skip1 > len1)
 		eofmsg(file1);
@@ -76,29 +80,38 @@ c_regular(int fd1, const char *file1, off_t skip1, off_t len1,
 	if (sflag && len1 != len2)
 		exit(DIFF_EXIT);
 
-	sigemptyset(&act.sa_mask);
-	act.sa_flags = SA_NODEFER;
-	act.sa_handler = segv_handler;
-	if (sigaction(SIGSEGV, &act, &oact))
-		err(ERR_EXIT, "sigaction()");
-
 	pagesize = getpagesize();
 	pagemask = (off_t)pagesize - 1;
 	off1 = ROUNDPAGE(skip1);
 	off2 = ROUNDPAGE(skip2);
 
 	length = MIN(len1, len2);
+	if (limit > 0)
+		length = MIN(length, limit);
 
 	if ((m1 = remmap(NULL, fd1, off1)) == NULL) {
-		c_special(fd1, file1, skip1, fd2, file2, skip2);
+		c_special(fd1, file1, skip1, fd2, file2, skip2, limit);
 		return;
 	}
 
 	if ((m2 = remmap(NULL, fd2, off2)) == NULL) {
 		munmap(m1, MMAP_CHUNK);
-		c_special(fd1, file1, skip1, fd2, file2, skip2);
+		c_special(fd1, file1, skip1, fd2, file2, skip2, limit);
 		return;
 	}
+
+	if (caph_rights_limit(fd1, cap_rights_init(&rights, CAP_MMAP_R)) < 0)
+		err(1, "unable to limit rights for %s", file1);
+	if (caph_rights_limit(fd2, cap_rights_init(&rights, CAP_MMAP_R)) < 0)
+		err(1, "unable to limit rights for %s", file2);
+	if (caph_enter() < 0)
+		err(ERR_EXIT, "unable to enter capability mode");
+
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = SA_NODEFER;
+	act.sa_handler = segv_handler;
+	if (sigaction(SIGSEGV, &act, &oact))
+		err(ERR_EXIT, "sigaction()");
 
 	dfound = 0;
 	e1 = m1 + MMAP_CHUNK;
@@ -114,10 +127,14 @@ c_regular(int fd1, const char *file1, off_t skip1, off_t len1,
 				    (long long)byte - 1, ch, *p2);
 			} else if (lflag) {
 				dfound = 1;
-				(void)printf("%6lld %3o %3o\n",
-				    (long long)byte, ch, *p2);
+				if (bflag)
+					(void)printf("%6lld %3o %c %3o %c\n",
+					    (long long)byte, ch, ch, *p2, *p2);
+				else
+					(void)printf("%6lld %3o %3o\n",
+					    (long long)byte, ch, *p2);
 			} else
-				diffmsg(file1, file2, byte, line);
+				diffmsg(file1, file2, byte, line, ch, *p2);
 				/* NOTREACHED */
 		}
 		if (ch == '\n')

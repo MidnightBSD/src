@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/smp.h 328653 2018-02-01 13:01:44Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _LINUX_SMP_H_

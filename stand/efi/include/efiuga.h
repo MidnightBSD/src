@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/include/efiuga.h 298826 2016-04-30 00:26:38Z pfg $ */
+/* $FreeBSD$ */
 /** @file
   UGA Draw protocol from the EFI 1.1 specification.
 
@@ -139,7 +139,7 @@ typedef enum {
   
     @retval EFI_SUCCESS           - The Blt operation completed.
     @retval EFI_INVALID_PARAMETER - BltOperation is not valid.
-    @retval EFI_DEVICE_ERROR      - A hardware error occurred writting to the video buffer.
+    @retval EFI_DEVICE_ERROR      - A hardware error occurred writing to the video buffer.
 
 --*/
 typedef

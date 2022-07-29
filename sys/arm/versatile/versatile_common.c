@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/versatile/versatile_common.c 330897 2018-03-14 03:19:51Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,6 +44,7 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/versatile/versatile_common.c 330897 2018-0
 
 #include <dev/fdt/fdt_common.h>
 #include <dev/ofw/openfirm.h>
+#include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
 #include <machine/vmparam.h>
@@ -54,7 +55,7 @@ fdt_intc_decode_ic(phandle_t node, pcell_t *intr, int *interrupt, int *trig,
     int *pol)
 {
 
-	if (!fdt_is_compatible(node, "arm,versatile-vic"))
+	if (!ofw_bus_node_is_compatible(node, "arm,versatile-vic"))
 		return (ENXIO);
 
 	*interrupt = fdt32_to_cpu(intr[0]);

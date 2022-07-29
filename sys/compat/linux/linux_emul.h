@@ -26,11 +26,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linux/linux_emul.h 347521 2019-05-13 11:17:31Z dchagin $
+ * $FreeBSD$
  */
 
 #ifndef _LINUX_EMUL_H_
 #define	_LINUX_EMUL_H_
+
+struct image_params;
 
 /*
  * modeled after similar structure in NetBSD
@@ -68,6 +70,7 @@ struct linux_pemuldata {
 	struct sx	pem_sx;		/* lock for this struct */
 	void		*epoll;		/* epoll data */
 	uint32_t	persona;	/* process execution domain */
+	uint32_t	ptrace_flags;	/* used by ptrace(2) */
 };
 
 #define	LINUX_PEM_XLOCK(p)	sx_xlock(&(p)->pem_sx)

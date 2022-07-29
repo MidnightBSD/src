@@ -1,7 +1,7 @@
-# $FreeBSD: stable/11/sys/mips/malta/std.malta 249083 2013-04-04 07:12:24Z mav $
+# $FreeBSD$
 files	"../malta/files.malta"
 
-cpu		CPU_MIPS4KC
+cpu		CPU_MALTA
 device		pci
 device		ata
 

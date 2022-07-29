@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/net/tcp.h 290045 2015-10-27 12:21:15Z hselasky $
+ * $FreeBSD$
  */
 #ifndef _LINUX_NET_TCP_H_
 #define	_LINUX_NET_TCP_H_

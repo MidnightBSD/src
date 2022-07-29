@@ -39,7 +39,7 @@
  *
  * Updated by Andrew Thompson <thompsa@FreeBSD.org> for MPSAFE TTY.
  *
- * $FreeBSD: stable/11/sys/netgraph/ng_tty.c 298813 2016-04-29 21:25:05Z pfg $
+ * $FreeBSD$
  * $Whistle: ng_tty.c,v 1.21 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -412,7 +412,7 @@ ngt_rint_bypass(struct tty *tp, const void *buf, size_t len)
 	size_t total = 0;
 	int error = 0, length;
 
-	tty_lock_assert(tp, MA_OWNED);
+	tty_assert_locked(tp);
 
 	if (sc->hook == NULL)
 		return (0);
@@ -460,7 +460,7 @@ ngt_rint(struct tty *tp, char c, int flags)
 	struct mbuf *m;
 	int error = 0;
 
-	tty_lock_assert(tp, MA_OWNED);
+	tty_assert_locked(tp);
 
 	if (sc->hook == NULL)
 		return (0);

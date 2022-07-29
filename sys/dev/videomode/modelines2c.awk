@@ -1,6 +1,6 @@
 #! /usr/bin/awk -f
 #	$NetBSD: modelines2c.awk,v 1.4 2006/10/26 23:19:50 bjh21 Exp $
-#	$FreeBSD: stable/11/sys/dev/videomode/modelines2c.awk 278798 2015-02-15 11:37:40Z hselasky $
+#	$FreeBSD$
 #
 # Copyright (c) 2006 Itronix Inc.
 # All rights reserved.

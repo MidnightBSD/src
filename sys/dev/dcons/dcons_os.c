@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (C) 2003,2004
  * 	Hidetoshi Shimokawa. All rights reserved.
  *
@@ -31,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/dcons/dcons_os.c 347627 2019-05-15 17:58:08Z ian $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -320,11 +322,16 @@ dcons_drv_init(int stage)
 		 * Allow read/write access to dcons buffer.
 		 */
 		for (pa = trunc_page(addr); pa < addr + size; pa += PAGE_SIZE)
-			*vtopte(KERNBASE + pa) |= PG_RW;
+			*vtopte(PMAP_MAP_LOW + pa) |= PG_RW;
 		invltlb();
 #endif
 		/* XXX P to V */
+#ifdef __amd64__
 		dg.buf = (struct dcons_buf *)(vm_offset_t)(KERNBASE + addr);
+#else /* __i386__ */
+		dg.buf = (struct dcons_buf *)((vm_offset_t)PMAP_MAP_LOW +
+		    addr);
+#endif
 		dg.size = size;
 		if (dcons_load_buffer(dg.buf, dg.size, sc) < 0)
 			dg.buf = NULL;

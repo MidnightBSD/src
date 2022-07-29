@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/vnic/nic_reg.h 296037 2016-02-25 14:26:13Z zbb $
+ * $FreeBSD$
  *
  */
 

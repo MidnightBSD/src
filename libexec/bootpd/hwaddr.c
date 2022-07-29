@@ -2,7 +2,7 @@
  * hwaddr.c - routines that deal with hardware addresses.
  * (i.e. Ethernet)
  *
- * $FreeBSD: stable/11/libexec/bootpd/hwaddr.c 297865 2016-04-12 18:18:26Z pfg $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -37,14 +37,6 @@
 #include <unistd.h>
 #endif
 #include <syslog.h>
-
-#ifndef USE_BFUNCS
-/* Yes, memcpy is OK here (no overlapped copies). */
-#include <memory.h>
-#define bcopy(a,b,c)    memcpy(b,a,c)
-#define bzero(p,l)      memset(p,0,l)
-#define bcmp(a,b,c)     memcmp(a,b,c)
-#endif
 
 #ifndef	ATF_INUSE	/* Not defined on some systems (i.e. Linux) */
 #define	ATF_INUSE 0

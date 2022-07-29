@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_BSDINSTALL 277677 2015-01-25 04:43:13Z ngie $
+.\" $FreeBSD$
 Set to not build
 .Xr bsdinstall 8 ,
 .Xr sade 8 ,

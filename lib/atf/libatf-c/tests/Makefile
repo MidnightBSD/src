@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/atf/libatf-c/tests/Makefile 349053 2019-06-15 09:30:11Z emaste $
+# $FreeBSD$
 
 .include <bsd.init.mk>
 

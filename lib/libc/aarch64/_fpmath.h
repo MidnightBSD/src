@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libc/aarch64/_fpmath.h 281197 2015-04-07 09:52:14Z andrew $
+ * $FreeBSD$
  */
 
 union IEEEl2bits {

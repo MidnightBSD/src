@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/builtins/case23.0 333224 2018-05-03 19:47:25Z jilles $
+# $FreeBSD$
 
 case [ in
 [[:alpha:]]) echo bad

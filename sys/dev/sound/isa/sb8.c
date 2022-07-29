@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * Copyright (c) 1997,1998 Luigi Rizzo
  *
@@ -42,7 +44,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/isa/sb8.c 331722 2018-03-29 02:50:57Z eadler $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 #define SB_DEFAULT_BUFSZ	4096
 
@@ -718,6 +720,7 @@ sb_attach(device_t dev)
     	char status[SND_STATUSLEN];
 	uintptr_t ver;
 
+	gone_in_dev(dev, 14, "ISA sound driver");
     	sb = malloc(sizeof(*sb), M_DEVBUF, M_WAITOK | M_ZERO);
 	sb->parent_dev = device_get_parent(dev);
 	BUS_READ_IVAR(device_get_parent(dev), dev, 1, &ver);

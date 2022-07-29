@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/bitops.h 345914 2019-04-05 11:10:27Z hselasky $
+ * $FreeBSD$
  */
 #ifndef	_LINUX_BITOPS_H_
 #define	_LINUX_BITOPS_H_
@@ -273,7 +273,14 @@ find_next_zero_bit(const unsigned long *addr, unsigned long size,
     atomic_clear_long(&((volatile unsigned long *)(a))[BIT_WORD(i)], BIT_MASK(i))
 
 #define	test_bit(i, a)							\
-    !!(READ_ONCE(((volatile unsigned long *)(a))[BIT_WORD(i)]) & BIT_MASK(i))
+    !!(READ_ONCE(((volatile const unsigned long *)(a))[BIT_WORD(i)]) & BIT_MASK(i))
+
+static inline void
+clear_bit_unlock(long bit, volatile unsigned long *var)
+{
+	clear_bit(bit, var);
+	wmb();
+}
 
 static inline int
 test_and_clear_bit(long bit, volatile unsigned long *var)
@@ -357,7 +364,7 @@ linux_reg_op(unsigned long *bitmap, int pos, int order, int reg_op)
         index = pos / BITS_PER_LONG;
         offset = pos - (index * BITS_PER_LONG);
         nlongs_reg = BITS_TO_LONGS(nbits_reg);
-        nbitsinlong = min(nbits_reg,  BITS_PER_LONG);
+        nbitsinlong = MIN(nbits_reg,  BITS_PER_LONG);
 
         mask = (1UL << (nbitsinlong - 1));
         mask += mask - 1;

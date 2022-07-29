@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/fdt/fdt_clock.c 299477 2016-05-11 18:20:02Z gonzo $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
@@ -58,7 +58,7 @@ enable_disable_all(device_t consumer, boolean_t enable)
 	boolean_t anyerrors;
 
 	cnode = ofw_bus_get_node(consumer);
-	ncells = OF_getencprop_alloc(cnode, "clocks", sizeof(*clks),
+	ncells = OF_getencprop_alloc_multi(cnode, "clocks", sizeof(*clks),
 	    (void **)&clks);
 	if (enable && ncells < 2) {
 		device_printf(consumer, "Warning: No clocks specified in fdt "
@@ -102,7 +102,7 @@ fdt_clock_get_info(device_t consumer, int n, struct fdt_clock_info *info)
 	uint32_t *clks;
 
 	cnode = ofw_bus_get_node(consumer);
-	ncells = OF_getencprop_alloc(cnode, "clocks", sizeof(*clks),
+	ncells = OF_getencprop_alloc_multi(cnode, "clocks", sizeof(*clks),
 	    (void **)&clks);
 	if (ncells <= 0)
 		return (ENXIO);

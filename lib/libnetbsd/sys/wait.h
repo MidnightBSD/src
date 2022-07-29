@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libnetbsd/sys/wait.h 314021 2017-02-21 03:46:43Z ngie $ *
+ * $FreeBSD$ *
  */
 
 #ifndef _LIBNETBSD_SYS_WAIT_H_

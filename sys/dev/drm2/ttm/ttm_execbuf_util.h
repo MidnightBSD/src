@@ -27,7 +27,7 @@
 /*
  * Authors: Thomas Hellstrom <thellstrom-at-vmware-dot-com>
  */
-/* $FreeBSD: stable/11/sys/dev/drm2/ttm/ttm_execbuf_util.h 247835 2013-03-05 09:49:34Z kib $ */
+/* $FreeBSD$ */
 
 #ifndef _TTM_EXECBUF_UTIL_H_
 #define _TTM_EXECBUF_UTIL_H_

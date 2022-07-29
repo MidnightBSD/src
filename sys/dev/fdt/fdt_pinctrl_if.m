@@ -23,10 +23,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/dev/fdt/fdt_pinctrl_if.m 271546 2014-09-13 19:03:32Z ian $
+# $FreeBSD$
 #
 
 #include <sys/types.h>
+#include <sys/bus.h>
 #include <dev/ofw/openfirm.h>
 
 #
@@ -35,13 +36,82 @@
 
 INTERFACE fdt_pinctrl;
 
+CODE {
+	static int
+	fdt_pinctrl_default_is_gpio(device_t pinctrl, device_t gpio, bool *is_gpio)
+	{
+
+		return (EOPNOTSUPP);
+	}
+
+	static int
+	fdt_pinctrl_default_set_flags(device_t pinctrl, device_t gpio, uint32_t pin,
+	    uint32_t flags)
+	{
+
+		return (EOPNOTSUPP);
+	}
+
+	static int
+	fdt_pinctrl_default_get_flags(device_t pinctrl, device_t gpio, uint32_t pin,
+	    uint32_t *flags)
+	{
+
+		return (EOPNOTSUPP);
+	}
+};
+
+# Needed for timestamping device probe/attach calls
+HEADER {
+	#include <sys/tslog.h>
+}
+
 #
 # Set pins to the specified configuration.  The cfgxref arg is an xref phandle
 # to a descendent node (child, grandchild, ...) of the pinctrl device node.
 # Returns 0 on success or a standard errno value.
 #
+PROLOG {
+	TSENTER2(device_get_name(pinctrl));
+}
+EPILOG {
+	TSEXIT2(device_get_name(pinctrl));
+}
 METHOD int configure {
 	device_t	pinctrl;
 	phandle_t	cfgxref;
 };
 
+
+#
+# Test if the pin is in gpio mode
+# Called from a gpio device
+#
+METHOD int is_gpio {
+	device_t pinctrl;
+	device_t gpio;
+	uint32_t pin;
+	bool *is_gpio;
+} DEFAULT fdt_pinctrl_default_is_gpio;
+
+#
+# Set the flags of a pin
+# Called from a gpio device
+#
+METHOD int set_flags {
+	device_t pinctrl;
+	device_t gpio;
+	uint32_t pin;
+	uint32_t flags;
+} DEFAULT fdt_pinctrl_default_set_flags;
+
+#
+# Get the flags of a pin
+# Called from a gpio device
+#
+METHOD int get_flags {
+	device_t pinctrl;
+	device_t gpio;
+	uint32_t pin;
+	uint32_t *flags;
+} DEFAULT fdt_pinctrl_default_get_flags;

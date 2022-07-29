@@ -28,7 +28,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/xen/xenstore/xenstorevar.h 315667 2017-03-21 08:36:25Z royger $
+ * $FreeBSD$
  */
 
 #ifndef _XEN_XENSTORE_XENSTOREVAR_H
@@ -52,9 +52,7 @@
 /* XenStore allocations including XenStore data returned to clients. */
 MALLOC_DECLARE(M_XENSTORE);
 
-struct xenstore_domain_interface;
 struct xs_watch;
-extern struct xenstore_domain_interface *xen_store;
 
 typedef	void (xs_watch_cb_t)(struct xs_watch *, const char **vec,
     unsigned int len);
@@ -92,6 +90,27 @@ struct xs_transaction
 };
 
 #define XST_NIL ((struct xs_transaction) { 0 })
+
+/**
+ * Check if Xenstore is initialized.
+ *
+ * \return  True if initialized, false otherwise.
+ */
+bool xs_initialized(void);
+
+/**
+ * Return xenstore event channel port.
+ *
+ * \return event channel port.
+ */
+evtchn_port_t xs_evtchn(void);
+
+/**
+ * Return xenstore page physical memory address.
+ *
+ * \return xenstore page physical address.
+ */
+vm_paddr_t xs_address(void);
 
 /**
  * Fetch the contents of a directory in the XenStore.

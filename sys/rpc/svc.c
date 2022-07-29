@@ -1,6 +1,8 @@
 /*	$NetBSD: svc.c,v 1.21 2000/07/06 03:10:35 christos Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -33,7 +35,7 @@ static char *sccsid2 = "@(#)svc.c 1.44 88/02/08 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)svc.c	2.4 88/08/11 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/rpc/svc.c 336927 2018-07-30 19:23:52Z rmacklem $");
+__FBSDID("$FreeBSD$");
 
 /*
  * svc.c, Server-side remote procedure call interface.
@@ -201,6 +203,8 @@ svcpool_cleanup(SVCPOOL *pool)
 		mtx_unlock(&grp->sg_lock);
 	}
 	TAILQ_FOREACH_SAFE(xprt, &cleanup, xp_link, nxprt) {
+		if (xprt->xp_socket != NULL)
+			soshutdown(xprt->xp_socket, SHUT_WR);
 		SVC_RELEASE(xprt);
 	}
 
@@ -386,6 +390,8 @@ xprt_unregister(SVCXPRT *xprt)
 	xprt_unregister_locked(xprt);
 	mtx_unlock(&grp->sg_lock);
 
+	if (xprt->xp_socket != NULL)
+		soshutdown(xprt->xp_socket, SHUT_WR);
 	SVC_RELEASE(xprt);
 }
 
@@ -1074,6 +1080,7 @@ svc_checkidle(SVCGROUP *grp)
 
 	mtx_unlock(&grp->sg_lock);
 	TAILQ_FOREACH_SAFE(xprt, &cleanup, xp_link, nxprt) {
+		soshutdown(xprt->xp_socket, SHUT_WR);
 		SVC_RELEASE(xprt);
 	}
 	mtx_lock(&grp->sg_lock);

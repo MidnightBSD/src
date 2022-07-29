@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * 1. Redistributions of source code must retain the
  * Copyright (c) 1997 Amancio Hasty, 1999 Roger Hardiman
  * All rights reserved.
@@ -32,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bktr/bktr_tuner.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -50,7 +52,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/bktr/bktr_tuner.c 331722 2018-03-29 02:50:
 #include <sys/proc.h>
 #endif
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #if (__FreeBSD_version < 500000)
 #include <machine/clock.h>              /* for DELAY */
 #include <pci/pcivar.h>
@@ -299,6 +301,16 @@ static const struct TUNER tuners[] = {
 	     0x00 },
 	   { 0x00, 0x00 },                      /* band-switch crosspoints */
 	   { 0xa0, 0x90, 0x30, 0x8e } },        /* the band-switch values */
+
+	 /* PHILIPS FI1216 */
+	 { "PHILIPS_FI1216",                    /* the 'name' */
+	   TTYPE_PAL,                           /* input type */
+	   { TSBH1_FCONTROL,                    /* control byte for Tuner PLL */
+	     TSBH1_FCONTROL,
+	     TSBH1_FCONTROL,
+	     0x00 },
+	   { 0x00, 0x00 },                      /* band-switch crosspoints */
+	   { 0x01, 0x02, 0x04, 0x00 } },        /* the band-switch values */
 };
 
 

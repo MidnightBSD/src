@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Nathan Whitehorn
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/powerpc/cpufreq/pcr.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -249,8 +251,10 @@ pcr_settings(device_t dev, struct cf_setting *sets, int *count)
 
 	sets[0].freq = 10000; sets[0].dev = dev;
 	sets[1].freq = 5000; sets[1].dev = dev;
-	if (sc->nmodes > 2)
-		sets[2].freq = 2500; sets[2].dev = dev;
+	if (sc->nmodes > 2) {
+		sets[2].freq = 2500;
+		sets[2].dev = dev;
+	}
 	*count = sc->nmodes;
 
 	return (0);

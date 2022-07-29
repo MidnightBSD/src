@@ -1,5 +1,5 @@
 /* $NetBSD: softfloat-macros,v 1.2 2009/02/16 10:23:35 tron Exp $ */
-/* $FreeBSD: stable/11/lib/libc/softfloat/bits64/softfloat-macros 334654 2018-06-05 13:46:18Z kib $ */
+/* $FreeBSD$ */
 
 /*
 ===============================================================================

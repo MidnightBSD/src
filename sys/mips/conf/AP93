@@ -10,11 +10,11 @@
 # + 64MB RAM
 # + uboot environment
 
-# $FreeBSD: stable/11/sys/mips/conf/AP93 345344 2019-03-20 18:49:45Z kib $
+# $FreeBSD$
 
 #NO_UNIVERSE
 
-include		"AR724X_BASE"
+include		"std.AR724X"
 ident		"AP93"
 hints		"AP93.hints"
 

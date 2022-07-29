@@ -2,6 +2,8 @@
  */
 
 /*-
+   SPDX-License-Identifier: RSA-MD
+
    Copyright (C) 1990-2, RSA Data Security, Inc. All rights reserved.
 
    License to copy and use this software is granted provided that it
@@ -24,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/md4c.c 325989 2017-11-19 00:32:16Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

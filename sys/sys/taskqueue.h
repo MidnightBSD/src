@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Doug Rabson
  * All rights reserved.
  *
@@ -24,14 +25,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/taskqueue.h 341154 2018-11-28 17:00:18Z markj $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_TASKQUEUE_H_
 #define _SYS_TASKQUEUE_H_
 
 #ifndef _KERNEL
-#error "no user-servicable parts inside"
+#error "no user-serviceable parts inside"
 #endif
 
 #include <sys/queue.h>
@@ -41,6 +42,7 @@
 
 struct taskqueue;
 struct taskqgroup;
+struct proc;
 struct thread;
 
 struct timeout_task {
@@ -74,7 +76,9 @@ struct taskqueue *taskqueue_create(const char *name, int mflags,
 				    taskqueue_enqueue_fn enqueue,
 				    void *context);
 int	taskqueue_start_threads(struct taskqueue **tqp, int count, int pri,
-				const char *name, ...) __printflike(4, 5);
+	    const char *name, ...) __printflike(4, 5);
+int	taskqueue_start_threads_in_proc(struct taskqueue **tqp, int count,
+	    int pri, struct proc *p, const char *name, ...) __printflike(5, 6);
 int	taskqueue_start_threads_cpuset(struct taskqueue **tqp, int count,
 	    int pri, cpuset_t *mask, const char *name, ...) __printflike(5, 6);
 int	taskqueue_enqueue(struct taskqueue *queue, struct task *task);
@@ -182,7 +186,7 @@ SYSINIT(taskqueue_##name, SI_SUB_TASKQ, SI_ORDER_SECOND,		\
 struct __hack
 #define TASKQUEUE_FAST_DEFINE_THREAD(name)				\
 TASKQUEUE_FAST_DEFINE(name, taskqueue_thread_enqueue,			\
-	&taskqueue_##name, taskqueue_start_threads(&taskqueue_##name	\
+	&taskqueue_##name, taskqueue_start_threads(&taskqueue_##name,	\
 	1, PWAIT, "%s taskq", #name))
 
 /*

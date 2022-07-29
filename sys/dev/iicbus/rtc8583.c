@@ -1,6 +1,8 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2017 Hiroki Mori.  All rights reserved.
- * Copyright (c) 2017 Ian Lepore.  All rights reserved.
+ * Copyright (c) 2017 Ian Lepore.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/iicbus/rtc8583.c 331503 2018-03-24 23:01:10Z ian $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for realtime clock EPSON RTC-8583
@@ -300,3 +302,4 @@ static devclass_t rtc8583_devclass;
 DRIVER_MODULE(rtc8583, iicbus, rtc8583_driver, rtc8583_devclass, NULL, NULL);
 MODULE_VERSION(rtc8583, 1);
 MODULE_DEPEND(rtc8583, iicbus, IICBUS_MINVER, IICBUS_PREFVER, IICBUS_MAXVER);
+IICBUS_FDT_PNP_INFO(compat_data);

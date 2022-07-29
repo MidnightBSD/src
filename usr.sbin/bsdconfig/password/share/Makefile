@@ -1,6 +1,4 @@
-# $MidnightBSD$
-
-NO_OBJ=
+# $FreeBSD$
 
 FILESDIR=	${SHAREDIR}/bsdconfig/password
 FILES=		password.subr

@@ -25,12 +25,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/netmap/netmap_bdg.h 345668 2019-03-29 01:32:24Z rpokala $
+ * $FreeBSD$
  */
 #ifndef _NET_NETMAP_BDG_H_
 #define _NET_NETMAP_BDG_H_
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 #define BDG_RWLOCK_T		struct rwlock // struct rwlock
 
 #define	BDG_RWINIT(b)		\
@@ -42,7 +42,7 @@
 #define BDG_RUNLOCK(b)		rw_runlock(&(b)->bdg_lock)
 #define BDG_RWDESTROY(b)	rw_destroy(&(b)->bdg_lock)
 
-#endif /* __MidnightBSD__ */
+#endif /* __FreeBSD__ */
 
 /*
  * The following bridge-related functions are used by other

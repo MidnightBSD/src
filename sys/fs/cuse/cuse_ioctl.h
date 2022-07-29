@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/fs/cuse/cuse_ioctl.h 325636 2017-11-10 08:42:37Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2014 Hans Petter Selasky. All rights reserved.
  *

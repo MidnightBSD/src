@@ -43,8 +43,8 @@
 #include "opt_inet.h"
 
 #include <machine/asm.h>
-#include "assym.s"
-__FBSDID("$FreeBSD: stable/11/sys/arm/arm/in_cksum_arm.S 275418 2014-12-02 18:37:04Z andrew $");
+#include "assym.inc"
+__FBSDID("$FreeBSD$");
 
 	.syntax	unified
 /*

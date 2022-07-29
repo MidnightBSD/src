@@ -4,7 +4,7 @@
 __RCSID("$NetBSD: infinity.c,v 1.2 1998/11/14 19:31:02 christos Exp $");
 #endif /* LIBC_SCCS and not lint */
 #endif
-__FBSDID("$FreeBSD: stable/11/lib/libc/powerpc64/gen/infinity.c 296113 2016-02-26 20:38:23Z nwhitehorn $");
+__FBSDID("$FreeBSD$");
 
 /* infinity.c */
 

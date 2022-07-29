@@ -1,6 +1,8 @@
-/*	$FreeBSD: stable/11/sys/dev/iwi/if_iwivar.h 345636 2019-03-28 09:50:25Z avos $	*/
+/*	$FreeBSD$	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004, 2005
  *      Damien Bergamini <damien.bergamini@free.fr>. All rights reserved.
  *

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1996 Stefan Esser <se@freebsd.org>
  * All rights reserved.
  *
@@ -18,7 +20,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ed/if_ed_pci.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -143,6 +145,5 @@ static driver_t ed_pci_driver = {
 DRIVER_MODULE(ed, pci, ed_pci_driver, ed_devclass, 0, 0);
 MODULE_DEPEND(ed, pci, 1, 1, 1);
 MODULE_DEPEND(ed, ether, 1, 1, 1);
-MODULE_PNP_INFO("W32:vendor/device;D:human", pci, ed, pci_ids, sizeof(pci_ids[0]),
+MODULE_PNP_INFO("W32:vendor/device;D:#", pci, ed, pci_ids,
     nitems(pci_ids) - 1);
-

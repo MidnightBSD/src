@@ -1,7 +1,8 @@
-# $FreeBSD: stable/11/usr.sbin/quot/Makefile 113091 2003-04-04 17:49:21Z obrien $
+# $FreeBSD$
 
 PROG=	quot
 MAN=	quot.8
+LIBADD=	ufs
 
 WARNS?=	2
 

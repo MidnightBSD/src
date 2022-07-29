@@ -1,9 +1,14 @@
-# $FreeBSD: stable/11/tests/sys/netinet/Makefile 308701 2016-11-15 22:18:52Z hiren $
+# $FreeBSD$
 
 TESTSDIR=	${TESTSBASE}/sys/netinet
 BINDIR=		${TESTSDIR}
 
-ATF_TESTS_SH=	fibs_test
+TESTS_SUBDIRS+=	libalias
+
+ATF_TESTS_C=	ip_reass_test \
+		so_reuseport_lb_test
+
+ATF_TESTS_SH=	carp fibs_test arp
 
 PROGS=	udp_dontroute tcp_user_cookie
 

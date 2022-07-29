@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,7 +35,7 @@ static const char sccsid[] = "@(#)inode.c	8.8 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/inode.c 347200 2019-05-06 19:15:59Z mckusick $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/stdint.h>
@@ -80,7 +82,7 @@ ckinode(union dinode *dp, struct inodesc *idesc)
 	else
 		dino.dp2 = dp->dp2;
 	ndb = howmany(DIP(&dino, di_size), sblock.fs_bsize);
-	for (i = 0; i < NDADDR; i++) {
+	for (i = 0; i < UFS_NDADDR; i++) {
 		idesc->id_lbn++;
 		if (--ndb == 0 &&
 		    (offset = blkoff(&sblock, DIP(&dino, di_size))) != 0)
@@ -117,9 +119,9 @@ ckinode(union dinode *dp, struct inodesc *idesc)
 			return (ret);
 	}
 	idesc->id_numfrags = sblock.fs_frag;
-	remsize = DIP(&dino, di_size) - sblock.fs_bsize * NDADDR;
+	remsize = DIP(&dino, di_size) - sblock.fs_bsize * UFS_NDADDR;
 	sizepb = sblock.fs_bsize;
-	for (i = 0; i < NIADDR; i++) {
+	for (i = 0; i < UFS_NIADDR; i++) {
 		sizepb *= NINDIR(&sblock);
 		idesc->id_level = i + 1;
 		if (DIP(&dino, di_ib[i])) {
@@ -289,7 +291,7 @@ ginode(ino_t inumber)
 {
 	ufs2_daddr_t iblk;
 
-	if (inumber < ROOTINO || inumber > maxino)
+	if (inumber < UFS_ROOTINO || inumber > maxino)
 		errx(EEXIT, "bad inode number %ju to ginode",
 		    (uintmax_t)inumber);
 	if (startinum == 0 ||
@@ -353,9 +355,9 @@ getnextinode(ino_t inumber, int rebuildcg)
 		mode = DIP(dp, di_mode) & IFMT;
 		if (mode == 0) {
 			if (memcmp(dp->dp2.di_db, ufs2_zino.di_db,
-				NDADDR * sizeof(ufs2_daddr_t)) ||
+				UFS_NDADDR * sizeof(ufs2_daddr_t)) ||
 			      memcmp(dp->dp2.di_ib, ufs2_zino.di_ib,
-				NIADDR * sizeof(ufs2_daddr_t)) ||
+				UFS_NIADDR * sizeof(ufs2_daddr_t)) ||
 			      dp->dp2.di_mode || dp->dp2.di_size)
 				return (NULL);
 			goto inodegood;
@@ -375,20 +377,20 @@ getnextinode(ino_t inumber, int rebuildcg)
 			if (DIP(dp, di_size) < (off_t)sblock.fs_maxsymlinklen) {
 				ndb = howmany(DIP(dp, di_size),
 				    sizeof(ufs2_daddr_t));
-				if (ndb > NDADDR) {
-					j = ndb - NDADDR;
+				if (ndb > UFS_NDADDR) {
+					j = ndb - UFS_NDADDR;
 					for (ndb = 1; j > 1; j--)
 						ndb *= NINDIR(&sblock);
-					ndb += NDADDR;
+					ndb += UFS_NDADDR;
 				}
 			}
 		}
-		for (j = ndb; ndb < NDADDR && j < NDADDR; j++)
+		for (j = ndb; ndb < UFS_NDADDR && j < UFS_NDADDR; j++)
 			if (DIP(dp, di_db[j]) != 0)
 				return (NULL);
-		for (j = 0, ndb -= NDADDR; ndb > 0; j++)
+		for (j = 0, ndb -= UFS_NDADDR; ndb > 0; j++)
 			ndb /= NINDIR(&sblock);
-		for (; j < NIADDR; j++)
+		for (; j < UFS_NIADDR; j++)
 			if (DIP(dp, di_ib[j]) != 0)
 				return (NULL);
 	}
@@ -454,8 +456,8 @@ cacheino(union dinode *dp, ino_t inumber)
 	struct inoinfo *inp, **inpp;
 	int i, blks;
 
-	if (howmany(DIP(dp, di_size), sblock.fs_bsize) > NDADDR)
-		blks = NDADDR + NIADDR;
+	if (howmany(DIP(dp, di_size), sblock.fs_bsize) > UFS_NDADDR)
+		blks = UFS_NDADDR + UFS_NIADDR;
 	else if (DIP(dp, di_size) > 0)
 		blks = howmany(DIP(dp, di_size), sblock.fs_bsize);
 	else
@@ -467,16 +469,16 @@ cacheino(union dinode *dp, ino_t inumber)
 	inpp = &inphead[inumber % dirhash];
 	inp->i_nexthash = *inpp;
 	*inpp = inp;
-	inp->i_parent = inumber == ROOTINO ? ROOTINO : (ino_t)0;
+	inp->i_parent = inumber == UFS_ROOTINO ? UFS_ROOTINO : (ino_t)0;
 	inp->i_dotdot = (ino_t)0;
 	inp->i_number = inumber;
 	inp->i_isize = DIP(dp, di_size);
 	inp->i_numblks = blks;
-	for (i = 0; i < MIN(blks, NDADDR); i++)
+	for (i = 0; i < MIN(blks, UFS_NDADDR); i++)
 		inp->i_blks[i] = DIP(dp, di_db[i]);
-	if (blks > NDADDR)
-		for (i = 0; i < NIADDR; i++)
-			inp->i_blks[NDADDR + i] = DIP(dp, di_ib[i]);
+	if (blks > UFS_NDADDR)
+		for (i = 0; i < UFS_NIADDR; i++)
+			inp->i_blks[UFS_NDADDR + i] = DIP(dp, di_ib[i]);
 	if (inplast == listmax) {
 		listmax += 100;
 		inpsort = (struct inoinfo **)reallocarray((char *)inpsort,
@@ -582,7 +584,7 @@ findino(struct inodesc *idesc)
 	if (dirp->d_ino == 0)
 		return (KEEPON);
 	if (strcmp(dirp->d_name, idesc->id_name) == 0 &&
-	    dirp->d_ino >= ROOTINO && dirp->d_ino <= maxino) {
+	    dirp->d_ino >= UFS_ROOTINO && dirp->d_ino <= maxino) {
 		idesc->id_parent = dirp->d_ino;
 		return (STOP|FOUND);
 	}
@@ -611,7 +613,7 @@ pinode(ino_t ino)
 	time_t t;
 
 	printf(" I=%lu ", (u_long)ino);
-	if (ino < ROOTINO || ino > maxino)
+	if (ino < UFS_ROOTINO || ino > maxino)
 		return;
 	dp = ginode(ino);
 	printf(" OWNER=");
@@ -666,22 +668,29 @@ allocino(ino_t request, int type)
 	union dinode *dp;
 	struct bufarea *cgbp;
 	struct cg *cgp;
-	int cg;
+	int cg, anyino;
 
-	if (request == 0)
-		request = ROOTINO;
-	else if (inoinfo(request)->ino_state != USTATE)
+	anyino = 0;
+	if (request == 0) {
+		request = UFS_ROOTINO;
+		anyino = 1;
+	} else if (inoinfo(request)->ino_state != USTATE)
 		return (0);
+retry:
 	for (ino = request; ino < maxino; ino++)
 		if (inoinfo(ino)->ino_state == USTATE)
 			break;
-	if (ino == maxino)
+	if (ino >= maxino)
 		return (0);
 	cg = ino_to_cg(&sblock, ino);
-	cgbp = cgget(cg);
+	cgbp = cglookup(cg);
 	cgp = cgbp->b_un.b_cg;
-	if (!check_cgmagic(cg, cgbp))
-		return (0);
+	if (!check_cgmagic(cg, cgbp)) {
+		if (anyino == 0)
+			return (0);
+		request = (cg + 1) * sblock.fs_ipg;
+		goto retry;
+	}
 	setbit(cg_inosused(cgp), ino % sblock.fs_ipg);
 	cgp->cg_cs.cs_nifree--;
 	switch (type & IFMT) {

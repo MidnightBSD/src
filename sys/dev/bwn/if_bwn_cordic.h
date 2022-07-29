@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/bwn/if_bwn_cordic.h 299785 2016-05-14 23:33:13Z adrian $
+ * $FreeBSD$
  */
 #ifndef	__IF_BWN_CORDIC_H__
 #define	__IF_BWN_CORDIC_H__

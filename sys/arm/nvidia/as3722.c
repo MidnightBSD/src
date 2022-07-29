@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/nvidia/as3722.c 308335 2016-11-05 10:56:32Z mmel $");
+__FBSDID("$FreeBSD$");
 
 /*
  * AS3722 PMIC driver

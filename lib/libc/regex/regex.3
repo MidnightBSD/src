@@ -13,7 +13,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)regex.3	8.4 (Berkeley) 3/20/94
-.\" $FreeBSD: stable/11/lib/libc/regex/regex.3 300683 2016-05-25 15:35:23Z pfg $
+.\" $FreeBSD$
 .\"
-.Dd May 25, 2016
+.Dd April 15, 2017
 .Dt REGEX 3
 .Os
 .Sh NAME
@@ -178,6 +178,17 @@ member is of type
 .Ft "const char *" .
 This flag permits inclusion of NULs in the RE;
 they are considered ordinary characters.
+This is an extension,
+compatible with but not specified by
+.St -p1003.2 ,
+and should be used with
+caution in software intended to be portable to other systems.
+.It Dv REG_POSIX
+Compile only
+.St -p1003.2
+compliant expressions.
+This flag has no effect unless linking against
+.Nm libregex .
 This is an extension,
 compatible with but not specified by
 .St -p1003.2 ,

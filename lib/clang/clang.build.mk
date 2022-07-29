@@ -1,3 +1,5 @@
+# $FreeBSD$
+
 .include <src.opts.mk>
 
 .ifndef CLANG_SRCS
@@ -10,5 +12,7 @@ CFLAGS+=	-I${CLANG_SRCS}/include
 CFLAGS+=	-DCLANG_ENABLE_ARCMT
 CFLAGS+=	-DCLANG_ENABLE_STATIC_ANALYZER
 .endif
+
+CFLAGS.gcc+=	-fno-strict-aliasing
 
 .include "llvm.build.mk"

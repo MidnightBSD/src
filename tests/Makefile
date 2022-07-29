@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tests/Makefile 299094 2016-05-04 23:20:53Z ngie $
+# $FreeBSD$
 
 PACKAGE= tests
 
@@ -17,4 +17,5 @@ afterinstall: install-tests-local
 install-tests-local: .PHONY
 	${INSTALL_SYMLINK} ../local/tests ${DESTDIR}${TESTSDIR}/local
 
+.include "Makefile.inc0"
 .include <bsd.test.mk>

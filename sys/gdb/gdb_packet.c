@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/gdb/gdb_packet.c 271173 2014-09-05 16:40:47Z benno $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -145,6 +147,7 @@ gdb_rx_mem(unsigned char *addr, size_t size)
 {
 	unsigned char *p;
 	void *prev;
+	void *wctx;
 	jmp_buf jb;
 	size_t cnt;
 	int ret;
@@ -153,6 +156,7 @@ gdb_rx_mem(unsigned char *addr, size_t size)
 	if (size * 2 != gdb_rxsz)
 		return (-1);
 
+	wctx = gdb_begin_write();
 	prev = kdb_jmpbuf(jb);
 	ret = setjmp(jb);
 	if (ret == 0) {
@@ -168,6 +172,7 @@ gdb_rx_mem(unsigned char *addr, size_t size)
 		kdb_cpu_sync_icache(addr, size);
 	}
 	(void)kdb_jmpbuf(prev);
+	gdb_end_write(wctx);
 	return ((ret == 0) ? 1 : 0);
 }
 
@@ -249,24 +254,16 @@ gdb_tx_end(void)
 					runlen--;
 				}
 			}
-			if (runlen == 1) {
+			/* Don't emit '$', '#', '+', '-' or a run length below 3. */
+			while (runlen == 1 || runlen == 2 ||
+			    runlen + 29 == '$' || runlen + 29 == '#' ||
+			    runlen + 29 == '+' || runlen + 29 == '-') {
 				gdb_cur->gdb_putc(c);
 				cksum += c;
 				runlen--;
 			}
 			if (runlen == 0)
 				continue;
-			/* Don't emit '$', '#', '+' or '-'. */
-			if (runlen == 7) {
-				gdb_cur->gdb_putc(c);
-				cksum += c;
-				runlen--;
-			}
-			if (runlen == 6 || runlen == 14 || runlen == 16) {
-				gdb_cur->gdb_putc(c);
-				cksum += c;
-				runlen--;
-			}
 			gdb_cur->gdb_putc('*');
 			cksum += '*';
 			gdb_cur->gdb_putc(runlen+29);

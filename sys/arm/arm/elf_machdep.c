@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/arm/elf_machdep.c 338867 2018-09-21 20:40:37Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -45,9 +47,14 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/arm/elf_machdep.c 338867 2018-09-21 20:40:
 
 #include <machine/elf.h>
 #include <machine/md_var.h>
+#include <machine/stack.h>
 #ifdef VFP
 #include <machine/vfp.h>
 #endif
+
+#include "opt_ddb.h"            /* for OPT_DDB */
+#include "opt_global.h"         /* for OPT_KDTRACE_HOOKS */
+#include "opt_stack.h"          /* for OPT_STACK */
 
 static boolean_t elf32_arm_abi_supported(struct image_params *);
 
@@ -69,7 +76,6 @@ struct sysentvec elf32_freebsd_sysvec = {
 	.sv_coredump	= __elfN(coredump),
 	.sv_imgact_try	= NULL,
 	.sv_minsigstksz	= MINSIGSTKSZ,
-	.sv_pagesize	= PAGE_SIZE,
 	.sv_minuser	= VM_MIN_ADDRESS,
 	.sv_maxuser	= VM_MAXUSER_ADDRESS,
 	.sv_usrstack	= USRSTACK,
@@ -81,9 +87,9 @@ struct sysentvec elf32_freebsd_sysvec = {
 	.sv_maxssiz	= NULL,
 	.sv_flags	=
 #if __ARM_ARCH >= 6
-			  SV_SHP | SV_TIMEKEEP |
+			  SV_ASLR | SV_SHP | SV_TIMEKEEP |
 #endif
-			  SV_ABI_FREEBSD | SV_ILP32 | SV_HWCAP,
+			  SV_ABI_FREEBSD | SV_ILP32 | SV_ASLR,
 	.sv_set_syscall_retval = cpu_set_syscall_retval,
 	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
 	.sv_syscallnames = syscallnames,
@@ -308,12 +314,25 @@ elf_cpu_load_file(linker_file_t lf)
 	cpu_l2cache_wb_range((vm_offset_t)lf->address, (vm_size_t)lf->size);
 	cpu_icache_sync_range((vm_offset_t)lf->address, (vm_size_t)lf->size);
 #endif
+
+#if defined(DDB) || defined(KDTRACE_HOOKS) || defined(STACK)
+	/*
+	 * Inform the stack(9) code of the new module, so it can acquire its
+	 * per-module unwind data.
+	 */
+	unwind_module_loaded(lf);
+#endif
+
 	return (0);
 }
 
 int
-elf_cpu_unload_file(linker_file_t lf __unused)
+elf_cpu_unload_file(linker_file_t lf)
 {
 
+#if defined(DDB) || defined(KDTRACE_HOOKS) || defined(STACK)
+	/* Inform the stack(9) code that this module is gone. */
+	unwind_module_unloaded(lf);
+#endif
 	return (0);
 }

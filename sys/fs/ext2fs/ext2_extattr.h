@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2017, Fedor Uporov
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/fs/ext2fs/ext2_extattr.h 322711 2017-08-20 01:08:23Z pfg $
+ * $FreeBSD$
  */
 
 #ifndef _FS_EXT2FS_EXT2_EXTARTTR_H_
@@ -57,7 +59,9 @@ struct ext2fs_extattr_header {
 	int32_t	h_refcount;	/* reference count */
 	int32_t	h_blocks;	/* number of disk blocks used */
 	int32_t	h_hash;		/* hash value of all attributes */
-	uint32_t h_reserved[4];	/* zero right now */
+	int32_t	h_checksum;	/* crc32c(uuid+id+xattrblock) */
+				/* id = inum if refcount=1, blknum otherwise */
+	uint32_t h_reserved[3];	/* zero right now */
 };
 
 struct ext2fs_extattr_dinode_header {

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2015 Landon Fuller <landon@landonf.org>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bhnd/cores/pcie2/bhnd_pcie2.c 301697 2016-06-08 21:31:33Z landonf $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Broadcom Common PCIe-G2 Support.

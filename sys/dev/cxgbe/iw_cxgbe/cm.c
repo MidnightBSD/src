@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2013, 2016 Chelsio, Inc. All rights reserved.
  *
  * This software is available to you under a choice of one of two
@@ -30,7 +32,7 @@
  * SOFTWARE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/cxgbe/iw_cxgbe/cm.c 355240 2019-11-30 19:21:29Z np $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 
@@ -848,20 +850,31 @@ setiwsockopt(struct socket *so)
 static void
 init_iwarp_socket(struct socket *so, void *arg)
 {
-
-	SOCKBUF_LOCK(&so->so_rcv);
-	soupcall_set(so, SO_RCV, c4iw_so_upcall, arg);
-	so->so_state |= SS_NBIO;
-	SOCKBUF_UNLOCK(&so->so_rcv);
+	if (SOLISTENING(so)) {
+		SOLISTEN_LOCK(so);
+		solisten_upcall_set(so, c4iw_so_upcall, arg);
+		so->so_state |= SS_NBIO;
+		SOLISTEN_UNLOCK(so);
+	} else {
+		SOCKBUF_LOCK(&so->so_rcv);
+		soupcall_set(so, SO_RCV, c4iw_so_upcall, arg);
+		so->so_state |= SS_NBIO;
+		SOCKBUF_UNLOCK(&so->so_rcv);
+	}
 }
 
 static void
 uninit_iwarp_socket(struct socket *so)
 {
-
-	SOCKBUF_LOCK(&so->so_rcv);
-	soupcall_clear(so, SO_RCV);
-	SOCKBUF_UNLOCK(&so->so_rcv);
+	if (SOLISTENING(so)) {
+		SOLISTEN_LOCK(so);
+		solisten_upcall_set(so, NULL, NULL);
+		SOLISTEN_UNLOCK(so);
+	} else {
+		SOCKBUF_LOCK(&so->so_rcv);
+		soupcall_clear(so, SO_RCV);
+		SOCKBUF_UNLOCK(&so->so_rcv);
+	}
 }
 
 static void
@@ -1000,7 +1013,6 @@ process_newconn(struct c4iw_listen_ep *master_lep, struct socket *new_so)
 	c4iw_get_ep(&real_lep->com);
 	init_timer(&new_ep->timer);
 	new_ep->com.state = MPA_REQ_WAIT;
-	START_EP_TIMER(new_ep);
 
 	setiwsockopt(new_so);
 	ret = soaccept(new_so, (struct sockaddr **)&remote);
@@ -1010,7 +1022,6 @@ process_newconn(struct c4iw_listen_ep *master_lep, struct socket *new_so)
 				__func__, master_lep->com.so, new_so, ret);
 		if (remote != NULL)
 			free(remote, M_SONAME);
-		uninit_iwarp_socket(new_so);
 		soclose(new_so);
 		c4iw_put_ep(&new_ep->com);
 		c4iw_put_ep(&real_lep->com);
@@ -1018,9 +1029,11 @@ process_newconn(struct c4iw_listen_ep *master_lep, struct socket *new_so)
 	}
 	free(remote, M_SONAME);
 
+	START_EP_TIMER(new_ep);
+
 	/* MPA request might have been queued up on the socket already, so we
 	 * initialize the socket/upcall_handler under lock to prevent processing
-	 * MPA request on another thread(via process_req()) simultaniously.
+	 * MPA request on another thread(via process_req()) simultaneously.
 	 */
 	c4iw_get_ep(&new_ep->com); /* Dereferenced at the end below, this is to
 				      avoid freeing of ep before ep unlock. */
@@ -1101,42 +1114,6 @@ terminate(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 	return 0;
 }
 
-static struct socket *
-dequeue_socket(struct socket *head)
-{
-	struct socket *so;
-	struct sockaddr_in *remote;
-
-	ACCEPT_LOCK();
-	so = TAILQ_FIRST(&head->so_comp);
-	if (!so) {
-		ACCEPT_UNLOCK();
-		return NULL;
-	}
-
-	SOCK_LOCK(so);
-	/*
-	 * Before changing the flags on the socket, we have to bump the
-	 * reference count.  Otherwise, if the protocol calls sofree(),
-	 * the socket will be released due to a zero refcount.
-	 */
-	soref(so);
-	TAILQ_REMOVE(&head->so_comp, so, so_list);
-	head->so_qlen--;
-	so->so_qstate &= ~SQ_COMP;
-	so->so_head = NULL;
-	so->so_state |= SS_NBIO;
-	SOCK_UNLOCK(so);
-	ACCEPT_UNLOCK();
-	remote = NULL;
-	if (soaccept(so, (struct sockaddr **)&remote) != 0) {
-		soclose(so);
-		so = NULL;
-	}
-	free(remote, M_SONAME);
-	return so;
-}
-
 static void
 process_socket_event(struct c4iw_ep *ep)
 {
@@ -1160,11 +1137,28 @@ process_socket_event(struct c4iw_ep *ep)
 
 	if (state == LISTEN) {
 		struct c4iw_listen_ep *lep = (struct c4iw_listen_ep *)ep;
-		struct socket *new_so;
+		struct socket *listen_so = so, *new_so = NULL;
+		int error = 0;
 
-		while ((new_so = dequeue_socket(so)) != NULL) {
+		SOLISTEN_LOCK(listen_so);
+		do {
+			error = solisten_dequeue(listen_so, &new_so,
+						SOCK_NONBLOCK);
+			if (error) {
+				CTR4(KTR_IW_CXGBE, "%s: lep %p listen_so %p "
+					"error %d", __func__, lep, listen_so,
+					error);
+				return;
+			}
 			process_newconn(lep, new_so);
-		}
+
+			/* solisten_dequeue() unlocks while return, so aquire
+			 * lock again for sol_qlen and also for next iteration.
+			 */
+			SOLISTEN_LOCK(listen_so);
+		} while (listen_so->sol_qlen);
+		SOLISTEN_UNLOCK(listen_so);
+
 		return;
 	}
 

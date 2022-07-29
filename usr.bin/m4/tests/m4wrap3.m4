@@ -1,4 +1,4 @@
-dnl $FreeBSD: stable/11/usr.bin/m4/tests/m4wrap3.m4 234852 2012-04-30 22:00:34Z bapt $
+dnl $FreeBSD$
 dnl $OpenBSD: src/regress/usr.bin/m4/m4wrap3.m4,v 1.1 2005/03/02 10:12:41 espie Exp $
 dnl Another test, this time for multiple wrappers
 dnl Check the behavior in presence of recursive m4wraps

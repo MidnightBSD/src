@@ -12,7 +12,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -29,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)utimes.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/11/lib/libc/sys/utimensat.2 294234 2016-01-17 21:14:27Z jilles $
+.\" $FreeBSD$
 .\"
-.Dd January 17, 2016
+.Dd February 23, 2021
 .Dt UTIMENSAT 2
 .Os
 .Sh NAME
@@ -146,6 +146,15 @@ names a symbolic link, the symbolic link's times are changed.
 By default,
 .Fn utimensat
 changes the times of the file referenced by the symbolic link.
+.It Dv AT_RESOLVE_BENEATH
+Only walk paths below the directory specified by the
+.Ar fd
+descriptor.
+See the description of the
+.Dv O_RESOLVE_BENEATH
+flag in the
+.Xr open 2
+manual page.
 .El
 .Sh RETURN VALUES
 .Rv -std
@@ -192,6 +201,8 @@ or
 .Dv UTIME_OMIT .
 .It Bq Er EIO
 An I/O error occurred while reading or writing the affected inode.
+.It Bq Er EINTEGRITY
+Corrupted data was detected while reading from the file system.
 .It Bq Er EPERM
 The
 .Fa times
@@ -267,10 +278,15 @@ argument is not an absolute path and
 is neither
 .Dv AT_FDCWD
 nor a file descriptor associated with a directory.
-.It Bq Er ENOTSUP
-The running kernel does not support this system call and
-.Dv AT_SYMLINK_NOFOLLOW
-is used with a path relative to a file descriptor.
+.It Bq Er ENOTCAPABLE
+.Fa path
+is an absolute path,
+or contained a ".." component leading to a
+directory outside of the directory hierarchy specified by
+.Fa fd ,
+and the process is in capability mode or the
+.Dv AT_RESOLVE_BENEATH
+flag was specified.
 .El
 .Sh SEE ALSO
 .Xr chflags 2 ,

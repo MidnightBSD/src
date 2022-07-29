@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mii/micphy.c 323408 2017-09-11 00:51:47Z ian $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Micrel KSZ9021 Gigabit Ethernet Transceiver

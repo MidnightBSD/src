@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Jilles Tjoelker
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libc/include/errlst.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef __ERRLST_H__
@@ -39,5 +41,7 @@ extern const int __hidden_sys_nerr __hidden;
 #define __hidden_sys_errlist sys_errlist
 #define __hidden_sys_nerr sys_nerr
 #endif
+
+extern const char __uprefix[] __hidden;
 
 #endif /* __ERRLST_H__ */

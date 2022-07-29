@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/sound/pci/allegro_code.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1996-2008, 4Front Technologies
  * Copyright (C) 1997-1999 ESS Technology, Inc
  * All rights reserved.

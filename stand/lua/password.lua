@@ -26,7 +26,7 @@
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
 --
--- $FreeBSD: stable/11/stand/lua/password.lua 345882 2019-04-04 17:29:43Z kevans $
+-- $FreeBSD$
 --
 
 local core = require("core")

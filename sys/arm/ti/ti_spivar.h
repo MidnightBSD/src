@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/ti/ti_spivar.h 297395 2016-03-29 19:11:04Z loos $
+ * $FreeBSD$
  */
 
 #ifndef	_TI_SPIVAR_H_

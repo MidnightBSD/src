@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/bin/chio/pathnames.h 139969 2005-01-10 08:39:26Z imp $	*/
+/* $FreeBSD$	*/
 
 /*-
  * Copyright (c) 1996 Jason R. Thorpe <thorpej@and.com>

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2015-2016 Landon Fuller <landon@landonf.org>
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  * 
- * $FreeBSD: stable/11/sys/dev/bhnd/cores/pcie2/bhnd_pcie2_hostbvar.h 300015 2016-05-17 06:52:53Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef _BHND_CORES_PCIE2_BHND_PCI_HOSTBVAR_H_

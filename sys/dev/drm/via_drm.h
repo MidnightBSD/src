@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm/via_drm.h 203288 2010-01-31 14:30:39Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 #ifndef _VIA_DRM_H_
 #define _VIA_DRM_H_

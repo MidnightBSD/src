@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/bmake/tests/basic/t2/Makefile.test 263346 2014-03-19 12:29:20Z jmmv $
+# $FreeBSD$
 #
 # Just a target and a command. No command line targets.
 #

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/evdev/evdev.h 326543 2017-12-04 21:12:05Z wulf $
+ * $FreeBSD$
  */
 
 #ifndef	_DEV_EVDEV_EVDEV_H
@@ -38,18 +38,17 @@
 
 struct evdev_dev;
 
-typedef int (evdev_open_t)(struct evdev_dev *, void *);
-typedef void (evdev_close_t)(struct evdev_dev *, void *);
-typedef void (evdev_event_t)(struct evdev_dev *, void *, uint16_t,
-    uint16_t, int32_t);
-typedef void (evdev_keycode_t)(struct evdev_dev *, void *,
+typedef int (evdev_open_t)(struct evdev_dev *);
+typedef int (evdev_close_t)(struct evdev_dev *);
+typedef void (evdev_event_t)(struct evdev_dev *, uint16_t, uint16_t, int32_t);
+typedef void (evdev_keycode_t)(struct evdev_dev *,
     struct input_keymap_entry *);
 
 /*
  * Keyboard and mouse events recipient mask.
  * evdev_rcpt_mask variable should be respected by keyboard and mouse drivers
  * that are able to send events through both evdev and sysmouse/kbdmux
- * interfaces so user can choose prefered one to not receive one event twice.
+ * interfaces so user can choose preferred one to not receive one event twice.
  */
 #define	EVDEV_RCPT_SYSMOUSE	(1<<0)
 #define	EVDEV_RCPT_KBDMUX	(1<<1)
@@ -126,6 +125,7 @@ void evdev_support_sw(struct evdev_dev *, uint16_t);
 void evdev_set_repeat_params(struct evdev_dev *, uint16_t, int);
 int evdev_set_report_size(struct evdev_dev *, size_t);
 void evdev_set_flag(struct evdev_dev *, uint16_t);
+void *evdev_get_softc(struct evdev_dev *);
 
 /* Multitouch related functions: */
 int32_t evdev_get_mt_slot_by_tracking_id(struct evdev_dev *, int32_t);
@@ -141,7 +141,6 @@ uint16_t evdev_scancode2key(int *, int);
 void evdev_push_mouse_btn(struct evdev_dev *, int);
 void evdev_push_leds(struct evdev_dev *, int);
 void evdev_push_repeats(struct evdev_dev *, keyboard_t *);
-evdev_event_t evdev_ev_kbd_event;
 
 /* Event reporting shortcuts: */
 static __inline int

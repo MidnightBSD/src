@@ -34,7 +34,7 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: stable/11/sys/riscv/riscv/bus_space_asm.S 298635 2016-04-26 12:45:01Z br $");
+__FBSDID("$FreeBSD$");
 
 ENTRY(generic_bs_r_1)
 	add	a3, a1, a2

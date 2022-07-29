@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -27,21 +26,21 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/tools/tools/npe/npestats/npestats.h 192661 2009-05-23 19:16:34Z sam $
+ * $FreeBSD$
  */
 
 #ifndef _NPESTATS_H_
 #define	_NPESTATS_H_
 
-#include "statfoo.h"
+#include "bsdstat.h"
 
 /*
  * npe statistics class.
  */
 struct npestatfoo {
-	struct statfoo base;
+	struct bsdstat base;
 
-	STATFOO_DECL_METHODS(struct npestatfoo *);
+	BSDSTAT_DECL_METHODS(struct npestatfoo *);
 
 	/* set the network interface name for collection */
 	void (*setifname)(struct npestatfoo *, const char *ifname);

@@ -1,6 +1,8 @@
-/* $FreeBSD: stable/11/sys/dev/usb/controller/xhci.h 356782 2020-01-16 08:52:54Z hselasky $ */
+/* $FreeBSD$ */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

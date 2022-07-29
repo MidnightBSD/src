@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Poul-Henning Kamp.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/puc/puc_pccard.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -71,10 +73,21 @@ puc_pccard_probe(device_t dev)
 	return (ENXIO);
 }
 
+static int
+puc_pccard_attach(device_t dev)
+{
+	int error;
+
+	error = puc_bfe_attach(dev);
+	if (error == 0)
+		gone_in_dev(dev, 13, "pccard removed");
+	return (error);
+}
+
 static device_method_t puc_pccard_methods[] = {
     /* Device interface */
     DEVMETHOD(device_probe,		puc_pccard_probe),
-    DEVMETHOD(device_attach,		puc_bfe_attach),
+    DEVMETHOD(device_attach,		puc_pccard_attach),
     DEVMETHOD(device_detach,		puc_bfe_detach),
 
     DEVMETHOD(bus_alloc_resource,	puc_bus_alloc_resource),

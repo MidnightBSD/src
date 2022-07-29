@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/builtins/cd3.0 222154 2011-05-20 22:55:18Z jilles $
+# $FreeBSD$
 
 # If fully successful, cd -Pe must be like cd -P.
 

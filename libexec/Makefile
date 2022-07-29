@@ -28,7 +28,9 @@ SUBDIR=	${_atf} \
 	mport.updepends \
 	mport.version_cmp \
 	msearch.index \
+	${_phttpget} \
 	${_pppoed} \
+	rc \
 	revnetgroup \
 	${_rlogind} \
 	rpc.rquotad \
@@ -62,6 +64,10 @@ SUBDIR+=	bootpd
 SUBDIR+=	fingerd
 .endif
 
+.if ${MK_MIDNIGHTBSD_UPDATE} != "no" || ${MK_PORTSNAP} != "no"
+_phttpget=	phttpget
+.endif
+
 .if ${MK_FTP} != "no"
 SUBDIR+=	ftpd
 .endif
@@ -93,11 +99,6 @@ _rtld-elf=	rtld-elf
 
 .if ${MK_RBOOTD} != "no"
 SUBDIR+=	rbootd
-.endif
-
-.if ${MK_RCMDS} != "no"
-_rlogind=	rlogind
-_rshd=		rshd
 .endif
 
 .if ${MK_SENDMAIL} != "no"

@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/tools/tools/locale/etc/charmaps/ISO8859-13.TXT 286434 2015-08-08 00:28:23Z bapt $
+# $FreeBSD$
 #
 #	Name:             ISO/IEC 8859-13:1998  to Unicode
 #	Unicode version:  3.0

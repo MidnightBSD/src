@@ -1,7 +1,7 @@
 #
 # Ubiquiti Routerstation: Boot from onboard flash
 #
-# $FreeBSD: stable/11/sys/mips/conf/ROUTERSTATION 345344 2019-03-20 18:49:45Z kib $
+# $FreeBSD$
 #
 
 #NO_UNIVERSE

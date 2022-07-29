@@ -1,6 +1,8 @@
 /*	$NetBSD: disassem.h,v 1.4 2001/03/04 04:15:58 matt Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1997 Mark Brinicombe.
  * Copyright (c) 1997 Causality Limited.
  *
@@ -35,7 +37,7 @@
  *
  * Define the interface structure required by the disassembler.
  *
- * $FreeBSD: stable/11/sys/arm/include/disassem.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_DISASSEM_H_

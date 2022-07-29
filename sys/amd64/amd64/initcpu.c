@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) KATO Takenori, 1997, 1998.
  * 
  * All rights reserved.  Unpublished rights reserved under the copyright
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/initcpu.c 349955 2019-07-12 20:05:30Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_cpu.h"
 
@@ -40,6 +42,7 @@ __FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/initcpu.c 349955 2019-07-12 20:05:
 
 #include <machine/cputypes.h>
 #include <machine/md_var.h>
+#include <machine/psl.h>
 #include <machine/specialreg.h>
 
 #include <vm/vm.h>
@@ -66,6 +69,23 @@ init_amd(void)
 	uint64_t msr;
 
 	/*
+	 * C1E renders the local APIC timer dead, so we disable it by
+	 * reading the Interrupt Pending Message register and clearing
+	 * both C1eOnCmpHalt (bit 28) and SmiOnCmpHalt (bit 27).
+	 *
+	 * Reference:
+	 *   "BIOS and Kernel Developer's Guide for AMD NPT Family 0Fh Processors"
+	 *   #32559 revision 3.00+
+	 *
+	 * Detect the presence of C1E capability mostly on latest
+	 * dual-cores (or future) k8 family.  Affected models range is
+	 * taken from Linux sources.
+	 */
+	if ((CPUID_TO_FAMILY(cpu_id) == 0xf ||
+	    CPUID_TO_FAMILY(cpu_id) == 0x10) && (cpu_feature2 & CPUID2_HV) == 0)
+		cpu_amdc1e_bug = 1;
+
+	/*
 	 * Work around Erratum 721 for Family 10h and 12h processors.
 	 * These processors may incorrectly update the stack pointer
 	 * after a long series of push and/or near-call instructions,
@@ -83,7 +103,7 @@ init_amd(void)
 	case 0x10:
 	case 0x12:
 		if ((cpu_feature2 & CPUID2_HV) == 0)
-			wrmsr(0xc0011029, rdmsr(0xc0011029) | 1);
+			wrmsr(MSR_DE_CFG, rdmsr(MSR_DE_CFG) | 1);
 		break;
 	}
 
@@ -132,9 +152,9 @@ init_amd(void)
 	if (CPUID_TO_FAMILY(cpu_id) == 0x17 && CPUID_TO_MODEL(cpu_id) == 0x1 &&
 	    (cpu_feature2 & CPUID2_HV) == 0) {
 		/* 1021 */
-		msr = rdmsr(0xc0011029);
+		msr = rdmsr(MSR_DE_CFG);
 		msr |= 0x2000;
-		wrmsr(0xc0011029, msr);
+		wrmsr(MSR_DE_CFG, msr);
 
 		/* 1033 */
 		msr = rdmsr(MSR_LS_CFG);
@@ -169,7 +189,8 @@ init_amd(void)
 	 */
 	if (lower_sharedpage_init == 0) {
 		lower_sharedpage_init = 1;
-		if (CPUID_TO_FAMILY(cpu_id) == 0x17) {
+		if (CPUID_TO_FAMILY(cpu_id) == 0x17 ||
+		    CPUID_TO_FAMILY(cpu_id) == 0x18) {
 			hw_lower_amd64_sharedpage = 1;
 		}
 	}
@@ -215,6 +236,18 @@ init_via(void)
 }
 
 /*
+ * The value for the TSC_AUX MSR and rdtscp/rdpid on the invoking CPU.
+ *
+ * Caller should prevent CPU migration.
+ */
+u_int
+cpu_auxmsr(void)
+{
+	KASSERT((read_rflags() & PSL_I) == 0, ("context switch possible"));
+	return (PCPU_GET(cpuid));
+}
+
+/*
  * Initialize CPU control registers
  */
 void
@@ -231,24 +264,46 @@ initializecpu(void)
 	if (cpu_stdext_feature & CPUID_STDEXT_FSGSBASE)
 		cr4 |= CR4_FSGSBASE;
 
+	if (cpu_stdext_feature2 & CPUID_STDEXT2_PKU)
+		cr4 |= CR4_PKE;
+
 	/*
+	 * If SMEP is present, we only need to flush RSB (by default)
+	 * on context switches, to prevent cross-process ret2spec
+	 * attacks.  Do it automatically if ibrs_disable is set, to
+	 * complete the mitigation.
+	 *
 	 * Postpone enabling the SMEP on the boot CPU until the page
 	 * tables are switched from the boot loader identity mapping
 	 * to the kernel tables.  The boot loader enables the U bit in
 	 * its tables.
 	 */
-	if (!IS_BSP() && (cpu_stdext_feature & CPUID_STDEXT_SMEP))
-		cr4 |= CR4_SMEP;
+	if (IS_BSP()) {
+		if (cpu_stdext_feature & CPUID_STDEXT_SMEP &&
+		    !TUNABLE_INT_FETCH(
+		    "machdep.mitigations.cpu_flush_rsb_ctxsw",
+		    &cpu_flush_rsb_ctxsw) &&
+		    hw_ibrs_disable)
+			cpu_flush_rsb_ctxsw = 1;
+	} else {
+		if (cpu_stdext_feature & CPUID_STDEXT_SMEP)
+			cr4 |= CR4_SMEP;
+		if (cpu_stdext_feature & CPUID_STDEXT_SMAP)
+			cr4 |= CR4_SMAP;
+	}
 	load_cr4(cr4);
-	if ((amd_feature & AMDID_NX) != 0) {
+	if (IS_BSP() && (amd_feature & AMDID_NX) != 0) {
 		msr = rdmsr(MSR_EFER) | EFER_NXE;
 		wrmsr(MSR_EFER, msr);
 		pg_nx = PG_NX;
 	}
 	hw_ibrs_recalculate(false);
 	hw_ssb_recalculate(false);
+	amd64_syscall_ret_flush_l1d_recalc();
+	x86_rngds_mitg_recalculate(false);
 	switch (cpu_vendor_id) {
 	case CPU_VENDOR_AMD:
+	case CPU_VENDOR_HYGON:
 		init_amd();
 		break;
 	case CPU_VENDOR_CENTAUR:
@@ -258,7 +313,7 @@ initializecpu(void)
 
 	if ((amd_feature & AMDID_RDTSCP) != 0 ||
 	    (cpu_stdext_feature2 & CPUID_STDEXT2_RDPID) != 0)
-		wrmsr(MSR_TSC_AUX, PCPU_GET(cpuid));
+		wrmsr(MSR_TSC_AUX, cpu_auxmsr());
 }
 
 void

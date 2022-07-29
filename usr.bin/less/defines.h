@@ -1,5 +1,3 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/usr.bin/less/defines.h 330571 2018-03-07 06:39:00Z delphij $ */
 /* defines.h.  Generated from defines.h.in by configure.  */
 /* defines.h.in.  Generated from configure.ac by autoheader.  */
 
@@ -86,7 +84,7 @@
 #define	PIPEC		(!SECURE)
 
 /*
- * LOGFILE is 1 if you wish to allow the -l option (to create log files).
+ * LOGFILE is 1 if you wish to allow the -o option (to create log files).
  */
 #define	LOGFILE		(!SECURE)
 
@@ -260,17 +258,29 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
 
+/* Define to 1 if you have the `nanosleep' function. */
+#define HAVE_NANOSLEEP 1
+
 /* Define HAVE_OSPEED if your termcap library has the ospeed variable. */
 #define HAVE_OSPEED 1
 
 /* PCRE (Perl-compatible regular expression) library */
 /* #undef HAVE_PCRE */
 
+/* PCRE2 (Perl-compatible regular expression) library */
+/* #undef HAVE_PCRE2 */
+
+/* Define to 1 if you have the `poll' function. */
+#define HAVE_POLL 1
+
 /* Define to 1 if you have the `popen' function. */
 #define HAVE_POPEN 1
 
 /* POSIX regcomp() and regex.h */
 #define HAVE_POSIX_REGCOMP 1
+
+/* Define to 1 if you have the `realpath' function. */
+#define HAVE_REALPATH 1
 
 /* System V regcmp() */
 /* #undef HAVE_REGCMP */
@@ -356,11 +366,17 @@
 /* Define HAVE_TIME_T if your system supports the "time_t" type. */
 #define HAVE_TIME_T 1
 
+/* Define to 1 if you have the `ttyname' function. */
+#define HAVE_TTYNAME 1
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
 
 /* Define HAVE_UPPER_LOWER if you have isupper, islower, toupper, tolower. */
 #define HAVE_UPPER_LOWER 1
+
+/* Define to 1 if you have the `usleep' function. */
+#define HAVE_USLEEP 1
 
 /* Henry Spencer V8 regcomp() and regexp.h */
 /* #undef HAVE_V8_REGCOMP */

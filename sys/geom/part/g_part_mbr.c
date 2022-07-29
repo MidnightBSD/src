@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007, 2008 Marcel Moolenaar
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/geom/part/g_part_mbr.c 339286 2018-10-10 15:44:14Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -125,24 +127,25 @@ static struct g_part_mbr_alias {
 	u_char		typ;
 	int		alias;
 } mbr_alias_match[] = {
-	{ DOSPTYP_386BSD,	G_PART_ALIAS_MIDNIGHTBSD },
+	{ DOSPTYP_386BSD,	G_PART_ALIAS_FREEBSD },
+	{ DOSPTYP_APPLE_BOOT,	G_PART_ALIAS_APPLE_BOOT },
+	{ DOSPTYP_APPLE_UFS,	G_PART_ALIAS_APPLE_UFS },
+	{ DOSPTYP_EFI,		G_PART_ALIAS_EFI },
 	{ DOSPTYP_EXT,		G_PART_ALIAS_EBR },
-	{ DOSPTYP_NTFS,		G_PART_ALIAS_MS_NTFS },
+	{ DOSPTYP_EXTLBA,	G_PART_ALIAS_EBR },
 	{ DOSPTYP_FAT16,	G_PART_ALIAS_MS_FAT16 },
 	{ DOSPTYP_FAT32,	G_PART_ALIAS_MS_FAT32 },
 	{ DOSPTYP_FAT32LBA,	G_PART_ALIAS_MS_FAT32LBA },
-	{ DOSPTYP_EXTLBA,	G_PART_ALIAS_EBR },
+	{ DOSPTYP_HFS,		G_PART_ALIAS_APPLE_HFS },
 	{ DOSPTYP_LDM,		G_PART_ALIAS_MS_LDM_DATA },
-	{ DOSPTYP_LINSWP,	G_PART_ALIAS_LINUX_SWAP },
-	{ DOSPTYP_LINUX,	G_PART_ALIAS_LINUX_DATA },
 	{ DOSPTYP_LINLVM,	G_PART_ALIAS_LINUX_LVM },
 	{ DOSPTYP_LINRAID,	G_PART_ALIAS_LINUX_RAID },
+	{ DOSPTYP_LINSWP,	G_PART_ALIAS_LINUX_SWAP },
+	{ DOSPTYP_LINUX,	G_PART_ALIAS_LINUX_DATA },
+	{ DOSPTYP_NTFS,		G_PART_ALIAS_MS_NTFS },
 	{ DOSPTYP_PPCBOOT,	G_PART_ALIAS_PREP_BOOT },
 	{ DOSPTYP_VMFS,		G_PART_ALIAS_VMFS },
 	{ DOSPTYP_VMKDIAG,	G_PART_ALIAS_VMKDIAG },
-	{ DOSPTYP_APPLE_UFS,	G_PART_ALIAS_APPLE_UFS },
-	{ DOSPTYP_APPLE_BOOT,	G_PART_ALIAS_APPLE_BOOT },
-	{ DOSPTYP_HFS,		G_PART_ALIAS_APPLE_HFS },
 };
 
 static int
@@ -327,7 +330,7 @@ g_part_mbr_dumpconf(struct g_part_table *basetable, struct g_part_entry *baseent
 		sbuf_printf(sb, "%s<efimedia>HD(%d,MBR,%#08x,%#jx,%#jx)", indent,
 		    entry->base.gpe_index, dsn, (intmax_t)entry->base.gpe_start,
 		    (intmax_t)(entry->base.gpe_end - entry->base.gpe_start + 1));
-		sbuf_printf(sb, "</efimedia>\n");
+		sbuf_cat(sb, "</efimedia>\n");
 	} else {
 		/* confxml: scheme information */
 	}
@@ -378,7 +381,7 @@ g_part_mbr_resize(struct g_part_table *basetable,
 		return (EINVAL);
 	/* XXX: prevent unexpected shrinking. */
 	pp = baseentry->gpe_pp;
-	if ((g_debugflags & 0x10) == 0 && size < gpp->gpp_size &&
+	if ((g_debugflags & G_F_FOOTSHOOTING) == 0 && size < gpp->gpp_size &&
 	    pp->mediasize / pp->sectorsize > size)
 		return (EBUSY);
 	entry = (struct g_part_mbr_entry *)baseentry;

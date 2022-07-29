@@ -23,7 +23,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/mediatek/mtk_pcie.c 300149 2016-05-18 15:05:44Z andrew $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -726,6 +726,7 @@ static device_method_t mtk_pci_methods[] = {
 	DEVMETHOD(pcib_read_config,	mtk_pci_read_config),
 	DEVMETHOD(pcib_write_config,	mtk_pci_write_config),
 	DEVMETHOD(pcib_route_interrupt,	mtk_pci_route_interrupt),
+	DEVMETHOD(pcib_request_feature,	pcib_request_feature_allow),
 
 	/* OFW bus interface */
 	DEVMETHOD(ofw_bus_get_compat,	ofw_bus_gen_get_compat),
@@ -761,7 +762,7 @@ mtk_pci_intr(void *arg)
 		if (reg & (1u<<irq)) {
 			irqidx = irq - sc->sc_irq_start;
 			event = sc->sc_eventstab[irqidx];
-			if (!event || TAILQ_EMPTY(&event->ie_handlers)) {
+			if (!event || CK_SLIST_EMPTY(&event->ie_handlers)) {
 				if (irq != 0)
 					printf("Stray PCI IRQ %d\n", irq);
 				continue;

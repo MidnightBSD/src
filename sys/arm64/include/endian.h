@@ -27,7 +27,7 @@
  *
  *	@(#)endian.h	8.1 (Berkeley) 6/10/93
  * $NetBSD: endian.h,v 1.7 1999/08/21 05:53:51 simonb Exp $
- * $FreeBSD: stable/11/sys/arm64/include/endian.h 280364 2015-03-23 11:54:56Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ENDIAN_H_
@@ -106,12 +106,12 @@ __bswap16_var(__uint16_t v)
 
 #define	__bswap16(x)	\
     ((__uint16_t)(__builtin_constant_p(x) ?	\
-     __bswap16_constant(x) :			\
+     __bswap16_constant((__uint16_t)(x)) :	\
      __bswap16_var(x)))
 
 #define	__bswap32(x)	\
     ((__uint32_t)(__builtin_constant_p(x) ? 	\
-     __bswap32_constant(x) :			\
+     __bswap32_constant((__uint32_t)(x)) :	\
      __bswap32_var(x)))
 
 #else

@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/share/examples/kld/firmware/README 154974 2006-01-29 02:52:42Z mlaier $
+$FreeBSD$
 
 This is a simple example of the firmware(9) system.  It consists of two
 parts:

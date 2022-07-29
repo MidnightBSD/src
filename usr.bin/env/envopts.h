@@ -29,7 +29,7 @@
  * are those of the authors and should not be interpreted as representing
  * official policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: stable/11/usr.bin/env/envopts.h 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 void		 search_paths(char *path, char **argv);

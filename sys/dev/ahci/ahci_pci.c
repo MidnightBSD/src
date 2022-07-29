@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ahci/ahci_pci.c 355329 2019-12-03 14:48:13Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -90,6 +90,11 @@ static const struct {
 	{0x06221b21, 0x00, "ASMedia ASM106x",	AHCI_Q_NOCCS|AHCI_Q_NOAUX},
 	{0x06241b21, 0x00, "ASMedia ASM106x",	AHCI_Q_NOCCS|AHCI_Q_NOAUX},
 	{0x06251b21, 0x00, "ASMedia ASM106x",	AHCI_Q_NOCCS|AHCI_Q_NOAUX},
+	{0x10621b21, 0x00, "ASMedia ASM116x",	0},
+	{0x10641b21, 0x00, "ASMedia ASM116x",	0},
+	{0x11641b21, 0x00, "ASMedia ASM116x",	0},
+	{0x11651b21, 0x00, "ASMedia ASM116x",	0},
+	{0x11661b21, 0x00, "ASMedia ASM116x",	0},
 	{0x79011d94, 0x00, "Hygon KERNCZ",	0},
 	{0x26528086, 0x00, "Intel ICH6",	AHCI_Q_NOFORCE},
 	{0x26538086, 0x00, "Intel ICH6M",	AHCI_Q_NOFORCE},
@@ -180,6 +185,9 @@ static const struct {
 	{0x1f3e8086, 0x00, "Intel Avoton (RAID)",	0},
 	{0x1f3f8086, 0x00, "Intel Avoton (RAID)",	0},
 	{0x23a38086, 0x00, "Intel Coleto Creek",	0},
+	{0x31e38086, 0x00, "Intel Gemini Lake",	0},
+	{0x5ae38086, 0x00, "Intel Apollo Lake",	0},
+	{0x7ae28086, 0x00, "Intel Alder Lake",	0},
 	{0x8c028086, 0x00, "Intel Lynx Point",	0},
 	{0x8c038086, 0x00, "Intel Lynx Point",	0},
 	{0x8c048086, 0x00, "Intel Lynx Point (RAID)",	0},
@@ -358,6 +366,7 @@ static const struct {
 	{0x01861039, 0x00, "SiS 968",		0},
 	{0xa01c177d, 0x00, "ThunderX",		AHCI_Q_ABAR0|AHCI_Q_1MSI},
 	{0x00311c36, 0x00, "Annapurna",		AHCI_Q_FORCE_PI|AHCI_Q_RESTORE_CAP|AHCI_Q_NOMSIX},
+	{0x1600144d, 0x00, "Samsung",		AHCI_Q_NOMSI},
 	{0x00000000, 0x00, NULL,		0}
 };
 
@@ -365,10 +374,7 @@ static int
 ahci_pci_ctlr_reset(device_t dev)
 {
 
-	if (pci_read_config(dev, PCIR_DEVVENDOR, 4) == 0x28298086 &&
-	    (pci_read_config(dev, 0x92, 1) & 0xfe) == 0x04)
-		pci_write_config(dev, 0x92, 0x01, 1);
-	return ahci_ctlr_reset(dev);
+	return(ahci_ctlr_reset(dev));
 }
 
 static int
@@ -472,6 +478,7 @@ ahci_pci_attach(device_t dev)
 	uint8_t revid = pci_get_revid(dev);
 	int msi_count, msix_count;
 	uint8_t table_bar = 0, pba_bar = 0;
+	uint32_t caps, pi;
 
 	msi_count = pci_msi_count(dev);
 	msix_count = pci_msix_count(dev);
@@ -503,6 +510,48 @@ ahci_pci_attach(device_t dev)
 	if (!(ctlr->r_mem = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
 	    &ctlr->r_rid, RF_ACTIVE)))
 		return ENXIO;
+
+	/*
+	 * Intel RAID hardware can remap NVMe devices inside its BAR.
+	 * Try to detect this. Either we have to add the device
+	 * here, or the user has to change the mode in the BIOS
+	 * from RST to AHCI.
+	 */
+	if (pci_get_vendor(dev) == 0x8086) {
+		uint32_t vscap;
+
+		vscap = ATA_INL(ctlr->r_mem, AHCI_VSCAP);
+		if (vscap & 1) {
+			uint32_t cap = ATA_INL(ctlr->r_mem, 0x800); /* Intel's REMAP CAP */
+			int i;
+
+			ctlr->remap_offset = 0x4000;
+			ctlr->remap_size = 0x4000;
+
+			/*
+			 * Check each of the devices that might be remapped to
+			 * make sure they are an nvme device. At the present,
+			 * nvme are the only known devices remapped.
+			 */
+			for (i = 0; i < 3; i++) {
+				if (cap & (1 << i) &&
+				    (ATA_INL(ctlr->r_mem, 0x880 + i * 0x80) ==
+				     ((PCIC_STORAGE << 16) |
+				      (PCIS_STORAGE_NVM << 8) |
+				      PCIP_STORAGE_NVM_ENTERPRISE_NVMHCI_1_0))) {
+					ctlr->remapped_devices++;
+				}
+			}
+
+			/* If we have any remapped device, disable MSI */
+			if (ctlr->remapped_devices > 0) {
+				device_printf(dev, "Detected %d nvme remapped devices\n",
+				    ctlr->remapped_devices);
+				ctlr->quirks |= (AHCI_Q_NOMSIX | AHCI_Q_NOMSI);
+			}
+		}
+	}
+
 
 	if (ctlr->quirks & AHCI_Q_NOMSIX)
 		msix_count = 0;
@@ -564,9 +613,12 @@ ahci_pci_attach(device_t dev)
 
 	/* Setup MSI register parameters */
 	/* Process hints. */
+	caps = ATA_INL(ctlr->r_mem, AHCI_CAP);
+	pi = ATA_INL(ctlr->r_mem, AHCI_PI);
 	if (ctlr->quirks & AHCI_Q_NOMSI)
 		ctlr->msi = 0;
-	else if (ctlr->quirks & AHCI_Q_1MSI)
+	else if ((ctlr->quirks & AHCI_Q_1MSI) ||
+	    ((caps & (AHCI_CAP_NPMASK | AHCI_CAP_CCCS)) == 0 && pi == 1))
 		ctlr->msi = 1;
 	else
 		ctlr->msi = 2;
@@ -674,6 +726,9 @@ static driver_t ahci_driver = {
         sizeof(struct ahci_controller)
 };
 DRIVER_MODULE(ahci, pci, ahci_driver, ahci_devclass, NULL, NULL);
+/* Also matches class / subclass / progid XXX need to add when we have masking support */
+MODULE_PNP_INFO("W32:vendor/device", pci, ahci, ahci_ids,
+    nitems(ahci_ids) - 1);
 static device_method_t ahci_ata_methods[] = {
 	DEVMETHOD(device_probe,     ahci_ata_probe),
 	DEVMETHOD(device_attach,    ahci_pci_attach),

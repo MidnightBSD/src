@@ -1,4 +1,4 @@
-#$FreeBSD: stable/11/rescue/rescue/Makefile 346429 2019-04-20 04:16:51Z kevans $
+#$FreeBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/2/93
 
 .include <src.opts.mk>
@@ -6,6 +6,7 @@
 PACKAGE=rescue
 MAN=
 MK_SSP=	no
+NO_SHARED=	yes
 
 PROG=	rescue
 BINDIR?=/rescue
@@ -67,10 +68,6 @@ CRUNCH_ALIAS_rm= unlink
 CRUNCH_ALIAS_ed= red
 CRUNCH_ALIAS_pkill= pgrep
 
-.if ${MK_RCMDS} != "no"
-CRUNCH_PROGS_bin+= rcp
-.endif
-
 .if ${MK_TCSH} != "no"
 CRUNCH_PROGS_bin+= csh
 CRUNCH_ALIAS_csh= -csh tcsh -tcsh
@@ -89,7 +86,7 @@ CRUNCH_SUPPRESS_LINK_-tcsh= 1
 # headers in addition to the standard 'paths.h' header.
 #
 CRUNCH_SRCDIRS+= sbin
-CRUNCH_PROGS_sbin= badsect					\
+CRUNCH_PROGS_sbin= 						\
 	camcontrol clri devfs dmesg dump			\
 	dumpfs dumpon fsck fsck_ffs fsck_msdosfs fsdb		\
 	fsirand gbde geom ifconfig init 			\
@@ -100,10 +97,6 @@ CRUNCH_PROGS_sbin= badsect					\
 	newfs_msdos nos-tun ping reboot				\
 	restore rcorder route savecore		 		\
 	shutdown spppcontrol swapon sysctl tunefs umount
-
-.if ${MK_ATM} != "no"
-CRUNCH_PROGS_sbin+= atmconfig
-.endif
 
 .if ${MK_CCD} != "no"
 CRUNCH_PROGS_sbin+= ccdconfig
@@ -116,6 +109,7 @@ CRUNCH_PROGS_sbin+= rtsol
 
 .if ${MK_IPFILTER} != "no"
 CRUNCH_PROGS_sbin+= ipf
+CRUNCH_LIBS_ipf+=	${LIBIPF}
 .endif
 
 .if ${MK_ROUTED} != "no"
@@ -153,10 +147,6 @@ CRUNCH_ALIAS_bsdlabel= disklabel
 #CRUNCH_LIBS+= -lsmb
 .endif
 
-.if ${MACHINE} == "pc98"
-CRUNCH_SRCDIR_fdisk= $(.CURDIR)/../../sbin/fdisk_pc98
-.endif
-
 .if ${MACHINE_CPUARCH} == "sparc64"
 CRUNCH_PROGS_sbin+= bsdlabel sunlabel
 .endif
@@ -166,16 +156,12 @@ CRUNCH_PROGS_sbin+= bsdlabel fdisk
 CRUNCH_ALIAS_bsdlabel= disklabel
 .endif
 
-CRUNCH_SRCDIR_atm= $(.CURDIR)/../../sbin/atm/atm
-CRUNCH_SRCDIR_atmconfig= $(.CURDIR)/../../sbin/atm/atmconfig
-CRUNCH_SRCDIR_fore_dnld= $(.CURDIR)/../../sbin/atm/fore_dnld
-CRUNCH_SRCDIR_ilmid= $(.CURDIR)/../../sbin/atm/ilmid
-CRUNCH_SRCDIR_rtquery= $(.CURDIR)/../../sbin/routed/rtquery
-CRUNCH_SRCDIR_ipf= $(.CURDIR)/../../sbin/ipf/ipf
+CRUNCH_SRCDIR_rtquery= ${SRCTOP}/sbin/routed/rtquery
+CRUNCH_SRCDIR_ipf= ${SRCTOP}/sbin/ipf/ipf
 .if ${MK_ZFS} != "no"
-CRUNCH_SRCDIR_zfs= ${.CURDIR}/../../cddl/sbin/zfs
-CRUNCH_SRCDIR_zpool= ${.CURDIR}/../../cddl/sbin/zpool
-CRUNCH_SRCDIR_zdb= ${.CURDIR}/../../cddl/usr.sbin/zdb
+CRUNCH_SRCDIR_zfs= ${SRCTOP}/cddl/sbin/zfs
+CRUNCH_SRCDIR_zpool= ${SRCTOP}/cddl/sbin/zpool
+CRUNCH_SRCDIR_zdb= ${SRCTOP}/cddl/usr.sbin/zdb
 .endif
 CRUNCH_ALIAS_reboot= fastboot halt fasthalt
 CRUNCH_ALIAS_restore= rrestore
@@ -207,6 +193,10 @@ CRUNCH_ALIAS_less= more
 
 CRUNCH_PROGS_usr.bin+= xz
 CRUNCH_ALIAS_xz= unxz lzma unlzma xzcat lzcat
+
+CRUNCH_PROGS_usr.bin+= zstd
+CRUNCH_ALIAS_zstd= unzstd zstdcat zstdmt
+CRUNCH_LIBS+=	${LDADD_zstd}
 
 CRUNCH_PROGS_usr.bin+= tar
 CRUNCH_LIBS+= -larchive

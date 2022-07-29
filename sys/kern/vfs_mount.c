@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1999-2004 Poul-Henning Kamp
  * Copyright (c) 1999 Michael Smith
  * Copyright (c) 1989, 1993
@@ -17,7 +19,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -35,10 +37,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/vfs_mount.c 357032 2020-01-23 06:18:08Z mckusick $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/conf.h>
+#include <sys/eventhandler.h>
 #include <sys/fcntl.h>
 #include <sys/jail.h>
 #include <sys/kernel.h>
@@ -93,6 +96,9 @@ struct mntlist mountlist = TAILQ_HEAD_INITIALIZER(mountlist);
 struct mtx mountlist_mtx;
 MTX_SYSINIT(mountlist, &mountlist_mtx, "mountlist", MTX_DEF);
 
+EVENTHANDLER_LIST_DEFINE(vfs_mounted);
+EVENTHANDLER_LIST_DEFINE(vfs_unmounted);
+
 /*
  * Global opts, taken by all filesystems
  */
@@ -114,6 +120,7 @@ mount_init(void *mem, int size, int flags)
 
 	mp = (struct mount *)mem;
 	mtx_init(&mp->mnt_mtx, "struct mount mtx", NULL, MTX_DEF);
+	mtx_init(&mp->mnt_listmtx, "struct mount vlist mtx", NULL, MTX_DEF);
 	lockinit(&mp->mnt_explock, PVFS, "explock", 0, 0);
 	return (0);
 }
@@ -125,6 +132,7 @@ mount_fini(void *mem, int size)
 
 	mp = (struct mount *)mem;
 	lockdestroy(&mp->mnt_explock);
+	mtx_destroy(&mp->mnt_listmtx);
 	mtx_destroy(&mp->mnt_mtx);
 }
 
@@ -467,6 +475,8 @@ vfs_mount_alloc(struct vnode *vp, struct vfsconf *vfsp, const char *fspath,
 	mp->mnt_nvnodelistsize = 0;
 	TAILQ_INIT(&mp->mnt_activevnodelist);
 	mp->mnt_activevnodelistsize = 0;
+	TAILQ_INIT(&mp->mnt_tmpfreevnodelist);
+	mp->mnt_tmpfreevnodelistsize = 0;
 	mp->mnt_ref = 0;
 	(void) vfs_busy(mp, MBF_NOWAIT);
 	atomic_add_acq_int(&vfsp->vfc_refcount, 1);
@@ -524,6 +534,8 @@ vfs_mount_destroy(struct mount *mp)
 		panic("vfs_mount_destroy: nonzero nvnodelistsize");
 	if (mp->mnt_activevnodelistsize != 0)
 		panic("vfs_mount_destroy: nonzero activevnodelistsize");
+	if (mp->mnt_tmpfreevnodelistsize != 0)
+		panic("vfs_mount_destroy: nonzero tmpfreevnodelistsize");
 	if (mp->mnt_lockref != 0)
 		panic("vfs_mount_destroy: nonzero lock refcount");
 	MNT_IUNLOCK(mp);
@@ -830,7 +842,12 @@ vfs_domount_first(
 	ASSERT_VOP_ELOCKED(vp, __func__);
 	KASSERT((fsflags & MNT_UPDATE) == 0, ("MNT_UPDATE shouldn't be here"));
 
-	if (vp == td->td_ucred->cr_prison->pr_root) {
+	/*
+	 * If the jail of the calling thread lacks permission for this type of
+	 * file system, or is trying to cover its own root, deny immediately.
+	 */
+	if (jailed(td->td_ucred) && (!prison_allow(td->td_ucred,
+	    vfsp->vfc_prison_flag) || vp == td->td_ucred->cr_prison->pr_root)) {
 		vput(vp);
 		return (EPERM);
 	}
@@ -923,7 +940,7 @@ vfs_domount_first(
 	vfs_event_signal(NULL, VQ_MOUNT, 0);
 	vn_lock(newdp, LK_EXCLUSIVE | LK_RETRY);
 	VOP_UNLOCK(vp, 0);
-	EVENTHANDLER_INVOKE(vfs_mounted, mp, newdp, td);
+	EVENTHANDLER_DIRECT_INVOKE(vfs_mounted, mp, newdp, td);
 	VOP_UNLOCK(newdp, 0);
 	mountcheckdirs(vp, newdp);
 	vrele(newdp);
@@ -1148,8 +1165,6 @@ vfs_domount(
 			vfsp = vfs_byname_kld(fstype, td, &error);
 		if (vfsp == NULL)
 			return (ENODEV);
-		if (jailed(td->td_ucred) && !(vfsp->vfc_flags & VFCF_JAIL))
-			return (EPERM);
 	}
 
 	/*
@@ -1322,7 +1337,7 @@ dounmount_cleanup(struct mount *mp, struct vnode *coveredvp, int mntkflags)
 int
 dounmount(struct mount *mp, int flags, struct thread *td)
 {
-	struct vnode *coveredvp, *fsrootvp;
+	struct vnode *coveredvp;
 	int error;
 	uint64_t async_flag;
 	int mnt_gen_r;
@@ -1367,14 +1382,13 @@ dounmount(struct mount *mp, int flags, struct thread *td)
 		dounmount_cleanup(mp, coveredvp, 0);
 		return (EBUSY);
 	}
-	mp->mnt_kern_flag |= MNTK_UNMOUNT | MNTK_NOINSMNTQ;
+	mp->mnt_kern_flag |= MNTK_UNMOUNT;
 	if (flags & MNT_NONBUSY) {
 		MNT_IUNLOCK(mp);
 		error = vfs_check_usecounts(mp);
 		MNT_ILOCK(mp);
 		if (error != 0) {
-			dounmount_cleanup(mp, coveredvp, MNTK_UNMOUNT |
-			    MNTK_NOINSMNTQ);
+			dounmount_cleanup(mp, coveredvp, MNTK_UNMOUNT);
 			return (error);
 		}
 	}
@@ -1424,22 +1438,6 @@ dounmount(struct mount *mp, int flags, struct thread *td)
 	MNT_IUNLOCK(mp);
 	cache_purgevfs(mp, false); /* remove cache entries for this file sys */
 	vfs_deallocate_syncvnode(mp);
-	/*
-	 * For forced unmounts, move process cdir/rdir refs on the fs root
-	 * vnode to the covered vnode.  For non-forced unmounts we want
-	 * such references to cause an EBUSY error.
-	 */
-	if ((flags & MNT_FORCE) &&
-	    VFS_ROOT(mp, LK_EXCLUSIVE, &fsrootvp) == 0) {
-		if (mp->mnt_vnodecovered != NULL &&
-		    (mp->mnt_flag & MNT_IGNORE) == 0)
-			mountcheckdirs(fsrootvp, mp->mnt_vnodecovered);
-		if (fsrootvp == rootvnode) {
-			vrele(rootvnode);
-			rootvnode = NULL;
-		}
-		vput(fsrootvp);
-	}
 	error = VFS_UNMOUNT(mp, flags);
 	vn_finished_write(mp);
 	/*
@@ -1449,19 +1447,7 @@ dounmount(struct mount *mp, int flags, struct thread *td)
 	 * it doesn't exist anymore.
 	 */
 	if (error && error != ENXIO) {
-		if ((flags & MNT_FORCE) &&
-		    VFS_ROOT(mp, LK_EXCLUSIVE, &fsrootvp) == 0) {
-			if (mp->mnt_vnodecovered != NULL &&
-			    (mp->mnt_flag & MNT_IGNORE) == 0)
-				mountcheckdirs(mp->mnt_vnodecovered, fsrootvp);
-			if (rootvnode == NULL) {
-				rootvnode = fsrootvp;
-				vref(rootvnode);
-			}
-			vput(fsrootvp);
-		}
 		MNT_ILOCK(mp);
-		mp->mnt_kern_flag &= ~MNTK_NOINSMNTQ;
 		if ((mp->mnt_flag & MNT_RDONLY) == 0) {
 			MNT_IUNLOCK(mp);
 			vfs_allocate_syncvnode(mp);
@@ -1484,12 +1470,16 @@ dounmount(struct mount *mp, int flags, struct thread *td)
 	mtx_lock(&mountlist_mtx);
 	TAILQ_REMOVE(&mountlist, mp, mnt_list);
 	mtx_unlock(&mountlist_mtx);
-	EVENTHANDLER_INVOKE(vfs_unmounted, mp, td);
+	EVENTHANDLER_DIRECT_INVOKE(vfs_unmounted, mp, td);
 	if (coveredvp != NULL) {
 		coveredvp->v_mountedhere = NULL;
 		VOP_UNLOCK(coveredvp, 0);
 	}
 	vfs_event_signal(NULL, VQ_UNMOUNT, 0);
+	if (rootvnode != NULL && mp == rootvnode->v_mount) {
+		vrele(rootvnode);
+		rootvnode = NULL;
+	}
 	if (mp == rootdevmp)
 		rootdevmp = NULL;
 	vfs_mount_destroy(mp);
@@ -1655,17 +1645,16 @@ vfs_getopt_size(struct vfsoptlist *opts, const char *name, off_t *value)
 	if (iv < 0)
 		return (EINVAL);
 	switch (vtp[0]) {
-	case 't':
-	case 'T':
+	case 't': case 'T':
 		iv *= 1024;
-	case 'g':
-	case 'G':
+		/* FALLTHROUGH */
+	case 'g': case 'G':
 		iv *= 1024;
-	case 'm':
-	case 'M':
+		/* FALLTHROUGH */
+	case 'm': case 'M':
 		iv *= 1024;
-	case 'k':
-	case 'K':
+		/* FALLTHROUGH */
+	case 'k': case 'K':
 		iv *= 1024;
 	case '\0':
 		break;
@@ -2054,10 +2043,81 @@ kernel_vmount(int flags, ...)
 	return (error);
 }
 
+/*
+ * Convert the old export args format into new export args.
+ *
+ * The old export args struct does not have security flavors.  Otherwise, the
+ * structs are identical.  The default security flavor 'sys' is applied by
+ * vfs_export when .ex_numsecflavors is 0.
+ */
 void
 vfs_oexport_conv(const struct oexport_args *oexp, struct export_args *exp)
 {
 
 	bcopy(oexp, exp, sizeof(*oexp));
 	exp->ex_numsecflavors = 0;
+}
+
+/*
+ * Suspend write operations on all local writeable filesystems.  Does
+ * full sync of them in the process.
+ *
+ * Iterate over the mount points in reverse order, suspending most
+ * recently mounted filesystems first.  It handles a case where a
+ * filesystem mounted from a md(4) vnode-backed device should be
+ * suspended before the filesystem that owns the vnode.
+ */
+void
+suspend_all_fs(void)
+{
+	struct mount *mp;
+	int error;
+
+	mtx_lock(&mountlist_mtx);
+	TAILQ_FOREACH_REVERSE(mp, &mountlist, mntlist, mnt_list) {
+		error = vfs_busy(mp, MBF_MNTLSTLOCK | MBF_NOWAIT);
+		if (error != 0)
+			continue;
+		if ((mp->mnt_flag & (MNT_RDONLY | MNT_LOCAL)) != MNT_LOCAL ||
+		    (mp->mnt_kern_flag & MNTK_SUSPEND) != 0) {
+			mtx_lock(&mountlist_mtx);
+			vfs_unbusy(mp);
+			continue;
+		}
+		error = vfs_write_suspend(mp, 0);
+		if (error == 0) {
+			MNT_ILOCK(mp);
+			MPASS((mp->mnt_kern_flag & MNTK_SUSPEND_ALL) == 0);
+			mp->mnt_kern_flag |= MNTK_SUSPEND_ALL;
+			MNT_IUNLOCK(mp);
+			mtx_lock(&mountlist_mtx);
+		} else {
+			printf("suspend of %s failed, error %d\n",
+			    mp->mnt_stat.f_mntonname, error);
+			mtx_lock(&mountlist_mtx);
+			vfs_unbusy(mp);
+		}
+	}
+	mtx_unlock(&mountlist_mtx);
+}
+
+void
+resume_all_fs(void)
+{
+	struct mount *mp;
+
+	mtx_lock(&mountlist_mtx);
+	TAILQ_FOREACH(mp, &mountlist, mnt_list) {
+		if ((mp->mnt_kern_flag & MNTK_SUSPEND_ALL) == 0)
+			continue;
+		mtx_unlock(&mountlist_mtx);
+		MNT_ILOCK(mp);
+		MPASS((mp->mnt_kern_flag & MNTK_SUSPEND) != 0);
+		mp->mnt_kern_flag &= ~MNTK_SUSPEND_ALL;
+		MNT_IUNLOCK(mp);
+		vfs_write_resume(mp, 0);
+		mtx_lock(&mountlist_mtx);
+		vfs_unbusy(mp);
+	}
+	mtx_unlock(&mountlist_mtx);
 }

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/efi/libefi/libefi.c 329114 2018-02-11 02:27:50Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <efi.h>
 #include <eficonsctl.h>
@@ -49,4 +49,11 @@ efi_get_table(EFI_GUID *tbl)
 			return (ST->ConfigurationTable[i].VendorTable);
 	}
 	return (NULL);
+}
+
+EFI_STATUS
+OpenProtocolByHandle(EFI_HANDLE handle, EFI_GUID *protocol, void **interface)
+{
+	return (BS->OpenProtocol(handle, protocol, interface, IH, NULL,
+	    EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL));
 }

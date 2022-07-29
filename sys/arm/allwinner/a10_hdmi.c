@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/allwinner/a10_hdmi.c 308324 2016-11-05 04:17:32Z mmel $
+ * $FreeBSD$
  */
 
 /*
@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/allwinner/a10_hdmi.c 308324 2016-11-05 04:17:32Z mmel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -189,6 +189,9 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/allwinner/a10_hdmi.c 308324 2016-11-05 04:
 #define	DDC_ADDR		0x50
 #define	EDDC_ADDR		0x60
 #define	EDID_LENGTH		128
+#define	DDC_CTRL_LINE		0x540
+#define	DDC_LINE_SCL_ENABLE	(1 << 8)
+#define	DDC_LINE_SDA_ENABLE	(1 << 9)
 #define	HDMI_ENABLE_DELAY	50000
 #define	DDC_READ_RETRY		4
 #define	EXT_TAG			0x00
@@ -494,6 +497,10 @@ a10hdmi_get_edid(device_t dev, uint8_t **edid, uint32_t *edid_len)
 		/* Configure DDC clock */
 		HDMI_WRITE(sc, DDC_CLOCK, DDC_CLOCK_M | DDC_CLOCK_N);
 
+		/* Enable SDA/SCL */
+		HDMI_WRITE(sc, DDC_CTRL_LINE,
+		    DDC_LINE_SCL_ENABLE | DDC_LINE_SDA_ENABLE);
+
 		/* Read EDID block */
 		error = a10hdmi_ddc_read(sc, 0, sc->edid);
 		if (error == 0) {
@@ -581,7 +588,7 @@ a10hdmi_get_tcon_config(struct a10hdmi_softc *sc, int *div, int *dbl)
 	/* Detect LCD CH1 special clock using a 1X or 2X source */
 	/* XXX */
 	pname = clk_get_name(clk_lcd_parent);
-	if (strcmp(pname, "pll3-1x") == 0 || strcmp(pname, "pll7-1x") == 0)
+	if (strcmp(pname, "pll3") == 0 || strcmp(pname, "pll7") == 0)
 		*dbl = 0;
 	else
 		*dbl = 1;

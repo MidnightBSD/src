@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/sys/netpfil/ipfw/dummynet.txt 298995 2016-05-03 18:05:43Z pfg $
+# $FreeBSD$
 #
 
 Notes on the internal structure of dummynet (2010 version)

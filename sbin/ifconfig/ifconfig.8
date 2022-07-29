@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)ifconfig.8	8.3 (Berkeley) 1/5/94
-.\" $FreeBSD: stable/11/sbin/ifconfig/ifconfig.8 342585 2018-12-29 00:42:11Z eugen $
+.\" $FreeBSD$
 .\"
-.Dd September 17, 2016
+.Dd March 29, 2022
 .Dt IFCONFIG 8
 .Os
 .Sh NAME
@@ -36,11 +36,8 @@
 .Nd configure network interface parameters
 .Sh SYNOPSIS
 .Nm
-.Op Fl f Ar type:format Ns Op Ar ,type:format
-.Op Fl L
-.Op Fl k
-.Op Fl m
-.Op Fl n
+.Op Fl kLmn
+.Op Fl f Ar type Ns Cm \&: Ns Ar format
 .Ar interface
 .Op Cm create
 .Ar address_family
@@ -54,27 +51,22 @@
 .Cm destroy
 .Nm
 .Fl a
-.Op Fl L
-.Op Fl d
-.Op Fl m
-.Op Fl u
-.Op Fl v
+.Op Fl dkLmuv
+.Op Fl f Ar type Ns Cm \&: Ns Ar format
+.Op Fl G Ar groupname
+.Op Fl g Ar groupname
 .Op Ar address_family
+.Nm
+.Fl C
+.Nm
+.Fl g Ar groupname
 .Nm
 .Fl l
-.Op Fl d
-.Op Fl u
+.Op Fl du
 .Op Ar address_family
 .Nm
-.Op Fl L
-.Op Fl d
-.Op Fl k
-.Op Fl m
-.Op Fl u
-.Op Fl v
-.Op Fl C
-.Nm
-.Op Fl g Ar groupname
+.Op Fl dkLmuv
+.Op Fl f Ar type Ns Cm \&: Ns Ar format
 .Sh DESCRIPTION
 The
 .Nm
@@ -91,15 +83,11 @@ or other operating parameters.
 The following options are available:
 .Bl -tag -width indent
 .It Ar address
-For the
-.Tn DARPA Ns -Internet
-family,
+For the DARPA-Internet family,
 the address is either a host name present in the host name data
 base,
 .Xr hosts 5 ,
-or a
-.Tn DARPA
-Internet address expressed in the Internet standard
+or a DARPA Internet address expressed in the Internet standard
 .Dq dot notation .
 .Pp
 It is also possible to use the CIDR notation (also known as the
@@ -130,9 +118,7 @@ parameter below for more information.
 .\" (Ethernet, FDDI, and Token Ring) interfaces,
 .\" which use the hardware physical address,
 .\" and on interfaces other than the first.
-.\" For the
-.\" .Tn ISO
-.\" family, addresses are specified as a long hexadecimal string,
+.\" For the ISO family, addresses are specified as a long hexadecimal string,
 .\" as in the Xerox family.
 .\" However, two consecutive dots imply a zero
 .\" byte, and the dots are optional, if the user wishes to (carefully)
@@ -211,6 +197,9 @@ environment variable.
 The format is specified as a comma separated list of
 .Sy type:format
 pairs.
+The
+.Fl f
+flag can be supplied multiple times.
 See the
 .Sx EXAMPLES
 section for more information.
@@ -319,12 +308,8 @@ Enable the use of the Address Resolution Protocol
 .Pq Xr arp 4
 in mapping
 between network level addresses and link level addresses (default).
-This is currently implemented for mapping between
-.Tn DARPA
-Internet
-addresses and
-.Tn IEEE
-802 48-bit MAC addresses (Ethernet, FDDI, and Token Ring addresses).
+This is currently implemented for mapping between DARPA Internet addresses
+and IEEE 802 48-bit MAC addresses (Ethernet, FDDI, and Token Ring addresses).
 .It Fl arp
 Disable the use of the Address Resolution Protocol
 .Pq Xr arp 4 .
@@ -369,7 +354,7 @@ the system will not attempt to
 transmit messages through that interface.
 If possible, the interface will be reset to disable reception as well.
 This action does not automatically disable routes using the interface.
-.It Cm group Ar group-name
+.It Cm group Ar groupname
 Assign the interface to a
 .Dq group .
 Any interface can be in multiple groups.
@@ -382,7 +367,7 @@ is a member of the PPP interface family group,
 .\" The interface(s) the default route(s) point to are members of the
 .\" .Em egress
 .\" interface group.
-.It Cm -group Ar group-name
+.It Cm -group Ar groupname
 Remove the interface from the given
 .Dq group .
 .It Cm eui64
@@ -424,8 +409,7 @@ of the interface to
 Some interfaces support the mutually exclusive use of one of several
 different physical media connectors.
 For example, a 10Mbit/s Ethernet
-interface might support the use of either
-.Tn AUI
+interface might support the use of either AUI
 or twisted pair connectors.
 Setting the media type to
 .Cm 10base5/AUI
@@ -460,6 +444,8 @@ this directive is used to select between 802.11a
 and 802.11g
 .Pq Cm 11g
 operating modes.
+.It Cm txrtlmt
+Set if the driver supports TX rate limiting.
 .It Cm inst Ar minst , Cm instance Ar minst
 Set the media instance to
 .Ar minst .
@@ -556,16 +542,31 @@ If the driver offers user-configurable VLAN support, enable
 reception of extended frames, tag processing in hardware,
 frame filtering in hardware, checksum offloading, or TSO on VLAN,
 respectively.
-Note that this must be issued on a physical interface associated with
+Note that this must be configured on a physical interface associated with
 .Xr vlan 4 ,
 not on a
 .Xr vlan 4
 interface itself.
-.It Fl vlanmtu , vlanhwtag, vlanhwfilter, vlanhwtso
+.It Fl vlanmtu , vlanhwtag , vlanhwfilter , vlanhwtso
 If the driver offers user-configurable VLAN support, disable
 reception of extended frames, tag processing in hardware,
 frame filtering in hardware, or TSO on VLAN,
 respectively.
+.It Cm vxlanhwcsum , vxlanhwtso
+If the driver offers user-configurable VXLAN support, enable inner checksum
+offloading (receive and transmit) or TSO on VXLAN, respectively.
+Note that this must be configured on a physical interface associated with
+.Xr vxlan 4 ,
+not on a
+.Xr vxlan 4
+interface itself.
+The physical interface is either the interface specified as the vxlandev
+or the interface hosting the vxlanlocal address.
+The driver will offload as much checksum work and TSO as it can reliably
+support, the exact level of offloading may vary between drivers.
+.It Fl vxlanhwcsum , vxlanhwtso
+If the driver offers user-configurable VXLAN support, disable checksum
+offloading (receive and transmit) or TSO on VXLAN, respectively.
 .It Cm vnet Ar jail
 Move the interface to the
 .Xr jail 8 ,
@@ -602,16 +603,12 @@ Destroy the specified network pseudo-device.
 Another name for the
 .Cm create
 parameter.
-Included for
-.Tn Solaris
-compatibility.
+Included for Solaris compatibility.
 .It Cm unplumb
 Another name for the
 .Cm destroy
 parameter.
-Included for
-.Tn Solaris
-compatibility.
+Included for Solaris compatibility.
 .It Cm metric Ar n
 Set the routing metric of the interface to
 .Ar n ,
@@ -722,10 +719,6 @@ controls whether this flag is set by default or not.
 .It Cm -accept_rtadv
 Clear a flag
 .Cm accept_rtadv .
-.It Cm autoconf
-Set a flag to accept router advertisements on an interface.
-.It Fl autoconf
-Disable autoconfiguration.
 .It Cm no_radr
 Set a flag to control whether routers from which the system accepts
 Router Advertisement messages will be added to the Default Router List
@@ -798,6 +791,10 @@ Note that the address family keyword
 .Dq Li inet6
 is needed for them:
 .Bl -tag -width indent
+.It Cm autoconf
+Set the IPv6 autoconfigured address bit.
+.It Fl autoconf
+Clear the IPv6 autoconfigured address bit.
 .It Cm deprecated
 Set the IPv6 deprecated address bit.
 .It Fl deprecated
@@ -830,13 +827,13 @@ is one of
 .Cm sta ,
 .Cm ahdemo
 (or
-.Cm adhoc-demo ),
-.Cm ibss ,
+.Cm adhoc-demo ) ,
+.Cm ibss
 (or
-.Cm adhoc ),
-.Cm ap ,
+.Cm adhoc ) ,
+.Cm ap
 (or
-.Cm hostap ),
+.Cm hostap ) ,
 .Cm wds ,
 .Cm tdma ,
 .Cm mesh ,
@@ -1471,42 +1468,45 @@ with a
 .Cm scan
 request or through background scanning.
 Depending on the capabilities of the stations the following
-flags can be included in the output:
+flags (capability codes) can be included in the output:
 .Bl -tag -width 3n
 .It Li A
-Authorized.
-Indicates that the station is permitted to send/receive data frames.
+Channel agility.
+.It Li B
+PBCC modulation.
+.It Li C
+Poll request capability.
+.It Li D
+DSSS/OFDM capability.
 .It Li E
-Extended Rate Phy (ERP).
-Indicates that the station is operating in an 802.11g network
-using extended transmit rates.
-.It Li H
-High Throughput (HT).
-Indicates that the station is using HT transmit rates.
-If a `+' follows immediately after then the station associated
-using deprecated mechanisms supported only when
-.Cm htcompat
-is enabled.
+Extended Service Set (ESS).
+Indicates that the station is part of an infrastructure network
+rather than an IBSS/ad-hoc network.
+.It Li I
+Independent Basic Service Set (IBSS).
+Indicates that the station is part of an ad-hoc network
+rather than an ESS network.
 .It Li P
-Power Save.
-Indicates that the station is operating in power save mode.
-.It Li Q
-Quality of Service (QoS).
-Indicates that the station is using QoS encapsulation for
-data frame.
-QoS encapsulation is enabled only when WME mode is enabled.
+Privacy capability.
+The station requires authentication and encryption
+for all data frames exchanged within the BSS using cryptographic means
+such as WEP, TKIP, or AES-CCMP.
+.It Li R
+Robust Secure Network (RSN).
 .It Li S
 Short Preamble.
-Indicates that the station is doing short preamble to optionally
+Indicates that the network is using short preambles,
+defined in 802.11b High Rate/DSSS PHY,
+and utilizes a 56 bit sync field
+rather than the 128 bit field used in long preamble mode.
+Short preambles are used to optionally
 improve throughput performance with 802.11g and 802.11b.
-.It Li T
-Transitional Security Network (TSN).
-Indicates that the station associated using TSN; see also
-.Cm tsn
-below.
-.It Li W
-Wi-Fi Protected Setup (WPS).
-Indicates that the station associated using WPS.
+.It Li c
+Pollable capability.
+.It Li s
+Short slot time capability.
+Indicates that the 802.11g network is using a short slot time
+because there are no legacy (802.11b) stations present.
 .El
 .Pp
 By default interesting information elements captured from the neighboring
@@ -1548,8 +1548,7 @@ Capabilities advertised by the stations are described under
 the
 .Cm scan
 request.
-Depending on the capabilities of the stations the following
-flags can be included in the output:
+The following flags can be included in the output:
 .Bl -tag -width 3n
 .It Li A
 Authorized.
@@ -1561,7 +1560,9 @@ using extended transmit rates.
 .It Li H
 High Throughput (HT).
 Indicates that the station is using HT transmit rates.
-If a `+' follows immediately after then the station associated
+If a
+.Sq Li +
+follows immediately after then the station associated
 using deprecated mechanisms supported only when
 .Cm htcompat
 is enabled.
@@ -1574,9 +1575,10 @@ Indicates that the station is using QoS encapsulation for
 data frame.
 QoS encapsulation is enabled only when WME mode is enabled.
 .It Li S
-Short Preamble.
-Indicates that the station is doing short preamble to optionally
-improve throughput performance with 802.11g and 802.11b.
+Short GI in HT 40MHz mode enabled.
+If a
+.Sq Li +
+follows immediately after then short GI in HT 20MHz mode is enabled as well.
 .It Li T
 Transitional Security Network (TSN).
 Indicates that the station associated using TSN; see also
@@ -1585,6 +1587,8 @@ below.
 .It Li W
 Wi-Fi Protected Setup (WPS).
 Indicates that the station associated using WPS.
+.It Li s
+Short GI in HT 20MHz mode enabled.
 .El
 .Pp
 By default information elements received from associated stations
@@ -1929,9 +1933,7 @@ string or as a string of hexadecimal digits preceded by
 .Ql 0x .
 For maximum portability, hex keys are recommended;
 the mapping of text keys to WEP encryption is usually driver-specific.
-In particular, the
-.Tn Windows
-drivers do this mapping differently to
+In particular, the Windows drivers do this mapping differently to
 .Fx .
 A key may be cleared by setting it to
 .Ql - .
@@ -2433,6 +2435,12 @@ Set to 0 to disable.
 .Pp
 The following parameters are specific to lagg interfaces:
 .Bl -tag -width indent
+.It Cm laggtype Ar type
+When creating a lagg interface the type can be specified as either
+.Cm ethernet
+or
+.Cm infiniband .
+If not specified ethernet is the default lagg type.
 .It Cm laggport Ar interface
 Add the interface named by
 .Ar interface
@@ -2514,9 +2522,12 @@ means
 .Dq enabled .
 .It Cm -lacp_strict
 Disable lacp strict compliance on the interface.
+.It Cm rr_limit Ar number
+Configure a stride for an interface in round-robin mode.
+The default stride is 1.
 .El
 .Pp
-The following parameters are specific to IP tunnel interfaces,
+The following parameters apply to IP tunnel interfaces,
 .Xr gif 4 :
 .Bl -tag -width indent
 .It Cm tunnel Ar src_addr dest_addr
@@ -2566,9 +2577,26 @@ Clear a flag
 .Cm send_rev_ethip_ver .
 .El
 .Pp
-The following parameters are specific to GRE tunnel interfaces,
+The following parameters apply to GRE tunnel interfaces,
 .Xr gre 4 :
 .Bl -tag -width indent
+.It Cm tunnel Ar src_addr dest_addr
+Configure the physical source and destination address for GRE tunnel
+interfaces.
+The arguments
+.Ar src_addr
+and
+.Ar dest_addr
+are interpreted as the outer source/destination for the encapsulating
+IPv4/IPv6 header.
+.It Fl tunnel
+Unconfigure the physical source and destination address for GRE tunnel
+interfaces previously configured with
+.Cm tunnel .
+.It Cm deletetunnel
+Another name for the
+.Fl tunnel
+parameter.
 .It Cm grekey Ar key
 Configure the GRE key to be used for outgoing packets.
 Note that
@@ -2636,9 +2664,9 @@ Values in order of priority are:
 .Cm 3
 .Pq Dv Critical applications ,
 .Cm 4
-.Pq Dv Video, < 100ms latency ,
+.Pq Dv Video, < 100ms latency and jitter ,
 .Cm 5
-.Pq Dv Video, < 10ms latency ,
+.Pq Dv Voice, < 10ms latency and jitter ,
 .Cm 6
 .Pq Dv Internetwork control ,
 .Cm 7
@@ -2842,9 +2870,26 @@ This flag instructs
 to display information about all interfaces in the system.
 The
 .Fl d
-flag limits this to interfaces that are down, and
+flag limits this to interfaces that are down,
 .Fl u
-limits this to interfaces that are up.
+limits this to interfaces that are up,
+limits this to interfaces that are up,
+.Fl g
+limits this to members of the specified group of interfaces, and
+.Fl G
+excludes members of the specified group from the list.
+Both
+.Fl g
+and
+.Fl G
+flags may be specified to apply both conditions.
+Only one option
+.Fl g
+should be specified as later override previous ones
+(same for
+.Fl G ) .
+.Sy groupname
+may contain shell patterns in which case it should be quoted.
 When no arguments are given,
 .Fl a
 is implied.
@@ -2968,6 +3013,9 @@ Display available wireless networks using
 .Pp
 Display inet and inet6 address subnet masks in CIDR notation
 .Dl # ifconfig -f inet:cidr,inet6:cidr
+.Pp
+Display interfaces that are up with the exception of loopback
+.Dl # ifconfig -a -u -G lo
 .Sh DIAGNOSTICS
 Messages indicating the specified interface does not exist, the
 requested address is unknown, or the user is not privileged and

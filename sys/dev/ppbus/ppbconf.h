@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997, 1998, 1999 Nicolas Souchu
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ppbus/ppbconf.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  *
  */
 #ifndef __PPBCONF_H
@@ -259,6 +261,7 @@ extern int ppb_release_bus(device_t, device_t);
 /* bus related functions */
 extern void ppb_lock(device_t);
 extern void ppb_unlock(device_t);
+extern struct mtx *ppb_get_lock(device_t);
 extern void _ppb_assert_locked(device_t, const char *, int);
 extern void ppb_init_callout(device_t, struct callout *, int);
 extern int ppb_sleep(device_t, void *, int, const char *, int);

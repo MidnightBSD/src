@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/include/asm.h 319202 2017-05-30 12:26:36Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ASM_H_
@@ -56,6 +56,9 @@
 #else
 #define	PIC_SYM(x,y)	x
 #endif
+
+/* Alias for link register x30 */
+#define	lr		x30
 
 /*
  * Sets the trap fault handler. The exception handler will return to the

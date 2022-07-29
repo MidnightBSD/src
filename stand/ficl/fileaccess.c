@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/ficl/fileaccess.c 231042 2012-02-05 20:00:39Z rpaulo $ */
+/* $FreeBSD$ */
 
 #include <errno.h>
 #include <stdlib.h>
@@ -67,14 +67,21 @@ static void ficlFopen(FICL_VM *pVM, char *writeMode) /* ( c-addr u fam -- fileid
     if (f == NULL)
         stackPushPtr(pVM->pStack, NULL);
     else
+#ifdef LOADER_VERIEXEC
+	if (*mode == 'r' &&
+	    verify_file(fileno(f), filename, 0, VE_GUESS) < 0) {
+	    fclose(f);
+	    stackPushPtr(pVM->pStack, NULL);
+	} else
+#endif
         {
-        ficlFILE *ff = (ficlFILE *)malloc(sizeof(ficlFILE));
-        strcpy(ff->filename, filename);
-        ff->f = f;
-        stackPushPtr(pVM->pStack, ff);
+	    ficlFILE *ff = (ficlFILE *)malloc(sizeof(ficlFILE));
+	    strcpy(ff->filename, filename);
+	    ff->f = f;
+	    stackPushPtr(pVM->pStack, ff);
 
-        fseek(f, 0, SEEK_SET);
-        }
+	    fseek(f, 0, SEEK_SET);
+	}
     pushIor(pVM, f != NULL);
 }
 

@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_BZIP2_SUPPORT 166255 2007-01-26 10:19:08Z delphij $
+.\" $FreeBSD$
 Set to build some programs without optional bzip2 support.

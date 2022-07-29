@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/msun/aarch64/fenv.h 280857 2015-03-30 16:42:08Z emaste $
+ * $FreeBSD$
  */
 
 #ifndef	_FENV_H_

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/nvpair.h 286796 2015-08-15 06:34:49Z oshogbo $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_NVPAIR_H_

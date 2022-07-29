@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  *	Chat -- a program for automatic session establishment (i.e. dial
  *		the phone and log in).
@@ -79,7 +78,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/chat/chat.c 313103 2017-02-02 19:50:28Z asomers $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -1395,7 +1394,7 @@ vfmtmsg(char *buf, int buflen, const char *fmt, va_list args)
 		}
 	    }
 	}
-	str = 0;
+	str = NULL;
 	base = 0;
 	neg = 0;
 	++fmt;

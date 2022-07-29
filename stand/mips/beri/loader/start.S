@@ -29,7 +29,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/stand/mips/beri/loader/start.S 262197 2014-02-18 23:18:32Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 .set mips64
 .set noreorder

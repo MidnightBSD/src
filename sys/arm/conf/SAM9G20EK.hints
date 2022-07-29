@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/arm/conf/SAM9G20EK.hints 236988 2012-06-13 04:40:29Z imp $
+# $FreeBSD$
 #
 
 # EEPROM

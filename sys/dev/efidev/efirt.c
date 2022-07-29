@@ -1,7 +1,7 @@
 /*-
  * Copyright (c) 2004 Marcel Moolenaar
  * Copyright (c) 2001 Doug Rabson
- * Copyright (c) 2016 The FreeBSD Foundation
+ * Copyright (c) 2016, 2018 The FreeBSD Foundation
  * All rights reserved.
  *
  * Portions of this software were developed by Konstantin Belousov
@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/efidev/efirt.c 350356 2019-07-26 10:38:20Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/efi.h>
@@ -255,12 +255,7 @@ efi_enter(void)
 	curpmap = &td->td_proc->p_vmspace->vm_pmap;
 	PMAP_LOCK(curpmap);
 	mtx_lock(&efi_lock);
-	error = fpu_kern_enter(td, NULL, FPU_KERN_NOCTX);
-	if (error != 0) {
-		PMAP_UNLOCK(curpmap);
-		return (error);
-	}
-
+	fpu_kern_enter(td, NULL, FPU_KERN_NOCTX);
 	error = efi_arch_enter();
 	if (error != 0) {
 		fpu_kern_leave(td, NULL);
@@ -290,35 +285,109 @@ efi_get_table(struct uuid *uuid, void **ptr)
 {
 	struct efi_cfgtbl *ct;
 	u_long count;
+	int error;
 
 	if (efi_cfgtbl == NULL || efi_systbl == NULL)
 		return (ENXIO);
+	error = efi_enter();
+	if (error != 0)
+		return (error);
 	count = efi_systbl->st_entries;
 	ct = efi_cfgtbl;
 	while (count--) {
 		if (!bcmp(&ct->ct_uuid, uuid, sizeof(*uuid))) {
-			*ptr = (void *)efi_phys_to_kva(ct->ct_data);
+			*ptr = ct->ct_data;
+			efi_leave();
 			return (0);
 		}
 		ct++;
 	}
+
+	efi_leave();
 	return (ENOENT);
 }
+
+static int efi_rt_handle_faults = EFI_RT_HANDLE_FAULTS_DEFAULT;
+SYSCTL_INT(_machdep, OID_AUTO, efi_rt_handle_faults, CTLFLAG_RWTUN,
+    &efi_rt_handle_faults, 0,
+    "Call EFI RT methods with fault handler wrapper around");
+
+static int
+efi_rt_arch_call_nofault(struct efirt_callinfo *ec)
+{
+
+	switch (ec->ec_argcnt) {
+	case 0:
+		ec->ec_efi_status = ((register_t (*)(void))ec->ec_fptr)();
+		break;
+	case 1:
+		ec->ec_efi_status = ((register_t (*)(register_t))ec->ec_fptr)
+		    (ec->ec_arg1);
+		break;
+	case 2:
+		ec->ec_efi_status = ((register_t (*)(register_t, register_t))
+		    ec->ec_fptr)(ec->ec_arg1, ec->ec_arg2);
+		break;
+	case 3:
+		ec->ec_efi_status = ((register_t (*)(register_t, register_t,
+		    register_t))ec->ec_fptr)(ec->ec_arg1, ec->ec_arg2,
+		    ec->ec_arg3);
+		break;
+	case 4:
+		ec->ec_efi_status = ((register_t (*)(register_t, register_t,
+		    register_t, register_t))ec->ec_fptr)(ec->ec_arg1,
+		    ec->ec_arg2, ec->ec_arg3, ec->ec_arg4);
+		break;
+	case 5:
+		ec->ec_efi_status = ((register_t (*)(register_t, register_t,
+		    register_t, register_t, register_t))ec->ec_fptr)(
+		    ec->ec_arg1, ec->ec_arg2, ec->ec_arg3, ec->ec_arg4,
+		    ec->ec_arg5);
+		break;
+	default:
+		panic("efi_rt_arch_call: %d args", (int)ec->ec_argcnt);
+	}
+
+	return (0);
+}
+
+static int
+efi_call(struct efirt_callinfo *ecp)
+{
+	int error;
+
+	error = efi_enter();
+	if (error != 0)
+		return (error);
+	error = efi_rt_handle_faults ? efi_rt_arch_call(ecp) :
+	    efi_rt_arch_call_nofault(ecp);
+	efi_leave();
+	if (error == 0)
+		error = efi_status_to_errno(ecp->ec_efi_status);
+	else if (bootverbose)
+		printf("EFI %s call faulted, error %d\n", ecp->ec_name, error);
+	return (error);
+}
+
+#define	EFI_RT_METHOD_PA(method)				\
+    ((uintptr_t)((struct efi_rt *)efi_phys_to_kva((uintptr_t)	\
+    efi_runtime))->method)
 
 static int
 efi_get_time_locked(struct efi_tm *tm, struct efi_tmcap *tmcap)
 {
-	efi_status status;
-	int error;
+	struct efirt_callinfo ec;
 
 	EFI_TIME_OWNED();
-	error = efi_enter();
-	if (error != 0)
-		return (error);
-	status = efi_runtime->rt_gettime(tm, tmcap);
-	efi_leave();
-	error = efi_status_to_errno(status);
-	return (error);
+	if (efi_runtime == NULL)
+		return (ENXIO);
+	bzero(&ec, sizeof(ec));
+	ec.ec_name = "rt_gettime";
+	ec.ec_argcnt = 2;
+	ec.ec_arg1 = (uintptr_t)tm;
+	ec.ec_arg2 = (uintptr_t)tmcap;
+	ec.ec_fptr = EFI_RT_METHOD_PA(rt_gettime);
+	return (efi_call(&ec));
 }
 
 int
@@ -358,30 +427,35 @@ efi_get_time_capabilities(struct efi_tmcap *tmcap)
 int
 efi_reset_system(void)
 {
-	int error;
+	struct efirt_callinfo ec;
 
-	error = efi_enter();
-	if (error != 0)
-		return (error);
-	efi_runtime->rt_reset(EFI_RESET_WARM, 0, 0, NULL);
-	efi_leave();
-	return (EIO);
+	if (efi_runtime == NULL)
+		return (ENXIO);
+	bzero(&ec, sizeof(ec));
+	ec.ec_name = "rt_reset";
+	ec.ec_argcnt = 4;
+	ec.ec_arg1 = (uintptr_t)EFI_RESET_WARM;
+	ec.ec_arg2 = (uintptr_t)0;
+	ec.ec_arg3 = (uintptr_t)0;
+	ec.ec_arg4 = (uintptr_t)NULL;
+	ec.ec_fptr = EFI_RT_METHOD_PA(rt_reset);
+	return (efi_call(&ec));
 }
 
 static int
 efi_set_time_locked(struct efi_tm *tm)
 {
-	efi_status status;
-	int error;
+	struct efirt_callinfo ec;
 
 	EFI_TIME_OWNED();
-	error = efi_enter();
-	if (error != 0)
-		return (error);
-	status = efi_runtime->rt_settime(tm);
-	efi_leave();
-	error = efi_status_to_errno(status);
-	return (error);
+	if (efi_runtime == NULL)
+		return (ENXIO);
+	bzero(&ec, sizeof(ec));
+	ec.ec_name = "rt_settime";
+	ec.ec_argcnt = 1;
+	ec.ec_arg1 = (uintptr_t)tm;
+	ec.ec_fptr = EFI_RT_METHOD_PA(rt_settime);
+	return (efi_call(&ec));
 }
 
 int
@@ -401,47 +475,57 @@ int
 efi_var_get(efi_char *name, struct uuid *vendor, uint32_t *attrib,
     size_t *datasize, void *data)
 {
-	efi_status status;
-	int error;
+	struct efirt_callinfo ec;
 
-	error = efi_enter();
-	if (error != 0)
-		return (error);
-	status = efi_runtime->rt_getvar(name, vendor, attrib, datasize, data);
-	efi_leave();
-	error = efi_status_to_errno(status);
-	return (error);
+	if (efi_runtime == NULL)
+		return (ENXIO);
+	bzero(&ec, sizeof(ec));
+	ec.ec_argcnt = 5;
+	ec.ec_name = "rt_getvar";
+	ec.ec_arg1 = (uintptr_t)name;
+	ec.ec_arg2 = (uintptr_t)vendor;
+	ec.ec_arg3 = (uintptr_t)attrib;
+	ec.ec_arg4 = (uintptr_t)datasize;
+	ec.ec_arg5 = (uintptr_t)data;
+	ec.ec_fptr = EFI_RT_METHOD_PA(rt_getvar);
+	return (efi_call(&ec));
 }
 
 int
 efi_var_nextname(size_t *namesize, efi_char *name, struct uuid *vendor)
 {
-	efi_status status;
-	int error;
+	struct efirt_callinfo ec;
 
-	error = efi_enter();
-	if (error != 0)
-		return (error);
-	status = efi_runtime->rt_scanvar(namesize, name, vendor);
-	efi_leave();
-	error = efi_status_to_errno(status);
-	return (error);
+	if (efi_runtime == NULL)
+		return (ENXIO);
+	bzero(&ec, sizeof(ec));
+	ec.ec_argcnt = 3;
+	ec.ec_name = "rt_scanvar";
+	ec.ec_arg1 = (uintptr_t)namesize;
+	ec.ec_arg2 = (uintptr_t)name;
+	ec.ec_arg3 = (uintptr_t)vendor;
+	ec.ec_fptr = EFI_RT_METHOD_PA(rt_scanvar);
+	return (efi_call(&ec));
 }
 
 int
 efi_var_set(efi_char *name, struct uuid *vendor, uint32_t attrib,
     size_t datasize, void *data)
 {
-	efi_status status;
-	int error;
+	struct efirt_callinfo ec;
 
-	error = efi_enter();
-	if (error != 0)
-		return (error);
-	status = efi_runtime->rt_setvar(name, vendor, attrib, datasize, data);
-	efi_leave();
-	error = efi_status_to_errno(status);
-	return (error);
+	if (efi_runtime == NULL)
+		return (ENXIO);
+	bzero(&ec, sizeof(ec));
+	ec.ec_argcnt = 5;
+	ec.ec_name = "rt_setvar";
+	ec.ec_arg1 = (uintptr_t)name;
+	ec.ec_arg2 = (uintptr_t)vendor;
+	ec.ec_arg3 = (uintptr_t)attrib;
+	ec.ec_arg4 = (uintptr_t)datasize;
+	ec.ec_arg5 = (uintptr_t)data;
+	ec.ec_fptr = EFI_RT_METHOD_PA(rt_setvar);
+	return (efi_call(&ec));
 }
 
 static int

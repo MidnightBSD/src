@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/stand/i386/loader/version 87636 2001-12-11 00:49:34Z jhb $
+$FreeBSD$
 
 NOTE ANY CHANGES YOU MAKE TO THE BOOTBLOCKS HERE.  The format of this
 file is important.  Make sure the current version number is on line 6.

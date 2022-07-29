@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/usb/usb_hub.c 343135 2019-01-18 08:48:30Z hselasky $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1998 The NetBSD Foundation, Inc. All rights reserved.
  * Copyright (c) 1998 Lennart Augustsson. All rights reserved.
  * Copyright (c) 2008-2010 Hans Petter Selasky. All rights reserved.
@@ -274,11 +276,11 @@ uhub_reset_tt_proc(struct usb_proc_msg *_pm)
 
 	/* Change lock */
 	USB_BUS_UNLOCK(udev->bus);
-	mtx_lock(&sc->sc_mtx);
+	USB_MTX_LOCK(&sc->sc_mtx);
 	/* Start transfer */
 	usbd_transfer_start(sc->sc_xfer[UHUB_RESET_TT_TRANSFER]);
 	/* Change lock */
-	mtx_unlock(&sc->sc_mtx);
+	USB_MTX_UNLOCK(&sc->sc_mtx);
 	USB_BUS_LOCK(udev->bus);
 }
 #endif
@@ -470,8 +472,14 @@ uhub_explore_handle_re_enumerate(struct usb_device *child)
 		} else {
 			err = usbd_req_re_enumerate(child, NULL);
 		}
-		if (err == 0)
+		if (err == 0) {
+			/* refresh device strings */
+			usb_get_langid(child);
+			usb_set_device_strings(child);
+
+			/* set default configuration */
 			err = usbd_set_config_index(child, 0);
+		}
 		if (err == 0) {
 			err = usb_probe_and_attach(child,
 			    USB_IFACE_INDEX_ANY);
@@ -748,8 +756,10 @@ repeat:
 		if ((sc->sc_st.port_change & UPS_C_CONNECT_STATUS) ||
 		    (!(sc->sc_st.port_status & UPS_CURRENT_CONNECT_STATUS))) {
 			if (timeout) {
-				DPRINTFN(0, "giving up port reset "
-				    "- device vanished\n");
+				DPRINTFN(0, "giving up port %d reset - "
+				   "device vanished: change %#x status %#x\n",
+				   portno, sc->sc_st.port_change,
+				   sc->sc_st.port_status);
 				goto error;
 			}
 			timeout = 1;
@@ -1535,9 +1545,9 @@ uhub_attach(device_t dev)
 
 	/* Start the interrupt endpoint, if any */
 
-	mtx_lock(&sc->sc_mtx);
+	USB_MTX_LOCK(&sc->sc_mtx);
 	usbd_transfer_start(sc->sc_xfer[UHUB_INTR_TRANSFER]);
-	mtx_unlock(&sc->sc_mtx);
+	USB_MTX_UNLOCK(&sc->sc_mtx);
 
 	/* Enable automatic power save on all USB HUBs */
 
@@ -1724,6 +1734,7 @@ uhub_child_pnpinfo_string(device_t parent, device_t child,
 	struct usb_hub *hub;
 	struct usb_interface *iface;
 	struct hub_result res;
+	uint8_t do_unlock;
 
 	if (!device_is_attached(parent)) {
 		if (buflen)
@@ -1745,6 +1756,9 @@ uhub_child_pnpinfo_string(device_t parent, device_t child,
 	}
 	iface = usbd_get_iface(res.udev, res.iface_index);
 	if (iface && iface->idesc) {
+		/* Make sure device information is not changed during the print. */
+		do_unlock = usbd_ctrl_lock(res.udev);
+
 		snprintf(buf, buflen, "vendor=0x%04x product=0x%04x "
 		    "devclass=0x%02x devsubclass=0x%02x "
 		    "devproto=0x%02x "
@@ -1766,6 +1780,9 @@ uhub_child_pnpinfo_string(device_t parent, device_t child,
 		    iface->idesc->bInterfaceProtocol,
 		    iface->pnpinfo ? " " : "",
 		    iface->pnpinfo ? iface->pnpinfo : "");
+
+		if (do_unlock)
+			usbd_ctrl_unlock(res.udev);
 	} else {
 		if (buflen) {
 			buf[0] = '\0';
@@ -2313,7 +2330,7 @@ usb_needs_explore(struct usb_bus *bus, uint8_t do_probe)
  *	usb_needs_explore_all
  *
  * This function is called whenever a new driver is loaded and will
- * cause that all USB busses are re-explored.
+ * cause that all USB buses are re-explored.
  *------------------------------------------------------------------------*/
 void
 usb_needs_explore_all(void)
@@ -2331,7 +2348,7 @@ usb_needs_explore_all(void)
 		return;
 	}
 	/*
-	 * Explore all USB busses in parallel.
+	 * Explore all USB buses in parallel.
 	 */
 	max = devclass_get_maxunit(dc);
 	while (max >= 0) {

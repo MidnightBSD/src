@@ -7,13 +7,27 @@
 .
     bin
     ..
-    games
-    ..
     include
         private
             bsdstat
             ..
+            event
+            ..
+            gmock
+                internal
+                    custom
+                    ..
+                ..
+            ..
+            gtest
+                internal
+                    custom
+                    ..
+                ..
+            ..
             ucl
+            ..
+            zstd
             ..
         ..
     ..
@@ -21,7 +35,7 @@
         aout
         ..
         clang
-            10.0.1
+            13.0.0
                 include
                     cuda_wrappers
                     ..
@@ -52,6 +66,8 @@
         ..
         engines
         ..
+        flua
+        ..
         i18n
         ..
         libxo
@@ -67,8 +83,6 @@
         gcc
         ..
         ldscripts
-        ..
-        lint
         ..
         pkgconfig
         ..
@@ -210,8 +224,6 @@
             IPv6
             ..
             atf
-            ..
-            atm
             ..
             legal
             ..
@@ -764,6 +776,8 @@
             fr_FR.ISO8859-15
             ..
             fr_FR.UTF-8
+            ..
+            ga_IE.UTF-8
             ..
             he_IL.UTF-8
             ..

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/libexec/rtld-elf/tests/libpythagoras/Makefile 316388 2017-04-02 02:16:01Z asomers $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 

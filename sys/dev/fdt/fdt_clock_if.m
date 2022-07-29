@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/dev/fdt/fdt_clock_if.m 270957 2014-09-02 03:23:05Z ian $
+# $FreeBSD$
 #
 
 #include <sys/types.h>

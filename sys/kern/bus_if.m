@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/kern/bus_if.m 346381 2019-04-19 12:57:37Z kib $
+# $FreeBSD$
 #
 
 #include <sys/types.h>
@@ -74,6 +74,18 @@ CODE {
 
 	static int null_reset_prepare(device_t bus, device_t dev)
 	{
+		return (0);
+	}
+
+	static int
+	null_translate_resource(device_t bus, int type, rman_res_t start,
+		rman_res_t *newstart)
+	{
+		if (device_get_parent(bus) != NULL)
+			return (BUS_TRANSLATE_RESOURCE(device_get_parent(bus),
+			    type, start, newstart));
+
+		*newstart = start;
 		return (0);
 	}
 };
@@ -216,7 +228,7 @@ METHOD void driver_added {
 /**
  * @brief Create a new child device
  *
- * For busses which use use drivers supporting DEVICE_IDENTIFY() to
+ * For buses which use use drivers supporting DEVICE_IDENTIFY() to
  * enumerate their devices, this method is used to create new
  * device instances. The new device will be added after the last
  * existing child with the same order. Implementations of bus_add_child
@@ -406,6 +418,23 @@ METHOD int adjust_resource {
 	rman_res_t	_end;
 };
 
+
+/**
+ * @brief translate a resource value
+ *
+ *
+ * @param _dev		the device associated with the resource
+ * @param _type		the type of resource
+ * @param _start	the starting address of the resource range
+ * @param _newstart	the new starting address of the resource range
+ */
+METHOD int translate_resource {
+	device_t	_dev;
+	int		_type;
+	rman_res_t	_start;
+	rman_res_t	*_newstart;
+} DEFAULT null_translate_resource;
+
 /**
  * @brief Release a resource
  *
@@ -482,10 +511,48 @@ METHOD int teardown_intr {
 };
 
 /**
+ * @brief Suspend an interrupt handler
+ *
+ * This method is used to mark a handler as suspended in the case
+ * that the associated device is powered down and cannot be a source
+ * for the, typically shared, interrupt.
+ * The value of @p _irq must be the interrupt resource passed
+ * to a previous call to BUS_SETUP_INTR().
+ * 
+ * @param _dev		the parent device of @p _child
+ * @param _child	the device which allocated the resource
+ * @param _irq		the resource representing the interrupt
+ */
+METHOD int suspend_intr {
+	device_t	_dev;
+	device_t	_child;
+	struct resource *_irq;
+} DEFAULT bus_generic_suspend_intr;
+
+/**
+ * @brief Resume an interrupt handler
+ *
+ * This method is used to clear suspended state of a handler when
+ * the associated device is powered up and can be an interrupt source
+ * again.
+ * The value of @p _irq must be the interrupt resource passed
+ * to a previous call to BUS_SETUP_INTR().
+ * 
+ * @param _dev		the parent device of @p _child
+ * @param _child	the device which allocated the resource
+ * @param _irq		the resource representing the interrupt
+ */
+METHOD int resume_intr {
+	device_t	_dev;
+	device_t	_child;
+	struct resource *_irq;
+} DEFAULT bus_generic_resume_intr;
+
+/**
  * @brief Define a resource which can be allocated with
  * BUS_ALLOC_RESOURCE().
  *
- * This method is used by some busses (typically ISA) to allow a
+ * This method is used by some buses (typically ISA) to allow a
  * driver to describe a resource range that it would like to
  * allocate. The resource defined by @p _type and @p _rid is defined
  * to start at @p _start and to include @p _count indices in its
@@ -572,7 +639,7 @@ METHOD struct resource_list * get_resource_list {
  * should return -1 if it is present.  Any errors in determining
  * should be returned as a normal errno value.  Client drivers are to
  * assume that the device is present, even if there is an error
- * determining if it is there.  Busses are to try to avoid returning
+ * determining if it is there.  Buses are to try to avoid returning
  * errors, but newcard will return an error if the device fails to
  * implement this method.
  * 

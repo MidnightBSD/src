@@ -1,8 +1,10 @@
 #	@(#)Makefile.inc	8.6 (Berkeley) 5/4/95
-# $FreeBSD: stable/11/lib/libc/gen/Makefile.inc 355898 2019-12-19 02:09:16Z kevans $
+# $FreeBSD$
 
 # machine-independent gen sources
 .PATH: ${LIBC_SRCTOP}/${LIBC_ARCH}/gen ${LIBC_SRCTOP}/gen
+
+CONFS=	shells
 
 SRCS+=	__getosreldate.c \
 	__pthread_mutex_init_calloc_cb_stub.c \
@@ -14,9 +16,12 @@ SRCS+=	__getosreldate.c \
 	_thread_init.c \
 	alarm.c \
 	arc4random.c \
+	arc4random-compat.c \
+	arc4random_uniform.c \
 	assert.c \
 	auxv.c \
 	basename.c \
+	basename_compat.c \
 	cap_sandboxed.c \
 	check_utility_compat.c \
 	clock.c \
@@ -29,6 +34,7 @@ SRCS+=	__getosreldate.c \
 	devname.c \
 	dirfd.c \
 	dirname.c \
+	dirname_compat.c \
 	disklabel.c \
 	dlfcn.c \
 	drand48.c \
@@ -39,6 +45,7 @@ SRCS+=	__getosreldate.c \
 	errlst.c \
 	errno.c \
 	exec.c \
+	exect.c \
 	fdevname.c \
 	feature_present.c \
 	fmtcheck.c \
@@ -55,6 +62,7 @@ SRCS+=	__getosreldate.c \
 	getcap.c \
 	getcwd.c \
 	getdomainname.c \
+	getentropy.c \
 	getgrent.c \
 	getgrouplist.c \
 	gethostname.c \
@@ -82,6 +90,7 @@ SRCS+=	__getosreldate.c \
 	libc_dlopen.c \
 	lockf.c \
 	lrand48.c \
+	memalign.c \
 	mrand48.c \
 	nftw.c \
 	nice.c \
@@ -101,6 +110,7 @@ SRCS+=	__getosreldate.c \
 	recvmmsg.c \
 	rewinddir.c \
 	scandir.c \
+	scandir_b.c \
 	seed48.c \
 	seekdir.c \
 	semctl.c \
@@ -129,6 +139,7 @@ SRCS+=	__getosreldate.c \
 	termios.c \
 	time.c \
 	times.c \
+	timespec_get.c \
 	timezone.c \
 	tls.c \
 	ttyname.c \
@@ -146,9 +157,19 @@ SRCS+=	__getosreldate.c \
 	waitid.c \
 	wordexp.c
 .if ${MK_SYMVER} == yes
-SRCS+=	fts-compat.c \
+SRCS+=	devname-compat11.c \
+	fts-compat.c \
+	fts-compat11.c \
+	ftw-compat11.c \
+	getmntinfo-compat11.c \
+	glob-compat11.c \
+	nftw-compat11.c \
+	readdir-compat11.c \
+	scandir-compat11.c \
 	unvis-compat.c
 .endif
+
+CFLAGS.arc4random.c= -I${SRCTOP}/sys -I${SRCTOP}/sys/crypto/chacha20
 
 .PATH: ${SRCTOP}/contrib/libc-pwcache
 SRCS+=	pwcache.c pwcache.h
@@ -174,6 +195,7 @@ SYM_MAPS+=${LIBC_SRCTOP}/gen/Symbol.map
 
 MAN+=	alarm.3 \
 	arc4random.3 \
+	auxv.3 \
 	basename.3 \
 	cap_rights_get.3 \
 	cap_sandboxed.3 \
@@ -210,6 +232,7 @@ MAN+=	alarm.3 \
 	getcwd.3 \
 	getdiskbyname.3 \
 	getdomainname.3 \
+	getentropy.3 \
 	getfsent.3 \
 	getgrent.3 \
 	getgrouplist.3 \
@@ -278,12 +301,14 @@ MAN+=	alarm.3 \
 	syslog.3 \
 	tcgetpgrp.3 \
 	tcgetsid.3 \
+	tcgetwinsize.3 \
 	tcsendbreak.3 \
 	tcsetattr.3 \
 	tcsetpgrp.3 \
 	tcsetsid.3 \
 	time.3 \
 	times.3 \
+	timespec_get.3 \
 	timezone.3 \
 	ttyname.3 \
 	tzset.3 \
@@ -298,12 +323,11 @@ MAN+=	alarm.3 \
 	vis.3 \
 	wordexp.3
 
-MLINKS+=arc4random.3 arc4random_addrandom.3 \
-	arc4random.3 arc4random_stir.3 \
-	arc4random.3 arc4random_buf.3 \
+MLINKS+=arc4random.3 arc4random_buf.3 \
 	arc4random.3 arc4random_uniform.3
-MLINKS+=basename.3 basename_r.3
+MLINKS+=auxv.3 elf_aux_info.3
 MLINKS+=ctermid.3 ctermid_r.3
+MLINKS+=daemon.3 daemonfd.3
 MLINKS+=devname.3 devname_r.3
 MLINKS+=devname.3 fdevname.3
 MLINKS+=devname.3 fdevname_r.3
@@ -493,6 +517,7 @@ MLINKS+=syslog.3 closelog.3 \
 	syslog.3 openlog.3 \
 	syslog.3 setlogmask.3 \
 	syslog.3 vsyslog.3
+MLINKS+=tcgetwinsize.3 tcsetwinsize.3
 MLINKS+=tcsendbreak.3 tcdrain.3 \
 	tcsendbreak.3 tcflow.3 \
 	tcsendbreak.3 tcflush.3

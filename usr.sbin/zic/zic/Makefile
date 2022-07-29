@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/zic/zic/Makefile 323718 2017-09-18 20:01:16Z rlibby $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

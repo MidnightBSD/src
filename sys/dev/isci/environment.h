@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * BSD LICENSE
  *
  * Copyright(c) 2008 - 2011 Intel Corporation. All rights reserved.
@@ -27,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/isci/environment.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef ENVIRONMENT_H_
@@ -42,7 +44,7 @@
 #include <sys/types.h>
 #include <sys/libkern.h>
 #include <machine/bus.h>
-#include <opt_isci.h>
+#include "opt_isci.h"
 
 typedef int8_t 		S8;
 typedef uint8_t		U8;

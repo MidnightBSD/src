@@ -1,5 +1,5 @@
 /*	$NetBSD: file.c,v 1.5 2011/02/16 18:35:39 joerg Exp $	*/
-/*	$FreeBSD: stable/11/usr.bin/grep/file.c 354628 2019-11-11 19:54:08Z kevans $	*/
+/*	$FreeBSD$	*/
 /*	$OpenBSD: file.c,v 1.11 2010/07/02 20:48:48 nicm Exp $	*/
 
 /*-
@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/grep/file.c 354628 2019-11-11 19:54:08Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mman.h>
@@ -49,46 +49,24 @@ __FBSDID("$FreeBSD: stable/11/usr.bin/grep/file.c 354628 2019-11-11 19:54:08Z ke
 #include <unistd.h>
 #include <wchar.h>
 #include <wctype.h>
-#include <zlib.h>
-
-#ifndef WITHOUT_LZMA
-#include <lzma.h>
-#endif
-
-#ifndef WITHOUT_BZIP2
-#include <bzlib.h>
-#endif
 
 #include "grep.h"
 
 #define	MAXBUFSIZ	(32 * 1024)
 #define	LNBUFBUMP	80
 
-static gzFile gzbufdesc;
-#ifndef WITHOUT_LZMA
-static lzma_stream lstrm = LZMA_STREAM_INIT;
-static lzma_action laction;
-static uint8_t lin_buf[MAXBUFSIZ];
-#endif
-#ifndef WITHOUT_BZIP2
-static BZFILE* bzbufdesc;
-#endif
-
-static unsigned char *buffer;
-static unsigned char *bufpos;
+static char *buffer;
+static char *bufpos;
 static size_t bufrem;
 static size_t fsiz;
 
-static unsigned char *lnbuf;
+static char *lnbuf;
 static size_t lnbuflen;
 
 static inline int
 grep_refill(struct file *f)
 {
 	ssize_t nr;
-#ifndef WITHOUT_LZMA
-	lzma_ret lzmaret;
-#endif
 
 	if (filebehave == FILE_MMAP)
 		return (0);
@@ -96,84 +74,7 @@ grep_refill(struct file *f)
 	bufpos = buffer;
 	bufrem = 0;
 
-	switch (filebehave) {
-	case FILE_GZIP:
-		nr = gzread(gzbufdesc, buffer, MAXBUFSIZ);
-		break;
-#ifndef WITHOUT_BZIP2
-	case FILE_BZIP:
-		if (bzbufdesc != NULL) {
-			int bzerr;
-
-			nr = BZ2_bzRead(&bzerr, bzbufdesc, buffer, MAXBUFSIZ);
-			switch (bzerr) {
-			case BZ_OK:
-			case BZ_STREAM_END:
-				/* No problem, nr will be okay */
-				break;
-			case BZ_DATA_ERROR_MAGIC:
-				/*
-				 * As opposed to gzread(), which simply returns the
-				 * plain file data, if it is not in the correct
-				 * compressed format, BZ2_bzRead() instead aborts.
-				 *
-				 * So, just restart at the beginning of the file again,
-				 * and use plain reads from now on.
-				 */
-				BZ2_bzReadClose(&bzerr, bzbufdesc);
-				bzbufdesc = NULL;
-				if (lseek(f->fd, 0, SEEK_SET) == -1)
-					return (-1);
-				nr = read(f->fd, buffer, MAXBUFSIZ);
-				break;
-			default:
-				/* Make sure we exit with an error */
-				nr = -1;
-			}
-		} else
-			/*
-			 * Also an error case; we should never have a scenario
-			 * where we have an open file but no bzip descriptor
-			 * at this point. See: grep_open
-			 */
-			nr = -1;
-		break;
-#endif
-#ifndef WITHOUT_LZMA
-	case FILE_XZ:
-	case FILE_LZMA:
-		lstrm.next_out = buffer;
-
-		do {
-			if (lstrm.avail_in == 0) {
-				lstrm.next_in = lin_buf;
-				nr = read(f->fd, lin_buf, MAXBUFSIZ);
-
-				if (nr < 0)
-					return (-1);
-				else if (nr == 0)
-					laction = LZMA_FINISH;
-
-				lstrm.avail_in = nr;
-			}
-
-			lzmaret = lzma_code(&lstrm, laction);
-
-			if (lzmaret != LZMA_OK && lzmaret != LZMA_STREAM_END)
-				return (-1);
-
-			if (lstrm.avail_out == 0 || lzmaret == LZMA_STREAM_END) {
-				bufrem = MAXBUFSIZ - lstrm.avail_out;
-				lstrm.next_out = buffer;
-				lstrm.avail_out = MAXBUFSIZ;
-			}
-		} while (bufrem == 0 && lzmaret != LZMA_STREAM_END);
-
-		return (0);
-#endif	/* WITHOUT_LZMA */
-	default:
-		nr = read(f->fd, buffer, MAXBUFSIZ);
-	}
+	nr = read(f->fd, buffer, MAXBUFSIZ);
 	if (nr < 0)
 		return (-1);
 
@@ -196,8 +97,7 @@ grep_lnbufgrow(size_t newlen)
 char *
 grep_fgetln(struct file *f, struct parsec *pc)
 {
-	unsigned char *p;
-	char *ret;
+	char *p;
 	size_t len;
 	size_t off;
 	ptrdiff_t diff;
@@ -215,12 +115,15 @@ grep_fgetln(struct file *f, struct parsec *pc)
 	/* Look for a newline in the remaining part of the buffer */
 	if ((p = memchr(bufpos, fileeol, bufrem)) != NULL) {
 		++p; /* advance over newline */
-		ret = bufpos;
 		len = p - bufpos;
+		if (grep_lnbufgrow(len + 1))
+			goto error;
+		memcpy(lnbuf, bufpos, len);
 		bufrem -= len;
 		bufpos = p;
 		pc->ln.len = len;
-		return (ret);
+		lnbuf[len] = '\0';
+		return (lnbuf);
 	}
 
 	/* We have to copy the current buffered data to the line buffer */
@@ -247,7 +150,7 @@ grep_fgetln(struct file *f, struct parsec *pc)
 		++p;
 		diff = p - bufpos;
 		len += diff;
-		if (grep_lnbufgrow(len))
+		if (grep_lnbufgrow(len + 1))
 		    goto error;
 		memcpy(lnbuf + off, bufpos, diff);
 		bufrem -= diff;
@@ -255,6 +158,7 @@ grep_fgetln(struct file *f, struct parsec *pc)
 		break;
 	}
 	pc->ln.len = len;
+	lnbuf[len] = '\0';
 	return (lnbuf);
 
 error:
@@ -269,9 +173,6 @@ struct file *
 grep_open(const char *path)
 {
 	struct file *f;
-#ifndef WITHOUT_LZMA
-	lzma_ret lzmaret;
-#endif
 
 	f = grep_malloc(sizeof *f);
 	memset(f, 0, sizeof *f);
@@ -308,37 +209,6 @@ grep_open(const char *path)
 
 	if ((buffer == NULL) || (buffer == MAP_FAILED))
 		buffer = grep_malloc(MAXBUFSIZ);
-
-	switch (filebehave) {
-	case FILE_GZIP:
-		if ((gzbufdesc = gzdopen(f->fd, "r")) == NULL)
-			goto error2;
-		break;
-#ifndef WITHOUT_BZIP2
-	case FILE_BZIP:
-		if ((bzbufdesc = BZ2_bzdopen(f->fd, "r")) == NULL)
-			goto error2;
-		break;
-#endif
-#ifndef WITHOUT_LZMA
-	case FILE_XZ:
-	case FILE_LZMA:
-
-		if (filebehave == FILE_XZ)
-			lzmaret = lzma_stream_decoder(&lstrm, UINT64_MAX,
-			    LZMA_CONCATENATED);
-		else
-			lzmaret = lzma_alone_decoder(&lstrm, UINT64_MAX);
-
-		if (lzmaret != LZMA_OK)
-			goto error2;
-
-		lstrm.avail_in = 0;
-		lstrm.avail_out = MAXBUFSIZ;
-		laction = LZMA_RUN;
-		break;
-#endif
-	}
 
 	/* Fill read buffer, also catches errors early */
 	if (bufrem == 0 && grep_refill(f) != 0)

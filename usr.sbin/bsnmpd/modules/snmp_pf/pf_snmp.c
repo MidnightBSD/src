@@ -25,8 +25,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_pf/pf_snmp.c 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
+
+#define PFIOC_USE_LATEST
 
 #include <sys/queue.h>
 #include <bsnmp/snmpmod.h>
@@ -36,6 +38,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <libpfctl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,6 +46,7 @@
 #include <syslog.h>
 #include <unistd.h>
 
+#define	SNMPTREE_TYPES
 #include "pf_oid.h"
 #include "pf_tree.h"
 
@@ -904,7 +908,7 @@ pf_tbladdr(struct snmp_context __unused *ctx, struct snmp_value __unused *val,
 }
 
 int
-pf_altq(struct snmp_context __unused *ctx, struct snmp_value *val,
+pf_altq_num(struct snmp_context __unused *ctx, struct snmp_value *val,
 	u_int sub, u_int __unused vindex, enum snmp_op op)
 {
 	asn_subid_t	which = val->var.subs[sub - 1];
@@ -981,7 +985,8 @@ pf_altqq(struct snmp_context __unused *ctx, struct snmp_value *val,
 			val->v.integer = e->altq.scheduler;
 			break;
 		case LEAF_pfAltqQueueBandwidth:
-			val->v.uint32 = e->altq.bandwidth;
+			val->v.uint32 = (e->altq.bandwidth > UINT_MAX) ?
+			    UINT_MAX : (u_int32_t)e->altq.bandwidth;
 			break;
 		case LEAF_pfAltqQueuePriority:
 			val->v.integer = e->altq.priority;
@@ -1227,7 +1232,7 @@ pfq_refresh(void)
 	}
 
 	bzero(&pa, sizeof(pa));
-
+	pa.version = PFIOC_ALTQ_VERSION;
 	if (ioctl(dev, DIOCGETALTQS, &pa)) {
 		syslog(LOG_ERR, "pfq_refresh: ioctl(DIOCGETALTQS): %s",
 		    strerror(errno));
@@ -1510,6 +1515,7 @@ static int
 pfl_scan_ruleset(const char *path)
 {
 	struct pfioc_rule pr;
+	struct pfctl_rule rule;
 	struct pfl_entry *e;
 	u_int32_t nr, i;
 
@@ -1524,13 +1530,14 @@ pfl_scan_ruleset(const char *path)
 
 	for (nr = pr.nr, i = 0; i < nr; i++) {
 		pr.nr = i;
-		if (ioctl(dev, DIOCGETRULE, &pr)) {
+		if (pfctl_get_rule(dev, pr.nr, pr.ticket, pr.anchor,
+		    PF_PASS, &rule, pr.anchor_call)) {
 			syslog(LOG_ERR, "pfl_scan_ruleset: ioctl(DIOCGETRULE):"
 			    " %s", strerror(errno));
 			goto err;
 		}
 
-		if (pr.rule.label[0]) {
+		if (rule.label[0]) {
 			e = (struct pfl_entry *)malloc(sizeof(*e));
 			if (e == NULL)
 				goto err;
@@ -1538,13 +1545,13 @@ pfl_scan_ruleset(const char *path)
 			strlcpy(e->name, path, sizeof(e->name));
 			if (path[0])
 				strlcat(e->name, "/", sizeof(e->name));
-			strlcat(e->name, pr.rule.label, sizeof(e->name));
+			strlcat(e->name, rule.label[0], sizeof(e->name));
 
-			e->evals = pr.rule.evaluations;
-			e->bytes[IN] = pr.rule.bytes[IN];
-			e->bytes[OUT] = pr.rule.bytes[OUT];
-			e->pkts[IN] = pr.rule.packets[IN];
-			e->pkts[OUT] = pr.rule.packets[OUT];
+			e->evals = rule.evaluations;
+			e->bytes[IN] = rule.bytes[IN];
+			e->bytes[OUT] = rule.bytes[OUT];
+			e->pkts[IN] = rule.packets[IN];
+			e->pkts[OUT] = rule.packets[OUT];
 			e->index = ++pfl_table_count;
 
 			TAILQ_INSERT_TAIL(&pfl_table, e, link);
@@ -1645,6 +1652,7 @@ altq_is_enabled(int pfdev)
 	struct pfioc_altq pa;
 
 	errno = 0;
+	pa.version = PFIOC_ALTQ_VERSION;
 	if (ioctl(pfdev, DIOCGETALTQS, &pa)) {
 		if (errno == ENODEV) {
 			syslog(LOG_INFO, "No ALTQ support in kernel\n"

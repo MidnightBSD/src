@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/qlxgbe/ql_def.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*
@@ -124,7 +126,7 @@ typedef struct _qla_tx_fp {
 } qla_tx_fp_t;
 
 /*
- * Adapter structure contains the hardware independant information of the
+ * Adapter structure contains the hardware independent information of the
  * pci function.
  */
 struct qla_host {
@@ -267,7 +269,7 @@ struct qla_host {
 typedef struct qla_host qla_host_t;
 
 /* note that align has to be a power of 2 */
-#define QL_ALIGN(size, align) (size + (align - 1)) & ~(align - 1);
+#define QL_ALIGN(size, align) (((size) + ((align) - 1)) & (~((align) - 1)))
 #define QL_MIN(x, y) ((x < y) ? x : y)
 
 #define QL_RUNNING(ifp) (ifp->if_drv_flags & IFF_DRV_RUNNING)

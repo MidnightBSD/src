@@ -1,6 +1,8 @@
 /*-
  * Generic SCSI Target Kernel Mode Driver
  *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Nate Lawson.
  * Copyright (c) 1998, 1999, 2001, 2002 Justin T. Gibbs.
  * All rights reserved.
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cam/scsi/scsi_target.c 350804 2019-08-08 22:16:19Z mav $");
+__FBSDID("$FreeBSD$");
 
 
 #include <sys/param.h>

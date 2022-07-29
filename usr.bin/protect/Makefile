@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/protect/Makefile 255708 2013-09-19 18:53:42Z jhb $
+# $FreeBSD$
 
 PROG=   protect
 WARNS?=	6

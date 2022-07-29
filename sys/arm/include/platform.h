@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/include/platform.h 270081 2014-08-17 02:56:58Z ian $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_PLATFORM_H_

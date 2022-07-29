@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2016 John Baldwin <jhb@FreeBSD.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/acpica/acpi_pcivar.h 297679 2016-04-07 17:15:16Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef	_ACPI_PCIVAR_H_

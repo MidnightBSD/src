@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2002 Benno Rice.
  * All rights reserved.
  *
@@ -22,7 +24,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/powerpc/powermac/uninorthvar.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_POWERPC_POWERMAC_UNINORTHVAR_H_
@@ -37,6 +39,8 @@ struct uninorth_softc {
 	vm_offset_t		sc_addr;
 	vm_offset_t		sc_data;
 	int			sc_ver;
+	int			sc_skipslot;
+	struct mtx		sc_cfg_mtx;
 };
 
 struct unin_chip_softc {

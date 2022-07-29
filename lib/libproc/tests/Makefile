@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libproc/tests/Makefile 336872 2018-07-29 19:11:21Z markj $
+# $FreeBSD$
 
 ATF_TESTS_C+=	proc_test
 
@@ -13,5 +13,7 @@ LIBADD=	elf proc rtld_db util
 # for testing symbol lookup.
 STRIP=
 CFLAGS.target_prog.c+= -O0
+
+CFLAGS.gcc+=	-fdollars-in-identifiers
 
 .include <bsd.test.mk>

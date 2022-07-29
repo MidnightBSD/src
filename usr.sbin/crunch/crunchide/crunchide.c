@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: crunchide.c,v 1.8 1997/11/01 06:51:45 lukem Exp $	*/
 /*
  * Copyright (c) 1997 Christopher G. Demetriou.  All rights reserved.
@@ -27,11 +26,9 @@
  *			   University of Maryland at College Park
  */
 /*
- * crunchide.c - tiptoes through an a.out symbol table, hiding all defined
+ * crunchide.c - tiptoes through a symbol table, hiding all defined
  *	global symbols.  Allows the user to supply a "keep list" of symbols
- *	that are not to be hidden.  This program relies on the use of the
- * 	linker's -dc flag to actually put global bss data into the file's
- * 	bss segment (rather than leaving it as undefined "common" data).
+ *	that are not to be hidden.
  *
  * 	The point of all this is to allow multiple programs to be linked
  *	together without getting multiple-defined errors.
@@ -41,7 +38,7 @@
  *	    int foo_main(int argc, char **argv){ return main(argc, argv); }
  *      like so:
  *	    cc -c foo.c foostub.c
- *	    ld -dc -r foo.o foostub.o -o foo.combined.o
+ *	    ld -r foo.o foostub.o -o foo.combined.o
  *	    crunchide -k _foo_main foo.combined.o
  *	at this point, foo.combined.o can be linked with another program
  * 	and invoked with "foo_main(argc, argv)".  foo's main() and any
@@ -64,7 +61,7 @@
 #ifndef lint
 __RCSID("$NetBSD: crunchide.c,v 1.8 1997/11/01 06:51:45 lukem Exp $");
 #endif
-__FBSDID("$FreeBSD: stable/10/usr.sbin/crunch/crunchide/crunchide.c 292422 2015-12-18 02:34:01Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -74,20 +71,19 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/crunch/crunchide/crunchide.c 292422 2015-
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
-#include <a.out.h>
 
 #include "extern.h"
 
-char *pname = "crunchide";
+static const char *pname = "crunchide";
 
-void usage(void);
+static void usage(void);
 
-void add_to_keep_list(char *symbol);
-void add_file_to_keep_list(char *filename);
+static void add_to_keep_list(char *symbol);
+static void add_file_to_keep_list(char *filename);
 
-int hide_syms(const char *filename);
+static int hide_syms(const char *filename);
 
-int verbose;
+static int verbose;
 
 int main(int, char *[]);
 
@@ -128,7 +124,7 @@ main(int argc, char **argv)
     return errors;
 }
 
-void
+static void
 usage(void)
 {
     fprintf(stderr,
@@ -139,12 +135,12 @@ usage(void)
 
 /* ---------------------------- */
 
-struct keep {
+static struct keep {
     struct keep *next;
     char *sym;
 } *keep_list;
 
-void
+static void
 add_to_keep_list(char *symbol)
 {
     struct keep *newp, *prevp, *curp;
@@ -184,7 +180,7 @@ in_keep_list(const char *symbol)
     return curp && cmp == 0;
 }
 
-void
+static void
 add_file_to_keep_list(char *filename)
 {
     FILE *keepf;
@@ -208,7 +204,7 @@ add_file_to_keep_list(char *filename)
 
 /* ---------------------------- */
 
-struct {
+static struct {
 	const char *name;
 	int	(*check)(int, const char *);	/* 1 if match, zero if not */
 	int	(*hide)(int, const char *);	/* non-zero if error */
@@ -221,7 +217,7 @@ struct {
 #endif
 };
 
-int
+static int
 hide_syms(const char *filename)
 {
 	int fd, i, n, rv;

@@ -1,11 +1,9 @@
 #	@(#)Makefile	8.1 (Berkeley) 7/19/93
-# $FreeBSD: stable/11/usr.bin/su/Makefile 275042 2014-11-25 14:29:10Z bapt $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
 PROG=	su
-
-WARNS?=	5
 
 LIBADD=	util pam
 

@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/security/mac/mac_net.c 332288 2018-04-08 16:54:07Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_mac.h"
 

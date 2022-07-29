@@ -1,8 +1,9 @@
 #	@(#)Makefile	8.2 (Berkeley) 4/4/94
-# $FreeBSD: stable/11/libexec/ftpd/Makefile 321269 2017-07-20 00:58:19Z ngie $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
+CONFS=	ftpusers
 PROG=	ftpd
 MAN=	ftpd.8 ftpchroot.5
 SRCS=	ftpd.c ftpcmd.y logwtmp.c popen.c

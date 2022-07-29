@@ -31,7 +31,7 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: stable/11/lib/libc/arm/string/bzero.S 204607 2010-03-02 22:16:40Z joel $");
+__FBSDID("$FreeBSD$");
 
 #define _BZERO
 #include "memset.S"

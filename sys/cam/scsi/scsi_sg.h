@@ -1,7 +1,7 @@
 /*
  * Structures and definitions for SCSI commands to the SG passthrough device.
  *
- * $FreeBSD: stable/11/sys/cam/scsi/scsi_sg.h 266981 2014-06-02 19:53:53Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _SCSI_SG_H

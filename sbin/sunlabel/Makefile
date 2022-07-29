@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sbin/sunlabel/Makefile 319185 2017-05-30 04:17:22Z ngie $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/geom
 

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/pwait/tests/pwait_test.sh 315723 2017-03-22 17:53:25Z bdrewery $
+# $FreeBSD$
 
 atf_test_case basic
 basic_head()

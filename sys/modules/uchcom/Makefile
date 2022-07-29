@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/uchcom/Makefile 346521 2019-04-22 04:11:37Z ian $
+# $FreeBSD$
 
 S=	${SRCTOP}/sys
 .PATH: $S/dev/usb/serial

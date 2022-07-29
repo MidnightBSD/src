@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libcxxrt/Version.map 350400 2019-07-29 06:13:22Z dim $
+# $FreeBSD$
 # Define the same version as the libsupc++ from gcc 4.2.1 so that we can use
 # libcxxrt as a drop-in replacement.
 
@@ -381,9 +381,15 @@ GLIBCXX_3.4.9 {
     };
 } GLIBCXX_3.4;
 
+GLIBCXX_3.4.20 {
+    extern "C++" {
+        "std::get_new_handler()";
+    };
+} GLIBCXX_3.4.9;
+
 GLIBCXX_3.4.22 {
     extern "C++" {
         "std::uncaught_exceptions()";
     };
-} GLIBCXX_3.4.9;
+} GLIBCXX_3.4.20;
 

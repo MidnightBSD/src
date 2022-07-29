@@ -2,7 +2,7 @@
 /*
  * Copyright is disclaimed as to the contents of this file.
  *
- * $FreeBSD: stable/11/usr.bin/getconf/progenv.gperf 322687 2017-08-19 01:26:26Z ngie $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

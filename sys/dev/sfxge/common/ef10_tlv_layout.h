@@ -27,7 +27,7 @@
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: stable/11/sys/dev/sfxge/common/ef10_tlv_layout.h 311027 2017-01-01 19:30:45Z arybchik $
+ * $FreeBSD$
  */
 
 /* These structures define the layouts for the TLV items stored in static and

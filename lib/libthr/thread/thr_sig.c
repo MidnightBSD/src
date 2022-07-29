@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005, David Xu <davidxu@freebsd.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_sig.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -599,10 +601,11 @@ __thr_sigprocmask(int how, const sigset_t *set, sigset_t *oset)
 	return (__sys_sigprocmask(how, p, oset));
 }
 
-__weak_reference(_pthread_sigmask, pthread_sigmask);
+__weak_reference(_thr_sigmask, pthread_sigmask);
+__weak_reference(_thr_sigmask, _pthread_sigmask);
 
 int
-_pthread_sigmask(int how, const sigset_t *set, sigset_t *oset)
+_thr_sigmask(int how, const sigset_t *set, sigset_t *oset)
 {
 
 	if (__thr_sigprocmask(how, set, oset))

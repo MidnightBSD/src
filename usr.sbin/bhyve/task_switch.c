@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/task_switch.c 336189 2018-07-11 07:16:13Z araujo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/_iovec.h>
@@ -48,6 +48,7 @@ __FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/task_switch.c 336189 2018-07-11 07:
 #include <vmmapi.h>
 
 #include "bhyverun.h"
+#include "debug.h"
 
 /*
  * Using 'struct i386tss' is tempting but causes myriad sign extension
@@ -843,7 +844,7 @@ vmexit_task_switch(struct vmctx *ctx, struct vm_exit *vmexit, int *pvcpu)
 	}
 
 	if (nt_type == SDT_SYS286BSY || nt_type == SDT_SYS286TSS) {
-		fprintf(stderr, "Task switch to 16-bit TSS not supported\n");
+		EPRINTLN("Task switch to 16-bit TSS not supported");
 		return (VMEXIT_ABORT);
 	}
 

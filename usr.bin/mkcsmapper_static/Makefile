@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/mkcsmapper_static/Makefile 296740 2016-03-12 18:54:02Z bdrewery $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../lib/libc/iconv ${.CURDIR}/../mkcsmapper
+.PATH: ${SRCTOP}/lib/libc/iconv ${SRCTOP}/usr.bin/mkcsmapper
 
 PROG=	mkcsmapper_static
 SRCS=	citrus_bcs.c citrus_db_factory.c citrus_db_hash.c \
@@ -12,5 +11,7 @@ NO_WMISSING_VARIABLE_DECLARATIONS=
 
 build-tools: mkcsmapper_static
 
-.include "${.CURDIR}/../mkcsmapper/Makefile.inc"
+.include "${SRCTOP}/usr.bin/mkcsmapper/Makefile.inc"
 .include <bsd.prog.mk>
+
+${PROG}: ${BUILD_TOOLS_META}

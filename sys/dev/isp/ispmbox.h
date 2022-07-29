@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/isp/ispmbox.h 347894 2019-05-16 22:03:25Z ken $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  *  Copyright (c) 2009-2018 Alexander Motin <mav@FreeBSD.org>
  *  Copyright (c) 1997-2009 by Matthew Jacob
  *  All rights reserved.

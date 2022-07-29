@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/tools/regression/net/if_tap/test-tap.sh 240944 2012-09-26 00:25:09Z emaste $
+# $FreeBSD$
 
 tap_exists()
 {

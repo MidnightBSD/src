@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Rick Macklem, University of Guelph
  * All rights reserved.
  *
@@ -26,13 +28,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/nfs/nfs_commonacl.c 297793 2016-04-10 23:07:00Z pfg $");
+__FBSDID("$FreeBSD$");
 
-#ifndef APPLEKEXT
 #include <fs/nfs/nfsport.h>
 
 extern int nfsrv_useacl;
-#endif
 
 static int nfsrv_acemasktoperm(u_int32_t acetype, u_int32_t mask, int owner,
     enum vtype type, acl_perm_t *permp);
@@ -40,7 +40,7 @@ static int nfsrv_acemasktoperm(u_int32_t acetype, u_int32_t mask, int owner,
 /*
  * Handle xdr for an ace.
  */
-APPLESTATIC int
+int
 nfsrv_dissectace(struct nfsrv_descript *nd, struct acl_entry *acep,
     int *aceerrp, int *acesizep, NFSPROC_T *p)
 {
@@ -58,7 +58,11 @@ nfsrv_dissectace(struct nfsrv_descript *nd, struct acl_entry *acep,
 	flag = fxdr_unsigned(u_int32_t, *tl++);
 	mask = fxdr_unsigned(u_int32_t, *tl++);
 	len = fxdr_unsigned(int, *tl);
-	if (len < 0) {
+	/*
+	 * The RFCs do not specify a limit to the length of the "who", but
+	 * NFSV4_OPAQUELIMIT (1024) should be sufficient.
+	 */
+	if (len < 0 || len > NFSV4_OPAQUELIMIT) {
 		error = NFSERR_BADXDR;
 		goto nfsmout;
 	} else if (len == 0) {
@@ -388,7 +392,7 @@ nfsrv_buildace(struct nfsrv_descript *nd, u_char *name, int namelen,
 /*
  * Build an NFSv4 ACL.
  */
-APPLESTATIC int
+int
 nfsrv_buildacl(struct nfsrv_descript *nd, NFSACL_T *aclp, enum vtype type,
     NFSPROC_T *p)
 {
@@ -448,40 +452,10 @@ nfsrv_buildacl(struct nfsrv_descript *nd, NFSACL_T *aclp, enum vtype type,
 }
 
 /*
- * Set an NFSv4 acl.
- */
-APPLESTATIC int
-nfsrv_setacl(vnode_t vp, NFSACL_T *aclp, struct ucred *cred,
-    NFSPROC_T *p)
-{
-	int error;
-
-	if (nfsrv_useacl == 0 || nfs_supportsnfsv4acls(vp) == 0) {
-		error = NFSERR_ATTRNOTSUPP;
-		goto out;
-	}
-	/*
-	 * With NFSv4 ACLs, chmod(2) may need to add additional entries.
-	 * Make sure it has enough room for that - splitting every entry
-	 * into two and appending "canonical six" entries at the end.
-	 * Cribbed out of kern/vfs_acl.c - Rick M.
-	 */
-	if (aclp->acl_cnt > (ACL_MAX_ENTRIES - 6) / 2) {
-		error = NFSERR_ATTRNOTSUPP;
-		goto out;
-	}
-	error = VOP_SETACL(vp, ACL_TYPE_NFS4, aclp, cred, p);
-
-out:
-	NFSEXITCODE(error);
-	return (error);
-}
-
-/*
  * Compare two NFSv4 acls.
  * Return 0 if they are the same, 1 if not the same.
  */
-APPLESTATIC int
+int
 nfsrv_compareacl(NFSACL_T *aclp1, NFSACL_T *aclp2)
 {
 	int i;

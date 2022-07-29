@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/i386/libi386/devicename.c 346476 2019-04-21 03:36:05Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 #include <string.h>

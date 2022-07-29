@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1994,1995 Stefan Esser, Wolfgang StanglMeier
  * Copyright (c) 2000 Michael Smith <msmith@freebsd.org>
  * Copyright (c) 2000 BSDi
@@ -27,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/pci/pcib_private.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef __PCIB_PRIVATE_H__
@@ -193,5 +195,7 @@ int		pcib_get_id(device_t pcib, device_t dev, enum pci_id_type type,
 		    uintptr_t *id);
 void		pcib_decode_rid(device_t pcib, uint16_t rid, int *bus, 
 		    int *slot, int *func);
+int		pcib_request_feature(device_t dev, enum pci_feature feature);
+int		pcib_request_feature_allow(device_t pcib, device_t dev, enum pci_feature feature);
 
 #endif

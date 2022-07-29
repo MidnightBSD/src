@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/ath/if_ath_misc.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 #ifndef	__IF_ATH_MISC_H__
 #define	__IF_ATH_MISC_H__
@@ -56,12 +58,14 @@ extern void ath_freebuf(struct ath_softc *sc, struct ath_buf *bf);
 extern void ath_returnbuf_head(struct ath_softc *sc, struct ath_buf *bf);
 extern void ath_returnbuf_tail(struct ath_softc *sc, struct ath_buf *bf);
 
-extern int ath_reset(struct ath_softc *, ATH_RESET_TYPE);
+extern int ath_reset(struct ath_softc *, ATH_RESET_TYPE,
+	    HAL_RESET_TYPE ah_reset_type);
 extern void ath_tx_default_comp(struct ath_softc *sc, struct ath_buf *bf,
 	    int fail);
 extern void ath_tx_update_ratectrl(struct ath_softc *sc,
 	    struct ieee80211_node *ni, struct ath_rc_series *rc,
-	    struct ath_tx_status *ts, int frmlen, int nframes, int nbad);
+	    struct ath_tx_status *ts, int frmlen, int rc_framelen,
+	    int nframes, int nbad);
 
 extern	int ath_hal_gethangstate(struct ath_hal *ah, uint32_t mask,
 	    uint32_t *hangs);
@@ -109,15 +113,23 @@ extern void ath_tx_dump(struct ath_softc *sc, struct ath_txq *txq);
 /*
  * Power state tracking.
  */
-extern	void _ath_power_setpower(struct ath_softc *sc, int power_state, const char *file, int line);
-extern	void _ath_power_set_selfgen(struct ath_softc *sc, int power_state, const char *file, int line);
-extern	void _ath_power_set_power_state(struct ath_softc *sc, int power_state, const char *file, int line);
-extern	void _ath_power_restore_power_state(struct ath_softc *sc, const char *file, int line);
+extern	void _ath_power_setpower(struct ath_softc *sc, int power_state,
+	    int selfgen, const char *file, int line);
+extern	void _ath_power_set_selfgen(struct ath_softc *sc,
+	    int power_state, const char *file, int line);
+extern	void _ath_power_set_power_state(struct ath_softc *sc,
+	    int power_state, const char *file, int line);
+extern	void _ath_power_restore_power_state(struct ath_softc *sc,
+	    const char *file, int line);
 
-#define	ath_power_setpower(sc, ps) _ath_power_setpower(sc, ps, __FILE__, __LINE__)
-#define	ath_power_setselfgen(sc, ps) _ath_power_set_selfgen(sc, ps, __FILE__, __LINE__)
-#define	ath_power_set_power_state(sc, ps) _ath_power_set_power_state(sc, ps, __FILE__, __LINE__)
-#define	ath_power_restore_power_state(sc) _ath_power_restore_power_state(sc, __FILE__, __LINE__)
+#define	ath_power_setpower(sc, ps, sg) _ath_power_setpower(sc, ps, sg, \
+	    __FILE__, __LINE__)
+#define	ath_power_setselfgen(sc, ps) _ath_power_set_selfgen(sc, ps, \
+	    __FILE__, __LINE__)
+#define	ath_power_set_power_state(sc, ps) \
+	    _ath_power_set_power_state(sc, ps, __FILE__, __LINE__)
+#define	ath_power_restore_power_state(sc) \
+	    _ath_power_restore_power_state(sc, __FILE__, __LINE__)
 
 /*
  * Kick the frame TX task.

@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_ACCT 223201 2011-06-17 20:47:44Z ed $
+.\" $FreeBSD$
 Set to not build process accounting tools such as
 .Xr accton 8
 and

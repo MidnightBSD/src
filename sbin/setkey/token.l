@@ -1,7 +1,9 @@
-/*	$FreeBSD: stable/11/sbin/setkey/token.l 331722 2018-03-29 02:50:57Z eadler $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: token.l,v 1.43 2003/07/25 09:35:28 itojun Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 1995, 1996, 1997, 1998, and 1999 WIDE Project.
  * All rights reserved.
  *
@@ -64,6 +66,8 @@ extern void parse_init(void);
 int parse(FILE **);
 int yyparse(void);
 %}
+
+%option noyywrap
 
 /* common section */
 nl		\n
@@ -165,7 +169,8 @@ tcp		{ yylval.num = 0; return(PR_TCP); }
 <S_ENCALG>cast128-cbc	{ yylval.num = SADB_X_EALG_CAST128CBC; BEGIN INITIAL; return(ALG_ENC); }
 <S_ENCALG>des-deriv	{ yylval.num = SADB_EALG_DESCBC; BEGIN INITIAL; return(ALG_ENC_DESDERIV); }
 <S_ENCALG>des-32iv	{ yylval.num = SADB_EALG_DESCBC; BEGIN INITIAL; return(ALG_ENC_DES32IV); }
-<S_ENCALG>rijndael-cbc	{ yylval.num = SADB_X_EALG_RIJNDAELCBC; BEGIN INITIAL; return(ALG_ENC); }
+<S_ENCALG>rijndael-cbc	{ yylval.num = SADB_X_EALG_AESCBC; BEGIN INITIAL; return(ALG_ENC); }
+<S_ENCALG>aes-cbc	{ yylval.num = SADB_X_EALG_AESCBC; BEGIN INITIAL; return(ALG_ENC); }
 <S_ENCALG>aes-ctr	{ yylval.num = SADB_X_EALG_AESCTR; BEGIN INITIAL; return(ALG_ENC_SALT); }
 <S_ENCALG>camellia-cbc	{ yylval.num = SADB_X_EALG_CAMELLIACBC; BEGIN INITIAL; return(ALG_ENC); }
 <S_ENCALG>aes-gcm-16	{ yylval.num = SADB_X_EALG_AESGCM16; BEGIN INITIAL; return(ALG_ENC_SALT); }

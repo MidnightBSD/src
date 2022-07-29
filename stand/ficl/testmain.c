@@ -37,7 +37,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD: stable/11/stand/ficl/testmain.c 94290 2002-04-09 17:45:28Z dcs $ */
+/* $FreeBSD$ */
 
 #include <stdlib.h>
 #include <stdio.h>

@@ -1,4 +1,7 @@
-/* $FreeBSD: stable/11/share/examples/tests/tests/plain/printf_test.c 331722 2018-03-29 02:50:57Z eadler $
+/* $FreeBSD$ */
+
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
  *
  * Copyright 2013 Google Inc.
  * All rights reserved.

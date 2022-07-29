@@ -580,16 +580,16 @@ mlx4_en_store_inline_header(volatile struct mlx4_wqe_data_seg *dseg,
 
 	if (unlikely(len < MIN_PKT_LEN)) {
 		*(volatile uint32_t *)inl =
-		    SET_BYTE_COUNT((1 << 31) | MIN_PKT_LEN);
+		    SET_BYTE_COUNT((1U << 31) | MIN_PKT_LEN);
 	} else if (len <= spc) {
 		*(volatile uint32_t *)inl =
-		    SET_BYTE_COUNT((1 << 31) | len);
+		    SET_BYTE_COUNT((1U << 31) | len);
 	} else {
 		*(volatile uint32_t *)(inl + 4 + spc) =
-		    SET_BYTE_COUNT((1 << 31) | (len - spc));
+		    SET_BYTE_COUNT((1U << 31) | (len - spc));
 		wmb();
 		*(volatile uint32_t *)inl =
-		    SET_BYTE_COUNT((1 << 31) | spc);
+		    SET_BYTE_COUNT((1U << 31) | spc);
 	}
 }
 
@@ -628,7 +628,7 @@ static void mlx4_bf_copy(void __iomem *dst, volatile unsigned long *src, unsigne
 	__iowrite64_copy(dst, __DEVOLATILE(void *, src), bytecnt / 8);
 }
 
-static int mlx4_en_xmit(struct mlx4_en_priv *priv, int tx_ind, struct mbuf **mbp)
+int mlx4_en_xmit(struct mlx4_en_priv *priv, int tx_ind, struct mbuf **mbp)
 {
 	enum {
 		DS_FACT = TXBB_SIZE / DS_SIZE_ALIGNMENT,
@@ -856,7 +856,7 @@ static int mlx4_en_xmit(struct mlx4_en_priv *priv, int tx_ind, struct mbuf **mbp
 		dseg->addr = 0;
 		dseg->lkey = 0;
 		wmb();
-		dseg->byte_count = SET_BYTE_COUNT((1 << 31)|0);
+		dseg->byte_count = SET_BYTE_COUNT((1U << 31)|0);
 	}
 
 	/* fill segment list */
@@ -866,7 +866,7 @@ static int mlx4_en_xmit(struct mlx4_en_priv *priv, int tx_ind, struct mbuf **mbp
 			dseg->addr = 0;
 			dseg->lkey = 0;
 			wmb();
-			dseg->byte_count = SET_BYTE_COUNT((1 << 31)|0);
+			dseg->byte_count = SET_BYTE_COUNT((1U << 31)|0);
 		} else {
 			dseg--;
 			dseg->addr = cpu_to_be64((uint64_t)segs[nr_segs].ds_addr);

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/iicbus/ds3231.c 331503 2018-03-24 23:01:10Z ian $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for Maxim DS3231[N] real-time clock/calendar.
@@ -356,16 +356,20 @@ ds3231_en32khz_sysctl(SYSCTL_HANDLER_ARGS)
 static int
 ds3231_probe(device_t dev)
 {
+	int rc;
 
 #ifdef FDT
 	if (!ofw_bus_status_okay(dev))
 		return (ENXIO);
-	if (!ofw_bus_is_compatible(dev, "maxim,ds3231"))
-		return (ENXIO);
+	if (ofw_bus_is_compatible(dev, "maxim,ds3231"))
+		rc = BUS_PROBE_DEFAULT;
+	else
 #endif
+		rc = BUS_PROBE_NOWILDCARD;
+
 	device_set_desc(dev, "Maxim DS3231 RTC");
 
-	return (BUS_PROBE_DEFAULT);
+	return (rc);
 }
 
 static int

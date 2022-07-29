@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/security/mac_bsdextended/mac_bsdextended.h 171253 2007-07-05 13:16:04Z rwatson $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_SECURITY_MAC_BSDEXTENDED_H
@@ -101,7 +101,7 @@ struct mac_bsdextended_object {
 	uid_t	mbo_uid_max;
 	gid_t	mbo_gid_min;
 	gid_t	mbo_gid_max;
-	struct fsid mbo_fsid;
+	fsid_t	mbo_fsid;
 	int	mbo_type;
 };
 

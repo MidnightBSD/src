@@ -1,5 +1,7 @@
-/*
+/*-
  * sdp.h
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2003 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: sdp.h,v 1.3 2003/09/05 00:33:59 max Exp $
- * $FreeBSD: stable/11/lib/libsdp/sdp.h 343901 2019-02-08 10:27:02Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _SDP_H_
@@ -530,6 +532,7 @@ void *             sdp_open       (bdaddr_t const *l, bdaddr_t const *r);
 void *             sdp_open_local (char const *control);
 int32_t            sdp_close      (void *xs);
 int32_t            sdp_error      (void *xs);
+int32_t            sdp_get_lcaddr (void *xs, bdaddr_t *l);
 
 int32_t            sdp_search     (void *xs,
                                    uint32_t plen, uint16_t const *pp,

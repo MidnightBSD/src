@@ -33,7 +33,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/tools/regression/environ/envctl.c 199983 2009-12-01 05:04:31Z green $");
+__FBSDID("$FreeBSD$");
 
 
 extern char **environ;

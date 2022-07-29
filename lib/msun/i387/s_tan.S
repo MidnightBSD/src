@@ -34,7 +34,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/i387/s_tan.S 240566 2012-09-16 16:58:49Z tijl $")
+__FBSDID("$FreeBSD$")
 
 ENTRY(tan)
 	fldl	4(%esp)

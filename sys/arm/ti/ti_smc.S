@@ -22,9 +22,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <machine/armreg.h>
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/ti/ti_smc.S 275524 2014-12-05 19:23:51Z andrew $");
+__FBSDID("$FreeBSD$");
+
+#include <machine/armreg.h>
 
 	.cpu cortex-a8
 	.arch_extension sec

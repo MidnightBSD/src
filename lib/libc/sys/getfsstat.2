@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)getfsstat.2	8.3 (Berkeley) 5/25/95
-.\" $FreeBSD: stable/11/lib/libc/sys/getfsstat.2 313450 2017-02-08 18:32:35Z jhb $
+.\" $FreeBSD$
 .\"
-.Dd December 27, 2016
+.Dd March 30, 2020
 .Dt GETFSSTAT 2
 .Os
 .Sh NAME
@@ -118,6 +118,8 @@ or
 An
 .Tn I/O
 error occurred while reading from or writing to the file system.
+.It Bq Er EINTEGRITY
+Corrupted data was detected while reading from the file system.
 .El
 .Sh SEE ALSO
 .Xr statfs 2 ,

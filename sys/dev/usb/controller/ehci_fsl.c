@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010-2012 Semihalf
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/usb/controller/ehci_fsl.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_bus.h"
 
@@ -173,7 +175,7 @@ enable_usb(device_t dev, bus_space_tag_t iot, bus_space_handle_t ioh)
 
 	node = ofw_bus_get_node(dev);
 	if ((node != 0) &&
-	    (OF_getprop_alloc(node, "phy_type", 1, (void **)&phy_type) > 0)) {
+	    (OF_getprop_alloc(node, "phy_type", (void **)&phy_type) > 0)) {
 		if (strncasecmp(phy_type, "utmi", strlen("utmi")) == 0)
 			tmp |= UTMI_PHY_EN;
 		OF_prop_free(phy_type);

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/fdt/fdt_static_dtb.S 298955 2016-05-03 03:41:25Z pfg $
+ * $FreeBSD$
  */
 
 #include "fdt_static_dtb.h"

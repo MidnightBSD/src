@@ -28,11 +28,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/iicbus/twsi/twsi.h 295626 2016-02-15 15:11:26Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _TWSI_H_
 #define	_TWSI_H_
+
+#ifdef EXT_RESOURCES
+#include <dev/extres/clk/clk.h>
+#endif
 
 struct twsi_baud_rate {
 	uint32_t	raw;
@@ -43,9 +47,26 @@ struct twsi_baud_rate {
 
 struct twsi_softc {
 	device_t	dev;
-	struct resource	*res[1];	/* SYS_RES_MEMORY */
+	struct resource	*res[2];
 	struct mtx	mutex;
 	device_t	iicbus;
+	void *			intrhand;
+	bool			have_intr;
+#ifdef EXT_RESOURCES
+	clk_t		clk_core;
+	clk_t		clk_reg;
+#endif
+
+	struct iic_msg		*msgs;
+	uint32_t		nmsgs;
+	uint32_t		msg_idx;
+	uint16_t		sent_bytes;
+	uint16_t		recv_bytes;
+	int			transfer;
+	int			error;
+	int			debug;
+	uint32_t		control_val;
+	bool			iflag_w1c;
 
 	bus_size_t	reg_data;
 	bus_size_t	reg_slave_addr;

@@ -24,7 +24,7 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \ 
-\ $FreeBSD: stable/11/stand/forth/logo-beastie.4th 281275 2015-04-08 20:10:42Z dteske $
+\ $FreeBSD$
 
 46 logoX ! 4 logoY ! \ Initialize logo placement defaults
 

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libutil/tests/humanize_number_test.c 335890 2018-07-03 14:40:19Z robak $
+ * $FreeBSD$
  *
  */
 

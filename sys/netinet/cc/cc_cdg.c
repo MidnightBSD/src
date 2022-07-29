@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2013
  * 	Swinburne University of Technology, Melbourne, Australia
  * All rights reserved.
@@ -47,7 +49,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/cc/cc_cdg.c 344512 2019-02-25 10:51:21Z tuexen $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/hhook.h>
@@ -201,13 +203,13 @@ static MALLOC_DEFINE(M_CDG, "cdg data",
 
 static int ertt_id;
 
-static VNET_DEFINE(uint32_t, cdg_alpha_inc);
-static VNET_DEFINE(uint32_t, cdg_beta_delay);
-static VNET_DEFINE(uint32_t, cdg_beta_loss);
-static VNET_DEFINE(uint32_t, cdg_smoothing_factor);
-static VNET_DEFINE(uint32_t, cdg_exp_backoff_scale);
-static VNET_DEFINE(uint32_t, cdg_consec_cong);
-static VNET_DEFINE(uint32_t, cdg_hold_backoff);
+VNET_DEFINE_STATIC(uint32_t, cdg_alpha_inc);
+VNET_DEFINE_STATIC(uint32_t, cdg_beta_delay);
+VNET_DEFINE_STATIC(uint32_t, cdg_beta_loss);
+VNET_DEFINE_STATIC(uint32_t, cdg_smoothing_factor);
+VNET_DEFINE_STATIC(uint32_t, cdg_exp_backoff_scale);
+VNET_DEFINE_STATIC(uint32_t, cdg_consec_cong);
+VNET_DEFINE_STATIC(uint32_t, cdg_hold_backoff);
 #define	V_cdg_alpha_inc		VNET(cdg_alpha_inc)
 #define	V_cdg_beta_delay	VNET(cdg_beta_delay)
 #define	V_cdg_beta_loss		VNET(cdg_beta_loss)
@@ -387,7 +389,7 @@ cdg_exp_backoff_scale_handler(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
-static inline unsigned long
+static inline uint32_t
 cdg_window_decrease(struct cc_var *ccv, unsigned long owin, unsigned int beta)
 {
 
@@ -473,7 +475,7 @@ cdg_cong_signal(struct cc_var *ccv, uint32_t signal_type)
 				cdg_data->shadow_w = cdg_window_decrease(ccv,
 				    cdg_data->shadow_w, RENO_BETA);
 
-			CCV(ccv, snd_ssthresh) = ulmax(cdg_data->shadow_w,
+			CCV(ccv, snd_ssthresh) = max(cdg_data->shadow_w,
 			    cdg_window_decrease(ccv, CCV(ccv, snd_cwnd),
 			    V_cdg_beta_loss));
 
@@ -712,5 +714,5 @@ SYSCTL_UINT(_net_inet_tcp_cc_cdg, OID_AUTO, loss_compete_hold_backoff,
     "the window backoff for loss based CC compatibility");
 
 DECLARE_CC_MODULE(cdg, &cdg_cc_algo);
-
+MODULE_VERSION(cdg, 1);
 MODULE_DEPEND(cdg, ertt, 1, 1, 1);

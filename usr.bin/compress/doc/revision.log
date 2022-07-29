@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/usr.bin/compress/doc/revision.log 220201 2011-03-31 14:35:33Z emaste $ */
+/* $FreeBSD$ */
 
 /*
  * $Header: compress.c,v 4.0 85/07/30 12:50:00 joe Release $

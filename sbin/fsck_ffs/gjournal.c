@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause AND BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
@@ -34,7 +36,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -52,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/gjournal.c 359754 2020-04-09 20:38:36Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -89,7 +91,7 @@ static unsigned ncgs = 0;
 static LIST_HEAD(, cgchain) cglist = LIST_HEAD_INITIALIZER(cglist);
 
 static const char *devnam;
-static struct uufsd *disk = NULL;
+static struct uufsd *diskp = NULL;
 static struct fs *fs = NULL;
 
 static void putcgs(void);
@@ -104,7 +106,7 @@ getcg(int cg)
 {
 	struct cgchain *cgc;
 
-	assert(disk != NULL && fs != NULL);
+	assert(diskp != NULL && fs != NULL);
 	LIST_FOREACH(cgc, &cglist, cgc_next) {
 		if (cgc->cgc_cg.cg_cgx == cg) {
 			//printf("%s: Found cg=%d\n", __func__, cg);
@@ -131,9 +133,8 @@ getcg(int cg)
 		if (cgc == NULL)
 			err(1, "malloc(%zu)", sizeof(*cgc));
 	}
-	if (cgread1(disk, cg) == -1)
-		err(1, "cgread1(%d)", cg);
-	bcopy(&disk->d_cg, &cgc->cgc_cg, sizeof(cgc->cgc_union));
+	if (cgget(diskp, cg, &cgc->cgc_cg) == -1)
+		err(1, "cgget(%d)", cg);
 	cgc->cgc_busy = 0;
 	cgc->cgc_dirty = 0;
 	LIST_INSERT_HEAD(&cglist, cgc, cgc_next);
@@ -181,17 +182,15 @@ putcgs(void)
 {
 	struct cgchain *cgc, *cgc2;
 
-	assert(disk != NULL && fs != NULL);
+	assert(diskp != NULL && fs != NULL);
 	LIST_FOREACH_SAFE(cgc, &cglist, cgc_next, cgc2) {
 		if (cgc->cgc_busy)
 			continue;
 		LIST_REMOVE(cgc, cgc_next);
 		ncgs--;
 		if (cgc->cgc_dirty) {
-			bcopy(&cgc->cgc_cg, &disk->d_cg,
-			    sizeof(cgc->cgc_union));
-			if (cgwrite1(disk, cgc->cgc_cg.cg_cgx) == -1)
-				err(1, "cgwrite1(%d)", cgc->cgc_cg.cg_cgx);
+			if (cgput(diskp, &cgc->cgc_cg) == -1)
+				err(1, "cgput(%d)", cgc->cgc_cg.cg_cgx);
 			//printf("%s: Wrote cg=%d\n", __func__,
 			//    cgc->cgc_cg.cg_cgx);
 		}
@@ -208,7 +207,7 @@ cancelcgs(void)
 {
 	struct cgchain *cgc;
 
-	assert(disk != NULL && fs != NULL);
+	assert(diskp != NULL && fs != NULL);
 	while ((cgc = LIST_FIRST(&cglist)) != NULL) {
 		if (cgc->cgc_busy)
 			continue;
@@ -225,16 +224,14 @@ cancelcgs(void)
 static void
 opendisk(void)
 {
-	if (disk != NULL)
+	if (diskp != NULL)
 		return;
-	disk = malloc(sizeof(*disk));
-	if (disk == NULL)
-		err(1, "malloc(%zu)", sizeof(*disk));
-	if (ufs_disk_fillout(disk, devnam) == -1) {
+	diskp = &disk;
+	if (ufs_disk_fillout(diskp, devnam) == -1) {
 		err(1, "ufs_disk_fillout(%s) failed: %s", devnam,
-		    disk->d_error);
+		    diskp->d_error);
 	}
-	fs = &disk->d_fs;
+	fs = &diskp->d_fs;
 }
 
 /*
@@ -245,12 +242,11 @@ closedisk(void)
 {
 
 	fs->fs_clean = 1;
-	if (sbwrite(disk, 0) == -1)
+	if (sbwrite(diskp, 0) == -1)
 		err(1, "sbwrite(%s)", devnam);
-	if (ufs_disk_close(disk) == -1)
+	if (ufs_disk_close(diskp) == -1)
 		err(1, "ufs_disk_close(%s)", devnam);
-	free(disk);
-	disk = NULL;
+	diskp = NULL;
 	fs = NULL;
 }
 
@@ -328,8 +324,8 @@ freeindir(ufs2_daddr_t blk, int level)
 	ufs2_daddr_t *blks;
 	int i;
 
-	if (bread(disk, fsbtodb(fs, blk), (void *)&sblks, (size_t)fs->fs_bsize) == -1)
-		err(1, "bread: %s", disk->d_error);
+	if (bread(diskp, fsbtodb(fs, blk), (void *)&sblks, (size_t)fs->fs_bsize) == -1)
+		err(1, "bread: %s", diskp->d_error);
 	blks = (ufs2_daddr_t *)&sblks;
 	for (i = 0; i < NINDIR(fs); i++) {
 		if (blks[i] == 0)
@@ -366,7 +362,7 @@ clear_inode(struct ufs2_dinode *dino)
 		osize = dino->di_extsize;
 		dino->di_blocks -= extblocks;
 		dino->di_extsize = 0;
-		for (i = 0; i < NXADDR; i++) {
+		for (i = 0; i < UFS_NXADDR; i++) {
 			if (dino->di_extb[i] == 0)
 				continue;
 			blkfree(dino->di_extb[i], sblksize(fs, osize, i));
@@ -382,7 +378,7 @@ clear_inode(struct ufs2_dinode *dino)
 		freeindir(dino->di_ib[level], level);
 	}
 	/* deallocate direct blocks and fragments */
-	for (i = 0; i < NDADDR; i++) {
+	for (i = 0; i < UFS_NDADDR; i++) {
 		bn = dino->di_db[i];
 		if (bn == 0)
 			continue;
@@ -446,7 +442,7 @@ gjournal_check(const char *filesys)
 			/* Unallocated? Skip it. */
 			if (isclr(inosused, cino))
 				continue;
-			if (getino(disk, &p, ino, &mode) == -1)
+			if (getino(diskp, &p, ino, &mode) == -1)
 				err(1, "getino(cg=%d ino=%ju)",
 				    cg, (uintmax_t)ino);
 			dino = p;
@@ -479,7 +475,7 @@ gjournal_check(const char *filesys)
 			/* Zero-fill the inode. */
 			*dino = ufs2_zino;
 			/* Write the inode back. */
-			if (putino(disk) == -1)
+			if (putino(diskp) == -1)
 				err(1, "putino(cg=%d ino=%ju)",
 				    cg, (uintmax_t)ino);
 			if (cgp->cg_unrefs == 0) {

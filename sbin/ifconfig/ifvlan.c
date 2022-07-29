@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1999 Bill Paul <wpaul@ctr.columbia.edu>
  * Copyright (c) 2012 ADARA Networks, Inc.
  * All rights reserved.
@@ -59,7 +61,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/11/sbin/ifconfig/ifvlan.c 331722 2018-03-29 02:50:57Z eadler $";
+  "$FreeBSD$";
 #endif
 
 #define	NOTAG	((u_short) -1)
@@ -105,8 +107,7 @@ vlan_create(int s, struct ifreq *ifr)
 			errx(1, "must specify a parent device for vlan create");
 		ifr->ifr_data = (caddr_t) &params;
 	}
-	if (ioctl(s, SIOCIFCREATE2, ifr) < 0)
-		err(1, "SIOCIFCREATE2");
+	ioctl_ifcreate(s, ifr);
 }
 
 static void

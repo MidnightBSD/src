@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2007-2009 Google Inc. and Amit Singh
  * All rights reserved.
  *
@@ -31,6 +33,11 @@
  * Copyright (C) 2005 Csaba Henk.
  * All rights reserved.
  *
+ * Copyright (c) 2019 The FreeBSD Foundation
+ *
+ * Portions of this software were developed by BFF Storage Systems, LLC under
+ * sponsorship from the FreeBSD Foundation.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -54,11 +61,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/fuse/fuse_node.c 349308 2019-06-23 14:49:30Z asomers $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
-#include <sys/module.h>
 #include <sys/systm.h>
+#include <sys/counter.h>
+#include <sys/module.h>
 #include <sys/errno.h>
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -75,8 +83,8 @@ __FBSDID("$FreeBSD: stable/11/sys/fs/fuse/fuse_node.c 349308 2019-06-23 14:49:30
 #include <sys/mount.h>
 #include <sys/sysctl.h>
 #include <sys/fcntl.h>
-#include <sys/fnv_hash.h>
 #include <sys/priv.h>
+#include <sys/buf.h>
 #include <security/mac/mac_framework.h>
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
@@ -87,63 +95,77 @@ __FBSDID("$FreeBSD: stable/11/sys/fs/fuse/fuse_node.c 349308 2019-06-23 14:49:30
 #include "fuse_io.h"
 #include "fuse_ipc.h"
 
-#define FUSE_DEBUG_MODULE VNOPS
-#include "fuse_debug.h"
+SDT_PROVIDER_DECLARE(fusefs);
+/* 
+ * Fuse trace probe:
+ * arg0: verbosity.  Higher numbers give more verbose messages
+ * arg1: Textual message
+ */
+SDT_PROBE_DEFINE2(fusefs, , node, trace, "int", "char*");
 
 MALLOC_DEFINE(M_FUSEVN, "fuse_vnode", "fuse vnode private data");
 
-static int fuse_node_count = 0;
+static int sysctl_fuse_cache_mode(SYSCTL_HANDLER_ARGS);
 
-SYSCTL_INT(_vfs_fuse, OID_AUTO, node_count, CTLFLAG_RD,
-    &fuse_node_count, 0, "");
+static counter_u64_t fuse_node_count;
 
-int	fuse_data_cache_enable = 1;
+SYSCTL_COUNTER_U64(_vfs_fusefs_stats, OID_AUTO, node_count, CTLFLAG_RD,
+    &fuse_node_count, "Count of FUSE vnodes");
 
-SYSCTL_INT(_vfs_fuse, OID_AUTO, data_cache_enable, CTLFLAG_RW,
-    &fuse_data_cache_enable, 0, "");
+int	fuse_data_cache_mode = FUSE_CACHE_WT;
 
-int	fuse_data_cache_invalidate = 0;
+/*
+ * DEPRECATED
+ * This sysctl is no longer needed as of fuse protocol 7.23.  Individual
+ * servers can select the cache behavior they need for each mountpoint:
+ * - writethrough: the default
+ * - writeback: set FUSE_WRITEBACK_CACHE in fuse_init_out.flags
+ * - uncached: set FOPEN_DIRECT_IO for every file
+ * The sysctl is retained primarily for use by jails supporting older FUSE
+ * protocols.  It may be removed entirely once FreeBSD 11.3 and 12.0 are EOL.
+ */
+SYSCTL_PROC(_vfs_fusefs, OID_AUTO, data_cache_mode, CTLTYPE_INT|CTLFLAG_RW,
+    &fuse_data_cache_mode, 0, sysctl_fuse_cache_mode, "I",
+    "Zero: disable caching of FUSE file data; One: write-through caching "
+    "(default); Two: write-back caching (generally unsafe)");
 
-SYSCTL_INT(_vfs_fuse, OID_AUTO, data_cache_invalidate, CTLFLAG_RW,
-    &fuse_data_cache_invalidate, 0, "");
+static int
+sysctl_fuse_cache_mode(SYSCTL_HANDLER_ARGS)
+{
+	int val, error;
 
-int	fuse_mmap_enable = 1;
+	val = *(int *)arg1;
+	error = sysctl_handle_int(oidp, &val, 0, req);
+	if (error || !req->newptr)
+		return (error);
 
-SYSCTL_INT(_vfs_fuse, OID_AUTO, mmap_enable, CTLFLAG_RW,
-    &fuse_mmap_enable, 0, "");
-
-int	fuse_refresh_size = 0;
-
-SYSCTL_INT(_vfs_fuse, OID_AUTO, refresh_size, CTLFLAG_RW,
-    &fuse_refresh_size, 0, "");
-
-int	fuse_sync_resize = 1;
-
-SYSCTL_INT(_vfs_fuse, OID_AUTO, sync_resize, CTLFLAG_RW,
-    &fuse_sync_resize, 0, "");
-
-int	fuse_fix_broken_io = 0;
-
-SYSCTL_INT(_vfs_fuse, OID_AUTO, fix_broken_io, CTLFLAG_RW,
-    &fuse_fix_broken_io, 0, "");
+	switch (val) {
+	case FUSE_CACHE_UC:
+	case FUSE_CACHE_WT:
+	case FUSE_CACHE_WB:
+		*(int *)arg1 = val;
+		break;
+	default:
+		return (EDOM);
+	}
+	return (0);
+}
 
 static void
 fuse_vnode_init(struct vnode *vp, struct fuse_vnode_data *fvdat,
     uint64_t nodeid, enum vtype vtyp)
 {
-	int i;
-
 	fvdat->nid = nodeid;
+	LIST_INIT(&fvdat->handles);
+	vattr_null(&fvdat->cached_attrs);
 	if (nodeid == FUSE_ROOT_ID) {
 		vp->v_vflag |= VV_ROOT;
 	}
 	vp->v_type = vtyp;
 	vp->v_data = fvdat;
+	timespecclear(&fvdat->last_local_modify);
 
-	for (i = 0; i < FUFH_MAXTYPE; i++)
-		fvdat->fufh[i].fh_type = FUFH_INVALID;
-
-	atomic_add_acq_int(&fuse_node_count, 1);
+	counter_u64_add(fuse_node_count, 1);
 }
 
 void
@@ -152,23 +174,21 @@ fuse_vnode_destroy(struct vnode *vp)
 	struct fuse_vnode_data *fvdat = vp->v_data;
 
 	vp->v_data = NULL;
+	KASSERT(LIST_EMPTY(&fvdat->handles),
+		("Destroying fuse vnode with open files!"));
 	free(fvdat, M_FUSEVN);
 
-	atomic_subtract_acq_int(&fuse_node_count, 1);
+	counter_u64_add(fuse_node_count, -1);
 }
 
-static int
+int
 fuse_vnode_cmp(struct vnode *vp, void *nidp)
 {
 	return (VTOI(vp) != *((uint64_t *)nidp));
 }
 
-static uint32_t __inline
-fuse_vnode_hash(uint64_t id)
-{
-	return (fnv_32_buf(&id, sizeof(id), FNV1_32_INIT));
-}
-
+SDT_PROBE_DEFINE3(fusefs, , node, stale_vnode, "struct vnode*", "enum vtype",
+		"uint64_t");
 static int
 fuse_vnode_alloc(struct mount *mp,
     struct thread *td,
@@ -176,12 +196,12 @@ fuse_vnode_alloc(struct mount *mp,
     enum vtype vtyp,
     struct vnode **vpp)
 {
+	struct fuse_data *data;
 	struct fuse_vnode_data *fvdat;
 	struct vnode *vp2;
 	int err = 0;
 
-	FS_DEBUG("been asked for vno #%ju\n", (uintmax_t)nodeid);
-
+	data = fuse_get_mpdata(mp);
 	if (vtyp == VNON) {
 		return EINVAL;
 	}
@@ -192,12 +212,37 @@ fuse_vnode_alloc(struct mount *mp,
 		return (err);
 
 	if (*vpp) {
-		MPASS((*vpp)->v_type == vtyp && (*vpp)->v_data != NULL);
-		FS_DEBUG("vnode taken from hash\n");
-		return (0);
+		if ((*vpp)->v_type == vtyp) {
+			/* Reuse a vnode that hasn't yet been reclaimed */
+			MPASS((*vpp)->v_data != NULL);
+			MPASS(VTOFUD(*vpp)->nid == nodeid);
+			SDT_PROBE2(fusefs, , node, trace, 1,
+				"vnode taken from hash");
+			return (0);
+		} else {
+			/*
+			 * The inode changed types!  If we get here, we can't
+			 * tell whether the inode's entry cache had expired
+			 * yet.  So this could be the result of a buggy server,
+			 * but more likely the server just reused an inode
+			 * number following an entry cache expiration.
+			 */
+			SDT_PROBE3(fusefs, , node, stale_vnode, *vpp, vtyp,
+				nodeid);
+			fuse_internal_vnode_disappear(*vpp);
+			vgone(*vpp);
+			lockmgr((*vpp)->v_vnlock, LK_RELEASE, NULL);
+		}
 	}
 	fvdat = malloc(sizeof(*fvdat), M_FUSEVN, M_WAITOK | M_ZERO);
-	err = getnewvnode("fuse", mp, &fuse_vnops, vpp);
+	switch (vtyp) {
+	case VFIFO:
+		err = getnewvnode("fuse", mp, &fuse_fifoops, vpp);
+		break;
+	default:
+		err = getnewvnode("fuse", mp, &fuse_vnops, vpp);
+		break;
+	}
 	if (err) {
 		free(fvdat, M_FUSEVN);
 		return (err);
@@ -207,14 +252,23 @@ fuse_vnode_alloc(struct mount *mp,
 	err = insmntque(*vpp, mp);
 	ASSERT_VOP_ELOCKED(*vpp, "fuse_vnode_alloc");
 	if (err) {
+		lockmgr((*vpp)->v_vnlock, LK_RELEASE, NULL);
 		free(fvdat, M_FUSEVN);
 		*vpp = NULL;
 		return (err);
 	}
+	/* Disallow async reads for fifos because UFS does.  I don't know why */
+	if (data->dataflags & FSESS_ASYNC_READ && vtyp != VFIFO)
+		VN_LOCK_ASHARE(*vpp);
+
 	err = vfs_hash_insert(*vpp, fuse_vnode_hash(nodeid), LK_EXCLUSIVE,
 	    td, &vp2, fuse_vnode_cmp, &nodeid);
-	if (err)
+	if (err) {
+		lockmgr((*vpp)->v_vnlock, LK_RELEASE, NULL);
+		free(fvdat, M_FUSEVN);
+		*vpp = NULL;
 		return (err);
+	}
 	if (vp2 != NULL) {
 		*vpp = vp2;
 		return (0);
@@ -227,6 +281,7 @@ fuse_vnode_alloc(struct mount *mp,
 
 int
 fuse_vnode_get(struct mount *mp,
+    struct fuse_entry_out *feo,
     uint64_t nodeid,
     struct vnode *dvp,
     struct vnode **vpp,
@@ -234,29 +289,40 @@ fuse_vnode_get(struct mount *mp,
     enum vtype vtyp)
 {
 	struct thread *td = (cnp != NULL ? cnp->cn_thread : curthread);
+	/* 
+	 * feo should only be NULL for the root directory, which (when libfuse
+	 * is used) always has generation 0
+	 */
+	uint64_t generation = feo ? feo->generation : 0;
 	int err = 0;
-
-	debug_printf("dvp=%p\n", dvp);
 
 	err = fuse_vnode_alloc(mp, td, nodeid, vtyp, vpp);
 	if (err) {
 		return err;
 	}
 	if (dvp != NULL) {
-		MPASS((cnp->cn_flags & ISDOTDOT) == 0);
-		MPASS(!(cnp->cn_namelen == 1 && cnp->cn_nameptr[0] == '.'));
+		MPASS(cnp && (cnp->cn_flags & ISDOTDOT) == 0);
+		MPASS(cnp &&
+			!(cnp->cn_namelen == 1 && cnp->cn_nameptr[0] == '.'));
 		fuse_vnode_setparent(*vpp, dvp);
 	}
-	if (dvp != NULL && cnp != NULL && (cnp->cn_flags & MAKEENTRY) != 0) {
+	if (dvp != NULL && cnp != NULL && (cnp->cn_flags & MAKEENTRY) != 0 &&
+	    feo != NULL &&
+	    (feo->entry_valid != 0 || feo->entry_valid_nsec != 0)) {
+		struct timespec timeout;
+
 		ASSERT_VOP_LOCKED(*vpp, "fuse_vnode_get");
 		ASSERT_VOP_LOCKED(dvp, "fuse_vnode_get");
-		cache_enter(dvp, *vpp, cnp);
+
+		fuse_validity_2_timespec(feo, &timeout);
+		cache_enter_time(dvp, *vpp, cnp, &timeout, NULL);
 	}
 
+	VTOFUD(*vpp)->generation = generation;
 	/*
 	 * In userland, libfuse uses cached lookups for dot and dotdot entries,
 	 * thus it does not really bump the nlookup counter for forget.
-	 * Follow the same semantic and avoid tu bump it in order to keep
+	 * Follow the same semantic and avoid the bump in order to keep
 	 * nlookup counters consistent.
 	 */
 	if (cnp == NULL || ((cnp->cn_flags & ISDOTDOT) == 0 &&
@@ -266,44 +332,19 @@ fuse_vnode_get(struct mount *mp,
 	return 0;
 }
 
+/*
+ * Called for every fusefs vnode open to initialize the vnode (not
+ * fuse_filehandle) for use
+ */
 void
 fuse_vnode_open(struct vnode *vp, int32_t fuse_open_flags, struct thread *td)
 {
-	/*
-	 * Funcation is called for every vnode open.
-	 * Merge fuse_open_flags it may be 0
-	 */
-	/*
-	 * Ideally speaking, direct io should be enabled on
-	 * fd's but do not see of any way of providing that
-	 * this implementation.
-	 *
-	 * Also cannot think of a reason why would two
-	 * different fd's on same vnode would like
-	 * have DIRECT_IO turned on and off. But linux
-	 * based implementation works on an fd not an
-	 * inode and provides such a feature.
-	 *
-	 * XXXIP: Handle fd based DIRECT_IO
-	 */
-	if (fuse_open_flags & FOPEN_DIRECT_IO) {
-		ASSERT_VOP_ELOCKED(vp, __func__);
-		VTOFUD(vp)->flag |= FN_DIRECTIO;
-		fuse_io_invalbuf(vp, td);
-	} else {
-		if ((fuse_open_flags & FOPEN_KEEP_CACHE) == 0)
-			fuse_io_invalbuf(vp, td);
-	        VTOFUD(vp)->flag &= ~FN_DIRECTIO;
-	}
-
-	if (vnode_vtype(vp) == VREG) {
-		/* XXXIP prevent getattr, by using cached node size */
+	if (vnode_vtype(vp) == VREG)
 		vnode_create_vobject(vp, 0, td);
-	}
 }
 
 int
-fuse_vnode_savesize(struct vnode *vp, struct ucred *cred)
+fuse_vnode_savesize(struct vnode *vp, struct ucred *cred, pid_t pid)
 {
 	struct fuse_vnode_data *fvdat = VTOFUD(vp);
 	struct thread *td = curthread;
@@ -312,8 +353,6 @@ fuse_vnode_savesize(struct vnode *vp, struct ucred *cred)
 	struct fuse_setattr_in *fsai;
 	int err = 0;
 
-	FS_DEBUG("inode=%ju size=%ju\n", (uintmax_t)VTOI(vp),
-	    (uintmax_t)fvdat->filesize);
 	ASSERT_VOP_ELOCKED(vp, "fuse_io_extend");
 
 	if (fuse_isdeadfs(vp)) {
@@ -334,56 +373,148 @@ fuse_vnode_savesize(struct vnode *vp, struct ucred *cred)
 	fsai->valid = 0;
 
 	/* Truncate to a new value. */
-	    fsai->size = fvdat->filesize;
+	MPASS((fvdat->flag & FN_SIZECHANGE) != 0);
+	fsai->size = fvdat->cached_attrs.va_size;
 	fsai->valid |= FATTR_SIZE;
 
-	fuse_filehandle_getrw(vp, FUFH_WRONLY, &fufh);
+	fuse_filehandle_getrw(vp, FWRITE, &fufh, cred, pid);
 	if (fufh) {
 		fsai->fh = fufh->fh_id;
 		fsai->valid |= FATTR_FH;
 	}
 	err = fdisp_wait_answ(&fdi);
 	fdisp_destroy(&fdi);
-	if (err == 0)
+	if (err == 0) {
+		getnanouptime(&fvdat->last_local_modify);
 		fvdat->flag &= ~FN_SIZECHANGE;
+	}
 
 	return err;
+}
+
+/*
+ * Adjust the vnode's size to a new value.
+ *
+ * If the new value came from the server, such as from a FUSE_GETATTR
+ * operation, set `from_server` true.  But if it came from a local operation,
+ * such as write(2) or truncate(2), set `from_server` false.
+ */
+int
+fuse_vnode_setsize(struct vnode *vp, off_t newsize, bool from_server)
+{
+	struct fuse_vnode_data *fvdat = VTOFUD(vp);
+	struct vattr *attrs;
+	off_t oldsize;
+	size_t iosize;
+	struct buf *bp = NULL;
+	int err = 0;
+
+	ASSERT_VOP_ELOCKED(vp, "fuse_vnode_setsize");
+
+	iosize = fuse_iosize(vp);
+	oldsize = fvdat->cached_attrs.va_size;
+	fvdat->cached_attrs.va_size = newsize;
+	if ((attrs = VTOVA(vp)) != NULL)
+		attrs->va_size = newsize;
+
+	if (newsize < oldsize) {
+		daddr_t lbn;
+
+		err = vtruncbuf(vp, newsize, fuse_iosize(vp));
+		if (err)
+			goto out;
+		if (newsize % iosize == 0)
+			goto out;
+		/* 
+		 * Zero the contents of the last partial block.
+		 * Sure seems like vtruncbuf should do this for us.
+		 */
+
+		lbn = newsize / iosize;
+		bp = getblk(vp, lbn, iosize, PCATCH, 0, 0);
+		if (!bp) {
+			err = EINTR;
+			goto out;
+		}
+		if (!(bp->b_flags & B_CACHE))
+			goto out;	/* Nothing to do */
+		MPASS(bp->b_flags & B_VMIO);
+		vfs_bio_clrbuf(bp);
+		bp->b_dirtyend = MIN(bp->b_dirtyend, newsize - lbn * iosize);
+	} else if (from_server && newsize > oldsize && oldsize != VNOVAL) {
+		/*
+		 * The FUSE server changed the file size behind our back.  We
+		 * should invalidate the entire cache.
+		 */
+		daddr_t left_lbn, end_lbn;
+
+		left_lbn = oldsize / iosize;
+		end_lbn = howmany(newsize, iosize);
+		v_inval_buf_range(vp, 0, end_lbn, iosize);
+	}
+out:
+	if (bp)
+		brelse(bp);
+	vnode_pager_setsize(vp, newsize);
+	return err;
+}
+	
+/* Get the current, possibly dirty, size of the file */
+int
+fuse_vnode_size(struct vnode *vp, off_t *filesize, struct ucred *cred,
+	struct thread *td)
+{
+	struct fuse_vnode_data *fvdat = VTOFUD(vp);
+	int error = 0;
+
+	if (!(fvdat->flag & FN_SIZECHANGE) &&
+		(!fuse_vnode_attr_cache_valid(vp) ||
+		  fvdat->cached_attrs.va_size == VNOVAL)) 
+		error = fuse_internal_do_getattr(vp, NULL, cred, td);
+
+	if (!error)
+		*filesize = fvdat->cached_attrs.va_size;
+
+	return error;
 }
 
 void
-fuse_vnode_refreshsize(struct vnode *vp, struct ucred *cred)
+fuse_vnode_undirty_cached_timestamps(struct vnode *vp)
 {
-
 	struct fuse_vnode_data *fvdat = VTOFUD(vp);
-	struct vattr va;
 
-	if ((fvdat->flag & FN_SIZECHANGE) != 0 ||
-	    (fuse_refresh_size == 0 && fvdat->filesize != 0))
-		return;
-
-	VOP_GETATTR(vp, &va, cred);
-	FS_DEBUG("refreshed file size: %jd\n", (intmax_t)VTOFUD(vp)->filesize);
+	fvdat->flag &= ~(FN_MTIMECHANGE | FN_CTIMECHANGE);
 }
 
-int
-fuse_vnode_setsize(struct vnode *vp, off_t newsize)
+/* Update a fuse file's cached timestamps */
+void
+fuse_vnode_update(struct vnode *vp, int flags)
 {
 	struct fuse_vnode_data *fvdat = VTOFUD(vp);
-	off_t oldsize;
-	int err = 0;
+	struct fuse_data *data = fuse_get_mpdata(vnode_mount(vp));
+	struct timespec ts;
 
-	FS_DEBUG("inode=%ju oldsize=%ju newsize=%ju\n",
-	    (uintmax_t)VTOI(vp), (uintmax_t)fvdat->filesize,
-	    (uintmax_t)newsize);
-	ASSERT_VOP_ELOCKED(vp, "fuse_vnode_setsize");
+	vfs_timestamp(&ts);
 
-	oldsize = fvdat->filesize;
-	fvdat->filesize = newsize;
-	fvdat->flag |= FN_SIZECHANGE;
+	if (data->time_gran > 1)
+		ts.tv_nsec = rounddown(ts.tv_nsec, data->time_gran);
 
-	if (newsize < oldsize) {
-		err = vtruncbuf(vp, newsize, fuse_iosize(vp));
-	}
-	vnode_pager_setsize(vp, newsize);
-	return err;
+	if (flags & FN_MTIMECHANGE)
+		fvdat->cached_attrs.va_mtime = ts;
+	if (flags & FN_CTIMECHANGE)
+		fvdat->cached_attrs.va_ctime = ts;
+	
+	fvdat->flag |= flags;
+}
+
+void
+fuse_node_init(void)
+{
+	fuse_node_count = counter_u64_alloc(M_WAITOK);
+}
+
+void
+fuse_node_destroy(void)
+{
+	counter_u64_free(fuse_node_count);
 }

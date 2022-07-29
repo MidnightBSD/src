@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2016 Landon Fuller <landon@landonf.org>
  * Copyright (c) 2015 Broadcom Corporation
  * All rights reserved.
@@ -18,11 +20,22 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/bhnd/cores/pcie2/bhnd_pcie2_reg.h 300015 2016-05-17 06:52:53Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef _BHND_CORES_PCIE2_BHND_PCIE2_REG_H_
 #define _BHND_CORES_PCIE2_BHND_PCIE2_REG_H_
+
+/*
+ * PCIe-Gen2 DMA Constants
+ */
+
+#define	BHND_PCIE2_DMA64_TRANSLATION	0x8000000000000000	/**< PCIe-Gen2 DMA64 address translation */
+#define	BHND_PCIE2_DMA64_MASK		0xc000000000000000	/**< PCIe-Gen2 DMA64 translation mask */
+
+/*
+ * PCIe-Gen2 Core Registers
+ */
 
 #define	BHND_PCIE2_CLK_CONTROL		0x000
 

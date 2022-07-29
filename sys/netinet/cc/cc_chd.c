@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2010
  *	Swinburne University of Technology, Melbourne, Australia
  * Copyright (c) 2010-2011 The FreeBSD Foundation
@@ -51,7 +53,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/cc/cc_chd.c 342189 2018-12-18 09:16:04Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -113,11 +115,11 @@ struct chd {
 
 static int ertt_id;
 
-static VNET_DEFINE(uint32_t, chd_qmin) = 5;
-static VNET_DEFINE(uint32_t, chd_pmax) = 50;
-static VNET_DEFINE(uint32_t, chd_loss_fair) = 1;
-static VNET_DEFINE(uint32_t, chd_use_max) = 1;
-static VNET_DEFINE(uint32_t, chd_qthresh) = 20;
+VNET_DEFINE_STATIC(uint32_t, chd_qmin) = 5;
+VNET_DEFINE_STATIC(uint32_t, chd_pmax) = 50;
+VNET_DEFINE_STATIC(uint32_t, chd_loss_fair) = 1;
+VNET_DEFINE_STATIC(uint32_t, chd_use_max) = 1;
+VNET_DEFINE_STATIC(uint32_t, chd_qthresh) = 20;
 #define	V_chd_qthresh	VNET(chd_qthresh)
 #define	V_chd_qmin	VNET(chd_qmin)
 #define	V_chd_pmax	VNET(chd_pmax)
@@ -303,8 +305,7 @@ static void
 chd_cb_destroy(struct cc_var *ccv)
 {
 
-	if (ccv->cc_data != NULL)
-		free(ccv->cc_data, M_CHD);
+	free(ccv->cc_data, M_CHD);
 }
 
 static int
@@ -492,4 +493,5 @@ SYSCTL_UINT(_net_inet_tcp_cc_chd,  OID_AUTO, use_max,
     "as the basic delay measurement for the algorithm.");
 
 DECLARE_CC_MODULE(chd, &chd_cc_algo);
+MODULE_VERSION(chd, 1);
 MODULE_DEPEND(chd, ertt, 1, 1, 1);

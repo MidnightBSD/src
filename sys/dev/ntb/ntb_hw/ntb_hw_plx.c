@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ntb/ntb_hw/ntb_hw_plx.c 355152 2019-11-28 00:41:42Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -339,6 +339,12 @@ ntb_plx_attach(device_t dev)
 		return (ENXIO);
 	}
 
+	/*
+	 * The device occupies whole bus.  In translated TLP slot field
+	 * keeps LUT index (original bus/slot), function is passed through.
+	 */
+	bus_dma_dmar_set_buswide(dev);
+
 	/* Identify chip port we are connected to. */
 	val = bus_read_4(sc->conf_res, 0x360);
 	sc->port = (val >> ((sc->ntx == 0) ? 8 : 16)) & 0x1f;
@@ -492,6 +498,43 @@ ntb_plx_detach(device_t dev)
 	return (0);
 }
 
+static int
+ntb_plx_port_number(device_t dev)
+{
+	struct ntb_plx_softc *sc = device_get_softc(dev);
+
+	return (sc->link ? 1 : 0);
+}
+
+static int
+ntb_plx_peer_port_count(device_t dev)
+{
+
+	return (1);
+}
+
+static int
+ntb_plx_peer_port_number(device_t dev, int pidx)
+{
+	struct ntb_plx_softc *sc = device_get_softc(dev);
+
+	if (pidx != 0)
+		return (-EINVAL);
+
+	return (sc->link ? 0 : 1);
+}
+
+static int
+ntb_plx_peer_port_idx(device_t dev, int port)
+{
+	int peer_port;
+
+	peer_port = ntb_plx_peer_port_number(dev, 0);
+	if (peer_port == -EINVAL || port != peer_port)
+		return (-EINVAL);
+
+	return (0);
+}
 
 static bool
 ntb_plx_link_is_up(device_t dev, enum ntb_speed *speed, enum ntb_width *width)
@@ -1011,6 +1054,10 @@ static device_method_t ntb_plx_methods[] = {
 	DEVMETHOD(bus_print_child,	ntb_print_child),
 	DEVMETHOD(bus_get_dma_tag,	ntb_get_dma_tag),
 	/* NTB interface */
+	DEVMETHOD(ntb_port_number,	ntb_plx_port_number),
+	DEVMETHOD(ntb_peer_port_count,	ntb_plx_peer_port_count),
+	DEVMETHOD(ntb_peer_port_number,	ntb_plx_peer_port_number),
+	DEVMETHOD(ntb_peer_port_idx, 	ntb_plx_peer_port_idx),
 	DEVMETHOD(ntb_link_is_up,	ntb_plx_link_is_up),
 	DEVMETHOD(ntb_link_enable,	ntb_plx_link_enable),
 	DEVMETHOD(ntb_link_disable,	ntb_plx_link_disable),

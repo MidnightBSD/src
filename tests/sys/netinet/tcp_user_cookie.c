@@ -29,7 +29,7 @@
  *
  *  Authors: George Neville-Neil
  *
- * $FreeBSD: stable/11/tests/sys/netinet/tcp_user_cookie.c 319296 2017-05-31 08:07:51Z ngie $
+ * $FreeBSD$
  */
 
 #include <arpa/inet.h>

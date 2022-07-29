@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITH_CLANG 264660 2014-04-18 17:03:58Z imp $
+.\" $FreeBSD$
 Set to build the Clang C/C++ compiler during the normal phase of the build.

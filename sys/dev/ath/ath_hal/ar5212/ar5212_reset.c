@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5212/ar5212_reset.c 298939 2016-05-02 19:56:48Z pfg $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -690,7 +692,7 @@ done:
 	HALDEBUG(ah, HAL_DEBUG_RESET, "%s: done\n", __func__);
 
 	RESTORE_CCK(ah, chan, isBmode);
-	
+
 	OS_MARK(ah, AH_MARK_RESET_DONE, 0);
 
 	return AH_TRUE;
@@ -1189,7 +1191,6 @@ ar5212MacStop(struct ath_hal *ah)
 
 	return status;
 }
-
 
 /*
  * Write the given reset bit mask into the reset register
@@ -1920,7 +1921,6 @@ ar5212SetSpurMitigation(struct ath_hal *ah,
 	}
 #undef CHAN_TO_SPUR
 }
-
 
 /*
  * Delta slope coefficient computation.
@@ -2735,7 +2735,7 @@ ar5212SetRateDurationTable(struct ath_hal *ah,
 			AR_RATE_DURATION(rt->info[i].rateCode),
 			ath_hal_computetxtime(ah, rt,
 				WLAN_CTRL_FRAME_SIZE,
-				rt->info[i].controlRate, AH_FALSE));
+				rt->info[i].controlRate, AH_FALSE, AH_TRUE));
 	if (!IEEE80211_IS_CHAN_TURBO(chan)) {
 		/* 11g Table is used to cover the CCK rates. */
 		rt = ar5212GetRateTable(ah, HAL_MODE_11G);
@@ -2748,7 +2748,8 @@ ar5212SetRateDurationTable(struct ath_hal *ah,
 			OS_REG_WRITE(ah, reg,
 				ath_hal_computetxtime(ah, rt,
 					WLAN_CTRL_FRAME_SIZE,
-					rt->info[i].controlRate, AH_FALSE));
+					rt->info[i].controlRate, AH_FALSE,
+					AH_TRUE));
 			/* cck rates have short preamble option also */
 			if (rt->info[i].shortPreamble) {
 				reg += rt->info[i].shortPreamble << 2;
@@ -2756,7 +2757,7 @@ ar5212SetRateDurationTable(struct ath_hal *ah,
 					ath_hal_computetxtime(ah, rt,
 						WLAN_CTRL_FRAME_SIZE,
 						rt->info[i].controlRate,
-						AH_TRUE));
+						AH_TRUE, AH_TRUE));
 			}
 		}
 	}

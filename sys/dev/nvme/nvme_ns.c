@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2012-2013 Intel Corporation
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/nvme/nvme_ns.c 350996 2019-08-13 19:23:45Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -85,6 +87,7 @@ nvme_ns_ioctl(struct cdev *cdev, u_long cmd, caddr_t arg, int flag,
 		struct nvme_get_nsid *gnsid = (struct nvme_get_nsid *)arg;
 		strncpy(gnsid->cdev, device_get_nameunit(ctrlr->dev),
 		    sizeof(gnsid->cdev));
+		gnsid->cdev[sizeof(gnsid->cdev) - 1] = '\0';
 		gnsid->nsid = ns->id;
 		break;
 	}
@@ -178,7 +181,14 @@ nvme_ns_get_max_io_xfer_size(struct nvme_namespace *ns)
 uint32_t
 nvme_ns_get_sector_size(struct nvme_namespace *ns)
 {
-	return (1 << ns->data.lbaf[ns->data.flbas.format].lbads);
+	uint8_t flbas_fmt, lbads;
+
+	flbas_fmt = (ns->data.flbas >> NVME_NS_DATA_FLBAS_FORMAT_SHIFT) &
+		NVME_NS_DATA_FLBAS_FORMAT_MASK;
+	lbads = (ns->data.lbaf[flbas_fmt] >> NVME_NS_DATA_LBAF_LBADS_SHIFT) &
+		NVME_NS_DATA_LBAF_LBADS_MASK;
+
+	return (1 << lbads);
 }
 
 uint64_t
@@ -221,8 +231,17 @@ nvme_ns_get_data(struct nvme_namespace *ns)
 uint32_t
 nvme_ns_get_stripesize(struct nvme_namespace *ns)
 {
+	uint32_t ss;
 
-	return (ns->stripesize);
+	if (((ns->data.nsfeat >> NVME_NS_DATA_NSFEAT_NPVALID_SHIFT) &
+	    NVME_NS_DATA_NSFEAT_NPVALID_MASK) != 0) {
+		ss = nvme_ns_get_sector_size(ns);
+		if (ns->data.npwa != 0)
+			return ((ns->data.npwa + 1) * ss);
+		else if (ns->data.npwg != 0)
+			return ((ns->data.npwg + 1) * ss);
+	}
+	return (ns->boundary);
 }
 
 static void
@@ -271,8 +290,10 @@ nvme_bio_child_inbed(struct bio *parent, int bio_error)
 	inbed = atomic_fetchadd_int(&parent->bio_inbed, 1) + 1;
 	if (inbed == children) {
 		bzero(&parent_cpl, sizeof(parent_cpl));
-		if (parent->bio_flags & BIO_ERROR)
-			parent_cpl.status.sc = NVME_SC_DATA_TRANSFER_ERROR;
+		if (parent->bio_flags & BIO_ERROR) {
+			parent_cpl.status &= ~(NVME_STATUS_SC_MASK << NVME_STATUS_SC_SHIFT);
+			parent_cpl.status |= (NVME_SC_DATA_TRANSFER_ERROR) << NVME_STATUS_SC_SHIFT;
+		}
 		nvme_ns_bio_done(parent, &parent_cpl);
 	}
 }
@@ -436,12 +457,12 @@ nvme_ns_bio_process(struct nvme_namespace *ns, struct bio *bp,
 
 	bp->bio_driver1 = cb_fn;
 
-	if (ns->stripesize > 0 &&
+	if (ns->boundary > 0 &&
 	    (bp->bio_cmd == BIO_READ || bp->bio_cmd == BIO_WRITE)) {
 		num_bios = nvme_get_num_segments(bp->bio_offset,
-		    bp->bio_bcount, ns->stripesize);
+		    bp->bio_bcount, ns->boundary);
 		if (num_bios > 1)
-			return (nvme_ns_split_bio(ns, bp, ns->stripesize));
+			return (nvme_ns_split_bio(ns, bp, ns->boundary));
 	}
 
 	switch (bp->bio_cmd) {
@@ -457,11 +478,15 @@ nvme_ns_bio_process(struct nvme_namespace *ns, struct bio *bp,
 	case BIO_DELETE:
 		dsm_range =
 		    malloc(sizeof(struct nvme_dsm_range), M_NVME,
-		    M_ZERO | M_WAITOK);
+		    M_ZERO | M_NOWAIT);
+		if (!dsm_range) {
+			err = ENOMEM;
+			break;
+		}
 		dsm_range->length =
-		    bp->bio_bcount/nvme_ns_get_sector_size(ns);
+		    htole32(bp->bio_bcount/nvme_ns_get_sector_size(ns));
 		dsm_range->starting_lba =
-		    bp->bio_offset/nvme_ns_get_sector_size(ns);
+		    htole64(bp->bio_offset/nvme_ns_get_sector_size(ns));
 		bp->bio_driver2 = dsm_range;
 		err = nvme_ns_cmd_deallocate(ns, dsm_range, 1,
 			nvme_ns_bio_done, bp);
@@ -491,28 +516,11 @@ nvme_ns_construct(struct nvme_namespace *ns, uint32_t id,
 	struct nvme_completion_poll_status	status;
 	int                                     res;
 	int					unit;
+	uint8_t					flbas_fmt;
+	uint8_t					vwc_present;
 
 	ns->ctrlr = ctrlr;
 	ns->id = id;
-	ns->stripesize = 0;
-
-	/*
-	 * Older Intel devices advertise in vendor specific space an alignment
-	 * that improves performance.  If present use for the stripe size.  NVMe
-	 * 1.3 standardized this as NOIOB, and newer Intel drives use that.
-	 */
-	switch (pci_get_devid(ctrlr->dev)) {
-	case 0x09538086:		/* Intel DC PC3500 */
-	case 0x0a538086:		/* Intel DC PC3520 */
-	case 0x0a548086:		/* Intel DC PC4500 */
-	case 0x0a558086:		/* Dell Intel P4600 */
-		if (ctrlr->cdata.vs[3] != 0)
-			ns->stripesize =
-			    (1 << ctrlr->cdata.vs[3]) * ctrlr->min_page_size;
-		break;
-	default:
-		break;
-	}
 
 	/*
 	 * Namespaces are reconstructed after a controller reset, so check
@@ -528,12 +536,14 @@ nvme_ns_construct(struct nvme_namespace *ns, uint32_t id,
 	status.done = 0;
 	nvme_ctrlr_cmd_identify_namespace(ctrlr, id, &ns->data,
 	    nvme_completion_poll_cb, &status);
-	while (!atomic_load_acq_int(&status.done))
-		pause("nvme", 1);
+	nvme_completion_poll(&status);
 	if (nvme_completion_is_error(&status.cpl)) {
 		nvme_printf(ctrlr, "nvme_identify_namespace failed\n");
 		return (ENXIO);
 	}
+
+	/* Convert data to host endian */
+	nvme_namespace_data_swapbytes(&ns->data);
 
 	/*
 	 * If the size of is zero, chances are this isn't a valid
@@ -544,20 +554,45 @@ nvme_ns_construct(struct nvme_namespace *ns, uint32_t id,
 	if (ns->data.nsze == 0)
 		return (ENXIO);
 
+	flbas_fmt = (ns->data.flbas >> NVME_NS_DATA_FLBAS_FORMAT_SHIFT) &
+		NVME_NS_DATA_FLBAS_FORMAT_MASK;
 	/*
 	 * Note: format is a 0-based value, so > is appropriate here,
 	 *  not >=.
 	 */
-	if (ns->data.flbas.format > ns->data.nlbaf) {
+	if (flbas_fmt > ns->data.nlbaf) {
 		printf("lba format %d exceeds number supported (%d)\n",
-		    ns->data.flbas.format, ns->data.nlbaf+1);
+		    flbas_fmt, ns->data.nlbaf + 1);
 		return (ENXIO);
 	}
 
-	if (ctrlr->cdata.oncs.dsm)
+	/*
+	 * Older Intel devices advertise in vendor specific space an alignment
+	 * that improves performance.  If present use for the stripe size.  NVMe
+	 * 1.3 standardized this as NOIOB, and newer Intel drives use that.
+	 */
+	switch (pci_get_devid(ctrlr->dev)) {
+	case 0x09538086:		/* Intel DC PC3500 */
+	case 0x0a538086:		/* Intel DC PC3520 */
+	case 0x0a548086:		/* Intel DC PC4500 */
+	case 0x0a558086:		/* Dell Intel P4600 */
+		if (ctrlr->cdata.vs[3] != 0)
+			ns->boundary =
+			    (1 << ctrlr->cdata.vs[3]) * ctrlr->min_page_size;
+		else
+			ns->boundary = 0;
+		break;
+	default:
+		ns->boundary = ns->data.noiob * nvme_ns_get_sector_size(ns);
+		break;
+	}
+
+	if (nvme_ctrlr_has_dataset_mgmt(&ctrlr->cdata))
 		ns->flags |= NVME_NS_DEALLOCATE_SUPPORTED;
 
-	if (ctrlr->cdata.vwc.present)
+	vwc_present = (ctrlr->cdata.vwc >> NVME_CTRLR_DATA_VWC_PRESENT_SHIFT) &
+		NVME_CTRLR_DATA_VWC_PRESENT_MASK;
+	if (vwc_present)
 		ns->flags |= NVME_NS_FLUSH_SUPPORTED;
 
 	/*
@@ -588,7 +623,8 @@ nvme_ns_construct(struct nvme_namespace *ns, uint32_t id,
 	return (0);
 }
 
-void nvme_ns_destruct(struct nvme_namespace *ns)
+void
+nvme_ns_destruct(struct nvme_namespace *ns)
 {
 
 	if (ns->cdev != NULL)

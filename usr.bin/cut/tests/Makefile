@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/cut/tests/Makefile 313540 2017-02-10 07:55:39Z ngie $
+# $FreeBSD$
 
 PACKAGE=	tests
 

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: (BSD-3-Clause AND ISC)
+ *
  * ++Copyright++ 1983, 1993
  * -
  * Copyright (c) 1983, 1993
@@ -52,7 +54,7 @@
 /*%
  *	@(#)inet.h	8.1 (Berkeley) 6/2/93
  *	$Id: inet.h,v 1.3 2005/04/27 04:56:16 sra Exp $
- * $FreeBSD: stable/11/include/arpa/inet.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _ARPA_INET_H_

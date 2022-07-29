@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Michael Smith <msmith@freebsd.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/eventhandler.h 331727 2018-03-29 04:41:45Z mjoras $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_EVENTHANDLER_H_
@@ -316,6 +317,13 @@ typedef void (*ada_probe_veto_fn)(void *, struct cam_path *,
     struct ata_params *, int *);
 EVENTHANDLER_DECLARE(ada_probe_veto, ada_probe_veto_fn);
 
+/* Swap device events */
+struct swdevt;
+typedef void (*swapon_fn)(void *, struct swdevt *);
+typedef void (*swapoff_fn)(void *, struct swdevt *);
+EVENTHANDLER_DECLARE(swapon, swapon_fn);
+EVENTHANDLER_DECLARE(swapoff, swapoff_fn);
+
 /* newbus device events */
 enum evhdev_detach {
 	EVHDEV_DETACH_BEGIN,    /* Before detach() is called */
@@ -326,5 +334,10 @@ typedef void (*device_attach_fn)(void *, device_t);
 typedef void (*device_detach_fn)(void *, device_t, enum evhdev_detach);
 EVENTHANDLER_DECLARE(device_attach, device_attach_fn);
 EVENTHANDLER_DECLARE(device_detach, device_detach_fn);
+
+/* Interface address addition and removal event */
+struct ifaddr;
+typedef void (*rt_addrmsg_fn)(void *, struct ifaddr *, int);
+EVENTHANDLER_DECLARE(rt_addrmsg, rt_addrmsg_fn);
 
 #endif /* _SYS_EVENTHANDLER_H_ */

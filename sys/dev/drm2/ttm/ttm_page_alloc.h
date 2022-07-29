@@ -23,7 +23,7 @@
  * Authors: Dave Airlie <airlied@redhat.com>
  *          Jerome Glisse <jglisse@redhat.com>
  */
-/* $FreeBSD: stable/11/sys/dev/drm2/ttm/ttm_page_alloc.h 247835 2013-03-05 09:49:34Z kib $ */
+/* $FreeBSD$ */
 #ifndef TTM_PAGE_ALLOC
 #define TTM_PAGE_ALLOC
 

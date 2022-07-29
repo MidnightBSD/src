@@ -24,19 +24,19 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/libkern/x86/crc32_sse42.c 317149 2017-04-19 16:16:41Z markj $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This file is compiled in userspace in order to run ATF unit tests.
  */
-#ifdef USERSPACE_TESTING
+#ifndef _KERNEL
 #include <stdint.h>
 #include <stdlib.h>
 #else
 #include <sys/param.h>
-#include <sys/systm.h>
 #include <sys/kernel.h>
 #endif
+#include <sys/gsb_crc32.h>
 
 static __inline uint32_t
 _mm_crc32_u8(uint32_t x, uint8_t y)
@@ -52,19 +52,21 @@ _mm_crc32_u8(uint32_t x, uint8_t y)
 	return (x);
 }
 
-static __inline uint32_t
-_mm_crc32_u32(uint32_t x, uint32_t y)
-{
-	__asm("crc32l %1,%0" : "+r" (x) : "r" (y));
-	return (x);
-}
-
+#ifdef __amd64__
 static __inline uint64_t
 _mm_crc32_u64(uint64_t x, uint64_t y)
 {
 	__asm("crc32q %1,%0" : "+r" (x) : "r" (y));
 	return (x);
 }
+#else
+static __inline uint32_t
+_mm_crc32_u32(uint32_t x, uint32_t y)
+{
+	__asm("crc32l %1,%0" : "+r" (x) : "r" (y));
+	return (x);
+}
+#endif
 
 /* CRC-32C (iSCSI) polynomial in reversed bit order. */
 #define POLY	0x82f63b78
@@ -197,7 +199,7 @@ crc32c_shift(uint32_t zeros[][256], uint32_t crc)
 
 /* Initialize tables for shifting crcs. */
 static void
-#ifdef USERSPACE_TESTING
+#ifndef _KERNEL
 __attribute__((__constructor__))
 #endif
 crc32c_init_hw(void)
@@ -212,9 +214,6 @@ SYSINIT(crc32c_sse42, SI_SUB_LOCK, SI_ORDER_ANY, crc32c_init_hw, NULL);
 #endif
 
 /* Compute CRC-32C using the Intel hardware instruction. */
-#ifdef USERSPACE_TESTING
-uint32_t sse42_crc32c(uint32_t, const unsigned char *, unsigned);
-#endif
 uint32_t
 sse42_crc32c(uint32_t crc, const unsigned char *buf, unsigned len)
 {

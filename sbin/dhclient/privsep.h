@@ -15,7 +15,7 @@
  * AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
  * OF OR IN CONNECTION WITH THE USE, ABUSE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sbin/dhclient/privsep.h 332602 2018-04-16 16:23:32Z asomers $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -44,8 +44,3 @@ struct imsg_hdr {
 	enum imsg_code	code;
 	size_t		len;
 };
-
-struct buf	*buf_open(size_t);
-int		 buf_add(struct buf *, const void *, size_t);
-int		 buf_close(int, struct buf *);
-ssize_t		 buf_read(int sock, void *, size_t);

@@ -1,6 +1,6 @@
 /*	$NetBSD: grep.h,v 1.5 2011/02/27 17:33:37 joerg Exp $	*/
 /*	$OpenBSD: grep.h,v 1.15 2010/04/05 03:03:55 tedu Exp $	*/
-/*	$FreeBSD: stable/11/usr.bin/grep/grep.h 354628 2019-11-11 19:54:08Z kevans $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
@@ -38,19 +38,6 @@
 #include <stdio.h>
 #include <zlib.h>
 
-#ifndef WITHOUT_FASTMATCH
-#include "fastmatch.h"
-#endif
-
-#ifdef WITHOUT_NLS
-#define	getstr(n)	 errstr[n]
-#else
-#include <nl_types.h>
-
-extern nl_catd		 catalog;
-#define	getstr(n)	 catgets(catalog, 1, n, errstr[n])
-#endif
-
 extern const char		*errstr[];
 
 #define	VERSION		"2.6.0-FreeBSD"
@@ -69,10 +56,6 @@ extern const char		*errstr[];
 
 #define	FILE_STDIO	0
 #define	FILE_MMAP	1
-#define	FILE_GZIP	2
-#define	FILE_BZIP	3
-#define	FILE_XZ		4
-#define	FILE_LZMA	5
 
 #define	DIR_READ	0
 #define	DIR_SKIP	1
@@ -150,9 +133,6 @@ extern unsigned int dpatterns, fpatterns, patterns;
 extern struct pat *pattern;
 extern struct epat *dpattern, *fpattern;
 extern regex_t	*er_pattern, *r_pattern;
-#ifndef WITHOUT_FASTMATCH
-extern fastmatch_t *fg_pattern;
-#endif
 
 /* For regex errors  */
 #define	RE_ERROR_BUF	512
@@ -169,6 +149,7 @@ char	*grep_strdup(const char *str);
 void	 grep_printline(struct str *line, int sep);
 
 /* queue.c */
+void	 initqueue(void);
 bool	 enqueue(struct str *x);
 void	 printqueue(void);
 void	 clearqueue(void);

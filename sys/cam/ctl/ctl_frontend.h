@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * Copyright (c) 2014-2017 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -29,7 +31,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_frontend.h#2 $
- * $FreeBSD: stable/11/sys/cam/ctl/ctl_frontend.h 313368 2017-02-07 01:55:48Z mav $
+ * $FreeBSD$
  */
 /*
  * CAM Target Layer front end registration hooks
@@ -41,6 +43,7 @@
 #define	_CTL_FRONTEND_H_
 
 #include <cam/ctl/ctl_ioctl.h>
+#include <sys/nv.h>
 
 typedef enum {
 	CTL_PORT_STATUS_NONE		= 0x00,
@@ -120,7 +123,6 @@ struct ctl_wwpn_iid {
  * port_name:		  A string describing the FETD.  e.g. "LSI 1030T U320"
  *			  or whatever you want to use to describe the driver.
  *
- *
  * physical_port:	  This is the physical port number of this
  * 			  particular port within the driver/hardware.  This
  * 			  number is hardware/driver specific.
@@ -179,11 +181,6 @@ struct ctl_wwpn_iid {
  *			  to request a dump of any debugging information or
  *			  state to the console.
  *
- * max_targets:		  The maximum number of targets that we can create
- *			  per-port.
- *
- * max_target_id:	  The highest target ID that we can use.
- *
  * targ_port:		  The CTL layer assigns a "port number" to every
  *			  FETD.  This port number should be passed back in
  *			  in the header of every ctl_io that is queued to
@@ -234,8 +231,6 @@ struct ctl_port {
 	void		*targ_lun_arg;		/* passed to CTL */
 	void		(*fe_datamove)(union ctl_io *io); /* passed to CTL */
 	void		(*fe_done)(union ctl_io *io); /* passed to CTL */
-	int		max_targets;		/* passed to CTL */
-	int		max_target_id;		/* passed to CTL */
 	int32_t		targ_port;		/* passed back to FETD */
 	void		*ctl_pool_ref;		/* passed back to FETD */
 	uint32_t	max_initiators;		/* passed back to FETD */
@@ -243,7 +238,7 @@ struct ctl_port {
 	uint64_t	wwnn;			/* set by CTL before online */
 	uint64_t	wwpn;			/* set by CTL before online */
 	ctl_port_status	status;			/* used by CTL */
-	ctl_options_t	options;		/* passed to CTL */
+	nvlist_t	*options;		/* passed to CTL */
 	struct ctl_devid *port_devid;		/* passed to CTL */
 	struct ctl_devid *target_devid;		/* passed to CTL */
 	struct ctl_devid *init_devid;		/* passed to CTL */
@@ -314,6 +309,13 @@ void ctl_port_offline(struct ctl_port *fe);
  * failure.
  */
 int ctl_queue(union ctl_io *io);
+
+/*
+ * This routine starts execution of I/O and task management requests from
+ * the FETD to the CTL layer.  May sleep.  Returns 0 for success, non-zero
+ * for failure.
+ */
+int ctl_run(union ctl_io *io);
 
 /*
  * This routine is used if the front end interface doesn't support

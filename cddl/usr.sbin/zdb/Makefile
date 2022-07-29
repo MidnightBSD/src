@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/cddl/usr.sbin/zdb/Makefile 339118 2018-10-03 02:52:47Z mav $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/cmd/zdb
 
@@ -6,7 +6,7 @@ PROG=	zdb
 MAN=	zdb.8
 SRCS=	zdb.c zdb_il.c
 
-WARNS?=	0
+WARNS?=	2
 CSTD=	c99
 
 CFLAGS+= -I${SRCTOP}/sys/cddl/compat/opensolaris
@@ -25,6 +25,7 @@ CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/head
 
 LIBADD=	nvpair umem uutil zfs zpool
 
+CFLAGS.gcc+= -fms-extensions
 # Since there are many asserts in this program, it makes no sense to compile
 # it without debugging.
 CFLAGS+=	-g -DDEBUG=1

@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/tools/regression/geom/Ref/disk.sun.da1.xml 113291 2003-04-09 12:40:12Z phk $
+$FreeBSD$
 /dev/md34	512	5120	10
 /dev/md34a	512	262967296	513608
 /dev/md34b	512	1075994624	2101552

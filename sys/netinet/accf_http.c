@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Paycounter, Inc.
  * Author: Alfred Perlstein <alfred@paycounter.com>, <alfred@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/accf_http.c 274421 2014-11-12 09:57:15Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #define ACCEPT_FILTER_MOD
 
@@ -52,28 +54,15 @@ static int mbufstrncmp(struct mbuf *m, struct mbuf *npkt, int offset,
 /* socketbuffer is full */
 static int sbfull(struct sockbuf *sb);
 
-static struct accept_filter accf_http_filter = {
-	"httpready",
-	sohashttpget,
-	NULL,
-	NULL
-};
-
-static moduledata_t accf_http_mod = {
-	"accf_http",
-	accept_filt_generic_mod_event,
-	&accf_http_filter
-};
-
-DECLARE_MODULE(accf_http, accf_http_mod, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
+ACCEPT_FILTER_DEFINE(accf_http, "httpready", sohashttpget, NULL, NULL, 1);
 
 static int parse_http_version = 1;
 
 static SYSCTL_NODE(_net_inet_accf, OID_AUTO, http, CTLFLAG_RW, 0,
 "HTTP accept filter");
 SYSCTL_INT(_net_inet_accf_http, OID_AUTO, parsehttpversion, CTLFLAG_RW,
-&parse_http_version, 1,
-"Parse http version so that non 1.x requests work");
+    &parse_http_version, 1,
+    "Parse http version so that non 1.x requests work");
 
 #ifdef ACCF_HTTP_DEBUG
 #define DPRINT(fmt, args...)						\

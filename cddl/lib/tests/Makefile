@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/cddl/lib/tests/Makefile 299094 2016-05-04 23:20:53Z ngie $
+# $FreeBSD$
 
 .PATH:		${SRCTOP}/tests
 KYUAFILE=	yes

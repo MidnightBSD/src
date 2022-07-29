@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011, Bryan Venteicher <bryanv@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,11 +25,15 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/virtio/network/if_vtnetvar.h 347878 2019-05-16 18:26:42Z tuexen $
+ * $FreeBSD$
  */
 
 #ifndef _IF_VTNETVAR_H
 #define _IF_VTNETVAR_H
+
+#ifdef ALTQ
+#define	VTNET_LEGACY_TX
+#endif
 
 struct vtnet_softc;
 
@@ -78,6 +84,7 @@ struct vtnet_rxq {
 	struct taskqueue	*vtnrx_tq;
 	struct task		 vtnrx_intrtask;
 #ifdef DEV_NETMAP
+	uint32_t		 vtnrx_nm_refill;
 	struct virtio_net_hdr_mrg_rxbuf vtnrx_shrhdr;
 #endif  /* DEV_NETMAP */
 	char			 vtnrx_name[16];
@@ -320,7 +327,7 @@ CTASSERT(sizeof(struct vtnet_mac_filter) <= PAGE_SIZE);
 #define VTNET_MRG_RX_SEGS	1
 #define VTNET_MIN_RX_SEGS	2
 #define VTNET_MAX_RX_SEGS	34
-#define VTNET_MIN_TX_SEGS	4
+#define VTNET_MIN_TX_SEGS	32
 #define VTNET_MAX_TX_SEGS	64
 
 /*
@@ -361,5 +368,11 @@ CTASSERT(((VTNET_MAX_TX_SEGS - 1) * MCLBYTES) >= VTNET_MAX_MTU);
     mtx_init(VTNET_CORE_MTX((_sc)), (_sc)->vtnet_mtx_name,		\
         "VTNET Core Lock", MTX_DEF);					\
 } while (0)
+
+/*
+ * Values for the init_mode argument of vtnet_init_locked().
+ */
+#define VTNET_INIT_NETMAP_ENTER		1
+#define VTNET_INIT_NETMAP_EXIT		2
 
 #endif /* _IF_VTNETVAR_H */

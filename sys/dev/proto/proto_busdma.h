@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015 Marcel Moolenaar
+ * Copyright (c) 2015, 2019 Marcel Moolenaar
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/proto/proto_busdma.h 285069 2015-07-03 01:52:22Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_PROTO_BUSDMA_H_
@@ -60,6 +60,7 @@ struct proto_busdma {
 	LIST_HEAD(,proto_tag)	tags;
 	LIST_HEAD(,proto_md)	mds;
 	bus_dma_tag_t		bd_roottag;
+	struct sx		sxlck;
 };
 
 struct proto_busdma *proto_busdma_attach(struct proto_softc *);

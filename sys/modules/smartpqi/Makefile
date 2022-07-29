@@ -1,5 +1,5 @@
 # 5/10/2017
-# $FreeBSD: stable/11/sys/modules/smartpqi/Makefile 333417 2018-05-09 16:14:12Z sbruno $
+# $FreeBSD$
 
 KMOD = smartpqi
 

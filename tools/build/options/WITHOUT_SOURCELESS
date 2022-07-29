@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_SOURCELESS 230972 2012-02-04 00:54:43Z rmh $
+.\" $FreeBSD$
 Set to not build kernel modules that include sourceless code (either microcode or native code for host CPU).

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/usb/input/wmt.c 340305 2018-11-09 21:26:26Z wulf $");
+__FBSDID("$FreeBSD$");
 
 /*
  * MS Windows 7/8/10 compatible USB HID Multi-touch Device driver.
@@ -227,12 +227,22 @@ static device_probe_t	wmt_probe;
 static device_attach_t	wmt_attach;
 static device_detach_t	wmt_detach;
 
+#if __FreeBSD_version >= 1200077
 static evdev_open_t	wmt_ev_open;
 static evdev_close_t	wmt_ev_close;
+#else
+static evdev_open_t	wmt_ev_open_11;
+static evdev_close_t	wmt_ev_close_11;
+#endif
 
 static const struct evdev_methods wmt_evdev_methods = {
+#if __FreeBSD_version >= 1200077
 	.ev_open = &wmt_ev_open,
 	.ev_close = &wmt_ev_close,
+#else
+	.ev_open = &wmt_ev_open_11,
+	.ev_close = &wmt_ev_close_11,
+#endif
 };
 
 static const struct usb_config wmt_config[WMT_N_TRANSFER] = {
@@ -527,24 +537,45 @@ tr_setup:
 }
 
 static void
-wmt_ev_close(struct evdev_dev *evdev, void *ev_softc)
+wmt_ev_close_11(struct evdev_dev *evdev, void *ev_softc)
 {
-	struct wmt_softc *sc = (struct wmt_softc *)ev_softc;
+	struct wmt_softc *sc = ev_softc;
 
 	mtx_assert(&sc->mtx, MA_OWNED);
 	usbd_transfer_stop(sc->xfer[WMT_INTR_DT]);
 }
 
 static int
-wmt_ev_open(struct evdev_dev *evdev, void *ev_softc)
+wmt_ev_open_11(struct evdev_dev *evdev, void *ev_softc)
 {
-	struct wmt_softc *sc = (struct wmt_softc *)ev_softc;
+	struct wmt_softc *sc = ev_softc;
 
 	mtx_assert(&sc->mtx, MA_OWNED);
 	usbd_transfer_start(sc->xfer[WMT_INTR_DT]);
 
 	return (0);
 }
+
+#if __FreeBSD_version >= 1200077
+static int
+wmt_ev_close(struct evdev_dev *evdev)
+{
+	struct wmt_softc *sc = evdev_get_softc(evdev);
+
+	wmt_ev_close_11(evdev, sc);
+
+	return (0);
+}
+
+static int
+wmt_ev_open(struct evdev_dev *evdev)
+{
+	struct wmt_softc *sc = evdev_get_softc(evdev);
+
+	return (wmt_ev_open_11(evdev, sc));
+
+}
+#endif
 
 /* port of userland hid_report_size() from usbhid(3) to kernel */
 static int
@@ -828,6 +859,12 @@ wmt_cont_max_parse(struct wmt_softc *sc, const void *r_ptr, uint16_t r_len)
 	}
 }
 
+static const STRUCT_USB_HOST_ID wmt_devs[] = {
+	/* generic HID class w/o boot interface */
+	{USB_IFACE_CLASS(UICLASS_HID),
+	 USB_IFACE_SUBCLASS(0),},
+};
+
 static devclass_t wmt_devclass;
 
 static device_method_t wmt_methods[] = {
@@ -848,3 +885,4 @@ DRIVER_MODULE(wmt, uhub, wmt_driver, wmt_devclass, NULL, 0);
 MODULE_DEPEND(wmt, usb, 1, 1, 1);
 MODULE_DEPEND(wmt, evdev, 1, 1, 1);
 MODULE_VERSION(wmt, 1);
+USB_PNP_HOST_INFO(wmt_devs);

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 M. Warner Losh.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/sio/sio_pci.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -118,9 +120,7 @@ sio_pci_probe(dev)
 	if (id->desc == NULL)
 		return (ENXIO);
 	device_set_desc(dev, id->desc);
-#ifdef PC98
-	SET_FLAG(dev, SET_IFTYPE(COM_IF_NS16550));
-#endif
+
 	return (sioprobe(dev, id->rid, 0UL, 0));
 }
 

@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/cloudabi/cloudabi_util.h 328127 2018-01-18 13:43:09Z ed $
+ * $FreeBSD$
  */
 
 #ifndef _CLOUDABI_UTIL_H_

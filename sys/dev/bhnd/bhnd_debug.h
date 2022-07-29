@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2016 Michael Zhilin <mizhka@gmail.com>
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  * THE POSSIBILITY OF SUCH DAMAGES.
  */
 
-/* $FreeBSD: stable/11/sys/dev/bhnd/bhnd_debug.h 319180 2017-05-30 03:55:38Z ngie $ */
+/* $FreeBSD$ */
 
 /*
  * This file provides set of macros for logging:

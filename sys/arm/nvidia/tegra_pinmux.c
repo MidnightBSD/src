@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/nvidia/tegra_pinmux.c 308335 2016-11-05 10:56:32Z mmel $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Pin multiplexer driver for Tegra SoCs.
@@ -648,12 +648,12 @@ pinmux_read_node(struct pinmux_softc *sc, phandle_t node, struct pincfg *cfg,
 {
 	int rv, i;
 
-	*lpins = OF_getprop_alloc(node, "nvidia,pins", 1, (void **)pins);
+	*lpins = OF_getprop_alloc(node, "nvidia,pins", (void **)pins);
 	if (*lpins <= 0)
 		return (ENOENT);
 
 	/* Read function (mux) settings. */
-	rv = OF_getprop_alloc(node, "nvidia,function", 1,
+	rv = OF_getprop_alloc(node, "nvidia,function",
 	    (void **)&cfg->function);
 	if (rv <= 0)
 		cfg->function = NULL;
@@ -710,7 +710,7 @@ static int pinmux_configure(device_t dev, phandle_t cfgxref)
 
 
 	for (node = OF_child(cfgnode); node != 0; node = OF_peer(node)) {
-		if (!fdt_is_enabled(node))
+		if (!ofw_bus_node_status_okay(node))
 			continue;
 		rv = pinmux_process_node(sc, node);
 	}

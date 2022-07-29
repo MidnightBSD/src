@@ -1,6 +1,8 @@
 /*	$KAME: dump.c,v 1.13 2003/10/05 00:09:36 itojun Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 1999 WIDE Project.
  * All rights reserved.
  * 
@@ -28,10 +30,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/rtsold/dump.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
+#include <sys/capsicum.h>
 #include <sys/socket.h>
 #include <sys/queue.h>
 
@@ -40,21 +43,20 @@
 #include <netinet/icmp6.h>
 #include <arpa/inet.h>
 
-#include <syslog.h>
-#include <time.h>
+#include <capsicum_helpers.h>
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>
+#include <syslog.h>
+#include <time.h>
 
 #include "rtsold.h"
 
-static FILE *fp;
+static const char * const ifstatstr[] =
+    { "IDLE", "DELAY", "PROBE", "DOWN", "TENTATIVE" };
 
-static void dump_interface_status(void);
-static const char * const ifstatstr[] = {"IDLE", "DELAY", "PROBE", "DOWN", "TENTATIVE"};
-
-static void
-dump_interface_status(void)
+void
+rtsold_dump(FILE *fp)
 {
 	struct ifinfo *ifi;
 	struct rainfo *rai;
@@ -62,7 +64,13 @@ dump_interface_status(void)
 	struct timespec now;
 	char ntopbuf[INET6_ADDRSTRLEN];
 
-	clock_gettime(CLOCK_MONOTONIC_FAST, &now);
+	if (fseek(fp, 0, SEEK_SET) != 0) {
+		warnmsg(LOG_ERR, __func__, "fseek(): %s", strerror(errno));
+		return;
+	}
+	(void)ftruncate(fileno(fp), 0);
+
+	(void)clock_gettime(CLOCK_MONOTONIC_FAST, &now);
 
 	TAILQ_FOREACH(ifi, &ifinfo_head, ifi_next) {
 		fprintf(fp, "Interface %s\n", ifi->ifname);
@@ -76,6 +84,8 @@ dump_interface_status(void)
 		}
 		fprintf(fp, "  interface status: %s\n",
 		    ifi->active > 0 ? "active" : "inactive");
+		fprintf(fp, "  managed config: %s\n",
+		    ifi->managedconfig ? "on" : "off");
 		fprintf(fp, "  other config: %s\n",
 		    ifi->otherconfig ? "on" : "off");
 		fprintf(fp, "  rtsold status: %s\n", ifstatstr[ifi->state]);
@@ -119,18 +129,29 @@ dump_interface_status(void)
 			fprintf(fp, "\n");
 		}
 	}
+	fflush(fp);
 }
 
-void
-rtsold_dump_file(const char *dumpfile)
+FILE *
+rtsold_init_dumpfile(const char *dumpfile)
 {
+	cap_rights_t rights;
+	FILE *fp;
+
 	if ((fp = fopen(dumpfile, "w")) == NULL) {
-		warnmsg(LOG_WARNING, __func__, "open a dump file(%s): %s",
+		warnmsg(LOG_WARNING, __func__, "opening a dump file(%s): %s",
 		    dumpfile, strerror(errno));
-		return;
+		return (NULL);
 	}
-	dump_interface_status();
-	fclose(fp);
+
+	cap_rights_init(&rights, CAP_FSTAT, CAP_FTRUNCATE, CAP_SEEK, CAP_WRITE);
+	if (caph_rights_limit(fileno(fp), &rights) != 0) {
+		warnmsg(LOG_WARNING, __func__, "caph_rights_limit(%s): %s",
+		    dumpfile, strerror(errno));
+		(void)fclose(fp);
+		return (NULL);
+	}
+	return (fp);
 }
 
 const char *

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2004, PADL Software Pty Ltd.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: stable/11/lib/libgssapi/gss_inquire_cred_by_oid.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 #include <gssapi/gssapi.h>
 
@@ -76,7 +78,7 @@ gss_inquire_cred_by_oid (OM_uint32 *minor_status,
 		if (status != GSS_S_COMPLETE)
 			continue;
 
-		for (i = 0; i < rset->count; i++) { 
+		for (i = 0; i < rset->count; i++) {
 			status = gss_add_buffer_set_member(minor_status,
 			     &rset->elements[i], &set);
 			if (status != GSS_S_COMPLETE)

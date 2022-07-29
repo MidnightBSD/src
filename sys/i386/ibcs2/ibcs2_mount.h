@@ -1,7 +1,9 @@
 /*	$NetBSD: ibcs2_mount.h,v 1.2 1994/10/26 02:53:00 cgd Exp $	*/
-/* $FreeBSD: stable/11/sys/i386/ibcs2/ibcs2_mount.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1994 Scott Bartram
  * All rights reserved.
  *

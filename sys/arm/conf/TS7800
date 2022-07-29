@@ -1,7 +1,7 @@
 #
 # Custom kernel for the TS-7800 board.
 #
-# $FreeBSD: stable/11/sys/arm/conf/TS7800 352023 2019-09-07 20:01:26Z imp $
+# $FreeBSD$
 #
 
 ident		TS7800
@@ -13,6 +13,7 @@ options 	SOC_MV_ORION
 options 	SCHED_4BSD		# 4BSD scheduler
 options 	INET			# InterNETworking
 options 	INET6			# IPv6 communications protocols
+options 	TCP_HHOOK		# hhook(9) framework for TCP
 options 	FFS			# Berkeley Fast Filesystem
 options 	SOFTUPDATES		# Enable FFS soft updates support
 options 	NFSCL			# Network Filesystem Client

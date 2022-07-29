@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/libkern/murmur3_32.c 273268 2014-10-18 22:15:11Z des $
+ * $FreeBSD$
  */
 
 #include <sys/hash.h>

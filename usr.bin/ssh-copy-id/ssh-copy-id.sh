@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause-FreeBSD
 #
 # Copyright (c) 2012 Eitan Adler
-# All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -27,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.bin/ssh-copy-id/ssh-copy-id.sh 330449 2018-03-05 07:26:05Z eadler $
+# $FreeBSD$
 
 usage() {
 	echo "usage: ssh-copy-id [-lv] [-i keyfile] [-o option] [-p port] [user@]hostname" >&2

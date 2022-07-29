@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)swapon.8	8.1 (Berkeley) 6/5/93
-.\" $FreeBSD: stable/11/sbin/swapon/swapon.8 308865 2016-11-19 20:02:49Z jilles $
+.\" $FreeBSD$
 .\"
-.Dd October 21, 2016
+.Dd May 19, 2020
 .Dt SWAPON 8
 .Os
 .Sh NAME
@@ -38,7 +38,7 @@
 .Nm swapon
 .Oo Fl F Ar fstab
 .Oc
-.Fl aLq | Ar
+.Fl aLq | E Ar
 .Nm swapoff
 .Oo Fl F Ar fstab
 .Oc
@@ -86,6 +86,21 @@ If the
 option is used,
 informational messages will not be
 written to standard output when a swap device is added.
+The
+.Fl E
+option causes each of following devices to receive a
+.Dv BIO_DELETE
+command.
+This command marks the device's blocks as unused, except those that
+might store a disk label.
+This marking can erase a crash dump.
+To delay
+.Nm swapon
+for a device until after
+.Nm savecore
+has copied the crash dump to another location, use the
+.Dq late
+option.
 .Pp
 The
 .Nm swapoff
@@ -128,7 +143,8 @@ are as follows:
 .It Fl F Ar fstab
 Specify the
 .Pa fstab
-file to use.
+file to use (in conjunction with
+.Fl a Ns ).
 .El
 .Pp
 The

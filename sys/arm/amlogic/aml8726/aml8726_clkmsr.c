@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/amlogic/aml8726/aml8726_clkmsr.c 298352 2016-04-20 15:45:55Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -255,14 +255,14 @@ aml8726_clkmsr_bus_frequency()
 	 * Try to access the clkmsr node directly i.e. through /aliases/.
 	 */
 
-	if ((node = OF_finddevice("clkmsr")) != 0)
+	if ((node = OF_finddevice("clkmsr")) != -1)
 		if (fdt_is_compatible_strict(node, "amlogic,aml8726-clkmsr"))
 			 goto moveon;
 
 	/*
 	 * Find the node the long way.
 	 */
-	if ((node = OF_finddevice("/soc")) == 0)
+	if ((node = OF_finddevice("/soc")) == -1)
 		return (0);
 
 	if ((node = fdt_find_compatible(node,

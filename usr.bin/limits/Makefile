@@ -1,12 +1,11 @@
-# $FreeBSD: stable/11/usr.bin/limits/Makefile 290567 2015-11-09 01:05:31Z ngie $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
 PROG=	limits
 LIBADD=	util
 
-.if ${MK_TESTS} != "no"
-SUBDIR+=	tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

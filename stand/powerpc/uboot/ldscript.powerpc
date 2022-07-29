@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/powerpc/uboot/ldscript.powerpc 272888 2014-10-10 06:24:09Z bapt $ */
+/* $FreeBSD$ */
 
 OUTPUT_FORMAT("elf32-powerpc-freebsd", "elf32-powerpc-freebsd",
 	      "elf32-powerpc-freebsd")

@@ -13,13 +13,13 @@
 # * USB powered
 # * USB storage
 #
-# $FreeBSD: stable/11/sys/mips/conf/TP-MR3020 291049 2015-11-19 01:58:12Z imp $
+# $FreeBSD$
 #
 
 #NO_UNIVERSE
 
 # Include the default AR933x parameters
-include	"AR933X_BASE"
+include	"std.AR933X"
 
 ident	TP-MR3020
 

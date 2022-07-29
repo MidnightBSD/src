@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/hyperv/netvsc/hn_nvs.c 324578 2017-10-13 05:09:56Z sephe $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet6.h"
 #include "opt_inet.h"
@@ -80,6 +80,8 @@ struct hn_nvs_sendctx		hn_nvs_sendctx_none =
     HN_NVS_SENDCTX_INITIALIZER(hn_nvs_sent_none, NULL);
 
 static const uint32_t		hn_nvs_version[] = {
+	HN_NVS_VERSION_61,
+	HN_NVS_VERSION_6,
 	HN_NVS_VERSION_5,
 	HN_NVS_VERSION_4,
 	HN_NVS_VERSION_2,
@@ -365,7 +367,7 @@ hn_nvs_disconn_rxbuf(struct hn_softc *sc)
 		pause("lingtx", (200 * hz) / 1000);
 	}
 
-	if (sc->hn_rxbuf_gpadl != 0) {
+	if (vmbus_current_version < VMBUS_VERSION_WIN10 && sc->hn_rxbuf_gpadl != 0) {
 		/*
 		 * Disconnect RXBUF from primary channel.
 		 */
@@ -426,7 +428,7 @@ hn_nvs_disconn_chim(struct hn_softc *sc)
 		pause("lingtx", (200 * hz) / 1000);
 	}
 
-	if (sc->hn_chim_gpadl != 0) {
+	if (vmbus_current_version < VMBUS_VERSION_WIN10 && sc->hn_chim_gpadl != 0) {
 		/*
 		 * Disconnect chimney sending buffer from primary channel.
 		 */
@@ -508,6 +510,9 @@ hn_nvs_conf_ndis(struct hn_softc *sc, int mtu)
 	conf.nvs_caps = HN_NVS_NDIS_CONF_VLAN;
 	if (sc->hn_nvs_ver >= HN_NVS_VERSION_5)
 		conf.nvs_caps |= HN_NVS_NDIS_CONF_SRIOV;
+	if (sc->hn_nvs_ver >= HN_NVS_VERSION_61)
+		conf.nvs_caps |= HN_NVS_NDIS_CONF_RSC;
+
 
 	/* NOTE: No response. */
 	error = hn_nvs_req_send(sc, &conf, sizeof(conf));

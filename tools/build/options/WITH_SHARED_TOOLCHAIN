@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITH_SHARED_TOOLCHAIN 354136 2019-10-28 18:37:32Z dim $
+.\" $FreeBSD$
 Set to build the toolchain binaries as dynamically linked executables.
 The set includes
 .Xr cc 1 ,

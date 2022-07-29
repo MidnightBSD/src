@@ -1,4 +1,6 @@
 /*
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -44,7 +46,7 @@ static const char sccsid[] = "from: @(#)quota.c	8.1 (Berkeley) 6/6/93";
  * Disk quota reporting program.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/quota/quota.c 352576 2019-09-21 14:06:16Z hrs $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -630,14 +632,14 @@ getnfsquota(struct statfs *fst, struct quotause *qup, long id, int quotatype)
 		gettimeofday(&tv, NULL);
 			/* blocks*/
 		dqp->dqb_bhardlimit =
-		    gq_rslt.getquota_rslt_u.gqr_rquota.rq_bhardlimit *
-		    (gq_rslt.getquota_rslt_u.gqr_rquota.rq_bsize / DEV_BSIZE);
+		    ((uint64_t)gq_rslt.getquota_rslt_u.gqr_rquota.rq_bhardlimit *
+		    gq_rslt.getquota_rslt_u.gqr_rquota.rq_bsize) / DEV_BSIZE;
 		dqp->dqb_bsoftlimit =
-		    gq_rslt.getquota_rslt_u.gqr_rquota.rq_bsoftlimit *
-		    (gq_rslt.getquota_rslt_u.gqr_rquota.rq_bsize / DEV_BSIZE);
+		    ((uint64_t)gq_rslt.getquota_rslt_u.gqr_rquota.rq_bsoftlimit *
+		    gq_rslt.getquota_rslt_u.gqr_rquota.rq_bsize) / DEV_BSIZE;
 		dqp->dqb_curblocks =
-		    gq_rslt.getquota_rslt_u.gqr_rquota.rq_curblocks *
-		    (gq_rslt.getquota_rslt_u.gqr_rquota.rq_bsize / DEV_BSIZE);
+		    ((uint64_t)gq_rslt.getquota_rslt_u.gqr_rquota.rq_curblocks *
+		    gq_rslt.getquota_rslt_u.gqr_rquota.rq_bsize) / DEV_BSIZE;
 			/* inodes */
 		dqp->dqb_ihardlimit =
 			gq_rslt.getquota_rslt_u.gqr_rquota.rq_fhardlimit;

@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)gethostname.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/11/lib/libc/gen/gethostname.3 165903 2007-01-09 00:28:16Z imp $
+.\" $FreeBSD$
 .\"
-.Dd August 18, 2003
+.Dd July 13, 2020
 .Dt GETHOSTNAME 3
 .Os
 .Sh NAME
@@ -68,9 +68,9 @@ which has length
 This call is restricted to the super-user and
 is normally used only when the system is bootstrapped.
 .Pp
-Host names are limited to
-.Brq Dv HOST_NAME_MAX
-characters, not including the trailing null, currently 255.
+Applications should use
+.Fn sysconf _SC_HOST_NAME_MAX
+to find the maximum length of a host name (not including the terminating null).
 .Sh RETURN VALUES
 .Rv -std
 .Sh ERRORS

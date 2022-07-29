@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)madvise.2	8.1 (Berkeley) 6/9/93
-.\" $FreeBSD: stable/11/lib/libc/sys/posix_fadvise.2 288640 2015-10-03 22:27:14Z markj $
+.\" $FreeBSD$
 .\"
-.Dd October 3, 2015
+.Dd March 30, 2020
 .Dt POSIX_FADVISE 2
 .Os
 .Sh NAME
@@ -124,6 +124,10 @@ argument does not refer to a regular file.
 The
 .Fa fd
 argument is associated with a pipe or FIFO.
+.It Bq Er EIO
+An I/O error occurred while reading from or writing to a file system.
+.It Bq Er EINTEGRITY
+Corrupted data was detected while reading from the file system.
 .El
 .Sh SEE ALSO
 .Xr madvise 2

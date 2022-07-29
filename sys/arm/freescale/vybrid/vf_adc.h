@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/freescale/vybrid/vf_adc.h 267507 2014-06-15 12:08:33Z br $
+ * $FreeBSD$
  */
 
 uint32_t adc_read(void);

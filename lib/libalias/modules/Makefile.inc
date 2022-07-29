@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libalias/modules/Makefile.inc 313538 2017-02-10 07:32:40Z ngie $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/netinet/libalias
 

@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/dev/iser/icl_iser.h 331769 2018-03-30 18:06:29Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2015, Mellanox Technologies, Inc. All rights reserved.
  *

@@ -1,7 +1,7 @@
 #
-# $FreeBSD: stable/11/stand/usb/usbcore.mk 329183 2018-02-12 20:51:28Z kevans $
+# $FreeBSD$
 #
-# Copyright (c) 2013 Hans Petter Selasky.
+# Copyright (c) 2013-2020 Hans Petter Selasky.
 # Copyright (c) 2014 SRI International
 # All rights reserved.
 #
@@ -162,6 +162,8 @@ KSRCS+=	usb_template_audio.c
 KSRCS+=	usb_template_phone.c
 KSRCS+=	usb_template_serialnet.c
 KSRCS+=	usb_template_midi.c
+KSRCS+=	usb_template_multi.c
+KSRCS+=	usb_template_cdceem.c
 
 #
 # USB mass storage support

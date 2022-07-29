@@ -1,5 +1,5 @@
-\ Copyright (c) 2016 Netflix, Inc
-\ All rights reserved.
+\
+\ Copyright (c) 2016 Netflix, Inc.
 \
 \ Redistribution and use in source and binary forms, with or without
 \ modification, are permitted provided that the following conditions
@@ -22,9 +22,18 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \
-\ $FreeBSD: stable/11/stand/forth/efi.4th 329011 2018-02-08 02:50:47Z kevans $
+\ $FreeBSD$
 
 only forth definitions
 
-\ Place holder for more functions
-.( EFI boot environment) cr
+: efiboot? ( -- flag )
+	s" efi-version" getenv -1 <> dup if
+		swap drop ( c-addr flag -- flag )
+	then
+;
+
+: maybe-efi-resizecons
+	efiboot? if
+		s" efi-autoresizecons" evaluate
+	then
+;

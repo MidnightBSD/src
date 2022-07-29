@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/tests/sys/queue_test.c 290909 2015-11-16 04:15:39Z ngie $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/queue.h>
 #include <stdio.h>

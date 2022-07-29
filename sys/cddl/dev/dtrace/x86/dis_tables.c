@@ -33,7 +33,7 @@
 /*	  All Rights Reserved  	*/
 
 /*
- * $FreeBSD: stable/11/sys/cddl/dev/dtrace/x86/dis_tables.c 313849 2017-02-17 00:50:00Z markj $
+ * $FreeBSD$
  */
 
 #include	"dis_tables.h"

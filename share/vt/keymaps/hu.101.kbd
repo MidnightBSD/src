@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/vt/keymaps/hu.101.kbd 293047 2016-01-02 04:42:53Z emaste $
+# $FreeBSD$
 #
 # This is for use with a US keyboard, with only the
 # Hungarian accented characters added to it, and some tricks:

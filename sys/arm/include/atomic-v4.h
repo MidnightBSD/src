@@ -33,7 +33,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/include/atomic-v4.h 333687 2018-05-16 21:04:19Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ATOMIC_V4_H_
@@ -54,6 +54,11 @@
 #define mb()   dmb()
 #define wmb()  dmb()
 #define rmb()  dmb()
+
+#if defined(__clang_major__) && __clang_major__ >= 12
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcompound-token-split-by-macro"
+#endif
 
 #define __with_interrupts_disabled(expr) \
 	do {						\
@@ -113,6 +118,43 @@ atomic_clear_64(volatile uint64_t *address, uint64_t clearmask)
 }
 
 static __inline int
+atomic_fcmpset_8(volatile uint8_t *p, volatile uint8_t *cmpval, volatile uint8_t newval)
+{
+	int ret;
+
+	__with_interrupts_disabled(
+	 {
+	 	ret = *p;
+	    	if (*p == *cmpval) {
+			*p = newval;
+			ret = 1;
+		} else {
+			*cmpval = *p;
+			ret = 0;
+		}
+	});
+	return (ret);
+}
+static __inline int
+atomic_fcmpset_16(volatile uint16_t *p, volatile uint16_t *cmpval, volatile uint16_t newval)
+{
+	int ret;
+
+	__with_interrupts_disabled(
+	 {
+	 	ret = *p;
+	    	if (*p == *cmpval) {
+			*p = newval;
+			ret = 1;
+		} else {
+			*cmpval = *p;
+			ret = 0;
+		}
+	});
+	return (ret);
+}
+
+static __inline int
 atomic_fcmpset_32(volatile u_int32_t *p, volatile u_int32_t *cmpval, volatile u_int32_t newval)
 {
 	int ret;
@@ -143,6 +185,40 @@ atomic_fcmpset_64(volatile u_int64_t *p, volatile u_int64_t *cmpval, volatile u_
 			ret = 1;
 		} else {
 			*cmpval = *p;
+			ret = 0;
+		}
+	});
+	return (ret);
+}
+
+static __inline int
+atomic_cmpset_8(volatile uint8_t *p, volatile uint8_t cmpval, volatile uint8_t newval)
+{
+	int ret;
+
+	__with_interrupts_disabled(
+	 {
+	    	if (*p == cmpval) {
+			*p = newval;
+			ret = 1;
+		} else {
+			ret = 0;
+		}
+	});
+	return (ret);
+}
+
+static __inline int
+atomic_cmpset_16(volatile uint16_t *p, volatile uint16_t cmpval, volatile uint16_t newval)
+{
+	int ret;
+
+	__with_interrupts_disabled(
+	 {
+	    	if (*p == cmpval) {
+			*p = newval;
+			ret = 1;
+		} else {
 			ret = 0;
 		}
 	});
@@ -247,6 +323,19 @@ static __inline void
 atomic_subtract_64(volatile u_int64_t *p, u_int64_t val)
 {
 	__with_interrupts_disabled(*p -= val);
+}
+
+static __inline uint64_t
+atomic_swap_64(volatile uint64_t *p, uint64_t v)
+{
+	uint64_t value;
+
+	__with_interrupts_disabled(
+	{
+		value = *p;
+		*p = v;
+	});
+	return (value);
 }
 
 #else /* !_KERNEL */
@@ -437,6 +526,10 @@ atomic_swap_32(volatile u_int32_t *p, u_int32_t v)
 #define atomic_fcmpset_rel_32	atomic_fcmpset_32
 #define atomic_fcmpset_acq_32	atomic_fcmpset_32
 #ifdef _KERNEL
+#define atomic_fcmpset_rel_8	atomic_fcmpset_8
+#define atomic_fcmpset_acq_8	atomic_fcmpset_8
+#define atomic_fcmpset_rel_16	atomic_fcmpset_16
+#define atomic_fcmpset_acq_16	atomic_fcmpset_16
 #define atomic_fcmpset_rel_64	atomic_fcmpset_64
 #define atomic_fcmpset_acq_64	atomic_fcmpset_64
 #endif
@@ -445,6 +538,10 @@ atomic_swap_32(volatile u_int32_t *p, u_int32_t v)
 #define atomic_cmpset_rel_32	atomic_cmpset_32
 #define atomic_cmpset_acq_32	atomic_cmpset_32
 #ifdef _KERNEL
+#define atomic_cmpset_rel_8	atomic_cmpset_8
+#define atomic_cmpset_acq_8	atomic_cmpset_8
+#define atomic_cmpset_rel_16	atomic_cmpset_16
+#define atomic_cmpset_acq_16	atomic_cmpset_16
 #define atomic_cmpset_rel_64	atomic_cmpset_64
 #define atomic_cmpset_acq_64	atomic_cmpset_64
 #endif
@@ -458,6 +555,7 @@ atomic_swap_32(volatile u_int32_t *p, u_int32_t v)
 #define atomic_subtract_acq_32	atomic_subtract_32
 #define atomic_store_rel_32	atomic_store_32
 #define atomic_store_rel_long	atomic_store_long
+#define atomic_store_rel_64	atomic_store_64
 #define atomic_load_acq_32	atomic_load_32
 #define atomic_load_acq_long	atomic_load_long
 #define atomic_add_acq_long		atomic_add_long
@@ -472,6 +570,10 @@ atomic_swap_32(volatile u_int32_t *p, u_int32_t v)
 #define atomic_cmpset_rel_long		atomic_cmpset_long
 #define atomic_load_acq_long		atomic_load_long
 #undef __with_interrupts_disabled
+
+#if defined(__clang_major__) && __clang_major__ >= 12
+#pragma clang diagnostic pop
+#endif
 
 static __inline void
 atomic_add_long(volatile u_long *p, u_long v)

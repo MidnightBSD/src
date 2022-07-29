@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/cddl/usr.bin/ztest/Makefile 339118 2018-10-03 02:52:47Z mav $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/cmd/ztest
 
@@ -9,6 +9,7 @@ WARNS?=	0
 CFLAGS+= -I${SRCTOP}/sys/cddl/compat/opensolaris
 CFLAGS+= -I${SRCTOP}/cddl/compat/opensolaris/include
 CFLAGS+= -I${SRCTOP}/cddl/compat/opensolaris/lib/libumem
+CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libzfs/common
 CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libzpool/common
 CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libnvpair
 CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libcmdutils
@@ -23,6 +24,10 @@ CSTD=	c99
 
 # Since there are many asserts in this program, it makes no sense to compile
 # it without debugging.
-CFLAGS+= -g -DDEBUG=1
+CFLAGS+= -g -DDEBUG=1 -Wno-format
+CFLAGS.gcc+= -fms-extensions
+
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

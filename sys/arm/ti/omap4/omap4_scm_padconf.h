@@ -26,7 +26,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/ti/omap4/omap4_scm_padconf.h 273262 2014-10-18 17:51:34Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef OMAP4_SCM_PADCONF_H
@@ -77,5 +77,7 @@
 #define PADCONF_PIN_OFF_INPUT_PULLDOWN  ( CONTROL_PADCONF_OFF_ENABLE \
                                         | CONTROL_PADCONF_OFF_PULL_ENABLE)
 #define PADCONF_PIN_OFF_WAKEUPENABLE	CONTROL_PADCONF_WAKEUP_ENABLE
+
+extern const struct ti_pinmux_device omap4_pinmux_dev;
 
 #endif /* OMAP4_SCM_PADCONF_H */

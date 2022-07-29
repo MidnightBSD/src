@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/iovctl/iovctl.c 296865 2016-03-14 17:41:17Z rstone $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/iov.h>
@@ -230,15 +230,19 @@ main(int argc, char **argv)
 		usage();
 	}
 
-	if (device == NULL && filename == NULL) {
+	if (device == NULL && filename == NULL  && action != CONFIG) {
 		warnx("Either the -d or -f flag must be specified");
 		usage();
 	}
 
 	switch (action) {
 	case CONFIG:
-		if (filename == NULL) {
+		if (device != NULL) {
 			warnx("-d flag cannot be used with the -C flag");
+			usage();
+		}
+		if (filename == NULL) {
+			warnx("The -f flag must be specified");
 			usage();
 		}
 		config_action(filename, dryrun);

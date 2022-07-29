@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/firewire/sbp/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 
 # Makefile for the SBP-II (Serial Bus Protocol 2/SCSI over IEEE1394)
 

@@ -30,7 +30,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/aarch64/gen/setjmp.S 284768 2015-06-24 16:15:32Z andrew $");
+__FBSDID("$FreeBSD$");
 
 #include <machine/setjmp.h>
 
@@ -82,7 +82,7 @@ ENTRY(longjmp)
 	/* Restore the signal mask */
 	mov	x2, #0				/* oset */
 	add	x1, x0, #(_JB_SIGMASK * 8)	/* set */
-	mov	x0, #3				/* SIG_BLOCK */
+	mov	x0, #3				/* SIG_SETMASK */
 	bl	sigprocmask
 
 	ldr	x1, [sp, #16]

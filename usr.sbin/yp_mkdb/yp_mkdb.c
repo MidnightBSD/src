@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1995, 1996
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
  *
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/yp_mkdb/yp_mkdb.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <fcntl.h>
@@ -86,8 +88,8 @@ unwind(char *map)
 
 	key.data = NULL;
 	while (yp_next_record(dbp, &key, &data, 1, 1) == YP_TRUE)
-		printf("%.*s %.*s\n", (int)key.size, key.data, (int)data.size,
-		    data.data);
+		printf("%.*s %.*s\n", (int)key.size, (char *)key.data,
+		    (int)data.size, (char *)data.data);
 
 	(void)(dbp->close)(dbp);
 	return;

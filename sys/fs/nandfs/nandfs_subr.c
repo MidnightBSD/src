@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010-2012 Semihalf
  * Copyright (c) 2008, 2009 Reinoud Zandijk
  * All rights reserved.
@@ -27,10 +29,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/nandfs/nandfs_subr.c 269420 2014-08-02 05:05:05Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/gsb_crc32.h>
 #include <sys/namei.h>
 #include <sys/resourcevar.h>
 #include <sys/kernel.h>
@@ -80,7 +83,7 @@ nandfs_bufsync(struct bufobj *bo, int waitfor)
 	struct vnode *vp;
 	int error = 0;
 
-	vp = bo->__bo_vnode;
+	vp = bo2vnode(bo);
 
 	ASSERT_VOP_LOCKED(vp, __func__);
 	error = nandfs_sync_file(vp);

@@ -24,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/qlnx/qlnxe/qlnx_def.h 337517 2018-08-09 01:17:35Z davidcs $
+ * $FreeBSD$
  *
  */
 
@@ -522,7 +522,7 @@ struct qlnx_host {
 typedef struct qlnx_host qlnx_host_t;
 
 /* note that align has to be a power of 2 */
-#define QL_ALIGN(size, align) (((size) + ((align) - 1)) & (~((align) - 1)))
+#define QL_ALIGN(size, align) (((size) + ((align) - 1)) & (~((align) - 1)));
 #define QL_MIN(x, y) ((x < y) ? x : y)
 
 #define QL_RUNNING(ifp) \

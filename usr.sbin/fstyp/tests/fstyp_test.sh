@@ -1,7 +1,8 @@
 #!/bin/sh
 #
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (c) 2015 Alan Somers
-# All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -24,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
-# $FreeBSD: stable/11/usr.sbin/fstyp/tests/fstyp_test.sh 312271 2017-01-16 07:11:47Z ngie $
+# $FreeBSD$
 
 atf_test_case cd9660
 cd9660_head() {
@@ -56,6 +57,24 @@ dir_head() {
 dir_body() {
 	atf_check -s exit:0 mkdir dir
 	atf_check -s exit:1 -e match:"not a disk" fstyp dir
+}
+
+atf_test_case exfat
+exfat_head() {
+	atf_set "descr" "fstyp(8) can detect exFAT filesystems"
+}
+exfat_body() {
+	bzcat $(atf_get_srcdir)/dfr-01-xfat.img.bz2 > exfat.img
+	atf_check -s exit:0 -o inline:"exfat\n" fstyp -u exfat.img
+}
+
+atf_test_case exfat_label
+exfat_label_head() {
+	atf_set "descr" "fstyp(8) can read exFAT labels"
+}
+exfat_label_body() {
+	bzcat $(atf_get_srcdir)/dfr-01-xfat.img.bz2 > exfat.img
+	atf_check -s exit:0 -o inline:"exfat exFat\n" fstyp -u -l exfat.img
 }
 
 atf_test_case empty
@@ -242,6 +261,8 @@ atf_init_test_cases() {
 	atf_add_test_case cd9660_label
 	atf_add_test_case dir
 	atf_add_test_case empty
+	atf_add_test_case exfat
+	atf_add_test_case exfat_label
 	atf_add_test_case ext2
 	atf_add_test_case ext3
 	atf_add_test_case ext4

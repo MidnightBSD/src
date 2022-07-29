@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/powerpc/boot1.chrp/Makefile 329183 2018-02-12 20:51:28Z kevans $
+# $FreeBSD$
 
 .include <bsd.init.mk>
 
@@ -29,6 +29,8 @@ boot1.hfs: boot1.elf bootinfo.txt
 	    conv=notrunc
 
 CLEANFILES+= boot1.hfs
+
+MK_PIE=		no
 
 .include <bsd.prog.mk>
 

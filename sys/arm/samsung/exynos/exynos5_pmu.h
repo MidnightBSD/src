@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/samsung/exynos/exynos5_pmu.h 269369 2014-08-01 06:20:25Z br $
+ * $FreeBSD$
  */
 
 int usb2_phy_power_on(void);

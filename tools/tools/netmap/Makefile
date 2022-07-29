@@ -1,25 +1,25 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/tools/tools/netmap/Makefile 276486 2014-12-31 23:25:37Z ngie $
+# $FreeBSD$
 #
 # For multiple programs using a single source file each,
 # we can just define 'progs' and create custom targets.
-PROGS	=	pkt-gen bridge vale-ctl
+PROGS	=	pkt-gen nmreplay bridge lb
 
 CLEANFILES = $(PROGS) *.o
 MAN=
-CFLAGS += -Werror -Wall # -nostdinc -I/usr/include -I../../../sys
-CFLAGS += -Wextra
 
-LDFLAGS += -lpthread
+.include <bsd.prog.mk>
+.include <bsd.lib.mk>
+
+LDFLAGS += -lpthread -lnetmap
 .ifdef WITHOUT_PCAP
 CFLAGS += -DNO_PCAP
 .else
 LDFLAGS += -lpcap
 .endif
+LDFLAGS += -lm # used by nmreplay
 
-.include <bsd.prog.mk>
-.include <bsd.lib.mk>
+CFLAGS += -Wno-cast-align
 
 all: $(PROGS)
 
@@ -27,7 +27,10 @@ pkt-gen: pkt-gen.o
 	$(CC) $(CFLAGS) -o pkt-gen pkt-gen.o $(LDFLAGS)
 
 bridge: bridge.o
-	$(CC) $(CFLAGS) -o bridge bridge.o
+	$(CC) $(CFLAGS) -o bridge bridge.o $(LDFLAGS)
 
-vale-ctl: vale-ctl.o
-	$(CC) $(CFLAGS) -o vale-ctl vale-ctl.o
+nmreplay: nmreplay.o
+	$(CC) $(CFLAGS) -o nmreplay nmreplay.o $(LDFLAGS)
+
+lb: lb.o pkt_hash.o
+	$(CC) $(CFLAGS) -o lb lb.o pkt_hash.o $(LDFLAGS)

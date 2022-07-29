@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/mips/beri/loader/loader.h 344290 2019-02-19 18:48:17Z kevans $
+ * $FreeBSD$
  */
 
 #ifndef _BOOT_LOADER_H_

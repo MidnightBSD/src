@@ -3,6 +3,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_btsocket.h,v 1.8 2003/04/26 22:32:10 max Exp $
- * $FreeBSD: stable/11/sys/netgraph/bluetooth/include/ng_btsocket.h 290038 2015-10-27 03:42:26Z takawata $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_BTSOCKET_H_
@@ -227,10 +229,6 @@ struct sockaddr_l2cap_compat {
 	u_int16_t	l2cap_psm;	/* PSM (Protocol/Service Multiplexor) */
 	bdaddr_t	l2cap_bdaddr;	/* address */
 };
-
-#define BDADDR_BREDR 0
-#define BDADDR_LE_PUBLIC 1
-#define BDADDR_LE_RANDOM 2
 
 struct sockaddr_l2cap {
 	u_char		l2cap_len;	/* total length */

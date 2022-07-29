@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tools/debugscripts/dot.gdbinit 244040 2012-12-08 22:16:36Z eadler $
+# $FreeBSD$
 # .gdbinit file for remote serial debugging.
 #
 # XXX Do not use this file directly.  It contains parameters which are

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Peter Wemm <peter@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/kern_kthread.c 331842 2018-03-31 13:19:27Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,6 +44,7 @@ __FBSDID("$FreeBSD: stable/11/sys/kern/kern_kthread.c 331842 2018-03-31 13:19:27
 #include <sys/unistd.h>
 #include <sys/wait.h>
 #include <sys/sched.h>
+#include <sys/tslog.h>
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
 
@@ -122,12 +125,19 @@ kproc_create(void (*func)(void *), void *arg,
 #ifdef KTR
 	sched_clear_tdname(td);
 #endif
+	TSTHREAD(td, td->td_name);
+#ifdef HWPMC_HOOKS
+	if (PMC_SYSTEM_SAMPLING_ACTIVE()) {
+		PMC_CALL_HOOK_UNLOCKED(td, PMC_FN_PROC_CREATE_LOG, p2);
+		PMC_CALL_HOOK_UNLOCKED(td, PMC_FN_THR_CREATE_LOG, NULL);
+	}
+#endif
 
 	/* call the processes' main()... */
 	cpu_fork_kthread_handler(td, func, arg);
 
 	/* Avoid inheriting affinity from a random parent. */
-	cpuset_setthread(td->td_tid, cpuset_root);
+	cpuset_kernthread(td);
 	thread_lock(td);
 	TD_SET_CAN_RUN(td);
 	sched_prio(td, PVM);
@@ -156,7 +166,7 @@ kproc_exit(int ecode)
 	 */
 	sx_xlock(&proctree_lock);
 	PROC_LOCK(p);
-	proc_reparent(p, initproc);
+	proc_reparent(p, initproc, true);
 	PROC_UNLOCK(p);
 	sx_xunlock(&proctree_lock);
 
@@ -273,17 +283,17 @@ kthread_add(void (*func)(void *), void *arg, struct proc *p,
 
 	bzero(&newtd->td_startzero,
 	    __rangeof(struct thread, td_startzero, td_endzero));
-	newtd->td_sleeptimo = 0;
-	newtd->td_vslock_sz = 0;
-	bzero(&newtd->td_si, sizeof(newtd->td_si));
+	newtd->td_pflags2 = 0;
+	newtd->td_errno = 0;
 	bcopy(&oldtd->td_startcopy, &newtd->td_startcopy,
 	    __rangeof(struct thread, td_startcopy, td_endcopy));
-	newtd->td_sa = oldtd->td_sa;
 
 	/* set up arg0 for 'ps', et al */
 	va_start(ap, fmt);
 	vsnprintf(newtd->td_name, sizeof(newtd->td_name), fmt, ap);
 	va_end(ap);
+
+	TSTHREAD(newtd, newtd->td_name);
 
 	newtd->td_proc = p;  /* needed for cpu_copy_thread */
 	/* might be further optimized for kthread */
@@ -307,8 +317,11 @@ kthread_add(void (*func)(void *), void *arg, struct proc *p,
 	tidhash_add(newtd);
 
 	/* Avoid inheriting affinity from a random parent. */
-	cpuset_setthread(newtd->td_tid, cpuset_root);
-
+	cpuset_kernthread(newtd);
+#ifdef HWPMC_HOOKS
+	if (PMC_SYSTEM_SAMPLING_ACTIVE())
+		PMC_CALL_HOOK_UNLOCKED(td, PMC_FN_THR_CREATE_LOG, NULL);
+#endif
 	/* Delay putting it on the run queue until now. */
 	if (!(flags & RFSTOPPED)) {
 		thread_lock(newtd);
@@ -329,6 +342,10 @@ kthread_exit(void)
 	td = curthread;
 	p = td->td_proc;
 
+#ifdef HWPMC_HOOKS
+	if (PMC_SYSTEM_SAMPLING_ACTIVE())
+		PMC_CALL_HOOK_UNLOCKED(td, PMC_FN_THR_EXIT_LOG, NULL);
+#endif
 	/* A module may be waiting for us to exit. */
 	wakeup(td);
 
@@ -427,12 +444,15 @@ kthread_suspend_check(void)
 		panic("%s: curthread is not a valid kthread", __func__);
 
 	/*
-	 * As long as the double-lock protection is used when accessing the
-	 * TDF_KTH_SUSP flag, synchronizing the read operation via proc mutex
-	 * is fine.
+	 * Setting the TDF_KTH_SUSP flag is protected by process lock.
+	 *
+	 * Do an unlocked read first to avoid serializing with all other threads
+	 * in the common case of not suspending.
 	 */
+	if ((td->td_flags & TDF_KTH_SUSP) == 0)
+		return;
 	PROC_LOCK(p);
-	while (td->td_flags & TDF_KTH_SUSP) {
+	while ((td->td_flags & TDF_KTH_SUSP) != 0) {
 		wakeup(&td->td_flags);
 		msleep(&td->td_flags, &p->p_mtx, PPAUSE, "ktsusp", 0);
 	}

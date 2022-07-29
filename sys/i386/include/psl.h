@@ -1,6 +1,6 @@
 /*-
  * This file is in the public domain.
  */
-/* $FreeBSD: stable/11/sys/i386/include/psl.h 233204 2012-03-19 21:29:57Z tijl $ */
+/* $FreeBSD$ */
 
 #include <x86/psl.h>

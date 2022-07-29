@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/mpt/mpilib/mpi_type.h 331722 2018-03-29 02:50:57Z eadler $ */
-/*
+/* $FreeBSD$ */
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2000-2010, LSI Logic Corporation and its contributors.
  * All rights reserved.
  * 
@@ -77,7 +79,7 @@ typedef unsigned char   U8;
 typedef signed   short  S16;
 typedef unsigned short  U16;
 
-#ifdef	__MidnightBSD__
+#ifdef	__FreeBSD__
 
 typedef int32_t  S32;
 typedef uint32_t U32;

@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/amlogic/aml8726/aml8726_timer.c 281416 2015-04-11 08:30:37Z ganbold $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -55,7 +55,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/amlogic/aml8726/aml8726_timer.c 281416 201
 #include <machine/bus.h>
 #include <machine/cpu.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
@@ -348,6 +347,7 @@ DELAY(int usec)
 			}
 		return;
 	}
+	TSENTER();
 
 	/*
 	 * Some of the other timers in the source tree do this calculation as:
@@ -392,4 +392,5 @@ DELAY(int usec)
 		previous = now;
 		remaining -= delta;
 	}
+	TSEXIT();
 }

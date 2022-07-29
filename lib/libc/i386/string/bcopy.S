@@ -12,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,7 +30,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/i386/string/bcopy.S 217106 2011-01-07 16:08:40Z kib $");
+__FBSDID("$FreeBSD$");
 
 #if 0
 	RCSID("$NetBSD: bcopy.S,v 1.6 1996/11/12 00:50:06 jtc Exp $")
@@ -64,7 +64,7 @@ ENTRY(bcopy)
 	movl	%edi,%edx
 	subl	%esi,%edx
 	cmpl	%ecx,%edx	/* overlapping? */
-	jb	1f
+	jb	2f
 	cld			/* nope, copy forwards. */
 	movl	%ecx,%edx
 	shrl	$2,%ecx		/* copy by words */
@@ -72,21 +72,28 @@ ENTRY(bcopy)
 	movsl
 	movl	%edx,%ecx
 	andl	$3,%ecx		/* any bytes left? */
+	jne	1f
+	popl	%edi
+	popl	%esi
+	ret
+1:
 	rep
 	movsb
 	popl	%edi
 	popl	%esi
 	ret
-1:
+2:
 	addl	%ecx,%edi	/* copy backwards. */
 	addl	%ecx,%esi
 	std
 	movl	%ecx,%edx
-	andl	$3,%ecx		/* any fractional bytes? */
 	decl	%edi
 	decl	%esi
+	andl	$3,%ecx		/* any fractional bytes? */
+	je	3f
 	rep
 	movsb
+3:
 	movl	%edx,%ecx	/* copy remainder by words */
 	shrl	$2,%ecx
 	subl	$3,%esi

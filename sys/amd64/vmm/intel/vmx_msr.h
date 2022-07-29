@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/vmm/intel/vmx_msr.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _VMX_MSR_H_
@@ -33,8 +35,10 @@ struct vmx;
 
 void vmx_msr_init(void);
 void vmx_msr_guest_init(struct vmx *vmx, int vcpuid);
+void vmx_msr_guest_enter_tsc_aux(struct vmx *vmx, int vcpuid);
 void vmx_msr_guest_enter(struct vmx *vmx, int vcpuid);
 void vmx_msr_guest_exit(struct vmx *vmx, int vcpuid);
+void vmx_msr_guest_exit_tsc_aux(struct vmx *vmx, int vcpuid);
 int vmx_rdmsr(struct vmx *, int vcpuid, u_int num, uint64_t *val, bool *retu);
 int vmx_wrmsr(struct vmx *, int vcpuid, u_int num, uint64_t val, bool *retu);
 

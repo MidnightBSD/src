@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/mkuzip/mkuz_insize.c 322983 2017-08-28 20:55:13Z sobomax $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/disk.h>
 #include <sys/ioctl.h>
@@ -59,7 +59,6 @@ mkuz_get_insize(struct mkuz_cfg *cfp)
 		ffd = open(statfsbuf.f_mntfromname, O_RDONLY);
 		if (ffd < 0) {
 			warn("open(%s, O_RDONLY)", statfsbuf.f_mntfromname);
-			close(ffd);
 			return (-1);
 		}
 		if (ioctl(ffd, DIOCGMEDIASIZE, &ms) < 0) {

@@ -1,6 +1,8 @@
 /*	$NetBSD: vmparam.h,v 1.26 2003/08/07 16:27:47 agc Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1988 The Regents of the University of California.
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/include/vmparam.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_VMPARAM_H_
@@ -184,6 +186,10 @@ extern vm_offset_t vm_max_kernel_address;
 
 #define	SFBUF
 #define	SFBUF_MAP
+
+#define	PMAP_HAS_DMAP	0
+#define	PHYS_TO_DMAP(x)	({ panic("No direct map exists"); 0; })
+#define	DMAP_TO_PHYS(x)	({ panic("No direct map exists"); 0; })
 
 #define	DEVMAP_MAX_VADDR	ARM_VECTORS_HIGH
 

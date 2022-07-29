@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011-2012 Stefan Bethke.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/etherswitch/etherswitch.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -142,6 +144,7 @@ etherswitchioctl(struct cdev *cdev, u_long cmd, caddr_t data, int flags, struct 
 	etherswitch_info_t *info;
 	etherswitch_reg_t *reg;
 	etherswitch_phyreg_t *phyreg;
+	etherswitch_portid_t *portid;
 	int error = 0;
 
 	switch (cmd) {
@@ -198,6 +201,23 @@ etherswitchioctl(struct cdev *cdev, u_long cmd, caddr_t data, int flags, struct 
 
 	case IOETHERSWITCHSETCONF:
 		error = ETHERSWITCH_SETCONF(etherswitch, (etherswitch_conf_t *)data);
+		break;
+
+	case IOETHERSWITCHFLUSHALL:
+		error = ETHERSWITCH_FLUSH_ALL(etherswitch);
+		break;
+
+	case IOETHERSWITCHFLUSHPORT:
+		portid = (etherswitch_portid_t *)data;
+		error = ETHERSWITCH_FLUSH_PORT(etherswitch, portid->es_port);
+		break;
+
+	case IOETHERSWITCHGETTABLE:
+		error = ETHERSWITCH_FETCH_TABLE(etherswitch, (void *) data);
+		break;
+
+	case IOETHERSWITCHGETTABLEENTRY:
+		error = ETHERSWITCH_FETCH_TABLE_ENTRY(etherswitch, (void *) data);
 		break;
 
 	default:

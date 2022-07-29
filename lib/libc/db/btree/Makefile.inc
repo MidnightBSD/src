@@ -1,5 +1,5 @@
 #	from @(#)Makefile.inc	8.2 (Berkeley) 7/14/94
-# $FreeBSD: stable/11/lib/libc/db/btree/Makefile.inc 262722 2014-03-04 02:19:39Z marcel $
+# $FreeBSD$
 
 .PATH: ${LIBC_SRCTOP}/db/btree
 

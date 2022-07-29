@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/net/mppcc.c 302773 2016-07-13 15:51:58Z pfg $
+ * $FreeBSD$
  */
 
 /*
@@ -232,7 +232,7 @@ int MPPC_Compress(u_char **src, u_char **dst, u_long *srcCnt, u_long *dstCnt, ch
 	} else if (off < 8192) {	/* 16-bit offset; 320 <= offset < 8192 */
 	    putbits16(*dst, 0xc000|(off-320), 16, &olen, &l);
 	} else {		/* NOTREACHED */
-	    __unreachable();
+	    __assert_unreachable();
 	    rtn &= ~MPPC_OK;
 	    return (rtn);
 	}

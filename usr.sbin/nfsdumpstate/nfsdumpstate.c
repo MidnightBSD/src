@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/nfsdumpstate/nfsdumpstate.c 347172 2019-05-06 03:13:22Z rmacklem $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -162,6 +162,9 @@ dump_openstate(void)
 				printf("%-45s ", " ");
 			break;
 #endif
+		default:
+			printf("%-45s ", " ");
+			break;
 		}
 		for (i = 0; i < dp[cnt].ndcl_clid.nclid_idlen; i++)
 			printf("%02x", dp[cnt].ndcl_clid.nclid_id[i]);

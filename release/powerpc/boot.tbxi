@@ -1,12 +1,12 @@
 <CHRP-BOOT>
 <LICENSE>
-$MidnightBSD$
+$FreeBSD$
 </LICENSE>
 <COMPATIBLE>
 MacRISC MacRISC3 MacRISC4
 </COMPATIBLE>
 <DESCRIPTION>
-MidnightBSD/PPC bootloader
+FreeBSD/PPC bootloader
 </DESCRIPTION>
 <BOOT-SCRIPT>
 " screen" output

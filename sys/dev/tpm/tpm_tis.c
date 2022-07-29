@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/tpm/tpm_tis.c 346725 2019-04-26 01:58:36Z mw $");
+__FBSDID("$FreeBSD$");
 
 #include "tpm20.h"
 
@@ -102,12 +102,11 @@ static int
 tpmtis_acpi_probe(device_t dev)
 {
 	int err = 0;
-	ACPI_TABLE_TPM2 *tbl;
+	ACPI_TABLE_TPM23 *tbl;
 	ACPI_STATUS status;
 
 	if (ACPI_ID_PROBE(device_get_parent(dev), dev, tpmtis_ids) == NULL)
 		return (ENXIO);
-
 	/*Find TPM2 Header*/
 	status = AcpiGetTable(ACPI_SIG_TPM2, 1, (ACPI_TABLE_HEADER **) &tbl);
 	if(ACPI_FAILURE(status) ||

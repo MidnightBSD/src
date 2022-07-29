@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Fabio Checconi, Luigi Rizzo, Paolo Valente
  * All rights reserved
  *
@@ -25,7 +27,7 @@
  */
 
 /*
- * $FreeBSD: stable/11/sys/netpfil/ipfw/dn_sched_qfq.c 325730 2017-11-12 01:26:43Z truckman $
+ * $FreeBSD$
  */
 
 #ifdef _KERNEL
@@ -82,7 +84,7 @@ int fls(unsigned int n)
 }
 #endif
 
-#if !defined(_KERNEL) || defined( __MidnightBSD__ ) || defined(_WIN32) || (defined(__MIPSEL__) && defined(LINUX_24))
+#if !defined(_KERNEL) || defined( __FreeBSD__ ) || defined(_WIN32) || (defined(__MIPSEL__) && defined(LINUX_24))
 static inline unsigned long __fls(unsigned long word)
 {
 	return fls(word) - 1;

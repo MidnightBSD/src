@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tools/test/ppsapi/Makefile 264400 2014-04-13 05:21:56Z imp $
+# $FreeBSD$
 
 PROG=	ppsapitest
 MAN=

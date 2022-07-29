@@ -1,6 +1,8 @@
 /*	$NetBSD: lockd_lock.c,v 1.5 2000/11/21 03:47:41 enami Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2001 Andrew P. Lentvorski, Jr.
  * Copyright (c) 2000 Manuel Bouyer.
  *
@@ -35,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/rpc.lockd/lockd_lock.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #define LOCKD_DEBUG
 
@@ -881,7 +883,7 @@ test_nfslock(const struct file_lock *fl, struct file_lock **conflicting_fl)
  *       While this seems to be intuitively wrong, it is required for proper
  *       Posix semantics during unlock.  It is absolutely imperative to not
  *       unlock the main lock before the two child locks are established. Thus,
- *       one has be be able to create duplicate locks over an existing lock
+ *       one has to be able to create duplicate locks over an existing lock
  *    2) It currently accepts duplicate locks from the same id,pid
  */
 

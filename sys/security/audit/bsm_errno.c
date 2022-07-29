@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2008 Apple Inc.
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/security/audit/bsm_errno.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -241,6 +243,13 @@ static const struct bsm_errno bsm_errnos[] = {
 	ERRNO_NO_LOCAL_MAPPING,
 #endif
 	ES("Process died with the lock") },
+	{ BSM_ERRNO_EINTEGRITY,
+#ifdef EINTEGRITY
+	EINTEGRITY,
+#else
+	ERRNO_NO_LOCAL_MAPPING,
+#endif
+	ES("Integrity check failed") },
 	{ BSM_ERRNO_ENOTRECOVERABLE,
 #ifdef ENOTRECOVERABLE
 	ENOTRECOVERABLE,

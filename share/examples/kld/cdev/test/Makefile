@@ -64,7 +64,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/share/examples/kld/cdev/test/Makefile 299293 2016-05-10 00:51:50Z gjb $
+# $FreeBSD$
 #
 PACKAGE=examples
 FILESDIR=${SHAREDIR}/examples/kld/cdev/test

@@ -20,7 +20,7 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- * $FreeBSD: stable/11/sys/cddl/dev/sdt/sdt.c 327480 2018-01-02 00:11:56Z mjg $
+ * $FreeBSD$
  *
  */
 
@@ -77,6 +77,7 @@ static void	sdt_kld_unload_try(void *, struct linker_file *, int *);
 static MALLOC_DEFINE(M_SDT, "SDT", "DTrace SDT providers");
 
 static int sdt_probes_enabled_count;
+static int lockstat_enabled_count;
 
 static dtrace_pattr_t sdt_attr = {
 { DTRACE_STABILITY_EVOLVING, DTRACE_STABILITY_EVOLVING, DTRACE_CLASS_COMMON },
@@ -208,8 +209,11 @@ sdt_enable(void *arg __unused, dtrace_id_t id, void *parg)
 
 	probe->id = id;
 	probe->sdtp_lf->nenabled++;
-	if (strcmp(probe->prov->name, "lockstat") == 0)
-		lockstat_enabled++;
+	if (strcmp(probe->prov->name, "lockstat") == 0) {
+		lockstat_enabled_count++;
+		if (lockstat_enabled_count == 1)
+			lockstat_enabled = true;
+	}
 	sdt_probes_enabled_count++;
 	if (sdt_probes_enabled_count == 1)
 		sdt_probes_enabled = true;
@@ -225,8 +229,11 @@ sdt_disable(void *arg __unused, dtrace_id_t id, void *parg)
 	sdt_probes_enabled_count--;
 	if (sdt_probes_enabled_count == 0)
 		sdt_probes_enabled = false;
-	if (strcmp(probe->prov->name, "lockstat") == 0)
-		lockstat_enabled--;
+	if (strcmp(probe->prov->name, "lockstat") == 0) {
+		lockstat_enabled_count--;
+		if (lockstat_enabled_count == 0)
+			lockstat_enabled = false;
+	}
 	probe->id = 0;
 	probe->sdtp_lf->nenabled--;
 }
@@ -264,25 +271,23 @@ sdt_destroy(void *arg, dtrace_id_t id, void *parg)
 {
 }
 
-/*
- * Called from the kernel linker when a module is loaded, before
- * dtrace_module_loaded() is called. This is done so that it's possible to
- * register new providers when modules are loaded. The DTrace framework
- * explicitly disallows calling into the framework from the provide_module
- * provider method, so we cannot do this there.
- */
 static void
-sdt_kld_load(void *arg __unused, struct linker_file *lf)
+sdt_kld_load_providers(struct linker_file *lf)
 {
 	struct sdt_provider **prov, **begin, **end;
-	struct sdt_probe **probe, **p_begin, **p_end;
-	struct sdt_argtype **argtype, **a_begin, **a_end;
 
 	if (linker_file_lookup_set(lf, "sdt_providers_set", &begin, &end,
 	    NULL) == 0) {
 		for (prov = begin; prov < end; prov++)
 			sdt_create_provider(*prov);
 	}
+}
+
+static void
+sdt_kld_load_probes(struct linker_file *lf)
+{
+	struct sdt_probe **probe, **p_begin, **p_end;
+	struct sdt_argtype **argtype, **a_begin, **a_end;
 
 	if (linker_file_lookup_set(lf, "sdt_probes_set", &p_begin, &p_end,
 	    NULL) == 0) {
@@ -301,6 +306,20 @@ sdt_kld_load(void *arg __unused, struct linker_file *lf)
 			    *argtype, argtype_entry);
 		}
 	}
+}
+
+/*
+ * Called from the kernel linker when a module is loaded, before
+ * dtrace_module_loaded() is called. This is done so that it's possible to
+ * register new providers when modules are loaded. The DTrace framework
+ * explicitly disallows calling into the framework from the provide_module
+ * provider method, so we cannot do this there.
+ */
+static void
+sdt_kld_load(void *arg __unused, struct linker_file *lf)
+{
+	sdt_kld_load_providers(lf);
+	sdt_kld_load_probes(lf);
 }
 
 static void
@@ -341,16 +360,21 @@ sdt_kld_unload_try(void *arg __unused, struct linker_file *lf, int *error)
 }
 
 static int
-sdt_linker_file_cb(linker_file_t lf, void *arg __unused)
+sdt_load_providers_cb(linker_file_t lf, void *arg __unused)
 {
+	sdt_kld_load_providers(lf);
+	return (0);
+}
 
-	sdt_kld_load(NULL, lf);
-
+static int
+sdt_load_probes_cb(linker_file_t lf, void *arg __unused)
+{
+	sdt_kld_load_probes(lf);
 	return (0);
 }
 
 static void
-sdt_load()
+sdt_load(void)
 {
 
 	TAILQ_INIT(&sdt_prov_list);
@@ -362,12 +386,17 @@ sdt_load()
 	sdt_kld_unload_try_tag = EVENTHANDLER_REGISTER(kld_unload_try,
 	    sdt_kld_unload_try, NULL, EVENTHANDLER_PRI_ANY);
 
-	/* Pick up probes from the kernel and already-loaded linker files. */
-	linker_file_foreach(sdt_linker_file_cb, NULL);
+	/*
+	 * Pick up probes from the kernel and already-loaded linker files.
+	 * Define providers in a separate pass since a linker file may be using
+	 * providers defined in a file that appears later in the list.
+	 */
+	linker_file_foreach(sdt_load_providers_cb, NULL);
+	linker_file_foreach(sdt_load_probes_cb, NULL);
 }
 
 static int
-sdt_unload()
+sdt_unload(void)
 {
 	struct sdt_provider *prov, *tmp;
 	int ret;

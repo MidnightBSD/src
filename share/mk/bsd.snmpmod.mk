@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/mk/bsd.snmpmod.mk 313239 2017-02-04 17:10:19Z ngie $
+# $FreeBSD$
 
 INCSDIR=	${INCLUDEDIR}/bsnmp
 
@@ -6,14 +6,16 @@ SHLIB_NAME=	snmp_${MOD}.so.${SHLIB_MAJOR}
 SRCS+=		${MOD}_oid.h ${MOD}_tree.c ${MOD}_tree.h
 CLEANFILES+=	${MOD}_oid.h ${MOD}_tree.c ${MOD}_tree.h
 CFLAGS+=	-I.
+GENSNMPTREEFLAGS+=	-I${SHAREDIR}/snmpdefs
+
 
 ${MOD}_oid.h: ${MOD}_tree.def ${EXTRAMIBDEFS} ${EXTRAMIBSYMS}
-	cat ${.ALLSRC} | gensnmptree -e ${XSYM} > ${.TARGET}
+	cat ${.ALLSRC} | gensnmptree ${GENSNMPTREEFLAGS} -e ${XSYM} > ${.TARGET}
 
 .ORDER: ${MOD}_tree.c ${MOD}_tree.h
 ${MOD}_tree.h: .NOMETA
 ${MOD}_tree.c ${MOD}_tree.h: ${MOD}_tree.def ${EXTRAMIBDEFS}
-	cat ${.ALLSRC} | gensnmptree -p ${MOD}_
+	cat ${.ALLSRC} | gensnmptree -f ${GENSNMPTREEFLAGS} -p ${MOD}_
 
 .if defined(DEFS)
 FILESGROUPS+=	DEFS

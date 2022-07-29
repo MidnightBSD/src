@@ -2,6 +2,8 @@
  * Generic driver definitions and exported functions for the Advanced
  * Systems Inc. Second Generation SCSI controllers
  * 
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1998, 1999, 2000 Justin Gibbs.
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  * SUCH DAMAGE.
  * All rights reserved.
  *
- * $FreeBSD: stable/11/sys/dev/advansys/adwvar.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _ADWVAR_H_

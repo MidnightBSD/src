@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/export.h 335435 2018-06-20 06:59:39Z hselasky $
+ * $FreeBSD$
  */
 #ifndef	_LINUX_EXPORT_H
 #define	_LINUX_EXPORT_H

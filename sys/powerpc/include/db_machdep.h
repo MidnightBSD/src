@@ -25,7 +25,7 @@
  *
  *	$OpenBSD: db_machdep.h,v 1.2 1997/03/21 00:48:48 niklas Exp $
  *	$NetBSD: db_machdep.h,v 1.4.22.1 2000/08/05 11:10:43 wiz Exp $
- * $FreeBSD: stable/11/sys/powerpc/include/db_machdep.h 276652 2015-01-04 01:45:26Z jhibbits $
+ * $FreeBSD$
  */
 
 /*
@@ -39,8 +39,6 @@
 
 #define	DB_ELF_SYMBOLS
 #define	DB_ELFSIZE	__ELF_WORD_SIZE
-
-#define BYTE_MSF        (1)
 
 typedef	vm_offset_t	db_addr_t;	/* address - unsigned */
 typedef	intptr_t	db_expr_t;	/* expression - signed */
@@ -87,7 +85,8 @@ typedef	intptr_t	db_expr_t;	/* expression - signed */
 #define	inst_load(ins)		0
 #define	inst_store(ins)		0
 
-#define	DB_SMALL_VALUE_MAX	(KERNBASE-1)
-#define	DB_SMALL_VALUE_MIN	(-0x40001)
+#ifdef __powerpc64__
+#define DB_STOFFS(offs)		((offs) & ~DMAP_BASE_ADDRESS)
+#endif
 
 #endif	/* _POWERPC_DB_MACHDEP_H_ */

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/10/tools/tools/vt/fontcvt/terminus.sh 269041 2014-07-24 01:35:41Z emaste $
+# $FreeBSD$
 
 for i in 6:12 8:14 8:16 10:18 10:20 11:22 12:24 14:28 16:32
 do

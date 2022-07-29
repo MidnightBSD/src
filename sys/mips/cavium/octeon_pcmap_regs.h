@@ -1,4 +1,6 @@
 /***********************license start***************
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  *  Copyright (c) 2003-2008 Cavium Networks (support@cavium.com). All rights
  *  reserved.
  *
@@ -41,7 +43,7 @@
  *    California, Berkeley and its contributors."
  */
 
-/* $FreeBSD: stable/11/sys/mips/cavium/octeon_pcmap_regs.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 #ifndef __OCTEON_PCMAP_REGS_H__
 #define __OCTEON_PCMAP_REGS_H__

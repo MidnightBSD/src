@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/uboot/lib/Makefile 332131 2018-04-06 19:01:08Z kevans $
+# $FreeBSD$
 
 .include <bsd.init.mk>
 
@@ -9,6 +9,8 @@ WARNS?=		2
 
 SRCS=	console.c copy.c devicename.c elf_freebsd.c glue.c
 SRCS+=	module.c net.c reboot.c time.c
+
+CFLAGS.glue.c+=	-DHAVE_MEMCPY -I${SRCTOP}/sys/contrib/zlib
 
 .if ${LOADER_DISK_SUPPORT:Uyes} == "yes"
 SRCS+= disk.c

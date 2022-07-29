@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/tools/debugscripts/kld_deb.py 291041 2015-11-19 00:01:52Z rodrigc $
+# $FreeBSD$
 
 from __future__ import print_function
 import sys

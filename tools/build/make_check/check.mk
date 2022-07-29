@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tools/build/make_check/check.mk 236340 2012-05-30 22:27:34Z obrien $
+# $FreeBSD$
 
 all:
 	${MK} ${MK_ARG}

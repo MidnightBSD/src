@@ -26,7 +26,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/arm/aeabi/aeabi_asm_double.S 288373 2015-09-29 16:09:58Z kib $");
+__FBSDID("$FreeBSD$");
 
 #define	PCR_Z	(1 << 30)
 #define	PCR_C	(1 << 29)

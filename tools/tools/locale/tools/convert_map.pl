@@ -1,6 +1,6 @@
 #! /usr/local/bin/perl
 #
-# $FreeBSD: stable/11/tools/tools/locale/tools/convert_map.pl 298116 2016-04-16 17:36:02Z bapt $
+# $FreeBSD$
 #
 # This file and its contents are supplied under the terms of the
 # Common Development and Distribution License ("CDDL"), version 1.0.
@@ -87,7 +87,7 @@ sub load_utf8_cm
 {
     my $file = shift;
 
-    open(UTF8, "$file") || die "open";
+    open(UTF8, "$file") || die "$!: open: $file";
 
     while (<UTF8>) {
 	next if (/^#/);
@@ -158,7 +158,8 @@ $mf = shift(@ARGV);
 $codeset = shift(@ARGV);
 my $max_mb;
 
-load_utf8_cm("etc/final-maps/map.UTF-8");
+my $etcdir = (exists $ENV{'ETCDIR'}) ? $ENV{'ETCDIR'} : "etc";
+load_utf8_cm("${etcdir}/final-maps/map.UTF-8");
 load_map($mf);
 
 

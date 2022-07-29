@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/limits/limits.c 328502 2018-01-28 00:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <stdio.h>

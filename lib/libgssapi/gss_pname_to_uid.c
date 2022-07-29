@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
  * Developed with Red Inc: Alfred Perlstein <alfred@freebsd.org>
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: stable/11/lib/libgssapi/gss_pname_to_uid.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 #include <unistd.h>
 #include <gssapi/gssapi.h>
@@ -53,7 +55,7 @@ gss_pname_to_uid(OM_uint32 *minor_status, const gss_name_t pname,
 
 	if (m->gm_pname_to_uid == NULL)
 		return (GSS_S_UNAVAILABLE);
-    
+
 	major_status = _gss_find_mn(minor_status, name, mech, &mn);
 	if (major_status != GSS_S_COMPLETE) {
 		_gss_mg_error(m, major_status, *minor_status);

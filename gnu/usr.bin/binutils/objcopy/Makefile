@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/gnu/usr.bin/binutils/objcopy/Makefile 270168 2014-08-19 15:04:32Z bdrewery $
+# $FreeBSD$
 
 .include "../Makefile.inc0"
 
@@ -7,11 +7,11 @@
 PROG=	objcopy
 SRCS=	objcopy.c not-strip.c
 CFLAGS+= -D_GNU_SOURCE
-CFLAGS+= -I${.CURDIR}/${RELTOP}/libbinutils
+CFLAGS+= -I${.CURDIR}/${GNURELTOP}/libbinutils
 CFLAGS+= -I${SRCDIR}/binutils -I${SRCDIR}/bfd
-DPADD=	${RELTOP}/libbinutils/libbinutils.a
-DPADD+=	${RELTOP}/libbfd/libbfd.a
-DPADD+=	${RELTOP}/libiberty/libiberty.a
+DPADD=	${GNURELTOP}/libbinutils/libbinutils${PIE_SUFFIX}.a
+DPADD+=	${GNURELTOP}/libbfd/libbfd${PIE_SUFFIX}.a
+DPADD+=	${GNURELTOP}/libiberty/libiberty${PIE_SUFFIX}.a
 LDADD=	${DPADD}
 
 .include <bsd.prog.mk>

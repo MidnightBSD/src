@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/evergreend.h 258780 2013-11-30 22:17:27Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #ifndef EVERGREEND_H
 #define EVERGREEND_H

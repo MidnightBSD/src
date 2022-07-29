@@ -1,10 +1,10 @@
-.include <src.opts.mk>
+# $FreeBSD$
+
 .include "${.CURDIR:H}/config.mk"
 
 SRCDIR=	${NCURSES_DIR}/panel
 
-LIB=	panelw
-SHLIB_MAJOR=	6
+LIB=	panel${LIB_SUFFIX}
 
 .PATH: ${SRCDIR}
 SRCS=	\
@@ -29,7 +29,10 @@ CLEANFILES=	ncurses_def.h
 
 CFLAGS+=	-I${SRCDIR}
 
-LIBADD+=	ncursesw
+LIBADD+=	ncurses${LIB_SUFFIX}
+
+.if defined(ENABLE_WIDEC)
+INCS=	panel.h
 
 # generate MAN
 .PATH: ${NCURSES_DIR}/man
@@ -53,19 +56,10 @@ MLINKS=	panel.3 bottom_panel.3 \
 	panel.3 show_panel.3 \
 	panel.3 top_panel.3 \
 	panel.3 update_panels.3
-
-# backward compat
-.if ${MK_INSTALLLIB} != "no"
-SYMLINKS+=	libpanelw.a ${LIBDIR}/libpanel.a
+.else
+MAN=
 .endif
-.if !defined(NO_PIC)
-SYMLINKS+=	libpanelw.so ${LIBDIR}/libpanel.so
-.endif
-.if ${MK_PROFILE} != "no"
-SYMLINKS+=	libpanelw_p.a ${LIBDIR}/libpanel_p.a
-.endif
-
-INCS=	panel.h
+	
 .include <bsd.lib.mk>
 
 # Keep the .SUFFIXES line after the include of bsd.lib.mk

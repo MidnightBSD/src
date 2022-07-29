@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/11/usr.sbin/fmtree/extern.h 124389 2004-01-11 19:38:48Z phk $
+ * $FreeBSD$
  */
 extern uint32_t crc_total;
 

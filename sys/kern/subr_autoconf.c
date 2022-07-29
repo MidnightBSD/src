@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -14,7 +16,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -35,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/subr_autoconf.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 
@@ -136,6 +138,7 @@ run_interrupt_driven_config_hooks()
 	while (next_to_notify != NULL) {
 		hook_entry = next_to_notify;
 		next_to_notify = TAILQ_NEXT(hook_entry, ich_links);
+		hook_entry->ich_state = ICHS_RUNNING;
 		mtx_unlock(&intr_config_hook_lock);
 		(*hook_entry->ich_func)(hook_entry->ich_arg);
 		mtx_lock(&intr_config_hook_lock);
@@ -153,6 +156,7 @@ boot_run_interrupt_driven_config_hooks(void *dummy)
 	run_interrupt_driven_config_hooks();
 
 	/* Block boot processing until all hooks are disestablished. */
+	TSWAIT("config hooks");
 	mtx_lock(&intr_config_hook_lock);
 	warned = 0;
 	while (!TAILQ_EMPTY(&intr_config_hook_list)) {
@@ -166,6 +170,7 @@ boot_run_interrupt_driven_config_hooks(void *dummy)
 		}
 	}
 	mtx_unlock(&intr_config_hook_lock);
+	TSUNWAIT("config hooks");
 }
 
 SYSINIT(intr_config_hooks, SI_SUB_INT_CONFIG_HOOKS, SI_ORDER_FIRST,
@@ -181,6 +186,7 @@ config_intrhook_establish(struct intr_config_hook *hook)
 {
 	struct intr_config_hook *hook_entry;
 
+	TSHOLD("config hooks");
 	mtx_lock(&intr_config_hook_lock);
 	TAILQ_FOREACH(hook_entry, &intr_config_hook_list, ich_links)
 		if (hook_entry == hook)
@@ -194,6 +200,7 @@ config_intrhook_establish(struct intr_config_hook *hook)
 	TAILQ_INSERT_TAIL(&intr_config_hook_list, hook, ich_links);
 	if (next_to_notify == NULL)
 		next_to_notify = hook;
+	hook->ich_state = ICHS_QUEUED;
 	mtx_unlock(&intr_config_hook_lock);
 	if (cold == 0)
 		/*
@@ -221,12 +228,11 @@ config_intrhook_oneshot(ich_func_t func, void *arg)
 	config_intrhook_establish(&ohook->och_hook);
 }
 
-void
-config_intrhook_disestablish(struct intr_config_hook *hook)
+static void
+config_intrhook_disestablish_locked(struct intr_config_hook *hook)
 {
 	struct intr_config_hook *hook_entry;
 
-	mtx_lock(&intr_config_hook_lock);
 	TAILQ_FOREACH(hook_entry, &intr_config_hook_list, ich_links)
 		if (hook_entry == hook)
 			break;
@@ -237,10 +243,54 @@ config_intrhook_disestablish(struct intr_config_hook *hook)
 	if (next_to_notify == hook)
 		next_to_notify = TAILQ_NEXT(hook, ich_links);
 	TAILQ_REMOVE(&intr_config_hook_list, hook, ich_links);
+	TSRELEASE("config hooks");
 
 	/* Wakeup anyone watching the list */
+	hook->ich_state = ICHS_DONE;
 	wakeup(&intr_config_hook_list);
+}
+
+void
+config_intrhook_disestablish(struct intr_config_hook *hook)
+{
+	mtx_lock(&intr_config_hook_lock);
+	config_intrhook_disestablish_locked(hook);
 	mtx_unlock(&intr_config_hook_lock);
+}
+
+int
+config_intrhook_drain(struct intr_config_hook *hook)
+{
+	mtx_lock(&intr_config_hook_lock);
+
+	/*
+	 * The config hook has completed, so just return.
+	 */
+	if (hook->ich_state == ICHS_DONE) {
+		mtx_unlock(&intr_config_hook_lock);
+		return (ICHS_DONE);
+	}
+
+	/*
+	 * The config hook hasn't started running, just call disestablish.
+	 */
+	if (hook->ich_state == ICHS_QUEUED) {
+		config_intrhook_disestablish_locked(hook);
+		mtx_unlock(&intr_config_hook_lock);
+		return (ICHS_QUEUED);
+	}
+
+	/*
+	 * The config hook is running, so wait for it to complete and return.
+	 */
+	while (hook->ich_state != ICHS_DONE) {
+		if (msleep(&intr_config_hook_list, &intr_config_hook_lock,
+		    0, "confhd", hz) == EWOULDBLOCK) {
+			// XXX do I whine?
+		}
+	}
+	mtx_unlock(&intr_config_hook_lock);
+	return (ICHS_RUNNING);
 }
 
 #ifdef DDB

@@ -25,16 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/setfacl/mask.c 204819 2010-03-07 07:59:05Z joel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/acl.h>
 #include <sys/stat.h>
 
 #include <err.h>
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "setfacl.h"
 
@@ -61,7 +58,7 @@ set_acl_mask(acl_t *prev_acl, const char *filename)
 	if (acl == NULL)
 		err(1, "%s: acl_dup() failed", filename);
 
-	if (n_flag == 0) {
+	if (!n_flag) {
 		/*
 		 * If no mask entry is specified and the -n option is not
 		 * specified, then the permissions of the resulting ACL mask

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/ypserv/common/yplib_host.h 287129 2015-08-25 15:27:32Z araujo $
+ * $FreeBSD$
  */
 
 #ifndef _YPLIB_HOST_H_

@@ -26,31 +26,26 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/mkimg/bsd.c 329059 2018-02-09 09:15:43Z manu $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/errno.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
-#include <sys/disklabel.h>
+#include <bsd.h>
 
 #include "endian.h"
 #include "image.h"
 #include "mkimg.h"
 #include "scheme.h"
 
-#ifndef FS_NANDFS
-#define	FS_NANDFS	30
-#endif
-
 static struct mkimg_alias bsd_aliases[] = {
-    {	ALIAS_MIDNIGHTBSD_NANDFS, ALIAS_INT2TYPE(FS_NANDFS) },
-    {	ALIAS_MIDNIGHTBSD_SWAP, ALIAS_INT2TYPE(FS_SWAP) },
-    {	ALIAS_MIDNIGHTBSD_UFS, ALIAS_INT2TYPE(FS_BSDFFS) },
-    {	ALIAS_MIDNIGHTBSD_VINUM, ALIAS_INT2TYPE(FS_VINUM) },
-    {	ALIAS_MIDNIGHTBSD_ZFS, ALIAS_INT2TYPE(FS_ZFS) },
+    {	ALIAS_FREEBSD_NANDFS, ALIAS_INT2TYPE(FS_NANDFS) },
+    {	ALIAS_FREEBSD_SWAP, ALIAS_INT2TYPE(FS_SWAP) },
+    {	ALIAS_FREEBSD_UFS, ALIAS_INT2TYPE(FS_BSDFFS) },
+    {	ALIAS_FREEBSD_VINUM, ALIAS_INT2TYPE(FS_VINUM) },
+    {	ALIAS_FREEBSD_ZFS, ALIAS_INT2TYPE(FS_ZFS) },
     {	ALIAS_NONE, 0 }
 };
 
@@ -59,7 +54,7 @@ bsd_metadata(u_int where, lba_t blk)
 {
 
 	if (where == SCHEME_META_IMG_START)
-		blk += BBSIZE / secsz;
+		blk += BSD_BOOTBLOCK_SIZE / secsz;
 	else if (where == SCHEME_META_IMG_END)
 		blk = round_cylinder(blk);
 	else
@@ -77,21 +72,21 @@ bsd_write(lba_t imgsz, void *bootcode)
 	int bsdparts, error, n;
 	uint16_t checksum;
 
-	buf = malloc(BBSIZE);
+	buf = malloc(BSD_BOOTBLOCK_SIZE);
 	if (buf == NULL)
 		return (ENOMEM);
 	if (bootcode != NULL) {
-		memcpy(buf, bootcode, BBSIZE);
+		memcpy(buf, bootcode, BSD_BOOTBLOCK_SIZE);
 		memset(buf + secsz, 0, sizeof(struct disklabel));
 	} else
-		memset(buf, 0, BBSIZE);
+		memset(buf, 0, BSD_BOOTBLOCK_SIZE);
 
 	bsdparts = nparts + 1;	/* Account for c partition */
-	if (bsdparts < MAXPARTITIONS)
-		bsdparts = MAXPARTITIONS;
+	if (bsdparts < BSD_NPARTS_MIN)
+		bsdparts = BSD_NPARTS_MIN;
 
 	d = (void *)(buf + secsz);
-	le32enc(&d->d_magic, DISKMAGIC);
+	le32enc(&d->d_magic, BSD_MAGIC);
 	le32enc(&d->d_secsize, secsz);
 	le32enc(&d->d_nsectors, nsecs);
 	le32enc(&d->d_ntracks, nheads);
@@ -99,14 +94,14 @@ bsd_write(lba_t imgsz, void *bootcode)
 	le32enc(&d->d_secpercyl, nsecs * nheads);
 	le32enc(&d->d_secperunit, imgsz);
 	le16enc(&d->d_rpm, 3600);
-	le32enc(&d->d_magic2, DISKMAGIC);
+	le32enc(&d->d_magic2, BSD_MAGIC);
 	le16enc(&d->d_npartitions, bsdparts);
-	le32enc(&d->d_bbsize, BBSIZE);
+	le32enc(&d->d_bbsize, BSD_BOOTBLOCK_SIZE);
 
-	dp = &d->d_partitions[RAW_PART];
+	dp = &d->d_partitions[BSD_PART_RAW];
 	le32enc(&dp->p_size, imgsz);
 	TAILQ_FOREACH(part, &partlist, link) {
-		n = part->index + ((part->index >= RAW_PART) ? 1 : 0);
+		n = part->index + ((part->index >= BSD_PART_RAW) ? 1 : 0);
 		dp = &d->d_partitions[n];
 		le32enc(&dp->p_size, part->size);
 		le32enc(&dp->p_offset, part->block);
@@ -122,7 +117,7 @@ bsd_write(lba_t imgsz, void *bootcode)
 		checksum ^= le16dec(p);
 	le16enc(&d->d_checksum, checksum);
 
-	error = image_write(0, buf, BBSIZE / secsz);
+	error = image_write(0, buf, BSD_BOOTBLOCK_SIZE / secsz);
 	free(buf);
 	return (error);
 }
@@ -133,8 +128,8 @@ static struct mkimg_scheme bsd_scheme = {
 	.aliases = bsd_aliases,
 	.metadata = bsd_metadata,
 	.write = bsd_write,
-	.nparts = 19,
-	.bootcode = BBSIZE,
+	.nparts = BSD_NPARTS_MAX - 1,
+	.bootcode = BSD_BOOTBLOCK_SIZE,
 	.maxsecsz = 512
 };
 

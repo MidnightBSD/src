@@ -12,7 +12,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -29,7 +29,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)showmount.8	8.3 (Berkeley) 3/29/95
-.\" $FreeBSD: stable/11/usr.bin/showmount/showmount.8 297207 2016-03-23 12:13:53Z trasz $
+.\" $FreeBSD$
 .\"
 .Dd March 20, 2016
 .Dt SHOWMOUNT 8
@@ -67,20 +67,20 @@ for a detailed description of the protocol.
 .Pp
 The following options are available:
 .Bl -tag -width indent
-.It Fl a
+.It Fl a , Fl -all
 List all mount points in the form:
 .Bd -ragged -offset indent -compact
 .Ar host : Ns Ar dirpath .
 .Ed
-.It Fl d
+.It Fl d , Fl -directories
 List directory paths of mount points instead of hosts.
-.It Fl E
+.It Fl E , Fl -exports-script
 Show the
 .Ar host Ns 's
 exports list in a script-friendly format.
 Client addresses and the header are not shown, and special
 characters are escaped.
-.It Fl e
+.It Fl e , Fl -exports
 Show the
 .Ar host Ns 's
 exports list.

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/iicbus/ds1307reg.h 331496 2018-03-24 20:40:16Z ian $
+ * $FreeBSD$
  */
 
 /*

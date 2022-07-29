@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/i386/boot0/Makefile 329183 2018-02-12 20:51:28Z kevans $
+# $FreeBSD$
 
 PROG?=	boot0
 STRIP=

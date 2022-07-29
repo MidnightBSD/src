@@ -16,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libopenbsd/ohash.c 269162 2014-07-27 22:54:13Z bapt $");
+__FBSDID("$FreeBSD$");
 
 #include <stddef.h>
 #include <stdint.h>

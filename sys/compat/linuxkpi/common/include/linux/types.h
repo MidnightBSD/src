@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/types.h 346392 2019-04-19 15:46:08Z bz $
+ * $FreeBSD$
  */
 #ifndef	_LINUX_TYPES_H_
 #define	_LINUX_TYPES_H_
@@ -52,6 +52,10 @@ typedef uint32_t __le32;
 typedef uint32_t __be32;
 typedef uint64_t __le64;
 typedef uint64_t __be64;
+
+typedef uint16_t __aligned_u16 __aligned(sizeof(uint16_t));
+typedef uint32_t __aligned_u32 __aligned(sizeof(uint32_t));
+typedef uint64_t __aligned_u64 __aligned(sizeof(uint64_t));
 
 typedef unsigned short ushort;
 typedef unsigned int    uint;

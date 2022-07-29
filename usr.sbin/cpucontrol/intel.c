@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006, 2008 Stanislav Sedov <stas@FreeBSD.org>.
  * All rights reserved.
  *
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/cpucontrol/intel.c 245491 2013-01-16 05:00:51Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
 #include <stdio.h>
@@ -75,26 +76,27 @@ intel_probe(int fd)
 }
 
 void
-intel_update(const char *dev, const char *path)
+intel_update(const struct ucode_update_params *params)
 {
-	int fd, devfd;
-	struct stat st;
-	uint32_t *fw_image;
+	int devfd;
+	const char *dev, *path;
+	const uint32_t *fw_image;
 	int have_ext_table;
 	uint32_t sum;
 	unsigned int i;
 	size_t payload_size;
-	intel_fw_header_t *fw_header;
-	intel_cpu_signature_t *ext_table;
-	intel_ext_header_t *ext_header;
-	uint32_t signature, flags;
+	const intel_fw_header_t *fw_header;
+	const intel_cpu_signature_t *ext_table;
+	const intel_ext_header_t *ext_header;
+	uint32_t sig, signature, flags;
 	int32_t revision;
 	ssize_t ext_size;
 	size_t ext_table_size;
-	void *fw_data;
+	const void *fw_data;
 	size_t data_size, total_size;
 	cpuctl_msr_args_t msrargs = {
-		.msr = MSR_IA32_PLATFORM_ID,
+		.msr = MSR_BIOS_SIGN,
+		.data = 0,
 	};
 	cpuctl_cpuid_args_t idargs = {
 		.level  = 1,	/* Signature. */
@@ -102,17 +104,21 @@ intel_update(const char *dev, const char *path)
 	cpuctl_update_args_t args;
 	int error;
 
+	dev = params->dev_path;
+	path = params->fw_path;
+	devfd = params->devfd;
+	fw_image = params->fwimage;
+
 	assert(path);
 	assert(dev);
 
-	fd = -1;
-	fw_image = MAP_FAILED;
 	ext_table = NULL;
 	ext_header = NULL;
-	devfd = open(dev, O_RDWR);
-	if (devfd < 0) {
-		WARN(0, "could not open %s for writing", dev);
-		return;
+
+	error = ioctl(devfd, CPUCTL_WRMSR, &msrargs);
+	if (error < 0) {
+		WARN(0, "ioctl(%s)", dev);
+		goto fail;
 	}
 	error = ioctl(devfd, CPUCTL_CPUID, &idargs);
 	if (error < 0) {
@@ -120,6 +126,7 @@ intel_update(const char *dev, const char *path)
 		goto fail;
 	}
 	signature = idargs.data[0];
+	msrargs.msr = MSR_IA32_PLATFORM_ID;
 	error = ioctl(devfd, CPUCTL_RDMSR, &msrargs);
 	if (error < 0) {
 		WARN(0, "ioctl(%s)", dev);
@@ -143,31 +150,12 @@ intel_update(const char *dev, const char *path)
 	/*
 	 * Open firmware image.
 	 */
-	fd = open(path, O_RDONLY, 0);
-	if (fd < 0) {
-		WARN(0, "open(%s)", path);
-		return;
-	}
-	error = fstat(fd, &st);
-	if (error != 0) {
-		WARN(0, "fstat(%s)", path);
-		goto fail;
-	}
-	if (st.st_size < 0 || (unsigned)st.st_size < sizeof(*fw_header)) {
+	if (params->fwsize < sizeof(*fw_header)) {
 		WARNX(2, "file too short: %s", path);
 		goto fail;
 	}
 
-	/*
-	 * mmap the whole image.
-	 */
-	fw_image = (uint32_t *)mmap(NULL, st.st_size, PROT_READ,
-	    MAP_PRIVATE, fd, 0);
-	if  (fw_image == MAP_FAILED) {
-		WARN(0, "mmap(%s)", path);
-		goto fail;
-	}
-	fw_header = (intel_fw_header_t *)fw_image;
+	fw_header = (const intel_fw_header_t *)fw_image;
 	if (fw_header->header_version != INTEL_HEADER_VERSION ||
 	    fw_header->loader_revision != INTEL_LOADER_REVISION) {
 		WARNX(2, "%s is not a valid intel firmware: version mismatch",
@@ -185,7 +173,7 @@ intel_update(const char *dev, const char *path)
 		total_size = data_size + sizeof(*fw_header);
 	else
 		total_size = fw_header->total_size;
-	if (total_size > (unsigned)st.st_size || st.st_size < 0) {
+	if (total_size > params->fwsize) {
 		WARNX(2, "file too short: %s", path);
 		goto fail;
 	}
@@ -196,7 +184,7 @@ intel_update(const char *dev, const char *path)
 	 */
 	sum = 0;
 	for (i = 0; i < (payload_size / sizeof(uint32_t)); i++)
-		sum += *((uint32_t *)fw_image + i);
+		sum += *((const uint32_t *)fw_image + i);
 	if (sum != 0) {
 		WARNX(2, "%s: update data checksum invalid", path);
 		goto fail;
@@ -209,9 +197,9 @@ intel_update(const char *dev, const char *path)
 	have_ext_table = 0;
 
 	if (ext_size > (signed)sizeof(*ext_header)) {
-		ext_header =
-		    (intel_ext_header_t *)((char *)fw_image + payload_size);
-		ext_table = (intel_cpu_signature_t *)(ext_header + 1);
+		ext_header = (const intel_ext_header_t *)
+		    ((const char *)fw_image + payload_size);
+		ext_table = (const intel_cpu_signature_t *)(ext_header + 1);
 
 		/*
 		 * Check the extended table size.
@@ -228,9 +216,10 @@ intel_update(const char *dev, const char *path)
 		 */
 		sum = 0;
 		for (i = 0; i < (ext_table_size / sizeof(uint32_t)); i++)
-			sum += *((uint32_t *)ext_header + i);
+			sum += *((const uint32_t *)ext_header + i);
 		if (sum != 0) {
-			WARNX(2, "%s: extended signature table checksum invalid",
+			WARNX(2,
+			    "%s: extended signature table checksum invalid",
 			    path);
 			goto no_table;
 		}
@@ -245,44 +234,37 @@ no_table:
 	 */
 	if (signature == fw_header->cpu_signature &&
 	    (flags & fw_header->cpu_flags) != 0)
-			goto matched;
+		goto matched;
 	else if (have_ext_table != 0) {
 		for (i = 0; i < ext_header->sig_count; i++) {
-			uint32_t sig = ext_table[i].cpu_signature;
+			sig = ext_table[i].cpu_signature;
 			if (signature == sig &&
 			    (flags & ext_table[i].cpu_flags) != 0)
 				goto matched;
 		}
-	} else
-		goto fail;
+	}
+	goto fail;
 
 matched:
 	if (revision >= fw_header->revision) {
 		WARNX(1, "skipping %s of rev %#x: up to date",
 		    path, fw_header->revision);
-		return;
+		goto fail;
 	}
 	fprintf(stderr, "%s: updating cpu %s from rev %#x to rev %#x... ",
-			path, dev, revision, fw_header->revision);
-	args.data = fw_data;
+	    path, dev, revision, fw_header->revision);
+	args.data = __DECONST(void *, fw_data);
 	args.size = data_size;
 	error = ioctl(devfd, CPUCTL_UPDATE, &args);
 	if (error < 0) {
-               error = errno;
+		error = errno;
 		fprintf(stderr, "failed.\n");
-               errno = error;
+		errno = error;
 		WARN(0, "ioctl()");
 		goto fail;
 	}
 	fprintf(stderr, "done.\n");
 
 fail:
-	if (fw_image != MAP_FAILED)
-		if (munmap(fw_image, st.st_size) != 0)
-			warn("munmap(%s)", path);
-	if (devfd >= 0)
-		close(devfd);
-	if (fd >= 0)
-		close(fd);
 	return;
 }

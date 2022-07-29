@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/11/usr.bin/bc/tty.c 291155 2015-11-22 02:43:14Z pfg $	*/
+/*	$FreeBSD$	*/
 /*      $OpenBSD: tty.c,v 1.3 2015/09/05 09:49:24 jsg Exp $	*/
 
 /*

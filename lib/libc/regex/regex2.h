@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992, 1993, 1994 Henry Spencer.
  * Copyright (c) 1992, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -14,7 +16,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)regex2.h	8.4 (Berkeley) 3/20/94
- * $FreeBSD: stable/11/lib/libc/regex/regex2.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*
@@ -102,6 +104,10 @@ typedef unsigned long sopno;
 #define	O_CH	(18L<<OPSHIFT)	/* end choice	back to OOR1		*/
 #define	OBOW	(19L<<OPSHIFT)	/* begin word	-			*/
 #define	OEOW	(20L<<OPSHIFT)	/* end word	-			*/
+#define	OBOS	(21L<<OPSHIFT)	/* begin subj.  -			*/
+#define	OEOS	(22L<<OPSHIFT)	/* end subj.	-			*/
+#define	OWBND	(23L<<OPSHIFT)	/* word bound	-			*/
+#define	ONWBND	(24L<<OPSHIFT)	/* not bound	-			*/
 
 /*
  * Structures for [] character-set representation.

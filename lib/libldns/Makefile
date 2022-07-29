@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libldns/Makefile 313538 2017-02-10 07:32:40Z ngie $
+# $FreeBSD$
 
 # Vendor sources and generated files
 LDNSDIR = ${SRCTOP}/contrib/ldns

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/build/stdlib.h 282994 2015-05-15 22:19:35Z dim $
+ * $FreeBSD$
  */
 
 #ifndef _LEGACY_STDLIB_H_

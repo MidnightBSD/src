@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/net/ip.h 335363 2018-06-19 11:06:36Z hselasky $
+ * $FreeBSD$
  */
 #ifndef _LINUX_NET_IP_H_
 #define	_LINUX_NET_IP_H_

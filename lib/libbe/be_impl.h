@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libbe/be_impl.h 357667 2020-02-07 21:57:27Z kevans $
+ * $FreeBSD$
  */
 
 #ifndef _LIBBE_IMPL_H

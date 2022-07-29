@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Doug Rabson
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/11/lib/libc/gen/tls.c 331722 2018-03-29 02:50:57Z eadler $
+ *	$FreeBSD$
  */
 
 /*
@@ -72,7 +74,7 @@ void __libc_free_tls(void *tls, size_t tcbsize, size_t tcbalign);
 #if defined(__amd64__)
 #define TLS_TCB_ALIGN 16
 #elif defined(__aarch64__) || defined(__arm__) || defined(__i386__) || \
-    defined(__mips__) || defined(__powerpc__) || defined(__riscv__) || \
+    defined(__mips__) || defined(__powerpc__) || defined(__riscv) || \
     defined(__sparc64__)
 #define TLS_TCB_ALIGN sizeof(void *)
 #else
@@ -80,7 +82,7 @@ void __libc_free_tls(void *tls, size_t tcbsize, size_t tcbalign);
 #endif
 
 #if defined(__aarch64__) || defined(__arm__) || defined(__mips__) || \
-    defined(__powerpc__) || defined(__riscv__)
+    defined(__powerpc__) || defined(__riscv)
 #define TLS_VARIANT_I
 #endif
 #if defined(__i386__) || defined(__amd64__) || defined(__sparc64__)
@@ -241,9 +243,9 @@ __libc_free_tls(void *tcb, size_t tcbsize, size_t tcbalign __unused)
  *
  * where:
  *  extra_size is tcbsize - TLS_TCB_SIZE
- *  post_size is used to adjust TCB to TLS aligment for first version of TLS
+ *  post_size is used to adjust TCB to TLS alignment for first version of TLS
  *            layout and is always 0 for second version.
- *  pre_size  is used to adjust TCB aligment for first version and to adjust
+ *  pre_size  is used to adjust TCB alignment for first version and to adjust
  *            TLS alignment for second version.
  *
  */

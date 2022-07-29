@@ -6,7 +6,7 @@
 # requires the cross-build world to be built the same.
 #   -adrian
 
-# $FreeBSD: stable/11/tools/bsdbox/Makefile.telnetd 264156 2014-04-05 17:54:50Z imp $
+# $FreeBSD$
 
 CRUNCH_PROGS_libexec+=	telnetd
 CRUNCH_PROGS_usr.bin+=	telnet

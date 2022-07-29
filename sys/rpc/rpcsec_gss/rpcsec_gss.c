@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2008 Doug Rabson
  * All rights reserved.
  *
@@ -63,7 +65,7 @@
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/rpc/rpcsec_gss/rpcsec_gss.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -96,11 +98,11 @@ static void	rpc_gss_destroy(AUTH *);
 static void	rpc_gss_destroy_context(AUTH *, bool_t);
 
 static struct auth_ops rpc_gss_ops = {
-	rpc_gss_nextverf,
-	rpc_gss_marshal,
-	rpc_gss_validate,
-	rpc_gss_refresh,
-	rpc_gss_destroy,
+	.ah_nextverf =	rpc_gss_nextverf,
+	.ah_marshal =	rpc_gss_marshal,
+	.ah_validate =	rpc_gss_validate,
+	.ah_refresh =	rpc_gss_refresh,
+	.ah_destroy =	rpc_gss_destroy,
 };
 
 enum rpcsec_gss_state {

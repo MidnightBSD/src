@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/11/sys/dev/drm2/drm_pciids.h 317609 2017-04-30 18:39:31Z markj $
+ * $FreeBSD$
  */
 
 /*

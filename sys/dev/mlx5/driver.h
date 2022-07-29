@@ -22,11 +22,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/driver.h 355653 2019-12-12 13:48:23Z kib $
+ * $FreeBSD$
  */
 
 #ifndef MLX5_DRIVER_H
 #define MLX5_DRIVER_H
+
+#include "opt_ratelimit.h"
 
 #include <linux/kernel.h>
 #include <linux/completion.h>
@@ -39,6 +41,7 @@
 #include <linux/vmalloc.h>
 #include <linux/radix-tree.h>
 #include <linux/idr.h>
+#include <linux/wait.h>
 
 #include <dev/mlx5/device.h>
 #include <dev/mlx5/doorbell.h>
@@ -143,6 +146,7 @@ enum {
 	MLX5_REG_PMPE		 = 0x5010,
 	MLX5_REG_PMAOS		 = 0x5012,
 	MLX5_REG_PPLM		 = 0x5023,
+	MLX5_REG_PDDR		 = 0x5031,
 	MLX5_REG_PBSR		 = 0x5038,
 	MLX5_REG_PCAM		 = 0x507f,
 	MLX5_REG_NODE_DESC	 = 0x6001,
@@ -515,14 +519,14 @@ struct mlx5_core_health {
 #define	MLX5_CQ_LINEAR_ARRAY_SIZE	1024
 
 struct mlx5_cq_linear_array_entry {
-	spinlock_t	lock;
 	struct mlx5_core_cq * volatile cq;
 };
 
 struct mlx5_cq_table {
 	/* protect radix tree
 	 */
-	spinlock_t		lock;
+	spinlock_t		writerlock;
+	atomic_t		writercount;
 	struct radix_tree_root	tree;
 	struct mlx5_cq_linear_array_entry linear_array[MLX5_CQ_LINEAR_ARRAY_SIZE];
 };
@@ -547,6 +551,23 @@ struct mlx5_mr_table {
 	spinlock_t		lock;
 	struct radix_tree_root	tree;
 };
+
+#ifdef RATELIMIT
+struct mlx5_rl_entry {
+	u32			rate;
+	u16			burst;
+	u16			index;
+	u32			refcount;
+};
+
+struct mlx5_rl_table {
+	struct mutex		rl_lock;
+	u16			max_size;
+	u32			max_rate;
+	u32			min_rate;
+	struct mlx5_rl_entry   *rl_entry;
+};
+#endif
 
 struct mlx5_pme_stats {
 	u64			status_counters[MLX5_MODULE_STATUS_NUM];
@@ -605,6 +626,9 @@ struct mlx5_priv {
 	struct list_head        ctx_list;
 	spinlock_t              ctx_lock;
 	unsigned long		pci_dev_data;
+#ifdef RATELIMIT
+	struct mlx5_rl_table	rl_table;
+#endif
 	struct mlx5_pme_stats pme_stats;
 
 	struct mlx5_eswitch	*eswitch;
@@ -924,11 +948,30 @@ void mlx5_cmd_use_events(struct mlx5_core_dev *dev);
 void mlx5_cmd_use_polling(struct mlx5_core_dev *dev);
 void mlx5_cmd_mbox_status(void *out, u8 *status, u32 *syndrome);
 int mlx5_core_get_caps(struct mlx5_core_dev *dev, enum mlx5_cap_type cap_type);
+
+struct mlx5_async_ctx {
+	struct mlx5_core_dev *dev;
+	atomic_t num_inflight;
+	struct wait_queue_head wait;
+};
+
+struct mlx5_async_work;
+
+typedef void (*mlx5_async_cbk_t)(int status, struct mlx5_async_work *context);
+
+struct mlx5_async_work {
+	struct mlx5_async_ctx *ctx;
+	mlx5_async_cbk_t user_callback;
+};
+
+void mlx5_cmd_init_async_ctx(struct mlx5_core_dev *dev,
+			     struct mlx5_async_ctx *ctx);
+void mlx5_cmd_cleanup_async_ctx(struct mlx5_async_ctx *ctx);
+int mlx5_cmd_exec_cb(struct mlx5_async_ctx *ctx, void *in, int in_size,
+		     void *out, int out_size, mlx5_async_cbk_t callback,
+		     struct mlx5_async_work *work);
 int mlx5_cmd_exec(struct mlx5_core_dev *dev, void *in, int in_size, void *out,
 		  int out_size);
-int mlx5_cmd_exec_cb(struct mlx5_core_dev *dev, void *in, int in_size,
-		     void *out, int out_size, mlx5_cmd_cbk_t callback,
-		     void *context);
 int mlx5_cmd_exec_polling(struct mlx5_core_dev *dev, void *in, int in_size,
 			  void *out, int out_size);
 int mlx5_cmd_alloc_uar(struct mlx5_core_dev *dev, u32 *uarn);
@@ -963,9 +1006,10 @@ void mlx5_init_mr_table(struct mlx5_core_dev *dev);
 void mlx5_cleanup_mr_table(struct mlx5_core_dev *dev);
 int mlx5_core_create_mkey_cb(struct mlx5_core_dev *dev,
 			     struct mlx5_core_mr *mkey,
-			     u32 *in, int inlen,
-			     u32 *out, int outlen,
-			     mlx5_cmd_cbk_t callback, void *context);
+			     struct mlx5_async_ctx *async_ctx, u32 *in,
+			     int inlen, u32 *out, int outlen,
+			     mlx5_async_cbk_t callback,
+			     struct mlx5_async_work *context);
 int mlx5_core_create_mkey(struct mlx5_core_dev *dev,
 			  struct mlx5_core_mr *mr,
 			  u32 *in, int inlen);
@@ -998,7 +1042,7 @@ void mlx5_unregister_debugfs(void);
 int mlx5_eq_init(struct mlx5_core_dev *dev);
 void mlx5_eq_cleanup(struct mlx5_core_dev *dev);
 void mlx5_fill_page_array(struct mlx5_buf *buf, __be64 *pas);
-void mlx5_cq_completion(struct mlx5_core_dev *dev, u32 cqn);
+void mlx5_cq_completion(struct mlx5_core_dev *dev, struct mlx5_eqe *eqe);
 void mlx5_rsc_event(struct mlx5_core_dev *dev, u32 rsn, int event_type);
 void mlx5_srq_event(struct mlx5_core_dev *dev, u32 srqn, int event_type);
 struct mlx5_core_srq *mlx5_core_get_srq(struct mlx5_core_dev *dev, u32 srqn);
@@ -1147,6 +1191,18 @@ static inline int mlx5_core_is_pf(struct mlx5_core_dev *dev)
 {
 	return !(dev->priv.pci_dev_data & MLX5_PCI_DEV_IS_VF);
 }
+#ifdef RATELIMIT
+int mlx5_init_rl_table(struct mlx5_core_dev *dev);
+void mlx5_cleanup_rl_table(struct mlx5_core_dev *dev);
+int mlx5_rl_add_rate(struct mlx5_core_dev *dev, u32 rate, u32 burst, u16 *index);
+void mlx5_rl_remove_rate(struct mlx5_core_dev *dev, u32 rate, u32 burst);
+bool mlx5_rl_is_in_range(const struct mlx5_core_dev *dev, u32 rate, u32 burst);
+
+static inline bool mlx5_rl_is_supported(struct mlx5_core_dev *dev)
+{
+	return !!(dev->priv.rl_table.max_size);
+}
+#endif
 
 void mlx5_disable_interrupts(struct mlx5_core_dev *);
 void mlx5_poll_interrupts(struct mlx5_core_dev *);

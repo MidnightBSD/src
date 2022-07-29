@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)unix.4	8.1 (Berkeley) 6/9/93
-.\" $FreeBSD: stable/11/share/man/man4/unix.4 313553 2017-02-10 15:03:54Z jilles $
+.\" $FreeBSD$
 .\"
-.Dd February 3, 2017
+.Dd August 3, 2020
 .Dt UNIX 4
 .Os
 .Sh NAME
@@ -195,7 +195,9 @@ The sending process could have exited and its process ID already been
 reused for a new process.
 .Sh SOCKET OPTIONS
 .Tn UNIX
-domain sockets support a number of socket options which can be set with
+domain sockets support a number of socket options for the options level
+.Dv SOL_LOCAL ,
+which can be set with
 .Xr setsockopt 2
 and tested with
 .Xr getsockopt 2 :
@@ -310,6 +312,7 @@ struct xucred {
   uid_t	cr_uid;			/* effective user id */
   short	cr_ngroups;		/* number of groups */
   gid_t	cr_groups[XU_NGROUPS];	/* groups */
+  pid_t	cr_pid;			/* process id of the sending process */
 };
 .Ed
 The
@@ -350,6 +353,7 @@ socket option.
 .Xr sendto 2 ,
 .Xr setsockopt 2 ,
 .Xr socket 2 ,
+.Xr CMSG_DATA 3 ,
 .Xr intro 4
 .Rs
 .%T "An Introductory 4.3 BSD Interprocess Communication Tutorial"

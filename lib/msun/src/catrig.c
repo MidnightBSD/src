@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Stephen Montgomery-Smith <stephen@FreeBSD.ORG>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/catrig.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <complex.h>
 #include <float.h>
@@ -298,7 +300,7 @@ casinh(double complex z)
 		 * C99 leaves it optional whether to raise invalid if one of
 		 * the arguments is not NaN, so we opt not to raise it.
 		 */
-		return (CMPLX(x + 0.0L + (y + 0), x + 0.0L + (y + 0)));
+		return (CMPLX(nan_mix(x, y), nan_mix(x, y)));
 	}
 
 	if (ax > RECIP_EPSILON || ay > RECIP_EPSILON) {
@@ -382,7 +384,7 @@ cacos(double complex z)
 		 * C99 leaves it optional whether to raise invalid if one of
 		 * the arguments is not NaN, so we opt not to raise it.
 		 */
-		return (CMPLX(x + 0.0L + (y + 0), x + 0.0L + (y + 0)));
+		return (CMPLX(nan_mix(x, y), nan_mix(x, y)));
 	}
 
 	if (ax > RECIP_EPSILON || ay > RECIP_EPSILON) {
@@ -599,7 +601,7 @@ catanh(double complex z)
 		 * C99 leaves it optional whether to raise invalid if one of
 		 * the arguments is not NaN, so we opt not to raise it.
 		 */
-		return (CMPLX(x + 0.0L + (y + 0), x + 0.0L + (y + 0)));
+		return (CMPLX(nan_mix(x, y), nan_mix(x, y)));
 	}
 
 	if (ax > RECIP_EPSILON || ay > RECIP_EPSILON)

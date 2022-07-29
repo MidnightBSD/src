@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/diskinfo/diskinfo.c 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 #include <stdbool.h>
@@ -407,9 +407,14 @@ speeddisk(int fd, off_t mediasize, u_int sectorsize)
 	int bulk, i;
 	off_t b0, b1, sectorcount, step;
 
+	/*
+	 * Drives smaller than 1MB produce negative sector numbers,
+	 * as do 2048 or fewer sectors.
+	 */
 	sectorcount = mediasize / sectorsize;
-	if (sectorcount <= 0)
-		return;		/* Can't test devices with no sectors */
+	if (mediasize < 1024 * 1024 || sectorcount < 2048)
+		return;
+
 
 	step = 1ULL << (flsll(sectorcount / (4 * 200)) - 1);
 	if (step > 16384)

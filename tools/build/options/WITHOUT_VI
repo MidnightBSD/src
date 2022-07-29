@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_VI 264903 2014-04-24 23:17:40Z imp $
+.\" $FreeBSD$
 Set to not build and install vi, view, ex and related programs.

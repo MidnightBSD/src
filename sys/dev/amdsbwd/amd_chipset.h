@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/amdsbwd/amd_chipset.h 335542 2018-06-22 09:25:24Z avg $
+ * $FreeBSD$
  */
 
 /*
@@ -53,7 +53,7 @@
  *     "KERNCZ" or "CZ")
  *
  * The register definitions are compatible within the classes and may be
- * incompatible accross them.
+ * incompatible across them.
  */
 
 /*
@@ -145,4 +145,6 @@
 #define	AMDFCH41_SMBUS_REVID		0x41
 #define	AMDCZ_SMBUS_DEVID		0x790b1022
 #define	AMDCZ49_SMBUS_REVID		0x49
+
+#define	HYGONCZ_SMBUS_DEVID		0x790b1d94
 

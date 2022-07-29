@@ -29,7 +29,7 @@
  *
  * Authors: Justin T. Gibbs     (Spectra Logic Corporation)
  *
- * $FreeBSD: stable/11/cddl/usr.sbin/zfsd/callout.h 301003 2016-05-30 19:32:56Z pfg $
+ * $FreeBSD$
  */
 
 /**

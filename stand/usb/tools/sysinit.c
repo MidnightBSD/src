@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/usb/tools/sysinit.c 246145 2013-01-31 11:00:57Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2013 Hans Petter Selasky. All rights reserved.
  *

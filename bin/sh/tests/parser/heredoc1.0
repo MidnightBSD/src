@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/parser/heredoc1.0 204836 2010-03-07 15:08:42Z jilles $
+# $FreeBSD$
 
 failures=0
 

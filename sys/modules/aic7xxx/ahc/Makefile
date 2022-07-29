@@ -1,18 +1,15 @@
 
-# $FreeBSD: stable/11/sys/modules/aic7xxx/ahc/Makefile 337478 2018-08-08 18:41:27Z bdrewery $
+# $FreeBSD$
 
 SYSDIR?=${SRCTOP}/sys
 .include "${SYSDIR}/conf/kern.opts.mk"
 
 .PATH:	${SYSDIR}/dev/aic7xxx
 KMOD=	ahc
-.if ${MK_EISA} != "no"
-SUBDIR+= ahc_eisa
-.endif
 SUBDIR+= ahc_isa ahc_pci
 
 GENSRCS= aic7xxx_seq.h aic7xxx_reg.h
-AHC_REG_PRETTY_PRINT=1
+# AHC_REG_PRETTY_PRINT=1
 REG_PRINT_OPT=
 .ifdef AHC_REG_PRETTY_PRINT
 GENSRCS+= aic7xxx_reg_print.c

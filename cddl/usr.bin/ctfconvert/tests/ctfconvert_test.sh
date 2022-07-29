@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/cddl/usr.bin/ctfconvert/tests/ctfconvert_test.sh 326289 2017-11-27 20:01:58Z asomers $
+# $FreeBSD$
 #
 
 usage_output='Usage: ctfconvert'

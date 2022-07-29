@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012-2014 Thomas Skibo <thomasskibo@yahoo.com>
  * All rights reserved.
  *
@@ -34,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/cadence/if_cgem.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -95,6 +97,12 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/cadence/if_cgem.c 331722 2018-03-29 02:50:
 
 #define CGEM_CKSUM_ASSIST	(CSUM_IP | CSUM_TCP | CSUM_UDP | \
 				 CSUM_TCP_IPV6 | CSUM_UDP_IPV6)
+
+static struct ofw_compat_data compat_data[] = {
+	{ "cadence,gem",	1 },
+	{ "cdns,macb",		1 },
+	{ NULL,			0 },
+};
 
 struct cgem_softc {
 	if_t			ifp;
@@ -1633,7 +1641,7 @@ cgem_probe(device_t dev)
 	if (!ofw_bus_status_okay(dev))
 		return (ENXIO);
 
-	if (!ofw_bus_is_compatible(dev, "cadence,gem"))
+	if (ofw_bus_search_compatible(dev, compat_data)->ocd_data == 0)
 		return (ENXIO);
 
 	device_set_desc(dev, "Cadence CGEM Gigabit Ethernet Interface");

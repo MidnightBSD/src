@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,7 +35,7 @@ static const char sccsid[] = "@(#)utilities.c	8.6 (Berkeley) 5/19/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/utilities.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -43,15 +45,11 @@ __FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/utilities.c 331722 2018-03-29 02:50:
 #include <ufs/ufs/dir.h>
 #include <ufs/ffs/fs.h>
 
-#include <err.h>
 #include <errno.h>
 #include <string.h>
-#include <ctype.h>
 #include <fstab.h>
 #include <paths.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 
 #include "fsck.h"
 

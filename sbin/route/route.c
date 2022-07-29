@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1983, 1989, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -40,7 +42,7 @@ static char sccsid[] = "@(#)route.c	8.6 (Berkeley) 4/28/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/route/route.c 340943 2018-11-26 11:08:38Z eugen $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -521,6 +523,7 @@ retry:
 			printf("done\n");
 		}
 	}
+	free(buf);
 	return (error);
 }
 
@@ -1439,6 +1442,7 @@ retry2:
 		rtm = (struct rt_msghdr *)(void *)next;
 		print_rtmsg(rtm, rtm->rtm_msglen);
 	}
+	free(buf);
 }
 
 static void
@@ -1481,9 +1485,20 @@ monitor(int argc, char *argv[])
 		interfaces();
 		exit(0);
 	}
+
+#ifdef SO_RERROR
+	n = 1;
+	if (setsockopt(s, SOL_SOCKET, SO_RERROR, &n, sizeof(n)) == -1)
+		warn("SO_RERROR");
+#endif
+
 	for (;;) {
 		time_t now;
-		n = read(s, msg, 2048);
+		n = read(s, msg, sizeof(msg));
+		if (n == -1) {
+			warn("read");
+			continue;
+		}
 		now = time(NULL);
 		(void)printf("\ngot message of size %d on %s", n, ctime(&now));
 		print_rtmsg((struct rt_msghdr *)(void *)msg, n);
@@ -1499,10 +1514,7 @@ rtmsg(int cmd, int flags, int fib)
 
 #define NEXTADDR(w, u)							\
 	if (rtm_addrs & (w)) {						\
-		l = (((struct sockaddr *)&(u))->sa_len == 0) ?		\
-		    sizeof(long) :					\
-		    1 + ((((struct sockaddr *)&(u))->sa_len - 1)	\
-			| (sizeof(long) - 1));				\
+		l = SA_SIZE(&(u));					\
 		memmove(cp, (char *)&(u), l);				\
 		cp += l;						\
 		if (verbose)						\
@@ -1568,7 +1580,8 @@ rtmsg(int cmd, int flags, int fib)
 		do {
 			l = read(s, (char *)&m_rtmsg, sizeof(m_rtmsg));
 		} while (l > 0 && stop_read == 0 &&
-		    (rtm.rtm_seq != rtm_seq || rtm.rtm_pid != pid));
+		    (rtm.rtm_type != RTM_GET || rtm.rtm_seq != rtm_seq ||
+			rtm.rtm_pid != pid));
 		if (stop_read != 0) {
 			warnx("read from routing socket timed out");
 			return (-1);
@@ -1710,10 +1723,13 @@ print_rtmsg(struct rt_msghdr *rtm, size_t msglen)
 		break;
 
 	default:
-		printf("pid: %ld, seq %d, errno %d, flags:",
-			(long)rtm->rtm_pid, rtm->rtm_seq, rtm->rtm_errno);
-		printb(rtm->rtm_flags, routeflags);
-		pmsg_common(rtm, msglen);
+		if (rtm->rtm_type <= RTM_RESOLVE) {
+			printf("pid: %ld, seq %d, errno %d, flags:",
+			    (long)rtm->rtm_pid, rtm->rtm_seq, rtm->rtm_errno);
+			printb(rtm->rtm_flags, routeflags);
+			pmsg_common(rtm, msglen);
+		} else
+			printf("type: %u, len: %zu\n", rtm->rtm_type, msglen);
 	}
 
 	return;

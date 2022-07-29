@@ -28,7 +28,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/11/usr.sbin/pw/pw.c 330449 2018-03-05 07:26:05Z eadler $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <err.h>
@@ -162,7 +162,8 @@ main(int argc, char *argv[])
 					PWF._altdir = PWF_ROOTDIR;
 				}
 				snprintf(conf.etcpath, sizeof(conf.etcpath),
-				    "%s%s", optarg, arg == 'R' ? "/etc" : "");
+				    "%s%s", optarg, arg == 'R' ?
+				    _PATH_PWD : "");
 			} else
 				break;
 		}

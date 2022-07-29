@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright 2010 Nexenta Systems, Inc.  All rights reserved.
  * Copyright 2015 John Marino <draco@marino.st>
  *
@@ -32,7 +32,7 @@
  * CHARMAP file handling for localedef.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/localedef/charmap.c 298878 2016-05-01 16:10:56Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/tree.h>
@@ -41,7 +41,6 @@ __FBSDID("$FreeBSD: stable/11/usr.bin/localedef/charmap.c 298878 2016-05-01 16:1
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
-#include <unistd.h>
 #include <stddef.h>
 #include <unistd.h>
 #include "localedef.h"

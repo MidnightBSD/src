@@ -1,7 +1,5 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Netflix, Inc.
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/efiio.h 318576 2017-05-20 16:12:44Z kib $
+ * $FreeBSD$
  */
 
 #ifndef	_SYS_EFIIO_H_

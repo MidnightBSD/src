@@ -1,6 +1,8 @@
 /*	$NetBSD: clnt_dg.c,v 1.4 2000/07/14 08:40:41 fvdl Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -36,7 +38,7 @@
 static char sccsid[] = "@(#)clnt_dg.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/rpc/clnt_dg.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Implements a connectionless client side RPC.
@@ -349,7 +351,6 @@ clnt_dg_call(
 	int retransmit_time;
 	int next_sendtime, starttime, rtt, time_waited, tv = 0;
 	struct sockaddr *sa;
-	socklen_t salen;
 	uint32_t xid = 0;
 	struct mbuf *mreq = NULL, *results;
 	struct cu_request *cr;
@@ -401,13 +402,10 @@ clnt_dg_call(
 		}
 		cu->cu_connected = 1;
 	}
-	if (cu->cu_connected) {
+	if (cu->cu_connected)
 		sa = NULL;
-		salen = 0;
-	} else {
+	else
 		sa = (struct sockaddr *)&cu->cu_raddr;
-		salen = cu->cu_rlen;
-	}
 	time_waited = 0;
 	retrans = 0;
 	if (ext && ext->rc_timers) {

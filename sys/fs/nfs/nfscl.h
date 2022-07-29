@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Rick Macklem, University of Guelph
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/fs/nfs/nfscl.h 322909 2017-08-25 22:52:40Z rmacklem $
+ * $FreeBSD$
  */
 
 #ifndef	_NFS_NFSCL_H
@@ -49,7 +51,8 @@ struct nfsv4node {
  */
 #define	NFSCL_REQSTART(n, p, v) 					\
 	nfscl_reqstart((n), (p), VFSTONFS((v)->v_mount), 		\
-	    VTONFS(v)->n_fhp->nfh_fh, VTONFS(v)->n_fhp->nfh_len, NULL, NULL)
+	    VTONFS(v)->n_fhp->nfh_fh, VTONFS(v)->n_fhp->nfh_len, NULL,	\
+	    NULL, 0, 0)
 
 /*
  * These two macros convert between a lease duration and renew interval.
@@ -77,5 +80,10 @@ struct nfsv4node {
 		if (nfscl_debuglevel >= (level))			\
 			printf(__VA_ARGS__);				\
 	} while (0)
+
+struct nfscl_reconarg {
+	int	minorvers;
+	uint8_t	sessionid[NFSX_V4SESSIONID];
+};
 
 #endif	/* _NFS_NFSCL_H */

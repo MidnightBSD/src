@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mlx5/mlx5_core/mlx5_fwdump.c 355545 2019-12-09 00:46:13Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -72,7 +72,7 @@ mlx5_fwdump_prep(struct mlx5_core_dev *mdev)
 	if (error != 0) {
 		/* Inability to create a firmware dump is not fatal. */
 		mlx5_core_warn(mdev,
-		    "Failed to find vendor-specific capability, error %d\n",
+		    "Unable to find vendor-specific capability, error %d\n",
 		    error);
 		return;
 	}
@@ -115,11 +115,15 @@ mlx5_fwdump_prep(struct mlx5_core_dev *mdev)
 		mlx5_core_warn(mdev, "no output from scan space\n");
 		goto unlock_vsc;
 	}
-	mdev->dump_rege = malloc(sz * sizeof(struct mlx5_crspace_regmap),
+
+	/*
+	 * We add a sentinel element at the end of the array to
+	 * terminate the read loop in mlx5_fwdump(), so allocate sz + 1.
+	 */
+	mdev->dump_rege = malloc((sz + 1) * sizeof(struct mlx5_crspace_regmap),
 	    M_MLX5_DUMP, M_WAITOK | M_ZERO);
 
 	for (i = 0, addr = 0;;) {
-		MPASS(i < sz);
 		mdev->dump_rege[i].cnt++;
 		MLX5_VSC_SET(vsc_addr, &in, address, addr);
 		pci_write_config(dev, vsc_addr + MLX5_VSC_ADDR_OFFSET, in, 4);
@@ -137,13 +141,21 @@ mlx5_fwdump_prep(struct mlx5_core_dev *mdev)
 		next_addr = MLX5_VSC_GET(vsc_addr, &out, address);
 		if (next_addr == 0 || next_addr == addr)
 			break;
-		if (next_addr != addr + 4)
-			mdev->dump_rege[++i].addr = next_addr;
+		if (next_addr != addr + 4) {
+			if (++i == sz) {
+				mlx5_core_err(mdev,
+		    "Inconsistent hw crspace reads (1): sz %u i %u addr %#lx",
+				    sz, i, (unsigned long)addr);
+				break;
+			}
+			mdev->dump_rege[i].addr = next_addr;
+		}
 		addr = next_addr;
 	}
-	if (i + 1 != sz) {
+	/* i == sz case already reported by loop above */
+	if (i + 1 != sz && i != sz) {
 		mlx5_core_err(mdev,
-		    "Inconsistent hw crspace reads: sz %u i %u addr %#lx",
+		    "Inconsistent hw crspace reads (2): sz %u i %u addr %#lx",
 		    sz, i, (unsigned long)addr);
 	}
 
@@ -433,7 +445,7 @@ mlx5_ctl_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 		fake_fw.name = "umlx_fw_up";
 		fake_fw.datasize = fu->img_fw_data_len;
 		fake_fw.version = 1;
-		fake_fw.data = (void *)kmem_malloc(kmem_arena, fu->img_fw_data_len,
+		fake_fw.data = (void *)kmem_malloc(fu->img_fw_data_len,
 		    M_WAITOK);
 		if (fake_fw.data == NULL) {
 			error = ENOMEM;
@@ -443,7 +455,7 @@ mlx5_ctl_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 		    fu->img_fw_data_len);
 		if (error == 0)
 			error = -mlx5_firmware_flash(mdev, &fake_fw);
-		kmem_free(kmem_arena, (vm_offset_t)fake_fw.data, fu->img_fw_data_len);
+		kmem_free((vm_offset_t)fake_fw.data, fu->img_fw_data_len);
 		break;
 	case MLX5_FW_RESET:
 		if ((fflag & FWRITE) == 0) {

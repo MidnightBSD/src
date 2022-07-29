@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: MIT-CMU
+ *
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
  * All Rights Reserved.
@@ -29,9 +31,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/ddb/db_expr.c 308418 2016-11-07 12:10:17Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
+#include <sys/systm.h>
 
 #include <ddb/ddb.h>
 #include <ddb/db_lex.h>
@@ -227,7 +230,7 @@ db_add_expr(db_expr_t *valuep)
 		lhs |= rhs;
 		break;
 	    default:
-		__unreachable();
+		__assert_unreachable();
 	    }
 	    t = db_read_token();
 	}
@@ -261,7 +264,7 @@ db_shift_expr(db_expr_t *valuep)
 		lhs <<= rhs;
 	    else {
 		/* Shift right is unsigned */
-		lhs = (unsigned) lhs >> rhs;
+		lhs = (db_addr_t)lhs >> rhs;
 	    }
 	    t = db_read_token();
 	}
@@ -311,7 +314,7 @@ db_logical_relation_expr(
 		    lhs = (lhs <= rhs);
 		    break;
 		default:
-		    __unreachable();
+		    __assert_unreachable();
 	    }
 	    t = db_read_token();
 	}

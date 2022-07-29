@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/autofs/common.c 332597 2018-04-16 16:16:24Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -55,7 +55,6 @@ __FBSDID("$FreeBSD: stable/11/usr.sbin/autofs/common.c 332597 2018-04-16 16:16:2
 #include <signal.h>
 #include <stdbool.h>
 #include <stdint.h>
-#define	_WITH_GETLINE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -142,7 +141,7 @@ create_directory(const char *path)
 	 */
 	copy = tofree = checked_strdup(path + 1);
 
-	partial = checked_strdup("");
+	partial = checked_strdup("/");
 	for (;;) {
 		component = strsep(&copy, "/");
 		if (component == NULL)

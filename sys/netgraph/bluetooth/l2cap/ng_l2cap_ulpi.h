@@ -3,6 +3,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_l2cap_ulpi.h,v 1.1 2002/11/24 19:47:06 max Exp $
- * $FreeBSD: stable/11/sys/netgraph/bluetooth/l2cap/ng_l2cap_ulpi.h 290038 2015-10-27 03:42:26Z takawata $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_L2CAP_ULPI_H_

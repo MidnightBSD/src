@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libthr/arch/powerpc/include/pthread_tls.h 346156 2019-04-12 15:15:27Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _ARCH_POWERPC_PTHREAD_TLS_H

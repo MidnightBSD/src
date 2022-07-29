@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm64/cloudabi64/cloudabi64_sysvec.c 326743 2017-12-10 12:25:32Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/imgact.h>
@@ -61,7 +61,7 @@ cloudabi64_proc_setregs(struct thread *td, struct image_params *imgp,
 	 * tpidr_el0 to the TCB.
 	 */
 	regs = td->td_frame;
-	regs->tf_x[0] = td->td_retval[0] =
+	regs->tf_x[0] =
 	    stack + roundup(sizeof(cloudabi64_tcb_t), sizeof(register_t));
 	(void)cpu_set_user_tls(td, TO_PTR(stack));
 }
@@ -166,7 +166,6 @@ static struct sysentvec cloudabi64_elf_sysvec = {
 	.sv_fixup		= cloudabi64_fixup,
 	.sv_name		= "CloudABI ELF64",
 	.sv_coredump		= elf64_coredump,
-	.sv_pagesize		= PAGE_SIZE,
 	.sv_minuser		= VM_MIN_ADDRESS,
 	.sv_maxuser		= VM_MAXUSER_ADDRESS,
 	.sv_stackprot		= VM_PROT_READ | VM_PROT_WRITE,

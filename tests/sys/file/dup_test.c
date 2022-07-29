@@ -5,7 +5,7 @@
  *
  * Written by Artur Grabowski <art@openbsd.org> 2002 Public Domain.
  *
- * $FreeBSD: stable/11/tests/sys/file/dup_test.c 281432 2015-04-11 10:14:59Z ngie $
+ * $FreeBSD$
  */
 
 /*

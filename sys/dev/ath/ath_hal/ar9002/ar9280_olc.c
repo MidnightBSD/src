@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 Adrian Chadd, Xenion Pty Ltd.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar9002/ar9280_olc.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -169,7 +171,6 @@ ar9280olcTemperatureCompensation(struct ath_hal *ah)
 	}
 }
 
-
 static int16_t
 ar9280ChangeGainBoundarySettings(struct ath_hal *ah, uint16_t *gb,
     uint16_t numXpdGain, uint16_t pdGainOverlap_t2, int8_t pwr_table_offset,
@@ -299,7 +300,6 @@ ar9280SetPowerCalTable(struct ath_hal *ah, struct ar5416eeprom *pEepData,
 	xpdMask = pEepData->modalHeader[IEEE80211_IS_CHAN_2GHZ(chan)].xpdGain;
 
 	(void) ath_hal_eepromGet(ah, AR_EEP_PWR_TABLE_OFFSET, &pwr_table_offset);
-
 
 	if (IS_EEP_MINOR_V2(ah)) {
 		pdGainOverlap_t2 = pEepData->modalHeader[IEEE80211_IS_CHAN_2GHZ(chan)].pdGainOverlap;

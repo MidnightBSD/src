@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5212/ar5212_keycache.c 218483 2011-02-09 15:23:16Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -242,7 +244,6 @@ ar5212SetKeyCacheEntry(struct ath_hal *ah, uint16_t entry,
 		OS_REG_WRITE(ah, AR_KEYTABLE_KEY4(entry), key4);
 		OS_REG_WRITE(ah, AR_KEYTABLE_TYPE(entry), keyType);
 		(void) ar5212SetKeyCacheEntryMac(ah, entry, mac);
-
 
 		/*
 		 * Write MIC entry according to new or old key layout.

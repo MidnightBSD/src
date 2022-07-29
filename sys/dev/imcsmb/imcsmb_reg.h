@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/imcsmb/imcsmb_reg.h 355366 2019-12-03 22:53:50Z rpokala $
+ * $FreeBSD$
  */
 
 #ifndef _DEV__IMCSMB__IMCSMB_REG_H_

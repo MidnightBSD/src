@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: (BSD-1-Clause AND BSD-4-Clause)
+ *
  * Copyright (c) 2011 Rick van der Zwet <info@rickvanderzwet.nl>
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -79,7 +81,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/usb/net/if_mos.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Moschip MCS7730/MCS7830/MCS7832 USB to Ethernet controller
@@ -604,7 +606,7 @@ mos_setmulti(struct usb_ether *ue)
 
 	/* get all new ones */
 	if_maddr_rlock(ifp);
-	TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 		if (ifma->ifma_addr->sa_family != AF_LINK) {
 			allmulti = 1;
 			continue;

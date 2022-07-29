@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/arm/uboot/Makefile 329183 2018-02-12 20:51:28Z kevans $
+# $FreeBSD$
 
 LOADER_UFS_SUPPORT?=	yes
 LOADER_CD9660_SUPPORT?=	no

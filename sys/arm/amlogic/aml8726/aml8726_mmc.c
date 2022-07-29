@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/amlogic/aml8726/aml8726_mmc.c 318197 2017-05-11 20:55:11Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,7 +46,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/amlogic/aml8726/aml8726_mmc.c 318197 2017-
 #include <machine/bus.h>
 #include <machine/cpu.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
@@ -586,7 +585,7 @@ aml8726_mmc_attach(device_t dev)
 	}
 
 	len = OF_getprop_alloc(OF_node_from_xref(prop[0]), "amlogic,function",
-	    sizeof(char), (void **)&function_name);
+	    (void **)&function_name);
 
 	if (len < 0) {
 		device_printf(dev,
@@ -636,7 +635,7 @@ aml8726_mmc_attach(device_t dev)
 	}
 
 	len = OF_getprop_alloc(node, "mmc-voltages",
-	    sizeof(char), (void **)&voltages);
+	    (void **)&voltages);
 
 	if (len < 0) {
 		device_printf(dev, "missing mmc-voltages attribute in FDT\n");
@@ -966,14 +965,25 @@ aml8726_mmc_read_ivar(device_t bus, device_t child,
 	case MMCBR_IVAR_POWER_MODE:
 		*(int *)result = sc->host.ios.power_mode;
 		break;
+	case MMCBR_IVAR_RETUNE_REQ:
+		*(int *)result = return_req_none;
 	case MMCBR_IVAR_VDD:
 		*(int *)result = sc->host.ios.vdd;
+		break;
+	case MMCBR_IVAR_VCCQ:
+		*result = sc->sc_host.ios.vccq;
 		break;
 	case MMCBR_IVAR_CAPS:
 		*(int *)result = sc->host.caps;
 		break;
+	case MMCBR_IVAR_TIMING:
+		*(int *)result = sc->sc_host.ios.timing;
+		break;
 	case MMCBR_IVAR_MAX_DATA:
 		*(int *)result = AML_MMC_MAX_DMA / MMC_SECTOR_SIZE;
+		break;
+	case MMCBR_IVAR_MAX_BUSY_TIMEOUT:
+		*(int *)result = 1000000;	/* 1s max */
 		break;
 	default:
 		return (EINVAL);
@@ -1012,6 +1022,12 @@ aml8726_mmc_write_ivar(device_t bus, device_t child,
 		break;
 	case MMCBR_IVAR_VDD:
 		sc->host.ios.vdd = value;
+		break;
+	case MMCBR_IVAR_VCCQ:
+		sc->sc_host.ios.vccq = value;
+		break;
+	case MMCBR_IVAR_TIMING:
+		sc->sc_host.ios.timing = value;
 		break;
 	/* These are read-only */
 	case MMCBR_IVAR_CAPS:

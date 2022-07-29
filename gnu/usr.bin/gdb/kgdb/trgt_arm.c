@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/gnu/usr.bin/gdb/kgdb/trgt_arm.c 298358 2016-04-20 17:58:13Z wma $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #ifndef CROSS_DEBUGGER

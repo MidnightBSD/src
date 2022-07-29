@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 James Gritton.
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libjail/jail.c 337879 2018-08-15 22:32:43Z jamie $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -225,11 +227,16 @@ jailparam_all(struct jailparam **jpp)
 		/* Get the next parameter. */
 		mlen2 = sizeof(mib2);
 		if (sysctl(mib1, mlen1 + 2, mib2, &mlen2, NULL, 0) < 0) {
+			if (errno == ENOENT) {
+				/* No more entries. */
+				break;
+			}
 			snprintf(jail_errmsg, JAIL_ERRMSGLEN,
 			    "sysctl(0.2): %s", strerror(errno));
 			goto error;
 		}
-		if (mib2[0] != mib1[2] || mib2[1] != mib1[3] ||
+		if (mib2[0] != mib1[2] ||
+		    mib2[1] != mib1[3] ||
 		    mib2[2] != mib1[4])
 			break;
 		/* Convert it to an ascii name. */
@@ -256,7 +263,10 @@ jailparam_all(struct jailparam **jpp)
 			goto error;
 		mib1[1] = 2;
 	}
-	jp = reallocarray(jp, njp, sizeof(*jp));
+	/* Just return the untrimmed buffer if reallocarray() somehow fails. */
+	tjp = reallocarray(jp, njp, sizeof(*jp));
+	if (tjp != NULL)
+		jp = tjp;
 	*jpp = jp;
 	return (njp);
 
@@ -513,18 +523,7 @@ jailparam_set(struct jailparam *jp, unsigned njp, int flags)
 				}
 				jiov[i - 1].iov_base = nname;
 				jiov[i - 1].iov_len = strlen(nname) + 1;
-			}
-			/*
-			 * Load filesystem modules associated with allow.mount
-			 * permissions.  Ignore failure, since the module may
-			 * be static, and even a failure to load is not a jail
-			 * error.
-			 */
-			if (strncmp(jp[j].jp_name, "allow.mount.", 12) == 0) {
-				if (kldload(jp[j].jp_name + 12) < 0 &&
-				    errno == ENOENT &&
-				    strncmp(jp[j].jp_name + 12, "no", 2) == 0)
-					(void)kldload(jp[j].jp_name + 14);
+				
 			}
 		} else {
 			/*
@@ -1052,7 +1051,15 @@ kldload_param(const char *name)
 	else if (strcmp(name, "sysvmsg") == 0 || strcmp(name, "sysvsem") == 0 ||
 	    strcmp(name, "sysvshm") == 0)
 		kl = kldload(name);
-	else {
+	else if (strncmp(name, "allow.mount.", 12) == 0) {
+		/* Load the matching filesystem */
+		const char *modname = name + 12;
+
+		kl = kldload(modname);
+		if (kl < 0 && errno == ENOENT &&
+		    strncmp(modname, "no", 2) == 0)
+			kl = kldload(modname + 2);
+	} else {
 		errno = ENOENT;
 		return (-1);
 	}

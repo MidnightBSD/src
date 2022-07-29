@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Mitsuru IWASAKI
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/x86/include/acpica_machdep.h 298094 2016-04-16 03:44:50Z gjb $
+ * $FreeBSD$
  */
 
 /******************************************************************************
@@ -82,6 +84,7 @@ void	madt_parse_interrupt_values(void *entry,
 	    enum intr_trigger *trig, enum intr_polarity *pol);
 
 extern int madt_found_sci_override;
+extern int (*apei_nmi)(void);
 
 #endif /* _KERNEL */
 

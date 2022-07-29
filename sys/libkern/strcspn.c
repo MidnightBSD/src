@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/libkern/strcspn.c 181748 2008-08-15 04:07:22Z kmacy $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/libkern.h>
 #include <sys/types.h>
@@ -35,7 +37,7 @@ __FBSDID("$FreeBSD: stable/11/sys/libkern/strcspn.c 181748 2008-08-15 04:07:22Z 
 #define	BIT(c)	((u_long)1 << ((u_char)(c) % LONG_BIT))
 
 size_t 
-strcspn(const char * __restrict s, const char * __restrict charset) 
+strcspn(const char *s, const char *charset)
 {
 	/*
 	 * NB: idx and bit are temporaries whose use causes gcc 3.4.2 to

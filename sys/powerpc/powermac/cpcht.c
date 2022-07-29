@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2008-2010 Nathan Whitehorn
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/powerpc/powermac/cpcht.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -57,6 +59,7 @@ __FBSDID("$FreeBSD: stable/11/sys/powerpc/powermac/cpcht.c 331722 2018-03-29 02:
 #include <vm/pmap.h>
 
 #include "pcib_if.h"
+#include <dev/pci/pcib_private.h>
 #include "pic_if.h"
 
 /*
@@ -103,6 +106,7 @@ static device_method_t	cpcht_methods[] = {
 	DEVMETHOD(pcib_alloc_msix,	cpcht_alloc_msix),
 	DEVMETHOD(pcib_release_msix,	cpcht_release_msix),
 	DEVMETHOD(pcib_map_msi,		cpcht_map_msi),
+	DEVMETHOD(pcib_request_feature,	pcib_request_feature_allow),
 
 	DEVMETHOD_END
 };

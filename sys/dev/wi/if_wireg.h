@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
  *
@@ -29,7 +31,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/wi/if_wireg.h 345636 2019-03-28 09:50:25Z avos $
+ * $FreeBSD$
  */
 
 #define WI_DELAY	5
@@ -81,8 +83,14 @@
 
 #define WI_DEFAULT_AUTHTYPE	1
 
-#ifdef __MidnightBSD__
-#define OS_STRING_NAME	"MidnightBSD"
+#ifdef __NetBSD__
+#define OS_STRING_NAME	"NetBSD"
+#endif
+#ifdef __FreeBSD__
+#define OS_STRING_NAME	"FreeBSD"
+#endif
+#ifdef __OpenBSD__
+#define OS_STRING_NAME	"OpenBSD"
 #endif
 
 #define WI_DEFAULT_NODENAME	OS_STRING_NAME " WaveLAN/IEEE node"

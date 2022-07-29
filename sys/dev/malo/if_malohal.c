@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007 Marvell Semiconductor, Inc.
  * Copyright (c) 2007 Sam Leffler, Errno Consulting
  * Copyright (c) 2008 Weongyo Jeong <weongyo@freebsd.org>
@@ -30,8 +32,8 @@
  */
 
 #include <sys/cdefs.h>
-#ifdef __MidnightBSD__
-__FBSDID("$FreeBSD: stable/11/sys/dev/malo/if_malohal.c 331722 2018-03-29 02:50:57Z eadler $");
+#ifdef __FreeBSD__
+__FBSDID("$FreeBSD$");
 #endif
 
 #include <sys/param.h>

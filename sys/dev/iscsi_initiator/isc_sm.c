@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/iscsi_initiator/isc_sm.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_iscsi_initiator.h"
 
@@ -569,7 +571,7 @@ ism_out(void *vp)
      wakeup(&sp->soc);
      wakeup(sp); // XXX: do we need this one?
 
-#if __MidnightBSD_version >= 4000
+#if __FreeBSD_version >= 700000
      destroy_dev(sp->dev);
 #endif
 
@@ -710,7 +712,7 @@ ism_stop(isc_session_t *sp)
      sc->nsess--;
      mtx_unlock(&sc->isc_mtx);
 
-#if __MidnightBSD_version < 4000
+#if __FreeBSD_version < 700000
      destroy_dev(sp->dev);
 #endif
 

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/11/sys/opencrypto/gmac.c 275732 2014-12-12 19:56:36Z jmg $
+ *	$FreeBSD$
  *
  */
 

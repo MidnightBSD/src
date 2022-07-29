@@ -1,6 +1,7 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/x86/include/apicvar.h 346817 2019-04-28 13:21:01Z dchagin $
+ * $FreeBSD$
  */
 
 #ifndef _X86_APICVAR_H_
@@ -74,8 +75,12 @@
  * I/O device!
  */
 
-#define	MAX_APIC_ID	0xfe
-#define	APIC_ID_ALL	0xff
+#define	xAPIC_MAX_APIC_ID	0xfe
+#define	xAPIC_ID_ALL		0xff
+#define	MAX_APIC_ID		0x200
+#define	APIC_ID_ALL		0xffffffff
+
+#define	IOAPIC_MAX_ID		xAPIC_MAX_APIC_ID
 
 /* I/O Interrupts are used for external devices such as ISA, PCI, etc. */
 #define	APIC_IO_INTS	(IDT_IO_INTS + 16)
@@ -123,7 +128,8 @@
 
 #define	IPI_STOP	(APIC_IPI_INTS + 6)	/* Stop CPU until restarted. */
 #define	IPI_SUSPEND	(APIC_IPI_INTS + 7)	/* Suspend CPU until restarted. */
-#define	IPI_DYN_FIRST	(APIC_IPI_INTS + 8)
+#define	IPI_SWI		(APIC_IPI_INTS + 8)	/* Run clk_intr_event. */
+#define	IPI_DYN_FIRST	(APIC_IPI_INTS + 9)
 #define	IPI_DYN_LAST	(253)			/* IPIs allocated at runtime */
 
 /*
@@ -181,7 +187,7 @@ inthand_t
 	IDTVEC(spuriousint_pti), IDTVEC(timerint_pti);
 
 extern vm_paddr_t lapic_paddr;
-extern int apic_cpuids[];
+extern int *apic_cpuids;
 
 void	apic_register_enumerator(struct apic_enumerator *enumerator);
 void	*ioapic_create(vm_paddr_t addr, int32_t apic_id, int intbase);

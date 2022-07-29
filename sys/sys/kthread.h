@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Peter Wemm <peter@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/kthread.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_KTHREAD_H_
@@ -59,7 +60,7 @@ void	kproc_start(const void *);
 int	kproc_suspend(struct proc *, int);
 void	kproc_suspend_check(struct proc *);
 
-/* create a thread inthe given process. create the process if needed */
+/* create a thread in the given process. create the process if needed */
 int     kproc_kthread_add(void (*)(void *), void *,
 	    struct proc **,
 	    struct thread **,

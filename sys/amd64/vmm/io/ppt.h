@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/vmm/io/ppt.h 351753 2019-09-03 16:23:46Z emaste $
+ * $FreeBSD$
  */
 
 #ifndef _IO_PPT_H_
@@ -36,6 +38,7 @@ int	ppt_setup_msi(struct vm *vm, int vcpu, int bus, int slot, int func,
 		      uint64_t addr, uint64_t msg, int numvec);
 int	ppt_setup_msix(struct vm *vm, int vcpu, int bus, int slot, int func,
 		int idx, uint64_t addr, uint64_t msg, uint32_t vector_control);
+int	ppt_disable_msix(struct vm *vm, int bus, int slot, int func);
 int	ppt_assigned_devices(struct vm *vm);
 bool	ppt_is_mmio(struct vm *vm, vm_paddr_t gpa);
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/extres/clk/clk_fixed.h 296903 2016-03-15 15:25:26Z mmel $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_EXTRES_CLK_FIXED_H_

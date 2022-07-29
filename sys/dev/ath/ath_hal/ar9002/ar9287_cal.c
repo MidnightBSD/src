@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008-2010 Atheros Communications Inc.
  * Copyright (c) 2011 Adrian Chadd, Xenion Pty Ltd.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar9002/ar9287_cal.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 #include "ah.h"
@@ -39,7 +41,6 @@
 
 #include "ar9002/ar9287_cal.h"
 
-
 void
 ar9287PACal(struct ath_hal *ah, HAL_BOOL is_reset)
 {
@@ -53,7 +54,7 @@ HAL_BOOL
 ar9287InitCalHardware(struct ath_hal *ah, const struct ieee80211_channel *chan)
 {
 	OS_REG_SET_BIT(ah, AR_PHY_AGC_CONTROL, AR_PHY_AGC_CONTROL_FLTR_CAL);
-	
+
 	/* Calibrate the AGC */
 	OS_REG_WRITE(ah, AR_PHY_AGC_CONTROL,
 	    OS_REG_READ(ah, AR_PHY_AGC_CONTROL) | AR_PHY_AGC_CONTROL_CAL);

@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_core/mlx5_fs_cmd.c 331807 2018-03-30 19:13:17Z hselasky $
+ * $FreeBSD$
  */
 
 #include <linux/types.h>

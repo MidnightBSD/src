@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/bectl/bectl.c 357667 2020-02-07 21:57:27Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -67,7 +67,7 @@ usage(bool explicit)
 
 	fp =  explicit ? stdout : stderr;
 	fprintf(fp, "%s",
-	    "usage:\tbectl {-h | -? | subcommand [args...]}\n"
+	    "Usage:\tbectl {-h | -? | subcommand [args...]}\n"
 #if SOON
 	    "\tbectl add (path)*\n"
 #endif
@@ -78,13 +78,12 @@ usage(bool explicit)
 	    "\tbectl destroy [-F] {beName | beName@snapshot}\n"
 	    "\tbectl export sourceBe\n"
 	    "\tbectl import targetBe\n"
-	    "\tbectl jail {-b | -U} [{-o key=value | -u key}]... "
-	    "{jailID | jailName}\n"
-	    "\t      bootenv [utility [argument ...]]\n"
-	    "\tbectl list [-DHas] [{-c property | -C property}]\n"
+	    "\tbectl jail [-bU] [{-o key=value | -u key}]... beName\n"
+	    "\t      [utility [argument ...]]\n"
+	    "\tbectl list [-aDHs] [{-c property | -C property}]\n"
 	    "\tbectl mount beName [mountpoint]\n"
 	    "\tbectl rename origBeName newBeName\n"
-	    "\tbectl {ujail | unjail} {jailID | jailName} bootenv\n"
+	    "\tbectl {ujail | unjail} {jailID | jailName | beName}\n"
 	    "\tbectl {umount | unmount} [-f] beName\n");
 
 	return (explicit ? 0 : EX_USAGE);
@@ -134,7 +133,6 @@ get_cmd_info(const char *cmd)
 	return (NULL);
 }
 
-
 static int
 bectl_cmd_activate(int argc, char *argv[])
 {
@@ -166,10 +164,10 @@ bectl_cmd_activate(int argc, char *argv[])
 	/* activate logic goes here */
 	if ((err = be_activate(be, argv[0], temp)) != 0)
 		/* XXX TODO: more specific error msg based on err */
-		printf("did not successfully activate boot environment %s\n",
+		printf("Did not successfully activate boot environment %s\n",
 		    argv[0]);
 	else
-		printf("successfully activated boot environment %s\n", argv[0]);
+		printf("Successfully activated boot environment %s\n", argv[0]);
 
 	if (temp)
 		printf("for next boot\n");
@@ -246,17 +244,21 @@ bectl_cmd_create(int argc, char *argv[])
 	switch (err) {
 	case BE_ERR_SUCCESS:
 		break;
+	case BE_ERR_INVALIDNAME:
+		fprintf(stderr,
+		    "bectl create: boot environment name must not contain spaces\n");
+		break;
 	default:
 		if (atpos != NULL)
 			fprintf(stderr,
-			    "failed to create a snapshot '%s' of '%s'\n",
+			    "Failed to create a snapshot '%s' of '%s'\n",
 			    atpos, bootenv);
 		else if (snapname == NULL)
 			fprintf(stderr,
-			    "failed to create bootenv %s\n", bootenv);
+			    "Failed to create bootenv %s\n", bootenv);
 		else
 			fprintf(stderr,
-			    "failed to create bootenv %s from snapshot %s\n",
+			    "Failed to create bootenv %s from snapshot %s\n",
 			    bootenv, snapname);
 	}
 
@@ -423,12 +425,12 @@ bectl_cmd_mount(int argc, char *argv[])
 
 	switch (err) {
 	case BE_ERR_SUCCESS:
-		printf("successfully mounted %s at %s\n", bootenv, result_loc);
+		printf("Successfully mounted %s at %s\n", bootenv, result_loc);
 		break;
 	default:
 		fprintf(stderr,
-		    (argc == 3) ? "failed to mount bootenv %s at %s\n" :
-		    "failed to mount bootenv %s at temporary path %s\n",
+		    (argc == 3) ? "Failed to mount bootenv %s at %s\n" :
+		    "Failed to mount bootenv %s at temporary path %s\n",
 		    bootenv, mountpoint);
 	}
 
@@ -456,16 +458,15 @@ bectl_cmd_rename(int argc, char *argv[])
 	dest = argv[2];
 
 	err = be_rename(be, src, dest);
-
 	switch (err) {
 	case BE_ERR_SUCCESS:
 		break;
 	default:
-		fprintf(stderr, "failed to rename bootenv %s to %s\n",
+		fprintf(stderr, "Failed to rename bootenv %s to %s\n",
 		    src, dest);
 	}
 
-	return (0);
+	return (err);
 }
 
 static int
@@ -506,7 +507,7 @@ bectl_cmd_unmount(int argc, char *argv[])
 	case BE_ERR_SUCCESS:
 		break;
 	default:
-		fprintf(stderr, "failed to unmount bootenv %s\n", bootenv);
+		fprintf(stderr, "Failed to unmount bootenv %s\n", bootenv);
 	}
 
 	return (err);
@@ -562,7 +563,7 @@ main(int argc, char *argv[])
 		return (usage(true));
 
 	if ((cmd = get_cmd_info(command)) == NULL) {
-		fprintf(stderr, "unknown command: %s\n", command);
+		fprintf(stderr, "Unknown command: %s\n", command);
 		return (usage(false));
 	}
 

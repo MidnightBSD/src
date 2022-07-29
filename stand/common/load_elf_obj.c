@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/common/load_elf_obj.c 332420 2018-04-11 22:23:22Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/exec.h>
@@ -60,7 +60,16 @@ typedef struct elf_file {
 
 	int		fd;
 	vm_offset_t	off;
+#ifdef LOADER_VERIEXEC_VECTX
+	struct vectx	*vctx;
+#endif
 } *elf_file_t;
+
+#ifdef LOADER_VERIEXEC_VECTX
+#define VECTX_HANDLE(ef) (ef)->vctx
+#else
+#define VECTX_HANDLE(ef) (ef)->fd
+#endif
 
 static int __elfN(obj_loadimage)(struct preloaded_file *mp, elf_file_t ef,
     uint64_t loadaddr);
@@ -100,9 +109,22 @@ __elfN(obj_loadfile)(char *filename, uint64_t dest,
 		return(EFTYPE);
 	if ((ef.fd = open(filename, O_RDONLY)) == -1)
 		return(errno);
+#ifdef LOADER_VERIEXEC_VECTX
+	{
+		int verror;
+
+		ef.vctx = vectx_open(ef.fd, filename, 0L, NULL, &verror, __func__);
+		if (verror) {
+			printf("Unverified %s: %s\n", filename, ve_error_get());
+			close(ef.fd);
+			free(ef.vctx);
+			return (EAUTH);
+		}
+	}
+#endif
 
 	hdr = &ef.hdr;
-	bytes_read = read(ef.fd, hdr, sizeof(*hdr));
+	bytes_read = VECTX_READ(VECTX_HANDLE(&ef), hdr, sizeof(*hdr));
 	if (bytes_read != sizeof(*hdr)) {
 		err = EFTYPE;	/* could be EIO, but may be small file */
 		goto oerr;
@@ -128,6 +150,13 @@ __elfN(obj_loadfile)(char *filename, uint64_t dest,
 		err = EFTYPE;
 		goto oerr;
 	}
+
+#if defined(LOADER_VERIEXEC) && !defined(LOADER_VERIEXEC_VECTX)
+	if (verify_file(ef.fd, filename, bytes_read, VE_MUST, __func__) < 0) {
+		err = EAUTH;
+		goto oerr;
+	}
+#endif
 
 	kfp = file_findfile(NULL, __elfN(obj_kerneltype));
 	if (kfp == NULL) {
@@ -174,6 +203,17 @@ ioerr:
 oerr:
 	file_discard(fp);
 out:
+#ifdef LOADER_VERIEXEC_VECTX
+	if (!err && ef.vctx) {
+		int verror;
+
+		verror = vectx_close(ef.vctx, VE_MUST, __func__);
+		if (verror) {
+			err = EAUTH;
+			file_discard(fp);
+		}
+	}
+#endif
 	close(ef.fd);
 	if (ef.e_shdr != NULL)
 		free(ef.e_shdr);
@@ -200,7 +240,7 @@ __elfN(obj_loadimage)(struct preloaded_file *fp, elf_file_t ef, uint64_t off)
 
 	/* Read in the section headers. */
 	shdrbytes = hdr->e_shnum * hdr->e_shentsize;
-	shdr = alloc_pread(ef->fd, (off_t)hdr->e_shoff, shdrbytes);
+	shdr = alloc_pread(VECTX_HANDLE(ef), (off_t)hdr->e_shoff, shdrbytes);
 	if (shdr == NULL) {
 		printf("\nelf" __XSTRING(__ELF_WORD_SIZE)
 		    "_obj_loadimage: read section headers failed\n");
@@ -224,6 +264,8 @@ __elfN(obj_loadimage)(struct preloaded_file *fp, elf_file_t ef, uint64_t off)
 #if defined(__i386__) || defined(__amd64__)
 		case SHT_X86_64_UNWIND:
 #endif
+		case SHT_INIT_ARRAY:
+		case SHT_FINI_ARRAY:
 			if ((shdr[i].sh_flags & SHF_ALLOC) == 0)
 				break;
 			lastaddr = roundup(lastaddr, shdr[i].sh_addralign);
@@ -240,8 +282,6 @@ __elfN(obj_loadimage)(struct preloaded_file *fp, elf_file_t ef, uint64_t off)
 		case SHT_SYMTAB:
 			nsym++;
 			ef->symtabindex = i;
-			shdr[i].sh_addr = (Elf_Addr)lastaddr;
-			lastaddr += shdr[i].sh_size;
 			break;
 		}
 	}
@@ -321,7 +361,7 @@ __elfN(obj_loadimage)(struct preloaded_file *fp, elf_file_t ef, uint64_t off)
 		if (cshdr == lshdr)
 			break;
 
-		if (kern_pread(ef->fd, (vm_offset_t)cshdr->sh_addr,
+		if (kern_pread(VECTX_HANDLE(ef), (vm_offset_t)cshdr->sh_addr,
 		    cshdr->sh_size, (off_t)cshdr->sh_offset) != 0) {
 			printf("\nelf" __XSTRING(__ELF_WORD_SIZE)
 			    "_obj_loadimage: read failed\n");

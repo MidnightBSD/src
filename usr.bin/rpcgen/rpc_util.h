@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/11/usr.bin/rpcgen/rpc_util.h 299509 2016-05-12 03:49:05Z cem $
+ * $FreeBSD$
  */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for

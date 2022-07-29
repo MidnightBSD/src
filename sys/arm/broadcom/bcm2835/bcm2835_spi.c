@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * Copyright (c) 2013 Luiz Otavio O Souza <loos@freebsd.org>
  * All rights reserved.
@@ -26,7 +28,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_spi.c 346519 2019-04-22 04:02:16Z ian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,14 +45,12 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_spi.c 346519 2019
 #include <machine/resource.h>
 #include <machine/intr.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <dev/spibus/spi.h>
 #include <dev/spibus/spibusvar.h>
 
-#include <arm/broadcom/bcm2835/bcm2835_gpio.h>
 #include <arm/broadcom/bcm2835/bcm2835_spireg.h>
 #include <arm/broadcom/bcm2835/bcm2835_spivar.h>
 
@@ -242,8 +242,7 @@ static int
 bcm_spi_attach(device_t dev)
 {
 	struct bcm_spi_softc *sc;
-	device_t gpio;
-	int i, rid;
+	int rid;
 
 	if (device_get_unit(dev) != 0) {
 		device_printf(dev, "only one SPI controller supported\n");
@@ -252,15 +251,6 @@ bcm_spi_attach(device_t dev)
 
 	sc = device_get_softc(dev);
 	sc->sc_dev = dev;
-
-	/* Configure the GPIO pins to ALT0 function to enable SPI the pins. */
-	gpio = devclass_get_device(devclass_find("gpio"), 0);
-	if (!gpio) {
-		device_printf(dev, "cannot find gpio0\n");
-		return (ENXIO);
-	}
-	for (i = 0; i < nitems(bcm_spi_pins); i++)
-		bcm_gpio_set_alternate(gpio, bcm_spi_pins[i], BCM_GPIO_ALT0);
 
 	rid = 0;
 	sc->sc_mem_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid,

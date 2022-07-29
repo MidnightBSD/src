@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,13 +34,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/nfsserver/nfs_nfsdsocket.c 340852 2018-11-23 20:38:50Z emaste $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Socket operations for use by the nfs server.
  */
 
-#ifndef APPLEKEXT
 #include <fs/nfs/nfsport.h>
 
 extern struct nfsstatsv1 nfsstatsv1;
@@ -50,6 +51,8 @@ extern struct nfsclienthashhead *nfsclienthash;
 extern int nfsrv_clienthashsize;
 extern int nfsrc_floodlevel, nfsrc_tcpsavedreplies;
 extern int nfsd_debuglevel;
+extern int nfsrv_layouthighwater;
+extern volatile int nfsrv_layoutcnt;
 NFSV4ROOTLOCKMUTEX;
 NFSSTATESPINLOCK;
 
@@ -182,11 +185,11 @@ int (*nfsrv4_ops0[NFSV41_NOPS])(struct nfsrv_descript *,
 	nfsrvd_destroysession,
 	nfsrvd_freestateid,
 	nfsrvd_notsupp,
+	nfsrvd_getdevinfo,
 	nfsrvd_notsupp,
-	nfsrvd_notsupp,
-	nfsrvd_notsupp,
-	nfsrvd_notsupp,
-	nfsrvd_notsupp,
+	nfsrvd_layoutcommit,
+	nfsrvd_layoutget,
+	nfsrvd_layoutreturn,
 	nfsrvd_notsupp,
 	nfsrvd_sequence,
 	nfsrvd_notsupp,
@@ -323,7 +326,6 @@ int (*nfsrv4_ops2[NFSV41_NOPS])(struct nfsrv_descript *,
 	(int (*)(struct nfsrv_descript *, int, vnode_t , vnode_t , NFSPROC_T *, struct nfsexstuff *, struct nfsexstuff *))0,
 	(int (*)(struct nfsrv_descript *, int, vnode_t , vnode_t , NFSPROC_T *, struct nfsexstuff *, struct nfsexstuff *))0,
 };
-#endif	/* !APPLEKEXT */
 
 /*
  * Static array that defines which nfs rpc's are nonidempotent
@@ -357,7 +359,7 @@ static int nfsrv_nonidempotent[NFS_V3NPROCS] = {
  * This static array indicates whether or not the RPC modifies the
  * file system.
  */
-static int nfs_writerpc[NFS_NPROCS] = { 0, 0, 1, 0, 0, 0, 0,
+int nfsrv_writerpc[NFS_NPROCS] = { 0, 0, 1, 0, 0, 0, 0,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
 
@@ -469,7 +471,7 @@ nfsrvd_statend(int op, uint64_t bytes, struct bintime *now,
  * handle plus name or ...
  * The NFS V4 Compound RPC is performed separately by nfsrvd_compound().
  */
-APPLESTATIC void
+void
 nfsrvd_dorpc(struct nfsrv_descript *nd, int isdgram, u_char *tag, int taglen,
     u_int32_t minorvers, NFSPROC_T *p)
 {
@@ -513,10 +515,10 @@ nfsrvd_dorpc(struct nfsrv_descript *nd, int isdgram, u_char *tag, int taglen,
 				lktype = LK_EXCLUSIVE;
 			if (nd->nd_flag & ND_PUBLOOKUP)
 				nfsd_fhtovp(nd, &nfs_pubfh, lktype, &vp, &nes,
-				    &mp, nfs_writerpc[nd->nd_procnum], p);
+				    &mp, nfsrv_writerpc[nd->nd_procnum], p);
 			else
 				nfsd_fhtovp(nd, &fh, lktype, &vp, &nes,
-				    &mp, nfs_writerpc[nd->nd_procnum], p);
+				    &mp, nfsrv_writerpc[nd->nd_procnum], p);
 			if (nd->nd_repstat == NFSERR_PROGNOTV4)
 				goto out;
 		}
@@ -541,8 +543,7 @@ nfsrvd_dorpc(struct nfsrv_descript *nd, int isdgram, u_char *tag, int taglen,
 		nfsrvd_statstart(nfsv3to4op[nd->nd_procnum], /*now*/ NULL);
 		nfsrvd_statend(nfsv3to4op[nd->nd_procnum], /*bytes*/ 0,
 		   /*now*/ NULL, /*then*/ NULL);
-		if (mp != NULL && nfs_writerpc[nd->nd_procnum] != 0)
-			vn_finished_write(mp);
+		vn_finished_write(mp);
 		goto out;
 	}
 
@@ -572,8 +573,7 @@ nfsrvd_dorpc(struct nfsrv_descript *nd, int isdgram, u_char *tag, int taglen,
 			error = (*(nfsrv3_procs0[nd->nd_procnum]))(nd, isdgram,
 			    vp, p, &nes);
 		}
-		if (mp != NULL && nfs_writerpc[nd->nd_procnum] != 0)
-			vn_finished_write(mp);
+		vn_finished_write(mp);
 
 		nfsrvd_statend(nfsv3to4op[nd->nd_procnum], /*bytes*/ 0,
 		    /*now*/ NULL, /*then*/ &start_time);
@@ -724,6 +724,10 @@ nfsrvd_compound(struct nfsrv_descript *nd, int isdgram, u_char *tag,
 	if (nfsrv_stablefirst.nsf_flags & NFSNSF_NOOPENS) {
 		nfsrv_throwawayopens(p);
 	}
+
+	/* Do a CBLAYOUTRECALL callback if over the high water mark. */
+	if (nfsrv_layoutcnt > nfsrv_layouthighwater)
+		nfsrv_recalloldlayout(p);
 
 	savevp = vp = NULL;
 	save_fsid.val[0] = save_fsid.val[1] = 0;
@@ -908,6 +912,11 @@ nfsrvd_compound(struct nfsrv_descript *nd, int isdgram, u_char *tag,
 					savevpnes = vpnes;
 					save_fsid = cur_fsid;
 				}
+				if ((nd->nd_flag & ND_CURSTATEID) != 0) {
+					nd->nd_savedcurstateid =
+					    nd->nd_curstateid;
+					nd->nd_flag |= ND_SAVEDCURSTATEID;
+				}
 			} else {
 				nd->nd_repstat = NFSERR_NOFILEHANDLE;
 			}
@@ -922,6 +931,11 @@ nfsrvd_compound(struct nfsrv_descript *nd, int isdgram, u_char *tag,
 					vp = savevp;
 					vpnes = savevpnes;
 					cur_fsid = save_fsid;
+				}
+				if ((nd->nd_flag & ND_SAVEDCURSTATEID) != 0) {
+					nd->nd_curstateid =
+					    nd->nd_savedcurstateid;
+					nd->nd_flag |= ND_CURSTATEID;
 				}
 			} else {
 				nd->nd_repstat = NFSERR_RESTOREFH;
@@ -979,10 +993,7 @@ nfsrvd_compound(struct nfsrv_descript *nd, int isdgram, u_char *tag,
 			if (!error && !nd->nd_repstat) {
 			    if (op == NFSV4OP_LOOKUP || op == NFSV4OP_LOOKUPP) {
 				new_mp = nvp->v_mount;
-				if (cur_fsid.val[0] !=
-				    new_mp->mnt_stat.f_fsid.val[0] ||
-				    cur_fsid.val[1] !=
-				    new_mp->mnt_stat.f_fsid.val[1]) {
+				if (fsidcmp(&cur_fsid, &new_mp->mnt_stat.f_fsid) != 0) {
 				    /* crossed a server mount point */
 				    nd->nd_repstat = nfsvno_checkexp(new_mp,
 					nd->nd_nam, &nes, &credanon);
@@ -1011,8 +1022,7 @@ nfsrvd_compound(struct nfsrv_descript *nd, int isdgram, u_char *tag,
 			if (vp == NULL || savevp == NULL) {
 				nd->nd_repstat = NFSERR_NOFILEHANDLE;
 				break;
-			} else if (cur_fsid.val[0] != save_fsid.val[0] ||
-			    cur_fsid.val[1] != save_fsid.val[1]) {
+			} else if (fsidcmp(&cur_fsid, &save_fsid) != 0) {
 				nd->nd_repstat = NFSERR_XDEV;
 				break;
 			}

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/diff/tests/diff_test.sh 339160 2018-10-03 17:16:18Z kevans $
+# $FreeBSD$
 
 atf_test_case simple
 atf_test_case unified
@@ -9,8 +9,12 @@ atf_test_case group_format
 atf_test_case side_by_side
 atf_test_case brief_format
 atf_test_case b230049
+atf_test_case b252515
 atf_test_case Bflag
+atf_test_case Nflag
 atf_test_case tabsize
+atf_test_case conflicting_format
+atf_test_case label
 
 simple_body()
 {
@@ -49,8 +53,6 @@ unified_body()
 {
 	atf_check -o file:$(atf_get_srcdir)/unified_p.out -s eq:1 \
 		diff -up -L input_c1.in -L input_c2.in  "$(atf_get_srcdir)/input_c1.in" "$(atf_get_srcdir)/input_c2.in"
-	atf_check -o file:$(atf_get_srcdir)/unified_c9999.out -s eq:1 \
-		diff -u -c9999 -L input_c1.in -L input_c2.in "$(atf_get_srcdir)/input_c1.in" "$(atf_get_srcdir)/input_c2.in"
 	atf_check -o file:$(atf_get_srcdir)/unified_9999.out -s eq:1 \
 		diff -u9999 -L input_c1.in -L input_c2.in "$(atf_get_srcdir)/input_c1.in" "$(atf_get_srcdir)/input_c2.in"
 }
@@ -62,6 +64,14 @@ b230049_body()
 	atf_check -o empty -s eq:0 \
 		diff -up --strip-trailing-cr -L b230049_a.in -L b230049_b.in \
 		    b230049_a.in b230049_b.in
+}
+
+b252515_body()
+{
+	printf 'a b\n' > b252515_a.in
+	printf 'a  b\n' > b252515_b.in
+	atf_check -o empty -s eq:0 \
+		diff -qw b252515_a.in b252515_b.in
 }
 
 header_body()
@@ -104,13 +114,11 @@ group_format_body()
 
 side_by_side_body()
 {
-	atf_expect_fail "--side-by-side not currently implemented (bug # 219933)"
-
 	atf_check -o save:A printf "A\nB\nC\n"
 	atf_check -o save:B printf "D\nB\nE\n"
 
-	exp_output="A[[:space:]]+|[[:space:]]+D\nB[[:space:]]+B\nC[[:space:]]+|[[:space:]]+E"
-	exp_output_suppressed="A[[:space:]]+|[[:space:]]+D\nC[[:space:]]+|[[:space:]]+E"
+	exp_output=$(printf "A[[:space:]]+|[[:space:]]+D\nB[[:space:]]+B\nC[[:space:]]+|[[:space:]]+E")
+	exp_output_suppressed=$(printf "A[[:space:]]+|[[:space:]]+D\nC[[:space:]]+|[[:space:]]+E")
 
 	atf_check -o match:"$exp_output" -s exit:1 \
 	    diff --side-by-side A B
@@ -167,6 +175,15 @@ Bflag_body()
 	atf_check -s exit:1 -o file:"$(atf_get_srcdir)/Bflag_F.out" diff -B E F
 }
 
+Nflag_body()
+{
+	atf_check -x 'printf "foo" > A'
+
+	atf_check -s exit:1 -o ignore -e ignore diff -N A NOFILE 
+	atf_check -s exit:1 -o ignore -e ignore diff -N NOFILE A 
+	atf_check -s exit:2 -o ignore -e ignore diff -N NOFILE1 NOFILE2 
+}
+
 tabsize_body()
 {
 	printf "\tA\n" > A
@@ -175,6 +192,38 @@ tabsize_body()
 	atf_check -s exit:1 \
 	    -o inline:"1c1\n<  A\n---\n>  B\n" \
 	    diff -t --tabsize 1 A B
+}
+
+conflicting_format_body()
+{
+	printf "\tA\n" > A
+	printf "\tB\n" > B
+
+	atf_check -s exit:2 -e ignore diff -c -u A B
+	atf_check -s exit:2 -e ignore diff -e -f A B
+	atf_check -s exit:2 -e ignore diff -y -q A B
+	atf_check -s exit:2 -e ignore diff -q -u A B
+	atf_check -s exit:2 -e ignore diff -q -c A B
+	atf_check -s exit:2 -e ignore diff --normal -c A B
+	atf_check -s exit:2 -e ignore diff -c --normal A B
+
+	atf_check -s exit:1 -o ignore -e ignore diff -u -u A B
+	atf_check -s exit:1 -o ignore -e ignore diff -e -e A B
+	atf_check -s exit:1 -o ignore -e ignore diff -y -y A B
+	atf_check -s exit:1 -o ignore -e ignore diff -q -q A B
+	atf_check -s exit:1 -o ignore -e ignore diff -c -c A B
+	atf_check -s exit:1 -o ignore -e ignore diff --normal --normal A B
+}
+
+label_body()
+{
+	printf "\tA\n" > A
+
+	atf_check -o inline:"Files hello and world are identical\n" \
+		-s exit:0 diff --label hello --label world -s A A
+
+	atf_check -o inline:"Binary files hello and world differ\n" \
+		-s exit:1 diff --label hello --label world `which diff` `which ls`
 }
 
 atf_init_test_cases()
@@ -188,6 +237,10 @@ atf_init_test_cases()
 	atf_add_test_case side_by_side
 	atf_add_test_case brief_format
 	atf_add_test_case b230049
+	atf_add_test_case b252515
 	atf_add_test_case Bflag
+	atf_add_test_case Nflag
 	atf_add_test_case tabsize
+	atf_add_test_case conflicting_format
+	atf_add_test_case label
 }

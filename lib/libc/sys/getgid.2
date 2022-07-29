@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)getgid.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/11/lib/libc/sys/getgid.2 292268 2015-12-15 15:19:06Z kevlo $
+.\" $FreeBSD$
 .\"
-.Dd December 15, 2015
+.Dd May 1, 2020
 .Dt GETGID 2
 .Os
 .Sh NAME
@@ -78,3 +78,8 @@ and
 .Fn getegid
 system calls are expected to conform to
 .St -p1003.1-90 .
+.Sh HISTORY
+The
+.Fn getgid
+function appeared in
+.At v4 .

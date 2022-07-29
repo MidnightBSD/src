@@ -1,6 +1,8 @@
 /*	$NetBSD: clnt.h,v 1.14 2000/06/02 22:57:55 fvdl Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2010, Oracle America, Inc.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  *
  *	from: @(#)clnt.h 1.31 94/04/29 SMI
  *	from: @(#)clnt.h	2.1 88/07/29 4.0 RPCSRC
- * $FreeBSD: stable/11/sys/rpc/clnt.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*
@@ -355,6 +357,12 @@ enum clnt_stat clnt_call_private(CLIENT *, struct rpc_callextra *, rpcproc_t,
 #define CLSET_PRIVPORT		27	/* set privileged source port flag */
 #define CLGET_PRIVPORT		28	/* get privileged source port flag */
 #define CLSET_BACKCHANNEL	29	/* set backchannel for socket */
+/* Structure used as the argument for CLSET_RECONUPCALL. */
+struct rpc_reconupcall {
+	void	(*call)(CLIENT *, void *, struct ucred *);
+	void	*arg;
+};
+#define	CLSET_RECONUPCALL	30	/* Reconnect upcall */
 #endif
 
 

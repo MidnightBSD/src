@@ -29,7 +29,7 @@
  *
  *  Authors: Alan Somers         (Spectra Logic Corporation)
  *
- * $FreeBSD: stable/11/tests/sys/netinet/udp_dontroute.c 317067 2017-04-17 20:13:20Z asomers $
+ * $FreeBSD$
  */
 
 #include <arpa/inet.h>

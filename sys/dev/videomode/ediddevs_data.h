@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/11/sys/dev/videomode/ediddevs_data.h 278798 2015-02-15 11:37:40Z hselasky $	*/
+/*	$FreeBSD$	*/
 
 /*
  * THIS FILE AUTOMATICALLY GENERATED.  DO NOT EDIT.

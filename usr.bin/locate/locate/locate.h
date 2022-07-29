@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1995 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)locate.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/10/usr.bin/locate/locate/locate.h 215752 2010-11-23 15:08:56Z nwhitehorn $
+ * $FreeBSD$
  */
 
 /* Symbolic constants shared by locate.c and code.c */

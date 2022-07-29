@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright 2005, Gleb Smirnoff <glebius@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/netgraph/ng_nat.c 297793 2016-04-10 23:07:00Z pfg $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -959,6 +961,8 @@ ng_nat_translate_flags(unsigned int x)
 		res |= PKT_ALIAS_PROXY_ONLY;
 	if (x & NG_NAT_REVERSE)
 		res |= PKT_ALIAS_REVERSE;
+	if (x & NG_NAT_UNREGISTERED_CGN)
+		res |= PKT_ALIAS_UNREGISTERED_CGN;
 
 	return (res);
 }

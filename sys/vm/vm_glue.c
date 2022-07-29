@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: (BSD-3-Clause AND MIT-CMU)
+ *
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -57,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/vm/vm_glue.c 341467 2018-12-04 15:04:48Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_vm.h"
 #include "opt_kstack_pages.h"
@@ -66,6 +68,7 @@ __FBSDID("$FreeBSD: stable/11/sys/vm/vm_glue.c 341467 2018-12-04 15:04:48Z emast
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/domainset.h>
 #include <sys/limits.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
@@ -90,6 +93,7 @@ __FBSDID("$FreeBSD: stable/11/sys/vm/vm_glue.c 341467 2018-12-04 15:04:48Z emast
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 #include <vm/pmap.h>
+#include <vm/vm_domainset.h>
 #include <vm/vm_map.h>
 #include <vm/vm_page.h>
 #include <vm/vm_pageout.h>
@@ -177,21 +181,8 @@ vslock(void *addr, size_t len)
 	if (last < (vm_offset_t)addr || end < (vm_offset_t)addr)
 		return (EINVAL);
 	npages = atop(end - start);
-	if (npages > vm_page_max_wired)
+	if (npages > (u_long)vm_page_max_user_wired)
 		return (ENOMEM);
-#if 0
-	/*
-	 * XXX - not yet
-	 *
-	 * The limit for transient usage of wired pages should be
-	 * larger than for "permanent" wired pages (mlock()).
-	 *
-	 * Also, the sysctl code, which is the only present user
-	 * of vslock(), does a hard loop on EAGAIN.
-	 */
-	if (npages + vm_cnt.v_wire_count > vm_page_max_wired)
-		return (EAGAIN);
-#endif
 	error = vm_map_wire(&curproc->p_vmspace->vm_map, start, end,
 	    VM_MAP_WIRE_SYSTEM | VM_MAP_WIRE_NOHOLES);
 	if (error == KERN_SUCCESS) {
@@ -295,7 +286,7 @@ vm_sync_icache(vm_map_t map, vm_offset_t va, vm_offset_t sz)
 
 struct kstack_cache_entry *kstack_cache;
 static int kstack_cache_size = 128;
-static int kstacks;
+static int kstacks, kstack_domain_iter;
 static struct mtx kstack_cache_mtx;
 MTX_SYSINIT(kstack_cache, &kstack_cache_mtx, "kstkch", MTX_DEF);
 
@@ -324,7 +315,7 @@ vm_thread_new(struct thread *td, int pages)
 	else if (pages > KSTACK_MAX_PAGES)
 		pages = KSTACK_MAX_PAGES;
 
-	if (pages == kstack_pages) {
+	if (pages == kstack_pages && kstack_cache != NULL) {
 		mtx_lock(&kstack_cache_mtx);
 		if (kstack_cache != NULL) {
 			ks_ce = kstack_cache;
@@ -364,6 +355,17 @@ vm_thread_new(struct thread *td, int pages)
 		printf("vm_thread_new: kstack allocation failed\n");
 		vm_object_deallocate(ksobj);
 		return (0);
+	}
+
+	/*
+	 * Ensure that kstack objects can draw pages from any memory
+	 * domain.  Otherwise a local memory shortage can block a process
+	 * swap-in.
+	 */
+	if (vm_ndomains > 1) {
+		ksobj->domain.dr_policy = DOMAINSET_RR();
+		ksobj->domain.dr_iter =
+		    atomic_fetchadd_int(&kstack_domain_iter, 1);
 	}
 
 	atomic_add_int(&kstacks, 1);
@@ -406,7 +408,7 @@ vm_thread_stack_dispose(vm_object_t ksobj, vm_offset_t ks, int pages)
 		if (m == NULL)
 			panic("vm_thread_dispose: kstack already missing?");
 		vm_page_lock(m);
-		vm_page_unwire(m, PQ_NONE);
+		vm_page_unwire_noq(m);
 		vm_page_free(m);
 		vm_page_unlock(m);
 	}
@@ -532,6 +534,7 @@ vm_forkproc(struct thread *td, struct proc *p2, struct thread *td2,
     struct vmspace *vm2, int flags)
 {
 	struct proc *p1 = td->td_proc;
+	struct domainset *dset;
 	int error;
 
 	if ((flags & RFPROC) == 0) {
@@ -555,9 +558,9 @@ vm_forkproc(struct thread *td, struct proc *p2, struct thread *td2,
 		p2->p_vmspace = p1->p_vmspace;
 		atomic_add_int(&p1->p_vmspace->vm_refcnt, 1);
 	}
-
-	while (vm_page_count_severe()) {
-		VM_WAIT;
+	dset = td2->td_domain.dr_policy;
+	while (vm_page_count_severe_set(&dset->ds_mask)) {
+		vm_wait_doms(&dset->ds_mask, 0);
 	}
 
 	if ((flags & RFMEM) == 0) {

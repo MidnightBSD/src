@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/powerpc/ofw/main.c 344290 2019-02-19 18:48:17Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 #include "openfirm.h"
@@ -63,7 +63,7 @@ init_heap(void)
 {
 	bzero(heap, HEAP_SIZE);
 
-	setheap(heap, (void *)((int)heap + HEAP_SIZE));
+	setheap(heap, (void *)((uintptr_t)heap + HEAP_SIZE));
 }
 
 uint64_t

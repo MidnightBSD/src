@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1988, 1992 The University of Utah and the Center
  *	for Software Science (CSS).
  * Copyright (c) 1992, 1993
@@ -45,7 +47,7 @@
 static const char sccsid[] = "@(#)bpf.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/11/libexec/rbootd/bpf.c 331722 2018-03-29 02:50:57Z eadler $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>

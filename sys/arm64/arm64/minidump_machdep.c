@@ -30,9 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm64/arm64/minidump_machdep.c 331017 2018-03-15 19:08:33Z kevans $");
-
-#include "opt_watchdog.h"
+__FBSDID("$FreeBSD$");
 
 #include "opt_watchdog.h"
 
@@ -58,24 +56,17 @@ __FBSDID("$FreeBSD: stable/11/sys/arm64/arm64/minidump_machdep.c 331017 2018-03-
 
 CTASSERT(sizeof(struct kerneldumpheader) == 512);
 
-/*
- * Don't touch the first SIZEOF_METADATA bytes on the dump device. This
- * is to protect us from metadata and to protect metadata from us.
- */
-#define	SIZEOF_METADATA		(64*1024)
-
 uint64_t *vm_page_dump;
 int vm_page_dump_size;
 
 static struct kerneldumpheader kdh;
-static off_t dumplo;
 
 /* Handle chunked writes. */
 static size_t fragsz;
 static void *dump_va;
 static size_t counter, progress, dumpsize;
 
-static uint64_t tmpbuffer[PAGE_SIZE / sizeof(uint64_t)];
+static uint64_t tmpbuffer[Ln_ENTRIES];
 
 CTASSERT(sizeof(*vm_page_dump) == 8);
 
@@ -102,8 +93,7 @@ blk_flush(struct dumperinfo *di)
 	if (fragsz == 0)
 		return (0);
 
-	error = dump_write(di, dump_va, 0, dumplo, fragsz);
-	dumplo += fragsz;
+	error = dump_append(di, dump_va, 0, fragsz);
 	fragsz = 0;
 	return (error);
 }
@@ -189,10 +179,9 @@ blk_write(struct dumperinfo *di, char *ptr, vm_paddr_t pa, size_t sz)
 		wdog_kern_pat(WD_LASTVAL);
 
 		if (ptr) {
-			error = dump_write(di, ptr, 0, dumplo, len);
+			error = dump_append(di, ptr, 0, len);
 			if (error)
 				return (error);
-			dumplo += len;
 			ptr += len;
 			sz -= len;
 		} else {
@@ -219,16 +208,14 @@ blk_write(struct dumperinfo *di, char *ptr, vm_paddr_t pa, size_t sz)
 int
 minidumpsys(struct dumperinfo *di)
 {
+	struct minidumphdr mdhdr;
 	pd_entry_t *l0, *l1, *l2;
 	pt_entry_t *l3;
-	uint32_t pmapsize;
 	vm_offset_t va;
 	vm_paddr_t pa;
-	int error;
 	uint64_t bits;
-	int i, bit;
-	int retry_count;
-	struct minidumphdr mdhdr;
+	uint32_t pmapsize;
+	int bit, error, i, j, retry_count;
 
 	retry_count = 0;
  retry:
@@ -240,11 +227,15 @@ minidumpsys(struct dumperinfo *di)
 		if (!pmap_get_tables(pmap_kernel(), va, &l0, &l1, &l2, &l3))
 			continue;
 
-		/* We should always be using the l2 table for kvm */
-		if (l2 == NULL)
-			continue;
-
-		if ((*l2 & ATTR_DESCR_MASK) == L2_BLOCK) {
+		if ((*l1 & ATTR_DESCR_MASK) == L1_BLOCK) {
+			pa = *l1 & ~ATTR_MASK;
+			for (i = 0; i < Ln_ENTRIES * Ln_ENTRIES;
+			    i++, pa += PAGE_SIZE)
+				if (is_dumpable(pa))
+					dump_add_page(pa);
+			pmapsize += (Ln_ENTRIES - 1) * PAGE_SIZE;
+			va += L1_SIZE - L2_SIZE;
+		} else if ((*l2 & ATTR_DESCR_MASK) == L2_BLOCK) {
 			pa = *l2 & ~ATTR_MASK;
 			for (i = 0; i < Ln_ENTRIES; i++, pa += PAGE_SIZE) {
 				if (is_dumpable(pa))
@@ -281,13 +272,6 @@ minidumpsys(struct dumperinfo *di)
 	}
 	dumpsize += PAGE_SIZE;
 
-	/* Determine dump offset on device. */
-	if (di->mediasize < SIZEOF_METADATA + dumpsize + sizeof(kdh) * 2) {
-		error = E2BIG;
-		goto fail;
-	}
-	dumplo = di->mediaoffset + di->mediasize - dumpsize;
-	dumplo -= sizeof(kdh) * 2;
 	progress = dumpsize;
 
 	/* Initialize mdhdr */
@@ -302,17 +286,15 @@ minidumpsys(struct dumperinfo *di)
 	mdhdr.dmapbase = DMAP_MIN_ADDRESS;
 	mdhdr.dmapend = DMAP_MAX_ADDRESS;
 
-	mkdumpheader(&kdh, KERNELDUMPMAGIC, KERNELDUMP_AARCH64_VERSION,
-	    dumpsize, di->blocksize);
+	dump_init_header(di, &kdh, KERNELDUMPMAGIC, KERNELDUMP_AARCH64_VERSION,
+	    dumpsize);
+
+	error = dump_start(di, &kdh);
+	if (error != 0)
+		goto fail;
 
 	printf("Dumping %llu out of %ju MB:", (long long)dumpsize >> 20,
 	    ptoa((uintmax_t)physmem) / 1048576);
-
-	/* Dump leader */
-	error = dump_write(di, &kdh, 0, dumplo, sizeof(kdh));
-	if (error)
-		goto fail;
-	dumplo += sizeof(kdh);
 
 	/* Dump my header */
 	bzero(&tmpbuffer, sizeof(tmpbuffer));
@@ -345,25 +327,31 @@ minidumpsys(struct dumperinfo *di)
 			error = blk_flush(di);
 			if (error)
 				goto fail;
-		} else if (l2 == NULL) {
+		} else if ((*l1 & ATTR_DESCR_MASK) == L1_BLOCK) {
+			/*
+			 * Handle a 1GB block mapping: write out 512 fake L2
+			 * pages.
+			 */
 			pa = (*l1 & ~ATTR_MASK) | (va & L1_OFFSET);
 
-			/* Generate fake l3 entries based upon the l1 entry */
 			for (i = 0; i < Ln_ENTRIES; i++) {
-				tmpbuffer[i] = pa + (i * PAGE_SIZE) |
-				    ATTR_DEFAULT | L3_PAGE;
+				for (j = 0; j < Ln_ENTRIES; j++) {
+					tmpbuffer[j] = pa + i * L2_SIZE +
+					    j * PAGE_SIZE | ATTR_DEFAULT |
+					    L3_PAGE;
+				}
+				error = blk_write(di, (char *)&tmpbuffer, 0,
+				    PAGE_SIZE);
+				if (error)
+					goto fail;
 			}
-			/* We always write a page, even if it is zero */
-			error = blk_write(di, (char *)&tmpbuffer, 0, PAGE_SIZE);
-			if (error)
-				goto fail;
 			/* flush, in case we reuse tmpbuffer in the same block*/
 			error = blk_flush(di);
 			if (error)
 				goto fail;
 			bzero(&tmpbuffer, sizeof(tmpbuffer));
+			va += L1_SIZE - L2_SIZE;
 		} else if ((*l2 & ATTR_DESCR_MASK) == L2_BLOCK) {
-			/* TODO: Handle an invalid L2 entry */
 			pa = (*l2 & ~ATTR_MASK) | (va & L2_OFFSET);
 
 			/* Generate fake l3 entries based upon the l1 entry */
@@ -371,7 +359,6 @@ minidumpsys(struct dumperinfo *di)
 				tmpbuffer[i] = pa + (i * PAGE_SIZE) |
 				    ATTR_DEFAULT | L3_PAGE;
 			}
-			/* We always write a page, even if it is zero */
 			error = blk_write(di, (char *)&tmpbuffer, 0, PAGE_SIZE);
 			if (error)
 				goto fail;
@@ -384,7 +371,6 @@ minidumpsys(struct dumperinfo *di)
 		} else {
 			pa = *l2 & ~ATTR_MASK;
 
-			/* We always write a page, even if it is zero */
 			error = blk_write(di, NULL, pa, PAGE_SIZE);
 			if (error)
 				goto fail;
@@ -410,18 +396,14 @@ minidumpsys(struct dumperinfo *di)
 	if (error)
 		goto fail;
 
-	/* Dump trailer */
-	error = dump_write(di, &kdh, 0, dumplo, sizeof(kdh));
-	if (error)
+	error = dump_finish(di, &kdh);
+	if (error != 0)
 		goto fail;
-	dumplo += sizeof(kdh);
 
-	/* Signal completion, signoff and exit stage left. */
-	dump_write(di, NULL, 0, 0, 0);
 	printf("\nDump complete\n");
 	return (0);
 
- fail:
+fail:
 	if (error < 0)
 		error = -error;
 

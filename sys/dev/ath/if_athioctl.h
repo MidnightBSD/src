@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/ath/if_athioctl.h 345636 2019-03-28 09:50:25Z avos $
+ * $FreeBSD$
  */
 
 /*
@@ -191,7 +193,6 @@ struct ath_diag {
 #define	SIOCGATHDIAG	_IOWR('i', 138, struct ath_diag)
 #define	SIOCGATHPHYERR	_IOWR('i', 140, struct ath_diag)
 
-
 /*
  * The rate control ioctl has to support multiple potential rate
  * control classes.  For now, instead of trying to support an
@@ -303,8 +304,8 @@ struct ath_radiotap_vendor_hdr {		/* 30 bytes */
 	/* At this point it should be 4 byte aligned */
 	uint32_t	evm[ATH_RADIOTAP_MAX_EVM];	/* 5 * 4 = 20 */
 
-	uint8_t		rssi_ctl[ATH_RADIOTAP_MAX_CHAINS];	/* 4 */
-	uint8_t		rssi_ext[ATH_RADIOTAP_MAX_CHAINS];	/* 4 */
+	uint8_t		rssi_ctl[ATH_RADIOTAP_MAX_CHAINS];	/* 4 * 4 = 16 */
+	uint8_t		rssi_ext[ATH_RADIOTAP_MAX_CHAINS];	/* 4 * 4 = 16 */
 
 	uint8_t		vh_phyerr_code;	/* Phy error code, or 0xff */
 	uint8_t		vh_rs_status;	/* RX status */
@@ -432,6 +433,7 @@ struct ath_tx_radiotap_header {
 #define	SPECTRAL_PARAM_SS_SHORT_RPT	4
 #define	SPECTRAL_PARAM_ENABLED		5
 #define	SPECTRAL_PARAM_ACTIVE		6
+#define	SPECTRAL_PARAM_SS_SPECTRAL_PRI	7
 
 /*
  * Spectral control parameters
@@ -446,5 +448,10 @@ struct ath_tx_radiotap_header {
 #define	SPECTRAL_CONTROL_SET_PARAMS	7
 #define	SPECTRAL_CONTROL_ENABLE_AT_RESET	8
 #define	SPECTRAL_CONTROL_DISABLE_AT_RESET	9
+
+/*
+ * Bluetooth coexistence control parameters
+ */
+#define	SIOCGATHBTCOEX		_IOWR('i', 152, struct ath_diag)
 
 #endif /* _DEV_ATH_ATHIOCTL_H */

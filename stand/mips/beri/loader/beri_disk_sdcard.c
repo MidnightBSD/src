@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/mips/beri/loader/beri_disk_sdcard.c 332154 2018-04-06 21:37:25Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -135,8 +135,8 @@ beri_sdcard_disk_print(int verbose)
 	    return (ret);
 	dev.dd.d_dev = &beri_sdcard_disk;
 	dev.dd.d_unit = 0;
-	dev.d_slice = -1;
-	dev.d_partition = -1;
+	dev.d_slice = D_SLICENONE;
+	dev.d_partition = D_PARTNONE;
 	if (disk_open(&dev, altera_sdcard_get_mediasize(),
 	    altera_sdcard_get_sectorsize()) == 0) {
 		snprintf(line, sizeof(line), "    sdcard%d", 0);

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mii/mii_fdt.c 323414 2017-09-11 01:59:24Z ian $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Utility functions for PHY drivers on systems configured using FDT data.

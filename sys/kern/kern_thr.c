@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003, Jeffrey Roberson <jeff@freebsd.org>
  * All rights reserved.
  *
@@ -25,10 +27,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/kern_thr.c 337242 2018-08-03 14:05:22Z asomers $");
+__FBSDID("$FreeBSD$");
 
-#include "opt_compat.h"
 #include "opt_posix.h"
+#include "opt_hwpmc_hooks.h"
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
@@ -54,8 +56,9 @@ __FBSDID("$FreeBSD: stable/11/sys/kern/kern_thr.c 337242 2018-08-03 14:05:22Z as
 #include <sys/rtprio.h>
 #include <sys/umtx.h>
 #include <sys/limits.h>
-
-#include <vm/vm_domain.h>
+#ifdef	HWPMC_HOOKS
+#include <sys/pmckern.h>
+#endif
 
 #include <machine/frame.h>
 
@@ -232,12 +235,10 @@ thread_create(struct thread *td, struct rtprio *rtp,
 
 	bzero(&newtd->td_startzero,
 	    __rangeof(struct thread, td_startzero, td_endzero));
-	newtd->td_sleeptimo = 0;
-	newtd->td_vslock_sz = 0;
-	bzero(&newtd->td_si, sizeof(newtd->td_si));
+	newtd->td_pflags2 = 0;
+	newtd->td_errno = 0;
 	bcopy(&td->td_startcopy, &newtd->td_startcopy,
 	    __rangeof(struct thread, td_startcopy, td_endcopy));
-	newtd->td_sa = td->td_sa;
 	newtd->td_proc = td->td_proc;
 	newtd->td_rb_list = newtd->td_rbp_list = newtd->td_rb_inact = 0;
 	thread_cow_get(newtd, td);
@@ -262,13 +263,13 @@ thread_create(struct thread *td, struct rtprio *rtp,
 	if (p->p_ptevents & PTRACE_LWP)
 		newtd->td_dbgflags |= TDB_BORN;
 
-	/*
-	 * Copy the existing thread VM policy into the new thread.
-	 */
-	vm_domain_policy_localcopy(&newtd->td_vm_dom_policy,
-	    &td->td_vm_dom_policy);
-
 	PROC_UNLOCK(p);
+#ifdef	HWPMC_HOOKS
+	if (PMC_PROC_IS_USING_PMCS(p))
+		PMC_CALL_HOOK(newtd, PMC_FN_THR_CREATE, NULL);
+	else if (PMC_SYSTEM_SAMPLING_ACTIVE())
+		PMC_CALL_HOOK_UNLOCKED(newtd, PMC_FN_THR_CREATE_LOG, NULL);
+#endif
 
 	tidhash_add(newtd);
 
@@ -600,6 +601,10 @@ sys_thr_set_name(struct thread *td, struct thr_set_name_args *uap)
 	if (ttd == NULL)
 		return (ESRCH);
 	strcpy(ttd->td_name, name);
+#ifdef HWPMC_HOOKS
+	if (PMC_PROC_IS_USING_PMCS(p) || PMC_SYSTEM_SAMPLING_ACTIVE())
+		PMC_CALL_HOOK_UNLOCKED(ttd, PMC_FN_THR_CREATE_LOG, NULL);
+#endif
 #ifdef KTR
 	sched_clear_tdname(ttd);
 #endif

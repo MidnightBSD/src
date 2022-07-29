@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2011 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
  *
@@ -30,13 +32,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/iscsi_initiator/isc_subr.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_iscsi_initiator.h"
 
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/conf.h>
+#include <sys/gsb_crc32.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/ctype.h>
@@ -192,6 +195,9 @@ i_crc32c(const void *buf, size_t size, uint32_t crc)
 int
 i_setopt(isc_session_t *sp, isc_opt_t *opt)
 {
+     char buf[16];
+     int error;
+
      if(opt->maxRecvDataSegmentLength > 0) {
 	  sp->opt.maxRecvDataSegmentLength = opt->maxRecvDataSegmentLength;
 	  sdebug(2, "maxRecvDataSegmentLength=%d", sp->opt.maxRecvDataSegmentLength);
@@ -233,15 +239,21 @@ i_setopt(isc_session_t *sp, isc_opt_t *opt)
      }
 
      if(opt->headerDigest != NULL) {
-	  sdebug(2, "opt.headerDigest='%s'", opt->headerDigest);
-	  if(strcmp(opt->headerDigest, "CRC32C") == 0) {
+	  error = copyinstr(opt->headerDigest, buf, sizeof(buf), NULL);
+	  if (error != 0)
+	       return (error);
+	  sdebug(2, "opt.headerDigest='%s'", buf);
+	  if(strcmp(buf, "CRC32C") == 0) {
 	       sp->hdrDigest = (digest_t *)i_crc32c;
 	       sdebug(2, "opt.headerDigest set");
 	  }
      }
      if(opt->dataDigest != NULL) {
-	  sdebug(2, "opt.dataDigest='%s'", opt->headerDigest);
-	  if(strcmp(opt->dataDigest, "CRC32C") == 0) {
+	  error = copyinstr(opt->dataDigest, buf, sizeof(buf), NULL);
+	  if (error != 0)
+	       return (error);
+	  sdebug(2, "opt.dataDigest='%s'", opt->dataDigest);
+	  if(strcmp(buf, "CRC32C") == 0) {
 	       sp->dataDigest = (digest_t *)i_crc32c;
 	       sdebug(2, "opt.dataDigest set");
 	  }

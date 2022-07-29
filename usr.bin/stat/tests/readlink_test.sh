@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.bin/stat/tests/readlink_test.sh 319834 2017-06-11 21:13:12Z ngie $
+# $FreeBSD$
 
 atf_test_case f_flag
 basic_head()

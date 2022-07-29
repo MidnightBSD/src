@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/amdgpio/amdgpio.c 349214 2019-06-19 20:21:34Z avg $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 

@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/sys/modules/vmware/vmxnet3/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -27,10 +27,7 @@
 
 KMOD=	if_vmx
 SRCS=	if_vmx.c
-SRCS+=	bus_if.h device_if.h pci_if.h opt_inet.h opt_inet6.h
-
-# With VMXNET3_LEGACY_TX, the driver will use the non-multiqueue
-# capable if_start interface.
-#CFLAGS+= -DVMXNET3_LEGACY_TX
+SRCS+=	bus_if.h device_if.h pci_if.h ifdi_if.h
+SRCS+=	opt_inet.h opt_inet6.h opt_rss.h
 
 .include <bsd.kmod.mk>

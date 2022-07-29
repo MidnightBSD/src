@@ -30,7 +30,7 @@
  *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: stable/11/sys/dev/liquidio/base/lio_device.h 325618 2017-11-09 19:52:56Z sbruno $*/
+/*$FreeBSD$*/
 
 /*
  *  \brief Host Driver: This file defines the octeon device structure.
@@ -799,7 +799,7 @@ void	*lio_get_config_info(struct octeon_device *oct, uint16_t card_type);
 
 /*
  *  Gets the octeon device configuration
- *  @return - pointer to the octeon configuration struture
+ *  @return - pointer to the octeon configuration structure
  */
 struct lio_config	*lio_get_conf(struct octeon_device *oct);
 

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause and BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
  *
@@ -40,7 +42,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -57,7 +59,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fsck.h	8.4 (Berkeley) 5/9/95
- * $FreeBSD: stable/11/sbin/fsck_ffs/fsck.h 359754 2020-04-09 20:38:36Z kevans $
+ * $FreeBSD$
  */
 
 #ifndef _FSCK_H_
@@ -135,11 +137,11 @@ extern struct inostatlist {
  */
 struct bufarea {
 	TAILQ_ENTRY(bufarea) b_list;		/* buffer list */
-	ufs2_daddr_t b_bno;
-	int b_size;
-	int b_errs;
-	int b_flags;
-	int b_type;
+	ufs2_daddr_t b_bno;			/* disk block number */
+	int b_size;				/* size of I/O */
+	int b_errs;				/* I/O error */
+	int b_flags;				/* B_ flags below */
+	int b_type;				/* BT_ type below */
 	union {
 		char *b_buf;			/* buffer space */
 		ufs1_daddr_t *b_indir1;		/* UFS1 indirect block */
@@ -170,14 +172,14 @@ struct bufarea {
 /*
  * Type of data in buffer
  */
-#define	BT_UNKNOWN 	 0	/* Buffer holds a superblock */
+#define	BT_UNKNOWN 	 0	/* Buffer type is unknown */
 #define	BT_SUPERBLK 	 1	/* Buffer holds a superblock */
 #define	BT_CYLGRP 	 2	/* Buffer holds a cylinder group map */
 #define	BT_LEVEL1 	 3	/* Buffer holds single level indirect */
 #define	BT_LEVEL2 	 4	/* Buffer holds double level indirect */
 #define	BT_LEVEL3 	 5	/* Buffer holds triple level indirect */
 #define	BT_EXTATTR 	 6	/* Buffer holds external attribute data */
-#define	BT_INODES 	 7	/* Buffer holds external attribute data */
+#define	BT_INODES 	 7	/* Buffer holds inodes */
 #define	BT_DIRDATA 	 8	/* Buffer holds directory data */
 #define	BT_DATA	 	 9	/* Buffer holds user data */
 #define BT_NUMBUFTYPES	10
@@ -309,7 +311,7 @@ extern u_int	real_dev_bsize;		/* actual disk sector size, not overridden */
 extern char	nflag;			/* assume a no response */
 extern char	yflag;			/* assume a yes response */
 extern int	bkgrdflag;		/* use a snapshot to run on an active system */
-extern ufs2_daddr_t bflag;		/* location of alternate super block */
+extern off_t	bflag;			/* location of alternate super block */
 extern int	debug;			/* output debugging info */
 extern int	Eflag;			/* delete empty data blocks */
 extern int	Zflag;			/* zero empty data blocks */
@@ -317,6 +319,7 @@ extern int	zflag;			/* zero unused directory space */
 extern int	inoopt;			/* trim out unused inodes */
 extern char	ckclean;		/* only do work if not cleanly unmounted */
 extern int	cvtlevel;		/* convert to newer file system format */
+extern int	ckhashadd;		/* check hashes to be added */
 extern int	bkgrdcheck;		/* determine if background check is possible */
 extern int	bkgrdsumadj;		/* whether the kernel have ability to adjust superblock summary */
 extern char	usedsoftdep;		/* just fix soft dependency inconsistencies */
@@ -329,6 +332,7 @@ extern char	skipclean;		/* skip clean file systems if preening */
 extern int	fsmodified;		/* 1 => write done to file system */
 extern int	fsreadfd;		/* file descriptor for reading file system */
 extern int	fswritefd;		/* file descriptor for writing file system */
+extern struct	uufsd disk;		/* libufs user-ufs disk structure */
 extern int	surrender;		/* Give up if reads fail */
 extern int	wantrestart;		/* Restart fsck on early termination */
 
@@ -439,7 +443,7 @@ void		freeinodebuf(void);
 void		fsutilinit(void);
 int		ftypeok(union dinode *dp);
 void		getblk(struct bufarea *bp, ufs2_daddr_t blk, long size);
-struct bufarea *cgget(int cg);
+struct bufarea *cglookup(int cg);
 struct bufarea *getdatablk(ufs2_daddr_t blkno, long size, int type);
 struct inoinfo *getinoinfo(ino_t inumber);
 union dinode   *getnextinode(ino_t inumber, int rebuildcg);

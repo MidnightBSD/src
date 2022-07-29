@@ -31,7 +31,7 @@
  * official policies, either expressed or implied, of the FreeBSD Project.
  *
  * ------+---------+---------+---------+---------+---------+---------+---------*
- * $FreeBSD: stable/11/usr.sbin/newsyslog/extern.h 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  * ------+---------+---------+---------+---------+---------+---------+---------*
  */
 

@@ -1,6 +1,6 @@
 #!/bin/csh
 #
-# $MidnightBSD$
+# $FreeBSD$
 #
 # Run tcpp -s -p 8 on the server, then this on the client.
 #

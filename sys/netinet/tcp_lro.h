@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006, Myricom Inc.
  * Copyright (c) 2008, Intel Corporation.
  * Copyright (c) 2016 Mellanox Technologies.
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/netinet/tcp_lro.h 300731 2016-05-26 11:10:31Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _TCP_LRO_H_
@@ -40,6 +42,7 @@
 
 struct lro_entry {
 	LIST_ENTRY(lro_entry)	next;
+	LIST_ENTRY(lro_entry)	hash_next;
 	struct mbuf		*m_head;
 	struct mbuf		*m_tail;
 	union {
@@ -95,6 +98,8 @@ struct lro_ctrl {
 	unsigned short	lro_ackcnt_lim;		/* max # of aggregated ACKs */
 	unsigned 	lro_length_lim;		/* max len of aggregated data */
 
+	u_long		lro_hashsz;
+	struct lro_head	*lro_hash;
 	struct lro_head	lro_active;
 	struct lro_head	lro_free;
 };

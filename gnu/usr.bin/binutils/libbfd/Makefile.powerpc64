@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/gnu/usr.bin/binutils/libbfd/Makefile.powerpc64 239654 2012-08-24 16:37:00Z rdivacky $
+# $FreeBSD$
 
 ARCHS+=	rs6000
 

@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/dev/bktr/bktr_os.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -11,6 +11,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * 1. Redistributions of source code must retain the 
  * Copyright (c) 1997 Amancio Hasty, 1999 Roger Hardiman
  * All rights reserved.
@@ -47,7 +49,7 @@
 /******************************/
 /* *** Memory Allocation  *** */
 /******************************/
-#if (defined(__MidnightBSD__) || defined(__bsdi__))
+#if (defined(__FreeBSD__) || defined(__bsdi__))
 vm_offset_t     get_bktr_mem( int unit, unsigned size );
 #endif
 
@@ -59,7 +61,7 @@ void            free_bktr_mem(bktr_ptr_t, bus_dmamap_t, vm_offset_t);
 /************************************/
 /* *** Interrupt Enable/Disable *** */
 /************************************/
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 #if (__FreeBSD_version >=500000)
 #define USE_VBIMUTEX
 #define	DECLARE_INTR_MASK(s)	/* no need to declare 's' */

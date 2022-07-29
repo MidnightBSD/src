@@ -1,5 +1,5 @@
 /*	$OpenBSD: ber.c,v 1.9 2015/02/12 00:30:38 pelikan Exp $ */
-/*	$FreeBSD: stable/11/usr.sbin/ypldap/ber.c 300639 2016-05-25 01:37:25Z truckman $ */
+/*	$FreeBSD$ */
 
 /*
  * Copyright (c) 2007 Reyk Floeter <reyk@vantronix.net>

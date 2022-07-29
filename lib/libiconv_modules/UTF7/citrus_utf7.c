@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/lib/libiconv_modules/UTF7/citrus_utf7.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*	$NetBSD: citrus_utf7.c,v 1.5 2006/08/23 12:57:24 tnozaki Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c)2004, 2005 Citrus Project,
  * All rights reserved.
  *

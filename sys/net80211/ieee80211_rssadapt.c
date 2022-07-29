@@ -1,6 +1,8 @@
-/*	$FreeBSD: stable/11/sys/net80211/ieee80211_rssadapt.c 343035 2019-01-15 02:16:23Z avos $	*/
+/*	$FreeBSD$	*/
 /* $NetBSD: ieee80211_rssadapt.c,v 1.9 2005/02/26 22:45:09 perry Exp $ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2010 Rui Paulo <rpaulo@FreeBSD.org>
  * Copyright (c) 2003, 2004 David Young.  All rights reserved.
  *
@@ -87,9 +89,8 @@ static int	rssadapt_rate(struct ieee80211_node *, void *, uint32_t);
 static void	rssadapt_lower_rate(struct ieee80211_rssadapt_node *, int, int);
 static void	rssadapt_raise_rate(struct ieee80211_rssadapt_node *,
 			int, int);
-static void	rssadapt_tx_complete(const struct ieee80211vap *,
-    			const struct ieee80211_node *, int,
-			void *, void *);
+static void	rssadapt_tx_complete(const struct ieee80211_node *,
+			const struct ieee80211_ratectl_tx_status *);
 static void	rssadapt_sysctlattach(struct ieee80211vap *,
 			struct sysctl_ctx_list *, struct sysctl_oid *);
 
@@ -116,15 +117,13 @@ static void
 rssadapt_setinterval(const struct ieee80211vap *vap, int msecs)
 {
 	struct ieee80211_rssadapt *rs = vap->iv_rs;
-	int t;
 
 	if (!rs)
 		return;
 
 	if (msecs < 100)
 		msecs = 100;
-	t = msecs_to_ticks(msecs);
-	rs->interval = (t < 1) ? 1 : t;
+	rs->interval = msecs_to_ticks(msecs);
 }
 
 static void
@@ -330,16 +329,24 @@ rssadapt_raise_rate(struct ieee80211_rssadapt_node *ra, int pktlen, int rssi)
 }
 
 static void
-rssadapt_tx_complete(const struct ieee80211vap *vap,
-    const struct ieee80211_node *ni, int success, void *arg1, void *arg2)
+rssadapt_tx_complete(const struct ieee80211_node *ni,
+    const struct ieee80211_ratectl_tx_status *status)
 {
 	struct ieee80211_rssadapt_node *ra = ni->ni_rctls;
-	int pktlen = *(int *)arg1, rssi = *(int *)arg2;
+	int pktlen, rssi;
 
 	if (!ra)
 		return;
 
-	if (success) {
+	if ((status->flags &
+	    (IEEE80211_RATECTL_STATUS_PKTLEN|IEEE80211_RATECTL_STATUS_RSSI)) !=
+	    (IEEE80211_RATECTL_STATUS_PKTLEN|IEEE80211_RATECTL_STATUS_RSSI))
+		return;
+
+	pktlen = status->pktlen;
+	rssi = status->rssi;
+
+	if (status->status == IEEE80211_RATECTL_TX_SUCCESS) {
 		ra->ra_nok++;
 		if ((ra->ra_rix + 1) < ra->ra_rates.rs_nrates &&
 		    (ticks - ra->ra_last_raise) >= ra->ra_raise_interval)

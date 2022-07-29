@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Luigi Rizzo, Alessandro Cerri. All rights reserved.
  * Copyright (c) 2004-2008 Qing Li. All rights reserved.
  * Copyright (c) 2008 Kip Macy. All rights reserved.
@@ -25,28 +27,22 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/net/if_llatbl.h 337462 2018-08-08 16:17:50Z ae $");
+__FBSDID("$FreeBSD$");
 
 #ifndef	_NET_IF_LLATBL_H_
 #define	_NET_IF_LLATBL_H_
 
 #include <sys/_rwlock.h>
 #include <netinet/in.h>
+#include <sys/epoch.h>
+#include <sys/ck.h>
 
 struct ifnet;
 struct sysctl_req;
 struct rt_msghdr;
 struct rt_addrinfo;
-
 struct llentry;
-LIST_HEAD(llentries, llentry);
-
-extern struct rwlock lltable_rwlock;
-#define	LLTABLE_RLOCK()		rw_rlock(&lltable_rwlock)
-#define	LLTABLE_RUNLOCK()	rw_runlock(&lltable_rwlock)
-#define	LLTABLE_WLOCK()		rw_wlock(&lltable_rwlock)
-#define	LLTABLE_WUNLOCK()	rw_wunlock(&lltable_rwlock)
-#define	LLTABLE_LOCK_ASSERT()	rw_assert(&lltable_rwlock, RA_LOCKED)
+CK_LIST_HEAD(llentries, llentry);
 
 #define	LLE_MAX_LINKHDR		24	/* Full IB header */
 /*
@@ -54,7 +50,7 @@ extern struct rwlock lltable_rwlock;
  * a shared lock
  */
 struct llentry {
-	LIST_ENTRY(llentry)	 lle_next;
+	CK_LIST_ENTRY(llentry)	 lle_next;
 	union {
 		struct in_addr	addr4;
 		struct in6_addr	addr6;
@@ -82,10 +78,11 @@ struct llentry {
 	int			 lle_refcnt;
 	char			*ll_addr;	/* link-layer address */
 
-	LIST_ENTRY(llentry)	lle_chain;	/* chain of deleted items */
+	CK_LIST_ENTRY(llentry)	lle_chain;	/* chain of deleted items */
 	struct callout		lle_timer;
 	struct rwlock		 lle_lock;
 	struct mtx		req_mtx;
+	struct epoch_context lle_epoch_ctx;
 };
 
 #define	LLE_WLOCK(lle)		rw_wlock(&(lle)->lle_lock)

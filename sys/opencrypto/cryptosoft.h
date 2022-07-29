@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/11/sys/opencrypto/cryptosoft.h 167755 2007-03-21 03:42:51Z sam $	*/
+/*	$FreeBSD$	*/
 /*	$OpenBSD: cryptosoft.h,v 1.10 2002/04/22 23:10:09 deraadt Exp $	*/
 
 /*-
@@ -55,8 +55,12 @@ struct swcr_data {
 #define sw_exf		SWCR_UN.SWCR_ENC.SW_exf
 #define sw_size		SWCR_UN.SWCR_COMP.SW_size
 #define sw_cxf		SWCR_UN.SWCR_COMP.SW_cxf
+};
 
-	struct swcr_data *sw_next;
+struct swcr_session {
+	struct mtx	swcr_lock;
+	struct swcr_data swcr_algorithms[2];
+	unsigned swcr_nalgs;
 };
 
 #ifdef _KERNEL

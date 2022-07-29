@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/include/efipoint.h 346482 2019-04-21 04:26:02Z kevans $ */
+/* $FreeBSD$ */
 /* Copyright (C) 2014 by John Cronin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy

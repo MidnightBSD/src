@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/ld128/s_erfl.c 268593 2014-07-13 17:05:03Z kargl $");
+__FBSDID("$FreeBSD$");
 
 /*
  * See s_erf.c for complete comments.

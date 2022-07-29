@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/11/tests/sys/geom/class/mirror/12_test.sh 327553 2018-01-04 16:19:56Z markj $
+# $FreeBSD$
 
 # Test handling of write errors.
 

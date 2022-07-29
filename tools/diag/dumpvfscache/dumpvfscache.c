@@ -1,4 +1,4 @@
-/* $FreeBSD: src/tools/diag/dumpvfscache/dumpvfscache.c,v 1.4 2002/01/02 06:25:39 kbyanc Exp $ */
+/* $FreeBSD$ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

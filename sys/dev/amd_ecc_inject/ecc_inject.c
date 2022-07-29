@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/amd_ecc_inject/ecc_inject.c 314638 2017-03-03 22:51:04Z avg $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -186,7 +186,7 @@ ecc_ei_inject(int count)
 	KASSERT(bit_mask != 0 && (bit_mask & ~INJ_VECTOR_MASK) == 0,
 	    ("bit mask value is outside of range: 0x%x", bit_mask));
 
-	memory = kmem_alloc_attr(kernel_arena, PAGE_SIZE, M_WAITOK, 0, ~0,
+	memory = kmem_alloc_attr(PAGE_SIZE, M_WAITOK, 0, ~0,
 	    VM_MEMATTR_UNCACHEABLE);
 
 	for (injected = 0; injected < count; injected++) {
@@ -195,7 +195,7 @@ ecc_ei_inject(int count)
 			pause_sbt("ecc_ei_inject", delay_ms * SBT_1MS, 0, 0);
 	}
 
-	kmem_free(kernel_arena, memory, PAGE_SIZE);
+	kmem_free(memory, PAGE_SIZE);
 }
 
 static int
@@ -203,7 +203,8 @@ ecc_ei_load(void)
 {
 	uint32_t val;
 
-	if (cpu_vendor_id != CPU_VENDOR_AMD || CPUID_TO_FAMILY(cpu_id) < 0x10) {
+	if ((cpu_vendor_id != CPU_VENDOR_AMD || CPUID_TO_FAMILY(cpu_id) < 0x10) &&
+	    cpu_vendor_id != CPU_VENDOR_HYGON) {
 		printf("DRAM ECC error injection is not supported\n");
 		return (ENXIO);
 	}

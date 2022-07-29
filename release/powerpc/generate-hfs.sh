@@ -10,16 +10,16 @@
 # template (e.g. because the boot block or the CHRP script have grown),
 # you must install it from ports.
 
-# $MidnightBSD$
+# $FreeBSD$
 
 HFS_SIZE=400		#Size in 2048-byte blocks of the produced image
-LOADER_SIZE=300k
+LOADER_SIZE=500k
 
 # Generate 800K HFS image
 OUTPUT_FILE=hfs-boot
 
 dd if=/dev/zero of=$OUTPUT_FILE bs=2048 count=$HFS_SIZE
-hformat -l "MidnightBSD Install" $OUTPUT_FILE
+hformat -l "FreeBSD Install" $OUTPUT_FILE
 hmount $OUTPUT_FILE
 
 # Create and bless a directory for the boot loader
@@ -30,9 +30,9 @@ hcd ppc
 # Make the CHRP boot script, which gets loader from the ISO9660 partition
 cat > bootinfo.txt << EOF
 <CHRP-BOOT>
-<DESCRIPTION>MidnightBSD/powerpc bootloader</DESCRIPTION>
-<OS-NAME>MidnightBSD</OS-NAME>
-<VERSION> $MidnightBSD: head/sys/boot/powerpc/boot1.chrp/bootinfo.txt 184490 2008-10
+<DESCRIPTION>FreeBSD/powerpc bootloader</DESCRIPTION>
+<OS-NAME>FreeBSD</OS-NAME>
+<VERSION> $FreeBSD: head/stand/powerpc/boot1.chrp/bootinfo.txt 184490 2008-10
 -31 00:52:31Z nwhitehorn $ </VERSION>
 
 <COMPATIBLE>
@@ -57,7 +57,7 @@ rm loader.tmp
 bzip2 $OUTPUT_FILE
 echo 'HFS boot filesystem created by generate-hfs.sh' > $OUTPUT_FILE.bz2.uu
 echo 'DO NOT EDIT' >> $OUTPUT_FILE.bz2.uu
-echo '$MidnightBSD$' >> $OUTPUT_FILE.bz2.uu
+echo '$FreeBSD$' >> $OUTPUT_FILE.bz2.uu
 
 uuencode $OUTPUT_FILE.bz2 $OUTPUT_FILE.bz2 >> $OUTPUT_FILE.bz2.uu
 rm $OUTPUT_FILE.bz2

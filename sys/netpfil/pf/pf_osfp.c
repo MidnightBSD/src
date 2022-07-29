@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2003 Mike Frantzen <frantzen@w4g.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -17,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netpfil/pf/pf_osfp.c 339418 2018-10-18 04:36:25Z kp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet6.h"
 
@@ -45,7 +47,7 @@ static MALLOC_DEFINE(M_PFOSFP, "pf_osfp", "pf(4) operating system fingerprints")
 		printf(format , ##x)
 
 SLIST_HEAD(pf_osfp_list, pf_os_fingerprint);
-static VNET_DEFINE(struct pf_osfp_list,	pf_osfp_list) =
+VNET_DEFINE_STATIC(struct pf_osfp_list,	pf_osfp_list) =
 	SLIST_HEAD_INITIALIZER();
 #define	V_pf_osfp_list			VNET(pf_osfp_list)
 

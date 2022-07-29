@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -39,7 +41,7 @@ static char sccsid[] = "@(#)echo.c	8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/echo/echo.c 332463 2018-04-13 03:30:10Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/uio.h>
@@ -69,7 +71,7 @@ errexit(const char *prog, const char *reason)
 	write(STDERR_FILENO, "\n", 1);
 	exit(1);
 }
-	
+
 int
 main(int argc, char *argv[])
 {
@@ -80,7 +82,7 @@ main(int argc, char *argv[])
 	char newline[] = "\n";
 	char *progname = argv[0];
 
-	if (caph_limit_stdio() < 0 || (cap_enter() < 0 && errno != ENOSYS))
+	if (caph_limit_stdio() < 0 || caph_enter() < 0)
 		err(1, "capsicum");
 
 	/* This utility may NOT do getopt(3) option parsing. */
@@ -98,13 +100,12 @@ main(int argc, char *argv[])
 
 	while (argv[0] != NULL) {
 		size_t len;
-		
+
 		len = strlen(argv[0]);
 
 		/*
-		 * If the next argument is NULL then this is this
-		 * the last argument, therefore we need to check
-		 * for a trailing \c.
+		 * If the next argument is NULL then this is the last argument,
+		 * therefore we need to check for a trailing \c.
 		 */
 		if (argv[1] == NULL) {
 			/* is there room for a '\c' and is there one? */

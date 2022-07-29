@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/doc/psd/23.rpc/Makefile 216178 2010-12-04 10:11:20Z uqs $
+# $FreeBSD$
 
 VOLUME=		psd/23.rpc
 SRCS=		stubs rpc.prog.ms

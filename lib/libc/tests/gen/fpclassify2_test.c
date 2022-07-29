@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libc/tests/gen/fpclassify2_test.c 274595 2014-11-16 20:29:57Z ngie $
+ * $FreeBSD$
  */
 
 #include <math.h>

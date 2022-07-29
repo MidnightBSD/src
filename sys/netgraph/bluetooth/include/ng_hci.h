@@ -3,6 +3,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_hci.h,v 1.2 2003/03/18 00:09:37 max Exp $
- * $FreeBSD: stable/11/sys/netgraph/bluetooth/include/ng_hci.h 298813 2016-04-29 21:25:05Z pfg $
+ * $FreeBSD$
  */
 
 /*
@@ -80,6 +82,7 @@
 #define NG_HCI_FEATURES_SIZE			8   /* LMP features */
 #define NG_HCI_UNIT_NAME_SIZE			248 /* unit name size */
 #define NG_HCI_COMMANDS_SIZE			64  /*Command list BMP size*/
+#define NG_HCI_EXTINQ_MAX			240 /**/
 /* HCI specification */
 #define NG_HCI_SPEC_V10				0x00 /* v1.0 */
 #define NG_HCI_SPEC_V11				0x01 /* v1.1 */
@@ -561,6 +564,9 @@ typedef struct {
 	u_int16_t	clock_offset;                   /* clock offset */
 	bdaddr_t	bdaddr;                         /* bdaddr */
 	u_int8_t	features[NG_HCI_FEATURES_SIZE]; /* features */
+	uint8_t 	addrtype;
+	uint8_t		extinq_size; /* MAX 240*/
+	uint8_t		extinq_data[NG_HCI_EXTINQ_MAX];
 } ng_hci_node_neighbor_cache_entry_ep;
 
 #define NG_HCI_MAX_NEIGHBOR_NUM \
@@ -1667,12 +1673,12 @@ typedef struct {
 }__attribute__ ((packed)) ng_hci_le_long_term_key_request_negative_reply_rp;
 
 
-#define NG_HCI_OCF_LE_READ_SUPPORTED_STATUS		0x001c
+#define NG_HCI_OCF_LE_READ_SUPPORTED_STATES		0x001c
 /*No command parameter*/
 typedef struct {
 	u_int8_t status;
-	u_int64_t le_status;
-}__attribute__ ((packed)) ng_hci_le_read_supported_status_rp;
+	u_int64_t le_states;
+}__attribute__ ((packed)) ng_hci_le_read_supported_states_rp;
 
 #define NG_HCI_OCF_LE_RECEIVER_TEST			0x001d
 typedef struct{
@@ -1949,7 +1955,7 @@ typedef struct {
 	u_int16_t 	interval;
 	u_int8_t	latency;
 	u_int16_t	supervision_timeout;
-	u_int8_t	master_clock_accracy;
+	u_int8_t	master_clock_accuracy;
 	
 } __attribute__ ((packed)) ng_hci_le_connection_complete_ep;
 

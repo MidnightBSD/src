@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_LOADER_GELI 329169 2018-02-12 15:48:12Z kevans $
+.\" $FreeBSD$
 Disable inclusion of GELI crypto support in the boot chain binaries.

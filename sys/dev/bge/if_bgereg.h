@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2001 Wind River Systems
  * Copyright (c) 1997, 1998, 1999, 2001
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -30,7 +32,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/bge/if_bgereg.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*
@@ -2864,6 +2866,12 @@ struct bge_gib {
 #define	BGE_DMA_MAXADDR		0xFFFFFFFFFF
 #endif
 
+#if (BUS_SPACE_MAXSIZE > 0xFFFFFFFF)
+#define	BGE_DMA_BNDRY		0x100000000
+#else
+#define	BGE_DMA_BNDRY		0
+#endif
+
 /*
  * Ring structures. Most of these reside in host memory and we tell
  * the NIC where they are via the ring control blocks. The exceptions
@@ -3065,3 +3073,11 @@ struct bge_softc {
 #define	BGE_LOCK_ASSERT(_sc)	mtx_assert(&(_sc)->bge_mtx, MA_OWNED)
 #define	BGE_UNLOCK(_sc)		mtx_unlock(&(_sc)->bge_mtx)
 #define	BGE_LOCK_DESTROY(_sc)	mtx_destroy(&(_sc)->bge_mtx)
+
+#ifdef BUS_SPACE_MAXADDR
+#if (BUS_SPACE_MAXADDR > 0xFFFFFFFF)
+#define	BGE_DMA_BOUNDARY	(0x100000000)
+#else
+#define	BGE_DMA_BOUNDARY	0
+#endif
+#endif

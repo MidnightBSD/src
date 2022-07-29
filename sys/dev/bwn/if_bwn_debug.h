@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/bwn/if_bwn_debug.h 299984 2016-05-16 22:56:45Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef	__IF_BWN_DEBUG_H__
@@ -53,6 +53,7 @@ enum {
 	BWN_DEBUG_XMIT_POWER	= 0x00020000,
 	BWN_DEBUG_PHY		= 0x00040000,
 	BWN_DEBUG_EEPROM	= 0x00080000,
+	BWN_DEBUG_HWCRYPTO	= 0x00100000,	/* HW crypto */
 	BWN_DEBUG_FATAL		= 0x80000000,	/* fatal errors */
 	BWN_DEBUG_ANY		= 0xffffffff
 };

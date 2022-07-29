@@ -34,7 +34,7 @@
  */
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: stable/11/usr.sbin/lpr/chkprintcap/skimprintcap.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -84,6 +84,8 @@ skim_printcap(const char *pcap_fname, int verbosity)
 	enum {CMNT_LINE, ENTRY_LINE, TAB_LINE, TABERR_LINE} is_type, had_type;
 
 	skinf = malloc(sizeof(struct skiminfo));
+	if (skinf == NULL)
+		return (NULL);
 	memset(skinf, 0, sizeof(struct skiminfo));
 
 	pc_file = fopen(pcap_fname, "r");

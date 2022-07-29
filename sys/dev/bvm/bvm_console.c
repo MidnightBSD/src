@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,11 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/bvm/bvm_console.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bvm/bvm_console.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -105,6 +107,8 @@ static void
 cn_drvinit(void *unused)
 {
 	struct tty *tp;
+    
+	gone_in(13, "bvmconsole");
 
 	if (bvm_consdev.cn_pri != CN_DEAD) {
 		tp = tty_alloc(&bvm_ttydevsw, NULL);
@@ -128,7 +132,7 @@ static void
 bvm_tty_close(struct tty *tp)
 {
 
-	tty_lock_assert(tp, MA_OWNED);
+	tty_assert_locked(tp);
 	callout_stop(&bvm_timer);
 }
 
@@ -157,7 +161,7 @@ bvm_timeout(void *v)
 
 	tp = (struct tty *)v;
 
-	tty_lock_assert(tp, MA_OWNED);
+	tty_assert_locked(tp);
 	while ((c = bvm_cngetc(NULL)) != -1)
 		ttydisc_rint(tp, c, 0);
 	ttydisc_rint_done(tp);

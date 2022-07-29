@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/amdpm/amdpm.c 272017 2014-09-23 06:31:15Z rpaulo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -66,6 +66,8 @@ static int amdpm_debug = 0;
 #define AMDPM_DEVICEID_AMD766PM 0x7413
 #define AMDPM_DEVICEID_AMD768PM 0x7443
 #define AMDPM_DEVICEID_AMD8111PM 0x746B
+
+#define AMDPM_VENDORID_HYGON 0x1d94
 
 /* nVidia nForce chipset */
 #define AMDPM_VENDORID_NVIDIA 0x10de
@@ -199,7 +201,8 @@ amdpm_attach(device_t dev)
 	pci_write_config(dev, AMDPCI_GEN_CONFIG_PM, val_b | AMDPCI_PMIOEN, 1);
 
 	/* Allocate I/O space */
-	if (pci_get_vendor(dev) == AMDPM_VENDORID_AMD)
+	if (pci_get_vendor(dev) == AMDPM_VENDORID_AMD ||
+	    pci_get_vendor(dev) == AMDPM_VENDORID_HYGON)
 		amdpm_sc->rid = AMDPCI_PMBASE;
 	else
 		amdpm_sc->rid = NFPCI_PMBASE;

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -14,7 +16,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,7 +39,7 @@ static char sccsid[] = "@(#)position.c	8.3 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/dd/position.c 338364 2018-08-29 02:18:13Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/mtio.h>
@@ -209,7 +211,7 @@ pos_out(void)
 			n = write(out.fd, out.db, out.dbsz);
 			if (n == -1)
 				err(1, "%s", out.name);
-			if ((size_t)n != out.dbsz)
+			if (n != out.dbsz)
 				errx(1, "%s: write failure", out.name);
 		}
 		break;

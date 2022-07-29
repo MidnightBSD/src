@@ -1,6 +1,8 @@
 /*-
  * Assembler for the sequencer program downloaded to Aic7xxx SCSI host adapters
  *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1997 Justin T. Gibbs.
  * Copyright (c) 2001, 2002 Adaptec Inc.
  * All rights reserved.
@@ -39,7 +41,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm.h#14 $
  *
- * $FreeBSD: stable/11/sys/dev/aic7xxx/aicasm/aicasm.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>

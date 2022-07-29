@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/usr.sbin/bluetooth/ath3kfw/ath3k_fw.h 301537 2016-06-07 04:22:18Z adrian $
+ * $FreeBSD$
  */
 #ifndef	__ATH3K_FW_H__
 #define	__ATH3K_FW_H__

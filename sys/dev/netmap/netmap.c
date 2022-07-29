@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2011-2014 Matteo Landi
  * Copyright (C) 2011-2016 Luigi Rizzo
  * Copyright (C) 2011-2016 Giuseppe Lettieri
@@ -29,7 +31,7 @@
 
 
 /*
- * $FreeBSD: stable/11/sys/dev/netmap/netmap.c 344509 2019-02-25 09:13:33Z vmaffione $
+ * $FreeBSD$
  *
  * This module supports memory mapped access to network devices,
  * see netmap(4).
@@ -423,7 +425,7 @@ ports attached to the switch)
  * is present in netmap_kern.h
  */
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 #include <sys/cdefs.h> /* prerequisite */
 #include <sys/types.h>
 #include <sys/errno.h>
@@ -484,7 +486,6 @@ int netmap_debug;
 #endif /* CONFIG_NETMAP_DEBUG */
 
 static int netmap_no_timestamp; /* don't timestamp on rxsync */
-int netmap_mitigate = 1;
 int netmap_no_pendintr = 1;
 int netmap_txsync_retry = 2;
 static int netmap_fwd = 0;	/* force transparent forwarding */
@@ -548,8 +549,6 @@ SYSCTL_INT(_dev_netmap, OID_AUTO, no_timestamp,
 		CTLFLAG_RW, &netmap_no_timestamp, 0, "no_timestamp");
 SYSCTL_INT(_dev_netmap, OID_AUTO, no_pendintr, CTLFLAG_RW, &netmap_no_pendintr,
 		0, "Always look for new received packets.");
-SYSCTL_INT(_dev_netmap, OID_AUTO, mitigate, CTLFLAG_RW, &netmap_mitigate,
-		0, "Interrupt mitigation for netmap TX wakeups");
 SYSCTL_INT(_dev_netmap, OID_AUTO, txsync_retry, CTLFLAG_RW,
 		&netmap_txsync_retry, 0, "Number of txsync loops in bridge's flush.");
 
@@ -617,6 +616,10 @@ netmap_set_all_rings(struct netmap_adapter *na, int stopped)
 	if (!nm_netmap_on(na))
 		return;
 
+	if (netmap_verbose) {
+		nm_prinf("%s: %sable all rings", na->name,
+		    (stopped ? "dis" : "en"));
+	}
 	for_rx_tx(t) {
 		for (i = 0; i < netmap_real_rings(na, t); i++) {
 			netmap_set_ring(na, i, t, stopped);
@@ -634,7 +637,7 @@ void
 netmap_disable_all_rings(struct ifnet *ifp)
 {
 	if (NM_NA_VALID(ifp)) {
-		netmap_set_all_rings(NA(ifp), NM_KR_STOPPED);
+		netmap_set_all_rings(NA(ifp), NM_KR_LOCKED);
 	}
 }
 
@@ -1036,6 +1039,15 @@ netmap_do_unregif(struct netmap_priv_d *priv)
 		}
 
 		na->nm_krings_delete(na);
+
+		/* restore the default number of host tx and rx rings */
+		if (na->na_flags & NAF_HOST_RINGS) {
+			na->num_host_tx_rings = 1;
+			na->num_host_rx_rings = 1;
+		} else {
+			na->num_host_tx_rings = 0;
+			na->num_host_rx_rings = 0;
+		}
 	}
 
 	/* possibily decrement counter of tx_si/rx_si users */
@@ -1576,6 +1588,19 @@ netmap_get_na(struct nmreq_header *hdr,
 	*na = ret;
 	netmap_adapter_get(ret);
 
+	/*
+	 * if the adapter supports the host rings and it is not alread open,
+	 * try to set the number of host rings as requested by the user
+	 */
+	if (((*na)->na_flags & NAF_HOST_RINGS) && (*na)->active_fds == 0) {
+		if (req->nr_host_tx_rings)
+			(*na)->num_host_tx_rings = req->nr_host_tx_rings;
+		if (req->nr_host_rx_rings)
+			(*na)->num_host_rx_rings = req->nr_host_rx_rings;
+	}
+	nm_prdis("%s: host tx %d rx %u", (*na)->name, (*na)->num_host_tx_rings,
+			(*na)->num_host_rx_rings);
+
 out:
 	if (error) {
 		if (ret)
@@ -1808,13 +1833,15 @@ netmap_ring_reinit(struct netmap_kring *kring)
  *
  */
 int
-netmap_interp_ringid(struct netmap_priv_d *priv, uint32_t nr_mode,
-			uint16_t nr_ringid, uint64_t nr_flags)
+netmap_interp_ringid(struct netmap_priv_d *priv, struct nmreq_header *hdr)
 {
 	struct netmap_adapter *na = priv->np_na;
+	struct nmreq_register *reg = (struct nmreq_register *)hdr->nr_body;
 	int excluded_direction[] = { NR_TX_RINGS_ONLY, NR_RX_RINGS_ONLY };
 	enum txrx t;
 	u_int j;
+	u_int nr_flags = reg->nr_flags, nr_mode = reg->nr_mode,
+	      nr_ringid = reg->nr_ringid;
 
 	for_rx_tx(t) {
 		if (nr_flags & excluded_direction[t]) {
@@ -1857,6 +1884,25 @@ netmap_interp_ringid(struct netmap_priv_d *priv, uint32_t nr_mode,
 			nm_prdis("ONE_NIC: %s %d %d", nm_txrx2str(t),
 				priv->np_qfirst[t], priv->np_qlast[t]);
 			break;
+		case NR_REG_ONE_SW:
+			if (!(na->na_flags & NAF_HOST_RINGS)) {
+				nm_prerr("host rings not supported");
+				return EINVAL;
+			}
+			if (nr_ringid >= na->num_host_tx_rings &&
+					nr_ringid >= na->num_host_rx_rings) {
+				nm_prerr("invalid ring id %d", nr_ringid);
+				return EINVAL;
+			}
+			/* if not enough rings, use the first one */
+			j = nr_ringid;
+			if (j >= nma_get_host_nrings(na, t))
+				j = 0;
+			priv->np_qfirst[t] = nma_get_nrings(na, t) + j;
+			priv->np_qlast[t] = nma_get_nrings(na, t) + j + 1;
+			nm_prdis("ONE_SW: %s %d %d", nm_txrx2str(t),
+				priv->np_qfirst[t], priv->np_qlast[t]);
+			break;
 		default:
 			nm_prerr("invalid regif type %d", nr_mode);
 			return EINVAL;
@@ -1889,19 +1935,19 @@ netmap_interp_ringid(struct netmap_priv_d *priv, uint32_t nr_mode,
  * for all rings is the same as a single ring.
  */
 static int
-netmap_set_ringid(struct netmap_priv_d *priv, uint32_t nr_mode,
-		uint16_t nr_ringid, uint64_t nr_flags)
+netmap_set_ringid(struct netmap_priv_d *priv, struct nmreq_header *hdr)
 {
 	struct netmap_adapter *na = priv->np_na;
+	struct nmreq_register *reg = (struct nmreq_register *)hdr->nr_body;
 	int error;
 	enum txrx t;
 
-	error = netmap_interp_ringid(priv, nr_mode, nr_ringid, nr_flags);
+	error = netmap_interp_ringid(priv, hdr);
 	if (error) {
 		return error;
 	}
 
-	priv->np_txpoll = (nr_flags & NR_NO_TX_POLL) ? 0 : 1;
+	priv->np_txpoll = (reg->nr_flags & NR_NO_TX_POLL) ? 0 : 1;
 
 	/* optimization: count the users registered for more than
 	 * one ring, which are the ones sleeping on the global queue.
@@ -1931,6 +1977,19 @@ netmap_unset_ringid(struct netmap_priv_d *priv)
 	priv->np_kloop_state = 0;
 }
 
+#define within_sel(p_, t_, i_)					  	  \
+	((i_) < (p_)->np_qlast[(t_)])
+#define nonempty_sel(p_, t_)						  \
+	(within_sel((p_), (t_), (p_)->np_qfirst[(t_)]))
+#define foreach_selected_ring(p_, t_, i_, kring_)			  \
+	for ((t_) = nonempty_sel((p_), NR_RX) ? NR_RX : NR_TX,		  \
+	     (i_) = (p_)->np_qfirst[(t_)];				  \
+	     (t_ == NR_RX ||						  \
+	      (t == NR_TX && within_sel((p_), (t_), (i_)))) &&     	  \
+	      ((kring_) = NMR((p_)->np_na, (t_))[(i_)]); 		  \
+	     (i_) = within_sel((p_), (t_), (i_) + 1) ? (i_) + 1 :         \
+		(++(t_) < NR_TXRX ? (p_)->np_qfirst[(t_)] : (i_)))
+
 
 /* Set the nr_pending_mode for the requested rings.
  * If requested, also try to get exclusive access to the rings, provided
@@ -1957,29 +2016,23 @@ netmap_krings_get(struct netmap_priv_d *priv)
 	 * are neither alread exclusively owned, nor we
 	 * want exclusive ownership when they are already in use
 	 */
-	for_rx_tx(t) {
-		for (i = priv->np_qfirst[t]; i < priv->np_qlast[t]; i++) {
-			kring = NMR(na, t)[i];
-			if ((kring->nr_kflags & NKR_EXCLUSIVE) ||
-			    (kring->users && excl))
-			{
-				nm_prdis("ring %s busy", kring->name);
-				return EBUSY;
-			}
+	foreach_selected_ring(priv, t, i, kring) {
+		if ((kring->nr_kflags & NKR_EXCLUSIVE) ||
+		    (kring->users && excl))
+		{
+			nm_prdis("ring %s busy", kring->name);
+			return EBUSY;
 		}
 	}
 
 	/* second round: increment usage count (possibly marking them
 	 * as exclusive) and set the nr_pending_mode
 	 */
-	for_rx_tx(t) {
-		for (i = priv->np_qfirst[t]; i < priv->np_qlast[t]; i++) {
-			kring = NMR(na, t)[i];
-			kring->users++;
-			if (excl)
-				kring->nr_kflags |= NKR_EXCLUSIVE;
-	                kring->nr_pending_mode = NKR_NETMAP_ON;
-		}
+	foreach_selected_ring(priv, t, i, kring) {
+		kring->users++;
+		if (excl)
+			kring->nr_kflags |= NKR_EXCLUSIVE;
+		kring->nr_pending_mode = NKR_NETMAP_ON;
 	}
 
 	return 0;
@@ -1992,7 +2045,6 @@ netmap_krings_get(struct netmap_priv_d *priv)
 static void
 netmap_krings_put(struct netmap_priv_d *priv)
 {
-	struct netmap_adapter *na = priv->np_na;
 	u_int i;
 	struct netmap_kring *kring;
 	int excl = (priv->np_flags & NR_EXCLUSIVE);
@@ -2005,15 +2057,12 @@ netmap_krings_put(struct netmap_priv_d *priv)
 			priv->np_qfirst[NR_RX],
 			priv->np_qlast[MR_RX]);
 
-	for_rx_tx(t) {
-		for (i = priv->np_qfirst[t]; i < priv->np_qlast[t]; i++) {
-			kring = NMR(na, t)[i];
-			if (excl)
-				kring->nr_kflags &= ~NKR_EXCLUSIVE;
-			kring->users--;
-			if (kring->users == 0)
-				kring->nr_pending_mode = NKR_NETMAP_OFF;
-		}
+	foreach_selected_ring(priv, t, i, kring) {
+		if (excl)
+			kring->nr_kflags &= ~NKR_EXCLUSIVE;
+		kring->users--;
+		if (kring->users == 0)
+			kring->nr_pending_mode = NKR_NETMAP_OFF;
 	}
 }
 
@@ -2246,7 +2295,7 @@ netmap_buf_size_validate(const struct netmap_adapter *na, unsigned mtu) {
  */
 int
 netmap_do_regif(struct netmap_priv_d *priv, struct netmap_adapter *na,
-	uint32_t nr_mode, uint16_t nr_ringid, uint64_t nr_flags)
+	struct nmreq_header *hdr)
 {
 	struct netmap_if *nifp = NULL;
 	int error;
@@ -2271,7 +2320,7 @@ netmap_do_regif(struct netmap_priv_d *priv, struct netmap_adapter *na,
 	}
 
 	/* compute the range of tx and rx rings to monitor */
-	error = netmap_set_ringid(priv, nr_mode, nr_ringid, nr_flags);
+	error = netmap_set_ringid(priv, hdr);
 	if (error)
 		goto err_put_lut;
 
@@ -2470,17 +2519,11 @@ netmap_ioctl(struct netmap_priv_d *priv, u_long cmd, caddr_t data,
 				}
 
 #ifdef WITH_EXTMEM
-				opt = nmreq_findoption((struct nmreq_option *)(uintptr_t)hdr->nr_options,
-						NETMAP_REQ_OPT_EXTMEM);
+				opt = nmreq_getoption(hdr, NETMAP_REQ_OPT_EXTMEM);
 				if (opt != NULL) {
 					struct nmreq_opt_extmem *e =
 						(struct nmreq_opt_extmem *)opt;
 
-					error = nmreq_checkduplicate(opt);
-					if (error) {
-						opt->nro_status = error;
-						break;
-					}
 					nmd = netmap_mem_ext_create(e->nro_usrptr,
 							&e->nro_info, &error);
 					opt->nro_status = error;
@@ -2518,21 +2561,16 @@ netmap_ioctl(struct netmap_priv_d *priv, u_long cmd, caddr_t data,
 					break;
 				}
 
-				error = netmap_do_regif(priv, na, req->nr_mode,
-							req->nr_ringid, req->nr_flags);
+				error = netmap_do_regif(priv, na, hdr);
 				if (error) {    /* reg. failed, release priv and ref */
 					break;
 				}
 
-				opt = nmreq_findoption((struct nmreq_option *)(uintptr_t)hdr->nr_options,
-							NETMAP_REQ_OPT_CSB);
+				opt = nmreq_getoption(hdr, NETMAP_REQ_OPT_CSB);
 				if (opt != NULL) {
 					struct nmreq_opt_csb *csbo =
 						(struct nmreq_opt_csb *)opt;
-					error = nmreq_checkduplicate(opt);
-					if (!error) {
-						error = netmap_csb_validate(priv, csbo);
-					}
+					error = netmap_csb_validate(priv, csbo);
 					opt->nro_status = error;
 					if (error) {
 						netmap_do_unregif(priv);
@@ -2547,6 +2585,8 @@ netmap_ioctl(struct netmap_priv_d *priv, u_long cmd, caddr_t data,
 				req->nr_tx_rings = na->num_tx_rings;
 				req->nr_rx_slots = na->num_rx_desc;
 				req->nr_tx_slots = na->num_tx_desc;
+				req->nr_host_tx_rings = na->num_host_tx_rings;
+				req->nr_host_rx_rings = na->num_host_rx_rings;
 				error = netmap_mem_get_info(na->nm_mem, &req->nr_memsize, &memflags,
 					&req->nr_mem_id);
 				if (error) {
@@ -2612,6 +2652,8 @@ netmap_ioctl(struct netmap_priv_d *priv, u_long cmd, caddr_t data,
 					regreq.nr_rx_slots = req->nr_rx_slots;
 					regreq.nr_tx_rings = req->nr_tx_rings;
 					regreq.nr_rx_rings = req->nr_rx_rings;
+					regreq.nr_host_tx_rings = req->nr_host_tx_rings;
+					regreq.nr_host_rx_rings = req->nr_host_rx_rings;
 					regreq.nr_mem_id = req->nr_mem_id;
 
 					/* get a refcount */
@@ -2650,6 +2692,8 @@ netmap_ioctl(struct netmap_priv_d *priv, u_long cmd, caddr_t data,
 				req->nr_tx_rings = na->num_tx_rings;
 				req->nr_rx_slots = na->num_rx_desc;
 				req->nr_tx_slots = na->num_tx_desc;
+				req->nr_host_tx_rings = na->num_host_tx_rings;
+				req->nr_host_rx_rings = na->num_host_rx_rings;
 			} while (0);
 			netmap_unget_na(na, ifp);
 			if (nmd_ref)
@@ -2804,19 +2848,15 @@ netmap_ioctl(struct netmap_priv_d *priv, u_long cmd, caddr_t data,
 		case NETMAP_REQ_CSB_ENABLE: {
 			struct nmreq_option *opt;
 
-			opt = nmreq_findoption((struct nmreq_option *)(uintptr_t)hdr->nr_options,
-						NETMAP_REQ_OPT_CSB);
+			opt = nmreq_getoption(hdr, NETMAP_REQ_OPT_CSB);
 			if (opt == NULL) {
 				error = EINVAL;
 			} else {
 				struct nmreq_opt_csb *csbo =
 					(struct nmreq_opt_csb *)opt;
-				error = nmreq_checkduplicate(opt);
-				if (!error) {
-					NMG_LOCK();
-					error = netmap_csb_validate(priv, csbo);
-					NMG_UNLOCK();
-				}
+				NMG_LOCK();
+				error = netmap_csb_validate(priv, csbo);
+				NMG_UNLOCK();
 				opt->nro_status = error;
 			}
 			break;
@@ -2984,13 +3024,72 @@ nmreq_opt_size_by_type(uint32_t nro_reqtype, uint64_t nro_size)
 	return rv - sizeof(struct nmreq_option);
 }
 
+/*
+ * nmreq_copyin: create an in-kernel version of the request.
+ *
+ * We build the following data structure:
+ *
+ * hdr -> +-------+                buf
+ *        |       |          +---------------+
+ *        +-------+          |usr body ptr   |
+ *        |options|-.        +---------------+
+ *        +-------+ |        |usr options ptr|
+ *        |body   |--------->+---------------+
+ *        +-------+ |        |               |
+ *                  |        |  copy of body |
+ *                  |        |               |
+ *                  |        +---------------+
+ *                  |        |    NULL       |
+ *                  |        +---------------+
+ *                  |    .---|               |\
+ *                  |    |   +---------------+ |
+ *                  | .------|               | |
+ *                  | |  |   +---------------+  \ option table
+ *                  | |  |   |      ...      |  / indexed by option
+ *                  | |  |   +---------------+ |  type
+ *                  | |  |   |               | |
+ *                  | |  |   +---------------+/
+ *                  | |  |   |usr next ptr 1 |
+ *                  `-|----->+---------------+
+ *                    |  |   | copy of opt 1 |
+ *                    |  |   |               |
+ *                    |  | .-| nro_next      |
+ *                    |  | | +---------------+
+ *                    |  | | |usr next ptr 2 |
+ *                    |  `-`>+---------------+
+ *                    |      | copy of opt 2 |
+ *                    |      |               |
+ *                    |    .-| nro_next      |
+ *                    |    | +---------------+
+ *                    |    | |               |
+ *                    ~    ~ ~      ...      ~
+ *                    |    .-|               |
+ *                    `----->+---------------+
+ *                         | |usr next ptr n |
+ *                         `>+---------------+
+ *                           | copy of opt n |
+ *                           |               |
+ *                           | nro_next(NULL)|
+ *                           +---------------+
+ *
+ * The options and body fields of the hdr structure are overwritten
+ * with in-kernel valid pointers inside the buf. The original user
+ * pointers are saved in the buf and restored on copyout.
+ * The list of options is copied and the pointers adjusted. The
+ * original pointers are saved before the option they belonged.
+ *
+ * The option table has an entry for every availabe option.  Entries
+ * for options that have not been passed contain NULL.
+ *
+ */
+
 int
 nmreq_copyin(struct nmreq_header *hdr, int nr_body_is_user)
 {
 	size_t rqsz, optsz, bufsz;
 	int error = 0;
 	char *ker = NULL, *p;
-	struct nmreq_option **next, *src;
+	struct nmreq_option **next, *src, **opt_tab;
 	uint64_t *ptrs;
 
 	if (hdr->nr_reserved) {
@@ -3026,15 +3125,15 @@ nmreq_copyin(struct nmreq_header *hdr, int nr_body_is_user)
 	 * (2+NETMAP_REQ_OPT_MAX). Note that the maximum size of body plus
 	 * options can not exceed NETMAP_REQ_MAXSIZE;
 	 */
-	bufsz = (2 + NETMAP_REQ_OPT_SYNC_KLOOP_MODE + 1) * sizeof(void *)
-	    + NETMAP_REQ_MAXSIZE;
+	bufsz = (2 + NETMAP_REQ_OPT_MAX) * sizeof(void *) + NETMAP_REQ_MAXSIZE +
+		NETMAP_REQ_OPT_MAX * sizeof(opt_tab);
 
 	ker = nm_os_malloc(bufsz);
 	if (ker == NULL) {
 		error = ENOMEM;
 		goto out_err;
 	}
-	p = ker;
+	p = ker;	/* write pointer into the buffer */
 
 	/* make a copy of the user pointers */
 	ptrs = (uint64_t*)p;
@@ -3049,6 +3148,9 @@ nmreq_copyin(struct nmreq_header *hdr, int nr_body_is_user)
 	/* overwrite the user pointer with the in-kernel one */
 	hdr->nr_body = (uintptr_t)p;
 	p += rqsz;
+	/* start of the options table */
+	opt_tab = (struct nmreq_option **)p;
+	p += sizeof(opt_tab) * NETMAP_REQ_OPT_MAX;
 
 	/* copy the options */
 	next = (struct nmreq_option **)&hdr->nr_options;
@@ -3073,6 +3175,34 @@ nmreq_copyin(struct nmreq_header *hdr, int nr_body_is_user)
 		 */
 		opt->nro_status = EOPNOTSUPP;
 
+		/* check for invalid types */
+		if (opt->nro_reqtype < 1) {
+			if (netmap_verbose)
+				nm_prinf("invalid option type: %u", opt->nro_reqtype);
+			opt->nro_status = EINVAL;
+			error = EINVAL;
+			goto next;
+		}
+
+		if (opt->nro_reqtype >= NETMAP_REQ_OPT_MAX) {
+			/* opt->nro_status is already EOPNOTSUPP */
+			error = EOPNOTSUPP;
+			goto next;
+		}
+
+		/* if the type is valid, index the option in the table
+		 * unless it is a duplicate.
+		 */
+		if (opt_tab[opt->nro_reqtype] != NULL) {
+			if (netmap_verbose)
+				nm_prinf("duplicate option: %u", opt->nro_reqtype);
+			opt->nro_status = EINVAL;
+			opt_tab[opt->nro_reqtype]->nro_status = EINVAL;
+			error = EINVAL;
+			goto next;
+		}
+		opt_tab[opt->nro_reqtype] = opt;
+
 		p = (char *)(opt + 1);
 
 		/* copy the option body */
@@ -3094,11 +3224,14 @@ nmreq_copyin(struct nmreq_header *hdr, int nr_body_is_user)
 			p += optsz;
 		}
 
+	next:
 		/* move to next option */
 		next = (struct nmreq_option **)&opt->nro_next;
 		src = *next;
 	}
-	return 0;
+	if (error)
+		nmreq_copyout(hdr, error);
+	return error;
 
 out_restore:
 	ptrs = (uint64_t *)ker;
@@ -3181,25 +3314,16 @@ out:
 }
 
 struct nmreq_option *
-nmreq_findoption(struct nmreq_option *opt, uint16_t reqtype)
+nmreq_getoption(struct nmreq_header *hdr, uint16_t reqtype)
 {
-	for ( ; opt; opt = (struct nmreq_option *)(uintptr_t)opt->nro_next)
-		if (opt->nro_reqtype == reqtype)
-			return opt;
-	return NULL;
-}
+	struct nmreq_option **opt_tab;
 
-int
-nmreq_checkduplicate(struct nmreq_option *opt) {
-	uint16_t type = opt->nro_reqtype;
-	int dup = 0;
+	if (!hdr->nr_options)
+		return NULL;
 
-	while ((opt = nmreq_findoption((struct nmreq_option *)(uintptr_t)opt->nro_next,
-			type))) {
-		dup++;
-		opt->nro_status = EINVAL;
-	}
-	return (dup ? EINVAL : 0);
+	opt_tab = (struct nmreq_option **)((uintptr_t)hdr->nr_options) -
+	    (NETMAP_REQ_OPT_MAX + 1);
+	return opt_tab[reqtype];
 }
 
 static int
@@ -3298,7 +3422,7 @@ netmap_poll(struct netmap_priv_d *priv, int events, NM_SELRECORD_T *sr)
 	si[NR_RX] = priv->np_si[NR_RX];
 	si[NR_TX] = priv->np_si[NR_TX];
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	/*
 	 * We start with a lock free round which is cheap if we have
 	 * slots available. If this fails, then lock and call the sync
@@ -3567,12 +3691,12 @@ netmap_attach_common(struct netmap_adapter *na)
 		na->rx_buf_maxsize = PAGE_SIZE;
 	}
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	if (na->na_flags & NAF_HOST_RINGS && na->ifp) {
 		na->if_input = na->ifp->if_input; /* for netmap_send_up */
 	}
 	na->pdev = na; /* make sure netmap_mem_map() is called */
-#endif /* __MidnightBSD__ */
+#endif /* __FreeBSD__ */
 	if (na->na_flags & NAF_HOST_RINGS) {
 		if (na->num_host_rx_rings == 0)
 			na->num_host_rx_rings = 1;
@@ -3895,9 +4019,9 @@ netmap_transmit(struct ifnet *ifp, struct mbuf *m)
 		goto done;
 	}
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	ETHER_BPF_MTAP(ifp, m);
-#endif /* __MidnightBSD__ */
+#endif /* __FreeBSD__ */
 
 	/* protect against netmap_rxsync_from_host(), netmap_sw_to_nic()
 	 * and maybe other instances of netmap_transmit (the latter
@@ -3937,75 +4061,71 @@ done:
 
 
 /*
- * netmap_reset() is called by the driver routines when reinitializing
- * a ring. The driver is in charge of locking to protect the kring.
- * If native netmap mode is not set just return NULL.
- * If native netmap mode is set, in particular, we have to set nr_mode to
- * NKR_NETMAP_ON.
+ * Reset function to be called by the driver routines when reinitializing
+ * a hardware ring. The driver is in charge of locking to protect the kring
+ * while this operation is being performed. This is normally achieved by
+ * calling netmap_disable_all_rings() before triggering a reset.
+ * If the kring is not in netmap mode, return NULL to inform the caller
+ * that this is the case.
+ * If the kring is in netmap mode, set hwofs so that the netmap indices
+ * seen by userspace (head/cut/tail) do not change, although the internal
+ * NIC indices have been reset to 0.
+ * In any case, adjust kring->nr_mode.
  */
 struct netmap_slot *
 netmap_reset(struct netmap_adapter *na, enum txrx tx, u_int n,
 	u_int new_cur)
 {
 	struct netmap_kring *kring;
-	int new_hwofs, lim;
+	u_int new_hwtail, new_hwofs;
 
 	if (!nm_native_on(na)) {
 		nm_prdis("interface not in native netmap mode");
 		return NULL;	/* nothing to reinitialize */
 	}
 
-	/* XXX note- in the new scheme, we are not guaranteed to be
-	 * under lock (e.g. when called on a device reset).
-	 * In this case, we should set a flag and do not trust too
-	 * much the values. In practice: TODO
-	 * - set a RESET flag somewhere in the kring
-	 * - do the processing in a conservative way
-	 * - let the *sync() fixup at the end.
-	 */
 	if (tx == NR_TX) {
 		if (n >= na->num_tx_rings)
 			return NULL;
-
 		kring = na->tx_rings[n];
-
-		if (kring->nr_pending_mode == NKR_NETMAP_OFF) {
-			kring->nr_mode = NKR_NETMAP_OFF;
-			return NULL;
-		}
-
-		// XXX check whether we should use hwcur or rcur
-		new_hwofs = kring->nr_hwcur - new_cur;
+		/*
+		 * Set hwofs to rhead, so that slots[rhead] is mapped to
+		 * the NIC internal slot 0, and thus the netmap buffer
+		 * at rhead is the next to be transmitted. Transmissions
+		 * that were pending before the reset are considered as
+		 * sent, so that we can have hwcur = rhead. All the slots
+		 * are now owned by the user, so we can also reinit hwtail.
+		 */
+		new_hwofs = kring->rhead;
+		new_hwtail = nm_prev(kring->rhead, kring->nkr_num_slots - 1);
 	} else {
 		if (n >= na->num_rx_rings)
 			return NULL;
 		kring = na->rx_rings[n];
-
-		if (kring->nr_pending_mode == NKR_NETMAP_OFF) {
-			kring->nr_mode = NKR_NETMAP_OFF;
-			return NULL;
-		}
-
-		new_hwofs = kring->nr_hwtail - new_cur;
+		/*
+		 * Set hwofs to hwtail, so that slots[hwtail] is mapped to
+		 * the NIC internal slot 0, and thus the netmap buffer
+		 * at hwtail is the next to be given to the NIC.
+		 * Unread slots (the ones in [rhead,hwtail[) are owned by
+		 * the user, and thus the caller cannot give them
+		 * to the NIC right now.
+		 */
+		new_hwofs = kring->nr_hwtail;
+		new_hwtail = kring->nr_hwtail;
 	}
-	lim = kring->nkr_num_slots - 1;
-	if (new_hwofs > lim)
-		new_hwofs -= lim + 1;
-
-	/* Always set the new offset value and realign the ring. */
-	if (netmap_debug & NM_DEBUG_ON)
-	    nm_prinf("%s %s%d hwofs %d -> %d, hwtail %d -> %d",
-		na->name,
-		tx == NR_TX ? "TX" : "RX", n,
-		kring->nkr_hwofs, new_hwofs,
-		kring->nr_hwtail,
-		tx == NR_TX ? lim : kring->nr_hwtail);
+	if (kring->nr_pending_mode == NKR_NETMAP_OFF) {
+		kring->nr_mode = NKR_NETMAP_OFF;
+		return NULL;
+	}
+	if (netmap_verbose) {
+	    nm_prinf("%s, hc %u->%u, ht %u->%u, ho %u->%u", kring->name,
+	        kring->nr_hwcur, kring->rhead,
+	        kring->nr_hwtail, new_hwtail,
+		kring->nkr_hwofs, new_hwofs);
+	}
+	kring->nr_hwcur = kring->rhead;
+	kring->nr_hwtail = new_hwtail;
 	kring->nkr_hwofs = new_hwofs;
-	if (tx == NR_TX) {
-		kring->nr_hwtail = kring->nr_hwcur + lim;
-		if (kring->nr_hwtail > lim)
-			kring->nr_hwtail -= lim + 1;
-	}
 
 	/*
 	 * Wakeup on the individual and global selwait
@@ -4107,7 +4227,7 @@ nm_set_native_flags(struct netmap_adapter *na)
 	struct ifnet *ifp = na->ifp;
 
 	/* We do the setup for intercepting packets only if we are the
-	 * first user of this adapapter. */
+	 * first user of this adapter. */
 	if (na->active_fds > 0) {
 		return;
 	}
@@ -4206,7 +4326,7 @@ netmap_init(void)
 	if (error)
 		goto fail;
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	nm_os_vi_init_index();
 #endif
 

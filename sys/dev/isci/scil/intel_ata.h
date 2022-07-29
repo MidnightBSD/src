@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0
+ *
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
  *
@@ -49,7 +51,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/isci/scil/intel_ata.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 /**
  * @file
@@ -242,7 +244,7 @@
  *
  * The following constants define bit masks utilized to determine if a
  * feature is supported/enabled or if a bit is simply set inside of the
- * IDENTIFY DEVICE data structre.
+ * IDENTIFY DEVICE data structure.
  */
 /*@{*/
 #define ATA_IDENTIFY_REMOVABLE_MEDIA_ENABLE              0x0080
@@ -299,13 +301,13 @@
 /*@}*/
 
 /**
- * @name ATA_WRITE_UNCORRECTIABLE feature field values
+ * @name ATA_WRITE_UNCORRECTABLE feature field values
  *
  * These constants define the Write Uncorrectable feature values
  * used with the SATI translation.
  */
 /*@{*/
-#define ATA_WRITE_UNCORRECTABLE_PSUEDO    0x55
+#define ATA_WRITE_UNCORRECTABLE_PSEUDO    0x55
 #define ATA_WRITE_UNCORRECTABLE_FLAGGED   0xAA
 /*@}*/
 

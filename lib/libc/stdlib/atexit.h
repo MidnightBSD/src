@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -28,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)atexit.h	8.2 (Berkeley) 7/3/94
- * $FreeBSD: stable/10/lib/libc/stdlib/atexit.h 251069 2013-05-28 20:57:40Z emaste $
+ * $FreeBSD$
  */
 
 /* must be at least 32 to guarantee ANSI conformance */

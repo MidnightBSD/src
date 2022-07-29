@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1988, 1992 The University of Utah and the Center
  *	for Software Science (CSS).
  * Copyright (c) 1992, 1993
@@ -39,7 +41,7 @@
  * From: Utah Hdr: rmp.h 3.1 92/07/06
  * Author: Jeff Forys, University of Utah CSS
  *
- * $FreeBSD: stable/11/libexec/rbootd/rmp.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*

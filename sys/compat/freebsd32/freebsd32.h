@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 Doug Rabson
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/freebsd32/freebsd32.h 338617 2018-09-12 18:52:18Z sobomax $
+ * $FreeBSD$
  */
 
 #ifndef _COMPAT_FREEBSD32_FREEBSD32_H_
@@ -35,12 +37,12 @@
 #include <sys/user.h>
 
 /*
- * Being a newer port, 32-bit FreeBSD/MIPS uses 64-bit time_t.
+ * i386 is the only arch with a 32-bit time_t
  */
-#ifdef __mips__
-typedef	int64_t	time32_t;
-#else
+#ifdef __amd64__
 typedef	int32_t	time32_t;
+#else
+typedef	int64_t	time32_t;
 #endif
 
 struct timeval32 {
@@ -59,7 +61,7 @@ struct itimerspec32 {
 };
 
 struct bintime32 {
-	uint32_t sec;
+	time32_t sec;
 	uint32_t frac[2];
 };
 
@@ -92,7 +94,29 @@ struct itimerval32 {
 	struct timeval32 it_value;
 };
 
-#define FREEBSD4_MNAMELEN        (88 - 2 * sizeof(int32_t)) /* size of on/from name bufs */
+struct umtx_time32 {
+	struct	timespec32	_timeout;
+	uint32_t		_flags;
+	uint32_t		_clockid;
+};
+
+struct umtx_robust_lists_params_compat32 {
+	uint32_t	robust_list_offset;
+	uint32_t	robust_priv_list_offset;
+	uint32_t	robust_inact_offset;
+};
+
+struct umutex32 {
+	volatile __lwpid_t	m_owner;	/* Owner of the mutex */
+	__uint32_t		m_flags;	/* Flags of the mutex */
+	__uint32_t		m_ceilings[2];	/* Priority protect ceiling */
+	__uint32_t		m_rb_lnk;	/* Robust linkage */
+	__uint32_t		m_pad;
+	__uint32_t		m_spare[2];
+};
+
+#define FREEBSD4_MFSNAMELEN	16
+#define FREEBSD4_MNAMELEN	(88 - 2 * sizeof(int32_t))
 
 /* 4.x version */
 struct statfs32 {
@@ -110,7 +134,7 @@ struct statfs32 {
 	int32_t	f_flags;
 	int32_t	f_syncwrites;
 	int32_t	f_asyncwrites;
-	char	f_fstypename[MFSNAMELEN];
+	char	f_fstypename[FREEBSD4_MFSNAMELEN];
 	char	f_mntonname[FREEBSD4_MNAMELEN];
 	int32_t	f_syncreads;
 	int32_t	f_asyncreads;
@@ -135,14 +159,51 @@ struct msghdr32 {
 	int		 msg_flags;
 };
 
+#if defined(__amd64__)
+#define	__STAT32_TIME_T_EXT	1
+#endif
+
 struct stat32 {
-	dev_t	st_dev;
-	ino_t	st_ino;
+	dev_t st_dev;
+	ino_t st_ino;
+	nlink_t st_nlink;
 	mode_t	st_mode;
-	nlink_t	st_nlink;
+	u_int16_t st_padding0;
 	uid_t	st_uid;
 	gid_t	st_gid;
-	dev_t	st_rdev;
+	u_int32_t st_padding1;
+	dev_t st_rdev;
+#ifdef	__STAT32_TIME_T_EXT
+	__int32_t st_atim_ext;
+#endif
+	struct timespec32 st_atim;
+#ifdef	__STAT32_TIME_T_EXT
+	__int32_t st_mtim_ext;
+#endif
+	struct timespec32 st_mtim;
+#ifdef	__STAT32_TIME_T_EXT
+	__int32_t st_ctim_ext;
+#endif
+	struct timespec32 st_ctim;
+#ifdef	__STAT32_TIME_T_EXT
+	__int32_t st_btim_ext;
+#endif
+	struct timespec32 st_birthtim;
+	off_t	st_size;
+	int64_t	st_blocks;
+	u_int32_t st_blksize;
+	u_int32_t st_flags;
+	u_int64_t st_gen;
+	u_int64_t st_spare[10];
+};
+struct freebsd11_stat32 {
+	u_int32_t st_dev;
+	u_int32_t st_ino;
+	mode_t	st_mode;
+	u_int16_t st_nlink;
+	uid_t	st_uid;
+	gid_t	st_gid;
+	u_int32_t st_rdev;
 	struct timespec32 st_atim;
 	struct timespec32 st_mtim;
 	struct timespec32 st_ctim;
@@ -159,9 +220,9 @@ struct stat32 {
 
 struct ostat32 {
 	__uint16_t st_dev;
-	ino_t	st_ino;
+	__uint32_t st_ino;
 	mode_t	st_mode;
-	nlink_t	st_nlink;
+	__uint16_t st_nlink;
 	__uint16_t st_uid;
 	__uint16_t st_gid;
 	__uint16_t st_rdev;
@@ -246,7 +307,7 @@ struct kinfo_proc32 {
 	pid_t	ki_tsid;
 	short	ki_jobc;
 	short	ki_spare_short1;
-	dev_t	ki_tdev;
+	uint32_t ki_tdev_freebsd11;
 	sigset_t ki_siglist;
 	sigset_t ki_sigmask;
 	sigset_t ki_sigignore;
@@ -294,6 +355,7 @@ struct kinfo_proc32 {
 	char	ki_moretdname[MAXCOMLEN-TDNAMLEN+1];
 	char	ki_sparestrings[46];
 	int	ki_spareints[KI_NSPARE_INT];
+	uint64_t ki_tdev;
 	int	ki_oncpu;
 	int	ki_lastcpu;
 	int	ki_tracer;
@@ -345,6 +407,26 @@ struct procctl_reaper_pids32 {
 	u_int	rp_count;
 	u_int	rp_pad0[15];
 	uint32_t rp_pids;
+};
+
+struct timex32 {
+	unsigned int modes;
+	int32_t	offset;
+	int32_t	freq;
+	int32_t	maxerror;
+	int32_t	esterror;
+	int	status;
+	int32_t	constant;
+	int32_t	precision;
+	int32_t	tolerance;
+	int32_t	ppsfreq;
+	int32_t	jitter;
+	int	shift;
+	int32_t	stabil;
+	int32_t	jitcnt;
+	int32_t	calcnt;
+	int32_t	errcnt;
+	int32_t	stbcnt;
 };
 
 #endif /* !_COMPAT_FREEBSD32_FREEBSD32_H_ */

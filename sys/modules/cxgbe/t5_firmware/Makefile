@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/sys/modules/cxgbe/t5_firmware/Makefile 346940 2019-04-30 01:25:02Z np $
+# $FreeBSD$
 #
 
 T5FW=	${SRCTOP}/sys/dev/cxgbe/firmware
@@ -17,11 +17,7 @@ FIRMWS+=	${F}:${F:C/.txt//}:1.0.0.0
 .endif
 .endfor
 
-T5FW_VER=	1.23.0.0
-FIRMWS+=	t5fw.fw:t5fw:${T5FW_VER}
-CLEANFILES+=	t5fw.fw
-
-t5fw.fw: t5fw-${T5FW_VER}.bin.uu
-	uudecode -o ${.TARGET} ${.ALLSRC}
+T5FW_VER=	1.25.0.40
+FIRMWS+=	t5fw-${T5FW_VER}.bin:t5fw:${T5FW_VER}
 
 .include <bsd.kmod.mk>

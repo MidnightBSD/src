@@ -1,6 +1,8 @@
 /*-
  * Common functions for SCSI Interface Modules (SIMs).
  *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Justin T. Gibbs.
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cam/cam_sim.c 316498 2017-04-04 17:59:10Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -101,14 +103,15 @@ cam_sim_alloc(sim_action_func sim_action, sim_poll_func sim_poll,
 void
 cam_sim_free(struct cam_sim *sim, int free_devq)
 {
-	struct mtx *mtx = sim->mtx;
+	struct mtx *mtx;
 	int error;
 
-	if (mtx) {
-		mtx_assert(mtx, MA_OWNED);
-	} else {
+	if (sim->mtx == NULL) {
 		mtx = &cam_sim_free_mtx;
 		mtx_lock(mtx);
+	} else {
+		mtx = sim->mtx;
+		mtx_assert(mtx, MA_OWNED);
 	}
 	sim->refcount--;
 	if (sim->refcount > 0) {
@@ -116,7 +119,7 @@ cam_sim_free(struct cam_sim *sim, int free_devq)
 		KASSERT(error == 0, ("invalid error value for msleep(9)"));
 	}
 	KASSERT(sim->refcount == 0, ("sim->refcount == 0"));
-	if (sim->mtx == NULL)
+	if (mtx == &cam_sim_free_mtx)	/* sim->mtx == NULL */
 		mtx_unlock(mtx);
 
 	if (free_devq)
@@ -127,17 +130,16 @@ cam_sim_free(struct cam_sim *sim, int free_devq)
 void
 cam_sim_release(struct cam_sim *sim)
 {
-	struct mtx *mtx = sim->mtx;
+	struct mtx *mtx;
 
-	if (mtx) {
-		if (!mtx_owned(mtx))
-			mtx_lock(mtx);
-		else
-			mtx = NULL;
-	} else {
+	if (sim->mtx == NULL)
 		mtx = &cam_sim_free_mtx;
+	else if (!mtx_owned(sim->mtx))
+		mtx = sim->mtx;
+	else
+		mtx = NULL;	/* We hold the lock. */
+	if (mtx)
 		mtx_lock(mtx);
-	}
 	KASSERT(sim->refcount >= 1, ("sim->refcount >= 1"));
 	sim->refcount--;
 	if (sim->refcount == 0)
@@ -149,17 +151,16 @@ cam_sim_release(struct cam_sim *sim)
 void
 cam_sim_hold(struct cam_sim *sim)
 {
-	struct mtx *mtx = sim->mtx;
+	struct mtx *mtx;
 
-	if (mtx) {
-		if (!mtx_owned(mtx))
-			mtx_lock(mtx);
-		else
-			mtx = NULL;
-	} else {
+	if (sim->mtx == NULL)
 		mtx = &cam_sim_free_mtx;
+	else if (!mtx_owned(sim->mtx))
+		mtx = sim->mtx;
+	else
+		mtx = NULL;	/* We hold the lock. */
+	if (mtx)
 		mtx_lock(mtx);
-	}
 	KASSERT(sim->refcount >= 1, ("sim->refcount >= 1"));
 	sim->refcount++;
 	if (mtx)

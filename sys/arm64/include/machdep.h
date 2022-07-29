@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/include/machdep.h 322761 2017-08-21 17:35:04Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_MACHDEP_H_
@@ -37,8 +37,13 @@ struct arm64_bootparams {
 	vm_offset_t	kern_l0pt;	/* L1 page table for the kernel */
 };
 
-extern vm_paddr_t physmap[];
-extern u_int physmap_idx;
+enum arm64_bus {
+	ARM64_BUS_NONE,
+	ARM64_BUS_FDT,
+	ARM64_BUS_ACPI,
+};
+
+extern enum arm64_bus arm64_bus_method;
 
 void dbg_init(void);
 void initarm(struct arm64_bootparams *);

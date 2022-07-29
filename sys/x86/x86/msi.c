@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2006 Yahoo!, Inc.
  * All rights reserved.
  * Written by: John Baldwin <jhb@FreeBSD.org>
@@ -35,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/x86/x86/msi.c 344912 2019-03-08 01:04:19Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 
@@ -152,7 +154,7 @@ struct pic msi_pic = {
 
 u_int first_msi_irq;
 
-u_int num_msi_irqs = 512;
+u_int num_msi_irqs = 2048;
 SYSCTL_UINT(_machdep, OID_AUTO, num_msi_irqs, CTLFLAG_RDTUN, &num_msi_irqs, 0,
     "Number of IRQs reserved for MSI and MSI-X interrupts");
 
@@ -317,6 +319,7 @@ msi_init(void)
 	switch (cpu_vendor_id) {
 	case CPU_VENDOR_INTEL:
 	case CPU_VENDOR_AMD:
+	case CPU_VENDOR_HYGON:
 		break;
 	case CPU_VENDOR_CENTAUR:
 		if (CPUID_TO_FAMILY(cpu_id) == 0x6 &&
@@ -376,7 +379,7 @@ int
 msi_alloc(device_t dev, int count, int maxcount, int *irqs)
 {
 	struct msi_intsrc *msi, *fsrc;
-	u_int cpu, *mirqs;
+	u_int cpu, domain, *mirqs;
 	int cnt, i, vector;
 #ifdef ACPI_DMAR
 	u_int cookies[count];
@@ -385,6 +388,9 @@ msi_alloc(device_t dev, int count, int maxcount, int *irqs)
 
 	if (!msi_enabled)
 		return (ENXIO);
+
+	if (bus_get_domain(dev, &domain) != 0)
+		domain = 0;
 
 	if (count > 1)
 		mirqs = malloc(count * sizeof(*mirqs), M_MSI, M_WAITOK);
@@ -433,7 +439,7 @@ again:
 	KASSERT(cnt == count, ("count mismatch"));
 
 	/* Allocate 'count' IDT vectors. */
-	cpu = intr_next_cpu();
+	cpu = intr_next_cpu(domain);
 	vector = apic_alloc_vectors(cpu, irqs, count, maxcount);
 	if (vector == 0) {
 		mtx_unlock(&msi_lock);
@@ -623,7 +629,7 @@ int
 msix_alloc(device_t dev, int *irq)
 {
 	struct msi_intsrc *msi;
-	u_int cpu;
+	u_int cpu, domain;
 	int i, vector;
 #ifdef ACPI_DMAR
 	u_int cookie;
@@ -632,6 +638,9 @@ msix_alloc(device_t dev, int *irq)
 
 	if (!msi_enabled)
 		return (ENXIO);
+
+	if (bus_get_domain(dev, &domain) != 0)
+		domain = 0;
 
 again:
 	mtx_lock(&msi_lock);
@@ -665,7 +674,7 @@ again:
 	}
 
 	/* Allocate an IDT vector. */
-	cpu = intr_next_cpu();
+	cpu = intr_next_cpu(domain);
 	vector = apic_alloc_vector(cpu, i);
 	if (vector == 0) {
 		mtx_unlock(&msi_lock);

@@ -33,13 +33,15 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/riscv/gen/sigsetjmp.S 294227 2016-01-17 15:21:23Z br $");
+__FBSDID("$FreeBSD$");
 
 #include <machine/setjmp.h>
 
 ENTRY(sigsetjmp)
-	beqz	a1, _C_LABEL(_setjmp)
-	j	_C_LABEL(setjmp)
+	beqz	a1, 1f
+	tail	_C_LABEL(setjmp)
+1:
+	tail	_C_LABEL(_setjmp)
 END(sigsetjmp)
 
 ENTRY(siglongjmp)
@@ -48,8 +50,10 @@ ENTRY(siglongjmp)
 	ld	a3, 0(a0)
 
 	/* Check the magic */
-	beq	a2, a3, _C_LABEL(_longjmp)
-	j	_C_LABEL(longjmp)
+	beq	a2, a3, 1f
+	tail	_C_LABEL(longjmp)
+1:
+	tail	_C_LABEL(_longjmp)
 
 	.align	3
 .Lmagic:

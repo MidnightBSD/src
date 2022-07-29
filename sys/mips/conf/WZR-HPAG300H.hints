@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/mips/conf/WZR-HPAG300H.hints 275470 2014-12-03 23:37:23Z sbruno $
+# $FreeBSD$
 
 # arge0 is connected to the LAN side of the switch PHY.
 # arge1 is connected to the single port WAN side of the switch PHY.

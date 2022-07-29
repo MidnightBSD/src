@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/ofwdump/ofwdump.c 277256 2015-01-16 18:42:49Z nwhitehorn $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/ofw/openfirm.h>
 #include <dev/ofw/openfirmio.h>
@@ -144,7 +144,7 @@ static void
 ofw_dump_properties(int fd, phandle_t n, int level, int raw, int str)
 {
 	int nlen;
-	char prop[32];
+	char prop[OFIOCSUGGPROPNAMELEN];
 
 	for (nlen = ofw_firstprop(fd, n, prop, sizeof(prop)); nlen != 0;
 	     nlen = ofw_nextprop(fd, n, prop, prop, sizeof(prop)))

@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/tools/tools/usbtest/Makefile 254159 2013-08-09 20:08:42Z hselasky $
+# $FreeBSD$
 #
 # Copyright (c) 2013 Hans Petter Selasky. All rights reserved.
 #
@@ -27,15 +26,17 @@
 #
 PROG=	usbtest
 MAN=
+BINDIR?= /usr/sbin
 SRCS+=	usbtest.c
 SRCS+=	usb_msc_test.c
 SRCS+=	usb_modem_test.c
 SRCS+=	usb_control_ep_test.c
+SYSDIR?= ${.CURDIR}/../../../sys
 
-LDADD+=	-lusb
+LIBADD+=	usb
 
 WARNS=	3
 
-CFLAGS+= -I ${.CURDIR}/../../../sys/dev/usb/gadget
+CFLAGS+= -I${SYSDIR}/dev/usb/gadget
 
 .include <bsd.prog.mk>

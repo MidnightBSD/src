@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * LP (Laptop Package)
  *
@@ -13,7 +12,7 @@
  *
  * Sep., 1994	Implemented on FreeBSD 1.1.5.1R (Toshiba AVS001WD)
  *
- * $FreeBSD: stable/10/sys/i386/include/apm_segments.h 139790 2005-01-06 22:18:23Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_APM_SEGMENTS_H

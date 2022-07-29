@@ -1,6 +1,8 @@
-/*      $FreeBSD: stable/11/sys/dev/ipw/if_ipwreg.h 331722 2018-03-29 02:50:57Z eadler $	*/
+/*      $FreeBSD$	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2006
  *      Damien Bergamini <damien.bergamini@free.fr>. All rights reserved.
  *

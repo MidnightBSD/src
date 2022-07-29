@@ -1,5 +1,3 @@
-/* $FreeBSD: stable/11/usr.sbin/kldxref/ef.h 329247 2018-02-13 22:40:33Z emaste $ */
-
 #ifndef _EF_H_
 #define _EF_H_
 

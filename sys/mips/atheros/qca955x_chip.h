@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/11/sys/mips/atheros/qca955x_chip.h 276685 2015-01-05 02:06:26Z adrian $ */
+/* $FreeBSD$ */
 
 #ifndef	__QCA955X_CHIP_H__
 #define	__QCA955X_CHIP_H__

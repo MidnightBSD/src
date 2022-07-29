@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/11/tests/sys/geom/class/eli/init_test.sh 348588 2019-06-03 21:04:23Z jhb $
+# $FreeBSD$
 
 . $(atf_get_srcdir)/conf.sh
 

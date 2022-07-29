@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/i18n/csmapper/GB/UCS%ISO-IR-165EXT.src 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 # $NetBSD: UCS%ISO-IR-165EXT.src,v 1.1 2006/10/26 15:06:18 tnozaki Exp $
 
 TYPE		ROWCOL

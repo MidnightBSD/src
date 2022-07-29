@@ -4,7 +4,7 @@
 #
 # This includes all the required drivers for the SoCs.
 #
-# $FreeBSD: stable/11/sys/mips/mediatek/std.mediatek 300659 2016-05-25 06:47:28Z sgalabov $
+# $FreeBSD$
 #
 
 # Include the standard file list for Mediatek SoCs.

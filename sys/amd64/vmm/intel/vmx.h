@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/vmm/intel/vmx.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _VMX_H_
@@ -85,6 +87,7 @@ struct vmxcap {
 	int	set;
 	uint32_t proc_ctls;
 	uint32_t proc_ctls2;
+	uint32_t exc_bitmap;
 };
 
 struct vmxstate {
@@ -114,6 +117,7 @@ enum {
 	IDX_MSR_SF_MASK,
 	IDX_MSR_KGSBASE,
 	IDX_MSR_PAT,
+	IDX_MSR_TSC_AUX,
 	GUEST_MSR_NUM		/* must be the last enumeration */
 };
 
@@ -138,7 +142,6 @@ CTASSERT((offsetof(struct vmx, pir_desc[0]) & 63) == 0);
 #define	VMX_GUEST_VMEXIT	0
 #define	VMX_VMRESUME_ERROR	1
 #define	VMX_VMLAUNCH_ERROR	2
-#define	VMX_INVEPT_ERROR	3
 int	vmx_enter_guest(struct vmxctx *ctx, struct vmx *vmx, int launched);
 void	vmx_call_isr(uintptr_t entry);
 
@@ -149,5 +152,19 @@ int	vmx_set_tsc_offset(struct vmx *vmx, int vcpu, uint64_t offset);
 
 extern char	vmx_exit_guest[];
 extern char	vmx_exit_guest_flush_rsb[];
+
+static inline bool
+vmx_have_msr_tsc_aux(struct vmx *vmx)
+{
+	int rdpid_rdtscp_bits = ((1 << VM_CAP_RDPID) | (1 << VM_CAP_RDTSCP));
+
+	/*
+	 * Since the values of these bits are uniform across all vCPUs
+	 * (see discussion in vmx_init() and initialization of these bits
+	 * in vmx_vminit()), just always use vCPU-zero's capability set and
+	 * remove the need to require a vcpuid argument.
+	 */
+	return ((vmx->cap[0].set & rdpid_rdtscp_bits) != 0);
+}
 
 #endif

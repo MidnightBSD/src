@@ -29,7 +29,7 @@
  *
  * Authors: Justin T. Gibbs     (Spectra Logic Corporation)
  *
- * $FreeBSD: stable/11/cddl/usr.sbin/zfsd/case_file.h 330733 2018-03-10 03:34:27Z asomers $
+ * $FreeBSD$
  */
 
 /**

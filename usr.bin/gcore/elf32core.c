@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/usr.bin/gcore/elf32core.c 325029 2017-10-27 04:38:42Z bdrewery $ */
+/* $FreeBSD$ */
 #ifndef __LP64__
 #error "this file must be compiled for LP64."
 #endif

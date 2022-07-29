@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/fxp/Makefile 345186 2019-03-15 15:16:31Z markj $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/dev/fxp
 

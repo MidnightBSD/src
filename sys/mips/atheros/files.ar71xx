@@ -1,6 +1,7 @@
-# $FreeBSD: stable/11/sys/mips/atheros/files.ar71xx 290910 2015-11-16 04:28:00Z adrian $
+# $FreeBSD$
 
 mips/atheros/apb.c		optional ar71xx_apb
+mips/atheros/ar71xx_caldata.c	optional ar71xx_caldata
 mips/atheros/ar71xx_gpio.c	optional gpio
 mips/atheros/ar71xx_machdep.c	standard
 mips/atheros/ar71xx_ehci.c	optional ehci

@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2017 Mark Johnston <markj@FreeBSD.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/linuxkpi/common/src/linux_hrtimer.c 335411 2018-06-20 06:35:37Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

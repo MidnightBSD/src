@@ -1,3 +1,5 @@
+# $FreeBSD$
+
 MAN=	intro.6
 
 PACKAGE=runtime-manuals

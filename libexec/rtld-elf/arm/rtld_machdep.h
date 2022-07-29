@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999, 2000 John D. Polstra.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/libexec/rtld-elf/arm/rtld_machdep.h 319434 2017-06-01 15:12:51Z vangyzen $
+ * $FreeBSD$
  */
 
 #ifndef RTLD_MACHDEP_H
@@ -31,6 +33,7 @@
 
 #include <sys/types.h>
 #include <machine/atomic.h>
+#include <machine/acle-compat.h>
 
 struct Struct_Obj_Entry;
 
@@ -61,11 +64,13 @@ typedef struct {
 
 #define round(size, align) \
     (((size) + (align) - 1) & ~((align) - 1))
-#define calculate_first_tls_offset(size, align) \
+#define calculate_first_tls_offset(size, align, offset)	\
     round(8, align)
-#define calculate_tls_offset(prev_offset, prev_size, size, align) \
+#define calculate_tls_offset(prev_offset, prev_size, size, align, offset) \
     round(prev_offset + prev_size, align)
 #define calculate_tls_end(off, size)    ((off) + (size))
+#define calculate_tls_post_size(align) \
+    round(TLS_TCB_SIZE, align) - TLS_TCB_SIZE
 	
 extern void *__tls_get_addr(tls_index *ti);
 
@@ -74,7 +79,11 @@ extern void *__tls_get_addr(tls_index *ti);
 
 extern void arm_abi_variant_hook(Elf_Auxinfo **);
 
+#ifdef __ARM_FP
 #define md_abi_variant_hook(x)		arm_abi_variant_hook(x)
 #define RTLD_VARIANT_ENV_NAMES
+#else
+#define md_abi_variant_hook(x)
+#endif
 
 #endif

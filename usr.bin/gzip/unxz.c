@@ -31,7 +31,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/gzip/unxz.c 343251 2019-01-21 06:52:35Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include <stdarg.h>
 #include <errno.h>

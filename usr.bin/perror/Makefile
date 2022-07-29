@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/perror/Makefile 192423 2009-05-20 05:49:06Z maxim $
+# $FreeBSD$
 
 PROG=	perror
 

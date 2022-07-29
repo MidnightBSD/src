@@ -27,10 +27,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/ath/if_ath_btcoex_mci.c 301182 2016-06-02 01:59:41Z gnn $
+ * $FreeBSD$
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ath/if_ath_btcoex_mci.c 301182 2016-06-02 01:59:41Z gnn $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This implements the MCI bluetooth coexistence handling.

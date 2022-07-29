@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/builtins/trap4.0 217035 2011-01-05 23:17:29Z jilles $
+# $FreeBSD$
 
 T=$(mktemp -d ${TMPDIR:-/tmp}/sh-test.XXXXXX)
 trap 'rm -rf $T' 0

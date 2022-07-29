@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/11/sys/dev/usb/wlan/if_rumreg.h 297171 2016-03-21 22:29:24Z avos $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 2005, 2006 Damien Bergamini <damien.bergamini@free.fr>

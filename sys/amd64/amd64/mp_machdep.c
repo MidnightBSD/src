@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1996, by Steve Passe
  * Copyright (c) 2003, by Peter Wemm
  * All rights reserved.
@@ -25,8 +27,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/mp_machdep.c 347700 2019-05-16 14:42:16Z markj $");
+__FBSDID("$FreeBSD$");
 
+#include "opt_acpi.h"
 #include "opt_cpu.h"
 #include "opt_ddb.h"
 #include "opt_kstack_pages.h"
@@ -37,6 +40,7 @@ __FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/mp_machdep.c 347700 2019-05-16 14:
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/cpuset.h>
+#include <sys/domainset.h>
 #ifdef GPROF 
 #include <sys/gmon.h>
 #endif
@@ -57,6 +61,8 @@ __FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/mp_machdep.c 347700 2019-05-16 14:
 #include <vm/pmap.h>
 #include <vm/vm_kern.h>
 #include <vm/vm_extern.h>
+#include <vm/vm_page.h>
+#include <vm/vm_phys.h>
 
 #include <x86/apicreg.h>
 #include <machine/clock.h>
@@ -73,6 +79,11 @@ __FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/mp_machdep.c 347700 2019-05-16 14:
 #include <machine/cpu.h>
 #include <x86/init.h>
 
+#ifdef DEV_ACPI
+#include <contrib/dev/acpica/include/acpi.h>
+#include <dev/acpica/acpivar.h>
+#endif
+
 #define WARMBOOT_TARGET		0
 #define WARMBOOT_OFF		(KERNBASE + 0x0467)
 #define WARMBOOT_SEG		(KERNBASE + 0x0469)
@@ -82,7 +93,9 @@ __FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/mp_machdep.c 347700 2019-05-16 14:
 #define BIOS_RESET		(0x0f)
 #define BIOS_WARM		(0x0a)
 
-extern	struct pcpu __pcpu[];
+#define GiB(v)			(v ## ULL << 30)
+
+#define	AP_BOOTPT_SZ		(PAGE_SIZE * 3)
 
 /* Temporary variables for init_secondary()  */
 char *doublefault_stack;
@@ -96,24 +109,84 @@ char *dbg_stack;
 
 static int	start_ap(int apic_id);
 
-static u_int	bootMP_size;
-static u_int	boot_address;
+static bool
+is_kernel_paddr(vm_paddr_t pa)
+{
+
+	return (pa >= trunc_2mpage(btext - KERNBASE) &&
+	   pa < round_page(_end - KERNBASE));
+}
+
+static bool
+is_mpboot_good(vm_paddr_t start, vm_paddr_t end)
+{
+
+	return (start + AP_BOOTPT_SZ <= GiB(4) && atop(end) < Maxmem);
+}
 
 /*
  * Calculate usable address in base memory for AP trampoline code.
  */
-u_int
-mp_bootaddress(u_int basemem)
+void
+mp_bootaddress(vm_paddr_t *physmap, unsigned int *physmap_idx)
 {
+	vm_paddr_t start, end;
+	unsigned int i;
+	bool allocated;
 
-	bootMP_size = mptramp_end - mptramp_start;
-	boot_address = trunc_page(basemem * 1024); /* round down to 4k boundary */
-	if (((basemem * 1024) - boot_address) < bootMP_size)
-		boot_address -= PAGE_SIZE;	/* not enough, lower by 4k */
-	/* 3 levels of page table pages */
-	mptramp_pagetables = boot_address - (PAGE_SIZE * 3);
+	alloc_ap_trampoline(physmap, physmap_idx);
 
-	return mptramp_pagetables;
+	/*
+	 * Find a memory region big enough below the 4GB boundary to
+	 * store the initial page tables.  Region must be mapped by
+	 * the direct map.
+	 *
+	 * Note that it needs to be aligned to a page boundary.
+	 */
+	allocated = false;
+	for (i = *physmap_idx; i <= *physmap_idx; i -= 2) {
+		/*
+		 * First, try to chomp at the start of the physmap region.
+		 * Kernel binary might claim it already.
+		 */
+		start = round_page(physmap[i]);
+		end = start + AP_BOOTPT_SZ;
+		if (start < end && end <= physmap[i + 1] &&
+		    is_mpboot_good(start, end) &&
+		    !is_kernel_paddr(start) && !is_kernel_paddr(end - 1)) {
+			allocated = true;
+			physmap[i] = end;
+			break;
+		}
+
+		/*
+		 * Second, try to chomp at the end.  Again, check
+		 * against kernel.
+		 */
+		end = trunc_page(physmap[i + 1]);
+		start = end - AP_BOOTPT_SZ;
+		if (start < end && start >= physmap[i] &&
+		    is_mpboot_good(start, end) &&
+		    !is_kernel_paddr(start) && !is_kernel_paddr(end - 1)) {
+			allocated = true;
+			physmap[i + 1] = start;
+			break;
+		}
+	}
+	if (allocated) {
+		mptramp_pagetables = start;
+		if (physmap[i] == physmap[i + 1] && *physmap_idx != 0) {
+			memmove(&physmap[i], &physmap[i + 2],
+			    sizeof(*physmap) * (*physmap_idx - i + 2));
+			*physmap_idx -= 2;
+		}
+	} else {
+		mptramp_pagetables = trunc_page(boot_address) - AP_BOOTPT_SZ;
+		if (bootverbose)
+			printf(
+"Cannot find enough space for the initial AP page tables, placing them at %#x",
+			    mptramp_pagetables);
+	}
 }
 
 /*
@@ -178,6 +251,10 @@ cpu_mp_start(void)
 	setidt(IPI_SUSPEND, pti ? IDTVEC(cpususpend_pti) : IDTVEC(cpususpend),
 	    SDT_SYSIGT, SEL_KPL, 0);
 
+	/* Install an IPI for calling delayed SWI */
+	setidt(IPI_SWI, pti ? IDTVEC(ipi_swi_pti) : IDTVEC(ipi_swi),
+	    SDT_SYSIGT, SEL_KPL, 0);
+
 	/* Set boot_cpu_id if needed. */
 	if (boot_cpu_id == -1) {
 		boot_cpu_id = PCPU_GET(apic_id);
@@ -195,8 +272,11 @@ cpu_mp_start(void)
 	init_ops.start_all_aps();
 
 	set_interrupt_apic_ids();
-}
 
+#if defined(DEV_ACPI) && MAXMEMDOM > 1
+	acpi_pxm_set_cpu_locality();
+#endif
+}
 
 /*
  * AP CPU's call this to initialize themselves.
@@ -220,18 +300,19 @@ init_secondary(void)
 	common_tss[cpu] = common_tss[0];
 	common_tss[cpu].tss_iobase = sizeof(struct amd64tss) +
 	    IOPERM_BITMAP_SIZE;
-	common_tss[cpu].tss_ist1 = (long)&doublefault_stack[PAGE_SIZE];
+	common_tss[cpu].tss_ist1 =
+	    (long)&doublefault_stack[DBLFAULT_STACK_SIZE];
 
 	/* The NMI stack runs on IST2. */
-	np = ((struct nmi_pcpu *) &nmi_stack[PAGE_SIZE]) - 1;
+	np = ((struct nmi_pcpu *)&nmi_stack[NMI_STACK_SIZE]) - 1;
 	common_tss[cpu].tss_ist2 = (long) np;
 
 	/* The MC# stack runs on IST3. */
-	np = ((struct nmi_pcpu *) &mce_stack[PAGE_SIZE]) - 1;
+	np = ((struct nmi_pcpu *)&mce_stack[MCE_STACK_SIZE]) - 1;
 	common_tss[cpu].tss_ist3 = (long) np;
 
 	/* The DB# stack runs on IST4. */
-	np = ((struct nmi_pcpu *) &dbg_stack[PAGE_SIZE]) - 1;
+	np = ((struct nmi_pcpu *)&dbg_stack[DBG_STACK_SIZE]) - 1;
 	common_tss[cpu].tss_ist4 = (long) np;
 
 	/* Prepare private GDT */
@@ -273,15 +354,15 @@ init_secondary(void)
 	common_tss[cpu].tss_rsp0 = 0;
 
 	/* Save the per-cpu pointer for use by the NMI handler. */
-	np = ((struct nmi_pcpu *) &nmi_stack[PAGE_SIZE]) - 1;
+	np = ((struct nmi_pcpu *)&nmi_stack[NMI_STACK_SIZE]) - 1;
 	np->np_pcpu = (register_t) pc;
 
 	/* Save the per-cpu pointer for use by the MC# handler. */
-	np = ((struct nmi_pcpu *) &mce_stack[PAGE_SIZE]) - 1;
+	np = ((struct nmi_pcpu *)&mce_stack[MCE_STACK_SIZE]) - 1;
 	np->np_pcpu = (register_t) pc;
 
 	/* Save the per-cpu pointer for use by the DB# handler. */
-	np = ((struct nmi_pcpu *) &dbg_stack[PAGE_SIZE]) - 1;
+	np = ((struct nmi_pcpu *)&dbg_stack[DBG_STACK_SIZE]) - 1;
 	np->np_pcpu = (register_t) pc;
 
 	wrmsr(MSR_FSBASE, 0);		/* User value */
@@ -319,27 +400,45 @@ init_secondary(void)
  * local functions and data
  */
 
+#ifdef NUMA
+static void
+mp_realloc_pcpu(int cpuid, int domain)
+{
+	vm_page_t m;
+	vm_offset_t oa, na;
+
+	oa = (vm_offset_t)&__pcpu[cpuid];
+	if (_vm_phys_domain(pmap_kextract(oa)) == domain)
+		return;
+	m = vm_page_alloc_domain(NULL, 0, domain,
+	    VM_ALLOC_NORMAL | VM_ALLOC_NOOBJ);
+	if (m == NULL)
+		return;
+	na = PHYS_TO_DMAP(VM_PAGE_TO_PHYS(m));
+	pagecopy((void *)oa, (void *)na);
+	pmap_qenter((vm_offset_t)&__pcpu[cpuid], &m, 1);
+	/* XXX old pcpu page leaked. */
+}
+#endif
+
 /*
  * start each AP in our list
  */
 int
 native_start_all_aps(void)
 {
-	vm_offset_t va = boot_address + KERNBASE;
 	u_int64_t *pt4, *pt3, *pt2;
 	u_int32_t mpbioswarmvec;
-	int apic_id, cpu, i;
+	int apic_id, cpu, domain, i;
 	u_char mpbiosreason;
 
 	mtx_init(&ap_boot_mtx, "ap boot", NULL, MTX_SPIN);
 
-	/* install the AP 1st level boot code */
-	pmap_kenter(va, boot_address);
-	pmap_invalidate_page(kernel_pmap, va);
-	bcopy(mptramp_start, (void *)va, bootMP_size);
+	/* copy the AP 1st level boot code */
+	bcopy(mptramp_start, (void *)PHYS_TO_DMAP(boot_address), bootMP_size);
 
 	/* Locate the page tables, they'll be below the trampoline */
-	pt4 = (u_int64_t *)(uintptr_t)(mptramp_pagetables + KERNBASE);
+	pt4 = (uint64_t *)PHYS_TO_DMAP(mptramp_pagetables);
 	pt3 = pt4 + (PAGE_SIZE) / sizeof(u_int64_t);
 	pt2 = pt3 + (PAGE_SIZE) / sizeof(u_int64_t);
 
@@ -369,25 +468,40 @@ native_start_all_aps(void)
 	outb(CMOS_REG, BIOS_RESET);
 	outb(CMOS_DATA, BIOS_WARM);	/* 'warm-start' */
 
+	/* Relocate pcpu areas to the correct domain. */
+#ifdef NUMA
+	if (vm_ndomains > 1)
+		for (cpu = 1; cpu < mp_ncpus; cpu++) {
+			apic_id = cpu_apic_ids[cpu];
+			domain = acpi_pxm_get_cpu_locality(apic_id);
+			mp_realloc_pcpu(cpu, domain);
+		}
+#endif
+
 	/* start each AP */
+	domain = 0;
 	for (cpu = 1; cpu < mp_ncpus; cpu++) {
 		apic_id = cpu_apic_ids[cpu];
-
+#ifdef NUMA
+		if (vm_ndomains > 1)
+			domain = acpi_pxm_get_cpu_locality(apic_id);
+#endif
 		/* allocate and set up an idle stack data page */
-		bootstacks[cpu] = (void *)kmem_malloc(kernel_arena,
-		    kstack_pages * PAGE_SIZE, M_WAITOK | M_ZERO);
-		doublefault_stack = (char *)kmem_malloc(kernel_arena,
-		    PAGE_SIZE, M_WAITOK | M_ZERO);
-		mce_stack = (char *)kmem_malloc(kernel_arena, PAGE_SIZE,
+		bootstacks[cpu] = (void *)kmem_malloc(kstack_pages * PAGE_SIZE,
 		    M_WAITOK | M_ZERO);
-		nmi_stack = (char *)kmem_malloc(kernel_arena, PAGE_SIZE,
+		doublefault_stack = (char *)kmem_malloc(DBLFAULT_STACK_SIZE,
 		    M_WAITOK | M_ZERO);
-		dbg_stack = (char *)kmem_malloc(kernel_arena, PAGE_SIZE,
+		mce_stack = (char *)kmem_malloc(MCE_STACK_SIZE,
 		    M_WAITOK | M_ZERO);
-		dpcpu = (void *)kmem_malloc(kernel_arena, DPCPU_SIZE,
-		    M_WAITOK | M_ZERO);
+		nmi_stack = (char *)kmem_malloc_domainset(
+		    DOMAINSET_PREF(domain), NMI_STACK_SIZE, M_WAITOK | M_ZERO);
+		dbg_stack = (char *)kmem_malloc_domainset(
+		    DOMAINSET_PREF(domain), DBG_STACK_SIZE, M_WAITOK | M_ZERO);
+		dpcpu = (void *)kmem_malloc_domainset(DOMAINSET_PREF(domain),
+		    DPCPU_SIZE, M_WAITOK | M_ZERO);
 
-		bootSTK = (char *)bootstacks[cpu] + kstack_pages * PAGE_SIZE - 8;
+		bootSTK = (char *)bootstacks[cpu] +
+		    kstack_pages * PAGE_SIZE - 8;
 		bootAP = cpu;
 
 		/* attempt to start the Application Processor */

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/tests/stdio/print_positional_test.c 299511 2016-05-12 04:08:45Z cem $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <stdio.h>

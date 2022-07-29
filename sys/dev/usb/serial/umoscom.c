@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/dev/usb/serial/umoscom.c 314500 2017-03-01 18:19:46Z ian $ */
+/* $FreeBSD$ */
 /*	$OpenBSD: umoscom.c,v 1.2 2006/10/26 06:02:43 jsg Exp $	*/
 
 /*

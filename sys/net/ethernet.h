@@ -1,7 +1,7 @@
 /*
  * Fundamental constants relating to ethernet.
  *
- * $FreeBSD: stable/11/sys/net/ethernet.h 346783 2019-04-27 04:39:41Z kevans $
+ * $FreeBSD$
  *
  */
 
@@ -43,7 +43,7 @@
 #define	M_HASFCS	M_PROTO5	/* FCS included at end of frame */
 
 /*
- * Ethernet CRC32 polynomials (big- and little-endian verions).
+ * Ethernet CRC32 polynomials (big- and little-endian versions).
  */
 #define	ETHER_CRC_POLY_LE	0xedb88320
 #define	ETHER_CRC_POLY_BE	0x04c11db6
@@ -360,10 +360,13 @@ struct ether_vlan_header {
 #define	ETHERTYPE_PBB		0x88E7	/* 802.1Q Provider Backbone Bridges */
 #define	ETHERTYPE_FCOE		0x8906	/* Fibre Channel over Ethernet */
 #define	ETHERTYPE_LOOPBACK	0x9000	/* Loopback: used to test interfaces */
+#define	ETHERTYPE_8021Q9100	0x9100	/* IEEE 802.1Q stacking (proprietary) */
 #define	ETHERTYPE_LBACK		ETHERTYPE_LOOPBACK	/* DEC MOP loopback */
 #define	ETHERTYPE_XNSSM		0x9001	/* 3Com (Formerly Bridge Communications), XNS Systems Management */
 #define	ETHERTYPE_TCPSM		0x9002	/* 3Com (Formerly Bridge Communications), TCP/IP Systems Management */
 #define	ETHERTYPE_BCLOOP	0x9003	/* 3Com (Formerly Bridge Communications), loopback detection */
+#define	ETHERTYPE_8021Q9200	0x9200	/* IEEE 802.1Q stacking (proprietary) */
+#define	ETHERTYPE_8021Q9300	0x9300	/* IEEE 802.1Q stacking (proprietary) */
 #define	ETHERTYPE_DEBNI		0xAAAA	/* DECNET? Used by VAX 6220 DEBNI */
 #define	ETHERTYPE_SONIX		0xFAF5	/* Sonix Arpeggio */
 #define	ETHERTYPE_VITAL		0xFF00	/* BBN VITAL-LanBridge cache wakeups */
@@ -408,8 +411,8 @@ struct ether_vlan_header {
 #define	IEEE8021Q_PCP_BE	0	/* Best effort (default) */
 #define	IEEE8021Q_PCP_EE	2	/* Excellent effort */
 #define	IEEE8021Q_PCP_CA	3	/* Critical applications */
-#define	IEEE8021Q_PCP_VI	4	/* Video, < 100ms latency */
-#define	IEEE8021Q_PCP_VO	5	/* Video, < 10ms latency */
+#define	IEEE8021Q_PCP_VI	4	/* Video, < 100ms latency and jitter */
+#define	IEEE8021Q_PCP_VO	5	/* Voice, < 10ms latency and jitter */
 #define	IEEE8021Q_PCP_IC	6	/* Internetwork control */
 #define	IEEE8021Q_PCP_NC	7	/* Network control (highest) */
 
@@ -426,6 +429,10 @@ extern	uint32_t ether_crc32_be(const uint8_t *, size_t);
 extern	void ether_demux(struct ifnet *, struct mbuf *);
 extern	void ether_ifattach(struct ifnet *, const u_int8_t *);
 extern	void ether_ifdetach(struct ifnet *);
+#ifdef VIMAGE
+struct vnet;
+extern	void ether_reassign(struct ifnet *, struct vnet *, char *);
+#endif
 extern	int  ether_ioctl(struct ifnet *, u_long, caddr_t);
 extern	int  ether_output(struct ifnet *, struct mbuf *,
 	    const struct sockaddr *, struct route *);

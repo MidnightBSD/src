@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,7 +35,7 @@ static char sccsid[] = "@(#)keyword.c	8.5 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/ps/keyword.c 332594 2018-04-16 16:12:30Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -81,8 +83,7 @@ static VAR var[] = {
 	    CHAR, NULL, 0},
 	{"cow", "COW", NULL, "copy-on-write-faults", 0, kvar, KOFF(ki_cow),
 	    UINT, "u", 0},
-	{"cpu", "CPU", NULL, "cpu-usage", 0, kvar, KOFF(ki_estcpu), UINT, "d",
-	    0},
+	{"cpu", "C", NULL, "on-cpu", 0, cpunum, 0, CHAR, NULL, 0},
 	{"cputime", "", "time", NULL, 0, NULL, 0, CHAR, NULL, 0},
 	{"dsiz", "DSIZ", NULL, "data-size", 0, kvar, KOFF(ki_dsize), PGTOK,
 	    "ld", 0},

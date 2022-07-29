@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Adrian Chadd <adrian@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/atheros/ar934x_chip.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 
@@ -314,6 +316,10 @@ ar934x_chip_reset_ethernet_switch(void)
 	ar71xx_device_stop(AR934X_RESET_ETH_SWITCH);
 	DELAY(100);
 	ar71xx_device_start(AR934X_RESET_ETH_SWITCH);
+	DELAY(100);
+	ar71xx_device_stop(AR934X_RESET_ETH_SWITCH_ANALOG);
+	DELAY(100);
+	ar71xx_device_start(AR934X_RESET_ETH_SWITCH_ANALOG);
 	DELAY(100);
 }
 

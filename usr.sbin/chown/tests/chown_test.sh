@@ -23,8 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/chown/tests/chown_test.sh 322835 2017-08-24 13:39:24Z gjb $
+# $FreeBSD$
 
 get_filesystem()
 {

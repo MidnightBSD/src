@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2010 Nathan Whitehorn
  * Copyright (C) 2011 glevand (geoffrey.levand@mail.ru)
  * All rights reserved.
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/powerpc/ps3/ps3bus.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -335,7 +337,7 @@ ps3bus_attach(device_t self)
 	rman_manage_region(&sc->sc_intr_rman, 0, ~0);
 
 	/* Get memory regions for DMA */
-	mem_regions(&sc->regions, &sc->rcount, &sc->regions, &sc->rcount);
+	mem_regions(&sc->regions, &sc->rcount, NULL, NULL);
 
 	/*
 	 * Probe all the PS3's buses.

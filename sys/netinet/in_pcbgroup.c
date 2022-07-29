@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010-2011 Juniper Networks, Inc.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/11/sys/netinet/in_pcbgroup.c 297439 2016-03-31 00:53:23Z gnn $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet6.h"
 #include "opt_rss.h"
@@ -184,7 +186,7 @@ in_pcbgroup_init(struct inpcbinfo *pcbinfo, u_int hashfields,
 		 * XXXRW: The notion of a bucket to CPU mapping is common at
 		 * both pcbgroup and RSS layers -- does that mean that we
 		 * should migrate it all from RSS to here, and just leave RSS
-		 * responsible only for providing hashing and mapping funtions?
+		 * responsible only for providing hashing and mapping functions?
 		 */
 #ifdef RSS
 		pcbgroup->ipg_cpu = rss_getcpu(pgn);
@@ -205,7 +207,7 @@ in_pcbgroup_destroy(struct inpcbinfo *pcbinfo)
 
 	for (pgn = 0; pgn < pcbinfo->ipi_npcbgroups; pgn++) {
 		pcbgroup = &pcbinfo->ipi_pcbgroups[pgn];
-		KASSERT(LIST_EMPTY(pcbinfo->ipi_listhead),
+		KASSERT(CK_LIST_EMPTY(pcbinfo->ipi_listhead),
 		    ("in_pcbinfo_destroy: listhead not empty"));
 		INP_GROUP_LOCK_DESTROY(pcbgroup);
 		hashdestroy(pcbgroup->ipg_hashbase, M_PCB,
@@ -336,7 +338,7 @@ in_pcbwild_add(struct inpcb *inp)
 		INP_GROUP_LOCK(&pcbinfo->ipi_pcbgroups[pgn]);
 	head = &pcbinfo->ipi_wildbase[INP_PCBHASH(INADDR_ANY, inp->inp_lport,
 	    0, pcbinfo->ipi_wildmask)];
-	LIST_INSERT_HEAD(head, inp, inp_pcbgroup_wild);
+	CK_LIST_INSERT_HEAD(head, inp, inp_pcbgroup_wild);
 	inp->inp_flags2 |= INP_PCBGROUPWILD;
 	for (pgn = 0; pgn < pcbinfo->ipi_npcbgroups; pgn++)
 		INP_GROUP_UNLOCK(&pcbinfo->ipi_pcbgroups[pgn]);
@@ -355,7 +357,7 @@ in_pcbwild_remove(struct inpcb *inp)
 	pcbinfo = inp->inp_pcbinfo;
 	for (pgn = 0; pgn < pcbinfo->ipi_npcbgroups; pgn++)
 		INP_GROUP_LOCK(&pcbinfo->ipi_pcbgroups[pgn]);
-	LIST_REMOVE(inp, inp_pcbgroup_wild);
+	CK_LIST_REMOVE(inp, inp_pcbgroup_wild);
 	for (pgn = 0; pgn < pcbinfo->ipi_npcbgroups; pgn++)
 		INP_GROUP_UNLOCK(&pcbinfo->ipi_pcbgroups[pgn]);
 	inp->inp_flags2 &= ~INP_PCBGROUPWILD;
@@ -413,7 +415,7 @@ in_pcbgroup_update_internal(struct inpcbinfo *pcbinfo,
 	oldpcbgroup = inp->inp_pcbgroup;
 	if (oldpcbgroup != NULL && oldpcbgroup != newpcbgroup) {
 		INP_GROUP_LOCK(oldpcbgroup);
-		LIST_REMOVE(inp, inp_pcbgrouphash);
+		CK_LIST_REMOVE(inp, inp_pcbgrouphash);
 		inp->inp_pcbgroup = NULL;
 		INP_GROUP_UNLOCK(oldpcbgroup);
 	}
@@ -443,7 +445,7 @@ in_pcbgroup_update_internal(struct inpcbinfo *pcbinfo,
 			    inp->inp_fport,
 			    newpcbgroup->ipg_hashmask)];
 		}
-		LIST_INSERT_HEAD(pcbhash, inp, inp_pcbgrouphash);
+		CK_LIST_INSERT_HEAD(pcbhash, inp, inp_pcbgrouphash);
 		inp->inp_pcbgroup = newpcbgroup;
 		INP_GROUP_UNLOCK(newpcbgroup);
 	}
@@ -546,7 +548,7 @@ in_pcbgroup_remove(struct inpcb *inp)
 	pcbgroup = inp->inp_pcbgroup;
 	if (pcbgroup != NULL) {
 		INP_GROUP_LOCK(pcbgroup);
-		LIST_REMOVE(inp, inp_pcbgrouphash);
+		CK_LIST_REMOVE(inp, inp_pcbgrouphash);
 		inp->inp_pcbgroup = NULL;
 		INP_GROUP_UNLOCK(pcbgroup);
 	}

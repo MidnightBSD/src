@@ -1,6 +1,6 @@
 # Canadian Bilingual keyboard
 #
-# $FreeBSD: stable/11/share/vt/keymaps/ca.kbd 270300 2014-08-21 20:33:09Z se $
+# $FreeBSD$
 
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock

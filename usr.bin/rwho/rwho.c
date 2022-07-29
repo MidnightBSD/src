@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1983, 1993 The Regents of the University of California.
  * Copyright (c) 2013 Mariusz Zaborski <oshogbo@FreeBSD.org>
  * All rights reserved.
@@ -12,7 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -42,7 +43,7 @@ static char sccsid[] = "@(#)rwho.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/rwho/rwho.c 280250 2015-03-19 12:32:48Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/capsicum.h>
 #include <sys/param.h>
@@ -50,6 +51,7 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/rwho/rwho.c 280250 2015-03-19 12:32:48Z rw
 
 #include <protocols/rwhod.h>
 
+#include <capsicum_helpers.h>
 #include <dirent.h>
 #include <err.h>
 #include <errno.h>
@@ -127,7 +129,7 @@ main(int argc, char *argv[])
 	dfd = dirfd(dirp);
 	mp = myutmp;
 	cap_rights_init(&rights, CAP_READ, CAP_LOOKUP);
-	if (cap_rights_limit(dfd, &rights) < 0 && errno != ENOSYS)
+	if (caph_rights_limit(dfd, &rights) < 0)
 		err(1, "cap_rights_limit failed: %s", _PATH_RWHODIR);
 	/*
 	 * Cache files required for time(3) and localtime(3) before entering
@@ -135,7 +137,7 @@ main(int argc, char *argv[])
 	 */
 	(void) time(&ct);
 	(void) localtime(&ct);
-	if (cap_enter() < 0 && errno != ENOSYS)
+	if (caph_enter() < 0)
 		err(1, "cap_enter");
 	(void) time(&now);
 	cap_rights_init(&rights, CAP_READ);
@@ -145,7 +147,7 @@ main(int argc, char *argv[])
 		f = openat(dfd, dp->d_name, O_RDONLY);
 		if (f < 0)
 			continue;
-		if (cap_rights_limit(f, &rights) < 0 && errno != ENOSYS)
+		if (caph_rights_limit(f, &rights) < 0)
 			err(1, "cap_rights_limit failed: %s", dp->d_name);
 		cc = read(f, (char *)&wd, sizeof(struct whod));
 		if (cc < WHDRSIZE) {

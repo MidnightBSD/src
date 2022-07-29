@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/net.h 290335 2015-11-03 12:37:55Z hselasky $
+ * $FreeBSD$
  */
 #ifndef	_LINUX_NET_H_
 #define	_LINUX_NET_H_
@@ -74,6 +74,16 @@ static inline void
 sock_release(struct socket *so)
 {
 	soclose(so);
+}
+
+
+int linuxkpi_net_ratelimit(void);
+
+static inline int
+net_ratelimit(void)
+{
+
+	return (linuxkpi_net_ratelimit());
 }
 
 #endif	/* _LINUX_NET_H_ */

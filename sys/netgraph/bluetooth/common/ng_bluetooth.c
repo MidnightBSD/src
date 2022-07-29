@@ -1,9 +1,10 @@
-/* $MidnightBSD$ */
 /*
  * bluetooth.c
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -29,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_bluetooth.c,v 1.3 2003/04/26 22:37:31 max Exp $
- * $FreeBSD: stable/10/sys/netgraph/bluetooth/common/ng_bluetooth.c 273736 2014-10-27 14:38:00Z hselasky $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

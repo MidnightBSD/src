@@ -119,16 +119,18 @@ if [ -f $BSDINSTALL_DISTDIR/MANIFEST ]; then
 	DISTMENU=`awk -F'\t' '!/^(kernel\.txz|base\.txz)/{print $1,$5,$6}' $BSDINSTALL_DISTDIR/MANIFEST`
 	DISTMENU="$(echo ${DISTMENU} | sed -E 's/\.txz//g')"
 
-	exec 3>&1
-	EXTRA_DISTS=$( eval dialog \
+	if [ -n "$DISTMENU" ]; then
+		exec 3>&1
+		EXTRA_DISTS=$( eval dialog \
 	    --backtitle \"MidnightBSD Installer\" \
-	    --title \"Distribution Select\" --nocancel --separate-output \
-	    --checklist \"Choose optional system components to install:\" \
-	    0 0 0 $DISTMENU \
-	2>&1 1>&3 )
-	for dist in $EXTRA_DISTS; do
-		export DISTRIBUTIONS="$DISTRIBUTIONS $dist.txz"
-	done
+		    --title \"Distribution Select\" --nocancel --separate-output \
+		    --checklist \"Choose optional system components to install:\" \
+		    0 0 0 $DISTMENU \
+		2>&1 1>&3 )
+		for dist in $EXTRA_DISTS; do
+			export DISTRIBUTIONS="$DISTRIBUTIONS $dist.txz"
+		done
+	fi
 fi
 
 LOCAL_DISTRIBUTIONS="MANIFEST"
@@ -320,7 +322,7 @@ if [ ! -z "$FETCH_DISTRIBUTIONS" ]; then
 		export DISTRIBUTIONS="$FETCH_DISTRIBUTIONS"
 		export BSDINSTALL_DISTDIR="$BSDINSTALL_FETCHDEST"
 	fi
-		
+
 	export FTP_PASSIVE_MODE=YES
 	# Iterate through the distribution list and set a flag if debugging
 	# distributions have been selected.
@@ -413,7 +415,7 @@ finalconfig() {
 		finalconfig
 		;;
 	"Root Password")
-		bsdinstall rootpass 
+		bsdinstall rootpass
 		finalconfig
 		;;
 	"Hostname")

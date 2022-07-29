@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Andrew Thompson
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/usb/usbdi_util.h 213435 2010-10-04 23:18:05Z hselasky $
+ * $FreeBSD$
  */
 #ifndef _USB_USBDI_UTIL_H_
 #define _USB_USBDI_UTIL_H_

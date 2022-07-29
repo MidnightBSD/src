@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_CTM 183242 2008-09-21 22:02:26Z sam $
+.\" $FreeBSD$
 Set to not build
 .Xr ctm 1
 and related utilities.

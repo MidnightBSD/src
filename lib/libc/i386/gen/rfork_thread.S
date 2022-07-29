@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/i386/gen/rfork_thread.S 240152 2012-09-05 21:41:05Z jilles $");
+__FBSDID("$FreeBSD$");
 
 /*
  * With thanks to John Dyson for the original version of this.
@@ -98,11 +98,7 @@ ENTRY(rfork_thread)
 	 */
 	pushl	%eax
 	pushl	$0
-#ifdef SYS_exit
 	movl	$SYS_exit, %eax
-#else
-	movl	$SYS_sys_exit, %eax
-#endif
 	KERNCALL
 
 	/*

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/tcpdump/tcpdump/Makefile 324322 2017-10-05 17:02:21Z gordon $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -194,7 +194,7 @@ CFLAGS+=-DHAVE_CASPER
 .endif
 .if ${MK_OPENSSL} != "no"
 LIBADD+=	crypto
-CFLAGS+= -I${DESTDIR}/usr/include/openssl
+CFLAGS+= -I${SYSROOT:U${DESTDIR}}/usr/include/openssl
 CFLAGS+= -DHAVE_LIBCRYPTO -DHAVE_OPENSSL_EVP_H
 .endif
 

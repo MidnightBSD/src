@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/11/lib/libc/quad/Symbol.map 170155 2007-05-31 13:07:37Z deischen $
+ * $FreeBSD$
  */
 
 FBSD_1.0 {

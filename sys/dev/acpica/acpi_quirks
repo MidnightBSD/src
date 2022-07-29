@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/dev/acpica/acpi_quirks 147612 2005-06-26 18:19:14Z dwmalone $
+# $FreeBSD$
 #
 # Quirks for ACPI tables can be added here.
 #

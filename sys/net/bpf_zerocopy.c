@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007 Seccuris Inc.
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/net/bpf_zerocopy.c 324128 2017-09-30 18:32:00Z alc $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_bpf.h"
 

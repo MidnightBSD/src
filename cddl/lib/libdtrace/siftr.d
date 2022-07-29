@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/11/cddl/lib/libdtrace/siftr.d 286420 2015-08-07 19:56:22Z markj $
+ * $FreeBSD$
  */
 
 #pragma D depends_on module kernel

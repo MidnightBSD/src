@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/fifolog/fifolog_writer/Makefile 321271 2017-07-20 01:02:30Z ngie $
+# $FreeBSD$
 
 PROG=	fifolog_writer
 

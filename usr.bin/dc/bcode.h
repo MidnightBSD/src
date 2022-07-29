@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/11/usr.bin/dc/bcode.h 264573 2014-04-16 23:14:05Z delphij $						*/
+/*	$FreeBSD$						*/
 /*	$OpenBSD: bcode.h,v 1.7 2012/11/07 11:06:14 otto Exp $	*/
 
 /*
@@ -95,3 +95,10 @@ void			negate(struct number *);
 void			split_number(const struct number *, BIGNUM *, BIGNUM *);
 void			bmul_number(struct number *, struct number *,
 			    struct number *, u_int scale);
+	
+static __inline u_int
+max(u_int a, u_int b)
+{
+
+	return (a > b ? a : b);
+}

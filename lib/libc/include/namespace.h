@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 Daniel Eischen <deischen@FreeBSD.org>.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libc/include/namespace.h 338405 2018-08-31 05:21:33Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _NAMESPACE_H_
@@ -136,6 +138,7 @@
 #define		pthread_getaffinity_np		_pthread_getaffinity_np
 #define		pthread_getconcurrency		_pthread_getconcurrency
 #define		pthread_getcpuclockid		_pthread_getcpuclockid
+#define		pthread_getname_np		_pthread_getname_np
 #define		pthread_getprio			_pthread_getprio
 #define		pthread_getschedparam		_pthread_getschedparam
 #define		pthread_getspecific		_pthread_getspecific
@@ -189,6 +192,7 @@
 #define		pthread_setcancelstate		_pthread_setcancelstate
 #define		pthread_setcanceltype		_pthread_setcanceltype
 #define		pthread_setconcurrency		_pthread_setconcurrency
+#define		pthread_setname_np		_pthread_setname_np
 #define		pthread_setprio			_pthread_setprio
 #define		pthread_setschedparam		_pthread_setschedparam
 #define		pthread_setspecific		_pthread_setspecific

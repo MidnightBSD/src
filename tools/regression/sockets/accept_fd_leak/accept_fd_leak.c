@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/regression/sockets/accept_fd_leak/accept_fd_leak.c 281362 2015-04-10 09:37:53Z ngie $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

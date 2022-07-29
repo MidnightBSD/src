@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/zone.h 219089 2011-02-27 19:41:40Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_ZONE_H_

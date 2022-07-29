@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/acpi/acpi_sony/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 
 .PATH:		${SRCTOP}/sys/dev/acpi_support
 

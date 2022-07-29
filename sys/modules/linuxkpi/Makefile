@@ -1,9 +1,10 @@
-# $FreeBSD: stable/11/sys/modules/linuxkpi/Makefile 340003 2018-11-01 15:50:57Z hselasky $
+# $FreeBSD$
 .PATH:	${SRCTOP}/sys/compat/linuxkpi/common/src
 
 KMOD=	linuxkpi
 SRCS=	linux_compat.c \
 	linux_current.c \
+	linux_domain.c \
 	linux_hrtimer.c \
 	linux_idr.c \
 	linux_kmod.c \
@@ -17,7 +18,8 @@ SRCS=	linux_compat.c \
 	linux_slab.c \
 	linux_tasklet.c \
 	linux_usb.c \
-	linux_work.c
+	linux_work.c \
+	linux_xarray.c
 
 SRCS+=	${LINUXKPI_GENSRCS}
 

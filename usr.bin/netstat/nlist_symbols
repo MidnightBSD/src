@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/netstat/nlist_symbols 296882 2016-03-15 00:19:30Z glebius $
+# $FreeBSD$
 #
 # module_name	symbol_name
 all	_ahstat

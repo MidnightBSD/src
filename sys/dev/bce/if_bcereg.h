@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2006-2014 QLogic Corporation
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,7 +24,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/bce/if_bcereg.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_BCEREG_H_DEFINED
@@ -6334,7 +6336,7 @@ struct fw_info {
 #define BCE_IF_HWASSIST	(CSUM_TCP | CSUM_UDP)
 #endif
 
-#if __MidnightBSD_version < 4000
+#if __FreeBSD_version < 700000
 #define BCE_IF_CAPABILITIES (IFCAP_VLAN_MTU | 			\
     IFCAP_VLAN_HWTAGGING | IFCAP_HWCSUM | IFCAP_JUMBO_MTU)
 #else

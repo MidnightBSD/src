@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/cxgbe/t4_filter.c 346951 2019-04-30 08:01:59Z np $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -864,8 +864,8 @@ set_filter(struct adapter *sc, struct t4_filter *t)
 	if (t->fs.val.iport >= sc->params.nports)
 		return (EINVAL);
 
-	/* Can't specify an iq if not steering to it */
-	if (!t->fs.dirsteer && t->fs.iq)
+	/* Can't specify an iqid/rss_info if not steering. */
+	if (!t->fs.dirsteer && !t->fs.dirsteerhash && !t->fs.maskhash && t->fs.iq)
 		return (EINVAL);
 
 	/* Validate against the global filter mode and ingress config */

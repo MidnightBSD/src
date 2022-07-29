@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: client.c,v 1.7 2006/09/07 21:06:53 max Exp $
- * $FreeBSD: stable/11/usr.sbin/bluetooth/bthidd/client.c 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>
@@ -188,14 +188,11 @@ client_connect(bthid_server_p srv, int32_t fd)
 		s->state = OPEN;
 		connect_in_progress = 0;
 
-		/* Register session's vkbd descriptor (if any) for read */
-		if (s->state == OPEN && d->keyboard) {
-			assert(s->vkbd != -1);
-
-			FD_SET(s->vkbd, &srv->rfdset);
-			if (s->vkbd > srv->maxfd)
-				srv->maxfd = s->vkbd;
-	        }
+		/* Create kbd/mouse after both channels are established */
+		if (session_run(s) < 0) {
+			session_close(s);
+			return (-1);
+		}
 		break;
 
 	default:

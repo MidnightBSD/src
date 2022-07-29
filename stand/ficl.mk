@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/ficl.mk 344289 2019-02-19 18:45:40Z kevans $
+# $FreeBSD$
 
 # Common flags to build FICL related files
 
@@ -16,3 +16,7 @@ CFLAGS+=	-fPIC
 
 CFLAGS+=	-I${FICLSRC} -I${FICLSRC}/${FICL_CPUARCH} -I${LDRSRC}
 CFLAGS+=	-DBF_DICTSIZE=15000
+
+.if ${MK_LOADER_VERIEXEC} != "no"
+CFLAGS+= -DLOADER_VERIEXEC -I${SRCTOP}/lib/libsecureboot/h
+.endif

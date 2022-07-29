@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/pax/tests/legacy_test.pl 260634 2014-01-14 18:39:30Z jmmv $
+# $FreeBSD$
 
 use strict;
 use warnings;

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -16,7 +17,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/fs/cd9660/cd9660_lookup.c 269165 2014-07-28 00:53:26Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -52,8 +53,8 @@ __FBSDID("$FreeBSD: stable/10/sys/fs/cd9660/cd9660_lookup.c 269165 2014-07-28 00
 #include <fs/cd9660/iso_rrip.h>
 
 struct cd9660_ino_alloc_arg {
-	ino_t ino;
-	ino_t i_ino;
+	cd_ino_t ino;
+	cd_ino_t i_ino;
 	struct iso_directory_record *ep;
 };
 
@@ -125,7 +126,7 @@ cd9660_lookup(ap)
 	struct cd9660_ino_alloc_arg dd_arg;
 	u_long bmask;			/* block offset mask */
 	int error;
-	ino_t ino, i_ino;
+	cd_ino_t ino, i_ino;
 	int ltype, reclen;
 	u_short namelen;
 	int isoflags;
@@ -376,7 +377,7 @@ found:
 	 */
 	if (dp->i_number != i_ino) {
 		ep2 = malloc(reclen, M_TEMP, M_WAITOK);
-		bcopy(ep, ep2, reclen);
+		memcpy(ep2, ep, reclen);
 		ep = ep2;
 	}
 	brelse(bp);

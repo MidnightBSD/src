@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/11/usr.bin/sort/file.h 335742 2018-06-27 21:11:28Z kevans $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/mk/bsd.nls.mk 301284 2016-06-03 19:25:36Z bdrewery $
+# $FreeBSD$
 #
 # This include file <bsd.nls.mk> handles building and installing Native
 # Language Support (NLS) catalogs
@@ -71,12 +71,12 @@ STAGE_SYMLINKS_DIR.NLS= ${STAGE_OBJTOP}
 SYMLINKS+= ${NLSSYMLINKS}
 .endif
 .for file in ${NLS}
-NLSNAME_${file:T}= ${file:T:R}/${NLSNAME}.cat
+NLSDIR_${file:T}=	${NLSDIR}/${file:T:R}
+NLSNAME_${file:T}=	${NLSNAME}.cat
 .if defined(NLSLINKS_${file:R}) && !empty(NLSLINKS_${file:R})
 .if !empty(NLSLINKS_${file:R}:M${file:R})
 .error NLSLINKS_${file:R} contains itself: ${file:R}
 .endif
-NLSLINKS+=	${file:R}
 .endif
 .for dst in ${NLSLINKS_${file:R}}
 NLSSYMLINKS+= ../${file:R}/${NLSNAME}.cat ${NLSDIR}/${dst}/${NLSNAME}.cat

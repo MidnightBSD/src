@@ -28,7 +28,7 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/qemu/virt_machdep.c 331893 2018-04-02 23:19:07Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,13 +44,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/qemu/virt_machdep.c 331893 2018-04-02 23:1
 
 #include "platform_if.h"
 
-static vm_offset_t
-virt_lastaddr(platform_t plat)
-{
-
-	return (devmap_lastaddr());
-}
-
 /*
  * Set up static device mappings.
  */
@@ -64,11 +57,9 @@ virt_devmap_init(platform_t plat)
 
 static platform_method_t virt_methods[] = {
 	PLATFORMMETHOD(platform_devmap_init,	virt_devmap_init),
-	PLATFORMMETHOD(platform_lastaddr,	virt_lastaddr),
 
 #ifdef SMP
 	PLATFORMMETHOD(platform_mp_start_ap,	virt_mp_start_ap),
-	PLATFORMMETHOD(platform_mp_setmaxid,	virt_mp_setmaxid),
 #endif
 
 	PLATFORMMETHOD_END,
@@ -86,7 +77,6 @@ gem5_devmap_init(platform_t plat)
 
 static platform_method_t gem5_methods[] = {
 	PLATFORMMETHOD(platform_devmap_init,	gem5_devmap_init),
-	PLATFORMMETHOD(platform_lastaddr,	virt_lastaddr),
 
 	PLATFORMMETHOD_END,
 };

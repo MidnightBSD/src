@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/sys/dev/usb/net/if_usievar.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 /*-
  * Copyright (c) 2011 Anybots Inc
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * written by Akinori Furukoshi <moonlightakkiy@yahoo.ca>
  *  - ucom part is based on u3g.c
  *

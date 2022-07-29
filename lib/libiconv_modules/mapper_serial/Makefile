@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libiconv_modules/mapper_serial/Makefile 260334 2014-01-05 21:03:49Z dim $
+# $FreeBSD$
 
 SHLIB=	mapper_serial
 SRCS+=	citrus_mapper_serial.c

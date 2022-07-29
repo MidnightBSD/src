@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/i18n/csmapper/KS/mapper.dir.KS.src 219019 2011-02-25 00:04:39Z gabor $ 
+# $FreeBSD$ 
 # $NetBSD: mapper.dir.KS.src,v 1.2 2006/10/18 17:54:55 tnozaki Exp $
 
 JOHAB/UCS			mapper_std	KS/JOHAB%UCS.mps

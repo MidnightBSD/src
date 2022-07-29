@@ -1,9 +1,7 @@
-/* $MidnightBSD$ */
 #ifndef __callout_test_h__
 #define __callout_test_h__
 /*-
- * Copyright (c) 2015
- *	Netflix Incorporated, All rights reserved.
+ * Copyright (c) 2015 Netflix, Inc.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +23,7 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *__FBSDID("$FreeBSD: stable/11/sys/tests/callout_test.h 290663 2015-11-10 14:14:41Z rrs $");
+ *__FBSDID("$FreeBSD$");
  *
  */
 struct callout_test {

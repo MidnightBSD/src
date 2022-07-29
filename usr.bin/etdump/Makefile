@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/etdump/Makefile 332947 2018-04-24 17:35:13Z benno $
+# $FreeBSD$
 
 PROG=	etdump
 

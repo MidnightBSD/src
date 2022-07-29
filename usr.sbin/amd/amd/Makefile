@@ -3,13 +3,14 @@
 # Makefile for amd
 # 	This file is under a "BSD" copyright (c) by David O'Brien 1998
 #
-# $FreeBSD: stable/11/usr.sbin/amd/amd/Makefile 319119 2017-05-29 10:15:41Z ngie $
+# $FreeBSD$
 #
 
 .include <bsd.init.mk>
 
-.PATH: ${.CURDIR}/../../../contrib/amd/amd
+.PATH:	${SRCTOP}/contrib/amd/amd
 
+CONFS=	amd.map
 PROG=	amd
 MAN=	amd.8
 SRCS=	am_ops.c amd.c amfs_auto.c amfs_direct.c amfs_error.c amfs_generic.c
@@ -26,7 +27,7 @@ SRCS+=	ops_umapfs.c
 SRCS+=	ops_unionfs.c opts.c readdir.c restart.c rpc_fwd.c sched.c
 SRCS+=	srvr_amfs_auto.c srvr_nfs.c sun_map.c
 
-CFLAGS+= -I${.CURDIR}/../../../contrib/amd/amd \
+CFLAGS+= -I${SRCTOP}/contrib/amd/amd \
 	 -I${SRCTOP}/contrib/amd/include \
 	 -I${OBJTOP}/include/rpcsvc
 

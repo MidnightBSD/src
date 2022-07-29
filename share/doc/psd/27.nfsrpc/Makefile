@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/doc/psd/27.nfsrpc/Makefile 216178 2010-12-04 10:11:20Z uqs $
+# $FreeBSD$
 
 VOLUME=		psd/27.nfsrfc
 SRCS=		stubs nfs.rfc.ms

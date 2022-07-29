@@ -1,6 +1,5 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/usr.bin/at/at.man 202756 2010-01-21 17:25:12Z ed $
-.Dd January 13, 2002
+.\" $FreeBSD$
+.Dd August 11, 2018
 .Dt "AT" 1
 .Os
 .Sh NAME
@@ -65,8 +64,9 @@ case, everybody's jobs are listed;
 .It Nm atrm
 deletes jobs;
 .It Nm batch
-executes commands when system load levels permit; in other words, when the load average
-drops below _LOADAVG_MX, or the value specified in the invocation of
+executes commands when system load levels permit; in other words, when
+the load average drops below _LOADAVG_MX times number of active CPUs,
+or the value specified in the invocation of
 .Nm atrun .
 .El
 .Pp
@@ -295,7 +295,7 @@ The hour of the day, from 0 to 23.
 .It Ar mm
 The minute of the hour, from 0 to 59.
 .It Ar SS
-The second of the minute, from 0 to 61.
+The second of the minute, from 0 to 60.
 .El
 .Pp
 If the
@@ -331,12 +331,13 @@ job-creation lock file
 .Xr cron 8 ,
 .Xr sendmail 8
 .Sh AUTHORS
+.An -nosplit
 At was mostly written by
-.An Thomas Koenig Aq ig25@rz.uni-karlsruhe.de .
+.An Thomas Koenig Aq Mt ig25@rz.uni-karlsruhe.de .
 The time parsing routines are by
-.An David Parsons Aq orc@pell.chi.il.us ,
+.An David Parsons Aq Mt orc@pell.chi.il.us ,
 with minor enhancements by
-.An Joe Halpin Aq joe.halpin@attbi.com .
+.An Joe Halpin Aq Mt joe.halpin@attbi.com .
 .Sh BUGS
 If the file
 .Pa /var/run/utx.active

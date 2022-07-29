@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1995 John Birrell <jb@cimlogic.com.au>.
  * All rights reserved.
  *
@@ -28,17 +30,18 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_equal.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <pthread.h>
 #include "un-namespace.h"
 #include "thr_private.h"
 
-__weak_reference(_pthread_equal, pthread_equal);
+__weak_reference(_thr_equal, pthread_equal);
+__weak_reference(_thr_equal, _pthread_equal);
 
 int
-_pthread_equal(pthread_t t1, pthread_t t2)
+_thr_equal(pthread_t t1, pthread_t t2)
 {
 	/* Compare the two thread pointers: */
 	return (t1 == t2);

@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/x86/include/cputypes.h 308433 2016-11-08 06:13:22Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef _X86_CPUTYPES_H_
@@ -45,5 +45,6 @@
 #define	CPU_VENDOR_INTEL	0x8086		/* Intel */
 #define	CPU_VENDOR_RISE		0xdead2bad	/* Rise */
 #define	CPU_VENDOR_CENTAUR	CPU_VENDOR_IDT
+#define	CPU_VENDOR_HYGON	0x1d94		/* Hygon */
 
 #endif /* !_X86_CPUTYPES_H_ */

@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_fops.c 288653 2015-10-04 07:45:36Z adrian $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 

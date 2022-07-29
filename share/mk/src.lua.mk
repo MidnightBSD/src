@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/mk/src.lua.mk 355345 2019-12-03 18:25:16Z kevans $
+# $FreeBSD$
 #
 # Lua helper file for FreeBSD /usr/src builds.
 #

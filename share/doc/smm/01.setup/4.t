@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)4.t	8.1 (Berkeley) 7/29/93
-.\" $FreeBSD: stable/11/share/doc/smm/01.setup/4.t 263142 2014-03-14 03:07:51Z eadler $
+.\" $FreeBSD$
 .\"
 .ds LH "Installing/Operating \*(4B
 .ds CF \*(Dy

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/tty_outq.c 314538 2017-03-02 04:23:53Z ian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -322,7 +324,7 @@ ttyoutq_write(struct ttyoutq *to, const void *buf, size_t nbytes)
 int
 ttyoutq_write_nofrag(struct ttyoutq *to, const void *buf, size_t nbytes)
 {
-	size_t ret;
+	size_t ret __unused;
 
 	if (ttyoutq_bytesleft(to) < nbytes)
 		return (-1);

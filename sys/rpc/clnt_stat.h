@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/11/sys/rpc/clnt_stat.h 177633 2008-03-26 15:23:12Z dfr $ */
+/*	$FreeBSD$ */
 /*
  * Copyright (c) 1986 - 1991, 1994, 1996, 1997 by Sun Microsystems, Inc.
  * All rights reserved.

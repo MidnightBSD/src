@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-
+__FBSDID("$FreeBSD$");
 
 /* double erf(double x)
  * double erfc(double x)
@@ -107,7 +107,7 @@
  *	   	erfc/erf(NaN) is NaN
  */
 
-
+#include <float.h>
 #include "math.h"
 #include "math_private.h"
 

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/gnu/usr.bin/cc/cc_tools/Makefile.dep 301934 2016-06-15 23:57:46Z bdrewery $
+# $FreeBSD$
 
 OBJS_DEPEND_GUESS.errors.o+= bconfig.h auto-host.h
 

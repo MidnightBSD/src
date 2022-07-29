@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/tty_pts.c 356020 2019-12-22 19:06:45Z kevans $");
+__FBSDID("$FreeBSD$");
 
 /* Add compatibility bits for FreeBSD. */
 #define PTS_COMPAT
@@ -63,6 +65,7 @@ __FBSDID("$FreeBSD: stable/11/sys/kern/tty_pts.c 356020 2019-12-22 19:06:45Z kev
 #include <sys/systm.h>
 #include <sys/tty.h>
 #include <sys/ttycom.h>
+#include <sys/uio.h>
 #include <sys/user.h>
 
 #include <machine/stdarg.h>
@@ -593,6 +596,8 @@ ptsdev_fill_kinfo(struct file *fp, struct kinfo_file *kif, struct filedesc *fdp)
 	kif->kf_type = KF_TYPE_PTS;
 	tp = fp->f_data;
 	kif->kf_un.kf_pts.kf_pts_dev = tty_udev(tp);
+	kif->kf_un.kf_pts.kf_pts_dev_freebsd11 =
+	    kif->kf_un.kf_pts.kf_pts_dev; /* truncate */
 	strlcpy(kif->kf_path, tty_devname(tp), sizeof(kif->kf_path));
 	return (0);
 }

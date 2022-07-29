@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1996, Javier Martín Rueda (jmrueda@diatel.upm.es)
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ex/if_ex.c 347962 2019-05-18 20:43:13Z brooks $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Intel EtherExpress Pro/10, Pro/10+ Ethernet driver
@@ -814,7 +816,7 @@ rx_another: ;
 
 
 static int
-ex_ioctl(register struct ifnet *ifp, u_long cmd, caddr_t data)
+ex_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 {
 	struct ex_softc *	sc = ifp->if_softc;
 	struct ifreq *		ifr = (struct ifreq *)data;
@@ -823,12 +825,6 @@ ex_ioctl(register struct ifnet *ifp, u_long cmd, caddr_t data)
 	DODEBUG(Start_End, printf("%s: ex_ioctl: start ", ifp->if_xname););
 
 	switch(cmd) {
-		case SIOCSIFADDR:
-		case SIOCGIFADDR:
-		case SIOCSIFMTU:
-			error = ether_ioctl(ifp, cmd, data);
-			break;
-
 		case SIOCSIFFLAGS:
 			DODEBUG(Start_End, printf("SIOCSIFFLAGS"););
 			EX_LOCK(sc);
@@ -850,8 +846,8 @@ ex_ioctl(register struct ifnet *ifp, u_long cmd, caddr_t data)
 			error = ifmedia_ioctl(ifp, ifr, &sc->ifmedia, cmd);
 			break;
 		default:
-			DODEBUG(Start_End, printf("unknown"););
-			error = EINVAL;
+			error = ether_ioctl(ifp, cmd, data);
+			break;
 	}
 
 	DODEBUG(Start_End, printf("\n%s: ex_ioctl: finish\n", ifp->if_xname););
@@ -872,7 +868,7 @@ ex_setmulti(struct ex_softc *sc)
 
 	count = 0;
 	if_maddr_rlock(ifp);
-	TAILQ_FOREACH(maddr, &ifp->if_multiaddrs, ifma_link) {
+	CK_STAILQ_FOREACH(maddr, &ifp->if_multiaddrs, ifma_link) {
 		if (maddr->ifma_addr->sa_family != AF_LINK)
 			continue;
 		count++;
@@ -906,7 +902,7 @@ ex_setmulti(struct ex_softc *sc)
 		CSR_WRITE_2(sc, IO_PORT_REG, (count + 1) * 6);
 
 		if_maddr_rlock(ifp);
-		TAILQ_FOREACH(maddr, &ifp->if_multiaddrs, ifma_link) {
+		CK_STAILQ_FOREACH(maddr, &ifp->if_multiaddrs, ifma_link) {
 			if (maddr->ifma_addr->sa_family != AF_LINK)
 				continue;
 

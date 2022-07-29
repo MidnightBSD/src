@@ -23,7 +23,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libnv/tests/nvlist_append_test.c 336346 2018-07-16 15:02:21Z kevans $
+ * $FreeBSD$
  */
 
 #include <sys/nv.h>

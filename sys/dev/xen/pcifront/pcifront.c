@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2006, Cisco Systems, Inc.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/xen/pcifront/pcifront.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -668,6 +670,7 @@ static device_method_t xpcib_methods[] = {
     DEVMETHOD(pcib_read_config,		xpcib_read_config),
     DEVMETHOD(pcib_write_config,	xpcib_write_config),
     DEVMETHOD(pcib_route_interrupt,	xpcib_route_interrupt),
+	DEVMETHOD(pcib_request_feature,	pcib_request_feature_allow),
 
     DEVMETHOD_END
 };

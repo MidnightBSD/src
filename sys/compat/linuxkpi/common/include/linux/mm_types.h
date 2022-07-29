@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/mm_types.h 329960 2018-02-25 10:24:59Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _LINUX_MM_TYPES_H_
@@ -34,6 +34,8 @@
 #include <linux/rwsem.h>
 
 #include <asm/atomic.h>
+
+typedef int vm_fault_t;
 
 struct vm_area_struct;
 struct task_struct;

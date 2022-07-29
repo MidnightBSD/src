@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/include/frame.h 329462 2018-02-17 18:00:01Z kib $
+ * $FreeBSD$
  */
 
 #ifndef	_AMD64_FRAME_H

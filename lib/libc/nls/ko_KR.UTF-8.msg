@@ -1,4 +1,4 @@
-$ $FreeBSD: stable/11/lib/libc/nls/ko_KR.UTF-8.msg 199329 2009-11-16 19:10:09Z jkim $
+$ $FreeBSD$
 $
 $ Message catalog for ko_KR.UTF-8 locale
 $

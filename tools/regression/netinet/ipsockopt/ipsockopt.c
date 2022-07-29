@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/regression/netinet/ipsockopt/ipsockopt.c 170613 2007-06-12 16:24:56Z bms $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -163,7 +163,7 @@ test_ip_options(int sock, const char *socktypename)
 		    "returned %d bytes of data", socktypename, len);
 
 	/*
-	 * One posible failure mode is that the call succeeds but neglects to
+	 * One possible failure mode is that the call succeeds but neglects to
 	 * copy out the data.
  	 */
 	if (test_options[0] == TEST_MAGIC)

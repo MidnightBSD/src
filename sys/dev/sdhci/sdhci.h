@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
  *
@@ -22,11 +24,13 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/sdhci/sdhci.h 343504 2019-01-27 19:04:28Z marius $
+ * $FreeBSD$
  */
 
 #ifndef	__SDHCI_H__
 #define	__SDHCI_H__
+
+#include "opt_mmccam.h"
 
 /* Macro for sizing the SDMA bounce buffer on the SDMA buffer boundary. */
 #define	SDHCI_SDMA_BNDRY_TO_BBUFSZ(bndry)	(4096 * (1 << bndry))
@@ -405,6 +409,15 @@ struct sdhci_slot {
 #define	STOP_STARTED		2
 #define	SDHCI_USE_DMA		4	/* Use DMA for this req. */
 #define	PLATFORM_DATA_STARTED	8	/* Data xfer is handled by platform */
+
+#ifdef MMCCAM
+	/* CAM stuff */
+	union ccb	*ccb;
+	struct cam_devq	*devq;
+	struct cam_sim	*sim;
+	struct mtx	sim_mtx;
+	u_char		card_present;	/* XXX Maybe derive this from elsewhere? */
+#endif
 };
 
 int sdhci_generic_read_ivar(device_t bus, device_t child, int which,

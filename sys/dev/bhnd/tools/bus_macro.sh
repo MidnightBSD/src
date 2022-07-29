@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/dev/bhnd/tools/bus_macro.sh 300250 2016-05-20 00:45:16Z adrian $
+# $FreeBSD$
 #
 # Generate the bhnd resource macros at the bottom of dev/bhnd/bhnd.h
 #
@@ -43,7 +43,7 @@ macro () {
 		echo -n ", ${i}"
 	done
 	echo ") \\"
-	echo "    ((r)->direct) ? \\"
+	echo "    (((r)->direct) ? \\"
 	echo -n "	bus_${n}((r)->res"
 	for i
 	do
@@ -57,7 +57,7 @@ macro () {
 	do
 		echo -n ", (${i})"
 	done
-	echo ")"
+	echo "))"
 
 }
 

@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mrsas/mrsas.h 346944 2019-04-30 07:12:30Z kadesai $");
+__FBSDID("$FreeBSD$");
 
 #ifndef MRSAS_H
 #define	MRSAS_H
@@ -678,8 +678,8 @@ typedef union {
 
 #define	mrsas_atomic_read(v)	atomic_load_acq_int(&(v)->val)
 #define	mrsas_atomic_set(v,i)	atomic_store_rel_int(&(v)->val, i)
-#define	mrsas_atomic_dec(v)	atomic_fetchadd_int(&(v)->val, -1)
-#define	mrsas_atomic_inc(v)	atomic_fetchadd_int(&(v)->val, 1)
+#define	mrsas_atomic_dec(v)	atomic_subtract_int(&(v)->val, 1)
+#define	mrsas_atomic_inc(v)	atomic_add_int(&(v)->val, 1)
 
 static inline int
 mrsas_atomic_inc_return(mrsas_atomic_t *v)

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/freescale/imx/imx_iomuxvar.h 323468 2017-09-11 22:28:38Z ian $
+ * $FreeBSD$
  */
 
 #ifndef	IMX_IOMUXVAR_H

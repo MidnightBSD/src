@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Juniper Networks, Inc.
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/x86/x86/fdt_machdep.c 287000 2015-08-21 15:57:57Z royger $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_platform.h"
 

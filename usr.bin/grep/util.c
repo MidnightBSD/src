@@ -1,5 +1,5 @@
 /*	$NetBSD: util.c,v 1.9 2011/02/27 17:33:37 joerg Exp $	*/
-/*	$FreeBSD: stable/11/usr.bin/grep/util.c 354628 2019-11-11 19:54:08Z kevans $	*/
+/*	$FreeBSD$	*/
 /*	$OpenBSD: util.c,v 1.39 2010/07/02 22:18:03 tedu Exp $	*/
 
 /*-
@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/grep/util.c 354628 2019-11-11 19:54:08Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -52,9 +52,6 @@ __FBSDID("$FreeBSD: stable/11/usr.bin/grep/util.c 354628 2019-11-11 19:54:08Z ke
 #include <wchar.h>
 #include <wctype.h>
 
-#ifndef WITHOUT_FASTMATCH
-#include "fastmatch.h"
-#endif
 #include "grep.h"
 
 static bool	 first_match = true;
@@ -253,6 +250,16 @@ static bool
 procmatches(struct mprintc *mc, struct parsec *pc, bool matched)
 {
 
+	if (mflag && mcount <= 0) {
+		/*
+		 * We already hit our match count, but we need to keep dumping
+		 * lines until we've lost our tail.
+		 */
+		grep_printline(&pc->ln, '-');
+		mc->tail--;
+		return (mc->tail != 0);
+	}
+
 	/*
 	 * XXX TODO: This should loop over pc->matches and handle things on a
 	 * line-by-line basis, setting up a `struct str` as needed.
@@ -266,7 +273,7 @@ procmatches(struct mprintc *mc, struct parsec *pc, bool matched)
 			/* XXX TODO: Decrement by number of matched lines */
 			mcount -= 1;
 			if (mcount <= 0)
-				return (false);
+				return (mc->tail != 0);
 		}
 	} else if (mc->doctx)
 		procmatch_nomatch(mc, pc);
@@ -290,7 +297,7 @@ procfile(const char *fn)
 	bool line_matched;
 
 	if (strcmp(fn, "-") == 0) {
-		fn = label != NULL ? label : getstr(1);
+		fn = label != NULL ? label : errstr[1];
 		f = grep_open(NULL);
 	} else {
 		if (stat(fn, &sb) == 0) {
@@ -358,6 +365,15 @@ procfile(const char *fn)
 			return (0);
 		}
 
+		if (mflag && mcount <= 0) {
+			/*
+			 * Short-circuit, already hit match count and now we're
+			 * just picking up any remaining pieces.
+			 */
+			if (!procmatches(&mc, &pc, false))
+				break;
+			continue;
+		}
 		line_matched = procline(&pc) == !vflag;
 		if (line_matched)
 			++lines;
@@ -370,7 +386,7 @@ procfile(const char *fn)
 		clearqueue();
 	grep_close(f);
 
-	if (cflag) {
+	if (cflag && !qflag) {
 		if (!hflag)
 			printf("%s:", pc.ln.file);
 		printf("%u\n", lines);
@@ -381,7 +397,7 @@ procfile(const char *fn)
 		printf("%s%c", fn, nullflag ? 0 : '\n');
 	if (lines != 0 && !cflag && !lflag && !Lflag &&
 	    binbehave == BINFILE_BIN && f->binary && !qflag)
-		printf(getstr(8), fn);
+		printf(errstr[7], fn);
 
 	free(pc.ln.file);
 	free(f);
@@ -472,31 +488,28 @@ procline(struct parsec *pc)
 
 	matchidx = pc->matchidx;
 
-	/*
-	 * With matchall (empty pattern), we can try to take some shortcuts.
-	 * Emtpy patterns trivially match every line except in the -w and -x
-	 * cases.  For -w (whole-word) cases, we only match if the first
-	 * character isn't a word-character.  For -x (whole-line) cases, we only
-	 * match if the line is empty.
-	 */
+	/* Null pattern shortcuts. */
 	if (matchall) {
-		if (pc->ln.len == 0)
+		if (xflag && pc->ln.len == 0) {
+			/* Matches empty lines (-x). */
 			return (true);
-		if (wflag) {
-			wend = L' ';
-			if (sscanf(&pc->ln.dat[0], "%lc", &wend) == 1 &&
-			    !iswword(wend))
-				return (true);
-		} else if (!xflag)
+		} else if (!wflag && !xflag) {
+			/* Matches every line (no -w or -x). */
 			return (true);
+		}
 
 		/*
-		 * If we don't have any other patterns, we really don't match.
-		 * If we do have other patterns, we must fall through and check
-		 * them.
+		 * If we only have the NULL pattern, whether we match or not
+		 * depends on if we got here with -w or -x.  If either is set,
+		 * the answer is no.  If we have other patterns, we'll defer
+		 * to them.
 		 */
-		if (patterns == 0)
-			return (false);
+		if (patterns == 0) {
+			return (!(wflag || xflag));
+		}
+	} else if (patterns == 0) {
+		/* Pattern file with no patterns. */
+		return (false);
 	}
 
 	matched = false;
@@ -521,14 +534,8 @@ procline(struct parsec *pc)
 				r = litexec(&pattern[i], pc->ln.dat, 1, &pmatch);
 			else
 #endif
-#ifndef WITHOUT_FASTMATCH
-			if (fg_pattern[i].pattern)
-				r = fastexec(&fg_pattern[i],
-				    pc->ln.dat, 1, &pmatch, leflags);
-			else
-#endif
-				r = regexec(&r_pattern[i], pc->ln.dat, 1,
-				    &pmatch, leflags);
+			r = regexec(&r_pattern[i], pc->ln.dat, 1, &pmatch,
+			    leflags);
 			if (r != 0)
 				continue;
 			/* Check for full match */
@@ -536,11 +543,7 @@ procline(struct parsec *pc)
 			    (size_t)pmatch.rm_eo != pc->ln.len))
 				continue;
 			/* Check for whole word match */
-#ifndef WITHOUT_FASTMATCH
-			if (wflag || fg_pattern[i].word) {
-#else
 			if (wflag) {
-#endif
 				wbegin = wend = L' ';
 				if (pmatch.rm_so != 0 &&
 				    sscanf(&pc->ln.dat[pmatch.rm_so - 1],

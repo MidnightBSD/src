@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/regression/netinet6/ip6_sockets/ip6_sockets.c 160500 2006-07-19 12:54:14Z rwatson $
+ * $FreeBSD$
  */
 
 #include <sys/socket.h>

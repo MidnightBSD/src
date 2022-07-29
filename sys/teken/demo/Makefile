@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/teken/demo/Makefile 226341 2011-10-13 14:20:27Z ed $
+# $FreeBSD$
 
 PROG=	teken_demo
 LDADD=	-lncursesw -lteken -lutil

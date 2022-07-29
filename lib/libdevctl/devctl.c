@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2014 John Baldwin <jhb@FreeBSD.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libdevctl/devctl.c 346384 2019-04-19 13:18:54Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/bus.h>
@@ -144,6 +143,20 @@ devctl_delete(const char *device, bool force)
 
 	return (devctl_simple_request(DEV_DELETE, device, force ?
 	    DEVF_FORCE_DELETE : 0));
+}
+
+int
+devctl_freeze(void)
+{
+
+	return (devctl_simple_request(DEV_FREEZE, "", 0));
+}
+
+int
+devctl_thaw(void)
+{
+
+	return (devctl_simple_request(DEV_THAW, "", 0));
 }
 
 int

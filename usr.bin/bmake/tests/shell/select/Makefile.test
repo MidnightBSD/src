@@ -4,7 +4,7 @@
 # normally don't have a ksh, we make this test conditional. This means
 # one has to recreate the test results once ksh is installed.
 #
-# $FreeBSD: stable/11/usr.bin/bmake/tests/shell/select/Makefile.test 263346 2014-03-19 12:29:20Z jmmv $
+# $FreeBSD$
 #
 
 .ifmake sh_test

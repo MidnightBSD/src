@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.bin/patch/tests/unified_patch_test.sh 355351 2019-12-03 18:55:09Z kevans $
+# $FreeBSD$
 
 atf_test_case basic
 basic_body()

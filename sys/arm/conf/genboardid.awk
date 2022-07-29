@@ -1,8 +1,10 @@
 #!/bin/awk
-# $FreeBSD: stable/11/sys/arm/conf/genboardid.awk 331722 2018-03-29 02:50:57Z eadler $
+# $FreeBSD$
 
 #-
-# Copyright (c) 2012 M. Warner Losh.  All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
+# Copyright (c) 2012 M. Warner Losh.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions

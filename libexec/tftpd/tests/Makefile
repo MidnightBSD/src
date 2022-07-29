@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/libexec/tftpd/tests/Makefile 330696 2018-03-09 15:30:20Z asomers $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -10,5 +10,6 @@ TEST_METADATA.functional+=	timeout=15
 
 LIBADD=	util
 WARNS?=	6
+CSTD=	c11
 
 .include <bsd.test.mk>

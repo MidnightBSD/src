@@ -28,7 +28,7 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm64/arm64/vm_machdep.c 319207 2017-05-30 13:26:37Z andrew $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -36,6 +36,7 @@ __FBSDID("$FreeBSD: stable/11/sys/arm64/arm64/vm_machdep.c 319207 2017-05-30 13:
 #include <sys/proc.h>
 #include <sys/sf_buf.h>
 #include <sys/signal.h>
+#include <sys/sysent.h>
 #include <sys/unistd.h>
 
 #include <vm/vm.h>
@@ -54,9 +55,7 @@ __FBSDID("$FreeBSD: stable/11/sys/arm64/arm64/vm_machdep.c 319207 2017-05-30 13:
 #include <machine/vfp.h>
 #endif
 
-#ifdef DEV_PSCI
 #include <dev/psci/psci.h>
-#endif
 
 /*
  * Finish a fork operation, with process p2 nearly set up.
@@ -91,7 +90,7 @@ cpu_fork(struct thread *td1, struct proc *p2, struct thread *td2, int flags)
 	td2->td_pcb = pcb2;
 	bcopy(td1->td_pcb, pcb2, sizeof(*pcb2));
 
-	td2->td_pcb->pcb_l0addr =
+	td2->td_proc->p_md.md_l0addr =
 	    vtophys(vmspace_pmap(td2->td_proc->p_vmspace)->pm_l0);
 
 	tf = (struct trapframe *)STACKALIGN((struct trapframe *)pcb2 - 1);
@@ -105,22 +104,21 @@ cpu_fork(struct thread *td1, struct proc *p2, struct thread *td2, int flags)
 	/* Set the return value registers for fork() */
 	td2->td_pcb->pcb_x[8] = (uintptr_t)fork_return;
 	td2->td_pcb->pcb_x[9] = (uintptr_t)td2;
-	td2->td_pcb->pcb_x[PCB_LR] = (uintptr_t)fork_trampoline;
+	td2->td_pcb->pcb_lr = (uintptr_t)fork_trampoline;
 	td2->td_pcb->pcb_sp = (uintptr_t)td2->td_frame;
+	td2->td_pcb->pcb_fpusaved = &td2->td_pcb->pcb_fpustate;
 	td2->td_pcb->pcb_vfpcpu = UINT_MAX;
 
 	/* Setup to release spin count in fork_exit(). */
 	td2->td_md.md_spinlock_count = 1;
-	td2->td_md.md_saved_daif = 0;
+	td2->td_md.md_saved_daif = td1->td_md.md_saved_daif & ~DAIF_I_MASKED;
 }
 
 void
 cpu_reset(void)
 {
 
-#ifdef DEV_PSCI
 	psci_reset();
-#endif
 
 	printf("cpu_reset failed");
 	while(1)
@@ -157,7 +155,7 @@ cpu_set_syscall_retval(struct thread *td, int error)
 		break;
 	default:
 		frame->tf_spsr |= PSR_C;	/* carry bit */
-		frame->tf_x[0] = error;
+		frame->tf_x[0] = SV_ABI_ERRNO(td->td_proc, error);
 		break;
 	}
 }
@@ -177,13 +175,14 @@ cpu_copy_thread(struct thread *td, struct thread *td0)
 
 	td->td_pcb->pcb_x[8] = (uintptr_t)fork_return;
 	td->td_pcb->pcb_x[9] = (uintptr_t)td;
-	td->td_pcb->pcb_x[PCB_LR] = (uintptr_t)fork_trampoline;
+	td->td_pcb->pcb_lr = (uintptr_t)fork_trampoline;
 	td->td_pcb->pcb_sp = (uintptr_t)td->td_frame;
+	td->td_pcb->pcb_fpusaved = &td->td_pcb->pcb_fpustate;
 	td->td_pcb->pcb_vfpcpu = UINT_MAX;
 
 	/* Setup to release spin count in fork_exit(). */
 	td->td_md.md_spinlock_count = 1;
-	td->td_md.md_saved_daif = 0;
+	td->td_md.md_saved_daif = td0->td_md.md_saved_daif & ~DAIF_I_MASKED;
 }
 
 /*
@@ -229,7 +228,7 @@ cpu_thread_alloc(struct thread *td)
 	td->td_pcb = (struct pcb *)(td->td_kstack +
 	    td->td_kstack_pages * PAGE_SIZE) - 1;
 	td->td_frame = (struct trapframe *)STACKALIGN(
-	    td->td_pcb - 1);
+	    (struct trapframe *)td->td_pcb - 1);
 }
 
 void
@@ -254,14 +253,30 @@ cpu_fork_kthread_handler(struct thread *td, void (*func)(void *), void *arg)
 
 	td->td_pcb->pcb_x[8] = (uintptr_t)func;
 	td->td_pcb->pcb_x[9] = (uintptr_t)arg;
-	td->td_pcb->pcb_x[PCB_LR] = (uintptr_t)fork_trampoline;
+	td->td_pcb->pcb_lr = (uintptr_t)fork_trampoline;
 	td->td_pcb->pcb_sp = (uintptr_t)td->td_frame;
+	td->td_pcb->pcb_fpusaved = &td->td_pcb->pcb_fpustate;
 	td->td_pcb->pcb_vfpcpu = UINT_MAX;
 }
 
 void
 cpu_exit(struct thread *td)
 {
+}
+
+bool
+cpu_exec_vmspace_reuse(struct proc *p __unused, vm_map_t map __unused)
+{
+
+	return (true);
+}
+
+int
+cpu_procctl(struct thread *td __unused, int idtype __unused, id_t id __unused,
+    int com __unused, void *data __unused)
+{
+
+	return (EINVAL);
 }
 
 void

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/common/self_reloc.c 310725 2016-12-28 21:58:20Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <elf.h>

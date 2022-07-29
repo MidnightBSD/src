@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
  * Copyright (c) 1994 John S. Dyson
@@ -38,7 +40,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)vmparam.h	5.9 (Berkeley) 5/12/91
- * $FreeBSD: stable/11/sys/amd64/include/vmparam.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 
@@ -108,7 +110,9 @@
 #define	VM_NFREELIST		3
 #define	VM_FREELIST_DEFAULT	0
 #define	VM_FREELIST_DMA32	1
-#define	VM_FREELIST_ISADMA	2
+#define	VM_FREELIST_LOWMEM	2
+
+#define VM_LOWMEM_BOUNDARY	(16 << 20)	/* 16MB ISA DMA limit */
 
 /*
  * Create the DMA32 free list only if the number of physical pages above
@@ -152,7 +156,9 @@
  * 0x0000000000000000 - 0x00007fffffffffff   user map
  * 0x0000800000000000 - 0xffff7fffffffffff   does not exist (hole)
  * 0xffff800000000000 - 0xffff804020100fff   recursive page table (512GB slot)
- * 0xffff804020101000 - 0xfffff7ffffffffff   unused
+ * 0xffff804020100fff - 0xffff807fffffffff   unused
+ * 0xffff808000000000 - 0xffff847fffffffff   large map (can be tuned up)
+ * 0xffff848000000000 - 0xfffff7ffffffffff   unused (large map extends there)
  * 0xfffff80000000000 - 0xfffffbffffffffff   4TB direct map
  * 0xfffffc0000000000 - 0xfffffdffffffffff   unused
  * 0xfffffe0000000000 - 0xffffffffffffffff   2TB kernel map
@@ -168,6 +174,9 @@
 
 #define	DMAP_MIN_ADDRESS	KVADDR(DMPML4I, 0, 0, 0)
 #define	DMAP_MAX_ADDRESS	KVADDR(DMPML4I + NDMPML4E, 0, 0, 0)
+
+#define	LARGEMAP_MIN_ADDRESS	KVADDR(LMSPML4I, 0, 0, 0)
+#define	LARGEMAP_MAX_ADDRESS	KVADDR(LMEPML4I + 1, 0, 0, 0)
 
 #define	KERNBASE		KVADDR(KPML4I, KPDPI, 0, 0)
 
@@ -188,6 +197,7 @@
  * because the result is not actually accessed until later, but the early
  * vt fb startup needs to be reworked.
  */
+#define	PMAP_HAS_DMAP	1
 #define	PHYS_TO_DMAP(x)	({						\
 	KASSERT(dmaplimit == 0 || (x) < dmaplimit,			\
 	    ("physical address %#jx not covered by the DMAP",		\
@@ -223,5 +233,11 @@
 #endif
 
 #define	ZERO_REGION_SIZE	(2 * 1024 * 1024)	/* 2MB */
+
+/*
+ * Use a fairly large batch size since we expect amd64 systems to have lots of
+ * memory.
+ */
+#define	VM_BATCHQUEUE_SIZE	31
 
 #endif /* _MACHINE_VMPARAM_H_ */

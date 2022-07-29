@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.bin/cut/tests/cut2_test.sh 313540 2017-02-10 07:55:39Z ngie $
+# $FreeBSD$
 
 atf_test_case s_flag
 s_flag_head()

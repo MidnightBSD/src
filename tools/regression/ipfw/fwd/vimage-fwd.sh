@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/tools/regression/ipfw/fwd/vimage-fwd.sh 225044 2011-08-20 17:05:11Z bz $
+# $FreeBSD$
 #
 
 #

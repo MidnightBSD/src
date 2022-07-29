@@ -1,7 +1,9 @@
 /*	$NetBSD: SYS.h,v 1.19 2009/12/14 01:07:41 matt Exp $ */
-/* $FreeBSD: stable/11/lib/libc/mips/SYS.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 /*-
+ * SPDX-License-Identifier: (BSD-4-Clause AND BSD-3-Clause)
+ *
  * Copyright (c) 1996 Jonathan Stone
  * All rights reserved.
  *

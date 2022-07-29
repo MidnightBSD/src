@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ntb/ntb_transport.h 317892 2017-05-07 00:26:57Z mav $
+ * $FreeBSD$
  */
 
 struct ntb_transport_qp;

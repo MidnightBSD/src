@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_TALK 277676 2015-01-25 04:37:44Z ngie $
+.\" $FreeBSD$
 Set to not build or install
 .Xr talk 1
 and

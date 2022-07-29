@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/cavium/thunder_pcie_pem.h 301031 2016-05-31 09:15:21Z andrew $
+ * $FreeBSD$
  *
  */
 

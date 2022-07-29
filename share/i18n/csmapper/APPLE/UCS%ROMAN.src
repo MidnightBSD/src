@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/i18n/csmapper/APPLE/UCS%ROMAN.src 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 # $NetBSD: UCS%ROMAN.src,v 1.2 2006/04/08 15:47:40 tnozaki Exp $
 
 TYPE		ROWCOL

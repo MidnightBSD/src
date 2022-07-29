@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/spi/spi.c 346518 2019-04-22 03:55:02Z ian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/ioccom.h>

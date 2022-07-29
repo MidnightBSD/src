@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Chelsio Communications, Inc.
  * All rights reserved.
  * Written by: Navdeep Parhar <np@FreeBSD.org>
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/cxgbe/offload.h 346877 2019-04-29 04:51:30Z np $
+ * $FreeBSD$
  *
  */
 
@@ -75,6 +77,46 @@ struct stid_region {
 union aopen_entry {
 	void *data;
 	union aopen_entry *next;
+};
+
+/* cxgbe_snd_tag flags */
+enum {
+	EO_FLOWC_PENDING	= (1 << 0),	/* flowc needs to be sent */
+	EO_FLOWC_RPL_PENDING	= (1 << 1),	/* flowc credits due back */
+	EO_SND_TAG_REF		= (1 << 2),	/* kernel has a ref on us */
+	EO_FLUSH_RPL_PENDING	= (1 << 3),	/* credit flush rpl due back */
+};
+
+struct cxgbe_snd_tag {
+	struct m_snd_tag com;
+	struct adapter *adapter;
+	u_int flags;
+	struct mtx lock;
+	int port_id;
+	int etid;
+	struct mbufq pending_tx, pending_fwack;
+	int plen;
+	struct sge_wrq *eo_txq;
+	uint32_t ctrl0;
+	uint16_t iqid;
+	int8_t schedcl;
+	uint64_t max_rate;      /* in bytes/s */
+	uint8_t tx_total;	/* total tx WR credits (in 16B units) */
+	uint8_t tx_credits;	/* tx WR credits (in 16B units) available */
+	uint8_t tx_nocompl;	/* tx WR credits since last compl request */
+	uint8_t ncompl;		/* # of completions outstanding. */
+};
+
+static inline struct cxgbe_snd_tag *
+mst_to_cst(struct m_snd_tag *t)
+{
+
+	return (__containerof(t, struct cxgbe_snd_tag, com));
+}
+
+union etid_entry {
+	struct cxgbe_snd_tag *cst;
+	union etid_entry *next;
 };
 
 /*
@@ -134,6 +176,11 @@ struct tid_info {
 	u_long hftid_4t_mask;
 	void *hftid_hash_tid;	/* LIST_HEAD(, filter_entry) *hftid_hash_tid; */
 	u_long hftid_tid_mask;
+
+	struct mtx etid_lock __aligned(CACHE_LINE_SIZE);
+	union etid_entry *etid_tab;
+	union etid_entry *efree;
+	u_int etids_in_use;
 };
 
 struct t4_range {
@@ -193,7 +240,6 @@ int t4_register_uld(struct uld_info *);
 int t4_unregister_uld(struct uld_info *);
 int t4_activate_uld(struct adapter *, int);
 int t4_deactivate_uld(struct adapter *, int);
-void t4_iscsi_init(struct adapter *, u_int, const u_int *);
 int uld_active(struct adapter *, int);
 #endif
 #endif

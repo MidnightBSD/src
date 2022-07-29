@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5212/ar5212_ani.c 280940 2015-04-01 03:42:46Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -39,7 +41,7 @@
 
 /*
  * ANI processing tunes radio parameters according to PHY errors
- * and related information.  This is done for for noise and spur
+ * and related information.  This is done for noise and spur
  * immunity in all operating modes if the device indicates it's
  * capable at attach time.  In addition, when there is a reference
  * rssi value (e.g. beacon frames from an ap in station mode)
@@ -223,7 +225,7 @@ ar5212AniControl(struct ath_hal *ah, HAL_ANI_CMD cmd, int param)
 	struct ath_hal_5212 *ahp = AH5212(ah);
 	struct ar5212AniState *aniState = ahp->ah_curani;
 	const struct ar5212AniParams *params = AH_NULL;
-	
+
 	/*
 	 * This function may be called before there's a current
 	 * channel (eg to disable ANI.)
@@ -782,7 +784,7 @@ ar5212AniLowerImmunity(struct ath_hal *ah)
 	struct ath_hal_5212 *ahp = AH5212(ah);
 	struct ar5212AniState *aniState;
 	const struct ar5212AniParams *params;
-	
+
 	HALASSERT(ANI_ENA(ah));
 
 	aniState = ahp->ah_curani;
@@ -998,6 +1000,9 @@ ar5212AniPoll(struct ath_hal *ah, const struct ieee80211_channel *chan)
 		ahp->ah_stats.ast_ani_lneg++;
 		/* restart ANI period if listenTime is invalid */
 		ar5212AniRestart(ah, aniState);
+
+		/* Don't do any further ANI processing here */
+		return;
 	}
 	/* XXX beware of overflow? */
 	aniState->listenTime += listenTime;

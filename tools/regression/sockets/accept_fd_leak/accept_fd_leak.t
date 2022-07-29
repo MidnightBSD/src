@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/11/tools/regression/sockets/accept_fd_leak/accept_fd_leak.t 137587 2004-11-11 19:47:55Z nik $
+# $FreeBSD$
 
 cd `dirname $0`
 

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/gnu/usr.bin/cc/cc1plus/Makefile 337477 2018-08-08 18:05:14Z bdrewery $
+# $FreeBSD$
 
 MAN=
 .include <src.opts.mk>

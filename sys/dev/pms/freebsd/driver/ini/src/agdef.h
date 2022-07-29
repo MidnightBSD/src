@@ -18,7 +18,7 @@
 *WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 *THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 *
-* $FreeBSD: stable/11/sys/dev/pms/freebsd/driver/ini/src/agdef.h 285242 2015-07-07 13:17:02Z achim $
+* $FreeBSD$
 *
 **
 *******************************************************************************/
@@ -62,7 +62,7 @@ EW     09-17-2004     1.0.0     Constant definitions
 #define AGTIAPI_MAX_DEVICE_7H       256 /*Max devices per channel in 7H */
 #define AGTIAPI_MAX_DEVICE_8H       512 /*Max devices per channel in 8H*/
 #define AGTIAPI_MAX_CAM_Q_DEPTH     1024
-#define AGTIAPI_NSEGS               (MAXPHYS / PAGE_SIZE)
+#define AGTIAPI_NSEGS               (MIN(btoc(MAXPHYS), 64) + 1)
 /*
 ** Adapter specific defines 
 */

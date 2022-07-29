@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright 2010, 2012 Konstantin Belousov <kib@FreeBSD.ORG>.
  * All rights reserved.
  *
@@ -25,6 +27,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <elf.h>
@@ -66,7 +69,7 @@ __init_elf_aux_vector(void)
 static pthread_once_t aux_once = PTHREAD_ONCE_INIT;
 static int pagesize, osreldate, canary_len, ncpus, pagesizes_len;
 static int hwcap_present, hwcap2_present;
-static char *canary, *pagesizes;
+static char *canary, *pagesizes, *execpath;
 static void *timekeep;
 static u_long hwcap, hwcap2;
 
@@ -83,6 +86,10 @@ init_aux(void)
 
 		case AT_CANARYLEN:
 			canary_len = aux->a_un.a_val;
+			break;
+
+		case AT_EXECPATH:
+			execpath = (char *)(aux->a_un.a_ptr);
 			break;
 
 		case AT_HWCAP:
@@ -143,6 +150,18 @@ _elf_aux_info(int aux, void *buf, int buflen)
 			res = 0;
 		} else
 			res = ENOENT;
+		break;
+	case AT_EXECPATH:
+		if (execpath == NULL)
+			res = ENOENT;
+		else if (buf == NULL)
+			res = EINVAL;
+		else {
+			if (strlcpy(buf, execpath, buflen) >= buflen)
+				res = EINVAL;
+			else
+				res = 0;
+		}
 		break;
 	case AT_HWCAP:
 		if (hwcap_present && buflen == sizeof(u_long)) {

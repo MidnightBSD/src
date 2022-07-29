@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/pmccontrol/pmccontrol.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -282,6 +282,14 @@ pmcc_do_list_state(void)
 	return 0;
 }
 
+#if defined(__i386__) || defined(__amd64__)
+static int
+pmcc_do_list_events(void)
+{
+	pmc_pmu_print_counters(NULL);
+	return (0);
+}
+#else
 static int
 pmcc_do_list_events(void)
 {
@@ -311,6 +319,7 @@ pmcc_do_list_events(void)
 	}
 	return 0;
 }
+#endif
 
 static int
 pmcc_show_statistics(void)

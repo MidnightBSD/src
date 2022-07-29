@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/iscsi/iscsi_ioctl.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef ISCSI_IOCTL_H
@@ -68,7 +70,8 @@ struct iscsi_session_conf {
 	int		isc_iser;
 	char		isc_offload[ISCSI_OFFLOAD_LEN];
 	int		isc_enable;
-	int		isc_spare[4];
+	int		isc_dscp;
+	int		isc_spare[3];
 };
 
 /*
@@ -76,8 +79,12 @@ struct iscsi_session_conf {
  * iscsid(8) must obey those when negotiating operational parameters.
  */
 struct iscsi_session_limits {
-	size_t		isl_max_data_segment_length;
-	int		isl_spare[8];
+	size_t		isl_spare0;
+	int		isl_max_recv_data_segment_length;
+	int		isl_max_send_data_segment_length;
+	int		isl_max_burst_length;
+	int		isl_first_burst_length;
+	int		isl_spare[4];
 };
 
 /*
@@ -89,14 +96,15 @@ struct iscsi_session_state {
 	char		iss_target_alias[ISCSI_ALIAS_LEN];
 	int		iss_header_digest;
 	int		iss_data_digest;
-	int		iss_max_data_segment_length;
+	int		iss_max_recv_data_segment_length;
 	int		iss_max_burst_length;
 	int		iss_first_burst_length;
 	int		iss_immediate_data;
 	int		iss_connected;
 	char		iss_reason[ISCSI_REASON_LEN];
 	char		iss_offload[ISCSI_OFFLOAD_LEN];
-	int		iss_spare[4];
+	int		iss_max_send_data_segment_length;
+	int		iss_spare[3];
 };
 
 /*
@@ -116,18 +124,20 @@ struct iscsi_daemon_handoff {
 	unsigned int			idh_session_id;
 	int				idh_socket;
 	char				idh_target_alias[ISCSI_ALIAS_LEN];
-	uint8_t				idh_spare_isid[6];
+	int				idh_protocol_level;
+	uint16_t			idh_spare;
 	uint16_t			idh_tsih;
 	uint16_t			idh_spare_cid;
 	uint32_t			idh_statsn;
 	int				idh_header_digest;
 	int				idh_data_digest;
-	size_t				idh_max_data_segment_length;
-	size_t				idh_max_burst_length;
-	size_t				idh_first_burst_length;
+	size_t				spare[3];
 	int				idh_immediate_data;
 	int				idh_initial_r2t;
-	int				idh_spare[4];
+	int				idh_max_recv_data_segment_length;
+	int				idh_max_send_data_segment_length;
+	int				idh_max_burst_length;
+	int				idh_first_burst_length;
 };
 
 struct iscsi_daemon_fail {

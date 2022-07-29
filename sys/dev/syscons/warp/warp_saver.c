@@ -1,6 +1,7 @@
-/* $MidnightBSD: src/sys/dev/syscons/warp/warp_saver.c,v 1.2 2008/12/02 22:43:14 laffer1 Exp $ */
 /*-
- * Copyright (c) 1998 Dag-Erling Coïdan Smørgrav
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
+ * Copyright (c) 1998 Dag-Erling CoÃ¯dan SmÃ¸rgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -130,10 +131,6 @@ warp_init(video_adapter_t *adp)
 	
 	if (!vidd_get_info(adp, M_VGA_CG320, &info)) {
 		scrmode = M_VGA_CG320;
-	} else if (!vidd_get_info(adp, M_PC98_PEGC640x480, &info)) {
-		scrmode = M_PC98_PEGC640x480;
-	} else if (!vidd_get_info(adp, M_PC98_PEGC640x400, &info)) {
-		scrmode = M_PC98_PEGC640x400;
 	} else {
 		log(LOG_NOTICE,
 		    "%s: the console does not support M_VGA_CG320\n",

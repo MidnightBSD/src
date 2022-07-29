@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Written by J.T. Conklin <jtc@NetBSD.org>.
  * Public domain.
@@ -11,7 +10,7 @@ __RCSID("$NetBSD: l64a.c,v 1.13 2003/07/26 19:24:54 salo Exp $");
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/l64a.c 302193 2016-06-25 10:08:04Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <stdint.h>
 #include <stdlib.h>

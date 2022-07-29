@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/kgssapi/kgss_if.m 184588 2008-11-03 10:38:00Z dfr $
+# $FreeBSD$
 
 # Interface for the in-kernel part of a GSS-API mechanism
 

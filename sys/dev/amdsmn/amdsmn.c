@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2017-2019 Conrad Meyer <cem@FreeBSD.org>
+ * Copyright (c) 2017-2020 Conrad Meyer <cem@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/amdsmn/amdsmn.c 355562 2019-12-09 17:14:43Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -59,7 +59,8 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/amdsmn/amdsmn.c 355562 2019-12-09 17:14:43
 #define	PCI_DEVICE_ID_AMD_15H_M60H_ROOT		0x1576
 #define	PCI_DEVICE_ID_AMD_17H_ROOT		0x1450
 #define	PCI_DEVICE_ID_AMD_17H_M10H_ROOT		0x15d0
-#define	PCI_DEVICE_ID_AMD_17H_M30H_ROOT		0x1480
+#define	PCI_DEVICE_ID_AMD_17H_M30H_ROOT		0x1480	/* Also M70H, F19H M00H/M20H */
+#define	PCI_DEVICE_ID_AMD_17H_M60H_ROOT		0x1630
 
 struct pciid;
 struct amdsmn_softc {
@@ -97,6 +98,12 @@ static const struct pciid {
 		.amdsmn_addr_reg = F17H_SMN_ADDR_REG,
 		.amdsmn_data_reg = F17H_SMN_DATA_REG,
 	},
+	{
+		.amdsmn_vendorid = CPU_VENDOR_AMD,
+		.amdsmn_deviceid = PCI_DEVICE_ID_AMD_17H_M60H_ROOT,
+		.amdsmn_addr_reg = F17H_SMN_ADDR_REG,
+		.amdsmn_data_reg = F17H_SMN_DATA_REG,
+	},
 };
 
 /*
@@ -125,6 +132,8 @@ static driver_t amdsmn_driver = {
 static devclass_t amdsmn_devclass;
 DRIVER_MODULE(amdsmn, hostb, amdsmn_driver, amdsmn_devclass, NULL, NULL);
 MODULE_VERSION(amdsmn, 1);
+MODULE_PNP_INFO("U16:vendor;U16:device", pci, amdsmn, amdsmn_ids,
+    nitems(amdsmn_ids));
 
 static bool
 amdsmn_match(device_t parent, const struct pciid **pciid_out)
@@ -178,6 +187,7 @@ amdsmn_probe(device_t dev)
 	switch (family) {
 	case 0x15:
 	case 0x17:
+	case 0x19:
 		break;
 	default:
 		return (ENXIO);

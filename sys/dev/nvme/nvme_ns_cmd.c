@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2012 Intel Corporation
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/nvme/nvme_ns_cmd.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "nvme_private.h"
 
@@ -125,11 +127,11 @@ nvme_ns_cmd_deallocate(struct nvme_namespace *ns, void *payload,
 
 	cmd = &req->cmd;
 	cmd->opc = NVME_OPC_DATASET_MANAGEMENT;
-	cmd->nsid = ns->id;
+	cmd->nsid = htole32(ns->id);
 
 	/* TODO: create a delete command data structure */
-	cmd->cdw10 = num_ranges - 1;
-	cmd->cdw11 = NVME_DSM_ATTR_DEALLOCATE;
+	cmd->cdw10 = htole32(num_ranges - 1);
+	cmd->cdw11 = htole32(NVME_DSM_ATTR_DEALLOCATE);
 
 	nvme_ctrlr_submit_io_request(ns->ctrlr, req);
 
@@ -189,6 +191,14 @@ nvme_ns_dump(struct nvme_namespace *ns, void *virt, off_t offset, size_t len)
 		nvme_qpair_process_completions(req->qpair);
 	}
 
+	/*
+	 * Normally, when using the polling interface, we can't return a
+	 * timeout error because we don't know when the completion routines
+	 * will be called if the command later completes. However, in this
+	 * case we're running a system dump, so all interrupts are turned
+	 * off, the scheduler isn't running so there's nothing to complete
+	 * the transaction.
+	 */
 	if (status.done == FALSE)
 		return (ETIMEDOUT);
 

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/xz/xz_mod.c 344605 2019-02-26 19:55:03Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/malloc.h>
 #include <sys/kernel.h>

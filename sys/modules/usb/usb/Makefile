@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/sys/modules/usb/usb/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 #
 # Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
 #
@@ -38,5 +38,9 @@ SRCS=	bus_if.h device_if.h usb_if.h usb_if.c vnode_if.h \
 	usb_handle_request.c usb_hid.c usb_hub.c usb_lookup.c usb_mbuf.c \
 	usb_msctest.c usb_parse.c usb_pf.c usb_process.c usb_request.c \
 	usb_transfer.c usb_util.c 
+
+.if !empty(OPT_FDT)
+SRCS+=	usb_fdt_support.c ofw_bus_if.h
+.endif
 
 .include <bsd.kmod.mk>

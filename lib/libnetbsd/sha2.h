@@ -1,6 +1,8 @@
-/*	$FreeBSD: stable/11/lib/libnetbsd/sha2.h 331722 2018-03-29 02:50:57Z eadler $	*/
+/*	$FreeBSD$	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 SRI International
  * All rights reserved.
  *

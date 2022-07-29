@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright 2008 Nathan Whitehorn. All rights reserved.
  * Copyright 2003 by Peter Grehan. All rights reserved.
  * Copyright (C) 1998, 1999, 2000 Tsubai Masanari.  All rights reserved.
@@ -36,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bm/if_bm.c 347962 2019-05-18 20:43:13Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -939,7 +941,7 @@ bm_setladrf(struct bm_softc *sc)
 		memset(hash, 0, sizeof(hash));
 
 		if_maddr_rlock(ifp);
-		TAILQ_FOREACH(inm, &ifp->if_multiaddrs, ifma_link) {
+		CK_STAILQ_FOREACH(inm, &ifp->if_multiaddrs, ifma_link) {
 			if (inm->ifma_addr->sa_family != AF_LINK)
 				continue;
 			crc = ether_crc32_le(LLADDR((struct sockaddr_dl *)

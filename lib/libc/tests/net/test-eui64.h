@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libc/tests/net/test-eui64.h 290563 2015-11-08 23:06:40Z ngie $
+ * $FreeBSD$
  */
 #ifndef _TEST_EUI64_H
 #define _TEST_EUI64_H

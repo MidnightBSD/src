@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/parser/set-v1.0 295937 2016-02-23 22:44:01Z jilles $
+# $FreeBSD$
 
 ${SH} <<\EOF
 echo one >&2

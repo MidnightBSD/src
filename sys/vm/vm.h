@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: (BSD-3-Clause AND MIT-CMU)
+ *
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -55,7 +57,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: stable/11/sys/vm/vm.h 331921 2018-04-03 09:38:53Z kib $
+ * $FreeBSD$
  */
 
 #ifndef VM_H
@@ -110,7 +112,9 @@ typedef struct vm_object *vm_object_t;
  * Define it here for "applications" that include vm headers (e.g.,
  * genassym).
  */
+#ifndef HAVE_BOOLEAN
 typedef int boolean_t;
+#endif
 
 /*
  * The exact set of memory attributes is machine dependent.  However,
@@ -131,7 +135,7 @@ struct vm_reserv;
 typedef struct vm_reserv *vm_reserv_t;
 
 /*
- * Information passed from the machine-independant VM initialization code
+ * Information passed from the machine-independent VM initialization code
  * for use by machine-dependant code (mainly for MMU support)
  */
 struct kva_md_info {
@@ -145,6 +149,8 @@ extern struct kva_md_info	kmi;
 extern void vm_ksubmap_init(struct kva_md_info *);
 
 extern int old_mlock;
+
+extern int vm_ndomains;
 
 struct ucred;
 int swap_reserve(vm_ooffset_t incr);

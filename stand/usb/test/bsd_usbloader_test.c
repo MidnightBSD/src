@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/usb/test/bsd_usbloader_test.c 328990 2018-02-07 19:20:59Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2013 Hans Petter Selasky. All rights reserved.
  *

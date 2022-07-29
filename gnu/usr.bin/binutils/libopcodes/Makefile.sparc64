@@ -1,4 +1,0 @@
-# $FreeBSD: stable/11/gnu/usr.bin/binutils/libopcodes/Makefile.sparc64 84906 2001-10-14 01:31:37Z obrien $
-
-SRCS+=	sparc-dis.c sparc-opc.c
-CFLAGS+= -DARCH_sparc

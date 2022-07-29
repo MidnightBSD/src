@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/dtc/fdt.cc 358205 2020-02-21 04:34:54Z kevans $
+ * $FreeBSD$
  */
 
 #define __STDC_LIMIT_MACROS 1
@@ -1563,11 +1563,11 @@ device_tree::parse_file(text_input_buffer &input,
 {
 	input.next_token();
 	// Read the header
-	if (input.consume("/dts-v1/;"))
+	while (input.consume("/dts-v1/;"))
 	{
 		read_header = true;
+		input.next_token();
 	}
-	input.next_token();
 	if (input.consume("/plugin/;"))
 	{
 		is_plugin = true;

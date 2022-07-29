@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010-2011 Juniper Networks, Inc.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/11/sys/netinet6/in6_pcbgroup.c 297439 2016-03-31 00:53:23Z gnn $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet6.h"
 #include "opt_rss.h"

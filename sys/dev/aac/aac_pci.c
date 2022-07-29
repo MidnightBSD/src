@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
  * Copyright (c) 2000 BSDi
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/aac/aac_pci.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * PCI bus interface and resource allocation.
@@ -441,7 +443,8 @@ aac_pci_attach(device_t dev)
 	 * Note that some of these controllers are 64-bit capable.
 	 */
 	if (bus_dma_tag_create(bus_get_dma_tag(dev),	/* parent */
-			       PAGE_SIZE, 0,		/* algnmnt, boundary */
+			       PAGE_SIZE,		/* algnmnt */
+			       ((bus_size_t)((uint64_t)1 << 32)), /* boundary*/
 			       BUS_SPACE_MAXADDR,	/* lowaddr */
 			       BUS_SPACE_MAXADDR, 	/* highaddr */
 			       NULL, NULL, 		/* filter, filterarg */
@@ -491,6 +494,8 @@ static driver_t aacch_driver = {
 
 static devclass_t	aacch_devclass;
 DRIVER_MODULE(aacch, pci, aacch_driver, aacch_devclass, NULL, NULL);
+MODULE_PNP_INFO("U16:vendor;U16:device;", pci, aac,
+    aac_identifiers, nitems(aac_identifiers) - 1);
 
 static int
 aacch_probe(device_t dev)

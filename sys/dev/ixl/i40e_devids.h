@@ -1,8 +1,8 @@
 /******************************************************************************
 
-  Copyright (c) 2013-2019, Intel Corporation
+  Copyright (c) 2013-2018, Intel Corporation
   All rights reserved.
-
+  
   Redistribution and use in source and binary forms, with or without 
   modification, are permitted provided that the following conditions are met:
   
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/ixl/i40e_devids.h 349163 2019-06-18 00:08:02Z erj $*/
+/*$FreeBSD$*/
 
 #ifndef _I40E_DEVIDS_H_
 #define _I40E_DEVIDS_H_
@@ -57,6 +57,10 @@
 #define I40E_DEV_ID_10G_BASE_T_BC	0x15FF
 #define I40E_DEV_ID_10G_B		0x104F
 #define I40E_DEV_ID_10G_SFP		0x104E
+#define I40E_DEV_ID_5G_BASE_T_BC	0x101F
+#define I40E_IS_X710TL_DEVICE(d) \
+	(((d) == I40E_DEV_ID_10G_BASE_T_BC) || \
+	((d) == I40E_DEV_ID_5G_BASE_T_BC))
 #define I40E_DEV_ID_VF			0x154C
 #define I40E_DEV_ID_VF_HV		0x1571
 #define I40E_DEV_ID_ADAPTIVE_VF		0x1889

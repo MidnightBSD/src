@@ -1,6 +1,8 @@
 /*	$NetBSD: tmpfs.h,v 1.26 2007/02/22 06:37:00 thorpej Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2005, 2006 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -29,28 +31,19 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/fs/tmpfs/tmpfs.h 356131 2019-12-27 17:55:56Z dougm $
+ * $FreeBSD$
  */
 
 #ifndef _FS_TMPFS_TMPFS_H_
 #define _FS_TMPFS_TMPFS_H_
 
-#include <sys/dirent.h>
-#include <sys/mount.h>
+#include <sys/cdefs.h>
 #include <sys/queue.h>
-#include <sys/vnode.h>
-#include <sys/file.h>
-#include <sys/lock.h>
-#include <sys/mutex.h>
-
-#include <sys/malloc.h>
-#include <sys/systm.h>
 #include <sys/tree.h>
-#include <sys/vmmeter.h>
-#include <vm/swap_pager.h>
 
-MALLOC_DECLARE(M_TMPFSMNT);
+#ifdef	_SYS_MALLOC_H_
 MALLOC_DECLARE(M_TMPFSNAME);
+#endif
 
 /*
  * Internal representation of a tmpfs directory entry.
@@ -195,8 +188,8 @@ struct tmpfs_node {
 	uid_t			tn_uid;		/* (v) */
 	gid_t			tn_gid;		/* (v) */
 	mode_t			tn_mode;	/* (v) */
+	int			tn_links;	/* (v) */
 	u_long			tn_flags;	/* (v) */
-	nlink_t			tn_links;	/* (v) */
 	struct timespec		tn_atime;	/* (vi) */
 	struct timespec		tn_mtime;	/* (vi) */
 	struct timespec		tn_ctime;	/* (vi) */
@@ -304,6 +297,8 @@ LIST_HEAD(tmpfs_node_list, tmpfs_node);
 #define tn_reg tn_spec.tn_reg
 #define tn_fifo tn_spec.tn_fifo
 
+#define	TMPFS_LINK_MAX INT_MAX
+
 #define TMPFS_NODE_LOCK(node) mtx_lock(&(node)->tn_interlock)
 #define TMPFS_NODE_UNLOCK(node) mtx_unlock(&(node)->tn_interlock)
 #define TMPFS_NODE_MTX(node) (&(node)->tn_interlock)
@@ -363,7 +358,7 @@ struct tmpfs_mount {
 	ino_t			tm_nodes_max;
 
 	/* unrhdr used to allocate inode numbers */
-	struct unrhdr *		tm_ino_unr;
+	struct unrhdr64		tm_ino_unr;
 
 	/* Number of nodes currently that are in use. */
 	ino_t			tm_nodes_inuse;
@@ -383,10 +378,6 @@ struct tmpfs_mount {
 	/* All node lock to protect the node list and tmp_pages_used. */
 	struct mtx		tm_allnode_lock;
 
-	/* Zones used to store file system meta data, per tmpfs mount. */
-	uma_zone_t		tm_dirent_pool;
-	uma_zone_t		tm_node_pool;
-
 	/* Read-only status. */
 	bool			tm_ronly;
 	/* Do not use namecache. */
@@ -400,12 +391,12 @@ struct tmpfs_mount {
  * This structure maps a file identifier to a tmpfs node.  Used by the
  * NFS code.
  */
-struct tmpfs_fid {
-	uint16_t		tf_len;
-	uint16_t		tf_pad;
-	ino_t			tf_id;
-	unsigned long		tf_gen;
+struct tmpfs_fid_data {
+	ino_t			tfd_id;
+	unsigned long		tfd_gen;
 };
+_Static_assert(sizeof(struct tmpfs_fid_data) <= MAXFIDSZ,
+    "(struct tmpfs_fid_data) is larger than (struct fid).fid_data");
 
 struct tmpfs_dir_cursor {
 	struct tmpfs_dirent	*tdc_current;
@@ -496,8 +487,9 @@ struct tmpfs_dirent *tmpfs_dir_next(struct tmpfs_node *dnode,
 #define TMPFS_PAGES_MINRESERVED		(4 * 1024 * 1024 / PAGE_SIZE)
 
 size_t tmpfs_mem_avail(void);
-
 size_t tmpfs_pages_used(struct tmpfs_mount *tmp);
+void tmpfs_subr_init(void);
+void tmpfs_subr_uninit(void);
 
 /*
  * Macros/functions to convert from generic data structures to tmpfs

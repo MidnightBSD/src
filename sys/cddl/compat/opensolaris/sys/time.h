@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/time.h 325132 2017-10-30 08:53:15Z avg $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_TIME_H_

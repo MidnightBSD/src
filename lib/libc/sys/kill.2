@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)kill.2	8.3 (Berkeley) 4/19/94
-.\" $FreeBSD: stable/11/lib/libc/sys/kill.2 331185 2018-03-19 06:54:16Z eadler $
+.\" $FreeBSD$
 .\"
-.Dd December 1, 2017
+.Dd December 1, 2019
 .Dt KILL 2
 .Os
 .Sh NAME
@@ -105,12 +105,11 @@ process with ID 1
 .Xr init 8 ) ,
 and the process sending the signal.
 If the user is not the super user, the signal is sent to all processes
-with the same uid as the user excluding the process sending the signal.
+which the caller has permissions to, excluding the process sending the signal.
 No error is returned if any process could be signaled.
 .El
 .Pp
-For compatibility with System V,
-if the process number is negative but not -1,
+If the process number is negative but not -1,
 the signal is sent to all processes whose process group ID
 is equal to the absolute value of the process number.
 This is a variant of
@@ -134,7 +133,7 @@ No process or process group can be found corresponding to that specified by
 .It Bq Er EPERM
 The sending process does not have permission to send
 .Va sig
-to the receiving process.
+to any receiving process.
 .El
 .Sh SEE ALSO
 .Xr getpgrp 2 ,

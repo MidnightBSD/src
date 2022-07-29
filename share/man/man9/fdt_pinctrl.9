@@ -26,9 +26,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man9/fdt_pinctrl.9 346512 2019-04-22 02:37:46Z ian $
+.\" $FreeBSD$
 .\"
-.Dd March 3, 2018
+.Dd June 23, 2018
 .Dt fdt_pinctrl 9
 .Os
 .Sh NAME
@@ -116,12 +116,42 @@ foo_configure_pins(device_t dev, phandle_t cfgxref)
 
 	cfgnode = OF_node_from_xref(cfgxref);
 	pins = NULL;
-	npins = OF_getencprop_alloc(cfgnode, "foo,pins", sizeof(*pins),
+	npins = OF_getencprop_alloc_multi(cfgnode, "foo,pins", sizeof(*pins),
 	    (void **)&pins);
 	functions = NULL;
-	nfunctions = OF_getencprop_alloc(cfgnode, "foo,functions",
+	nfunctions = OF_getencprop_alloc_multi(cfgnode, "foo,functions",
 	    sizeof(*functions), (void **)&functions);
 	...
+}
+
+static int
+foo_is_gpio(device_t dev, device_t gpiodev, bool *is_gpio)
+{
+	return (foo_is_pin_func_gpio(is_gpio));
+}
+
+static int
+foo_set_flags(device_t dev, device_t gpiodev, uint32_t pin, uint32_t flags)
+{
+	int rv;
+
+	rv = foo_is_pin_func_gpio(is_gpio);
+	if (rv != 0)
+		return (rv);
+	foo_set_flags(pin, flags);
+	return (0);
+}
+
+static int
+foo_get_flags(device_t dev, device_t gpiodev, uint32_t pin, uint32_t *flags)
+{
+	int rv;
+
+	rv = foo_is_pin_func_gpio(is_gpio);
+	if (rv != 0)
+		return (rv);
+	foo_get_flags(pin, flags);
+	return (0);
 }
 
 static int
@@ -144,6 +174,9 @@ static device_method_t foo_methods[] = {
 
 	/* fdt_pinctrl interface */
 	DEVMETHOD(fdt_pinctrl_configure, foo_configure_pins),
+	DEVMETHOD(fdt_pinctrl_is_gpio, foo_is_gpio),
+	DEVMETHOD(fdt_pinctrl_set_flags, foo_set_flags),
+	DEVMETHOD(fdt_pinctrl_get_flags, foo_get_flags),
 
 	/* Terminate method list */
 	DEVMETHOD_END

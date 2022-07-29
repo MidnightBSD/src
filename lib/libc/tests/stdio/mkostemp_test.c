@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/tests/stdio/mkostemp_test.c 290537 2015-11-08 06:37:50Z ngie $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stat.h>
 

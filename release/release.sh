@@ -100,8 +100,6 @@ env_setup() {
 	KERNEL="GENERIC"
 
 	# Set to non-empty value to disable checkout of doc/ and/or ports/.
-	# Disabling mports/ checkout also forces NODOC to be set.
-	NODOC=
 	NOPORTS=
 
 	# Set to non-empty value to disable distributing source tree.
@@ -138,7 +136,6 @@ env_check() {
 	if [ -n "${EMBEDDEDBUILD}" ]; then
 		WITH_DVD=
 		WITH_COMPRESSED_IMAGES=
-		NODOC=yes
 		case ${EMBEDDED_TARGET}:${EMBEDDED_TARGET_ARCH} in
 			arm:arm*|arm64:aarch64)
 				chroot_build_release_cmd="chroot_arm_build_release"
@@ -163,7 +160,6 @@ env_check() {
 	# this file, unless overridden by release.conf.  In most cases, these
 	# will not need to be changed.
 	CONF_FILES="__MAKE_CONF=${MAKE_CONF} SRCCONF=${SRC_CONF}"
-	NOCONF_FILES="__MAKE_CONF=/dev/null SRCCONF=/dev/null"
 	if [ -n "${TARGET}" ] && [ -n "${TARGET_ARCH}" ]; then
 		ARCH_FLAGS="TARGET=${TARGET} TARGET_ARCH=${TARGET_ARCH}"
 	else
@@ -187,9 +183,9 @@ env_check() {
 
 	CHROOT_MAKEENV="${CHROOT_MAKEENV} \
 		MAKEOBJDIRPREFIX=${CHROOTDIR}/tmp/obj"
-	CHROOT_WMAKEFLAGS="${MAKE_FLAGS} ${WORLD_FLAGS} ${NOCONF_FILES}"
-	CHROOT_IMAKEFLAGS="${WORLD_FLAGS} ${NOCONF_FILES}"
-	CHROOT_DMAKEFLAGS="${WORLD_FLAGS} ${NOCONF_FILES}"
+	CHROOT_WMAKEFLAGS="${MAKE_FLAGS} ${WORLD_FLAGS} ${CONF_FILES}"
+	CHROOT_IMAKEFLAGS="${WORLD_FLAGS} ${CONF_FILES}"
+	CHROOT_DMAKEFLAGS="${WORLD_FLAGS} ${CONF_FILES}"
 	RELEASE_WMAKEFLAGS="${MAKE_FLAGS} ${WORLD_FLAGS} ${ARCH_FLAGS} \
 		${CONF_FILES}"
 	RELEASE_KMAKEFLAGS="${MAKE_FLAGS} ${KERNEL_FLAGS} \
@@ -364,7 +360,7 @@ efi_boot_name()
 			echo "bootaa64.efi"
 			;;
 		amd64)
-			echo "bootx86.efi"
+			echo "bootx64.efi"
 			;;
 	esac
 }
@@ -372,7 +368,6 @@ efi_boot_name()
 # chroot_arm_build_release(): Create arm SD card image.
 chroot_arm_build_release() {
 	load_target_env
-	eval chroot ${CHROOTDIR} make -C /usr/src/release obj
 	case ${EMBEDDED_TARGET} in
 		arm|arm64)
 			if [ -e "${RELENGDIR}/tools/arm.subr" ]; then

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010-2012 Semihalf.
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/nandfs/nandfs_dat.c 235537 2012-05-17 10:11:18Z gber $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -293,9 +295,13 @@ nandfs_get_dat_bdescs_ioctl(struct nandfs_device *nffsdev,
     struct nandfs_argv *nargv)
 {
 	struct nandfs_bdesc *bd;
-	size_t size;
+	size_t size, sizecheck;
 	int error;
 
+	sizecheck = nargv->nv_nmembs;
+	if (sizecheck >= SIZE_MAX / sizeof(struct nandfs_bdesc))
+		return (EINVAL);
+		
 	size = nargv->nv_nmembs * sizeof(struct nandfs_bdesc);
 	bd = malloc(size, M_NANDFSTEMP, M_WAITOK);
 	error = copyin((void *)(uintptr_t)nargv->nv_base, bd, size);

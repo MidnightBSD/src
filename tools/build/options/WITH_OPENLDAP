@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITH_OPENLDAP 264902 2014-04-24 23:17:31Z imp $
+.\" $FreeBSD$
 Enable building openldap support for kerberos.

@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/lib/atf/libatf-c/Makefile 305910 2016-09-18 02:45:35Z ngie $
+# $FreeBSD$
 
 .include <src.opts.mk>
 .include <bsd.init.mk>
@@ -97,9 +97,8 @@ INCSDIR_atf-c.h= ${INCLUDEDIR}
 MAN=		atf-c.3
 MLINKS+=	atf-c.3 atf-c-api.3  # Backwards compatibility.
 
-.if ${MK_TESTS} != "no"
-SUBDIR=		tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include "../common.mk"
 .include <bsd.lib.mk>

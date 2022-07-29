@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tools/regression/sockets/so_setfib/Makefile 281407 2015-04-11 06:38:50Z ngie $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

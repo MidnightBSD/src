@@ -3,6 +3,7 @@ LIB=		z
 SHLIBDIR?=	/lib
 SHLIB_MAJOR=	6
 MAN=		zlib.3 zopen.3
+MLINKS+=	zopen.3 zdopen.3
 
 ZLIBSRC=	${SRCTOP}/sys/contrib/zlib
 
@@ -13,7 +14,7 @@ ZLIBSRC=	${SRCTOP}/sys/contrib/zlib
 #CFLAGS=-O3 -Wall -Wwrite-strings -Wpointer-arith -Wconversion \
 #           -Wstrict-prototypes -Wmissing-prototypes
 
-CFLAGS+=	-DHAS_snprintf -DHAS_vsnprintf -I${.CURDIR}
+CFLAGS+=	-D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -I${.CURDIR}
 
 WARNS?=		3
 
@@ -74,6 +75,3 @@ FILES=		zlib.pc
 FILESDIR=	${LIBDATADIR}/pkgconfig
 
 .include <bsd.lib.mk>
-
-## XXX: clang integrated-as doesn't grok .intel_syntax directives yet
-#ACFLAGS.gvmat64.S=	${CLANG_NO_IAS}

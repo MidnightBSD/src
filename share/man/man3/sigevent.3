@@ -1,7 +1,6 @@
 .\" -*- nroff -*-
 .\"
 .\" Copyright (c) 2016 John H. Baldwin <jhb@FreeBSD.org>
-.\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -24,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man3/sigevent.3 303324 2016-07-25 23:37:47Z jhb $
+.\" $FreeBSD$
 .\"
-.Dd July 15, 2016
+.Dd February 25, 2020
 .Dt SIGEVENT 3
 .Os
 .Sh NAME
@@ -35,7 +34,7 @@
 .Sh SYNOPSIS
 .In signal.h
 .Sh DESCRIPTION
-Some operations permit threads to request asychronous notification of events
+Some operations permit threads to request asynchronous notification of events
 via a
 .Vt struct sigevent
 structure.
@@ -120,6 +119,11 @@ notifications must link against the
 .Xr mq_notify 2 ,
 .Xr timer_create 2 ,
 .Xr siginfo 3
+.Sh HISTORY
+The
+.Va sigevent
+structure first appeared in
+.Fx 3.3 .
 .Sh STANDARDS
 The
 .Vt struct sigevent

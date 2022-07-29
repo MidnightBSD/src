@@ -7,7 +7,7 @@
 \ locstate: 0 = looking for -- or }}
 \           1 = found --
 \
-\ $FreeBSD: stable/11/stand/ficl/softwords/ficllocal.fr 51786 1999-09-29 04:43:16Z dcs $
+\ $FreeBSD$
 
 hide
 0 constant zero

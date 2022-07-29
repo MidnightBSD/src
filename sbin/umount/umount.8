@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)umount.8	8.2 (Berkeley) 5/8/95
-.\" $FreeBSD: stable/11/sbin/umount/umount.8 360039 2020-04-17 07:41:27Z 0mp $
+.\" $FreeBSD$
 .\"
-.Dd April 14, 2020
+.Dd June 19, 2020
 .Dt UMOUNT 8
 .Os
 .Sh NAME
@@ -69,8 +69,11 @@ All the file systems described in
 .Xr fstab 5
 are unmounted.
 .It Fl A
-All the currently mounted file systems except
-the root are unmounted.
+All the currently mounted file systems are unmounted,
+except for those mounted at
+.Pa /
+or
+.Pa /dev .
 .It Fl F Ar fstab
 Specify the
 .Pa fstab
@@ -187,4 +190,4 @@ file system table
 A
 .Nm
 utility appeared in
-.At v6 .
+.At v1 .

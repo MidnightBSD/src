@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/callo.h 296510 2016-03-08 17:27:13Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_CALLO_H_

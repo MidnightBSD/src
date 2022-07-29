@@ -31,7 +31,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.bin/m4/TEST/hash.m4 250226 2013-05-03 23:29:38Z jkim $
+# $FreeBSD$
 #
 #	@(#)hash.m4	8.1 (Berkeley) 6/6/93
 #

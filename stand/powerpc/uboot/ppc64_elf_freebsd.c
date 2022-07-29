@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/powerpc/uboot/ppc64_elf_freebsd.c 346482 2019-04-21 04:26:02Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #define __ELF_WORD_SIZE 64
 

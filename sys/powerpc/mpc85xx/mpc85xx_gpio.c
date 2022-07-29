@@ -24,11 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/powerpc/mpc85xx/mpc85xx_gpio.c 281057 2015-04-04 02:34:40Z jhibbits $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/powerpc/mpc85xx/mpc85xx_gpio.c 281057 2015-04-04 02:34:40Z jhibbits $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -179,7 +179,6 @@ mpc85xx_gpio_pin_toggle(device_t dev, uint32_t pin)
 static int
 mpc85xx_gpio_probe(device_t dev)
 {
-	uint16_t vers;
 	uint32_t svr;
 
 	if (!ofw_bus_status_okay(dev))
@@ -187,16 +186,6 @@ mpc85xx_gpio_probe(device_t dev)
 
 	if (!ofw_bus_is_compatible(dev, "gpio"))
 		return (ENXIO);
-
-	vers = mfpvr() >> 16;
-	switch (vers) {
-	case FSL_E500v1:
-	case FSL_E500v2:
-	case FSL_E500mc:
-		break;
-	default:
-		return (ENXIO);
-	}
 
 	svr = mfspr(SPR_SVR);
 	switch (SVR_VER(svr)) {

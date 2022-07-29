@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libc/locale/xlocale.c 359584 2020-04-03 00:38:12Z markj $
+ * $FreeBSD$
  */
 
 #include <pthread.h>
@@ -249,6 +251,7 @@ static int dupcomponent(int type, locale_t base, locale_t new)
 
 locale_t newlocale(int mask, const char *locale, locale_t base)
 {
+	locale_t orig_base;
 	int type;
 	const char *realLocale = locale;
 	int useenv = 0;
@@ -261,6 +264,7 @@ locale_t newlocale(int mask, const char *locale, locale_t base)
 		return (NULL);
 	}
 
+	orig_base = base;
 	FIX_LOCALE(base);
 	copyflags(new, base);
 
@@ -273,7 +277,7 @@ locale_t newlocale(int mask, const char *locale, locale_t base)
 	for (type=0 ; type<XLC_LAST ; type++) {
 		if (mask & 1) {
 			if (useenv) {
-				realLocale = __get_locale_env(type);
+				realLocale = __get_locale_env(type + 1);
 			}
 			new->components[type] =
 			     constructors[type](realLocale, new);
@@ -295,6 +299,8 @@ locale_t newlocale(int mask, const char *locale, locale_t base)
 	if (0 == success) {
 		xlocale_release(new);
 		new = NULL;
+	} else if (base == orig_base) {
+		xlocale_release(base);
 	}
 
 	return (new);
@@ -325,20 +331,18 @@ locale_t duplocale(locale_t base)
  * Free a locale_t.  This is quite a poorly named function.  It actually
  * disclaims a reference to a locale_t, rather than freeing it.  
  */
-int
+void
 freelocale(locale_t loc)
 {
-	/* Fail if we're passed something that isn't a locale. */
-	if ((NULL == loc) || (LC_GLOBAL_LOCALE == loc)) {
-		return (-1);
-	}
-	/* If we're passed the global locale, pretend that we freed it but don't
-	 * actually do anything. */
-	if (&__xlocale_global_locale == loc) {
-		return (0);
-	}
-	xlocale_release(loc);
-	return (0);
+
+	/*
+	 * Fail if we're passed something that isn't a locale. If we're
+	 * passed the global locale, pretend that we freed it but don't
+	 * actually do anything.
+	 */
+	if (loc != NULL && loc != LC_GLOBAL_LOCALE &&
+	    loc != &__xlocale_global_locale)
+		xlocale_release(loc);
 }
 
 /*

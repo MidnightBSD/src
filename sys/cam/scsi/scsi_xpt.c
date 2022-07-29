@@ -1,6 +1,8 @@
 /*-
  * Implementation of the SCSI Transport
  *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997, 1998, 1999 Justin T. Gibbs.
  * Copyright (c) 1997, 1998, 1999 Kenneth D. Merry.
  * All rights reserved.
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cam/scsi/scsi_xpt.c 351754 2019-09-03 16:24:44Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -178,7 +180,6 @@ do {									\
 
 typedef enum {
 	PROBE_INQUIRY_CKSUM	= 0x01,
-	PROBE_SERIAL_CKSUM	= 0x02,
 	PROBE_NO_ANNOUNCE	= 0x04,
 	PROBE_EXTLUN		= 0x08
 } probe_flags;
@@ -596,15 +597,22 @@ static void	 scsi_dev_async(u_int32_t async_code,
 				void *async_arg);
 static void	 scsi_action(union ccb *start_ccb);
 static void	 scsi_announce_periph(struct cam_periph *periph);
+static void	 scsi_announce_periph_sbuf(struct cam_periph *periph, struct sbuf *sb);
 static void	 scsi_proto_announce(struct cam_ed *device);
+static void	 scsi_proto_announce_sbuf(struct cam_ed *device,
+					  struct sbuf *sb);
 static void	 scsi_proto_denounce(struct cam_ed *device);
+static void	 scsi_proto_denounce_sbuf(struct cam_ed *device,
+					  struct sbuf *sb);
 static void	 scsi_proto_debug_out(union ccb *ccb);
+static void	 _scsi_announce_periph(struct cam_periph *, u_int *, u_int *, struct ccb_trans_settings *);
 
 static struct xpt_xport_ops scsi_xport_ops = {
 	.alloc_device = scsi_alloc_device,
 	.action = scsi_action,
 	.async = scsi_dev_async,
 	.announce = scsi_announce_periph,
+	.announce_sbuf = scsi_announce_periph_sbuf,
 };
 #define SCSI_XPT_XPORT(x, X)			\
 static struct xpt_xport scsi_xport_ ## x = {	\
@@ -626,7 +634,9 @@ SCSI_XPT_XPORT(ppb, PPB);
 
 static struct xpt_proto_ops scsi_proto_ops = {
 	.announce = scsi_proto_announce,
+	.announce_sbuf = scsi_proto_announce_sbuf,
 	.denounce = scsi_proto_denounce,
+	.denounce_sbuf = scsi_proto_denounce_sbuf,
 	.debug_out = scsi_proto_debug_out,
 };
 static struct xpt_proto scsi_proto = {
@@ -645,7 +655,6 @@ static cam_status
 proberegister(struct cam_periph *periph, void *arg)
 {
 	union ccb *request_ccb;	/* CCB representing the probe request */
-	cam_status status;
 	probe_softc *softc;
 
 	request_ccb = (union ccb *)arg;
@@ -669,10 +678,9 @@ proberegister(struct cam_periph *periph, void *arg)
 	periph->softc = softc;
 	softc->periph = periph;
 	softc->action = PROBE_INVALID;
-	status = cam_periph_acquire(periph);
-	if (status != CAM_REQ_CMP) {
-		return (status);
-	}
+	if (cam_periph_acquire(periph) != 0)
+		return (CAM_REQ_CMP_ERR);
+
 	CAM_DEBUG(periph->path, CAM_DEBUG_PROBE, ("Probe started\n"));
 	scsi_devise_transport(periph->path);
 
@@ -769,8 +777,6 @@ again:
 	}
 	case PROBE_INQUIRY:
 	case PROBE_FULL_INQUIRY:
-	case PROBE_INQUIRY_BASIC_DV1:
-	case PROBE_INQUIRY_BASIC_DV2:
 	{
 		u_int inquiry_len;
 		struct scsi_inquiry_data *inq_buf;
@@ -785,20 +791,19 @@ again:
 		 * serial number check finish, we attempt to figure out
 		 * whether we still have the same device.
 		 */
-		if (((periph->path->device->flags & CAM_DEV_UNCONFIGURED) == 0)
-		 && ((softc->flags & PROBE_INQUIRY_CKSUM) == 0)) {
-
+		if (periph->path->device->flags & CAM_DEV_UNCONFIGURED) {
+			softc->flags &= ~PROBE_INQUIRY_CKSUM;
+		} else if ((softc->flags & PROBE_INQUIRY_CKSUM) == 0) {
 			MD5Init(&softc->context);
 			MD5Update(&softc->context, (unsigned char *)inq_buf,
 				  sizeof(struct scsi_inquiry_data));
-			softc->flags |= PROBE_INQUIRY_CKSUM;
 			if (periph->path->device->serial_num_len > 0) {
 				MD5Update(&softc->context,
 					  periph->path->device->serial_num,
 					  periph->path->device->serial_num_len);
-				softc->flags |= PROBE_SERIAL_CKSUM;
 			}
 			MD5Final(softc->digest, &softc->context);
+			softc->flags |= PROBE_INQUIRY_CKSUM;
 		}
 
 		if (softc->action == PROBE_INQUIRY)
@@ -814,22 +819,6 @@ again:
 		 */
 		inquiry_len = roundup2(inquiry_len, 2);
 
-		if (softc->action == PROBE_INQUIRY_BASIC_DV1
-		 || softc->action == PROBE_INQUIRY_BASIC_DV2) {
-			inq_buf = malloc(inquiry_len, M_CAMXPT, M_NOWAIT);
-		}
-		if (inq_buf == NULL) {
-			xpt_print(periph->path, "malloc failure- skipping Basic"
-			    "Domain Validation\n");
-			PROBE_SET_ACTION(softc, PROBE_DV_EXIT);
-			scsi_test_unit_ready(csio,
-					     /*retries*/4,
-					     probedone,
-					     MSG_SIMPLE_Q_TAG,
-					     SSD_FULL_SIZE,
-					     /*timeout*/60000);
-			break;
-		}
 		scsi_inquiry(csio,
 			     /*retries*/4,
 			     probedone,
@@ -1014,6 +1003,40 @@ done:
 		}
 		goto done;
 	}
+	case PROBE_INQUIRY_BASIC_DV1:
+	case PROBE_INQUIRY_BASIC_DV2:
+	{
+		u_int inquiry_len;
+		struct scsi_inquiry_data *inq_buf;
+
+		inq_buf = &periph->path->device->inq_data;
+		inquiry_len = roundup2(SID_ADDITIONAL_LENGTH(inq_buf), 2);
+		inq_buf = malloc(inquiry_len, M_CAMXPT, M_NOWAIT);
+		if (inq_buf == NULL) {
+			xpt_print(periph->path, "malloc failure- skipping Basic"
+			    "Domain Validation\n");
+			PROBE_SET_ACTION(softc, PROBE_DV_EXIT);
+			scsi_test_unit_ready(csio,
+					     /*retries*/4,
+					     probedone,
+					     MSG_SIMPLE_Q_TAG,
+					     SSD_FULL_SIZE,
+					     /*timeout*/60000);
+			break;
+		}
+
+		scsi_inquiry(csio,
+			     /*retries*/4,
+			     probedone,
+			     MSG_SIMPLE_Q_TAG,
+			     (u_int8_t *)inq_buf,
+			     inquiry_len,
+			     /*evpd*/FALSE,
+			     /*page_code*/0,
+			     SSD_MIN_SIZE,
+			     /*timeout*/60 * 1000);
+		break;
+	}
 	default:
 		panic("probestart: invalid action state 0x%x\n", softc->action);
 	}
@@ -1166,8 +1189,8 @@ probedone(struct cam_periph *periph, union ccb *done_ccb)
 	{
 		if (cam_ccb_status(done_ccb) != CAM_REQ_CMP) {
 
-			if (cam_periph_error(done_ccb, 0,
-					     SF_NO_PRINT, NULL) == ERESTART) {
+			if (cam_periph_error(done_ccb, 0, SF_NO_PRINT) ==
+			    ERESTART) {
 outr:
 				/* Drop freeze taken due to CAM_DEV_QFREEZE */
 				cam_release_devq(path, 0, 0, 0, FALSE);
@@ -1264,8 +1287,7 @@ out:
 		} else if (cam_periph_error(done_ccb, 0,
 					    done_ccb->ccb_h.target_lun > 0
 					    ? SF_RETRY_UA|SF_QUIET_IR
-					    : SF_RETRY_UA,
-					    &softc->saved_ccb) == ERESTART) {
+					    : SF_RETRY_UA) == ERESTART) {
 			goto outr;
 		} else {
 			if ((done_ccb->ccb_h.status & CAM_DEV_QFRZN) != 0) {
@@ -1307,9 +1329,9 @@ out:
 
 		if (cam_ccb_status(done_ccb) != CAM_REQ_CMP) {
 			if (cam_periph_error(done_ccb, 0,
-			    done_ccb->ccb_h.target_lun > 0 ?
-			    SF_RETRY_UA|SF_QUIET_IR : SF_RETRY_UA,
-			    &softc->saved_ccb) == ERESTART) {
+				done_ccb->ccb_h.target_lun > 0 ?
+				SF_RETRY_UA|SF_QUIET_IR : SF_RETRY_UA) ==
+			    ERESTART) {
 				goto outr;
 			}
 			if ((done_ccb->ccb_h.status & CAM_DEV_QFRZN) != 0) {
@@ -1416,8 +1438,7 @@ out:
 			page = (struct scsi_control_page *)offset;
 			path->device->queue_flags = page->queue_flags;
 		} else if (cam_periph_error(done_ccb, 0,
-					    SF_RETRY_UA|SF_NO_PRINT,
-					    &softc->saved_ccb) == ERESTART) {
+			SF_RETRY_UA|SF_NO_PRINT) == ERESTART) {
 			goto outr;
 		} else if ((done_ccb->ccb_h.status & CAM_DEV_QFRZN) != 0) {
 			/* Don't wedge the queue */
@@ -1459,8 +1480,7 @@ out:
 			xpt_schedule(periph, priority);
 			goto out;
 		} else if (cam_periph_error(done_ccb, 0,
-					    SF_RETRY_UA|SF_NO_PRINT,
-					    &softc->saved_ccb) == ERESTART) {
+			SF_RETRY_UA|SF_NO_PRINT) == ERESTART) {
 			goto outr;
 		} else if ((done_ccb->ccb_h.status & CAM_DEV_QFRZN) != 0) {
 			/* Don't wedge the queue */
@@ -1504,8 +1524,7 @@ out:
 				path->device->device_id = (uint8_t *)devid;
 			}
 		} else if (cam_periph_error(done_ccb, 0,
-					    SF_RETRY_UA,
-					    &softc->saved_ccb) == ERESTART) {
+			SF_RETRY_UA) == ERESTART) {
 			goto outr;
 		} else if ((done_ccb->ccb_h.status & CAM_DEV_QFRZN) != 0) {
 			/* Don't wedge the queue */
@@ -1547,9 +1566,8 @@ out:
 				path->device->ext_inq_len = length;
 				path->device->ext_inq = (uint8_t *)ext_inq;
 			}
-		} else if (cam_periph_error(done_ccb, 0,
-					    SF_RETRY_UA,
-					    &softc->saved_ccb) == ERESTART) {
+		} else if (cam_periph_error(done_ccb, 0, SF_RETRY_UA) ==
+		    ERESTART) {
 			goto outr;
 		} else if ((done_ccb->ccb_h.status & CAM_DEV_QFRZN) != 0) {
 			/* Don't wedge the queue */
@@ -1612,8 +1630,7 @@ probe_device_check:
 				path->device->serial_num[slen] = '\0';
 			}
 		} else if (cam_periph_error(done_ccb, 0,
-					    SF_RETRY_UA|SF_NO_PRINT,
-					    &softc->saved_ccb) == ERESTART) {
+			SF_RETRY_UA|SF_NO_PRINT) == ERESTART) {
 			goto outr;
 		} else if ((done_ccb->ccb_h.status & CAM_DEV_QFRZN) != 0) {
 			/* Don't wedge the queue */
@@ -1682,7 +1699,7 @@ probe_device_check:
 	case PROBE_DV_EXIT:
 		if (cam_ccb_status(done_ccb) != CAM_REQ_CMP) {
 			if (cam_periph_error(done_ccb, 0, SF_NO_PRINT |
-			    SF_NO_RECOVERY | SF_NO_RETRY, NULL) == ERESTART)
+			    SF_NO_RECOVERY | SF_NO_RETRY) == ERESTART)
 				goto outr;
 		}
 		if ((done_ccb->ccb_h.status & CAM_DEV_QFRZN) != 0) {
@@ -1734,7 +1751,7 @@ probe_device_check:
 
 		if (cam_ccb_status(done_ccb) != CAM_REQ_CMP) {
 			if (cam_periph_error(done_ccb, 0, SF_NO_PRINT |
-			    SF_NO_RECOVERY | SF_NO_RETRY, NULL) == ERESTART)
+			    SF_NO_RECOVERY | SF_NO_RETRY) == ERESTART)
 				goto outr;
 		}
 		if ((done_ccb->ccb_h.status & CAM_DEV_QFRZN) != 0) {
@@ -3032,56 +3049,123 @@ scsi_dev_async(u_int32_t async_code, struct cam_eb *bus, struct cam_et *target,
 }
 
 static void
-scsi_announce_periph(struct cam_periph *periph)
+_scsi_announce_periph(struct cam_periph *periph, u_int *speed, u_int *freq, struct ccb_trans_settings *cts)
 {
 	struct	ccb_pathinq cpi;
-	struct	ccb_trans_settings cts;
 	struct	cam_path *path = periph->path;
-	u_int	speed;
-	u_int	freq;
-	u_int	mb;
 
 	cam_periph_assert(periph, MA_OWNED);
 
-	xpt_setup_ccb(&cts.ccb_h, path, CAM_PRIORITY_NORMAL);
-	cts.ccb_h.func_code = XPT_GET_TRAN_SETTINGS;
-	cts.type = CTS_TYPE_CURRENT_SETTINGS;
-	xpt_action((union ccb*)&cts);
-	if (cam_ccb_status((union ccb *)&cts) != CAM_REQ_CMP)
+	xpt_setup_ccb(&cts->ccb_h, path, CAM_PRIORITY_NORMAL);
+	cts->ccb_h.func_code = XPT_GET_TRAN_SETTINGS;
+	cts->type = CTS_TYPE_CURRENT_SETTINGS;
+	xpt_action((union ccb*)cts);
+	if (cam_ccb_status((union ccb *)cts) != CAM_REQ_CMP)
 		return;
+	
 	/* Ask the SIM for its base transfer speed */
 	xpt_setup_ccb(&cpi.ccb_h, path, CAM_PRIORITY_NORMAL);
 	cpi.ccb_h.func_code = XPT_PATH_INQ;
 	xpt_action((union ccb *)&cpi);
+
 	/* Report connection speed */
-	speed = cpi.base_transfer_speed;
-	freq = 0;
-	if (cts.ccb_h.status == CAM_REQ_CMP && cts.transport == XPORT_SPI) {
+	*speed = cpi.base_transfer_speed;
+	*freq = 0;
+
+	if (cts->ccb_h.status == CAM_REQ_CMP && cts->transport == XPORT_SPI) {
 		struct	ccb_trans_settings_spi *spi =
-		    &cts.xport_specific.spi;
+		    &cts->xport_specific.spi;
 
 		if ((spi->valid & CTS_SPI_VALID_SYNC_OFFSET) != 0
 		  && spi->sync_offset != 0) {
-			freq = scsi_calc_syncsrate(spi->sync_period);
-			speed = freq;
+			*freq = scsi_calc_syncsrate(spi->sync_period);
+			*speed = *freq;
 		}
 		if ((spi->valid & CTS_SPI_VALID_BUS_WIDTH) != 0)
-			speed *= (0x01 << spi->bus_width);
+			*speed *= (0x01 << spi->bus_width);
 	}
-	if (cts.ccb_h.status == CAM_REQ_CMP && cts.transport == XPORT_FC) {
+	if (cts->ccb_h.status == CAM_REQ_CMP && cts->transport == XPORT_FC) {
 		struct	ccb_trans_settings_fc *fc =
-		    &cts.xport_specific.fc;
+		    &cts->xport_specific.fc;
 
 		if (fc->valid & CTS_FC_VALID_SPEED)
-			speed = fc->bitrate;
+			*speed = fc->bitrate;
 	}
-	if (cts.ccb_h.status == CAM_REQ_CMP && cts.transport == XPORT_SAS) {
+	if (cts->ccb_h.status == CAM_REQ_CMP && cts->transport == XPORT_SAS) {
 		struct	ccb_trans_settings_sas *sas =
-		    &cts.xport_specific.sas;
+		    &cts->xport_specific.sas;
 
 		if (sas->valid & CTS_SAS_VALID_SPEED)
-			speed = sas->bitrate;
+			*speed = sas->bitrate;
 	}
+}
+
+static void
+scsi_announce_periph_sbuf(struct cam_periph *periph, struct sbuf *sb)
+{
+	struct	ccb_trans_settings cts;
+	u_int speed, freq, mb;
+
+	_scsi_announce_periph(periph, &speed, &freq, &cts);
+	if (cam_ccb_status((union ccb *)&cts) != CAM_REQ_CMP)
+		return;
+
+	mb = speed / 1000;
+	if (mb > 0)
+		sbuf_printf(sb, "%s%d: %d.%03dMB/s transfers",
+		       periph->periph_name, periph->unit_number,
+		       mb, speed % 1000);
+	else
+		sbuf_printf(sb, "%s%d: %dKB/s transfers", periph->periph_name,
+		       periph->unit_number, speed);
+	/* Report additional information about SPI connections */
+	if (cts.ccb_h.status == CAM_REQ_CMP && cts.transport == XPORT_SPI) {
+		struct	ccb_trans_settings_spi *spi;
+
+		spi = &cts.xport_specific.spi;
+		if (freq != 0) {
+			sbuf_printf(sb, " (%d.%03dMHz%s, offset %d", freq / 1000,
+			       freq % 1000,
+			       (spi->ppr_options & MSG_EXT_PPR_DT_REQ) != 0
+			     ? " DT" : "",
+			       spi->sync_offset);
+		}
+		if ((spi->valid & CTS_SPI_VALID_BUS_WIDTH) != 0
+		 && spi->bus_width > 0) {
+			if (freq != 0) {
+				sbuf_printf(sb, ", ");
+			} else {
+				sbuf_printf(sb, " (");
+			}
+			sbuf_printf(sb, "%dbit)", 8 * (0x01 << spi->bus_width));
+		} else if (freq != 0) {
+			sbuf_printf(sb, ")");
+		}
+	}
+	if (cts.ccb_h.status == CAM_REQ_CMP && cts.transport == XPORT_FC) {
+		struct	ccb_trans_settings_fc *fc;
+
+		fc = &cts.xport_specific.fc;
+		if (fc->valid & CTS_FC_VALID_WWNN)
+			sbuf_printf(sb, " WWNN 0x%llx", (long long) fc->wwnn);
+		if (fc->valid & CTS_FC_VALID_WWPN)
+			sbuf_printf(sb, " WWPN 0x%llx", (long long) fc->wwpn);
+		if (fc->valid & CTS_FC_VALID_PORT)
+			sbuf_printf(sb, " PortID 0x%x", fc->port);
+	}
+	sbuf_printf(sb, "\n");
+}
+
+static void
+scsi_announce_periph(struct cam_periph *periph)
+{
+	struct	ccb_trans_settings cts;
+	u_int speed, freq, mb;
+
+	_scsi_announce_periph(periph, &speed, &freq, &cts);
+	if (cam_ccb_status((union ccb *)&cts) != CAM_REQ_CMP)
+		return;
+
 	mb = speed / 1000;
 	if (mb > 0)
 		printf("%s%d: %d.%03dMB/s transfers",
@@ -3129,9 +3213,21 @@ scsi_announce_periph(struct cam_periph *periph)
 }
 
 static void
+scsi_proto_announce_sbuf(struct cam_ed *device, struct sbuf *sb)
+{
+	scsi_print_inquiry_sbuf(sb, &device->inq_data);
+}
+
+static void
 scsi_proto_announce(struct cam_ed *device)
 {
 	scsi_print_inquiry(&device->inq_data);
+}
+
+static void
+scsi_proto_denounce_sbuf(struct cam_ed *device, struct sbuf *sb)
+{
+	scsi_print_inquiry_short_sbuf(sb, &device->inq_data);
 }
 
 static void
@@ -3152,6 +3248,6 @@ scsi_proto_debug_out(union ccb *ccb)
 	device = ccb->ccb_h.path->device;
 	CAM_DEBUG(ccb->ccb_h.path,
 	    CAM_DEBUG_CDB,("%s. CDB: %s\n",
-		scsi_op_desc(ccb->csio.cdb_io.cdb_bytes[0], &device->inq_data),
-		scsi_cdb_string(ccb->csio.cdb_io.cdb_bytes, cdb_str, sizeof(cdb_str))));
+		scsi_op_desc(scsiio_cdb_ptr(&ccb->csio)[0], &device->inq_data),
+		scsi_cdb_string(scsiio_cdb_ptr(&ccb->csio), cdb_str, sizeof(cdb_str))));
 }

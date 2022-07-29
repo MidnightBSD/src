@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2013 M. Warner Losh. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/mips/include/elf.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*-
@@ -103,8 +105,10 @@ typedef struct {	/* Auxiliary vector entry on initial stack */
 	int	a_type;			/* Entry type. */
 	union {
 		int	a_val;		/* Integer value. */
+#if defined(__mips_o32) || defined(__mips_n32)
 		void	*a_ptr;		/* Address. */
 		void	(*a_fcn)(void); /* Function pointer (not used). */
+#endif
 	} a_un;
 } Elf32_Auxinfo;
 
@@ -240,25 +244,5 @@ __ElfType(Auxinfo);
 
 #define	R_MIPS_COPY		126
 #define	R_MIPS_JUMP_SLOT	127
-
-/*
- * ELF Flags
- */
-
-#define	EF_MIPS_ARCH_1		0x00000000	/* -mips1 code */
-#define	EF_MIPS_ARCH_2		0x10000000	/* -mips2 code */
-#define	EF_MIPS_ARCH_3		0x20000000	/* -mips3 code */
-#define	EF_MIPS_ARCH_4		0x30000000	/* -mips4 code */
-#define	EF_MIPS_ARCH_5		0x40000000	/* -mips5 code */
-#define	EF_MIPS_ARCH_32		0x50000000	/* -mips32 code */
-#define	EF_MIPS_ARCH_64		0x60000000	/* -mips64 code */
-#define	EF_MIPS_ARCH_32R2	0x70000000	/* -mips32r2 code */
-#define	EF_MIPS_ARCH_64R2	0x80000000	/* -mips64r2 code */
-
-#define	EF_MIPS_ABI		0x0000f000
-#define	EF_MIPS_ABI_O32		0x00001000
-#define	EF_MIPS_ABI_O64		0x00002000
-#define	EF_MIPS_ABI_EABI32	0x00003000
-#define	EF_MIPS_ABI_EABI64	0x00004000
 
 #endif /* __MIPS_ELF_H */

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2006 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5211/ar5211_misc.c 247286 2013-02-25 22:42:43Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -554,6 +556,13 @@ ar5211SetCoverageClass(struct ath_hal *ah, uint8_t coverageclass, int now)
 {
 }
 
+HAL_STATUS
+ar5211SetQuiet(struct ath_hal *ah, uint32_t period, uint32_t duration,
+    uint32_t next_start, HAL_QUIET_FLAG flags)
+{
+	return HAL_OK;
+}
+
 /*
  * Control Adaptive Noise Immunity Parameters
  */
@@ -698,7 +707,6 @@ ar5211Get11nExtBusy(struct ath_hal *ah)
 {
 	return (0);
 }
-
 
 /*
  * There's no channel survey support for the AR5211.

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007, 2008 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
  *
@@ -33,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/asmc/asmc.c 344889 2019-03-07 15:31:32Z dab $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -54,8 +56,6 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/asmc/asmc.c 344889 2019-03-07 15:31:32Z da
 
 #include <dev/acpica/acpivar.h>
 #include <dev/asmc/asmcvar.h>
-
-#include "opt_intr_filter.h"
 
 /*
  * Device interface.
@@ -83,9 +83,6 @@ static int 	asmc_temp_getvalue(device_t dev, const char *key);
 static int 	asmc_sms_read(device_t, const char *key, int16_t *val);
 static void 	asmc_sms_calibrate(device_t dev);
 static int 	asmc_sms_intrfast(void *arg);
-#ifdef INTR_FILTER
-static void 	asmc_sms_handler(void *arg);
-#endif
 static void 	asmc_sms_printintr(device_t dev, uint8_t);
 static void 	asmc_sms_task(void *arg, int pending);
 #ifdef DEBUG
@@ -173,6 +170,12 @@ struct asmc_model asmc_models[] = {
 	  "MacBook3,1", "Apple SMC MacBook Core 2 Duo",
 	  ASMC_SMS_FUNCS, ASMC_FAN_FUNCS, NULL, NULL, NULL,
 	  ASMC_MB31_TEMPS, ASMC_MB31_TEMPNAMES, ASMC_MB31_TEMPDESCS
+	},
+
+	{
+	  "MacBook7,1", "Apple SMC MacBook Core 2 Duo (mid 2010)",
+	  ASMC_SMS_FUNCS, ASMC_FAN_FUNCS2, ASMC_LIGHT_FUNCS_DISABLED,
+	  ASMC_MB71_TEMPS, ASMC_MB71_TEMPNAMES, ASMC_MB71_TEMPDESCS
 	},
 
 	{
@@ -626,13 +629,11 @@ asmc_attach(device_t dev)
 	 * We only need to do this for the non INTR_FILTER case.
 	 */
 	sc->sc_sms_tq = NULL;
-#ifndef INTR_FILTER
 	TASK_INIT(&sc->sc_sms_task, 0, asmc_sms_task, sc);
 	sc->sc_sms_tq = taskqueue_create_fast("asmc_taskq", M_WAITOK,
 	    taskqueue_thread_enqueue, &sc->sc_sms_tq);
 	taskqueue_start_threads(&sc->sc_sms_tq, 1, PI_REALTIME, "%s sms taskq",
 	    device_get_nameunit(dev));
-#endif
 	/*
 	 * Allocate an IRQ for the SMS.
 	 */
@@ -647,11 +648,7 @@ asmc_attach(device_t dev)
 
 	ret = bus_setup_intr(dev, sc->sc_irq,
 	          INTR_TYPE_MISC | INTR_MPSAFE,
-#ifdef INTR_FILTER
-	    asmc_sms_intrfast, asmc_sms_handler,
-#else
 	    asmc_sms_intrfast, NULL,
-#endif
 	    dev, &sc->sc_cookie);
 
 	if (ret) {
@@ -1065,7 +1062,7 @@ asmc_fan_count(device_t dev)
 {
 	uint8_t buf[1];
 
-	if (asmc_key_read(dev, ASMC_KEY_FANCOUNT, buf, sizeof buf) < 0)
+	if (asmc_key_read(dev, ASMC_KEY_FANCOUNT, buf, sizeof buf) != 0)
 		return (-1);
 
 	return (buf[0]);
@@ -1079,7 +1076,7 @@ asmc_fan_getvalue(device_t dev, const char *key, int fan)
 	char fankey[5];
 
 	snprintf(fankey, sizeof(fankey), key, fan);
-	if (asmc_key_read(dev, fankey, buf, sizeof buf) < 0)
+	if (asmc_key_read(dev, fankey, buf, sizeof buf) != 0)
 		return (-1);
 	speed = (buf[0] << 6) | (buf[1] >> 2);
 
@@ -1093,7 +1090,7 @@ asmc_fan_getstring(device_t dev, const char *key, int fan, uint8_t *buf, uint8_t
 	char* desc;
 
 	snprintf(fankey, sizeof(fankey), key, fan);
-	if (asmc_key_read(dev, fankey, buf, buflen) < 0)
+	if (asmc_key_read(dev, fankey, buf, buflen) != 0)
 		return (NULL);
 	desc = buf+4;
 
@@ -1232,7 +1229,7 @@ asmc_temp_getvalue(device_t dev, const char *key)
 	/*
 	 * Check for invalid temperatures.
 	 */
-	if (asmc_key_read(dev, key, buf, sizeof buf) < 0)
+	if (asmc_key_read(dev, key, buf, sizeof buf) != 0)
 		return (-1);
 
 	return (buf[0]);
@@ -1304,23 +1301,10 @@ asmc_sms_intrfast(void *arg)
 	sc->sc_sms_intrtype = type;
 	asmc_sms_printintr(dev, type);
 
-#ifdef INTR_FILTER
-	return (FILTER_SCHEDULE_THREAD | FILTER_HANDLED);
-#else
 	taskqueue_enqueue(sc->sc_sms_tq, &sc->sc_sms_task);
-#endif
 	return (FILTER_HANDLED);
 }
 
-#ifdef INTR_FILTER
-static void
-asmc_sms_handler(void *arg)
-{
-	struct asmc_softc *sc = device_get_softc(arg);
-
-	asmc_sms_task(sc, 0);
-}
-#endif
 
 
 static void

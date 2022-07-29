@@ -1,10 +1,8 @@
 #!/bin/sh
-# $FreeBSD: stable/11/tools/regression/zfs/zpool/add/option-f_size_mismatch.t 273631 2014-10-25 06:28:48Z ngie $
+# $FreeBSD$
 
 dir=`dirname $0`
 . ${dir}/../../misc.sh
-
-[ "${os}" = "FreeBSD" ] && die "panics FreeBSD; see bug # 194586"
 
 echo "1..100"
 

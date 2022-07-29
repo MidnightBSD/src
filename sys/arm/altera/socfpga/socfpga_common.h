@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/altera/socfpga/socfpga_common.h 271200 2014-09-06 18:08:21Z br $
+ * $FreeBSD$
  */
 
 #define	READ4(_sc, _reg) bus_read_4((_sc)->res[0], _reg)

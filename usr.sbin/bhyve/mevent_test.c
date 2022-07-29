@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bhyve/mevent_test.c 336704 2018-07-25 04:33:56Z araujo $
+ * $FreeBSD$
  */
 
 /*

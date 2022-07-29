@@ -3,6 +3,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_bt3c_pccard.c,v 1.5 2003/04/01 18:15:21 max Exp $
- * $FreeBSD: stable/11/sys/netgraph/bluetooth/drivers/bt3c/ng_bt3c_pccard.c 296137 2016-02-27 03:38:01Z jhibbits $
+ * $FreeBSD$
  *
  * XXX XXX XX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX 
  *
@@ -674,6 +676,8 @@ bt3c_pccard_attach(device_t dev)
 	sc->want = 1;
 
 	NG_NODE_SET_PRIVATE(sc->node, sc);
+
+	gone_in_dev(dev, 13, "pccard removed");
 
 	return (0);
 bad:

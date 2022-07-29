@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/nvidia/tegra_usbphy.c 332025 2018-04-04 13:23:06Z mmel $");
+__FBSDID("$FreeBSD$");
 
 
 /*
@@ -46,7 +46,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/nvidia/tegra_usbphy.c 332025 2018-04-04 13
 #include <dev/extres/hwreset/hwreset.h>
 #include <dev/extres/phy/phy.h>
 #include <dev/extres/regulator/regulator.h>
-#include <dev/fdt/fdt_common.h>
 #include <dev/fdt/fdt_pinctrl.h>
 #include <dev/ofw/openfirm.h>
 #include <dev/ofw/ofw_bus.h>
@@ -594,7 +593,7 @@ usb_get_ifc_mode(device_t dev, phandle_t node, char *name)
 	int rv;
 	enum usb_ifc_type ret;
 
-	rv = OF_getprop_alloc(node, name, 1, (void **)&tmpstr);
+	rv = OF_getprop_alloc(node, name, (void **)&tmpstr);
 	if (rv <= 0)
 		return (USB_IFC_TYPE_UNKNOWN);
 
@@ -616,7 +615,7 @@ usb_get_dr_mode(device_t dev, phandle_t node, char *name)
 	int rv;
 	enum usb_dr_mode ret;
 
-	rv = OF_getprop_alloc(node, name, 1, (void **)&tmpstr);
+	rv = OF_getprop_alloc(node, name, (void **)&tmpstr);
 	if (rv <= 0)
 		return (USB_DR_MODE_UNKNOWN);
 

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: (BSD-3-Clause AND MIT-CMU)
+ *
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -57,7 +59,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: stable/11/sys/vm/vm_pageout.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _VM_VM_PAGEOUT_H_
@@ -73,14 +75,12 @@
  *	Exported data structures.
  */
 
-extern int vm_page_max_wired;
-extern int vm_pageout_deficit;
+extern u_int vm_page_max_user_wired;
 extern int vm_pageout_page_count;
-extern bool vm_pageout_wanted;
-extern bool vm_pages_needed;
 
 #define	VM_OOM_MEM	1
-#define	VM_OOM_SWAPZ	2
+#define	VM_OOM_MEM_PF	2
+#define	VM_OOM_SWAPZ	3
 
 /*
  * vm_lowmem flags.
@@ -96,12 +96,12 @@ extern bool vm_pages_needed;
  *	Signal pageout-daemon and wait for it.
  */
 
-void pagedaemon_wait(int pri, const char *wmesg);
-void pagedaemon_wakeup(void);
-#define VM_WAIT vm_wait()
-#define VM_WAITPFAULT vm_waitpfault()
-void vm_wait(void);
-void vm_waitpfault(void);
+void vm_wait(vm_object_t obj);
+int vm_wait_intr(vm_object_t obj);
+void vm_waitpfault(struct domainset *, int timo);
+void vm_wait_domain(int domain);
+void vm_wait_min(void);
+void vm_wait_severe(void);
 
 int vm_pageout_flush(vm_page_t *, int, int, int, int *, boolean_t *);
 void vm_pageout_oom(int shortage);

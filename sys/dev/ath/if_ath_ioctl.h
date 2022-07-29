@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/ath/if_ath_ioctl.h 291233 2015-11-24 03:42:58Z adrian $
+ * $FreeBSD$
  */
 #ifndef	__IF_ATH_IOCTL_H__
 #define	__IF_ATH_IOCTL_H__

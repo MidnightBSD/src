@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008, 2009 Silicon Graphics International Corp.
  * Copyright (c) 2014-2015 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -37,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cam/ctl/scsi_ctl.c 322423 2017-08-12 10:22:18Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -363,12 +365,6 @@ ctlfeasync(void *callback_arg, uint32_t code, struct cam_path *path, void *arg)
 		port->targ_lun_arg = softc;
 		port->fe_datamove = ctlfe_datamove;
 		port->fe_done = ctlfe_done;
-		/*
-		 * XXX KDM the path inquiry doesn't give us the maximum
-		 * number of targets supported.
-		 */
-		port->max_targets = cpi->max_target;
-		port->max_target_id = cpi->max_target;
 		port->targ_port = -1;
 
 		retval = ctl_port_register(port);
@@ -463,7 +459,7 @@ ctlferegister(struct cam_periph *periph, void *arg)
 	struct ctlfe_lun_softc *softc;
 	union ccb ccb;
 	cam_status status;
-	int i;
+	int i, acstatus;
 
 	softc = (struct ctlfe_lun_softc *)arg;
 	bus_softc = softc->parent_softc;
@@ -543,11 +539,11 @@ ctlferegister(struct cam_periph *periph, void *arg)
 		}
 	}
 
-	status = cam_periph_acquire(periph);
-	if ((status & CAM_STATUS_MASK) != CAM_REQ_CMP) {
+	acstatus = cam_periph_acquire(periph);
+	if (acstatus != 0) {
 		xpt_print(periph->path, "%s: could not acquire reference "
-			  "count, status = %#x\n", __func__, status);
-		return (status);
+			  "count, status = %#x\n", __func__, acstatus);
+		return (CAM_REQ_CMP_ERR);
 	}
 
 	if (i == 0) {
@@ -732,7 +728,7 @@ ctlfedata(struct ctlfe_lun_softc *softc, union ctl_io *io,
 		cam_sglist = cmd_info->cam_sglist;
 		*dxfer_len = 0;
 		for (i = 0; i < io->scsiio.kern_sg_entries - idx; i++) {
-			cam_sglist[i].ds_addr = (bus_addr_t)ctl_sglist[i + idx].addr + off;
+			cam_sglist[i].ds_addr = (bus_addr_t)(uintptr_t)ctl_sglist[i + idx].addr + off;
 			if (ctl_sglist[i + idx].len - off <= bus_softc->maxio - *dxfer_len) {
 				cam_sglist[i].ds_len = ctl_sglist[idx + i].len - off;
 				*dxfer_len += cam_sglist[i].ds_len;
@@ -1157,6 +1153,7 @@ ctlfedone(struct cam_periph *periph, union ccb *done_ccb)
 		} else {
 			io->io_hdr.nexus.targ_lun = atio->ccb_h.target_lun;
 		}
+		io->scsiio.priority = atio->priority;
 		io->scsiio.tag_num = atio->tag_id;
 		switch (atio->tag_action) {
 		case CAM_TAG_ACTION_NONE:
@@ -1399,8 +1396,7 @@ ctlfedone(struct cam_periph *periph, union ccb *done_ccb)
 				xpt_release_ccb(done_ccb);
 				mtx_unlock(mtx);
 
-				/* Call the backend move done callback */
-				io->scsiio.be_move_done(io);
+				ctl_datamove_done(io, false);
 			}
 			return;
 		}
@@ -1496,6 +1492,7 @@ ctlfedone(struct cam_periph *periph, union ccb *done_ccb)
 			ctlfe_free_ccb(periph, done_ccb);
 			goto out;
 		}
+		mtx_unlock(mtx);
 		if (send_ctl_io != 0) {
 			ctl_queue(io);
 		} else {
@@ -1503,7 +1500,7 @@ ctlfedone(struct cam_periph *periph, union ccb *done_ccb)
 			done_ccb->ccb_h.func_code = XPT_NOTIFY_ACKNOWLEDGE;
 			xpt_action(done_ccb);
 		}
-		break;
+		return;
 	}
 	case XPT_NOTIFY_ACKNOWLEDGE:
 		/* Queue this back down to the SIM as an immediate notify. */
@@ -1914,7 +1911,7 @@ ctlfe_datamove(union ctl_io *io)
 	struct ctlfe_lun_softc *softc;
 
 	KASSERT(io->io_hdr.io_type == CTL_IO_SCSI,
-	    ("Unexpected io_type (%d) in ctlfe_datamove", io->io_hdr.io_type));
+	    ("%s: unexpected I/O type %x", __func__, io->io_hdr.io_type));
 
 	io->scsiio.ext_data_filled = 0;
 	ccb = PRIV_CCB(io);

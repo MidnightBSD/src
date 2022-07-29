@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sbin/mount_fusefs/Makefile 319185 2017-05-30 04:17:22Z ngie $
+# $FreeBSD$
 
 .if defined(DEBUG)
 DEBUG_FLAGS+= -D_DEBUG -g

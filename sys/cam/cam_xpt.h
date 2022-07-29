@@ -2,6 +2,8 @@
  * Data structures and definitions for dealing with the 
  * Common Access Method Transport (xpt) layer.
  *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Justin T. Gibbs.
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cam/cam_xpt.h 350804 2019-08-08 22:16:19Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _CAM_CAM_XPT_H
@@ -43,6 +45,7 @@ union ccb;
 struct cam_periph;
 struct cam_ed;
 struct cam_sim;
+struct sbuf;
 
 /*
  * Definition of a CAM path.  Paths are created from bus, target, and lun ids
@@ -108,6 +111,7 @@ void			xpt_print_device(struct cam_ed *device);
 void			xpt_print(struct cam_path *path, const char *fmt, ...);
 int			xpt_path_string(struct cam_path *path, char *str,
 					size_t str_len);
+int			xpt_path_sbuf(struct cam_path *path, struct sbuf *sb);
 path_id_t		xpt_path_path_id(struct cam_path *path);
 target_id_t		xpt_path_target_id(struct cam_path *path);
 lun_id_t		xpt_path_lun_id(struct cam_path *path);
@@ -136,10 +140,13 @@ cam_status		xpt_compile_path(struct cam_path *new_path,
 					 lun_id_t lun_id);
 cam_status		xpt_clone_path(struct cam_path **new_path,
 				      struct cam_path *path);
-void			xpt_copy_path(struct cam_path *new_path,
-				      struct cam_path *path);
 
 void			xpt_release_path(struct cam_path *path);
+
+const char *		xpt_action_name(uint32_t action);
+void			xpt_pollwait(union ccb *start_ccb, uint32_t timeout);
+uint32_t		xpt_poll_setup(union ccb *start_ccb);
+void			xpt_sim_poll(struct cam_sim *sim);
 
 /*
  * Perform a path inquiry at the request priority. The bzero may be

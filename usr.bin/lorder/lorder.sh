@@ -1,5 +1,7 @@
 #!/bin/sh -
 #
+# SPDX-License-Identifier: BSD-3-Clause
+#
 # Copyright (c) 1990, 1993
 #	The Regents of the University of California.  All rights reserved.
 #
@@ -11,7 +13,7 @@
 # 2. Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in the
 #    documentation and/or other materials provided with the distribution.
-# 4. Neither the name of the University nor the names of its contributors
+# 3. Neither the name of the University nor the names of its contributors
 #    may be used to endorse or promote products derived from this software
 #    without specific prior written permission.
 #
@@ -29,7 +31,7 @@
 #
 #	@(#)lorder.sh	8.1 (Berkeley) 6/6/93
 #
-# $MidnightBSD$
+# $FreeBSD$
 #
 
 # only one argument is a special case, just output the name twice
@@ -55,14 +57,14 @@ for i in $*; do
 	echo $i $i
 done
 
-# if the line has " [TDW] " it's a globally defined symbol, put it
+# if the line has " [RTDW] " it's a globally defined symbol, put it
 # into the symbol file.
 #
 # if the line has " U " it's a globally undefined symbol, put it into
 # the reference file.
-${NM} -go $* | sed "
-	/ [TDW] / {
-		s/:.* [TDW] / /
+${NM} ${NMFLAGS} -go $* | sed "
+	/ [RTDW] / {
+		s/:.* [RTDW] / /
 		w $S
 		d
 	}
@@ -73,6 +75,7 @@ ${NM} -go $* | sed "
 	d
 "
 
+export LC_ALL=C
 # eliminate references that can be resolved by the same library.
 if [ $(expr "$*" : '.*\.a[[:>:]]') -ne 0 ]; then
 	sort -u -o $S $S

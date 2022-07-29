@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Nikolai Saoukh
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/x86/isa/orm.c 299392 2016-05-10 22:28:06Z bz $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver to take care of holes in ISA I/O memory occupied
@@ -186,3 +188,4 @@ static driver_t orm_driver = {
 static devclass_t orm_devclass;
 
 DRIVER_MODULE(orm, isa, orm_driver, orm_devclass, 0, 0);
+ISA_PNP_INFO(orm_ids);

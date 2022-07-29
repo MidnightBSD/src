@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)00.contents	8.2 (Berkeley) 4/20/94
-.\" $FreeBSD: stable/11/share/doc/usd/contents/contents.ms 282218 2015-04-29 12:57:55Z bapt $
+.\" $FreeBSD$
 .\"
 .de ND
 .KE

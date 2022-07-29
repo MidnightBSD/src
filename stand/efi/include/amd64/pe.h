@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/include/amd64/pe.h 292625 2015-12-22 20:40:34Z emaste $ */
+/* $FreeBSD$ */
 /* 
     PE32+ header file
  */

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/mips/Makefile 330123 2018-02-28 18:31:35Z kevans $
+# $FreeBSD$
 
 NO_OBJ=t
 

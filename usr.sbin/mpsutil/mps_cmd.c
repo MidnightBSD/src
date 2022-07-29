@@ -2,7 +2,6 @@
  * Copyright (c) 2015 Baptiste Daroussin <bapt@FreeBSD.org>
  *
  * Copyright (c) 2015 Netflix, Inc.
- * All rights reserved.
  * Written by: Scott Long <scottl@freebsd.org>
  *
  * Copyright (c) 2008 Yahoo!, Inc.
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__RCSID("$FreeBSD: stable/11/usr.sbin/mpsutil/mps_cmd.c 315599 2017-03-20 00:54:45Z pfg $");
+__RCSID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -48,6 +47,7 @@ __RCSID("$FreeBSD: stable/11/usr.sbin/mpsutil/mps_cmd.c 315599 2017-03-20 00:54:
 #endif
 #include <sys/sysctl.h>
 #include <sys/uio.h>
+#include <sys/endian.h>
 
 #include <err.h>
 #include <fcntl.h>
@@ -246,6 +246,8 @@ struct mprs_btdh_mapping {
         uint16_t        Reserved;
 };
 
+static void adjust_iocfacts_endianness(MPI2_IOC_FACTS_REPLY *facts);
+
 const char *
 mps_ioc_status(U16 IOCStatus)
 {
@@ -284,6 +286,29 @@ mps_map_btdh(int fd, uint16_t *devhandle, uint16_t *bus, uint16_t *target)
 }
 
 int
+mps_set_slot_status(int fd, U16 handle, U16 slot, U32 status)
+{
+	MPI2_SEP_REQUEST req;
+	MPI2_SEP_REPLY reply;
+
+	bzero(&req, sizeof(req));
+	req.Function = MPI2_FUNCTION_SCSI_ENCLOSURE_PROCESSOR;
+	req.Action = MPI2_SEP_REQ_ACTION_WRITE_STATUS;
+	req.Flags = MPI2_SEP_REQ_FLAGS_ENCLOSURE_SLOT_ADDRESS;
+	req.EnclosureHandle = handle;
+	req.Slot = slot;
+	req.SlotStatus = status;
+
+	if (mps_pass_command(fd, &req, sizeof(req), &reply, sizeof(reply),
+	    NULL, 0, NULL, 0, 30) != 0)
+		return (errno);
+
+	if (!IOC_STATUS_SUCCESS(le16toh(reply.IOCStatus)))
+		return (EIO);
+	return (0);
+}
+
+int
 mps_read_config_page_header(int fd, U8 PageType, U8 PageNumber, U32 PageAddress,
     MPI2_CONFIG_PAGE_HEADER *header, U16 *IOCStatus)
 {
@@ -301,7 +326,7 @@ mps_read_config_page_header(int fd, U8 PageType, U8 PageNumber, U32 PageAddress,
 	    NULL, 0, NULL, 0, 30))
 		return (errno);
 
-	if (!IOC_STATUS_SUCCESS(reply.IOCStatus)) {
+	if (!IOC_STATUS_SUCCESS(le16toh(reply.IOCStatus))) {
 		if (IOCStatus != NULL)
 			*IOCStatus = reply.IOCStatus;
 		return (EIO);
@@ -324,15 +349,15 @@ mps_read_ext_config_page_header(int fd, U8 ExtPageType, U8 PageNumber, U32 PageA
 	req.Header.PageType = MPI2_CONFIG_PAGETYPE_EXTENDED;
 	req.ExtPageType = ExtPageType;
 	req.Header.PageNumber = PageNumber;
-	req.PageAddress = PageAddress;
+	req.PageAddress = htole32(PageAddress);
 
 	if (mps_pass_command(fd, &req, sizeof(req), &reply, sizeof(reply),
 	    NULL, 0, NULL, 0, 30))
 		return (errno);
 
-	if (!IOC_STATUS_SUCCESS(reply.IOCStatus)) {
+	if (!IOC_STATUS_SUCCESS(le16toh(reply.IOCStatus))) {
 		if (IOCStatus != NULL)
-			*IOCStatus = reply.IOCStatus;
+			*IOCStatus = le16toh(reply.IOCStatus);
 		return (EIO);
 	}
 	if ((header == NULL) || (ExtPageLength == NULL))
@@ -363,10 +388,9 @@ mps_read_config_page(int fd, U8 PageType, U8 PageNumber, U32 PageAddress,
 	bzero(&req, sizeof(req));
 	req.Function = MPI2_FUNCTION_CONFIG;
 	req.Action = MPI2_CONFIG_ACTION_PAGE_READ_CURRENT;
-	req.PageAddress = PageAddress;
+	req.PageAddress = htole32(PageAddress);
 	req.Header = header;
-	req.Header.PageLength = reply.Header.PageLength;
-	if (reply.Header.PageLength == 0)
+	if (req.Header.PageLength == 0)
 		req.Header.PageLength = 4;
 
 	len = req.Header.PageLength * 4;
@@ -378,6 +402,7 @@ mps_read_config_page(int fd, U8 PageType, U8 PageNumber, U32 PageAddress,
 		errno = error;
 		return (NULL);
 	}
+	reply.IOCStatus = le16toh(reply.IOCStatus);
 	if (!IOC_STATUS_SUCCESS(reply.IOCStatus)) {
 		if (IOCStatus != NULL)
 			*IOCStatus = reply.IOCStatus;
@@ -415,14 +440,14 @@ mps_read_extended_config_page(int fd, U8 ExtPageType, U8 PageVersion,
 	bzero(&req, sizeof(req));
 	req.Function = MPI2_FUNCTION_CONFIG;
 	req.Action = MPI2_CONFIG_ACTION_PAGE_READ_CURRENT;
-	req.PageAddress = PageAddress;
+	req.PageAddress = htole32(PageAddress);
 	req.Header = header;
 	if (pagelen == 0)
-		pagelen = 4;
+		pagelen = htole16(4);
 	req.ExtPageLength = pagelen;
 	req.ExtPageType = ExtPageType;
 
-	len = pagelen * 4;
+	len = le16toh(pagelen) * 4;
 	buf = malloc(len);
 	if (mps_pass_command(fd, &req, sizeof(req), &reply, sizeof(reply),
 	    buf, len, NULL, 0, 30)) {
@@ -431,6 +456,7 @@ mps_read_extended_config_page(int fd, U8 ExtPageType, U8 PageVersion,
 		errno = error;
 		return (NULL);
 	}
+	reply.IOCStatus = le16toh(reply.IOCStatus);
 	if (!IOC_STATUS_SUCCESS(reply.IOCStatus)) {
 		if (IOCStatus != NULL)
 			*IOCStatus = reply.IOCStatus;
@@ -454,7 +480,7 @@ mps_firmware_send(int fd, unsigned char *fw, uint32_t len, bool bios)
 	bzero(&reply, sizeof(reply));
 	req.Function = MPI2_FUNCTION_FW_DOWNLOAD;
 	req.ImageType = bios ? MPI2_FW_DOWNLOAD_ITYPE_BIOS : MPI2_FW_DOWNLOAD_ITYPE_FW;
-	req.TotalImageSize = len;
+	req.TotalImageSize = htole32(len);
 	req.MsgFlags = MPI2_FW_DOWNLOAD_MSGFLGS_LAST_SEGMENT;
 
 	if (mps_user_command(fd, &req, sizeof(req), &reply, sizeof(reply),
@@ -485,7 +511,7 @@ mps_firmware_get(int fd, unsigned char **firmware, bool bios)
 		return (-1);
 	}
 
-	size = reply.ActualImageSize;
+	size = le32toh(reply.ActualImageSize);
 	*firmware = calloc(size, sizeof(unsigned char));
 	if (*firmware == NULL) {
 		warn("calloc");
@@ -554,6 +580,7 @@ mps_read_config_page(int fd, U8 PageType, U8 PageNumber, U32 PageAddress,
 		errno = error;
 		return (NULL);
 	}
+	req.ioc_status = le16toh(req.ioc_status);
 	if (!IOC_STATUS_SUCCESS(req.ioc_status)) {
 		if (IOCStatus != NULL)
 			*IOCStatus = req.ioc_status;
@@ -581,9 +608,10 @@ mps_read_extended_config_page(int fd, U8 ExtPageType, U8 PageVersion,
 	req.header.PageVersion = PageVersion;
 	req.header.PageNumber = PageNumber;
 	req.header.ExtPageType = ExtPageType;
-	req.page_address = PageAddress;
+	req.page_address = htole32(PageAddress);
 	if (ioctl(fd, MPSIO_READ_EXT_CFG_HEADER, &req) < 0)
 		return (NULL);
+	req.ioc_status = le16toh(req.ioc_status);
 	if (!IOC_STATUS_SUCCESS(req.ioc_status)) {
 		if (IOCStatus != NULL)
 			*IOCStatus = req.ioc_status;
@@ -603,6 +631,7 @@ mps_read_extended_config_page(int fd, U8 ExtPageType, U8 PageVersion,
 		errno = error;
 		return (NULL);
 	}
+	req.ioc_status = le16toh(req.ioc_status);
 	if (!IOC_STATUS_SUCCESS(req.ioc_status)) {
 		if (IOCStatus != NULL)
 			*IOCStatus = req.ioc_status;
@@ -653,27 +682,32 @@ mps_pass_command(int fd, void *req, uint32_t req_len, void *reply,
 {
 	struct mprs_pass_thru pass;
 
+	bzero(&pass, sizeof(pass));
 	pass.PtrRequest = (uint64_t)(uintptr_t)req;
 	pass.PtrReply = (uint64_t)(uintptr_t)reply;
-	pass.PtrData = (uint64_t)(uintptr_t)data_in;
-	pass.PtrDataOut = (uint64_t)(uintptr_t)data_out;
 	pass.RequestSize = req_len;
 	pass.ReplySize = reply_len;
-	pass.DataSize = datain_len;
-	pass.DataOutSize = dataout_len;
 	if (datain_len && dataout_len) {
+		pass.PtrData = (uint64_t)(uintptr_t)data_in;
+		pass.PtrDataOut = (uint64_t)(uintptr_t)data_out;
+		pass.DataSize = datain_len;
+		pass.DataOutSize = dataout_len;
 		if (is_mps) {
 			pass.DataDirection = MPS_PASS_THRU_DIRECTION_BOTH;
 		} else {
 			pass.DataDirection = MPR_PASS_THRU_DIRECTION_BOTH;
 		}
 	} else if (datain_len) {
+		pass.PtrData = (uint64_t)(uintptr_t)data_in;
+		pass.DataSize = datain_len;
 		if (is_mps) {
 			pass.DataDirection = MPS_PASS_THRU_DIRECTION_READ;
 		} else {
 			pass.DataDirection = MPR_PASS_THRU_DIRECTION_READ;
 		}
 	} else if (dataout_len) {
+		pass.PtrData = (uint64_t)(uintptr_t)data_out;
+		pass.DataSize = dataout_len;
 		if (is_mps) {
 			pass.DataDirection = MPS_PASS_THRU_DIRECTION_WRITE;
 		} else {
@@ -726,6 +760,35 @@ mps_get_iocfacts(int fd)
 		errno = EINVAL;
 		return (NULL);
 	}
+	adjust_iocfacts_endianness(facts);
 	return (facts);
 }
 
+static void
+adjust_iocfacts_endianness(MPI2_IOC_FACTS_REPLY *facts)
+{
+	facts->MsgVersion = le16toh(facts->MsgVersion);
+	facts->HeaderVersion = le16toh(facts->HeaderVersion);
+	facts->Reserved1 = le16toh(facts->Reserved1);
+	facts->IOCExceptions = le16toh(facts->IOCExceptions);
+	facts->IOCStatus = le16toh(facts->IOCStatus);
+	facts->IOCLogInfo = le32toh(facts->IOCLogInfo);
+	facts->RequestCredit = le16toh(facts->RequestCredit);
+	facts->ProductID = le16toh(facts->ProductID);
+	facts->IOCCapabilities = le32toh(facts->IOCCapabilities);
+	facts->IOCRequestFrameSize =
+	    le16toh(facts->IOCRequestFrameSize);
+	facts->FWVersion.Word = le32toh(facts->FWVersion.Word);
+	facts->MaxInitiators = le16toh(facts->MaxInitiators);
+	facts->MaxTargets = le16toh(facts->MaxTargets);
+	facts->MaxSasExpanders = le16toh(facts->MaxSasExpanders);
+	facts->MaxEnclosures = le16toh(facts->MaxEnclosures);
+	facts->ProtocolFlags = le16toh(facts->ProtocolFlags);
+	facts->HighPriorityCredit = le16toh(facts->HighPriorityCredit);
+	facts->MaxReplyDescriptorPostQueueDepth =
+	    le16toh(facts->MaxReplyDescriptorPostQueueDepth);
+	facts->MaxDevHandle = le16toh(facts->MaxDevHandle);
+	facts->MaxPersistentEntries =
+	    le16toh(facts->MaxPersistentEntries);
+	facts->MinDevHandle = le16toh(facts->MinDevHandle);
+}

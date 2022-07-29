@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2005 John Bicket
  * All rights reserved.
  *
@@ -33,7 +35,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_rate/sample/sample.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*
@@ -74,12 +76,11 @@ struct txschedule {
 };
 
 /*
- * for now, we track performance for three different packet
- * size buckets
+ * We track performance for eight different packet size buckets.
  */
-#define NUM_PACKET_SIZE_BINS 2
+#define NUM_PACKET_SIZE_BINS 7
 
-static const int packet_size_bins[NUM_PACKET_SIZE_BINS]  = { 250, 1600 };
+static const int packet_size_bins[NUM_PACKET_SIZE_BINS]  = { 250, 1600, 4096, 8192, 16384, 32768, 65536 };
 
 static inline int
 bin_to_size(int index)
@@ -104,7 +105,7 @@ struct sample_node {
 
 	int current_rix[NUM_PACKET_SIZE_BINS];
 	int packets_since_switch[NUM_PACKET_SIZE_BINS];
-	unsigned ticks_since_switch[NUM_PACKET_SIZE_BINS];
+	int ticks_since_switch[NUM_PACKET_SIZE_BINS];
 
 	int packets_since_sample[NUM_PACKET_SIZE_BINS];
 	unsigned sample_tt[NUM_PACKET_SIZE_BINS];
@@ -136,7 +137,7 @@ static unsigned calc_usecs_unicast_packet(struct ath_softc *sc,
 	const HAL_RATE_TABLE *rt = sc->sc_currates;
 	struct ieee80211com *ic = &sc->sc_ic;
 	int rts, cts;
-	
+
 	unsigned t_slot = 20;
 	unsigned t_difs = 50; 
 	unsigned t_sifs = 10; 
@@ -144,7 +145,7 @@ static unsigned calc_usecs_unicast_packet(struct ath_softc *sc,
 	int x = 0;
 	int cw = WIFI_CW_MIN;
 	int cix;
-	
+
 	KASSERT(rt != NULL, ("no rate table, mode %u", sc->sc_curmode));
 
 	if (rix >= rt->rateCount) {
@@ -212,9 +213,9 @@ static unsigned calc_usecs_unicast_packet(struct ath_softc *sc,
 		if (rts)		/* SIFS + CTS */
 			ctsduration += rt->info[cix].spAckDuration;
 
-		/* XXX assumes short preamble */
+		/* XXX assumes short preamble, include SIFS */
 		ctsduration += ath_hal_pkt_txtime(sc->sc_ah, rt, length, rix,
-		    is_ht40, 0);
+		    is_ht40, 0, 1);
 
 		if (cts)	/* SIFS + ACK */
 			ctsduration += rt->info[cix].spAckDuration;
@@ -223,9 +224,9 @@ static unsigned calc_usecs_unicast_packet(struct ath_softc *sc,
 	}
 	tt += t_difs;
 
-	/* XXX assumes short preamble */
+	/* XXX assumes short preamble, include SIFS */
 	tt += (long_retries+1)*ath_hal_pkt_txtime(sc->sc_ah, rt, length, rix,
-	    is_ht40, 0);
+	    is_ht40, 0, 1);
 
 	tt += (long_retries+1)*(t_sifs + rt->info[rix].spAckDuration);
 

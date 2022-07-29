@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2000 John Baldwin
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/i386/pxeldr/pxeldr.S 261517 2014-02-05 17:22:54Z jhb $
+ * $FreeBSD$
  */
 
 /*

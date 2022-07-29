@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1988, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/uipc_mbuf.c 331847 2018-03-31 17:28:30Z avos $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_param.h"
 #include "opt_mbuf_stress_test.h"
@@ -69,6 +71,13 @@ SDT_PROBE_DEFINE3_XLATE(sdt, , , m__get,
 SDT_PROBE_DEFINE4_XLATE(sdt, , , m__getcl,
     "uint32_t", "uint32_t",
     "uint16_t", "uint16_t",
+    "uint32_t", "uint32_t",
+    "struct mbuf *", "mbufinfo_t *");
+
+SDT_PROBE_DEFINE5_XLATE(sdt, , , m__getjcl,
+    "uint32_t", "uint32_t",
+    "uint16_t", "uint16_t",
+    "uint32_t", "uint32_t",
     "uint32_t", "uint32_t",
     "struct mbuf *", "mbufinfo_t *");
 
@@ -188,7 +197,17 @@ mb_dupcl(struct mbuf *n, struct mbuf *m)
 	KASSERT(m->m_flags & M_EXT, ("%s: M_EXT not set on %p", __func__, m));
 	KASSERT(!(n->m_flags & M_EXT), ("%s: M_EXT set on %p", __func__, n));
 
-	n->m_ext = m->m_ext;
+	/*
+	 * Cache access optimization.  For most kinds of external
+	 * storage we don't need full copy of m_ext, since the
+	 * holder of the 'ext_count' is responsible to carry the
+	 * free routine and its arguments.  Exclusion is EXT_EXTREF,
+	 * where 'ext_cnt' doesn't point into mbuf at all.
+	 */
+	if (m->m_ext.ext_type == EXT_EXTREF)
+		bcopy(&m->m_ext, &n->m_ext, sizeof(struct m_ext));
+	else
+		bcopy(&m->m_ext, &n->m_ext, m_ext_copylen);
 	n->m_flags |= M_EXT;
 	n->m_flags |= m->m_flags & M_RDONLY;
 
@@ -776,6 +795,29 @@ m_adj(struct mbuf *mp, int req_len)
 	}
 }
 
+void
+m_adj_decap(struct mbuf *mp, int len)
+{
+	uint8_t rsstype;
+
+	m_adj(mp, len);
+	if ((mp->m_flags & M_PKTHDR) != 0) {
+		/*
+		 * If flowid was calculated by card from the inner
+		 * headers, move flowid to the decapsulated mbuf
+		 * chain, otherwise clear.  This depends on the
+		 * internals of m_adj, which keeps pkthdr as is, in
+		 * particular not changing rsstype and flowid.
+		 */
+		rsstype = mp->m_pkthdr.rsstype;
+		if ((rsstype & M_HASHTYPE_INNER) != 0) {
+			M_HASHTYPE_SET(mp, rsstype & ~M_HASHTYPE_INNER);
+		} else {
+			M_HASHTYPE_CLEAR(mp);
+		}
+	}
+}
+
 /*
  * Rearange an mbuf chain so that len bytes are contiguous
  * and in the data area of an mbuf (so that mtod will work
@@ -1336,7 +1378,7 @@ nospace:
 /*
  * Defragment an mbuf chain, returning at most maxfrags separate
  * mbufs+clusters.  If this is not possible NULL is returned and
- * the original mbuf chain is left in it's present (potentially
+ * the original mbuf chain is left in its present (potentially
  * modified) state.  We use two techniques: collapsing consecutive
  * mbufs and replacing consecutive mbufs by a cluster.
  *
@@ -1514,7 +1556,7 @@ m_uiotombuf(struct uio *uio, int how, int len, int align, int flags)
 	 * the total data supplied by the uio.
 	 */
 	if (len > 0)
-		total = min(uio->uio_resid, len);
+		total = (uio->uio_resid < len) ? uio->uio_resid : len;
 	else
 		total = uio->uio_resid;
 
@@ -1558,7 +1600,7 @@ m_uiotombuf(struct uio *uio, int how, int len, int align, int flags)
  * Copy an mbuf chain into a uio limited by len if set.
  */
 int
-m_mbuftouio(struct uio *uio, struct mbuf *m, int len)
+m_mbuftouio(struct uio *uio, const struct mbuf *m, int len)
 {
 	int error, length, total;
 	int progress = 0;
@@ -1621,9 +1663,6 @@ m_unshare(struct mbuf *m0, int how)
 				mprev->m_len += m->m_len;
 				mprev->m_next = m->m_next;	/* unlink from chain */
 				m_free(m);			/* reclaim mbuf */
-#if 0
-				newipsecstat.ips_mbcoalesced++;
-#endif
 			} else {
 				mprev = m;
 			}
@@ -1653,9 +1692,6 @@ m_unshare(struct mbuf *m0, int how)
 			mprev->m_len += m->m_len;
 			mprev->m_next = m->m_next;	/* unlink from chain */
 			m_free(m);			/* reclaim mbuf */
-#if 0
-			newipsecstat.ips_clcoalesced++;
-#endif
 			continue;
 		}
 

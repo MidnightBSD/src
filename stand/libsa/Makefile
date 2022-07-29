@@ -1,3 +1,4 @@
+# $FreeBSD$
 # Originally from	$NetBSD: Makefile,v 1.21 1997/10/26 22:08:38 lukem Exp $
 #
 # Notes:
@@ -65,10 +66,20 @@ SRCS+=	aeabi_memcmp.S aeabi_memcpy.S aeabi_memmove.S aeabi_memset.S
 .PATH: ${SRCTOP}/contrib/llvm-project/compiler-rt/lib/builtins/
 # __clzsi2 and ctzsi2 for various builtin functions
 SRCS+=	clzsi2.c ctzsi2.c
+.if ${COMPILER_TYPE} == "gcc" && \
+    (${MACHINE_CPUARCH} == "mips" || ${MACHINE_CPUARCH} == "powerpc")
+# prevent "undefined reference to `__clzdi2'" in umoddi3.o and udivdi3.o
+SRCS+=	clzdi2.c
+.endif
 # Divide and modulus functions called by the compiler
 SRCS+=	divmoddi4.c  divmodsi4.c  divdi3.c  divsi3.c  moddi3.c  modsi3.c
 SRCS+=	udivmoddi4.c udivmodsi4.c udivdi3.c udivsi3.c umoddi3.c umodsi3.c
 SRCS+=	ashldi3.c ashrdi3.c lshrdi3.c
+
+.if ${MACHINE_CPUARCH:Namd64:Ni386} == ""
+.PATH: ${SASRC}/x86
+SRCS+= hypervisor.c
+.endif
 
 .if ${MACHINE_CPUARCH} == "powerpc"
 SRCS+=	syncicache.c
@@ -95,6 +106,11 @@ SRCS+=bzlib.c crctable.c decompress.c huffman.c randtable.c
 CFLAGS+=-DHAVE_MEMCPY -I${SRCTOP}/sys/contrib/zlib
 SRCS+=	adler32.c crc32.c
 SRCS+=	infback.c inffast.c inflate.c inftrees.c zutil.c
+
+# lz4 decompression functionality
+.PATH: ${SRCTOP}/sys/cddl/contrib/opensolaris/common/lz4
+SRCS+=	lz4.c
+CFLAGS.lz4.c+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/common/lz4
 
 # Create a subset of includes that are safe, as well as adjusting those that aren't
 # The lists may drive people nuts, but they are explicitly opt-in
@@ -126,6 +142,20 @@ CLEANFILES+= ${SAFE_INCS} ${STAND_H_INC} ${OTHER_INC}
 SRCS+=	closeall.c dev.c ioctl.c nullfs.c stat.c \
 	fstat.c close.c lseek.c open.c read.c write.c readdir.c
 
+# SMBios routines
+SRCS+=	smbios.c
+.if !defined(BOOT_HIDE_SERIAL_NUMBERS)
+# Export serial numbers, UUID, and asset tag from loader.
+CFLAGS.smbios.c+= -DSMBIOS_SERIAL_NUMBERS
+.if defined(BOOT_LITTLE_ENDIAN_UUID)
+# Use little-endian UUID format as defined in SMBIOS 2.6.
+CFLAGS.smbios.c+= -DSMBIOS_LITTLE_ENDIAN_UUID
+.elif defined(BOOT_NETWORK_ENDIAN_UUID)
+# Use network-endian UUID format for backward compatibility.
+CFLAGS.smbios.c+= -DSMBIOS_NETWORK_ENDIAN_UUID
+.endif
+.endif
+
 # network routines
 SRCS+=	arp.c ether.c ip.c inet_ntoa.c in_cksum.c net.c udp.c netif.c rpc.c
 
@@ -141,15 +171,27 @@ SRCS+=	pkgfs.c
 SRCS+=	nandfs.c
 .endif
 
+# Time support
+SRCS+=	time.c
+
+# kernel ufs support
+.PATH: ${SRCTOP}/sys/ufs/ffs
+SRCS+=ffs_subr.c ffs_tables.c
+
 CFLAGS.bzipfs.c+= -I${SRCTOP}/contrib/bzip2
 
-# explicit_bzero
+# explicit_bzero and calculate_crc32c
 .PATH: ${SYSDIR}/libkern
-SRCS+=  explicit_bzero.c
+SRCS+=  explicit_bzero.c crc32_libkern.c
 
 # Maybe GELI
 .if ${MK_LOADER_GELI} == "yes"
 .include "${SASRC}/geli/Makefile.inc"
+.endif
+
+.if ${MK_LOADER_VERIEXEC} == "yes" && ${MK_BEARSSL} == "yes"
+.include "${SRCTOP}/lib/libbearssl/Makefile.libsa.inc"
+.include "${SRCTOP}/lib/libsecureboot/Makefile.libsa.inc"
 .endif
 
 # Maybe ZFS

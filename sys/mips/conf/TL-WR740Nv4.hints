@@ -1,7 +1,7 @@
 #
 # This file adds to the values in AR933X_BASE.hints
 #
-# $FreeBSD: stable/11/sys/mips/conf/TL-WR740Nv4.hints 289745 2015-10-22 08:08:06Z adrian $
+# $FreeBSD$
 
 # mdiobus on arge1
 hint.argemdio.0.at="nexus0"

@@ -6,6 +6,8 @@
 #define	STG_IO_CONTROL_FLAGS	(STG_FIFO_INTERRUPTS | STG_WAIT_FOR_SELECT)
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * [NetBSD for NEC PC-98 series]
  *  Copyright (c) 1996, 1997, 1998, 1999, 2000, 2001
  *	NetBSD/pc98 porting staff. All rights reserved.
@@ -39,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/stg/tmc18c30.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -421,6 +423,7 @@ stgattachsubr(sc)
 
 	(void) scsi_low_attach(slp, 0, STG_NTARGETS, STG_NLUNS,
 				sizeof(struct stg_targ_info), 0);
+	gone_in(12, "stg(4) driver");
 }
 
 /**************************************************************

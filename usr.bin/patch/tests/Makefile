@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/patch/tests/Makefile 351836 2019-09-05 03:16:14Z kevans $
+# $FreeBSD$
 
 PACKAGE=	tests
 

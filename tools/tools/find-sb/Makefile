@@ -1,5 +1,7 @@
-# $FreeBSD: src/tools/tools/find-sb/Makefile,v 1.2 2004/12/21 08:47:27 ru Exp $
+# $FreeBSD$
+
 PROG=	find-sb
-NO_MAN=
+MAN=
+WARNS?=	6
 
 .include <bsd.prog.mk>

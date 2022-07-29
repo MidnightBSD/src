@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Maxime Henrion <mux@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/kenv.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_KENV_H_
@@ -33,10 +34,12 @@
 /*
  * Constants for the kenv(2) syscall
  */
-#define KENV_GET	0
-#define KENV_SET	1
-#define KENV_UNSET	2
-#define KENV_DUMP	3
+#define KENV_GET		0
+#define KENV_SET		1
+#define KENV_UNSET		2
+#define KENV_DUMP		3
+#define KENV_DUMP_LOADER	4
+#define KENV_DUMP_STATIC	5
 
 #define KENV_MNAMELEN	128	/* Maximum name length (for the syscall) */
 #define KENV_MVALLEN	128	/* Maximum value length (for the syscall) */

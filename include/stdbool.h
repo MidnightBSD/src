@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Jeroen Ruigrok van der Werven <asmodai@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/include/stdbool.h 228878 2011-12-25 20:15:41Z ed $
+ * $FreeBSD$
  */
 
 #ifndef __bool_true_false_are_defined

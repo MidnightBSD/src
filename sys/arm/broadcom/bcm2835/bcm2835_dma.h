@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Daisuke Aoyama <aoyama@peach.ne.jp>
  * Copyright (c) 2013 Oleksandr Tymoshenko <gonzo@bluezbox.com>
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_dma.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_BCM2835_DMA_H_
@@ -40,6 +42,10 @@
 
 /* Peripheral DREQ Signals (4.2.1.3) */
 #define	BCM_DMA_DREQ_NONE	0
+/*
+ * XXX This doesn't seem to work for the Raspberry Pi 4, but the peripheral
+ * documentation still lists it at 11.
+ */
 #define	BCM_DMA_DREQ_EMMC	11
 #define	BCM_DMA_DREQ_SDHOST	13
 

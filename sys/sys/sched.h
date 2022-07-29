@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1996, 1997
  *      HD Associates, Inc.  All rights reserved.
  *
@@ -57,7 +58,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/sched.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _SCHED_H_
@@ -102,13 +103,32 @@ void	sched_switch(struct thread *td, struct thread *newtd, int flags);
 void	sched_throw(struct thread *td);
 void	sched_unlend_prio(struct thread *td, u_char prio);
 void	sched_user_prio(struct thread *td, u_char prio);
-void	sched_userret(struct thread *td);
+void	sched_userret_slowpath(struct thread *td);
 void	sched_wakeup(struct thread *td);
 #ifdef	RACCT
 #ifdef	SCHED_4BSD
 fixpt_t	sched_pctcpu_delta(struct thread *td);
 #endif
 #endif
+
+static inline void
+sched_userret(struct thread *td)
+{
+
+	/*
+	 * XXX we cheat slightly on the locking here to avoid locking in
+	 * the usual case.  Setting td_priority here is essentially an
+	 * incomplete workaround for not setting it properly elsewhere.
+	 * Now that some interrupt handlers are threads, not setting it
+	 * properly elsewhere can clobber it in the window between setting
+	 * it here and returning to user mode, so don't waste time setting
+	 * it perfectly here.
+	 */
+	KASSERT((td->td_flags & TDF_BORROWING) == 0,
+	    ("thread with borrowed priority returning to userland"));
+	if (__predict_false(td->td_priority != td->td_user_pri))
+		sched_userret_slowpath(td);
+}
 
 /*
  * Threads are moved on and off of run queues

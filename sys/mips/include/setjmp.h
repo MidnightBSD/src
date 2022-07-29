@@ -1,6 +1,8 @@
 /* From: NetBSD: setjmp.h,v 1.2 1997/04/06 08:47:41 cgd Exp */
 
 /*-
+ * SPDX-License-Identifier: MIT-CMU
+ *
  * Copyright (c) 1994, 1995 Carnegie-Mellon University.
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  * rights to redistribute these changes.
  *
  *	JNPR: setjmp.h,v 1.2 2006/12/02 09:53:41 katta
- * $FreeBSD: stable/11/sys/mips/include/setjmp.h 209500 2010-06-24 08:08:43Z jchandra $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_SETJMP_H_

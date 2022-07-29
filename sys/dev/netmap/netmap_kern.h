@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2011-2014 Matteo Landi, Luigi Rizzo
  * Copyright (C) 2013-2016 Universita` di Pisa
  * All rights reserved.
@@ -26,7 +28,7 @@
  */
 
 /*
- * $FreeBSD: stable/11/sys/dev/netmap/netmap_kern.h 356805 2020-01-16 20:57:29Z vmaffione $
+ * $FreeBSD$
  *
  * The header contains the definitions of constants and function
  * prototypes used only in kernelspace.
@@ -78,7 +80,7 @@
 #define WITH_NMNULL
 #endif
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 #include <sys/selinfo.h>
 
 #define likely(x)	__builtin_expect((long)!!(x), 1L)
@@ -242,7 +244,7 @@ typedef struct hrtimer{
 #define	NMG_UNLOCK()		NM_MTX_UNLOCK(netmap_global_lock)
 #define	NMG_LOCK_ASSERT()	NM_MTX_ASSERT(netmap_global_lock)
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 #define nm_prerr_int	printf
 #define nm_prinf_int	printf
 #elif defined (_WIN32)
@@ -644,7 +646,7 @@ tail->|                 |<-hwtail    |                 |<-hwlease
  */
 
 struct lut_entry;
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #define plut_entry lut_entry
 #endif
 
@@ -1351,6 +1353,24 @@ nm_native_on(struct netmap_adapter *na)
 	return nm_netmap_on(na) && (na->na_flags & NAF_NATIVE);
 }
 
+static inline struct netmap_kring *
+netmap_kring_on(struct netmap_adapter *na, u_int q, enum txrx t)
+{
+	struct netmap_kring *kring = NULL;
+
+	if (!nm_native_on(na))
+		return NULL;
+
+	if (t == NR_RX && q < na->num_rx_rings)
+		kring = na->rx_rings[q];
+	else if (t == NR_TX && q < na->num_tx_rings)
+		kring = na->tx_rings[q];
+	else
+		return NULL;
+
+	return (kring->nr_mode == NKR_NETMAP_ON) ? kring : NULL;
+}
+
 static inline int
 nm_iszombie(struct netmap_adapter *na)
 {
@@ -1429,8 +1449,7 @@ int netmap_attach_common(struct netmap_adapter *);
 /* fill priv->np_[tr]xq{first,last} using the ringid and flags information
  * coming from a struct nmreq_register
  */
-int netmap_interp_ringid(struct netmap_priv_d *priv, uint32_t nr_mode,
-			uint16_t nr_ringid, uint64_t nr_flags);
+int netmap_interp_ringid(struct netmap_priv_d *priv, struct nmreq_header *hdr);
 /* update the ring parameters (number and size of tx and rx rings).
  * It calls the nm_config callback, if available.
  */
@@ -1465,7 +1484,7 @@ void netmap_enable_all_rings(struct ifnet *);
 
 int netmap_buf_size_validate(const struct netmap_adapter *na, unsigned mtu);
 int netmap_do_regif(struct netmap_priv_d *priv, struct netmap_adapter *na,
-		uint32_t nr_mode, uint16_t nr_ringid, uint64_t nr_flags);
+		struct nmreq_header *);
 void netmap_do_unregif(struct netmap_priv_d *priv);
 
 u_int nm_bound_var(u_int *v, u_int dflt, u_int lo, u_int hi, const char *msg);
@@ -1484,6 +1503,8 @@ int netmap_get_vale_na(struct nmreq_header *hdr, struct netmap_adapter **na,
 		struct netmap_mem_d *nmd, int create);
 void *netmap_vale_create(const char *bdg_name, int *return_status);
 int netmap_vale_destroy(const char *bdg_name, void *auth_token);
+
+extern unsigned int vale_max_bridges;
 
 #else /* !WITH_VALE */
 #define netmap_bdg_learning(_1, _2, _3, _4)	0
@@ -1532,7 +1553,7 @@ extern struct nm_bridge *nm_bridges;
 #define netmap_bns_get()
 #define netmap_bns_put(_1)
 #define netmap_bns_getbridges(b, n) \
-	do { *b = nm_bridges; *n = NM_BRIDGES; } while (0)
+	do { *b = nm_bridges; *n = vale_max_bridges; } while (0)
 #endif
 
 /* Various prototypes */
@@ -1589,7 +1610,6 @@ int netmap_adapter_put(struct netmap_adapter *na);
 #define NETMAP_BUF_BASE(_na)	((_na)->na_lut.lut[0].vaddr)
 #define NETMAP_BUF_SIZE(_na)	((_na)->na_lut.objsize)
 extern int netmap_no_pendintr;
-extern int netmap_mitigate;
 extern int netmap_verbose;
 #ifdef CONFIG_NETMAP_DEBUG
 extern int netmap_debug;		/* for debugging */
@@ -1658,7 +1678,7 @@ extern int netmap_generic_txqdisc;
 
 #define NM_IS_NATIVE(ifp)	(NM_NA_VALID(ifp) && NA(ifp)->nm_dtor == netmap_hw_dtor)
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 
 /* Assigns the device IOMMU domain to an allocator.
  * Returns -ENOMEM in case the domain is different */
@@ -1849,7 +1869,7 @@ netmap_idx_k2n(struct netmap_kring *kr, int idx)
 
 
 /* Entries of the look-up table. */
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 struct lut_entry {
 	void *vaddr;		/* virtual address. */
 	vm_paddr_t paddr;	/* physical address. */
@@ -2273,7 +2293,7 @@ ptnet_sync_tail(struct nm_csb_ktoa *ktoa, struct netmap_kring *kring)
 }
 #endif /* WITH_PTNETMAP */
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 /*
  * FreeBSD mbuf allocator/deallocator in emulation mode:
  */
@@ -2384,10 +2404,9 @@ nm_os_get_mbuf(struct ifnet *ifp, int len)
 }
 
 #endif /* __FreeBSD_version >= 1100000 */
-#endif /* __MidnightBSD__ */
+#endif /* __FreeBSD__ */
 
-struct nmreq_option * nmreq_findoption(struct nmreq_option *, uint16_t);
-int nmreq_checkduplicate(struct nmreq_option *);
+struct nmreq_option * nmreq_getoption(struct nmreq_header *, uint16_t);
 
 int netmap_init_bridges(void);
 void netmap_uninit_bridges(void);

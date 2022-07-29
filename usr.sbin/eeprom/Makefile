@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/eeprom/Makefile 319119 2017-05-29 10:15:41Z ngie $
+# $FreeBSD$
 
 .PATH: ${.CURDIR:H}/ofwdump
 

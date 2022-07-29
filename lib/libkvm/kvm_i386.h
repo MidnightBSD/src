@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2015 John H. Baldwin <jhb@FreeBSD.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libkvm/kvm_i386.h 293979 2016-01-14 15:51:13Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef __KVM_I386_H__
@@ -53,8 +52,11 @@ typedef	uint64_t	i386_pde_pae_t;
 #define	I386_NBPDR_PAE		(1 << I386_PDRSHIFT_PAE)
 #define	I386_PAGE_PS_MASK_PAE	(I386_NBPDR_PAE - 1)
 
+/* Source: i386/include/pmap.h */
 #define	I386_PG_V		0x001
+#define	I386_PG_RW		0x002
 #define	I386_PG_PS		0x080
+#define	I386_PG_NX		(1ULL << 63)
 #define	I386_PG_FRAME_PAE	(0x000ffffffffff000ull)
 #define	I386_PG_PS_FRAME_PAE	(0x000fffffffe00000ull)
 #define	I386_PG_FRAME		(0xfffff000)

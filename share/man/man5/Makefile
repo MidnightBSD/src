@@ -27,6 +27,7 @@ MAN=	acct.5 \
 	forward.5 \
 	fs.5 \
 	fstab.5 \
+	fusefs.5 \
 	group.5 \
 	hosts.5 \
 	hosts.equiv.5 \
@@ -40,12 +41,14 @@ MAN=	acct.5 \
 	make.conf.5 \
 	moduli.5 \
 	motd.5 \
+	mount.conf.5 \
 	mqueuefs.5 \
 	msdosfs.5 \
 	networks.5 \
 	nsmb.conf.5 \
 	nsswitch.conf.5 \
 	nullfs.5 \
+	os-release.5 \
 	passwd.5 \
 	pbm.5 \
 	periodic.conf.5 \
@@ -62,13 +65,16 @@ MAN=	acct.5 \
 	resolver.5 \
 	services.5 \
 	shells.5 \
+	smbfs.5 \
 	src.conf.5 \
 	stab.5 \
 	style.Makefile.5 \
 	sysctl.conf.5 \
-	tmpfs.5
+	tmpfs.5 \
+	unionfs.5
 
 MLINKS=	dir.5 dirent.5
+MLINKS+=ext2fs.5 ext4fs.5
 MLINKS+=fs.5 inode.5
 MLINKS+=hosts.equiv.5 rhosts.5
 MLINKS+=msdosfs.5 msdos.5

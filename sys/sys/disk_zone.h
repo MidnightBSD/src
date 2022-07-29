@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2015 Spectra Logic Corporation
  * All rights reserved.
  *
@@ -30,7 +31,7 @@
  *
  * Authors: Ken Merry           (Spectra Logic Corporation)
  *
- * $FreeBSD: stable/11/sys/sys/disk_zone.h 300207 2016-05-19 14:08:36Z ken $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_DISK_ZONE_H_

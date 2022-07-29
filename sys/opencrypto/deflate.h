@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/11/sys/opencrypto/deflate.h 281855 2015-04-22 14:38:58Z rodrigc $	*/
+/*	$FreeBSD$	*/
 /* $OpenBSD: deflate.h,v 1.3 2002/03/14 01:26:51 millert Exp $ */
 
 /*-
@@ -36,16 +36,12 @@
 #ifndef _CRYPTO_DEFLATE_H_
 #define _CRYPTO_DEFLATE_H_
 
-#include <sys/zlib.h>
-
 #define Z_METHOD	8
 #define Z_MEMLEVEL	8
 #define MINCOMP		2	/* won't be used, but must be defined */
 #define ZBUF		10
 
 u_int32_t deflate_global(u_int8_t *, u_int32_t, int, u_int8_t **);
-void *z_alloc(void *, u_int, u_int);
-void z_free(void *, void *);
 
 /*
  * We are going to use a combined allocation to hold the metadata

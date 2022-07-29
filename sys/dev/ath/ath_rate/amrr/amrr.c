@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2004 INRIA
  * Copyright (c) 2002-2005 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -37,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ath/ath_rate/amrr/amrr.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * AMRR rate control. See:
@@ -62,7 +64,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/ath/ath_rate/amrr/amrr.c 331722 2018-03-29
 #include <sys/bus.h>
 
 #include <sys/socket.h>
- 
+
 #include <net/if.h>
 #include <net/if_media.h>
 #include <net/if_arp.h>
@@ -102,8 +104,9 @@ ath_rate_node_cleanup(struct ath_softc *sc, struct ath_node *an)
 
 void
 ath_rate_findrate(struct ath_softc *sc, struct ath_node *an,
-	int shortPreamble, size_t frameLen,
-	u_int8_t *rix, int *try0, u_int8_t *txrate)
+	int shortPreamble, size_t frameLen, int tid, int is_aggr,
+	u_int8_t *rix, int *try0, u_int8_t *txrate, int *maxdur,
+	int *maxpktlen)
 {
 	struct amrr_node *amn = ATH_NODE_AMRR(an);
 
@@ -113,6 +116,8 @@ ath_rate_findrate(struct ath_softc *sc, struct ath_node *an,
 		*txrate = amn->amn_tx_rate0sp;
 	else
 		*txrate = amn->amn_tx_rate0;
+	maxdur = -1;
+	maxpktlen = -1;
 }
 
 /*
@@ -123,7 +128,7 @@ ath_rate_findrate(struct ath_softc *sc, struct ath_node *an,
  */
 void
 ath_rate_getxtxrates(struct ath_softc *sc, struct ath_node *an,
-    uint8_t rix0, struct ath_rc_series *rc)
+    uint8_t rix0, int is_aggr, struct ath_rc_series *rc)
 {
 	struct amrr_node *amn = ATH_NODE_AMRR(an);
 
@@ -139,7 +144,6 @@ ath_rate_getxtxrates(struct ath_softc *sc, struct ath_node *an,
 	rc[2].tries = amn->amn_tx_try2;
 	rc[3].tries = amn->amn_tx_try3;
 }
-
 
 void
 ath_rate_setupxtxdesc(struct ath_softc *sc, struct ath_node *an,
@@ -157,7 +161,7 @@ ath_rate_setupxtxdesc(struct ath_softc *sc, struct ath_node *an,
 void
 ath_rate_tx_complete(struct ath_softc *sc, struct ath_node *an,
 	const struct ath_rc_series *rc, const struct ath_tx_status *ts,
-	int frame_size, int nframes, int nbad)
+	int frame_size, int rc_framesize, int nframes, int nbad)
 {
 	struct amrr_node *amn = ATH_NODE_AMRR(an);
 	int sr = ts->ts_shortretry;
@@ -194,6 +198,11 @@ ath_rate_newassoc(struct ath_softc *sc, struct ath_node *an, int isnew)
 		ath_rate_ctl_start(sc, &an->an_node);
 }
 
+void
+ath_rate_update_rx_rssi(struct ath_softc *sc, struct ath_node *an, int rssi)
+{
+}
+
 static void 
 node_reset(struct amrr_node *amn)
 {
@@ -206,7 +215,6 @@ node_reset(struct amrr_node *amn)
   	amn->amn_recovery = 0;
   	amn->amn_success_threshold = ath_rate_min_success_threshold;
 }
-
 
 /**
  * The code below assumes that we are dealing with hardware multi rate retry
@@ -406,7 +414,6 @@ ath_rate_ctl(void *arg, struct ieee80211_node *ni)
    		} else {
 			amn->amn_recovery = 0;
 		}
-
    	}
 	if (is_enough (amn) || rix != amn->amn_rix) {
 		/* reset counters. */

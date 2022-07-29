@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/pr/tests/Makefile 316501 2017-04-04 20:03:57Z asomers $
+# $FreeBSD$
 
 PACKAGE=	tests
 

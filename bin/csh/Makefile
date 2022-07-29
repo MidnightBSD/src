@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/csh/Makefile 337477 2018-08-08 18:05:14Z bdrewery $
+# $FreeBSD$
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
 #
 # C Shell with process control; VM/UNIX VAX Makefile
@@ -8,6 +8,12 @@
 
 .include <src.opts.mk>
 
+CONFGROUPS=	ETC ROOT
+ETC=	csh.cshrc csh.login csh.logout
+ROOT=	dot.cshrc dot.login
+ROOTDIR=	/root
+ROOTNAME_dot.cshrc=	.cshrc
+ROOTNAME_dot.login=	.login
 PACKAGE=runtime
 TCSHDIR= ${SRCTOP}/contrib/tcsh
 .PATH: ${TCSHDIR}
@@ -147,5 +153,11 @@ tc.const.h: tc.const.c sh.char.h config.h config_f.h sh.types.h sh.err.h ${BUILD
 	    sed -e 's/Char \([a-zA-Z0-9_]*\)\(.*\)/extern Char \1[];/' | \
 	    sort >> ${.TARGET}
 	@echo '#endif /* _h_tc_const */' >> ${.TARGET}
+
+beforeinstallconfig:
+	rm -f ${DESTDIR}/.cshrc
+
+afterinstallconfig:
+	${INSTALL_LINK} ${TAG_ARGS} ${DESTDIR}/root/.cshrc ${DESTDIR}/.cshrc
 
 .include <bsd.prog.mk>

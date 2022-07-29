@@ -1,7 +1,8 @@
-# $FreeBSD: stable/11/share/vt/fonts/Makefile 338917 2018-09-24 18:41:32Z emaste $
+# $FreeBSD$
 
 FONTS=	gallant.fnt \
 	terminus-b32.fnt \
+	tom-thumb.fnt \
 	vgarom-8x8.fnt \
 	vgarom-8x14.fnt \
 	vgarom-8x16.fnt \

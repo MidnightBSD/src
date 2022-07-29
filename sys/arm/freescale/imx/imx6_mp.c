@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 Juergen Weiss <weiss@uni-mainz.de>
  * Copyright (c) 2014 Ian Lepore <ian@freebsd.org>
  * All rights reserved.
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/imx/imx6_mp.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -41,6 +43,10 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/freescale/imx/imx6_mp.c 331722 2018-03-29 
 #include <machine/smp.h>
 #include <machine/fdt.h>
 #include <machine/intr.h>
+#include <machine/platform.h>
+#include <machine/platformvar.h>
+
+#include <arm/freescale/imx/imx6_machdep.h>
 
 #define	SCU_PHYSBASE			0x00a00000
 #define	SCU_SIZE			0x00001000
@@ -67,7 +73,7 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/freescale/imx/imx6_mp.c 331722 2018-03-29 
 #define	SRC_GPR1_C1ARG			0x24	/* Register for Core 1 entry arg */
 
 void
-platform_mp_setmaxid(void)
+imx6_mp_setmaxid(platform_t plat)
 {
 	bus_space_handle_t scu;
 	int hwcpu, ncpu;
@@ -92,8 +98,8 @@ platform_mp_setmaxid(void)
 	mp_maxid = ncpu - 1;
 }
 
-void    
-platform_mp_start_ap(void)
+void
+imx6_mp_start_ap(platform_t plat)
 {
 	bus_space_handle_t scu;
 	bus_space_handle_t src;

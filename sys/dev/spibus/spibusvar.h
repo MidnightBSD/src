@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/spibus/spibusvar.h 332942 2018-04-24 17:00:08Z ian $
+ * $FreeBSD$
  */
 
 #define SPIBUS_IVAR(d) (struct spibus_ivar *) device_get_ivars(d)

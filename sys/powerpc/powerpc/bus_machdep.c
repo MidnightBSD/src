@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Semihalf, Rafal Jaworowski <raj@semihalf.com>
  * Copyright (c) 1996, 1997, 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/powerpc/powerpc/bus_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #define	KTR_BE_IO	0
 #define	KTR_LE_IO	0
@@ -41,6 +43,7 @@ __FBSDID("$FreeBSD: stable/11/sys/powerpc/powerpc/bus_machdep.c 331722 2018-03-2
 #include <sys/ktr.h>
 #include <vm/vm.h>
 #include <vm/pmap.h>
+#include <sys/endian.h>
 
 #include <machine/bus.h>
 #include <machine/pio.h>
@@ -105,13 +108,16 @@ bs_gen_map(bus_addr_t addr, bus_size_t size, int flags,
 void
 bs_remap_earlyboot(void)
 {
+	vm_paddr_t pa, spa;
+	vm_offset_t va;
 	int i;
-	vm_offset_t pa, spa, va;
 	vm_memattr_t ma;
 
 	for (i = 0; i < earlyboot_map_idx; i++) {
 		spa = earlyboot_mappings[i].addr;
-		if (spa == earlyboot_mappings[i].virt &&
+
+		if (hw_direct_map &&
+		   PHYS_TO_DMAP(spa) == earlyboot_mappings[i].virt &&
 		   pmap_dev_direct_mapped(spa, earlyboot_mappings[i].size) == 0)
 			continue;
 
@@ -330,6 +336,7 @@ bs_be_ws_8(bus_space_handle_t bsh, bus_size_t ofs, uint64_t val)
 	addr = __ppc_ba(bsh, ofs);
 	*addr = val;
 	powerpc_iomb();
+	CTR4(KTR_BE_IO, "%s(bsh=%#x, ofs=%#x, val=%#x)", __func__, bsh, ofs, val);
 }
 
 static void
@@ -529,7 +536,14 @@ bs_le_rs_4(bus_space_handle_t bsh, bus_size_t ofs)
 static uint64_t
 bs_le_rs_8(bus_space_handle_t bsh, bus_size_t ofs)
 {
-	TODO;
+	volatile uint64_t *addr;
+	uint64_t res;
+
+	addr = __ppc_ba(bsh, ofs);
+	res = le64toh(*addr);
+	powerpc_iomb();
+	CTR4(KTR_LE_IO, "%s(bsh=%#x, ofs=%#x) = %#x", __func__, bsh, ofs, res);
+	return (res);
 }
 
 static void
@@ -628,7 +642,12 @@ bs_le_ws_4(bus_space_handle_t bsh, bus_size_t ofs, uint32_t val)
 static void
 bs_le_ws_8(bus_space_handle_t bsh, bus_size_t ofs, uint64_t val)
 {
-	TODO;
+	volatile uint64_t *addr;
+
+	addr = __ppc_ba(bsh, ofs);
+	*addr = htole64(val);
+	powerpc_iomb();
+	CTR4(KTR_LE_IO, "%s(bsh=%#x, ofs=%#x, val=%#x)", __func__, bsh, ofs, val);
 }
 
 static void

@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/tools/regression/geom/Ref/disk.beast.da0.xml 113291 2003-04-09 12:40:12Z phk $
+$FreeBSD$
 /dev/md34	512	5120	10
 /dev/md34a	512	4064280576	7938048
 /dev/md34b	512	270925824	529152

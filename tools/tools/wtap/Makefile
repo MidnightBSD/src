@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tools/tools/wtap/Makefile 230445 2012-01-22 04:51:00Z adrian $
+# $FreeBSD$
 
 SUBDIR=	wtap vis_map
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/tests/gen/dlopen_empty_test.c 295059 2016-01-30 04:16:05Z sobomax $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stat.h>
 #include <dlfcn.h>

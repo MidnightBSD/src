@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 Stuart Walsh<stu@ipng.org.uk>
  * and Duncan Barclay<dmlb@dmlb.org>
  *
@@ -26,7 +28,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bfe/if_bfe.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -155,6 +157,8 @@ static driver_t bfe_driver = {
 static devclass_t bfe_devclass;
 
 DRIVER_MODULE(bfe, pci, bfe_driver, bfe_devclass, 0, 0);
+MODULE_PNP_INFO("U16:vendor;U16:device;D:#", pci, bfe, bfe_devs,
+    nitems(bfe_devs) - 1);
 DRIVER_MODULE(miibus, bfe, miibus_driver, miibus_devclass, 0, 0);
 
 /*
@@ -793,6 +797,8 @@ bfe_list_newbuf(struct bfe_softc *sc, int c)
 	int nsegs;
 
 	m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
+	if (m == NULL)
+		return (ENOBUFS);
 	m->m_len = m->m_pkthdr.len = MCLBYTES;
 
 	if (bus_dmamap_load_mbuf_sg(sc->bfe_rxmbuf_tag, sc->bfe_rx_sparemap,
@@ -1105,7 +1111,7 @@ bfe_set_rx_mode(struct bfe_softc *sc)
 	else {
 		val &= ~BFE_RXCONF_ALLMULTI;
 		if_maddr_rlock(ifp);
-		TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 			if (ifma->ifma_addr->sa_family != AF_LINK)
 				continue;
 			bfe_cam_write(sc,

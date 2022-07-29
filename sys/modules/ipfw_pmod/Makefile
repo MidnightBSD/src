@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/ipfw_pmod/Makefile 316435 2017-04-03 03:07:48Z ae $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/netpfil/ipfw/pmod
 

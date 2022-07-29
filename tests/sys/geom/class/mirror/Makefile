@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tests/sys/geom/class/mirror/Makefile 328334 2018-01-24 15:16:17Z markj $
+# $FreeBSD$
 
 PACKAGE=	tests
 

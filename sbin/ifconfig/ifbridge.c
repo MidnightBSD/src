@@ -37,7 +37,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/11/sbin/ifconfig/ifbridge.c 330469 2018-03-05 08:33:29Z eadler $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -63,36 +63,9 @@ static const char rcsid[] =
 
 #include "ifconfig.h"
 
-#define PV2ID(pv, epri, eaddr)  do {		\
-		epri     = pv >> 48;		\
-		eaddr[0] = pv >> 40;		\
-		eaddr[1] = pv >> 32;		\
-		eaddr[2] = pv >> 24;		\
-		eaddr[3] = pv >> 16;		\
-		eaddr[4] = pv >> 8;		\
-		eaddr[5] = pv >> 0;		\
-} while (0)
-
-static const char *stpstates[] = {
-	"disabled",
-	"listening",
-	"learning",
-	"forwarding",
-	"blocking",
-	"discarding"
-};
-static const char *stpproto[] = {
-	"stp",
-	"-",
-	"rstp"
-};
-static const char *stproles[] = {
-	"disabled",
-	"root",
-	"designated",
-	"alternate",
-	"backup"
-};
+static const char *stpstates[] = { STP_STATES };
+static const char *stpproto[] = { STP_PROTOS };
+static const char *stproles[] = { STP_ROLES };
 
 static int
 get_val(const char *cp, u_long *valp)

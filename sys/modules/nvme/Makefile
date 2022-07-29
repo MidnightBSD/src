@@ -1,15 +1,18 @@
-# $FreeBSD: stable/11/sys/modules/nvme/Makefile 329095 2018-02-10 00:39:34Z mav $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/dev/nvme
 
 KMOD = nvme
 
 SRCS =	nvme.c			\
+	nvme_ahci.c		\
 	nvme_ctrlr.c		\
 	nvme_ctrlr_cmd.c	\
 	nvme_ns.c		\
 	nvme_ns_cmd.c		\
+	nvme_pci.c		\
 	nvme_qpair.c		\
+	nvme_sim.c		\
 	nvme_sysctl.c		\
 	nvme_test.c		\
 	nvme_util.c		\

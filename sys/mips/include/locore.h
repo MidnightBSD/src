@@ -12,7 +12,7 @@
  * software for any purpose.  It is provided "as is" without
  * express or implied warranty.
  *
- * $FreeBSD: stable/11/sys/mips/include/locore.h 232615 2012-03-06 19:01:32Z jmallett $
+ * $FreeBSD$
  */
 
 /*
@@ -59,6 +59,9 @@
 #define	MIPS_PRID_CID_LEXRA		0x0b	/* Lexra */
 #define	MIPS_PRID_CID_RMI		0x0c	/* RMI */
 #define	MIPS_PRID_CID_CAVIUM		0x0d	/* Cavium */
+#define	MIPS_PRID_CID_INGENIC		0xe1	/* Ingenic */
+#define	MIPS_PRID_CID_INGENIC2		0xd1	/* Ingenic */
+
 #define	MIPS_PRID_COPTS(x)	(((x) >> 24) & 0x00ff)	/* Company Options */
 
 #endif	/* _MIPS_LOCORE_H */

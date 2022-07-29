@@ -1,4 +1,6 @@
 /*- 
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 The FreeBSD Foundation 
  * All rights reserved. 
  * 
@@ -27,8 +29,8 @@
  * SUCH DAMAGE. 
  */ 
 #include <sys/cdefs.h>
-#ifdef __MidnightBSD__
-__FBSDID("$FreeBSD: stable/11/sys/net80211/ieee80211_mesh.c 344969 2019-03-09 12:54:10Z avos $");
+#ifdef __FreeBSD__
+__FBSDID("$FreeBSD$");
 #endif
 
 /*
@@ -1580,7 +1582,7 @@ mesh_input(struct ieee80211_node *ni, struct mbuf *m,
 			if (IEEE80211_QOS_HAS_SEQ(wh) &&
 			    TID_TO_WME_AC(tid) >= WME_AC_VI)
 				ic->ic_wme.wme_hipri_traffic++;
-			if (! ieee80211_check_rxseq(ni, wh, wh->i_addr1))
+			if (! ieee80211_check_rxseq(ni, wh, wh->i_addr1, rxs))
 				goto out;
 		}
 	}
@@ -3567,16 +3569,21 @@ mesh_ioctl_set80211(struct ieee80211vap *vap, struct ieee80211req *ireq)
 			ieee80211_mesh_rt_flush(vap);
 			break;
 		case IEEE80211_MESH_RTCMD_ADD:
-			if (IEEE80211_ADDR_EQ(vap->iv_myaddr, ireq->i_data) ||
-			    IEEE80211_ADDR_EQ(broadcastaddr, ireq->i_data))
-				return EINVAL;
-			error = copyin(ireq->i_data, &tmpaddr,
+			error = copyin(ireq->i_data, tmpaddr,
 			    IEEE80211_ADDR_LEN);
-			if (error == 0)
-				ieee80211_mesh_discover(vap, tmpaddr, NULL);
+			if (error != 0)
+				break;
+			if (IEEE80211_ADDR_EQ(vap->iv_myaddr, tmpaddr) ||
+			    IEEE80211_ADDR_EQ(broadcastaddr, tmpaddr))
+				return EINVAL;
+			ieee80211_mesh_discover(vap, tmpaddr, NULL);
 			break;
 		case IEEE80211_MESH_RTCMD_DELETE:
-			ieee80211_mesh_rt_del(vap, ireq->i_data);
+			error = copyin(ireq->i_data, tmpaddr,
+			    IEEE80211_ADDR_LEN);
+			if (error != 0)
+				break;
+			ieee80211_mesh_rt_del(vap, tmpaddr);
 			break;
 		default:
 			return ENOSYS;

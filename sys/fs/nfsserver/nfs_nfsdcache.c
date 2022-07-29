@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/nfsserver/nfs_nfsdcache.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Here is the basic algorithm:
@@ -156,7 +158,6 @@ __FBSDID("$FreeBSD: stable/11/sys/fs/nfsserver/nfs_nfsdcache.c 331722 2018-03-29
  *	that case. This level should be set high enough that this almost
  *	never happens.
  */
-#ifndef APPLEKEXT
 #include <fs/nfs/nfsport.h>
 
 extern struct nfsstatsv1 nfsstatsv1;
@@ -164,7 +165,6 @@ extern struct mtx nfsrc_udpmtx;
 extern struct nfsrchash_bucket nfsrchash_table[NFSRVCACHE_HASHSIZE];
 extern struct nfsrchash_bucket nfsrcahash_table[NFSRVCACHE_HASHSIZE];
 int nfsrc_floodlevel = NFSRVCACHE_FLOODLEVEL, nfsrc_tcpsavedreplies = 0;
-#endif	/* !APPLEKEXT */
 
 SYSCTL_DECL(_vfs_nfsd);
 
@@ -301,7 +301,7 @@ nfsrc_cachemutex(struct nfsrvcache *rp)
 /*
  * Initialize the server request cache list
  */
-APPLESTATIC void
+void
 nfsrvd_initcache(void)
 {
 	int i;
@@ -326,7 +326,7 @@ nfsrvd_initcache(void)
  * Get a cache entry for this request. Basically just malloc a new one
  * and then call nfsrc_getudp() or nfsrc_gettcp() to do the rest.
  */
-APPLESTATIC int
+int
 nfsrvd_getcache(struct nfsrv_descript *nd)
 {
 	struct nfsrvcache *newrp;
@@ -334,7 +334,7 @@ nfsrvd_getcache(struct nfsrv_descript *nd)
 
 	if (nd->nd_procnum == NFSPROC_NULL)
 		panic("nfsd cache null");
-	MALLOC(newrp, struct nfsrvcache *, sizeof (struct nfsrvcache),
+	newrp = malloc(sizeof (struct nfsrvcache),
 	    M_NFSRVCACHE, M_WAITOK);
 	NFSBZERO((caddr_t)newrp, sizeof (struct nfsrvcache));
 	if (nd->nd_flag & ND_NFSV4)
@@ -421,7 +421,7 @@ loop:
 				panic("nfs udp cache1");
 			}
 			nfsrc_unlock(rp);
-			free((caddr_t)newrp, M_NFSRVCACHE);
+			free(newrp, M_NFSRVCACHE);
 			goto out;
 		}
 	}
@@ -453,7 +453,7 @@ out:
 /*
  * Update a request cache entry after the rpc has been done
  */
-APPLESTATIC struct nfsrvcache *
+struct nfsrvcache *
 nfsrvd_updatecache(struct nfsrv_descript *nd)
 {
 	struct nfsrvcache *rp;
@@ -555,7 +555,7 @@ out:
  * Invalidate and, if possible, free an in prog cache entry.
  * Must not sleep.
  */
-APPLESTATIC void
+void
 nfsrvd_delcache(struct nfsrvcache *rp)
 {
 	struct mtx *mutex;
@@ -575,7 +575,7 @@ nfsrvd_delcache(struct nfsrvcache *rp)
  * the entry's sequence number and unlock it. The argument is
  * the pointer returned by nfsrvd_updatecache().
  */
-APPLESTATIC void
+void
 nfsrvd_sentcache(struct nfsrvcache *rp, int have_seq, uint32_t seq)
 {
 	struct nfsrchash_bucket *hbp;
@@ -708,7 +708,7 @@ tryagain:
 			panic("nfs tcp cache1");
 		}
 		nfsrc_unlock(rp);
-		free((caddr_t)newrp, M_NFSRVCACHE);
+		free(newrp, M_NFSRVCACHE);
 		goto out;
 	}
 	nfsstatsv1.srvcache_misses++;
@@ -800,14 +800,14 @@ nfsrc_freecache(struct nfsrvcache *rp)
 		if (!(rp->rc_flag & RC_UDP))
 			atomic_add_int(&nfsrc_tcpsavedreplies, -1);
 	}
-	FREE((caddr_t)rp, M_NFSRVCACHE);
+	free(rp, M_NFSRVCACHE);
 	atomic_add_int(&nfsstatsv1.srvcache_size, -1);
 }
 
 /*
  * Clean out the cache. Called when nfsserver module is unloaded.
  */
-APPLESTATIC void
+void
 nfsrvd_cleancache(void)
 {
 	struct nfsrvcache *rp, *nextrp;
@@ -972,7 +972,7 @@ nfsrc_trimcache(u_int64_t sockref, uint32_t snd_una, int final)
 /*
  * Add a seqid# reference to the cache entry.
  */
-APPLESTATIC void
+void
 nfsrvd_refcache(struct nfsrvcache *rp)
 {
 	struct mtx *mutex;
@@ -991,7 +991,7 @@ nfsrvd_refcache(struct nfsrvcache *rp)
 /*
  * Dereference a seqid# cache entry.
  */
-APPLESTATIC void
+void
 nfsrvd_derefcache(struct nfsrvcache *rp)
 {
 	struct mtx *mutex;

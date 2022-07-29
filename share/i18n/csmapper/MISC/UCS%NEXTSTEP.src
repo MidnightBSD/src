@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/i18n/csmapper/MISC/UCS%NEXTSTEP.src 219019 2011-02-25 00:04:39Z gabor $ 
+# $FreeBSD$ 
 # $NetBSD: UCS%NEXTSTEP.src,v 1.1 2006/10/19 14:45:02 tnozaki Exp $
 
 TYPE		ROWCOL

@@ -30,7 +30,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/arm/cpufunc_asm_pj4b.S 266673 2014-05-25 19:19:41Z zbb $");
+__FBSDID("$FreeBSD$");
 
 #include <machine/param.h>
 

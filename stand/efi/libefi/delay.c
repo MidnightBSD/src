@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/efi/libefi/delay.c 346480 2019-04-21 04:15:57Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <efi.h>
 #include <efilib.h>

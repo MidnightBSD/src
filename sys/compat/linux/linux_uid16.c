@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001  The FreeBSD Project
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/linux/linux_uid16.c 283427 2015-05-24 16:14:41Z dchagin $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 
@@ -278,16 +280,6 @@ linux_getgroups16(struct thread *td, struct linux_getgroups16_args *args)
 	LIN_SDT_PROBE1(uid16, linux_getgroups16, return, 0);
 	return (0);
 }
-
-/*
- * The FreeBSD native getgid(2) and getuid(2) also modify td->td_retval[1]
- * when COMPAT_43 is defined. This clobbers registers that are assumed to
- * be preserved. The following lightweight syscalls fixes this. See also
- * linux_getpid(2), linux_getgid(2) and linux_getuid(2) in linux_misc.c
- *
- * linux_getgid16() - MP SAFE
- * linux_getuid16() - MP SAFE
- */
 
 int
 linux_getgid16(struct thread *td, struct linux_getgid16_args *args)

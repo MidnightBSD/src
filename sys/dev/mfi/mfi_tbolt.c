@@ -1,4 +1,6 @@
- /*-
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -31,7 +33,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mfi/mfi_tbolt.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_mfi.h"
 
@@ -1107,16 +1109,12 @@ mfi_tbolt_send_frame(struct mfi_softc *sc, struct mfi_command *cm)
 
 	if (hdr->cmd == MFI_CMD_PD_SCSI_IO) {
 		/* check for inquiry commands coming from CLI */
-		if (cdb[0] != 0x28 || cdb[0] != 0x2A) {
-			if ((req_desc = mfi_tbolt_build_mpt_cmd(sc, cm)) ==
-			    NULL) {
-				device_printf(sc->mfi_dev, "Mapping from MFI "
-				    "to MPT Failed \n");
-				return 1;
-			}
+		if ((req_desc = mfi_tbolt_build_mpt_cmd(sc, cm)) ==
+		    NULL) {
+			device_printf(sc->mfi_dev, "Mapping from MFI "
+			    "to MPT Failed \n");
+			return 1;
 		}
-		else
-			device_printf(sc->mfi_dev, "DJA NA XXX SYSPDIO\n");
 	} else if (hdr->cmd == MFI_CMD_LD_SCSI_IO ||
 	    hdr->cmd == MFI_CMD_LD_READ || hdr->cmd == MFI_CMD_LD_WRITE) {
 		cm->cm_flags |= MFI_CMD_SCSI;

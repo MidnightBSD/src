@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libnetbsd/Makefile 332979 2018-04-25 01:30:29Z benno $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 

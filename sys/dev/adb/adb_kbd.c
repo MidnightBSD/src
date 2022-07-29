@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2008 Nathan Whitehorn
  * All rights reserved.
  *
@@ -22,7 +24,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/adb/adb_kbd.c 356013 2019-12-22 17:15:48Z kevans $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>

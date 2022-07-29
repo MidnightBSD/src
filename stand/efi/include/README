@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/include/README 139738 2005-01-05 22:16:58Z imp $ */
+/* $FreeBSD$ */
 /*-
 
 Files in this directory and subdirectories are subject to the following

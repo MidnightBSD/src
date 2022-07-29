@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 2013 Emulex
  * All rights reserved.
  *
@@ -36,7 +38,7 @@
  * Costa Mesa, CA 92626
  */
 
-/* $FreeBSD: stable/11/sys/dev/oce/oce_hw.c 338938 2018-09-25 23:48:43Z jpaetzel $ */
+/* $FreeBSD$ */
 
 
 #include "oce_if.h"
@@ -567,7 +569,7 @@ oce_hw_update_multicast(POCE_SOFTC sc)
 #if __FreeBSD_version > 800000
 	if_maddr_rlock(ifp);
 #endif
-	TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;
 

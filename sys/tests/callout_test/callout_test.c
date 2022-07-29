@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2015 Netflix Inc. All rights reserved.
+ * Copyright (c) 2015 Netflix, Inc.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -23,7 +23,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/tests/callout_test/callout_test.c 319168 2017-05-30 02:53:00Z ngie $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

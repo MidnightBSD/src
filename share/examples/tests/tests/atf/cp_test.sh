@@ -1,4 +1,6 @@
-# $FreeBSD: stable/11/share/examples/tests/tests/atf/cp_test.sh 331722 2018-03-29 02:50:57Z eadler $
+# $FreeBSD$
+#
+# SPDX-License-Identifier: BSD-3-Clause
 #
 # Copyright 2013 Google Inc.
 # All rights reserved.

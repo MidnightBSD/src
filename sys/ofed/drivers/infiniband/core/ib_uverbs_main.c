@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/ofed/drivers/infiniband/core/ib_uverbs_main.c 337096 2018-08-02 08:33:51Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <linux/module.h>
 #include <linux/device.h>
@@ -1431,5 +1431,5 @@ static void __exit ib_uverbs_cleanup(void)
 	idr_destroy(&ib_uverbs_srq_idr);
 }
 
-module_init_order(ib_uverbs_init, SI_ORDER_THIRD);
-module_exit(ib_uverbs_cleanup);
+module_init_order(ib_uverbs_init, SI_ORDER_FIFTH);
+module_exit_order(ib_uverbs_cleanup, SI_ORDER_FIFTH);

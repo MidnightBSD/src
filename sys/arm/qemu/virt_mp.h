@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/qemu/virt_mp.h 296158 2016-02-28 13:43:58Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _QEMU_VIRT_MP_H_

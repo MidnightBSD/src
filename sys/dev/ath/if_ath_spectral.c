@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Adrian Chadd <adrian@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,10 +28,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/ath/if_ath_spectral.c 332303 2018-04-08 20:50:16Z emaste $
+ * $FreeBSD$
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ath/if_ath_spectral.c 332303 2018-04-08 20:50:16Z emaste $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Implement some basic spectral scan control logic.
@@ -52,7 +54,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/ath/if_ath_spectral.c 332303 2018-04-08 20
 #include <sys/bus.h>
 
 #include <sys/socket.h>
- 
+
 #include <net/if.h>
 #include <net/if_var.h>
 #include <net/if_media.h>
@@ -70,6 +72,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/ath/if_ath_spectral.c 332303 2018-04-08 20
 
 #include <dev/ath/if_athvar.h>
 #include <dev/ath/if_ath_spectral.h>
+#include <dev/ath/if_ath_misc.h>
 
 #include <dev/ath/ath_hal/ah_desc.h>
 
@@ -191,6 +194,10 @@ ath_ioctl_spectral(struct ath_softc *sc, struct ath_diag *ad)
 	if (! ath_hal_spectral_supported(sc->sc_ah))
 		return (EINVAL);
 
+	ATH_LOCK(sc);
+	ath_power_set_power_state(sc, HAL_PM_AWAKE);
+	ATH_UNLOCK(sc);
+
 	if (ad->ad_id & ATH_DIAG_IN) {
 		/*
 		 * Copy in data.
@@ -286,6 +293,9 @@ bad:
 		free(indata, M_TEMP);
 	if ((ad->ad_id & ATH_DIAG_DYN) && outdata != NULL)
 		free(outdata, M_TEMP);
+	ATH_LOCK(sc);
+	ath_power_restore_power_state(sc);
+	ATH_UNLOCK(sc);
+
 	return (error);
 }
-

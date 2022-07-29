@@ -1,6 +1,6 @@
 STARTFONT 2.1
 COMMENT
-COMMENT $FreeBSD: stable/11/sys/dev/syscons/fonts/cursor.bdf 320805 2017-07-08 15:01:55Z bde $
+COMMENT $FreeBSD$
 COMMENT
 COMMENT Mouse cursors for syscons.  All except some unused ones are the
 COMMENT main 10x16 one scaled down to 9x13 and/or scaled to minimize

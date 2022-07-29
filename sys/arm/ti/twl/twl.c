@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011
  *	Ben Gray <ben.r.gray@gmail.com>.
  * All rights reserved.
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/ti/twl/twl.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Texas Instruments TWL4030/TWL5030/TWL60x0/TPS659x0 Power Management and
@@ -78,7 +80,7 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/ti/twl/twl.c 331722 2018-03-29 02:50:57Z e
 /* Each TWL device typically has more than one I2C address */
 #define TWL_MAX_SUBADDRS            4
 
-/* The maxium number of bytes that can be written in one call */
+/* The maximum number of bytes that can be written in one call */
 #define TWL_MAX_IIC_DATA_SIZE       63
 
 /* The TWL devices typically use 4 I2C address for the different internal

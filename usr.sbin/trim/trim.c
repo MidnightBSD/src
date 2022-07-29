@@ -45,7 +45,7 @@
 #include <unistd.h>
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/trim/trim.c 345375 2019-03-21 11:32:52Z eugen $");
+__FBSDID("$FreeBSD$");
 
 static bool	candelete(int fd);
 static off_t	getsize(const char *path);

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/mips/atheros/qca955xreg.h 285083 2015-07-03 07:00:24Z adrian $
+ * $FreeBSD$
  */
 #ifndef	__QCA955XREG_H__
 #define	__QCA955XREG_H__

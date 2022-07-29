@@ -34,7 +34,7 @@ static char *sccsid2 = "@(#)xdr.c 1.35 87/08/12";
 static char *sccsid = "@(#)xdr.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/xdr/xdr.c 319614 2017-06-06 07:21:33Z delphij $");
+__FBSDID("$FreeBSD$");
 
 /*
  * xdr.c, Generic XDR routines implementation.
@@ -50,6 +50,7 @@ __FBSDID("$FreeBSD: stable/11/sys/xdr/xdr.c 319614 2017-06-06 07:21:33Z delphij 
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
+#include <sys/module.h>
 
 #include <rpc/rpc.h>
 #include <rpc/rpc_com.h>
@@ -64,6 +65,8 @@ typedef u_quad_t        u_longlong_t;   /* ANSI unsigned long long type */
  */
 #define XDR_FALSE	((long) 0)
 #define XDR_TRUE	((long) 1)
+
+MALLOC_DEFINE(M_RPC, "rpc", "Remote Procedure Call");
 
 /*
  * for unit alignment
@@ -834,3 +837,20 @@ xdr_u_longlong_t(XDR *xdrs, u_longlong_t *ullp)
 	 */
 	return (xdr_uint64_t(xdrs, (uint64_t *)ullp));
 }
+
+/*
+ * Kernel module glue
+ */
+static int
+xdr_modevent(module_t mod, int type, void *data)
+{
+
+        return (0);
+}
+static moduledata_t xdr_mod = {
+        "xdr",
+        xdr_modevent,
+        NULL,
+};
+DECLARE_MODULE(xdr, xdr_mod, SI_SUB_VFS, SI_ORDER_ANY);
+MODULE_VERSION(xdr, 1);

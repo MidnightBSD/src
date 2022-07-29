@@ -12,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,13 +32,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/ip_reass.c 341260 2018-11-29 20:38:23Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_rss.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/eventhandler.h>
+#include <sys/kernel.h>
 #include <sys/hash.h>
 #include <sys/mbuf.h>
 #include <sys/malloc.h>
@@ -46,7 +47,10 @@ __FBSDID("$FreeBSD: stable/11/sys/netinet/ip_reass.c 341260 2018-11-29 20:38:23Z
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/sysctl.h>
+#include <sys/socket.h>
 
+#include <net/if.h>
+#include <net/if_var.h>
 #include <net/rss_config.h>
 #include <net/netisr.h>
 #include <net/vnet.h>
@@ -74,9 +78,9 @@ struct ipqbucket {
 	int			 count;
 };
 
-static VNET_DEFINE(struct ipqbucket, ipq[IPREASS_NHASH]);
+VNET_DEFINE_STATIC(struct ipqbucket, ipq[IPREASS_NHASH]);
 #define	V_ipq		VNET(ipq)
-static VNET_DEFINE(uint32_t, ipq_hashseed);
+VNET_DEFINE_STATIC(uint32_t, ipq_hashseed);
 #define V_ipq_hashseed   VNET(ipq_hashseed)
 
 #define	IPQ_LOCK(i)	mtx_lock(&V_ipq[i].lock)
@@ -84,7 +88,7 @@ static VNET_DEFINE(uint32_t, ipq_hashseed);
 #define	IPQ_UNLOCK(i)	mtx_unlock(&V_ipq[i].lock)
 #define	IPQ_LOCK_ASSERT(i)	mtx_assert(&V_ipq[i].lock, MA_OWNED)
 
-static VNET_DEFINE(int, ipreass_maxbucketsize);
+VNET_DEFINE_STATIC(int, ipreass_maxbucketsize);
 #define	V_ipreass_maxbucketsize	VNET(ipreass_maxbucketsize)
 
 void		ipreass_init(void);
@@ -133,15 +137,15 @@ ipq_drop(struct ipqbucket *bucket, struct ipq *fp)
 #define	IP_MAXFRAGPACKETS	(imin(IP_MAXFRAGS, IPREASS_NHASH * 50))
 
 static int		maxfrags;
-static volatile u_int	nfrags;
+static u_int __exclusive_cache_line	nfrags;
 SYSCTL_INT(_net_inet_ip, OID_AUTO, maxfrags, CTLFLAG_RW,
     &maxfrags, 0,
     "Maximum number of IPv4 fragments allowed across all reassembly queues");
 SYSCTL_UINT(_net_inet_ip, OID_AUTO, curfrags, CTLFLAG_RD,
-    __DEVOLATILE(u_int *, &nfrags), 0,
+    &nfrags, 0,
     "Current number of IPv4 fragments across all reassembly queues");
 
-static VNET_DEFINE(uma_zone_t, ipq_zone);
+VNET_DEFINE_STATIC(uma_zone_t, ipq_zone);
 #define	V_ipq_zone	VNET(ipq_zone)
 SYSCTL_PROC(_net_inet_ip, OID_AUTO, maxfragpackets, CTLFLAG_VNET |
     CTLTYPE_INT | CTLFLAG_RW, NULL, 0, sysctl_maxfragpackets, "I",
@@ -150,10 +154,10 @@ SYSCTL_UMA_CUR(_net_inet_ip, OID_AUTO, fragpackets, CTLFLAG_VNET,
     &VNET_NAME(ipq_zone),
     "Current number of IPv4 fragment reassembly queue entries");
 
-static VNET_DEFINE(int, noreass);
+VNET_DEFINE_STATIC(int, noreass);
 #define	V_noreass	VNET(noreass)
 
-static VNET_DEFINE(int, maxfragsperpacket);
+VNET_DEFINE_STATIC(int, maxfragsperpacket);
 #define	V_maxfragsperpacket	VNET(maxfragsperpacket)
 SYSCTL_INT(_net_inet_ip, OID_AUTO, maxfragsperpacket, CTLFLAG_VNET | CTLFLAG_RW,
     &VNET_NAME(maxfragsperpacket), 0,
@@ -180,6 +184,7 @@ ip_reass(struct mbuf *m)
 	struct ip *ip;
 	struct mbuf *p, *q, *nq, *t;
 	struct ipq *fp;
+	struct ifnet *srcifp;
 	struct ipqhead *head;
 	int i, hlen, next, tmpmax;
 	u_int8_t ecn, ecn0;
@@ -196,7 +201,7 @@ ip_reass(struct mbuf *m)
 	 */
 	tmpmax = maxfrags;
 	if (V_noreass == 1 || V_maxfragsperpacket == 0 ||
-	    (tmpmax >= 0 && nfrags >= (u_int)tmpmax)) {
+	    (tmpmax >= 0 && atomic_load_int(&nfrags) >= (u_int)tmpmax)) {
 		IPSTAT_INC(ips_fragments);
 		IPSTAT_INC(ips_fragdropped);
 		m_freem(m);
@@ -228,6 +233,21 @@ ip_reass(struct mbuf *m)
 	else
 		m->m_flags &= ~M_IP_FRAG;
 	ip->ip_off = htons(ntohs(ip->ip_off) << 3);
+
+	/*
+	 * Make sure the fragment lies within a packet of valid size.
+	 */
+	if (ntohs(ip->ip_len) + ntohs(ip->ip_off) > IP_MAXPACKET) {
+		IPSTAT_INC(ips_toolong);
+		IPSTAT_INC(ips_fragdropped);
+		m_freem(m);
+		return (NULL);
+	}
+
+	/*
+	 * Store receive network interface pointer for later.
+	 */
+	srcifp = m->m_pkthdr.rcvif;
 
 	/*
 	 * Attempt reassembly; if it succeeds, proceed.
@@ -479,8 +499,11 @@ ip_reass(struct mbuf *m)
 	m->m_len += (ip->ip_hl << 2);
 	m->m_data -= (ip->ip_hl << 2);
 	/* some debugging cruft by sklower, below, will go away soon */
-	if (m->m_flags & M_PKTHDR)	/* XXX this should be done elsewhere */
+	if (m->m_flags & M_PKTHDR) {	/* XXX this should be done elsewhere */
 		m_fixhdr(m);
+		/* set valid receive interface pointer */
+		m->m_pkthdr.rcvif = srcifp;
+	}
 	IPSTAT_INC(ips_reassembled);
 	IPQ_UNLOCK(hash);
 
@@ -569,11 +592,16 @@ ipreass_slowtimo(void)
 {
 	struct ipq *fp, *tmp;
 
+	if (atomic_load_int(&nfrags) == 0)
+		return;
+
 	for (int i = 0; i < IPREASS_NHASH; i++) {
+		if (TAILQ_EMPTY(&V_ipq[i].head))
+			continue;
 		IPQ_LOCK(i);
 		TAILQ_FOREACH_SAFE(fp, &V_ipq[i].head, ipq_list, tmp)
 		if (--fp->ipq_ttl == 0)
-				ipq_timeout(&V_ipq[i], fp);
+			ipq_timeout(&V_ipq[i], fp);
 		IPQ_UNLOCK(i);
 	}
 }
@@ -596,6 +624,46 @@ ipreass_drain(void)
 	}
 }
 
+/*
+ * Drain off all datagram fragments belonging to
+ * the given network interface.
+ */
+static void
+ipreass_cleanup(void *arg __unused, struct ifnet *ifp)
+{
+	struct ipq *fp, *temp;
+	struct mbuf *m;
+	int i;
+
+	KASSERT(ifp != NULL, ("%s: ifp is NULL", __func__));
+
+	CURVNET_SET_QUIET(ifp->if_vnet);
+
+	/*
+	 * Skip processing if IPv4 reassembly is not initialised or
+	 * torn down by ipreass_destroy().
+	 */ 
+	if (V_ipq_zone == NULL) {
+		CURVNET_RESTORE();
+		return;
+	}
+
+	for (i = 0; i < IPREASS_NHASH; i++) {
+		IPQ_LOCK(i);
+		/* Scan fragment list. */
+		TAILQ_FOREACH_SAFE(fp, &V_ipq[i].head, ipq_list, temp) {
+			for (m = fp->ipq_frags; m != NULL; m = m->m_nextpkt) {
+				/* clear no longer valid rcvif pointer */
+				if (m->m_pkthdr.rcvif == ifp)
+					m->m_pkthdr.rcvif = NULL;
+			}
+		}
+		IPQ_UNLOCK(i);
+	}
+	CURVNET_RESTORE();
+}
+EVENTHANDLER_DEFINE(ifnet_departure_event, ipreass_cleanup, NULL, 0);
+
 #ifdef VIMAGE
 /*
  * Destroy IP reassembly structures.
@@ -606,6 +674,7 @@ ipreass_destroy(void)
 
 	ipreass_drain();
 	uma_zdestroy(V_ipq_zone);
+	V_ipq_zone = NULL;
 	for (int i = 0; i < IPREASS_NHASH; i++)
 		mtx_destroy(&V_ipq[i].lock);
 }

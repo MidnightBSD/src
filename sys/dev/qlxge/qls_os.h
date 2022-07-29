@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013-2014 Qlogic Corporation
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/qlxge/qls_os.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 /*
  * File: qls_os.h
@@ -47,6 +49,10 @@
 #include <machine/atomic.h>
 #include <machine/_inttypes.h>
 #include <sys/conf.h>
+
+#if __FreeBSD_version < 900044
+#error FreeBSD Version not supported - use version >= 900044
+#endif
 
 #include <net/if.h>
 #include <net/if_var.h>

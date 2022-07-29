@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/sys/dev/exca/excavar.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 /*-
- * Copyright (c) 2002 M Warner Losh.  All rights reserved.
+ * SPDX-License-Identifier: BSD-4-Clause AND BSD-2-Clause-FreeBSD
+ *
+ * Copyright (c) 2002 M. Warner Losh.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

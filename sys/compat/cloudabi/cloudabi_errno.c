@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/cloudabi/cloudabi_errno.c 297247 2016-03-24 21:47:15Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -63,6 +63,7 @@ cloudabi_convert_errno(int error)
 		[EIDRM]			= CLOUDABI_EIDRM,
 		[EILSEQ]		= CLOUDABI_EILSEQ,
 		[EINPROGRESS]		= CLOUDABI_EINPROGRESS,
+		[EINTEGRITY]		= CLOUDABI_EINVAL,
 		[EINTR]			= CLOUDABI_EINTR,
 		[EINVAL]		= CLOUDABI_EINVAL,
 		[EIO]			= CLOUDABI_EIO,

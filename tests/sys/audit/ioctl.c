@@ -22,7 +22,7 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tests/sys/audit/ioctl.c 339090 2018-10-02 17:27:10Z asomers $
+ * $FreeBSD$
  */
 
 #include <sys/ioctl.h>

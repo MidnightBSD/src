@@ -1,5 +1,5 @@
 #	@(#)Makefile	5.11 (Berkeley) 9/6/90
-# $FreeBSD: stable/11/lib/libc/xdr/Makefile.inc 262722 2014-03-04 02:19:39Z marcel $
+# $FreeBSD$
 
 .PATH: ${LIBC_SRCTOP}/xdr ${LIBC_SRCTOP}/.
 SRCS+=	xdr.c xdr_array.c xdr_float.c xdr_mem.c \

@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/fs/autofs/autofs_ioctl.h 332596 2018-04-16 16:15:31Z trasz $
+ * $FreeBSD$
  */
 
 #ifndef AUTOFS_IOCTL_H

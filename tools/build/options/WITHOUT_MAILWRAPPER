@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_MAILWRAPPER 156932 2006-03-21 07:50:50Z ru $
+.\" $FreeBSD$
 Set to not build the
 .Xr mailwrapper 8
 MTA selector.

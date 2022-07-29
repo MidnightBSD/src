@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/usr.bin/dtc/HACKING 339159 2018-10-03 17:14:40Z kevans $
+$FreeBSD$
 
 Notes for people hacking on dtc
 ===============================

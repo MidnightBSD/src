@@ -1,7 +1,7 @@
 /*
  * Языческие праздники
  *
- * $FreeBSD: stable/11/usr.bin/calendar/calendars/ru_RU.UTF-8/calendar.pagan 304379 2016-08-18 10:37:20Z ache $
+ * $FreeBSD$
  */
 
 #ifndef _ru_RU_UTF_8_pagan_

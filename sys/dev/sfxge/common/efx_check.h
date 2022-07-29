@@ -27,7 +27,7 @@
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: stable/11/sys/dev/sfxge/common/efx_check.h 342424 2018-12-25 07:00:37Z arybchik $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_EFX_CHECK_H

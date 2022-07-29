@@ -1,5 +1,6 @@
-# $FreeBSD: stable/11/usr.sbin/autofs/Makefile 319119 2017-05-29 10:15:41Z ngie $
+# $FreeBSD$
 
+CONFS=	auto_master
 PACKAGE=autofs
 PROG=	automountd
 SRCS=	automount.c
@@ -23,11 +24,13 @@ LIBADD=	util
 MOUNT=  ${SRCTOP}/sbin/mount
 CFLAGS+=-I${MOUNT}
 
-WARNS=	6
+WARNS?=	6
 
 LINKS=	${BINDIR}/automountd ${BINDIR}/automount
 LINKS+=	${BINDIR}/automountd ${BINDIR}/autounmountd
 
 .PATH:	${MOUNT}
+
+SUBDIR=	autofs
 
 .include <bsd.prog.mk>

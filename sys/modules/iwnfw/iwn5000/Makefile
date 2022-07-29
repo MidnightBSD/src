@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/iwnfw/iwn5000/Makefile 220892 2011-04-20 17:32:20Z bschmidt $
+# $FreeBSD$
 
 KMOD=	iwn5000fw
 IMG=	iwlwifi-5000-8.83.5.1

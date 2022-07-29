@@ -24,7 +24,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/lib/csu/powerpc64/crti.S 291668 2015-12-03 00:10:57Z nwhitehorn $");
+__FBSDID("$FreeBSD$");
 
 #ifdef _CALL_ELF
 .abiversion _CALL_ELF

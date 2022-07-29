@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/uboot/lib/module.c 283579 2015-05-26 20:32:14Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 /*
  * U-Boot-specific module functionality.

@@ -71,7 +71,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
- * $FreeBSD: stable/11/sys/dev/iwm/if_iwm_fw.h 330192 2018-03-01 06:22:14Z eadler $
+ * $FreeBSD$
  */
 #ifndef	__IF_IWM_FW_H__
 #define	__IF_IWM_FW_H__
@@ -107,7 +107,7 @@
 #define IWM_PAGING_TLV_SECURE_MASK 1
 
 extern	void iwm_free_fw_paging(struct iwm_softc *);
-extern	int iwm_save_fw_paging(struct iwm_softc *, const struct iwm_fw_sects *);
-extern	int iwm_send_paging_cmd(struct iwm_softc *, const struct iwm_fw_sects *);
+extern	int iwm_save_fw_paging(struct iwm_softc *, const struct iwm_fw_img *);
+extern	int iwm_send_paging_cmd(struct iwm_softc *, const struct iwm_fw_img *);
 
 #endif	/* __IF_IWM_FW_H__ */

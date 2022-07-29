@@ -15,14 +15,14 @@
  * AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/tpm/tpmvar.h 211201 2010-08-12 00:16:18Z takawata $
+ * $FreeBSD$
  */
 
 #ifndef _TPMVAR_H
 #define _TPMVAR_H
 
 struct tpm_softc {
-#ifndef __MidnightBSD__
+#ifndef __FreeBSD__
 	struct device sc_dev;
 #endif
 	void *sc_ih;
@@ -45,14 +45,14 @@ struct tpm_softc {
 #define	TPM_OPEN	0x0001
 
 	int	 sc_vector;
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	void	*intr_cookie;
 	int mem_rid, irq_rid;
 	struct resource *mem_res, *irq_res;
 	struct cdev *sc_cdev;
 #endif
 
-#ifndef __MidnightBSD__
+#ifndef __FreeBSD__
 	void	*sc_powerhook;
 #endif
 	int	 sc_suspend;

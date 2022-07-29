@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_ctrdtr.c 277490 2015-01-21 16:41:05Z andrew $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <rtld_tls.h>

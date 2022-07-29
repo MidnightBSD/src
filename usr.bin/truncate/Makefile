@@ -1,12 +1,11 @@
-# $FreeBSD: stable/11/usr.bin/truncate/Makefile 275042 2014-11-25 14:29:10Z bapt $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
 PROG=	truncate
 LIBADD=	util
 
-.if ${MK_TESTS} != "no"
-SUBDIR+= tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

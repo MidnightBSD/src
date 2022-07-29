@@ -1,8 +1,9 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: extern.h,v 1.5 1998/05/06 13:16:57 mycroft Exp $	*/
-/* $FreeBSD: stable/10/usr.sbin/crunch/crunchide/extern.h 292422 2015-12-18 02:34:01Z emaste $ */
+/* $FreeBSD$ */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1997 Christopher G. Demetriou.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * 1. Redistributions of source code must retain the
  * Copyright (c) 1997 Amancio Hasty, 1999 Roger Hardiman
  * All rights reserved.
@@ -32,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bktr/bktr_card.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -52,7 +54,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/bktr/bktr_card.c 331722 2018-03-29 02:50:5
 #include <sys/param.h>
 #include <sys/systm.h>
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 
 #if (__FreeBSD_version < 500000)
 #include <machine/clock.h>              /* for DELAY */
@@ -415,6 +417,18 @@ static const struct CARDTYPE cards[] = {
 	   0,                                   /* EEProm size */
 	   { 0x01, 0x04, 0x01, 0x03, 1 },       /* audio MUX values */
 	   0x00ffffff },
+	{  CARD_LEADTEK_WINFAST_2000_XP,        /* the card id */
+	   "Leadtek Winfast 2000 XP",           /* the 'name' */
+	   NULL,                                /* the tuner */
+	   0,                                   /* the tuner i2c address */
+	   0,                                   /* dbx is optional */
+	   0,
+	   0,
+	   0,                                   /* EEProm unknown */
+	   0,                                   /* size unknown */
+	   { 0x122000, 0x1000, 0x620000, 0x0000, 1 },   /* audio MUX values */
+	   0xb33000 },                          /* GPIO mask */
+
 };
 
 struct bt848_card_sig bt848_card_signature[1]= {

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libexecinfo/Makefile 313538 2017-02-10 07:32:40Z ngie $
+# $FreeBSD$
 
 PACKAGE=lib${LIB}
 LIBEXECINFO=	${SRCTOP}/contrib/libexecinfo

@@ -32,12 +32,13 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 /*
  * Simple TFTP implementation for libsa.
  * Assumes:
  *  - socket descriptor (int) at open_file->f_devdata
- *  - server host IP in global servip
+ *  - server host IP in global rootip
  * Restrictions:
  *  - read only
  *  - lseek only with SEEK_SET or SEEK_CUR
@@ -82,8 +83,6 @@ struct fs_ops tftp_fsops = {
 	.fo_readdir = null_readdir
 };
 
-extern struct in_addr servip;
-
 static int	tftpport = 2000;
 static int	is_open = 0;
 
@@ -99,11 +98,13 @@ static int	is_open = 0;
  * Jumbo frames in the future.
  */
 #define	TFTP_MAX_BLKSIZE 9008
+#define TFTP_TRIES 2
 
 struct tftp_handle {
 	struct iodesc  *iodesc;
 	int		currblock;	/* contents of lastdata */
-	int		islastblock;	/* flag */
+	int		islastblock:1;	/* flag */
+	int		tries:4;	/* number of read attempts */
 	int		validsize;
 	int		off;
 	char		*path;	/* saved for re-requests */
@@ -457,7 +458,7 @@ tftp_open(const char *path, struct open_file *f)
 		return (EINVAL);
 	}
 
-	io->destip = servip;
+	io->destip = rootip;
 	tftpfile->off = 0;
 	pathsize = (strlen(rootpath) + 1 + strlen(path) + 1) * sizeof(char);
 	tftpfile->path = malloc(pathsize);
@@ -529,7 +530,12 @@ tftp_read(struct open_file *f, void *addr, size_t size,
 #ifdef TFTP_DEBUG
 				printf("tftp: read error\n");
 #endif
-				return (rc);
+				if (tftpfile->tries > TFTP_TRIES) {
+					return (rc);
+				} else {
+					tftpfile->tries++;
+					tftp_makereq(tftpfile);
+				}
 			}
 			if (tftpfile->islastblock)
 				break;

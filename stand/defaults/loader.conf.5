@@ -22,8 +22,8 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/stand/defaults/loader.conf.5 347700 2019-05-16 14:42:16Z markj $
-.Dd May 16, 2019
+.\" $FreeBSD$
+.Dd October 8, 2021
 .Dt LOADER.CONF 5
 .Os
 .Sh NAME
@@ -78,6 +78,47 @@ may have any prefix; the prefix identifies a module.
 All such settings sharing a common
 prefix refer to the same module.
 .Bl -tag -width Ar
+.It Ar autoboot_delay
+Delay in seconds before automatically booting.
+A user with console access will be able to interrupt the
+.Ic autoboot
+process and escape into the interactive mode by pressing a key on
+the console during this delay.
+.Pp
+If set to
+.Dq Li NO ,
+no
+.Ic autoboot
+is automatically attempted after processing
+.Pa /boot/loader.rc ,
+though explicit
+.Ic autoboot Ns 's
+are processed normally, using a 10 second delay.
+.Pp
+If set to
+.Dq Li 0 ,
+no delay is inserted, but any keys pressed while the kernel and modules are
+loaded will enter interactive mode.
+.Pp
+If set to
+.Dq Li -1 ,
+no delay will be inserted and
+.Nm
+starts interactive mode only if
+.Ic autoboot
+has failed.
+In combination with the
+.Va beastie_disable
+option, this option prevents users with console access from being able
+to interrupt the
+.Ic autoboot
+process and escape to the loader prompt.
+To use the
+.Va autoboot_delay
+option in this manner,
+.Va beastie_disable
+must be set to
+.Dq Li YES .
 .It Ar exec
 Immediately executes a
 .Xr loader 8
@@ -88,6 +129,11 @@ than
 so its use should be avoided.
 Multiple instances of it will be processed
 independently.
+.It Ar loader_conf_dirs
+Space separated list of directories to process for configuration files.
+The lua-based loader will process files with a
+.Dq .conf
+suffix that are placed in these directories.
 .It Ar loader_conf_files
 Defines additional configuration files to be processed right after the
 present file.
@@ -225,6 +271,8 @@ serial port speed setting.
 selects serial console,
 .Dq vidconsole
 selects the video console,
+.Dq efi
+selects the EFI console,
 .Dq nullconsole
 selects a mute console
 (useful for systems with neither a video console nor a serial port), and
@@ -233,6 +281,19 @@ selects the video console which prevents any input and hides all output
 replacing it with
 .Dq spinning
 character (useful for embedded products and such).
+.It Va efi_max_resolution
+Specify the maximum desired resolution for the EFI console.
+The following values are accepted:
+.Bl -column "WidthxHeight"
+.It Sy Value Ta Sy Resolution
+.It 480p Ta 640x480
+.It 720p Ta 1280x720
+.It 1080p Ta 1920x1080
+.It 2160p Ta 3840x2160
+.It 4k Ta 3840x2160
+.It 5k Ta 5120x2880
+.It Va Width Ns x Ns Va Height Ta Va Width Ns x Ns Va Height
+.El
 .It Va kernel
 .Pq Dq kernel
 .It Va kernels
@@ -240,6 +301,8 @@ character (useful for embedded products and such).
 Space or comma separated list of kernels to present in the boot menu.
 .It Va loader_conf_files
 .Pq Dq Pa /boot/loader.conf /boot/loader.conf.local
+.It Va loader_conf_dirs
+.Pq Dq Pa /boot/loader.conf.d
 .It Va splash_bmp_load
 .Pq Dq NO
 If set to

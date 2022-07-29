@@ -1,4 +1,5 @@
 /******************************************************************************
+SPDX-License-Identifier: BSD-2-Clause-FreeBSD
 
 Copyright (c) 2006-2013, Myricom Inc.
 All rights reserved.
@@ -28,7 +29,7 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mxge/if_mxge.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,7 +47,8 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/mxge/if_mxge.c 331722 2018-03-29 02:50:57Z
 #include <sys/sysctl.h>
 #include <sys/sx.h>
 #include <sys/taskqueue.h>
-#include <sys/zlib.h>
+#include <contrib/zlib/zlib.h>
+#include <dev/zlib/zcalloc.h>
 
 #include <net/if.h>
 #include <net/if_var.h>
@@ -682,22 +684,6 @@ mxge_validate_firmware(mxge_softc_t *sc, const mcp_gen_header_t *hdr)
 
 }
 
-static void *
-z_alloc(void *nil, u_int items, u_int size)
-{
-	void *ptr;
-
-	ptr = malloc(items * size, M_TEMP, M_NOWAIT);
-	return ptr;
-}
-
-static void
-z_free(void *nil, void *ptr)
-{
-	free(ptr, M_TEMP);
-}
-
-
 static int
 mxge_load_firmware_helper(mxge_softc_t *sc, uint32_t *limit)
 {
@@ -722,8 +708,8 @@ mxge_load_firmware_helper(mxge_softc_t *sc, uint32_t *limit)
 
 	/* setup zlib and decompress f/w */
 	bzero(&zs, sizeof (zs));
-	zs.zalloc = z_alloc;
-	zs.zfree = z_free;
+	zs.zalloc = zcalloc_nowait;
+	zs.zfree = zcfree;
 	status = inflateInit(&zs);
 	if (status != Z_OK) {
 		status = EIO;
@@ -1145,7 +1131,7 @@ mxge_set_multicast_list(mxge_softc_t *sc)
 	/* Walk the multicast list, and add each address */
 
 	if_maddr_rlock(ifp);
-	TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;
 		bcopy(LLADDR((struct sockaddr_dl *)ifma->ifma_addr),
@@ -4153,10 +4139,50 @@ mxge_media_status(struct ifnet *ifp, struct ifmediareq *ifmr)
 }
 
 static int
+mxge_fetch_i2c(mxge_softc_t *sc, struct ifi2creq *i2c)
+{
+	mxge_cmd_t cmd;
+	uint32_t i2c_args;
+	int i, ms, err;
+
+
+	if (i2c->dev_addr != 0xA0 &&
+	    i2c->dev_addr != 0xA2)
+		return (EINVAL);
+	if (i2c->len > sizeof(i2c->data))
+		return (EINVAL);
+
+	for (i = 0; i < i2c->len; i++) {
+		i2c_args = i2c->dev_addr << 0x8;
+		i2c_args |= i2c->offset + i;
+		cmd.data0 = 0;	 /* just fetch 1 byte, not all 256 */
+		cmd.data1 = i2c_args;
+		err = mxge_send_cmd(sc, MXGEFW_CMD_I2C_READ, &cmd);
+
+		if (err != MXGEFW_CMD_OK)
+			return (EIO);
+		/* now we wait for the data to be cached */
+		cmd.data0 = i2c_args & 0xff;
+		err = mxge_send_cmd(sc, MXGEFW_CMD_I2C_BYTE, &cmd);
+		for (ms = 0; (err == EBUSY) && (ms < 50); ms++) {
+			cmd.data0 = i2c_args & 0xff;
+			err = mxge_send_cmd(sc, MXGEFW_CMD_I2C_BYTE, &cmd);
+			if (err == EBUSY)
+				DELAY(1000);
+		}
+		if (err != MXGEFW_CMD_OK)
+			return (EIO);
+		i2c->data[i] = cmd.data0;
+	}
+	return (0);
+}
+
+static int
 mxge_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 {
 	mxge_softc_t *sc = ifp->if_softc;
 	struct ifreq *ifr = (struct ifreq *)data;
+	struct ifi2creq i2c;
 	int err, mask;
 
 	err = 0;
@@ -4192,6 +4218,10 @@ mxge_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 	case SIOCADDMULTI:
 	case SIOCDELMULTI:
 		mtx_lock(&sc->driver_mtx);
+		if (sc->dying) {
+			mtx_unlock(&sc->driver_mtx);
+			return (EINVAL);
+		}
 		mxge_set_multicast_list(sc);
 		mtx_unlock(&sc->driver_mtx);
 		break;
@@ -4201,13 +4231,15 @@ mxge_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		mask = ifr->ifr_reqcap ^ ifp->if_capenable;
 		if (mask & IFCAP_TXCSUM) {
 			if (IFCAP_TXCSUM & ifp->if_capenable) {
+				mask &= ~IFCAP_TSO4;
 				ifp->if_capenable &= ~(IFCAP_TXCSUM|IFCAP_TSO4);
 				ifp->if_hwassist &= ~(CSUM_TCP | CSUM_UDP);
 			} else {
 				ifp->if_capenable |= IFCAP_TXCSUM;
 				ifp->if_hwassist |= (CSUM_TCP | CSUM_UDP);
 			}
-		} else if (mask & IFCAP_RXCSUM) {
+		}
+		if (mask & IFCAP_RXCSUM) {
 			if (IFCAP_RXCSUM & ifp->if_capenable) {
 				ifp->if_capenable &= ~IFCAP_RXCSUM;
 			} else {
@@ -4229,6 +4261,7 @@ mxge_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 #if IFCAP_TSO6
 		if (mask & IFCAP_TXCSUM_IPV6) {
 			if (IFCAP_TXCSUM_IPV6 & ifp->if_capenable) {
+				mask &= ~IFCAP_TSO6;
 				ifp->if_capenable &= ~(IFCAP_TXCSUM_IPV6
 						       | IFCAP_TSO6);
 				ifp->if_hwassist &= ~(CSUM_TCP_IPV6
@@ -4238,7 +4271,8 @@ mxge_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 				ifp->if_hwassist |= (CSUM_TCP_IPV6
 						     | CSUM_UDP_IPV6);
 			}
-		} else if (mask & IFCAP_RXCSUM_IPV6) {
+		}
+		if (mask & IFCAP_RXCSUM_IPV6) {
 			if (IFCAP_RXCSUM_IPV6 & ifp->if_capenable) {
 				ifp->if_capenable &= ~IFCAP_RXCSUM_IPV6;
 			} else {
@@ -4277,12 +4311,36 @@ mxge_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 
 	case SIOCGIFMEDIA:
 		mtx_lock(&sc->driver_mtx);
+		if (sc->dying) {
+			mtx_unlock(&sc->driver_mtx);
+			return (EINVAL);
+		}
 		mxge_media_probe(sc);
 		mtx_unlock(&sc->driver_mtx);
 		err = ifmedia_ioctl(ifp, (struct ifreq *)data,
 				    &sc->media, command);
 		break;
 
+	case SIOCGI2C:
+		if (sc->connector != MXGE_XFP &&
+		    sc->connector != MXGE_SFP) {
+			err = ENXIO;
+			break;
+		}
+		err = copyin(ifr_data_get_ptr(ifr), &i2c, sizeof(i2c));
+		if (err != 0)
+			break;
+		mtx_lock(&sc->driver_mtx);
+		if (sc->dying) {
+			mtx_unlock(&sc->driver_mtx);
+			return (EINVAL);
+		}
+		err = mxge_fetch_i2c(sc, &i2c);
+		mtx_unlock(&sc->driver_mtx);
+		if (err == 0)
+			err = copyout(&i2c, ifr_data_get_ptr(ifr),
+			    sizeof(i2c));
+		break;
 	default:
 		err = ether_ioctl(ifp, command, data);
 		break;
@@ -4915,6 +4973,9 @@ mxge_attach(device_t dev)
 	ifp->if_ioctl = mxge_ioctl;
 	ifp->if_start = mxge_start;
 	ifp->if_get_counter = mxge_get_counter;
+	ifp->if_hw_tsomax = IP_MAXPACKET - (ETHER_HDR_LEN + ETHER_VLAN_ENCAP_LEN);
+	ifp->if_hw_tsomaxsegcount = sc->ss[0].tx.max_desc;
+	ifp->if_hw_tsomaxsegsize = IP_MAXPACKET;
 	/* Initialise the ifmedia structure */
 	ifmedia_init(&sc->media, 0, mxge_media_change,
 		     mxge_media_status);

@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/cpuvar.h 275576 2014-12-07 11:21:41Z avg $
+ * $FreeBSD$
  */
 
 /*

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/drm2/radeonkmsfw/OLAND_rlc/Makefile 254885 2013-08-25 19:37:15Z dumbbell $
+# $FreeBSD$
 
 KMOD=	radeonkmsfw_OLAND_rlc
 IMG=	OLAND_rlc

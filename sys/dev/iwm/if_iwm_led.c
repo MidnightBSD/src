@@ -87,7 +87,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/iwm/if_iwm_led.c 330455 2018-03-05 08:05:30Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_wlan.h"
 #include "opt_iwm.h"
@@ -139,20 +139,20 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/iwm/if_iwm_led.c 330455 2018-03-05 08:05:3
 
 /* Set led register on */
 void
-iwm_mvm_led_enable(struct iwm_softc *sc)
+iwm_led_enable(struct iwm_softc *sc)
 {
 	IWM_WRITE(sc, IWM_CSR_LED_REG, IWM_CSR_LED_REG_TURN_ON);
 }
 
 /* Set led register off */
 void
-iwm_mvm_led_disable(struct iwm_softc *sc)
+iwm_led_disable(struct iwm_softc *sc)
 {
 	IWM_WRITE(sc, IWM_CSR_LED_REG, IWM_CSR_LED_REG_TURN_OFF);
 }
 
 static int
-iwm_mvm_led_is_enabled(struct iwm_softc *sc)
+iwm_led_is_enabled(struct iwm_softc *sc)
 {
 	return (IWM_READ(sc, IWM_CSR_LED_REG) == IWM_CSR_LED_REG_TURN_ON);
 }
@@ -162,10 +162,13 @@ iwm_led_blink_timeout(void *arg)
 {
 	struct iwm_softc *sc = arg;
 
-	if (iwm_mvm_led_is_enabled(sc))
-		iwm_mvm_led_disable(sc);
+	if (sc->sc_attached == 0)
+		return;
+
+	if (iwm_led_is_enabled(sc))
+		iwm_led_disable(sc);
 	else
-		iwm_mvm_led_enable(sc);
+		iwm_led_enable(sc);
 
 	callout_reset(&sc->sc_led_blink_to, (200 * hz) / 1000,
 	    iwm_led_blink_timeout, sc);
@@ -181,5 +184,5 @@ void
 iwm_led_blink_stop(struct iwm_softc *sc)
 {
 	callout_stop(&sc->sc_led_blink_to);
-	iwm_mvm_led_disable(sc);
+	iwm_led_disable(sc);
 }

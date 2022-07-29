@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/usr.bin/m4/tests/strangequotes.m4.uu 234852 2012-04-30 22:00:34Z bapt $
+$FreeBSD$
 $OpenBSD: src/regress/usr.bin/m4/strangequotes.m4.uu,v 1.2 2001/09/19 19:15:08 espie Exp $
 
 begin 644 strangequotes.m4

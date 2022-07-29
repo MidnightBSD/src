@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5416/ar5416desc.h 250346 2013-05-08 01:11:25Z adrian $
+ * $FreeBSD$
  */
 #ifndef _ATH_AR5416_DESC_H_
 #define _ATH_AR5416_DESC_H_
@@ -61,7 +63,6 @@ struct ar5416_rx_desc { /* rx desc has 2 control words + 9 status words */
  	uint32_t	status7;
 	uint32_t	status8;
 };
-
 
 struct ar5416_desc {
 	uint32_t   ds_link;    /* link pointer */

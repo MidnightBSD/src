@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1998, 2001 Nicolas Souchu
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/iicbus/iicbus.c 350031 2019-07-16 15:02:28Z avg $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Autoconfiguration and support routines for the Philips serial I2C bus
@@ -49,6 +51,8 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/iicbus/iicbus.c 350031 2019-07-16 15:02:28
 
 /* See comments below for why auto-scanning is a bad idea. */
 #define SCAN_IICBUS 0
+
+SYSCTL_NODE(_hw, OID_AUTO, i2c, CTLFLAG_RW, 0, "i2c controls");
 
 static int
 iicbus_probe(device_t dev)
@@ -87,8 +91,8 @@ iic_probe_device(device_t dev, u_char addr)
  * We add all the devices which we know about.
  * The generic attach routine will attach them if they are alive.
  */
-static int
-iicbus_attach(device_t dev)
+int
+iicbus_attach_common(device_t dev, u_int bus_freq)
 {
 #if SCAN_IICBUS
 	unsigned char addr;
@@ -98,7 +102,7 @@ iicbus_attach(device_t dev)
 
 	sc->dev = dev;
 	mtx_init(&sc->lock, "iicbus", NULL, MTX_DEF);
-	iicbus_init_frequency(dev, 0);
+	iicbus_init_frequency(dev, bus_freq);
 	iicbus_reset(dev, IIC_FASTEST, 0, NULL);
 	if (resource_int_value(device_get_name(dev),
 		device_get_unit(dev), "strict", &strict) == 0)
@@ -129,13 +133,21 @@ iicbus_attach(device_t dev)
 }
 
 static int
+iicbus_attach(device_t dev)
+{
+
+	return (iicbus_attach_common(dev, 0));
+}
+
+int
 iicbus_detach(device_t dev)
 {
 	struct iicbus_softc *sc = IICBUS_SOFTC(dev);
+	int err;
 
+	if ((err = device_delete_children(dev)) != 0)
+		return (err);
 	iicbus_reset(dev, IIC_FASTEST, 0, NULL);
-	bus_generic_detach(dev);
-	device_delete_children(dev);
 	mtx_destroy(&sc->lock);
 	return (0);
 }
@@ -155,7 +167,7 @@ iicbus_print_child(device_t dev, device_t child)
 	return (retval);
 }
 
-static void
+void
 iicbus_probe_nomatch(device_t bus, device_t child)
 {
 	struct iicbus_ivar *devi = IICBUS_IVAR(child);
@@ -163,7 +175,7 @@ iicbus_probe_nomatch(device_t bus, device_t child)
 	device_printf(bus, "<unknown card> at addr %#x\n", devi->addr);
 }
 
-static int
+int
 iicbus_child_location_str(device_t bus, device_t child, char *buf,
     size_t buflen)
 {
@@ -173,7 +185,7 @@ iicbus_child_location_str(device_t bus, device_t child, char *buf,
 	return (0);
 }
 
-static int
+int
 iicbus_child_pnpinfo_str(device_t bus, device_t child, char *buf,
     size_t buflen)
 {
@@ -181,7 +193,7 @@ iicbus_child_pnpinfo_str(device_t bus, device_t child, char *buf,
 	return (0);
 }
 
-static int
+int
 iicbus_read_ivar(device_t bus, device_t child, int which, uintptr_t *result)
 {
 	struct iicbus_ivar *devi = IICBUS_IVAR(child);
@@ -196,7 +208,7 @@ iicbus_read_ivar(device_t bus, device_t child, int which, uintptr_t *result)
 	return (0);
 }
 
-static int
+int
 iicbus_write_ivar(device_t bus, device_t child, int which, uintptr_t value)
 {
 	struct iicbus_ivar *devi = IICBUS_IVAR(child);
@@ -212,8 +224,9 @@ iicbus_write_ivar(device_t bus, device_t child, int which, uintptr_t value)
 	return (0);
 }
 
-static device_t
-iicbus_add_child(device_t dev, u_int order, const char *name, int unit)
+device_t
+iicbus_add_child_common(device_t dev, u_int order, const char *name, int unit,
+    size_t ivars_size)
 {
 	device_t child;
 	struct iicbus_ivar *devi;
@@ -221,7 +234,7 @@ iicbus_add_child(device_t dev, u_int order, const char *name, int unit)
 	child = device_add_child_ordered(dev, order, name, unit);
 	if (child == NULL)
 		return (child);
-	devi = malloc(sizeof(struct iicbus_ivar), M_DEVBUF, M_NOWAIT | M_ZERO);
+	devi = malloc(ivars_size, M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (devi == NULL) {
 		device_delete_child(dev, child);
 		return (0);
@@ -229,6 +242,14 @@ iicbus_add_child(device_t dev, u_int order, const char *name, int unit)
 	resource_list_init(&devi->rl);
 	device_set_ivars(child, devi);
 	return (child);
+}
+
+static device_t
+iicbus_add_child(device_t dev, u_int order, const char *name, int unit)
+{
+
+	return (iicbus_add_child_common(
+	    dev, order, name, unit, sizeof(struct iicbus_ivar)));
 }
 
 static void
@@ -328,6 +349,8 @@ static device_method_t iicbus_methods[] = {
 	DEVMETHOD(device_probe,		iicbus_probe),
 	DEVMETHOD(device_attach,	iicbus_attach),
 	DEVMETHOD(device_detach,	iicbus_detach),
+	DEVMETHOD(device_suspend,	bus_generic_suspend),
+	DEVMETHOD(device_resume,	bus_generic_resume),
 
 	/* bus interface */
 	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),

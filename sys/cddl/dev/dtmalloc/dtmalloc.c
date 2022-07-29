@@ -20,7 +20,7 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- * $FreeBSD: stable/11/sys/cddl/dev/dtmalloc/dtmalloc.c 324282 2017-10-04 15:47:16Z markj $
+ * $FreeBSD$
  *
  */
 
@@ -35,6 +35,9 @@
 
 #include <sys/dtrace.h>
 #include <sys/dtrace_bsd.h>
+
+extern bool dtrace_malloc_enabled;
+static uint32_t dtrace_malloc_enabled_count;
 
 static d_open_t	dtmalloc_open;
 static int	dtmalloc_unload(void);
@@ -152,6 +155,9 @@ dtmalloc_enable(void *arg, dtrace_id_t id, void *parg)
 {
 	uint32_t *p = parg;
 	*p = id;
+	dtrace_malloc_enabled_count++;
+	if (dtrace_malloc_enabled_count == 1)
+		dtrace_malloc_enabled = true;
 }
 
 static void
@@ -159,6 +165,9 @@ dtmalloc_disable(void *arg, dtrace_id_t id, void *parg)
 {
 	uint32_t *p = parg;
 	*p = 0;
+	dtrace_malloc_enabled_count--;
+	if (dtrace_malloc_enabled_count == 0)
+		dtrace_malloc_enabled = false;
 }
 
 static void

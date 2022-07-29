@@ -24,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man9/VFS_SET.9 275993 2014-12-21 10:57:42Z brueffer $
+.\" $FreeBSD$
 .\"
-.Dd February 21, 2013
+.Dd August 16, 2018
 .Dt VFS_SET 9
 .Os
 .Sh NAME
@@ -72,9 +72,10 @@ Loopback file system layer.
 File names are stored as Unicode.
 .It Dv VFCF_JAIL
 Can be mounted from within a jail if
-.Va security.jail.mount_allowed
-sysctl is set to
-.Dv 1 .
+.Va allow.mount
+and
+.Va allow.mount.<fsname>
+jail parameters are set.
 .It Dv VFCF_DELEGADMIN
 Supports delegated administration if
 .Va vfs.usermount

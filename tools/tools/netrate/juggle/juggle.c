@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Robert N. M. Watson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/tools/tools/netrate/juggle/juggle.c 213574 2010-10-08 14:31:49Z pluknet $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -93,19 +92,6 @@
  * or result in blocking.
  */
 #define	PIPELINE_MAX	4
-
-/*
- * As in all programs, steal timespecsub() from time.h.
- */
-#define timespecsub(vvp, uvp)                                           \
-        do {                                                            \
-                (vvp)->tv_sec -= (uvp)->tv_sec;                         \
-                (vvp)->tv_nsec -= (uvp)->tv_nsec;                       \
-                if ((vvp)->tv_nsec < 0) {                               \
-                        (vvp)->tv_sec--;                                \
-                        (vvp)->tv_nsec += 1000000000;                   \
-                }                                                       \
-        } while (0)
 
 static int
 udp_create(int *fd1p, int *fd2p)
@@ -278,7 +264,7 @@ juggle(int fd1, int fd2, int pipeline)
 	if (clock_gettime(CLOCK_REALTIME, &tfinish) < 0)
 		err(-1, "juggle: clock_gettime");
 
-	timespecsub(&tfinish, &tstart);
+	timespecsub(&tfinish, &tstart, &tfinish);
 
 	return (tfinish);
 }
@@ -374,7 +360,7 @@ thread_juggle(int fd1, int fd2, int pipeline)
 	if (pthread_join(thread, NULL) != 0)
 		err(-1, "thread_juggle: pthread_join");
 
-	timespecsub(&tfinish, &tstart);
+	timespecsub(&tfinish, &tstart, &tfinish);
 
 	return (tfinish);
 }
@@ -459,7 +445,7 @@ process_juggle(int fd1, int fd2, int pipeline)
 	if (wpid != pid)
 		errx(-1, "process_juggle: waitpid: pid != wpid");
 
-	timespecsub(&tfinish, &tstart);
+	timespecsub(&tfinish, &tstart, &tfinish);
 
 	return (tfinish);
 }
@@ -499,7 +485,7 @@ main(int argc, char *argv[])
 	int fd1, fd2, i, j, p;
 	struct utsname uts;
 
-	printf("version, juggle.c %s\n", "$FreeBSD: stable/10/tools/tools/netrate/juggle/juggle.c 213574 2010-10-08 14:31:49Z pluknet $");
+	printf("version, juggle.c %s\n", "$FreeBSD$");
 
 	if (uname(&uts) < 0)
 		err(-1, "utsname");

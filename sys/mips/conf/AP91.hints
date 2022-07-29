@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/mips/conf/AP91.hints 242718 2012-11-07 22:46:30Z ray $
+# $FreeBSD$
 
 # arge0 MDIO bus
 hint.argemdio.0.at="nexus0"

@@ -18,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/acpi_support/atk0110.c 335471 2018-06-21 09:41:44Z dim $");
+__FBSDID("$FreeBSD$");
 
 #include <machine/_inttypes.h>
 #include <sys/param.h>

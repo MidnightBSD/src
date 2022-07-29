@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/11/tools/regression/pthread/unwind/cond_wait_cancel2.cpp 213155 2010-09-25 04:26:40Z davidxu $
+ * $FreeBSD$
  *
  * Test stack unwinding for mixed pthread_cleanup_push/pop and C++
  * object, both should work together.
@@ -13,10 +13,10 @@
 
 #include "Test.cpp"
 
-pthread_mutex_t mtx;
-pthread_cond_t cv;
+static pthread_mutex_t mtx;
+static pthread_cond_t cv;
 
-void f()
+static void f()
 {
 	Test t;
 
@@ -26,13 +26,13 @@ void f()
 	printf("Bug, thread shouldn't be here.\n");
 }
 
-void g()
+static void g()
 {
 	f();
 }
 
-void *
-thr(void *arg)
+static void *
+thr(void *arg __unused)
 {
 	pthread_cleanup_push(cleanup_handler, NULL);
 	g();

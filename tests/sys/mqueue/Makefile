@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tests/sys/mqueue/Makefile 306905 2016-10-09 12:34:56Z kib $
+# $FreeBSD$
 
 TESTSDIR=	${TESTSBASE}/sys/mqueue
 

@@ -1,5 +1,5 @@
 #	@(#)Makefile	5.3 (Berkeley) 5/12/90
-# $FreeBSD: stable/11/usr.bin/yacc/Makefile 319186 2017-05-30 04:27:05Z ngie $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -21,8 +21,7 @@ CFLAGS+=	-DYYPATCH=${YYPATCH}
 LINKS=	${BINDIR}/yacc ${BINDIR}/byacc
 MLINKS=	yacc.1 byacc.1
 
-.if ${MK_TESTS} != "no"
-SUBDIR+= tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

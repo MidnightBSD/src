@@ -1,4 +1,4 @@
-#	$FreeBSD: stable/11/share/examples/kld/dyn_sysctl/Makefile 299293 2016-05-10 00:51:50Z gjb $
+#	$FreeBSD$
 
 PACKAGE=examples
 FILESDIR=${SHAREDIR}/examples/kld/${KMOD}

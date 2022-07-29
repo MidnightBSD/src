@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bhyve/mem.c 336191 2018-07-11 07:22:05Z araujo $
+ * $FreeBSD$
  */
 
 /*
@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/mem.c 336191 2018-07-11 07:22:05Z araujo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/errno.h>
@@ -139,6 +139,9 @@ mmio_rb_dump(struct mmio_rb_tree *rbt)
 
 RB_GENERATE(mmio_rb_tree, mmio_rb_range, mr_link, mmio_rb_range_compare);
 
+typedef int (mem_cb_t)(struct vmctx *ctx, int vcpu, uint64_t gpa,
+    struct mem_range *mr, void *arg);
+
 static int
 mem_read(void *ctx, int vcpu, uint64_t gpa, uint64_t *rval, int size, void *arg)
 {
@@ -161,10 +164,9 @@ mem_write(void *ctx, int vcpu, uint64_t gpa, uint64_t wval, int size, void *arg)
 	return (error);
 }
 
-int
-emulate_mem(struct vmctx *ctx, int vcpu, uint64_t paddr, struct vie *vie,
-    struct vm_guest_paging *paging)
-
+static int
+access_memory(struct vmctx *ctx, int vcpu, uint64_t paddr, mem_cb_t *cb,
+    void *arg)
 {
 	struct mmio_rb_range *entry;
 	int err, perror, immutable;
@@ -210,8 +212,7 @@ emulate_mem(struct vmctx *ctx, int vcpu, uint64_t paddr, struct vie *vie,
 		assert(perror == 0);
 	}
 
-	err = vmm_emulate_instruction(ctx, vcpu, paddr, vie, paging,
-				      mem_read, mem_write, &entry->mr_param);
+	err = cb(ctx, vcpu, paddr, &entry->mr_param, arg);
 
 	if (!immutable) {
 		perror = pthread_rwlock_unlock(&mmio_rwlock);
@@ -220,6 +221,73 @@ emulate_mem(struct vmctx *ctx, int vcpu, uint64_t paddr, struct vie *vie,
 
 
 	return (err);
+}
+
+struct emulate_mem_args {
+	struct vie *vie;
+	struct vm_guest_paging *paging;
+};
+
+static int
+emulate_mem_cb(struct vmctx *ctx, int vcpu, uint64_t paddr, struct mem_range *mr,
+    void *arg)
+{
+	struct emulate_mem_args *ema;
+
+	ema = arg;
+	return (vmm_emulate_instruction(ctx, vcpu, paddr, ema->vie, ema->paging,
+	    mem_read, mem_write, mr));
+}
+
+int
+emulate_mem(struct vmctx *ctx, int vcpu, uint64_t paddr, struct vie *vie,
+    struct vm_guest_paging *paging)
+
+{
+	struct emulate_mem_args ema;
+
+	ema.vie = vie;
+	ema.paging = paging;
+	return (access_memory(ctx, vcpu, paddr, emulate_mem_cb, &ema));
+}
+
+struct rw_mem_args {
+	uint64_t *val;
+	int size;
+	int operation;
+};
+
+static int
+rw_mem_cb(struct vmctx *ctx, int vcpu, uint64_t paddr, struct mem_range *mr,
+    void *arg)
+{
+	struct rw_mem_args *rma;
+
+	rma = arg;
+	return (mr->handler(ctx, vcpu, rma->operation, paddr, rma->size,
+	    rma->val, mr->arg1, mr->arg2));
+}
+
+int
+read_mem(struct vmctx *ctx, int vcpu, uint64_t gpa, uint64_t *rval, int size)
+{
+	struct rw_mem_args rma;
+
+	rma.val = rval;
+	rma.size = size;
+	rma.operation = MEM_F_READ;
+	return (access_memory(ctx, vcpu, gpa, rw_mem_cb, &rma));
+}
+
+int
+write_mem(struct vmctx *ctx, int vcpu, uint64_t gpa, uint64_t wval, int size)
+{
+	struct rw_mem_args rma;
+
+	rma.val = &wval;
+	rma.size = size;
+	rma.operation = MEM_F_WRITE;
+	return (access_memory(ctx, vcpu, gpa, rw_mem_cb, &rma));
 }
 
 static int

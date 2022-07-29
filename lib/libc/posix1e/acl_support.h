@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999, 2000, 2001 Robert N. M. Watson
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libc/posix1e/acl_support.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 /*
  * Support functionality for the POSIX.1e ACL interface

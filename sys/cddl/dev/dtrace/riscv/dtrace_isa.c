@@ -21,7 +21,7 @@
  *
  * Portions Copyright 2016 Ruslan Bukin <br@bsdpad.com>
  *
- * $FreeBSD: stable/11/sys/cddl/dev/dtrace/riscv/dtrace_isa.c 300618 2016-05-24 16:41:37Z br $
+ * $FreeBSD$
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.

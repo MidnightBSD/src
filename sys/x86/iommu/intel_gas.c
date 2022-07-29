@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/x86/iommu/intel_gas.c 329942 2018-02-25 00:32:42Z markj $");
+__FBSDID("$FreeBSD$");
 
 #define	RB_AUGMENT(entry) dmar_gas_augment_entry(entry)
 
@@ -65,6 +67,7 @@ __FBSDID("$FreeBSD: stable/11/sys/x86/iommu/intel_gas.c 329942 2018-02-25 00:32:
 #include <x86/include/busdma_impl.h>
 #include <x86/iommu/intel_reg.h>
 #include <x86/iommu/busdma_dmar.h>
+#include <dev/pci/pcireg.h>
 #include <x86/iommu/intel_dmar.h>
 
 /*
@@ -540,13 +543,15 @@ dmar_gas_alloc_region(struct dmar_domain *domain, struct dmar_map_entry *entry,
 	 */
 	if (prev != NULL && prev->end > entry->start &&
 	    (prev->flags & DMAR_MAP_ENTRY_PLACE) == 0) {
-		if ((prev->flags & DMAR_MAP_ENTRY_RMRR) == 0)
+		if ((flags & DMAR_GM_RMRR) == 0 ||
+		    (prev->flags & DMAR_MAP_ENTRY_RMRR) == 0)
 			return (EBUSY);
 		entry->start = prev->end;
 	}
 	if (next != NULL && next->start < entry->end &&
 	    (next->flags & DMAR_MAP_ENTRY_PLACE) == 0) {
-		if ((next->flags & DMAR_MAP_ENTRY_RMRR) == 0)
+		if ((flags & DMAR_GM_RMRR) == 0 ||
+		    (next->flags & DMAR_MAP_ENTRY_RMRR) == 0)
 			return (EBUSY);
 		entry->end = next->start;
 	}
@@ -566,7 +571,8 @@ dmar_gas_alloc_region(struct dmar_domain *domain, struct dmar_map_entry *entry,
 	found = dmar_gas_rb_insert(domain, entry);
 	KASSERT(found, ("found RMRR dup %p start %jx end %jx",
 	    domain, (uintmax_t)entry->start, (uintmax_t)entry->end));
-	entry->flags = DMAR_MAP_ENTRY_RMRR;
+	if ((flags & DMAR_GM_RMRR) != 0)
+		entry->flags = DMAR_MAP_ENTRY_RMRR;
 
 #ifdef INVARIANTS
 	struct dmar_map_entry *ip, *in;
@@ -686,7 +692,7 @@ dmar_gas_map_region(struct dmar_domain *domain, struct dmar_map_entry *entry,
 
 	KASSERT(entry->flags == 0, ("used RMRR entry %p %p %x", domain,
 	    entry, entry->flags));
-	KASSERT((flags & ~(DMAR_GM_CANWAIT)) == 0,
+	KASSERT((flags & ~(DMAR_GM_CANWAIT | DMAR_GM_RMRR)) == 0,
 	    ("invalid flags 0x%x", flags));
 
 	start = entry->start;

@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_ISCSI 277675 2015-01-25 04:20:11Z ngie $
+.\" $FreeBSD$
 Set to not build
-.Xr iscid 8
+.Xr iscsid 8
 and related utilities.

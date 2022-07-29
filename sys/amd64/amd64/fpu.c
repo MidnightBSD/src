@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990 William Jolitz.
  * Copyright (c) 1991 The Regents of the University of California.
  * All rights reserved.
@@ -11,7 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/fpu.c 336963 2018-07-31 10:18:30Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,6 +46,7 @@ __FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/fpu.c 336963 2018-07-31 10:18:30Z 
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/sysctl.h>
+#include <sys/sysent.h>
 #include <machine/bus.h>
 #include <sys/rman.h>
 #include <sys/signalvar.h>
@@ -59,6 +62,7 @@ __FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/fpu.c 336963 2018-07-31 10:18:30Z 
 #include <machine/specialreg.h>
 #include <machine/segments.h>
 #include <machine/ucontext.h>
+#include <x86/ifunc.h>
 
 /*
  * Floating point support.
@@ -77,7 +81,7 @@ __FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/fpu.c 336963 2018-07-31 10:18:30Z 
 #define	stmxcsr(addr)		__asm __volatile("stmxcsr %0" : : "m" (*(addr)))
 
 static __inline void
-xrstor(char *addr, uint64_t mask)
+xrstor32(char *addr, uint64_t mask)
 {
 	uint32_t low, hi;
 
@@ -87,13 +91,56 @@ xrstor(char *addr, uint64_t mask)
 }
 
 static __inline void
-xsave(char *addr, uint64_t mask)
+xrstor64(char *addr, uint64_t mask)
+{
+	uint32_t low, hi;
+
+	low = mask;
+	hi = mask >> 32;
+	__asm __volatile("xrstor64 %0" : : "m" (*addr), "a" (low), "d" (hi));
+}
+
+static __inline void
+xsave32(char *addr, uint64_t mask)
 {
 	uint32_t low, hi;
 
 	low = mask;
 	hi = mask >> 32;
 	__asm __volatile("xsave %0" : "=m" (*addr) : "a" (low), "d" (hi) :
+	    "memory");
+}
+
+static __inline void
+xsave64(char *addr, uint64_t mask)
+{
+	uint32_t low, hi;
+
+	low = mask;
+	hi = mask >> 32;
+	__asm __volatile("xsave64 %0" : "=m" (*addr) : "a" (low), "d" (hi) :
+	    "memory");
+}
+
+static __inline void
+xsaveopt32(char *addr, uint64_t mask)
+{
+	uint32_t low, hi;
+
+	low = mask;
+	hi = mask >> 32;
+	__asm __volatile("xsaveopt %0" : "=m" (*addr) : "a" (low), "d" (hi) :
+	    "memory");
+}
+
+static __inline void
+xsaveopt64(char *addr, uint64_t mask)
+{
+	uint32_t low, hi;
+
+	low = mask;
+	hi = mask >> 32;
+	__asm __volatile("xsaveopt64 %0" : "=m" (*addr) : "a" (low), "d" (hi) :
 	    "memory");
 }
 
@@ -108,8 +155,12 @@ void	fxsave(caddr_t addr);
 void	fxrstor(caddr_t addr);
 void	ldmxcsr(u_int csr);
 void	stmxcsr(u_int *csr);
-void	xrstor(char *addr, uint64_t mask);
-void	xsave(char *addr, uint64_t mask);
+void	xrstor32(char *addr, uint64_t mask);
+void	xrstor64(char *addr, uint64_t mask);
+void	xsave32(char *addr, uint64_t mask);
+void	xsave64(char *addr, uint64_t mask);
+void	xsaveopt32(char *addr, uint64_t mask);
+void	xsaveopt64(char *addr, uint64_t mask);
 
 #endif	/* __GNUCLIKE_ASM && !lint */
 
@@ -140,7 +191,7 @@ SYSCTL_INT(_hw, HW_FLOATINGPT, floatingpoint, CTLFLAG_RD,
     SYSCTL_NULL_INT_PTR, 1, "Floating point instructions executed in hardware");
 
 int lazy_fpu_switch = 0;
-SYSCTL_INT(_hw, OID_AUTO, lazy_fpu_switch, CTLFLAG_RWTUN | CTLFLAG_NOFETCH,
+SYSCTL_INT(_hw, OID_AUTO, lazy_fpu_switch, CTLFLAG_RD,
     &lazy_fpu_switch, 0,
     "Lazily load FPU context after context switch");
 
@@ -154,24 +205,99 @@ struct xsave_area_elm_descr {
 	u_int	size;
 } *xsave_area_desc;
 
-void
-fpusave(void *addr)
+static void
+fpusave_xsaveopt64(void *addr)
 {
-
-	if (use_xsave)
-		xsave((char *)addr, xsave_mask);
-	else
-		fxsave((char *)addr);
+	xsaveopt64((char *)addr, xsave_mask);
 }
 
-void
-fpurestore(void *addr)
+static void
+fpusave_xsaveopt3264(void *addr)
+{
+	if (SV_CURPROC_FLAG(SV_ILP32))
+		xsaveopt32((char *)addr, xsave_mask);
+	else
+		xsaveopt64((char *)addr, xsave_mask);
+}
+
+static void
+fpusave_xsave64(void *addr)
+{
+	xsave64((char *)addr, xsave_mask);
+}
+
+static void
+fpusave_xsave3264(void *addr)
+{
+	if (SV_CURPROC_FLAG(SV_ILP32))
+		xsave32((char *)addr, xsave_mask);
+	else
+		xsave64((char *)addr, xsave_mask);
+}
+
+static void
+fpurestore_xrstor64(void *addr)
+{
+	xrstor64((char *)addr, xsave_mask);
+}
+
+static void
+fpurestore_xrstor3264(void *addr)
+{
+	if (SV_CURPROC_FLAG(SV_ILP32))
+		xrstor32((char *)addr, xsave_mask);
+	else
+		xrstor64((char *)addr, xsave_mask);
+}
+
+static void
+fpusave_fxsave(void *addr)
+{
+
+	fxsave((char *)addr);
+}
+
+static void
+fpurestore_fxrstor(void *addr)
+{
+
+	fxrstor((char *)addr);
+}
+
+static void
+init_xsave(void)
 {
 
 	if (use_xsave)
-		xrstor((char *)addr, xsave_mask);
-	else
-		fxrstor((char *)addr);
+		return;
+	if ((cpu_feature2 & CPUID2_XSAVE) == 0)
+		return;
+	use_xsave = 1;
+	TUNABLE_INT_FETCH("hw.use_xsave", &use_xsave);
+}
+
+DEFINE_IFUNC(, void, fpusave, (void *), static)
+{
+
+	init_xsave();
+	if (!use_xsave)
+		return (fpusave_fxsave);
+	if ((cpu_stdext_feature & CPUID_EXTSTATE_XSAVEOPT) != 0) {
+		return ((cpu_stdext_feature & CPUID_STDEXT_NFPUSG) != 0 ?
+		    fpusave_xsaveopt64 : fpusave_xsaveopt3264);
+	}
+	return ((cpu_stdext_feature & CPUID_STDEXT_NFPUSG) != 0 ?
+	    fpusave_xsave64 : fpusave_xsave3264);
+}
+
+DEFINE_IFUNC(, void, fpurestore, (void *), static)
+{
+
+	init_xsave();
+	if (!use_xsave)
+		return (fpurestore_fxrstor);
+	return ((cpu_stdext_feature & CPUID_STDEXT_NFPUSG) != 0 ?
+	    fpurestore_xrstor64 : fpurestore_xrstor3264);
 }
 
 void
@@ -208,15 +334,10 @@ fpuinit_bsp1(void)
 {
 	u_int cp[4];
 	uint64_t xsave_mask_user;
+	bool old_wp;
 
-	TUNABLE_INT_FETCH("hw.lazy_fpu_switch", &lazy_fpu_switch);
-	if ((cpu_feature2 & CPUID2_XSAVE) != 0) {
-		use_xsave = 1;
-		TUNABLE_INT_FETCH("hw.use_xsave", &use_xsave);
-	}
 	if (!use_xsave)
 		return;
-
 	cpuid_count(0xd, 0x0, cp);
 	xsave_mask = XFEATURE_ENABLED_X87 | XFEATURE_ENABLED_SSE;
 	if ((cp[0] & xsave_mask) != xsave_mask)
@@ -237,8 +358,15 @@ fpuinit_bsp1(void)
 		 * Patch the XSAVE instruction in the cpu_switch code
 		 * to XSAVEOPT.  We assume that XSAVE encoding used
 		 * REX byte, and set the bit 4 of the r/m byte.
+		 *
+		 * It seems that some BIOSes give control to the OS
+		 * with CR0.WP already set, making the kernel text
+		 * read-only before cpu_startup().
 		 */
+		old_wp = disable_wp();
+		ctx_switch_xsave32[3] |= 0x10;
 		ctx_switch_xsave[3] |= 0x10;
+		restore_wp(old_wp);
 	}
 }
 
@@ -309,6 +437,7 @@ fpuinit(void)
 static void
 fpuinitstate(void *arg __unused)
 {
+	uint64_t *xstate_bv;
 	register_t saveintr;
 	int cp[4], i, max_ext_n;
 
@@ -317,7 +446,7 @@ fpuinitstate(void *arg __unused)
 	saveintr = intr_disable();
 	stop_emulating();
 
-	fpusave(fpu_initialstate);
+	fpusave_fxsave(fpu_initialstate);
 	if (fpu_initialstate->sv_env.en_mxcsr_mask)
 		cpu_mxcsr_mask = fpu_initialstate->sv_env.en_mxcsr_mask;
 	else
@@ -336,9 +465,14 @@ fpuinitstate(void *arg __unused)
 
 	/*
 	 * Create a table describing the layout of the CPU Extended
-	 * Save Area.
+	 * Save Area.  See Intel SDM rev. 075 Vol. 1 13.4.1 "Legacy
+	 * Region of an XSAVE Area" for the source of offsets/sizes.
 	 */
 	if (use_xsave) {
+		xstate_bv = (uint64_t *)((char *)(fpu_initialstate + 1) +
+		    offsetof(struct xstate_hdr, xstate_bv));
+		*xstate_bv = XFEATURE_ENABLED_X87 | XFEATURE_ENABLED_SSE;
+
 		max_ext_n = flsl(xsave_mask);
 		xsave_area_desc = malloc(max_ext_n * sizeof(struct
 		    xsave_area_elm_descr), M_DEVBUF, M_WAITOK | M_ZERO);
@@ -390,14 +524,14 @@ fpuformat(void)
 	return (_MC_FPFMT_XMM);
 }
 
-/* 
+/*
  * The following mechanism is used to ensure that the FPE_... value
  * that is passed as a trapcode to the signal handler of the user
  * process does not have more than one bit set.
- * 
+ *
  * Multiple bits may be set if the user process modifies the control
  * word while a status word bit is already set.  While this is a sign
- * of bad coding, we have no choise than to narrow them down to one
+ * of bad coding, we have no choice than to narrow them down to one
  * bit, since we must not send a trapcode that is not exactly one of
  * the FPE_ macros.
  *
@@ -708,8 +842,7 @@ void
 fpu_activate_sw(struct thread *td)
 {
 
-	if (lazy_fpu_switch || (td->td_pflags & TDP_KTHREAD) != 0 ||
-	    !PCB_USER_FPU(td->td_pcb)) {
+	if ((td->td_pflags & TDP_KTHREAD) != 0 || !PCB_USER_FPU(td->td_pcb)) {
 		PCPU_SET(fpcurthread, NULL);
 		start_emulating();
 	} else if (PCPU_GET(fpcurthread) != td) {
@@ -953,6 +1086,7 @@ static driver_t fpupnp_driver = {
 static devclass_t fpupnp_devclass;
 
 DRIVER_MODULE(fpupnp, acpi, fpupnp_driver, fpupnp_devclass, 0, 0);
+ISA_PNP_INFO(fpupnp_ids);
 #endif	/* DEV_ISA */
 
 static MALLOC_DEFINE(M_FPUKERN_CTX, "fpukern_ctx",
@@ -1000,7 +1134,7 @@ fpu_kern_ctx_savefpu(struct fpu_kern_ctx *ctx)
 	return ((struct savefpu *)p);
 }
 
-int
+void
 fpu_kern_enter(struct thread *td, struct fpu_kern_ctx *ctx, u_int flags)
 {
 	struct pcb *pcb;
@@ -1032,11 +1166,11 @@ fpu_kern_enter(struct thread *td, struct fpu_kern_ctx *ctx, u_int flags)
 		fpurestore(fpu_initialstate);
 		set_pcb_flags(pcb, PCB_KERNFPU | PCB_FPUNOSAVE |
 		    PCB_FPUINITDONE);
-		return (0);
+		return;
 	}
 	if ((flags & FPU_KERN_KTHR) != 0 && is_fpu_kern_thread(0)) {
 		ctx->flags = FPU_KERN_CTX_DUMMY | FPU_KERN_CTX_INUSE;
-		return (0);
+		return;
 	}
 	critical_enter();
 	KASSERT(!PCB_USER_FPU(pcb) || pcb->pcb_save ==
@@ -1050,7 +1184,6 @@ fpu_kern_enter(struct thread *td, struct fpu_kern_ctx *ctx, u_int flags)
 	set_pcb_flags(pcb, PCB_KERNFPU);
 	clear_pcb_flags(pcb, PCB_FPUINITDONE);
 	critical_exit();
-	return (0);
 }
 
 int
@@ -1087,8 +1220,9 @@ fpu_kern_leave(struct thread *td, struct fpu_kern_ctx *ctx)
 	if (pcb->pcb_save == get_pcb_user_save_pcb(pcb)) {
 		if ((pcb->pcb_flags & PCB_USERFPUINITDONE) != 0) {
 			set_pcb_flags(pcb, PCB_FPUINITDONE);
-			clear_pcb_flags(pcb, PCB_KERNFPU);
-		} else
+			if ((pcb->pcb_flags & PCB_KERNFPU_THR) == 0)
+				clear_pcb_flags(pcb, PCB_KERNFPU);
+		} else if ((pcb->pcb_flags & PCB_KERNFPU_THR) == 0)
 			clear_pcb_flags(pcb, PCB_FPUINITDONE | PCB_KERNFPU);
 	} else {
 		if ((ctx->flags & FPU_KERN_CTX_FPUINITDONE) != 0)
@@ -1111,7 +1245,7 @@ fpu_kern_thread(u_int flags)
 	    ("mangled pcb_save"));
 	KASSERT(PCB_USER_FPU(curpcb), ("recursive call"));
 
-	set_pcb_flags(curpcb, PCB_KERNFPU);
+	set_pcb_flags(curpcb, PCB_KERNFPU | PCB_KERNFPU_THR);
 	return (0);
 }
 
@@ -1121,7 +1255,7 @@ is_fpu_kern_thread(u_int flags)
 
 	if ((curthread->td_pflags & TDP_KTHREAD) == 0)
 		return (0);
-	return ((curpcb->pcb_flags & PCB_KERNFPU) != 0);
+	return ((curpcb->pcb_flags & PCB_KERNFPU_THR) != 0);
 }
 
 /*

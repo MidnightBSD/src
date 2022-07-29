@@ -19,7 +19,7 @@ PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
 ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
 SOFTWARE.
 
- $FreeBSD: stable/11/libexec/bootpd/tools/bootpef/bootpef.c 97419 2002-05-28 18:39:53Z alfred $
+ $FreeBSD$
 
 ************************************************************************/
 
@@ -54,14 +54,6 @@ SOFTWARE.
 #include <errno.h>
 #include <ctype.h>
 #include <syslog.h>
-
-#ifndef	USE_BFUNCS
-#include <memory.h>
-/* Yes, memcpy is OK here (no overlapped copies). */
-#define bcopy(a,b,c)    memcpy(b,a,c)
-#define bzero(p,l)      memset(p,0,l)
-#define bcmp(a,b,c)     memcmp(a,b,c)
-#endif
 
 #include "bootp.h"
 #include "hash.h"

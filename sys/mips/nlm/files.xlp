@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/mips/nlm/files.xlp 279384 2015-02-27 23:33:53Z jchandra $
+# $FreeBSD$
 mips/nlm/hal/nlm_hal.c				standard
 mips/nlm/hal/fmn.c				standard
 mips/nlm/xlp_machdep.c				standard

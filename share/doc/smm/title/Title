@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)Title	8.2 (Berkeley) 4/19/94
-.\" $FreeBSD: stable/11/share/doc/smm/title/Title 279947 2015-03-13 07:29:49Z emaste $
+.\" $FreeBSD$
 .\"
 .ps 18
 .vs 22

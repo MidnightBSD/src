@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * From i386: FreeBSD:  157909 2006-04-21 04:28:43Z peter
- * $FreeBSD: stable/11/sys/riscv/include/minidump.h 292407 2015-12-17 18:44:30Z br $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_MINIDUMP_H_

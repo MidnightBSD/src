@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2013  Peter Grehan <grehan@freebsd.org>
  * All rights reserved.
+ * Copyright 2020 Joyent, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,11 +26,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bhyve/block_if.c 348375 2019-05-29 23:11:07Z jhb $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/block_if.c 348375 2019-05-29 23:11:07Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #ifndef WITHOUT_CAPSICUM
@@ -42,6 +43,9 @@ __FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/block_if.c 348375 2019-05-29 23:11:
 #include <sys/disk.h>
 
 #include <assert.h>
+#ifndef WITHOUT_CAPSICUM
+#include <capsicum_helpers.h>
+#endif
 #include <err.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -56,6 +60,7 @@ __FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/block_if.c 348375 2019-05-29 23:11:
 #include <machine/atomic.h>
 
 #include "bhyverun.h"
+#include "debug.h"
 #include "mevent.h"
 #include "block_if.h"
 
@@ -406,6 +411,8 @@ blockif_open(const char *optstr, const char *ident)
 	off_t size, psectsz, psectoff;
 	int extra, fd, i, sectsz;
 	int nocache, sync, ro, candelete, geom, ssopt, pssopt;
+	int nodelete;
+
 #ifndef WITHOUT_CAPSICUM
 	cap_rights_t rights;
 	cap_ioctl_t cmds[] = { DIOCGFLUSH, DIOCGDELETE };
@@ -418,6 +425,7 @@ blockif_open(const char *optstr, const char *ident)
 	nocache = 0;
 	sync = 0;
 	ro = 0;
+	nodelete = 0;
 
 	/*
 	 * The first element in the optstring is always a pathname.
@@ -430,6 +438,8 @@ blockif_open(const char *optstr, const char *ident)
 			continue;
 		else if (!strcmp(cp, "nocache"))
 			nocache = 1;
+		else if (!strcmp(cp, "nodelete"))
+			nodelete = 1;
 		else if (!strcmp(cp, "sync") || !strcmp(cp, "direct"))
 			sync = 1;
 		else if (!strcmp(cp, "ro"))
@@ -439,7 +449,7 @@ blockif_open(const char *optstr, const char *ident)
 		else if (sscanf(cp, "sectorsize=%d", &ssopt) == 1)
 			pssopt = ssopt;
 		else {
-			fprintf(stderr, "Invalid device option \"%s\"\n", cp);
+			EPRINTLN("Invalid device option \"%s\"", cp);
 			goto err;
 		}
 	}
@@ -473,7 +483,7 @@ blockif_open(const char *optstr, const char *ident)
 	if (ro)
 		cap_rights_clear(&rights, CAP_FSYNC, CAP_WRITE);
 
-	if (cap_rights_limit(fd, &rights) == -1 && errno != ENOSYS)
+	if (caph_rights_limit(fd, &rights) == -1)
 		errx(EX_OSERR, "Unable to apply rights for sandbox");
 #endif
 
@@ -496,7 +506,7 @@ blockif_open(const char *optstr, const char *ident)
 			ioctl(fd, DIOCGSTRIPEOFFSET, &psectoff);
 		strlcpy(arg.name, "GEOM::candelete", sizeof(arg.name));
 		arg.len = sizeof(arg.value.i);
-		if (ioctl(fd, DIOCGATTR, &arg) == 0)
+		if (nodelete == 0 && ioctl(fd, DIOCGATTR, &arg) == 0)
 			candelete = arg.value.i;
 		if (ioctl(fd, DIOCGPROVIDERNAME, name) == 0)
 			geom = 1;
@@ -504,14 +514,14 @@ blockif_open(const char *optstr, const char *ident)
 		psectsz = sbuf.st_blksize;
 
 #ifndef WITHOUT_CAPSICUM
-	if (cap_ioctls_limit(fd, cmds, nitems(cmds)) == -1 && errno != ENOSYS)
+	if (caph_ioctls_limit(fd, cmds, nitems(cmds)) == -1)
 		errx(EX_OSERR, "Unable to apply rights for sandbox");
 #endif
 
 	if (ssopt != 0) {
 		if (!powerof2(ssopt) || !powerof2(pssopt) || ssopt < 512 ||
 		    ssopt > pssopt) {
-			fprintf(stderr, "Invalid sector size %d/%d\n",
+			EPRINTLN("Invalid sector size %d/%d",
 			    ssopt, pssopt);
 			goto err;
 		}
@@ -525,8 +535,8 @@ blockif_open(const char *optstr, const char *ident)
 		 */
 		if (S_ISCHR(sbuf.st_mode)) {
 			if (ssopt < sectsz || (ssopt % sectsz) != 0) {
-				fprintf(stderr, "Sector size %d incompatible "
-				    "with underlying device sector size %d\n",
+				EPRINTLN("Sector size %d incompatible "
+				    "with underlying device sector size %d",
 				    ssopt, sectsz);
 				goto err;
 			}

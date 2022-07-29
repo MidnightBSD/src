@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989 Regents of the University of California.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  *	from: @(#)float.h	7.1 (Berkeley) 5/8/90
  *	from: src/sys/i386/include/float.h,v 1.8 1999/08/28 00:44:11 peter
  *	JNPR: float.h,v 1.4 2006/12/02 09:53:41 katta
- * $FreeBSD: stable/11/sys/mips/include/float.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_FLOAT_H_
@@ -42,11 +44,7 @@ extern int __flt_rounds(void);
 __END_DECLS
 
 #define	FLT_RADIX	2		/* b */
-#ifdef CPU_HAVEFPU
 #define	FLT_ROUNDS	__flt_rounds() /* FP addition rounds to nearest */
-#else
-#define	FLT_ROUNDS	(-1)
-#endif
 
 #if __ISO_C_VISIBLE >= 1999
 #define	FLT_EVAL_METHOD	0

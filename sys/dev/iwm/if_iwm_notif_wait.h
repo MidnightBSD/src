@@ -66,7 +66,7 @@
  *
  *****************************************************************************/
 
-/* $FreeBSD: stable/11/sys/dev/iwm/if_iwm_notif_wait.h 330170 2018-03-01 05:48:20Z eadler $ */
+/* $FreeBSD$ */
 
 #ifndef __IF_IWN_NOTIF_WAIT_H__
 #define __IF_IWN_NOTIF_WAIT_H__

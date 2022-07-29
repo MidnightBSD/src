@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/netinet/cc/cc.h 341503 2018-12-04 22:25:24Z tuexen $
+ * $FreeBSD$
  */
 
 /*
@@ -52,7 +52,7 @@
 #define _NETINET_CC_CC_H_
 
 #if !defined(_KERNEL)
-#error "no user-servicable parts inside"
+#error "no user-serviceable parts inside"
 #endif
 
 /* Global CC vars. */
@@ -63,6 +63,12 @@ extern struct cc_algo newreno_cc_algo;
 /* Per-netstack bits. */
 VNET_DECLARE(struct cc_algo *, default_cc_ptr);
 #define	V_default_cc_ptr VNET(default_cc_ptr)
+
+VNET_DECLARE(int, cc_do_abe);
+#define	V_cc_do_abe			VNET(cc_do_abe)
+
+VNET_DECLARE(int, cc_abe_frlossreduce);
+#define	V_cc_abe_frlossreduce		VNET(cc_abe_frlossreduce)
 
 /* Define the new net.inet.tcp.cc sysctl tree. */
 SYSCTL_DECL(_net_inet_tcp_cc);
@@ -86,12 +92,13 @@ struct cc_var {
 		struct tcpcb		*tcp;
 		struct sctp_nets	*sctp;
 	} ccvc;
+	uint16_t	nsegs; /* # segments coalesced into current chain. */
 };
 
 /* cc_var flags. */
 #define	CCF_ABC_SENTAWND	0x0001	/* ABC counted cwnd worth of bytes? */
 #define	CCF_CWND_LIMITED	0x0002	/* Are we currently cwnd limited? */
-#define	CCF_DELACK		0x0004	/* Is this ack delayed? */
+#define	CCF_UNUSED1		0x0004	/* unused */
 #define	CCF_ACKNOW		0x0008	/* Will this ack be sent now? */
 #define	CCF_IPHDR_CE		0x0010	/* Does this packet set CE bit? */
 #define	CCF_TCPHDR_CWR		0x0020	/* Does this packet set CWR bit? */

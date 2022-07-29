@@ -1,6 +1,6 @@
 # A Programmer Dvorak keyboard for US English
 #
-# $FreeBSD: stable/11/share/vt/keymaps/us.dvorakp.kbd 270114 2014-08-17 19:54:21Z se $
+# $FreeBSD$
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock
 # code  base   shift  cntrl  shift  alt    shift  cntrl  shift state

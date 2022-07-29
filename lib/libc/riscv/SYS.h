@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libc/riscv/SYS.h 294227 2016-01-17 15:21:23Z br $
+ * $FreeBSD$
  */
 
 #include <sys/syscall.h>
@@ -54,8 +54,10 @@ END(__sys_##name)
 ENTRY(__sys_##name);						\
 	WEAK_REFERENCE(__sys_##name, _##name);			\
 	_SYSCALL(name);						\
-	bnez	t0, cerror; 					\
+	bnez	t0, 1f; 					\
 	ret;							\
+1:	la	t1, cerror;					\
+	jr	t1;						\
 END(__sys_##name)
 
 #define	RSYSCALL(name)						\
@@ -63,6 +65,8 @@ ENTRY(__sys_##name);						\
 	WEAK_REFERENCE(__sys_##name, name);			\
 	WEAK_REFERENCE(__sys_##name, _##name);			\
 	_SYSCALL(name);						\
-	bnez	t0, cerror; 					\
+	bnez	t0, 1f; 					\
 	ret;							\
+1:	la	t1, cerror;					\
+	jr	t1;						\
 END(__sys_##name)

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	JNPR: ldscript.mips,v 1.3 2006/10/11 06:12:04
- * $FreeBSD: stable/11/sys/conf/ldscript.mips.mips64 317145 2017-04-19 15:33:24Z emaste $
+ * $FreeBSD$
  */
 
 OUTPUT_ARCH(mips)
@@ -176,6 +176,11 @@ SECTIONS
   PROVIDE (etext = .);
   .rodata   : { *(.rodata) *(.rodata.*) *(.gnu.linkonce.r.*) }
   .rodata1   : { *(.rodata1) }
+  .note.gnu.build-id : {
+    PROVIDE (__build_id_start = .);
+    *(.note.gnu.build-id)
+    PROVIDE (__build_id_end = .);
+  }
   .reginfo : { *(.reginfo) }
   .sdata2   : { *(.sdata2) *(.sdata2.*) *(.gnu.linkonce.s2.*) }
   .sbss2   : { *(.sbss2) *(.sbss2.*) *(.gnu.linkonce.sb2.*) }

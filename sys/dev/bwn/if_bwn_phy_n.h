@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/bwn/if_bwn_phy_n.h 300018 2016-05-17 07:11:12Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef	__IF_BWN_PHY_N_H__

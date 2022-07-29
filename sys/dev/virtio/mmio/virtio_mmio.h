@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/virtio/mmio/virtio_mmio.h 284544 2015-06-18 10:33:04Z br $
+ * $FreeBSD$
  */
 
 #ifndef	_VIRTIO_MMIO_H

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/atheros/qca955x_chip.c 298848 2016-04-30 14:41:18Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 

@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: bthost.c,v 1.5 2003/05/21 20:30:01 max Exp $
- * $FreeBSD: stable/11/usr.bin/bluetooth/bthost/bthost.c 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 #define L2CAP_SOCKET_CHECKED

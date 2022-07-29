@@ -39,10 +39,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/x86/x86/cpu_machdep.c 355701 2019-12-13 06:54:41Z scottl $");
+__FBSDID("$FreeBSD$");
 
+#include "opt_acpi.h"
 #include "opt_atpic.h"
-#include "opt_compat.h"
 #include "opt_cpu.h"
 #include "opt_ddb.h"
 #include "opt_inet.h"
@@ -51,11 +51,9 @@ __FBSDID("$FreeBSD: stable/11/sys/x86/x86/cpu_machdep.c 355701 2019-12-13 06:54:
 #include "opt_kstack_pages.h"
 #include "opt_maxmem.h"
 #include "opt_mp_watchdog.h"
-#include "opt_perfmon.h"
 #include "opt_platform.h"
 #ifdef __i386__
 #include "opt_apic.h"
-#include "opt_xbox.h"
 #endif
 
 #include <sys/param.h>
@@ -63,6 +61,7 @@ __FBSDID("$FreeBSD: stable/11/sys/x86/x86/cpu_machdep.c 355701 2019-12-13 06:54:
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/cpu.h>
+#include <sys/domainset.h>
 #include <sys/kdb.h>
 #include <sys/kernel.h>
 #include <sys/ktr.h>
@@ -77,13 +76,11 @@ __FBSDID("$FreeBSD: stable/11/sys/x86/x86/cpu_machdep.c 355701 2019-12-13 06:54:
 
 #include <machine/clock.h>
 #include <machine/cpu.h>
+#include <machine/cpufunc.h>
 #include <machine/cputypes.h>
 #include <machine/specialreg.h>
 #include <machine/md_var.h>
 #include <machine/mp_watchdog.h>
-#ifdef PERFMON
-#include <machine/perfmon.h>
-#endif
 #include <machine/tss.h>
 #ifdef SMP
 #include <machine/smp.h>
@@ -92,6 +89,7 @@ __FBSDID("$FreeBSD: stable/11/sys/x86/x86/cpu_machdep.c 355701 2019-12-13 06:54:
 #include <machine/elan_mmcr.h>
 #endif
 #include <x86/acpica_machdep.h>
+#include <x86/ifunc.h>
 
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
@@ -102,9 +100,9 @@ __FBSDID("$FreeBSD: stable/11/sys/x86/x86/cpu_machdep.c 355701 2019-12-13 06:54:
 #include <vm/vm_pager.h>
 #include <vm/vm_param.h>
 
-#ifndef PC98
 #include <isa/isareg.h>
-#endif
+
+#include <contrib/dev/acpica/include/acpi.h>
 
 #define	STATE_RUNNING	0x0
 #define	STATE_MWAIT	0x1
@@ -349,9 +347,7 @@ static void
 cpu_reset_real(void)
 {
 	struct region_descriptor null_idt;
-#ifndef PC98
 	int b;
-#endif
 
 	disable_intr();
 #ifdef CPU_ELAN
@@ -365,16 +361,6 @@ cpu_reset_real(void)
 		outl(0xcfc, 0xf);
 	}
 #endif
-#ifdef PC98
-	/*
-	 * Attempt to do a CPU reset via CPU reset port.
-	 */
-	if ((inb(0x35) & 0xa0) != 0xa0) {
-		outb(0x37, 0x0f);		/* SHUT0 = 0. */
-		outb(0x37, 0x0b);		/* SHUT1 = 0. */
-	}
-	outb(0xf0, 0x00);			/* Reset. */
-#else
 #if !defined(BROKEN_KEYBOARD_RESET)
 	/*
 	 * Attempt to do a CPU reset via the keyboard controller,
@@ -413,7 +399,6 @@ cpu_reset_real(void)
 		outb(0x92, b | 0x1);
 		DELAY(500000);  /* wait 0.5 sec to see if that did it */
 	}
-#endif /* PC98 */
 
 	printf("No known reset method worked, attempting CPU shutdown\n");
 	DELAY(1000000); /* wait 1 sec for printf to complete */
@@ -469,7 +454,6 @@ cpu_reset(void)
 
 			/* Restart CPU #0. */
 			CPU_SETOF(0, &started_cpus);
-			wmb();
 
 			cnt = 0;
 			while (cpu_reset_proxy_active == 0 && cnt < 10000000) {
@@ -503,12 +487,13 @@ cpu_mwait_usable(void)
 }
 
 void (*cpu_idle_hook)(sbintime_t) = NULL;	/* ACPI idle hook. */
-static int	cpu_ident_amdc1e = 0;	/* AMD C1E supported. */
+
+int cpu_amdc1e_bug = 0;			/* AMD C1E APIC workaround required. */
+
 static int	idle_mwait = 1;		/* Use MONITOR/MWAIT for short idle. */
 SYSCTL_INT(_machdep, OID_AUTO, idle_mwait, CTLFLAG_RWTUN, &idle_mwait,
     0, "Use MONITOR/MWAIT for short idle");
 
-#ifndef PC98
 static void
 cpu_idle_acpi(sbintime_t sbt)
 {
@@ -527,7 +512,6 @@ cpu_idle_acpi(sbintime_t sbt)
 		acpi_cpu_c1();
 	atomic_store_int(state, STATE_RUNNING);
 }
-#endif /* !PC98 */
 
 static void
 cpu_idle_hlt(sbintime_t sbt)
@@ -606,40 +590,7 @@ cpu_idle_spin(sbintime_t sbt)
 	}
 }
 
-/*
- * C1E renders the local APIC timer dead, so we disable it by
- * reading the Interrupt Pending Message register and clearing
- * both C1eOnCmpHalt (bit 28) and SmiOnCmpHalt (bit 27).
- * 
- * Reference:
- *   "BIOS and Kernel Developer's Guide for AMD NPT Family 0Fh Processors"
- *   #32559 revision 3.00+
- */
-#define	MSR_AMDK8_IPM		0xc0010055
-#define	AMDK8_SMIONCMPHALT	(1ULL << 27)
-#define	AMDK8_C1EONCMPHALT	(1ULL << 28)
-#define	AMDK8_CMPHALT		(AMDK8_SMIONCMPHALT | AMDK8_C1EONCMPHALT)
-
-void
-cpu_probe_amdc1e(void)
-{
-
-	/*
-	 * Detect the presence of C1E capability mostly on latest
-	 * dual-cores (or future) k8 family.
-	 */
-	if (cpu_vendor_id == CPU_VENDOR_AMD &&
-	    (cpu_id & 0x00000f00) == 0x00000f00 &&
-	    (cpu_id & 0x0fff0000) >=  0x00040000) {
-		cpu_ident_amdc1e = 1;
-	}
-}
-
-#if defined(__i386__) && defined(PC98)
-void (*cpu_idle_fn)(sbintime_t) = cpu_idle_hlt;
-#else
 void (*cpu_idle_fn)(sbintime_t) = cpu_idle_acpi;
-#endif
 
 void
 cpu_idle(int busy)
@@ -668,10 +619,11 @@ cpu_idle(int busy)
 	}
 
 	/* Apply AMD APIC timer C1E workaround. */
-	if (cpu_ident_amdc1e && cpu_disable_c3_sleep) {
+	if (cpu_amdc1e_bug && cpu_disable_c3_sleep) {
 		msr = rdmsr(MSR_AMDK8_IPM);
-		if (msr & AMDK8_CMPHALT)
-			wrmsr(MSR_AMDK8_IPM, msr & ~AMDK8_CMPHALT);
+		if ((msr & (AMDK8_SMIONCMPHALT | AMDK8_C1EONCMPHALT)) != 0)
+			wrmsr(MSR_AMDK8_IPM, msr & ~(AMDK8_SMIONCMPHALT |
+			    AMDK8_C1EONCMPHALT));
 	}
 
 	/* Call main idle method. */
@@ -724,9 +676,7 @@ static struct {
 	{ .id_fn = cpu_idle_mwait, .id_name = "mwait",
 	    .id_cpuid2_flag = CPUID2_MON },
 	{ .id_fn = cpu_idle_hlt, .id_name = "hlt" },
-#if !defined(__i386__) || !defined(PC98)
 	{ .id_fn = cpu_idle_acpi, .id_name = "acpi" },
-#endif
 };
 
 static int
@@ -742,11 +692,9 @@ idle_sysctl_available(SYSCTL_HANDLER_ARGS)
 		if (idle_tbl[i].id_cpuid2_flag != 0 &&
 		    (cpu_feature2 & idle_tbl[i].id_cpuid2_flag) == 0)
 			continue;
-#if !defined(__i386__) || !defined(PC98)
 		if (strcmp(idle_tbl[i].id_name, "acpi") == 0 &&
 		    cpu_idle_hook == NULL)
 			continue;
-#endif
 		p += sprintf(p, "%s%s", p != avail ? ", " : "",
 		    idle_tbl[i].id_name);
 	}
@@ -767,11 +715,9 @@ cpu_idle_selector(const char *new_idle_name)
 		if (idle_tbl[i].id_cpuid2_flag != 0 &&
 		    (cpu_feature2 & idle_tbl[i].id_cpuid2_flag) == 0)
 			continue;
-#if !defined(__i386__) || !defined(PC98)
 		if (strcmp(idle_tbl[i].id_name, "acpi") == 0 &&
 		    cpu_idle_hook == NULL)
 			continue;
-#endif
 		if (strcmp(idle_tbl[i].id_name, new_idle_name))
 			continue;
 		cpu_idle_fn = idle_tbl[i].id_fn;
@@ -833,20 +779,15 @@ cpu_idle_tun(void *unused __unused)
 }
 SYSINIT(cpu_idle_tun, SI_SUB_CPU, SI_ORDER_MIDDLE, cpu_idle_tun, NULL);
 
-static int panic_on_nmi = 1;
+static int panic_on_nmi = 0xff;
 SYSCTL_INT(_machdep, OID_AUTO, panic_on_nmi, CTLFLAG_RWTUN,
     &panic_on_nmi, 0,
-    "Panic on NMI raised by hardware failure");
+    "Panic on NMI: 1 = H/W failure; 2 = unknown; 0xff = all");
 int nmi_is_broadcast = 1;
 SYSCTL_INT(_machdep, OID_AUTO, nmi_is_broadcast, CTLFLAG_RWTUN,
     &nmi_is_broadcast, 0,
     "Chipset NMI is broadcast");
-#ifdef KDB
-int kdb_on_nmi = 1;
-SYSCTL_INT(_machdep, OID_AUTO, kdb_on_nmi, CTLFLAG_RWTUN,
-    &kdb_on_nmi, 0,
-    "Go to KDB on NMI with unknown source");
-#endif
+int (*apei_nmi)(void);
 
 void
 nmi_call_kdb(u_int cpu, u_int type, struct trapframe *frame)
@@ -857,19 +798,35 @@ nmi_call_kdb(u_int cpu, u_int type, struct trapframe *frame)
 	/* machine/parity/power fail/"kitchen sink" faults */
 	if (isa_nmi(frame->tf_err)) {
 		claimed = true;
-		if (panic_on_nmi)
+		if ((panic_on_nmi & 1) != 0)
 			panic("NMI indicates hardware failure");
 	}
 #endif /* DEV_ISA */
+
+	/* ACPI Platform Error Interfaces callback. */
+	if (apei_nmi != NULL && (*apei_nmi)())
+		claimed = true;
+
+	/*
+	 * NMIs can be useful for debugging.  They can be hooked up to a
+	 * pushbutton, usually on an ISA, PCI, or PCIe card.  They can also be
+	 * generated by an IPMI BMC, either manually or in response to a
+	 * watchdog timeout.  For example, see the "power diag" command in
+	 * ports/sysutils/ipmitool.  They can also be generated by a
+	 * hypervisor; see "bhyvectl --inject-nmi".
+	 */
+
 #ifdef KDB
-	if (!claimed && kdb_on_nmi) {
-		/*
-		 * NMI can be hooked up to a pushbutton for debugging.
-		 */
-		printf("NMI/cpu%d ... going to debugger\n", cpu);
-		kdb_trap(type, 0, frame);
+	if (!claimed && (panic_on_nmi & 2) != 0) {
+		if (debugger_on_panic) {
+			printf("NMI/cpu%d ... going to debugger\n", cpu);
+			claimed = kdb_trap(type, 0, frame);
+		}
 	}
 #endif /* KDB */
+
+	if (!claimed && panic_on_nmi != 0)
+		panic("NMI");
 }
 
 void
@@ -1049,11 +1006,11 @@ hw_mds_recalculate(void)
 	 * reported.  For instance, hypervisor might unknowingly
 	 * filter the cap out.
 	 * For the similar reasons, and for testing, allow to enable
-	 * mitigation even for RDCL_NO or MDS_NO caps.
+	 * mitigation even when MDS_NO cap is set.
 	 */
 	if (cpu_vendor_id != CPU_VENDOR_INTEL || hw_mds_disable == 0 ||
-	    ((cpu_ia32_arch_caps & (IA32_ARCH_CAP_RDCL_NO |
-	    IA32_ARCH_CAP_MDS_NO)) != 0 && hw_mds_disable == 3)) {
+	    ((cpu_ia32_arch_caps & IA32_ARCH_CAP_MDS_NO) != 0 &&
+	    hw_mds_disable == 3)) {
 		mds_handler = mds_handler_void;
 	} else if (((cpu_stdext_feature3 & CPUID_STDEXT3_MD_CLEAR) != 0 &&
 	    hw_mds_disable == 3) || hw_mds_disable == 1) {
@@ -1072,8 +1029,8 @@ hw_mds_recalculate(void)
 		CPU_FOREACH(i) {
 			pc = pcpu_find(i);
 			if (pc->pc_mds_buf == NULL) {
-				pc->pc_mds_buf = malloc(672, M_TEMP,
-				    M_WAITOK);
+				pc->pc_mds_buf = malloc_domainset(672, M_TEMP,
+				    DOMAINSET_PREF(pc->pc_domain), M_WAITOK);
 				bzero(pc->pc_mds_buf, 16);
 			}
 		}
@@ -1090,8 +1047,8 @@ hw_mds_recalculate(void)
 		CPU_FOREACH(i) {
 			pc = pcpu_find(i);
 			if (pc->pc_mds_buf == NULL) {
-				pc->pc_mds_buf = malloc(1536, M_TEMP,
-				    M_WAITOK);
+				pc->pc_mds_buf = malloc_domainset(1536, M_TEMP,
+				    DOMAINSET_PREF(pc->pc_domain), M_WAITOK);
 				bzero(pc->pc_mds_buf, 16);
 			}
 		}
@@ -1112,10 +1069,12 @@ hw_mds_recalculate(void)
 		CPU_FOREACH(i) {
 			pc = pcpu_find(i);
 			if (pc->pc_mds_buf == NULL) {
-				pc->pc_mds_buf = malloc(6 * 1024,
-				    M_TEMP, M_WAITOK);
-				b64 = (vm_offset_t)malloc(64 + 63,
-				    M_TEMP, M_WAITOK);
+				pc->pc_mds_buf = malloc_domainset(6 * 1024,
+				    M_TEMP, DOMAINSET_PREF(pc->pc_domain),
+				    M_WAITOK);
+				b64 = (vm_offset_t)malloc_domainset(64 + 63,
+				    M_TEMP, DOMAINSET_PREF(pc->pc_domain),
+				    M_WAITOK);
 				pc->pc_mds_buf64 = (void *)roundup2(b64, 64);
 				bzero(pc->pc_mds_buf64, 64);
 			}
@@ -1360,3 +1319,121 @@ SYSCTL_PROC(_machdep_mitigations_taa, OID_AUTO, state,
     sysctl_taa_state_handler, "A",
     "TAA Mitigation state");
 
+int __read_frequently cpu_flush_rsb_ctxsw;
+SYSCTL_INT(_machdep_mitigations, OID_AUTO, flush_rsb_ctxsw,
+    CTLFLAG_RW | CTLFLAG_NOFETCH, &cpu_flush_rsb_ctxsw, 0,
+    "Flush Return Stack Buffer on context switch");
+
+SYSCTL_NODE(_machdep_mitigations, OID_AUTO, rngds,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "MCU Optimization, disable RDSEED mitigation");
+
+int x86_rngds_mitg_enable = 1;
+void
+x86_rngds_mitg_recalculate(bool all_cpus)
+{
+	if ((cpu_stdext_feature3 & CPUID_STDEXT3_MCUOPT) == 0)
+		return;
+	x86_msr_op(MSR_IA32_MCU_OPT_CTRL,
+	    (x86_rngds_mitg_enable ? MSR_OP_OR : MSR_OP_ANDNOT) |
+	    (all_cpus ? MSR_OP_RENDEZVOUS : MSR_OP_LOCAL),
+	    IA32_RNGDS_MITG_DIS);
+}
+
+static int
+sysctl_rngds_mitg_enable_handler(SYSCTL_HANDLER_ARGS)
+{
+	int error, val;
+
+	val = x86_rngds_mitg_enable;
+	error = sysctl_handle_int(oidp, &val, 0, req);
+	if (error != 0 || req->newptr == NULL)
+		return (error);
+	x86_rngds_mitg_enable = val;
+	x86_rngds_mitg_recalculate(true);
+	return (0);
+}
+SYSCTL_PROC(_machdep_mitigations_rngds, OID_AUTO, enable, CTLTYPE_INT |
+    CTLFLAG_RWTUN | CTLFLAG_NOFETCH | CTLFLAG_MPSAFE, NULL, 0,
+    sysctl_rngds_mitg_enable_handler, "I",
+    "MCU Optimization, disabling RDSEED mitigation control "
+    "(0 - mitigation disabled (RDSEED optimized), 1 - mitigation enabled");
+
+static int
+sysctl_rngds_state_handler(SYSCTL_HANDLER_ARGS)
+{
+	const char *state;
+
+	if ((cpu_stdext_feature3 & CPUID_STDEXT3_MCUOPT) == 0) {
+		state = "Not applicable";
+	} else if (x86_rngds_mitg_enable == 0) {
+		state = "RDSEED not serialized";
+	} else {
+		state = "Mitigated";
+	}
+	return (SYSCTL_OUT(req, state, strlen(state)));
+}
+SYSCTL_PROC(_machdep_mitigations_rngds, OID_AUTO, state,
+    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, 0,
+    sysctl_rngds_state_handler, "A",
+    "MCU Optimization state");
+
+/*
+ * Enable and restore kernel text write permissions.
+ * Callers must ensure that disable_wp()/restore_wp() are executed
+ * without rescheduling on the same core.
+ */
+bool
+disable_wp(void)
+{
+	u_int cr0;
+
+	cr0 = rcr0();
+	if ((cr0 & CR0_WP) == 0)
+		return (false);
+	load_cr0(cr0 & ~CR0_WP);
+	return (true);
+}
+
+void
+restore_wp(bool old_wp)
+{
+
+	if (old_wp)
+		load_cr0(rcr0() | CR0_WP);
+}
+
+bool
+acpi_get_fadt_bootflags(uint16_t *flagsp)
+{
+#ifdef DEV_ACPI
+	ACPI_TABLE_FADT *fadt;
+	vm_paddr_t physaddr;
+
+	physaddr = acpi_find_table(ACPI_SIG_FADT);
+	if (physaddr == 0)
+		return (false);
+	fadt = acpi_map_table(physaddr, ACPI_SIG_FADT);
+	if (fadt == NULL)
+		return (false);
+	*flagsp = fadt->BootFlags;
+	acpi_unmap_table(fadt);
+	return (true);
+#else
+	return (false);
+#endif
+}
+
+DEFINE_IFUNC(, uint64_t, rdtsc_ordered, (void), static)
+{
+	bool cpu_is_amd = cpu_vendor_id == CPU_VENDOR_AMD ||
+	    cpu_vendor_id == CPU_VENDOR_HYGON;
+
+	if ((amd_feature & AMDID_RDTSCP) != 0)
+		return (rdtscp);
+	else if ((cpu_feature & CPUID_SSE2) != 0)
+		return (cpu_is_amd ? rdtsc_ordered_mfence :
+		    rdtsc_ordered_lfence);
+	else
+		return (rdtsc);
+}

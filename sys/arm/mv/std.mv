@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/arm/mv/std.mv 239362 2012-08-18 05:48:19Z andrew $
+# $FreeBSD$
 
 files		"../mv/files.mv"
 cpu		CPU_ARM9E

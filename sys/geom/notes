@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/sys/geom/notes 134824 2004-09-05 21:15:58Z phk $
+$FreeBSD$
 
 For the lack of a better place to put them, this file will contain
 notes on some of the more intricate details of geom.

@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_FILE 278193 2015-02-04 10:24:40Z ngie $
+.\" $FreeBSD$
 Set to not build
 .Xr file 1
 and related programs.

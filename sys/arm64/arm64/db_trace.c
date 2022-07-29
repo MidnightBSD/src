@@ -30,7 +30,7 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm64/arm64/db_trace.c 305773 2016-09-13 16:22:50Z andrew $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/proc.h>
 #include <sys/kdb.h>
@@ -111,7 +111,7 @@ db_trace_thread(struct thread *thr, int count)
 
 		frame.sp = (uint64_t)ctx->pcb_sp;
 		frame.fp = (uint64_t)ctx->pcb_x[29];
-		frame.pc = (uint64_t)ctx->pcb_x[30];
+		frame.pc = (uintptr_t)ctx->pcb_lr;
 		db_stack_trace_cmd(&frame);
 	} else
 		db_trace_self();

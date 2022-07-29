@@ -3,6 +3,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001-2009 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_ubt.c,v 1.16 2003/10/10 19:15:06 max Exp $
- * $FreeBSD: stable/11/sys/netgraph/bluetooth/drivers/ubt/ng_ubt.c 298813 2016-04-29 21:25:05Z pfg $
+ * $FreeBSD$
  */
 
 /*
@@ -506,6 +508,7 @@ static const STRUCT_USB_HOST_ID ubt_devs[] =
 	{ USB_VPI(USB_VENDOR_LITEON, 0x2003, 0) },
 	{ USB_VPI(USB_VENDOR_FOXCONN, 0xe042, 0) },
 	{ USB_VPI(USB_VENDOR_DELL, 0x8197, 0) },
+	{ USB_VPI(USB_VENDOR_BELKIN, 0x065a, 0) },
 };
 
 /*
@@ -621,7 +624,7 @@ ubt_attach(device_t dev)
 	struct usb_endpoint_descriptor	*ed;
 	struct usb_interface_descriptor *id;
 	struct usb_interface		*iface;
-	uint16_t			wMaxPacketSize;
+	uint32_t			wMaxPacketSize;
 	uint8_t				alt_index, i, j;
 	uint8_t				iface_index[2] = { 0, 1 };
 
@@ -711,9 +714,10 @@ ubt_attach(device_t dev)
 		if ((ed->bDescriptorType == UDESC_ENDPOINT) &&
 		    (ed->bLength >= sizeof(*ed)) &&
 		    (i == 1)) {
-			uint16_t temp;
+			uint32_t temp;
 
-			temp = UGETW(ed->wMaxPacketSize);
+			temp = usbd_get_max_frame_length(
+			    ed, NULL, usbd_get_speed(uaa->device));
 			if (temp > wMaxPacketSize) {
 				wMaxPacketSize = temp;
 				alt_index = j;

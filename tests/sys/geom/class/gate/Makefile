@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tests/sys/geom/class/gate/Makefile 313753 2017-02-15 00:15:24Z asomers $
+# $FreeBSD$
 
 PACKAGE=	tests
 

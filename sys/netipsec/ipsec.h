@@ -1,7 +1,9 @@
-/*	$FreeBSD: stable/11/sys/netipsec/ipsec.h 351358 2019-08-21 22:42:08Z jhb $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: ipsec.h,v 1.53 2001/11/20 08:32:38 itojun Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
  *
@@ -36,11 +38,6 @@
 
 #ifndef _NETIPSEC_IPSEC_H_
 #define _NETIPSEC_IPSEC_H_
-
-#if defined(_KERNEL) && !defined(_LKM) && !defined(KLD_MODULE)
-#include "opt_inet.h"
-#include "opt_ipsec.h"
-#endif
 
 #include <net/pfkeyv2.h>
 #include <netipsec/keydb.h>
@@ -217,8 +214,9 @@ struct ipsecstat {
 	uint64_t ips_out_inval;		/* output: generic error */
 	uint64_t ips_out_bundlesa;	/* output: bundled SA processed */
 
-	uint64_t ips_mbcoalesced;	/* mbufs coalesced during clone */
-	uint64_t ips_clcoalesced;	/* clusters coalesced during clone */
+	uint64_t ips_spdcache_hits;	/* SPD cache hits */
+	uint64_t ips_spdcache_misses;	/* SPD cache misses */
+
 	uint64_t ips_clcopied;		/* clusters copied during clone */
 	uint64_t ips_mbinserted;	/* mbufs inserted during makespace */
 	/* 
@@ -281,6 +279,7 @@ VNET_DECLARE(int, ip4_ah_net_deflev);
 VNET_DECLARE(int, ip4_ipsec_dfbit);
 VNET_DECLARE(int, ip4_ipsec_ecn);
 VNET_DECLARE(int, crypto_support);
+VNET_DECLARE(int, async_crypto);
 VNET_DECLARE(int, natt_cksum_policy);
 
 extern struct timeval ipsec_warn_interval;
@@ -294,6 +293,7 @@ extern struct timeval ipsec_warn_interval;
 #define	V_ip4_ipsec_dfbit	VNET(ip4_ipsec_dfbit)
 #define	V_ip4_ipsec_ecn		VNET(ip4_ipsec_ecn)
 #define	V_crypto_support	VNET(crypto_support)
+#define	V_async_crypto		VNET(async_crypto)
 #define	V_natt_cksum_policy	VNET(natt_cksum_policy)
 
 #define ipseclog(x)	do { if (V_ipsec_debug) log x; } while (0)
@@ -329,7 +329,7 @@ int udp_ipsec_pcbctl(struct inpcb *, struct sockopt *);
 
 int ipsec_chkreplay(uint32_t, struct secasvar *);
 int ipsec_updatereplay(uint32_t, struct secasvar *);
-int ipsec_updateid(struct secasvar *, uint64_t *, uint64_t *);
+int ipsec_updateid(struct secasvar *, crypto_session_t *, crypto_session_t *);
 int ipsec_initialized(void);
 
 void ipsec_setspidx_inpcb(struct inpcb *, struct secpolicyindex *, u_int);

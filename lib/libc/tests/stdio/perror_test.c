@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/tests/stdio/perror_test.c 290860 2015-11-15 12:48:42Z bapt $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <errno.h>

@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/xen/xenmem/xenmem_if.m 282634 2015-05-08 14:48:40Z royger $
+# $FreeBSD$
 #
 
 #include <sys/bus.h>

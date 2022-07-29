@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/dev/ppbus/ppbus_if.m 139749 2005-01-06 01:43:34Z imp $
+# $FreeBSD$
 #
 
 #include <sys/bus.h>

@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/11/sys/cddl/dev/dtrace/dtrace_sysctl.c 310328 2016-12-20 16:37:45Z gnn $
+ * $FreeBSD$
  *
  */
 

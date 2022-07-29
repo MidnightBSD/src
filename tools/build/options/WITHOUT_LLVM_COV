@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_LLVM_COV 346296 2019-04-16 20:05:24Z dim $
+.\" $FreeBSD$
 Set to not build the
 .Xr llvm-cov 1
 tool.

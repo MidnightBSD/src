@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/iscsi/icl_wrappers.h 332601 2018-04-16 16:22:00Z trasz $
+ * $FreeBSD$
  */
 
 /*

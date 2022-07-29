@@ -28,7 +28,7 @@
 #include "opt_inet6.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/net/if_vxlan.c 346783 2019-04-27 04:39:41Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/eventhandler.h>
@@ -587,7 +587,7 @@ vxlan_ftable_update_locked(struct vxlan_softc *sc,
     struct rm_priotracker *tracker)
 {
 	struct vxlan_ftable_entry *fe;
-	int error;
+	int error __unused;
 
 	VXLAN_LOCK_ASSERT(sc);
 
@@ -862,8 +862,9 @@ static void
 vxlan_socket_destroy(struct vxlan_socket *vso)
 {
 	struct socket *so;
-	struct vxlan_socket_mc_info *mc;
+#ifdef INVARIANTS
 	int i;
+	struct vxlan_socket_mc_info *mc;
 
 	for (i = 0; i < VXLAN_SO_MC_MAX_GROUPS; i++) {
 		mc = &vso->vxlso_mc[i];
@@ -877,7 +878,7 @@ vxlan_socket_destroy(struct vxlan_socket *vso)
 		    ("%s: socket %p vni_hash[%d] not empty",
 		     __func__, vso, i));
 	}
-
+#endif
 	so = vso->vxlso_sock;
 	if (so != NULL) {
 		vso->vxlso_sock = NULL;
@@ -1133,7 +1134,7 @@ vxlan_socket_mc_join_group(struct vxlan_socket *vso,
 		 * If we really need to, we can of course look in the INP's
 		 * membership list:
 		 *     sotoinpcb(vso->vxlso_sock)->inp_moptions->
-		 *         imo_membership[]->inm_ifp
+		 *         imo_head[]->imf_inm->inm_ifp
 		 * similarly to imo_match_group().
 		 */
 		source->in4.sin_addr = local->in4.sin_addr;
@@ -2504,7 +2505,7 @@ vxlan_rcv_udp_packet(struct mbuf *m, int offset, struct inpcb *inpcb,
 	struct vxlan_socket *vso;
 	struct vxlan_header *vxh, vxlanhdr;
 	uint32_t vni;
-	int error;
+	int error __unused;
 
 	M_ASSERTPKTHDR(m);
 	vso = xvso;
@@ -2531,8 +2532,9 @@ vxlan_rcv_udp_packet(struct mbuf *m, int offset, struct inpcb *inpcb,
 		goto out;
 
 	vni = ntohl(vxh->vxlh_vni) >> VXLAN_HDR_VNI_SHIFT;
+
 	/* Adjust to the start of the inner Ethernet frame. */
-	m_adj(m, offset + sizeof(struct vxlan_header));
+	m_adj_decap(m, offset + sizeof(struct vxlan_header));
 
 	error = vxlan_input(vso, vni, &m, srcsa);
 	MPASS(error != 0 || m == NULL);
@@ -3048,10 +3050,10 @@ vxlan_sysctl_setup(struct vxlan_softc *sc)
 	    OID_AUTO, "ftable", CTLFLAG_RD, NULL, "");
 	SYSCTL_ADD_UINT(ctx, SYSCTL_CHILDREN(node), OID_AUTO, "count",
 	    CTLFLAG_RD, &sc->vxl_ftable_cnt, 0,
-	    "Number of entries in fowarding table");
+	    "Number of entries in forwarding table");
 	SYSCTL_ADD_UINT(ctx, SYSCTL_CHILDREN(node), OID_AUTO, "max",
 	     CTLFLAG_RD, &sc->vxl_ftable_max, 0,
-	    "Maximum number of entries allowed in fowarding table");
+	    "Maximum number of entries allowed in forwarding table");
 	SYSCTL_ADD_UINT(ctx, SYSCTL_CHILDREN(node), OID_AUTO, "timeout",
 	    CTLFLAG_RD, &sc->vxl_ftable_timeout, 0,
 	    "Number of seconds between prunes of the forwarding table");

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/mkuzip/mkuz_conveyor.h 298504 2016-04-23 07:23:43Z sobomax $
+ * $FreeBSD$
  */
 
 struct mkuz_fifo_queue;

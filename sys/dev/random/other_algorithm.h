@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/random/other_algorithm.h 286839 2015-08-17 07:36:12Z markm $
+ * $FreeBSD$
  */
 
 /*-
@@ -31,14 +31,13 @@
  * containing an alternative entropy-processing algorithm for random(4).
  *
  * The functions below should be completed with the appropriate code,
- * and the nearby yarrow.c and fortuna.c may be consulted for examples
- * of working code.
+ * and the nearby fortuna.c may be consulted for examples of working code.
  *
  * The author is willing to provide reasonable help to those wishing to
  * write such a module for themselves. Please use the markm@ FreeBSD
  * email address, and ensure that you are developing this on a suitably
- * supported branch (This is currently 11-CURRENT, and will be no
- * older than 11-STABLE in the future).
+ * supported branch (This is currently 12-CURRENT, and may be no
+ * older than 12-STABLE in the future).
  */
 
 #ifndef SYS_DEV_RANDOM_OTHER_H_INCLUDED

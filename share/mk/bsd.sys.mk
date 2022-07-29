@@ -6,16 +6,16 @@
 # Enable various levels of compiler warning checks.  These may be
 # overridden (e.g. if using a non-gcc compiler) by defining MK_WARNS=no.
 
-# for GCC:   http://gcc.gnu.org/onlinedocs/gcc-4.2.1/gcc/Warning-Options.html
+# for 4.2.1 GCC:   http://gcc.gnu.org/onlinedocs/gcc-4.2.1/gcc/Warning-Options.html
+# for current GCC: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
+# for clang: https://clang.llvm.org/docs/DiagnosticsReference.html
 
 .include <bsd.compiler.mk>
 
 # the default is gnu99 for now
 CSTD?=		gnu99
 
-.if ${CSTD} == "k&r"
-CFLAGS+=	-traditional
-.elif ${CSTD} == "c89" || ${CSTD} == "c90"
+.if ${CSTD} == "c89" || ${CSTD} == "c90"
 CFLAGS+=	-std=iso9899:1990
 .elif ${CSTD} == "c94" || ${CSTD} == "c95"
 CFLAGS+=	-std=iso9899:199409
@@ -24,6 +24,11 @@ CFLAGS+=	-std=iso9899:1999
 .else # CSTD
 CFLAGS+=	-std=${CSTD}
 .endif # CSTD
+
+.if !empty(CXXSTD)
+CXXFLAGS+=	-std=${CXXSTD}
+.endif
+
 #
 # Turn off -Werror for gcc 4.2.1. The compiler is on the glide path out of the
 # system, and any warnings specific to it are no longer relevant as there are
@@ -56,7 +61,6 @@ CWARNFLAGS+=	-Wreturn-type -Wcast-qual -Wwrite-strings -Wswitch -Wshadow\
 CWARNFLAGS+=	-Wcast-align
 .endif # !NO_WCAST_ALIGN !NO_WCAST_ALIGN.${COMPILER_TYPE}
 .endif # WARNS >= 4
-# BDECFLAGS
 .if ${WARNS} >= 6
 CWARNFLAGS+=	-Wchar-subscripts -Winline -Wnested-externs -Wredundant-decls\
 		-Wold-style-definition
@@ -78,7 +82,10 @@ CWARNFLAGS+=	-Wno-pointer-sign
 .if ${WARNS} <= 6
 CWARNFLAGS.clang+=	-Wno-empty-body -Wno-string-plus-int
 .if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 30400
-CWARNFLAGS.clang+= -Wno-unused-const-variable
+CWARNFLAGS.clang+=	-Wno-unused-const-variable
+.endif
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 130000
+CWARNFLAGS.clang+=	-Wno-error=unused-but-set-variable
 .endif
 .endif # WARNS <= 6
 .if ${WARNS} <= 3
@@ -89,6 +96,9 @@ CWARNFLAGS.clang+=	-Wno-unused-local-typedef
 .endif
 .if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 40000
 CWARNFLAGS.clang+=	-Wno-address-of-packed-member
+.endif
+.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 90100
+CWARNFLAGS.gcc+=	-Wno-address-of-packed-member
 .endif
 .if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 70000 && \
     ${MACHINE_CPUARCH} == "arm" && !${MACHINE_ARCH:Marmv[67]*}
@@ -152,10 +162,38 @@ CWARNFLAGS+=	-Wno-error=address			\
 
 # GCC 6.1.0
 .if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 60100
-CWARNFLAGS+=	-Wno-error=nonnull-compare		\
+CWARNFLAGS+=	-Wno-error=empty-body			\
+		-Wno-error=nonnull-compare		\
 		-Wno-error=shift-negative-value		\
 		-Wno-error=tautological-compare		\
 		-Wno-error=unused-const-variable
+.endif
+
+# GCC 7.1.0
+.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 70100
+CWARNFLAGS+=	-Wno-error=bool-operation		\
+		-Wno-error=deprecated			\
+		-Wno-error=expansion-to-defined		\
+		-Wno-error=format-overflow		\
+		-Wno-error=format-truncation		\
+		-Wno-error=implicit-fallthrough		\
+		-Wno-error=int-in-bool-context		\
+		-Wno-error=memset-elt-size		\
+		-Wno-error=noexcept-type		\
+		-Wno-error=nonnull			\
+		-Wno-error=pointer-compare		\
+		-Wno-error=stringop-overflow
+.endif
+
+# GCC 8.1.0
+.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 80100
+CWARNFLAGS+=	-Wno-error=aggressive-loop-optimizations	\
+		-Wno-error=cast-function-type			\
+		-Wno-error=catch-value				\
+		-Wno-error=multistatement-macros		\
+		-Wno-error=restrict				\
+		-Wno-error=sizeof-pointer-memaccess		\
+		-Wno-error=stringop-truncation
 .endif
 
 # How to handle MidnightBSD custom printf format specifiers.
@@ -169,15 +207,13 @@ FORMAT_EXTENSIONS=	-fformat-extensions
 CWARNFLAGS+=	-Wno-unknown-pragmas
 .endif # IGNORE_PRAGMA
 
-# We need this conditional because many places that use it
-# only enable it for some files with CLFAGS.$FILE+=${CLANG_NO_IAS}.
-# unconditionally, and can't easily use the CFLAGS.clang=
-# mechanism.
-.if ${COMPILER_TYPE} == "clang"
-CLANG_NO_IAS=	 -no-integrated-as
+# This warning is utter nonsense
+CFLAGS+=	-Wno-format-zero-length
+
+CLANG_OPT_SMALL= -mstack-alignment=8 -mllvm -inline-threshold=3
+.if ${COMPILER_VERSION} < 130000
+CLANG_OPT_SMALL+= -mllvm -simplifycfg-dup-ret
 .endif
-CLANG_OPT_SMALL= -mstack-alignment=8 -mllvm -inline-threshold=3\
-		 -mllvm -simplifycfg-dup-ret
 .if ${COMPILER_VERSION} >= 30500 && ${COMPILER_VERSION} < 30700
 CLANG_OPT_SMALL+= -mllvm -enable-gvn=false
 .else
@@ -208,8 +244,12 @@ SSP_CFLAGS?=	-fstack-protector
 CFLAGS+=	${SSP_CFLAGS}
 .endif # SSP && !ARM && !MIPS
 
+# Additional flags passed in CFLAGS and CXXFLAGS when MK_DEBUG_FILES is
+# enabled.
+DEBUG_FILES_CFLAGS?= -g
+
 # Allow user-specified additional warning flags, plus compiler and file
-# specific flag overrides, unless we've overriden this...
+# specific flag overrides, unless we've overridden this...
 .if ${MK_WARNS} != "no"
 CFLAGS+=	${CWARNFLAGS:M*} ${CWARNFLAGS.${COMPILER_TYPE}}
 CFLAGS+=	${CWARNFLAGS.${.IMPSRC:T}}
@@ -221,9 +261,34 @@ CFLAGS+=	 ${CFLAGS.${COMPILER_TYPE}}
 CXXFLAGS+=	 ${CXXFLAGS.${COMPILER_TYPE}}
 
 AFLAGS+=	${AFLAGS.${.IMPSRC:T}}
+AFLAGS+=	${AFLAGS.${.TARGET:T}}
 ACFLAGS+=	${ACFLAGS.${.IMPSRC:T}}
+ACFLAGS+=	${ACFLAGS.${.TARGET:T}}
 CFLAGS+=	${CFLAGS.${.IMPSRC:T}}
 CXXFLAGS+=	${CXXFLAGS.${.IMPSRC:T}}
+
+LDFLAGS+=	${LDFLAGS.${LINKER_TYPE}}
+
+# Only allow .TARGET when not using PROGS as it has the same syntax
+# per PROG which is ambiguous with this syntax. This is only needed
+# for PROG_VARS vars.
+#
+# Some directories (currently just clang) also need to disable this since
+# CFLAGS.${COMPILER_TYPE}, CFLAGS.${.IMPSRC:T} and CFLAGS.${.TARGET:T} all live
+# in the same namespace, meaning that, for example, GCC builds of clang pick up
+# CFLAGS.clang via CFLAGS.${.TARGET:T} and thus try to pass Clang-specific
+# flags. Ideally the different sources of CFLAGS would be namespaced to avoid
+# collisions.
+.if !defined(_RECURSING_PROGS) && !defined(NO_TARGET_FLAGS)
+.if ${MK_WARNS} != "no"
+CFLAGS+=	${CWARNFLAGS.${.TARGET:T}}
+.endif
+CFLAGS+=	${CFLAGS.${.TARGET:T}}
+CXXFLAGS+=	${CXXFLAGS.${.TARGET:T}}
+LDFLAGS+=	${LDFLAGS.${.TARGET:T}}
+LDADD+=		${LDADD.${.TARGET:T}}
+LIBADD+=	${LIBADD.${.TARGET:T}}
+.endif
 
 .if defined(SRCTOP)
 # Prevent rebuilding during install to support read-only objdirs.
@@ -238,8 +303,8 @@ PHONY_NOTMAIN = analyze afterdepend afterinstall all beforedepend beforeinstall 
 		beforelinking build build-tools buildconfig buildfiles \
 		buildincludes check checkdpadd clean cleandepend cleandir \
 		cleanobj configure depend distclean distribute exe \
-		files html includes install installconfig installfiles \
-		installincludes lint obj objlink objs objwarn \
+		files html includes install installconfig installdirs \
+		installfiles installincludes lint obj objlink objs objwarn \
 		realinstall tags whereobj
 
 # we don't want ${PROG} to be PHONY
@@ -328,7 +393,7 @@ STAGE_TARGETS+= $t
 STAGE_TARGETS+= stage_as
 .endif
 
-.if !empty(_LIBS) || (${MK_STAGING_PROG} != "no" && !defined(INTERNALPROG))
+.if !empty(STAGE_TARGETS) || (${MK_STAGING_PROG} != "no" && !defined(INTERNALPROG))
 
 .if !empty(LINKS)
 STAGE_TARGETS+= stage_links

@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/linuxkpi/common/src/linux_compat.c 356987 2020-01-22 15:51:24Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_stack.h"
 
@@ -50,6 +50,7 @@ __FBSDID("$FreeBSD: stable/11/sys/compat/linuxkpi/common/src/linux_compat.c 3569
 #include <sys/rwlock.h>
 #include <sys/mman.h>
 #include <sys/stack.h>
+#include <sys/time.h>
 #include <sys/user.h>
 
 #include <vm/vm.h>
@@ -85,6 +86,7 @@ __FBSDID("$FreeBSD: stable/11/sys/compat/linuxkpi/common/src/linux_compat.c 3569
 #include <linux/compat.h>
 #include <linux/poll.h>
 #include <linux/smp.h>
+#include <linux/wait_bit.h>
 
 #if defined(__i386__) || defined(__amd64__)
 #include <asm/smp.h>
@@ -95,6 +97,17 @@ SYSCTL_NODE(_compat, OID_AUTO, linuxkpi, CTLFLAG_RW, 0, "LinuxKPI parameters");
 int linuxkpi_debug;
 SYSCTL_INT(_compat_linuxkpi, OID_AUTO, debug, CTLFLAG_RWTUN,
     &linuxkpi_debug, 0, "Set to enable pr_debug() prints. Clear to disable.");
+
+int linuxkpi_warn_dump_stack = 0;
+SYSCTL_INT(_compat_linuxkpi, OID_AUTO, warn_dump_stack, CTLFLAG_RWTUN,
+    &linuxkpi_warn_dump_stack, 0,
+    "Set to enable stack traces from WARN_ON(). Clear to disable.");
+
+static struct timeval lkpi_net_lastlog;
+static int lkpi_net_curpps;
+static int lkpi_net_maxpps = 99;
+SYSCTL_INT(_compat_linuxkpi, OID_AUTO, net_ratelimit, CTLFLAG_RWTUN,
+    &lkpi_net_maxpps, 0, "Limit number of LinuxKPI net messages per second.");
 
 MALLOC_DEFINE(M_KMALLOC, "linux", "Linux kmalloc compat");
 
@@ -116,6 +129,9 @@ struct list_head pci_devices;
 spinlock_t pci_lock;
 
 unsigned long linux_timer_hz_mask;
+
+wait_queue_head_t linux_bit_waitq;
+wait_queue_head_t linux_var_waitq;
 
 int
 panic_cmp(struct rb_node *one, struct rb_node *two)
@@ -528,14 +544,14 @@ linux_cdev_pager_populate(vm_object_t vm_obj, vm_pindex_t pidx, int fault_type,
 	struct vm_area_struct *vmap;
 	int err;
 
-	linux_set_current(curthread);
-
 	/* get VM area structure */
 	vmap = linux_cdev_handle_find(vm_obj->handle);
 	MPASS(vmap != NULL);
 	MPASS(vmap->vm_private_data == vm_obj->handle);
 
 	VM_OBJECT_WUNLOCK(vm_obj);
+
+	linux_set_current(curthread);
 
 	down_write(&vmap->vm_mm->mmap_sem);
 	if (unlikely(vmap->vm_ops == NULL)) {
@@ -718,15 +734,19 @@ linux_get_fop(struct linux_file *filp, const struct file_operations **fop,
 	ldev = filp->f_cdev;
 	*fop = filp->f_op;
 	if (ldev != NULL) {
-		for (siref = ldev->siref;;) {
-			if ((siref & LDEV_SI_DTR) != 0) {
-				ldev = &dummy_ldev;
-				siref = ldev->siref;
-				*fop = ldev->ops;
-				MPASS((ldev->siref & LDEV_SI_DTR) == 0);
-			} else if (atomic_fcmpset_int(&ldev->siref, &siref,
-			    siref + LDEV_SI_REF)) {
-				break;
+		if (ldev->kobj.ktype == &linux_cdev_static_ktype) {
+			refcount_acquire(&ldev->refs);
+		} else {
+			for (siref = ldev->siref;;) {
+				if ((siref & LDEV_SI_DTR) != 0) {
+					ldev = &dummy_ldev;
+					*fop = ldev->ops;
+					siref = ldev->siref;
+					MPASS((ldev->siref & LDEV_SI_DTR) == 0);
+				} else if (atomic_fcmpset_int(&ldev->siref,
+				    &siref, siref + LDEV_SI_REF)) {
+					break;
+				}
 			}
 		}
 	}
@@ -739,8 +759,13 @@ linux_drop_fop(struct linux_cdev *ldev)
 
 	if (ldev == NULL)
 		return;
-	MPASS((ldev->siref & ~LDEV_SI_DTR) != 0);
-	atomic_subtract_int(&ldev->siref, LDEV_SI_REF);
+	if (ldev->kobj.ktype == &linux_cdev_static_ktype) {
+		linux_cdev_deref(ldev);
+	} else {
+		MPASS(ldev->kobj.ktype == &linux_cdev_ktype);
+		MPASS((ldev->siref & ~LDEV_SI_DTR) != 0);
+		atomic_subtract_int(&ldev->siref, LDEV_SI_REF);
+	}
 }
 
 #define	OPW(fp,td,code) ({			\
@@ -897,7 +922,7 @@ linux_clear_user(void *_uaddr, size_t _len)
 }
 
 int
-linux_access_ok(int rw, const void *uaddr, size_t len)
+linux_access_ok(const void *uaddr, size_t len)
 {
 	uintptr_t saddr;
 	uintptr_t eaddr;
@@ -1522,8 +1547,9 @@ linux_file_close(struct file *file, struct thread *td)
 	if (filp->f_vnode != NULL)
 		vdrop(filp->f_vnode);
 	linux_drop_fop(ldev);
-	if (filp->f_cdev != NULL)
-		linux_cdev_deref(filp->f_cdev);
+	ldev = filp->f_cdev;
+	if (ldev != NULL)
+		linux_cdev_deref(ldev);
 	kfree(filp);
 
 	return (error);
@@ -1802,7 +1828,7 @@ vmmap_remove(void *addr)
 	return (vmmap);
 }
 
-#if defined(__i386__) || defined(__amd64__) || defined(__powerpc__)
+#if defined(__i386__) || defined(__amd64__) || defined(__powerpc__) || defined(__aarch64__)
 void *
 _ioremap_attr(vm_paddr_t phys_addr, unsigned long size, int attr)
 {
@@ -1825,7 +1851,7 @@ iounmap(void *addr)
 	vmmap = vmmap_remove(addr);
 	if (vmmap == NULL)
 		return;
-#if defined(__i386__) || defined(__amd64__) || defined(__powerpc__)
+#if defined(__i386__) || defined(__amd64__) || defined(__powerpc__) || defined(__aarch64__)
 	pmap_unmapdev((vm_offset_t)addr, vmmap->vm_size);
 #endif
 	kfree(vmmap);
@@ -1897,20 +1923,31 @@ linux_timer_callback_wrapper(void *context)
 {
 	struct timer_list *timer;
 
-	linux_set_current(curthread);
-
 	timer = context;
+
+	if (linux_set_current_flags(curthread, M_NOWAIT)) {
+		/* try again later */
+		callout_reset(&timer->callout, 1,
+		    &linux_timer_callback_wrapper, timer);
+		return;
+	}
+
 	timer->function(timer->data);
 }
 
-void
+int
 mod_timer(struct timer_list *timer, int expires)
 {
+	int ret;
 
 	timer->expires = expires;
-	callout_reset(&timer->callout,
+	ret = callout_reset(&timer->callout,
 	    linux_timer_jiffies_until(expires),
 	    &linux_timer_callback_wrapper, timer);
+
+	MPASS(ret == 0 || ret == 1);
+
+	return (ret == 1);
 }
 
 void
@@ -1929,6 +1966,24 @@ add_timer_on(struct timer_list *timer, int cpu)
 	callout_reset_on(&timer->callout,
 	    linux_timer_jiffies_until(timer->expires),
 	    &linux_timer_callback_wrapper, timer, cpu);
+}
+
+int
+del_timer(struct timer_list *timer)
+{
+
+	if (callout_stop(&(timer)->callout) == -1)
+		return (0);
+	return (1);
+}
+
+int
+del_timer_sync(struct timer_list *timer)
+{
+
+	if (callout_drain(&(timer)->callout) == -1)
+		return (0);
+	return (1);
 }
 
 /* greatest common divisor, Euclid equation */
@@ -2146,8 +2201,8 @@ linux_completion_done(struct completion *c)
 static void
 linux_cdev_deref(struct linux_cdev *ldev)
 {
-
-	if (refcount_release(&ldev->refs))
+	if (refcount_release(&ldev->refs) &&
+	    ldev->kobj.ktype == &linux_cdev_ktype)
 		kfree(ldev);
 }
 
@@ -2167,13 +2222,16 @@ linux_cdev_release(struct kobject *kobj)
 static void
 linux_cdev_static_release(struct kobject *kobj)
 {
-	struct linux_cdev *cdev;
-	struct kobject *parent;
+	struct cdev *cdev;
+	struct linux_cdev *ldev;
 
-	cdev = container_of(kobj, struct linux_cdev, kobj);
-	parent = kobj->parent;
-	linux_destroy_dev(cdev);
-	kobject_put(parent);
+	ldev = container_of(kobj, struct linux_cdev, kobj);
+	cdev = ldev->cdev;
+	if (cdev != NULL) {
+		destroy_dev(cdev);
+		ldev->cdev = NULL;
+	}
+	kobject_put(kobj->parent);
 }
 
 void
@@ -2184,6 +2242,8 @@ linux_destroy_dev(struct linux_cdev *ldev)
 		return;
 
 	MPASS((ldev->siref & LDEV_SI_DTR) == 0);
+	MPASS(ldev->kobj.ktype == &linux_cdev_ktype);
+
 	atomic_set_int(&ldev->siref, LDEV_SI_DTR);
 	while ((atomic_load_int(&ldev->siref) & ~LDEV_SI_DTR) != 0)
 		pause("ldevdtr", hz / 4);
@@ -2345,7 +2405,8 @@ linux_irq_handler(void *ent)
 {
 	struct irq_ent *irqe;
 
-	linux_set_current(curthread);
+	if (linux_set_current_flags(curthread, M_NOWAIT))
+		return;
 
 	irqe = ent;
 	irqe->handler(irqe->irq, irqe->arg);
@@ -2465,6 +2526,14 @@ linux_dump_stack(void)
 #endif
 }
 
+int
+linuxkpi_net_ratelimit(void)
+{
+
+	return (ppsratecheck(&lkpi_net_lastlog, &lkpi_net_curpps,
+	   lkpi_net_maxpps));
+}
+
 #if defined(__i386__) || defined(__amd64__)
 bool linux_cpu_has_clflush;
 #endif
@@ -2500,6 +2569,8 @@ linux_compat_init(void *arg)
 	mtx_init(&vmmaplock, "IO Map lock", NULL, MTX_DEF);
 	for (i = 0; i < VMMAP_HASH_SIZE; i++)
 		LIST_INIT(&vmmaphead[i]);
+	init_waitqueue_head(&linux_bit_waitq);
+	init_waitqueue_head(&linux_var_waitq);
 }
 SYSINIT(linux_compat, SI_SUB_DRIVERS, SI_ORDER_SECOND, linux_compat_init, NULL);
 

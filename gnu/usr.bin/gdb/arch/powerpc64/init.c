@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/gnu/usr.bin/gdb/arch/powerpc64/init.c 169188 2007-05-01 18:29:34Z marcel $ */
+/* $FreeBSD$ */
 
 /* Do not modify this file.  */
 /* It is created automatically by the Makefile.  */

@@ -1,6 +1,8 @@
 /*	$NetBSD: gt_pci.c,v 1.4 2003/07/15 00:24:54 lukem Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2001, 2002 Wasabi Systems, Inc.
  * All rights reserved.
  *
@@ -40,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/malta/gt_pci.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -229,7 +231,7 @@ gt_pci_intr(void *v)
 
 		event = sc->sc_eventstab[irq];
 
-		if (!event || TAILQ_EMPTY(&event->ie_handlers))
+		if (!event || CK_SLIST_EMPTY(&event->ie_handlers))
 			continue;
 
 		/* TODO: frame instead of NULL? */
@@ -758,6 +760,7 @@ static device_method_t gt_pci_methods[] = {
 	DEVMETHOD(pcib_read_config,	gt_pci_read_config),
 	DEVMETHOD(pcib_write_config,	gt_pci_write_config),
 	DEVMETHOD(pcib_route_interrupt,	gt_pci_route_interrupt),
+	DEVMETHOD(pcib_request_feature,	pcib_request_feature_allow),
 
 	DEVMETHOD_END
 };

@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/jiffies.h 331756 2018-03-30 02:04:46Z emaste $
+ * $FreeBSD$
  */
 #ifndef	_LINUX_JIFFIES_H_
 #define	_LINUX_JIFFIES_H_
@@ -45,7 +45,9 @@
 #define	MAX_JIFFY_OFFSET	((INT_MAX >> 1) - 1)
 
 #define	time_after(a, b)	((int)((b) - (a)) < 0)
+#define	time_after32(a, b)	((int32_t)((uint32_t)(b) - (uint32_t)(a)) < 0)
 #define	time_before(a, b)	time_after(b,a)
+#define	time_before32(a, b)	time_after32(b, a)
 #define	time_after_eq(a, b)	((int)((a) - (b)) >= 0)
 #define	time_before_eq(a, b)	time_after_eq(b, a)
 #define	time_in_range(a,b,c)	\

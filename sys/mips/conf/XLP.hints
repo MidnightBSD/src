@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/mips/conf/XLP.hints 323467 2017-09-11 22:21:15Z ian $
+# $FreeBSD$
 
 # RTC
 hint.ds13rtc.0.at="iicbus1"

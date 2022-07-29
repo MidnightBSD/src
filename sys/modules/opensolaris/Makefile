@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/opensolaris/Makefile 346786 2019-04-27 05:35:51Z markj $
+# $FreeBSD$
 
 SYSDIR?=	${SRCTOP}/sys
 

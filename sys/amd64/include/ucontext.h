@@ -1,6 +1,6 @@
 /*-
  * This file is in the public domain.
  */
-/* $FreeBSD: stable/11/sys/amd64/include/ucontext.h 247047 2013-02-20 17:39:52Z kib $ */
+/* $FreeBSD$ */
 
 #include <x86/ucontext.h>

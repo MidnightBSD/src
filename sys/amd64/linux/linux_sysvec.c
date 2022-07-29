@@ -32,9 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/amd64/linux/linux_sysvec.c 346835 2019-04-28 14:08:05Z dchagin $");
-
-#include "opt_compat.h"
+__FBSDID("$FreeBSD$");
 
 #define	__ELF_WORD_SIZE	64
 
@@ -72,11 +70,11 @@ __FBSDID("$FreeBSD: stable/11/sys/amd64/linux/linux_sysvec.c 346835 2019-04-28 1
 #include <machine/md_var.h>
 #include <machine/pcb.h>
 #include <machine/specialreg.h>
+#include <machine/trap.h>
 
 #include <amd64/linux/linux.h>
 #include <amd64/linux/linux_proto.h>
 #include <compat/linux/linux_emul.h>
-#include <compat/linux/linux_futex.h>
 #include <compat/linux/linux_ioctl.h>
 #include <compat/linux/linux_mib.h>
 #include <compat/linux/linux_misc.h>
@@ -86,20 +84,6 @@ __FBSDID("$FreeBSD: stable/11/sys/amd64/linux/linux_sysvec.c 346835 2019-04-28 1
 #include <compat/linux/linux_vdso.h>
 
 MODULE_VERSION(linux64, 1);
-
-#if defined(DEBUG)
-SYSCTL_PROC(_compat_linux, OID_AUTO, debug,
-	    CTLTYPE_STRING | CTLFLAG_RW,
-	    0, 0, linux_sysctl_debug, "A",
-	    "Linux 64 debugging control");
-#endif
-
-/*
- * Allow the sendsig functions to use the ldebug() facility even though they
- * are not syscalls themselves.  Map them to syscall 0.  This is slightly less
- * bogus than using ldebug(sigreturn).
- */
-#define	LINUX_SYS_linux_rt_sendsig	0
 
 const char *linux_kplatform;
 static int linux_szsigcode;
@@ -242,11 +226,11 @@ static int
 linux_fixup_elf(register_t **stack_base, struct image_params *imgp)
 {
 	Elf_Auxargs *args;
-	Elf_Addr *base;
-	Elf_Addr *pos;
+	Elf_Auxinfo *argarray, *pos;
+	Elf_Addr *auxbase, *base;
 	struct ps_strings *arginfo;
 	struct proc *p;
-	int issetugid;
+	int error, issetugid;
 
 	p = imgp->proc;
 	arginfo = (struct ps_strings *)p->p_sysent->sv_psstrings;
@@ -255,7 +239,9 @@ linux_fixup_elf(register_t **stack_base, struct image_params *imgp)
 	    ("unsafe linux_fixup_elf(), should be curproc"));
 	base = (Elf64_Addr *)*stack_base;
 	args = (Elf64_Auxargs *)imgp->auxargs;
-	pos = base + (imgp->args->argc + imgp->args->envc + 2);
+	auxbase = base + imgp->args->argc + 1 + imgp->args->envc + 1;
+	argarray = pos = malloc(LINUX_AT_COUNT * sizeof(*pos), M_TEMP,
+	    M_WAITOK | M_ZERO);
 
 	issetugid = p->p_flag & P_SUGID ? 1 : 0;
 	AUXARGS_ENTRY(pos, LINUX_AT_SYSINFO_EHDR,
@@ -283,9 +269,16 @@ linux_fixup_elf(register_t **stack_base, struct image_params *imgp)
 	AUXARGS_ENTRY(pos, AT_NULL, 0);
 	free(imgp->auxargs, M_TEMP);
 	imgp->auxargs = NULL;
+	KASSERT(pos - argarray <= LINUX_AT_COUNT, ("Too many auxargs"));
+
+	error = copyout(argarray, auxbase, sizeof(*argarray) * LINUX_AT_COUNT);
+	free(argarray, M_TEMP);
+	if (error != 0)
+		return (error);
 
 	base--;
-	suword(base, (uint64_t)imgp->args->argc);
+	if (suword(base, (uint64_t)imgp->args->argc) == -1)
+		return (EFAULT);
 
 	*stack_base = (register_t *)base;
 	return (0);
@@ -349,6 +342,12 @@ linux_copyout_strings(struct image_params *imgp)
 	 */
 	vectp -= imgp->args->argc + 1 + imgp->args->envc + 1;
 
+	/*
+	 * Starting with 2.24, glibc depends on a 16-byte stack alignment.
+	 * One "long argc" will be prepended later.
+	 */
+	vectp = (char **)((((uintptr_t)vectp + 8) & ~0xF) - 8);
+
 	/* vectp also becomes our initial stack base. */
 	stack_base = (register_t *)vectp;
 
@@ -403,11 +402,8 @@ linux_exec_setregs(struct thread *td, struct image_params *imgp, u_long stack)
 	regs = td->td_frame;
 	pcb = td->td_pcb;
 
-	mtx_lock(&dt_lock);
 	if (td->td_proc->p_md.md_ldt != NULL)
 		user_ldt_free(td);
-	else
-		mtx_unlock(&dt_lock);
 
 	pcb->pcb_fsbase = 0;
 	pcb->pcb_gsbase = 0;
@@ -428,27 +424,7 @@ linux_exec_setregs(struct thread *td, struct image_params *imgp, u_long stack)
 	regs->tf_gs = _ugssel;
 	regs->tf_flags = TF_HASSEGS;
 
-	/*
-	 * Reset the hardware debug registers if they were in use.
-	 * They won't have any meaning for the newly exec'd process.
-	 */
-	if (pcb->pcb_flags & PCB_DBREGS) {
-		pcb->pcb_dr0 = 0;
-		pcb->pcb_dr1 = 0;
-		pcb->pcb_dr2 = 0;
-		pcb->pcb_dr3 = 0;
-		pcb->pcb_dr6 = 0;
-		pcb->pcb_dr7 = 0;
-		if (pcb == curpcb) {
-			/*
-			 * Clear the debug registers on the running
-			 * CPU, otherwise they will end up affecting
-			 * the next process we switch to.
-			 */
-			reset_dbregs();
-		}
-		clear_pcb_flags(pcb, PCB_DBREGS);
-	}
+	x86_clear_dbregs(pcb);
 
 	/*
 	 * Drop the FP state if we hold it, so that the process gets a
@@ -640,9 +616,6 @@ linux_rt_sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 
 	/* Copy the sigframe out to the user's stack. */
 	if (copyout(&sf, sfp, sizeof(*sfp)) != 0) {
-#ifdef DEBUG
-		printf("process %ld has trashed its stack\n", (long)p->p_pid);
-#endif
 		PROC_LOCK(p);
 		sigexit(td, SIGILL);
 	}
@@ -662,7 +635,7 @@ linux_rt_sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 const unsigned long linux_vsyscall_vector[] = {
 	LINUX_SYS_gettimeofday,
 	LINUX_SYS_linux_time,
-				/* getcpu not implemented */
+	LINUX_SYS_linux_getcpu,
 };
 
 static int
@@ -718,7 +691,6 @@ struct sysentvec elf_linux_sysvec = {
 	.sv_coredump	= elf64_coredump,
 	.sv_imgact_try	= linux_exec_imgact_try,
 	.sv_minsigstksz	= LINUX_MINSIGSTKSZ,
-	.sv_pagesize	= PAGE_SIZE,
 	.sv_minuser	= VM_MIN_ADDRESS,
 	.sv_maxuser	= VM_MAXUSER_ADDRESS,
 	.sv_usrstack	= USRSTACK,
@@ -816,7 +788,7 @@ static Elf64_Brandinfo linux_glibc2brand = {
 	.brand		= ELFOSABI_LINUX,
 	.machine	= EM_X86_64,
 	.compat_3_brand	= "Linux",
-	.emul_path	= "/compat/linux",
+	.emul_path	= linux_emul_path,
 	.interp_path	= "/lib64/ld-linux-x86-64.so.2",
 	.sysvec		= &elf_linux_sysvec,
 	.interp_newpath	= NULL,
@@ -828,7 +800,7 @@ static Elf64_Brandinfo linux_glibc2brandshort = {
 	.brand		= ELFOSABI_LINUX,
 	.machine	= EM_X86_64,
 	.compat_3_brand	= "Linux",
-	.emul_path	= "/compat/linux",
+	.emul_path	= linux_emul_path,
 	.interp_path	= "/lib64/ld-linux.so.2",
 	.sysvec		= &elf_linux_sysvec,
 	.interp_newpath	= NULL,
@@ -840,7 +812,7 @@ static Elf64_Brandinfo linux_muslbrand = {
 	.brand		= ELFOSABI_LINUX,
 	.machine	= EM_X86_64,
 	.compat_3_brand	= "Linux",
-	.emul_path	= "/compat/linux",
+	.emul_path	= linux_emul_path,
 	.interp_path	= "/lib/ld-musl-x86_64.so.1",
 	.sysvec		= &elf_linux_sysvec,
 	.interp_newpath	= NULL,
@@ -873,8 +845,6 @@ linux64_elf_modevent(module_t mod, int type, void *data)
 		if (error == 0) {
 			SET_FOREACH(lihp, linux_ioctl_handler_set)
 				linux_ioctl_register_handler(*lihp);
-			LIST_INIT(&futex_list);
-			mtx_init(&futex_mtx, "ftllk64", NULL, MTX_DEF);
 			stclohz = (stathz ? stathz : hz);
 			if (bootverbose)
 				printf("Linux x86-64 ELF exec handler installed\n");
@@ -895,7 +865,6 @@ linux64_elf_modevent(module_t mod, int type, void *data)
 		if (error == 0) {
 			SET_FOREACH(lihp, linux_ioctl_handler_set)
 				linux_ioctl_unregister_handler(*lihp);
-			mtx_destroy(&futex_mtx);
 			if (bootverbose)
 				printf("Linux ELF exec handler removed\n");
 		} else

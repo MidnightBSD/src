@@ -28,12 +28,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/cxgbe/t4_clip.c 346946 2019-04-30 07:34:34Z np $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
 #include <sys/types.h>
+#include <sys/ck.h>
 #include <sys/eventhandler.h>
 #include <sys/malloc.h>
 #include <sys/rmlock.h>
@@ -219,7 +220,7 @@ update_clip_table(struct adapter *sc)
 
 		/* XXX: races with if_vmove */
 		CURVNET_SET(vi->ifp->if_vnet);
-		TAILQ_FOREACH(ia, &V_in6_ifaddrhead, ia_link) {
+		CK_STAILQ_FOREACH(ia, &V_in6_ifaddrhead, ia_link) {
 			lip = &ia->ia_addr.sin6_addr;
 
 			KASSERT(!IN6_IS_ADDR_MULTICAST(lip),
@@ -272,8 +273,11 @@ update_clip_table(struct adapter *sc)
 
 				inet_ntop(AF_INET6, &ce->lip, &ip[0],
 				    sizeof(ip));
-				log(LOG_ERR, "%s: could not add %s (%d)\n",
-				    __func__, ip, rc);
+				if (sc->active_ulds != 0) {
+					log(LOG_ERR,
+					    "%s: could not add %s (%d)\n",
+					    __func__, ip, rc);
+				}
 				free(ce, M_CXGBE);
 			}
 next:

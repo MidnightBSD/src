@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Andriy Gapon <avg@FreeBSD.org>.
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/cpucontrol/amd10h.c 308761 2016-11-17 15:17:01Z avg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -89,9 +88,8 @@ amd10h_probe(int fd)
  * source code.
  */
 void
-amd10h_update(const char *dev, const char *path)
+amd10h_update(const struct ucode_update_params *params)
 {
-	struct stat st;
 	cpuctl_cpuid_args_t idargs;
 	cpuctl_msr_args_t msrargs;
 	cpuctl_update_args_t args;
@@ -101,27 +99,27 @@ amd10h_update(const char *dev, const char *path)
 	const section_header_t *section_header;
 	const container_header_t *container_header;
 	const uint8_t *fw_data;
-	uint8_t *fw_image;
+	const uint8_t *fw_image;
+	const char *dev, *path;
 	size_t fw_size;
 	size_t selected_size;
 	uint32_t revision;
 	uint32_t new_rev;
 	uint32_t signature;
 	uint16_t equiv_id;
-	int fd, devfd;
+	int devfd;
 	unsigned int i;
 	int error;
+
+	dev = params->dev_path;
+	path = params->fw_path;
+	devfd = params->devfd;
+	fw_image = params->fwimage;
+	fw_size = params->fwsize;
 
 	assert(path);
 	assert(dev);
 
-	fd = -1;
-	fw_image = MAP_FAILED;
-	devfd = open(dev, O_RDWR);
-	if (devfd < 0) {
-		WARN(0, "could not open %s for writing", dev);
-		return;
-	}
 	idargs.level = 1;
 	error = ioctl(devfd, CPUCTL_CPUID, &idargs);
 	if (error < 0) {
@@ -130,7 +128,7 @@ amd10h_update(const char *dev, const char *path)
 	}
 	signature = idargs.data[0];
 
-	msrargs.msr = 0x0000008b;
+	msrargs.msr = MSR_BIOS_SIGN;
 	error = ioctl(devfd, CPUCTL_RDMSR, &msrargs);
 	if (error < 0) {
 		WARN(0, "ioctl(%s)", dev);
@@ -140,7 +138,8 @@ amd10h_update(const char *dev, const char *path)
 
 	WARNX(1, "found cpu family %#x model %#x "
 	    "stepping %#x extfamily %#x extmodel %#x.",
-	    (signature >> 8) & 0x0f, (signature >> 4) & 0x0f,
+	    ((signature >> 8) & 0x0f) + ((signature >> 20) & 0xff),
+	    (signature >> 4) & 0x0f,
 	    (signature >> 0) & 0x0f, (signature >> 20) & 0xff,
 	    (signature >> 16) & 0x0f);
 	WARNX(1, "microcode revision %#x", revision);
@@ -148,33 +147,16 @@ amd10h_update(const char *dev, const char *path)
 	/*
 	 * Open the firmware file.
 	 */
-	fd = open(path, O_RDONLY, 0);
-	if (fd < 0) {
-		WARN(0, "open(%s)", path);
-		goto done;
-	}
-	error = fstat(fd, &st);
-	if (error != 0) {
-		WARN(0, "fstat(%s)", path);
-		goto done;
-	}
-	if (st.st_size < 0 || (size_t)st.st_size <
+	WARNX(1, "checking %s for update.", path);
+	if (fw_size <
 	    (sizeof(*container_header) + sizeof(*section_header))) {
 		WARNX(2, "file too short: %s", path);
 		goto done;
 	}
-	fw_size = st.st_size;
 
 	/*
 	 * mmap the whole image.
 	 */
-	fw_image = (uint8_t *)mmap(NULL, st.st_size, PROT_READ,
-	    MAP_PRIVATE, fd, 0);
-	if (fw_image == MAP_FAILED) {
-		WARN(0, "mmap(%s)", path);
-		goto done;
-	}
-
 	fw_data = fw_image;
 	container_header = (const container_header_t *)fw_data;
 	if (container_header->magic != AMD_10H_MAGIC) {
@@ -216,7 +198,9 @@ amd10h_update(const char *dev, const char *path)
 	for (i = 0; equiv_cpu_table[i].installed_cpu != 0; i++) {
 		if (signature == equiv_cpu_table[i].installed_cpu) {
 			equiv_id = equiv_cpu_table[i].equiv_cpu;
-			WARNX(3, "equiv_id: %x", equiv_id);
+			WARNX(3, "equiv_id: %x, signature %8x,"
+			    " equiv_cpu_table[%d] %8x", equiv_id, signature,
+			    i, equiv_cpu_table[i].installed_cpu);
 			break;
 		}
 	}
@@ -233,7 +217,7 @@ amd10h_update(const char *dev, const char *path)
 		fw_size -= sizeof(*section_header);
 		if (section_header->type != AMD_10H_uCODE_TYPE) {
 			WARNX(2, "%s is not a valid amd firmware: "
-			    "section has incorret type", path);
+			    "section has incorrect type", path);
 			goto done;
 		}
 		if (section_header->size > fw_size) {
@@ -250,10 +234,16 @@ amd10h_update(const char *dev, const char *path)
 		fw_data += section_header->size;
 		fw_size -= section_header->size;
 
-		if (fw_header->processor_rev_id != equiv_id)
+		if (fw_header->processor_rev_id != equiv_id) {
+			WARNX(1, "firmware processor_rev_id %x, equiv_id %x",
+			    fw_header->processor_rev_id, equiv_id);
 			continue; /* different cpu */
-		if (fw_header->patch_id <= revision)
+		}
+		if (fw_header->patch_id <= revision) {
+			WARNX(1, "patch_id %x, revision %x",
+			    fw_header->patch_id, revision);
 			continue; /* not newer revision */
+		}
 		if (fw_header->nb_dev_id != 0 || fw_header->sb_dev_id != 0) {
 			WARNX(2, "Chipset-specific microcode is not supported");
 		}
@@ -286,7 +276,7 @@ amd10h_update(const char *dev, const char *path)
 		fprintf(stderr, "done.\n");
 	}
 
-	msrargs.msr = 0x0000008b;
+	msrargs.msr = MSR_BIOS_SIGN;
 	error = ioctl(devfd, CPUCTL_RDMSR, &msrargs);
 	if (error < 0) {
 		WARN(0, "ioctl(%s)", dev);
@@ -297,12 +287,5 @@ amd10h_update(const char *dev, const char *path)
 		WARNX(0, "revision after update %#x", new_rev);
 
 done:
-	if (fd >= 0)
-		close(fd);
-	if (devfd >= 0)
-		close(devfd);
-	if (fw_image != MAP_FAILED)
-		if (munmap(fw_image, st.st_size) != 0)
-			warn("munmap(%s)", path);
 	return;
 }

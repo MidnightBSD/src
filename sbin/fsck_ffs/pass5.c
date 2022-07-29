@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,7 +35,7 @@ static const char sccsid[] = "@(#)pass5.c	8.9 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/pass5.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -61,6 +63,7 @@ pass5(void)
 	struct fs *fs = &sblock;
 	ufs2_daddr_t d, dbase, dmax, start;
 	int rewritecg = 0;
+	ino_t inum;
 	struct csum *cs;
 	struct csum_total cstotal;
 	struct inodesc idesc[3];
@@ -68,9 +71,15 @@ pass5(void)
 	struct cg *cg, *newcg = (struct cg *)buf;
 	struct bufarea *cgbp;
 
-	inoinfo(WINO)->ino_state = USTATE;
+	inoinfo(UFS_WINO)->ino_state = USTATE;
 	memset(newcg, 0, (size_t)fs->fs_cgsize);
 	newcg->cg_niblk = fs->fs_ipg;
+	/* check to see if we are to add a cylinder group check hash */
+	if ((ckhashadd & CK_CYLGRP) != 0) {
+		fs->fs_metackhash |= CK_CYLGRP;
+		rewritecg = 1;
+		sbdirty();
+	}
 	if (cvtlevel >= 3) {
 		if (fs->fs_maxcontig < 2 && fs->fs_contigsumsize > 0) {
 			if (preen)
@@ -162,10 +171,26 @@ pass5(void)
 			    c * 100 / sblock.fs_ncg);
 			got_sigalarm = 0;
 		}
-		cgbp = cgget(c);
+		cgbp = cglookup(c);
 		cg = cgbp->b_un.b_cg;
 		if (!cg_chkmagic(cg))
 			pfatal("CG %d: BAD MAGIC NUMBER\n", c);
+		/*
+		 * If we have a cylinder group check hash and are not adding
+		 * it for the first time, verify that it is good.
+		 */
+		if ((fs->fs_metackhash & CK_CYLGRP) != 0 &&
+		    (ckhashadd & CK_CYLGRP) == 0) {
+			uint32_t ckhash, thishash;
+
+			ckhash = cg->cg_ckhash;
+			cg->cg_ckhash = 0;
+			thishash = calculate_crc32c(~0L, cg, fs->fs_cgsize);
+			if (ckhash != thishash)
+				pwarn("CG %d: BAD CHECK-HASH %#x vs %#x\n",
+				    c, ckhash, thishash);
+			cg->cg_ckhash = ckhash;
+		}
 		newcg->cg_time = cg->cg_time;
 		newcg->cg_old_time = cg->cg_old_time;
 		newcg->cg_unrefs = cg->cg_unrefs;
@@ -212,9 +237,9 @@ pass5(void)
 		}
 		memset(&newcg->cg_frsum[0], 0, sizeof newcg->cg_frsum);
 		memset(cg_inosused(newcg), 0, (size_t)(mapsize));
-		j = fs->fs_ipg * c;
-		for (i = 0; i < inostathead[c].il_numalloced; j++, i++) {
-			switch (inoinfo(j)->ino_state) {
+		inum = fs->fs_ipg * c;
+		for (i = 0; i < inostathead[c].il_numalloced; inum++, i++) {
+			switch (inoinfo(inum)->ino_state) {
 
 			case USTATE:
 				break;
@@ -234,14 +259,14 @@ pass5(void)
 				break;
 
 			default:
-				if (j < (int)ROOTINO)
+				if (inum < UFS_ROOTINO)
 					break;
-				errx(EEXIT, "BAD STATE %d FOR INODE I=%d",
-				    inoinfo(j)->ino_state, j);
+				errx(EEXIT, "BAD STATE %d FOR INODE I=%ju",
+				    inoinfo(inum)->ino_state, (uintmax_t)inum);
 			}
 		}
 		if (c == 0)
-			for (i = 0; i < (int)ROOTINO; i++) {
+			for (i = 0; i < (int)UFS_ROOTINO; i++) {
 				setbit(cg_inosused(newcg), i);
 				newcg->cg_cs.cs_nifree--;
 			}
@@ -305,6 +330,12 @@ pass5(void)
 				sump[run]++;
 			}
 		}
+		if ((fs->fs_metackhash & CK_CYLGRP) != 0) {
+			newcg->cg_ckhash = 0;
+			newcg->cg_ckhash =
+			    calculate_crc32c(~0L, (void *)newcg, fs->fs_cgsize);
+		}
+
 		if (bkgrdflag != 0) {
 			cstotal.cs_nffree += cg->cg_cs.cs_nffree;
 			cstotal.cs_nbfree += cg->cg_cs.cs_nbfree;

@@ -1,5 +1,5 @@
 #	$NetBSD: Makefile.ediddevs,v 1.1 2006/05/11 01:49:53 gdamore Exp $
-#	$FreeBSD: stable/11/sys/dev/videomode/Makefile.ediddevs 278798 2015-02-15 11:37:40Z hselasky $
+#	$FreeBSD$
 #
 # As per tron@NetBSD.org, the proper procedure is
 #

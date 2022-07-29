@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/completion.h 334767 2018-06-07 07:47:32Z hselasky $
+ * $FreeBSD$
  */
 #ifndef	_LINUX_COMPLETION_H_
 #define	_LINUX_COMPLETION_H_

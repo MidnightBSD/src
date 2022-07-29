@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/sdhci/sdhci_acpi.c 343504 2019-01-27 19:04:28Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -457,4 +457,7 @@ static devclass_t sdhci_acpi_devclass;
 DRIVER_MODULE(sdhci_acpi, acpi, sdhci_acpi_driver, sdhci_acpi_devclass, NULL,
     NULL);
 SDHCI_DEPEND(sdhci_acpi);
+
+#ifndef MMCCAM
 MMC_DECLARE_BRIDGE(sdhci_acpi);
+#endif

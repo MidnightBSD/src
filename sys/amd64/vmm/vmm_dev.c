@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,14 +25,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/vmm/vmm_dev.c 348271 2019-05-25 11:27:56Z rgrimes $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/vmm_dev.c 348271 2019-05-25 11:27:56Z rgrimes $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
+#include <sys/jail.h>
 #include <sys/queue.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
@@ -41,6 +44,7 @@ __FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/vmm_dev.c 348271 2019-05-25 11:27:56
 #include <sys/ioccom.h>
 #include <sys/mman.h>
 #include <sys/uio.h>
+#include <sys/proc.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -80,14 +84,27 @@ struct vmmdev_softc {
 
 static SLIST_HEAD(, vmmdev_softc) head;
 
+static unsigned pr_allow_flag;
 static struct mtx vmmdev_mtx;
 
 static MALLOC_DEFINE(M_VMMDEV, "vmmdev", "vmmdev");
 
 SYSCTL_DECL(_hw_vmm);
 
+static int vmm_priv_check(struct ucred *ucred);
 static int devmem_create_cdev(const char *vmname, int id, char *devmem);
 static void devmem_destroy(void *arg);
+
+static int
+vmm_priv_check(struct ucred *ucred)
+{
+
+	if (jailed(ucred) &&
+	    !(ucred->cr_prison->pr_allow & pr_allow_flag))
+		return (EPERM);
+
+	return (0);
+}
 
 static int
 vcpu_lock_one(struct vmmdev_softc *sc, int vcpu)
@@ -179,6 +196,10 @@ vmmdev_rw(struct cdev *cdev, struct uio *uio, int flags)
 	void *hpa, *cookie;
 	struct vmmdev_softc *sc;
 	uint16_t lastcpu;
+
+	error = vmm_priv_check(curthread->td_ucred);
+	if (error)
+		return (error);
 
 	sc = vmmdev_lookup2(cdev);
 	if (sc == NULL)
@@ -288,6 +309,36 @@ done:
 }
 
 static int
+vm_get_register_set(struct vm *vm, int vcpu, unsigned int count, int *regnum,
+    uint64_t *regval)
+{
+	int error, i;
+
+	error = 0;
+	for (i = 0; i < count; i++) {
+		error = vm_get_register(vm, vcpu, regnum[i], &regval[i]);
+		if (error)
+			break;
+	}
+	return (error);
+}
+
+static int
+vm_set_register_set(struct vm *vm, int vcpu, unsigned int count, int *regnum,
+    uint64_t *regval)
+{
+	int error, i;
+
+	error = 0;
+	for (i = 0; i < count; i++) {
+		error = vm_set_register(vm, vcpu, regnum[i], regval[i]);
+		if (error)
+			break;
+	}
+	return (error);
+}
+
+static int
 vmmdev_ioctl(struct cdev *cdev, u_long cmd, caddr_t data, int fflag,
 	     struct thread *td)
 {
@@ -296,6 +347,7 @@ vmmdev_ioctl(struct cdev *cdev, u_long cmd, caddr_t data, int fflag,
 	struct vmmdev_softc *sc;
 	struct vm_register *vmreg;
 	struct vm_seg_desc *vmsegdesc;
+	struct vm_register_set *vmregset;
 	struct vm_run *vmrun;
 	struct vm_exception *vmexc;
 	struct vm_lapic_irq *vmirq;
@@ -322,12 +374,17 @@ vmmdev_ioctl(struct cdev *cdev, u_long cmd, caddr_t data, int fflag,
 	struct vm_rtc_data *rtcdata;
 	struct vm_memmap *mm;
 	struct vm_cpu_topology *topology;
+	uint64_t *regvals;
+	int *regnums;
+
+	error = vmm_priv_check(curthread->td_ucred);
+	if (error)
+		return (error);
 
 	sc = vmmdev_lookup2(cdev);
 	if (sc == NULL)
 		return (ENXIO);
 
-	error = 0;
 	vcpu = -1;
 	state_changed = 0;
 
@@ -340,6 +397,8 @@ vmmdev_ioctl(struct cdev *cdev, u_long cmd, caddr_t data, int fflag,
 	case VM_SET_REGISTER:
 	case VM_GET_SEGMENT_DESCRIPTOR:
 	case VM_SET_SEGMENT_DESCRIPTOR:
+	case VM_GET_REGISTER_SET:
+	case VM_SET_REGISTER_SET:
 	case VM_INJECT_EXCEPTION:
 	case VM_GET_CAPABILITY:
 	case VM_SET_CAPABILITY:
@@ -347,6 +406,7 @@ vmmdev_ioctl(struct cdev *cdev, u_long cmd, caddr_t data, int fflag,
 	case VM_PPTDEV_MSIX:
 	case VM_SET_X2APIC_STATE:
 	case VM_GLA2GPA:
+	case VM_GLA2GPA_NOFAULT:
 	case VM_ACTIVATE_CPU:
 	case VM_SET_INTINFO:
 	case VM_GET_INTINFO:
@@ -435,6 +495,11 @@ vmmdev_ioctl(struct cdev *cdev, u_long cmd, caddr_t data, int fflag,
 				       pptmsix->func, pptmsix->idx,
 				       pptmsix->addr, pptmsix->msg,
 				       pptmsix->vector_control);
+		break;
+	case VM_PPTDEV_DISABLE_MSIX:
+		pptdev = (struct vm_pptdev *)data;
+		error = ppt_disable_msix(sc->vm, pptdev->bus, pptdev->slot,
+					 pptdev->func);
 		break;
 	case VM_MAP_PPTDEV_MMIO:
 		pptmmio = (struct vm_pptdev_mmio *)data;
@@ -553,6 +618,48 @@ vmmdev_ioctl(struct cdev *cdev, u_long cmd, caddr_t data, int fflag,
 					vmsegdesc->regnum,
 					&vmsegdesc->desc);
 		break;
+	case VM_GET_REGISTER_SET:
+		vmregset = (struct vm_register_set *)data;
+		if (vmregset->count > VM_REG_LAST) {
+			error = EINVAL;
+			break;
+		}
+		regvals = malloc(sizeof(regvals[0]) * vmregset->count, M_VMMDEV,
+		    M_WAITOK);
+		regnums = malloc(sizeof(regnums[0]) * vmregset->count, M_VMMDEV,
+		    M_WAITOK);
+		error = copyin(vmregset->regnums, regnums, sizeof(regnums[0]) *
+		    vmregset->count);
+		if (error == 0)
+			error = vm_get_register_set(sc->vm, vmregset->cpuid,
+			    vmregset->count, regnums, regvals);
+		if (error == 0)
+			error = copyout(regvals, vmregset->regvals,
+			    sizeof(regvals[0]) * vmregset->count);
+		free(regvals, M_VMMDEV);
+		free(regnums, M_VMMDEV);
+		break;
+	case VM_SET_REGISTER_SET:
+		vmregset = (struct vm_register_set *)data;
+		if (vmregset->count > VM_REG_LAST) {
+			error = EINVAL;
+			break;
+		}
+		regvals = malloc(sizeof(regvals[0]) * vmregset->count, M_VMMDEV,
+		    M_WAITOK);
+		regnums = malloc(sizeof(regnums[0]) * vmregset->count, M_VMMDEV,
+		    M_WAITOK);
+		error = copyin(vmregset->regnums, regnums, sizeof(regnums[0]) *
+		    vmregset->count);
+		if (error == 0)
+			error = copyin(vmregset->regvals, regvals,
+			    sizeof(regvals[0]) * vmregset->count);
+		if (error == 0)
+			error = vm_set_register_set(sc->vm, vmregset->cpuid,
+			    vmregset->count, regnums, regvals);
+		free(regvals, M_VMMDEV);
+		free(regnums, M_VMMDEV);
+		break;
 	case VM_GET_CAPABILITY:
 		vmcap = (struct vm_capability *)data;
 		error = vm_get_capability(sc->vm, vmcap->cpuid,
@@ -595,6 +702,13 @@ vmmdev_ioctl(struct cdev *cdev, u_long cmd, caddr_t data, int fflag,
 		    ("%s: vm_gla2gpa unknown error %d", __func__, error));
 		break;
 	}
+	case VM_GLA2GPA_NOFAULT:
+		gg = (struct vm_gla2gpa *)data;
+		error = vm_gla2gpa_nofault(sc->vm, gg->vcpuid, &gg->paging,
+		    gg->gla, gg->prot, &gg->gpa, &gg->fault);
+		KASSERT(error == 0 || error == EFAULT,
+		    ("%s: vm_gla2gpa unknown error %d", __func__, error));
+		break;
 	case VM_ACTIVATE_CPU:
 		vac = (struct vm_activate_cpu *)data;
 		error = vm_activate_cpu(sc->vm, vac->vcpuid);
@@ -612,11 +726,21 @@ vmmdev_ioctl(struct cdev *cdev, u_long cmd, caddr_t data, int fflag,
 			*cpuset = vm_active_cpus(sc->vm);
 		else if (vm_cpuset->which == VM_SUSPENDED_CPUS)
 			*cpuset = vm_suspended_cpus(sc->vm);
+		else if (vm_cpuset->which == VM_DEBUG_CPUS)
+			*cpuset = vm_debug_cpus(sc->vm);
 		else
 			error = EINVAL;
 		if (error == 0)
 			error = copyout(cpuset, vm_cpuset->cpus, size);
 		free(cpuset, M_TEMP);
+		break;
+	case VM_SUSPEND_CPU:
+		vac = (struct vm_activate_cpu *)data;
+		error = vm_suspend_cpu(sc->vm, vac->vcpuid);
+		break;
+	case VM_RESUME_CPU:
+		vac = (struct vm_activate_cpu *)data;
+		error = vm_resume_cpu(sc->vm, vac->vcpuid);
 		break;
 	case VM_SET_INTINFO:
 		vmii = (struct vm_intinfo *)data;
@@ -671,8 +795,12 @@ vmmdev_ioctl(struct cdev *cdev, u_long cmd, caddr_t data, int fflag,
 		vcpu_unlock_all(sc);
 
 done:
-	/* Make sure that no handler returns a bogus value like ERESTART */
-	KASSERT(error >= 0, ("vmmdev_ioctl: invalid error return %d", error));
+	/*
+	 * Make sure that no handler returns a kernel-internal
+	 * error value to userspace.
+	 */
+	KASSERT(error == ERESTART || error >= 0,
+	    ("vmmdev_ioctl: invalid error return %d", error));
 	return (error);
 }
 
@@ -687,6 +815,10 @@ vmmdev_mmap_single(struct cdev *cdev, vm_ooffset_t *offset, vm_size_t mapsize,
 	int error, found, segid;
 	uint16_t lastcpu;
 	bool sysmem;
+
+	error = vmm_priv_check(curthread->td_ucred);
+	if (error)
+		return (error);
 
 	first = *offset;
 	last = first + mapsize;
@@ -777,6 +909,10 @@ sysctl_vmm_destroy(SYSCTL_HANDLER_ARGS)
 	struct vmmdev_softc *sc;
 	struct cdev *cdev;
 
+	error = vmm_priv_check(req->td->td_ucred);
+	if (error)
+		return (error);
+
 	strlcpy(buf, "beavis", sizeof(buf));
 	error = sysctl_handle_string(oidp, buf, sizeof(buf), req);
 	if (error != 0 || req->newptr == NULL)
@@ -818,7 +954,8 @@ sysctl_vmm_destroy(SYSCTL_HANDLER_ARGS)
 	destroy_dev_sched_cb(cdev, vmmdev_destroy, sc);
 	return (0);
 }
-SYSCTL_PROC(_hw_vmm, OID_AUTO, destroy, CTLTYPE_STRING | CTLFLAG_RW,
+SYSCTL_PROC(_hw_vmm, OID_AUTO, destroy,
+	    CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_PRISON,
 	    NULL, 0, sysctl_vmm_destroy, "A", NULL);
 
 static struct cdevsw vmmdevsw = {
@@ -838,6 +975,10 @@ sysctl_vmm_create(SYSCTL_HANDLER_ARGS)
 	struct cdev *cdev;
 	struct vmmdev_softc *sc, *sc2;
 	char buf[VM_MAX_NAMELEN];
+
+	error = vmm_priv_check(req->td->td_ucred);
+	if (error)
+		return (error);
 
 	strlcpy(buf, "beavis", sizeof(buf));
 	error = sysctl_handle_string(oidp, buf, sizeof(buf), req);
@@ -889,13 +1030,16 @@ sysctl_vmm_create(SYSCTL_HANDLER_ARGS)
 
 	return (0);
 }
-SYSCTL_PROC(_hw_vmm, OID_AUTO, create, CTLTYPE_STRING | CTLFLAG_RW,
+SYSCTL_PROC(_hw_vmm, OID_AUTO, create,
+	    CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_PRISON,
 	    NULL, 0, sysctl_vmm_create, "A", NULL);
 
 void
 vmmdev_init(void)
 {
 	mtx_init(&vmmdev_mtx, "vmm device mutex", NULL, MTX_DEF);
+	pr_allow_flag = prison_add_allow(NULL, "vmm", NULL,
+	    "Allow use of vmm in a jail.");
 }
 
 int

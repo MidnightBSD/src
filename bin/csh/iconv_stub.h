@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/bin/csh/iconv_stub.h 281591 2015-04-16 07:17:00Z tijl $
+ * $FreeBSD$
  */
 
 #ifndef _ICONV_H_

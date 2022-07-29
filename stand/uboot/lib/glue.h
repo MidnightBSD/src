@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/uboot/lib/glue.h 359761 2020-04-10 00:23:34Z kevans $
+ * $FreeBSD$
  */
 
 /*

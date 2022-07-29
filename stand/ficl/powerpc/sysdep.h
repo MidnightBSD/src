@@ -46,7 +46,7 @@
 ** contact me by email at the address above.
 **
 ** $Id: sysdep.h,v 1.6 2001-04-26 21:41:55-07 jsadler Exp jsadler $
-** $FreeBSD: stable/11/stand/ficl/powerpc/sysdep.h 123372 2003-12-10 09:05:08Z grehan $
+** $FreeBSD$
 */
 
 #if !defined (__SYSDEP_H__)
@@ -79,15 +79,15 @@
 ** System dependent data type declarations...
 */
 #if !defined INT32
-#define INT32 int
+#define INT32 int32_t
 #endif
 
 #if !defined UNS32
-#define UNS32 unsigned int
+#define UNS32 uint32_t
 #endif
 
 #if !defined UNS16
-#define UNS16 unsigned short
+#define UNS16 uint16_t
 #endif
 
 #if !defined UNS8
@@ -367,6 +367,9 @@ typedef struct
 */
 #if !defined FICL_ALIGN
 #define FICL_ALIGN 2
+#endif
+
+#if !defined FICL_ALIGN_ADD
 #define FICL_ALIGN_ADD ((1 << FICL_ALIGN) - 1)
 #endif
 

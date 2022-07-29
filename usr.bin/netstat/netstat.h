@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992, 1993
  *	Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -27,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)netstat.h	8.2 (Berkeley) 1/4/94
- * $FreeBSD: stable/11/usr.bin/netstat/netstat.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
@@ -39,6 +41,8 @@
 extern int	Aflag;	/* show addresses of protocol control block */
 extern int	aflag;	/* show all sockets (including servers) */
 extern int	bflag;	/* show i/f total bytes in/out */
+extern int	cflag;	/* show congestion control stats */
+extern int	Cflag;	/* show congestion control algo and stack */
 extern int	dflag;	/* show i/f dropped packets */
 extern int	gflag;	/* show group (multicast) routing or stats */
 extern int	hflag;	/* show counters in human readable format */
@@ -48,6 +52,7 @@ extern int	mflag;	/* show memory stats */
 extern int	noutputs;	/* how much outputs before we exit */
 extern int	numeric_addr;	/* show addresses numerically */
 extern int	numeric_port;	/* show ports numerically */
+extern int	Pflag;	/* show TCP log ID */
 extern int	rflag;	/* show routing tables (or routing stats) */
 extern int	Rflag;	/* show flowid / RSS information */
 extern int	sflag;	/* show protocol statistics */
@@ -140,7 +145,6 @@ void	intpr(void (*)(char *), int);
 
 void	pr_family(int);
 void	rt_stats(void);
-void	flowtable_stats(void);
 
 char	*routename(struct sockaddr *, int);
 const char *netname(struct sockaddr *, struct sockaddr *);

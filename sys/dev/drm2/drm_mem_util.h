@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_mem_util.h 296548 2016-03-08 20:33:02Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #ifndef _DRM_MEM_UTIL_H_
 #define _DRM_MEM_UTIL_H_
@@ -36,19 +36,15 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_mem_util.h 296548 2016-03-08 20:3
 
 static __inline__ void *drm_calloc_large(size_t nmemb, size_t size)
 {
-	if (size != 0 && nmemb > SIZE_MAX / size)
-		return NULL;
 
-	return malloc(nmemb * size, DRM_MEM_DRIVER, M_NOWAIT | M_ZERO);
+	return mallocarray(nmemb, size, DRM_MEM_DRIVER, M_NOWAIT | M_ZERO);
 }
 
 /* Modeled after cairo's malloc_ab, it's like calloc but without the zeroing. */
 static __inline__ void *drm_malloc_ab(size_t nmemb, size_t size)
 {
-	if (size != 0 && nmemb > SIZE_MAX / size)
-		return NULL;
 
-	return malloc(nmemb * size, DRM_MEM_DRIVER, M_NOWAIT);
+	return mallocarray(nmemb, size, DRM_MEM_DRIVER, M_NOWAIT);
 }
 
 static __inline void drm_free_large(void *ptr)

@@ -1,6 +1,8 @@
-/* $MidnightBSD$ */
-/* 
+/*-
  *  panic.h -  header for at(1)
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  *  Copyright (C) 1993  Thomas Koenig
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/at/panic.h 89315 2002-01-13 20:21:08Z mike $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>

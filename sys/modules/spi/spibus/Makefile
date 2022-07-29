@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/spi/spibus/Makefile 332113 2018-04-06 16:48:07Z ian $
+# $FreeBSD$
 
 .PATH:	${SRCTOP}/sys/dev/spibus
 

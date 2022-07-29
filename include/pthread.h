@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1993, 1994 by Chris Provenzano, proven@mit.edu
  * Copyright (c) 1995-1998 by John Birrell <jb@cimlogic.com.au>
  * All rights reserved.
@@ -30,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/include/pthread.h 338707 2018-09-17 02:51:08Z pfg $
+ * $FreeBSD$
  */
 #ifndef _PTHREAD_H_
 #define	_PTHREAD_H_
@@ -299,6 +301,9 @@ void		pthread_testcancel(void);
 int		pthread_getprio(pthread_t);
 int		pthread_setprio(pthread_t, int);
 void		pthread_yield(void);
+
+int		pthread_getname_np(pthread_t, char *, size_t);
+int		pthread_setname_np(pthread_t, const char *);
 #endif
 
 int		pthread_mutexattr_getprioceiling(

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/mips/atheros/ar71xx_macaddr.h 280798 2015-03-28 23:40:29Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef	__ATHEROS_AR71XX_MACADDR_H__

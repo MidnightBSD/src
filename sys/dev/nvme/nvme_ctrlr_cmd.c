@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2012-2013 Intel Corporation
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/nvme/nvme_ctrlr_cmd.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "nvme_private.h"
 
@@ -46,7 +48,7 @@ nvme_ctrlr_cmd_identify_controller(struct nvme_controller *ctrlr, void *payload,
 	 * TODO: create an identify command data structure, which
 	 *  includes this CNS bit in cdw10.
 	 */
-	cmd->cdw10 = 1;
+	cmd->cdw10 = htole32(1);
 
 	nvme_ctrlr_submit_admin_request(ctrlr, req);
 }
@@ -67,15 +69,14 @@ nvme_ctrlr_cmd_identify_namespace(struct nvme_controller *ctrlr, uint32_t nsid,
 	/*
 	 * TODO: create an identify command data structure
 	 */
-	cmd->nsid = nsid;
+	cmd->nsid = htole32(nsid);
 
 	nvme_ctrlr_submit_admin_request(ctrlr, req);
 }
 
 void
 nvme_ctrlr_cmd_create_io_cq(struct nvme_controller *ctrlr,
-    struct nvme_qpair *io_que, uint16_t vector, nvme_cb_fn_t cb_fn,
-    void *cb_arg)
+    struct nvme_qpair *io_que, nvme_cb_fn_t cb_fn, void *cb_arg)
 {
 	struct nvme_request *req;
 	struct nvme_command *cmd;
@@ -89,10 +90,10 @@ nvme_ctrlr_cmd_create_io_cq(struct nvme_controller *ctrlr,
 	 * TODO: create a create io completion queue command data
 	 *  structure.
 	 */
-	cmd->cdw10 = ((io_que->num_entries-1) << 16) | io_que->id;
+	cmd->cdw10 = htole32(((io_que->num_entries-1) << 16) | io_que->id);
 	/* 0x3 = interrupts enabled | physically contiguous */
-	cmd->cdw11 = (vector << 16) | 0x3;
-	cmd->prp1 = io_que->cpl_bus_addr;
+	cmd->cdw11 = htole32((io_que->vector << 16) | 0x3);
+	cmd->prp1 = htole64(io_que->cpl_bus_addr);
 
 	nvme_ctrlr_submit_admin_request(ctrlr, req);
 }
@@ -113,10 +114,10 @@ nvme_ctrlr_cmd_create_io_sq(struct nvme_controller *ctrlr,
 	 * TODO: create a create io submission queue command data
 	 *  structure.
 	 */
-	cmd->cdw10 = ((io_que->num_entries-1) << 16) | io_que->id;
+	cmd->cdw10 = htole32(((io_que->num_entries-1) << 16) | io_que->id);
 	/* 0x1 = physically contiguous */
-	cmd->cdw11 = (io_que->id << 16) | 0x1;
-	cmd->prp1 = io_que->cmd_bus_addr;
+	cmd->cdw11 = htole32((io_que->id << 16) | 0x1);
+	cmd->prp1 = htole64(io_que->cmd_bus_addr);
 
 	nvme_ctrlr_submit_admin_request(ctrlr, req);
 }
@@ -137,7 +138,7 @@ nvme_ctrlr_cmd_delete_io_cq(struct nvme_controller *ctrlr,
 	 * TODO: create a delete io completion queue command data
 	 *  structure.
 	 */
-	cmd->cdw10 = io_que->id;
+	cmd->cdw10 = htole32(io_que->id);
 
 	nvme_ctrlr_submit_admin_request(ctrlr, req);
 }
@@ -158,14 +159,15 @@ nvme_ctrlr_cmd_delete_io_sq(struct nvme_controller *ctrlr,
 	 * TODO: create a delete io submission queue command data
 	 *  structure.
 	 */
-	cmd->cdw10 = io_que->id;
+	cmd->cdw10 = htole32(io_que->id);
 
 	nvme_ctrlr_submit_admin_request(ctrlr, req);
 }
 
 void
 nvme_ctrlr_cmd_set_feature(struct nvme_controller *ctrlr, uint8_t feature,
-    uint32_t cdw11, void *payload, uint32_t payload_size,
+    uint32_t cdw11, uint32_t cdw12, uint32_t cdw13, uint32_t cdw14,
+    uint32_t cdw15, void *payload, uint32_t payload_size,
     nvme_cb_fn_t cb_fn, void *cb_arg)
 {
 	struct nvme_request *req;
@@ -175,8 +177,12 @@ nvme_ctrlr_cmd_set_feature(struct nvme_controller *ctrlr, uint8_t feature,
 
 	cmd = &req->cmd;
 	cmd->opc = NVME_OPC_SET_FEATURES;
-	cmd->cdw10 = feature;
-	cmd->cdw11 = cdw11;
+	cmd->cdw10 = htole32(feature);
+	cmd->cdw11 = htole32(cdw11);
+	cmd->cdw12 = htole32(cdw12);
+	cmd->cdw13 = htole32(cdw13);
+	cmd->cdw14 = htole32(cdw14);
+	cmd->cdw15 = htole32(cdw15);
 
 	nvme_ctrlr_submit_admin_request(ctrlr, req);
 }
@@ -193,8 +199,8 @@ nvme_ctrlr_cmd_get_feature(struct nvme_controller *ctrlr, uint8_t feature,
 
 	cmd = &req->cmd;
 	cmd->opc = NVME_OPC_GET_FEATURES;
-	cmd->cdw10 = feature;
-	cmd->cdw11 = cdw11;
+	cmd->cdw10 = htole32(feature);
+	cmd->cdw11 = htole32(cdw11);
 
 	nvme_ctrlr_submit_admin_request(ctrlr, req);
 }
@@ -207,20 +213,19 @@ nvme_ctrlr_cmd_set_num_queues(struct nvme_controller *ctrlr,
 
 	cdw11 = ((num_queues - 1) << 16) | (num_queues - 1);
 	nvme_ctrlr_cmd_set_feature(ctrlr, NVME_FEAT_NUMBER_OF_QUEUES, cdw11,
-	    NULL, 0, cb_fn, cb_arg);
+	    0, 0, 0, 0, NULL, 0, cb_fn, cb_arg);
 }
 
 void
 nvme_ctrlr_cmd_set_async_event_config(struct nvme_controller *ctrlr,
-    union nvme_critical_warning_state state, nvme_cb_fn_t cb_fn,
-    void *cb_arg)
+    uint32_t state, nvme_cb_fn_t cb_fn, void *cb_arg)
 {
 	uint32_t cdw11;
 
-	cdw11 = state.raw;
+	cdw11 = state;
 	nvme_ctrlr_cmd_set_feature(ctrlr,
-	    NVME_FEAT_ASYNC_EVENT_CONFIGURATION, cdw11, NULL, 0, cb_fn,
-	    cb_arg);
+	    NVME_FEAT_ASYNC_EVENT_CONFIGURATION, cdw11, 0, 0, 0, 0, NULL, 0,
+	    cb_fn, cb_arg);
 }
 
 void
@@ -245,7 +250,7 @@ nvme_ctrlr_cmd_set_interrupt_coalescing(struct nvme_controller *ctrlr,
 
 	cdw11 = ((microseconds/100) << 8) | threshold;
 	nvme_ctrlr_cmd_set_feature(ctrlr, NVME_FEAT_INTERRUPT_COALESCING, cdw11,
-	    NULL, 0, cb_fn, cb_arg);
+	    0, 0, 0, 0, NULL, 0, cb_fn, cb_arg);
 }
 
 void
@@ -260,9 +265,10 @@ nvme_ctrlr_cmd_get_log_page(struct nvme_controller *ctrlr, uint8_t log_page,
 
 	cmd = &req->cmd;
 	cmd->opc = NVME_OPC_GET_LOG_PAGE;
-	cmd->nsid = nsid;
+	cmd->nsid = htole32(nsid);
 	cmd->cdw10 = ((payload_size/sizeof(uint32_t)) - 1) << 16;
 	cmd->cdw10 |= log_page;
+	cmd->cdw10 = htole32(cmd->cdw10);
 
 	nvme_ctrlr_submit_admin_request(ctrlr, req);
 }
@@ -319,7 +325,7 @@ nvme_ctrlr_cmd_abort(struct nvme_controller *ctrlr, uint16_t cid,
 
 	cmd = &req->cmd;
 	cmd->opc = NVME_OPC_ABORT;
-	cmd->cdw10 = (cid << 16) | sqid;
+	cmd->cdw10 = htole32((cid << 16) | sqid);
 
 	nvme_ctrlr_submit_admin_request(ctrlr, req);
 }

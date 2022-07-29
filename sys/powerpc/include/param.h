@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2001 David E. O'Brien
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -35,7 +37,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: stable/11/sys/powerpc/include/param.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _POWERPC_INCLUDE_PARAM_H_
@@ -57,7 +59,11 @@
 #ifdef __powerpc64__
 #define	MACHINE_ARCH	"powerpc64"
 #else
+#ifdef	__SPE__
+#define	MACHINE_ARCH	"powerpcspe"
+#else
 #define	MACHINE_ARCH	"powerpc"
+#endif
 #endif
 #endif
 #define	MID_MACHINE	MID_POWERPC

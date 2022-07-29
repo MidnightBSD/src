@@ -27,7 +27,7 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGES.
 #
-# $FreeBSD: stable/11/sys/xen/xenbus/xenbusb_if.m 222975 2011-06-11 04:59:01Z gibbs $
+# $FreeBSD$
 #
 
 #include <sys/bus.h>

@@ -1,3 +1,4 @@
-# $FreeBSD: stable/11/sys/arm/allwinner/a13/files.a13 302472 2016-07-08 23:38:25Z manu $
+# $FreeBSD$
 
 arm/allwinner/a13/a13_padconf.c		standard
+arm/allwinner/clkng/ccu_a13.c		standard

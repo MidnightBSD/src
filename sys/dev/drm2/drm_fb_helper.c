@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_fb_helper.c 346817 2019-04-28 13:21:01Z dchagin $");
+__FBSDID("$FreeBSD$");
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
@@ -841,7 +841,7 @@ int drm_fb_helper_single_fb_probe(struct drm_fb_helper *fb_helper,
 	struct fb_info *info;
 	struct drm_fb_helper_surface_size sizes;
 	int gamma_size = 0;
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 	struct drm_crtc *crtc;
 	struct drm_device *dev;
 	int ret;
@@ -932,7 +932,7 @@ int drm_fb_helper_single_fb_probe(struct drm_fb_helper *fb_helper,
 	for (i = 0; i < fb_helper->crtc_count; i++)
 		fb_helper->crtc_info[i].mode_set.fb = fb_helper->fb;
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 	if (new_fb) {
 		int ret;
 

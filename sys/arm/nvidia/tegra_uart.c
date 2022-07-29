@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/nvidia/tegra_uart.c 340145 2018-11-04 23:28:56Z mmacy $");
+__FBSDID("$FreeBSD$");
 
 
 /*
@@ -44,7 +44,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/nvidia/tegra_uart.c 340145 2018-11-04 23:2
 
 #include <dev/extres/clk/clk.h>
 #include <dev/extres/hwreset/hwreset.h>
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 #include <dev/uart/uart.h>
@@ -103,6 +102,10 @@ tegra_uart_grab(struct uart_softc *sc)
 	uart_lock(sc->sc_hwmtx);
 	ier = uart_getreg(bas, REG_IER);
 	uart_setreg(bas, REG_IER, ier & ns8250->ier_mask);
+
+	while ((uart_getreg(bas, REG_LSR) & LSR_TEMT) == 0)
+		;
+
 	uart_setreg(bas, REG_FCR, 0);
 	uart_barrier(bas);
 	uart_unlock(sc->sc_hwmtx);

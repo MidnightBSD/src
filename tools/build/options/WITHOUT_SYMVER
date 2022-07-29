@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_SYMVER 169649 2007-05-17 05:03:24Z deischen $
+.\" $FreeBSD$
 Set to disable symbol versioning when building shared libraries.

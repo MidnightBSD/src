@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/dev/videomode/test.c 278798 2015-02-15 11:37:40Z hselasky $ */
+/* $FreeBSD$ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

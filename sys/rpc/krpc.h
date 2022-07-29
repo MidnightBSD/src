@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/rpc/krpc.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _RPC_KRPC_H_
@@ -76,6 +78,9 @@ struct rc_data {
 	CLIENT*			rc_client; /* underlying RPC client */
 	struct rpc_err		rc_err;
 	void			*rc_backchannel;
+	void			(*rc_reconcall)(CLIENT *, void *,
+				    struct ucred *); /* reconection upcall */
+	void			*rc_reconarg;	/* upcall arg */
 };
 
 struct ct_data {

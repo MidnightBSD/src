@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libopenbsd/sys/sysctl.h 290838 2015-11-14 23:43:59Z rodrigc $
+ * $FreeBSD$
  */
 
 #ifndef _LIBOPENBSD_SYS_SYSCTL_H_

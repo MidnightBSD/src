@@ -25,7 +25,7 @@
 #define __NI_REG_H__
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/ni_reg.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 /* northern islands - DCE5 */
 

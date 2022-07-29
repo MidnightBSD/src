@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 2008 MARVELL INTERNATIONAL LTD.
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/mv/kirkwood/kirkwood.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -78,4 +80,11 @@ get_tclk(void)
 		return (TCLK_200MHZ);
 
 	return (TCLK_166MHZ);
+}
+
+uint32_t
+get_cpu_freq(void)
+{
+
+	return (0);
 }

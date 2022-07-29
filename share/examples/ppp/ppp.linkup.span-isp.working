@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/examples/ppp/ppp.linkup.span-isp.working 85848 2001-11-01 23:44:12Z cjc $
+# $FreeBSD$
 
 # This is a working example of ppp.linkup.span-isp that uses ppp connections
 # to the same machine through 3 null-modem serial cables.

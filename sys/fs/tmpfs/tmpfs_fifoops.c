@@ -1,6 +1,8 @@
 /*	$NetBSD: tmpfs_fifoops.c,v 1.5 2005/12/11 12:24:29 christos Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2005 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -34,10 +36,10 @@
  * tmpfs vnode interface for named pipes.
  */
 #include <sys/cdefs.h>
- __FBSDID("$FreeBSD: stable/11/sys/fs/tmpfs/tmpfs_fifoops.c 346286 2019-04-16 17:43:14Z kib $");
+ __FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
-#include <sys/filedesc.h>
+#include <sys/mount.h>
 #include <sys/proc.h>
 #include <sys/vnode.h>
 

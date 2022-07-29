@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/11/sys/modules/drm2/radeonkmsfw/gen-makefiles 254885 2013-08-25 19:37:15Z dumbbell $
+# $FreeBSD$
 
 set -e
 
@@ -20,7 +20,7 @@ for file in $fwdir/*.uu; do
 
 	mkdir -p $scriptdir/$img
 	cat > $scriptdir/$img/Makefile <<EOF
-# \$FreeBSD: stable/11/sys/modules/drm2/radeonkmsfw/gen-makefiles 254885 2013-08-25 19:37:15Z dumbbell $
+# \$FreeBSD$
 
 KMOD=	radeonkmsfw_$img
 IMG=	$img

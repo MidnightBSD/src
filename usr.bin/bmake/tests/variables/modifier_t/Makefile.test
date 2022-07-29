@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/bmake/tests/variables/modifier_t/Makefile.test 263346 2014-03-19 12:29:20Z jmmv $
+# $FreeBSD$
 #
 # Test the t modifier.
 #

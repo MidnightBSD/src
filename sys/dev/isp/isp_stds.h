@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/isp/isp_stds.h 347894 2019-05-16 22:03:25Z ken $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  *  Copyright (c) 1997-2009 by Matthew Jacob
  *  All rights reserved.
  * 
@@ -86,6 +88,9 @@ typedef struct {
 #define	FCP_CMND_TASK_ATTR_ACA		0x04
 #define	FCP_CMND_TASK_ATTR_UNTAGGED	0x05
 #define	FCP_CMND_TASK_ATTR_MASK		0x07
+
+#define	FCP_CMND_PRIO_MASK		0x78
+#define	FCP_CMND_PRIO_SHIFT		3
 
 #define	FCP_CMND_ADDTL_CDBLEN_SHIFT	2
 

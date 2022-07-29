@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/diff/tests/Makefile 339160 2018-10-03 17:16:18Z kevans $
+# $FreeBSD$
 
 PACKAGE=	tests
 

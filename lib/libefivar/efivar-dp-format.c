@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2017 Netflix, Inc.
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libefivar/efivar-dp-format.c 332123 2018-04-06 18:10:38Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <efivar.h>
 #include <stdio.h>
@@ -256,7 +255,7 @@ DevPathToTextVendor (
         UefiDevicePathLibCatPrint (Str, "VenVt100Plus()");
         return ;
       } else if (CompareGuid (&Vendor->Guid, &gEfiVTUTF8Guid)) {
-        UefiDevicePathLibCatPrint (Str, "VenUft8()");
+        UefiDevicePathLibCatPrint (Str, "VenUtf8()");
         return ;
       } else if (CompareGuid (&Vendor->Guid, &gEfiUartDevicePathGuid)) {
         FlowControlMap = (((UART_FLOW_CONTROL_DEVICE_PATH *) Vendor)->FlowControlMap);

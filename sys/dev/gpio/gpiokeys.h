@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/gpio/gpiokeys.h 299475 2016-05-11 17:57:26Z gonzo $
+ * $FreeBSD$
  */
 #ifndef __GPIOKEYS_H__
 #define __GPIOKEYS_H__

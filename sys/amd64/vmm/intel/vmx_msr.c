@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,11 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/vmm/intel/vmx_msr.c 351753 2019-09-03 16:23:46Z emaste $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/intel/vmx_msr.c 351753 2019-09-03 16:23:46Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,6 +44,7 @@ __FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/intel/vmx_msr.c 351753 2019-09-03 16
 
 #include "vmx.h"
 #include "vmx_msr.h"
+#include "x86.h"
 
 static bool
 vmx_ctl_allows_one_setting(uint64_t msr_val, int bitpos)
@@ -359,6 +362,16 @@ vmx_msr_guest_enter(struct vmx *vmx, int vcpuid)
 }
 
 void
+vmx_msr_guest_enter_tsc_aux(struct vmx *vmx, int vcpuid)
+{
+	uint64_t guest_tsc_aux = vmx->guest_msrs[vcpuid][IDX_MSR_TSC_AUX];
+	uint32_t host_aux = cpu_auxmsr();
+
+	if (vmx_have_msr_tsc_aux(vmx) && guest_tsc_aux != host_aux)
+		wrmsr(MSR_TSC_AUX, guest_tsc_aux);
+}
+
+void
 vmx_msr_guest_exit(struct vmx *vmx, int vcpuid)
 {
 	uint64_t *guest_msrs = vmx->guest_msrs[vcpuid];
@@ -377,6 +390,23 @@ vmx_msr_guest_exit(struct vmx *vmx, int vcpuid)
 	wrmsr(MSR_SF_MASK, host_msrs[IDX_MSR_SF_MASK]);
 
 	/* MSR_KGSBASE will be restored on the way back to userspace */
+}
+
+void
+vmx_msr_guest_exit_tsc_aux(struct vmx *vmx, int vcpuid)
+{
+	uint64_t guest_tsc_aux = vmx->guest_msrs[vcpuid][IDX_MSR_TSC_AUX];
+	uint32_t host_aux = cpu_auxmsr();
+
+	if (vmx_have_msr_tsc_aux(vmx) && guest_tsc_aux != host_aux)
+		/*
+		 * Note that it is not necessary to save the guest value
+		 * here; vmx->guest_msrs[vcpuid][IDX_MSR_TSC_AUX] always
+		 * contains the current value since it is updated whenever
+		 * the guest writes to it (which is expected to be very
+		 * rare).
+		 */
+		wrmsr(MSR_TSC_AUX, host_aux);
 }
 
 int
@@ -470,6 +500,17 @@ vmx_wrmsr(struct vmx *vmx, int vcpuid, u_int num, uint64_t val, bool *retu)
 		break;
 	case MSR_TSC:
 		error = vmx_set_tsc_offset(vmx, vcpuid, val - rdtsc());
+		break;
+	case MSR_TSC_AUX:
+		if (vmx_have_msr_tsc_aux(vmx))
+			/*
+			 * vmx_msr_guest_enter_tsc_aux() will apply this
+			 * value when it is called immediately before guest
+			 * entry.
+			 */
+			guest_msrs[IDX_MSR_TSC_AUX] = val;
+		else
+			vm_inject_gp(vmx->vm, vcpuid);
 		break;
 	default:
 		error = EINVAL;

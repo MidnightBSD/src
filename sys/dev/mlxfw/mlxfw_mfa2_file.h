@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlxfw/mlxfw_mfa2_file.h 347285 2019-05-08 10:49:05Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _MLXFW_MFA2_FILE_H

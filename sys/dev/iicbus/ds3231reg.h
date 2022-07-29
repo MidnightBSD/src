@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/iicbus/ds3231reg.h 323467 2017-09-11 22:21:15Z ian $
+ * $FreeBSD$
  */
 
 /*

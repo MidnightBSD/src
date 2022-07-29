@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_TESTS 268778 2014-07-16 21:40:11Z jmmv $
+.\" $FreeBSD$
 Set to not build nor install the
 .Fx
 Test Suite in

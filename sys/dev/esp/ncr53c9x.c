@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-2-Clause NetBSD
+ *
  * Copyright (c) 2004 Scott Long
  * Copyright (c) 2005, 2008 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
@@ -98,7 +100,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/esp/ncr53c9x.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -400,6 +402,7 @@ ncr53c9x_attach(struct ncr53c9x_softc *sc)
 
 	NCR_UNLOCK(sc);
 
+	gone_in_dev(sc->sc_dev, 14, "esp(4) driver");
 	return (0);
 
 fail_async:

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/spi/mx25l/Makefile 332113 2018-04-06 16:48:07Z ian $
+# $FreeBSD$
 
 .PATH:	${SRCTOP}/sys/dev/flash
 

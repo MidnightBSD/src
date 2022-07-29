@@ -1,4 +1,6 @@
-# $FreeBSD: stable/11/usr.sbin/Makefile.powerpc 292553 2015-12-21 17:41:08Z ian $
+# $FreeBSD$
 
+.if ${MACHINE_ARCH} != "powerpcspe"
 SUBDIR+=	nvram
+.endif
 SUBDIR+=	ofwdump

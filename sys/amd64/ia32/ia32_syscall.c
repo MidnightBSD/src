@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (C) 1994, David Greenman
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,14 +38,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/amd64/ia32/ia32_syscall.c 332428 2018-04-12 13:40:02Z kib $");
+__FBSDID("$FreeBSD$");
 
 /*
  * 386 Trap and System call handling
  */
 
 #include "opt_clock.h"
-#include "opt_compat.h"
 #include "opt_cpu.h"
 #include "opt_isa.h"
 
@@ -208,14 +209,13 @@ ia32_syscall(struct trapframe *frame)
 {
 	struct thread *td;
 	register_t orig_tf_rflags;
-	int error;
 	ksiginfo_t ksi;
 
 	orig_tf_rflags = frame->tf_rflags;
 	td = curthread;
 	td->td_frame = frame;
 
-	error = syscallenter(td);
+	syscallenter(td);
 
 	/*
 	 * Traced syscall.
@@ -229,7 +229,8 @@ ia32_syscall(struct trapframe *frame)
 		trapsignal(td, &ksi);
 	}
 
-	syscallret(td, error);
+	syscallret(td);
+	amd64_syscall_ret_flush_l1d(td->td_errno);
 }
 
 static void

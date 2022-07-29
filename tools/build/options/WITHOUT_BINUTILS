@@ -1,4 +1,7 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_BINUTILS 286332 2015-08-05 18:30:00Z emaste $
-Set to not build or install binutils (as, ld, objcopy, and objdump ) as part
+.\" $FreeBSD$
+Do not build or install GNU
+.Xr as 1 ,
+.Xr ld.bfd 1 , and
+.Xr objdump 1
+as part
 of the normal system build.
-The resulting system cannot build programs from source.

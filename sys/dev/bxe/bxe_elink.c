@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2007-2017 QLogic Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bxe/bxe_elink.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "bxe.h"
 #include "bxe_elink.h"
@@ -4416,7 +4418,7 @@ static uint8_t elink_ext_phy_resolve_fc(struct elink_phy *phy,
 	uint8_t ret = 0;
 	vars->flow_ctrl = ELINK_FLOW_CTRL_NONE;
 	if (phy->req_flow_ctrl != ELINK_FLOW_CTRL_AUTO) {
-		/* Update the advertised flow-controled of LD/LP in AN */
+		/* Update the advertised flow-controlled of LD/LP in AN */
 		if (phy->req_line_speed == ELINK_SPEED_AUTO_NEG)
 			elink_ext_phy_update_adv_fc(phy, params, vars);
 		/* But set the flow-control result as the requested one */
@@ -6260,7 +6262,7 @@ static void elink_flow_ctrl_resolve(struct elink_phy *phy,
 
 	/* Resolve from gp_status in case of AN complete and not sgmii */
 	if (phy->req_flow_ctrl != ELINK_FLOW_CTRL_AUTO) {
-		/* Update the advertised flow-controled of LD/LP in AN */
+		/* Update the advertised flow-controlled of LD/LP in AN */
 		if (phy->req_line_speed == ELINK_SPEED_AUTO_NEG)
 			elink_update_adv_fc(phy, params, vars, gp_status);
 		/* But set the flow-control result as the requested one */

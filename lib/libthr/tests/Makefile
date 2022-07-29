@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libthr/tests/Makefile 313680 2017-02-12 09:24:18Z ngie $
+# $FreeBSD$
 
 PACKAGE=	tests
 
@@ -23,7 +23,7 @@ NETBSD_ATF_TESTS_C+=	sigmask_test
 NETBSD_ATF_TESTS_C+=	sigsuspend_test
 NETBSD_ATF_TESTS_C+=	siglongjmp_test
 NETBSD_ATF_TESTS_C+=	sleep_test
-.if ${MACHINE} != "arm64" # ARM64TODO: Missing makecontext
+.if ${MACHINE_CPUARCH} != "aarch64" # ARM64TODO: Missing makecontext
 NETBSD_ATF_TESTS_C+=	swapcontext_test
 .endif
 NETBSD_ATF_TESTS_C+=	timedmutex_test
@@ -32,6 +32,8 @@ NETBSD_ATF_TESTS_SH=	atexit_test
 NETBSD_ATF_TESTS_SH+=	cancel_test
 NETBSD_ATF_TESTS_SH+=	exit_test
 NETBSD_ATF_TESTS_SH+=	resolv_test
+
+ATF_TESTS_C+=		umtx_op_test
 
 LIBADD+=		pthread
 LIBADD.fpu_test+=	m

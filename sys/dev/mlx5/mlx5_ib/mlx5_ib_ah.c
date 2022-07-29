@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_ib/mlx5_ib_ah.c 331784 2018-03-30 18:36:44Z hselasky $
+ * $FreeBSD$
  */
 
 #include "mlx5_ib.h"

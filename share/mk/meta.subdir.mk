@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/mk/meta.subdir.mk 294742 2016-01-25 18:34:15Z bdrewery $
+# $FreeBSD$
 # $Id: meta.subdir.mk,v 1.11 2015/11/24 22:26:51 sjg Exp $
 
 #

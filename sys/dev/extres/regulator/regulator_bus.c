@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/extres/regulator/regulator_bus.c 296906 2016-03-15 15:30:17Z mmel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -58,10 +58,8 @@ ofw_regulator_bus_probe(device_t dev)
 static int
 ofw_regulator_bus_attach(device_t dev)
 {
-	struct ofw_regulator_bus_softc *sc;
 	phandle_t node, child;
 
-	sc = device_get_softc(dev);
 	node  = ofw_bus_get_node(dev);
 	simplebus_init(dev, node);
 

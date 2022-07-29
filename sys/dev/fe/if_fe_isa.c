@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/fe/if_fe_isa.c 298955 2016-05-03 03:41:25Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -67,9 +67,6 @@ static driver_t fe_isa_driver = {
 	fe_isa_methods,
 	sizeof (struct fe_softc)
 };
-
-DRIVER_MODULE(fe, isa, fe_isa_driver, fe_devclass, 0, 0);
-
 
 static int fe_probe_ssi(device_t);
 static int fe_probe_jli(device_t);
@@ -1062,3 +1059,5 @@ fe_probe_ubn(device_t dev)
 
 	return 0;
 }
+
+DRIVER_MODULE(fe, isa, fe_isa_driver, fe_devclass, 0, 0);

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1995
  *	A.R. Gordon (andrew.gordon@net-tel.co.uk).  All rights reserved.
  *
@@ -36,7 +38,7 @@
 /* The actual program logic is in the file procs.c			*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/rpc.statd/statd.c 355368 2019-12-03 22:54:24Z rpokala $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <errno.h>

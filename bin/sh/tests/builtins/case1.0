@@ -1,4 +1,4 @@
-#$FreeBSD: stable/11/bin/sh/tests/builtins/case1.0 172440 2007-10-04 16:14:48Z stefanf $
+#$FreeBSD$
 f()
 {
 	false

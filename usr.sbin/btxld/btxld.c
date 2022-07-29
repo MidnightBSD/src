@@ -28,7 +28,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/11/usr.sbin/btxld/btxld.c 330449 2018-03-05 07:26:05Z eadler $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -189,7 +189,7 @@ static void
 cleanup(void)
 {
     if (tname)
-	remove(tname);
+	(void)remove(tname);
 }
 
 /*
@@ -287,6 +287,7 @@ btxld(const char *iname)
 	err(2, "%s", tname);
     if (rename(tname, oname))
 	err(2, "%s: Can't rename to %s", tname, oname);
+    free((void*)(intptr_t)tname);
     tname = NULL;
     if (verbose) {
 	printf(binfo, btx.btx_majver, btx.btx_minver, btx.btx_textsz,

@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libkvm/tests/kvm_test_common.c 346920 2019-04-29 19:36:46Z ngie $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <string.h>

@@ -1,9 +1,8 @@
-/* $MidnightBSD$ */
 /* dlg_config.h.  Generated automatically by configure.  */
 /*
  * The configure script expands this as a set of definitions
  *
- * $FreeBSD: stable/10/gnu/lib/libdialog/dlg_config.h 255852 2013-09-24 14:52:43Z dteske $
+ * $FreeBSD$
  */
 
 #define CURSES_WACS_ARRAY _nc_wacs
@@ -103,7 +102,7 @@
 #define PACKAGE "dialog"
 #define RETSIGTYPE void
 #define STDC_HEADERS 1
-#define SYSTEM_NAME "midnightbsd1.0"
+#define SYSTEM_NAME "freebsd10.0"
 #define TIME_WITH_SYS_TIME 1
 #define TYPE_CHTYPE_IS_SCALAR 1
 #define USE_WIDE_CURSES 1

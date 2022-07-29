@@ -1,4 +1,4 @@
 #! /foo/bar/baz
-# $FreeBSD: stable/11/tests/sys/kern/execve/non_exist_shell 281464 2015-04-12 12:29:34Z ngie $
+# $FreeBSD$
 
 echo foo

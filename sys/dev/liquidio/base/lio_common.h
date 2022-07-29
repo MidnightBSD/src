@@ -30,7 +30,7 @@
  *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: stable/11/sys/dev/liquidio/base/lio_common.h 325618 2017-11-09 19:52:56Z sbruno $*/
+/*$FreeBSD$*/
 
 /*   \file  lio_common.h
  *   \brief Common: Structures and macros used in PCI-NIC package by core and

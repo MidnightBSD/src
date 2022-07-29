@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Poul-Henning Kamp
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/geom/geom_vfs.c 322083 2017-08-05 09:34:09Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -192,6 +194,10 @@ g_vfs_strategy(struct bufobj *bo, struct buf *bp)
 	}
 	bip->bio_done = g_vfs_done;
 	bip->bio_caller2 = bp;
+#if defined(BUF_TRACKING) || defined(FULL_BUF_TRACKING)
+	buf_track(bp, __func__);
+	bip->bio_track_bp = bp;
+#endif
 	g_io_request(bip, cp);
 }
 

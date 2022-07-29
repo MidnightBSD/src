@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/ofed/drivers/infiniband/core/ib_sa_query.c 337096 2018-08-02 08:33:51Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <linux/module.h>
 #include <linux/err.h>
@@ -702,12 +702,10 @@ int ib_init_ah_from_path(struct ib_device *device, u8 port_num,
 			return -ENODEV;
 		}
 		ndev = ib_get_ndev_from_path(rec);
-		rcu_read_lock();
 		if ((ndev && ndev != resolved_dev) ||
 		    (resolved_dev != idev &&
-		     !rdma_is_upper_dev_rcu(idev, resolved_dev)))
+		     rdma_vlan_dev_real_dev(resolved_dev) != idev))
 			ret = -EHOSTUNREACH;
-		rcu_read_unlock();
 		dev_put(idev);
 		dev_put(resolved_dev);
 		if (ret) {

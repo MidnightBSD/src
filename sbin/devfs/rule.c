@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/devfs/rule.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -267,7 +267,7 @@ ruleset_main(int ac, char **av)
  * differs from the other rulespec_in*() routines in that it also
  * calls ioctl() for the rules, since it is impractical (and not very
  * useful) to return a list (or array) of rules, just so the caller
- * can call call ioctl() for each of them.
+ * can call ioctl() for each of them.
  */
 static void
 rulespec_infp(FILE *fp, unsigned long request, devfs_rsnum rsnum)

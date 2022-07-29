@@ -1,7 +1,7 @@
 #
 # DEFAULTS -- Default kernel configuration file for FreeBSD/powerpc
 #
-# $FreeBSD: stable/11/sys/powerpc/conf/DEFAULTS 255643 2013-09-17 17:37:04Z nwhitehorn $
+# $FreeBSD$
 
 # Pseudo devices.
 device		mem		# Memory and kernel memory devices

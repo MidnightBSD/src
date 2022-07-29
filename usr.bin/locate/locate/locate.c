@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1995 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
  * Copyright (c) 1989, 1993
  *      The Regents of the University of California.  All rights reserved.
@@ -48,7 +49,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)locate.c    8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.bin/locate/locate/locate.c 244063 2012-12-10 02:26:01Z eadler $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 /*
@@ -136,9 +137,7 @@ extern int	check_bigram_char(int);
 extern char 	*patprep(char *);
 
 int
-main(argc, argv)
-        int argc;
-        char **argv;
+main(int argc, char **argv)
 {
         register int ch;
         char **dbv = NULL;
@@ -227,10 +226,13 @@ main(argc, argv)
 }
 
 
+/*
+ * Arguments:
+ * db	database
+ * s	search strings
+ */
 void
-search_fopen(db, s)
-	char *db; /* database */
-	char **s; /* search strings */
+search_fopen(char *db, char **s)
 {
 	FILE *fp;
 #ifdef DEBUG
@@ -277,10 +279,13 @@ search_fopen(db, s)
 } 
 
 #ifdef MMAP
+/*
+ * Arguments:
+ * db	database
+ * s	search strings
+ */
 void
-search_mmap(db, s)
-	char *db; /* database */
-	char **s; /* search strings */
+search_mmap(char *db, char **s)
 {
         struct stat sb;
         int fd;

@@ -2,7 +2,7 @@
  * This file is freeware. You are free to use it and add your own
  * license.
  *
- * $FreeBSD: stable/11/sys/cddl/dev/prototype.c 324282 2017-10-04 15:47:16Z markj $
+ * $FreeBSD$
  *
  */
 

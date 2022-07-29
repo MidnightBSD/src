@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/tzsetup/Makefile 319193 2017-05-30 07:29:18Z ngie $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * From i386: FreeBSD:  157909 2006-04-21 04:28:43Z peter
- * $FreeBSD: stable/11/sys/arm64/include/minidump.h 286954 2015-08-20 11:26:26Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_MINIDUMP_H_

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008,	Jeffrey Roberson <jeff@freebsd.org>
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/cpuset.h 333338 2018-05-07 21:42:22Z shurd $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_CPUSET_H_
@@ -64,6 +65,7 @@
 #define	CPU_OR_ATOMIC(d, s)		BIT_OR_ATOMIC(CPU_SETSIZE, d, s)
 #define	CPU_COPY_STORE_REL(f, t)	BIT_COPY_STORE_REL(CPU_SETSIZE, f, t)
 #define	CPU_FFS(p)			BIT_FFS(CPU_SETSIZE, p)
+#define	CPU_FLS(p)			BIT_FLS(CPU_SETSIZE, p)
 #define	CPU_COUNT(p)			BIT_COUNT(CPU_SETSIZE, p)
 #define	CPUSET_FSET			BITSET_FSET(_NCPUWORDS)
 #define	CPUSET_T_INITIALIZER		BITSET_T_INITIALIZER
@@ -111,6 +113,7 @@ LIST_HEAD(setlist, cpuset);
  */
 struct cpuset {
 	cpuset_t		cs_mask;	/* bitmask of valid cpus. */
+	struct domainset	*cs_domain;	/* (c) NUMA policy. */
 	volatile u_int		cs_ref;		/* (a) Reference count. */
 	int			cs_flags;	/* (s) Flags from below. */
 	cpusetid_t		cs_id;		/* (s) Id or INVALID. */
@@ -128,6 +131,15 @@ struct prison;
 struct proc;
 struct thread;
 
+/*
+ * Callbacks for copying in/out a cpuset or domainset.  Used for alternate
+ * ABIs, like compat32.
+ */
+struct cpuset_copy_cb {
+	int (*cpuset_copyin)(const void *, void *, size_t);
+	int (*cpuset_copyout)(const void *, void *, size_t);
+};
+
 struct cpuset *cpuset_thread0(void);
 struct cpuset *cpuset_ref(struct cpuset *);
 void	cpuset_rel(struct cpuset *);
@@ -137,6 +149,7 @@ int	cpuset_create_root(struct prison *, struct cpuset **);
 int	cpuset_setproc_update_set(struct proc *, struct cpuset *);
 int	cpuset_which(cpuwhich_t, id_t, struct proc **,
 	    struct thread **, struct cpuset **);
+void	cpuset_kernthread(struct thread *);
 
 char	*cpusetobj_strprint(char *, const cpuset_t *);
 int	cpusetobj_strscan(cpuset_t *, const char *);

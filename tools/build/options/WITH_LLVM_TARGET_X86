@@ -1,2 +1,5 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITH_LLVM_TARGET_X86 335875 2018-07-02 21:20:36Z dim $
+.\" $FreeBSD$
 Set to build LLVM target support for X86.
+The
+.Va LLVM_TARGET_ALL
+option should be used rather than this in most cases.

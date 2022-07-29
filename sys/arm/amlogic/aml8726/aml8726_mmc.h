@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/amlogic/aml8726/aml8726_mmc.h 299069 2016-05-04 15:48:59Z pfg $
+ * $FreeBSD$
  */
 
 #ifndef	_ARM_AMLOGIC_AML8726_MMC_H

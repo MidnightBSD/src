@@ -38,7 +38,7 @@ static const char copyright[] =
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/sa/main.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * sa:	system accounting
@@ -312,7 +312,7 @@ usage(void)
 static FILE *
 acct_load(const char *pn, int wr)
 {
-	struct acctv2 ac;
+	struct acctv3 ac;
 	struct cmdinfo ci;
 	ssize_t rv;
 	FILE *f;

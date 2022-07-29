@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0
+ *
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
  *
@@ -49,7 +51,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/isci/scil/scif_sas_controller.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 #ifndef _SCIF_SAS_CONTROLLER_H_
 #define _SCIF_SAS_CONTROLLER_H_
@@ -119,7 +121,7 @@ typedef struct SCIF_SAS_CONTROLLER
    SCI_BASE_CONTROLLER_STATE_HANDLER_T * state_handlers;
 
    /**
-    * This field contains the memory desciptors defining the physical
+    * This field contains the memory descriptors defining the physical
     * memory requirements for this controller.
     */
    SCI_PHYSICAL_MEMORY_DESCRIPTOR_T mdes[SCIF_SAS_MAX_MEMORY_DESCRIPTORS];
