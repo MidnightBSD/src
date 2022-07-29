@@ -45,17 +45,18 @@ AHD_REG_PRETTY_PRINT	opt_aic79xx.h
 ADW_ALLOW_MEMIO		opt_adw.h
 
 TWA_DEBUG		opt_twa.h
-TWA_FLASH_FIRMWARE	opt_twa.h
 
 # Debugging options.
 ALT_BREAK_TO_DEBUGGER	opt_kdb.h
 BREAK_TO_DEBUGGER	opt_kdb.h
+BUF_TRACKING		opt_global.h
 DDB
 DDB_BUFR_SIZE	opt_ddb.h
 DDB_CAPTURE_DEFAULTBUFSIZE	opt_ddb.h
 DDB_CAPTURE_MAXBUFSIZE	opt_ddb.h
 DDB_CTF		opt_ddb.h
 DDB_NUMSYM	opt_ddb.h
+FULL_BUF_TRACKING	opt_global.h
 GDB
 KDB		opt_global.h
 KDB_TRACE	opt_kdb.h
@@ -65,9 +66,11 @@ SYSCTL_DEBUG	opt_sysctl.h
 EARLY_PRINTF	opt_global.h
 TEXTDUMP_PREFERRED	opt_ddb.h
 TEXTDUMP_VERBOSE	opt_ddb.h
+NUM_CORE_FILES	opt_global.h
+TSLOG	opt_global.h
+TSLOGSIZE	opt_global.h
 
 # Miscellaneous options.
-ADAPTIVE_LOCKMGRS
 ALQ
 ALTERA_SDCARD_FAST_SIM	opt_altera_sdcard.h
 ATSE_CFI_HACK	opt_cfi.h
@@ -77,21 +80,22 @@ BOOTVERBOSE	opt_global.h
 CALLOUT_PROFILING
 CAPABILITIES	opt_capsicum.h
 CAPABILITY_MODE	opt_capsicum.h
-COMPAT_43	opt_compat.h
-COMPAT_43TTY	opt_compat.h
-COMPAT_FREEBSD4	opt_compat.h
-COMPAT_FREEBSD5	opt_compat.h
-COMPAT_FREEBSD6	opt_compat.h
-COMPAT_FREEBSD7	opt_compat.h
-COMPAT_FREEBSD9	opt_compat.h
-COMPAT_FREEBSD10	opt_compat.h
+COMPAT_43	opt_global.h
+COMPAT_43TTY	opt_global.h
+COMPAT_FREEBSD4	opt_global.h
+COMPAT_FREEBSD5	opt_global.h
+COMPAT_FREEBSD6	opt_global.h
+COMPAT_FREEBSD7	opt_global.h
+COMPAT_FREEBSD9	opt_global.h
+COMPAT_FREEBSD10	opt_global.h
+COMPAT_FREEBSD11	opt_global.h
 COMPAT_CLOUDABI32	opt_dontuse.h
 COMPAT_CLOUDABI64	opt_dontuse.h
-COMPAT_LINUXKPI	opt_compat.h
+COMPAT_LINUXKPI	opt_dontuse.h
+_COMPAT_LINUX32	opt_compat.h	# XXX: make sure opt_compat.h exists
 COMPILING_LINT	opt_global.h
 CY_PCI_FASTINTR
 DEADLKRES	opt_watchdog.h
-DEVICE_NUMA
 EXT_RESOURCES	opt_global.h
 DIRECTIO
 FILEMON		opt_dontuse.h
@@ -100,7 +104,6 @@ FULL_PREEMPTION	opt_sched.h
 GZIO		opt_gzio.h
 IMAGACT_BINMISC		opt_dontuse.h
 IPI_PREEMPTION	opt_sched.h
-GEOM_AES	opt_geom.h
 GEOM_BDE	opt_geom.h
 GEOM_BSD	opt_geom.h
 GEOM_CACHE	opt_geom.h
@@ -126,9 +129,7 @@ GEOM_PART_EBR_COMPAT	opt_geom.h
 GEOM_PART_GPT	opt_geom.h
 GEOM_PART_LDM	opt_geom.h
 GEOM_PART_MBR	opt_geom.h
-GEOM_PART_PC98	opt_geom.h
 GEOM_PART_VTOC8	opt_geom.h
-GEOM_PC98	opt_geom.h
 GEOM_RAID	opt_geom.h
 GEOM_RAID3	opt_geom.h
 GEOM_SHSEC	opt_geom.h
@@ -157,16 +158,23 @@ MAC_IFOFF	opt_dontuse.h
 MAC_LOMAC	opt_dontuse.h
 MAC_MLS		opt_dontuse.h
 MAC_NONE	opt_dontuse.h
+MAC_NTPD	opt_dontuse.h
 MAC_PARTITION	opt_dontuse.h
 MAC_PORTACL	opt_dontuse.h
 MAC_SEEOTHERUIDS	opt_dontuse.h
 MAC_STATIC	opt_mac.h
 MAC_STUB	opt_dontuse.h
 MAC_TEST	opt_dontuse.h
+MAC_VERIEXEC	opt_dontuse.h
+MAC_VERIEXEC_SHA1	opt_dontuse.h
+MAC_VERIEXEC_SHA256	opt_dontuse.h
+MAC_VERIEXEC_SHA384	opt_dontuse.h
+MAC_VERIEXEC_SHA512	opt_dontuse.h
 MD_ROOT		opt_md.h
 MD_ROOT_FSTYPE	opt_md.h
 MD_ROOT_READONLY	opt_md.h
 MD_ROOT_SIZE	opt_md.h
+MD_ROOT_MEM	opt_md.h
 MFI_DEBUG	opt_mfi.h
 MFI_DECODE_LOG	opt_mfi.h
 MPROF_BUFFERS	opt_mprof.h
@@ -217,11 +225,12 @@ SYSVMSG		opt_sysvipc.h
 SYSVSEM		opt_sysvipc.h
 SYSVSHM		opt_sysvipc.h
 SW_WATCHDOG	opt_watchdog.h
+TCPHPTS         opt_inet.h
 TURNSTILE_PROFILING
 UMTX_PROFILING
+UMTX_CHAINS	opt_global.h
 VERBOSE_SYSINIT
-WLCACHE		opt_wavelan.h
-WLDEBUG		opt_wavelan.h
+ZSTDIO		opt_zstdio.h
 
 # POSIX kernel options
 P1003_1B_MQUEUE			opt_posix.h
@@ -240,7 +249,7 @@ CD9660		opt_dontuse.h
 EXT2FS		opt_dontuse.h
 FDESCFS		opt_dontuse.h
 FFS		opt_dontuse.h
-FUSE		opt_dontuse.h
+FUSEFS		opt_dontuse.h
 MSDOSFS		opt_dontuse.h
 NANDFS		opt_dontuse.h
 NULLFS		opt_dontuse.h
@@ -311,6 +320,9 @@ NFS_ROOT	opt_nfsroot.h
 # SMB/CIFS requester
 NETSMB		opt_netsmb.h
 
+# Enable netdump(4) client support.
+NETDUMP 	opt_global.h
+
 # Options used only in subr_param.c.
 HZ		opt_param.h
 MAXFILES	opt_param.h
@@ -341,12 +353,14 @@ SCSI_NO_SENSE_STRINGS	opt_scsi.h
 SCSI_NO_OP_STRINGS	opt_scsi.h
 
 # Options used only in cam/ata/ata_da.c
-ADA_TEST_FAILURE	opt_ada.h
 ATA_STATIC_ID		opt_ada.h
 
 # Options used only in cam/scsi/scsi_cd.c
 CHANGER_MIN_BUSY_SECONDS	opt_cd.h
 CHANGER_MAX_BUSY_SECONDS	opt_cd.h
+
+# Options used only in cam/scsi/scsi_da.c
+DA_TRACK_REFS		opt_da.h
 
 # Options used only in cam/scsi/scsi_sa.c.
 SA_IO_TIMEOUT		opt_sa.h
@@ -413,6 +427,8 @@ BOOTP_NFSV3		opt_bootp.h
 BOOTP_WIRED_TO		opt_bootp.h
 DEVICE_POLLING
 DUMMYNET		opt_ipdn.h
+RATELIMIT		opt_ratelimit.h
+RATELIMIT_DEBUG		opt_ratelimit.h
 INET			opt_inet.h
 INET6			opt_inet6.h
 IPDIVERT
@@ -434,7 +450,6 @@ IPSEC_SUPPORT		opt_ipsec.h
 IPSTEALTH
 KRPC
 LIBALIAS
-LIBMBPOOL
 LIBMCHAIN
 MBUF_PROFILING
 MBUF_STRESS_TEST
@@ -449,19 +464,22 @@ SLIP_IFF_OPTS		opt_slip.h
 TCPDEBUG
 TCPPCAP		opt_global.h
 SIFTR
+TCP_BLACKBOX		opt_global.h
+TCP_HHOOK		opt_inet.h
 TCP_OFFLOAD		opt_inet.h # Enable code to dispatch TCP offloading
 TCP_RFC7413		opt_inet.h
 TCP_RFC7413_MAX_KEYS	opt_inet.h
+TCP_RFC7413_MAX_PSKS	opt_inet.h
 TCP_SIGNATURE		opt_ipsec.h
 VLAN_ARRAY		opt_vlan.h
+XDR
 XBONEHACK
-FLOWTABLE		opt_route.h
-FLOWTABLE_HASH_ALL	opt_route.h
 
 #
 # SCTP
 #
 SCTP			opt_sctp.h
+SCTP_SUPPORT		opt_sctp.h
 SCTP_DEBUG		opt_sctp.h # Enable debug printfs
 SCTP_LOCK_LOGGING	opt_sctp.h # Log to KTR lock activity
 SCTP_MBUF_LOGGING	opt_sctp.h # Log to KTR general mbuf aloc/free
@@ -552,10 +570,6 @@ DRM_DEBUG		opt_drm.h
 TI_SF_BUF_JUMBO		opt_ti.h
 TI_JUMBO_HDRSPLIT	opt_ti.h
 
-# XXX Conflict: # of devices vs network protocol (Native ATM).
-# This makes "atm.h" unusable.
-NATM
-
 # DPT driver debug flags
 DPT_MEASURE_PERFORMANCE	opt_dpt.h
 DPT_RESET_HBA		opt_dpt.h
@@ -593,6 +607,7 @@ DFLTPHYS		opt_global.h
 DIAGNOSTIC		opt_global.h
 INVARIANT_SUPPORT	opt_global.h
 INVARIANTS		opt_global.h
+KASSERT_PANIC_OPTIONAL	opt_global.h
 MAXCPU			opt_global.h
 MAXMEMDOM		opt_global.h
 MAXPHYS			opt_global.h
@@ -611,7 +626,6 @@ VM_KMEM_SIZE		opt_vm.h
 VM_KMEM_SIZE_SCALE	opt_vm.h
 VM_KMEM_SIZE_MAX	opt_vm.h
 VM_NRESERVLEVEL		opt_vm.h
-VM_NUMA_ALLOC		opt_vm.h
 VM_LEVEL_0_ORDER	opt_vm.h
 NO_SWAPPING		opt_vm.h
 MALLOC_MAKE_FAILURES	opt_vm.h
@@ -627,6 +641,7 @@ DEBUG_REDZONE		opt_vm.h
 # Standard SMP options
 EARLY_AP_STARTUP	opt_global.h
 SMP			opt_global.h
+NUMA			opt_global.h
 
 # Size of the kernel message buffer
 MSGBUF_SIZE		opt_msgbuf.h
@@ -681,8 +696,9 @@ UPLCOM_INTR_INTERVAL	opt_uplcom.h
 UVSCOM_DEFAULT_OPKTSIZE	opt_uvscom.h
 UVSCOM_INTR_INTERVAL	opt_uvscom.h
 
-# options for the Realtek RTL8188*U/RTL8192CU driver (urtwn)
-URTWN_WITHOUT_UCODE	opt_urtwn.h
+# options for the Realtek rtwn driver
+RTWN_DEBUG		opt_rtwn.h
+RTWN_WITHOUT_UCODE	opt_rtwn.h
 
 # Embedded system options
 INIT_PATH
@@ -714,6 +730,7 @@ ACPI_MAX_TASKS		opt_acpi.h
 ACPI_MAX_THREADS	opt_acpi.h
 ACPI_DMAR		opt_acpi.h
 DEV_ACPI		opt_acpi.h
+ACPI_EARLY_EPYC_WAR	opt_acpi.h
 
 # ISA support
 DEV_ISA			opt_isa.h
@@ -722,7 +739,6 @@ ISAPNP			opt_isa.h
 # various 'device presence' options.
 DEV_BPF			opt_bpf.h
 DEV_CARP		opt_carp.h
-DEV_MCA			opt_mca.h
 DEV_NETMAP		opt_global.h
 DEV_PCI			opt_pci.h
 DEV_PF			opt_pf.h
@@ -731,10 +747,6 @@ DEV_PFSYNC		opt_pf.h
 DEV_RANDOM		opt_global.h
 DEV_SPLASH		opt_splash.h
 DEV_VLAN		opt_vlan.h
-
-# EISA support
-DEV_EISA		opt_eisa.h
-EISA_SLOTS		opt_eisa.h
 
 # ed driver
 ED_HPP			opt_ed.h
@@ -773,6 +785,7 @@ SC_DISABLE_KDBKEY	opt_syscons.h
 SC_DISABLE_REBOOT	opt_syscons.h
 SC_HISTORY_SIZE		opt_syscons.h
 SC_KERNEL_CONS_ATTR	opt_syscons.h
+SC_KERNEL_CONS_ATTRS	opt_syscons.h
 SC_KERNEL_CONS_REV_ATTR	opt_syscons.h
 SC_MOUSE_CHAR		opt_syscons.h
 SC_NO_CUTPASTE		opt_syscons.h
@@ -787,8 +800,8 @@ SC_PIXEL_MODE		opt_syscons.h
 SC_RENDER_DEBUG		opt_syscons.h
 SC_TWOBUTTON_MOUSE	opt_syscons.h
 VT_ALT_TO_ESC_HACK	opt_syscons.h
-VT_FB_DEFAULT_WIDTH	opt_syscons.h
-VT_FB_DEFAULT_HEIGHT	opt_syscons.h
+VT_FB_MAX_WIDTH		opt_syscons.h
+VT_FB_MAX_HEIGHT	opt_syscons.h
 VT_MAXWINDOWS		opt_syscons.h
 VT_TWOBUTTON_MOUSE	opt_syscons.h
 DEV_SC			opt_syscons.h
@@ -864,6 +877,7 @@ BWI_DEBUG_VERBOSE	opt_bwi.h
 # options for the Brodacom BCM43xx driver (bwn)
 BWN_DEBUG		opt_bwn.h
 BWN_GPL_PHY		opt_bwn.h
+BWN_USE_SIBA		opt_bwn.h
 
 # Options for the SIBA driver
 SIBA_DEBUG		opt_siba.h
@@ -880,6 +894,10 @@ MWL_RXBUF		opt_mwl.h
 MWL_DIAGAPI		opt_mwl.h
 MWL_AGGR_SIZE		opt_mwl.h
 MWL_TX_NODROP		opt_mwl.h
+
+# Options for the Marvell NETA driver
+MVNETA_MULTIQUEUE	opt_mvneta.h
+MVNETA_KTR		opt_mvneta.h
 
 # Options for the Intel 802.11ac wireless driver
 IWM_DEBUG		opt_iwm.h
@@ -900,12 +918,6 @@ DCONS_FORCE_GDB		opt_dcons.h
 HWPMC_DEBUG		opt_global.h
 HWPMC_HOOKS
 HWPMC_MIPS_BACKTRACE 	opt_hwpmc_hooks.h
-
-# XBOX options for FreeBSD/i386, but some files are MI
-XBOX			opt_xbox.h
-
-# Interrupt filtering
-INTR_FILTER
 
 # 802.11 support layer
 IEEE80211_DEBUG		opt_wlan.h
@@ -974,9 +986,6 @@ RACCT_DEFAULT_TO_DISABLED	opt_global.h
 RCTL		opt_global.h
 
 # Random number generator(s)
-# Which CSPRNG hash we get.
-# If Yarrow is not chosen, Fortuna is selected.
-RANDOM_YARROW	opt_global.h
 # With this, no entropy processor is loaded, but the entropy
 # harvesting infrastructure is present. This means an entropy
 # processor may be loaded as a module.
@@ -984,9 +993,7 @@ RANDOM_LOADABLE	opt_global.h
 # This turns on high-rate and potentially expensive harvesting in
 # the uma slab allocator.
 RANDOM_ENABLE_UMA	opt_global.h
-
-# Intel em(4) driver
-EM_MULTIQUEUE	opt_em.h
+RANDOM_ENABLE_ETHER	opt_global.h
 
 # This options turns TPM into entropy source.
 TPM_HARVEST	opt_tpm.h
@@ -1011,5 +1018,21 @@ UINPUT_DEBUG	opt_evdev.h
 # Hyper-V network driver
 HN_DEBUG	opt_hn.h
 
+# CAM-based MMC stack
+MMCCAM
+# Encrypted kernel crash dumps
+EKCD		opt_ekcd.h
+
 # NVME options
 NVME_USE_NVD	opt_nvme.h
+
+# amdsbwd options
+AMDSBWD_DEBUG	opt_amdsbwd.h
+
+# kenv options
+# The early kernel environment (loader environment, config(8)-provided static)
+# is typically cleared after the dynamic environment comes up to ensure that
+# we're not inadvertently holding on to 'secret' values in these stale envs.
+# This option is insecure except in controlled environments where the static
+# environment's contents are known to be safe.
+PRESERVE_EARLY_KENV	opt_global.h

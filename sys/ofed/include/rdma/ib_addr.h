@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0
+ *
  * Copyright (c) 2005 Voltaire Inc.  All rights reserved.
  * Copyright (c) 2005 Intel Corporation.  All rights reserved.
  *
@@ -30,7 +32,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/ofed/include/rdma/ib_addr.h 338612 2018-09-12 08:56:08Z hselasky $
+ * $FreeBSD$
  */
 
 #if !defined(IB_ADDR_H)
@@ -225,7 +227,7 @@ static inline void iboe_addr_get_sgid(struct rdma_dev_addr *dev_addr,
 #endif
 	dev = dev_get_by_index(dev_addr->net, dev_addr->bound_dev_if);
 	if (dev) {
-		TAILQ_FOREACH(ifa, &dev->if_addrhead, ifa_link) {
+		CK_STAILQ_FOREACH(ifa, &dev->if_addrhead, ifa_link) {
 			if (ifa->ifa_addr == NULL ||
 			    ifa->ifa_addr->sa_family != AF_INET)
 				continue;

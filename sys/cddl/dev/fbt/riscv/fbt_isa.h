@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/11/sys/cddl/dev/fbt/riscv/fbt_isa.h 300618 2016-05-24 16:41:37Z br $
+ * $FreeBSD$
  *
  */
 

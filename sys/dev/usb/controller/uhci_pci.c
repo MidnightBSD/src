@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/usb/controller/uhci_pci.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /* Universal Host Controller Interface
  *
@@ -347,8 +349,13 @@ uhci_pci_attach(device_t self)
 		break;
 	}
 
+#if (__FreeBSD_version >= 700031)
 	err = bus_setup_intr(self, sc->sc_irq_res, INTR_TYPE_BIO | INTR_MPSAFE,
 	    NULL, (driver_intr_t *)uhci_interrupt, sc, &sc->sc_intr_hdl);
+#else
+	err = bus_setup_intr(self, sc->sc_irq_res, INTR_TYPE_BIO | INTR_MPSAFE,
+	    (driver_intr_t *)uhci_interrupt, sc, &sc->sc_intr_hdl);
+#endif
 
 	if (err) {
 		device_printf(self, "Could not setup irq, %d\n", err);

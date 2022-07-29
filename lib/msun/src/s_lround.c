@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
 #include <math.h>
 
 #ifndef type
-
+__FBSDID("$FreeBSD$");
 #define type		double
 #define	roundit		round
 #define dtype		long
@@ -47,9 +49,11 @@
  * that everything is in range.  At compile time, INRANGE(x) should reduce to
  * two floating-point comparisons in the former case, or TRUE otherwise.
  */
+static const type type_min = (type)DTYPE_MIN;
+static const type type_max = (type)DTYPE_MAX;
 static const type dtype_min = (type)DTYPE_MIN - 0.5;
 static const type dtype_max = (type)DTYPE_MAX + 0.5;
-#define	INRANGE(x)	(dtype_max - (type)DTYPE_MAX != 0.5 || \
+#define	INRANGE(x)	(dtype_max - type_max != 0.5 || \
 			 ((x) > dtype_min && (x) < dtype_max))
 
 dtype

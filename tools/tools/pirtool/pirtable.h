@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2002-2006 Bruce M. Simpson.
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/tools/pirtool/pirtable.h,v 1.6 2007/01/11 05:00:30 imp Exp $
+ * $FreeBSD$
  */
 
 /*

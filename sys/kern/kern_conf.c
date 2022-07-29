@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999-2002 Poul-Henning Kamp
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/kern_conf.c 353783 2019-10-20 22:01:35Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -184,16 +186,16 @@ dev_refthread(struct cdev *dev, int *ref)
 		*ref = 0;
 		return (dev->si_devsw);
 	}
-	dev_lock();
+	cdp = cdev2priv(dev);
+	mtx_lock(&cdp->cdp_threadlock);
 	csw = dev->si_devsw;
 	if (csw != NULL) {
-		cdp = cdev2priv(dev);
 		if ((cdp->cdp_flags & CDP_SCHED_DTR) == 0)
 			atomic_add_long(&dev->si_threadcount, 1);
 		else
 			csw = NULL;
 	}
-	dev_unlock();
+	mtx_unlock(&cdp->cdp_threadlock);
 	*ref = 1;
 	return (csw);
 }
@@ -220,19 +222,21 @@ devvn_refthread(struct vnode *vp, struct cdev **devp, int *ref)
 	}
 
 	csw = NULL;
-	dev_lock();
+	VI_LOCK(vp);
 	dev = vp->v_rdev;
 	if (dev == NULL) {
-		dev_unlock();
+		VI_UNLOCK(vp);
 		return (NULL);
 	}
 	cdp = cdev2priv(dev);
+	mtx_lock(&cdp->cdp_threadlock);
 	if ((cdp->cdp_flags & CDP_SCHED_DTR) == 0) {
 		csw = dev->si_devsw;
 		if (csw != NULL)
 			atomic_add_long(&dev->si_threadcount, 1);
 	}
-	dev_unlock();
+	mtx_unlock(&cdp->cdp_threadlock);
+	VI_UNLOCK(vp);
 	if (csw != NULL) {
 		*devp = dev;
 		*ref = 1;
@@ -661,6 +665,9 @@ prep_cdevsw(struct cdevsw *devsw, int flags)
 	}
 	
 	if (devsw->d_flags & D_NEEDGIANT) {
+		printf("WARNING: Device \"%s\" is Giant locked and may be "
+		    "deleted before FreeBSD 14.0.\n",
+		    devsw->d_name == NULL ? "???" : devsw->d_name);
 		if (devsw->d_gianttrick == NULL) {
 			memcpy(dsw2, devsw, sizeof *dsw2);
 			devsw->d_gianttrick = dsw2;
@@ -868,11 +875,11 @@ make_dev(struct cdevsw *devsw, int unit, uid_t uid, gid_t gid, int mode,
 {
 	struct cdev *dev;
 	va_list ap;
-	int res;
+	int res __unused;
 
 	va_start(ap, fmt);
 	res = make_dev_credv(0, &dev, devsw, unit, NULL, uid, gid, mode, fmt,
-	    ap);
+		      ap);
 	va_end(ap);
 	KASSERT(res == 0 && dev != NULL,
 	    ("make_dev: failed make_dev_credv (error=%d)", res));
@@ -885,7 +892,7 @@ make_dev_cred(struct cdevsw *devsw, int unit, struct ucred *cr, uid_t uid,
 {
 	struct cdev *dev;
 	va_list ap;
-	int res;
+	int res __unused;
 
 	va_start(ap, fmt);
 	res = make_dev_credv(0, &dev, devsw, unit, cr, uid, gid, mode, fmt, ap);
@@ -998,7 +1005,7 @@ make_dev_alias(struct cdev *pdev, const char *fmt, ...)
 {
 	struct cdev *dev;
 	va_list ap;
-	int res;
+	int res __unused;
 
 	va_start(ap, fmt);
 	res = make_dev_alias_v(MAKEDEV_WAITOK, &dev, pdev, fmt, ap);
@@ -1130,20 +1137,26 @@ destroy_devl(struct cdev *dev)
 		dev->si_flags &= ~SI_CLONELIST;
 	}
 
+	mtx_lock(&cdp->cdp_threadlock);
 	csw = dev->si_devsw;
 	dev->si_devsw = NULL;	/* already NULL for SI_ALIAS */
 	while (csw != NULL && csw->d_purge != NULL && dev->si_threadcount) {
 		csw->d_purge(dev);
+		mtx_unlock(&cdp->cdp_threadlock);
 		msleep(csw, &devmtx, PRIBIO, "devprg", hz/10);
+		mtx_lock(&cdp->cdp_threadlock);
 		if (dev->si_threadcount)
 			printf("Still %lu threads in %s\n",
 			    dev->si_threadcount, devtoname(dev));
 	}
 	while (dev->si_threadcount != 0) {
 		/* Use unique dummy wait ident */
+		mtx_unlock(&cdp->cdp_threadlock);
 		msleep(&csw, &devmtx, PRIBIO, "devdrn", hz / 10);
+		mtx_lock(&cdp->cdp_threadlock);
 	}
 
+	mtx_unlock(&cdp->cdp_threadlock);
 	dev_unlock();
 	if ((cdp->cdp_flags & CDP_UNREF_DTR) == 0) {
 		/* avoid out of order notify events */
@@ -1243,7 +1256,7 @@ dev_stdclone(char *name, char **namep, const char *stem, int *unit)
 	int u, i;
 
 	i = strlen(stem);
-	if (bcmp(stem, name, i) != 0)
+	if (strncmp(stem, name, i) != 0)
 		return (0);
 	if (!isdigit(name[i]))
 		return (0);

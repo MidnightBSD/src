@@ -23,7 +23,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $Id: sdpd.8,v 1.1 2004/01/13 19:31:54 max Exp $
-.\" $FreeBSD: stable/11/usr.sbin/bluetooth/sdpd/sdpd.8 267668 2014-06-20 09:57:27Z bapt $
+.\" $FreeBSD$
 .\"
 .Dd January 13, 2004
 .Dt SDPD 8
@@ -98,7 +98,16 @@ was started as root.
 The default user name is
 .Dq Li nobody .
 .El
-.Sh CAVEAT
+.Sh FILES
+.Bl -tag -width ".Pa /var/run/sdp" -compact
+.It Pa /var/run/sdp
+.El
+.Sh SEE ALSO
+.Xr sdp 3 ,
+.Xr sdpcontrol 8
+.Sh AUTHORS
+.An Maksim Yevmenkin Aq Mt m_evmenkin@yahoo.com
+.Sh CAVEATS
 The
 .Nm
 daemon
@@ -126,15 +135,6 @@ It only performs minimal checking on the service data sent in the Service
 Register request.
 It is assumed that application must obtain all required resources such
 as RFCOMM channels etc., before registering the service.
-.Sh FILES
-.Bl -tag -width ".Pa /var/run/sdp" -compact
-.It Pa /var/run/sdp
-.El
-.Sh SEE ALSO
-.Xr sdp 3 ,
-.Xr sdpcontrol 8
-.Sh AUTHORS
-.An Maksim Yevmenkin Aq Mt m_evmenkin@yahoo.com
 .Sh BUGS
 Most likely.
 Please report if found.

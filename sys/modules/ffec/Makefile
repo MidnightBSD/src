@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/ffec/Makefile 323416 2017-09-11 02:14:28Z ian $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/dev/ffec
 

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/mlx5/Makefile 353218 2019-10-07 09:15:47Z hselasky $
+# $FreeBSD$
 .PATH:	${SRCTOP}/sys/dev/mlx5/mlx5_core \
 	${SRCTOP}/sys/dev/mlx5/mlx5_lib \
 	${SRCTOP}/sys/dev/mlx5/mlx5_fpga
@@ -25,6 +25,7 @@ mlx5_pagealloc.c \
 mlx5_pd.c \
 mlx5_port.c \
 mlx5_qp.c \
+mlx5_rl.c \
 mlx5_srq.c \
 mlx5_transobj.c \
 mlx5_uar.c \
@@ -33,7 +34,7 @@ mlx5_vsc.c \
 mlx5_wq.c \
 mlx5_gid.c
 SRCS+=	${LINUXKPI_GENSRCS}
-SRCS+=	opt_inet.h opt_inet6.h opt_rss.h
+SRCS+=	opt_inet.h opt_inet6.h opt_rss.h opt_ratelimit.h
 
 CFLAGS+= -I${SRCTOP}/sys/ofed/include
 CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015 Mark R V Murray
+ * Copyright (c) 2015-2018 Mark R V Murray
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,19 +30,21 @@
  * containing an alternative entropy-processing algorithm for random(4).
  *
  * The functions below should be completed with the appropriate code,
- * and the nearby yarrow.c and fortuna.c may be consulted for examples
- * of working code.
+ * and the nearby fortuna.c may be consulted for examples of working code.
  *
  * The author is willing to provide reasonable help to those wishing to
  * write such a module for themselves. Please use the markm@ FreeBSD
  * email address, and ensure that you are developing this on a suitably
- * supported branch (This is currently 11-CURRENT, and will be no
- * older than 11-STABLE in the future).
+ * supported branch (This is currently 12-CURRENT, and may be no
+ * older than 12-STABLE in the future).
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/random/other_algorithm.c 292782 2015-12-27 17:33:59Z allanjude $");
+__FBSDID("$FreeBSD$");
 
+#include <sys/limits.h>
+
+#ifdef _KERNEL
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
@@ -62,27 +64,42 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/random/other_algorithm.c 292782 2015-12-27
 #include <dev/random/random_harvestq.h>
 #include <dev/random/uint128.h>
 #include <dev/random/other_algorithm.h>
+#else /* !_KERNEL */
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <threads.h>
+
+#include "unit_test.h"
+
+#include <crypto/rijndael/rijndael-api-fst.h>
+#include <crypto/sha2/sha256.h>
+
+#include <dev/random/hash.h>
+#include <dev/random/randomdev.h>
+#include <dev/random/uint128.h>
+#include <dev/random/other_algorithm.h>
+#endif /* _KERNEL */
 
 static void random_other_pre_read(void);
-static void random_other_read(uint8_t *, u_int);
+static void random_other_read(uint8_t *, size_t);
 static bool random_other_seeded(void);
 static void random_other_process_event(struct harvest_event *);
-static void random_other_init_alg(void *);
-static void random_other_deinit_alg(void *);
 
 /*
  * RANDOM_OTHER_NPOOLS is used when reading hardware random
  * number sources to ensure that each pool gets one read sample
- * per loop iteration. Yarrow has 2 such pools (FAST and SLOW),
- * and fortuna has 32 (0-31). The RNG used prior to Yarrow and
- * ported from Linux had just 1 pool.
+ * per loop iteration. Fortuna has 32 (0-31).
  */
 #define RANDOM_OTHER_NPOOLS 1
 
-struct random_algorithm random_alg_context = {
+#ifdef RANDOM_LOADABLE
+static
+#endif
+const struct random_algorithm random_alg_context = {
 	.ra_ident = "other",
-	.ra_init_alg = random_other_init_alg,
-	.ra_deinit_alg = random_other_deinit_alg,
 	.ra_pre_read = random_other_pre_read,
 	.ra_read = random_other_read,
 	.ra_seeded = random_other_seeded,
@@ -94,34 +111,20 @@ struct random_algorithm random_alg_context = {
 static mtx_t other_mtx;
 
 /*
- * void random_other_init_alg(void *unused __unused)
- *
  * Do algorithm-specific initialisation here.
  */
-void
+static void
 random_other_init_alg(void *unused __unused)
 {
 
+#ifdef RANDOM_LOADABLE
+	p_random_alg_context = &random_alg_context;
+#endif
+
 	RANDOM_RESEED_INIT_LOCK();
-	/*
-	 * Do set-up work here!
-	 */
 }
-
-/*
- * void random_other_deinit_alg(void *unused __unused)
- *
- * Do algorithm-specific deinitialisation here.
- */
-static void
-random_other_deinit_alg(void *unused __unused)
-{
-
-	/*
-	 * Do tear-down work here!
-	 */
-	RANDOM_RESEED_DEINIT_LOCK();
-}
+SYSINIT(random_alg, SI_SUB_RANDOM, SI_ORDER_SECOND, random_other_init_alg,
+    NULL);
 
 /*
  * void random_other_pre_read(void)
@@ -147,10 +150,10 @@ random_other_pre_read(void)
 }
 
 /*
- * void random_other_read(uint8_t *buf, u_int count)
+ * void random_other_read(uint8_t *buf, size_t count)
  *
  * Generate <count> bytes of output into <*buf>.
- * You may use the fact that <count> will be a multiple of
+ * You may NOT use the fact that <count> will be a multiple of
  * RANDOM_BLOCKSIZE for optimization purposes.
  *
  * This function will always be called with your generator
@@ -158,7 +161,7 @@ random_other_pre_read(void)
  * output here, then feel free to KASSERT() or panic().
  */
 static void
-random_other_read(uint8_t *buf, u_int count)
+random_other_read(uint8_t *buf, size_t count)
 {
 
 	RANDOM_RESEED_LOCK();

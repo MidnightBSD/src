@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2007 Sepherosa Ziehau.  All rights reserved.
  *
  * This code is derived from software contributed to The DragonFly Project
@@ -32,7 +34,7 @@
  * SUCH DAMAGE.
  *
  * $DragonFly: src/sys/dev/netif/et/if_etvar.h,v 1.4 2007/10/23 14:28:42 sephe Exp $
- * $FreeBSD: stable/11/sys/dev/et/if_etvar.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _IF_ETVAR_H

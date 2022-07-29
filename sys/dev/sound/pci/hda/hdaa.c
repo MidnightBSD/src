@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Stephane E. Potvin <sepotvin@videotron.ca>
  * Copyright (c) 2006 Ariff Abdullah <ariff@FreeBSD.org>
  * Copyright (c) 2008-2012 Alexander Motin <mav@FreeBSD.org>
@@ -45,7 +47,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/hda/hdaa.c 331722 2018-03-29 02:50:57Z eadler $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 #define hdaa_lock(devinfo)	snd_mtxlock((devinfo)->lock)
 #define hdaa_unlock(devinfo)	snd_mtxunlock((devinfo)->lock)
@@ -1748,7 +1750,8 @@ hdaa_channel_init(kobj_t obj, void *data, struct snd_dbuf *b,
 	hdaa_unlock(devinfo);
 
 	if (sndbuf_alloc(ch->b, bus_get_dma_tag(devinfo->dev),
-	    hda_get_dma_nocache(devinfo->dev) ? BUS_DMA_NOCACHE : 0,
+	    hda_get_dma_nocache(devinfo->dev) ? BUS_DMA_NOCACHE :
+	    BUS_DMA_COHERENT,
 	    pdevinfo->chan_size) != 0)
 		return (NULL);
 
@@ -2190,7 +2193,7 @@ hdaa_channel_getptr(kobj_t obj, void *data)
 	hdaa_unlock(devinfo);
 
 	/*
-	 * Round to available space and force 128 bytes aligment.
+	 * Round to available space and force 128 bytes alignment.
 	 */
 	ptr %= ch->blksz * ch->blkcnt;
 	ptr &= HDA_BLK_ALIGN;
@@ -2383,7 +2386,7 @@ hdaa_audio_ctl_source_volume(struct hdaa_pcm_devinfo *pdevinfo,
 	}
 
 	/* If widget has own ossdev - not traverse it.
-	   It will be traversed on it's own. */
+	   It will be traversed on its own. */
 	if (w->ossdev >= 0 && depth > 0)
 		return;
 
@@ -3710,7 +3713,7 @@ hdaa_audio_adddac(struct hdaa_devinfo *devinfo, int asid)
 		    asid, as->index);
 	);
 
-	/* Find the exisitng DAC position and return if found more the one. */
+	/* Find the existing DAC position and return if found more the one. */
 	pos = -1;
 	for (i = 0; i < 16; i++) {
 		if (as->dacs[0][i] <= 0)
@@ -4551,7 +4554,7 @@ hdaa_audio_ctl_source_amp(struct hdaa_devinfo *devinfo, nid_t nid, int index,
 	}
 
 	/* If widget has own ossdev - not traverse it.
-	   It will be traversed on it's own. */
+	   It will be traversed on its own. */
 	if (w->ossdev >= 0 && depth > 0)
 		return (found);
 
@@ -5031,11 +5034,13 @@ hdaa_audio_prepare_pin_ctrl(struct hdaa_devinfo *devinfo)
 		pincap = w->wclass.pin.cap;
 
 		/* Disable everything. */
-		w->wclass.pin.ctrl &= ~(
-		    HDA_CMD_SET_PIN_WIDGET_CTRL_HPHN_ENABLE |
-		    HDA_CMD_SET_PIN_WIDGET_CTRL_OUT_ENABLE |
-		    HDA_CMD_SET_PIN_WIDGET_CTRL_IN_ENABLE |
-		    HDA_CMD_SET_PIN_WIDGET_CTRL_VREF_ENABLE_MASK);
+		if (devinfo->init_clear) {
+			w->wclass.pin.ctrl &= ~(
+		    	HDA_CMD_SET_PIN_WIDGET_CTRL_HPHN_ENABLE |
+		    	HDA_CMD_SET_PIN_WIDGET_CTRL_OUT_ENABLE |
+		    	HDA_CMD_SET_PIN_WIDGET_CTRL_IN_ENABLE |
+		    	HDA_CMD_SET_PIN_WIDGET_CTRL_VREF_ENABLE_MASK);
+		}
 
 		if (w->enable == 0) {
 			/* Pin is unused so left it disabled. */
@@ -6668,6 +6673,10 @@ hdaa_attach(device_t dev)
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
 	    "reconfig", CTLTYPE_INT | CTLFLAG_RW,
 	    dev, 0, hdaa_sysctl_reconfig, "I", "Reprocess configuration");
+	SYSCTL_ADD_INT(device_get_sysctl_ctx(dev),
+	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
+	    "init_clear", CTLFLAG_RW,
+	    &devinfo->init_clear, 1,"Clear initial pin widget configuration");
 	bus_generic_attach(dev);
 	return (0);
 }

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ofw/ofw_subr.h 292555 2015-12-21 18:07:32Z ian $
+ * $FreeBSD$
  */
 
 #ifndef	_DEV_OFW_OFW_SUBR_H_
@@ -45,5 +45,7 @@
 
 int ofw_reg_to_paddr(phandle_t _dev, int _regno, bus_addr_t *_paddr,
     bus_size_t *_size, pcell_t *_pci_hi);
+
+int ofw_parse_bootargs(void);
 
 #endif

@@ -1,6 +1,10 @@
-/* $FreeBSD: stable/11/include/unwind.h 213290 2010-09-30 03:16:35Z davidxu $ */
+/* $FreeBSD$ */
 
-/* libunwind - a platform-independent unwind library
+/*-
+   libunwind - a platform-independent unwind library
+
+   SPDX-License-Identifier: ISC
+
    Copyright (C) 2003 Hewlett-Packard Co
 	Contributed by David Mosberger-Tang <davidm@hpl.hp.com>
 
@@ -66,7 +70,7 @@ typedef void (*_Unwind_Exception_Cleanup_Fn) (_Unwind_Reason_Code,
 					      struct _Unwind_Exception *);
 
 typedef _Unwind_Reason_Code (*_Unwind_Stop_Fn) (int, _Unwind_Action,
-						__int64_t,
+						__uint64_t,
 						struct _Unwind_Exception *,
 						struct _Unwind_Context *,
 						void *);
@@ -78,7 +82,7 @@ typedef _Unwind_Reason_Code (*_Unwind_Stop_Fn) (int, _Unwind_Action,
    IA-64, while being more general.  */
 struct _Unwind_Exception
   {
-    __int64_t exception_class;
+    __uint64_t exception_class;
     _Unwind_Exception_Cleanup_Fn exception_cleanup;
     unsigned long private_1;
     unsigned long private_2;
@@ -120,7 +124,7 @@ extern unsigned long _Unwind_GetBSP (struct _Unwind_Context *);
 
 /* Return the "canonical frame address" for the given context.
    This is used by NPTL... */
-extern unsigned long _Unwind_GetCFA (struct _Unwind_Context *);
+extern uintptr_t _Unwind_GetCFA (struct _Unwind_Context *);
 
 /* Return the base-address for data references.  */
 extern unsigned long _Unwind_GetDataRelBase (struct _Unwind_Context *);

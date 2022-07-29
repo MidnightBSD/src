@@ -29,7 +29,7 @@
 #
 #  Authors: Alan Somers         (Spectra Logic Corporation)
 #
-# $FreeBSD: stable/11/tests/sys/net/if_lagg_test.sh 329874 2018-02-23 18:18:42Z asomers $
+# $FreeBSD$
 
 atf_test_case create cleanup
 create_head()

@@ -29,9 +29,9 @@
 .\"
 .\" * Other names and brands may be claimed as the property of others.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/cxgbe.4 355251 2019-11-30 20:43:30Z np $
+.\" $FreeBSD$
 .\"
-.Dd Oct 25, 2019
+.Dd October 19, 2020
 .Dt CXGBE 4
 .Os
 .Sh NAME
@@ -61,8 +61,8 @@ driver provides support for PCI Express Ethernet adapters based on
 the Chelsio Terminator 4, Terminator 5, and Terminator 6 ASICs (T4, T5, and T6).
 The driver supports Jumbo Frames, Transmit/Receive checksum offload,
 TCP segmentation offload (TSO), Large Receive Offload (LRO), VLAN
-tag insertion/extraction, VLAN checksum offload, VLAN TSO, and
-Receive Side Steering (RSS).
+tag insertion/extraction, VLAN checksum offload, VLAN TSO, VXLAN checksum
+offload, VXLAN TSO, and Receive Side Steering (RSS).
 For further hardware information and questions related to hardware
 requirements, see
 .Pa http://www.chelsio.com/ .
@@ -262,7 +262,8 @@ The default is 1.
 .It Va hw.cxgbe.fl_pktshift
 Number of padding bytes inserted before the beginning of an Ethernet
 frame in the receive buffer.
-The default value of 2 ensures that the Ethernet payload (usually the IP header)
+The default value is 0.
+A value of of 2 would ensure that the Ethernet payload (usually the IP header)
 is at a 4 byte aligned address.
 0-7 are all valid values.
 .It Va hw.cxgbe.fl_pad
@@ -290,10 +291,14 @@ This tunable establishes the default PAUSE settings for all ports.
 Settings can be displayed and controlled on a per-port basis via the
 dev.<port>.X.pause_settings sysctl.
 .It Va hw.cxgbe.fec
-FEC (Forward Error Correction) settings.
+Forward Error Correction settings.
+-1 (default) means driver should automatically pick a value.
 0 disables FEC.
-Bit 0 enables RS FEC, bit 1 enables BASE-R FEC (aka Firecode FEC).
-The default is -1 which lets the driver pick a value.
+Finer grained control can be achieved by setting individual bits.
+Bit 0 enables RS FEC, bit 1 enables BASE-R FEC (aka Firecode FEC), bit
+2 enables NO FEC, and bit 6 enables the FEC that is recommended by the
+transceiver/cable that is plugged in.
+These bits can be set together in any combination.
 This tunable establishes the default FEC settings for all ports.
 Settings can be displayed and controlled on a per-port basis via the
 dev.<port>.X.fec sysctl.
@@ -312,11 +317,6 @@ Allow the hardware to deliver multiple frames in the same receive buffer
 opportunistically.
 The default is -1 which lets the driver decide.
 0 or 1 explicitly disable or enable this feature.
-.It Va hw.cxgbe.allow_mbufs_in_cluster
-1 allows the driver to lay down one or more mbufs within the receive buffer
-opportunistically.
-This is the default.
-0 prohibits the driver from doing so.
 .It Va hw.cxgbe.largest_rx_cluster
 .It Va hw.cxgbe.safest_rx_cluster
 Sizes of rx clusters.
@@ -351,6 +351,40 @@ This tunable is for specialized applications only and should not be used in
 normal operation.
 The capabilities for which hardware resources have been reserved are listed in
 dev.<nexus>.X.*caps sysctls.
+.It Va hw.cxgbe.tx_vm_wr
+Setting this to 1 instructs the driver to use VM work requests to transmit data.
+This lets PF interfaces transmit frames to VF interfaces over the internal
+switch in the ASIC.
+Note that the
+.Xr cxgbev 4
+VF driver always uses VM work requests and is not affected by this tunable.
+The default value is 0 and should be changed only if PF and VF interfaces need
+to communicate with each other.
+Different interfaces can be assigned different values using the
+dev.<port>.X.tx_vm_wr sysctl when the interface is administratively down.
+.It Va hw.cxgbe.attack_filter
+Set to 1 to enable the "attack filter".
+Default is 0.
+The attack filter will drop an incoming frame if any of these conditions is
+true: src ip/ip6 == dst ip/ip6; tcp and src/dst ip is not unicast; src/dst ip is
+loopback (127.x.y.z); src ip6 is not unicast; src/dst ip6 is loopback (::1/128)
+or unspecified (::/128); tcp and src/dst ip6 is mcast (ff00::/8).
+This facility is available on T4 and T5 based cards only.
+.It Va hw.cxgbe.drop_ip_fragments
+Set to 1 to drop all incoming IP fragments.
+Default is 0.
+Note that this drops valid frames.
+.It Va hw.cxgbe.drop_pkts_with_l2_errors
+Set to 1 to drop incoming frames with Layer 2 length or checksum errors.
+Default is 1.
+.It Va hw.cxgbe.drop_pkts_with_l3_errors
+Set to 1 to drop incoming frames with IP version, length, or checksum errors.
+The IP checksum is validated for TCP or UDP packets only.
+Default is 0.
+.It Va hw.cxgbe.drop_pkts_with_l4_errors
+Set to 1 to drop incoming frames with Layer 4 (TCP or UDP) length,
+checksum, or other errors.
+Default is 0.
 .El
 .Sh SUPPORT
 For general information and support,

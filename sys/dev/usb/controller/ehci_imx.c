@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010-2012 Semihalf
  * Copyright (c) 2012 The FreeBSD Foundation
  * Copyright (c) 2013 Ian Lepore <ian@freebsd.org>
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/usb/controller/ehci_imx.c 346520 2019-04-22 04:07:51Z ian $");
+__FBSDID("$FreeBSD$");
 
 /*
  * EHCI driver for Freescale i.MX SoCs which incorporate the USBOH3 controller.
@@ -508,5 +510,5 @@ static driver_t ehci_driver = {
 
 static devclass_t ehci_devclass;
 
-DRIVER_MODULE(ehci, simplebus, ehci_driver, ehci_devclass, 0, 0);
-MODULE_DEPEND(ehci, usb, 1, 1, 1);
+DRIVER_MODULE(imx_ehci, simplebus, ehci_driver, ehci_devclass, 0, 0);
+MODULE_DEPEND(imx_ehci, usb, 1, 1, 1);

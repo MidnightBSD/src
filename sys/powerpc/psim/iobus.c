@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright 2002 by Peter Grehan. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/powerpc/psim/iobus.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*
@@ -219,7 +221,7 @@ iobus_attach(device_t dev)
         root = sc->sc_node;
 
         for (child = OF_child(root); child != 0; child = OF_peer(child)) {
-                OF_getprop_alloc(child, "name", 1, (void **)&name);
+                OF_getprop_alloc(child, "name", (void **)&name);
 
                 cdev = device_add_child(dev, NULL, -1);
                 if (cdev != NULL) {

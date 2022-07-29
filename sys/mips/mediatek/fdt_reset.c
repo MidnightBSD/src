@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/mips/mediatek/fdt_reset.c 299755 2016-05-14 20:05:35Z gonzo $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
@@ -59,7 +59,7 @@ assert_deassert_all(device_t consumer, boolean_t assert)
 	boolean_t anyerrors;
 
 	rnode = ofw_bus_get_node(consumer);
-	ncells = OF_getencprop_alloc(rnode, "resets", sizeof(*resets),
+	ncells = OF_getencprop_alloc_multi(rnode, "resets", sizeof(*resets),
 	    (void **)&resets);
 	if (!assert && ncells < 2) {
 		device_printf(consumer, "Warning: No resets specified in fdt "

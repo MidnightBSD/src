@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: link_control.c,v 1.4 2003/08/18 19:19:54 max Exp $
- * $FreeBSD: stable/11/usr.sbin/bluetooth/hccontrol/link_control.c 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 #define L2CAP_SOCKET_CHECKED
@@ -612,7 +612,7 @@ hci_read_remote_supported_features(int s, int argc, char **argv)
 	char				 b[512];
 	ng_hci_read_remote_features_cp	 cp;
 	ng_hci_event_pkt_t		*e = (ng_hci_event_pkt_t *) b; 
-	char				 buffer[1024];
+	char				 buffer[2048];
 
 	/* parse command parameters */
 	switch (argc) {

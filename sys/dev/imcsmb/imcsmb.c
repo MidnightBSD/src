@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/imcsmb/imcsmb.c 355366 2019-12-03 22:53:50Z rpokala $
+ * $FreeBSD$
  */
 
 /* A detailed description of this device is present in imcsmb_pci.c */

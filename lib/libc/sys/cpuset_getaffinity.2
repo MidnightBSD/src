@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/lib/libc/sys/cpuset_getaffinity.2 319819 2017-06-11 02:04:39Z allanjude $
+.\" $FreeBSD$
 .\"
 .Dd May 23, 2017
 .Dt CPUSET_GETAFFINITY 2
@@ -155,13 +155,15 @@ See
 .Xr capsicum 4 .
 .El
 .Sh SEE ALSO
-.Xr capsicum 4 ,
 .Xr cpuset 1 ,
 .Xr cpuset 2 ,
+.Xr cpuset_getdomain 2 ,
 .Xr cpuset_getid 2 ,
+.Xr cpuset_setdomain 2 ,
 .Xr cpuset_setid 2 ,
 .Xr pthread_affinity_np 3 ,
 .Xr pthread_attr_affinity_np 3 ,
+.Xr capsicum 4 ,
 .Xr cpuset 9
 .Sh HISTORY
 The

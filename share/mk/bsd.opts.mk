@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/mk/bsd.opts.mk 322688 2017-08-19 01:40:30Z ngie $
+# $FreeBSD$
 #
 # Option file for src builds.
 #
@@ -55,6 +55,7 @@ __DEFAULT_YES_OPTIONS = \
     INCLUDES \
     INSTALLLIB \
     KERBEROS \
+    MAKE_CHECK_USE_SANDBOX \
     MAN \
     MANCOMPRESS \
     NIS \
@@ -63,18 +64,24 @@ __DEFAULT_YES_OPTIONS = \
     PROFILE \
     SSP \
     SYMVER \
+    TESTS \
     TOOLCHAIN \
     WARNS
 
 __DEFAULT_NO_OPTIONS = \
+    BIND_NOW \
     CCACHE_BUILD \
     CTF \
     INSTALL_AS_USER \
+    PIE \
+    RETPOLINE \
     STALE_STAGED
 
 __DEFAULT_DEPENDENT_OPTIONS = \
+    MAKE_CHECK_USE_SANDBOX/TESTS \
     STAGING_MAN/STAGING \
     STAGING_PROG/STAGING \
+    STALE_STAGED/STAGING \
 
 
 .include <bsd.mkopt.mk>
@@ -97,10 +104,6 @@ __DEFAULT_DEPENDENT_OPTIONS = \
 MK_${var}:=no
 .endif
 .endfor
-
-.if ${MK_STAGING} == "no"
-MK_STALE_STAGED= no
-.endif
 
 .include <bsd.cpu.mk>
 

@@ -1,6 +1,7 @@
-# $FreeBSD: stable/11/sys/mips/beri/std.beri 256935 2013-10-22 21:08:25Z brooks $
+# $FreeBSD$
 files	"../beri/files.beri"
 
 cpu		CPU_MIPS4KC
 
 options 	BERI_LARGE_TLB
+options 	PLATFORM_INIT_SECONDARY

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/evdev/evdev_mt.c 324768 2017-10-19 20:16:40Z wulf $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

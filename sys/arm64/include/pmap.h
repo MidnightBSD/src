@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/include/pmap.h 336711 2018-07-25 15:40:27Z markj $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PMAP_H_
@@ -112,6 +112,8 @@ struct pv_chunk {
 	struct pv_entry		pc_pventry[_NPCPV];
 };
 
+struct thread;
+
 #ifdef _KERNEL
 extern struct pmap	kernel_pmap_store;
 #define	kernel_pmap	(&kernel_pmap_store)
@@ -144,10 +146,14 @@ extern vm_offset_t virtual_end;
 	((((va) | (pa)) & L1_OFFSET) == 0 && (size) >= L1_SIZE)
 
 void	pmap_bootstrap(vm_offset_t, vm_offset_t, vm_paddr_t, vm_size_t);
+void	pmap_kenter(vm_offset_t sva, vm_size_t size, vm_paddr_t pa, int mode);
 void	pmap_kenter_device(vm_offset_t, vm_size_t, vm_paddr_t);
 vm_paddr_t pmap_kextract(vm_offset_t va);
 void	pmap_kremove(vm_offset_t);
 void	pmap_kremove_device(vm_offset_t, vm_size_t);
+void	*pmap_mapdev_attr(vm_offset_t pa, vm_size_t size, vm_memattr_t ma);
+bool	pmap_page_is_mapped(vm_page_t m);
+bool	pmap_ps_enabled(pmap_t pmap);
 
 void	*pmap_mapdev(vm_offset_t, vm_size_t);
 void	*pmap_mapbios(vm_paddr_t, vm_size_t);
@@ -162,7 +168,14 @@ bool	pmap_get_tables(pmap_t, vm_offset_t, pd_entry_t **, pd_entry_t **,
 
 int	pmap_fault(pmap_t, uint64_t, uint64_t);
 
-#define	pmap_page_is_mapped(m)	(!TAILQ_EMPTY(&(m)->md.pv_list))
+struct pcb *pmap_switch(struct thread *, struct thread *);
+
+static inline int
+pmap_vmspace_copy(pmap_t dst_pmap __unused, pmap_t src_pmap __unused)
+{
+
+	return (0);
+}
 
 #endif	/* _KERNEL */
 

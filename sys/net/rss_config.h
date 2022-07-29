@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/net/rss_config.h 287245 2015-08-28 05:58:16Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef _NET_RSS_CONFIG_H_
@@ -66,7 +66,6 @@
 #define	RSS_HASHTYPE_RSS_IPV6_EX	(1 << 5)	/* IPv6 2-tuple + ext hdrs */
 #define	RSS_HASHTYPE_RSS_TCP_IPV6_EX	(1 << 6)	/* TCPv6 4-tiple + ext hdrs */
 #define	RSS_HASHTYPE_RSS_UDP_IPV4	(1 << 7)	/* IPv4 UDP 4-tuple */
-#define	RSS_HASHTYPE_RSS_UDP_IPV4_EX	(1 << 8)	/* IPv4 UDP 4-tuple + ext hdrs */
 #define	RSS_HASHTYPE_RSS_UDP_IPV6	(1 << 9)	/* IPv6 UDP 4-tuple */
 #define	RSS_HASHTYPE_RSS_UDP_IPV6_EX	(1 << 10)	/* IPv6 UDP 4-tuple + ext hdrs */
 

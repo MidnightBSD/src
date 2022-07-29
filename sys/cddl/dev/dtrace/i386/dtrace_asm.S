@@ -19,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/11/sys/cddl/dev/dtrace/i386/dtrace_asm.S 298171 2016-04-17 23:08:47Z markj $
+ * $FreeBSD$
  */
 /*
  * Copyright 2004 Sun Microsystems, Inc.  All rights reserved.
@@ -32,7 +32,7 @@
 #include <sys/cpuvar_defs.h>
 #include <sys/dtrace.h>
 
-#include "assym.s"
+#include "assym.inc"
 
 	ENTRY(dtrace_invop_start)
 
@@ -133,22 +133,6 @@ invop_nop:
 	iret				/* return from interrupt */
 
 	END(dtrace_invop_start)
-
-/*
-void dtrace_invop_init(void)
-*/
-	ENTRY(dtrace_invop_init)
-	movl	$dtrace_invop_start, dtrace_invop_jump_addr
-	ret
-	END(dtrace_invop_init)
-
-/*
-void dtrace_invop_uninit(void)
-*/
-	ENTRY(dtrace_invop_uninit)
-	movl	$0, dtrace_invop_jump_addr
-	ret
-	END(dtrace_invop_uninit)
 
 /*
 greg_t dtrace_getfp(void)

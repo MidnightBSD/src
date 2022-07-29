@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Stanislav Sedov <stas@FreeBSD.org>
  * Copyright (c) 2017 Dell EMC
  * All rights reserved.
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libprocstat/libprocstat.h 341779 2018-12-10 01:39:40Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _LIBPROCSTAT_H_
@@ -122,15 +124,15 @@ struct filestat {
 struct vnstat {
 	uint64_t	vn_fileid;
 	uint64_t	vn_size;
+	uint64_t	vn_dev;
+	uint64_t	vn_fsid;
 	char		*vn_mntdir;
-	uint32_t	vn_dev;
-	uint32_t	vn_fsid;
 	int		vn_type;
 	uint16_t	vn_mode;
 	char		vn_devname[SPECNAMELEN + 1];
 };
 struct ptsstat {
-	uint32_t	dev;
+	uint64_t	dev;
 	char		devname[SPECNAMELEN + 1];
 };
 struct pipestat {
@@ -159,6 +161,8 @@ struct sockstat {
 	struct sockaddr_storage	sa_peer;	/* Peer address. */
 	int		type;
 	char		dname[32];
+	unsigned int	sendq;
+	unsigned int	recvq;
 };
 
 STAILQ_HEAD(filestat_list, filestat);

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libnv/tests/nvlist_move_test.c 285063 2015-07-02 21:58:10Z oshogbo $
+ * $FreeBSD$
  */
 
 #include <sys/nv.h>

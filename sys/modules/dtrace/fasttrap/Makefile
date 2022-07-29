@@ -1,11 +1,11 @@
-# $FreeBSD: stable/11/sys/modules/dtrace/fasttrap/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 
 SYSDIR?=	${SRCTOP}/sys
 
 .PATH:		${SYSDIR}/cddl/contrib/opensolaris/uts/common/dtrace
 
 KMOD=		fasttrap
-SRCS=		fasttrap.c fasttrap_isa.c opt_compat.h
+SRCS=		fasttrap.c fasttrap_isa.c
 SRCS+=		vnode_if.h
 
 CFLAGS+=	-I${SYSDIR}/cddl/compat/opensolaris \

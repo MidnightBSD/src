@@ -1,5 +1,7 @@
 #!/bin/sh
 #
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (c) 2000 Alexandre Peixoto
 # All rights reserved.
 #
@@ -24,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/share/examples/ipfw/change_rules.sh,v 1.6 2003/09/07 07:52:56 jmg Exp $
+# $FreeBSD$
 
 # Change ipfw(8) rules with safety guarantees for remote operation
 #
@@ -147,7 +149,7 @@ cat <<!
 The new rules are now installed. The previous rules have been preserved in
 the file ${edit_file}.$DATE
 !
-diff -F "^# .*[A-Za-z]" -u ${edit_file}.$DATE ${edit_file} \
+diff -u ${edit_file}.$DATE ${edit_file} \
     | mail -s "`hostname` Firewall rule change" root
 rm ${TMPFILE}
 exit 0

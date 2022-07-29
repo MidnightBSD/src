@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2017 Alexander Motin <mav@FreeBSD.org>
  * Copyright (c) 1997-2009 by Matthew Jacob
  * All rights reserved.
@@ -29,7 +31,7 @@
  * Platform (FreeBSD) dependent common attachment code for Qlogic adapters.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/isp/isp_freebsd.c 348483 2019-05-31 20:36:32Z ken $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/isp/isp_freebsd.h>
 #include <sys/unistd.h>
@@ -119,17 +121,12 @@ isp_attach_chan(ispsoftc_t *isp, struct cam_devq *devq, int chan)
 	if (sim == NULL)
 		return (ENOMEM);
 
-	ISP_LOCK(isp);
 	if (xpt_bus_register(sim, isp->isp_dev, chan) != CAM_SUCCESS) {
-		ISP_UNLOCK(isp);
 		cam_sim_free(sim, FALSE);
 		return (EIO);
 	}
-	ISP_UNLOCK(isp);
 	if (xpt_create_path(&path, NULL, cam_sim_path(sim), CAM_TARGET_WILDCARD, CAM_LUN_WILDCARD) != CAM_REQ_CMP) {
-		ISP_LOCK(isp);
 		xpt_bus_deregister(cam_sim_path(sim));
-		ISP_UNLOCK(isp);
 		cam_sim_free(sim, FALSE);
 		return (ENXIO);
 	}
@@ -165,7 +162,6 @@ isp_attach_chan(ispsoftc_t *isp, struct cam_devq *devq, int chan)
 		struct sysctl_oid *tree = device_get_sysctl_tree(isp->isp_osinfo.dev);
 		char name[16];
 
-		ISP_LOCK(isp);
 		fc->sim = sim;
 		fc->path = path;
 		fc->isp = isp;
@@ -187,7 +183,6 @@ isp_attach_chan(ispsoftc_t *isp, struct cam_devq *devq, int chan)
 			LIST_INIT(&fc->atused[i]);
 #endif
 		isp_loop_changed(isp, chan);
-		ISP_UNLOCK(isp);
 		if (kproc_create(isp_kthread, fc, &fc->kproc, 0, 0,
 		    "%s_%d", device_get_nameunit(isp->isp_osinfo.dev), chan)) {
 			xpt_free_path(fc->path);
@@ -315,9 +310,7 @@ unwind:
 		ISP_GET_PC(isp, chan, sim, sim);
 		ISP_GET_PC(isp, chan, path, path);
 		xpt_free_path(path);
-		ISP_LOCK(isp);
 		xpt_bus_deregister(cam_sim_path(sim));
-		ISP_UNLOCK(isp);
 		cam_sim_free(sim, FALSE);
 	}
 	cam_simq_free(isp->isp_osinfo.devq);
@@ -1914,6 +1907,8 @@ isp_handle_platform_atio7(ispsoftc_t *isp, at7_entry_t *aep)
 		atiop->tag_action = 0;
 		break;
 	}
+	atiop->priority = (aep->at_cmnd.fcp_cmnd_task_attribute &
+	    FCP_CMND_PRIO_MASK) >> FCP_CMND_PRIO_SHIFT;
 	atp->orig_datalen = aep->at_cmnd.cdb_dl.sf.fcp_cmnd_dl;
 	atp->bytes_xfered = 0;
 	atp->lun = lun;
@@ -4095,8 +4090,9 @@ uint64_t
 isp_nanotime_sub(struct timespec *b, struct timespec *a)
 {
 	uint64_t elapsed;
-	struct timespec x = *b;
-	timespecsub(&x, a);
+	struct timespec x;
+
+	timespecsub(b, a, &x);
 	elapsed = GET_NANOSEC(&x);
 	if (elapsed == 0)
 		elapsed++;

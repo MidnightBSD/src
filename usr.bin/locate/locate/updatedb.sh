@@ -1,5 +1,7 @@
 #!/bin/sh
 #
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (c) September 1995 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
 # All rights reserved.
 #
@@ -26,8 +28,7 @@
 #
 # updatedb - update locate database for local mounted filesystems
 #
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/locate/locate/updatedb.sh 294779 2016-01-26 08:44:01Z des $
+# $FreeBSD$
 
 if [ "$(id -u)" = "0" ]; then
 	echo ">>> WARNING" 1>&2

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +26,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/sdhci/sdhci_pci.c 343504 2019-01-27 19:04:28Z marius $");
+__FBSDID("$FreeBSD$");
+
+#include "opt_mmccam.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -86,6 +90,9 @@ static const struct sdhci_device {
 	    SDHCI_QUIRK_LOWER_FREQUENCY },
 	{ 0x8034104c,	0xffff, "TI XX21/XX11 SD",
 	    SDHCI_QUIRK_FORCE_DMA },
+	{ 0x803c104c,	0xffff, "TI XX12 SD",
+	    SDHCI_QUIRK_FORCE_DMA |
+	    SDHCI_QUIRK_WAITFOR_RESET_ASSERTED },
 	{ 0x05501524,	0xffff, "ENE CB712 SD",
 	    SDHCI_QUIRK_BROKEN_TIMINGS },
 	{ 0x05511524,	0xffff, "ENE CB712 SD 2",
@@ -398,8 +405,9 @@ sdhci_pci_attach(device_t dev)
 		device_printf(dev, "Can't setup IRQ\n");
 	pci_enable_busmaster(dev);
 	/* Process cards detection. */
-	for (i = 0; i < sc->num_slots; i++)
+	for (i = 0; i < sc->num_slots; i++) {
 		sdhci_start_slot(&sc->slots[i]);
+	}
 
 	return (0);
 }
@@ -522,4 +530,7 @@ static devclass_t sdhci_pci_devclass;
 DRIVER_MODULE(sdhci_pci, pci, sdhci_pci_driver, sdhci_pci_devclass, NULL,
     NULL);
 SDHCI_DEPEND(sdhci_pci);
+
+#ifndef MMCCAM
 MMC_DECLARE_BRIDGE(sdhci_pci);
+#endif

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/drm2/radeonkmsfw/Makefile 290665 2015-11-10 17:15:36Z bdrewery $
+# $FreeBSD$
 
 SUBDIR=									\
 	ARUBA_me							\

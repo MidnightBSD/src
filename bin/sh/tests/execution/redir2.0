@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/execution/redir2.0 213738 2010-10-12 18:20:38Z obrien $
+# $FreeBSD$
 trap ': $((brokenpipe+=1))' PIPE
 
 P=${TMPDIR:-/tmp}

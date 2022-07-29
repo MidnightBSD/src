@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 Robert N. M. Watson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/tools/tools/netrate/http/http.c 203800 2010-02-12 16:33:03Z ru $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -161,7 +160,7 @@ killall(void)
 }
 
 static void
-signal_handler(int signum)
+signal_handler(int signum __unused)
 {
 
 	statep->hwd[curthread].hwd_start_signal_barrier = 1;
@@ -233,7 +232,7 @@ usage(void)
 }
 
 static void
-main_sighup(int signum)
+main_sighup(int signum __unused)
 {
 
 	killall();
@@ -243,7 +242,7 @@ int
 main(int argc, char *argv[])
 {
 	int ch, error, i;
-	char *pagebuffer;
+	struct state *pagebuffer;
 	uintmax_t total;
 	size_t len;
 	pid_t pid;
@@ -284,7 +283,7 @@ main(int argc, char *argv[])
 		err(-1, "mmap");
 	if (minherit(pagebuffer, len, INHERIT_SHARE) < 0)
 		err(-1, "minherit");
-	statep = (struct state *)pagebuffer;
+	statep = pagebuffer;
 
 	bzero(&statep->sin, sizeof(statep->sin));
 	statep->sin.sin_len = sizeof(statep->sin);

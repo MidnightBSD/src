@@ -1,10 +1,13 @@
-# $FreeBSD: stable/11/stand/powerpc/Makefile 332148 2018-04-06 19:54:10Z kevans $
+# $FreeBSD$
 
 NO_OBJ=t
 
 .include <bsd.init.mk>
 
 SUBDIR.yes=		boot1.chrp ofw uboot
+
+.if "${MACHINE_ARCH}" == "powerpc64"
 SUBDIR.${MK_FDT}+=	kboot
+.endif
 
 .include <bsd.subdir.mk>

@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/11/sys/mips/atheros/qca953x_chip.h 290910 2015-11-16 04:28:00Z adrian $ */
+/* $FreeBSD$ */
 
 #ifndef	__QCA953X_CHIP_H__
 #define	__QCA953X_CHIP_H__

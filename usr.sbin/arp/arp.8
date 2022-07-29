@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)arp.8	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: stable/11/usr.sbin/arp/arp.8 317048 2017-04-17 13:01:42Z garga $
+.\" $FreeBSD$
 .\"
-.Dd April 6, 2017
+.Dd July 13, 2020
 .Dt ARP 8
 .Os
 .Sh NAME
@@ -87,7 +87,9 @@ See
 .Xr xo_parse_args 3
 for details on command line arguments.
 .It Fl a
-The program displays or deletes all of the current
+The program displays or, if it is used with the
+.Fl d
+flag, deletes all of the current
 .Tn ARP
 entries.
 .It Fl d

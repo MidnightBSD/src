@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/11/lib/libc/stdio/Symbol.map 357852 2020-02-13 03:13:29Z kevans $
+ * $FreeBSD$
  */
 
 FBSD_1.0 {

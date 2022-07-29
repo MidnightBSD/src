@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1995-1998 John Birrell <jb@cimlogic.com.au>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_exit.c 338405 2018-08-31 05:21:33Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <errno.h>
@@ -48,7 +50,8 @@ __FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_exit.c 338405 2018-08-31 05:
 
 static void	exit_thread(void) __dead2;
 
-__weak_reference(_pthread_exit, pthread_exit);
+__weak_reference(_Tthr_exit, pthread_exit);
+__weak_reference(_Tthr_exit, _pthread_exit);
 
 #ifdef _PTHREAD_FORCED_UNWIND
 static int message_printed;
@@ -58,13 +61,13 @@ static void thread_unwind(void) __dead2;
 static void thread_uw_init(void);
 static _Unwind_Reason_Code thread_unwind_stop(int version,
 	_Unwind_Action actions,
-	int64_t exc_class,
+	uint64_t exc_class,
 	struct _Unwind_Exception *exc_obj,
 	struct _Unwind_Context *context, void *stop_parameter);
 /* unwind library pointers */
 static _Unwind_Reason_Code (*uwl_forcedunwind)(struct _Unwind_Exception *,
 	_Unwind_Stop_Fn, void *);
-static unsigned long (*uwl_getcfa)(struct _Unwind_Context *);
+static uintptr_t (*uwl_getcfa)(struct _Unwind_Context *);
 
 static void
 thread_uw_init(void)
@@ -106,7 +109,7 @@ _Unwind_ForcedUnwind(struct _Unwind_Exception *ex, _Unwind_Stop_Fn stop_func,
 	return (*uwl_forcedunwind)(ex, stop_func, stop_arg);
 }
 
-unsigned long
+uintptr_t
 _Unwind_GetCFA(struct _Unwind_Context *context)
 {
 	return (*uwl_getcfa)(context);
@@ -130,7 +133,7 @@ thread_unwind_cleanup(_Unwind_Reason_Code code __unused,
 
 static _Unwind_Reason_Code
 thread_unwind_stop(int version __unused, _Unwind_Action actions,
-	int64_t exc_class __unused,
+	uint64_t exc_class __unused,
 	struct _Unwind_Exception *exc_obj __unused,
 	struct _Unwind_Context *context, void *stop_parameter __unused)
 {
@@ -201,7 +204,7 @@ _thread_exit(const char *fname, int lineno, const char *msg)
 }
 
 void
-_pthread_exit(void *status)
+_Tthr_exit(void *status)
 {
 	_pthread_exit_mask(status, NULL);
 }
@@ -239,9 +242,6 @@ _pthread_exit_mask(void *status, sigset_t *mask)
 
 #ifdef PIC
 	thread_uw_init();
-#endif /* PIC */
-
-#ifdef PIC
 	if (uwl_forcedunwind != NULL) {
 #else
 	if (_Unwind_ForcedUnwind != NULL) {

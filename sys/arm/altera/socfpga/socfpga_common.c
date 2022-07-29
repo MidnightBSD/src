@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/altera/socfpga/socfpga_common.c 314506 2017-03-01 19:55:04Z ian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,48 +43,3 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/altera/socfpga/socfpga_common.c 314506 201
 
 #include <arm/altera/socfpga/socfpga_rstmgr.h>
 
-void
-cpu_reset(void)
-{
-	uint32_t paddr;
-	bus_addr_t vaddr;
-	phandle_t node;
-
-	if (rstmgr_warmreset() == 0)
-		goto end;
-
-	node = OF_finddevice("rstmgr");
-	if (node == -1)
-		goto end;
-
-	if ((OF_getencprop(node, "reg", &paddr, sizeof(paddr))) > 0) {
-		if (bus_space_map(fdtbus_bs_tag, paddr, 0x8, 0, &vaddr) == 0) {
-			bus_space_write_4(fdtbus_bs_tag, vaddr,
-			    RSTMGR_CTRL, CTRL_SWWARMRSTREQ);
-		}
-	}
-
-end:
-	while (1);
-}
-
-#ifndef INTRNG
-static int
-fdt_pic_decode_ic(phandle_t node, pcell_t *intr, int *interrupt, int *trig,
-    int *pol)
-{
-
-	if (!fdt_is_compatible(node, "arm,gic"))
-		return (ENXIO);
-
-	*interrupt = fdt32_to_cpu(intr[0]);
-	*trig = INTR_TRIGGER_CONFORM;
-	*pol = INTR_POLARITY_CONFORM;
-	return (0);
-}
-
-fdt_pic_decode_t fdt_pic_table[] = {
-	&fdt_pic_decode_ic,
-	NULL
-};
-#endif

@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/11/usr.bin/uuencode/Makefile 265420 2014-05-06 04:22:01Z imp $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -11,8 +11,7 @@ MLINKS=	uuencode.1 uudecode.1 \
 	uuencode.1 b64encode.1 \
 	b64encode.1 b64decode.1
 
-.if ${MK_TESTS} != "no"
-SUBDIR+= tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

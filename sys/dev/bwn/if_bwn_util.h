@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/bwn/if_bwn_util.h 299757 2016-05-14 20:09:37Z adrian $
+ * $FreeBSD$
  */
 #ifndef	__IF_BWN_UTIL_H__
 #define	__IF_BWN_UTIL_H__

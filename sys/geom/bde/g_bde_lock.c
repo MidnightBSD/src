@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -29,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/geom/bde/g_bde_lock.c 298808 2016-04-29 20:56:58Z pfg $
+ * $FreeBSD$
  */
 /* This souce file contains routines which operates on the lock sectors, both
  * for the kernel and the userland program gbde(1).

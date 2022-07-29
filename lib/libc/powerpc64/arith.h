@@ -1,7 +1,7 @@
 /*
  * MD header for contrib/gdtoa
  *
- * $FreeBSD: stable/11/lib/libc/powerpc64/arith.h 209878 2010-07-10 14:45:03Z nwhitehorn $
+ * $FreeBSD$
  */
 
 /*

@@ -37,35 +37,53 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: stable/11/sys/netgraph/ng_bridge.h 207680 2010-05-05 22:06:05Z zec $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_NG_BRIDGE_H_
 #define _NETGRAPH_NG_BRIDGE_H_
 
+/*
+ * Support the older ABI based on fixed size tables.
+ * ABI is deprecated, to be removed in releases > 12
+ * Please note: There is no API support!
+ * You canno create new messages using the old API but messages conforming the
+ * old ABI are understood.
+ */
+#define	NGM_BRIDGE_TABLE_ABI
+
 /* Node type name and magic cookie */
 #define NG_BRIDGE_NODE_TYPE		"bridge"
-#define NGM_BRIDGE_COOKIE		967239368
+#define NGM_BRIDGE_COOKIE		1569321993
+
+#ifdef NGM_BRIDGE_TABLE_ABI
+#define	NGM_BRIDGE_COOKIE_TBL		967239368
+#define	NG_BRIDGE_MAX_LINKS		32
+#endif /* NGM_BRIDGE_TABLE_ABI */
 
 /* Hook names */
 #define NG_BRIDGE_HOOK_LINK_PREFIX	"link"	 /* append decimal integer */
 #define NG_BRIDGE_HOOK_LINK_FMT		"link%d" /* for use with printf(3) */
-
-/* Maximum number of supported links */
-#define NG_BRIDGE_MAX_LINKS		32
+#define NG_BRIDGE_HOOK_UPLINK_PREFIX	"uplink" /* append decimal integer */
+#define NG_BRIDGE_HOOK_UPLINK_FMT	"uplink%d" /* for use with printf(3) */
 
 /* Node configuration structure */
 struct ng_bridge_config {
-	u_char		ipfw[NG_BRIDGE_MAX_LINKS]; 	/* enable ipfw */
 	u_char		debugLevel;		/* debug level */
 	u_int32_t	loopTimeout;		/* link loopback mute time */
 	u_int32_t	maxStaleness;		/* max host age before nuking */
 	u_int32_t	minStableAge;		/* min time for a stable host */
 };
 
+#ifdef NGM_BRIDGE_TABLE_ABI
+struct ng_bridge_config_tbl {
+	u_char		ipfw[NG_BRIDGE_MAX_LINKS];
+	struct ng_bridge_config cfg;
+};
+#endif /* NGM_BRIDGE_TABLE_ABI */
+
 /* Keep this in sync with the above structure definition */
-#define NG_BRIDGE_CONFIG_TYPE_INFO(ainfo)	{		\
-	  { "ipfw",		(ainfo)			},	\
+#define NG_BRIDGE_CONFIG_TYPE_INFO	{			\
 	  { "debugLevel",	&ng_parse_uint8_type	},	\
 	  { "loopTimeout",	&ng_parse_uint32_type	},	\
 	  { "maxStaleness",	&ng_parse_uint32_type	},	\
@@ -110,18 +128,30 @@ struct ng_bridge_link_stats {
 	  { NULL }						\
 }
 
-/* Structure describing a single host */
-struct ng_bridge_host {
+struct ng_bridge_link;
+typedef struct ng_bridge_link *link_p;
+
+#ifdef NGM_BRIDGE_TABLE_ABI
+struct ng_bridge_host_tbl {
 	u_char		addr[6];	/* ethernet address */
 	u_int16_t	linkNum;	/* link where addr can be found */
 	u_int16_t	age;		/* seconds ago entry was created */
 	u_int16_t	staleness;	/* seconds ago host last heard from */
 };
+#endif /* NGM_BRIDGE_TABLE_ABI */
+
+/* external representation of the host */
+struct ng_bridge_hostent {
+	u_char		addr[6];		/* ethernet address */
+	char		hook[NG_HOOKSIZ];	/* link where addr can be found */
+	u_int16_t	age;			/* seconds ago entry was created */
+	u_int16_t	staleness;		/* seconds ago host last heard from */
+};
 
 /* Keep this in sync with the above structure definition */
 #define NG_BRIDGE_HOST_TYPE_INFO(entype)	{		\
 	  { "addr",		(entype)		},	\
-	  { "linkNum",		&ng_parse_uint16_type	},	\
+	  { "hook",		&ng_parse_hookbuf_type	},	\
 	  { "age",		&ng_parse_uint16_type	},	\
 	  { "staleness",	&ng_parse_uint16_type	},	\
 	  { NULL }						\
@@ -129,8 +159,8 @@ struct ng_bridge_host {
 
 /* Structure returned by NGM_BRIDGE_GET_TABLE */
 struct ng_bridge_host_ary {
-	u_int32_t		numHosts;
-	struct ng_bridge_host	hosts[];
+	u_int32_t			numHosts;
+	struct ng_bridge_hostent	hosts[];
 };
 
 /* Keep this in sync with the above structure definition */
@@ -138,6 +168,29 @@ struct ng_bridge_host_ary {
 	  { "numHosts",		&ng_parse_uint32_type	},	\
 	  { "hosts",		(harytype)		},	\
 	  { NULL }						\
+}
+
+#ifdef NGM_BRIDGE_TABLE_ABI
+struct ng_bridge_hostent_tbl {
+	u_char		addr[6];		/* ethernet address */
+	u_int16_t	linkNum;		/* link where addr can be found */
+	u_int16_t	age;			/* seconds ago entry was created */
+	u_int16_t	staleness;		/* seconds ago host last heard from */
+};
+struct ng_bridge_host_tbl_ary {
+	u_int32_t			numHosts;
+	struct ng_bridge_hostent_tbl	hosts[];
+};
+#endif /* NGM_BRIDGE_TABLE_ABI */
+
+struct ng_bridge_move_host {
+	u_char		addr[ETHER_ADDR_LEN];	/* ethernet address */
+	char		hook[NG_HOOKSIZ];	/* link where addr can be found */
+};
+/* Keep this in sync with the above structure definition */
+#define NG_BRIDGE_MOVE_HOST_TYPE_INFO(entype)	{		\
+	  { "addr",		(entype)		},	\
+	  { "hook",		&ng_parse_hookbuf_type	},	\
 }
 
 /* Netgraph control messages */
@@ -150,6 +203,7 @@ enum {
 	NGM_BRIDGE_GETCLR_STATS,	/* atomically get & clear link stats */
 	NGM_BRIDGE_GET_TABLE,		/* get link table */
 	NGM_BRIDGE_SET_PERSISTENT,	/* set persistent mode */
+	NGM_BRIDGE_MOVE_HOST,		/* move a host to a link */
 };
 
 #endif /* _NETGRAPH_NG_BRIDGE_H_ */

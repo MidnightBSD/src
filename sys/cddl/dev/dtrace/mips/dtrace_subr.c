@@ -19,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/11/sys/cddl/dev/dtrace/mips/dtrace_subr.c 332566 2018-04-16 14:39:04Z lidl $
+ * $FreeBSD$
  *
  */
 /*
@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cddl/dev/dtrace/mips/dtrace_subr.c 332566 2018-04-16 14:39:04Z lidl $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -24,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/qlnx/qlnxe/pcics_reg_driver.h 320164 2017-06-20 19:16:06Z davidcs $
+ * $FreeBSD$
  *
  */
 

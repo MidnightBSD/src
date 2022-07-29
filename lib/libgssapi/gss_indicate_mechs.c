@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Doug Rabson
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/11/lib/libgssapi/gss_indicate_mechs.c 331722 2018-03-29 02:50:57Z eadler $
+ *	$FreeBSD$
  */
 
 #include <gssapi/gssapi.h>
@@ -44,7 +46,7 @@ gss_indicate_mechs(OM_uint32 *minor_status,
 	major_status = gss_create_empty_oid_set(minor_status, mech_set);
 	if (major_status)
 		return (major_status);
-	
+
 	SLIST_FOREACH(m, &_gss_mechs, gm_link) {
 		if (m->gm_indicate_mechs) {
 			major_status = m->gm_indicate_mechs(minor_status, &set);

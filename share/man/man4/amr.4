@@ -21,7 +21,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/amr.4 267938 2014-06-26 21:46:14Z bapt $
+.\" $FreeBSD$
 .\"
 .Dd March 29, 2006
 .Dt AMR 4
@@ -45,6 +45,11 @@ module at boot time, place the following line in
 .Bd -literal -offset indent
 amr_load="YES"
 .Ed
+.Sh DEPRECATION NOTICE
+The
+.Nm
+driver is not present in
+.Fx 14.0 .
 .Sh DESCRIPTION
 The
 .Nm

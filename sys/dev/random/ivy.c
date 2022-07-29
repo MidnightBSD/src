@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/random/ivy.c 298102 2016-04-16 06:10:47Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -40,15 +40,18 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/random/ivy.c 298102 2016-04-16 06:10:47Z k
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/random.h>
+#include <sys/sysctl.h>
 #include <sys/systm.h>
 
 #include <machine/md_var.h>
 #include <machine/specialreg.h>
+#include <x86/ifunc.h>
 
 #include <dev/random/randomdev.h>
 
 #define	RETRY_COUNT	10
 
+static bool has_rdrand, has_rdseed;
 static u_int random_ivy_read(void *, u_int);
 
 static struct random_source random_ivy = {
@@ -57,27 +60,85 @@ static struct random_source random_ivy = {
 	.rs_read = random_ivy_read
 };
 
-static inline int
-ivy_rng_store(u_long *buf)
+SYSCTL_NODE(_kern_random, OID_AUTO, rdrand, CTLFLAG_RW, 0,
+    "rdrand (ivy) entropy source");
+static bool acquire_independent_seed_samples = false;
+SYSCTL_BOOL(_kern_random_rdrand, OID_AUTO, rdrand_independent_seed,
+    CTLFLAG_RWTUN, &acquire_independent_seed_samples, 0,
+    "If non-zero, use more expensive and slow, but safer, seeded samples "
+    "where RDSEED is not present.");
+
+static bool
+x86_rdrand_store(u_long *buf)
 {
-#ifdef __GNUCLIKE_ASM
+	u_long rndval, seed_iterations, i;
+	int retry;
+
+	/* Per [1], "§ 5.2.6 Generating Seeds from RDRAND,"
+	 * machines lacking RDSEED will guarantee RDRAND is reseeded every 8kB
+	 * of generated output.
+	 *
+	 * [1]: https://software.intel.com/en-us/articles/intel-digital-random-number-generator-drng-software-implementation-guide#inpage-nav-6-8
+	 */
+	if (acquire_independent_seed_samples)
+		seed_iterations = 8 * 1024 / sizeof(*buf);
+	else
+		seed_iterations = 1;
+
+	for (i = 0; i < seed_iterations; i++) {
+		retry = RETRY_COUNT;
+		__asm __volatile(
+		    "1:\n\t"
+		    "rdrand	%1\n\t"	/* read randomness into rndval */
+		    "jc		2f\n\t" /* CF is set on success, exit retry loop */
+		    "dec	%0\n\t" /* otherwise, retry-- */
+		    "jne	1b\n\t" /* and loop if retries are not exhausted */
+		    "2:"
+		    : "+r" (retry), "=r" (rndval) : : "cc");
+		if (retry == 0)
+			return (false);
+	}
+	*buf = rndval;
+	return (true);
+}
+
+static bool
+x86_rdseed_store(u_long *buf)
+{
 	u_long rndval;
 	int retry;
 
 	retry = RETRY_COUNT;
 	__asm __volatile(
 	    "1:\n\t"
-	    "rdrand	%1\n\t"	/* read randomness into rndval */
+	    "rdseed	%1\n\t"	/* read randomness into rndval */
 	    "jc		2f\n\t" /* CF is set on success, exit retry loop */
 	    "dec	%0\n\t" /* otherwise, retry-- */
 	    "jne	1b\n\t" /* and loop if retries are not exhausted */
 	    "2:"
 	    : "+r" (retry), "=r" (rndval) : : "cc");
 	*buf = rndval;
-	return (retry);
-#else /* __GNUCLIKE_ASM */
-	return (0);
-#endif
+	return (retry != 0);
+}
+
+static bool
+x86_unimpl_store(u_long *buf __unused)
+{
+
+	panic("%s called", __func__);
+}
+
+DEFINE_IFUNC(static, bool, x86_rng_store, (u_long *buf), static)
+{
+	has_rdrand = (cpu_feature2 & CPUID2_RDRAND);
+	has_rdseed = (cpu_stdext_feature & CPUID_STDEXT_RDSEED);
+
+	if (has_rdseed)
+		return (x86_rdseed_store);
+	else if (has_rdrand)
+		return (x86_rdrand_store);
+	else
+		return (x86_unimpl_store);
 }
 
 /* It is required that buf length is a multiple of sizeof(u_long). */
@@ -90,7 +151,7 @@ random_ivy_read(void *buf, u_int c)
 	KASSERT(c % sizeof(*b) == 0, ("partial read %d", c));
 	b = buf;
 	for (count = c; count > 0; count -= sizeof(*b)) {
-		if (ivy_rng_store(&rndval) == 0)
+		if (!x86_rng_store(&rndval))
 			break;
 		*b++ = rndval;
 	}
@@ -104,14 +165,14 @@ rdrand_modevent(module_t mod, int type, void *unused)
 
 	switch (type) {
 	case MOD_LOAD:
-		if (cpu_feature2 & CPUID2_RDRAND) {
+		if (has_rdrand || has_rdseed) {
 			random_source_register(&random_ivy);
 			printf("random: fast provider: \"%s\"\n", random_ivy.rs_ident);
 		}
 		break;
 
 	case MOD_UNLOAD:
-		if (cpu_feature2 & CPUID2_RDRAND)
+		if (has_rdrand || has_rdseed)
 			random_source_deregister(&random_ivy);
 		break;
 
@@ -127,6 +188,12 @@ rdrand_modevent(module_t mod, int type, void *unused)
 	return (error);
 }
 
-DEV_MODULE(rdrand, rdrand_modevent, NULL);
+static moduledata_t rdrand_mod = {
+	"rdrand",
+	rdrand_modevent,
+	0
+};
+
+DECLARE_MODULE(rdrand, rdrand_mod, SI_SUB_RANDOM, SI_ORDER_FOURTH);
 MODULE_VERSION(rdrand, 1);
-MODULE_DEPEND(rdrand, random_device, 1, 1, 1);
+MODULE_DEPEND(rdrand, random_harvestq, 1, 1, 1);

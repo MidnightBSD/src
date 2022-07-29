@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 The University of Melbourne
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/kern_ffclock.c 298310 2016-04-19 23:48:27Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ffclock.h"
 
@@ -398,7 +400,7 @@ sys_ffclock_getcounter(struct thread *td, struct ffclock_getcounter_args *uap)
 }
 
 /*
- * System call allowing the synchronisation daemon to push new feed-foward clock
+ * System call allowing the synchronisation daemon to push new feed-forward clock
  * estimates to the kernel. Acquire ffclock_mtx to prevent concurrent updates
  * and ensure data consistency.
  * NOTE: ffclock_updated signals the fftimehands that new estimates are

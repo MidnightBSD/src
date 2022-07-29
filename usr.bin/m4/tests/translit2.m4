@@ -1,4 +1,4 @@
-dnl $FreeBSD: stable/11/usr.bin/m4/tests/translit2.m4 234852 2012-04-30 22:00:34Z bapt $
+dnl $FreeBSD$
 translit(`[HAVE_abc/def.h
 ]', `
 /.', `/  ')

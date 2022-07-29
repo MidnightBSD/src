@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright 2010 Nexenta Systems, Inc.  All rights reserved.
  * Copyright 2015 John Marino <draco@marino.st>
  *
@@ -33,7 +33,7 @@
  * for localedef for processing by the higher level grammar processor.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/localedef/scanner.c 298878 2016-05-01 16:10:56Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <stdlib.h>

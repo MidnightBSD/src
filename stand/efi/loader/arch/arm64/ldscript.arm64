@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/loader/arch/arm64/ldscript.arm64 329011 2018-02-08 02:50:47Z kevans $ */
+/* $FreeBSD$ */
 /*
 OUTPUT_FORMAT("elf64-aarch64-freebsd", "elf64-aarch64-freebsd", "elf64-aarch64-freebsd")
 */
@@ -80,6 +80,7 @@ SECTIONS
   _edata = .;
 
   /* Unused sections */
+  .interp	: { *(.interp) }
   .dynstr	: { *(.dynstr) }
   .hash		: { *(.hash) }
 }

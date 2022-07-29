@@ -1,11 +1,16 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: stable/11/sbin/tunefs/Makefile 298107 2016-04-16 07:45:30Z gjb $
+# $FreeBSD$
 
 PACKAGE=runtime
 PROG=	tunefs
+SRCS=	tunefs.c getmntopts.c
 LIBADD=	ufs
 MAN=	tunefs.8
 
-WARNS=	3
+MOUNT=	${SRCTOP}/sbin/mount
+CFLAGS+=	-I${MOUNT}
+.PATH:	${MOUNT}
+
+WARNS?=	3
 
 .include <bsd.prog.mk>

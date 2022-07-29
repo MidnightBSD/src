@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/pci/pci_subr.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Support APIs for Host to PCI bridge drivers and drivers that
@@ -73,7 +75,7 @@ host_pcib_get_busno(pci_read_config_fn read_config, int bus, int slot, int func,
 		 * For the 450nx chipset, there is a whole bundle of
 		 * things pretending to be host bridges. The MIOC will 
 		 * be seen first and isn't really a pci bridge (the
-		 * actual busses are attached to the PXB's). We need to 
+		 * actual buses are attached to the PXB's). We need to 
 		 * read the registers of the MIOC to figure out the
 		 * bus numbers for the PXB channels.
 		 *

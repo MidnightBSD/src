@@ -1,6 +1,8 @@
 /*	$NetBSD: rpc_commondata.c,v 1.7 2000/06/02 23:11:13 fvdl Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -32,7 +34,7 @@
 static char *sccsid = "@(#)rpc_commondata.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/rpc_commondata.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <rpc/rpc.h>

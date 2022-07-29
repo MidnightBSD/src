@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
  * Copyright (c) 2008-2012, by Michael Tuexen. All rights reserved.
@@ -31,13 +33,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/sctp_uio.h 347154 2019-05-05 12:28:39Z tuexen $");
+__FBSDID("$FreeBSD$");
 
 #ifndef _NETINET_SCTP_UIO_H_
 #define _NETINET_SCTP_UIO_H_
 
 
-#if ! defined(_KERNEL)
+#if !defined(_KERNEL)
 #include <stdint.h>
 #endif
 #include <sys/types.h>
@@ -631,10 +633,15 @@ struct sctp_setpeerprim {
 	uint8_t sspp_padding[4];
 };
 
+union sctp_sockstore {
+	struct sockaddr_in sin;
+	struct sockaddr_in6 sin6;
+	struct sockaddr sa;
+};
+
 struct sctp_getaddresses {
 	sctp_assoc_t sget_assoc_id;
-	/* addr is filled in for N * sockaddr_storage */
-	struct sockaddr addr[1];
+	union sctp_sockstore addr[];
 };
 
 struct sctp_status {
@@ -1126,7 +1133,7 @@ struct sctpstat {
 
 #define SCTP_STAT_INCR(_x) SCTP_STAT_INCR_BY(_x,1)
 #define SCTP_STAT_DECR(_x) SCTP_STAT_DECR_BY(_x,1)
-#if defined(__MidnightBSD__) && defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
+#if defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
 #define SCTP_STAT_INCR_BY(_x,_d) (SCTP_BASE_STATS[PCPU_GET(cpuid)]._x += _d)
 #define SCTP_STAT_DECR_BY(_x,_d) (SCTP_BASE_STATS[PCPU_GET(cpuid)]._x -= _d)
 #else
@@ -1140,12 +1147,6 @@ struct sctpstat {
 #define SCTP_STAT_DECR_COUNTER32(_x) SCTP_STAT_DECR(_x)
 #define SCTP_STAT_DECR_COUNTER64(_x) SCTP_STAT_DECR(_x)
 #define SCTP_STAT_DECR_GAUGE32(_x) SCTP_STAT_DECR(_x)
-
-union sctp_sockstore {
-	struct sockaddr_in sin;
-	struct sockaddr_in6 sin6;
-	struct sockaddr sa;
-};
 
 
 /***********************************/
@@ -1175,14 +1176,11 @@ struct xsctp_inpcb {
 	uint16_t local_port;
 	uint16_t qlen_old;
 	uint16_t maxqlen_old;
-	void *socket;
+	uint16_t __spare16;
+	kvaddr_t socket;
 	uint32_t qlen;
 	uint32_t maxqlen;
-#if defined(__LP64__)
-	uint32_t extra_padding[27];	/* future */
-#else
-	uint32_t extra_padding[28];	/* future */
-#endif
+	uint32_t extra_padding[26];	/* future */
 };
 
 struct xsctp_tcb {

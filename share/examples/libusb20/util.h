@@ -5,7 +5,7 @@
  * this stuff is worth it, you can buy me a beer in return.        Joerg Wunsch
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: stable/11/share/examples/libusb20/util.h 257779 2013-11-07 07:22:51Z hselasky $
+ * $FreeBSD$
  */
 
 #include <stdint.h>

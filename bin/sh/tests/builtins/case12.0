@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/builtins/case12.0 228007 2011-11-26 22:28:25Z jilles $
+# $FreeBSD$
 
 false
 case x in

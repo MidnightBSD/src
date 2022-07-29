@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/string/memset_s.c 322692 2017-08-19 09:38:43Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <stddef.h>

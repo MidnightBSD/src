@@ -1,6 +1,8 @@
 /*	$NetBSD: am7990var.h,v 1.23 2005/12/11 12:21:25 christos Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1997, 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/11/sys/dev/le/am7990var.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 #ifndef _DEV_LE_AM7990VAR_H_
 #define	_DEV_LE_AM7990VAR_H_

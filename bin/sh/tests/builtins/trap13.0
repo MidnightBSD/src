@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/builtins/trap13.0 257399 2013-10-30 21:36:15Z jilles $
+# $FreeBSD$
 
 {
 	trap 'exit 0' INT

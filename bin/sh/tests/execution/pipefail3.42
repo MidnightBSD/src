@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/execution/pipefail3.42 345561 2019-03-26 22:34:07Z jilles $
+# $FreeBSD$
 
 set -o pipefail
 : | (exit 42)

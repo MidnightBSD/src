@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)statfs.2	8.5 (Berkeley) 5/24/95
-.\" $FreeBSD: stable/11/lib/libc/sys/statfs.2 165903 2007-01-09 00:28:16Z imp $
+.\" $FreeBSD$
 .\"
-.Dd November 1, 2006
+.Dd March 30, 2020
 .Dt STATFS 2
 .Os
 .Sh NAME
@@ -66,8 +66,8 @@ typedef struct fsid { int32_t val[2]; } fsid_t; /* file system id type */
  */
 
 #define	MFSNAMELEN	16		/* length of type name including null */
-#define	MNAMELEN	88		/* size of on/from name bufs */
-#define	STATFS_VERSION	0x20030518	/* current version number */
+#define	MNAMELEN	1024		/* size of on/from name bufs */
+#define	STATFS_VERSION	0x20140518	/* current version number */
 
 struct statfs {
 uint32_t f_version;		/* structure version number */
@@ -204,6 +204,8 @@ points to an invalid address.
 An
 .Tn I/O
 error occurred while reading from or writing to the file system.
+.It Bq Er EINTEGRITY
+Corrupted data was detected while reading from the file system.
 .El
 .Pp
 The
@@ -225,9 +227,12 @@ points to an invalid address.
 An
 .Tn I/O
 error occurred while reading from or writing to the file system.
+.It Bq Er EINTEGRITY
+Corrupted data was detected while reading from the file system.
 .El
 .Sh SEE ALSO
-.Xr fhstatfs 2
+.Xr fhstatfs 2 ,
+.Xr getfsstat 2
 .Sh HISTORY
 The
 .Fn statfs

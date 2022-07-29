@@ -1,5 +1,6 @@
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (c) 2018 Alan Somers
-# All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -22,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/tests/sys/geom/class/eli/misc_test.sh 345394 2019-03-21 22:23:52Z asomers $
+# $FreeBSD$
 
 . $(atf_get_srcdir)/conf.sh
 

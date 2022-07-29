@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1995, 1996
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
  *
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/rpc.yppasswdd/yppasswdd_server.c 351694 2019-09-02 10:20:57Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>
@@ -481,7 +483,9 @@ yppasswdproc_update_1_svc(yppasswd *argp, struct svc_req *rqstp)
 	char *cryptpw;
 	char *oldshell = NULL;
 	char *oldgecos = NULL;
+	char *passdir;
 	char *passfile_hold;
+	char passdir_buf[MAXPATHLEN + 2];
 	char passfile_buf[MAXPATHLEN + 2];
 	char passfile_hold_buf[MAXPATHLEN + 2];
 	char *domain = yppasswd_domain;
@@ -615,11 +619,14 @@ yppasswdproc_update_1_svc(yppasswd *argp, struct svc_req *rqstp)
 	snprintf(passfile_hold_buf, sizeof(passfile_hold_buf),
 	    "%s.hold", passfile);
 	passfile_hold = (char *)&passfile_hold_buf;
-	
+
 
 	/* Step 5: make a new password file with the updated info. */
 
-	if (pw_init(dirname(passfile), passfile)) {
+	snprintf(passdir_buf, sizeof(passdir_buf), "%s", passfile);
+	passdir = dirname(passdir_buf);
+
+	if (pw_init(passdir, passfile)) {
 		yp_error("pw_init() failed");
 		return &result;
 	}
@@ -739,7 +746,9 @@ yppasswdproc_update_master_1_svc(master_yppasswd *argp,
 	uid_t uid;
 	int rval = 0;
 	DBT key, data;
+	char *passdir;
 	char *passfile_hold;
+	char passdir_buf[MAXPATHLEN + 2];
 	char passfile_buf[MAXPATHLEN + 2];
 	char passfile_hold_buf[MAXPATHLEN + 2];
 	struct sockaddr_in *rqhost;
@@ -842,7 +851,10 @@ allow additions to be made to the password database");
 	    "%s.hold", passfile);
 	passfile_hold = (char *)&passfile_hold_buf;
 
-	if (pw_init(dirname(passfile), passfile)) {
+	snprintf(passdir_buf, sizeof(passdir_buf), "%s", passfile);
+	passdir = dirname(passdir_buf);
+
+	if (pw_init(passdir, passfile)) {
 		yp_error("pw_init() failed");
 		return &result;
 	}

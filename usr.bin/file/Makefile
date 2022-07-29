@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/file/Makefile 319186 2017-05-30 04:27:05Z ngie $
+# $FreeBSD$
 # Makefile for file(1) cmd.
 # Copyright (c) David E. O'Brien, 2000-2004, 2009
 # Copyright (c) Ian F. Darwin 86/09/01 - see LEGAL.NOTICE.

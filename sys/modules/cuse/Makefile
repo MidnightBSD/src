@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/cuse/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 #
 # Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
 #
@@ -27,6 +27,6 @@
 .PATH: ${SRCTOP}/sys/fs/cuse
 
 KMOD=	cuse
-SRCS=	cuse.c device_if.h bus_if.h vnode_if.h opt_compat.h
+SRCS=	cuse.c device_if.h bus_if.h vnode_if.h
 
 .include <bsd.kmod.mk>

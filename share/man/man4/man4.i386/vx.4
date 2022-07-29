@@ -28,7 +28,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/man4.i386/vx.4 347962 2019-05-18 20:43:13Z brooks $
+.\" $FreeBSD$
 .\"
 .Dd October 24, 2018
 .Dt VX 4 i386
@@ -87,21 +87,9 @@ driver supports the following cards:
 .It
 3Com 3c590 EtherLink III PCI
 .It
-3Com 3c592 EtherLink III EISA
-.It
 3Com 3c595 Fast EtherLink III PCI in 10 Mbps mode
-.It
-3Com 3c597 Fast EtherLink III EISA in 10 Mbps mode
 .El
 .Sh DIAGNOSTICS
-.Bl -diag
-.It "vx%d: not configured; kernel is built for only %d devices."
-There are not enough devices in the kernel configuration file for the number
-of adapters present in the system.
-Add devices to the configuration file,
-rebuild the kernel, and reboot.
-.El
-.Pp
 All other diagnostics indicate either a hardware problem or a bug in the
 driver.
 .Sh SEE ALSO

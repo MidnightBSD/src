@@ -8,24 +8,24 @@
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/ar/ar.h 346903 2019-04-29 18:37:39Z emaste $
+ * $FreeBSD$
  */
 
 #define	BSDAR_VERSION	"1.1.0"
@@ -54,7 +54,7 @@
  */
 #define	AC(CALL) do {							\
 	if ((CALL))							\
-		bsdar_errc(bsdar, EX_SOFTWARE, archive_errno(a), "%s",	\
+		bsdar_errc(bsdar, archive_errno(a), "%s",		\
 		    archive_error_string(a));				\
 } while (0)
 
@@ -114,16 +114,8 @@ struct bsdar {
 	TAILQ_HEAD(, ar_obj) v_obj;	/* object(member) list */
 };
 
-void	bsdar_errc(struct bsdar *, int _eval, int _code,
-	    const char *fmt, ...) __dead2;
-void	bsdar_warnc(struct bsdar *, int _code, const char *fmt, ...);
-void	ar_mode_d(struct bsdar *bsdar);
-void	ar_mode_m(struct bsdar *bsdar);
-void	ar_mode_p(struct bsdar *bsdar);
-void	ar_mode_q(struct bsdar *bsdar);
-void	ar_mode_r(struct bsdar *bsdar);
-void	ar_mode_s(struct bsdar *bsdar);
-void	ar_mode_t(struct bsdar *bsdar);
-void	ar_mode_x(struct bsdar *bsdar);
-void	ar_mode_A(struct bsdar *bsdar);
 void	ar_mode_script(struct bsdar *ar);
+int	ar_read_archive(struct bsdar *ar, int mode, FILE *out);
+int	ar_write_archive(struct bsdar *ar, int mode);
+void	bsdar_errc(struct bsdar *, int _code, const char *fmt, ...) __dead2;
+void	bsdar_warnc(struct bsdar *, int _code, const char *fmt, ...);

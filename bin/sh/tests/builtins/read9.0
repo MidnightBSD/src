@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/builtins/read9.0 287308 2015-08-30 17:24:22Z jilles $
+# $FreeBSD$
 
 empty=''
 read a b c <<EOF

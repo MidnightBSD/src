@@ -2,6 +2,8 @@
 /*	$NetBSD$	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * [Ported for FreeBSD]
  *  Copyright (c) 2000
  *      Noriaki Mitsunaga, Mitsuru Iwasaki and Takanori Watanabe.
@@ -39,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/stg/tmc18c30_pccard.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/errno.h>

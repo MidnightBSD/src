@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -15,7 +17,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -35,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/cd9660/cd9660_vnops.c 341074 2018-11-27 16:51:18Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -444,10 +446,10 @@ iso_shipdir(idp)
 	idp->current.d_reclen = GENERIC_DIRSIZ(&idp->current);
 	if (assoc) {
 		idp->assocoff = idp->curroff;
-		bcopy(&idp->current,&idp->assocent,idp->current.d_reclen);
+		memcpy(&idp->assocent, &idp->current, idp->current.d_reclen);
 	} else {
 		idp->saveoff = idp->curroff;
-		bcopy(&idp->current,&idp->saveent,idp->current.d_reclen);
+		memcpy(&idp->saveent, &idp->current, idp->current.d_reclen);
 	}
 	return (0);
 }
@@ -479,8 +481,9 @@ cd9660_readdir(ap)
 	int error = 0;
 	int reclen;
 	u_short namelen;
-	int ncookies = 0;
+	u_int ncookies = 0;
 	u_long *cookies = NULL;
+	cd_ino_t ino;
 
 	dp = VTOI(vdp);
 	imp = dp->i_mnt;
@@ -573,11 +576,15 @@ cd9660_readdir(ap)
 				entryoffsetinblock;
 
 		idp->curroff += reclen;
+		/* NOTE: d_off is the offset of *next* entry. */
+		idp->current.d_off = idp->curroff;
 
 		switch (imp->iso_ftype) {
 		case ISO_FTYPE_RRIP:
-			cd9660_rrip_getname(ep,idp->current.d_name, &namelen,
-					   &idp->current.d_fileno,imp);
+			ino = idp->current.d_fileno;
+			cd9660_rrip_getname(ep, idp->current.d_name, &namelen,
+			    &ino, imp);
+			idp->current.d_fileno = ino;
 			idp->current.d_namlen = (u_char)namelen;
 			if (idp->current.d_namlen)
 				error = iso_uiodir(idp,&idp->current,idp->curroff);
@@ -831,15 +838,15 @@ cd9660_vptofh(ap)
 	memcpy(ap->a_fhp, &ifh, sizeof(ifh));
 
 #ifdef	ISOFS_DBG
-	printf("vptofh: ino %d, start %ld\n",
-	    ifh.ifid_ino, ifh.ifid_start);
+	printf("vptofh: ino %jd, start %ld\n",
+	    (uintmax_t)ifh.ifid_ino, ifh.ifid_start);
 #endif
 
 	return (0);
 }
 
 SYSCTL_NODE(_vfs, OID_AUTO, cd9660, CTLFLAG_RW, 0, "cd9660 filesystem");
-static int use_buf_pager = 0;
+static int use_buf_pager = 1;
 SYSCTL_INT(_vfs_cd9660, OID_AUTO, use_buf_pager, CTLFLAG_RWTUN,
     &use_buf_pager, 0,
     "Use buffer pager instead of bmap");
@@ -852,12 +859,13 @@ cd9660_gbp_getblkno(struct vnode *vp, vm_ooffset_t off)
 }
 
 static int
-cd9660_gbp_getblksz(struct vnode *vp, daddr_t lbn)
+cd9660_gbp_getblksz(struct vnode *vp, daddr_t lbn, long *sz)
 {
 	struct iso_node *ip;
 
 	ip = VTOI(vp);
-	return (blksize(ip->i_mnt, ip, lbn));
+	*sz = blksize(ip->i_mnt, ip, lbn);
+	return (0);
 }
 
 static int

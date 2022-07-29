@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011-2015 LSI Corp.
  * Copyright (c) 2013-2015 Avago Technologies
  * All rights reserved.
@@ -26,7 +28,7 @@
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: stable/11/sys/dev/mps/mps_sas.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 struct mps_fw_event_work;
@@ -60,6 +62,7 @@ struct mpssas_target {
 	SLIST_HEAD(, mpssas_lun) luns;
 	TAILQ_HEAD(, mps_command) commands;
 	struct mps_command *tm;
+	struct mps_command *pending_remove_tm;
 	TAILQ_HEAD(, mps_command) timedout_commands;
 	uint16_t        exp_dev_handle;
 	uint16_t        phy_num;
@@ -67,9 +70,6 @@ struct mpssas_target {
 	uint16_t	parent_handle;
 	uint64_t	parent_sasaddr;
 	uint32_t	parent_devinfo;
-	struct sysctl_ctx_list sysctl_ctx;
-	struct sysctl_oid *sysctl_tree;
-	TAILQ_ENTRY(mpssas_target) sysctl_link;
 	uint64_t        issued;
 	uint64_t        completed;
 	unsigned int    outstanding;

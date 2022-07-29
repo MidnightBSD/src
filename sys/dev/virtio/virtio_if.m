@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/dev/virtio/virtio_if.m 255110 2013-09-01 04:20:23Z bryanv $
+# $FreeBSD$
 
 #include <sys/bus.h>
 

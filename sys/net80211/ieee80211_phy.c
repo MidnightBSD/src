@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/net80211/ieee80211_phy.c 300232 2016-05-19 21:08:33Z avos $");
+__FBSDID("$FreeBSD$");
 
 /*
  * IEEE 802.11 PHY-related support.

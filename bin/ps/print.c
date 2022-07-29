@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,7 +36,7 @@ static char sccsid[] = "@(#)print.c	8.6 (Berkeley) 4/16/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/ps/print.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -234,7 +236,7 @@ state(KINFO *k, VARENT *ve __unused)
 		break;
 
 	case SSLEEP:
-		if (tdflags & TDF_SINTR)	/* interruptable (long) */
+		if (tdflags & TDF_SINTR)	/* interruptible (long) */
 			*cp = k->ki_p->ki_slptime >= MAXSLP ? 'I' : 'S';
 		else
 			*cp = 'D';
@@ -549,6 +551,19 @@ cputime(KINFO *k, VARENT *ve)
 }
 
 char *
+cpunum(KINFO *k, VARENT *ve __unused)
+{
+	char *cpu;
+
+	if (k->ki_p->ki_stat == SRUN && k->ki_p->ki_oncpu != NOCPU) {
+		asprintf(&cpu, "%d", k->ki_p->ki_oncpu);
+	} else {
+		asprintf(&cpu, "%d", k->ki_p->ki_lastcpu);
+	}
+	return (cpu);
+}
+
+char *
 systime(KINFO *k, VARENT *ve)
 {
 	long secs, psecs;
@@ -660,7 +675,7 @@ getpmem(KINFO *k)
 		return (0.0);
 	/* XXX want pmap ptpages, segtab, etc. (per architecture) */
 	/* XXX don't have info about shared */
-	fracmem = ((float)k->ki_p->ki_rssize) / mempages;
+	fracmem = ((double)k->ki_p->ki_rssize) / mempages;
 	return (100.0 * fracmem);
 }
 
@@ -702,17 +717,24 @@ priorityr(KINFO *k, VARENT *ve __unused)
 	class = lpri->pri_class;
 	level = lpri->pri_level;
 	switch (class) {
-	case PRI_ITHD:
-		asprintf(&str, "intr:%u", level);
+	case RTP_PRIO_REALTIME:
+	/* alias for PRI_REALTIME */
+		asprintf(&str, "real:%u", level - PRI_MIN_REALTIME);
 		break;
-	case PRI_REALTIME:
-		asprintf(&str, "real:%u", level);
+	case RTP_PRIO_NORMAL:
+	/* alias for PRI_TIMESHARE */
+		if (level >= PRI_MIN_TIMESHARE)
+			asprintf(&str, "normal:%u", level - PRI_MIN_TIMESHARE);
+		else
+			asprintf(&str, "kernel:%u", level - PRI_MIN_KERN);
 		break;
-	case PRI_TIMESHARE:
-		asprintf(&str, "normal");
+	case RTP_PRIO_IDLE:
+	/* alias for PRI_IDLE */
+		asprintf(&str, "idle:%u", level - PRI_MIN_IDLE);
 		break;
-	case PRI_IDLE:
-		asprintf(&str, "idle:%u", level);
+	case RTP_PRIO_ITHD:
+	/* alias for PRI_ITHD */
+		asprintf(&str, "intr:%u", level - PRI_MIN_ITHD);
 		break;
 	default:
 		asprintf(&str, "%u:%u", class, level);
@@ -769,8 +791,6 @@ printval(void *bp, VAR *v)
 	case PGTOK:
 		(void)asprintf(&str, ofmt, ps_pgtok(*(u_long *)bp));
 		break;
-	default:
-		xo_errx(1, "unknown type %d", v->type);
 	}
 
 	return (str);

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2007-2009 Intel Corporation
  * All rights reserved.
@@ -23,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/net80211/ieee80211_tdma.h 283535 2015-05-25 16:37:41Z adrian $
+ * $FreeBSD$
  */
 #ifndef _NET80211_IEEE80211_TDMA_H_
 #define _NET80211_IEEE80211_TDMA_H_

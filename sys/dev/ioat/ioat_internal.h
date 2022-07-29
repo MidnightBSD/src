@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-__FBSDID("$FreeBSD: stable/11/sys/dev/ioat/ioat_internal.h 344650 2019-02-28 00:29:15Z mav $");
+__FBSDID("$FreeBSD$");
 
 #ifndef __IOAT_INTERNAL_H__
 #define __IOAT_INTERNAL_H__
@@ -414,6 +414,10 @@ struct bus_dmadesc {
 struct ioat_descriptor {
 	struct bus_dmadesc	bus_dmadesc;
 	uint32_t		id;
+	bus_dmamap_t		src_dmamap;
+	bus_dmamap_t		dst_dmamap;
+	bus_dmamap_t		src2_dmamap;
+	bus_dmamap_t		dst2_dmamap;
 };
 
 /* Unused by this driver at this time. */
@@ -437,6 +441,8 @@ struct ioat_softc {
 })
 
 	device_t		device;
+	int			domain;
+	int			cpu;
 	int			version;
 	unsigned		chan_idx;
 
@@ -456,6 +462,8 @@ struct ioat_softc {
 
 	bus_dma_tag_t		hw_desc_tag;
 	bus_dmamap_t		hw_desc_map;
+
+	bus_dma_tag_t		data_tag;
 
 	bus_dma_tag_t		comp_update_tag;
 	bus_dmamap_t		comp_update_map;

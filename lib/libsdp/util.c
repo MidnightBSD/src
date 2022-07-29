@@ -1,5 +1,7 @@
-/*
+/*-
  * util.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2003 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: util.c,v 1.5 2003/09/08 02:29:35 max Exp $
- * $FreeBSD: stable/11/lib/libsdp/util.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <netinet/in.h>

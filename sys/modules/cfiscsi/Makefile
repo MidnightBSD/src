@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/cfiscsi/Makefile 316212 2017-03-30 04:56:27Z ngie $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/cam/ctl
 

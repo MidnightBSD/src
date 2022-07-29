@@ -1,4 +1,6 @@
 /*************************************************************************
+SPDX-License-Identifier: BSD-3-Clause
+
 Copyright (c) 2003-2007  Cavium Networks (support@cavium.com). All rights
 reserved.
 
@@ -28,7 +30,7 @@ AND WITH ALL FAULTS AND CAVIUM  NETWORKS MAKES NO PROMISES, REPRESENTATIONS OR W
 *************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/cavium/octe/ethernet-xaui.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

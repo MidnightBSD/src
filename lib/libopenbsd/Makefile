@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libopenbsd/Makefile 298107 2016-04-16 07:45:30Z gjb $
+# $FreeBSD$
 
 PACKAGE=lib${LIB}
 LIB=	openbsd
@@ -10,6 +10,6 @@ INTERNALLIB=
 
 CFLAGS+= -I${.CURDIR}
 
-WARNS=	3
+WARNS?=	3
 
 .include <bsd.lib.mk>

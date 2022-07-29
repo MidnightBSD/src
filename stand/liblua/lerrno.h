@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/liblua/lerrno.h 344220 2019-02-17 02:39:17Z kevans $
+ * $FreeBSD$
  */
 
 #pragma once

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1998-1999 Andrew Gallatin
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/freebsd32/freebsd32_util.h 321322 2017-07-21 06:48:47Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _COMPAT_FREEBSD32_FREEBSD32_UTIL_H_
@@ -104,9 +106,6 @@ SYSCALL32_MODULE(syscallname,                           \
 #define SYSCALL32_INIT_HELPER_COMPAT(syscallname)		\
     SYSCALL32_INIT_HELPER_COMPAT_F(syscallname, 0)
 
-int    syscall32_register(int *offset, struct sysent *new_sysent,
-	    struct sysent *old_sysent, int flags);
-int    syscall32_deregister(int *offset, struct sysent *old_sysent);
 int    syscall32_module_handler(struct module *mod, int what, void *arg);
 int    syscall32_helper_register(struct syscall_helper_data *sd, int flags);
 int    syscall32_helper_unregister(struct syscall_helper_data *sd);

@@ -1,6 +1,6 @@
 #	pccardc Makefile
 #
-# $MidnightBSD$
+# $FreeBSD$
 
 PROG=	dumpcis
 MAN=	dumpcis.8

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: Beerware
+ *
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <phk@FreeBSD.org> wrote this file.  As long as you retain this notice you
@@ -6,7 +8,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: stable/11/usr.sbin/ctm/ctm/ctm_pass1.c 93150 2002-03-25 13:53:46Z phk $
+ * $FreeBSD$
  *
  */
 
@@ -114,6 +116,7 @@ Pass1(FILE *fd, unsigned applied)
 		    }
 		    if (name[0] == '/') {
 			Fatal("Absolute paths are illegal.");
+			Delete(name);
 			return Exit_Mess;
 		    }
 		    q = name;
@@ -121,6 +124,7 @@ Pass1(FILE *fd, unsigned applied)
 			if (q[0] == '.' && q[1] == '.')
 			    if (q[2] == '/' || q[2] == '\0') {
 				Fatal("Paths containing '..' are illegal.");
+				Delete(name);
 				return Exit_Mess;
 			    }
 			if ((q = strchr(q, '/')) == NULL)

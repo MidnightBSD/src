@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)4.t	8.1 (Berkeley) 6/8/93
-.\"	$FreeBSD: stable/11/share/doc/psd/21.ipc/4.t 263142 2014-03-14 03:07:51Z eadler $
+.\"	$FreeBSD$
 .\"
 .\".ds RH "Client/Server Model
 .bp

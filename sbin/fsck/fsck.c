@@ -1,6 +1,8 @@
 /*	$NetBSD: fsck.c,v 1.30 2003/08/07 10:04:15 agc Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1996 Christos Zoulas. All rights reserved.
  * Copyright (c) 1980, 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/fsck/fsck.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -46,7 +48,6 @@ __FBSDID("$FreeBSD: stable/11/sbin/fsck/fsck.c 331722 2018-03-29 02:50:57Z eadle
 
 #include <ctype.h>
 #include <err.h>
-#include <errno.h>
 #include <fstab.h>
 #include <fcntl.h>
 #include <paths.h>

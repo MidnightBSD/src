@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-2-Clause
+ *
  * Copyright (c) 2006 IronPort Systems
  * All rights reserved.
  *
@@ -51,9 +53,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mfi/mfi.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
-#include "opt_compat.h"
 #include "opt_mfi.h"
 
 #include <sys/param.h>
@@ -67,7 +68,6 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/mfi/mfi.c 331722 2018-03-29 02:50:57Z eadl
 #include <sys/conf.h>
 #include <sys/eventhandler.h>
 #include <sys/rman.h>
-#include <sys/bus_dma.h>
 #include <sys/bio.h>
 #include <sys/ioccom.h>
 #include <sys/uio.h>
@@ -3361,7 +3361,7 @@ out:
 		if (cm->cm_frame->header.cmd == MFI_CMD_STP) {
 			for (i = 0; i < 2; i++) {
 				if (sc->kbuff_arr[i]) {
-					if (sc->mfi_kbuff_arr_busaddr != 0)
+					if (sc->mfi_kbuff_arr_busaddr[i] != 0)
 						bus_dmamap_unload(
 						    sc->mfi_kbuff_arr_dmat[i],
 						    sc->mfi_kbuff_arr_dmamap[i]

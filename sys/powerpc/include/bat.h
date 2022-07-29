@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD AND BSD-4-Clause
+ *
  * Copyright (c) 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -58,7 +60,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: bat.h,v 1.2 1999/12/18 01:36:06 thorpej Exp $
- * $FreeBSD: stable/11/sys/powerpc/include/bat.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_BAT_H_

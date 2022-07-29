@@ -25,7 +25,7 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 .\" EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man3/pthread_condattr.3 330486 2018-03-05 09:17:55Z eadler $
+.\" $FreeBSD$
 .Dd May 31, 2016
 .Dt PTHREAD_CONDATTR 3
 .Os
@@ -46,11 +46,15 @@
 .Ft int
 .Fn pthread_condattr_destroy "pthread_condattr_t *attr"
 .Ft int
-.Fn pthread_condattr_getclock "pthread_condattr_t * restrict attr" "clockid_t * restrict clock_id"
+.Fo pthread_condattr_getclock
+.Fa "pthread_condattr_t * restrict attr" "clockid_t * restrict clock_id"
+.Fc
 .Ft int
 .Fn pthread_condattr_setclock "pthread_condattr_t *attr" "clockid_t clock_id"
 .Ft int
-.Fn pthread_condattr_getpshared "pthread_condattr_t * restrict attr" "int * restrict pshared"
+.Fo pthread_condattr_getpshared
+.Fa "pthread_condattr_t * restrict attr" "int * restrict pshared"
+.Fc 
 .Ft int
 .Fn pthread_condattr_setpshared "pthread_condattr_t *attr" "int pshared"
 .Sh DESCRIPTION

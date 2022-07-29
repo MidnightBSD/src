@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/dev/iser/icl_iser.c 331769 2018-03-30 18:06:29Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2015, Mellanox Technologies, Inc. All rights reserved.
  *
@@ -484,9 +484,13 @@ iser_conn_task_done(struct icl_conn *ic, void *prv)
 }
 
 static int
-iser_limits(size_t *limitp)
+iser_limits(struct icl_drv_limits *idl)
 {
-	*limitp = 128 * 1024;
+
+	idl->idl_max_recv_data_segment_length = 128 * 1024;
+	idl->idl_max_send_data_segment_length = 128 * 1024;
+	idl->idl_max_burst_length = 262144;
+	idl->idl_first_burst_length = 65536;
 
 	return (0);
 }
@@ -561,5 +565,4 @@ moduledata_t icl_iser_data = {
 DECLARE_MODULE(icl_iser, icl_iser_data, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
 MODULE_DEPEND(icl_iser, icl, 1, 1, 1);
 MODULE_DEPEND(icl_iser, ibcore, 1, 1, 1);
-MODULE_DEPEND(icl_iser, linuxkpi, 1, 1, 1);
 MODULE_VERSION(icl_iser, 1);

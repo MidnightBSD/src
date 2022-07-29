@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_core/mlx5_vsc.c 353258 2019-10-07 10:25:46Z hselasky $
+ * $FreeBSD$
  */
 
 #include <dev/mlx5/driver.h>

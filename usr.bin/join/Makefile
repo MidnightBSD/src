@@ -1,12 +1,11 @@
-# $FreeBSD: stable/11/usr.bin/join/Makefile 265420 2014-05-06 04:22:01Z imp $
+# $FreeBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
 
 .include <src.opts.mk>
 
 PROG=	join
 
-.if ${MK_TESTS} != "no"
-SUBDIR+= tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

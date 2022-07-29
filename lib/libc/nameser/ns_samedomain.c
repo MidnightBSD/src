@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995,1999 by Internet Software Consortium.
  *
@@ -19,7 +21,7 @@
 static const char rcsid[] = "$Id: ns_samedomain.c,v 1.6 2005/04/27 04:56:40 sra Exp $";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/nameser/ns_samedomain.c 298830 2016-04-30 01:24:24Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include "port_before.h"
 

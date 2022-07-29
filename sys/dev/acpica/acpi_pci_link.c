@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/acpi_pci_link.c 354058 2019-10-25 00:16:57Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -843,8 +843,10 @@ acpi_pci_link_srs_from_links(struct acpi_pci_link_softc *sc,
 			device_printf(sc->pl_dev,
 			    "Unable to build resources: %s\n",
 			    AcpiFormatException(status));
-			if (srsbuf->Pointer != NULL)
+			if (srsbuf->Pointer != NULL) {
 				AcpiOsFree(srsbuf->Pointer);
+				srsbuf->Pointer = NULL;
+			}
 			return (status);
 		}
 	}
@@ -867,6 +869,8 @@ acpi_pci_link_route_irqs(device_t dev)
 		status = acpi_pci_link_srs_from_links(sc, &srsbuf);
 	else
 		status = acpi_pci_link_srs_from_crs(sc, &srsbuf);
+	if (ACPI_FAILURE(status))
+		return (status);
 
 	/* Write out new resources via _SRS. */
 	status = AcpiSetCurrentResources(acpi_get_handle(dev), &srsbuf);

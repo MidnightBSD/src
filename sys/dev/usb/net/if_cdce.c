@@ -1,6 +1,8 @@
 /*	$NetBSD: if_cdce.c,v 1.4 2004/10/24 12:50:54 augustss Exp $ */
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1997, 1998, 1999, 2000-2003 Bill Paul <wpaul@windriver.com>
  * Copyright (c) 2003-2005 Craig Boston
  * Copyright (c) 2004 Daniel Hartmeier
@@ -46,11 +48,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/usb/net/if_cdce.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
+#include <sys/gsb_crc32.h>
 #include <sys/queue.h>
 #include <sys/types.h>
 #include <sys/systm.h>

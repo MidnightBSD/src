@@ -1,6 +1,8 @@
 /*	$KAME: if.c,v 1.27 2003/10/05 00:09:36 itojun Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
  * 
@@ -28,14 +30,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/rtsold/if.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
-#include <sys/socket.h>
-#include <sys/sysctl.h>
+#include <sys/capsicum.h>
 #include <sys/ioctl.h>
 #include <sys/queue.h>
+#include <sys/socket.h>
+#include <sys/sysctl.h>
 
 #include <net/if.h>
 #include <net/if_types.h>
@@ -49,6 +52,7 @@
 #include <netinet6/in6_var.h>
 #include <netinet6/nd6.h>
 
+#include <capsicum_helpers.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -61,16 +65,28 @@
 #include "rtsold.h"
 
 static int ifsock;
-
-static int get_llflag(const char *);
 static void get_rtaddrs(int, struct sockaddr *, struct sockaddr **);
 
 int
 ifinit(void)
 {
-	ifsock = rssock;
+	cap_rights_t rights;
+	int sock;
 
-	return(0);
+	sock = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+	if (sock < 0) {
+		warnmsg(LOG_ERR, __func__, "socket(): %s",
+		    strerror(errno));
+		return (-1);
+	}
+	if (caph_rights_limit(sock, cap_rights_init(&rights, CAP_IOCTL)) < 0) {
+		warnmsg(LOG_ERR, __func__, "caph_rights_limit(): %s",
+		    strerror(errno));
+		(void)close(sock);
+		return (-1);
+	}
+	ifsock = sock;
+	return (0);
 }
 
 int
@@ -148,10 +164,9 @@ interface_up(char *name)
 	}
 	close(s);
 
-	llflag = get_llflag(name);
-	if (llflag < 0) {
+	if (cap_llflags_get(capllflags, name, &llflag) != 0) {
 		warnmsg(LOG_WARNING, __func__,
-		    "get_llflag() failed, anyway I'll try");
+		    "cap_llflags_get() failed, anyway I'll try");
 		return (0);
 	}
 
@@ -247,7 +262,7 @@ lladdropt_length(struct sockaddr_dl *sdl)
 {
 	switch (sdl->sdl_type) {
 	case IFT_ETHER:
-	case IFT_IEEE80211:
+	case IFT_L2VLAN:
 		return (ROUNDUP8(ETHER_ADDR_LEN + 2));
 	default:
 		return (0);
@@ -263,7 +278,7 @@ lladdropt_fill(struct sockaddr_dl *sdl, struct nd_opt_hdr *ndopt)
 
 	switch (sdl->sdl_type) {
 	case IFT_ETHER:
-	case IFT_IEEE80211:
+	case IFT_L2VLAN:
 		ndopt->nd_opt_len = (ROUNDUP8(ETHER_ADDR_LEN + 2)) >> 3;
 		addr = (char *)(ndopt + 1);
 		memcpy(addr, LLADDR(sdl), ETHER_ADDR_LEN);
@@ -273,8 +288,6 @@ lladdropt_fill(struct sockaddr_dl *sdl, struct nd_opt_hdr *ndopt)
 		    "unsupported link type(%d)", sdl->sdl_type);
 		exit(1);
 	}
-
-	return;
 }
 
 struct sockaddr_dl *
@@ -316,7 +329,7 @@ if_nametosdl(char *name)
 			}
 		}
 	}
-	if (next == lim) {
+	if (next >= lim) {
 		/* search failed */
 		free(buf);
 		return (NULL);
@@ -331,89 +344,6 @@ if_nametosdl(char *name)
 	free(buf);
 	return (ret_sdl);
 }
-
-int
-getinet6sysctl(int code)
-{
-	int mib[] = { CTL_NET, PF_INET6, IPPROTO_IPV6, 0 };
-	int value;
-	size_t size;
-
-	mib[3] = code;
-	size = sizeof(value);
-	if (sysctl(mib, nitems(mib), &value, &size, NULL, 0) < 0)
-		return (-1);
-	else
-		return (value);
-}
-
-int
-setinet6sysctl(int code, int newval)
-{
-	int mib[] = { CTL_NET, PF_INET6, IPPROTO_IPV6, 0 };
-	int value;
-	size_t size;
-
-	mib[3] = code;
-	size = sizeof(value);
-	if (sysctl(mib, nitems(mib), &value, &size,
-	    &newval, sizeof(newval)) < 0)
-		return (-1);
-	else
-		return (value);
-}
-
-/*------------------------------------------------------------*/
-
-/* get ia6_flags for link-local addr on if.  returns -1 on error. */
-static int
-get_llflag(const char *name)
-{
-	struct ifaddrs *ifap, *ifa;
-	struct in6_ifreq ifr6;
-	struct sockaddr_in6 *sin6;
-	int s;
-
-	if ((s = socket(PF_INET6, SOCK_DGRAM, 0)) < 0) {
-		warnmsg(LOG_ERR, __func__, "socket(SOCK_DGRAM): %s",
-		    strerror(errno));
-		exit(1);
-	}
-	if (getifaddrs(&ifap) != 0) {
-		warnmsg(LOG_ERR, __func__, "getifaddrs: %s",
-		    strerror(errno));
-		exit(1);
-	}
-
-	for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
-		if (strlen(ifa->ifa_name) != strlen(name) ||
-		    strncmp(ifa->ifa_name, name, strlen(name)) != 0)
-			continue;
-		if (ifa->ifa_addr->sa_family != AF_INET6)
-			continue;
-		sin6 = (struct sockaddr_in6 *)(void *)ifa->ifa_addr;
-		if (!IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr))
-			continue;
-
-		memset(&ifr6, 0, sizeof(ifr6));
-		strlcpy(ifr6.ifr_name, name, sizeof(ifr6.ifr_name));
-		memcpy(&ifr6.ifr_ifru.ifru_addr, sin6, sin6->sin6_len);
-		if (ioctl(s, SIOCGIFAFLAG_IN6, &ifr6) < 0) {
-			warnmsg(LOG_ERR, __func__,
-			    "ioctl(SIOCGIFAFLAG_IN6): %s", strerror(errno));
-			exit(1);
-		}
-
-		freeifaddrs(ifap);
-		close(s);
-		return (ifr6.ifr_ifru.ifru_flags6);
-	}
-
-	freeifaddrs(ifap);
-	close(s);
-	return (-1);
-}
-
 
 static void
 get_rtaddrs(int addrs, struct sockaddr *sa, struct sockaddr **rti_info)

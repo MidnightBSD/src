@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2006 Kip Macy
  * Copyright (c) 2015 Wei Liu <wei.liu2@citrix.com>
  * All rights reserved.
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/xen/netfront/netfront.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -168,7 +170,7 @@ struct netfront_rxq {
 	xen_intr_handle_t	xen_intr_handle;
 
 	grant_ref_t 		gref_head;
-	grant_ref_t 		grant_ref[NET_TX_RING_SIZE + 1];
+	grant_ref_t 		grant_ref[NET_RX_RING_SIZE + 1];
 
 	struct mbuf		*mbufs[NET_RX_RING_SIZE + 1];
 
@@ -942,7 +944,7 @@ netfront_send_fake_arp(device_t dev, struct netfront_info *info)
 	struct ifaddr *ifa;
 
 	ifp = info->xn_ifp;
-	TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
+	CK_STAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
 		if (ifa->ifa_addr->sa_family == AF_INET) {
 			arp_ifinit(ifp, ifa);
 		}
@@ -959,6 +961,8 @@ netfront_backend_changed(device_t dev, XenbusState newstate)
 	struct netfront_info *sc = device_get_softc(dev);
 
 	DPRINTK("newstate=%d\n", newstate);
+
+	CURVNET_SET(sc->xn_ifp->if_vnet);
 
 	switch (newstate) {
 	case XenbusStateInitialising:
@@ -992,6 +996,8 @@ netfront_backend_changed(device_t dev, XenbusState newstate)
 #endif
 		break;
 	}
+
+	CURVNET_RESTORE();
 }
 
 /**

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2013-2014 Vincenzo Maffione
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 /*
- * $FreeBSD: stable/11/sys/dev/netmap/netmap_mbq.h 341477 2018-12-04 17:40:56Z vmaffione $
+ * $FreeBSD$
  */
 
 

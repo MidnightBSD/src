@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * SCSI Disk Emulator
  *
  * Copyright (c) 2002 Nate Lawson.
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/share/examples/scsi_target/scsi_target.c 255120 2013-09-01 13:01:59Z mav $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

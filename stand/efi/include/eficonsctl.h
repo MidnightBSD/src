@@ -29,7 +29,7 @@
  * Abstract: Abstraction of a Text mode or GOP/UGA screen
  */
 
-/* $FreeBSD: stable/11/stand/efi/include/eficonsctl.h 293724 2016-01-12 02:17:39Z smh $ */
+/* $FreeBSD$ */
 
 #ifndef _EFI_CONS_CTL_H
 #define _EFI_CONS_CTL_H

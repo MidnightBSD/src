@@ -1,5 +1,5 @@
 /*	$NetBSD: usbhid.c,v 1.14 2000/07/03 02:51:37 matt Exp $	*/
-/*	$FreeBSD: stable/11/usr.bin/usbhidctl/usbhid.c 351845 2019-09-05 09:35:41Z hselasky $ */
+/*	$FreeBSD$ */
 
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-NetBSD

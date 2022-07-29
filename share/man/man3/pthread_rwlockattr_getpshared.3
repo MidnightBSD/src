@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man3/pthread_rwlockattr_getpshared.3 338707 2018-09-17 02:51:08Z pfg $
+.\" $FreeBSD$
 .\"
 .Dd August 17, 2018
 .Dt PTHREAD_RWLOCKATTR_GETPSHARED 3
@@ -35,7 +35,9 @@
 .Sh SYNOPSIS
 .In pthread.h
 .Ft int
-.Fn pthread_rwlockattr_getpshared "const pthread_rwlockattr_t *restrict attr" "int *restrict pshared"
+.Fo pthread_rwlockattr_getpshared
+.Fa "const pthread_rwlockattr_t *restrict attr" "int *restrict pshared"
+.Fc
 .Sh DESCRIPTION
 The
 .Fn pthread_rwlockattr_getpshared

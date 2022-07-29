@@ -58,7 +58,7 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/subr_rman.c 300317 2016-05-20 17:57:47Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -94,6 +94,7 @@ struct resource_i {
 	rman_res_t	r_end;		/* index of the last entry (inclusive) */
 	u_int	r_flags;
 	void	*r_virtual;	/* virtual address of this resource */
+	void	*r_irq_cookie;	/* interrupt cookie for this (interrupt) resource */
 	device_t r_dev;	/* device which has allocated this resource */
 	struct rman *r_rm;	/* resource manager from whence this came */
 	int	r_rid;		/* optional rid for this resource. */
@@ -448,6 +449,8 @@ rman_reserve_resource_bound(struct rman *rm, rman_res_t start, rman_res_t end,
 	       "length %#jx, flags %x, device %s\n", rm->rm_descr, start, end,
 	       count, flags,
 	       dev == NULL ? "<null>" : device_get_nameunit(dev)));
+	KASSERT(count != 0, ("%s: attempted to allocate an empty range",
+	    __func__));
 	KASSERT((flags & RF_FIRSTSHARE) == 0,
 	    ("invalid flags %#x", flags));
 	new_rflags = (flags & ~RF_FIRSTSHARE) | RF_ALLOCATED;
@@ -523,7 +526,7 @@ rman_reserve_resource_bound(struct rman *rm, rman_res_t start, rman_res_t end,
 		DPRINTF(("truncated region: [%#jx, %#jx]; size %#jx (requested %#jx)\n",
 		       rstart, rend, (rend - rstart + 1), count));
 
-		if ((rend - rstart + 1) >= count) {
+		if ((rend - rstart) >= (count - 1)) {
 			DPRINTF(("candidate region: [%#jx, %#jx], size %#jx\n",
 			       rstart, rend, (rend - rstart + 1)));
 			if ((s->r_end - s->r_start + 1) == count) {
@@ -866,6 +869,20 @@ rman_get_virtual(struct resource *r)
 {
 
 	return (r->__r_i->r_virtual);
+}
+
+void
+rman_set_irq_cookie(struct resource *r, void *c)
+{
+
+	r->__r_i->r_irq_cookie = c;
+}
+
+void *
+rman_get_irq_cookie(struct resource *r)
+{
+
+	return (r->__r_i->r_irq_cookie);
 }
 
 void

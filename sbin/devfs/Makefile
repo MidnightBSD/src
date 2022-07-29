@@ -1,5 +1,8 @@
-# $FreeBSD: stable/11/sbin/devfs/Makefile 298107 2016-04-16 07:45:30Z gjb $
+# $FreeBSD$
 
+CONFS=	devfs.conf devfs.rules
+CONFSDIR_devfs.rules=	/etc/defaults
+CONFSMODE_devfs.rules=	600
 PACKAGE=runtime
 PROG=	devfs
 SRCS=	devfs.c rule.c

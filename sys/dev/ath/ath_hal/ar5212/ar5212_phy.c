@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5212/ar5212_phy.c 191022 2009-04-13 21:01:08Z sam $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -126,7 +128,6 @@ HAL_RATE_TABLE ar5212_11b_table = {
 /*  11 Mb */ {  AH_TRUE,  CCK,   11000,    0x18,    0x04, (0x80|22),   1 }
 	},
 };
-
 
 /* Venice TODO: roundUpRate() is broken when the rate table does not represent rates
  * in increasing order  e.g.  5.5, 11, 6, 9.    

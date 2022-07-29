@@ -37,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: stable/11/sys/netgraph/ng_socket.c 298431 2016-04-21 19:40:10Z pfg $
+ * $FreeBSD$
  * $Whistle: ng_socket.c,v 1.28 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -974,7 +974,7 @@ ngs_rcvmsg(node_p node, item_p item, hook_p lasthook)
 	/* Send it up to the socket. */
 	if (sbappendaddr_locked(&so->so_rcv, (struct sockaddr *)&addr, m,
 	    NULL) == 0) {
-		SOCKBUF_UNLOCK(&so->so_rcv);
+		soroverflow_locked(so);
 		TRAP_ERROR;
 		m_freem(m);
 		return (ENOBUFS);

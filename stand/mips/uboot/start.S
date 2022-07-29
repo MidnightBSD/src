@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/mips/uboot/start.S 296183 2016-02-29 07:47:04Z sgalabov $
+ * $FreeBSD$
  */
 
 #include <machine/asm.h>

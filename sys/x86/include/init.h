@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Roger Pau Monné <roger.pau@citrix.com>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/x86/include/init.h 272310 2014-09-30 16:46:45Z royger $
+ * $FreeBSD$
  */
 
 #ifndef __X86_INIT_H__
@@ -39,7 +41,7 @@ struct init_ops {
 	void	(*early_clock_source_init)(void);
 	void	(*early_delay)(int);
 	void	(*parse_memmap)(caddr_t, vm_paddr_t *, int *);
-	u_int	(*mp_bootaddress)(u_int);
+	void	(*mp_bootaddress)(vm_paddr_t *, unsigned int *);
 	int	(*start_all_aps)(void);
 	void	(*msi_init)(void);
 };

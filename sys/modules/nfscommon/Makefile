@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/nfscommon/Makefile 346463 2019-04-21 00:41:06Z rmacklem $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/fs/nfs
 KMOD=	nfscommon

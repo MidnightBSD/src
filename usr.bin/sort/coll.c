@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/sort/coll.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -332,8 +332,6 @@ find_field_end(const struct bwstring *s, struct key_specs *ks)
 	size_t f2, next_field_start, pos_end;
 	bool empty_field, empty_key;
 
-	pos_end = 0;
-	next_field_start = 0;
 	empty_field = false;
 	empty_key = false;
 	f2 = ks->f2;
@@ -829,7 +827,6 @@ numcoll_impl(struct key_value *kv1, struct key_value *kv2,
 	main1 = main2 = 0;
 	frac1 = frac2 = 0;
 
-	cmp_res = 0;
 	key1_read = key2_read = false;
 
 	if (debug_sort) {

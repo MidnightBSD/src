@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) Comtrol Corporation <support@comtrol.com>
  * All rights reserved.
  *
@@ -32,13 +34,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/rp/rp.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /* 
  * rp.c - for RocketPort FreeBSD
  */
-
-#include "opt_compat.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -674,7 +674,7 @@ static void rp_do_poll(void *arg)
 
 	rp = arg;
 	tp = rp->rp_tty;
-	tty_lock_assert(tp, MA_OWNED);
+	tty_assert_locked(tp);
 	ctl = rp->rp_ctlp;
 	CtlMask = ctl->ctlmask(ctl);
 	if (CtlMask & (1 << rp->rp_aiop)) {

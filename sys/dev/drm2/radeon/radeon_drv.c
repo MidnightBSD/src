@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon_drv.c 342969 2019-01-12 16:58:32Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/radeon/radeon_drm.h>
@@ -397,3 +397,5 @@ MODULE_DEPEND(radeonkms, iicbus, 1, 1, 1);
 MODULE_DEPEND(radeonkms, iic, 1, 1, 1);
 MODULE_DEPEND(radeonkms, iicbb, 1, 1, 1);
 MODULE_DEPEND(radeonkms, firmware, 1, 1, 1);
+MODULE_PNP_INFO("U32:vendor;U32:device;P:#;D:#", vgapci, radeonkms,
+    pciidlist, nitems(pciidlist) - 1);

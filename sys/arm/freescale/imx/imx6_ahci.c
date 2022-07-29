@@ -26,7 +26,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/imx/imx6_ahci.c 346525 2019-04-22 04:58:01Z ian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

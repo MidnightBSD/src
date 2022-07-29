@@ -29,9 +29,9 @@
 .\"
 .\" * Other names and brands may be claimed as the property of others.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/ixgbe.4 267938 2014-06-26 21:46:14Z bapt $
+.\" $FreeBSD$
 .\"
-.Dd December 19, 2010
+.Dd January 30, 2019
 .Dt IXGBE 4
 .Os
 .Sh NAME
@@ -39,9 +39,10 @@
 .Nd "Intel(R) 10Gb Ethernet driver for the FreeBSD operating system"
 .Sh SYNOPSIS
 To compile this driver into the kernel,
-place the following line in your
+place the following lines in your
 kernel configuration file:
 .Bd -ragged -offset indent
+.Cd "device iflib"
 .Cd "device ixgbe"
 .Ed
 .Pp

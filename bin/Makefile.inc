@@ -1,5 +1,5 @@
 #	@(#)Makefile.inc	8.1 (Berkeley) 5/31/93
-# $FreeBSD: stable/11/bin/Makefile.inc 265420 2014-05-06 04:22:01Z imp $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

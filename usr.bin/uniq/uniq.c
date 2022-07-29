@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -41,11 +43,12 @@ static const char copyright[] =
 static char sccsid[] = "@(#)uniq.c	8.3 (Berkeley) 5/4/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/11/usr.bin/uniq/uniq.c 335737 2018-06-27 20:55:49Z kevans $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/capsicum.h>
 
+#include <capsicum_helpers.h>
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
@@ -54,7 +57,6 @@ static const char rcsid[] =
 #include <locale.h>
 #include <nl_types.h>
 #include <stdint.h>
-#define _WITH_GETLINE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -63,11 +65,18 @@ static const char rcsid[] =
 #include <wchar.h>
 #include <wctype.h>
 
-static int cflag, dflag, uflag, iflag;
+static int Dflag, cflag, dflag, uflag, iflag;
 static int numchars, numfields, repeats;
+
+/* Dflag values */
+#define	DF_NONE		0
+#define	DF_NOSEP	1
+#define	DF_PRESEP	2
+#define	DF_POSTSEP	3
 
 static const struct option long_opts[] =
 {
+	{"all-repeated",optional_argument,	NULL, 'D'},
 	{"count",	no_argument,		NULL, 'c'},
 	{"repeated",	no_argument,		NULL, 'd'},
 	{"skip-fields",	required_argument,	NULL, 'f'},
@@ -85,17 +94,6 @@ static wchar_t	*skip(wchar_t *);
 static void	 obsolete(char *[]);
 static void	 usage(void);
 
-static void
-strerror_init(void)
-{
-
-	/*
-	 * Cache NLS data before entering capability mode.
-	 * XXXPJD: There should be strerror_init() and strsignal_init() in libc.
-	 */
-	(void)catopen("libc", NL_CAT_LOCALE);
-}
-
 int
 main (int argc, char *argv[])
 {
@@ -110,9 +108,19 @@ main (int argc, char *argv[])
 	(void) setlocale(LC_ALL, "");
 
 	obsolete(argv);
-	while ((ch = getopt_long(argc, argv, "+cdif:s:u", long_opts,
+	while ((ch = getopt_long(argc, argv, "+D::cdif:s:u", long_opts,
 	    NULL)) != -1)
 		switch (ch) {
+		case 'D':
+			if (optarg == NULL || strcasecmp(optarg, "none") == 0)
+				Dflag = DF_NOSEP;
+			else if (strcasecmp(optarg, "prepend") == 0)
+				Dflag = DF_PRESEP;
+			else if (strcasecmp(optarg, "separate") == 0)
+				Dflag = DF_POSTSEP;
+			else
+				usage();
+			break;
 		case 'c':
 			cflag = 1;
 			break;
@@ -152,14 +160,14 @@ main (int argc, char *argv[])
 	if (argc > 0 && strcmp(argv[0], "-") != 0)
 		ifp = file(ifn = argv[0], "r");
 	cap_rights_init(&rights, CAP_FSTAT, CAP_READ);
-	if (cap_rights_limit(fileno(ifp), &rights) < 0 && errno != ENOSYS)
+	if (caph_rights_limit(fileno(ifp), &rights) < 0)
 		err(1, "unable to limit rights for %s", ifn);
 	cap_rights_init(&rights, CAP_FSTAT, CAP_WRITE);
 	if (argc > 1)
 		ofp = file(argv[1], "w");
 	else
 		cap_rights_set(&rights, CAP_IOCTL);
-	if (cap_rights_limit(fileno(ofp), &rights) < 0 && errno != ENOSYS) {
+	if (caph_rights_limit(fileno(ofp), &rights) < 0) {
 		err(1, "unable to limit rights for %s",
 		    argc > 1 ? argv[1] : "stdout");
 	}
@@ -168,15 +176,14 @@ main (int argc, char *argv[])
 
 		cmd = TIOCGETA; /* required by isatty(3) in printf(3) */
 
-		if (cap_ioctls_limit(fileno(ofp), &cmd, 1) < 0 &&
-		    errno != ENOSYS) {
+		if (caph_ioctls_limit(fileno(ofp), &cmd, 1) < 0) {
 			err(1, "unable to limit ioctls for %s",
 			    argc > 1 ? argv[1] : "stdout");
 		}
 	}
 
-	strerror_init();
-	if (cap_enter() < 0 && errno != ENOSYS)
+	caph_cache_catpages();
+	if (caph_enter() < 0)
 		err(1, "unable to enter capability mode");
 
 	prevbuflen = thisbuflen = 0;
@@ -204,7 +211,10 @@ main (int argc, char *argv[])
 
 		if (comp) {
 			/* If different, print; set previous to new value. */
-			show(ofp, prevline);
+			if (Dflag == DF_POSTSEP && repeats > 0)
+				fputc('\n', ofp);
+			if (!Dflag)
+				show(ofp, prevline);
 			p = prevline;
 			b1 = prevbuflen;
 			prevline = thisline;
@@ -216,12 +226,22 @@ main (int argc, char *argv[])
 			thisbuflen = b1;
 			tthis = NULL;
 			repeats = 0;
-		} else
+		} else {
+			if (Dflag) {
+				if (repeats == 0) {
+					if (Dflag == DF_PRESEP)
+						fputc('\n', ofp);
+					show(ofp, prevline);
+				}
+				show(ofp, thisline);
+			}
 			++repeats;
+		}
 	}
 	if (ferror(ifp))
 		err(1, "%s", ifn);
-	show(ofp, prevline);
+	if (!Dflag)
+		show(ofp, prevline);
 	exit(0);
 }
 
@@ -286,7 +306,7 @@ static void
 show(FILE *ofp, const char *str)
 {
 
-	if ((dflag && repeats == 0) || (uflag && repeats > 0))
+	if ((!Dflag && dflag && repeats == 0) || (uflag && repeats > 0))
 		return;
 	if (cflag)
 		(void)fprintf(ofp, "%4d %s", repeats + 1, str);
@@ -353,6 +373,6 @@ static void
 usage(void)
 {
 	(void)fprintf(stderr,
-"usage: uniq [-c] [-d | -u] [-i] [-f fields] [-s chars] [input [output]]\n");
+"usage: uniq [-c | -d | -D | -u] [-i] [-f fields] [-s chars] [input [output]]\n");
 	exit(1);
 }

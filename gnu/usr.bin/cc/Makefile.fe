@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/gnu/usr.bin/cc/Makefile.fe 216127 2010-12-02 17:36:47Z nwhitehorn $
+# $FreeBSD$
 
 #	Front-end-only bits
 

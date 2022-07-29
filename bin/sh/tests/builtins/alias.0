@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/builtins/alias.0 190285 2009-03-22 21:12:00Z stefanf $
+# $FreeBSD$
 set -e
 
 unalias -a

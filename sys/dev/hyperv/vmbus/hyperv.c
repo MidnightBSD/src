@@ -30,7 +30,7 @@
  * Implements low-level interactions with Hyper-V/Azure
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/hyperv/vmbus/hyperv.c 332068 2018-04-05 12:59:50Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -264,8 +264,7 @@ SYSINIT(hyperv_initialize, SI_SUB_HYPERVISOR, SI_ORDER_FIRST, hyperv_init,
 static void
 hypercall_memfree(void)
 {
-	kmem_free(kernel_arena, (vm_offset_t)hypercall_context.hc_addr,
-	    PAGE_SIZE);
+	kmem_free((vm_offset_t)hypercall_context.hc_addr, PAGE_SIZE);
 	hypercall_context.hc_addr = NULL;
 }
 
@@ -283,7 +282,7 @@ hypercall_create(void *arg __unused)
 	 *   the NX bit.
 	 * - Assume kmem_malloc() returns properly aligned memory.
 	 */
-	hypercall_context.hc_addr = (void *)kmem_malloc(kernel_arena, PAGE_SIZE,
+	hypercall_context.hc_addr = (void *)kmem_malloc(PAGE_SIZE, M_EXEC |
 	    M_WAITOK);
 	hypercall_context.hc_paddr = vtophys(hypercall_context.hc_addr);
 

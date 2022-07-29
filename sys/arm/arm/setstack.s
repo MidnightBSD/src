@@ -48,9 +48,10 @@
  *
  */
 
-#include <machine/armreg.h>
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/arm/setstack.s 269390 2014-08-01 18:24:44Z ian $");
+__FBSDID("$FreeBSD$");
+
+#include <machine/armreg.h>
 
 /* To set the stack pointer for a particular mode we must switch
  * to that mode update the banked r13 and then switch back.

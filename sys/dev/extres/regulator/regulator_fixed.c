@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/extres/regulator/regulator_fixed.c 337705 2018-08-13 08:47:54Z mmel $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_platform.h"
 #include <sys/param.h>
@@ -73,6 +73,7 @@ static int regnode_fixed_enable(struct regnode *regnode, bool enable,
     int *udelay);
 static int regnode_fixed_status(struct regnode *regnode, int *status);
 static int regnode_fixed_stop(struct regnode *regnode, int *udelay);
+static int regnode_fixed_get_voltage(struct regnode *regnode, int *uvolt);
 
 static regnode_method_t regnode_fixed_methods[] = {
 	/* Regulator interface */
@@ -80,6 +81,8 @@ static regnode_method_t regnode_fixed_methods[] = {
 	REGNODEMETHOD(regnode_enable,		regnode_fixed_enable),
 	REGNODEMETHOD(regnode_status,		regnode_fixed_status),
 	REGNODEMETHOD(regnode_stop,		regnode_fixed_stop),
+	REGNODEMETHOD(regnode_get_voltage,	regnode_fixed_get_voltage),
+	REGNODEMETHOD(regnode_check_voltage,	regnode_method_check_voltage),
 	REGNODEMETHOD_END
 };
 DEFINE_CLASS_1(regnode_fixed, regnode_fixed_class, regnode_fixed_methods,
@@ -145,7 +148,6 @@ regnode_fixed_init(struct regnode *regnode)
 	struct regnode_fixed_sc *sc;
 	struct gpiobus_pin *pin;
 	uint32_t flags;
-	bool enable;
 	int rv;
 
 	sc = regnode_get_softc(regnode);
@@ -158,14 +160,15 @@ regnode_fixed_init(struct regnode *regnode)
 	flags = GPIO_PIN_OUTPUT;
 	if (sc->gpio_open_drain)
 		flags |= GPIO_PIN_OPENDRAIN;
-	enable = sc->param->boot_on || sc->param->always_on;
-	if (!sc->param->enable_active_high)
-		enable = !enable;
-	rv = GPIO_PIN_SET(pin->dev, pin->pin, enable);
-	if (rv != 0) {
-		device_printf(dev, "Cannot set GPIO pin: %d\n", pin->pin);
-		return (rv);
+	if (sc->param->boot_on || sc->param->always_on) {
+		rv = GPIO_PIN_SET(pin->dev, pin->pin, sc->param->enable_active_high);
+		if (rv != 0) {
+			device_printf(dev, "Cannot set GPIO pin: %d\n",
+			    pin->pin);
+			return (rv);
+		}
 	}
+
 	rv = GPIO_PIN_SETFLAGS(pin->dev, pin->pin, flags);
 	if (rv != 0) {
 		device_printf(dev, "Cannot configure GPIO pin: %d\n", pin->pin);
@@ -279,6 +282,16 @@ regnode_fixed_status(struct regnode *regnode, int *status)
 	return (rv);
 }
 
+static int
+regnode_fixed_get_voltage(struct regnode *regnode, int *uvolt)
+{
+	struct regnode_fixed_sc *sc;
+
+	sc = regnode_get_softc(regnode);
+	*uvolt = sc->param->min_uvolt;
+	return (0);
+}
+
 int
 regnode_fixed_register(device_t dev, struct regnode_fixed_init_def *init_def)
 {
@@ -381,6 +394,10 @@ regfix_parse_fdt(struct regfix_softc * sc)
 		return(rv);
 	}
 
+	if (init_def->std_param.min_uvolt != init_def->std_param.max_uvolt) {
+		device_printf(sc->dev, "min_uvolt != max_uvolt\n");
+		return (ENXIO);
+	}
 	/* Fixed regulator uses 'startup-delay-us' property for enable_delay */
 	rv = OF_getencprop(node, "startup-delay-us",
 	   &init_def->std_param.enable_delay,

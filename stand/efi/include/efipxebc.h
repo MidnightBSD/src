@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/include/efipxebc.h 293724 2016-01-12 02:17:39Z smh $ */
+/* $FreeBSD$ */
 #ifndef _EFIPXEBC_H
 #define _EFIPXEBC_H
 

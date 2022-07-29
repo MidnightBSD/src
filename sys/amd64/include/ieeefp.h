@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2003 Peter Wemm.
  * Copyright (c) 1990 Andrew Moore, Talke Studio
  * All rights reserved.
@@ -32,7 +34,7 @@
  * SUCH DAMAGE.
  *
  * 	from: @(#) ieeefp.h 	1.0 (Berkeley) 9/23/93
- * $FreeBSD: stable/11/sys/amd64/include/ieeefp.h 334771 2018-06-07 09:03:42Z dim $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_IEEEFP_H_

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Olivier Houchard.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +26,7 @@
 
 
 /*
- * $FreeBSD: stable/11/sys/arm/ti/ti_smc.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef TI_SMC_H_

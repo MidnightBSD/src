@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2003 Bruce M. Simpson <bms@spc.org>
  * Copyright (c) 2016 Andrey V. Elsukov <ae@FreeBSD.org>
  *
@@ -28,7 +30,7 @@
 
 /* TCP MD5 Signature Option (RFC2385) */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netipsec/xform_tcp.c 315514 2017-03-18 22:04:20Z ae $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -78,22 +80,23 @@ tcp_ipsec_pcbctl(struct inpcb *inp, struct sockopt *sopt)
 	struct tcpcb *tp;
 	int error, optval;
 
-	INP_WLOCK_ASSERT(inp);
 	if (sopt->sopt_name != TCP_MD5SIG) {
-		INP_WUNLOCK(inp);
 		return (ENOPROTOOPT);
 	}
 
-	tp = intotcpcb(inp);
 	if (sopt->sopt_dir == SOPT_GET) {
+		INP_RLOCK(inp);
+		if (inp->inp_flags & (INP_TIMEWAIT | INP_DROPPED)) {
+			INP_RUNLOCK(inp);
+			return (ECONNRESET);
+		}
+		tp = intotcpcb(inp);
 		optval = (tp->t_flags & TF_SIGNATURE) ? 1 : 0;
-		INP_WUNLOCK(inp);
+		INP_RUNLOCK(inp);
 
 		/* On success return with released INP_WLOCK */
 		return (sooptcopyout(sopt, &optval, sizeof(optval)));
 	}
-
-	INP_WUNLOCK(inp);
 
 	error = sooptcopyin(sopt, &optval, sizeof(optval), sizeof(optval));
 	if (error != 0)
@@ -105,12 +108,13 @@ tcp_ipsec_pcbctl(struct inpcb *inp, struct sockopt *sopt)
 		INP_WUNLOCK(inp);
 		return (ECONNRESET);
 	}
+	tp = intotcpcb(inp);
 	if (optval > 0)
 		tp->t_flags |= TF_SIGNATURE;
 	else
 		tp->t_flags &= ~TF_SIGNATURE;
 
-	/* On success return with acquired INP_WLOCK */
+	INP_WUNLOCK(inp);
 	return (error);
 }
 

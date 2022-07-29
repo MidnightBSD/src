@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/ttm/ttm_bo_vm.c 318847 2017-05-25 01:15:53Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_vm.h"
 
@@ -115,7 +115,7 @@ ttm_bo_vm_fault(vm_object_t vm_obj, vm_ooffset_t offset,
 	vm_object_pip_add(vm_obj, 1);
 	if (*mres != NULL) {
 		vm_page_lock(*mres);
-		vm_page_remove(*mres);
+		(void)vm_page_remove(*mres);
 		vm_page_unlock(*mres);
 	}
 retry:
@@ -246,7 +246,7 @@ reserve:
 	if (m1 == NULL) {
 		if (vm_page_insert(m, vm_obj, OFF_TO_IDX(offset))) {
 			VM_OBJECT_WUNLOCK(vm_obj);
-			VM_WAIT;
+			vm_wait(vm_obj);
 			VM_OBJECT_WLOCK(vm_obj);
 			ttm_mem_io_unlock(man);
 			ttm_bo_unreserve(bo);

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1988, 1990, 1993, 1994, 1995
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/tcp_reass.c 344511 2019-02-25 10:38:37Z tuexen $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -274,7 +276,7 @@ tcp_reass_global_init(void)
 	TUNABLE_INT_FETCH("net.inet.tcp.reass.maxsegments",
 	    &tcp_reass_maxseg);
 	tcp_reass_zone = uma_zcreate("tcpreass", sizeof (struct tseg_qent),
-	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, UMA_ZONE_NOFREE);
+	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, 0);
 	/* Set the zone limit and read back the effective value. */
 	tcp_reass_maxseg = uma_zone_set_max(tcp_reass_zone,
 	    tcp_reass_maxseg);
@@ -528,7 +530,6 @@ tcp_reass(struct tcpcb *tp, struct tcphdr *th, tcp_seq *seq_start,
 	struct tseg_qent *p = NULL;
 	struct tseg_qent *nq = NULL;
 	struct tseg_qent *te = NULL;
-	struct tseg_qent tqs;
 	struct mbuf *mlast = NULL;
 	struct sockbuf *sb;
 	struct socket *so = tp->t_inpcb->inp_socket;
@@ -1083,8 +1084,7 @@ present:
 		KASSERT(tp->t_segqmbuflen >= q->tqe_mbuf_cnt,
 			("tp:%p seg queue goes negative", tp));
 		tp->t_segqmbuflen -= q->tqe_mbuf_cnt;
-		if (q != &tqs) 
-			uma_zfree(tcp_reass_zone, q);
+		uma_zfree(tcp_reass_zone, q);
 		tp->t_segqlen--;
 		q = nq;
 	} while (q && q->tqe_start == tp->rcv_nxt);

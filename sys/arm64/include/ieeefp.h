@@ -1,7 +1,7 @@
 /*-
  * Based on sys/sparc64/include/ieeefp.h
  * Public domain.
- * $FreeBSD: stable/11/sys/arm64/include/ieeefp.h 284751 2015-06-24 12:19:49Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_IEEEFP_H_

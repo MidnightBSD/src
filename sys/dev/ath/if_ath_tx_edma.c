@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Adrian Chadd <adrian@FreeBSD.org>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ath/if_ath_tx_edma.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for the Atheros Wireless LAN controller.
@@ -178,6 +180,13 @@ ath_tx_edma_push_staging_list(struct ath_softc *sc, struct ath_txq *txq,
 
 	ATH_TXQ_LOCK_ASSERT(txq);
 
+	DPRINTF(sc, ATH_DEBUG_XMIT | ATH_DEBUG_TX_PROC,
+	    "%s: called; TXQ=%d, fifo.depth=%d, axq_q empty=%d\n",
+	    __func__,
+	    txq->axq_qnum,
+	    txq->axq_fifo_depth,
+	    !! (TAILQ_EMPTY(&txq->axq_q)));
+
 	/*
 	 * Don't bother doing any work if it's full.
 	 */
@@ -268,7 +277,7 @@ ath_tx_edma_push_staging_list(struct ath_softc *sc, struct ath_txq *txq,
 
 	/* Bump FIFO queue */
 	txq->axq_fifo_depth++;
-	DPRINTF(sc, ATH_DEBUG_XMIT,
+	DPRINTF(sc, ATH_DEBUG_XMIT | ATH_DEBUG_TX_PROC,
 	    "%s: queued %d packets; depth=%d, fifo depth=%d\n",
 	    __func__, sqdepth, txq->fifo.axq_depth, txq->axq_fifo_depth);
 
@@ -296,16 +305,21 @@ ath_edma_tx_fifo_fill(struct ath_softc *sc, struct ath_txq *txq)
 
 	ATH_TXQ_LOCK_ASSERT(txq);
 
-	DPRINTF(sc, ATH_DEBUG_TX_PROC, "%s: Q%d: called\n",
+	DPRINTF(sc, ATH_DEBUG_TX_PROC,
+	    "%s: Q%d: called; fifo.depth=%d, fifo depth=%d, depth=%d, aggr_depth=%d\n",
 	    __func__,
-	    txq->axq_qnum);
+	    txq->axq_qnum,
+	    txq->fifo.axq_depth,
+	    txq->axq_fifo_depth,
+	    txq->axq_depth,
+	    txq->axq_aggr_depth);
 
 	/*
-	 * For now, push up to 4 frames per TX FIFO slot.
+	 * For now, push up to 32 frames per TX FIFO slot.
 	 * If more are in the hardware queue then they'll
 	 * get populated when we try to send another frame
 	 * or complete a frame - so at most there'll be
-	 * 32 non-AMPDU frames per TXQ.
+	 * 32 non-AMPDU frames per node/TID anyway.
 	 *
 	 * Note that the hardware staging queue will limit
 	 * how many frames in total we will have pushed into
@@ -640,7 +654,7 @@ ath_edma_setup_txfifo(struct ath_softc *sc, int qnum)
 	 * Set initial "empty" state.
 	 */
 	te->m_fifo_head = te->m_fifo_tail = te->m_fifo_depth = 0;
-	
+
 	return (0);
 }
 
@@ -750,11 +764,29 @@ ath_edma_tx_proc(void *arg, int npending)
 {
 	struct ath_softc *sc = (struct ath_softc *) arg;
 
+	ATH_PCU_LOCK(sc);
+	sc->sc_txproc_cnt++;
+	ATH_PCU_UNLOCK(sc);
+
+	ATH_LOCK(sc);
+	ath_power_set_power_state(sc, HAL_PM_AWAKE);
+	ATH_UNLOCK(sc);
+
 #if 0
 	DPRINTF(sc, ATH_DEBUG_TX_PROC, "%s: called, npending=%d\n",
 	    __func__, npending);
 #endif
 	ath_edma_tx_processq(sc, 1);
+
+	ATH_PCU_LOCK(sc);
+	sc->sc_txproc_cnt--;
+	ATH_PCU_UNLOCK(sc);
+
+	ATH_LOCK(sc);
+	ath_power_restore_power_state(sc);
+	ATH_UNLOCK(sc);
+
+	ath_tx_kick(sc);
 }
 
 /*
@@ -778,6 +810,8 @@ ath_edma_tx_processq(struct ath_softc *sc, int dosched)
 	uint32_t txstatus[32];
 #endif
 
+	DPRINTF(sc, ATH_DEBUG_TX_PROC, "%s: called\n", __func__);
+
 	for (idx = 0; ; idx++) {
 		bzero(&ts, sizeof(ts));
 
@@ -788,8 +822,12 @@ ath_edma_tx_processq(struct ath_softc *sc, int dosched)
 		status = ath_hal_txprocdesc(ah, NULL, (void *) &ts);
 		ATH_TXSTATUS_UNLOCK(sc);
 
-		if (status == HAL_EINPROGRESS)
+		if (status == HAL_EINPROGRESS) {
+			DPRINTF(sc, ATH_DEBUG_TX_PROC,
+			    "%s: (%d): EINPROGRESS\n",
+			    __func__, idx);
 			break;
+		}
 
 #ifdef	ATH_DEBUG
 		if (sc->sc_debug & ATH_DEBUG_TX_PROC)
@@ -811,10 +849,11 @@ ath_edma_tx_processq(struct ath_softc *sc, int dosched)
 		}
 
 #if defined(ATH_DEBUG_ALQ) && defined(ATH_DEBUG)
-		if (if_ath_alq_checkdebug(&sc->sc_alq, ATH_ALQ_EDMA_TXSTATUS))
+		if (if_ath_alq_checkdebug(&sc->sc_alq, ATH_ALQ_EDMA_TXSTATUS)) {
 			if_ath_alq_post(&sc->sc_alq, ATH_ALQ_EDMA_TXSTATUS,
 			    sc->sc_tx_statuslen,
 			    (char *) txstatus);
+		}
 #endif /* ATH_DEBUG_ALQ */
 
 		/*
@@ -972,6 +1011,8 @@ ath_edma_tx_processq(struct ath_softc *sc, int dosched)
 			sc->sc_stats.ast_tx_rssi = ts.ts_rssi;
 			ATH_RSSI_LPF(sc->sc_halstats.ns_avgtxrssi,
 			    ts.ts_rssi);
+			ATH_RSSI_LPF(ATH_NODE(ni)->an_node_stats.ns_avgtxrssi,
+			    ts.ts_rssi);
 		}
 
 		/* Handle frame completion and rate control update */
@@ -991,6 +1032,10 @@ ath_edma_tx_processq(struct ath_softc *sc, int dosched)
 		/* Attempt to schedule more hardware frames to the TX FIFO */
 		for (i = 0; i < HAL_NUM_TX_QUEUES; i++) {
 			if (ATH_TXQ_SETUP(sc, i)) {
+				ATH_TX_LOCK(sc);
+				ath_txq_sched(sc, &sc->sc_txq[i]);
+				ATH_TX_UNLOCK(sc);
+
 				ATH_TXQ_LOCK(&sc->sc_txq[i]);
 				ath_edma_tx_fifo_fill(sc, &sc->sc_txq[i]);
 				ATH_TXQ_UNLOCK(&sc->sc_txq[i]);
@@ -999,6 +1044,8 @@ ath_edma_tx_processq(struct ath_softc *sc, int dosched)
 		/* Kick software scheduler */
 		ath_tx_swq_kick(sc);
 	}
+
+	DPRINTF(sc, ATH_DEBUG_TX_PROC, "%s: end\n", __func__);
 }
 
 static void

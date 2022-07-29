@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/kshim/bsd_kernel.h 329183 2018-02-12 20:51:28Z kevans $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2011 Hans Petter Selasky. All rights reserved.
  *
@@ -205,9 +205,17 @@ typedef unsigned int uint32_t;
 #define	_INT32_T_DECLARED
 typedef signed int int32_t;
 #define	_UINT64_T_DECLARED
+#ifndef __LP64__
 typedef unsigned long long uint64_t;
-#define	_INT16_T_DECLARED
+#else
+typedef unsigned long uint64_t;
+#endif
+#define	_INT64_T_DECLARED
+#ifndef __LP64__
 typedef signed long long int64_t;
+#else
+typedef signed long int64_t;
+#endif
 
 typedef uint16_t uid_t;
 typedef uint16_t gid_t;
@@ -248,7 +256,12 @@ typedef uint8_t *bus_space_handle_t;
 typedef int bus_dma_filter_t(void *, bus_addr_t);
 typedef void bus_dma_lock_t(void *, bus_dma_lock_op_t);
 
-typedef uint32_t bool;
+#ifndef __bool_true_false_are_defined
+#define	__bool_true_false_are_defined
+typedef _Bool bool;
+#define	true 1
+#define	false 0
+#endif
 
 /* SYSINIT API */
 

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bhyve/fwctl.c 341486 2018-12-04 18:32:50Z gordon $
+ * $FreeBSD$
  */
 
 /*
@@ -33,7 +33,7 @@
  * but with a request/response messaging protocol.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/fwctl.c 341486 2018-12-04 18:32:50Z gordon $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>

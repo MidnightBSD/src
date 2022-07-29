@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/gnu/usr.bin/binutils/objdump/Makefile 270168 2014-08-19 15:04:32Z bdrewery $
+# $FreeBSD$
 
 .include "../Makefile.inc0"
 
@@ -7,13 +7,13 @@
 PROG=	objdump
 SRCS=	objdump.c prdbg.c
 CFLAGS+= -D_GNU_SOURCE
-CFLAGS+= -I${.CURDIR}/${RELTOP}/libbinutils
+CFLAGS+= -I${.CURDIR}/${GNURELTOP}/libbinutils
 CFLAGS+= -I${SRCDIR}/binutils
 CFLAGS+= -DBFD_VERSION_STRING=\"${VERSION}\"
-DPADD=	${RELTOP}/libbinutils/libbinutils.a
-DPADD+=	${RELTOP}/libopcodes/libopcodes.a
-DPADD+=	${RELTOP}/libbfd/libbfd.a
-DPADD+=	${RELTOP}/libiberty/libiberty.a
+DPADD=	${GNURELTOP}/libbinutils/libbinutils${PIE_SUFFIX}.a
+DPADD+=	${GNURELTOP}/libopcodes/libopcodes${PIE_SUFFIX}.a
+DPADD+=	${GNURELTOP}/libbfd/libbfd${PIE_SUFFIX}.a
+DPADD+=	${GNURELTOP}/libiberty/libiberty${PIE_SUFFIX}.a
 LDADD=	${DPADD}
 
 .include <bsd.prog.mk>

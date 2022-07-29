@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mmc/mmc_ioctl.h 322119 2017-08-06 16:07:25Z marius $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_MMC_MMC_IOCTL_H_

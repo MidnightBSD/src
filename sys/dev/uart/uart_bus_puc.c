@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Marcel Moolenaar.  All rights reserved.
  * Copyright (c) 2002 JF Hay.  All rights reserved.
  * Copyright (c) 2001 M. Warner Losh.  All rights reserved.
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_bus_puc.c 340145 2018-11-04 23:28:56Z mmacy $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

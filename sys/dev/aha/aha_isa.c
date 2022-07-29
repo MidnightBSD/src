@@ -3,6 +3,8 @@
  *      Adaptec 154x.
  */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999-2003 M. Warner Losh
  * All rights reserved.
  *
@@ -55,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/aha/aha_isa.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -360,3 +362,4 @@ static devclass_t aha_devclass;
 
 DRIVER_MODULE(aha, isa, aha_isa_driver, aha_devclass, 0, 0);
 MODULE_DEPEND(aha, isa, 1, 1, 1);
+ISA_PNP_INFO(aha_ids);

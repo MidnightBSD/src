@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2012-2014 Matteo Landi
  * Copyright (C) 2012-2016 Luigi Rizzo
  * Copyright (C) 2012-2016 Giuseppe Lettieri
@@ -27,7 +29,7 @@
  */
 
 /*
- * $FreeBSD: stable/11/sys/dev/netmap/netmap_mem2.h 342033 2018-12-13 10:13:29Z vmaffione $
+ * $FreeBSD$
  *
  * (New) memory allocator for netmap
  */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2017 The FreeBSD Foundation
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/cxa_thread_atexit.c 312590 2017-01-21 12:30:07Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "libc_private.h"
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/regression/sockets/unix_sendtorace/unix_sendtorace.c 281401 2015-04-11 03:54:43Z ngie $
+ * $FreeBSD$
  */
 
 /*

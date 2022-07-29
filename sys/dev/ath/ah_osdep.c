@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ah_osdep.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -41,6 +43,7 @@
 #include <sys/pcpu.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
+#include <sys/conf.h>
 
 #include <machine/stdarg.h>
 
@@ -420,3 +423,33 @@ ath_hal_assert_failed(const char* filename, int lineno, const char *msg)
 	panic("ath_hal_assert");
 }
 #endif /* AH_ASSERT */
+
+static int
+ath_hal_modevent(module_t mod __unused, int type, void *data __unused)
+{
+	int error = 0;
+
+	switch (type) {
+	case MOD_LOAD:
+		printf("[ath_hal] loaded\n");
+		break;
+
+	case MOD_UNLOAD:
+		printf("[ath_hal] unloaded\n");
+		break;
+
+	case MOD_SHUTDOWN:
+		break;
+
+	default:
+		error = EOPNOTSUPP;
+		break;
+	}
+	return (error);
+}
+
+DEV_MODULE(ath_hal, ath_hal_modevent, NULL);
+MODULE_VERSION(ath_hal, 1);
+#if	defined(AH_DEBUG_ALQ)
+MODULE_DEPEND(ath_hal, alq, 1, 1, 1);
+#endif

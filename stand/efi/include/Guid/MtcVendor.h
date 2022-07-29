@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/include/Guid/MtcVendor.h 342742 2019-01-03 20:27:50Z tsoome $ */
+/* $FreeBSD$ */
 /** @file
   GUID is for MTC variable.
 

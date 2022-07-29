@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/cddl/lib/libdtrace/socket.d 323814 2017-09-20 16:31:06Z gnn $
+ * $FreeBSD$
  *
  * Translators and flags for the socket structure.  FreeBSD specific code.
  */

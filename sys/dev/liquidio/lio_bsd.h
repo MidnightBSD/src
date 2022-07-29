@@ -30,12 +30,13 @@
  *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: stable/11/sys/dev/liquidio/lio_bsd.h 325618 2017-11-09 19:52:56Z sbruno $*/
+/*$FreeBSD$*/
 
 #ifndef __LIO_BSD_H__
 #define __LIO_BSD_H__
 
 #include <sys/param.h>
+#include <sys/gsb_crc32.h>
 #include <sys/socket.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
@@ -52,6 +53,7 @@
 #include <net/if_vlan_var.h>
 #include <net/if_gif.h>
 
+#include <netinet/in.h>
 #include <netinet/tcp_lro.h>
 
 #include <sys/bus.h>

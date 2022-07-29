@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1996-2000 Whistle Communications, Inc.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/usb/misc/udbp.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /* Driver for arbitrary double bulk pipe devices.
  * The driver assumes that there will be the same driver on the other side.
@@ -259,6 +261,7 @@ static driver_t udbp_driver = {
 };
 
 static const STRUCT_USB_HOST_ID udbp_devs[] = {
+	{USB_VPI(USB_VENDOR_BELKIN, USB_PRODUCT_BELKIN_F5U258, 0)},
 	{USB_VPI(USB_VENDOR_NETCHIP, USB_PRODUCT_NETCHIP_TURBOCONNECT, 0)},
 	{USB_VPI(USB_VENDOR_NETCHIP, USB_PRODUCT_NETCHIP_GADGETZERO, 0)},
 	{USB_VPI(USB_VENDOR_PROLIFIC, USB_PRODUCT_PROLIFIC_PL2301, 0)},

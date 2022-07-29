@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/kref.h 329961 2018-02-25 10:25:47Z hselasky $
+ * $FreeBSD$
  */
 #ifndef _LINUX_KREF_H_
 #define _LINUX_KREF_H_
@@ -38,6 +38,7 @@
 #include <linux/compiler.h>
 #include <linux/kernel.h>
 #include <linux/mutex.h>
+#include <linux/refcount.h>
 
 #include <asm/atomic.h>
 
@@ -76,6 +77,20 @@ kref_put(struct kref *kref, void (*rel)(struct kref *kref))
 	}
 	return 0;
 }
+
+static inline int
+kref_put_lock(struct kref *kref, void (*rel)(struct kref *kref),
+    spinlock_t *lock)
+{
+
+	if (refcount_release(&kref->refcount.counter)) {
+		spin_lock(lock);
+		rel(kref);
+		return (1);
+	}
+	return (0);
+}
+
 
 static inline int
 kref_sub(struct kref *kref, unsigned int count,

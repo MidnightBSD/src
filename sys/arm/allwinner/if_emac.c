@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Ganbold Tsagaankhuu <ganbold@freebsd.org>
  * All rights reserved.
  *
@@ -23,13 +25,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/allwinner/if_emac.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /* A10/A20 EMAC driver */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/allwinner/if_emac.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -69,7 +71,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/allwinner/if_emac.c 331722 2018-03-29 02:5
 #include <net/bpf.h>
 #include <net/bpfdesc.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
@@ -169,6 +170,7 @@ emac_get_hwaddr(struct emac_softc *sc, uint8_t *hwaddr)
 {
 	uint32_t val0, val1, rnd;
 	u_char rootkey[16];
+	size_t rootkey_size;
 
 	/*
 	 * Try to get MAC address from running hardware.
@@ -192,7 +194,9 @@ emac_get_hwaddr(struct emac_softc *sc, uint8_t *hwaddr)
 		hwaddr[4] = (val0 >> 8) & 0xff;
 		hwaddr[5] = (val0 >> 0) & 0xff;
 	} else {
-		if (aw_sid_get_rootkey(rootkey) == 0) {
+		rootkey_size = sizeof(rootkey);
+		if (aw_sid_get_fuse(AW_SID_FUSE_ROOTKEY, rootkey,
+		    &rootkey_size) == 0) {
 			hwaddr[0] = 0x2;
 			hwaddr[1] = rootkey[3];
 			hwaddr[2] = rootkey[12];
@@ -239,7 +243,7 @@ emac_set_rx_mode(struct emac_softc *sc)
 		hashes[1] = 0xffffffff;
 	} else {
 		if_maddr_rlock(ifp);
-		TAILQ_FOREACH(ifma, &sc->emac_ifp->if_multiaddrs, ifma_link) {
+		CK_STAILQ_FOREACH(ifma, &sc->emac_ifp->if_multiaddrs, ifma_link) {
 			if (ifma->ifma_addr->sa_family != AF_LINK)
 				continue;
 			h = ether_crc32_be(LLADDR((struct sockaddr_dl *)
@@ -404,7 +408,7 @@ emac_rxeof(struct emac_softc *sc, int count)
 		m->m_len = m->m_pkthdr.len = len - ETHER_CRC_LEN;
 
 		/*
-		 * Emac controller needs strict aligment, so to avoid
+		 * Emac controller needs strict alignment, so to avoid
 		 * copying over an entire frame to align, we allocate
 		 * a new mbuf and copy ethernet header + IP header to
 		 * the new mbuf. The new mbuf is prepended into the

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5212/ar5212.h 290612 2015-11-09 15:59:42Z adrian $
+ * $FreeBSD$
  */
 #ifndef _ATH_AR5212_H_
 #define _ATH_AR5212_H_
@@ -537,7 +539,7 @@ extern	uint32_t ar5212GetRxDP(struct ath_hal *ath, HAL_RX_QUEUE);
 extern	void ar5212SetRxDP(struct ath_hal *ah, uint32_t rxdp, HAL_RX_QUEUE);
 extern	void ar5212EnableReceive(struct ath_hal *ah);
 extern	HAL_BOOL ar5212StopDmaReceive(struct ath_hal *ah);
-extern	void ar5212StartPcuReceive(struct ath_hal *ah);
+extern	void ar5212StartPcuReceive(struct ath_hal *ah, HAL_BOOL);
 extern	void ar5212StopPcuReceive(struct ath_hal *ah);
 extern	void ar5212SetMulticastFilter(struct ath_hal *ah,
 		uint32_t filter0, uint32_t filter1);

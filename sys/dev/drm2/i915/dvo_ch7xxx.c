@@ -27,7 +27,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/i915/dvo_ch7xxx.c 296548 2016-03-08 20:33:02Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #include "dvo.h"
 

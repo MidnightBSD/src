@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/ficl32/Makefile 329140 2018-02-11 20:58:00Z kevans $
+# $FreeBSD$
 
 DO32=1
 

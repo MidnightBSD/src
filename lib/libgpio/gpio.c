@@ -23,7 +23,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libgpio/gpio.c 298272 2016-04-19 15:18:31Z loos $
+ * $FreeBSD$
  */
 #include <stdio.h>
 #include <fcntl.h>

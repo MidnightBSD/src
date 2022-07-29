@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * 1. Redistributions of source code must retain the 
  * Copyright (c) 1997 Amancio Hasty, 1999 Roger Hardiman
  * All rights reserved.
@@ -63,7 +65,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bktr/bktr_core.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -92,7 +94,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/bktr/bktr_core.c 331722 2018-03-29 02:50:5
 #include "opt_bktr.h"		/* Include any kernel config options */
 
 #if (                                                            \
-       (defined(__MidnightBSD__))                                    \
+       (defined(__FreeBSD__))                                    \
     || (defined(__bsdi__))                                       \
     || (defined(__OpenBSD__))                                    \
     || (defined(__NetBSD__))                                     \
@@ -102,7 +104,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/bktr/bktr_core.c 331722 2018-03-29 02:50:5
 /*******************/
 /* *** FreeBSD *** */
 /*******************/
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -162,7 +164,7 @@ bktr_name(bktr_ptr_t bktr)
 }
 
 
-#endif  /* __MidnightBSD__ */
+#endif  /* __FreeBSD__ */
 
 
 /****************/
@@ -490,7 +492,7 @@ common_bktr_attach( bktr_ptr_t bktr, int unit, u_long pci_id, u_int rev )
                 buf = 0;
 #endif
 
-#if defined(__MidnightBSD__) || defined(__bsdi__)
+#if defined(__FreeBSD__) || defined(__bsdi__)
 
 /* If this is a module, check if there is any currently saved contiguous memory */
 #if defined(BKTR_FREEBSD_MODULE)
@@ -570,9 +572,9 @@ bktr_store_address(unit, BKTR_MEM_BUF,          buf);
  
 	/* using the pci device id and revision id */
 	/* and determine the card type            */
-	if (PCI_VENDOR(pci_id) == PCI_VENDOR_BROOKTREE)
+	if (BKTR_PCI_VENDOR(pci_id) == PCI_VENDOR_BROOKTREE)
 	{
-		switch (PCI_PRODUCT(pci_id)) {
+		switch (BKTR_PCI_PRODUCT(pci_id)) {
 		case PCI_PRODUCT_BROOKTREE_BT848:
 			if (rev == 0x12)
 				bktr->id = BROOKTREE_848A;
@@ -610,7 +612,7 @@ bktr_store_address(unit, BKTR_MEM_BUF,          buf);
         bktr->msp_source_selected = -1;
 	bktr->audio_mux_present = 1;
 
-#if defined(__MidnightBSD__) 
+#if defined(__FreeBSD__) 
 #ifdef BKTR_NEW_MSP34XX_DRIVER
 	/* get hint on short programming of the msp34xx, so we know */
 	/* if the decision what thread to start should be overwritten */
@@ -972,7 +974,7 @@ video_open( bktr_ptr_t bktr )
 	bktr->flags |= METEOR_OPEN;
 
 #ifdef BT848_DUMP
-	dump_bt848( bt848 );
+	dump_bt848(bktr);
 #endif
 
         bktr->clr_on_start = FALSE;
@@ -1545,7 +1547,7 @@ video_ioctl( bktr_ptr_t bktr, int unit, ioctl_cmd_t cmd, caddr_t arg, struct thr
 		break;
 
 	case METEORGBRIG:	/* get brightness */
-		*(u_char *)arg = INB(bktr, BKTR_BRIGHT);
+		*(u_char *)arg = INB(bktr, BKTR_BRIGHT) + 128;
 		break;
 
 	case METEORSCSAT:	/* set chroma saturation */
@@ -1688,7 +1690,7 @@ video_ioctl( bktr_ptr_t bktr, int unit, ioctl_cmd_t cmd, caddr_t arg, struct thr
 			                    BT848_INT_VSYNC      |
 					    BT848_INT_FMTCHG);
 #ifdef BT848_DUMP
-			dump_bt848( bt848 );
+			dump_bt848(bktr);
 #endif
 			break;
 		
@@ -2522,7 +2524,7 @@ common_ioctl( bktr_ptr_t bktr, ioctl_cmd_t cmd, caddr_t arg )
 /*
  * 
  */
-#ifdef BT848_DEBUG 
+#if defined(BT848_DEBUG) || defined(BT848_DUMP)
 static int
 dump_bt848( bktr_ptr_t bktr )
 {
@@ -2542,7 +2544,7 @@ dump_bt848( bktr_ptr_t bktr )
 		       r[i], INL(bktr, r[i]),
 		       r[i+1], INL(bktr, r[i+1]),
 		       r[i+2], INL(bktr, r[i+2]),
-		       r[i+3], INL(bktr, r[i+3]]));
+		       r[i+3], INL(bktr, r[i+3]));
 	}
 
 	printf("%s: INT STAT %x \n", bktr_name(bktr),
@@ -3121,7 +3123,6 @@ yuvpack_prog( bktr_ptr_t bktr, char i_flag,
 	OUTB(bktr, BKTR_COLOR_CTL, INB(bktr, BKTR_COLOR_CTL) | BT848_COLOR_CTL_RGB_DED | BT848_COLOR_CTL_GAMMA);
 	OUTB(bktr, BKTR_ADC, SYNC_LEVEL);
 
-	bktr->capcontrol =   1 << 6 | 1 << 4 | 1 << 2 | 3;
 	bktr->capcontrol = 3 << 2 |  3;
 
 	dma_prog = (uint32_t *) bktr->dma_prog;
@@ -3706,28 +3707,26 @@ start_capture( bktr_ptr_t bktr, unsigned type )
 
 
 /*
- * 
+ * Set the temporal decimation register to get the desired frame rate.
+ * We use the 'skip frame' modus always and always start dropping on an
+ * odd field.
  */
 static void
 set_fps( bktr_ptr_t bktr, u_short fps )
 {
 	struct format_params	*fp;
-	int i_flag;
 
 	fp = &format_params[bktr->format_params];
 
 	switch(bktr->flags & METEOR_ONLY_FIELDS_MASK) {
 	case METEOR_ONLY_EVEN_FIELDS:
 		bktr->flags |= METEOR_WANT_EVEN;
-		i_flag = 1;
 		break;
 	case METEOR_ONLY_ODD_FIELDS:
 		bktr->flags |= METEOR_WANT_ODD;
-		i_flag = 1;
 		break;
 	default:
 		bktr->flags |= METEOR_WANT_MASK;
-		i_flag = 2;
 		break;
 	}
 
@@ -3738,7 +3737,7 @@ set_fps( bktr_ptr_t bktr, u_short fps )
 	OUTB(bktr, BKTR_TDEC, 0);
 
 	if (fps < fp->frame_rate)
-		OUTB(bktr, BKTR_TDEC, i_flag*(fp->frame_rate - fps) & 0x3f);
+		OUTB(bktr, BKTR_TDEC, (fp->frame_rate - fps) & 0x3f);
 	else
 		OUTB(bktr, BKTR_TDEC, 0);
 	return;

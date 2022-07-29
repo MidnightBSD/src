@@ -36,7 +36,7 @@
 #include "opt_platform.h"
 
 #include <sys/param.h>
-__FBSDID("$FreeBSD: stable/11/sys/riscv/riscv/bus_machdep.c 298635 2016-04-26 12:45:01Z br $");
+__FBSDID("$FreeBSD$");
 
 #include <vm/vm.h>
 #include <vm/pmap.h>

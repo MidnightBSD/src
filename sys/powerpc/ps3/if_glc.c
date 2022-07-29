@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2010 Nathan Whitehorn
  * All rights reserved.
  *
@@ -22,7 +24,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/powerpc/ps3/if_glc.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -522,7 +524,7 @@ glc_set_multicast(struct glc_softc *sc)
 	} else {
 		if_maddr_rlock(ifp);
 		naddrs = 1; /* Include broadcast */
-		TAILQ_FOREACH(inm, &ifp->if_multiaddrs, ifma_link) {
+		CK_STAILQ_FOREACH(inm, &ifp->if_multiaddrs, ifma_link) {
 			if (inm->ifma_addr->sa_family != AF_LINK)
 				continue;
 			addr = 0;
@@ -830,7 +832,8 @@ glc_txintr(struct glc_softc *sc)
 		/* Speculatively (or necessarily) start the TX queue again */
 		error = lv1_net_start_tx_dma(sc->sc_bus, sc->sc_dev,
 		    sc->sc_txdmadesc_phys +
-		    txs->txs_firstdesc*sizeof(struct glc_dmadesc), 0);
+		    ((txs == NULL) ? 0 : txs->txs_firstdesc)*
+		     sizeof(struct glc_dmadesc), 0);
 		if (error != 0)
 			device_printf(sc->sc_self,
 			    "lv1_net_start_tx_dma error: %d\n", error);

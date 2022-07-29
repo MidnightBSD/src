@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/udf_iconv/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 
 .PATH:	${SRCTOP}/sys/fs/udf
 KMOD=	udf_iconv

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
  * Developed with Red Inc: Alfred Perlstein <alfred@freebsd.org>
@@ -28,7 +30,7 @@
 #include "opt_inet6.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/nlm/nlm_prot_impl.c 302216 2016-06-26 20:08:42Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/fail.h>
@@ -38,7 +40,7 @@ __FBSDID("$FreeBSD: stable/11/sys/nlm/nlm_prot_impl.c 302216 2016-06-26 20:08:42
 #include <sys/lockf.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
-#if __MidnightBSD_version >= 4000
+#if __FreeBSD_version >= 700000
 #include <sys/priv.h>
 #endif
 #include <sys/proc.h>
@@ -91,17 +93,10 @@ static SYSCTL_NODE(_vfs_nlm, OID_AUTO, sysid, CTLFLAG_RW, NULL, "");
 /*
  * Syscall hooks
  */
-static int nlm_syscall_offset = SYS_nlm_syscall;
-static struct sysent nlm_syscall_prev_sysent;
-#if __MidnightBSD_version < 4000
-static struct sysent nlm_syscall_sysent = {
-	(sizeof(struct nlm_syscall_args) / sizeof(register_t)) | SYF_MPSAFE,
-	(sy_call_t *) nlm_syscall
+static struct syscall_helper_data nlm_syscalls[] = {
+	SYSCALL_INIT_HELPER(nlm_syscall),
+	SYSCALL_INIT_LAST
 };
-#else
-MAKE_SYSENT(nlm_syscall);
-#endif
-static bool_t nlm_syscall_registered = FALSE;
 
 /*
  * Debug level passed in from userland. We also support a sysctl hook
@@ -285,8 +280,8 @@ ng_cookie(struct netobj *src)
 /*
  * Initialise NLM globals.
  */
-static void
-nlm_init(void *dummy)
+static int
+nlm_init(void)
 {
 	int error;
 
@@ -294,24 +289,18 @@ nlm_init(void *dummy)
 	TAILQ_INIT(&nlm_waiting_locks);
 	TAILQ_INIT(&nlm_hosts);
 
-	error = syscall_register(&nlm_syscall_offset, &nlm_syscall_sysent,
-	    &nlm_syscall_prev_sysent, SY_THR_STATIC_KLD);
-	if (error)
+	error = syscall_helper_register(nlm_syscalls, SY_THR_STATIC_KLD);
+	if (error != 0)
 		NLM_ERR("Can't register NLM syscall\n");
-	else
-		nlm_syscall_registered = TRUE;
+	return (error);
 }
-SYSINIT(nlm_init, SI_SUB_LOCK, SI_ORDER_FIRST, nlm_init, NULL);
 
 static void
-nlm_uninit(void *dummy)
+nlm_uninit(void)
 {
 
-	if (nlm_syscall_registered)
-		syscall_deregister(&nlm_syscall_offset,
-		    &nlm_syscall_prev_sysent);
+	syscall_helper_unregister(nlm_syscalls);
 }
-SYSUNINIT(nlm_uninit, SI_SUB_LOCK, SI_ORDER_FIRST, nlm_uninit, NULL);
 
 /*
  * Create a netobj from an arbitrary source.
@@ -346,7 +335,6 @@ static CLIENT *
 nlm_get_rpc(struct sockaddr *sa, rpcprog_t prog, rpcvers_t vers)
 {
 	char *wchan = "nlmrcv";
-	const char* protofmly;
 	struct sockaddr_storage ss;
 	struct socket *so;
 	CLIENT *rpcb;
@@ -368,14 +356,11 @@ nlm_get_rpc(struct sockaddr *sa, rpcprog_t prog, rpcvers_t vers)
 	switch (ss.ss_family) {
 	case AF_INET:
 		((struct sockaddr_in *)&ss)->sin_port = htons(111);
-		protofmly = "inet";
 		so = nlm_socket;
 		break;
-		
 #ifdef INET6
 	case AF_INET6:
 		((struct sockaddr_in6 *)&ss)->sin6_port = htons(111);
-		protofmly = "inet6";
 		so = nlm_socket6;
 		break;
 #endif
@@ -1700,7 +1685,7 @@ sys_nlm_syscall(struct thread *td, struct nlm_syscall_args *uap)
 {
 	int error;
 
-#if __MidnightBSD_version >= 4000
+#if __FreeBSD_version >= 700000
 	error = priv_check(td, PRIV_NFS_LOCKD);
 #else
 	error = suser(td);
@@ -1809,7 +1794,7 @@ nlm_get_vfs_state(struct nlm_host *host, struct svc_req *rqstp,
 			goto out;
 	}
 
-#if __MidnightBSD_version < 9000
+#if __FreeBSD_version < 800011
 	VOP_UNLOCK(vs->vs_vp, 0, curthread);
 #else
 	VOP_UNLOCK(vs->vs_vp, 0);
@@ -2414,8 +2399,10 @@ nfslockd_modevent(module_t mod, int type, void *data)
 
 	switch (type) {
 	case MOD_LOAD:
-		return (0);
+		return (nlm_init());
+
 	case MOD_UNLOAD:
+		nlm_uninit();
 		/* The NLM module cannot be safely unloaded. */
 		/* FALLTHROUGH */
 	default:
@@ -2430,6 +2417,7 @@ static moduledata_t nfslockd_mod = {
 DECLARE_MODULE(nfslockd, nfslockd_mod, SI_SUB_VFS, SI_ORDER_ANY);
 
 /* So that loader and kldload(2) can find us, wherever we are.. */
+MODULE_DEPEND(nfslockd, xdr, 1, 1, 1);
 MODULE_DEPEND(nfslockd, krpc, 1, 1, 1);
 MODULE_DEPEND(nfslockd, nfslock, 1, 1, 1);
 MODULE_VERSION(nfslockd, 1);

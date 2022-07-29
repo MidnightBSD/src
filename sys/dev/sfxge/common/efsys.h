@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010-2016 Solarflare Communications Inc.
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: stable/11/sys/dev/sfxge/common/efsys.h 350412 2019-07-29 10:44:04Z arybchik $
+ * $FreeBSD$
  */
 
 #ifndef	_SYS_EFSYS_H
@@ -70,6 +72,11 @@ extern "C" {
 #endif
 #include "efx_types.h"
 
+/* Common code requires this */
+#if __FreeBSD_version < 800068
+#define	memmove(d, s, l) bcopy(s, d, l)
+#endif
+
 /* FreeBSD equivalents of Solaris things */
 #ifndef _NOTE
 #define	_NOTE(s)
@@ -86,7 +93,7 @@ extern "C" {
 #define	ISP2(x)			(((x) & ((x) - 1)) == 0)
 #endif
 
-#if defined(__x86_64__) && __MidnightBSD_version >= 9000
+#if defined(__x86_64__) && __FreeBSD_version >= 1000000
 
 #define	SFXGE_USE_BUS_SPACE_8		1
 
@@ -104,7 +111,7 @@ extern "C" {
 
 #define	ENOTACTIVE EINVAL
 
-/* Memory type to use on MidnightBSD */
+/* Memory type to use on FreeBSD */
 MALLOC_DECLARE(M_SFXGE);
 
 /* Machine dependend prefetch wrappers */

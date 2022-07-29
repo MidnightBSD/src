@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: (BSD-4-Clause AND MIT-CMU)
+ *
  * Copyright (c) 1991 Regents of the University of California.
  * All rights reserved.
  * Copyright (c) 1994 John S. Dyson
@@ -69,7 +71,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/vm/vm_swapout.c 338335 2018-08-27 09:39:34Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_kstack_pages.h"
 #include "opt_kstack_max_pages.h"
@@ -208,9 +210,9 @@ vm_swapout_object_deactivate_pages(pmap_t pmap, vm_object_t first_object,
 				goto unlock_return;
 			if (vm_page_busied(p))
 				continue;
-			PCPU_INC(cnt.v_pdpages);
+			VM_CNT_INC(v_pdpages);
 			vm_page_lock(p);
-			if (p->wire_count != 0 || p->hold_count != 0 ||
+			if (vm_page_held(p) ||
 			    !pmap_page_exists_quick(pmap, p)) {
 				vm_page_unlock(p);
 				continue;
@@ -225,20 +227,22 @@ vm_swapout_object_deactivate_pages(pmap_t pmap, vm_object_t first_object,
 				vm_page_activate(p);
 				p->act_count += act_delta;
 			} else if (vm_page_active(p)) {
+				/*
+				 * The page daemon does not requeue pages
+				 * after modifying their activation count.
+				 */
 				if (act_delta == 0) {
 					p->act_count -= min(p->act_count,
 					    ACT_DECLINE);
 					if (!remove_mode && p->act_count == 0) {
 						pmap_remove_all(p);
 						vm_page_deactivate(p);
-					} else
-						vm_page_requeue(p);
+					}
 				} else {
 					vm_page_activate(p);
 					if (p->act_count < ACT_MAX -
 					    ACT_ADVANCE)
 						p->act_count += ACT_ADVANCE;
-					vm_page_requeue(p);
 				}
 			} else if (vm_page_inactive(p))
 				pmap_remove_all(p);
@@ -400,8 +404,15 @@ vm_daemon(void)
 		swapout_flags = vm_pageout_req_swapout;
 		vm_pageout_req_swapout = 0;
 		mtx_unlock(&vm_daemon_mtx);
-		if (swapout_flags)
+		if (swapout_flags != 0) {
+			/*
+			 * Drain the per-CPU page queue batches as a deadlock
+			 * avoidance measure.
+			 */
+			if ((swapout_flags & VM_SWAP_NORMAL) != 0)
+				vm_page_drain_pqbatch();
 			swapout_procs(swapout_flags);
+		}
 
 		/*
 		 * scan the processes for exceeding their rlimits or if
@@ -547,7 +558,7 @@ vm_thread_swapout(struct thread *td)
 			panic("vm_thread_swapout: kstack already missing?");
 		vm_page_dirty(m);
 		vm_page_lock(m);
-		vm_page_unwire(m, PQ_INACTIVE);
+		vm_page_unwire(m, PQ_LAUNDRY);
 		vm_page_unlock(m);
 	}
 	VM_OBJECT_WUNLOCK(ksobj);
@@ -733,7 +744,8 @@ swapper_selector(bool wkilled_only)
 /*
  * Limit swapper to swap in one non-WKILLED process in MAXSLP/2
  * interval, assuming that there is:
- * - no memory shortage;
+ * - there exists at least one domain that is not suffering from a shortage of
+ *   free memory;
  * - no parallel swap-ins;
  * - no other swap-ins in the current SWAPIN_INTERVAL.
  */
@@ -741,7 +753,7 @@ static bool
 swapper_wkilled_only(void)
 {
 
-	return (vm_page_count_min() || swap_inprogress > 0 ||
+	return (vm_page_count_min_set(&all_domains) || swap_inprogress > 0 ||
 	    (u_int)(ticks - last_swapin) < SWAPIN_INTERVAL);
 }
 

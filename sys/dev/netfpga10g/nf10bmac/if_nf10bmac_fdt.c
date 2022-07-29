@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/netfpga10g/nf10bmac/if_nf10bmac_fdt.c 267923 2014-06-26 17:26:33Z bz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>

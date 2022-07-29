@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1998 Kazutaka YOKOTA and Michael Smith
  * Copyright (c) 2009-2013 Jung-uk Kim <jkim@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/fb/vesa.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_vga.h"
 #include "opt_vesa.h"
@@ -1322,6 +1324,16 @@ vesa_set_mode(video_adapter_t *adp, int mode)
 #if VESA_DEBUG > 0
 	printf("VESA: about to set a VESA mode...\n");
 #endif
+	/*
+	 * The mode change should reset the palette format to 6 bits, so
+	 * we must reset V_ADP_DAC8.  Some BIOSes do an incomplete reset
+	 * if we call them with an 8-bit palette, so reset directly.
+	 */
+	if (adp->va_flags & V_ADP_DAC8) {
+	    vesa_bios_set_dac(6);
+	    adp->va_flags &= ~V_ADP_DAC8;
+	}
+
 	/* don't use the linear frame buffer for text modes. XXX */
 	if (!(info.vi_flags & V_INFO_GRAPHICS))
 		info.vi_flags &= ~V_INFO_LINEAR;
@@ -1330,9 +1342,6 @@ vesa_set_mode(video_adapter_t *adp, int mode)
 		mode |= 0x4000;
 	if (vesa_bios_set_mode(mode | 0x8000))
 		return (1);
-
-	/* Palette format is reset by the above VBE function call. */
-	adp->va_flags &= ~V_ADP_DAC8;
 
 	if ((vesa_adp_info->v_flags & V_DAC8) != 0 &&
 	    (info.vi_flags & V_INFO_GRAPHICS) != 0 &&
@@ -1352,6 +1361,7 @@ vesa_set_mode(video_adapter_t *adp, int mode)
 	vesa_adp->va_crtc_addr =
 		(vesa_adp->va_flags & V_ADP_COLOR) ? COLOR_CRTC : MONO_CRTC;
 
+	vesa_adp->va_flags &= ~V_ADP_CWIDTH9;
 	vesa_adp->va_line_width = info.vi_buffer_size / info.vi_height;
 	if ((info.vi_flags & V_INFO_GRAPHICS) != 0)
 		vesa_adp->va_line_width /= info.vi_planes;
@@ -1925,17 +1935,26 @@ vesa_load(void)
 	if (error == 0)
 		vesa_bios_info(bootverbose);
 
+	/* Don't return ENODEV, the upper layers will whine. */
+	if (error == ENODEV) {
+		error = 0;
+		vesa_adp = NULL;
+	}
+
 	return (error);
 }
 
 static int
 vesa_unload(void)
 {
-	u_char palette[256*3];
 	int error;
 
+	/* The driver never initialized, so make it easy to unload. */
+	if (vesa_adp == NULL)
+		return (0);
+
 	/* if the adapter is currently in a VESA mode, don't unload */
-	if ((vesa_adp != NULL) && VESA_MODE(vesa_adp->va_mode))
+	if (VESA_MODE(vesa_adp->va_mode))
 		return (EBUSY);
 	/* 
 	 * FIXME: if there is at least one vty which is in a VESA mode,
@@ -1945,10 +1964,8 @@ vesa_unload(void)
 	if ((error = vesa_unload_ioctl()) == 0) {
 		if (vesa_adp != NULL) {
 			if ((vesa_adp->va_flags & V_ADP_DAC8) != 0) {
-				vesa_bios_save_palette(0, 256, palette, 8);
 				vesa_bios_set_dac(6);
 				vesa_adp->va_flags &= ~V_ADP_DAC8;
-				vesa_bios_load_palette(0, 256, palette, 6);
 			}
 			vesa_adp->va_flags &= ~V_ADP_VESA;
 			vidsw[vesa_adp->va_index] = prevvidsw;

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -11,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -28,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mman.h	8.2 (Berkeley) 1/9/95
- * $FreeBSD: stable/11/sys/sys/mman.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_MMAN_H_
@@ -206,7 +207,7 @@ typedef	__size_t	size_t;
 struct file;
 
 struct shmfd {
-	size_t		shm_size;
+	size_t		shm_oldsize;
 	vm_object_t	shm_object;
 	int		shm_refs;
 	uid_t		shm_uid;
@@ -229,6 +230,7 @@ struct shmfd {
 
 	struct rangelock shm_rl;
 	struct mtx	shm_mtx;
+	vm_ooffset_t	shm_size;
 };
 #endif
 
@@ -243,6 +245,9 @@ void	shm_drop(struct shmfd *shmfd);
 int	shm_dotruncate(struct shmfd *shmfd, off_t length);
 
 extern struct fileops shm_ops;
+
+#define	MAP_32BIT_MAX_ADDR	((vm_offset_t)1 << 31)
+
 #else /* !_KERNEL */
 
 __BEGIN_DECLS
@@ -261,7 +266,7 @@ int	mlock(const void *, size_t);
 #define	_MMAP_DECLARED
 void *	mmap(void *, size_t, int, int, int, off_t);
 #endif
-int	mprotect(const void *, size_t, int);
+int	mprotect(void *, size_t, int);
 int	msync(void *, size_t, int);
 int	munlock(const void *, size_t);
 int	munmap(void *, size_t);

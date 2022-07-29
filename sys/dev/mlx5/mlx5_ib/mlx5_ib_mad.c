@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_ib/mlx5_ib_mad.c 331769 2018-03-30 18:06:29Z hselasky $
+ * $FreeBSD$
  */
 
 #include <dev/mlx5/vport.h>

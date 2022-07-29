@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2001 David E. O'Brien
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -35,7 +37,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: stable/11/sys/arm/include/param.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _ARM_INCLUDE_PARAM_H_
@@ -52,10 +54,12 @@
 
 #define __PCI_REROUTE_INTERRUPT
 
-#if __ARM_ARCH >= 6
-#define	_V6_SUFFIX "v6"
+#if __ARM_ARCH >= 7
+#define	_V_SUFFIX "v7"
+#elif __ARM_ARCH >= 6
+#define	_V_SUFFIX "v6"
 #else
-#define	_V6_SUFFIX ""
+#define	_V_SUFFIX ""
 #endif
 
 #ifdef __ARM_BIG_ENDIAN
@@ -68,7 +72,7 @@
 #define	MACHINE		"arm"
 #endif
 #ifndef MACHINE_ARCH
-#define	MACHINE_ARCH	"arm" _V6_SUFFIX _EB_SUFFIX
+#define	MACHINE_ARCH	"arm" _V_SUFFIX _EB_SUFFIX
 #endif
 
 #if defined(SMP) || defined(KLD_MODULE)

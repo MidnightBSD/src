@@ -1,5 +1,5 @@
 #	@(#)Makefile.inc	8.1 (Berkeley) 6/4/93
-# $FreeBSD: stable/11/lib/libc/string/Makefile.inc 329919 2018-02-24 18:16:28Z cy $
+# $FreeBSD$
 
 .PATH: ${LIBC_SRCTOP}/${LIBC_ARCH}/string ${LIBC_SRCTOP}/string
 .PATH: ${SRCTOP}/sys/libkern
@@ -64,6 +64,7 @@ MLINKS+=strcpy.3 stpcpy.3 \
 	strcpy.3 strncpy.3
 MLINKS+=strdup.3 strndup.3
 MLINKS+=strerror.3 perror.3 \
+	strerror.3 strerror_l.3 \
 	strerror.3 strerror_r.3 \
 	strerror.3 sys_errlist.3 \
 	strerror.3 sys_nerr.3

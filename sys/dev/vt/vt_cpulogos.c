@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/vt/vt_cpulogos.c 350056 2019-07-16 16:49:11Z vangyzen $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/callout.h>
@@ -194,7 +194,7 @@ vt_fini_logos(void *dummy __unused)
 
 		if (vd->vd_curwindow == vw) {
 			vd->vd_flags |= VDF_INVALID;
-			vt_resume_flush_timer(vd, 0);
+			vt_resume_flush_timer(vw, 0);
 		}
 		VT_UNLOCK(vd);
 	}
@@ -252,7 +252,7 @@ vt_init_logos(void *dummy)
 
 	if (vd->vd_curwindow == vw) {
 		vd->vd_flags |= VDF_INVALID;
-		vt_resume_flush_timer(vd, 0);
+		vt_resume_flush_timer(vw, 0);
 	}
 
 	callout_init(&vt_splash_cpu_callout, 1);

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1998, 1999 Scott Mitchell
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  * SUCH DAMAGE.
  *
  *	$Id: if_xe.c,v 1.20 1999/06/13 19:17:40 scott Exp $
- * $FreeBSD: stable/11/sys/dev/xe/if_xevar.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 #ifndef DEV_XE_IF_XEDEV_H
 #define DEV_XE_IF_XEDEV_H

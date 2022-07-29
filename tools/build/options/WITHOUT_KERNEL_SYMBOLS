@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_KERNEL_SYMBOLS 222189 2011-05-22 18:23:17Z imp $
+.\" $FreeBSD$
 Set to not install kernel symbol files.
 .Bf -symbolic
 This option is recommended for those people who have small root partitions.

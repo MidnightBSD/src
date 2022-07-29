@@ -36,7 +36,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/makefs/ffs.h 330976 2018-03-15 09:04:23Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _FFS_H
@@ -44,6 +44,7 @@
 
 #include <ufs/ufs/dinode.h>
 #include <ufs/ffs/fs.h>
+#include <stdbool.h>
 
 typedef struct {
 	char	label[MAXVOLLEN];	/* volume name/label */
@@ -52,6 +53,7 @@ typedef struct {
 	int	cpg;		/* cylinders per group */
 	int	cpgflg;		/* cpg was specified by user */
 	int	density;	/* bytes per inode */
+	bool	min_inodes;	/* allocate minimum number of inodes */
 	int	ntracks;	/* number of tracks */
 	int	nsectors;	/* number of sectors */
 	int	rpm;		/* rpm */
@@ -66,6 +68,7 @@ typedef struct {
 	int	version;	/* filesystem version (1 = FFS, 2 = UFS2) */
 	int	maxbsize;	/* maximum extent size */
 	int	maxblkspercg;	/* max # of blocks per cylinder group */
+	int	softupdates;	/* soft updates */
 		/* XXX: support `old' file systems ? */
 } ffs_opt_t;
 

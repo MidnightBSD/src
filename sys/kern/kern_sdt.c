@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright 2006-2008 John Birrell <jb@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/kern/kern_sdt.c 327480 2018-01-02 00:11:56Z mjg $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

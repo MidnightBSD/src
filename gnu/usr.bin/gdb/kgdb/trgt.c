@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/gnu/usr.bin/gdb/kgdb/trgt.c 291525 2015-11-30 21:53:24Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -37,7 +37,6 @@ __FBSDID("$FreeBSD: stable/11/gnu/usr.bin/gdb/kgdb/trgt.c 291525 2015-11-30 21:5
 
 #include <defs.h>
 #include <readline/readline.h>
-#include <readline/tilde.h>
 #include <command.h>
 #include <exec.h>
 #include <frame-unwind.h>

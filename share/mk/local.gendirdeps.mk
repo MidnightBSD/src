@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/mk/local.gendirdeps.mk 356775 2020-01-16 03:38:06Z kevans $
+# $FreeBSD$
 
 # we need a keyword, this noise is to prevent it being expanded
 GENDIRDEPS_HEADER= echo '\# ${FreeBSD:L:@v@$$$v$$ @:M*F*}';
@@ -10,6 +10,12 @@ GENDIRDEPS_FILTER+= \
 	Nlib/libssp_nonshared \
 	Ncddl/usr.bin/ctf* \
 	Nlib/libc_nonshared \
+	Ngnu/lib/csu \
+	Ngnu/lib/libgcc \
+	Nlib/libgcc_eh \
+	Nlib/libgcc_s \
+	Nstand/libsa/* \
+	Nstand/libsa32/* \
 	Ntargets/pseudo/stage* \
 	Ntools/*
 

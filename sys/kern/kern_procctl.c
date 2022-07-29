@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/kern_procctl.c 352125 2019-09-10 07:29:21Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,6 +42,11 @@ __FBSDID("$FreeBSD: stable/11/sys/kern/kern_procctl.c 352125 2019-09-10 07:29:21
 #include <sys/syscallsubr.h>
 #include <sys/sysproto.h>
 #include <sys/wait.h>
+
+#include <vm/vm.h>
+#include <vm/pmap.h>
+#include <vm/vm_map.h>
+#include <vm/vm_extern.h>
 
 static int
 protect_setchild(struct thread *td, struct proc *p, int flags)
@@ -414,6 +419,63 @@ trapcap_status(struct thread *td, struct proc *p, int *data)
 }
 
 static int
+aslr_ctl(struct thread *td, struct proc *p, int state)
+{
+
+	PROC_LOCK_ASSERT(p, MA_OWNED);
+
+	switch (state) {
+	case PROC_ASLR_FORCE_ENABLE:
+		p->p_flag2 &= ~P2_ASLR_DISABLE;
+		p->p_flag2 |= P2_ASLR_ENABLE;
+		break;
+	case PROC_ASLR_FORCE_DISABLE:
+		p->p_flag2 |= P2_ASLR_DISABLE;
+		p->p_flag2 &= ~P2_ASLR_ENABLE;
+		break;
+	case PROC_ASLR_NOFORCE:
+		p->p_flag2 &= ~(P2_ASLR_ENABLE | P2_ASLR_DISABLE);
+		break;
+	default:
+		return (EINVAL);
+	}
+	return (0);
+}
+
+static int
+aslr_status(struct thread *td, struct proc *p, int *data)
+{
+	struct vmspace *vm;
+	int d;
+
+	switch (p->p_flag2 & (P2_ASLR_ENABLE | P2_ASLR_DISABLE)) {
+	case 0:
+		d = PROC_ASLR_NOFORCE;
+		break;
+	case P2_ASLR_ENABLE:
+		d = PROC_ASLR_FORCE_ENABLE;
+		break;
+	case P2_ASLR_DISABLE:
+		d = PROC_ASLR_FORCE_DISABLE;
+		break;
+	}
+	if ((p->p_flag & P_WEXIT) == 0) {
+		_PHOLD(p);
+		PROC_UNLOCK(p);
+		vm = vmspace_acquire_ref(p);
+		if (vm != NULL) {
+			if ((vm->vm_map.flags & MAP_ASLR) != 0)
+				d |= PROC_ASLR_ACTIVE;
+			vmspace_free(vm);
+		}
+		PROC_LOCK(p);
+		_PRELE(p);
+	}
+	*data = d;
+	return (0);
+}
+
+static int
 stackgap_ctl(struct thread *td, struct proc *p, int state)
 {
 	PROC_LOCK_ASSERT(p, MA_OWNED);
@@ -482,7 +544,12 @@ sys_procctl(struct thread *td, struct procctl_args *uap)
 	} x;
 	int error, error1, flags, signum;
 
+	if (uap->com >= PROC_PROCCTL_MD_MIN)
+		return (cpu_procctl(td, uap->idtype, uap->id,
+		    uap->com, uap->data));
+
 	switch (uap->com) {
+	case PROC_ASLR_CTL:
 	case PROC_SPROTECT:
 	case PROC_STACKGAP_CTL:
 	case PROC_TRACE_CTL:
@@ -513,6 +580,7 @@ sys_procctl(struct thread *td, struct procctl_args *uap)
 			return (error);
 		data = &x.rk;
 		break;
+	case PROC_ASLR_STATUS:
 	case PROC_STACKGAP_STATUS:
 	case PROC_TRACE_STATUS:
 	case PROC_TRAPCAP_STATUS:
@@ -541,6 +609,7 @@ sys_procctl(struct thread *td, struct procctl_args *uap)
 		if (error == 0)
 			error = error1;
 		break;
+	case PROC_ASLR_STATUS:
 	case PROC_STACKGAP_STATUS:
 	case PROC_TRACE_STATUS:
 	case PROC_TRAPCAP_STATUS:
@@ -561,6 +630,10 @@ kern_procctl_single(struct thread *td, struct proc *p, int com, void *data)
 
 	PROC_LOCK_ASSERT(p, MA_OWNED);
 	switch (com) {
+	case PROC_ASLR_CTL:
+		return (aslr_ctl(td, p, *(int *)data));
+	case PROC_ASLR_STATUS:
+		return (aslr_status(td, p, data));
 	case PROC_SPROTECT:
 		return (protect_set(td, p, *(int *)data));
 	case PROC_STACKGAP_CTL:
@@ -600,6 +673,8 @@ kern_procctl(struct thread *td, idtype_t idtype, id_t id, int com, void *data)
 	bool tree_locked;
 
 	switch (com) {
+	case PROC_ASLR_CTL:
+	case PROC_ASLR_STATUS:
 	case PROC_REAP_ACQUIRE:
 	case PROC_REAP_RELEASE:
 	case PROC_REAP_STATUS:
@@ -651,6 +726,8 @@ kern_procctl(struct thread *td, idtype_t idtype, id_t id, int com, void *data)
 		sx_xlock(&proctree_lock);
 		tree_locked = true;
 		break;
+	case PROC_ASLR_CTL:
+	case PROC_ASLR_STATUS:
 	case PROC_STACKGAP_CTL:
 	case PROC_STACKGAP_STATUS:
 	case PROC_TRACE_STATUS:
@@ -663,12 +740,18 @@ kern_procctl(struct thread *td, idtype_t idtype, id_t id, int com, void *data)
 
 	switch (idtype) {
 	case P_PID:
-		p = pfind(id);
-		if (p == NULL) {
-			error = ESRCH;
-			break;
+		if (id == 0) {
+			p = td->td_proc;
+			error = 0;
+			PROC_LOCK(p);
+		} else {
+			p = pfind(id);
+			if (p == NULL) {
+				error = ESRCH;
+				break;
+			}
+			error = p_cansee(td, p);
 		}
-		error = p_cansee(td, p);
 		if (error == 0)
 			error = kern_procctl_single(td, p, com, data);
 		PROC_UNLOCK(p);

@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/security/mac_portacl/mac_portacl.c 330499 2018-03-05 12:16:37Z eugen $
+ * $FreeBSD$
  */
 
 /*

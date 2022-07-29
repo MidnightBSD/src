@@ -1,6 +1,6 @@
 /******************************************************************************
 
-  Copyright (c) 2001-2017, Intel Corporation
+  Copyright (c) 2001-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/ixgbe/ixgbe_features.h 320897 2017-07-11 21:25:07Z erj $*/
+/*$FreeBSD$*/
 
 
 #ifndef _IXGBE_FEATURES_H_

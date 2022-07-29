@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013-2014 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/vybrid/vf_iomuxc.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -144,7 +146,7 @@ pinmux_set(struct iomuxc_softc *sc)
 			child = OF_child(child);
 		}
 
-		if (!fdt_is_enabled(child))
+		if (!ofw_bus_node_status_okay(child))
 			continue;
 
 		if ((len = OF_getproplen(child, "iomux_config")) > 0) {

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1983, 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/inetd/inetd.c 356690 2020-01-13 18:18:24Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 __COPYRIGHT("@(#) Copyright (c) 1983, 1991, 1993, 1994\n\
@@ -392,9 +394,9 @@ main(int argc, char **argv)
 		case '?':
 		default:
 			syslog(LOG_ERR,
-				"usage: inetd [-dlwW] [-a address] [-R rate]"
-				" [-c maximum] [-C rate]"
-				" [-p pidfile] [conf-file]");
+				"usage: inetd [-dlWw] [-a address] [-C rate]"
+				" [-c maximum] [-p filename] [-R rate]"
+				" [-s maximum] [configuration_file]");
 			exit(EX_USAGE);
 		}
 	/*
@@ -1622,7 +1624,6 @@ getconfigent(void)
 	int v6bind;
 #endif
 	int i;
-	size_t unsz;
 
 #ifdef IPSEC
 	policy = NULL;
@@ -1850,16 +1851,16 @@ more:
 #define	SUN_PATH_MAXSIZE	sizeof(sep->se_ctrladdr_un.sun_path)
 		memset(&sep->se_ctrladdr, 0, sizeof(sep->se_ctrladdr));
 		sep->se_ctrladdr_un.sun_family = sep->se_family;
-		if ((unsz = strlcpy(sep->se_ctrladdr_un.sun_path,
-		    sep->se_service, SUN_PATH_MAXSIZE) >= SUN_PATH_MAXSIZE)) {
+		if (strlcpy(sep->se_ctrladdr_un.sun_path, sep->se_service,
+		    SUN_PATH_MAXSIZE) >= SUN_PATH_MAXSIZE) {
 			syslog(LOG_ERR,
 			    "domain socket pathname too long for service %s",
 			    sep->se_service);
 			goto more;
 		}
-		sep->se_ctrladdr_un.sun_len = unsz;
 #undef SUN_PATH_MAXSIZE
-		sep->se_ctrladdr_size = SUN_LEN(&sep->se_ctrladdr_un);
+		sep->se_ctrladdr_size = sep->se_ctrladdr_un.sun_len =
+		    SUN_LEN(&sep->se_ctrladdr_un);
 	}
 	arg = sskip(&cp);
 	if (!strncmp(arg, "wait", 4))

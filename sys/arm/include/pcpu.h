@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Luoqi Chen <luoqi@freebsd.org>
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  * SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/i386/include/globaldata.h,v 1.27 2001/04/27
- * $FreeBSD: stable/11/sys/arm/include/pcpu.h 331988 2018-04-04 06:11:05Z mmel $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_PCPU_H_
@@ -63,10 +65,12 @@ struct vmspace;
 	int pc_dbreg_cmd;						\
 	int pc_bp_harden_kind;						\
 	uint32_t pc_original_actlr;					\
-	char __pad[11]
+	uint64_t pc_clock;						\
+	uint32_t pc_mpidr;						\
+	char __pad[135]
 #else
 #define PCPU_MD_FIELDS							\
-	char __pad[157]
+	char __pad[93]
 #endif
 
 #ifdef _KERNEL

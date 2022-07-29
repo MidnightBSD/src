@@ -1,5 +1,7 @@
 /*-
- * Copyright (c) 2002-2005 M Warner Losh.  All rights reserved.
+ * SPDX-License-Identifier: BSD-4-Clause AND BSD-2-Clause-FreeBSD
+ *
+ * Copyright (c) 2002-2005 M. Warner Losh.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/exca/exca.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -240,7 +242,7 @@ exca_do_mem_map(struct exca_softc *sc, int win)
  * map (either common or attribute).  Memory created via this interface
  * starts out at card address 0.  Since the only way to set this is
  * to set it on a struct resource after it has been mapped, we're safe
- * in maping this assumption.  Note that resources can be remapped using
+ * in mapping this assumption.  Note that resources can be remapped using
  * exca_do_mem_map so that's how the card address can be set later.
  */
 int

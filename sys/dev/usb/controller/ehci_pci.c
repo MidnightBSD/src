@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/usb/controller/ehci_pci.c 355329 2019-12-03 14:48:13Z mav $");
+__FBSDID("$FreeBSD$");
 
 /*
  * USB Enhanced Host Controller Driver, a.k.a. USB 2.0 controller.
@@ -403,8 +405,13 @@ ehci_pci_attach(device_t self)
 		sprintf(sc->sc_vendor, "(0x%04x)", pci_get_vendor(self));
 	}
 
+#if (__FreeBSD_version >= 700031)
 	err = bus_setup_intr(self, sc->sc_irq_res, INTR_TYPE_BIO | INTR_MPSAFE,
 	    NULL, (driver_intr_t *)ehci_interrupt, sc, &sc->sc_intr_hdl);
+#else
+	err = bus_setup_intr(self, sc->sc_irq_res, INTR_TYPE_BIO | INTR_MPSAFE,
+	    (driver_intr_t *)ehci_interrupt, sc, &sc->sc_intr_hdl);
+#endif
 	if (err) {
 		device_printf(self, "Could not setup irq, %d\n", err);
 		sc->sc_intr_hdl = NULL;

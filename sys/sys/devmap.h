@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Ian Lepore <ian@freebsd.org>
  * All rights reserved.
  *
@@ -24,14 +25,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/devmap.h 298627 2016-04-26 11:53:37Z br $
+ * $FreeBSD$
  */
 
 #ifndef	_SYS_DEVMAP_H_
 #define	_SYS_DEVMAP_H_
 
 #ifndef _KERNEL
-#error "no user-servicable parts inside"
+#error "no user-serviceable parts inside"
 #endif
 
 /*

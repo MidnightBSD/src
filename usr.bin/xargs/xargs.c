@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -44,7 +46,7 @@ static char sccsid[] = "@(#)xargs.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/xargs/xargs.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -54,6 +56,7 @@ __FBSDID("$FreeBSD: stable/11/usr.bin/xargs/xargs.c 331722 2018-03-29 02:50:57Z 
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <langinfo.h>
 #include <locale.h>
 #include <paths.h>
@@ -96,6 +99,22 @@ static volatile int childerr;
 
 extern char **environ;
 
+static const char *optstr = "+0E:I:J:L:n:oP:pR:S:s:rtx";
+
+static const struct option long_options[] =
+{
+	{"exit",		no_argument,		NULL,	'x'},
+	{"interactive",		no_argument,		NULL,	'p'},
+	{"max-args",		required_argument,	NULL,	'n'},
+	{"max-chars",		required_argument,	NULL,	's'},
+	{"max-procs",		required_argument,	NULL,	'P'},
+	{"no-run-if-empty",	no_argument,		NULL,	'r'},
+	{"null",		no_argument,		NULL,	'0'},
+	{"verbose",		no_argument,		NULL,	't'},
+
+	{NULL,			no_argument,		NULL,	0},
+};
+
 int
 main(int argc, char *argv[])
 {
@@ -135,7 +154,7 @@ main(int argc, char *argv[])
 		nline -= strlen(*ep++) + 1 + sizeof(*ep);
 	}
 	maxprocs = 1;
-	while ((ch = getopt(argc, argv, "0E:I:J:L:n:oP:pR:S:s:rtx")) != -1)
+	while ((ch = getopt_long(argc, argv, optstr, long_options, NULL)) != -1)
 		switch (ch) {
 		case 'E':
 			eofstr = optarg;
@@ -648,7 +667,7 @@ waitchildren(const char *name, int waitall)
 		if (childerr != 0 && cause_exit == 0) {
 			errno = childerr;
 			waitall = 1;
-			cause_exit = ENOENT ? 127 : 126;
+			cause_exit = errno == ENOENT ? 127 : 126;
 			warn("%s", name);
 		} else if (WIFSIGNALED(status)) {
 			waitall = cause_exit = 1;
@@ -763,7 +782,7 @@ prompt(void)
 	(void)fprintf(stderr, "?...");
 	(void)fflush(stderr);
 	if ((response = fgetln(ttyfp, &rsize)) == NULL ||
-	    regcomp(&cre, nl_langinfo(YESEXPR), REG_BASIC) != 0) {
+	    regcomp(&cre, nl_langinfo(YESEXPR), REG_EXTENDED) != 0) {
 		(void)fclose(ttyfp);
 		return (0);
 	}

@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/11/sys/cddl/dev/fbt/powerpc/fbt_isa.h 270067 2014-08-16 21:42:55Z markj $
+ * $FreeBSD$
  *
  */
 

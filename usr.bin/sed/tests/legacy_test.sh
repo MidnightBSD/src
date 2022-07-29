@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/11/usr.bin/sed/tests/legacy_test.sh 263227 2014-03-16 08:04:06Z jmmv $
+# $FreeBSD$
 
 SRCDIR="$(dirname "${0}")"; export SRCDIR
 

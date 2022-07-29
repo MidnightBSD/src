@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Semihalf.
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/fdt/fdt_slicer.c 353041 2019-10-03 12:47:05Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -83,12 +85,10 @@ fill_slices_from_node(phandle_t node, struct flash_slice *slices, int *count)
 		}
 
 		/* Retrieve label. */
-		nmlen = OF_getprop_alloc(child, "label", sizeof(char),
-		    (void **)&label);
+		nmlen = OF_getprop_alloc(child, "label", (void **)&label);
 		if (nmlen <= 0) {
 			/* Use node name if no label defined */
-			nmlen = OF_getprop_alloc(child, "name", sizeof(char),
-			    (void **)&label);
+			nmlen = OF_getprop_alloc(child, "name", (void **)&label);
 			if (nmlen <= 0) {
 				debugf("slice i=%d with no name\n", i);
 				label = NULL;

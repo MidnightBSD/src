@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -41,7 +43,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)mount_fs.c	8.6 (Berkeley) 4/26/95";
 #endif
 static const char rcsid[] =
-	"$FreeBSD: stable/11/sbin/mount/mount_fs.c 331722 2018-03-29 02:50:57Z eadler $";
+	"$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>

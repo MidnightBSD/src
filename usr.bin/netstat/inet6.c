@@ -1,5 +1,7 @@
 /*	BSDI inet.c,v 2.3 1995/10/24 02:19:29 prb Exp	*/
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1983, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -11,7 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -35,7 +37,7 @@ static char sccsid[] = "@(#)inet6.c	8.4 (Berkeley) 4/20/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/netstat/inet6.c 355869 2019-12-17 23:45:50Z bz $");
+__FBSDID("$FreeBSD$");
 
 #ifdef INET6
 #include <sys/param.h>
@@ -389,6 +391,8 @@ ip6_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 	    "{N:/fragment%s dropped after timeout}\n");
 	p(ip6s_fragoverflow, "\t{:dropped-fragments-overflow/%ju} "
 	    "{N:/fragment%s that exceeded limit}\n");
+	p(ip6s_atomicfrags, "\t{:atomic-fragments/%ju} "
+	    "{N:/atomic fragment%s}\n");
 	p(ip6s_reassembled, "\t{:reassembled-packets/%ju} "
 	    "{N:/packet%s reassembled ok}\n");
 	p(ip6s_delivered, "\t{:received-local-packets/%ju} "

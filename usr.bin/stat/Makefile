@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/stat/Makefile 321086 2017-07-17 21:01:10Z ngie $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -7,6 +7,7 @@ PROG=	stat
 LINKS=	${BINDIR}/stat ${BINDIR}/readlink
 MLINKS=	stat.1 readlink.1
 
+HAS_TESTS=
 SUBDIR.${MK_TESTS}+=	tests
 
 .include <bsd.prog.mk>

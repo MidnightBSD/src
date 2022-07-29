@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/blacklistctl/Makefile 301226 2016-06-02 19:06:04Z lidl $
+# $FreeBSD$
 
 BLACKLIST_DIR=${SRCTOP}/contrib/blacklist
 .PATH: ${BLACKLIST_DIR}/bin ${BLACKLIST_DIR}/port

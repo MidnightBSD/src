@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/efi/Makefile.inc 344405 2019-02-21 02:32:30Z kevans $
+# $FreeBSD$
 
 # Options used when building app-specific efi components
 # See conf/kern.mk for the correct set of these

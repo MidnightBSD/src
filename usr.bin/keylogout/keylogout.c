@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD$");
 
 /*
  * unset the secret key on local machine

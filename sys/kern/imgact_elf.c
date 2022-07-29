@@ -1,6 +1,8 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2017 Dell EMC
- * Copyright (c) 2000 David O'Brien
+ * Copyright (c) 2000-2001, 2003 David O'Brien
  * Copyright (c) 1995-1996 Søren Schmidt
  * Copyright (c) 1996 Peter Wemm
  * All rights reserved.
@@ -30,17 +32,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD$");
 
 #include "opt_capsicum.h"
-#include "opt_compat.h"
-#include "opt_gzio.h"
 
 #include <sys/param.h>
 #include <sys/capsicum.h>
+#include <sys/compressor.h>
 #include <sys/exec.h>
 #include <sys/fcntl.h>
-#include <sys/gzio.h>
 #include <sys/imgact.h>
 #include <sys/imgact_elf.h>
 #include <sys/jail.h>
@@ -88,19 +88,17 @@ __FBSDID("$MidnightBSD$");
 
 static int __elfN(check_header)(const Elf_Ehdr *hdr);
 static Elf_Brandinfo *__elfN(get_brandinfo)(struct image_params *imgp,
-    const char *interp, int interp_name_len, int32_t *osrel);
+    const char *interp, int32_t *osrel, uint32_t *fctl0);
 static int __elfN(load_file)(struct proc *p, const char *file, u_long *addr,
-    u_long *entry, size_t pagesize);
+    u_long *entry);
 static int __elfN(load_section)(struct image_params *imgp, vm_ooffset_t offset,
-    caddr_t vmaddr, size_t memsz, size_t filsz, vm_prot_t prot,
-    size_t pagesize);
+    caddr_t vmaddr, size_t memsz, size_t filsz, vm_prot_t prot);
 static int __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp);
-static bool __elfN(midnightbsd_trans_osrel)(const Elf_Note *note,
-    int32_t *osrel);
 static bool __elfN(freebsd_trans_osrel)(const Elf_Note *note,
     int32_t *osrel);
+static bool kfreebsd_trans_osrel(const Elf_Note *note, int32_t *osrel);
 static boolean_t __elfN(check_note)(struct image_params *imgp,
-    Elf_Brandnote *checknote, int32_t *osrel);
+    Elf_Brandnote *checknote, int32_t *osrel, uint32_t *fctl0);
 static vm_prot_t __elfN(trans_prot)(Elf_Word);
 static Elf_Word __elfN(untrans_prot)(vm_prot_t);
 
@@ -121,7 +119,8 @@ SYSCTL_INT(_debug, OID_AUTO, __elfN(legacy_coredump), CTLFLAG_RW,
 
 int __elfN(nxstack) =
 #if defined(__amd64__) || defined(__powerpc64__) /* both 64 and 32 bit */ || \
-    (defined(__arm__) && __ARM_ARCH >= 7) || defined(__aarch64__)
+    (defined(__arm__) && __ARM_ARCH >= 7) || defined(__aarch64__) || \
+    defined(__riscv)
 	1;
 #else
 	0;
@@ -138,25 +137,71 @@ SYSCTL_INT(_kern_elf32, OID_AUTO, read_exec, CTLFLAG_RW, &i386_read_exec, 0,
 #endif
 #endif
 
+static u_long __elfN(pie_base) = ET_DYN_LOAD_ADDR;
+static int
+sysctl_pie_base(SYSCTL_HANDLER_ARGS)
+{
+	u_long val;
+	int error;
+
+	val = __elfN(pie_base);
+	error = sysctl_handle_long(oidp, &val, 0, req);
+	if (error != 0 || req->newptr == NULL)
+		return (error);
+	if ((val & PAGE_MASK) != 0)
+		return (EINVAL);
+	__elfN(pie_base) = val;
+	return (0);
+}
+SYSCTL_PROC(__CONCAT(_kern_elf, __ELF_WORD_SIZE), OID_AUTO, pie_base,
+    CTLTYPE_ULONG | CTLFLAG_MPSAFE | CTLFLAG_RW, NULL, 0,
+    sysctl_pie_base, "LU",
+    "PIE load base without randomization");
+
+SYSCTL_NODE(__CONCAT(_kern_elf, __ELF_WORD_SIZE), OID_AUTO, aslr, CTLFLAG_RW, 0,
+    "");
+#define	ASLR_NODE_OID	__CONCAT(__CONCAT(_kern_elf, __ELF_WORD_SIZE), _aslr)
+
+static int __elfN(aslr_enabled) = 0;
+SYSCTL_INT(ASLR_NODE_OID, OID_AUTO, enable, CTLFLAG_RWTUN,
+    &__elfN(aslr_enabled), 0,
+    __XSTRING(__CONCAT(ELF, __ELF_WORD_SIZE))
+    ": enable address map randomization");
+
+static int __elfN(pie_aslr_enabled) = 0;
+SYSCTL_INT(ASLR_NODE_OID, OID_AUTO, pie_enable, CTLFLAG_RWTUN,
+    &__elfN(pie_aslr_enabled), 0,
+    __XSTRING(__CONCAT(ELF, __ELF_WORD_SIZE))
+    ": enable address map randomization for PIE binaries");
+
+static int __elfN(aslr_honor_sbrk) = 1;
+SYSCTL_INT(ASLR_NODE_OID, OID_AUTO, honor_sbrk, CTLFLAG_RW,
+    &__elfN(aslr_honor_sbrk), 0,
+    __XSTRING(__CONCAT(ELF, __ELF_WORD_SIZE)) ": assume sbrk is used");
+
+static int __elfN(aslr_stack_gap) = 3;
+SYSCTL_INT(ASLR_NODE_OID, OID_AUTO, stack_gap, CTLFLAG_RW,
+    &__elfN(aslr_stack_gap), 0,
+    __XSTRING(__CONCAT(ELF, __ELF_WORD_SIZE))
+    ": maximum percentage of main stack to waste on a random gap");
+
 static Elf_Brandinfo *elf_brand_list[MAX_BRANDS];
 
-#define	trunc_page_ps(va, ps)	rounddown2(va, ps)
-#define	round_page_ps(va, ps)	roundup2(va, ps)
-#define	aligned(a, t)	(trunc_page_ps((u_long)(a), sizeof(t)) == (u_long)(a))
+#define	aligned(a, t)	(rounddown2((u_long)(a), sizeof(t)) == (u_long)(a))
 
-static const char MIDNIGHTBSD_ABI_VENDOR[] = "MidnightBSD";
+static const char FREEBSD_ABI_VENDOR[] = "FreeBSD";
 
-Elf_Brandnote __elfN(midnightbsd_brandnote) = {
-	.hdr.n_namesz	= sizeof(MIDNIGHTBSD_ABI_VENDOR),
+Elf_Brandnote __elfN(freebsd_brandnote) = {
+	.hdr.n_namesz	= sizeof(FREEBSD_ABI_VENDOR),
 	.hdr.n_descsz	= sizeof(int32_t),
 	.hdr.n_type	= NT_FREEBSD_ABI_TAG,
-	.vendor		= MIDNIGHTBSD_ABI_VENDOR,
+	.vendor		= FREEBSD_ABI_VENDOR,
 	.flags		= BN_TRANSLATE_OSREL,
-	.trans_osrel	= __elfN(midnightbsd_trans_osrel)
+	.trans_osrel	= __elfN(freebsd_trans_osrel)
 };
 
 static bool
-__elfN(midnightbsd_trans_osrel)(const Elf_Note *note, int32_t *osrel)
+__elfN(freebsd_trans_osrel)(const Elf_Note *note, int32_t *osrel)
 {
 	uintptr_t p;
 
@@ -167,29 +212,39 @@ __elfN(midnightbsd_trans_osrel)(const Elf_Note *note, int32_t *osrel)
 	return (true);
 }
 
-static const char FREEBSD_ABI_VENDOR[] = "FreeBSD";
+static const char GNU_ABI_VENDOR[] = "GNU";
+static int GNU_KFREEBSD_ABI_DESC = 3;
 
-Elf_Brandnote __elfN(freebsd_brandnote) = {
-	.hdr.n_namesz	= sizeof(FREEBSD_ABI_VENDOR),
-	.hdr.n_descsz	= sizeof(int32_t),
+Elf_Brandnote __elfN(kfreebsd_brandnote) = {
+	.hdr.n_namesz	= sizeof(GNU_ABI_VENDOR),
+	.hdr.n_descsz	= 16,	/* XXX at least 16 */
 	.hdr.n_type	= 1,
-	.vendor		= FREEBSD_ABI_VENDOR,
+	.vendor		= GNU_ABI_VENDOR,
 	.flags		= BN_TRANSLATE_OSREL,
-	.trans_osrel	= __elfN(freebsd_trans_osrel)
+	.trans_osrel	= kfreebsd_trans_osrel
 };
 
-static bool                                                                                                                                                               
-__elfN(freebsd_trans_osrel)(const Elf_Note *note, int32_t *osrel)                                                                                                     
-{                                                                                                                                                                         
+static bool
+kfreebsd_trans_osrel(const Elf_Note *note, int32_t *osrel)
+{
+	const Elf32_Word *desc;
 	uintptr_t p;
 
 	p = (uintptr_t)(note + 1);
 	p += roundup2(note->n_namesz, ELF_NOTE_ROUNDSIZE);
-	*osrel = *(const int32_t *)(p);
 
-	return (true);                                                                                                                                                    
+	desc = (const Elf32_Word *)p;
+	if (desc[0] != GNU_KFREEBSD_ABI_DESC)
+		return (false);
+
+	/*
+	 * Debian GNU/kFreeBSD embed the earliest compatible kernel version
+	 * (__FreeBSD_version: <major><two digit minor>Rxx) in the LSB way.
+	 */
+	*osrel = desc[1] * 100000 + desc[2] * 1000 + desc[3];
+
+	return (true);
 }
-
 
 int
 __elfN(insert_brand_entry)(Elf_Brandinfo *entry)
@@ -246,12 +301,14 @@ __elfN(brand_inuse)(Elf_Brandinfo *entry)
 
 static Elf_Brandinfo *
 __elfN(get_brandinfo)(struct image_params *imgp, const char *interp,
-    int interp_name_len, int32_t *osrel)
+    int32_t *osrel, uint32_t *fctl0)
 {
 	const Elf_Ehdr *hdr = (const Elf_Ehdr *)imgp->image_header;
 	Elf_Brandinfo *bi, *bi_m;
 	boolean_t ret;
-	int i;
+	int i, interp_name_len;
+
+	interp_name_len = interp != NULL ? strlen(interp) + 1 : 0;
 
 	/*
 	 * We support four types of branding -- (1) the ELF EI_OSABI field
@@ -270,7 +327,8 @@ __elfN(get_brandinfo)(struct image_params *imgp, const char *interp,
 			continue;
 		if (hdr->e_machine == bi->machine && (bi->flags &
 		    (BI_BRAND_NOTE|BI_BRAND_NOTE_MANDATORY)) != 0) {
-			ret = __elfN(check_note)(imgp, bi->brand_note, osrel);
+			ret = __elfN(check_note)(imgp, bi->brand_note, osrel,
+			    fctl0);
 			/* Give brand a chance to veto check_note's guess */
 			if (ret && bi->header_supported)
 				ret = bi->header_supported(imgp);
@@ -378,6 +436,13 @@ __elfN(get_brandinfo)(struct image_params *imgp, const char *interp,
 			return (bi);
 	}
 	return (NULL);
+}
+
+static bool
+__elfN(phdr_in_zero_page)(const Elf_Ehdr *hdr)
+{
+	return (hdr->e_phoff <= PAGE_SIZE &&
+	    (u_int)hdr->e_phentsize * hdr->e_phnum <= PAGE_SIZE - hdr->e_phoff);
 }
 
 static int
@@ -497,13 +562,17 @@ __elfN(map_insert)(struct image_params *imgp, vm_map_t map, vm_object_t object,
 	} else {
 		vm_object_reference(object);
 		rv = vm_map_fixed(map, object, offset, start, end - start,
-		    prot, VM_PROT_ALL, cow | MAP_CHECK_EXCL);
+		    prot, VM_PROT_ALL, cow | MAP_CHECK_EXCL |
+		    (object != NULL ? MAP_VN_EXEC : 0));
 		if (rv != KERN_SUCCESS) {
 			locked = VOP_ISLOCKED(imgp->vp);
 			VOP_UNLOCK(imgp->vp, 0);
 			vm_object_deallocate(object);
 			vn_lock(imgp->vp, locked | LK_RETRY);
 			return (rv);
+		} else if (object != NULL) {
+			MPASS(imgp->vp->v_object == object);
+			VOP_SET_TEXT_CHECKED(imgp->vp);
 		}
 	}
 	return (KERN_SUCCESS);
@@ -511,8 +580,7 @@ __elfN(map_insert)(struct image_params *imgp, vm_map_t map, vm_object_t object,
 
 static int
 __elfN(load_section)(struct image_params *imgp, vm_ooffset_t offset,
-    caddr_t vmaddr, size_t memsz, size_t filsz, vm_prot_t prot,
-    size_t pagesize)
+    caddr_t vmaddr, size_t memsz, size_t filsz, vm_prot_t prot)
 {
 	struct sf_buf *sf;
 	size_t map_len;
@@ -540,8 +608,8 @@ __elfN(load_section)(struct image_params *imgp, vm_ooffset_t offset,
 
 	object = imgp->object;
 	map = &imgp->proc->p_vmspace->vm_map;
-	map_addr = trunc_page_ps((vm_offset_t)vmaddr, pagesize);
-	file_addr = trunc_page_ps(offset, pagesize);
+	map_addr = trunc_page((vm_offset_t)vmaddr);
+	file_addr = trunc_page(offset);
 
 	/*
 	 * We have two choices.  We can either clear the data in the last page
@@ -552,22 +620,17 @@ __elfN(load_section)(struct image_params *imgp, vm_ooffset_t offset,
 	if (filsz == 0)
 		map_len = 0;
 	else if (memsz > filsz)
-		map_len = trunc_page_ps(offset + filsz, pagesize) - file_addr;
+		map_len = trunc_page(offset + filsz) - file_addr;
 	else
-		map_len = round_page_ps(offset + filsz, pagesize) - file_addr;
+		map_len = round_page(offset + filsz) - file_addr;
 
 	if (map_len != 0) {
 		/* cow flags: don't dump readonly sections in core */
 		cow = MAP_COPY_ON_WRITE | MAP_PREFAULT |
 		    (prot & VM_PROT_WRITE ? 0 : MAP_DISABLE_COREDUMP);
 
-		rv = __elfN(map_insert)(imgp, map,
-				      object,
-				      file_addr,	/* file offset */
-				      map_addr,		/* virtual start */
-				      map_addr + map_len,/* virtual end */
-				      prot,
-				      cow);
+		rv = __elfN(map_insert)(imgp, map, object, file_addr,
+		    map_addr, map_addr + map_len, prot, cow);
 		if (rv != KERN_SUCCESS)
 			return (EINVAL);
 
@@ -583,11 +646,10 @@ __elfN(load_section)(struct image_params *imgp, vm_ooffset_t offset,
 	 * segment in the file is extended to provide bss.  It's a neat idea
 	 * to try and save a page, but it's a pain in the behind to implement.
 	 */
-	copy_len = filsz == 0 ? 0 : (offset + filsz) - trunc_page_ps(offset +
-	    filsz, pagesize);
-	map_addr = trunc_page_ps((vm_offset_t)vmaddr + filsz, pagesize);
-	map_len = round_page_ps((vm_offset_t)vmaddr + memsz, pagesize) -
-	    map_addr;
+	copy_len = filsz == 0 ? 0 : (offset + filsz) - trunc_page(offset +
+	    filsz);
+	map_addr = trunc_page((vm_offset_t)vmaddr + filsz);
+	map_len = round_page((vm_offset_t)vmaddr + memsz) - map_addr;
 
 	/* This had damn well better be true! */
 	if (map_len != 0) {
@@ -603,8 +665,7 @@ __elfN(load_section)(struct image_params *imgp, vm_ooffset_t offset,
 			return (EIO);
 
 		/* send the page fragment to user space */
-		off = trunc_page_ps(offset + filsz, pagesize) -
-		    trunc_page(offset + filsz);
+		off = trunc_page(offset + filsz) - trunc_page(offset + filsz);
 		error = copyout((caddr_t)sf_buf_kva(sf) + off,
 		    (caddr_t)map_addr, copy_len);
 		vm_imgact_unmap_page(sf);
@@ -623,6 +684,47 @@ __elfN(load_section)(struct image_params *imgp, vm_ooffset_t offset,
 	return (0);
 }
 
+static int
+__elfN(load_sections)(struct image_params *imgp, const Elf_Ehdr *hdr,
+    const Elf_Phdr *phdr, u_long rbase, u_long *base_addrp)
+{
+	vm_prot_t prot;
+	u_long base_addr;
+	bool first;
+	int error, i;
+
+	ASSERT_VOP_LOCKED(imgp->vp, __func__);
+
+	base_addr = 0;
+	first = true;
+
+	for (i = 0; i < hdr->e_phnum; i++) {
+		if (phdr[i].p_type != PT_LOAD || phdr[i].p_memsz == 0)
+			continue;
+
+		/* Loadable segment */
+		prot = __elfN(trans_prot)(phdr[i].p_flags);
+		error = __elfN(load_section)(imgp, phdr[i].p_offset,
+		    (caddr_t)(uintptr_t)phdr[i].p_vaddr + rbase,
+		    phdr[i].p_memsz, phdr[i].p_filesz, prot);
+		if (error != 0)
+			return (error);
+
+		/*
+		 * Establish the base address if this is the first segment.
+		 */
+		if (first) {
+  			base_addr = trunc_page(phdr[i].p_vaddr + rbase);
+			first = false;
+		}
+	}
+
+	if (base_addrp != NULL)
+		*base_addrp = base_addr;
+
+	return (0);
+}
+
 /*
  * Load the file "file" into memory.  It may be either a shared object
  * or an executable.
@@ -637,7 +739,7 @@ __elfN(load_section)(struct image_params *imgp, vm_ooffset_t offset,
  */
 static int
 __elfN(load_file)(struct proc *p, const char *file, u_long *addr,
-	u_long *entry, size_t pagesize)
+	u_long *entry)
 {
 	struct {
 		struct nameidata nd;
@@ -649,10 +751,9 @@ __elfN(load_file)(struct proc *p, const char *file, u_long *addr,
 	struct nameidata *nd;
 	struct vattr *attr;
 	struct image_params *imgp;
-	vm_prot_t prot;
 	u_long rbase;
 	u_long base_addr = 0;
-	int error, i, numsegs;
+	int error;
 
 #ifdef CAPABILITY_MODE
 	/*
@@ -663,7 +764,7 @@ __elfN(load_file)(struct proc *p, const char *file, u_long *addr,
 		return (ECAPMODE);
 #endif
 
-	tempdata = malloc(sizeof(*tempdata), M_TEMP, M_WAITOK);
+	tempdata = malloc(sizeof(*tempdata), M_TEMP, M_WAITOK | M_ZERO);
 	nd = &tempdata->nd;
 	attr = &tempdata->attr;
 	imgp = &tempdata->image_params;
@@ -673,13 +774,9 @@ __elfN(load_file)(struct proc *p, const char *file, u_long *addr,
 	 */
 	imgp->proc = p;
 	imgp->attr = attr;
-	imgp->firstpage = NULL;
-	imgp->image_header = NULL;
-	imgp->object = NULL;
-	imgp->execlabel = NULL;
 
-	NDINIT(nd, LOOKUP, ISOPEN | LOCKLEAF | FOLLOW, UIO_SYSSPACE, file,
-	    curthread);
+	NDINIT(nd, LOOKUP, ISOPEN | FOLLOW | LOCKSHARED | LOCKLEAF,
+	    UIO_SYSSPACE, file, curthread);
 	if ((error = namei(nd)) != 0) {
 		nd->ni_vp = NULL;
 		goto fail;
@@ -698,12 +795,6 @@ __elfN(load_file)(struct proc *p, const char *file, u_long *addr,
 	if (error)
 		goto fail;
 
-	/*
-	 * Also make certain that the interpreter stays the same, so set
-	 * its VV_TEXT flag, too.
-	 */
-	VOP_SET_TEXT(nd->ni_vp);
-
 	imgp->object = nd->ni_vp->v_object;
 
 	hdr = (const Elf_Ehdr *)imgp->image_header;
@@ -719,8 +810,7 @@ __elfN(load_file)(struct proc *p, const char *file, u_long *addr,
 	}
 
 	/* Only support headers that fit within first page for now      */
-	if ((hdr->e_phoff > PAGE_SIZE) ||
-	    (u_int)hdr->e_phentsize * hdr->e_phnum > PAGE_SIZE - hdr->e_phoff) {
+	if (!__elfN(phdr_in_zero_page)(hdr)) {
 		error = ENOEXEC;
 		goto fail;
 	}
@@ -731,25 +821,10 @@ __elfN(load_file)(struct proc *p, const char *file, u_long *addr,
 		goto fail;
 	}
 
-	for (i = 0, numsegs = 0; i < hdr->e_phnum; i++) {
-		if (phdr[i].p_type == PT_LOAD && phdr[i].p_memsz != 0) {
-			/* Loadable segment */
-			prot = __elfN(trans_prot)(phdr[i].p_flags);
-			error = __elfN(load_section)(imgp, phdr[i].p_offset,
-			    (caddr_t)(uintptr_t)phdr[i].p_vaddr + rbase,
-			    phdr[i].p_memsz, phdr[i].p_filesz, prot, pagesize);
-			if (error != 0)
-				goto fail;
-			/*
-			 * Establish the base address if this is the
-			 * first segment.
-			 */
-			if (numsegs == 0)
-  				base_addr = trunc_page(phdr[i].p_vaddr +
-				    rbase);
-			numsegs++;
-		}
-	}
+	error = __elfN(load_sections)(imgp, hdr, phdr, rbase, &base_addr);
+	if (error != 0)
+		goto fail;
+
 	*addr = base_addr;
 	*entry = (unsigned long)hdr->e_entry + rbase;
 
@@ -757,13 +832,223 @@ fail:
 	if (imgp->firstpage)
 		exec_unmap_first_page(imgp);
 
-	if (nd->ni_vp)
+	if (nd->ni_vp) {
+		if (imgp->textset)
+			VOP_UNSET_TEXT_CHECKED(nd->ni_vp);
 		vput(nd->ni_vp);
-
+	}
 	free(tempdata, M_TEMP);
 
 	return (error);
 }
+
+static u_long
+__CONCAT(rnd_, __elfN(base))(vm_map_t map __unused, u_long minv, u_long maxv,
+    u_int align)
+{
+	u_long rbase, res;
+
+	MPASS(vm_map_min(map) <= minv);
+	MPASS(maxv <= vm_map_max(map));
+	MPASS(minv < maxv);
+	MPASS(minv + align < maxv);
+	arc4rand(&rbase, sizeof(rbase), 0);
+	res = roundup(minv, (u_long)align) + rbase % (maxv - minv);
+	res &= ~((u_long)align - 1);
+	if (res >= maxv)
+		res -= align;
+	KASSERT(res >= minv,
+	    ("res %#lx < minv %#lx, maxv %#lx rbase %#lx",
+	    res, minv, maxv, rbase));
+	KASSERT(res < maxv,
+	    ("res %#lx > maxv %#lx, minv %#lx rbase %#lx",
+	    res, maxv, minv, rbase));
+	return (res);
+}
+
+static int
+__elfN(enforce_limits)(struct image_params *imgp, const Elf_Ehdr *hdr,
+    const Elf_Phdr *phdr, u_long et_dyn_addr)
+{
+	struct vmspace *vmspace;
+	const char *err_str;
+	u_long text_size, data_size, total_size, text_addr, data_addr;
+	u_long seg_size, seg_addr;
+	int i;
+
+	err_str = NULL;
+	text_size = data_size = total_size = text_addr = data_addr = 0;
+
+	for (i = 0; i < hdr->e_phnum; i++) {
+		if (phdr[i].p_type != PT_LOAD || phdr[i].p_memsz == 0)
+			continue;
+
+		seg_addr = trunc_page(phdr[i].p_vaddr + et_dyn_addr);
+		seg_size = round_page(phdr[i].p_memsz +
+		    phdr[i].p_vaddr + et_dyn_addr - seg_addr);
+
+		/*
+		 * Make the largest executable segment the official
+		 * text segment and all others data.
+		 *
+		 * Note that obreak() assumes that data_addr + data_size == end
+		 * of data load area, and the ELF file format expects segments
+		 * to be sorted by address.  If multiple data segments exist,
+		 * the last one will be used.
+		 */
+
+		if ((phdr[i].p_flags & PF_X) != 0 && text_size < seg_size) {
+			text_size = seg_size;
+			text_addr = seg_addr;
+		} else {
+			data_size = seg_size;
+			data_addr = seg_addr;
+		}
+		total_size += seg_size;
+	}
+	
+	if (data_addr == 0 && data_size == 0) {
+		data_addr = text_addr;
+		data_size = text_size;
+	}
+
+	/*
+	 * Check limits.  It should be safe to check the
+	 * limits after loading the segments since we do
+	 * not actually fault in all the segments pages.
+	 */
+	PROC_LOCK(imgp->proc);
+	if (data_size > lim_cur_proc(imgp->proc, RLIMIT_DATA))
+		err_str = "Data segment size exceeds process limit";
+	else if (text_size > maxtsiz)
+		err_str = "Text segment size exceeds system limit";
+	else if (total_size > lim_cur_proc(imgp->proc, RLIMIT_VMEM))
+		err_str = "Total segment size exceeds process limit";
+	else if (racct_set(imgp->proc, RACCT_DATA, data_size) != 0)
+		err_str = "Data segment size exceeds resource limit";
+	else if (racct_set(imgp->proc, RACCT_VMEM, total_size) != 0)
+		err_str = "Total segment size exceeds resource limit";
+	PROC_UNLOCK(imgp->proc);
+	if (err_str != NULL) {
+		uprintf("%s\n", err_str);
+		return (ENOMEM);
+	}
+
+	vmspace = imgp->proc->p_vmspace;
+	vmspace->vm_tsize = text_size >> PAGE_SHIFT;
+	vmspace->vm_taddr = (caddr_t)(uintptr_t)text_addr;
+	vmspace->vm_dsize = data_size >> PAGE_SHIFT;
+	vmspace->vm_daddr = (caddr_t)(uintptr_t)data_addr;
+
+	return (0);
+}
+
+static int
+__elfN(get_interp)(struct image_params *imgp, const Elf_Phdr *phdr,
+    char **interpp, bool *free_interpp)
+{
+	struct thread *td;
+	char *interp;
+	int error, interp_name_len;
+
+	KASSERT(phdr->p_type == PT_INTERP,
+	    ("%s: p_type %u != PT_INTERP", __func__, phdr->p_type));
+	ASSERT_VOP_LOCKED(imgp->vp, __func__);
+
+	td = curthread;
+
+	/* Path to interpreter */
+	if (phdr->p_filesz < 2 || phdr->p_filesz > MAXPATHLEN) {
+		uprintf("Invalid PT_INTERP\n");
+		return (ENOEXEC);
+	}
+
+	interp_name_len = phdr->p_filesz;
+	if (phdr->p_offset > PAGE_SIZE ||
+	    interp_name_len > PAGE_SIZE - phdr->p_offset) {
+		/*
+		 * The vnode lock might be needed by the pagedaemon to
+		 * clean pages owned by the vnode.  Do not allow sleep
+		 * waiting for memory with the vnode locked, instead
+		 * try non-sleepable allocation first, and if it
+		 * fails, go to the slow path were we drop the lock
+		 * and do M_WAITOK.  A text reference prevents
+		 * modifications to the vnode content.
+		 */
+		interp = malloc(interp_name_len + 1, M_TEMP, M_NOWAIT);
+		if (interp == NULL) {
+			VOP_UNLOCK(imgp->vp, 0);
+			interp = malloc(interp_name_len + 1, M_TEMP, M_WAITOK);
+			vn_lock(imgp->vp, LK_SHARED | LK_RETRY);
+		}
+
+		error = vn_rdwr(UIO_READ, imgp->vp, interp,
+		    interp_name_len, phdr->p_offset,
+		    UIO_SYSSPACE, IO_NODELOCKED, td->td_ucred,
+		    NOCRED, NULL, td);
+		if (error != 0) {
+			free(interp, M_TEMP);
+			uprintf("i/o error PT_INTERP %d\n", error);
+			return (error);
+		}
+		interp[interp_name_len] = '\0';
+
+		*interpp = interp;
+		*free_interpp = true;
+		return (0);
+	}
+
+	interp = __DECONST(char *, imgp->image_header) + phdr->p_offset;
+	if (interp[interp_name_len - 1] != '\0') {
+		uprintf("Invalid PT_INTERP\n");
+		return (ENOEXEC);
+	}
+
+	*interpp = interp;
+	*free_interpp = false;
+	return (0);
+}
+
+static int
+__elfN(load_interp)(struct image_params *imgp, const Elf_Brandinfo *brand_info,
+    const char *interp, u_long *addr, u_long *entry)
+{
+	char *path;
+	int error;
+
+	if (brand_info->emul_path != NULL &&
+	    brand_info->emul_path[0] != '\0') {
+		path = malloc(MAXPATHLEN, M_TEMP, M_WAITOK);
+		snprintf(path, MAXPATHLEN, "%s%s",
+		    brand_info->emul_path, interp);
+		error = __elfN(load_file)(imgp->proc, path, addr, entry);
+		free(path, M_TEMP);
+		if (error == 0)
+			return (0);
+	}
+
+	if (brand_info->interp_newpath != NULL &&
+	    (brand_info->interp_path == NULL ||
+	    strcmp(interp, brand_info->interp_path) == 0)) {
+		error = __elfN(load_file)(imgp->proc,
+		    brand_info->interp_newpath, addr, entry);
+		if (error == 0)
+			return (0);
+	}
+
+	error = __elfN(load_file)(imgp->proc, interp, addr, entry);
+	if (error == 0)
+		return (0);
+
+	uprintf("ELF interpreter %s not found, error %d\n", interp, error);
+	return (error);
+}
+
+/*
+ * Impossible et_dyn_addr initial value indicating that the real base
+ * must be calculated later with some randomization applied.
+ */
+#define	ET_DYN_ADDR_RAND	1
 
 static int
 __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
@@ -773,15 +1058,16 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 	const Elf_Phdr *phdr;
 	Elf_Auxargs *elf_auxargs;
 	struct vmspace *vmspace;
-	const char *err_str, *newinterp;
-	char *interp, *interp_buf, *path;
+	vm_map_t map;
+	char *interp;
 	Elf_Brandinfo *brand_info;
 	struct sysentvec *sv;
-	vm_prot_t prot;
-	u_long text_size, data_size, total_size, text_addr, data_addr;
-	u_long seg_size, seg_addr, addr, baddr, et_dyn_addr, entry, proghdr;
+	u_long addr, baddr, et_dyn_addr, entry, proghdr;
+	u_long maxalign, mapsz, maxv, maxv1;
+	uint32_t fctl0;
 	int32_t osrel;
-	int error, i, n, interp_name_len, have_interp;
+	bool free_interp;
+	int error, i, n;
 
 	hdr = (const Elf_Ehdr *)imgp->image_header;
 
@@ -800,9 +1086,7 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 	 * detected an ELF file.
 	 */
 
-	if ((hdr->e_phoff > PAGE_SIZE) ||
-	    (u_int)hdr->e_phentsize * hdr->e_phnum > PAGE_SIZE - hdr->e_phoff) {
-		/* Only support headers in first page for now */
+	if (!__elfN(phdr_in_zero_page)(hdr)) {
 		uprintf("Program headers not in the first page\n");
 		return (ENOEXEC);
 	}
@@ -815,60 +1099,46 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 	n = error = 0;
 	baddr = 0;
 	osrel = 0;
-	text_size = data_size = total_size = text_addr = data_addr = 0;
+	fctl0 = 0;
 	entry = proghdr = 0;
-	interp_name_len = 0;
-	err_str = newinterp = NULL;
-	interp = interp_buf = NULL;
+	interp = NULL;
+	free_interp = false;
 	td = curthread;
+	maxalign = PAGE_SIZE;
+	mapsz = 0;
 
 	for (i = 0; i < hdr->e_phnum; i++) {
 		switch (phdr[i].p_type) {
 		case PT_LOAD:
 			if (n == 0)
 				baddr = phdr[i].p_vaddr;
+			if (phdr[i].p_align > maxalign)
+				maxalign = phdr[i].p_align;
+			mapsz += phdr[i].p_memsz;
 			n++;
+
+			/*
+			 * If this segment contains the program headers,
+			 * remember their virtual address for the AT_PHDR
+			 * aux entry. Static binaries don't usually include
+			 * a PT_PHDR entry.
+			 */
+			if (phdr[i].p_offset == 0 &&
+			    hdr->e_phoff + hdr->e_phnum * hdr->e_phentsize
+				<= phdr[i].p_filesz)
+				proghdr = phdr[i].p_vaddr + hdr->e_phoff;
 			break;
 		case PT_INTERP:
 			/* Path to interpreter */
-			if (phdr[i].p_filesz < 2 ||
-			    phdr[i].p_filesz > MAXPATHLEN) {
-				uprintf("Invalid PT_INTERP\n");
-				error = ENOEXEC;
-				goto ret;
-			}
 			if (interp != NULL) {
 				uprintf("Multiple PT_INTERP headers\n");
 				error = ENOEXEC;
 				goto ret;
 			}
-			interp_name_len = phdr[i].p_filesz;
-			if (phdr[i].p_offset > PAGE_SIZE ||
-			    interp_name_len > PAGE_SIZE - phdr[i].p_offset) {
-				VOP_UNLOCK(imgp->vp, 0);
-				interp_buf = malloc(interp_name_len + 1, M_TEMP,
-				    M_WAITOK);
-				vn_lock(imgp->vp, LK_EXCLUSIVE | LK_RETRY);
-				error = vn_rdwr(UIO_READ, imgp->vp, interp_buf,
-				    interp_name_len, phdr[i].p_offset,
-				    UIO_SYSSPACE, IO_NODELOCKED, td->td_ucred,
-				    NOCRED, NULL, td);
-				if (error != 0) {
-					uprintf("i/o error PT_INTERP %d\n",
-					    error);
-					goto ret;
-				}
-				interp_buf[interp_name_len] = '\0';
-				interp = interp_buf;
-			} else {
-				interp = __DECONST(char *, imgp->image_header) +
-				    phdr[i].p_offset;
-				if (interp[interp_name_len - 1] != '\0') {
-					uprintf("Invalid PT_INTERP\n");
-					error = ENOEXEC;
-					goto ret;
-				}
-			}
+			error = __elfN(get_interp)(imgp, &phdr[i], &interp,
+			    &free_interp);
+			if (error != 0)
+				goto ret;
 			break;
 		case PT_GNU_STACK:
 			if (__elfN(nxstack))
@@ -876,17 +1146,21 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 				    __elfN(trans_prot)(phdr[i].p_flags);
 			imgp->stack_sz = phdr[i].p_memsz;
 			break;
+		case PT_PHDR: 	/* Program header table info */
+			proghdr = phdr[i].p_vaddr;
+			break;
 		}
 	}
 
-	brand_info = __elfN(get_brandinfo)(imgp, interp, interp_name_len,
-	    &osrel);
+	brand_info = __elfN(get_brandinfo)(imgp, interp, &osrel, &fctl0);
 	if (brand_info == NULL) {
 		uprintf("ELF binary type \"%u\" not known.\n",
 		    hdr->e_ident[EI_OSABI]);
 		error = ENOEXEC;
 		goto ret;
 	}
+	sv = brand_info->sysvec;
+	et_dyn_addr = 0;
 	if (hdr->e_type == ET_DYN) {
 		if ((brand_info->flags & BI_CAN_EXEC_DYN) == 0) {
 			uprintf("Cannot execute shared object\n");
@@ -897,15 +1171,18 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 		 * Honour the base load address from the dso if it is
 		 * non-zero for some reason.
 		 */
-		if (baddr == 0)
-			et_dyn_addr = ET_DYN_LOAD_ADDR;
-		else
-			et_dyn_addr = 0;
-	} else
-		et_dyn_addr = 0;
-	sv = brand_info->sysvec;
-	if (interp != NULL && brand_info->interp_newpath != NULL)
-		newinterp = brand_info->interp_newpath;
+		if (baddr == 0) {
+			if ((sv->sv_flags & SV_ASLR) == 0 ||
+			    (fctl0 & NT_FREEBSD_FCTL_ASLR_DISABLE) != 0)
+				et_dyn_addr = __elfN(pie_base);
+			else if ((__elfN(pie_aslr_enabled) &&
+			    (imgp->proc->p_flag2 & P2_ASLR_DISABLE) == 0) ||
+			    (imgp->proc->p_flag2 & P2_ASLR_ENABLE) != 0)
+				et_dyn_addr = ET_DYN_ADDR_RAND;
+			else
+				et_dyn_addr = __elfN(pie_base);
+		}
+	}
 
 	/*
 	 * Avoid a possible deadlock if the current address space is destroyed
@@ -920,105 +1197,67 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 	 */
 	VOP_UNLOCK(imgp->vp, 0);
 
+	/*
+	 * Decide whether to enable randomization of user mappings.
+	 * First, reset user preferences for the setid binaries.
+	 * Then, account for the support of the randomization by the
+	 * ABI, by user preferences, and make special treatment for
+	 * PIE binaries.
+	 */
+	if (imgp->credential_setid) {
+		PROC_LOCK(imgp->proc);
+		imgp->proc->p_flag2 &= ~(P2_ASLR_ENABLE | P2_ASLR_DISABLE);
+		PROC_UNLOCK(imgp->proc);
+	}
+	if ((sv->sv_flags & SV_ASLR) == 0 ||
+	    (imgp->proc->p_flag2 & P2_ASLR_DISABLE) != 0 ||
+	    (fctl0 & NT_FREEBSD_FCTL_ASLR_DISABLE) != 0) {
+		KASSERT(et_dyn_addr != ET_DYN_ADDR_RAND,
+		    ("et_dyn_addr == RAND and !ASLR"));
+	} else if ((imgp->proc->p_flag2 & P2_ASLR_ENABLE) != 0 ||
+	    (__elfN(aslr_enabled) && hdr->e_type == ET_EXEC) ||
+	    et_dyn_addr == ET_DYN_ADDR_RAND) {
+		imgp->map_flags |= MAP_ASLR;
+		/*
+		 * If user does not care about sbrk, utilize the bss
+		 * grow region for mappings as well.  We can select
+		 * the base for the image anywere and still not suffer
+		 * from the fragmentation.
+		 */
+		if (!__elfN(aslr_honor_sbrk) ||
+		    (imgp->proc->p_flag2 & P2_ASLR_IGNSTART) != 0)
+			imgp->map_flags |= MAP_ASLR_IGNSTART;
+	}
+
 	error = exec_new_vmspace(imgp, sv);
+	vmspace = imgp->proc->p_vmspace;
+	map = &vmspace->vm_map;
+
 	imgp->proc->p_sysent = sv;
 
-	vn_lock(imgp->vp, LK_EXCLUSIVE | LK_RETRY);
+	maxv = vm_map_max(map) - lim_max(td, RLIMIT_STACK);
+	if (et_dyn_addr == ET_DYN_ADDR_RAND) {
+		KASSERT((map->flags & MAP_ASLR) != 0,
+		    ("ET_DYN_ADDR_RAND but !MAP_ASLR"));
+		et_dyn_addr = __CONCAT(rnd_, __elfN(base))(map,
+		    vm_map_min(map) + mapsz + lim_max(td, RLIMIT_DATA),
+		    /* reserve half of the address space to interpreter */
+		    maxv / 2, 1UL << flsl(maxalign));
+	}
+
+	vn_lock(imgp->vp, LK_SHARED | LK_RETRY);
 	if (error != 0)
 		goto ret;
 
-	for (i = 0; i < hdr->e_phnum; i++) {
-		switch (phdr[i].p_type) {
-		case PT_LOAD:	/* Loadable segment */
-			if (phdr[i].p_memsz == 0)
-				break;
-			prot = __elfN(trans_prot)(phdr[i].p_flags);
-			error = __elfN(load_section)(imgp, phdr[i].p_offset,
-			    (caddr_t)(uintptr_t)phdr[i].p_vaddr + et_dyn_addr,
-			    phdr[i].p_memsz, phdr[i].p_filesz, prot,
-			    sv->sv_pagesize);
-			if (error != 0)
-				goto ret;
+	error = __elfN(load_sections)(imgp, hdr, phdr, et_dyn_addr, NULL);
+	if (error != 0)
+		goto ret;
 
-			/*
-			 * If this segment contains the program headers,
-			 * remember their virtual address for the AT_PHDR
-			 * aux entry. Static binaries don't usually include
-			 * a PT_PHDR entry.
-			 */
-			if (phdr[i].p_offset == 0 &&
-			    hdr->e_phoff + hdr->e_phnum * hdr->e_phentsize
-				<= phdr[i].p_filesz)
-				proghdr = phdr[i].p_vaddr + hdr->e_phoff +
-				    et_dyn_addr;
-
-			seg_addr = trunc_page(phdr[i].p_vaddr + et_dyn_addr);
-			seg_size = round_page(phdr[i].p_memsz +
-			    phdr[i].p_vaddr + et_dyn_addr - seg_addr);
-
-			/*
-			 * Make the largest executable segment the official
-			 * text segment and all others data.
-			 *
-			 * Note that obreak() assumes that data_addr + 
-			 * data_size == end of data load area, and the ELF
-			 * file format expects segments to be sorted by
-			 * address.  If multiple data segments exist, the
-			 * last one will be used.
-			 */
-
-			if (phdr[i].p_flags & PF_X && text_size < seg_size) {
-				text_size = seg_size;
-				text_addr = seg_addr;
-			} else {
-				data_size = seg_size;
-				data_addr = seg_addr;
-			}
-			total_size += seg_size;
-			break;
-		case PT_PHDR: 	/* Program header table info */
-			proghdr = phdr[i].p_vaddr + et_dyn_addr;
-			break;
-		default:
-			break;
-		}
-	}
-	
-	if (data_addr == 0 && data_size == 0) {
-		data_addr = text_addr;
-		data_size = text_size;
-	}
+	error = __elfN(enforce_limits)(imgp, hdr, phdr, et_dyn_addr);
+	if (error != 0)
+		goto ret;
 
 	entry = (u_long)hdr->e_entry + et_dyn_addr;
-
-	/*
-	 * Check limits.  It should be safe to check the
-	 * limits after loading the segments since we do
-	 * not actually fault in all the segments pages.
-	 */
-	PROC_LOCK(imgp->proc);
-	if (data_size > lim_cur_proc(imgp->proc, RLIMIT_DATA))
-		err_str = "Data segment size exceeds process limit";
-	else if (text_size > maxtsiz)
-		err_str = "Text segment size exceeds system limit";
-	else if (total_size > lim_cur_proc(imgp->proc, RLIMIT_VMEM))
-		err_str = "Total segment size exceeds process limit";
-	else if (racct_set(imgp->proc, RACCT_DATA, data_size) != 0)
-		err_str = "Data segment size exceeds resource limit";
-	else if (racct_set(imgp->proc, RACCT_VMEM, total_size) != 0)
-		err_str = "Total segment size exceeds resource limit";
-	if (err_str != NULL) {
-		PROC_UNLOCK(imgp->proc);
-		uprintf("%s\n", err_str);
-		error = ENOMEM;
-		goto ret;
-	}
-
-	vmspace = imgp->proc->p_vmspace;
-	vmspace->vm_tsize = text_size >> PAGE_SHIFT;
-	vmspace->vm_taddr = (caddr_t)(uintptr_t)text_addr;
-	vmspace->vm_dsize = data_size >> PAGE_SHIFT;
-	vmspace->vm_daddr = (caddr_t)(uintptr_t)data_addr;
 
 	/*
 	 * We load the dynamic linker where a userland call
@@ -1028,51 +1267,46 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 	 */
 	addr = round_page((vm_offset_t)vmspace->vm_daddr + lim_max(td,
 	    RLIMIT_DATA));
-	PROC_UNLOCK(imgp->proc);
+	if ((map->flags & MAP_ASLR) != 0) {
+		maxv1 = maxv / 2 + addr / 2;
+		MPASS(maxv1 >= addr);	/* No overflow */
+		map->anon_loc = __CONCAT(rnd_, __elfN(base))(map, addr, maxv1,
+		    (MAXPAGESIZES > 1 && pagesizes[1] != 0) ?
+		    pagesizes[1] : pagesizes[0]);
+	} else {
+		map->anon_loc = addr;
+	}
 
 	imgp->entry_addr = entry;
 
 	if (interp != NULL) {
-		have_interp = FALSE;
 		VOP_UNLOCK(imgp->vp, 0);
-		if (brand_info->emul_path != NULL &&
-		    brand_info->emul_path[0] != '\0') {
-			path = malloc(MAXPATHLEN, M_TEMP, M_WAITOK);
-			snprintf(path, MAXPATHLEN, "%s%s",
-			    brand_info->emul_path, interp);
-			error = __elfN(load_file)(imgp->proc, path, &addr,
-			    &imgp->entry_addr, sv->sv_pagesize);
-			free(path, M_TEMP);
-			if (error == 0)
-				have_interp = TRUE;
+		if ((map->flags & MAP_ASLR) != 0) {
+			/* Assume that interpreter fits into 1/4 of AS */
+			maxv1 = maxv / 2 + addr / 2;
+			MPASS(maxv1 >= addr);	/* No overflow */
+			addr = __CONCAT(rnd_, __elfN(base))(map, addr,
+			    maxv1, PAGE_SIZE);
 		}
-		if (!have_interp && newinterp != NULL &&
-		    (brand_info->interp_path == NULL ||
-		    strcmp(interp, brand_info->interp_path) == 0)) {
-			error = __elfN(load_file)(imgp->proc, newinterp, &addr,
-			    &imgp->entry_addr, sv->sv_pagesize);
-			if (error == 0)
-				have_interp = TRUE;
-		}
-		if (!have_interp) {
-			error = __elfN(load_file)(imgp->proc, interp, &addr,
-			    &imgp->entry_addr, sv->sv_pagesize);
-		}
-		vn_lock(imgp->vp, LK_EXCLUSIVE | LK_RETRY);
-		if (error != 0) {
-			uprintf("ELF interpreter %s not found, error %d\n",
-			    interp, error);
+		error = __elfN(load_interp)(imgp, brand_info, interp, &addr,
+		    &imgp->entry_addr);
+		vn_lock(imgp->vp, LK_SHARED | LK_RETRY);
+		if (error != 0)
 			goto ret;
-		}
 	} else
 		addr = et_dyn_addr;
 
 	/*
 	 * Construct auxargs table (used by the fixup routine)
 	 */
-	elf_auxargs = malloc(sizeof(Elf_Auxargs), M_TEMP, M_WAITOK);
+	elf_auxargs = malloc(sizeof(Elf_Auxargs), M_TEMP, M_NOWAIT);
+	if (elf_auxargs == NULL) {
+		VOP_UNLOCK(imgp->vp, 0);
+		elf_auxargs = malloc(sizeof(Elf_Auxargs), M_TEMP, M_WAITOK);
+		vn_lock(imgp->vp, LK_SHARED | LK_RETRY);
+	}
 	elf_auxargs->execfd = -1;
-	elf_auxargs->phdr = proghdr;
+	elf_auxargs->phdr = proghdr + et_dyn_addr;
 	elf_auxargs->phent = hdr->e_phentsize;
 	elf_auxargs->phnum = hdr->e_phnum;
 	elf_auxargs->pagesz = PAGE_SIZE;
@@ -1085,11 +1319,13 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 	imgp->interpreted = 0;
 	imgp->reloc_base = addr;
 	imgp->proc->p_osrel = osrel;
+	imgp->proc->p_fctl0 = fctl0;
 	imgp->proc->p_elf_machine = hdr->e_machine;
 	imgp->proc->p_elf_flags = hdr->e_flags;
 
- ret:
-	free(interp_buf, M_TEMP);
+ret:
+	if (free_interp)
+		free(interp, M_TEMP);
 	return (error);
 }
 
@@ -1099,11 +1335,14 @@ int
 __elfN(freebsd_fixup)(register_t **stack_base, struct image_params *imgp)
 {
 	Elf_Auxargs *args = (Elf_Auxargs *)imgp->auxargs;
-	Elf_Addr *base;
-	Elf_Addr *pos;
+	Elf_Auxinfo *argarray, *pos;
+	Elf_Addr *base, *auxbase;
+	int error;
 
 	base = (Elf_Addr *)*stack_base;
-	pos = base + (imgp->args->argc + imgp->args->envc + 2);
+	auxbase = base + imgp->args->argc + 1 + imgp->args->envc + 1;
+	argarray = pos = malloc(AT_COUNT * sizeof(*pos), M_TEMP,
+	    M_WAITOK | M_ZERO);
 
 	if (args->execfd != -1)
 		AUXARGS_ENTRY(pos, AT_EXECFD, args->execfd);
@@ -1135,19 +1374,24 @@ __elfN(freebsd_fixup)(register_t **stack_base, struct image_params *imgp)
 	AUXARGS_ENTRY(pos, AT_STACKPROT, imgp->sysent->sv_shared_page_obj
 	    != NULL && imgp->stack_prot != 0 ? imgp->stack_prot :
 	    imgp->sysent->sv_stackprot);
-	if ((imgp->sysent->sv_flags & SV_HWCAP) != 0) {
-		if (imgp->sysent->sv_hwcap != NULL)
-			AUXARGS_ENTRY(pos, AT_HWCAP, *imgp->sysent->sv_hwcap);
-		if (imgp->sysent->sv_hwcap2 != NULL)
-			AUXARGS_ENTRY(pos, AT_HWCAP2, *imgp->sysent->sv_hwcap2);
-	}
+	if (imgp->sysent->sv_hwcap != NULL)
+		AUXARGS_ENTRY(pos, AT_HWCAP, *imgp->sysent->sv_hwcap);
+	if (imgp->sysent->sv_hwcap2 != NULL)
+		AUXARGS_ENTRY(pos, AT_HWCAP2, *imgp->sysent->sv_hwcap2);
 	AUXARGS_ENTRY(pos, AT_NULL, 0);
 
 	free(imgp->auxargs, M_TEMP);
 	imgp->auxargs = NULL;
+	KASSERT(pos - argarray <= AT_COUNT, ("Too many auxargs"));
+
+	error = copyout(argarray, auxbase, sizeof(*argarray) * AT_COUNT);
+	free(argarray, M_TEMP);
+	if (error != 0)
+		return (error);
 
 	base--;
-	suword(base, (long)imgp->args->argc);
+	if (suword(base, imgp->args->argc) == -1)
+		return (EFAULT);
 	*stack_base = (register_t *)base;
 	return (0);
 }
@@ -1189,14 +1433,17 @@ struct coredump_params {
 	struct ucred	*file_cred;
 	struct thread	*td;
 	struct vnode	*vp;
-	struct gzio_stream *gzs;
+	struct compressor *comp;
 };
+
+extern int compress_user_cores;
+extern int compress_user_cores_level;
 
 static void cb_put_phdr(vm_map_entry_t, void *);
 static void cb_size_segment(vm_map_entry_t, void *);
 static int core_write(struct coredump_params *, const void *, size_t, off_t,
     enum uio_seg);
-static void each_writable_segment(struct thread *, segment_callback, void *);
+static void each_dumpable_segment(struct thread *, segment_callback, void *);
 static int __elfN(corehdr)(struct coredump_params *, int, void *, size_t,
     struct note_info_list *, size_t);
 static void __elfN(prepare_notes)(struct thread *, struct note_info_list *,
@@ -1205,7 +1452,6 @@ static void __elfN(puthdr)(struct thread *, void *, size_t, int, size_t);
 static void __elfN(putnote)(struct note_info *, struct sbuf *);
 static size_t register_note(struct note_info_list *, int, outfunc_t, void *);
 static int sbuf_drain_core_output(void *, const char *, int);
-static int sbuf_drain_count(void *arg, const char *data, int len);
 
 static void __elfN(note_fpregset)(void *, struct sbuf *, size_t *);
 static void __elfN(note_prpsinfo)(void *, struct sbuf *, size_t *);
@@ -1223,16 +1469,13 @@ static void note_procstat_rlimit(void *, struct sbuf *, size_t *);
 static void note_procstat_umask(void *, struct sbuf *, size_t *);
 static void note_procstat_vmmap(void *, struct sbuf *, size_t *);
 
-#ifdef GZIO
-extern int compress_user_cores_gzlevel;
-
 /*
  * Write out a core segment to the compression stream.
  */
 static int
-compress_chunk(struct coredump_params *p, char *base, char *buf, u_int len)
+compress_chunk(struct coredump_params *p, char *base, char *buf, size_t len)
 {
-	u_int chunk_len;
+	size_t chunk_len;
 	int error;
 
 	while (len > 0) {
@@ -1245,7 +1488,7 @@ compress_chunk(struct coredump_params *p, char *base, char *buf, u_int len)
 		error = copyin(base, buf, chunk_len);
 		if (error != 0)
 			bzero(buf, chunk_len);
-		error = gzio_write(p->gzs, buf, chunk_len);
+		error = compressor_write(p->comp, buf, chunk_len);
 		if (error != 0)
 			break;
 		base += chunk_len;
@@ -1255,13 +1498,12 @@ compress_chunk(struct coredump_params *p, char *base, char *buf, u_int len)
 }
 
 static int
-core_gz_write(void *base, size_t len, off_t offset, void *arg)
+core_compressed_write(void *base, size_t len, off_t offset, void *arg)
 {
 
 	return (core_write((struct coredump_params *)arg, base, len, offset,
 	    UIO_SYSSPACE));
 }
-#endif /* GZIO */
 
 static int
 core_write(struct coredump_params *p, const void *base, size_t len,
@@ -1279,10 +1521,9 @@ core_output(void *base, size_t len, off_t offset, struct coredump_params *p,
 {
 	int error;
 
-#ifdef GZIO
-	if (p->gzs != NULL)
+	if (p->comp != NULL)
 		return (compress_chunk(p, base, tmpbuf, len));
-#endif
+
 	/*
 	 * EFAULT is a non-fatal error that we can get, for example,
 	 * if the segment is backed by a file but extends beyond its
@@ -1327,11 +1568,9 @@ sbuf_drain_core_output(void *arg, const char *data, int len)
 	locked = PROC_LOCKED(p->td->td_proc);
 	if (locked)
 		PROC_UNLOCK(p->td->td_proc);
-#ifdef GZIO
-	if (p->gzs != NULL)
-		error = gzio_write(p->gzs, __DECONST(char *, data), len);
+	if (p->comp != NULL)
+		error = compressor_write(p->comp, __DECONST(char *, data), len);
 	else
-#endif
 		error = core_write(p, __DECONST(void *, data), len, p->offset,
 		    UIO_SYSSPACE);
 	if (locked)
@@ -1339,19 +1578,6 @@ sbuf_drain_core_output(void *arg, const char *data, int len)
 	if (error != 0)
 		return (-error);
 	p->offset += len;
-	return (len);
-}
-
-/*
- * Drain into a counter.
- */
-static int
-sbuf_drain_count(void *arg, const char *data __unused, int len)
-{
-	size_t *sizep;
-
-	sizep = (size_t *)arg;
-	*sizep += len;
 	return (len);
 }
 
@@ -1366,11 +1592,7 @@ __elfN(coredump)(struct thread *td, struct vnode *vp, off_t limit, int flags)
 	struct note_info *ninfo;
 	void *hdr, *tmpbuf;
 	size_t hdrsize, notesz, coresize;
-#ifdef GZIO
-	boolean_t compress;
 
-	compress = (flags & IMGACT_CORE_COMPRESS) != 0;
-#endif
 	hdr = NULL;
 	tmpbuf = NULL;
 	TAILQ_INIT(&notelst);
@@ -1378,12 +1600,14 @@ __elfN(coredump)(struct thread *td, struct vnode *vp, off_t limit, int flags)
 	/* Size the program segments. */
 	seginfo.count = 0;
 	seginfo.size = 0;
-	each_writable_segment(td, cb_size_segment, &seginfo);
+	each_dumpable_segment(td, cb_size_segment, &seginfo);
 
 	/*
 	 * Collect info about the core file header area.
 	 */
 	hdrsize = sizeof(Elf_Ehdr) + sizeof(Elf_Phdr) * (1 + seginfo.count);
+	if (seginfo.count + 1 >= PN_XNUM)
+		hdrsize += sizeof(Elf_Shdr);
 	__elfN(prepare_notes)(td, &notelst, &notesz);
 	coresize = round_page(hdrsize + notesz) + seginfo.size;
 
@@ -1393,7 +1617,7 @@ __elfN(coredump)(struct thread *td, struct vnode *vp, off_t limit, int flags)
 	params.file_cred = NOCRED;
 	params.td = td;
 	params.vp = vp;
-	params.gzs = NULL;
+	params.comp = NULL;
 
 #ifdef RACCT
 	if (racct_enable) {
@@ -1411,18 +1635,17 @@ __elfN(coredump)(struct thread *td, struct vnode *vp, off_t limit, int flags)
 		goto done;
 	}
 
-#ifdef GZIO
 	/* Create a compression stream if necessary. */
-	if (compress) {
-		params.gzs = gzio_init(core_gz_write, GZIO_DEFLATE,
-		    CORE_BUF_SIZE, compress_user_cores_gzlevel, &params);
-		if (params.gzs == NULL) {
+	if (compress_user_cores != 0) {
+		params.comp = compressor_init(core_compressed_write,
+		    compress_user_cores, CORE_BUF_SIZE,
+		    compress_user_cores_level, &params);
+		if (params.comp == NULL) {
 			error = EFAULT;
 			goto done;
 		}
 		tmpbuf = malloc(CORE_BUF_SIZE, M_TEMP, M_WAITOK | M_ZERO);
         }
-#endif
 
 	/*
 	 * Allocate memory for building the header, fill it up,
@@ -1448,10 +1671,8 @@ __elfN(coredump)(struct thread *td, struct vnode *vp, off_t limit, int flags)
 			offset += php->p_filesz;
 			php++;
 		}
-#ifdef GZIO
-		if (error == 0 && compress)
-			error = gzio_flush(params.gzs);
-#endif
+		if (error == 0 && params.comp != NULL)
+			error = compressor_flush(params.comp);
 	}
 	if (error) {
 		log(LOG_WARNING,
@@ -1460,13 +1681,9 @@ __elfN(coredump)(struct thread *td, struct vnode *vp, off_t limit, int flags)
 	}
 
 done:
-#ifdef GZIO
-	if (compress) {
-		free(tmpbuf, M_TEMP);
-		if (params.gzs != NULL)
-			gzio_fini(params.gzs);
-	}
-#endif
+	free(tmpbuf, M_TEMP);
+	if (params.comp != NULL)
+		compressor_fini(params.comp);
 	while ((ninfo = TAILQ_FIRST(&notelst)) != NULL) {
 		TAILQ_REMOVE(&notelst, ninfo, link);
 		free(ninfo, M_TEMP);
@@ -1478,13 +1695,11 @@ done:
 }
 
 /*
- * A callback for each_writable_segment() to write out the segment's
+ * A callback for each_dumpable_segment() to write out the segment's
  * program header entry.
  */
 static void
-cb_put_phdr(entry, closure)
-	vm_map_entry_t entry;
-	void *closure;
+cb_put_phdr(vm_map_entry_t entry, void *closure)
 {
 	struct phdr_closure *phc = (struct phdr_closure *)closure;
 	Elf_Phdr *phdr = phc->phdr;
@@ -1504,13 +1719,11 @@ cb_put_phdr(entry, closure)
 }
 
 /*
- * A callback for each_writable_segment() to gather information about
+ * A callback for each_dumpable_segment() to gather information about
  * the number of segments and their total size.
  */
 static void
-cb_size_segment(entry, closure)
-	vm_map_entry_t entry;
-	void *closure;
+cb_size_segment(vm_map_entry_t entry, void *closure)
 {
 	struct sseg_closure *ssc = (struct sseg_closure *)closure;
 
@@ -1524,16 +1737,13 @@ cb_size_segment(entry, closure)
  * caller-supplied data.
  */
 static void
-each_writable_segment(td, func, closure)
-	struct thread *td;
-	segment_callback func;
-	void *closure;
+each_dumpable_segment(struct thread *td, segment_callback func, void *closure)
 {
 	struct proc *p = td->td_proc;
 	vm_map_t map = &p->p_vmspace->vm_map;
 	vm_map_entry_t entry;
 	vm_object_t backing_object, object;
-	boolean_t ignore_entry;
+	bool ignore_entry;
 
 	vm_map_lock_read(map);
 	for (entry = map->header.next; entry != &map->header;
@@ -1573,9 +1783,7 @@ each_writable_segment(td, func, closure)
 			VM_OBJECT_RUNLOCK(object);
 			object = backing_object;
 		}
-		ignore_entry = object->type != OBJT_DEFAULT &&
-		    object->type != OBJT_SWAP && object->type != OBJT_VNODE &&
-		    object->type != OBJT_PHYS;
+		ignore_entry = (object->flags & OBJ_FICTITIOUS) != 0;
 		VM_OBJECT_RUNLOCK(object);
 		if (ignore_entry)
 			continue;
@@ -1681,10 +1889,10 @@ __elfN(puthdr)(struct thread *td, void *hdr, size_t hdrsize, int numsegs,
 {
 	Elf_Ehdr *ehdr;
 	Elf_Phdr *phdr;
+	Elf_Shdr *shdr;
 	struct phdr_closure phc;
 
 	ehdr = (Elf_Ehdr *)hdr;
-	phdr = (Elf_Phdr *)((char *)hdr + sizeof(Elf_Ehdr));
 
 	ehdr->e_ident[EI_MAG0] = ELFMAG0;
 	ehdr->e_ident[EI_MAG1] = ELFMAG1;
@@ -1704,14 +1912,43 @@ __elfN(puthdr)(struct thread *td, void *hdr, size_t hdrsize, int numsegs,
 	ehdr->e_flags = td->td_proc->p_elf_flags;
 	ehdr->e_ehsize = sizeof(Elf_Ehdr);
 	ehdr->e_phentsize = sizeof(Elf_Phdr);
-	ehdr->e_phnum = numsegs + 1;
 	ehdr->e_shentsize = sizeof(Elf_Shdr);
-	ehdr->e_shnum = 0;
 	ehdr->e_shstrndx = SHN_UNDEF;
+	if (numsegs + 1 < PN_XNUM) {
+		ehdr->e_phnum = numsegs + 1;
+		ehdr->e_shnum = 0;
+	} else {
+		ehdr->e_phnum = PN_XNUM;
+		ehdr->e_shnum = 1;
+
+		ehdr->e_shoff = ehdr->e_phoff +
+		    (numsegs + 1) * ehdr->e_phentsize;
+		KASSERT(ehdr->e_shoff == hdrsize - sizeof(Elf_Shdr),
+		    ("e_shoff: %zu, hdrsize - shdr: %zu",
+		     (size_t)ehdr->e_shoff, hdrsize - sizeof(Elf_Shdr)));
+
+		shdr = (Elf_Shdr *)((char *)hdr + ehdr->e_shoff);
+		memset(shdr, 0, sizeof(*shdr));
+		/*
+		 * A special first section is used to hold large segment and
+		 * section counts.  This was proposed by Sun Microsystems in
+		 * Solaris and has been adopted by Linux; the standard ELF
+		 * tools are already familiar with the technique.
+		 *
+		 * See table 7-7 of the Solaris "Linker and Libraries Guide"
+		 * (or 12-7 depending on the version of the document) for more
+		 * details.
+		 */
+		shdr->sh_type = SHT_NULL;
+		shdr->sh_size = ehdr->e_shnum;
+		shdr->sh_link = ehdr->e_shstrndx;
+		shdr->sh_info = numsegs + 1;
+	}
 
 	/*
 	 * Fill in the program header entries.
 	 */
+	phdr = (Elf_Phdr *)((char *)hdr + ehdr->e_phoff);
 
 	/* The note segement. */
 	phdr->p_type = PT_NOTE;
@@ -1727,7 +1964,7 @@ __elfN(puthdr)(struct thread *td, void *hdr, size_t hdrsize, int numsegs,
 	/* All the writable segments from the program. */
 	phc.phdr = phdr;
 	phc.offset = round_page(hdrsize + notesz);
-	each_writable_segment(td, cb_put_phdr, &phc);
+	each_dumpable_segment(td, cb_put_phdr, &phc);
 }
 
 static size_t
@@ -1749,7 +1986,7 @@ register_note(struct note_info_list *list, int type, outfunc_t out, void *arg)
 		return (size);
 
 	notesize = sizeof(Elf_Note) +		/* note header */
-	    roundup2(sizeof(MIDNIGHTBSD_ABI_VENDOR), ELF_NOTE_ROUNDSIZE) +
+	    roundup2(sizeof(FREEBSD_ABI_VENDOR), ELF_NOTE_ROUNDSIZE) +
 						/* note name */
 	    roundup2(size, ELF_NOTE_ROUNDSIZE);	/* note description */
 
@@ -1779,12 +2016,12 @@ __elfN(populate_note)(int type, void *src, void *dst, size_t size, void **descp)
 	buf = dst;
 	if (buf != NULL) {
 		note = (Elf_Note *)buf;
-		note->n_namesz = sizeof(MIDNIGHTBSD_ABI_VENDOR);
+		note->n_namesz = sizeof(FREEBSD_ABI_VENDOR);
 		note->n_descsz = size;
 		note->n_type = type;
 		buf += sizeof(*note);
-		buf += append_note_data(MIDNIGHTBSD_ABI_VENDOR, buf,
-		    sizeof(MIDNIGHTBSD_ABI_VENDOR));
+		buf += append_note_data(FREEBSD_ABI_VENDOR, buf,
+		    sizeof(FREEBSD_ABI_VENDOR));
 		append_note_data(src, buf, size);
 		if (descp != NULL)
 			*descp = buf;
@@ -1810,13 +2047,13 @@ __elfN(putnote)(struct note_info *ninfo, struct sbuf *sb)
 		return;
 	}
 
-	note.n_namesz = sizeof(MIDNIGHTBSD_ABI_VENDOR);
+	note.n_namesz = sizeof(FREEBSD_ABI_VENDOR);
 	note.n_descsz = ninfo->outsize;
 	note.n_type = ninfo->type;
 
 	sbuf_bcat(sb, &note, sizeof(note));
 	sbuf_start_section(sb, &old_len);
-	sbuf_bcat(sb, MIDNIGHTBSD_ABI_VENDOR, sizeof(MIDNIGHTBSD_ABI_VENDOR));
+	sbuf_bcat(sb, FREEBSD_ABI_VENDOR, sizeof(FREEBSD_ABI_VENDOR));
 	sbuf_end_section(sb, old_len, ELF_NOTE_ROUNDSIZE, 0);
 	if (note.n_descsz == 0)
 		return;
@@ -2120,7 +2357,7 @@ note_procstat_files(void *arg, struct sbuf *sb, size_t *sizep)
 	if (sb == NULL) {
 		size = 0;
 		sb = sbuf_new(NULL, NULL, 128, SBUF_FIXEDLEN);
-		sbuf_set_drain(sb, sbuf_drain_count, &size);
+		sbuf_set_drain(sb, sbuf_count_drain, &size);
 		sbuf_bcat(sb, &structsize, sizeof(structsize));
 		PROC_LOCK(p);
 		kern_proc_filedesc_out(p, sb, -1, filedesc_flags);
@@ -2171,7 +2408,7 @@ note_procstat_vmmap(void *arg, struct sbuf *sb, size_t *sizep)
 	if (sb == NULL) {
 		size = 0;
 		sb = sbuf_new(NULL, NULL, 128, SBUF_FIXEDLEN);
-		sbuf_set_drain(sb, sbuf_drain_count, &size);
+		sbuf_set_drain(sb, sbuf_count_drain, &size);
 		sbuf_bcat(sb, &structsize, sizeof(structsize));
 		PROC_LOCK(p);
 		kern_proc_vmmap_out(p, sb, -1, vmmap_flags);
@@ -2299,7 +2536,7 @@ __elfN(note_procstat_auxv)(void *arg, struct sbuf *sb, size_t *sizep)
 	if (sb == NULL) {
 		size = 0;
 		sb = sbuf_new(NULL, NULL, 128, SBUF_FIXEDLEN);
-		sbuf_set_drain(sb, sbuf_drain_count, &size);
+		sbuf_set_drain(sb, sbuf_count_drain, &size);
 		sbuf_bcat(sb, &structsize, sizeof(structsize));
 		PHOLD(p);
 		proc_getauxv(curthread, p, sb);
@@ -2333,9 +2570,12 @@ __elfN(parse_notes)(struct image_params *imgp, Elf_Note *checknote,
 	ASSERT_VOP_LOCKED(imgp->vp, "parse_notes");
 	if (pnote->p_offset > PAGE_SIZE ||
 	    pnote->p_filesz > PAGE_SIZE - pnote->p_offset) {
-		VOP_UNLOCK(imgp->vp, 0);
-		buf = malloc(pnote->p_filesz, M_TEMP, M_WAITOK);
-		vn_lock(imgp->vp, LK_EXCLUSIVE | LK_RETRY);
+		buf = malloc(pnote->p_filesz, M_TEMP, M_NOWAIT);
+		if (buf == NULL) {
+			VOP_UNLOCK(imgp->vp, 0);
+			buf = malloc(pnote->p_filesz, M_TEMP, M_WAITOK);
+			vn_lock(imgp->vp, LK_SHARED | LK_RETRY);
+		}
 		error = vn_rdwr(UIO_READ, imgp->vp, buf, pnote->p_filesz,
 		    pnote->p_offset, UIO_SYSSPACE, IO_NODELOCKED,
 		    curthread->td_ucred, NOCRED, NULL, curthread);
@@ -2404,29 +2644,65 @@ brandnote_cb(const Elf_Note *note, void *arg0, boolean_t *res)
 	return (TRUE);
 }
 
+static Elf_Note fctl_note = {
+	.n_namesz = sizeof(FREEBSD_ABI_VENDOR),
+	.n_descsz = sizeof(uint32_t),
+	.n_type = NT_FREEBSD_FEATURE_CTL,
+};
+
+struct fctl_cb_arg {
+	uint32_t *fctl0;
+};
+
+static boolean_t
+note_fctl_cb(const Elf_Note *note, void *arg0, boolean_t *res)
+{
+	struct fctl_cb_arg *arg;
+	const Elf32_Word *desc;
+	uintptr_t p;
+
+	arg = arg0;
+	p = (uintptr_t)(note + 1);
+	p += roundup2(note->n_namesz, ELF_NOTE_ROUNDSIZE);
+	desc = (const Elf32_Word *)p;
+	*arg->fctl0 = desc[0];
+	*res = TRUE;
+	return (TRUE);
+}
+
 /*
- * Try to find the appropriate ABI-note section for checknote,
- * fetch the osreldate for binary from the ELF OSABI-note. Only the
- * first page of the image is searched, the same as for headers.
+ * Try to find the appropriate ABI-note section for checknote, fetch
+ * the osreldate and feature control flags for binary from the ELF
+ * OSABI-note.  Only the first page of the image is searched, the same
+ * as for headers.
  */
 static boolean_t
 __elfN(check_note)(struct image_params *imgp, Elf_Brandnote *brandnote,
-    int32_t *osrel)
+    int32_t *osrel, uint32_t *fctl0)
 {
 	const Elf_Phdr *phdr;
 	const Elf_Ehdr *hdr;
 	struct brandnote_cb_arg b_arg;
-	int i;
+	struct fctl_cb_arg f_arg;
+	int i, j;
 
 	hdr = (const Elf_Ehdr *)imgp->image_header;
 	phdr = (const Elf_Phdr *)(imgp->image_header + hdr->e_phoff);
 	b_arg.brandnote = brandnote;
 	b_arg.osrel = osrel;
+	f_arg.fctl0 = fctl0;
 
 	for (i = 0; i < hdr->e_phnum; i++) {
 		if (phdr[i].p_type == PT_NOTE && __elfN(parse_notes)(imgp,
 		    &brandnote->hdr, brandnote->vendor, &phdr[i], brandnote_cb,
 		    &b_arg)) {
+			for (j = 0; j < hdr->e_phnum; j++) {
+				if (phdr[j].p_type == PT_NOTE &&
+				    __elfN(parse_notes)(imgp, &fctl_note,
+				    FREEBSD_ABI_VENDOR, &phdr[j],
+				    note_fctl_cb, &f_arg))
+					break;
+			}
 			return (TRUE);
 		}
 	}
@@ -2438,8 +2714,8 @@ __elfN(check_note)(struct image_params *imgp, Elf_Brandnote *brandnote,
  * Tell kern_execve.c about it, with a little help from the linker.
  */
 static struct execsw __elfN(execsw) = {
-	__CONCAT(exec_, __elfN(imgact)),
-	__XSTRING(__CONCAT(ELF, __ELF_WORD_SIZE))
+	.ex_imgact = __CONCAT(exec_, __elfN(imgact)),
+	.ex_name = __XSTRING(__CONCAT(ELF, __ELF_WORD_SIZE))
 };
 EXEC_SET(__CONCAT(elf, __ELF_WORD_SIZE), __elfN(execsw));
 
@@ -2477,4 +2753,22 @@ __elfN(untrans_prot)(vm_prot_t prot)
 	if (prot & VM_PROT_WRITE)
 		flags |= PF_W;
 	return (flags);
+}
+
+void
+__elfN(stackgap)(struct image_params *imgp, u_long *stack_base)
+{
+	u_long range, rbase, gap;
+	int pct;
+
+	pct = __elfN(aslr_stack_gap);
+	if (pct == 0)
+		return;
+	if (pct > 50)
+		pct = 50;
+	range = imgp->eff_stack_sz * pct / 100;
+	arc4rand(&rbase, sizeof(rbase), 0);
+	gap = rbase % range;
+	gap &= ~(sizeof(u_long) - 1);
+	*stack_base -= gap;
 }

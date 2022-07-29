@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
  *
@@ -38,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/an/if_an.c 355934 2019-12-20 16:05:29Z markj $");
+__FBSDID("$FreeBSD$");
 
 /*
  * The Aironet 4500/4800 series cards come in PCMCIA, ISA and PCI form.
@@ -2318,7 +2320,7 @@ an_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		}
 		break;
 	case SIOCS80211:
-		if ((error = priv_check(td, PRIV_NET80211_MANAGE)))
+		if ((error = priv_check(td, PRIV_NET80211_VAP_MANAGE)))
 			goto out;
 		AN_LOCK(sc);
 		sc->areq.an_len = sizeof(sc->areq);

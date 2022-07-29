@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/usr.bin/lex/initparse.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 #ifndef lint
 static const char yysccsid[] = "@(#)yaccpar	1.9 (Berkeley) 02/21/93";
 #endif
@@ -17,6 +17,8 @@ static const char yysccsid[] = "@(#)yaccpar	1.9 (Berkeley) 02/21/93";
 #define YYPURE 0
 
 #line 35 "parse.y"
+/* SPDX-License-Identifier: BSD-2-Clause */
+
 /*  Copyright (c) 1990 The Regents of the University of California. */
 /*  All rights reserved. */
 

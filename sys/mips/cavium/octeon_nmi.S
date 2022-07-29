@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/mips/cavium/octeon_nmi.S 215989 2010-11-28 08:11:05Z gonzo $
+ * $FreeBSD$
  */
 
 #include <machine/asm.h>

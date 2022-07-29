@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/uboot/lib/time.c 329010 2018-02-08 02:44:21Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 

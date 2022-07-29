@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1991 The Regents of the University of California.
  * Copyright (c) 1999 Michael Smith
@@ -18,7 +20,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -38,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/kern_cons.c 335659 2018-06-26 09:04:24Z avg $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 #include "opt_syscons.h"
@@ -88,7 +90,11 @@ int	cons_avail_mask = 0;	/* Bit mask. Each registered low level console
 				 * (i.e., if it is in graphics mode) will have
 				 * this bit cleared.
 				 */
+
 static int cn_mute;
+SYSCTL_INT(_kern, OID_AUTO, consmute, CTLFLAG_RW, &cn_mute, 0,
+    "State of the console muting");
+
 static char *consbuf;			/* buffer used by `consmsgbuf' */
 static struct callout conscallout;	/* callout for outputting to constty */
 struct msgbuf consmsgbuf;		/* message buffer for console tty */
@@ -336,25 +342,6 @@ sysctl_kern_console(SYSCTL_HANDLER_ARGS)
 
 SYSCTL_PROC(_kern, OID_AUTO, console, CTLTYPE_STRING|CTLFLAG_RW,
 	0, 0, sysctl_kern_console, "A", "Console device control");
-
-/*
- * User has changed the state of the console muting.
- * This may require us to open or close the device in question.
- */
-static int
-sysctl_kern_consmute(SYSCTL_HANDLER_ARGS)
-{
-	int error;
-
-	error = sysctl_handle_int(oidp, &cn_mute, 0, req);
-	if (error != 0 || req->newptr == NULL)
-		return (error);
-	return (error);
-}
-
-SYSCTL_PROC(_kern, OID_AUTO, consmute, CTLTYPE_INT|CTLFLAG_RW,
-	0, sizeof(cn_mute), sysctl_kern_consmute, "I",
-	"State of the console muting");
 
 void
 cngrab()

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libsysdecode/Makefile 351891 2019-09-05 20:27:44Z bdrewery $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -120,23 +120,32 @@ CFLAGS+=-DPF
 # Workaround duplicate declarations in <netinet/ip_compat.h>
 CFLAGS.gcc.ioctl.c+= -Wno-redundant-decls
 
-# Workaround warning for unused ssi_cables[] in <dev/lmc/if_lmc.h>
-CFLAGS.gcc.ioctl.c+= -Wno-unused
+# Ignore deprecation warning in <sys/pioctl.h>
+CFLAGS.clang.ioctl.c+= -Wno-\#warnings
+.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 40700
+CFLAGS.gcc.ioctl.c+= -Wno-cpp
+.endif
 
+CFLAGS.clang+=	${CFLAGS.clang.${.IMPSRC}}
 CFLAGS.gcc+=	${CFLAGS.gcc.${.IMPSRC}}
 
 DEPENDOBJS+=	tables.h
 tables.h: mktables
-	sh ${.CURDIR}/mktables ${DESTDIR}${INCLUDEDIR} ${.TARGET}
+	sh ${.CURDIR}/mktables ${SYSROOT:U${DESTDIR}}${INCLUDEDIR} ${.TARGET}
 
 # mkioctls runs find(1) for headers so needs to rebuild every time.  This used
 # to be a hack only done in buildworld.
 .if !defined(_SKIP_BUILD)
-ioctl.c: .PHONY
+ioctl.c.tmp: .PHONY
 .endif
-ioctl.c: mkioctls .META
-	env MACHINE=${MACHINE} CPP="${CPP}" MK_PF="${MK_PF}" \
-		/bin/sh ${.CURDIR}/mkioctls ${DESTDIR}${INCLUDEDIR} > ${.TARGET}
+ioctl.c.tmp: mkioctls .META
+	env CPP="${CPP}" MK_PF="${MK_PF}" \
+	    /bin/sh ${.CURDIR}/mkioctls ${SYSROOT:U${DESTDIR}}${INCLUDEDIR} > ${.TARGET}
+
+ioctl.c: ioctl.c.tmp
+	if [ ! -e ${.TARGET} ] || ! cmp -s ${.TARGET} ${.TARGET}.tmp; then \
+		mv -f ${.TARGET}.tmp ${.TARGET}; \
+	fi
 
 beforedepend: ioctl.c tables.h
 

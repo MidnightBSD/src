@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: stable/11/sys/amd64/include/smp.h 329462 2018-02-17 18:00:01Z kib $
+ * $FreeBSD$
  *
  */
 
@@ -23,7 +23,6 @@
 
 /* global symbols in mpboot.S */
 extern char			mptramp_start[];
-extern char			mptramp_end[];
 extern u_int32_t		mptramp_pagetables;
 
 /* IPI handlers */
@@ -47,6 +46,7 @@ inthand_t
 	IDTVEC(invlrng_pcid),
 	IDTVEC(invlcache_pti),
 	IDTVEC(ipi_intr_bitmap_handler_pti),
+	IDTVEC(ipi_swi_pti),
 	IDTVEC(cpustop_pti),
 	IDTVEC(cpususpend_pti),
 	IDTVEC(rendezvous_pti);
@@ -59,6 +59,7 @@ void	invlpg_pcid_handler(void);
 void	invlrng_invpcid_handler(void);
 void	invlrng_pcid_handler(void);
 int	native_start_all_aps(void);
+void	mp_bootaddress(vm_paddr_t *, unsigned int *);
 
 #endif /* !LOCORE */
 #endif /* SMP */

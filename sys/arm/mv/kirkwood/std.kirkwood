@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/arm/mv/kirkwood/std.kirkwood 292524 2015-12-20 23:38:14Z ian $
+# $FreeBSD$
 
 makeoptions	KERNVIRTADDR=0xc0000000
 options 	KERNVIRTADDR=0xc0000000

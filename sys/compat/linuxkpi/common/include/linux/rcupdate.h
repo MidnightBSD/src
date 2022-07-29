@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/rcupdate.h 345934 2019-04-05 11:29:05Z hselasky $
+ * $FreeBSD$
  */
 #ifndef	_LINUX_RCUPDATE_H_
 #define	_LINUX_RCUPDATE_H_
@@ -95,6 +95,12 @@
 #define	rcu_assign_pointer(p, v) do {				\
 	atomic_store_rel_ptr((volatile uintptr_t *)&(p),	\
 	    (uintptr_t)(v));					\
+} while (0)
+
+#define	rcu_swap_protected(rcu, ptr, c) do {			\
+	typeof(ptr) p = rcu_dereference_protected(rcu, c);	\
+	rcu_assign_pointer(rcu, ptr);				\
+	(ptr) = p;						\
 } while (0)
 
 /* prototypes */

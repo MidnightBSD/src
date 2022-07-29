@@ -1,7 +1,9 @@
 /*	$NetBSD: if_media.h,v 1.3 1997/03/26 01:19:27 thorpej Exp $	*/
-/* $FreeBSD: stable/11/sys/net/if_media.h 338871 2018-09-21 23:31:04Z erj $ */
+/* $FreeBSD$ */
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1997
  *	Jonathan Stone and Jason R. Thorpe.  All rights reserved.
  *
@@ -256,6 +258,7 @@ uint64_t	ifmedia_baudrate(int);
 #define	IFM_400G_DR4	IFM_X(115)	/* 400GBase-DR4 */
 #define	IFM_400G_AUI8_AC IFM_X(116)	/* 400G-AUI8 active copper/optical */
 #define	IFM_400G_AUI8	IFM_X(117)	/* 400G-AUI8 */
+#define	IFM_50G_KR4	IFM_X(118)	/* 50GBase-KR4 */
 
 /*
  * Please update ieee8023ad_lacp.c:lacp_compose_key()
@@ -269,32 +272,6 @@ uint64_t	ifmedia_baudrate(int);
 #define	IFM_ETH_TXPAUSE	0x00000400	/* transmit PAUSE frames */
 #define	IFM_ETH_XTYPE	0x00007800	/* extended media variants */
 #define	IFM_ETH_XSHIFT	6		/* shift XTYPE next to TMASK */
-
-/*
- * Token ring
- */
-#define	IFM_TOKEN	0x00000040
-#define	IFM_TOK_STP4	3		/* Shielded twisted pair 4m - DB9 */
-#define	IFM_TOK_STP16	4		/* Shielded twisted pair 16m - DB9 */
-#define	IFM_TOK_UTP4	5		/* Unshielded twisted pair 4m - RJ45 */
-#define	IFM_TOK_UTP16	6		/* Unshielded twisted pair 16m - RJ45 */
-#define	IFM_TOK_STP100  7		/* Shielded twisted pair 100m - DB9 */
-#define	IFM_TOK_UTP100  8		/* Unshielded twisted pair 100m - RJ45 */
-#define	IFM_TOK_ETR	0x00000200	/* Early token release */
-#define	IFM_TOK_SRCRT	0x00000400	/* Enable source routing features */
-#define	IFM_TOK_ALLR	0x00000800	/* All routes / Single route bcast */
-#define	IFM_TOK_DTR	0x00002000	/* Dedicated token ring */
-#define	IFM_TOK_CLASSIC	0x00004000	/* Classic token ring */
-#define	IFM_TOK_AUTO	0x00008000	/* Automatic Dedicate/Classic token ring */
-
-/*
- * FDDI
- */
-#define	IFM_FDDI	0x00000060
-#define	IFM_FDDI_SMF	3		/* Single-mode fiber */
-#define	IFM_FDDI_MMF	4		/* Multi-mode fiber */
-#define	IFM_FDDI_UTP	5		/* CDDI / UTP */
-#define	IFM_FDDI_DA	0x00000100	/* Dual attach / single attach */
 
 /*
  * IEEE 802.11 Wireless
@@ -324,6 +301,7 @@ uint64_t	ifmedia_baudrate(int);
 #define	IFM_IEEE80211_OFDM27	23	/* OFDM 27Mbps */
 /* NB: not enough bits to express MCS fully */
 #define	IFM_IEEE80211_MCS	24	/* HT MCS rate */
+#define	IFM_IEEE80211_VHT	25	/* VHT MCS rate */
 
 #define	IFM_IEEE80211_ADHOC	0x00000100	/* Operate in Adhoc mode */
 #define	IFM_IEEE80211_HOSTAP	0x00000200	/* Operate in Host AP mode */
@@ -340,6 +318,8 @@ uint64_t	ifmedia_baudrate(int);
 #define	IFM_IEEE80211_FH	0x00040000	/* 2Ghz, GFSK mode */
 #define	IFM_IEEE80211_11NA	0x00050000	/* 5Ghz, HT mode */
 #define	IFM_IEEE80211_11NG	0x00060000	/* 2Ghz, HT mode */
+#define	IFM_IEEE80211_VHT5G	0x00070000	/* 5Ghz, VHT mode */
+#define	IFM_IEEE80211_VHT2G	0x00080000	/* 2Ghz, VHT mode */
 
 /*
  * ATM
@@ -444,8 +424,6 @@ struct ifmedia_description {
 
 #define	IFM_TYPE_DESCRIPTIONS {						\
 	{ IFM_ETHER,		"Ethernet" },				\
-	{ IFM_TOKEN,		"Token ring" },				\
-	{ IFM_FDDI,		"FDDI" },				\
 	{ IFM_IEEE80211,	"IEEE 802.11 Wireless Ethernet" },	\
 	{ IFM_ATM,		"ATM" },				\
 	{ 0, NULL },							\
@@ -507,6 +485,7 @@ struct ifmedia_description {
 	{ IFM_25G_SR,	"25GBase-SR" },					\
 	{ IFM_50G_CR2,	"50GBase-CR2" },				\
 	{ IFM_50G_KR2,	"50GBase-KR2" },				\
+	{ IFM_50G_KR4,	"50GBase-KR4" },				\
 	{ IFM_25G_LR,	"25GBase-LR" },					\
 	{ IFM_10G_AOC,	"10GBase-AOC" },				\
 	{ IFM_25G_ACC,	"25GBase-ACC" },				\
@@ -618,55 +597,6 @@ struct ifmedia_description {
 	{ 0, NULL },							\
 }
 
-#define	IFM_SUBTYPE_TOKENRING_DESCRIPTIONS {				\
-	{ IFM_TOK_STP4,	"DB9/4Mbit" },					\
-	{ IFM_TOK_STP16, "DB9/16Mbit" },				\
-	{ IFM_TOK_UTP4,	"UTP/4Mbit" },					\
-	{ IFM_TOK_UTP16, "UTP/16Mbit" },				\
-	{ IFM_TOK_STP100, "STP/100Mbit" },				\
-	{ IFM_TOK_UTP100, "UTP/100Mbit" },				\
-	{ 0, NULL },							\
-}
-
-#define	IFM_SUBTYPE_TOKENRING_ALIASES {					\
-	{ IFM_TOK_STP4,	"4STP" },					\
-	{ IFM_TOK_STP16, "16STP" },					\
-	{ IFM_TOK_UTP4,	"4UTP" },					\
-	{ IFM_TOK_UTP16, "16UTP" },					\
-	{ IFM_TOK_STP100, "100STP" },					\
-	{ IFM_TOK_UTP100, "100UTP" },					\
-	{ 0, NULL },							\
-}
-
-#define	IFM_SUBTYPE_TOKENRING_OPTION_DESCRIPTIONS {			\
-	{ IFM_TOK_ETR,	"EarlyTokenRelease" },				\
-	{ IFM_TOK_SRCRT, "SourceRouting" },				\
-	{ IFM_TOK_ALLR,	"AllRoutes" },					\
-	{ IFM_TOK_DTR,	"Dedicated" },					\
-	{ IFM_TOK_CLASSIC,"Classic" },					\
-	{ IFM_TOK_AUTO,	" " },						\
-	{ 0, NULL },							\
-}
-
-#define	IFM_SUBTYPE_FDDI_DESCRIPTIONS {					\
-	{ IFM_FDDI_SMF, "Single-mode" },				\
-	{ IFM_FDDI_MMF, "Multi-mode" },					\
-	{ IFM_FDDI_UTP, "UTP" },					\
-	{ 0, NULL },							\
-}
-
-#define	IFM_SUBTYPE_FDDI_ALIASES {					\
-	{ IFM_FDDI_SMF,	"SMF" },					\
-	{ IFM_FDDI_MMF,	"MMF" },					\
-	{ IFM_FDDI_UTP,	"CDDI" },					\
-	{ 0, NULL },							\
-}
-
-#define	IFM_SUBTYPE_FDDI_OPTION_DESCRIPTIONS {				\
-	{ IFM_FDDI_DA, "Dual-attach" },					\
-	{ 0, NULL },							\
-}
-
 #define	IFM_SUBTYPE_IEEE80211_DESCRIPTIONS {				\
 	{ IFM_IEEE80211_FH1, "FH/1Mbps" },				\
 	{ IFM_IEEE80211_FH2, "FH/2Mbps" },				\
@@ -690,6 +620,7 @@ struct ifmedia_description {
 	{ IFM_IEEE80211_OFDM4, "OFDM/4.5Mbps" },			\
 	{ IFM_IEEE80211_OFDM27, "OFDM/27Mbps" },			\
 	{ IFM_IEEE80211_MCS, "MCS" },					\
+	{ IFM_IEEE80211_VHT, "VHT" },					\
 	{ 0, NULL },							\
 }
 
@@ -729,6 +660,7 @@ struct ifmedia_description {
 	{ IFM_IEEE80211_OFDM4, "OFDM4.5" },				\
 	{ IFM_IEEE80211_OFDM27, "OFDM27" },				\
 	{ IFM_IEEE80211_MCS, "MCS" },					\
+	{ IFM_IEEE80211_VHT, "VHT" },					\
 	{ 0, NULL },							\
 }
 
@@ -751,6 +683,8 @@ struct ifmedia_description {
 	{ IFM_IEEE80211_FH, "fh" },					\
 	{ IFM_IEEE80211_11NA, "11na" },					\
 	{ IFM_IEEE80211_11NG, "11ng" },					\
+	{ IFM_IEEE80211_VHT5G, "11ac" },				\
+	{ IFM_IEEE80211_VHT2G, "11ac2" },				\
 	{ 0, NULL },							\
 }
 
@@ -873,9 +807,9 @@ struct ifmedia_baudrate {
 	{ IFM_ETHER | IFM_10G_KR,	IF_Gbps(10ULL) },		\
 	{ IFM_ETHER | IFM_10G_CR1,	IF_Gbps(10ULL) },		\
 	{ IFM_ETHER | IFM_20G_KR2,	IF_Gbps(20ULL) },		\
-	{ IFM_ETHER | IFM_2500_KX,	IF_Mbps(2500) },		\
-	{ IFM_ETHER | IFM_2500_T,	IF_Mbps(2500) },		\
-	{ IFM_ETHER | IFM_5000_T,	IF_Mbps(5000) },		\
+	{ IFM_ETHER | IFM_2500_KX,	IF_Mbps(2500ULL) },		\
+	{ IFM_ETHER | IFM_2500_T,	IF_Mbps(2500ULL) },		\
+	{ IFM_ETHER | IFM_5000_T,	IF_Mbps(5000ULL) },		\
 	{ IFM_ETHER | IFM_50G_PCIE,	IF_Gbps(50ULL) },		\
 	{ IFM_ETHER | IFM_25G_PCIE,	IF_Gbps(25ULL) },		\
 	{ IFM_ETHER | IFM_1000_SGMII,	IF_Mbps(1000) },		\
@@ -895,6 +829,7 @@ struct ifmedia_baudrate {
 	{ IFM_ETHER | IFM_25G_SR,	IF_Gbps(25ULL) },		\
 	{ IFM_ETHER | IFM_50G_CR2,	IF_Gbps(50ULL) },		\
 	{ IFM_ETHER | IFM_50G_KR2,	IF_Gbps(50ULL) },		\
+	{ IFM_ETHER | IFM_50G_KR4,	IF_Gbps(50ULL) },		\
 	{ IFM_ETHER | IFM_25G_LR,	IF_Gbps(25ULL) },		\
 	{ IFM_ETHER | IFM_10G_AOC,	IF_Gbps(10ULL) },		\
 	{ IFM_ETHER | IFM_25G_ACC,	IF_Gbps(25ULL) },		\
@@ -956,15 +891,6 @@ struct ifmedia_baudrate {
 	{ IFM_ETHER | IFM_400G_AUI8_AC,	IF_Gbps(400ULL) },		\
 	{ IFM_ETHER | IFM_400G_AUI8,	IF_Gbps(400ULL) },		\
 									\
-	{ IFM_TOKEN | IFM_TOK_STP4,	IF_Mbps(4) },			\
-	{ IFM_TOKEN | IFM_TOK_STP16,	IF_Mbps(16) },			\
-	{ IFM_TOKEN | IFM_TOK_UTP4,	IF_Mbps(4) },			\
-	{ IFM_TOKEN | IFM_TOK_UTP16,	IF_Mbps(16) },			\
-									\
-	{ IFM_FDDI | IFM_FDDI_SMF,	IF_Mbps(100) },			\
-	{ IFM_FDDI | IFM_FDDI_MMF,	IF_Mbps(100) },			\
-	{ IFM_FDDI | IFM_FDDI_UTP,	IF_Mbps(100) },			\
-									\
 	{ IFM_IEEE80211 | IFM_IEEE80211_FH1,	IF_Mbps(1) },		\
 	{ IFM_IEEE80211 | IFM_IEEE80211_FH2,	IF_Mbps(2) },		\
 	{ IFM_IEEE80211 | IFM_IEEE80211_DS2,	IF_Mbps(2) },		\
@@ -1001,10 +927,6 @@ struct ifmedia_status_description {
 #define	IFM_STATUS_DESCRIPTIONS {					\
 	{ IFM_ETHER,		IFM_AVALID,	IFM_ACTIVE,		\
 	    { "no carrier", "active" } },				\
-	{ IFM_FDDI,		IFM_AVALID,	IFM_ACTIVE,		\
-	    { "no ring", "inserted" } },				\
-	{ IFM_TOKEN,		IFM_AVALID,	IFM_ACTIVE,		\
-	    { "no ring", "inserted" } },				\
 	{ IFM_IEEE80211,	IFM_AVALID,	IFM_ACTIVE,		\
 	    { "no network", "active" } },				\
 	{ IFM_ATM,		IFM_AVALID,	IFM_ACTIVE,		\

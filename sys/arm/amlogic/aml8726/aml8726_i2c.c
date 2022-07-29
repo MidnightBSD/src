@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/amlogic/aml8726/aml8726_i2c.c 281416 2015-04-11 08:30:37Z ganbold $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -47,7 +47,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/amlogic/aml8726/aml8726_i2c.c 281416 2015-
 
 #include <machine/bus.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 

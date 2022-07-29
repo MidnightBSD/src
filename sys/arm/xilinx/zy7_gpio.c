@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Thomas Skibo
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/xilinx/zy7_gpio.c 333619 2018-05-15 02:26:50Z gonzo $
+ * $FreeBSD$
  */
 
 /*
@@ -44,7 +46,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/xilinx/zy7_gpio.c 333619 2018-05-15 02:26:50Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -62,7 +64,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/xilinx/zy7_gpio.c 333619 2018-05-15 02:26:
 #include <machine/resource.h>
 #include <machine/stdarg.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/gpio/gpiobusvar.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>

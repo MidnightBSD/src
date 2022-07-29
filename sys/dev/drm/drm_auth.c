@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1999 Precision Insight, Inc., Cedar Park, Texas.
  * Copyright 2000 VA Linux Systems, Inc., Sunnyvale, California.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/drm_auth.c 183833 2008-10-13 18:03:27Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 /** @file drm_auth.c
  * Implementation of the get/authmagic ioctls implementing the authentication

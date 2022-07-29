@@ -1,5 +1,5 @@
 # $OpenBSD: Makefile,v 1.9 2004/05/04 12:52:05 henning Exp $
-# $FreeBSD: stable/11/sbin/dhclient/Makefile 332602 2018-04-16 16:23:32Z asomers $
+# $FreeBSD$
 #
 # Copyright (c) 1996, 1997 The Internet Software Consortium.
 # All rights reserved.
@@ -33,6 +33,7 @@
 
 .include <src.opts.mk>
 
+CONFS=	dhclient.conf
 PACKAGE=runtime
 SRCS=	dhclient.c clparse.c alloc.c dispatch.c hash.c bpf.c options.c \
 	tree.c conflex.c errwarn.c inet.c packet.c convert.c tables.c \
@@ -44,11 +45,17 @@ MAN=	dhclient.8 dhclient.conf.5 dhclient.leases.5 dhcp-options.5 \
 	dhclient-script.8
 LIBADD=	util
 
-WARNS?=	4
+.if ${MK_DYNAMICROOT} == "no"
+.warning ${PROG} built without libcasper support
+.elif ${MK_CASPER} != "no" && !defined(RESCUE)
+LIBADD+=        casper
+LIBADD+=        cap_syslog
+CFLAGS+=-DWITH_CASPER
+.endif
+
 NO_WCAST_ALIGN=	yes
 
-.if ${MK_TESTS} != "no"
-SUBDIR+=    tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

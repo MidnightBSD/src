@@ -1,7 +1,9 @@
 /*	$NetBSD: check_bound.c,v 1.2 2000/06/22 08:09:26 fvdl Exp $	*/
-/*	$FreeBSD: stable/11/usr.sbin/rpcbind/check_bound.c 331722 2018-03-29 02:50:57Z eadler $ */
+/*	$FreeBSD$ */
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -51,7 +53,6 @@ static	char sccsid[] = "@(#)check_bound.c 1.11 89/04/21 Copyr 1989 Sun Micro";
 #include <sys/socket.h>
 #include <rpc/rpc.h>
 #include <rpc/svc_dg.h>
-#include <stdio.h>
 #include <netconfig.h>
 #include <syslog.h>
 #include <string.h>

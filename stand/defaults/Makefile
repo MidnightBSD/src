@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/defaults/Makefile 332115 2018-04-06 16:59:58Z kevans $
+# $FreeBSD$
 
 .include <bsd.init.mk>
 

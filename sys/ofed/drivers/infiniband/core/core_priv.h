@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0
+ *
  * Copyright (c) 2004 Topspin Communications.  All rights reserved.
  *
  * This software is available to you under a choice of one of two
@@ -29,7 +31,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/ofed/drivers/infiniband/core/core_priv.h 331784 2018-03-30 18:36:44Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _CORE_PRIV_H
@@ -125,16 +127,6 @@ unsigned long roce_gid_type_mask_support(struct ib_device *ib_dev, u8 port);
 int ib_cache_setup_one(struct ib_device *device);
 void ib_cache_cleanup_one(struct ib_device *device);
 void ib_cache_release_one(struct ib_device *device);
-
-static inline bool rdma_is_upper_dev_rcu(struct net_device *dev,
-					 struct net_device *upper)
-{
-
-	/* TODO: add support for LAGG */
-	upper = VLAN_TRUNKDEV(upper);
-
-	return (dev == upper);
-}
 
 int addr_init(void);
 void addr_cleanup(void);

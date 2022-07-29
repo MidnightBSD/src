@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mvs/mvs.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -1493,7 +1495,8 @@ mvs_execute_transaction(struct mvs_slot *slot)
 		crqb->cmd[i++] = ccb->ataio.cmd.features;
 		crqb->cmd[i++] = 0x11;
 		if (ccb->ataio.cmd.flags & CAM_ATAIO_FPDMA) {
-			crqb->cmd[i++] = slot->tag << 3;
+			crqb->cmd[i++] = (slot->tag << 3) |
+			    (ccb->ataio.cmd.sector_count & 0x07);
 			crqb->cmd[i++] = 0x12;
 		} else {
 			crqb->cmd[i++] = ccb->ataio.cmd.sector_count_exp;

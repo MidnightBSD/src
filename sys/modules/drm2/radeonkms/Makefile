@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/drm2/radeonkms/Makefile 342691 2019-01-02 16:28:56Z markj $
+# $FreeBSD$
 
 .PATH:	${SRCTOP}/sys/dev/drm2/radeon
 
@@ -92,7 +92,6 @@ radeon_acpi=		radeon_acpi.c
 
 SRCS	+=								\
 	opt_acpi.h							\
-	opt_compat.h							\
 	opt_drm.h							\
 	opt_syscons.h							\
 	acpi_if.h							\
@@ -108,3 +107,4 @@ SRCS	+=								\
 CFLAGS+=			-I${SRCTOP}/sys/dev/drm2/radeon
 
 CWARNFLAGS+=			${CWARNFLAGS.${.IMPSRC:T}}
+CWARNFLAGS+=	${NO_WUNUSED_BUT_SET_VARIABLE}

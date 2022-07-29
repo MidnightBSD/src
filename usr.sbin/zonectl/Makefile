@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/zonectl/Makefile 319191 2017-05-30 05:15:09Z ngie $
+# $FreeBSD$
 
 PROG=	zonectl
 SRCS=	zonectl.c

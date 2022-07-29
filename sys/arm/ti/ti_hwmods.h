@@ -23,7 +23,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/ti/ti_hwmods.h 286678 2015-08-12 17:23:15Z ian $
+ * $FreeBSD$
  */
 #ifndef _TI_HWMODS_H_
 #define _TI_HWMODS_H_

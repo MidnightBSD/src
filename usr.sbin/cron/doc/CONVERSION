@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/usr.sbin/cron/doc/CONVERSION 72091 2001-02-06 11:21:58Z asmodai $
+$FreeBSD$
 
 Conversion of BSD 4.[23] crontab files:
 

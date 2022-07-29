@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_core/mlx5_main.c 355653 2019-12-12 13:48:23Z kib $
+ * $FreeBSD$
  */
 
 #include <linux/kmod.h>
@@ -179,6 +179,8 @@ static struct mlx5_profile profiles[] = {
 
 #ifdef PCI_IOV
 static const char iov_mac_addr_name[] = "mac-addr";
+static const char iov_node_guid_name[] = "node-guid";
+static const char iov_port_guid_name[] = "port-guid";
 #endif
 
 static int set_dma_caps(struct pci_dev *pdev)
@@ -705,7 +707,7 @@ static int wait_fw_init(struct mlx5_core_dev *dev, u32 max_wait_mili,
 		if (warn_time_mili && time_after(jiffies, warn)) {
 			mlx5_core_warn(dev,
 			    "Waiting for FW initialization, timeout abort in %u s\n",
-			    (unsigned int)(jiffies_to_msecs(end - warn) / 1000));
+			    (unsigned)(jiffies_to_msecs(end - warn) / 1000));
 			warn = jiffies + msecs_to_jiffies(warn_time_mili);
 		}
 		msleep(FW_INIT_WAIT_MS);
@@ -934,7 +936,7 @@ static int mlx5_init_once(struct mlx5_core_dev *dev, struct mlx5_priv *priv)
 
 	err = mlx5_vsc_find_cap(dev);
 	if (err)
-		mlx5_core_err(dev, "Unable to find vendor specific capabilities\n");
+		mlx5_core_warn(dev, "Unable to find vendor specific capabilities\n");
 
 	err = mlx5_query_hca_caps(dev);
 	if (err) {
@@ -969,7 +971,22 @@ static int mlx5_init_once(struct mlx5_core_dev *dev, struct mlx5_priv *priv)
 	mlx5_init_reserved_gids(dev);
 	mlx5_fpga_init(dev);
 
+#ifdef RATELIMIT
+	err = mlx5_init_rl_table(dev);
+	if (err) {
+		mlx5_core_err(dev, "Failed to init rate limiting\n");
+		goto err_tables_cleanup;
+	}
+#endif
 	return 0;
+
+#ifdef RATELIMIT
+err_tables_cleanup:
+	mlx5_cleanup_mr_table(dev);
+	mlx5_cleanup_srq_table(dev);
+	mlx5_cleanup_qp_table(dev);
+	mlx5_cleanup_cq_table(dev);
+#endif
 
 err_eq_cleanup:
 	mlx5_eq_cleanup(dev);
@@ -980,6 +997,9 @@ out:
 
 static void mlx5_cleanup_once(struct mlx5_core_dev *dev)
 {
+#ifdef RATELIMIT
+	mlx5_cleanup_rl_table(dev);
+#endif
 	mlx5_fpga_cleanup(dev);
 	mlx5_cleanup_reserved_gids(dev);
 	mlx5_cleanup_mr_table(dev);
@@ -1284,7 +1304,14 @@ m(+1, u64, no_eeprom, "no_eeprom", "No EEPROM/retry timeout") \
 m(+1, u64, enforce_part_number, "enforce_part_number", "Module Enforce part number list") \
 m(+1, u64, unknown_id, "unknown_id", "Module Unknown identifier") \
 m(+1, u64, high_temp, "high_temp", "Module High Temperature") \
-m(+1, u64, cable_shorted, "cable_shorted", "Module Cable is shorted")
+m(+1, u64, cable_shorted, "cable_shorted", "Module Cable is shorted") \
+m(+1, u64, pmd_type_not_enabled, "pmd_type_not_enabled", "PMD type is not enabled") \
+m(+1, u64, laster_tec_failure, "laster_tec_failure", "Laster TEC failure") \
+m(+1, u64, high_current, "high_current", "High current") \
+m(+1, u64, high_voltage, "high_voltage", "High voltage") \
+m(+1, u64, pcie_sys_power_slot_exceeded, "pcie_sys_power_slot_exceeded", "PCIe system power slot Exceeded") \
+m(+1, u64, high_power, "high_power", "High power")			\
+m(+1, u64, module_state_machine_fault, "module_state_machine_fault", "Module State Machine fault")
 
 static const char *mlx5_pme_err_desc[] = {
 	MLX5_PORT_MODULE_ERROR_STATS(MLX5_STATS_DESC)
@@ -1598,6 +1625,10 @@ static int init_one(struct pci_dev *pdev,
 			vf_schema = pci_iov_schema_alloc_node();
 			pci_iov_schema_add_unicast_mac(vf_schema,
 			    iov_mac_addr_name, 0, NULL);
+			pci_iov_schema_add_uint64(vf_schema, iov_node_guid_name,
+			    0, 0);
+			pci_iov_schema_add_uint64(vf_schema, iov_port_guid_name,
+			    0, 0);
 			err = pci_iov_attach(bsddev, pf_schema, vf_schema);
 			if (err != 0) {
 				device_printf(bsddev,
@@ -1632,10 +1663,14 @@ static void remove_one(struct pci_dev *pdev)
 	struct mlx5_core_dev *dev  = pci_get_drvdata(pdev);
 	struct mlx5_priv *priv = &dev->priv;
 
+#ifdef PCI_IOV
+	pci_iov_detach(pdev->dev.bsddev);
+	mlx5_eswitch_disable_sriov(priv->eswitch);
+#endif
+
 	if (mlx5_unload_one(dev, priv, true)) {
-		mlx5_core_err(dev, "mlx5_unload_one failed\n");
-		mlx5_health_cleanup(dev);
-		return;
+		mlx5_core_err(dev, "mlx5_unload_one() failed, leaked %lld bytes\n",
+		    (long long)(dev->priv.fw_pages * MLX5_ADAPTER_PAGE_SIZE));
 	}
 
 	mlx5_pagealloc_cleanup(dev);
@@ -1799,6 +1834,7 @@ mlx5_iov_add_vf(device_t dev, uint16_t vfnum, const nvlist_t *vf_config)
 	struct mlx5_priv *priv;
 	const void *mac;
 	size_t mac_size;
+	uint64_t node_guid, port_guid;
 	int error;
 
 	pdev = device_get_softc(dev);
@@ -1813,6 +1849,33 @@ mlx5_iov_add_vf(device_t dev, uint16_t vfnum, const nvlist_t *vf_config)
 		    &mac_size);
 		error = -mlx5_eswitch_set_vport_mac(priv->eswitch,
 		    vfnum + 1, __DECONST(u8 *, mac));
+		if (error != 0) {
+			mlx5_core_err(core_dev,
+			    "setting MAC for VF %d failed, error %d\n",
+			    vfnum + 1, error);
+		}
+	}
+
+	if (nvlist_exists_number(vf_config, iov_node_guid_name)) {
+		node_guid = nvlist_get_number(vf_config, iov_node_guid_name);
+		error = -mlx5_modify_nic_vport_node_guid(core_dev, vfnum + 1,
+		    node_guid);
+		if (error != 0) {
+			mlx5_core_err(core_dev,
+		    "modifying node GUID for VF %d failed, error %d\n",
+			    vfnum + 1, error);
+		}
+	}
+
+	if (nvlist_exists_number(vf_config, iov_port_guid_name)) {
+		port_guid = nvlist_get_number(vf_config, iov_port_guid_name);
+		error = -mlx5_modify_nic_vport_port_guid(core_dev, vfnum + 1,
+		    port_guid);
+		if (error != 0) {
+			mlx5_core_err(core_dev,
+		    "modifying port GUID for VF %d failed, error %d\n",
+			    vfnum + 1, error);
+		}
 	}
 
 	error = -mlx5_eswitch_set_vport_state(priv->eswitch, vfnum + 1,
@@ -2000,5 +2063,5 @@ static void __exit cleanup(void)
 	pci_unregister_driver(&mlx5_core_driver);
 }
 
-module_init(init);
-module_exit(cleanup);
+module_init_order(init, SI_ORDER_FIRST);
+module_exit_order(cleanup, SI_ORDER_FIRST);

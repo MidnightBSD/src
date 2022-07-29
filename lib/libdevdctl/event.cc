@@ -63,7 +63,7 @@
 #include "event_factory.h"
 #include "exception.h"
 
-__FBSDID("$FreeBSD: stable/11/lib/libdevdctl/event.cc 330733 2018-03-10 03:34:27Z asomers $");
+__FBSDID("$FreeBSD$");
 
 /*================================== Macros ==================================*/
 #define NUM_ELEMENTS(x) (sizeof(x) / sizeof(*x))
@@ -277,6 +277,7 @@ Event::GetTimestamp() const
 bool
 Event::DevPath(std::string &path) const
 {
+	char buf[SPECNAMELEN + 1];
 	string devName;
 
 	if (!DevName(devName))
@@ -288,7 +289,11 @@ Event::DevPath(std::string &path) const
 		return (false);
 
 	/* Normalize the device name in case the DEVFS event is for a link. */
-	devName = fdevname(devFd);
+	if (fdevname_r(devFd, buf, sizeof(buf)) == NULL) {
+		close(devFd);
+		return (false);
+	}
+	devName = buf;
 	path = _PATH_DEV + devName;
 
 	close(devFd);
@@ -427,7 +432,7 @@ Event::TimestampEventString(std::string &eventString)
 		 * Add a timestamp as the final field of the event if it is
 		 * not already present.
 		 */
-		if (eventString.find("timestamp=") == string::npos) {
+		if (eventString.find(" timestamp=") == string::npos) {
 			const size_t bufsize = 32;	// Long enough for a 64-bit int
 			timeval now;
 			char timebuf[bufsize];

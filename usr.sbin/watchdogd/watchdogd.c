@@ -34,7 +34,7 @@
  */
 
 #include <sys/types.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/watchdogd/watchdogd.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/mman.h>
 #include <sys/param.h>
@@ -112,14 +112,6 @@ static struct option longopts[] = {
 	{ "softtimeout-action", required_argument, &softtimeout_act_set, 1 },
 	{ NULL, 0, NULL, 0}
 };
-
-/*
- * Ask malloc() to map minimum-sized chunks of virtual address space at a time,
- * so that mlockall() won't needlessly wire megabytes of unused memory into the
- * process.  This must be done using the malloc_conf string so that it gets set
- * up before the first allocation, which happens before entry to main().
- */
-const char * malloc_conf = "lg_chunk:0";
 
 /*
  * Periodically pat the watchdog, preventing it from firing.

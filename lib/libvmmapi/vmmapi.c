@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,11 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libvmmapi/vmmapi.c 348201 2019-05-23 21:23:18Z rgrimes $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libvmmapi/vmmapi.c 348201 2019-05-23 21:23:18Z rgrimes $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -109,6 +111,7 @@ struct vmctx *
 vm_open(const char *name)
 {
 	struct vmctx *vm;
+	int saved_errno;
 
 	vm = malloc(sizeof(struct vmctx) + strlen(name) + 1);
 	assert(vm != NULL);
@@ -124,7 +127,9 @@ vm_open(const char *name)
 
 	return (vm);
 err:
-	vm_destroy(vm);
+	saved_errno = errno;
+	free(vm);
+	errno = saved_errno;
 	return (NULL);
 }
 
@@ -585,6 +590,40 @@ vm_get_register(struct vmctx *ctx, int vcpu, int reg, uint64_t *ret_val)
 }
 
 int
+vm_set_register_set(struct vmctx *ctx, int vcpu, unsigned int count,
+    const int *regnums, uint64_t *regvals)
+{
+	int error;
+	struct vm_register_set vmregset;
+
+	bzero(&vmregset, sizeof(vmregset));
+	vmregset.cpuid = vcpu;
+	vmregset.count = count;
+	vmregset.regnums = regnums;
+	vmregset.regvals = regvals;
+
+	error = ioctl(ctx->fd, VM_SET_REGISTER_SET, &vmregset);
+	return (error);
+}
+
+int
+vm_get_register_set(struct vmctx *ctx, int vcpu, unsigned int count,
+    const int *regnums, uint64_t *regvals)
+{
+	int error;
+	struct vm_register_set vmregset;
+
+	bzero(&vmregset, sizeof(vmregset));
+	vmregset.cpuid = vcpu;
+	vmregset.count = count;
+	vmregset.regnums = regnums;
+	vmregset.regvals = regvals;
+
+	error = ioctl(ctx->fd, VM_GET_REGISTER_SET, &vmregset);
+	return (error);
+}
+
+int
 vm_run(struct vmctx *ctx, int vcpu, struct vm_exit *vmexit)
 {
 	int error;
@@ -776,16 +815,13 @@ vm_inject_nmi(struct vmctx *ctx, int vcpu)
 	return (ioctl(ctx->fd, VM_INJECT_NMI, &vmnmi));
 }
 
-static struct {
-	const char	*name;
-	int		type;
-} capstrmap[] = {
-	{ "hlt_exit",		VM_CAP_HALT_EXIT },
-	{ "mtrap_exit",		VM_CAP_MTRAP_EXIT },
-	{ "pause_exit",		VM_CAP_PAUSE_EXIT },
-	{ "unrestricted_guest",	VM_CAP_UNRESTRICTED_GUEST },
-	{ "enable_invpcid",	VM_CAP_ENABLE_INVPCID },
-	{ 0 }
+static const char *capstrmap[] = {
+	[VM_CAP_HALT_EXIT]  = "hlt_exit",
+	[VM_CAP_MTRAP_EXIT] = "mtrap_exit",
+	[VM_CAP_PAUSE_EXIT] = "pause_exit",
+	[VM_CAP_UNRESTRICTED_GUEST] = "unrestricted_guest",
+	[VM_CAP_ENABLE_INVPCID] = "enable_invpcid",
+	[VM_CAP_BPT_EXIT] = "bpt_exit",
 };
 
 int
@@ -793,9 +829,9 @@ vm_capability_name2type(const char *capname)
 {
 	int i;
 
-	for (i = 0; capstrmap[i].name != NULL && capname != NULL; i++) {
-		if (strcmp(capstrmap[i].name, capname) == 0)
-			return (capstrmap[i].type);
+	for (i = 0; i < nitems(capstrmap); i++) {
+		if (strcmp(capstrmap[i], capname) == 0)
+			return (i);
 	}
 
 	return (-1);
@@ -804,12 +840,8 @@ vm_capability_name2type(const char *capname)
 const char *
 vm_capability_type2name(int type)
 {
-	int i;
-
-	for (i = 0; capstrmap[i].name != NULL; i++) {
-		if (capstrmap[i].type == type)
-			return (capstrmap[i].name);
-	}
+	if (type < nitems(capstrmap))
+		return (capstrmap[type]);
 
 	return (NULL);
 }
@@ -921,6 +953,19 @@ vm_setup_pptdev_msix(struct vmctx *ctx, int vcpu, int bus, int slot, int func,
 	pptmsix.vector_control = vector_control;
 
 	return ioctl(ctx->fd, VM_PPTDEV_MSIX, &pptmsix);
+}
+
+int
+vm_disable_pptdev_msix(struct vmctx *ctx, int bus, int slot, int func)
+{
+	struct vm_pptdev ppt;
+
+	bzero(&ppt, sizeof(ppt));
+	ppt.bus = bus;
+	ppt.slot = slot;
+	ppt.func = func;
+
+	return ioctl(ctx->fd, VM_PPTDEV_DISABLE_MSIX, &ppt);
 }
 
 uint64_t *
@@ -1196,6 +1241,27 @@ vm_gla2gpa(struct vmctx *ctx, int vcpu, struct vm_guest_paging *paging,
 	return (error);
 }
 
+int
+vm_gla2gpa_nofault(struct vmctx *ctx, int vcpu, struct vm_guest_paging *paging,
+    uint64_t gla, int prot, uint64_t *gpa, int *fault)
+{
+	struct vm_gla2gpa gg;
+	int error;
+
+	bzero(&gg, sizeof(struct vm_gla2gpa));
+	gg.vcpuid = vcpu;
+	gg.prot = prot;
+	gg.gla = gla;
+	gg.paging = *paging;
+
+	error = ioctl(ctx->fd, VM_GLA2GPA_NOFAULT, &gg);
+	if (error == 0) {
+		*fault = gg.fault;
+		*gpa = gg.gpa;
+	}
+	return (error);
+}
+
 #ifndef min
 #define	min(a,b)	(((a) < (b)) ? (a) : (b))
 #endif
@@ -1316,6 +1382,13 @@ vm_suspended_cpus(struct vmctx *ctx, cpuset_t *cpus)
 }
 
 int
+vm_debug_cpus(struct vmctx *ctx, cpuset_t *cpus)
+{
+
+	return (vm_get_cpus(ctx, VM_DEBUG_CPUS, cpus));
+}
+
+int
 vm_activate_cpu(struct vmctx *ctx, int vcpu)
 {
 	struct vm_activate_cpu ac;
@@ -1324,6 +1397,30 @@ vm_activate_cpu(struct vmctx *ctx, int vcpu)
 	bzero(&ac, sizeof(struct vm_activate_cpu));
 	ac.vcpuid = vcpu;
 	error = ioctl(ctx->fd, VM_ACTIVATE_CPU, &ac);
+	return (error);
+}
+
+int
+vm_suspend_cpu(struct vmctx *ctx, int vcpu)
+{
+	struct vm_activate_cpu ac;
+	int error;
+
+	bzero(&ac, sizeof(struct vm_activate_cpu));
+	ac.vcpuid = vcpu;
+	error = ioctl(ctx->fd, VM_SUSPEND_CPU, &ac);
+	return (error);
+}
+
+int
+vm_resume_cpu(struct vmctx *ctx, int vcpu)
+{
+	struct vm_activate_cpu ac;
+	int error;
+
+	bzero(&ac, sizeof(struct vm_activate_cpu));
+	ac.vcpuid = vcpu;
+	error = ioctl(ctx->fd, VM_RESUME_CPU, &ac);
 	return (error);
 }
 
@@ -1464,16 +1561,20 @@ vm_get_ioctls(size_t *len)
 	    VM_ALLOC_MEMSEG, VM_GET_MEMSEG, VM_MMAP_MEMSEG, VM_MMAP_MEMSEG,
 	    VM_MMAP_GETNEXT, VM_SET_REGISTER, VM_GET_REGISTER,
 	    VM_SET_SEGMENT_DESCRIPTOR, VM_GET_SEGMENT_DESCRIPTOR,
+	    VM_SET_REGISTER_SET, VM_GET_REGISTER_SET,
 	    VM_INJECT_EXCEPTION, VM_LAPIC_IRQ, VM_LAPIC_LOCAL_IRQ,
 	    VM_LAPIC_MSI, VM_IOAPIC_ASSERT_IRQ, VM_IOAPIC_DEASSERT_IRQ,
 	    VM_IOAPIC_PULSE_IRQ, VM_IOAPIC_PINCOUNT, VM_ISA_ASSERT_IRQ,
 	    VM_ISA_DEASSERT_IRQ, VM_ISA_PULSE_IRQ, VM_ISA_SET_IRQ_TRIGGER,
 	    VM_SET_CAPABILITY, VM_GET_CAPABILITY, VM_BIND_PPTDEV,
 	    VM_UNBIND_PPTDEV, VM_MAP_PPTDEV_MMIO, VM_PPTDEV_MSI,
-	    VM_PPTDEV_MSIX, VM_INJECT_NMI, VM_STATS, VM_STAT_DESC,
+	    VM_PPTDEV_MSIX, VM_PPTDEV_DISABLE_MSIX,
+	    VM_INJECT_NMI, VM_STATS, VM_STAT_DESC,
 	    VM_SET_X2APIC_STATE, VM_GET_X2APIC_STATE,
 	    VM_GET_HPET_CAPABILITIES, VM_GET_GPA_PMAP, VM_GLA2GPA,
-	    VM_ACTIVATE_CPU, VM_GET_CPUS, VM_SET_INTINFO, VM_GET_INTINFO,
+	    VM_GLA2GPA_NOFAULT,
+	    VM_ACTIVATE_CPU, VM_GET_CPUS, VM_SUSPEND_CPU, VM_RESUME_CPU,
+	    VM_SET_INTINFO, VM_GET_INTINFO,
 	    VM_RTC_WRITE, VM_RTC_READ, VM_RTC_SETTIME, VM_RTC_GETTIME,
 	    VM_RESTART_INSTRUCTION, VM_SET_TOPOLOGY, VM_GET_TOPOLOGY };
 

@@ -29,7 +29,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sbin/fsdb/fsdb.h 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 extern int blread(int fd, char *buf, ufs2_daddr_t blk, long size);

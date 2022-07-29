@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006-2007 Daniel Roethlisberger <daniel@roe.ch>
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/cmx/cmx_pccard.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -93,7 +95,7 @@ cmx_pccard_attach(device_t dev)
 		return rv;
 	}
 
-	device_printf(dev, "attached\n");
+	gone_in_dev(dev, 13, "pccard removed");
 	return 0;
 }
 

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/opieinfo/Makefile 319186 2017-05-30 04:27:05Z ngie $
+# $FreeBSD$
 #
 OPIE_DIST?=	${SRCTOP}/contrib/opie
 

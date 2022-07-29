@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/common/dev_net.h 283062 2015-05-18 15:46:43Z ian $
+ * $FreeBSD$
  */
 
 #ifndef _BOOT_DEV_NET_H_

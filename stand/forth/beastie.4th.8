@@ -1,4 +1,4 @@
-.\" Copyright (c) 2011 Devin Teske
+.\" Copyright (c) 2011-2012 Devin Teske
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
 .\"
 .\" $MidnightBSD$
 .\"
-.Dd May 16, 2011
+.Dd January 6, 2016
 .Dt BEASTIE.4TH 8
 .Os
 .Sh NAME
@@ -34,9 +34,9 @@
 The file that goes by the name of
 .Nm
 is a set of commands designed to draw the ASCII art MidnightBSD mascot
-.Nd known simply as
-.Ic beastie
-.Nd to the right of the boot loader menu.
+\(en known simply as
+.Em beastie
+\(en to the right of the boot loader menu.
 The commands of
 .Nm
 by themselves are not enough for most uses.
@@ -94,8 +94,9 @@ The
 variable can be configured in
 .Xr loader.conf 5
 to the number of seconds you would like to delay loading the boot menu.
-During the delay the user can press Ctrl-C to fall back to autoboot or ENTER
-to proceed.
+During the delay the user can press Ctrl-C to fall back to
+.Ic autoboot
+or ENTER to proceed.
 The default behavior is to not delay.
 .El
 .Pp
@@ -118,6 +119,7 @@ Sets the desired row position of the logo. Default is 4.
 If set to
 .Dq YES ,
 the beastie boot menu will be skipped.
+The beastie boot menu is always skipped if running non-x86 hardware.
 .It Va loader_delay
 If set to a number higher than zero, introduces a delay before starting the
 beastie boot menu. During the delay the user can press either Ctrl-C to skip
@@ -168,4 +170,4 @@ set of commands was written by
 .An Scott Long Aq scottl@FreeBSD.org ,
 .An Aleksander Fafula Aq alex@fafula.com
 and
-.An Devin Teske Aq devinteske@hotmail.com .
+.An Devin Teske Aq dteske@FreeBSD.org .

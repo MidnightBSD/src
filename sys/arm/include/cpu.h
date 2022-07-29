@@ -1,5 +1,5 @@
 /* $NetBSD: cpu.h,v 1.2 2001/02/23 21:23:52 reinoud Exp $ */
-/* $FreeBSD: stable/11/sys/arm/include/cpu.h 340270 2018-11-08 22:42:55Z jhb $ */
+/* $FreeBSD$ */
 
 #ifndef MACHINE_CPU_H
 #define MACHINE_CPU_H
@@ -20,7 +20,7 @@ void	swi_vm(void *);
 static __inline uint64_t
 get_cyclecount(void)
 {
-#if __ARM_ARCH >= 6
+#if __ARM_ARCH > 6 || (__ARM_ARCH == 6 && defined(CPU_ARM1176))
 #if (__ARM_ARCH > 6) && defined(DEV_PMU)
 	if (pmu_attched) {
 		u_int cpu;

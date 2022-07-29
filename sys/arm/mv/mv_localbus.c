@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Semihalf.
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/mv/mv_localbus.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_platform.h"
 #include <sys/param.h>
@@ -173,7 +175,7 @@ fdt_localbus_reg_decode(phandle_t node, struct localbus_softc *sc,
 		return (ENXIO);
 
 	tuple_size = sizeof(pcell_t) * (addr_cells + size_cells);
-	tuples = OF_getprop_alloc(node, "reg", tuple_size, (void **)&reg);
+	tuples = OF_getprop_alloc_multi(node, "reg", tuple_size, (void **)&reg);
 	debugf("addr_cells = %d, size_cells = %d\n", addr_cells, size_cells);
 	debugf("tuples = %d, tuple size = %d\n", tuples, tuple_size);
 	if (tuples <= 0)
@@ -270,10 +272,10 @@ localbus_attach(device_t dev)
 	    dt_child = OF_peer(dt_child)) {
 
 		/* Check and process 'status' property. */
-		if (!(fdt_is_enabled(dt_child)))
+		if (!(ofw_bus_node_status_okay(dt_child)))
 			continue;
 
-		if (!(fdt_pm_is_enabled(dt_child)))
+		if (!(mv_fdt_pm(dt_child)))
 			continue;
 
 		di = malloc(sizeof(*di), M_LOCALBUS, M_WAITOK | M_ZERO);

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/etc/mtree/BSD.debug.dist 350259 2019-07-23 20:31:54Z dim $
+# $FreeBSD$
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -27,11 +27,9 @@
         usr
             bin
             ..
-            games
-            ..
             lib
                 clang
-                    8.0.1
+                    13.0.0
                         lib
                             freebsd
                             ..

@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/usr.sbin/bluetooth/ath3kfw/ath3k_fw.c 301537 2016-06-07 04:22:18Z adrian $
+ * $FreeBSD$
  */
 
 #include <stdio.h>

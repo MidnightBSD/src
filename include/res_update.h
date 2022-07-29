@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999 by Internet Software Consortium, Inc.
  *
@@ -17,7 +19,7 @@
 
 /*
  *	$Id: res_update.h,v 1.3 2005/04/27 04:56:15 sra Exp $
- * $FreeBSD: stable/11/include/res_update.h 269867 2014-08-12 12:36:06Z ume $
+ * $FreeBSD$
  */
 
 #ifndef __RES_UPDATE_H

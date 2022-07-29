@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/isp/isp_freebsd.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Qlogic ISP SCSI Host Adapter FreeBSD Wrapper Definitions
  *
  * Copyright (c) 1997-2008 by Matthew Jacob
@@ -548,7 +550,8 @@ default:							\
 #define	XS_TAG_TYPE(ccb)	\
 	((ccb->tag_action == MSG_SIMPLE_Q_TAG)? REQFLAG_STAG : \
 	 ((ccb->tag_action == MSG_HEAD_OF_Q_TAG)? REQFLAG_HTAG : REQFLAG_OTAG))
-		
+
+#define	XS_PRIORITY(ccb)	(ccb)->priority
 
 #define	XS_SETERR(ccb, v)	(ccb)->ccb_h.status &= ~CAM_STATUS_MASK, \
 				(ccb)->ccb_h.status |= v

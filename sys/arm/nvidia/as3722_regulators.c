@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/nvidia/as3722_regulators.c 308328 2016-11-05 04:40:58Z mmel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -542,7 +542,7 @@ struct as3722_regnode_init_def *init_def)
 	if (rv <= 0)
 		return;
 	supply_node = OF_node_from_xref(supply_node);
-	rv = OF_getprop_alloc(supply_node, "regulator-name", 1,
+	rv = OF_getprop_alloc(supply_node, "regulator-name",
 	    (void **)&init_def->reg_init_def.parent_name);
 	if (rv <= 0)
 		init_def->reg_init_def.parent_name = NULL;

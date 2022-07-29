@@ -28,7 +28,7 @@
 #
 # TEST.sh - check if test(1) or builtin test works
 #
-# $FreeBSD: stable/11/bin/test/tests/legacy_test.sh 289488 2015-10-18 05:51:44Z ngie $
+# $FreeBSD$
 
 # force a specified test program, e.g. `env test=/bin/test sh regress.sh'
 : ${test=test}

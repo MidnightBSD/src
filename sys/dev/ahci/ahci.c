@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2012 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ahci/ahci.c 350793 2019-08-08 21:46:36Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -139,7 +141,27 @@ int
 ahci_ctlr_reset(device_t dev)
 {
 	struct ahci_controller *ctlr = device_get_softc(dev);
+	uint32_t v;
 	int timeout;
+
+	/* BIOS/OS Handoff */
+	if ((ATA_INL(ctlr->r_mem, AHCI_VS) >= 0x00010200) &&
+	    (ATA_INL(ctlr->r_mem, AHCI_CAP2) & AHCI_CAP2_BOH) &&
+	    ((v = ATA_INL(ctlr->r_mem, AHCI_BOHC)) & AHCI_BOHC_OOS) == 0) {
+
+		/* Request OS ownership. */
+		ATA_OUTL(ctlr->r_mem, AHCI_BOHC, v | AHCI_BOHC_OOS);
+
+		/* Wait up to 2s for BIOS ownership release. */
+		for (timeout = 0; timeout < 80; timeout++) {
+			DELAY(25000);
+			v = ATA_INL(ctlr->r_mem, AHCI_BOHC);
+			if ((v & AHCI_BOHC_BOS) == 0)
+				break;
+			if ((v & AHCI_BOHC_BB) == 0)
+				break;
+		}
+	}
 
 	/* Enable AHCI mode */
 	ATA_OUTL(ctlr->r_mem, AHCI_GHC, AHCI_GHC_AE);
@@ -260,7 +282,8 @@ ahci_attach(device_t dev)
 	    (ctlr->caps & AHCI_CAP_64BIT) ? BUS_SPACE_MAXADDR :
 	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
 	    BUS_SPACE_MAXSIZE, BUS_SPACE_UNRESTRICTED, BUS_SPACE_MAXSIZE,
-	    0, NULL, NULL, &ctlr->dma_tag)) {
+	    ctlr->dma_coherent ? BUS_DMA_COHERENT : 0, NULL, NULL, 
+	    &ctlr->dma_tag)) {
 		ahci_free_mem(dev);
 		rman_fini(&ctlr->sc_iomem);
 		return (ENXIO);
@@ -344,12 +367,22 @@ ahci_attach(device_t dev)
 		if ((ctlr->ichannels & (1 << unit)) == 0)
 			device_disable(child);
 	}
+	/* Attach any remapped NVME device */
+	for (; unit < ctlr->channels + ctlr->remapped_devices; unit++) {
+		child = device_add_child(dev, "nvme", -1);
+		if (child == NULL) {
+			device_printf(dev, "failed to add remapped NVMe device");
+			    continue;
+		}
+		device_set_ivars(child, (void *)(intptr_t)(unit | AHCI_REMAPPED_UNIT));
+	}
+
 	if (ctlr->caps & AHCI_CAP_EMS) {
 		child = device_add_child(dev, "ahciem", -1);
 		if (child == NULL)
 			device_printf(dev, "failed to add enclosure device\n");
 		else
-			device_set_ivars(child, (void *)(intptr_t)-1);
+			device_set_ivars(child, (void *)(intptr_t)AHCI_EM_UNIT);
 	}
 	bus_generic_attach(dev);
 	return (0);
@@ -494,6 +527,12 @@ ahci_intr(void *data)
 				ctlr->interrupt[unit].function(arg);
 		}
 	}
+	for (; unit < ctlr->channels + ctlr->remapped_devices; unit++) {
+		if ((arg = ctlr->interrupt[unit].argument)) {
+			ctlr->interrupt[unit].function(arg);
+		}
+	}
+
 	/* AHCI declares level triggered IS. */
 	if (!(ctlr->quirks & AHCI_Q_EDGEIS))
 		ATA_OUTL(ctlr->r_mem, AHCI_IS, is);
@@ -543,12 +582,25 @@ ahci_alloc_resource(device_t dev, device_t child, int type, int *rid,
 	struct resource *res;
 	rman_res_t st;
 	int offset, size, unit;
+	bool is_em, is_remapped;
 
 	unit = (intptr_t)device_get_ivars(child);
+	is_em = is_remapped = false;
+	if (unit & AHCI_REMAPPED_UNIT) {
+		unit &= AHCI_UNIT;
+		unit -= ctlr->channels;
+		is_remapped = true;
+	} else if (unit & AHCI_EM_UNIT) {
+		unit &= AHCI_UNIT;
+		is_em = true;
+	}
 	res = NULL;
 	switch (type) {
 	case SYS_RES_MEMORY:
-		if (unit >= 0) {
+		if (is_remapped) {
+			offset = ctlr->remap_offset + unit * ctlr->remap_size;
+			size = ctlr->remap_size;
+		} else if (!is_em) {
 			offset = AHCI_OFFSET + (unit << 7);
 			size = 128;
 		} else if (*rid == 0) {
@@ -609,7 +661,7 @@ ahci_setup_intr(device_t dev, device_t child, struct resource *irq,
     void *argument, void **cookiep)
 {
 	struct ahci_controller *ctlr = device_get_softc(dev);
-	int unit = (intptr_t)device_get_ivars(child);
+	int unit = (intptr_t)device_get_ivars(child) & AHCI_UNIT;
 
 	if (filter != NULL) {
 		printf("ahci.c: we cannot use a filter here\n");
@@ -625,7 +677,7 @@ ahci_teardown_intr(device_t dev, device_t child, struct resource *irq,
     void *cookie)
 {
 	struct ahci_controller *ctlr = device_get_softc(dev);
-	int unit = (intptr_t)device_get_ivars(child);
+	int unit = (intptr_t)device_get_ivars(child) & AHCI_UNIT;
 
 	ctlr->interrupt[unit].function = NULL;
 	ctlr->interrupt[unit].argument = NULL;
@@ -635,12 +687,13 @@ ahci_teardown_intr(device_t dev, device_t child, struct resource *irq,
 int
 ahci_print_child(device_t dev, device_t child)
 {
-	int retval, channel;
+	intptr_t ivars;
+	int retval;
 
 	retval = bus_print_child_header(dev, child);
-	channel = (int)(intptr_t)device_get_ivars(child);
-	if (channel >= 0)
-		retval += printf(" at channel %d", channel);
+	ivars = (intptr_t)device_get_ivars(child);
+	if ((ivars & AHCI_EM_UNIT) == 0)
+		retval += printf(" at channel %d", (int)ivars & AHCI_UNIT);
 	retval += bus_print_child_footer(dev, child);
 	return (retval);
 }
@@ -649,11 +702,11 @@ int
 ahci_child_location_str(device_t dev, device_t child, char *buf,
     size_t buflen)
 {
-	int channel;
+	intptr_t ivars;
 
-	channel = (int)(intptr_t)device_get_ivars(child);
-	if (channel >= 0)
-		snprintf(buf, buflen, "channel=%d", channel);
+	ivars = (intptr_t)device_get_ivars(child);
+	if ((ivars & AHCI_EM_UNIT) == 0)
+		snprintf(buf, buflen, "channel=%d", (int)ivars & AHCI_UNIT);
 	return (0);
 }
 
@@ -1709,6 +1762,14 @@ ahci_execute_transaction(struct ahci_slot *slot)
 		}
 
 		/*
+		 * Some Marvell controllers require additional time
+		 * after soft reset to work properly. Setup delay
+		 * to 50ms after soft reset.
+		 */
+		if (ch->quirks & AHCI_Q_MRVL_SR_DEL)
+			DELAY(50000);
+
+		/*
 		 * Marvell HBAs with non-RAID firmware do not wait for
 		 * readiness after soft reset, so we have to wait here.
 		 * Marvell RAIDs do not have this problem, but instead
@@ -2518,21 +2579,23 @@ ahci_setup_fis(struct ahci_channel *ch, struct ahci_cmd_tab *ctp, union ccb *ccb
 		fis[9] = ccb->ataio.cmd.lba_mid_exp;
 		fis[10] = ccb->ataio.cmd.lba_high_exp;
 		fis[11] = ccb->ataio.cmd.features_exp;
+		fis[12] = ccb->ataio.cmd.sector_count;
 		if (ccb->ataio.cmd.flags & CAM_ATAIO_FPDMA) {
-			fis[12] = tag << 3;
-		} else {
-			fis[12] = ccb->ataio.cmd.sector_count;
+			fis[12] &= 0x07;
+			fis[12] |= tag << 3;
 		}
 		fis[13] = ccb->ataio.cmd.sector_count_exp;
+		if (ccb->ataio.ata_flags & ATA_FLAG_ICC)
+			fis[14] = ccb->ataio.icc;
 		fis[15] = ATA_A_4BIT;
+		if (ccb->ataio.ata_flags & ATA_FLAG_AUX) {
+			fis[16] =  ccb->ataio.aux        & 0xff;
+			fis[17] = (ccb->ataio.aux >>  8) & 0xff;
+			fis[18] = (ccb->ataio.aux >> 16) & 0xff;
+			fis[19] = (ccb->ataio.aux >> 24) & 0xff;
+		}
 	} else {
 		fis[15] = ccb->ataio.cmd.control;
-	}
-	if (ccb->ataio.ata_flags & ATA_FLAG_AUX) {
-		fis[16] =  ccb->ataio.aux        & 0xff;
-		fis[17] = (ccb->ataio.aux >>  8) & 0xff;
-		fis[18] = (ccb->ataio.aux >> 16) & 0xff;
-		fis[19] = (ccb->ataio.aux >> 24) & 0xff;
 	}
 	return (20);
 }
@@ -2798,7 +2861,7 @@ ahciaction(struct cam_sim *sim, union ccb *ccb)
 		cpi->initiator_id = 0;
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 150000;
-		strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
 		strlcpy(cpi->hba_vid, "AHCI", HBA_IDLEN);
 		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);

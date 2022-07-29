@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause AND BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1996-2000 Whistle Communications, Inc.
  * All rights reserved.
  *
@@ -58,7 +60,7 @@
  *
  * Authors: Archie Cobbs <archie@freebsd.org>, Alexander Motin <mav@alkar.net>
  *
- * $FreeBSD: stable/11/sys/netgraph/ng_ppp.c 298813 2016-04-29 21:25:05Z pfg $
+ * $FreeBSD$
  * $Whistle: ng_ppp.c,v 1.24 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -1512,7 +1514,7 @@ done:
  *	is increased.
  *
  *    o If we receive a fragment with seq# < MSEQ, we throw it away
- *	because we've already delcared it lost.
+ *	because we've already declared it lost.
  *
  * This assumes linkNum != NG_PPP_BUNDLE_LINKNUM.
  */

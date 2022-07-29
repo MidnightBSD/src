@@ -1,6 +1,8 @@
-/* $MidnightBSD$ */
-/* 
+/*-
  *  perm.c - check user permission for at(1)
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  *  Copyright (C) 1994  Thomas Koenig
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/at/perm.c 87628 2001-12-10 21:13:08Z dwmalone $");
+__FBSDID("$FreeBSD$");
 
 /* System Headers */
 

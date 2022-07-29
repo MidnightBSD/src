@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/tests/sys/acl/mktrivial.sh 324404 2017-10-07 23:10:16Z ngie $
+# $FreeBSD$
 #
 
 # This shell script generates an input file for the "run" script, used

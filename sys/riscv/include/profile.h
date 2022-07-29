@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: MIT-CMU
+ *
  * Copyright (c) 1994, 1995, 1996 Carnegie-Mellon University.
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  *
  *	from: NetBSD: profile.h,v 1.9 1997/04/06 08:47:37 cgd Exp
  *	from: FreeBSD: src/sys/alpha/include/profile.h,v 1.4 1999/12/29
- * $FreeBSD: stable/11/sys/riscv/include/profile.h 292407 2015-12-17 18:44:30Z br $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PROFILE_H_
@@ -68,7 +70,7 @@ void	mcount(uintfptr_t frompc, uintfptr_t selfpc);
 
 #else /* !_KERNEL */
 
-typedef unsigned long long	uintfptr_t;
+typedef	__uintfptr_t	uintfptr_t;
 
 #define	_MCOUNT_DECL	void mcount
 #define	MCOUNT

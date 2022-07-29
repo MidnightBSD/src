@@ -19,7 +19,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -35,17 +35,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/amd64/exception.S 354769 2019-11-16 11:00:22Z kib $
+ * $FreeBSD$
  */
 
 #include "opt_atpic.h"
-#include "opt_compat.h"
 #include "opt_hwpmc_hooks.h"
 
-#include "assym.s"
+#include "assym.inc"
 
-#include <machine/asmacros.h>
 #include <machine/psl.h>
+#include <machine/asmacros.h>
 #include <machine/trap.h>
 #include <machine/specialreg.h>
 
@@ -254,7 +253,9 @@ alltraps_pushregs_no_rax:
 	movq	%r14,TF_R14(%rsp)
 	movq	%r15,TF_R15(%rsp)
 	movl	$TF_HASSEGS,TF_FLAGS(%rsp)
-	cld
+	pushfq
+	andq	$~(PSL_D | PSL_AC),(%rsp)
+	popfq
 	FAKE_MCOUNT(TF_RIP(%rsp))
 #ifdef KDTRACE_HOOKS
 	/*
@@ -341,11 +342,15 @@ IDTVEC(dblfault)
 	movq	%r15,TF_R15(%rsp)
 	SAVE_SEGS
 	movl	$TF_HASSEGS,TF_FLAGS(%rsp)
-	cld
+	pushfq
+	andq	$~(PSL_D | PSL_AC),(%rsp)
+	popfq
 	testb	$SEL_RPL_MASK,TF_CS(%rsp) /* Did we come from kernel? */
 	jz	1f			/* already running with kernel GS.base */
 	swapgs
 1:	lfence
+	movq	%cr3,%rax
+	movq	%rax,PCPU(SAVED_UCR3)
 	movq	PCPU(KCR3),%rax
 	cmpq	$~0,%rax
 	je	2f
@@ -519,17 +524,17 @@ prot_addrf:
 IDTVEC(fast_syscall_pti)
 	swapgs
 	lfence
-	movq	%rax,PCPU(SCRATCH_RAX)
 	cmpq	$~0,PCPU(UCR3)
 	je	fast_syscall_common
+	movq	%rax,PCPU(SCRATCH_RAX)
 	movq	PCPU(KCR3),%rax
 	movq	%rax,%cr3
+	movq	PCPU(SCRATCH_RAX),%rax
 	jmp	fast_syscall_common
 	SUPERALIGN_TEXT
 IDTVEC(fast_syscall)
 	swapgs
 	lfence
-	movq	%rax,PCPU(SCRATCH_RAX)
 fast_syscall_common:
 	movq	%rsp,PCPU(SCRATCH_RSP)
 	movq	PCPU(RSP0),%rsp
@@ -540,9 +545,16 @@ fast_syscall_common:
 	movq	%rcx,TF_RIP(%rsp)	/* %rcx original value is in %r10 */
 	movq	PCPU(SCRATCH_RSP),%r11	/* %r11 already saved */
 	movq	%r11,TF_RSP(%rsp)	/* user stack pointer */
-	movq	PCPU(SCRATCH_RAX),%rax
+	/*
+	 * Save a few arg registers early to free them for use in
+	 * handle_ibrs_entry().  %r10 is especially tricky.  It is not an
+	 * arg register, but it holds the arg register %rcx.  Profiling
+	 * preserves %rcx, but may clobber %r10.  Profiling may also
+	 * clobber %r11, but %r11 (original %eflags) has been saved.
+	 */
 	movq	%rax,TF_RAX(%rsp)	/* syscall number */
 	movq	%rdx,TF_RDX(%rsp)	/* arg 3 */
+	movq	%r10,TF_RCX(%rsp)	/* arg 4 */
 	SAVE_SEGS
 	call	handle_ibrs_entry
 	movq	PCPU(CURPCB),%r11
@@ -553,7 +565,6 @@ fast_syscall_common:
 	movq	$2,TF_ERR(%rsp)
 	movq	%rdi,TF_RDI(%rsp)	/* arg 1 */
 	movq	%rsi,TF_RSI(%rsp)	/* arg 2 */
-	movq	%r10,TF_RCX(%rsp)	/* arg 4 */
 	movq	%r8,TF_R8(%rsp)		/* arg 5 */
 	movq	%r9,TF_R9(%rsp)		/* arg 6 */
 	movq	%rbx,TF_RBX(%rsp)	/* C preserved */
@@ -645,7 +656,9 @@ IDTVEC(dbg)
 	movq	%r15,TF_R15(%rsp)
 	SAVE_SEGS
 	movl	$TF_HASSEGS,TF_FLAGS(%rsp)
-	cld
+	pushfq
+	andq	$~(PSL_D | PSL_AC),(%rsp)
+	popfq
 	testb	$SEL_RPL_MASK,TF_CS(%rsp)
 	jnz	dbg_fromuserspace
 	lfence
@@ -780,7 +793,9 @@ IDTVEC(nmi)
 	movq	%r15,TF_R15(%rsp)
 	SAVE_SEGS
 	movl	$TF_HASSEGS,TF_FLAGS(%rsp)
-	cld
+	pushfq
+	andq	$~(PSL_D | PSL_AC),(%rsp)
+	popfq
 	xorl	%ebx,%ebx
 	testb	$SEL_RPL_MASK,TF_CS(%rsp)
 	jnz	nmi_fromuserspace
@@ -871,7 +886,9 @@ nmi_calltrap:
 	subq	%rcx,%rdx
 	movq	%rdx,%rdi	/* destination stack pointer */
 	shrq	$3,%rcx		/* trap frame size in long words */
-	cld
+	pushfq
+	andq	$~(PSL_D | PSL_AC),(%rsp)
+	popfq
 	rep
 	movsq			/* copy trapframe */
 	movq	%rdx,%rsp	/* we are on the regular kstack */
@@ -983,7 +1000,9 @@ IDTVEC(mchk)
 	movq	%r15,TF_R15(%rsp)
 	SAVE_SEGS
 	movl	$TF_HASSEGS,TF_FLAGS(%rsp)
-	cld
+	pushfq
+	andq	$~(PSL_D | PSL_AC),(%rsp)
+	popfq
 	xorl	%ebx,%ebx
 	testb	$SEL_RPL_MASK,TF_CS(%rsp)
 	jnz	mchk_fromuserspace

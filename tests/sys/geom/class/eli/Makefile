@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tests/sys/geom/class/eli/Makefile 345394 2019-03-21 22:23:52Z asomers $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/geom/eli ${SRCTOP}/sys/crypto/sha2
 
@@ -16,6 +16,7 @@ ATF_TESTS_SH+=	integrity_test
 ATF_TESTS_SH+=	kill_test
 ATF_TESTS_SH+=	misc_test
 ATF_TESTS_SH+=	onetime_test
+ATF_TESTS_SH+=	reentrancy_test
 ATF_TESTS_SH+=	resize_test
 ATF_TESTS_SH+=	setkey_test
 

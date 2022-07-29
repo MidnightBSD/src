@@ -1,6 +1,7 @@
 /*-
  * Copyright (c) 2011-2015 LSI Corp.
  * Copyright (c) 2013-2016 Avago Technologies
+ * Copyright 2000-2020 Broadcom Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,9 +25,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
+ * Broadcom Inc. (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: stable/11/sys/dev/mpr/mpr_sas.h 319435 2017-06-01 15:39:09Z slm $
+ * $FreeBSD$
  */
 
 struct mpr_fw_event_work;
@@ -63,6 +64,7 @@ struct mprsas_target {
 	SLIST_HEAD(, mprsas_lun) luns;
 	TAILQ_HEAD(, mpr_command) commands;
 	struct mpr_command *tm;
+	struct mpr_command *pending_remove_tm;
 	TAILQ_HEAD(, mpr_command) timedout_commands;
 	uint16_t        exp_dev_handle;
 	uint16_t        phy_num;
@@ -70,9 +72,6 @@ struct mprsas_target {
 	uint16_t	parent_handle;
 	uint64_t	parent_sasaddr;
 	uint32_t	parent_devinfo;
-	struct sysctl_ctx_list sysctl_ctx;
-	struct sysctl_oid *sysctl_tree;
-	TAILQ_ENTRY(mprsas_target) sysctl_link;
 	uint64_t        issued;
 	uint64_t        completed;
 	unsigned int    outstanding;
@@ -85,6 +84,7 @@ struct mprsas_target {
 	uint8_t		supports_SSU;
 	uint8_t		is_nvme;
 	uint32_t	MDTS;
+	uint8_t		controller_reset_timeout;
 };
 
 struct mprsas_softc {

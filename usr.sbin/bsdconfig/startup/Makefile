@@ -1,6 +1,4 @@
-# $MidnightBSD$
-
-NO_OBJ=
+# $FreeBSD$
 
 SUBDIR= include share
 

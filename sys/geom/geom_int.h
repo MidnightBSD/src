@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -33,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/geom/geom_int.h 260479 2014-01-09 11:13:03Z mav $
+ * $FreeBSD$
  */
 
 LIST_HEAD(class_list_head, g_class);
@@ -43,21 +44,10 @@ extern int g_collectstats;
 #define G_STATS_PROVIDERS	1	/* Collect I/O stats for providers */
 #define G_STATS_CONSUMERS	2	/* Collect I/O stats for consumers */
 
-extern int g_debugflags;
-/*
- * 1	G_T_TOPOLOGY
- * 2	G_T_BIO
- * 4	G_T_ACCESS
- * 8	(unused)
- * 16	Allow footshooting on rank#1 providers
- * 32	G_T_DETAILS
- */
-#define G_F_DISKIOCTL	64
-#define G_F_CTLDUMP	128
-
 /* geom_dump.c */
 void g_confxml(void *, int flag);
 void g_conf_specific(struct sbuf *sb, struct g_class *mp, struct g_geom *gp, struct g_provider *pp, struct g_consumer *cp);
+void g_conf_cat_escaped(struct sbuf *sb, const char *buf);
 void g_conf_printf_escaped(struct sbuf *sb, const char *fmt, ...);
 void g_confdot(void *, int flag);
 void g_conftxt(void *, int flag);

@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/11/libexec/rtld-elf/libmap.c 339122 2018-10-03 11:34:28Z kib $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -25,7 +25,7 @@ struct lm {
 	TAILQ_ENTRY(lm)	lm_link;
 };
 
-TAILQ_HEAD(lmp_list, lmp) lmp_head = TAILQ_HEAD_INITIALIZER(lmp_head);
+static TAILQ_HEAD(lmp_list, lmp) lmp_head = TAILQ_HEAD_INITIALIZER(lmp_head);
 struct lmp {
 	char *p;
 	enum { T_EXACT=0, T_BASENAME, T_DIRECTORY } type;
@@ -44,8 +44,8 @@ struct lmc {
 static int lm_count;
 
 static void lmc_parse(char *, size_t);
-static void lmc_parse_file(char *);
-static void lmc_parse_dir(char *);
+static void lmc_parse_file(const char *);
+static void lmc_parse_dir(const char *);
 static void lm_add(const char *, const char *, const char *);
 static void lm_free(struct lm_list *);
 static char *lml_find(struct lm_list *, const char *);
@@ -96,12 +96,13 @@ lm_init(char *libmap_override)
 }
 
 static void
-lmc_parse_file(char *path)
+lmc_parse_file(const char *path)
 {
 	struct lmc *p;
 	char *lm_map;
 	struct stat st;
-	int fd;
+	ssize_t retval;
+	int fd, saved_errno;
 
 	TAILQ_FOREACH(p, &lmc_head, next) {
 		if (strcmp(p->path, path) == 0)
@@ -115,9 +116,9 @@ lmc_parse_file(char *path)
 		return;
 	}
 	if (fstat(fd, &st) == -1) {
-		close(fd);
 		dbg("lm_parse_file: fstat(\"%s\") failed, %s", path,
 		    rtld_strerror(errno));
+		close(fd);
 		return;
 	}
 
@@ -128,25 +129,32 @@ lmc_parse_file(char *path)
 		}
 	}
 
-	lm_map = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-	if (lm_map == (const char *)MAP_FAILED) {
-		close(fd);
-		dbg("lm_parse_file: mmap(\"%s\") failed, %s", path,
-		    rtld_strerror(errno));
+	lm_map = xmalloc(st.st_size);
+	retval = read(fd, lm_map, st.st_size);
+	saved_errno = errno;
+	close(fd);
+	if (retval != st.st_size) {
+		if (retval == -1) {
+			dbg("lm_parse_file: read(\"%s\") failed, %s", path,
+			    rtld_strerror(saved_errno));
+		} else {
+			dbg("lm_parse_file: short read(\"%s\"), %zd vs %jd",
+			    path, retval, (uintmax_t)st.st_size);
+		}
+		free(lm_map);
 		return;
 	}
-	close(fd);
 	p = xmalloc(sizeof(struct lmc));
 	p->path = xstrdup(path);
 	p->dev = st.st_dev;
 	p->ino = st.st_ino;
 	TAILQ_INSERT_HEAD(&lmc_head, p, next);
 	lmc_parse(lm_map, st.st_size);
-	munmap(lm_map, st.st_size);
+	free(lm_map);
 }
 
 static void
-lmc_parse_dir(char *idir)
+lmc_parse_dir(const char *idir)
 {
 	DIR *d;
 	struct dirent *dp;
@@ -196,8 +204,7 @@ lmc_parse(char *lm_p, size_t lm_len)
 	char prog[MAXPATHLEN];
 	/* allow includedir + full length path */
 	char line[MAXPATHLEN + 13];
-	size_t cnt;
-	int i;
+	size_t cnt, i;
 
 	cnt = 0;
 	p = NULL;
@@ -400,7 +407,7 @@ lm_find(const char *p, const char *f)
  * replacement library, or NULL.
  */
 char *
-lm_findn(const char *p, const char *f, const int n)
+lm_findn(const char *p, const char *f, const size_t n)
 {
 	char pathbuf[64], *s, *t;
 

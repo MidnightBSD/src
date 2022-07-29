@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Doug Rabson
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/11/lib/libgssapi/gss_compare_name.c 331722 2018-03-29 02:50:57Z eadler $
+ *	$FreeBSD$
  */
 
 #include <gssapi/gssapi.h>
@@ -43,7 +45,7 @@ gss_compare_name(OM_uint32 *minor_status,
 	struct _gss_name *name2 = (struct _gss_name *) name2_arg;
 
 	/*
-	 * First check the implementation-independant name if both
+	 * First check the implementation-independent name if both
 	 * names have one. Otherwise, try to find common mechanism
 	 * names and compare them.
 	 */

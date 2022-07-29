@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/beri/virtio/virtio.h 276710 2015-01-05 16:43:22Z br $
+ * $FreeBSD$
  */
 
 #define READ2(_sc, _reg) \

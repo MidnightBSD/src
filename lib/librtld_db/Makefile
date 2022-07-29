@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/librtld_db/Makefile 298107 2016-04-16 07:45:30Z gjb $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -13,5 +13,7 @@ INCS=		rtld_db.h
 CFLAGS+= -I${.CURDIR}
 # Avoid circular dependency, we only need the libproc.h header here.
 CFLAGS+= -I${.CURDIR:H}/libproc
+
+LIBADD+=	elf procstat
 
 .include <bsd.lib.mk>

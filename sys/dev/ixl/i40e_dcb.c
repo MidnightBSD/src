@@ -1,8 +1,8 @@
 /******************************************************************************
 
-  Copyright (c) 2013-2019, Intel Corporation
+  Copyright (c) 2013-2018, Intel Corporation 
   All rights reserved.
-
+  
   Redistribution and use in source and binary forms, with or without 
   modification, are permitted provided that the following conditions are met:
   
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/ixl/i40e_dcb.c 349163 2019-06-18 00:08:02Z erj $*/
+/*$FreeBSD$*/
 
 #include "i40e_adminq.h"
 #include "i40e_prototype.h"
@@ -265,7 +265,7 @@ static void i40e_parse_ieee_app_tlv(struct i40e_lldp_org_tlv *tlv,
 }
 
 /**
- * i40e_parse_ieee_etsrec_tlv
+ * i40e_parse_ieee_tlv
  * @tlv: IEEE 802.1Qaz TLV
  * @dcbcfg: Local store to update ETS REC data
  *
@@ -345,8 +345,14 @@ static void i40e_parse_cee_pgcfg_tlv(struct i40e_cee_feat_tlv *tlv,
 	 *        |pg0|pg1|pg2|pg3|pg4|pg5|pg6|pg7|
 	 *        ---------------------------------
 	 */
-	for (i = 0; i < I40E_MAX_TRAFFIC_CLASS; i++)
+	for (i = 0; i < I40E_MAX_TRAFFIC_CLASS; i++) {
 		etscfg->tcbwtable[i] = buf[offset++];
+
+		if (etscfg->prioritytable[i] == I40E_CEE_PGID_STRICT)
+			dcbcfg->etscfg.tsatable[i] = I40E_IEEE_TSA_STRICT;
+		else
+			dcbcfg->etscfg.tsatable[i] = I40E_IEEE_TSA_ETS;
+	}
 
 	/* Number of TCs supported (1 octet) */
 	etscfg->maxtcs = buf[offset];
@@ -907,7 +913,25 @@ enum i40e_status_code i40e_init_dcb(struct i40e_hw *hw, bool enable_mib_change)
 		return I40E_NOT_SUPPORTED;
 
 	/* Read LLDP NVM area */
-	ret = i40e_read_lldp_cfg(hw, &lldp_cfg);
+	if (hw->flags & I40E_HW_FLAG_FW_LLDP_PERSISTENT) {
+		u8 offset = 0;
+
+		if (hw->mac.type == I40E_MAC_XL710)
+			offset = I40E_LLDP_CURRENT_STATUS_XL710_OFFSET;
+		else if (hw->mac.type == I40E_MAC_X722)
+			offset = I40E_LLDP_CURRENT_STATUS_X722_OFFSET;
+		else
+			return I40E_NOT_SUPPORTED;
+
+		ret = i40e_read_nvm_module_data(hw,
+						I40E_SR_EMP_SR_SETTINGS_PTR,
+						offset,
+						I40E_LLDP_CURRENT_STATUS_OFFSET,
+						I40E_LLDP_CURRENT_STATUS_SIZE,
+						&lldp_cfg.adminstatus);
+	} else {
+		ret = i40e_read_lldp_cfg(hw, &lldp_cfg);
+	}
 	if (ret)
 		return I40E_ERR_NOT_READY;
 
@@ -1280,7 +1304,8 @@ enum i40e_status_code i40e_set_dcb_config(struct i40e_hw *hw)
 
 /**
  * i40e_dcb_config_to_lldp - Convert Dcbconfig to MIB format
- * @hw: pointer to the hw struct
+ * @lldpmib: pointer to mib to be output
+ * @miblen: pointer to u16 for length of lldpmib
  * @dcbcfg: store for LLDPDU data
  *
  * send DCB configuration to FW

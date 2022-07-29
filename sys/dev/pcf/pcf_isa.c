@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Joerg Wunsch
  *
  * derived from sys/i386/isa/pcf.c which is:
@@ -28,7 +30,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/pcf/pcf_isa.c 343643 2019-02-01 03:26:10Z avos $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Hardware driver for a Philips PCF8584 I2C bus controller sitting

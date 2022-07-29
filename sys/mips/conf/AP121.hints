@@ -1,7 +1,7 @@
 #
 # This file adds to the values in AR91XX_BASE.hints.
 #
-# $FreeBSD: stable/11/sys/mips/conf/AP121.hints 249127 2013-04-05 02:15:10Z adrian $
+# $FreeBSD$
 
 # mdiobus on arge1
 hint.argemdio.0.at="nexus0"

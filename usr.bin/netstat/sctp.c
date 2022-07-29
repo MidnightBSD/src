@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2001-2007, by Weongyo Jeong. All rights reserved.
  * Copyright (c) 2011, by Michael Tuexen. All rights reserved.
  *
@@ -36,7 +38,7 @@ static char sccsid[] = "@(#)sctp.c	0.1 (Berkeley) 4/18/2007";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/netstat/sctp.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>

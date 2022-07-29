@@ -24,7 +24,7 @@
 */
 
 /*
- * $FreeBSD: stable/11/sys/gnu/dev/bwn/phy_n/if_bwn_radio_2056.h 300016 2016-05-17 07:09:24Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef	__IF_BWN_RADIO_2056_H__

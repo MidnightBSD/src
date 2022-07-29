@@ -1,7 +1,9 @@
-/*	$FreeBSD: stable/11/sys/net/pfkeyv2.h 331722 2018-03-29 02:50:57Z eadler $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: pfkeyv2.h,v 1.37 2003/09/06 05:15:43 itojun Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
  *
@@ -381,6 +383,7 @@ _Static_assert(sizeof(struct sadb_x_sa_replay) == 8, "struct size mismatch");
 #define SADB_EALG_NULL		11
 #define SADB_X_EALG_RIJNDAELCBC	12
 #define SADB_X_EALG_AES		12
+#define	SADB_X_EALG_AESCBC	12
 #define SADB_X_EALG_AESCTR	13
 #define SADB_X_EALG_AESGCM8	18	/* RFC4106 */
 #define SADB_X_EALG_AESGCM12	19

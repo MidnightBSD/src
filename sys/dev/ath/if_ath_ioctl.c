@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ath/if_ath_ioctl.c 332303 2018-04-08 20:50:16Z emaste $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for the Atheros Wireless LAN controller.
@@ -204,7 +204,6 @@ ath_ioctl_diag(struct ath_softc *sc, struct ath_diag *ad)
 		}
 	}
 
-
 	ATH_LOCK(sc);
 	if (id != HAL_DIAG_REGS)
 		ath_power_set_power_state(sc, HAL_PM_AWAKE);
@@ -296,6 +295,8 @@ ath_ioctl(struct ieee80211com *ic, u_long cmd, void *data)
 		return (ath_ioctl_spectral(sc, data));
 	case SIOCGATHNODERATESTATS:
 		return (ath_ioctl_ratestats(sc, data));
+	case SIOCGATHBTCOEX:
+		return (ath_btcoex_ioctl(sc, data));
 	default:
 		/*
 		 * This signals the net80211 layer that we didn't handle this
@@ -304,4 +305,3 @@ ath_ioctl(struct ieee80211com *ic, u_long cmd, void *data)
 		return (ENOTTY);
 	}
 }
-

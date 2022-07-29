@@ -21,7 +21,7 @@
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  * Portions Copyright 2013 Justin Hibbits jhibbits@freebsd.org
  *
- * $FreeBSD: stable/11/sys/cddl/dev/fbt/powerpc/fbt_isa.c 318572 2017-05-20 05:12:32Z jhibbits $
+ * $FreeBSD$
  *
  */
 
@@ -127,16 +127,8 @@ fbt_provide_module_function(linker_file_t lf, int symindx,
 		return (0);
 #endif
 
-	if (strncmp(name, "dtrace_", 7) == 0 &&
-	    strncmp(name, "dtrace_safe_", 12) != 0) {
-		/*
-		 * Anything beginning with "dtrace_" may be called
-		 * from probe context unless it explicitly indicates
-		 * that it won't be called from probe context by
-		 * using the prefix "dtrace_safe_".
-		 */
+	if (fbt_excluded(name))
 		return (0);
-	}
 
 	instr = (uint32_t *) symval->value;
 	limit = (uint32_t *) (symval->value + symval->size);
@@ -216,7 +208,7 @@ again:
 		fbt->fbtp_id = dtrace_probe_create(fbt_id, modname,
 		    name, FBT_RETURN, FBT_AFRAMES, fbt);
 	} else {
-		retfbt->fbtp_next = fbt;
+		retfbt->fbtp_probenext = fbt;
 		fbt->fbtp_id = retfbt->fbtp_id;
 	}
 

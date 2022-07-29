@@ -10,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)sleep.c	8.3 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/sleep/sleep.c 332463 2018-04-13 03:30:10Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <capsicum_helpers.h>
 #include <ctype.h>
@@ -70,7 +70,7 @@ main(int argc, char *argv[])
 	time_t original;
 	char buf[2];
 
-	if (caph_limit_stdio() < 0 || (cap_enter() < 0 && errno != ENOSYS))
+	if (caph_limit_stdio() < 0 || caph_enter() < 0)
 		err(1, "capsicum");
 
 	if (argc != 2)

@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/vnic/nicvf_queues.c 326788 2017-12-12 01:20:45Z emaste $
+ * $FreeBSD$
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/vnic/nicvf_queues.c 326788 2017-12-12 01:20:45Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -1714,13 +1714,12 @@ nicvf_sq_disable(struct nicvf *nic, int qidx)
 static void
 nicvf_sq_free_used_descs(struct nicvf *nic, struct snd_queue *sq, int qidx)
 {
-	uint64_t head, tail;
+	uint64_t head;
 	struct snd_buff *snd_buff;
 	struct sq_hdr_subdesc *hdr;
 
 	NICVF_TX_LOCK(sq);
 	head = nicvf_queue_reg_read(nic, NIC_QSET_SQ_0_7_HEAD, qidx) >> 4;
-	tail = nicvf_queue_reg_read(nic, NIC_QSET_SQ_0_7_TAIL, qidx) >> 4;
 	while (sq->head != head) {
 		hdr = (struct sq_hdr_subdesc *)GET_SQ_DESC(sq, sq->head);
 		if (hdr->subdesc_type != SQ_DESC_TYPE_HEADER) {

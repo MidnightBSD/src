@@ -1,7 +1,9 @@
 /*	$OpenBSD: pathnames.h,v 1.6 2015/11/03 16:21:47 deraadt Exp $	*/
 /*	$NetBSD: pathnames.h,v 1.6 1995/09/29 00:27:55 cgd Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -33,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/11/usr.bin/m4/pathnames.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #define _PATH_DIVNAME	"/tmp/m4.0XXXXXXXXXX"	/* unix diversion files */

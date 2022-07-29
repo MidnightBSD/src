@@ -17,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/dhclient/privsep.c 332602 2018-04-16 16:23:32Z asomers $");
+__FBSDID("$FreeBSD$");
 
 #include "dhcpd.h"
 #include "privsep.h"
@@ -102,7 +102,7 @@ buf_read(int sock, void *buf, size_t nbytes)
 }
 
 void
-dispatch_imsg(struct interface_info *ifi, int fd)
+dispatch_imsg(struct interface_info *ifix, int fd)
 {
 	struct imsg_hdr		 hdr;
 	char			*medium, *reason, *filename,
@@ -235,14 +235,14 @@ dispatch_imsg(struct interface_info *ifi, int fd)
 			error("buf_close: %m");
 		break;
 	case IMSG_SEND_PACKET:
-		send_packet_priv(ifi, &hdr, fd);
+		send_packet_priv(ifix, &hdr, fd);
 		break;
 	case IMSG_SET_INTERFACE_MTU:
 		if (hdr.len < sizeof(hdr) + sizeof(u_int16_t))
 			error("corrupted message received");	
 	
 		buf_read(fd, &mtu, sizeof(u_int16_t));
-		interface_set_mtu_priv(ifi->name, mtu);
+		interface_set_mtu_priv(ifix->name, mtu);
 		break;
 	default:
 		error("received unknown message, code %d", hdr.code);

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Mark R V Murray
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	from: src/sys/alpha/include/memdev.h,v 1.2 2004/08/01 18:51:44 markm
- * $FreeBSD: stable/11/sys/mips/include/memdev.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_MEMDEV_H_
@@ -35,7 +37,7 @@
 
 d_open_t	memopen;
 d_read_t	memrw;
-#define		memioctl	(d_ioctl_t *)NULL
+d_ioctl_t	memioctl_md;
 d_mmap_t	memmmap;
 
 #endif /* _MACHINE_MEMDEV_H_ */

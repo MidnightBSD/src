@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/regression/sockets/unix_cmsg/t_peercred.h 339066 2018-10-01 17:26:41Z sobomax $
+ * $FreeBSD$
  */
 
 int t_peercred(void);

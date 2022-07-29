@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/i18n/csmapper/MISC/UCS%RISCOS-LATIN1.src 219019 2011-02-25 00:04:39Z gabor $ 
+# $FreeBSD$ 
 # $NetBSD: UCS%RISCOS-LATIN1.src,v 1.1 2007/04/01 18:52:29 tnozaki Exp $
 
 TYPE		ROWCOL

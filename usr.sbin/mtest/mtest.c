@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/mtest/mtest.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -388,6 +388,7 @@ process_cmd(char *cmd, int s, int s6, FILE *fp __unused)
 	void			*optval;
 	uint32_t		 fmode, ifindex;
 	socklen_t		 optlen;
+	size_t			 j;
 	int			 af, error, f, flags, i, level, n, optname;
 
 	af = AF_UNSPEC;
@@ -736,8 +737,8 @@ process_cmd(char *cmd, int s, int s6, FILE *fp __unused)
 		nsrc = MIN(nreqsrc, nsrc);
 		fprintf(stderr, "hexdump of sources:\n");
 		uint8_t *bp = (uint8_t *)&sources[0];
-		for (i = 0; i < (nsrc * sizeof(sources[0])); i++) {
-			fprintf(stderr, "%02x", bp[i]);
+		for (j = 0; j < (nsrc * sizeof(sources[0])); j++) {
+			fprintf(stderr, "%02x", bp[j]);
 		}
 		fprintf(stderr, "\nend hexdump\n");
 

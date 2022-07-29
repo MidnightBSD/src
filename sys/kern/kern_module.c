@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Doug Rabson
  * All rights reserved.
  *
@@ -25,10 +26,8 @@
  * SUCH DAMAGE.
  */
 
-#include "opt_compat.h"
-
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/kern_module.c 293688 2016-01-11 19:59:56Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -440,7 +439,7 @@ sys_modfind(struct thread *td, struct modfind_args *uap)
 	return (error);
 }
 
-MODULE_VERSION(kernel, __MidnightBSD_version);
+MODULE_VERSION(kernel, __FreeBSD_version);
 
 #ifdef COMPAT_FREEBSD32
 #include <sys/mount.h>

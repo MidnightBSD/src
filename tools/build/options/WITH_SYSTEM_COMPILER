@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITH_SYSTEM_COMPILER 300354 2016-05-21 01:32:23Z bdrewery $
+.\" $FreeBSD$
 Set to opportunistically skip building a cross-compiler during the
 bootstrap phase of the build.
 If the currently installed compiler matches the planned bootstrap compiler

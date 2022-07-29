@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/dev/sf/starfire_tx.h 175525 2008-01-21 05:09:07Z yongari $ */
+/* $FreeBSD$ */
 /*
  *   MODULE: GFP_TX.H
  *

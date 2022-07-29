@@ -44,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/security/mac/mac_cred.c 299187 2016-05-06 16:59:04Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_mac.h"
 

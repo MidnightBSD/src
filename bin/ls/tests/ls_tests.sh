@@ -24,7 +24,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/bin/ls/tests/ls_tests.sh 311997 2017-01-12 21:41:00Z asomers $
+# $FreeBSD$
 #
 
 create_test_dir()
@@ -83,6 +83,14 @@ PB=$(( 1024 * $TB ))
 create_test_inputs2()
 {
 	create_test_dir
+
+	if ! getconf MIN_HOLE_SIZE "$(pwd)"; then
+	    echo "getconf MIN_HOLE_SIZE $(pwd) failed; sparse files probably" \
+	         "not supported by file system"
+	    mount
+	    atf_skip "Test's work directory does not support sparse files;" \
+	             "try with a different TMPDIR?"
+	fi
 
 	for filesize in 1 512 $(( 2 * $KB )) $(( 10 * $KB )) $(( 512 * $KB )); \
 	do

@@ -39,7 +39,7 @@
 .\" OR OTHERWISE) RISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 .\" IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/doc/usd/22.trofftut/tt04 108533 2003-01-01 18:49:04Z schweikh $
+.\" $FreeBSD$
 .\"
 .NH
 Indents and Line Lengths

@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/irqreturn.h 329958 2018-02-25 10:23:23Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _LINUX_IRQRETURN_H

@@ -23,8 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
-# $MidnightBSD$
+# $FreeBSD$
 
 #
 # Title that will be shown in the bsdconfig menu.

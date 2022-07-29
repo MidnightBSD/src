@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/riscv/include/db_machdep.h 296614 2016-03-10 15:51:43Z br $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_DB_MACHDEP_H_
@@ -41,20 +41,26 @@
 #include <machine/frame.h>
 #include <machine/trap.h>
 
-#define	T_BREAKPOINT	(EXCP_INSTR_BREAKPOINT)
+#define	T_BREAKPOINT	(EXCP_BREAKPOINT)
 #define	T_WATCHPOINT	(0)
 
 typedef vm_offset_t	db_addr_t;
 typedef long		db_expr_t;
 
-#define	PC_REGS()	((db_addr_t)kdb_thrctx->pcb_sepc)
+#define	PC_REGS()	((db_addr_t)kdb_frame->tf_sepc)
 
 #define	BKPT_INST	(0x00100073)
 #define	BKPT_SIZE	(INSN_SIZE)
 #define	BKPT_SET(inst)	(BKPT_INST)
 
-#define	BKPT_SKIP do {				\
-	kdb_frame->tf_sepc += BKPT_SIZE;	\
+#define	BKPT_SKIP do {							\
+	uint32_t _instr;						\
+									\
+	_instr = db_get_value(PC_REGS(), sizeof(uint32_t), FALSE);	\
+	if ((_instr & 0x3) == 0x3)					\
+		kdb_frame->tf_sepc += 4;	/* ebreak */		\
+	else								\
+		kdb_frame->tf_sepc += 2;	/* c.ebreak */		\
 } while (0)
 
 #define	db_clear_single_step	kdb_cpu_clear_singlestep
@@ -82,9 +88,6 @@ typedef long		db_expr_t;
 #define	is_store_instr(ins)	(((ins) & 0x7f) == 35)
 
 #define	next_instr_address(pc, bd)	((bd) ? (pc) : ((pc) + 4))
-
-#define	DB_SMALL_VALUE_MAX	(0x7fffffff)
-#define	DB_SMALL_VALUE_MIN	(-0x40001)
 
 #define	DB_ELFSIZE		64
 

@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/compiler.h 334766 2018-06-07 07:46:39Z hselasky $
+ * $FreeBSD$
  */
 #ifndef	_LINUX_COMPILER_H_
 #define	_LINUX_COMPILER_H_
@@ -81,6 +81,12 @@
 
 #define	barrier()			__asm__ __volatile__("": : :"memory")
 
+#if defined(LINUXKPI_VERSION) && LINUXKPI_VERSION >= 50000
+/* Moved from drm_os_freebsd.h */
+#define	lower_32_bits(n)		((u32)(n))
+#define	upper_32_bits(n)		((u32)(((n) >> 16) >> 16))
+#endif
+
 #define	___PASTE(a,b) a##b
 #define	__PASTE(a,b) ___PASTE(a,b)
 
@@ -104,5 +110,8 @@
 #define	lockless_dereference(p) READ_ONCE(p)
 
 #define	_AT(T,X)	((T)(X))
+
+#define	__same_type(a, b)	__builtin_types_compatible_p(typeof(a), typeof(b))
+#define	__must_be_array(a)	__same_type(a, &(a)[0])
 
 #endif	/* _LINUX_COMPILER_H_ */

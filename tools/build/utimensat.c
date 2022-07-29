@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/tools/build/utimensat.c 301763 2016-06-09 21:57:34Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stat.h>
 

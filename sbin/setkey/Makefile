@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sbin/setkey/Makefile 319185 2017-05-30 04:17:22Z ngie $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -38,15 +38,13 @@ WARNS?=	1
 CFLAGS+= -I${.CURDIR} -I${SRCTOP}/lib/libipsec
 YFLAGS=	-d
 
-LIBADD=	l y
-
 CLEANFILES=	y.tab.c y.tab.h key_test.o keytest
 
 # libpfkey
 # ipsec_strerror.c is for avoiding shlib reference to non-exported function.
 .PATH: ${SRCTOP}/lib/libipsec ${SRCTOP}/sys/netipsec
 SRCS+= pfkey.c pfkey_dump.c key_debug.c ipsec_strerror.c
-CFLAGS+= -I${SRCTOP}/lib/libipsec -I${SRCTOP}/sys/netipsec
+CFLAGS+= -I${SRCTOP}/sys
 
 SRCS+=	y.tab.h
 y.tab.h: parse.y

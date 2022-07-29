@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Poul-Henning Kamp.
  * Copyright (c) 2009 James Gritton.
  * All rights reserved.
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/jail.h 339446 2018-10-20 16:20:36Z jamie $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_JAIL_H_
@@ -109,11 +110,13 @@ struct xprison {
 
 struct iovec;
 
+__BEGIN_DECLS
 int jail(struct jail *);
 int jail_set(struct iovec *, unsigned int, int);
 int jail_get(struct iovec *, unsigned int, int);
 int jail_attach(int);
 int jail_remove(int);
+__END_DECLS
 
 #else /* _KERNEL */
 
@@ -135,6 +138,7 @@ MALLOC_DECLARE(M_PRISON);
 #include <sys/osd.h>
 
 #define	HOSTUUIDLEN	64
+#define	DEFAULT_HOSTUUID	"00000000-0000-0000-0000-000000000000"
 #define	OSRELEASELEN	32
 
 struct racct;
@@ -143,7 +147,7 @@ struct prison_racct;
 /*
  * This structure describes a prison.  It is pointed to by all struct
  * ucreds's of the inmates.  pr_ref keeps track of them and is used to
- * delete the struture when the last inmate is dead.
+ * delete the structure when the last inmate is dead.
  *
  * Lock key:
  *   (a) allprison_lock
@@ -216,24 +220,22 @@ struct prison_racct {
 #define	PR_IP6		0x04000000	/* IPv6 restricted or disabled */
 					/* by this jail or an ancestor */
 
-/* Flags for pr_allow */
-#define	PR_ALLOW_SET_HOSTNAME		0x0001
-#define	PR_ALLOW_SYSVIPC		0x0002
-#define	PR_ALLOW_RAW_SOCKETS		0x0004
-#define	PR_ALLOW_CHFLAGS		0x0008
-#define	PR_ALLOW_MOUNT			0x0010
-#define	PR_ALLOW_QUOTAS			0x0020
-#define	PR_ALLOW_SOCKET_AF		0x0040
-#define	PR_ALLOW_MOUNT_DEVFS		0x0080
-#define	PR_ALLOW_MOUNT_NULLFS		0x0100
-#define	PR_ALLOW_MOUNT_ZFS		0x0200
-#define	PR_ALLOW_MOUNT_PROCFS		0x0400
-#define	PR_ALLOW_MOUNT_TMPFS		0x0800
-#define	PR_ALLOW_MOUNT_FDESCFS		0x1000
-#define	PR_ALLOW_MOUNT_LINPROCFS	0x2000
-#define	PR_ALLOW_MOUNT_LINSYSFS		0x4000
-#define	PR_ALLOW_READ_MSGBUF		0x8000
-#define	PR_ALLOW_ALL			0xffff
+/*
+ * Flags for pr_allow
+ * Bits not noted here may be used for dynamic allow.mount.xxxfs.
+ */
+#define	PR_ALLOW_SET_HOSTNAME		0x00000001
+#define	PR_ALLOW_SYSVIPC		0x00000002
+#define	PR_ALLOW_RAW_SOCKETS		0x00000004
+#define	PR_ALLOW_CHFLAGS		0x00000008
+#define	PR_ALLOW_MOUNT			0x00000010
+#define	PR_ALLOW_QUOTAS			0x00000020
+#define	PR_ALLOW_SOCKET_AF		0x00000040
+#define	PR_ALLOW_MLOCK			0x00000080
+#define	PR_ALLOW_READ_MSGBUF		0x00000100
+#define	PR_ALLOW_RESERVED_PORTS		0x00008000
+#define	PR_ALLOW_KMEM_ACCESS		0x00010000	/* reserved, not used yet */
+#define	PR_ALLOW_ALL_STATIC		0x000181ff
 
 /*
  * OSD methods
@@ -363,6 +365,7 @@ struct ucred;
 struct mount;
 struct sockaddr;
 struct statfs;
+struct vfsconf;
 int jailed(struct ucred *cred);
 int jailed_without_vnet(struct ucred *);
 void getcredhostname(struct ucred *, char *, size_t);
@@ -413,6 +416,9 @@ int prison_if(struct ucred *cred, struct sockaddr *sa);
 char *prison_name(struct prison *, struct prison *);
 int prison_priv_check(struct ucred *cred, int priv);
 int sysctl_jail_param(SYSCTL_HANDLER_ARGS);
+unsigned prison_add_allow(const char *prefix, const char *name,
+    const char *prefix_descr, const char *descr);
+void prison_add_vfs(struct vfsconf *vfsp);
 void prison_racct_foreach(void (*callback)(struct racct *racct,
     void *arg2, void *arg3), void (*pre)(void), void (*post)(void),
     void *arg2, void *arg3);

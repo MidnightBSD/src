@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/syscons/keymaps/danish.iso.macbook.kbd 241851 2012-10-22 03:30:17Z eadler $
+# $FreeBSD$
 # Danish ISO 8859-1 keyboard layout for Apple MacBook keyboards. Not all
 # key combinations are available in this character set yet.
 # by Erik Cederstrand <erik@cederstrand.dk>

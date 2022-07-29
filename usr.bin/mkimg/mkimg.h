@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Juniper Networks, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/mkimg/mkimg.h 329059 2018-02-09 09:15:43Z manu $
+ * $FreeBSD$
  */
 
 #ifndef _MKIMG_MKIMG_H_
@@ -104,5 +103,11 @@ typedef struct mkimg_uuid mkimg_uuid_t;
 
 void mkimg_uuid(mkimg_uuid_t *);
 void mkimg_uuid_enc(void *, const mkimg_uuid_t *);
+
+#ifdef __linux__
+# if !defined(__unused)
+#   define __unused __attribute__ ((__unused__))
+# endif
+#endif
 
 #endif /* _MKIMG_MKIMG_H_ */

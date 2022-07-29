@@ -27,7 +27,7 @@
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: stable/11/sys/dev/sfxge/common/ef10_impl.h 342441 2018-12-25 07:21:35Z arybchik $
+ * $FreeBSD$
  */
 
 #ifndef	_SYS_EF10_IMPL_H

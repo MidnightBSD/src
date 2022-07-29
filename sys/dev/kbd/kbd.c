@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/kbd/kbd.c 356013 2019-12-22 17:15:48Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_kbd.h"
 
@@ -45,6 +47,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/kbd/kbd.c 356013 2019-12-22 17:15:48Z keva
 
 #include <sys/kbio.h>
 
+#include <dev/evdev/input-event-codes.h>
 #include <dev/kbd/kbdreg.h>
 
 #define KBD_INDEX(dev)	dev2unit(dev)
@@ -1331,13 +1334,7 @@ genkbd_keyaction(keyboard_t *kbd, int keycode, int up, int *shiftstate,
 			state &= ~NLKDOWN;
 			break;
 		case CLK:
-#ifndef PC98
 			state &= ~CLKDOWN;
-#else
-			state &= ~CLKED;
-			i = state & LOCK_MASK;
-			(void)kbdd_ioctl(kbd, KDSETLED, (caddr_t)&i);
-#endif
 			break;
 		case SLK:
 			state &= ~SLKDOWN;
@@ -1367,13 +1364,7 @@ genkbd_keyaction(keyboard_t *kbd, int keycode, int up, int *shiftstate,
 				set_lockkey_state(kbd, state, NLK);
 				break;
 			case CLK:
-#ifndef PC98
 				set_lockkey_state(kbd, state, CLK);
-#else
-				state |= CLKED;
-				i = state & LOCK_MASK;
-				(void)kbdd_ioctl(kbd, KDSETLED, (caddr_t)&i);
-#endif
 				break;
 			case SLK:
 				set_lockkey_state(kbd, state, SLK);
@@ -1488,6 +1479,44 @@ genkbd_keyaction(keyboard_t *kbd, int keycode, int up, int *shiftstate,
 		}
 	}
 	/* NOT REACHED */
+}
+
+void
+kbd_ev_event(keyboard_t *kbd, uint16_t type, uint16_t code, int32_t value)
+{
+	int delay[2], led = 0, leds, oleds;
+
+	if (type == EV_LED) {
+		leds = oleds = KBD_LED_VAL(kbd);
+		switch (code) {
+		case LED_CAPSL:
+			led = CLKED;
+			break;
+		case LED_NUML:
+			led = NLKED;
+			break;
+		case LED_SCROLLL:
+			led = SLKED;
+			break;
+		}
+
+		if (value)
+			leds |= led;
+		else
+			leds &= ~led;
+
+		if (leds != oleds)
+			kbdd_ioctl(kbd, KDSETLED, (caddr_t)&leds);
+
+	} else if (type == EV_REP && code == REP_DELAY) {
+		delay[0] = value;
+		delay[1] = kbd->kb_delay2;
+		kbdd_ioctl(kbd, KDSETREPEAT, (caddr_t)delay);
+	} else if (type == EV_REP && code == REP_PERIOD) {
+		delay[0] = kbd->kb_delay1;
+		delay[1] = value;
+		kbdd_ioctl(kbd, KDSETREPEAT, (caddr_t)delay);
+	}
 }
 
 static void

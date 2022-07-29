@@ -1,6 +1,8 @@
 /*	$NetBSD: xdr.c,v 1.22 2000/07/06 03:10:35 christos Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2010, Oracle America, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,7 +38,7 @@ static char *sccsid2 = "@(#)xdr.c 1.35 87/08/12";
 static char *sccsid = "@(#)xdr.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/xdr/xdr.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * xdr.c, Generic XDR routines implementation.

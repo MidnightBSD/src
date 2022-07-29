@@ -5,7 +5,9 @@
  * way...
  */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +45,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/dhclient/inet.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "dhcpd.h"
 

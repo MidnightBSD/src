@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/usr.sbin/bootparamd/bootparamd/README 228990 2011-12-30 10:58:14Z uqs $
+$FreeBSD$
 
 This directory contains a version of the rpc.bootparamd, which have been 
 written using the Sun's RPC protocol for bootparamd. To use it you must 

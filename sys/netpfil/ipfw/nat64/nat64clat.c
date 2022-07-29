@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netpfil/ipfw/nat64/nat64clat.c 346212 2019-04-14 12:39:09Z ae $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -71,7 +71,7 @@ nat64clat_log(struct pfloghdr *plog, struct mbuf *m, sa_family_t family,
 	static uint32_t pktid = 0;
 
 	memset(plog, 0, sizeof(*plog));
-	plog->length = PFLOG_REAL_HDRLEN;
+	plog->length = PFLOG_HDRLEN;
 	plog->af = family;
 	plog->action = PF_NAT;
 	plog->dir = PF_IN;

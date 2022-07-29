@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/trm/trm.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  *	HISTORY:					
@@ -27,6 +27,8 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/trm/trm.c 331722 2018-03-29 02:50:57Z eadl
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * (C)Copyright 1995-2001 Tekram Technology Co.,Ltd.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -68,7 +70,9 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/trm/trm.c 331722 2018-03-29 02:50:57Z eadl
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/queue.h>
+#if __FreeBSD_version >= 500000
 #include <sys/bio.h>
+#endif
 #include <sys/buf.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -634,7 +638,7 @@ trm_action(struct cam_sim *psim, union ccb *pccb)
 			cpi->initiator_id = pACB->AdaptSCSIID;
 			cpi->bus_id = cam_sim_bus(psim);
 			cpi->base_transfer_speed = 3300;
-			strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
+			strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
 			strlcpy(cpi->hba_vid, "Tekram_TRM", HBA_IDLEN);
 			strlcpy(cpi->dev_name, cam_sim_name(psim), DEV_IDLEN);
 			cpi->unit_number = cam_sim_unit(psim);
@@ -3372,7 +3376,9 @@ trm_attach(device_t dev)
 	PACB	pACB = 0;
 	int	rid = 0;
 	int unit = device_get_unit(dev);
-	
+
+	gone_in(13, "Giant locked CAM drivers");
+
 	device_id = pci_get_devid(dev);
 	/*
 	 * These cards do not allow memory mapped accesses

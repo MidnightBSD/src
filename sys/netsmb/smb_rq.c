@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netsmb/smb_rq.c 243882 2012-12-05 08:04:20Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -736,13 +738,13 @@ smb_t2_request_int(struct smb_t2rq *t2p)
 bad:
 	smb_iod_removerq(rqp);
 freerq:
-	smb_rq_done(rqp);
 	if (error) {
 		if (rqp->sr_flags & SMBR_RESTART)
 			t2p->t2_flags |= SMBT2_RESTART;
 		md_done(&t2p->t2_rparam);
 		md_done(&t2p->t2_rdata);
 	}
+	smb_rq_done(rqp);
 	return error;
 }
 

@@ -40,7 +40,7 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/riscv/riscv/mp_machdep.c 295972 2016-02-24 16:50:34Z br $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -58,12 +58,11 @@ __FBSDID("$FreeBSD: stable/11/sys/riscv/riscv/mp_machdep.c 295972 2016-02-24 16:
 #include <vm/pmap.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_kern.h>
+#include <vm/vm_map.h>
 
 #include <machine/intr.h>
 #include <machine/smp.h>
-#ifdef VFP
-#include <machine/vfp.h>
-#endif
+#include <machine/sbi.h>
 
 #ifdef FDT
 #include <dev/ofw/openfirm.h>
@@ -71,8 +70,6 @@ __FBSDID("$FreeBSD: stable/11/sys/riscv/riscv/mp_machdep.c 295972 2016-02-24 16:
 #endif
 
 boolean_t ofw_cpu_reg(phandle_t node, u_int, cell_t *);
-
-extern struct pcpu __pcpu[];
 
 uint32_t __riscv_boot_ap[MAXCPU];
 
@@ -89,21 +86,30 @@ static device_attach_t riscv64_cpu_attach;
 
 static int ipi_handler(void *);
 
-struct mtx ap_boot_mtx;
 struct pcb stoppcbs[MAXCPU];
+
+extern uint32_t boot_hart;
+extern cpuset_t all_harts;
 
 #ifdef INVARIANTS
 static uint32_t cpu_reg[MAXCPU][2];
 #endif
 static device_t cpu_list[MAXCPU];
 
-void mpentry(unsigned long cpuid);
+void mpentry(u_long hartid);
 void init_secondary(uint64_t);
 
-uint8_t secondary_stacks[MAXCPU - 1][PAGE_SIZE * KSTACK_PAGES] __aligned(16);
+static struct mtx ap_boot_mtx;
+
+/* Stacks for AP initialization, discarded once idle threads are started. */
+void *bootstack;
+static void *bootstacks[MAXCPU];
+
+/* Count of started APs, used to synchronize access to bootstack. */
+static volatile int aps_started;
 
 /* Set to 1 once we're ready to let the APs out of the pen. */
-volatile int aps_ready = 0;
+static volatile int aps_ready;
 
 /* Temporary variables for init_secondary()  */
 void *dpcpu[MAXCPU - 1];
@@ -183,6 +189,7 @@ riscv64_cpu_attach(device_t dev)
 static void
 release_aps(void *dummy __unused)
 {
+	cpuset_t mask;
 	int cpu, i;
 
 	if (mp_ncpus == 1)
@@ -193,7 +200,13 @@ release_aps(void *dummy __unused)
 
 	atomic_store_rel_int(&aps_ready, 1);
 
+	/* Wake up the other CPUs */
+	mask = all_harts;
+	CPU_CLR(boot_hart, &mask);
+
 	printf("Release APs\n");
+
+	sbi_send_ipi(mask.__bits);
 
 	for (i = 0; i < 2000; i++) {
 		if (smp_started) {
@@ -211,22 +224,33 @@ release_aps(void *dummy __unused)
 SYSINIT(start_aps, SI_SUB_SMP, SI_ORDER_FIRST, release_aps, NULL);
 
 void
-init_secondary(uint64_t cpu)
+init_secondary(uint64_t hart)
 {
 	struct pcpu *pcpup;
+	u_int cpuid;
+
+	/* Renumber this cpu */
+	cpuid = hart;
+	if (cpuid < boot_hart)
+		cpuid += mp_maxid + 1;
+	cpuid -= boot_hart;
 
 	/* Setup the pcpu pointer */
-	pcpup = &__pcpu[cpu];
-	__asm __volatile("mv gp, %0" :: "r"(pcpup));
+	pcpup = &__pcpu[cpuid];
+	__asm __volatile("mv tp, %0" :: "r"(pcpup));
 
-	/* Spin until the BSP releases the APs */
-	while (!aps_ready)
+	/* Workaround: make sure wfi doesn't halt the hart */
+	csr_set(sie, SIE_SSIE);
+	csr_set(sip, SIE_SSIE);
+
+	/* Signal the BSP and spin until it has released all APs. */
+	atomic_add_int(&aps_started, 1);
+	while (!atomic_load_int(&aps_ready))
 		__asm __volatile("wfi");
 
 	/* Initialize curthread */
 	KASSERT(PCPU_GET(idlethread) != NULL, ("no idle thread"));
 	pcpup->pc_curthread = pcpup->pc_idlethread;
-	pcpup->pc_curpcb = pcpup->pc_idlethread->td_pcb;
 
 	/*
 	 * Identify current CPU. This is necessary to setup
@@ -238,15 +262,16 @@ init_secondary(uint64_t cpu)
 	/* Enable software interrupts */
 	riscv_unmask_ipi();
 
+#ifndef EARLY_AP_STARTUP
 	/* Start per-CPU event timers. */
 	cpu_initclocks_ap();
-
-#ifdef VFP
-	/* TODO: init FPU */
 #endif
 
-	/* Enable interrupts */
-	intr_enable();
+	/* Enable external (PLIC) interrupts */
+	csr_set(sie, SIE_SEIE);
+
+	/* Activate process 0's pmap. */
+	pmap_activate_boot(vmspace_pmap(proc0.p_vmspace));
 
 	mtx_lock_spin(&ap_boot_mtx);
 
@@ -259,12 +284,35 @@ init_secondary(uint64_t cpu)
 
 	mtx_unlock_spin(&ap_boot_mtx);
 
+	/*
+	 * Assert that smp_after_idle_runnable condition is reasonable.
+	 */
+	MPASS(PCPU_GET(curpcb) == NULL);
+
 	/* Enter the scheduler */
 	sched_throw(NULL);
 
 	panic("scheduler returned us to init_secondary");
 	/* NOTREACHED */
 }
+
+static void
+smp_after_idle_runnable(void *arg __unused)
+{
+	struct pcpu *pc;
+	int cpu;
+
+	for (cpu = 1; cpu <= mp_maxid; cpu++) {
+		if (bootstacks[cpu] != NULL) {
+			pc = pcpu_find(cpu);
+			while ((void *)atomic_load_ptr(&pc->pc_curpcb) == NULL)
+				cpu_spinwait();
+			kmem_free((vm_offset_t)bootstacks[cpu], PAGE_SIZE);
+		}
+	}
+}
+SYSINIT(smp_after_idle_runnable, SI_SUB_SMP, SI_ORDER_ANY,
+    smp_after_idle_runnable, NULL);
 
 static int
 ipi_handler(void *arg)
@@ -273,14 +321,7 @@ ipi_handler(void *arg)
 	u_int cpu, ipi;
 	int bit;
 
-	/*
-	 * We have shared interrupt line for both IPI and HTIF,
-	 * so we don't really need to clear pending bit here
-	 * as it will be cleared later in htif_intr.
-	 * But lets assume HTIF is optional part, so do clear
-	 * pending bit if there is no new entires in htif_ring.
-	 */
-	machine_command(ECALL_CLEAR_IPI, 0);
+	sbi_clear_ipi();
 
 	cpu = PCPU_GET(cpuid);
 
@@ -324,6 +365,12 @@ ipi_handler(void *arg)
 			CPU_CLR_ATOMIC(cpu, &started_cpus);
 			CPU_CLR_ATOMIC(cpu, &stopped_cpus);
 			CTR0(KTR_SMP, "IPI_STOP (restart)");
+
+			/*
+			 * The kernel debugger might have set a breakpoint,
+			 * so flush the instruction cache.
+			 */
+			fence_i();
 			break;
 		case IPI_HARDCLOCK:
 			CTR1(KTR_SMP, "%s: IPI_HARDCLOCK", __func__);
@@ -356,11 +403,15 @@ cpu_mp_probe(void)
 static boolean_t
 cpu_init_fdt(u_int id, phandle_t node, u_int addr_size, pcell_t *reg)
 {
-	uint64_t target_cpu;
 	struct pcpu *pcpup;
+	vm_paddr_t start_addr;
+	uint64_t hart;
+	u_int cpuid;
+	int naps;
+	int error;
 
-	/* Check we are able to start this cpu */
-	if (id > mp_maxid)
+	/* Check if this hart supports MMU. */
+	if (OF_getproplen(node, "mmu-type") < 0)
 		return (0);
 
 	KASSERT(id < MAXCPU, ("Too many CPUs"));
@@ -372,31 +423,69 @@ cpu_init_fdt(u_int id, phandle_t node, u_int addr_size, pcell_t *reg)
 		cpu_reg[id][1] = reg[1];
 #endif
 
-	target_cpu = reg[0];
+	hart = reg[0];
 	if (addr_size == 2) {
-		target_cpu <<= 32;
-		target_cpu |= reg[1];
+		hart <<= 32;
+		hart |= reg[1];
 	}
 
-	pcpup = &__pcpu[id];
+	KASSERT(hart < MAXCPU, ("Too many harts."));
 
-	/* We are already running on cpu 0 */
-	if (id == 0) {
-		pcpup->pc_reg = target_cpu;
+	/* We are already running on this cpu */
+	if (hart == boot_hart)
 		return (1);
+
+	/*
+	 * Rotate the CPU IDs to put the boot CPU as CPU 0.
+	 * We keep the other CPUs ordered.
+	 */
+	cpuid = hart;
+	if (cpuid < boot_hart)
+		cpuid += mp_maxid + 1;
+	cpuid -= boot_hart;
+
+	/* Check if we are able to start this cpu */
+	if (cpuid > mp_maxid)
+		return (0);
+
+	/*
+	 * Depending on the SBI implementation, APs are waiting either in
+	 * locore.S or to be activated explicitly, via SBI call.
+	 */
+	if (sbi_probe_extension(SBI_EXT_ID_HSM) != 0) {
+		start_addr = pmap_kextract((vm_offset_t)mpentry);
+		error = sbi_hsm_hart_start(hart, start_addr, 0);
+		if (error != 0) {
+			mp_ncpus--;
+
+			/* Send a warning to the user and continue. */
+			printf("AP %u (hart %lu) failed to start, error %d\n",
+			    cpuid, hart, error);
+			return (0);
+		}
 	}
 
-	pcpu_init(pcpup, id, sizeof(struct pcpu));
-	pcpup->pc_reg = target_cpu;
+	pcpup = &__pcpu[cpuid];
+	pcpu_init(pcpup, cpuid, sizeof(struct pcpu));
+	pcpup->pc_hart = hart;
 
-	dpcpu[id - 1] = (void *)kmem_malloc(kernel_arena, DPCPU_SIZE,
-	    M_WAITOK | M_ZERO);
-	dpcpu_init(dpcpu[id - 1], id);
+	dpcpu[cpuid - 1] = (void *)kmem_malloc(DPCPU_SIZE, M_WAITOK | M_ZERO);
+	dpcpu_init(dpcpu[cpuid - 1], cpuid);
 
-	printf("Starting CPU %u (%lx)\n", id, target_cpu);
-	__riscv_boot_ap[id] = 1;
+	bootstacks[cpuid] = (void *)kmem_malloc(PAGE_SIZE, M_WAITOK | M_ZERO);
 
-	CPU_SET(id, &all_cpus);
+	naps = atomic_load_int(&aps_started);
+	bootstack = (char *)bootstacks[cpuid] + PAGE_SIZE;
+
+	printf("Starting CPU %u (hart %lx)\n", cpuid, hart);
+	atomic_store_32(&__riscv_boot_ap[hart], 1);
+
+	/* Wait for the AP to switch to its boot stack. */
+	while (atomic_load_int(&aps_started) < naps + 1)
+		cpu_spinwait();
+
+	CPU_SET(cpuid, &all_cpus);
+	CPU_SET(hart, &all_harts);
 
 	return (1);
 }
@@ -410,6 +499,7 @@ cpu_mp_start(void)
 	mtx_init(&ap_boot_mtx, "ap boot", NULL, MTX_SPIN);
 
 	CPU_SET(0, &all_cpus);
+	CPU_SET(boot_hart, &all_harts);
 
 	switch(cpu_enum_method) {
 #ifdef FDT
@@ -428,13 +518,24 @@ cpu_mp_announce(void)
 {
 }
 
+static boolean_t
+cpu_check_mmu(u_int id, phandle_t node, u_int addr_size, pcell_t *reg)
+{
+
+	/* Check if this hart supports MMU. */
+	if (OF_getproplen(node, "mmu-type") < 0)
+		return (0);
+
+	return (1);
+}
+
 void
 cpu_mp_setmaxid(void)
 {
 #ifdef FDT
 	int cores;
 
-	cores = ofw_cpu_early_foreach(NULL, false);
+	cores = ofw_cpu_early_foreach(cpu_check_mmu, true);
 	if (cores > 0) {
 		cores = MIN(cores, MAXCPU);
 		if (bootverbose)

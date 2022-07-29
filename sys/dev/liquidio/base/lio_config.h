@@ -30,7 +30,7 @@
  *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: stable/11/sys/dev/liquidio/base/lio_config.h 325618 2017-11-09 19:52:56Z sbruno $*/
+/*$FreeBSD$*/
 
 /*  \file  lio_config.h
  *  \brief Host Driver: Configuration data structures for the host driver.

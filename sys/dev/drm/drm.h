@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /**
  * \file drm.h
  * Header for the Direct Rendering Manager
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/dev/drm/drm.h 183573 2008-10-03 16:59:11Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 /**
  * \mainpage
@@ -83,7 +82,7 @@ __FBSDID("$FreeBSD: stable/10/sys/dev/drm/drm.h 183573 2008-10-03 16:59:11Z rnol
 #define DRM_IOC_WRITE		_IOC_WRITE
 #define DRM_IOC_READWRITE	_IOC_READ|_IOC_WRITE
 #define DRM_IOC(dir, group, nr, size) _IOC(dir, group, nr, size)
-#elif defined(__MidnightBSD__) || defined(__MidnightBSD_kernel__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
+#elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
 #include <sys/ioccom.h>
 #define DRM_IOCTL_NR(n)		((n) & 0xff)
 #define DRM_IOC_VOID		IOC_VOID
@@ -164,7 +163,7 @@ struct drm_hw_lock {
 /* This is beyond ugly, and only works on GCC.  However, it allows me to use
  * drm.h in places (i.e., in the X-server) where I can't use size_t.  The real
  * fix is to use uint32_t instead of size_t, but that fix will break existing
- * LP64 (i.e., PowerPC64, SPARC64, IA-64, Alpha, etc.) systems.  That *will*
+ * LP64 (i.e., PowerPC64, SPARC64, Alpha, etc.) systems.  That *will*
  * eventually happen, though.  I chose 'unsigned long' to be the fallback type
  * because that works on all the platforms I know about.  Hopefully, the
  * real fix will happen before that bites us.
@@ -813,7 +812,7 @@ struct drm_fence_arg {
  */
 #define DRM_BO_HINT_WAIT_LAZY   0x00000008
 /*
- * The client has compute relocations refering to this buffer using the
+ * The client has compute relocations referring to this buffer using the
  * offset in the presumed_offset field. If that offset ends up matching
  * where this buffer lands, the kernel is free to skip executing those
  * relocations
@@ -1145,5 +1144,14 @@ typedef struct drm_mm_type_arg drm_mm_type_arg_t;
 typedef struct drm_mm_init_arg drm_mm_init_arg_t;
 typedef enum drm_bo_type drm_bo_type_t;
 #endif
+
+#define DRM_OBSOLETE(dev)							\
+    do {									\
+	device_printf(dev, "=======================================================\n"); \
+	device_printf(dev, "This code is deprecated.\n"); \
+	device_printf(dev, "=======================================================\n"); \
+	gone_in_dev(dev, 13, "drm drivers");					\
+    } while (0)
+
 
 #endif

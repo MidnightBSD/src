@@ -5,7 +5,7 @@
 # This is not standalone kernel config. Use it only for including
 # purposes.
 #
-# $FreeBSD: stable/11/sys/powerpc/conf/dpaa/DPAA 352023 2019-09-07 20:01:26Z imp $
+# $FreeBSD$
 
 cpu		BOOKE
 cpu		BOOKE_E500
@@ -74,6 +74,7 @@ device		sdhci
 
 # Network devices
 device		miibus		# MII bus support
+device		iflib
 device		em
 
 

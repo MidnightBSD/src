@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1995 Bruce D. Evans.
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/i386/include/md_var.h,v 1.40 2001/07/12
- * $FreeBSD: stable/11/sys/arm/include/md_var.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_MD_VAR_H_
@@ -40,6 +42,7 @@ extern uint32_t *vm_page_dump;
 extern int vm_page_dump_size;
 extern u_long elf_hwcap;
 extern u_long elf_hwcap2;
+extern vm_paddr_t arm_physmem_kernaddr;
 
 extern int (*_arm_memcpy)(void *, void *, int, int);
 extern int (*_arm_bzero)(void *, int, int);

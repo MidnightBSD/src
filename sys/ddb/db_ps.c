@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1993 The Regents of the University of California.
  * All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/ddb/db_ps.c 339857 2018-10-29 12:47:15Z avg $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_kstack_pages.h"
 
@@ -44,6 +46,7 @@ __FBSDID("$FreeBSD: stable/11/sys/ddb/db_ps.c 339857 2018-10-29 12:47:15Z avg $"
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 #include <vm/pmap.h>
+#include <vm/vm_map.h>
 
 #include <ddb/ddb.h>
 
@@ -92,10 +95,10 @@ dump_args(volatile struct proc *p)
  *
  *          1         2         3         4         5         6         7
  * 1234567890123456789012345678901234567890123456789012345678901234567890
- *   pid  ppid  pgrp   uid   state   wmesg     wchan    cmd
- * <pid> <ppi> <pgi> <uid>  <stat> < wmesg > < wchan  > <name>
+ *   pid  ppid  pgrp   uid  state   wmesg   wchan       cmd
+ * <pid> <ppi> <pgi> <uid>  <stat>  <wmesg> <wchan   >  <name>
  * <pid> <ppi> <pgi> <uid>  <stat>  (threaded)          <command>
- * <tid >                   <stat> < wmesg > < wchan  > <name>
+ * <tid >                   <stat>  <wmesg> <wchan   >  <name>
  *
  * For machines with 64-bit pointers, we expand the wchan field 8 more
  * characters.
@@ -119,9 +122,9 @@ db_ps(db_expr_t addr, bool hasaddr, db_expr_t count, char *modif)
 		p = &proc0;
 
 #ifdef __LP64__
-	db_printf("  pid  ppid  pgrp   uid   state   wmesg         wchan        cmd\n");
+	db_printf("  pid  ppid  pgrp   uid  state   wmesg   wchan               cmd\n");
 #else
-	db_printf("  pid  ppid  pgrp   uid   state   wmesg     wchan    cmd\n");
+	db_printf("  pid  ppid  pgrp   uid  state   wmesg   wchan       cmd\n");
 #endif
 	while (--np >= 0 && !db_pager_quit) {
 		if (p == NULL) {
@@ -307,15 +310,15 @@ dumpthread(volatile struct proc *p, volatile struct thread *td, int all)
 		wmesg = "";
 		wchan = NULL;
 	}
-	db_printf("%c%-8.8s ", wprefix, wmesg);
+	db_printf("%c%-7.7s ", wprefix, wmesg);
 	if (wchan == NULL)
 #ifdef __LP64__
-		db_printf("%18s ", "");
+		db_printf("%18s  ", "");
 #else
-		db_printf("%10s ", "");
+		db_printf("%10s  ", "");
 #endif
 	else
-		db_printf("%p ", wchan);
+		db_printf("%p  ", wchan);
 	if (p->p_flag & P_SYSTEM)
 		db_printf("[");
 	if (td->td_name[0] != '\0')
@@ -477,6 +480,16 @@ DB_SHOW_COMMAND(proc, db_show_proc)
 		dump_args(p);
 		db_printf("\n");
 	}
+	db_printf(" repear: %p reapsubtree: %d\n",
+	    p->p_reaper, p->p_reapsubtree);
+	db_printf(" sigparent: %d\n", p->p_sigparent);
+	db_printf(" vmspace: %p\n", p->p_vmspace);
+	db_printf("   (map %p)\n",
+	    (p->p_vmspace != NULL) ? &p->p_vmspace->vm_map : 0);
+	db_printf("   (map.pmap %p)\n",
+	    (p->p_vmspace != NULL) ? &p->p_vmspace->vm_map.pmap : 0);
+	db_printf("   (pmap %p)\n",
+	    (p->p_vmspace != NULL) ? &p->p_vmspace->vm_pmap : 0);
 	db_printf(" threads: %d\n", p->p_numthreads);
 	FOREACH_THREAD_IN_PROC(p, td) {
 		dumpthread(p, td, 1);

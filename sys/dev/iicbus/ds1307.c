@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/iicbus/ds1307.c 331503 2018-03-24 23:01:10Z ian $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for Maxim DS1307 I2C real-time clock/calendar.
@@ -216,18 +216,13 @@ ds1307_probe(device_t dev)
 		return (ENXIO);
 
 	compat = ofw_bus_search_compatible(dev, ds1307_compat_data);
-
-	if (compat->ocd_str == NULL)
-		return (ENXIO);
-
-	device_set_desc(dev, (const char *)compat->ocd_data);
-
-	return (BUS_PROBE_DEFAULT);
-#else
-	device_set_desc(dev, "Maxim DS1307 RTC");
-
-	return (BUS_PROBE_NOWILDCARD);
+	if (compat->ocd_str != NULL) {
+		device_set_desc(dev, (const char *)compat->ocd_data);
+		return (BUS_PROBE_DEFAULT);
+	}
 #endif
+	device_set_desc(dev, "Maxim DS1307 RTC");
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 static int
@@ -435,3 +430,4 @@ static devclass_t ds1307_devclass;
 DRIVER_MODULE(ds1307, iicbus, ds1307_driver, ds1307_devclass, NULL, NULL);
 MODULE_VERSION(ds1307, 1);
 MODULE_DEPEND(ds1307, iicbus, 1, 1, 1);
+IICBUS_FDT_PNP_INFO(ds1307_compat_data);

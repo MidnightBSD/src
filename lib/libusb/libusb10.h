@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/lib/libusb/libusb10.h 349668 2019-07-03 18:25:05Z hselasky $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Sylvestre Gallon. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

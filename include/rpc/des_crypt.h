@@ -1,11 +1,13 @@
 /*
  * @(#)des_crypt.h	2.1 88/08/11 4.0 RPCSRC;	from 1.4 88/02/08 (C) 1986 SMI
- * $FreeBSD: stable/11/include/rpc/des_crypt.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  *
  * des_crypt.h, des library routine interface
  * Copyright (C) 1986, Sun Microsystems, Inc.
  */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *

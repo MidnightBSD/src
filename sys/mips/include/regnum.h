@@ -1,6 +1,8 @@
 /*	$OpenBSD: regnum.h,v 1.3 1999/01/27 04:46:06 imp Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1988 University of Utah.
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -17,7 +19,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -36,7 +38,7 @@
  *	from: Utah Hdr: reg.h 1.1 90/07/09
  *	@(#)reg.h	8.2 (Berkeley) 1/11/94
  *	JNPR: regnum.h,v 1.6 2007/08/09 11:23:32 katta
- * $FreeBSD: stable/11/sys/mips/include/regnum.h 351792 2019-09-03 20:19:43Z kevans $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_REGNUM_H_
@@ -163,7 +165,7 @@
 #define	F30	(FPBASE+30)
 #define	F31	(FPBASE+31)
 #define	FSR	(FPBASE+32)
-#define FSR_DUMMY (FPBASE+33) /* For 8 byte alignment */
+#define FIR	(FPBASE+33)
 
 /*
  * Index of FP registers in 'struct frame', relative to the base
@@ -203,6 +205,7 @@
 #define	F30_NUM	(30)
 #define	F31_NUM	(31)
 #define	FSR_NUM	(32)
+#define	FIR_NUM	(33)
 
 #endif	/* _KERNEL || _WANT_MIPS_REGNUM */
 

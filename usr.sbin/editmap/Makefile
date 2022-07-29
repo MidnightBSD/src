@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/editmap/Makefile 319119 2017-05-29 10:15:41Z ngie $
+# $FreeBSD$
 
 SENDMAIL_DIR=${SRCTOP}/contrib/sendmail
 .PATH: ${SENDMAIL_DIR}/editmap

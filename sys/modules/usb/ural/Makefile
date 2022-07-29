@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/sys/modules/usb/ural/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 #
 # Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
 #
@@ -30,7 +30,7 @@ S=	${SRCTOP}/sys
 .PATH:	$S/dev/usb/wlan
 
 KMOD=	if_ural
-SRCS=	opt_bus.h opt_usb.h device_if.h bus_if.h usb_if.h usbdevs.h \
-	if_ural.c
+SRCS=	opt_bus.h opt_usb.h opt_wlan.h device_if.h bus_if.h usb_if.h \
+	usbdevs.h if_ural.c
 
 .include <bsd.kmod.mk>

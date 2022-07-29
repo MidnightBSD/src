@@ -1,6 +1,6 @@
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon_irq_kms.h 280183 2015-03-17 18:50:33Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #ifndef __RADEON_IRQ_KMS_H__
 #define	__RADEON_IRQ_KMS_H__

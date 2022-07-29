@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002-2006 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,13 +12,6 @@
  *    similar to the "NO WARRANTY" disclaimer below ("Disclaimer") and any
  *    redistribution must be conditioned upon including a substantially
  *    similar Disclaimer requirement for further binary redistribution.
- * 3. Neither the names of the above-listed copyright holders nor the names
- *    of any contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * Alternatively, this software may be distributed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
  *
  * NO WARRANTY
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -33,14 +26,14 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: src/tools/tools/ath/athstats/main.c,v 1.1 2006/08/10 19:01:16 sam Exp $
+ * $FreeBSD$
  */
 
 /*
  * Simple Atheros-specific tool to inspect and monitor network traffic
  * statistics.
  *
- *	athstats [-i interface] [-l] [-o fmtstring] [interval]
+ *	athstats [-i interface] [-bz] [-l] [-o fmtstring] [interval]
  *
  * (default interface is ath0).  If interval is specified a rolling output
  * a la netstat -i is displayed every interval seconds.  The format of
@@ -48,15 +41,41 @@
  * print a list of all possible statistics for use with the -o option.
  */
 
-#include <stdio.h>
-#include <signal.h>
-#include <unistd.h>
+#include <sys/param.h>
+
 #include <err.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "athstats.h"
 
-#define	S_DEFAULT \
-	"input,output,altrate,short,long,xretry,crcerr,crypt,phyerr,rssi,rate"
+static struct {
+	const char *tag;
+	const char *fmt;
+} tags[] = {
+  { "default",
+    "input,output,altrate,short,long,xretry,crcerr,crypt,phyerr,rssi,rate"
+  },
+  { "ani",
+    "avgbrssi,avgrssi,avgtxrssi,NI,SI,step,owsd,cwst,NI+,NI-,SI+,SI-,OFDM,CCK,LISTEN"
+  },
+  { "tdma",
+    "input,output,bexmit,tdmau,tdmadj,crcerr,phyerr,phytor,rssi,noise,rate"
+  },
+};
+
+static const char *
+getfmt(const char *tag)
+{
+	int i;
+	for (i = 0; i < nitems(tags); i++)
+		if (strcasecmp(tags[i].tag, tag) == 0)
+			return tags[i].fmt;
+	return tag;
+}
 
 static int signalled;
 
@@ -70,11 +89,18 @@ int
 main(int argc, char *argv[])
 {
 	struct athstatfoo *wf;
-	int c;
+	const char *ifname;
+	int c, banner = 1;
 
-	wf = athstats_new("ath0", S_DEFAULT);
-	while ((c = getopt(argc, argv, "i:lo:")) != -1) {
+	ifname = getenv("ATH");
+	if (ifname == NULL)
+		ifname = ATH_DEFAULT;
+	wf = athstats_new(ifname, getfmt("default"));
+	while ((c = getopt(argc, argv, "bi:lo:z")) != -1) {
 		switch (c) {
+		case 'b':
+			banner = 0;
+			break;
 		case 'i':
 			wf->setifname(wf, optarg);
 			break;
@@ -82,10 +108,13 @@ main(int argc, char *argv[])
 			wf->print_fields(wf, stdout);
 			return 0;
 		case 'o':
-			wf->setfmt(wf, optarg);
+			wf->setfmt(wf, getfmt(optarg));
+			break;
+		case 'z':
+			wf->zerostats(wf);
 			break;
 		default:
-			errx(-1, "usage: %s [-a] [-i ifname] [-l] [-o fmt] [interval]\n", argv[0]);
+			errx(-1, "usage: %s [-a] [-i ifname] [-l] [-o fmt] [-z] [interval]\n", argv[0]);
 			/*NOTREACHED*/
 		}
 	}
@@ -102,7 +131,8 @@ main(int argc, char *argv[])
 		signalled = 0;
 		alarm(interval);
 	banner:
-		wf->print_header(wf, stdout);
+		if (banner)
+			wf->print_header(wf, stdout);
 		line = 0;
 	loop:
 		if (line != 0) {

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/bmake/tests/syntax/funny-targets/Makefile.test 263346 2014-03-19 12:29:20Z jmmv $
+# $FreeBSD$
 #
 # PR bin/6612 / GRN r102178
 #

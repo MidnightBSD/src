@@ -1,6 +1,8 @@
 /*	$NetBSD: undefined.h,v 1.4 2001/12/20 01:20:23 thorpej Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1995-1996 Mark Brinicombe.
  * Copyright (c) 1995 Brini.
  * All rights reserved.
@@ -42,7 +44,7 @@
  *
  * Created      : 08/02/95
  *
- * $FreeBSD: stable/11/sys/arm/include/undefined.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 

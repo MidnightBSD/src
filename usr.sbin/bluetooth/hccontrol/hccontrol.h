@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: hccontrol.h,v 1.2 2003/05/19 17:29:29 max Exp $
- * $FreeBSD: stable/11/usr.sbin/bluetooth/hccontrol/hccontrol.h 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _HCCONTROL_H_
@@ -72,7 +72,9 @@ char const *	hci_hmode2str       (int, char *, int);
 char const *	hci_ver2str         (int);
 char const *	hci_lmpver2str      (int);
 char const *	hci_manufacturer2str(int);
+char const * 	hci_commands2str    (uint8_t *, char *, int);
 char const *	hci_features2str    (uint8_t *, char *, int);
+char const *	hci_le_features2str (uint8_t *, char *, int);
 char const *	hci_cc2str          (int);
 char const *	hci_con_state2str   (int);
 char const *	hci_status2str      (int);

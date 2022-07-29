@@ -2,7 +2,7 @@
  * This file is in the public domain.
  *
  *	from: src/sys/alpha/include/pmc_mdep.h,v 1.2 2005/06/09 19:45:06 jkoshy
- * $FreeBSD: stable/11/sys/mips/include/pmc_mdep.h 233628 2012-03-28 20:58:30Z fabient $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PMC_MDEP_H_

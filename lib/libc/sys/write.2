@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)write.2	8.5 (Berkeley) 4/2/94
-.\" $FreeBSD: stable/11/lib/libc/sys/write.2 324942 2017-10-24 00:32:20Z emaste $
+.\" $FreeBSD$
 .\"
-.Dd October 23, 2017
+.Dd February 11, 2021
 .Dt WRITE 2
 .Os
 .Sh NAME
@@ -205,6 +205,12 @@ is greater than
 if the sysctl
 .Va debug.iosize_max_clamp
 is non-zero).
+.It Bq Er EINTEGRITY
+The backing store for
+.Fa fd
+detected corrupted data while reading.
+(For example, writing a partial filesystem block may require first reading
+the existing block which may trigger this error.)
 .El
 .Pp
 In addition,
@@ -287,4 +293,18 @@ system call appeared in
 The
 .Fn write
 function appeared in
-.At v6 .
+.At v1 .
+.Sh BUGS
+The
+.Fn pwrite
+system call appends the file without changing the file offset if
+.Dv O_APPEND
+is set, contrary to
+.St -p1003.1-2008
+where
+.Fn pwrite
+writes into
+.Fa offset
+regardless of whether
+.Dv O_APPEND
+is set.

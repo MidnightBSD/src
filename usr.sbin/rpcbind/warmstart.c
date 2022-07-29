@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -34,7 +36,7 @@
 
 /*
  * #ident	"@(#)warmstart.c	1.7	93/07/05 SMI"
- * $FreeBSD: stable/11/usr.sbin/rpcbind/warmstart.c 331722 2018-03-29 02:50:57Z eadler $/
+ * $FreeBSD$/
  */
 #include <sys/types.h>
 #include <sys/stat.h>

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2010 Fabio Checconi
  * Copyright (c) 2009-2010 Luigi Rizzo, Universita` di Pisa
  * All rights reserved.
@@ -27,7 +29,7 @@
 
 /*
  * $Id$
- * $FreeBSD: stable/11/sys/geom/sched/gs_rr.c 296606 2016-03-10 06:25:39Z imp $
+ * $FreeBSD$
  *
  * A round-robin (RR) anticipatory scheduler, with per-client queues.
  *

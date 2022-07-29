@@ -11,7 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: vector.s, 386BSD 0.1 unknown origin
- * $FreeBSD: stable/11/sys/amd64/amd64/atpic_vector.S 329462 2018-02-17 18:00:01Z kib $
+ * $FreeBSD$
  */
 
 /*
@@ -36,7 +36,7 @@
  * master and slave interrupt controllers.
  */
 
-#include "assym.s"
+#include "assym.inc"
 #include <machine/asmacros.h>
 
 /*

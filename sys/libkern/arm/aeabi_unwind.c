@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2013 Andrew Turner
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/libkern/arm/aeabi_unwind.c 285338 2015-07-09 21:02:40Z andrew $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #ifdef _KERNEL

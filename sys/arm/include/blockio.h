@@ -1,6 +1,8 @@
 /*	$NetBSD: blockio.h,v 1.2 2001/06/02 10:44:56 bjh21 Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2001 Ben Harris
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/include/blockio.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  *
  */
 /*

@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/tests/sys/kern/unix_seqpacket_test.c 321165 2017-07-18 18:51:34Z ngie $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <fcntl.h>

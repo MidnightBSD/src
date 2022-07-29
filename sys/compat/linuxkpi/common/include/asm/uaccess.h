@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/asm/uaccess.h 335432 2018-06-20 06:57:14Z hselasky $
+ * $FreeBSD$
  */
 #ifndef _ASM_UACCESS_H_
 #define _ASM_UACCESS_H_
@@ -52,7 +52,11 @@ copy_from_user(void *to, const void *from, unsigned long n)
 #define	__copy_from_user(...)	copy_from_user(__VA_ARGS__)
 #define	__copy_in_user(...)	copy_from_user(__VA_ARGS__)
 
+#if defined(LINUXKPI_VERSION) && LINUXKPI_VERSION >= 50000
+#define	user_access_begin(ptr, len) access_ok(ptr, len)
+#else
 #define	user_access_begin() do { } while (0)
+#endif
 #define	user_access_end() do { } while (0)
 
 #define	unsafe_get_user(x, ptr, err) do { \

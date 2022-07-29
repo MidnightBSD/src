@@ -18,7 +18,7 @@
 *LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
 *SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 *
-* $FreeBSD: stable/11/sys/dev/pms/freebsd/driver/common/osenv.h 299081 2016-05-04 17:52:53Z pfg $
+* $FreeBSD$
 *
 *******************************************************************************/
 /***************************************************************************

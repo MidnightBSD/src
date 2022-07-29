@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: (BSD-2-Clause-FreeBSD AND BSD-4-Clause)
+ *
  * Copyright (c) 1999, 2000 Kenneth D. Merry.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$MidnightBSD$
+ *	$FreeBSD$
  */
 /*
  * The ti_stats structure below is from code with the following copyright, 

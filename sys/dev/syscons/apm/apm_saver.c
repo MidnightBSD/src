@@ -1,5 +1,6 @@
-/* $MidnightBSD: src/sys/dev/syscons/apm/apm_saver.c,v 1.2 2008/12/02 22:43:12 laffer1 Exp $ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1999 Nick Sayer (who stole shamelessly from blank_saver)
  * All rights reserved.
  *

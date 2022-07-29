@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tests/sys/aio/Makefile 337239 2018-08-03 14:01:32Z asomers $
+# $FreeBSD$
 
 TESTSDIR=	${TESTSBASE}/sys/aio
 

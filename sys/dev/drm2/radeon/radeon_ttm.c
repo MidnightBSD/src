@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/radeon/radeon_ttm.c 280183 2015-03-17 18:50:33Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/ttm/ttm_bo_api.h>
 #include <dev/drm2/ttm/ttm_bo_driver.h>

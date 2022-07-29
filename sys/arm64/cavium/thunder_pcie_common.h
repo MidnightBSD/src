@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/cavium/thunder_pcie_common.h 296307 2016-03-02 08:39:59Z wma $
+ * $FreeBSD$
  */
 
 #ifndef _CAVIUM_THUNDER_PCIE_COMMON_H_

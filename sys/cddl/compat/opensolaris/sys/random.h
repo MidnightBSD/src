@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/random.h 305764 2016-09-13 07:15:39Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_RANDOM_H_

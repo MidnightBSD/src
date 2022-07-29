@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/include/pte-v4.h 295801 2016-02-19 09:23:32Z skra $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PTE_V4_H_

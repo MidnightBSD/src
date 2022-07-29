@@ -1,8 +1,10 @@
 /*	$OpenBSD: tip.h,v 1.27 2006/08/18 03:06:18 jason Exp $	*/
 /*	$NetBSD: tip.h,v 1.7 1997/04/20 00:02:46 mellon Exp $	*/
-/*	$FreeBSD: stable/11/usr.bin/tip/tip/tip.h 359763 2020-04-10 00:27:19Z kevans $	*/
+/*	$FreeBSD$	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *

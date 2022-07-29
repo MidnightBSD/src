@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/sort/file.c 335742 2018-06-27 21:11:28Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -633,7 +633,6 @@ file_reader_init(const char *fsrc)
 			int fd, flags;
 
 			flags = MAP_NOCORE | MAP_NOSYNC;
-			addr = MAP_FAILED;
 
 			fd = open(fsrc, O_RDONLY);
 			if (fd < 0)
@@ -1237,7 +1236,7 @@ sort_list_to_file(struct sort_list *list, const char *outfile)
 {
 	struct sort_mods *sm = &(keys[0].sm);
 
-	if (!(sm->Mflag) && !(sm->Rflag) && !(sm->Vflag) && !(sm->Vflag) &&
+	if (!(sm->Mflag) && !(sm->Rflag) && !(sm->Vflag) &&
 	    !(sm->gflag) && !(sm->hflag) && !(sm->nflag)) {
 		if ((sort_opts_vals.sort_method == SORT_DEFAULT) && byte_sort)
 			sort_opts_vals.sort_method = SORT_RADIXSORT;

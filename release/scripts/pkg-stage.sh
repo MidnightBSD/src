@@ -27,6 +27,12 @@ x11-drivers/xf86-video-vmware
 x11/gnome3
 x11/xorg"
 
+if [ ! -f ${PORTSDIR}/Makefile ]; then
+	echo "*** ${PORTSDIR} is missing!    ***"
+	echo "*** Skipping pkg-stage.sh     ***"
+	echo "*** Unset NOPORTS to fix this ***"
+	exit 0
+fi
 export DVD_DIR="dvd/packages"
 export PKG_ABI=$(pkg config ABI)
 export PKG_ALTABI=$(pkg config ALTABI 2>/dev/null)

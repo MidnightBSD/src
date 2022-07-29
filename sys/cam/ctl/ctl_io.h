@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * Copyright (c) 2014-2015 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -29,7 +31,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_io.h#5 $
- * $FreeBSD: stable/11/sys/cam/ctl/ctl_io.h 345114 2019-03-13 20:28:07Z mav $
+ * $FreeBSD$
  */
 /*
  * CAM Target Layer data movement structures/interface.
@@ -39,6 +41,10 @@
 
 #ifndef	_CTL_IO_H_
 #define	_CTL_IO_H_
+
+#ifndef _KERNEL
+#include <stdbool.h>
+#endif
 
 #define	CTL_MAX_CDBLEN	32
 /*
@@ -129,9 +135,9 @@ struct ctl_lba_len_flags {
 };
 
 struct ctl_ptr_len_flags {
-	uint8_t *ptr;
-	uint32_t len;
-	uint32_t flags;
+	uint8_t		*ptr;
+	uint32_t	len;
+	uint32_t	flags;
 };
 
 union ctl_priv {
@@ -241,7 +247,7 @@ struct ctl_io_hdr {
 	union ctl_priv	  ctl_private[CTL_NUM_PRIV];/* CTL private area */
 	TAILQ_HEAD(, ctl_io_hdr) blocked_queue;	/* I/Os blocked by this one */
 	STAILQ_ENTRY(ctl_io_hdr) links;	/* linked list pointer */
-	TAILQ_ENTRY(ctl_io_hdr) ooa_links;	/* ooa_queue links */
+	LIST_ENTRY(ctl_io_hdr) ooa_links;	/* ooa_queue links */
 	TAILQ_ENTRY(ctl_io_hdr) blocked_links;	/* blocked_queue links */
 };
 
@@ -319,13 +325,14 @@ struct ctl_scsiio {
 	struct     scsi_sense_data sense_data;	/* sense data */
 	uint8_t	   sense_len;		/* Returned sense length */
 	uint8_t	   scsi_status;		/* SCSI status byte */
-	uint8_t	   sense_residual;	/* Unused. */
+	uint8_t	   seridx;		/* Serialization index. */
+	uint8_t	   priority;		/* Command priority */
 	uint32_t   residual;		/* Unused */
 	uint32_t   tag_num;		/* tag number */
 	ctl_tag_type tag_type;		/* simple, ordered, head of queue,etc.*/
 	uint8_t    cdb_len;		/* CDB length */
 	uint8_t	   cdb[CTL_MAX_CDBLEN];	/* CDB */
-	int	   (*be_move_done)(union ctl_io *io); /* called by fe */
+	int	   (*be_move_done)(union ctl_io *io, bool samethr); /* called by fe */
 	int        (*io_cont)(union ctl_io *io); /* to continue processing */
 };
 
@@ -405,10 +412,10 @@ typedef enum {
  * structure.
  */
 struct ctl_pr_info {
-	ctl_pr_action        action;
-	uint8_t              sa_res_key[8];
-	uint8_t              res_type;
-	uint32_t             residx;
+	ctl_pr_action		action;
+	uint8_t			sa_res_key[8];
+	uint8_t			res_type;
+	uint32_t		residx;
 };
 
 struct ctl_ha_msg_hdr {
@@ -480,6 +487,7 @@ struct ctl_ha_msg_scsi {
 	uint8_t			cdb_len;	/* CDB length */
 	uint8_t			scsi_status; /* SCSI status byte */
 	uint8_t			sense_len;   /* Returned sense length */
+	uint8_t			priority;    /* Command priority */
 	uint32_t		port_status; /* trans status, set by FETD,
 						0 = good*/
 	uint32_t		kern_data_resid; /* for DATAMOVE_DONE */
@@ -569,15 +577,15 @@ union ctl_ha_msg {
 };
 
 struct ctl_prio {
-	struct ctl_io_hdr  io_hdr;
-	struct ctl_ha_msg_pr pr_msg;
+	struct ctl_io_hdr	io_hdr;
+	struct ctl_ha_msg_pr	pr_msg;
 };
 
 union ctl_io {
-	struct ctl_io_hdr io_hdr;	/* common to all I/O types */
-	struct ctl_scsiio scsiio;	/* Normal SCSI commands */
-	struct ctl_taskio taskio;	/* SCSI task management/reset */
-	struct ctl_prio   presio;	/* update per. res info on other SC */
+	struct ctl_io_hdr	io_hdr;	/* common to all I/O types */
+	struct ctl_scsiio	scsiio;	/* Normal SCSI commands */
+	struct ctl_taskio	taskio;	/* SCSI task management/reset */
+	struct ctl_prio		presio;	/* update per. res info on other SC */
 };
 
 #ifdef _KERNEL

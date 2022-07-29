@@ -1,5 +1,7 @@
-/*
+/*-
  * service.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2003 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: service.c,v 1.1 2004/01/13 19:32:36 max Exp $
- * $FreeBSD: stable/11/lib/libsdp/service.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/uio.h>

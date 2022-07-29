@@ -28,13 +28,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/rfb.c 349435 2019-06-26 17:42:47Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
-#include <sys/endian.h>
 #ifndef WITHOUT_CAPSICUM
 #include <sys/capsicum.h>
 #endif
+#include <sys/endian.h>
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <sys/time.h>
@@ -45,6 +45,9 @@ __FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/rfb.c 349435 2019-06-26 17:42:47Z m
 #include <netdb.h>
 
 #include <assert.h>
+#ifndef WITHOUT_CAPSICUM
+#include <capsicum_helpers.h>
+#endif
 #include <err.h>
 #include <errno.h>
 #include <pthread.h>
@@ -60,6 +63,7 @@ __FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/rfb.c 349435 2019-06-26 17:42:47Z m
 #include <zlib.h>
 
 #include "bhyvegc.h"
+#include "debug.h"
 #include "console.h"
 #include "rfb.h"
 #include "sockstream.h"
@@ -69,9 +73,10 @@ __FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/rfb.c 349435 2019-06-26 17:42:47Z m
 #endif
 
 static int rfb_debug = 0;
-#define	DPRINTF(params) if (rfb_debug) printf params
-#define	WPRINTF(params) printf params
+#define	DPRINTF(params) if (rfb_debug) PRINTLN params
+#define	WPRINTF(params) PRINTLN params
 
+#define VERSION_LENGTH	12
 #define AUTH_LENGTH	16
 #define PASSWD_LENGTH	8
 
@@ -353,7 +358,7 @@ rfb_send_rect(struct rfb_softc *rc, int cfd, struct bhyvegc_image *gc,
 			/* Compress with zlib */
 			err = deflate(&rc->zstream, Z_SYNC_FLUSH);
 			if (err != Z_OK) {
-				WPRINTF(("zlib[rect] deflate err: %d\n", err));
+				WPRINTF(("zlib[rect] deflate err: %d", err));
 				rc->enc_zlib_ok = false;
 				deflateEnd(&rc->zstream);
 				goto doraw;
@@ -437,7 +442,7 @@ rfb_send_all(struct rfb_softc *rc, int cfd, struct bhyvegc_image *gc)
 		/* Compress with zlib */
 		err = deflate(&rc->zstream, Z_SYNC_FLUSH);
 		if (err != Z_OK) {
-			WPRINTF(("zlib deflate err: %d\n", err));
+			WPRINTF(("zlib deflate err: %d", err));
 			rc->enc_zlib_ok = false;
 			deflateEnd(&rc->zstream);
 			goto doraw;
@@ -765,7 +770,7 @@ rfb_handle(struct rfb_softc *rc, int cfd)
 	stream_write(cfd, vbuf, strlen(vbuf));
 
 	/* 1b. Read client version */
-	len = read(cfd, buf, sizeof(buf));
+	len = stream_read(cfd, buf, VERSION_LENGTH);
 
 	/* 2a. Send security type */
 	buf[0] = 1;
@@ -875,7 +880,7 @@ rfb_handle(struct rfb_softc *rc, int cfd)
 	for (;;) {
 		len = read(cfd, buf, 1);
 		if (len <= 0) {
-			DPRINTF(("rfb client exiting\r\n"));
+			DPRINTF(("rfb client exiting"));
 			break;
 		}
 
@@ -899,7 +904,7 @@ rfb_handle(struct rfb_softc *rc, int cfd)
 			rfb_recv_cuttext_msg(rc, cfd);
 			break;
 		default:
-			WPRINTF(("rfb unknown cli-code %d!\n", buf[0] & 0xff));
+			WPRINTF(("rfb unknown cli-code %d!", buf[0] & 0xff));
 			goto done;
 		}
 	}
@@ -999,7 +1004,7 @@ rfb_init(char *hostname, int port, int wait, char *password)
 	hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV | AI_PASSIVE;
 
 	if ((e = getaddrinfo(hostname, servname, &hints, &ai)) != 0) {
-		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(e));
+		EPRINTLN("getaddrinfo: %s", gai_strerror(e));
 		return(-1);
 	}
 
@@ -1026,7 +1031,7 @@ rfb_init(char *hostname, int port, int wait, char *password)
 
 #ifndef WITHOUT_CAPSICUM
 	cap_rights_init(&rights, CAP_ACCEPT, CAP_EVENT, CAP_READ, CAP_WRITE);
-	if (cap_rights_limit(rc->sfd, &rights) == -1 && errno != ENOSYS)
+	if (caph_rights_limit(rc->sfd, &rights) == -1)
 		errx(EX_OSERR, "Unable to apply rights for sandbox");
 #endif
 
@@ -1042,7 +1047,7 @@ rfb_init(char *hostname, int port, int wait, char *password)
 	pthread_set_name_np(rc->tid, "rfb");
 
 	if (wait) {
-		DPRINTF(("Waiting for rfb client...\n"));
+		DPRINTF(("Waiting for rfb client..."));
 		pthread_mutex_lock(&rc->mtx);
 		pthread_cond_wait(&rc->cond, &rc->mtx);
 		pthread_mutex_unlock(&rc->mtx);

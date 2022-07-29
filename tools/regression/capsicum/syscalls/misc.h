@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/regression/capsicum/syscalls/misc.h 247606 2013-03-02 01:00:26Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef _MISC_H_

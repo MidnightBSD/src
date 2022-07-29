@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009, Pyun YongHyeon <yongari@FreeBSD.org>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
 /* Driver for Atheros AR813x/AR815x PCIe Ethernet. */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/alc/if_alc.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -62,6 +64,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/alc/if_alc.c 331722 2018-03-29 02:50:57Z e
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
+#include <netinet/netdump/netdump.h>
 
 #include <dev/mii/mii.h>
 #include <dev/mii/miivar.h>
@@ -197,6 +200,7 @@ static int	alc_shutdown(device_t);
 static void	alc_start(struct ifnet *);
 static void	alc_start_locked(struct ifnet *);
 static void	alc_start_queue(struct alc_softc *);
+static void	alc_start_tx(struct alc_softc *);
 static void	alc_stats_clear(struct alc_softc *);
 static void	alc_stats_update(struct alc_softc *);
 static void	alc_stop(struct alc_softc *);
@@ -210,6 +214,8 @@ static void	alc_watchdog(struct alc_softc *);
 static int	sysctl_int_range(SYSCTL_HANDLER_ARGS, int, int);
 static int	sysctl_hw_alc_proc_limit(SYSCTL_HANDLER_ARGS);
 static int	sysctl_hw_alc_int_mod(SYSCTL_HANDLER_ARGS);
+
+NETDUMP_DEFINE(alc);
 
 static device_method_t alc_methods[] = {
 	/* Device interface. */
@@ -225,7 +231,7 @@ static device_method_t alc_methods[] = {
 	DEVMETHOD(miibus_writereg,	alc_miibus_writereg),
 	DEVMETHOD(miibus_statchg,	alc_miibus_statchg),
 
-	{ NULL, NULL }
+	DEVMETHOD_END
 };
 
 static driver_t alc_driver = {
@@ -237,6 +243,8 @@ static driver_t alc_driver = {
 static devclass_t alc_devclass;
 
 DRIVER_MODULE(alc, pci, alc_driver, alc_devclass, 0, 0);
+MODULE_PNP_INFO("U16:vendor;U16:device", pci, alc, alc_ident_table,
+    nitems(alc_ident_table) - 1);
 DRIVER_MODULE(miibus, alc, miibus_driver, miibus_devclass, 0, 0);
 
 static struct resource_spec alc_res_spec_mem[] = {
@@ -1430,6 +1438,8 @@ alc_attach(device_t dev)
 	case DEVICEID_ATHEROS_AR8151:
 	case DEVICEID_ATHEROS_AR8151_V2:
 		sc->alc_flags |= ALC_FLAG_APS;
+		if (CSR_READ_4(sc, ALC_MT_MAGIC) == MT_MAGIC)
+			sc->alc_flags |= ALC_FLAG_MT;
 		/* FALLTHROUGH */
 	default:
 		break;
@@ -1648,6 +1658,9 @@ alc_attach(device_t dev)
 		ether_ifdetach(ifp);
 		goto fail;
 	}
+
+	/* Attach driver netdump methods. */
+	NETDUMP_SET(ifp, alc);
 
 fail:
 	if (error != 0)
@@ -1966,6 +1979,8 @@ alc_dma_alloc(struct alc_softc *sc)
 	int error, i;
 
 	lowaddr = BUS_SPACE_MAXADDR;
+	if (sc->alc_flags & ALC_FLAG_MT)
+		lowaddr = BUS_SPACE_MAXSIZE_32BIT;
 again:
 	/* Create parent DMA tag. */
 	error = bus_dma_tag_create(
@@ -2208,7 +2223,7 @@ again:
 	error = bus_dma_tag_create(
 	    bus_get_dma_tag(sc->alc_dev), /* parent */
 	    1, 0,			/* alignment, boundary */
-	    BUS_SPACE_MAXADDR,		/* lowaddr */
+	    lowaddr,			/* lowaddr */
 	    BUS_SPACE_MAXADDR,		/* highaddr */
 	    NULL, NULL,			/* filter, filterarg */
 	    BUS_SPACE_MAXSIZE_32BIT,	/* maxsize */
@@ -2972,22 +2987,28 @@ alc_start_locked(struct ifnet *ifp)
 		ETHER_BPF_MTAP(ifp, m_head);
 	}
 
-	if (enq > 0) {
-		/* Sync descriptors. */
-		bus_dmamap_sync(sc->alc_cdata.alc_tx_ring_tag,
-		    sc->alc_cdata.alc_tx_ring_map, BUS_DMASYNC_PREWRITE);
-		/* Kick. Assume we're using normal Tx priority queue. */
-		if ((sc->alc_flags & ALC_FLAG_AR816X_FAMILY) != 0)
-			CSR_WRITE_2(sc, ALC_MBOX_TD_PRI0_PROD_IDX,
-			    (uint16_t)sc->alc_cdata.alc_tx_prod);
-		else
-			CSR_WRITE_4(sc, ALC_MBOX_TD_PROD_IDX,
-			    (sc->alc_cdata.alc_tx_prod <<
-			    MBOX_TD_PROD_LO_IDX_SHIFT) &
-			    MBOX_TD_PROD_LO_IDX_MASK);
-		/* Set a timeout in case the chip goes out to lunch. */
-		sc->alc_watchdog_timer = ALC_TX_TIMEOUT;
-	}
+	if (enq > 0)
+		alc_start_tx(sc);
+}
+
+static void
+alc_start_tx(struct alc_softc *sc)
+{
+
+	/* Sync descriptors. */
+	bus_dmamap_sync(sc->alc_cdata.alc_tx_ring_tag,
+	    sc->alc_cdata.alc_tx_ring_map, BUS_DMASYNC_PREWRITE);
+	/* Kick. Assume we're using normal Tx priority queue. */
+	if ((sc->alc_flags & ALC_FLAG_AR816X_FAMILY) != 0)
+		CSR_WRITE_2(sc, ALC_MBOX_TD_PRI0_PROD_IDX,
+		    (uint16_t)sc->alc_cdata.alc_tx_prod);
+	else
+		CSR_WRITE_4(sc, ALC_MBOX_TD_PROD_IDX,
+		    (sc->alc_cdata.alc_tx_prod <<
+		    MBOX_TD_PROD_LO_IDX_SHIFT) &
+		    MBOX_TD_PROD_LO_IDX_MASK);
+	/* Set a timeout in case the chip goes out to lunch. */
+	sc->alc_watchdog_timer = ALC_TX_TIMEOUT;
 }
 
 static void
@@ -3322,6 +3343,11 @@ alc_intr(void *arg)
 
 	sc = (struct alc_softc *)arg;
 
+	if (sc->alc_flags & ALC_FLAG_MT) {
+		taskqueue_enqueue(sc->alc_tq, &sc->alc_int_task);
+		return (FILTER_HANDLED);
+	}
+
 	status = CSR_READ_4(sc, ALC_INTR_STATUS);
 	if ((status & ALC_INTRS) == 0)
 		return (FILTER_STRAY);
@@ -3399,7 +3425,10 @@ alc_int_task(void *arg, int pending)
 done:
 	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) != 0) {
 		/* Re-enable interrupts if we're running. */
-		CSR_WRITE_4(sc, ALC_INTR_STATUS, 0x7FFFFFFF);
+		if (sc->alc_flags & ALC_FLAG_MT)
+			CSR_WRITE_4(sc, ALC_INTR_STATUS, 0);
+		else
+			CSR_WRITE_4(sc, ALC_INTR_STATUS, 0x7FFFFFFF);
 	}
 	ALC_UNLOCK(sc);
 }
@@ -4593,7 +4622,7 @@ alc_rxfilter(struct alc_softc *sc)
 	}
 
 	if_maddr_rlock(ifp);
-	TAILQ_FOREACH(ifma, &sc->alc_ifp->if_multiaddrs, ifma_link) {
+	CK_STAILQ_FOREACH(ifma, &sc->alc_ifp->if_multiaddrs, ifma_link) {
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;
 		crc = ether_crc32_be(LLADDR((struct sockaddr_dl *)
@@ -4640,3 +4669,54 @@ sysctl_hw_alc_int_mod(SYSCTL_HANDLER_ARGS)
 	return (sysctl_int_range(oidp, arg1, arg2, req,
 	    ALC_IM_TIMER_MIN, ALC_IM_TIMER_MAX));
 }
+
+#ifdef NETDUMP
+static void
+alc_netdump_init(struct ifnet *ifp, int *nrxr, int *ncl, int *clsize)
+{
+	struct alc_softc *sc;
+
+	sc = if_getsoftc(ifp);
+	KASSERT(sc->alc_buf_size <= MCLBYTES, ("incorrect cluster size"));
+
+	*nrxr = ALC_RX_RING_CNT;
+	*ncl = NETDUMP_MAX_IN_FLIGHT;
+	*clsize = MCLBYTES;
+}
+
+static void
+alc_netdump_event(struct ifnet *ifp __unused, enum netdump_ev event __unused)
+{
+}
+
+static int
+alc_netdump_transmit(struct ifnet *ifp, struct mbuf *m)
+{
+	struct alc_softc *sc;
+	int error;
+
+	sc = if_getsoftc(ifp);
+	if ((if_getdrvflags(ifp) & (IFF_DRV_RUNNING | IFF_DRV_OACTIVE)) !=
+	    IFF_DRV_RUNNING)
+		return (EBUSY);
+
+	error = alc_encap(sc, &m);
+	if (error == 0)
+		alc_start_tx(sc);
+	return (error);
+}
+
+static int
+alc_netdump_poll(struct ifnet *ifp, int count)
+{
+	struct alc_softc *sc;
+
+	sc = if_getsoftc(ifp);
+	if ((if_getdrvflags(ifp) & (IFF_DRV_RUNNING | IFF_DRV_OACTIVE)) !=
+	    IFF_DRV_RUNNING)
+		return (EBUSY);
+
+	alc_txeof(sc);
+	return (alc_rxintr(sc, count));
+}
+#endif /* NETDUMP */

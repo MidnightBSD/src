@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/cddl/usr.bin/ctfconvert/tests/Makefile 326289 2017-11-27 20:01:58Z asomers $
+# $FreeBSD$
 
 ATF_TESTS_SH+=  ctfconvert_test
 

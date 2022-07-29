@@ -1,6 +1,8 @@
 /*-
  * Implementation of Utility functions for all SCSI device types.
  *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997, 1998, 1999 Justin T. Gibbs.
  * Copyright (c) 1997, 1998, 2003 Kenneth D. Merry.
  * All rights reserved.
@@ -28,14 +30,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cam/scsi/scsi_all.c 355336 2019-12-03 16:47:04Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/stdint.h>
 
 #ifdef _KERNEL
-#include <opt_scsi.h>
+#include "opt_scsi.h"
 
 #include <sys/systm.h>
 #include <sys/libkern.h>
@@ -416,6 +418,8 @@ static struct op_table_entry scsi_op_codes[] = {
 	{ 0x52,	D, "XDREAD(10)" },
 	/* 52       O          READ TRACK INFORMATION */
 	{ 0x52,	R, "READ TRACK INFORMATION" },
+	/* 53  O               XDWRITEREAD(10) */
+	{ 0x53,	D, "XDWRITEREAD(10)" },
 	/* 53       O          RESERVE TRACK */
 	{ 0x53,	R, "RESERVE TRACK" },
 	/* 54       O          SEND OPC INFORMATION */
@@ -459,6 +463,8 @@ static struct op_table_entry scsi_op_codes[] = {
 	{ 0x81,	T, "READ REVERSE(16)" },
 	/* 82  Z               REGENERATE(16) */
 	{ 0x82,	D, "REGENERATE(16)" },
+	/* 82   O              ALLOW OVERWRITE */
+	{ 0x82,	T, "ALLOW OVERWRITE" },
 	/* 83  OOOOO O    OO   EXTENDED COPY */
 	{ 0x83,	D | T | L | P | W | O | K | V, "EXTENDED COPY" },
 	/* 84  OOOOO O    OO   RECEIVE COPY RESULTS */
@@ -1164,7 +1170,7 @@ static struct asc_table_entry asc_table[] = {
 	{ SST(0x04, 0x1B, SS_WAIT | EBUSY,
 	    "Logical unit not ready, sanitize in progress") },
 	/* DT     MAEB    */
-	{ SST(0x04, 0x1C, SS_RDEF,	/* XXX TBD */
+	{ SST(0x04, 0x1C, SS_START | SSQ_DECREMENT_COUNT | ENXIO,
 	    "Logical unit not ready, additional power use not yet granted") },
 	/* D              */
 	{ SST(0x04, 0x1D, SS_WAIT | EBUSY,
@@ -3486,7 +3492,12 @@ scsi_cdb_string(u_int8_t *cdb_ptr, char *cdb_string, size_t len)
 
 	/* ENOMEM just means that the fixed buffer is full, OK to ignore */
 	error = sbuf_finish(&sb);
-	if (error != 0 && error != ENOMEM)
+	if (error != 0 &&
+#ifdef _KERNEL
+	    error != ENOMEM)
+#else
+	    errno != ENOMEM)
+#endif
 		return ("");
 
 	return(sbuf_data(&sb));
@@ -5087,8 +5098,8 @@ scsi_sense_sbuf(struct cam_device *device, struct ccb_scsiio *csio,
 			 * errors on finicky architectures.  We don't
 			 * ensure that the sense data is pointer aligned.
 			 */
-			bcopy(&csio->sense_data, &sense, 
-			      sizeof(struct scsi_sense_data *));
+			bcopy((struct scsi_sense_data **)&csio->sense_data,
+			    &sense, sizeof(struct scsi_sense_data *));
 		}
 	} else {
 		/*
@@ -5156,7 +5167,7 @@ scsi_sense_print(struct ccb_scsiio *csio)
 
 	sbuf_finish(&sb);
 
-	printf("%s", sbuf_data(&sb));
+	sbuf_putbuf(&sb);
 }
 
 #else /* !_KERNEL */
@@ -5212,8 +5223,8 @@ scsi_extract_sense_ccb(union ccb *ccb,
 		return (0);
 
 	if (ccb->ccb_h.flags & CAM_SENSE_PTR)
-		bcopy(&ccb->csio.sense_data, &sense_data,
-		    sizeof(struct scsi_sense_data *));
+		bcopy((struct scsi_sense_data **)&ccb->csio.sense_data,
+		    &sense_data, sizeof(struct scsi_sense_data *));
 	else
 		sense_data = &ccb->csio.sense_data;
 	scsi_extract_sense_len(sense_data,
@@ -5348,11 +5359,10 @@ scsi_get_ascq(struct scsi_sense_data *sense_data, u_int sense_len,
  * for this routine to function properly.
  */
 void
-scsi_print_inquiry(struct scsi_inquiry_data *inq_data)
+scsi_print_inquiry_sbuf(struct sbuf *sb, struct scsi_inquiry_data *inq_data)
 {
 	u_int8_t type;
 	char *dtype, *qtype;
-	char vendor[16], product[48], revision[16], rstr[12];
 
 	type = SID_TYPE(inq_data);
 
@@ -5441,41 +5451,55 @@ scsi_print_inquiry(struct scsi_inquiry_data *inq_data)
 		break;
 	}
 
-	cam_strvis(vendor, inq_data->vendor, sizeof(inq_data->vendor),
-		   sizeof(vendor));
-	cam_strvis(product, inq_data->product, sizeof(inq_data->product),
-		   sizeof(product));
-	cam_strvis(revision, inq_data->revision, sizeof(inq_data->revision),
-		   sizeof(revision));
+	scsi_print_inquiry_short_sbuf(sb, inq_data);
+
+	sbuf_printf(sb, "%s %s ", SID_IS_REMOVABLE(inq_data) ? "Removable" : "Fixed", dtype);
 
 	if (SID_ANSI_REV(inq_data) == SCSI_REV_0)
-		snprintf(rstr, sizeof(rstr), "SCSI");
+		sbuf_printf(sb, "SCSI ");
 	else if (SID_ANSI_REV(inq_data) <= SCSI_REV_SPC) {
-		snprintf(rstr, sizeof(rstr), "SCSI-%d",
-		    SID_ANSI_REV(inq_data));
+		sbuf_printf(sb, "SCSI-%d ", SID_ANSI_REV(inq_data));
 	} else {
-		snprintf(rstr, sizeof(rstr), "SPC-%d SCSI",
-		    SID_ANSI_REV(inq_data) - 2);
+		sbuf_printf(sb, "SPC-%d SCSI ", SID_ANSI_REV(inq_data) - 2);
 	}
-	printf("<%s %s %s> %s %s %s device%s\n",
-	       vendor, product, revision,
-	       SID_IS_REMOVABLE(inq_data) ? "Removable" : "Fixed",
-	       dtype, rstr, qtype);
+	sbuf_printf(sb, "device%s\n", qtype);
+}
+
+void
+scsi_print_inquiry(struct scsi_inquiry_data *inq_data)
+{
+	struct sbuf	sb;
+	char		buffer[120];
+
+	sbuf_new(&sb, buffer, 120, SBUF_FIXEDLEN);
+	scsi_print_inquiry_sbuf(&sb, inq_data);
+	sbuf_finish(&sb);
+	sbuf_putbuf(&sb);
+}
+
+void
+scsi_print_inquiry_short_sbuf(struct sbuf *sb, struct scsi_inquiry_data *inq_data)
+{
+
+	sbuf_printf(sb, "<");
+	cam_strvis_sbuf(sb, inq_data->vendor, sizeof(inq_data->vendor), 0);
+	sbuf_printf(sb, " ");
+	cam_strvis_sbuf(sb, inq_data->product, sizeof(inq_data->product), 0);
+	sbuf_printf(sb, " ");
+	cam_strvis_sbuf(sb, inq_data->revision, sizeof(inq_data->revision), 0);
+	sbuf_printf(sb, "> ");
 }
 
 void
 scsi_print_inquiry_short(struct scsi_inquiry_data *inq_data)
 {
-	char vendor[16], product[48], revision[16];
+	struct sbuf	sb;
+	char		buffer[84];
 
-	cam_strvis(vendor, inq_data->vendor, sizeof(inq_data->vendor),
-		   sizeof(vendor));
-	cam_strvis(product, inq_data->product, sizeof(inq_data->product),
-		   sizeof(product));
-	cam_strvis(revision, inq_data->revision, sizeof(inq_data->revision),
-		   sizeof(revision));
-
-	printf("<%s %s %s>", vendor, product, revision);
+	sbuf_new(&sb, buffer, 84, SBUF_FIXEDLEN);
+	scsi_print_inquiry_short_sbuf(&sb, inq_data);
+	sbuf_finish(&sb);
+	sbuf_putbuf(&sb);
 }
 
 /*
@@ -8379,6 +8403,38 @@ scsi_ata_read_log(struct ccb_scsiio *csio, uint32_t retries,
 	return (retval);
 }
 
+int scsi_ata_setfeatures(struct ccb_scsiio *csio, uint32_t retries,
+			 void (*cbfcnp)(struct cam_periph *, union ccb *),
+			 uint8_t tag_action, uint8_t feature,
+			 uint64_t lba, uint32_t count,
+			 uint8_t sense_len, uint32_t timeout)
+{
+	return (scsi_ata_pass(csio,
+		retries,
+		cbfcnp,
+		/*flags*/CAM_DIR_NONE,
+		tag_action,
+		/*protocol*/AP_PROTO_PIO_IN,
+		/*ata_flags*/AP_FLAG_TDIR_FROM_DEV |
+			     AP_FLAG_BYT_BLOK_BYTES |
+			     AP_FLAG_TLEN_SECT_CNT,
+		/*features*/feature,
+		/*sector_count*/count,
+		/*lba*/lba,
+		/*command*/ATA_SETFEATURES,
+		/*device*/ 0,
+		/*icc*/ 0,
+		/*auxiliary*/0,
+		/*control*/0,
+		/*data_ptr*/NULL,
+		/*dxfer_len*/0,
+		/*cdb_storage*/NULL,
+		/*cdb_storage_len*/0,
+		/*minimum_cmd_size*/0,
+		sense_len,
+		timeout));
+}
+
 /*
  * Note! This is an unusual CDB building function because it can return
  * an error in the event that the command in question requires a variable
@@ -9101,7 +9157,7 @@ scsi_devid_match(uint8_t *lhs, size_t lhs_len, uint8_t *rhs, size_t rhs_len)
 	rhs_end = rhs + rhs_len;
 
 	/*
-	 * rhs_last and lhs_last are the last posible position of a valid
+	 * rhs_last and lhs_last are the last possible position of a valid
 	 * descriptor assuming it had a zero length identifier.  We use
 	 * these variables to insure we can safely dereference the length
 	 * field in our loop termination tests.

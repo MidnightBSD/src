@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -36,7 +38,7 @@
  *	...and...
  *	@(#)null_vnodeops.c 1.20 92/07/07 UCLA Ficus project
  *
- * $FreeBSD: stable/11/sys/fs/nullfs/null_vnops.c 344156 2019-02-15 11:28:32Z kib $
+ * $FreeBSD$
  */
 
 /*
@@ -337,15 +339,15 @@ null_add_writecount(struct vop_add_writecount_args *ap)
 
 	vp = ap->a_vp;
 	lvp = NULLVPTOLOWERVP(vp);
-	KASSERT(vp->v_writecount + ap->a_inc >= 0, ("wrong writecount inc"));
-	if (vp->v_writecount > 0 && vp->v_writecount + ap->a_inc == 0)
-		error = VOP_ADD_WRITECOUNT(lvp, -1);
-	else if (vp->v_writecount == 0 && vp->v_writecount + ap->a_inc > 0)
-		error = VOP_ADD_WRITECOUNT(lvp, 1);
-	else
-		error = 0;
+	VI_LOCK(vp);
+	/* text refs are bypassed to lowervp */
+	VNASSERT(vp->v_writecount >= 0, vp, ("wrong null writecount"));
+	VNASSERT(vp->v_writecount + ap->a_inc >= 0, vp,
+	    ("wrong writecount inc %d", ap->a_inc));
+	error = VOP_ADD_WRITECOUNT(lvp, ap->a_inc);
 	if (error == 0)
 		vp->v_writecount += ap->a_inc;
+	VI_UNLOCK(vp);
 	return (error);
 }
 
@@ -374,10 +376,21 @@ null_lookup(struct vop_lookup_args *ap)
 	 */
 	ldvp = NULLVPTOLOWERVP(dvp);
 	vp = lvp = NULL;
-	KASSERT((ldvp->v_vflag & VV_ROOT) == 0 ||
-	    ((dvp->v_vflag & VV_ROOT) != 0 && (flags & ISDOTDOT) == 0),
-	    ("ldvp %p fl %#x dvp %p fl %#x flags %#x", ldvp, ldvp->v_vflag,
-	     dvp, dvp->v_vflag, flags));
+
+	/*
+	 * Renames in the lower mounts might create an inconsistent
+	 * configuration where lower vnode is moved out of the
+	 * directory tree remounted by our null mount.  Do not try to
+	 * handle it fancy, just avoid VOP_LOOKUP() with DOTDOT name
+	 * which cannot be handled by VOP, at least passing over lower
+	 * root.
+	 */
+	if ((ldvp->v_vflag & VV_ROOT) != 0 && (flags & ISDOTDOT) != 0) {
+		KASSERT((dvp->v_vflag & VV_ROOT) == 0,
+		    ("ldvp %p fl %#x dvp %p fl %#x flags %#x",
+		    ldvp, ldvp->v_vflag, dvp, dvp->v_vflag, flags));
+		return (ENOENT);
+	}
 
 	/*
 	 * Hold ldvp.  The reference on it, owned by dvp, is lost in
@@ -649,7 +662,7 @@ null_lock(struct vop_lock1_args *ap)
 	nn = VTONULL(vp);
 	/*
 	 * If we're still active we must ask the lower layer to
-	 * lock as ffs has special lock considerations in it's
+	 * lock as ffs has special lock considerations in its
 	 * vop lock.
 	 */
 	if (nn != NULL && (lvp = NULLVPTOLOWERVP(vp)) != NULL) {
@@ -662,7 +675,7 @@ null_lock(struct vop_lock1_args *ap)
 		 * the lowervp's vop_lock routine.  When we vgone we will
 		 * drop our last ref to the lowervp, which would allow it
 		 * to be reclaimed.  The lowervp could then be recycled,
-		 * in which case it is not legal to be sleeping in it's VOP.
+		 * in which case it is not legal to be sleeping in its VOP.
 		 * We prevent it from being recycled by holding the vnode
 		 * here.
 		 */
@@ -800,15 +813,19 @@ null_reclaim(struct vop_reclaim_args *ap)
 	vp->v_data = NULL;
 	vp->v_object = NULL;
 	vp->v_vnlock = &vp->v_lock;
-	VI_UNLOCK(vp);
 
 	/*
-	 * If we were opened for write, we leased one write reference
+	 * If we were opened for write, we leased the write reference
 	 * to the lower vnode.  If this is a reclamation due to the
 	 * forced unmount, undo the reference now.
 	 */
 	if (vp->v_writecount > 0)
-		VOP_ADD_WRITECOUNT(lowervp, -1);
+		VOP_ADD_WRITECOUNT(lowervp, -vp->v_writecount);
+	else if (vp->v_writecount < 0)
+		vp->v_writecount = 0;
+
+	VI_UNLOCK(vp);
+
 	if ((xp->null_flags & NULLV_NOUNLOCK) != 0)
 		vunref(lowervp);
 	else

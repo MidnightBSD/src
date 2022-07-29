@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/tools/regression/p1003_1b/main.c 287297 2015-08-29 19:47:20Z rodrigc $ */
+/* $FreeBSD$ */
 
 #include <sys/param.h>
 

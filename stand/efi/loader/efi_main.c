@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/efi/loader/efi_main.c 346482 2019-04-21 04:26:02Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <efi.h>
 #include <eficonsctl.h>
@@ -103,7 +103,7 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 
 	/* Use efi_exit() from here on... */
 
-	status = BS->HandleProtocol(IH, &image_protocol, (VOID**)&img);
+	status = OpenProtocolByHandle(IH, &image_protocol, (void**)&img);
 	if (status != EFI_SUCCESS)
 		efi_exit(status);
 

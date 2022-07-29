@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tools/regression/nfsmmap/Makefile 228975 2011-12-30 00:04:11Z uqs $
+# $FreeBSD$
 
 SUBDIR= test1 test2
 

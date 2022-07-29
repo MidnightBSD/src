@@ -1,7 +1,9 @@
 /*-
- * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Roger Pau Monné <roger.pau@citrix.com>
  * All rights reserved.
+ * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/x86/xen/pvcpu_enum.c 340016 2018-11-01 18:34:26Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,6 +44,7 @@ __FBSDID("$FreeBSD: stable/11/sys/x86/xen/pvcpu_enum.c 340016 2018-11-01 18:34:2
 
 #include <machine/cpu.h>
 #include <machine/smp.h>
+#include <machine/md_var.h>
 
 #include <xen/xen-os.h>
 #include <xen/xen_intr.h>
@@ -65,11 +68,11 @@ static vm_paddr_t madt_physaddr;
 static vm_offset_t madt_length;
 
 static struct apic_enumerator xenpv_enumerator = {
-	"Xen PV",
-	xenpv_probe,
-	xenpv_probe_cpus,
-	xenpv_setup_local,
-	xenpv_setup_io
+	.apic_name = "Xen PV",
+	.apic_probe = xenpv_probe,
+	.apic_probe_cpus = xenpv_probe_cpus,
+	.apic_setup_local = xenpv_setup_local,
+	.apic_setup_io = xenpv_setup_io
 };
 
 /*--------------------- Helper functions to parse MADT -----------------------*/
@@ -151,11 +154,12 @@ xenpv_probe_cpus(void)
 #ifdef SMP
 	int i, ret;
 
-	for (i = 0; i < MAXCPU; i++) {
+	for (i = 0; i < MAXCPU && (i * 2) < MAX_APIC_ID; i++) {
 		ret = HYPERVISOR_vcpu_op(VCPUOP_is_up, i, NULL);
-		if (ret >= 0)
-			lapic_create((i * 2), (i == 0));
+		mp_ncpus = min(mp_ncpus + 1, MAXCPU);
 	}
+	mp_maxid = mp_ncpus - 1;
+	max_apic_id = mp_ncpus * 2;
 #endif
 	return (0);
 }
@@ -166,6 +170,16 @@ xenpv_probe_cpus(void)
 static int
 xenpv_setup_local(void)
 {
+#ifdef SMP
+	int i, ret;
+
+	for (i = 0; i < MAXCPU && (i * 2) < MAX_APIC_ID; i++) {
+		ret = HYPERVISOR_vcpu_op(VCPUOP_is_up, i, NULL);
+		if (ret >= 0)
+			lapic_create((i * 2), (i == 0));
+	}
+#endif
+
 	PCPU_SET(vcpu_id, 0);
 	lapic_init(0);
 	return (0);
@@ -248,19 +262,3 @@ xenpv_register(void *dummy __unused)
 	}
 }
 SYSINIT(xenpv_register, SI_SUB_TUNABLES - 1, SI_ORDER_FIRST, xenpv_register, NULL);
-
-/*
- * Setup per-CPU vCPU IDs
- */
-static void
-xenpv_set_ids(void *dummy)
-{
-	struct pcpu *pc;
-	int i;
-
-	CPU_FOREACH(i) {
-		pc = pcpu_find(i);
-		pc->pc_vcpu_id = i;
-	}
-}
-SYSINIT(xenpv_set_ids, SI_SUB_CPU, SI_ORDER_MIDDLE, xenpv_set_ids, NULL);

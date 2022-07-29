@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2005 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
  *
@@ -23,13 +25,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/msun/powerpc/fenv.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_FENV_H_
 #define	_FENV_H_
 
 #include <sys/_types.h>
+#include <machine/endian.h>
 
 #ifndef	__fenv_static
 #define	__fenv_static	static
@@ -87,8 +90,17 @@ extern const fenv_t	__fe_dfl_env;
 			 FE_OVERFLOW | FE_UNDERFLOW) >> _FPUSW_SHIFT)
 
 #ifndef _SOFT_FLOAT
-#define	__mffs(__env)	__asm __volatile("mffs %0" : "=f" (*(__env)))
-#define	__mtfsf(__env)	__asm __volatile("mtfsf 255,%0" : : "f" (__env))
+#ifdef __SPE__
+#define	__mffs(__env) \
+	__asm __volatile("mfspr %0, 512" : "=r" ((__env)->__bits.__reg))
+#define	__mtfsf(__env) \
+	__asm __volatile("mtspr 512,%0;isync" :: "r" ((__env).__bits.__reg))
+#else
+#define	__mffs(__env) \
+	__asm __volatile("mffs %0" : "=f" ((__env)->__d))
+#define	__mtfsf(__env) \
+	__asm __volatile("mtfsf 255,%0" :: "f" ((__env).__d))
+#endif
 #else
 #define	__mffs(__env)
 #define	__mtfsf(__env)
@@ -114,9 +126,9 @@ feclearexcept(int __excepts)
 
 	if (__excepts & FE_INVALID)
 		__excepts |= FE_ALL_INVALID;
-	__mffs(&__r.__d);
+	__mffs(&__r);
 	__r.__bits.__reg &= ~__excepts;
-	__mtfsf(__r.__d);
+	__mtfsf(__r);
 	return (0);
 }
 
@@ -125,7 +137,7 @@ fegetexceptflag(fexcept_t *__flagp, int __excepts)
 {
 	union __fpscr __r;
 
-	__mffs(&__r.__d);
+	__mffs(&__r);
 	*__flagp = __r.__bits.__reg & __excepts;
 	return (0);
 }
@@ -137,10 +149,10 @@ fesetexceptflag(const fexcept_t *__flagp, int __excepts)
 
 	if (__excepts & FE_INVALID)
 		__excepts |= FE_ALL_EXCEPT;
-	__mffs(&__r.__d);
+	__mffs(&__r);
 	__r.__bits.__reg &= ~__excepts;
 	__r.__bits.__reg |= *__flagp & __excepts;
-	__mtfsf(__r.__d);
+	__mtfsf(__r);
 	return (0);
 }
 
@@ -151,9 +163,9 @@ feraiseexcept(int __excepts)
 
 	if (__excepts & FE_INVALID)
 		__excepts |= FE_VXSOFT;
-	__mffs(&__r.__d);
+	__mffs(&__r);
 	__r.__bits.__reg |= __excepts;
-	__mtfsf(__r.__d);
+	__mtfsf(__r);
 	return (0);
 }
 
@@ -162,7 +174,7 @@ fetestexcept(int __excepts)
 {
 	union __fpscr __r;
 
-	__mffs(&__r.__d);
+	__mffs(&__r);
 	return (__r.__bits.__reg & __excepts);
 }
 
@@ -171,7 +183,7 @@ fegetround(void)
 {
 	union __fpscr __r;
 
-	__mffs(&__r.__d);
+	__mffs(&__r);
 	return (__r.__bits.__reg & _ROUND_MASK);
 }
 
@@ -182,10 +194,10 @@ fesetround(int __round)
 
 	if (__round & ~_ROUND_MASK)
 		return (-1);
-	__mffs(&__r.__d);
+	__mffs(&__r);
 	__r.__bits.__reg &= ~_ROUND_MASK;
 	__r.__bits.__reg |= __round;
-	__mtfsf(__r.__d);
+	__mtfsf(__r);
 	return (0);
 }
 
@@ -194,7 +206,7 @@ fegetenv(fenv_t *__envp)
 {
 	union __fpscr __r;
 
-	__mffs(&__r.__d);
+	__mffs(&__r);
 	*__envp = __r.__bits.__reg;
 	return (0);
 }
@@ -204,10 +216,10 @@ feholdexcept(fenv_t *__envp)
 {
 	union __fpscr __r;
 
-	__mffs(&__r.__d);
+	__mffs(&__r);
 	*__envp = __r.__d;
 	__r.__bits.__reg &= ~(FE_ALL_EXCEPT | _ENABLE_MASK);
-	__mtfsf(__r.__d);
+	__mtfsf(__r);
 	return (0);
 }
 
@@ -217,7 +229,7 @@ fesetenv(const fenv_t *__envp)
 	union __fpscr __r;
 
 	__r.__bits.__reg = *__envp;
-	__mtfsf(__r.__d);
+	__mtfsf(__r);
 	return (0);
 }
 
@@ -226,10 +238,10 @@ feupdateenv(const fenv_t *__envp)
 {
 	union __fpscr __r;
 
-	__mffs(&__r.__d);
+	__mffs(&__r);
 	__r.__bits.__reg &= FE_ALL_EXCEPT;
 	__r.__bits.__reg |= *__envp;
-	__mtfsf(__r.__d);
+	__mtfsf(__r);
 	return (0);
 }
 
@@ -243,10 +255,10 @@ feenableexcept(int __mask)
 	union __fpscr __r;
 	fenv_t __oldmask;
 
-	__mffs(&__r.__d);
+	__mffs(&__r);
 	__oldmask = __r.__bits.__reg;
 	__r.__bits.__reg |= (__mask & FE_ALL_EXCEPT) >> _FPUSW_SHIFT;
-	__mtfsf(__r.__d);
+	__mtfsf(__r);
 	return ((__oldmask & _ENABLE_MASK) << _FPUSW_SHIFT);
 }
 
@@ -256,10 +268,10 @@ fedisableexcept(int __mask)
 	union __fpscr __r;
 	fenv_t __oldmask;
 
-	__mffs(&__r.__d);
+	__mffs(&__r);
 	__oldmask = __r.__bits.__reg;
 	__r.__bits.__reg &= ~((__mask & FE_ALL_EXCEPT) >> _FPUSW_SHIFT);
-	__mtfsf(__r.__d);
+	__mtfsf(__r);
 	return ((__oldmask & _ENABLE_MASK) << _FPUSW_SHIFT);
 }
 
@@ -268,7 +280,7 @@ fegetexcept(void)
 {
 	union __fpscr __r;
 
-	__mffs(&__r.__d);
+	__mffs(&__r);
 	return ((__r.__bits.__reg & _ENABLE_MASK) << _FPUSW_SHIFT);
 }
 

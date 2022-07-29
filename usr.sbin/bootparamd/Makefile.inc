@@ -1,6 +1,7 @@
 #	@(#)Makefile.inc	5.1 (Berkeley) 5/11/90
-# $FreeBSD: stable/11/usr.sbin/bootparamd/Makefile.inc 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD$
 
 BINDIR?=	/usr/sbin
 
-WARNS?=		2
+NO_WCAST_ALIGN=
+CWARNFLAGS.clang+=	-Wno-incompatible-pointer-types-discards-qualifiers

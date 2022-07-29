@@ -2,6 +2,8 @@
 /* From: NetBSD: ffs_extern.h,v 1.19 2001/08/17 02:18:48 lukem Exp */
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -30,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_extern.h	8.6 (Berkeley) 3/30/95
- * $FreeBSD: stable/11/usr.sbin/makefs/ffs/ffs_extern.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include "ffs/buf.h"

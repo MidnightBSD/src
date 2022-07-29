@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/otusfw/otusfw_init/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 
 KMOD=	otusfw_init
 FIRMWS=	otusfw_init:otusfw_init:1

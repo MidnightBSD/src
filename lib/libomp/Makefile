@@ -1,3 +1,5 @@
+# $FreeBSD$
+
 .include <bsd.compiler.mk>
 
 SHLIB_NAME=	libomp.so
@@ -52,9 +54,9 @@ CFLAGS+=	-I${ITTSRC}
 CFLAGS+=	-ffunction-sections
 CFLAGS+=	-fdata-sections
 CXXFLAGS+=	-fvisibility-inlines-hidden
-CXXFLAGS+=	-std=c++11
 CXXFLAGS+=	-fno-exceptions
 CXXFLAGS+=	-fno-rtti
+CXXSTD=		c++11
 
 .if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 90000
 # When targeting i386, clang 9.0.0 produces a new warning about large atomic

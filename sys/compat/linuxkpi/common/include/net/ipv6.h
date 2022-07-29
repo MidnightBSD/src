@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/net/ipv6.h 331756 2018-03-30 02:04:46Z emaste $
+ * $FreeBSD$
  */
 #ifndef _LINUX_NET_IPV6_H_
 #define	_LINUX_NET_IPV6_H_

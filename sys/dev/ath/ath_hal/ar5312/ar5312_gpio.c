@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5312/ar5312_gpio.c 188974 2009-02-24 00:12:16Z sam $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -126,6 +128,5 @@ ar5312GpioSetIntr(struct ath_hal *ah, u_int gpio, uint32_t ilevel)
 	/* Change the interrupt mask. */
 	(void) ar5212SetInterrupts(ah, AH5212(ah)->ah_maskReg | HAL_INT_GPIO);
 }
-
 
 #endif /* AH_SUPPORT_AR5312 */

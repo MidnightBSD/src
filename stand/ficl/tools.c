@@ -54,7 +54,7 @@
 ** Specify breakpoint default action
 */
 
-/* $FreeBSD: stable/11/stand/ficl/tools.c 264262 2014-04-08 18:02:32Z emaste $ */
+/* $FreeBSD$ */
 
 #ifdef TESTMAIN
 #include <stdlib.h>

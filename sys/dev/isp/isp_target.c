@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  *  Copyright (c) 1997-2009 by Matthew Jacob
  *  All rights reserved.
  *
@@ -39,9 +41,9 @@
 #ifdef	__NetBSD__
 #include <dev/ic/isp_netbsd.h>
 #endif
-#ifdef	__MidnightBSD__
+#ifdef	__FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/isp/isp_target.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 #include <dev/isp/isp_freebsd.h>
 #endif
 #ifdef	__OpenBSD__

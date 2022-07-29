@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/i386/loader/chain.c 346476 2019-04-21 03:36:05Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 #include <sys/param.h>
@@ -42,6 +42,12 @@ __FBSDID("$FreeBSD: stable/11/stand/i386/loader/chain.c 346476 2019-04-21 03:36:
 #include "bootstrap.h"
 #include "libi386/libi386.h"
 #include "btxv86.h"
+
+#ifdef LOADER_VERIEXEC_VECTX
+#define VECTX_HANDLE(x) vctx
+#else
+#define VECTX_HANDLE(x) x
+#endif
 
 /*
  * The MBR/VBR is located in first sector of disk/partition.
@@ -59,6 +65,10 @@ command_chain(int argc, char *argv[])
 	struct stat st;
 	vm_offset_t mem = 0x100000;
 	struct i386_devdesc *rootdev;
+#ifdef LOADER_VERIEXEC_VECTX
+	struct vectx *vctx;
+	int verror;
+#endif
 
 	if (argc == 1) {
 		command_errmsg = "no device or file name specified";
@@ -75,6 +85,23 @@ command_chain(int argc, char *argv[])
 		return (CMD_ERROR);
 	}
 
+#ifdef LOADER_VERIEXEC_VECTX
+	vctx = vectx_open(fd, argv[1], 0L, NULL, &verror, __func__);
+	if (verror) {
+		sprintf(command_errbuf, "can't verify: %s", argv[1]);
+		close(fd);
+		free(vctx);
+		return (CMD_ERROR);
+	}
+#else
+#ifdef LOADER_VERIEXEC
+	if (verify_file(fd, argv[1], 0, VE_MUST, __func__) < 0) {
+		sprintf(command_errbuf, "can't verify: %s", argv[1]);
+		close(fd);
+		return (CMD_ERROR);
+	}
+#endif
+#endif
 	len = strlen(argv[1]);
 	if (argv[1][len-1] != ':') {
 		if (fstat(fd, &st) == -1) {
@@ -96,13 +123,19 @@ command_chain(int argc, char *argv[])
 		return (CMD_ERROR);
 	}
 
-	if (archsw.arch_readin(fd, mem, size) != size) {
+	if (archsw.arch_readin(VECTX_HANDLE(fd), mem, size) != size) {
 		command_errmsg = "failed to read disk";
 		close(fd);
 		return (CMD_ERROR);
 	}
 	close(fd);
-
+#ifdef LOADER_VERIEXEC_VECTX
+	verror = vectx_close(vctx, VE_MUST, __func__);
+	if (verror) {
+		free(vctx);
+		return (CMD_ERROR);
+	}
+#endif
 	if (argv[1][len-1] == ':' &&
 	    *((uint16_t *)PTOV(mem + DOSMAGICOFFSET)) != DOSMAGIC) {
 		command_errmsg = "wrong magic";

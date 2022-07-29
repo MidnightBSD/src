@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 Mike Barcroft <mike@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/lldiv.c 301459 2016-06-05 18:11:52Z ache $");
+__FBSDID("$FreeBSD$");
 
 #include <stdlib.h>
 

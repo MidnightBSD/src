@@ -1,8 +1,9 @@
 #	@(#)Makefile	8.2 (Berkeley) 3/17/94
-# $FreeBSD: stable/11/sbin/bsdlabel/Makefile 319185 2017-05-30 04:17:22Z ngie $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/geom
 
+CONFS=	disktab
 PACKAGE=runtime
 PROG=	bsdlabel
 SRCS=	bsdlabel.c geom_bsd_enc.c

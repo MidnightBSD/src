@@ -29,7 +29,7 @@
 #include "opt_inet6.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netpfil/ipfw/pmod/tcpmod.c 337902 2018-08-16 09:42:09Z ae $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -56,7 +56,7 @@ __FBSDID("$FreeBSD: stable/11/sys/netpfil/ipfw/pmod/tcpmod.c 337902 2018-08-16 0
 
 #include <machine/in_cksum.h>
 
-static VNET_DEFINE(uint16_t, tcpmod_setmss_eid) = 0;
+VNET_DEFINE_STATIC(uint16_t, tcpmod_setmss_eid) = 0;
 #define	V_tcpmod_setmss_eid	VNET(tcpmod_setmss_eid)
 
 static int

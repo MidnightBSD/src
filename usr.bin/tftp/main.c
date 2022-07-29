@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -40,7 +42,7 @@ static char sccsid[] = "@(#)main.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/tftp/main.c 345389 2019-03-21 21:45:18Z asomers $");
+__FBSDID("$FreeBSD$");
 
 /* Many bug fixes are from Jim Guyton <guyton@rand-unix> */
 
@@ -64,6 +66,7 @@ __FBSDID("$FreeBSD: stable/11/usr.bin/tftp/main.c 345389 2019-03-21 21:45:18Z as
 #include <netdb.h>
 #include <setjmp.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -111,8 +114,9 @@ static void	setblocksize2(int, char **);
 static void	setoptions(int, char **);
 static void	setrollover(int, char **);
 static void	setpacketdrop(int, char **);
+static void	setwindowsize(int, char **);
 
-static void command(void) __dead2;
+static void command(bool, EditLine *, History *, HistEvent *) __dead2;
 static const char *command_prompt(void);
 
 static void urihandling(char *URI);
@@ -155,6 +159,7 @@ static struct cmd cmdtab[] = {
 	  "enable or disable RFC2347 style options" },
 	{ "help",	help,		"print help information"	},
 	{ "packetdrop",	setpacketdrop,	"artificial packetloss feature"	},
+	{ "windowsize",	setwindowsize,	"set windowsize[*]"		},
 	{ "?",		help,		"print help information"	},
 	{ NULL,		NULL,		NULL				}
 };
@@ -174,11 +179,28 @@ static struct	modes {
 int
 main(int argc, char *argv[])
 {
+	HistEvent he;
+	static EditLine *el;
+	static History *hist;
+	bool interactive;
 
 	acting_as_client = 1;
 	peer = -1;
-	strcpy(mode, "netascii");
+	strcpy(mode, "octet");
 	signal(SIGINT, intr);
+
+	interactive = isatty(STDIN_FILENO);
+	if (interactive) {
+		el = el_init("tftp", stdin, stdout, stderr);
+		hist = history_init();
+		history(hist, &he, H_SETSIZE, 100);
+		el_set(el, EL_HIST, history, hist);
+		el_set(el, EL_EDITOR, "emacs");
+		el_set(el, EL_PROMPT, command_prompt);
+		el_set(el, EL_SIGNAL, 1);
+		el_source(el, NULL);
+	}
+
 	if (argc > 1) {
 		if (setjmp(toplevel) != 0)
 			exit(txrx_error);
@@ -190,11 +212,15 @@ main(int argc, char *argv[])
 
 		setpeer(argc, argv);
 	}
-	if (setjmp(toplevel) != 0)
+
+	if (setjmp(toplevel) != 0) {
+		if (interactive)
+			el_reset(el);
 		(void)putchar('\n');
+	}
 
 	init_options();
-	command();
+	command(interactive, el, hist, &he);
 }
 
 /*
@@ -451,7 +477,7 @@ put(int argc, char *argv[])
 			lcp[strlen(lcp) - 1] = '\0';
 			lcp++;
 		}
-		setpeer0(lcp, NULL);		
+		setpeer0(lcp, NULL);
 	}
 	if (!connected) {
 		printf("No target machine specified.\n");
@@ -467,6 +493,7 @@ put(int argc, char *argv[])
 
 		if (fstat(fd, &sb) < 0) {
 			warn("%s", cp);
+			close(fd);
 			return;
 		}
 		asprintf(&options[OPT_TSIZE].o_request, "%ju", sb.st_size);
@@ -708,36 +735,22 @@ command_prompt(void)
  * Command parser.
  */
 static void
-command(void)
+command(bool interactive, EditLine *el, History *hist, HistEvent *hep)
 {
-	HistEvent he;
 	struct cmd *c;
-	static EditLine *el;
-	static History *hist;
 	const char *bp;
 	char *cp;
-	int len, num, vrbose;
+	int len, num;
 	char	line[MAXLINE];
 
-	vrbose = isatty(0);
-	if (vrbose) {
-		el = el_init("tftp", stdin, stdout, stderr);
-		hist = history_init();
-		history(hist, &he, H_SETSIZE, 100);
-		el_set(el, EL_HIST, history, hist);
-		el_set(el, EL_EDITOR, "emacs");
-		el_set(el, EL_PROMPT, command_prompt);
-		el_set(el, EL_SIGNAL, 1);
-		el_source(el, NULL);
-	}
 	for (;;) {
-		if (vrbose) {
-                        if ((bp = el_gets(el, &num)) == NULL || num == 0)
-                                exit(0);
-                        len = MIN(MAXLINE, num);
-                        memcpy(line, bp, len);
-                        line[len] = '\0';
-                        history(hist, &he, H_ENTER, bp);
+		if (interactive) {
+			if ((bp = el_gets(el, &num)) == NULL || num == 0)
+				exit(0);
+			len = MIN(MAXLINE, num);
+			memcpy(line, bp, len);
+			line[len - 1] = '\0';
+			history(hist, hep, H_ENTER, bp);
 		} else {
 			line[0] = 0;
 			if (fgets(line, sizeof line , stdin) == NULL) {
@@ -1057,4 +1070,28 @@ setpacketdrop(int argc, char *argv[])
 
 	printf("Randomly %d in 100 packets will be dropped\n",
 	    packetdroppercentage);
+}
+
+static void
+setwindowsize(int argc, char *argv[])
+{
+
+	if (!options_rfc_enabled)
+		printf("RFC2347 style options are not enabled "
+		    "(but proceeding anyway)\n");
+
+	if (argc != 1) {
+		int size = atoi(argv[1]);
+
+		if (size < WINDOWSIZE_MIN || size > WINDOWSIZE_MAX) {
+			printf("Windowsize should be between %d and %d "
+			    "blocks.\n", WINDOWSIZE_MIN, WINDOWSIZE_MAX);
+			return;
+		} else {
+			asprintf(&options[OPT_WINDOWSIZE].o_request, "%d",
+			    size);
+		}
+	}
+	printf("Windowsize is now %s blocks.\n",
+	    options[OPT_WINDOWSIZE].o_request);
 }

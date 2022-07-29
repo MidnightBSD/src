@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/kern/device_if.m 300113 2016-05-18 04:35:58Z scottl $
+# $FreeBSD$
 #
 
 #include <sys/bus.h>
@@ -38,6 +38,11 @@
  * @{
  */
 INTERFACE device;
+
+# Needed for timestamping device probe/attach calls
+HEADER {
+	#include <sys/tslog.h>
+}
 
 #
 # Default implementations of some methods.
@@ -142,6 +147,12 @@ CODE {
  *			be returned to indicate the type of error
  * @see DEVICE_ATTACH(), pci_get_vendor(), pci_get_device()
  */
+PROLOG {
+	TSENTER2(device_get_name(dev));
+}
+EPILOG {
+	TSEXIT2(device_get_name(dev));
+}
 METHOD int probe {
 	device_t dev;
 };
@@ -199,6 +210,12 @@ STATICMETHOD void identify {
  *			be returned to indicate the type of error
  * @see DEVICE_PROBE()
  */
+PROLOG {
+	TSENTER2(device_get_name(dev));
+}
+EPILOG {
+	TSEXIT2(device_get_name(dev));
+}
 METHOD int attach {
 	device_t dev;
 };

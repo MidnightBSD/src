@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 2013 Emulex
  * All rights reserved.
  *
@@ -36,7 +38,7 @@
  * Costa Mesa, CA 92626
  */
 
-/* $FreeBSD: stable/11/sys/dev/oce/oce_queue.c 338938 2018-09-25 23:48:43Z jpaetzel $ */
+/* $FreeBSD$ */
 
 #include "oce_if.h"
 

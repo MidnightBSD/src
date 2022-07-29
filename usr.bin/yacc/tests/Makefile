@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/yacc/tests/Makefile 319349 2017-05-31 19:16:22Z jkim $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 

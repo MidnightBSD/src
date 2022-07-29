@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,7 +34,7 @@
 static char sccsid[] = "@(#)itime.c	8.1 (Berkeley) 6/5/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/11/sbin/dump/itime.c 331722 2018-03-29 02:50:57Z eadler $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -58,8 +60,10 @@ struct dumptime {
 	SLIST_ENTRY(dumptime) dt_list;
 };
 SLIST_HEAD(dthead, dumptime) dthead = SLIST_HEAD_INITIALIZER(dthead);
-struct	dumpdates **ddatev = NULL;
-int	nddates = 0;
+int	nddates = 0;		/* number of records (might be zero) */
+struct	dumpdates **ddatev;	/* the arrayfied version */
+char	*dumpdates;		/* name of the file containing dump date info */
+int	lastlevel;		/* dump level of previous dump */
 
 static	void dumprecout(FILE *, const struct dumpdates *);
 static	int getrecord(FILE *, struct dumpdates *);

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/rpc.ypxfrd/Makefile 319191 2017-05-30 05:15:09Z ngie $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/usr.sbin/ypserv
 

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/11/bin/pkill/tests/pgrep-n_test.sh 263351 2014-03-19 12:46:04Z jmmv $
+# $FreeBSD$
 
 base=`basename $0`
 

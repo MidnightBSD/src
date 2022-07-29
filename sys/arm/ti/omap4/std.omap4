@@ -1,6 +1,8 @@
 # Omap4430 generic configuration
-#$FreeBSD: stable/11/sys/arm/ti/omap4/std.omap4 327658 2018-01-07 00:04:13Z ian $
+#$FreeBSD$
 files		"../ti/omap4/files.omap4"
 include		"../ti/std.ti"
+
+cpu 		CPU_CORTEXA
 
 options		SOC_OMAP4

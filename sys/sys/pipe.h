@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996 John S. Dyson
  * All rights reserved.
@@ -19,14 +18,14 @@
  * 5. Modifications may be freely made to this file if the above conditions
  *    are met.
  *
- * $FreeBSD: stable/11/sys/sys/pipe.h 265206 2014-05-02 00:52:13Z mjg $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_PIPE_H_
 #define _SYS_PIPE_H_
 
 #ifndef _KERNEL
-#error "no user-servicable parts inside"
+#error "no user-serviceable parts inside"
 #endif
 
 /*
@@ -104,7 +103,7 @@ struct pipemapping {
  */
 struct pipe {
 	struct	pipebuf pipe_buffer;	/* data storage */
-	struct	pipemapping pipe_map;	/* pipe mapping for direct I/O */
+	struct	pipemapping pipe_pages;	/* wired pages for direct I/O */
 	struct	selinfo pipe_sel;	/* for compat with select */
 	struct	timespec pipe_atime;	/* time of last access */
 	struct	timespec pipe_mtime;	/* time of last modify */
@@ -143,6 +142,6 @@ struct pipepair {
 #define PIPE_LOCK_ASSERT(pipe, type)  mtx_assert(PIPE_MTX(pipe), (type))
 
 void	pipe_dtor(struct pipe *dpipe);
-void	pipe_named_ctor(struct pipe **ppipe, struct thread *td);
+int	pipe_named_ctor(struct pipe **ppipe, struct thread *td);
 void	pipeselwakeup(struct pipe *cpipe);
 #endif /* !_SYS_PIPE_H_ */

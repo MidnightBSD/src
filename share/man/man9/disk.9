@@ -25,9 +25,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man9/disk.9 256884 2013-10-22 10:21:20Z mav $
+.\" $FreeBSD$
 .\"
-.Dd October 30, 2012
+.Dd April 30, 2020
 .Dt DISK 9
 .Os
 .Sh NAME
@@ -45,6 +45,8 @@
 .Fn disk_destroy "struct disk *disk"
 .Ft int
 .Fn disk_resize "struct disk *disk" "int flags"
+.Ft void
+.Fn disk_add_alias "struct disk *disk" "const char *alias"
 .Sh DESCRIPTION
 The disk storage API permits kernel device drivers providing access to
 disk-like storage devices to advertise the device to other kernel
@@ -69,6 +71,20 @@ function,
 fill in the fields and call
 .Fn disk_create
 when the device is ready to service requests.
+.Fn disk_add_alias
+adds an alias for the disk and must be called before
+.Fn disk_create ,
+but may be called multiple times.
+For each alias added, a device node will be created with
+.Xr make_dev_alias 9
+in the same way primary device nodes are created with
+.Xr make_dev 9
+for
+.Va d_name
+and
+.Va d_unit .
+Care should be taken to ensure that only one driver creates aliases
+for any given name.
 .Fn disk_resize
 can be called by the driver after modifying
 .Va d_mediasize
@@ -156,9 +172,11 @@ kernel panic to record a copy of the system RAM to the disk.
 Optional: if this method is provided, it gives the disk driver the
 opportunity to override the default GEOM response to BIO_GETATTR requests.
 This function should return -1 if the attribute is not handled, 0 if the
-attribute is handled, or an errno to be passed to g_io_deliver().
+attribute is handled, or an errno to be passed to
+.Fn g_io_deliver .
 .It Vt "disk_gone_t *" Va d_gone
-Optional: if this method is provided, it will be called after disk_gone()
+Optional: if this method is provided, it will be called after
+.Fn disk_gone
 is called, once GEOM has finished its cleanup process.
 Once this callback is called, it is safe for the disk driver to free all of
 its resources, as it will not be receiving further calls from GEOM.
@@ -228,6 +246,16 @@ structure for this disk device.
 .Sh SEE ALSO
 .Xr GEOM 4 ,
 .Xr devfs 5
+.Sh HISTORY
+The
+.Nm kernel disk storage API
+first appeard in
+.Fx 4.9 .
 .Sh AUTHORS
 This manual page was written by
 .An Robert Watson .
+.Sh BUGS
+Disk aliases are not a general purpose aliasing mechanism, but are
+intended only to ease the transition from one name to another.
+They can be used to ensure that nvd0 and nda0 are the same thing.
+They cannot be used to implement the diskX concept from macOS.

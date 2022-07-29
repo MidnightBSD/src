@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1999 Marcel Moolenaar
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD$
  */
 
 #ifndef _SYS_ASSYM_H_
@@ -40,5 +42,18 @@ char name ## w0[(ASSYM_ABS(value) & 0xFFFFU) + ASSYM_BIAS];		      \
 char name ## w1[((ASSYM_ABS(value) & 0xFFFF0000UL) >> 16) + ASSYM_BIAS];      \
 char name ## w2[((ASSYM_ABS(value) & 0xFFFF00000000ULL) >> 32) + ASSYM_BIAS]; \
 char name ## w3[((ASSYM_ABS(value) & 0xFFFF000000000000ULL) >> 48) + ASSYM_BIAS]
+
+
+/* char name ## _datatype_ ## STRINGIFY(typeof(((struct parenttype *)(0x0))-> name)) [1]; */
+#ifdef OFFSET_TEST
+#define OFFSET_CTASSERT CTASSERT
+#else
+#define OFFSET_CTASSERT(...)
+#endif
+
+#define OFFSYM(name, parenttype, datatype)				\
+char __assym_offset__ ## parenttype ## __ ## name ## __ ## datatype [offsetof(struct parenttype, name)]; \
+CTASSERT(__builtin_types_compatible_p(__typeof(((struct parenttype *)(0x0))-> name), datatype)); \
+OFFSET_CTASSERT(offsetof(struct parenttype, name) == offsetof(struct parenttype ## _lite, name))
 
 #endif /* !_SYS_ASSYM_H_ */

@@ -38,7 +38,7 @@ SOFTWARE.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/libexec/bootpd/bootpd.c 342229 2018-12-19 18:19:15Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -71,14 +71,6 @@ __FBSDID("$FreeBSD: stable/11/libexec/bootpd/bootpd.c 342229 2018-12-19 18:19:15
 
 #ifdef	NO_SETSID
 # include <fcntl.h>		/* for O_RDONLY, etc */
-#endif
-
-#ifndef	USE_BFUNCS
-# include <memory.h>
-/* Yes, memcpy is OK here (no overlapped copies). */
-# define bcopy(a,b,c)    memcpy(b,a,c)
-# define bzero(p,l)      memset(p,0,l)
-# define bcmp(a,b,c)     memcmp(a,b,c)
 #endif
 
 #include "bootp.h"
@@ -143,6 +135,7 @@ struct timeval actualtimeout =
 	15 * 60L,					/* tv_sec */
 	0							/* tv_usec */
 };
+int arpmod = TRUE;				/* modify the ARP table */
 
 /*
  * General
@@ -266,6 +259,9 @@ main(argc, argv)
 			break;
 		switch (argv[0][1]) {
 
+		case 'a':				/* don't modify the ARP table */
+			arpmod = FALSE;
+			break;
 		case 'c':				/* chdir_path */
 			if (argv[0][2]) {
 				stmp = &(argv[0][2]);
@@ -583,8 +579,9 @@ PRIVATE void
 usage()
 {
 	fprintf(stderr,
-			"usage:  bootpd [-i | -s] [-c chdir-path] [-d level] [-h hostname] [-t timeout]\n");
-	fprintf(stderr, "               [bootptab [dumpfile]]\n");
+		"usage: bootpd [-a] [-i | -s] [-c chdir-path] [-d level] [-h hostname]\n"
+		"              [-t timeout] [bootptab [dumpfile]]\n");
+	fprintf(stderr, "\t -a\tdon't modify ARP table\n");
 	fprintf(stderr, "\t -c n\tset current directory\n");
 	fprintf(stderr, "\t -d n\tset debug level\n");
 	fprintf(stderr, "\t -h n\tset the hostname to listen on\n");
@@ -1067,10 +1064,12 @@ sendreply(forward, dst_override)
 		if (haf == 0)
 			haf = HTYPE_ETHERNET;
 
-		if (debug > 1)
-			report(LOG_INFO, "setarp %s - %s",
-				   inet_ntoa(dst), haddrtoa(ha, len));
-		setarp(s, &dst, haf, ha, len);
+		if (arpmod) {
+			if (debug > 1)
+				report(LOG_INFO, "setarp %s - %s",
+					   inet_ntoa(dst), haddrtoa(ha, len));
+			setarp(s, &dst, haf, ha, len);
+		}
 	}
 
 	if ((forward == 0) &&

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/include/cpu-v4.h 328966 2018-02-07 06:27:29Z mmel $
+ * $FreeBSD$
  */
 #ifndef MACHINE_CPU_V4_H
 #define MACHINE_CPU_V4_H

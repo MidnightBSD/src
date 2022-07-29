@@ -1,7 +1,7 @@
 /*
  * Fêtes à souhaiter
  *
- * $FreeBSD: stable/11/usr.bin/calendar/calendars/fr_FR.ISO8859-1/calendar.fetes 212163 2010-09-02 21:48:35Z edwin $
+ * $FreeBSD$
  */
 
 #ifndef _fr_FR_ISO8859_1_fetes_

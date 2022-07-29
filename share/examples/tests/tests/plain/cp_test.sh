@@ -1,5 +1,5 @@
 #! /bin/sh
-# $FreeBSD: stable/11/share/examples/tests/tests/plain/cp_test.sh 299094 2016-05-04 23:20:53Z ngie $
+# $FreeBSD$
 #
 # Copyright 2013 Google Inc.
 # All rights reserved.

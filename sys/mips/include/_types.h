@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2002 Mike Barcroft <mike@FreeBSD.org>
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +36,7 @@
  *	From: @(#)ansi.h	8.2 (Berkeley) 1/4/94
  *	From: @(#)types.h	8.3 (Berkeley) 1/5/94
  *	from: src/sys/i386/include/_types.h,v 1.12 2005/07/02 23:13:31 thompsa
- * $FreeBSD: stable/11/sys/mips/include/_types.h 332135 2018-04-06 19:17:59Z kevans $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE__TYPES_H_
@@ -149,19 +151,5 @@ typedef	int		___wchar_t;
 
 #define	__WCHAR_MIN	__INT_MIN	/* min value for a wchar_t */
 #define	__WCHAR_MAX	__INT_MAX	/* max value for a wchar_t */
-
-/*
- * Unusual type definitions.
- */
-#ifdef __GNUCLIKE_BUILTIN_VARARGS
-typedef __builtin_va_list	__va_list;	/* internally known to gcc */
-#else
-typedef	char *			__va_list;
-#endif /* __GNUCLIKE_BUILTIN_VARARGS */
-#if defined(__GNUC_VA_LIST_COMPATIBILITY) && !defined(__GNUC_VA_LIST) \
-    && !defined(__NO_GNUC_VA_LIST)
-#define	__GNUC_VA_LIST
-typedef __va_list		__gnuc_va_list;	/* compatibility w/GNU headers*/
-#endif
 
 #endif /* !_MACHINE__TYPES_H_ */

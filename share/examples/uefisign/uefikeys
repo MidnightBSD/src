@@ -2,7 +2,7 @@
 #
 # See uefisign(8) manual page for usage instructions.
 #
-# $FreeBSD: stable/11/share/examples/uefisign/uefikeys 279321 2015-02-26 14:22:27Z trasz $
+# $FreeBSD$
 #
 
 die() {

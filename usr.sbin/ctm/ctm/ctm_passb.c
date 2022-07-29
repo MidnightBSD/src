@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: Beerware
+ *
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <koshy@india.hp.com> wrote this file.  As long as you retain this notice you
@@ -6,7 +8,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Joseph Koshy
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: stable/11/usr.sbin/ctm/ctm/ctm_passb.c 76300 2001-05-06 03:03:45Z kris $
+ * $FreeBSD$
  *
  */
 

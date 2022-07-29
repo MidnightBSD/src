@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Matthew Jacob
  * Copyright (c) 2010 Spectra Logic Corporation
  * All rights reserved.
@@ -32,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cam/scsi/scsi_enc_ses.c 352299 2019-09-13 15:49:02Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -1795,7 +1797,7 @@ ses_process_elm_addlstatus(enc_softc_t *enc, struct enc_fsm_state *state,
 			ses_elem_index_type_t index_type;
 
 			eip_hdr = (struct ses_elm_addlstatus_eip_hdr *)elm_hdr;
-			if (eip_hdr->byte2 & SES_ADDL_EIP_EIIOE) {
+			if (SES_ADDL_EIP_EIIOE_EI_GLOB(eip_hdr->byte2)) {
 				index_type = SES_ELEM_INDEX_GLOBAL;
 				expected_index = iter.global_element_index;
 			} else {
@@ -1805,8 +1807,8 @@ ses_process_elm_addlstatus(enc_softc_t *enc, struct enc_fsm_state *state,
 			if (eip_hdr->element_index < expected_index) {
 				ENC_VLOG(enc, "%s: provided %selement index "
 				    "%d is lower then expected %d\n",
-				    __func__, (eip_hdr->byte2 &
-				    SES_ADDL_EIP_EIIOE) ? "global " : "",
+				    __func__, SES_ADDL_EIP_EIIOE_EI_GLOB(
+				    eip_hdr->byte2) ? "global " : "",
 				    eip_hdr->element_index, expected_index);
 				goto badindex;
 			}
@@ -1816,7 +1818,7 @@ ses_process_elm_addlstatus(enc_softc_t *enc, struct enc_fsm_state *state,
 			if (telement == NULL) {
 				ENC_VLOG(enc, "%s: provided %selement index "
 				    "%d does not exist\n", __func__,
-				    (eip_hdr->byte2 & SES_ADDL_EIP_EIIOE) ?
+				    SES_ADDL_EIP_EIIOE_EI_GLOB(eip_hdr->byte2) ?
 				    "global " : "", eip_hdr->element_index);
 				goto badindex;
 			}
@@ -1825,7 +1827,7 @@ ses_process_elm_addlstatus(enc_softc_t *enc, struct enc_fsm_state *state,
 				ENC_VLOG(enc, "%s: provided %selement index "
 				    "%d can't have additional status\n",
 				    __func__,
-				    (eip_hdr->byte2 & SES_ADDL_EIP_EIIOE) ?
+				    SES_ADDL_EIP_EIIOE_EI_GLOB(eip_hdr->byte2) ?
 				    "global " : "", eip_hdr->element_index);
 badindex:
 				/*
@@ -1841,7 +1843,7 @@ badindex:
 				element = telement;
 			}
 
-			if (eip_hdr->byte2 & SES_ADDL_EIP_EIIOE)
+			if (SES_ADDL_EIP_EIIOE_EI_GLOB(eip_hdr->byte2))
 				index = iter.global_element_index;
 			else
 				index = iter.individual_element_index;
@@ -1850,8 +1852,8 @@ badindex:
 				ENC_VLOG(enc, "%s: provided %s element"
 					"index %d skips mandatory status "
 					" element at index %d\n",
-					__func__, (eip_hdr->byte2 &
-					SES_ADDL_EIP_EIIOE) ? "global " : "",
+					__func__, SES_ADDL_EIP_EIIOE_EI_GLOB(
+					eip_hdr->byte2) ? "global " : "",
 					index, expected_index);
 			}
 		}
@@ -2902,13 +2904,19 @@ ses_handle_string(enc_softc_t *enc, encioc_string_t *sstr, int ioc)
 		buf[1] = 0;
 		buf[2] = sstr->bufsiz >> 8;
 		buf[3] = sstr->bufsiz & 0xff;
-		memcpy(&buf[4], sstr->buf, sstr->bufsiz);
+		ret = copyin(sstr->buf, &buf[4], sstr->bufsiz);
+		if (ret != 0) {
+			ENC_FREE(buf);
+			return (ret);
+		}
 		break;
 	case ENCIOC_GETSTRING:
 		payload = sstr->bufsiz;
 		amt = payload;
+		buf = ENC_MALLOC(payload);
+		if (buf == NULL)
+			return (ENOMEM);
 		ses_page_cdb(cdb, payload, SesStringIn, CAM_DIR_IN);
-		buf = sstr->buf;
 		break;
 	case ENCIOC_GETENCNAME:
 		if (ses_cache->ses_nsubencs < 1)
@@ -2948,7 +2956,9 @@ ses_handle_string(enc_softc_t *enc, encioc_string_t *sstr, int ioc)
 		return (EINVAL);
 	}
 	ret = enc_runcmd(enc, cdb, 6, buf, &amt);
-	if (ioc == ENCIOC_SETSTRING)
+	if (ret == 0 && ioc == ENCIOC_GETSTRING)
+		ret = copyout(buf, sstr->buf, sstr->bufsiz);
+	if (ioc == ENCIOC_SETSTRING || ioc == ENCIOC_GETSTRING)
 		ENC_FREE(buf);
 	return (ret);
 }

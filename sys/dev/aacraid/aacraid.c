@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
  * Copyright (c) 2000 BSDi
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/aacraid/aacraid.c 354965 2019-11-21 14:55:27Z emaste $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for the Adaptec by PMC Series 6,7,8,... families of RAID controllers
@@ -37,7 +39,6 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/aacraid/aacraid.c 354965 2019-11-21 14:55:
 #define AAC_DRIVERNAME			"aacraid"
 
 #include "opt_aacraid.h"
-#include "opt_compat.h"
 
 /* #include <stddef.h> */
 #include <sys/param.h>
@@ -59,7 +60,6 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/aacraid/aacraid.c 354965 2019-11-21 14:55:
 #include <sys/rman.h>
 
 #include <machine/bus.h>
-#include <sys/bus_dma.h>
 #include <machine/resource.h>
 
 #include <dev/pci/pcireg.h>

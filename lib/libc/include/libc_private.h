@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1998 John Birrell <jb@cimlogic.com.au>.
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libc/include/libc_private.h 349688 2019-07-03 19:42:36Z kib $
+ * $FreeBSD$
  *
  * Private definitions for libc, libc_r and libpthread.
  *
@@ -175,6 +177,7 @@ typedef enum {
 	PJT_MUTEXATTR_GETROBUST,
 	PJT_MUTEXATTR_SETROBUST,
 	PJT_GETTHREADID_NP,
+	PJT_ATTR_GET_NP,
 	PJT_MAX
 } pjt_index_t;
 
@@ -235,6 +238,7 @@ enum {
 	INTERPOS_fdatasync,
 	INTERPOS_clock_nanosleep,
 	INTERPOS_distribute_static_tls,
+	INTERPOS_pdfork,
 	INTERPOS_MAX
 };
 
@@ -312,6 +316,8 @@ struct pollfd;
 struct rusage;
 struct sigaction;
 struct sockaddr;
+struct stat;
+struct statfs;
 struct timespec;
 struct timeval;
 struct timezone;
@@ -330,9 +336,14 @@ int		__sys_close(int);
 int		__sys_connect(int, const struct sockaddr *, __socklen_t);
 int		__sys_fcntl(int, int, ...);
 int		__sys_fdatasync(int);
+int		__sys_fstat(int fd, struct stat *);
+int		__sys_fstatfs(int fd, struct statfs *);
+int		__sys_fstatat(int, const char *, struct stat *, int);
 int		__sys_fsync(int);
 __pid_t		__sys_fork(void);
 int		__sys_ftruncate(int, __off_t);
+__ssize_t	__sys_getdirentries(int, char *, __size_t, __off_t *);
+int		__sys_getfsstat(struct statfs *, long, int);
 int		__sys_gettimeofday(struct timeval *, struct timezone *);
 int		__sys_kevent(int, const struct kevent *, int, struct kevent *,
 		    int, const struct timespec *);
@@ -342,6 +353,7 @@ int		__sys_msync(void *, __size_t, int);
 int		__sys_nanosleep(const struct timespec *, struct timespec *);
 int		__sys_open(const char *, int, ...);
 int		__sys_openat(int, const char *, int, ...);
+int		__sys_pdfork(int *, int);
 int		__sys_pselect(int, struct fd_set *, struct fd_set *,
 		    struct fd_set *, const struct timespec *,
 		    const __sigset_t *);
@@ -371,6 +383,7 @@ int		__sys_sigtimedwait(const __sigset_t *, struct __siginfo *,
 		    const struct timespec *);
 int		__sys_sigwait(const __sigset_t *, int *);
 int		__sys_sigwaitinfo(const __sigset_t *, struct __siginfo *);
+int		__sys_statfs(const char *, struct statfs *);
 int		__sys_swapcontext(struct __ucontext *,
 		    const struct __ucontext *);
 int		__sys_thr_kill(long, int);
@@ -417,5 +430,10 @@ void	___pthread_cleanup_push_imp(void (*)(void *), void *,
 void	___pthread_cleanup_pop_imp(int);
 
 void __throw_constraint_handler_s(const char * restrict msg, int error);
+
+struct __nl_cat_d;
+struct _xlocale;
+struct __nl_cat_d *__catopen_l(const char *name, int type,
+	    struct _xlocale *locale);
 
 #endif /* _LIBC_PRIVATE_H_ */

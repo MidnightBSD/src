@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/mips/conf/DIR-825B1.hints 280319 2015-03-21 06:18:25Z adrian $
+# $FreeBSD$
 
 # arge0 is connected to the LAN side of the switch PHY.
 # arge1 is connected to the single port WAN side of the switch PHY.

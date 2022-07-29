@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -40,11 +42,12 @@ static char sccsid[] = "@(#)calendar.c	8.3 (Berkeley) 3/25/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/calendar/calendar.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <errno.h>
 #include <locale.h>
+#include <langinfo.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,6 +67,9 @@ static char	*DEBUG = NULL;
 static time_t	f_time = 0;
 double		UTCOffset = UTCOFFSET_NOTSET;
 int		EastLongitude = LONGITUDE_NOTSET;
+#ifdef WITH_ICONV
+const char	*outputEncoding;
+#endif
 
 static void	usage(void) __dead2;
 
@@ -78,6 +84,12 @@ main(int argc, char *argv[])
 	struct tm tp1, tp2;
 
 	(void)setlocale(LC_ALL, "");
+#ifdef WITH_ICONV
+	/* save the information about the encoding used in the terminal */
+	outputEncoding = strdup(nl_langinfo(CODESET));
+	if (outputEncoding == NULL)
+		errx(1, "cannot allocate memory");
+#endif
 
 	while ((ch = getopt(argc, argv, "-A:aB:D:dF:f:l:t:U:W:?")) != -1)
 		switch (ch) {
@@ -209,8 +221,10 @@ main(int argc, char *argv[])
 			(void)setegid(pw->pw_gid);
 			(void)initgroups(pw->pw_name, pw->pw_gid);
 			(void)seteuid(pw->pw_uid);
-			if (!chdir(pw->pw_dir))
+			if (!chdir(pw->pw_dir)) {
+				setenv("HOME", pw->pw_dir, 1);
 				cal();
+			}
 			(void)seteuid(0);
 		}
 	else

@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 4/2/94
-# $FreeBSD: stable/11/usr.bin/chpass/Makefile 319186 2017-05-30 04:27:05Z ngie $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 Jake Burkholder.
  * All rights reserved.
  *
@@ -25,9 +27,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_kbd_sun.c 356013 2019-12-22 17:15:48Z kevans $");
+__FBSDID("$FreeBSD$");
 
-#include "opt_compat.h"
 #include "opt_kbd.h"
 #include "opt_sunkbd.h"
 

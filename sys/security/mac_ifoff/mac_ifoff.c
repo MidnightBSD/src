@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/security/mac_ifoff/mac_ifoff.c 267992 2014-06-28 03:56:17Z hselasky $
+ * $FreeBSD$
  */
 
 /*

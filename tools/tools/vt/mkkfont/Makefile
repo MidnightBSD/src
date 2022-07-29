@@ -1,4 +1,3 @@
-# $MidnightBSD$
 PROG=	mkkfont
 MAN1=
 

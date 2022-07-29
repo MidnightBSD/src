@@ -28,7 +28,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/11/usr.sbin/pw/pw_group.c 330449 2018-03-05 07:26:05Z eadler $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <ctype.h>
@@ -66,13 +66,18 @@ grp_set_passwd(struct group *grp, bool update, int fd, bool precrypted)
 	}
 	
 	if ((istty = isatty(fd))) {
-		n = t;
-		/* Disable echo */
-		n.c_lflag &= ~(ECHO);
-		tcsetattr(fd, TCSANOW, &n);
-		printf("%sassword for group %s:", update ? "New p" : "P",
-		    grp->gr_name);
-		fflush(stdout);
+		if (tcgetattr(fd, &t) == -1)
+			istty = 0;
+		else {
+			n = t;
+			/* Disable echo */
+			n.c_lflag &= ~(ECHO);
+			tcsetattr(fd, TCSANOW, &n);
+			printf("%sassword for group %s:",
+			    update ? "New p" : "P",
+			    grp->gr_name);
+			fflush(stdout);
+		}
 	}
 	b = read(fd, line, sizeof(line) - 1);
 	if (istty) {	/* Restore state */

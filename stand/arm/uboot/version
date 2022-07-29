@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/stand/arm/uboot/version 235537 2012-05-17 10:11:18Z gber $
+$FreeBSD$
 
 NOTE ANY CHANGES YOU MAKE TO THE BOOTBLOCKS HERE.  The format of this
 file is important.  Make sure the current version number is on line 6.

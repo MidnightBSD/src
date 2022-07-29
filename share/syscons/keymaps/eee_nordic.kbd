@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/syscons/keymaps/eee_nordic.kbd 183975 2008-10-17 14:07:39Z philip $
+# $FreeBSD$
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock
 # code  base   shift  cntrl  shift  alt    shift  cntrl  shift state

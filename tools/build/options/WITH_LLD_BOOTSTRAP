@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITH_LLD_BOOTSTRAP 318472 2017-05-18 17:40:30Z emaste $
+.\" $FreeBSD$
 Set to build the LLD linker during the bootstrap phase of the build.

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm/mga_ucode.h 152909 2005-11-28 23:13:57Z anholt $");
+__FBSDID("$FreeBSD$");
 
 /*
  * WARP pipes are named according to the functions they perform, where:

@@ -1,6 +1,8 @@
 /*	$NetBSD: fpu_emu.c,v 1.14 2005/12/11 12:18:42 christos Exp $ */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright 2001 Wasabi Systems, Inc.
  * All rights reserved.
  *
@@ -76,7 +78,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/powerpc/fpu/fpu_emu.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 

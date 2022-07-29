@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Luoqi Chen.
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/aic/aic.c 335138 2018-06-14 14:46:20Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -1575,6 +1577,7 @@ aic_attach(struct aic_softc *aic)
 		printf(", fast SCSI");
 	printf("\n");
 	mtx_unlock(&aic->lock);
+	gone_in_dev(aic->dev, 12, "aic(4) driver");
 	return (0);
 }
 

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,9 +34,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/nfsserver/nfs_nfsdsubs.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
-#ifndef APPLEKEXT
 /*
  * These functions support the macros and help fiddle mbuf chains for
  * the nfs op functions. They do things like create the rpc header and
@@ -55,10 +56,11 @@ extern uid_t nfsrv_defaultuid;
 extern gid_t nfsrv_defaultgid;
 
 char nfs_v2pubfh[NFSX_V2FH];
+struct nfsdontlisthead nfsrv_dontlisthead;
+struct nfslayouthead nfsrv_recalllisthead;
 static nfstype newnfsv2_type[9] = { NFNON, NFREG, NFDIR, NFBLK, NFCHR, NFLNK,
     NFNON, NFCHR, NFNON };
 extern nfstype nfsv34_type[9];
-#endif	/* !APPLEKEXT */
 
 static u_int32_t nfsrv_isannfserr(u_int32_t);
 
@@ -1269,7 +1271,7 @@ static short *nfsrv_v4errmap[] = {
  * A fiddled version of m_adj() that ensures null fill to a long
  * boundary and only trims off the back end
  */
-APPLESTATIC void
+void
 nfsrv_adj(mbuf_t mp, int len, int nul)
 {
 	mbuf_t m;
@@ -1328,7 +1330,7 @@ nfsrv_adj(mbuf_t mp, int len, int nul)
  * Make these functions instead of macros, so that the kernel text size
  * doesn't get too big...
  */
-APPLESTATIC void
+void
 nfsrv_wcc(struct nfsrv_descript *nd, int before_ret,
     struct nfsvattr *before_nvap, int after_ret, struct nfsvattr *after_nvap)
 {
@@ -1349,7 +1351,7 @@ nfsrv_wcc(struct nfsrv_descript *nd, int before_ret,
 	nfsrv_postopattr(nd, after_ret, after_nvap);
 }
 
-APPLESTATIC void
+void
 nfsrv_postopattr(struct nfsrv_descript *nd, int after_ret,
     struct nfsvattr *after_nvap)
 {
@@ -1368,7 +1370,7 @@ nfsrv_postopattr(struct nfsrv_descript *nd, int after_ret,
  * Fill in file attributes for V2 and 3. For V4, call a separate
  * routine that sifts through all the attribute bits.
  */
-APPLESTATIC void
+void
 nfsrv_fillattr(struct nfsrv_descript *nd, struct nfsvattr *nvap)
 {
 	struct nfs_fattr *fp;
@@ -1392,14 +1394,13 @@ nfsrv_fillattr(struct nfsrv_descript *nd, struct nfsvattr *nvap)
 	if (nd->nd_flag & ND_NFSV3) {
 		fp->fa_type = vtonfsv34_type(nvap->na_type);
 		fp->fa_mode = vtonfsv34_mode(nvap->na_mode);
-		txdr_hyper(nvap->na_size, &fp->fa3_size);
-		txdr_hyper(nvap->na_bytes, &fp->fa3_used);
+		txdr_hyper(nvap->na_size, (uint32_t*)&fp->fa3_size);
+		txdr_hyper(nvap->na_bytes, (uint32_t*)&fp->fa3_used);
 		fp->fa3_rdev.specdata1 = txdr_unsigned(NFSMAJOR(nvap->na_rdev));
 		fp->fa3_rdev.specdata2 = txdr_unsigned(NFSMINOR(nvap->na_rdev));
 		fp->fa3_fsid.nfsuquad[0] = 0;
 		fp->fa3_fsid.nfsuquad[1] = txdr_unsigned(nvap->na_fsid);
-		fp->fa3_fileid.nfsuquad[0] = 0;
-		fp->fa3_fileid.nfsuquad[1] = txdr_unsigned(nvap->na_fileid);
+		txdr_hyper(nvap->na_fileid, (uint32_t*)&fp->fa3_fileid);
 		txdr_nfsv3time(&nvap->na_atime, &fp->fa3_atime);
 		txdr_nfsv3time(&nvap->na_mtime, &fp->fa3_mtime);
 		txdr_nfsv3time(&nvap->na_ctime, &fp->fa3_ctime);
@@ -1428,7 +1429,7 @@ nfsrv_fillattr(struct nfsrv_descript *nd, struct nfsvattr *nvap)
  * the public file handle.
  * For NFSv4, if the length is incorrect, set nd_repstat == NFSERR_BADHANDLE
  */
-APPLESTATIC int
+int
 nfsrv_mtofh(struct nfsrv_descript *nd, struct nfsrvfh *fhp)
 {
 	u_int32_t *tl;
@@ -1442,7 +1443,14 @@ nfsrv_mtofh(struct nfsrv_descript *nd, struct nfsrvfh *fhp)
 			nd->nd_flag |= ND_PUBLOOKUP;
 			goto nfsmout;
 		}
-		if (len < NFSRV_MINFH || len > NFSRV_MAXFH) {
+		copylen = len;
+
+		/* If len == NFSX_V4PNFSFH the RPC is a pNFS DS one. */
+		if (len == NFSX_V4PNFSFH && (nd->nd_flag & ND_NFSV41) != 0) {
+			copylen = NFSX_MYFH;
+			len = NFSM_RNDUP(len);
+			nd->nd_flag |= ND_DSSERVER;
+		} else if (len < NFSRV_MINFH || len > NFSRV_MAXFH) {
 			if (nd->nd_flag & ND_NFSV4) {
 			    if (len > 0 && len <= NFSX_V4FHMAX) {
 				error = nfsm_advance(nd, NFSM_RNDUP(len), -1);
@@ -1459,7 +1467,6 @@ nfsrv_mtofh(struct nfsrv_descript *nd, struct nfsrvfh *fhp)
 				goto nfsmout;
 			}
 		}
-		copylen = len;
 	} else {
 		/*
 		 * For NFSv2, the file handle is always 32 bytes on the
@@ -1491,7 +1498,7 @@ nfsmout:
  * RPC procedure is not involved.
  * Returns the error number in XDR.
  */
-APPLESTATIC int
+int
 nfsd_errmap(struct nfsrv_descript *nd)
 {
 	short *defaulterrp, *errp;
@@ -1508,6 +1515,8 @@ nfsd_errmap(struct nfsrv_descript *nd)
 		else if (nd->nd_repstat == NFSERR_MINORVERMISMATCH ||
 			 nd->nd_repstat == NFSERR_OPILLEGAL)
 			return (txdr_unsigned(nd->nd_repstat));
+		else if (nd->nd_repstat == NFSERR_REPLYFROMCACHE)
+			return (txdr_unsigned(NFSERR_IO));
 		else if ((nd->nd_flag & ND_NFSV41) != 0) {
 			if (nd->nd_repstat == EOPNOTSUPP)
 				nd->nd_repstat = NFSERR_NOTSUPP;
@@ -1547,7 +1556,7 @@ nfsrv_isannfserr(u_int32_t errval)
  * file object. (Called when uid and/or gid is specified in the
  * settable attributes for V4.
  */
-APPLESTATIC int
+int
 nfsrv_checkuidgid(struct nfsrv_descript *nd, struct nfsvattr *nvap)
 {
 	int error = 0;
@@ -1580,7 +1589,7 @@ out:
  * and this routine fixes up the settable attributes for V4 if allowed
  * by nfsrv_checkuidgid().
  */
-APPLESTATIC void
+void
 nfsrv_fixattr(struct nfsrv_descript *nd, vnode_t vp,
     struct nfsvattr *nvap, NFSACL_T *aclp, NFSPROC_T *p, nfsattrbit_t *attrbitp,
     struct nfsexstuff *exp)
@@ -1688,7 +1697,7 @@ nfsrv_hexdigit(char c, int *err)
  * Check to see if NFSERR_MOVED can be returned for this op. Return 1 iff
  * it can be.
  */
-APPLESTATIC int
+int
 nfsrv_errmoved(int op)
 {
 	short *errp;
@@ -1706,7 +1715,7 @@ nfsrv_errmoved(int op)
  * Fill in attributes for a Referral.
  * (Return the number of bytes of XDR created.)
  */
-APPLESTATIC int
+int
 nfsrv_putreferralattr(struct nfsrv_descript *nd, nfsattrbit_t *retbitp,
     struct nfsreferral *refp, int getattr, int *reterrp)
 {
@@ -1809,8 +1818,7 @@ nfsrv_putreferralattr(struct nfsrv_descript *nd, nfsattrbit_t *retbitp,
 			break;
 		case NFSATTRBIT_MOUNTEDONFILEID:
 			NFSM_BUILD(tl, u_int32_t *, NFSX_HYPER);
-			*tl++ = 0;
-			*tl = txdr_unsigned(refp->nfr_dfileno);
+			txdr_hyper(refp->nfr_dfileno, tl);
 			retnum += NFSX_HYPER;
 			break;
 		default:
@@ -1825,7 +1833,7 @@ nfsrv_putreferralattr(struct nfsrv_descript *nd, nfsattrbit_t *retbitp,
 /*
  * Parse a file name out of a request.
  */
-APPLESTATIC int
+int
 nfsrv_parsename(struct nfsrv_descript *nd, char *bufp, u_long *hashp,
     NFSPATHLEN_T *outlenp)
 {
@@ -2054,6 +2062,8 @@ nfsd_init(void)
 		mtx_init(&nfssessionhash[i].mtx, "nfssm", NULL, MTX_DEF);
 		LIST_INIT(&nfssessionhash[i].list);
 	}
+	LIST_INIT(&nfsrv_dontlisthead);
+	TAILQ_INIT(&nfsrv_recalllisthead);
 
 	/* and the v2 pubfh should be all zeros */
 	NFSBZERO(nfs_v2pubfh, NFSX_V2FH);

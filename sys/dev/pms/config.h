@@ -18,7 +18,7 @@
 *LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
 *SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 *
-* $FreeBSD: stable/11/sys/dev/pms/config.h 285659 2015-07-17 20:29:47Z benno $
+* $FreeBSD$
 *
 ********************************************************************************/
 

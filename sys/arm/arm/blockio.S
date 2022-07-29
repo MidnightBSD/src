@@ -48,7 +48,7 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: stable/11/sys/arm/arm/blockio.S 283366 2015-05-24 12:20:11Z andrew $");
+__FBSDID("$FreeBSD$");
 
 	.syntax	unified
 

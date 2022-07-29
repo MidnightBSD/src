@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/nvidia/tegra_sdhci.c 343504 2019-01-27 19:04:28Z marius $");
+__FBSDID("$FreeBSD$");
 
 /*
  * SDHCI driver glue for NVIDIA Tegra family
@@ -61,6 +61,8 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/nvidia/tegra_sdhci.c 343504 2019-01-27 19:
 #include <dev/sdhci/sdhci_fdt_gpio.h>
 
 #include "sdhci_if.h"
+
+#include "opt_mmccam.h"
 
 /* Tegra SDHOST controller vendor register definitions */
 #define	SDMMC_VENDOR_CLOCK_CNTRL		0x100
@@ -311,13 +313,6 @@ tegra_sdhci_attach(device_t dev)
 
 	rv = clk_get_by_ofw_index(dev, 0, 0, &sc->clk);
 	if (rv != 0) {
-
-		device_printf(dev, "Cannot get clock\n");
-		goto fail;
-	}
-
-	rv = clk_get_by_ofw_index(dev, 0, 0, &sc->clk);
-	if (rv != 0) {
 		device_printf(dev, "Cannot get clock\n");
 		goto fail;
 	}
@@ -464,4 +459,6 @@ static DEFINE_CLASS_0(sdhci, tegra_sdhci_driver, tegra_sdhci_methods,
 DRIVER_MODULE(sdhci_tegra, simplebus, tegra_sdhci_driver, tegra_sdhci_devclass,
     NULL, NULL);
 SDHCI_DEPEND(sdhci_tegra);
+#ifndef MMCCAM
 MMC_DECLARE_BRIDGE(sdhci);
+#endif

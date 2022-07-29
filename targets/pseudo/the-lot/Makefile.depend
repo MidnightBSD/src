@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/targets/pseudo/the-lot/Makefile.depend 296587 2016-03-09 22:46:01Z bdrewery $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -10,7 +10,7 @@ DIRDEPS = \
 	targets/pseudo/userland \
 
 .if ${MK_TESTS} != "no"
-DIRDEPS+= targes/pseudo/tests
+DIRDEPS+= targets/pseudo/tests
 .endif
 
 .include <dirdeps.mk>

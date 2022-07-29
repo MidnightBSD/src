@@ -3,6 +3,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_bt3c_var.h,v 1.1 2002/11/24 19:46:54 max Exp $
- * $FreeBSD: stable/11/sys/netgraph/bluetooth/drivers/bt3c/ng_bt3c_var.h 160114 2006-07-05 17:18:47Z emax $
+ * $FreeBSD$
  *
  * XXX XXX XX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX 
  *

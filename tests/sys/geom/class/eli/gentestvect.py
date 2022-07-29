@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# $FreeBSD: stable/11/tests/sys/geom/class/eli/gentestvect.py 327856 2018-01-12 00:31:07Z asomers $
+# $FreeBSD$
 
 from hashlib import pbkdf2_hmac
 import hashlib

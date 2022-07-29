@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: stable/11/sys/arm64/include/_align.h 280364 2015-03-23 11:54:56Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE__ALIGN_H_

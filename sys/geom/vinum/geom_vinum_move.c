@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  *  Copyright (c) 2005 Chris Jones
  *  All rights reserved.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/geom/vinum/geom_vinum_move.c 213318 2010-10-01 06:12:13Z lulf $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/libkern.h>
 #include <sys/malloc.h>

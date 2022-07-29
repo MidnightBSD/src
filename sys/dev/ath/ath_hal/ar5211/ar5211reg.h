@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2006 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5211/ar5211reg.h 228980 2011-12-30 02:58:37Z dim $
+ * $FreeBSD$
  */
 #ifndef _DEV_ATH_AR5211REG_H
 #define _DEV_ATH_AR5211REG_H
@@ -805,7 +807,6 @@
 #define	AR5211_USEC_TX_LAT_S	14
 #define	AR5211_USEC_RX_LAT_M	0x1F800000	/* Rx latency */
 #define	AR5211_USEC_RX_LAT_S	23
-
 
 #define	AR_BEACON_PERIOD	0x0000FFFF	/* Beacon period in TU/msec */
 #define	AR_BEACON_PERIOD_S	0		/* Byte offset of PERIOD start*/

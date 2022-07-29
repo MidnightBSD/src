@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netpfil/ipfw/ip_fw_iface.c 317042 2017-04-17 09:34:09Z ae $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Kernel interface tracking API.

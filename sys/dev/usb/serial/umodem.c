@@ -1,9 +1,11 @@
 /*	$NetBSD: umodem.c,v 1.45 2002/09/23 05:51:23 simonb Exp $	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/usb/serial/umodem.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2003, M. Warner Losh <imp@FreeBSD.org>.
  * All rights reserved.
  *
@@ -148,6 +150,8 @@ static const STRUCT_USB_HOST_ID umodem_host_devs[] = {
 	{USB_VPI(USB_VENDOR_KYOCERA, USB_PRODUCT_KYOCERA_AHK3001V, 1)},
 	{USB_VPI(USB_VENDOR_SIERRA, USB_PRODUCT_SIERRA_MC5720, 1)},
 	{USB_VPI(USB_VENDOR_CURITEL, USB_PRODUCT_CURITEL_PC5740, 1)},
+	/* Winbond */
+	{USB_VENDOR(USB_VENDOR_WINBOND), USB_PRODUCT(USB_PRODUCT_WINBOND_CDC)},
 };
 
 /*
@@ -454,6 +458,8 @@ umodem_attach(device_t dev)
 		usbd_xfer_set_stall(sc->sc_xfer[UMODEM_BULK_RD]);
 		mtx_unlock(&sc->sc_mtx);
 	}
+
+	ucom_set_usb_mode(&sc->sc_super_ucom, uaa->usb_mode);
 
 	error = ucom_attach(&sc->sc_super_ucom, &sc->sc_ucom, 1, sc,
 	    &umodem_callback, &sc->sc_mtx);

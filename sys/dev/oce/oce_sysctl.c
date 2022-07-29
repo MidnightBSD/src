@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 2013 Emulex
  * All rights reserved.
  *
@@ -36,7 +38,7 @@
  * Costa Mesa, CA 92626
  */
 
-/* $FreeBSD: stable/11/sys/dev/oce/oce_sysctl.c 343300 2019-01-22 04:20:52Z delphij $ */
+/* $FreeBSD$ */
 
 #include "oce_if.h"
 
@@ -102,7 +104,7 @@ oce_add_sysctls(POCE_SOFTC sc)
 			CTLFLAG_RW,
 			&oce_max_rsp_handled,
 			sizeof(oce_max_rsp_handled),
-			"Maximum receive frames handled per interupt");
+			"Maximum receive frames handled per interrupt");
 
 	if ((sc->function_mode & FNM_FLEX10_MODE) || 
 	    (sc->function_mode & FNM_UMC_MODE))

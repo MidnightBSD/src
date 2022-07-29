@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/lib/libxo/add.man 334458 2018-05-31 23:55:59Z gjb $
+.\" $FreeBSD$
 .Sh ADDITIONAL DOCUMENTATION
 .Fx
 uses

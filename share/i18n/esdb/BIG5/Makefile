@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/i18n/esdb/BIG5/Makefile 296702 2016-03-11 23:45:36Z bdrewery $
+# $FreeBSD$
 # $NetBSD: Makefile.inc,v 1.3 2008/10/25 22:35:36 apb Exp $
 
 CODE=	Big5

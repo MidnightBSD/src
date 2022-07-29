@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2000 Christoph Herrmann, Thomas-Henning von Kamptz
  * Copyright (c) 1980, 1989, 1993 The Regents of the University of California.
  * All rights reserved.
@@ -36,7 +38,7 @@
  * SUCH DAMAGE.
  *
  * $TSHeader: src/sbin/growfs/debug.h,v 1.2 2000/11/16 18:43:50 tom Exp $
- * $FreeBSD: stable/11/sbin/growfs/debug.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  *
  */
 

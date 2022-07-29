@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/stand/arm/uboot/help.uboot 271285 2014-09-08 19:19:10Z ian $
+$FreeBSD$
 
 ###############################################################################
 # Tubenv DShow or import U-Boot environment variables

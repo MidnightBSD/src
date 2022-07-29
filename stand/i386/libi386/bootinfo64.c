@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/i386/libi386/bootinfo64.c 344399 2019-02-20 23:55:35Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 #include <sys/param.h>
@@ -158,6 +158,7 @@ bi_checkcpu(void)
     /* Check for vendors that support AMD features. */
     if (strncmp(cpu_vendor, INTEL_VENDOR_ID, 12) != 0 &&
 	strncmp(cpu_vendor, AMD_VENDOR_ID, 12) != 0 &&
+	strncmp(cpu_vendor, HYGON_VENDOR_ID, 12) != 0 &&
 	strncmp(cpu_vendor, CENTAUR_VENDOR_ID, 12) != 0)
 	return (0);
 

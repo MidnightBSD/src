@@ -19,7 +19,7 @@ PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
 ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
 SOFTWARE.
 
- $FreeBSD: stable/11/libexec/bootpd/readfile.c 297866 2016-04-12 18:24:02Z pfg $
+ $FreeBSD$
 
 ************************************************************************/
 
@@ -45,14 +45,6 @@ SOFTWARE.
 #include <ctype.h>
 #include <assert.h>
 #include <syslog.h>
-
-#ifndef USE_BFUNCS
-#include <memory.h>
-/* Yes, memcpy is OK here (no overlapped copies). */
-#define	bcopy(a,b,c)	memcpy(b,a,c)
-#define	bzero(p,l)	memset(p,0,l)
-#define	bcmp(a,b,c)	memcmp(a,b,c)
-#endif
 
 #include "bootp.h"
 #include "hash.h"

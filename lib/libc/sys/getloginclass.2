@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/lib/libc/sys/getloginclass.2 308257 2016-11-03 14:49:26Z trasz $
+.\" $FreeBSD$
 .\"
 .Dd July 12, 2016
 .Dt GETLOGINCLASS 2
@@ -80,7 +80,7 @@ Login class names are limited to
 .Dv MAXLOGNAME
 (from
 .In sys/param.h )
-characters, currently 17 including null.
+characters, currently 33 including null.
 .It Bq Er EPERM
 The caller tried to set the login class and was not the super-user.
 .It Bq Er ENAMETOOLONG

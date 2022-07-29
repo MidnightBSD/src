@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/kgssapi/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/kgssapi ${SRCTOP}/sys/rpc/rpcsec_gss
 KMOD=	kgssapi

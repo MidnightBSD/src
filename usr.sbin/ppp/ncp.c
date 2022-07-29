@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/ppp/ncp.c 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -438,6 +438,21 @@ void
 ncp_ClearUrgentPorts(struct port_range *range)
 {
   range->nports = 0;
+}
+
+int
+ncp_IsUrgentTcpLen(struct ncp *ncp, int len)
+{
+  if (len < ncp->cfg.urgent.len)
+    return 1;
+  else
+    return 0;
+}
+
+void
+ncp_SetUrgentTcpLen(struct ncp *ncp, int len)
+{
+    ncp->cfg.urgent.len = len;
 }
 
 int

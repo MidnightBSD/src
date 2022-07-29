@@ -45,7 +45,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/security/mac/mac_internal.h 292384 2015-12-16 23:39:27Z markj $
+ * $FreeBSD$
  */
 
 #ifndef _SECURITY_MAC_MAC_INTERNAL_H_

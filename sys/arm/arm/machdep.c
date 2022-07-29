@@ -1,6 +1,8 @@
 /*	$NetBSD: arm32_machdep.c,v 1.44 2004/03/24 15:34:47 atatat Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2004 Olivier Houchard
  * Copyright (c) 1994-1998 Mark Brinicombe.
  * Copyright (c) 1994 Brini.
@@ -42,7 +44,6 @@
  * Updated	: 18/04/01 updated for new wscons
  */
 
-#include "opt_compat.h"
 #include "opt_ddb.h"
 #include "opt_kstack_pages.h"
 #include "opt_platform.h"
@@ -50,7 +51,7 @@
 #include "opt_timer.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/arm/machdep.c 355346 2019-12-03 18:28:39Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/buf.h>
@@ -64,6 +65,7 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/arm/machdep.c 355346 2019-12-03 18:28:39Z 
 #include <sys/kernel.h>
 #include <sys/linker.h>
 #include <sys/msgbuf.h>
+#include <sys/physmem.h>
 #include <sys/reboot.h>
 #include <sys/rwlock.h>
 #include <sys/sched.h>
@@ -76,11 +78,11 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/arm/machdep.c 355346 2019-12-03 18:28:39Z 
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
 
+#include <machine/asm.h>
 #include <machine/debug_monitor.h>
 #include <machine/machdep.h>
 #include <machine/metadata.h>
 #include <machine/pcb.h>
-#include <machine/physmem.h>
 #include <machine/platform.h>
 #include <machine/sysarch.h>
 #include <machine/undefined.h>
@@ -104,6 +106,14 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/arm/machdep.c 355346 2019-12-03 18:28:39Z 
 #error FreeBSD/arm doesn't provide compatibility with releases prior to 10
 #endif
 
+#if __ARM_ARCH >= 6 && !defined(INTRNG)
+#error armv6 requires INTRNG
+#endif
+
+#ifndef _ARM_ARCH_5E
+#error FreeBSD requires ARMv5 or later
+#endif
+
 struct pcpu __pcpu[MAXCPU];
 struct pcpu *pcpup = &__pcpu[0];
 
@@ -111,6 +121,9 @@ static struct trapframe proc0_tf;
 uint32_t cpu_reset_address = 0;
 int cold = 1;
 vm_offset_t vector_page;
+
+/* The address at which the kernel was loaded.  Set early in initarm(). */
+vm_paddr_t arm_physmem_kernaddr;
 
 int (*_arm_memcpy)(void *, void *, int, int) = NULL;
 int (*_arm_bzero)(void *, int, int) = NULL;
@@ -143,13 +156,12 @@ static struct pv_addr kernelstack;
 #endif /* __ARM_ARCH >= 6 */
 #endif /* FDT */
 
-#ifdef MULTIDELAY
+#ifdef PLATFORM
 static delay_func *delay_impl;
 static void *delay_arg;
 #endif
 
 struct kva_md_info kmi;
-
 /*
  * arm32_vector_init:
  *
@@ -223,10 +235,10 @@ cpu_startup(void *dummy)
 	    (uintmax_t)arm32_ptob(realmem),
 	    (uintmax_t)arm32_ptob(realmem) / mbyte);
 	printf("avail memory = %ju (%ju MB)\n",
-	    (uintmax_t)arm32_ptob(vm_cnt.v_free_count),
-	    (uintmax_t)arm32_ptob(vm_cnt.v_free_count) / mbyte);
+	    (uintmax_t)arm32_ptob(vm_free_count()),
+	    (uintmax_t)arm32_ptob(vm_free_count()) / mbyte);
 	if (bootverbose) {
-		arm_physmem_print_tables();
+		physmem_print_tables();
 		devmap_print_table();
 	}
 
@@ -267,8 +279,22 @@ cpu_flush_dcache(void *ptr, size_t len)
 int
 cpu_est_clockrate(int cpu_id, uint64_t *rate)
 {
+#if __ARM_ARCH >= 6
+	struct pcpu *pc;
 
+	pc = pcpu_find(cpu_id);
+	if (pc == NULL || rate == NULL)
+		return (EINVAL);
+
+	if (pc->pc_clock == 0)
+		return (EOPNOTSUPP);
+
+	*rate = pc->pc_clock;
+
+	return (0);
+#else
 	return (ENXIO);
+#endif
 }
 
 void
@@ -298,6 +324,7 @@ cpu_idle_wakeup(int cpu)
 	return (0);
 }
 
+#ifdef NO_EVENTTIMERS
 /*
  * Most ARM platforms don't need to do anything special to init their clocks
  * (they get intialized during normal device attachment), and by not defining a
@@ -308,8 +335,14 @@ cpu_idle_wakeup(int cpu)
 void
 arm_generic_initclocks(void)
 {
+}
+__weak_reference(arm_generic_initclocks, cpu_initclocks);
 
-#ifndef NO_EVENTTIMERS
+#else
+void
+cpu_initclocks(void)
+{
+
 #ifdef SMP
 	if (PCPU_GET(cpuid) == 0)
 		cpu_initclocks_bsp();
@@ -318,11 +351,10 @@ arm_generic_initclocks(void)
 #else
 	cpu_initclocks_bsp();
 #endif
-#endif
 }
-__weak_reference(arm_generic_initclocks, cpu_initclocks);
+#endif
 
-#ifdef MULTIDELAY
+#ifdef PLATFORM
 void
 arm_set_delay(delay_func *impl, void *arg)
 {
@@ -336,13 +368,19 @@ void
 DELAY(int usec)
 {
 
+	TSENTER();
 	delay_impl(usec, delay_arg);
+	TSEXIT();
 }
 #endif
 
 void
 cpu_pcpu_init(struct pcpu *pcpu, int cpuid, size_t size)
 {
+
+#if __ARM_ARCH >= 6
+	pcpu->pc_mpidr = 0xffffffff;
+#endif
 }
 
 void
@@ -389,6 +427,8 @@ exec_setregs(struct thread *td, struct image_params *imgp, u_long stack)
 	tf->tf_svc_lr = 0x77777777;
 	tf->tf_pc = imgp->entry_addr;
 	tf->tf_spsr = PSR_USR32_MODE;
+	if ((register_t)imgp->entry_addr & 1)
+		tf->tf_spsr |= PSR_T;
 }
 
 
@@ -727,6 +767,9 @@ pcpu0_init(void)
 	set_curthread(&thread0);
 #endif
 	pcpu_init(pcpup, 0, sizeof(struct pcpu));
+#if __ARM_ARCH >= 6
+	pcpup->pc_mpidr = cp15_mpidr_get() & 0xFFFFFF;
+#endif
 	PCPU_SET(curthread, &thread0);
 }
 
@@ -738,8 +781,9 @@ init_proc0(vm_offset_t kstack)
 {
 	proc_linkup0(&proc0, &thread0);
 	thread0.td_kstack = kstack;
-	thread0.td_pcb = (struct pcb *)
-		(thread0.td_kstack + kstack_pages * PAGE_SIZE) - 1;
+	thread0.td_kstack_pages = kstack_pages;
+	thread0.td_pcb = (struct pcb *)(thread0.td_kstack +
+	    thread0.td_kstack_pages * PAGE_SIZE) - 1;
 	thread0.td_pcb->pcb_flags = 0;
 	thread0.td_pcb->pcb_vfpcpu = -1;
 	thread0.td_pcb->pcb_vfpstate.fpscr = VFPSCR_DN;
@@ -835,11 +879,11 @@ initarm(struct arm_boot_params *abp)
 	/* Grab physical memory regions information from device tree. */
 	if (fdt_get_mem_regions(mem_regions, &mem_regions_sz, &memsize) != 0)
 		panic("Cannot get physical memory regions");
-	arm_physmem_hardware_regions(mem_regions, mem_regions_sz);
+	physmem_hardware_regions(mem_regions, mem_regions_sz);
 
 	/* Grab reserved memory regions information from device tree. */
 	if (fdt_get_reserved_regions(mem_regions, &mem_regions_sz) == 0)
-		arm_physmem_exclude_regions(mem_regions, mem_regions_sz,
+		physmem_exclude_regions(mem_regions, mem_regions_sz,
 		    EXFLAG_NODUMP | EXFLAG_NOALLOC);
 
 	/* Platform-specific initialisation */
@@ -856,9 +900,10 @@ initarm(struct arm_boot_params *abp)
 
 	/*
 	 * Add one table for end of kernel map, one for stacks, msgbuf and
-	 * L1 and L2 tables map and one for vectors map.
+	 * L1 and L2 tables map,  one for vectors map and two for
+	 * l2 structures from pmap_bootstrap.
 	 */
-	l2size += 3;
+	l2size += 5;
 
 	/* Make it divisible by 4 */
 	l2size = (l2size + 3) & ~3;
@@ -1045,9 +1090,9 @@ initarm(struct arm_boot_params *abp)
 	 *
 	 * Prepare the list of physical memory available to the vm subsystem.
 	 */
-	arm_physmem_exclude_region(abp->abp_physaddr,
+	physmem_exclude_region(abp->abp_physaddr,
 	    (virtual_avail - KERNVIRTADDR), EXFLAG_NOALLOC);
-	arm_physmem_init_kernel_globals();
+	physmem_init_kernel_globals();
 
 	init_param2(physmem);
 	dbg_monitor_init();
@@ -1113,11 +1158,11 @@ initarm(struct arm_boot_params *abp)
 		if (fdt_get_mem_regions(mem_regions, &mem_regions_sz,NULL) != 0)
 			panic("Cannot get physical memory regions");
 	}
-	arm_physmem_hardware_regions(mem_regions, mem_regions_sz);
+	physmem_hardware_regions(mem_regions, mem_regions_sz);
 
 	/* Grab reserved memory regions information from device tree. */
 	if (fdt_get_reserved_regions(mem_regions, &mem_regions_sz) == 0)
-		arm_physmem_exclude_regions(mem_regions, mem_regions_sz,
+		physmem_exclude_regions(mem_regions, mem_regions_sz,
 		    EXFLAG_NODUMP | EXFLAG_NOALLOC);
 
 	/*
@@ -1252,9 +1297,9 @@ initarm(struct arm_boot_params *abp)
 	 *
 	 * Prepare the list of physical memory available to the vm subsystem.
 	 */
-	arm_physmem_exclude_region(abp->abp_physaddr,
+	physmem_exclude_region(abp->abp_physaddr,
 		pmap_preboot_get_pages(0) - abp->abp_physaddr, EXFLAG_NOALLOC);
-	arm_physmem_init_kernel_globals();
+	physmem_init_kernel_globals();
 
 	init_param2(physmem);
 	/* Init message buffer. */

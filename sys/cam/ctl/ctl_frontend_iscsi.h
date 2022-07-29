@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cam/ctl/ctl_frontend_iscsi.h 332622 2018-04-16 17:24:33Z trasz $
+ * $FreeBSD$
  */
 
 #ifndef CTL_FRONTEND_ISCSI_H
@@ -85,9 +87,10 @@ struct cfiscsi_session {
 	bool				cs_terminating;
 	bool				cs_handoff_in_progress;
 	bool				cs_tasks_aborted;
-	size_t				cs_max_data_segment_length;
-	size_t				cs_max_burst_length;
-	size_t				cs_first_burst_length;
+	int				cs_max_recv_data_segment_length;
+	int				cs_max_send_data_segment_length;
+	int				cs_max_burst_length;
+	int				cs_first_burst_length;
 	bool				cs_immediate_data;
 	char				cs_initiator_name[CTL_ISCSI_NAME_LEN];
 	char				cs_initiator_addr[CTL_ISCSI_ADDR_LEN];

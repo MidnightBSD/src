@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,7 +39,7 @@ static char sccsid[] = "@(#)mount.c	8.25 (Berkeley) 5/8/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/mount/mount.c 346227 2019-04-15 13:12:54Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -115,6 +117,8 @@ static struct opt {
 	{ MNT_NFS4ACLS,		"nfsv4acls" },
 	{ MNT_GJOURNAL,		"gjournal" },
 	{ MNT_AUTOMOUNTED,	"automounted" },
+	{ MNT_VERIFIED,		"verified" },
+	{ MNT_UNTRUSTED,	"untrusted" },
 	{ 0, NULL }
 };
 
@@ -337,7 +341,8 @@ main(int argc, char *argv[])
 	rval = 0;
 	switch (argc) {
 	case 0:
-		if ((mntsize = getmntinfo(&mntbuf, MNT_NOWAIT)) == 0)
+		if ((mntsize = getmntinfo(&mntbuf,
+		     verbose ? MNT_WAIT : MNT_NOWAIT)) == 0)
 			err(1, "getmntinfo");
 		if (all) {
 			while ((fs = getfsent()) != NULL) {
@@ -356,6 +361,7 @@ main(int argc, char *argv[])
 				else
 					failok = 0;
 				if (!(init_flags & MNT_UPDATE) &&
+				    !hasopt(fs->fs_mntops, "update") &&
 				    ismounted(fs, mntbuf, mntsize))
 					continue;
 				options = update_options(options, fs->fs_mntops,
@@ -500,7 +506,7 @@ ismounted(struct fstab *fs, struct statfs *mntbuf, int mntsize)
 
 	/* 
 	 * Consider the filesystem to be mounted if:
-	 * It has the same mountpoint as a mounted filesytem, and
+	 * It has the same mountpoint as a mounted filesystem, and
 	 * It has the same type as that same mounted filesystem, and
 	 * It has the same device name as that same mounted filesystem, OR
 	 *     It is a nonremountable filesystem
@@ -597,11 +603,8 @@ mountfs(const char *vfstype, const char *spec, const char *name, int flags,
 		optbuf = catopt(optbuf, "update");
 
 	/* Compatibility glue. */
-	if (strcmp(vfstype, "msdos") == 0) {
-		warnx(
-		    "Using \"-t msdosfs\", since \"-t msdos\" is deprecated.");
+	if (strcmp(vfstype, "msdos") == 0)
 		vfstype = "msdosfs";
-	}
 
 	/* Construct the name of the appropriate mount command */
 	(void)snprintf(execname, sizeof(execname), "mount_%s", vfstype);
@@ -718,17 +721,14 @@ getmntpt(const char *name)
 char *
 catopt(char *s0, const char *s1)
 {
-	size_t i;
 	char *cp;
 
 	if (s1 == NULL || *s1 == '\0')
 		return (s0);
 
 	if (s0 && *s0) {
-		i = strlen(s0) + strlen(s1) + 1 + 1;
-		if ((cp = malloc(i)) == NULL)
-			errx(1, "malloc failed");
-		(void)snprintf(cp, i, "%s,%s", s0, s1);
+		if (asprintf(&cp, "%s,%s", s0, s1) == -1)
+			errx(1, "asprintf failed");
 	} else
 		cp = strdup(s1);
 
@@ -974,6 +974,7 @@ flags2opts(int flags)
 	if (flags & MNT_MULTILABEL)	res = catopt(res, "multilabel");
 	if (flags & MNT_ACLS)		res = catopt(res, "acls");
 	if (flags & MNT_NFS4ACLS)	res = catopt(res, "nfsv4acls");
+	if (flags & MNT_UNTRUSTED)	res = catopt(res, "untrusted");
 
 	return (res);
 }

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/allwinner/aw_reset.c 297725 2016-04-08 23:07:16Z jmcneill $
+ * $FreeBSD$
  */
 
 /*
@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/allwinner/aw_reset.c 297725 2016-04-08 23:07:16Z jmcneill $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -160,5 +160,5 @@ static driver_t aw_reset_driver = {
 static devclass_t aw_reset_devclass;
 
 EARLY_DRIVER_MODULE(aw_reset, simplebus, aw_reset_driver, aw_reset_devclass,
-    0, 0, BUS_PASS_BUS + BUS_PASS_ORDER_MIDDLE);
+    0, 0, BUS_PASS_RESOURCE + BUS_PASS_ORDER_MIDDLE);
 MODULE_VERSION(aw_reset, 1);

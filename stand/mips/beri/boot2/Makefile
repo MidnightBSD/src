@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/stand/mips/beri/boot2/Makefile 337477 2018-08-08 18:05:14Z bdrewery $
+# $FreeBSD$
 
 .include <bsd.init.mk>
 

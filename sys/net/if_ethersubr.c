@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -27,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_ethersubr.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/11/sys/net/if_ethersubr.c 346783 2019-04-27 04:39:41Z kevans $
+ * $FreeBSD$
  */
 
 #include "opt_inet.h"
@@ -105,22 +107,16 @@ void	(*ng_ether_detach_p)(struct ifnet *ifp);
 void	(*vlan_input_p)(struct ifnet *, struct mbuf *);
 
 /* if_bridge(4) support */
-struct mbuf *(*bridge_input_p)(struct ifnet *, struct mbuf *); 
-int	(*bridge_output_p)(struct ifnet *, struct mbuf *, 
-		struct sockaddr *, struct rtentry *);
 void	(*bridge_dn_p)(struct mbuf *, struct ifnet *);
 
 /* if_lagg(4) support */
-struct mbuf *(*lagg_input_p)(struct ifnet *, struct mbuf *); 
+struct mbuf *(*lagg_input_ethernet_p)(struct ifnet *, struct mbuf *); 
 
 static const u_char etherbroadcastaddr[ETHER_ADDR_LEN] =
 			{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
 static	int ether_resolvemulti(struct ifnet *, struct sockaddr **,
 		struct sockaddr *);
-#ifdef VIMAGE
-static	void ether_reassign(struct ifnet *, struct vnet *, char *);
-#endif
 static	int ether_requestencap(struct ifnet *, struct if_encap_req *);
 
 
@@ -290,11 +286,10 @@ ether_output(struct ifnet *ifp, struct mbuf *m,
 	char linkhdr[ETHER_HDR_LEN], *phdr;
 	struct ether_header *eh;
 	struct pf_mtag *t;
-	int loop_copy = 1;
+	bool loop_copy;
 	int hlen;	/* link layer header length */
 	uint32_t pflags;
 	struct llentry *lle = NULL;
-	struct rtentry *rt0 = NULL;
 	int addref = 0;
 
 	phdr = NULL;
@@ -330,7 +325,6 @@ ether_output(struct ifnet *ifp, struct mbuf *m,
 				pflags = lle->r_flags;
 			}
 		}
-		rt0 = ro->ro_rt;
 	}
 
 #ifdef MAC
@@ -362,7 +356,7 @@ ether_output(struct ifnet *ifp, struct mbuf *m,
 		update_mbuf_csumflags(m, m);
 		return (if_simloop(ifp, m, dst->sa_family, 0));
 	}
-	loop_copy = pflags & RT_MAY_LOOP;
+	loop_copy = (pflags & RT_MAY_LOOP) != 0;
 
 	/*
 	 * Add local net header.  If no space in first mbuf,
@@ -469,7 +463,8 @@ ether_output_frame(struct ifnet *ifp, struct mbuf *m)
 	uint8_t pcp;
 
 	pcp = ifp->if_pcp;
-	if (pcp != IFNET_PCP_NONE && !ether_set_pcp(&m, ifp, pcp))
+	if (pcp != IFNET_PCP_NONE && ifp->if_type != IFT_L2VLAN &&
+	    !ether_set_pcp(&m, ifp, pcp))
 		return (0);
 
 	if (PFIL_HOOKED(&V_link_pfil_hook)) {
@@ -521,7 +516,7 @@ ether_input_internal(struct ifnet *ifp, struct mbuf *m)
 	}
 	eh = mtod(m, struct ether_header *);
 	etype = ntohs(eh->ether_type);
-	random_harvest_queue(m, sizeof(*m), 2, RANDOM_NET_ETHER);
+	random_harvest_queue_ether(m, sizeof(*m));
 
 	CURVNET_SET_QUIET(ifp->if_vnet);
 
@@ -568,9 +563,9 @@ ether_input_internal(struct ifnet *ifp, struct mbuf *m)
 
 	/* Handle input from a lagg(4) port */
 	if (ifp->if_type == IFT_IEEE8023ADLAG) {
-		KASSERT(lagg_input_p != NULL,
+		KASSERT(lagg_input_ethernet_p != NULL,
 		    ("%s: if_lagg not loaded!", __func__));
-		m = (*lagg_input_p)(ifp, m);
+		m = (*lagg_input_ethernet_p)(ifp, m);
 		if (m != NULL)
 			ifp = m->m_pkthdr.rcvif;
 		else {
@@ -929,8 +924,8 @@ ether_ifattach(struct ifnet *ifp, const u_int8_t *lla)
 
 	ifp->if_addrlen = ETHER_ADDR_LEN;
 	ifp->if_hdrlen = ETHER_HDR_LEN;
-	if_attach(ifp);
 	ifp->if_mtu = ETHERMTU;
+	if_attach(ifp);
 	ifp->if_output = ether_output;
 	ifp->if_input = ether_input;
 	ifp->if_resolvemulti = ether_resolvemulti;
@@ -1299,7 +1294,7 @@ static SYSCTL_NODE(_net_link, IFT_L2VLAN, vlan, CTLFLAG_RW, 0,
 static SYSCTL_NODE(_net_link_vlan, PF_LINK, link, CTLFLAG_RW, 0,
     "for consistency");
 
-static VNET_DEFINE(int, soft_pad);
+VNET_DEFINE_STATIC(int, soft_pad);
 #define	V_soft_pad	VNET(soft_pad)
 SYSCTL_INT(_net_link_vlan, OID_AUTO, soft_pad, CTLFLAG_RW | CTLFLAG_VNET,
     &VNET_NAME(soft_pad), 0,
@@ -1351,6 +1346,13 @@ ether_8021q_frame(struct mbuf **mp, struct ifnet *ife, struct ifnet *p,
 	}
 
 	/*
+	 * If PCP is set in mbuf, use it
+	 */
+	if ((*mp)->m_flags & M_VLANTAG) {
+		pcp = EVL_PRIOFTAG((*mp)->m_pkthdr.ether_vtag);
+	}
+
+	/*
 	 * If underlying interface can do VLAN tag insertion itself,
 	 * just pass the packet along. However, we need some way to
 	 * tell the interface where the packet came from so that it
@@ -1394,6 +1396,11 @@ ether_gen_addr(struct ifnet *ifp, struct ether_addr *hwaddr)
 	char jailname[MAXHOSTNAMELEN];
 
 	getcredhostuuid(curthread->td_ucred, uuid, sizeof(uuid));
+	if (strncmp(uuid, DEFAULT_HOSTUUID, sizeof(uuid)) == 0) {
+		/* Fall back to a random mac address. */
+		goto rando;
+	}
+
 	/* If each (vnet) jail would also have a unique hostuuid this would not
 	 * be necessary. */
 	getjailname(curthread->td_ucred, jailname, sizeof(jailname));
@@ -1401,9 +1408,7 @@ ether_gen_addr(struct ifnet *ifp, struct ether_addr *hwaddr)
 	    jailname);
 	if (sz < 0) {
 		/* Fall back to a random mac address. */
-		arc4rand(hwaddr, sizeof(*hwaddr), 0);
-		hwaddr->octet[0] = 0x02;
-		return;
+		goto rando;
 	}
 
 	SHA1Init(&ctx);
@@ -1418,6 +1423,14 @@ ether_gen_addr(struct ifnet *ifp, struct ether_addr *hwaddr)
 		hwaddr->octet[i] = addr >> ((ETHER_ADDR_LEN - i - 1) * 8) &
 		    0xFF;
 	}
+
+	return;
+rando:
+	arc4rand(hwaddr, sizeof(*hwaddr), 0);
+	/* Unicast */
+	hwaddr->octet[0] &= 0xFE;
+	/* Locally administered. */
+	hwaddr->octet[0] |= 0x02;
 }
 
 DECLARE_MODULE(ether, ether_mod, SI_SUB_INIT_IF, SI_ORDER_ANY);

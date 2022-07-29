@@ -36,7 +36,7 @@
 
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/mips/bcopy.S 256495 2013-10-15 04:43:31Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <machine/endian.h>
 
@@ -65,6 +65,7 @@ __FBSDID("$FreeBSD: stable/11/sys/mips/mips/bcopy.S 256495 2013-10-15 04:43:31Z 
 #define	SIZEREG	a2
 
 LEAF(memcpy)
+XLEAF(memmove)
 	.set	noat
 	.set	noreorder
 

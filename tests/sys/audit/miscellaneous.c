@@ -22,7 +22,7 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tests/sys/audit/miscellaneous.c 339095 2018-10-02 18:12:32Z asomers $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

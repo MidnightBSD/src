@@ -1,13 +1,12 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: stable/11/share/man/man7/Makefile 319227 2017-05-30 17:07:40Z emaste $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
 PACKAGE=runtime-manuals
 
 #MISSING: eqnchar.7 ms.7 term.7
-MAN=	adding_user.7 \
-	arch.7 \
+MAN=	arch.7 \
 	ascii.7 \
 	bsd.snmpmod.mk.7 \
 	build.7 \
@@ -23,13 +22,14 @@ MAN=	adding_user.7 \
 	hostname.7 \
 	intro.7 \
 	maclabel.7 \
-	mailaddr.7 \
 	mports.7 \
 	operator.7 \
+	orders.7 \
 	release.7 \
 	sdoc.7 \
 	security.7 \
 	sprog.7 \
+	stats.7 \
 	stdint.7 \
 	sticky.7 \
 	tests.7 \
@@ -43,7 +43,7 @@ MLINKS+= c99.7 c89.7
 MLINKS+= c99.7 c90.7
 
 .if ${MK_TESTS} != "no"
-ATF=	${.CURDIR}/../../../contrib/atf
+ATF=	${SRCTOP}/contrib/atf
 .PATH:	${ATF}/doc
 MAN+=	atf.7
 

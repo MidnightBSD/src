@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/cddl/usr.bin/ctfmerge/Makefile 321268 2017-07-20 00:53:50Z ngie $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/tools/ctf/common
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/tools/ctf/cvt

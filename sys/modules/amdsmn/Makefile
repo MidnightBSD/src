@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/amdsmn/Makefile 323184 2017-09-05 15:13:41Z cem $
+# $FreeBSD$
 
 .PATH:	${SRCTOP}/sys/dev/amdsmn
 

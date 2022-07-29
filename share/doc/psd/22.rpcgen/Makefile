@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/doc/psd/22.rpcgen/Makefile 216178 2010-12-04 10:11:20Z uqs $
+# $FreeBSD$
 
 VOLUME=		psd/22.rpcgen
 SRCS=		stubs rpcgen.ms

@@ -1,6 +1,8 @@
 /*	$NetBSD: zuncompress.c,v 1.11 2011/08/16 13:55:02 joerg Exp $ */
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1985, 1986, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -33,7 +35,7 @@
  * SUCH DAMAGE.
  *
  * from: NetBSD: zopen.c,v 1.8 2003/08/07 11:13:29 agc Exp
- * $FreeBSD: stable/11/usr.bin/gzip/zuncompress.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /* This file is #included by gzip.c */

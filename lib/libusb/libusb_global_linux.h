@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/lib/libusb/libusb_global_linux.h 358948 2020-03-13 09:17:51Z hselasky $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

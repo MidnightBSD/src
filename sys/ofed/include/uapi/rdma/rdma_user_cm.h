@@ -31,7 +31,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/ofed/include/uapi/rdma/rdma_user_cm.h 331772 2018-03-30 18:17:33Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef RDMA_USER_CM_H

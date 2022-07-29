@@ -23,7 +23,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/include/pmc_mdep.h 283112 2015-05-19 15:25:47Z br $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PMC_MDEP_H_

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/i386/libi386/i386_module.c 215245 2010-11-13 15:23:20Z nyan $");
+__FBSDID("$FreeBSD$");
 
 /*
  * i386-specific module functionality.

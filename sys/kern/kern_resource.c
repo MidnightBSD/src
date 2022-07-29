@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  * (c) UNIX System Laboratories, Inc.
@@ -15,7 +17,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -35,9 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/kern_resource.c 347701 2019-05-16 14:46:21Z kib $");
-
-#include "opt_compat.h"
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -303,8 +303,7 @@ sys_rtprio_thread(struct thread *td, struct rtprio_thread_args *uap)
 		td1 = td;
 		PROC_LOCK(p);
 	} else {
-		/* Only look up thread in current process */
-		td1 = tdfind(uap->lwpid, curproc->p_pid);
+		td1 = tdfind(uap->lwpid, -1);
 		if (td1 == NULL)
 			return (ESRCH);
 		p = td1->td_proc;
@@ -1343,6 +1342,18 @@ struct uidinfo *
 uifind(uid_t uid)
 {
 	struct uidinfo *new_uip, *uip;
+	struct ucred *cred;
+
+	cred = curthread->td_ucred;
+	if (cred->cr_uidinfo->ui_uid == uid) {
+		uip = cred->cr_uidinfo;
+		uihold(uip);
+		return (uip);
+	} else if (cred->cr_ruidinfo->ui_uid == uid) {
+		uip = cred->cr_ruidinfo;
+		uihold(uip);
+		return (uip);
+	}
 
 	rw_rlock(&uihashtbl_lock);
 	uip = uilookup(uid);
@@ -1354,7 +1365,6 @@ uifind(uid_t uid)
 	racct_create(&new_uip->ui_racct);
 	refcount_init(&new_uip->ui_ref, 1);
 	new_uip->ui_uid = uid;
-	mtx_init(&new_uip->ui_vmsize_mtx, "ui_vmsize", NULL, MTX_DEF);
 
 	rw_wlock(&uihashtbl_lock);
 	/*
@@ -1369,7 +1379,6 @@ uifind(uid_t uid)
 	} else {
 		rw_wunlock(&uihashtbl_lock);
 		racct_destroy(&new_uip->ui_racct);
-		mtx_destroy(&new_uip->ui_vmsize_mtx);
 		free(new_uip, M_UIDINFO);
 	}
 	return (uip);
@@ -1430,7 +1439,6 @@ uifree(struct uidinfo *uip)
 	if (uip->ui_vmsize != 0)
 		printf("freeing uidinfo: uid = %d, swapuse = %lld\n",
 		    uip->ui_uid, (unsigned long long)uip->ui_vmsize);
-	mtx_destroy(&uip->ui_vmsize_mtx);
 	free(uip, M_UIDINFO);
 }
 
@@ -1460,18 +1468,17 @@ ui_racct_foreach(void (*callback)(struct racct *racct,
 static inline int
 chglimit(struct uidinfo *uip, long *limit, int diff, rlim_t max, const char *name)
 {
+	long new;
 
 	/* Don't allow them to exceed max, but allow subtraction. */
+	new = atomic_fetchadd_long(limit, (long)diff) + diff;
 	if (diff > 0 && max != 0) {
-		if (atomic_fetchadd_long(limit, (long)diff) + diff > max) {
+		if (new < 0 || new > max) {
 			atomic_subtract_long(limit, (long)diff);
 			return (0);
 		}
-	} else {
-		atomic_add_long(limit, (long)diff);
-		if (*limit < 0)
-			printf("negative %s for uid = %d\n", name, uip->ui_uid);
-	}
+	} else if (new < 0)
+		printf("negative %s for uid = %d\n", name, uip->ui_uid);
 	return (1);
 }
 

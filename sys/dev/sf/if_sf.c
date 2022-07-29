@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
  *
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/sf/if_sf.c 347962 2019-05-18 20:43:13Z brooks $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Adaptec AIC-6915 "Starfire" PCI fast ethernet driver for FreeBSD.
@@ -482,8 +484,9 @@ sf_rxfilter(struct sf_softc *sc)
 
 	/* Now program new ones. */
 	i = 1;
+	/* XXX how do we maintain reverse semantics without impl */
 	if_maddr_rlock(ifp);
-	TAILQ_FOREACH_REVERSE(ifma, &ifp->if_multiaddrs, ifmultihead,
+	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs,
 	    ifma_link) {
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;

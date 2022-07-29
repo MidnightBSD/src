@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
  * Copyright (c) 2008-2012, by Michael Tuexen. All rights reserved.
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/sctp_header.h 347154 2019-05-05 12:28:39Z tuexen $");
+__FBSDID("$FreeBSD$");
 
 #ifndef _NETINET_SCTP_HEADER_H_
 #define _NETINET_SCTP_HEADER_H_
@@ -542,43 +544,43 @@ struct sctp_auth_chunk {
 #ifndef SCTP_MAX_OVERHEAD
 #ifdef INET6
 #define SCTP_MAX_OVERHEAD (sizeof(struct sctp_data_chunk) + \
-			   sizeof(struct sctphdr) + \
-			   sizeof(struct sctp_ecne_chunk) + \
-			   sizeof(struct sctp_sack_chunk) + \
-			   sizeof(struct ip6_hdr))
+                           sizeof(struct sctphdr) + \
+                           sizeof(struct sctp_ecne_chunk) + \
+                           sizeof(struct sctp_sack_chunk) + \
+                           sizeof(struct ip6_hdr))
 
 #define SCTP_MED_OVERHEAD (sizeof(struct sctp_data_chunk) + \
-			   sizeof(struct sctphdr) + \
-			   sizeof(struct ip6_hdr))
+                           sizeof(struct sctphdr) + \
+                           sizeof(struct ip6_hdr))
 
 
 #define SCTP_MIN_OVERHEAD (sizeof(struct ip6_hdr) + \
-			   sizeof(struct sctphdr))
+                           sizeof(struct sctphdr))
 
 #else
 #define SCTP_MAX_OVERHEAD (sizeof(struct sctp_data_chunk) + \
-			   sizeof(struct sctphdr) + \
-			   sizeof(struct sctp_ecne_chunk) + \
-			   sizeof(struct sctp_sack_chunk) + \
-			   sizeof(struct ip))
+                           sizeof(struct sctphdr) + \
+                           sizeof(struct sctp_ecne_chunk) + \
+                           sizeof(struct sctp_sack_chunk) + \
+                           sizeof(struct ip))
 
 #define SCTP_MED_OVERHEAD (sizeof(struct sctp_data_chunk) + \
-			   sizeof(struct sctphdr) + \
-			   sizeof(struct ip))
+                           sizeof(struct sctphdr) + \
+                           sizeof(struct ip))
 
 
 #define SCTP_MIN_OVERHEAD (sizeof(struct ip) + \
-			   sizeof(struct sctphdr))
+                           sizeof(struct sctphdr))
 
 #endif				/* INET6 */
 #endif				/* !SCTP_MAX_OVERHEAD */
 
 #define SCTP_MED_V4_OVERHEAD (sizeof(struct sctp_data_chunk) + \
-			      sizeof(struct sctphdr) + \
-			      sizeof(struct ip))
+                              sizeof(struct sctphdr) + \
+                              sizeof(struct ip))
 
 #define SCTP_MIN_V4_OVERHEAD (sizeof(struct ip) + \
-			      sizeof(struct sctphdr))
+                              sizeof(struct sctphdr))
 
 #undef SCTP_PACKED
 #endif				/* !__sctp_header_h__ */

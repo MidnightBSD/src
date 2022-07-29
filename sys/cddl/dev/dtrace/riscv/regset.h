@@ -19,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/11/sys/cddl/dev/dtrace/riscv/regset.h 300618 2016-05-24 16:41:37Z br $ 
+ * $FreeBSD$ 
  */
 /*
  * Copyright 2004 Sun Microsystems, Inc.  All rights reserved.

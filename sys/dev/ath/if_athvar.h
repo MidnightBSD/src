@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/ath/if_athvar.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*
@@ -202,6 +204,7 @@ struct ath_node {
 					   node */
 	int			clrdmask;	/* has clrdmask been set */
 	uint32_t	an_leak_count;	/* How many frames to leak during pause */
+	HAL_NODE_STATS	an_node_stats;	/* HAL node stats for this node */
 	/* variable-length rate control state follows */
 };
 #define	ATH_NODE(ni)	((struct ath_node *)(ni))
@@ -305,6 +308,7 @@ struct ath_buf {
 
 		/* 16 bit? */
 		uint32_t bfs_ctsduration;	/* CTS duration (pre-11n NICs) */
+		int32_t bfs_rc_maxpktlen;	/* max packet length/bucket from ratectrl or -1 */
 		struct ath_rc_series bfs_rc[ATH_RC_NUM];	/* non-11n TX series */
 	} bf_state;
 };
@@ -314,8 +318,9 @@ typedef TAILQ_HEAD(ath_bufhead_s, ath_buf) ath_bufhead;
 #define	ATH_BUF_BUSY	0x00000002	/* (tx) desc owned by h/w */
 #define	ATH_BUF_FIFOEND	0x00000004
 #define	ATH_BUF_FIFOPTR	0x00000008
+#define	ATH_BUF_TOA_PROBE	0x00000010	/* ToD/ToA exchange probe */
 
-#define	ATH_BUF_FLAGS_CLONE	(ATH_BUF_MGMT)
+#define	ATH_BUF_FLAGS_CLONE	(ATH_BUF_MGMT | ATH_BUF_TOA_PROBE)
 
 /*
  * DMA state for tx/rx descriptors.
@@ -406,7 +411,6 @@ struct ath_txq {
 #define	ATH_TXQ_UNLOCK_ASSERT(_tq)	mtx_assert(&(_tq)->axq_lock,	\
 					    MA_NOTOWNED)
 
-
 #define	ATH_NODE_LOCK(_an)		mtx_lock(&(_an)->an_mtx)
 #define	ATH_NODE_UNLOCK(_an)		mtx_unlock(&(_an)->an_mtx)
 #define	ATH_NODE_LOCK_ASSERT(_an)	mtx_assert(&(_an)->an_mtx, MA_OWNED)
@@ -489,6 +493,7 @@ struct ath_vap {
 	int		(*av_set_tim)(struct ieee80211_node *, int);
 	void		(*av_recv_pspoll)(struct ieee80211_node *,
 				struct mbuf *);
+	struct ieee80211_quiet_ie	quiet_ie;
 };
 #define	ATH_VAP(vap)	((struct ath_vap *)(vap))
 
@@ -1151,8 +1156,8 @@ void	ath_intr(void *);
 	((*(_ah)->ah_stopTxDma)((_ah), (_qnum)))
 #define	ath_hal_stoppcurecv(_ah) \
 	((*(_ah)->ah_stopPcuReceive)((_ah)))
-#define	ath_hal_startpcurecv(_ah) \
-	((*(_ah)->ah_startPcuReceive)((_ah)))
+#define	ath_hal_startpcurecv(_ah, _is_scanning) \
+	((*(_ah)->ah_startPcuReceive)((_ah), (_is_scanning)))
 #define	ath_hal_stopdmarecv(_ah) \
 	((*(_ah)->ah_stopDmaReceive)((_ah)))
 #define	ath_hal_getdiagstate(_ah, _id, _indata, _insize, _outdata, _outsize) \
@@ -1348,7 +1353,7 @@ void	ath_intr(void *);
 	== HAL_OK)
 #define	ath_hal_setrxbufsize(_ah, _req) \
 	(ath_hal_setcapability(_ah, HAL_CAP_RXBUFSIZE, 0, _req, NULL)	\
-	== HAL_OK)
+	== AH_TRUE)
 
 #define	ath_hal_getchannoise(_ah, _c) \
 	((*(_ah)->ah_getChanNoise)((_ah), (_c)))
@@ -1370,9 +1375,12 @@ void	ath_intr(void *);
 	0, NULL) == HAL_OK)
 #define	ath_hal_gtxto_supported(_ah) \
 	(ath_hal_getcapability(_ah, HAL_CAP_GTXTO, 0, NULL) == HAL_OK)
-#define	ath_hal_has_long_rxdesc_tsf(_ah) \
-	(ath_hal_getcapability(_ah, HAL_CAP_LONG_RXDESC_TSF, \
-	0, NULL) == HAL_OK)
+#define	ath_hal_get_rx_tsf_prec(_ah, _pr) \
+	(ath_hal_getcapability((_ah), HAL_CAP_RXTSTAMP_PREC, 0, (_pr)) \
+	    == HAL_OK)
+#define	ath_hal_get_tx_tsf_prec(_ah, _pr) \
+	(ath_hal_getcapability((_ah), HAL_CAP_TXTSTAMP_PREC, 0, (_pr)) \
+	    == HAL_OK)
 #define	ath_hal_setuprxdesc(_ah, _ds, _size, _intreq) \
 	((*(_ah)->ah_setupRxDesc)((_ah), (_ds), (_size), (_intreq)))
 #define	ath_hal_rxprocdesc(_ah, _ds, _dspa, _dsnext, _rs) \
@@ -1480,6 +1488,8 @@ void	ath_intr(void *);
 	((*(_ah)->ah_get11nExtBusy)((_ah)))
 #define	ath_hal_setchainmasks(_ah, _txchainmask, _rxchainmask) \
 	((*(_ah)->ah_setChainMasks)((_ah), (_txchainmask), (_rxchainmask)))
+#define	ath_hal_set_quiet(_ah, _p, _d, _o, _f) \
+	((*(_ah)->ah_setQuiet)((_ah), (_p), (_d), (_o), (_f)))
 
 #define	ath_hal_spectral_supported(_ah) \
 	(ath_hal_getcapability(_ah, HAL_CAP_SPECTRAL_SCAN, 0, NULL) == HAL_OK)

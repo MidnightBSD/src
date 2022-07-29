@@ -3,7 +3,7 @@
 \ ** F I C L   O - O   E X T E N S I O N S
 \ ** john sadler aug 1998
 \
-\ $FreeBSD: stable/11/stand/ficl/softwords/oo.fr 167850 2007-03-23 22:26:01Z jkim $
+\ $FreeBSD$
 
 17 ficl-vocabulary oop
 also oop definitions

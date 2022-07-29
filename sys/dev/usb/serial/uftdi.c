@@ -1,6 +1,8 @@
 /*	$NetBSD: uftdi.c,v 1.13 2002/09/23 05:51:23 simonb Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2000 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/usb/serial/uftdi.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * NOTE: all function names beginning like "uftdi_cfg_" can only
@@ -291,6 +293,8 @@ static const STRUCT_USB_HOST_ID uftdi_devs[] = {
 	UFTDI_DEV(BBELECTRONICS, USPTL4, 0),
 	UFTDI_DEV(BBELECTRONICS, USTL4, 0),
 	UFTDI_DEV(BBELECTRONICS, ZZ_PROG1_USB, 0),
+	UFTDI_DEV(BRAINBOXES, US257, 0),
+	UFTDI_DEV(BRAINBOXES, US25701, 0),
 	UFTDI_DEV(CONTEC, COM1USBH, 0),
 	UFTDI_DEV(DRESDENELEKTRONIK, SENSORTERMINALBOARD, 0),
 	UFTDI_DEV(DRESDENELEKTRONIK, WIRELESSHANDHELDTERMINAL, 0),

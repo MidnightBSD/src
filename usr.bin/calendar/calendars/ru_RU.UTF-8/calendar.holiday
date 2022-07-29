@@ -1,7 +1,7 @@
 /*
  * Российские праздники (нерабочие "красные" дни)
  *
- * $FreeBSD: stable/11/usr.bin/calendar/calendars/ru_RU.UTF-8/calendar.holiday 303659 2016-08-02 14:14:36Z glebius $
+ * $FreeBSD$
  */
 
 #ifndef _ru_RU_UTF_8_holiday_

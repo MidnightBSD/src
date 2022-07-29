@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/vt/keymaps/uk.macbook.kbd 342254 2018-12-19 22:48:27Z dab $
+# $FreeBSD$
 # by James Wright <james.wright@jigsawdezign.com>
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock

@@ -22,7 +22,7 @@
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  * Portions Copyright 2018 Devin Teske dteske@freebsd.org
  *
- * $FreeBSD: stable/11/cddl/lib/libdtrace/errno.d 333617 2018-05-15 00:00:44Z dteske $
+ * $FreeBSD$
  */
 /*
  * Copyright 2004 Sun Microsystems, Inc.  All rights reserved.
@@ -225,7 +225,9 @@ inline int ENOTRECOVERABLE = 95;
 #pragma D binding "1.13" ENOTRECOVERABLE
 inline int EOWNERDEAD = 96;
 #pragma D binding "1.13" EOWNERDEAD
-inline int ELAST = 96;
+inline int EINTEGRITY = 97;
+#pragma D binding "1.13" EINTEGRITY
+inline int ELAST = 97;
 #pragma D binding "1.0" ELAST
 inline int ERESTART = -1;
 #pragma D binding "1.0" ERESTART
@@ -340,6 +342,7 @@ inline string strerror[int errno] =
 	errno == ECAPMODE ?		"Not permitted in capability mode" :
 	errno == ENOTRECOVERABLE ?	"State not recoverable" :
 	errno == EOWNERDEAD ?		"Previous owner died" :
+	errno == EINTEGRITY ?		"Integrity check failed" :
 	errno == ERESTART ?		"restart syscall" :
 	errno == EJUSTRETURN ?		"don't modify regs, just return" :
 	errno == ENOIOCTL ?		"ioctl not handled by this layer" :

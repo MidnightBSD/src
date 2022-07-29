@@ -1,6 +1,4 @@
-# $MidnightBSD$
-
-NO_OBJ=
+# $FreeBSD$
 
 FILESDIR=	${LIBEXECDIR}/bsdconfig/120.networking/include
 FILES=		messages.subr

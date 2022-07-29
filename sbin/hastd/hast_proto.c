@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/hastd/hast_proto.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/endian.h>
 
@@ -44,9 +44,7 @@ __FBSDID("$FreeBSD: stable/11/sbin/hastd/hast_proto.c 330449 2018-03-05 07:26:05
 #include <pjdlog.h>
 #include <proto.h>
 
-#ifdef HAVE_CRYPTO
 #include "hast_checksum.h"
-#endif
 #include "hast_compression.h"
 #include "hast_proto.h"
 
@@ -70,9 +68,7 @@ struct hast_pipe_stage {
 
 static struct hast_pipe_stage pipeline[] = {
 	{ "compression", compression_send, compression_recv },
-#ifdef HAVE_CRYPTO
 	{ "checksum", checksum_send, checksum_recv }
-#endif
 };
 
 /*

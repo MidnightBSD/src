@@ -20,12 +20,12 @@ CFLAGS+=	-I${SVNDIR}/include \
 		-I${APRU}/include/private \
 		-I${APRU}/include
 
-LDADD=		-L${LIBSVN_WCDIR} -lsvn_wc \
-		-L${LIBSVN_DELTADIR} -lsvn_delta \
-		-L${LIBSVN_DIFFDIR} -lsvn_diff \
-		-L${LIBSVN_SUBRDIR} -lsvn_subr \
-		-L${LIBAPR_UTILDIR} -lapr-util \
-		-L${LIBAPRDIR} -lapr
+LDADD=		-L${LIBSVN_WCDIR} -lsvn_wc${PIE_SUFFIX} \
+		-L${LIBSVN_DELTADIR} -lsvn_delta${PIE_SUFFIX} \
+		-L${LIBSVN_DIFFDIR} -lsvn_diff${PIE_SUFFIX} \
+		-L${LIBSVN_SUBRDIR} -lsvn_subr${PIE_SUFFIX} \
+		-L${LIBAPR_UTILDIR} -lapr-util${PIE_SUFFIX} \
+		-L${LIBAPRDIR} -lapr${PIE_SUFFIX}
 
 LIBADD+=	bsdxml \
 		sqlite3 \

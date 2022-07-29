@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/ofed/libibumad/Makefile 335253 2018-06-16 15:05:05Z kib $
+# $FreeBSD$
 
 _spath=	${SRCTOP}/contrib/ofed/libibumad
 .PATH: ${_spath}

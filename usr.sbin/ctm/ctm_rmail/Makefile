@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/ctm/ctm_rmail/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD$
 
 PROG=	ctm_rmail
 MLINKS=	ctm_rmail.1 ctm_smail.1 \

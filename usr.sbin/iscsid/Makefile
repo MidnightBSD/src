@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/iscsid/Makefile 319119 2017-05-29 10:15:41Z ngie $
+# $FreeBSD$
 
 PACKAGE=	iscsi
 PROG=		iscsid
@@ -11,6 +11,6 @@ MAN=		iscsid.8
 
 LIBADD=		md util
 
-WARNS=		6
+WARNS?=		6
 
 .include <bsd.prog.mk>

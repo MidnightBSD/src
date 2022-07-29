@@ -1,6 +1,8 @@
 /*	$NetBSD: bridgestp.c,v 1.5 2003/11/28 08:56:48 keihan Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2000 Jason L. Wright (jason@thought.net)
  * Copyright (c) 2006 Andrew Thompson (thompsa@FreeBSD.org)
  * All rights reserved.
@@ -35,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/net/bridgestp.c 345683 2019-03-29 11:59:54Z kp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -590,6 +592,23 @@ bstp_received_bpdu(struct bstp_state *bs, struct bstp_port *bp,
 		case BSTP_INFO_DISABLED:
 		case BSTP_INFO_AGED:
 			return;
+	}
+
+	/* range checks */
+	if (cu->cu_message_age >= cu->cu_max_age) {
+		return;
+	}
+	if (cu->cu_max_age < BSTP_MIN_MAX_AGE ||
+	    cu->cu_max_age > BSTP_MAX_MAX_AGE) {
+		return;
+	}
+	if (cu->cu_forward_delay < BSTP_MIN_FORWARD_DELAY ||
+	    cu->cu_forward_delay > BSTP_MAX_FORWARD_DELAY) {
+		return;
+	}
+	if (cu->cu_hello_time < BSTP_MIN_HELLO_TIME ||
+	    cu->cu_hello_time > BSTP_MAX_HELLO_TIME) {
+		return;
 	}
 
 	type = bstp_pdu_rcvtype(bp, cu);
@@ -1869,6 +1888,7 @@ bstp_tick(void *arg)
 	if (bs->bs_running == 0)
 		return;
 
+	NET_EPOCH_ENTER();
 	CURVNET_SET(bs->bs_vnet);
 
 	/* poll link events on interfaces that do not support linkstate */
@@ -1907,6 +1927,7 @@ bstp_tick(void *arg)
 	}
 
 	CURVNET_RESTORE();
+	NET_EPOCH_EXIT();
 
 	callout_reset(&bs->bs_bstpcallout, hz, bstp_tick, bs);
 }
@@ -2041,8 +2062,8 @@ bstp_reinit(struct bstp_state *bs)
 	 * bridges in the same STP domain.
 	 */
 	IFNET_RLOCK_NOSLEEP();
-	TAILQ_FOREACH(ifp, &V_ifnet, if_link) {
-		if (ifp->if_type != IFT_ETHER)
+	CK_STAILQ_FOREACH(ifp, &V_ifnet, if_link) {
+		if (ifp->if_type != IFT_ETHER && ifp->if_type != IFT_L2VLAN)
 			continue;	/* Not Ethernet */
 
 		if (ifp->if_bridge != bridgeptr)
@@ -2230,6 +2251,7 @@ bstp_enable(struct bstp_port *bp)
 
 	switch (ifp->if_type) {
 		case IFT_ETHER:	/* These can do spanning tree. */
+		case IFT_L2VLAN:
 			break;
 		default:
 			/* Nothing else can. */

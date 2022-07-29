@@ -1,9 +1,10 @@
 # $Id: Makefile,v 1.5 2003/09/08 02:28:35 max Exp $
-# $FreeBSD: stable/11/usr.sbin/bluetooth/Makefile 282054 2015-04-27 06:34:51Z ngie $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
 SUBDIR= \
+	bluetooth-config \
 	bt3cfw \
 	btpand \
 	hccontrol \

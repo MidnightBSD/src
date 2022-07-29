@@ -1,6 +1,8 @@
 /*	$NetBSD: ieee754.h,v 1.4 2003/10/27 02:30:26 simonb Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -39,7 +41,7 @@
  *
  *	@(#)ieee.h	8.1 (Berkeley) 6/11/93
  *
- * $FreeBSD: stable/11/sys/arm/include/ieee.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  *
  */
 

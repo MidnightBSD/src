@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/tests/stdio/gets_s_test.c 335335 2018-06-18 19:35:17Z cy $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
 #include <stdint.h>

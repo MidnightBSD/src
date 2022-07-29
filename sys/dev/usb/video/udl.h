@@ -1,5 +1,5 @@
 /*	$OpenBSD: udl.h,v 1.21 2013/04/15 09:23:02 mglocker Exp $ */
-/*	$FreeBSD: stable/11/sys/dev/usb/video/udl.h 281644 2015-04-17 07:07:06Z hselasky $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (c) 2009 Marcus Glocker <mglocker@openbsd.org>

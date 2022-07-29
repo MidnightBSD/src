@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/tools/regression/netinet6/icmp6_filter/Makefile 264400 2014-04-13 05:21:56Z imp $
+# $FreeBSD$
 #
 
 PROG=	icmp6_filter

@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/dev/extres/clk/clknode_if.m 294660 2016-01-24 11:00:38Z mmel $
+# $FreeBSD$
 #
 
 INTERFACE clknode;

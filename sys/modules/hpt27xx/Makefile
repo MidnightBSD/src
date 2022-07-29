@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/hpt27xx/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 HPT27XX=	${SRCTOP}/sys/dev/hpt27xx
 .PATH:	${HPT27XX}
 

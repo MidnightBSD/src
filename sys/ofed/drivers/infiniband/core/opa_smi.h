@@ -31,7 +31,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/ofed/drivers/infiniband/core/opa_smi.h 331772 2018-03-30 18:17:33Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef __OPA_SMI_H_

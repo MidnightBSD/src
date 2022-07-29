@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mrsas/mrsas_linux.c 340180 2018-11-06 12:57:38Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -67,6 +67,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/mrsas/mrsas_linux.c 340180 2018-11-06 12:5
 #include <compat/linux/linux_util.h>
 
 #include <dev/mrsas/mrsas.h>
+#undef COMPAT_FREEBSD32
 #include <dev/mrsas/mrsas_ioctl.h>
 
 /* There are multiple ioctl number ranges that need to be handled */

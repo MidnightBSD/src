@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -39,7 +41,7 @@
 static char sccsid[] = "@(#)vfprintf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/stdio/vfprintf.c 334655 2018-06-05 13:53:37Z kib $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Actual printf innards.

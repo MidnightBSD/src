@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/gnu/usr.bin/cc/cc_tools/Makefile.hdrs 298218 2016-04-18 18:13:58Z bdrewery $
+# $FreeBSD$
 #
 # This is logic for common headers shared inside of gnu/lib.  It used to
 # live in gnu/usr.bin/cc/cc_tools/Makefile.
@@ -45,6 +45,10 @@ TARGET_INC+=	${GCC_CPU}/bpabi.h
 .if ${TARGET_ARCH} == "powerpc64"
 TARGET_INC+=	${GCC_CPU}/biarch64.h
 TARGET_INC+=    ${GCC_CPU}/default64.h
+.endif
+.if ${TARGET_ARCH} == "powerpcspe" 	 
+TARGET_INC+=    ${GCC_CPU}/freebsdspe.h 	 
+TARGET_INC+=    ${GCC_CPU}/e500-double.h 	 
 .endif
 TARGET_INC+=	${GCC_CPU}/freebsd.h
 .if ${TARGET_CPUARCH} == "amd64"

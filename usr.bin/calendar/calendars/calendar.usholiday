@@ -1,7 +1,7 @@
 /*
  * USA holiday
  *
- * $FreeBSD: stable/11/usr.bin/calendar/calendars/calendar.usholiday 169102 2007-04-29 20:03:06Z dwmalone $
+ * $FreeBSD$
  */
 
 #ifndef _calendar_usholiday_

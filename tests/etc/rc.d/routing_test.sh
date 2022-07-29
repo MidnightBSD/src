@@ -29,7 +29,7 @@
 # 
 #  Authors: Alan Somers         (Spectra Logic Corporation)
 #
-# $FreeBSD: stable/11/tests/etc/rc.d/routing_test.sh 324404 2017-10-07 23:10:16Z ngie $
+# $FreeBSD$
 
 atf_test_case static_ipv4_loopback_route_for_each_fib cleanup
 static_ipv4_loopback_route_for_each_fib_head()
@@ -57,6 +57,10 @@ static_ipv6_loopback_route_for_each_fib_body()
 {
 	local nfibs fib
 	nfibs=`sysctl -n net.fibs`
+
+	if [ "`sysctl -in kern.features.inet6`" != "1" ]; then
+		atf_skip "This test requires IPv6 support"
+	fi
 
 	# Check for an IPv6 loopback route
 	for fib in `seq 0 $((${nfibs} - 1))`; do

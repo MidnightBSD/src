@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/tools/test/iconv/ref/UTF-16LE 219019 2011-02-25 00:04:39Z gabor $
+$FreeBSD$
 0x0100 = 0x00000100
 0x0101 = 0x00000101
 0x0102 = 0x00000102

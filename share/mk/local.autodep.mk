@@ -1,8 +1,8 @@
-# $FreeBSD: stable/11/share/mk/local.autodep.mk 291725 2015-12-03 22:39:42Z bdrewery $
+# $FreeBSD$
 
 .if ${.MAKE.DEPENDFILE:M*.${MACHINE}} == ""
 # by default only MACHINE0 does updates
-UPDATE_DEPENDFILE_MACHINE?= ${MACHINE0}
+UPDATE_DEPENDFILE_MACHINE?= ${MACHINE0:U${MACHINE}}
 .if ${MACHINE} != ${UPDATE_DEPENDFILE_MACHINE}
 UPDATE_DEPENDFILE= no
 .endif

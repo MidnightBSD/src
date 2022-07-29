@@ -1,7 +1,7 @@
 /* 
  * FQ_Codel - The FlowQueue-Codel scheduler/AQM
  *
- * $FreeBSD: stable/11/sys/netpfil/ipfw/dn_sched_fq_codel.c 325730 2017-11-12 01:26:43Z truckman $
+ * $FreeBSD$
  * 
  * Copyright (C) 2016 Centre for Advanced Internet Architectures,
  *  Swinburne University of Technology, Melbourne, Australia.
@@ -44,6 +44,7 @@
 #include <netinet/ip_fw.h>	/* flow_id */
 #include <netinet/ip_dummynet.h>
 
+#include <sys/lock.h>
 #include <sys/proc.h>
 #include <sys/rwlock.h>
 
@@ -162,7 +163,7 @@ codel_drop_head(struct fq_codel_flow *q, struct fq_codel_si *si)
 	fq_update_stats(q, si, -m->m_pkthdr.len, 1);
 
 	if (si->main_q.ni.length == 0) /* queue is now idle */
-			si->main_q.q_time = dn_cfg.curr_time;
+			si->main_q.q_time = V_dn_cfg.curr_time;
 
 	FREE_PKT(m);
 }
@@ -186,10 +187,8 @@ codel_enqueue(struct fq_codel_flow *q, struct mbuf *m, struct fq_codel_si *si)
 	if (mtag == NULL)
 		mtag = m_tag_alloc(MTAG_ABI_COMPAT, DN_AQM_MTAG_TS, sizeof(aqm_time_t),
 			M_NOWAIT);
-	if (mtag == NULL) {
-		m_freem(m); 
+	if (mtag == NULL)
 		goto drop;
-	}
 	*(aqm_time_t *)(mtag + 1) = AQM_UNOW;
 	m_tag_prepend(m, mtag);
 
@@ -453,8 +452,8 @@ fq_codel_new_sched(struct dn_sch_inst *_si)
 	q->fs = _si->sched->fs;
 
 	/* allocate memory for flows array */
-	si->flows = malloc(schk->cfg.flows_cnt * sizeof(struct fq_codel_flow),
-		 M_DUMMYNET, M_NOWAIT | M_ZERO);
+	si->flows = mallocarray(schk->cfg.flows_cnt,
+	    sizeof(struct fq_codel_flow), M_DUMMYNET, M_NOWAIT | M_ZERO);
 	if (si->flows == NULL) {
 		D("cannot allocate memory for fq_codel configuration parameters");
 		return ENOMEM ; 

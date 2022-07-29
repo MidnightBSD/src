@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  *
  * $KAME: altq_priq.h,v 1.7 2003/10/03 05:05:15 kjc Exp $
- * $FreeBSD: stable/11/sys/net/altq/altq_priq.h 287009 2015-08-21 22:02:22Z loos $
+ * $FreeBSD$
  */
 
 #ifndef _ALTQ_ALTQ_PRIQ_H_
@@ -111,6 +111,12 @@ struct priq_classstats {
 	struct redstats		red[3];	/* rio has 3 red stats */
 	struct codel_stats	codel;
 };
+
+/*
+ * PRIQ_STATS_VERSION is defined in altq.h to work around issues stemming
+ * from mixing of public-API and internal bits in each scheduler-specific
+ * header.
+ */
 
 #ifdef ALTQ3_COMPAT
 struct priq_class_stats {

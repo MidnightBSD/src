@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/types.h 299459 2016-05-11 16:05:32Z cem $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_TYPES_H_
@@ -72,7 +72,10 @@ typedef	u_int		minor_t;
 
 typedef	short		index_t;
 typedef	off_t		offset_t;
-typedef	long		ptrdiff_t;	/* pointer difference */
+#ifndef _PTRDIFF_T_DECLARED
+typedef	__ptrdiff_t		ptrdiff_t;	/* pointer difference */
+#define _PTRDIFF_T_DECLARED
+#endif
 typedef	int64_t		rlim64_t;
 typedef	int		major_t;
 

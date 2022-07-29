@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Stacey D. Son
  * All rights reserved.
@@ -27,7 +26,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/binmiscctl/binmiscctl.c 287463 2015-09-04 15:45:42Z sbruno $");
+__FBSDID("$FreeBSD$");
+
+#include <sys/types.h>
+#include <sys/imgact_binmisc.h>
+#include <sys/linker.h>
+#include <sys/module.h>
+#include <sys/sysctl.h>
 
 #include <ctype.h>
 #include <errno.h>
@@ -37,11 +42,6 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/binmiscctl/binmiscctl.c 287463 2015-09-04
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <sys/types.h>
-#include <sys/imgact_binmisc.h>
-#include <sys/linker.h>
-#include <sys/sysctl.h>
 
 enum cmd {
 	CMD_ADD = 0,
@@ -134,7 +134,7 @@ static char const *cmd_sysctl_name[] = {
 	IBE_SYSCTL_NAME_LIST
 };
 
-static void
+static void __dead2
 usage(const char *format, ...)
 {
 	va_list args;
@@ -150,7 +150,7 @@ usage(const char *format, ...)
 	fprintf(stderr, "\n");
 	fprintf(stderr, "usage: %s command [args...]\n\n", __progname);
 
-	for(i = 0; i < ( sizeof (cmds) / sizeof (cmds[0])); i++) {
+	for(i = 0; i < nitems(cmds); i++) {
 		fprintf(stderr, "%s:\n", cmds[i].desc);
 		fprintf(stderr, "\t%s %s %s\n\n", __progname, cmds[i].name,
 		    cmds[i].args);
@@ -159,7 +159,7 @@ usage(const char *format, ...)
 	exit (error);
 }
 
-static void
+static void __dead2
 fatal(const char *format, ...)
 {
 	va_list args;
@@ -232,7 +232,7 @@ demux_cmd(__unused int argc, char *const argv[])
 	optind = 1;
 	optreset = 1;
 
-	for(i = 0; i < ( sizeof (cmds) / sizeof (cmds[0])); i++) {
+	for(i = 0; i < nitems(cmds); i++) {
 		if (!strcasecmp(cmds[i].name, argv[0])) {
 			return (i);
 		}
@@ -299,10 +299,12 @@ add_cmd(__unused int argc, char *argv[], ximgact_binmisc_entry_t *xbe)
 			break;
 
 		case 'm':
+			free(magic);
 			magic = strdup(optarg);
 			break;
 
 		case 'M':
+			free(mask);
 			mask = strdup(optarg);
 			xbe->xbe_flags |= IBF_USE_MASK;
 			break;
@@ -402,7 +404,7 @@ main(int argc, char **argv)
 	size_t xbe_out_sz = 0, *xbe_out_szp = NULL;
 	uint32_t i;
 
-	if (kldfind(KMOD_NAME) == -1) {
+	if (modfind(KMOD_NAME) == -1) {
 		if (kldload(KMOD_NAME) == -1)
 			fatal("Can't load %s kernel module: %s",
 			    KMOD_NAME, strerror(errno));
@@ -417,7 +419,7 @@ main(int argc, char **argv)
 
 	argc--, argv++;
 	cmd = demux_cmd(argc, argv);
-	if (cmd == -1)
+	if (cmd < 0)
 		usage("Error: Unknown command \"%s\"", argv[0]);
 	argc--, argv++;
 
@@ -503,7 +505,7 @@ main(int argc, char **argv)
 			free(xbe_outp);
 			fatal("Fatal: %s", strerror(errno));
 		}
-		for(i = 0; i < (xbe_out_sz / sizeof(xbe_out)); i++)
+		for(i = 0; i < howmany(xbe_out_sz, sizeof(xbe_out)); i++)
 			printxbe(&xbe_outp[i]);
 	}
 

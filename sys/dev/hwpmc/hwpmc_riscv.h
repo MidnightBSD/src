@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_riscv.h 295041 2016-01-29 15:12:31Z br $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_HWPMC_RISCV_H_

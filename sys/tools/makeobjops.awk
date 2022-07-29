@@ -1,6 +1,8 @@
 #!/usr/bin/awk -f
 
 #-
+# SPDX-License-Identifier: BSD-3-Clause
+#
 # Copyright (c) 1992, 1993
 #        The Regents of the University of California.  All rights reserved.
 #
@@ -12,7 +14,7 @@
 # 2. Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in the
 #    documentation and/or other materials provided with the distribution.
-# 4. Neither the name of the University nor the names of its contributors
+# 3. Neither the name of the University nor the names of its contributors
 #    may be used to endorse or promote products derived from this software
 #    without specific prior written permission.
 #
@@ -34,8 +36,7 @@
 # From src/sys/kern/makedevops.pl,v 1.12 1999/11/22 14:40:04 n_hibma Exp
 # From src/sys/kern/makeobjops.pl,v 1.8 2001/11/16 02:02:42 joe Exp
 #
-# $FreeBSD: stable/10/sys/tools/makeobjops.awk 227385 2011-11-09 13:26:59Z ed $
-# $MidnightBSD$
+# $FreeBSD$
 
 #
 #   Script to produce kobj front-end sugar.
@@ -325,11 +326,19 @@ function handle_method (static, doc)
 	}
 	printh("{");
 	printh("\tkobjop_t _m;");
+	if (ret != "void")
+		printh("\t" ret " rc;");
 	if (!static)
 		firstvar = "((kobj_t)" firstvar ")";
+	if (prolog != "")
+		printh(prolog);
 	printh("\tKOBJOPLOOKUP(" firstvar "->ops," mname ");");
-	retrn =  (ret != "void") ? "return " : "";
-	printh("\t" retrn "((" mname "_t *) _m)(" varname_list ");");
+	rceq = (ret != "void") ? "rc = " : "";
+	printh("\t" rceq "((" mname "_t *) _m)(" varname_list ");");
+	if (epilog != "")
+		printh(epilog);
+	if (ret != "void")
+		printh("\treturn (rc);");
 	printh("}\n");
 }
 
@@ -439,6 +448,8 @@ for (file_i = 0; file_i < num_files; file_i++) {
 	lineno = 0;
 	error = 0;		# to signal clean up and gerror setting
 	lastdoc = "";
+	prolog = "";
+	epilog = "";
 
 	while (!error && (getline < src) > 0) {
 		lineno++;
@@ -472,10 +483,18 @@ for (file_i = 0; file_i < num_files; file_i++) {
 		else if (/^METHOD/) {
 			handle_method(0, lastdoc);
 			lastdoc = "";
+			prolog = "";
+			epilog = "";
 		} else if (/^STATICMETHOD/) {
 			handle_method(1, lastdoc);
 			lastdoc = "";
-		} else {
+			prolog = "";
+			epilog = "";
+		} else if (/^PROLOG[ 	]*{$/)
+			prolog = handle_code();
+		else if (/^EPILOG[ 	]*{$/)
+			epilog = handle_code();
+		else {
 			debug($0);
 			warnsrc("Invalid line encountered");
 			error = 1;

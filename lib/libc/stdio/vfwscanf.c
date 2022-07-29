@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -41,7 +43,7 @@ static char sccsid[] = "@(#)vfscanf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/stdio/vfwscanf.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <ctype.h>
@@ -492,7 +494,7 @@ literal:
 				goto input_failure;
 			if (wi != c) {
 				__ungetwc(wi, fp, locale);
-				goto input_failure;
+				goto match_failure;
 			}
 			nread++;
 			continue;

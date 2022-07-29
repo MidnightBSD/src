@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011, David E. O'Brien.
  * Copyright (c) 2009-2011, Juniper Networks, Inc.
  * Copyright (c) 2015-2016, EMC Corp.
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/filemon/filemon_wrapper.c 343885 2019-02-07 23:55:11Z bdrewery $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/eventhandler.h>
 #include <sys/filedesc.h>
@@ -38,9 +40,6 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/filemon/filemon_wrapper.c 343885 2019-02-0
 #include <sys/vnode.h>
 
 #include <machine/stdarg.h>
-
-#include "opt_compat.h"
-
 
 static void filemon_output_event(struct filemon *filemon, const char *fmt, ...)
     __printflike(2, 3);

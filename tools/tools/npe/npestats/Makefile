@@ -1,9 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tools/tools/npe/npestats/Makefile 276486 2014-12-31 23:25:37Z ngie $
+# $FreeBSD$
 
 PROG=	npestats
-SRCS=	main.c statfoo.c npestats.c
+SRCS=	main.c npestats.c
 BINDIR=	/usr/local/bin
 MAN=
+LIBADD=	bsdstat
+CFLAGS+=-I${.CURDIR}/../../../../lib/libbsdstat/
 
 .include <bsd.prog.mk>

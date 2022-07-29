@@ -1,4 +1,6 @@
-/*-
+/*--
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -17,7 +19,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,13 +36,9 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-#if 0
-static const char sccsid[] = "@(#)pw_util.c	8.3 (Berkeley) 4/2/94";
-#endif
-static const char rcsid[] =
-  "$FreeBSD: stable/11/lib/libutil/pw_util.c 356461 2020-01-07 18:42:53Z ian $";
-#endif /* not lint */
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
+__SCCSID("@(#)pw_util.c	8.3 (Berkeley) 4/2/94");
 
 /*
  * This file is used by all the "password" programs; vipw(8), chpass(1),
@@ -183,7 +181,7 @@ pw_lock(void)
 			if (errno == EWOULDBLOCK) {
 				errx(1, "the password db file is busy");
 			} else {
-				err(1, "could not lock the passwd file: ");
+				err(1, "could not lock the passwd file");
 			}
 		}
 
@@ -193,7 +191,7 @@ pw_lock(void)
 		 * close and retry.
 		 */
 		if (fstat(lockfd, &st) == -1)
-			err(1, "fstat() failed: ");
+			err(1, "fstat() failed");
 		if (st.st_nlink != 0)
 			break;
 		close(lockfd);
@@ -310,12 +308,13 @@ pw_edit(int notsetuid)
 		sigaction(SIGQUIT, &sa_quit, NULL);
 		sigprocmask(SIG_SETMASK, &oldsigset, NULL);
 		if (notsetuid) {
-			(void)setgid(getgid());
-			(void)setuid(getuid());
+			if (setgid(getgid()) == -1)
+				err(1, "setgid");
+			if (setuid(getuid()) == -1)
+				err(1, "setuid");
 		}
-		errno = 0;
 		execlp(editor, editor, tempname, (char *)NULL);
-		_exit(errno);
+		err(1, "%s", editor);
 	default:
 		/* parent */
 		break;
@@ -329,7 +328,9 @@ pw_edit(int notsetuid)
 			break;
 		} else if (WIFSTOPPED(pstat)) {
 			raise(WSTOPSIG(pstat));
-		} else if (WIFEXITED(pstat) && WEXITSTATUS(pstat) == 0) {
+		} else if (WIFEXITED(pstat)) {
+			if (WEXITSTATUS(pstat) != 0)
+				errx(1, "\"%s\" exited with status %d", editor, WEXITSTATUS(pstat));
 			editpid = -1;
 			break;
 		} else {

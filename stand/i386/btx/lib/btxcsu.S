@@ -13,7 +13,7 @@
 # purpose.
 #
 
-# $FreeBSD: stable/11/stand/i386/btx/lib/btxcsu.S 235154 2012-05-09 08:04:29Z avg $
+# $FreeBSD$
 
 #include <bootargs.h>
 

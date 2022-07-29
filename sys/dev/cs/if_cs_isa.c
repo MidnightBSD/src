@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997,1998 Maxim Bolotin and Oleg Sharoiko.
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/cs/if_cs_isa.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -118,3 +120,4 @@ extern devclass_t cs_devclass;
 DRIVER_MODULE(cs, isa, cs_isa_driver, cs_devclass, 0, 0);
 MODULE_DEPEND(cs, isa, 1, 1, 1);
 MODULE_DEPEND(cs, ether, 1, 1, 1);
+ISA_PNP_INFO(cs_ids);

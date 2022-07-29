@@ -22,7 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sbin/mdconfig/tests/mdconfig_test.sh 275170 2014-11-27 06:04:00Z ngie $
+# $FreeBSD$
 #
 
 check_diskinfo()

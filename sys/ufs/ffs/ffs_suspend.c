@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -76,7 +78,7 @@ ffs_susp_suspended(struct mount *mp)
 	sx_assert(&ffs_susp_lock, SA_LOCKED);
 
 	ump = VFSTOUFS(mp);
-	if (ump->um_writesuspended)
+	if ((ump->um_flags & UM_WRITESUSPENDED) != 0)
 		return (1);
 	return (0);
 }
@@ -208,7 +210,9 @@ ffs_susp_suspend(struct mount *mp)
 	if ((error = vfs_write_suspend(mp, VS_SKIP_UNMOUNT)) != 0)
 		return (error);
 
-	ump->um_writesuspended = 1;
+	UFS_LOCK(ump);
+	ump->um_flags |= UM_WRITESUSPENDED;
+	UFS_UNLOCK(ump);
 
 	return (0);
 }
@@ -234,7 +238,9 @@ ffs_susp_unsuspend(struct mount *mp)
 
 	vfs_write_resume(mp, 0);
 	ump = VFSTOUFS(mp);
-	ump->um_writesuspended = 0;
+	UFS_LOCK(ump);
+	ump->um_flags &= ~UM_WRITESUSPENDED;
+	UFS_UNLOCK(ump);
 	vfs_unbusy(mp);
 }
 

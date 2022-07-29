@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*
  * 16 Feb 93	Julian Elischer	(julian@dialix.oz.au)
  *
- * $FreeBSD: stable/11/sys/sys/cdio.h 349629 2019-07-03 00:12:50Z markj $
+ * $FreeBSD$
  */
 
 /*

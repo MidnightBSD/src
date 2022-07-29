@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/cxgbe/iw_cxgbe/Makefile 331769 2018-03-30 18:06:29Z hselasky $
+# $FreeBSD$
 
 CXGBE=	${SRCTOP}/sys/dev/cxgbe
 .PATH: ${CXGBE}/iw_cxgbe

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -15,7 +17,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,7 +36,7 @@
  *      @(#)bpf.h	8.1 (Berkeley) 6/10/93
  *	@(#)bpf.h	1.34 (LBL)     6/16/96
  *
- * $FreeBSD: stable/11/sys/net/bpf.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _NET_BPF_H_
@@ -147,6 +149,7 @@ struct bpf_zbuf {
 #define	BIOCSETFNR	_IOW('B', 130, struct bpf_program)
 #define	BIOCGTSTAMP	_IOR('B', 131, u_int)
 #define	BIOCSTSTAMP	_IOW('B', 132, u_int)
+#define	BIOCSETVLANPCP	_IOW('B', 133, u_int)
 
 /* Obsolete */
 #define	BIOCGSEESENT	BIOCGDIRECTION

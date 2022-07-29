@@ -24,7 +24,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.sbin/makefs/tests/makefs_ffs_tests.sh 339048 2018-10-01 15:40:06Z asomers $
+# $FreeBSD$
 #
 
 MAKEFS="makefs -t ffs"

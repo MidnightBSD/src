@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/usb/runfw/Makefile 351876 2019-09-05 17:20:24Z bdrewery $
+# $FreeBSD$
 
 KMOD=	runfw
 FIRMWS=	run.fw:runfw:1

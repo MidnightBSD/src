@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Cameron Grant <cg@freebsd.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/sound/driver.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
@@ -59,7 +61,6 @@ MODULE_VERSION(snd_driver, 1);
 MODULE_DEPEND(snd_driver, snd_ad1816, 1, 1, 1);
 MODULE_DEPEND(snd_driver, snd_als4000, 1, 1, 1);
 MODULE_DEPEND(snd_driver, snd_atiixp, 1, 1, 1);
-/* MODULE_DEPEND(snd_driver, snd_aureal, 1, 1, 1); */
 MODULE_DEPEND(snd_driver, snd_cmi, 1, 1, 1);
 MODULE_DEPEND(snd_driver, snd_cs4281, 1, 1, 1);
 MODULE_DEPEND(snd_driver, snd_csa, 1, 1, 1);

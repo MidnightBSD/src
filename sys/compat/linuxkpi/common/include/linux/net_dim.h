@@ -32,7 +32,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/net_dim.h 347796 2019-05-16 17:09:06Z hselasky $
+ * $FreeBSD$
  */
 
 /* This file implements Dynamic Interrupt Moderation, DIM */

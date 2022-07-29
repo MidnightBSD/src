@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright 2001 The FreeBSD Project. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/gen/sysctlnametomib.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -45,8 +47,8 @@ sysctlnametomib(const char *name, int *mibp, size_t *sizep)
 	int oid[2];
 	int error;
 
-	oid[0] = 0;
-	oid[1] = 3;
+	oid[0] = CTL_SYSCTL;
+	oid[1] = CTL_SYSCTL_NAME2OID;
 
 	*sizep *= sizeof(int);
 	error = sysctl(oid, 2, mibp, sizep, name, strlen(name));

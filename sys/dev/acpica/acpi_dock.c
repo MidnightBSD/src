@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/acpica/acpi_dock.c 246128 2013-01-30 18:01:20Z sbz $
+ * $FreeBSD$
  */
 
 #include "opt_acpi.h"
@@ -63,6 +63,8 @@ struct acpi_dock_softc {
 };
 
 ACPI_SERIAL_DECL(dock, "ACPI Docking Station");
+
+static char *acpi_dock_pnp_ids[] = {"PNP0C15", NULL};
 
 /*
  * Utility functions
@@ -256,11 +258,13 @@ acpi_dock_insert_children(device_t dev)
 static void
 acpi_dock_insert(device_t dev)
 {
-	struct acpi_dock_softc *sc;
+	struct acpi_dock_softc	*sc;
+	ACPI_HANDLE		h;
 
 	ACPI_SERIAL_ASSERT(dock);
 
 	sc = device_get_softc(dev);
+	h = acpi_get_handle(dev);
 
 	if (sc->status == ACPI_DOCK_STATUS_UNDOCKED ||
 	    sc->status == ACPI_DOCK_STATUS_UNKNOWN) {
@@ -270,8 +274,12 @@ acpi_dock_insert(device_t dev)
 			return;
 		}
 
-		if (!cold)
+		if (!cold) {
 			acpi_dock_insert_children(dev);
+
+			acpi_UserNotify("Dock", h, 1);
+		}
+
 		sc->status = ACPI_DOCK_STATUS_DOCKED;
 	}
 }
@@ -325,10 +333,13 @@ static void
 acpi_dock_removal(device_t dev)
 {
 	struct acpi_dock_softc *sc;
+	ACPI_HANDLE		h;
 
 	ACPI_SERIAL_ASSERT(dock);
 
 	sc = device_get_softc(dev);
+	h = acpi_get_handle(dev);
+
 	if (sc->status == ACPI_DOCK_STATUS_DOCKED ||
 	    sc->status == ACPI_DOCK_STATUS_UNKNOWN) {
 		acpi_dock_eject_children(dev);
@@ -341,6 +352,8 @@ acpi_dock_removal(device_t dev)
 			device_printf(dev, "_EJ0 failed\n");
 			return;
 		}
+
+		acpi_UserNotify("Dock", h, 0);
 
 		sc->status = ACPI_DOCK_STATUS_UNDOCKED;
 	}
@@ -534,4 +547,4 @@ static devclass_t acpi_dock_devclass;
 
 DRIVER_MODULE(acpi_dock, acpi, acpi_dock_driver, acpi_dock_devclass, 0, 0);
 MODULE_DEPEND(acpi_dock, acpi, 1, 1, 1);
-
+ACPI_PNP_INFO(acpi_dock_pnp_ids);

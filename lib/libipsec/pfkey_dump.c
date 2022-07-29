@@ -1,6 +1,8 @@
 /*	$KAME: pfkey_dump.c,v 1.45 2003/09/08 10:14:56 itojun Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 1995, 1996, 1997, 1998, and 1999 WIDE Project.
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libipsec/pfkey_dump.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -179,8 +181,8 @@ static struct val2str str_alg_enc[] = {
 #endif
 	{ SADB_X_EALG_CAST128CBC, "cast128-cbc", },
 	{ SADB_X_EALG_BLOWFISHCBC, "blowfish-cbc", },
-#ifdef SADB_X_EALG_RIJNDAELCBC
-	{ SADB_X_EALG_RIJNDAELCBC, "rijndael-cbc", },
+#ifdef SADB_X_EALG_AESCBC
+	{ SADB_X_EALG_AESCBC, "aes-cbc", },
 #endif
 #ifdef SADB_X_EALG_TWOFISHCBC
 	{ SADB_X_EALG_TWOFISHCBC, "twofish-cbc", },
@@ -213,7 +215,7 @@ static struct val2str str_sp_scope[] = {
 };
 
 /*
- * dump SADB_MSG formated.  For debugging, you should use kdebug_sadb().
+ * dump SADB_MSG formatted.  For debugging, you should use kdebug_sadb().
  */
 void
 pfkey_sadump(m)

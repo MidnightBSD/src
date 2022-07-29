@@ -1,7 +1,9 @@
 /*	$NetBSD: lockd.c,v 1.7 2000/08/12 18:08:44 thorpej Exp $	*/
-/*	$FreeBSD: stable/11/usr.sbin/rpc.lockd/lockd.c 355368 2019-12-03 22:54:24Z rpokala $ */
+/*	$FreeBSD$ */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1995
  *	A.R. Gordon (andrew.gordon@net-tel.co.uk).  All rights reserved.
  *
@@ -424,7 +426,7 @@ main(int argc, char **argv)
 	 * Note that it is NOT sensible to run this program from inetd - the
 	 * protocol assumes that it will run immediately at boot time.
 	 */
-	if ((foreground == 0) && daemon(0, debug_level > 0)) {
+	if ((foreground == 0) && daemon(0, 0)) {
 		err(1, "cannot fork");
 		/* NOTREACHED */
 	}

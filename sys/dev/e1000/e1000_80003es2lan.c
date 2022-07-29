@@ -1,31 +1,32 @@
 /******************************************************************************
+  SPDX-License-Identifier: BSD-3-Clause
 
-  Copyright (c) 2001-2015, Intel Corporation 
+  Copyright (c) 2001-2020, Intel Corporation
   All rights reserved.
-  
-  Redistribution and use in source and binary forms, with or without 
+
+  Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:
-  
-   1. Redistributions of source code must retain the above copyright notice, 
+
+   1. Redistributions of source code must retain the above copyright notice,
       this list of conditions and the following disclaimer.
-  
-   2. Redistributions in binary form must reproduce the above copyright 
-      notice, this list of conditions and the following disclaimer in the 
+
+   2. Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
-  
-   3. Neither the name of the Intel Corporation nor the names of its 
-      contributors may be used to endorse or promote products derived from 
+
+   3. Neither the name of the Intel Corporation nor the names of its
+      contributors may be used to endorse or promote products derived from
       this software without specific prior written permission.
-  
+
   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
-  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
-  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
-  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
-  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
-  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
-  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
-  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
 
@@ -59,7 +60,6 @@ static s32  e1000_reset_hw_80003es2lan(struct e1000_hw *hw);
 static s32  e1000_init_hw_80003es2lan(struct e1000_hw *hw);
 static s32  e1000_setup_copper_link_80003es2lan(struct e1000_hw *hw);
 static void e1000_clear_hw_cntrs_80003es2lan(struct e1000_hw *hw);
-static s32  e1000_acquire_swfw_sync_80003es2lan(struct e1000_hw *hw, u16 mask);
 static s32  e1000_cfg_kmrn_10_100_80003es2lan(struct e1000_hw *hw, u16 duplex);
 static s32  e1000_cfg_kmrn_1000_80003es2lan(struct e1000_hw *hw);
 static s32  e1000_cfg_on_link_up_80003es2lan(struct e1000_hw *hw);
@@ -68,7 +68,6 @@ static s32  e1000_read_kmrn_reg_80003es2lan(struct e1000_hw *hw, u32 offset,
 static s32  e1000_write_kmrn_reg_80003es2lan(struct e1000_hw *hw, u32 offset,
 					     u16 data);
 static void e1000_initialize_hw_bits_80003es2lan(struct e1000_hw *hw);
-static void e1000_release_swfw_sync_80003es2lan(struct e1000_hw *hw, u16 mask);
 static s32  e1000_read_mac_addr_80003es2lan(struct e1000_hw *hw);
 static void e1000_power_down_phy_copper_80003es2lan(struct e1000_hw *hw);
 
@@ -220,14 +219,14 @@ static s32 e1000_init_mac_params_80003es2lan(struct e1000_hw *hw)
 	/* Set rar entry count */
 	mac->rar_entry_count = E1000_RAR_ENTRIES;
 	/* Set if part includes ASF firmware */
-	mac->asf_firmware_present = TRUE;
+	mac->asf_firmware_present = true;
 	/* FWSM register */
-	mac->has_fwsm = TRUE;
+	mac->has_fwsm = true;
 	/* ARC supported; valid only if manageability features are enabled. */
 	mac->arc_subsystem_valid = !!(E1000_READ_REG(hw, E1000_FWSM) &
 				      E1000_FWSM_MODE_MASK);
 	/* Adaptive IFS not supported */
-	mac->adaptive_ifs = FALSE;
+	mac->adaptive_ifs = false;
 
 	/* Function pointers */
 
@@ -299,7 +298,7 @@ static s32 e1000_acquire_phy_80003es2lan(struct e1000_hw *hw)
 	DEBUGFUNC("e1000_acquire_phy_80003es2lan");
 
 	mask = hw->bus.func ? E1000_SWFW_PHY1_SM : E1000_SWFW_PHY0_SM;
-	return e1000_acquire_swfw_sync_80003es2lan(hw, mask);
+	return e1000_acquire_swfw_sync(hw, mask);
 }
 
 /**
@@ -315,7 +314,7 @@ static void e1000_release_phy_80003es2lan(struct e1000_hw *hw)
 	DEBUGFUNC("e1000_release_phy_80003es2lan");
 
 	mask = hw->bus.func ? E1000_SWFW_PHY1_SM : E1000_SWFW_PHY0_SM;
-	e1000_release_swfw_sync_80003es2lan(hw, mask);
+	e1000_release_swfw_sync(hw, mask);
 }
 
 /**
@@ -333,7 +332,7 @@ static s32 e1000_acquire_mac_csr_80003es2lan(struct e1000_hw *hw)
 
 	mask = E1000_SWFW_CSR_SM;
 
-	return e1000_acquire_swfw_sync_80003es2lan(hw, mask);
+	return e1000_acquire_swfw_sync(hw, mask);
 }
 
 /**
@@ -350,7 +349,7 @@ static void e1000_release_mac_csr_80003es2lan(struct e1000_hw *hw)
 
 	mask = E1000_SWFW_CSR_SM;
 
-	e1000_release_swfw_sync_80003es2lan(hw, mask);
+	e1000_release_swfw_sync(hw, mask);
 }
 
 /**
@@ -365,14 +364,14 @@ static s32 e1000_acquire_nvm_80003es2lan(struct e1000_hw *hw)
 
 	DEBUGFUNC("e1000_acquire_nvm_80003es2lan");
 
-	ret_val = e1000_acquire_swfw_sync_80003es2lan(hw, E1000_SWFW_EEP_SM);
+	ret_val = e1000_acquire_swfw_sync(hw, E1000_SWFW_EEP_SM);
 	if (ret_val)
 		return ret_val;
 
 	ret_val = e1000_acquire_nvm_generic(hw);
 
 	if (ret_val)
-		e1000_release_swfw_sync_80003es2lan(hw, E1000_SWFW_EEP_SM);
+		e1000_release_swfw_sync(hw, E1000_SWFW_EEP_SM);
 
 	return ret_val;
 }
@@ -388,78 +387,7 @@ static void e1000_release_nvm_80003es2lan(struct e1000_hw *hw)
 	DEBUGFUNC("e1000_release_nvm_80003es2lan");
 
 	e1000_release_nvm_generic(hw);
-	e1000_release_swfw_sync_80003es2lan(hw, E1000_SWFW_EEP_SM);
-}
-
-/**
- *  e1000_acquire_swfw_sync_80003es2lan - Acquire SW/FW semaphore
- *  @hw: pointer to the HW structure
- *  @mask: specifies which semaphore to acquire
- *
- *  Acquire the SW/FW semaphore to access the PHY or NVM.  The mask
- *  will also specify which port we're acquiring the lock for.
- **/
-static s32 e1000_acquire_swfw_sync_80003es2lan(struct e1000_hw *hw, u16 mask)
-{
-	u32 swfw_sync;
-	u32 swmask = mask;
-	u32 fwmask = mask << 16;
-	s32 i = 0;
-	s32 timeout = 50;
-
-	DEBUGFUNC("e1000_acquire_swfw_sync_80003es2lan");
-
-	while (i < timeout) {
-		if (e1000_get_hw_semaphore_generic(hw))
-			return -E1000_ERR_SWFW_SYNC;
-
-		swfw_sync = E1000_READ_REG(hw, E1000_SW_FW_SYNC);
-		if (!(swfw_sync & (fwmask | swmask)))
-			break;
-
-		/* Firmware currently using resource (fwmask)
-		 * or other software thread using resource (swmask)
-		 */
-		e1000_put_hw_semaphore_generic(hw);
-		msec_delay_irq(5);
-		i++;
-	}
-
-	if (i == timeout) {
-		DEBUGOUT("Driver can't access resource, SW_FW_SYNC timeout.\n");
-		return -E1000_ERR_SWFW_SYNC;
-	}
-
-	swfw_sync |= swmask;
-	E1000_WRITE_REG(hw, E1000_SW_FW_SYNC, swfw_sync);
-
-	e1000_put_hw_semaphore_generic(hw);
-
-	return E1000_SUCCESS;
-}
-
-/**
- *  e1000_release_swfw_sync_80003es2lan - Release SW/FW semaphore
- *  @hw: pointer to the HW structure
- *  @mask: specifies which semaphore to acquire
- *
- *  Release the SW/FW semaphore used to access the PHY or NVM.  The mask
- *  will also specify which port we're releasing the lock for.
- **/
-static void e1000_release_swfw_sync_80003es2lan(struct e1000_hw *hw, u16 mask)
-{
-	u32 swfw_sync;
-
-	DEBUGFUNC("e1000_release_swfw_sync_80003es2lan");
-
-	while (e1000_get_hw_semaphore_generic(hw) != E1000_SUCCESS)
-		; /* Empty */
-
-	swfw_sync = E1000_READ_REG(hw, E1000_SW_FW_SYNC);
-	swfw_sync &= ~mask;
-	E1000_WRITE_REG(hw, E1000_SW_FW_SYNC, swfw_sync);
-
-	e1000_put_hw_semaphore_generic(hw);
+	e1000_release_swfw_sync(hw, E1000_SWFW_EEP_SM);
 }
 
 /**
@@ -963,8 +891,8 @@ static s32 e1000_init_hw_80003es2lan(struct e1000_hw *hw)
 	reg_data &= ~0x00100000;
 	E1000_WRITE_REG_ARRAY(hw, E1000_FFLT, 0x0001, reg_data);
 
-	/* default to TRUE to enable the MDIC W/A */
-	hw->dev_spec._80003es2lan.mdic_wa_enable = TRUE;
+	/* default to true to enable the MDIC W/A */
+	hw->dev_spec._80003es2lan.mdic_wa_enable = true;
 
 	ret_val =
 	    e1000_read_kmrn_reg_80003es2lan(hw, E1000_KMRNCTRLSTA_OFFSET >>
@@ -972,7 +900,7 @@ static s32 e1000_init_hw_80003es2lan(struct e1000_hw *hw)
 	if (!ret_val) {
 		if ((i & E1000_KMRNCTRLSTA_OPMODE_MASK) ==
 		     E1000_KMRNCTRLSTA_OPMODE_INBAND_MDIO)
-			hw->dev_spec._80003es2lan.mdic_wa_enable = FALSE;
+			hw->dev_spec._80003es2lan.mdic_wa_enable = false;
 	}
 
 	/* Clear all of the statistics registers (clear on read).  It is
@@ -1240,7 +1168,6 @@ static s32 e1000_setup_copper_link_80003es2lan(struct e1000_hw *hw)
 /**
  *  e1000_cfg_on_link_up_80003es2lan - es2 link configuration after link-up
  *  @hw: pointer to the HW structure
- *  @duplex: current duplex setting
  *
  *  Configure the KMRN interface by applying last minute quirks for
  *  10/100 operation.

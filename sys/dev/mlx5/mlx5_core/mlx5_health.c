@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_core/mlx5_health.c 353246 2019-10-07 09:54:08Z hselasky $
+ * $FreeBSD$
  */
 
 #include <linux/kernel.h>
@@ -492,7 +492,7 @@ static const char *hsynd_str(u8 synd)
 	case MLX5_HEALTH_SYNDR_FFSER_ERR:
 		return "FFSER error";
 	case MLX5_HEALTH_SYNDR_HIGH_TEMP:
-		return "High temprature";
+		return "High temperature";
 	default:
 		return "unrecognized error";
 	}

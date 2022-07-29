@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010, 2012 Zheng Liu <lz@freebsd.org>
  * Copyright (c) 2012, Vyacheslav Matyushin
  * All rights reserved.
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/fs/ext2fs/htree.h 311231 2017-01-04 02:42:17Z pfg $
+ * $FreeBSD$
  */
 
 #ifndef _FS_EXT2FS_HTREE_H_
@@ -56,6 +58,14 @@ struct ext2fs_htree_count {
 struct ext2fs_htree_entry {
 	uint32_t h_hash;
 	uint32_t h_blk;
+};
+
+/*
+ * This goes at the end of each htree block.
+ */
+struct ext2fs_htree_tail {
+	uint32_t ht_reserved;
+	uint32_t ht_checksum;	/* crc32c(uuid+inum+dirblock) */
 };
 
 struct ext2fs_htree_root_info {

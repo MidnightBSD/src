@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/include/efipart.h 292625 2015-12-22 20:40:34Z emaste $ */
+/* $FreeBSD$ */
 #ifndef _EFI_PART_H
 #define _EFI_PART_H
 

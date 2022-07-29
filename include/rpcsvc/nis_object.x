@@ -36,7 +36,7 @@
  *	All Rights Reserved.
  */
 
-/* $FreeBSD: stable/11/include/rpcsvc/nis_object.x 259117 2013-12-09 04:26:50Z hrs $ */
+/* $FreeBSD$ */
 /* From: %#pragma ident	"@(#)nis_object.x	1.10	94/05/03 SMI" */
 
 #if RPC_HDR

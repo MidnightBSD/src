@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/conf/ldscript.arm64 317146 2017-04-19 15:46:34Z andrew $ */
+/* $FreeBSD$ */
 OUTPUT_ARCH(aarch64)
 ENTRY(_start)
 
@@ -27,6 +27,11 @@ SECTIONS
   .gnu.version   : { *(.gnu.version)	}
   .gnu.version_d   : { *(.gnu.version_d)	}
   .gnu.version_r   : { *(.gnu.version_r)	}
+  .note.gnu.build-id : {
+    PROVIDE (__build_id_start = .);
+    *(.note.gnu.build-id)
+    PROVIDE (__build_id_end = .);
+  }
   .rel.text      :
     { *(.rel.text) *(.rel.gnu.linkonce.t*) }
   .rela.text     :

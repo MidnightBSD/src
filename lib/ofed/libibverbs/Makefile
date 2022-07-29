@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/ofed/libibverbs/Makefile 337681 2018-08-12 08:42:06Z kib $
+# $FreeBSD$
 
 _spath=	${SRCTOP}/contrib/ofed/libibverbs
 .PATH: ${_spath} ${_spath}/man

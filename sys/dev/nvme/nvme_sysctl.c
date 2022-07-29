@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2012-2016 Intel Corporation
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/nvme/nvme_sysctl.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_nvme.h"
 
@@ -40,20 +42,14 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/nvme/nvme_sysctl.c 331722 2018-03-29 02:50
 #endif
 
 int nvme_use_nvd = NVME_USE_NVD;
+bool nvme_verbose_cmd_dump = false;
 
 SYSCTL_NODE(_hw, OID_AUTO, nvme, CTLFLAG_RD, 0, "NVMe sysctl tunables");
 SYSCTL_INT(_hw_nvme, OID_AUTO, use_nvd, CTLFLAG_RDTUN,
     &nvme_use_nvd, 1, "1 = Create NVD devices, 0 = Create NDA devices");
-
-/*
- * CTLTYPE_S64 and sysctl_handle_64 were added in r217616.  Define these
- *  explicitly here for older kernels that don't include the r217616
- *  changeset.
- */
-#ifndef CTLTYPE_S64
-#define CTLTYPE_S64		CTLTYPE_QUAD
-#define sysctl_handle_64	sysctl_handle_quad
-#endif
+SYSCTL_BOOL(_hw_nvme, OID_AUTO, verbose_cmd_dump, CTLFLAG_RWTUN,
+    &nvme_verbose_cmd_dump, 0,
+    "enable verbose command printing when a command fails");
 
 static void
 nvme_dump_queue(struct nvme_qpair *qpair)
@@ -139,16 +135,17 @@ static int
 nvme_sysctl_timeout_period(SYSCTL_HANDLER_ARGS)
 {
 	struct nvme_controller *ctrlr = arg1;
-	uint32_t oldval = ctrlr->timeout_period;
-	int error = sysctl_handle_int(oidp, &ctrlr->timeout_period, 0, req);
+	uint32_t newval = ctrlr->timeout_period;
+	int error = sysctl_handle_int(oidp, &newval, 0, req);
 
-	if (error)
+	if (error || (req->newptr == NULL))
 		return (error);
 
-	if (ctrlr->timeout_period > NVME_MAX_TIMEOUT_PERIOD ||
-	    ctrlr->timeout_period < NVME_MIN_TIMEOUT_PERIOD) {
-		ctrlr->timeout_period = oldval;
+	if (newval > NVME_MAX_TIMEOUT_PERIOD ||
+	    newval < NVME_MIN_TIMEOUT_PERIOD) {
 		return (EINVAL);
+	} else {
+		ctrlr->timeout_period = newval;
 	}
 
 	return (0);
@@ -160,6 +157,8 @@ nvme_qpair_reset_stats(struct nvme_qpair *qpair)
 
 	qpair->num_cmds = 0;
 	qpair->num_intr_handler_calls = 0;
+	qpair->num_retries = 0;
+	qpair->num_failures = 0;
 }
 
 static int
@@ -190,6 +189,36 @@ nvme_sysctl_num_intr_handler_calls(SYSCTL_HANDLER_ARGS)
 		num_intr_handler_calls += ctrlr->ioq[i].num_intr_handler_calls;
 
 	return (sysctl_handle_64(oidp, &num_intr_handler_calls, 0, req));
+}
+
+static int
+nvme_sysctl_num_retries(SYSCTL_HANDLER_ARGS)
+{
+	struct nvme_controller 	*ctrlr = arg1;
+	int64_t			num_retries = 0;
+	int			i;
+
+	num_retries = ctrlr->adminq.num_retries;
+
+	for (i = 0; i < ctrlr->num_io_queues; i++)
+		num_retries += ctrlr->ioq[i].num_retries;
+
+	return (sysctl_handle_64(oidp, &num_retries, 0, req));
+}
+
+static int
+nvme_sysctl_num_failures(SYSCTL_HANDLER_ARGS)
+{
+	struct nvme_controller 	*ctrlr = arg1;
+	int64_t			num_failures = 0;
+	int			i;
+
+	num_failures = ctrlr->adminq.num_failures;
+
+	for (i = 0; i < ctrlr->num_io_queues; i++)
+		num_failures += ctrlr->ioq[i].num_failures;
+
+	return (sysctl_handle_64(oidp, &num_failures, 0, req));
 }
 
 static int
@@ -243,6 +272,11 @@ nvme_sysctl_initialize_queue(struct nvme_qpair *qpair,
 	    "Number of times interrupt handler was invoked (will typically be "
 	    "less than number of actual interrupts generated due to "
 	    "coalescing)");
+	SYSCTL_ADD_QUAD(ctrlr_ctx, que_list, OID_AUTO, "num_retries",
+	    CTLFLAG_RD, &qpair->num_retries, "Number of commands retried");
+	SYSCTL_ADD_QUAD(ctrlr_ctx, que_list, OID_AUTO, "num_failures",
+	    CTLFLAG_RD, &qpair->num_failures,
+	    "Number of commands ending in failure after all retries");
 
 	SYSCTL_ADD_PROC(ctrlr_ctx, que_list, OID_AUTO,
 	    "dump_debug", CTLTYPE_UINT | CTLFLAG_RW, qpair, 0,
@@ -263,9 +297,9 @@ nvme_sysctl_initialize_ctrlr(struct nvme_controller *ctrlr)
 	ctrlr_tree = device_get_sysctl_tree(ctrlr->dev);
 	ctrlr_list = SYSCTL_CHILDREN(ctrlr_tree);
 
-	SYSCTL_ADD_UINT(ctrlr_ctx, ctrlr_list, OID_AUTO, "num_cpus_per_ioq",
-	    CTLFLAG_RD, &ctrlr->num_cpus_per_ioq, 0,
-	    "Number of CPUs assigned per I/O queue pair");
+	SYSCTL_ADD_UINT(ctrlr_ctx, ctrlr_list, OID_AUTO, "num_io_queues",
+	    CTLFLAG_RD, &ctrlr->num_io_queues, 0,
+	    "Number of I/O queue pairs");
 
 	SYSCTL_ADD_PROC(ctrlr_ctx, ctrlr_list, OID_AUTO,
 	    "int_coal_time", CTLTYPE_UINT | CTLFLAG_RW, ctrlr, 0,
@@ -293,6 +327,16 @@ nvme_sysctl_initialize_ctrlr(struct nvme_controller *ctrlr)
 	    "Number of times interrupt handler was invoked (will "
 	    "typically be less than number of actual interrupts "
 	    "generated due to coalescing)");
+
+	SYSCTL_ADD_PROC(ctrlr_ctx, ctrlr_list, OID_AUTO,
+	    "num_retries", CTLTYPE_S64 | CTLFLAG_RD,
+	    ctrlr, 0, nvme_sysctl_num_retries, "IU",
+	    "Number of commands retried");
+
+	SYSCTL_ADD_PROC(ctrlr_ctx, ctrlr_list, OID_AUTO,
+	    "num_failures", CTLTYPE_S64 | CTLFLAG_RD,
+	    ctrlr, 0, nvme_sysctl_num_failures, "IU",
+	    "Number of commands ending in failure after all retries");
 
 	SYSCTL_ADD_PROC(ctrlr_ctx, ctrlr_list, OID_AUTO,
 	    "reset_stats", CTLTYPE_UINT | CTLFLAG_RW, ctrlr, 0,

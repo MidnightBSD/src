@@ -23,6 +23,8 @@
  * Authors:
  *    Eric Anholt <eric@anholt.net>
  *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -52,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/i915/i915_gem.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/i915/i915_drm.h>
@@ -1133,8 +1135,8 @@ static int __wait_seqno(struct intel_ring_buffer *ring, u32 seqno,
 #undef EXIT_COND
 
 	if (timeout) {
-		timespecsub(&now, &before);
-		timespecsub(timeout, &now);
+		timespecsub(&now, &before, &now);
+		timespecsub(timeout, &now, timeout);
 	}
 
 	switch (end) {
@@ -1559,7 +1561,7 @@ retry:
 		i915_gem_object_unpin(obj);
 		DRM_UNLOCK(dev);
 		VM_OBJECT_WUNLOCK(vm_obj);
-		VM_WAIT;
+		vm_wait(vm_obj);
 		goto retry;
 	}
 	page->valid = VM_PAGE_BITS_ALL;

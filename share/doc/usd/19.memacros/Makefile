@@ -1,10 +1,10 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/8/93
-# $FreeBSD: stable/11/share/doc/usd/19.memacros/Makefile 106143 2002-10-29 14:56:09Z ru $
+# $FreeBSD$
 
 VOLUME=		usd/19.memacros
 SRCS=		meintro.me-sed
 MACROS=		-me
-GROFFDIR=	${.CURDIR}/../../../../contrib/groff
+GROFFDIR=	${SRCTOP}/contrib/groff
 SRCDIR=		${GROFFDIR}/doc
 
 version=`cat ${GROFFDIR}/VERSION`

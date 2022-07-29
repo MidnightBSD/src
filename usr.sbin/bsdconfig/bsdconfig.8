@@ -23,10 +23,9 @@
 .\" ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
-.\" $MidnightBSD$
+.\" $FreeBSD$
 .\"
-.Dd Jun 5, 2013
+.Dd June 5, 2013
 .Dt BSDCONFIG 8
 .Os
 .Sh NAME
@@ -104,6 +103,11 @@ Shortcut to the Default Router/Gateway menu under networking.
 Manage disk partitions and/or labels.
 Executes
 .Xr sade 8 .
+.It Cm docsinstall
+Executes the
+.Cm bsdinstall docsinstall
+sub-utility to allow installation/re-installation of the FreeBSD Documentation
+set(s).
 .It Cm dot
 Generate a graphviz
 .Xr dot 1
@@ -243,8 +247,8 @@ first appeared in
 .Fx 9.2 .
 .Sh AUTHORS
 .An Ron McDowell
-.An Devin Teske Aq dteske@FreeBSD.org
+.An Devin Teske Aq Mt dteske@FreeBSD.org
 .Sh BUGS
-The diskmgmt modules call bsdinstall.
+The docsinstall and diskmgmt modules call bsdinstall.
 Bugs found in these modules should be considered those of bsdinstall, not
 .Nm .

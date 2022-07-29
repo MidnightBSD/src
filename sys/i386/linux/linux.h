@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1994-1996 Søren Schmidt
  * All rights reserved.
  *
@@ -6,26 +8,23 @@
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/sys/i386/linux/linux.h 346839 2019-04-28 14:19:31Z dchagin $
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ * $FreeBSD$
  */
 
 #ifndef _I386_LINUX_H_
@@ -39,15 +38,6 @@
 
 #define LINUX_LEGACY_SYSCALLS
 
-/*
- * debugging support
- */
-extern u_char linux_debug_map[];
-#define	ldebug(name)	isclr(linux_debug_map, LINUX_SYS_linux_ ## name)
-#define	ARGS(nm, fmt)	"linux(%ld/%ld): "#nm"("fmt")\n",			\
-			(long)td->td_proc->p_pid, (long)td->td_tid
-#define	LMSG(fmt)	"linux(%ld/%ld): "fmt"\n",				\
-			(long)td->td_proc->p_pid, (long)td->td_tid
 #define	LINUX_DTRACE	linuxulator
 
 #define	LINUX_SHAREDPAGE	(VM_MAXUSER_ADDRESS - PAGE_SIZE)
@@ -448,11 +438,6 @@ union l_semun {
 	l_uintptr_t	__pad;
 };
 
-struct l_sockaddr {
-	l_ushort	sa_family;
-	char		sa_data[14];
-};
-
 struct l_ifmap {
 	l_ulong		mem_start;
 	l_ulong		mem_end;
@@ -461,9 +446,6 @@ struct l_ifmap {
 	u_char		dma;
 	u_char		port;
 };
-
-#define	LINUX_IFHWADDRLEN	6
-#define	LINUX_IFNAMSIZ		16
 
 struct l_ifreq {
 	union {

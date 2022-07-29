@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)5.t	8.1 (Berkeley) 8/14/93
-.\" $FreeBSD: stable/11/share/doc/psd/21.ipc/5.t 263142 2014-03-14 03:07:51Z eadler $
+.\" $FreeBSD$
 .\"
 .\".ds RH "Advanced Topics
 .bp

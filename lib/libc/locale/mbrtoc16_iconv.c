@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/lib/libc/locale/mbrtoc16_iconv.c 251314 2013-06-03 17:17:56Z ed $ */
+/* $FreeBSD$ */
 #define	charXX_t	char16_t
 #define	mbrtocXX	mbrtoc16
 #define	mbrtocXX_l	mbrtoc16_l

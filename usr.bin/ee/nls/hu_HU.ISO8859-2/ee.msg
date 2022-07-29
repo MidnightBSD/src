@@ -3,7 +3,7 @@ $ ee.i18n.guide for more information
 $ 
 $ For ee patchlevel 3
 $ 
-$ $FreeBSD: stable/11/usr.bin/ee/nls/hu_HU.ISO8859-2/ee.msg 193279 2009-06-01 21:54:59Z gabor $
+$ $FreeBSD$
 $ 
 $ 
 $set 1

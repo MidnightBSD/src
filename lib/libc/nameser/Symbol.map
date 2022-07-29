@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/11/lib/libc/nameser/Symbol.map 269867 2014-08-12 12:36:06Z ume $
+ * $FreeBSD$
  */
 
 FBSD_1.0 {

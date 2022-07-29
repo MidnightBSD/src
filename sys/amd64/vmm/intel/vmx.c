@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  * Copyright (c) 2018 Joyent, Inc.
@@ -24,11 +26,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/vmm/intel/vmx.c 351753 2019-09-03 16:23:46Z emaste $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/intel/vmx.c 351753 2019-09-03 16:23:46Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -158,6 +160,14 @@ static int cap_pause_exit;
 SYSCTL_INT(_hw_vmm_vmx_cap, OID_AUTO, pause_exit, CTLFLAG_RD, &cap_pause_exit,
     0, "PAUSE triggers a VM-exit");
 
+static int cap_rdpid;
+SYSCTL_INT(_hw_vmm_vmx_cap, OID_AUTO, rdpid, CTLFLAG_RD, &cap_rdpid, 0,
+    "Guests are allowed to use RDPID");
+
+static int cap_rdtscp;
+SYSCTL_INT(_hw_vmm_vmx_cap, OID_AUTO, rdtscp, CTLFLAG_RD, &cap_rdtscp, 0,
+    "Guests are allowed to use RDTSCP");
+
 static int cap_unrestricted_guest;
 SYSCTL_INT(_hw_vmm_vmx_cap, OID_AUTO, unrestricted_guest, CTLFLAG_RD,
     &cap_unrestricted_guest, 0, "Unrestricted guests");
@@ -191,10 +201,10 @@ static u_int vpid_alloc_failed;
 SYSCTL_UINT(_hw_vmm_vmx, OID_AUTO, vpid_alloc_failed, CTLFLAG_RD,
 	    &vpid_alloc_failed, 0, NULL);
 
-static int guest_l1d_flush;
+int guest_l1d_flush;
 SYSCTL_INT(_hw_vmm_vmx, OID_AUTO, l1d_flush, CTLFLAG_RD,
     &guest_l1d_flush, 0, NULL);
-static int guest_l1d_flush_sw;
+int guest_l1d_flush_sw;
 SYSCTL_INT(_hw_vmm_vmx, OID_AUTO, l1d_flush_sw, CTLFLAG_RD,
     &guest_l1d_flush_sw, 0, NULL);
 
@@ -290,6 +300,18 @@ static int vmx_getdesc(void *arg, int vcpu, int reg, struct seg_desc *desc);
 static int vmx_getreg(void *arg, int vcpu, int reg, uint64_t *retval);
 static int vmxctx_setreg(struct vmxctx *vmxctx, int reg, uint64_t val);
 static void vmx_inject_pir(struct vlapic *vlapic);
+
+static inline bool
+host_has_rdpid(void)
+{
+	return ((cpu_stdext_feature2 & CPUID_STDEXT2_RDPID) != 0);
+}
+
+static inline bool
+host_has_rdtscp(void)
+{
+	return ((amd_feature & AMDID_RDTSCP) != 0);
+}
 
 #ifdef KTR
 static const char *
@@ -743,6 +765,43 @@ vmx_init(int ipinum)
 					 PROCBASED_PAUSE_EXITING, 0,
 					 &tmp) == 0);
 
+	/*
+	 * Check support for RDPID and/or RDTSCP.
+	 *
+	 * Support a pass-through-based implementation of these via the
+	 * "enable RDTSCP" VM-execution control and the "RDTSC exiting"
+	 * VM-execution control.
+	 *
+	 * The "enable RDTSCP" VM-execution control applies to both RDPID
+	 * and RDTSCP (see SDM volume 3, section 25.3, "Changes to
+	 * Instruction Behavior in VMX Non-root operation"); this is why
+	 * only this VM-execution control needs to be enabled in order to
+	 * enable passing through whichever of RDPID and/or RDTSCP are
+	 * supported by the host.
+	 *
+	 * The "RDTSC exiting" VM-execution control applies to both RDTSC
+	 * and RDTSCP (again, per SDM volume 3, section 25.3), and is
+	 * already set up for RDTSC and RDTSCP pass-through by the current
+	 * implementation of RDTSC.
+	 *
+	 * Although RDPID and RDTSCP are optional capabilities, since there
+	 * does not currently seem to be a use case for enabling/disabling
+	 * these via libvmmapi, choose not to support this and, instead,
+	 * just statically always enable or always disable this support
+	 * across all vCPUs on all VMs. (Note that there may be some
+	 * complications to providing this functionality, e.g., the MSR
+	 * bitmap is currently per-VM rather than per-vCPU while the
+	 * capability API wants to be able to control capabilities on a
+	 * per-vCPU basis).
+	 */
+	error = vmx_set_ctlreg(MSR_VMX_PROCBASED_CTLS2,
+			       MSR_VMX_PROCBASED_CTLS2,
+			       PROCBASED2_ENABLE_RDTSCP, 0, &tmp);
+	cap_rdpid = error == 0 && host_has_rdpid();
+	cap_rdtscp = error == 0 && host_has_rdtscp();
+	if (cap_rdpid || cap_rdtscp)
+		procbased_ctls2 |= PROCBASED2_ENABLE_RDTSCP;
+
 	cap_unrestricted_guest = (vmx_set_ctlreg(MSR_VMX_PROCBASED_CTLS2,
 					MSR_VMX_PROCBASED_CTLS2,
 					PROCBASED2_UNRESTRICTED_GUEST, 0,
@@ -995,6 +1054,15 @@ vmx_vminit(struct vm *vm, pmap_t pmap)
 	 * the "use TSC offsetting" execution control is enabled and the
 	 * difference between the host TSC and the guest TSC is written
 	 * into the TSC offset in the VMCS.
+	 *
+	 * Guest TSC_AUX support is enabled if any of guest RDPID and/or
+	 * guest RDTSCP support are enabled (since, as per Table 2-2 in SDM
+	 * volume 4, TSC_AUX is supported if any of RDPID and/or RDTSCP are
+	 * supported). If guest TSC_AUX support is enabled, TSC_AUX is
+	 * exposed read-only so that the VMM can do one fewer MSR read per
+	 * exit than if this register were exposed read-write; the guest
+	 * restore value can be updated during guest writes (expected to be
+	 * rare) instead of during all exits (common).
 	 */
 	if (guest_msr_rw(vmx, MSR_GSBASE) ||
 	    guest_msr_rw(vmx, MSR_FSBASE) ||
@@ -1002,7 +1070,8 @@ vmx_vminit(struct vm *vm, pmap_t pmap)
 	    guest_msr_rw(vmx, MSR_SYSENTER_ESP_MSR) ||
 	    guest_msr_rw(vmx, MSR_SYSENTER_EIP_MSR) ||
 	    guest_msr_rw(vmx, MSR_EFER) ||
-	    guest_msr_ro(vmx, MSR_TSC))
+	    guest_msr_ro(vmx, MSR_TSC) ||
+	    ((cap_rdpid || cap_rdtscp) && guest_msr_ro(vmx, MSR_TSC_AUX)))
 		panic("vmx_vminit: error setting guest msr access");
 
 	vpid_alloc(vpid, VM_MAXCPU);
@@ -1081,8 +1150,11 @@ vmx_vminit(struct vm *vm, pmap_t pmap)
 		KASSERT(error == 0, ("vmx_vminit: error customizing the vmcs"));
 
 		vmx->cap[i].set = 0;
+		vmx->cap[i].set |= cap_rdpid != 0 ? 1 << VM_CAP_RDPID : 0;
+		vmx->cap[i].set |= cap_rdtscp != 0 ? 1 << VM_CAP_RDTSCP : 0;
 		vmx->cap[i].proc_ctls = procbased_ctls;
 		vmx->cap[i].proc_ctls2 = procbased_ctls2;
+		vmx->cap[i].exc_bitmap = exc_bitmap;
 
 		vmx->state[i].nextrip = ~0;
 		vmx->state[i].lastcpu = NOCPU;
@@ -2559,6 +2631,18 @@ vmx_exit_process(struct vmx *vmx, int vcpu, struct vm_exit *vmexit)
 			return (1);
 		}
 
+		/*
+		 * If the hypervisor has requested user exits for
+		 * debug exceptions, bounce them out to userland.
+		 */
+		if (intr_type == VMCS_INTR_T_SWEXCEPTION && intr_vec == IDT_BP &&
+		    (vmx->cap[vcpu].set & (1 << VM_CAP_BPT_EXIT))) {
+			vmexit->exitcode = VM_EXITCODE_BPT;
+			vmexit->u.bpt.inst_length = vmexit->inst_length;
+			vmexit->inst_length = 0;
+			break;
+		}
+
 		if (intr_vec == IDT_PF) {
 			error = vmxctx_setreg(vmxctx, VM_REG_GUEST_CR2, qual);
 			KASSERT(error == 0, ("%s: vmxctx_setreg(cr2) error %d",
@@ -2738,7 +2822,6 @@ vmx_exit_inst_error(struct vmxctx *vmxctx, int rc, struct vm_exit *vmexit)
 	switch (rc) {
 	case VMX_VMRESUME_ERROR:
 	case VMX_VMLAUNCH_ERROR:
-	case VMX_INVEPT_ERROR:
 		vmexit->u.vmx.inst_type = rc;
 		break;
 	default:
@@ -2843,6 +2926,29 @@ vmx_dr_leave_guest(struct vmxctx *vmxctx)
 	write_rflags(read_rflags() | vmxctx->host_tf);
 }
 
+static __inline void
+vmx_pmap_activate(struct vmx *vmx, pmap_t pmap)
+{
+	long eptgen;
+	int cpu;
+
+	cpu = curcpu;
+
+	CPU_SET_ATOMIC(cpu, &pmap->pm_active);
+	eptgen = atomic_load_long(&pmap->pm_eptgen);
+	if (eptgen != vmx->eptgen[cpu]) {
+		vmx->eptgen[cpu] = eptgen;
+		invept(INVEPT_TYPE_SINGLE_CONTEXT,
+		    (struct invept_desc){ .eptp = vmx->eptp, ._res = 0 });
+	}
+}
+
+static __inline void
+vmx_pmap_deactivate(struct vmx *vmx, pmap_t pmap)
+{
+	CPU_CLR_ATOMIC(curcpu, &pmap->pm_active);
+}
+
 static int
 vmx_run(void *arg, int vcpu, register_t rip, pmap_t pmap,
     struct vm_eventinfo *evinfo)
@@ -2942,6 +3048,12 @@ vmx_run(void *arg, int vcpu, register_t rip, pmap_t pmap,
 			break;
 		}
 
+		if (vcpu_debugged(vm, vcpu)) {
+			enable_intr();
+			vm_exit_debug(vmx->vm, vcpu, rip);
+			break;
+		}
+
 		/*
 		 * If TPR Shadowing is enabled, the TPR Threshold
 		 * must be updated right before entering the guest.
@@ -2968,10 +3080,37 @@ vmx_run(void *arg, int vcpu, register_t rip, pmap_t pmap,
 		sidt(&idtr);
 		ldt_sel = sldt();
 
-		vmx_run_trace(vmx, vcpu);
+		/*
+		 * The TSC_AUX MSR must be saved/restored while interrupts
+		 * are disabled so that it is not possible for the guest
+		 * TSC_AUX MSR value to be overwritten by the resume
+		 * portion of the IPI_SUSPEND codepath. This is why the
+		 * transition of this MSR is handled separately from those
+		 * handled by vmx_msr_guest_{enter,exit}(), which are ok to
+		 * be transitioned with preemption disabled but interrupts
+		 * enabled.
+		 *
+		 * These vmx_msr_guest_{enter,exit}_tsc_aux() calls can be
+		 * anywhere in this loop so long as they happen with
+		 * interrupts disabled. This location is chosen for
+		 * simplicity.
+		 */
+		vmx_msr_guest_enter_tsc_aux(vmx, vcpu);
+
 		vmx_dr_enter_guest(vmxctx);
+
+		/*
+		 * Mark the EPT as active on this host CPU and invalidate
+		 * EPTP-tagged TLB entries if required.
+		 */
+		vmx_pmap_activate(vmx, pmap);
+
+		vmx_run_trace(vmx, vcpu);
 		rc = vmx_enter_guest(vmxctx, vmx, launched);
+
+		vmx_pmap_deactivate(vmx, pmap);
 		vmx_dr_leave_guest(vmxctx);
+		vmx_msr_guest_exit_tsc_aux(vmx, vcpu);
 
 		bare_lgdt(&gdtr);
 		lidt(&idtr);
@@ -3314,6 +3453,14 @@ vmx_getcap(void *arg, int vcpu, int type, int *retval)
 		if (cap_monitor_trap)
 			ret = 0;
 		break;
+	case VM_CAP_RDPID:
+		if (cap_rdpid)
+			ret = 0;
+		break;
+	case VM_CAP_RDTSCP:
+		if (cap_rdtscp)
+			ret = 0;
+		break;
 	case VM_CAP_UNRESTRICTED_GUEST:
 		if (cap_unrestricted_guest)
 			ret = 0;
@@ -3321,6 +3468,9 @@ vmx_getcap(void *arg, int vcpu, int type, int *retval)
 	case VM_CAP_ENABLE_INVPCID:
 		if (cap_invpcid)
 			ret = 0;
+		break;
+	case VM_CAP_BPT_EXIT:
+		ret = 0;
 		break;
 	default:
 		break;
@@ -3375,6 +3525,17 @@ vmx_setcap(void *arg, int vcpu, int type, int val)
 			reg = VMCS_PRI_PROC_BASED_CTLS;
 		}
 		break;
+	case VM_CAP_RDPID:
+	case VM_CAP_RDTSCP:
+		if (cap_rdpid || cap_rdtscp)
+			/*
+			 * Choose not to support enabling/disabling
+			 * RDPID/RDTSCP via libvmmapi since, as per the
+			 * discussion in vmx_init(), RDPID/RDTSCP are
+			 * either always enabled or always disabled.
+			 */
+			error = EOPNOTSUPP;
+		break;
 	case VM_CAP_UNRESTRICTED_GUEST:
 		if (cap_unrestricted_guest) {
 			retval = 0;
@@ -3393,11 +3554,25 @@ vmx_setcap(void *arg, int vcpu, int type, int val)
 			reg = VMCS_SEC_PROC_BASED_CTLS;
 		}
 		break;
+	case VM_CAP_BPT_EXIT:
+		retval = 0;
+
+		/* Don't change the bitmap if we are tracing all exceptions. */
+		if (vmx->cap[vcpu].exc_bitmap != 0xffffffff) {
+			pptr = &vmx->cap[vcpu].exc_bitmap;
+			baseval = *pptr;
+			flag = (1 << IDT_BP);
+			reg = VMCS_EXCEPTION_BITMAP;
+		}
+		break;
 	default:
 		break;
 	}
 
-	if (retval == 0) {
+	if (retval)
+		return (retval);
+
+	if (pptr != NULL) {
 		if (val) {
 			baseval |= flag;
 		} else {
@@ -3407,26 +3582,23 @@ vmx_setcap(void *arg, int vcpu, int type, int val)
 		error = vmwrite(reg, baseval);
 		VMCLEAR(vmcs);
 
-		if (error) {
-			retval = error;
-		} else {
-			/*
-			 * Update optional stored flags, and record
-			 * setting
-			 */
-			if (pptr != NULL) {
-				*pptr = baseval;
-			}
+		if (error)
+			return (error);
 
-			if (val) {
-				vmx->cap[vcpu].set |= (1 << type);
-			} else {
-				vmx->cap[vcpu].set &= ~(1 << type);
-			}
-		}
+		/*
+		 * Update optional stored flags, and record
+		 * setting
+		 */
+		*pptr = baseval;
 	}
 
-	return (retval);
+	if (val) {
+		vmx->cap[vcpu].set |= (1 << type);
+	} else {
+		vmx->cap[vcpu].set &= ~(1 << type);
+	}
+
+	return (0);
 }
 
 struct vlapic_vtx {
@@ -3843,20 +4015,20 @@ vmx_vlapic_cleanup(void *arg, struct vlapic *vlapic)
 }
 
 struct vmm_ops vmm_ops_intel = {
-	vmx_init,
-	vmx_cleanup,
-	vmx_restore,
-	vmx_vminit,
-	vmx_run,
-	vmx_vmcleanup,
-	vmx_getreg,
-	vmx_setreg,
-	vmx_getdesc,
-	vmx_setdesc,
-	vmx_getcap,
-	vmx_setcap,
-	ept_vmspace_alloc,
-	ept_vmspace_free,
-	vmx_vlapic_init,
-	vmx_vlapic_cleanup,
+	.init		= vmx_init,
+	.cleanup	= vmx_cleanup,
+	.resume		= vmx_restore,
+	.vminit		= vmx_vminit,
+	.vmrun		= vmx_run,
+	.vmcleanup	= vmx_vmcleanup,
+	.vmgetreg	= vmx_getreg,
+	.vmsetreg	= vmx_setreg,
+	.vmgetdesc	= vmx_getdesc,
+	.vmsetdesc	= vmx_setdesc,
+	.vmgetcap	= vmx_getcap,
+	.vmsetcap	= vmx_setcap,
+	.vmspace_alloc	= ept_vmspace_alloc,
+	.vmspace_free	= ept_vmspace_free,
+	.vlapic_init	= vmx_vlapic_init,
+	.vlapic_cleanup	= vmx_vlapic_cleanup,
 };

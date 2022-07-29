@@ -2,6 +2,8 @@
  * FreeBSD/CAM specific routines for LSI '909 FC  adapters.
  * FreeBSD Version.
  *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-3-Clause
+ *
  * Copyright (c)  2000, 2001 by Greg Ansley
  *
  * Redistribution and use in source and binary forms, with or without
@@ -94,7 +96,7 @@
  * OWNER OR CONTRIBUTOR IS ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mpt/mpt_cam.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/mpt/mpt.h>
 #include <dev/mpt/mpt_cam.h>
@@ -1291,10 +1293,6 @@ mpt_execute_req_a64(void *arg, bus_dma_segment_t *dm_segs, int nseg, int error)
 	hdrp = req->req_vbuf;
 	mpt_off = req->req_vbuf;
 
-	if (error == 0 && ((uint32_t)nseg) >= mpt->max_seg_cnt) {
-		error = EFBIG;
-	}
-
 	if (error == 0) {
 		switch (hdrp->Function) {
 		case MPI_FUNCTION_SCSI_IO_REQUEST:
@@ -1312,12 +1310,6 @@ mpt_execute_req_a64(void *arg, bus_dma_segment_t *dm_segs, int nseg, int error)
 			error = EINVAL;
 			break;
 		}
-	}
-
-	if (error == 0 && ((uint32_t)nseg) >= mpt->max_seg_cnt) {
-		error = EFBIG;
-		mpt_prt(mpt, "segment count %d too large (max %u)\n",
-		    nseg, mpt->max_seg_cnt);
 	}
 
 bad:
@@ -1694,10 +1686,6 @@ mpt_execute_req(void *arg, bus_dma_segment_t *dm_segs, int nseg, int error)
 	hdrp = req->req_vbuf;
 	mpt_off = req->req_vbuf;
 
-	if (error == 0 && ((uint32_t)nseg) >= mpt->max_seg_cnt) {
-		error = EFBIG;
-	}
-
 	if (error == 0) {
 		switch (hdrp->Function) {
 		case MPI_FUNCTION_SCSI_IO_REQUEST:
@@ -1714,12 +1702,6 @@ mpt_execute_req(void *arg, bus_dma_segment_t *dm_segs, int nseg, int error)
 			error = EINVAL;
 			break;
 		}
-	}
-
-	if (error == 0 && ((uint32_t)nseg) >= mpt->max_seg_cnt) {
-		error = EFBIG;
-		mpt_prt(mpt, "segment count %d too large (max %u)\n",
-		    nseg, mpt->max_seg_cnt);
 	}
 
 bad:
@@ -3621,7 +3603,7 @@ mpt_action(struct cam_sim *sim, union ccb *ccb)
 		} else {
 			cpi->target_sprt = 0;
 		}
-		strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
 		strlcpy(cpi->hba_vid, "LSI", HBA_IDLEN);
 		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);

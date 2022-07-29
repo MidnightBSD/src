@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2002, Jeffrey Roberson <jeff@freebsd.org>
  * Copyright (c) 2008-2009, Lawrence Stewart <lstewart@freebsd.org>
  * Copyright (c) 2010, The FreeBSD Foundation
@@ -30,12 +31,13 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/alq.h 207223 2010-04-26 13:48:22Z lstewart $
+ * $FreeBSD$
  *
  */
 #ifndef _SYS_ALQ_H_
 #define	_SYS_ALQ_H_
 
+#ifdef _KERNEL
 /*
  * Opaque type for the Async. Logging Queue
  */
@@ -142,4 +144,5 @@ alq_post(struct alq *alq, struct ale *ale)
 	alq_post_flags(alq, ale, 0);
 }
 
+#endif	/* _KERNEL */
 #endif	/* _SYS_ALQ_H_ */

@@ -1,5 +1,5 @@
 # Makefile for mrsas driver
-# $FreeBSD: stable/11/sys/modules/mrsas/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 
 KMOD=mrsas
 .PATH: ${SRCTOP}/sys/dev/${KMOD}

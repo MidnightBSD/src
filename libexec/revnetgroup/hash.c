@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1995
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
  *
@@ -32,7 +34,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/11/libexec/revnetgroup/hash.c 331722 2018-03-29 02:50:57Z eadler $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <stdio.h>

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/bmake/tests/execution/Makefile 299094 2016-05-04 23:20:53Z ngie $
+# $FreeBSD$
 
 TESTSDIR=	${TESTSBASE}/usr.bin/bmake/execution
 

@@ -2,6 +2,7 @@
  * Copyright (c) 2004 Takanori Watanabe
  * Copyright (c) 2005 Markus Brueffer <markus@FreeBSD.org>
  * All rights reserved.
+ * Copyright (c) 2020 Ali Abdallah <ali.abdallah@suse.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/acpi_support/acpi_ibm.c 347636 2019-05-16 00:51:30Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for extra ACPI-controlled gadgets found on IBM ThinkPad laptops.
@@ -74,6 +75,8 @@ ACPI_MODULE_NAME("IBM")
 #define ACPI_IBM_METHOD_FANSTATUS	12
 #define ACPI_IBM_METHOD_THERMAL		13
 #define ACPI_IBM_METHOD_HANDLEREVENTS	14
+#define ACPI_IBM_METHOD_MIC_LED		15
+#define ACPI_IBM_METHOD_PRIVACYGUARD	16
 
 /* Hotkeys/Buttons */
 #define IBM_RTC_HOTKEY1			0x64
@@ -103,7 +106,7 @@ ACPI_MODULE_NAME("IBM")
 #define   IBM_EC_MASK_MUTE		(1 << 6)
 #define IBM_EC_FANSTATUS		0x2F
 #define   IBM_EC_MASK_FANLEVEL		0x3f
-#define   IBM_EC_MASK_FANDISENGAGED	(1 << 6)
+#define   IBM_EC_MASK_FANUNTHROTTLED	(1 << 6)
 #define   IBM_EC_MASK_FANSTATUS		(1 << 7)
 #define IBM_EC_FANSPEED			0x84
 
@@ -122,6 +125,8 @@ ACPI_MODULE_NAME("IBM")
 #define   IBM_NAME_MASK_WLAN		(1 << 2)
 #define IBM_NAME_THERMAL_GET		"TMP7"
 #define IBM_NAME_THERMAL_UPDT		"UPDT"
+#define IBM_NAME_PRIVACYGUARD_GET	"GSSS"
+#define IBM_NAME_PRIVACYGUARD_SET	"SSSS"
 
 #define IBM_NAME_EVENTS_STATUS_GET	"DHKC"
 #define IBM_NAME_EVENTS_MASK_GET	"DHKN"
@@ -144,6 +149,10 @@ ACPI_MODULE_NAME("IBM")
 #define IBM_EVENT_VOLUME_DOWN		0x16
 #define IBM_EVENT_MUTE			0x17
 #define IBM_EVENT_ACCESS_IBM_BUTTON	0x18
+
+/* Device-specific register flags */
+#define IBM_FLAG_PRIVACYGUARD_DEVICE_PRESENT	0x10000
+#define IBM_FLAG_PRIVACYGUARD_ON	0x1
 
 #define ABS(x) (((x) < 0)? -(x) : (x))
 
@@ -174,6 +183,10 @@ struct acpi_ibm_softc {
 	struct cdev	*led_dev;
 	int		led_busy;
 	int		led_state;
+
+	/* Mic led handle */
+	ACPI_HANDLE	mic_led_handle;
+	int		mic_led_state;
 
 	int		wlan_bt_flags;
 	int		thermal_updt_supported;
@@ -251,14 +264,24 @@ static struct {
 	{
 		.name		= "fan_level",
 		.method		= ACPI_IBM_METHOD_FANLEVEL,
-		.description	= "Fan level",
+		.description	= "Fan level, 0-7 (recommended max), "
+				  "8 (unthrottled, full-speed)",
 	},
 	{
 		.name		= "fan",
 		.method		= ACPI_IBM_METHOD_FANSTATUS,
 		.description	= "Fan enable",
 	},
-
+	{
+		.name		= "mic_led",
+		.method		= ACPI_IBM_METHOD_MIC_LED,
+		.description	= "Mic led",
+	},
+	{
+	 .name		= "privacyguard",
+	 .method	= ACPI_IBM_METHOD_PRIVACYGUARD,
+	 .description	= "PrivacyGuard enable",
+	},
 	{ NULL, 0, NULL, 0 }
 };
 
@@ -318,6 +341,11 @@ static int	acpi_ibm_bluetooth_set(struct acpi_ibm_softc *sc, int arg);
 static int	acpi_ibm_thinklight_set(struct acpi_ibm_softc *sc, int arg);
 static int	acpi_ibm_volume_set(struct acpi_ibm_softc *sc, int arg);
 static int	acpi_ibm_mute_set(struct acpi_ibm_softc *sc, int arg);
+static int	acpi_ibm_privacyguard_get(struct acpi_ibm_softc *sc);
+static ACPI_STATUS	acpi_ibm_privacyguard_set(struct acpi_ibm_softc *sc, int arg);
+static ACPI_STATUS	acpi_ibm_privacyguard_acpi_call(struct acpi_ibm_softc *sc, bool write, int *arg);
+
+static int	acpi_status_to_errno(ACPI_STATUS status);
 
 static device_method_t acpi_ibm_methods[] = {
 	/* Device interface */
@@ -341,6 +369,19 @@ DRIVER_MODULE(acpi_ibm, acpi, acpi_ibm_driver, acpi_ibm_devclass,
 	      0, 0);
 MODULE_DEPEND(acpi_ibm, acpi, 1, 1, 1);
 static char    *ibm_ids[] = {"IBM0068", "LEN0068", "LEN0268", NULL};
+
+static int
+acpi_status_to_errno(ACPI_STATUS status)
+{
+	switch (status) {
+	case AE_OK:
+		return (0);
+	case AE_BAD_PARAMETER:
+		return (EINVAL);
+	default:
+		return (ENODEV);
+	}
+}
 
 static void
 ibm_led(void *softc, int onoff)
@@ -368,6 +409,35 @@ ibm_led_task(struct acpi_ibm_softc *sc, int pending __unused)
 	ACPI_SERIAL_END(ibm);
 
 	sc->led_busy = 0;
+}
+
+static int
+acpi_ibm_mic_led_set (struct acpi_ibm_softc *sc, int arg)
+{
+	ACPI_OBJECT_LIST input;
+	ACPI_OBJECT params[1];
+	ACPI_STATUS status;
+
+	if (arg < 0 || arg > 1)
+		return (EINVAL);
+
+	if (sc->mic_led_handle) {
+		params[0].Type = ACPI_TYPE_INTEGER;
+		params[0].Integer.Value = 0;
+		/* mic led: 0 off, 2 on */
+		if (arg == 1)
+			params[0].Integer.Value = 2;
+
+		input.Pointer = params;
+		input.Count = 1;
+
+		status = AcpiEvaluateObject (sc->handle, "MMTS", &input, NULL);
+		if (ACPI_SUCCESS(status))
+			sc->mic_led_state = arg;
+		return(status);
+	}
+
+	return (0);
 }
 
 static int
@@ -584,6 +654,9 @@ acpi_ibm_resume(device_t dev)
 	}
 	ACPI_SERIAL_END(ibm);
 
+	/* The mic led does not turn back on when sysctl_set is called in the above loop */
+	acpi_ibm_mic_led_set(sc, sc->mic_led_state);
+
 	return (0);
 }
 
@@ -759,7 +832,10 @@ acpi_ibm_sysctl_get(struct acpi_ibm_softc *sc, int method)
 		 */
 		if (!sc->fan_handle) {
 			ACPI_EC_READ(sc->ec_dev, IBM_EC_FANSTATUS, &val_ec, 1);
-			val = val_ec & IBM_EC_MASK_FANLEVEL;
+			if (val_ec & IBM_EC_MASK_FANUNTHROTTLED)
+				val = 8;
+			else
+				val = val_ec & IBM_EC_MASK_FANLEVEL;
 		}
 		break;
 
@@ -771,6 +847,17 @@ acpi_ibm_sysctl_get(struct acpi_ibm_softc *sc, int method)
 		else
 			val = -1;
 		break;
+	case ACPI_IBM_METHOD_MIC_LED:
+		if (sc->mic_led_handle)
+			return sc->mic_led_state;
+		else
+			val = -1;
+		break;
+
+	case ACPI_IBM_METHOD_PRIVACYGUARD:
+		val = acpi_ibm_privacyguard_get(sc);
+		break;
+
 	}
 
 	return (val);
@@ -815,6 +902,10 @@ acpi_ibm_sysctl_set(struct acpi_ibm_softc *sc, int method, int arg)
 		return acpi_ibm_mute_set(sc, arg);
 		break;
 
+	case ACPI_IBM_METHOD_MIC_LED:
+		return acpi_ibm_mic_led_set (sc, arg);
+		break;
+
 	case ACPI_IBM_METHOD_THINKLIGHT:
 		return acpi_ibm_thinklight_set(sc, arg);
 		break;
@@ -823,16 +914,28 @@ acpi_ibm_sysctl_set(struct acpi_ibm_softc *sc, int method, int arg)
 		return acpi_ibm_bluetooth_set(sc, arg);
 		break;
 
+	case ACPI_IBM_METHOD_PRIVACYGUARD:
+		return (acpi_status_to_errno(acpi_ibm_privacyguard_set(sc, arg)));
+		break;
+
 	case ACPI_IBM_METHOD_FANLEVEL:
-		if (arg < 0 || arg > 7)
+		if (arg < 0 || arg > 8)
 			return (EINVAL);
 
 		if (!sc->fan_handle) {
-			/* Read the current fanstatus */
+			/* Read the current fan status. */
 			ACPI_EC_READ(sc->ec_dev, IBM_EC_FANSTATUS, &val_ec, 1);
-			val = val_ec & (~IBM_EC_MASK_FANLEVEL);
+			val = val_ec & ~(IBM_EC_MASK_FANLEVEL |
+			    IBM_EC_MASK_FANUNTHROTTLED);
 
-			return ACPI_EC_WRITE(sc->ec_dev, IBM_EC_FANSTATUS, val | arg, 1);
+			if (arg == 8)
+				/* Full speed, set the unthrottled bit. */
+				val |= 7 | IBM_EC_MASK_FANUNTHROTTLED;
+			else
+				val |= arg;
+
+			return (ACPI_EC_WRITE(sc->ec_dev, IBM_EC_FANSTATUS, val,
+			    1));
 		}
 		break;
 
@@ -873,6 +976,17 @@ acpi_ibm_sysctl_init(struct acpi_ibm_softc *sc, int method)
 	case ACPI_IBM_METHOD_MUTE:
 		/* EC is required here, which was already checked before */
 		return (TRUE);
+
+	case ACPI_IBM_METHOD_MIC_LED:
+		if (ACPI_SUCCESS(AcpiGetHandle(sc->handle, "MMTS", &sc->mic_led_handle)))
+		{
+			/* Turn off mic led by default */
+			acpi_ibm_mic_led_set (sc, 0);
+			return(TRUE);
+		}
+		else
+			sc->mic_led_handle = NULL;
+		return (FALSE);
 
 	case ACPI_IBM_METHOD_THINKLIGHT:
 		sc->cmos_handle = NULL;
@@ -943,6 +1057,10 @@ acpi_ibm_sysctl_init(struct acpi_ibm_softc *sc, int method)
 
 	case ACPI_IBM_METHOD_HANDLEREVENTS:
 		return (TRUE);
+
+	case ACPI_IBM_METHOD_PRIVACYGUARD:
+		return (acpi_ibm_privacyguard_get(sc) != -1);
+
 	}
 	return (FALSE);
 }
@@ -1158,6 +1276,60 @@ acpi_ibm_thinklight_set(struct acpi_ibm_softc *sc, int arg)
 	}
 
 	return (0);
+}
+
+/*
+ * Helper function to make a get or set ACPI call to the PrivacyGuard handle.
+ * Only meant to be used internally by the get/set functions below.
+ */
+static ACPI_STATUS
+acpi_ibm_privacyguard_acpi_call(struct acpi_ibm_softc *sc, bool write, int *arg) {
+	ACPI_OBJECT		Arg;
+	ACPI_OBJECT_LIST	Args;
+	ACPI_STATUS		status;
+	ACPI_OBJECT		out_obj;
+	ACPI_BUFFER		result;
+
+	Arg.Type = ACPI_TYPE_INTEGER;
+	Arg.Integer.Value = (write ? *arg : 0);
+	Args.Count = 1;
+	Args.Pointer = &Arg;
+	result.Length = sizeof(out_obj);
+	result.Pointer = &out_obj;
+
+	status = AcpiEvaluateObject(sc->handle,
+	    (write ? IBM_NAME_PRIVACYGUARD_SET : IBM_NAME_PRIVACYGUARD_GET),
+	    &Args, &result);
+	if (ACPI_SUCCESS(status) && !write)
+		*arg = out_obj.Integer.Value;
+
+	return (status);
+}
+
+/*
+ * Returns -1 if the device is not present.
+ */
+static int
+acpi_ibm_privacyguard_get(struct acpi_ibm_softc *sc)
+{
+	ACPI_STATUS status;
+	int val;
+
+	status = acpi_ibm_privacyguard_acpi_call(sc, false, &val);
+	if (ACPI_SUCCESS(status) &&
+	    (val & IBM_FLAG_PRIVACYGUARD_DEVICE_PRESENT))
+		return (val & IBM_FLAG_PRIVACYGUARD_ON);
+
+	return (-1);
+}
+
+static ACPI_STATUS
+acpi_ibm_privacyguard_set(struct acpi_ibm_softc *sc, int arg)
+{
+	if (arg < 0 || arg > 1)
+		return (AE_BAD_PARAMETER);
+
+	return (acpi_ibm_privacyguard_acpi_call(sc, true, &arg));
 }
 
 static int

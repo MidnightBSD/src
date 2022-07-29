@@ -38,7 +38,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/security/mac/mac_framework.h 263152 2014-03-14 06:29:43Z glebius $
+ * $FreeBSD$
  */
 
 /*

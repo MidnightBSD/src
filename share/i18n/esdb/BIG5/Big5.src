@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/i18n/esdb/BIG5/Big5.src 219019 2011-02-25 00:04:39Z gabor $ 
+# $FreeBSD$ 
 # $NetBSD: Big5.src,v 1.1 2006/06/19 17:28:25 tnozaki Exp $
 
 NAME		"encoding"

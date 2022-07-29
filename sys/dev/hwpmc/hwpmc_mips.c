@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010, George V. Neville-Neil <gnn@freebsd.org>
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/hwpmc/hwpmc_mips.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_hwpmc_hooks.h"
 
@@ -250,15 +252,16 @@ mips_release_pmc(int cpu, int ri, struct pmc *pmc)
 }
 
 static int
-mips_pmc_intr(int cpu, struct trapframe *tf)
+mips_pmc_intr(struct trapframe *tf)
 {
 	int error;
-	int retval, ri;
+	int retval, ri, cpu;
 	struct pmc *pm;
 	struct mips_cpu *pc;
 	uint32_t r0, r2;
 	pmc_value_t r;
 
+	cpu = curcpu;
 	KASSERT(cpu >= 0 && cpu < pmc_cpu_max(),
 	    ("[mips,%d] CPU %d out of range", __LINE__, cpu));
 
@@ -287,8 +290,7 @@ mips_pmc_intr(int cpu, struct trapframe *tf)
 		retval = 1;
 		if (pm->pm_state != PMC_STATE_RUNNING)
 			continue;
-		error = pmc_process_interrupt(cpu, PMC_HR, pm, tf,
-		    TRAPF_USERMODE(tf));
+		error = pmc_process_interrupt(PMC_HR, pm, tf);
 		if (error) {
 			/* Clear/disable the relevant counter */
 			if (ri == 0)

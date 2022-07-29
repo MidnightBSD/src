@@ -30,7 +30,7 @@
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: stable/11/sys/dev/sfxge/sfxge_version.h 301725 2016-06-09 12:33:53Z arybchik $
+ * $FreeBSD$
  */
 
 #ifndef _SFXGE_VERSION_H

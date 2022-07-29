@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libbe/be_error.c 357667 2020-02-07 21:57:27Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include "be.h"
 #include "be_impl.h"

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/vnic/q_struct.h 296039 2016-02-25 14:29:57Z zbb $
+ * $FreeBSD$
  *
  */
 

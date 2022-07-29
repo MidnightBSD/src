@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/mips/atheros/ar71xx_pci_bus_space.h 330897 2018-03-14 03:19:51Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef __AR71XX_PCI_BUS_SPACEH__

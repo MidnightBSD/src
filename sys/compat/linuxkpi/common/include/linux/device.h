@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/device.h 354616 2019-11-11 15:28:27Z hselasky $
+ * $FreeBSD$
  */
 #ifndef	_LINUX_DEVICE_H_
 #define	_LINUX_DEVICE_H_
@@ -61,6 +61,9 @@ struct class {
 };
 
 struct dev_pm_ops {
+#if defined(LINUXKPI_VERSION) && LINUXKPI_VERSION >= 50000
+	int (*prepare)(struct device *dev);
+#endif
 	int (*suspend)(struct device *dev);
 	int (*suspend_late)(struct device *dev);
 	int (*resume)(struct device *dev);
@@ -105,7 +108,10 @@ struct device {
 	struct class	*class;
 	void		(*release)(struct device *dev);
 	struct kobject	kobj;
-	uint64_t	*dma_mask;
+	union {
+		const u64 *dma_mask;	/* XXX for backwards compat */
+		void	*dma_priv;
+	};
 	void		*driver_data;
 	unsigned int	irq;
 #define	LINUX_IRQ_INVALID	65535
@@ -549,11 +555,9 @@ class_remove_file(struct class *class, const struct class_attribute *attr)
 		sysfs_remove_file(&class->kobj, &attr->attr);
 }
 
-static inline int
-dev_to_node(struct device *dev)
-{
-	return -1;
-}
+#define	dev_to_node(dev) linux_dev_to_node(dev)
+#define	of_node_to_nid(node) -1
+int linux_dev_to_node(struct device *);
 
 char *kvasprintf(gfp_t, const char *, va_list);
 char *kasprintf(gfp_t, const char *, ...);

@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/11/sys/netpfil/ipfw/test/test_dn_sched.c 294882 2016-01-27 02:22:31Z luigi $
+ * $FreeBSD$
  *
  * library functions for userland testing of dummynet schedulers
  */
@@ -81,7 +81,7 @@ ipdn_bound_var(int *v, int dflt, int lo, int hi, const char *msg)
         return *v;
 }
 
-#ifndef __MidnightBSD__
+#ifndef __FreeBSD__
 int
 fls(int mask)
 {

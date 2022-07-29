@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/dev/altera/pio/pio_if.m 274656 2014-11-18 14:12:19Z br $
+# $FreeBSD$
 #
 
 #include <sys/types.h>

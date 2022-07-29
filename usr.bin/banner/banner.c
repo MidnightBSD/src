@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -11,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -41,7 +42,7 @@ static char sccsid[] = "@(#)banner.c	8.4 (Berkeley) 4/29/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/banner/banner.c 319256 2017-05-30 21:58:53Z asomers $");
+__FBSDID("$FreeBSD$");
 
 /*
  * banner - prints large signs
@@ -1063,7 +1064,7 @@ main(int argc, char *argv[])
 			j += strlen(argv[i]) + 1;
 		if ((message = malloc((size_t)j)) == NULL) 
 			err(1, "malloc");
-		strcpy(message, *argv);
+		strlcpy(message, *argv, j);
 		while (*++argv) {
 			strlcat(message, " ", j);
 			strlcat(message, *argv, j);

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/nvidia/tegra124/tegra124_pmc.c 308335 2016-11-05 10:56:32Z mmel $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -38,7 +38,6 @@
 
 #include <dev/extres/clk/clk.h>
 #include <dev/extres/hwreset/hwreset.h>
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 

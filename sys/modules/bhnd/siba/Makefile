@@ -1,10 +1,14 @@
-# $FreeBSD: stable/11/sys/modules/bhnd/siba/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 
 .PATH:	${SRCTOP}/sys/dev/bhnd/siba
 
 KMOD=	siba
-SRCS=	siba.c siba_subr.c
+SRCS=	siba.c siba_subr.c \
+	siba_erom.c
 
-SRCS+=	device_if.h bus_if.h bhnd_bus_if.h
+SRCS+=	device_if.h bus_if.h
+SRCS+=	bhnd_bus_if.h bhnd_chipc_if.h \
+	bhnd_erom_if.h bhnd_pmu_if.h \
+	bhnd_pwrctl_if.h
 
 .include <bsd.kmod.mk>

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright 2014 Garrett D'Amore <garrett@damore.org>
  * Copyright 2010 Nexenta Systems, Inc.  All rights reserved.
  * Copyright (c) 1993
@@ -15,7 +17,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -36,7 +38,7 @@
 static char sccsid[] = "@(#)rune.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/locale/rune.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <arpa/inet.h>
@@ -92,7 +94,7 @@ _Read_RuneMagi(const char *fname)
 
 	fdata = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
 	(void) _close(fd);
-	if (fdata == NULL) {
+	if (fdata == MAP_FAILED) {
 		errno = EINVAL;
 		return (NULL);
 	}
@@ -149,8 +151,7 @@ _Read_RuneMagi(const char *fname)
 	data = malloc(sizeof(_RuneLocale) +
 	    (frl->runetype_ext_nranges + frl->maplower_ext_nranges +
 	    frl->mapupper_ext_nranges) * sizeof(_RuneEntry) +
-	    runetype_ext_len * sizeof(*rr->__types) +
-	    frl->variable_len);
+	    runetype_ext_len * sizeof(*rr->__types) + frl->variable_len);
 	if (data == NULL) {
 		saverr = errno;
 		munmap(fdata, sb.st_size);

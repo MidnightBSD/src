@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/uart/uart_bus_fdt.c 340145 2018-11-04 23:28:56Z mmacy $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_platform.h"
 
@@ -117,9 +119,18 @@ static int
 phandle_chosen_propdev(phandle_t chosen, const char *name, phandle_t *node)
 {
 	char buf[64];
+	char *sep;
 
 	if (OF_getprop(chosen, name, buf, sizeof(buf)) <= 0)
 		return (ENXIO);
+	/*
+	 * stdout-path may have a ':' to separate the device from the
+	 * connection settings. Split the string so we just pass the former
+	 * to OF_finddevice.
+	 */
+	sep = strchr(buf, ':');
+	if (sep != NULL)
+		*sep = '\0';
 	if ((*node = OF_finddevice(buf)) == -1)
 		return (ENXIO);
 
@@ -163,7 +174,8 @@ uart_fdt_find_by_node(phandle_t node, int class_list)
 
 int
 uart_cpu_fdt_probe(struct uart_class **classp, bus_space_tag_t *bst,
-    bus_space_handle_t *bsh, int *baud, u_int *rclk, u_int *shiftp)
+    bus_space_handle_t *bsh, int *baud, u_int *rclk, u_int *shiftp,
+    u_int *iowidthp)
 {
 	const char *propnames[] = {"stdout-path", "linux,stdout-path", "stdout",
 	    "stdin-path", "stdin", NULL};
@@ -235,6 +247,7 @@ uart_cpu_fdt_probe(struct uart_class **classp, bus_space_tag_t *bst,
 	*baud = br;
 	*rclk = clk;
 	*shiftp = shift;
+	*iowidthp = iowidth;
 
 	return (0);
 }

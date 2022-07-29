@@ -33,7 +33,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS THE
  * SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/ofed/drivers/infiniband/core/cm_msgs.h 331772 2018-03-30 18:17:33Z hselasky $
+ * $FreeBSD$
  */
 
 #if !defined(CM_MSGS_H)

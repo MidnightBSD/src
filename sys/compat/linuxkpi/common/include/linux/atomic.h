@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/atomic.h 328653 2018-02-01 13:01:44Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _LINUX_ATOMIC_H_
@@ -31,5 +31,6 @@
 
 #include <asm/atomic.h>
 #include <asm/atomic64.h>
+#include <asm/atomic-long.h>
 
 #endif /* _LINUX_ATOMIC_H_ */

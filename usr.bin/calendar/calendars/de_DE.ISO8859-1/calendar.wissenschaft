@@ -1,7 +1,7 @@
 /*
  * Wissenschaft
  *
- * $FreeBSD: stable/11/usr.bin/calendar/calendars/de_DE.ISO8859-1/calendar.wissenschaft 121109 2003-10-15 08:18:59Z tg $
+ * $FreeBSD$
  */
 
 #ifndef _de_DE_ISO8859_1_wissenschaft_

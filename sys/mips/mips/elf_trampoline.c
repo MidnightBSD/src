@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Olivier Houchard.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/mips/elf_trampoline.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 #include <machine/asm.h>
 #include <sys/param.h>
 
@@ -39,7 +41,6 @@ __FBSDID("$FreeBSD: stable/11/sys/mips/mips/elf_trampoline.c 331722 2018-03-29 0
  */
 #include "opt_global.h"
 
-#include <sys/inflate.h>
 #include <machine/elf.h>
 #include <machine/cpufunc.h>
 #include <machine/stdarg.h>
@@ -97,7 +98,7 @@ bzero(void *addr, size_t count)
 #define	mkptr(x)	((void *)(intptr_t)(int)(x))
 
 /*
- * Relocate PT_LOAD segements of kernel ELF image to their respective
+ * Relocate PT_LOAD segments of kernel ELF image to their respective
  * virtual addresses and return entry point
  */
 void *

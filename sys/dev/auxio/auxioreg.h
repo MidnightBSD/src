@@ -1,7 +1,9 @@
-/*	$FreeBSD: stable/11/sys/dev/auxio/auxioreg.h 331722 2018-03-29 02:50:57Z eadler $ */
+/*	$FreeBSD$ */
 /*	$NetBSD: auxioreg.h,v 1.4 2001/10/22 07:31:41 mrg Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2000 Matthew R. Green
  * All rights reserved.
  *

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010-2011 Alexander V. Chernikov <melifaro@ipfw.ru>
  * Copyright (c) 2004-2005 Gleb Smirnoff <glebius@FreeBSD.org>
  * Copyright (c) 2001-2003 Roman V. Palagin <romanp@unshadow.net>
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netgraph/netflow/netflow.c 300772 2016-05-26 19:17:51Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet6.h"
 #include "opt_route.h"

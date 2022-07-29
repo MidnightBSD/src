@@ -23,7 +23,7 @@
  * Portions Copyright 2013 Howard Su howardsu@freebsd.org
  * Portions Copyright 2015 Ruslan Bukin <br@bsdpad.com>
  *
- * $FreeBSD: stable/11/sys/cddl/dev/fbt/aarch64/fbt_isa.c 298171 2016-04-17 23:08:47Z markj $
+ * $FreeBSD$
  */
 
 /*
@@ -152,7 +152,7 @@ again:
 		fbt->fbtp_id = dtrace_probe_create(fbt_id, modname,
 		    name, FBT_RETURN, 3, fbt);
 	} else {
-		retfbt->fbtp_next = fbt;
+		retfbt->fbtp_probenext = fbt;
 		fbt->fbtp_id = retfbt->fbtp_id;
 	}
 	retfbt = fbt;

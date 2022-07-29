@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -16,7 +18,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -36,13 +38,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/kern_mib.c 354762 2019-11-16 00:33:02Z scottl $");
+__FBSDID("$FreeBSD$");
 
-#include "opt_compat.h"
 #include "opt_posix.h"
 #include "opt_config.h"
 
 #include <sys/param.h>
+#include <sys/boot.h>
 #include <sys/jail.h>
 #include <sys/kernel.h>
 #include <sys/limits.h>
@@ -137,10 +139,13 @@ SYSCTL_INT(_kern, KERN_SAVED_IDS, saved_ids, CTLFLAG_RD|CTLFLAG_CAPRD,
     SYSCTL_NULL_INT_PTR, 0, "Whether saved set-group/user ID is available");
 #endif
 
-char kernelname[MAXPATHLEN] = "/boot/kernel/kernel";	/* XXX bloat */
+char kernelname[MAXPATHLEN] = PATH_KERNEL;	/* XXX bloat */
 
 SYSCTL_STRING(_kern, KERN_BOOTFILE, bootfile, CTLFLAG_RW | CTLFLAG_MPSAFE,
     kernelname, sizeof kernelname, "Name of kernel file booted");
+
+SYSCTL_INT(_kern, KERN_MAXPHYS, maxphys, CTLFLAG_RD | CTLFLAG_CAPRD,
+    SYSCTL_NULL_INT_PTR, MAXPHYS, "Maximum block I/O access size");
 
 SYSCTL_INT(_hw, HW_NCPU, ncpu, CTLFLAG_RD|CTLFLAG_CAPRD,
     &mp_ncpus, 0, "Number of active CPUs");
@@ -157,15 +162,8 @@ sysctl_kern_arnd(SYSCTL_HANDLER_ARGS)
 	char buf[256];
 	size_t len;
 
-	/*-
-	 * This is one of the very few legitimate uses of read_random(9).
-	 * Use of arc4random(9) is not recommended as that will ignore
-	 * an unsafe (i.e. unseeded) random(4).
-	 *
-	 * If random(4) is not seeded, then this returns 0, so the
-	 * sysctl will return a zero-length buffer.
-	 */
-	len = read_random(buf, MIN(req->oldlen, sizeof(buf)));
+	len = MIN(req->oldlen, sizeof(buf));
+	read_random(buf, len);
 	return (SYSCTL_OUT(req, buf, len));
 }
 
@@ -208,7 +206,7 @@ sysctl_hw_usermem(SYSCTL_HANDLER_ARGS)
 {
 	u_long val, p, p1;
 
-	p1 = physmem - vm_cnt.v_wire_count;
+	p1 = physmem - vm_wire_count();
 	p = SIZE_T_MAX >> PAGE_SHIFT;
 	if (p1 < p)
 		p = p1;
@@ -228,22 +226,32 @@ static int
 sysctl_hw_pagesizes(SYSCTL_HANDLER_ARGS)
 {
 	int error;
+	size_t len;
 #ifdef SCTL_MASK32
 	int i;
 	uint32_t pagesizes32[MAXPAGESIZES];
 
 	if (req->flags & SCTL_MASK32) {
 		/*
-		 * Recreate the "pagesizes" array with 32-bit elements.  Truncate
-		 * any page size greater than UINT32_MAX to zero.
+		 * Recreate the "pagesizes" array with 32-bit elements.
+		 * Truncate any page size greater than UINT32_MAX to zero,
+		 * which assumes that page sizes are powers of two.
 		 */
 		for (i = 0; i < MAXPAGESIZES; i++)
 			pagesizes32[i] = (uint32_t)pagesizes[i];
 
-		error = SYSCTL_OUT(req, pagesizes32, sizeof(pagesizes32));
+		len = sizeof(pagesizes32);
+		if (len > req->oldlen)
+			len = req->oldlen;
+		error = SYSCTL_OUT(req, pagesizes32, len);
 	} else
 #endif
-		error = SYSCTL_OUT(req, pagesizes, sizeof(pagesizes));
+	{
+		len = sizeof(pagesizes);
+		if (len > req->oldlen)
+			len = req->oldlen;
+		error = SYSCTL_OUT(req, pagesizes, len);
+	}
 	return (error);
 }
 SYSCTL_PROC(_hw, OID_AUTO, pagesizes, CTLTYPE_ULONG | CTLFLAG_RD,
@@ -335,15 +343,15 @@ sysctl_hostname(SYSCTL_HANDLER_ARGS)
 }
 
 SYSCTL_PROC(_kern, KERN_HOSTNAME, hostname,
-    CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_PRISON | CTLFLAG_MPSAFE,
+    CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_PRISON | CTLFLAG_CAPRD | CTLFLAG_MPSAFE,
     (void *)(offsetof(struct prison, pr_hostname)), MAXHOSTNAMELEN,
     sysctl_hostname, "A", "Hostname");
 SYSCTL_PROC(_kern, KERN_NISDOMAINNAME, domainname,
-    CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_PRISON | CTLFLAG_MPSAFE,
+    CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_PRISON | CTLFLAG_CAPRD | CTLFLAG_MPSAFE,
     (void *)(offsetof(struct prison, pr_domainname)), MAXHOSTNAMELEN,
     sysctl_hostname, "A", "Name of the current YP/NIS domain");
 SYSCTL_PROC(_kern, KERN_HOSTUUID, hostuuid,
-    CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_PRISON | CTLFLAG_MPSAFE,
+    CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_PRISON | CTLFLAG_CAPRD | CTLFLAG_MPSAFE,
     (void *)(offsetof(struct prison, pr_hostuuid)), HOSTUUIDLEN,
     sysctl_hostname, "A", "Host UUID");
 
@@ -485,6 +493,54 @@ sysctl_osreldate(SYSCTL_HANDLER_ARGS)
 SYSCTL_PROC(_kern, KERN_OSRELDATE, osreldate,
     CTLTYPE_INT | CTLFLAG_CAPRD | CTLFLAG_RD | CTLFLAG_MPSAFE,
     NULL, 0, sysctl_osreldate, "I", "Kernel release date");
+
+/*
+ * The build-id is copied from the ELF section .note.gnu.build-id.  The linker 
+ * script defines two variables to expose the beginning and end.  LLVM 
+ * currently uses a SHA-1 hash, but other formats can be supported by checking 
+ * the length of the section.
+ */
+
+extern char __build_id_start[];
+extern char __build_id_end[];
+
+#define	BUILD_ID_HEADER_LEN	0x10
+#define	BUILD_ID_HASH_MAXLEN	0x14
+
+static int
+sysctl_build_id(SYSCTL_HANDLER_ARGS)
+{
+	uintptr_t sectionlen = (uintptr_t)(__build_id_end - __build_id_start);
+	int hashlen;
+	char buf[2*BUILD_ID_HASH_MAXLEN+1];
+
+	/*
+	 * The ELF note section has a four byte length for the vendor name,
+	 * four byte length for the value, and a four byte vendor specific 
+	 * type.  The name for the build id is "GNU\0".  We skip the first 16 
+	 * bytes to read the build hash.  We will return the remaining bytes up 
+	 * to 20 (SHA-1) hash size.  If the hash happens to be a custom number 
+	 * of bytes we will pad the value with zeros, as the section should be 
+	 * four byte aligned.
+	 */
+	if (sectionlen <= BUILD_ID_HEADER_LEN ||
+	    sectionlen > (BUILD_ID_HEADER_LEN + BUILD_ID_HASH_MAXLEN)) {
+	    return (ENOENT);
+	}
+   
+
+	hashlen = sectionlen - BUILD_ID_HEADER_LEN;
+	for (int i = 0; i < hashlen; i++) {
+	    uint8_t c = __build_id_start[i+BUILD_ID_HEADER_LEN];
+	    snprintf(&buf[2*i], 3, "%02x", c);
+	}
+
+	return (SYSCTL_OUT(req, buf, strlen(buf) + 1));
+}
+
+SYSCTL_PROC(_kern, OID_AUTO, build_id,
+    CTLTYPE_STRING | CTLFLAG_CAPRD | CTLFLAG_RD | CTLFLAG_MPSAFE,
+    NULL, 0, sysctl_build_id, "A", "Operating system build-id");
 
 SYSCTL_NODE(_kern, OID_AUTO, features, CTLFLAG_RD, 0, "Kernel Features");
 

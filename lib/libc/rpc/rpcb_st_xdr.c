@@ -1,6 +1,8 @@
 /*	$NetBSD: rpcb_st_xdr.c,v 1.3 2000/07/14 08:40:42 fvdl Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -38,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/rpcb_st_xdr.c 358122 2020-02-19 16:18:27Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <rpc/rpc.h>

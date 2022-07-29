@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/teken/libteken/Makefile 221698 2011-05-09 16:27:39Z ed $
+# $FreeBSD$
 
 LIB=	teken
 SHLIB_MAJOR= 0

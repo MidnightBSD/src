@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: ISC
+ *
  * The authors of this code are John Ioannidis (ji@tla.org),
  * Angelos D. Keromytis (kermit@csd.uch.gr) and
  * Niels Provos (provos@physnet.uni-hamburg.de).
@@ -35,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netpfil/pf/if_pflog.c 310093 2016-12-14 21:29:12Z kp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -94,7 +96,7 @@ static void	pflog_clone_destroy(struct ifnet *);
 
 static const char pflogname[] = "pflog";
 
-static VNET_DEFINE(struct if_clone *, pflog_cloner);
+VNET_DEFINE_STATIC(struct if_clone *, pflog_cloner);
 #define	V_pflog_cloner		VNET(pflog_cloner)
 
 VNET_DEFINE(struct ifnet *, pflogifs[PFLOGIFS_MAX]);	/* for fast access */
@@ -199,9 +201,9 @@ pflogioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 }
 
 static int
-pflog_packet(struct pfi_kif *kif, struct mbuf *m, sa_family_t af, u_int8_t dir,
-    u_int8_t reason, struct pf_rule *rm, struct pf_rule *am,
-    struct pf_ruleset *ruleset, struct pf_pdesc *pd, int lookupsafe)
+pflog_packet(struct pfi_kkif *kif, struct mbuf *m, sa_family_t af, u_int8_t dir,
+    u_int8_t reason, struct pf_krule *rm, struct pf_krule *am,
+    struct pf_kruleset *ruleset, struct pf_pdesc *pd, int lookupsafe)
 {
 	struct ifnet *ifn;
 	struct pfloghdr hdr;
@@ -229,6 +231,7 @@ pflog_packet(struct pfi_kif *kif, struct mbuf *m, sa_family_t af, u_int8_t dir,
 			strlcpy(hdr.ruleset, ruleset->anchor->name,
 			    sizeof(hdr.ruleset));
 	}
+	hdr.ridentifier = htonl(rm->ridentifier);
 	/*
 	 * XXXGL: we avoid pf_socket_lookup() when we are holding
 	 * state lock, since this leads to unsafe LOR.

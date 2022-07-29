@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/efi.h 337668 2018-08-12 00:33:24Z kevans $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_EFI_H_
@@ -52,7 +51,7 @@ typedef unsigned long efi_status;
 
 struct efi_cfgtbl {
 	struct uuid	ct_uuid;
-	uint64_t	ct_data;
+	void		*ct_data;
 };
 
 struct efi_md {
@@ -170,10 +169,13 @@ struct efi_systbl {
 
 extern vm_paddr_t efi_systbl_phys;
 
+struct efirt_callinfo;
+
 /* Internal MD EFI functions */
 int efi_arch_enter(void);
 void efi_arch_leave(void);
 vm_offset_t efi_phys_to_kva(vm_paddr_t);
+int efi_rt_arch_call(struct efirt_callinfo *);
 bool efi_create_1t1_map(struct efi_md *, int, int);
 void efi_destroy_1t1_map(void);
 

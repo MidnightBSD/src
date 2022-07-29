@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/makefs/cd9660/cd9660_debug.c 332977 2018-04-25 01:12:40Z benno $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 
 #include <sys/mount.h>
@@ -59,8 +59,7 @@ print_n_tabs(int n)
 
 #if 0
 void
-debug_print_rrip_info(n)
-cd9660node *n;
+debug_print_rrip_info(cd9660node *n)
 {
 	struct ISO_SUSP_ATTRIBUTES *t;
 	TAILQ_FOREACH(t, &node->head, rr_ll) {

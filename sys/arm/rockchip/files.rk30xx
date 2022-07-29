@@ -1,7 +1,5 @@
-# $FreeBSD: stable/11/sys/arm/rockchip/files.rk30xx 291135 2015-11-21 16:23:56Z andrew $
-kern/kern_clocksource.c			standard
+# $FreeBSD$
 
-arm/rockchip/rk30xx_common.c		standard
 arm/rockchip/rk30xx_machdep.c		standard
 arm/rockchip/rk30xx_pmu.c		standard
 arm/rockchip/rk30xx_grf.c		standard
@@ -10,3 +8,4 @@ arm/rockchip/rk30xx_gpio.c		optional	gpio
 arm/rockchip/rk30xx_mp.c		optional	smp
 
 dev/mmc/host/dwmmc.c			optional	dwmmc
+dev/mmc/host/dwmmc_rockchip.c		optional	dwmmc

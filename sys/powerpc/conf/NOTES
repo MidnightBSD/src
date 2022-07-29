@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/powerpc/conf/NOTES 345040 2019-03-11 23:16:10Z jhb $
+# $FreeBSD$
 #
 # This file contains machine dependent kernel configuration notes.  For
 # machine independent notes, look in /sys/conf/NOTES.

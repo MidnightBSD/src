@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/uboot.mk 332150 2018-04-06 20:24:50Z kevans $
+# $FreeBSD$
 
 SRCS+=	main.c
 

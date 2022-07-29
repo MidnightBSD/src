@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/makefs/cd9660/cd9660_archimedes.c 332981 2018-04-25 01:48:15Z benno $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
 #include <stdint.h>

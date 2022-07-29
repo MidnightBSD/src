@@ -28,7 +28,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/an.4 267938 2014-06-26 21:46:14Z bapt $
+.\" $FreeBSD$
 .\"
 .Dd July 16, 2005
 .Dt AN 4
@@ -51,6 +51,9 @@ module at boot time, place the following line in
 .Bd -literal -offset indent
 if_an_load="YES"
 .Ed
+.Sh DEPRECATION NOTICE
+This driver is scheduled for removal prior to the release of
+.Fx 13.0
 .Sh DESCRIPTION
 The
 .Nm

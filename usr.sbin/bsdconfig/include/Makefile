@@ -1,7 +1,4 @@
-# $MidnightBSD$
-# $MidnightBSD$
-
-NO_OBJ=
+# $FreeBSD$
 
 FILESDIR=	${LIBEXECDIR}/bsdconfig/include
 FILES=		bsdconfig.hlp media.hlp messages.subr network_device.hlp \

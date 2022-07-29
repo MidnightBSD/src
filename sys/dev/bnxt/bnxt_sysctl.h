@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bnxt/bnxt_sysctl.h 333364 2018-05-08 15:51:40Z shurd $");
+__FBSDID("$FreeBSD$");
 
 #include "bnxt.h"
 

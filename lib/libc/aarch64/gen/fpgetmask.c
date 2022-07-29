@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/aarch64/gen/fpgetmask.c 284807 2015-06-25 08:22:25Z andrew $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <ieeefp.h>

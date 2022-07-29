@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2010, Oracle America, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +45,7 @@
 #ifndef	_RPCSVC_NIS_TAGS_H
 #define	_RPCSVC_NIS_TAGS_H
 
-/* $FreeBSD: stable/11/include/rpcsvc/nis_tags.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /* From: #pragma ident	"@(#)nis_tags.h	1.10	94/05/03 SMI" */
 /* from file: zns_tags.h	1.7 Copyright (c) 1990 Sun Microsystems */
 

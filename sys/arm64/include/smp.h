@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/include/smp.h 297029 2016-03-18 16:29:58Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_SMP_H_

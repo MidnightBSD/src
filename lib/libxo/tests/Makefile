@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libxo/tests/Makefile 322446 2017-08-12 23:40:01Z ngie $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 

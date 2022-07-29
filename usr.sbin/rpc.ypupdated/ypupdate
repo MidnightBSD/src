@@ -8,7 +8,7 @@
 #
 # Comment out the LOG=yes line to disable logging.
 #
-# $FreeBSD: stable/11/usr.sbin/rpc.ypupdated/ypupdate 50479 1999-08-28 01:35:59Z peter $
+# $FreeBSD$
 #
 
 LOG=yes

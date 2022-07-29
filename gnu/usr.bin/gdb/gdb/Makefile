@@ -1,11 +1,12 @@
-# $FreeBSD: stable/11/gnu/usr.bin/gdb/gdb/Makefile 275077 2014-11-25 21:18:18Z bapt $
+# $FreeBSD$
 
 PROG=	gdb${GDB_SUFFIX}
 SRCS=	gdb.c
 
-BULIBS= ${OBJ_BU}/libbfd/libbfd.a ${OBJ_BU}/libopcodes/libopcodes.a \
-	${OBJ_BU}/libiberty/libiberty.a
-GDBLIBS= ${OBJ_GDB}/libgdb/libgdb.a
+BULIBS= ${OBJ_BU}/libbfd/libbfd${PIE_SUFFIX}.a \
+	${OBJ_BU}/libopcodes/libopcodes${PIE_SUFFIX}.a \
+	${OBJ_BU}/libiberty/libiberty${PIE_SUFFIX}.a
+GDBLIBS= ${OBJ_GDB}/libgdb/libgdb${PIE_SUFFIX}.a
 
 # libthread_db.so calls back into gdb for the proc services.  Make all the
 # global symbols visible.
@@ -13,7 +14,7 @@ LDFLAGS+= -Wl,-E
 
 DPADD=	${GDBLIBS} ${BULIBS}
 LDADD=	${GDBLIBS} ${BULIBS}
-LIBADD+=	m readline ncursesw gnuregex
+LIBADD+=	m edit ncursesw gnuregex
 
 .include <bsd.prog.mk>
 CFLAGS+=	-DDEBUGDIR=\"${DEBUGDIR}\"

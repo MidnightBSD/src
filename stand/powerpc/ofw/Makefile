@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/powerpc/ofw/Makefile 332152 2018-04-06 20:27:55Z kevans $
+# $FreeBSD$
 
 LOADER_CD9660_SUPPORT?=	yes
 LOADER_EXT2FS_SUPPORT?=	no
@@ -39,10 +39,12 @@ CFLAGS+=	-DRELOC=${RELOC}
 LDFLAGS=	-nostdlib -static -T ${.CURDIR}/ldscript.powerpc
 
 # Open Firmware standalone support library
-LIBOFW=		${BOOTOBJ}/ofw/libofw/libofw.a
-CFLAGS+=	-I${BOOTSRC}/ofw/libofw
+LIBOFW=		${BOOTOBJ}/libofw/libofw.a
+CFLAGS+=	-I${BOOTSRC}/libofw
 
 DPADD=		${LDR_INTERP} ${LIBOFW} ${LIBFDT} ${LIBSA}
 LDADD=		${LDR_INTERP} ${LIBOFW} ${LIBFDT} ${LIBSA}
+
+MK_PIE=		no
 
 .include <bsd.prog.mk>

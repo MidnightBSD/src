@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2010
  *	Swinburne University of Technology, Melbourne, Australia
  * Copyright (c) 2010 Lawrence Stewart <lstewart@freebsd.org>
@@ -52,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/cc/cc_hd.c 342189 2018-12-18 09:16:04Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -85,9 +87,9 @@ static int	hd_mod_init(void);
 
 static int ertt_id;
 
-static VNET_DEFINE(uint32_t, hd_qthresh) = 20;
-static VNET_DEFINE(uint32_t, hd_qmin) = 5;
-static VNET_DEFINE(uint32_t, hd_pmax) = 5;
+VNET_DEFINE_STATIC(uint32_t, hd_qthresh) = 20;
+VNET_DEFINE_STATIC(uint32_t, hd_qmin) = 5;
+VNET_DEFINE_STATIC(uint32_t, hd_pmax) = 5;
 #define	V_hd_qthresh	VNET(hd_qthresh)
 #define	V_hd_qmin	VNET(hd_qmin)
 #define	V_hd_pmax	VNET(hd_pmax)
@@ -247,4 +249,5 @@ SYSCTL_PROC(_net_inet_tcp_cc_hd, OID_AUTO, queue_min,
     &hd_qmin_handler, "IU", "minimum queueing delay threshold (qmin) in ticks");
 
 DECLARE_CC_MODULE(hd, &hd_cc_algo);
+MODULE_VERSION(hd, 1);
 MODULE_DEPEND(hd, ertt, 1, 1, 1);

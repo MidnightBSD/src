@@ -1,5 +1,7 @@
 /* $Id: os_bsd.c,v 1.13 2010/05/11 03:12:11 lcn Exp $ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * HighPoint RAID Driver for FreeBSD
  * Copyright (C) 2005-2011 HighPoint Technologies, Inc. All Rights Reserved.
  * All rights reserved.
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/hptnr/hptnr_os_bsd.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <dev/hptnr/hptnr_config.h>

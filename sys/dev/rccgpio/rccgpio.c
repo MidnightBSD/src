@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/rccgpio/rccgpio.c 311205 2017-01-04 00:25:22Z loos $");
+__FBSDID("$FreeBSD$");
 
 /*
  * GPIO driver for the ADI Engineering RCC-VE and RCC-DFF/DFFv2.

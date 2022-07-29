@@ -9,7 +9,7 @@
  * to the absolute address 0x60. Here we implement a loop waiting on the release
  * of a lock by the kernel at 0x40.
  * 
- * $FreeBSD: stable/11/stand/powerpc/kboot/kerneltramp.S 329183 2018-02-12 20:51:28Z kevans $
+ * $FreeBSD$
  */
 
 #include <machine/asm.h>

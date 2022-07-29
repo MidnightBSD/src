@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tests/sys/kern/acct/Makefile 313213 2017-02-04 16:02:48Z ngie $
+# $FreeBSD$
 
 TESTSDIR=	${TESTSBASE}/sys/kern/acct
 

@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2015 John H. Baldwin <jhb@FreeBSD.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libkvm/kvm_aarch64.h 291406 2015-11-27 18:58:26Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef __KVM_AARCH64_H__
@@ -40,7 +39,13 @@ typedef uint64_t	aarch64_pte_t;
 #define	AARCH64_PAGE_SIZE	(1 << AARCH64_PAGE_SHIFT)
 #define	AARCH64_PAGE_MASK	(AARCH64_PAGE_SIZE - 1)
 
-#define	AARCH64_ATTR_MASK	0xfff0000000000fff
+/* Source: arm64/include/pte.h */
+#define	AARCH64_ATTR_MASK	0xfffc000000000fff
+#define	AARCH64_ATTR_UXN	(1ULL << 54)
+#define	AARCH64_ATTR_PXN	(1ULL << 53)
+#define	AARCH64_ATTR_XN		(AARCH64_ATTR_PXN | AARCH64_ATTR_UXN)
+#define	AARCH64_ATTR_AP(x)	((x) << 6)
+#define	AARCH64_ATTR_AP_RO	(1 << 1)
 
 #define	AARCH64_ATTR_DESCR_MASK	3
 

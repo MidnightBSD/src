@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/grep/tests/Makefile 322587 2017-08-16 18:00:32Z kevans $
+# $FreeBSD$
 
 PACKAGE=	tests
 

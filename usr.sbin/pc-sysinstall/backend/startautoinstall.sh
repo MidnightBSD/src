@@ -1,5 +1,7 @@
 #!/bin/sh
 #-
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (c) 2010 iXsystems, Inc.  All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,7 +27,7 @@
 #
 # Script which reads the pc-autoinstall.conf directive, and begins the install
 #
-# $FreeBSD: stable/11/usr.sbin/pc-sysinstall/backend/startautoinstall.sh 232880 2012-03-12 18:50:37Z jpaetzel $
+# $FreeBSD$
 
 # Source our functions scripts
 . ${BACKEND}/functions.sh

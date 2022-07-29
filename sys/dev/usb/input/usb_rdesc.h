@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Nick Hibma <n_hibma@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/usb/input/usb_rdesc.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  *
  * This file contains replacements for broken HID report descriptors.
  */
@@ -274,3 +276,31 @@
     0x81, 0x01,		/*  INPUT (Constant)			*/\
     0xc0		/* END COLLECTION			*/\
 
+/* Fixed report descriptor for Super Nintendo gamepads */
+#define	UHID_SNES_REPORT_DESCR(...) \
+    0x05, 0x01,         /*  Usage Page (Desktop),           */\
+    0x09, 0x04,         /*  Usage (Joystik),                */\
+    0xA1, 0x01,         /*  Collection (Application),       */\
+    0xA1, 0x02,         /*      Collection (Logical),       */\
+    0x14,               /*          Logical Minimum (0),    */\
+    0x75, 0x08,         /*          Report Size (8),        */\
+    0x95, 0x03,         /*          Report Count (3),       */\
+    0x81, 0x01,         /*          Input (Constant),       */\
+    0x26, 0xFF, 0x00,   /*          Logical Maximum (255),  */\
+    0x95, 0x02,         /*          Report Count (2),       */\
+    0x09, 0x30,         /*          Usage (X),              */\
+    0x09, 0x31,         /*          Usage (Y),              */\
+    0x81, 0x02,         /*          Input (Variable),       */\
+    0x75, 0x01,         /*          Report Size (1),        */\
+    0x95, 0x04,         /*          Report Count (4),       */\
+    0x81, 0x01,         /*          Input (Constant),       */\
+    0x25, 0x01,         /*          Logical Maximum (1),    */\
+    0x95, 0x0A,         /*          Report Count (10),      */\
+    0x05, 0x09,         /*          Usage Page (Button),    */\
+    0x19, 0x01,         /*          Usage Minimum (01h),    */\
+    0x29, 0x0A,         /*          Usage Maximum (0Ah),    */\
+    0x81, 0x02,         /*          Input (Variable),       */\
+    0x95, 0x0A,         /*          Report Count (10),      */\
+    0x81, 0x01,         /*          Input (Constant),       */\
+    0xC0,               /*      End Collection,             */\
+    0xC0                /*  End Collection                  */

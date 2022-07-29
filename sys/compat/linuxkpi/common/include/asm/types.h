@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/asm/types.h 290335 2015-11-03 12:37:55Z hselasky $
+ * $FreeBSD$
  */
 #ifndef	_ASM_TYPES_H_
 #define	_ASM_TYPES_H_

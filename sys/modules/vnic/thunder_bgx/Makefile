@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/vnic/thunder_bgx/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 
 SYSDIR?=${SRCTOP}/sys
 .include "${SYSDIR}/conf/kern.opts.mk"

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Edward Tomasz Napierala <trasz@FreeBSD.org>
  * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/geom/mountver/g_mountver.h 325819 2017-11-14 17:56:32Z trasz $
+ * $FreeBSD$
  */
 
 #ifndef	_G_MOUNTVER_H_

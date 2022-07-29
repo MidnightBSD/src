@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_ft5406.c 307778 2016-10-22 16:42:49Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -47,7 +47,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_ft5406.c 307778 2
 #include <vm/vm.h>
 #include <vm/pmap.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
@@ -173,20 +172,22 @@ out:
 	callout_reset(&sc->sc_callout, sc->sc_tick, ft5406ts_callout, sc);
 }
 
-static void
-ft5406ts_ev_close(struct evdev_dev *evdev, void *data)
+static int
+ft5406ts_ev_close(struct evdev_dev *evdev)
 {
-	struct ft5406ts_softc *sc = (struct ft5406ts_softc *)data;
+	struct ft5406ts_softc *sc = evdev_get_softc(evdev);
 
 	FT5406_LOCK_ASSERT(sc);
 
 	callout_stop(&sc->sc_callout);
+
+	return (0);
 }
 
 static int
-ft5406ts_ev_open(struct evdev_dev *evdev, void *data)
+ft5406ts_ev_open(struct evdev_dev *evdev)
 {
-	struct ft5406ts_softc *sc = (struct ft5406ts_softc *)data;
+	struct ft5406ts_softc *sc = evdev_get_softc(evdev);
 
 	FT5406_LOCK_ASSERT(sc);
 
@@ -226,7 +227,7 @@ ft5406ts_init(void *arg)
 		return;
 	}
 
-	touchbuf = VCBUS_TO_PHYS(msg.body.resp.address);
+	touchbuf = VCBUS_TO_ARMC(msg.body.resp.address);
 	sc->touch_buf = (uint8_t*)pmap_mapdev(touchbuf, FT5406_WINDOW_SIZE);
 
 	/* 60Hz */
@@ -269,7 +270,7 @@ static int
 ft5406ts_probe(device_t dev)
 {
 
-	if (!ofw_bus_is_compatible(dev, "rpi,rpi-ft5406"))
+	if (!ofw_bus_is_compatible(dev, "raspberrypi,firmware-ts"))
 		return (ENXIO);
 
 	device_set_desc(dev, "FT5406 touchscreen (VC memory interface)");
@@ -331,5 +332,5 @@ static driver_t ft5406ts_driver = {
 	sizeof(struct ft5406ts_softc),
 };
 
-DRIVER_MODULE(ft5406ts, ofwbus, ft5406ts_driver, ft5406ts_devclass, 0, 0);
+DRIVER_MODULE(ft5406ts, simplebus, ft5406ts_driver, ft5406ts_devclass, 0, 0);
 MODULE_DEPEND(ft5406ts, evdev, 1, 1, 1);

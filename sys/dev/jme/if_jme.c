@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008, Pyun YongHyeon <yongari@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/jme/if_jme.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -567,7 +569,7 @@ jme_map_intr_vector(struct jme_softc *sc)
 	    MSINUM_INTR_SOURCE(2, N_INTR_TXQ3_COMP);
 	map[MSINUM_REG_INDEX(N_INTR_TXQ4_COMP)] |=
 	    MSINUM_INTR_SOURCE(2, N_INTR_TXQ4_COMP);
-	map[MSINUM_REG_INDEX(N_INTR_TXQ4_COMP)] |=
+	map[MSINUM_REG_INDEX(N_INTR_TXQ5_COMP)] |=
 	    MSINUM_INTR_SOURCE(2, N_INTR_TXQ5_COMP);
 	map[MSINUM_REG_INDEX(N_INTR_TXQ6_COMP)] |=
 	    MSINUM_INTR_SOURCE(2, N_INTR_TXQ6_COMP);
@@ -2484,7 +2486,7 @@ jme_txeof(struct jme_softc *sc)
 		ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 	}
 	sc->jme_cdata.jme_tx_cons = cons;
-	/* Unarm watchog timer when there is no pending descriptors in queue. */
+	/* Unarm watchdog timer when there is no pending descriptors in queue. */
 	if (sc->jme_cdata.jme_tx_cnt == 0)
 		sc->jme_watchdog_timer = 0;
 
@@ -2846,7 +2848,7 @@ jme_init_locked(struct jme_softc *sc)
 	 * frames larger than 4000 bytes.
 	 * For best performance of standard MTU sized frames use
 	 * maximum allowable FIFO threshold, 128QW. Note these do
-	 * not hold on chip full mask verion >=2. For these
+	 * not hold on chip full mask version >=2. For these
 	 * controllers 64QW and 128QW are not valid value.
 	 */
 	if (CHIPMODE_REVFM(sc->jme_chip_rev) >= 2)
@@ -3276,7 +3278,7 @@ jme_set_filter(struct jme_softc *sc)
 	bzero(mchash, sizeof(mchash));
 
 	if_maddr_rlock(ifp);
-	TAILQ_FOREACH(ifma, &sc->jme_ifp->if_multiaddrs, ifma_link) {
+	CK_STAILQ_FOREACH(ifma, &sc->jme_ifp->if_multiaddrs, ifma_link) {
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;
 		crc = ether_crc32_be(LLADDR((struct sockaddr_dl *)

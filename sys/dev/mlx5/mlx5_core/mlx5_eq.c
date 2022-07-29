@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_core/mlx5_eq.c 353266 2019-10-07 10:31:27Z hselasky $
+ * $FreeBSD$
  */
 
 #include <linux/interrupt.h>
@@ -240,14 +240,13 @@ static int mlx5_eq_int(struct mlx5_core_dev *dev, struct mlx5_eq *eq)
 		 * Make sure we read EQ entry contents after we've
 		 * checked the ownership bit.
 		 */
-		rmb();
+		atomic_thread_fence_acq();
 
 		mlx5_core_dbg(eq->dev, "eqn %d, eqe type %s\n",
 			      eq->eqn, eqe_type_str(eqe->type));
 		switch (eqe->type) {
 		case MLX5_EVENT_TYPE_COMP:
-			cqn = be32_to_cpu(eqe->data.comp.cqn) & 0xffffff;
-			mlx5_cq_completion(dev, cqn);
+			mlx5_cq_completion(dev, eqe);
 			break;
 
 		case MLX5_EVENT_TYPE_PATH_MIG:
@@ -659,6 +658,20 @@ static const char *mlx5_port_module_event_error_type_to_string(u8 error_type)
 		return "High Temperature";
 	case MLX5_MODULE_EVENT_ERROR_CABLE_IS_SHORTED:
 		return "Bad or shorted cable/module";
+	case MLX5_MODULE_EVENT_ERROR_PMD_TYPE_NOT_ENABLED:
+		return "PMD type is not enabled";
+	case MLX5_MODULE_EVENT_ERROR_LASTER_TEC_FAILURE:
+		return "Laster_TEC_failure";
+	case MLX5_MODULE_EVENT_ERROR_HIGH_CURRENT:
+		return "High_current";
+	case MLX5_MODULE_EVENT_ERROR_HIGH_VOLTAGE:
+		return "High_voltage";
+	case MLX5_MODULE_EVENT_ERROR_PCIE_SYS_POWER_SLOT_EXCEEDED:
+		return "pcie_system_power_slot_Exceeded";
+	case MLX5_MODULE_EVENT_ERROR_HIGH_POWER:
+		return "High_power";
+	case MLX5_MODULE_EVENT_ERROR_MODULE_STATE_MACHINE_FAULT:
+		return "Module_state_machine_fault";
 	default:
 		return "Unknown error type";
 	}

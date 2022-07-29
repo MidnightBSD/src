@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/cddl/lib/libnvpair/Makefile 338080 2018-08-20 00:53:38Z kevans $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/lib/libnvpair
 .PATH: ${SRCTOP}/sys/cddl/contrib/opensolaris/common/nvpair

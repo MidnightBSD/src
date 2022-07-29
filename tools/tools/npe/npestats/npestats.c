@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -27,21 +26,21 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/tools/tools/npe/npestats/npestats.c 192661 2009-05-23 19:16:34Z sam $
+ * $FreeBSD$
  */
 
 /*
  * npe statistics class.
  */
-#include <sys/types.h>
+#include <sys/param.h>
 #include <sys/sysctl.h>
 
+#include <err.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
 #include <string.h>
 #include <unistd.h>
-#include <err.h>
 
 #include "npestats.h"
 
@@ -152,7 +151,7 @@ npe_collect(struct npestatfoo_p *wf, struct npestats *stats)
 }
 
 static void
-npe_collect_cur(struct statfoo *sf)
+npe_collect_cur(struct bsdstat *sf)
 {
 	struct npestatfoo_p *wf = (struct npestatfoo_p *) sf;
 
@@ -160,7 +159,7 @@ npe_collect_cur(struct statfoo *sf)
 }
 
 static void
-npe_collect_tot(struct statfoo *sf)
+npe_collect_tot(struct bsdstat *sf)
 {
 	struct npestatfoo_p *wf = (struct npestatfoo_p *) sf;
 
@@ -168,7 +167,7 @@ npe_collect_tot(struct statfoo *sf)
 }
 
 static void
-npe_update_tot(struct statfoo *sf)
+npe_update_tot(struct bsdstat *sf)
 {
 	struct npestatfoo_p *wf = (struct npestatfoo_p *) sf;
 
@@ -176,7 +175,7 @@ npe_update_tot(struct statfoo *sf)
 }
 
 static int
-npe_get_curstat(struct statfoo *sf, int s, char b[], size_t bs)
+npe_get_curstat(struct bsdstat *sf, int s, char b[], size_t bs)
 {
 	struct npestatfoo_p *wf = (struct npestatfoo_p *) sf;
 #define	STAT(x) \
@@ -212,7 +211,7 @@ npe_get_curstat(struct statfoo *sf, int s, char b[], size_t bs)
 }
 
 static int
-npe_get_totstat(struct statfoo *sf, int s, char b[], size_t bs)
+npe_get_totstat(struct bsdstat *sf, int s, char b[], size_t bs)
 {
 	struct npestatfoo_p *wf = (struct npestatfoo_p *) sf;
 #define	STAT(x) \
@@ -247,17 +246,17 @@ npe_get_totstat(struct statfoo *sf, int s, char b[], size_t bs)
 #undef STAT
 }
 
-STATFOO_DEFINE_BOUNCE(npestatfoo)
+BSDSTAT_DEFINE_BOUNCE(npestatfoo)
 
 struct npestatfoo *
 npestats_new(const char *ifname, const char *fmtstring)
 {
-#define	N(a)	(sizeof(a) / sizeof(a[0]))
 	struct npestatfoo_p *wf;
 
 	wf = calloc(1, sizeof(struct npestatfoo_p));
 	if (wf != NULL) {
-		statfoo_init(&wf->base.base, "npestats", npestats, N(npestats));
+		bsdstat_init(&wf->base.base, "npestats", npestats,
+		    nitems(npestats));
 		/* override base methods */
 		wf->base.base.collect_cur = npe_collect_cur;
 		wf->base.base.collect_tot = npe_collect_tot;
@@ -266,7 +265,7 @@ npestats_new(const char *ifname, const char *fmtstring)
 		wf->base.base.update_tot = npe_update_tot;
 
 		/* setup bounce functions for public methods */
-		STATFOO_BOUNCE(wf, npestatfoo);
+		BSDSTAT_BOUNCE(wf, npestatfoo);
 
 		/* setup our public methods */
 		wf->base.setifname = npe_setifname;
@@ -275,5 +274,4 @@ npestats_new(const char *ifname, const char *fmtstring)
 		wf->base.setfmt(&wf->base, fmtstring);
 	}
 	return &wf->base;
-#undef N
 }

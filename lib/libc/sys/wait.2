@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)wait.2	8.2 (Berkeley) 4/19/94
-.\" $FreeBSD: stable/11/lib/libc/sys/wait.2 351016 2019-08-14 09:42:16Z kib $
+.\" $FreeBSD$
 .\"
 .Dd August 11, 2019
 .Dt WAIT 2
@@ -607,13 +607,11 @@ fields of
 .Fa infop
 must be checked against zero to determine if a process reported status.
 .Pp
+The
 .Fn wait
-called with -1 to wait for any child process will ignore a child that is
-referenced by a process descriptor (see
-.Xr pdfork 2 ) .
-Specific processes can still be waited on by specifying the process ID
-or descriptor (see
-.Xr pdwait 4 ) .
+family of functions will not return a child process created with
+.Xr pdfork 2
+unless specifically directed to do so by specifying its process ID.
 .Sh ERRORS
 The
 .Fn wait
@@ -688,4 +686,4 @@ only permits this flag with
 The
 .Fn wait
 function appeared in
-.At v6 .
+.At v1 .

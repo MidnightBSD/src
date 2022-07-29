@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/fs/smbfs/smbfs_node.c 304983 2016-08-29 05:51:27Z kib $
+ * $FreeBSD$
  */
 #include <sys/param.h>
 #include <sys/systm.h>

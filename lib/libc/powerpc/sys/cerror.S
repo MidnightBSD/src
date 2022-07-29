@@ -26,7 +26,7 @@
 /*      $NetBSD: cerror.S,v 1.5 2000/01/27 14:58:48 kleink Exp $        */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/powerpc/sys/cerror.S 217398 2011-01-14 11:33:40Z kib $");
+__FBSDID("$FreeBSD$");
 	
 #include "SYS.h"
 

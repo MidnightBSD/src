@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (C) 2002
  * 	Hidetoshi Shimokawa. All rights reserved.
  * 
@@ -34,7 +36,7 @@
 
 #if defined(__FreeBSD__)
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/fwcontrol/fwcontrol.c 353589 2019-10-15 20:04:15Z brooks $");
+__FBSDID("$FreeBSD$");
 #endif
 
 #include <sys/param.h>

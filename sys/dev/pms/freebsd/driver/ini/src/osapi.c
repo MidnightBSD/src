@@ -18,7 +18,7 @@
 *LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
 *SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 *
-* $FreeBSD: stable/11/sys/dev/pms/freebsd/driver/ini/src/osapi.c 299081 2016-05-04 17:52:53Z pfg $
+* $FreeBSD$
 *
 *******************************************************************************/
 /******************************************************************************
@@ -764,7 +764,6 @@ ostiSetDeviceQueueDepth( tiRoot_t *tiRoot,
                          )
 {
   bit32 retVal = 0;
-  struct agtiapi_softc *pCard = TIROOT_TO_CARD(tiRoot);
   ccb_t *pccb = (ccb_t *) tiIORequest->osData;
   tiDeviceHandle_t *tiDeviceHandle = pccb->devHandle;
   ag_device_t *pDevice = (ag_device_t *)tiDeviceHandle->osData;

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Antoine Brodin
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/mips/stack_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/systm.h>
@@ -94,8 +96,7 @@ stack_capture(struct stack *st, u_register_t pc, u_register_t sp)
 
 			switch (insn.IType.op) {
 			case OP_SPECIAL:
-				if((insn.RType.func == OP_JR))
-				{
+				if (insn.RType.func == OP_JR) {
 					if (ra >= (u_register_t)(intptr_t)btext)
 						break;
 					if (insn.RType.rs != RA)

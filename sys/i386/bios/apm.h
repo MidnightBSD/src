@@ -15,7 +15,7 @@
  *
  * Sep, 1994	Implemented on FreeBSD 1.1.5.1R (Toshiba AVS001WD)
  *
- * $FreeBSD: stable/11/sys/i386/bios/apm.h 183328 2008-09-24 18:46:39Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef __APM_H__
@@ -27,11 +27,6 @@
 
 /* static data */
 struct apm_softc {
-#ifdef PC98
-	bus_space_tag_t		sc_iot;
-	bus_space_handle_t	sc_ioh;
-	struct resource 	*sc_res;
-#endif
 	struct mtx	mtx;
 	struct cv	cv;
 	struct proc	*event_thread;

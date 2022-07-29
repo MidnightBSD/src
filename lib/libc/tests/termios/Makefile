@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libc/tests/termios/Makefile 299094 2016-05-04 23:20:53Z ngie $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009, Pyun YongHyeon <yongari@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/alc/if_alcreg.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_IF_ALCREG_H
@@ -1118,6 +1120,14 @@
 
 #define	MII_EXT_ANEG_NLP78		0x8027
 #define	ANEG_NLP78_120M_DEFAULT		0x8A05
+
+#define ALC_MT_MAGIC			0x1F00
+#define ALC_MT_MODE			0x1F04
+#define ALC_MT_SPEED			0x1F08
+#define ALC_MT_VERSION			0x1F0C
+
+#define MT_MAGIC			0xaabb1234
+#define MT_MODE_4Q			BIT(0)
 
 /* Statistics counters collected by the MAC. */
 struct smb {

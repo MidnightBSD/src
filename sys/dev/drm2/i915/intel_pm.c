@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/i915/intel_pm.c 298331 2016-04-20 02:58:22Z cem $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/i915/i915_drv.h>
@@ -3102,8 +3102,7 @@ static void __i915_update_gfx_val(struct drm_i915_private *dev_priv)
 	mtx_assert(&mchdev_lock, MA_OWNED);
 
 	nanotime(&now);
-	diff1 = now;
-	timespecsub(&diff1, &dev_priv->ips.last_time2);
+	timespecsub(&now, &dev_priv->ips.last_time2, &diff1);
 
 	/* Don't divide by 0 */
 	diffms = diff1.tv_sec * 1000 + diff1.tv_nsec / 1000000;

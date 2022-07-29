@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libc/tests/nss/testutil.h 299654 2016-05-13 10:52:02Z ngie $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>
@@ -325,6 +325,6 @@ __##ent##_2pass_test(struct ent##_test_data *td1,			\
 {									\
 	int rv;								\
 									\
-	rv = __##ent##_test_data_compare(td1, td2, cmp_func, cmp_mdata);	\
+	rv = __##ent##_test_data_compare(td1, td2, cmp_func, cmp_mdata);\
 	return (rv);							\
 }

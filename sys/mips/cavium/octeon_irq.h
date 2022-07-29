@@ -1,4 +1,6 @@
 /***********************license start***************
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2003-2010  Cavium Networks (support@cavium.com). All rights
  * reserved.
  *
@@ -41,7 +43,7 @@
 #define __OCTEON_IRQ_H__
 
 /*
- * $FreeBSD: stable/11/sys/mips/cavium/octeon_irq.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /**

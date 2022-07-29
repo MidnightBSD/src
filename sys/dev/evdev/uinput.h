@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/evdev/uinput.h 324768 2017-10-19 20:16:40Z wulf $
+ * $FreeBSD$
  */
 
 #ifndef _EVDEV_UINPUT_H_
@@ -89,6 +89,13 @@ struct uinput_abs_setup {
 #define UI_END_FF_UPLOAD	_IOW(UINPUT_IOCTL_BASE, 201, struct uinput_ff_upload)
 #define UI_BEGIN_FF_ERASE	_IOWR(UINPUT_IOCTL_BASE, 202, struct uinput_ff_erase)
 #define UI_END_FF_ERASE		_IOW(UINPUT_IOCTL_BASE, 203, struct uinput_ff_erase)
+
+/*
+ * FreeBSD specific. Set unique identifier of input device.
+ * Name and magic are chosen to reduce chances of clashing
+ * with possible future Linux extensions.
+ */
+#define UI_SET_BSDUNIQ		_IO(UINPUT_IOCTL_BASE, 109)
 
 #define EV_UINPUT		0x0101
 #define UI_FF_UPLOAD		1

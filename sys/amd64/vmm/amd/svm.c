@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/amd/svm.c 348271 2019-05-25 11:27:56Z rgrimes $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -101,9 +101,6 @@ SYSCTL_INT(_hw_vmm_svm, OID_AUTO, vmcb_clean, CTLFLAG_RDTUN, &vmcb_clean,
 
 static MALLOC_DEFINE(M_SVM, "svm", "svm");
 static MALLOC_DEFINE(M_SVM_VLAPIC, "svm-vlapic", "svm-vlapic");
-
-/* Per-CPU context area. */
-extern struct pcpu __pcpu[];
 
 static uint32_t svm_feature = ~0U;	/* AMD SVM features. */
 SYSCTL_UINT(_hw_vmm_svm, OID_AUTO, features, CTLFLAG_RDTUN, &svm_feature, 0,
@@ -2050,6 +2047,12 @@ svm_vmrun(void *arg, int vcpu, register_t rip, pmap_t pmap,
 			break;
 		}
 
+		if (vcpu_debugged(vm, vcpu)) {
+			enable_gintr();
+			vm_exit_debug(vm, vcpu, state->rip);
+			break;
+		}
+
 		/*
 		 * #VMEXIT resumes the host with the guest LDTR, so
 		 * save the current LDT selector so it can be restored
@@ -2077,7 +2080,7 @@ svm_vmrun(void *arg, int vcpu, register_t rip, pmap_t pmap,
 		/* Launch Virtual Machine. */
 		VCPU_CTR1(vm, vcpu, "Resume execution at %#lx", state->rip);
 		svm_dr_enter_guest(gctx);
-		svm_launch(vmcb_pa, gctx, &__pcpu[curcpu]);
+		svm_launch(vmcb_pa, gctx, get_pcpu());
 		svm_dr_leave_guest(gctx);
 
 		CPU_CLR_ATOMIC(curcpu, &pmap->pm_active);
@@ -2216,6 +2219,11 @@ svm_setreg(void *arg, int vcpu, int ident, uint64_t val)
 		return (0);
 	}
 
+	if (ident == VM_REG_GUEST_ENTRY_INST_LENGTH) {
+		/* Ignore. */
+		return (0);
+	}
+
 	/*
 	 * XXX deal with CR3 and invalidate TLB entries tagged with the
 	 * vcpu's ASID. This needs to be treated differently depending on
@@ -2309,20 +2317,20 @@ svm_vlapic_cleanup(void *arg, struct vlapic *vlapic)
 }
 
 struct vmm_ops vmm_ops_amd = {
-	svm_init,
-	svm_cleanup,
-	svm_restore,
-	svm_vminit,
-	svm_vmrun,
-	svm_vmcleanup,
-	svm_getreg,
-	svm_setreg,
-	vmcb_getdesc,
-	vmcb_setdesc,
-	svm_getcap,
-	svm_setcap,
-	svm_npt_alloc,
-	svm_npt_free,
-	svm_vlapic_init,
-	svm_vlapic_cleanup	
+	.init		= svm_init,
+	.cleanup	= svm_cleanup,
+	.resume		= svm_restore,
+	.vminit		= svm_vminit,
+	.vmrun		= svm_vmrun,
+	.vmcleanup	= svm_vmcleanup,
+	.vmgetreg	= svm_getreg,
+	.vmsetreg	= svm_setreg,
+	.vmgetdesc	= vmcb_getdesc,
+	.vmsetdesc	= vmcb_setdesc,
+	.vmgetcap	= svm_getcap,
+	.vmsetcap	= svm_setcap,
+	.vmspace_alloc	= svm_npt_alloc,
+	.vmspace_free	= svm_npt_free,
+	.vlapic_init	= svm_vlapic_init,
+	.vlapic_cleanup	= svm_vlapic_cleanup,
 };

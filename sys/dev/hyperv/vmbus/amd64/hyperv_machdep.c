@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/hyperv/vmbus/amd64/hyperv_machdep.c 322612 2017-08-17 05:09:22Z sephe $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -128,6 +128,8 @@ hyperv_tsc_vdso_timehands(struct vdso_timehands *vdso_th,
 	vdso_th->th_algo = VDSO_TH_ALGO_X86_HVTSC;
 	vdso_th->th_x86_shift = 0;
 	vdso_th->th_x86_hpet_idx = 0;
+	vdso_th->th_x86_pvc_last_systime = 0;
+	vdso_th->th_x86_pvc_stable_mask = 0;
 	bzero(vdso_th->th_res, sizeof(vdso_th->th_res));
 	return (1);
 }
@@ -188,6 +190,7 @@ hyperv_tsc_tcinit(void *dummy __unused)
 
 	switch (cpu_vendor_id) {
 	case CPU_VENDOR_AMD:
+	case CPU_VENDOR_HYGON:
 		hyperv_tsc_timecounter.tc_get_timecount =
 		    hyperv_tsc_timecount_mfence;
 		tc64 = hyperv_tc64_tsc_mfence;

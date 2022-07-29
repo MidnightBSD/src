@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/cddl/lib/libctf/Makefile 321268 2017-07-20 00:53:50Z ngie $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/common/ctf
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/lib/libctf/common

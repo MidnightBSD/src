@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/getopt/getopt.c 332463 2018-04-13 03:30:10Z kevans $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This material, written by Henry Spencer, was released by him
@@ -19,7 +19,7 @@ main(int argc, char *argv[])
 	int c;
 	int status = 0;
 
-	if (caph_limit_stdio() < 0 || (cap_enter() < 0 && errno != ENOSYS))
+	if (caph_limit_stdio() < 0 || caph_enter() < 0)
 		err(1, "capsicum");
 
 	optind = 2;	/* Past the program name and the option letters. */

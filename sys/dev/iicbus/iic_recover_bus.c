@@ -1,6 +1,7 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2017 Ian Lepore <ian@freebsd.org>
- * All rights reserved.
  *
  * Development sponsored by Microsemi, Inc.
  *
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/iicbus/iic_recover_bus.c 323419 2017-09-11 02:50:24Z ian $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Helper code to recover a hung i2c bus by bit-banging a recovery sequence.

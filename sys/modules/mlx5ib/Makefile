@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/mlx5ib/Makefile 341958 2018-12-12 12:46:12Z hselasky $
+# $FreeBSD$
 .PATH:	${SRCTOP}/sys/dev/mlx5/mlx5_ib
 
 KMOD=mlx5ib
@@ -16,13 +16,12 @@ mlx5_ib_qp.c \
 mlx5_ib_srq.c \
 mlx5_ib_virt.c
 SRCS+=	${LINUXKPI_GENSRCS}
-SRCS+= 	opt_inet.h opt_inet6.h
+SRCS+= 	opt_inet.h opt_inet6.h opt_ratelimit.h
 
 CFLAGS+= -I${SRCTOP}/sys/ofed/include
 CFLAGS+= -I${SRCTOP}/sys/ofed/include/uapi
 CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include
 CFLAGS+= -DCONFIG_INFINIBAND_USER_MEM
-CFLAGS+= -DINET -DINET6
 
 .if defined(CONFIG_BUILD_FPGA)
 CFLAGS+= -DCONFIG_MLX5_FPGA

@@ -1,6 +1,8 @@
 /*	$NetBSD: pmap_clnt.h,v 1.9 2000/06/02 22:57:55 fvdl Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  *
  *	from: @(#)pmap_clnt.h 1.11 88/02/08 SMI 
  *	from: @(#)pmap_clnt.h	2.1 88/07/29 4.0 RPCSRC
- * $FreeBSD: stable/11/include/rpc/pmap_clnt.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*

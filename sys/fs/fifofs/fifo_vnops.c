@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990, 1993, 1995
  *	The Regents of the University of California.
  * Copyright (c) 2005 Robert N. M. Watson
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fifo_vnops.c	8.10 (Berkeley) 5/27/95
- * $FreeBSD: stable/11/sys/fs/fifofs/fifo_vnops.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -148,7 +150,9 @@ fifo_open(ap)
 	if (fp == NULL || (ap->a_mode & FEXEC) != 0)
 		return (EINVAL);
 	if ((fip = vp->v_fifoinfo) == NULL) {
-		pipe_named_ctor(&fpipe, td);
+		error = pipe_named_ctor(&fpipe, td);
+		if (error != 0)
+			return (error);
 		fip = malloc(sizeof(*fip), M_VNODE, M_WAITOK);
 		fip->fi_pipe = fpipe;
 		fpipe->pipe_wgen = fip->fi_readers = fip->fi_writers = 0;
@@ -169,10 +173,12 @@ fifo_open(ap)
 		fip->fi_rgen++;
 		if (fip->fi_readers == 1) {
 			fpipe->pipe_state &= ~PIPE_EOF;
-			if (fip->fi_writers > 0)
+			if (fip->fi_writers > 0) {
 				wakeup(&fip->fi_writers);
+				pipeselwakeup(fpipe);
+			}
 		}
-		fp->f_seqcount = fpipe->pipe_wgen - fip->fi_writers;
+		fp->f_pipegen = fpipe->pipe_wgen - fip->fi_writers;
 	}
 	if (ap->a_mode & FWRITE) {
 		if ((ap->a_mode & O_NONBLOCK) && fip->fi_readers == 0) {
@@ -185,8 +191,10 @@ fifo_open(ap)
 		fip->fi_wgen++;
 		if (fip->fi_writers == 1) {
 			fpipe->pipe_state &= ~PIPE_EOF;
-			if (fip->fi_readers > 0)
+			if (fip->fi_readers > 0) {
 				wakeup(&fip->fi_readers);
+				pipeselwakeup(fpipe);
+			}
 		}
 	}
 	if ((ap->a_mode & O_NONBLOCK) == 0) {
@@ -205,6 +213,7 @@ fifo_open(ap)
 					fpipe->pipe_state |= PIPE_EOF;
 					if (fpipe->pipe_state & PIPE_WANTW)
 						wakeup(fpipe);
+					pipeselwakeup(fpipe);
 					PIPE_UNLOCK(fpipe);
 					fifo_cleanup(vp);
 				}
@@ -233,6 +242,7 @@ fifo_open(ap)
 					if (fpipe->pipe_state & PIPE_WANTR)
 						wakeup(fpipe);
 					fpipe->pipe_wgen++;
+					pipeselwakeup(fpipe);
 					PIPE_UNLOCK(fpipe);
 					fifo_cleanup(vp);
 				}

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause AND BSD-2-Clause-NetBSDE
+ *
  * Copyright (c) KATO Takenori, 1999.
  *
  * All rights reserved.  Unpublished rights reserved under the copyright
@@ -28,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/x86/include/bus.h 286667 2015-08-12 15:26:32Z marcel $
+ * $FreeBSD$
  */
 
 /*	$NetBSD: bus.h,v 1.12 1997/10/01 08:25:15 fvdl Exp $	*/
@@ -101,9 +103,7 @@
 #include <machine/cpufunc.h>
 
 #ifndef __GNUCLIKE_ASM
-# ifndef lint
-#  error "no assembler code for your compiler"
-# endif
+#error "no assembler code for your compiler"
 #endif
 
 /*
@@ -114,10 +114,15 @@
 
 #define BUS_SPACE_MAXSIZE_24BIT	0xFFFFFF
 #define BUS_SPACE_MAXSIZE_32BIT 0xFFFFFFFF
+#if defined(__amd64__)
+#define BUS_SPACE_MAXSIZE	0xFFFFFFFFFFFFFFFFULL
+#else
 #define BUS_SPACE_MAXSIZE	0xFFFFFFFF
+#endif
 #define BUS_SPACE_MAXADDR_24BIT	0xFFFFFF
 #define BUS_SPACE_MAXADDR_32BIT 0xFFFFFFFF
 #if defined(__amd64__) || defined(PAE)
+#define BUS_SPACE_MAXADDR_48BIT	0xFFFFFFFFFFFFULL
 #define BUS_SPACE_MAXADDR	0xFFFFFFFFFFFFFFFFULL
 #else
 #define BUS_SPACE_MAXADDR	0xFFFFFFFF

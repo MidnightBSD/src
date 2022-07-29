@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1997 Berkeley Software Design, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/nfs/nfs_lock.c 304843 2016-08-26 10:04:10Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

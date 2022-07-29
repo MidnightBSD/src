@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  *  Device driver optimized for the Symbios/LSI 53C896/53C895A/53C1010 
  *  PCI-SCSI controllers.
  *
@@ -55,7 +57,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/11/sys/dev/sym/sym_fw2.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 /*
  *  Scripts for SYMBIOS-Processor
@@ -1772,7 +1774,7 @@ static const struct SYM_FWB_SCR SYM_FWB_SCR = {
 	 *  While testing with bogus QUANTUM drives, the C1010 
 	 *  sometimes raised a spurious phase mismatch with 
 	 *  WSR and the CHMOV(1) triggered another PM.
-	 *  Waiting explicitely for the PHASE seemed to avoid 
+	 *  Waiting explicitly for the PHASE seemed to avoid 
 	 *  the nested phase mismatch. Btw, this didn't happen 
 	 *  using my IBM drives.
 	 */

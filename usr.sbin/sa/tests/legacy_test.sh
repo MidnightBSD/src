@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/11/usr.sbin/sa/tests/legacy_test.sh 263226 2014-03-16 04:09:22Z jmmv $
+# $FreeBSD$
 #
 
 DIR=`dirname $0`

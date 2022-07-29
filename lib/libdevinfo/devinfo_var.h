@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
  * All rights reserved.
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/11/lib/libdevinfo/devinfo_var.h 331722 2018-03-29 02:50:57Z eadler $
+ *	$FreeBSD$
  */
 
 #include <sys/types.h>
@@ -43,11 +45,11 @@
  */
 struct devinfo_i_dev {
 	struct devinfo_dev		dd_dev;
-	char				dd_name[DEVINFO_STRLEN];
-	char				dd_desc[DEVINFO_STRLEN];
-	char				dd_drivername[DEVINFO_STRLEN];
-	char				dd_pnpinfo[DEVINFO_STRLEN * 4];
-	char				dd_location[DEVINFO_STRLEN * 4];
+	char				*dd_name;
+	char				*dd_desc;
+	char				*dd_drivername;
+	char				*dd_pnpinfo;
+	char				*dd_location;
 	uint32_t			dd_devflags;
 	uint16_t			dd_flags;
 	device_state_t			dd_state;

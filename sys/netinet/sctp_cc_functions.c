@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
  * Copyright (c) 2008-2012, by Michael Tuexen. All rights reserved.
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/sctp_cc_functions.c 347154 2019-05-05 12:28:39Z tuexen $");
+__FBSDID("$FreeBSD$");
 
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
@@ -46,7 +48,7 @@ __FBSDID("$FreeBSD: stable/11/sys/netinet/sctp_cc_functions.c 347154 2019-05-05 
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_auth.h>
 #include <netinet/sctp_asconf.h>
-#include <netinet/sctp_dtrace_declare.h>
+#include <netinet/sctp_kdtrace.h>
 
 #define SHIFT_MPTCP_MULTI_N 40
 #define SHIFT_MPTCP_MULTI_Z 16
@@ -1316,9 +1318,7 @@ sctp_cwnd_update_rtcc_after_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *ne
 	sctp_cwnd_update_after_ecn_echo_common(stcb, net, in_window, num_pkt_lost, 1);
 }
 
-
-static
-void
+static void
 sctp_cwnd_update_rtcc_tsn_acknowledged(struct sctp_nets *net,
     struct sctp_tmit_chunk *tp1)
 {
@@ -1435,7 +1435,6 @@ sctp_set_rtcc_initial_cc_param(struct sctp_tcb *stcb,
 	net->cc_mod.rtcc.use_dccc_ecn = SCTP_BASE_SYSCTL(sctp_use_dccc_ecn);
 	net->cc_mod.rtcc.step_cnt = 0;
 	net->cc_mod.rtcc.last_step_state = 0;
-
 
 }
 
@@ -1874,7 +1873,7 @@ htcp_cong_time(struct htcp *ca)
 static inline uint32_t
 htcp_ccount(struct htcp *ca)
 {
-	return (htcp_cong_time(ca) / ca->minRTT);
+	return (ca->minRTT == 0 ? htcp_cong_time(ca) : htcp_cong_time(ca) / ca->minRTT);
 }
 
 static inline void
@@ -1912,7 +1911,7 @@ measure_rtt(struct sctp_nets *net)
 	if (net->fast_retran_ip == 0 && net->ssthresh < 0xFFFF && htcp_ccount(&net->cc_mod.htcp_ca) > 3) {
 		if (net->cc_mod.htcp_ca.maxRTT < net->cc_mod.htcp_ca.minRTT)
 			net->cc_mod.htcp_ca.maxRTT = net->cc_mod.htcp_ca.minRTT;
-		if (net->cc_mod.htcp_ca.maxRTT < srtt && srtt <= net->cc_mod.htcp_ca.maxRTT + MSEC_TO_TICKS(20))
+		if (net->cc_mod.htcp_ca.maxRTT < srtt && srtt <= net->cc_mod.htcp_ca.maxRTT + sctp_msecs_to_ticks(20))
 			net->cc_mod.htcp_ca.maxRTT = srtt;
 	}
 }
@@ -1973,7 +1972,7 @@ htcp_beta_update(struct htcp *ca, uint32_t minRTT, uint32_t maxRTT)
 		}
 	}
 
-	if (ca->modeswitch && minRTT > (uint32_t)MSEC_TO_TICKS(10) && maxRTT) {
+	if (ca->modeswitch && minRTT > sctp_msecs_to_ticks(10) && maxRTT) {
 		ca->beta = (minRTT << 7) / maxRTT;
 		if (ca->beta < BETA_MIN)
 			ca->beta = BETA_MIN;
@@ -2003,12 +2002,12 @@ htcp_alpha_update(struct htcp *ca)
 		scale = min(max(scale, 1U << 2), 10U << 3);	/* clamping ratio to
 								 * interval [0.5,10]<<3 */
 		factor = (factor << 3) / scale;
-		if (!factor)
+		if (factor != 0)
 			factor = 1;
 	}
 
 	ca->alpha = 2 * factor * ((1 << 7) - ca->beta);
-	if (!ca->alpha)
+	if (ca->alpha != 0)
 		ca->alpha = ALPHA_BASE;
 }
 
@@ -2049,7 +2048,7 @@ htcp_cong_avoid(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	/*-
 	 * How to handle these functions?
-         *	if (!tcp_is_cwnd_limited(sk, in_flight)) RRS - good question.
+	 *	if (!tcp_is_cwnd_limited(sk, in_flight)) RRS - good question.
 	 *		return;
 	 */
 	if (net->cwnd <= net->ssthresh) {

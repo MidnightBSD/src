@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/msun/arm/fenv-vfp.c 300119 2016-05-18 06:01:18Z imp $
+ * $FreeBSD$
  */
 
 #define	FENV_MANGLE(x)	__vfp_ ##x

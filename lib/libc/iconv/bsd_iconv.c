@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/lib/libc/iconv/bsd_iconv.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /* $NetBSD: iconv.c,v 1.11 2009/03/03 16:22:33 explorer Exp $ */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2003 Citrus Project,
  * Copyright (c) 2009, 2010 Gabor Kovesdan <gabor@FreeBSD.org>,
  * All rights reserved.

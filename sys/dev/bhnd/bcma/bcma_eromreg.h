@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2015 Landon Fuller <landon@landonf.org>
  * Copyright (c) 2010 Broadcom Corporation
  * 
@@ -18,7 +20,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  * 
- * $FreeBSD: stable/11/sys/dev/bhnd/bcma/bcma_eromreg.h 296077 2016-02-26 03:34:08Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef	_BCMA_BCMA_EROM_REG_H_

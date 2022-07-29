@@ -33,7 +33,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/mips/gen/fabs.S 178580 2008-04-26 12:08:02Z imp $");
+__FBSDID("$FreeBSD$");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 	ASMSTR("from: @(#)fabs.s	8.1 (Berkeley) 2/16/94")

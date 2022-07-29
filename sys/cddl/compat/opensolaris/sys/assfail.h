@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/assfail.h 272701 2014-10-07 14:15:50Z avg $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_ASSFAIL_H_

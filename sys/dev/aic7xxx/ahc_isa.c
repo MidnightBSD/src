@@ -1,6 +1,8 @@
 /*-
  * FreeBSD, VLB/ISA product support functions
  *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2004 Justin T. Gibbs.
  * All rights reserved.
  *
@@ -36,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/aic7xxx/ahc_isa.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/aic7xxx/aic7xxx_osm.h>
 

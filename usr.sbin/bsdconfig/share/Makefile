@@ -1,7 +1,4 @@
-# $MidnightBSD$
-# $MidnightBSD$
-
-NO_OBJ=
+# $FreeBSD$
 
 SUBDIR=	media packages
 

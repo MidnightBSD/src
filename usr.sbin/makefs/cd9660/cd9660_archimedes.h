@@ -31,7 +31,7 @@
 /*
  * cd9660_archimedes.c - support for RISC OS "ARCHIMEDES" extension
  *
- * $FreeBSD: stable/11/usr.sbin/makefs/cd9660/cd9660_archimedes.h 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 struct ISO_ARCHIMEDES {

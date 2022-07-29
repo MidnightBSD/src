@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libutil/tests/flopen_test.c 269904 2014-08-13 04:56:27Z ngie $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/fcntl.h>

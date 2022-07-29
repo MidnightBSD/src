@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/gnu/usr.bin/dtc/Makefile 317993 2017-05-08 23:57:54Z gonzo $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 

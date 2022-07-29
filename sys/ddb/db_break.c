@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: MIT-CMU
+ *
  * Mach Operating System
  * Copyright (c) 1991,1990 Carnegie Mellon University
  * All Rights Reserved.
@@ -33,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/ddb/db_break.c 283248 2015-05-21 15:16:18Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 

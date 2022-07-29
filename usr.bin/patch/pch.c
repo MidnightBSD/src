@@ -24,7 +24,7 @@
  * behaviour
  *
  * $OpenBSD: pch.c,v 1.43 2014/11/18 17:03:35 tobias Exp $
- * $FreeBSD: stable/11/usr.bin/patch/pch.c 355351 2019-12-03 18:55:09Z kevans $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -587,16 +587,11 @@ another_hunk(void)
 			len = pgets(true);
 			p_input_line++;
 			if (len == 0) {
-				if (p_max - p_end < 4) {
-					/* assume blank lines got chopped */
-					strlcpy(buf, "  \n", buf_size);
-				} else {
-					if (repl_beginning && repl_could_be_missing) {
-						repl_missing = true;
-						goto hunk_done;
-					}
-					fatal("unexpected end of file in patch\n");
+				if (repl_beginning && repl_could_be_missing) {
+					repl_missing = true;
+					goto hunk_done;
 				}
+				fatal("unexpected end of file in patch\n");
 			}
 			p_end++;
 			if (p_end >= hunkmax)

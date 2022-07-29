@@ -1,5 +1,5 @@
 /*	$NetBSD: security.c,v 1.5 2000/06/08 09:01:05 fvdl Exp $	*/
-/*	$FreeBSD: stable/11/usr.sbin/rpcbind/security.c 262860 2014-03-06 17:33:27Z mav $ */
+/*	$FreeBSD$ */
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -9,12 +9,9 @@
 #include <rpc/rpc.h>
 #include <rpc/rpcb_prot.h>
 #include <rpc/pmap_prot.h>
-#include <err.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <libutil.h>
 #include <syslog.h>
 #include <netdb.h>
 

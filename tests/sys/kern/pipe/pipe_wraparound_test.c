@@ -35,7 +35,7 @@ SUCH DAMAGE.
 #include <unistd.h>
 
 /*
- * $FreeBSD: stable/11/tests/sys/kern/pipe/pipe_wraparound_test.c 290914 2015-11-16 05:38:40Z ngie $
+ * $FreeBSD$
  * This program tests to make sure that wraparound writes and reads
  * are working, assuming that 16K socket buffers are used.  In order
  * to really stress the pipe code with this test, kernel modifications

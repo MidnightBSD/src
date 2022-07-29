@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/include/bus_dma_impl.h 282655 2015-05-08 18:47:19Z zbb $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_BUS_DMA_IMPL_H_
@@ -58,6 +58,7 @@ struct bus_dma_impl {
 	    bus_size_t maxsegsz, int flags, bus_dma_lock_t *lockfunc,
 	    void *lockfuncarg, bus_dma_tag_t *dmat);
 	int (*tag_destroy)(bus_dma_tag_t dmat);
+	bool (*id_mapped)(bus_dma_tag_t, vm_paddr_t, bus_size_t);
 	int (*map_create)(bus_dma_tag_t dmat, int flags, bus_dmamap_t *mapp);
 	int (*map_destroy)(bus_dma_tag_t dmat, bus_dmamap_t map);
 	int (*mem_alloc)(bus_dma_tag_t dmat, void** vaddr, int flags,
@@ -70,7 +71,7 @@ struct bus_dma_impl {
 	    vm_paddr_t buf, bus_size_t buflen, int flags,
 	    bus_dma_segment_t *segs, int *segp);
 	int (*load_buffer)(bus_dma_tag_t dmat, bus_dmamap_t map,
-	    void *buf, bus_size_t buflen, pmap_t pmap, int flags,
+	    void *buf, bus_size_t buflen, struct pmap *pmap, int flags,
 	    bus_dma_segment_t *segs, int *segp);
 	void (*map_waitok)(bus_dma_tag_t dmat, bus_dmamap_t map,
 	    struct memdesc *mem, bus_dmamap_callback_t *callback,

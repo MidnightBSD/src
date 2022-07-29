@@ -19,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/11/cddl/compat/opensolaris/include/devid.h 178414 2008-04-22 07:43:00Z jb $
+ * $FreeBSD$
  */
 /*
  * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.

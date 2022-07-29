@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/cxgb/cxgb/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 
 CXGB = ${SRCTOP}/sys/dev/cxgb
 .PATH: ${CXGB} ${CXGB}/common ${CXGB}/sys

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/jail/Makefile 352561 2019-09-20 19:50:44Z mizhka $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

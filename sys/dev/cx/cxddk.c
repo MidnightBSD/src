@@ -17,7 +17,7 @@
  * Cronyx Id: cxddk.c,v 1.1.2.2 2003/11/27 14:24:50 rik Exp $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/cx/cxddk.c 315221 2017-03-14 02:06:03Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/cx/machdep.h>
 #include <dev/cx/cxddk.h>
@@ -215,7 +215,7 @@ void cx_enable_receive (cx_chan_t *c, int on)
 }
 
 /*
- * Turn the transmiter on/off.
+ * Turn the transmitter on/off.
  */
 void cx_enable_transmit (cx_chan_t *c, int on)
 {

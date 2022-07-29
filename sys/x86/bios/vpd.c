@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 Matthew N. Dodd <winter@jurai.net>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/x86/bios/vpd.c 227309 2011-11-07 15:43:11Z ed $");
+__FBSDID("$FreeBSD$");
 
 /*
  * VPD decoder for IBM systems (Thinkpads)
@@ -193,19 +195,19 @@ vpd_attach (device_t dev)
 	sysctl_ctx_init(&sc->ctx);
 	SYSCTL_ADD_STRING(&sc->ctx,
 		SYSCTL_STATIC_CHILDREN(_hw_vpd_machine_type), OID_AUTO,
-		unit, CTLFLAG_RD|CTLFLAG_DYN, sc->MachineType, 0, NULL);
+		unit, CTLFLAG_RD, sc->MachineType, 0, NULL);
 	SYSCTL_ADD_STRING(&sc->ctx,
 		SYSCTL_STATIC_CHILDREN(_hw_vpd_machine_model), OID_AUTO,
-		unit, CTLFLAG_RD|CTLFLAG_DYN, sc->MachineModel, 0, NULL);
+		unit, CTLFLAG_RD, sc->MachineModel, 0, NULL);
 	SYSCTL_ADD_STRING(&sc->ctx,
 		SYSCTL_STATIC_CHILDREN(_hw_vpd_build_id), OID_AUTO,
-		unit, CTLFLAG_RD|CTLFLAG_DYN, sc->BuildID, 0, NULL);
+		unit, CTLFLAG_RD, sc->BuildID, 0, NULL);
 	SYSCTL_ADD_STRING(&sc->ctx,
 		SYSCTL_STATIC_CHILDREN(_hw_vpd_serial_box), OID_AUTO,
-		unit, CTLFLAG_RD|CTLFLAG_DYN, sc->BoxSerial, 0, NULL);
+		unit, CTLFLAG_RD, sc->BoxSerial, 0, NULL);
 	SYSCTL_ADD_STRING(&sc->ctx,
 		SYSCTL_STATIC_CHILDREN(_hw_vpd_serial_planar), OID_AUTO,
-		unit, CTLFLAG_RD|CTLFLAG_DYN, sc->PlanarSerial, 0, NULL);
+		unit, CTLFLAG_RD, sc->PlanarSerial, 0, NULL);
 
 	device_printf(dev, "Machine Type: %.4s, Model: %.3s, Build ID: %.9s\n",
 		sc->MachineType, sc->MachineModel, sc->BuildID);

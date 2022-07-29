@@ -15,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/ld80/e_powl.c 336767 2018-07-27 17:39:36Z dim $");
+__FBSDID("$FreeBSD$");
 
 #include <math.h>
 
@@ -117,7 +117,7 @@ __p1evll(long double x, long double *PP, int n)
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/ld80/e_powl.c 336767 2018-07-27 17:39:36Z dim $");
+__FBSDID("$FreeBSD$");
 
 #include <float.h>
 #include <math.h>
@@ -262,9 +262,9 @@ if( x == 1.0L )
 	return( 1.0L );
 
 if( isnan(x) )
-	return( x );
+	return ( nan_mix(x, y) );
 if( isnan(y) )
-	return( y );
+	return ( nan_mix(x, y) );
 
 if( y == 1.0L )
 	return( x );

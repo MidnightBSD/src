@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/lib/libc/iconv/citrus_mmap.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*	$NetBSD: citrus_mmap.c,v 1.4 2011/10/15 23:00:01 christos Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c)2003 Citrus Project,
  * All rights reserved.
  *

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/cddl/lib/libzfs/Makefile 339118 2018-10-03 02:52:47Z mav $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/cddl/compat/opensolaris/misc
 .PATH: ${SRCTOP}/sys/cddl/contrib/opensolaris/common/zfs
@@ -40,6 +40,7 @@ SRCS+=	libzfs_changelist.c \
 	zprop_common.c \
 
 WARNS?=	0
+SHLIB_MAJOR= 3
 CSTD=	c99
 CFLAGS+= -DZFS_NO_ACL
 CFLAGS+= -I${SRCTOP}/sbin/mount

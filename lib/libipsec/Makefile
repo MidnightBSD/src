@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/lib/libipsec/Makefile 298107 2016-04-16 07:45:30Z gjb $
+# $FreeBSD$
 
 PACKAGE=lib${LIB}
 SHLIBDIR?= /lib
@@ -40,7 +40,7 @@ CFLAGS+=-DIPSEC_DEBUG -DIPSEC
 CFLAGS+=-DINET6
 .endif
 
-#.PATH:	${.CURDIR}/../../sys/netipsec
+#.PATH:	${SRCTOP}/sys/netipsec
 #SRCS=	pfkey.c pfkey_dump.c
 SRCS+=	ipsec_strerror.c policy_parse.y policy_token.l
 SRCS+=	ipsec_dump_policy.c ipsec_get_policylen.c

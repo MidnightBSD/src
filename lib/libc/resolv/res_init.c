@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: (BSD-3-Clause AND ISC)
+ *
  * Copyright (c) 1985, 1989, 1993
  *    The Regents of the University of California.  All rights reserved.
  * 
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  * 
@@ -69,7 +71,7 @@ static const char sccsid[] = "@(#)res_init.c	8.1 (Berkeley) 6/7/93";
 static const char rcsid[] = "$Id: res_init.c,v 1.26 2008/12/11 09:59:00 marka Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/resolv/res_init.c 340058 2018-11-02 15:02:44Z bz $");
+__FBSDID("$FreeBSD$");
 
 #include "port_before.h"
 

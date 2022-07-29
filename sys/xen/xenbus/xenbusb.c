@@ -30,7 +30,7 @@
 /**
  * \file xenbusb.c
  *
- * \brief Shared support functions for managing the NewBus busses that contain
+ * \brief Shared support functions for managing the NewBus buses that contain
  *        Xen front and back end device instances.
  *
  * The NewBus implementation of XenBus attaches a xenbusb_front and xenbusb_back
@@ -52,7 +52,7 @@
  *                        xnb1
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/xen/xenbus/xenbusb.c 315668 2017-03-21 08:38:12Z royger $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -429,7 +429,7 @@ xenbusb_release_confighook(struct xenbusb_softc *xbs)
 }
 
 /**
- * \brief Verify the existance of attached device instances and perform
+ * \brief Verify the existence of attached device instances and perform
  *        probe/attach processing for newly arrived devices.
  *
  * \param dev  The NewBus device representing this XenBus bus.
@@ -747,7 +747,7 @@ xenbusb_attach(device_t dev, char *bus_node, u_int id_components)
 	xbs->xbs_dev = dev;
 
 	/*
-	 * Since XenBus busses are attached to the XenStore, and
+	 * Since XenBus buses are attached to the XenStore, and
 	 * the XenStore does not probe children until after interrupt
 	 * services are available, this config hook is used solely
 	 * to ensure that the remainder of the boot process (e.g.

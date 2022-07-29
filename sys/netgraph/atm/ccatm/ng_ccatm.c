@@ -30,13 +30,13 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/netgraph/atm/ccatm/ng_ccatm.c 298075 2016-04-15 17:30:33Z pfg $
+ * $FreeBSD$
  *
  * ATM call control and API
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netgraph/atm/ccatm/ng_ccatm.c 298075 2016-04-15 17:30:33Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

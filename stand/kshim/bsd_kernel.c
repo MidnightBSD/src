@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/kshim/bsd_kernel.c 315221 2017-03-14 02:06:03Z pfg $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2013 Hans Petter Selasky. All rights reserved.
  *

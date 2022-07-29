@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011, David E. O'Brien.
  * Copyright (c) 2009-2011, Juniper Networks, Inc.
  * Copyright (c) 2015-2016, EMC Corp.
@@ -27,9 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/filemon/filemon.c 343885 2019-02-07 23:55:11Z bdrewery $");
-
-#include "opt_compat.h"
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -362,7 +362,6 @@ filemon_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag __unused,
 	int error = 0;
 	struct filemon *filemon;
 	struct proc *p;
-	cap_rights_t rights;
 
 	if ((error = devfs_get_cdevpriv((void **) &filemon)) != 0)
 		return (error);
@@ -378,7 +377,7 @@ filemon_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag __unused,
 		}
 
 		error = fget_write(td, *(int *)data,
-		    cap_rights_init(&rights, CAP_PWRITE),
+		    &cap_pwrite_rights,
 		    &filemon->fp);
 		if (error == 0)
 			/* Write the file header. */

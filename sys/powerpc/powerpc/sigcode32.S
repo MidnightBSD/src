@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/powerpc/powerpc/sigcode32.S 295186 2016-02-03 01:50:27Z jhibbits $ */
+/* $FreeBSD$ */
 /* $NetBSD: sigcode.S,v 1.1 1999/11/17 14:56:11 kleink Exp $	*/
 
 /*-
@@ -34,7 +34,7 @@
 
 #include <machine/asm.h>
 #include <sys/syscall.h>
-#include "assym.s"
+#include "assym.inc"
 
 /*
  * The following code gets copied to the top of the user stack on process

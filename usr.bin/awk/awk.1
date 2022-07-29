@@ -22,8 +22,8 @@
 .\" ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 .\" THIS SOFTWARE.
 .\"
-.\"	$FreeBSD: stable/11/usr.bin/awk/awk.1 315998 2017-03-26 18:08:55Z bapt $
-.Dd $Mdocdate: September 14 2015 $
+.\"	$FreeBSD$
+.Dd $Mdocdate: June 6 2020 $
 .Dt AWK 1
 .Os
 .Sh NAME
@@ -32,7 +32,7 @@
 .Sh SYNOPSIS
 .Nm awk
 .Op Fl safe
-.Op Fl V
+.Op Fl version
 .Op Fl d Ns Op Ar n
 .Op Fl F Ar fs
 .Op Fl v Ar var Ns = Ns Ar value
@@ -101,7 +101,7 @@ approximation to a
 .Dq safe
 version of
 .Nm .
-.It Fl V
+.It Fl version
 Print the version number of
 .Nm
 to standard output and exit.
@@ -265,7 +265,7 @@ and concatenation
 .Pq indicated by whitespace .
 The operators
 .Ic \&! ++ \-\- += \-= *= /= %= ^=
-.Ic > >= < <= == != ?:
+.Ic > >= < <= == != ?\&:
 are also available in expressions.
 Variables may be scalars, array elements
 (denoted
@@ -690,12 +690,15 @@ and returns its exit status.
 .Bl -tag -width "lshift(a, b)"
 .It Fn compl x
 Returns the bitwise complement of integer argument x.
-.It Fn and x y
-Performs a bitwise AND on integer arguments x and y.
-.It Fn or x y
-Performs a bitwise OR on integer arguments x and y.
-.It Fn xor x y
-Performs a bitwise Exclusive-OR on integer arguments x and y.
+.It Fn and v1 v2 ...
+Performs a bitwise AND on all arguments provided, as integers.
+There must be at least two values.
+.It Fn or v1 v2 ...
+Performs a bitwise OR on all arguments provided, as integers.
+There must be at least two values.
+.It Fn xor v1 v2 ...
+Performs a bitwise Exclusive-OR on all arguments provided, as integers.
+There must be at least two values.
 .It Fn lshift x n
 Returns integer argument x shifted by n bits to the left.
 .It Fn rshift x n
@@ -749,8 +752,7 @@ Print an error message to standard error:
 .Xr lex 1 ,
 .Xr printf 1 ,
 .Xr sed 1 ,
-.Xr re_format 7 ,
-.Xr script 7
+.Xr re_format 7
 .Rs
 .%A A. V. Aho
 .%A B. W. Kernighan
@@ -771,9 +773,10 @@ except
 does not support {n,m} pattern matching.
 .Pp
 The flags
-.Op Fl \&dV
+.Fl d ,
+.Fl safe ,
 and
-.Op Fl safe ,
+.Fl version
 as well as the commands
 .Cm fflush , compl , and , or ,
 .Cm xor , lshift , rshift ,

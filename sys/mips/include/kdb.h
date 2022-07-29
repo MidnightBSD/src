@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	from: src/sys/alpha/include/kdb.h,v 1.2 2005/01/05 20:05:50 imp
- * $FreeBSD: stable/11/sys/mips/include/kdb.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_KDB_H_

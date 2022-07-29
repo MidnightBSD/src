@@ -1,4 +1,4 @@
-$ $FreeBSD: stable/11/lib/libc/nls/zh_CN.UTF-8.msg 244756 2012-12-28 01:09:30Z delphij $
+$ $FreeBSD$
 $
 $ Message catalog for zh_CN.UTF-8 locale
 $

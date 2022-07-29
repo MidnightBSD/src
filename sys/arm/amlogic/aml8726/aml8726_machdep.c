@@ -27,7 +27,7 @@
 #include "opt_global.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/amlogic/aml8726/aml8726_machdep.c 314506 2017-03-01 19:55:04Z ian $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_platform.h"
 

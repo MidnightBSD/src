@@ -1,5 +1,5 @@
 #	$OpenBSD: Makefile,v 1.11 2006/05/25 08:41:52 jmc Exp $
-# $FreeBSD: stable/11/usr.bin/tip/tip/Makefile 287970 2015-09-18 21:01:52Z bdrewery $
+# $FreeBSD$
 #
 # Files are:
 #	/etc/remote		remote host description file
@@ -31,6 +31,7 @@
 #				explicitly to remcap.c if not 1024
 #	CONNECT			enable ~C command (connect pgm to remote)
 
+CONFS=	phones remote
 PROG=	tip
 LINKS=	${BINDIR}/tip ${BINDIR}/cu
 MAN=	tip.1 cu.1
@@ -46,6 +47,9 @@ SRCS=	acu.c acutab.c cmds.c cmdtab.c cu.c hunt.c log.c partab.c \
 # -- remote.o depends on the Makefile because of DEFBR and DEFFS
 # -- log.o depends on the Makefile because of ACULOG
 acutab.o log.o remote.o: Makefile
+
+# Don't rebuild based on remote.c
+remote: .MADE
 
 .include <bsd.prog.mk>
 

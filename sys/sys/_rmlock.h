@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2007 Stephan Uphoff <ups@FreeBSD.org>
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/sys/_rmlock.h 252209 2013-06-25 18:44:15Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef _SYS__RMLOCK_H_

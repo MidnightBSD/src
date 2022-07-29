@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,7 +33,7 @@
 static char sccsid[] = "@(#)bsearch.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/libkern/bsearch.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/libkern.h>
@@ -44,7 +46,7 @@ __FBSDID("$FreeBSD: stable/11/sys/libkern/bsearch.c 331722 2018-03-29 02:50:57Z 
  * is odd, moving left simply involves halving lim: e.g., when lim
  * is 5 we look at item 2, so we change lim to 2 so that we will
  * look at items 0 & 1.  If lim is even, the same applies.  If lim
- * is odd, moving right again involes halving lim, this time moving
+ * is odd, moving right again involves halving lim, this time moving
  * the base up one item past p: e.g., when lim is 5 we change base
  * to item 3 and make lim 2 so that we will look at items 3 and 4.
  * If lim is even, however, we have to shrink it by one before
@@ -53,12 +55,8 @@ __FBSDID("$FreeBSD: stable/11/sys/libkern/bsearch.c 331722 2018-03-29 02:50:57Z 
  * look at item 3.
  */
 void *
-bsearch(key, base0, nmemb, size, compar)
-	const void *key;
-	const void *base0;
-	size_t nmemb;
-	size_t size;
-	int (*compar)(const void *, const void *);
+bsearch(const void *key, const void *base0, size_t nmemb, size_t size,
+    int (*compar)(const void *, const void *))
 {
 	const char *base = base0;
 	size_t lim;

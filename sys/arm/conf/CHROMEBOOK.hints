@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/arm/conf/CHROMEBOOK.hints 263936 2014-03-30 15:22:36Z br $
+# $FreeBSD$
 
 # Chrome Embedded Controller
 hint.chrome_ec.0.at="iicbus0"

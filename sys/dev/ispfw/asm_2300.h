@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/ispfw/asm_2300.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 2001, 2002, 2003, 2004, 2005 by Qlogic, Inc.
  * All rights reserved.
  *

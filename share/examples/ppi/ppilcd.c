@@ -2,7 +2,7 @@
  * Control LCD module hung off parallel port using the
  * ppi 'geek port' interface.
  *
- * $FreeBSD: stable/11/share/examples/ppi/ppilcd.c 250460 2013-05-10 16:41:26Z eadler $
+ * $FreeBSD$
  */
 
 #include <stdio.h>

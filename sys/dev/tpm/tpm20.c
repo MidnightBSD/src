@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/tpm/tpm20.c 346725 2019-04-26 01:58:36Z mw $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/random.h>
 
@@ -294,8 +294,7 @@ tpm20_harvest(void *arg)
 
 	sx_xunlock(&sc->dev_lock);
 	if (entropy_size > 0)
-		random_harvest_queue(entropy, entropy_size,
-		    entropy_size * NBBY / 2, RANDOM_PURE_TPM);
+		random_harvest_queue(entropy, entropy_size, RANDOM_PURE_TPM);
 
 	callout_reset(&sc->harvest_callout, sc->harvest_ticks, tpm20_harvest, sc);
 }

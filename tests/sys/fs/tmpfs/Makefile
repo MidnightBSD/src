@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tests/sys/fs/tmpfs/Makefile 319005 2017-05-27 22:59:23Z ngie $
+# $FreeBSD$
 
 PACKAGE=		tests
 

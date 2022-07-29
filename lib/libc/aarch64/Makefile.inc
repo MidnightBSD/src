@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libc/aarch64/Makefile.inc 315044 2017-03-11 02:51:29Z brooks $
+# $FreeBSD$
 #
 # Machine dependent definitions for the arm 64-bit architecture.
 #

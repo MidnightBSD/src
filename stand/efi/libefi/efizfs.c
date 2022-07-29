@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/efi/libefi/efizfs.c 344371 2019-02-20 18:34:20Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <stand.h>
@@ -44,14 +44,6 @@ __FBSDID("$FreeBSD: stable/11/stand/efi/libefi/efizfs.c 344371 2019-02-20 18:34:
 static zfsinfo_list_t zfsinfo;
 
 uint64_t pool_guid;
-
-static EFI_HANDLE preferred;
-
-void
-efizfs_set_preferred(EFI_HANDLE h)
-{
-	preferred = h;
-}
 
 zfsinfo_list_t *
 efizfs_get_zfsinfo_list(void)
@@ -94,9 +86,11 @@ insert_zfs(EFI_HANDLE handle, uint64_t guid)
         zfsinfo_t *zi;
 
         zi = malloc(sizeof(zfsinfo_t));
-        zi->zi_handle = handle;
-        zi->zi_pool_guid = guid;
-        STAILQ_INSERT_TAIL(&zfsinfo, zi, zi_link);
+	if (zi != NULL) {
+        	zi->zi_handle = handle;
+        	zi->zi_pool_guid = guid;
+        	STAILQ_INSERT_TAIL(&zfsinfo, zi, zi_link);
+	}
 }
 
 void
@@ -105,7 +99,7 @@ efi_zfs_probe(void)
 	pdinfo_list_t *hdi;
 	pdinfo_t *hd, *pd = NULL;
 	char devname[SPECNAMELEN + 1];
-        uint64_t guid;
+	uint64_t guid;
 
 	hdi = efiblk_get_pdinfo_list(&efipart_hddev);
 	STAILQ_INIT(&zfsinfo);
@@ -120,9 +114,10 @@ efi_zfs_probe(void)
 		STAILQ_FOREACH(pd, &hd->pd_part, pd_link) {
 			snprintf(devname, sizeof(devname), "%s%dp%d:",
 			    efipart_hddev.dv_name, hd->pd_unit, pd->pd_unit);
+			guid = 0;
 			if (zfs_probe_dev(devname, &guid) == 0) {
 				insert_zfs(pd->pd_handle, guid);
-				if (pd->pd_handle == preferred)
+				if (pd->pd_handle == boot_img->DeviceHandle)
 					pool_guid = guid;
 			}
 

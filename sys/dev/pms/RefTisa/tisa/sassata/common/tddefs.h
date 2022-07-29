@@ -18,7 +18,7 @@
 *LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
 *SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 *
-* $FreeBSD: stable/11/sys/dev/pms/RefTisa/tisa/sassata/common/tddefs.h 285242 2015-07-07 13:17:02Z achim $
+* $FreeBSD$
 *
 ********************************************************************************/
 /*******************************************************************************/
@@ -123,7 +123,7 @@
 /* the maximum number of interrupt coalesce context */
 #define TD_MAX_INT_COALESCE 512
 
-#if (defined(__MidnightBSD__))
+#if (defined(__FreeBSD__))
 #define MAX_OUTSTANDING_IO_PER_LUN   64
 #else
 #define MAX_OUTSTANDING_IO_PER_LUN  254  //64

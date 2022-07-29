@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2007-2014 QLogic Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +30,7 @@
 #define BXE_STATS_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bxe/bxe_stats.h 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 

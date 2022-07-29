@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/kcondvar.h 324756 2017-10-19 16:16:26Z ian $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_CONDVAR_H_

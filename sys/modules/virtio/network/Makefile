@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/sys/modules/virtio/network/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions

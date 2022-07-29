@@ -1,5 +1,5 @@
 /*	$OpenBSD: parse.y,v 1.18 2015/01/16 06:40:22 deraadt Exp $	*/
-/*	$FreeBSD: stable/11/usr.sbin/ypldap/parse.y 330965 2018-03-15 02:25:28Z eadler $ */
+/*	$FreeBSD$ */
 
 /*
  * Copyright (c) 2008 Pierre-Yves Ritschard <pyr@openbsd.org>

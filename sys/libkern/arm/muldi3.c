@@ -1,6 +1,8 @@
 /*	$NetBSD: muldi3.c,v 1.8 2003/08/07 16:32:09 agc Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -38,7 +40,7 @@
 #if 0
 static char sccsid[] = "@(#)muldi3.c	8.1 (Berkeley) 6/4/93";
 #else
-__FBSDID("$FreeBSD: stable/11/sys/libkern/arm/muldi3.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 #endif
 #endif /* LIBC_SCCS and not lint */
 

@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)link.2	8.3 (Berkeley) 1/12/94
-.\" $FreeBSD: stable/11/lib/libc/sys/link.2 195763 2009-07-19 16:48:25Z jilles $
+.\" $FreeBSD$
 .\"
-.Dd April 10, 2008
+.Dd February 23, 2021
 .Dt LINK 2
 .Os
 .Sh NAME
@@ -115,6 +115,15 @@ If
 .Fa name1
 names a symbolic link, a new link for the target of the symbolic link is
 created.
+.It Dv AT_RESOLVE_BENEATH
+Only walk paths below the directory specified by the
+.Ar fd1
+descriptor.
+See the description of the
+.Dv O_RESOLVE_BENEATH
+flag in the
+.Xr open 2
+manual page.
 .El
 .Pp
 If
@@ -215,6 +224,8 @@ containing the directory has been exhausted.
 .It Bq Er EIO
 An I/O error occurred while reading from or writing to
 the file system to make the directory entry.
+.It Bq Er EINTEGRITY
+Corrupted data was detected while reading from the file system.
 .It Bq Er EROFS
 The requested link requires writing in a directory on a read-only file
 system.
@@ -257,6 +268,17 @@ or
 respectively, is neither
 .Dv AT_FDCWD
 nor a file descriptor associated with a directory.
+.It Bq Er ENOTCAPABLE
+.Fa name1
+is not strictly relative to the starting directory.
+For example,
+.Fa name1
+is absolute or includes a ".." component that escapes
+the directory hierarchy specified by
+.Fa fd ,
+and the process is in capability mode or the
+.Dv AT_RESOLVE_BENEATH
+flag was specified.
 .El
 .Sh SEE ALSO
 .Xr chflags 2 ,
@@ -275,7 +297,7 @@ system call follows The Open Group Extended API Set 2 specification.
 The
 .Fn link
 function appeared in
-.At v7 .
+.At v1 .
 The
 .Fn linkat
 system call appeared in

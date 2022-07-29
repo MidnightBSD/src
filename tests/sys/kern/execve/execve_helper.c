@@ -31,24 +31,31 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tests/sys/kern/execve/execve_helper.c 312321 2017-01-17 01:55:14Z ngie $
+ * $FreeBSD$
  */
 
 #include <err.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+
+/* Passing -n == null_argv */
+static char * const null_argv[] = { NULL };
 
 int
 main(int argc, char **argv)
 {
 
-	if (argc != 2) {
-		fprintf(stderr, "usage: %s <progname>\n", argv[0]);
+	if (argc == 2) {
+		execve(argv[1], &argv[1], NULL);
+	} else if (argc == 3 && strcmp(argv[1], "-n") == 0) {
+		execve(argv[2], null_argv, NULL);
+	} else {
+		fprintf(stderr, "usage: %s [-n] <progname>\n", argv[0]);
 		exit(2);
 	}
 
-	execve(argv[1], &argv[1], NULL);
 	err(1, "execve failed");
 }

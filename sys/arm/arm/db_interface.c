@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/arm/db_interface.c 298352 2016-04-20 15:45:55Z pfg $");
+__FBSDID("$FreeBSD$");
 #include "opt_ddb.h"
 
 #include <sys/param.h>

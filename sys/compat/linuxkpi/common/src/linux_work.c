@@ -25,12 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/linuxkpi/common/src/linux_work.c 352479 2019-09-18 07:29:33Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <linux/workqueue.h>
 #include <linux/wait.h>
 #include <linux/compat.h>
 #include <linux/spinlock.h>
+#include <linux/rcupdate.h>
 
 #include <sys/kernel.h>
 
@@ -85,7 +86,7 @@ linux_update_state(atomic_t *v, const uint8_t *pstate)
  * completed. This function gives the linux_work_fn() function a hint,
  * that the task is not going away and can have its state checked
  * again. Without this extra hint LinuxKPI tasks cannot be serialized
- * accross multiple worker threads.
+ * across multiple worker threads.
  */
 static bool
 linux_work_exec_unblock(struct work_struct *work)
@@ -153,6 +154,53 @@ linux_queue_work_on(int cpu __unused, struct workqueue_struct *wq,
 	default:
 		return (false);		/* already on a queue */
 	}
+}
+
+/*
+ * Callback func for linux_queue_rcu_work
+ */
+static void
+rcu_work_func(struct rcu_head *rcu)
+{
+	struct rcu_work *rwork;
+
+	rwork = container_of(rcu, struct rcu_work, rcu);
+	linux_queue_work_on(WORK_CPU_UNBOUND, rwork->wq, &rwork->work);
+}
+
+/*
+ * This function queue a work after a grace period
+ * If the work was already pending it returns false,
+ * if not it calls call_rcu and returns true.
+ */
+bool
+linux_queue_rcu_work(struct workqueue_struct *wq, struct rcu_work *rwork)
+{
+
+	if (!linux_work_pending(&rwork->work)) {
+		rwork->wq = wq;
+		linux_call_rcu(RCU_TYPE_REGULAR, &rwork->rcu, rcu_work_func);
+		return (true);
+	}
+	return (false);
+}
+
+/*
+ * This function waits for the last execution of a work and then
+ * flush the work.
+ * It returns true if the work was pending and we waited, it returns
+ * false otherwise.
+ */
+bool
+linux_flush_rcu_work(struct rcu_work *rwork)
+{
+
+	if (linux_work_pending(&rwork->work)) {
+		linux_rcu_barrier(RCU_TYPE_REGULAR);
+		linux_flush_work(&rwork->work);
+		return (true);
+	}
+	return (linux_flush_work(&rwork->work));
 }
 
 /*

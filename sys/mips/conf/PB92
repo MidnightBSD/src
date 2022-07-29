@@ -2,7 +2,7 @@
 # PB92 -- Kernel configuration file for FreeBSD/mips for Atheros PB92 reference
 #         board (AR7242)
 #
-# $FreeBSD: stable/11/sys/mips/conf/PB92 345344 2019-03-20 18:49:45Z kib $
+# $FreeBSD$
 #
 
 ident		PB92
@@ -37,6 +37,7 @@ options 	SCHED_4BSD		#4BSD scheduler
 options 	INET			#InterNETworking
 # Can't do IPv6 - it just doesn't fit.
 # options 	INET6
+options 	TCP_HHOOK		# hhook(9) framework for TCP
 # options 	NFSCL			#Network Filesystem Client
 options 	PSEUDOFS		#Pseudo-filesystem framework
 options 	_KPOSIX_PRIORITY_SCHEDULING #Posix P1003_1B real-time extensions

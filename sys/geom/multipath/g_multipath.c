@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011-2013 Alexander Motin <mav@FreeBSD.org>
  * Copyright (c) 2006-2007 Matthew Jacob <mjacob@FreeBSD.org>
  * All rights reserved.
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/geom/multipath/g_multipath.c 332640 2018-04-17 02:18:04Z kevans $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -41,6 +43,7 @@ __FBSDID("$FreeBSD: stable/11/sys/geom/multipath/g_multipath.c 332640 2018-04-17
 #include <sys/mutex.h>
 #include <sys/bio.h>
 #include <sys/sbuf.h>
+#include <sys/sdt.h>
 #include <sys/sysctl.h>
 #include <sys/kthread.h>
 #include <sys/malloc.h>
@@ -58,6 +61,14 @@ SYSCTL_UINT(_kern_geom_multipath, OID_AUTO, debug, CTLFLAG_RW,
 static u_int g_multipath_exclusive = 1;
 SYSCTL_UINT(_kern_geom_multipath, OID_AUTO, exclusive, CTLFLAG_RW,
     &g_multipath_exclusive, 0, "Exclusively open providers");
+
+SDT_PROVIDER_DECLARE(geom);
+SDT_PROBE_DEFINE2(geom, multipath, config, restore, "char*", "char*");
+SDT_PROBE_DEFINE2(geom, multipath, config, remove, "char*", "char*");
+SDT_PROBE_DEFINE2(geom, multipath, config, disconnect, "char*", "char*");
+SDT_PROBE_DEFINE3(geom, multipath, config, fail, "char*", "char*", "int");
+SDT_PROBE_DEFINE2(geom, multipath, config, taste, "char*", "char*");
+SDT_PROBE_DEFINE2(geom, multipath, io, restart, "struct bio*", "struct bio*");
 
 static enum {
 	GKT_NIL,
@@ -144,6 +155,8 @@ g_multipath_fault(struct g_consumer *cp, int cause)
 			printf("GEOM_MULTIPATH: "
 			    "all paths in %s were marked FAIL, restore %s\n",
 			    sc->sc_name, lcp->provider->name);
+			SDT_PROBE2(geom, multipath, config, restore,
+			    sc->sc_name, lcp->provider->name);
 			lcp->index &= ~MP_FAIL;
 		}
 	}
@@ -215,6 +228,8 @@ g_mpd(void *arg, int flags __unused)
 	if (cp->provider) {
 		printf("GEOM_MULTIPATH: %s removed from %s\n",
 		    cp->provider->name, gp->name);
+		SDT_PROBE2(geom, multipath, config, remove,
+		    gp->name, cp->provider->name);
 		g_detach(cp);
 	}
 	g_destroy_consumer(cp);
@@ -232,6 +247,8 @@ g_multipath_orphan(struct g_consumer *cp)
 	g_topology_assert();
 	printf("GEOM_MULTIPATH: %s in %s was disconnected\n",
 	    cp->provider->name, cp->geom->name);
+	SDT_PROBE2(geom, multipath, config, disconnect,
+	    cp->geom->name, cp->provider->name);
 	sc = cp->geom->softc;
 	cnt = (uintptr_t *)&cp->private;
 	mtx_lock(&sc->sc_mtx);
@@ -376,6 +393,12 @@ g_multipath_done(struct bio *bp)
 			mtx_unlock(&sc->sc_mtx);
 		} else
 			mtx_unlock(&sc->sc_mtx);
+		if (bp->bio_error == 0 &&
+			bp->bio_cmd == BIO_GETATTR &&
+			!strcmp(bp->bio_attribute, "GEOM::physpath"))
+		{
+			strlcat(bp->bio_data, "/mp", bp->bio_length);
+		}
 		g_std_done(bp);
 	}
 }
@@ -409,6 +432,8 @@ g_multipath_done_error(struct bio *bp)
 	if ((cp->index & MP_FAIL) == 0) {
 		printf("GEOM_MULTIPATH: Error %d, %s in %s marked FAIL\n",
 		    bp->bio_error, pp->name, sc->sc_name);
+		SDT_PROBE3(geom, multipath, config, fail,
+		    sc->sc_name, pp->name, bp->bio_error);
 		g_multipath_fault(cp, MP_FAIL);
 	}
 	(*cnt)--;
@@ -424,6 +449,7 @@ g_multipath_done_error(struct bio *bp)
 	 */
 	if (pbp->bio_children < (uintptr_t)pbp->bio_driver1) {
 		pbp->bio_inbed++;
+		SDT_PROBE2(geom, multipath, io, restart, bp, pbp);
 		g_destroy_bio(bp);
 		g_multipath_start(pbp);
 	} else {
@@ -829,6 +855,7 @@ g_multipath_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 		return (NULL);
 	if (g_multipath_debug)
 		printf("MULTIPATH: %s/%s\n", md.md_name, md.md_uuid);
+	SDT_PROBE2(geom, multipath, config, taste, md.md_name, md.md_uuid);
 
 	/*
 	 * Let's check if such a device already is present. We check against
@@ -1228,8 +1255,12 @@ g_multipath_ctl_fail(struct gctl_req *req, struct g_class *mp, int fail)
 				name, sc->sc_name, fail ? "FAIL" : "OK");
 			if (fail) {
 				g_multipath_fault(cp, MP_FAIL);
+				SDT_PROBE3(geom, multipath, config, fail,
+				    sc->sc_name, cp->provider->name, 0);
 			} else {
 				cp->index &= ~MP_FAIL;
+				SDT_PROBE2(geom, multipath, config, restore,
+				    sc->sc_name, cp->provider->name);
 			}
 		}
 	}
@@ -1275,6 +1306,8 @@ g_multipath_ctl_remove(struct gctl_req *req, struct g_class *mp)
 			found = 1;
 			printf("GEOM_MULTIPATH: removing %s from %s\n",
 			    cp->provider->name, cp->geom->name);
+			SDT_PROBE2(geom, multipath, config, remove,
+			    cp->geom->name, cp->provider->name);
 			sc->sc_ndisks--;
 			g_multipath_fault(cp, MP_LOST);
 			cnt = (uintptr_t *)&cp->private;
@@ -1448,7 +1481,7 @@ g_multipath_ctl_getactive(struct gctl_req *req, struct g_class *mp)
 	} else if (sc->sc_active && sc->sc_active->provider) {
 		sbuf_printf(sb, "%s\n", sc->sc_active->provider->name);
 	} else {
-		sbuf_printf(sb, "none\n");
+		sbuf_cat(sb, "none\n");
 	}
 	sbuf_finish(sb);
 	gctl_set_param_err(req, "output", sbuf_data(sb), sbuf_len(sb) + 1);

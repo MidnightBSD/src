@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/usr.bin/indent/tests/comments.0 331147 2018-03-18 22:19:52Z eadler $ */
+/* $FreeBSD$ */
 typedef enum x {
 	aaaaaaaaaaaaaaaaaaaaaa = 1 << 0,	/* test a */
 	bbbbbbbbbbbbbbbbb = 1 << 1,	/* test b */
@@ -29,4 +29,24 @@ void t(void) {
 	/* r309219 Go through linked list, freeing from the malloced (t[-1]) address. */
 	
 	/* r309343	*/
+}
+
+int c(void)
+{
+	if (1) { /*- a christmas tree  *
+				      ***
+				     ***** */
+		    /*- another one *
+				   ***
+				  ***** */
+	    7;
+	}
+
+	if (1) /*- a christmas tree  *
+				    ***
+				   ***** */
+		    /*- another one *
+				   ***
+				  ***** */
+	    1;
 }

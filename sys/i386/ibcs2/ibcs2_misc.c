@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1995 Steven Wallace
  * Copyright (c) 1994, 1995 Scott Bartram
  * Copyright (c) 1992, 1993
@@ -47,7 +49,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/i386/ibcs2/ibcs2_misc.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * IBCS2 compatibility module.
@@ -736,12 +738,16 @@ int
 ibcs2_pathconf(struct thread *td, struct ibcs2_pathconf_args *uap)
 {
 	char *path;
+	long value;
 	int error;
 
 	CHECKALTEXIST(td, uap->path, &path);
 	uap->name++;	/* iBCS2 _PC_* defines are offset by one */
-	error = kern_pathconf(td, path, UIO_SYSSPACE, uap->name, FOLLOW);
+	error = kern_pathconf(td, path, UIO_SYSSPACE, uap->name, FOLLOW,
+	    &value);
 	free(path, M_TEMP);
+	if (error == 0)
+		td->td_retval[0] = value;
 	return (error);
 }
 

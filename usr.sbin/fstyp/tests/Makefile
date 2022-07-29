@@ -1,9 +1,10 @@
-# $FreeBSD: stable/11/usr.sbin/fstyp/tests/Makefile 299094 2016-05-04 23:20:53Z ngie $
+# $FreeBSD$
 
 PACKAGE=	tests
 
 ATF_TESTS_SH=	fstyp_test
 
+${PACKAGE}FILES+=	dfr-01-xfat.img.bz2
 ${PACKAGE}FILES+=	ext2.img.bz2
 ${PACKAGE}FILES+=	ext3.img.bz2
 ${PACKAGE}FILES+=	ext4.img.bz2

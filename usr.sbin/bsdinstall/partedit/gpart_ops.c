@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
  *
@@ -24,7 +25,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bsdinstall/partedit/gpart_ops.c 329870 2018-02-23 16:46:49Z rpokala $
  */
 
 #include <sys/param.h>
@@ -74,8 +74,6 @@ scheme_supports_labels(const char *scheme)
 		return (1);
 	if (strcmp(scheme, "GPT") == 0)
 		return (1);
-	if (strcmp(scheme, "PC98") == 0)
-		return (1);
 
 	return (0);
 }
@@ -102,14 +100,14 @@ newfs_command(const char *fstype, char *command, int use_default)
 		if (!use_default) {
 			int choice;
 			choice = dlg_checklist("UFS Options", "", 0, 0, 0,
-			    sizeof(items)/sizeof(items[0]), items, NULL,
+			    nitems(items), items, NULL,
 			    FLAG_CHECK, &i);
 			if (choice == 1) /* Cancel */
 				return;
 		}
 
 		strcpy(command, "newfs ");
-		for (i = 0; i < (int)(sizeof(items)/sizeof(items[0])); i++) {
+		for (i = 0; i < (int)nitems(items); i++) {
 			if (items[i].state == 0)
 				continue;
 			if (strcmp(items[i].name, "UFS1") == 0)
@@ -140,7 +138,7 @@ newfs_command(const char *fstype, char *command, int use_default)
 		if (!use_default) {
 			int choice;
 			choice = dlg_checklist("ZFS Options", "", 0, 0, 0,
-			    sizeof(items)/sizeof(items[0]), items, NULL,
+			    nitems(items), items, NULL,
 			    FLAG_CHECK, &i);
 			if (choice == 1) /* Cancel */
 				return;
@@ -149,14 +147,14 @@ newfs_command(const char *fstype, char *command, int use_default)
 		strcpy(command, "zpool create -f -m none ");
 		if (getenv("BSDINSTALL_TMPBOOT") != NULL) {
 			char zfsboot_path[MAXPATHLEN];
-			sprintf(zfsboot_path, "%s/zfs",
+			snprintf(zfsboot_path, sizeof(zfsboot_path), "%s/zfs",
 			    getenv("BSDINSTALL_TMPBOOT"));
 			mkdir(zfsboot_path, S_IRWXU | S_IRGRP | S_IXGRP |
 			    S_IROTH | S_IXOTH);
 			sprintf(command, "%s -o cachefile=%s/zpool.cache ",
 			    command, zfsboot_path);
 		}
-		for (i = 0; i < (int)(sizeof(items)/sizeof(items[0])); i++) {
+		for (i = 0; i < (int)nitems(items); i++) {
 			if (items[i].state == 0)
 				continue;
 			if (strcmp(items[i].name, "fletcher4") == 0)
@@ -168,7 +166,8 @@ newfs_command(const char *fstype, char *command, int use_default)
 			else if (strcmp(items[i].name, "atime") == 0)
 				strcat(command, "-O atime=off ");
 		}
-	} else if (strcmp(fstype, "fat32") == 0 || strcmp(fstype, "efi") == 0) {
+	} else if (strcmp(fstype, "fat32") == 0 || strcmp(fstype, "efi") == 0 ||
+	     strcmp(fstype, "ms-basic-data") == 0) {
 		int i;
 		DIALOG_LISTITEM items[] = {
 			{"FAT32", "FAT Type 32",
@@ -182,19 +181,17 @@ newfs_command(const char *fstype, char *command, int use_default)
 		if (!use_default) {
 			int choice;
 			choice = dlg_checklist("FAT Options", "", 0, 0, 0,
-			    sizeof(items)/sizeof(items[0]), items, NULL,
+			    nitems(items), items, NULL,
 			    FLAG_RADIO, &i);
 			if (choice == 1) /* Cancel */
 				return;
 		}
 
 		strcpy(command, "newfs_msdos ");
-		for (i = 0; i < (int)(sizeof(items)/sizeof(items[0])); i++) {
+		for (i = 0; i < (int)nitems(items); i++) {
 			if (items[i].state == 0)
 				continue;
-			if (strcmp(items[i].name, "FAT32") == 0)
-				strcat(command, "-F 32 ");
-			else if (strcmp(items[i].name, "FAT16") == 0)
+			if (strcmp(items[i].name, "FAT16") == 0)
 				strcat(command, "-F 16 ");
 			else if (strcmp(items[i].name, "FAT12") == 0)
 				strcat(command, "-F 12 ");
@@ -219,11 +216,9 @@ choose_part_type(const char *def_scheme)
 		{"BSD", "BSD Labels",
 		    "Bootable on most x86 systems", 0 },
 		{"GPT", "GUID Partition Table",
-		    "Bootable on most x86 systems", 0 },
+		    "Bootable on most x86 systems and EFI aware ARM64", 0 },
 		{"MBR", "DOS Partitions",
 		    "Bootable on most x86 systems", 0 },
-		{"PC98", "NEC PC9801 Partition Table",
-		    "Bootable on NEC PC9801 systems", 0 },
 		{"VTOC8", "Sun VTOC8 Partition Table",
 		    "Bootable on Sun SPARC systems", 0 },
 	};
@@ -232,7 +227,7 @@ parttypemenu:
 	dialog_vars.default_item = __DECONST(char *, def_scheme);
 	cancel = dlg_menu("Partition Scheme",
 	    "Select a partition scheme for this volume:", 0, 0, 0,
-	    sizeof(items) / sizeof(items[0]), items, &choice, NULL);
+	    nitems(items), items, &choice, NULL);
 	dialog_vars.default_item = NULL;
 
 	if (cancel)
@@ -326,8 +321,7 @@ gpart_activate(struct gprovider *pp)
 		}
 	}
 
-	if (strcmp(scheme, "MBR") == 0 || strcmp(scheme, "EBR") == 0 ||
-	    strcmp(scheme, "PC98") == 0)
+	if (strcmp(scheme, "MBR") == 0 || strcmp(scheme, "EBR") == 0)
 		attribute = "active";
 	else
 		return;
@@ -618,6 +612,20 @@ editpart:
 	if (choice) /* Cancel pressed */
 		goto endedit;
 
+	/* If this is the root partition, check that this fs is bootable */
+	if (strcmp(items[2].text, "/") == 0 && !is_fs_bootable(scheme,
+	    items[0].text)) {
+		char message[512];
+		sprintf(message, "This file system (%s) is not bootable "
+		    "on this system. Are you sure you want to proceed?",
+		    items[0].text);
+		dialog_vars.defaultno = TRUE;
+		choice = dialog_yesno("Warning", message, 0, 0);
+		dialog_vars.defaultno = FALSE;
+		if (choice == 1) /* cancel */
+			goto editpart;
+	}
+
 	/* Check if the label has a / in it */
 	if (strchr(items[3].text, '/') != NULL) {
 		dialog_msgbox("Error", "Label contains a /, which is not an "
@@ -654,7 +662,7 @@ endedit:
 	    "midnightbsd") == 0)
 		gpart_partition(pp->lg_name, "BSD");
 
-	for (i = 0; i < (sizeof(items) / sizeof(items[0])); i++)
+	for (i = 0; i < nitems(items); i++)
 		if (items[i].text_free)
 			free(items[i].text);
 }
@@ -665,6 +673,7 @@ set_default_part_metadata(const char *name, const char *scheme,
 {
 	struct partition_metadata *md;
 	char *zpool_name = NULL;
+	const char *default_bootmount = NULL;
 	int i;
 
 	/* Set part metadata */
@@ -695,8 +704,12 @@ set_default_part_metadata(const char *name, const char *scheme,
 
 	if (strcmp(type, "mnbsd-swap") == 0)
 		mountpoint = "none";
-	if (strcmp(type, bootpart_type(scheme)) == 0)
-		md->bootcode = 1;
+	if (strcmp(type, bootpart_type(scheme, &default_bootmount)) == 0) {
+		if (default_bootmount == NULL)
+			md->bootcode = 1;
+		else if (mountpoint == NULL || strlen(mountpoint) == 0)
+			mountpoint = default_bootmount;
+	}
 
 	/* VTOC8 needs partcode at the start of partitions */
 	if (strcmp(scheme, "VTOC8") == 0 && (strcmp(type, "mnbsd-ufs") == 0
@@ -734,7 +747,8 @@ set_default_part_metadata(const char *name, const char *scheme,
 		/* Get VFS from text after mnbsd-, if possible */
 		if (strncmp("mnbsd-", type, 6) == 0)
 			md->fstab->fs_vfstype = strdup(&type[6]);
-		else if (strcmp("fat32", type) == 0 || strcmp("efi", type) == 0)
+		else if (strcmp("fat32", type) == 0 || strcmp("efi", type) == 0
+	     	    || strcmp("ms-basic-data", type) == 0)
 			md->fstab->fs_vfstype = strdup("msdosfs");
 		else
 			md->fstab->fs_vfstype = strdup(type); /* Guess */
@@ -841,7 +855,7 @@ gpart_max_free(struct ggeom *geom, intmax_t *npartstart)
 	}
 
 	if (end - lastend > maxsize) {
-		maxsize = end - lastend - 1;
+		maxsize = end - lastend;
 		maxstart = lastend + 1;
 	}
 
@@ -876,9 +890,95 @@ gpart_max_free(struct ggeom *geom, intmax_t *npartstart)
 	return (maxsize);
 }
 
+static size_t
+add_boot_partition(struct ggeom *geom, struct gprovider *pp,
+    const char *scheme, int interactive)
+{
+	struct gconfig *gc;
+	struct gprovider *ppi;
+	int choice;
+
+	/* Check for existing mnbsd-boot partition */
+	LIST_FOREACH(ppi, &geom->lg_provider, lg_provider) {
+		struct partition_metadata *md;
+		const char *bootmount = NULL;
+
+		LIST_FOREACH(gc, &ppi->lg_config, lg_config)
+			if (strcmp(gc->lg_name, "type") == 0)
+				break;
+		if (gc == NULL)
+			continue;
+		if (strcmp(gc->lg_val, bootpart_type(scheme, &bootmount)) != 0)
+			continue;
+
+		/*
+		 * If the boot partition is not mountable and needs partcode,
+		 * but doesn't have it, it doesn't satisfy our requirements.
+		 */
+		md = get_part_metadata(ppi->lg_name, 0);
+		if (bootmount == NULL && (md == NULL || !md->bootcode))
+			continue;
+
+		/* If it is mountable, but mounted somewhere else, remount */
+		if (bootmount != NULL && md != NULL && md->fstab != NULL
+		    && strlen(md->fstab->fs_file) > 0
+		    && strcmp(md->fstab->fs_file, bootmount) != 0)
+			continue;
+
+		/* If it is mountable, but mountpoint is not set, mount it */
+		if (bootmount != NULL && md == NULL)
+			set_default_part_metadata(ppi->lg_name, scheme,
+			    gc->lg_val, bootmount, NULL);
+		
+		/* Looks good at this point, no added data needed */
+		return (0);
+	}
+
+	if (interactive)
+		choice = dialog_yesno("Boot Partition",
+		    "This partition scheme requires a boot partition "
+		    "for the disk to be bootable. Would you like to "
+		    "make one now?", 0, 0);
+	else
+		choice = 0;
+
+	if (choice == 0) { /* yes */
+		struct partition_metadata *md;
+		const char *bootmount = NULL;
+		char *bootpartname = NULL;
+		char sizestr[7];
+
+		humanize_number(sizestr, 7,
+		    bootpart_size(scheme), "B", HN_AUTOSCALE,
+		    HN_NOSPACE | HN_DECIMAL);
+
+		gpart_create(pp, bootpart_type(scheme, &bootmount),
+		    sizestr, bootmount, &bootpartname, 0);
+
+		if (bootpartname == NULL) /* Error reported to user already */
+			return 0;
+
+		/* If the part is not mountable, make sure newfs isn't set */
+		if (bootmount == NULL) {
+			md = get_part_metadata(bootpartname, 0);
+			if (md != NULL && md->newfs != NULL) {
+				free(md->newfs);
+				md->newfs = NULL;
+			}
+		}
+
+		free(bootpartname);
+
+		return (bootpart_size(scheme));
+	}
+	
+	return (0);
+}
+
 void
-gpart_create(struct gprovider *pp, char *default_type, char *default_size,
-     char *default_mountpoint, char **partname, int interactive)
+gpart_create(struct gprovider *pp, const char *default_type,
+    const char *default_size, const char *default_mountpoint,
+    char **partname, int interactive)
 {
 	struct gctl_req *r;
 	struct gconfig *gc;
@@ -966,19 +1066,19 @@ gpart_create(struct gprovider *pp, char *default_type, char *default_size,
 	items[1].text = sizestr;
 
 	/* Special-case the MBR default type for nested partitions */
-	if (strcmp(scheme, "MBR") == 0 || strcmp(scheme, "PC98") == 0) {
-		items[0].text = "midightbsd";
+	if (strcmp(scheme, "MBR") == 0) {
+		items[0].text = "midnightbsd";
 		items[0].help = "Filesystem type (e.g. midnightbsd, fat32)";
 	}
 
 	nitems = scheme_supports_labels(scheme) ? 4 : 3;
 
 	if (default_type != NULL)
-		items[0].text = default_type;
+		items[0].text = (char *)default_type;
 	if (default_size != NULL)
-		items[1].text = default_size;
+		items[1].text = (char *)default_size;
 	if (default_mountpoint != NULL)
-		items[2].text = default_mountpoint;
+		items[2].text = (char *)default_mountpoint;
 
 	/* Default options */
 	strncpy(options_fstype, items[0].text,
@@ -1095,61 +1195,21 @@ addpartform:
 	 * the user to add one.
 	 */
 
-	/* Check for existing mnbsd-boot partition */
-	LIST_FOREACH(pp, &geom->lg_provider, lg_provider) {
-		struct partition_metadata *md;
-		md = get_part_metadata(pp->lg_name, 0);
-		if (md == NULL || !md->bootcode)
-			continue;
-		LIST_FOREACH(gc, &pp->lg_config, lg_config)
-			if (strcmp(gc->lg_name, "type") == 0)
-				break;
-		if (gc != NULL && strcmp(gc->lg_val,
-		    bootpart_type(scheme)) == 0)
-			break;
-	}
-
-	/* If there isn't one, and we need one, ask */
 	if ((strcmp(items[0].text, "midnightbsd") == 0 ||
-	    strcmp(items[2].text, "/") == 0) && bootpart_size(scheme) > 0 &&
-	    pp == NULL) {
-		if (interactive)
-			choice = dialog_yesno("Boot Partition",
-			    "This partition scheme requires a boot partition "
-			    "for the disk to be bootable. Would you like to "
-			    "make one now?", 0, 0);
-		else
-			choice = 0;
+	    strcmp(items[2].text, "/") == 0) && bootpart_size(scheme) > 0) {
+		size_t bytes = add_boot_partition(geom, pp, scheme,
+		    interactive);
 
-		if (choice == 0) { /* yes */
-			r = gctl_get_handle();
-			gctl_ro_param(r, "class", -1, "PART");
-			gctl_ro_param(r, "arg0", -1, geom->lg_name);
-			gctl_ro_param(r, "flags", -1, GPART_FLAGS);
-			gctl_ro_param(r, "verb", -1, "add");
-			gctl_ro_param(r, "type", -1, bootpart_type(scheme));
-			snprintf(sizestr, sizeof(sizestr), "%jd",
-			    bootpart_size(scheme) / sector);
-			gctl_ro_param(r, "size", -1, sizestr);
-			snprintf(startstr, sizeof(startstr), "%jd", firstfree);
-			gctl_ro_param(r, "start", -1, startstr);
-			gctl_rw_param(r, "output", sizeof(output), output);
-			errstr = gctl_issue(r);
-			if (errstr != NULL && errstr[0] != '\0') 
-				gpart_show_error("Error", NULL, errstr);
-			gctl_free(r);
-
-			get_part_metadata(strtok(output, " "), 1)->bootcode = 1;
-
-			/* Now adjust the part we are really adding forward */
-			firstfree += bootpart_size(scheme) / sector;
-			size -= (bootpart_size(scheme) + stripe)/sector;
+		/* Now adjust the part we are really adding forward */
+		if (bytes > 0) {
+			firstfree += bytes / sector;
+			size -= (bytes + stripe)/sector;
 			if (stripe > 0 && (firstfree*sector % stripe) != 0) 
 				firstfree += (stripe - ((firstfree*sector) %
 				    stripe)) / sector;
 		}
 	}
-	
+
 	r = gctl_get_handle();
 	gctl_ro_param(r, "class", -1, "PART");
 	gctl_ro_param(r, "arg0", -1, geom->lg_name);
@@ -1187,15 +1247,14 @@ addpartform:
 	gctl_issue(r); /* Error usually expected and non-fatal */
 	gctl_free(r);
 
-	if (strcmp(items[0].text, bootpart_type(scheme)) == 0)
-		get_part_metadata(newpartname, 1)->bootcode = 1;
-	else if (strcmp(items[0].text, "midnightbsd") == 0)
+
+	if (strcmp(items[0].text, "midnightbsd") == 0)
 		gpart_partition(newpartname, "BSD");
 	else
 		set_default_part_metadata(newpartname, scheme,
 		    items[0].text, items[2].text, newfs);
 
-	for (i = 0; i < (sizeof(items) / sizeof(items[0])); i++)
+	for (i = 0; i < nitems(items); i++)
 		if (items[i].text_free)
 			free(items[i].text);
 

@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/11/usr.bin/fold/Makefile 327186 2017-12-26 03:59:49Z asomers $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

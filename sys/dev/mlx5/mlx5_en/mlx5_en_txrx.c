@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_en/mlx5_en_txrx.c 353226 2019-10-07 09:28:53Z hselasky $
+ * $FreeBSD$
  */
 
 #include "en.h"

@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/11/usr.bin/sort/sort.h 330449 2018-03-05 07:26:05Z eadler $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
@@ -41,7 +41,7 @@
 #include <sys/types.h>
 #include <md5.h>
 
-#define	VERSION	"2.3-MidnightBSD"
+#define	VERSION	"2.3-FreeBSD"
 
 #ifdef WITHOUT_NLS
 #define	getstr(n)	 nlsstr[n]

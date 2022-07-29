@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -11,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,13 +30,13 @@
  *
  *	@(#)socketvar.h	8.3 (Berkeley) 2/19/95
  *
- * $FreeBSD: stable/11/sys/sys/sockopt.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 #ifndef _SYS_SOCKOPT_H_
 #define _SYS_SOCKOPT_H_
 
 #ifndef _KERNEL
-#error "no user-servicable parts inside"
+#error "no user-serviceable parts inside"
 #endif
 
 
@@ -61,12 +62,11 @@ int	sosetopt(struct socket *so, struct sockopt *sopt);
 int	sogetopt(struct socket *so, struct sockopt *sopt);
 int	sooptcopyin(struct sockopt *sopt, void *buf, size_t len, size_t minlen);
 int	sooptcopyout(struct sockopt *sopt, const void *buf, size_t len);
-/* XXX; prepare mbuf for (__FreeBSD__ < 3) routines. */
 int	soopt_getm(struct sockopt *sopt, struct mbuf **mp);
 int	soopt_mcopyin(struct sockopt *sopt, struct mbuf *m);
 int	soopt_mcopyout(struct sockopt *sopt, struct mbuf *m);
-int	do_getopt_accept_filter(struct socket *so, struct sockopt *sopt);
-int	do_setopt_accept_filter(struct socket *so, struct sockopt *sopt);
+int	accept_filt_getopt(struct socket *, struct sockopt *);
+int	accept_filt_setopt(struct socket *, struct sockopt *);
 int	so_setsockopt(struct socket *so, int level, int optname,
 	    void *optval, size_t optlen);
 

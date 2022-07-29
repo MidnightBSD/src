@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2006-2014 QLogic Corporation
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bce/if_bce.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * The following controllers are supported by this driver:
@@ -527,7 +529,8 @@ MODULE_DEPEND(bce, miibus, 1, 1, 1);
 
 DRIVER_MODULE(bce, pci, bce_driver, bce_devclass, NULL, NULL);
 DRIVER_MODULE(miibus, bce, miibus_driver, miibus_devclass, NULL, NULL);
-
+MODULE_PNP_INFO("U16:vendor;U16:device;U16:#;U16:#;D:#", pci, bce,
+    bce_devs, nitems(bce_devs) - 1);
 
 /****************************************************************************/
 /* Tunable device values                                                    */
@@ -627,7 +630,7 @@ static int bce_rx_quick_cons_trip_int = DEFAULT_RX_QUICK_CONS_TRIP_INT;
 #endif
 SYSCTL_UINT(_hw_bce, OID_AUTO, rx_quick_cons_trip_int, CTLFLAG_RDTUN,
     &bce_rx_quick_cons_trip_int, 0,
-    "Receive BD trip point duirng interrupts");
+    "Receive BD trip point during interrupts");
 
 /* Allowable values are 1 ... 100 */
 #ifdef BCE_DEBUG
@@ -3224,7 +3227,7 @@ bce_init_media(struct bce_softc *sc)
 /****************************************************************************/
 /* Free any DMA memory owned by the driver.                                 */
 /*                                                                          */
-/* Scans through each data structre that requires DMA memory and frees      */
+/* Scans through each data structure that requires DMA memory and frees     */
 /* the memory if allocated.                                                 */
 /*                                                                          */
 /* Returns:                                                                 */
@@ -5654,7 +5657,7 @@ bce_init_tx_chain(struct bce_softc *sc)
 	DBRUN(sc->tx_full_count = 0);
 
 	/*
-	 * The NetXtreme II supports a linked-list structre called
+	 * The NetXtreme II supports a linked-list structure called
 	 * a Buffer Descriptor Chain (or BD chain).  A BD chain
 	 * consists of a series of 1 or more chain pages, each of which
 	 * consists of a fixed number of BD entries.
@@ -6797,7 +6800,7 @@ bce_rx_intr(struct bce_softc *sc)
 			DBRUN(sc->vlan_tagged_frames_rcvd++);
 			if (ifp->if_capenable & IFCAP_VLAN_HWTAGGING) {
 				DBRUN(sc->vlan_tagged_frames_stripped++);
-#if __MidnightBSD_version < 4000
+#if __FreeBSD_version < 700000
 				VLAN_INPUT_TAG(ifp, m0,
 				    l2fhdr->l2_fhdr_vlan_tag, continue);
 #else
@@ -8114,7 +8117,7 @@ bce_set_rx_mode(struct bce_softc *sc)
 		DBPRINT(sc, BCE_INFO_MISC, "Enabling selective multicast mode.\n");
 
 		if_maddr_rlock(ifp);
-		TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 			if (ifma->ifma_addr->sa_family != AF_LINK)
 				continue;
 			h = ether_crc32_le(LLADDR((struct sockaddr_dl *)
@@ -8138,7 +8141,7 @@ bce_set_rx_mode(struct bce_softc *sc)
 		REG_WR(sc, BCE_EMAC_RX_MODE, rx_mode);
 	}
 
-	/* Disable and clear the exisitng sort before enabling a new sort. */
+	/* Disable and clear the existing sort before enabling a new sort. */
 	REG_WR(sc, BCE_RPM_SORT_USER0, 0x0);
 	REG_WR(sc, BCE_RPM_SORT_USER0, sort_mode);
 	REG_WR(sc, BCE_RPM_SORT_USER0, sort_mode | BCE_RPM_SORT_USER0_ENA);

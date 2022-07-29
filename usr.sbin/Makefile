@@ -1,5 +1,4 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
-# $FreeBSD: stable/11/usr.sbin/Makefile 357082 2020-01-24 15:29:33Z kevans $
 
 .include <src.opts.mk>
 
@@ -64,8 +63,12 @@ SUBDIR=	adduser \
 	nologin \
 	pciconf \
 	periodic \
+	pnfsdscopymr \
+	pnfsdsfile \
+	pnfsdskill \
 	powerd \
 	procctl \
+	prometheus_sysctl_exporter \
 	pstat \
 	pw \
 	pwd_mkdb \
@@ -99,6 +102,7 @@ SUBDIR=	adduser \
 	tzsetup \
 	uefisign \
 	ugidfw \
+	valectl \
 	vigr \
 	vipw \
 	wake \

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Ganbold Tsagaankhuu <ganbold@freebsd.org>
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
 /* CPU configuration module for Allwinner A20 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/allwinner/a20/a20_cpu_cfg.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,7 +45,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/allwinner/a20/a20_cpu_cfg.c 331722 2018-03
 #include <machine/cpu.h>
 #include <machine/intr.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/openfirm.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
@@ -118,7 +119,7 @@ static driver_t a20_cpu_cfg_driver = {
 static devclass_t a20_cpu_cfg_devclass;
 
 EARLY_DRIVER_MODULE(a20_cpu_cfg, simplebus, a20_cpu_cfg_driver, a20_cpu_cfg_devclass, 0, 0,
-    BUS_PASS_RESOURCE + BUS_PASS_ORDER_MIDDLE);
+    BUS_PASS_CPU + BUS_PASS_ORDER_FIRST);
 
 uint64_t
 a20_read_counter64(void)

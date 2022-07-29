@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/ofed/drivers/infiniband/core/ib_uverbs_marshall.c 338557 2018-09-10 08:19:38Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <rdma/ib_marshall.h>
 

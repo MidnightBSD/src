@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2007-2009 Google Inc.
  * All rights reserved.
  * 
@@ -30,6 +32,11 @@
  * 
  * Copyright (C) 2005 Csaba Henk.
  * All rights reserved.
+ *
+ * Copyright (c) 2019 The FreeBSD Foundation
+ *
+ * Portions of this software were developed by BFF Storage Systems, LLC under
+ * sponsorship from the FreeBSD Foundation.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,14 +59,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/fs/fuse/fuse_io.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _FUSE_IO_H_
 #define _FUSE_IO_H_
 
 int fuse_io_dispatch(struct vnode *vp, struct uio *uio, int ioflag,
-    struct ucred *cred);
+    struct ucred *cred, pid_t pid);
 int fuse_io_strategy(struct vnode *vp, struct buf *bp);
 int fuse_io_flushbuf(struct vnode *vp, int waitfor, struct thread *td);
 int fuse_io_invalbuf(struct vnode *vp, struct thread *td);

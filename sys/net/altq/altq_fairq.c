@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  * 
  * $DragonFly: src/sys/net/altq/altq_fairq.c,v 1.1 2008/04/06 18:58:15 dillon Exp $
- * $FreeBSD: stable/11/sys/net/altq/altq_fairq.c 287009 2015-08-21 22:02:22Z loos $
+ * $FreeBSD$
  */
 /*
  * Matt: I gutted altq_priq.c and used it as a skeleton on which to build
@@ -148,12 +148,11 @@ fairq_pfattach(struct pf_altq *a)
 }
 
 int
-fairq_add_altq(struct pf_altq *a)
+fairq_add_altq(struct ifnet *ifp, struct pf_altq *a)
 {
 	struct fairq_if *pif;
-	struct ifnet *ifp;
 
-	if ((ifp = ifunit(a->ifname)) == NULL)
+	if (ifp == NULL)
 		return (EINVAL);
 	if (!ALTQ_IS_READY(&ifp->if_snd))
 		return (ENODEV);
@@ -229,7 +228,7 @@ fairq_remove_queue(struct pf_altq *a)
 }
 
 int
-fairq_getqstats(struct pf_altq *a, void *ubuf, int *nbytes)
+fairq_getqstats(struct pf_altq *a, void *ubuf, int *nbytes, int version)
 {
 	struct fairq_if *pif;
 	struct fairq_class *cl;

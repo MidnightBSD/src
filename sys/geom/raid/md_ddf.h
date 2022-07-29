@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Alexander Motin <mav@FreeBSD.org>
  * Copyright (c) 2008 Scott Long
  * All rights reserved.
@@ -24,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/geom/raid/md_ddf.h 234848 2012-04-30 17:53:02Z mav $
+ * $FreeBSD$
  */
 
 #ifndef MD_DDF_H

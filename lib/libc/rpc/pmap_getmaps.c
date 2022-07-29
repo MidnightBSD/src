@@ -1,6 +1,8 @@
 /*	$NetBSD: pmap_getmaps.c,v 1.16 2000/07/06 03:10:34 christos Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -33,7 +35,7 @@ static char *sccsid2 = "@(#)pmap_getmaps.c 1.10 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)pmap_getmaps.c	2.2 88/08/01 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/pmap_getmaps.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * pmap_getmap.c

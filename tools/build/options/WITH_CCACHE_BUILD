@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITH_CCACHE_BUILD 319247 2017-05-30 18:04:55Z ngie $
+.\" $FreeBSD$
 Set to use
 .Xr ccache 1
 for the build.

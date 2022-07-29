@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/efirt_machdep.c 337668 2018-08-12 00:33:24Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/efi.h>
@@ -55,6 +55,7 @@ __FBSDID("$FreeBSD: stable/11/sys/amd64/amd64/efirt_machdep.c 337668 2018-08-12 
 #include <machine/vmparam.h>
 #include <vm/vm.h>
 #include <vm/pmap.h>
+#include <vm/vm_extern.h>
 #include <vm/vm_map.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
@@ -74,8 +75,7 @@ efi_destroy_1t1_map(void)
 		VM_OBJECT_RLOCK(obj_1t1_pt);
 		TAILQ_FOREACH(m, &obj_1t1_pt->memq, listq)
 			m->wire_count = 0;
-		atomic_subtract_int(&vm_cnt.v_wire_count,
-		    obj_1t1_pt->resident_page_count);
+		vm_wire_sub(obj_1t1_pt->resident_page_count);
 		VM_OBJECT_RUNLOCK(obj_1t1_pt);
 		vm_object_deallocate(obj_1t1_pt);
 	}
@@ -267,6 +267,7 @@ efi_arch_enter(void)
 
 	curpmap = PCPU_GET(curpmap);
 	PMAP_LOCK_ASSERT(curpmap, MA_OWNED);
+	curthread->td_md.md_efirt_dis_pf = vm_fault_disable_pagefaults();
 
 	/*
 	 * IPI TLB shootdown handler invltlb_pcid_handler() reloads
@@ -301,6 +302,7 @@ efi_arch_leave(void)
 	    curpmap->pm_pcids[PCPU_GET(cpuid)].pm_pcid : 0));
 	if (!pmap_pcid_enabled)
 		invltlb();
+	vm_fault_enable_pagefaults(curthread->td_md.md_efirt_dis_pf);
 }
 
 /* XXX debug stuff */

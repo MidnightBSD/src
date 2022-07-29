@@ -28,11 +28,12 @@
  *
  */
 
+#include "opt_acpi.h"
 #include "opt_kstack_pages.h"
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm64/arm64/mp_machdep.c 322801 2017-08-22 19:48:33Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,6 +43,7 @@ __FBSDID("$FreeBSD: stable/11/sys/arm64/arm64/mp_machdep.c 322801 2017-08-22 19:
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
+#include <sys/pcpu.h>
 #include <sys/proc.h>
 #include <sys/sched.h>
 #include <sys/smp.h>
@@ -58,14 +60,38 @@ __FBSDID("$FreeBSD: stable/11/sys/arm64/arm64/mp_machdep.c 322801 2017-08-22 19:
 #include <machine/vfp.h>
 #endif
 
+#ifdef DEV_ACPI
+#include <contrib/dev/acpica/include/acpi.h>
+#include <dev/acpica/acpivar.h>
+#endif
+
 #ifdef FDT
 #include <dev/ofw/openfirm.h>
+#include <dev/ofw/ofw_bus.h>
+#include <dev/ofw/ofw_bus_subr.h>
 #include <dev/ofw/ofw_cpu.h>
 #endif
 
 #include <dev/psci/psci.h>
 
 #include "pic_if.h"
+
+#define	MP_QUIRK_CPULIST	0x01	/* The list of cpus may be wrong, */
+					/* don't panic if one fails to start */
+static uint32_t mp_quirks;
+
+#ifdef FDT
+static struct {
+	const char *compat;
+	uint32_t quirks;
+} fdt_quirks[] = {
+	{ "arm,foundation-aarch64",	MP_QUIRK_CPULIST },
+	{ "arm,fvp-base",		MP_QUIRK_CPULIST },
+	/* This is incorrect in some DTS files */
+	{ "arm,vfp-base",		MP_QUIRK_CPULIST },
+	{ NULL, 0 },
+};
+#endif
 
 typedef void intr_ipi_send_t(void *, cpuset_t, u_int);
 typedef void intr_ipi_handler_t(void *);
@@ -86,17 +112,6 @@ static struct intr_ipi *intr_ipi_lookup(u_int);
 static void intr_pic_ipi_setup(u_int, const char *, intr_ipi_handler_t *,
     void *);
 
-boolean_t ofw_cpu_reg(phandle_t node, u_int, cell_t *);
-
-extern struct pcpu __pcpu[];
-
-static enum {
-	CPUS_UNKNOWN,
-#ifdef FDT
-	CPUS_FDT,
-#endif
-} cpu_enum_method;
-
 static device_identify_t arm64_cpu_identify;
 static device_probe_t arm64_cpu_probe;
 static device_attach_t arm64_cpu_attach;
@@ -107,9 +122,6 @@ static void ipi_preempt(void *);
 static void ipi_rendezvous(void *);
 static void ipi_stop(void *);
 
-static int ipi_handler(void *arg);
-
-struct mtx ap_boot_mtx;
 struct pcb stoppcbs[MAXCPU];
 
 static device_t cpu_list[MAXCPU];
@@ -124,10 +136,18 @@ static int cpu0 = -1;
 void mpentry(unsigned long cpuid);
 void init_secondary(uint64_t);
 
-uint8_t secondary_stacks[MAXCPU - 1][PAGE_SIZE * KSTACK_PAGES] __aligned(16);
+/* Synchronize AP startup. */
+static struct mtx ap_boot_mtx;
+
+/* Stacks for AP initialization, discarded once idle threads are started. */
+void *bootstack;
+static void *bootstacks[MAXCPU];
+
+/* Count of started APs, used to synchronize access to bootstack. */
+static volatile int aps_started;
 
 /* Set to 1 once we're ready to let the APs out of the pen. */
-volatile int aps_ready = 0;
+static volatile int aps_ready;
 
 /* Temporary variables for init_secondary()  */
 void *dpcpu[MAXCPU - 1];
@@ -207,7 +227,11 @@ arm64_cpu_attach(device_t dev)
 static void
 release_aps(void *dummy __unused)
 {
-	int cpu, i;
+	int i, started;
+
+	/* Only release CPUs if they exist */
+	if (mp_ncpus == 1)
+		return;
 
 	intr_pic_ipi_setup(IPI_AST, "ast", ipi_ast, NULL);
 	intr_pic_ipi_setup(IPI_PREEMPT, "preempt", ipi_preempt, NULL);
@@ -218,18 +242,26 @@ release_aps(void *dummy __unused)
 
 	atomic_store_rel_int(&aps_ready, 1);
 	/* Wake up the other CPUs */
-	__asm __volatile("sev");
+	__asm __volatile(
+	    "dsb ishst	\n"
+	    "sev	\n"
+	    ::: "memory");
 
-	printf("Release APs\n");
+	printf("Release APs...");
 
+	started = 0;
 	for (i = 0; i < 2000; i++) {
 		if (smp_started) {
-			for (cpu = 0; cpu <= mp_maxid; cpu++) {
-				if (CPU_ABSENT(cpu))
-					continue;
-				print_cpu_features(cpu);
-			}
+			printf("done\n");
 			return;
+		}
+		/*
+		 * Don't time out while we are making progress. Some large
+		 * systems can take a while to start all CPUs.
+		 */
+		if (smp_cpus > started) {
+			i = 0;
+			started = smp_cpus;
 		}
 		DELAY(1000);
 	}
@@ -252,14 +284,14 @@ init_secondary(uint64_t cpu)
 	    "mov x18, %0 \n"
 	    "msr tpidr_el1, %0" :: "r"(pcpup));
 
-	/* Spin until the BSP releases the APs */
-	while (!aps_ready)
+	/* Signal the BSP and spin until it has released all APs. */
+	atomic_add_int(&aps_started, 1);
+	while (!atomic_load_int(&aps_ready))
 		__asm __volatile("wfe");
 
 	/* Initialize curthread */
 	KASSERT(PCPU_GET(idlethread) != NULL, ("no idle thread"));
 	pcpup->pc_curthread = pcpup->pc_idlethread;
-	pcpup->pc_curpcb = pcpup->pc_idlethread->td_pcb;
 
 	/*
 	 * Identify current CPU. This is necessary to setup
@@ -267,6 +299,7 @@ init_secondary(uint64_t cpu)
 	 * runtime chip identification.
 	 */
 	identify_cpu();
+	install_cpu_errata();
 
 	intr_pic_init_secondary();
 
@@ -280,19 +313,18 @@ init_secondary(uint64_t cpu)
 	dbg_init();
 	pan_enable();
 
-	/* Enable interrupts */
-	intr_enable();
-
 	mtx_lock_spin(&ap_boot_mtx);
-
 	atomic_add_rel_32(&smp_cpus, 1);
-
 	if (smp_cpus == mp_ncpus) {
 		/* enable IPI's, tlb shootdown, freezes etc */
 		atomic_store_rel_int(&smp_started, 1);
 	}
-
 	mtx_unlock_spin(&ap_boot_mtx);
+
+	/*
+	 * Assert that smp_after_idle_runnable condition is reasonable.
+	 */
+	MPASS(PCPU_GET(curpcb) == NULL);
 
 	/* Enter the scheduler */
 	sched_throw(NULL);
@@ -300,6 +332,24 @@ init_secondary(uint64_t cpu)
 	panic("scheduler returned us to init_secondary");
 	/* NOTREACHED */
 }
+
+static void
+smp_after_idle_runnable(void *arg __unused)
+{
+	struct pcpu *pc;
+	int cpu;
+
+	for (cpu = 1; cpu < mp_ncpus; cpu++) {
+		if (bootstacks[cpu] != NULL) {
+			pc = pcpu_find(cpu);
+			while ((void *)atomic_load_ptr(&pc->pc_curpcb) == NULL)
+				cpu_spinwait();
+			kmem_free((vm_offset_t)bootstacks[cpu], PAGE_SIZE);
+		}
+	}
+}
+SYSINIT(smp_after_idle_runnable, SI_SUB_SMP, SI_ORDER_ANY,
+    smp_after_idle_runnable, NULL);
 
 /*
  *  Send IPI thru interrupt controller.
@@ -425,29 +475,27 @@ cpu_mp_probe(void)
 	return (1);
 }
 
-#ifdef FDT
-static boolean_t
-cpu_init_fdt(u_int id, phandle_t node, u_int addr_size, pcell_t *reg)
+static bool
+start_cpu(u_int id, uint64_t target_cpu)
 {
-	uint64_t target_cpu;
 	struct pcpu *pcpup;
 	vm_paddr_t pa;
 	u_int cpuid;
-	int err;
+	int err, naps;
 
 	/* Check we are able to start this cpu */
 	if (id > mp_maxid)
-		return (0);
+		return (false);
 
 	KASSERT(id < MAXCPU, ("Too many CPUs"));
 
 	/* We are already running on cpu 0 */
 	if (id == cpu0)
-		return (1);
+		return (true);
 
 	/*
 	 * Rotate the CPU IDs to put the boot CPU as CPU 0. We keep the other
-	 * CPUs ordered as the are likely grouped into clusters so it can be
+	 * CPUs ordered as they are likely grouped into clusters so it can be
 	 * useful to keep that property, e.g. for the GICv3 driver to send
 	 * an IPI to all CPUs in the cluster.
 	 */
@@ -459,9 +507,105 @@ cpu_init_fdt(u_int id, phandle_t node, u_int addr_size, pcell_t *reg)
 	pcpup = &__pcpu[cpuid];
 	pcpu_init(pcpup, cpuid, sizeof(struct pcpu));
 
-	dpcpu[cpuid - 1] = (void *)kmem_malloc(kernel_arena, DPCPU_SIZE,
-	    M_WAITOK | M_ZERO);
+	dpcpu[cpuid - 1] = (void *)kmem_malloc(DPCPU_SIZE, M_WAITOK | M_ZERO);
 	dpcpu_init(dpcpu[cpuid - 1], cpuid);
+
+	bootstacks[cpuid] = (void *)kmem_malloc(PAGE_SIZE, M_WAITOK | M_ZERO);
+
+	naps = atomic_load_int(&aps_started);
+	bootstack = (char *)bootstacks[cpuid] + PAGE_SIZE;
+
+	printf("Starting CPU %u (%lx)\n", cpuid, target_cpu);
+	pa = pmap_extract(kernel_pmap, (vm_offset_t)mpentry);
+	err = psci_cpu_on(target_cpu, pa, cpuid);
+	if (err != PSCI_RETVAL_SUCCESS) {
+		/*
+		 * Panic here if INVARIANTS are enabled and PSCI failed to
+		 * start the requested CPU.  psci_cpu_on() returns PSCI_MISSING
+		 * to indicate we are unable to use it to start the given CPU.
+		 */
+		KASSERT(err == PSCI_MISSING ||
+		    (mp_quirks & MP_QUIRK_CPULIST) == MP_QUIRK_CPULIST,
+		    ("Failed to start CPU %u (%lx), error %d\n",
+		    id, target_cpu, err));
+
+		pcpu_destroy(pcpup);
+		kmem_free((vm_offset_t)dpcpu[cpuid - 1], DPCPU_SIZE);
+		dpcpu[cpuid - 1] = NULL;
+		kmem_free((vm_offset_t)bootstacks[cpuid], PAGE_SIZE);
+		bootstacks[cpuid] = NULL;
+		mp_ncpus--;
+
+		/* Notify the user that the CPU failed to start */
+		printf("Failed to start CPU %u (%lx), error %d\n",
+		    id, target_cpu, err);
+	} else {
+		/* Wait for the AP to switch to its boot stack. */
+		while (atomic_load_int(&aps_started) < naps + 1)
+			cpu_spinwait();
+		CPU_SET(cpuid, &all_cpus);
+	}
+
+	return (true);
+}
+
+#ifdef DEV_ACPI
+static void
+madt_handler(ACPI_SUBTABLE_HEADER *entry, void *arg)
+{
+	ACPI_MADT_GENERIC_INTERRUPT *intr;
+	u_int *cpuid;
+	u_int id;
+
+	switch(entry->Type) {
+	case ACPI_MADT_TYPE_GENERIC_INTERRUPT:
+		intr = (ACPI_MADT_GENERIC_INTERRUPT *)entry;
+		cpuid = arg;
+		id = *cpuid;
+		start_cpu(id, intr->ArmMpidr);
+		__pcpu[id].pc_acpi_id = intr->Uid;
+		(*cpuid)++;
+		break;
+	default:
+		break;
+	}
+}
+
+static void
+cpu_init_acpi(void)
+{
+	ACPI_TABLE_MADT *madt;
+	vm_paddr_t physaddr;
+	u_int cpuid;
+
+	physaddr = acpi_find_table(ACPI_SIG_MADT);
+	if (physaddr == 0)
+		return;
+
+	madt = acpi_map_table(physaddr, ACPI_SIG_MADT);
+	if (madt == NULL) {
+		printf("Unable to map the MADT, not starting APs\n");
+		return;
+	}
+
+	cpuid = 0;
+	acpi_walk_subtables(madt + 1, (char *)madt + madt->Header.Length,
+	    madt_handler, &cpuid);
+
+	acpi_unmap_table(madt);
+
+#if MAXMEMDOM > 1
+	acpi_pxm_set_cpu_locality();
+#endif
+}
+#endif
+
+#ifdef FDT
+static boolean_t
+cpu_init_fdt(u_int id, phandle_t node, u_int addr_size, pcell_t *reg)
+{
+	uint64_t target_cpu;
+	int domain;
 
 	target_cpu = reg[0];
 	if (addr_size == 2) {
@@ -469,25 +613,18 @@ cpu_init_fdt(u_int id, phandle_t node, u_int addr_size, pcell_t *reg)
 		target_cpu |= reg[1];
 	}
 
-	printf("Starting CPU %u (%lx)\n", cpuid, target_cpu);
-	pa = pmap_extract(kernel_pmap, (vm_offset_t)mpentry);
+	if (!start_cpu(id, target_cpu))
+		return (FALSE);
 
-	err = psci_cpu_on(target_cpu, pa, cpuid);
-	if (err != PSCI_RETVAL_SUCCESS) {
-		/* Panic here if INVARIANTS are enabled */
-		KASSERT(0, ("Failed to start CPU %u (%lx)\n", id,
-		    target_cpu));
+	/* Try to read the numa node of this cpu */
+	if (vm_ndomains == 1 ||
+	    OF_getencprop(node, "numa-node-id", &domain, sizeof(domain)) <= 0)
+		domain = 0;
+	__pcpu[id].pc_domain = domain;
+	if (domain < MAXMEMDOM)
+		CPU_SET(id, &cpuset_domain[domain]);
 
-		pcpu_destroy(pcpup);
-		kmem_free(kernel_arena, (vm_offset_t)dpcpu[cpuid - 1],
-		    DPCPU_SIZE);
-		dpcpu[cpuid - 1] = NULL;
-		/* Notify the user that the CPU failed to start */
-		printf("Failed to start CPU %u (%lx)\n", id, target_cpu);
-	} else
-		CPU_SET(cpuid, &all_cpus);
-
-	return (1);
+	return (TRUE);
 }
 #endif
 
@@ -495,19 +632,36 @@ cpu_init_fdt(u_int id, phandle_t node, u_int addr_size, pcell_t *reg)
 void
 cpu_mp_start(void)
 {
+#ifdef FDT
+	phandle_t node;
+	int i;
+#endif
 
 	mtx_init(&ap_boot_mtx, "ap boot", NULL, MTX_SPIN);
 
 	CPU_SET(0, &all_cpus);
 
-	switch(cpu_enum_method) {
+	switch(arm64_bus_method) {
+#ifdef DEV_ACPI
+	case ARM64_BUS_ACPI:
+		KASSERT(cpu0 >= 0, ("Current CPU was not found"));
+		cpu_init_acpi();
+		break;
+#endif
 #ifdef FDT
-	case CPUS_FDT:
+	case ARM64_BUS_FDT:
+		node = OF_peer(0);
+		for (i = 0; fdt_quirks[i].compat != NULL; i++) {
+			if (ofw_bus_node_is_compatible(node,
+			    fdt_quirks[i].compat) != 0) {
+				mp_quirks = fdt_quirks[i].quirks;
+			}
+		}
 		KASSERT(cpu0 >= 0, ("Current CPU was not found"));
 		ofw_cpu_early_foreach(cpu_init_fdt, true);
 		break;
 #endif
-	case CPUS_UNKNOWN:
+	default:
 		break;
 	}
 }
@@ -518,6 +672,57 @@ cpu_mp_announce(void)
 {
 }
 
+#ifdef DEV_ACPI
+static void
+cpu_count_acpi_handler(ACPI_SUBTABLE_HEADER *entry, void *arg)
+{
+	ACPI_MADT_GENERIC_INTERRUPT *intr;
+	u_int *cores = arg;
+	uint64_t mpidr_reg;
+
+	switch(entry->Type) {
+	case ACPI_MADT_TYPE_GENERIC_INTERRUPT:
+		intr = (ACPI_MADT_GENERIC_INTERRUPT *)entry;
+		if (cpu0 < 0) {
+			mpidr_reg = READ_SPECIALREG(mpidr_el1);
+			if ((mpidr_reg & 0xff00fffffful) == intr->ArmMpidr)
+				cpu0 = *cores;
+		}
+		(*cores)++;
+		break;
+	default:
+		break;
+	}
+}
+
+static u_int
+cpu_count_acpi(void)
+{
+	ACPI_TABLE_MADT *madt;
+	vm_paddr_t physaddr;
+	u_int cores;
+
+	physaddr = acpi_find_table(ACPI_SIG_MADT);
+	if (physaddr == 0)
+		return (0);
+
+	madt = acpi_map_table(physaddr, ACPI_SIG_MADT);
+	if (madt == NULL) {
+		printf("Unable to map the MADT, not starting APs\n");
+		return (0);
+	}
+
+	cores = 0;
+	acpi_walk_subtables(madt + 1, (char *)madt + madt->Header.Length,
+	    cpu_count_acpi_handler, &cores);
+
+	acpi_unmap_table(madt);
+
+	return (cores);
+}
+#endif
+
+#ifdef FDT
 static boolean_t
 cpu_find_cpu0_fdt(u_int id, phandle_t node, u_int addr_size, pcell_t *reg)
 {
@@ -538,24 +743,47 @@ cpu_find_cpu0_fdt(u_int id, phandle_t node, u_int addr_size, pcell_t *reg)
 
 	return (TRUE);
 }
+#endif
 
 void
 cpu_mp_setmaxid(void)
 {
-#ifdef FDT
+#if defined(DEV_ACPI) || defined(FDT)
 	int cores;
-
-	cores = ofw_cpu_early_foreach(cpu_find_cpu0_fdt, false);
-	if (cores > 0) {
-		cores = MIN(cores, MAXCPU);
-		if (bootverbose)
-			printf("Found %d CPUs in the device tree\n", cores);
-		mp_ncpus = cores;
-		mp_maxid = cores - 1;
-		cpu_enum_method = CPUS_FDT;
-		return;
-	}
 #endif
+
+	switch(arm64_bus_method) {
+#ifdef DEV_ACPI
+	case ARM64_BUS_ACPI:
+		cores = cpu_count_acpi();
+		if (cores > 0) {
+			cores = MIN(cores, MAXCPU);
+			if (bootverbose)
+				printf("Found %d CPUs in the ACPI tables\n",
+				    cores);
+			mp_ncpus = cores;
+			mp_maxid = cores - 1;
+			return;
+		}
+		break;
+#endif
+#ifdef FDT
+	case ARM64_BUS_FDT:
+		cores = ofw_cpu_early_foreach(cpu_find_cpu0_fdt, false);
+		if (cores > 0) {
+			cores = MIN(cores, MAXCPU);
+			if (bootverbose)
+				printf("Found %d CPUs in the device tree\n",
+				    cores);
+			mp_ncpus = cores;
+			mp_maxid = cores - 1;
+			return;
+		}
+		break;
+#endif
+	default:
+		break;
+	}
 
 	if (bootverbose)
 		printf("No CPU data, limiting to 1 core\n");

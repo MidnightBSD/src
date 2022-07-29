@@ -22,7 +22,7 @@
  * Portions Copyright 2008 John Birrell jb@freebsd.org
  * Portions Copyright 2018 Devin Teske dteske@freebsd.org
  *
- * $FreeBSD: stable/11/cddl/lib/libdtrace/signal.d 333617 2018-05-15 00:00:44Z dteske $
+ * $FreeBSD$
  */
 
 inline int SIGHUP = 1;

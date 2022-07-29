@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*
  * Memory range attribute operations, performed on /dev/mem
  *
- * $FreeBSD: stable/11/sys/sys/memrange.h 298981 2016-05-03 15:14:17Z pfg $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_MEMRANGE_H_
@@ -45,6 +44,20 @@ struct mem_range_op
 
 #define MEMRANGE_GET	_IOWR('m', 50, struct mem_range_op)
 #define MEMRANGE_SET	_IOW('m', 51, struct mem_range_op)
+
+#define	ME_STATE_INVALID	0
+#define	ME_STATE_VALID		1
+#define	ME_STATE_MAPPED		2
+
+struct mem_extract {
+	uint64_t	me_vaddr;
+	uint64_t	me_paddr;
+	int		me_domain;
+	int		me_state;
+	uint64_t	pad1[5];
+};
+
+#define	MEM_EXTRACT_PADDR	_IOWR('m', 52, struct mem_extract)
 
 #ifdef _KERNEL
 

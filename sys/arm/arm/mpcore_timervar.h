@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/arm/mpcore_timervar.h 264051 2014-04-02 18:49:50Z ian $
+ * $FreeBSD$
  */
 
 #ifndef	_ARM_MPCORE_TIMERVAR_H_

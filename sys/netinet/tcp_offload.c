@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Chelsio Communications, Inc.
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/tcp_offload.c 294869 2016-01-27 00:45:46Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 
@@ -163,6 +165,17 @@ tcp_offload_ctloutput(struct tcpcb *tp, int sopt_dir, int sopt_name)
 	INP_WLOCK_ASSERT(tp->t_inpcb);
 
 	tod->tod_ctloutput(tod, tp, sopt_dir, sopt_name);
+}
+
+void
+tcp_offload_tcp_info(struct tcpcb *tp, struct tcp_info *ti)
+{
+	struct toedev *tod = tp->tod;
+
+	KASSERT(tod != NULL, ("%s: tp->tod is NULL, tp %p", __func__, tp));
+	INP_WLOCK_ASSERT(tp->t_inpcb);
+
+	tod->tod_tcp_info(tod, tp, ti);
 }
 
 void

@@ -34,7 +34,7 @@
  */
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: stable/11/usr.sbin/lpr/common_source/ctlinfo.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * ctlinfo - This collection of routines will know everything there is to
@@ -44,7 +44,7 @@ __FBSDID("$FreeBSD: stable/11/usr.sbin/lpr/common_source/ctlinfo.c 330449 2018-0
  */
 
 /*
- * Some define's useful for debuging.
+ * Some define's useful for debugging.
  * TRIGGERTEST_FNAME and DEBUGREADCF_FNAME, allow us to do testing on
  * a per-spool-directory basis.
  */
@@ -292,8 +292,10 @@ ctl_readcf(const char *ptrname, const char *cfname)
 	msize = sroom2 + CTI_LINEMAX;
 	msize = roundup(msize, 8);
 	cstart = malloc(msize);
-	if (cstart == NULL)
+	if (cstart == NULL) {
+		fclose(cfile);
 		return NULL;
+	}
 	memset(cstart, 0, msize);
 	cpriv = (struct cjprivate *)cstart;
 	cpriv->pub.cji_priv = cpriv;

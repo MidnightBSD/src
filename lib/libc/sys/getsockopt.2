@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)getsockopt.2	8.4 (Berkeley) 5/2/95
-.\" $FreeBSD: stable/11/lib/libc/sys/getsockopt.2 359196 2020-03-21 18:24:33Z asomers $
+.\" $FreeBSD$
 .\"
-.Dd September 11, 2019
+.Dd February 8, 2021
 .Dt GETSOCKOPT 2
 .Os
 .Sh NAME
@@ -152,6 +152,7 @@ and set with
 .It Dv SO_DEBUG Ta "enables recording of debugging information"
 .It Dv SO_REUSEADDR Ta "enables local address reuse"
 .It Dv SO_REUSEPORT Ta "enables duplicate address and port bindings"
+.It Dv SO_REUSEPORT_LB Ta "enables duplicate address and port bindings with load balancing"
 .It Dv SO_KEEPALIVE Ta "enables keep connections alive"
 .It Dv SO_DONTROUTE Ta "enables routing bypass for outgoing messages"
 .It Dv SO_LINGER  Ta "linger on close if data present"
@@ -171,10 +172,12 @@ for the socket
 .It Dv SO_TIMESTAMP Ta "enables reception of a timestamp with datagrams"
 .It Dv SO_BINTIME Ta "enables reception of a timestamp with datagrams"
 .It Dv SO_ACCEPTCONN Ta "get listening status of the socket (get only)"
+.It Dv SO_DOMAIN Ta "get the domain of the socket (get only)"
 .It Dv SO_TYPE Ta "get the type of the socket (get only)"
 .It Dv SO_PROTOCOL Ta "get the protocol number for the socket (get only)"
 .It Dv SO_PROTOTYPE Ta "SunOS alias for the Linux SO_PROTOCOL (get only)"
 .It Dv SO_ERROR Ta "get and clear error on the socket (get only)"
+.It Dv SO_RERROR Ta "enables receive error reporting"
 .It Dv SO_SETFIB Ta "set the associated FIB (routing table) for the socket (set only)"
 .El
 .Pp
@@ -188,6 +191,9 @@ The following options are recognized in
 .It Dv SO_LISTENINCQLEN Ta "get incomplete queue length of the socket (get only)"
 .It Dv SO_USER_COOKIE Ta "set the 'so_user_cookie' value for the socket (uint32_t, set only)"
 .It Dv SO_TS_CLOCK Ta "set specific format of timestamp returned by SO_TIMESTAMP"
+.It Dv SO_MAX_PACING_RATE Ta "set the maximum transmit rate in bytes per second for the socket"
+.It Dv SO_NO_OFFLOAD Ta "disables protocol offloads"
+.It Dv SO_NO_DDP Ta "disables direct data placement offload"
 .El
 .Pp
 .Dv SO_DEBUG
@@ -206,6 +212,15 @@ if they all set
 before binding the port.
 This option permits multiple instances of a program to each
 receive UDP/IP multicast or broadcast datagrams destined for the bound port.
+.Pp
+.Dv SO_REUSEPORT_LB
+allows completely duplicate bindings by multiple processes
+if they all set
+.Dv SO_REUSEPORT_LB
+before binding the port.
+Incoming TCP and UDP connections are distributed among the sharing
+processes based on a hash function of local port number, foreign IP
+address and port number. A maximum of 256 processes can share one socket.
 .Pp
 .Dv SO_KEEPALIVE
 enables the
@@ -456,10 +471,10 @@ Additional timestamp types are available by following
 .Dv SO_TIMESTAMP
 with
 .Dv SO_TS_CLOCK ,
-which requests specific timestamp format to be returned instead of
+which requests a specific timestamp format to be returned instead of
 .Dv SCM_TIMESTAMP when
 .Dv SO_TIMESTAMP is enabled.
-The following
+These
 .Dv SO_TS_CLOCK
 values are recognized in
 .Fx :
@@ -499,8 +514,14 @@ returns any pending error on the socket and clears
 the error status.
 It may be used to check for asynchronous errors on connected
 datagram sockets or for other asynchronous errors.
+.Dv SO_RERROR
+indicates that receive buffer overflows should be handled as errors.
+Historically receive buffer overflows have been ignored and programs
+could not tell if they missed messages or messages had been truncated
+because of overflows.
+Since programs historically do not expect to get receive overflow errors,
+this behavior is not the default.
 .Pp
-Finally,
 .Dv SO_LABEL
 returns the MAC label of the socket.
 .Dv SO_PEERLABEL
@@ -509,6 +530,7 @@ Note that your kernel must be compiled with MAC support.
 See
 .Xr mac 3
 for more information.
+.Pp
 .Dv SO_LISTENQLIMIT
 returns the maximal number of queued connections, as set by
 .Xr listen 2 .
@@ -516,10 +538,29 @@ returns the maximal number of queued connections, as set by
 returns the number of unaccepted complete connections.
 .Dv SO_LISTENINCQLEN
 returns the number of unaccepted incomplete connections.
+.Pp
+.Dv SO_MAX_PACING_RATE
+instruct the socket and underlying network adapter layers to limit the
+transfer rate to the given unsigned 32-bit value in bytes per second.
+.Pp
+.Dv SO_NO_OFFLOAD
+disables support for protocol offloads.
+At present, this prevents TCP sockets from using TCP offload engines.
+.Dv SO_NO_DDP
+disables support for a specific TCP offload known as direct data
+placement (DDP).
+DDP is an offload supported by Chelsio network adapters that permits
+reassembled TCP data streams to be received via zero-copy in
+user-supplied buffers using
+.Xr aio_read 2 .
 .Sh RETURN VALUES
 .Rv -std
 .Sh ERRORS
-The call succeeds unless:
+The
+.Fn getsockopt
+and
+.Fn setsockopt
+system calls succeed unless:
 .Bl -tag -width Er
 .It Bq Er EBADF
 The argument
@@ -544,6 +585,17 @@ is not in a valid part of the process address space.
 Installing an
 .Xr accept_filter 9
 on a non-listening socket was attempted.
+.It Bq Er ENOMEM
+A memory allocation failed that was required to service the request.
+.El
+.Pp
+The
+.Fn setsockopt
+system call may also return the following error:
+.Bl -tag -width Er
+.It Bq Er ENOBUFS
+Insufficient resources were available in the system
+to perform the operation.
 .El
 .Sh SEE ALSO
 .Xr ioctl 2 ,

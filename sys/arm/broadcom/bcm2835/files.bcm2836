@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/arm/broadcom/bcm2835/files.bcm2836 291135 2015-11-21 16:23:56Z andrew $
+# $FreeBSD$
 
 arm/broadcom/bcm2835/bcm2836.c			standard
 arm/broadcom/bcm2835/bcm2836_mp.c		optional smp

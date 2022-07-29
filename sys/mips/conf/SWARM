@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/sys/mips/conf/SWARM 233644 2012-03-29 02:54:35Z jmallett $
+# $FreeBSD$
 #
 
 include		"std.SWARM"

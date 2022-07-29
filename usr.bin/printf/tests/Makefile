@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/printf/tests/Makefile 338181 2018-08-22 04:27:33Z pfg $
+# $FreeBSD$
 
 PACKAGE=	tests
 

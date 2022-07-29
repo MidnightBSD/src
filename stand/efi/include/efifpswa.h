@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/include/efifpswa.h 293724 2016-01-12 02:17:39Z smh $ */
+/* $FreeBSD$ */
 #ifndef _EFI_FPSWA_H
 #define _EFI_FPSWA_H
 

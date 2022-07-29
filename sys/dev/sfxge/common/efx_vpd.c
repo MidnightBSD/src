@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2016 Solarflare Communications Inc.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/sfxge/common/efx_vpd.c 342428 2018-12-25 07:03:01Z arybchik $");
+__FBSDID("$FreeBSD$");
 
 #include "efx.h"
 #include "efx_impl.h"
@@ -893,7 +895,7 @@ efx_vpd_hunk_set(
 
 				/*
 				 * The keyword doesn't already exist. If the
-				 * user deleting a non-existant keyword then
+				 * user deleting a non-existent keyword then
 				 * this is a no-op.
 				 */
 				if (evvp->evv_length == 0)

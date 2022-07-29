@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_CUSE 270171 2014-08-19 15:40:26Z hselasky $
+.\" $FreeBSD$
 Set to not build CUSE-related programs and libraries.

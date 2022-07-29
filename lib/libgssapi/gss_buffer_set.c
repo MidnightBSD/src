@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2004, PADL Software Pty Ltd.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: stable/11/lib/libgssapi/gss_buffer_set.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 #include <gssapi/gssapi.h>
 #include <errno.h>
@@ -38,7 +40,7 @@
 
 /* RCSID("$Id: gss_buffer_set.c 18885 2006-10-24 21:53:02Z lha $"); */
 
-OM_uint32 
+OM_uint32
 gss_create_empty_buffer_set(OM_uint32 * minor_status,
     gss_buffer_set_t *buffer_set)
 {

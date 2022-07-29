@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/lib/libiconv_modules/MSKanji/citrus_mskanji.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*	$NetBSD: citrus_mskanji.c,v 1.13 2008/06/14 16:01:08 tnozaki Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c)2002 Citrus Project,
  * All rights reserved.
  *

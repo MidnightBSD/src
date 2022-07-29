@@ -1,5 +1,7 @@
 /*-
- * $FreeBSD: stable/11/sys/dev/bktr/bktr_reg.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
+ *
+ * SPDX-License-Identifier: BSD-4-Clause
  *
  * Copyright (c) 1999 Roger Hardiman
  * Copyright (c) 1998 Amancio Hasty
@@ -35,7 +37,7 @@
  */
 
 #ifdef __NetBSD__
-#include <machine/bus.h>		/* struct device */
+#include <machine/bus.h>		/* device_t */
 #include <sys/device.h>
 #include <sys/select.h>			/* struct selinfo */
 # ifdef DEBUG
@@ -50,7 +52,7 @@
  * Support the older kernel options on FreeBSD and OpenBSD.
  *
  */
-#if defined(__MidnightBSD__) || defined(__OpenBSD__)
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
 #if defined(BROOKTREE_ALLOC_PAGES)
 #define BKTR_ALLOC_PAGES BROOKTREE_ALLOC_PAGES
 #endif
@@ -86,15 +88,15 @@
  * Definitions for the Brooktree 848/878 video capture to pci interface.
  */
 #ifndef __NetBSD__
-#define PCI_VENDOR_SHIFT                        0
-#define PCI_VENDOR_MASK                         0xffff
-#define PCI_VENDOR(id) \
-            (((id) >> PCI_VENDOR_SHIFT) & PCI_VENDOR_MASK)
+#define BKTR_PCI_VENDOR_SHIFT                        0
+#define BKTR_PCI_VENDOR_MASK                         0xffff
+#define BKTR_PCI_VENDOR(id) \
+            (((id) >> BKTR_PCI_VENDOR_SHIFT) & BKTR_PCI_VENDOR_MASK)
 
-#define PCI_PRODUCT_SHIFT                       16
-#define PCI_PRODUCT_MASK                        0xffff
-#define PCI_PRODUCT(id) \
-            (((id) >> PCI_PRODUCT_SHIFT) & PCI_PRODUCT_MASK)
+#define BKTR_PCI_PRODUCT_SHIFT                       16
+#define BKTR_PCI_PRODUCT_MASK                        0xffff
+#define BKTR_PCI_PRODUCT(id) \
+            (((id) >> BKTR_PCI_PRODUCT_SHIFT) & BKTR_PCI_PRODUCT_MASK)
 
 /* PCI vendor ID */
 #define PCI_VENDOR_BROOKTREE    0x109e                /* Brooktree */
@@ -461,7 +463,7 @@ struct bktr_i2c_softc {
  * memory mapped structure method only works on 32 bit processors
  * with the right type of endianness.
  */
-#if defined(__NetBSD__) || defined(__MidnightBSD__)
+#if defined(__NetBSD__) || defined(__FreeBSD__)
 #define INB(bktr,offset)	bus_space_read_1((bktr)->memt,(bktr)->memh,(offset))
 #define INW(bktr,offset)	bus_space_read_2((bktr)->memt,(bktr)->memh,(offset))
 #define INL(bktr,offset)	bus_space_read_4((bktr)->memt,(bktr)->memh,(offset))
@@ -524,7 +526,7 @@ struct bktr_softc {
     vm_offset_t		phys_base;	/* Bt848 register physical address */
 #endif
 
-#if defined (__MidnightBSD__)
+#if defined (__FreeBSD__)
     int             mem_rid;	/* 4.x resource id */
     struct resource *res_mem;	/* 4.x resource descriptor for registers */
     int             irq_rid;	/* 4.x resource id */
@@ -717,7 +719,7 @@ struct bt848_card_sig {
 /* ioctl_cmd_t int on old versions, u_long on new versions */
 /***********************************************************/
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 typedef u_long ioctl_cmd_t;
 #endif
 

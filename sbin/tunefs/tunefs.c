@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -39,7 +41,7 @@ static char sccsid[] = "@(#)tunefs.c	8.2 (Berkeley) 4/19/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/tunefs/tunefs.c 344864 2019-03-07 00:04:13Z mckusick $");
+__FBSDID("$FreeBSD$");
 
 /*
  * tunefs: change layout parameters to an existing file system.
@@ -59,6 +61,7 @@ __FBSDID("$FreeBSD: stable/11/sbin/tunefs/tunefs.c 344864 2019-03-07 00:04:13Z m
 #include <fcntl.h>
 #include <fstab.h>
 #include <libufs.h>
+#include <mntopts.h>
 #include <paths.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -93,9 +96,11 @@ main(int argc, char *argv[])
 	int kvalue, Lflag, lflag, mflag, mvalue, Nflag, nflag, oflag, ovalue;
 	int pflag, sflag, svalue, Svalue, tflag;
 	int ch, found_arg, i;
+	int iovlen = 0;
 	const char *chg[2];
-	struct ufs_args args;
 	struct statfs stfs;
+	struct iovec *iov = NULL;
+	char errmsg[255] = {0};
 
 	if (argc < 3)
 		usage();
@@ -110,12 +115,12 @@ main(int argc, char *argv[])
 		switch (ch) {
 
 		case 'A':
-			found_arg = 1;
+			found_arg++;
 			Aflag++;
 			break;
 
 		case 'a':
-			found_arg = 1;
+			found_arg++;
 			name = "POSIX.1e ACLs";
 			avalue = optarg;
 			if (strcmp(avalue, "enable") &&
@@ -127,7 +132,7 @@ main(int argc, char *argv[])
 			break;
 
 		case 'e':
-			found_arg = 1;
+			found_arg++;
 			name = "maximum blocks per file in a cylinder group";
 			evalue = atoi(optarg);
 			if (evalue < 1)
@@ -137,7 +142,7 @@ main(int argc, char *argv[])
 			break;
 
 		case 'f':
-			found_arg = 1;
+			found_arg++;
 			name = "average file size";
 			fvalue = atoi(optarg);
 			if (fvalue < 1)
@@ -147,7 +152,7 @@ main(int argc, char *argv[])
 			break;
 
 		case 'j':
-			found_arg = 1;
+			found_arg++;
 			name = "softdep journaled file system";
 			jvalue = optarg;
 			if (strcmp(jvalue, "enable") &&
@@ -159,7 +164,7 @@ main(int argc, char *argv[])
 			break;
 
 		case 'J':
-			found_arg = 1;
+			found_arg++;
 			name = "gjournaled file system";
 			Jvalue = optarg;
 			if (strcmp(Jvalue, "enable") &&
@@ -171,7 +176,7 @@ main(int argc, char *argv[])
 			break;
 
 		case 'k':
-			found_arg = 1;
+			found_arg++;
 			name = "space to hold for metadata blocks";
 			kvalue = atoi(optarg);
 			if (kvalue < 0)
@@ -180,7 +185,7 @@ main(int argc, char *argv[])
 			break;
 
 		case 'L':
-			found_arg = 1;
+			found_arg++;
 			name = "volume label";
 			Lvalue = optarg;
 			i = -1;
@@ -200,7 +205,7 @@ main(int argc, char *argv[])
 			break;
 
 		case 'l':
-			found_arg = 1;
+			found_arg++;
 			name = "multilabel MAC file system";
 			lvalue = optarg;
 			if (strcmp(lvalue, "enable") &&
@@ -212,7 +217,7 @@ main(int argc, char *argv[])
 			break;
 
 		case 'm':
-			found_arg = 1;
+			found_arg++;
 			name = "minimum percentage of free space";
 			mvalue = atoi(optarg);
 			if (mvalue < 0 || mvalue > 99)
@@ -221,7 +226,7 @@ main(int argc, char *argv[])
 			break;
 
 		case 'N':
-			found_arg = 1;
+			found_arg++;
 			name = "NFSv4 ACLs";
 			Nvalue = optarg;
 			if (strcmp(Nvalue, "enable") &&
@@ -233,7 +238,7 @@ main(int argc, char *argv[])
 			break;
 
 		case 'n':
-			found_arg = 1;
+			found_arg++;
 			name = "soft updates";
 			nvalue = optarg;
 			if (strcmp(nvalue, "enable") != 0 &&
@@ -245,7 +250,7 @@ main(int argc, char *argv[])
 			break;
 
 		case 'o':
-			found_arg = 1;
+			found_arg++;
 			name = "optimization preference";
 			if (strcmp(optarg, "space") == 0)
 				ovalue = FS_OPTSPACE;
@@ -259,12 +264,12 @@ main(int argc, char *argv[])
 			break;
 
 		case 'p':
-			found_arg = 1;
+			found_arg++;
 			pflag = 1;
 			break;
 
 		case 's':
-			found_arg = 1;
+			found_arg++;
 			name = "expected number of files per directory";
 			svalue = atoi(optarg);
 			if (svalue < 1)
@@ -274,7 +279,7 @@ main(int argc, char *argv[])
 			break;
 
 		case 'S':
-			found_arg = 1;
+			found_arg++;
 			name = "Softdep Journal Size";
 			Svalue = atoi(optarg);
 			if (Svalue < SUJ_MIN)
@@ -283,7 +288,7 @@ main(int argc, char *argv[])
 			break;
 
 		case 't':
-			found_arg = 1;
+			found_arg++;
 			name = "trim";
 			tvalue = optarg;
 			if (strcmp(tvalue, "enable") != 0 &&
@@ -305,6 +310,13 @@ main(int argc, char *argv[])
 	on = special = argv[0];
 	if (ufs_disk_fillout(&disk, special) == -1)
 		goto err;
+	/*
+	 * Check for unclean filesystem.
+	 */
+	if ((sblock.fs_clean == 0 ||
+	    (sblock.fs_flags & (FS_UNCLEAN | FS_NEEDSFSCK)) != 0) &&
+	    (found_arg > 1 || !pflag))
+		errx(1, "%s is not clean - run fsck.\n", special);
 	if (disk.d_name != special) {
 		if (statfs(special, &stfs) != 0)
 			warn("Can't stat %s", special);
@@ -374,7 +386,7 @@ main(int argc, char *argv[])
 				warnx("%s cannot be enabled until fsck is run",
 				    name);
 			} else if (journal_alloc(Svalue) != 0) {
-				warnx("%s can not be enabled", name);
+				warnx("%s cannot be enabled", name);
 			} else {
  				sblock.fs_flags |= FS_DOSOFTDEP | FS_SUJ;
  				warnx("%s set", name);
@@ -558,10 +570,16 @@ main(int argc, char *argv[])
 		goto err;
 	ufs_disk_close(&disk);
 	if (active) {
-		bzero(&args, sizeof(args));
-		if (mount("ufs", on,
-		    stfs.f_flags | MNT_UPDATE | MNT_RELOAD, &args) < 0)
-			err(9, "%s: reload", special);
+		build_iovec_argf(&iov, &iovlen, "fstype", "ufs");
+		build_iovec_argf(&iov, &iovlen, "fspath", "%s", on);
+		build_iovec(&iov, &iovlen, "errmsg", errmsg, sizeof(errmsg));
+		if (nmount(iov, iovlen,
+		    stfs.f_flags | MNT_UPDATE | MNT_RELOAD) < 0) {
+			if (errmsg[0])
+				err(9, "%s: reload: %s", special, errmsg);
+			else
+				err(9, "%s: reload", special);
+		}
 		warnx("file system reloaded");
 	}
 	exit(0);
@@ -664,7 +682,7 @@ dir_search(ufs2_daddr_t blk, int bytes)
 }
 
 /*
- * Search in the ROOTINO for the SUJ_FILE.  If it exists we can not enable
+ * Search in the UFS_ROOTINO for the SUJ_FILE.  If it exists we can not enable
  * journaling.
  */
 static ino_t
@@ -677,18 +695,18 @@ journal_findfile(void)
 	void *ip;
 	int i;
 
-	if (getino(&disk, &ip, ROOTINO, &mode) != 0) {
+	if (getino(&disk, &ip, UFS_ROOTINO, &mode) != 0) {
 		warn("Failed to get root inode");
 		return (-1);
 	}
 	dp2 = ip;
 	dp1 = ip;
 	if (sblock.fs_magic == FS_UFS1_MAGIC) {
-		if ((off_t)dp1->di_size >= lblktosize(&sblock, NDADDR)) {
-			warnx("ROOTINO extends beyond direct blocks.");
+		if ((off_t)dp1->di_size >= lblktosize(&sblock, UFS_NDADDR)) {
+			warnx("UFS_ROOTINO extends beyond direct blocks.");
 			return (-1);
 		}
-		for (i = 0; i < NDADDR; i++) {
+		for (i = 0; i < UFS_NDADDR; i++) {
 			if (dp1->di_db[i] == 0)
 				break;
 			if ((ino = dir_search(dp1->di_db[i],
@@ -696,11 +714,11 @@ journal_findfile(void)
 				return (ino);
 		}
 	} else {
-		if ((off_t)dp2->di_size >= lblktosize(&sblock, NDADDR)) {
-			warnx("ROOTINO extends beyond direct blocks.");
+		if ((off_t)dp2->di_size >= lblktosize(&sblock, UFS_NDADDR)) {
+			warnx("UFS_ROOTINO extends beyond direct blocks.");
 			return (-1);
 		}
-		for (i = 0; i < NDADDR; i++) {
+		for (i = 0; i < UFS_NDADDR; i++) {
 			if (dp2->di_db[i] == 0)
 				break;
 			if ((ino = dir_search(dp2->di_db[i],
@@ -780,7 +798,7 @@ dir_extend(ufs2_daddr_t blk, ufs2_daddr_t nblk, off_t size, ino_t ino)
 }
 
 /*
- * Insert the journal file into the ROOTINO directory.  We always extend the
+ * Insert the journal file into the UFS_ROOTINO directory.  We always extend the
  * last frag
  */
 static int
@@ -796,7 +814,7 @@ journal_insertfile(ino_t ino)
 	int mode;
 	int off;
 
-	if (getino(&disk, &ip, ROOTINO, &mode) != 0) {
+	if (getino(&disk, &ip, UFS_ROOTINO, &mode) != 0) {
 		warn("Failed to get root inode");
 		sbdirty();
 		return (-1);
@@ -809,7 +827,7 @@ journal_insertfile(ino_t ino)
 	if (nblk <= 0)
 		return (-1);
 	/*
-	 * For simplicity sake we aways extend the ROOTINO into a new
+	 * For simplicity sake we aways extend the UFS_ROOTINO into a new
 	 * directory block rather than searching for space and inserting
 	 * into an existing block.  However, if the rootino has frags
 	 * have to free them and extend the block.
@@ -957,8 +975,10 @@ journal_alloc(int64_t size)
 	 * If the journal file exists we can't allocate it.
 	 */
 	ino = journal_findfile();
-	if (ino == (ino_t)-1)
+	if (ino == (ino_t)-1) {
+		warnx("journal_findfile() failed.");
 		return (-1);
+	}
 	if (ino > 0) {
 		warnx("Journal file %s already exists, please remove.",
 		    SUJ_FILE);
@@ -1029,7 +1049,7 @@ journal_alloc(int64_t size)
 			dp2->di_ctime = utime;
 			dp2->di_birthtime = utime;
 		}
-		for (i = 0; i < NDADDR && resid; i++, resid--) {
+		for (i = 0; i < UFS_NDADDR && resid; i++, resid--) {
 			blk = journal_balloc();
 			if (blk <= 0)
 				goto out;
@@ -1041,7 +1061,7 @@ journal_alloc(int64_t size)
 				dp2->di_blocks++;
 			}
 		}
-		for (i = 0; i < NIADDR && resid; i++) {
+		for (i = 0; i < UFS_NIADDR && resid; i++) {
 			blk = journal_balloc();
 			if (blk <= 0)
 				goto out;

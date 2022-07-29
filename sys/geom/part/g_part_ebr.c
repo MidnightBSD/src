@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007-2009 Marcel Moolenaar
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
 #include "opt_geom.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/geom/part/g_part_ebr.c 339286 2018-10-10 15:44:14Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -133,13 +135,14 @@ static struct g_part_ebr_alias {
 	int		alias;
 } ebr_alias_match[] = {
 	{ DOSPTYP_386BSD,	G_PART_ALIAS_MIDNIGHTBSD },
-	{ DOSPTYP_NTFS,		G_PART_ALIAS_MS_NTFS },
+	{ DOSPTYP_EFI,		G_PART_ALIAS_EFI },
 	{ DOSPTYP_FAT32,	G_PART_ALIAS_MS_FAT32 },
 	{ DOSPTYP_FAT32LBA,	G_PART_ALIAS_MS_FAT32LBA },
-	{ DOSPTYP_LINSWP,	G_PART_ALIAS_LINUX_SWAP },
-	{ DOSPTYP_LINUX,	G_PART_ALIAS_LINUX_DATA },
 	{ DOSPTYP_LINLVM,	G_PART_ALIAS_LINUX_LVM },
 	{ DOSPTYP_LINRAID,	G_PART_ALIAS_LINUX_RAID },
+	{ DOSPTYP_LINSWP,	G_PART_ALIAS_LINUX_SWAP },
+	{ DOSPTYP_LINUX,	G_PART_ALIAS_LINUX_DATA },
+	{ DOSPTYP_NTFS,		G_PART_ALIAS_MS_NTFS },
 };
 
 static void ebr_set_chs(struct g_part_table *, uint32_t, u_char *, u_char *,

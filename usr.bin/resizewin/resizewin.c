@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/resizewin/resizewin.c 324263 2017-10-04 11:39:44Z trasz $");
+__FBSDID("$FreeBSD$");
 #include <sys/ioctl.h>
 #include <sys/time.h>
 #include <err.h>

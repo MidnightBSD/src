@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libssp_nonshared/Makefile 356356 2020-01-04 20:19:25Z kevans $
+# $FreeBSD$
 
 PACKAGE=	clibs
 LIB=		ssp_nonshared

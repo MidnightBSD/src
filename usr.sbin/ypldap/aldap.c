@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/11/usr.sbin/ypldap/aldap.c 309872 2016-12-12 02:24:54Z araujo $ */
+/*	$FreeBSD$ */
 /*	$Id: aldap.c,v 1.32 2016/04/27 10:53:27 schwarze Exp $ */
 /*	$OpenBSD: aldap.c,v 1.32 2016/04/27 10:53:27 schwarze Exp $ */
 
@@ -1212,30 +1212,19 @@ char *
 parseval(char *p, size_t len)
 {
 	char	 hex[3];
-	char	*cp = p, *buffer, *newbuffer;
-	size_t	 size, newsize, i, j;
+	char	*buffer;
+	size_t	 i, j;
 
-	size = 50;
-	if ((buffer = calloc(1, size)) == NULL)
+	if ((buffer = calloc(1, len + 1)) == NULL)
 		return NULL;
 
 	for (i = j = 0; j < len; i++) {
-		if (i >= size) {
-			newsize = size + 1024;
-			if ((newbuffer = realloc(buffer, newsize)) == NULL) {
-				free(buffer);
-				return (NULL);
-			}
-			buffer = newbuffer;
-			size = newsize;
-		}
-
-		if (cp[j] == '\\') {
-			strlcpy(hex, cp + j + 1, sizeof(hex));
+		if (p[j] == '\\') {
+			strlcpy(hex, p + j + 1, sizeof(hex));
 			buffer[i] = (char)strtoumax(hex, NULL, 16);
 			j += 3;
 		} else {
-			buffer[i] = cp[j];
+			buffer[i] = p[j];
 			j++;
 		}
 	}

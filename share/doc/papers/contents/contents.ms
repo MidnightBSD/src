@@ -21,7 +21,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/doc/papers/contents/contents.ms 146661 2005-05-26 23:01:30Z eivind $
+.\" $FreeBSD$
 .\"
 .OH '''Papers Contents'
 .EH 'Papers Contents'''
@@ -31,8 +31,8 @@ UNIX Papers coming with FreeBSD
 These papers are of both historic and current interest, but most of them are
 many years old.
 More recent documentation is available from
-.>> <a href="http://www.freebsd.org/docs/">
-http://www.FreeBSD.org/docs/
+.>> <a href="https://www.freebsd.org/docs/">
+https://www.FreeBSD.org/docs/
 .>> </a>
 
 .IP

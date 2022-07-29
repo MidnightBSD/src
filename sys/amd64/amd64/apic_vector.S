@@ -17,7 +17,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	from: vector.s, 386BSD 0.1 unknown origin
- * $FreeBSD: stable/11/sys/amd64/amd64/apic_vector.S 329462 2018-02-17 18:00:01Z kib $
+ * $FreeBSD$
  */
 
 /*
@@ -44,7 +44,7 @@
 
 #include "opt_smp.h"
 
-#include "assym.s"
+#include "assym.inc"
 
 #include <machine/asmacros.h>
 #include <machine/specialreg.h>
@@ -253,6 +253,16 @@ invltlb_ret:
 	INTR_HANDLER cpususpend
 	call	cpususpend_handler
 	call	as_lapic_eoi
+	jmp	doreti
+
+/*
+ * Executed by a CPU when it receives an IPI_SWI.
+ */
+	INTR_HANDLER ipi_swi
+	call	as_lapic_eoi
+	FAKE_MCOUNT(TF_RIP(%rsp))
+	call	ipi_swi_handler
+	MEXITCOUNT
 	jmp	doreti
 
 /*

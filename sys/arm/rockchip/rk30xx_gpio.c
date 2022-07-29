@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Ganbold Tsagaankhuu <ganbold@freebsd.org>
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * Copyright (c) 2012 Luiz Otavio O Souza.
@@ -27,7 +29,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/rockchip/rk30xx_gpio.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -612,7 +614,7 @@ rk30_gpio_init(void)
 				 */
 				ctrl = OF_node_from_xref(gpios[0]);
 
-				if (fdt_is_compatible(ctrl, e->compat))
+				if (ofw_bus_node_is_compatible(ctrl, e->compat))
 					/* Call a handler. */
 					if ((rv = e->handler(ctrl,
 					    (pcell_t *)&gpios, len)))

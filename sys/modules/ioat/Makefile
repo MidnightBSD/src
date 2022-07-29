@@ -1,6 +1,6 @@
 # ioat Loadable Kernel Module
 #
-# $FreeBSD: stable/11/sys/modules/ioat/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 
 IOAT_SRC_PATH = ${SRCTOP}/sys
 

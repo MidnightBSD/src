@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-3-Clause
+ *
  * Copyright (c) 1999,2000 Michael Smith
  * Copyright (c) 2000 BSDi
  * All rights reserved.
@@ -53,7 +55,7 @@
  * SUCH DAMAGE.
  *
  *
- *      $FreeBSD: stable/11/sys/dev/amr/amrvar.h 331722 2018-03-29 02:50:57Z eadler $
+ *      $FreeBSD$
  */
 
 #include <geom/geom_disk.h>

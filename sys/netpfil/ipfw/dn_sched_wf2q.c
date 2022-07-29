@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Riccardo Panicucci, Universita` di Pisa
  * Copyright (c) 2000-2002 Luigi Rizzo, Universita` di Pisa
  * All rights reserved
@@ -26,7 +28,7 @@
  */
 
 /*
- * $FreeBSD: stable/11/sys/netpfil/ipfw/dn_sched_wf2q.c 325730 2017-11-12 01:26:43Z truckman $
+ * $FreeBSD$
  */
 
 #ifdef _KERNEL

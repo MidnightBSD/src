@@ -1,7 +1,9 @@
 /*	$NetBSD: instr.h,v 1.4 2005/12/11 12:18:43 christos Exp $ */
-/* $FreeBSD: stable/11/sys/powerpc/fpu/fpu_instr.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
  *

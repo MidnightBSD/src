@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libdl/Makefile 332027 2018-04-04 13:54:51Z kevans $
+# $FreeBSD$
 
 PACKAGE=clibs
 LIB=dl

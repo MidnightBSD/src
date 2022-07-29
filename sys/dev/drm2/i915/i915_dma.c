@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/i915/i915_dma.c 296721 2016-03-12 11:57:32Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 

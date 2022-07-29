@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_PKGBOOTSTRAP 258924 2013-12-04 15:58:42Z bdrewery $
+.\" $FreeBSD$
 Set to not build
 .Xr pkg 7
 bootstrap tool.

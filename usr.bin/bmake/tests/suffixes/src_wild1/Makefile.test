@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/bmake/tests/suffixes/src_wild1/Makefile.test 263346 2014-03-19 12:29:20Z jmmv $
+# $FreeBSD$
 
 test1:	TEST1.b
 	cat TEST1.a TEST2.a | diff -u - TEST1.b

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2006 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5211/ar5211_keycache.c 204644 2010-03-03 17:32:32Z rpaulo $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -160,7 +162,6 @@ ar5211SetKeyCacheEntry(struct ath_hal *ah, uint16_t entry,
 	key4 = LE_READ_4(k->kv_val+12) ^ xorMask;
 	if (k->kv_len <= 104 / NBBY)
 		key4 &= 0xff;
-
 
 	/*
 	 * Note: WEP key cache hardware requires that each double-word

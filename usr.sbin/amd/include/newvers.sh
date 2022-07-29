@@ -1,5 +1,5 @@
 #	$NetBSD: mkconf,v 1.1.1.1 1997/07/24 21:20:12 christos Exp $
-# $FreeBSD: stable/11/usr.sbin/amd/include/newvers.sh 264374 2014-04-12 18:01:25Z des $
+# $FreeBSD$
 # mkconf
 # Generate local configuration parameters for amd
 #

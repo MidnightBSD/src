@@ -31,7 +31,7 @@ SOFTWARE.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/libexec/bootpd/bootpgw/bootpgw.c 229780 2012-01-07 16:09:54Z uqs $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -64,14 +64,6 @@ __FBSDID("$FreeBSD: stable/11/libexec/bootpd/bootpgw/bootpgw.c 229780 2012-01-07
 
 #ifdef	NO_SETSID
 # include <fcntl.h>		/* for O_RDONLY, etc */
-#endif
-
-#ifndef	USE_BFUNCS
-# include <memory.h>
-/* Yes, memcpy is OK here (no overlapped copies). */
-# define bcopy(a,b,c)    memcpy(b,a,c)
-# define bzero(p,l)      memset(p,0,l)
-# define bcmp(a,b,c)     memcmp(a,b,c)
 #endif
 
 #include "bootp.h"
@@ -124,6 +116,7 @@ struct timeval actualtimeout =
 u_char maxhops = 4;				/* Number of hops allowed for requests. */
 u_int minwait = 3;				/* Number of seconds client must wait before
 						   its bootrequest packets are forwarded. */
+int arpmod = TRUE;				/* modify the ARP table */
 
 /*
  * General
@@ -238,6 +231,9 @@ main(argc, argv)
 			break;
 		switch (argv[0][1]) {
 
+		case 'a':				/* don't modify the ARP table */
+			arpmod = FALSE;
+			break;
 		case 'd':				/* debug level */
 			if (argv[0][2]) {
 				stmp = &(argv[0][2]);
@@ -496,7 +492,9 @@ static void
 usage()
 {
 	fprintf(stderr,
-			"usage:  bootpgw [-d level] [-i] [-s] [-t timeout] server\n");
+		"usage: bootpgw [-a] [-i | -s] [-d level] [-h count] [-t timeout]\n"
+		"               [-w time] server\n");
+	fprintf(stderr, "\t -a\tdon't modify ARP table\n");
 	fprintf(stderr, "\t -d n\tset debug level\n");
 	fprintf(stderr, "\t -h n\tset max hop count\n");
 	fprintf(stderr, "\t -i\tforce inetd mode (run as child of inetd)\n");
@@ -641,19 +639,23 @@ handle_reply()
 	send_addr.sin_addr = bp->bp_yiaddr;
 	send_addr.sin_port = htons(bootpc_port);
 
-	/* Create an ARP cache entry for the client. */
-	ha = bp->bp_chaddr;
-	len = bp->bp_hlen;
-	if (len > MAXHADDRLEN)
-		len = MAXHADDRLEN;
-	haf = (int) bp->bp_htype;
-	if (haf == 0)
-		haf = HTYPE_ETHERNET;
+	if (arpmod) {
+		/* Create an ARP cache entry for the client. */
+		ha = bp->bp_chaddr;
+		len = bp->bp_hlen;
+		struct in_addr dst;
 
-	if (debug > 1)
-		report(LOG_INFO, "setarp %s - %s",
-			   inet_ntoa(bp->bp_yiaddr), haddrtoa(ha, len));
-	setarp(s, &bp->bp_yiaddr, haf, ha, len);
+		if (len > MAXHADDRLEN)
+			len = MAXHADDRLEN;
+		haf = (int) bp->bp_htype;
+		if (haf == 0)
+			haf = HTYPE_ETHERNET;
+
+		if (debug > 1)
+			report(LOG_INFO, "setarp %s - %s",
+				   inet_ntoa(dst), haddrtoa(ha, len));
+		setarp(s, &dst, haf, ha, len);
+	}
 
 	/* Send reply with same size packet as request used. */
 	if (sendto(s, pktbuf, pktlen, 0,

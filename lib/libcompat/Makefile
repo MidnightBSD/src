@@ -1,9 +1,9 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# $FreeBSD: stable/11/lib/libcompat/Makefile 313538 2017-02-10 07:32:40Z ngie $
+# $FreeBSD$
 
 PACKAGE=lib${LIB}
 LIB=	compat
-CFLAGS+=-DLIBC_SCCS -DSYSLIBC_SCCS -I${SRCTOP}/lib/libc/locale
+CFLAGS+=-I${SRCTOP}/lib/libc/locale
 NO_PIC=
 
 WARNS?=	0

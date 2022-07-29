@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000,2004
  *	Poul-Henning Kamp.  All rights reserved.
  *
@@ -25,7 +27,7 @@
  *
  * From: FreeBSD: src/sys/miscfs/kernfs/kernfs_vfsops.c 1.36
  *
- * $FreeBSD: stable/11/sys/fs/devfs/devfs_devs.c 341074 2018-11-27 16:51:18Z markj $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -80,10 +82,20 @@ sysctl_devname(SYSCTL_HANDLER_ARGS)
 {
 	int error;
 	dev_t ud;
+#ifdef COMPAT_FREEBSD11
+	uint32_t ud_compat;
+#endif
 	struct cdev_priv *cdp;
 	struct cdev *dev;
 
-	error = SYSCTL_IN(req, &ud, sizeof (ud));
+#ifdef COMPAT_FREEBSD11
+	if (req->newlen == sizeof(ud_compat)) {
+		error = SYSCTL_IN(req, &ud_compat, sizeof(ud_compat));
+		if (error == 0)
+			ud = ud_compat == (uint32_t)NODEV ? NODEV : ud_compat;
+	} else
+#endif
+		error = SYSCTL_IN(req, &ud, sizeof (ud));
 	if (error)
 		return (error);
 	if (ud == NODEV)
@@ -125,6 +137,8 @@ devfs_alloc(int flags)
 	    ((flags & MAKEDEV_NOWAIT) ? M_NOWAIT : M_WAITOK));
 	if (cdp == NULL)
 		return (NULL);
+
+	mtx_init(&cdp->cdp_threadlock, "devthrd", NULL, MTX_DEF);
 
 	cdp->cdp_dirents = &cdp->cdp_dirent0;
 
@@ -168,6 +182,7 @@ devfs_free(struct cdev *cdev)
 	devfs_free_cdp_inode(cdp->cdp_inode);
 	if (cdp->cdp_maxdirent > 0) 
 		free(cdp->cdp_dirents, M_DEVFS2);
+	mtx_destroy(&cdp->cdp_threadlock);
 	free(cdp, M_CDEVP);
 }
 

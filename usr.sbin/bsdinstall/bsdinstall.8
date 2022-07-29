@@ -1,7 +1,6 @@
-.\" $MidnightBSD$
 .\"-
-.\" Copyright (c) 2011-2013 Nathan Whitehorn <nwhitehorn@FreeBSD.org>
-.\" All rights reserved.
+.\" Copyright (c) 2011-2013 Nathan Whitehorn <nwhitehorn@FreeBSD.org> All rights reserved.
+.\" Copyright (c) 2018 Roberto Fernandez Cueto <roberfern@gmail.com>
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -24,9 +23,9 @@
 .\" ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/usr.sbin/bsdinstall/bsdinstall.8 321181 2017-07-19 02:50:06Z ngie $
+.\" $FreeBSD$
 .\"
-.Dd May 23, 2017
+.Dd February 6, 2020
 .Dt BSDINSTALL 8
 .Os
 .Sh NAME
@@ -119,6 +118,8 @@ is set, also configures the network interfaces of the current system to match.
 Provides the installer's interactive guided disk partitioner for single-disk
 installations.
 Defaults to UFS.
+.It Cm bootconfig
+Detects an appropriate partition and installs UEFI boot loader files.
 .It Cm zfsboot
 Provides an alternative ZFS-only automatic interactive disk partitioner.
 Creates a single
@@ -132,7 +133,7 @@ with separate datasets for
 and
 .Pa /var .
 Optionally can set up
-.Xr geli 8 
+.Xr geli 8
 to encrypt the disk.
 .It Cm partedit
 Provides the installer's interactive manual disk partitioner with an interface
@@ -261,13 +262,22 @@ Others are set by various interactive user prompts, and can be usefully
 overridden when making scripted or customized installers.
 .Bl -tag -width ".Ev BSDINSTALL_DISTSITE"
 .It Ev DISTRIBUTIONS
-The set of distributions to install, e.g., "base kernel ports".
-Default: none
+The set of distributions to install, e.g., "base.txz kernel.txz ports.txz".
+Default: unset
+.It Ev PARTITIONS
+The partitioning of the disk onto which the system is being installed.
+See
+.Cm scriptedpart
+of
+the
+.Sx TARGETS
+section for format details.
+Default: unset
 .It Ev BSDINSTALL_DISTDIR
 The directory in which the distribution files can be found (or to which they
 should be downloaded).
 Default:
-.Pa /usr/midnightbsd-dist
+.Dq Pa /usr/freebsd-dist
 .It Ev BSDINSTALL_DISTSITE
 URL from which the distribution files should be downloaded if they are not
 already present in the directory defined by
@@ -288,11 +298,11 @@ Example:
 The directory into which the distribution files should be unpacked and the
 directory at which the root file system of the new system should be mounted.
 Default:
-.Pa /mnt
+.Dq Pa /mnt
 .It Ev BSDINSTALL_LOG
 Path to a log file for the installation.
 Default:
-.Pa /tmp/bsdinstall_log
+.Dq Pa /tmp/bsdinstall_log
 .It Ev BSDINSTALL_TMPETC
 Directory where files destined for the new system's
 .Pa /etc
@@ -301,7 +311,7 @@ will be stored until the
 target is executed.
 If this directory does not already exist, it will be created.
 Default:
-.Pa /tmp/bsdinstall_etc
+.Dq Pa /tmp/bsdinstall_etc
 .It Ev BSDINSTALL_TMPBOOT
 Directory where files destined for the new system's
 .Pa /boot
@@ -310,7 +320,113 @@ will be stored until the
 target is executed.
 If this directory does not already exist, it will be created.
 Default:
-.Pa /tmp/bsdinstall_boot
+.Dq Pa /tmp/bsdinstall_boot
+.It Ev ZFSBOOT_POOL_NAME
+Name for the pool containing the base system.
+Default:
+.Dq zroot
+.It Ev ZFSBOOT_POOL_CREATE_OPTIONS
+Options to be used when creating the base system's pool.
+Each option must be followed by the -O flag to be taken into consideration
+or the pool will not be created due to errors using the command
+.Cm zpool .
+Default:
+.Dq Li "-O compress=lz4 -O atime=off"
+.It Ev ZFSBOOT_BEROOT_NAME
+Name for the boot environment parent dataset.
+This is a non-mountable dataset meant to be a parent dataset where different
+boot environment are going to be created.
+Default:
+.Dq ROOT
+.It Ev ZFSBOOT_BOOTFS_NAME
+Name for the primary boot environment, which will be the default boot
+environment for the system.
+Default:
+.Dq default
+.It Ev ZFSBOOT_VDEV_TYPE
+The type of pool to be created for the base system.
+This variable can take one of this values: stripe (No redundancy),
+mirror (n-Way mirroring), raid10 (RAID 1+0 - n x 2-Way Mirrors),
+raidz1 (RAID-Z1 - Single Redundacy RAID), raidz2 (RAID-Z2 - Double Redundacy RAID)
+or raidz3 (RAID-Z3 Triple Redundacy RAID).
+Default:
+.Dq stripe
+.It Ev ZFSBOOT_FORCE_4K_SECTORS
+Indicates either the pool will use 4K or 512 sectors.
+If this variable is not empty, 4K sectors will be used.
+Default:
+.Dq 1
+.It Ev ZFSBOOT_GELI_ENCRYPTION
+If this variable is not empty, it will use
+.Xr geli 8
+to encrypt the root pool, enabling automatically the
+.Ev ZFSBOOT_BOOT_POOL
+variable.
+Default:
+.Dq ""
+.It Ev ZFSBOOT_GELI_KEY_FILE
+Path to the
+.Xr geli 8
+keyfile used to encrypt the pool where the base system is stored.
+Default:
+.Dq Pa /boot/encryption.key
+.It Ev ZFSBOOT_BOOT_POOL
+If set a separated boot pool will be created for the kernel of the
+system and
+.Xr loader 8 .
+Default: unset
+.It Ev ZFSBOOT_BOOT_POOL_CREATE_OPTIONS
+Options to use when creating the boot pool, when enabled (See
+.Ev ZFSBOOT_BOOT_POOL ).
+Default: unset
+.It Ev ZFSBOOT_BOOT_POOL_NAME
+Name for the optional boot pool when it is enabled, (See
+.Ev ZFSBOOT_BOOT_POOL ).
+Default:
+.Dq bootpool
+.It Ev ZFSBOOT_BOOT_POOL_SIZE
+Size of the boot pool when it is enabled (See
+.Ev ZFSBOOT_BOOT_POOL ).
+Default:
+.Dq 2g
+.It Ev ZFSBOOT_DISKS
+Disks to be used for the base system, including the boot pool.
+This variable must only be used on a scripted installation.
+See
+.Sx SCRIPTING
+for more information.
+Default: unset
+.It Ev ZFSBOOT_SWAP_SIZE
+Size of the swap partition on each block device.
+This variable will be passed to
+.Xr gpart 8 ;
+which supports SI unit suffixes.
+Default:
+.Dq 2g
+.It Ev ZFSBOOT_SWAP_ENCRYPTION
+If set, enables the encryption of the swap partition using
+.Xr geli 8 .
+Default: ""
+.It Ev ZFSBOOT_SWAP_MIRROR
+If set, enables a swap mirroring using
+.Xr gmirror 8 .
+Default:
+unset
+.It Ev ZFSBOOT_DATASETS
+ZFS datasets to be created on the root zpool, it requires the
+following datasets:
+.Pa /tmp ,
+.Pa /var/tmp ,
+.Pa /$ZFSBOOT_BEROOT_NAME/$ZFSBOOT_BOOTFS_NAME .
+See
+.Sx ZFS DATASETS
+for more information about who to write this variable and to
+take a look into the default value of it.
+.It Ev ZFSBOOT_CONFIRM_LAYOUT
+If set and the installation is interactive, allow the user to confirm
+the layout before continuing with the installation.
+Default:
+.Dq 1
 .El
 .Sh SCRIPTING
 .Nm
@@ -332,6 +448,20 @@ A typical bsdinstall script looks like this:
 .Bd -literal -offset indent
 PARTITIONS=ada0
 DISTRIBUTIONS="kernel.txz base.txz"
+
+#!/bin/sh
+gpart bootcode -b /boot/pmbr -p /boot/gptboot -i 1 ada0
+sysrc ifconfig_em0=DHCP
+sysrc sshd_enable=YES
+pkg install puppet
+.Ed
+.Pp
+For a ZFS scripted installation, the script looks like this:
+.Bd -literal -offset indent
+DISTRIBUTIONS="kernel.txz base.txz"
+export ZFSBOOT_VDEV_TYPE=stripe
+export ZFSBOOT_DISKS=ada0
+export nonInteractive="YES"
 
 #!/bin/sh
 echo "ifconfig_em0=DHCP" >> /etc/rc.conf
@@ -374,8 +504,22 @@ instead of
 .Cm partedit ,
 the preamble can contain the variable
 .Ev ZFSBOOT_DATASETS
-instead of 
-.Ev PARTITIONS .
+instead of
+.Ev PARTITIONS ,
+and setting the variables
+.Ev ZFSBOOT_DISKS
+and
+.Ev ZFSBOOT_VDEV_TYPE
+to create the pool of disks for the base system.
+Usually, for a mirrored booting disk, this two variables looks like this:
+.Bd -literal -offset indent
+ZFSBOOT_DISKS="ada0 ada1"
+ZFSBOOT_VDEV_TYPE=mirror
+.Ed
+.Pp
+Remenber to export all the variables for the
+.Cm zfsboot
+command, otherwise it will not get set.
 .Ss SETUP SCRIPT
 Following the preamble is an optional shell script, beginning with a #!
 declaration.
@@ -386,11 +530,56 @@ configuration files, install packages, etc.
 Note that newly configured system services, e.g., networking have not
 been started in the installed system at this time and only installation
 host services are available.
+.Ss ZFS DATASETS
+The
+.Cm zfsboot
+partitioning takes the
+.Ev ZFSBOOT_DATASETS
+variable to create the datasets on the base system.
+This variable can get pretty huge if the pool contains a lot of datasets.
+The default value of the
+.Ev ZFSBOOT_DATASETS
+looks like this:
+.Bd -literal -offset indent
+# DATASET	OPTIONS (comma or space separated; or both)
+
+# Boot Environment [BE] root and default boot dataset
+/$ZFSBOOT_BEROOT_NAME				mountpoint=none
+/$ZFSBOOT_BEROOT_NAME/$ZFSBOOT_BOOTFS_NAME	mountpoint=/
+
+# Compress /tmp, allow exec but not setuid
+/tmp		mountpoint=/tmp,exec=on,setuid=off
+
+# Do not mount /usr so that 'base' files go to the BEROOT
+/usr		mountpoint=/usr,canmount=off
+
+# Home directories separated so they are common to all BEs
+/usr/home	# NB: /home is a symlink to /usr/home
+
+# Ports tree
+/usr/ports	setuid=off
+
+# Source tree (compressed)
+/usr/src
+
+# Create /var and friends
+/var		mountpoint=/var,canmount=off
+/var/audit	exec=off,setuid=off
+/var/crash	exec=off,setuid=off
+/var/log	exec=off,setuid=off
+/var/mail	atime=on
+/var/tmp	setuid=off
+.Ed
+.Pp
+The first column if the dataset to be created on the top of the
+.Ev ZFSBOOT_POOL_NAME
+and the rest of the columns are the options to be set on each dataset.
+The options must be written on a coma or space separated list, or both.
+And everything behind a pound/hash character is ignored as a comment.
 .Sh HISTORY
 This version of
 .Nm
 first appeared in
-.Mx 0.4 .
+.Fx 9.0 .
 .Sh AUTHORS
-.An -nosplit
-.An Nathan Whitehorn Aq nwhitehorn@FreeBSD.org
+.An Nathan Whitehorn Aq Mt nwhitehorn@FreeBSD.org

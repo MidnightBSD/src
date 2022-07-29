@@ -1,7 +1,7 @@
-# $FreeBSD: stable/11/usr.sbin/mpsutil/Makefile 319119 2017-05-29 10:15:41Z ngie $
+# $FreeBSD$
 
 PROG=	mpsutil
-SRCS=	mps_cmd.c mps_flash.c mps_show.c mpsutil.c
+SRCS=	mps_cmd.c mps_debug.c mps_flash.c mps_set.c mps_show.c mps_slot.c mpsutil.c
 MAN=	mpsutil.8
 
 WARNS?= 3

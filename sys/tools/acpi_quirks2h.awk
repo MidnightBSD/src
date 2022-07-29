@@ -1,9 +1,10 @@
 #!/usr/bin/awk -f
 #
-# $FreeBSD: stable/10/sys/tools/acpi_quirks2h.awk 167814 2007-03-22 18:16:43Z jkim $
-# $MidnightBSD$
+# $FreeBSD$
 
 #-
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (c) 2004 Mark Santcroos <marks@ripe.net>
 # All rights reserved.
 #

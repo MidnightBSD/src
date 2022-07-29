@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Chelsio Communications, Inc.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/netinet/toecore.h 239511 2012-08-21 18:09:33Z np $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_TOE_H_
@@ -36,6 +38,7 @@
 struct tcpopt;
 struct tcphdr;
 struct in_conninfo;
+struct tcp_info;
 
 struct toedev {
 	TAILQ_ENTRY(toedev) link;	/* glue for toedev_list */
@@ -99,6 +102,10 @@ struct toedev {
 
 	/* TCP socket option */
 	void (*tod_ctloutput)(struct toedev *, struct tcpcb *, int, int);
+
+	/* Update software state */
+	void (*tod_tcp_info)(struct toedev *, struct tcpcb *,
+	    struct tcp_info *);
 };
 
 #include <sys/eventhandler.h>
@@ -122,7 +129,7 @@ int toe_l2_resolve(struct toedev *, struct ifnet *, struct sockaddr *,
 void toe_connect_failed(struct toedev *, struct inpcb *, int);
 
 void toe_syncache_add(struct in_conninfo *, struct tcpopt *, struct tcphdr *,
-    struct inpcb *, void *, void *);
+    struct inpcb *, void *, void *, uint8_t);
 int  toe_syncache_expand(struct in_conninfo *, struct tcpopt *, struct tcphdr *,
     struct socket **);
 

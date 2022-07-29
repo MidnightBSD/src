@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -50,7 +52,7 @@ static char sccsid[] = "@(#)chpass.c	8.4 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/chpass/chpass.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -82,7 +84,7 @@ main(int argc, char *argv[])
 	struct passwd lpw, *old_pw, *pw;
 	int ch, pfd, tfd;
 	const char *password;
-	char *arg = NULL;
+	char *arg = NULL, *cryptpw;
 	uid_t uid;
 #ifdef YP
 	struct ypclnt *ypclnt;
@@ -228,8 +230,8 @@ main(int argc, char *argv[])
 
 	if (old_pw && !master_mode) {
 		password = getpass("Password: ");
-		if (strcmp(crypt(password, old_pw->pw_passwd),
-		    old_pw->pw_passwd) != 0)
+		cryptpw = crypt(password, old_pw->pw_passwd);
+		if (cryptpw == NULL || strcmp(cryptpw, old_pw->pw_passwd) != 0)
 			baduser();
 	} else {
 		password = "";

@@ -1,12 +1,12 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/12/93
-# $FreeBSD: stable/11/usr.bin/netstat/Makefile 291330 2015-11-25 20:38:17Z bdrewery $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
 PROG=	netstat
 SRCS=	if.c inet.c main.c mbuf.c mroute.c netisr.c nl_symbols.c route.c \
 	unix.c mroute6.c ipsec.c bpf.c pfkey.c sctp.c \
-	flowtable.c nl_defs.h
+	nl_defs.h
 
 nl_symbols.c: nlist_symbols
 	awk '\

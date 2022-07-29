@@ -1,5 +1,6 @@
-# $FreeBSD: stable/11/sys/modules/rtwnfw/Makefile 293011 2015-12-31 22:33:32Z adrian $
+# $FreeBSD$
 
-SUBDIR=	rtwnrtl8192cU rtwnrtl8192cUB
+SUBDIR=	rtwnrtl8188eu rtwnrtl8192cT rtwnrtl8192cU rtwnrtl8192eu rtwnrtl8812au \
+	rtwnrtl8821au rtwnrtl8192cE rtwnrtl8192cEB rtwnrtl8188ee
 
 .include <bsd.subdir.mk>

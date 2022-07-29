@@ -1,5 +1,7 @@
 #!/bin/sh
 #
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (c) 2001-2006,2012 Douglas Barton, dougb@FreeBSD.org
 # All rights reserved.
 #
@@ -24,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/libexec/save-entropy/save-entropy.sh 355749 2019-12-14 09:54:30Z delphij $
+# $FreeBSD$
 
 # This script is called by cron to store bits of randomness which are
 # then used to seed /dev/random on boot.
@@ -125,5 +127,7 @@ fi
 # Save entropy to the selected slot.
 chmod 600 "${save_file}" 2>/dev/null || :
 dd if=/dev/random of="${save_file}" bs=${entropy_save_sz} count=1 2>/dev/null
+chflags nodump "${save_file}" 2>/dev/null || :
+fsync "${save_file}" "."
 
 exit 0

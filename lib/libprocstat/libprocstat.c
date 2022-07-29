@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2017 Dell EMC
  * Copyright (c) 2009 Stanislav Sedov <stas@FreeBSD.org>
  * Copyright (c) 1988, 1993
@@ -34,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libprocstat/libprocstat.c 341779 2018-12-10 01:39:40Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/elf.h>
@@ -48,10 +50,12 @@ __FBSDID("$FreeBSD: stable/11/lib/libprocstat/libprocstat.c 341779 2018-12-10 01
 #include <sys/stat.h>
 #include <sys/vnode.h>
 #include <sys/socket.h>
+#define	_WANT_SOCKET
 #include <sys/socketvar.h>
 #include <sys/domain.h>
 #include <sys/protosw.h>
 #include <sys/un.h>
+#define	_WANT_UNPCB
 #include <sys/unpcb.h>
 #include <sys/sysctl.h>
 #include <sys/tty.h>
@@ -84,6 +88,7 @@ __FBSDID("$FreeBSD: stable/11/lib/libprocstat/libprocstat.c 341779 2018-12-10 01
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
+#define	_WANT_INPCB
 #include <netinet/in_pcb.h>
 
 #include <assert.h>
@@ -452,7 +457,7 @@ procstat_getfiles_kvm(struct procstat *procstat, struct kinfo_proc *kp, int mmap
 	vm_map_t map;
 	vm_object_t objp;
 	struct vnode *vp;
-	struct file **ofiles;
+	struct filedescent *ofiles;
 	struct filestat *entry;
 	struct filestat_list *head;
 	kvm_t *kd;
@@ -527,25 +532,25 @@ procstat_getfiles_kvm(struct procstat *procstat, struct kinfo_proc *kp, int mmap
 	}
 
 	nfiles = filed.fd_lastfile + 1;
-	ofiles = malloc(nfiles * sizeof(struct file *));
+	ofiles = malloc(nfiles * sizeof(struct filedescent));
 	if (ofiles == NULL) {
-		warn("malloc(%zu)", nfiles * sizeof(struct file *));
+		warn("malloc(%zu)", nfiles * sizeof(struct filedescent));
 		goto do_mmapped;
 	}
 	if (!kvm_read_all(kd, (unsigned long)filed.fd_ofiles, ofiles,
-	    nfiles * sizeof(struct file *))) {
+	    nfiles * sizeof(struct filedescent))) {
 		warnx("cannot read file structures at %p",
 		    (void *)filed.fd_ofiles);
 		free(ofiles);
 		goto do_mmapped;
 	}
 	for (i = 0; i <= filed.fd_lastfile; i++) {
-		if (ofiles[i] == NULL)
+		if (ofiles[i].fde_file == NULL)
 			continue;
-		if (!kvm_read_all(kd, (unsigned long)ofiles[i], &file,
+		if (!kvm_read_all(kd, (unsigned long)ofiles[i].fde_file, &file,
 		    sizeof(struct file))) {
 			warnx("can't read file %d at %p", i,
-			    (void *)ofiles[i]);
+			    (void *)ofiles[i].fde_file);
 			continue;
 		}
 		switch (file.f_type) {
@@ -827,9 +832,7 @@ procstat_getfiles_sysctl(struct procstat *procstat, struct kinfo_proc *kp,
 	cap_rights_t cap_rights;
 
 	assert(kp);
-	if (kp->ki_fd == NULL)
-		return (NULL);
-	switch(procstat->type) {
+	switch (procstat->type) {
 	case PROCSTAT_SYSCTL:
 		files = kinfo_getfile(kp->ki_pid, &cnt);
 		break;
@@ -1346,12 +1349,12 @@ procstat_get_vnode_info_sysctl(struct filestat *fst, struct vnstat *vn,
 	struct statfs stbuf;
 	struct kinfo_file *kif;
 	struct kinfo_vmentry *kve;
+	char *name, *path;
 	uint64_t fileid;
 	uint64_t size;
-	char *name, *path;
-	uint32_t fsid;
+	uint64_t fsid;
+	uint64_t rdev;
 	uint16_t mode;
-	uint32_t rdev;
 	int vntype;
 	int status;
 
@@ -1506,6 +1509,8 @@ procstat_get_socket_info_kvm(kvm_t *kd, struct filestat *fst,
 				} else
 					sock->inp_ppcb =
 					    (uintptr_t)inpcb.inp_ppcb;
+				sock->sendq = s.so_snd.sb_ccc;
+				sock->recvq = s.so_rcv.sb_ccc;
 			}
 		}
 		break;
@@ -1519,6 +1524,8 @@ procstat_get_socket_info_kvm(kvm_t *kd, struct filestat *fst,
 				sock->so_rcv_sb_state = s.so_rcv.sb_state;
 				sock->so_snd_sb_state = s.so_snd.sb_state;
 				sock->unp_conn = (uintptr_t)unpcb.unp_conn;
+				sock->sendq = s.so_snd.sb_ccc;
+				sock->recvq = s.so_rcv.sb_ccc;
 			}
 		}
 		break;
@@ -1554,8 +1561,10 @@ procstat_get_socket_info_sysctl(struct filestat *fst, struct sockstat *sock,
 	sock->dom_family = kif->kf_sock_domain;
 	sock->so_pcb = kif->kf_un.kf_sock.kf_sock_pcb;
 	strlcpy(sock->dname, kif->kf_path, sizeof(sock->dname));
-	bcopy(&kif->kf_sa_local, &sock->sa_local, kif->kf_sa_local.ss_len);
-	bcopy(&kif->kf_sa_peer, &sock->sa_peer, kif->kf_sa_peer.ss_len);
+	bcopy(&kif->kf_un.kf_sock.kf_sa_local, &sock->sa_local,
+	    kif->kf_un.kf_sock.kf_sa_local.ss_len);
+	bcopy(&kif->kf_un.kf_sock.kf_sa_peer, &sock->sa_peer,
+	    kif->kf_un.kf_sock.kf_sa_peer.ss_len);
 
 	/*
 	 * Protocol specific data.
@@ -1563,17 +1572,22 @@ procstat_get_socket_info_sysctl(struct filestat *fst, struct sockstat *sock,
 	switch(sock->dom_family) {
 	case AF_INET:
 	case AF_INET6:
-		if (sock->proto == IPPROTO_TCP)
+		if (sock->proto == IPPROTO_TCP) {
 			sock->inp_ppcb = kif->kf_un.kf_sock.kf_sock_inpcb;
+			sock->sendq = kif->kf_un.kf_sock.kf_sock_sendq;
+			sock->recvq = kif->kf_un.kf_sock.kf_sock_recvq;
+		}
 		break;
 	case AF_UNIX:
 		if (kif->kf_un.kf_sock.kf_sock_unpconn != 0) {
-				sock->so_rcv_sb_state =
-				    kif->kf_un.kf_sock.kf_sock_rcv_sb_state;
-				sock->so_snd_sb_state =
-				    kif->kf_un.kf_sock.kf_sock_snd_sb_state;
-				sock->unp_conn =
-				    kif->kf_un.kf_sock.kf_sock_unpconn;
+			sock->so_rcv_sb_state =
+			    kif->kf_un.kf_sock.kf_sock_rcv_sb_state;
+			sock->so_snd_sb_state =
+			    kif->kf_un.kf_sock.kf_sock_snd_sb_state;
+			sock->unp_conn =
+			    kif->kf_un.kf_sock.kf_sock_unpconn;
+			sock->sendq = kif->kf_un.kf_sock.kf_sock_sendq;
+			sock->recvq = kif->kf_un.kf_sock.kf_sock_recvq;
 		}
 		break;
 	default:
@@ -2181,6 +2195,7 @@ procstat_getrlimit_core(struct procstat_core *core, int which,
 		return (-1);
 	}
 	*rlimit = rlimits[which];
+	free(rlimits);
 	return (0);
 }
 
@@ -2508,6 +2523,12 @@ struct ptrace_lwpinfo *
 procstat_getptlwpinfo(struct procstat *procstat, unsigned int *cntp)
 {
 	switch (procstat->type) {
+	case PROCSTAT_KVM:
+		warnx("kvm method is not supported");
+		return (NULL);
+	case PROCSTAT_SYSCTL:
+		warnx("sysctl method is not supported");
+		return (NULL);
 	case PROCSTAT_CORE:
 	 	return (procstat_getptlwpinfo_core(procstat->core, cntp));
 	default:

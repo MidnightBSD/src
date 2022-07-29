@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2013-2014 Vincenzo Maffione
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 /*
- * $FreeBSD: stable/11/sys/dev/netmap/netmap_mbq.c 341477 2018-12-04 17:40:56Z vmaffione $
+ * $FreeBSD$
  */
 
 
@@ -33,13 +35,13 @@
 #include "bsd_glue.h"
 #elif defined (_WIN32)
 #include "win_glue.h"
-#else   /* __MidnightBSD__ */
+#else   /* __FreeBSD__ */
 #include <sys/param.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/systm.h>
 #include <sys/mbuf.h>
-#endif  /* __MidnightBSD__ */
+#endif  /* __FreeBSD__ */
 
 #include "netmap_mbq.h"
 

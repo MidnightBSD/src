@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/i2c/iicbus/Makefile 332113 2018-04-06 16:48:07Z ian $
+# $FreeBSD$
 
 .PATH:	${SRCTOP}/sys/dev/iicbus
 
@@ -14,6 +14,11 @@ SRCS=	\
 	iiconf.c \
 	iiconf.h \
 	opt_platform.h \
+
+.if ${MACHINE_CPUARCH} == "aarch64" || ${MACHINE_CPUARCH} == "amd64" || \
+    ${MACHINE_CPUARCH} == "i386"
+SRCS+=	acpi_iicbus.c opt_acpi.h acpi_if.h
+.endif
 
 .if !empty(OPT_FDT)
 SRCS+=	ofw_iicbus.c ofw_bus_if.h

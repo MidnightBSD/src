@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/i18n/csmapper/MISC/Makefile 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 # $NetBSD: Makefile.inc,v 1.13 2007/04/01 18:52:29 tnozaki Exp $
 
 CODE=	MISC

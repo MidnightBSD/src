@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/mips/beri/loader/arch.c 298433 2016-04-21 19:57:40Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -44,7 +44,7 @@ static int	beri_arch_autoload(void);
 static ssize_t	beri_arch_copyin(const void *src, vm_offset_t va, size_t len);
 static ssize_t	beri_arch_copyout(vm_offset_t va, void *dst, size_t len);
 static uint64_t	beri_arch_loadaddr(u_int type, void *data, uint64_t addr);
-static ssize_t	beri_arch_readin(int fd, vm_offset_t va, size_t len);
+static ssize_t	beri_arch_readin(readin_handle_t fd, vm_offset_t va, size_t len);
 
 struct arch_switch archsw = {
 	.arch_autoload = beri_arch_autoload,
@@ -90,8 +90,8 @@ beri_arch_loadaddr(u_int type, void *data, uint64_t addr)
 }
 
 static ssize_t
-beri_arch_readin(int fd, vm_offset_t va, size_t len)
+beri_arch_readin(readin_handle_t fd, vm_offset_t va, size_t len)
 {
 
-	return (read(fd, (void *)va, len));
+	return (VECTX_READ(fd, (void *)va, len));
 }

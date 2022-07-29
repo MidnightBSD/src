@@ -29,7 +29,7 @@
  *
  * Authors: Alan Somers         (Spectra Logic Corporation)
  *
- * $FreeBSD: stable/11/tests/sys/net/randsleep.c 329874 2018-02-23 18:18:42Z asomers $
+ * $FreeBSD$
  */
 
 #include <errno.h>

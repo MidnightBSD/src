@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_en/mlx5_en_main.c 355653 2019-12-12 13:48:23Z kib $
+ * $FreeBSD$
  */
 
 #include "en.h"
@@ -31,9 +31,9 @@
 #include <machine/atomic.h>
 
 #ifndef ETH_DRIVER_VERSION
-#define	ETH_DRIVER_VERSION	"3.5.2"
+#define	ETH_DRIVER_VERSION	"3.6.0"
 #endif
-#define DRIVER_RELDATE	"September 2019"
+#define DRIVER_RELDATE	"December 2020"
 
 static const char mlx5e_version[] = "mlx5en: Mellanox Ethernet driver "
 	ETH_DRIVER_VERSION " (" DRIVER_RELDATE ")\n";
@@ -164,6 +164,10 @@ static const struct media mlx5e_mode_table[MLX5E_LINK_SPEEDS_NUMBER][MLX5E_LINK_
 	},
 	[MLX5E_50GBASE_KR2][MLX5E_KR2] = {
 		.subtype = IFM_50G_KR2,
+		.baudrate = IF_Gbps(50ULL),
+	},
+	[MLX5E_50GBASE_KR4][MLX5E_KR4] = {
+		.subtype = IFM_50G_KR4,
 		.baudrate = IF_Gbps(50ULL),
 	},
 };
@@ -312,6 +316,10 @@ static const struct media mlx5e_ext_mode_table[MLX5E_EXT_LINK_SPEEDS_NUMBER][MLX
 	},
 	[MLX5E_50GAUI_2_LAUI_2_50GBASE_CR2_KR2][MLX5E_KR2] = {
 		.subtype = IFM_50G_KR2,
+		.baudrate = IF_Gbps(50ULL),
+	},
+	[MLX5E_50GAUI_2_LAUI_2_50GBASE_CR2_KR2][MLX5E_KR4] = {
+		.subtype = IFM_50G_KR4,
 		.baudrate = IF_Gbps(50ULL),
 	},
 	[MLX5E_50GAUI_2_LAUI_2_50GBASE_CR2_KR2][MLX5E_SR2] = {
@@ -484,7 +492,7 @@ mlx5e_media_status(struct ifnet *dev, struct ifmediareq *ifmr)
 	struct mlx5e_priv *priv = dev->if_softc;
 
 	ifmr->ifm_status = priv->media_status_last;
-	ifmr->ifm_active = priv->media_active_last |
+	ifmr->ifm_current = ifmr->ifm_active = priv->media_active_last |
 	    (priv->params.rx_pauseframe_control ? IFM_ETH_RXPAUSE : 0) |
 	    (priv->params.tx_pauseframe_control ? IFM_ETH_TXPAUSE : 0);
 
@@ -896,6 +904,30 @@ mlx5e_update_stats_locked(struct mlx5e_priv *priv)
 		}
 	}
 
+#ifdef RATELIMIT
+	/* Collect statistics from all rate-limit queues */
+	for (j = 0; j < priv->rl.param.tx_worker_threads_def; j++) {
+		struct mlx5e_rl_worker *rlw = priv->rl.workers + j;
+
+		for (i = 0; i < priv->rl.param.tx_channels_per_worker_def; i++) {
+			struct mlx5e_rl_channel *channel = rlw->channels + i;
+			struct mlx5e_sq *sq = channel->sq;
+
+			if (sq == NULL)
+				continue;
+
+			sq_stats = &sq->stats;
+
+			tso_packets += sq_stats->tso_packets;
+			tso_bytes += sq_stats->tso_bytes;
+			tx_queue_dropped += sq_stats->dropped;
+			tx_queue_dropped += sq_stats->enobuf;
+			tx_defragged += sq_stats->defragged;
+			tx_offload_none += sq_stats->csum_offload_none;
+		}
+	}
+#endif
+
 	/* update counters */
 	s->tso_packets = tso_packets;
 	s->tso_bytes = tso_bytes;
@@ -1027,6 +1059,15 @@ free_out:
 		mlx5_en_err(priv->ifp,
 		    "Updating FEC failed: %d\n", error);
 	}
+
+	/* Update temperature, if any */
+	if (priv->params_ethtool.hw_num_temp != 0) {
+		error = mlx5e_hw_temperature_update(priv);
+		if (error != 0 && error != EOPNOTSUPP) {
+			mlx5_en_err(priv->ifp,
+			    "Updating temperature failed: %d\n", error);
+		}
+	}
 }
 
 static void
@@ -1049,7 +1090,7 @@ mlx5e_update_stats(void *arg)
 
 	queue_work(priv->wq, &priv->update_stats_work);
 
-	callout_reset(&priv->watchdog, hz, &mlx5e_update_stats, priv);
+	callout_reset(&priv->watchdog, hz / 4, &mlx5e_update_stats, priv);
 }
 
 static void
@@ -1091,6 +1132,113 @@ mlx5e_disable_async_events(struct mlx5e_priv *priv)
 	mtx_lock(&priv->async_events_mtx);
 	clear_bit(MLX5E_STATE_ASYNC_EVENTS_ENABLE, &priv->state);
 	mtx_unlock(&priv->async_events_mtx);
+}
+
+static void mlx5e_calibration_callout(void *arg);
+static int mlx5e_calibration_duration = 20;
+static int mlx5e_fast_calibration = 1;
+static int mlx5e_normal_calibration = 30;
+
+static SYSCTL_NODE(_hw_mlx5, OID_AUTO, calibr, CTLFLAG_RW, 0,
+    "MLX5 timestamp calibration parameteres");
+
+SYSCTL_INT(_hw_mlx5_calibr, OID_AUTO, duration, CTLFLAG_RWTUN,
+    &mlx5e_calibration_duration, 0,
+    "Duration of initial calibration");
+SYSCTL_INT(_hw_mlx5_calibr, OID_AUTO, fast, CTLFLAG_RWTUN,
+    &mlx5e_fast_calibration, 0,
+    "Recalibration interval during initial calibration");
+SYSCTL_INT(_hw_mlx5_calibr, OID_AUTO, normal, CTLFLAG_RWTUN,
+    &mlx5e_normal_calibration, 0,
+    "Recalibration interval during normal operations");
+
+/*
+ * Ignites the calibration process.
+ */
+static void
+mlx5e_reset_calibration_callout(struct mlx5e_priv *priv)
+{
+
+	if (priv->clbr_done == 0)
+		mlx5e_calibration_callout(priv);
+	else
+		callout_reset_sbt_curcpu(&priv->tstmp_clbr, (priv->clbr_done <
+		    mlx5e_calibration_duration ? mlx5e_fast_calibration :
+		    mlx5e_normal_calibration) * SBT_1S, 0,
+		    mlx5e_calibration_callout, priv, C_DIRECT_EXEC);
+}
+
+static uint64_t
+mlx5e_timespec2usec(const struct timespec *ts)
+{
+
+	return ((uint64_t)ts->tv_sec * 1000000000 + ts->tv_nsec);
+}
+
+static uint64_t
+mlx5e_hw_clock(struct mlx5e_priv *priv)
+{
+	struct mlx5_init_seg *iseg;
+	uint32_t hw_h, hw_h1, hw_l;
+
+	iseg = priv->mdev->iseg;
+	do {
+		hw_h = ioread32be(&iseg->internal_timer_h);
+		hw_l = ioread32be(&iseg->internal_timer_l);
+		hw_h1 = ioread32be(&iseg->internal_timer_h);
+	} while (hw_h1 != hw_h);
+	return (((uint64_t)hw_h << 32) | hw_l);
+}
+
+/*
+ * The calibration callout, it runs either in the context of the
+ * thread which enables calibration, or in callout.  It takes the
+ * snapshot of system and adapter clocks, then advances the pointers to
+ * the calibration point to allow rx path to read the consistent data
+ * lockless.
+ */
+static void
+mlx5e_calibration_callout(void *arg)
+{
+	struct mlx5e_priv *priv;
+	struct mlx5e_clbr_point *next, *curr;
+	struct timespec ts;
+	int clbr_curr_next;
+
+	priv = arg;
+	curr = &priv->clbr_points[priv->clbr_curr];
+	clbr_curr_next = priv->clbr_curr + 1;
+	if (clbr_curr_next >= nitems(priv->clbr_points))
+		clbr_curr_next = 0;
+	next = &priv->clbr_points[clbr_curr_next];
+
+	next->base_prev = curr->base_curr;
+	next->clbr_hw_prev = curr->clbr_hw_curr;
+
+	next->clbr_hw_curr = mlx5e_hw_clock(priv);
+	if (((next->clbr_hw_curr - curr->clbr_hw_curr) >> MLX5E_TSTMP_PREC) ==
+	    0) {
+		if (priv->clbr_done != 0) {
+			mlx5_en_err(priv->ifp,
+			    "HW failed tstmp frozen %#jx %#jx, disabling\n",
+			     next->clbr_hw_curr, curr->clbr_hw_prev);
+			priv->clbr_done = 0;
+		}
+		atomic_store_rel_int(&curr->clbr_gen, 0);
+		return;
+	}
+
+	nanouptime(&ts);
+	next->base_curr = mlx5e_timespec2usec(&ts);
+
+	curr->clbr_gen = 0;
+	atomic_thread_fence_rel();
+	priv->clbr_curr = clbr_curr_next;
+	atomic_store_rel_int(&next->clbr_gen, ++(priv->clbr_gen));
+
+	if (priv->clbr_done < mlx5e_calibration_duration)
+		priv->clbr_done++;
+	mlx5e_reset_calibration_callout(priv);
 }
 
 static const char *mlx5e_rq_stats_desc[] = {
@@ -1145,7 +1293,7 @@ mlx5e_create_rq(struct mlx5e_channel *c,
 
 	wq_sz = mlx5_wq_ll_get_size(&rq->wq);
 
-	err = -tcp_lro_init_args(&rq->lro, c->ifp, TCP_LRO_ENTRIES, wq_sz);
+	err = -tcp_lro_init_args(&rq->lro, c->tag.m_snd_tag.ifp, TCP_LRO_ENTRIES, wq_sz);
 	if (err)
 		goto err_rq_wq_destroy;
 
@@ -1186,7 +1334,7 @@ mlx5e_create_rq(struct mlx5e_channel *c,
 		}
 	}
 
-	rq->ifp = c->ifp;
+	rq->ifp = c->tag.m_snd_tag.ifp;
 	rq->channel = c;
 	rq->ix = c->ix;
 
@@ -1763,7 +1911,7 @@ mlx5e_drain_sq(struct mlx5e_sq *sq)
 	    mdev->state != MLX5_DEVICE_STATE_INTERNAL_ERROR) {
 		mtx_unlock(&sq->lock);
 		msleep(1);
-		sq->cq.mcq.comp(&sq->cq.mcq);
+		sq->cq.mcq.comp(&sq->cq.mcq, NULL);
 		mtx_lock(&sq->lock);
 	}
 	mtx_unlock(&sq->lock);
@@ -1781,7 +1929,7 @@ mlx5e_drain_sq(struct mlx5e_sq *sq)
 	       mdev->state != MLX5_DEVICE_STATE_INTERNAL_ERROR) {
 		mtx_unlock(&sq->lock);
 		msleep(1);
-		sq->cq.mcq.comp(&sq->cq.mcq);
+		sq->cq.mcq.comp(&sq->cq.mcq, NULL);
 		mtx_lock(&sq->lock);
 	}
 	mtx_unlock(&sq->lock);
@@ -1854,6 +2002,7 @@ static int
 mlx5e_enable_cq(struct mlx5e_cq *cq, struct mlx5e_cq_param *param, int eq_ix)
 {
 	struct mlx5_core_cq *mcq = &cq->mcq;
+	u32 out[MLX5_ST_SZ_DW(create_cq_out)];
 	void *in;
 	void *cqc;
 	int inlen;
@@ -1882,7 +2031,7 @@ mlx5e_enable_cq(struct mlx5e_cq *cq, struct mlx5e_cq_param *param, int eq_ix)
 	    PAGE_SHIFT);
 	MLX5_SET64(cqc, cqc, dbr_addr, cq->wq_ctrl.db.dma);
 
-	err = mlx5_core_create_cq(cq->priv->mdev, mcq, in, inlen);
+	err = mlx5_core_create_cq(cq->priv->mdev, mcq, in, inlen, out, sizeof(out));
 
 	kvfree(in);
 
@@ -2004,7 +2153,10 @@ mlx5e_chan_static_init(struct mlx5e_priv *priv, struct mlx5e_channel *c, int ix)
 	/* setup priv and channel number */
 	c->priv = priv;
 	c->ix = ix;
-	c->ifp = priv->ifp;
+
+	/* setup send tag */
+	c->tag.m_snd_tag.ifp = priv->ifp;
+	c->tag.type = IF_SND_TAG_TYPE_UNLIMITED;
 
 	mtx_init(&c->rq.mtx, "mlx5rx", MTX_NETWORK_LOCK, MTX_DEF);
 
@@ -2043,9 +2195,10 @@ mlx5e_open_channel(struct mlx5e_priv *priv,
     struct mlx5e_channel_param *cparam,
     struct mlx5e_channel *c)
 {
+	struct epoch_tracker et;
 	int i, err;
 
-	/* zero non-persistant data */
+	/* zero non-persistent data */
 	MLX5E_ZERO(&c->rq, mlx5e_rq_zero_start);
 	for (i = 0; i != priv->num_tc; i++)
 		MLX5E_ZERO(&c->sq[i], mlx5e_sq_zero_start);
@@ -2070,7 +2223,9 @@ mlx5e_open_channel(struct mlx5e_priv *priv,
 		goto err_close_sqs;
 
 	/* poll receive queue initially */
-	c->rq.cq.mcq.comp(&c->rq.cq.mcq);
+	NET_EPOCH_ENTER_ET(et);
+	c->rq.cq.mcq.comp(&c->rq.cq.mcq, NULL);
+	NET_EPOCH_EXIT_ET(et);
 
 	return (0);
 
@@ -2572,6 +2727,31 @@ mlx5e_close_rqt(struct mlx5e_priv *priv)
 	mlx5_cmd_exec(priv->mdev, in, sizeof(in), out, sizeof(out));
 }
 
+#define	MLX5E_RSS_KEY_SIZE (10 * 4)	/* bytes */
+
+static void
+mlx5e_get_rss_key(void *key_ptr)
+{
+#ifdef RSS
+	rss_getkey(key_ptr);
+#else
+	static const u32 rsskey[] = {
+	    cpu_to_be32(0xD181C62C),
+	    cpu_to_be32(0xF7F4DB5B),
+	    cpu_to_be32(0x1983A2FC),
+	    cpu_to_be32(0x943E1ADB),
+	    cpu_to_be32(0xD9389E6B),
+	    cpu_to_be32(0xD1039C2C),
+	    cpu_to_be32(0xA74499AD),
+	    cpu_to_be32(0x593D56D9),
+	    cpu_to_be32(0xF3253C06),
+	    cpu_to_be32(0x2ADC1FFC),
+	};
+	CTASSERT(sizeof(rsskey) == MLX5E_RSS_KEY_SIZE);
+	memcpy(key_ptr, rsskey, MLX5E_RSS_KEY_SIZE);
+#endif
+}
+
 static void
 mlx5e_build_tir_ctx(struct mlx5e_priv *priv, u32 * tirc, int tt)
 {
@@ -2623,26 +2803,19 @@ mlx5e_build_tir_ctx(struct mlx5e_priv *priv, u32 * tirc, int tt)
 		MLX5_SET(tirc, tirc, rx_hash_fn,
 		    MLX5_TIRC_RX_HASH_FN_HASH_TOEPLITZ);
 		hkey = (__be32 *) MLX5_ADDR_OF(tirc, tirc, rx_hash_toeplitz_key);
+
+		CTASSERT(MLX5_FLD_SZ_BYTES(tirc, rx_hash_toeplitz_key) >=
+		    MLX5E_RSS_KEY_SIZE);
 #ifdef RSS
 		/*
 		 * The FreeBSD RSS implementation does currently not
 		 * support symmetric Toeplitz hashes:
 		 */
 		MLX5_SET(tirc, tirc, rx_hash_symmetric, 0);
-		rss_getkey((uint8_t *)hkey);
 #else
 		MLX5_SET(tirc, tirc, rx_hash_symmetric, 1);
-		hkey[0] = cpu_to_be32(0xD181C62C);
-		hkey[1] = cpu_to_be32(0xF7F4DB5B);
-		hkey[2] = cpu_to_be32(0x1983A2FC);
-		hkey[3] = cpu_to_be32(0x943E1ADB);
-		hkey[4] = cpu_to_be32(0xD9389E6B);
-		hkey[5] = cpu_to_be32(0xD1039C2C);
-		hkey[6] = cpu_to_be32(0xA74499AD);
-		hkey[7] = cpu_to_be32(0x593D56D9);
-		hkey[8] = cpu_to_be32(0xF3253C06);
-		hkey[9] = cpu_to_be32(0x2ADC1FFC);
 #endif
+		mlx5e_get_rss_key(hkey);
 		break;
 	}
 
@@ -3068,7 +3241,10 @@ mlx5e_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 {
 	struct mlx5e_priv *priv;
 	struct ifreq *ifr;
+	struct ifdownreason *ifdr;
 	struct ifi2creq i2c;
+	struct ifrsskey *ifrk;
+	struct ifrsshash *ifrh;
 	int error = 0;
 	int mask = 0;
 	int size_read = 0;
@@ -3158,6 +3334,7 @@ mlx5e_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 
 			if (IFCAP_TSO4 & ifp->if_capenable &&
 			    !(IFCAP_TXCSUM & ifp->if_capenable)) {
+				mask &= ~IFCAP_TSO4;
 				ifp->if_capenable &= ~IFCAP_TSO4;
 				ifp->if_hwassist &= ~CSUM_IP_TSO;
 				mlx5_en_err(ifp,
@@ -3170,6 +3347,7 @@ mlx5e_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 
 			if (IFCAP_TSO6 & ifp->if_capenable &&
 			    !(IFCAP_TXCSUM_IPV6 & ifp->if_capenable)) {
+				mask &= ~IFCAP_TSO6;
 				ifp->if_capenable &= ~IFCAP_TSO6;
 				ifp->if_hwassist &= ~CSUM_IP6_TSO;
 				mlx5_en_err(ifp,
@@ -3200,6 +3378,8 @@ mlx5e_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 			ifp->if_capenable ^= IFCAP_TSO6;
 			ifp->if_hwassist ^= CSUM_IP6_TSO;
 		}
+		if (mask & IFCAP_VLAN_HWTSO)
+			ifp->if_capenable ^= IFCAP_VLAN_HWTSO;
 		if (mask & IFCAP_VLAN_HWFILTER) {
 			if (ifp->if_capenable & IFCAP_VLAN_HWFILTER)
 				mlx5e_disable_vlan_filter(priv);
@@ -3237,6 +3417,16 @@ mlx5e_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 			if (was_opened && need_restart) {
 				mlx5e_close_locked(ifp);
 				mlx5e_open_locked(ifp);
+			}
+		}
+		if (mask & IFCAP_HWRXTSTMP) {
+			ifp->if_capenable ^= IFCAP_HWRXTSTMP;
+			if (ifp->if_capenable & IFCAP_HWRXTSTMP) {
+				if (priv->clbr_done == 0)
+					mlx5e_reset_calibration_callout(priv);
+			} else {
+				callout_drain(&priv->tstmp_clbr);
+				priv->clbr_done = 0;
 			}
 		}
 out:
@@ -3317,6 +3507,36 @@ out:
 		error = copyout(&i2c, ifr_data_get_ptr(ifr), sizeof(i2c));
 err_i2c:
 		PRIV_UNLOCK(priv);
+		break;
+	case SIOCGIFDOWNREASON:
+		ifdr = (struct ifdownreason *)data;
+		bzero(ifdr->ifdr_msg, sizeof(ifdr->ifdr_msg));
+		PRIV_LOCK(priv);
+		error = -mlx5_query_pddr_troubleshooting_info(priv->mdev, NULL,
+		    ifdr->ifdr_msg, sizeof(ifdr->ifdr_msg));
+		PRIV_UNLOCK(priv);
+		if (error == 0)
+			ifdr->ifdr_reason = IFDR_REASON_MSG;
+		break;
+
+	case SIOCGIFRSSKEY:
+		ifrk = (struct ifrsskey *)data;
+		ifrk->ifrk_func = RSS_FUNC_TOEPLITZ;
+		ifrk->ifrk_keylen = MLX5E_RSS_KEY_SIZE;
+		CTASSERT(sizeof(ifrk->ifrk_key) >= MLX5E_RSS_KEY_SIZE);
+		mlx5e_get_rss_key(ifrk->ifrk_key);
+		break;
+
+	case SIOCGIFRSSHASH:
+		ifrh = (struct ifrsshash *)data;
+		ifrh->ifrh_func = RSS_FUNC_TOEPLITZ;
+		ifrh->ifrh_types =
+		    RSS_TYPE_IPV4 |
+		    RSS_TYPE_TCP_IPV4 |
+		    RSS_TYPE_UDP_IPV4 |
+		    RSS_TYPE_IPV6 |
+		    RSS_TYPE_TCP_IPV6 |
+		    RSS_TYPE_UDP_IPV6;
 		break;
 
 	default:
@@ -3589,6 +3809,7 @@ static void
 mlx5e_disable_rx_dma(struct mlx5e_channel *ch)
 {
 	struct mlx5e_rq *rq = &ch->rq;
+	struct epoch_tracker et;
 	int err;
 
 	mtx_lock(&rq->mtx);
@@ -3604,7 +3825,9 @@ mlx5e_disable_rx_dma(struct mlx5e_channel *ch)
 
 	while (!mlx5_wq_ll_is_empty(&rq->wq)) {
 		msleep(1);
-		rq->cq.mcq.comp(&rq->cq.mcq);
+		NET_EPOCH_ENTER_ET(et);
+		rq->cq.mcq.comp(&rq->cq.mcq, NULL);
+		NET_EPOCH_EXIT_ET(et);
 	}
 
 	/*
@@ -3622,6 +3845,7 @@ static void
 mlx5e_enable_rx_dma(struct mlx5e_channel *ch)
 {
 	struct mlx5e_rq *rq = &ch->rq;
+	struct epoch_tracker et;
 	int err;
 
 	rq->wq.wqe_ctr = 0;
@@ -3634,7 +3858,9 @@ mlx5e_enable_rx_dma(struct mlx5e_channel *ch)
 
 	rq->enabled = 1;
 
-	rq->cq.mcq.comp(&rq->cq.mcq);
+	NET_EPOCH_ENTER_ET(et);
+	rq->cq.mcq.comp(&rq->cq.mcq, NULL);
+	NET_EPOCH_EXIT_ET(et);
 }
 
 void
@@ -3850,6 +4076,158 @@ mlx5e_setup_pauseframes(struct mlx5e_priv *priv)
 	PRIV_UNLOCK(priv);
 }
 
+static int
+mlx5e_ul_snd_tag_alloc(struct ifnet *ifp,
+    union if_snd_tag_alloc_params *params,
+    struct m_snd_tag **ppmt)
+{
+	struct mlx5e_priv *priv;
+	struct mlx5e_channel *pch;
+
+	priv = ifp->if_softc;
+
+	if (unlikely(priv->gone || params->hdr.flowtype == M_HASHTYPE_NONE)) {
+		return (EOPNOTSUPP);
+	} else {
+		/* keep this code synced with mlx5e_select_queue() */
+		u32 ch = priv->params.num_channels;
+#ifdef RSS
+		u32 temp;
+
+		if (rss_hash2bucket(params->hdr.flowid,
+		    params->hdr.flowtype, &temp) == 0)
+			ch = temp % ch;
+		else
+#endif
+			ch = (params->hdr.flowid % 128) % ch;
+
+		/*
+		 * NOTE: The channels array is only freed at detach
+		 * and it safe to return a pointer to the send tag
+		 * inside the channels structure as long as we
+		 * reference the priv.
+		 */
+		pch = priv->channel + ch;
+
+		/* check if send queue is not running */
+		if (unlikely(pch->sq[0].running == 0))
+			return (ENXIO);
+		mlx5e_ref_channel(priv);
+		*ppmt = &pch->tag.m_snd_tag;
+		return (0);
+	}
+}
+
+static int
+mlx5e_ul_snd_tag_query(struct m_snd_tag *pmt, union if_snd_tag_query_params *params)
+{
+	struct mlx5e_channel *pch =
+	    container_of(pmt, struct mlx5e_channel, tag.m_snd_tag);
+
+	params->unlimited.max_rate = -1ULL;
+	params->unlimited.queue_level = mlx5e_sq_queue_level(&pch->sq[0]);
+	return (0);
+}
+
+static void
+mlx5e_ul_snd_tag_free(struct m_snd_tag *pmt)
+{
+	struct mlx5e_channel *pch =
+	    container_of(pmt, struct mlx5e_channel, tag.m_snd_tag);
+
+	mlx5e_unref_channel(pch->priv);
+}
+
+static int
+mlx5e_snd_tag_alloc(struct ifnet *ifp,
+    union if_snd_tag_alloc_params *params,
+    struct m_snd_tag **ppmt)
+{
+
+	switch (params->hdr.type) {
+#ifdef RATELIMIT
+	case IF_SND_TAG_TYPE_RATE_LIMIT:
+		return (mlx5e_rl_snd_tag_alloc(ifp, params, ppmt));
+#endif
+	case IF_SND_TAG_TYPE_UNLIMITED:
+		return (mlx5e_ul_snd_tag_alloc(ifp, params, ppmt));
+	default:
+		return (EOPNOTSUPP);
+	}
+}
+
+static int
+mlx5e_snd_tag_modify(struct m_snd_tag *pmt, union if_snd_tag_modify_params *params)
+{
+	struct mlx5e_snd_tag *tag =
+	    container_of(pmt, struct mlx5e_snd_tag, m_snd_tag);
+
+	switch (tag->type) {
+#ifdef RATELIMIT
+	case IF_SND_TAG_TYPE_RATE_LIMIT:
+		return (mlx5e_rl_snd_tag_modify(pmt, params));
+#endif
+	case IF_SND_TAG_TYPE_UNLIMITED:
+	default:
+		return (EOPNOTSUPP);
+	}
+}
+
+static int
+mlx5e_snd_tag_query(struct m_snd_tag *pmt, union if_snd_tag_query_params *params)
+{
+	struct mlx5e_snd_tag *tag =
+	    container_of(pmt, struct mlx5e_snd_tag, m_snd_tag);
+
+	switch (tag->type) {
+#ifdef RATELIMIT
+	case IF_SND_TAG_TYPE_RATE_LIMIT:
+		return (mlx5e_rl_snd_tag_query(pmt, params));
+#endif
+	case IF_SND_TAG_TYPE_UNLIMITED:
+		return (mlx5e_ul_snd_tag_query(pmt, params));
+	default:
+		return (EOPNOTSUPP);
+	}
+}
+
+static void
+mlx5e_snd_tag_free(struct m_snd_tag *pmt)
+{
+	struct mlx5e_snd_tag *tag =
+	    container_of(pmt, struct mlx5e_snd_tag, m_snd_tag);
+
+	switch (tag->type) {
+#ifdef RATELIMIT
+	case IF_SND_TAG_TYPE_RATE_LIMIT:
+		mlx5e_rl_snd_tag_free(pmt);
+		break;
+#endif
+	case IF_SND_TAG_TYPE_UNLIMITED:
+		mlx5e_ul_snd_tag_free(pmt);
+		break;
+	default:
+		break;
+	}
+}
+
+static void
+mlx5e_ifm_add(struct mlx5e_priv *priv, int type)
+{
+	ifmedia_add(&priv->media, type | IFM_ETHER, 0, NULL);
+	ifmedia_add(&priv->media, type | IFM_ETHER |
+	    IFM_ETH_RXPAUSE | IFM_ETH_TXPAUSE, 0, NULL);
+	ifmedia_add(&priv->media, type | IFM_ETHER | IFM_ETH_RXPAUSE, 0, NULL);
+	ifmedia_add(&priv->media, type | IFM_ETHER | IFM_ETH_TXPAUSE, 0, NULL);
+	ifmedia_add(&priv->media, type | IFM_ETHER | IFM_FDX, 0, NULL);
+	ifmedia_add(&priv->media, type | IFM_ETHER | IFM_FDX |
+	    IFM_ETH_RXPAUSE, 0, NULL);
+	ifmedia_add(&priv->media, type | IFM_ETHER | IFM_FDX |
+	    IFM_ETH_TXPAUSE, 0, NULL);
+	ifmedia_add(&priv->media, type | IFM_ETHER | IFM_FDX |
+	    IFM_ETH_RXPAUSE | IFM_ETH_TXPAUSE, 0, NULL);
+}
+
 static void *
 mlx5e_create_ifp(struct mlx5_core_dev *mdev)
 {
@@ -3909,7 +4287,12 @@ mlx5e_create_ifp(struct mlx5_core_dev *mdev)
 	ifp->if_capabilities |= IFCAP_LINKSTATE | IFCAP_JUMBO_MTU;
 	ifp->if_capabilities |= IFCAP_LRO;
 	ifp->if_capabilities |= IFCAP_TSO | IFCAP_VLAN_HWTSO;
-	ifp->if_capabilities |= IFCAP_HWSTATS;
+	ifp->if_capabilities |= IFCAP_HWSTATS | IFCAP_HWRXTSTMP;
+	ifp->if_capabilities |= IFCAP_TXRTLMT;
+	ifp->if_snd_tag_alloc = mlx5e_snd_tag_alloc;
+	ifp->if_snd_tag_free = mlx5e_snd_tag_free;
+	ifp->if_snd_tag_modify = mlx5e_snd_tag_modify;
+	ifp->if_snd_tag_query = mlx5e_snd_tag_query;
 
 	/* set TSO limits so that we don't have to drop TX packets */
 	ifp->if_hw_tsomax = MLX5E_MAX_TX_PAYLOAD_SIZE - (ETHER_HDR_LEN + ETHER_VLAN_ENCAP_LEN);
@@ -3988,14 +4371,20 @@ mlx5e_create_ifp(struct mlx5_core_dev *mdev)
 		random_ether_addr(dev_addr);
 		mlx5_en_err(ifp, "Assigned random MAC address\n");
 	}
+#ifdef RATELIMIT
+	err = mlx5e_rl_init(priv);
+	if (err) {
+		mlx5_en_err(ifp, "mlx5e_rl_init failed, %d\n", err);
+		goto err_create_mkey;
+	}
+#endif
 
 	/* set default MTU */
 	mlx5e_set_dev_port_mtu(ifp, ifp->if_mtu);
 
 	/* Set default media status */
 	priv->media_status_last = IFM_AVALID;
-	priv->media_active_last = IFM_ETHER | IFM_AUTO |
-	    IFM_ETH_RXPAUSE | IFM_FDX;
+	priv->media_active_last = IFM_ETHER | IFM_AUTO | IFM_FDX;
 
 	/* setup default pauseframes configuration */
 	mlx5e_setup_pauseframes(priv);
@@ -4015,7 +4404,7 @@ mlx5e_create_ifp(struct mlx5_core_dev *mdev)
 		mlx5_en_err(ifp, "Query port media capability failed, %d\n", err);
 	}
 
-	ifmedia_init(&priv->media, IFM_IMASK | IFM_ETH_FMASK,
+	ifmedia_init(&priv->media, IFM_IMASK,
 	    mlx5e_media_change, mlx5e_media_status);
 
 	speeds_num = ext ? MLX5E_EXT_LINK_SPEEDS_NUMBER : MLX5E_LINK_SPEEDS_NUMBER;
@@ -4025,21 +4414,12 @@ mlx5e_create_ifp(struct mlx5_core_dev *mdev)
 			    mlx5e_mode_table[i][j];
 			if (media_entry.baudrate == 0)
 				continue;
-			if (MLX5E_PROT_MASK(i) & eth_proto_cap) {
-				ifmedia_add(&priv->media,
-				    media_entry.subtype |
-				    IFM_ETHER, 0, NULL);
-				ifmedia_add(&priv->media,
-				    media_entry.subtype |
-				    IFM_ETHER | IFM_FDX |
-				    IFM_ETH_RXPAUSE | IFM_ETH_TXPAUSE, 0, NULL);
-			}
+			if (MLX5E_PROT_MASK(i) & eth_proto_cap)
+				mlx5e_ifm_add(priv, media_entry.subtype);
 		}
 	}
 
-	ifmedia_add(&priv->media, IFM_ETHER | IFM_AUTO, 0, NULL);
-	ifmedia_add(&priv->media, IFM_ETHER | IFM_AUTO | IFM_FDX |
-	    IFM_ETH_RXPAUSE | IFM_ETH_TXPAUSE, 0, NULL);
+	mlx5e_ifm_add(priv, IFM_AUTO);
 
 	/* Set autoselect by default */
 	ifmedia_set(&priv->media, IFM_ETHER | IFM_AUTO | IFM_FDX |
@@ -4073,8 +4453,19 @@ mlx5e_create_ifp(struct mlx5_core_dev *mdev)
 	mlx5e_update_stats(priv);
 	mtx_unlock(&priv->async_events_mtx);
 
+	SYSCTL_ADD_INT(&priv->sysctl_ctx, SYSCTL_CHILDREN(priv->sysctl_ifnet),
+	    OID_AUTO, "rx_clbr_done", CTLFLAG_RD,
+	    &priv->clbr_done, 0,
+	    "RX timestamps calibration state");
+	callout_init(&priv->tstmp_clbr, 1);
+	mlx5e_reset_calibration_callout(priv);
+
 	return (priv);
 
+#ifdef RATELIMIT
+err_create_mkey:
+	mlx5_core_destroy_mkey(priv->mdev, &priv->mr);
+#endif
 err_dealloc_transport_domain:
 	mlx5_dealloc_transport_domain(mdev, priv->tdn);
 
@@ -4111,8 +4502,22 @@ mlx5e_destroy_ifp(struct mlx5_core_dev *mdev, void *vpriv)
 	/* XXX wait a bit to allow IOCTL handlers to complete */
 	pause("W", hz);
 
+#ifdef RATELIMIT
+	/*
+	 * The kernel can have reference(s) via the m_snd_tag's into
+	 * the ratelimit channels, and these must go away before
+	 * detaching:
+	 */
+	while (READ_ONCE(priv->rl.stats.tx_active_connections) != 0) {
+		mlx5_en_err(priv->ifp,
+		    "Waiting for all ratelimit connections to terminate\n");
+		pause("W", hz);
+	}
+#endif
 	/* stop watchdog timer */
 	callout_drain(&priv->watchdog);
+
+	callout_drain(&priv->tstmp_clbr);
 
 	if (priv->vlan_attach != NULL)
 		EVENTHANDLER_DEREGISTER(vlan_config, priv->vlan_attach);
@@ -4124,10 +4529,20 @@ mlx5e_destroy_ifp(struct mlx5_core_dev *mdev, void *vpriv)
 	mlx5e_close_locked(ifp);
 	PRIV_UNLOCK(priv);
 
+	/* wait for all unlimited send tags to go away */
+	while (priv->channel_refs != 0) {
+		mlx5_en_err(priv->ifp,
+		    "Waiting for all unlimited connections to terminate\n");
+		pause("W", hz);
+	}
+
 	/* unregister device */
 	ifmedia_removeall(&priv->media);
 	ether_ifdetach(ifp);
 
+#ifdef RATELIMIT
+	mlx5e_rl_cleanup(priv);
+#endif
 	/* destroy all remaining sysctl nodes */
 	sysctl_ctx_free(&priv->stats.vport.ctx);
 	sysctl_ctx_free(&priv->stats.pport.ctx);
@@ -4182,8 +4597,8 @@ mlx5e_show_version(void __unused *arg)
 }
 SYSINIT(mlx5e_show_version, SI_SUB_DRIVERS, SI_ORDER_ANY, mlx5e_show_version, NULL);
 
-module_init_order(mlx5e_init, SI_ORDER_THIRD);
-module_exit_order(mlx5e_cleanup, SI_ORDER_THIRD);
+module_init_order(mlx5e_init, SI_ORDER_SIXTH);
+module_exit_order(mlx5e_cleanup, SI_ORDER_SIXTH);
 
 #if (__FreeBSD_version >= 1100000)
 MODULE_DEPEND(mlx5en, linuxkpi, 1, 1, 1);

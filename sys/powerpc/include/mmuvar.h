@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Peter Grehan
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/powerpc/include/mmuvar.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_MMUVAR_H_
@@ -114,6 +116,7 @@ DATA_SET(mmu_set, name)
 #define MMU_TYPE_BOOKE	"mmu_booke"	/* Book-E MMU specification */
 #define MMU_TYPE_OEA	"mmu_oea"	/* 32-bit OEA */
 #define MMU_TYPE_G5	"mmu_g5"	/* 64-bit bridge (ibm 970) */
+#define MMU_TYPE_P9H	"mmu_p9h"	/* 64-bit native ISA 3.0 (POWER9) hash */
 #define MMU_TYPE_8xx	"mmu_8xx"	/* 8xx quicc TLB */
 
 #endif /* _MACHINE_MMUVAR_H_ */

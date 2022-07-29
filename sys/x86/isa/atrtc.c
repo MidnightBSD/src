@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Poul-Henning Kamp
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -24,11 +26,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/x86/isa/atrtc.c 345590 2019-03-27 19:17:42Z wulf $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/x86/isa/atrtc.c 345590 2019-03-27 19:17:42Z wulf $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include "opt_isa.h"
@@ -67,6 +69,10 @@ __FBSDID("$FreeBSD: stable/11/sys/x86/isa/atrtc.c 345590 2019-03-27 19:17:42Z wu
  */
 static struct mtx atrtc_lock;
 MTX_SYSINIT(atrtc_lock_init, &atrtc_lock, "atrtc", MTX_SPIN);
+
+/* Force RTC enabled/disabled. */
+static int atrtc_enabled = -1;
+TUNABLE_INT("hw.atrtc.enabled", &atrtc_enabled);
 
 struct mtx atrtc_time_lock;
 MTX_SYSINIT(atrtc_time_lock_init, &atrtc_time_lock, "atrtc_time", MTX_DEF);
@@ -400,11 +406,29 @@ static struct isa_pnp_id atrtc_ids[] = {
 	{ 0 }
 };
 
+static bool
+atrtc_acpi_disabled(void)
+{
+#ifdef DEV_ACPI
+	uint16_t flags;
+
+	if (!acpi_get_fadt_bootflags(&flags))
+		return (false);
+	return ((flags & ACPI_FADT_NO_CMOS_RTC) != 0);
+#else
+	return (false);
+#endif
+}
+
 static int
 atrtc_probe(device_t dev)
 {
 	int result;
-	
+
+	if ((atrtc_enabled == -1 && atrtc_acpi_disabled()) ||
+	    (atrtc_enabled == 0))
+		return (ENXIO);
+
 	result = ISA_PNP_PROBE(device_get_parent(dev), dev, atrtc_ids);
 	/* ENOENT means no PnP-ID, device is hinted. */
 	if (result == ENOENT) {
@@ -632,3 +656,4 @@ DRIVER_MODULE(atrtc, isa, atrtc_isa_driver, atrtc_devclass, 0, 0);
 #ifdef DEV_ACPI
 DRIVER_MODULE(atrtc, acpi, atrtc_acpi_driver, atrtc_devclass, 0, 0);
 #endif
+ISA_PNP_INFO(atrtc_ids);

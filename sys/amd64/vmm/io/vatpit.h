@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/vmm/io/vatpit.h 336190 2018-07-11 07:19:42Z araujo $
+ * $FreeBSD$
  */
 
 #ifndef _VATPIT_H_

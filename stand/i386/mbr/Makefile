@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/i386/mbr/Makefile 329183 2018-02-12 20:51:28Z kevans $
+# $FreeBSD$
 
 PROG=	mbr
 STRIP=

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -47,7 +49,7 @@ static char sccsid[] = "@(#)ps.c	8.4 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/ps/ps.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/jail.h>
@@ -192,13 +194,27 @@ main(int argc, char *argv[])
 	(void) setlocale(LC_ALL, "");
 	time(&now);			/* Used by routines in print.c. */
 
+	/*
+	 * Compute default output line length before processing options.
+	 * If COLUMNS is set, use it.  Otherwise, if this is part of an
+	 * interactive job (i.e. one associated with a terminal), use
+	 * the terminal width.  "Interactive" is determined by whether
+	 * any of stdout, stderr, or stdin is a terminal.  The intent
+	 * is that "ps", "ps | more", and "ps | grep" all use the same
+	 * default line length unless -w is specified.
+	 *
+	 * If not interactive, the default length was traditionally 79.
+	 * It has been changed to unlimited.  This is mostly for the
+	 * benefit of non-interactive scripts, which arguably should
+	 * use -ww, but is compatible with Linux.
+	 */
 	if ((cols = getenv("COLUMNS")) != NULL && *cols != '\0')
 		termwidth = atoi(cols);
 	else if ((ioctl(STDOUT_FILENO, TIOCGWINSZ, (char *)&ws) == -1 &&
 	     ioctl(STDERR_FILENO, TIOCGWINSZ, (char *)&ws) == -1 &&
 	     ioctl(STDIN_FILENO,  TIOCGWINSZ, (char *)&ws) == -1) ||
 	     ws.ws_col == 0)
-		termwidth = 79;
+		termwidth = UNLIMITED;
 	else
 		termwidth = ws.ws_col - 1;
 
@@ -399,7 +415,7 @@ main(int argc, char *argv[])
 		case 'w':
 			if (wflag)
 				termwidth = UNLIMITED;
-			else if (termwidth < 131)
+			else if (termwidth < 131 && termwidth != UNLIMITED)
 				termwidth = 131;
 			wflag++;
 			break;
@@ -490,7 +506,7 @@ main(int argc, char *argv[])
 			what = KERN_PROC_PGRP | showthreads;
 			flag = *pgrplist.l.pids;
 			nselectors = 0;
-		} else if (pidlist.count == 1) {
+		} else if (pidlist.count == 1 && !descendancy) {
 			what = KERN_PROC_PID | showthreads;
 			flag = *pidlist.l.pids;
 			nselectors = 0;
@@ -528,6 +544,14 @@ main(int argc, char *argv[])
 	if ((kp == NULL && errno != ESRCH) || (kp != NULL && nentries < 0))
 		xo_errx(1, "%s", kvm_geterr(kd));
 	nkept = 0;
+	if (descendancy)
+		for (elem = 0; elem < pidlist.count; elem++)
+			for (i = 0; i < nentries; i++)
+				if (kp[i].ki_ppid == pidlist.l.pids[elem]) {
+					if (pidlist.count >= pidlist.maxcount)
+						expand_list(&pidlist);
+					pidlist.l.pids[pidlist.count++] = kp[i].ki_pid;
+				}
 	if (nentries > 0) {
 		if ((kinfo = malloc(nentries * sizeof(*kinfo))) == NULL)
 			xo_errx(1, "malloc failed");
@@ -673,7 +697,7 @@ main(int argc, char *argv[])
 			    (STAILQ_NEXT(vent, next_ve) == NULL &&
 			    (vent->var->flag & LJUST))) ? 0 : vent->var->width;
 			snprintf(fmtbuf, sizeof(fmtbuf), "{:%s/%%%s%d..%ds}",
-			    vent->var->field ?: vent->var->name,
+			    vent->var->field ? vent->var->field : vent->var->name,
 			    (vent->var->flag & LJUST) ? "-" : "",
 			    fwidthmin, fwidthmax);
 			xo_emit(fmtbuf, str);
@@ -1240,6 +1264,7 @@ fmt(char **(*fn)(kvm_t *, const struct kinfo_proc *, int), KINFO *ki,
 static void
 saveuser(KINFO *ki)
 {
+	char tdname[COMMLEN + 1];
 	char *argsp;
 
 	if (ki->ki_p->ki_flag & P_INMEM) {
@@ -1256,12 +1281,14 @@ saveuser(KINFO *ki)
 	 * save arguments if needed
 	 */
 	if (needcomm) {
-		if (ki->ki_p->ki_stat == SZOMB)
+		if (ki->ki_p->ki_stat == SZOMB) {
 			ki->ki_args = strdup("<defunct>");
-		else if (UREADOK(ki) || (ki->ki_p->ki_args != NULL))
+		} else if (UREADOK(ki) || (ki->ki_p->ki_args != NULL)) {
+			(void)snprintf(tdname, sizeof(tdname), "%s%s",
+			    ki->ki_p->ki_tdname, ki->ki_p->ki_moretdname);
 			ki->ki_args = fmt(kvm_getargv, ki,
-			    ki->ki_p->ki_comm, ki->ki_p->ki_tdname, MAXCOMLEN);
-		else {
+			    ki->ki_p->ki_comm, tdname, COMMLEN * 2 + 1);
+		} else {
 			asprintf(&argsp, "(%s)", ki->ki_p->ki_comm);
 			ki->ki_args = argsp;
 		}
@@ -1432,7 +1459,7 @@ pidmax_init(void)
 	}
 }
 
-static void
+static void __dead2
 usage(void)
 {
 #define	SINGLE_OPTS	"[-aCcde" OPT_LAZY_f "HhjlmrSTuvwXxZ]"

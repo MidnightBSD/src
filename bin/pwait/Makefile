@@ -1,12 +1,11 @@
-# $FreeBSD: stable/11/bin/pwait/Makefile 315723 2017-03-22 17:53:25Z bdrewery $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
 PACKAGE=runtime
 PROG=	pwait
 
-.if ${MK_TESTS} != "no"
-SUBDIR+=	tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+=	tests
 
 .include <bsd.prog.mk>

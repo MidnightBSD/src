@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/cxgbetool/tcbinfot5.c 339393 2018-10-16 22:09:33Z np $");
+__FBSDID("$FreeBSD$");
 
 /* Auto-generated file.  Avoid direct editing.     */
 /* Edits will be lost when file regenerated.       */

@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/sys/dev/usb/serial/ugensa.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*	$NetBSD: ugensa.c,v 1.9.2.1 2007/03/24 14:55:50 yamt Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2004, 2005 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -158,6 +160,8 @@ static const STRUCT_USB_HOST_ID ugensa_devs[] = {
 	{USB_VPI(USB_VENDOR_KYOCERA2, USB_PRODUCT_KYOCERA2_CDMA_MSM_K, 0)},
 	{USB_VPI(USB_VENDOR_HP, USB_PRODUCT_HP_49GPLUS, 0)},
 	{USB_VPI(USB_VENDOR_NOVATEL2, USB_PRODUCT_NOVATEL2_FLEXPACKGPS, 0)},
+	{USB_VENDOR(USB_VENDOR_GOOGLE), USB_IFACE_CLASS(UICLASS_VENDOR),
+		USB_IFACE_SUBCLASS(0x50), USB_IFACE_PROTOCOL(0x01), USB_DRIVER_INFO(10)},
 };
 
 DRIVER_MODULE(ugensa, uhub, ugensa_driver, ugensa_devclass, NULL, 0);

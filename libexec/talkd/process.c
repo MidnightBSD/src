@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -32,7 +34,7 @@
 static char sccsid[] = "@(#)process.c	8.2 (Berkeley) 11/16/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/11/libexec/talkd/process.c 331722 2018-03-29 02:50:57Z eadler $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 /*

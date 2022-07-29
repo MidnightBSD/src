@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/drm2/i915/intel_drv.h 299381 2016-05-10 18:18:29Z hselasky $
+ * $FreeBSD$
  */
 #ifndef __INTEL_DRV_H__
 #define __INTEL_DRV_H__

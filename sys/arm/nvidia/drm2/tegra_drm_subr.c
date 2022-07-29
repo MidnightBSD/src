@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/nvidia/drm2/tegra_drm_subr.c 310600 2016-12-26 14:36:05Z mmel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -125,7 +125,7 @@ tegra_drm_encoder_attach(struct tegra_drm_encoder *output, phandle_t node)
 
 	/* XXX parse output panel here */
 
-	rv = OF_getencprop_alloc(node, "nvidia,edid", 1,
+	rv = OF_getencprop_alloc(node, "nvidia,edid",
 	    (void **)&output->edid);
 
 	/* EDID exist but have invalid size */

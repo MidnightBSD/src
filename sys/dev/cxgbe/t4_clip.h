@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/cxgbe/t4_clip.h 346934 2019-04-29 22:16:33Z np $
+ * $FreeBSD$
  */
 
 #ifndef __T4_CLIP_H

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 Michael Shalayeff
  * All rights reserved.
  *
@@ -42,7 +44,7 @@
 
 /*
  *	$OpenBSD: if_pfsync.h,v 1.35 2008/06/29 08:42:15 mcbride Exp $
- *	$FreeBSD: stable/11/sys/net/if_pfsync.h 262489 2014-02-25 18:44:33Z jhb $
+ *	$FreeBSD$
  */
 
 
@@ -235,6 +237,8 @@ struct pfsyncreq {
 	char		 pfsyncr_syncdev[IFNAMSIZ];
 	struct in_addr	 pfsyncr_syncpeer;
 	int		 pfsyncr_maxupdates;
+#define	PFSYNCF_OK		0x00000001
+#define	PFSYNCF_DEFER		0x00000002
 	int		 pfsyncr_defer;
 };
 

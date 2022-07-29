@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/allwinner/a10_fb.c 308324 2016-11-05 04:17:32Z mmel $
+ * $FreeBSD$
  */
 
 /*
@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/allwinner/a10_fb.c 308324 2016-11-05 04:17:32Z mmel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -178,8 +178,8 @@ static struct resource_spec a10fb_spec[] = {
 static int
 a10fb_allocfb(struct a10fb_softc *sc)
 {
-	sc->vaddr = kmem_alloc_contig(kernel_arena, sc->fbsize,
-	    M_NOWAIT | M_ZERO, 0, ~0, FB_ALIGN, 0, VM_MEMATTR_WRITE_COMBINING);
+	sc->vaddr = kmem_alloc_contig(sc->fbsize, M_NOWAIT | M_ZERO, 0, ~0,
+	    FB_ALIGN, 0, VM_MEMATTR_WRITE_COMBINING);
 	if (sc->vaddr == 0) {
 		device_printf(sc->dev, "failed to allocate FB memory\n");
 		return (ENOMEM);
@@ -192,7 +192,7 @@ a10fb_allocfb(struct a10fb_softc *sc)
 static void
 a10fb_freefb(struct a10fb_softc *sc)
 {
-	kmem_free(kernel_arena, sc->vaddr, sc->fbsize);
+	kmem_free(sc->vaddr, sc->fbsize);
 }
 
 static int

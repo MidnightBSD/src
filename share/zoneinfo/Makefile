@@ -2,7 +2,7 @@
 
 CLEANFILES+=	yearistype
 CLEANDIRS+=	builddir
-CONTRIBDIR=	${.CURDIR}/../../contrib/tzdata/
+CONTRIBDIR=	${SRCTOP}/contrib/tzdata/
 .PATH:		${CONTRIBDIR}
 
 .if defined(LEAPSECONDS)
@@ -54,16 +54,28 @@ zoneinfo: yearistype ${TDATA}
 	zic -D -d ${TZBUILDDIR} -p ${POSIXRULES} -m ${NOBINMODE} \
 	    ${LEAPFILE} -y ${.OBJDIR}/yearistype ${TZFILES}
 
+#
+# Sort TZS to ensure they are the same every build. find -s might
+# be a shorter way to express this, but it's non-portable. Any
+# differences between the two don't matter for this purpose.
+#
+.if make(*install*)
+TZS!= cd ${TZBUILDDIR} && find * -type f | LC_ALL=C sort
+.endif
+
 beforeinstall: install-zoneinfo
 install-zoneinfo:
 	mkdir -p ${DESTDIR}/usr/share/zoneinfo
 	cd ${DESTDIR}/usr/share/zoneinfo;  mkdir -p ${TZBUILDSUBDIRS}
-	cd ${TZBUILDDIR} && \
-	    find -s * -type f -print -exec ${INSTALL} ${TAG_ARGS} \
+.for f in ${TZS}
+	${INSTALL} ${TAG_ARGS} \
 	    -o ${BINOWN} -g ${BINGRP} -m ${NOBINMODE} \
-	    \{} ${DESTDIR}/usr/share/zoneinfo/\{} \;
+	    ${TZBUILDDIR}/${f} ${DESTDIR}/usr/share/zoneinfo/${f}
+.endfor
 	${INSTALL} ${TAG_ARGS} -o ${BINOWN} -g ${BINGRP} -m ${NOBINMODE} \
 	    ${CONTRIBDIR}/zone.tab ${DESTDIR}/usr/share/zoneinfo/
+	${INSTALL} ${TAG_ARGS} -o ${BINOWN} -g ${BINGRP} -m ${NOBINMODE} \
+	    ${CONTRIBDIR}/zone1970.tab ${DESTDIR}/usr/share/zoneinfo/
 
 afterinstall:
 #
@@ -85,8 +97,7 @@ afterinstall:
 		echo "Run tzsetup(8) manually to update /etc/localtime."; \
 	fi
 
-.if ${MK_TESTS} != "no"
-SUBDIR+=	tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

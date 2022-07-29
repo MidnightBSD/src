@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/sys/modules/vmware/Makefile 254738 2013-08-23 20:47:16Z bryanv $
+# $FreeBSD$
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -23,6 +23,9 @@
 # SUCH DAMAGE.
 #
 
-SUBDIR=	vmxnet3
+SUBDIR=	 vmxnet3
+.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
+SUBDIR+= vmci
+.endif
 
 .include <bsd.subdir.mk>

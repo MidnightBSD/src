@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/tools/regression/pthread/unwind/sem_wait_cancel.cpp 213155 2010-09-25 04:26:40Z davidxu $ */
+/* $FreeBSD$ */
 /* Test stack unwinding for libc's sem */
 
 #include <pthread.h>
@@ -8,10 +8,10 @@
 
 #include "Test.cpp"
 
-sem_t sem;
+static sem_t sem;
 
-void *
-thr(void *arg)
+static void *
+thr(void *arg __unused)
 {
 	Test t;
 

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -43,7 +45,7 @@ static char sccsid[] = "@(#)mountd.c	8.15 (Berkeley) 5/1/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/mountd/mountd.c 349772 2019-07-05 22:48:31Z rmacklem $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>
@@ -182,6 +184,12 @@ struct fhreturn {
 
 #define	GETPORT_MAXTRY	20	/* Max tries to get a port # */
 
+/*
+ * How long to delay a reload of exports when there are RPC request(s)
+ * to process, in usec.  Must be less than 1second.
+ */
+#define	RELOADDELAY	250000
+
 /* Global defs */
 static char	*add_expdir(struct dirlist **, char *, int);
 static void	add_dlist(struct dirlist **, struct dirlist *,
@@ -262,10 +270,10 @@ static char **exnames;
 static char **hosts = NULL;
 static struct xucred def_anon = {
 	XUCRED_VERSION,
-	(uid_t)-2,
+	(uid_t)65534,
 	1,
-	{ (gid_t)-2 },
-	NULL
+	{ (gid_t)65533 },
+	{ NULL }
 };
 static int force_v2 = 0;
 static int resvport_only = 1;
@@ -408,7 +416,13 @@ main(int argc, char **argv)
 	int maxrec = RPC_MAXDATASIZE;
 	int attempt_cnt, port_len, port_pos, ret;
 	char **port_list;
+	uint64_t curtime, nexttime;
+	struct timeval tv;
+	struct timespec tp;
+	sigset_t sig_mask, sighup_mask;
+	int enable_rpcbind;
 
+	enable_rpcbind = 1;
 	/* Check that another mountd isn't already running. */
 	pfh = pidfile_open(_PATH_MOUNTDPID, 0600, &otherpid);
 	if (pfh == NULL) {
@@ -423,7 +437,7 @@ main(int argc, char **argv)
 	else
 		close(s);
 
-	while ((c = getopt(argc, argv, "2deh:lnp:rS")) != -1)
+	while ((c = getopt(argc, argv, "2deh:lnp:RrS")) != -1)
 		switch (c) {
 		case '2':
 			force_v2 = 1;
@@ -433,6 +447,10 @@ main(int argc, char **argv)
 			break;
 		case 'n':
 			resvport_only = 0;
+			break;
+		case 'R':
+			/* Do not support Mount protocol */
+			enable_rpcbind = 0;
 			break;
 		case 'r':
 			dir_only = 0;
@@ -478,6 +496,21 @@ main(int argc, char **argv)
 		default:
 			usage();
 		}
+	if (enable_rpcbind == 0) {
+		if (svcport_str != NULL) {
+			warnx("-p option not compatible with -R, ignored");
+			free(svcport_str);
+			svcport_str = NULL;
+		}
+		if (nhosts > 0) {
+			warnx("-h option not compatible with -R, ignored");
+			for (k = 0; k < nhosts; k++) 
+				free(hosts[k]);
+			free(hosts);
+			hosts = NULL;
+			nhosts = 0;
+		}
+	}
 
 	if (modfind("nfsd") < 0) {
 		/* Not present in kernel, try loading it */
@@ -511,58 +544,61 @@ main(int argc, char **argv)
 
 	pidfile_write(pfh);
 
-	rpcb_unset(MOUNTPROG, MOUNTVERS, NULL);
-	rpcb_unset(MOUNTPROG, MOUNTVERS3, NULL);
-	rpc_control(RPC_SVC_CONNMAXREC_SET, &maxrec);
+	if (enable_rpcbind != 0) {
+		rpcb_unset(MOUNTPROG, MOUNTVERS, NULL);
+		rpcb_unset(MOUNTPROG, MOUNTVERS3, NULL);
+		rpc_control(RPC_SVC_CONNMAXREC_SET, &maxrec);
 
-	if (!resvport_only) {
-		if (sysctlbyname("vfs.nfsd.nfs_privport", NULL, NULL,
-		    &resvport_only, sizeof(resvport_only)) != 0 &&
-		    errno != ENOENT) {
-			syslog(LOG_ERR, "sysctl: %m");
-			exit(1);
-		}
-	}
-
-	/*
-	 * If no hosts were specified, add a wildcard entry to bind to
-	 * INADDR_ANY. Otherwise make sure 127.0.0.1 and ::1 are added to the
-	 * list.
-	 */
-	if (nhosts == 0) {
-		hosts = malloc(sizeof(char *));
-		if (hosts == NULL)
-			out_of_mem();
-		hosts[0] = "*";
-		nhosts = 1;
-	} else {
-		hosts_bak = hosts;
-		if (have_v6) {
-			hosts_bak = realloc(hosts, (nhosts + 2) *
-			    sizeof(char *));
-			if (hosts_bak == NULL) {
-				for (k = 0; k < nhosts; k++)
-					free(hosts[k]);
-		    		free(hosts);
-		    		out_of_mem();
-			} else
-				hosts = hosts_bak;
-			nhosts += 2;
-			hosts[nhosts - 2] = "::1";
-		} else {
-			hosts_bak = realloc(hosts, (nhosts + 1) * sizeof(char *));
-			if (hosts_bak == NULL) {
-				for (k = 0; k < nhosts; k++)
-					free(hosts[k]);
-				free(hosts);
-				out_of_mem();
-			} else {
-				nhosts += 1;
-				hosts = hosts_bak;
+		if (!resvport_only) {
+			if (sysctlbyname("vfs.nfsd.nfs_privport", NULL, NULL,
+			    &resvport_only, sizeof(resvport_only)) != 0 &&
+			    errno != ENOENT) {
+				syslog(LOG_ERR, "sysctl: %m");
+				exit(1);
 			}
 		}
 
-		hosts[nhosts - 1] = "127.0.0.1";
+		/*
+		 * If no hosts were specified, add a wildcard entry to bind to
+		 * INADDR_ANY. Otherwise make sure 127.0.0.1 and ::1 are added
+		 * to the list.
+		 */
+		if (nhosts == 0) {
+			hosts = malloc(sizeof(char *));
+			if (hosts == NULL)
+				out_of_mem();
+			hosts[0] = "*";
+			nhosts = 1;
+		} else {
+			hosts_bak = hosts;
+			if (have_v6) {
+				hosts_bak = realloc(hosts, (nhosts + 2) *
+				    sizeof(char *));
+				if (hosts_bak == NULL) {
+					for (k = 0; k < nhosts; k++)
+						free(hosts[k]);
+			    		free(hosts);
+			    		out_of_mem();
+				} else
+					hosts = hosts_bak;
+				nhosts += 2;
+				hosts[nhosts - 2] = "::1";
+			} else {
+				hosts_bak = realloc(hosts, (nhosts + 1) *
+				    sizeof(char *));
+				if (hosts_bak == NULL) {
+					for (k = 0; k < nhosts; k++)
+						free(hosts[k]);
+					free(hosts);
+					out_of_mem();
+				} else {
+					nhosts += 1;
+					hosts = hosts_bak;
+				}
+			}
+
+			hosts[nhosts - 1] = "127.0.0.1";
+		}
 	}
 
 	attempt_cnt = 1;
@@ -570,115 +606,164 @@ main(int argc, char **argv)
 	sock_fd = NULL;
 	port_list = NULL;
 	port_len = 0;
-	nc_handle = setnetconfig();
-	while ((nconf = getnetconfig(nc_handle))) {
-		if (nconf->nc_flag & NC_VISIBLE) {
-			if (have_v6 == 0 && strcmp(nconf->nc_protofmly,
-			    "inet6") == 0) {
-				/* DO NOTHING */
-			} else {
-				ret = create_service(nconf);
-				if (ret == 1)
-					/* Ignore this call */
-					continue;
-				if (ret < 0) {
-					/*
-					 * Failed to bind port, so close off
-					 * all sockets created and try again
-					 * if the port# was dynamically
-					 * assigned via bind(2).
-					 */
-					clearout_service();
-					if (mallocd_svcport != 0 &&
-					    attempt_cnt < GETPORT_MAXTRY) {
-						free(svcport_str);
+	if (enable_rpcbind != 0) {
+		nc_handle = setnetconfig();
+		while ((nconf = getnetconfig(nc_handle))) {
+			if (nconf->nc_flag & NC_VISIBLE) {
+				if (have_v6 == 0 && strcmp(nconf->nc_protofmly,
+				    "inet6") == 0) {
+					/* DO NOTHING */
+				} else {
+					ret = create_service(nconf);
+					if (ret == 1)
+						/* Ignore this call */
+						continue;
+					if (ret < 0) {
+						/*
+						 * Failed to bind port, so close
+						 * off all sockets created and
+						 * try again if the port# was
+						 * dynamically assigned via
+						 * bind(2).
+						 */
+						clearout_service();
+						if (mallocd_svcport != 0 &&
+						    attempt_cnt <
+						    GETPORT_MAXTRY) {
+							free(svcport_str);
+							svcport_str = NULL;
+							mallocd_svcport = 0;
+						} else {
+							errno = EADDRINUSE;
+							syslog(LOG_ERR,
+							    "bindresvport_sa:"
+							    " %m");
+							exit(1);
+						}
+
+						/*
+						 * Start over at the first
+						 * service.
+						 */
+						free(sock_fd);
+						sock_fdcnt = 0;
+						sock_fd = NULL;
+						nc_handle = setnetconfig();
+						attempt_cnt++;
+					} else if (mallocd_svcport != 0 &&
+					    attempt_cnt == GETPORT_MAXTRY) {
+						/*
+						 * For the last attempt, allow
+						 * different port #s for each
+						 * nconf by saving the
+						 * svcport_str setting it back
+						 * to NULL.
+						 */
+						port_list = realloc(port_list,
+						    (port_len + 1) *
+						    sizeof(char *));
+						if (port_list == NULL)
+							out_of_mem();
+						port_list[port_len++] =
+						    svcport_str;
 						svcport_str = NULL;
 						mallocd_svcport = 0;
-					} else {
-						errno = EADDRINUSE;
-						syslog(LOG_ERR,
-						    "bindresvport_sa: %m");
-						exit(1);
 					}
-
-					/* Start over at the first service. */
-					free(sock_fd);
-					sock_fdcnt = 0;
-					sock_fd = NULL;
-					nc_handle = setnetconfig();
-					attempt_cnt++;
-				} else if (mallocd_svcport != 0 &&
-				    attempt_cnt == GETPORT_MAXTRY) {
-					/*
-					 * For the last attempt, allow
-					 * different port #s for each nconf
-					 * by saving the svcport_str and
-					 * setting it back to NULL.
-					 */
-					port_list = realloc(port_list,
-					    (port_len + 1) * sizeof(char *));
-					if (port_list == NULL)
-						out_of_mem();
-					port_list[port_len++] = svcport_str;
-					svcport_str = NULL;
-					mallocd_svcport = 0;
 				}
 			}
 		}
-	}
 
-	/*
-	 * Successfully bound the ports, so call complete_service() to
-	 * do the rest of the setup on the service(s).
-	 */
-	sock_fdpos = 0;
-	port_pos = 0;
-	nc_handle = setnetconfig();
-	while ((nconf = getnetconfig(nc_handle))) {
-		if (nconf->nc_flag & NC_VISIBLE) {
-			if (have_v6 == 0 && strcmp(nconf->nc_protofmly,
-			    "inet6") == 0) {
-				/* DO NOTHING */
-			} else if (port_list != NULL) {
-				if (port_pos >= port_len) {
-					syslog(LOG_ERR, "too many port#s");
-					exit(1);
-				}
-				complete_service(nconf, port_list[port_pos++]);
-			} else
-				complete_service(nconf, svcport_str);
+		/*
+		 * Successfully bound the ports, so call complete_service() to
+		 * do the rest of the setup on the service(s).
+		 */
+		sock_fdpos = 0;
+		port_pos = 0;
+		nc_handle = setnetconfig();
+		while ((nconf = getnetconfig(nc_handle))) {
+			if (nconf->nc_flag & NC_VISIBLE) {
+				if (have_v6 == 0 && strcmp(nconf->nc_protofmly,
+				    "inet6") == 0) {
+					/* DO NOTHING */
+				} else if (port_list != NULL) {
+					if (port_pos >= port_len) {
+						syslog(LOG_ERR, "too many"
+						    " port#s");
+						exit(1);
+					}
+					complete_service(nconf,
+					    port_list[port_pos++]);
+				} else
+					complete_service(nconf, svcport_str);
+			}
 		}
-	}
-	endnetconfig(nc_handle);
-	free(sock_fd);
-	if (port_list != NULL) {
-		for (port_pos = 0; port_pos < port_len; port_pos++)
-			free(port_list[port_pos]);
-		free(port_list);
-	}
+		endnetconfig(nc_handle);
+		free(sock_fd);
+		if (port_list != NULL) {
+			for (port_pos = 0; port_pos < port_len; port_pos++)
+				free(port_list[port_pos]);
+			free(port_list);
+		}
 
-	if (xcreated == 0) {
-		syslog(LOG_ERR, "could not create any services");
-		exit(1);
+		if (xcreated == 0) {
+			syslog(LOG_ERR, "could not create any services");
+			exit(1);
+		}
 	}
 
 	/* Expand svc_run() here so that we can call get_exportlist(). */
+	curtime = nexttime = 0;
+	sigemptyset(&sighup_mask);
+	sigaddset(&sighup_mask, SIGHUP);
 	for (;;) {
-		if (got_sighup) {
-			get_exportlist(1);
+		clock_gettime(CLOCK_MONOTONIC, &tp);
+		curtime = tp.tv_sec;
+		curtime = curtime * 1000000 + tp.tv_nsec / 1000;
+		sigprocmask(SIG_BLOCK, &sighup_mask, &sig_mask);
+		if (got_sighup && curtime >= nexttime) {
 			got_sighup = 0;
-		}
-		readfds = svc_fdset;
-		switch (select(svc_maxfd + 1, &readfds, NULL, NULL, NULL)) {
-		case -1:
-			if (errno == EINTR)
-                                continue;
-			syslog(LOG_ERR, "mountd died: select: %m");
-			exit(1);
-		case 0:
-			continue;
-		default:
-			svc_getreqset(&readfds);
+			sigprocmask(SIG_UNBLOCK, &sighup_mask, NULL);
+			get_exportlist(1);
+			clock_gettime(CLOCK_MONOTONIC, &tp);
+			nexttime = tp.tv_sec;
+			nexttime = nexttime * 1000000 + tp.tv_nsec / 1000 +
+			    RELOADDELAY;
+		} else
+			sigprocmask(SIG_UNBLOCK, &sighup_mask, NULL);
+
+		/*
+		 * If a reload is pending, poll for received request(s),
+		 * otherwise set a RELOADDELAY timeout, since a SIGHUP
+		 * could be processed between the got_sighup test and
+		 * the select() system call.
+		 */
+		tv.tv_sec = 0;
+		if (got_sighup)
+			tv.tv_usec = 0;
+		else
+			tv.tv_usec = RELOADDELAY;
+		if (enable_rpcbind != 0) {
+			readfds = svc_fdset;
+			switch (select(svc_maxfd + 1, &readfds, NULL, NULL,
+			    &tv)) {
+			case -1:
+				if (errno == EINTR) {
+					/* Allow a reload now. */
+					nexttime = 0;
+					continue;
+				}
+				syslog(LOG_ERR, "mountd died: select: %m");
+				exit(1);
+			case 0:
+				/* Allow a reload now. */
+				nexttime = 0;
+				continue;
+			default:
+				svc_getreqset(&readfds);
+			}
+		} else {
+			/* Simply wait for a signal. */
+			sigsuspend(&sig_mask);
 		}
 	}
 } 
@@ -1045,7 +1130,8 @@ mntsrv(struct svc_req *rqstp, SVCXPRT *transp)
 	struct sockaddr *saddr;
 	u_short sport;
 	char rpcpath[MNTPATHLEN + 1], dirpath[MAXPATHLEN];
-	int bad = 0, defset, hostset;
+	int defset, hostset;
+	long bad = 0;
 	sigset_t sighup_mask;
 	int numsecflavors, *secflavorsp;
 
@@ -1566,10 +1652,8 @@ get_exportlist_one(int passno)
 				    ep = get_exp();
 				} else {
 				    if (ep) {
-					if (ep->ex_fs.val[0] !=
-					    fsb.f_fsid.val[0] ||
-					    ep->ex_fs.val[1] !=
-					    fsb.f_fsid.val[1]) {
+					if (fsidcmp(&ep->ex_fs, &fsb.f_fsid)
+					    != 0) {
 						getexp_err(ep, tgrp,
 						    "fsid mismatch");
 						goto nextline;
@@ -1787,10 +1871,11 @@ get_exportlist(int passno)
 	struct iovec *iov;
 	struct statfs *mntbufp;
 	char errmsg[255];
-	int num, i;
+	int error, i, nfs_maxvers, num;
 	int iovlen;
 	struct nfsex_args eargs;
 	FILE *debug_file;
+	size_t nfs_maxvers_size;
 
 	if ((debug_file = fopen(_PATH_MOUNTDDEBUG, "r")) != NULL) {
 		fclose(debug_file);
@@ -1912,6 +1997,21 @@ get_exportlist(int passno)
 
 		/* Read the export file(s) and process them */
 		read_exportfile(0);
+	}
+
+	if (strlen(v4root_dirpath) == 0) {
+		/* Check to see if a V4: line is needed. */
+		nfs_maxvers_size = sizeof(nfs_maxvers);
+		error = sysctlbyname("vfs.nfsd.server_max_nfsvers",
+		    &nfs_maxvers, &nfs_maxvers_size, NULL, 0);
+		if (error != 0 || nfs_maxvers < NFS_VER2 || nfs_maxvers >
+		    NFS_VER4) {
+			syslog(LOG_ERR, "sysctlbyname(vfs.nfsd."
+			    "server_max_nfsvers) failed, defaulting to NFSv3");
+			nfs_maxvers = NFS_VER3;
+		}
+		if (nfs_maxvers == NFS_VER4)
+			syslog(LOG_ERR, "NFSv4 requires at least one V4: line");
 	}
 
 	if (iov != NULL) {
@@ -2086,8 +2186,7 @@ compare_nmount_exportlist(struct iovec *iov, int iovlen, char *errmsg)
 			if ((oep->ex_flag & EX_DONE) == 0) {
 				LOGDEBUG("not done delete=%s", oep->ex_fsdir);
 				if (statfs(oep->ex_fsdir, &ofs) >= 0 &&
-				    oep->ex_fs.val[0] == ofs.f_fsid.val[0] &&
-				    oep->ex_fs.val[1] == ofs.f_fsid.val[1]) {
+				    fsidcmp(&oep->ex_fs, &ofs.f_fsid) == 0) {
 					LOGDEBUG("do delete");
 					/*
 					 * Clear has_publicfh if if was set
@@ -2351,8 +2450,7 @@ ex_search(fsid_t *fsid, struct exportlisthead *exhp)
 
 	i = EXPHASH(fsid);
 	SLIST_FOREACH(ep, &exhp[i], entries) {
-		if (ep->ex_fs.val[0] == fsid->val[0] &&
-		    ep->ex_fs.val[1] == fsid->val[1])
+		if (fsidcmp(&ep->ex_fs, fsid) == 0)
 			return (ep);
 	}
 
@@ -3120,8 +3218,7 @@ do_mount(struct exportlist *ep, struct grouplist *grp, int exflags,
 				 * filesystem.
 				 */
 				if (statfs(dirp, &fsb1) != 0 ||
-				    bcmp(&fsb1.f_fsid, &fsb->f_fsid,
-				    sizeof (fsb1.f_fsid)) != 0) {
+				    fsidcmp(&fsb1.f_fsid, &fsb->f_fsid) != 0) {
 					*cp = savedc;
 					syslog(LOG_ERR,
 					    "can't export %s %s", dirp,
@@ -3406,8 +3503,8 @@ parsecred(char *namelist, struct xucred *cr)
 	/*
 	 * Set up the unprivileged user.
 	 */
-	cr->cr_uid = -2;
-	cr->cr_groups[0] = -2;
+	cr->cr_uid = 65534;
+	cr->cr_groups[0] = 65533;
 	cr->cr_ngroups = 1;
 	/*
 	 * Get the user's password table entry.
@@ -3437,10 +3534,18 @@ parsecred(char *namelist, struct xucred *cr)
 		/*
 		 * Compress out duplicate.
 		 */
-		cr->cr_ngroups = ngroups - 1;
 		cr->cr_groups[0] = groups[0];
-		for (cnt = 2; cnt < ngroups; cnt++)
-			cr->cr_groups[cnt - 1] = groups[cnt];
+		if (ngroups > 1 && groups[0] == groups[1]) {
+			cr->cr_ngroups = ngroups - 1;
+			for (cnt = 2; cnt < ngroups; cnt++)
+				cr->cr_groups[cnt - 1] = groups[cnt];
+		} else {
+			cr->cr_ngroups = ngroups;
+			if (cr->cr_ngroups > XU_NGROUPS)
+				cr->cr_ngroups = XU_NGROUPS;
+			for (cnt = 1; cnt < cr->cr_ngroups; cnt++)
+				cr->cr_groups[cnt] = groups[cnt];
+		}
 		return;
 	}
 	/*

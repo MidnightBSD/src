@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/11/lib/libc/rpc/Symbol.map 204950 2010-03-10 13:23:25Z jhb $
+ * $FreeBSD$
  */
 
 FBSD_1.0 {

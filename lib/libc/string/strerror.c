@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -31,7 +33,7 @@
 static char sccsid[] = "@(#)strerror.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/string/strerror.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #if defined(NLS)
 #include <nl_types.h>
@@ -43,23 +45,22 @@ __FBSDID("$FreeBSD: stable/11/lib/libc/string/strerror.c 331722 2018-03-29 02:50
 #include <stdio.h>
 
 #include "errlst.h"
-
-#define	UPREFIX		"Unknown error"
+#include "../locale/xlocale_private.h"
+#include "libc_private.h"
 
 /*
- * Define a buffer size big enough to describe a 64-bit signed integer
- * converted to ASCII decimal (19 bytes), with an optional leading sign
- * (1 byte); finally, we get the prefix, delimiter (": ") and a trailing
- * NUL from UPREFIX.
+ * Define buffer big enough to contain delimiter (": ", 2 bytes),
+ * 64-bit signed integer converted to ASCII decimal (19 bytes) with
+ * optional leading sign (1 byte), and a trailing NUL.
  */
-#define	EBUFSIZE	(20 + 2 + sizeof(UPREFIX))
+#define	EBUFSIZE	(2 + 19 + 1 + 1)
 
 /*
  * Doing this by hand instead of linking with stdio(3) avoids bloat for
  * statically linked binaries.
  */
 static void
-errstr(int num, char *uprefix, char *buf, size_t len)
+errstr(int num, const char *uprefix, char *buf, size_t len)
 {
 	char *t;
 	unsigned int uerr;
@@ -79,34 +80,35 @@ errstr(int num, char *uprefix, char *buf, size_t len)
 	strlcat(buf, t, len);
 }
 
-int
-strerror_r(int errnum, char *strerrbuf, size_t buflen)
+static int
+strerror_rl(int errnum, char *strerrbuf, size_t buflen, locale_t locale)
 {
 	int retval = 0;
 #if defined(NLS)
 	int saved_errno = errno;
 	nl_catd catd;
-	catd = catopen("libc", NL_CAT_LOCALE);
+
+	catd = __catopen_l("libc", NL_CAT_LOCALE, locale);
 #endif
 
 	if (errnum < 0 || errnum >= __hidden_sys_nerr) {
 		errstr(errnum,
 #if defined(NLS)
-			catgets(catd, 1, 0xffff, UPREFIX),
+		    catgets(catd, 1, 0xffff, __uprefix),
 #else
-			UPREFIX,
+		    __uprefix,
 #endif
-			strerrbuf, buflen);
+		   strerrbuf, buflen);
 		retval = EINVAL;
 	} else {
 		if (strlcpy(strerrbuf,
 #if defined(NLS)
-			catgets(catd, 1, errnum, __hidden_sys_errlist[errnum]),
+		    catgets(catd, 1, errnum, __hidden_sys_errlist[errnum]),
 #else
-			__hidden_sys_errlist[errnum],
+		    __hidden_sys_errlist[errnum],
 #endif
-			buflen) >= buflen)
-		retval = ERANGE;
+		    buflen) >= buflen)
+			retval = ERANGE;
 	}
 
 #if defined(NLS)
@@ -117,12 +119,33 @@ strerror_r(int errnum, char *strerrbuf, size_t buflen)
 	return (retval);
 }
 
+int
+strerror_r(int errnum, char *strerrbuf, size_t buflen)
+{
+	return (strerror_rl(errnum, strerrbuf, buflen, __get_locale()));
+}
+
+char *
+strerror_l(int num, locale_t locale)
+{
+#ifndef __NO_TLS
+	static _Thread_local char ebuf[NL_TEXTMAX];
+
+	if (strerror_rl(num, ebuf, sizeof(ebuf), locale) != 0)
+		errno = EINVAL;
+	return (ebuf);
+#else
+	errno = ENOTSUP;
+	return (NULL);
+#endif
+}
+
 char *
 strerror(int num)
 {
 	static char ebuf[NL_TEXTMAX];
 
-	if (strerror_r(num, ebuf, sizeof(ebuf)) != 0)
+	if (strerror_rl(num, ebuf, sizeof(ebuf), __get_locale()) != 0)
 		errno = EINVAL;
 	return (ebuf);
 }

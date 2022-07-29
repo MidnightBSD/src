@@ -7,10 +7,8 @@ use and modify. Please send modifications and/or suggestions + bug fixes to
 
 */
 
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD: stable/11/usr.sbin/bootparamd/callbootd/callbootd.c 256506 2013-10-15 07:37:30Z kevlo $";
-#endif /* not lint */
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include "bootparam_prot.h"
 #include <rpc/rpc.h>
@@ -27,20 +25,17 @@ static const char rcsid[] =
 #include <stdio.h>
 #include <string.h>
 
-int broadcast;
+static int broadcast;
+static char cln[MAX_MACHINE_NAME+1];
+static char dmn[MAX_MACHINE_NAME+1];
+static char path[MAX_PATH_LEN+1];
 
-char cln[MAX_MACHINE_NAME+1];
-char dmn[MAX_MACHINE_NAME+1];
-char path[MAX_PATH_LEN+1];
-extern char *inet_ntoa();
 static void usage(void);
 int printgetfile(bp_getfile_res *);
 int printwhoami(bp_whoami_res *);
 
-bool_t
-eachres_whoami(resultp, raddr)
-bp_whoami_res *resultp;
-struct sockaddr_in *raddr;
+static bool_t
+eachres_whoami(bp_whoami_res *resultp, struct sockaddr_in *raddr)
 {
   struct hostent *he;
 
@@ -51,10 +46,8 @@ struct sockaddr_in *raddr;
   return(0);
 }
 
-bool_t
-eachres_getfile(resultp, raddr)
-bp_getfile_res *resultp;
-struct sockaddr_in *raddr;
+static bool_t
+eachres_getfile(bp_getfile_res *resultp, struct sockaddr_in *raddr)
 {
   struct hostent *he;
 
@@ -67,9 +60,7 @@ struct sockaddr_in *raddr;
 
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
   char *server;
 
@@ -79,8 +70,8 @@ char **argv;
   bp_getfile_res *getfile_res, stat_getfile_res;
 
 
-  long the_inet_addr;
-  CLIENT *clnt;
+  in_addr_t the_inet_addr;
+  CLIENT *clnt = NULL;		/* Silence warnings */
 
   stat_whoami_res.client_name = cln;
   stat_whoami_res.domain_name = dmn;
@@ -158,7 +149,7 @@ char **argv;
 
 
 static void
-usage()
+usage(void)
 {
 	fprintf(stderr,
 		"usage: callbootd server procnum (IP-addr | host fileid)\n");
@@ -166,8 +157,7 @@ usage()
 }
 
 int
-printwhoami(res)
-bp_whoami_res *res;
+printwhoami(bp_whoami_res *res)
 {
       if ( res) {
 	printf("client_name:\t%s\ndomain_name:\t%s\n",
@@ -188,8 +178,7 @@ bp_whoami_res *res;
 
 
 int
-printgetfile(res)
-bp_getfile_res *res;
+printgetfile(bp_getfile_res *res)
 {
       if (res) {
 	printf("server_name:\t%s\nserver_address:\t%s\npath:\t%s\n",

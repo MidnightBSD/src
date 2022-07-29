@@ -1,5 +1,5 @@
 /*	$OpenBSD: entries.c,v 1.3 2015/01/16 06:40:22 deraadt Exp $ */
-/*	$FreeBSD: stable/11/usr.sbin/ypldap/entries.c 322882 2017-08-25 08:24:29Z araujo $ */
+/*	$FreeBSD$ */
 /*
  * Copyright (c) 2008 Pierre-Yves Ritschard <pyr@openbsd.org>
  *

@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/ofed/drivers/infiniband/core/ib_cm.c 341878 2018-12-12 11:01:23Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <linux/completion.h>
 #include <linux/dma-mapping.h>
@@ -1104,6 +1104,7 @@ struct ib_cm_id *ib_cm_insert_listen(struct ib_device *device,
 			/* Sharing an ib_cm_id with different handlers is not
 			 * supported */
 			spin_unlock_irqrestore(&cm.lock, flags);
+			ib_destroy_cm_id(cm_id);
 			return ERR_PTR(-EINVAL);
 		}
 		atomic_inc(&cm_id_priv->refcount);
@@ -4180,5 +4181,5 @@ static void __exit ib_cm_cleanup(void)
 }
 
 module_init_order(ib_cm_init, SI_ORDER_SECOND);
-module_exit_order(ib_cm_cleanup, SI_ORDER_FIRST);
+module_exit_order(ib_cm_cleanup, SI_ORDER_SECOND);
 

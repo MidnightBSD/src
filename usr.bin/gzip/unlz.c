@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/gzip/unlz.c 343251 2019-01-21 06:52:35Z delphij $
+ * $FreeBSD$
  */
 
 /*  Lzd - Educational decompressor for the lzip format
@@ -618,8 +618,6 @@ unlz(int fin, int fout, char *pre, size_t prelen, off_t *bytes_in)
 
 	char header[HDR_SIZE];
 
-	if (prelen > sizeof(header))
-		return -1;
 	if (pre && prelen)
 		memcpy(header, pre, prelen);
 	

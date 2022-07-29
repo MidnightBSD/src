@@ -1,6 +1,8 @@
 /*	$NetBSD: linux_futex.h,v 1.2 2005/12/11 12:20:19 christos Exp $ */
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2005 Emmanuel Dreyfus, all rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,14 +32,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linux/linux_futex.h 283383 2015-05-24 14:53:16Z dchagin $
+ * $FreeBSD$
  */
 
 #ifndef _LINUX_FUTEX_H
 #define _LINUX_FUTEX_H
-
-extern LIST_HEAD(futex_list, futex) futex_list;
-extern struct mtx futex_mtx;
 
 #define LINUX_FUTEX_WAIT		 0
 #define LINUX_FUTEX_WAKE		 1
@@ -76,6 +75,11 @@ extern struct mtx futex_mtx;
 #define	FUTEX_TID_MASK		0x3fffffff
 #define	FUTEX_BITSET_MATCH_ANY	0xffffffff
 
+int futex_xchgl(int oparg, uint32_t *uaddr, int *oldval);
+int futex_addl(int oparg, uint32_t *uaddr, int *oldval);
+int futex_orl(int oparg, uint32_t *uaddr, int *oldval);
+int futex_andl(int oparg, uint32_t *uaddr, int *oldval);
+int futex_xorl(int oparg, uint32_t *uaddr, int *oldval);
 void	release_futexes(struct thread *,
 			struct linux_emuldata *);
 

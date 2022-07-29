@@ -29,6 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)unistd.h	8.12 (Berkeley) 4/27/95
+ * $FreeBSD$
  */
 
 #ifndef _UNISTD_H_
@@ -398,7 +399,7 @@ int	 ftruncate(int, off_t);
 #endif
 
 #if __POSIX_VISIBLE >= 199506
-int	 getlogin_r(char *, int);
+int	 getlogin_r(char *, size_t);
 #endif
 
 /* 1003.1-2001 */
@@ -450,8 +451,6 @@ int	 symlink(const char * __restrict, const char * __restrict);
 /* X/Open System Interfaces */
 #if __XSI_VISIBLE
 char	*crypt(const char *, const char *);
-/* char	*ctermid(char *); */		/* XXX ??? */
-int	 encrypt(char *, int);
 long	 gethostid(void);
 int	 lockf(int, int, off_t);
 int	 nice(int);

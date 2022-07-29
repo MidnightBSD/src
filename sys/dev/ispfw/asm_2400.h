@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/ispfw/asm_2400.h 331870 2018-04-01 22:59:53Z mav $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 2005-2014 by Qlogic, Inc.
  * All rights reserved.
  *

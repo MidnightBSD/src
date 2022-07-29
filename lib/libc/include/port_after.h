@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/lib/libc/include/port_after.h 156964 2006-03-21 18:31:24Z ume $ */
+/* $FreeBSD$ */
 
 #ifndef _PORT_AFTER_H_
 #define _PORT_AFTER_H_

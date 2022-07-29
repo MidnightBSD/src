@@ -31,7 +31,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/samsung/exynos/exynos_uart.h 266944 2014-06-01 08:34:45Z br $
+ * $FreeBSD$
  */
 
 /* s3c2410-specific registers */

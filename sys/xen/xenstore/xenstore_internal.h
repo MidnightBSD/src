@@ -1,6 +1,8 @@
 /*-
  * Core definitions and data structures shareable across OS platforms.
  *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Spectra Logic Corporation
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/xen/xenstore/xenstore_internal.h 272318 2014-09-30 17:31:04Z royger $
+ * $FreeBSD$
  */
 
 /* Used by the XenStore character device to borrow kernel's store connection. */

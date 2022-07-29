@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/arm/nvidia/drm2/tegra_dc_if.m 310600 2016-12-26 14:36:05Z mmel $
+# $FreeBSD$
 #
 
 #include <machine/bus.h>

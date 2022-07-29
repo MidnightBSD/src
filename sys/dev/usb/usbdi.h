@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Andrew Thompson
  *
  * Redistribution and use in source and binary forms, with or without
@@ -21,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/usb/usbdi.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 #ifndef _USB_USBDI_H_
 #define _USB_USBDI_H_
@@ -173,6 +175,9 @@ struct usb_endpoint {
 struct usb_interface {
 	struct usb_interface_descriptor *idesc;
 	device_t subdev;
+	/* Total number of alternate settings, from 1 to 256 */
+	uint16_t num_altsetting;
+	/* Current alternate interface index, from 0 to 255 */
 	uint8_t	alt_index;
 	uint8_t	parent_iface_index;
 
@@ -182,7 +187,6 @@ struct usb_interface {
 	struct usb_device *linux_udev;
 	void   *bsd_priv_sc;		/* device specific information */
 	char   *pnpinfo;		/* additional PnP-info for this interface */
-	uint8_t	num_altsetting;		/* number of alternate settings */
 	uint8_t	bsd_iface_index;
 };
 
@@ -335,18 +339,18 @@ struct usb_device_id {
 } __aligned(32);
 
 #define USB_STD_PNP_INFO "M16:mask;U16:vendor;U16:product;L16:release;G16:release;" \
-	"U8:devclass;U8:devsubclass;U8:devprotocol;" \
+	"U8:devclass;U8:devsubclass;U8:devproto;" \
 	"U8:intclass;U8:intsubclass;U8:intprotocol;"
 #define USB_STD_PNP_HOST_INFO USB_STD_PNP_INFO "T:mode=host;"
 #define USB_STD_PNP_DEVICE_INFO USB_STD_PNP_INFO "T:mode=device;"
 #define USB_PNP_HOST_INFO(table)					\
-	MODULE_PNP_INFO(USB_STD_PNP_HOST_INFO, usb, table, table, sizeof(table[0]), \
+	MODULE_PNP_INFO(USB_STD_PNP_HOST_INFO, uhub, table, table,	\
 	    sizeof(table) / sizeof(table[0]))
 #define USB_PNP_DEVICE_INFO(table)					\
-	MODULE_PNP_INFO(USB_STD_PNP_DEVICE_INFO, usb, table, table, sizeof(table[0]), \
+	MODULE_PNP_INFO(USB_STD_PNP_DEVICE_INFO, uhub, table, table,	\
 	    sizeof(table) / sizeof(table[0]))
 #define USB_PNP_DUAL_INFO(table)					\
-	MODULE_PNP_INFO(USB_STD_PNP_INFO, usb, table, table, sizeof(table[0]), \
+	MODULE_PNP_INFO(USB_STD_PNP_INFO, uhub, table, table,		\
 	    sizeof(table) / sizeof(table[0]))
 
 /* check that the size of the structure above is correct */
@@ -435,6 +439,39 @@ struct usb_attach_arg {
 };
 
 /*
+ * General purpose locking wrappers to ease supporting
+ * USB polled mode:
+ */
+#ifdef INVARIANTS
+#define	USB_MTX_ASSERT(_m, _t) do {		\
+	if (!USB_IN_POLLING_MODE_FUNC())	\
+		mtx_assert(_m, _t);		\
+} while (0)
+#else
+#define	USB_MTX_ASSERT(_m, _t) do { } while (0)
+#endif
+
+#define	USB_MTX_LOCK(_m) do {			\
+	if (!USB_IN_POLLING_MODE_FUNC())	\
+		mtx_lock(_m);			\
+} while (0)
+
+#define	USB_MTX_UNLOCK(_m) do {			\
+	if (!USB_IN_POLLING_MODE_FUNC())	\
+		mtx_unlock(_m);			\
+} while (0)
+
+#define	USB_MTX_LOCK_SPIN(_m) do {		\
+	if (!USB_IN_POLLING_MODE_FUNC())	\
+		mtx_lock_spin(_m);		\
+} while (0)
+
+#define	USB_MTX_UNLOCK_SPIN(_m) do {		\
+	if (!USB_IN_POLLING_MODE_FUNC())	\
+		mtx_unlock_spin(_m);		\
+} while (0)
+
+/*
  * The following is a wrapper for the callout structure to ease
  * porting the code to other platforms.
  */
@@ -442,8 +479,26 @@ struct usb_callout {
 	struct callout co;
 };
 #define	usb_callout_init_mtx(c,m,f) callout_init_mtx(&(c)->co,m,f)
-#define	usb_callout_reset(c,t,f,d) callout_reset(&(c)->co,t,f,d)
-#define	usb_callout_stop(c) callout_stop(&(c)->co)
+#define	usb_callout_reset(c,...) do {			\
+	if (!USB_IN_POLLING_MODE_FUNC())		\
+		callout_reset(&(c)->co, __VA_ARGS__);	\
+} while (0)
+#define	usb_callout_reset_sbt(c,...) do {			\
+	if (!USB_IN_POLLING_MODE_FUNC())			\
+		callout_reset_sbt(&(c)->co, __VA_ARGS__);	\
+} while (0)
+#define	usb_callout_stop(c) do {			\
+	if (!USB_IN_POLLING_MODE_FUNC()) {		\
+		callout_stop(&(c)->co);			\
+	} else {					\
+		/*					\
+		 * Cannot stop callout when		\
+		 * polling. Set dummy callback		\
+		 * function instead:			\
+		 */					\
+		(c)->co.c_func = &usbd_dummy_timeout;	\
+	}						\
+} while (0)
 #define	usb_callout_drain(c) callout_drain(&(c)->co)
 #define	usb_callout_pending(c) callout_pending(&(c)->co)
 
@@ -552,6 +607,9 @@ uint8_t	usbd_get_interface_altindex(struct usb_interface *iface);
 usb_error_t usbd_set_alt_interface_index(struct usb_device *udev,
 	    uint8_t iface_index, uint8_t alt_index);
 uint32_t usbd_get_isoc_fps(struct usb_device *udev);
+uint32_t usbd_get_max_frame_length(const struct usb_endpoint_descriptor *,
+    const struct usb_endpoint_ss_comp_descriptor *,
+    enum usb_dev_speed);
 usb_error_t usbd_transfer_setup(struct usb_device *udev,
 	    const uint8_t *ifaces, struct usb_xfer **pxfer,
 	    const struct usb_config *setup_start, uint16_t n_setup,
@@ -623,6 +681,8 @@ void	usbd_frame_zero(struct usb_page_cache *cache, usb_frlength_t offset,
 void	usbd_start_re_enumerate(struct usb_device *udev);
 usb_error_t
 	usbd_start_set_config(struct usb_device *, uint8_t);
+int	usbd_in_polling_mode(void);
+void	usbd_dummy_timeout(void *);
 
 int	usb_fifo_attach(struct usb_device *udev, void *priv_sc,
 	    struct mtx *priv_mtx, struct usb_fifo_methods *pm,

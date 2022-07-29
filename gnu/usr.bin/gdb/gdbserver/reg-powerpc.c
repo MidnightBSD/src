@@ -23,7 +23,7 @@
 /* This file was created with the aid of ``regdat.sh'' and ``../../../../contrib/gdb/gdb/regformats/reg-ppc.dat''.  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/gnu/usr.bin/gdb/gdbserver/reg-powerpc.c 206624 2010-04-14 20:31:06Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "regdef.h"
 #include "regcache.h"

@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/ppp/ip.c 330804 2018-03-12 17:36:37Z eugen $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -820,6 +820,8 @@ PacketCheck(struct bundle *bundle, u_int32_t family,
     if (!frag && ncp_IsUrgentTcpPort(&bundle->ncp, ntohs(th->th_sport),
                                      ntohs(th->th_dport)))
       pri++;
+    else if (!frag && ncp_IsUrgentTcpLen(&bundle->ncp, datalen))
+      pri++;
 
     if (logit && loglen < sizeof logbuf) {
       len = datalen - (th->th_off << 2);
@@ -851,6 +853,8 @@ PacketCheck(struct bundle *bundle, u_int32_t family,
           loglen += strlen(logbuf + loglen);
         }
       }
+      snprintf(logbuf + loglen, sizeof logbuf - loglen, " pri:%d", pri);
+      loglen += strlen(logbuf + loglen);
     }
     break;
 

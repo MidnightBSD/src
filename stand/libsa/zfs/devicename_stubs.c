@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/libsa/zfs/devicename_stubs.c 336084 2018-07-08 07:42:49Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 #include "libzfs.h"

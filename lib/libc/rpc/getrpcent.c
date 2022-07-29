@@ -1,6 +1,8 @@
 /*	$NetBSD: getrpcent.c,v 1.17 2000/01/22 22:19:17 mycroft Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -32,7 +34,7 @@
 static char *sccsid = "@(#)getrpcent.c 1.14 91/03/11 Copyr 1984 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/getrpcent.c 360415 2020-04-27 23:49:13Z brooks $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Copyright (c) 1984 by Sun Microsystems, Inc.

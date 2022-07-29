@@ -1,7 +1,9 @@
-/*	$FreeBSD: stable/11/sbin/setkey/setkey.c 331722 2018-03-29 02:50:57Z eadler $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: setkey.c,v 1.28 2003/06/27 07:15:45 itojun Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 1995, 1996, 1997, 1998, and 1999 WIDE Project.
  * All rights reserved.
  *
@@ -32,6 +34,8 @@
 
 #include <sys/types.h>
 #include <sys/param.h>
+#include <sys/linker.h>
+#include <sys/module.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <err.h>
@@ -65,6 +69,7 @@ void shortdump_hdr(void);
 void shortdump(struct sadb_msg *);
 static void printdate(void);
 static int32_t gmt2local(time_t);
+static int modload(const char *name);
 
 #define MODE_SCRIPT	1
 #define MODE_CMDDUMP	2
@@ -98,6 +103,17 @@ usage()
 	printf("       setkey [-Pv] -F\n");
 	printf("       setkey [-h] -x\n");
 	exit(1);
+}
+
+static int
+modload(const char *name)
+{
+	if (modfind(name) < 0)
+		if (kldload(name) < 0 || modfind(name) < 0) {
+			warn("%s: module not found", name);
+			return 0;
+	}
+	return 1;
 }
 
 int
@@ -165,6 +181,7 @@ main(ac, av)
 		}
 	}
 
+	modload("ipsec");
 	so = pfkey_open();
 	if (so < 0) {
 		perror("pfkey_open");

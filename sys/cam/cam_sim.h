@@ -1,6 +1,8 @@
 /*-
  * Data structures and definitions for SCSI Interface Modules (SIMs).
  *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Justin T. Gibbs.
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cam/cam_sim.h 256843 2013-10-21 12:00:26Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _CAM_CAM_SIM_H

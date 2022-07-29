@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/riscv/riscv/mem.c 295041 2016-01-29 15:12:31Z br $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -122,3 +122,9 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 	return (error);
 }
 
+int
+memioctl_md(struct cdev *dev __unused, u_long cmd __unused,
+    caddr_t data __unused, int flags __unused, struct thread *td __unused)
+{
+	return (ENOTTY);
+}

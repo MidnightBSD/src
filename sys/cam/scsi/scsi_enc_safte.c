@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Matthew Jacob
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cam/scsi/scsi_enc_safte.c 350793 2019-08-08 21:46:36Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 

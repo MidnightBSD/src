@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/usb/controller/dwc_otg.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -190,6 +192,13 @@ struct dwc_otg_softc {
 
 	uint16_t sc_active_rx_ep;
 	uint16_t sc_last_frame_num;
+
+	uint8_t sc_phy_type;
+	uint8_t sc_phy_bits;
+#define	DWC_OTG_PHY_ULPI 1
+#define	DWC_OTG_PHY_HSIC 2
+#define	DWC_OTG_PHY_INTERNAL 3
+#define	DWC_OTG_PHY_UTMI 4
 
 	uint8_t sc_timer_active;
 	uint8_t	sc_dev_ep_max;

@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/dtc/string.cc 339159 2018-10-03 17:14:40Z kevans $
+ * $FreeBSD$
  */
 
 #include <string>

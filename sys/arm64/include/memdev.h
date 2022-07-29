@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm64/include/memdev.h 305135 2016-08-31 17:30:21Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_MEMDEV_H_
@@ -34,7 +34,7 @@
 
 d_open_t	memopen;
 d_read_t	memrw;
-#define		memioctl	(d_ioctl_t *)NULL
+d_ioctl_t	memioctl_md;
 d_mmap_t	memmmap;
 
 #endif /* _MACHINE_MEMDEV_H_ */

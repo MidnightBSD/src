@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2001 Dag-Erling Coïdan Smørgrav
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/pseudofs/pseudofs_vnops.c 341074 2018-11-27 16:51:18Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_pseudofs.h"
 
@@ -65,6 +67,8 @@ __FBSDID("$FreeBSD: stable/11/sys/fs/pseudofs/pseudofs_vnops.c 341074 2018-11-27
 #define KASSERT_PN_IS_LINK(pn)						\
 	KASSERT((pn)->pn_type == pfstype_symlink,			\
 	    ("%s(): VLNK vnode refers to non-link pfs_node", __func__))
+
+#define	PFS_MAXBUFSIZ		1024 * 1024
 
 /*
  * Returns the fileno, adjusted for target pid
@@ -657,8 +661,8 @@ pfs_read(struct vop_read_args *va)
 		goto ret;
 	}
 	buflen = uio->uio_offset + uio->uio_resid;
-	if (buflen > MAXPHYS)
-		buflen = MAXPHYS;
+	if (buflen > PFS_MAXBUFSIZ)
+		buflen = PFS_MAXBUFSIZ;
 
 	sb = sbuf_new(sb, NULL, buflen + 1, 0);
 	if (sb == NULL) {
@@ -823,6 +827,8 @@ pfs_readdir(struct vop_readdir_args *va)
 		for (i = 0; i < PFS_NAMELEN - 1 && pn->pn_name[i] != '\0'; ++i)
 			pfsent->entry.d_name[i] = pn->pn_name[i];
 		pfsent->entry.d_namlen = i;
+		/* NOTE: d_off is the offset of the *next* entry. */
+		pfsent->entry.d_off = offset + PFS_DELEN;
 		switch (pn->pn_type) {
 		case pfstype_procdir:
 			KASSERT(p != NULL,
@@ -862,7 +868,7 @@ pfs_readdir(struct vop_readdir_args *va)
 		free(pfsent, M_IOV);
 		i++;
 	}
-	PFS_TRACE(("%d bytes", i * PFS_DELEN));
+	PFS_TRACE(("%ju bytes", (uintmax_t)(i * PFS_DELEN)));
 	PFS_RETURN (error);
 }
 
@@ -959,7 +965,8 @@ pfs_setattr(struct vop_setattr_args *va)
 	PFS_TRACE(("%s", pn->pn_name));
 	pfs_assert_not_owned(pn);
 
-	PFS_RETURN (EOPNOTSUPP);
+	/* Silently ignore unchangeable attributes. */
+	PFS_RETURN (0);
 }
 
 /*
@@ -987,6 +994,9 @@ pfs_write(struct vop_write_args *va)
 		PFS_RETURN (EBADF);
 
 	if (pn->pn_fill == NULL)
+		PFS_RETURN (EIO);
+
+	if (uio->uio_resid > PFS_MAXBUFSIZ)
 		PFS_RETURN (EIO);
 
 	/*

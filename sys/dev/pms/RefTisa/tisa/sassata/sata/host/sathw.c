@@ -27,7 +27,7 @@
  */
 /*****************************************************************************/
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/pms/RefTisa/tisa/sassata/sata/host/sathw.c 285242 2015-07-07 13:17:02Z achim $");
+__FBSDID("$FreeBSD$");
 #include <dev/pms/config.h>
 
 #include <dev/pms/freebsd/driver/common/osenv.h>

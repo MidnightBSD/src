@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/regression/sockets/unix_gc/unix_gc.c 294128 2016-01-16 02:19:56Z ngie $
+ * $FreeBSD$
  */
 
 /*

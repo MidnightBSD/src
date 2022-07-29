@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/wtap/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 
 
 # Declare Name of kernel module

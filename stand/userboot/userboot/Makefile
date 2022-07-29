@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/userboot/userboot/Makefile 344413 2019-02-21 03:18:12Z kevans $
+# $FreeBSD$
 
 LOADER_MSDOS_SUPPORT?=	yes
 LOADER_UFS_SUPPORT?=	yes
@@ -20,7 +20,6 @@ SRCS+=		bootinfo.c
 SRCS+=		bootinfo32.c
 SRCS+=		bootinfo64.c
 SRCS+=		conf.c
-SRCS+=		console.c
 SRCS+=		copy.c
 SRCS+=		devicename.c
 SRCS+=		elf32_freebsd.c
@@ -34,6 +33,7 @@ SRCS+=		vers.c
 CFLAGS+=	-Wall
 CFLAGS+=	-I${BOOTSRC}/userboot
 
+CFLAGS+=	-I${SYSDIR}/cddl/contrib/opensolaris/uts/common
 CWARNFLAGS.main.c += -Wno-implicit-function-declaration
 
 LDFLAGS+=	-nostdlib -Wl,-Bsymbolic

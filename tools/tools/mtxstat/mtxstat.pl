@@ -1,6 +1,6 @@
 #!/usr/bin/perl -Tw
 #-
-# Copyright (c) 2002 Dag-Erling Coïdan Smørgrav
+# Copyright (c) 2002 Dag-Erling CoÃ¯dan SmÃ¸rgrav
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-#      $FreeBSD: src/tools/tools/mtxstat/mtxstat.pl,v 1.2 2003/09/19 21:52:29 sam Exp $
+#      $FreeBSD$
 #
 
 use strict;

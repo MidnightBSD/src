@@ -37,7 +37,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/aic7xxx/aic7xxx.seq 346817 2019-04-28 13:21:01Z dchagin $
+ * $FreeBSD$
  */
 
 VERSION = "$Id: //depot/aic7xxx/aic7xxx/aic7xxx.seq#58 $"
@@ -1446,7 +1446,7 @@ p_command_xfer:
 		test	SSTAT0, SDONE jnz . + 2;
 		test    SSTAT1, PHASEMIS jz . - 1;
 		/*
-		 * Wait for our ACK to go-away on it's own
+		 * Wait for our ACK to go-away on its own
 		 * instead of being killed by SCSIEN getting cleared.
 		 */
 		test	SCSISIGI, ACKI jnz .;

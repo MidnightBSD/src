@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libdpv/status.c 274116 2014-11-04 23:46:01Z dteske $");
+__FBSDID("$FreeBSD$");
 
 #include <curses.h>
 #include <dialog.h>

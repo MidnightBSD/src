@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/kern/pic_if.m 308333 2016-11-05 10:23:02Z mmel $
+# $FreeBSD$
 #
 
 #include <sys/bus.h>

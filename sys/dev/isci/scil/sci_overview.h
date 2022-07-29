@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0
+ *
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
  *
@@ -49,7 +51,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/isci/scil/sci_overview.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 #ifndef _SCI_OVERVIEW_H_
 #define _SCI_OVERVIEW_H_
@@ -214,7 +216,7 @@ associate one object to another.  An SCI object can be made to have an
 association to another SCI object.  Additionally, an SCI object can be
 made to have an association to a non-SCI based object.  For example, an SCI
 Framework library can have it's association set to an operating system
-specific adapter/device driver structre.
+specific adapter/device driver structure.
 
 Simply put, the association that an object has is a handle (i.e. a void pointer)
 to a user structure.  This enables the user of the SCI object to

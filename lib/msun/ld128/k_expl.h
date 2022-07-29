@@ -1,6 +1,8 @@
 /* from: FreeBSD: head/lib/msun/ld128/s_expl.c 251345 2013-06-03 20:09:22Z kargl */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2013 Steven G. Kargl
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/ld128/k_expl.h 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * ld128 version of k_expl.h.  See ../ld80/s_expl.c for most comments.
@@ -242,16 +244,8 @@ __k_expl(long double x, long double *hip, long double *lop, int *kp)
 	int n, n2;
 
 	/* Reduce x to (k*ln2 + endpoint[n2] + r1 + r2). */
-	/* Use a specialized rint() to get fn.  Assume round-to-nearest. */
-	/* XXX assume no extra precision for the additions, as for trig fns. */
-	/* XXX this set of comments is now quadruplicated. */
-	/* XXX but see ../src/e_exp.c for a fix using double_t. */
-	fn = (double)x * INV_L + 0x1.8p52 - 0x1.8p52;
-#if defined(HAVE_EFFICIENT_IRINT)
+	fn = rnint((double)x * INV_L);
 	n = irint(fn);
-#else
-	n = (int)fn;
-#endif
 	n2 = (unsigned)n % INTERVALS;
 	/* Depend on the sign bit being propagated: */
 	*kp = n >> LOG2_INTERVALS;

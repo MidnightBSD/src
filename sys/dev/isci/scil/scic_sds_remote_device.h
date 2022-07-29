@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0
+ *
  * This file is provided under a dual BSD/GPLv2 license.  When using or
  * redistributing this file, you may do so under either license.
  *
@@ -49,7 +51,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/isci/scil/scic_sds_remote_device.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 #ifndef _SCIC_SDS_REMOTE_DEVICE_H_
 #define _SCIC_SDS_REMOTE_DEVICE_H_
@@ -126,7 +128,7 @@ enum SCIC_SDS_STP_REMOTE_DEVICE_READY_SUBSTATES
    SCIC_SDS_STP_REMOTE_DEVICE_READY_SUBSTATE_IDLE,
 
    /**
-    * This is the command state for for the STP remote device.  This state is
+    * This is the command state for the STP remote device.  This state is
     * entered when the device is processing a non-NCQ command.  The device object
     * will fail any new start IO requests until this command is complete.
     */
@@ -275,7 +277,7 @@ typedef struct SCIC_SDS_REMOTE_DEVICE
    U32 not_ready_reason;
 
    /**
-    * This field is TRUE if this remote device has an initialzied ready substate
+    * This field is TRUE if this remote device has an initialized ready substate
     * machine. SSP devices do not have a ready substate machine and STP devices
     * have a ready substate machine.
     */

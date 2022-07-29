@@ -1,7 +1,9 @@
 /*	$KAME: rtsock.c,v 1.3 2000/10/10 08:46:45 itojun Exp $	*/
-/*	$FreeBSD: stable/11/usr.sbin/rtsold/rtsock.c 331722 2018-03-29 02:50:57Z eadler $	*/
+/*	$FreeBSD$	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 2000 WIDE Project.
  * All rights reserved.
  * 
@@ -31,10 +33,11 @@
  */
 
 #include <sys/param.h>
-#include <sys/socket.h>
-#include <sys/uio.h>
-#include <sys/time.h>
+#include <sys/capsicum.h>
 #include <sys/queue.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/uio.h>
 
 #include <net/if.h>
 #include <net/route.h>
@@ -44,6 +47,7 @@
 #include <netinet/ip6.h>
 #include <netinet/icmp6.h>
 
+#include <capsicum_helpers.h>
 #include <time.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -55,35 +59,35 @@
 #include <syslog.h>
 #include "rtsold.h"
 
-#define ROUNDUP(a, size) \
-	(((a) & ((size)-1)) ? (1 + ((a) | ((size)-1))) : (a))
-
-#define NEXT_SA(ap) (ap) = (struct sockaddr *) \
-	((caddr_t)(ap) + \
-	 ((ap)->sa_len ? ROUNDUP((ap)->sa_len, sizeof(u_long)) \
-		       : sizeof(u_long)))
-
-#ifdef RTM_IFANNOUNCE	/*NetBSD 1.5 or later*/
 static int rtsock_input_ifannounce(int, struct rt_msghdr *, char *);
-#endif
 
 static struct {
 	u_char type;
 	size_t minlen;
 	int (*func)(int, struct rt_msghdr *, char *);
 } rtsock_dispatch[] = {
-#ifdef RTM_IFANNOUNCE	/*NetBSD 1.5 or later*/
 	{ RTM_IFANNOUNCE, sizeof(struct if_announcemsghdr),
 	  rtsock_input_ifannounce },
-#endif
 	{ 0, 0, NULL },
 };
 
 int
 rtsock_open(void)
 {
+	cap_rights_t rights;
+	int error, s;
 
-	return (socket(PF_ROUTE, SOCK_RAW, 0));
+	s = socket(PF_ROUTE, SOCK_RAW, 0);
+	if (s < 0)
+		return (s);
+	cap_rights_init(&rights, CAP_EVENT, CAP_READ);
+	if (caph_rights_limit(s, &rights) != 0) {
+		error = errno;
+		(void)close(s);
+		errno = error;
+		return (-1);
+	}
+	return (s);
 }
 
 int
@@ -133,7 +137,6 @@ rtsock_input(int s)
 	return (ret);
 }
 
-#ifdef RTM_IFANNOUNCE	/*NetBSD 1.5 or later*/
 static int
 rtsock_input_ifannounce(int s __unused, struct rt_msghdr *rtm, char *lim)
 {
@@ -172,4 +175,3 @@ rtsock_input_ifannounce(int s __unused, struct rt_msghdr *rtm, char *lim)
 
 	return (0);
 }
-#endif

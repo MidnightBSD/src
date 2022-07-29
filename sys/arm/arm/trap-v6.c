@@ -30,7 +30,7 @@
 #include "opt_ktrace.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/arm/trap-v6.c 344905 2019-03-08 00:20:37Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -287,12 +287,12 @@ abort_handler(struct trapframe *tf, int prefetch)
 	struct vmspace *vm;
 	vm_prot_t ftype;
 	bool usermode;
-	int bp_harden;
+	int bp_harden, ucode;
 #ifdef INVARIANTS
 	void *onfault;
 #endif
 
-	PCPU_INC(cnt.v_trap);
+	VM_CNT_INC(v_trap);
 	td = curthread;
 
 	fsr = (prefetch) ? cp15_ifsr_get(): cp15_dfsr_get();
@@ -462,8 +462,11 @@ abort_handler(struct trapframe *tf, int prefetch)
 		/*
 		 * Don't allow user-mode faults in kernel address space.
 		 */
-		if (usermode)
+		if (usermode) {
+			ksig.sig = SIGSEGV;
+			ksig.code = SEGV_ACCERR;
 			goto nogo;
+		}
 
 		map = kernel_map;
 	} else {
@@ -472,8 +475,11 @@ abort_handler(struct trapframe *tf, int prefetch)
 		 * is NULL or curproc->p_vmspace is NULL the fault is fatal.
 		 */
 		vm = (p != NULL) ? p->p_vmspace : NULL;
-		if (vm == NULL)
+		if (vm == NULL) {
+			ksig.sig = SIGSEGV;
+			ksig.code = 0;
 			goto nogo;
+		}
 
 		map = &vm->vm_map;
 		if (!usermode && (td->td_intr_nesting_level != 0 ||
@@ -497,7 +503,9 @@ abort_handler(struct trapframe *tf, int prefetch)
 #endif
 
 	/* Fault in the page. */
-	rv = vm_fault(map, va, ftype, VM_FAULT_NORMAL);
+	rv = vm_fault_trap(map, va, ftype, VM_FAULT_NORMAL, &ksig.sig,
+	    &ucode);
+	ksig.code = ucode;
 
 #ifdef INVARIANTS
 	pcb->pcb_onfault = onfault;
@@ -518,8 +526,6 @@ nogo:
 		return;
 	}
 
-	ksig.sig = SIGSEGV;
-	ksig.code = (rv == KERN_PROTECTION_FAILURE) ? SEGV_ACCERR : SEGV_MAPERR;
 	ksig.addr = far;
 
 do_trapsignal:

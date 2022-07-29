@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -26,13 +28,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/msgs/pathnames.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/6/93
  */
 
 #define	_PATH_MSGS	"/var/msgs"
 #define	_PATH_MAIL	"/usr/bin/Mail -f %s"
-#define	_PATH_PAGER	"/usr/bin/more -%d"
+#define	_PATH_PAGER	"/usr/bin/less -%d"
 #undef _PATH_TMP
 #define	_PATH_TMP	"/tmp/msgXXXXXX"

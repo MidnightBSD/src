@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_en/en.h 353406 2019-10-10 15:38:08Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _MLX5_EN_H_
@@ -51,6 +51,7 @@
 #include <netinet/udp.h>
 #include <net/ethernet.h>
 #include <sys/buf_ring.h>
+#include <sys/kthread.h>
 
 #include "opt_rss.h"
 
@@ -146,7 +147,7 @@ MALLOC_DECLARE(M_MLX5EN);
 struct mlx5_core_dev;
 struct mlx5e_cq;
 
-typedef void (mlx5e_cq_comp_t)(struct mlx5_core_cq *);
+typedef void (mlx5e_cq_comp_t)(struct mlx5_core_cq *, struct mlx5_eqe *);
 
 #define	mlx5_en_err(_dev, format, ...)				\
 	if_printf(_dev, "ERR: ""%s:%d:(pid %d): " format, \
@@ -723,6 +724,8 @@ struct mlx5e_params_ethtool {
 	u8	fec_avail_10x_25x[MLX5E_MAX_FEC_10X_25X];
 	u16	fec_avail_50x[MLX5E_MAX_FEC_50X];
 	u32	fec_mode_active;
+	s32	hw_val_temp[MLX5_MAX_TEMPERATURE];
+	u32	hw_num_temp;
 };
 
 struct mlx5e_cq {
@@ -744,7 +747,7 @@ struct mlx5e_rq_mbuf {
 };
 
 struct mlx5e_rq {
-	/* persistant fields */
+	/* persistent fields */
 	struct mtx mtx;
 	struct mlx5e_rq_stats stats;
 	struct callout watchdog;
@@ -783,12 +786,17 @@ enum {
 	MLX5E_SQ_FULL
 };
 
+struct mlx5e_snd_tag {
+	struct m_snd_tag m_snd_tag;	/* send tag */
+	u32	type;	/* tag type */
+};
+
 struct mlx5e_sq {
-	/* persistant fields */
+	/* persistent fields */
 	struct	mtx lock;
 	struct	mtx comp_lock;
 	struct	mlx5e_sq_stats stats;
-  	struct	callout cev_callout;
+	struct	callout cev_callout;
 
 	/* data path */
 #define	mlx5e_sq_zero_start dma_tag
@@ -845,10 +853,26 @@ mlx5e_sq_has_room_for(struct mlx5e_sq *sq, u16 n)
 	return ((sq->wq.sz_m1 & (cc - pc)) >= n || cc == pc);
 }
 
+static inline u32
+mlx5e_sq_queue_level(struct mlx5e_sq *sq)
+{
+	u16 cc;
+	u16 pc;
+
+	if (sq == NULL)
+		return (0);
+
+	cc = sq->cc;
+	pc = sq->pc;
+
+	return (((sq->wq.sz_m1 & (pc - cc)) *
+	    IF_SND_QUEUE_LEVEL_MAX) / sq->wq.sz_m1);
+}
+
 struct mlx5e_channel {
 	struct mlx5e_rq rq;
+	struct mlx5e_snd_tag tag;
 	struct mlx5e_sq sq[MLX5E_MAX_TX_NUM_TC];
-	struct ifnet *ifp;
 	struct mlx5e_priv *priv;
 	int	ix;
 } __aligned(MLX5E_CACHELINE_SIZE);
@@ -935,6 +959,20 @@ struct mlx5e_flow_tables {
 	struct mlx5e_flow_table inner_rss;
 };
 
+#ifdef RATELIMIT
+#include "en_rl.h"
+#endif
+
+#define	MLX5E_TSTMP_PREC 10
+
+struct mlx5e_clbr_point {
+	uint64_t base_curr;
+	uint64_t base_prev;
+	uint64_t clbr_hw_prev;
+	uint64_t clbr_hw_curr;
+	u_int clbr_gen;
+};
+
 struct mlx5e_dcbx {
 	u32	cable_len;
 	u32	xoff;
@@ -961,6 +999,7 @@ struct mlx5e_priv {
 	u32	pdn;
 	u32	tdn;
 	struct mlx5_core_mr mr;
+	volatile unsigned int channel_refs;
 
 	u32	tisn[MLX5E_MAX_TX_NUM_TC];
 	u32	rqtn;
@@ -997,6 +1036,15 @@ struct mlx5e_priv {
 	int	media_active_last;
 
 	struct callout watchdog;
+#ifdef RATELIMIT
+	struct mlx5e_rl_priv_data rl;
+#endif
+
+	struct callout tstmp_clbr;
+	int	clbr_done;
+	int	clbr_curr;
+	struct mlx5e_clbr_point clbr_points[2];
+	u_int	clbr_gen;
 
 	struct mlx5e_dcbx dcbx;
 	bool	sw_is_port_buf_owner;
@@ -1039,8 +1087,8 @@ int	mlx5e_open_locked(struct ifnet *);
 int	mlx5e_close_locked(struct ifnet *);
 
 void	mlx5e_cq_error_event(struct mlx5_core_cq *mcq, int event);
-void	mlx5e_rx_cq_comp(struct mlx5_core_cq *);
-void	mlx5e_tx_cq_comp(struct mlx5_core_cq *);
+mlx5e_cq_comp_t mlx5e_rx_cq_comp;
+mlx5e_cq_comp_t mlx5e_tx_cq_comp;
 struct mlx5_cqe64 *mlx5e_get_cqe(struct mlx5e_cq *cq);
 
 void	mlx5e_dim_work(struct work_struct *);
@@ -1097,6 +1145,24 @@ mlx5e_cq_arm(struct mlx5e_cq *cq, spinlock_t *dblock)
 	mlx5_cq_arm(mcq, MLX5_CQ_DB_REQ_NOT, mcq->uar->map, dblock, cq->wq.cc);
 }
 
+static inline void
+mlx5e_ref_channel(struct mlx5e_priv *priv)
+{
+
+	KASSERT(priv->channel_refs < INT_MAX,
+	    ("Channel refs will overflow"));
+	atomic_fetchadd_int(&priv->channel_refs, 1);
+}
+
+static inline void
+mlx5e_unref_channel(struct mlx5e_priv *priv)
+{
+
+	KASSERT(priv->channel_refs > 0,
+	    ("Channel refs is not greater than zero"));
+	atomic_fetchadd_int(&priv->channel_refs, -1);
+}
+
 #define	mlx5e_dbg(_IGN, _priv, ...) mlx5_core_dbg((_priv)->mdev, __VA_ARGS__)
 
 extern const struct ethtool_ops mlx5e_ethtool_ops;
@@ -1123,5 +1189,6 @@ void	mlx5e_update_sq_inline(struct mlx5e_sq *sq);
 void	mlx5e_refresh_sq_inline(struct mlx5e_priv *priv);
 int	mlx5e_update_buf_lossy(struct mlx5e_priv *priv);
 int	mlx5e_fec_update(struct mlx5e_priv *priv);
+int	mlx5e_hw_temperature_update(struct mlx5e_priv *priv);
 
 #endif					/* _MLX5_EN_H_ */

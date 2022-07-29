@@ -1,11 +1,6 @@
-# $FreeBSD: stable/11/sys/arm/nvidia/tegra124/std.tegra124 327658 2018-01-07 00:04:13Z ian $
+# $FreeBSD$
 cpu 		CPU_CORTEXA
-machine		arm	armv6
+machine		arm	armv7
 makeoptions	CONF_CFLAGS="-march=armv7a"
-
-options		INTRNG
-
-options		IPI_IRQ_START=0
-options		IPI_IRQ_END=15
 
 files "../nvidia/tegra124/files.tegra124"

@@ -38,7 +38,7 @@
 #include "iso9660_rrip.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/makefs/cd9660/cd9660_write.c 332981 2018-04-25 01:48:15Z benno $");
+__FBSDID("$FreeBSD$");
 
 #include <util.h>
 
@@ -97,7 +97,7 @@ cd9660_write_image(iso9660_disk *diskStructure, const char* image)
 
 	/*
 	 * Write the path tables: there are actually four, but right
-	 * now we are only concearned with two.
+	 * now we are only concerned with two.
 	 */
 	status = cd9660_write_path_tables(diskStructure, fd);
 	if (status == 0) {
@@ -145,10 +145,8 @@ static int
 cd9660_write_volume_descriptors(iso9660_disk *diskStructure, FILE *fd)
 {
 	volume_descriptor *vd_temp = diskStructure->firstVolumeDescriptor;
-	int pos;
 
 	while (vd_temp != NULL) {
-		pos = vd_temp->sector * diskStructure->sectorSize;
 		cd9660_write_filedata(diskStructure, fd, vd_temp->sector,
 		    vd_temp->volumeDescriptorData, 1);
 		vd_temp = vd_temp->next;
@@ -269,7 +267,6 @@ cd9660_write_file(iso9660_disk *diskStructure, FILE *fd, cd9660node *writenode)
 	int ret;
 	off_t working_sector;
 	int cur_sector_offset;
-	int written;
 	iso_directory_record_cd9660 temp_record;
 	cd9660node *temp;
 	int rv = 0;
@@ -342,7 +339,7 @@ cd9660_write_file(iso9660_disk *diskStructure, FILE *fd, cd9660node *writenode)
 					err(1, "fseeko");
 			}
 			/* Write out the basic ISO directory record */
-			written = fwrite(&temp_record, 1,
+			(void)fwrite(&temp_record, 1,
 			    temp->isoDirRecord->length[0], fd);
 			if (diskStructure->rock_ridge_enabled) {
 				cd9660_write_rr(diskStructure, fd, temp,

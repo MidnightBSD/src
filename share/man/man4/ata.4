@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/ata.4 281793 2015-04-20 21:19:26Z joel $
+.\" $FreeBSD$
 .\"
 .Dd March 23, 2015
 .Dt ATA 4
@@ -222,6 +222,9 @@ Unknown ATA chipsets are supported in PIO modes, and if the standard
 busmaster DMA registers are present and contain valid setup, DMA is
 also enabled, although the max mode is limited to UDMA33, as it is
 not known what the chipset can do and how to program it.
+.Sh DEPRECATION NOTICE
+The PC Card attachment of this driver is scheduled for removal prior to the release of
+.Fx 13.0
 .Sh NOTES
 Please remember that in order to use UDMA4/ATA66 and above modes you
 .Em must

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000-2004 Taku YAMAMOTO <taku@tackymt.homeip.net>
  * All rights reserved.
  *
@@ -58,7 +60,7 @@
 
 #include <dev/sound/pci/maestro_reg.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/maestro.c 331722 2018-03-29 02:50:57Z eadler $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 /*
  * PCI IDs of supported chips:

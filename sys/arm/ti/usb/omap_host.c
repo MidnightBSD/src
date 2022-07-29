@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/ti/usb/omap_host.c 283276 2015-05-22 03:16:18Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -35,7 +35,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/ti/usb/omap_host.c 283276 2015-05-22 03:16
 #include <sys/rman.h>
 #include <sys/module.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/fdt/simplebus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
@@ -393,7 +392,7 @@ omap_uhh_attach(device_t dev)
 		snprintf(propname, sizeof(propname),
 		    "port%d-mode", i+1);
 
-		if (OF_getprop_alloc(node, propname, 1, (void**)&mode) <= 0)
+		if (OF_getprop_alloc(node, propname, (void**)&mode) <= 0)
 			continue;
 		if (strcmp(mode, "ehci-phy") == 0)
 			isc->port_mode[i] = EHCI_HCD_OMAP_MODE_PHY;

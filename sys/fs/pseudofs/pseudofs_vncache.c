@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2001 Dag-Erling Coïdan Smørgrav
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/pseudofs/pseudofs_vncache.c 312248 2017-01-16 00:43:57Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_pseudofs.h"
 

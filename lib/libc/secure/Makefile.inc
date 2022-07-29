@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libc/secure/Makefile.inc 296915 2016-03-15 19:26:32Z emaste $
+# $FreeBSD$
 #
 # libc sources related to security
 

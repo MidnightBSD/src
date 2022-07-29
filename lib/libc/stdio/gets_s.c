@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/stdio/gets_s.c 335335 2018-06-18 19:35:17Z cy $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <errno.h>

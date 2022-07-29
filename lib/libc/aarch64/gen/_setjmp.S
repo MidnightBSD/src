@@ -30,7 +30,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/aarch64/gen/_setjmp.S 284768 2015-06-24 16:15:32Z andrew $");
+__FBSDID("$FreeBSD$");
 
 #include <machine/setjmp.h>
 

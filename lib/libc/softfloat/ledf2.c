@@ -9,7 +9,7 @@
 #include "softfloat.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/softfloat/ledf2.c 129203 2004-05-14 12:13:06Z cognet $");
+__FBSDID("$FreeBSD$");
 
 flag __ledf2(float64, float64);
 

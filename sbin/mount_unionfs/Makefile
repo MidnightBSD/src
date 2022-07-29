@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.3 (Berkeley) 3/27/94
-# $FreeBSD: stable/11/sbin/mount_unionfs/Makefile 319185 2017-05-30 04:17:22Z ngie $
+# $FreeBSD$
 
 PACKAGE=runtime
 PROG=	mount_unionfs

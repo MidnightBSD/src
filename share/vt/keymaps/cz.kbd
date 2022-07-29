@@ -1,7 +1,7 @@
 # Czech Standard Typewriter QWERTZ Keyboard
 # by Rudolf Cejka <cejkar@fit.vutbr.cz>
 #
-# $FreeBSD: stable/11/share/vt/keymaps/cz.kbd 270200 2014-08-20 07:48:09Z se $
+# $FreeBSD$
 #
 # English/Czech keyboard lock:  (Left)Alt+Shift
 # English/Czech keyboard shift: (Right)AltGr

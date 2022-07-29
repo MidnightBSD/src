@@ -29,7 +29,7 @@
  *
  * Authors: Justin T. Gibbs     (Spectra Logic Corporation)
  *
- * $FreeBSD: stable/11/lib/libdevdctl/event.h 301001 2016-05-30 19:25:00Z pfg $
+ * $FreeBSD$
  */
 
 /**

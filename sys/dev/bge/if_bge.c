@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2001 Wind River Systems
  * Copyright (c) 1997, 1998, 1999, 2001
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -32,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/bge/if_bge.c 350891 2019-08-12 08:45:26Z avg $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Broadcom BCM57xx(x)/BCM590x NetXtreme and NetLink family Ethernet driver
@@ -98,6 +100,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/bge/if_bge.c 350891 2019-08-12 08:45:26Z a
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
+#include <netinet/netdump/netdump.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>
@@ -424,8 +427,9 @@ static int bge_encap(struct bge_softc *, struct mbuf **, uint32_t *);
 static void bge_intr(void *);
 static int bge_msi_intr(void *);
 static void bge_intr_task(void *, int);
-static void bge_start_locked(if_t);
 static void bge_start(if_t);
+static void bge_start_locked(if_t);
+static void bge_start_tx(struct bge_softc *, uint32_t);
 static int bge_ioctl(if_t, u_long, caddr_t);
 static void bge_init_locked(struct bge_softc *);
 static void bge_init(void *);
@@ -515,6 +519,8 @@ static void bge_add_sysctl_stats(struct bge_softc *, struct sysctl_ctx_list *,
     struct sysctl_oid_list *);
 static int bge_sysctl_stats(SYSCTL_HANDLER_ARGS);
 
+NETDUMP_DEFINE(bge);
+
 static device_method_t bge_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		bge_probe),
@@ -541,6 +547,8 @@ static driver_t bge_driver = {
 static devclass_t bge_devclass;
 
 DRIVER_MODULE(bge, pci, bge_driver, bge_devclass, 0, 0);
+MODULE_PNP_INFO("U16:vendor;U16:device", pci, bge, bge_devs,
+    nitems(bge_devs) - 1);
 DRIVER_MODULE(miibus, bge, miibus_driver, miibus_devclass, 0, 0);
 
 static int bge_allow_asf = 1;
@@ -2919,10 +2927,14 @@ bge_dma_ring_alloc(struct bge_softc *sc, bus_size_t alignment,
     bus_addr_t *paddr, const char *msg)
 {
 	struct bge_dmamap_arg ctx;
+	bus_addr_t lowaddr;
+	bus_size_t ring_end;
 	int error;
 
+	lowaddr = BUS_SPACE_MAXADDR;
+again:
 	error = bus_dma_tag_create(sc->bge_cdata.bge_parent_tag,
-	    alignment, 0, BUS_SPACE_MAXADDR, BUS_SPACE_MAXADDR, NULL,
+	    alignment, 0, lowaddr, BUS_SPACE_MAXADDR, NULL,
 	    NULL, maxsize, 1, maxsize, 0, NULL, NULL, tag);
 	if (error != 0) {
 		device_printf(sc->bge_dev,
@@ -2947,6 +2959,25 @@ bge_dma_ring_alloc(struct bge_softc *sc, bus_size_t alignment,
 		return (ENOMEM);
 	}
 	*paddr = ctx.bge_busaddr;
+	ring_end = *paddr + maxsize;
+	if ((sc->bge_flags & BGE_FLAG_4G_BNDRY_BUG) != 0 &&
+	    BGE_ADDR_HI(*paddr) != BGE_ADDR_HI(ring_end)) {
+		/*
+		 * 4GB boundary crossed.  Limit maximum allowable DMA
+		 * address space to 32bit and try again.
+		 */
+		bus_dmamap_unload(*tag, *map);
+		bus_dmamem_free(*tag, *ring, *map);
+		bus_dma_tag_destroy(*tag);
+		if (bootverbose)
+			device_printf(sc->bge_dev, "4GB boundary crossed, "
+			    "limit DMA address space to 32bit for %s\n", msg);
+		*ring = NULL;
+		*tag = NULL;
+		*map = NULL;
+		lowaddr = BUS_SPACE_MAXADDR_32BIT;
+		goto again;
+	}
 	return (0);
 }
 
@@ -2954,7 +2985,7 @@ static int
 bge_dma_alloc(struct bge_softc *sc)
 {
 	bus_addr_t lowaddr;
-	bus_size_t rxmaxsegsz, sbsz, txsegsz, txmaxsegsz;
+	bus_size_t boundary, sbsz, rxmaxsegsz, txsegsz, txmaxsegsz;
 	int i, error;
 
 	lowaddr = BUS_SPACE_MAXADDR;
@@ -3041,7 +3072,9 @@ bge_dma_alloc(struct bge_softc *sc)
 	}
 
 	/* Create parent tag for buffers. */
+	boundary = 0;
 	if ((sc->bge_flags & BGE_FLAG_4G_BNDRY_BUG) != 0) {
+		boundary = BGE_DMA_BNDRY;
 		/*
 		 * XXX
 		 * watchdog timeout issue was observed on BCM5704 which
@@ -3052,10 +3085,10 @@ bge_dma_alloc(struct bge_softc *sc)
 		if (sc->bge_pcixcap != 0)
 			lowaddr = BUS_SPACE_MAXADDR_32BIT;
 	}
-	error = bus_dma_tag_create(bus_get_dma_tag(sc->bge_dev), 1, 0, lowaddr,
-	    BUS_SPACE_MAXADDR, NULL, NULL, BUS_SPACE_MAXSIZE_32BIT, 0,
-	    BUS_SPACE_MAXSIZE_32BIT, 0, NULL, NULL,
-	    &sc->bge_cdata.bge_buffer_tag);
+	error = bus_dma_tag_create(bus_get_dma_tag(sc->bge_dev),
+	    1, boundary, lowaddr, BUS_SPACE_MAXADDR, NULL,
+	    NULL, BUS_SPACE_MAXSIZE_32BIT, 0, BUS_SPACE_MAXSIZE_32BIT,
+	    0, NULL, NULL, &sc->bge_cdata.bge_buffer_tag);
 	if (error != 0) {
 		device_printf(sc->bge_dev,
 		    "could not allocate buffer dma tag\n");
@@ -3947,7 +3980,11 @@ again:
 	if (error) {
 		ether_ifdetach(ifp);
 		device_printf(sc->bge_dev, "couldn't set up irq\n");
+		goto fail;
 	}
+
+	/* Attach driver netdump methods. */
+	NETDUMP_SET(ifp, bge);
 
 fail:
 	if (error)
@@ -5395,22 +5432,26 @@ bge_start_locked(if_t ifp)
 		if_bpfmtap(ifp, m_head);
 	}
 
-	if (count > 0) {
-		bus_dmamap_sync(sc->bge_cdata.bge_tx_ring_tag,
-		    sc->bge_cdata.bge_tx_ring_map, BUS_DMASYNC_PREWRITE);
-		/* Transmit. */
+	if (count > 0)
+		bge_start_tx(sc, prodidx);
+}
+
+static void
+bge_start_tx(struct bge_softc *sc, uint32_t prodidx)
+{
+
+	bus_dmamap_sync(sc->bge_cdata.bge_tx_ring_tag,
+	    sc->bge_cdata.bge_tx_ring_map, BUS_DMASYNC_PREWRITE);
+	/* Transmit. */
+	bge_writembx(sc, BGE_MBX_TX_HOST_PROD0_LO, prodidx);
+	/* 5700 b2 errata */
+	if (sc->bge_chiprev == BGE_CHIPREV_5700_BX)
 		bge_writembx(sc, BGE_MBX_TX_HOST_PROD0_LO, prodidx);
-		/* 5700 b2 errata */
-		if (sc->bge_chiprev == BGE_CHIPREV_5700_BX)
-			bge_writembx(sc, BGE_MBX_TX_HOST_PROD0_LO, prodidx);
 
-		sc->bge_tx_prodidx = prodidx;
+	sc->bge_tx_prodidx = prodidx;
 
-		/*
-		 * Set a timeout in case the chip goes out to lunch.
-		 */
-		sc->bge_timer = BGE_TX_TIMEOUT;
-	}
+	/* Set a timeout in case the chip goes out to lunch. */
+	sc->bge_timer = BGE_TX_TIMEOUT;
 }
 
 /*
@@ -6708,15 +6749,15 @@ bge_sysctl_mem_read(SYSCTL_HANDLER_ARGS)
 static int
 bge_get_eaddr_fw(struct bge_softc *sc, uint8_t ether_addr[])
 {
-
+#ifdef __sparc64__
 	if (sc->bge_flags & BGE_FLAG_EADDR)
 		return (1);
 
-#ifdef __sparc64__
 	OF_getetheraddr(sc->bge_dev, ether_addr);
 	return (0);
-#endif
+#else
 	return (1);
+#endif
 }
 
 static int
@@ -6802,3 +6843,74 @@ bge_get_counter(if_t ifp, ift_counter cnt)
 		return (if_get_counter_default(ifp, cnt));
 	}
 }
+
+#ifdef NETDUMP
+static void
+bge_netdump_init(if_t ifp, int *nrxr, int *ncl, int *clsize)
+{
+	struct bge_softc *sc;
+
+	sc = if_getsoftc(ifp);
+	BGE_LOCK(sc);
+	*nrxr = sc->bge_return_ring_cnt;
+	*ncl = NETDUMP_MAX_IN_FLIGHT;
+	if ((sc->bge_flags & BGE_FLAG_JUMBO_STD) != 0 &&
+	    (if_getmtu(sc->bge_ifp) + ETHER_HDR_LEN + ETHER_CRC_LEN +
+	    ETHER_VLAN_ENCAP_LEN > (MCLBYTES - ETHER_ALIGN)))
+		*clsize = MJUM9BYTES;
+	else
+		*clsize = MCLBYTES;
+	BGE_UNLOCK(sc);
+}
+
+static void
+bge_netdump_event(if_t ifp __unused, enum netdump_ev event __unused)
+{
+}
+
+static int
+bge_netdump_transmit(if_t ifp, struct mbuf *m)
+{
+	struct bge_softc *sc;
+	uint32_t prodidx;
+	int error;
+
+	sc = if_getsoftc(ifp);
+	if ((if_getdrvflags(ifp) & (IFF_DRV_RUNNING | IFF_DRV_OACTIVE)) !=
+	    IFF_DRV_RUNNING)
+		return (1);
+
+	prodidx = sc->bge_tx_prodidx;
+	error = bge_encap(sc, &m, &prodidx);
+	if (error == 0)
+		bge_start_tx(sc, prodidx);
+	return (error);
+}
+
+static int
+bge_netdump_poll(if_t ifp, int count)
+{
+	struct bge_softc *sc;
+	uint32_t rx_prod, tx_cons;
+
+	sc = if_getsoftc(ifp);
+	if ((if_getdrvflags(ifp) & (IFF_DRV_RUNNING | IFF_DRV_OACTIVE)) !=
+	    IFF_DRV_RUNNING)
+		return (1);
+
+	bus_dmamap_sync(sc->bge_cdata.bge_status_tag,
+	    sc->bge_cdata.bge_status_map,
+	    BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
+
+	rx_prod = sc->bge_ldata.bge_status_block->bge_idx[0].bge_rx_prod_idx;
+	tx_cons = sc->bge_ldata.bge_status_block->bge_idx[0].bge_tx_cons_idx;
+
+	bus_dmamap_sync(sc->bge_cdata.bge_status_tag,
+	    sc->bge_cdata.bge_status_map,
+	    BUS_DMASYNC_PREREAD | BUS_DMASYNC_PREWRITE);
+
+	(void)bge_rxeof(sc, rx_prod, 0);
+	bge_txeof(sc, tx_cons);
+	return (0);
+}
+#endif /* NETDUMP */

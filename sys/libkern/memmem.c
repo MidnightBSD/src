@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/libkern/memmem.c 319284 2017-05-31 05:45:06Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/libkern.h>
 #include <sys/param.h>

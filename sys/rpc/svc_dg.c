@@ -1,6 +1,8 @@
 /*	$NetBSD: svc_dg.c,v 1.4 2000/07/06 03:10:35 christos Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -36,7 +38,7 @@
 #ident	"@(#)svc_dg.c	1.17	94/04/24 SMI"
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/rpc/svc_dg.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * svc_dg.c, Server side for connectionless RPC.

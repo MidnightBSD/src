@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 The FreeBSD Foundation
  * Copyright (c) 2013 Mariusz Zaborski <oshogbo@FreeBSD.org>
  * All rights reserved.
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libnv/msgio.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -56,18 +58,19 @@ __FBSDID("$FreeBSD: stable/11/lib/libnv/msgio.c 331722 2018-03-29 02:50:57Z eadl
 #define	PJDLOG_ABORT(...)		abort()
 #endif
 
-#define	PKG_MAX_SIZE	(MCLBYTES / CMSG_SPACE(sizeof(int)) - 1)
+/*
+ * To work around limitations in 32-bit emulation on 64-bit kernels, use a
+ * machine-independent limit on the number of FDs per message.  Each control
+ * message contains 1 FD and requires 12 bytes for the header, 4 pad bytes,
+ * 4 bytes for the descriptor, and another 4 pad bytes.
+ */
+#define	PKG_MAX_SIZE	(MCLBYTES / 24)
 
 static int
 msghdr_add_fd(struct cmsghdr *cmsg, int fd)
 {
 
 	PJDLOG_ASSERT(fd >= 0);
-
-	if (!fd_is_valid(fd)) {
-		errno = EBADF;
-		return (-1);
-	}
 
 	cmsg->cmsg_level = SOL_SOCKET;
 	cmsg->cmsg_type = SCM_RIGHTS;

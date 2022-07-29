@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Peter Grehan
  * Copyright (c) 2009 Nathan Whitehorn
  * All rights reserved.
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/powerpc/powerpc/platform.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Dispatch platform calls to the appropriate platform implementation
@@ -154,10 +156,14 @@ mem_regions(struct mem_region **phys, int *physsz, struct mem_region **avail,
 		}
 	}
 
-	*phys = pregions;
-	*avail = aregions;
-	*physsz = npregions;
-	*availsz = naregions;
+	if (phys != NULL)
+		*phys = pregions;
+	if (avail != NULL)
+		*avail = aregions;
+	if (physsz != NULL)
+		*physsz = npregions;
+	if (availsz != NULL)
+		*availsz = naregions;
 }
 
 int
@@ -236,6 +242,12 @@ platform_smp_ap_init()
 	PLATFORM_SMP_AP_INIT(plat_obj);
 }
 
+void
+platform_smp_probe_threads(void)
+{
+	PLATFORM_SMP_PROBE_THREADS(plat_obj);
+}
+
 #ifdef SMP
 struct cpu_group *
 cpu_topo(void)
@@ -253,17 +265,10 @@ cpu_reset()
         PLATFORM_RESET(plat_obj);
 }
 
-int
-cpu_idle_wakeup(int cpu)
-{
-	return (PLATFORM_IDLE_WAKEUP(plat_obj, cpu));
-}
-
-void
-platform_cpu_idle(int cpu)
+void platform_smp_timebase_sync(u_long tb, int ap)
 {
 
-	PLATFORM_IDLE(plat_obj, cpu);
+	PLATFORM_SMP_TIMEBASE_SYNC(plat_obj, tb, ap);
 }
 
 /*

@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  * 
- * $FreeBSD: stable/11/sys/dev/bhnd/bhndb/bhndb_pci_hwdata.h 296077 2016-02-26 03:34:08Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef _BHND_BHNDB_PCI_HWDATA_H_

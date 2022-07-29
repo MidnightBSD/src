@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997, 1998, 1999 Nicolas Souchu
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ppbus/ppb_base.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -216,6 +218,14 @@ ppb_unlock(device_t bus)
 	struct ppb_data *ppb = DEVTOSOFTC(bus);
 
 	mtx_unlock(ppb->ppc_lock);
+}
+
+struct mtx *
+ppb_get_lock(device_t bus)
+{
+	struct ppb_data *ppb = DEVTOSOFTC(bus);
+
+	return (ppb->ppc_lock);
 }
 
 void

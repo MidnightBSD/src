@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/msun/arm/fenv-mangle.h 263210 2014-03-15 21:58:07Z andrew $
+ * $FreeBSD$
  */
 
 #ifdef _FENV_MANGLE_H_

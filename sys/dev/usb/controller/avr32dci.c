@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/dev/usb/controller/avr32dci.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

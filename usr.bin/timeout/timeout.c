@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/timeout/timeout.c 298879 2016-05-01 16:13:05Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/procctl.h>
 #include <sys/time.h>

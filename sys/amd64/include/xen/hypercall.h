@@ -33,7 +33,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/amd64/include/xen/hypercall.h 289033 2015-10-08 16:39:43Z royger $
+ * $FreeBSD$
  */
 
 #ifndef __MACHINE_XEN_HYPERCALL_H__

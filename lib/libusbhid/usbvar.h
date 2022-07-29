@@ -1,6 +1,8 @@
 /*	$NetBSD: usbvar.h,v 1.2 1999/05/11 21:15:46 augustss Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1999 Lennart Augustsson <augustss@netbsd.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libusbhid/usbvar.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  *
  */
 

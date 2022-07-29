@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/11/sys/netpfil/ipfw/test/dn_test.h 294882 2016-01-27 02:22:31Z luigi $
+ * $FreeBSD$
  *
  * userspace compatibility code for dummynet schedulers
  */
@@ -162,7 +162,7 @@ typedef struct _md_t moduledata_t;
 #include <ip_dn_private.h>
 #include <dn_sched.h>
 
-#ifndef __MidnightBSD__
+#ifndef __FreeBSD__
 int fls(int);
 #endif
 

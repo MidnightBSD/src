@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/sysfs.h 354616 2019-11-11 15:28:27Z hselasky $
+ * $FreeBSD$
  */
 #ifndef	_LINUX_SYSFS_H_
 #define	_LINUX_SYSFS_H_

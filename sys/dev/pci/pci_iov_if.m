@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/dev/pci/pci_iov_if.m 283670 2015-05-28 22:01:50Z jhb $
+# $FreeBSD$
 #
 
 #include <sys/bus.h>

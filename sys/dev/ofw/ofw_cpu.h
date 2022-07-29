@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ofw/ofw_cpu.h 279012 2015-02-19 16:34:48Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_OFW_OFW_CPU_H_

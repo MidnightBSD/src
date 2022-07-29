@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2010 Juli Mallett <jmallett@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/mips/mips/tlb.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include "opt_ddb.h"
@@ -85,13 +87,6 @@ static inline void
 tlb_write_indexed(void)
 {
 	__asm __volatile ("tlbwi" : : : "memory");
-	mips_cp0_sync();
-}
-
-static inline void
-tlb_write_random(void)
-{
-	__asm __volatile ("tlbwr" : : : "memory");
 	mips_cp0_sync();
 }
 
@@ -353,7 +348,7 @@ DB_SHOW_COMMAND(tlb, ddb_dump_tlb)
 	else
 		cpu = PCPU_GET(cpuid);
 
-	if (cpu < 0 || cpu >= mp_ncpus) {
+	if (cpu >= mp_ncpus) {
 		db_printf("Invalid CPU %u\n", cpu);
 		return;
 	}

@@ -27,9 +27,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet6/in6_jail.c 316944 2017-04-14 22:02:08Z smh $");
+__FBSDID("$FreeBSD$");
 
-#include "opt_compat.h"
 #include "opt_ddb.h"
 #include "opt_inet.h"
 #include "opt_inet6.h"

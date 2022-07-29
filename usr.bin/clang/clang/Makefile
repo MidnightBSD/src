@@ -13,9 +13,6 @@ SRCS+=		driver.cpp
 .if ${MK_SHARED_TOOLCHAIN} == "no"
 NO_SHARED?= yes
 
-.if ${MACHINE_CPUARCH} == "arm"
-CFLAGS+= -mlong-calls
-.endif
 .endif
 
 LINKS=	${BINDIR}/clang ${BINDIR}/clang++ \
@@ -36,5 +33,8 @@ MLINKS+= clang.1 cc.1 \
 .endif
 
 LIBADD+=	z
+
+# Ensure we don't add CFLAGS.clang when using GCC
+NO_TARGET_FLAGS=
 
 .include "../clang.prog.mk"

@@ -1,8 +1,8 @@
 /******************************************************************************
 
-  Copyright (c) 2013-2019, Intel Corporation
+  Copyright (c) 2013-2018, Intel Corporation
   All rights reserved.
-
+  
   Redistribution and use in source and binary forms, with or without 
   modification, are permitted provided that the following conditions are met:
   
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/ixl/ixl_pf_qmgr.c 349163 2019-06-18 00:08:02Z erj $*/
+/*$FreeBSD$*/
 
 
 #include "ixl_pf_qmgr.h"
@@ -45,7 +45,7 @@ ixl_pf_qmgr_init(struct ixl_pf_qmgr *qmgr, u16 num_queues)
 
 	qmgr->num_queues = num_queues;
 	qmgr->qinfo = malloc(num_queues * sizeof(struct ixl_pf_qmgr_qinfo),
-	    M_IXL, M_ZERO | M_WAITOK);
+	    M_IXL, M_ZERO | M_NOWAIT);
 	if (qmgr->qinfo == NULL)
 		return ENOMEM;
 
@@ -266,13 +266,29 @@ ixl_pf_qmgr_is_queue_configured(struct ixl_pf_qtag *qtag, u16 vsi_qidx, bool tx)
 		return (qmgr->qinfo[pf_qidx].rx_configured);
 }
 
+void
+ixl_pf_qmgr_clear_queue_flags(struct ixl_pf_qtag *qtag)
+{
+	MPASS(qtag != NULL);
+
+	struct ixl_pf_qmgr *qmgr = qtag->qmgr;
+	for (u16 i = 0; i < qtag->num_allocated; i++) {
+		u16 pf_qidx = ixl_pf_qidx_from_vsi_qidx(qtag, i);
+
+		qmgr->qinfo[pf_qidx].tx_configured = 0;
+		qmgr->qinfo[pf_qidx].rx_configured = 0;
+		qmgr->qinfo[pf_qidx].rx_enabled = 0;
+		qmgr->qinfo[pf_qidx].tx_enabled = 0;
+	}
+}
+
 u16
 ixl_pf_qidx_from_vsi_qidx(struct ixl_pf_qtag *qtag, u16 index)
 {
 	MPASS(index < qtag->num_allocated);
 
 	if (qtag->type == IXL_PF_QALLOC_CONTIGUOUS)
-		return qtag->qidx[0] + index;
+		return qtag->first_qidx + index;
 	else
 		return qtag->qidx[index];
 }

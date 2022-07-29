@@ -1,5 +1,3 @@
-# $FreeBSD: stable/11/stand/efi/libefi/Makefile 344399 2019-02-20 23:55:35Z kevans $
-
 .include <bsd.init.mk>
 
 LIB=	efi
@@ -12,6 +10,7 @@ SRCS=	delay.c \
 	efi_driver_utils.c \
 	efichar.c \
 	efienv.c \
+	efihttp.c \
 	efinet.c \
 	efipart.c \
 	efizfs.c \
@@ -46,6 +45,8 @@ CFLAGS+= -I${EFIINC}
 CFLAGS+= -I${EFIINCMD}
 .if ${MK_LOADER_ZFS} != "no"
 CFLAGS+=	-I${ZFSSRC}
+CFLAGS+=	-I${SYSDIR}/cddl/boot/zfs
+CFLAGS+=	-I${SYSDIR}/cddl/contrib/opensolaris/uts/common
 CFLAGS+=	-DEFI_ZFS_BOOT
 .endif
 

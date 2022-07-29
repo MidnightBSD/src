@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/nfscl/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/fs/nfsclient ${SRCTOP}/sys/nfs
 KMOD=	nfscl

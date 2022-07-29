@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/x86/x86/identcpu.c 354658 2019-11-12 19:35:46Z scottl $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_cpu.h"
 
@@ -91,6 +91,7 @@ u_int	cpu_feature;		/* Feature flags */
 u_int	cpu_feature2;		/* Feature flags */
 u_int	amd_feature;		/* AMD feature flags */
 u_int	amd_feature2;		/* AMD feature flags */
+u_int	amd_rascap;		/* AMD RAS capabilities */
 u_int	amd_pminfo;		/* AMD advanced power management info */
 u_int	amd_extended_feature_extensions;
 u_int	via_feature_rng;	/* VIA RNG features */
@@ -214,6 +215,7 @@ static struct {
 } cpu_vendors[] = {
 	{ INTEL_VENDOR_ID,	CPU_VENDOR_INTEL },	/* GenuineIntel */
 	{ AMD_VENDOR_ID,	CPU_VENDOR_AMD },	/* AuthenticAMD */
+	{ HYGON_VENDOR_ID,	CPU_VENDOR_HYGON },	/* HygonGenuine */
 	{ CENTAUR_VENDOR_ID,	CPU_VENDOR_CENTAUR },	/* CentaurHauls */
 #ifdef __i386__
 	{ NSC_VENDOR_ID,	CPU_VENDOR_NSC },	/* Geode by NSC */
@@ -274,7 +276,7 @@ printcpuinfo(void)
 			switch (cpu_id & 0xf00) {
 			case 0x400:
 				strcat(cpu_model, "i486 ");
-			        /* Check the particular flavor of 486 */
+				/* Check the particular flavor of 486 */
 				switch (cpu_id & 0xf0) {
 				case 0x00:
 				case 0x10:
@@ -302,32 +304,32 @@ printcpuinfo(void)
 				}
 				break;
 			case 0x500:
-			        /* Check the particular flavor of 586 */
-			        strcat(cpu_model, "Pentium");
-			        switch (cpu_id & 0xf0) {
+				/* Check the particular flavor of 586 */
+				strcat(cpu_model, "Pentium");
+				switch (cpu_id & 0xf0) {
 				case 0x00:
-				        strcat(cpu_model, " A-step");
+					strcat(cpu_model, " A-step");
 					break;
 				case 0x10:
-				        strcat(cpu_model, "/P5");
+					strcat(cpu_model, "/P5");
 					break;
 				case 0x20:
-				        strcat(cpu_model, "/P54C");
+					strcat(cpu_model, "/P54C");
 					break;
 				case 0x30:
-				        strcat(cpu_model, "/P24T");
+					strcat(cpu_model, "/P24T");
 					break;
 				case 0x40:
-				        strcat(cpu_model, "/P55C");
+					strcat(cpu_model, "/P55C");
 					break;
 				case 0x70:
-				        strcat(cpu_model, "/P54C");
+					strcat(cpu_model, "/P54C");
 					break;
 				case 0x80:
-				        strcat(cpu_model, "/P55C (quarter-micron)");
+					strcat(cpu_model, "/P55C (quarter-micron)");
 					break;
 				default:
-				        /* nothing */
+					/* nothing */
 					break;
 				}
 #if defined(I586_CPU) && !defined(NO_F00F_HACK)
@@ -340,18 +342,18 @@ printcpuinfo(void)
 #endif
 				break;
 			case 0x600:
-			        /* Check the particular flavor of 686 */
-  			        switch (cpu_id & 0xf0) {
+				/* Check the particular flavor of 686 */
+				switch (cpu_id & 0xf0) {
 				case 0x00:
-				        strcat(cpu_model, "Pentium Pro A-step");
+					strcat(cpu_model, "Pentium Pro A-step");
 					break;
 				case 0x10:
-				        strcat(cpu_model, "Pentium Pro");
+					strcat(cpu_model, "Pentium Pro");
 					break;
 				case 0x30:
 				case 0x50:
 				case 0x60:
-				        strcat(cpu_model,
+					strcat(cpu_model,
 				"Pentium II/Pentium II Xeon/Celeron");
 					cpu = CPU_PII;
 					break;
@@ -359,12 +361,12 @@ printcpuinfo(void)
 				case 0x80:
 				case 0xa0:
 				case 0xb0:
-				        strcat(cpu_model,
+					strcat(cpu_model,
 					"Pentium III/Pentium III Xeon/Celeron");
 					cpu = CPU_PIII;
 					break;
 				default:
-				        strcat(cpu_model, "Unknown 80686");
+					strcat(cpu_model, "Unknown 80686");
 					break;
 				}
 				break;
@@ -673,6 +675,18 @@ printcpuinfo(void)
 		}
 		break;
 #endif
+	case CPU_VENDOR_HYGON:
+		strcpy(cpu_model, "Hygon ");
+#ifdef __i386__
+		strcat(cpu_model, "Unknown");
+#else
+		if ((cpu_id & 0xf00) == 0xf00)
+			strcat(cpu_model, "AMD64 Processor");
+		else
+			strcat(cpu_model, "Unknown");
+#endif
+		break;
+
 	default:
 		strcat(cpu_model, "Unknown");
 		break;
@@ -732,6 +746,7 @@ printcpuinfo(void)
 
 	if (cpu_vendor_id == CPU_VENDOR_INTEL ||
 	    cpu_vendor_id == CPU_VENDOR_AMD ||
+	    cpu_vendor_id == CPU_VENDOR_HYGON ||
 	    cpu_vendor_id == CPU_VENDOR_CENTAUR ||
 #ifdef __i386__
 	    cpu_vendor_id == CPU_VENDOR_TRANSMETA ||
@@ -978,11 +993,18 @@ printcpuinfo(void)
 				       "\004PKU"
 				       "\005OSPKE"
 				       "\006WAITPKG"
+				       "\007AVX512VBMI2"
 				       "\011GFNI"
+				       "\012VAES"
+				       "\013VPCLMULQDQ"
+				       "\014AVX512VNNI"
+				       "\015AVX512BITALG"
+				       "\016AVX512VPOPCNTDQ"
 				       "\027RDPID"
 				       "\032CLDEMOTE"
 				       "\034MOVDIRI"
 				       "\035MOVDIRI64B"
+				       "\036ENQCMD"
 				       "\037SGXLC"
 				       );
 			}
@@ -991,8 +1013,13 @@ printcpuinfo(void)
 				printf("\n  Structured Extended Features3=0x%b",
 				    cpu_stdext_feature3,
 				       "\020"
+				       "\003AVX512_4VNNIW"
+				       "\004AVX512_4FMAPS"
+				       "\011AVX512VP2INTERSECT"
+				       "\012MCUOPT"
 				       "\013MD_CLEAR"
 				       "\016TSXFA"
+				       "\023PCONFIG"
 				       "\033IBPB"
 				       "\034STIBP"
 				       "\035L1DFL"
@@ -1024,7 +1051,7 @@ printcpuinfo(void)
 				       "\003RSBA"
 				       "\004SKIP_L1DFL_VME"
 				       "\005SSB_NO"
-				       "\006MDS_NO"
+				       "\005MDS_NO"
 				       "\010TSX_CTRL"
 				       "\011TAA_NO"
 				       );
@@ -1050,7 +1077,8 @@ printcpuinfo(void)
 				print_svm_info();
 
 			if ((cpu_feature & CPUID_HTT) &&
-			    cpu_vendor_id == CPU_VENDOR_AMD)
+			    (cpu_vendor_id == CPU_VENDOR_AMD ||
+			     cpu_vendor_id == CPU_VENDOR_HYGON))
 				cpu_feature &= ~CPUID_HTT;
 
 			/*
@@ -1080,7 +1108,8 @@ printcpuinfo(void)
 		printf("\n");
 
 	if (bootverbose) {
-		if (cpu_vendor_id == CPU_VENDOR_AMD)
+		if (cpu_vendor_id == CPU_VENDOR_AMD ||
+		    cpu_vendor_id == CPU_VENDOR_HYGON)
 			print_AMD_info();
 		else if (cpu_vendor_id == CPU_VENDOR_INTEL)
 			print_INTEL_info();
@@ -1330,7 +1359,7 @@ identify_hypervisor(void)
 		if (regs[0] == 0 && regs[1] == 0x4b4d564b &&
 		    regs[2] == 0x564b4d56 && regs[3] == 0x0000004d)
 			regs[0] = 0x40000001;
-			
+
 		if (regs[0] >= 0x40000000) {
 			hv_high = regs[0];
 			((u_int *)&hv_vendor)[0] = regs[1];
@@ -1357,7 +1386,7 @@ identify_hypervisor(void)
 		if (strncmp(p, "VMware-", 7) == 0 || strncmp(p, "VMW", 3) == 0) {
 			vmware_hvcall(VMW_HVCMD_GETVERSION, regs);
 			if (regs[1] == VMW_HVMAGIC) {
-				vm_guest = VM_GUEST_VMWARE;			
+				vm_guest = VM_GUEST_VMWARE;
 				freeenv(p);
 				return;
 			}
@@ -1480,6 +1509,19 @@ identify_cpu2(void)
 	}
 }
 
+void
+identify_cpu_fixup_bsp(void)
+{
+	u_int regs[4];
+
+	cpu_vendor_id = find_cpu_vendor_id();
+
+	if (fix_cpuid()) {
+		do_cpuid(0, regs);
+		cpu_high = regs[0];
+	}
+}
+
 /*
  * Final stage of CPU identification.
  */
@@ -1491,12 +1533,7 @@ finishidentcpu(void)
 	u_char ccr3;
 #endif
 
-	cpu_vendor_id = find_cpu_vendor_id();
-
-	if (fix_cpuid()) {
-		do_cpuid(0, regs);
-		cpu_high = regs[0];
-	}
+	identify_cpu_fixup_bsp();
 
 	if (cpu_high >= 5 && (cpu_feature2 & CPUID2_MON) != 0) {
 		do_cpuid(5, regs);
@@ -1511,6 +1548,7 @@ finishidentcpu(void)
 	if (cpu_high > 0 &&
 	    (cpu_vendor_id == CPU_VENDOR_INTEL ||
 	     cpu_vendor_id == CPU_VENDOR_AMD ||
+	     cpu_vendor_id == CPU_VENDOR_HYGON ||
 	     cpu_vendor_id == CPU_VENDOR_TRANSMETA ||
 	     cpu_vendor_id == CPU_VENDOR_CENTAUR ||
 	     cpu_vendor_id == CPU_VENDOR_NSC)) {
@@ -1521,6 +1559,7 @@ finishidentcpu(void)
 #else
 	if (cpu_vendor_id == CPU_VENDOR_INTEL ||
 	    cpu_vendor_id == CPU_VENDOR_AMD ||
+	    cpu_vendor_id == CPU_VENDOR_HYGON ||
 	    cpu_vendor_id == CPU_VENDOR_CENTAUR) {
 		do_cpuid(0x80000000, regs);
 		cpu_exthigh = regs[0];
@@ -1533,6 +1572,7 @@ finishidentcpu(void)
 	}
 	if (cpu_exthigh >= 0x80000007) {
 		do_cpuid(0x80000007, regs);
+		amd_rascap = regs[1];
 		amd_pminfo = regs[3];
 	}
 	if (cpu_exthigh >= 0x80000008) {
@@ -1639,7 +1679,8 @@ int
 pti_get_default(void)
 {
 
-	if (strcmp(cpu_vendor, AMD_VENDOR_ID) == 0)
+	if (strcmp(cpu_vendor, AMD_VENDOR_ID) == 0 ||
+	    strcmp(cpu_vendor, HYGON_VENDOR_ID) == 0)
 		return (0);
 	if ((cpu_ia32_arch_caps & IA32_ARCH_CAP_RDCL_NO) != 0)
 		return (0);
@@ -2199,23 +2240,23 @@ print_svm_info(void)
 		comma = 0;
 		if (features & (1 << 0)) {
 			printf("%sNP", comma ? "," : "");
-                        comma = 1; 
+			comma = 1;
 		}
 		if (features & (1 << 3)) {
 			printf("%sNRIP", comma ? "," : "");
-                        comma = 1; 
+			comma = 1;
 		}
 		if (features & (1 << 5)) {
 			printf("%sVClean", comma ? "," : "");
-                        comma = 1; 
+			comma = 1;
 		}
 		if (features & (1 << 6)) {
 			printf("%sAFlush", comma ? "," : "");
-                        comma = 1; 
+			comma = 1;
 		}
 		if (features & (1 << 7)) {
 			printf("%sDAssist", comma ? "," : "");
-                        comma = 1; 
+			comma = 1;
 		}
 		printf("%sNAsids=%d", comma ? "," : "", regs[1]);
 		return;
@@ -2233,11 +2274,29 @@ print_svm_info(void)
 	       "\010DecodeAssist"	/* Decode assist */
 	       "\011<b8>"
 	       "\012<b9>"
-	       "\013PauseFilter"	/* PAUSE intercept filter */    
-	       "\014<b11>"
+	       "\013PauseFilter"	/* PAUSE intercept filter */
+	       "\014EncryptedMcodePatch"
 	       "\015PauseFilterThreshold" /* PAUSE filter threshold */
 	       "\016AVIC"		/* virtual interrupt controller */
-                );
+	       "\017<b14>"
+	       "\020V_VMSAVE_VMLOAD"
+	       "\021vGIF"
+	       "\022<b17>"
+	       "\023<b18>"
+	       "\024<b19>"
+	       "\025GuesSpecCtl"	/* Guest Spec_ctl */
+	       "\026<b21>"
+	       "\027<b22>"
+	       "\030<b23>"
+	       "\031<b24>"
+	       "\032<b25>"
+	       "\033<b26>"
+	       "\034<b27>"
+	       "\035<b28>"
+	       "\036<b29>"
+	       "\037<b30>"
+	       "\040<b31>"
+	       );
 	printf("\nRevision=%d, ASIDs=%d", regs[0] & 0xff, regs[1]);
 }
 

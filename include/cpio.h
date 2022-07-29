@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Mike Barcroft <mike@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,8 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/cpio.h,v 1.1 2002/08/01 07:18:38 mike Exp $
- * $MidnightBSD$
+ * $FreeBSD$
  */
 
 #ifndef _CPIO_H_

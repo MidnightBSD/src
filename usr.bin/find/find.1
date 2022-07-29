@@ -12,7 +12,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -29,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)find.1	8.7 (Berkeley) 5/9/95
-.\" $FreeBSD: stable/11/usr.bin/find/find.1 360195 2020-04-22 13:53:22Z 0mp $
+.\" $FreeBSD$
 .\"
-.Dd April 18, 2020
+.Dd May 13, 2021
 .Dt FIND 1
 .Os
 .Sh NAME
@@ -135,6 +135,19 @@ primary specified by
 Refer to its description under
 .Sx PRIMARIES
 for more information.
+.It Fl f Ar path
+Add
+.Ar path
+to the list of paths that will be recursed into.
+This is useful when
+.Ar path
+begins with a character that would otherwise be interpreted as an
+.Ar expression ,
+namely
+.Dq Li "!" ,
+.Dq Li "("
+and
+.Dq Li - .
 .It Fl s
 Cause
 .Nm
@@ -1016,9 +1029,9 @@ and
 as well as
 .Ic -amin , -anewer , -cmin , -cnewer , -delete , -empty , -fstype ,
 .Ic -iname , -inum , -iregex , -ls , -maxdepth , -mindepth , -mmin ,
-.Ic -path , -print0 , -regex , -sparse
+.Ic -not , -path , -print0 , -regex , -sparse
 and all of the
-.Ic -B*
+.Fl B*
 birthtime related primaries are extensions to
 .St -p1003.1-2001 .
 .Pp
@@ -1071,10 +1084,17 @@ and
 .Xr sed 1
 options.
 .Sh HISTORY
-A
+A simple
 .Nm
 command appeared in
-.At v1 .
+.At v1
+and was removed in
+.At v3 .
+It was rewritten for
+.At v5
+and later be enhanced for the Programmer's Workbench (PWB).
+These changes were later incorporated in
+.At v7.
 .Sh BUGS
 The special characters used by
 .Nm

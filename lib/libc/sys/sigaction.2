@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	From: @(#)sigaction.2	8.2 (Berkeley) 4/3/94
-.\" $FreeBSD: stable/11/lib/libc/sys/sigaction.2 307758 2016-10-22 00:38:47Z des $
+.\" $FreeBSD$
 .\"
-.Dd September 30, 2016
+.Dd June 29, 2020
 .Dt SIGACTION 2
 .Os
 .Sh NAME
@@ -46,6 +46,7 @@ struct  sigaction {
         sigset_t sa_mask;               /* signal mask to apply */
 };
 .Ed
+.Pp
 .Ft int
 .Fo sigaction
 .Fa "int sig"
@@ -143,15 +144,13 @@ assigns an action for a signal specified by
 .Fa sig .
 If
 .Fa act
-is non-zero, it
-specifies an action
+is non-NULL, it specifies an action
 .Dv ( SIG_DFL ,
 .Dv SIG_IGN ,
-or a handler routine) and mask
-to be used when delivering the specified signal.
+or a handler routine) and mask to be used when delivering the specified signal.
 If
 .Fa oact
-is non-zero, the previous handling information for the signal
+is non-NULL, the previous handling information for the signal
 is returned to the user.
 .Pp
 The above declaration of
@@ -161,8 +160,12 @@ It is provided only to list the accessible members.
 See
 .In sys/signal.h
 for the actual definition.
-In particular, the storage occupied by sa_handler and sa_sigaction overlaps,
-and an application can not use both simultaneously.
+In particular, the storage occupied by
+.Va sa_handler
+and
+.Va sa_sigaction
+overlaps, and it is nonsensical for an application to attempt to use both
+simultaneously.
 .Pp
 Once a signal handler is installed, it normally remains installed
 until another
@@ -566,6 +569,7 @@ Extension Interfaces:
 .Pp
 .Fn accept4 ,
 .Fn bindat ,
+.Fn close_range ,
 .Fn closefrom ,
 .Fn connectat ,
 .Fn eaccess ,

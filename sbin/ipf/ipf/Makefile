@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sbin/ipf/ipf/Makefile 319185 2017-05-30 04:17:22Z ngie $
+# $FreeBSD$
 
 PACKAGE=	ipf
 PROG=		ipf
@@ -13,7 +13,6 @@ CLEANFILES+=	${GENHDRS} ipf_y.c ipf_l.c
 ipf_y.c: ipf_y.y
 	${YACC} -d ${.ALLSRC}
 	sed -e 's/yy/ipf_yy/g' \
-	    -e 's/"ipf_y.y"/"..\/tools\/ipf_y.y"/' \
 	    y.tab.c > ${.TARGET}
 	sed -e 's/yy/ipf_yy/g' \
 	    y.tab.h > ${.TARGET:.c=.h}
@@ -30,10 +29,7 @@ ipf_l.h: lexer.h
 	sed -e 's/yy/ipf_yy/g' \
 	    ${.ALLSRC} > ${.TARGET}
 
-.if defined(RESCUE)
-LIBIPF_SRCS!=	cd ${.CURDIR:H}/libipf && ${MAKE} -V SRCS
-SRCS+=	${LIBIPF_SRCS}
-.else
+.if !defined(RESCUE)
 LIBADD+=	pcap
 .endif
 

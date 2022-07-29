@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  *  Copyright (c) 2009-2018 Alexander Motin <mav@FreeBSD.org>
  *  Copyright (c) 1997-2009 by Matthew Jacob
  *  All rights reserved.
@@ -46,9 +48,9 @@
 __KERNEL_RCSID(0, "$NetBSD$");
 #include <dev/ic/isp_netbsd.h>
 #endif
-#ifdef	__MidnightBSD__
+#ifdef	__FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/isp/isp.c 348483 2019-05-31 20:36:32Z ken $");
+__FBSDID("$FreeBSD$");
 #include <dev/isp/isp_freebsd.h>
 #endif
 #ifdef	__OpenBSD__
@@ -4488,7 +4490,7 @@ isp_start(XS_T *xs)
 
 	/*
 	 * Now see if we need to synchronize the ISP with respect to anything.
-	 * We do dual duty here (cough) for synchronizing for busses other
+	 * We do dual duty here (cough) for synchronizing for buses other
 	 * than which we got here to send a command to.
 	 */
 	reqp = (ispreq_t *) local;
@@ -4552,7 +4554,9 @@ isp_start(XS_T *xs)
 		} else {
 			ttype = FCP_CMND_TASK_ATTR_SIMPLE;
 		}
-		((ispreqt7_t *)reqp)->req_task_attribute = ttype;
+		((ispreqt7_t *)reqp)->req_task_attribute = ttype |
+		    ((XS_PRIORITY(xs) << FCP_CMND_PRIO_SHIFT) &
+		     FCP_CMND_PRIO_MASK);
 	} else if (IS_FC(isp)) {
 		/*
 		 * See comment in isp_intr_respq
@@ -7668,12 +7672,7 @@ isp_read_nvram_2400(ispsoftc_t *isp, uint8_t *nvram_data)
 	int retval = 0;
 	uint32_t addr, csum, lwrds, *dptr;
 
-	if (isp->isp_port) {
-		addr = ISP2400_NVRAM_PORT1_ADDR;
-	} else {
-		addr = ISP2400_NVRAM_PORT0_ADDR;
-	}
-
+	addr = ISP2400_NVRAM_PORT_ADDR(isp->isp_port);
 	dptr = (uint32_t *) nvram_data;
 	for (lwrds = 0; lwrds < ISP2400_NVRAM_SIZE >> 2; lwrds++) {
 		isp_rd_2400_nvram(isp, addr++, dptr++);

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/tests/sys/geom/class/eli/onetime_test.sh 345394 2019-03-21 22:23:52Z asomers $
+# $FreeBSD$
 
 . $(atf_get_srcdir)/conf.sh
 

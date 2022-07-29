@@ -33,7 +33,7 @@
  *
  * so there!
  *
- * $FreeBSD: stable/11/sbin/ifconfig/ifconfig.h 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 #define	__constructor	__attribute__((constructor))
@@ -136,6 +136,7 @@ extern	int printkeys;
 extern	int newaddr;
 extern	int verbose;
 extern	int printifname;
+extern	int exit_code;
 
 void	setifcap(const char *, int value, int s, const struct afswtch *);
 
@@ -157,3 +158,4 @@ struct ifmediareq *ifmedia_getstate(int s);
 
 void print_vhid(const struct ifaddrs *, const char *);
 
+void ioctl_ifcreate(int s, struct ifreq *);

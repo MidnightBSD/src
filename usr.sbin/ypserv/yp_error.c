@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1995
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
  *
@@ -32,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/ypserv/yp_error.c 359754 2020-04-09 20:38:36Z kevans $");
+__FBSDID("$FreeBSD$");
 
 /*
  * error logging/reporting facilities

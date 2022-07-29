@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/gpio/gpiobus.c 350045 2019-07-16 15:58:19Z avg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -74,6 +76,18 @@ static int gpiobus_pin_getcaps(device_t, device_t, uint32_t, uint32_t*);
 static int gpiobus_pin_set(device_t, device_t, uint32_t, unsigned int);
 static int gpiobus_pin_get(device_t, device_t, uint32_t, unsigned int*);
 static int gpiobus_pin_toggle(device_t, device_t, uint32_t);
+
+/*
+ * gpiobus_pin flags
+ *  The flags in struct gpiobus_pin are not related to the flags used by the
+ *  low-level controller driver in struct gpio_pin.  Currently, only pins
+ *  acquired via FDT data have gpiobus_pin.flags set, sourced from the flags in
+ *  the FDT properties.  In theory, these flags are defined per-platform.  In
+ *  practice they are always the flags from the dt-bindings/gpio/gpio.h file.
+ *  The only one of those flags we currently support is for handling active-low
+ *  pins, so we just define that flag here instead of including a GPL'd header.
+ */
+#define	GPIO_ACTIVE_LOW 1
 
 /*
  * XXX -> Move me to better place - gpio_subr.c?
@@ -129,8 +143,125 @@ gpio_check_flags(uint32_t caps, uint32_t flags)
 	/* Cannot mix pull-up/pull-down together. */
 	if (flags & GPIO_PIN_PULLUP && flags & GPIO_PIN_PULLDOWN)
 		return (EINVAL);
+	/* Cannot mix output and interrupt flags together */
+	if (flags & GPIO_PIN_OUTPUT && flags & GPIO_INTR_MASK)
+		return (EINVAL);
+	/* Only one interrupt flag can be defined at once */
+	if ((flags & GPIO_INTR_MASK) & ((flags & GPIO_INTR_MASK) - 1))
+		return (EINVAL);
+	/* The interrupt attached flag cannot be set */
+	if (flags & GPIO_INTR_ATTACHED)
+		return (EINVAL);
 
 	return (0);
+}
+
+int
+gpio_pin_get_by_bus_pinnum(device_t busdev, uint32_t pinnum, gpio_pin_t *ppin)
+{
+	gpio_pin_t pin;
+	int err;
+
+	err = gpiobus_acquire_pin(busdev, pinnum);
+	if (err != 0)
+		return (EBUSY);
+
+	pin = malloc(sizeof(*pin), M_DEVBUF, M_WAITOK | M_ZERO);
+
+	pin->dev = device_get_parent(busdev);
+	pin->pin = pinnum;
+	pin->flags = 0;
+
+	*ppin = pin;
+	return (0);
+}
+
+int
+gpio_pin_get_by_child_index(device_t childdev, uint32_t idx, gpio_pin_t *ppin)
+{
+	struct gpiobus_ivar *devi;
+
+	devi = GPIOBUS_IVAR(childdev);
+	if (idx >= devi->npins)
+		return (EINVAL);
+
+	return (gpio_pin_get_by_bus_pinnum(device_get_parent(childdev),
+	    devi->pins[idx], ppin));
+}
+
+int
+gpio_pin_getcaps(gpio_pin_t pin, uint32_t *caps)
+{
+
+	KASSERT(pin != NULL, ("GPIO pin is NULL."));
+	KASSERT(pin->dev != NULL, ("GPIO pin device is NULL."));
+	return (GPIO_PIN_GETCAPS(pin->dev, pin->pin, caps));
+}
+
+int
+gpio_pin_is_active(gpio_pin_t pin, bool *active)
+{
+	int rv;
+	uint32_t tmp;
+
+	KASSERT(pin != NULL, ("GPIO pin is NULL."));
+	KASSERT(pin->dev != NULL, ("GPIO pin device is NULL."));
+	rv = GPIO_PIN_GET(pin->dev, pin->pin, &tmp);
+	if (rv  != 0) {
+		return (rv);
+	}
+
+	if (pin->flags & GPIO_ACTIVE_LOW)
+		*active = tmp == 0;
+	else
+		*active = tmp != 0;
+	return (0);
+}
+
+void
+gpio_pin_release(gpio_pin_t gpio)
+{
+	device_t busdev;
+
+	if (gpio == NULL)
+		return;
+
+	KASSERT(gpio->dev != NULL, ("GPIO pin device is NULL."));
+
+	busdev = GPIO_GET_BUS(gpio->dev);
+	if (busdev != NULL)
+		gpiobus_release_pin(busdev, gpio->pin);
+
+	free(gpio, M_DEVBUF);
+}
+
+int
+gpio_pin_set_active(gpio_pin_t pin, bool active)
+{
+	int rv;
+	uint32_t tmp;
+
+	if (pin->flags & GPIO_ACTIVE_LOW)
+		tmp = active ? 0 : 1;
+	else
+		tmp = active ? 1 : 0;
+
+	KASSERT(pin != NULL, ("GPIO pin is NULL."));
+	KASSERT(pin->dev != NULL, ("GPIO pin device is NULL."));
+	rv = GPIO_PIN_SET(pin->dev, pin->pin, tmp);
+	return (rv);
+}
+
+int
+gpio_pin_setflags(gpio_pin_t pin, uint32_t flags)
+{
+	int rv;
+
+	KASSERT(pin != NULL, ("GPIO pin is NULL."));
+	KASSERT(pin->dev != NULL, ("GPIO pin device is NULL."));
+
+	rv = GPIO_PIN_SETFLAGS(pin->dev, pin->pin, flags);
+	return (rv);
 }
 
 static void
@@ -299,13 +430,13 @@ gpiobus_release_pin(device_t bus, uint32_t pin)
 	/* Consistency check. */
 	if (pin >= sc->sc_npins) {
 		device_printf(bus,
-		    "gpiobus_acquire_pin: invalid pin %d, max=%d\n",
+		    "invalid pin %d, max=%d\n",
 		    pin, sc->sc_npins - 1);
 		return (-1);
 	}
 
 	if (!sc->sc_pins[pin].mapped) {
-		device_printf(bus, "gpiobus_acquire_pin: pin %d is not mapped\n", pin);
+		device_printf(bus, "pin %d is not mapped\n", pin);
 		return (-1);
 	}
 	sc->sc_pins[pin].mapped = 0;
@@ -368,8 +499,6 @@ gpiobus_parse_pins(struct gpiobus_softc *sc, device_t child, int mask)
 		devi->pins[npins++] = i;
 	}
 
-	if (gpiobus_acquire_child_pins(sc->sc_busdev, child) != 0)
-		return (EINVAL);
 	return (0);
 }
 
@@ -423,8 +552,6 @@ gpiobus_parse_pin_list(struct gpiobus_softc *sc, device_t child,
 		p = endp + 1;
 	}
 
-	if (gpiobus_acquire_child_pins(sc->sc_busdev, child) != 0)
-		return (EINVAL);
 	return (0);
 }
 
@@ -598,6 +725,21 @@ gpiobus_add_child(device_t dev, u_int order, const char *name, int unit)
 	return (child);
 }
 
+static int
+gpiobus_rescan(device_t dev)
+{
+
+	/*
+	 * Re-scan is supposed to remove and add children, but if someone has
+	 * deleted the hints for a child we attached earlier, we have no easy
+	 * way to handle that.  So this just attaches new children for whom new
+	 * hints or drivers have arrived since we last tried.
+	 */
+	bus_enumerate_hinted_children(dev);
+	bus_generic_attach(dev);
+	return (0);
+}
+
 static void
 gpiobus_hinted_child(device_t bus, const char *dname, int dunit)
 {
@@ -606,6 +748,10 @@ gpiobus_hinted_child(device_t bus, const char *dname, int dunit)
 	device_t child;
 	const char *pins;
 	int irq, pinmask;
+
+	if (device_find_child(bus, dname, dunit) != NULL) {
+		return;
+	}
 
 	child = BUS_ADD_CHILD(bus, 0, dname, dunit);
 	devi = GPIOBUS_IVAR(child);
@@ -959,6 +1105,7 @@ static device_method_t gpiobus_methods[] = {
 	DEVMETHOD(bus_deactivate_resource,	bus_generic_deactivate_resource),
 	DEVMETHOD(bus_get_resource_list,	gpiobus_get_resource_list),
 	DEVMETHOD(bus_add_child,	gpiobus_add_child),
+	DEVMETHOD(bus_rescan,		gpiobus_rescan),
 	DEVMETHOD(bus_probe_nomatch,	gpiobus_probe_nomatch),
 	DEVMETHOD(bus_print_child,	gpiobus_print_child),
 	DEVMETHOD(bus_child_pnpinfo_str, gpiobus_child_pnpinfo_str),

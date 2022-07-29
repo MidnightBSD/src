@@ -1,5 +1,7 @@
 #!/bin/sh
 #-
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (c) 2010 iXsystems, Inc.  All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -23,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.sbin/pc-sysinstall/backend/functions-mountoptical.sh 220059 2011-03-27 16:57:54Z jpaetzel $
+# $FreeBSD$
 
 # Functions which perform mounting / unmounting and switching of 
 # optical / usb media
@@ -82,7 +84,7 @@ opt_mount()
   do
 
     # Loop though and look for an installation disk
-    for i in `ls -1 /dev/acd* /dev/cd* /dev/scd* /dev/rscd* 2>/dev/null`
+    for i in `ls -1 /dev/cd* 2>/dev/null`
     do
       # Find the CD Device
       /sbin/mount_cd9660 $i ${CDMNT}

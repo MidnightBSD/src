@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/parser/Makefile 299094 2016-05-04 23:20:53Z ngie $
+# $FreeBSD$
 
 PACKAGE=	tests
 
@@ -22,6 +22,9 @@ ${PACKAGE}FILES+=	alias12.0
 ${PACKAGE}FILES+=	alias13.0
 ${PACKAGE}FILES+=	alias14.0
 ${PACKAGE}FILES+=	alias15.0 alias15.0.stdout
+${PACKAGE}FILES+=	alias16.0
+${PACKAGE}FILES+=	alias17.0
+${PACKAGE}FILES+=	alias18.0
 ${PACKAGE}FILES+=	and-pipe-not.0
 ${PACKAGE}FILES+=	case1.0
 ${PACKAGE}FILES+=	case2.0
@@ -71,6 +74,7 @@ ${PACKAGE}FILES+=	line-cont8.0
 ${PACKAGE}FILES+=	line-cont9.0
 ${PACKAGE}FILES+=	line-cont10.0
 ${PACKAGE}FILES+=	line-cont11.0
+${PACKAGE}FILES+=	line-cont12.0
 ${PACKAGE}FILES+=	no-space1.0
 ${PACKAGE}FILES+=	no-space2.0
 ${PACKAGE}FILES+=	nul1.0

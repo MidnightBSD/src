@@ -32,7 +32,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/cyapa/cyapa.h 285876 2015-07-25 18:14:35Z grembo $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_DEV_SMBUS_CYAPA_CYAPA_H_

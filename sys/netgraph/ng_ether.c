@@ -39,7 +39,7 @@
  * Authors: Archie Cobbs <archie@freebsd.org>
  *	    Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: stable/11/sys/netgraph/ng_ether.c 298813 2016-04-29 21:25:05Z pfg $
+ * $FreeBSD$
  */
 
 /*
@@ -314,7 +314,8 @@ ng_ether_attach(struct ifnet *ifp)
 	 * eiface nodes, which may be problematic due to naming
 	 * clashes.
 	 */
-	if ((node = ng_name2noderef(NULL, ifp->if_xname)) != NULL) {
+	ng_ether_sanitize_ifname(ifp->if_xname, name);
+	if ((node = ng_name2noderef(NULL, name)) != NULL) {
 		NG_NODE_UNREF(node);
 		return;
 	}
@@ -341,7 +342,6 @@ ng_ether_attach(struct ifnet *ifp)
 	priv->hwassist = ifp->if_hwassist;
 
 	/* Try to give the node the same name as the interface */
-	ng_ether_sanitize_ifname(ifp->if_xname, name);
 	if (ng_name_node(node, name) != 0)
 		log(LOG_WARNING, "%s: can't name node %s\n", __func__, name);
 }
@@ -414,8 +414,9 @@ ng_ether_ifnet_arrival_event(void *arg __unused, struct ifnet *ifp)
 	node_p node;
 
 	/* Only ethernet interfaces are of interest. */
-	if (ifp->if_type != IFT_ETHER
-	    && ifp->if_type != IFT_L2VLAN)
+	if (ifp->if_type != IFT_ETHER &&
+	    ifp->if_type != IFT_L2VLAN &&
+	    ifp->if_type != IFT_BRIDGE)
 		return;
 
 	/*
@@ -753,13 +754,13 @@ ng_ether_shutdown(node_p node)
 
 	if (node->nd_flags & NGF_REALLY_DIE) {
 		/*
-		 * WE came here because the ethernet card is being unloaded,
-		 * so stop being persistent.
-		 * Actually undo all the things we did on creation.
-		 * Assume the ifp has already been freed.
+		 * The ifnet is going away, perhaps because the driver was
+		 * unloaded or its vnet is being torn down.
 		 */
 		NG_NODE_SET_PRIVATE(node, NULL);
-		free(priv, M_NETGRAPH);		
+		if (priv->ifp != NULL)
+			IFP2NG(priv->ifp) = NULL;
+		free(priv, M_NETGRAPH);
 		NG_NODE_UNREF(node);	/* free node itself */
 		return (0);
 	}
@@ -868,9 +869,10 @@ vnet_ng_ether_init(const void *unused)
 
 	/* Create nodes for any already-existing Ethernet interfaces. */
 	IFNET_RLOCK();
-	TAILQ_FOREACH(ifp, &V_ifnet, if_link) {
-		if (ifp->if_type == IFT_ETHER
-		    || ifp->if_type == IFT_L2VLAN)
+	CK_STAILQ_FOREACH(ifp, &V_ifnet, if_link) {
+		if (ifp->if_type == IFT_ETHER ||
+		    ifp->if_type == IFT_L2VLAN ||
+		    ifp->if_type == IFT_BRIDGE)
 			ng_ether_attach(ifp);
 	}
 	IFNET_RUNLOCK();

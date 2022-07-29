@@ -23,11 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/mkimg/endian.h 329059 2018-02-09 09:15:43Z manu $
+ * $FreeBSD$
  */
 
 #ifndef _MKIMG_ENDIAN_H_
 #define _MKIMG_ENDIAN_H_
+
+#include <stdint.h>
 
 static __inline uint16_t
 be16dec(const void *pp)

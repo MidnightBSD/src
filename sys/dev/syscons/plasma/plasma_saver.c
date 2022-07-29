@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Dag-Erling Smørgrav
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/dev/syscons/plasma/plasma_saver.c 294783 2016-01-26 08:55:31Z des $
+ * $FreeBSD$
  *
  * To CJA, in appreciation of Nighthawk brunches past and future.
  */
@@ -50,8 +49,6 @@
  */
 static int modes[] = {
 	M_VGA_CG640,
-	M_PC98_PEGC640x480,
-	M_PC98_PEGC640x400,
 	M_VGA_CG320,
 	-1
 };

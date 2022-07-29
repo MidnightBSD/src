@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD$
 
 PROG = rwall
 

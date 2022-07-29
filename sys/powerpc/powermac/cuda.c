@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2006 Michael Lorenz
  * Copyright 2008 by Nathan Whitehorn
  * All rights reserved.
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/powerpc/powermac/cuda.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -163,12 +165,16 @@ cuda_attach(device_t dev)
             	RF_ACTIVE);
         if (sc->sc_irq == NULL) {
                 device_printf(dev, "could not allocate interrupt\n");
+                bus_release_resource(dev, SYS_RES_MEMORY, sc->sc_memrid,
+                    sc->sc_memr);
                 return (ENXIO);
         }
 
 	if (bus_setup_intr(dev, sc->sc_irq, INTR_TYPE_MISC | INTR_MPSAFE 
 	    | INTR_ENTROPY, NULL, cuda_intr, dev, &sc->sc_ih) != 0) {
                 device_printf(dev, "could not setup interrupt\n");
+                bus_release_resource(dev, SYS_RES_MEMORY, sc->sc_memrid,
+                    sc->sc_memr);
                 bus_release_resource(dev, SYS_RES_IRQ, sc->sc_irqrid,
                     sc->sc_irq);
                 return (ENXIO);

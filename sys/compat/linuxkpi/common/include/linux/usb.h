@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/usb.h 331756 2018-03-30 02:04:46Z emaste $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2007 Luigi Rizzo - Universita` di Pisa. All rights reserved.
  * Copyright (c) 2007 Hans Petter Selasky. All rights reserved.

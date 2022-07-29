@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/net/netmap_virt.h 356805 2020-01-16 20:57:29Z vmaffione $
+ * $FreeBSD$
  */
 
 #ifndef NETMAP_VIRT_H

@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/ocs_fc/ocs_device.h 331766 2018-03-30 15:28:25Z ken $
+ * $FreeBSD$
  */
 
 /**
@@ -56,7 +56,7 @@
  * @brief Defines the number of SGLs allocated on each IO object
  */
 #ifndef OCS_FC_MAX_SGL
-#define OCS_FC_MAX_SGL		128
+#define OCS_FC_MAX_SGL		256
 #endif
 
 

@@ -1,6 +1,8 @@
 /* $NetBSD: atomic.h,v 1.1 2002/10/19 12:22:34 bsh Exp $ */
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (C) 2003-2004 Olivier Houchard
  * Copyright (C) 1994-1997 Mark Brinicombe
  * Copyright (C) 1994 Brini
@@ -33,7 +35,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/include/atomic.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_ATOMIC_H_
@@ -52,6 +54,13 @@
 #else /* < armv6 */
 #include <machine/atomic-v4.h>
 #endif /* Arch >= v6 */
+
+static __inline u_long
+atomic_swap_long(volatile u_long *p, u_long v)
+{
+
+	return (atomic_swap_32((volatile uint32_t *)p, v));
+}
 
 #define atomic_clear_ptr		atomic_clear_32
 #define atomic_clear_acq_ptr		atomic_clear_acq_32

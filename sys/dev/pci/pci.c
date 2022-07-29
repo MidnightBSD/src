@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997, Stefan Esser <se@freebsd.org>
  * Copyright (c) 2000, Michael Smith <msmith@freebsd.org>
  * Copyright (c) 2000, BSDi
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/pci/pci.c 355359 2019-12-03 22:01:45Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_bus.h"
 
@@ -119,6 +121,8 @@ static void		pci_resume_msi(device_t dev);
 static void		pci_resume_msix(device_t dev);
 static int		pci_remap_intr_method(device_t bus, device_t dev,
 			    u_int irq);
+static void		pci_hint_device_unit(device_t acdev, device_t child,
+			    const char *name, int *unitp);
 static int		pci_reset_post(device_t dev, device_t child);
 static int		pci_reset_prepare(device_t dev, device_t child);
 static int		pci_reset_child(device_t dev, device_t child,
@@ -165,6 +169,7 @@ static device_method_t pci_methods[] = {
 	DEVMETHOD(bus_child_detached,	pci_child_detached),
 	DEVMETHOD(bus_child_pnpinfo_str, pci_child_pnpinfo_str_method),
 	DEVMETHOD(bus_child_location_str, pci_child_location_str_method),
+	DEVMETHOD(bus_hint_device_unit,	pci_hint_device_unit),
 	DEVMETHOD(bus_remap_intr,	pci_remap_intr_method),
 	DEVMETHOD(bus_suspend_child,	pci_suspend_child),
 	DEVMETHOD(bus_resume_child,	pci_resume_child),
@@ -203,7 +208,7 @@ static device_method_t pci_methods[] = {
 	DEVMETHOD(pci_alloc_devinfo,	pci_alloc_devinfo_method),
 	DEVMETHOD(pci_child_added,	pci_child_added_method),
 #ifdef PCI_IOV
-	DEVMETHOD(pci_iov_attach_name,	pci_iov_attach_method),
+	DEVMETHOD(pci_iov_attach,	pci_iov_attach_method),
 	DEVMETHOD(pci_iov_detach,	pci_iov_detach_method),
 	DEVMETHOD(pci_create_iov_child,	pci_create_iov_child_method),
 #endif
@@ -405,6 +410,10 @@ SYSCTL_INT(_hw_pci, OID_AUTO, clear_buses, CTLFLAG_RDTUN, &pci_clear_buses, 0,
 static int pci_enable_ari = 1;
 SYSCTL_INT(_hw_pci, OID_AUTO, enable_ari, CTLFLAG_RDTUN, &pci_enable_ari,
     0, "Enable support for PCIe Alternative RID Interpretation");
+
+int pci_enable_aspm = 1;
+SYSCTL_INT(_hw_pci, OID_AUTO, enable_aspm, CTLFLAG_RDTUN, &pci_enable_aspm,
+    0, "Enable support for PCIe Active State Power Management");
 
 static int pci_clear_aer_on_attach = 0;
 SYSCTL_INT(_hw_pci, OID_AUTO, clear_aer_on_attach, CTLFLAG_RWTUN,
@@ -1100,16 +1109,16 @@ pci_read_vpd(device_t pcib, pcicfgregs *cfg)
 					break;
 				}
 				remain |= byte2 << 8;
-				if (remain > (0x7f*4 - vrs.off)) {
-					state = -1;
-					pci_printf(cfg,
-					    "invalid VPD data, remain %#x\n",
-					    remain);
-				}
 				name = byte & 0x7f;
 			} else {
 				remain = byte & 0x7;
 				name = (byte >> 3) & 0xf;
+			}
+			if (vrs.off + remain - vrs.bytesinval > 0x8000) {
+				pci_printf(cfg,
+				    "VPD data overflow, remain %#x\n", remain);
+				state = -1;
+				break;
 			}
 			switch (name) {
 			case 0x2:	/* String */
@@ -2152,6 +2161,21 @@ pci_ht_map_msi(device_t dev, uint64_t addr)
 }
 
 int
+pci_get_relaxed_ordering_enabled(device_t dev)
+{
+	struct pci_devinfo *dinfo = device_get_ivars(dev);
+	int cap;
+	uint16_t val;
+
+	cap = dinfo->cfg.pcie.pcie_location;
+	if (cap == 0)
+		return (0);
+	val = pci_read_config(dev, cap + PCIER_DEVICE_CTL, 2);
+	val &= PCIEM_CTL_RELAXED_ORD_ENABLE;
+	return (val != 0);
+}
+
+int
 pci_get_max_payload(device_t dev)
 {
 	struct pci_devinfo *dinfo = device_get_ivars(dev);
@@ -3029,13 +3053,21 @@ pci_read_bar(device_t dev, int reg, pci_addr_t *mapp, pci_addr_t *testvalp,
 	 * Determine the BAR's length by writing all 1's.  The bottom
 	 * log_2(size) bits of the BAR will stick as 0 when we read
 	 * the value back.
+	 *
+	 * NB: according to the PCI Local Bus Specification, rev. 3.0:
+	 * "Software writes 0FFFFFFFFh to both registers, reads them back,
+	 * and combines the result into a 64-bit value." (section 6.2.5.1)
+	 *
+	 * Writes to both registers must be performed before attempting to
+	 * read back the size value.
 	 */
+	testval = 0;
 	pci_write_config(dev, reg, 0xffffffff, 4);
-	testval = pci_read_config(dev, reg, 4);
 	if (ln2range == 64) {
 		pci_write_config(dev, reg + 4, 0xffffffff, 4);
 		testval |= (pci_addr_t)pci_read_config(dev, reg + 4, 4) << 32;
 	}
+	testval |= pci_read_config(dev, reg, 4);
 
 	/*
 	 * Restore the original value of the BAR.  We may have reprogrammed
@@ -3223,7 +3255,7 @@ pci_add_map(device_t bus, device_t dev, int reg, struct resource_list *rl,
 	 * If base is 0, then we have problems if this architecture does
 	 * not allow that.  It is best to ignore such entries for the
 	 * moment.  These will be allocated later if the driver specifically
-	 * requests them.  However, some removable busses look better when
+	 * requests them.  However, some removable buses look better when
 	 * all resources are allocated, so allow '0' to be overriden.
 	 *
 	 * Similarly treat maps whose values is the same as the test value
@@ -4095,7 +4127,6 @@ pci_rescan_method(device_t dev)
 {
 #define	REG(n, w)	PCIB_READ_CONFIG(pcib, busno, s, f, n, w)
 	device_t pcib = device_get_parent(dev);
-	struct pci_softc *sc;
 	device_t child, *devlist, *unchanged;
 	int devcount, error, i, j, maxslots, oldcount;
 	int busno, domain, s, f, pcifunchigh;
@@ -4115,7 +4146,6 @@ pci_rescan_method(device_t dev)
 	} else
 		unchanged = NULL;
 
-	sc = device_get_softc(dev);
 	domain = pcib_get_domain(dev);
 	busno = pcib_get_bus(dev);
 	maxslots = PCIB_MAXSLOTS(pcib);
@@ -4192,11 +4222,9 @@ device_t
 pci_add_iov_child(device_t bus, device_t pf, uint16_t rid, uint16_t vid,
     uint16_t did)
 {
-	struct pci_devinfo *pf_dinfo, *vf_dinfo;
+	struct pci_devinfo *vf_dinfo;
 	device_t pcib;
 	int busno, slot, func;
-
-	pf_dinfo = device_get_ivars(pf);
 
 	pcib = device_get_parent(bus);
 
@@ -4219,6 +4247,45 @@ pci_create_iov_child_method(device_t bus, device_t pf, uint16_t rid,
 	return (pci_add_iov_child(bus, pf, rid, vid, did));
 }
 #endif
+
+/*
+ * For PCIe device set Max_Payload_Size to match PCIe root's.
+ */
+static void
+pcie_setup_mps(device_t dev)
+{
+	struct pci_devinfo *dinfo = device_get_ivars(dev);
+	device_t root;
+	uint16_t rmps, mmps, mps;
+
+	if (dinfo->cfg.pcie.pcie_location == 0)
+		return;
+	root = pci_find_pcie_root_port(dev);
+	if (root == NULL)
+		return;
+	/* Check whether the MPS is already configured. */
+	rmps = pcie_read_config(root, PCIER_DEVICE_CTL, 2) &
+	    PCIEM_CTL_MAX_PAYLOAD;
+	mps = pcie_read_config(dev, PCIER_DEVICE_CTL, 2) &
+	    PCIEM_CTL_MAX_PAYLOAD;
+	if (mps == rmps)
+		return;
+	/* Check whether the device is capable of the root's MPS. */
+	mmps = (pcie_read_config(dev, PCIER_DEVICE_CAP, 2) &
+	    PCIEM_CAP_MAX_PAYLOAD) << 5;
+	if (rmps > mmps) {
+		/*
+		 * The device is unable to handle root's MPS.  Limit root.
+		 * XXX: We should traverse through all the tree, applying
+		 * it to all the devices.
+		 */
+		pcie_adjust_config(root, PCIER_DEVICE_CTL,
+		    PCIEM_CTL_MAX_PAYLOAD, mmps, 2);
+	} else {
+		pcie_adjust_config(dev, PCIER_DEVICE_CTL,
+		    PCIEM_CTL_MAX_PAYLOAD, rmps, 2);
+	}
+}
 
 static void
 pci_add_child_clear_aer(device_t dev, struct pci_devinfo *dinfo)
@@ -4307,6 +4374,7 @@ pci_add_child(device_t bus, struct pci_devinfo *dinfo)
 	pci_cfg_restore(dev, dinfo);
 	pci_print_verbose(dinfo);
 	pci_add_resources(bus, dev, 0, 0);
+	pcie_setup_mps(dev);
 	pci_child_added(dinfo->cfg.dev);
 
 	if (pci_clear_aer_on_attach)
@@ -4336,9 +4404,6 @@ pci_attach_common(device_t dev)
 {
 	struct pci_softc *sc;
 	int busno, domain;
-#ifdef PCI_DMA_BOUNDARY
-	int error, tag_valid;
-#endif
 #ifdef PCI_RES_BUS
 	int rid;
 #endif
@@ -4358,23 +4423,7 @@ pci_attach_common(device_t dev)
 	if (bootverbose)
 		device_printf(dev, "domain=%d, physical bus=%d\n",
 		    domain, busno);
-#ifdef PCI_DMA_BOUNDARY
-	tag_valid = 0;
-	if (device_get_devclass(device_get_parent(device_get_parent(dev))) !=
-	    devclass_find("pci")) {
-		error = bus_dma_tag_create(bus_get_dma_tag(dev), 1,
-		    PCI_DMA_BOUNDARY, BUS_SPACE_MAXADDR, BUS_SPACE_MAXADDR,
-		    NULL, NULL, BUS_SPACE_MAXSIZE, BUS_SPACE_UNRESTRICTED,
-		    BUS_SPACE_MAXSIZE, 0, NULL, NULL, &sc->sc_dma_tag);
-		if (error)
-			device_printf(dev, "Failed to create DMA tag: %d\n",
-			    error);
-		else
-			tag_valid = 1;
-	}
-	if (!tag_valid)
-#endif
-		sc->sc_dma_tag = bus_get_dma_tag(dev);
+	sc->sc_dma_tag = bus_get_dma_tag(dev);
 	return (0);
 }
 
@@ -4389,7 +4438,7 @@ pci_attach(device_t dev)
 
 	/*
 	 * Since there can be multiple independently numbered PCI
-	 * busses on systems with multiple PCI domains, we can't use
+	 * buses on systems with multiple PCI domains, we can't use
 	 * the unit number to decide which bus we are probing. We ask
 	 * the parent pcib what our domain and bus numbers are.
 	 */
@@ -4420,6 +4469,31 @@ pci_detach(device_t dev)
 }
 
 static void
+pci_hint_device_unit(device_t dev, device_t child, const char *name, int *unitp)
+{
+	int line, unit;
+	const char *at;
+	char me1[24], me2[32];
+	uint8_t b, s, f;
+	uint32_t d;
+
+	d = pci_get_domain(child);
+	b = pci_get_bus(child);
+	s = pci_get_slot(child);
+	f = pci_get_function(child);
+	snprintf(me1, sizeof(me1), "pci%u:%u:%u", b, s, f);
+	snprintf(me2, sizeof(me2), "pci%u:%u:%u:%u", d, b, s, f);
+	line = 0;
+	while (resource_find_dev(&line, name, &unit, "at", NULL) == 0) {
+		resource_string_value(name, unit, "at", &at);
+		if (strcmp(at, me1) != 0 && strcmp(at, me2) != 0)
+			continue; /* No match, try next candidate */
+		*unitp = unit;
+		return;
+	}
+}
+
+static void
 pci_set_power_child(device_t dev, device_t child, int state)
 {
 	device_t pcib;
@@ -4443,6 +4517,7 @@ int
 pci_suspend_child(device_t dev, device_t child)
 {
 	struct pci_devinfo *dinfo;
+	struct resource_list_entry *rle;
 	int error;
 
 	dinfo = device_get_ivars(child);
@@ -4459,8 +4534,20 @@ pci_suspend_child(device_t dev, device_t child)
 	if (error)
 		return (error);
 
-	if (pci_do_power_suspend)
+	if (pci_do_power_suspend) {
+		/*
+		 * Make sure this device's interrupt handler is not invoked
+		 * in the case the device uses a shared interrupt that can
+		 * be raised by some other device.
+		 * This is applicable only to regular (legacy) PCI interrupts
+		 * as MSI/MSI-X interrupts are never shared.
+		 */
+		rle = resource_list_find(&dinfo->resources,
+		    SYS_RES_IRQ, 0);
+		if (rle != NULL && rle->res != NULL)
+			(void)bus_suspend_intr(child, rle->res);
 		pci_set_power_child(dev, child, PCI_POWERSTATE_D3);
+	}
 
 	return (0);
 }
@@ -4469,6 +4556,7 @@ int
 pci_resume_child(device_t dev, device_t child)
 {
 	struct pci_devinfo *dinfo;
+	struct resource_list_entry *rle;
 
 	if (pci_do_power_resume)
 		pci_set_power_child(dev, child, PCI_POWERSTATE_D0);
@@ -4479,6 +4567,16 @@ pci_resume_child(device_t dev, device_t child)
 		pci_cfg_save(child, dinfo, 1);
 
 	bus_generic_resume_child(dev, child);
+
+	/*
+	 * Allow interrupts only after fully resuming the driver and hardware.
+	 */
+	if (pci_do_power_suspend) {
+		/* See pci_suspend_child for details. */
+		rle = resource_list_find(&dinfo->resources, SYS_RES_IRQ, 0);
+		if (rle != NULL && rle->res != NULL)
+			(void)bus_resume_intr(child, rle->res);
+	}
 
 	return (0);
 }
@@ -5875,7 +5973,6 @@ pci_cfg_restore(device_t dev, struct pci_devinfo *dinfo)
 	 */
 	if (pci_get_powerstate(dev) != PCI_POWERSTATE_D0)
 		pci_set_powerstate(dev, PCI_POWERSTATE_D0);
-	pci_write_config(dev, PCIR_COMMAND, dinfo->cfg.cmdreg, 2);
 	pci_write_config(dev, PCIR_INTLINE, dinfo->cfg.intline, 1);
 	pci_write_config(dev, PCIR_INTPIN, dinfo->cfg.intpin, 1);
 	pci_write_config(dev, PCIR_CACHELNSZ, dinfo->cfg.cachelnsz, 1);
@@ -5913,6 +6010,9 @@ pci_cfg_restore(device_t dev, struct pci_devinfo *dinfo)
 		break;
 	}
 	pci_restore_bars(dev);
+
+	if ((dinfo->cfg.hdrtype & PCIM_HDRTYPE) != PCIM_HDRTYPE_BRIDGE)
+		pci_write_config(dev, PCIR_COMMAND, dinfo->cfg.cmdreg, 2);
 
 	/*
 	 * Restore extended capabilities for PCI-Express and PCI-X
@@ -6243,6 +6343,67 @@ pcie_get_max_completion_timeout(device_t dev)
 	}
 }
 
+void
+pcie_apei_error(device_t dev, int sev, uint8_t *aerp)
+{
+	struct pci_devinfo *dinfo = device_get_ivars(dev);
+	const char *s;
+	int aer;
+	uint32_t r, r1;
+	uint16_t rs;
+
+	if (sev == PCIEM_STA_CORRECTABLE_ERROR)
+		s = "Correctable";
+	else if (sev == PCIEM_STA_NON_FATAL_ERROR)
+		s = "Uncorrectable (Non-Fatal)";
+	else
+		s = "Uncorrectable (Fatal)";
+	device_printf(dev, "%s PCIe error reported by APEI\n", s);
+	if (aerp) {
+		if (sev == PCIEM_STA_CORRECTABLE_ERROR) {
+			r = le32dec(aerp + PCIR_AER_COR_STATUS);
+			r1 = le32dec(aerp + PCIR_AER_COR_MASK);
+		} else {
+			r = le32dec(aerp + PCIR_AER_UC_STATUS);
+			r1 = le32dec(aerp + PCIR_AER_UC_MASK);
+		}
+		device_printf(dev, "status 0x%08x mask 0x%08x", r, r1);
+		if (sev != PCIEM_STA_CORRECTABLE_ERROR) {
+			r = le32dec(aerp + PCIR_AER_UC_SEVERITY);
+			rs = le16dec(aerp + PCIR_AER_CAP_CONTROL);
+			printf(" severity 0x%08x first %d\n",
+			    r, rs & 0x1f);
+		} else
+			printf("\n");
+	}
+
+	/* As kind of recovery just report and clear the error statuses. */
+	if (pci_find_extcap(dev, PCIZ_AER, &aer) == 0) {
+		r = pci_read_config(dev, aer + PCIR_AER_UC_STATUS, 4);
+		if (r != 0) {
+			pci_write_config(dev, aer + PCIR_AER_UC_STATUS, r, 4);
+			device_printf(dev, "Clearing UC AER errors 0x%08x\n", r);
+		}
+
+		r = pci_read_config(dev, aer + PCIR_AER_COR_STATUS, 4);
+		if (r != 0) {
+			pci_write_config(dev, aer + PCIR_AER_COR_STATUS, r, 4);
+			device_printf(dev, "Clearing COR AER errors 0x%08x\n", r);
+		}
+	}
+	if (dinfo->cfg.pcie.pcie_location != 0) {
+		rs = pci_read_config(dev, dinfo->cfg.pcie.pcie_location +
+		    PCIER_DEVICE_STA, 2);
+		if ((rs & (PCIEM_STA_CORRECTABLE_ERROR |
+		    PCIEM_STA_NON_FATAL_ERROR | PCIEM_STA_FATAL_ERROR |
+		    PCIEM_STA_UNSUPPORTED_REQ)) != 0) {
+			pci_write_config(dev, dinfo->cfg.pcie.pcie_location +
+			    PCIER_DEVICE_STA, rs, 2);
+			device_printf(dev, "Clearing PCIe errors 0x%04x\n", rs);
+		}
+	}
+}
+
 /*
  * Perform a Function Level Reset (FLR) on a device.
  *
@@ -6403,6 +6564,42 @@ pci_reset_child(device_t dev, device_t child, int flags)
 			BUS_RESUME_CHILD(dev, child);
 	}
 	return (error);
+}
+
+const struct pci_device_table *
+pci_match_device(device_t child, const struct pci_device_table *id, size_t nelt)
+{
+	bool match;
+	uint16_t vendor, device, subvendor, subdevice, class, subclass, revid;
+
+	vendor = pci_get_vendor(child);
+	device = pci_get_device(child);
+	subvendor = pci_get_subvendor(child);
+	subdevice = pci_get_subdevice(child);
+	class = pci_get_class(child);
+	subclass = pci_get_subclass(child);
+	revid = pci_get_revid(child);
+	while (nelt-- > 0) {
+		match = true;
+		if (id->match_flag_vendor)
+			match &= vendor == id->vendor;
+		if (id->match_flag_device)
+			match &= device == id->device;
+		if (id->match_flag_subvendor)
+			match &= subvendor == id->subvendor;
+		if (id->match_flag_subdevice)
+			match &= subdevice == id->subdevice;
+		if (id->match_flag_class)
+			match &= class == id->class_id;
+		if (id->match_flag_subclass)
+			match &= subclass == id->subclass;
+		if (id->match_flag_revid)
+			match &= revid == id->revid;
+		if (match)
+			return (id);
+		id++;
+	}
+	return (NULL);
 }
 
 static void

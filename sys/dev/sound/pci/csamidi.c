@@ -54,7 +54,7 @@
 
 #include "mpufoi_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/csamidi.c 347113 2019-05-04 12:19:02Z avatar $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 /* pulled from mpu401.c */
 #define	MPU_DATAPORT	0

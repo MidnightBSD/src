@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: 0BSD
+ * SPDX-License-Identifier: BSD-1-Clause
  *
  * Copyright (c) 1990, 1991, 1992, 1993, 1996
  *	The Regents of the University of California.  All rights reserved.
@@ -24,7 +24,7 @@ The Regents of the University of California.  All rights reserved.\n";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/rarpd/rarpd.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rarpd - Reverse ARP Daemon
@@ -757,7 +757,8 @@ update_arptab(u_char *ep, in_addr_t ipaddr)
 	}
 	do {
 		cc = read(r, rt, sizeof(rtmsg));
-	} while (cc > 0 && (rt->rtm_seq != seq || rt->rtm_pid != pid));
+	} while (cc > 0 && (rt->rtm_type != RTM_GET || rt->rtm_seq != seq ||
+	    rt->rtm_pid != pid));
 	if (cc == -1) {
 		logmsg(LOG_ERR, "rtmsg get read: %m");
 		close(r);
@@ -805,7 +806,8 @@ update_arptab(u_char *ep, in_addr_t ipaddr)
 	}
 	do {
 		cc = read(r, rt, sizeof(rtmsg));
-	} while (cc > 0 && (rt->rtm_seq != seq || rt->rtm_pid != pid));
+	} while (cc > 0 && (rt->rtm_type != RTM_ADD || rt->rtm_seq != seq ||
+	    rt->rtm_pid != pid));
 	close(r);
 	if (cc == -1) {
 		logmsg(LOG_ERR, "rtmsg add read: %m");

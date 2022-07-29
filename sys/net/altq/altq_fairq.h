@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  * 
  * $DragonFly: src/sys/net/altq/altq_fairq.h,v 1.1 2008/04/06 18:58:15 dillon Exp $
- * $FreeBSD: stable/11/sys/net/altq/altq_fairq.h 287009 2015-08-21 22:02:22Z loos $
+ * $FreeBSD$
  */
 
 #ifndef _ALTQ_ALTQ_FAIRQ_H_
@@ -81,6 +81,12 @@ struct fairq_classstats {
 	struct redstats		red[3];	/* rio has 3 red stats */
 	struct codel_stats	codel;
 };
+
+/*
+ * FAIRQ_STATS_VERSION is defined in altq.h to work around issues stemming
+ * from mixing of public-API and internal bits in each scheduler-specific
+ * header.
+ */
 
 #ifdef _KERNEL
 

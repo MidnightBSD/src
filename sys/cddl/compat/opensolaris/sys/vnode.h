@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/sys/vnode.h 318716 2017-05-23 07:27:30Z markj $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_VNODE_H_
@@ -278,7 +278,7 @@ vn_remove(char *fnamep, enum uio_seg seg, enum rm dirflag)
 	ASSERT(seg == UIO_SYSSPACE);
 	ASSERT(dirflag == RMFILE);
 
-	return (kern_unlinkat(curthread, AT_FDCWD, fnamep, seg, 0));
+	return (kern_unlinkat(curthread, AT_FDCWD, fnamep, seg, 0, 0));
 }
 
 #endif	/* _KERNEL */

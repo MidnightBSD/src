@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libc/stdlib/tsearch_path.h 292613 2015-12-22 18:12:11Z ed $
+ * $FreeBSD$
  */
 
 #ifndef TSEARCH_PATH_H

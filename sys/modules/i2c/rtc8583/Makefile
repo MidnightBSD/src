@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/i2c/rtc8583/Makefile 330412 2018-03-04 21:06:21Z ian $
+# $FreeBSD$
 
 .PATH:	${SRCTOP}/sys/dev/iicbus
 KMOD	= rtc8583

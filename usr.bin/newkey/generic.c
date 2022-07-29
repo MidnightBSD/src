@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)generic.c 1.2 91/03/11 Copyr 1986 Sun Micro";
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/newkey/generic.c 305552 2016-09-07 18:22:08Z dim $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/file.h>
 

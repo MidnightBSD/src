@@ -62,7 +62,7 @@
 
 #include "libmocks.h"
 
-__FBSDID("$FreeBSD: stable/11/cddl/usr.sbin/zfsd/tests/zfsd_unittest.cc 307108 2016-10-12 05:15:09Z mav $");
+__FBSDID("$FreeBSD$");
 
 /*================================== Macros ==================================*/
 #define	NUM_ELEMENTS(x) (sizeof(x) / sizeof(*x))

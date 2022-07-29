@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2003
  * 	Hidetoshi Shimokawa. All rights reserved.
  *
@@ -33,9 +35,9 @@
  *
  */
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/firewire/fwdma.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 #endif
 
 #include <sys/param.h>

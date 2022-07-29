@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/dmapool.h 339987 2018-11-01 09:00:37Z hselasky $
+ * $FreeBSD$
  */
 #ifndef _LINUX_DMAPOOL_H_
 #define	_LINUX_DMAPOOL_H_
@@ -37,44 +37,35 @@
 #include <linux/device.h>
 #include <linux/slab.h>
 
-struct dma_pool {
-	uma_zone_t	pool_zone;
-};
+struct dma_pool;
+struct dma_pool *linux_dma_pool_create(char *name, struct device *dev,
+    size_t size, size_t align, size_t boundary);
+void linux_dma_pool_destroy(struct dma_pool *pool);
+void *linux_dma_pool_alloc(struct dma_pool *pool, gfp_t mem_flags,
+    dma_addr_t *handle);
+void linux_dma_pool_free(struct dma_pool *pool, void *vaddr,
+    dma_addr_t dma_addr);
 
 static inline struct dma_pool *
 dma_pool_create(char *name, struct device *dev, size_t size,
     size_t align, size_t boundary)
 {
-	struct dma_pool *pool;
 
-	pool = kmalloc(sizeof(*pool), GFP_KERNEL);
-	align--;
-	/*
-	 * XXX Eventually this could use a separate allocf to honor boundary
-	 * and physical address requirements of the device.
-	 */
-	pool->pool_zone = uma_zcreate(name, size, NULL, NULL, NULL, NULL,
-	    align, UMA_ZONE_OFFPAGE|UMA_ZONE_HASH);
-
-	return (pool);
+	return (linux_dma_pool_create(name, dev, size, align, boundary));
 }
 
 static inline void
 dma_pool_destroy(struct dma_pool *pool)
 {
-	uma_zdestroy(pool->pool_zone);
-	kfree(pool);
+
+	linux_dma_pool_destroy(pool);
 }
 
 static inline void *
 dma_pool_alloc(struct dma_pool *pool, gfp_t mem_flags, dma_addr_t *handle)
 {
-	void *vaddr;
 
-	vaddr = uma_zalloc(pool->pool_zone, mem_flags);
-	if (vaddr)
-		*handle = vtophys(vaddr);
-	return (vaddr);
+	return (linux_dma_pool_alloc(pool, mem_flags, handle));
 }
 
 static inline void *
@@ -85,9 +76,10 @@ dma_pool_zalloc(struct dma_pool *pool, gfp_t mem_flags, dma_addr_t *handle)
 }
 
 static inline void
-dma_pool_free(struct dma_pool *pool, void *vaddr, dma_addr_t addr)
+dma_pool_free(struct dma_pool *pool, void *vaddr, dma_addr_t dma_addr)
 {
-	uma_zfree(pool->pool_zone, vaddr);
+
+	linux_dma_pool_free(pool, vaddr, dma_addr);
 }
 
 

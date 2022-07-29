@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/mlx5_core/mlx5_alloc.c 322150 2017-08-07 12:48:13Z hselasky $
+ * $FreeBSD$
  */
 
 #include <linux/errno.h>

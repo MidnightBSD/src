@@ -1,6 +1,8 @@
 /*	$NetBSD: obio.c,v 1.11 2003/07/15 00:25:05 lukem Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2001, 2002, 2003 Wasabi Systems, Inc.
  * All rights reserved.
  *
@@ -41,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/malta/obio.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

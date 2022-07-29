@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/efi/libefi/efi_driver_utils.c 329114 2018-02-11 02:27:50Z kevans $
+ * $FreeBSD$
  */
 
 #include <stdbool.h>
@@ -52,6 +52,8 @@ connect_controllers(EFI_GUID *filter)
         }
 
         handles = malloc(hsize);
+	if (handles == NULL)
+		return (EFI_OUT_OF_RESOURCES);
         nhandles = hsize / sizeof(EFI_HANDLE);
 
         status = BS->LocateHandle(ByProtocol, filter, NULL,

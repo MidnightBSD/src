@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/imx/imx6_src.c 314506 2017-03-01 19:55:04Z ian $");
+__FBSDID("$FreeBSD$");
 
 /*
  * System Reset Control for iMX6

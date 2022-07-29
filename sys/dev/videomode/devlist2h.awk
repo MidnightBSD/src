@@ -1,6 +1,6 @@
 #! /usr/bin/awk -f
 #	$NetBSD: devlist2h.awk,v 1.9 2005/12/11 12:21:20 christos Exp $
-#	$FreeBSD: stable/11/sys/dev/videomode/devlist2h.awk 278798 2015-02-15 11:37:40Z hselasky $
+#	$FreeBSD$
 #
 # Copyright (c) 1995, 1996 Christopher G. Demetriou
 # All rights reserved.

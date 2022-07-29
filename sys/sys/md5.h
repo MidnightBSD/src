@@ -1,9 +1,10 @@
-/* $MidnightBSD$ */
 /* MD5.H - header file for MD5C.C
- * $FreeBSD: stable/11/sys/sys/md5.h 310372 2016-12-21 18:42:04Z emaste $
+ * $FreeBSD$
  */
 
 /*-
+ SPDX-License-Identifier: RSA-MD
+
  Copyright (C) 1991-2, RSA Data Security, Inc. Created 1991. All
 rights reserved.
 

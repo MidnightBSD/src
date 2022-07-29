@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
  *
@@ -38,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/an/if_an_pccard.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 
@@ -154,5 +156,7 @@ an_pccard_attach(device_t dev)
 fail:
 	if (error)
 		an_release_resources(dev);
+	else
+		gone_in_dev(dev, 13, "pccard removed, an doesn't support modern crypto");
 	return (error);
 }

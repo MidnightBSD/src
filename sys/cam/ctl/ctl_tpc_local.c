@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 Alexander Motin <mav@FreeBSD.org>
  * Copyright (c) 2004, 2005 Silicon Graphics International Corp.
  * All rights reserved.
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cam/ctl/ctl_tpc_local.c 313368 2017-02-07 01:55:48Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -95,8 +97,6 @@ tpcl_init(void)
 	port->port_name = "tpc";
 	port->fe_datamove = tpcl_datamove;
 	port->fe_done = tpcl_done;
-	port->max_targets = 1;
-	port->max_target_id = 0;
 	port->targ_port = -1;
 	port->max_initiators = 1;
 
@@ -255,7 +255,7 @@ tpcl_datamove(union ctl_io *io)
 			 __func__, ctsio->ext_data_len, ctsio->kern_data_len));
 
 bailout:
-	io->scsiio.be_move_done(io);
+	ctl_datamove_done(io, true);
 }
 
 static void
@@ -295,12 +295,12 @@ tpcl_resolve(struct ctl_softc *softc, int init_port,
 		    lun->lun_devid->len, &cscdid->codeset,
 		    cscdid->length + 4) == 0) {
 			lunid = lun->lun;
-			if (ss && lun->be_lun)
+			if (ss)
 				*ss = lun->be_lun->blocksize;
-			if (ps && lun->be_lun)
+			if (ps)
 				*ps = lun->be_lun->blocksize <<
 				    lun->be_lun->pblockexp;
-			if (pso && lun->be_lun)
+			if (pso)
 				*pso = lun->be_lun->blocksize *
 				    lun->be_lun->pblockoff;
 			break;

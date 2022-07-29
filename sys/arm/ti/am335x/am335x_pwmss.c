@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/ti/am335x/am335x_pwmss.c 303772 2016-08-05 16:32:09Z loos $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -41,7 +41,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/ti/am335x/am335x_pwmss.c 303772 2016-08-05
 
 #include <machine/bus.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/fdt/simplebus.h>
 #include <dev/ofw/openfirm.h>
 #include <dev/ofw/ofw_bus.h>

@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.sbin/bsdinstall/scripts/config 353047 2019-10-03 14:39:15Z gjb $
+# $FreeBSD$
 #
 ############################################################ MAIN
 
@@ -34,6 +34,11 @@ rm $BSDINSTALL_TMPETC/rc.conf.*
 
 cat $BSDINSTALL_CHROOT/etc/sysctl.conf $BSDINSTALL_TMPETC/sysctl.conf.* >> $BSDINSTALL_TMPETC/sysctl.conf
 rm $BSDINSTALL_TMPETC/sysctl.conf.*
+
+if [ -f $BSDINSTALL_TMPETC/ttys.hardening ]; then
+	cat $BSDINSTALL_TMPETC/ttys.hardening > $BSDINSTALL_TMPETC/ttys
+	rm $BSDINSTALL_TMPETC/ttys.hardening
+fi
 
 cp $BSDINSTALL_TMPETC/* $BSDINSTALL_CHROOT/etc
 

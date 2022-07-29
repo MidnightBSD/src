@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008-2009 Robert N. M. Watson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/tools/tools/netrate/tcpp/tcpp.c 208873 2010-06-06 15:27:08Z rwatson $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

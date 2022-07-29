@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/loader/arch/arm/ldscript.arm 329183 2018-02-12 20:51:28Z kevans $ */
+/* $FreeBSD$ */
 OUTPUT_ARCH(arm)
 ENTRY(_start)
 SECTIONS

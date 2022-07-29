@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/mlx5fpga_tools/Makefile 341573 2018-12-05 14:17:22Z slavash $
+# $FreeBSD$
 .PATH:	${SRCTOP}/sys/dev/mlx5/mlx5_fpga_tools
 
 KMOD=mlx5fpga_tools

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/ti/am335x/am335x_dmtreg.h 314512 2017-03-01 21:11:36Z ian $
+ * $FreeBSD$
  */
 
 #ifndef AM335X_DMTREG_H

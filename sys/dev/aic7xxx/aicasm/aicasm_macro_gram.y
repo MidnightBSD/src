@@ -3,6 +3,8 @@
  * Sub-parser for macro invocation in the Aic7xxx SCSI
  * Host adapter sequencer assembler.
  *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2001 Adaptec Inc.
  * All rights reserved.
  *
@@ -40,7 +42,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_macro_gram.y#5 $
  *
- * $FreeBSD: stable/11/sys/dev/aic7xxx/aicasm/aicasm_macro_gram.y 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

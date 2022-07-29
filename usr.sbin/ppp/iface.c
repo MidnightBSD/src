@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/ppp/iface.c 330804 2018-03-12 17:36:37Z eugen $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -147,6 +147,7 @@ iface_Create(const char *name)
       iface = (struct iface *)malloc(sizeof *iface);
       if (iface == NULL) {
         fprintf(stderr, "iface_Create: malloc: %s\n", strerror(errno));
+	free(buf);
         return NULL;
       }
       iface->name = strdup(name);

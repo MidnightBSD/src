@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# $FreeBSD: stable/11/libexec/tftpd/Makefile 332608 2018-04-16 16:32:00Z asomers $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

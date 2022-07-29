@@ -1,5 +1,5 @@
 # $Id: Makefile,v 1.6 2003/10/24 15:41:26 simokawa Exp $
-# $FreeBSD: stable/11/sys/modules/dcons/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 
 .PATH:	${SRCTOP}/sys/dev/dcons
 

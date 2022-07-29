@@ -1,7 +1,8 @@
-/* $NetBSD: cfe_error.h,v 1.2 2003/02/07 17:38:48 cgd Exp $ */
-/* from: SiByte Id: cfe_error.h,v 1.2 2002/07/09 19:37:52 cgd Exp $ */
+/* from: Broadcom Id: cfe_error.h,v 1.3 2003/02/07 17:27:56 cgd Exp $ */
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright 2000, 2001, 2002
  * Broadcom Corporation. All rights reserved.
  *
@@ -32,7 +33,7 @@
  *    WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  *    OR OTHERWISE), EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/cfe/cfe_error.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*  *********************************************************************

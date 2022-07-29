@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Vadim Goncharov <vadimnuclight@tpu.ru>
  * All rights reserved.
  * 
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/netgraph/ng_tag.h 159979 2006-06-27 12:45:28Z glebius $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_NG_TAG_H_

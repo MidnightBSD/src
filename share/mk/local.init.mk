@@ -1,4 +1,7 @@
-# $FreeBSD: stable/11/share/mk/local.init.mk 294349 2016-01-19 22:41:44Z bdrewery $
+# $FreeBSD$
+
+.if !target(__${_this}__)
+__${_this}__:
 
 .if ${.MAKE.MODE:Mmeta*} != ""
 .if !empty(SUBDIR) && !defined(LIB) && !defined(PROG) && ${.MAKE.MAKEFILES:M*bsd.prog.mk} == ""
@@ -33,3 +36,5 @@ CFLAGS+= ${HOST_CFLAGS}
 .endif
 
 .-include "src.init.mk"
+.-include "${.CURDIR}/local.init.mk"
+.endif

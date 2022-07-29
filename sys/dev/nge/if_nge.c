@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2001 Wind River Systems
  * Copyright (c) 1997, 1998, 1999, 2000, 2001
  *	Bill Paul <wpaul@bsdi.com>.  All rights reserved.
@@ -32,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/nge/if_nge.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * National Semiconductor DP83820/DP83821 gigabit ethernet driver
@@ -725,7 +727,7 @@ nge_rxfilter(struct nge_softc *sc)
 	 * which bit within that byte needs to be set.
 	 */
 	if_maddr_rlock(ifp);
-	TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;
 		h = ether_crc32_be(LLADDR((struct sockaddr_dl *)
@@ -1947,7 +1949,7 @@ nge_encap(struct nge_softc *sc, struct mbuf **m_head)
 	if ((m->m_flags & M_VLANTAG) != 0)
 		desc->nge_extsts |= htole32(NGE_TXEXTSTS_VLANPKT |
 		    bswap16(m->m_pkthdr.ether_vtag));
-	/* Set EOP on the last desciptor. */
+	/* Set EOP on the last descriptor. */
 	desc->nge_cmdsts &= htole32(~NGE_CMDSTS_MORE);
 
 	/* Set checksum offload in the first descriptor. */

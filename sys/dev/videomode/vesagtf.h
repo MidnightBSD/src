@@ -1,5 +1,5 @@
 /*	$NetBSD$	*/
-/*	$FreeBSD: stable/11/sys/dev/videomode/vesagtf.h 278798 2015-02-15 11:37:40Z hselasky $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 2006 Itronix Inc.

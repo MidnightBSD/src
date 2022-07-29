@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libdpv/util.h 293379 2016-01-07 22:13:17Z dteske $
+ * $FreeBSD$
  */
 
 #ifndef _UTIL_H_

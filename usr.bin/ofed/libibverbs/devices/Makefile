@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/ofed/libibverbs/devices/Makefile 335253 2018-06-16 15:05:05Z kib $
+# $FreeBSD$
 
 PROG=	ibv_devices
 MAN=	ibv_devices.1

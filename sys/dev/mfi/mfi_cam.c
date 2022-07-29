@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright 2007 Scott Long
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mfi/mfi_cam.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_mfi.h"
 
@@ -39,7 +41,6 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/mfi/mfi_cam.c 331722 2018-03-29 02:50:57Z 
 #include <sys/conf.h>
 #include <sys/eventhandler.h>
 #include <sys/rman.h>
-#include <sys/bus_dma.h>
 #include <sys/bio.h>
 #include <sys/ioccom.h>
 #include <sys/uio.h>

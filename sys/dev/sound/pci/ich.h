@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Katsurajima Naoto <raven@katsurajima.seya.yokohama.jp>
  * Copyright (c) 2001 Cameron Grant <cg@freebsd.org>
  * All rights reserved.
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THEPOSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/sound/pci/ich.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #define PCIR_NAMBAR 0x10

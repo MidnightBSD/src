@@ -1,4 +1,4 @@
- $FreeBSD: stable/11/sys/i386/ibcs2/syscalls.master 346817 2019-04-28 13:21:01Z dchagin $
+ $FreeBSD$
 
 ;	@(#)syscalls.master	8.1 (Berkeley) 7/19/93
 ; System call name/number master file (or rather, slave, from IBCS2).
@@ -57,7 +57,7 @@
 15	AUE_CHMOD	STD	{ int ibcs2_chmod(char *path, int mode); }
 16	AUE_CHOWN	STD	{ int ibcs2_chown(char *path, int uid, \
 				    int gid); }
-17	AUE_NULL	NOPROTO	{ int obreak(caddr_t nsize); }
+17	AUE_NULL	NOPROTO	{ caddr_t break(caddr_t nsize); }
 18	AUE_STAT	STD	{ int ibcs2_stat(char* path, \
 				    struct ibcs2_stat *st); }
 19	AUE_LSEEK	STD	{ long ibcs2_lseek(int fd, long offset, \
@@ -202,3 +202,4 @@
 125	AUE_NULL	UNIMPL	nosys
 126	AUE_NULL	UNIMPL	nosys
 127	AUE_NULL	UNIMPL	nosys
+; vim: syntax=off

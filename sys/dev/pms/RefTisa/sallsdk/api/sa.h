@@ -18,7 +18,7 @@
 *LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
 *SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 *
-* $FreeBSD: stable/11/sys/dev/pms/RefTisa/sallsdk/api/sa.h 285242 2015-07-07 13:17:02Z achim $
+* $FreeBSD$
 *
 ********************************************************************************/
 /*******************************************************************************/
@@ -1660,7 +1660,7 @@ typedef struct agsaContext_s
   void  *sdkData; /**< Pointer-sized value used internally by the LL Layer */
 } agsaContext_t;
 
-/** \brief hold points to global data strutures used by the LL and OS Layers
+/** \brief hold points to global data structures used by the LL and OS Layers
  *
  * The agsaRoot_t data structure is used to hold pointer-sized values for
  * internal use by the LL and OS Layers. It is intended that the

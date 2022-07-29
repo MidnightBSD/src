@@ -27,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/riscv/include/_stdint.h 292407 2015-12-17 18:44:30Z br $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE__STDINT_H_

@@ -33,7 +33,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/riscv/sys/syscall.S 294227 2016-01-17 15:21:23Z br $");
+__FBSDID("$FreeBSD$");
 
 #include "SYS.h"
 

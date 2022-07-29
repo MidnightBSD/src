@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/parameters/positional8.0 291025 2015-11-18 21:09:03Z jilles $
+# $FreeBSD$
 
 failures=''
 ok=''

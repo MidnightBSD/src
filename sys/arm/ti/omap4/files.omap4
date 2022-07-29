@@ -1,4 +1,4 @@
-#$FreeBSD: stable/11/sys/arm/ti/omap4/files.omap4 295627 2016-02-15 15:28:56Z skra $
+#$FreeBSD$
 
 arm/ti/ti_smc.S					standard
 
@@ -13,6 +13,8 @@ arm/ti/omap4/omap4_prcm_clks.c			standard
 arm/ti/omap4/omap4_scm_padconf.c		standard
 arm/ti/omap4/omap4_mp.c				optional	smp
 arm/ti/omap4/omap4_wugen.c			standard
+
+arm/ti/omap4/pandaboard/pandaboard.c		standard
 
 arm/ti/twl/twl.c				optional	twl
 arm/ti/twl/twl_vreg.c				optional	twl twl_vreg

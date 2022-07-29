@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_TOOLCHAIN 297939 2016-04-13 20:55:05Z bdrewery $
+.\" $FreeBSD$
 Set to not install header or
 programs used for program development,
 compilers, debuggers etc.

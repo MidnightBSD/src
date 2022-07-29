@@ -1,7 +1,9 @@
 /*	$NetBSD: pmap_svc.c,v 1.2 2000/10/20 11:49:40 fvdl Exp $	*/
-/*	$FreeBSD: stable/11/usr.sbin/rpcbind/pmap_svc.c 331722 2018-03-29 02:50:57Z eadler $ */
+/*	$FreeBSD$ */
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *

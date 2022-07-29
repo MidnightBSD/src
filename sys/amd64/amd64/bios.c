@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Michael Smith
  * Copyright (c) 1998 Jonathan Lemon
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/amd64/bios.c 148231 2005-07-21 09:48:37Z phk $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Subset of the i386 bios support code.  We cannot make bios16 nor bios32

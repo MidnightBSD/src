@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2010
  *	Swinburne University of Technology, Melbourne, Australia
  * Copyright (c) 2010 Lawrence Stewart <lstewart@freebsd.org>
@@ -54,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netinet/cc/cc_vegas.c 342189 2018-12-18 09:16:04Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -96,8 +98,8 @@ struct vegas {
 
 static int32_t ertt_id;
 
-static VNET_DEFINE(uint32_t, vegas_alpha) = 1;
-static VNET_DEFINE(uint32_t, vegas_beta) = 3;
+VNET_DEFINE_STATIC(uint32_t, vegas_alpha) = 1;
+VNET_DEFINE_STATIC(uint32_t, vegas_beta) = 3;
 #define	V_vegas_alpha	VNET(vegas_alpha)
 #define	V_vegas_beta	VNET(vegas_beta)
 
@@ -116,7 +118,7 @@ struct cc_algo vegas_cc_algo = {
 
 /*
  * The vegas window adjustment is done once every RTT, as indicated by the
- * ERTT_NEW_MEASUREMENT flag. This flag is reset once the new measurment data
+ * ERTT_NEW_MEASUREMENT flag. This flag is reset once the new measurement data
  * has been used.
  */
 static void
@@ -166,9 +168,7 @@ vegas_ack_received(struct cc_var *ccv, uint16_t ack_type)
 static void
 vegas_cb_destroy(struct cc_var *ccv)
 {
-
-	if (ccv->cc_data != NULL)
-		free(ccv->cc_data, M_VEGAS);
+	free(ccv->cc_data, M_VEGAS);
 }
 
 static int
@@ -300,4 +300,5 @@ SYSCTL_PROC(_net_inet_tcp_cc_vegas, OID_AUTO, beta,
     "vegas beta, specified as number of \"buffers\" (0 < alpha < beta)");
 
 DECLARE_CC_MODULE(vegas, &vegas_cc_algo);
+MODULE_VERSION(vegas, 1);
 MODULE_DEPEND(vegas, ertt, 1, 1, 1);

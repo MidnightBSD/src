@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/xen/privcmd/privcmd.c 299185 2016-05-06 16:44:46Z royger $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -55,7 +55,6 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/xen/privcmd/privcmd.c 299185 2016-05-06 16
 #include <vm/vm_map.h>
 #include <vm/vm_object.h>
 #include <vm/vm_pager.h>
-#include <vm/vm_phys.h>
 
 #include <machine/md_var.h>
 
@@ -233,9 +232,21 @@ privcmd_ioctl(struct cdev *dev, unsigned long cmd, caddr_t arg,
 		struct ioctl_privcmd_hypercall *hcall;
 
 		hcall = (struct ioctl_privcmd_hypercall *)arg;
-
+#ifdef __amd64__
+		/*
+		 * The hypervisor page table walker will refuse to access
+		 * user-space pages if SMAP is enabled, so temporary disable it
+		 * while performing the hypercall.
+		 */
+		if (cpu_stdext_feature & CPUID_STDEXT_SMAP)
+			stac();
+#endif
 		error = privcmd_hypercall(hcall->op, hcall->arg[0],
 		    hcall->arg[1], hcall->arg[2], hcall->arg[3], hcall->arg[4]);
+#ifdef __amd64__
+		if (cpu_stdext_feature & CPUID_STDEXT_SMAP)
+			clac();
+#endif
 		if (error >= 0) {
 			hcall->retval = error;
 			error = 0;

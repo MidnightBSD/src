@@ -26,7 +26,7 @@
 
 #include "opt_platform.h"
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/dpaa/portals_common.c 300637 2016-05-25 01:23:19Z jhibbits $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -121,7 +121,7 @@ dpaa_portal_alloc_res(device_t dev, struct dpaa_portals_devinfo *di, int cpu)
 		return (ENXIO);
 	}
 
-	err = XX_PreallocAndBindIntr((int)sc->sc_dp[cpu].dp_ires, cpu);
+	err = XX_PreallocAndBindIntr((uintptr_t)sc->sc_dp[cpu].dp_ires, cpu);
 
 	if (err != E_OK) {
 		device_printf(dev, "Could not prealloc and bind interrupt\n");

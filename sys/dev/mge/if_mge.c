@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 2008 MARVELL INTERNATIONAL LTD.
  * Copyright (C) 2009-2015 Semihalf
  * Copyright (C) 2015 Stormshield
@@ -36,7 +38,7 @@
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mge/if_mge.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -695,7 +697,7 @@ static void
 mge_free_dma(struct mge_softc *sc)
 {
 
-	/* Free desciptors and mbufs */
+	/* Free descriptors and mbufs */
 	mge_free_desc(sc, sc->mge_rx_desc, MGE_RX_DESC_NUM, sc->mge_rx_dtag, 1);
 	mge_free_desc(sc, sc->mge_tx_desc, MGE_TX_DESC_NUM, sc->mge_tx_dtag, 0);
 
@@ -2050,7 +2052,7 @@ mge_setup_multicast(struct mge_softc *sc)
 		memset(omt, 0, sizeof(omt));
 
 		if_maddr_rlock(ifp);
-		TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 			if (ifma->ifma_addr->sa_family != AF_LINK)
 				continue;
 

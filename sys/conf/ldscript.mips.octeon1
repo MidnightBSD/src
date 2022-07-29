@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/conf/ldscript.mips.octeon1 317145 2017-04-19 15:33:24Z emaste $ */
+/* $FreeBSD$ */
 
 ENTRY(_start)
 
@@ -22,6 +22,12 @@ SECTIONS {
 		_fdata = .;
 	    	*(.rodata)
 		. = ALIGN(32);
+	}
+
+	.note.gnu.build-id : {
+		PROVIDE (__build_id_start = .);
+		*(.note.gnu.build-id)
+		PROVIDE (__build_id_end = .);
 	}
 	
 	.data : {

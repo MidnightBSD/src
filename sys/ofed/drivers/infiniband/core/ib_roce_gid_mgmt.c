@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/ofed/drivers/infiniband/core/ib_roce_gid_mgmt.c 341872 2018-12-12 10:54:41Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include "core_priv.h"
 
@@ -185,7 +185,7 @@ roce_gid_update_addr_callback(struct ib_device *device, u8 port,
 	VNET_FOREACH(vnet_iter) {
 	    CURVNET_SET(vnet_iter);
 	    IFNET_RLOCK();
-	    TAILQ_FOREACH(idev, &V_ifnet, if_link) {
+	    CK_STAILQ_FOREACH(idev, &V_ifnet, if_link) {
 		if (idev != ndev) {
 			if (idev->if_type != IFT_L2VLAN)
 				continue;
@@ -196,7 +196,7 @@ roce_gid_update_addr_callback(struct ib_device *device, u8 port,
 		/* clone address information for IPv4 and IPv6 */
 		IF_ADDR_RLOCK(idev);
 #if defined(INET)
-		TAILQ_FOREACH(ifa, &idev->if_addrhead, ifa_link) {
+		CK_STAILQ_FOREACH(ifa, &idev->if_addrhead, ifa_link) {
 			if (ifa->ifa_addr == NULL ||
 			    ifa->ifa_addr->sa_family != AF_INET)
 				continue;
@@ -212,7 +212,7 @@ roce_gid_update_addr_callback(struct ib_device *device, u8 port,
 		}
 #endif
 #if defined(INET6)
-		TAILQ_FOREACH(ifa, &idev->if_addrhead, ifa_link) {
+		CK_STAILQ_FOREACH(ifa, &idev->if_addrhead, ifa_link) {
 			if (ifa->ifa_addr == NULL ||
 			    ifa->ifa_addr->sa_family != AF_INET6)
 				continue;

@@ -1,7 +1,9 @@
 /*	$NetBSD: ibcs2_types.h,v 1.5 1995/08/14 01:11:54 mycroft Exp $	*/
-/* $FreeBSD: stable/11/sys/i386/ibcs2/ibcs2_types.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1994 Scott Bartram
  * All rights reserved.
  *

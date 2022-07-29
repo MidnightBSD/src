@@ -1,6 +1,8 @@
 /*	$OpenBSD$	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2002 Jason L. Wright (jason@thought.net)
  * All rights reserved.
  *
@@ -32,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/rndtest/rndtest.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -95,7 +97,11 @@ rndtest_attach(device_t dev)
 		rsp->rs_discard = 1;
 		rsp->rs_collect = 1;
 		rsp->rs_parent = dev;
+#if __FreeBSD_version < 500000
+		callout_init(&rsp->rs_to);
+#else
 		callout_init(&rsp->rs_to, 1);
+#endif
 	} else
 		device_printf(dev, "rndtest_init: no memory for state block\n");
 	return (rsp);
@@ -143,7 +149,7 @@ rndtest_harvest(struct rndtest_state *rsp, void *buf, u_int len)
 		rndstats.rst_discard += len;
 	else
 	/* MarkM: FIX!! Check that this does not swamp the harvester! */
-	random_harvest_queue(buf, len, len*NBBY/2, RANDOM_PURE_RNDTEST);
+	random_harvest_queue(buf, len, RANDOM_PURE_RNDTEST);
 }
 
 static void

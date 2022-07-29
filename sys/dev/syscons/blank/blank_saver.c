@@ -1,6 +1,7 @@
-/* $MidnightBSD: src/sys/dev/syscons/blank/blank_saver.c,v 1.2 2008/12/02 22:43:12 laffer1 Exp $ */
 /*-
- * Copyright (c) 1995-1998 Søren Schmidt
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
+ * Copyright (c) 1995-1998 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

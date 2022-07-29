@@ -14,7 +14,7 @@
 \
 \ revised 2 June 2000 - { | a -- } now works correctly
 \
-\ $FreeBSD: stable/11/stand/ficl/softwords/jhlocal.fr 167850 2007-03-23 22:26:01Z jkim $
+\ $FreeBSD$
 
 hide
 

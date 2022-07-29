@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010-2011 Monthadar Al Jaberi, TerraNet AB
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/wtap/if_wtap.c 343823 2019-02-06 02:35:56Z avos $
+ * $FreeBSD$
  */
 #include "if_wtapvar.h"
 #include <sys/uio.h>    /* uio struct */
@@ -106,7 +108,7 @@ wtap_node_write(struct cdev *dev, struct uio *uio, int ioflag)
 	CURVNET_SET(TD_TO_VNET(curthread));
 	IFNET_RLOCK_NOSLEEP();
 
-	TAILQ_FOREACH(ifp, &V_ifnet, if_link) {
+	CK_STAILQ_FOREACH(ifp, &V_ifnet, if_link) {
 		printf("ifp->if_xname = %s\n", ifp->if_xname);
 		if(strcmp(devtoname(dev), ifp->if_xname) == 0){
 			printf("found match, correspoding wtap = %s\n",
@@ -145,16 +147,6 @@ wtap_medium_enqueue(struct wtap_vap *avp, struct mbuf *m)
 {
 
 	return medium_transmit(avp->av_md, avp->id, m);
-}
-
-static int
-wtap_media_change(struct ifnet *ifp)
-{
-
-	DWTAP_PRINTF("%s\n", __func__);
-	int error = ieee80211_media_change(ifp);
-	/* NB: only the fixed rate can change and that doesn't need a reset */
-	return (error == ENETRESET ? 0 : error);
 }
 
 /*
@@ -349,8 +341,8 @@ wtap_vap_create(struct ieee80211com *ic, const char name[IFNAMSIZ],
 	vap->iv_bmiss = wtap_bmiss;
 
 	/* complete setup */
-	ieee80211_vap_attach(vap, wtap_media_change, ieee80211_media_status,
-	    mac);
+	ieee80211_vap_attach(vap, ieee80211_media_change,
+	    ieee80211_media_status, mac);
 	avp->av_dev = make_dev(&wtap_cdevsw, 0, UID_ROOT, GID_WHEEL, 0600,
 	    "%s", (const char *)sc->name);
 

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/efibootmgr/Makefile 326725 2017-12-09 06:52:20Z imp $
+# $FreeBSD$
 EFIBOOT=${SRCTOP}/stand/efi
 EFIINCL=${SRCTOP}/stand/efi/include
 EFIVAR=${SRCTOP}/usr.sbin/efivar

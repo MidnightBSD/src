@@ -20,7 +20,7 @@
  *
  * Portions Copyright 2018 Devin Teske dteske@freebsd.org
  *
- * $FreeBSD: stable/11/cddl/lib/libdtrace/io.d 333617 2018-05-15 00:00:44Z dteske $
+ * $FreeBSD$
  */
 /*
  * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/mips/conf/std.XLP 345344 2019-03-20 18:49:45Z kib $
+# $FreeBSD$
 
 include		"../nlm/std.xlp"
 makeoptions	MODULES_OVERRIDE=""
@@ -15,6 +15,7 @@ options 	PREEMPTION		# Enable kernel thread preemption
 #options 	FULL_PREEMPTION		# Enable kernel thread preemption
 options 	INET			# InterNETworking
 options 	INET6			# IPv6 communications protocols
+options 	TCP_HHOOK		# hhook(9) framework for TCP
 options 	FFS			# Berkeley Fast Filesystem
 #options 	SOFTUPDATES		# Enable FFS soft updates support
 options 	UFS_ACL			# Support for access control lists
@@ -75,6 +76,7 @@ device		ether
 device		xlpge
 #device		re
 device		msk
+device		iflib
 device		em
 
 # Disks
@@ -112,6 +114,7 @@ device		cfi
 device		cfid
 
 # MMC/SD
+device		gpio
 device		mmc			# MMC/SD bus
 device		mmcsd			# MMC/SD memory card
 device		sdhci			# Generic PCI SD Host Controller

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/mips/sys_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -39,7 +41,11 @@ __FBSDID("$FreeBSD: stable/11/sys/mips/mips/sys_machdep.c 331722 2018-03-29 02:5
 #include <sys/syscall.h>
 #include <sys/sysent.h>
 
+#include <machine/cpufunc.h>
+#include <machine/cpuinfo.h>
 #include <machine/sysarch.h>
+#include <machine/cpuregs.h>
+#include <machine/tls.h>
 
 #ifndef _SYS_SYSPROTO_H_
 struct sysarch_args {
@@ -57,6 +63,17 @@ sysarch(struct thread *td, struct sysarch_args *uap)
 	switch (uap->op) {
 	case MIPS_SET_TLS:
 		td->td_md.md_tls = uap->parms;
+
+		/*
+		 * If there is an user local register implementation (ULRI)
+		 * update it as well.  Add the TLS and TCB offsets so the
+		 * value in this register is adjusted like in the case of the
+		 * rdhwr trap() instruction handler.
+		 */
+		if (cpuinfo.userlocal_reg == true) {
+			mips_wr_userlocal((unsigned long)(uap->parms +
+			    td->td_md.md_tls_tcb_offset));
+		}
 		return (0);
 	case MIPS_GET_TLS: 
 		tlsbase = td->td_md.md_tls;

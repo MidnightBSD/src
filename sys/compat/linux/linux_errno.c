@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/compat/linux/linux_errno.c 346827 2019-04-28 13:40:17Z dchagin $ */
+/* $FreeBSD$ */
 
 #include <sys/cdefs.h>
 #include <sys/errno.h>

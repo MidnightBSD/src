@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Rick Macklem, University of Guelph
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/fs/nfs/nfsv4_errstr.h 191783 2009-05-04 15:23:58Z rmacklem $
+ * $FreeBSD$
  */
 
 #ifndef _NFS_NFSV4ERRSTR_H_

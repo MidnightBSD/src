@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/sys/compat/linuxkpi/common/src/linux_usb.c 331756 2018-03-30 02:04:46Z emaste $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2007 Luigi Rizzo - Universita` di Pisa. All rights reserved.
  * Copyright (c) 2007 Hans Petter Selasky. All rights reserved.
@@ -707,8 +707,6 @@ usb_control_msg(struct usb_device *dev, struct usb_host_endpoint *uhe,
 	 * 0xFFFF is a FreeBSD specific magic value.
 	 */
 	urb = usb_alloc_urb(0xFFFF, size);
-	if (urb == NULL)
-		return (-ENOMEM);
 
 	urb->dev = dev;
 	urb->endpoint = uhe;
@@ -939,17 +937,12 @@ usb_linux_create_usb_device(struct usb_device *udev, device_t dev)
 					if (p_ui) {
 						p_ui->altsetting = p_uhi - 1;
 						p_ui->cur_altsetting = p_uhi - 1;
-						p_ui->num_altsetting = 1;
 						p_ui->bsd_iface_index = iface_index;
 						p_ui->linux_udev = udev;
 						p_ui++;
 					}
 					iface_no_curr = iface_no;
 					iface_index++;
-				} else {
-					if (p_ui) {
-						(p_ui - 1)->num_altsetting++;
-					}
 				}
 				break;
 
@@ -1008,16 +1001,14 @@ usb_alloc_urb(uint16_t iso_packets, uint16_t mem_flags)
 	}
 
 	urb = malloc(size, M_USBDEV, M_WAITOK | M_ZERO);
-	if (urb) {
 
-		cv_init(&urb->cv_wait, "URBWAIT");
-		if (iso_packets == 0xFFFF) {
-			urb->setup_packet = (void *)(urb + 1);
-			urb->transfer_buffer = (void *)(urb->setup_packet +
-			    sizeof(struct usb_device_request));
-		} else {
-			urb->number_of_packets = iso_packets;
-		}
+	cv_init(&urb->cv_wait, "URBWAIT");
+	if (iso_packets == 0xFFFF) {
+		urb->setup_packet = (void *)(urb + 1);
+		urb->transfer_buffer = (void *)(urb->setup_packet +
+		    sizeof(struct usb_device_request));
+	} else {
+		urb->number_of_packets = iso_packets;
 	}
 	return (urb);
 }
@@ -1722,8 +1713,6 @@ usb_bulk_msg(struct usb_device *udev, struct usb_host_endpoint *uhe,
 		return (err);
 
 	urb = usb_alloc_urb(0, 0);
-	if (urb == NULL)
-		return (-ENOMEM);
 
 	usb_fill_bulk_urb(urb, udev, uhe, data, len,
 	    usb_linux_wait_complete, NULL);

@@ -1,8 +1,9 @@
-# $FreeBSD: stable/11/sys/modules/iser/Makefile 331769 2018-03-30 18:06:29Z hselasky $
+# $FreeBSD$
 
-.PATH:	${SRCTOP}/sys/dev/iser/
+SYSDIR?=${SRCTOP}/sys
+.include "${SYSDIR}/conf/kern.opts.mk"
 
-.include <bsd.own.mk>
+.PATH:	${SYSDIR}/dev/iser/
 
 KMOD=	iser
 
@@ -14,7 +15,7 @@ SRCS+=	iser_verbs.c
 SRCS+=	${LINUXKPI_GENSRCS}
 SRCS+=	opt_inet.h opt_inet6.h opt_cam.h icl_conn_if.h
 
-CFLAGS+= -I${SRCTOP}/sys/
+CFLAGS+= -I${SYSDIR}/
 CFLAGS+= -I${SYSDIR}/ofed/include
 CFLAGS+= -I${SYSDIR}/ofed/include/uapi
 CFLAGS+= -I${SYSDIR}/compat/linuxkpi/common/include

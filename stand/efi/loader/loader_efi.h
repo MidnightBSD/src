@@ -25,13 +25,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/efi/loader/loader_efi.h 329114 2018-02-11 02:27:50Z kevans $
+ * $FreeBSD$
  */
 
 #ifndef	_LOADER_EFI_COPY_H_
 #define	_LOADER_EFI_COPY_H_
 
 #include <stand.h>
+#include <readin.h>
 
 int	efi_autoload(void);
 
@@ -39,9 +40,10 @@ int	efi_copy_init(void);
 
 ssize_t	efi_copyin(const void *src, vm_offset_t dest, const size_t len);
 ssize_t	efi_copyout(const vm_offset_t src, void *dest, const size_t len);
-ssize_t	efi_readin(const int fd, vm_offset_t dest, const size_t len);
+ssize_t	efi_readin(readin_handle_t fd, vm_offset_t dest, const size_t len);
 void * efi_translate(vm_offset_t ptr);
 
 void	efi_copy_finish(void);
+void	efi_copy_get_locations(uint64_t *dst, uint64_t *src, uint64_t *src_end);
 
 #endif	/* _LOADER_EFI_COPY_H_ */

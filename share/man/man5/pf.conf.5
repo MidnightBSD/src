@@ -1,4 +1,4 @@
-.\"    $FreeBSD: stable/11/share/man/man5/pf.conf.5 342956 2019-01-12 05:44:10Z kp $
+.\"    $FreeBSD$
 .\"	$OpenBSD: pf.conf.5,v 1.406 2009/01/31 19:37:12 sobrado Exp $
 .\"
 .\" Copyright (c) 2002, Daniel Hartmeier
@@ -28,7 +28,7 @@
 .\" ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.Dd January 5, 2019
+.Dd September 25, 2021
 .Dt PF.CONF 5
 .Os
 .Sh NAME
@@ -189,6 +189,7 @@ The
 .Ar counters
 flag enables per-address packet and byte counters which can be displayed with
 .Xr pfctl 8 .
+Note that this feature carries significant memory overhead for large tables.
 .El
 .Pp
 For example,
@@ -539,6 +540,34 @@ For example:
 .Bd -literal -offset indent
 set state-policy if-bound
 .Ed
+.It Ar set syncookies never | always | adaptive
+When
+.Cm syncookies
+are active, pf will answer each incoming TCP SYN with a syncookie SYNACK,
+without allocating any resources.
+Upon reception of the client's ACK in response to the syncookie
+SYNACK, pf will evaluate the ruleset and create state if the ruleset
+permits it, complete the three way handshake with the target host and
+continue the connection with synproxy in place.
+This allows pf to be resilient against large synflood attacks which would
+run the state table against its limits otherwise.
+Due to the blind answers to every incoming SYN syncookies share the caveats of
+synproxy, namely seemingly accepting connections that will be dropped later on.
+.Pp
+.Bl -tag -width adaptive -compact
+.It Cm never
+pf will never send syncookie SYNACKs (the default).
+.It Cm always
+pf will always send syncookie SYNACKs.
+.It Cm adaptive
+pf will enable syncookie mode when a given percentage of the state table
+is used up by half-open TCP connections, as in, those that saw the initial
+SYN but didn't finish the three way handshake.
+The thresholds for entering and leaving syncookie mode can be specified using
+.Bd -literal -offset indent
+set syncookies adaptive (start 25%, end 12%)
+.Ed
+.El
 .It Ar set state-defaults
 The
 .Ar state-defaults
@@ -618,6 +647,13 @@ Generate debug messages for various errors.
 .It Ar loud
 Generate debug messages for common conditions.
 .El
+.It Ar set keepcounters
+Preserve rule counters across rule updates.
+Usually rule counters are reset to zero on every update of the ruleset.
+With
+.Ar keepcounters
+set pf will attempt to find matching rules between old and new rulesets
+and preserve the rule counters.
 .El
 .Sh TRAFFIC NORMALIZATION
 Traffic normalization is used to sanitize packet content in such
@@ -673,9 +709,17 @@ for matching IP packets.
 .Em TOS
 may be
 given as one of
+.Ar critical ,
+.Ar inetcontrol ,
 .Ar lowdelay ,
+.Ar netcontrol ,
 .Ar throughput ,
 .Ar reliability ,
+or one of the DiffServ Code Points:
+.Ar ef ,
+.Ar va ,
+.Ar af11 No ... Ar af43 ,
+.Ar cs0 No ... Ar cs7 ;
 or as either hex or decimal.
 .It Ar random-id
 Replaces the IP identification field with random values to compensate
@@ -1221,8 +1265,10 @@ below.
 .Xr pf 4
 has the ability to
 .Ar block
-and
+,
 .Ar pass
+and
+.Ar match
 packets based on attributes of their layer 3 (see
 .Xr ip 4
 and
@@ -1238,7 +1284,15 @@ assigned to queues for the purpose of bandwidth control.
 .Pp
 For each packet processed by the packet filter, the filter rules are
 evaluated in sequential order, from first to last.
-The last matching rule decides what action is taken.
+For
+.Ar block
+and
+.Ar pass
+, the last matching rule decides what action is taken.
+For
+.Ar match
+, rules are evaulated every time they match; the pass/block state of a packet
+remains unchanged.
 If no rule matches the packet, the default action is to pass
 the packet.
 .Pp
@@ -1286,6 +1340,21 @@ packets that match explicit rules is specify a first filter rule of:
 .Bd -literal -offset indent
 block all
 .Ed
+.It Ar match
+The packet is matched.
+This mechanism is used to provide fine grained filtering without altering the
+block/pass state of a packet.
+.Ar match
+rules differ from
+.Ar block
+and
+.Ar pass
+rules in that parameters are set every time a packet matches the rule, not only
+on the last matching rule.
+For the following parameters, this means that the parameter effectively becomes
+"sticky" until explicitly overridden:
+.Ar queue
+.
 .It Ar pass
 The packet is passed;
 state is created unless the
@@ -1722,9 +1791,17 @@ bits set.
 .Em TOS
 may be
 given as one of
+.Ar critical ,
+.Ar inetcontrol ,
 .Ar lowdelay ,
+.Ar netcontrol ,
 .Ar throughput ,
 .Ar reliability ,
+or one of the DiffServ Code Points:
+.Ar ef ,
+.Ar va ,
+.Ar af11 No ... Ar af43 ,
+.Ar cs0 No ... Ar cs7 ;
 or as either hex or decimal.
 .Pp
 For example, the following rules are identical:
@@ -1791,6 +1868,9 @@ pass in inet proto tcp from any to 1.2.3.5 \e
 The macro expansion for the
 .Ar label
 directive occurs only at configuration file parse time, not during runtime.
+.It Ar ridentifier Aq Ar number
+Add an identifier (number) to the rule, which can be used to correlate the rule
+to pflog entries, even after ruleset updates.
 .It Xo Ar queue Aq Ar queue
 .No \*(Ba ( Aq Ar queue ,
 .Aq Ar queue )
@@ -1828,7 +1908,6 @@ pass in proto tcp to port 25 set prio 2
 pass in proto tcp to port 22 set prio (2, 5)
 .Ed
 .Pp
-
 .It Ar tag Aq Ar string
 Packets matching this rule will be tagged with the
 specified string.
@@ -1899,10 +1978,6 @@ route the packet according to the type of route option.
 When such a rule creates state, the route option is also applied to all
 packets matching the same connection.
 .Bl -tag -width xxxx
-.It Ar fastroute
-The
-.Ar fastroute
-option does a normal route lookup to find the next hop for the packet.
 .It Ar route-to
 The
 .Ar route-to
@@ -1987,6 +2062,27 @@ rules, the
 option prevents
 .Xr pf 4
 from modifying the source port on TCP and UDP packets.
+.It Xo Ar map-e-portset Aq Ar psid-offset
+.No / Aq Ar psid-len
+.No / Aq Ar psid
+.Xc
+With
+.Ar nat
+rules, the
+.Ar map-e-portset
+option enables the source port translation of MAP-E (RFC 7597) Customer Edge.
+In order to make the host act as a MAP-E Customer Edge, setting up a tunneling
+interface and pass rules for encapsulated packets are required in addition
+to the map-e-portset nat rule.
+.Pp
+For example:
+.Bd -literal -offset indent
+nat on $gif_mape_if from $int_if:network to any \e
+      -> $ipv4_mape_src map-e-portset 6/8/0x34
+.Ed
+.Pp
+sets PSID offset 6, PSID length 8, PSID 0x34.
+.Ed
 .El
 .Pp
 Additionally, the
@@ -2856,11 +2952,12 @@ option         = "set" ( [ "timeout" ( timeout | "{" timeout-list "}" ) ] |
                  [ "require-order" ( "yes" | "no" ) ]
                  [ "fingerprints" filename ] |
                  [ "skip on" ifspec ] |
-                 [ "debug" ( "none" | "urgent" | "misc" | "loud" ) ] )
+                 [ "debug" ( "none" | "urgent" | "misc" | "loud" ) ]
+                 [ "keepcounters" ] )
 
 pf-rule        = action [ ( "in" | "out" ) ]
                  [ "log" [ "(" logopts ")"] ] [ "quick" ]
-                 [ "on" ifspec ] [ "fastroute" | route ] [ af ] [ protospec ]
+                 [ "on" ifspec ] [ route ] [ af ] [ protospec ]
                  hosts [ filteropt-list ]
 
 logopts        = logopt [ "," logopts ]
@@ -2876,13 +2973,15 @@ filteropt      = user | group | flags | icmp-type | icmp6-type | "tos" tos |
                  "label" string | "tag" string | [ ! ] "tagged" string |
                  "set prio" ( number | "(" number [ [ "," ] number ] ")" ) |
                  "queue" ( string | "(" string [ [ "," ] string ] ")" ) |
-                 "rtable" number | "probability" number"%" | "prio" number
+                 "rtable" number | "probability" number"%" | "prio" number |
+                 "ridentifier" number
 
 nat-rule       = [ "no" ] "nat" [ "pass" [ "log" [ "(" logopts ")" ] ] ]
                  [ "on" ifspec ] [ af ]
                  [ protospec ] hosts [ "tag" string ] [ "tagged" string ]
                  [ "-\*(Gt" ( redirhost | "{" redirhost-list "}" )
-                 [ portspec ] [ pooltype ] [ "static-port" ] ]
+                 [ portspec ] [ pooltype ] [ "static-port" ]
+                 [ "map-e-portset" number "/" number "/" number ] ]
 
 binat-rule     = [ "no" ] "binat" [ "pass" [ "log" [ "(" logopts ")" ] ] ]
                  [ "on" interface-name ] [ af ]
@@ -2899,6 +2998,7 @@ rdr-rule       = [ "no" ] "rdr" [ "pass" [ "log" [ "(" logopts ")" ] ] ]
 
 antispoof-rule = "antispoof" [ "log" ] [ "quick" ]
                  "for" ifspec [ af ] [ "label" string ]
+                 [ "ridentifier" number ]
 
 table-rule     = "table" "\*(Lt" string "\*(Gt" [ tableopts-list ]
 tableopts-list = tableopts-list tableopts | tableopts
@@ -3044,6 +3144,8 @@ include        = "include" filename
 Host name database.
 .It Pa /etc/pf.conf
 Default location of the ruleset file.
+The file has to be created manually as it is not installed with a
+standard installation.
 .It Pa /etc/pf.os
 Default location of OS fingerprints.
 .It Pa /etc/protocols

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1993, David Greenman
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/kern/imgact_shell.c 325514 2017-11-07 14:28:10Z pfg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/vnode.h>
@@ -254,5 +255,8 @@ exec_shell_imgact(struct image_params *imgp)
 /*
  * Tell kern_execve.c about it, with a little help from the linker.
  */
-static struct execsw shell_execsw = { exec_shell_imgact, "#!" };
+static struct execsw shell_execsw = {
+	.ex_imgact = exec_shell_imgact,
+	.ex_name = "#!"
+};
 EXEC_SET(shell, shell_execsw);

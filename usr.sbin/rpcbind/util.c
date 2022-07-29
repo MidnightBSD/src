@@ -1,6 +1,6 @@
 /*
  * $NetBSD: util.c,v 1.4 2000/08/03 00:04:30 fvdl Exp $
- * $FreeBSD: stable/11/usr.sbin/rpcbind/util.c 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 /*-
@@ -42,10 +42,8 @@
 #include <ifaddrs.h>
 #include <sys/poll.h>
 #include <rpc/rpc.h>
-#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <netdb.h>
 #include <netconfig.h>
 #include <stdio.h>
@@ -231,17 +229,19 @@ addrmerge(struct netbuf *caller, const char *serv_uaddr, const char *clnt_uaddr,
 			 * a link-local address then use the scope id to see
 			 * which one.
 			 */
-			if (IN6_IS_ADDR_LINKLOCAL(&SA2SIN6ADDR(ifsa)) &&
-			    IN6_IS_ADDR_LINKLOCAL(&SA2SIN6ADDR(caller_sa)) &&
-			    IN6_IS_ADDR_LINKLOCAL(&SA2SIN6ADDR(hint_sa))) {
-				if (SA2SIN6(ifsa)->sin6_scope_id ==
-				    SA2SIN6(caller_sa)->sin6_scope_id) {
+			if (IN6_IS_ADDR_LINKLOCAL(&SA2SIN6ADDR(ifsa))) {
+				if (IN6_IS_ADDR_LINKLOCAL(&SA2SIN6ADDR(caller_sa)) &&
+				    IN6_IS_ADDR_LINKLOCAL(&SA2SIN6ADDR(hint_sa)) &&
+				    (SA2SIN6(ifsa)->sin6_scope_id ==
+				     SA2SIN6(caller_sa)->sin6_scope_id)) {
 					const int goodness = 3;
 
 					if (bestif_goodness < goodness) {
 						bestif = ifap;
 						bestif_goodness = goodness;
 					}
+				} else {
+					continue;
 				}
 			}
 		}

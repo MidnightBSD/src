@@ -1,8 +1,10 @@
 /*	OpenBSD: qsphyreg.h,v 1.2 1999/03/09 00:02:45 jason Exp 	*/
 /*	NetBSD: qsphyreg.h,v 1.1 1998/08/11 00:01:03 thorpej Exp 	*/
-/*	$FreeBSD: stable/11/sys/dev/mii/qsphyreg.h 331722 2018-03-29 02:50:57Z eadler $	*/
+/*	$FreeBSD$	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
  *

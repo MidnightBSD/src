@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1995 Andrew McRae.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,10 +26,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef lint
-static const char rcsid[] =
-  "$MidnightBSD$";
-#endif /* not lint */
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 /* 
  * Code cleanup, bug-fix and extension
@@ -181,8 +181,7 @@ static void
 dump_config_map(struct tuple *tp)
 {
 	u_char *p = tp->data, x;
-	int     rlen, mlen = 0;
-	int     i;
+	unsigned int rlen, mlen = 0, i;
 
 	rlen = (p[0] & 3) + 1;
 	if (tp->code == CIS_CONF_MAP)
@@ -969,7 +968,7 @@ dump_network_ext(u_char *p, int len)
 			printf(" %02x", p[i + 2]);
 		putchar('\n');
 		break;
-	case 5:			/* Connecter type */
+	case 5:			/* Connector type */
 		if (len < 2)
 			goto err;
 		printf("\tNetwork connector: %s connector standard\n",

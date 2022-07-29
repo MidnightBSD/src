@@ -26,9 +26,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man9/VFS_QUOTACTL.9 206622 2010-04-14 19:08:06Z uqs $
+.\" $FreeBSD$
 .\"
-.Dd May 23, 2009
+.Dd December 17, 2020
 .Dt VFS_QUOTACTL 9
 .Os
 .Sh NAME
@@ -39,7 +39,7 @@
 .In sys/mount.h
 .In sys/vnode.h
 .Ft int
-.Fn VFS_QUOTACTL "struct mount *mp" "int cmds" "uid_t uid" "caddr_t arg"
+.Fn VFS_QUOTACTL "struct mount *mp" "int cmds" "uid_t uid" "void *arg"
 .Sh DESCRIPTION
 Implement file system quotas.
 See

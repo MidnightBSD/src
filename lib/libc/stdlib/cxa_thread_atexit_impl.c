@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Mahdi Mokhtari <mokhi64@gmail.com>
  * Copyright (c) 2016, 2017 The FreeBSD Foundation
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/cxa_thread_atexit_impl.c 312590 2017-01-21 12:30:07Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/queue.h>
 #include "namespace.h"

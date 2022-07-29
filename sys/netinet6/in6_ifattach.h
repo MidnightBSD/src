@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	$KAME: in6_ifattach.h,v 1.14 2001/02/08 12:48:39 jinmei Exp $
- * $FreeBSD: stable/11/sys/netinet6/in6_ifattach.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET6_IN6_IFATTACH_H_

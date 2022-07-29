@@ -11,7 +11,7 @@
  * backupfile.h -- declarations for making Emacs style backup file names
  *
  * $OpenBSD: backupfile.h,v 1.6 2003/07/28 18:35:36 otto Exp $
- * $FreeBSD: stable/11/usr.bin/patch/backupfile.h 246091 2013-01-29 20:05:16Z delphij $
+ * $FreeBSD$
  */
 
 /* When to make backup files. */

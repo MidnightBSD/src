@@ -26,7 +26,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/sys/libkern/arm/memcpy.S 285338 2015-07-09 21:02:40Z andrew $");
+__FBSDID("$FreeBSD$");
 
 ENTRY_NP(__aeabi_memcpy)
 EENTRY_NP(__aeabi_memcpy4)

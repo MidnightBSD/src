@@ -1,6 +1,7 @@
 /******************************************************************************
+  SPDX-License-Identifier: BSD-3-Clause
 
-  Copyright (c) 2001-2017, Intel Corporation
+  Copyright (c) 2001-2020, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -30,7 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/ixgbe/ixgbe_dcb.c 331722 2018-03-29 02:50:57Z eadler $*/
+/*$FreeBSD$*/
 
 
 #include "ixgbe_type.h"
@@ -44,6 +45,10 @@
  * are the smallest unit programmable into the underlying
  * hardware. The IEEE 802.1Qaz specification do not use bandwidth
  * groups so this is much simplified from the CEE case.
+ * @bw: bandwidth index by traffic class
+ * @refill: refill credits index by traffic class
+ * @max: max credits by traffic class
+ * @max_frame_size: maximum frame size
  */
 s32 ixgbe_dcb_calculate_tc_credits(u8 *bw, u16 *refill, u16 *max,
 				   int max_frame_size)
@@ -78,8 +83,10 @@ s32 ixgbe_dcb_calculate_tc_credits(u8 *bw, u16 *refill, u16 *max,
 
 /**
  * ixgbe_dcb_calculate_tc_credits_cee - Calculates traffic class credits
- * @ixgbe_dcb_config: Struct containing DCB settings.
- * @direction: Configuring either Tx or Rx.
+ * @hw: pointer to hardware structure
+ * @dcb_config: Struct containing DCB settings
+ * @max_frame_size: Maximum frame size
+ * @direction: Configuring either Tx or Rx
  *
  * This function calculates the credits allocated to each traffic class.
  * It should be called only after the rules are checked by
@@ -294,11 +301,11 @@ void ixgbe_dcb_unpack_map_cee(struct ixgbe_dcb_config *cfg, int direction,
  * The following rules are checked:
  * 1. The sum of bandwidth percentages of all Bandwidth Groups must total 100%.
  * 2. The sum of bandwidth percentages of all Traffic Classes within a Bandwidth
- *    Group must total 100.
+ *   Group must total 100.
  * 3. A Traffic Class should not be set to both Link Strict Priority
- *    and Group Strict Priority.
+ *   and Group Strict Priority.
  * 4. Link strict Bandwidth Groups can only have link strict traffic classes
- *    with zero bandwidth.
+ *   with zero bandwidth.
  */
 s32 ixgbe_dcb_check_config_cee(struct ixgbe_dcb_config *dcb_config)
 {
@@ -325,7 +332,7 @@ s32 ixgbe_dcb_check_config_cee(struct ixgbe_dcb_config *dcb_config)
 				goto err_config;
 			}
 			if (p->tsa == ixgbe_dcb_tsa_strict) {
-				link_strict[i][bw_id] = TRUE;
+				link_strict[i][bw_id] = true;
 				/* Link strict should have zero bandwidth */
 				if (bw) {
 					ret_val = IXGBE_ERR_CONFIG;
@@ -402,10 +409,8 @@ s32 ixgbe_dcb_get_tc_stats(struct ixgbe_hw *hw, struct ixgbe_hw_stats *stats,
 	case ixgbe_mac_X550:
 	case ixgbe_mac_X550EM_x:
 	case ixgbe_mac_X550EM_a:
-#if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ret = ixgbe_dcb_get_tc_stats_82599(hw, stats, tc_count);
 		break;
-#endif
 	default:
 		break;
 	}
@@ -433,10 +438,8 @@ s32 ixgbe_dcb_get_pfc_stats(struct ixgbe_hw *hw, struct ixgbe_hw_stats *stats,
 	case ixgbe_mac_X550:
 	case ixgbe_mac_X550EM_x:
 	case ixgbe_mac_X550EM_a:
-#if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ret = ixgbe_dcb_get_pfc_stats_82599(hw, stats, tc_count);
 		break;
-#endif
 	default:
 		break;
 	}
@@ -475,11 +478,9 @@ s32 ixgbe_dcb_config_rx_arbiter_cee(struct ixgbe_hw *hw,
 	case ixgbe_mac_X550:
 	case ixgbe_mac_X550EM_x:
 	case ixgbe_mac_X550EM_a:
-#if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ret = ixgbe_dcb_config_rx_arbiter_82599(hw, refill, max, bwgid,
 							tsa, map);
 		break;
-#endif
 	default:
 		break;
 	}
@@ -517,11 +518,9 @@ s32 ixgbe_dcb_config_tx_desc_arbiter_cee(struct ixgbe_hw *hw,
 	case ixgbe_mac_X550:
 	case ixgbe_mac_X550EM_x:
 	case ixgbe_mac_X550EM_a:
-#if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ret = ixgbe_dcb_config_tx_desc_arbiter_82599(hw, refill, max,
 							     bwgid, tsa);
 		break;
-#endif
 	default:
 		break;
 	}
@@ -561,12 +560,10 @@ s32 ixgbe_dcb_config_tx_data_arbiter_cee(struct ixgbe_hw *hw,
 	case ixgbe_mac_X550:
 	case ixgbe_mac_X550EM_x:
 	case ixgbe_mac_X550EM_a:
-#if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ret = ixgbe_dcb_config_tx_data_arbiter_82599(hw, refill, max,
 							     bwgid, tsa,
 							     map);
 		break;
-#endif
 	default:
 		break;
 	}
@@ -599,10 +596,8 @@ s32 ixgbe_dcb_config_pfc_cee(struct ixgbe_hw *hw,
 	case ixgbe_mac_X550:
 	case ixgbe_mac_X550EM_x:
 	case ixgbe_mac_X550EM_a:
-#if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ret = ixgbe_dcb_config_pfc_82599(hw, pfc_en, map);
 		break;
-#endif
 	default:
 		break;
 	}
@@ -628,10 +623,8 @@ s32 ixgbe_dcb_config_tc_stats(struct ixgbe_hw *hw)
 	case ixgbe_mac_X550:
 	case ixgbe_mac_X550EM_x:
 	case ixgbe_mac_X550EM_a:
-#if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ret = ixgbe_dcb_config_tc_stats_82599(hw, NULL);
 		break;
-#endif
 	default:
 		break;
 	}
@@ -676,7 +669,6 @@ s32 ixgbe_dcb_hw_config_cee(struct ixgbe_hw *hw,
 	case ixgbe_mac_X550:
 	case ixgbe_mac_X550EM_x:
 	case ixgbe_mac_X550EM_a:
-#if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ixgbe_dcb_config_82599(hw, dcb_config);
 		ret = ixgbe_dcb_hw_config_82599(hw, dcb_config->link_speed,
 						refill, max, bwgid,
@@ -684,7 +676,6 @@ s32 ixgbe_dcb_hw_config_cee(struct ixgbe_hw *hw,
 
 		ixgbe_dcb_config_tc_stats_82599(hw, dcb_config);
 		break;
-#endif
 	default:
 		break;
 	}
@@ -711,10 +702,8 @@ s32 ixgbe_dcb_config_pfc(struct ixgbe_hw *hw, u8 pfc_en, u8 *map)
 	case ixgbe_mac_X550:
 	case ixgbe_mac_X550EM_x:
 	case ixgbe_mac_X550EM_a:
-#if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ret = ixgbe_dcb_config_pfc_82599(hw, pfc_en, map);
 		break;
-#endif
 	default:
 		break;
 	}
@@ -737,7 +726,6 @@ s32 ixgbe_dcb_hw_config(struct ixgbe_hw *hw, u16 *refill, u16 *max,
 	case ixgbe_mac_X550:
 	case ixgbe_mac_X550EM_x:
 	case ixgbe_mac_X550EM_a:
-#if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ixgbe_dcb_config_rx_arbiter_82599(hw, refill, max, bwg_id,
 						  tsa, map);
 		ixgbe_dcb_config_tx_desc_arbiter_82599(hw, refill, max, bwg_id,
@@ -745,7 +733,6 @@ s32 ixgbe_dcb_hw_config(struct ixgbe_hw *hw, u16 *refill, u16 *max,
 		ixgbe_dcb_config_tx_data_arbiter_82599(hw, refill, max, bwg_id,
 						       tsa, map);
 		break;
-#endif
 	default:
 		break;
 	}

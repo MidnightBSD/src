@@ -1,6 +1,8 @@
 /*	$NetBSD: uuid_stream.c,v 1.3 2008/04/19 18:21:38 plunky Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Marcel Moolenaar
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/uuid/uuid_stream.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/endian.h>
 #include <uuid.h>

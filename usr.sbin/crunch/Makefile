@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD$
 
 SUBDIR=	crunchgen crunchide
 

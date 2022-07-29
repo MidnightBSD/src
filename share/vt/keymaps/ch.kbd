@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/vt/keymaps/ch.kbd 270156 2014-08-18 21:07:12Z se $
+# $FreeBSD$
 #
 # swissgerman keymap, no dead keys
 # created 14.11.1999 by Martin Blapp <mb@imp.ch>

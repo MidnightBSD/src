@@ -38,7 +38,7 @@
  * Author: Archie Cobbs <archie@freebsd.org>
  *
  * $Whistle: ng_parse.c,v 1.3 1999/11/29 01:43:48 archie Exp $
- * $FreeBSD: stable/11/sys/netgraph/ng_parse.c 277951 2015-01-30 21:59:53Z dim $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -961,9 +961,11 @@ ng_ipaddr_parse(const struct ng_parse_type *type,
 		if ((error = ng_int8_parse(&ng_parse_int8_type,
 		    s, off, start, buf + i, buflen)) != 0)
 			return (error);
-		if (i < 3 && s[*off] != '.')
-			return (EINVAL);
-		(*off)++;
+		if (i < 3) {
+			if (s[*off] != '.')
+				return (EINVAL);
+			(*off)++;
+		}
 	}
 	*buflen = 4;
 	return (0);

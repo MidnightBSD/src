@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2008 Edwin Groothuis. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/libexec/tftpd/tftp-file.c 339057 2018-10-01 16:04:07Z asomers $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -210,6 +212,20 @@ write_close(void)
 		return 1;
 	}
 	return 0;
+}
+
+off_t
+tell_file(void)
+{
+
+	return ftello(file);
+}
+
+int
+seek_file(off_t offset)
+{
+
+	return fseeko(file, offset, SEEK_SET);
 }
 
 int

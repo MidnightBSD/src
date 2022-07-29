@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libsysdecode/flags.c 332248 2018-04-07 21:04:43Z tuexen $");
+__FBSDID("$FreeBSD$");
 
 #define L2CAP_SOCKET_CHECKED
 
@@ -524,7 +524,7 @@ static struct name_table kevent_proc_fflags[] = {
 
 static struct name_table kevent_timer_fflags[] = {
 	X(NOTE_SECONDS) X(NOTE_MSECONDS) X(NOTE_USECONDS) X(NOTE_NSECONDS)
-	XEND
+	X(NOTE_ABSTIME) XEND
 };
 
 void
@@ -758,9 +758,11 @@ sysdecode_reboot_howto(FILE *fp, int howto, int *rem)
 	/*
 	 * RB_AUTOBOOT is special in that its value is zero, but it is
 	 * also an implied argument if a different operation is not
-	 * requested via RB_HALT, RB_POWEROFF, or RB_REROOT.
+	 * requested via RB_HALT, RB_POWERCYCLE, RB_POWEROFF, or
+	 * RB_REROOT.
 	 */
-	if (howto != 0 && (howto & (RB_HALT | RB_POWEROFF | RB_REROOT)) == 0) {
+	if (howto != 0 && (howto & (RB_HALT | RB_POWEROFF | RB_REROOT |
+	    RB_POWERCYCLE)) == 0) {
 		fputs("RB_AUTOBOOT|", fp);
 		printed = true;
 	} else
@@ -927,6 +929,20 @@ sysdecode_umtx_op(int op)
 {
 
 	return (lookup_value(umtxop, op));
+}
+
+bool
+sysdecode_umtx_op_flags(FILE *fp, int op, int *rem)
+{
+	uintmax_t val;
+	bool printed;
+
+	printed = false;
+	val = (unsigned)op;
+	print_mask_part(fp, umtxopflags, &val, &printed);
+	if (rem != NULL)
+		*rem = val;
+	return (printed);
 }
 
 const char *
@@ -1206,7 +1222,7 @@ sysdecode_sctp_pr_policy(int policy)
 
 static struct name_table sctpsndflags[] = {
 	X(SCTP_EOF) X(SCTP_ABORT) X(SCTP_UNORDERED) X(SCTP_ADDR_OVER)
-	X(SCTP_SENDALL) X(SCTP_SACK_IMMEDIATELY) XEND
+	X(SCTP_SENDALL) X(SCTP_EOR) X(SCTP_SACK_IMMEDIATELY) XEND
 };
 
 bool

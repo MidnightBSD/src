@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/expansion/trim2.0 206147 2010-04-03 21:07:50Z jilles $
+# $FreeBSD$
 
 e= q='?' a='*' t=texttext s='ast*que?non' p='/et[c]/' w='a b c' b='{{(#)}}'
 h='##'

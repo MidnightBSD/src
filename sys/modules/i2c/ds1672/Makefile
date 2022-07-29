@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/i2c/ds1672/Makefile 330529 2018-03-06 02:30:34Z ian $
+# $FreeBSD$
 
 .PATH:	${SRCTOP}/sys/dev/iicbus
 KMOD	= ds1672

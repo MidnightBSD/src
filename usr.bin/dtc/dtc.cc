@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/dtc/dtc.cc 358205 2020-02-21 04:34:54Z kevans $
+ * $FreeBSD$
  */
 
 #include <sys/resource.h>

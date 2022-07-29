@@ -2,7 +2,7 @@
 #define _INTEL_RINGBUFFER_H_
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/i915/intel_ringbuffer.h 296548 2016-03-08 20:33:02Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Gen2 BSpec "1. Programming Environment" / 1.4.4.6 "Ring Buffer Use"

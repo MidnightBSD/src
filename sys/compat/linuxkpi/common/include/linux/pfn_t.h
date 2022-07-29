@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/compat/linuxkpi/common/include/linux/pfn_t.h 328653 2018-02-01 13:01:44Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _LINUX_PFN_T_H_

@@ -35,7 +35,7 @@ static char sccsid[] = "@(#)rpc_scan.c 1.11 89/02/22 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/rpcgen/rpc_scan.c 223922 2011-07-11 05:31:52Z delphij $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rpc_scan.c, Scanner for the RPC protocol compiler
@@ -490,6 +490,7 @@ docppline(char *line, int *lineno, const char **fname)
 	*p = 0;
 	if (*file == 0) {
 		*fname = NULL;
+		free(file);
 	} else {
 		*fname = file;
 	}

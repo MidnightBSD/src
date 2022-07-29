@@ -1,6 +1,7 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 John Baldwin <jhb@FreeBSD.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,7 +58,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/subr_sleepqueue.c 354405 2019-11-06 18:02:18Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_sleepqueue_profiling.h"
 #include "opt_ddb.h"
@@ -93,7 +94,10 @@ __FBSDID("$FreeBSD: stable/11/sys/kern/subr_sleepqueue.c 354405 2019-11-06 18:02
  * Constants for the hash table of sleep queue chains.
  * SC_TABLESIZE must be a power of two for SC_MASK to work properly.
  */
-#define	SC_TABLESIZE	256			/* Must be power of 2. */
+#ifndef SC_TABLESIZE
+#define	SC_TABLESIZE	256
+#endif
+CTASSERT(powerof2(SC_TABLESIZE));
 #define	SC_MASK		(SC_TABLESIZE - 1)
 #define	SC_SHIFT	8
 #define	SC_HASH(wc)	((((uintptr_t)(wc) >> SC_SHIFT) ^ (uintptr_t)(wc)) & \
@@ -137,7 +141,7 @@ struct sleepqueue_chain {
 	u_int	sc_depth;			/* Length of sc_queues. */
 	u_int	sc_max_depth;			/* Max length of sc_queues. */
 #endif
-};
+} __aligned(CACHE_LINE_SIZE);
 
 #ifdef SLEEPQUEUE_PROFILING
 u_int sleepq_max_depth;
@@ -379,7 +383,7 @@ void
 sleepq_set_timeout_sbt(void *wchan, sbintime_t sbt, sbintime_t pr,
     int flags)
 {
-	struct sleepqueue_chain *sc;
+	struct sleepqueue_chain *sc __unused;
 	struct thread *td;
 	sbintime_t pr1;
 
@@ -788,7 +792,7 @@ sleepq_type(void *wchan)
 static int
 sleepq_resume_thread(struct sleepqueue *sq, struct thread *td, int pri)
 {
-	struct sleepqueue_chain *sc;
+	struct sleepqueue_chain *sc __unused;
 
 	MPASS(td != NULL);
 	MPASS(sq->sq_wchan != NULL);
@@ -1001,7 +1005,7 @@ sleepq_remove_matching(struct sleepqueue *sq, int queue,
 static void
 sleepq_timeout(void *arg)
 {
-	struct sleepqueue_chain *sc;
+	struct sleepqueue_chain *sc __unused;
 	struct sleepqueue *sq;
 	struct thread *td;
 	void *wchan;
@@ -1168,11 +1172,10 @@ sleepq_sbuf_print_stacks(struct sbuf *sb, void *wchan, int queue,
 	struct stack **st;
 	struct sbuf **td_infos;
 	int i, stack_idx, error, stacks_to_allocate;
-	bool finished, partial_print;
+	bool finished;
 
 	error = 0;
 	finished = false;
-	partial_print = false;
 
 	KASSERT(wchan != NULL, ("%s: invalid NULL wait channel", __func__));
 	MPASS((queue >= 0) && (queue < NR_SLEEPQS));
@@ -1195,7 +1198,7 @@ sleepq_sbuf_print_stacks(struct sbuf *sb, void *wchan, int queue,
 		    M_TEMP, M_WAITOK);
 		for (stack_idx = 0; stack_idx < stacks_to_allocate;
 		    stack_idx++)
-			st[stack_idx] = stack_create();
+			st[stack_idx] = stack_create(M_WAITOK);
 
 		/* Where we will store the td name, tid, etc. */
 		td_infos = malloc(sizeof(struct sbuf *) * stacks_to_allocate,

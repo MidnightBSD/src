@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/build/stat.h 301763 2016-06-09 21:57:34Z jilles $
+ * $FreeBSD$
  */
 
 #ifndef _LEGACY_SYS_STAT_H_

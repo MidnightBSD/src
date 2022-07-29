@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1998-2000 Doug Rabson
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/link_elf.c 340054 2018-11-02 14:15:52Z bz $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 #include "opt_gdb.h"
@@ -38,6 +40,9 @@ __FBSDID("$FreeBSD: stable/11/sys/kern/link_elf.c 340054 2018-11-02 14:15:52Z bz
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
+#ifdef SPARSE_MAPPING
+#include <sys/mman.h>
+#endif
 #include <sys/mutex.h>
 #include <sys/mount.h>
 #include <sys/pcpu.h>
@@ -64,10 +69,6 @@ __FBSDID("$FreeBSD: stable/11/sys/kern/link_elf.c 340054 2018-11-02 14:15:52Z bz
 #include <vm/vm_map.h>
 
 #include <sys/link_elf.h>
-
-#ifdef DDB_CTF
-#include <sys/zlib.h>
-#endif
 
 #include "linker_if.h"
 
@@ -174,7 +175,7 @@ static kobj_method_t link_elf_methods[] = {
 	KOBJMETHOD(linker_ctf_get,		link_elf_ctf_get),
 	KOBJMETHOD(linker_symtab_get,		link_elf_symtab_get),
 	KOBJMETHOD(linker_strtab_get,		link_elf_strtab_get),
-	{ 0, 0 }
+	KOBJMETHOD_END
 };
 
 static struct linker_class link_elf_class = {
@@ -386,7 +387,7 @@ link_elf_link_common_finish(linker_file_t lf)
 	return (0);
 }
 
-extern vm_offset_t __startkernel;
+extern vm_offset_t __startkernel, __endkernel;
 
 static void
 link_elf_init(void* arg)
@@ -421,14 +422,19 @@ link_elf_init(void* arg)
 	ef->address = 0;
 #endif
 #ifdef SPARSE_MAPPING
-	ef->object = 0;
+	ef->object = NULL;
 #endif
 	ef->dynamic = dp;
 
 	if (dp != NULL)
 		parse_dynamic(ef);
+#ifdef __powerpc__
+	linker_kernel_file->address = (caddr_t)__startkernel;
+	linker_kernel_file->size = (intptr_t)(__endkernel - __startkernel);
+#else
 	linker_kernel_file->address += KERNBASE;
 	linker_kernel_file->size = -(intptr_t)linker_kernel_file->address;
+#endif
 
 	if (modptr != NULL) {
 		ef->modptr = modptr;
@@ -682,6 +688,50 @@ parse_vnet(elf_file_t ef)
 }
 #endif
 
+#ifdef __arm__
+/*
+ * Locate the ARM exception/unwind table info for DDB and stack(9) use by
+ * searching for the section header that describes it.  There may be no unwind
+ * info, for example in a module containing only data.
+ */
+static void
+link_elf_locate_exidx(linker_file_t lf, Elf_Shdr *shdr, int nhdr)
+{
+	int i;
+
+	for (i = 0; i < nhdr; i++) {
+		if (shdr[i].sh_type == SHT_ARM_EXIDX) {
+			lf->exidx_addr = shdr[i].sh_addr + lf->address;
+			lf->exidx_size = shdr[i].sh_size;
+			break;
+		}
+	}
+}
+
+/*
+ * Locate the section headers metadata in a preloaded module, then use it to
+ * locate the exception/unwind table in the module.  The size of the metadata
+ * block is stored in a uint32 word immediately before the data itself, and a
+ * comment in preload_search_info() says it is safe to rely on that.
+ */
+static void
+link_elf_locate_exidx_preload(struct linker_file *lf, caddr_t modptr)
+{
+	uint32_t *modinfo;
+	Elf_Shdr *shdr;
+	uint32_t  nhdr;
+
+	modinfo = (uint32_t *)preload_search_info(modptr,
+	    MODINFO_METADATA | MODINFOMD_SHDR);
+	if (modinfo != NULL) {
+		shdr = (Elf_Shdr *)modinfo;
+		nhdr = modinfo[-1] / sizeof(Elf_Shdr);
+		link_elf_locate_exidx(lf, shdr, nhdr);
+	}
+}
+
+#endif /* __arm__ */
+
 static int
 link_elf_link_preload(linker_class_t cls,
     const char* filename, linker_file_t *result)
@@ -721,7 +771,7 @@ link_elf_link_preload(linker_class_t cls,
 	ef->modptr = modptr;
 	ef->address = *(caddr_t *)baseptr;
 #ifdef SPARSE_MAPPING
-	ef->object = 0;
+	ef->object = NULL;
 #endif
 	dp = (vm_offset_t)ef->address + *(vm_offset_t *)dynptr;
 	ef->dynamic = (Elf_Dyn *)dp;
@@ -736,6 +786,10 @@ link_elf_link_preload(linker_class_t cls,
 		lf->ctors_addr = ef->address + *ctors_addrp;
 		lf->ctors_size = *ctors_sizep;
 	}
+
+#ifdef __arm__
+	link_elf_locate_exidx_preload(lf, modptr);
+#endif
 
 	error = parse_dynamic(ef);
 	if (error == 0)
@@ -775,17 +829,15 @@ link_elf_load_file(linker_class_t cls, const char* filename,
 	struct nameidata nd;
 	struct thread* td = curthread;	/* XXX */
 	Elf_Ehdr *hdr;
-	caddr_t firstpage;
+	caddr_t firstpage, segbase;
 	int nbytes, i;
 	Elf_Phdr *phdr;
 	Elf_Phdr *phlimit;
 	Elf_Phdr *segs[MAXSEGS];
 	int nsegs;
 	Elf_Phdr *phdyn;
-	Elf_Phdr *phphdr;
 	caddr_t mapbase;
 	size_t mapsize;
-	Elf_Off base_offset;
 	Elf_Addr base_vaddr;
 	Elf_Addr base_vlimit;
 	int error = 0;
@@ -884,7 +936,6 @@ link_elf_load_file(linker_class_t cls, const char* filename,
 	phlimit = phdr + hdr->e_phnum;
 	nsegs = 0;
 	phdyn = NULL;
-	phphdr = NULL;
 	while (phdr < phlimit) {
 		switch (phdr->p_type) {
 		case PT_LOAD:
@@ -898,10 +949,6 @@ link_elf_load_file(linker_class_t cls, const char* filename,
 			 */
 			segs[nsegs] = phdr;
 			++nsegs;
-			break;
-
-		case PT_PHDR:
-			phphdr = phdr;
 			break;
 
 		case PT_DYNAMIC:
@@ -931,7 +978,6 @@ link_elf_load_file(linker_class_t cls, const char* filename,
 	 * out our contiguous region, and to establish the base
 	 * address for relocation.
 	 */
-	base_offset = trunc_page(segs[0]->p_offset);
 	base_vaddr = trunc_page(segs[0]->p_vaddr);
 	base_vlimit = round_page(segs[nsegs - 1]->p_vaddr +
 	    segs[nsegs - 1]->p_memsz);
@@ -945,30 +991,59 @@ link_elf_load_file(linker_class_t cls, const char* filename,
 
 	ef = (elf_file_t) lf;
 #ifdef SPARSE_MAPPING
-	ef->object = vm_object_allocate(OBJT_DEFAULT, mapsize >> PAGE_SHIFT);
+	ef->object = vm_pager_allocate(OBJT_PHYS, NULL, mapsize, VM_PROT_ALL,
+	    0, thread0.td_ucred);
 	if (ef->object == NULL) {
 		error = ENOMEM;
 		goto out;
 	}
-	ef->address = (caddr_t) vm_map_min(kernel_map);
+#ifdef __amd64__
+	mapbase = (caddr_t)KERNBASE;
+#else
+	mapbase = (caddr_t)vm_map_min(kernel_map);
+#endif
+	/*
+	 * Mapping protections are downgraded after relocation processing.
+	 */
 	error = vm_map_find(kernel_map, ef->object, 0,
-	    (vm_offset_t *) &ef->address, mapsize, 0, VMFS_OPTIMAL_SPACE,
+	    (vm_offset_t *)&mapbase, mapsize, 0, VMFS_OPTIMAL_SPACE,
 	    VM_PROT_ALL, VM_PROT_ALL, 0);
 	if (error != 0) {
 		vm_object_deallocate(ef->object);
-		ef->object = 0;
+		ef->object = NULL;
 		goto out;
 	}
 #else
-	ef->address = malloc(mapsize, M_LINKER, M_WAITOK);
+	mapbase = malloc(mapsize, M_LINKER, M_EXEC | M_WAITOK);
 #endif
-	mapbase = ef->address;
+	ef->address = mapbase;
 
 	/*
 	 * Read the text and data sections and zero the bss.
 	 */
 	for (i = 0; i < nsegs; i++) {
-		caddr_t segbase = mapbase + segs[i]->p_vaddr - base_vaddr;
+		segbase = mapbase + segs[i]->p_vaddr - base_vaddr;
+
+#ifdef SPARSE_MAPPING
+		/*
+		 * Consecutive segments may have different mapping permissions,
+		 * so be strict and verify that their mappings do not overlap.
+		 */
+		if (((vm_offset_t)segbase & PAGE_MASK) != 0) {
+			error = EINVAL;
+			goto out;
+		}
+
+		error = vm_map_wire(kernel_map,
+		    (vm_offset_t)segbase,
+		    (vm_offset_t)segbase + round_page(segs[i]->p_memsz),
+		    VM_MAP_WIRE_SYSTEM | VM_MAP_WIRE_NOHOLES);
+		if (error != KERN_SUCCESS) {
+			error = ENOMEM;
+			goto out;
+		}
+#endif
+
 		error = vn_rdwr(UIO_READ, nd.ni_vp,
 		    segbase, segs[i]->p_filesz, segs[i]->p_offset,
 		    UIO_SYSSPACE, IO_NODELOCKED, td->td_ucred, NOCRED,
@@ -977,20 +1052,6 @@ link_elf_load_file(linker_class_t cls, const char* filename,
 			goto out;
 		bzero(segbase + segs[i]->p_filesz,
 		    segs[i]->p_memsz - segs[i]->p_filesz);
-
-#ifdef SPARSE_MAPPING
-		/*
-		 * Wire down the pages
-		 */
-		error = vm_map_wire(kernel_map,
-		    (vm_offset_t) segbase,
-		    (vm_offset_t) segbase + segs[i]->p_memsz,
-		    VM_MAP_WIRE_SYSTEM|VM_MAP_WIRE_NOHOLES);
-		if (error != KERN_SUCCESS) {
-			error = ENOMEM;
-			goto out;
-		}
-#endif
 	}
 
 #ifdef GPROF
@@ -1027,6 +1088,34 @@ link_elf_load_file(linker_class_t cls, const char* filename,
 	error = relocate_file(ef);
 	if (error != 0)
 		goto out;
+
+#ifdef SPARSE_MAPPING
+	/*
+	 * Downgrade permissions on text segment mappings now that relocation
+	 * processing is complete.  Restrict permissions on read-only segments.
+	 */
+	for (i = 0; i < nsegs; i++) {
+		vm_prot_t prot;
+
+		if (segs[i]->p_type != PT_LOAD)
+			continue;
+
+		prot = VM_PROT_READ;
+		if ((segs[i]->p_flags & PF_W) != 0)
+			prot |= VM_PROT_WRITE;
+		if ((segs[i]->p_flags & PF_X) != 0)
+			prot |= VM_PROT_EXECUTE;
+		segbase = mapbase + segs[i]->p_vaddr - base_vaddr;
+		error = vm_map_protect(kernel_map,
+		    (vm_offset_t)segbase,
+		    (vm_offset_t)segbase + round_page(segs[i]->p_memsz),
+		    prot, FALSE);
+		if (error != KERN_SUCCESS) {
+			error = ENOMEM;
+			goto out;
+		}
+	}
+#endif
 
 	/*
 	 * Try and load the symbol table if it's present.  (you can
@@ -1096,6 +1185,11 @@ link_elf_load_file(linker_class_t cls, const char* filename,
 	ef->ddbstrtab = ef->strbase;
 
 nosyms:
+
+#ifdef __arm__
+	link_elf_locate_exidx(lf, shdr, hdr->e_shnum);
+#endif
+
 	error = link_elf_link_common_finish(lf);
 	if (error != 0)
 		goto out;
@@ -1118,6 +1212,9 @@ Elf_Addr
 elf_relocaddr(linker_file_t lf, Elf_Addr x)
 {
 	elf_file_t ef;
+
+	KASSERT(lf->ops->cls == (kobj_class_t)&link_elf_class,
+	    ("elf_relocaddr: unexpected linker file %p", lf));
 
 	ef = (elf_file_t)lf;
 	if (x >= ef->pcpu_start && x < ef->pcpu_stop)
@@ -1666,7 +1763,7 @@ link_elf_strtab_get(linker_file_t lf, caddr_t *strtab)
 	return (ef->ddbstrcnt);
 }
 
-#if defined(__i386__) || defined(__amd64__)
+#if defined(__i386__) || defined(__amd64__) || defined(__aarch64__)
 /*
  * Use this lookup routine when performing relocations early during boot.
  * The generic lookup routine depends on kobj, which is not initialized
@@ -1695,14 +1792,10 @@ link_elf_ireloc(caddr_t kmdp)
 {
 	struct elf_file eff;
 	elf_file_t ef;
-	volatile char *c;
-	size_t i;
 
 	ef = &eff;
 
-	/* Do not use bzero/memset before ireloc is done. */
-	for (c = (char *)ef, i = 0; i < sizeof(*ef); i++)
-		c[i] = 0;
+	bzero_early(ef, sizeof(*ef));
 
 	ef->modptr = kmdp;
 	ef->dynamic = (Elf_Dyn *)&_DYNAMIC;

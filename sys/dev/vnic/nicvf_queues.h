@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/vnic/nicvf_queues.h 299443 2016-05-11 13:20:29Z zbb $
+ * $FreeBSD$
  *
  */
 

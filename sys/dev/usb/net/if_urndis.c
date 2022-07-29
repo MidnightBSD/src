@@ -21,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/usb/net/if_urndis.c 351015 2019-08-14 09:41:30Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -178,6 +178,9 @@ static const STRUCT_USB_HOST_ID urndis_host_devs[] = {
 	/* Nokia 7 plus */
 	{USB_IFACE_CLASS(UICLASS_IAD), USB_IFACE_SUBCLASS(0x4),
 		USB_IFACE_PROTOCOL(UIPROTO_ACTIVESYNC)},
+	/* Novatel Wireless 8800/8000/etc */
+	{USB_IFACE_CLASS(UICLASS_IAD), USB_IFACE_SUBCLASS(0xef),
+		USB_IFACE_PROTOCOL(UIPROTO_RNDIS)},
 };
 
 DRIVER_MODULE(urndis, uhub, urndis_driver, urndis_devclass, NULL, NULL);

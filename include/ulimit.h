@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Kyle Martin <mkm@ieee.org>
  * All rights reserved.
  *
@@ -23,8 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/ulimit.h,v 1.4 2003/01/08 01:18:13 tjr Exp $
- * $MidnightBSD$
+ * $FreeBSD$
  */
 
 #ifndef _ULIMIT_H_

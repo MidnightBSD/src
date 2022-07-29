@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/tools/tools/locale/etc/charmaps/GB2312.TXT 286434 2015-08-08 00:28:23Z bapt $
+# $FreeBSD$
 #
 #	Name:             GB2312-80 to Unicode table (complete, hex format)
 #	Unicode version:  3.0

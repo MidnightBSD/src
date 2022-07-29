@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
  * Copyright (c) 1994 by Chris Provenzano, proven@mit.edu
  * All rights reserved.
@@ -31,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/timers.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  *
  * Description : Basic timers header.
  */
@@ -106,13 +107,10 @@ struct	kclock {
 	int (*timer_delete)(struct itimer * timer);
 	int (*timer_gettime)(struct itimer * timer,
 		struct itimerspec * cur_value);
-	void (*event_hook)(struct proc *p, clockid_t clock_id, int event);
 };
 
-/* Event values for event_hook() */
-#define	ITIMER_EV_EXEC	0
-#define	ITIMER_EV_EXIT	1
-
+void	itimers_exec(struct proc *p);
+void	itimers_exit(struct proc *p);
 int	itimer_accept(struct proc *p, int tid, ksiginfo_t *ksi);
 #endif
 #endif /* !_SYS_TIMERS_H_ */

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/hexdump/tests/Makefile 359290 2020-03-25 00:31:42Z kevans $
+# $FreeBSD$
 
 PACKAGE=	tests
 

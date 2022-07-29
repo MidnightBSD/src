@@ -27,7 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  *	From: $NetBSD: int_fmtio.h,v 1.4 2008/04/28 20:23:36 martin Exp $
- * $FreeBSD: stable/11/sys/riscv/include/_inttypes.h 292407 2015-12-17 18:44:30Z br $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE__INTTYPES_H_

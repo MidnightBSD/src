@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002-2005 Networks Associates Technology, Inc.
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libugidfw/ugidfw.c 336040 2018-07-06 19:10:11Z jamie $
+ * $FreeBSD$
  */
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -332,9 +334,8 @@ bsde_rule_to_string(struct mac_bsdextended_rule *rule, char *buf, size_t buflen)
 		if (rule->mbr_object.mbo_flags & MBO_FSID_DEFINED) {
 			numfs = getmntinfo(&mntbuf, MNT_NOWAIT);
 			for (i = 0; i < numfs; i++)
-				if (memcmp(&(rule->mbr_object.mbo_fsid),
-				    &(mntbuf[i].f_fsid),
-				    sizeof(mntbuf[i].f_fsid)) == 0)
+				if (fsidcmp(&rule->mbr_object.mbo_fsid,
+				    &mntbuf[i].f_fsid) == 0)
 					break;
 			len = snprintf(cur, left, "filesys %s ",
 			    i == numfs ? "???" : mntbuf[i].f_mntonname);

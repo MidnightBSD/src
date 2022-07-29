@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright 1997 Sean Eric Fagan
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/truss/extern.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 extern int print_line_prefix(struct trussinfo *);

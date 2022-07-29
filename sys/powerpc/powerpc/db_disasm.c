@@ -2,7 +2,7 @@
 /*	$OpenBSD: db_disasm.c,v 1.2 1996/12/28 06:21:48 rahnds Exp $	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/powerpc/powerpc/db_disasm.c 310449 2016-12-23 03:42:38Z jhibbits $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -310,7 +310,9 @@ const struct opcode opcodes_1f[] = {
 	{ "lfsux",	0xfc0007fe, 0x7c00046e, Op_D | Op_A | Op_B },
 	{ "mfsr",	0xfc0007fe, 0x7c0004a6, Op_D | Op_SR },
 	{ "lswi",	0xfc0007fe, 0x7c0004aa, Op_D | Op_A | Op_NB },
-	{ "sync",	0xfc0007fe, 0x7c0004ac, 0 },
+	{ "sync",	0xfc6007fe, 0x7c0004ac, 0 },
+	{ "lwsync",	0xfc6007fe, 0x7c2004ac, 0 },
+	{ "ptesync",	0xfc6007fe, 0x7c4004ac, 0 },
 	{ "lfdx",	0xfc0007fe, 0x7c0004ae, Op_D | Op_A | Op_B },
 	{ "lfdux",	0xfc0007fe, 0x7c0004ee, Op_D | Op_A | Op_B },
 	{ "mfsrin",	0xfc0007fe, 0x7c000526, Op_D | Op_B },

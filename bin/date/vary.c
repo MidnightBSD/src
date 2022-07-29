@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/date/vary.c 133381 2004-08-09 13:43:39Z yar $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <time.h>

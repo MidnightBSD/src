@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2008 Edwin Groothuis. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/libexec/tftpd/tftp-utils.c 345389 2019-03-21 21:45:18Z asomers $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -49,6 +51,7 @@ int		timeoutnetwork = MAX_TIMEOUTS * TIMEOUT;
 int		maxtimeouts = MAX_TIMEOUTS;
 uint16_t	segsize = SEGSIZE;
 uint16_t	pktsize = SEGSIZE + 4;
+uint16_t	windowsize = WINDOWSIZE;
 
 int	acting_as_client;
 

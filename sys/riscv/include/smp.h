@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/riscv/include/smp.h 295972 2016-02-24 16:50:34Z br $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_SMP_H_
@@ -45,6 +45,8 @@
 #define	IPI_STOP	(1 << 3)
 #define	IPI_STOP_HARD	(1 << 4)
 #define	IPI_HARDCLOCK	(1 << 5)
+
+#define	INTR_IPI_COUNT	1
 
 void ipi_all_but_self(u_int ipi);
 void ipi_cpu(int cpu, u_int ipi);

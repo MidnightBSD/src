@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -39,12 +41,13 @@ static char sccsid[] = "@(#)kdump.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/kdump/kdump.c 358253 2020-02-22 21:44:00Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #define _WANT_KERNEL_ERRNO
 #ifdef __LP64__
 #define	_WANT_KEVENT32
 #endif
+#define	_WANT_FREEBSD11_KEVENT
 #include <sys/param.h>
 #include <sys/capsicum.h>
 #include <sys/errno.h>
@@ -61,12 +64,13 @@ __FBSDID("$FreeBSD: stable/11/usr.bin/kdump/kdump.c 358253 2020-02-22 21:44:00Z 
 #include <sys/un.h>
 #include <sys/queue.h>
 #include <sys/wait.h>
-#ifdef HAVE_LIBCASPER
+#ifdef WITH_CASPER
 #include <sys/nv.h>
 #endif
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <ctype.h>
+#include <capsicum_helpers.h>
 #include <err.h>
 #include <grp.h>
 #include <inttypes.h>
@@ -79,13 +83,12 @@ __FBSDID("$FreeBSD: stable/11/usr.bin/kdump/kdump.c 358253 2020-02-22 21:44:00Z 
 #include <stdlib.h>
 #include <string.h>
 #include <sysdecode.h>
-#include <termios.h>
 #include <time.h>
 #include <unistd.h>
 #include <vis.h>
 #include "ktrace.h"
 
-#ifdef HAVE_LIBCASPER
+#ifdef WITH_CASPER
 #include <libcasper.h>
 
 #include <casper/cap_grp.h>
@@ -116,7 +119,6 @@ void ktrfault(struct ktr_fault *);
 void ktrfaultend(struct ktr_faultend *);
 void ktrkevent(struct kevent *);
 void ktrstructarray(struct ktr_struct_array *, size_t);
-void limitfd(int fd);
 void usage(void);
 
 #define	TIMESTAMP_NONE		0x0
@@ -173,36 +175,9 @@ struct proc_info
 
 static TAILQ_HEAD(trace_procs, proc_info) trace_procs;
 
-#ifdef HAVE_LIBCASPER
+#ifdef WITH_CASPER
 static cap_channel_t *cappwd, *capgrp;
-#endif
 
-static void
-strerror_init(void)
-{
-
-	/*
-	 * Cache NLS data before entering capability mode.
-	 * XXXPJD: There should be strerror_init() and strsignal_init() in libc.
-	 */
-	(void)catopen("libc", NL_CAT_LOCALE);
-}
-
-static void
-localtime_init(void)
-{
-	time_t ltime;
-
-	/*
-	 * Allow localtime(3) to cache /etc/localtime content before entering
-	 * capability mode.
-	 * XXXPJD: There should be localtime_init() in libc.
-	 */
-	(void)time(&ltime);
-	(void)localtime(&ltime);
-}
-
-#ifdef HAVE_LIBCASPER
 static int
 cappwdgrp_setup(cap_channel_t **cappwdp, cap_channel_t **capgrpp)
 {
@@ -244,7 +219,7 @@ cappwdgrp_setup(cap_channel_t **cappwdp, cap_channel_t **capgrpp)
 	*capgrpp = capgrploc;
 	return (0);
 }
-#endif	/* HAVE_LIBCASPER */
+#endif	/* WITH_CASPER */
 
 static void
 print_integer_arg(const char *(*decoder)(int), int value)
@@ -279,14 +254,21 @@ print_integer_arg_valid(const char *(*decoder)(int), int value)
 	}
 }
 
+static bool
+print_mask_arg_part(bool (*decoder)(FILE *, int, int *), int value, int *rem)
+{
+
+	printf("%#x<", value);
+	return (decoder(stdout, value, rem));
+}
+
 static void
 print_mask_arg(bool (*decoder)(FILE *, int, int *), int value)
 {
 	bool invalid;
 	int rem;
 
-	printf("%#x<", value);
-	invalid = !decoder(stdout, value, &rem);
+	invalid = !print_mask_arg_part(decoder, value, &rem);
 	printf(">");
 	if (invalid)
 		printf("<invalid>%u", rem);
@@ -450,9 +432,10 @@ main(int argc, char *argv[])
 		if (!freopen(tracefile, "r", stdin))
 			err(1, "%s", tracefile);
 
-	strerror_init();
-	localtime_init();
-#ifdef HAVE_LIBCASPER
+	caph_cache_catpages();
+	caph_cache_tzdata();
+
+#ifdef WITH_CASPER
 	if (resolv) {
 		if (cappwdgrp_setup(&cappwd, &capgrp) < 0) {
 			cappwd = NULL;
@@ -460,18 +443,17 @@ main(int argc, char *argv[])
 		}
 	}
 	if (!resolv || (cappwd != NULL && capgrp != NULL)) {
-		if (cap_enter() < 0 && errno != ENOSYS)
+		if (caph_enter() < 0)
 			err(1, "unable to enter capability mode");
 	}
 #else
 	if (!resolv) {
-		if (cap_enter() < 0 && errno != ENOSYS)
+		if (caph_enter() < 0)
 			err(1, "unable to enter capability mode");
 	}
 #endif
-	limitfd(STDIN_FILENO);
-	limitfd(STDOUT_FILENO);
-	limitfd(STDERR_FILENO);
+	if (caph_limit_stdio() == -1)
+		err(1, "unable to limit stdio");
 
 	TAILQ_INIT(&trace_procs);
 	drop_logged = 0;
@@ -562,40 +544,6 @@ main(int argc, char *argv[])
 			fflush(stdout);
 	}
 	return 0;
-}
-
-void
-limitfd(int fd)
-{
-	cap_rights_t rights;
-	unsigned long cmd;
-
-	cap_rights_init(&rights, CAP_FSTAT);
-	cmd = 0;
-
-	switch (fd) {
-	case STDIN_FILENO:
-		cap_rights_set(&rights, CAP_READ);
-		break;
-	case STDOUT_FILENO:
-		cap_rights_set(&rights, CAP_IOCTL, CAP_WRITE);
-		cmd = TIOCGETA;	/* required by isatty(3) in printf(3) */
-		break;
-	case STDERR_FILENO:
-		cap_rights_set(&rights, CAP_WRITE);
-		if (!suppressdata) {
-			cap_rights_set(&rights, CAP_IOCTL);
-			cmd = TIOCGWINSZ;
-		}
-		break;
-	default:
-		abort();
-	}
-
-	if (cap_rights_limit(fd, &rights) < 0 && errno != ENOSYS)
-		err(1, "unable to limit rights for descriptor %d", fd);
-	if (cmd != 0 && cap_ioctls_limit(fd, &cmd, 1) < 0 && errno != ENOSYS)
-		err(1, "unable to limit ioctls for descriptor %d", fd);
 }
 
 int
@@ -807,18 +755,14 @@ syscallabi(u_int sv_flags)
 	switch (sv_flags & SV_ABI_MASK) {
 	case SV_ABI_FREEBSD:
 		return (SYSDECODE_ABI_FREEBSD);
-#if defined(__amd64__) || defined(__i386__)
 	case SV_ABI_LINUX:
-#ifdef __amd64__
+#ifdef __LP64__
 		if (sv_flags & SV_ILP32)
 			return (SYSDECODE_ABI_LINUX32);
 #endif
 		return (SYSDECODE_ABI_LINUX);
-#endif
-#if defined(__aarch64__) || defined(__amd64__)
 	case SV_ABI_CLOUDABI:
 		return (SYSDECODE_ABI_CLOUDABI64);
-#endif
 	default:
 		return (SYSDECODE_ABI_UNKNOWN);
 	}
@@ -968,7 +912,6 @@ ktrsyscall(struct ktr_syscall *ktr, u_int sv_flags)
 				ip++;
 				narg--;
 				break;
-			case SYS_mknod:
 			case SYS_mknodat:
 				print_number(ip, narg, c);
 				putchar(',');
@@ -1501,10 +1444,16 @@ ktrsyscall(struct ktr_syscall *ktr, u_int sv_flags)
 				ip++;
 				narg--;
 				break;
-			case SYS__umtx_op:
+			case SYS__umtx_op: {
+				int op;
+
 				print_number(ip, narg, c);
 				putchar(',');
-				print_integer_arg(sysdecode_umtx_op, *ip);
+				if (print_mask_arg_part(sysdecode_umtx_op_flags,
+				    *ip, &op))
+					putchar('|');
+				print_integer_arg(sysdecode_umtx_op, op);
+				putchar('>');
 				switch (*ip) {
 				case UMTX_OP_CV_WAIT:
 					ip++;
@@ -1524,6 +1473,7 @@ ktrsyscall(struct ktr_syscall *ktr, u_int sv_flags)
 				ip++;
 				narg--;
 				break;
+			}
 			case SYS_ftruncate:
 			case SYS_truncate:
 				print_number(ip, narg, c);
@@ -1830,8 +1780,6 @@ ktrsockaddr(struct sockaddr *sa)
 {
 /*
  TODO: Support additional address families
-	#include <netnatm/natm.h>
-	struct sockaddr_natm	*natm;
 	#include <netsmb/netbios.h>
 	struct sockaddr_nb	*nb;
 */
@@ -1918,7 +1866,7 @@ ktrstat(struct stat *statp)
 	if (!resolv) {
 		pwd = NULL;
 	} else {
-#ifdef HAVE_LIBCASPER
+#ifdef WITH_CASPER
 		if (cappwd != NULL)
 			pwd = cap_getpwuid(cappwd, statp->st_uid);
 		else
@@ -1932,7 +1880,7 @@ ktrstat(struct stat *statp)
 	if (!resolv) {
 		grp = NULL;
 	} else {
-#ifdef HAVE_LIBCASPER
+#ifdef WITH_CASPER
 		if (capgrp != NULL)
 			grp = cap_getgrgid(capgrp, statp->st_gid);
 		else
@@ -2125,6 +2073,7 @@ ktrkevent(struct kevent *kev)
 	case EVFILT_PROC:
 	case EVFILT_TIMER:
 	case EVFILT_PROCDESC:
+	case EVFILT_EMPTY:
 		printf("%ju", (uintmax_t)kev->ident);
 		break;
 	case EVFILT_SIGNAL:
@@ -2180,9 +2129,41 @@ ktrstructarray(struct ktr_struct_array *ksa, size_t buflen)
 				goto bad_size;
 			memcpy(&kev, data, sizeof(kev));
 			ktrkevent(&kev);
+		} else if (strcmp(name, "kevent_freebsd11") == 0) {
+			struct kevent_freebsd11 kev11;
+
+			if (ksa->struct_size != sizeof(kev11))
+				goto bad_size;
+			memcpy(&kev11, data, sizeof(kev11));
+			memset(&kev, 0, sizeof(kev));
+			kev.ident = kev11.ident;
+			kev.filter = kev11.filter;
+			kev.flags = kev11.flags;
+			kev.fflags = kev11.fflags;
+			kev.data = kev11.data;
+			kev.udata = kev11.udata;
+			ktrkevent(&kev);
 #ifdef _WANT_KEVENT32
 		} else if (strcmp(name, "kevent32") == 0) {
 			struct kevent32 kev32;
+
+			if (ksa->struct_size != sizeof(kev32))
+				goto bad_size;
+			memcpy(&kev32, data, sizeof(kev32));
+			memset(&kev, 0, sizeof(kev));
+			kev.ident = kev32.ident;
+			kev.filter = kev32.filter;
+			kev.flags = kev32.flags;
+			kev.fflags = kev32.fflags;
+#if BYTE_ORDER == BIG_ENDIAN
+			kev.data = kev32.data2 | ((int64_t)kev32.data1 << 32);
+#else
+			kev.data = kev32.data1 | ((int64_t)kev32.data2 << 32);
+#endif
+			kev.udata = (void *)(uintptr_t)kev32.udata;
+			ktrkevent(&kev);
+		} else if (strcmp(name, "kevent32_freebsd11") == 0) {
+			struct kevent32_freebsd11 kev32;
 
 			if (ksa->struct_size != sizeof(kev32))
 				goto bad_size;

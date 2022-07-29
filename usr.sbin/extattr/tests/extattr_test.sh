@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.sbin/extattr/tests/extattr_test.sh 319555 2017-06-03 20:39:48Z ngie $
+# $FreeBSD$
 
 atf_test_case bad_namespace
 bad_namespace_head() {
@@ -360,7 +360,11 @@ atf_init_test_cases() {
 
 check_fs() {
 	case `df -T . | tail -n 1 | cut -wf 2` in
-		"ufs") ;; # UFS is fine
+		"ufs")
+		case `dumpfs . | head -1 | awk -F'[()]' '{print $2}'` in
+			"UFS1") atf_skip "UFS1 is not supported by this test";;
+			"UFS2") ;; # UFS2 is fine
+		esac ;;
 		"zfs") ;; # ZFS is fine
 		"tmpfs") atf_skip "tmpfs does not support extended attributes";;
 	esac

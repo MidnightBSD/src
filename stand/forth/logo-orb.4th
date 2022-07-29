@@ -21,16 +21,14 @@
 \ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
-\
-\ $MidnightBSD$
-\ $FreeBSD: stable/10/sys/boot/forth/logo-orbbw.4th 281843 2015-04-22 01:08:40Z dteske $
+\ 
+\ $FreeBSD$
 
 46 logoX ! 7 logoY ! \ Initialize logo placement defaults
 
 : logo+ ( x y c-addr/u -- x y' )
 	2swap 2dup at-xy 2swap \ position the cursor
 	[char] @ escc! \ replace @ with Esc
-
 	type \ print to the screen
 	1+ \ increase y for next time we're called
 ;

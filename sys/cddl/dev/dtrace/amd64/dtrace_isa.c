@@ -19,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/11/sys/cddl/dev/dtrace/amd64/dtrace_isa.c 298171 2016-04-17 23:08:47Z markj $
+ * $FreeBSD$
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
@@ -37,6 +37,7 @@
 #include <machine/md_var.h>
 #include <machine/reg.h>
 #include <machine/stack.h>
+#include <x86/ifunc.h>
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -55,6 +56,7 @@ void
 dtrace_getpcstack(pc_t *pcstack, int pcstack_limit, int aframes,
     uint32_t *intrpc)
 {
+	struct thread *td;
 	int depth = 0;
 	register_t rbp;
 	struct amd64_frame *frame;
@@ -69,8 +71,14 @@ dtrace_getpcstack(pc_t *pcstack, int pcstack_limit, int aframes,
 	__asm __volatile("movq %%rbp,%0" : "=r" (rbp));
 
 	frame = (struct amd64_frame *)rbp;
+	td = curthread;
 	while (depth < pcstack_limit) {
 		if (!INKERNEL((long) frame))
+			break;
+
+		if ((vm_offset_t)frame >=
+		    td->td_kstack + ptoa(td->td_kstack_pages) ||
+		    (vm_offset_t)frame < td->td_kstack)
 			break;
 
 		callpc = frame->f_retaddr;
@@ -83,14 +91,11 @@ dtrace_getpcstack(pc_t *pcstack, int pcstack_limit, int aframes,
 			if ((aframes == 0) && (caller != 0)) {
 				pcstack[depth++] = caller;
 			}
-		}
-		else {
+		} else {
 			pcstack[depth++] = callpc;
 		}
 
-		if (frame->f_frame <= frame ||
-		    (vm_offset_t)frame->f_frame >= curthread->td_kstack +
-		    curthread->td_kstack_pages * PAGE_SIZE)
+		if ((vm_offset_t)frame->f_frame <= (vm_offset_t)frame)
 			break;
 		frame = frame->f_frame;
 	}
@@ -663,4 +668,71 @@ dtrace_fuword64(void *uaddr)
 		return (0);
 	}
 	return (dtrace_fuword64_nocheck(uaddr));
+}
+
+/*
+ * ifunc resolvers for SMAP support
+ */
+void dtrace_copy_nosmap(uintptr_t, uintptr_t, size_t);
+void dtrace_copy_smap(uintptr_t, uintptr_t, size_t);
+DEFINE_IFUNC(, void, dtrace_copy, (uintptr_t, uintptr_t, size_t), static)
+{
+
+	return ((cpu_stdext_feature & CPUID_STDEXT_SMAP) != 0 ?
+	    dtrace_copy_smap : dtrace_copy_nosmap);
+}
+
+void dtrace_copystr_nosmap(uintptr_t, uintptr_t, size_t, volatile uint16_t *);
+void dtrace_copystr_smap(uintptr_t, uintptr_t, size_t, volatile uint16_t *);
+DEFINE_IFUNC(, void, dtrace_copystr, (uintptr_t, uintptr_t, size_t,
+    volatile uint16_t *), static)
+{
+
+	return ((cpu_stdext_feature & CPUID_STDEXT_SMAP) != 0 ?
+	    dtrace_copystr_smap : dtrace_copystr_nosmap);
+}
+
+uintptr_t dtrace_fulword_nosmap(void *);
+uintptr_t dtrace_fulword_smap(void *);
+DEFINE_IFUNC(, uintptr_t, dtrace_fulword, (void *), static)
+{
+
+	return ((cpu_stdext_feature & CPUID_STDEXT_SMAP) != 0 ?
+	    dtrace_fulword_smap : dtrace_fulword_nosmap);
+}
+
+uint8_t dtrace_fuword8_nocheck_nosmap(void *);
+uint8_t dtrace_fuword8_nocheck_smap(void *);
+DEFINE_IFUNC(, uint8_t, dtrace_fuword8_nocheck, (void *), static)
+{
+
+	return ((cpu_stdext_feature & CPUID_STDEXT_SMAP) != 0 ?
+	    dtrace_fuword8_nocheck_smap : dtrace_fuword8_nocheck_nosmap);
+}
+
+uint16_t dtrace_fuword16_nocheck_nosmap(void *);
+uint16_t dtrace_fuword16_nocheck_smap(void *);
+DEFINE_IFUNC(, uint16_t, dtrace_fuword16_nocheck, (void *), static)
+{
+
+	return ((cpu_stdext_feature & CPUID_STDEXT_SMAP) != 0 ?
+	    dtrace_fuword16_nocheck_smap : dtrace_fuword16_nocheck_nosmap);
+}
+
+uint32_t dtrace_fuword32_nocheck_nosmap(void *);
+uint32_t dtrace_fuword32_nocheck_smap(void *);
+DEFINE_IFUNC(, uint32_t, dtrace_fuword32_nocheck, (void *), static)
+{
+
+	return ((cpu_stdext_feature & CPUID_STDEXT_SMAP) != 0 ?
+	    dtrace_fuword32_nocheck_smap : dtrace_fuword32_nocheck_nosmap);
+}
+
+uint64_t dtrace_fuword64_nocheck_nosmap(void *);
+uint64_t dtrace_fuword64_nocheck_smap(void *);
+DEFINE_IFUNC(, uint64_t, dtrace_fuword64_nocheck, (void *), static)
+{
+
+	return ((cpu_stdext_feature & CPUID_STDEXT_SMAP) != 0 ?
+	    dtrace_fuword64_nocheck_smap : dtrace_fuword64_nocheck_nosmap);
 }

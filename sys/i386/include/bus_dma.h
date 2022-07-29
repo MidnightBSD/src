@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Scott Long
  * All rights reserved.
  *
@@ -25,11 +26,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/sys/i386/include/bus_dma.h 143598 2005-03-14 16:46:28Z scottl $ */
+/* $FreeBSD$ */
 
 #ifndef _I386_BUS_DMA_H_
 #define _I386_BUS_DMA_H_
 
-#include <sys/bus_dma.h>
+#include <x86/bus_dma.h> 
 
 #endif /* _I386_BUS_DMA_H_ */

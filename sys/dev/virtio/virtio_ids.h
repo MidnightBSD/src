@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/virtio/virtio_ids.h 331112 2018-03-17 20:37:01Z bryanv $
+ * $FreeBSD$
  */
 
 #ifndef _VIRTIO_IDS_H_

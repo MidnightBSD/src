@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/tools/regression/sockets/unix_close_race/unix_close_race.c 281400 2015-04-11 03:43:43Z ngie $
+ * $FreeBSD$
  */
 
 /*

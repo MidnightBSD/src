@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/gpio/bytgpio.c 309375 2016-12-01 22:22:19Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 

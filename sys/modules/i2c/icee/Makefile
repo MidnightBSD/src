@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/i2c/icee/Makefile 323691 2017-09-17 22:58:13Z ian $
+# $FreeBSD$
 
 .PATH:	${SRCTOP}/sys/dev/iicbus
 KMOD=	icee

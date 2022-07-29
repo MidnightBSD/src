@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/intel/spi.c 338693 2018-09-15 13:07:43Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 

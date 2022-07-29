@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -38,7 +40,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)ul.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/11/usr.bin/ul/ul.c 331722 2018-03-29 02:50:57Z eadler $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <err.h>

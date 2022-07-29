@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Andrew Thompson <thompsa@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/geom/linux_lvm/g_linux_lvm.h 176417 2008-02-20 07:45:36Z thompsa $
+ * $FreeBSD$
  */
 
 #define	G_LLVM_DEBUG(lvl, ...)	do {					\

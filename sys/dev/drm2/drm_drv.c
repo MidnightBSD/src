@@ -47,7 +47,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drm_drv.c 296674 2016-03-11 18:59:15Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/sysent.h>
 

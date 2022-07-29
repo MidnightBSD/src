@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-
+__FBSDID("$FreeBSD$");
 
 /*
  * See e_cosh.c for complete comments.

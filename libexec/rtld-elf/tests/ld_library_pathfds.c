@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/libexec/rtld-elf/tests/ld_library_pathfds.c 269504 2014-08-04 05:46:10Z ngie $
+ * $FreeBSD$
  */
 
 #include <atf-c.h>
@@ -186,7 +186,7 @@ expect_missing_library(int binary, char *pathfds)
 {
 	char * const env[] = { pathfds, NULL };
 	try_to_run(binary, 1, env, "",
-	   "Shared object \"libpythagoras.so.0\" not found,"
+	   "ld-elf.so.1: Shared object \"libpythagoras.so.0\" not found,"
 	    " required by \"target\"\n");
 }
 

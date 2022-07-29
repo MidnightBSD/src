@@ -46,7 +46,7 @@
  * from: scsi.c,v 1.17 1998/01/12 07:57:57 charnier Exp $";
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/camcontrol/util.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stdint.h>
 #include <sys/types.h>
@@ -126,14 +126,13 @@ arg_put(void *hook __unused, int letter, void *arg, int count, char *name)
 		{
 			char *p;
 
-			p = malloc(count + 1);
+			p = calloc(1, count + 1);
 			if (p == NULL) {
 				fprintf(stderr, "can't malloc memory for p\n");
 				exit(1);
 			}
 
-			bzero(p, count +1);
-			strncpy(p, (char *)arg, count);
+			strlcpy(p, (char *)arg, count + 1);
 			if (letter == 'z')
 			{
 				int i;

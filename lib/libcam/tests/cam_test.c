@@ -27,7 +27,7 @@
 /* Tests functions in sys/cam/cam.c */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libcam/tests/cam_test.c 326782 2017-12-11 20:47:26Z asomers $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <fcntl.h>

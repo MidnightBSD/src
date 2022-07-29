@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/tools/regression/sockets/unix_cmsg/README 246670 2013-02-11 12:56:23Z pluknet $
+$FreeBSD$
 
 About unix_cmsg
 ===============

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar9002/ar9285_reset.c 251655 2013-06-12 14:52:57Z adrian $
+ * $FreeBSD$
  */
 
 /*
@@ -105,7 +107,7 @@ ar9285SetTransmitPower(struct ath_hal *ah,
     if (IS_EEP_MINOR_V2(ah)) {
         AH5416(ah)->ah_ht40PowerIncForPdadc = pModal->ht40PowerIncForPdadc;
     }
- 
+
     if (!ar9285SetPowerPerRateTable(ah, pEepData,  chan,
                                     &AH5416(ah)->ah_ratesArray[0],cfgCtl,
                                     twiceAntennaReduction,

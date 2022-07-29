@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_CASPER 258838 2013-12-02 08:21:28Z pjd $
+.\" $FreeBSD$
 Set to not build Casper program and related libraries.

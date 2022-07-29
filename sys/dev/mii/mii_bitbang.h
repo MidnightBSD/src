@@ -1,6 +1,8 @@
 /*	$NetBSD: mii_bitbang.h,v 1.6 2009/05/12 14:31:27 cegger Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mii/mii_bitbang.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #define	MII_BIT_MDO		0	/* data out (host->PHY) */

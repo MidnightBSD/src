@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/lib/libc/iconv/citrus_none.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /* $NetBSD: citrus_none.h,v 1.3 2003/06/25 09:51:38 tshiozak Exp $ */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c)2002 Citrus Project,
  * All rights reserved.
  *

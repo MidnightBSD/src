@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/sys/netpfil/ipfw/test/Makefile 294882 2016-01-27 02:22:31Z luigi $
+# $FreeBSD$
 #
 # Makefile for building userland tests
 # this is written in a form compatible with gmake

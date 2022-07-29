@@ -25,11 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bhyve/pci_passthru.c 351059 2019-08-14 23:28:43Z jhb $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/pci_passthru.c 351059 2019-08-14 23:28:43Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #ifndef WITHOUT_CAPSICUM
@@ -45,6 +45,9 @@ __FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/pci_passthru.c 351059 2019-08-14 23
 
 #include <machine/iodev.h>
 
+#ifndef WITHOUT_CAPSICUM
+#include <capsicum_helpers.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -580,7 +583,7 @@ cfginitbar(struct vmctx *ctx, struct passthru_softc *sc)
 		sc->psc_bar[i].addr = base;
 
 		/* Allocate the BAR in the guest I/O or MMIO space */
-		error = pci_emul_alloc_pbar(pi, i, base, bartype, size);
+		error = pci_emul_alloc_bar(pi, i, bartype, size);
 		if (error)
 			return (-1);
 
@@ -636,6 +639,9 @@ cfginit(struct vmctx *ctx, struct pci_devinst *pi, int bus, int slot, int func)
 		goto done;
 	}
 
+	pci_set_cfgdata16(pi, PCIR_COMMAND, read_config(&sc->psc_sel,
+	    PCIR_COMMAND, 2));
+
 	error = 0;				/* success */
 done:
 	return (error);
@@ -674,9 +680,9 @@ passthru_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 	}
 
 #ifndef WITHOUT_CAPSICUM
-	if (cap_rights_limit(pcifd, &rights) == -1 && errno != ENOSYS)
+	if (caph_rights_limit(pcifd, &rights) == -1)
 		errx(EX_OSERR, "Unable to apply rights for sandbox");
-	if (cap_ioctls_limit(pcifd, pci_ioctls, nitems(pci_ioctls)) == -1 && errno != ENOSYS)
+	if (caph_ioctls_limit(pcifd, pci_ioctls, nitems(pci_ioctls)) == -1)
 		errx(EX_OSERR, "Unable to apply rights for sandbox");
 #endif
 
@@ -689,9 +695,9 @@ passthru_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 	}
 
 #ifndef WITHOUT_CAPSICUM
-	if (cap_rights_limit(iofd, &rights) == -1 && errno != ENOSYS)
+	if (caph_rights_limit(iofd, &rights) == -1)
 		errx(EX_OSERR, "Unable to apply rights for sandbox");
-	if (cap_ioctls_limit(iofd, io_ioctls, nitems(io_ioctls)) == -1 && errno != ENOSYS)
+	if (caph_ioctls_limit(iofd, io_ioctls, nitems(io_ioctls)) == -1)
 		errx(EX_OSERR, "Unable to apply rights for sandbox");
 #endif
 
@@ -706,7 +712,7 @@ passthru_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 #ifndef WITHOUT_CAPSICUM
 	cap_rights_clear(&rights, CAP_IOCTL);
 	cap_rights_set(&rights, CAP_MMAP_RW);
-	if (cap_rights_limit(memfd, &rights) == -1 && errno != ENOSYS)
+	if (caph_rights_limit(memfd, &rights) == -1)
 		errx(EX_OSERR, "Unable to apply rights for sandbox");
 #endif
 
@@ -800,6 +806,19 @@ passthru_cfgread(struct vmctx *ctx, int vcpu, struct pci_devinst *pi,
 	}
 #endif
 
+	/*
+	 * Emulate the command register.  If a single read reads both the
+	 * command and status registers, read the status register from the
+	 * device's config space.
+	 */
+	if (coff == PCIR_COMMAND) {
+		if (bytes <= 2)
+			return (-1);
+		*rv = read_config(&sc->psc_sel, PCIR_STATUS, 2) << 16 |
+		    pci_get_cfgdata16(pi, PCIR_COMMAND);
+		return (0);
+	}
+
 	/* Everything else just read from the device's config space */
 	*rv = read_config(&sc->psc_sel, coff, bytes);
 
@@ -812,6 +831,7 @@ passthru_cfgwrite(struct vmctx *ctx, int vcpu, struct pci_devinst *pi,
 {
 	int error, msix_table_entries, i;
 	struct passthru_softc *sc;
+	uint16_t cmd_old;
 
 	sc = pi->pi_arg;
 
@@ -825,8 +845,8 @@ passthru_cfgwrite(struct vmctx *ctx, int vcpu, struct pci_devinst *pi,
 	 * MSI capability is emulated
 	 */
 	if (msicap_access(sc, coff)) {
-		msicap_cfgwrite(pi, sc->psc_msi.capoff, coff, bytes, val);
-
+		pci_emul_capwrite(pi, coff, bytes, val, sc->psc_msi.capoff,
+		    PCIY_MSI);
 		error = vm_setup_pptdev_msi(ctx, vcpu, sc->psc_sel.pc_bus,
 			sc->psc_sel.pc_dev, sc->psc_sel.pc_func,
 			pi->pi_msi.addr, pi->pi_msi.msg_data,
@@ -837,7 +857,8 @@ passthru_cfgwrite(struct vmctx *ctx, int vcpu, struct pci_devinst *pi,
 	}
 
 	if (msixcap_access(sc, coff)) {
-		msixcap_cfgwrite(pi, sc->psc_msix.capoff, coff, bytes, val);
+		pci_emul_capwrite(pi, coff, bytes, val, sc->psc_msix.capoff,
+		    PCIY_MSIX);
 		if (pi->pi_msix.enabled) {
 			msix_table_entries = pi->pi_msix.table_count;
 			for (i = 0; i < msix_table_entries; i++) {
@@ -851,6 +872,11 @@ passthru_cfgwrite(struct vmctx *ctx, int vcpu, struct pci_devinst *pi,
 				if (error)
 					err(1, "vm_setup_pptdev_msix");
 			}
+		} else {
+			error = vm_disable_pptdev_msix(ctx, sc->psc_sel.pc_bus,
+			    sc->psc_sel.pc_dev, sc->psc_sel.pc_func);
+			if (error)
+				err(1, "vm_disable_pptdev_msix");
 		}
 		return (0);
 	}
@@ -868,6 +894,14 @@ passthru_cfgwrite(struct vmctx *ctx, int vcpu, struct pci_devinst *pi,
 #endif
 
 	write_config(&sc->psc_sel, coff, bytes, val);
+	if (coff == PCIR_COMMAND) {
+		cmd_old = pci_get_cfgdata16(pi, PCIR_COMMAND);
+		if (bytes == 1)
+			pci_set_cfgdata8(pi, PCIR_COMMAND, val);
+		else if (bytes == 2)
+			pci_set_cfgdata16(pi, PCIR_COMMAND, val);
+		pci_emul_cmd_changed(pi, cmd_old);
+	}
 
 	return (0);
 }

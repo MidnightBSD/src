@@ -5,7 +5,7 @@
 \ (jws) To make a prefix, simply create a new definition in the <prefixes> 
 \ wordlist. start-prefixes and end-prefixes handle the bookkeeping
 \
-\ $FreeBSD: stable/11/stand/ficl/softwords/prefix.fr 167850 2007-03-23 22:26:01Z jkim $
+\ $FreeBSD$
 
 variable save-current
 

@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/extres/hwreset/hwreset.h 308324 2016-11-05 04:17:32Z mmel $
+ * $FreeBSD$
  */
 
 #ifndef DEV_EXTRES_HWRESET_HWRESET_H
@@ -40,8 +40,6 @@ typedef struct hwreset *hwreset_t;
  * Provider interface
  */
 #ifdef FDT
-int hwreset_default_ofw_map(device_t provider_dev, phandle_t xref, int ncells,
-    pcell_t *cells, intptr_t *id);
 void hwreset_register_ofw_provider(device_t provider_dev);
 void hwreset_unregister_ofw_provider(device_t provider_dev);
 #endif

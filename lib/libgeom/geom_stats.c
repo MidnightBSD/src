@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause-FreeBSD
+ *
  * Copyright (c) 2003 Poul-Henning Kamp
  * All rights reserved.
  *
@@ -26,13 +28,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libgeom/geom_stats.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
+#include <sys/ioctl.h>
+#include <sys/disk.h>
 #include <sys/devicestat.h>
 #include <sys/mman.h>
 #include <sys/time.h>
+#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <paths.h>
@@ -51,7 +56,7 @@ geom_stats_close(void)
 {
 	if (statsfd == -1)
 		return;
-	munmap(statp, npages *pagesize);
+	munmap(statp, npages * pagesize);
 	statp = NULL;
 	close (statsfd);
 	statsfd = -1;
@@ -61,17 +66,22 @@ void
 geom_stats_resync(void)
 {
 	void *p;
+	off_t mediasize;
+	int error;
 
 	if (statsfd == -1)
 		return;
-	for (;;) {
-		p = mmap(statp, (npages + 1) * pagesize,
-		    PROT_READ, MAP_SHARED, statsfd, 0);
-		if (p == MAP_FAILED)
-			break;
-		else
-			statp = p;
-		npages++;
+	error = ioctl(statsfd, DIOCGMEDIASIZE, &mediasize);
+	if (error)
+		err(1, "DIOCGMEDIASIZE(" _PATH_DEV DEVSTAT_DEVICE_NAME ")");
+
+	munmap(statp, npages * pagesize);
+	p = mmap(statp, mediasize, PROT_READ, MAP_SHARED, statsfd, 0);
+	if (p == MAP_FAILED)
+		err(1, "mmap(/dev/devstat):");
+	else {
+		statp = p;
+		npages = mediasize / pagesize;
 	}
 }
 
@@ -126,9 +136,8 @@ geom_stats_snapshot_get(void)
 		free(sp);
 		return (NULL);
 	}
-	memset(sp->ptr, 0, pagesize * npages); 	/* page in, cache */
+	explicit_bzero(sp->ptr, pagesize * npages); 	/* page in, cache */
 	clock_gettime(CLOCK_REALTIME, &sp->time);
-	memset(sp->ptr, 0, pagesize * npages); 	/* page in, cache */
 	memcpy(sp->ptr, statp, pagesize * npages);
 	sp->pages = npages;
 	sp->perpage = spp;

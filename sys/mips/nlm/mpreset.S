@@ -26,7 +26,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD: stable/11/sys/mips/nlm/mpreset.S 279387 2015-02-28 00:17:29Z jchandra $
+ * $FreeBSD$
  */
 
 #include <machine/asm.h>
@@ -38,7 +38,7 @@
 
 #define SYS_REG_KSEG1(node, reg)	(0xa0000000 + XLP_DEFAULT_IO_BASE + \
 		XLP_IO_SYS_OFFSET(node)  + XLP_IO_PCI_HDRSZ + (reg) * 4)
-#include "assym.s"
+#include "assym.inc"
 
 	.text
 	.set	noat

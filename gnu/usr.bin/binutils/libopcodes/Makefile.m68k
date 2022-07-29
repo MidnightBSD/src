@@ -1,6 +1,0 @@
-#
-# $FreeBSD: stable/11/gnu/usr.bin/binutils/libopcodes/Makefile.m68k 52923 1999-11-06 21:02:48Z jb $
-#
-
-SRCS+=		m68k-dis.c m68k-opc.c
-CFLAGS+=	-DARCH_m68k

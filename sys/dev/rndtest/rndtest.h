@@ -1,7 +1,9 @@
-/*	$FreeBSD: stable/11/sys/dev/rndtest/rndtest.h 331722 2018-03-29 02:50:57Z eadler $	*/
+/*	$FreeBSD$	*/
 /*	$OpenBSD$	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2002 Jason L. Wright (jason@thought.net)
  * All rights reserved.
  *

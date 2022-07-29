@@ -18,7 +18,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: stable/11/usr.sbin/cron/crontab/crontab.c 321241 2017-07-19 20:22:16Z ngie $";
+  "$FreeBSD$";
 #endif
 
 /* crontab - install and manage per-user crontab files

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/jail/command.c 344250 2019-02-18 10:13:52Z marck $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/event.h>
@@ -147,8 +147,9 @@ next_command(struct cfjail *j)
 		}
 		if (j->comstring == NULL || j->comstring->len == 0 ||
 		    (create_failed && (comparam == IP_EXEC_PRESTART ||
-		    comparam == IP_EXEC_START || comparam == IP_COMMAND ||
-		    comparam == IP_EXEC_POSTSTART)))
+		    comparam == IP_EXEC_CREATED || comparam == IP_EXEC_START ||
+		    comparam == IP_COMMAND || comparam == IP_EXEC_POSTSTART ||
+		    comparam == IP_EXEC_PREPARE)))
 			continue;
 		switch (run_command(j)) {
 		case -1:
@@ -434,7 +435,7 @@ run_command(struct cfjail *j)
 
 		argv[argc] = down ? "-alias" : "alias";
 		argv[argc + 1] = NULL;
-		break;	
+		break;
 #endif
 
 	case IP_VNET_INTERFACE:
@@ -475,6 +476,7 @@ run_command(struct cfjail *j)
 		if (down) {
 			argv[4] = NULL;
 			argv[3] = argv[1];
+			argv[1] = "-ft";
 			argv[0] = "/sbin/umount";
 		} else {
 			if (argc == 4) {
@@ -488,9 +490,9 @@ run_command(struct cfjail *j)
 				argv[4] = argv[1];
 				argv[3] = argv[0];
 			}
+			argv[1] = "-t";
 			argv[0] = _PATH_MOUNT;
 		}
-		argv[1] = "-t";
 		break;
 
 	case IP_MOUNT_DEVFS:
@@ -605,13 +607,13 @@ run_command(struct cfjail *j)
 				bg = 1;
 			}
 			comcs = alloca(comstring->len + 1);
-			strcpy(comcs, comstring->s);	
+			strcpy(comcs, comstring->s);
 			argc = 0;
 			for (cs = strtok(comcs, " \t\f\v\r\n"); cs;
 			     cs = strtok(NULL, " \t\f\v\r\n"))
 				argc++;
 			argv = alloca((argc + 1) * sizeof(char *));
-			strcpy(comcs, comstring->s);	
+			strcpy(comcs, comstring->s);
 			argc = 0;
 			for (cs = strtok(comcs, " \t\f\v\r\n"); cs;
 			     cs = strtok(NULL, " \t\f\v\r\n"))

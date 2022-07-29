@@ -1,6 +1,6 @@
 /*	$OpenBSD: if_zydreg.h,v 1.19 2006/11/30 19:28:07 damien Exp $	*/
 /*	$NetBSD: if_zydreg.h,v 1.2 2007/06/16 11:18:45 kiyohara Exp $	*/
-/*	$FreeBSD: stable/11/sys/dev/usb/wlan/if_zydreg.h 345636 2019-03-28 09:50:25Z avos $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 2006 by Damien Bergamini <damien.bergamini@free.fr>
@@ -1250,6 +1250,7 @@ enum {
 
 struct zyd_softc {
 	struct ieee80211com	sc_ic;
+	struct ieee80211_ratectl_tx_status sc_txs;
 	struct mbufq		sc_snd;
 	device_t		sc_dev;
 	struct usb_device	*sc_udev;

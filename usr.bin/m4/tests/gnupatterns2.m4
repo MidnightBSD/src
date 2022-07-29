@@ -1,4 +1,4 @@
-dnl $FreeBSD: stable/11/usr.bin/m4/tests/gnupatterns2.m4 234852 2012-04-30 22:00:34Z bapt $
+dnl $FreeBSD$
 define(`zoinx',dnl
 `patsubst($1,\(\w+\)\(\W*\),\1 )')dnl
 zoinx(acosl asinl atanl \

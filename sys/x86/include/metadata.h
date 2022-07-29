@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/x86/include/metadata.h 293343 2016-01-07 19:47:26Z emaste $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_METADATA_H_

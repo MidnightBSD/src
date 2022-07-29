@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2011
  *	Ben Gray <ben.r.gray@gmail.com>.
  * All rights reserved.
@@ -27,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/ti/omap4/omap4_scm_padconf.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -295,7 +297,7 @@ const static struct ti_pinmux_padconf ti_padconf_devmap[] = {
 	{  .ballname = NULL  },
 };
 
-const struct ti_pinmux_device ti_pinmux_dev = {
+const struct ti_pinmux_device omap4_pinmux_dev = {
 	.padconf_muxmode_mask	= CONTROL_PADCONF_MUXMODE_MASK,
 	.padconf_sate_mask	= CONTROL_PADCONF_SATE_MASK,
 	.padstate		= ti_padstate_devmap,

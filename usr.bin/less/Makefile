@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/less/Makefile 275042 2014-11-25 14:29:10Z bapt $
+# $FreeBSD$
 
 PROG=	less
 SRCS=	main.c screen.c brac.c ch.c charset.c cmdbuf.c command.c cvt.c \
@@ -12,7 +12,8 @@ LIBADD=	ncursesw
 LINKS=	${BINDIR}/less ${BINDIR}/more \
 	${BINDIR}/zless ${BINDIR}/bzless \
 	${BINDIR}/zless ${BINDIR}/xzless \
-	${BINDIR}/zless ${BINDIR}/lzless
+	${BINDIR}/zless ${BINDIR}/lzless \
+	${BINDIR}/zless ${BINDIR}/zstdless
 MLINKS=	less.1 more.1
 CLEANFILES= less.1
 

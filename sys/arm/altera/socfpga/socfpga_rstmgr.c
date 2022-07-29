@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2014 Ruslan Bukin <br@bsdpad.com>
+ * Copyright (c) 2014-2017 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
  *
  * This software was developed by SRI International and the University of
@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/altera/socfpga/socfpga_rstmgr.c 314503 2017-03-01 18:53:05Z ian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -166,7 +166,7 @@ rstmgr_sysctl(SYSCTL_HANDLER_ARGS)
 }
 
 int
-rstmgr_warmreset(void)
+rstmgr_warmreset(uint32_t reg)
 {
 	struct rstmgr_softc *sc;
 
@@ -175,8 +175,7 @@ rstmgr_warmreset(void)
 		return (1);
 
 	/* Request warm reset */
-	WRITE4(sc, RSTMGR_CTRL,
-	    CTRL_SWWARMRSTREQ);
+	WRITE4(sc, reg, CTRL_SWWARMRSTREQ);
 
 	return (0);
 }
@@ -214,6 +213,7 @@ rstmgr_probe(device_t dev)
 		return (ENXIO);
 
 	device_set_desc(dev, "Reset Manager");
+
 	return (BUS_PROBE_DEFAULT);
 }
 

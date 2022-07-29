@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/lib/libutil/pidfile.3 300152 2016-05-18 15:25:45Z pfg $
+.\" $FreeBSD$
 .\"
-.Dd February 8, 2012
+.Dd May 10, 2020
 .Dt PIDFILE 3
 .Os
 .Sh NAME
@@ -286,6 +286,15 @@ Probably called not from the process which used
 .Xr open 2 ,
 .Xr daemon 3 ,
 .Xr flopen 3
+.Sh HISTORY
+The functions
+.Fn pidfile_open ,
+.Fn pidfile_write ,
+.Fn pidfile_close
+and
+.Fn pidfile_remove
+first appeared in
+.Fx 5.5 .
 .Sh AUTHORS
 .An -nosplit
 The

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Konstantin Belousov <kib@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/include/counter.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef __MACHINE_COUNTER_H__
@@ -31,6 +33,8 @@
 
 #include <sys/pcpu.h>
 #include <machine/atomic.h>
+
+#define	EARLY_COUNTER	&__pcpu[0].pc_early_dummy_counter
 
 #define	counter_enter()	do {} while (0)
 #define	counter_exit()	do {} while (0)
@@ -41,8 +45,7 @@ static inline uint64_t
 counter_u64_read_one(uint64_t *p, int cpu)
 {
 
-	return (atomic_load_64((uint64_t *)((char *)p + sizeof(struct pcpu) *
-	    cpu)));
+	return (atomic_load_64((uint64_t *)zpcpu_get_cpu(p, cpu)));
 }
 
 static inline uint64_t
@@ -62,8 +65,7 @@ static void
 counter_u64_zero_one_cpu(void *arg)
 {
 
-	atomic_store_64((uint64_t *)((char *)arg + sizeof(struct pcpu) *
-	    PCPU_GET(cpuid)), 0);
+	atomic_store_64((uint64_t *)zpcpu_get(arg), 0);
 }
 
 static inline void

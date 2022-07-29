@@ -1,6 +1,7 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 John Baldwin <jhb@FreeBSD.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/kern_ktr.c 343545 2019-01-29 07:48:49Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 #include "opt_ktr.h"
@@ -416,7 +417,7 @@ DB_SHOW_COMMAND(ktr, db_ktr_all)
 	tstate.first = -1;
 	db_ktr_verbose = 0;
 	db_ktr_verbose |= (strchr(modif, 'v') != NULL) ? 2 : 0;
-	db_ktr_verbose |= (strchr(modif, 'V') != NULL) ? 1 : 0; /* just timestap please */
+	db_ktr_verbose |= (strchr(modif, 'V') != NULL) ? 1 : 0; /* just timestamp please */
 	if (strchr(modif, 'a') != NULL) {
 		db_disable_pager();
 		while (cncheckc() == -1)

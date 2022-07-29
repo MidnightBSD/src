@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2008 Edwin Groothuis. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/libexec/tftpd/tftp-io.c 345389 2019-03-21 21:45:18Z asomers $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -188,7 +190,7 @@ send_wrq(int peer, char *filename, char *mode)
 			filename, mode
 		);
 
-	DROPPACKETn("send_wrq", 1);
+	DROPPACKETn("send_wrq", 0);
 
 	tp = (struct tftphdr *)buf;
 	tp->th_opcode = htons((u_short)WRQ);
@@ -236,7 +238,7 @@ send_rrq(int peer, char *filename, char *mode)
 			filename, mode
 		);
 
-	DROPPACKETn("send_rrq", 1);
+	DROPPACKETn("send_rrq", 0);
 
 	tp = (struct tftphdr *)buf;
 	tp->th_opcode = htons((u_short)RRQ);

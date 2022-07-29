@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/builtins/getopts1.0 297752 2016-04-09 16:06:13Z jilles $
+# $FreeBSD$
 
 printf -- '-1-\n'
 set -- -abc

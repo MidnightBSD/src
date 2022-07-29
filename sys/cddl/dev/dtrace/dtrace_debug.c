@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cddl/dev/dtrace/dtrace_debug.c 316712 2017-04-11 17:28:23Z markj $
+ * $FreeBSD$
  *
  */
 

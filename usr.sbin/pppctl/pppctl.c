@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/pppctl/pppctl.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -121,6 +121,7 @@ static int
 Receive(int fd, int display)
 {
     static char Buffer[LINELEN];
+    char temp[sizeof(Buffer)];
     struct timeval t;
     int Result;
     char *last;
@@ -185,7 +186,8 @@ Receive(int fd, int display)
             else
                 flush = last - Buffer + 1;
             write(STDOUT_FILENO, Buffer, flush);
-            strcpy(Buffer, Buffer + flush);
+	    strcpy(temp, Buffer + flush);
+	    strcpy(Buffer, temp);
             len -= flush;
         }
         if ((Result = select(fd + 1, &f, NULL, NULL, &t)) <= 0) {

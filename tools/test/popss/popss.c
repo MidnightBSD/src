@@ -29,7 +29,7 @@
  * SUCH DAMAGE.
  *
  * $Id: popss.c,v 1.28 2018/05/09 21:35:29 kostik Exp kostik $
- * $FreeBSD: stable/11/tools/test/popss/popss.c 333460 2018-05-10 13:52:52Z kib $
+ * $FreeBSD$
  *
  * cc -m32 -Wall -Wextra -O2 -g -o popss popss.c
  * Use as "popss <instruction>", where instruction is one of

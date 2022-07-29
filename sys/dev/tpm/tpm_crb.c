@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/tpm/tpm_crb.c 346725 2019-04-26 01:58:36Z mw $");
+__FBSDID("$FreeBSD$");
 
 #include "tpm20.h"
 
@@ -106,7 +106,7 @@ static int
 tpmcrb_acpi_probe(device_t dev)
 {
 	int err = 0;
-	ACPI_TABLE_TPM2 *tbl;
+	ACPI_TABLE_TPM23 *tbl;
 	ACPI_STATUS status;
 
 	if (ACPI_ID_PROBE(device_get_parent(dev), dev, tpmcrb_ids) == NULL)

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,12 +25,13 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/ata.h 351579 2019-08-28 20:20:38Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_ATA_H_
 #define _SYS_ATA_H_
 
+#include <sys/types.h>
 #include <sys/ioccom.h>
 
 /* ATA/ATAPI device parameters */
@@ -45,6 +47,7 @@ struct ata_params {
 #define ATA_ATAPI_TYPE_TAPE             0x0100  /* streaming tape */
 #define ATA_ATAPI_TYPE_CDROM            0x0500  /* CD-ROM device */
 #define ATA_ATAPI_TYPE_OPTICAL          0x0700  /* optical disk */
+#define ATA_ATAPI_REMOVABLE             0x0080
 #define ATA_DRQ_MASK                    0x0060
 #define ATA_DRQ_SLOW                    0x0000  /* cpu 3 ms delay */
 #define ATA_DRQ_INTR                    0x0020  /* interrupt 10 ms delay */
@@ -475,6 +478,13 @@ struct ata_params {
 #define ATA_READ_BUFFER                 0xe4    /* read buffer */
 #define ATA_READ_PM                     0xe4    /* read portmultiplier */
 #define ATA_CHECK_POWER_MODE            0xe5    /* device power mode */
+#define		ATA_PM_STANDBY		0x00	/* standby, also ATA_EPC_STANDBY_Z */
+#define		ATA_PM_STANDBY_Y	0x01	/* standby, also ATA_EPC_STANDBY_Y */
+#define		ATA_PM_IDLE		0x80	/* idle */
+#define		ATA_PM_IDLE_A		0x81	/* idle, also ATA_EPC_IDLE_A */
+#define		ATA_PM_IDLE_B		0x82	/* idle, also ATA_EPC_IDLE_B */
+#define		ATA_PM_IDLE_C		0x83	/* idle, also ATA_EPC_IDLE_C */
+#define		ATA_PM_ACTIVE_IDLE	0xff	/* active or idle */
 #define ATA_SLEEP                       0xe6    /* sleep */
 #define ATA_FLUSHCACHE                  0xe7    /* flush cache to disk */
 #define	ATA_WRITE_BUFFER		0xe8    /* write buffer */

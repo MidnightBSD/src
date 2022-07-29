@@ -26,7 +26,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $FreeBSD: stable/11/sys/modules/gpio/gpiobus/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 #
 
 .PATH:	${SRCTOP}/sys/dev/gpio/
@@ -35,6 +35,10 @@ KMOD=	gpiobus
 SRCS=	gpiobus.c gpioc.c
 SRCS+=	gpio_if.c gpio_if.h gpiobus_if.c gpiobus_if.h ofw_bus_if.h
 SRCS+=	device_if.h bus_if.h opt_platform.h
+
+.if !empty(OPT_FDT)
+SRCS+=	ofw_gpiobus.c
+.endif
 
 CFLAGS+=  -I. -I${SRCTOP}/sys/dev/gpio/
 

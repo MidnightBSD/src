@@ -58,9 +58,9 @@
 .\" 	Created.
 .\" 	[90/08/30            dbg]
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/ddb.4 339857 2018-10-29 12:47:15Z avg $
+.\" $FreeBSD$
 .\"
-.Dd March 3, 2017
+.Dd September 7, 2018
 .Dt DDB 4
 .Os
 .Sh NAME
@@ -781,7 +781,7 @@ Lock owner.
 .It Ic show Cm lockchain Ar addr
 Show all threads a particular thread at address
 .Ar addr
-is waiting on based on non-sleepable and non-spin locks.
+is waiting on based on non-spin locks.
 .\"
 .Pp
 .It Ic show Cm lockedbufs
@@ -934,14 +934,10 @@ at address
 Display the register set.
 If the
 .Cm u
-modifier is specified, it displays user registers instead of
-kernel registers or the currently saved one.
+modifier is specified, the register contents of the thread's previous
+trapframe are displayed instead.
+Usually, this corresponds to the saved state from userspace.
 .Pp
-.Sy Warning :
-The support of the
-.Cm u
-modifier depends on the machine.
-If not supported, incorrect information will be displayed.
 .\"
 .Pp
 .It Ic show Cm rman Ar addr
@@ -959,8 +955,9 @@ Useful for long debugging sessions.
 .\"
 .Pp
 .It Ic show Cm sleepchain
-Show all the threads a particular thread is waiting on based on
-sleepable locks.
+Deprecated.
+Now an alias for
+.Ic show Cm lockchain .
 .\"
 .Pp
 .It Ic show Cm sleepq
@@ -1122,6 +1119,11 @@ Shows clean/dirty buffer lists of the vnode located at
 .Ar addr .
 .\"
 .Pp
+.It Ic show Cm vpath Ar addr
+Walk the namecache to lookup the pathname of the vnode located at
+.Ar addr .
+.\"
+.Pp
 .It Ic show Cm watches
 Displays all watchpoints.
 Shows watchpoints set with "watch" command.
@@ -1274,6 +1276,7 @@ The width of the displayed line.
 .It Va lines
 The number of lines.
 It is used by the built-in pager.
+Setting it to 0 disables paging.
 .It Va tabstops
 Tab stop width.
 .It Va work Ns Ar xx

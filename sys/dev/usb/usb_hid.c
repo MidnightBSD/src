@@ -1,6 +1,8 @@
-/* $FreeBSD: stable/11/sys/dev/usb/usb_hid.c 337291 2018-08-04 12:45:37Z wulf $ */
+/* $FreeBSD$ */
 /*	$NetBSD: hid.c,v 1.17 2001/11/13 06:24:53 lukem Exp $	*/
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -434,36 +436,36 @@ hid_get_item(struct hid_data *s, struct hid_item *h)
 				s->loc_count = dval & mask;
 				break;
 			case 10:	/* Push */
-				s->pushlevel ++;
-				if (s->pushlevel < MAXPUSH) {
-					s->cur[s->pushlevel] = *c;
-					/* store size and count */
-					c->loc.size = s->loc_size;
-					c->loc.count = s->loc_count;
-					/* update current item pointer */
-					c = &s->cur[s->pushlevel];
-				} else {
-					DPRINTFN(0, "Cannot push "
-					    "item @ %d\n", s->pushlevel);
+				/* stop parsing, if invalid push level */
+				if ((s->pushlevel + 1) >= MAXPUSH) {
+					DPRINTFN(0, "Cannot push item @ %d\n", s->pushlevel);
+					return (0);
 				}
+				s->pushlevel ++;
+				s->cur[s->pushlevel] = *c;
+				/* store size and count */
+				c->loc.size = s->loc_size;
+				c->loc.count = s->loc_count;
+				/* update current item pointer */
+				c = &s->cur[s->pushlevel];
 				break;
 			case 11:	/* Pop */
-				s->pushlevel --;
-				if (s->pushlevel < MAXPUSH) {
-					/* preserve position */
-					oldpos = c->loc.pos;
-					c = &s->cur[s->pushlevel];
-					/* restore size and count */
-					s->loc_size = c->loc.size;
-					s->loc_count = c->loc.count;
-					/* set default item location */
-					c->loc.pos = oldpos;
-					c->loc.size = 0;
-					c->loc.count = 0;
-				} else {
-					DPRINTFN(0, "Cannot pop "
-					    "item @ %d\n", s->pushlevel);
+				/* stop parsing, if invalid push level */
+				if (s->pushlevel == 0) {
+					DPRINTFN(0, "Cannot pop item @ 0\n");
+					return (0);
 				}
+				s->pushlevel --;
+				/* preserve position */
+				oldpos = c->loc.pos;
+				c = &s->cur[s->pushlevel];
+				/* restore size and count */
+				s->loc_size = c->loc.size;
+				s->loc_count = c->loc.count;
+				/* set default item location */
+				c->loc.pos = oldpos;
+				c->loc.size = 0;
+				c->loc.count = 0;
 				break;
 			default:
 				DPRINTFN(0, "Global bTag=%d\n", bTag);

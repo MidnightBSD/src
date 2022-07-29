@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002-2009 Luigi Rizzo, Universita` di Pisa
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netpfil/ipfw/ip_fw2.c 356036 2019-12-23 10:06:32Z ae $");
+__FBSDID("$FreeBSD$");
 
 /*
  * The FreeBSD IP packet firewall, main file
@@ -53,6 +55,7 @@ __FBSDID("$FreeBSD: stable/11/sys/netpfil/ipfw/ip_fw2.c 356036 2019-12-23 10:06:
 #include <sys/proc.h>
 #include <sys/rwlock.h>
 #include <sys/rmlock.h>
+#include <sys/sdt.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/sysctl.h>
@@ -103,15 +106,27 @@ __FBSDID("$FreeBSD: stable/11/sys/netpfil/ipfw/ip_fw2.c 356036 2019-12-23 10:06:
 #include <security/mac/mac_framework.h>
 #endif
 
+#define	IPFW_PROBE(probe, arg0, arg1, arg2, arg3, arg4, arg5)		\
+    SDT_PROBE6(ipfw, , , probe, arg0, arg1, arg2, arg3, arg4, arg5)
+
+SDT_PROVIDER_DEFINE(ipfw);
+SDT_PROBE_DEFINE6(ipfw, , , rule__matched,
+    "int",			/* retval */
+    "int",			/* af */
+    "void *",			/* src addr */
+    "void *",			/* dst addr */
+    "struct ip_fw_args *",	/* args */
+    "struct ip_fw *"		/* rule */);
+
 /*
  * static variables followed by global ones.
  * All ipfw global variables are here.
  */
 
-static VNET_DEFINE(int, fw_deny_unknown_exthdrs);
+VNET_DEFINE_STATIC(int, fw_deny_unknown_exthdrs);
 #define	V_fw_deny_unknown_exthdrs	VNET(fw_deny_unknown_exthdrs)
 
-static VNET_DEFINE(int, fw_permit_single_frag6) = 1;
+VNET_DEFINE_STATIC(int, fw_permit_single_frag6) = 1;
 #define	V_fw_permit_single_frag6	VNET(fw_permit_single_frag6)
 
 #ifdef IPFIREWALL_DEFAULT_TO_ACCEPT
@@ -128,14 +143,14 @@ VNET_DEFINE(unsigned int, fw_tables_sets) = 0;	/* Don't use set-aware tables */
 /* Use 128 tables by default */
 static unsigned int default_fw_tables = IPFW_TABLES_DEFAULT;
 
+static int jump_lookup_pos(struct ip_fw_chain *chain, struct ip_fw *f, int num,
+    int tablearg, int jump_backwards);
 #ifndef LINEAR_SKIPTO
-static int jump_fast(struct ip_fw_chain *chain, struct ip_fw *f, int num,
+static int jump_cached(struct ip_fw_chain *chain, struct ip_fw *f, int num,
     int tablearg, int jump_backwards);
-#define	JUMP(ch, f, num, targ, back)	jump_fast(ch, f, num, targ, back)
+#define	JUMP(ch, f, num, targ, back)	jump_cached(ch, f, num, targ, back)
 #else
-static int jump_linear(struct ip_fw_chain *chain, struct ip_fw *f, int num,
-    int tablearg, int jump_backwards);
-#define	JUMP(ch, f, num, targ, back)	jump_linear(ch, f, num, targ, back)
+#define	JUMP(ch, f, num, targ, back)	jump_lookup_pos(ch, f, num, targ, back)
 #endif
 
 /*
@@ -417,11 +432,11 @@ iface_match(struct ifnet *ifp, ipfw_insn_if *cmd, struct ip_fw_chain *chain,
 				return(1);
 		}
 	} else {
-#if !defined(USERSPACE) && defined(__MidnightBSD__)	/* and OSX too ? */
+#if !defined(USERSPACE) && defined(__FreeBSD__)	/* and OSX too ? */
 		struct ifaddr *ia;
 
 		if_addr_rlock(ifp);
-		TAILQ_FOREACH(ia, &ifp->if_addrhead, ifa_link) {
+		CK_STAILQ_FOREACH(ia, &ifp->if_addrhead, ifa_link) {
 			if (ia->ifa_addr->sa_family != AF_INET)
 				continue;
 			if (cmd->p.ip.s_addr == ((struct sockaddr_in *)
@@ -431,7 +446,7 @@ iface_match(struct ifnet *ifp, ipfw_insn_if *cmd, struct ip_fw_chain *chain,
 			}
 		}
 		if_addr_runlock(ifp);
-#endif /* __MidnightBSD__ */
+#endif /* __FreeBSD__ */
 	}
 	return(0);	/* no match, fail ... */
 }
@@ -460,7 +475,7 @@ iface_match(struct ifnet *ifp, ipfw_insn_if *cmd, struct ip_fw_chain *chain,
 static int
 verify_path(struct in_addr src, struct ifnet *ifp, u_int fib)
 {
-#if defined(USERSPACE) || !defined(__MidnightBSD__)
+#if defined(USERSPACE) || !defined(__FreeBSD__)
 	return 0;
 #else
 	struct nhop4_basic nh4;
@@ -488,7 +503,7 @@ verify_path(struct in_addr src, struct ifnet *ifp, u_int fib)
 
 	/* found valid route */
 	return 1;
-#endif /* __MidnightBSD__ */
+#endif /* __FreeBSD__ */
 }
 
 /*
@@ -752,17 +767,17 @@ ipfw_send_pkt(struct mbuf *replyto, struct ipfw_flow_id *id, u_int32_t seq,
  * ipv6 specific rules here...
  */
 static __inline int
-icmp6type_match (int type, ipfw_insn_u32 *cmd)
+icmp6type_match(int type, ipfw_insn_u32 *cmd)
 {
 	return (type <= ICMP6_MAXTYPE && (cmd->d[type/32] & (1<<(type%32)) ) );
 }
 
 static int
-flow6id_match( int curr_flow, ipfw_insn_u32 *cmd )
+flow6id_match(int curr_flow, ipfw_insn_u32 *cmd)
 {
 	int i;
-	for (i=0; i <= cmd->o.arg1; ++i )
-		if (curr_flow == cmd->d[i] )
+	for (i=0; i <= cmd->o.arg1; ++i)
+		if (curr_flow == cmd->d[i])
 			return 1;
 	return 0;
 }
@@ -786,7 +801,7 @@ ipfw_localip6(struct in6_addr *in6)
 		return (in6_localip(in6));
 
 	IN6_IFADDR_RLOCK(&in6_ifa_tracker);
-	TAILQ_FOREACH(ia, &V_in6_ifaddrhead, ia_link) {
+	CK_STAILQ_FOREACH(ia, &V_in6_ifaddrhead, ia_link) {
 		if (!IN6_IS_ADDR_LINKLOCAL(&ia->ia_addr.sin6_addr))
 			continue;
 		if (IN6_ARE_MASKED_ADDR_EQUAL(&ia->ia_addr.sin6_addr,
@@ -934,7 +949,7 @@ send_reject6(struct ip_fw_args *args, int code, u_int hlen, struct ip6_hdr *ip6)
 				 * If the packet contains an ABORT chunk, don't
 				 * reply.
 				 * XXX: We should search through all chunks,
-				 *      but don't do to avoid attacks.
+				 * but do not do that to avoid attacks.
 				 */
 				v_tag = 0;
 				break;
@@ -1052,7 +1067,7 @@ send_reject(struct ip_fw_args *args, int code, int iplen, struct ip *ip)
 				 * If the packet contains an ABORT chunk, don't
 				 * reply.
 				 * XXX: We should search through all chunks,
-				 * but don't do to avoid attacks.
+				 * but do not do that to avoid attacks.
 				 */
 				v_tag = 0;
 				break;
@@ -1089,7 +1104,7 @@ check_uidgid(ipfw_insn_u32 *insn, struct ip_fw_args *args, int *ugid_lookupp,
 #if defined(USERSPACE)
 	return 0;	// not supported in userspace
 #else
-#ifndef __MidnightBSD__
+#ifndef __FreeBSD__
 	/* XXX */
 	return cred_check(insn, proto, oif,
 	    dst_ip, dst_port, src_ip, src_port,
@@ -1193,7 +1208,7 @@ check_uidgid(ipfw_insn_u32 *insn, struct ip_fw_args *args, int *ugid_lookupp,
 	else if (insn->o.opcode == O_JAIL)
 		match = ((*uc)->cr_prison->pr_id == (int)insn->d[0]);
 	return (match);
-#endif /* __MidnightBSD__ */
+#endif /* __FreeBSD__ */
 #endif /* not supported in userspace */
 }
 
@@ -1213,60 +1228,83 @@ set_match(struct ip_fw_args *args, int slot,
 	args->flags |= IPFW_ARGS_REF;
 }
 
+static int
+jump_lookup_pos(struct ip_fw_chain *chain, struct ip_fw *f, int num,
+    int tablearg, int jump_backwards)
+{
+	int f_pos, i;
+
+	i = IP_FW_ARG_TABLEARG(chain, num, skipto);
+	/* make sure we do not jump backward */
+	if (jump_backwards == 0 && i <= f->rulenum)
+		i = f->rulenum + 1;
+
+#ifndef LINEAR_SKIPTO
+	if (chain->idxmap != NULL)
+		f_pos = chain->idxmap[i];
+	else
+		f_pos = ipfw_find_rule(chain, i, 0);
+#else
+	f_pos = chain->idxmap[i];
+#endif /* LINEAR_SKIPTO */
+
+	return (f_pos);
+}
+
+
 #ifndef LINEAR_SKIPTO
 /*
  * Helper function to enable cached rule lookups using
- * cached_id and cached_pos fields in ipfw rule.
+ * cache.id and cache.pos fields in ipfw rule.
  */
 static int
-jump_fast(struct ip_fw_chain *chain, struct ip_fw *f, int num,
+jump_cached(struct ip_fw_chain *chain, struct ip_fw *f, int num,
     int tablearg, int jump_backwards)
 {
 	int f_pos;
 
-	/* If possible use cached f_pos (in f->cached_pos),
-	 * whose version is written in f->cached_id
-	 * (horrible hacks to avoid changing the ABI).
+	/* Can't use cache with IP_FW_TARG */
+	if (num == IP_FW_TARG)
+		return jump_lookup_pos(chain, f, num, tablearg, jump_backwards);
+
+	/*
+	 * If possible use cached f_pos (in f->cache.pos),
+	 * whose version is written in f->cache.id (horrible hacks
+	 * to avoid changing the ABI).
+	 *
+	 * Multiple threads can execute the same rule simultaneously,
+	 * we need to ensure that cache.pos is updated before cache.id.
 	 */
-	if (num != IP_FW_TARG && f->cached_id == chain->id)
-		f_pos = f->cached_pos;
-	else {
-		int i = IP_FW_ARG_TABLEARG(chain, num, skipto);
-		/* make sure we do not jump backward */
-		if (jump_backwards == 0 && i <= f->rulenum)
-			i = f->rulenum + 1;
-		if (chain->idxmap != NULL)
-			f_pos = chain->idxmap[i];
-		else
-			f_pos = ipfw_find_rule(chain, i, 0);
-		/* update the cache */
-		if (num != IP_FW_TARG) {
-			f->cached_id = chain->id;
-			f->cached_pos = f_pos;
-		}
+
+#ifdef __LP64__
+	struct ip_fw_jump_cache cache;
+
+	cache.raw_value = f->cache.raw_value;
+	if (cache.id == chain->id)
+		return (cache.pos);
+
+	f_pos = jump_lookup_pos(chain, f, num, tablearg, jump_backwards);
+
+	cache.pos = f_pos;
+	cache.id = chain->id;
+	f->cache.raw_value = cache.raw_value;
+#else
+	if (f->cache.id == chain->id) {
+		/* Load pos after id */
+		atomic_thread_fence_acq();
+		return (f->cache.pos);
 	}
 
+	f_pos = jump_lookup_pos(chain, f, num, tablearg, jump_backwards);
+
+	f->cache.pos = f_pos;
+	/* Store id after pos */
+	atomic_thread_fence_rel();
+	f->cache.id = chain->id;
+#endif /* !__LP64__ */
 	return (f_pos);
 }
-#else
-/*
- * Helper function to enable real fast rule lookups.
- */
-static int
-jump_linear(struct ip_fw_chain *chain, struct ip_fw *f, int num,
-    int tablearg, int jump_backwards)
-{
-	int f_pos;
-
-	num = IP_FW_ARG_TABLEARG(chain, num, skipto);
-	/* make sure we do not jump backward */
-	if (jump_backwards == 0 && num <= f->rulenum)
-		num = f->rulenum + 1;
-	f_pos = chain->idxmap[num];
-
-	return (f_pos);
-}
-#endif
+#endif /* !LINEAR_SKIPTO */
 
 #define	TARG(k, f)	IP_FW_ARG_TABLEARG(chain, k, f)
 /*
@@ -1344,7 +1382,7 @@ ipfw_chk(struct ip_fw_args *args)
 	 * these types of constraints, as well as decrease contention
 	 * on pcb related locks.
 	 */
-#ifndef __MidnightBSD__
+#ifndef __FreeBSD__
 	struct bsd_ucred ucred_cache;
 #else
 	struct ucred *ucred_cache = NULL;
@@ -1439,7 +1477,7 @@ ipfw_chk(struct ip_fw_args *args)
  * pointer might become stale after other pullups (but we never use it
  * this way).
  */
-#define PULLUP_TO(_len, p, T)	PULLUP_LEN(_len, p, sizeof(T))
+#define	PULLUP_TO(_len, p, T)	PULLUP_LEN(_len, p, sizeof(T))
 #define	_PULLUP_LOCKED(_len, p, T, unlock)			\
 do {								\
 	int x = (_len) + T;					\
@@ -1849,7 +1887,7 @@ do {						\
 					match = check_uidgid(
 						    (ipfw_insn_u32 *)cmd,
 						    args, &ucred_lookup,
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 						    &ucred_cache);
 #else
 						    (void *)&ucred_cache);
@@ -1901,7 +1939,23 @@ do {						\
 				break;
 
 			case O_FRAG:
-				match = (offset != 0);
+				if (is_ipv4) {
+					/*
+					 * Since flags_match() works with
+					 * uint8_t we pack ip_off into 8 bits.
+					 * For this match offset is a boolean.
+					 */
+					match = flags_match(cmd,
+					    ((ntohs(ip->ip_off) & ~IP_OFFMASK)
+					    >> 8) | (offset != 0));
+				} else {
+					/*
+					 * Compatiblity: historically bare
+					 * "frag" would match IPv6 fragments.
+					 */
+					match = (cmd->arg1 == 0x1 &&
+					    (offset != 0));
+				}
 				break;
 
 			case O_IN:	/* "out" is "not in" */
@@ -2000,19 +2054,19 @@ do {						\
 						check_uidgid(
 						    (ipfw_insn_u32 *)cmd,
 						    args, &ucred_lookup,
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 						    &ucred_cache);
 						if (vidx == 4 /* uid */)
 							key = ucred_cache->cr_uid;
 						else if (vidx == 5 /* jail */)
 							key = ucred_cache->cr_prison->pr_id;
-#else /* !__MidnightBSD__ */
+#else /* !__FreeBSD__ */
 						    (void *)&ucred_cache);
 						if (vidx == 4 /* uid */)
 							key = ucred_cache.uid;
 						else if (vidx == 5 /* jail */)
 							key = ucred_cache.xid;
-#endif /* !__MidnightBSD__ */
+#endif /* !__FreeBSD__ */
 					}
 #endif /* !USERSPACE */
 					else
@@ -2150,7 +2204,7 @@ do {						\
 				if ((proto == IPPROTO_UDP ||
 				    proto == IPPROTO_UDPLITE ||
 				    proto == IPPROTO_TCP ||
-				    proto==IPPROTO_SCTP) && offset == 0) {
+				    proto == IPPROTO_SCTP) && offset == 0) {
 					u_int16_t x =
 					    (cmd->opcode == O_IP_SRCPORT) ?
 						src_port : dst_port ;
@@ -2185,7 +2239,7 @@ do {						\
 				break;
 
 			case O_IPVER:
-				match = (is_ipv4 &&
+				match = ((is_ipv4 || is_ipv6) &&
 				    cmd->arg1 == ip->ip_v);
 				break;
 
@@ -2556,9 +2610,7 @@ do {						\
 #ifndef USERSPACE	/* not supported in userspace */
 				struct inpcb *inp = args->inp;
 				struct inpcbinfo *pi;
-				
-				if (is_ipv6) /* XXX can we remove this ? */
-					break;
+				bool inp_locked = false;
 
 				if (proto == IPPROTO_TCP)
 					pi = &V_tcbinfo;
@@ -2574,27 +2626,37 @@ do {						\
 				 * certainly be inp_user_cookie?
 				 */
 
-				/* For incoming packet, lookup up the 
-				inpcb using the src/dest ip/port tuple */
-				if (inp == NULL) {
-					inp = in_pcblookup(pi, 
-						src_ip, htons(src_port),
-						dst_ip, htons(dst_port),
-						INPLOOKUP_RLOCKPCB, NULL);
-					if (inp != NULL) {
-						tablearg =
-						    inp->inp_socket->so_user_cookie;
-						if (tablearg)
-							match = 1;
-						INP_RUNLOCK(inp);
-					}
-				} else {
+				/*
+				 * For incoming packet lookup the inpcb
+				 * using the src/dest ip/port tuple.
+				 */
+				if (is_ipv4 && inp == NULL) {
+					inp = in_pcblookup(pi,
+					    src_ip, htons(src_port),
+					    dst_ip, htons(dst_port),
+					    INPLOOKUP_RLOCKPCB, NULL);
+					inp_locked = true;
+				}
+#ifdef INET6
+				if (is_ipv6 && inp == NULL) {
+					inp = in6_pcblookup(pi,
+					    &args->f_id.src_ip6,
+					    htons(src_port),
+					    &args->f_id.dst_ip6,
+					    htons(dst_port),
+					    INPLOOKUP_RLOCKPCB, NULL);
+					inp_locked = true;
+				}
+#endif /* INET6 */
+				if (inp != NULL) {
 					if (inp->inp_socket) {
 						tablearg =
 						    inp->inp_socket->so_user_cookie;
 						if (tablearg)
 							match = 1;
 					}
+					if (inp_locked)
+						INP_RUNLOCK(inp);
 				}
 #endif /* !USERSPACE */
 				break;
@@ -3186,12 +3248,19 @@ do {						\
 		struct ip_fw *rule = chain->map[f_pos];
 		/* Update statistics */
 		IPFW_INC_RULE_COUNTER(rule, pktlen);
+		IPFW_PROBE(rule__matched, retval,
+		    is_ipv4 ? AF_INET : AF_INET6,
+		    is_ipv4 ? (uintptr_t)&src_ip :
+		        (uintptr_t)&args->f_id.src_ip6,
+		    is_ipv4 ? (uintptr_t)&dst_ip :
+		        (uintptr_t)&args->f_id.dst_ip6,
+		    args, rule);
 	} else {
 		retval = IP_FW_DENY;
 		printf("ipfw: ouch!, skip past end of rules, denying packet\n");
 	}
 	IPFW_PF_RUNLOCK(chain);
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	if (ucred_cache != NULL)
 		crfree(ucred_cache);
 #endif

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -41,7 +43,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)init.c	8.1 (Berkeley) 7/15/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/11/sbin/init/init.c 346481 2019-04-21 04:18:57Z kevans $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -104,10 +106,10 @@ static void stall(const char *, ...) __printflike(1, 2);
 static void warning(const char *, ...) __printflike(1, 2);
 static void emergency(const char *, ...) __printflike(1, 2);
 static void disaster(int);
-static void badsys(int);
 static void revoke_ttys(void);
 static int  runshutdown(void);
 static char *strk(char *);
+static void runfinal(void);
 
 /*
  * We really need a recursive typedef...
@@ -305,16 +307,15 @@ invalid:
 	 * We catch or block signals rather than ignore them,
 	 * so that they get reset on exec.
 	 */
-	handle(badsys, SIGSYS, 0);
-	handle(disaster, SIGABRT, SIGFPE, SIGILL, SIGSEGV, SIGBUS, SIGXCPU,
-	    SIGXFSZ, 0);
+	handle(disaster, SIGABRT, SIGFPE, SIGILL, SIGSEGV, SIGBUS, SIGSYS,
+	    SIGXCPU, SIGXFSZ, 0);
 	handle(transition_handler, SIGHUP, SIGINT, SIGEMT, SIGTERM, SIGTSTP,
-	    SIGUSR1, SIGUSR2, 0);
+	    SIGUSR1, SIGUSR2, SIGWINCH, 0);
 	handle(alrm_handler, SIGALRM, 0);
 	sigfillset(&mask);
 	delset(&mask, SIGABRT, SIGFPE, SIGILL, SIGSEGV, SIGBUS, SIGSYS,
 	    SIGXCPU, SIGXFSZ, SIGHUP, SIGINT, SIGEMT, SIGTERM, SIGTSTP,
-	    SIGALRM, SIGUSR1, SIGUSR2, 0);
+	    SIGALRM, SIGUSR1, SIGUSR2, SIGWINCH, 0);
 	sigprocmask(SIG_SETMASK, &mask, NULL);
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = 0;
@@ -502,22 +503,6 @@ emergency(const char *message, ...)
 
 	vsyslog(LOG_EMERG, message, ap);
 	va_end(ap);
-}
-
-/*
- * Catch a SIGSYS signal.
- *
- * These may arise if a system does not support sysctl.
- * We tolerate up to 25 of these, then throw in the towel.
- */
-static void
-badsys(int sig)
-{
-	static int badcount = 0;
-
-	if (badcount++ < 25)
-		return;
-	disaster(sig);
 }
 
 /*
@@ -894,6 +879,8 @@ single_user(void)
 	if (Reboot) {
 		/* Instead of going single user, let's reboot the machine */
 		sync();
+		/* Run scripts after all processes have been terminated. */
+		runfinal();
 		if (reboot(howto) == -1) {
 			emergency("reboot(%#x) failed, %s", howto,
 			    strerror(errno));
@@ -927,8 +914,8 @@ single_user(void)
 				if (clear == NULL || *clear == '\0')
 					_exit(0);
 				password = crypt(clear, pp->pw_passwd);
-				bzero(clear, _PASSWORD_LEN);
-				if (password == NULL ||
+				explicit_bzero(clear, _PASSWORD_LEN);
+				if (password != NULL &&
 				    strcmp(password, pp->pw_passwd) == 0)
 					break;
 				warning("single-user login failed\n");
@@ -1627,8 +1614,9 @@ transition_handler(int sig)
 		    current_state == clean_ttys || current_state == catatonia)
 			requested_transition = clean_ttys;
 		break;
+	case SIGWINCH:
 	case SIGUSR2:
-		howto = RB_POWEROFF;
+		howto = sig == SIGUSR2 ? RB_POWEROFF : RB_POWERCYCLE;
 	case SIGUSR1:
 		howto |= RB_HALT;
 	case SIGINT:
@@ -2048,9 +2036,58 @@ setprocresources(const char *cname)
 	login_cap_t *lc;
 	if ((lc = login_getclassbyname(cname, NULL)) != NULL) {
 		setusercontext(lc, (struct passwd*)NULL, 0,
+		    LOGIN_SETENV |
 		    LOGIN_SETPRIORITY | LOGIN_SETRESOURCES |
 		    LOGIN_SETLOGINCLASS | LOGIN_SETCPUMASK);
 		login_close(lc);
 	}
 }
 #endif
+
+/*
+ * Run /etc/rc.final to execute scripts after all user processes have been
+ * terminated.
+ */
+static void
+runfinal(void)
+{
+	struct stat sb;
+	pid_t other_pid, pid;
+	sigset_t mask;
+
+	/* Avoid any surprises. */
+	alarm(0);
+
+	/* rc.final is optional. */
+	if (stat(_PATH_RUNFINAL, &sb) == -1 && errno == ENOENT)
+		return;
+	if (access(_PATH_RUNFINAL, X_OK) != 0) {
+		warning("%s exists, but not executable", _PATH_RUNFINAL);
+		return;
+	}
+
+	pid = fork();
+	if (pid == 0) {
+		/*
+		 * Reopen stdin/stdout/stderr so that scripts can write to
+		 * console.
+		 */
+		close(0);
+		open(_PATH_DEVNULL, O_RDONLY);
+		close(1);
+		close(2);
+		open_console();
+		dup2(1, 2);
+		sigemptyset(&mask);
+		sigprocmask(SIG_SETMASK, &mask, NULL);
+		signal(SIGCHLD, SIG_DFL);
+		execl(_PATH_RUNFINAL, _PATH_RUNFINAL, NULL);
+		perror("execl(" _PATH_RUNFINAL ") failed");
+		exit(1);
+	}
+
+	/* Wait for rc.final script to exit */
+	while ((other_pid = waitpid(-1, NULL, 0)) != pid && other_pid > 0) {
+		continue;
+	}
+}

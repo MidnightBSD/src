@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITH_OPENMP 346333 2019-04-17 20:16:48Z dim $
+.\" $FreeBSD$
 Set to build LLVM's OpenMP runtime.

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/ocs_fc/Makefile 351895 2019-09-05 20:39:13Z bdrewery $
+# $FreeBSD$
 
 .PATH:	${SRCTOP}/sys/dev/ocs_fc
 KMOD = ocs_fc
@@ -33,7 +33,8 @@ SRCS += \
 	ocs_scsi.c \
 	ocs_unsol.c \
 	ocs_ddump.c \
-	ocs_mgmt.c 
+	ocs_mgmt.c \
+	ocs_gendump.c
 
 
 # CAM initiator/target

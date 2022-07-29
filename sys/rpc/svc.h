@@ -1,6 +1,8 @@
 /*	$NetBSD: svc.h,v 1.17 2000/06/02 22:57:56 fvdl Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  *
  *	from: @(#)svc.h 1.35 88/12/17 SMI
  *	from: @(#)svc.h      1.27    94/04/25 SMI
- * $FreeBSD: stable/11/sys/rpc/svc.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*
@@ -146,6 +148,11 @@ struct __rpc_svcthread;
  * reference count which tracks the number of currently assigned
  * worker threads plus one for the service pool's reference.
  * For NFSv4.1 sessions, a reference is also held for a backchannel.
+ * xp_p2 - Points to the CLIENT structure for the RPC server end
+ *         (the client end for callbacks).
+ *         Points to the private structure (cl_private) for the
+ *         CLIENT structure for the RPC client end (the server
+ *         end for callbacks).
  */
 typedef struct __rpc_svcxprt {
 #ifdef _KERNEL
@@ -654,7 +661,7 @@ __END_DECLS
  * Somebody has to wait for incoming requests and then call the correct
  * service routine.  The routine svc_run does infinite waiting; i.e.,
  * svc_run never returns.
- * Since another (co-existant) package may wish to selectively wait for
+ * Since another (co-existent) package may wish to selectively wait for
  * incoming calls or other events outside of the rpc architecture, the
  * routine svc_getreq is provided.  It must be passed readfds, the
  * "in-place" results of a select system call (see select, section 2).

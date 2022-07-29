@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libc/tests/stdio/Makefile 332736 2018-04-18 19:18:14Z cy $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 

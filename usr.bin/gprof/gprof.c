@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -40,7 +42,7 @@ static char sccsid[] = "@(#)gprof.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/gprof/gprof.c 359763 2020-04-10 00:27:19Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <limits.h>
@@ -159,8 +161,11 @@ main(int argc, char **argv)
 	 *	get information from the executable file.
 	 */
     if ((Kflag && kernel_getnfile(a_outname, &defaultEs) == -1) ||
-      (!Kflag && elf_getnfile(a_outname, &defaultEs) == -1 &&
-      aout_getnfile(a_outname, &defaultEs) == -1))
+      (!Kflag && elf_getnfile(a_outname, &defaultEs) == -1
+#ifdef WITH_AOUT
+      && aout_getnfile(a_outname, &defaultEs) == -1
+#endif
+      ))
 	errx(1, "%s: bad format", a_outname);
 	/*
 	 *	sort symbol table.

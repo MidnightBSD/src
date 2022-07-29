@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Sandvine Incorporated.  All righs reserved.
  *
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/tools/tools/ncpus/biosmptable.c 219519 2011-03-11 18:44:16Z brucec $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <x86/mptable.h>

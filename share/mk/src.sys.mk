@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/mk/src.sys.mk 298487 2016-04-22 20:31:29Z bdrewery $
+# $FreeBSD$
 
 # Note: This file is also duplicated in the sys/conf/kern.pre.mk so
 # it will always grab SRCCONF, even if it isn't being built in-tree
@@ -14,7 +14,7 @@ SRCCONF?=	/etc/src.conf
 
 # Validate that the user didn't try setting an env-only variable in
 # their src.conf. This benefits from already including bsd.mkopt.mk.
-.for var in ${__ENV_ONLY_OPTIONS}
+.for var in ${__ENV_ONLY_OPTIONS:O:u}
 __presrcconf_${var}:=	${MK_${var}:U-}${WITHOUT_${var}:Uno:Dyes}${WITH_${var}:Uno:Dyes}
 .endfor
 
@@ -22,7 +22,7 @@ __presrcconf_${var}:=	${MK_${var}:U-}${WITHOUT_${var}:Uno:Dyes}${WITH_${var}:Uno
 _srcconf_included_:	.NOTMAIN
 
 # Validate the env-only variables.
-.for var in ${__ENV_ONLY_OPTIONS}
+.for var in ${__ENV_ONLY_OPTIONS:O:u}
 __postrcconf_${var}:=	${MK_${var}:U-}${WITHOUT_${var}:Uno:Dyes}${WITH_${var}:Uno:Dyes}
 .if ${__presrcconf_${var}} != ${__postrcconf_${var}}
 .error Option ${var} may only be defined in ${SRC_ENV_CONF}, environment, or make argument, not ${SRCCONF}.
@@ -33,6 +33,12 @@ __postrcconf_${var}:=	${MK_${var}:U-}${WITHOUT_${var}:Uno:Dyes}${WITH_${var}:Uno
 
 .endif # SRCCONF
 .endif
+
+# The following should be removed no earlier than LLVM11 being imported into the
+# tree, to ensure we don't regress the build.  LLVM11 and GCC10 will switch the
+# default over to -fno-common, making this redundant.
+CFCOMMONFLAG?=	-fno-common
+CFLAGS+=	${CFCOMMONFLAG}
 
 # tempting, but bsd.compiler.mk causes problems this early
 # probably need to remove dependence on bsd.own.mk 

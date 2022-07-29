@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
@@ -14,7 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ah_soc.h 204644 2010-03-03 17:32:32Z rpaulo $
+ * $FreeBSD$
  */
 #ifndef _ATH_AH_SOC_H_
 #define _ATH_AH_SOC_H_
@@ -60,18 +62,18 @@ struct ar531x_boarddata {
 #define BD_WLAN1_5G_EN  0x00040000   /* FLAG for radio0_2G */
 	uint16_t resetConfigGpio;   /* Reset factory GPIO pin */
 	uint16_t sysLedGpio;        /* System LED GPIO pin */
-	
+
 	uint32_t cpuFreq;           /* CPU core frequency in Hz */
 	uint32_t sysFreq;           /* System frequency in Hz */
 	uint32_t cntFreq;           /* Calculated C0_COUNT frequency */
-	
+
 	uint8_t  wlan0Mac[6];
 	uint8_t  enet0Mac[6];
 	uint8_t  enet1Mac[6];
-	
+
 	uint16_t pciId;             /* Pseudo PCIID for common code */
 	uint16_t memCap;            /* cap bank1 in MB */
-	
+
 	/* version 3 */
 	uint8_t  wlan1Mac[6];       /* (ar5212) */
 };

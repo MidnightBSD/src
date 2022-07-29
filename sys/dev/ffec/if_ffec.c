@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Ian Lepore <ian@freebsd.org>
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ffec/if_ffec.c 338992 2018-09-28 10:02:47Z ae $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for Freescale Fast Ethernet Controller, found on imx-series SoCs among
@@ -993,7 +995,7 @@ ffec_setup_rxfilter(struct ffec_softc *sc)
 	else {
 		ghash = 0;
 		if_maddr_rlock(ifp);
-		TAILQ_FOREACH(ifma, &sc->ifp->if_multiaddrs, ifma_link) {
+		CK_STAILQ_FOREACH(ifma, &sc->ifp->if_multiaddrs, ifma_link) {
 			if (ifma->ifma_addr->sa_family != AF_LINK)
 				continue;
 			/* 6 bits from MSB in LE CRC32 are used for hash. */
@@ -1719,7 +1721,7 @@ ffec_attach(device_t dev)
 	 *
 	 * All in all, it seems likely that 13 is a safe divisor for now,
 	 * because if we really do need to base it on the peripheral clock
-	 * speed, then we need a platform-independant get-clock-freq API.
+	 * speed, then we need a platform-independent get-clock-freq API.
 	 */
 	mscr = 13 << FEC_MSCR_MII_SPEED_SHIFT;
 	if (OF_hasprop(ofw_node, "phy-disable-preamble")) {

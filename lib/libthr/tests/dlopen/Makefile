@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libthr/tests/dlopen/Makefile 299094 2016-05-04 23:20:53Z ngie $
+# $FreeBSD$
 
 TESTSRC=	${SRCTOP}/contrib/netbsd-tests/lib/libpthread/dlopen
 

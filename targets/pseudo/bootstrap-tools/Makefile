@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/targets/pseudo/bootstrap-tools/Makefile 311182 2017-01-03 22:49:56Z bdrewery $
+# $FreeBSD$
 
 # building clang is particularly tedious - so avoid re-inventing wheels
 
@@ -13,10 +13,10 @@ TARGET_MACHINE= host
 HOST_MACHINE!= uname -m
 HOST_MACHINE_ARCH!= uname -p
 BTOOLSDIR?= ${HOST_OBJTOP}/tools
+WORLDTMP= ${BTOOLSDIR}
 LEGACY_TOOLS?= ${BTOOLSDIR}/legacy
 
 BSENV= \
-	unset MAKEOBJDIR; MAKEOBJDIRPREFIX=${BTOOLSDIR} \
 	MAKESYSPATH=${SRCTOP}/tools/build/mk:${SRCTOP}/share/mk \
 	TARGET=${HOST_MACHINE} TARGET_ARCH=${HOST_MACHINE_ARCH} \
 	WITHOUT_STAGING=1 STAGE_ROOT= BOOTSTRAPPING_TOOLS=1 \
@@ -27,26 +27,36 @@ BSENV= \
 .if !defined(OSRELDATE)
 ord_h= /usr/include/osreldate.h
 .if exists(${ord_h})
-OSRELDATE!= sed -n '/define.*__MidnightBSD_version/{s,^[^0-9]*,,p;q;}' ${ord_h}
+OSRELDATE!= sed -n '/define.*__FreeBSD_version/{s,^[^0-9]*,,p;q;}' ${ord_h}
 .endif
 OSRELDATE?= 0
 .endif
 
 # need to keep this in sync with src/Makefile.inc1 
 BSARGS= 	DESTDIR= \
+		OBJTOP='${WORLDTMP}/obj-tools' \
+		OBJROOT='$${OBJTOP}/' \
+		MAKEOBJDIRPREFIX= \
 		BOOTSTRAPPING=${OSRELDATE} \
-		SSP_CFLAGS= \
-		MK_HTML=no NO_LINT=yes MK_MAN=no \
-		-DNO_PIC MK_PROFILE=no -DNO_SHARED \
-		-DNO_CPU_CFLAGS MK_WARNS=no MK_CTF=no \
-		MK_CLANG_EXTRAS=no MK_CLANG_FULL=no \
-		MK_LLDB=no MK_TESTS=no \
+		BWPHASE=${.TARGET} \
+		-DNO_CPU_CFLAGS \
+		-DNO_LINT \
+		-DNO_PIC \
+		-DNO_SHARED \
+		MK_CTF=no \
+		MK_CLANG_EXTRAS=no \
+		MK_CLANG_FORMAT=no \
+		MK_CLANG_FULL=no \
+		MK_HTML=no \
+		MK_MAN=no \
+		MK_PROFILE=no \
+		MK_SSP=no \
+		MK_TESTS=no \
+		MK_WARNS=no \
 		MK_INCLUDES=yes
 
-# Need to override these so OBJTOP uses are proper in the non-meta build.
-BSARGS+= OBJTOP=${BTOOLSDIR}${SRCTOP} OBJROOT='$${OBJTOP}/'
 # We will handle building the toolchain and cross-compiler.
-BSARGS+= MK_CROSS_COMPILER=no MK_CLANG=no MK_GCC=no
+BSARGS+= MK_CROSS_COMPILER=no MK_CLANG=no MK_GCC=no MK_LLDB=no
 
 DISTRIB_ENV=	INSTALL="sh ${SRCTOP}/tools/install.sh" NO_FSCHG=1 MK_TESTS=no
 legacy: .MAKE ${META_DEPS}
@@ -85,7 +95,7 @@ BSTCARGS= \
 
 # finally we build toolchain leveraging the above.
 bootstrap-toolchain:	.MAKE cross-tools
-	${BSTCENV} ${MAKE} -C ${.CURDIR:H:H} ${BSTCARGS} toolchain
+	${BSTCENV} ${MAKE} -C ${SRCTOP} ${BSTCARGS} toolchain
 
 # Ensure CCACHE_DIR is ignored since we are processing .meta files here.
 .include <bsd.compiler.mk>

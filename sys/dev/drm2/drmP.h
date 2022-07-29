@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drmP.h 331017 2018-03-15 19:08:33Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #ifndef _DRM_P_H_
 #define _DRM_P_H_
@@ -52,6 +52,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/drm2/drmP.h 331017 2018-03-15 19:08:33Z ke
 #include <sys/stat.h>
 #include <sys/priv.h>
 #include <sys/proc.h>
+#include <sys/limits.h>
 #include <sys/lock.h>
 #include <sys/fcntl.h>
 #include <sys/uio.h>
@@ -121,7 +122,6 @@ struct drm_device;
 #include <dev/drm2/drm_hashtab.h>
 #include <dev/drm2/drm_mm.h>
 
-#include "opt_compat.h"
 #include "opt_drm.h"
 #include "opt_syscons.h"
 #ifdef DRM_DEBUG

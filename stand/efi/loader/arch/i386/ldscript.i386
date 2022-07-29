@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/loader/arch/i386/ldscript.i386 329011 2018-02-08 02:50:47Z kevans $ */
+/* $FreeBSD$ */
 OUTPUT_FORMAT("elf32-i386-freebsd", "elf32-i386-freebsd", "elf32-i386-freebsd")
 OUTPUT_ARCH(i386)
 ENTRY(_start)

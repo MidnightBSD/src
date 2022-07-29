@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,7 +35,7 @@ static char sccsid[] = "@(#)fio.c	8.2 (Berkeley) 4/20/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/mail/fio.c 336953 2018-07-31 00:37:25Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include "rcv.h"
 #include <sys/file.h>
@@ -235,7 +237,7 @@ makemessage(FILE *f, int omsgCount)
 	size -= (omsgCount + 1) * sizeof(struct message);
 	(void)fflush(f);
 	(void)lseek(fileno(f), (off_t)sizeof(*message), 0);
-	if (read(fileno(f), (char *)&message[omsgCount], size) != size)
+	if (read(fileno(f), (void *)&message[omsgCount], size) != size)
 		errx(1, "Message temporary file corrupted");
 	message[msgCount].m_size = 0;
 	message[msgCount].m_lines = 0;

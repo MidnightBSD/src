@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)compare.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/fmtree/compare.c 312072 2017-01-13 13:37:09Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>

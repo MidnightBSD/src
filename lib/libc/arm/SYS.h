@@ -1,6 +1,8 @@
 /*	$NetBSD: SYS.h,v 1.8 2003/08/07 16:42:02 agc Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
  *
@@ -32,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)SYS.h	5.5 (Berkeley) 5/7/91
- * $FreeBSD: stable/11/lib/libc/arm/SYS.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #include <machine/asm.h>

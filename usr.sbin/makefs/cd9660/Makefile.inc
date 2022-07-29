@@ -1,7 +1,7 @@
-#	$FreeBSD: stable/11/usr.sbin/makefs/cd9660/Makefile.inc 330976 2018-03-15 09:04:23Z eadler $
+#	$FreeBSD$
 #
 
-.PATH:	${SRCDIR}/cd9660 ${SRCTOP}/sys/fs/cd9660/
+.PATH:	${SRCDIR}/cd9660
 
 CFLAGS+=-I${SRCTOP}/sys/fs/cd9660/
 

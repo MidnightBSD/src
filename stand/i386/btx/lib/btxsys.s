@@ -13,7 +13,7 @@
 # purpose.
 #
 
-# $FreeBSD: stable/11/stand/i386/btx/lib/btxsys.s 50477 1999-08-28 01:08:13Z peter $
+# $FreeBSD$
 
 #
 # BTX system calls.

@@ -5,7 +5,7 @@
 .\" This file contains changes from the Open Software Foundation.
 .\"
 .\"     from: @(#)newsyslog.8
-.\" $FreeBSD: stable/11/usr.sbin/newsyslog/newsyslog.conf.5 328587 2018-01-30 04:50:23Z eadler $
+.\" $FreeBSD$
 .\"
 .\" Copyright 1988, 1989 by the Massachusetts Institute of Technology
 .\"
@@ -21,7 +21,7 @@
 .\" the suitability of this software for any purpose.  It is
 .\" provided "as is" without express or implied warranty.
 .\"
-.Dd January 15, 2018
+.Dd February 26, 2021
 .Dt NEWSYSLOG.CONF 5
 .Os
 .Sh NAME
@@ -96,6 +96,11 @@ or
 .Pa /etc/group .
 .It Ar mode
 Specify the file mode of the log file and archives.
+Valid mode bits are
+.Dv 0666 .
+(That is, read and write permissions for the rotated log may be specified for
+the owner, group, and others.)
+All other mode bits are ignored.
 .It Ar count
 Specify the maximum number of archive files which may exist.
 This does not consider the current log file.
@@ -281,6 +286,18 @@ this log file.
 This option would affect how the
 .Xr dump 8
 command treats the log file when making a file system backup.
+.It Cm E
+indicates that the log file should not be rotated when its
+size is zero.
+The
+.Cm E
+flag is mostly useful in conjunction with
+.Cm B
+flag to prevent
+.Xr newsyslog 8
+from inserting an informational 
+.Tn ASCII
+message into the new file.
 .It Cm G
 indicates that the specified
 .Ar logfile_name
@@ -326,6 +343,12 @@ indicates that
 should attempt to save disk space by compressing the rotated
 log file using
 .Xr xz 1 .
+.It Cm Y
+indicates that
+.Xr newsyslog 8
+should attempt to save disk space by compressing the rotated
+log file using
+.Xr zstd 1 .
 .It Cm Z
 indicates that
 .Xr newsyslog 8

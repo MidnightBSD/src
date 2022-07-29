@@ -3,7 +3,7 @@
 #
 # This includes all the configurable parts of the kernel.
 #
-# $FreeBSD: stable/11/sys/mips/conf/MT7620A_FDT 345344 2019-03-20 18:49:45Z kib $
+# $FreeBSD$
 #
 
 #NO_UNIVERSE
@@ -73,5 +73,5 @@ device 		bpf
 device 		if_bridge
 
 # Extres
-device 		ext_resources
+options		EXT_RESOURCES
 device 		clk

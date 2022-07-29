@@ -1,8 +1,10 @@
 /*	$NetBSD: hesiod.h,v 1.3 1999/01/24 23:53:18 lukem Exp $	*/
-/*	$FreeBSD: stable/11/include/hesiod.h 331722 2018-03-29 02:50:57Z eadler $ */
+/*	$FreeBSD$ */
 
 
 /*-
+ * SPDX-License-Identifier: (BSD-2-Clause-NetBSD AND ISC)
+ *
  * Copyright (c) 1997, 1998, 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
  *

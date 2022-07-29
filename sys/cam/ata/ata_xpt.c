@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cam/ata/ata_xpt.c 351754 2019-09-03 16:24:44Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -188,11 +190,16 @@ static void	 ata_dev_async(u_int32_t async_code,
 				void *async_arg);
 static void	 ata_action(union ccb *start_ccb);
 static void	 ata_announce_periph(struct cam_periph *periph);
+static void	 ata_announce_periph_sbuf(struct cam_periph *periph, struct sbuf *sb);
 static void	 ata_proto_announce(struct cam_ed *device);
+static void	 ata_proto_announce_sbuf(struct cam_ed *device, struct sbuf *sb);
 static void	 ata_proto_denounce(struct cam_ed *device);
+static void	 ata_proto_denounce_sbuf(struct cam_ed *device, struct sbuf *sb);
 static void	 ata_proto_debug_out(union ccb *ccb);
 static void	 semb_proto_announce(struct cam_ed *device);
+static void	 semb_proto_announce_sbuf(struct cam_ed *device, struct sbuf *sb);
 static void	 semb_proto_denounce(struct cam_ed *device);
+static void	 semb_proto_denounce_sbuf(struct cam_ed *device, struct sbuf *sb);
 
 static int ata_dma = 1;
 static int atapi_dma = 1;
@@ -205,6 +212,7 @@ static struct xpt_xport_ops ata_xport_ops = {
 	.action = ata_action,
 	.async = ata_dev_async,
 	.announce = ata_announce_periph,
+	.announce_sbuf = ata_announce_periph_sbuf,
 };
 #define ATA_XPT_XPORT(x, X)			\
 static struct xpt_xport ata_xport_ ## x = {	\
@@ -221,7 +229,9 @@ ATA_XPT_XPORT(sata, SATA);
 
 static struct xpt_proto_ops ata_proto_ops_ata = {
 	.announce = ata_proto_announce,
+	.announce_sbuf = ata_proto_announce_sbuf,
 	.denounce = ata_proto_denounce,
+	.denounce_sbuf = ata_proto_denounce_sbuf,
 	.debug_out = ata_proto_debug_out,
 };
 static struct xpt_proto ata_proto_ata = {
@@ -232,7 +242,9 @@ static struct xpt_proto ata_proto_ata = {
 
 static struct xpt_proto_ops ata_proto_ops_satapm = {
 	.announce = ata_proto_announce,
+	.announce_sbuf = ata_proto_announce_sbuf,
 	.denounce = ata_proto_denounce,
+	.denounce_sbuf = ata_proto_denounce_sbuf,
 	.debug_out = ata_proto_debug_out,
 };
 static struct xpt_proto ata_proto_satapm = {
@@ -243,7 +255,9 @@ static struct xpt_proto ata_proto_satapm = {
 
 static struct xpt_proto_ops ata_proto_ops_semb = {
 	.announce = semb_proto_announce,
+	.announce_sbuf = semb_proto_announce_sbuf,
 	.denounce = semb_proto_denounce,
+	.denounce_sbuf = semb_proto_denounce_sbuf,
 	.debug_out = ata_proto_debug_out,
 };
 static struct xpt_proto ata_proto_semb = {
@@ -265,7 +279,6 @@ static cam_status
 proberegister(struct cam_periph *periph, void *arg)
 {
 	union ccb *request_ccb;	/* CCB representing the probe request */
-	cam_status status;
 	probe_softc *softc;
 
 	request_ccb = (union ccb *)arg;
@@ -289,10 +302,9 @@ proberegister(struct cam_periph *periph, void *arg)
 	periph->softc = softc;
 	softc->periph = periph;
 	softc->action = PROBE_INVALID;
-	status = cam_periph_acquire(periph);
-	if (status != CAM_REQ_CMP) {
-		return (status);
-	}
+	if (cam_periph_acquire(periph) != 0)
+		return (CAM_REQ_CMP_ERR);
+
 	CAM_DEBUG(periph->path, CAM_DEBUG_PROBE, ("Probe started\n"));
 	ata_device_transport(periph->path);
 	probeschedule(periph);
@@ -753,8 +765,8 @@ probedone(struct cam_periph *periph, union ccb *done_ccb)
 
 	if ((done_ccb->ccb_h.status & CAM_STATUS_MASK) != CAM_REQ_CMP) {
 		if (cam_periph_error(done_ccb,
-		    0, softc->restart ? (SF_NO_RECOVERY | SF_NO_RETRY) : 0,
-		    NULL) == ERESTART) {
+			0, softc->restart ? (SF_NO_RECOVERY | SF_NO_RETRY) : 0
+		    ) == ERESTART) {
 out:
 			/* Drop freeze taken due to CAM_DEV_QFREEZE flag set. */
 			cam_release_devq(path, 0, 0, 0, FALSE);
@@ -886,31 +898,13 @@ noerror:
 	case PROBE_IDENTIFY:
 	{
 		struct ccb_pathinq cpi;
-		int16_t *ptr;
 		int veto = 0;
 
 		/*
 		 * Convert to host byte order, and fix the strings.
 		 */
 		ident_buf = &softc->ident_data;
-		for (ptr = (int16_t *)ident_buf;
-		     ptr < (int16_t *)ident_buf + sizeof(struct ata_params)/2; ptr++) {
-			*ptr = le16toh(*ptr);
-		}
-		if (strncmp(ident_buf->model, "FX", 2) &&
-		    strncmp(ident_buf->model, "NEC", 3) &&
-		    strncmp(ident_buf->model, "Pioneer", 7) &&
-		    strncmp(ident_buf->model, "SHARP", 5)) {
-			ata_bswap(ident_buf->model, sizeof(ident_buf->model));
-			ata_bswap(ident_buf->revision, sizeof(ident_buf->revision));
-			ata_bswap(ident_buf->serial, sizeof(ident_buf->serial));
-		}
-		ata_btrim(ident_buf->model, sizeof(ident_buf->model));
-		ata_bpack(ident_buf->model, ident_buf->model, sizeof(ident_buf->model));
-		ata_btrim(ident_buf->revision, sizeof(ident_buf->revision));
-		ata_bpack(ident_buf->revision, ident_buf->revision, sizeof(ident_buf->revision));
-		ata_btrim(ident_buf->serial, sizeof(ident_buf->serial));
-		ata_bpack(ident_buf->serial, ident_buf->serial, sizeof(ident_buf->serial));
+		ata_param_fixup(ident_buf);
 
 		/*
 		 * Allow others to veto this ATA disk attachment.  This
@@ -1763,9 +1757,11 @@ ata_dev_advinfo(union ccb *start_ccb)
 		break;
 	case CDAI_TYPE_PHYS_PATH:
 		if (cdai->flags & CDAI_FLAG_STORE) {
-			if (device->physpath != NULL)
+			if (device->physpath != NULL) {
 				free(device->physpath, M_CAMXPT);
-			device->physpath_len = cdai->bufsiz;
+				device->physpath = NULL;
+				device->physpath_len = 0;
+			}
 			/* Clear existing buffer if zero length */
 			if (cdai->bufsiz == 0)
 				break;
@@ -1774,6 +1770,7 @@ ata_dev_advinfo(union ccb *start_ccb)
 				start_ccb->ccb_h.status = CAM_REQ_ABORTED;
 				return;
 			}
+			device->physpath_len = cdai->bufsiz;
 			memcpy(device->physpath, cdai->buf, cdai->bufsiz);
 		} else {
 			cdai->provsiz = device->physpath_len;
@@ -2093,40 +2090,49 @@ ata_dev_async(u_int32_t async_code, struct cam_eb *bus, struct cam_et *target,
 }
 
 static void
-ata_announce_periph(struct cam_periph *periph)
+_ata_announce_periph(struct cam_periph *periph, struct ccb_trans_settings *cts, u_int *speed)
 {
 	struct	ccb_pathinq cpi;
-	struct	ccb_trans_settings cts;
 	struct	cam_path *path = periph->path;
-	u_int	speed;
-	u_int	mb;
 
 	cam_periph_assert(periph, MA_OWNED);
 
-	xpt_setup_ccb(&cts.ccb_h, path, CAM_PRIORITY_NORMAL);
-	cts.ccb_h.func_code = XPT_GET_TRAN_SETTINGS;
-	cts.type = CTS_TYPE_CURRENT_SETTINGS;
-	xpt_action((union ccb*)&cts);
-	if ((cts.ccb_h.status & CAM_STATUS_MASK) != CAM_REQ_CMP)
+	xpt_setup_ccb(&cts->ccb_h, path, CAM_PRIORITY_NORMAL);
+	cts->ccb_h.func_code = XPT_GET_TRAN_SETTINGS;
+	cts->type = CTS_TYPE_CURRENT_SETTINGS;
+	xpt_action((union ccb*)cts);
+	if ((cts->ccb_h.status & CAM_STATUS_MASK) != CAM_REQ_CMP)
 		return;
 	/* Ask the SIM for its base transfer speed */
 	xpt_path_inq(&cpi, path);
 	/* Report connection speed */
-	speed = cpi.base_transfer_speed;
-	if (cts.ccb_h.status == CAM_REQ_CMP && cts.transport == XPORT_ATA) {
+	*speed = cpi.base_transfer_speed;
+	if (cts->transport == XPORT_ATA) {
 		struct	ccb_trans_settings_pata *pata =
-		    &cts.xport_specific.ata;
+		    &cts->xport_specific.ata;
 
 		if (pata->valid & CTS_ATA_VALID_MODE)
-			speed = ata_mode2speed(pata->mode);
+			*speed = ata_mode2speed(pata->mode);
 	}
-	if (cts.ccb_h.status == CAM_REQ_CMP && cts.transport == XPORT_SATA) {
+	if (cts->transport == XPORT_SATA) {
 		struct	ccb_trans_settings_sata *sata =
-		    &cts.xport_specific.sata;
+		    &cts->xport_specific.sata;
 
 		if (sata->valid & CTS_SATA_VALID_REVISION)
-			speed = ata_revision2speed(sata->revision);
+			*speed = ata_revision2speed(sata->revision);
 	}
+}
+
+static void
+ata_announce_periph(struct cam_periph *periph)
+{
+	struct ccb_trans_settings cts;
+	u_int speed, mb;
+
+	_ata_announce_periph(periph, &cts, &speed);
+	if ((cts.ccb_h.status & CAM_STATUS_MASK) != CAM_REQ_CMP)
+		return;
+
 	mb = speed / 1000;
 	if (mb > 0)
 		printf("%s%d: %d.%03dMB/s transfers",
@@ -2136,7 +2142,7 @@ ata_announce_periph(struct cam_periph *periph)
 		printf("%s%d: %dKB/s transfers", periph->periph_name,
 		       periph->unit_number, speed);
 	/* Report additional information about connection */
-	if (cts.ccb_h.status == CAM_REQ_CMP && cts.transport == XPORT_ATA) {
+	if (cts.transport == XPORT_ATA) {
 		struct ccb_trans_settings_pata *pata =
 		    &cts.xport_specific.ata;
 
@@ -2149,7 +2155,7 @@ ata_announce_periph(struct cam_periph *periph)
 			printf("PIO %dbytes", pata->bytecount);
 		printf(")");
 	}
-	if (cts.ccb_h.status == CAM_REQ_CMP && cts.transport == XPORT_SATA) {
+	if (cts.transport == XPORT_SATA) {
 		struct ccb_trans_settings_sata *sata =
 		    &cts.xport_specific.sata;
 
@@ -2170,6 +2176,64 @@ ata_announce_periph(struct cam_periph *periph)
 }
 
 static void
+ata_announce_periph_sbuf(struct cam_periph *periph, struct sbuf *sb)
+{
+	struct ccb_trans_settings cts;
+	u_int speed, mb;
+
+	_ata_announce_periph(periph, &cts, &speed);
+	if ((cts.ccb_h.status & CAM_STATUS_MASK) != CAM_REQ_CMP)
+		return;
+
+	mb = speed / 1000;
+	if (mb > 0)
+		sbuf_printf(sb, "%s%d: %d.%03dMB/s transfers",
+		       periph->periph_name, periph->unit_number,
+		       mb, speed % 1000);
+	else
+		sbuf_printf(sb, "%s%d: %dKB/s transfers", periph->periph_name,
+		       periph->unit_number, speed);
+	/* Report additional information about connection */
+	if (cts.transport == XPORT_ATA) {
+		struct ccb_trans_settings_pata *pata =
+		    &cts.xport_specific.ata;
+
+		sbuf_printf(sb, " (");
+		if (pata->valid & CTS_ATA_VALID_MODE)
+			sbuf_printf(sb, "%s, ", ata_mode2string(pata->mode));
+		if ((pata->valid & CTS_ATA_VALID_ATAPI) && pata->atapi != 0)
+			sbuf_printf(sb, "ATAPI %dbytes, ", pata->atapi);
+		if (pata->valid & CTS_ATA_VALID_BYTECOUNT)
+			sbuf_printf(sb, "PIO %dbytes", pata->bytecount);
+		sbuf_printf(sb, ")");
+	}
+	if (cts.transport == XPORT_SATA) {
+		struct ccb_trans_settings_sata *sata =
+		    &cts.xport_specific.sata;
+
+		sbuf_printf(sb, " (");
+		if (sata->valid & CTS_SATA_VALID_REVISION)
+			sbuf_printf(sb, "SATA %d.x, ", sata->revision);
+		else
+			sbuf_printf(sb, "SATA, ");
+		if (sata->valid & CTS_SATA_VALID_MODE)
+			sbuf_printf(sb, "%s, ", ata_mode2string(sata->mode));
+		if ((sata->valid & CTS_ATA_VALID_ATAPI) && sata->atapi != 0)
+			sbuf_printf(sb, "ATAPI %dbytes, ", sata->atapi);
+		if (sata->valid & CTS_SATA_VALID_BYTECOUNT)
+			sbuf_printf(sb, "PIO %dbytes", sata->bytecount);
+		sbuf_printf(sb, ")");
+	}
+	sbuf_printf(sb, "\n");
+}
+
+static void
+ata_proto_announce_sbuf(struct cam_ed *device, struct sbuf *sb)
+{
+	ata_print_ident_sbuf(&device->ident_data, sb);
+}
+
+static void
 ata_proto_announce(struct cam_ed *device)
 {
 	ata_print_ident(&device->ident_data);
@@ -2182,6 +2246,18 @@ ata_proto_denounce(struct cam_ed *device)
 }
 
 static void
+ata_proto_denounce_sbuf(struct cam_ed *device, struct sbuf *sb)
+{
+	ata_print_ident_short_sbuf(&device->ident_data, sb);
+}
+
+static void
+semb_proto_announce_sbuf(struct cam_ed *device, struct sbuf *sb)
+{
+	semb_print_ident_sbuf((struct sep_identify_data *)&device->ident_data, sb);
+}
+
+static void
 semb_proto_announce(struct cam_ed *device)
 {
 	semb_print_ident((struct sep_identify_data *)&device->ident_data);
@@ -2191,6 +2267,12 @@ static void
 semb_proto_denounce(struct cam_ed *device)
 {
 	semb_print_ident_short((struct sep_identify_data *)&device->ident_data);
+}
+
+static void
+semb_proto_denounce_sbuf(struct cam_ed *device, struct sbuf *sb)
+{
+	semb_print_ident_short_sbuf((struct sep_identify_data *)&device->ident_data, sb);
 }
 
 static void

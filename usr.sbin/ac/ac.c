@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/ac/ac.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/queue.h>
 #include <sys/time.h>
@@ -68,7 +68,7 @@ struct user_entry {
 };
 
 /*
- * this is for chosing whether to ignore a login
+ * this is for choosing whether to ignore a login
  */
 struct tty_entry {
 	SLIST_ENTRY(tty_entry) next;

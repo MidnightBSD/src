@@ -28,7 +28,7 @@
  * These notices must be retained in any copies of any part of this software.
  *
  * $KAME: altq_cbq.h,v 1.12 2003/10/03 05:05:15 kjc Exp $
- * $FreeBSD: stable/11/sys/net/altq/altq_cbq.h 287009 2015-08-21 22:02:22Z loos $
+ * $FreeBSD$
  */
 
 #ifndef _ALTQ_ALTQ_CBQ_H_
@@ -46,7 +46,7 @@ extern "C" {
 
 #define	NULL_CLASS_HANDLE	0
 
-/* class flags should be same as class flags in rm_class.h */
+/* class flags must be same as class flags in altq_rmclass.h */
 #define	CBQCLF_RED		0x0001	/* use RED */
 #define	CBQCLF_ECN		0x0002  /* use RED/ECN */
 #define	CBQCLF_RIO		0x0004  /* use RIO */
@@ -54,6 +54,15 @@ extern "C" {
 #define	CBQCLF_CLEARDSCP	0x0010  /* clear diffserv codepoint */
 #define	CBQCLF_BORROW		0x0020  /* borrow from parent */
 #define	CBQCLF_CODEL		0x0040	/* use CoDel */
+
+#ifdef _KERNEL
+CTASSERT(CBQCLF_RED == RMCF_RED);
+CTASSERT(CBQCLF_ECN == RMCF_ECN);
+CTASSERT(CBQCLF_RIO == RMCF_RIO);
+CTASSERT(CBQCLF_FLOWVALVE == RMCF_FLOWVALVE);
+CTASSERT(CBQCLF_CLEARDSCP == RMCF_CLEARDSCP);
+CTASSERT(CBQCLF_CODEL == RMCF_CODEL);
+#endif
 
 /* class flags only for root class */
 #define	CBQCLF_WRR		0x0100	/* weighted-round robin */
@@ -98,6 +107,12 @@ typedef struct _cbq_class_stats_ {
 	struct redstats	red[3];
 	struct codel_stats codel;
 } class_stats_t;
+
+/*
+ * CBQ_STATS_VERSION is defined in altq.h to work around issues stemming
+ * from mixing of public-API and internal bits in each scheduler-specific
+ * header.
+ */
 
 #ifdef ALTQ3_COMPAT
 /*
@@ -190,7 +205,7 @@ struct cbq_getstats {
 #define	CBQ_TIMEOUT		10
 #define	CBQ_LS_TIMEOUT		(20 * hz / 1000)
 
-#define	CBQ_MAX_CLASSES	256
+#define	CBQ_MAX_CLASSES	2048
 
 #ifdef ALTQ3_COMPAT
 #define	CBQ_MAX_FILTERS 256

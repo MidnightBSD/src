@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/units/Makefile 298257 2016-04-19 07:28:39Z delphij $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -8,8 +8,7 @@ FILESDIR=	${SHAREDIR}/misc
 
 LIBADD=	edit
 
-.if ${MK_TESTS} != "no"
-SUBDIR+= tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

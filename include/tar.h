@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -30,7 +32,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)tar.h	8.2 (Berkeley) 1/4/94
- * $MidnightBSD: src/include/tar.h,v 1.2 2012/03/09 03:51:10 laffer1 Exp $
+ *
+ * $FreeBSD$
  */
 
 #ifndef _TAR_H

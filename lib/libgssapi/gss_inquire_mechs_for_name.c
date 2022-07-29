@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Doug Rabson
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/11/lib/libgssapi/gss_inquire_mechs_for_name.c 331722 2018-03-29 02:50:57Z eadler $
+ *	$FreeBSD$
  */
 
 #include <gssapi/gssapi.h>
@@ -49,7 +51,7 @@ gss_inquire_mechs_for_name(OM_uint32 *minor_status,
 	major_status = gss_create_empty_oid_set(minor_status, mech_types);
 	if (major_status)
 		return (major_status);
-    
+
 	/*
 	 * We go through all the loaded mechanisms and see if this
 	 * name's type is supported by the mechanism. If it is, add

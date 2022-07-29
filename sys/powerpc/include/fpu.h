@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (C) 1996 Wolfgang Solfrank.
  * Copyright (C) 1996 TooLs GmbH.
  * All rights reserved.
@@ -29,7 +31,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: fpu.h,v 1.2 1999/12/07 15:14:56 danw Exp $
- * $FreeBSD: stable/11/sys/powerpc/include/fpu.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_FPU_H_
@@ -72,6 +74,7 @@
 
 void    enable_fpu(struct thread *);
 void    save_fpu(struct thread *);
+void    save_fpu_nodrop(struct thread *);
 
 #endif /* _KERNEL */
 

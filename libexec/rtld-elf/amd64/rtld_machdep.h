@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999, 2000 John D. Polstra.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/libexec/rtld-elf/amd64/rtld_machdep.h 316135 2017-03-29 11:03:08Z kib $
+ * $FreeBSD$
  */
 
 #ifndef RTLD_MACHDEP_H
@@ -59,14 +61,6 @@ extern uint32_t cpu_stdext_feature2;
 	(((Elf_Addr (*)(uint32_t, uint32_t, uint32_t, uint32_t))ptr)( \
 	    cpu_feature, cpu_feature2, cpu_stdext_feature, cpu_stdext_feature2))
 
-#define round(size, align) \
-	(((size) + (align) - 1) & ~((align) - 1))
-#define calculate_first_tls_offset(size, align) \
-	round(size, align)
-#define calculate_tls_offset(prev_offset, prev_size, size, align) \
-	round((prev_offset) + (size), align)
-#define calculate_tls_end(off, size) 	(off)
-
 typedef struct {
     unsigned long ti_module;
     unsigned long ti_offset;
@@ -79,4 +73,8 @@ void *__tls_get_addr(tls_index *ti) __exported;
 
 #define md_abi_variant_hook(x)
 
+size_t calculate_first_tls_offset(size_t size, size_t align, size_t offset);
+size_t calculate_tls_offset(size_t prev_offset, size_t prev_size, size_t size,
+    size_t align, size_t offset);
+size_t calculate_tls_end(size_t off, size_t size);
 #endif

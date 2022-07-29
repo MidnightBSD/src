@@ -1,9 +1,10 @@
-# $FreeBSD: stable/11/tests/sys/fifo/Makefile 299094 2016-05-04 23:20:53Z ngie $
+# $FreeBSD$
 
 TESTSDIR=	${TESTSBASE}/sys/fifo
 
 PLAIN_TESTS_C+=	fifo_create
 PLAIN_TESTS_C+=	fifo_io
+ATF_TESTS_C+=	fifo_kqueue
 PLAIN_TESTS_C+=	fifo_misc
 PLAIN_TESTS_C+=	fifo_open
 

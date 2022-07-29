@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -27,8 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)a.out.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/include/a.out.h,v 1.4 2004/06/22 17:05:36 obrien Exp $
- * $MidnightBSD: src/include/a.out.h,v 1.2 2012/03/09 03:45:16 laffer1 Exp $
+ * $FreeBSD$
  */
 
 #ifndef	_AOUT_H_

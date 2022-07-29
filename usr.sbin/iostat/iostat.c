@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1997, 1998, 2000, 2001  Kenneth D. Merry
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/iostat/iostat.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 /*
  * Parts of this program are derived from the original FreeBSD iostat
@@ -800,11 +802,15 @@ devstats(int perf_select, long double etime, int havelast)
 	char *devicename;
 
 	if (xflag > 0) {
+		if (Cflag > 0) {
+			printf("      cpu\n");
+			printf(" us ni sy in id\n");
+			cpustats();
+			printf("\n");
+		}
 		printf("                        extended device statistics  ");
 		if (Tflag > 0)
 			printf("      tty ");
-		if (Cflag > 0)
-			printf("           cpu ");
 		printf("\n");
 		if (Iflag == 0) {
 			printf("device       r/s     w/s     kr/s     kw/s "
@@ -815,8 +821,6 @@ devstats(int perf_select, long double etime, int havelast)
 		}
 		if (Tflag > 0)
 			printf("tin  tout ");
-		if (Cflag > 0)
-			printf("us ni sy in id ");
 		printf("\n");
 	}
 
@@ -884,17 +888,17 @@ devstats(int perf_select, long double etime, int havelast)
 			    mb_per_second_write > ((long double).0005)/1024 ||
 			    busy_pct > 0.5) {
 				if (Iflag == 0)
-					printf("%-8.8s %7d %7d %8.1Lf "
-					    "%8.1Lf %5d %5d %5d %5d "
-					    "%4" PRIu64 " %3.0Lf ",
+					printf("%-8.8s %7.0Lf %7.0Lf %8.1Lf "
+					    "%8.1Lf %5.0Lf %5.0Lf %5.0Lf %5.0Lf"
+					    " %4" PRIu64 " %3.0Lf ",
 					    devicename,
-					    (int)transfers_per_second_read,
-					    (int)transfers_per_second_write,
+					    transfers_per_second_read,
+					    transfers_per_second_write,
 					    mb_per_second_read * 1024,
 					    mb_per_second_write * 1024,
-					    (int)ms_per_read, (int)ms_per_write,
-					    (int)ms_per_other,
-					    (int)ms_per_transaction,
+					    ms_per_read, ms_per_write,
+					    ms_per_other,
+					    ms_per_transaction,
 					    queue_len, busy_pct);
 				else
 					printf("%-8.8s %11.1Lf %11.1Lf "
@@ -920,8 +924,6 @@ devstats(int perf_select, long double etime, int havelast)
 						printf("%4.0Lf%5.0Lf",
 						    cur.tk_nin / etime,
 						    cur.tk_nout / etime);
-					if (Cflag > 0)
-						cpustats();
 				}
 				printf("\n");
 			}

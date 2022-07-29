@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -28,13 +30,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/freebsd32/freebsd32_capability.c 306586 2016-10-02 16:13:18Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_capsicum.h"
 
 #include <sys/param.h>
 #include <sys/capsicum.h>
 #include <sys/filedesc.h>
+#include <sys/limits.h>
 #include <sys/malloc.h>
 #include <sys/proc.h>
 #include <sys/syscallsubr.h>

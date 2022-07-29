@@ -1,6 +1,8 @@
 /*	$NetBSD: nsphyter.c,v 1.28 2008/01/20 07:58:19 msaitoh Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD AND BSD-2-Clause
+ *
  * Copyright (c) 1998, 1999, 2000, 2001 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -55,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mii/nsphyter.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for the National Semiconductor's DP83843, DP83847 and DP83849

@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/ofed/drivers/infiniband/core/ib_ucma.c 337096 2018-08-02 08:33:51Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <linux/completion.h>
 #include <linux/file.h>
@@ -1782,5 +1782,5 @@ static void __exit ucma_cleanup(void)
 	idr_destroy(&multicast_idr);
 }
 
-module_init(ucma_init);
-module_exit(ucma_cleanup);
+module_init_order(ucma_init, SI_ORDER_FIFTH);
+module_exit_order(ucma_cleanup, SI_ORDER_FIFTH);

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/acpi/iasl/Makefile 327557 2018-01-04 19:43:42Z jkim $
+# $FreeBSD$
 
 PROG=	iasl
 
@@ -6,7 +6,8 @@ PROG=	iasl
 SRCS=	acfileio.c adfile.c adisasm.c adwalk.c ahids.c		\
 	ahpredef.c ahtable.c ahuuids.c cmfsize.c dmextern.c	\
 	dmrestag.c dmswitch.c dmtable.c dmtables.c dmtbdump.c	\
-	dmtbinfo.c getopt.c
+	dmtbdump1.c dmtbdump2.c dmtbdump3.c dmtbinfo.c		\
+	dmtbinfo1.c dmtbinfo2.c dmtbinfo3.c getopt.c
 
 # compiler
 SRCS+=	aslallocate.c aslanalyze.c aslascii.c aslbtypes.c	\
@@ -25,9 +26,10 @@ SRCS+=	aslallocate.c aslanalyze.c aslascii.c aslbtypes.c	\
 	aslrestype2w.c aslstartup.c aslstubs.c asltransform.c	\
 	asltree.c aslutils.c asluuid.c aslwalks.c aslxref.c	\
 	aslxrefout.c cvcompiler.c cvdisasm.c cvparser.c		\
-	dtcompile.c dtexpress.c dtfield.c dtio.c dtparser.y.h	\
-	dtparserlex.c dtparserparse.c dtsubtable.c dttable.c	\
-	dttable1.c dttable2.c dttemplate.c dtutils.c		\
+	dtcompile.c dtcompilerparser.y.h dtcompilerparserlex.c	\
+	dtcompilerparserparse.c dtexpress.c dtfield.c dtio.c	\
+	dtparser.y.h dtparserlex.c dtparserparse.c dtsubtable.c	\
+	dttable.c dttable1.c dttable2.c dttemplate.c dtutils.c	\
 	prexpress.c prmacros.c prparser.y.h prparserlex.c	\
 	prparserparse.c prscan.c prutils.c
 
@@ -80,13 +82,16 @@ MAN=	iasl.8
 
 CFLAGS+= -DACPI_ASL_COMPILER -I.
 LFLAGS= -i -s
+DLFLAGS=-i
 YFLAGS= -d
 
 CLEANFILES= aslcompiler.y aslcompiler.y.h aslcompilerlex.c	\
-	aslcompilerparse.c aslcompilerparse.h dtparser.y.h	\
-	dtparserlex.c dtparserparse.c dtparserparse.h		\
-	prparser.y.h prparserlex.c prparserparse.c		\
-	prparserparse.h
+	aslcompilerparse.c aslcompilerparse.h			\
+	dtcompilerparser.y.h dtcompilerparserlex.c		\
+	dtcompilerparserparse.c	dtcompilerparserparse.h		\
+	dtparser.y.h dtparserlex.c dtparserparse.c		\
+	dtparserparse.h prparser.y.h prparserlex.c		\
+	prparserparse.c prparserparse.h
 
 PARSER=	aslcstyle.y aslhelpers.y aslkeywords.y aslparser.y	\
 	aslprimaries.y aslresources.y aslrules.y aslsupport.y	\
@@ -108,8 +113,20 @@ aslcompilerparse.c aslcompilerparse.h: aslcompiler.y
 aslcompiler.y.h: aslcompilerparse.h .NOMETA
 	ln -f ${.ALLSRC} ${.TARGET}
 
+dtcompilerparserlex.c: dtcompilerparser.l
+	${LEX} ${DLFLAGS} -PDtCompilerParser -o${.TARGET} ${.ALLSRC}
+
+.ORDER: dtcompilerparserparse.c dtcompilerparserparse.h
+dtcompilerparserparse.h: .NOMETA
+dtcompilerparserparse.c dtcompilerparserparse.h: dtcompilerparser.y
+	${YACC} ${YFLAGS} -pDtCompilerParser -odtcompilerparserparse.c \
+	    ${.ALLSRC}
+
+dtcompilerparser.y.h: dtcompilerparserparse.h .NOMETA
+	ln -f ${.ALLSRC} ${.TARGET}
+
 dtparserlex.c: dtparser.l
-	${LEX} ${LFLAGS} -PDtParser -o${.TARGET} ${.ALLSRC}
+	${LEX} ${DLFLAGS} -PDtParser -o${.TARGET} ${.ALLSRC}
 
 .ORDER: dtparserparse.c dtparserparse.h
 dtparserparse.h: .NOMETA

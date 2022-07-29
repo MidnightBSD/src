@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/dev/extres/clk/clkdev_if.m 297350 2016-03-28 11:51:35Z jmcneill $
+# $FreeBSD$
 #
 
 #include <machine/bus.h>

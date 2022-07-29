@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010-2012 Semihalf
  * Copyright (c) 2008, 2009 Reinoud Zandijk
  * All rights reserved.
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/fs/nandfs/nandfs_vnops.c 346032 2019-04-08 15:52:13Z sjg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -832,9 +834,8 @@ nandfs_setattr(struct vop_setattr_args *ap)
 		 * Privileged non-jail processes may not modify system flags
 		 * if securelevel > 0 and any existing system flags are set.
 		 * Privileged jail processes behave like privileged non-jail
-		 * processes if the security.jail.chflags_allowed sysctl is
-		 * is non-zero; otherwise, they behave like unprivileged
-		 * processes.
+		 * processes if the PR_ALLOW_CHFLAGS permission bit is set;
+		 * otherwise, they behave like unprivileged processes.
 		 */
 
 		flags = inode->i_flags;
@@ -1232,6 +1233,8 @@ nandfs_readdir(struct vop_readdir_args *ap)
 				dirent.d_namlen = name_len;
 				strncpy(dirent.d_name, ndirent->name, name_len);
 				dirent.d_reclen = GENERIC_DIRSIZ(&dirent);
+				/* NOTE: d_off is the offset of the *next* entry. */
+				dirent.d_off = diroffset + ndirent->rec_len;
 				dirent_terminate(&dirent);
 				DPRINTF(READDIR, ("copying `%*.*s`\n", name_len,
 				    name_len, dirent.d_name));
@@ -1353,7 +1356,7 @@ nandfs_link(struct vop_link_args *ap)
 	struct nandfs_inode *inode = &node->nn_inode;
 	int error;
 
-	if (inode->i_links_count >= LINK_MAX)
+	if (inode->i_links_count >= NANDFS_LINK_MAX)
 		return (EMLINK);
 
 	if (inode->i_flags & (IMMUTABLE | APPEND))
@@ -1575,7 +1578,7 @@ abortit:
 	fdnode = VTON(fdvp);
 	fnode = VTON(fvp);
 
-	if (fnode->nn_inode.i_links_count >= LINK_MAX) {
+	if (fnode->nn_inode.i_links_count >= NANDFS_LINK_MAX) {
 		VOP_UNLOCK(fvp, 0);
 		error = EMLINK;
 		goto abortit;
@@ -1838,7 +1841,7 @@ nandfs_mkdir(struct vop_mkdir_args *ap)
 	if (nandfs_fs_full(dir_node->nn_nandfsdev))
 		return (ENOSPC);
 
-	if (dir_inode->i_links_count >= LINK_MAX)
+	if (dir_inode->i_links_count >= NANDFS_LINK_MAX)
 		return (EMLINK);
 
 	error = nandfs_node_create(nmp, &node, mode);
@@ -2212,7 +2215,7 @@ nandfs_whiteout(struct vop_whiteout_args *ap)
 		/* Create a new directory whiteout */
 #ifdef INVARIANTS
 		if ((cnp->cn_flags & SAVENAME) == 0)
-			panic("ufs_whiteout: missing name");
+			panic("nandfs_whiteout: missing name");
 #endif
 		error = nandfs_add_dirent(dvp, NANDFS_WHT_INO, cnp->cn_nameptr,
 		    cnp->cn_namelen, DT_WHT);
@@ -2238,7 +2241,7 @@ nandfs_pathconf(struct vop_pathconf_args *ap)
 	error = 0;
 	switch (ap->a_name) {
 	case _PC_LINK_MAX:
-		*ap->a_retval = LINK_MAX;
+		*ap->a_retval = NANDFS_LINK_MAX;
 		break;
 	case _PC_NAME_MAX:
 		*ap->a_retval = NANDFS_NAME_LEN;

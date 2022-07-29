@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/acpica/acpi_timer.c 297000 2016-03-18 01:28:41Z jhibbits $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -273,7 +273,6 @@ acpi_timer_resume_handler(struct timecounter *newtc)
 			device_printf(acpi_timer_dev,
 			    "restoring timecounter, %s -> %s\n",
 			    tc->tc_name, newtc->tc_name);
-		(void)newtc->tc_get_timecount(newtc);
 		(void)newtc->tc_get_timecount(newtc);
 		timecounter = newtc;
 	}

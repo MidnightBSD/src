@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/common/load_elf.c 346483 2019-04-21 04:35:49Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -71,7 +71,16 @@ typedef struct elf_file {
 	size_t	firstlen;
 	int		kernel;
 	uint64_t	off;
+#ifdef LOADER_VERIEXEC_VECTX
+	struct vectx	*vctx;
+#endif
 } *elf_file_t;
+
+#ifdef LOADER_VERIEXEC_VECTX
+#define VECTX_HANDLE(ef) (ef)->vctx
+#else
+#define VECTX_HANDLE(ef) (ef)->fd
+#endif
 
 static int __elfN(loadimage)(struct preloaded_file *mp, elf_file_t ef,
     uint64_t loadaddr);
@@ -214,7 +223,20 @@ __elfN(load_elf_header)(char *filename, elf_file_t ef)
 		close(ef->fd);
 		return (ENOMEM);
 	}
-	bytes_read = read(ef->fd, ef->firstpage, PAGE_SIZE);
+#ifdef LOADER_VERIEXEC_VECTX
+	{
+		int verror;
+
+		ef->vctx = vectx_open(ef->fd, filename, 0L, NULL, &verror, __func__);
+		if (verror) {
+			printf("Unverified %s: %s\n", filename, ve_error_get());
+			close(ef->fd);
+			free(ef->vctx);
+			return (EAUTH);
+		}
+	}
+#endif
+	bytes_read = VECTX_READ(VECTX_HANDLE(ef), ef->firstpage, PAGE_SIZE);
 	ef->firstlen = (size_t)bytes_read;
 	if (bytes_read < 0 || ef->firstlen <= sizeof(Elf_Ehdr)) {
 		err = EFTYPE; /* could be EIO, but may be small file */
@@ -245,6 +267,12 @@ __elfN(load_elf_header)(char *filename, elf_file_t ef)
 		goto error;
 	}
 
+#if defined(LOADER_VERIEXEC) && !defined(LOADER_VERIEXEC_VECTX)
+	if (verify_file(ef->fd, filename, bytes_read, VE_MUST, __func__) < 0) {
+		err = EAUTH;
+		goto error;
+	}
+#endif
 	return (0);
 
 error:
@@ -253,6 +281,9 @@ error:
 		ef->firstpage = NULL;
 	}
 	if (ef->fd != -1) {
+#ifdef LOADER_VERIEXEC_VECTX
+		free(ef->vctx);
+#endif
 		close(ef->fd);
 		ef->fd = -1;
 	}
@@ -409,8 +440,20 @@ oerr:
 out:
 	if (ef.firstpage)
 		free(ef.firstpage);
-	if (ef.fd != -1)
+	if (ef.fd != -1) {
+#ifdef LOADER_VERIEXEC_VECTX
+		if (!err && ef.vctx) {
+			int verror;
+
+			verror = vectx_close(ef.vctx, VE_MUST, __func__);
+			if (verror) {
+				err = EAUTH;
+				file_discard(fp);
+			}
+		}
+#endif
 		close(ef.fd);
+	}
 	return (err);
 }
 
@@ -477,7 +520,7 @@ __elfN(loadimage)(struct preloaded_file *fp, elf_file_t ef, uint64_t off)
 			off += 0x01000000;
 			ehdr->e_entry += off;
 #ifdef ELF_VERBOSE
-			printf("Converted entry 0x%08x\n", ehdr->e_entry);
+			printf("Converted entry 0x%jx\n", (uintmax_t)ehdr->e_entry);
 #endif
 		} else
 			off = 0;
@@ -503,8 +546,8 @@ __elfN(loadimage)(struct preloaded_file *fp, elf_file_t ef, uint64_t off)
 		off -= ehdr->e_entry & ~PAGE_MASK;
 		ehdr->e_entry += off;
 #ifdef ELF_VERBOSE
-		printf("ehdr->e_entry 0x%08x, va<->pa off %llx\n",
-		    ehdr->e_entry, off);
+		printf("ehdr->e_entry 0x%jx, va<->pa off %llx\n",
+		    (uintmax_t)ehdr->e_entry, off);
 #endif
 #else
 		off = 0;	/* other archs use direct mapped kernels */
@@ -553,7 +596,8 @@ __elfN(loadimage)(struct preloaded_file *fp, elf_file_t ef, uint64_t off)
 			    phdr[i].p_vaddr + off, fpcopy);
 		}
 		if (phdr[i].p_filesz > fpcopy) {
-			if (kern_pread(ef->fd, phdr[i].p_vaddr + off + fpcopy,
+			if (kern_pread(VECTX_HANDLE(ef),
+			    phdr[i].p_vaddr + off + fpcopy,
 			    phdr[i].p_filesz - fpcopy,
 			    phdr[i].p_offset + fpcopy) != 0) {
 				printf("\nelf" __XSTRING(__ELF_WORD_SIZE)
@@ -597,7 +641,7 @@ __elfN(loadimage)(struct preloaded_file *fp, elf_file_t ef, uint64_t off)
 	chunk = (size_t)ehdr->e_shnum * (size_t)ehdr->e_shentsize;
 	if (chunk == 0 || ehdr->e_shoff == 0)
 		goto nosyms;
-	shdr = alloc_pread(ef->fd, ehdr->e_shoff, chunk);
+	shdr = alloc_pread(VECTX_HANDLE(ef), ehdr->e_shoff, chunk);
 	if (shdr == NULL) {
 		printf("\nelf" __XSTRING(__ELF_WORD_SIZE)
 		    "_loadimage: failed to read section headers");
@@ -616,8 +660,8 @@ __elfN(loadimage)(struct preloaded_file *fp, elf_file_t ef, uint64_t off)
 	 */
 	chunk = shdr[ehdr->e_shstrndx].sh_size;
 	if (chunk) {
-		shstr = alloc_pread(ef->fd, shdr[ehdr->e_shstrndx].sh_offset,
-		    chunk);
+		shstr = alloc_pread(VECTX_HANDLE(ef),
+		    shdr[ehdr->e_shstrndx].sh_offset, chunk);
 		if (shstr) {
 			for (i = 0; i < ehdr->e_shnum; i++) {
 				if (strcmp(shstr + shdr[i].sh_name,
@@ -707,14 +751,14 @@ __elfN(loadimage)(struct preloaded_file *fp, elf_file_t ef, uint64_t off)
 		printf("0x%lx+0x%lx", (long)sizeof(size), (long)size);
 #endif
 
-		if (lseek(ef->fd, (off_t)shdr[i].sh_offset, SEEK_SET) == -1) {
+		if (VECTX_LSEEK(VECTX_HANDLE(ef), (off_t)shdr[i].sh_offset, SEEK_SET) == -1) {
 			printf("\nelf" __XSTRING(__ELF_WORD_SIZE)
 			   "_loadimage: could not seek for symbols - skipped!");
 			lastaddr = ssym;
 			ssym = 0;
 			goto nosyms;
 		}
-		result = archsw.arch_readin(ef->fd, lastaddr, shdr[i].sh_size);
+		result = archsw.arch_readin(VECTX_HANDLE(ef), lastaddr, shdr[i].sh_size);
 		if (result < 0 || (size_t)result != shdr[i].sh_size) {
 			printf("\nelf" __XSTRING(__ELF_WORD_SIZE)
 			    "_loadimage: could not read symbols - skipped! "
@@ -831,7 +875,7 @@ nosyms:
 	p_start = sym.st_value + ef->off;
 	if (__elfN(lookup_symbol)(fp, ef, "__stop_set_modmetadata_set",
 	    &sym) != 0)
-		return ENOENT;
+		return 0;
 	p_end = sym.st_value + ef->off;
 
 	if (__elfN(parse_modmetadata)(fp, ef, p_start, p_end) == 0)
@@ -924,14 +968,14 @@ __elfN(load_modmetadata)(struct preloaded_file *fp, uint64_t dest)
 	}
 
 	size = (size_t)ef.ehdr->e_shnum * (size_t)ef.ehdr->e_shentsize;
-	shdr = alloc_pread(ef.fd, ef.ehdr->e_shoff, size);
+	shdr = alloc_pread(VECTX_HANDLE(&ef), ef.ehdr->e_shoff, size);
 	if (shdr == NULL) {
 		err = ENOMEM;
 		goto out;
 	}
 
 	/* Load shstrtab. */
-	shstrtab = alloc_pread(ef.fd, shdr[ef.ehdr->e_shstrndx].sh_offset,
+	shstrtab = alloc_pread(VECTX_HANDLE(&ef), shdr[ef.ehdr->e_shstrndx].sh_offset,
 	    shdr[ef.ehdr->e_shstrndx].sh_size);
 	if (shstrtab == NULL) {
 		printf("\nelf" __XSTRING(__ELF_WORD_SIZE)
@@ -960,7 +1004,7 @@ __elfN(load_modmetadata)(struct preloaded_file *fp, uint64_t dest)
 	}
 
 	/* Load set_modmetadata_set into memory */
-	err = kern_pread(ef.fd, dest, sh_meta->sh_size, sh_meta->sh_offset);
+	err = kern_pread(VECTX_HANDLE(&ef), dest, sh_meta->sh_size, sh_meta->sh_offset);
 	if (err != 0) {
 		printf("\nelf" __XSTRING(__ELF_WORD_SIZE)
     "load_modmetadata: unable to load set_modmetadata_set: %d\n", err);
@@ -971,7 +1015,7 @@ __elfN(load_modmetadata)(struct preloaded_file *fp, uint64_t dest)
 	dest += sh_meta->sh_size;
 
 	/* Load data sections into memory. */
-	err = kern_pread(ef.fd, dest, sh_data[0]->sh_size,
+	err = kern_pread(VECTX_HANDLE(&ef), dest, sh_data[0]->sh_size,
 	    sh_data[0]->sh_offset);
 	if (err != 0) {
 		printf("\nelf" __XSTRING(__ELF_WORD_SIZE)
@@ -986,7 +1030,7 @@ __elfN(load_modmetadata)(struct preloaded_file *fp, uint64_t dest)
 	ef.off = -(sh_data[0]->sh_addr - dest);
 	dest +=	(sh_data[1]->sh_addr - sh_data[0]->sh_addr);
 
-	err = kern_pread(ef.fd, dest, sh_data[1]->sh_size,
+	err = kern_pread(VECTX_HANDLE(&ef), dest, sh_data[1]->sh_size,
 	    sh_data[1]->sh_offset);
 	if (err != 0) {
 		printf("\nelf" __XSTRING(__ELF_WORD_SIZE)
@@ -1008,8 +1052,20 @@ out:
 		free(shdr);
 	if (ef.firstpage != NULL)
 		free(ef.firstpage);
-	if (ef.fd != -1)
+	if (ef.fd != -1) {
+#ifdef LOADER_VERIEXEC_VECTX
+		if (!err && ef.vctx) {
+			int verror;
+
+			verror = vectx_close(ef.vctx, VE_MUST, __func__);
+			if (verror) {
+				err = EAUTH;
+				file_discard(fp);
+			}
+		}
+#endif
 		close(ef.fd);
+	}
 	return (err);
 }
 

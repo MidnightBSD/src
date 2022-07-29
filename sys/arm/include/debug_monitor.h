@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/include/debug_monitor.h 300969 2016-05-29 17:35:38Z zbb $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_DEBUG_MONITOR_H_

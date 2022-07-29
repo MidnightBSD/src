@@ -1,5 +1,6 @@
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (c) 2016 Alan Somers
-# All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -22,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/tests/sys/geom/class/nop/nop_test.sh 329789 2018-02-22 02:12:47Z asomers $
+# $FreeBSD$
 
 MD_DEVS="md.devs"
 PLAINFILES=plainfiles
@@ -201,7 +202,7 @@ stripesize_head()
 {
 	atf_set "descr" "Test gnop's -p and -P options"
 	atf_set "require.user" "root"
-	atf_set "timeout" 15
+	atf_set "timeout" 120
 }
 stripesize_body()
 {

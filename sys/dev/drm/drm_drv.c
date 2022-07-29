@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/drm/drm_drv.c 283999 2015-06-04 20:36:16Z jhb $");
+__FBSDID("$FreeBSD$");
 
 /** @file drm_drv.c
  * The catch-all file for DRM device support, including module setup/teardown,
@@ -174,7 +174,8 @@ int drm_probe(device_t kdev, drm_pci_id_list_t *idlist)
 			DRM_DEBUG("desc : %s\n", device_get_desc(kdev));
 			device_set_desc(kdev, id_entry->name);
 		}
-		return 0;
+		DRM_OBSOLETE(kdev);
+		return BUS_PROBE_GENERIC;
 	}
 
 	return ENXIO;
@@ -744,7 +745,7 @@ int drm_ioctl(struct cdev *kdev, u_long cmd, caddr_t data, int flags,
 	if (ioctl->func == NULL && nr >= DRM_COMMAND_BASE) {
 		/* The array entries begin at DRM_COMMAND_BASE ioctl nr */
 		nr -= DRM_COMMAND_BASE;
-		if (nr > dev->driver->max_ioctl) {
+		if (nr >= dev->driver->max_ioctl) {
 			DRM_DEBUG("Bad driver ioctl number, 0x%x (of 0x%x)\n",
 			    nr, dev->driver->max_ioctl);
 			return EINVAL;

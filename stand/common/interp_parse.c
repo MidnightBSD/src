@@ -15,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/common/interp_parse.c 329183 2018-02-12 20:51:28Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 #include <string.h>

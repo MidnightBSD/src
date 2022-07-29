@@ -1,6 +1,8 @@
 /*-
  * Core definitions and data structures shareable across OS platforms.
  *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1994-2002 Justin T. Gibbs.
  * Copyright (c) 2000-2002 Adaptec Inc.
  * All rights reserved.
@@ -39,7 +41,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aic79xx.h#107 $
  *
- * $FreeBSD: stable/11/sys/dev/aic7xxx/aic79xx.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _AIC79XX_H_
@@ -694,7 +696,7 @@ struct scb_data {
 /************************ Target Mode Definitions *****************************/
 
 /*
- * Connection desciptor for select-in requests in target mode.
+ * Connection descriptor for select-in requests in target mode.
  */
 struct target_cmd {
 	uint8_t scsiid;		/* Our ID and the initiator's ID */

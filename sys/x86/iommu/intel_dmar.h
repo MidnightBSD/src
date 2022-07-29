@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013-2015 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/x86/iommu/intel_dmar.h 320357 2017-06-26 12:30:39Z kib $
+ * $FreeBSD$
  */
 
 #ifndef __X86_IOMMU_INTEL_DMAR_H
@@ -237,6 +239,15 @@ struct dmar_unit {
 	struct taskqueue *delayed_taskqueue;
 
 	int dma_enabled;
+
+	/*
+	 * Bitmap of buses for which context must ignore slot:func,
+	 * duplicating the page table pointer into all context table
+	 * entries.  This is a client-controlled quirk to support some
+	 * NTBs.
+	 */
+	uint32_t buswide_ctxs[(PCI_BUSMAX + 1) / NBBY / sizeof(uint32_t)];
+
 };
 
 #define	DMAR_LOCK(dmar)		mtx_lock(&(dmar)->lock)
@@ -256,7 +267,7 @@ struct dmar_unit {
 #define	DMAR_BARRIER_RMRR	0
 #define	DMAR_BARRIER_USEQ	1
 
-struct dmar_unit *dmar_find(device_t dev);
+struct dmar_unit *dmar_find(device_t dev, bool verbose);
 struct dmar_unit *dmar_find_hpet(device_t dev, uint16_t *rid);
 struct dmar_unit *dmar_find_ioapic(u_int apic_id, uint16_t *rid);
 
@@ -323,10 +334,16 @@ void domain_flush_iotlb_sync(struct dmar_domain *domain, dmar_gaddr_t base,
 int domain_alloc_pgtbl(struct dmar_domain *domain);
 void domain_free_pgtbl(struct dmar_domain *domain);
 
+int dmar_dev_depth(device_t child);
+void dmar_dev_path(device_t child, int *busno, void *path1, int depth);
+
 struct dmar_ctx *dmar_instantiate_ctx(struct dmar_unit *dmar, device_t dev,
     bool rmrr);
 struct dmar_ctx *dmar_get_ctx_for_dev(struct dmar_unit *dmar, device_t dev,
     uint16_t rid, bool id_mapped, bool rmrr_init);
+struct dmar_ctx *dmar_get_ctx_for_devpath(struct dmar_unit *dmar, uint16_t rid,
+    int dev_domain, int dev_busno, const void *dev_path, int dev_path_len,
+    bool id_mapped, bool rmrr_init);
 int dmar_move_ctx_to_domain(struct dmar_domain *domain, struct dmar_ctx *ctx);
 void dmar_free_ctx_locked(struct dmar_unit *dmar, struct dmar_ctx *ctx);
 void dmar_free_ctx(struct dmar_ctx *ctx);
@@ -358,7 +375,8 @@ int dmar_gas_map_region(struct dmar_domain *domain,
 int dmar_gas_reserve_region(struct dmar_domain *domain, dmar_gaddr_t start,
     dmar_gaddr_t end);
 
-void dmar_dev_parse_rmrr(struct dmar_domain *domain, device_t dev,
+void dmar_dev_parse_rmrr(struct dmar_domain *domain, int dev_domain,
+    int dev_busno, const void *dev_path, int dev_path_len,
     struct dmar_map_entries_tailq *rmrr_entries);
 int dmar_instantiate_rmrr_ctxs(struct dmar_unit *dmar);
 
@@ -368,8 +386,12 @@ void dmar_quirks_pre_use(struct dmar_unit *dmar);
 int dmar_init_irt(struct dmar_unit *unit);
 void dmar_fini_irt(struct dmar_unit *unit);
 
+void dmar_set_buswide_ctx(struct dmar_unit *unit, u_int busno);
+bool dmar_is_buswide_ctx(struct dmar_unit *unit, u_int busno);
+
 #define	DMAR_GM_CANWAIT	0x0001
 #define	DMAR_GM_CANSPLIT 0x0002
+#define	DMAR_GM_RMRR	0x0004
 
 #define	DMAR_PGF_WAITOK	0x0001
 #define	DMAR_PGF_ZERO	0x0002
@@ -380,7 +402,6 @@ void dmar_fini_irt(struct dmar_unit *unit);
 extern dmar_haddr_t dmar_high;
 extern int haw;
 extern int dmar_tbl_pagecnt;
-extern int dmar_match_verbose;
 extern int dmar_batch_coalesce;
 extern int dmar_check_free;
 
@@ -522,8 +543,7 @@ extern struct timespec dmar_hw_timeout;
 	} else {						\
 		forever = false;				\
 		nanouptime(&curr);				\
-		last = curr;					\
-		timespecadd(&last, &dmar_hw_timeout);		\
+		timespecadd(&curr, &dmar_hw_timeout, &last);	\
 	}							\
 	for (;;) {						\
 		if (cond) {					\

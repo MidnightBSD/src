@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010-2011 Aleksandr Rybalko <ray@dlink.ua>
  *   based on geom_redboot.c
  * Copyright (c) 2009 Sam Leffler, Errno Consulting
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/geom/geom_map.c 332640 2018-04-17 02:18:04Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/libexec/flua/modules/lfs.h 354833 2019-11-18 23:21:13Z kevans $
+ * $FreeBSD$
  */
 
 #pragma once

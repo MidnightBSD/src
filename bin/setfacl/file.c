@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/setfacl/file.c 301582 2016-06-08 05:32:39Z truckman $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/acl.h>
@@ -50,10 +50,10 @@ get_acl_from_file(const char *filename)
 		err(1, "(null) filename in get_acl_from_file()");
 
 	if (strcmp(filename, "-") == 0) {
-		if (have_stdin != 0)
+		if (have_stdin)
 			err(1, "cannot specify more than one stdin");
 		file = stdin;
-		have_stdin = 1;
+		have_stdin = true;
 	} else {
 		file = fopen(filename, "r");
 		if (file == NULL)

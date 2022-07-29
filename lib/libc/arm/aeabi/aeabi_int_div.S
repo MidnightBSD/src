@@ -26,7 +26,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/arm/aeabi/aeabi_int_div.S 316998 2017-04-16 05:14:42Z mmel $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Due to bug in libcompiler_rt, all symbols declared by

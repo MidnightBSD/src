@@ -1,8 +1,9 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/11/usr.sbin/inetd/Makefile 356388 2020-01-05 21:35:02Z kevans $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
+CONFS=	inetd.conf
 PROG=	inetd
 MAN=	inetd.8
 MLINKS=	inetd.8 inetd.conf.5

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ow/ow_temp.c 287225 2015-08-27 23:33:38Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -137,15 +137,17 @@ ow_temp_event_thread(void *arg)
 	struct ow_temp_softc *sc;
 	uint8_t scratch[8 + 1];
 	uint8_t crc;
-	int retries, rv;
+	int retries, rv, tmp;
 
 	sc = arg;
 	pause("owtstart", device_get_unit(sc->dev) * hz / 100);	// 10ms stagger
 	mtx_lock(&sc->temp_lock);
 	sc->flags |= OW_TEMP_RUNNING;
+	mtx_unlock(&sc->temp_lock);
 	ow_temp_read_power_supply(sc->dev, &sc->parasite);
 	if (sc->parasite)
 		device_printf(sc->dev, "Running in parasitic mode unsupported\n");
+	mtx_lock(&sc->temp_lock);
 	while ((sc->flags & OW_TEMP_DONE) == 0) {
 		mtx_unlock(&sc->temp_lock);
 		ow_temp_convert_t(sc->dev);
@@ -153,10 +155,9 @@ ow_temp_event_thread(void *arg)
 		msleep(sc, &sc->temp_lock, 0, "owtcvt", hz);
 		if (sc->flags & OW_TEMP_DONE)
 			break;
+		mtx_unlock(&sc->temp_lock);
 		for (retries = 5; retries > 0; retries--) {
-			mtx_unlock(&sc->temp_lock);
 			rv = ow_temp_read_scratchpad(sc->dev, scratch, sizeof(scratch));
-			mtx_lock(&sc->temp_lock);
 			if (rv == 0) {
 				crc = own_crc(sc->dev, scratch, sizeof(scratch) - 1);
 				if (crc == scratch[8]) {
@@ -164,22 +165,23 @@ ow_temp_event_thread(void *arg)
 						if (scratch[7]) {
 							/*
 							 * Formula from DS18S20 datasheet, page 6
-							 * DS18S20 datahseet says count_per_c is 16, DS1820 does not
+							 * DS18S20 datasheet says count_per_c is 16, DS1820 does not
 							 */
-							sc->temp = (int16_t)((scratch[0] & 0xfe) |
+							tmp = (int16_t)((scratch[0] & 0xfe) |
 							    (scratch[1] << 8)) << 3;
-							sc->temp += 16 - scratch[6] - 4; /* count_per_c == 16 */
+							tmp += 16 - scratch[6] - 4; /* count_per_c == 16 */
 						} else
-							sc->temp = (int16_t)(scratch[0] | (scratch[1] << 8)) << 3;
+							tmp = (int16_t)(scratch[0] | (scratch[1] << 8)) << 3;
 					} else
-						sc->temp = (int16_t)(scratch[0] | (scratch[1] << 8));
-					sc->temp = sc->temp * 1000 / 16 + 273150;
+						tmp = (int16_t)(scratch[0] | (scratch[1] << 8));
+					sc->temp = tmp * 1000 / 16 + 273150;
 					break;
 				}
 				sc->bad_crc++;
 			} else
 				sc->bad_reads++;
 		}
+		mtx_lock(&sc->temp_lock);
 		msleep(sc, &sc->temp_lock, 0, "owtcvt", sc->reading_interval);
 	}
 	sc->flags &= ~OW_TEMP_RUNNING;

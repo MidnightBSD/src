@@ -1,5 +1,5 @@
 /* $NetBSD: vesagtf.c,v 1.2 2013/09/15 15:56:07 martin Exp $ */
-/* $FreeBSD: stable/11/sys/dev/videomode/vesagtf.c 278798 2015-02-15 11:37:40Z hselasky $ */
+/* $FreeBSD$ */
 
 /*-
  * Copyright (c) 2006 Itronix Inc.
@@ -154,7 +154,7 @@
 #ifdef	_KERNEL
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/11/sys/dev/videomode/vesagtf.c 278798 2015-02-15 11:37:40Z hselasky $");
+__FBSDID("$FreeBSD$");
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/systm.h>

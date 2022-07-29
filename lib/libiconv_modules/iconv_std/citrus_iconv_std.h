@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/lib/libiconv_modules/iconv_std/citrus_iconv_std.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /*	$NetBSD: citrus_iconv_std.h,v 1.1 2003/06/25 09:51:44 tshiozak Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c)2003 Citrus Project,
  * All rights reserved.
  *

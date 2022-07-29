@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  * (c) UNIX System Laboratories, Inc.
@@ -15,7 +17,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)param.h	8.3 (Berkeley) 4/4/95
- * $MidnightBSD$
+ * $FreeBSD$
  */
 
 #ifndef _SYS_PARAM_H_
@@ -44,30 +46,37 @@
 #define BSD4_3	1
 #define BSD4_4	1
 
-/* 
+/*
+ * __FreeBSD_version numbers are documented in the Porter's Handbook.
+ * If you bump the version for any reason, you should update the documentation
+ * there.
+ * Currently this lives here in the doc/ repository:
+ *
+ *	documentation/content/en/books/porters-handbook/versions/_index.adoc
+ *
  * scheme is:  <major><two digit minor>Rxx
- *              For 0.x no major, 0.4 = 4RXX
- *		'R' is in the range 0 to 4 if this is a release branch
- * 		or r is 5-9 in stable after 1.0 is released.
+ *		'R' is in the range 0 to 4 if this is a release branch or
+ *		X.0-CURRENT before releng/X.0 is created, otherwise 'R' is
+ *		in the range 5 to 9.
  */
-#undef __MidnightBSD_version
-#define __MidnightBSD_version 300000	/* Master, propagated to newvers */
-
-/* Version of FreeBSD we're compatible with */
 #undef __FreeBSD_version
-#define __FreeBSD_version 1103509	/* Master, propagated to newvers */
+#define __FreeBSD_version 1203507	/* Master, propagated to newvers */
 
 /*
+ * __FreeBSD_kernel__ indicates that this system uses the kernel of FreeBSD,
+ * which by definition is always true on FreeBSD. This macro is also defined
+ * on other systems that use the kernel of FreeBSD, such as GNU/kFreeBSD.
+ *
  * It is tempting to use this macro in userland code when we want to enable
  * kernel-specific routines, and in fact it's fine to do this in code that
- * is part of MidnightBSD itself.  However, be aware that as presence of this
- * macro is still not widespread (e.g. older BSD versions, 3rd party
+ * is part of FreeBSD itself.  However, be aware that as presence of this
+ * macro is still not widespread (e.g. older FreeBSD versions, 3rd party
  * compilers, etc), it is STRONGLY DISCOURAGED to check for this macro in
- * external applications without also checking for __MidnightBSD__ as an
+ * external applications without also checking for __FreeBSD__ as an
  * alternative.
  */
-#undef __MidnightBSD_kernel__
-#define __MidnightBSD_kernel__
+#undef __FreeBSD_kernel__
+#define __FreeBSD_kernel__
 
 #if defined(_KERNEL) || defined(IN_RTLD)
 #define	P_OSREL_SIGWAIT			700000
@@ -76,9 +85,9 @@
 #define	P_OSREL_MAP_FSTRICT		1100036
 #define	P_OSREL_SHUTDOWN_ENOTCONN	1100077
 #define	P_OSREL_MAP_GUARD		1200035
-#define	P_OSREL_MAP_GUARD_11		1101501
 #define	P_OSREL_WRFSBASE		1200041
-#define	P_OSREL_WRFSBASE_11		1101503
+#define	P_OSREL_CK_CYLGRP		1200046
+#define	P_OSREL_VMTOTAL64		1200054
 
 #define	P_OSREL_MAJOR(x)		((x) / 100000)
 #endif
@@ -287,9 +296,9 @@
 #endif
 #define	nitems(x)	(sizeof((x)) / sizeof((x)[0]))
 #define	rounddown(x, y)	(((x)/(y))*(y))
-#define	rounddown2(x, y) ((x)&(~((y)-1)))          /* if y is power of two */
+#define	rounddown2(x, y) __align_down(x, y) /* if y is power of two */
 #define	roundup(x, y)	((((x)+((y)-1))/(y))*(y))  /* to any y */
-#define	roundup2(x, y)	(((x)+((y)-1))&(~((y)-1))) /* if y is powers of two */
+#define	roundup2(x, y)	__align_up(x, y) /* if y is powers of two */
 #define powerof2(x)	((((x)-1)&(x))==0)
 
 /* Macros for min/max. */
@@ -312,7 +321,6 @@ __END_DECLS
 #endif
 #endif
 
-#ifndef lint
 #ifndef _BYTEORDER_FUNC_DEFINED
 #define	_BYTEORDER_FUNC_DEFINED
 #define	htonl(x)	__htonl(x)
@@ -320,7 +328,6 @@ __END_DECLS
 #define	ntohl(x)	__ntohl(x)
 #define	ntohs(x)	__ntohs(x)
 #endif /* !_BYTEORDER_FUNC_DEFINED */
-#endif /* lint */
 #endif /* _KERNEL */
 
 /*

@@ -1,6 +1,9 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
+ * Copyright (c) 2017, 2020 Yoshihiro Ota
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,7 +32,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/11/usr.bin/systat/swap.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #ifdef lint
 static const char sccsid[] = "@(#)swap.c	8.3 (Berkeley) 4/29/95";
@@ -53,23 +56,21 @@ static const char sccsid[] = "@(#)swap.c	8.3 (Berkeley) 4/29/95";
 
 #include "systat.h"
 #include "extern.h"
+#include "devs.h"
 
-static char *header;
-static long blocksize;
-static int dlen, odlen;
-static int hlen;
-static int ulen, oulen;
-static int pagesize;
+static int pathlen;
 
 WINDOW *
 openswap(void)
 {
-	return (subwin(stdscr, LINES-3-1, 0, MAINWIN_ROW, 0));
+
+	return (subwin(stdscr, LINES - 3 - 1, 0, MAINWIN_ROW, 0));
 }
 
 void
 closeswap(WINDOW *w)
 {
+
 	if (w == NULL)
 		return;
 	wclear(w);
@@ -88,29 +89,6 @@ closeswap(WINDOW *w)
 static struct kvm_swap kvmsw[NSWAP];
 static int kvnsw, okvnsw;
 
-static void calclens(void);
-
-#define CONVERT(v)	((int)((int64_t)(v) * pagesize / blocksize))
-
-static void
-calclens(void)
-{
-	int i, n;
-	int len;
-
-	dlen = sizeof("Disk");
-	for (i = 0; i < kvnsw; ++i) {
-		len = strlen(kvmsw[i].ksw_devname);
-		if (dlen < len)
-			dlen = len;
-	}
-
-	ulen = sizeof("Used");
-	for (n = CONVERT(kvmsw[kvnsw].ksw_used), len = 2; n /= 10; ++len);
-	if (ulen < len)
-		ulen = len;
-}
-
 int
 initswap(void)
 {
@@ -119,20 +97,14 @@ initswap(void)
 	if (once)
 		return (1);
 
-	header = getbsize(&hlen, &blocksize);
-	pagesize = getpagesize();
-
 	if ((kvnsw = kvm_getswapinfo(kd, kvmsw, NSWAP, 0)) < 0) {
 		error("systat: kvm_getswapinfo failed");
 		return (0);
 	}
-	okvnsw = kvnsw;
-
-	calclens();
-	odlen = dlen;
-	oulen = ulen;
-
+	pathlen = 80 - 50 /* % */ - 5 /* Used */ - 5 /* Size */ - 3 /* space */;
+	dsinit(12);
 	once = 1;
+
 	return (1);
 }
 
@@ -146,9 +118,14 @@ fetchswap(void)
 		return;
 	}
 
-	odlen = dlen;
-	oulen = ulen;
-	calclens();
+	struct devinfo *tmp_dinfo;
+
+	tmp_dinfo = last_dev.dinfo;
+	last_dev.dinfo = cur_dev.dinfo;
+	cur_dev.dinfo = tmp_dinfo;
+
+	last_dev.snap_time = cur_dev.snap_time;
+	dsgetinfo( &cur_dev );
 }
 
 void
@@ -157,22 +134,22 @@ labelswap(void)
 	const char *name;
 	int i;
 
-	fetchswap();
-
 	werase(wnd);
 
-	mvwprintw(wnd, 0, 0, "%*s%*s%*s %s",
-	    -dlen, "Disk", hlen, header, ulen, "Used",
-	    "/0%  /10  /20  /30  /40  /50  /60  /70  /80  /90  /100");
+	dslabel(12, 0, 18);
+
+	if (kvnsw <= 0) {
+		mvwprintw(wnd, 0, 0, "(swap not configured)");
+		return;
+	}
+
+	mvwprintw(wnd, 0, 0, "%*s%5s %5s %s",
+	    -pathlen, "Device/Path", "Size", "Used",
+	    "|0%  /10  /20  /30  /40  / 60\\  70\\  80\\  90\\ 100|");
 
 	for (i = 0; i <= kvnsw; ++i) {
-		if (i == kvnsw) {
-			if (kvnsw == 1)
-				break;
-			name = "Total";
-		} else
-			name = kvmsw[i].ksw_devname;
-		mvwprintw(wnd, i + 1, 0, "%*s", -dlen, name);
+		name = i == kvnsw ? "Total" : kvmsw[i].ksw_devname;
+		mvwprintw(wnd, 1 + i, 0, "%-*.*s", pathlen, pathlen - 1, name);
 	}
 }
 
@@ -182,35 +159,23 @@ showswap(void)
 	int count;
 	int i;
 
-	if (kvnsw != okvnsw || dlen != odlen || ulen != oulen)
+	if (kvnsw != okvnsw)
 		labelswap();
 
+	dsshow(12, 0, 18, &cur_dev, &last_dev);
+
+	if (kvnsw <= 0)
+		return;
+
 	for (i = 0; i <= kvnsw; ++i) {
-		if (i == kvnsw) {
-			if (kvnsw == 1)
-				break;
+		sysputpage(wnd, i + 1, pathlen, 5, kvmsw[i].ksw_total, 0);
+		sysputpage(wnd, i + 1, pathlen + 5 + 1, 5, kvmsw[i].ksw_used,
+		    0);
+
+		if (kvmsw[i].ksw_used > 0) {
+			count = 50 * kvmsw[i].ksw_used / kvmsw[i].ksw_total;
+			sysputXs(wnd, i + 1, pathlen + 5 + 1 + 5 + 1, count);
 		}
-
-		if (kvmsw[i].ksw_total == 0) {
-			mvwprintw(
-			    wnd,
-			    i + 1,
-			    dlen + hlen + ulen + 1,
-			    "(swap not configured)"
-			);
-			continue;
-		}
-
-		wmove(wnd, i + 1, dlen);
-
-		wprintw(wnd, "%*d", hlen, CONVERT(kvmsw[i].ksw_total));
-		wprintw(wnd, "%*d", ulen, CONVERT(kvmsw[i].ksw_used));
-
-		count = 50.0 * kvmsw[i].ksw_used / kvmsw[i].ksw_total + 1;
-
-		waddch(wnd, ' ');
-		while (count--)
-			waddch(wnd, 'X');
 		wclrtoeol(wnd);
 	}
 }

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/mk/src.init.mk 290467 2015-11-06 21:49:17Z bdrewery $
+# $FreeBSD$
 
 .if !target(__<src.init.mk>__)
 __<src.init.mk>__:

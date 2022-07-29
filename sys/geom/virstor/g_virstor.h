@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006-2007 Ivan Voras <ivoras@freebsd.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/geom/virstor/g_virstor.h 172302 2007-09-23 07:34:23Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef _G_VIRSTOR_H_
@@ -48,8 +50,8 @@ struct virstor_map_entry {
 #define	LOG_MSG(lvl, ...)       do {					\
         if (g_virstor_debug >= (lvl)) {					\
                 printf("GEOM_" G_VIRSTOR_CLASS_NAME);			\
-                if (lvl > 0)						\
-                        printf("[%u]", lvl);				\
+                if ((lvl) > 0)						\
+                        printf("[%u]", (lvl));				\
                 printf(": ");						\
                 printf(__VA_ARGS__);					\
                 printf("\n");						\
@@ -60,8 +62,8 @@ struct virstor_map_entry {
 #define	LOG_REQ(lvl, bp, ...)  do {					\
         if (g_virstor_debug >= (lvl)) {					\
                 printf("GEOM_" G_VIRSTOR_CLASS_NAME);			\
-                if (lvl > 0)						\
-                        printf("[%u]", lvl);				\
+                if ((lvl) > 0)						\
+                        printf("[%u]", (lvl));				\
                 printf(": ");						\
                 printf(__VA_ARGS__);					\
                 printf(" ");						\

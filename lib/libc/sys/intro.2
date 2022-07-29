@@ -9,7 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)intro.2	8.5 (Berkeley) 2/27/95
-.\" $FreeBSD: stable/11/lib/libc/sys/intro.2 307069 2016-10-11 21:59:22Z jilles $
+.\" $FreeBSD$
 .\"
 .Dd September 8, 2016
 .Dt INTRO 2
@@ -472,6 +472,20 @@ The system call or operation is not permitted for capability mode processes.
 The state protected by a robust mutex is not recoverable.
 .It Er 96 EOWNERDEAD Em "Previous owner died" .
 The owner of a robust mutex terminated while holding the mutex lock.
+.It Er 97 EINTEGRITY Em "Integrity check failed" .
+An integrity check such as a check-hash or a cross-correlation failed.
+The integrity error falls between
+.Er EINVAL
+that identifies errors in parameters to a system call and
+.Er EIO
+that identifies errors with the underlying storage media.
+It is typically raised by intermediate kernel layers such as a
+filesystem or an in-kernel GEOM subsystem when they detect inconsistencies.
+Uses include allowing the
+.Xr mount 8
+command to return a different exit value to automate the running of
+.Xr fsck 8
+during a system boot.
 .El
 .Sh DEFINITIONS
 .Bl -tag -width Ds

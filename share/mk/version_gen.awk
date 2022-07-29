@@ -1,4 +1,6 @@
 #
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (C) 2006 Daniel M. Eischen.  All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -22,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/share/mk/version_gen.awk 172747 2007-10-18 10:32:28Z yar $
+# $FreeBSD$
 #
 
 #

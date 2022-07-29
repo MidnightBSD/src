@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
@@ -29,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/atomic_common.h 327195 2017-12-26 10:07:17Z kib $
+ * $FreeBSD$
  */
 #ifndef _SYS_ATOMIC_COMMON_H_
 #define	_SYS_ATOMIC_COMMON_H_
@@ -42,7 +41,7 @@
 #define	atomic_load_short(p)	(*(volatile u_short *)(p))
 #define	atomic_load_int(p)	(*(volatile u_int *)(p))
 #define	atomic_load_long(p)	(*(volatile u_long *)(p))
-#define	atomic_load_ptr(p)	(*(volatile uintptr_t*)(p))
+#define	atomic_load_ptr(p)	(*(volatile __typeof(*p) *)(p))
 #define	atomic_load_8(p)	(*(volatile uint8_t *)(p))
 #define	atomic_load_16(p)	(*(volatile uint16_t *)(p))
 #define	atomic_load_32(p)	(*(volatile uint32_t *)(p))
@@ -70,5 +69,7 @@
 #define	atomic_store_64(p, v)		\
     (*(volatile uint64_t *)(p) = (uint64_t)(v))
 #endif
+
+#define	atomic_interrupt_fence()	__compiler_membar()
 
 #endif

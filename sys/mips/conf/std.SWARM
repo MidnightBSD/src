@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/sys/mips/conf/std.SWARM 289137 2015-10-11 13:01:51Z mav $
+# $FreeBSD$
 #
 
 hints		"SWARM.hints"
@@ -20,6 +20,7 @@ options 	KDB
 
 options 	SCHED_4BSD		#4BSD scheduler
 options 	INET			#InterNETworking
+options 	TCP_HHOOK		# hhook(9) framework for TCP
 options 	NFSCL			#Network Filesystem Client
 options 	NFS_ROOT		#NFS usable as /, requires NFSCL
 options 	PSEUDOFS		#Pseudo-filesystem framework

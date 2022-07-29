@@ -1,7 +1,9 @@
 /*	$NetBSD: rpc_com.h,v 1.3 2000/12/10 04:10:08 christos Exp $	*/
-/*	$FreeBSD: stable/11/include/rpc/rpc_com.h 331722 2018-03-29 02:50:57Z eadler $ */
+/*	$FreeBSD$ */
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
  *

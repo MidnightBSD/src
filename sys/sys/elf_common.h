@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2017 Dell EMC
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
+ * Copyright (c) 2017, 2018 Dell EMC
  * Copyright (c) 2000, 2001, 2008, 2011, David E. O'Brien
  * Copyright (c) 1998 John D. Polstra.
  * All rights reserved.
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/sys/elf_common.h 351766 2019-09-03 17:29:54Z emaste $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_ELF_COMMON_H_
@@ -50,6 +51,7 @@ typedef struct {
 	u_int32_t	n_descsz;	/* Length of descriptor. */
 	u_int32_t	n_type;		/* Type of this note. */
 } Elf_Note;
+typedef Elf_Note Elf_Nhdr;
 
 /*
  * Option kinds.
@@ -344,10 +346,24 @@ typedef struct {
 #define	EF_MIPS_UCODE		0x00000010
 #define	EF_MIPS_ABI2		0x00000020	/* N32 */
 #define	EF_MIPS_OPTIONS_FIRST	0x00000080
+#define	EF_MIPS_ABI		0x0000F000
+#define	EF_MIPS_ABI_O32		0x00001000
+#define	EF_MIPS_ABI_O64		0x00002000
+#define	EF_MIPS_ABI_EABI32	0x00003000
+#define	EF_MIPS_ABI_EABI64	0x00004000
 #define	EF_MIPS_ARCH_ASE	0x0F000000	/* Architectural extensions */
 #define	EF_MIPS_ARCH_ASE_MDMX	0x08000000	/* MDMX multimedia extension */
 #define	EF_MIPS_ARCH_ASE_M16	0x04000000	/* MIPS-16 ISA extensions */
 #define	EF_MIPS_ARCH		0xF0000000	/* Architecture field */
+#define	EF_MIPS_ARCH_1		0x00000000	/* -mips1 code */
+#define	EF_MIPS_ARCH_2		0x10000000	/* -mips2 code */
+#define	EF_MIPS_ARCH_3		0x20000000	/* -mips3 code */
+#define	EF_MIPS_ARCH_4		0x30000000	/* -mips4 code */
+#define	EF_MIPS_ARCH_5		0x40000000	/* -mips5 code */
+#define	EF_MIPS_ARCH_32		0x50000000	/* -mips32 code */
+#define	EF_MIPS_ARCH_64		0x60000000	/* -mips64 code */
+#define	EF_MIPS_ARCH_32R2	0x70000000	/* -mips32r2 code */
+#define	EF_MIPS_ARCH_64R2	0x80000000	/* -mips64r2 code */
 
 #define	EF_PPC_EMB		0x80000000
 #define	EF_PPC_RELOCATABLE	0x00010000
@@ -757,20 +773,25 @@ typedef struct {
 #define	LL_DELAY_LOAD		0x10
 #define	LL_DELTA		0x20
 
+/* Note section names */
+#define	ELF_NOTE_FREEBSD	"FreeBSD"
+#define	ELF_NOTE_NETBSD		"NetBSD"
+#define	ELF_NOTE_SOLARIS	"SUNW Solaris"
+#define	ELF_NOTE_GNU		"GNU"
+
 /* Values for n_type used in executables. */
 #define	NT_FREEBSD_ABI_TAG	1
 #define	NT_FREEBSD_NOINIT_TAG	2
 #define	NT_FREEBSD_ARCH_TAG	3
 #define	NT_FREEBSD_FEATURE_CTL	4
 
-#define	NT_MIDNIGHTBSD_ABI_TAG	1
-#define	NT_MIDNIGHTBSD_NOINIT_TAG	2
-#define	NT_MIDNIGHTBSD_ARCH_TAG	3
-#define	NT_MIDNIGHTBSD_FEATURE_CTL	4
-
 /* NT_FREEBSD_FEATURE_CTL desc[0] bits */
 #define	NT_FREEBSD_FCTL_ASLR_DISABLE	0x00000001
+#define	NT_FREEBSD_FCTL_PROTMAX_DISABLE	0x00000002
+#define	NT_FREEBSD_FCTL_STKGAP_DISABLE	0x00000004
 #define	NT_FREEBSD_FCTL_WXNEEDED	0x00000008
+#define	NT_FREEBSD_FCTL_LA48		0x00000010
+#define	NT_FREEBSD_FCTL_ASG_DISABLE	0x00000020 /* ASLR STACK GAP Disable */
 
 /* Values for n_type.  Used in core files. */
 #define	NT_PRSTATUS	1	/* Process status. */
@@ -788,6 +809,7 @@ typedef struct {
 #define	NT_PROCSTAT_AUXV	16	/* Procstat auxv data. */
 #define	NT_PTLWPINFO		17	/* Thread ptrace miscellaneous info. */
 #define	NT_PPC_VMX	0x100	/* PowerPC Altivec/VMX registers */
+#define	NT_PPC_VSX	0x102	/* PowerPC VSX registers */
 #define	NT_X86_XSTATE	0x202	/* x86 XSAVE extended state. */
 #define	NT_ARM_VFP	0x400	/* ARM VFP registers */
 
@@ -924,12 +946,17 @@ typedef struct {
 #define	R_386_RELATIVE		8	/* Add load address of shared object. */
 #define	R_386_GOTOFF		9	/* Add GOT-relative symbol address. */
 #define	R_386_GOTPC		10	/* Add PC-relative GOT table address. */
+#define	R_386_32PLT		11
 #define	R_386_TLS_TPOFF		14	/* Negative offset in static TLS block */
 #define	R_386_TLS_IE		15	/* Absolute address of GOT for -ve static TLS */
 #define	R_386_TLS_GOTIE		16	/* GOT entry for negative static TLS block */
 #define	R_386_TLS_LE		17	/* Negative offset relative to static TLS */
 #define	R_386_TLS_GD		18	/* 32 bit offset to GOT (index,off) pair */
 #define	R_386_TLS_LDM		19	/* 32 bit offset to GOT (index,zero) pair */
+#define	R_386_16		20
+#define	R_386_PC16		21
+#define	R_386_8			22
+#define	R_386_PC8		23
 #define	R_386_TLS_GD_32		24	/* 32 bit offset to GOT (index,off) pair */
 #define	R_386_TLS_GD_PUSH	25	/* pushl instruction for Sun ABI GD sequence */
 #define	R_386_TLS_GD_CALL	26	/* call instruction for Sun ABI GD sequence */
@@ -944,7 +971,12 @@ typedef struct {
 #define	R_386_TLS_DTPMOD32	35	/* GOT entry containing TLS index */
 #define	R_386_TLS_DTPOFF32	36	/* GOT entry containing TLS offset */
 #define	R_386_TLS_TPOFF32	37	/* GOT entry of -ve static TLS offset */
+#define	R_386_SIZE32		38
+#define	R_386_TLS_GOTDESC	39
+#define	R_386_TLS_DESC_CALL	40
+#define	R_386_TLS_DESC		41
 #define	R_386_IRELATIVE		42	/* PLT entry resolved indirectly at runtime */
+#define	R_386_GOT32X		43
 
 #define	R_AARCH64_NONE		0	/* No relocation */
 #define	R_AARCH64_ABS64		257	/* Absolute offset */
@@ -953,6 +985,10 @@ typedef struct {
 #define	R_AARCH64_PREL64	260	/* PC relative */
 #define	R_AARCH64_PREL32	261	/* PC relative, 32-bit overflow check */
 #define	R_AARCH64_PREL16	262	/* PC relative, 16-bit overflow check */
+#define	R_AARCH64_TSTBR14	279	/* TBZ/TBNZ immediate */
+#define	R_AARCH64_CONDBR19	280	/* Conditional branch immediate */
+#define	R_AARCH64_JUMP26	282	/* Branch immediate */
+#define	R_AARCH64_CALL26	283	/* Call immediate */
 #define	R_AARCH64_COPY		1024	/* Copy data from shared object */
 #define	R_AARCH64_GLOB_DAT	1025	/* Set GOT entry to data address */
 #define	R_AARCH64_JUMP_SLOT	1026	/* Set GOT entry to code address */
@@ -1107,6 +1143,8 @@ typedef struct {
 #define	R_MIPS_CALLLO16 31	/* lower 16 bit GOT entry for function */
 #define	R_MIPS_JALR	37
 #define	R_MIPS_TLS_GD	42
+#define	R_MIPS_COPY	126
+#define	R_MIPS_JUMP_SLOT	127
 
 #define	R_PPC_NONE		0	/* No relocation. */
 #define	R_PPC_ADDR32		1
@@ -1277,6 +1315,8 @@ typedef struct {
 #define	R_RISCV_SET8		54
 #define	R_RISCV_SET16		55
 #define	R_RISCV_SET32		56
+#define	R_RISCV_32_PCREL	57
+#define	R_RISCV_IRELATIVE	58
 
 #define	R_SPARC_NONE		0
 #define	R_SPARC_8		1
@@ -1397,6 +1437,10 @@ typedef struct {
 #define	R_X86_64_TLSDESC_CALL	35
 #define	R_X86_64_TLSDESC	36
 #define	R_X86_64_IRELATIVE	37
+#define	R_X86_64_RELATIVE64	38
+/* 39 and 40 were BND-related, already decomissioned */
+#define	R_X86_64_GOTPCRELX	41
+#define	R_X86_64_REX_GOTPCRELX	42
 
 
 #endif /* !_SYS_ELF_COMMON_H_ */

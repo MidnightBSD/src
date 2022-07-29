@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/ofed/drivers/infiniband/core/ib_smi.c 337096 2018-08-02 08:33:51Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <rdma/ib_smi.h>
 #include "smi.h"

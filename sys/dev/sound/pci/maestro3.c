@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 Scott Long <scottl@freebsd.org>
  * Copyright (c) 2001 Darrell Anderson <anderson@cs.duke.edu>
  * All rights reserved.
@@ -43,7 +45,7 @@
  * <zab@zabbo.net>, http://www.zabbo.net/maestro3
  *
  * Cameron Grant created the pcm framework used here nearly verbatim.
- * <cg@freebsd.org>, http://people.freebsd.org/~cg/template.c
+ * <cg@freebsd.org>, https://people.freebsd.org/~cg/template.c
  *
  * Taku YAMAMOTO for his Maestro-1/2 FreeBSD driver and sanity reference.
  * <taku@cent.saitama-u.ac.jp>
@@ -67,7 +69,7 @@
 #include <dev/sound/pci/allegro_reg.h>
 #include <dev/sound/pci/allegro_code.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/maestro3.c 331722 2018-03-29 02:50:57Z eadler $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 /* -------------------------------------------------------------------- */
 

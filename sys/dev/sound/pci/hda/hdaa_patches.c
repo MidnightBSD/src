@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Stephane E. Potvin <sepotvin@videotron.ca>
  * Copyright (c) 2006 Ariff Abdullah <ariff@FreeBSD.org>
  * Copyright (c) 2008-2012 Alexander Motin <mav@FreeBSD.org>
@@ -42,7 +44,7 @@
 #include <dev/sound/pci/hda/hdaa.h>
 #include <dev/sound/pci/hda/hda_reg.h>
 
-SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pci/hda/hdaa_patches.c 351814 2019-09-04 14:05:04Z jkim $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 static const struct {
 	uint32_t model;
@@ -388,7 +390,8 @@ hdac_pin_patch(struct hdaa_widget *w)
 			break;
 		}
 	} else if (id == HDA_CODEC_ALC285 &&
-	    subid == LENOVO_X120KH_SUBVENDOR) {
+	    (subid == LENOVO_X120KH_SUBVENDOR ||
+	    subid == LENOVO_X120QD_SUBVENDOR)) {
 		switch (nid) {
 		case 33:
 			patch = "as=1 seq=15";
@@ -412,6 +415,46 @@ hdac_pin_patch(struct hdaa_widget *w)
 	    subid == LENOVO_X120BS_SUBVENDOR) {
 		switch (nid) {
 		case 21:
+			patch = "as=1 seq=15";
+			break;
+		}
+	} else if (id == HDA_CODEC_ALC295 && subid == HP_AF006UR_SUBVENDOR) {
+		switch (nid) {
+		case 18:
+			patch = "as=2";
+			break;
+		case 25:
+			patch = "as=2 seq=15";
+			break;
+		case 33:
+			patch = "as=1 seq=15";
+			break;
+		}
+	} else if (id == HDA_CODEC_ALC298 && HDA_DEV_MATCH(LENOVO_ALL_SUBVENDOR, subid)) {
+		switch (nid) {
+		case 23:
+			config = 0x03a1103f;
+			break;
+		case 33:
+			config = 0x2121101f;
+			break;
+		}
+	} else if (id == HDA_CODEC_ALC298 && subid == DELL_XPS9560_SUBVENDOR) {
+		switch (nid) {
+		case 24:
+			config = 0x01a1913c;
+			break;
+		case 26:
+			config = 0x01a1913d;
+			break;
+		}
+	} else if (id == HDA_CODEC_ALC256 && (subid == DELL_I7577_SUBVENDOR ||
+	    subid == DELL_L7480_SUBVENDOR)) {
+		switch (nid) {
+		case 20:
+			patch = "as=1 seq=0";
+			break;
+		case 33:
 			patch = "as=1 seq=15";
 			break;
 		}
@@ -753,6 +796,10 @@ hdaa_patch_direct(struct hdaa_devinfo *devinfo)
 		}
 		break;
 	}
+	if (id == HDA_CODEC_ALC255 || id == HDA_CODEC_ALC256) {
+		val = hdaa_read_coef(dev, 0x20, 0x46);
+		hdaa_write_coef(dev, 0x20, 0x46, val|0x3000);
+	}
 	if (subid == APPLE_INTEL_MAC)
 		hda_command(dev, HDA_CMD_12BIT(0, devinfo->nid,
 		    0x7e7, 0));
@@ -761,10 +808,10 @@ hdaa_patch_direct(struct hdaa_devinfo *devinfo)
 		    subid == 0x834a1043 || subid == 0x83981043 ||
 		    subid == 0x83ce1043) {
 			/*
-			 * The ditital mics on some Asus laptops produce
+			 * The digital mics on some Asus laptops produce
 			 * differential signals instead of expected stereo.
-			 * That results in silence if downmix it to mono.
-			 * To workaround, make codec to handle signal as mono.
+			 * That results in silence if downmixing to mono.
+			 * To workaround, make codec handle the signal as mono.
 			 */
 			val = hdaa_read_coef(dev, 0x20, 0x07);
 			hdaa_write_coef(dev, 0x20, 0x07, val|0x80);

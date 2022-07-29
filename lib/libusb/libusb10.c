@@ -1,5 +1,7 @@
 /* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Sylvestre Gallon. All rights reserved.
  * Copyright (c) 2009 Hans Petter Selasky. All rights reserved.
  *
@@ -75,7 +77,7 @@ static const struct libusb_version libusb_version = {
 	.micro = 0,
 	.nano = 2016,
 	.rc = "",
-	.describe = "http://www.freebsd.org"
+	.describe = "https://www.freebsd.org"
 };
 
 const struct libusb_version *
@@ -527,6 +529,15 @@ libusb_open(libusb_device *dev, libusb_device_handle **devh)
 		libusb_unref_device(dev);
 		return (LIBUSB_ERROR_NO_MEM);
 	}
+
+	/*
+	 * Clear the device gone flag, in case the device was opened
+	 * after a re-attach, to allow new transaction:
+	 */
+	CTX_LOCK(ctx);
+	dev->device_is_gone = 0;
+	CTX_UNLOCK(ctx);
+
 	libusb10_add_pollfd(ctx, &dev->dev_poll, pdev, libusb20_dev_get_fd(pdev), POLLIN |
 	    POLLOUT | POLLRDNORM | POLLWRNORM);
 

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/geom/geom_sched/Makefile.inc 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 # included by geom_sched children
 
 .PATH: ${SRCTOP}/sys/geom/sched

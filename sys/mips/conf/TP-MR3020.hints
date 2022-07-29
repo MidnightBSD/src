@@ -1,7 +1,7 @@
 #
 # This file adds to the values in AR933X_BASE.hints
 #
-# $FreeBSD: stable/11/sys/mips/conf/TP-MR3020.hints 289482 2015-10-18 04:50:51Z sbruno $
+# $FreeBSD$
 
 # mdiobus on arge1
 hint.argemdio.0.at="nexus0"

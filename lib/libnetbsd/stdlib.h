@@ -1,6 +1,8 @@
-/* $FreeBSD: stable/11/lib/libnetbsd/stdlib.h 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2012 SRI International
  * Copyright (c) 2001-2002,2004 The NetBSD Foundation, Inc.
  * All rights reserved.

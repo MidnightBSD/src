@@ -1,2 +1,2 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITH_STAGING_PROG 284708 2015-06-22 20:21:57Z sjg $
+.\" $FreeBSD$
 Enable staging of PROGs to stage tree.

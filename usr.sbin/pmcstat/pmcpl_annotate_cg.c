@@ -3,8 +3,10 @@
  *
  * Copyright (c) 2005-2007, Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
- * Copyright (c) 2014, Adrian Chadd, Netflix Inc.
  * All rights reserved.
+ *
+ * Copyright (c) 2014 Netflix, Inc.
+ * Written by: Adrian Chadd <adrian@FreeBSD.org>
  *
  * Portions of this software were developed by A. Joseph Koshy under
  * sponsorship from the FreeBSD Foundation and Google, Inc.
@@ -37,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/pmcstat/pmcpl_annotate_cg.c 330449 2018-03-05 07:26:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/endian.h>

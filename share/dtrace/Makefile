@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/dtrace/Makefile 333617 2018-05-15 00:00:44Z dteske $
+# $FreeBSD$
 #
 # Hand installing our scripts and optionally (based on MK_CDDL) installing
 # the DTraceToolkit.
@@ -21,7 +21,7 @@ SCRIPTS=	blocking \
 
 SCRIPTSDIR= ${SHAREDIR}/dtrace
 
-DSRCS=		mbuf.d
+DSRCS=		mbuf.d ipfw.d
 
 FILES=		${DSRCS}
 FILESDIR=	/usr/lib/dtrace

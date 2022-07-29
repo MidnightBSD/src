@@ -1,5 +1,5 @@
-#	$FreeBSD: src/tools/tools/net80211/Makefile,v 1.1.2.1 2006/01/31 20:48:20 sam Exp $
+#	$FreeBSD$
 
-SUBDIR=	wlanstats wlandebug wlanwatch
+SUBDIR=	stumbler w00t wesside wlaninject wlanstats wlantxtime wlanwatch wlanwds
 
 .include <bsd.subdir.mk>

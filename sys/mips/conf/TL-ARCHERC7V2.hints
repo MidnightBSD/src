@@ -1,7 +1,7 @@
 # The Archer C7 v2 is based on the AP135-020 board, with
 # TP-Link specific bits (eg flash layout, MAC address, etc.)
 
-# $FreeBSD: stable/11/sys/mips/conf/TL-ARCHERC7V2.hints 285079 2015-07-03 06:09:56Z adrian $
+# $FreeBSD$
 
 # QCA955X_ETH_CFG_RGMII_EN (1 << 0)
 hint.qca955x_gmac.0.gmac_cfg=0x1

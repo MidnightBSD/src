@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_EFI 318618 2017-05-22 06:15:50Z ngie $
+.\" $FreeBSD$
 Set not to build
 .Xr efivar 3
 and

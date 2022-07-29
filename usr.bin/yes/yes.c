@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1987, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,7 +39,7 @@ static const char copyright[] =
 #if 0
 static char sccsid[] = "@(#)yes.c	8.1 (Berkeley) 6/6/93";
 #else
-static const char rcsid[] = "$FreeBSD: stable/11/usr.bin/yes/yes.c 332464 2018-04-13 03:32:18Z kevans $";
+static const char rcsid[] = "$FreeBSD$";
 #endif
 #endif /* not lint */
 
@@ -58,7 +60,7 @@ main(int argc, char **argv)
 	size_t more;
 	ssize_t ret;
 
-	if (caph_limit_stdio() < 0 || (cap_enter() < 0 && errno != ENOSYS))
+	if (caph_limit_stdio() < 0 || caph_enter() < 0)
 		err(1, "capsicum");
 
 	if (argc > 1) {

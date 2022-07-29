@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003-2009 Silicon Graphics International Corp.
  * Copyright (c) 2011 Spectra Logic Corporation
  * Copyright (c) 2014-2015 Alexander Motin <mav@FreeBSD.org>
@@ -38,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/cam/ctl/ctl_error.c 350787 2019-08-08 21:33:50Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

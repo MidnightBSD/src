@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/cxgbe/tom/t4_tls.h 345664 2019-03-28 23:43:38Z jhb $
+ * $FreeBSD$
  *
  */
 
@@ -249,16 +249,6 @@ enum {
 	CH_MK_SIZE_NOP,
 };
 
-#define SCMD_ENCDECCTRL_ENCRYPT 0
-#define SCMD_ENCDECCTRL_DECRYPT 1
-
-#define SCMD_CIPH_MODE_NOP			0
-#define SCMD_CIPH_MODE_AES_CBC			1
-#define SCMD_CIPH_MODE_AES_GCM			2
-#define SCMD_CIPH_MODE_AES_CTR			3
-#define SCMD_CIPH_MODE_AES_GEN			4
-#define SCMD_CIPH_MODE_AES_CCM			7
-
 struct tls_scmd {
 	__be32 seqno_numivs;
 	__be32 ivgen_hdrlen;
@@ -278,7 +268,6 @@ struct tls_ofld_info {
 	struct tls_scmd scmd0;
 	u_int sb_off;
 	struct callout handshake_timer;
-	u_int rcv_over;
 };
 
 struct tls_key_req {

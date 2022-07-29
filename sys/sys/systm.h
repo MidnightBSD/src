@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1988, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  * (c) UNIX System Laboratories, Inc.
@@ -16,7 +17,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,16 +34,16 @@
  * SUCH DAMAGE.
  *
  *	@(#)systm.h	8.7 (Berkeley) 3/29/95
- * $FreeBSD: stable/11/sys/sys/systm.h 354405 2019-11-06 18:02:18Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_SYSTM_H_
 #define	_SYS_SYSTM_H_
 
+#include <sys/cdefs.h>
 #include <machine/atomic.h>
 #include <machine/cpufunc.h>
 #include <sys/callout.h>
-#include <sys/cdefs.h>
 #include <sys/queue.h>
 #include <sys/stdint.h>		/* for people using printf mainly */
 
@@ -79,8 +80,21 @@ extern int vm_guest;		/* Running as virtual machine guest? */
 enum VM_GUEST { VM_GUEST_NO = 0, VM_GUEST_VM, VM_GUEST_XEN, VM_GUEST_HV,
 		VM_GUEST_VMWARE, VM_GUEST_KVM, VM_GUEST_BHYVE, VM_LAST };
 
+/*
+ * These functions need to be declared before the KASSERT macro is invoked in
+ * !KASSERT_PANIC_OPTIONAL builds, so their declarations are sort of out of
+ * place compared to other function definitions in this header.  On the other
+ * hand, this header is a bit disorganized anyway.
+ */
+void	panic(const char *, ...) __dead2 __printflike(1, 2);
+void	vpanic(const char *, __va_list) __dead2 __printflike(1, 0);
+
 #if defined(WITNESS) || defined(INVARIANT_SUPPORT)
+#ifdef KASSERT_PANIC_OPTIONAL
 void	kassert_panic(const char *fmt, ...)  __printflike(1, 2);
+#else
+#define kassert_panic	panic
+#endif
 #endif
 
 #ifdef	INVARIANTS		/* The option is always available */
@@ -94,16 +108,26 @@ void	kassert_panic(const char *fmt, ...)  __printflike(1, 2);
 		kassert_panic msg;					\
 	}								\
 } while (0)
+#define	__assert_unreachable() \
+	panic("executing segment marked as unreachable at %s:%d (%s)\n", \
+	    __FILE__, __LINE__, __func__)
 #else
 #define	KASSERT(exp,msg) do { \
 } while (0)
 
 #define	VNASSERT(exp, vp, msg) do { \
 } while (0)
+#define	__assert_unreachable()	__unreachable()
 #endif
 
 #ifndef CTASSERT	/* Allow lint to override */
 #define	CTASSERT(x)	_Static_assert(x, "compile-time assertion failed")
+#endif
+
+#if defined(_KERNEL)
+#include <sys/param.h>		/* MAXCPU */
+#include <sys/pcpu.h>		/* curthread */
+#include <sys/kpilite.h>
 #endif
 
 /*
@@ -206,18 +230,49 @@ void	*phashinit_flags(int count, struct malloc_type *type, u_long *nentries,
     int flags);
 void	g_waitidle(void);
 
-void	panic(const char *, ...) __dead2 __printflike(1, 2);
-void	vpanic(const char *, __va_list) __dead2 __printflike(1, 0);
-
 void	cpu_boot(int);
 void	cpu_flush_dcache(void *, size_t);
 void	cpu_rootconf(void);
-void	critical_enter(void);
-void	critical_exit(void);
+void	critical_enter_KBI(void);
+void	critical_exit_KBI(void);
+void	critical_exit_preempt(void);
 void	init_param1(void);
 void	init_param2(long physpages);
 void	init_static_kenv(char *, size_t);
 void	tablefull(const char *);
+
+#if defined(KLD_MODULE) || defined(KTR_CRITICAL) || !defined(_KERNEL) || defined(GENOFFSET)
+#define critical_enter() critical_enter_KBI()
+#define critical_exit() critical_exit_KBI()
+#else
+static __inline void
+critical_enter(void)
+{
+	struct thread_lite *td;
+
+	td = (struct thread_lite *)curthread;
+	td->td_critnest++;
+	__compiler_membar();
+}
+
+static __inline void
+critical_exit(void)
+{
+	struct thread_lite *td;
+
+	td = (struct thread_lite *)curthread;
+	KASSERT(td->td_critnest != 0,
+	    ("critical_exit: td_critnest == 0"));
+	__compiler_membar();
+	td->td_critnest--;
+	__compiler_membar();
+	if (__predict_false(td->td_owepreempt))
+		critical_exit_preempt();
+
+}
+#endif
+
+
 #ifdef  EARLY_PRINTF
 typedef void early_putc_t(int ch);
 extern early_putc_t *early_putc;
@@ -257,11 +312,27 @@ void	hexdump(const void *ptr, int length, const char *hdr, int flags);
 
 #define ovbcopy(f, t, l) bcopy((f), (t), (l))
 void	bcopy(const void * _Nonnull from, void * _Nonnull to, size_t len);
+#define bcopy(from, to, len) __builtin_memmove((to), (from), (len))
 void	bzero(void * _Nonnull buf, size_t len);
+#define bzero(buf, len) __builtin_memset((buf), 0, (len))
 void	explicit_bzero(void * _Nonnull, size_t);
+int	bcmp(const void *b1, const void *b2, size_t len);
+#define bcmp(b1, b2, len) __builtin_memcmp((b1), (b2), (len))
 
+void	*memset(void * _Nonnull buf, int c, size_t len);
+#define memset(buf, c, len) __builtin_memset((buf), (c), (len))
 void	*memcpy(void * _Nonnull to, const void * _Nonnull from, size_t len);
+#define memcpy(to, from, len) __builtin_memcpy((to), (from), (len))
 void	*memmove(void * _Nonnull dest, const void * _Nonnull src, size_t n);
+#define memmove(dest, src, n) __builtin_memmove((dest), (src), (n))
+int	memcmp(const void *b1, const void *b2, size_t len);
+#define memcmp(b1, b2, len) __builtin_memcmp((b1), (b2), (len))
+
+void	*memset_early(void * _Nonnull buf, int c, size_t len);
+#define bzero_early(buf, len) memset_early((buf), 0, (len))
+void	*memcpy_early(void * _Nonnull to, const void * _Nonnull from, size_t len);
+void	*memmove_early(void * _Nonnull dest, const void * _Nonnull src, size_t n);
+#define bcopy_early(from, to, len) memmove_early((to), (from), (len))
 
 int	copystr(const void * _Nonnull __restrict kfaddr,
 	    void * _Nonnull __restrict kdaddr, size_t len,
@@ -302,15 +373,11 @@ void	realitexpire(void *);
 
 int	sysbeep(int hertz, int period);
 
-void	hardclock(int usermode, uintfptr_t pc);
-void	hardclock_cnt(int cnt, int usermode);
-void	hardclock_cpu(int usermode);
+void	hardclock(int cnt, int usermode);
 void	hardclock_sync(int cpu);
 void	softclock(void *);
-void	statclock(int usermode);
-void	statclock_cnt(int cnt, int usermode);
-void	profclock(int usermode, uintfptr_t pc);
-void	profclock_cnt(int cnt, int usermode, uintfptr_t pc);
+void	statclock(int cnt, int usermode);
+void	profclock(int cnt, int usermode, uintfptr_t pc);
 
 int	hardclockintr(void);
 
@@ -326,10 +393,6 @@ void	cpu_new_callout(int cpu, sbintime_t bt, sbintime_t bt_opt);
 void	cpu_et_frequency(struct eventtimer *et, uint64_t newfreq);
 extern int	cpu_disable_c2_sleep;
 extern int	cpu_disable_c3_sleep;
-
-int	cr_cansee(struct ucred *u1, struct ucred *u2);
-int	cr_canseesocket(struct ucred *cred, struct socket *so);
-int	cr_canseeinpcb(struct ucred *cred, struct inpcb *inp);
 
 char	*kern_getenv(const char *name);
 void	freeenv(char *env);
@@ -444,9 +507,14 @@ int poll_no_poll(int events);
 void	DELAY(int usec);
 
 /* Root mount holdback API */
-struct root_hold_token;
+struct root_hold_token {
+	int				flags;
+	const char			*who;
+	TAILQ_ENTRY(root_hold_token)	list;
+};
 
 struct root_hold_token *root_mount_hold(const char *identifier);
+void root_mount_hold_token(const char *identifier, struct root_hold_token *h);
 void root_mount_rel(struct root_hold_token *h);
 int root_mounted(void);
 
@@ -458,12 +526,39 @@ struct unrhdr;
 struct unrhdr *new_unrhdr(int low, int high, struct mtx *mutex);
 void init_unrhdr(struct unrhdr *uh, int low, int high, struct mtx *mutex);
 void delete_unrhdr(struct unrhdr *uh);
+void clear_unrhdr(struct unrhdr *uh);
 void clean_unrhdr(struct unrhdr *uh);
 void clean_unrhdrl(struct unrhdr *uh);
 int alloc_unr(struct unrhdr *uh);
 int alloc_unr_specific(struct unrhdr *uh, u_int item);
 int alloc_unrl(struct unrhdr *uh);
 void free_unr(struct unrhdr *uh, u_int item);
+
+#ifndef __LP64__
+#define UNR64_LOCKED
+#endif
+
+struct unrhdr64 {
+        uint64_t	counter;
+};
+
+static __inline void
+new_unrhdr64(struct unrhdr64 *unr64, uint64_t low)
+{
+
+	unr64->counter = low;
+}
+
+#ifdef UNR64_LOCKED
+uint64_t alloc_unr64(struct unrhdr64 *);
+#else
+static __inline uint64_t
+alloc_unr64(struct unrhdr64 *unr64)
+{
+
+	return (atomic_fetchadd_64(&unr64->counter, 1));
+}
+#endif
 
 void	intr_prof_stack_use(struct thread *td, struct trapframe *frame);
 
@@ -477,7 +572,7 @@ void _gone_in(int major, const char *msg);
 void _gone_in_dev(struct device *dev, int major, const char *msg);
 #ifdef NO_OBSOLETE_CODE
 #define __gone_ok(m, msg)					 \
-	_Static_assert(m < P_OSREL_MAJOR(__MidnightBSD_version)),	 \
+	_Static_assert(m < P_OSREL_MAJOR(__FreeBSD_version)),	 \
 	    "Obsolete code" msg);
 #else
 #define	__gone_ok(m, msg)
@@ -487,6 +582,15 @@ void _gone_in_dev(struct device *dev, int major, const char *msg);
 #define	gone_by_fcp101_dev(dev)						\
 	gone_in_dev((dev), 13,						\
 	    "see https://github.com/freebsd/fcp/blob/master/fcp-0101.md")
+
+#ifdef _KERNEL
+#if defined(INVARIANTS) || defined(WITNESS)
+#define	__diagused
+#else
+#define	__diagused	__unused
+#endif
+
+#endif /* _KERNEL */
 
 __NULLABILITY_PRAGMA_POP
 

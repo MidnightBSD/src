@@ -1,7 +1,7 @@
 /*
  * Australian holidays
  *
- * $FreeBSD: stable/11/usr.bin/calendar/calendars/calendar.australia 205937 2010-03-30 21:11:16Z edwin $
+ * $FreeBSD$
  */
 
 #ifndef _calendar_australia_

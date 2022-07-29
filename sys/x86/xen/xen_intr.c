@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/x86/xen/xen_intr.c 342656 2018-12-31 22:09:08Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 
@@ -45,6 +45,7 @@ __FBSDID("$FreeBSD: stable/11/sys/x86/xen/xen_intr.c 342656 2018-12-31 22:09:08Z
 #include <sys/interrupt.h>
 #include <sys/pcpu.h>
 #include <sys/smp.h>
+#include <sys/refcount.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -105,7 +106,7 @@ struct xen_intr_pcpu_data {
  * Start the scan at port 0 by initializing the last scanned
  * location as the highest numbered event channel port.
  */
-static DPCPU_DEFINE(struct xen_intr_pcpu_data, xen_intr_pcpu) = {
+DPCPU_DEFINE_STATIC(struct xen_intr_pcpu_data, xen_intr_pcpu) = {
 	.last_processed_l1i = LONG_BIT - 1,
 	.last_processed_l2i = LONG_BIT - 1
 };
@@ -131,6 +132,7 @@ struct xenisrc {
 	u_int		xi_activehi:1;
 	u_int		xi_edgetrigger:1;
 	u_int		xi_masked:1;
+	volatile u_int	xi_refcount;
 };
 
 static void	xen_intr_suspend(struct pic *);
@@ -349,10 +351,8 @@ xen_intr_release_isrc(struct xenisrc *isrc)
 {
 
 	mtx_lock(&xen_intr_isrc_lock);
-	if (isrc->xi_intsrc.is_handlers != 0) {
-		mtx_unlock(&xen_intr_isrc_lock);
-		return (EBUSY);
-	}
+	KASSERT(isrc->xi_intsrc.is_handlers == 0,
+	    ("Release called, but xenisrc still in use"));
 	evtchn_mask_port(isrc->xi_port);
 	evtchn_clear_port(isrc->xi_port);
 
@@ -423,6 +423,7 @@ xen_intr_bind_isrc(struct xenisrc **isrcp, evtchn_port_t local_port,
 	}
 	isrc->xi_port = local_port;
 	xen_intr_port_to_isrc[local_port] = isrc;
+	refcount_init(&isrc->xi_refcount, 1);
 	mtx_unlock(&xen_intr_isrc_lock);
 
 	/* Assign the opaque handler (the event channel port) */
@@ -435,7 +436,7 @@ xen_intr_bind_isrc(struct xenisrc **isrcp, evtchn_port_t local_port,
 		 * unless specified otherwise, so shuffle them to balance
 		 * the interrupt load.
 		 */
-		xen_intr_assign_cpu(&isrc->xi_intsrc, intr_next_cpu());
+		xen_intr_assign_cpu(&isrc->xi_intsrc, intr_next_cpu(0));
 	}
 #endif
 
@@ -489,7 +490,7 @@ xen_intr_isrc(xen_intr_handle_t handle)
  * Determine the event channel ports at the given section of the
  * event port bitmap which have pending events for the given cpu.
  * 
- * \param pcpu  The Xen interrupt pcpu data for the cpu being querried.
+ * \param pcpu  The Xen interrupt pcpu data for the cpu being queried.
  * \param sh    The Xen shared info area.
  * \param idx   The index of the section of the event channel bitmap to
  *              inspect.
@@ -968,7 +969,7 @@ xen_intr_disable_source(struct intsrc *base_isrc, int eoi)
 	/*
 	 * NB: checking if the event channel is already masked is
 	 * needed because the event channel user-space device
-	 * masks event channels on it's filter as part of it's
+	 * masks event channels on its filter as part of its
 	 * normal operation, and those shouldn't be automatically
 	 * unmasked by the generic interrupt code. The event channel
 	 * device will unmask them when needed.
@@ -1532,6 +1533,13 @@ xen_intr_unbind(xen_intr_handle_t *port_handlep)
 	if (isrc == NULL)
 		return;
 
+	mtx_lock(&xen_intr_isrc_lock);
+	if (refcount_release(&isrc->xi_refcount) == 0) {
+		mtx_unlock(&xen_intr_isrc_lock);
+		return;
+	}
+	mtx_unlock(&xen_intr_isrc_lock);
+
 	if (isrc->xi_cookie != NULL)
 		intr_remove_handler(isrc->xi_cookie);
 	xen_intr_release_isrc(isrc);
@@ -1577,7 +1585,7 @@ xen_intr_add_handler(const char *name, driver_filter_t filter,
 		return (EINVAL);
 
 	error = intr_add_handler(name, isrc->xi_vector,filter, handler, arg,
-	    flags|INTR_EXCL, &isrc->xi_cookie);
+	    flags|INTR_EXCL, &isrc->xi_cookie, 0);
 	if (error != 0) {
 		printf(
 		    "%s: xen_intr_add_handler: intr_add_handler failed: %d\n",
@@ -1585,6 +1593,31 @@ xen_intr_add_handler(const char *name, driver_filter_t filter,
 	}
 
 	return (error);
+}
+
+int
+xen_intr_get_evtchn_from_port(evtchn_port_t port, xen_intr_handle_t *handlep)
+{
+
+	if (!is_valid_evtchn(port) || port >= NR_EVENT_CHANNELS)
+		return (EINVAL);
+
+	if (handlep == NULL) {
+		return (EINVAL);
+	}
+
+	mtx_lock(&xen_intr_isrc_lock);
+	if (xen_intr_port_to_isrc[port] == NULL) {
+		mtx_unlock(&xen_intr_isrc_lock);
+		return (EINVAL);
+	}
+	refcount_acquire(&xen_intr_port_to_isrc[port]->xi_refcount);
+	mtx_unlock(&xen_intr_isrc_lock);
+
+	/* Assign the opaque handler (the event channel port) */
+	*handlep = &xen_intr_port_to_isrc[port]->xi_vector;
+
+	return (0);
 }
 
 #ifdef DDB

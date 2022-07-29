@@ -1,5 +1,5 @@
 /*
- *  $FreeBSD: stable/11/sys/dev/cxgb/cxgb_include.h 267992 2014-06-28 03:56:17Z hselasky $
+ *  $FreeBSD$
  */
 
 #include <sys/cdefs.h>

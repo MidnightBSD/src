@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/11/lib/libc/stdtime/Symbol.map 170154 2007-05-31 13:01:34Z deischen $
+ * $FreeBSD$
  */
 
 FBSD_1.0 {

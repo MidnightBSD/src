@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Olivier Houchard <cognet@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/arm/include/asmacros.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_ASMACROS_H_
@@ -35,7 +37,7 @@
 
 #ifdef LOCORE
 
-#ifdef _ARM_ARCH_6
+#if __ARM_ARCH >= 6
 #define GET_CURTHREAD_PTR(tmp) \
     	mrc	p15, 0, tmp, c13, c0, 4
 #else

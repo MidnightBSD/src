@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/random/nehemiah.c 298102 2016-04-16 06:10:47Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -68,7 +68,7 @@ VIA_RNG_store(void *buf)
 #ifdef __GNUCLIKE_ASM
 	__asm __volatile(
 		"movl	$0,%%edx\n\t"
-		"xstore"
+		".byte 0x0f, 0xa7, 0xc0"
 			: "=a" (retval), "+d" (rate), "+D" (buf)
 			:
 			: "memory"
@@ -101,17 +101,14 @@ random_nehemiah_read(void *buf, u_int c)
 	size_t count, ret;
 	uint64_t tmp;
 
-	if ((fpu_kern_enter(curthread, fpu_ctx_save, FPU_KERN_NORMAL) == 0)) {
-		b = buf;
-		for (count = c; count > 0; count -= ret) {
-			ret = MIN(VIA_RNG_store(&tmp), count);
-			memcpy(b, &tmp, ret);
-			b += ret;
-		}
-		fpu_kern_leave(curthread, fpu_ctx_save);
+	fpu_kern_enter(curthread, fpu_ctx_save, FPU_KERN_NORMAL);
+	b = buf;
+	for (count = c; count > 0; count -= ret) {
+		ret = MIN(VIA_RNG_store(&tmp), count);
+		memcpy(b, &tmp, ret);
+		b += ret;
 	}
-	else
-		c = 0;
+	fpu_kern_leave(curthread, fpu_ctx_save);
 
 	return (c);
 }
@@ -149,6 +146,12 @@ nehemiah_modevent(module_t mod, int type, void *unused)
 	return (error);
 }
 
-DEV_MODULE(nehemiah, nehemiah_modevent, NULL);
+static moduledata_t nehemiah_mod = {
+	"nehemiah",
+	nehemiah_modevent,
+	0
+};
+
+DECLARE_MODULE(nehemiah, nehemiah_mod, SI_SUB_RANDOM, SI_ORDER_FOURTH);
 MODULE_VERSION(nehemiah, 1);
-MODULE_DEPEND(nehemiah, random_device, 1, 1, 1);
+MODULE_DEPEND(nehemiah, random_harvestq, 1, 1, 1);

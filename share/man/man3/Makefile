@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 12/13/93
-# $FreeBSD: stable/11/share/man/man3/Makefile 338405 2018-08-31 05:21:33Z kib $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -8,6 +8,7 @@ PACKAGE=runtime-manuals
 MAN=		assert.3 \
 		ATOMIC_VAR_INIT.3 \
 		bitstring.3 \
+		CMSG_DATA.3 \
 		end.3 \
 		fpgetround.3 \
 		intro.3 \
@@ -57,6 +58,10 @@ MLINKS+=	bitstring.3 bit_alloc.3 \
 		bitstring.3 bit_set.3 \
 		bitstring.3 bitstr_size.3 \
 		bitstring.3 bit_test.3
+MLINKS+=	CMSG_DATA.3 CMSG_FIRSTHDR.3 \
+		CMSG_DATA.3 CMSG_LEN.3 \
+		CMSG_DATA.3 CMSG_NEXTHDR.3 \
+		CMSG_DATA.3 CMSG_SPACE.3
 MLINKS+=	end.3 edata.3 \
 		end.3 etext.3
 MLINKS+=	fpgetround.3 fpgetmask.3 \
@@ -106,6 +111,7 @@ MLINKS+=	queue.3 LIST_CLASS_ENTRY.3 \
 		queue.3 SLIST_REMOVE.3 \
 		queue.3 SLIST_REMOVE_AFTER.3 \
 		queue.3 SLIST_REMOVE_HEAD.3 \
+		queue.3 SLIST_REMOVE_PREVPTR.3 \
 		queue.3 SLIST_SWAP.3 \
 		queue.3 STAILQ_CLASS_ENTRY.3 \
 		queue.3 STAILQ_CLASS_HEAD.3 \
@@ -163,13 +169,31 @@ MLINKS+=	stdarg.3 va_arg.3 \
 MLINKS+=	timeradd.3 timerclear.3 \
 		timeradd.3 timercmp.3 \
 		timeradd.3 timerisset.3 \
-		timeradd.3 timersub.3
+		timeradd.3 timersub.3 \
+		timeradd.3 timespecadd.3 \
+		timeradd.3 timespecsub.3 \
+		timeradd.3 timespecclear.3 \
+		timeradd.3 timespecisset.3 \
+		timeradd.3 timespeccmp.3
 MLINKS+=	tree.3 RB_EMPTY.3 \
 		tree.3 RB_ENTRY.3 \
 		tree.3 RB_FIND.3 \
 		tree.3 RB_FOREACH.3 \
+		tree.3 RB_FOREACH_FROM.3 \
 		tree.3 RB_FOREACH_REVERSE.3 \
+		tree.3 RB_FOREACH_REVERSE_FROM.3 \
+		tree.3 RB_FOREACH_REVERSE_SAFE.3 \
+		tree.3 RB_FOREACH_SAFE.3 \
 		tree.3 RB_GENERATE.3 \
+		tree.3 RB_GENERATE_FIND.3 \
+		tree.3 RB_GENERATE_INSERT.3 \
+		tree.3 RB_GENERATE_INSERT_COLOR.3 \
+		tree.3 RB_GENERATE_MINMAX.3 \
+		tree.3 RB_GENERATE_NEXT.3 \
+		tree.3 RB_GENERATE_NFIND.3 \
+		tree.3 RB_GENERATE_PREV.3 \
+		tree.3 RB_GENERATE_REMOVE.3 \
+		tree.3 RB_GENERATE_REMOVE_COLOR.3 \
 		tree.3 RB_GENERATE_STATIC.3 \
 		tree.3 RB_HEAD.3 \
 		tree.3 RB_INIT.3 \
@@ -183,6 +207,15 @@ MLINKS+=	tree.3 RB_EMPTY.3 \
 		tree.3 RB_PARENT.3 \
 		tree.3 RB_PREV.3 \
 		tree.3 RB_PROTOTYPE.3 \
+		tree.3 RB_PROTOTYPE_FIND.3 \
+		tree.3 RB_PROTOTYPE_INSERT.3 \
+		tree.3 RB_PROTOTYPE_INSERT_COLOR.3 \
+		tree.3 RB_PROTOTYPE_MINMAX.3 \
+		tree.3 RB_PROTOTYPE_NEXT.3 \
+		tree.3 RB_PROTOTYPE_NFIND.3 \
+		tree.3 RB_PROTOTYPE_PREV.3 \
+		tree.3 RB_PROTOTYPE_REMOVE.3 \
+		tree.3 RB_PROTOTYPE_REMOVE_COLOR.3 \
 		tree.3 RB_PROTOTYPE_STATIC.3 \
 		tree.3 RB_REMOVE.3 \
 		tree.3 RB_RIGHT.3 \
@@ -316,11 +349,13 @@ PTHREAD_MLINKS+=pthread_multi_np.3 pthread_single_np.3
 PTHREAD_MLINKS+=pthread_mutexattr.3 pthread_mutexattr_destroy.3 \
 		pthread_mutexattr.3 pthread_mutexattr_getprioceiling.3 \
 		pthread_mutexattr.3 pthread_mutexattr_getprotocol.3 \
+		pthread_mutexattr.3 pthread_mutexattr_getpshared.3 \
 		pthread_mutexattr.3 pthread_mutexattr_getrobust.3 \
 		pthread_mutexattr.3 pthread_mutexattr_gettype.3 \
 		pthread_mutexattr.3 pthread_mutexattr_init.3 \
 		pthread_mutexattr.3 pthread_mutexattr_setprioceiling.3 \
 		pthread_mutexattr.3 pthread_mutexattr_setprotocol.3 \
+		pthread_mutexattr.3 pthread_mutexattr_setpshared.3 \
 		pthread_mutexattr.3 pthread_mutexattr_setrobust.3 \
 		pthread_mutexattr.3 pthread_mutexattr_settype.3
 PTHREAD_MLINKS+=pthread_mutexattr_getkind_np.3 pthread_mutexattr_setkind_np.3
@@ -328,14 +363,17 @@ PTHREAD_MLINKS+=pthread_rwlock_rdlock.3 pthread_rwlock_tryrdlock.3
 PTHREAD_MLINKS+=pthread_rwlock_wrlock.3 pthread_rwlock_trywrlock.3
 PTHREAD_MLINKS+=pthread_schedparam.3 pthread_getschedparam.3 \
 		pthread_schedparam.3 pthread_setschedparam.3
-PTHREAD_MLINKS+=pthread_set_name_np.3 pthread_get_name_np.3
+PTHREAD_MLINKS+=pthread_set_name_np.3 pthread_get_name_np.3 \
+		pthread_set_name_np.3 pthread_getname_np.3 \
+		pthread_set_name_np.3 pthread_setname_np.3
 PTHREAD_MLINKS+=pthread_spin_init.3 pthread_spin_destroy.3 \
 		pthread_spin_lock.3 pthread_spin_trylock.3 \
 		pthread_spin_lock.3 pthread_spin_unlock.3
 PTHREAD_MLINKS+=pthread_switch_add_np.3 pthread_switch_delete_np.3
 PTHREAD_MLINKS+=pthread_testcancel.3 pthread_setcancelstate.3 \
 		pthread_testcancel.3 pthread_setcanceltype.3
-PTHREAD_MLINKS+=pthread_join.3 pthread_timedjoin_np.3
+PTHREAD_MLINKS+=pthread_join.3 pthread_peekjoin_np.3 \
+		pthread_join.3 pthread_timedjoin_np.3
 .endif
 
 .include <bsd.prog.mk>

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1982, 1986, 1993, 1994, 1995
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -27,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_var.h	8.4 (Berkeley) 5/24/95
- * $FreeBSD: stable/11/sys/netinet/tcp_syncache.h 347153 2019-05-05 12:11:58Z tuexen $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_TCP_SYNCACHE_H_
@@ -43,8 +45,8 @@ int	 syncache_expand(struct in_conninfo *, struct tcpopt *,
 	     struct tcphdr *, struct socket **, struct mbuf *);
 int	 syncache_add(struct in_conninfo *, struct tcpopt *,
 	     struct tcphdr *, struct inpcb *, struct socket **, struct mbuf *,
-	     void *, void *);
-void	 syncache_chkrst(struct in_conninfo *, struct tcphdr *);
+	     void *, void *, uint8_t);
+void	 syncache_chkrst(struct in_conninfo *, struct tcphdr *, struct mbuf *);
 void	 syncache_badack(struct in_conninfo *);
 int	 syncache_pcblist(struct sysctl_req *req, int max_pcbs, int *pcbs_exported);
 
@@ -61,8 +63,8 @@ struct syncache {
 	struct		mbuf *sc_ipopts;	/* source route */
 	u_int16_t	sc_peer_mss;		/* peer's MSS */
 	u_int16_t	sc_wnd;			/* advertised window */
-	u_int8_t	sc_ip_ttl;		/* IPv4 TTL */
-	u_int8_t	sc_ip_tos;		/* IPv4 TOS */
+	u_int8_t	sc_ip_ttl;		/* TTL / Hop Limit */
+	u_int8_t	sc_ip_tos;		/* TOS / Traffic Class */
 	u_int8_t	sc_requested_s_scale:4,
 			sc_requested_r_scale:4;
 	u_int16_t	sc_flags;
@@ -72,9 +74,7 @@ struct syncache {
 #endif
 	struct label	*sc_label;		/* MAC label reference */
 	struct ucred	*sc_cred;		/* cred cache for jail checks */
-#ifdef TCP_RFC7413
 	void		*sc_tfo_cookie;		/* for TCP Fast Open response */
-#endif
 	void		*sc_pspare;		/* TCP_SIGNATURE */
 	u_int32_t	sc_spare[2];		/* UTO */
 };
@@ -90,6 +90,10 @@ struct syncache {
 #define SCF_SIGNATURE	0x20			/* send MD5 digests */
 #define SCF_SACK	0x80			/* send SACK option */
 #define SCF_ECN		0x100			/* send ECN setup packet */
+#define SCF_ACE_N	0x200			/* send ACE non-ECT setup */
+#define SCF_ACE_0	0x400			/* send ACE ECT0 setup */
+#define SCF_ACE_1	0x800			/* send ACE ECT1 setup */
+#define SCF_ACE_CE	0x1000			/* send ACE CE setup */
 
 struct syncache_head {
 	struct mtx	sch_mtx;

@@ -36,7 +36,7 @@
  */
 
 
-#include "assym.s"
+#include "assym.inc"
 
 #include <machine/asm.h>
 #include <sys/errno.h>
@@ -46,7 +46,7 @@
 .L_min_memcpy_size:
 	.word	_C_LABEL(_min_memcpy_size)
 
-__FBSDID("$FreeBSD: stable/11/sys/arm/arm/bcopyinout.S 300694 2016-05-25 19:44:26Z ian $");
+__FBSDID("$FreeBSD$");
 #ifdef _ARM_ARCH_5E
 #include <arm/arm/bcopyinout_xscale.S>
 #else

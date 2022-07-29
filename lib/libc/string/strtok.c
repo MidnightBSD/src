@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1998 Softweyr LLC.  All rights reserved.
  *
  * strtok_r, from Berkeley strtok
@@ -36,7 +38,7 @@
 static char sccsid[] = "@(#)strtok.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/string/strtok.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <stddef.h>
 #ifdef DEBUG_STRTOK

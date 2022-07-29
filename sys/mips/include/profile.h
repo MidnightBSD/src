@@ -1,5 +1,7 @@
 /*	$OpenBSD: profile.h,v 1.2 1999/01/27 04:46:05 imp Exp $ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -14,7 +16,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,7 +34,7 @@
  *
  *	from: @(#)profile.h	8.1 (Berkeley) 6/10/93
  *	JNPR: profile.h,v 1.4 2006/12/02 09:53:41 katta
- * $FreeBSD: stable/11/sys/mips/include/profile.h 352083 2019-09-09 17:37:52Z kevans $
+ * $FreeBSD$
  */
 #ifndef _MACHINE_PROFILE_H_
 #define	_MACHINE_PROFILE_H_

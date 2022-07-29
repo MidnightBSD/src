@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/gnu/usr.bin/cc/cc_tools/Makefile 337477 2018-08-08 18:05:14Z bdrewery $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -391,6 +391,7 @@ GNTOOLS+=	genattr genattrtab genautomata gencodes gencheck genchecksum \
 
 ${GNTOOLS:C,$,.o,} ${GNTOOLS}: ${BUILD_TOOLS_META}
 all: ${GNTOOLS} ${GENSRCS} ${GENONLY}
+build-tools: all
 beforedepend: ${GENONLY}
 
 #

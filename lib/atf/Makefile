@@ -23,16 +23,13 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/lib/atf/Makefile 296704 2016-03-11 23:45:42Z bdrewery $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
 SUBDIR=		libatf-c \
 		libatf-c++ \
-                ${_tests}
 
-.if ${MK_TESTS} != "no"
-_tests= 	tests
-.endif
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.subdir.mk>

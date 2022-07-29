@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2018 Vincenzo Maffione
  * All rights reserved.
  *
@@ -23,9 +25,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: stable/11/sys/dev/netmap/netmap_legacy.c 344047 2019-02-12 09:26:05Z vmaffione $ */
 
-#if defined(__MidnightBSD__)
+/* $FreeBSD$ */
+
+#if defined(__FreeBSD__)
 #include <sys/cdefs.h> /* prerequisite */
 #include <sys/types.h>
 #include <sys/param.h>	/* defines used in kernel.h */
@@ -65,15 +68,17 @@ nmreq_register_from_legacy(struct nmreq *nmr, struct nmreq_header *hdr,
 	req->nr_rx_slots = nmr->nr_rx_slots;
 	req->nr_tx_rings = nmr->nr_tx_rings;
 	req->nr_rx_rings = nmr->nr_rx_rings;
+	req->nr_host_tx_rings = 0;
+	req->nr_host_rx_rings = 0;
 	req->nr_mem_id = nmr->nr_arg2;
 	req->nr_ringid = nmr->nr_ringid & NETMAP_RING_MASK;
 	if ((nmr->nr_flags & NR_REG_MASK) == NR_REG_DEFAULT) {
 		/* Convert the older nmr->nr_ringid (original
 		 * netmap control API) to nmr->nr_flags. */
 		u_int regmode = NR_REG_DEFAULT;
-		if (req->nr_ringid & NETMAP_SW_RING) {
+		if (nmr->nr_ringid & NETMAP_SW_RING) {
 			regmode = NR_REG_SW;
-		} else if (req->nr_ringid & NETMAP_HW_RING) {
+		} else if (nmr->nr_ringid & NETMAP_HW_RING) {
 			regmode = NR_REG_ONE_NIC;
 		} else {
 			regmode = NR_REG_ALL_NIC;
@@ -95,7 +100,7 @@ nmreq_register_from_legacy(struct nmreq *nmr, struct nmreq_header *hdr,
 			/* No space for the pipe suffix. */
 			return ENOBUFS;
 		}
-		strncat(hdr->nr_name, suffix, strlen(suffix));
+		strlcat(hdr->nr_name, suffix, sizeof(hdr->nr_name));
 		req->nr_mode = NR_REG_ALL_NIC;
 		req->nr_ringid = 0;
 	}
@@ -246,6 +251,8 @@ nmreq_from_legacy(struct nmreq *nmr, u_long ioctl_cmd)
 			req->nr_rx_slots = nmr->nr_rx_slots;
 			req->nr_tx_rings = nmr->nr_tx_rings;
 			req->nr_rx_rings = nmr->nr_rx_rings;
+			req->nr_host_tx_rings = 0;
+			req->nr_host_rx_rings = 0;
 			req->nr_mem_id = nmr->nr_arg2;
 		}
 		break;
@@ -364,8 +371,8 @@ netmap_ioctl_legacy(struct netmap_priv_d *priv, u_long cmd, caddr_t data,
 		struct nmreq *nmr = (struct nmreq *) data;
 		struct nmreq_header *hdr;
 
-		if (nmr->nr_version < 11) {
-			nm_prerr("Minimum supported API is 11 (requested %u)",
+		if (nmr->nr_version < 14) {
+			nm_prerr("Minimum supported API is 14 (requested %u)",
 			    nmr->nr_version);
 			return EINVAL;
 		}
@@ -391,7 +398,7 @@ netmap_ioctl_legacy(struct netmap_priv_d *priv, u_long cmd, caddr_t data,
 		break;
 	}
 #endif
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	case FIONBIO:
 	case FIOASYNC:
 		/* FIONBIO/FIOASYNC are no-ops. */

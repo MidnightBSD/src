@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Berkeley Software Design, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from BSDI Id: mutex.h,v 2.7.2.35 2000/04/27 03:10:26 cp
- * $FreeBSD: stable/11/sys/sys/lock.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_LOCK_H_
@@ -126,8 +127,8 @@ struct lock_class {
  * calling conventions for this debugging code in modules so that modules can
  * work with both debug and non-debug kernels.
  */
-#if defined(KLD_MODULE) || defined(WITNESS) || defined(INVARIANTS) || \
-    defined(INVARIANT_SUPPORT) || defined(LOCK_PROFILING) || defined(KTR)
+#if (defined(KLD_MODULE) && !defined(KLD_TIED)) || defined(WITNESS) || defined(INVARIANTS) || \
+    defined(LOCK_PROFILING) || defined(KTR)
 #define	LOCK_DEBUG	1
 #else
 #define	LOCK_DEBUG	0
@@ -276,6 +277,8 @@ const char *witness_file(struct lock_object *);
 void	witness_thread_exit(struct thread *);
 
 #ifdef	WITNESS
+int	witness_startup_count(void);
+void	witness_startup(void *);
 
 /* Flags for witness_warn(). */
 #define	WARN_GIANTOK	0x01	/* Giant is exempt from this check. */

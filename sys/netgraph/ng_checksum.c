@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netgraph/ng_checksum.c 309385 2016-12-02 05:36:37Z julian $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -683,9 +683,9 @@ bypass:
 	return (error);
 
 done:
+	NG_FREE_M(m);
 drop:
 	NG_FREE_ITEM(item);
-	NG_FREE_M(m);
 
 	priv->stats.dropped++;
 

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/amd64/include/vmm_dev.h 348201 2019-05-23 21:23:18Z rgrimes $
+ * $FreeBSD$
  */
 
 #ifndef	_VMM_DEV_H_
@@ -62,6 +64,13 @@ struct vm_seg_desc {			/* data or code segment */
 	int		cpuid;
 	int		regnum;		/* enum vm_reg_name */
 	struct seg_desc desc;
+};
+
+struct vm_register_set {
+	int		cpuid;
+	unsigned int	count;
+	const int	*regnums;	/* enum vm_reg_name */
+	uint64_t	*regvals;
 };
 
 struct vm_run {
@@ -200,6 +209,7 @@ struct vm_cpuset {
 };
 #define	VM_ACTIVE_CPUS		0
 #define	VM_SUSPENDED_CPUS	1
+#define	VM_DEBUG_CPUS		2
 
 struct vm_intinfo {
 	int		vcpuid;
@@ -241,12 +251,15 @@ enum {
 	IOCNUM_GET_MEMSEG = 15,
 	IOCNUM_MMAP_MEMSEG = 16,
 	IOCNUM_MMAP_GETNEXT = 17,
+	IOCNUM_GLA2GPA_NOFAULT = 18,
 
 	/* register/state accessors */
 	IOCNUM_SET_REGISTER = 20,
 	IOCNUM_GET_REGISTER = 21,
 	IOCNUM_SET_SEGMENT_DESCRIPTOR = 22,
 	IOCNUM_GET_SEGMENT_DESCRIPTOR = 23,
+	IOCNUM_SET_REGISTER_SET = 24,
+	IOCNUM_GET_REGISTER_SET = 25,
 
 	/* interrupt injection */
 	IOCNUM_GET_INTINFO = 28,
@@ -268,6 +281,7 @@ enum {
 	IOCNUM_MAP_PPTDEV_MMIO = 42,
 	IOCNUM_PPTDEV_MSI = 43,
 	IOCNUM_PPTDEV_MSIX = 44,
+	IOCNUM_PPTDEV_DISABLE_MSIX = 45,
 
 	/* statistics */
 	IOCNUM_VM_STATS = 50, 
@@ -291,6 +305,8 @@ enum {
 	/* vm_cpuset */
 	IOCNUM_ACTIVATE_CPU = 90,
 	IOCNUM_GET_CPUSET = 91,
+	IOCNUM_SUSPEND_CPU = 92,
+	IOCNUM_RESUME_CPU = 93,
 
 	/* RTC */
 	IOCNUM_RTC_READ = 100,
@@ -321,6 +337,10 @@ enum {
 	_IOW('v', IOCNUM_SET_SEGMENT_DESCRIPTOR, struct vm_seg_desc)
 #define	VM_GET_SEGMENT_DESCRIPTOR \
 	_IOWR('v', IOCNUM_GET_SEGMENT_DESCRIPTOR, struct vm_seg_desc)
+#define	VM_SET_REGISTER_SET \
+	_IOW('v', IOCNUM_SET_REGISTER_SET, struct vm_register_set)
+#define	VM_GET_REGISTER_SET \
+	_IOWR('v', IOCNUM_GET_REGISTER_SET, struct vm_register_set)
 #define	VM_INJECT_EXCEPTION	\
 	_IOW('v', IOCNUM_INJECT_EXCEPTION, struct vm_exception)
 #define	VM_LAPIC_IRQ 		\
@@ -359,6 +379,8 @@ enum {
 	_IOW('v', IOCNUM_PPTDEV_MSI, struct vm_pptdev_msi)
 #define	VM_PPTDEV_MSIX \
 	_IOW('v', IOCNUM_PPTDEV_MSIX, struct vm_pptdev_msix)
+#define	VM_PPTDEV_DISABLE_MSIX \
+	_IOW('v', IOCNUM_PPTDEV_DISABLE_MSIX, struct vm_pptdev)
 #define VM_INJECT_NMI \
 	_IOW('v', IOCNUM_INJECT_NMI, struct vm_nmi)
 #define	VM_STATS \
@@ -379,10 +401,16 @@ enum {
 	_IOWR('v', IOCNUM_GET_GPA_PMAP, struct vm_gpa_pte)
 #define	VM_GLA2GPA	\
 	_IOWR('v', IOCNUM_GLA2GPA, struct vm_gla2gpa)
+#define	VM_GLA2GPA_NOFAULT \
+	_IOWR('v', IOCNUM_GLA2GPA_NOFAULT, struct vm_gla2gpa)
 #define	VM_ACTIVATE_CPU	\
 	_IOW('v', IOCNUM_ACTIVATE_CPU, struct vm_activate_cpu)
 #define	VM_GET_CPUS	\
 	_IOW('v', IOCNUM_GET_CPUSET, struct vm_cpuset)
+#define	VM_SUSPEND_CPU \
+	_IOW('v', IOCNUM_SUSPEND_CPU, struct vm_activate_cpu)
+#define	VM_RESUME_CPU \
+	_IOW('v', IOCNUM_RESUME_CPU, struct vm_activate_cpu)
 #define	VM_SET_INTINFO	\
 	_IOW('v', IOCNUM_SET_INTINFO, struct vm_intinfo)
 #define	VM_GET_INTINFO	\

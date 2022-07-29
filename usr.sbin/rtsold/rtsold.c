@@ -1,6 +1,8 @@
 /*	$KAME: rtsold.c,v 1.67 2003/05/17 18:16:15 itojun Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
  * 
@@ -28,13 +30,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/rtsold/rtsold.c 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
-#include <sys/types.h>
+#include <sys/param.h>
+#include <sys/capsicum.h>
+#include <sys/event.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
-#include <sys/param.h>
 
 #include <net/if.h>
 #include <net/if_dl.h>
@@ -46,23 +49,27 @@
 
 #include <netinet6/nd6.h>
 
-#include <signal.h>
-#include <unistd.h>
-#include <syslog.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <time.h>
-#include <errno.h>
+#include <capsicum_helpers.h>
 #include <err.h>
-#include <stdarg.h>
+#include <errno.h>
 #include <ifaddrs.h>
-#include <poll.h>
+#include <libgen.h>
+#include <signal.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <syslog.h>
+#include <time.h>
+#include <unistd.h>
+
+#include <libcasper.h>
+#include <casper/cap_syslog.h>
+#include <libutil.h>
 
 #include "rtsold.h"
 
-#define RTSOL_DUMPFILE	"/var/run/rtsold.dump";
-#define RTSOL_PIDFILE	"/var/run/rtsold.pid";
+#define RTSOL_DUMPFILE	"/var/run/rtsold.dump"
 
 struct timespec tm_max;
 static int log_upto = 999;
@@ -73,8 +80,11 @@ int aflag = 0;
 int dflag = 0;
 int uflag = 0;
 
+const char *managedconf_script;
 const char *otherconf_script;
 const char *resolvconf_script = "/sbin/resolvconf";
+
+cap_channel_t *capllflags, *capscript, *capsendmsg, *capsyslog;
 
 /* protocol constants */
 #define MAX_RTR_SOLICITATION_DELAY	1 /* second */
@@ -89,45 +99,40 @@ const char *resolvconf_script = "/sbin/resolvconf";
 
 /* static variables and functions */
 static int mobile_node = 0;
-static const char *pidfilename = RTSOL_PIDFILE;
 
-#ifndef SMALL
-static int do_dump;
-static const char *dumpfilename = RTSOL_DUMPFILE;
-#endif
+static sig_atomic_t do_dump, do_exit;
+static struct pidfh *pfh;
 
-#if 0
-static int ifreconfig(char *);
-#endif
-
+static char **autoifprobe(void);
+static int ifconfig(char *ifname);
+static int init_capabilities(void);
 static int make_packet(struct ifinfo *);
 static struct timespec *rtsol_check_timer(void);
 
-#ifndef SMALL
-static void rtsold_set_dump_file(int);
-#endif
-static void usage(void);
+static void set_dumpfile(int);
+static void set_exit(int);
+static void usage(const char *progname);
 
 int
 main(int argc, char **argv)
 {
-	int s, ch, once = 0;
+	struct kevent events[2];
+	FILE *dumpfp;
+	struct ifinfo *ifi;
 	struct timespec *timeout;
-	const char *opts;
-	struct pollfd set[2];
-	int rtsock;
-	char *argv0;
+	const char *opts, *pidfilepath, *progname;
+	int ch, error, kq, once, rcvsock, rtsock;
 
-#ifndef SMALL
-	/* rtsold */
-	opts = "adDfFm1O:p:R:u";
-#else
-	/* rtsol */
-	opts = "adDFO:R:u";
-	fflag = 1;
-	once = 1;
-#endif
-	argv0 = argv[0];
+	progname = basename(argv[0]);
+	if (strcmp(progname, "rtsold") == 0) {
+		opts = "adDfFm1M:O:p:R:u";
+		once = 0;
+		pidfilepath = NULL;
+	} else {
+		opts = "adDFM:O:R:u";
+		fflag = 1;
+		once = 1;
+	}
 
 	while ((ch = getopt(argc, argv, opts)) != -1) {
 		switch (ch) {
@@ -152,11 +157,14 @@ main(int argc, char **argv)
 		case '1':
 			once = 1;
 			break;
+		case 'M':
+			managedconf_script = optarg;
+			break;
 		case 'O':
 			otherconf_script = optarg;
 			break;
 		case 'p':
-			pidfilename = optarg;
+			pidfilepath = optarg;
 			break;
 		case 'R':
 			resolvconf_script = optarg;
@@ -165,17 +173,14 @@ main(int argc, char **argv)
 			uflag = 1;
 			break;
 		default:
-			usage();
-			exit(1);
+			usage(progname);
 		}
 	}
 	argc -= optind;
 	argv += optind;
 
-	if ((!aflag && argc == 0) || (aflag && argc != 0)) {
-		usage();
-		exit(1);
-	}
+	if ((!aflag && argc == 0) || (aflag && argc != 0))
+		usage(progname);
 
 	/* Generate maximum time in timespec. */
 	tm_max.tv_sec = (-1) & ~((time_t)1 << ((sizeof(tm_max.tv_sec) * 8) - 1));
@@ -189,74 +194,65 @@ main(int argc, char **argv)
 	else
 		log_upto = LOG_NOTICE;
 
-	if (!fflag) {
-		char *ident;
-
-		ident = strrchr(argv0, '/');
-		if (!ident)
-			ident = argv0;
-		else
-			ident++;
-		openlog(ident, LOG_NDELAY|LOG_PID, LOG_DAEMON);
-		if (log_upto >= 0)
-			setlogmask(LOG_UPTO(log_upto));
-	}
-
-	if (otherconf_script && *otherconf_script != '/') {
+	if (managedconf_script != NULL && *managedconf_script != '/')
+		errx(1, "configuration script (%s) must be an absolute path",
+		    managedconf_script);
+	if (otherconf_script != NULL && *otherconf_script != '/')
 		errx(1, "configuration script (%s) must be an absolute path",
 		    otherconf_script);
-	}
-	if (resolvconf_script && *resolvconf_script != '/') {
+	if (*resolvconf_script != '/')
 		errx(1, "configuration script (%s) must be an absolute path",
 		    resolvconf_script);
+
+	if (!fflag) {
+		pfh = pidfile_open(pidfilepath, 0644, NULL);
+		if (pfh == NULL)
+			errx(1, "failed to open pidfile: %s", strerror(errno));
+		if (daemon(0, 0) != 0)
+			errx(1, "failed to daemonize");
 	}
-	if (pidfilename && *pidfilename != '/') {
-		errx(1, "pid filename (%s) must be an absolute path",
-		    pidfilename);
-	}
 
-#if (__FreeBSD_version < 900000)
-	if (Fflag) {
-		setinet6sysctl(IPV6CTL_FORWARDING, 0);
-	} else {
-		/* warn if forwarding is up */
-		if (getinet6sysctl(IPV6CTL_FORWARDING))
-			warnx("kernel is configured as a router, not a host");
-	}
-#endif
+	if ((error = init_capabilities()) != 0)
+		err(1, "failed to initialize capabilities");
 
-#ifndef SMALL
-	/* initialization to dump internal status to a file */
-	signal(SIGUSR1, rtsold_set_dump_file);
-#endif
+	if (!fflag) {
+		cap_openlog(capsyslog, progname, LOG_NDELAY | LOG_PID,
+		    LOG_DAEMON);
+		if (log_upto >= 0)
+			(void)cap_setlogmask(capsyslog, LOG_UPTO(log_upto));
+		(void)signal(SIGTERM, set_exit);
+		(void)signal(SIGINT, set_exit);
+		(void)signal(SIGUSR1, set_dumpfile);
+		dumpfp = rtsold_init_dumpfile(RTSOL_DUMPFILE);
+	} else
+		dumpfp = NULL;
 
-	if (!fflag)
-		daemon(0, 0);		/* act as a daemon */
-
-	/*
-	 * Open a socket for sending RS and receiving RA.
-	 * This should be done before calling ifinit(), since the function
-	 * uses the socket.
-	 */
-	if ((s = sockopen()) < 0) {
-		warnmsg(LOG_ERR, __func__, "failed to open a socket");
+	kq = kqueue();
+	if (kq < 0) {
+		warnmsg(LOG_ERR, __func__, "failed to create a kqueue: %s",
+		    strerror(errno));
 		exit(1);
 	}
-	set[0].fd = s;
-	set[0].events = POLLIN;
-	set[1].fd = -1;
 
+	/* Open global sockets and register for read events. */
 	if ((rtsock = rtsock_open()) < 0) {
-		warnmsg(LOG_ERR, __func__, "failed to open a socket");
+		warnmsg(LOG_ERR, __func__, "failed to open routing socket");
 		exit(1);
 	}
-	set[1].fd = rtsock;
-	set[1].events = POLLIN;
+	if ((rcvsock = recvsockopen()) < 0) {
+		warnmsg(LOG_ERR, __func__, "failed to open receive socket");
+		exit(1);
+	}
+	EV_SET(&events[0], rtsock, EVFILT_READ, EV_ADD, 0, 0, NULL);
+	EV_SET(&events[1], rcvsock, EVFILT_READ, EV_ADD, 0, 0, NULL);
+	if (kevent(kq, events, 2, NULL, 0, NULL) < 0) {
+		warnmsg(LOG_ERR, __func__, "kevent(): %s", strerror(errno));
+		exit(1);
+	}
 
-	/* configuration per interface */
-	if (ifinit()) {
-		warnmsg(LOG_ERR, __func__,
-		    "failed to initialize interfaces");
+	/* Probe network interfaces and set up tracking info. */
+	if (ifinit() != 0) {
+		warnmsg(LOG_ERR, __func__, "failed to initialize interfaces");
 		exit(1);
 	}
 	if (aflag)
@@ -270,42 +266,37 @@ main(int argc, char **argv)
 		argv++;
 	}
 
-	/* setup for probing default routers */
-	if (probe_init()) {
+	/* Write to our pidfile. */
+	if (pfh != NULL && pidfile_write(pfh) != 0) {
 		warnmsg(LOG_ERR, __func__,
-		    "failed to setup for probing routers");
+		    "failed to open pidfile: %s", strerror(errno));
 		exit(1);
-		/*NOTREACHED*/
 	}
 
-	/* dump the current pid */
-	if (!once) {
-		pid_t pid = getpid();
-		FILE *fp;
+	/* Enter capability mode. */
+	caph_cache_catpages();
+	if (caph_enter_casper() != 0) {
+		warnmsg(LOG_ERR, __func__, "caph_enter(): %s", strerror(errno));
+		exit(1);
+	}
 
-		if ((fp = fopen(pidfilename, "w")) == NULL)
-			warnmsg(LOG_ERR, __func__,
-			    "failed to open a pid log file(%s): %s",
-			    pidfilename, strerror(errno));
-		else {
-			fprintf(fp, "%d\n", pid);
-			fclose(fp);
+	for (;;) {
+		if (do_exit) {
+			/* Handle SIGTERM, SIGINT. */
+			if (pfh != NULL)
+				pidfile_remove(pfh);
+			break;
 		}
-	}
-	while (1) {		/* main loop */
-		int e;
-#ifndef SMALL
-		if (do_dump) {	/* SIGUSR1 */
+		if (do_dump) {
+			/* Handle SIGUSR1. */
 			do_dump = 0;
-			rtsold_dump_file(dumpfilename);
+			if (dumpfp != NULL)
+				rtsold_dump(dumpfp);
 		}
-#endif
 
 		timeout = rtsol_check_timer();
 
 		if (once) {
-			struct ifinfo *ifi;
-
 			/* if we have no timeout, we are done (or failed) */
 			if (timeout == NULL)
 				break;
@@ -318,43 +309,87 @@ main(int argc, char **argv)
 			if (ifi == NULL)
 				break;
 		}
-		e = poll(set, 2, timeout ? (timeout->tv_sec * 1000 + timeout->tv_nsec / 1000 / 1000) : INFTIM);
-		if (e < 1) {
-			if (e < 0 && errno != EINTR) {
-				warnmsg(LOG_ERR, __func__, "select: %s",
+
+		error = kevent(kq, NULL, 0, &events[0], 1, timeout);
+		if (error < 1) {
+			if (error < 0 && errno != EINTR)
+				warnmsg(LOG_ERR, __func__, "kevent(): %s",
 				    strerror(errno));
-			}
 			continue;
 		}
 
-		/* packet reception */
-		if (set[1].revents & POLLIN)
+		if (events[0].ident == (uintptr_t)rtsock)
 			rtsock_input(rtsock);
-		if (set[0].revents & POLLIN)
-			rtsol_input(s);
+		else
+			rtsol_input(rcvsock);
 	}
-	/* NOTREACHED */
 
 	return (0);
 }
 
-int
+static int
+init_capabilities(void)
+{
+#ifdef WITH_CASPER
+	const char *const scripts[] =
+	    { resolvconf_script, managedconf_script, otherconf_script };
+	const char *scripts_set[nitems(scripts)];
+	cap_channel_t *capcasper;
+	nvlist_t *limits;
+	int count;
+
+	capcasper = cap_init();
+	if (capcasper == NULL)
+		return (-1);
+
+	capllflags = cap_service_open(capcasper, "rtsold.llflags");
+	if (capllflags == NULL)
+		return (-1);
+
+	capscript = cap_service_open(capcasper, "rtsold.script");
+	if (capscript == NULL)
+		return (-1);
+	count = 0;
+	for (size_t i = 0; i < nitems(scripts); i++)
+		if (scripts[i] != NULL)
+			scripts_set[count++] = scripts[i];
+	limits = nvlist_create(0);
+	nvlist_add_string_array(limits, "scripts", scripts_set, count);
+	if (cap_limit_set(capscript, limits) != 0)
+		return (-1);
+
+	capsendmsg = cap_service_open(capcasper, "rtsold.sendmsg");
+	if (capsendmsg == NULL)
+		return (-1);
+
+	if (!fflag) {
+		capsyslog = cap_service_open(capcasper, "system.syslog");
+		if (capsyslog == NULL)
+			return (-1);
+	}
+
+	cap_close(capcasper);
+#endif /* WITH_CASPER */
+	return (0);
+}
+
+static int
 ifconfig(char *ifname)
 {
 	struct ifinfo *ifi;
 	struct sockaddr_dl *sdl;
 	int flags;
 
+	ifi = NULL;
 	if ((sdl = if_nametosdl(ifname)) == NULL) {
 		warnmsg(LOG_ERR, __func__,
 		    "failed to get link layer information for %s", ifname);
-		return (-1);
+		goto bad;
 	}
 	if (find_ifinfo(sdl->sdl_index)) {
 		warnmsg(LOG_ERR, __func__,
 		    "interface %s was already configured", ifname);
-		free(sdl);
-		return (-1);
+		goto bad;
 	}
 
 	if (Fflag) {
@@ -363,30 +398,29 @@ ifconfig(char *ifname)
 
 		if ((s = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
 			warnmsg(LOG_ERR, __func__, "socket() failed.");
-			return (-1);
+			goto bad;
 		}
 		memset(&nd, 0, sizeof(nd));
 		strlcpy(nd.ifname, ifname, sizeof(nd.ifname));
 		if (ioctl(s, SIOCGIFINFO_IN6, (caddr_t)&nd) < 0) {
 			warnmsg(LOG_ERR, __func__,
 			    "cannot get accept_rtadv flag");
-			close(s);
-			return (-1);
+			(void)close(s);
+			goto bad;
 		}
 		nd.ndi.flags |= ND6_IFF_ACCEPT_RTADV;
 		if (ioctl(s, SIOCSIFINFO_IN6, (caddr_t)&nd) < 0) {
 			warnmsg(LOG_ERR, __func__,
 			    "cannot set accept_rtadv flag");
-			close(s);
-			return (-1);
+			(void)close(s);
+			goto bad;
 		}
-		close(s);
+		(void)close(s);
 	}
 
 	if ((ifi = malloc(sizeof(*ifi))) == NULL) {
 		warnmsg(LOG_ERR, __func__, "memory allocation failed");
-		free(sdl);
-		return (-1);
+		goto bad;
 	}
 	memset(ifi, 0, sizeof(*ifi));
 	ifi->sdl = sdl;
@@ -437,52 +471,10 @@ ifconfig(char *ifname)
 	return (0);
 
 bad:
-	free(ifi->sdl);
+	free(sdl);
 	free(ifi);
 	return (-1);
 }
-
-void
-iflist_init(void)
-{
-	struct ifinfo *ifi;
-
-	while ((ifi = TAILQ_FIRST(&ifinfo_head)) != NULL) {
-		TAILQ_REMOVE(&ifinfo_head, ifi, ifi_next);
-		if (ifi->sdl != NULL)
-			free(ifi->sdl);
-		if (ifi->rs_data != NULL)
-			free(ifi->rs_data);
-		free(ifi);
-	}
-}
-
-#if 0
-static int
-ifreconfig(char *ifname)
-{
-	struct ifinfo *ifi, *prev;
-	int rv;
-
-	prev = NULL;
-	TAILQ_FOREACH(ifi, &ifinfo_head, ifi_next) {
-		if (strncmp(ifi->ifname, ifname, sizeof(ifi->ifname)) == 0)
-			break;
-		prev = ifi;
-	}
-	prev->next = ifi->next;
-
-	rv = ifconfig(ifname);
-
-	/* reclaim it after ifconfig() in case ifname is pointer inside ifi */
-	if (ifi->rs_data)
-		free(ifi->rs_data);
-	free(ifi->sdl);
-	free(ifi);
-
-	return (rv);
-}
-#endif
 
 struct rainfo *
 find_rainfo(struct ifinfo *ifi, struct sockaddr_in6 *sin6)
@@ -555,7 +547,7 @@ rtsol_check_timer(void)
 	struct ifinfo *ifi;
 	struct rainfo *rai;
 	struct ra_opt *rao, *raotmp;
-	int flags;
+	int error, flags;
 
 	clock_gettime(CLOCK_MONOTONIC_FAST, &now);
 
@@ -618,22 +610,29 @@ rtsol_check_timer(void)
 
 				/*
 				 * If we need a probe, clear the previous
-				 * status wrt the "other" configuration.
+				 * status wrt the "managed/other" configuration.
 				 */
-				if (probe)
+				if (probe) {
+					ifi->managedconfig = 0;
 					ifi->otherconfig = 0;
-
-				if (probe && mobile_node)
-					defrouter_probe(ifi);
+				}
+				if (probe && mobile_node) {
+					error = cap_probe_defrouters(capsendmsg,
+					    ifi);
+					if (error != 0)
+						warnmsg(LOG_DEBUG, __func__,
+					    "failed to probe routers: %d",
+						    error);
+				}
 				break;
 			}
 			case IFS_DELAY:
 				ifi->state = IFS_PROBE;
-				sendpacket(ifi);
+				(void)cap_rssend(capsendmsg, ifi);
 				break;
 			case IFS_PROBE:
 				if (ifi->probes < MAX_RTR_SOLICITATIONS)
-					sendpacket(ifi);
+					(void)cap_rssend(capsendmsg, ifi);
 				else {
 					warnmsg(LOG_INFO, __func__,
 					    "No answer after sending %d RSs",
@@ -714,10 +713,9 @@ rtsol_timer_update(struct ifinfo *ifi)
 			ifi->timer.tv_sec = 1;
 		break;
 	case IFS_IDLE:
-		if (mobile_node) {
+		if (mobile_node)
 			/* XXX should be configurable */
 			ifi->timer.tv_sec = 3;
-		}
 		else
 			ifi->timer = tm_max;	/* stop timer(valid?) */
 		break;
@@ -729,7 +727,7 @@ rtsol_timer_update(struct ifinfo *ifi)
 	case IFS_PROBE:
 		if (ifi->probes < MAX_RTR_SOLICITATIONS)
 			ifi->timer.tv_sec = RTR_SOLICITATION_INTERVAL;
-		else {
+		else
 			/*
 			 * After sending MAX_RTR_SOLICITATIONS solicitations,
 			 * we're just waiting for possible replies; there
@@ -738,7 +736,6 @@ rtsol_timer_update(struct ifinfo *ifi)
 			 * on RFC 2461, Section 6.3.7.
 			 */
 			ifi->timer.tv_sec = MAX_RTR_SOLICITATION_DELAY;
-		}
 		break;
 	default:
 		warnmsg(LOG_ERR, __func__,
@@ -765,31 +762,36 @@ rtsol_timer_update(struct ifinfo *ifi)
 #undef MILLION
 }
 
-/* timer related utility functions */
-#define MILLION 1000000
-
-#ifndef SMALL
 static void
-rtsold_set_dump_file(int sig __unused)
+set_dumpfile(int sig __unused)
 {
+
 	do_dump = 1;
 }
-#endif
 
 static void
-usage(void)
+set_exit(int sig __unused)
 {
-#ifndef SMALL
-	fprintf(stderr, "usage: rtsold [-dDfFm1] [-O script-name] "
-	    "[-p pidfile] [-R script-name] interface ...\n");
-	fprintf(stderr, "usage: rtsold [-dDfFm1] [-O script-name] "
-	    "[-p pidfile] [-R script-name] -a\n");
-#else
-	fprintf(stderr, "usage: rtsol [-dDF] [-O script-name] "
-	    "[-p pidfile] [-R script-name] interface ...\n");
-	fprintf(stderr, "usage: rtsol [-dDF] [-O script-name] "
-	    "[-p pidfile] [-R script-name] -a\n");
-#endif
+
+	do_exit = 1;
+}
+
+static void
+usage(const char *progname)
+{
+
+	if (strcmp(progname, "rtsold") == 0) {
+		fprintf(stderr, "usage: rtsold [-dDfFm1] [-O script-name] "
+		    "[-p pidfile] [-R script-name] interface ...\n");
+		fprintf(stderr, "usage: rtsold [-dDfFm1] [-O script-name] "
+		    "[-p pidfile] [-R script-name] -a\n");
+	} else {
+		fprintf(stderr, "usage: rtsol [-dDF] [-O script-name] "
+		    "[-p pidfile] [-R script-name] interface ...\n");
+		fprintf(stderr, "usage: rtsol [-dDF] [-O script-name] "
+		    "[-p pidfile] [-R script-name] -a\n");
+	}
+	exit(1);
 }
 
 void
@@ -800,14 +802,12 @@ warnmsg(int priority, const char *func, const char *msg, ...)
 
 	va_start(ap, msg);
 	if (fflag) {
-		if (priority <= log_upto) {
-			(void)vfprintf(stderr, msg, ap);
-			(void)fprintf(stderr, "\n");
-		}
+		if (priority <= log_upto)
+			vwarnx(msg, ap);
 	} else {
 		snprintf(buf, sizeof(buf), "<%s> %s", func, msg);
 		msg = buf;
-		vsyslog(priority, msg, ap);
+		cap_vsyslog(capsyslog, priority, msg, ap);
 	}
 	va_end(ap);
 }
@@ -815,7 +815,7 @@ warnmsg(int priority, const char *func, const char *msg, ...)
 /*
  * return a list of interfaces which is suitable to sending an RS.
  */
-char **
+static char **
 autoifprobe(void)
 {
 	static char **argv = NULL;

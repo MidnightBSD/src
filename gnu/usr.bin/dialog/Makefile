@@ -1,6 +1,6 @@
-# $FreeBSD: stable/11/gnu/usr.bin/dialog/Makefile 275077 2014-11-25 21:18:18Z bapt $
+# $FreeBSD$
 
-DIALOG=	${.CURDIR}/../../../contrib/dialog
+DIALOG=	${SRCTOP}/contrib/dialog
 PROG=   dialog
 
 LIBADD=	dialog ncursesw m

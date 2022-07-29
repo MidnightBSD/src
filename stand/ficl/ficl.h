@@ -41,7 +41,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD: stable/11/stand/ficl/ficl.h 329011 2018-02-08 02:50:47Z kevans $ */
+/* $FreeBSD$ */
 
 #if !defined (__FICL_H__)
 #define __FICL_H__
@@ -249,7 +249,7 @@ typedef struct ficl_system_info FICL_SYSTEM_INFO;
 ** complement of false... that unifies logical and bitwise operations
 ** nicely.
 */
-#define FICL_TRUE  ((unsigned long)~(0L))
+#define FICL_TRUE  (~(FICL_UNS)0)
 #define FICL_FALSE (0)
 #define FICL_BOOL(x) ((x) ? FICL_TRUE : FICL_FALSE)
 
@@ -1156,6 +1156,10 @@ typedef void ficlCompileFcn(FICL_SYSTEM *);
 #define FICL_COMPILE_SET(func)	\
 	DATA_SET(Xficl_compile_set, func)
 SET_DECLARE(Xficl_compile_set, ficlCompileFcn);
+
+#ifdef LOADER_VERIEXEC
+#include <verify_file.h>
+#endif
 
 #ifdef __cplusplus
 }

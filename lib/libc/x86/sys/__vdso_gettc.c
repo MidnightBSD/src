@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2012 Konstantin Belousov <kib@FreeBSD.org>
- * Copyright (c) 2016, 2017 The FreeBSD Foundation
+ * Copyright (c) 2016, 2017, 2019 The FreeBSD Foundation
  * All rights reserved.
  *
  * Portions of this software were developed by Konstantin Belousov
@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/x86/sys/__vdso_gettc.c 344158 2019-02-15 11:36:16Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include "namespace.h"
@@ -45,127 +45,155 @@ __FBSDID("$FreeBSD: stable/11/lib/libc/x86/sys/__vdso_gettc.c 344158 2019-02-15 
 #include "un-namespace.h"
 #include <machine/atomic.h>
 #include <machine/cpufunc.h>
+#include <machine/pvclock.h>
 #include <machine/specialreg.h>
 #include <dev/acpica/acpi_hpet.h>
 #ifdef WANT_HYPERV
 #include <dev/hyperv/hyperv.h>
 #endif
+#include <x86/ifunc.h>
 #include "libc_private.h"
 
-static enum LMB {
-	LMB_UNKNOWN,
-	LMB_NONE,
-	LMB_MFENCE,
-	LMB_LFENCE
-} lfence_works = LMB_UNKNOWN;
-
-static void
-cpuidp(u_int leaf, u_int p[4])
-{
-
-	__asm __volatile(
-#if defined(__i386__)
-	    "	pushl	%%ebx\n"
-#endif
-	    "	cpuid\n"
-#if defined(__i386__)
-	    "	movl	%%ebx,%1\n"
-	    "	popl	%%ebx"
-#endif
-	    : "=a" (p[0]),
-#if defined(__i386__)
-	    "=r" (p[1]),
-#elif defined(__amd64__)
-	    "=b" (p[1]),
-#else
-#error "Arch"
-#endif
-	    "=c" (p[2]), "=d" (p[3])
-	    :  "0" (leaf));
-}
-
-static enum LMB
-select_lmb(void)
-{
-	u_int p[4];
-	/* Not a typo, string matches our cpuidp() registers use. */
-	static const char intel_id[] = "GenuntelineI";
-
-	cpuidp(0, p);
-	return (memcmp(p + 1, intel_id, sizeof(intel_id) - 1) == 0 ?
-	    LMB_LFENCE : LMB_MFENCE);
-}
-
-static void
-init_fence(void)
-{
-#if defined(__i386__)
-	u_int cpuid_supported, p[4];
-
-	lfence_works = LMB_NONE;
-	__asm __volatile(
-	    "	pushfl\n"
-	    "	popl	%%eax\n"
-	    "	movl    %%eax,%%ecx\n"
-	    "	xorl    $0x200000,%%eax\n"
-	    "	pushl	%%eax\n"
-	    "	popfl\n"
-	    "	pushfl\n"
-	    "	popl    %%eax\n"
-	    "	xorl    %%eax,%%ecx\n"
-	    "	je	1f\n"
-	    "	movl	$1,%0\n"
-	    "	jmp	2f\n"
-	    "1:	movl	$0,%0\n"
-	    "2:\n"
-	    : "=r" (cpuid_supported) : : "eax", "ecx", "cc");
-	if (cpuid_supported) {
-		cpuidp(0x1, p);
-		if ((p[3] & CPUID_SSE2) != 0)
-			lfence_works = select_lmb();
-	}
-#elif defined(__amd64__)
-	lfence_works = select_lmb();
-#else
-#error "Arch"
-#endif
-}
-
-static void
-rdtsc_mb(void)
-{
-
-again:
-	if (__predict_true(lfence_works == LMB_LFENCE)) {
-		lfence();
-		return;
-	} else if (lfence_works == LMB_MFENCE) {
-		mfence();
-		return;
-	} else if (lfence_works == LMB_NONE) {
-		return;
-	}
-	init_fence();
-	goto again;
-}
-
-static u_int
-__vdso_gettc_rdtsc_low(const struct vdso_timehands *th)
+static inline u_int
+rdtsc_low(const struct vdso_timehands *th)
 {
 	u_int rv;
 
-	rdtsc_mb();
 	__asm __volatile("rdtsc; shrd %%cl, %%edx, %0"
 	    : "=a" (rv) : "c" (th->th_x86_shift) : "edx");
 	return (rv);
 }
 
-static u_int
-__vdso_rdtsc32(void)
+static inline u_int
+rdtscp_low(const struct vdso_timehands *th)
 {
+	u_int rv;
 
-	rdtsc_mb();
+	__asm __volatile("rdtscp; movl %%edi,%%ecx; shrd %%cl, %%edx, %0"
+	    : "=a" (rv) : "D" (th->th_x86_shift) : "ecx", "edx");
+	return (rv);
+}
+
+static u_int
+rdtsc_low_mb_lfence(const struct vdso_timehands *th)
+{
+	lfence();
+	return (rdtsc_low(th));
+}
+
+static u_int
+rdtsc_low_mb_mfence(const struct vdso_timehands *th)
+{
+	mfence();
+	return (rdtsc_low(th));
+}
+
+static u_int
+rdtsc_low_mb_none(const struct vdso_timehands *th)
+{
+	return (rdtsc_low(th));
+}
+
+static u_int
+rdtsc32_mb_lfence(void)
+{
+	lfence();
 	return (rdtsc32());
+}
+
+static u_int
+rdtsc32_mb_mfence(void)
+{
+	mfence();
+	return (rdtsc32());
+}
+
+static u_int
+rdtsc32_mb_none(void)
+{
+	return (rdtsc32());
+}
+
+static u_int
+rdtscp32_(void)
+{
+	return (rdtscp32());
+}
+
+struct tsc_selector_tag {
+	u_int (*ts_rdtsc32)(void);
+	u_int (*ts_rdtsc_low)(const struct vdso_timehands *);
+};
+
+static const struct tsc_selector_tag tsc_selector[] = {
+	[0] = {				/* Intel, LFENCE */
+		.ts_rdtsc32 =	rdtsc32_mb_lfence,
+		.ts_rdtsc_low =	rdtsc_low_mb_lfence,
+	},
+	[1] = {				/* AMD, MFENCE */
+		.ts_rdtsc32 =	rdtsc32_mb_mfence,
+		.ts_rdtsc_low =	rdtsc_low_mb_mfence,
+	},
+	[2] = {				/* No SSE2 */
+		.ts_rdtsc32 = rdtsc32_mb_none,
+		.ts_rdtsc_low = rdtsc_low_mb_none,
+	},
+	[3] = {				/* RDTSCP */
+		.ts_rdtsc32 =	rdtscp32_,
+		.ts_rdtsc_low =	rdtscp_low,
+	},
+};
+
+static int
+tsc_selector_idx(u_int cpu_feature)
+{
+	u_int amd_feature, cpu_exthigh, cpu_id, p[4], v[3];
+	static const char amd_id[] = "AuthenticAMD";
+	static const char hygon_id[] = "HygonGenuine";
+	bool amd_cpu;
+
+	if (cpu_feature == 0)
+		return (2);	/* should not happen due to RDTSC */
+
+	do_cpuid(0, p);
+	v[0] = p[1];
+	v[1] = p[3];
+	v[2] = p[2];
+	amd_cpu = memcmp(v, amd_id, sizeof(amd_id) - 1) == 0 ||
+	    memcmp(v, hygon_id, sizeof(hygon_id) - 1) == 0;
+
+	do_cpuid(1, p);
+	cpu_id = p[0];
+
+	if (cpu_feature != 0) {
+		do_cpuid(0x80000000, p);
+		cpu_exthigh = p[0];
+	} else {
+		cpu_exthigh = 0;
+	}
+	if (cpu_exthigh >= 0x80000001) {
+		do_cpuid(0x80000001, p);
+		amd_feature = p[3];
+	} else {
+		amd_feature = 0;
+	}
+
+	if ((amd_feature & AMDID_RDTSCP) != 0)
+		return (3);
+	if ((cpu_feature & CPUID_SSE2) == 0)
+		return (2);
+	return (amd_cpu ? 1 : 0);
+}
+
+DEFINE_UIFUNC(static, u_int, __vdso_gettc_rdtsc_low,
+    (const struct vdso_timehands *th), static)
+{
+	return (tsc_selector[tsc_selector_idx(cpu_feature)].ts_rdtsc_low);
+}
+
+DEFINE_UIFUNC(static, u_int, __vdso_gettc_rdtsc32, (void), static)
+{
+	return (tsc_selector[tsc_selector_idx(cpu_feature)].ts_rdtsc32);
 }
 
 #define	HPET_DEV_MAP_MAX	10
@@ -263,7 +291,7 @@ __vdso_hyperv_tsc(struct hyperv_reftsc *tsc_ref, u_int *tc)
 		scale = tsc_ref->tsc_scale;
 		ofs = tsc_ref->tsc_ofs;
 
-		rdtsc_mb();
+		mfence();	/* XXXKIB */
 		tsc = rdtsc();
 
 		/* ret = ((tsc * scale) >> 64) + ofs */
@@ -285,6 +313,61 @@ __vdso_hyperv_tsc(struct hyperv_reftsc *tsc_ref, u_int *tc)
 
 #endif	/* WANT_HYPERV */
 
+static struct pvclock_vcpu_time_info *pvclock_timeinfos;
+
+static int
+__vdso_pvclock_gettc(const struct vdso_timehands *th, u_int *tc)
+{
+	uint64_t delta, ns, tsc;
+	struct pvclock_vcpu_time_info *ti;
+	uint32_t cpuid_ti, cpuid_tsc, version;
+	bool stable;
+
+	do {
+		ti = &pvclock_timeinfos[0];
+		version = atomic_load_acq_32(&ti->version);
+		stable = (ti->flags & th->th_x86_pvc_stable_mask) != 0;
+		if (stable) {
+			tsc = rdtscp();
+		} else {
+			(void)rdtscp_aux(&cpuid_ti);
+			ti = &pvclock_timeinfos[cpuid_ti];
+			version = atomic_load_acq_32(&ti->version);
+			tsc = rdtscp_aux(&cpuid_tsc);
+		}
+		delta = tsc - ti->tsc_timestamp;
+		ns = ti->system_time + pvclock_scale_delta(delta,
+		    ti->tsc_to_system_mul, ti->tsc_shift);
+		atomic_thread_fence_acq();
+	} while ((ti->version & 1) != 0 || ti->version != version ||
+	    (!stable && cpuid_ti != cpuid_tsc));
+	*tc = MAX(ns, th->th_x86_pvc_last_systime);
+	return (0);
+}
+
+static void
+__vdso_init_pvclock_timeinfos(void)
+{
+	struct pvclock_vcpu_time_info *timeinfos;
+	size_t len;
+	int fd, ncpus;
+	unsigned int mode;
+
+	timeinfos = MAP_FAILED;
+	if (_elf_aux_info(AT_NCPUS, &ncpus, sizeof(ncpus)) != 0 ||
+	    (cap_getmode(&mode) == 0 && mode != 0) ||
+	    (fd = _open("/dev/" PVCLOCK_CDEVNAME, O_RDONLY | O_CLOEXEC)) < 0)
+		goto leave;
+	len = ncpus * sizeof(*pvclock_timeinfos);
+	timeinfos = mmap(NULL, len, PROT_READ, MAP_SHARED, fd, 0);
+	_close(fd);
+leave:
+	if (atomic_cmpset_rel_ptr(
+	    (volatile uintptr_t *)&pvclock_timeinfos, (uintptr_t)NULL,
+	    (uintptr_t)timeinfos) == 0 && timeinfos != MAP_FAILED)
+		(void)munmap((void *)timeinfos, len);
+}
+
 #pragma weak __vdso_gettc
 int
 __vdso_gettc(const struct vdso_timehands *th, u_int *tc)
@@ -295,7 +378,7 @@ __vdso_gettc(const struct vdso_timehands *th, u_int *tc)
 	switch (th->th_algo) {
 	case VDSO_TH_ALGO_X86_TSC:
 		*tc = th->th_x86_shift > 0 ? __vdso_gettc_rdtsc_low(th) :
-		    __vdso_rdtsc32();
+		    __vdso_gettc_rdtsc32();
 		return (0);
 	case VDSO_TH_ALGO_X86_HPET:
 		idx = th->th_x86_hpet_idx;
@@ -320,6 +403,12 @@ __vdso_gettc(const struct vdso_timehands *th, u_int *tc)
 			return (ENOSYS);
 		return (__vdso_hyperv_tsc(hyperv_ref_tsc, tc));
 #endif
+	case VDSO_TH_ALGO_X86_PVCLK:
+		if (pvclock_timeinfos == NULL)
+			__vdso_init_pvclock_timeinfos();
+		if (pvclock_timeinfos == MAP_FAILED)
+			return (ENOSYS);
+		return (__vdso_pvclock_gettc(th, tc));
 	default:
 		return (ENOSYS);
 	}

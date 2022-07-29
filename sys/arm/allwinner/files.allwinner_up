@@ -1,3 +1,3 @@
-# $FreeBSD: stable/11/sys/arm/allwinner/files.allwinner_up 308273 2016-11-04 00:43:12Z manu $
+# $FreeBSD$
 
-arm/allwinner/timer.c			standard
+arm/allwinner/a10_timer.c		standard

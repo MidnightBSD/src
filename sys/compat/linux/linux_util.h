@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1994 Christos Zoulas
  * Copyright (c) 1995 Frank van der Linden
  * Copyright (c) 1995 Scott Bartram
@@ -28,7 +30,7 @@
  *
  * from: svr4_util.h,v 1.5 1994/11/18 02:54:31 christos Exp
  * from: linux_util.h,v 1.2 1995/03/05 23:23:50 fvdl Exp
- * $FreeBSD: stable/11/sys/compat/linux/linux_util.h 346812 2019-04-28 09:53:08Z dchagin $
+ * $FreeBSD$
  */
 
 #ifndef	_LINUX_UTIL_H_
@@ -48,7 +50,7 @@ MALLOC_DECLARE(M_EPOLL);
 MALLOC_DECLARE(M_FUTEX);
 MALLOC_DECLARE(M_FUTEX_WP);
 
-extern const char linux_emul_path[];
+extern char linux_emul_path[];
 
 int linux_emul_convpath(struct thread *, const char *, enum uio_seg, char **, int, int);
 

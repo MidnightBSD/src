@@ -1,5 +1,7 @@
 /*	$NetBSD: if_de.c,v 1.86 1999/06/01 19:17:59 thorpej Exp $	*/
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1994-1997 Matt Thomas (matt@3am-software.com)
  * All rights reserved.
  *
@@ -36,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/de/if_de.c 347962 2019-05-18 20:43:13Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #define	TULIP_HDR_DATA
 
@@ -3051,7 +3053,7 @@ tulip_addr_filter(tulip_softc_t * const sc)
     else
 	bcopy(sc->tulip_enaddr, eaddr, ETHER_ADDR_LEN);
 
-    TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+    CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 
 	    if (ifma->ifma_addr->sa_family == AF_LINK)
 		multicnt++;
@@ -3078,7 +3080,7 @@ tulip_addr_filter(tulip_softc_t * const sc)
 	 */
 	bzero(sc->tulip_setupdata, sizeof(sc->tulip_setupdata));
 
-	TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;
@@ -3110,7 +3112,7 @@ tulip_addr_filter(tulip_softc_t * const sc)
 	    /*
 	     * Else can get perfect filtering for 16 addresses.
 	     */
-	    TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+	    CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 		    if (ifma->ifma_addr->sa_family != AF_LINK)
 			    continue;
 		    addrp = LLADDR((struct sockaddr_dl *)ifma->ifma_addr);

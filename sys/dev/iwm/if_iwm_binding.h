@@ -1,5 +1,5 @@
 /*	$OpenBSD: if_iwm.c,v 1.39 2015/03/23 00:35:19 jsg Exp $	*/
-/*	$FreeBSD: stable/11/sys/dev/iwm/if_iwm_binding.h 330204 2018-03-01 06:36:41Z eadler $ */
+/*	$FreeBSD$ */
 /*
  * Copyright (c) 2014 genua mbh <info@genua.de>
  * Copyright (c) 2014 Fixup Software Ltd.
@@ -105,7 +105,7 @@
 #ifndef	__IF_IWM_BINDING_H__
 #define	__IF_IWM_BINDING_H__
 
-extern	int iwm_mvm_binding_add_vif(struct iwm_softc *sc, struct iwm_vap *ivp);
-extern	int iwm_mvm_binding_remove_vif(struct iwm_softc *sc, struct iwm_vap *ivp);
+extern	int iwm_binding_add_vif(struct iwm_softc *sc, struct iwm_vap *ivp);
+extern	int iwm_binding_remove_vif(struct iwm_softc *sc, struct iwm_vap *ivp);
 
 #endif	/* __IF_IWM_BINDING_H__ */

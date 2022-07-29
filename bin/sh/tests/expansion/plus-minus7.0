@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/bin/sh/tests/expansion/plus-minus7.0 216738 2010-12-27 15:57:41Z emaste $
+# $FreeBSD$
 
 e= s='foo'
 failures=''

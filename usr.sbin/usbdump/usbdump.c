@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/usr.sbin/usbdump/usbdump.c 349665 2019-07-03 18:18:42Z hselasky $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

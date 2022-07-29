@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/dev/usb/usb_util.c 305734 2016-09-12 10:17:25Z hselasky $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

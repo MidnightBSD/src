@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/modules/agp/Makefile 329527 2018-02-18 19:46:57Z markj $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/dev/agp
 

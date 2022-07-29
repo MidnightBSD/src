@@ -43,7 +43,7 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm64/arm64/nexus.c 345873 2019-04-04 12:02:41Z mw $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -55,6 +55,7 @@ __FBSDID("$FreeBSD: stable/11/sys/arm64/arm64/nexus.c 345873 2019-04-04 12:02:41
 #include <sys/rman.h>
 #include <sys/interrupt.h>
 
+#include <machine/machdep.h>
 #include <machine/vmparam.h>
 #include <machine/pcb.h>
 #include <vm/vm.h>
@@ -71,6 +72,8 @@ __FBSDID("$FreeBSD: stable/11/sys/arm64/arm64/nexus.c 345873 2019-04-04 12:02:41
 #ifdef DEV_ACPI
 #include <contrib/dev/acpica/include/acpi.h>
 #include <dev/acpica/acpivar.h>
+#include "acpi_bus_if.h"
+#include "pcib_if.h"
 #endif
 
 extern struct bus_space memmap_bus;
@@ -289,9 +292,11 @@ nexus_config_intr(device_t dev, int irq, enum intr_trigger trig,
     enum intr_polarity pol)
 {
 
-	/* TODO: This is wrong, it's needed for ACPI */
-	device_printf(dev, "bus_config_intr is obsolete and not supported!\n");
-	return (EOPNOTSUPP);
+	/*
+	 * On arm64 (due to INTRNG), ACPI interrupt configuration is 
+	 * done in nexus_acpi_map_intr().
+	 */
+	return (0);
 }
 
 static int
@@ -425,6 +430,8 @@ static device_method_t nexus_fdt_methods[] = {
 
 	/* OFW interface */
 	DEVMETHOD(ofw_bus_map_intr,	nexus_ofw_map_intr),
+
+	DEVMETHOD_END,
 };
 
 #define nexus_baseclasses nexus_fdt_baseclasses
@@ -439,7 +446,7 @@ static int
 nexus_fdt_probe(device_t dev)
 {
 
-	if (OF_peer(0) == 0)
+	if (arm64_bus_method != ARM64_BUS_FDT)
 		return (ENXIO);
 
 	device_quiet(dev);
@@ -474,10 +481,17 @@ nexus_ofw_map_intr(device_t dev, device_t child, phandle_t iparent, int icells,
 #endif
 
 #ifdef DEV_ACPI
+static int nexus_acpi_map_intr(device_t dev, device_t child, u_int irq, int trig, int pol);
+
 static device_method_t nexus_acpi_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		nexus_acpi_probe),
 	DEVMETHOD(device_attach,	nexus_acpi_attach),
+
+	/* ACPI interface */
+	DEVMETHOD(acpi_bus_map_intr,	nexus_acpi_map_intr),
+
+	DEVMETHOD_END,
 };
 
 #define nexus_baseclasses nexus_acpi_baseclasses
@@ -493,7 +507,7 @@ static int
 nexus_acpi_probe(device_t dev)
 {
 
-	if (acpi_identify() != 0)
+	if (arm64_bus_method != ARM64_BUS_ACPI || acpi_identify() != 0)
 		return (ENXIO);
 
 	device_quiet(dev);
@@ -506,5 +520,32 @@ nexus_acpi_attach(device_t dev)
 
 	nexus_add_child(dev, 10, "acpi", 0);
 	return (nexus_attach(dev));
+}
+
+static int
+nexus_acpi_map_intr(device_t dev, device_t child, u_int irq, int trig, int pol)
+{
+	struct intr_map_data_acpi *acpi_data;
+	size_t len;
+
+	len = sizeof(*acpi_data);
+	acpi_data = (struct intr_map_data_acpi *)intr_alloc_map_data(
+	    INTR_MAP_DATA_ACPI, len, M_WAITOK | M_ZERO);
+	acpi_data->irq = irq;
+	acpi_data->pol = pol;
+	acpi_data->trig = trig;
+
+	/*
+	 * TODO: This will only handle a single interrupt controller.
+	 * ACPI will map multiple controllers into a single virtual IRQ
+	 * space. Each controller has a System Vector Base to hold the
+	 * first irq it handles in this space. As such the correct way
+	 * to handle interrupts with ACPI is to search through the
+	 * controllers for the largest base value that is no larger than
+	 * the IRQ value.
+	 */
+	irq = intr_map_irq(NULL, ACPI_INTR_XREF,
+	    (struct intr_map_data *)acpi_data);
+	return (irq);
 }
 #endif

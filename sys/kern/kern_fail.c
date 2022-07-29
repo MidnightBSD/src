@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Isilon Inc http://www.isilon.com/
  *
  * Redistribution and use in source and binary forms, with or without
@@ -50,7 +52,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/kern/kern_fail.c 318847 2017-05-25 01:15:53Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_stack.h"
 
@@ -425,7 +427,7 @@ fail_point_sleep(struct fail_point *fp, int msecs,
 	int timo;
 
 	/* Convert from millisecs to ticks, rounding up */
-	timo = howmany(msecs * hz, 1000);
+	timo = howmany((int64_t)msecs * hz, 1000L);
 
 	if (timo > 0) {
 		if (!(fp->fp_flags & FAIL_POINT_USE_TIMEOUT_PATH)) {

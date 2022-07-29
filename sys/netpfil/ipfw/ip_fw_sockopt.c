@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002-2009 Luigi Rizzo, Universita` di Pisa
  * Copyright (c) 2014 Yandex LLC
  * Copyright (c) 2014 Alexander V. Chernikov
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netpfil/ipfw/ip_fw_sockopt.c 350583 2019-08-05 07:50:25Z ae $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Control socket and rule management routines for ipfw.
@@ -179,7 +181,7 @@ static size_t ctl3_rsize;
  * static variables followed by global ones
  */
 
-static VNET_DEFINE(uma_zone_t, ipfw_cntr_zone);
+VNET_DEFINE_STATIC(uma_zone_t, ipfw_cntr_zone);
 #define	V_ipfw_cntr_zone		VNET(ipfw_cntr_zone)
 
 void
@@ -204,7 +206,7 @@ ipfw_alloc_rule(struct ip_fw_chain *chain, size_t rulesize)
 	struct ip_fw *rule;
 
 	rule = malloc(rulesize, M_IPFW, M_WAITOK | M_ZERO);
-	rule->cntr = uma_zalloc(V_ipfw_cntr_zone, M_WAITOK | M_ZERO);
+	rule->cntr = uma_zalloc_pcpu(V_ipfw_cntr_zone, M_WAITOK | M_ZERO);
 	rule->refcnt = 1;
 
 	return (rule);
@@ -222,7 +224,7 @@ ipfw_free_rule(struct ip_fw *rule)
 	 */
 	if (rule->refcnt > 1)
 		return;
-	uma_zfree(V_ipfw_cntr_zone, rule->cntr);
+	uma_zfree_pcpu(V_ipfw_cntr_zone, rule->cntr);
 	free(rule, M_IPFW);
 }
 
@@ -358,7 +360,7 @@ get_map(struct ip_fw_chain *chain, int extra, int locked)
 
 	for (;;) {
 		struct ip_fw **map;
-		int i, mflags;
+		u_int i, mflags;
 
 		mflags = M_ZERO | ((locked != 0) ? M_NOWAIT : M_WAITOK);
 

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 Ian Dowse.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,7 +50,7 @@
 #define	DIRHASH_DEL	(-2)	/* deleted entry; may be part of chain */
 
 #define	DIRALIGN	4
-#define	DH_NFSTATS	(DIRECTSIZ(MAXNAMLEN + 1) / DIRALIGN)
+#define	DH_NFSTATS	(DIRECTSIZ(UFS_MAXNAMLEN + 1) / DIRALIGN)
 				 /* max DIRALIGN words in a directory entry */
 
 /*
@@ -64,7 +66,7 @@
  * placed at the most-recently-used end of the list. This helps a lot
  * in the worst-case case scenario where every directory access is
  * to a directory that is not hashed (i.e. the working set of hash
- * candidates is much larger than the configured memry limit). In this
+ * candidates is much larger than the configured memory limit). In this
  * case it limits the number of hash builds to 1/DH_SCOREINIT of the
  * number of accesses.
  */ 

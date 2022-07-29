@@ -1,5 +1,4 @@
-/* $MidnightBSD: src/sys/dev/syscons/logo/logo.c,v 1.2 2008/12/02 22:43:13 laffer1 Exp $ */
-/* $FreeBSD: src/sys/dev/syscons/logo/logo.c,v 1.3 2001/08/09 00:02:30 peter Exp $ */
+/* $FreeBSD$ */
 
 #define	LOGO_WIDTH	66
 #define	LOGO_HEIGHT	69

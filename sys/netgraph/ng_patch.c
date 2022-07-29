@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Maxim Ignatenko <gelraen.ua@gmail.com>
  * Copyright (c) 2015 Dmitry Vagin <daemon.hammer@ya.ru>
  * All rights reserved.
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netgraph/ng_patch.c 310625 2016-12-27 08:31:40Z julian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

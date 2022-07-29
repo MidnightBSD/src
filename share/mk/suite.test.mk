@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/mk/suite.test.mk 299094 2016-05-04 23:20:53Z ngie $
+# $FreeBSD$
 #
 # You must include bsd.test.mk instead of this file from your Makefile.
 #
@@ -7,6 +7,8 @@
 .if !target(__<bsd.test.mk>__)
 .error suite.test.mk cannot be included directly.
 .endif
+
+.include <bsd.opts.mk>
 
 # Name of the test suite these tests belong to.  Should rarely be changed for
 # Makefiles built into the MidnightBSD src tree.
@@ -75,8 +77,6 @@ Kyuafile: Makefile
 	@mv ${.TARGET}.tmp ${.TARGET}
 .endif
 
-CHECKDIR?=	${DESTDIR}${TESTSDIR}
-
 KYUA= ${LOCALBASE}/bin/kyua
 
 # Definition of the "make check" target and supporting variables.
@@ -99,4 +99,28 @@ realcheck: .PHONY
 		echo "LOCALBASE=\"${LOCALBASE}\""; \
 		false; \
 	fi
-	@${KYUA} test -k ${CHECKDIR}/Kyuafile
+	@env ${TESTS_ENV:Q} ${KYUA} test -k ${DESTDIR}${TESTSDIR}/Kyuafile
+
+MAKE_CHECK_SANDBOX_DIR=	checkdir
+CLEANDIRS+=	${MAKE_CHECK_SANDBOX_DIR}
+
+.if ${MK_MAKE_CHECK_USE_SANDBOX} != "no" && make(check)
+DESTDIR:=	${.OBJDIR}/${MAKE_CHECK_SANDBOX_DIR}
+
+beforecheck:
+.for t in clean depend all
+	@cd ${.CURDIR} && ${MAKE} $t
+.endfor
+	@cd ${SRCTOP} && ${MAKE} hierarchy DESTDIR=${DESTDIR}
+	@cd ${.CURDIR} && ${MAKE} install \
+	    DESTDIR=${DESTDIR}
+
+# NOTE: this is intentional to ensure that "make check" can be run multiple
+#       times. "aftercheck" won't be run if "make check" fails, is interrupted,
+#       etc.
+aftercheck:
+	@cd ${.CURDIR} && ${MAKE} clean
+	@test ! -e ${DESTDIR} || chflags -R 0 "${DESTDIR}"
+	@rm -Rf "${DESTDIR}"
+
+.endif

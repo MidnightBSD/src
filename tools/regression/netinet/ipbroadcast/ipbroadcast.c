@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/tools/regression/netinet/ipbroadcast/ipbroadcast.c 167512 2007-03-13 23:36:48Z bms $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>

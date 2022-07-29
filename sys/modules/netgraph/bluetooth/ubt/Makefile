@@ -1,5 +1,5 @@
 # $Id: Makefile,v 1.2 2003/03/22 23:44:34 max Exp $
-# $FreeBSD: stable/11/sys/modules/netgraph/bluetooth/ubt/Makefile 319182 2017-05-30 04:11:12Z ngie $
+# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/netgraph/bluetooth/drivers/ubt
 

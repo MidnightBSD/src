@@ -12,7 +12,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -29,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)setlocale.3	8.1 (Berkeley) 6/9/93
-.\" $FreeBSD: stable/11/lib/libc/locale/setlocale.3 352283 2019-09-13 07:24:29Z bapt $
+.\" $FreeBSD$
 .\"
-.Dd September 9, 2019
+.Dd August 7, 2020
 .Dt SETLOCALE 3
 .Os
 .Sh NAME
@@ -98,6 +98,10 @@ as well as values returned by
 Set a locale for formatting dates and times using the
 .Fn strftime
 function.
+.It Dv LANG
+Sets the generic locale category for native language, local customs
+and coded character set in the absence of more specific locale
+variables.
 .El
 .Pp
 Only three locales are defined by default,
@@ -115,9 +119,24 @@ argument of
 causes
 .Fn setlocale
 to return the current locale.
+.Pp
+The option
+.Fl a
+to the
+.Xr locale 1
+command can be used to display all further possible names for the
+.Fa locale
+argument that are recognized.
+Specifying any unrecognized value for
+.Fa locale
+makes
+.Fn setlocale
+fail.
+.Pp
 By default, C programs start in the
 .Li \&"C"
 locale.
+.Pp
 The only function in the library that sets the locale is
 .Fn setlocale ;
 the locale is never changed as a side effect of some other routine.
@@ -138,6 +157,25 @@ if the given combination of
 and
 .Fa locale
 makes no sense.
+.Sh EXAMPLES
+The following code illustrates how a program can initialize the
+international environment for one language, while selectively
+modifying the program's locale such that regular expressions and
+string operations can be applied to text recorded in a different
+language:
+.Bd -literal
+    setlocale(LC_ALL, "de");
+    setlocale(LC_COLLATE, "fr");
+.Ed
+.Pp
+When a process is started, its current locale is set to the C or POSIX
+locale.
+An internationalized program that depends on locale data not defined in
+the C or POSIX locale must invoke the setlocale subroutine in the
+following manner before using any of the locale-specific information:
+.Bd -literal
+    setlocale(LC_ALL, "");
+.Ed
 .Sh FILES
 .Bl -tag -width /usr/share/locale/locale/category -compact
 .It Pa $PATH_LOCALE/ Ns Em locale/category
@@ -150,6 +188,7 @@ and the category
 .Sh ERRORS
 No errors are defined.
 .Sh SEE ALSO
+.Xr locale 1 ,
 .Xr localedef 1 ,
 .Xr catopen 3 ,
 .Xr ctype 3 ,

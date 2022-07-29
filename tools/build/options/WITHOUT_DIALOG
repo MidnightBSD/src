@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_DIALOG 319247 2017-05-30 18:04:55Z ngie $
+.\" $FreeBSD$
 Set to not build
 .Xr dialog 1 ,
 .Xr dialog 3 ,

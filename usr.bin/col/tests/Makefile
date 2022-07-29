@@ -1,11 +1,17 @@
-# $FreeBSD: stable/11/usr.bin/col/tests/Makefile 316256 2017-03-30 06:20:24Z ngie $
+# $FreeBSD$
 
 PACKAGE=	tests
 
 ATF_TESTS_SH=	col_test
 
-${PACKAGE}FILES+=	\
+${PACKAGE}FILES+= \
+		hlf.in \
+		hlf2.in \
+		nl.in \
+		nl2.in \
+		nl3.in \
 		rlf.in \
-		rlf2.in
+		rlf2.in \
+		rlf3.in
 
 .include <bsd.test.mk>

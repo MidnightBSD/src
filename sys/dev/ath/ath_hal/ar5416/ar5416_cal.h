@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: ISC
+ *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2002-2008 Atheros Communications, Inc.
  *
@@ -14,11 +16,11 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar5416/ar5416_cal.h 219480 2011-03-11 11:35:36Z adrian $
+ * $FreeBSD$
  */
 #ifndef _ATH_AR5416_CAL_H_
 #define _ATH_AR5416_CAL_H_
- 
+
 typedef enum {
 	ADC_DC_INIT_CAL	= 0x1,
 	ADC_GAIN_CAL	= 0x2,

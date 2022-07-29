@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/sys/dev/gpio/gpio_if.m 324755 2017-10-19 16:07:57Z ian $
+# $FreeBSD$
 #
 
 #include <sys/bus.h>

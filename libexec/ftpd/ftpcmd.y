@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1985, 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -43,7 +45,7 @@ static char sccsid[] = "@(#)ftpcmd.y	8.3 (Berkeley) 4/6/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/libexec/ftpd/ftpcmd.y 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -71,6 +73,8 @@ __FBSDID("$FreeBSD: stable/11/libexec/ftpd/ftpcmd.y 331722 2018-03-29 02:50:57Z 
 
 #include "extern.h"
 #include "pathnames.h"
+
+#define	yylex	ftpcmd_yylex
 
 off_t	restart_point;
 

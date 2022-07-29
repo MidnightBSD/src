@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libc/tests/tls/Makefile 299094 2016-05-04 23:20:53Z ngie $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -16,7 +16,7 @@ NETBSD_ATF_TESTS_C+=	tls_dynamic_test
 
 .include "../Makefile.netbsd-tests"
 
-DSODIR=		${.OBJDIR}/../tls_dso
+DSODIR=		${.OBJDIR:H}/tls_dso
 
 LIBADD.tls_static_test+=	pthread
 LDFLAGS.tls_static_test+=	-static

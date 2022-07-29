@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/libexec/tcpd/Makefile 321269 2017-07-20 00:58:19Z ngie $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

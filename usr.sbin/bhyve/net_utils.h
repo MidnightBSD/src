@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2019 Vincenzo Maffione <v.maffione@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,7 +24,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bhyve/net_utils.h 349739 2019-07-04 18:20:02Z vmaffione $
+ * $FreeBSD$
  */
 
 #ifndef _NET_UTILS_H_

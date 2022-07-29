@@ -1,6 +1,4 @@
-# $MidnightBSD$
-
-NO_OBJ=
+# $FreeBSD$
 
 FILESDIR=	${LIBEXECDIR}/bsdconfig/110.mouse/include
 FILES=		messages.subr

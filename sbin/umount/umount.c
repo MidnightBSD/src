@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -10,7 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -38,7 +40,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)umount.c	8.8 (Berkeley) 5/8/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/11/sbin/umount/umount.c 331722 2018-03-29 02:50:57Z eadler $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -133,10 +135,6 @@ main(int argc, char *argv[])
 
 	if ((fflag & MNT_FORCE) != 0 && (fflag & MNT_NONBUSY) != 0)
 		err(1, "-f and -n are mutually exclusive");
-
-	/* Start disks transferring immediately. */
-	if ((fflag & (MNT_FORCE | MNT_NONBUSY)) == 0 && nfsforce == 0)
-		sync();
 
 	if ((argc == 0 && !all) || (argc != 0 && all))
 		usage();
@@ -429,7 +427,7 @@ umountfs(struct statfs *sfs)
 			return (1);
 		}
 	}
-	/* Mark this this file system as unmounted. */
+	/* Mark this file system as unmounted. */
 	getmntentry(NULL, NULL, &sfs->f_fsid, REMOVE);
 	if (vflag)
 		(void)printf("%s: unmount from %s\n", sfs->f_mntfromname,
@@ -507,8 +505,7 @@ getmntentry(const char *fromname, const char *onname, fsid_t *fsid, dowhat what)
 			continue;
 		if (onname != NULL && strcmp(sfs->f_mntonname, onname) != 0)
 			continue;
-		if (fsid != NULL && bcmp(&sfs->f_fsid, fsid,
-		    sizeof(*fsid)) != 0)
+		if (fsid != NULL && fsidcmp(&sfs->f_fsid, fsid) != 0)
 			continue;
 
 		switch (what) {

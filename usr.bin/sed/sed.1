@@ -12,7 +12,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -29,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)sed.1	8.2 (Berkeley) 12/30/93
-.\" $FreeBSD: stable/11/usr.bin/sed/sed.1 318759 2017-05-23 22:11:45Z brd $
+.\" $FreeBSD$
 .\"
-.Dd March 27, 2017
+.Dd June 10, 2020
 .Dt SED 1
 .Os
 .Sh NAME
@@ -41,9 +41,11 @@
 .Nm
 .Op Fl Ealnru
 .Ar command
+.Op Fl I Ar extension
+.Op Fl i Ar extension
 .Op Ar
 .Nm
-.Op Fl Ealnr
+.Op Fl Ealnru
 .Op Fl e Ar command
 .Op Fl f Ar command_file
 .Op Fl I Ar extension
@@ -96,6 +98,10 @@ Append the editing commands found in the file
 .Ar command_file
 to the list of commands.
 The editing commands should each be listed on a separate line.
+The commands are read from the standard input if
+.Ar command_file
+is
+.Dq Li - .
 .It Fl I Ar extension
 Edit files in-place, saving backups with the specified
 .Ar extension .
@@ -197,7 +203,8 @@ option was specified);
 .It
 a context address
 that consists of a regular expression preceded and followed by a
-delimiter. The closing delimiter can also optionally be followed by the
+delimiter.
+The closing delimiter can also optionally be followed by the
 .Dq I
 character, to indicate that the regular expression is to be matched
 in a case-insensitive way.
@@ -606,7 +613,7 @@ Using a different separator can be handy when working with paths:
 echo "/home/example" | sed 's#/home/example#/usr/local/example#'
 .Ed
 .Pp
-Replace all occurances of
+Replace all occurrences of
 .Ql foo
 with
 .Ql bar
@@ -633,7 +640,9 @@ The
 .Fl E , I , a
 and
 .Fl i
-options, the prefixing
+options, the special meaning of
+.Fl f Cm - ,
+the prefixing
 .Dq \&+
 in the second member of an address range,
 as well as the

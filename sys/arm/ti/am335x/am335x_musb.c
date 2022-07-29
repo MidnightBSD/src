@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/ti/am335x/am335x_musb.c 308401 2016-11-07 08:36:06Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -45,7 +45,6 @@ __FBSDID("$FreeBSD: stable/11/sys/arm/ti/am335x/am335x_musb.c 308401 2016-11-07 
 #include <sys/malloc.h>
 #include <sys/priv.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/openfirm.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>

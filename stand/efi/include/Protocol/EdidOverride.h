@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/stand/efi/include/Protocol/EdidOverride.h 342742 2019-01-03 20:27:50Z tsoome $ */
+/* $FreeBSD$ */
 /** @file
   EDID Override Protocol from the UEFI 2.0 specification.
 

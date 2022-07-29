@@ -1,7 +1,9 @@
-/* $FreeBSD: stable/11/lib/libiconv_modules/GBK2K/citrus_gbk2k.c 331722 2018-03-29 02:50:57Z eadler $ */
+/* $FreeBSD$ */
 /* $NetBSD: citrus_gbk2k.c,v 1.7 2008/06/14 16:01:07 tnozaki Exp $ */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c)2003 Citrus Project,
  * All rights reserved.
  *

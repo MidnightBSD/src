@@ -1,5 +1,7 @@
-/* $FreeBSD: stable/11/sys/cam/scsi/scsi_ses.h 350793 2019-08-08 21:46:36Z mav $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: (BSD-2-Clause-FreeBSD OR GPL-2.0)
+ *
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.
  *
@@ -2413,7 +2415,7 @@ int ses_elm_sas_descr_type(union ses_elm_sas_hdr *);
  * This structure for SPSP_PROTO_ATA is not defined by SES specs,
  * but purely my own design to make AHCI EM interoperate with SES.
  * Since no other software I know can talk to SEMB, and we do not
- * expose this this outside, it should be safe to do what we want.
+ * expose this outside, it should be safe to do what we want.
  */
 struct ses_elm_ata_hdr {
 	uint8_t bus[4];
@@ -2437,7 +2439,13 @@ int ses_elm_addlstatus_invalid(struct ses_elm_addlstatus_base_hdr *);
 struct ses_elm_addlstatus_eip_hdr {
 	struct ses_elm_addlstatus_base_hdr base;
 	uint8_t byte2;
-#define	SES_ADDL_EIP_EIIOE	1
+#define	SES_ADDL_EIP_EIIOE_MASK	3
+#define	SES_ADDL_EIP_EIIOE_SES2	0
+#define	SES_ADDL_EIP_EIIOE_GLOB	1
+#define	SES_ADDL_EIP_EIIOE_IND	2
+#define	SES_ADDL_EIP_EIIOE_MIX	3
+#define	SES_ADDL_EIP_EIIOE_EI_GLOB(x)				\
+    (((x) & SES_ADDL_EIP_EIIOE_MASK) == SES_ADDL_EIP_EIIOE_GLOB)
 	uint8_t element_index;
 	/* NB: This define (currently) applies to all eip=1 headers */
 #define	SES_EIP_HDR_EXTRA_LEN	2

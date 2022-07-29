@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: Beerware
+ *
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <phk@FreeBSD.org> wrote this file.  As long as you retain this notice you
@@ -23,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/mn/if_mn.c 298955 2016-05-03 03:41:25Z pfg $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Stuff to describe the MUNIC32X and FALC54 chips.
@@ -1393,6 +1395,7 @@ mn_attach (device_t self)
 	default:
 		printf(" Rev 0x%x\n", sc->f54r->vstr);
 	}
+	gone_in_dev(self, 13, "sync serial (T1/E1) driver");
 
 	if (ng_make_node_common(&mntypestruct, &sc->node) != 0) {
 		printf("ng_make_node_common failed\n");

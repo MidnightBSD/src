@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1993, Garrett A. Wollman.
  * Copyright (c) 1993, University of Vermont and State Agricultural College.
  * All rights reserved.
@@ -27,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/ddb/ddb.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  */
 
 /*
@@ -68,6 +70,10 @@ SYSCTL_DECL(_debug_ddb);
 
 #ifndef DB_MAXSCRIPTRECURSION
 #define	DB_MAXSCRIPTRECURSION	3
+#endif
+
+#ifndef DB_STOFFS
+#define DB_STOFFS(offs)		(offs)
 #endif
 
 #ifndef DB_CALL

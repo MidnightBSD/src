@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 IronPort Systems Inc. <ambrisko@ironport.com>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ipmi/ipmi_kcs.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,55 +48,46 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/ipmi/ipmi_kcs.c 331722 2018-03-29 02:50:57
 #include <dev/ipmi/ipmivars.h>
 #endif
 
+#define	POLLING_DELAY_MIN 4	/* Waits are 2-3 usecs on typical systems */
+#define	POLLING_DELAY_MAX 256
+
 static void	kcs_clear_obf(struct ipmi_softc *, int);
 static void	kcs_error(struct ipmi_softc *);
-static int	kcs_wait_for_ibf(struct ipmi_softc *, int);
-static int	kcs_wait_for_obf(struct ipmi_softc *, int);
+static int	kcs_wait_for_ibf(struct ipmi_softc *, bool);
+static int	kcs_wait_for_obf(struct ipmi_softc *, bool);
 
 static int
-kcs_wait_for_ibf(struct ipmi_softc *sc, int state)
+kcs_wait(struct ipmi_softc *sc, int value, int mask)
 {
 	int status, start = ticks;
+	int delay_usec = POLLING_DELAY_MIN;
 
 	status = INB(sc, KCS_CTL_STS);
-	if (state == 0) {
-		/* WAIT FOR IBF = 0 */
-		while (ticks - start < MAX_TIMEOUT && status & KCS_STATUS_IBF) {
-			DELAY(100);
-			status = INB(sc, KCS_CTL_STS);
-		}
-	} else {
-		/* WAIT FOR IBF = 1 */
-		while (ticks - start < MAX_TIMEOUT &&
-		    !(status & KCS_STATUS_IBF)) {
-			DELAY(100);
-			status = INB(sc, KCS_CTL_STS);
-		}
+	while (ticks - start < MAX_TIMEOUT && (status & mask) != value) {
+		/*
+		 * The wait delay is increased exponentially to avoid putting
+		 * significant load on I/O bus.
+		 */
+		DELAY(delay_usec);
+		status = INB(sc, KCS_CTL_STS);
+		if (delay_usec < POLLING_DELAY_MAX)
+			delay_usec *= 2;
 	}
 	return (status);
 }
 
 static int
-kcs_wait_for_obf(struct ipmi_softc *sc, int state)
+kcs_wait_for_ibf(struct ipmi_softc *sc, bool level)
 {
-	int status, start = ticks;
 
-	status = INB(sc, KCS_CTL_STS);
-	if (state == 0) {
-		/* WAIT FOR OBF = 0 */
-		while (ticks - start < MAX_TIMEOUT && status & KCS_STATUS_OBF) {
-			DELAY(100);
-			status = INB(sc, KCS_CTL_STS);
-		}
-	} else {
-		/* WAIT FOR OBF = 1 */
-		while (ticks - start < MAX_TIMEOUT &&
-		    !(status & KCS_STATUS_OBF)) {
-			DELAY(100);
-			status = INB(sc, KCS_CTL_STS);
-		}
-	}
-	return (status);
+	return (kcs_wait(sc, level ? KCS_STATUS_IBF : 0, KCS_STATUS_IBF));
+}
+
+static int
+kcs_wait_for_obf(struct ipmi_softc *sc, bool level)
+{
+
+	return (kcs_wait(sc, level ? KCS_STATUS_OBF : 0, KCS_STATUS_OBF));
 }
 
 static void
@@ -148,7 +141,7 @@ kcs_error(struct ipmi_softc *sc)
 
 			/* Read error status */
 			data = INB(sc, KCS_DATA);
-			if (data != 0)
+			if (data != 0 && (data != 0xff || bootverbose))
 				device_printf(sc->ipmi_dev, "KCS error: %02x\n",
 				    data);
 
@@ -414,8 +407,10 @@ kcs_polled_request(struct ipmi_softc *sc, struct ipmi_request *req)
 
 	/* Next we read the completion code. */
 	if (kcs_read_byte(sc, &req->ir_compcode) != 1) {
-		device_printf(sc->ipmi_dev,
-		    "KCS: Failed to read completion code\n");
+		if (bootverbose) {
+			device_printf(sc->ipmi_dev,
+			    "KCS: Failed to read completion code\n");
+		}
 		goto fail;
 	}
 #ifdef KCS_DEBUG

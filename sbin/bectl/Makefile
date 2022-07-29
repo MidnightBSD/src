@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sbin/bectl/Makefile 346429 2019-04-20 04:16:51Z kevans $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

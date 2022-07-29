@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/mlx5/vport.h 341972 2018-12-12 13:00:56Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef __MLX5_VPORT_H__

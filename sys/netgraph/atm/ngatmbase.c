@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
  * 	All rights reserved.
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netgraph/atm/ngatmbase.c 276750 2015-01-06 12:59:37Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -81,7 +83,7 @@ uni_msg_init(void)
 
 /*
  * Ensure, that the message can be extended by at least s bytes.
- * Re-allocate the message (not the header). If that failes,
+ * Re-allocate the message (not the header). If that fails,
  * free the entire message and return ENOMEM. Free space at the start of
  * the message is retained.
  */

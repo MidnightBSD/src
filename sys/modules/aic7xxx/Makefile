@@ -1,5 +1,5 @@
 
-# $FreeBSD: stable/11/sys/modules/aic7xxx/Makefile 260401 2014-01-07 19:33:17Z scottl $
+# $FreeBSD$
 
 SUBDIR= ahc ahd
 

@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/security/mac_mls/mac_mls.h 299187 2016-05-06 16:59:04Z pfg $
+ * $FreeBSD$
  */
 /*
  * Definitions for the TrustedBSD MLS confidentiality policy module.

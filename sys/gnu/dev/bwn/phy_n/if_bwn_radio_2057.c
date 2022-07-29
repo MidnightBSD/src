@@ -25,7 +25,7 @@
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/gnu/dev/bwn/phy_n/if_bwn_radio_2057.c 300193 2016-05-19 05:06:12Z adrian $");
+__FBSDID("$FreeBSD$");
 
 /*
  * The Broadcom Wireless LAN controller driver.
@@ -62,9 +62,6 @@ __FBSDID("$FreeBSD: stable/11/sys/gnu/dev/bwn/phy_n/if_bwn_radio_2057.c 300193 2
 
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
-#include <dev/siba/siba_ids.h>
-#include <dev/siba/sibareg.h>
-#include <dev/siba/sibavar.h>
 
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_radiotap.h>

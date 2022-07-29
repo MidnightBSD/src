@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  * (c) UNIX System Laboratories, Inc.
@@ -36,8 +38,7 @@
  *
  *	@(#)ar.h	8.2 (Berkeley) 1/21/94
  *
- * $FreeBSD: src/include/ar.h,v 1.2 2006/11/13 04:28:29 jkoshy Exp $
- * $MidnightBSD: src/include/ar.h,v 1.3 2012/03/09 03:45:16 laffer1 Exp $
+ * $FreeBSD$
  */
 
 #ifndef _AR_H_

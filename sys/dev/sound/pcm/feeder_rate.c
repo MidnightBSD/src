@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
  *
@@ -59,7 +61,7 @@
 #define SND_USE_FXDIV
 #include "snd_fxdiv_gen.h"
 
-SND_DECLARE_FILE("$FreeBSD: stable/11/sys/dev/sound/pcm/feeder_rate.c 331722 2018-03-29 02:50:57Z eadler $");
+SND_DECLARE_FILE("$FreeBSD$");
 #endif
 
 #include "feeder_rate_gen.h"

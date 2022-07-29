@@ -1,7 +1,7 @@
 #
 # Custom kernel for Marvell DB-88F6xxx boards.
 #
-# $FreeBSD: stable/11/sys/arm/conf/DB-88F6XXX 352023 2019-09-07 20:01:26Z imp $
+# $FreeBSD$
 #
 
 ident		DB-88F6XXX
@@ -13,6 +13,7 @@ options 	SOC_MV_KIRKWOOD
 options 	SCHED_4BSD		# 4BSD scheduler
 options 	INET			# InterNETworking
 options 	INET6			# IPv6 communications protocols
+options 	TCP_HHOOK		# hhook(9) framework for TCP
 options 	FFS			# Berkeley Fast Filesystem
 options 	NANDFS			# NAND Filesystem
 options 	NFSCL			# Network Filesystem Client

@@ -19,7 +19,7 @@
 ## Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,
 ## USA.
 
-## $FreeBSD: stable/11/gnu/lib/libsupc++/Version.map 301570 2016-06-08 00:29:48Z pfg $
+## $FreeBSD$
 
 
 # Symbols in the support library (libsupc++) have their own tag.

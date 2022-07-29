@@ -1,5 +1,5 @@
-/*
- * Copyright 2010 Nexenta Systems, Inc.  All rights reserved.
+/*-
+ * Copyright 2018 Nexenta Systems, Inc.
  * Copyright 2015 John Marino <draco@marino.st>
  *
  * This source code is derived from the illumos localedef command, and
@@ -27,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.bin/localedef/localedef.h 321121 2017-07-18 08:35:22Z ngie $
+ * $FreeBSD$
  */
 
 /*
@@ -47,7 +47,9 @@ extern int mb_cur_max;
 extern int mb_cur_min;
 extern int last_kw;
 extern int verbose;
+#if YYDEBUG
 extern int yydebug;
+#endif
 extern int lineno;
 extern int undefok;	/* mostly ignore undefined symbols */
 extern int warnok;
@@ -74,6 +76,8 @@ void scan_to_eol(void);
 void add_wcs(wchar_t);
 void add_tok(int);
 wchar_t *get_wcs(void);
+
+uint32_t htote(uint32_t);
 
 /* charmap.c - CHARMAP handling */
 void init_charmap(void);

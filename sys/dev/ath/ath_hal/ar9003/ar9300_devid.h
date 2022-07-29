@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2012, Qualcomm Atheros, Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms are permitted
@@ -32,7 +34,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGES.
  *
- * $FreeBSD: stable/11/sys/dev/ath/ath_hal/ar9003/ar9300_devid.h 331722 2018-03-29 02:50:57Z eadler $
+ * $FreeBSD$
  *
  */
 #ifndef	__AR9300_DEVID_H__

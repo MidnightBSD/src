@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/11/sbin/mount_msdosfs/Makefile 319185 2017-05-30 04:17:22Z ngie $
+# $FreeBSD$
 #
 
 PACKAGE=runtime

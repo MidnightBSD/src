@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/acpi/acpidump/Makefile 272444 2014-10-02 19:11:18Z jkim $
+# $FreeBSD$
 
 PROG=	acpidump
 MAN=	acpidump.8

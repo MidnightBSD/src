@@ -46,7 +46,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD: stable/11/stand/ficl/i386/sysdep.h 231042 2012-02-05 20:00:39Z rpaulo $ */
+/* $FreeBSD$ */
 
 #if !defined (__SYSDEP_H__)
 #define __SYSDEP_H__ 

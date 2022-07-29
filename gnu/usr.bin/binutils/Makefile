@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/gnu/usr.bin/binutils/Makefile 287262 2015-08-28 16:23:03Z imp $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -8,18 +8,17 @@ SUBDIR=	doc\
 	libopcodes \
 	libbinutils \
 	as \
-	ld \
-	${_objcopy} \
-	objdump \
+	objdump
 
-.if ${MK_ELFCOPY_AS_OBJCOPY} == "no"
-_objcopy=	objcopy
+# When we use ld.lld as /usr/bin/ld, do not install the non-ifunc-capable
+# GNU binutils 2.17.50 ld.
+.if ${MK_LLD_IS_LD} == "no"
+SUBDIR+=ld
 .endif
 
 SUBDIR_DEPEND_libbinutils=libbfd		# for bfdver.h
 SUBDIR_DEPEND_as=libbfd libiberty libopcodes
 SUBDIR_DEPEND_ld=libbfd libiberty
-SUBDIR_DEPEND_objcopy=libbfd libiberty libbinutils
 SUBDIR_DEPEND_objdump=libbfd libiberty libbinutils libopcodes
 
 .if !make(install)

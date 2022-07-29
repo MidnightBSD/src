@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/killall/Makefile 275042 2014-11-25 14:29:10Z bapt $
+# $FreeBSD$
 
 PROG=	killall
 LIBADD=	jail

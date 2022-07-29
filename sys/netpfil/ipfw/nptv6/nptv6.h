@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/netpfil/ipfw/nptv6/nptv6.h 303012 2016-07-18 19:46:31Z ae $
+ * $FreeBSD$
  */
 
 #ifndef	_IP_FW_NPTV6_H_
@@ -51,11 +51,14 @@ struct nptv6_cfg {
 	uint16_t		adjustment; /* Checksum adjustment value */
 	uint8_t			plen;	    /* Prefix length */
 	uint8_t			flags;	    /* Flags for internal use */
-#define	NPTV6_48PLEN		0x0001
+#define	NPTV6_READY		0x80
+#define	NPTV6_48PLEN		0x40
+
+	char			if_name[IF_NAMESIZE];
 	char			name[64];   /* Instance name */
 	counter_u64_t		stats[NPTV6STATS]; /* Statistics counters */
 };
-#define	NPTV6_FLAGSMASK		0
+#define	NPTV6_FLAGSMASK		(NPTV6_DYNAMIC_PREFIX)
 
 int nptv6_init(struct ip_fw_chain *ch, int first);
 void nptv6_uninit(struct ip_fw_chain *ch, int last);

@@ -22,7 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.bin/du/tests/du_test.sh 346920 2019-04-29 19:36:46Z ngie $
+# $FreeBSD$
 
 atf_test_case A_flag
 A_flag_head()
@@ -45,16 +45,25 @@ H_flag_head()
 H_flag_body()
 {
 	local paths1='testdir/A/B testdir/A testdir/C testdir'
-	local paths2='testdir/A/B testdir/A testdir/C testdir'
-	local sep='\n[0-9]+\t'
+	local paths2='testdir/C/B testdir/C'
+	local lineprefix="^[0-9]+$(printf "\t")"
+	local sep="\$\n${lineprefix}"
 
 	atf_check mkdir testdir
 	atf_check -x "cd testdir && mkdir A && touch A/B && ln -s A C"
 
 	atf_check -o save:du.out du -aAH testdir
-	atf_check egrep -q "[0-9]+\t$(echo $paths1 | tr ' ' "$sep")\n" du.out
+	atf_check egrep -q "${lineprefix}$(echo $paths1 | sed -e "s/ /$sep/g")$" du.out
+	# Check that the output doesn't contain any lines (i.e. paths) that we
+	# did not expect it to contain from $paths1.
+	atf_check -s exit:1 egrep -vq "${lineprefix}$(echo $paths1 | sed -e "s/ /$sep/g")$" du.out
+
 	atf_check -o save:du_C.out du -aAH testdir/C
-	atf_check egrep -q "[0-9]+\t$(echo $paths2 | tr ' ' "$sep")\n" du_C.out
+	atf_check egrep -q "${lineprefix}$(echo $paths2 | sed -e "s/ /$sep/g")$" du_C.out
+
+	# Check that the output doesn't contain any lines (i.e. paths) that we
+	# did not expect it to contain from $paths2.
+	atf_check -s exit:1 egrep -vq "${lineprefix}$(echo $paths2 | sed -e "s/ /$sep/g")$" du_C.out
 }
 
 atf_test_case I_flag

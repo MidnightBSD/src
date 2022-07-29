@@ -42,7 +42,7 @@
  *      from: @(#)pmap.h        7.4 (Berkeley) 5/12/91
  * 	from: FreeBSD: src/sys/i386/include/pmap.h,v 1.70 2000/11/30
  *
- * $FreeBSD: stable/11/sys/arm/include/pmap-v6.h 331971 2018-04-04 02:17:26Z mmel $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PMAP_V6_H_
@@ -167,6 +167,7 @@ void pmap_bootstrap(vm_offset_t);
 void pmap_kenter(vm_offset_t, vm_paddr_t);
 void pmap_kremove(vm_offset_t);
 boolean_t pmap_page_is_mapped(vm_page_t);
+bool	pmap_ps_enabled(pmap_t pmap);
 
 void pmap_tlb_flush(pmap_t, vm_offset_t);
 void pmap_tlb_flush_range(pmap_t, vm_offset_t, vm_size_t);

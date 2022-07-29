@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/net/toeplitz.c 277331 2015-01-18 18:06:40Z adrian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
