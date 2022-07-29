@@ -25,8 +25,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/usr.sbin/bsdinstall/scripts/netconfig_ipv4 323337 2017-09-09 01:23:30Z emaste $
-# $MidnightBSD$
 #
 ############################################################ INCLUDES
 
@@ -50,6 +48,7 @@ esac
 dialog --backtitle 'MidnightBSD Installer' --title 'Network Configuration' --yesno 'Would you like to use DHCP to configure this interface?' 0 0
 if [ $? -eq $DIALOG_OK ]; then
 	if [ ! -z $BSDINSTALL_CONFIGCURRENT ]; then
+		ifconfig $INTERFACE up
 		dialog --backtitle 'MidnightBSD Installer' --infobox "Acquiring DHCP lease..." 0 0
 		err=$( dhclient $INTERFACE 2>&1 )
 		if [ $? -ne 0 ]; then

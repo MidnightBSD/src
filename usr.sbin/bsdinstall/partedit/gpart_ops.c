@@ -25,7 +25,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bsdinstall/partedit/gpart_ops.c 329870 2018-02-23 16:46:49Z rpokala $
  */
 
 #include <sys/param.h>
@@ -748,7 +747,8 @@ set_default_part_metadata(const char *name, const char *scheme,
 		/* Get VFS from text after mnbsd-, if possible */
 		if (strncmp("mnbsd-", type, 6) == 0)
 			md->fstab->fs_vfstype = strdup(&type[6]);
-		else if (strcmp("fat32", type) == 0 || strcmp("efi", type) == 0)
+		else if (strcmp("fat32", type) == 0 || strcmp("efi", type) == 0
+	     	    || strcmp("ms-basic-data", type) == 0)
 			md->fstab->fs_vfstype = strdup("msdosfs");
 		else
 			md->fstab->fs_vfstype = strdup(type); /* Guess */
@@ -898,7 +898,7 @@ add_boot_partition(struct ggeom *geom, struct gprovider *pp,
 	struct gprovider *ppi;
 	int choice;
 
-	/* Check for existing freebsd-boot partition */
+	/* Check for existing mnbsd-boot partition */
 	LIST_FOREACH(ppi, &geom->lg_provider, lg_provider) {
 		struct partition_metadata *md;
 		const char *bootmount = NULL;
@@ -1067,7 +1067,7 @@ gpart_create(struct gprovider *pp, const char *default_type,
 
 	/* Special-case the MBR default type for nested partitions */
 	if (strcmp(scheme, "MBR") == 0) {
-		items[0].text = "midightbsd";
+		items[0].text = "midnightbsd";
 		items[0].help = "Filesystem type (e.g. midnightbsd, fat32)";
 	}
 
@@ -1195,61 +1195,21 @@ addpartform:
 	 * the user to add one.
 	 */
 
-	/* Check for existing mnbsd-boot partition */
-	LIST_FOREACH(pp, &geom->lg_provider, lg_provider) {
-		struct partition_metadata *md;
-		md = get_part_metadata(pp->lg_name, 0);
-		if (md == NULL || !md->bootcode)
-			continue;
-		LIST_FOREACH(gc, &pp->lg_config, lg_config)
-			if (strcmp(gc->lg_name, "type") == 0)
-				break;
-		if (gc != NULL && strcmp(gc->lg_val,
-		    bootpart_type(scheme)) == 0)
-			break;
-	}
-
-	/* If there isn't one, and we need one, ask */
 	if ((strcmp(items[0].text, "midnightbsd") == 0 ||
-	    strcmp(items[2].text, "/") == 0) && bootpart_size(scheme) > 0 &&
-	    pp == NULL) {
-		if (interactive)
-			choice = dialog_yesno("Boot Partition",
-			    "This partition scheme requires a boot partition "
-			    "for the disk to be bootable. Would you like to "
-			    "make one now?", 0, 0);
-		else
-			choice = 0;
+	    strcmp(items[2].text, "/") == 0) && bootpart_size(scheme) > 0) {
+		size_t bytes = add_boot_partition(geom, pp, scheme,
+		    interactive);
 
-		if (choice == 0) { /* yes */
-			r = gctl_get_handle();
-			gctl_ro_param(r, "class", -1, "PART");
-			gctl_ro_param(r, "arg0", -1, geom->lg_name);
-			gctl_ro_param(r, "flags", -1, GPART_FLAGS);
-			gctl_ro_param(r, "verb", -1, "add");
-			gctl_ro_param(r, "type", -1, bootpart_type(scheme));
-			snprintf(sizestr, sizeof(sizestr), "%jd",
-			    bootpart_size(scheme) / sector);
-			gctl_ro_param(r, "size", -1, sizestr);
-			snprintf(startstr, sizeof(startstr), "%jd", firstfree);
-			gctl_ro_param(r, "start", -1, startstr);
-			gctl_rw_param(r, "output", sizeof(output), output);
-			errstr = gctl_issue(r);
-			if (errstr != NULL && errstr[0] != '\0') 
-				gpart_show_error("Error", NULL, errstr);
-			gctl_free(r);
-
-			get_part_metadata(strtok(output, " "), 1)->bootcode = 1;
-
-			/* Now adjust the part we are really adding forward */
-			firstfree += bootpart_size(scheme) / sector;
-			size -= (bootpart_size(scheme) + stripe)/sector;
+		/* Now adjust the part we are really adding forward */
+		if (bytes > 0) {
+			firstfree += bytes / sector;
+			size -= (bytes + stripe)/sector;
 			if (stripe > 0 && (firstfree*sector % stripe) != 0) 
 				firstfree += (stripe - ((firstfree*sector) %
 				    stripe)) / sector;
 		}
 	}
-	
+
 	r = gctl_get_handle();
 	gctl_ro_param(r, "class", -1, "PART");
 	gctl_ro_param(r, "arg0", -1, geom->lg_name);
@@ -1287,9 +1247,8 @@ addpartform:
 	gctl_issue(r); /* Error usually expected and non-fatal */
 	gctl_free(r);
 
-	if (strcmp(items[0].text, bootpart_type(scheme)) == 0)
-		get_part_metadata(newpartname, 1)->bootcode = 1;
-	else if (strcmp(items[0].text, "midnightbsd") == 0)
+
+	if (strcmp(items[0].text, "midnightbsd") == 0)
 		gpart_partition(newpartname, "BSD");
 	else
 		set_default_part_metadata(newpartname, scheme,

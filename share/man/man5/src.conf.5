@@ -1096,37 +1096,71 @@ Set to build the
 tool.
 .Pp
 This is a default setting on
-amd64/amd64, arm/arm, arm/armeb, arm/armv6, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, pc98/i386, powerpc/powerpc and powerpc/powerpc64.
+amd64/amd64, arm/arm, arm/armv6, arm/armv7, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, mips/mipselhf, mips/mipshf, mips/mips64elhf, mips/mips64hf, powerpc/powerpc, powerpc/powerpc64, powerpc/powerpcspe, riscv/riscv64 and riscv/riscv64sf.
+.It Va WITH_LLVM_CXXFILT
+Install LLVM's llvm-cxxfilt as c++filt, instead of ELF Tool Chain's cxxfilt.
 .It Va WITHOUT_LLVM_LIBUNWIND
 Set to use GCC's stack unwinder (instead of LLVM's libunwind).
 .Pp
 This is a default setting on
-arm/arm, arm/armeb, arm/armv6, powerpc/powerpc, powerpc/powerpc64 and sparc64/sparc64.
+arm/arm, arm/armv6, arm/armv7, powerpc/powerpc, powerpc/powerpc64, powerpc/powerpcspe and sparc64/sparc64.
 .It Va WITH_LLVM_LIBUNWIND
 Set to use LLVM's libunwind stack unwinder (instead of GCC's unwinder).
 .Pp
 This is a default setting on
-amd64/amd64, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32 and pc98/i386.
+amd64/amd64, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, mips/mipselhf, mips/mipshf, mips/mips64elhf, mips/mips64hf, riscv/riscv64 and riscv/riscv64sf.
 .It Va WITHOUT_LLVM_TARGET_AARCH64
 Set to not build LLVM target support for AArch64.
+The
+.Va LLVM_TARGET_ALL
+option should be used rather than this in most cases.
 .Pp
 This is a default setting on
-sparc64/sparc64.
+arm/arm.
 .It Va WITH_LLVM_TARGET_AARCH64
 Set to build LLVM target support for AArch64.
+The
+.Va LLVM_TARGET_ALL
+option should be used rather than this in most cases.
 .Pp
 This is a default setting on
-amd64/amd64, arm/arm, arm/armeb, arm/armv6, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, pc98/i386, powerpc/powerpc and powerpc/powerpc64.
+amd64/amd64, arm/armv6, arm/armv7, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, mips/mipselhf, mips/mipshf, mips/mips64elhf, mips/mips64hf, powerpc/powerpc, powerpc/powerpc64, powerpc/powerpcspe, riscv/riscv64, riscv/riscv64sf and sparc64/sparc64.
+.It Va WITHOUT_LLVM_TARGET_ALL
+Set to only build the required LLVM target support.
+This option is preferred to specific target support options.
+When set, these options are also in effect:
+.Pp
+.Bl -inset -compact
+.It Va WITHOUT_LLVM_TARGET_AARCH64
+(unless
+.Va WITH_LLVM_TARGET_AARCH64
+is set explicitly)
+.It Va WITHOUT_LLVM_TARGET_ARM
+(unless
+.Va WITH_LLVM_TARGET_ARM
+is set explicitly)
+.It Va WITHOUT_LLVM_TARGET_MIPS
+(unless
+.Va WITH_LLVM_TARGET_MIPS
+is set explicitly)
+.It Va WITHOUT_LLVM_TARGET_POWERPC
+(unless
+.Va WITH_LLVM_TARGET_POWERPC
+is set explicitly)
+.It Va WITHOUT_LLVM_TARGET_RISCV
+(unless
+.Va WITH_LLVM_TARGET_RISCV
+is set explicitly)
+.It Va WITHOUT_LLVM_TARGET_SPARC
+(unless
+.Va WITH_LLVM_TARGET_SPARC
+is set explicitly)
+.El
 .It Va WITHOUT_LLVM_TARGET_ARM
 Set to not build LLVM target support for ARM.
-.Pp
-This is a default setting on
-sparc64/sparc64.
-.It Va WITH_LLVM_TARGET_ARM
-Set to build LLVM target support for ARM.
-.Pp
-This is a default setting on
-amd64/amd64, arm/arm, arm/armeb, arm/armv6, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, pc98/i386, powerpc/powerpc and powerpc/powerpc64.
+The
+.Va LLVM_TARGET_ALL
+option should be used rather than this in most cases.
 .It Va WITH_LLVM_TARGET_BPF
 Set to build LLVM target support for BPF.
 The
@@ -1134,51 +1168,91 @@ The
 option should be used rather than this in most cases.
 .It Va WITHOUT_LLVM_TARGET_MIPS
 Set to not build LLVM target support for MIPS.
+The
+.Va LLVM_TARGET_ALL
+option should be used rather than this in most cases.
 .Pp
 This is a default setting on
-sparc64/sparc64.
+arm/arm.
 .It Va WITH_LLVM_TARGET_MIPS
 Set to build LLVM target support for MIPS.
+The
+.Va LLVM_TARGET_ALL
+option should be used rather than this in most cases.
 .Pp
 This is a default setting on
-amd64/amd64, arm/arm, arm/armeb, arm/armv6, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, pc98/i386, powerpc/powerpc and powerpc/powerpc64.
+amd64/amd64, arm/armv6, arm/armv7, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, mips/mipselhf, mips/mipshf, mips/mips64elhf, mips/mips64hf, powerpc/powerpc, powerpc/powerpc64, powerpc/powerpcspe, riscv/riscv64, riscv/riscv64sf and sparc64/sparc64.
 .It Va WITHOUT_LLVM_TARGET_POWERPC
 Set to not build LLVM target support for PowerPC.
+The
+.Va LLVM_TARGET_ALL
+option should be used rather than this in most cases.
 .Pp
 This is a default setting on
-sparc64/sparc64.
+arm/arm.
 .It Va WITH_LLVM_TARGET_POWERPC
 Set to build LLVM target support for PowerPC.
+The
+.Va LLVM_TARGET_ALL
+option should be used rather than this in most cases.
 .Pp
 This is a default setting on
-amd64/amd64, arm/arm, arm/armeb, arm/armv6, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, pc98/i386, powerpc/powerpc and powerpc/powerpc64.
+amd64/amd64, arm/armv6, arm/armv7, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, mips/mipselhf, mips/mipshf, mips/mips64elhf, mips/mips64hf, powerpc/powerpc, powerpc/powerpc64, powerpc/powerpcspe, riscv/riscv64, riscv/riscv64sf and sparc64/sparc64.
+.It Va WITHOUT_LLVM_TARGET_RISCV
+Set to not build LLVM target support for RISC-V.
+The
+.Va LLVM_TARGET_ALL
+option should be used rather than this in most cases.
+.Pp
+This is a default setting on
+arm/arm.
 .It Va WITH_LLVM_TARGET_RISCV
 Set to build LLVM target support for RISC-V.
 The
 .Va LLVM_TARGET_ALL
 option should be used rather than this in most cases.
+.Pp
+This is a default setting on
+amd64/amd64, arm/armv6, arm/armv7, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, mips/mipselhf, mips/mipshf, mips/mips64elhf, mips/mips64hf, powerpc/powerpc, powerpc/powerpc64, powerpc/powerpcspe, riscv/riscv64, riscv/riscv64sf and sparc64/sparc64.
 .It Va WITHOUT_LLVM_TARGET_SPARC
 Set to not build LLVM target support for SPARC.
+The
+.Va LLVM_TARGET_ALL
+option should be used rather than this in most cases.
 .Pp
 This is a default setting on
-sparc64/sparc64.
+arm/arm.
 .It Va WITH_LLVM_TARGET_SPARC
 Set to build LLVM target support for SPARC.
+The
+.Va LLVM_TARGET_ALL
+option should be used rather than this in most cases.
 .Pp
 This is a default setting on
-amd64/amd64, arm/arm, arm/armeb, arm/armv6, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, pc98/i386, powerpc/powerpc and powerpc/powerpc64.
+amd64/amd64, arm/armv6, arm/armv7, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, mips/mipselhf, mips/mipshf, mips/mips64elhf, mips/mips64hf, powerpc/powerpc, powerpc/powerpc64, powerpc/powerpcspe, riscv/riscv64, riscv/riscv64sf and sparc64/sparc64.
 .It Va WITHOUT_LLVM_TARGET_X86
 Set to not build LLVM target support for X86.
+The
+.Va LLVM_TARGET_ALL
+option should be used rather than this in most cases.
 .Pp
 This is a default setting on
-sparc64/sparc64.
+arm/arm.
 .It Va WITH_LLVM_TARGET_X86
 Set to build LLVM target support for X86.
+The
+.Va LLVM_TARGET_ALL
+option should be used rather than this in most cases.
 .Pp
 This is a default setting on
-amd64/amd64, arm/arm, arm/armeb, arm/armv6, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, pc98/i386, powerpc/powerpc and powerpc/powerpc64.
+amd64/amd64, arm/armv6, arm/armv7, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, mips/mipselhf, mips/mipshf, mips/mips64elhf, mips/mips64hf, powerpc/powerpc, powerpc/powerpc64, powerpc/powerpcspe, riscv/riscv64, riscv/riscv64sf and sparc64/sparc64.
+.It Va WITH_LOADER_EFI_SECUREBOOT
+Enable building
+.Xr loader 8
+with support for verification based on certificates obtained from UEFI.
+.Pp
 .It Va WITH_LOADER_FIREWIRE
-Enable firewire support in /boot/loader and /boot/zfsloader on x86.
+Enable firewire support in /boot/loader on x86.
 This option is a nop on all other platforms.
 .It Va WITH_LOADER_FORCE_LE
 Set to force the powerpc boot loader to launch the kernel in little
@@ -1187,47 +1261,69 @@ endian mode.
 Disable inclusion of GELI crypto support in the boot chain binaries.
 .Pp
 This is a default setting on
-pc98/i386, powerpc/powerpc, powerpc/powerpc64 and sparc64/sparc64.
+powerpc/powerpc, powerpc/powerpc64, powerpc/powerpcspe and sparc64/sparc64.
 .It Va WITH_LOADER_GELI
 Set to build GELI bootloader support.
 .Pp
 This is a default setting on
-amd64/amd64, arm/arm, arm/armeb, arm/armv6, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64 and mips/mipsn32.
+amd64/amd64, arm/arm, arm/armv6, arm/armv7, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, mips/mipselhf, mips/mipshf, mips/mips64elhf, mips/mips64hf, riscv/riscv64 and riscv/riscv64sf.
 .It Va WITHOUT_LOADER_LUA
 Set to not build LUA bindings for the boot loader.
 .Pp
 This is a default setting on
-pc98/i386, powerpc/powerpc, powerpc/powerpc64 and sparc64/sparc64.
+powerpc/powerpc, powerpc/powerpc64, powerpc/powerpcspe and sparc64/sparc64.
 .It Va WITH_LOADER_LUA
 Set to build LUA bindings for the boot loader.
 .Pp
 This is a default setting on
-amd64/amd64, arm/arm, arm/armeb, arm/armv6, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64 and mips/mipsn32.
+amd64/amd64, arm/arm, arm/armv6, arm/armv7, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, mips/mipselhf, mips/mipshf, mips/mips64elhf, mips/mips64hf, riscv/riscv64 and riscv/riscv64sf.
 .It Va WITHOUT_LOADER_OFW
 Disable building of openfirmware bootloader components.
 .Pp
 This is a default setting on
-amd64/amd64, arm/arm, arm/armeb, arm/armv6, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32 and pc98/i386.
+amd64/amd64, arm/arm, arm/armv6, arm/armv7, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, mips/mipselhf, mips/mipshf, mips/mips64elhf, mips/mips64hf, riscv/riscv64 and riscv/riscv64sf.
 .It Va WITH_LOADER_OFW
 Set to build openfirmware bootloader components.
 .Pp
 This is a default setting on
-powerpc/powerpc, powerpc/powerpc64 and sparc64/sparc64.
+powerpc/powerpc, powerpc/powerpc64, powerpc/powerpcspe and sparc64/sparc64.
 .It Va WITHOUT_LOADER_UBOOT
 Disable building of ubldr.
 .Pp
 This is a default setting on
-amd64/amd64, arm64/aarch64, i386/i386, pc98/i386 and sparc64/sparc64.
+amd64/amd64, arm64/aarch64, i386/i386, riscv/riscv64, riscv/riscv64sf and sparc64/sparc64.
 .It Va WITH_LOADER_UBOOT
 Set to build ubldr.
 .Pp
 This is a default setting on
-arm/arm, arm/armeb, arm/armv6, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, powerpc/powerpc and powerpc/powerpc64.
-.It Va WITH_LOADER_VERBOSE
-Set to build with extra verbose debugging in the loader.
-May explode already nearly too large loader over the limit.
-Use with care.
-
+arm/arm, arm/armv6, arm/armv7, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, mips/mipselhf, mips/mipshf, mips/mips64elhf, mips/mips64hf, powerpc/powerpc, powerpc/powerpc64 and powerpc/powerpcspe.
+.It Va WITH_LOADER_VERIEXEC
+Enable building
+.Xr loader 8
+with support for verification similar to Verified Exec.
+.Pp
+Depends on
+.Va WITH_BEARSSL .
+When set, these options are also in effect:
+.Pp
+.Bl -inset -compact
+.It Va WITH_LOADER_EFI_SECUREBOOT
+(unless
+.Va WITHOUT_LOADER_EFI_SECUREBOOT
+is set explicitly)
+.It Va WITH_LOADER_VERIEXEC_VECTX
+(unless
+.Va WITHOUT_LOADER_VERIEXEC_VECTX
+is set explicitly)
+.El
+.It Va WITH_LOADER_VERIEXEC_PASS_MANIFEST
+Enable building
+.Xr loader 8
+with support to pass a verified manifest to the kernel.
+The kernel has to be built with a module to parse the manifest.
+.Pp
+Depends on
+.Va WITH_LOADER_VERIEXEC .
 .It Va WITHOUT_LOADER_ZFS
 Set to not build ZFS file system boot loader support.
 .It Va WITHOUT_LOCALES
@@ -1267,6 +1363,20 @@ MTA selector.
 Set to not install
 .Xr make 1
 and related support files.
+.It Va WITHOUT_MAKE_CHECK_USE_SANDBOX
+Set to not execute
+.Dq Li "make check"
+in limited sandbox mode.
+This option should be paired with
+.Va WITH_INSTALL_AS_USER
+if executed as an unprivileged user.
+See
+.Xr tests 7
+for more details.
+.It Va WITHOUT_MALLOC_PRODUCTION
+Set to enable assertions and statistics gathering in
+.Xr malloc 3 .
+It also defaults the A and J runtime options to on.
 .It Va WITHOUT_MAN
 Set to not build manual pages.
 When set, these options are also in effect:
@@ -1280,19 +1390,9 @@ is set explicitly)
 .It Va WITHOUT_MANCOMPRESS
 Set to not to install compressed man pages.
 Only the uncompressed versions will be installed.
-.It Va WITHOUT_MANDOCDB
-Use the version of
-.Xr makewhatis 1
-introduced in
-.Fx 2.1 ,
-instead of the
-.Xr makewhatis 8
-database and utilities from
-.Xr mandoc 1 .
 .It Va WITHOUT_MAN_UTILS
 Set to not build utilities for manual pages,
 .Xr apropos 1 ,
-.Xr catman 1 ,
 .Xr makewhatis 1 ,
 .Xr man 1 ,
 .Xr whatis 1 ,
@@ -1350,17 +1450,6 @@ This option originally invoked a different build system but that was renamed
 to
 .Va WITH_DIRDEPS_BUILD .
 .Pp
-Currently this also enforces
-.Va WITHOUT_SYSTEM_COMPILER .
-When set, these options are also in effect:
-.Pp
-.Bl -inset -compact
-.It Va WITHOUT_SYSTEM_COMPILER
-(unless
-.Va WITH_SYSTEM_COMPILER
-is set explicitly)
-.El
-.Pp
 This must be set in the environment, make command line, or
 .Pa /etc/src-env.conf ,
 not
@@ -1370,13 +1459,18 @@ Set to not build
 .Xr mlx5tool 8
 .Pp
 This is a default setting on
-arm/arm, arm/armeb, arm/armv6, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32 and powerpc/powerpc.
+arm/arm, arm/armv6, arm/armv7, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, mips/mipselhf, mips/mipshf, mips/mips64elhf, mips/mips64hf, powerpc/powerpc, powerpc/powerpcspe, riscv/riscv64 and riscv/riscv64sf.
 .It Va WITH_MLX5TOOL
 Set to build
 .Xr mlx5tool 8
 .Pp
 This is a default setting on
-amd64/amd64, arm64/aarch64, i386/i386, pc98/i386, powerpc/powerpc64 and sparc64/sparc64.
+amd64/amd64, arm64/aarch64, i386/i386, powerpc/powerpc64 and sparc64/sparc64.
+.It Va WITHOUT_MODULE_DRM
+Disable creation of old drm video modules.
+
+.It Va WITHOUT_MODULE_DRM2
+Disable creation of old drm2 video modules.
 .It Va WITH_NAND
 Set to build the NAND Flash components.
 .It Va WITHOUT_NDIS
@@ -1396,8 +1490,15 @@ When set, it enforces these options:
 .Va WITHOUT_ATM
 .It
 .Va WITHOUT_BLUETOOTH
-.It
-.Va WITHOUT_NETGRAPH_SUPPORT
+.El
+.Pp
+When set, these options are also in effect:
+.Pp
+.Bl -inset -compact
+.It Va WITHOUT_NETGRAPH_SUPPORT
+(unless
+.Va WITH_NETGRAPH_SUPPORT
+is set explicitly)
 .El
 .It Va WITHOUT_NETGRAPH_SUPPORT
 Set to build libraries, programs, and kernel modules without netgraph support.
@@ -1432,6 +1533,16 @@ will not be built either if this option is set.
 Set to not build
 .Xr ntpd 8
 and related programs.
+.It Va WITHOUT_NVME
+Set to not build nvme related tools and kernel modules.
+.Pp
+This is a default setting on
+arm/arm, arm/armv6, arm/armv7, arm64/aarch64, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, mips/mipselhf, mips/mipshf, mips/mips64elhf, mips/mips64hf, powerpc/powerpc, powerpc/powerpcspe, riscv/riscv64, riscv/riscv64sf and sparc64/sparc64.
+.It Va WITH_NVME
+Set to build nvme related tools and kernel modules.
+.Pp
+This is a default setting on
+amd64/amd64, i386/i386 and powerpc/powerpc64.
 .It Va WITH_OFED
 Set to build the
 .Dq "OpenFabrics Enterprise Distribution"
@@ -1446,12 +1557,12 @@ Enable building openldap support for kerberos.
 Set to not build LLVM's OpenMP runtime.
 .Pp
 This is a default setting on
-arm/arm, arm/armeb, arm/armv6, arm64/aarch64, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, powerpc/powerpc, powerpc/powerpc64 and sparc64/sparc64.
+arm/arm, arm/armv6, arm/armv7, mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, mips/mipselhf, mips/mipshf, mips/mips64elhf, mips/mips64hf, powerpc/powerpc, powerpc/powerpcspe, riscv/riscv64, riscv/riscv64sf and sparc64/sparc64.
 .It Va WITH_OPENMP
 Set to build LLVM's OpenMP runtime.
 .Pp
 This is a default setting on
-amd64/amd64, i386/i386 and pc98/i386.
+amd64/amd64, arm64/aarch64, i386/i386 and powerpc/powerpc64.
 .It Va WITHOUT_OPENSSH
 Set to not build OpenSSH.
 .It Va WITHOUT_OPENSSL
@@ -1460,11 +1571,27 @@ When set, it enforces these options:
 .Pp
 .Bl -item -compact
 .It
+.Va WITHOUT_DMAGENT
+.It
 .Va WITHOUT_KERBEROS
 .It
 .Va WITHOUT_KERBEROS_SUPPORT
 .It
+.Va WITHOUT_LDNS
+.It
+.Va WITHOUT_LDNS_UTILS
+.It
 .Va WITHOUT_OPENSSH
+.It
+.Va WITHOUT_PKGBOOTSTRAP
+.It
+.Va WITHOUT_SVN
+.It
+.Va WITHOUT_SVNLITE
+.It
+.Va WITHOUT_UNBOUND
+.It
+.Va WITHOUT_WIRELESS
 .El
 .Pp
 When set, these options are also in effect:
@@ -1480,11 +1607,13 @@ Set to not build PAM library and modules.
 .Bf -symbolic
 This option is deprecated and does nothing.
 .Ef
-When set, it enforces these options:
+When set, these options are also in effect:
 .Pp
-.Bl -item -compact
-.It
-.Va WITHOUT_PAM_SUPPORT
+.Bl -inset -compact
+.It Va WITHOUT_PAM_SUPPORT
+(unless
+.Va WITH_PAM_SUPPORT
+is set explicitly)
 .El
 .It Va WITHOUT_PAM_SUPPORT
 Set to build some programs without PAM support, particularly
@@ -1503,6 +1632,9 @@ When set, it enforces these options:
 .It
 .Va WITHOUT_AUTHPF
 .El
+.It Va WITH_PIE
+Build dynamically linked binaries as
+Position-Independent Executable (PIE).
 .It Va WITHOUT_PKGBOOTSTRAP
 Set to not build
 .Xr pkg 7
@@ -1524,13 +1656,15 @@ Set to not build profiled libraries for use with
 .Xr gprof 8 .
 .Pp
 This is a default setting on
-mips/mips64el and mips/mips64.
+mips/mips64el, mips/mips64, mips/mips64elhf and mips/mips64hf.
 .It Va WITH_PROFILE
 Set to build profiled libraries for use with
 .Xr gprof 8 .
+This option is deprecated and is not present in
+.Fx 14 .
 .Pp
 This is a default setting on
-amd64/amd64, arm/arm, arm/armeb, arm/armv6, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mipsn32, pc98/i386, powerpc/powerpc, powerpc/powerpc64 and sparc64/sparc64.
+amd64/amd64, arm/arm, arm/armv6, arm/armv7, arm64/aarch64, i386/i386, mips/mipsel, mips/mips, mips/mipsn32, mips/mipselhf, mips/mipshf, powerpc/powerpc, powerpc/powerpc64, powerpc/powerpcspe, riscv/riscv64, riscv/riscv64sf and sparc64/sparc64.
 .It Va WITHOUT_QUOTAS
 Set to not build
 .Xr quota 1
@@ -1540,29 +1674,31 @@ Set to not build radius support into various applications, like
 .Xr pam_radius 8
 and
 .Xr ppp 8 .
+.It Va WITH_RATELIMIT
+Set to build the system with rate limit support.
+.Pp
+This makes
+.Dv SO_MAX_PACING_RATE
+effective in
+.Xr getsockopt 2 ,
+and
+.Ar txrlimit
+support in
+.Xr ifconfig 8 ,
+by proxy.
 .It Va WITHOUT_RBOOTD
 Set to not build or install
 .Xr rbootd 8 .
-.It Va WITHOUT_RCMDS
-Disable building of the
-.Bx
-r-commands.
-This includes
-.Xr rlogin 1 ,
-.Xr rsh 1 ,
-etc.
-.It Va WITHOUT_RCS
-Set to not build
-.Xr rcs 1 ,
-.Xr etcupdate 8 ,
-and related utilities.
-.It Va WITH_REPRODUCIBLE_BUILD
-Set to exclude build metadata (such as the build time, user, or host)
-from the kernel, boot loaders, and uname output, so that builds produce
-bit-for-bit identical output.
+.It Va WITHOUT_REPRODUCIBLE_BUILD
+Set to include build metadata (such as the build time, user, and host)
+in the kernel, boot loaders, and uname output.
+Successive builds will not be bit-for-bit identical.
 .It Va WITHOUT_RESCUE
 Set to not build
 .Xr rescue 8 .
+.It Va WITH_RETPOLINE
+Set to build the base system with the retpoline speculative execution
+vulnerability mitigation for CVE-2017-5715.
 .It Va WITHOUT_ROUTED
 Set to not build
 .Xr routed 8
@@ -1575,6 +1711,9 @@ with warmstart support.
 Set to not build
 .Xr sendmail 8
 and related programs.
+.It Va WITHOUT_SERVICESDB
+Set to not install
+.Pa /var/db/services.db .
 .It Va WITHOUT_SETUID_LOGIN
 Set this to disable the installation of
 .Xr login 1
@@ -1608,6 +1747,14 @@ Set to not build kernel modules that include sourceless native code for host CPU
 Set to not build kernel modules that include sourceless microcode.
 .It Va WITHOUT_SSP
 Set to not build world with propolice stack smashing protection.
+.Pp
+This is a default setting on
+mips/mipsel, mips/mips, mips/mips64el, mips/mips64, mips/mipsn32, mips/mipselhf, mips/mipshf, mips/mips64elhf and mips/mips64hf.
+.It Va WITH_SSP
+Set to build world with propolice stack smashing protection.
+.Pp
+This is a default setting on
+amd64/amd64, arm/arm, arm/armv6, arm/armv7, arm64/aarch64, i386/i386, powerpc/powerpc, powerpc/powerpc64, powerpc/powerpcspe, riscv/riscv64, riscv/riscv64sf and sparc64/sparc64.
 .It Va WITH_STAGING
 Enable staging of files to a stage tree.
 This can be best thought of as auto-install to
@@ -1674,6 +1821,22 @@ The
 and
 .Va WITHOUT_GCC
 options control those.
+.It Va WITHOUT_SYSTEM_LINKER
+Set to not opportunistically skip building a cross-linker during the
+bootstrap phase of the build.
+Normally, if the currently installed linker matches the planned bootstrap
+linker type and revision, then it will not be built.
+This does not prevent a linker from being built for installation though,
+only for building one for the build itself.
+The
+.Va WITHOUT_LLD
+and
+.Va WITHOUT_BINUTILS
+options control those.
+.Pp
+This option is only relevant when
+.Va WITH_LLD_BOOTSTRAP
+is set.
 .It Va WITHOUT_TALK
 Set to not build or install
 .Xr talk 1
@@ -1706,20 +1869,31 @@ When set, it enforces these options:
 .Bl -item -compact
 .It
 .Va WITHOUT_DTRACE_TESTS
-.It
-.Va WITHOUT_TESTS_SUPPORT
+.El
+.Pp
+When set, these options are also in effect:
+.Pp
+.Bl -inset -compact
+.It Va WITHOUT_GOOGLETEST
+(unless
+.Va WITH_GOOGLETEST
+is set explicitly)
+.It Va WITHOUT_TESTS_SUPPORT
+(unless
+.Va WITH_TESTS_SUPPORT
+is set explicitly)
 .El
 .It Va WITHOUT_TESTS_SUPPORT
 Set to disables the build of all test-related dependencies, including ATF.
-.It Va WITHOUT_TEXTPROC
-Set to not build
-programs used for text processing.
 When set, it enforces these options:
 .Pp
 .Bl -item -compact
 .It
-.Va WITHOUT_GROFF
+.Va WITHOUT_GOOGLETEST
 .El
+.It Va WITHOUT_TEXTPROC
+Set to not build
+programs used for text processing.
 .It Va WITHOUT_TFTP
 Set to not build or install
 .Xr tftp 1
@@ -1742,6 +1916,8 @@ When set, it enforces these options:
 .It
 .Va WITHOUT_CLANG_EXTRAS
 .It
+.Va WITHOUT_CLANG_FORMAT
+.It
 .Va WITHOUT_CLANG_FULL
 .It
 .Va WITHOUT_GCC
@@ -1760,6 +1936,27 @@ When set, it enforces these options:
 Set to not build
 .Xr unbound 8
 and related programs.
+.It Va WITHOUT_UNIFIED_OBJDIR
+Set to use the historical object directory format for
+.Xr build 7
+targets.
+For native-builds and builds done directly in sub-directories the format of
+.Pa ${MAKEOBJDIRPREFIX}/${.CURDIR}
+is used,
+while for cross-builds
+.Pa ${MAKEOBJDIRPREFIX}/${TARGET}.${TARGET_ARCH}/${.CURDIR}
+is used.
+.Pp
+This option is transitional and will be removed in a future version of
+.Fx ,
+at which time
+.va WITH_UNIFIED_OBJDIR
+will be enabled permanently.
+.Pp
+This must be set in the environment, make command line, or
+.Pa /etc/src-env.conf ,
+not
+.Pa /etc/src.conf .
 .It Va WITHOUT_USB
 Set to not build USB-related programs and libraries.
 .It Va WITHOUT_USB_GADGET_EXAMPLES
@@ -1773,6 +1970,15 @@ Set to not build user accounting tools such as
 .Xr lastlogin 8
 and
 .Xr utx 8 .
+.It Va WITH_VERIEXEC
+Enable building
+.Xr veriexec 8
+which loads the contents of verified manifests into the kernel
+for use by
+.Xr mac_veriexec 4
+.Pp
+Depends on
+.Va WITH_BEARSSL .
 .It Va WITHOUT_VI
 Set to not build and install vi, view, ex and related programs.
 .It Va WITHOUT_VT
@@ -1789,11 +1995,13 @@ Set to not build programs used for 802.11 wireless networks; especially
 .Xr wpa_supplicant 8
 and
 .Xr hostapd 8 .
-When set, it enforces these options:
+When set, these options are also in effect:
 .Pp
-.Bl -item -compact
-.It
-.Va WITHOUT_WIRELESS_SUPPORT
+.Bl -inset -compact
+.It Va WITHOUT_WIRELESS_SUPPORT
+(unless
+.Va WITH_WIRELESS_SUPPORT
+is set explicitly)
 .El
 .It Va WITHOUT_WIRELESS_SUPPORT
 Set to build libraries, programs, and kernel modules without
@@ -1813,14 +2021,9 @@ When set, it enforces these options:
 .Bl -item -compact
 .It
 .Va WITHOUT_ZONEINFO_LEAPSECONDS_SUPPORT
-.It
-.Va WITHOUT_ZONEINFO_OLD_TIMEZONES_SUPPORT
 .El
 .It Va WITH_ZONEINFO_LEAPSECONDS_SUPPORT
 Set to build leapsecond information in to the timezone database.
-.It Va WITH_ZONEINFO_OLD_TIMEZONES_SUPPORT
-Set to build backward compatibility timezone aliases in to the timezone
-database.
 .El
 .Sh FILES
 .Bl -tag -compact -width Pa
