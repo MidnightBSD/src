@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/contrib/libnv/dnvlist.c 285139 2015-07-04 16:33:37Z oshogbo $");
+__FBSDID("$FreeBSD$");
 
 #ifdef _KERNEL
 

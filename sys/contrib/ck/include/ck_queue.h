@@ -53,7 +53,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)queue.h	8.5 (Berkeley) 8/20/94
- * $FreeBSD: stable/11/sys/contrib/ck/include/ck_queue.h 339650 2018-10-23 13:12:42Z avg $
+ * $FreeBSD$
  */
 
 #ifndef CK_QUEUE_H

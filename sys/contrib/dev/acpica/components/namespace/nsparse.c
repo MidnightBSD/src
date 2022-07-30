@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -171,8 +171,17 @@
  *
  * RETURN:      Status
  *
- * DESCRIPTION: Load ACPI/AML table by executing the entire table as a
- *              TermList.
+ * DESCRIPTION: Load ACPI/AML table by executing the entire table as a single
+ *              large control method.
+ *
+ * NOTE: The point of this is to execute any module-level code in-place
+ * as the table is parsed. Some AML code depends on this behavior.
+ *
+ * It is a run-time option at this time, but will eventually become
+ * the default.
+ *
+ * Note: This causes the table to only have a single-pass parse.
+ * However, this is compatible with other ACPI implementations.
  *
  ******************************************************************************/
 
@@ -232,8 +241,9 @@ AcpiNsExecuteTable (
         goto Cleanup;
     }
 
-    ACPI_DEBUG_PRINT ((ACPI_DB_PARSE,
-        "Create table code block: %p\n", MethodObj));
+    ACPI_DEBUG_PRINT_RAW ((ACPI_DB_PARSE,
+        "%s: Create table pseudo-method for [%4.4s] @%p, method %p\n",
+        ACPI_GET_FUNCTION_NAME, Table->Signature, Table, MethodObj));
 
     MethodObj->Method.AmlStart = AmlStart;
     MethodObj->Method.AmlLength = AmlLength;
@@ -251,7 +261,17 @@ AcpiNsExecuteTable (
         goto Cleanup;
     }
 
+    /* Optional object evaluation log */
+
+    ACPI_DEBUG_PRINT_RAW ((ACPI_DB_EVALUATION,
+        "%-26s:  (Definition Block level)\n", "Module-level evaluation"));
+
     Status = AcpiPsExecuteTable (Info);
+
+    /* Optional object evaluation log */
+
+    ACPI_DEBUG_PRINT_RAW ((ACPI_DB_EVALUATION,
+        "%-26s:  (Definition Block level)\n", "Module-level complete"));
 
 Cleanup:
     if (Info)
@@ -345,7 +365,7 @@ AcpiNsOneCompleteParse (
 
     /* Found OSDT table, enable the namespace override feature */
 
-    if (ACPI_COMPARE_NAME(Table->Signature, ACPI_SIG_OSDT) &&
+    if (ACPI_COMPARE_NAMESEG (Table->Signature, ACPI_SIG_OSDT) &&
         PassNumber == ACPI_IMODE_LOAD_PASS1)
     {
         WalkState->NamespaceOverride = TRUE;
@@ -402,54 +422,18 @@ AcpiNsParseTable (
     ACPI_FUNCTION_TRACE (NsParseTable);
 
 
-    if (AcpiGbl_ParseTableAsTermList)
-    {
-        ACPI_DEBUG_PRINT ((ACPI_DB_PARSE, "**** Start load pass\n"));
+    /*
+     * Executes the AML table as one large control method.
+     * The point of this is to execute any module-level code in-place
+     * as the table is parsed. Some AML code depends on this behavior.
+     *
+     * Note: This causes the table to only have a single-pass parse.
+     * However, this is compatible with other ACPI implementations.
+     */
+    ACPI_DEBUG_PRINT_RAW ((ACPI_DB_PARSE,
+        "%s: **** Start table execution pass\n", ACPI_GET_FUNCTION_NAME));
 
-        Status = AcpiNsExecuteTable (TableIndex, StartNode);
-        if (ACPI_FAILURE (Status))
-        {
-            return_ACPI_STATUS (Status);
-        }
-    }
-    else
-    {
-        /*
-         * AML Parse, pass 1
-         *
-         * In this pass, we load most of the namespace. Control methods
-         * are not parsed until later. A parse tree is not created.
-         * Instead, each Parser Op subtree is deleted when it is finished.
-         * This saves a great deal of memory, and allows a small cache of
-         * parse objects to service the entire parse. The second pass of
-         * the parse then performs another complete parse of the AML.
-         */
-        ACPI_DEBUG_PRINT ((ACPI_DB_PARSE, "**** Start pass 1\n"));
-
-        Status = AcpiNsOneCompleteParse (ACPI_IMODE_LOAD_PASS1,
-            TableIndex, StartNode);
-        if (ACPI_FAILURE (Status))
-        {
-            return_ACPI_STATUS (Status);
-        }
-
-        /*
-         * AML Parse, pass 2
-         *
-         * In this pass, we resolve forward references and other things
-         * that could not be completed during the first pass.
-         * Another complete parse of the AML is performed, but the
-         * overhead of this is compensated for by the fact that the
-         * parse objects are all cached.
-         */
-        ACPI_DEBUG_PRINT ((ACPI_DB_PARSE, "**** Start pass 2\n"));
-        Status = AcpiNsOneCompleteParse (ACPI_IMODE_LOAD_PASS2,
-            TableIndex, StartNode);
-        if (ACPI_FAILURE (Status))
-        {
-            return_ACPI_STATUS (Status);
-        }
-    }
+    Status = AcpiNsExecuteTable (TableIndex, StartNode);
 
     return_ACPI_STATUS (Status);
 }

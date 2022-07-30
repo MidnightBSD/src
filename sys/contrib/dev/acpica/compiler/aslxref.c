@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -174,9 +174,11 @@ XfNamespaceLocateEnd (
     UINT32                  Level,
     void                    *Context);
 
-static ACPI_PARSE_OBJECT *
-XfGetParentMethod (
-    ACPI_PARSE_OBJECT       *Op);
+static BOOLEAN
+XfValidateCrossReference (
+    ACPI_PARSE_OBJECT       *Op,
+    const ACPI_OPCODE_INFO  *OpInfo,
+    ACPI_NAMESPACE_NODE     *Node);
 
 static BOOLEAN
 XfObjectExists (
@@ -197,21 +199,15 @@ XfCheckFieldRange (
     UINT32                  FieldBitLength,
     UINT32                  AccessBitWidth);
 
-#ifdef __UNDER_DEVELOPMENT
-static ACPI_PARSE_OBJECT *
-XfGetParentMethod (
+static BOOLEAN
+XfFindCondRefOfName (
+    ACPI_NAMESPACE_NODE     *Node,
     ACPI_PARSE_OBJECT       *Op);
 
-static void
-XfCheckIllegalReference (
-    ACPI_PARSE_OBJECT       *Op,
-    ACPI_NAMESPACE_NODE     *Node);
-
 static BOOLEAN
-XfIsObjectParental (
-    ACPI_PARSE_OBJECT       *MethodOp1,
-    ACPI_PARSE_OBJECT       *MethodOp2);
-#endif
+XfRefIsGuardedByIfCondRefOf (
+    ACPI_NAMESPACE_NODE     *Node,
+    ACPI_PARSE_OBJECT       *Op);
 
 
 /*******************************************************************************
@@ -253,7 +249,7 @@ XfCrossReferenceNamespace (
 
     /* Walk the entire parse tree */
 
-    TrWalkParseTree (Gbl_ParseTreeRoot, ASL_WALK_VISIT_TWICE,
+    TrWalkParseTree (AslGbl_ParseTreeRoot, ASL_WALK_VISIT_TWICE,
         XfNamespaceLocateBegin, XfNamespaceLocateEnd, WalkState);
 
     ACPI_FREE (WalkState);
@@ -392,40 +388,6 @@ XfCheckFieldRange (
 
 /*******************************************************************************
  *
- * FUNCTION:    XfGetParentMethod
- *
- * PARAMETERS:  Op                      - Parse Op to be checked
- *
- * RETURN:      Control method Op if found. NULL otherwise
- *
- * DESCRIPTION: Find the control method parent of a parse op. Returns NULL if
- *              the input Op is not within a control method.
- *
- ******************************************************************************/
-
-static ACPI_PARSE_OBJECT *
-XfGetParentMethod (
-    ACPI_PARSE_OBJECT       *Op)
-{
-    ACPI_PARSE_OBJECT       *NextOp;
-
-
-    NextOp = Op->Asl.Parent;
-    while (NextOp)
-    {
-        if (NextOp->Asl.AmlOpcode == AML_METHOD_OP)
-        {
-            return (NextOp);
-        }
-
-        NextOp = NextOp->Asl.Parent;
-    }
-
-    return (NULL); /* No parent method found */
-}
-
-/*******************************************************************************
- *
  * FUNCTION:    XfNamespaceLocateBegin
  *
  * PARAMETERS:  ASL_WALK_CALLBACK
@@ -469,6 +431,8 @@ XfNamespaceLocateBegin (
     ASL_METHOD_LOCAL        *MethodArgs = NULL;
     int                     RegisterNumber;
     UINT32                  i;
+    ACPI_NAMESPACE_NODE     *DeclarationParentMethod;
+    ACPI_PARSE_OBJECT       *ReferenceParentMethod;
 
 
     ACPI_FUNCTION_TRACE_PTR (XfNamespaceLocateBegin, Op);
@@ -504,7 +468,7 @@ XfNamespaceLocateBegin (
             Node->ArgCount = (UINT8)
                 (((UINT8) NextOp->Asl.Value.Integer) & 0x07);
 
-            /* We will track all posible ArgXs */
+            /* We will track all possible ArgXs */
 
             for (i = 0; i < ACPI_METHOD_NUM_ARGS; i++)
             {
@@ -546,7 +510,7 @@ XfNamespaceLocateBegin (
     {
         /* Find parent method Op */
 
-        NextOp = XfGetParentMethod (Op);
+        NextOp = UtGetParentMethodOp (Op);
         if (!NextOp)
         {
             return_ACPI_STATUS (AE_OK);
@@ -583,7 +547,7 @@ XfNamespaceLocateBegin (
     {
         /* Find parent method Op */
 
-        NextOp = XfGetParentMethod (Op);
+        NextOp = UtGetParentMethodOp (Op);
         if (!NextOp)
         {
             return_ACPI_STATUS (AE_OK);
@@ -628,17 +592,6 @@ XfNamespaceLocateBegin (
     }
 
     /*
-     * One special case: CondRefOf operator - we don't care if the name exists
-     * or not at this point, just ignore it, the point of the operator is to
-     * determine if the name exists at runtime.
-     */
-    if ((Op->Asl.Parent) &&
-        (Op->Asl.Parent->Asl.ParseOpcode == PARSEOP_CONDREFOF))
-    {
-        return_ACPI_STATUS (AE_OK);
-    }
-
-    /*
      * We must enable the "search-to-root" for single NameSegs, but
      * we have to be very careful about opening up scopes
      */
@@ -646,7 +599,8 @@ XfNamespaceLocateBegin (
     if ((Op->Asl.ParseOpcode == PARSEOP_NAMESTRING) ||
         (Op->Asl.ParseOpcode == PARSEOP_NAMESEG)    ||
         (Op->Asl.ParseOpcode == PARSEOP_METHODCALL) ||
-        (Op->Asl.ParseOpcode == PARSEOP_EXTERNAL))
+        (Op->Asl.ParseOpcode == PARSEOP_EXTERNAL)   ||
+        (Op->Asl.ParseOpcode == PARSEOP_CONDREFOF))
     {
         /*
          * These are name references, do not push the scope stack
@@ -699,10 +653,10 @@ XfNamespaceLocateBegin (
      * The namespace is also used as a lookup table for references to resource
      * descriptors and the fields within them.
      */
-    Gbl_NsLookupCount++;
+    AslGbl_NsLookupCount++;
 
     Status = AcpiNsLookup (WalkState->ScopeInfo, Path, ObjectType,
-        ACPI_IMODE_EXECUTE, Flags, WalkState, &(Node));
+        ACPI_IMODE_EXECUTE, Flags, WalkState, &Node);
     if (ACPI_FAILURE (Status))
     {
         if (Status == AE_NOT_FOUND)
@@ -711,7 +665,22 @@ XfNamespaceLocateBegin (
              * We didn't find the name reference by path -- we can qualify this
              * a little better before we print an error message
              */
-            if (strlen (Path) == ACPI_NAME_SIZE)
+
+            if ((Op->Asl.Parent) &&
+                (Op->Asl.Parent->Asl.ParseOpcode == PARSEOP_CONDREFOF))
+            {
+                /*
+                 * One special case: CondRefOf operator - if the name doesn't
+                 * exist at this point, it means that there's no actual or
+                 * external declaration. If the name is not found, just ignore
+                 * it, the point of the operator is to determine if the name
+                 * exists at runtime. We wanted to see if this named object
+                 * exists to facilitate analysis to allow protected usage of
+                 * undeclared externals.
+                 */
+                return_ACPI_STATUS (AE_OK);
+            }
+            else if (strlen (Path) == ACPI_NAMESEG_SIZE)
             {
                 /* A simple, one-segment ACPI name */
 
@@ -734,11 +703,34 @@ XfNamespaceLocateBegin (
             }
             else
             {
-                /* Check for a fully qualified path */
+                /* The NamePath contains multiple NameSegs */
 
-                if (Path[0] == AML_ROOT_PREFIX)
+                if ((OpInfo->Flags & AML_CREATE) ||
+                    (OpInfo->ObjectType == ACPI_TYPE_LOCAL_ALIAS))
                 {
-                    /* Gave full path, the object does not exist */
+                    /*
+                     * The new name is the last parameter. For the
+                     * CreateXXXXField and Alias operators
+                     */
+                    NextOp = Op->Asl.Child;
+                    while (!(NextOp->Asl.CompileFlags & OP_IS_NAME_DECLARATION))
+                    {
+                        NextOp = NextOp->Asl.Next;
+                    }
+
+                    AslError (ASL_ERROR, ASL_MSG_PREFIX_NOT_EXIST, NextOp,
+                        NextOp->Asl.ExternalName);
+                }
+                else if (OpInfo->Flags & AML_NAMED)
+                {
+                    /* The new name is the first parameter */
+
+                    AslError (ASL_ERROR, ASL_MSG_PREFIX_NOT_EXIST, Op,
+                        Op->Asl.ExternalName);
+                }
+                else if (Path[0] == AML_ROOT_PREFIX)
+                {
+                    /* Full namepath from root, the object does not exist */
 
                     AslError (ASL_ERROR, ASL_MSG_NOT_EXIST, Op,
                         Op->Asl.ExternalName);
@@ -746,11 +738,20 @@ XfNamespaceLocateBegin (
                 else
                 {
                     /*
-                     * We can't tell whether it doesn't exist or just
-                     * can't be reached.
+                     * Generic "not found" error. Cannot determine whether it
+                     * doesn't exist or just can't be reached. However, we
+                     * can differentiate between a NameSeg vs. NamePath.
                      */
-                    AslError (ASL_ERROR, ASL_MSG_NOT_FOUND, Op,
-                        Op->Asl.ExternalName);
+                    if (strlen (Op->Asl.ExternalName) == ACPI_NAMESEG_SIZE)
+                    {
+                        AslError (ASL_ERROR, ASL_MSG_NOT_FOUND, Op,
+                            Op->Asl.ExternalName);
+                    }
+                    else
+                    {
+                        AslError (ASL_ERROR, ASL_MSG_NAMEPATH_NOT_EXIST, Op,
+                            Op->Asl.ExternalName);
+                    }
                 }
             }
 
@@ -758,6 +759,56 @@ XfNamespaceLocateBegin (
         }
 
         return_ACPI_STATUS (Status);
+    }
+
+    /* Check for an attempt to access an object in another method */
+
+    if (!XfValidateCrossReference (Op, OpInfo, Node))
+    {
+        AslError (ASL_ERROR, ASL_MSG_TEMPORARY_OBJECT, Op,
+            Op->Asl.ExternalName);
+        return_ACPI_STATUS (Status);
+    }
+
+   /* Object was found above, check for an illegal forward reference */
+
+    if (Op->Asl.CompileFlags & OP_NOT_FOUND_DURING_LOAD)
+    {
+        /*
+         * During the load phase, this Op was flagged as a possible
+         * illegal forward reference. In other words, Op is a name path or
+         * name segment that refers to a named object declared after the
+         * reference. In this scinario, Node refers to the actual declaration
+         * and Op is a parse node that references the named object.
+         *
+         * Note:
+         *
+         * Object references inside of control methods are allowed to
+         * refer to objects declared outside of control methods.
+         *
+         * If the declaration and reference are both contained inside of the
+         * same method or outside of any method, this is a forward reference
+         * and should be reported as a compiler error.
+         */
+        DeclarationParentMethod = UtGetParentMethodNode (Node);
+        ReferenceParentMethod = UtGetParentMethodOp (Op);
+
+        /* case 1: declaration and reference are both outside of method */
+
+        if (!ReferenceParentMethod && !DeclarationParentMethod)
+        {
+            AslError (ASL_ERROR, ASL_MSG_ILLEGAL_FORWARD_REF, Op,
+                Op->Asl.ExternalName);
+        }
+
+        /* case 2: declaration and reference are both inside of the same method */
+
+        else if (ReferenceParentMethod && DeclarationParentMethod &&
+            ReferenceParentMethod == DeclarationParentMethod->Op)
+        {
+             AslError (ASL_ERROR, ASL_MSG_ILLEGAL_FORWARD_REF, Op,
+                Op->Asl.ExternalName);
+        }
     }
 
     /* Check for a reference vs. name declaration */
@@ -768,13 +819,6 @@ XfNamespaceLocateBegin (
         /* This node has been referenced, mark it for reference check */
 
         Node->Flags |= ANOBJ_IS_REFERENCED;
-
-#ifdef __UNDER_DEVELOPMENT
-
-        /* Check for an illegal reference */
-
-        XfCheckIllegalReference (Op, Node);
-#endif
     }
 
     /* Attempt to optimize the NamePath */
@@ -884,12 +928,12 @@ XfNamespaceLocateBegin (
 
             if (Message)
             {
-                sprintf (MsgBuffer,
+                sprintf (AslGbl_MsgBuffer,
                     "Size mismatch, Tag: %u bit%s, Field: %u bit%s",
                     TagBitLength, (TagBitLength > 1) ? "s" : "",
                     FieldBitLength, (FieldBitLength > 1) ? "s" : "");
 
-                AslError (ASL_WARNING, Message, Op, MsgBuffer);
+                AslError (ASL_WARNING, Message, Op, AslGbl_MsgBuffer);
             }
         }
 
@@ -955,10 +999,10 @@ XfNamespaceLocateBegin (
          */
         if (Node->Type != ACPI_TYPE_METHOD)
         {
-            sprintf (MsgBuffer, "%s is a %s",
+            sprintf (AslGbl_MsgBuffer, "%s is a %s",
                 Op->Asl.ExternalName, AcpiUtGetTypeName (Node->Type));
 
-            AslError (ASL_ERROR, ASL_MSG_NOT_METHOD, Op, MsgBuffer);
+            AslError (ASL_ERROR, ASL_MSG_NOT_METHOD, Op, AslGbl_MsgBuffer);
             return_ACPI_STATUS (AE_OK);
         }
 
@@ -987,7 +1031,7 @@ XfNamespaceLocateBegin (
             NextOp = NextOp->Asl.Next;
         }
 
-        if (Node->Value != ASL_EXTERNAL_METHOD &&
+        if (Node->Value != ASL_EXTERNAL_METHOD_UNKNOWN_PARAMS &&
             Op->Asl.Parent->Asl.ParseOpcode != PARSEOP_EXTERNAL)
         {
             /*
@@ -996,18 +1040,43 @@ XfNamespaceLocateBegin (
              */
             if (PassedArgs != Node->Value)
             {
-                sprintf (MsgBuffer, "%s requires %u", Op->Asl.ExternalName,
-                            Node->Value);
-
-                if (PassedArgs < Node->Value)
+                if (Node->Flags & ANOBJ_IS_EXTERNAL)
                 {
-                    AslError (ASL_ERROR, ASL_MSG_ARG_COUNT_LO, Op, MsgBuffer);
+                    sprintf (AslGbl_MsgBuffer,
+                        "according to previous use, %s requires %u",
+                        Op->Asl.ExternalName, Node->Value);
                 }
                 else
                 {
-                    AslError (ASL_ERROR, ASL_MSG_ARG_COUNT_HI, Op, MsgBuffer);
+                    sprintf (AslGbl_MsgBuffer, "%s requires %u", Op->Asl.ExternalName,
+                        Node->Value);
+                }
+
+                if (PassedArgs < Node->Value)
+                {
+                    AslError (ASL_ERROR, ASL_MSG_ARG_COUNT_LO, Op, AslGbl_MsgBuffer);
+                }
+                else
+                {
+                    AslError (ASL_ERROR, ASL_MSG_ARG_COUNT_HI, Op, AslGbl_MsgBuffer);
                 }
             }
+        }
+
+        /*
+         * At this point, a method call to an external method has been
+         * detected. As of 11/19/2019, iASL does not support parameter counts
+         * for methods declared as external. Therefore, save the parameter
+         * count of the first method call and use this count check other
+         * method calls to ensure that the methods are being called with the
+         * same amount of parameters.
+         */
+        else if (Node->Type == ACPI_TYPE_METHOD &&
+            (Node->Flags & ANOBJ_IS_EXTERNAL) &&
+            Node->Value == ASL_EXTERNAL_METHOD_UNKNOWN_PARAMS &&
+            Op->Asl.Parent->Asl.ParseOpcode != PARSEOP_EXTERNAL)
+        {
+            Node->Value = PassedArgs;
         }
     }
 
@@ -1134,6 +1203,52 @@ XfNamespaceLocateBegin (
         }
     }
 
+    /*
+     * 5) Check for external resolution
+     *
+     * By this point, everything should be loaded in the namespace. If a
+     * namespace lookup results in a namespace node that is an external, it
+     * means that this named object was not defined in the input ASL. This
+     * causes issues because there are plenty of incidents where developers
+     * use the external keyword to suppress compiler errors about undefined
+     * objects. Note: this only applies when compiling multiple definition
+     * blocks.
+     *
+     * Do not check for external resolution in the following cases:
+     *
+     * case 1) External (ABCD)
+     *
+     *         This declares ABCD as an external so there is no requirement for
+     *         ABCD to be loaded in the namespace when analyzing the actual
+     *         External() statement.
+     *
+     * case 2) CondRefOf (ABCD)
+     *
+     *         This operator will query the ACPI namespace on the existence of
+     *         ABCD. If ABCD does not exist, this operator will return a 0
+     *         without incurring AML runtime errors. Therefore, ABCD is allowed
+     *         to not exist when analyzing the CondRefOf operator.
+     *
+     * case 3) External (ABCD)
+     *         if (CondRefOf (ABCD))
+     *         {
+     *             Store (0, ABCD)
+     *         }
+     *
+     *         In this case, ABCD is accessed only if it exists due to the if
+     *         statement so there is no need to flag the ABCD nested in the
+     *         store operator.
+     */
+    if (AslGbl_ParseTreeRoot->Asl.Child && AslGbl_ParseTreeRoot->Asl.Child->Asl.Next &&
+        (Node->Flags & ANOBJ_IS_EXTERNAL) &&
+        Op->Asl.Parent->Asl.ParseOpcode != PARSEOP_EXTERNAL &&
+        Op->Asl.ParseOpcode != PARSEOP_EXTERNAL &&
+        Op->Asl.Parent->Asl.ParseOpcode != PARSEOP_CONDREFOF &&
+        !XfRefIsGuardedByIfCondRefOf (Node, Op))
+    {
+        AslError (ASL_ERROR, ASL_MSG_UNDEFINED_EXTERNAL, Op, NULL);
+    }
+
     /* 5) Check for a connection object */
 #if 0
     else if (Op->Asl.Parent->Asl.ParseOpcode == PARSEOP_CONNECTION)
@@ -1144,6 +1259,96 @@ XfNamespaceLocateBegin (
 
     Op->Asl.Node = Node;
     return_ACPI_STATUS (Status);
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    XfRefIsGuardedByIfCondRefOf
+ *
+ * PARAMETERS:  Node        - Named object reference node
+ *              Op          - Named object reference parse node
+ *
+ * RETURN:      BOOLEAN
+ *
+ * DESCRIPTION: returns true if Op checked inside if (CondRefOf (...))
+ *              refers to Node.
+ *
+ ******************************************************************************/
+
+static BOOLEAN
+XfRefIsGuardedByIfCondRefOf (
+    ACPI_NAMESPACE_NODE     *Node,
+    ACPI_PARSE_OBJECT       *Op)
+{
+    ACPI_PARSE_OBJECT       *Parent = Op->Asl.Parent;
+
+
+    while (Parent)
+    {
+        if (Parent->Asl.ParseOpcode == PARSEOP_IF &&
+            XfFindCondRefOfName (Node, Parent->Asl.Child))
+        {
+            return (TRUE);
+        }
+
+        Parent = Parent->Asl.Parent;
+    }
+
+    return (FALSE);
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    XfRefIsGuardedByIfCondRefOf
+ *
+ * PARAMETERS:  Node        - Named object reference node
+ *              Op          - Named object reference parse node
+ *
+ * RETURN:      BOOLEAN
+ *
+ * DESCRIPTION: returns true if Op checked inside if (CondRefOf (...))
+ *              refers to Node.
+ *
+ ******************************************************************************/
+
+static BOOLEAN
+XfFindCondRefOfName (
+    ACPI_NAMESPACE_NODE     *Node,
+    ACPI_PARSE_OBJECT       *Op)
+{
+    BOOLEAN                 CondRefOfFound = FALSE;
+
+
+    if (!Op)
+    {
+        return (FALSE);
+    }
+
+    switch (Op->Asl.ParseOpcode)
+    {
+    case PARSEOP_CONDREFOF:
+
+        return (Op->Asl.Child->Common.Node == Node);
+        break;
+
+    case PARSEOP_LAND:
+
+        CondRefOfFound = XfFindCondRefOfName (Node, Op->Asl.Child);
+        if (CondRefOfFound)
+        {
+            return (TRUE);
+        }
+
+        return (XfFindCondRefOfName (Node, Op->Asl.Child->Asl.Next));
+        break;
+
+    default:
+
+        return (FALSE);
+        break;
+    }
 }
 
 
@@ -1207,176 +1412,101 @@ XfNamespaceLocateEnd (
 }
 
 
-#ifdef __UNDER_DEVELOPMENT
 /*******************************************************************************
  *
- * FUNCTION:    XfIsObjectParental
+ * FUNCTION:    XfValidateCrossReference
  *
- * PARAMETERS:  ChildOp                 - Op to be checked
- *              PossibleParentOp        - Determine if this op is in the family
+ * PARAMETERS:  Op                      - Parse Op that references the object
+ *              OpInfo                  - Parse Op info struct
+ *              Node                    - Node for the referenced object
  *
- * RETURN:      TRUE if ChildOp is a descendent of PossibleParentOp
+ * RETURN:      TRUE if the reference is legal, FALSE otherwise
  *
- * DESCRIPTION: Determine if an Op is a descendent of another Op. Used to
- *              detect if a method is declared within another method.
+ * DESCRIPTION: Determine if a reference to another object is allowed.
+ *
+ * EXAMPLE:
+ *      Method (A) {Name (INT1, 1)}     Declaration of object INT1
+ *      Method (B) (Store (2, \A.INT1)} Illegal reference to object INT1
+ *                                      (INT1 is temporary, valid only during
+ *                                      execution of A)
+ *
+ * NOTES:
+ *      A null pointer returned by either UtGetParentMethodOp or
+ *      UtGetParentMethodNode indicates that the parameter object is not
+ *      within a control method.
+ *
+ *      Five cases are handled: Case(Op, Node)
+ *      1) Case(0,0): Op is not within a method, Node is not    --> OK
+ *      2) Case(0,1): Op is not within a method, but Node is    --> Illegal
+ *      3) Case(1,0): Op is within a method, Node is not        --> OK
+ *      4) Case(1,1): Both are within the same method           --> OK
+ *      5) Case(1,1): Both are in methods, but not same method  --> Illegal
  *
  ******************************************************************************/
 
 static BOOLEAN
-XfIsObjectParental (
-    ACPI_PARSE_OBJECT       *ChildOp,
-    ACPI_PARSE_OBJECT       *PossibleParentOp)
-{
-    ACPI_PARSE_OBJECT       *ParentOp;
-
-
-    /* Search upwards through the tree for possible parent */
-
-    ParentOp = ChildOp;
-    while (ParentOp)
-    {
-        if (ParentOp == PossibleParentOp)
-        {
-            return (TRUE);
-        }
-
-        ParentOp = ParentOp->Asl.Parent;
-    }
-
-    return (FALSE);
-}
-
-
-/*******************************************************************************
- *
- * FUNCTION:    XfGetParentMethod
- *
- * PARAMETERS:  Op                      - Op to be checked
- *
- * RETURN:      Op for parent method. NULL if object is not within a method.
- *
- * DESCRIPTION: Determine if an object is within a control method. Used to
- *              implement special rules for named references from within a
- *              control method.
- *
- * NOTE: It would be better to have the parser set a flag in the Op if possible.
- *
- ******************************************************************************/
-
-static ACPI_PARSE_OBJECT *
-XfGetParentMethod (
-    ACPI_PARSE_OBJECT       *Op)
-{
-    ACPI_PARSE_OBJECT       *ParentOp;
-
-
-    if (!Op)
-    {
-        return (NULL);
-    }
-
-    if (Op->Asl.ParseOpcode == PARSEOP_METHOD)
-    {
-        return (NULL);
-    }
-
-    /* Walk upwards through the parse tree, up to the root if necessary */
-
-    ParentOp = Op;
-    while (ParentOp)
-    {
-        if (ParentOp->Asl.ParseOpcode == PARSEOP_METHOD)
-        {
-            return (ParentOp);
-        }
-
-        ParentOp = ParentOp->Asl.Parent;
-    }
-
-    /* Object is not within a method */
-
-    return (NULL);
-}
-
-
-/*******************************************************************************
- *
- * FUNCTION:    XfCheckIllegalReference
- *
- * PARAMETERS:  Op                      - Op referring to the target
- *              TargetNode              - Target of the reference
- *
- * RETURN:      None. Emits error message for an illegal reference
- *
- * DESCRIPTION: Determine if a named reference is legal. A "named" reference
- *              is something like: Store(ABCD, ...), where ABCD is an AML
- *              Nameseg or Namepath.
- *
- * NOTE: Caller must ensure that the name Op is in fact a reference, and not
- *       an actual name declaration (creation of a named object).
- *
- ******************************************************************************/
-
-static void
-XfCheckIllegalReference (
+XfValidateCrossReference (
     ACPI_PARSE_OBJECT       *Op,
-    ACPI_NAMESPACE_NODE     *TargetNode)
+    const ACPI_OPCODE_INFO  *OpInfo,
+    ACPI_NAMESPACE_NODE     *Node)
 {
-    ACPI_PARSE_OBJECT       *MethodOp1;
-    ACPI_PARSE_OBJECT       *MethodOp2;
-    ACPI_PARSE_OBJECT       *TargetOp;
+    ACPI_PARSE_OBJECT       *ReferencingMethodOp;
+    ACPI_NAMESPACE_NODE     *ReferencedMethodNode;
 
+
+    /* Ignore actual named (and related) object declarations */
+
+    if (OpInfo->Flags & (AML_NAMED | AML_CREATE | AML_DEFER | AML_HAS_ARGS))
+    {
+        return (TRUE);
+    }
 
     /*
-     * Check for an illegal reference to a named object:
-     *
-     * 1) References from one control method to another, non-parent
-     *    method are not allowed, they will fail at runtime.
-     *
-     * 2) Forward references within a control method are not allowed.
-     *    AML interpreters use a one-pass parse of control methods
-     *    so these forward references will fail at runtime.
+     * 1) Search upwards in parse tree for owner of the referencing object
+     * 2) Search upwards in namespace to find the owner of the referenced object
      */
-    TargetOp = TargetNode->Op;
+    ReferencingMethodOp = UtGetParentMethodOp (Op);
+    ReferencedMethodNode = UtGetParentMethodNode (Node);
 
-    MethodOp1 = XfGetParentMethod (Op);
-    MethodOp2 = XfGetParentMethod (TargetOp);
-
-    /* Are both objects within control method(s)? */
-
-    if (!MethodOp1 || !MethodOp2)
-    {
-        return;
-    }
-
-    /* Objects not in the same method? */
-
-    if (MethodOp1 != MethodOp2)
+    if (!ReferencingMethodOp && !ReferencedMethodNode)
     {
         /*
-         * 1) Cross-method named reference
-         *
-         * This is OK if and only if the target reference is within in a
-         * method that is a parent of current method
+         * 1) Case (0,0): Both Op and Node are not within methods
+         * --> OK
          */
-        if (!XfIsObjectParental (MethodOp1, MethodOp2))
-        {
-            AslError (ASL_ERROR, ASL_MSG_ILLEGAL_METHOD_REF, Op,
-                Op->Asl.ExternalName);
-        }
+        return (TRUE);
     }
 
-    /*
-     * 2) Both reference and target are in the same method. Check if this is
-     * an (illegal) forward reference by examining the exact source code
-     * location of each (the referenced object and the object declaration).
-     * This is a bit nasty, yet effective.
-     */
-    else if (Op->Asl.LogicalByteOffset < TargetOp->Asl.LogicalByteOffset)
+    if (!ReferencingMethodOp && ReferencedMethodNode)
     {
-        AslError (ASL_ERROR, ASL_MSG_ILLEGAL_FORWARD_REF, Op,
-            Op->Asl.ExternalName);
+        /*
+         * 2) Case (0,1): Op is not in a method, but Node is within a
+         * method --> illegal
+         */
+        return (FALSE);
     }
-
+    else if (ReferencingMethodOp && !ReferencedMethodNode)
+    {
+        /*
+         * 3) Case (1,0): Op is within a method, but Node is not
+         * --> OK
+         */
+        return (TRUE);
+    }
+    else if (ReferencingMethodOp->Asl.Node == ReferencedMethodNode)
+    {
+        /*
+         * 4) Case (1,1): Both Op and Node are within the same method
+         * --> OK
+         */
+        return (TRUE);
+    }
+    else
+    {
+        /*
+         * 5) Case (1,1), Op and Node are in different methods
+         * --> Illegal
+         */
+        return (FALSE);
+    }
 }
-#endif

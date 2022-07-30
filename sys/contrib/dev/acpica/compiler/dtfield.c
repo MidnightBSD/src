@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -280,8 +280,10 @@ DtCompileString (
 
     if (Length > ByteLength)
     {
-        sprintf (MsgBuffer, "Maximum %u characters", ByteLength);
-        DtError (ASL_ERROR, ASL_MSG_STRING_LENGTH, Field, MsgBuffer);
+        sprintf (AslGbl_MsgBuffer,
+            "Maximum %u characters, found %u characters [%s]",
+            ByteLength, Length, Field->Value);
+        DtError (ASL_ERROR, ASL_MSG_STRING_LENGTH, Field, AslGbl_MsgBuffer);
         Length = ByteLength;
     }
 
@@ -360,8 +362,8 @@ DtCompileUuid (
     Status = AuValidateUuid (InString);
     if (ACPI_FAILURE (Status))
     {
-        sprintf (MsgBuffer, "%s", Field->Value);
-        DtNameError (ASL_ERROR, ASL_MSG_INVALID_UUID, Field, MsgBuffer);
+        sprintf (AslGbl_MsgBuffer, "%s", Field->Value);
+        DtNameError (ASL_ERROR, ASL_MSG_INVALID_UUID, Field, AslGbl_MsgBuffer);
     }
     else
     {
@@ -462,9 +464,9 @@ DtCompileInteger (
 
     if (Value > MaxValue)
     {
-        sprintf (MsgBuffer, "%8.8X%8.8X - max %u bytes",
+        sprintf (AslGbl_MsgBuffer, "%8.8X%8.8X - max %u bytes",
             ACPI_FORMAT_UINT64 (Value), ByteLength);
-        DtError (ASL_ERROR, ASL_MSG_INTEGER_SIZE, Field, MsgBuffer);
+        DtError (ASL_ERROR, ASL_MSG_INTEGER_SIZE, Field, AslGbl_MsgBuffer);
     }
 
     memcpy (Buffer, &Value, ByteLength);
@@ -574,6 +576,14 @@ DtCompileBuffer (
 
     StringValue = DtNormalizeBuffer (StringValue, &Count);
     Substring = StringValue;
+    if (Count != ByteLength)
+    {
+        sprintf(AslGbl_MsgBuffer,
+            "Found %u values, must match expected count: %u",
+            Count, ByteLength);
+        DtError (ASL_ERROR, ASL_MSG_BUFFER_LIST, Field, AslGbl_MsgBuffer);
+        goto Exit;
+    }
 
     /* Each element of StringValue is now three chars (2 hex + 1 space) */
 
@@ -712,10 +722,129 @@ DtCompileFlag (
 
     if (Value >= ((UINT64) 1 << BitLength))
     {
-        sprintf (MsgBuffer, "Maximum %u bit", BitLength);
-        DtError (ASL_ERROR, ASL_MSG_FLAG_VALUE, Field, MsgBuffer);
+        sprintf (AslGbl_MsgBuffer, "Maximum %u bit", BitLength);
+        DtError (ASL_ERROR, ASL_MSG_FLAG_VALUE, Field, AslGbl_MsgBuffer);
         Value = 0;
     }
 
     *Buffer |= (UINT8) (Value << BitPosition);
+}
+
+
+/******************************************************************************
+ *
+ * FUNCTION:    DtCreateField
+ *
+ * PARAMETERS: Name
+ *             Value
+ *             Line
+ *             Offset
+ *             Column
+ *             NameColumn
+ *
+ * RETURN:     None
+ *
+ * DESCRIPTION: Create a field
+ *
+ *****************************************************************************/
+
+void
+DtCreateField (
+    DT_TABLE_UNIT           *FieldKey,
+    DT_TABLE_UNIT           *FieldValue,
+    UINT32                  Offset)
+{
+    DT_FIELD                *Field = UtFieldCacheCalloc ();
+
+
+    Field->StringLength = 0;
+    if (FieldKey->Value)
+    {
+        Field->Name =
+            strcpy (UtLocalCacheCalloc (strlen (FieldKey->Value) + 1), FieldKey->Value);
+    }
+
+    if (FieldValue->Value)
+    {
+        Field->StringLength = strlen (FieldValue->Value);
+        Field->Value =
+            strcpy (UtLocalCacheCalloc (Field->StringLength + 1), FieldValue->Value);
+    }
+
+    Field->Line = FieldValue->Line;
+    Field->ByteOffset = Offset;
+    Field->NameColumn = FieldKey->Column;
+    Field->Column = FieldValue->Column;
+    DtLinkField (Field);
+
+    DtDumpFieldList (AslGbl_FieldList);
+}
+
+
+/******************************************************************************
+ *
+ * FUNCTION:    DtCreateTableUnit
+ *
+ * PARAMETERS: Data
+ *             Line
+ *             Column
+ *
+ * RETURN:     a table unit
+ *
+ * DESCRIPTION: Create a table unit
+ *
+ *****************************************************************************/
+
+DT_TABLE_UNIT *
+DtCreateTableUnit (
+    char                    *Data,
+    UINT32                  Line,
+    UINT32                  Column)
+{
+    DT_TABLE_UNIT           *Unit = (DT_TABLE_UNIT *) UtFieldCacheCalloc ();
+
+
+    Unit->Value = Data;
+    Unit->Line = Line;
+    Unit->Column = Column;
+    return (Unit);
+}
+
+
+/******************************************************************************
+ *
+ * FUNCTION:    DtLinkField
+ *
+ * PARAMETERS:  Field               - New field object to link
+ *
+ * RETURN:      None
+ *
+ * DESCRIPTION: Link one field name and value to the list
+ *
+ *****************************************************************************/
+
+void
+DtLinkField (
+    DT_FIELD                *Field)
+{
+    DT_FIELD                *Prev;
+    DT_FIELD                *Next;
+
+
+    Prev = Next = AslGbl_FieldList;
+
+    while (Next)
+    {
+        Prev = Next;
+        Next = Next->Next;
+    }
+
+    if (Prev)
+    {
+        Prev->Next = Field;
+    }
+    else
+    {
+        AslGbl_FieldList = Field;
+    }
 }

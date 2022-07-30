@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -572,16 +572,18 @@
 #define ACPI_WARN_PREDEFINED(plist)         AcpiUtPredefinedWarning plist
 #define ACPI_INFO_PREDEFINED(plist)         AcpiUtPredefinedInfo plist
 #define ACPI_BIOS_ERROR_PREDEFINED(plist)   AcpiUtPredefinedBiosError plist
+#define ACPI_ERROR_ONLY(s)                  s
 
 #else
 
 /* No error messages */
 
-#define ACPI_ERROR_NAMESPACE(s, e)
+#define ACPI_ERROR_NAMESPACE(s, p, e)
 #define ACPI_ERROR_METHOD(s, n, p, e)
 #define ACPI_WARN_PREDEFINED(plist)
 #define ACPI_INFO_PREDEFINED(plist)
 #define ACPI_BIOS_ERROR_PREDEFINED(plist)
+#define ACPI_ERROR_ONLY(s)
 
 #endif /* ACPI_NO_ERROR_MESSAGES */
 
@@ -608,7 +610,7 @@
 
 
 /*
- * Macors used for the ASL-/ASL+ converter utility
+ * Macros used for the ASL-/ASL+ converter utility
  */
 #ifdef ACPI_ASL_COMPILER
 
@@ -623,7 +625,7 @@
 #define ASL_CV_PRINT_ONE_COMMENT(a,b,c,d) CvPrintOneCommentType (a,b,c,d);
 #define ASL_CV_PRINT_ONE_COMMENT_LIST(a,b) CvPrintOneCommentList (a,b);
 #define ASL_CV_FILE_HAS_SWITCHED(a)       CvFileHasSwitched(a)
-#define ASL_CV_INIT_FILETREE(a,b,c)      CvInitFileTree(a,b,c);
+#define ASL_CV_INIT_FILETREE(a,b)      CvInitFileTree(a,b);
 
 #else
 
@@ -638,7 +640,7 @@
 #define ASL_CV_PRINT_ONE_COMMENT(a,b,c,d)
 #define ASL_CV_PRINT_ONE_COMMENT_LIST(a,b)
 #define ASL_CV_FILE_HAS_SWITCHED(a)       0
-#define ASL_CV_INIT_FILETREE(a,b,c)
+#define ASL_CV_INIT_FILETREE(a,b)
 
 #endif
 

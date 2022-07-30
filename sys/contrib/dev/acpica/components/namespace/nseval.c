@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -160,13 +160,6 @@
 #define _COMPONENT          ACPI_NAMESPACE
         ACPI_MODULE_NAME    ("nseval")
 
-/* Local prototypes */
-
-static void
-AcpiNsExecModuleCode (
-    ACPI_OPERAND_OBJECT     *MethodObj,
-    ACPI_EVALUATE_INFO      *Info);
-
 
 /*******************************************************************************
  *
@@ -259,6 +252,12 @@ AcpiNsEvaluate (
         return_ACPI_STATUS (AE_NO_MEMORY);
     }
 
+    /* Optional object evaluation log */
+
+    ACPI_DEBUG_PRINT_RAW ((ACPI_DB_EVALUATION,
+        "%-26s:  %s (%s)\n", "   Enter evaluation",
+        &Info->FullPathname[1], AcpiUtGetTypeName (Info->Node->Type)));
+
     /* Count the number of arguments being passed in */
 
     Info->ParamCount = 0;
@@ -308,6 +307,7 @@ AcpiNsEvaluate (
      */
     switch (AcpiNsGetType (Info->Node))
     {
+    case ACPI_TYPE_ANY:
     case ACPI_TYPE_DEVICE:
     case ACPI_TYPE_EVENT:
     case ACPI_TYPE_MUTEX:
@@ -315,13 +315,13 @@ AcpiNsEvaluate (
     case ACPI_TYPE_THERMAL:
     case ACPI_TYPE_LOCAL_SCOPE:
         /*
-         * 1) Disallow evaluation of certain object types. For these,
-         *    object evaluation is undefined and not supported.
+         * 1) Disallow evaluation of these object types. For these,
+         *    object evaluation is undefined.
          */
         ACPI_ERROR ((AE_INFO,
-            "%s: Evaluation of object type [%s] is not supported",
-            Info->FullPathname,
-            AcpiUtGetTypeName (Info->Node->Type)));
+            "%s: This object type [%s] "
+            "never contains data and cannot be evaluated",
+            Info->FullPathname, AcpiUtGetTypeName (Info->Node->Type)));
 
         Status = AE_TYPE;
         goto Cleanup;
@@ -428,12 +428,28 @@ AcpiNsEvaluate (
 
         Status = AE_OK;
     }
+    else if (ACPI_FAILURE(Status))
+    {
+        /* If ReturnObject exists, delete it */
+
+        if (Info->ReturnObject)
+        {
+            AcpiUtRemoveReference (Info->ReturnObject);
+            Info->ReturnObject = NULL;
+        }
+    }
 
     ACPI_DEBUG_PRINT ((ACPI_DB_NAMES,
         "*** Completed evaluation of object %s ***\n",
         Info->RelativePathname));
 
 Cleanup:
+    /* Optional object evaluation log */
+
+    ACPI_DEBUG_PRINT_RAW ((ACPI_DB_EVALUATION,
+        "%-26s:  %s\n", "   Exit evaluation",
+        &Info->FullPathname[1]));
+
     /*
      * Namespace was unlocked by the handling AcpiNs* function, so we
      * just free the pathname and return
@@ -441,193 +457,4 @@ Cleanup:
     ACPI_FREE (Info->FullPathname);
     Info->FullPathname = NULL;
     return_ACPI_STATUS (Status);
-}
-
-
-/*******************************************************************************
- *
- * FUNCTION:    AcpiNsExecModuleCodeList
- *
- * PARAMETERS:  None
- *
- * RETURN:      None. Exceptions during method execution are ignored, since
- *              we cannot abort a table load.
- *
- * DESCRIPTION: Execute all elements of the global module-level code list.
- *              Each element is executed as a single control method.
- *
- ******************************************************************************/
-
-void
-AcpiNsExecModuleCodeList (
-    void)
-{
-    ACPI_OPERAND_OBJECT     *Prev;
-    ACPI_OPERAND_OBJECT     *Next;
-    ACPI_EVALUATE_INFO      *Info;
-    UINT32                  MethodCount = 0;
-
-
-    ACPI_FUNCTION_TRACE (NsExecModuleCodeList);
-
-
-    /* Exit now if the list is empty */
-
-    Next = AcpiGbl_ModuleCodeList;
-    if (!Next)
-    {
-        return_VOID;
-    }
-
-    /* Allocate the evaluation information block */
-
-    Info = ACPI_ALLOCATE (sizeof (ACPI_EVALUATE_INFO));
-    if (!Info)
-    {
-        return_VOID;
-    }
-
-    /* Walk the list, executing each "method" */
-
-    while (Next)
-    {
-        Prev = Next;
-        Next = Next->Method.Mutex;
-
-        /* Clear the link field and execute the method */
-
-        Prev->Method.Mutex = NULL;
-        AcpiNsExecModuleCode (Prev, Info);
-        MethodCount++;
-
-        /* Delete the (temporary) method object */
-
-        AcpiUtRemoveReference (Prev);
-    }
-
-    ACPI_INFO ((
-        "Executed %u blocks of module-level executable AML code",
-        MethodCount));
-
-    ACPI_FREE (Info);
-    AcpiGbl_ModuleCodeList = NULL;
-    return_VOID;
-}
-
-
-/*******************************************************************************
- *
- * FUNCTION:    AcpiNsExecModuleCode
- *
- * PARAMETERS:  MethodObj           - Object container for the module-level code
- *              Info                - Info block for method evaluation
- *
- * RETURN:      None. Exceptions during method execution are ignored, since
- *              we cannot abort a table load.
- *
- * DESCRIPTION: Execute a control method containing a block of module-level
- *              executable AML code. The control method is temporarily
- *              installed to the root node, then evaluated.
- *
- ******************************************************************************/
-
-static void
-AcpiNsExecModuleCode (
-    ACPI_OPERAND_OBJECT     *MethodObj,
-    ACPI_EVALUATE_INFO      *Info)
-{
-    ACPI_OPERAND_OBJECT     *ParentObj;
-    ACPI_NAMESPACE_NODE     *ParentNode;
-    ACPI_OBJECT_TYPE        Type;
-    ACPI_STATUS             Status;
-
-
-    ACPI_FUNCTION_TRACE (NsExecModuleCode);
-
-
-    /*
-     * Get the parent node. We cheat by using the NextObject field
-     * of the method object descriptor.
-     */
-    ParentNode = ACPI_CAST_PTR (
-        ACPI_NAMESPACE_NODE, MethodObj->Method.NextObject);
-    Type = AcpiNsGetType (ParentNode);
-
-    /*
-     * Get the region handler and save it in the method object. We may need
-     * this if an operation region declaration causes a _REG method to be run.
-     *
-     * We can't do this in AcpiPsLinkModuleCode because
-     * AcpiGbl_RootNode->Object is NULL at PASS1.
-     */
-    if ((Type == ACPI_TYPE_DEVICE) && ParentNode->Object)
-    {
-        MethodObj->Method.Dispatch.Handler =
-            ParentNode->Object->Device.Handler;
-    }
-
-    /* Must clear NextObject (AcpiNsAttachObject needs the field) */
-
-    MethodObj->Method.NextObject = NULL;
-
-    /* Initialize the evaluation information block */
-
-    memset (Info, 0, sizeof (ACPI_EVALUATE_INFO));
-    Info->PrefixNode = ParentNode;
-
-    /*
-     * Get the currently attached parent object. Add a reference,
-     * because the ref count will be decreased when the method object
-     * is installed to the parent node.
-     */
-    ParentObj = AcpiNsGetAttachedObject (ParentNode);
-    if (ParentObj)
-    {
-        AcpiUtAddReference (ParentObj);
-    }
-
-    /* Install the method (module-level code) in the parent node */
-
-    Status = AcpiNsAttachObject (ParentNode, MethodObj, ACPI_TYPE_METHOD);
-    if (ACPI_FAILURE (Status))
-    {
-        goto Exit;
-    }
-
-    /* Execute the parent node as a control method */
-
-    Status = AcpiNsEvaluate (Info);
-
-    ACPI_DEBUG_PRINT ((ACPI_DB_INIT_NAMES,
-        "Executed module-level code at %p\n",
-        MethodObj->Method.AmlStart));
-
-    /* Delete a possible implicit return value (in slack mode) */
-
-    if (Info->ReturnObject)
-    {
-        AcpiUtRemoveReference (Info->ReturnObject);
-    }
-
-    /* Detach the temporary method object */
-
-    AcpiNsDetachObject (ParentNode);
-
-    /* Restore the original parent object */
-
-    if (ParentObj)
-    {
-        Status = AcpiNsAttachObject (ParentNode, ParentObj, Type);
-    }
-    else
-    {
-        ParentNode->Type = (UINT8) Type;
-    }
-
-Exit:
-    if (ParentObj)
-    {
-        AcpiUtRemoveReference (ParentObj);
-    }
-    return_VOID;
 }

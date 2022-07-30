@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 The FreeBSD Foundation
  * Copyright (c) 2013-2015 Mariusz Zaborski <oshogbo@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/contrib/libnv/nv_impl.h 336346 2018-07-16 15:02:21Z kevans $
+ * $FreeBSD$
  */
 
 #ifndef	_NV_IMPL_H_
@@ -50,13 +52,13 @@ typedef struct nvpair nvpair_t;
 #define	NV_FLAG_IN_ARRAY		0x100
 
 #ifdef _KERNEL
-#define	nv_malloc(size)			malloc((size), M_NVLIST, M_WAITOK)
+#define	nv_malloc(size)			malloc((size), M_NVLIST, M_NOWAIT)
 #define	nv_calloc(n, size)		mallocarray((n), (size), M_NVLIST, \
-					    M_WAITOK | M_ZERO)
+					    M_NOWAIT | M_ZERO)
 #define	nv_realloc(buf, size)		realloc((buf), (size), M_NVLIST, \
-					    M_WAITOK)
+					    M_NOWAIT)
 #define	nv_free(buf)			free((buf), M_NVLIST)
-#define	nv_strdup(buf)			strdup((buf), M_NVLIST)
+#define	nv_strdup(buf)			strdup_flags((buf), M_NVLIST, M_NOWAIT)
 #define	nv_vasprintf(ptr, ...)		vasprintf(ptr, M_NVLIST, __VA_ARGS__)
 
 #define	ERRNO_SET(var)			do { } while (0)
@@ -101,6 +103,7 @@ bool nvlist_move_nvpair(nvlist_t *nvl, nvpair_t *nvp);
 
 void nvlist_set_parent(nvlist_t *nvl, nvpair_t *parent);
 void nvlist_set_array_next(nvlist_t *nvl, nvpair_t *ele);
+nvpair_t *nvlist_get_array_next_nvpair(nvlist_t *nvl);
 
 const nvpair_t *nvlist_get_nvpair(const nvlist_t *nvl, const char *name);
 

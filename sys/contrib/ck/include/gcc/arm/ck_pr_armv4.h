@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/contrib/ck/include/gcc/arm/ck_pr_armv4.h 328515 2018-01-28 18:38:17Z cognet $
+ * $FreeBSD$
  */
 
 #ifndef CK_PR_ARM_H

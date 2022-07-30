@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -233,15 +233,15 @@
 
 /* Maximum object reference count (detects object deletion issues) */
 
-#define ACPI_MAX_REFERENCE_COUNT        0x800
+#define ACPI_MAX_REFERENCE_COUNT        0x4000
 
 /* Default page size for use in mapping memory for operation regions */
 
 #define ACPI_DEFAULT_PAGE_SIZE          4096    /* Must be power of 2 */
 
-/* OwnerId tracking. 8 entries allows for 255 OwnerIds */
+/* OwnerId tracking. 128 entries allows for 4095 OwnerIds */
 
-#define ACPI_NUM_OWNERID_MASKS          8
+#define ACPI_NUM_OWNERID_MASKS          128
 
 /* Size of the root table array is increased by this increment */
 
@@ -286,7 +286,7 @@
 
 /*
  * Maximal number of elements the Result Stack can contain,
- * it may be an arbitray value not exceeding the types of
+ * it may be an arbitrary value not exceeding the types of
  * ResultSize and ResultCount (now UINT8).
  */
 #define ACPI_RESULTS_OBJ_NUM_MAX        255
@@ -318,11 +318,21 @@
 #define ACPI_RSDP_CHECKSUM_LENGTH       20
 #define ACPI_RSDP_XCHECKSUM_LENGTH      36
 
-/* SMBus, GSBus and IPMI bidirectional buffer size */
+/*
+ * SMBus, GSBus and IPMI buffer sizes. All have a 2-byte header,
+ * containing both Status and Length.
+ */
+#define ACPI_SERIAL_HEADER_SIZE         2   /* Common for below. Status and Length fields */
 
-#define ACPI_SMBUS_BUFFER_SIZE          34
-#define ACPI_GSBUS_BUFFER_SIZE          34
-#define ACPI_IPMI_BUFFER_SIZE           66
+#define ACPI_SMBUS_DATA_SIZE            32
+#define ACPI_SMBUS_BUFFER_SIZE          ACPI_SERIAL_HEADER_SIZE + ACPI_SMBUS_DATA_SIZE
+
+#define ACPI_IPMI_DATA_SIZE             64
+#define ACPI_IPMI_BUFFER_SIZE           ACPI_SERIAL_HEADER_SIZE + ACPI_IPMI_DATA_SIZE
+
+#define ACPI_MAX_GSBUS_DATA_SIZE        255
+#define ACPI_MAX_GSBUS_BUFFER_SIZE      ACPI_SERIAL_HEADER_SIZE + ACPI_MAX_GSBUS_DATA_SIZE
+
 
 /* _SxD and _SxW control methods */
 

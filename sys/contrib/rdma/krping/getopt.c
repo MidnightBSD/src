@@ -3,7 +3,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/contrib/rdma/krping/getopt.c 256470 2013-10-14 23:02:05Z np $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <linux/kernel.h>

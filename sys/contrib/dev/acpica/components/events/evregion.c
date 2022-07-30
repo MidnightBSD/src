@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -409,7 +409,7 @@ AcpiEvAddressSpaceDispatch (
         /*
          * For handlers other than the default (supplied) handlers, we must
          * exit the interpreter because the handler *might* block -- we don't
-         * know what it will do, so we can't hold the lock on the intepreter.
+         * know what it will do, so we can't hold the lock on the interpreter.
          */
         AcpiExExitInterpreter();
     }
@@ -838,6 +838,20 @@ AcpiEvExecuteRegMethods (
 
     ACPI_FUNCTION_TRACE (EvExecuteRegMethods);
 
+    /*
+     * These address spaces do not need a call to _REG, since the ACPI
+     * specification defines them as: "must always be accessible". Since
+     * they never change state (never become unavailable), no need to ever
+     * call _REG on them. Also, a DataTable is not a "real" address space,
+     * so do not call _REG. September 2018.
+     */
+    if ((SpaceId == ACPI_ADR_SPACE_SYSTEM_MEMORY) ||
+        (SpaceId == ACPI_ADR_SPACE_SYSTEM_IO) ||
+        (SpaceId == ACPI_ADR_SPACE_DATA_TABLE))
+    {
+        return_VOID;
+    }
+
     Info.SpaceId = SpaceId;
     Info.Function = Function;
     Info.RegRunCount = 0;
@@ -904,8 +918,8 @@ AcpiEvRegRun (
     }
 
     /*
-     * We only care about regions.and objects that are allowed to have address
-     * space handlers
+     * We only care about regions and objects that are allowed to have
+     * address space handlers
      */
     if ((Node->Type != ACPI_TYPE_REGION) &&
         (Node != AcpiGbl_RootNode))
@@ -1023,11 +1037,11 @@ AcpiEvOrphanEcRegMethod (
     Objects[1].Type = ACPI_TYPE_INTEGER;
     Objects[1].Integer.Value = ACPI_REG_CONNECT;
 
-    Status = AcpiEvaluateObject (RegMethod, NULL, &Args, NULL);
+    (void) AcpiEvaluateObject (RegMethod, NULL, &Args, NULL);
 
 Exit:
     /* We ignore all errors from above, don't care */
 
-    Status = AcpiUtAcquireMutex (ACPI_MTX_NAMESPACE);
+    (void) AcpiUtAcquireMutex (ACPI_MTX_NAMESPACE);
     return_VOID;
 }

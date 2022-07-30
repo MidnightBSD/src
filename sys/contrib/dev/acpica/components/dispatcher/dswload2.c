@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -157,6 +157,9 @@
 #include <contrib/dev/acpica/include/acinterp.h>
 #include <contrib/dev/acpica/include/acnamesp.h>
 #include <contrib/dev/acpica/include/acevents.h>
+#if !defined(ACPI_DB_APP) && defined(ACPI_EXEC_APP)
+#include "aecommon.h"
+#endif
 
 #define _COMPONENT          ACPI_DISPATCHER
         ACPI_MODULE_NAME    ("dswload2")
@@ -167,7 +170,7 @@
  * FUNCTION:    AcpiDsLoad2BeginOp
  *
  * PARAMETERS:  WalkState       - Current state of the parse tree walk
- *              OutOp           - Wher to return op if a new one is created
+ *              OutOp           - Where to return op if a new one is created
  *
  * RETURN:      Status
  *
@@ -448,6 +451,15 @@ AcpiDsLoad2BeginOp (
         }
 #endif
 
+        /*
+         * For name creation opcodes, the full namepath prefix must
+         * exist, except for the final (new) nameseg.
+         */
+        if (WalkState->OpInfo->Flags & AML_NAMED)
+        {
+            Flags |= ACPI_NS_PREFIX_MUST_EXIST;
+        }
+
         /* Add new entry or lookup existing entry */
 
         Status = AcpiNsLookup (WalkState->ScopeInfo, BufferPtr, ObjectType,
@@ -520,9 +532,11 @@ AcpiDsLoad2EndOp (
     ACPI_NAMESPACE_NODE     *Node;
     ACPI_PARSE_OBJECT       *Arg;
     ACPI_NAMESPACE_NODE     *NewNode;
-#ifndef ACPI_NO_METHOD_EXECUTION
     UINT32                  i;
     UINT8                   RegionSpace;
+#if !defined(ACPI_DB_APP) && defined(ACPI_EXEC_APP)
+    ACPI_OPERAND_OBJECT     *ObjDesc;
+    char                    *Namepath;
 #endif
 
 
@@ -613,7 +627,6 @@ AcpiDsLoad2EndOp (
 
     switch (WalkState->OpInfo->Type)
     {
-#ifndef ACPI_NO_METHOD_EXECUTION
 
     case AML_TYPE_CREATE_FIELD:
         /*
@@ -621,6 +634,11 @@ AcpiDsLoad2EndOp (
          * be evaluated later during the execution phase
          */
         Status = AcpiDsCreateBufferField (Op, WalkState);
+        if ACPI_FAILURE (Status)
+        {
+            ACPI_EXCEPTION ((AE_INFO, Status, "CreateBufferField failure"));
+            goto Cleanup;
+        }
         break;
 
      case AML_TYPE_NAMED_FIELD:
@@ -709,13 +727,11 @@ AcpiDsLoad2EndOp (
         }
 
         break;
-#endif /* ACPI_NO_METHOD_EXECUTION */
 
     case AML_TYPE_NAMED_COMPLEX:
 
         switch (Op->Common.AmlOpcode)
         {
-#ifndef ACPI_NO_METHOD_EXECUTION
         case AML_REGION_OP:
         case AML_DATA_REGION_OP:
 
@@ -762,6 +778,31 @@ AcpiDsLoad2EndOp (
         case AML_NAME_OP:
 
             Status = AcpiDsCreateNode (WalkState, Node, Op);
+            if (ACPI_FAILURE (Status))
+            {
+                goto Cleanup;
+            }
+
+#if !defined(ACPI_DB_APP) && defined(ACPI_EXEC_APP)
+            /*
+             * AcpiExec support for namespace initialization file (initialize
+             * Name opcodes in this code.)
+             */
+            Namepath = AcpiNsGetExternalPathname (Node);
+            Status = AeLookupInitFileEntry (Namepath, &ObjDesc);
+            if (ACPI_SUCCESS (Status))
+            {
+                /* Detach any existing object, attach new object */
+
+                if (Node->Object)
+                {
+                    AcpiNsDetachObject (Node);
+                }
+                AcpiNsAttachObject (Node, ObjDesc, ObjDesc->Common.Type);
+            }
+            ACPI_FREE (Namepath);
+            Status = AE_OK;
+#endif
             break;
 
         case AML_METHOD_OP:
@@ -800,7 +841,6 @@ AcpiDsLoad2EndOp (
             }
             break;
 
-#endif /* ACPI_NO_METHOD_EXECUTION */
 
         default:
 

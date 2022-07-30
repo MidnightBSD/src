@@ -1,4 +1,4 @@
- $FreeBSD: stable/11/sys/contrib/cloudabi/syscalls64.master 325858 2017-11-15 15:56:08Z ed $
+ $FreeBSD$
 
 ; Copyright (c) 2016 Nuxi (https://nuxi.nl/) and contributors.
 ;

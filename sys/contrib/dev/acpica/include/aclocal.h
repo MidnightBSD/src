@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -295,12 +295,12 @@ typedef struct acpi_namespace_node
     union acpi_operand_object       *Object;        /* Interpreter object */
     UINT8                           DescriptorType; /* Differentiate object descriptor types */
     UINT8                           Type;           /* ACPI Type associated with this name */
-    UINT8                           Flags;          /* Miscellaneous flags */
-    ACPI_OWNER_ID                   OwnerId;        /* Node creator */
+    UINT16                          Flags;          /* Miscellaneous flags */
     ACPI_NAME_UNION                 Name;           /* ACPI Name, always 4 chars per ACPI spec */
     struct acpi_namespace_node      *Parent;        /* Parent node */
     struct acpi_namespace_node      *Child;         /* First child */
     struct acpi_namespace_node      *Peer;          /* First peer */
+    ACPI_OWNER_ID                   OwnerId;        /* Node creator */
 
     /*
      * The following fields are used by the ASL compiler and disassembler only
@@ -327,8 +327,8 @@ typedef struct acpi_namespace_node
 #define ANOBJ_SUBTREE_HAS_INI           0x10    /* Used to optimize device initialization */
 #define ANOBJ_EVALUATED                 0x20    /* Set on first evaluation of node */
 #define ANOBJ_ALLOCATED_BUFFER          0x40    /* Method AML buffer is dynamic (InstallMethod) */
+#define ANOBJ_NODE_EARLY_INIT           0x80    /* AcpiExec only: Node was create via init file (-fi) */
 
-#define IMPLICIT_EXTERNAL               0x02    /* iASL only: This object created implicitly via External */
 #define ANOBJ_IS_EXTERNAL               0x08    /* iASL only: This object created via External() */
 #define ANOBJ_METHOD_NO_RETVAL          0x10    /* iASL only: Method has no return value */
 #define ANOBJ_METHOD_SOME_NO_RETVAL     0x20    /* iASL only: Method has at least one return value */
@@ -480,7 +480,7 @@ ACPI_STATUS (*ACPI_INTERNAL_METHOD) (
  */
 typedef struct acpi_name_info
 {
-    char                        Name[ACPI_NAME_SIZE];
+    char                        Name[ACPI_NAMESEG_SIZE];
     UINT16                      ArgumentList;
     UINT8                       ExpectedBtypes;
 
@@ -568,7 +568,7 @@ typedef ACPI_STATUS (*ACPI_OBJECT_CONVERTER) (
 
 typedef struct acpi_simple_repair_info
 {
-    char                        Name[ACPI_NAME_SIZE];
+    char                        Name[ACPI_NAMESEG_SIZE];
     UINT32                      UnexpectedBtypes;
     UINT32                      PackageIndex;
     ACPI_OBJECT_CONVERTER       ObjectConverter;
@@ -597,9 +597,9 @@ typedef struct acpi_simple_repair_info
 
 typedef struct acpi_reg_walk_info
 {
-    ACPI_ADR_SPACE_TYPE     SpaceId;
     UINT32                  Function;
     UINT32                  RegRunCount;
+    ACPI_ADR_SPACE_TYPE     SpaceId;
 
 } ACPI_REG_WALK_INFO;
 
@@ -1105,7 +1105,7 @@ typedef struct acpi_comment_addr_node
 
 /*
  * File node - used for "Include" operator file stack and
- * depdendency tree for the -ca option
+ * dependency tree for the -ca option
  */
 typedef struct acpi_file_node
 {

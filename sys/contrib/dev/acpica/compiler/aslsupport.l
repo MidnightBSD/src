@@ -9,7 +9,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -212,22 +212,22 @@ AslDoLineDirective (
     char                    *Filename;
     UINT32                  i;
 
-   Gbl_HasIncludeFiles = TRUE;
+   AslGbl_HasIncludeFiles = TRUE;
 
     /* Eat the entire line that contains the #line directive */
 
-    Gbl_LineBufPtr = Gbl_CurrentLineBuffer;
+    AslGbl_LineBufPtr = AslGbl_CurrentLineBuffer;
 
     while ((c = input()) != '\n' && c != EOF)
     {
-        *Gbl_LineBufPtr = c;
-        Gbl_LineBufPtr++;
+        *AslGbl_LineBufPtr = (char) c;
+        AslGbl_LineBufPtr++;
     }
-    *Gbl_LineBufPtr = 0;
+    *AslGbl_LineBufPtr = 0;
 
     /* First argument is the actual line number */
 
-    Token = strtok (Gbl_CurrentLineBuffer, " ");
+    Token = strtok (AslGbl_CurrentLineBuffer, " ");
     if (!Token)
     {
         goto ResetAndExit;
@@ -239,13 +239,13 @@ AslDoLineDirective (
 
     /* Emit the appropriate number of newlines */
 
-    Gbl_CurrentColumn = 0;
-    if (LineNumber > Gbl_CurrentLineNumber)
+    AslGbl_CurrentColumn = 0;
+    if (LineNumber > AslGbl_CurrentLineNumber)
     {
-        for (i = 0; i < (LineNumber - Gbl_CurrentLineNumber); i++)
+        for (i = 0; i < (LineNumber - AslGbl_CurrentLineNumber); i++)
         {
             FlWriteFile (ASL_FILE_SOURCE_OUTPUT, "\n", 1);
-            Gbl_CurrentColumn++;
+            AslGbl_CurrentColumn++;
         }
     }
 
@@ -256,7 +256,7 @@ AslDoLineDirective (
     Token = strtok (NULL, " \"");
     if (Token)
     {
-        Filename = ACPI_ALLOCATE_ZEROED (strlen (Token) + 1);
+        Filename = UtLocalCacheCalloc (strlen (Token) + 1);
         strcpy (Filename, Token);
         FlSetFilename (Filename);
     }
@@ -267,9 +267,9 @@ ResetAndExit:
 
     /* Reset globals for a new line */
 
-    Gbl_CurrentLineOffset += Gbl_CurrentColumn;
-    Gbl_CurrentColumn = 0;
-    Gbl_LineBufPtr = Gbl_CurrentLineBuffer;
+    AslGbl_CurrentLineOffset += AslGbl_CurrentColumn;
+    AslGbl_CurrentColumn = 0;
+    AslGbl_LineBufPtr = AslGbl_CurrentLineBuffer;
 }
 
 
@@ -295,13 +295,13 @@ AslPopInputFileStack (
     ASL_FILE_NODE           *Fnode;
 
 
-    Gbl_PreviousIncludeFilename = Gbl_Files[ASL_FILE_INPUT].Filename;
-    Fnode = Gbl_IncludeFileStack;
+    AslGbl_PreviousIncludeFilename = AslGbl_Files[ASL_FILE_INPUT].Filename;
+    Fnode = AslGbl_IncludeFileStack;
     DbgPrint (ASL_PARSE_OUTPUT,
         "\nPop InputFile Stack, Fnode %p\n", Fnode);
 
     DbgPrint (ASL_PARSE_OUTPUT,
-        "Include: Closing \"%s\"\n\n", Gbl_Files[ASL_FILE_INPUT].Filename);
+        "Include: Closing \"%s\"\n\n", AslGbl_Files[ASL_FILE_INPUT].Filename);
 
     if (!Fnode)
     {
@@ -314,12 +314,12 @@ AslPopInputFileStack (
 
     /* Update the top-of-stack */
 
-    Gbl_IncludeFileStack = Fnode->Next;
+    AslGbl_IncludeFileStack = Fnode->Next;
 
     /* Reset global line counter and filename */
 
-    Gbl_Files[ASL_FILE_INPUT].Filename = Fnode->Filename;
-    Gbl_CurrentLineNumber = Fnode->CurrentLineNumber;
+    AslGbl_Files[ASL_FILE_INPUT].Filename = Fnode->Filename;
+    AslGbl_CurrentLineNumber = Fnode->CurrentLineNumber;
 
     /* Point the parser to the popped file */
 
@@ -362,14 +362,14 @@ AslPushInputFileStack (
     Fnode = UtLocalCalloc (sizeof (ASL_FILE_NODE));
 
     Fnode->File = yyin;
-    Fnode->Next = Gbl_IncludeFileStack;
+    Fnode->Next = AslGbl_IncludeFileStack;
     Fnode->State = YY_CURRENT_BUFFER;
-    Fnode->Filename = Gbl_Files[ASL_FILE_INPUT].Filename;
-    Fnode->CurrentLineNumber = Gbl_CurrentLineNumber;
+    Fnode->Filename = AslGbl_Files[ASL_FILE_INPUT].Filename;
+    Fnode->CurrentLineNumber = AslGbl_CurrentLineNumber;
 
     /* Push it on the stack */
 
-    Gbl_IncludeFileStack = Fnode;
+    AslGbl_IncludeFileStack = Fnode;
 
     /* Point the parser to this file */
 
@@ -381,17 +381,17 @@ AslPushInputFileStack (
 
     /* Reset the global line count and filename */
 
-    Gbl_Files[ASL_FILE_INPUT].Filename =
+    AslGbl_Files[ASL_FILE_INPUT].Filename =
         UtLocalCacheCalloc (strlen (Filename) + 1);
 
-    strcpy (Gbl_Files[ASL_FILE_INPUT].Filename, Filename);
+    strcpy (AslGbl_Files[ASL_FILE_INPUT].Filename, Filename);
 
-    Gbl_CurrentLineNumber = 1;
+    AslGbl_CurrentLineNumber = 1;
     yyin = InputFile;
 
     /* converter: reset the comment state to STANDARD_COMMENT */
 
-    Gbl_CommentState.CommentType = STANDARD_COMMENT;
+    AslGbl_CommentState.CommentType = STANDARD_COMMENT;
 }
 
 
@@ -412,18 +412,18 @@ AslResetCurrentLineBuffer (
     void)
 {
 
-    if (Gbl_Files[ASL_FILE_SOURCE_OUTPUT].Handle)
+    if (AslGbl_Files[ASL_FILE_SOURCE_OUTPUT].Handle)
     {
-        FlWriteFile (ASL_FILE_SOURCE_OUTPUT, Gbl_CurrentLineBuffer,
-            Gbl_LineBufPtr - Gbl_CurrentLineBuffer);
+        FlWriteFile (ASL_FILE_SOURCE_OUTPUT, AslGbl_CurrentLineBuffer,
+            AslGbl_LineBufPtr - AslGbl_CurrentLineBuffer);
     }
 
-    Gbl_CurrentLineOffset += Gbl_CurrentColumn;
-    Gbl_CurrentColumn = 0;
+    AslGbl_CurrentLineOffset += AslGbl_CurrentColumn;
+    AslGbl_CurrentColumn = 0;
 
-    Gbl_CurrentLineNumber++;
-    Gbl_LogicalLineNumber++;
-    Gbl_LineBufPtr = Gbl_CurrentLineBuffer;
+    AslGbl_CurrentLineNumber++;
+    AslGbl_LogicalLineNumber++;
+    AslGbl_LineBufPtr = AslGbl_CurrentLineBuffer;
 }
 
 
@@ -452,7 +452,7 @@ AslInsertLineBuffer (
         return;
     }
 
-    Gbl_InputByteCount++;
+    AslGbl_InputByteCount++;
 
     /* Handle tabs. Convert to spaces */
 
@@ -460,31 +460,31 @@ AslInsertLineBuffer (
     {
         SourceChar = ' ';
         Count = ASL_SPACES_PER_TAB -
-                    (Gbl_CurrentColumn & (ASL_SPACES_PER_TAB-1));
+                    (AslGbl_CurrentColumn & (ASL_SPACES_PER_TAB-1));
     }
 
     for (i = 0; i < Count; i++)
     {
-        Gbl_CurrentColumn++;
+        AslGbl_CurrentColumn++;
 
         /* Insert the character into the line buffer */
 
-        *Gbl_LineBufPtr = (UINT8) SourceChar;
-        Gbl_LineBufPtr++;
+        *AslGbl_LineBufPtr = (UINT8) SourceChar;
+        AslGbl_LineBufPtr++;
 
-        if (Gbl_LineBufPtr >
-            (Gbl_CurrentLineBuffer + (Gbl_LineBufferSize - 1)))
+        if (AslGbl_LineBufPtr >
+            (AslGbl_CurrentLineBuffer + (AslGbl_LineBufferSize - 1)))
         {
 #if 0
             /*
              * Warning if we have split a long source line.
              * <Probably overkill>
              */
-            sprintf (MsgBuffer, "Max %u", Gbl_LineBufferSize);
+            sprintf (MsgBuffer, "Max %u", AslGbl_LineBufferSize);
             AslCommonError (ASL_WARNING, ASL_MSG_LONG_LINE,
-                Gbl_CurrentLineNumber, Gbl_LogicalLineNumber,
-                Gbl_CurrentLineOffset, Gbl_CurrentColumn,
-                Gbl_Files[ASL_FILE_INPUT].Filename, MsgBuffer);
+                AslGbl_CurrentLineNumber, AslGbl_LogicalLineNumber,
+                AslGbl_CurrentLineOffset, AslGbl_CurrentColumn,
+                AslGbl_Files[ASL_FILE_INPUT].Filename, MsgBuffer);
 #endif
 
             AslResetCurrentLineBuffer ();
@@ -498,7 +498,7 @@ AslInsertLineBuffer (
 
         if (AcpiGbl_CaptureComments)
         {
-            CvProcessCommentState (SourceChar);
+            CvProcessCommentState ((char) SourceChar);
         }
     }
 }
@@ -532,14 +532,18 @@ count (
     {
     case 2:
 
-        TotalKeywords++;
-        TotalNamedObjects++;
+        ++AslGbl_TotalKeywords;
+        ++AslGbl_TotalNamedObjects;
+        ++AslGbl_FilesList->TotalKeywords;
+        ++AslGbl_FilesList->TotalNamedObjects;
         break;
 
     case 3:
 
-        TotalKeywords++;
-        TotalExecutableOpcodes++;
+        ++AslGbl_TotalKeywords;
+        ++AslGbl_TotalExecutableOpcodes;
+        ++AslGbl_FilesList->TotalKeywords;
+        ++AslGbl_FilesList->TotalExecutableOpcodes;
         break;
 
     default:
@@ -550,7 +554,7 @@ count (
     for (p = yytext; *p != '\0'; p++)
     {
         AslInsertLineBuffer (*p);
-        *Gbl_LineBufPtr = 0;
+        *AslGbl_LineBufPtr = 0;
     }
 }
 
@@ -573,9 +577,9 @@ AslDoComment (
 {
     int                     c;
     int                     c1 = 0;
-    char                    *StringBuffer = MsgBuffer;
-    char                    *EndBuffer = MsgBuffer + ASL_MSG_BUFFER_SIZE;
-    ASL_COMMENT_STATE       CurrentState = Gbl_CommentState; /* to reference later on */
+    char                    *StringBuffer = AslGbl_MsgBuffer;
+    char                    *EndBuffer = AslGbl_MsgBuffer + ASL_MSG_BUFFER_SIZE;
+    ASL_COMMENT_STATE       CurrentState = AslGbl_CommentState; /* to reference later on */
 
 
     AslInsertLineBuffer ('/');
@@ -597,7 +601,7 @@ loop:
         AslInsertLineBuffer (c);
         if (AcpiGbl_CaptureComments && CurrentState.CaptureComments)
         {
-            *StringBuffer = c;
+            *StringBuffer = (char) c;
             ++StringBuffer;
         }
         c1 = c;
@@ -610,14 +614,14 @@ loop:
 
     /*
      * Check for nested comment -- can help catch cases where a previous
-     * comment was accidently left unterminated
+     * comment was accidentally left unterminated
      */
     if ((c1 == '/') && (c == '*'))
     {
         AslCommonError (ASL_WARNING, ASL_MSG_NESTED_COMMENT,
-            Gbl_CurrentLineNumber, Gbl_LogicalLineNumber,
-            Gbl_InputByteCount, Gbl_CurrentColumn,
-            Gbl_Files[ASL_FILE_INPUT].Filename, NULL);
+            AslGbl_CurrentLineNumber, AslGbl_LogicalLineNumber,
+            AslGbl_InputByteCount, AslGbl_CurrentColumn,
+            AslGbl_Files[ASL_FILE_INPUT].Filename, NULL);
     }
 
     /* Comment is closed only if the NEXT character is a slash */
@@ -625,7 +629,7 @@ loop:
     AslInsertLineBuffer (c);
     if (AcpiGbl_CaptureComments && CurrentState.CaptureComments)
     {
-        *StringBuffer = c;
+        *StringBuffer = (char) c;
         ++StringBuffer;
     }
 
@@ -654,9 +658,9 @@ EarlyEOF:
      * Premature End-Of-File
      */
     AslCommonError (ASL_ERROR, ASL_MSG_EARLY_EOF,
-        Gbl_CurrentLineNumber, Gbl_LogicalLineNumber,
-        Gbl_CurrentLineOffset, Gbl_CurrentColumn,
-        Gbl_Files[ASL_FILE_INPUT].Filename, NULL);
+        AslGbl_CurrentLineNumber, AslGbl_LogicalLineNumber,
+        AslGbl_CurrentLineOffset, AslGbl_CurrentColumn,
+        AslGbl_Files[ASL_FILE_INPUT].Filename, NULL);
     return (FALSE);
 
 
@@ -665,9 +669,9 @@ BufferOverflow:
     /* Comment was too long */
 
     AslCommonError (ASL_ERROR, ASL_MSG_STRING_LENGTH,
-        Gbl_CurrentLineNumber, Gbl_LogicalLineNumber,
-        Gbl_CurrentLineOffset, Gbl_CurrentColumn,
-        Gbl_Files[ASL_FILE_INPUT].Filename, "Max length 4096");
+        AslGbl_CurrentLineNumber, AslGbl_LogicalLineNumber,
+        AslGbl_CurrentLineOffset, AslGbl_CurrentColumn,
+        AslGbl_Files[ASL_FILE_INPUT].Filename, "Max length 4096");
     return (FALSE);
 
 }
@@ -691,9 +695,9 @@ AslDoCommentType2 (
     void)
 {
     int                     c;
-    char                    *StringBuffer = MsgBuffer;
-    char                    *EndBuffer = MsgBuffer + ASL_MSG_BUFFER_SIZE;
-    ASL_COMMENT_STATE       CurrentState = Gbl_CommentState;
+    char                    *StringBuffer = AslGbl_MsgBuffer;
+    char                    *EndBuffer = AslGbl_MsgBuffer + ASL_MSG_BUFFER_SIZE;
+    ASL_COMMENT_STATE       CurrentState = AslGbl_CommentState;
 
 
     AslInsertLineBuffer ('/');
@@ -716,7 +720,7 @@ AslDoCommentType2 (
         AslInsertLineBuffer (c);
         if (AcpiGbl_CaptureComments && CurrentState.CaptureComments)
         {
-            *StringBuffer = c;
+            *StringBuffer = (char) c;
             ++StringBuffer;
         }
     }
@@ -743,9 +747,9 @@ BufferOverflow:
     /* Comment was too long */
 
     AslCommonError (ASL_ERROR, ASL_MSG_STRING_LENGTH,
-        Gbl_CurrentLineNumber, Gbl_LogicalLineNumber,
-        Gbl_CurrentLineOffset, Gbl_CurrentColumn,
-        Gbl_Files[ASL_FILE_INPUT].Filename, "Max length 4096");
+        AslGbl_CurrentLineNumber, AslGbl_LogicalLineNumber,
+        AslGbl_CurrentLineOffset, AslGbl_CurrentColumn,
+        AslGbl_Files[ASL_FILE_INPUT].Filename, "Max length 4096");
     return (FALSE);
 
 }
@@ -767,8 +771,8 @@ static char
 AslDoStringLiteral (
     void)
 {
-    char                *StringBuffer = MsgBuffer;
-    char                *EndBuffer = MsgBuffer + ASL_MSG_BUFFER_SIZE;
+    char                *StringBuffer = AslGbl_MsgBuffer;
+    char                *EndBuffer = AslGbl_MsgBuffer + ASL_MSG_BUFFER_SIZE;
     char                *CleanString;
     int                 StringChar;
     UINT32              State = ASL_NORMAL_CHAR;
@@ -874,7 +878,7 @@ DoCharacter:
                 if (ACPI_IS_OCTAL_DIGIT (StringChar))
                 {
                     State = ASL_OCTAL_CONSTANT;
-                    ConvertBuffer[0] = StringChar;
+                    ConvertBuffer[0] = (char) StringChar;
                     i = 1;
                     continue;
                 }
@@ -882,9 +886,9 @@ DoCharacter:
                 /* Unknown escape sequence issue warning, but use the character */
 
                 AslCommonError (ASL_WARNING, ASL_MSG_INVALID_ESCAPE,
-                    Gbl_CurrentLineNumber, Gbl_LogicalLineNumber,
-                    Gbl_CurrentLineOffset, Gbl_CurrentColumn,
-                    Gbl_Files[ASL_FILE_INPUT].Filename, NULL);
+                    AslGbl_CurrentLineNumber, AslGbl_LogicalLineNumber,
+                    AslGbl_CurrentLineOffset, AslGbl_CurrentColumn,
+                    AslGbl_Files[ASL_FILE_INPUT].Filename, NULL);
                 break;
             }
             break;
@@ -909,9 +913,9 @@ DoCharacter:
                 if ((Digit == 0) || (Digit > ACPI_ASCII_MAX))
                 {
                     AslCommonError (ASL_WARNING, ASL_MSG_INVALID_STRING,
-                        Gbl_CurrentLineNumber, Gbl_LogicalLineNumber,
-                        Gbl_CurrentLineOffset, Gbl_CurrentColumn,
-                        Gbl_Files[ASL_FILE_INPUT].Filename, NULL);
+                        AslGbl_CurrentLineNumber, AslGbl_LogicalLineNumber,
+                        AslGbl_CurrentLineOffset, AslGbl_CurrentColumn,
+                        AslGbl_Files[ASL_FILE_INPUT].Filename, NULL);
                 }
                 else
                 {
@@ -930,7 +934,7 @@ DoCharacter:
 
             /* Append another digit of the constant */
 
-            ConvertBuffer[i] = StringChar;
+            ConvertBuffer[i] = (char) StringChar;
             i++;
             continue;
 
@@ -953,9 +957,9 @@ DoCharacter:
                 if ((Digit == 0) || (Digit > ACPI_ASCII_MAX))
                 {
                     AslCommonError (ASL_WARNING, ASL_MSG_INVALID_STRING,
-                        Gbl_CurrentLineNumber, Gbl_LogicalLineNumber,
-                        Gbl_CurrentLineOffset, Gbl_CurrentColumn,
-                        Gbl_Files[ASL_FILE_INPUT].Filename, NULL);
+                        AslGbl_CurrentLineNumber, AslGbl_LogicalLineNumber,
+                        AslGbl_CurrentLineOffset, AslGbl_CurrentColumn,
+                        AslGbl_Files[ASL_FILE_INPUT].Filename, NULL);
                 }
                 else
                 {
@@ -974,7 +978,7 @@ DoCharacter:
 
             /* Append another digit of the constant */
 
-            ConvertBuffer[i] = StringChar;
+            ConvertBuffer[i] = (char) StringChar;
             i++;
             continue;
 
@@ -985,7 +989,7 @@ DoCharacter:
 
         /* Save the finished character */
 
-        *StringBuffer = StringChar;
+        *StringBuffer = (char) StringChar;
         StringBuffer++;
         if (StringBuffer >= EndBuffer)
         {
@@ -997,9 +1001,9 @@ DoCharacter:
      * Premature End-Of-File
      */
     AslCommonError (ASL_ERROR, ASL_MSG_EARLY_EOF,
-        Gbl_CurrentLineNumber, Gbl_LogicalLineNumber,
-        Gbl_CurrentLineOffset, Gbl_CurrentColumn,
-        Gbl_Files[ASL_FILE_INPUT].Filename, NULL);
+        AslGbl_CurrentLineNumber, AslGbl_LogicalLineNumber,
+        AslGbl_CurrentLineOffset, AslGbl_CurrentColumn,
+        AslGbl_Files[ASL_FILE_INPUT].Filename, NULL);
     return (FALSE);
 
 
@@ -1009,8 +1013,8 @@ CompletedString:
      */
     *StringBuffer = 0;
 
-    CleanString = UtLocalCacheCalloc (strlen (MsgBuffer) + 1);
-    strcpy (CleanString, MsgBuffer);
+    CleanString = UtLocalCacheCalloc (strlen (AslGbl_MsgBuffer) + 1);
+    strcpy (CleanString, AslGbl_MsgBuffer);
     AslCompilerlval.s = CleanString;
     return (TRUE);
 
@@ -1020,8 +1024,8 @@ BufferOverflow:
     /* Literal was too long */
 
     AslCommonError (ASL_ERROR, ASL_MSG_STRING_LENGTH,
-        Gbl_CurrentLineNumber, Gbl_LogicalLineNumber,
-        Gbl_CurrentLineOffset, Gbl_CurrentColumn,
-        Gbl_Files[ASL_FILE_INPUT].Filename, "Max length 4096");
+        AslGbl_CurrentLineNumber, AslGbl_LogicalLineNumber,
+        AslGbl_CurrentLineOffset, AslGbl_CurrentColumn,
+        AslGbl_Files[ASL_FILE_INPUT].Filename, "Max length 4096");
     return (FALSE);
 }

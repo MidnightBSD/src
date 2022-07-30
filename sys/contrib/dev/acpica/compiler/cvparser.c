@@ -9,7 +9,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -230,8 +230,7 @@ CvIsFilename (
  * FUNCTION:    CvInitFileTree
  *
  * PARAMETERS:  Table      - input table
- *              AmlStart   - Address of the starting point of the AML.
- *              AmlLength  - Length of the AML file.
+ *              RootFile   - Output file that defines the DefinitionBlock
  *
  * RETURN:      None
  *
@@ -243,8 +242,7 @@ CvIsFilename (
 void
 CvInitFileTree (
     ACPI_TABLE_HEADER       *Table,
-    UINT8                   *AmlStart,
-    UINT32                  AmlLength)
+    FILE                    *RootFile)
 {
     UINT8                   *TreeAml;
     UINT8                   *FileEnd;
@@ -252,6 +250,8 @@ CvInitFileTree (
     char                    *PreviousFilename = NULL;
     char                    *ParentFilename = NULL;
     char                    *ChildFilename = NULL;
+    UINT8                   *AmlStart;
+    UINT32                  AmlLength;
 
 
     if (!AcpiGbl_CaptureComments)
@@ -259,9 +259,13 @@ CvInitFileTree (
         return;
     }
 
+
+    AmlLength = Table->Length - sizeof (ACPI_TABLE_HEADER);
+    AmlStart = ((UINT8 *) Table + sizeof (ACPI_TABLE_HEADER));
+
     CvDbgPrint ("AmlLength: %x\n", AmlLength);
     CvDbgPrint ("AmlStart:  %p\n", AmlStart);
-    CvDbgPrint ("AmlEnd?:   %p\n", AmlStart+AmlLength);
+    CvDbgPrint ("AmlEnd:    %p\n", AmlStart+AmlLength);
 
     AcpiGbl_FileTreeRoot = AcpiOsAcquireObject (AcpiGbl_FileCache);
 
@@ -273,10 +277,10 @@ CvInitFileTree (
 
     /* Set the root file to the current open file */
 
-    AcpiGbl_FileTreeRoot->File = AcpiGbl_OutputFile;
+    AcpiGbl_FileTreeRoot->File = RootFile;
 
     /*
-     * Set this to true because we dont need to output
+     * Set this to true because we don't need to output
      * an include statement for the topmost file
      */
     AcpiGbl_FileTreeRoot->IncludeWritten = TRUE;
@@ -514,7 +518,7 @@ CvFileAddressLookup(
  * RETURN:      None
  *
  * DESCRIPTION: Takes a given parse op, looks up its Op->Common.Aml field
- *              within the file tree and fills in approperiate file information
+ *              within the file tree and fills in appropriate file information
  *              from a matching node within the tree.
  *              This is referred as ASL_CV_LABEL_FILENODE.
  *
@@ -638,9 +642,9 @@ CvAddToFileTree (
             /* delete the .xxx file */
 
             FlDeleteFile (ASL_FILE_AML_OUTPUT);
-            sprintf (MsgBuffer, "\"%s\" - %s", Filename, strerror (errno));
+            sprintf (AslGbl_MsgBuffer, "\"%s\" - %s", Filename, strerror (errno));
             AslCommonError (ASL_ERROR, ASL_MSG_OPEN, 0, 0, 0, 0,
-                NULL, MsgBuffer);
+                NULL, AslGbl_MsgBuffer);
             AslAbort ();
         }
     }
@@ -912,7 +916,6 @@ CvCaptureCommentsOnly (
 
                     /* Not a valid comment option. Revert the AML */
 
-                    Aml -= 2;
                     goto DefBlock;
 
             } /* End switch statement */
@@ -1005,7 +1008,7 @@ CvCaptureComments (
  *
  * RETURN:      None
  *
- * DESCRIPTION: Transfer all of the commments stored in global containers to the
+ * DESCRIPTION: Transfer all of the comments stored in global containers to the
  *              given Op. This will be invoked shortly after the parser creates
  *              a ParseOp.
  *              This is referred as ASL_CV_TRANSFER_COMMENTS.

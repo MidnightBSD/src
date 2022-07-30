@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -272,6 +272,10 @@ AcpiEvDeleteGpeBlock (
     /* Disable all GPEs in this block */
 
     Status = AcpiHwDisableGpeBlock (GpeBlock->XruptBlock, GpeBlock, NULL);
+    if (ACPI_FAILURE (Status))
+    {
+        return_ACPI_STATUS (Status);
+    }
 
     if (!GpeBlock->Previous && !GpeBlock->Next)
     {
@@ -542,7 +546,7 @@ AcpiEvCreateGpeBlock (
     WalkInfo.GpeDevice = GpeDevice;
     WalkInfo.ExecuteByOwnerId = FALSE;
 
-    Status = AcpiNsWalkNamespace (ACPI_TYPE_METHOD, GpeDevice,
+    (void) AcpiNsWalkNamespace (ACPI_TYPE_METHOD, GpeDevice,
         ACPI_UINT32_MAX, ACPI_NS_WALK_NO_UNLOCK,
         AcpiEvMatchGpeMethod, NULL, &WalkInfo, NULL);
 
@@ -585,7 +589,7 @@ ACPI_STATUS
 AcpiEvInitializeGpeBlock (
     ACPI_GPE_XRUPT_INFO     *GpeXruptInfo,
     ACPI_GPE_BLOCK_INFO     *GpeBlock,
-    void                    *Ignored)
+    void                    *Context)
 {
     ACPI_STATUS             Status;
     ACPI_GPE_EVENT_INFO     *GpeEventInfo;
@@ -593,6 +597,8 @@ AcpiEvInitializeGpeBlock (
     UINT32                  GpeIndex;
     UINT32                  i;
     UINT32                  j;
+    BOOLEAN                 *IsPollingNeeded = Context;
+    ACPI_ERROR_ONLY (UINT32 GpeNumber);
 
 
     ACPI_FUNCTION_TRACE (EvInitializeGpeBlock);
@@ -622,26 +628,34 @@ AcpiEvInitializeGpeBlock (
 
             GpeIndex = (i * ACPI_GPE_REGISTER_WIDTH) + j;
             GpeEventInfo = &GpeBlock->EventInfo[GpeIndex];
+            ACPI_ERROR_ONLY(GpeNumber = GpeBlock->BlockBaseNumber + GpeIndex);
+            GpeEventInfo->Flags |= ACPI_GPE_INITIALIZED;
 
             /*
              * Ignore GPEs that have no corresponding _Lxx/_Exx method
              * and GPEs that are used to wake the system
              */
-            if ((ACPI_GPE_DISPATCH_TYPE (GpeEventInfo->Flags) == ACPI_GPE_DISPATCH_NONE) ||
-                (ACPI_GPE_DISPATCH_TYPE (GpeEventInfo->Flags) == ACPI_GPE_DISPATCH_HANDLER) ||
-                (ACPI_GPE_DISPATCH_TYPE (GpeEventInfo->Flags) == ACPI_GPE_DISPATCH_RAW_HANDLER) ||
+            if ((ACPI_GPE_DISPATCH_TYPE (GpeEventInfo->Flags) != ACPI_GPE_DISPATCH_METHOD) ||
                 (GpeEventInfo->Flags & ACPI_GPE_CAN_WAKE))
             {
                 continue;
             }
 
-            Status = AcpiEvAddGpeReference (GpeEventInfo);
+            Status = AcpiEvAddGpeReference (GpeEventInfo, FALSE);
             if (ACPI_FAILURE (Status))
             {
                 ACPI_EXCEPTION ((AE_INFO, Status,
                     "Could not enable GPE 0x%02X",
-                    GpeIndex + GpeBlock->BlockBaseNumber));
+                    GpeNumber));
                 continue;
+            }
+
+            GpeEventInfo->Flags |= ACPI_GPE_AUTO_ENABLED;
+
+            if (IsPollingNeeded &&
+                ACPI_GPE_IS_POLLING_NEEDED (GpeEventInfo))
+            {
+                *IsPollingNeeded = TRUE;
             }
 
             GpeEnabledCount++;

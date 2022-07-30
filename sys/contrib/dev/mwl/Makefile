@@ -1,4 +1,4 @@
-#	$FreeBSD: stable/11/sys/contrib/dev/mwl/Makefile 193240 2009-06-01 18:07:01Z sam $
+#	$FreeBSD$
 
 FILES=	mw88W8363.fw.uu mwlboot.fw.uu
 

@@ -1,4 +1,4 @@
-#	$FreeBSD: stable/11/sys/contrib/dev/iwi/Makefile 191945 2009-05-09 18:54:18Z sam $
+#	$FreeBSD$
 
 FW_VERSION=3.1
 ALL=	ipw2200-bss.fw.uu ipw2200-ibss.fw.uu ipw2200-sniffer.fw.uu

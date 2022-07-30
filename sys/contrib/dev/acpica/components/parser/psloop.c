@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -164,6 +164,7 @@
 #include <contrib/dev/acpica/include/acdispat.h>
 #include <contrib/dev/acpica/include/amlcode.h>
 #include <contrib/dev/acpica/include/acconvert.h>
+#include <contrib/dev/acpica/include/acnamesp.h>
 
 #define _COMPONENT          ACPI_PARSER
         ACPI_MODULE_NAME    ("psloop")
@@ -176,13 +177,6 @@ AcpiPsGetArguments (
     ACPI_WALK_STATE         *WalkState,
     UINT8                   *AmlOpStart,
     ACPI_PARSE_OBJECT       *Op);
-
-static void
-AcpiPsLinkModuleCode (
-    ACPI_PARSE_OBJECT       *ParentOp,
-    UINT8                   *AmlStart,
-    UINT32                  AmlLength,
-    ACPI_OWNER_ID           OwnerId);
 
 
 /*******************************************************************************
@@ -207,7 +201,6 @@ AcpiPsGetArguments (
 {
     ACPI_STATUS             Status = AE_OK;
     ACPI_PARSE_OBJECT       *Arg = NULL;
-    const ACPI_OPCODE_INFO  *OpInfo;
 
 
     ACPI_FUNCTION_TRACE_PTR (PsGetArguments, WalkState);
@@ -283,76 +276,8 @@ AcpiPsGetArguments (
         }
 
         ACPI_DEBUG_PRINT ((ACPI_DB_PARSE,
-            "Final argument count: %u pass %u\n",
+            "Final argument count: %8.8X pass %u\n",
             WalkState->ArgCount, WalkState->PassNumber));
-
-        /*
-         * Handle executable code at "module-level". This refers to
-         * executable opcodes that appear outside of any control method.
-         */
-        if ((WalkState->PassNumber <= ACPI_IMODE_LOAD_PASS2) &&
-            ((WalkState->ParseFlags & ACPI_PARSE_DISASSEMBLE) == 0))
-        {
-            /*
-             * We want to skip If/Else/While constructs during Pass1 because we
-             * want to actually conditionally execute the code during Pass2.
-             *
-             * Except for disassembly, where we always want to walk the
-             * If/Else/While packages
-             */
-            switch (Op->Common.AmlOpcode)
-            {
-            case AML_IF_OP:
-            case AML_ELSE_OP:
-            case AML_WHILE_OP:
-                /*
-                 * Currently supported module-level opcodes are:
-                 * IF/ELSE/WHILE. These appear to be the most common,
-                 * and easiest to support since they open an AML
-                 * package.
-                 */
-                if (WalkState->PassNumber == ACPI_IMODE_LOAD_PASS1)
-                {
-                    AcpiPsLinkModuleCode (Op->Common.Parent, AmlOpStart,
-                        (UINT32) (WalkState->ParserState.PkgEnd - AmlOpStart),
-                        WalkState->OwnerId);
-                }
-
-                ACPI_DEBUG_PRINT ((ACPI_DB_PARSE,
-                    "Pass1: Skipping an If/Else/While body\n"));
-
-                /* Skip body of if/else/while in pass 1 */
-
-                WalkState->ParserState.Aml = WalkState->ParserState.PkgEnd;
-                WalkState->ArgCount = 0;
-                break;
-
-            default:
-                /*
-                 * Check for an unsupported executable opcode at module
-                 * level. We must be in PASS1, the parent must be a SCOPE,
-                 * The opcode class must be EXECUTE, and the opcode must
-                 * not be an argument to another opcode.
-                 */
-                if ((WalkState->PassNumber == ACPI_IMODE_LOAD_PASS1) &&
-                    (Op->Common.Parent->Common.AmlOpcode == AML_SCOPE_OP))
-                {
-                    OpInfo = AcpiPsGetOpcodeInfo (Op->Common.AmlOpcode);
-                    if ((OpInfo->Class == AML_CLASS_EXECUTE) &&
-                        (!Arg))
-                    {
-                        ACPI_WARNING ((AE_INFO,
-                            "Unsupported module-level executable opcode "
-                            "0x%.2X at table offset 0x%.4X",
-                            Op->Common.AmlOpcode,
-                            (UINT32) (ACPI_PTR_DIFF (AmlOpStart,
-                                WalkState->ParserState.AmlStart) +
-                                sizeof (ACPI_TABLE_HEADER))));
-                    }
-                }
-                break;
-            }
-        }
 
         /* Special processing for certain opcodes */
 
@@ -427,107 +352,6 @@ AcpiPsGetArguments (
 
 /*******************************************************************************
  *
- * FUNCTION:    AcpiPsLinkModuleCode
- *
- * PARAMETERS:  ParentOp            - Parent parser op
- *              AmlStart            - Pointer to the AML
- *              AmlLength           - Length of executable AML
- *              OwnerId             - OwnerId of module level code
- *
- * RETURN:      None.
- *
- * DESCRIPTION: Wrap the module-level code with a method object and link the
- *              object to the global list. Note, the mutex field of the method
- *              object is used to link multiple module-level code objects.
- *
- ******************************************************************************/
-
-static void
-AcpiPsLinkModuleCode (
-    ACPI_PARSE_OBJECT       *ParentOp,
-    UINT8                   *AmlStart,
-    UINT32                  AmlLength,
-    ACPI_OWNER_ID           OwnerId)
-{
-    ACPI_OPERAND_OBJECT     *Prev;
-    ACPI_OPERAND_OBJECT     *Next;
-    ACPI_OPERAND_OBJECT     *MethodObj;
-    ACPI_NAMESPACE_NODE     *ParentNode;
-
-
-    ACPI_FUNCTION_TRACE (PsLinkModuleCode);
-
-
-    /* Get the tail of the list */
-
-    Prev = Next = AcpiGbl_ModuleCodeList;
-    while (Next)
-    {
-        Prev = Next;
-        Next = Next->Method.Mutex;
-    }
-
-    /*
-     * Insert the module level code into the list. Merge it if it is
-     * adjacent to the previous element.
-     */
-    if (!Prev ||
-       ((Prev->Method.AmlStart + Prev->Method.AmlLength) != AmlStart))
-    {
-        /* Create, initialize, and link a new temporary method object */
-
-        MethodObj = AcpiUtCreateInternalObject (ACPI_TYPE_METHOD);
-        if (!MethodObj)
-        {
-            return_VOID;
-        }
-
-        ACPI_DEBUG_PRINT ((ACPI_DB_PARSE,
-            "Create/Link new code block: %p\n", MethodObj));
-
-        if (ParentOp->Common.Node)
-        {
-            ParentNode = ParentOp->Common.Node;
-        }
-        else
-        {
-            ParentNode = AcpiGbl_RootNode;
-        }
-
-        MethodObj->Method.AmlStart = AmlStart;
-        MethodObj->Method.AmlLength = AmlLength;
-        MethodObj->Method.OwnerId = OwnerId;
-        MethodObj->Method.InfoFlags |= ACPI_METHOD_MODULE_LEVEL;
-
-        /*
-         * Save the parent node in NextObject. This is cheating, but we
-         * don't want to expand the method object.
-         */
-        MethodObj->Method.NextObject =
-            ACPI_CAST_PTR (ACPI_OPERAND_OBJECT, ParentNode);
-
-        if (!Prev)
-        {
-            AcpiGbl_ModuleCodeList = MethodObj;
-        }
-        else
-        {
-            Prev->Method.Mutex = MethodObj;
-        }
-    }
-    else
-    {
-        ACPI_DEBUG_PRINT ((ACPI_DB_PARSE,
-            "Appending to existing code block: %p\n", Prev));
-
-        Prev->Method.AmlLength += AmlLength;
-    }
-
-    return_VOID;
-}
-
-/*******************************************************************************
- *
  * FUNCTION:    AcpiPsParseLoop
  *
  * PARAMETERS:  WalkState           - Current state
@@ -547,6 +371,7 @@ AcpiPsParseLoop (
     ACPI_PARSE_OBJECT       *Op = NULL;     /* current op */
     ACPI_PARSE_STATE        *ParserState;
     UINT8                   *AmlOpStart = NULL;
+    UINT8                   OpcodeLength;
 
 
     ACPI_FUNCTION_TRACE_PTR (PsParseLoop, WalkState);
@@ -560,7 +385,7 @@ AcpiPsParseLoop (
     ParserState = &WalkState->ParserState;
     WalkState->ArgTypes = 0;
 
-#if (!defined (ACPI_NO_METHOD_EXECUTION) && !defined (ACPI_CONSTANT_EVAL_ONLY))
+#ifndef ACPI_CONSTANT_EVAL_ONLY
 
     if (WalkState->WalkType & ACPI_WALK_METHOD_RESTART)
     {
@@ -627,6 +452,18 @@ AcpiPsParseLoop (
             Status = AcpiPsCreateOp (WalkState, AmlOpStart, &Op);
             if (ACPI_FAILURE (Status))
             {
+                /*
+                 * ACPI_PARSE_MODULE_LEVEL means that we are loading a table by
+                 * executing it as a control method. However, if we encounter
+                 * an error while loading the table, we need to keep trying to
+                 * load the table rather than aborting the table load. Set the
+                 * status to AE_OK to proceed with the table load.
+                 */
+                if ((WalkState->ParseFlags & ACPI_PARSE_MODULE_LEVEL) &&
+                    ((Status == AE_ALREADY_EXISTS) || (Status == AE_NOT_FOUND)))
+                {
+                    Status = AE_OK;
+                }
                 if (Status == AE_CTRL_PARSE_CONTINUE)
                 {
                     continue;
@@ -646,6 +483,32 @@ AcpiPsParseLoop (
                 if (ACPI_FAILURE (Status))
                 {
                     return_ACPI_STATUS (Status);
+                }
+                if (AcpiNsOpensScope (
+                    AcpiPsGetOpcodeInfo (WalkState->Opcode)->ObjectType))
+                {
+                    /*
+                     * If the scope/device op fails to parse, skip the body of
+                     * the scope op because the parse failure indicates that
+                     * the device may not exist.
+                     */
+                    ACPI_INFO (("Skipping parse of AML opcode: %s (0x%4.4X)",
+                        AcpiPsGetOpcodeName (WalkState->Opcode), WalkState->Opcode));
+
+                    /*
+                     * Determine the opcode length before skipping the opcode.
+                     * An opcode can be 1 byte or 2 bytes in length.
+                     */
+                    OpcodeLength = 1;
+                    if ((WalkState->Opcode & 0xFF00) == AML_EXTENDED_OPCODE)
+                    {
+                        OpcodeLength = 2;
+                    }
+                    WalkState->ParserState.Aml = WalkState->Aml + OpcodeLength;
+
+                    WalkState->ParserState.Aml =
+                        AcpiPsGetNextPackageEnd(&WalkState->ParserState);
+                    WalkState->Aml = WalkState->ParserState.Aml;
                 }
 
                 continue;
@@ -689,7 +552,32 @@ AcpiPsParseLoop (
                 {
                     return_ACPI_STATUS (Status);
                 }
+                if ((WalkState->ControlState) &&
+                    ((WalkState->ControlState->Control.Opcode == AML_IF_OP) ||
+                    (WalkState->ControlState->Control.Opcode == AML_WHILE_OP)))
+                {
+                    /*
+                     * If the if/while op fails to parse, we will skip parsing
+                     * the body of the op.
+                     */
+                    ParserState->Aml =
+                        WalkState->ControlState->Control.AmlPredicateStart + 1;
+                    ParserState->Aml =
+                        AcpiPsGetNextPackageEnd (ParserState);
+                    WalkState->Aml = ParserState->Aml;
 
+                    ACPI_ERROR ((AE_INFO, "Skipping While/If block"));
+                    if (*WalkState->Aml == AML_ELSE_OP)
+                    {
+                        ACPI_ERROR ((AE_INFO, "Skipping Else block"));
+                        WalkState->ParserState.Aml = WalkState->Aml + 1;
+                        WalkState->ParserState.Aml =
+                            AcpiPsGetNextPackageEnd (ParserState);
+                        WalkState->Aml = ParserState->Aml;
+                    }
+                    ACPI_FREE(AcpiUtPopGenericState (&WalkState->ControlState));
+                }
+                Op = NULL;
                 continue;
             }
         }
@@ -697,7 +585,7 @@ AcpiPsParseLoop (
         /* Check for arguments that need to be processed */
 
         ACPI_DEBUG_PRINT ((ACPI_DB_PARSE,
-            "Parseloop: argument count: %u\n", WalkState->ArgCount));
+            "Parseloop: argument count: %8.8X\n", WalkState->ArgCount));
 
         if (WalkState->ArgCount)
         {
@@ -776,6 +664,22 @@ AcpiPsParseLoop (
             Status = AcpiPsNextParseState (WalkState, Op, Status);
             if (Status == AE_CTRL_PENDING)
             {
+                Status = AE_OK;
+            }
+            else if ((WalkState->ParseFlags & ACPI_PARSE_MODULE_LEVEL) &&
+                (ACPI_AML_EXCEPTION(Status) || Status == AE_ALREADY_EXISTS ||
+                Status == AE_NOT_FOUND))
+            {
+                /*
+                 * ACPI_PARSE_MODULE_LEVEL flag means that we are currently
+                 * loading a table by executing it as a control method.
+                 * However, if we encounter an error while loading the table,
+                 * we need to keep trying to load the table rather than
+                 * aborting the table load (setting the status to AE_OK
+                 * continues the table load). If we get a failure at this
+                 * point, it means that the dispatcher got an error while
+                 * trying to execute the Op.
+                 */
                 Status = AE_OK;
             }
         }

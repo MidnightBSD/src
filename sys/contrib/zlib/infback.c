@@ -1,5 +1,5 @@
 /* infback.c -- inflate using a call-back interface
- * Copyright (C) 1995-2016 Mark Adler
+ * Copyright (C) 1995-2022 Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
@@ -42,7 +42,7 @@ int stream_size;
         return Z_STREAM_ERROR;
     strm->msg = Z_NULL;                 /* in case we return an error */
     if (strm->zalloc == (alloc_func)0) {
-#ifdef Z_SOLO
+#if defined(Z_SOLO) && !defined(_KERNEL)
         return Z_STREAM_ERROR;
 #else
         strm->zalloc = zcalloc;
@@ -50,7 +50,7 @@ int stream_size;
 #endif
     }
     if (strm->zfree == (free_func)0)
-#ifdef Z_SOLO
+#if defined(Z_SOLO) && !defined(_KERNEL)
         return Z_STREAM_ERROR;
 #else
     strm->zfree = zcfree;
@@ -477,6 +477,7 @@ void FAR *out_desc;
             }
             Tracev((stderr, "inflate:       codes ok\n"));
             state->mode = LEN;
+                /* fallthrough */
 
         case LEN:
             /* use inflate_fast() if we have enough input and output */

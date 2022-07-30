@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -256,7 +256,7 @@ TrSetOpIntegerValue (
     if (AcpiGbl_CaptureComments &&
         (ParseOpcode == PARSEOP_METHODCALL))
     {
-        Gbl_CommentState.CaptureComments = FALSE;
+        AslGbl_CommentState.CaptureComments = FALSE;
     }
 
     return (Op);
@@ -372,7 +372,7 @@ TrSetOpCurrentFilename (
     ACPI_PARSE_OBJECT       *Op)
 {
 
-    Op->Asl.Filename = Gbl_PreviousIncludeFilename;
+    Op->Asl.Filename = AslGbl_PreviousIncludeFilename;
 }
 
 
@@ -398,9 +398,9 @@ TrSetOpIntegerWidth (
 
     /* Handle command-line version override */
 
-    if (Gbl_RevisionOverride)
+    if (AslGbl_RevisionOverride)
     {
-        AcpiUtSetIntegerWidth (Gbl_RevisionOverride);
+        AcpiUtSetIntegerWidth (AslGbl_RevisionOverride);
     }
     else
     {
@@ -434,8 +434,8 @@ TrSetOpEndLineNumber (
         return;
     }
 
-    Op->Asl.EndLine = Gbl_CurrentLineNumber;
-    Op->Asl.EndLogicalLine = Gbl_LogicalLineNumber;
+    Op->Asl.EndLine = AslGbl_CurrentLineNumber;
+    Op->Asl.EndLogicalLine = AslGbl_LogicalLineNumber;
 }
 
 
@@ -462,6 +462,7 @@ TrLinkOpChildren (
 {
     ACPI_PARSE_OBJECT       *Child;
     ACPI_PARSE_OBJECT       *PrevChild;
+    ACPI_PARSE_OBJECT       *LastSibling;
     va_list                 ap;
     UINT32                  i;
     BOOLEAN                 FirstChild;
@@ -480,8 +481,18 @@ TrLinkOpChildren (
     {
     case PARSEOP_ASL_CODE:
 
-        Gbl_ParseTreeRoot = Op;
-        Op->Asl.ParseOpcode = PARSEOP_DEFAULT_ARG;
+        if (!AslGbl_ParseTreeRoot)
+        {
+            DbgPrint (ASL_PARSE_OUTPUT, "Creating first Definition Block\n");
+            AslGbl_ParseTreeRoot = Op;
+            Op->Asl.ParseOpcode = PARSEOP_DEFAULT_ARG;
+        }
+        else
+        {
+            DbgPrint (ASL_PARSE_OUTPUT, "Creating subsequent Definition Block\n");
+            Op = AslGbl_ParseTreeRoot;
+        }
+
         DbgPrint (ASL_PARSE_OUTPUT, "ASLCODE (Tree Completed)->");
         break;
 
@@ -516,13 +527,13 @@ TrLinkOpChildren (
          * then is an endBlk comment. Categorize it as so and distribute
          * all regular comments to this parse op.
          */
-        if (Gbl_CommentListHead)
+        if (AslGbl_CommentListHead)
         {
-            Op->Asl.EndBlkComment = Gbl_CommentListHead;
+            Op->Asl.EndBlkComment = AslGbl_CommentListHead;
             CvDbgPrint ("EndBlk Comment for %s: %s",
-                Op->Asl.ParseOpName, Gbl_CommentListHead->Comment);
-            Gbl_CommentListHead = NULL;
-            Gbl_CommentListTail = NULL;
+                Op->Asl.ParseOpName, AslGbl_CommentListHead->Comment);
+            AslGbl_CommentListHead = NULL;
+            AslGbl_CommentListTail = NULL;
         }
     }
 
@@ -560,7 +571,27 @@ TrLinkOpChildren (
         if (FirstChild)
         {
             FirstChild = FALSE;
-            Op->Asl.Child = Child;
+
+            /*
+             * In the case that multiple definition blocks are being compiled,
+             * append the definition block to the end of the child list as the
+             * last sibling. This is done to facilitate namespace cross-
+             * reference between multiple definition blocks.
+             */
+            if (Op->Asl.Child &&
+                (Op->Asl.Child->Asl.ParseOpcode == PARSEOP_DEFINITION_BLOCK))
+            {
+                LastSibling = Op->Asl.Child;
+                while (LastSibling->Asl.Next)
+                {
+                    LastSibling = LastSibling->Asl.Next;
+                }
+                LastSibling->Asl.Next = Child;
+            }
+            else
+            {
+                Op->Asl.Child = Child;
+            }
         }
 
         /* Point all children to parent */
@@ -592,7 +623,7 @@ TrLinkOpChildren (
 
     if (AcpiGbl_CaptureComments)
     {
-        Gbl_CommentState.LatestParseOp = Op;
+        AslGbl_CommentState.LatestParseOp = Op;
         CvDbgPrint ("TrLinkOpChildren=====Set latest parse op to this op.\n");
     }
 
@@ -772,9 +803,9 @@ TrLinkChildOp (
     {
         if (Op1->Asl.ParseOpcode == PARSEOP_METHODCALL)
         {
-            Gbl_CommentState.CaptureComments = TRUE;
+            AslGbl_CommentState.CaptureComments = TRUE;
         }
-        Gbl_CommentState.LatestParseOp = Op1;
+        AslGbl_CommentState.LatestParseOp = Op1;
     }
 
     if (!Op1 || !Op2)
@@ -825,9 +856,11 @@ TrWalkParseTree (
     BOOLEAN                 OpPreviouslyVisited;
     ACPI_PARSE_OBJECT       *StartOp = Op;
     ACPI_STATUS             Status;
+    ACPI_PARSE_OBJECT       *Restore = NULL;
+    BOOLEAN                 WalkOneDefinitionBlock = Visitation & ASL_WALK_VISIT_DB_SEPARATELY;
 
 
-    if (!Gbl_ParseTreeRoot)
+    if (!AslGbl_ParseTreeRoot)
     {
         return (AE_OK);
     }
@@ -835,7 +868,13 @@ TrWalkParseTree (
     Level = 0;
     OpPreviouslyVisited = FALSE;
 
-    switch (Visitation)
+    if (Op->Asl.ParseOpcode == PARSEOP_DEFINITION_BLOCK &&
+        WalkOneDefinitionBlock)
+    {
+        Restore = Op->Asl.Next;
+        Op->Asl.Next = NULL;
+    }
+    switch (Visitation & ~ASL_WALK_VISIT_DB_SEPARATELY)
     {
     case ASL_WALK_VISIT_DOWNWARD:
 
@@ -861,7 +900,7 @@ TrWalkParseTree (
                 {
                     /* Exit immediately on any error */
 
-                    return (Status);
+                    goto ErrorExit;
                 }
             }
 
@@ -907,7 +946,7 @@ TrWalkParseTree (
                 Status = AscendingCallback (Op, Level, Context);
                 if (ACPI_FAILURE (Status))
                 {
-                    return (Status);
+                    goto ErrorExit;
                 }
             }
             else
@@ -956,7 +995,7 @@ TrWalkParseTree (
                 Status = AscendingCallback (Op, Level, Context);
                 if (ACPI_FAILURE (Status))
                 {
-                    return (Status);
+                    goto ErrorExit;
                 }
             }
             else
@@ -979,7 +1018,7 @@ TrWalkParseTree (
                 {
                     /* Exit immediately on any error */
 
-                    return (Status);
+                    goto ErrorExit;
                 }
             }
 
@@ -1018,5 +1057,20 @@ TrWalkParseTree (
 
     /* If we get here, the walk completed with no errors */
 
+    if (Op->Asl.ParseOpcode == PARSEOP_DEFINITION_BLOCK &&
+        WalkOneDefinitionBlock)
+    {
+        Op->Asl.Next = Restore;
+    }
+
     return (AE_OK);
+
+ErrorExit:
+
+    if (Op->Asl.ParseOpcode == PARSEOP_DEFINITION_BLOCK &&
+        WalkOneDefinitionBlock)
+    {
+        Op->Asl.Next = Restore;
+    }
+    return (Status);
 }

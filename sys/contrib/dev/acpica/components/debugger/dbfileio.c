@@ -9,7 +9,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -253,7 +253,7 @@ AcpiDbLoadTables (
     {
         Table = TableListHead->Table;
 
-        Status = AcpiLoadTable (Table);
+        Status = AcpiLoadTable (Table, NULL);
         if (ACPI_FAILURE (Status))
         {
             if (Status == AE_ALREADY_EXISTS)

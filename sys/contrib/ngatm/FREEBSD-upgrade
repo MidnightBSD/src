@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/sys/contrib/ngatm/FREEBSD-upgrade 121937 2003-11-03 09:15:31Z harti $
+$FreeBSD$
 
 This is the part of the NgATM stuff that is shared by kernel and user.
 Be careful to feed changes back to the maintainer <harti@freebsd.org>,

@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -161,7 +161,7 @@ static char                 VersionString[9];
 
 /* Local prototypes */
 
-static ACPI_STATUS
+void
 DtInitialize (
     void);
 
@@ -184,7 +184,7 @@ DtInsertCompilerIds (
  *
  * DESCRIPTION: Main entry point for the data table compiler.
  *
- * Note: Assumes Gbl_Files[ASL_FILE_INPUT] is initialized and the file is
+ * Note: Assumes AslGbl_Files[ASL_FILE_INPUT] is initialized and the file is
  *          open at seek offset zero.
  *
  *****************************************************************************/
@@ -196,20 +196,16 @@ DtDoCompile (
     ACPI_STATUS             Status;
     UINT8                   Event;
     DT_FIELD                *FieldList;
+    ASL_GLOBAL_FILE_NODE    *FileNode;
 
 
     /* Initialize globals */
 
-    Status = DtInitialize ();
-    if (ACPI_FAILURE (Status))
-    {
-        printf ("Error during compiler initialization, 0x%X\n", Status);
-        return (Status);
-    }
+    DtInitialize ();
 
     /* Preprocessor */
 
-    if (Gbl_PreprocessFlag)
+    if (AslGbl_PreprocessFlag)
     {
         /* Preprocessor */
 
@@ -217,19 +213,35 @@ DtDoCompile (
         PrDoPreprocess ();
         UtEndEvent (Event);
 
-        if (Gbl_PreprocessOnly)
+        if (AslGbl_PreprocessOnly)
         {
             return (AE_OK);
         }
     }
 
-    /*
-     * Scan the input file (file is already open) and
-     * build the parse tree
-     */
-    Event = UtBeginEvent ("Scan and parse input file");
-    FieldList = DtScanFile (Gbl_Files[ASL_FILE_INPUT].Handle);
-    UtEndEvent (Event);
+    /* Compile the parse tree */
+
+    if (AslGbl_DtLexBisonPrototype)
+    {
+        Event = UtBeginEvent ("Parse data table in prototype mode");
+
+        DtCompilerInitLexer (AslGbl_Files[ASL_FILE_INPUT].Handle);
+        DtCompilerParserparse ();
+        FieldList = AslGbl_FieldList;
+        DtCompilerTerminateLexer ();
+
+        UtEndEvent (Event);
+    }
+    else
+    {
+        /*
+         * Scan the input file (file is already open) and
+         * build the parse tree
+         */
+        Event = UtBeginEvent ("Scan and parse input file");
+        FieldList = DtScanFile (AslGbl_Files[ASL_FILE_INPUT].Handle);
+        UtEndEvent (Event);
+    }
 
     /* Did the parse tree get successfully constructed? */
 
@@ -240,47 +252,53 @@ DtDoCompile (
         DtError (ASL_ERROR, ASL_MSG_SYNTAX, NULL,
             "Input file does not appear to be an ASL or data table source file");
 
-        Status = AE_ERROR;
-        goto CleanupAndExit;
+        return (AE_ERROR);
     }
 
     Event = UtBeginEvent ("Compile parse tree");
 
-    /*
-     * Compile the parse tree
-     */
     Status = DtCompileDataTable (&FieldList);
     UtEndEvent (Event);
 
+    FileNode = FlGetCurrentFileNode ();
+
+    FileNode->TotalLineCount = AslGbl_CurrentLineNumber;
+    FileNode->OriginalInputFileSize = AslGbl_InputByteCount;
+    DbgPrint (ASL_PARSE_OUTPUT, "Line count: %u input file size: %u\n",
+            FileNode->TotalLineCount, FileNode->OriginalInputFileSize);
+
     if (ACPI_FAILURE (Status))
     {
+        FileNode->ParserErrorDetected = TRUE;
+
         /* TBD: temporary error message. Msgs should come from function above */
 
         DtError (ASL_ERROR, ASL_MSG_SYNTAX, NULL,
             "Could not compile input file");
 
-        goto CleanupAndExit;
+        return (Status);
     }
 
     /* Create/open the binary output file */
 
-    Gbl_Files[ASL_FILE_AML_OUTPUT].Filename = NULL;
-    Status = FlOpenAmlOutputFile (Gbl_OutputFilenamePrefix);
+    AslGbl_Files[ASL_FILE_AML_OUTPUT].Filename = NULL;
+    Status = FlOpenAmlOutputFile (AslGbl_OutputFilenamePrefix);
     if (ACPI_FAILURE (Status))
     {
-        goto CleanupAndExit;
+        return (Status);
     }
 
     /* Write the binary, then the optional hex file */
 
-    DtOutputBinary (Gbl_RootTable);
+    DtOutputBinary (AslGbl_RootTable);
     HxDoHexOutput ();
     DtWriteTableToListing ();
 
-CleanupAndExit:
+    /* Save the compile time statistics to the current file node */
 
-    AcpiUtDeleteCaches ();
-    CmCleanupAndExit ();
+    FileNode->TotalFields = AslGbl_InputFieldCount;
+    FileNode->OutputByteLength = AslGbl_TableLength;
+
     return (Status);
 }
 
@@ -298,33 +316,20 @@ CleanupAndExit:
  *
  *****************************************************************************/
 
-static ACPI_STATUS
+void
 DtInitialize (
     void)
 {
-    ACPI_STATUS             Status;
 
-
-    Status = AcpiOsInitialize ();
-    if (ACPI_FAILURE (Status))
-    {
-        return (Status);
-    }
-
-    Status = AcpiUtInitGlobals ();
-    if (ACPI_FAILURE (Status))
-    {
-        return (Status);
-    }
 
     AcpiUtSetIntegerWidth (2); /* Set width to 64 bits */
 
-    Gbl_FieldList = NULL;
-    Gbl_RootTable = NULL;
-    Gbl_SubtableStack = NULL;
+    AslGbl_FieldList = NULL;
+    AslGbl_RootTable = NULL;
+    AslGbl_SubtableStack = NULL;
 
     sprintf (VersionString, "%X", (UINT32) ACPI_CA_VERSION);
-    return (AE_OK);
+    return;
 }
 
 
@@ -353,7 +358,7 @@ DtInsertCompilerIds (
      * Don't insert current compiler ID if requested. Used for compiler
      * debug/validation only.
      */
-    if (Gbl_UseOriginalCompilerId)
+    if (AslGbl_UseOriginalCompilerId)
     {
         return;
     }
@@ -404,21 +409,21 @@ DtCompileDataTable (
     Signature = DtGetFieldValue (*FieldList);
     if (!Signature)
     {
-        sprintf (MsgBuffer, "Expected \"%s\"", "Signature");
+        sprintf (AslGbl_MsgBuffer, "Expected \"%s\"", "Signature");
         DtNameError (ASL_ERROR, ASL_MSG_INVALID_FIELD_NAME,
-            *FieldList, MsgBuffer);
+            *FieldList, AslGbl_MsgBuffer);
         return (AE_ERROR);
     }
 
-    Gbl_Signature = UtLocalCacheCalloc (strlen (Signature) + 1);
-    strcpy (Gbl_Signature, Signature);
+    AslGbl_Signature = UtLocalCacheCalloc (strlen (Signature) + 1);
+    strcpy (AslGbl_Signature, Signature);
 
     /*
      * Handle tables that don't use the common ACPI table header structure.
      * Currently, these are the FACS and RSDP. Also check for an OEMx table,
      * these tables have user-defined contents.
      */
-    if (ACPI_COMPARE_NAME (Signature, ACPI_SIG_FACS))
+    if (ACPI_COMPARE_NAMESEG (Signature, ACPI_SIG_FACS))
     {
         Status = DtCompileFacs (FieldList);
         if (ACPI_FAILURE (Status))
@@ -434,7 +439,7 @@ DtCompileDataTable (
         Status = DtCompileRsdp (FieldList);
         return (Status);
     }
-    else if (ACPI_COMPARE_NAME (Signature, ACPI_SIG_S3PT))
+    else if (ACPI_COMPARE_NAMESEG (Signature, ACPI_SIG_S3PT))
     {
         Status = DtCompileS3pt (FieldList);
         if (ACPI_FAILURE (Status))
@@ -453,18 +458,18 @@ DtCompileDataTable (
     DtInsertCompilerIds (*FieldList);
 
     Status = DtCompileTable (FieldList, AcpiDmTableInfoHeader,
-        &Gbl_RootTable, TRUE);
+        &AslGbl_RootTable);
     if (ACPI_FAILURE (Status))
     {
         return (Status);
     }
 
-    DtPushSubtable (Gbl_RootTable);
+    DtPushSubtable (AslGbl_RootTable);
 
     /* Validate the signature via the ACPI table list */
 
     TableData = AcpiDmGetTableData (Signature);
-    if (!TableData || Gbl_CompileGeneric)
+    if (!TableData || AslGbl_CompileGeneric)
     {
         /* Unknown table signature and/or force generic compile */
 
@@ -492,13 +497,13 @@ DtCompileDataTable (
         {
             Subtable = NULL;
             Status = DtCompileTable (FieldList, TableData->TableInfo,
-                &Subtable, TRUE);
+                &Subtable);
             if (ACPI_FAILURE (Status))
             {
                 return (Status);
             }
 
-            DtInsertSubtable (Gbl_RootTable, Subtable);
+            DtInsertSubtable (AslGbl_RootTable, Subtable);
             DtPopSubtable ();
         }
     }
@@ -515,7 +520,7 @@ FinishHeader:
 
     DtSetTableLength ();
     AcpiTableHeader = ACPI_CAST_PTR (
-        ACPI_TABLE_HEADER, Gbl_RootTable->Buffer);
+        ACPI_TABLE_HEADER, AslGbl_RootTable->Buffer);
     DtSetTableChecksum (&AcpiTableHeader->Checksum);
 
     DtDumpFieldList (RootField);
@@ -531,7 +536,6 @@ FinishHeader:
  * PARAMETERS:  Field               - Current field list pointer
  *              Info                - Info table for this ACPI table
  *              RetSubtable         - Compile result of table
- *              Required            - If this subtable must exist
  *
  * RETURN:      Status
  *
@@ -543,8 +547,7 @@ ACPI_STATUS
 DtCompileTable (
     DT_FIELD                **Field,
     ACPI_DMTABLE_INFO       *Info,
-    DT_SUBTABLE             **RetSubtable,
-    BOOLEAN                 Required)
+    DT_SUBTABLE             **RetSubtable)
 {
     DT_FIELD                *LocalField;
     UINT32                  Length;
@@ -559,7 +562,7 @@ DtCompileTable (
     ACPI_STATUS             Status = AE_OK;
 
 
-    if (!Field)
+    if (!Field || !Info)
     {
         return (AE_BAD_PARAMETER);
     }
@@ -614,21 +617,29 @@ DtCompileTable (
 
         if (!LocalField)
         {
-            sprintf (MsgBuffer, "Found NULL field - Field name \"%s\" needed",
+            sprintf (AslGbl_MsgBuffer, "Found NULL field - Field name \"%s\" needed",
                 Info->Name);
-            DtFatal (ASL_MSG_COMPILER_INTERNAL, NULL, MsgBuffer);
+            DtFatal (ASL_MSG_COMPILER_INTERNAL, NULL, AslGbl_MsgBuffer);
             Status = AE_BAD_DATA;
             goto Error;
         }
 
         /* Maintain table offsets */
 
-        LocalField->TableOffset = Gbl_CurrentTableOffset;
+        LocalField->TableOffset = AslGbl_CurrentTableOffset;
         FieldLength = DtGetFieldLength (LocalField, Info);
-        Gbl_CurrentTableOffset += FieldLength;
+        AslGbl_CurrentTableOffset += FieldLength;
 
         FieldType = DtGetFieldType (Info);
-        Gbl_InputFieldCount++;
+        AslGbl_InputFieldCount++;
+
+        if (FieldType != DT_FIELD_TYPE_INLINE_SUBTABLE &&
+            strcmp (Info->Name, LocalField->Name))
+        {
+            sprintf (AslGbl_MsgBuffer, "found \"%s\" expected \"%s\"",
+                LocalField->Name, Info->Name);
+            DtError (ASL_ERROR, ASL_MSG_INVALID_LABEL, LocalField, AslGbl_MsgBuffer);
+        }
 
         switch (FieldType)
         {
@@ -682,25 +693,25 @@ DtCompileTable (
             case ACPI_DMT_GAS:
 
                 Status = DtCompileTable (Field, AcpiDmTableInfoGas,
-                    &InlineSubtable, TRUE);
+                    &InlineSubtable);
                 break;
 
             case ACPI_DMT_HESTNTFY:
 
                 Status = DtCompileTable (Field, AcpiDmTableInfoHestNotify,
-                    &InlineSubtable, TRUE);
+                    &InlineSubtable);
                 break;
 
             case ACPI_DMT_IORTMEM:
 
                 Status = DtCompileTable (Field, AcpiDmTableInfoIortAcc,
-                    &InlineSubtable, TRUE);
+                    &InlineSubtable);
                 break;
 
             default:
-                sprintf (MsgBuffer, "Invalid DMT opcode: 0x%.2X",
+                sprintf (AslGbl_MsgBuffer, "Invalid DMT opcode: 0x%.2X",
                     Info->Opcode);
-                DtFatal (ASL_MSG_COMPILER_INTERNAL, NULL, MsgBuffer);
+                DtFatal (ASL_MSG_COMPILER_INTERNAL, NULL, AslGbl_MsgBuffer);
                 Status = AE_BAD_DATA;
                 break;
             }
@@ -783,7 +794,7 @@ DtCompileTwoSubtables (
     DT_FIELD                **PFieldList = (DT_FIELD **) List;
 
 
-    Status = DtCompileTable (PFieldList, TableInfo1, &Subtable, TRUE);
+    Status = DtCompileTable (PFieldList, TableInfo1, &Subtable);
     if (ACPI_FAILURE (Status))
     {
         return (Status);
@@ -794,7 +805,7 @@ DtCompileTwoSubtables (
 
     while (*PFieldList)
     {
-        Status = DtCompileTable (PFieldList, TableInfo2, &Subtable, FALSE);
+        Status = DtCompileTable (PFieldList, TableInfo2, &Subtable);
         if (ACPI_FAILURE (Status))
         {
             return (Status);

@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -191,8 +191,8 @@ NsSetupNamespaceListing (
     void                    *Handle)
 {
 
-    Gbl_NsOutputFlag = TRUE;
-    Gbl_Files[ASL_FILE_NAMESPACE_OUTPUT].Handle = Handle;
+    AslGbl_NsOutputFlag = TRUE;
+    AslGbl_Files[ASL_FILE_NAMESPACE_OUTPUT].Handle = Handle;
 }
 
 
@@ -217,12 +217,12 @@ NsDisplayNamespace (
     ACPI_STATUS             Status;
 
 
-    if (!Gbl_NsOutputFlag)
+    if (!AslGbl_NsOutputFlag)
     {
         return (AE_OK);
     }
 
-    Gbl_NumNamespaceObjects = 0;
+    AslGbl_NumNamespaceObjects = 0;
 
     /* File header */
 
@@ -234,6 +234,10 @@ NsDisplayNamespace (
     Status = AcpiNsWalkNamespace (ACPI_TYPE_ANY, ACPI_ROOT_OBJECT,
         ACPI_UINT32_MAX, FALSE, NsDoOneNamespaceObject, NULL,
         NULL, NULL);
+    if (ACPI_FAILURE (Status))
+    {
+        return (Status);
+    }
 
     /* Print the full pathname for each namespace node */
 
@@ -272,11 +276,11 @@ NsDoOneNamespaceObject (
     ACPI_PARSE_OBJECT       *Op;
 
 
-    Gbl_NumNamespaceObjects++;
+    AslGbl_NumNamespaceObjects++;
 
     FlPrintFile (ASL_FILE_NAMESPACE_OUTPUT, "%5u  [%u]  %*s %4.4s - %s",
-        Gbl_NumNamespaceObjects, Level, (Level * 3), " ",
-        &Node->Name, AcpiUtGetTypeName (Node->Type));
+        AslGbl_NumNamespaceObjects, Level, (Level * 3), " ",
+        &Node->Name.Ascii[0], AcpiUtGetTypeName (Node->Type));
 
     Op = Node->Op;
     ObjDesc = ACPI_CAST_PTR (ACPI_OPERAND_OBJECT, Node->Object);
@@ -429,7 +433,7 @@ NsDoOneNamespaceObject (
             {
                 FlPrintFile (ASL_FILE_NAMESPACE_OUTPUT,
                     "       [Initial Length  0x%.2X elements]",
-                    Op->Asl.Value.Integer);
+                    (UINT32) Op->Asl.Value.Integer);
             }
             break;
 
@@ -452,7 +456,7 @@ NsDoOneNamespaceObject (
             {
                 FlPrintFile (ASL_FILE_NAMESPACE_OUTPUT,
                     "        [Initial Length  0x%.2X bytes]",
-                    Op->Asl.Value.Integer);
+                    (UINT32) Op->Asl.Value.Integer);
             }
             break;
 
@@ -531,7 +535,8 @@ NsDoOnePathname (
         return (Status);
     }
 
-    FlPrintFile (ASL_FILE_NAMESPACE_OUTPUT, "%s\n", TargetPath.Pointer);
+    FlPrintFile (ASL_FILE_NAMESPACE_OUTPUT, "%s\n",
+        ACPI_CAST_PTR (char, TargetPath.Pointer));
     ACPI_FREE (TargetPath.Pointer);
     return (AE_OK);
 }

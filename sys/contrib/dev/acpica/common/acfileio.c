@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -401,16 +401,16 @@ AcGetOneTableFromFile (
         return (AE_CTRL_TERMINATE);
     }
 
-    /* Validate the table signature/header (limited ASCII chars) */
-
-    Status = AcValidateTableHeader (File, TableOffset);
-    if (ACPI_FAILURE (Status))
-    {
-        return (Status);
-    }
-
     if (GetOnlyAmlTables)
     {
+        /* Validate the table signature/header (limited ASCII chars) */
+
+        Status = AcValidateTableHeader (File, TableOffset);
+        if (ACPI_FAILURE (Status))
+        {
+            return (Status);
+        }
+
         /*
          * Table must be an AML table (DSDT/SSDT).
          * Used for iASL -e option only.
@@ -438,7 +438,12 @@ AcGetOneTableFromFile (
     fseek (File, TableOffset, SEEK_SET);
 
     Count = fread (Table, 1, TableHeader.Length, File);
-    if (Count != (INT32) TableHeader.Length)
+
+    /*
+     * Checks for data table headers happen later in the execution. Only verify
+     * for Aml tables at this point in the code.
+     */
+    if (GetOnlyAmlTables && Count != (INT32) TableHeader.Length)
     {
         Status = AE_ERROR;
         goto ErrorExit;
@@ -580,7 +585,7 @@ AcValidateTableHeader (
      * These fields must be ASCII: OemId, OemTableId, AslCompilerId.
      * We allow a NULL terminator in OemId and OemTableId.
      */
-    for (i = 0; i < ACPI_NAME_SIZE; i++)
+    for (i = 0; i < ACPI_NAMESEG_SIZE; i++)
     {
         if (!ACPI_IS_ASCII ((UINT8) TableHeader.AslCompilerId[i]))
         {

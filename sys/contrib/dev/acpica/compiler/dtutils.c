@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -186,10 +186,20 @@ DtError (
     DT_FIELD                *FieldObject,
     char                    *ExtraMessage)
 {
+    UINT32                  Line = 0;
+
+
+    /* Field object could be NULL */
+
+    if (FieldObject)
+    {
+        Line = FieldObject->Line;
+    }
 
     /* Check if user wants to ignore this exception */
 
-    if (AslIsExceptionIgnored (Level, MessageId))
+    if (AslIsExceptionIgnored (AslGbl_Files[ASL_FILE_INPUT].Filename,
+        Line, Level, MessageId))
     {
         return;
     }
@@ -201,7 +211,7 @@ DtError (
             FieldObject->Line,
             FieldObject->ByteOffset,
             FieldObject->Column,
-            Gbl_Files[ASL_FILE_INPUT].Filename, ExtraMessage);
+            AslGbl_Files[ASL_FILE_INPUT].Filename, ExtraMessage);
     }
     else
     {
@@ -239,7 +249,7 @@ DtNameError (
     case ASL_WARNING2:
     case ASL_WARNING3:
 
-        if (Gbl_WarningLevel < Level)
+        if (AslGbl_WarningLevel < Level)
         {
             return;
         }
@@ -257,7 +267,7 @@ DtNameError (
             FieldObject->Line,
             FieldObject->ByteOffset,
             FieldObject->NameColumn,
-            Gbl_Files[ASL_FILE_INPUT].Filename, ExtraMessage);
+            AslGbl_Files[ASL_FILE_INPUT].Filename, ExtraMessage);
     }
     else
     {
@@ -640,8 +650,8 @@ DtGetFieldLength (
         else
         {   /* At this point, this is a fatal error */
 
-            sprintf (MsgBuffer, "Expected \"%s\"", Info->Name);
-            DtFatal (ASL_MSG_COMPILER_INTERNAL, NULL, MsgBuffer);
+            sprintf (AslGbl_MsgBuffer, "Expected \"%s\"", Info->Name);
+            DtFatal (ASL_MSG_COMPILER_INTERNAL, NULL, AslGbl_MsgBuffer);
             return (0);
         }
         break;
@@ -672,8 +682,8 @@ DtGetFieldLength (
         else
         {   /* At this point, this is a fatal error */
 
-            sprintf (MsgBuffer, "Expected \"%s\"", Info->Name);
-            DtFatal (ASL_MSG_COMPILER_INTERNAL, NULL, MsgBuffer);
+            sprintf (AslGbl_MsgBuffer, "Expected \"%s\"", Info->Name);
+            DtFatal (ASL_MSG_COMPILER_INTERNAL, NULL, AslGbl_MsgBuffer);
             return (0);
         }
         break;
@@ -768,7 +778,7 @@ DtSetTableChecksum (
     UINT8                   OldSum;
 
 
-    DtWalkTableTree (Gbl_RootTable, DtSum, NULL, &Checksum);
+    DtWalkTableTree (AslGbl_RootTable, DtSum, NULL, &Checksum);
 
     OldSum = *ChecksumPointer;
     Checksum = (UINT8) (Checksum - OldSum);
@@ -800,7 +810,7 @@ DtSetTableLength (
     DT_SUBTABLE             *ChildTable;
 
 
-    ParentTable = Gbl_RootTable;
+    ParentTable = AslGbl_RootTable;
     ChildTable = NULL;
 
     if (!ParentTable)
@@ -838,7 +848,7 @@ DtSetTableLength (
         {
             ChildTable = ParentTable;
 
-            if (ChildTable == Gbl_RootTable)
+            if (ChildTable == AslGbl_RootTable)
             {
                 break;
             }
@@ -907,7 +917,7 @@ DtWalkTableTree (
         else
         {
             ChildTable = ParentTable;
-            if (ChildTable == Gbl_RootTable)
+            if (ChildTable == AslGbl_RootTable)
             {
                 break;
             }

@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -183,8 +183,9 @@
 #define OP_IS_DUPLICATE             0x00040000
 #define OP_IS_RESOURCE_DATA         0x00080000
 #define OP_IS_NULL_RETURN           0x00100000
+#define OP_NOT_FOUND_DURING_LOAD    0x00200000
 
-#define ACPI_NUM_OP_FLAGS           0x21
+#define ACPI_NUM_OP_FLAGS           0x22
 
 /* Keeps information about individual control methods */
 
@@ -220,10 +221,10 @@ typedef struct asl_analysis_walk_info
 
 typedef struct asl_mapping_entry
 {
-    UINT32                      Value;
-    UINT32                      AcpiBtype;   /* Object type or return type */
-    UINT16                      AmlOpcode;
-    UINT8                       Flags;
+    UINT32                  Value;
+    UINT32                  AcpiBtype;   /* Object type or return type */
+    UINT16                  AmlOpcode;
+    UINT8                   Flags;
 
 } ASL_MAPPING_ENTRY;
 
@@ -232,8 +233,8 @@ typedef struct asl_mapping_entry
 
 typedef struct asl_walk_info
 {
-    ACPI_PARSE_OBJECT           **NodePtr;
-    UINT32                      *LevelPtr;
+    ACPI_PARSE_OBJECT       **NodePtr;
+    UINT32                  *LevelPtr;
 
 } ASL_WALK_INFO;
 
@@ -242,10 +243,8 @@ typedef struct asl_walk_info
 
 typedef struct asl_file_info
 {
-    FILE                        *Handle;
-    char                        *Filename;
-    const char                  *ShortDescription;
-    const char                  *Description;
+    FILE                    *Handle;
+    char                    *Filename;
 
 } ASL_FILE_INFO;
 
@@ -256,6 +255,11 @@ typedef struct asl_file_status
 
 } ASL_FILE_STATUS;
 
+
+typedef UINT32                      ASL_FILE_SWITCH_STATUS;    /* File switch status */
+#define SWITCH_TO_DIFFERENT_FILE    0
+#define SWITCH_TO_SAME_FILE         1
+#define FILE_NOT_FOUND              2
 
 /*
  * File types. Note: Any changes to this table must also be reflected
@@ -294,9 +298,16 @@ typedef enum
 
 } ASL_FILE_TYPES;
 
-
 #define ASL_MAX_FILE_TYPE       18
 #define ASL_NUM_FILES           (ASL_MAX_FILE_TYPE + 1)
+
+typedef struct asl_file_desc
+{
+    const char              *ShortDescription;
+    const char              *Description;
+
+} ASL_FILE_DESC;
+
 
 /* Name suffixes used to create filenames for output files */
 
@@ -324,16 +335,16 @@ typedef enum
 
 typedef struct asl_cache_info
 {
-    void                            *Next;
-    char                            Buffer[1];
+    void                    *Next;
+    char                    Buffer[1];
 
 } ASL_CACHE_INFO;
 
 
 typedef struct asl_include_dir
 {
-    char                        *Dir;
-    struct asl_include_dir      *Next;
+    char                    *Dir;
+    struct asl_include_dir  *Next;
 
 } ASL_INCLUDE_DIR;
 
@@ -342,6 +353,11 @@ typedef struct asl_include_dir
  * An entry in the exception list, one for each error/warning
  * Note: SubError nodes would be treated with the same messageId and Level
  * as the parent error node.
+ *
+ * The source filename represents the name of the .src of where the error
+ * occurred. This is useful for errors that occur inside of include files.
+ * Since include files aren't recorded as a part of the global files list,
+ * this provides a way to get the included file.
  */
 typedef struct asl_error_msg
 {
@@ -354,6 +370,7 @@ typedef struct asl_error_msg
     struct asl_error_msg        *SubError;
     char                        *Filename;
     char                        *SourceLine;
+    char                        *SourceFilename;
     UINT32                      FilenameLength;
     UINT16                      MessageId;
     UINT8                       Level;
@@ -361,13 +378,39 @@ typedef struct asl_error_msg
 } ASL_ERROR_MSG;
 
 /* An entry in the expected messages array */
+
 typedef struct asl_expected_message
 {
-    UINT32                       MessageId;
-    char                         *MessageIdStr;
-    BOOLEAN                      MessageReceived;
+    UINT32                      MessageId;
+    char                        *MessageIdStr;
+    BOOLEAN                     MessageReceived;
 
 } ASL_EXPECTED_MESSAGE;
+
+/*
+ * An entry in the line-based expected messages list
+ *
+ * TBD: might be possible to merge this with ASL_EXPECTED_MESSAGE
+ */
+typedef struct asl_expected_msg_node
+{
+    struct asl_expected_msg_node    *Next;
+    UINT32                          MessageId;
+    char                            *MessageIdStr;
+    struct asl_location_node        *LocationList;
+
+} ASL_EXPECTED_MSG_NODE;
+
+typedef struct asl_location_node
+{
+    struct asl_location_node    *Next;
+    char                        *Filename;
+    UINT32                      LineNumber;
+    UINT32                      Column;
+    UINT32                      LogicalByteOffset;
+    BOOLEAN                     MessageReceived;
+
+} ASL_LOCATION_NODE;
 
 
 /* An entry in the listing file stack (for include files) */
@@ -477,5 +520,23 @@ typedef struct asl_file_node
     struct asl_file_node    *Next;
 
 } ASL_FILE_NODE;
+
+typedef struct asl_files_node
+{
+    struct asl_file_info    Files[ASL_NUM_FILES];
+    struct asl_files_node   *Next;
+    char                    *TableSignature;
+    char                    *TableId;
+    UINT32                  TotalLineCount;
+    UINT32                  OriginalInputFileSize;
+    UINT32                  TotalKeywords;
+    UINT32                  TotalFields;
+    UINT32                  OutputByteLength;
+    UINT32                  TotalNamedObjects;
+    UINT32                  TotalExecutableOpcodes;
+    BOOLEAN                 ParserErrorDetected;
+    UINT8                   FileType;
+
+} ASL_GLOBAL_FILE_NODE;
 
 #endif  /* __ASLTYPES_H */

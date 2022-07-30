@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -156,6 +156,7 @@
 #include <contrib/dev/acpica/include/acnamesp.h>
 #include <contrib/dev/acpica/include/acparser.h>
 #include <contrib/dev/acpica/include/acapps.h>
+#include <contrib/dev/acpica/include/acconvert.h>
 
 
 #define _COMPONENT          ACPI_TOOLS
@@ -379,8 +380,6 @@ AdAmlDisassemble (
             Status = AE_ERROR;
             goto Cleanup;
         }
-
-        AcpiOsRedirectOutput (File);
     }
 
     *OutFilename = DisasmFilename;
@@ -459,7 +458,7 @@ AdDisassembleOneTable (
      */
     if (AcpiGbl_CaptureComments)
     {
-        strncpy (Table->Signature, AcpiGbl_TableSig, ACPI_NAME_SIZE);
+        strncpy (Table->Signature, AcpiGbl_TableSig, ACPI_NAMESEG_SIZE);
     }
 #endif
 
@@ -467,6 +466,11 @@ AdDisassembleOneTable (
 
     if (!AcpiGbl_ForceAmlDisassembly && !AcpiUtIsAmlTable (Table))
     {
+        if (File)
+        {
+            AcpiOsRedirectOutput (File);
+        }
+
         AdDisassemblerHeader (Filename, ACPI_IS_DATA_TABLE);
 
         /* This is a "Data Table" (non-AML table) */
@@ -489,6 +493,10 @@ AdDisassembleOneTable (
         return (AE_OK);
     }
 
+    /* Initialize the converter output file */
+
+    ASL_CV_INIT_FILETREE(Table, File);
+
     /*
      * This is an AML table (DSDT or SSDT).
      * Always parse the tables, only option is what to display
@@ -499,6 +507,13 @@ AdDisassembleOneTable (
         AcpiOsPrintf ("Could not parse ACPI tables, %s\n",
             AcpiFormatException (Status));
         return (Status);
+    }
+
+    /* Redirect output for code generation and debugging output */
+
+    if (File)
+    {
+        AcpiOsRedirectOutput (File);
     }
 
     /* Debug output, namespace and parse tree */
@@ -576,11 +591,11 @@ AdDisassembleOneTable (
                 DisasmFilename, CmGetFileSize (File));
         }
 
-        if (Gbl_MapfileFlag)
+        if (AslGbl_MapfileFlag)
         {
             fprintf (stderr, "%14s %s - %u bytes\n",
-                Gbl_Files[ASL_FILE_MAP_OUTPUT].ShortDescription,
-                Gbl_Files[ASL_FILE_MAP_OUTPUT].Filename,
+                AslGbl_FileDescs[ASL_FILE_MAP_OUTPUT].ShortDescription,
+                AslGbl_Files[ASL_FILE_MAP_OUTPUT].Filename,
                 FlGetFileSize (ASL_FILE_MAP_OUTPUT));
         }
     }
@@ -746,7 +761,6 @@ AdDoExternalFileList (
             {
                 ExternalFileList = ExternalFileList->Next;
                 GlobalStatus = AE_TYPE;
-                Status = AE_OK;
                 continue;
             }
 

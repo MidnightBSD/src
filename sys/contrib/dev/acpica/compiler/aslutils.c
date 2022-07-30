@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -174,6 +174,10 @@ UtAttachNameseg (
     ACPI_PARSE_OBJECT       *Op,
     char                    *Name);
 
+static void
+UtDisplayErrorSummary (
+    UINT32                  FileId);
+
 
 /*******************************************************************************
  *
@@ -219,6 +223,7 @@ UtQueryForOverwrite (
     char                    *Pathname)
 {
     struct stat             StatInfo;
+    int                     InChar;
 
 
     if (!stat (Pathname, &StatInfo))
@@ -226,13 +231,145 @@ UtQueryForOverwrite (
         fprintf (stderr, "Target file \"%s\" already exists, overwrite? [y|n] ",
             Pathname);
 
-        if (getchar () != 'y')
+        InChar = fgetc (stdin);
+        if (InChar == '\n')
+        {
+            InChar = fgetc (stdin);
+        }
+
+        if ((InChar != 'y') && (InChar != 'Y'))
         {
             return (FALSE);
         }
     }
 
     return (TRUE);
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    UtNodeIsDescendantOf
+ *
+ * PARAMETERS:  Node1                   - Child node
+ *              Node2                   - Possible parent node
+ *
+ * RETURN:      Boolean
+ *
+ * DESCRIPTION: Returns TRUE if Node1 is a descendant of Node2. Otherwise,
+ *              return FALSE. Note, we assume a NULL Node2 element to be the
+ *              topmost (root) scope. All nodes are descendants of the root.
+ *              Note: Nodes at the same level (siblings) are not considered
+ *              descendants.
+ *
+ ******************************************************************************/
+
+BOOLEAN
+UtNodeIsDescendantOf (
+    ACPI_NAMESPACE_NODE     *Node1,
+    ACPI_NAMESPACE_NODE     *Node2)
+{
+
+    if (Node1 == Node2)
+    {
+        return (FALSE);
+    }
+
+    if (!Node2)
+    {
+        return (TRUE); /* All nodes descend from the root */
+    }
+
+    /* Walk upward until the root is reached or parent is found */
+
+    while (Node1)
+    {
+        if (Node1 == Node2)
+        {
+            return (TRUE);
+        }
+
+        Node1 = Node1->Parent;
+    }
+
+    return (FALSE);
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    UtGetParentMethodNode
+ *
+ * PARAMETERS:  Node                    - Namespace node for any object
+ *
+ * RETURN:      Namespace node for the parent method
+ *              NULL - object is not within a method
+ *
+ * DESCRIPTION: Find the parent (owning) method node for a namespace object
+ *
+ ******************************************************************************/
+
+ACPI_NAMESPACE_NODE *
+UtGetParentMethodNode (
+    ACPI_NAMESPACE_NODE     *Node)
+{
+    ACPI_NAMESPACE_NODE     *ParentNode;
+
+
+    if (!Node)
+    {
+        return (NULL);
+    }
+
+    /* Walk upward until a method is found, or the root is reached */
+
+    ParentNode = Node->Parent;
+    while (ParentNode)
+    {
+        if (ParentNode->Type == ACPI_TYPE_METHOD)
+        {
+            return (ParentNode);
+        }
+
+        ParentNode = ParentNode->Parent;
+    }
+
+    return (NULL); /* Object is not within a control method */
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    UtGetParentMethodOp
+ *
+ * PARAMETERS:  Op                      - Parse Op to be checked
+ *
+ * RETURN:      Control method Op if found. NULL otherwise
+ *
+ * DESCRIPTION: Find the control method parent of a parse op. Returns NULL if
+ *              the input Op is not within a control method.
+ *
+ ******************************************************************************/
+
+ACPI_PARSE_OBJECT *
+UtGetParentMethodOp (
+    ACPI_PARSE_OBJECT       *Op)
+{
+    ACPI_PARSE_OBJECT       *NextOp;
+
+
+    NextOp = Op->Asl.Parent;
+    while (NextOp)
+    {
+        if (NextOp->Asl.AmlOpcode == AML_METHOD_OP)
+        {
+            return (NextOp);
+        }
+
+        NextOp = NextOp->Asl.Parent;
+    }
+
+    return (NULL); /* No parent method found */
 }
 
 
@@ -263,7 +400,7 @@ UtDisplaySupportedTables (
     /* All ACPI tables with the common table header */
 
     printf ("\n  Supported ACPI tables:\n");
-    for (TableData = Gbl_AcpiSupportedTables, i = 1;
+    for (TableData = AcpiGbl_SupportedTables, i = 1;
          TableData->Signature; TableData++, i++)
     {
         printf ("%8u) %s    %s\n", i,
@@ -387,7 +524,7 @@ DbgPrint (
     va_list                 Args;
 
 
-    if (!Gbl_DebugFlag)
+    if (!AslGbl_DebugFlag)
     {
         return;
     }
@@ -429,22 +566,30 @@ UtSetParseOpName (
 
 /*******************************************************************************
  *
- * FUNCTION:    UtDisplaySummary
+ * FUNCTION:    UtDisplayOneSummary
  *
  * PARAMETERS:  FileID              - ID of outpout file
  *
  * RETURN:      None
  *
- * DESCRIPTION: Display compilation statistics
+ * DESCRIPTION: Display compilation statistics for one input file
  *
  ******************************************************************************/
 
 void
-UtDisplaySummary (
-    UINT32                  FileId)
+UtDisplayOneSummary (
+    UINT32                  FileId,
+    BOOLEAN                 DisplayErrorSummary)
 {
     UINT32                  i;
+    ASL_GLOBAL_FILE_NODE    *FileNode;
+    BOOLEAN                 DisplayAMLSummary;
 
+
+    DisplayAMLSummary =
+        !AslGbl_PreprocessOnly && !AslGbl_ParserErrorDetected &&
+        ((AslGbl_ExceptionCount[ASL_ERROR] == 0) || AslGbl_IgnoreErrors) &&
+        AslGbl_Files[ASL_FILE_AML_OUTPUT].Handle;
 
     if (FileId != ASL_FILE_STDOUT)
     {
@@ -456,44 +601,49 @@ UtDisplaySummary (
 
     /* Summary of main input and output files */
 
-    if (Gbl_FileType == ASL_INPUT_TYPE_ASCII_DATA)
-    {
-        FlPrintFile (FileId,
-            "%-14s %s - %u lines, %u bytes, %u fields\n",
-            "Table Input:",
-            Gbl_Files[ASL_FILE_INPUT].Filename, Gbl_CurrentLineNumber,
-            Gbl_InputByteCount, Gbl_InputFieldCount);
+    FileNode = FlGetCurrentFileNode ();
 
-        if ((Gbl_ExceptionCount[ASL_ERROR] == 0) || (Gbl_IgnoreErrors))
-        {
-            FlPrintFile (FileId,
-                "%-14s %s - %u bytes\n",
-                "Binary Output:",
-                Gbl_Files[ASL_FILE_AML_OUTPUT].Filename, Gbl_TableLength);
-        }
-    }
-    else
+    if (FileNode->ParserErrorDetected)
     {
         FlPrintFile (FileId,
-            "%-14s %s - %u lines, %u bytes, %u keywords\n",
+            "%-14s %s - Compilation aborted due to parser-detected syntax error(s)\n",
+            "Input file:", AslGbl_Files[ASL_FILE_INPUT].Filename);
+    }
+    else if (FileNode->FileType == ASL_INPUT_TYPE_ASCII_DATA)
+    {
+        FlPrintFile (FileId,
+            "%-14s %s - %7u bytes %6u fields %8u source lines\n",
+            "Table Input:",
+            AslGbl_Files[ASL_FILE_INPUT].Filename,
+            FileNode->OriginalInputFileSize, FileNode->TotalFields,
+            FileNode->TotalLineCount);
+
+        FlPrintFile (FileId,
+            "%-14s %s - %7u bytes\n",
+            "Binary Output:",
+            AslGbl_Files[ASL_FILE_AML_OUTPUT].Filename, FileNode->OutputByteLength);
+    }
+    else if (FileNode->FileType == ASL_INPUT_TYPE_ASCII_ASL)
+    {
+        FlPrintFile (FileId,
+            "%-14s %s - %7u bytes %6u keywords %6u source lines\n",
             "ASL Input:",
-            Gbl_Files[ASL_FILE_INPUT].Filename, Gbl_CurrentLineNumber,
-            Gbl_OriginalInputFileSize, TotalKeywords);
+            AslGbl_Files[ASL_FILE_INPUT].Filename,
+            FileNode->OriginalInputFileSize,
+            FileNode->TotalKeywords,
+            FileNode->TotalLineCount);
 
         /* AML summary */
 
-        if ((Gbl_ExceptionCount[ASL_ERROR] == 0) || (Gbl_IgnoreErrors))
+        if (DisplayAMLSummary)
         {
-            if (Gbl_Files[ASL_FILE_AML_OUTPUT].Handle)
-            {
-                FlPrintFile (FileId,
-                    "%-14s %s - %u bytes, %u named objects, "
-                    "%u executable opcodes\n",
-                    "AML Output:",
-                    Gbl_Files[ASL_FILE_AML_OUTPUT].Filename,
-                    FlGetFileSize (ASL_FILE_AML_OUTPUT),
-                    TotalNamedObjects, TotalExecutableOpcodes);
-            }
+            FlPrintFile (FileId,
+                "%-14s %s - %7u bytes %6u opcodes  %6u named objects\n",
+                "AML Output:",
+                AslGbl_Files[ASL_FILE_AML_OUTPUT].Filename,
+                FlGetFileSize (ASL_FILE_AML_OUTPUT),
+                FileNode->TotalExecutableOpcodes,
+                FileNode->TotalNamedObjects);
         }
     }
 
@@ -501,54 +651,148 @@ UtDisplaySummary (
 
     for (i = ASL_FILE_SOURCE_OUTPUT; i <= ASL_MAX_FILE_TYPE; i++)
     {
-        if (!Gbl_Files[i].Filename || !Gbl_Files[i].Handle)
+        if (!AslGbl_Files[i].Filename || !AslGbl_Files[i].Handle)
         {
             continue;
         }
 
         /* .SRC is a temp file unless specifically requested */
 
-        if ((i == ASL_FILE_SOURCE_OUTPUT) && (!Gbl_SourceOutputFlag))
+        if ((i == ASL_FILE_SOURCE_OUTPUT) && (!AslGbl_SourceOutputFlag))
         {
             continue;
         }
 
         /* .PRE is the preprocessor intermediate file */
 
-        if ((i == ASL_FILE_PREPROCESSOR)  && (!Gbl_KeepPreprocessorTempFile))
+        if ((i == ASL_FILE_PREPROCESSOR)  && (!AslGbl_KeepPreprocessorTempFile))
         {
             continue;
         }
 
-        FlPrintFile (FileId, "%14s %s - %u bytes\n",
-            Gbl_Files[i].ShortDescription,
-            Gbl_Files[i].Filename, FlGetFileSize (i));
+        FlPrintFile (FileId, "%-14s %s - %7u bytes\n",
+            AslGbl_FileDescs[i].ShortDescription,
+            AslGbl_Files[i].Filename, FlGetFileSize (i));
     }
 
-    /* Error summary */
+
+    /*
+     * Optionally emit an error summary for a file. This is used to enhance the
+     * appearance of listing files.
+     */
+    if (DisplayErrorSummary)
+    {
+        UtDisplayErrorSummary (FileId);
+    }
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    UtDisplayErrorSummary
+ *
+ * PARAMETERS:  FileID              - ID of outpout file
+ *
+ * RETURN:      None
+ *
+ * DESCRIPTION: Display compilation statistics for all input files
+ *
+ ******************************************************************************/
+
+static void
+UtDisplayErrorSummary (
+    UINT32                  FileId)
+{
+    BOOLEAN                 ErrorDetected;
+
+
+    ErrorDetected = AslGbl_ParserErrorDetected ||
+        ((AslGbl_ExceptionCount[ASL_ERROR] > 0) && !AslGbl_IgnoreErrors);
+
+    if (ErrorDetected)
+    {
+        FlPrintFile (FileId, "\nCompilation failed. ");
+    }
+    else
+    {
+        FlPrintFile (FileId, "\nCompilation successful. ");
+    }
 
     FlPrintFile (FileId,
-        "\nCompilation complete. %u Errors, %u Warnings, %u Remarks",
-        Gbl_ExceptionCount[ASL_ERROR],
-        Gbl_ExceptionCount[ASL_WARNING] +
-            Gbl_ExceptionCount[ASL_WARNING2] +
-            Gbl_ExceptionCount[ASL_WARNING3],
-        Gbl_ExceptionCount[ASL_REMARK]);
+        "%u Errors, %u Warnings, %u Remarks",
+        AslGbl_ExceptionCount[ASL_ERROR],
+        AslGbl_ExceptionCount[ASL_WARNING] +
+            AslGbl_ExceptionCount[ASL_WARNING2] +
+            AslGbl_ExceptionCount[ASL_WARNING3],
+        AslGbl_ExceptionCount[ASL_REMARK]);
 
-    if (Gbl_FileType != ASL_INPUT_TYPE_ASCII_DATA)
+    if (AslGbl_FileType != ASL_INPUT_TYPE_ASCII_DATA)
     {
-        FlPrintFile (FileId, ", %u Optimizations",
-            Gbl_ExceptionCount[ASL_OPTIMIZATION]);
-
-        if (TotalFolds)
+        if (AslGbl_ParserErrorDetected)
         {
-            FlPrintFile (FileId, ", %u Constants Folded", TotalFolds);
+            FlPrintFile (FileId,
+                "\nNo AML files were generated due to syntax error(s)\n");
+            return;
+        }
+        else if (ErrorDetected)
+        {
+            FlPrintFile (FileId,
+                "\nNo AML files were generated due to compiler error(s)\n");
+            return;
+        }
+
+        FlPrintFile (FileId, ", %u Optimizations",
+            AslGbl_ExceptionCount[ASL_OPTIMIZATION]);
+
+        if (AslGbl_TotalFolds)
+        {
+            FlPrintFile (FileId, ", %u Constants Folded", AslGbl_TotalFolds);
         }
     }
 
     FlPrintFile (FileId, "\n");
 }
 
+
+/*******************************************************************************
+ *
+ * FUNCTION:    UtDisplaySummary
+ *
+ * PARAMETERS:  FileID              - ID of outpout file
+ *
+ * RETURN:      None
+ *
+ * DESCRIPTION: Display compilation statistics for all input files
+ *
+ ******************************************************************************/
+
+void
+UtDisplaySummary (
+    UINT32                  FileId)
+{
+    ASL_GLOBAL_FILE_NODE    *Current = AslGbl_FilesList;
+
+
+    while (Current)
+    {
+        switch  (FlSwitchFileSet(Current->Files[ASL_FILE_INPUT].Filename))
+        {
+            case SWITCH_TO_SAME_FILE:
+            case SWITCH_TO_DIFFERENT_FILE:
+
+                UtDisplayOneSummary (FileId, FALSE);
+                Current = Current->Next;
+                break;
+
+            case FILE_NOT_FOUND:
+            default:
+
+                Current = NULL;
+                break;
+        }
+    }
+    UtDisplayErrorSummary (FileId);
+}
 
 /*******************************************************************************
  *
@@ -579,10 +823,10 @@ UtCheckIntegerRange (
     if ((Op->Asl.Value.Integer < LowValue) ||
         (Op->Asl.Value.Integer > HighValue))
     {
-        sprintf (MsgBuffer, "0x%X, allowable: 0x%X-0x%X",
+        sprintf (AslGbl_MsgBuffer, "0x%X, allowable: 0x%X-0x%X",
             (UINT32) Op->Asl.Value.Integer, LowValue, HighValue);
 
-        AslError (ASL_ERROR, ASL_MSG_RANGE, Op, MsgBuffer);
+        AslError (ASL_ERROR, ASL_MSG_RANGE, Op, AslGbl_MsgBuffer);
         return (NULL);
     }
 
@@ -661,7 +905,7 @@ UtPadNameWithUnderscores (
     UINT32                  i;
 
 
-    for (i = 0; (i < ACPI_NAME_SIZE); i++)
+    for (i = 0; (i < ACPI_NAMESEG_SIZE); i++)
     {
         if (*NameSeg)
         {
@@ -732,7 +976,7 @@ UtAttachNameseg (
         UtPadNameWithUnderscores (Name, PaddedNameSeg);
     }
 
-    ACPI_MOVE_NAME (Op->Asl.NameSeg, PaddedNameSeg);
+    ACPI_COPY_NAMESEG (Op->Asl.NameSeg, PaddedNameSeg);
 }
 
 
@@ -783,6 +1027,37 @@ UtAttachNamepathToOwner (
 
 /*******************************************************************************
  *
+ * FUNCTION:    UtNameContainsAllPrefix
+ *
+ * PARAMETERS:  Op                  - Op containing NameString
+ *
+ * RETURN:      NameString consists of all ^ characters
+ *
+ * DESCRIPTION: Determine if this Op contains a name segment that consists of
+ *              all '^' characters.
+ *
+ ******************************************************************************/
+
+BOOLEAN
+UtNameContainsAllPrefix (
+    ACPI_PARSE_OBJECT       *Op)
+{
+    UINT32                  Length = Op->Asl.AmlLength;
+    UINT32                  i;
+
+    for (i = 0; i < Length; i++)
+    {
+        if (Op->Asl.Value.String[i] != '^')
+        {
+            return (FALSE);
+        }
+    }
+
+    return (TRUE);
+}
+
+/*******************************************************************************
+ *
  * FUNCTION:    UtDoConstant
  *
  * PARAMETERS:  String              - Hex/Decimal/Octal
@@ -808,10 +1083,63 @@ UtDoConstant (
         sprintf (ErrBuf, "While creating 64-bit constant: %s\n",
             AcpiFormatException (Status));
 
-        AslCommonError (ASL_ERROR, ASL_MSG_SYNTAX, Gbl_CurrentLineNumber,
-            Gbl_LogicalLineNumber, Gbl_CurrentLineOffset,
-            Gbl_CurrentColumn, Gbl_Files[ASL_FILE_INPUT].Filename, ErrBuf);
+        AslCommonError (ASL_ERROR, ASL_MSG_SYNTAX, AslGbl_CurrentLineNumber,
+            AslGbl_LogicalLineNumber, AslGbl_CurrentLineOffset,
+            AslGbl_CurrentColumn, AslGbl_Files[ASL_FILE_INPUT].Filename, ErrBuf);
     }
 
     return (ConvertedInteger);
+}
+
+
+/******************************************************************************
+ *
+ * FUNCTION:    AcpiUtStrdup
+ *
+ * PARAMETERS:  String1             - string to duplicate
+ *
+ * RETURN:      int that signifies string relationship. Zero means strings
+ *              are equal.
+ *
+ * DESCRIPTION: Duplicate the string using UtCacheAlloc to avoid manual memory
+ *              reclamation.
+ *
+ ******************************************************************************/
+
+char *
+AcpiUtStrdup (
+    char                    *String)
+{
+    char                    *NewString = (char *) UtLocalCalloc (strlen (String) + 1);
+
+
+    strcpy (NewString, String);
+    return (NewString);
+}
+
+
+/******************************************************************************
+ *
+ * FUNCTION:    AcpiUtStrcat
+ *
+ * PARAMETERS:  String1
+ *              String2
+ *
+ * RETURN:      New string with String1 concatenated with String2
+ *
+ * DESCRIPTION: Concatenate string1 and string2
+ *
+ ******************************************************************************/
+
+char *
+AcpiUtStrcat (
+    char                    *String1,
+    char                    *String2)
+{
+    UINT32                  String1Length = strlen (String1);
+    char                    *NewString = (char *) UtLocalCalloc (strlen (String1) + strlen (String2) + 1);
+
+    strcpy (NewString, String1);
+    strcpy (NewString + String1Length, String2);
+    return (NewString);
 }

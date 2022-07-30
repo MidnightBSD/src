@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -393,6 +393,7 @@ Cleanup:
 }
 
 
+#ifdef ACPI_DISASSEMBLER
 /*******************************************************************************
  *
  * FUNCTION:    AcpiDbDisassembleAml
@@ -426,9 +427,7 @@ AcpiDbDisassembleAml (
         NumStatements = strtoul (Statements, NULL, 0);
     }
 
-#ifdef ACPI_DISASSEMBLER
     AcpiDmDisassemble (NULL, Op, NumStatements);
-#endif
 }
 
 
@@ -494,6 +493,11 @@ AcpiDbDisassembleMethod (
     }
 
     Status = AcpiUtAllocateOwnerId (&ObjDesc->Method.OwnerId);
+    if (ACPI_FAILURE(Status))
+    {
+        return (Status);
+    }
+
     WalkState->OwnerId = ObjDesc->Method.OwnerId;
 
     /* Push start scope on scope stack and make it current */
@@ -511,8 +515,11 @@ AcpiDbDisassembleMethod (
     WalkState->ParseFlags |= ACPI_PARSE_DISASSEMBLE;
 
     Status = AcpiPsParseAml (WalkState);
+    if (ACPI_FAILURE(Status))
+    {
+        return (Status);
+    }
 
-#ifdef ACPI_DISASSEMBLER
     (void) AcpiDmParseDeferredOps (Op);
 
     /* Now we can disassemble the method */
@@ -520,7 +527,6 @@ AcpiDbDisassembleMethod (
     AcpiGbl_DmOpt_Verbose = FALSE;
     AcpiDmDisassemble (NULL, Op, 0);
     AcpiGbl_DmOpt_Verbose = TRUE;
-#endif
 
     AcpiPsDeleteParseTree (Op);
 
@@ -531,6 +537,7 @@ AcpiDbDisassembleMethod (
     AcpiUtReleaseOwnerId (&ObjDesc->Method.OwnerId);
     return (AE_OK);
 }
+#endif
 
 
 /*******************************************************************************

@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -410,7 +410,7 @@ AcpiDbDecodeAndDisplayObject (
 
         default:
 
-            /* Is not a recognizeable object */
+            /* Is not a recognizable object */
 
             AcpiOsPrintf (
                 "Not a known ACPI internal object, descriptor type %2.2X\n",
@@ -713,7 +713,6 @@ AcpiDbDisplayResults (
         return;
     }
 
-    ObjDesc = WalkState->MethodDesc;
     Node  = WalkState->MethodNode;
 
     if (WalkState->Results)
@@ -773,7 +772,6 @@ AcpiDbDisplayCallingTree (
         return;
     }
 
-    Node = WalkState->MethodNode;
     AcpiOsPrintf ("Current Control Method Call Tree\n");
 
     while (WalkState)
@@ -820,9 +818,8 @@ AcpiDbDisplayObjectType (
         return;
     }
 
-    AcpiOsPrintf ("ADR: %8.8X%8.8X, STA: %8.8X, Flags: %X\n",
-        ACPI_FORMAT_UINT64 (Info->Address),
-        Info->CurrentStatus, Info->Flags);
+    AcpiOsPrintf ("ADR: %8.8X%8.8X, Flags: %X\n",
+        ACPI_FORMAT_UINT64 (Info->Address), Info->Flags);
 
     AcpiOsPrintf ("S1D-%2.2X S2D-%2.2X S3D-%2.2X S4D-%2.2X\n",
         Info->HighestDstates[0], Info->HighestDstates[1],
@@ -867,7 +864,7 @@ AcpiDbDisplayObjectType (
  *
  * DESCRIPTION: Display the result of an AML opcode
  *
- * Note: Curently only displays the result object if we are single stepping.
+ * Note: Currently only displays the result object if we are single stepping.
  * However, this output may be useful in other contexts and could be enabled
  * to do so if needed.
  *
