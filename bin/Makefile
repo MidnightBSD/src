@@ -45,7 +45,6 @@ SUBDIR= cat \
 
 
 SUBDIR.${MK_ASH}+=  sh                                                                                                                                      
-SUBDIR.${MK_RCMDS}+=  rcp                                                                                                                                               
 SUBDIR.${MK_SENDMAIL}+=       rmail                                                                                                                                     
 SUBDIR.${MK_TCSH}+=   csh                                                                                                                                               
 SUBDIR.${MK_TESTS}+=  tests  
