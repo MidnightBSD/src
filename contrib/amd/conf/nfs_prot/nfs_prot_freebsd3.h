@@ -35,7 +35,7 @@
  *
  * File: am-utils/conf/nfs_prot/nfs_prot_freebsd3.h
  * $Id: nfs_prot_freebsd3.h,v 1.5.2.7 2004/01/06 03:15:19 ezk Exp $
- * $FreeBSD: stable/11/contrib/amd/conf/nfs_prot/nfs_prot_freebsd3.h 310490 2016-12-23 22:42:14Z cy $
+ * $FreeBSD$
  *
  */
 

@@ -34,9 +34,9 @@
 .\"
 .\"
 .\" File: am-utils/amd/amd.8
-.\" $FreeBSD: stable/11/contrib/amd/amd/amd.8 310490 2016-12-23 22:42:14Z cy $
+.\" $FreeBSD$
 .\"
-.Dd February 26, 2016
+.Dd November 22, 2019
 .Dt AMD 8
 .Os
 .Sh NAME
@@ -72,10 +72,17 @@
 .Ar ...
 .Sh DESCRIPTION
 .Bf -symbolic
-This daemon is obsolete.
+The
+.Nm
+daemon in the
+.Fx
+base system is deprecated and will be removed before
+.Fx 13.0 .
 Users are advised to use
 .Xr autofs 5
-instead.
+or the
+.Pa sysutils/am-utils
+port or package instead.
 .Ef
 .Pp
 The
@@ -362,15 +369,15 @@ number of process context switches.
 A weird imagination is most useful to gain full advantage of all
 the features.
 .Sh SEE ALSO
-.Xr domainname 1,
-.Xr hostname 1,
-.Xr syslog 3.
-.Xr amd.conf 5,
-.Xr mtab 5,
-.Xr amq 8,
-.Xr automount 8,
-.Xr mount 8,
-.Xr umount 8,
+.Xr domainname 1 ,
+.Xr hostname 1 ,
+.Xr syslog 3 ,
+.Xr amd.conf 5 ,
+.Xr mtab 5 ,
+.Xr amq 8 ,
+.Xr automount 8 ,
+.Xr mount 8 ,
+.Xr umount 8
 .Pp
 .Dq am-utils
 .Xr info 1
