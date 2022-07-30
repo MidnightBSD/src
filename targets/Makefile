@@ -1,5 +1,3 @@
-# $FreeBSD$
-
 # This is the top-level makefile - derived from the Junos version
 #
 # If a subdir that matches the requested target exists, we assume

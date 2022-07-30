@@ -60,6 +60,7 @@ DIRDEPS = \
 	lib/libdevdctl \
 	lib/libdevinfo \
 	lib/libdevstat \
+	lib/libdispatch \
 	lib/libdwarf \
 	lib/libedit/edit/readline \
 	lib/libelf \
@@ -108,6 +109,8 @@ DIRDEPS = \
 	lib/libmemstat \
 	lib/libmilter \
 	lib/libmp \
+	lib/libmport \
+	lib/libmsearch \
 	lib/libnetgraph \
 	lib/libngatm \
 	lib/libnv \
