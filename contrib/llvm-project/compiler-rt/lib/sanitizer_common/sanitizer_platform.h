@@ -12,7 +12,7 @@
 #ifndef SANITIZER_PLATFORM_H
 #define SANITIZER_PLATFORM_H
 
-#if !defined(__linux__) && !defined(__FreeBSD__) && !defined(__NetBSD__) && \
+#if !defined(__linux__) && !defined(__FreeBSD__) && !defined(__MidnightBSD__) && !defined(__NetBSD__) && \
     !defined(__APPLE__) && !defined(_WIN32) && !defined(__Fuchsia__) &&     \
     !(defined(__sun__) && defined(__svr4__))
 #  error "This operating system is not supported"
@@ -37,7 +37,7 @@
 # define SANITIZER_GLIBC   0
 #endif
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 # define SANITIZER_FREEBSD 1
 #else
 # define SANITIZER_FREEBSD 0

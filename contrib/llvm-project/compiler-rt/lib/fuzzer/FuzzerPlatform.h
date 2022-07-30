@@ -36,7 +36,7 @@
 #define LIBFUZZER_FREEBSD 0
 #define LIBFUZZER_WINDOWS 0
 #define LIBFUZZER_EMSCRIPTEN 0
-#elif __FreeBSD__
+#elif __FreeBSD__ || defined(__MidnightBSD__)
 #define LIBFUZZER_APPLE 0
 #define LIBFUZZER_FUCHSIA 0
 #define LIBFUZZER_LINUX 0
