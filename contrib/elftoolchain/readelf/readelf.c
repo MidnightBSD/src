@@ -280,7 +280,7 @@ static const char *elf_osabi(unsigned int abi);
 static const char *elf_type(unsigned int type);
 static const char *elf_ver(unsigned int ver);
 static const char *dt_type(unsigned int mach, unsigned int dtype);
-static void dump_ar(struct readelf *re, int);
+static bool dump_ar(struct readelf *re, int);
 static void dump_arm_attributes(struct readelf *re, uint8_t *p, uint8_t *pe);
 static void dump_attributes(struct readelf *re);
 static uint8_t *dump_compatibility_tag(uint8_t *p, uint8_t *pe);
@@ -310,7 +310,7 @@ static void dump_dwarf_ranges_foreach(struct readelf *re, Dwarf_Die die,
     Dwarf_Addr base);
 static void dump_dwarf_str(struct readelf *re);
 static void dump_eflags(struct readelf *re, uint64_t e_flags);
-static void dump_elf(struct readelf *re);
+static bool dump_elf(struct readelf *re);
 static void dump_flags(struct flag_desc *fd, uint64_t flags);
 static void dump_dyn_val(struct readelf *re, GElf_Dyn *dyn, uint32_t stab);
 static void dump_dynamic(struct readelf *re);
@@ -362,8 +362,9 @@ static const char *note_type(const char *note_name, unsigned int et,
     unsigned int nt);
 static const char *note_type_freebsd(unsigned int nt);
 static const char *note_type_freebsd_core(unsigned int nt);
-static const char *note_type_linux_core(unsigned int nt);
+static const char *note_type_go(unsigned int nt);
 static const char *note_type_gnu(unsigned int nt);
+static const char *note_type_linux_core(unsigned int nt);
 static const char *note_type_netbsd(unsigned int nt);
 static const char *note_type_openbsd(unsigned int nt);
 static const char *note_type_unknown(unsigned int nt);
@@ -1133,13 +1134,15 @@ note_type(const char *name, unsigned int et, unsigned int nt)
 	if ((strcmp(name, "CORE") == 0 || strcmp(name, "LINUX") == 0) &&
 	    et == ET_CORE)
 		return note_type_linux_core(nt);
-	else if (strcmp(name, "FreeBSD") == 0 || strcmp(name, "MidnightBSD")) 
+	else if (strcmp(name, "FreeBSD") == 0 || strcmp(name, "MidnightBSD") == 0)
 		if (et == ET_CORE)
 			return note_type_freebsd_core(nt);
 		else
 			return note_type_freebsd(nt);
 	else if (strcmp(name, "GNU") == 0 && et != ET_CORE)
 		return note_type_gnu(nt);
+	else if (strcmp(name, "Go") == 0 && et != ET_CORE)
+		return note_type_go(nt);
 	else if (strcmp(name, "NetBSD") == 0 && et != ET_CORE)
 		return note_type_netbsd(nt);
 	else if (strcmp(name, "OpenBSD") == 0 && et != ET_CORE)
@@ -1183,6 +1186,7 @@ note_type_freebsd_core(unsigned int nt)
 	case 0x102: return "NT_PPC_VSX (ppc VSX registers)";
 	case 0x202: return "NT_X86_XSTATE (x86 XSAVE extended state)";
 	case 0x400: return "NT_ARM_VFP (arm VFP registers)";
+	case 0x406: return "NT_ARM_ADDR_MASK (arm address mask)";
 	default: return (note_type_unknown(nt));
 	}
 }
@@ -1228,6 +1232,15 @@ note_type_gnu(unsigned int nt)
 	case 3: return "NT_GNU_BUILD_ID (Build id set by ld(1))";
 	case 4: return "NT_GNU_GOLD_VERSION (GNU gold version)";
 	case 5: return "NT_GNU_PROPERTY_TYPE_0";
+	default: return (note_type_unknown(nt));
+	}
+}
+
+static const char *
+note_type_go(unsigned int nt)
+{
+	switch (nt) {
+	case 4: return "elfGoBuildIDTag";
 	default: return (note_type_unknown(nt));
 	}
 }
@@ -3672,13 +3685,11 @@ dump_notes(struct readelf *re)
 
 static struct flag_desc note_feature_ctl_flags[] = {
 	{ NT_FREEBSD_FCTL_ASLR_DISABLE,		"ASLR_DISABLE" },
-#ifdef NT_FREEBSD_FCTL_PROTMAX_DISABLE
 	{ NT_FREEBSD_FCTL_PROTMAX_DISABLE,	"PROTMAX_DISABLE" },
-#endif
-#ifdef NT_FREEBSD_FCTL_STKGAP_DISABLE
 	{ NT_FREEBSD_FCTL_STKGAP_DISABLE,	"STKGAP_DISABLE" },
-#endif
 	{ NT_FREEBSD_FCTL_WXNEEDED,		"WXNEEDED" },
+	{ NT_FREEBSD_FCTL_LA48,			"LA48" },
+	{ NT_FREEBSD_FCTL_ASG_DISABLE,		"ASG_DISABLE" },
 	{ 0, NULL }
 };
 
@@ -3749,6 +3760,16 @@ dump_notes_data(struct readelf *re, const char *name, uint32_t type,
 				goto unknown;
 			printf("   Features:");
 			dump_flags(note_feature_ctl_flags, ubuf[0]);
+			return;
+		}
+	} else if (strcmp(name, "Go") == 0) {
+		if (type == 4) {
+			printf("   Build ID: ");
+			for (i = 0; i < sz; i++) {
+				printf(isprint(buf[i]) ? "%c" : "<%02x>",
+				    buf[i]);
+			}
+			printf("\n");
 			return;
 		}
 	} else if (strcmp(name, "GNU") == 0) {
@@ -7205,18 +7226,18 @@ unload_sections(struct readelf *re)
 	}
 }
 
-static void
+static bool
 dump_elf(struct readelf *re)
 {
 
 	/* Fetch ELF header. No need to continue if it fails. */
 	if (gelf_getehdr(re->elf, &re->ehdr) == NULL) {
 		warnx("gelf_getehdr failed: %s", elf_errmsg(-1));
-		return;
+		return (false);
 	}
 	if ((re->ec = gelf_getclass(re->elf)) == ELFCLASSNONE) {
 		warnx("gelf_getclass failed: %s", elf_errmsg(-1));
-		return;
+		return (false);
 	}
 	if (re->ehdr.e_ident[EI_DATA] == ELFDATA2MSB) {
 		re->dw_read = _read_msb;
@@ -7260,6 +7281,7 @@ dump_elf(struct readelf *re)
 		dump_dwarf(re);
 	if (re->options & ~RE_H)
 		unload_sections(re);
+	return (true);
 }
 
 static void
@@ -7305,7 +7327,7 @@ dump_dwarf(struct readelf *re)
 	dwarf_finish(re->dbg, &de);
 }
 
-static void
+static bool
 dump_ar(struct readelf *re, int fd)
 {
 	Elf_Arsym *arsym;
@@ -7356,14 +7378,14 @@ dump_ar(struct readelf *re, int fd)
 		}
 		if (elf_rand(re->ar, SARMAG) != SARMAG) {
 			warnx("elf_rand() failed: %s", elf_errmsg(-1));
-			return;
+			return (false);
 		}
 	}
 
 process_members:
 
 	if ((re->options & ~RE_C) == 0)
-		return;
+		return (true);
 
 	cmd = ELF_C_READ;
 	while ((re->elf = elf_begin(fd, cmd, re->ar)) != NULL) {
@@ -7383,11 +7405,14 @@ process_members:
 		elf_end(re->elf);
 	}
 	re->elf = re->ar;
+	return (true);
 }
 
-static void
+static bool
 dump_object(struct readelf *re, int fd)
 {
+	bool rv = false;
+
 	if ((re->flags & DISPLAY_FILENAME) != 0)
 		printf("\nFile: %s\n", re->filename);
 
@@ -7401,10 +7426,10 @@ dump_object(struct readelf *re, int fd)
 		warnx("Not an ELF file.");
 		goto done;
 	case ELF_K_ELF:
-		dump_elf(re);
+		rv = dump_elf(re);
 		break;
 	case ELF_K_AR:
-		dump_ar(re, fd);
+		rv = dump_ar(re, fd);
 		break;
 	default:
 		warnx("Internal: libelf returned unknown elf kind.");
@@ -7412,6 +7437,7 @@ dump_object(struct readelf *re, int fd)
 
 done:
 	elf_end(re->elf);
+	return (rv);
 }
 
 static void
@@ -7757,7 +7783,7 @@ main(int argc, char **argv)
 {
 	struct readelf	*re, re_storage;
 	unsigned long	 si;
-	int		 fd, opt, i;
+	int		 fd, opt, i, exit_code;
 	char		*ep;
 
 	re = &re_storage;
@@ -7883,16 +7909,19 @@ main(int argc, char **argv)
 		errx(EXIT_FAILURE, "ELF library initialization failed: %s",
 		    elf_errmsg(-1));
 
+	exit_code = EXIT_SUCCESS;
 	for (i = 0; i < argc; i++) {
 		re->filename = argv[i];
 		fd = open(re->filename, O_RDONLY);
 		if (fd < 0) {
 			warn("open %s failed", re->filename);
+			exit_code = EXIT_FAILURE;
 		} else {
-			dump_object(re, fd);
+			if (!dump_object(re, fd))
+				exit_code = EXIT_FAILURE;
 			close(fd);
 		}
 	}
 
-	exit(EXIT_SUCCESS);
+	exit(exit_code);
 }
