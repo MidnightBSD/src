@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/11/sys/crypto/skein/skein.h 300921 2016-05-29 01:15:36Z allanjude $	*/
+/*	$FreeBSD$	*/
 #ifndef _SKEIN_H_
 #define _SKEIN_H_     1
 /**************************************************************************

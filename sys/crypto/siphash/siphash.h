@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/crypto/siphash/siphash.h 309023 2016-11-22 20:28:17Z asomers $
+ * $FreeBSD$
  */
 
 /*

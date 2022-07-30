@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/crypto/via/padlock.h 230426 2012-01-21 17:45:27Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _PADLOCK_H_
@@ -73,9 +73,6 @@ struct padlock_session {
 	uint8_t		*ses_ictx;
 	uint8_t		*ses_octx;
 	int		ses_mlen;
-	int		ses_used;
-	uint32_t	ses_id;
-	TAILQ_ENTRY(padlock_session) ses_next;
 	struct fpu_kern_ctx *ses_fpu_ctx;
 };
 

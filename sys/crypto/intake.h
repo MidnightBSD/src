@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/crypto/intake.h 329099 2018-02-10 04:37:44Z kevans $
+ * $FreeBSD$
  */
 
 #ifndef _INTAKE_H_

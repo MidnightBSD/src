@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/11/sys/crypto/rijndael/rijndael-api-fst.h 274341 2014-11-10 09:55:35Z des $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: rijndael-api-fst.h,v 1.6 2001/05/27 00:23:23 itojun Exp $	*/
 
 /*

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/crypto/aesni/aesni_os.h 281606 2015-04-16 17:42:52Z rodrigc $
+ * $FreeBSD$
  *
  */
 
