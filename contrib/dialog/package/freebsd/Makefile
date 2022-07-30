@@ -3,7 +3,7 @@
 # Whom:			AlanE <alane@freebsd.org>
 #
 # $Carpetsmoker: ports/cdialog/Makefile,v 1.4 2007/04/22 11:30:53 carpetsmoker Exp $
-# $FreeBSD: stable/10/contrib/dialog/package/freebsd/Makefile 255852 2013-09-24 14:52:43Z dteske $
+# $FreeBSD$
 #
 
 PORTNAME=	cdialog
