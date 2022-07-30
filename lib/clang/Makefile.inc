@@ -1,5 +1,3 @@
-# $FreeBSD$
-
 .include <bsd.compiler.mk>
 
 MK_PIE:=	no	# Explicit libXXX.a references
