@@ -95,13 +95,11 @@ key_t	msgkey, semkey, shmkey;
 
 int	maxloop = 1;
 
-#ifndef __FreeBSD__
 union semun {
 	int	val;		/* value for SETVAL */
 	struct	semid_ds *buf;	/* buffer for IPC_{STAT,SET} */
 	u_short	*array;		/* array for GETALL & SETALL */
 };
-#endif
 
 
 /* Writes an integer to a file.  To be used from the body of the test
@@ -211,6 +209,9 @@ ATF_TC_BODY(msg, tc)
 	int sender_msqid;
 	int loop;
 	int c_status;
+
+	if (atf_tc_get_config_var_as_bool_wd(tc, "ci", false))
+		atf_tc_skip("https://bugs.freebsd.org/233649");
 
 	/*
 	 * Install a SIGSYS handler so that we can exit gracefully if

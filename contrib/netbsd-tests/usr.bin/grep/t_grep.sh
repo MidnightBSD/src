@@ -214,6 +214,89 @@ zgrep_body()
 	atf_check -o file:"$(atf_get_srcdir)/d_zgrep.out" zgrep -h line d_input.gz
 }
 
+atf_test_case zgrep_combined_flags
+zgrep_combined_flags_head()
+{
+	atf_set "descr" "Checks for zgrep wrapper problems with combined flags (PR 247126)"
+}
+zgrep_combined_flags_body()
+{
+	atf_expect_fail "known but unsolved zgrep wrapper script regression"
+
+	echo 'foo bar' > test
+
+	atf_check -o inline:"foo bar\n" zgrep -we foo test
+	# Avoid hang on reading from stdin in the failure case
+	atf_check -o inline:"foo bar\n" zgrep -wefoo test < /dev/null
+}
+
+atf_test_case zgrep_eflag
+zgrep_eflag_head()
+{
+	atf_set "descr" "Checks for zgrep wrapper problems with -e PATTERN (PR 247126)"
+}
+zgrep_eflag_body()
+{
+	echo 'foo bar' > test
+
+	# Avoid hang on reading from stdin in the failure case
+	atf_check -o inline:"foo bar\n" zgrep -e 'foo bar' test < /dev/null
+	atf_check -o inline:"foo bar\n" zgrep --regexp='foo bar' test < /dev/null
+}
+
+atf_test_case zgrep_fflag
+zgrep_fflag_head()
+{
+	atf_set "descr" "Checks for zgrep wrapper problems with -f FILE (PR 247126)"
+}
+zgrep_fflag_body()
+{
+	echo foo > pattern
+	echo foobar > test
+
+	# Avoid hang on reading from stdin in the failure case
+	atf_check -o inline:"foobar\n" zgrep -f pattern test </dev/null
+	atf_check -o inline:"foobar\n" zgrep --file=pattern test </dev/null
+}
+
+atf_test_case zgrep_long_eflag
+zgrep_long_eflag_head()
+{
+	atf_set "descr" "Checks for zgrep wrapper problems with --ignore-case reading from stdin (PR 247126)"
+}
+zgrep_long_eflag_body()
+{
+	echo foobar > test
+
+	atf_check -o inline:"foobar\n" zgrep -e foo --ignore-case < test
+}
+
+atf_test_case zgrep_multiple_eflags
+zgrep_multiple_eflags_head()
+{
+	atf_set "descr" "Checks for zgrep wrapper problems with multiple -e flags (PR 247126)"
+}
+zgrep_multiple_eflags_body()
+{
+	atf_expect_fail "known but unsolved zgrep wrapper script regression"
+
+	echo foobar > test
+
+	atf_check -o inline:"foobar\n" zgrep -e foo -e xxx test
+}
+
+atf_test_case zgrep_empty_eflag
+zgrep_empty_eflag_head()
+{
+	atf_set "descr" "Checks for zgrep wrapper problems with empty -e flags pattern (PR 247126)"
+}
+zgrep_empty_eflag_body()
+{
+	echo foobar > test
+
+	atf_check -o inline:"foobar\n" zgrep -e '' test
+}
+
 atf_test_case nonexistent
 nonexistent_head()
 {
@@ -406,11 +489,11 @@ wflag_emptypat_body()
 
 	atf_check -s exit:1 -o empty grep -w -e "" test1
 
-	atf_check -o file:test2 grep -w -e "" test2
+	atf_check -o file:test2 grep -vw -e "" test2
 
 	atf_check -s exit:1 -o empty grep -w -e "" test3
 
-	atf_check -o file:test4 grep -w -e "" test4
+	atf_check -o file:test4 grep -vw -e "" test4
 }
 
 atf_test_case xflag_emptypat
@@ -421,7 +504,6 @@ xflag_emptypat_body()
 	printf "qaz" > test3
 	printf " qaz\n" > test4
 
-	# -x is whole-line, more strict than -w.
 	atf_check -s exit:1 -o empty grep -x -e "" test1
 
 	atf_check -o file:test2 grep -x -e "" test2
@@ -465,6 +547,22 @@ xflag_emptypat_plus_body()
 	# -v handling
 	atf_check -s exit:1 -o empty grep -Fvxf patlist1 target
 	atf_check -o file:spacelines grep -Fxvf patlist1 target_spacelines
+}
+
+atf_test_case emptyfile
+emptyfile_descr()
+{
+	atf_set "descr" "Check for proper handling of empty pattern files (PR 253209)"
+}
+emptyfile_body()
+{
+	:> epatfile
+	echo "blubb" > subj
+
+	# From PR 253209, bsdgrep was short-circuiting completely on an empty
+	# file, but we should have still been processing lines.
+	atf_check -s exit:1 -o empty fgrep -f epatfile subj
+	atf_check -o file:subj fgrep -vf epatfile subj
 }
 
 atf_test_case excessive_matches
@@ -808,6 +906,40 @@ mflag_body()
 
 	atf_check -o inline:"test1:2\n" grep -m 2 -EHc "a|b|e|f" test1
 }
+
+atf_test_case mflag_trail_ctx
+mflag_trail_ctx_head()
+{
+	atf_set "descr" "Check proper handling of -m with trailing context (PR 253350)"
+}
+mflag_trail_ctx_body()
+{
+	printf "foo\nfoo\nbar\nfoo\nbar\nfoo\nbar\n" > test1
+
+	# Should pick up the next line after matching the first.
+	atf_check -o inline:"foo\nfoo\n" grep -A1 -m1 foo test1
+
+	# Make sure the trailer is picked up as a non-match!
+	atf_check -o inline:"1:foo\n2-foo\n" grep -A1 -nm1 foo test1
+}
+
+atf_test_case zgrep_multiple_files
+zgrep_multiple_files_head()
+{
+	atf_set "descr" "Ensures that zgrep functions properly with multiple files"
+}
+zgrep_multiple_files_body()
+{
+	echo foo > test1
+	echo foo > test2
+	atf_check -o inline:"test1:foo\ntest2:foo\n" zgrep foo test1 test2
+
+	echo bar > test1
+	atf_check -o inline:"test2:foo\n" zgrep foo test1 test2
+
+	echo bar > test2
+	atf_check -s exit:1 zgrep foo test1 test2
+}
 # End FreeBSD
 
 atf_init_test_cases()
@@ -826,6 +958,12 @@ atf_init_test_cases()
 	atf_add_test_case file_exp
 	atf_add_test_case egrep
 	atf_add_test_case zgrep
+	atf_add_test_case zgrep_combined_flags
+	atf_add_test_case zgrep_eflag
+	atf_add_test_case zgrep_empty_eflag
+	atf_add_test_case zgrep_fflag
+	atf_add_test_case zgrep_long_eflag
+	atf_add_test_case zgrep_multiple_eflags
 	atf_add_test_case nonexistent
 	atf_add_test_case context2
 # Begin FreeBSD
@@ -839,6 +977,7 @@ atf_init_test_cases()
 	atf_add_test_case wflag_emptypat
 	atf_add_test_case xflag_emptypat
 	atf_add_test_case xflag_emptypat_plus
+	atf_add_test_case emptyfile
 	atf_add_test_case excessive_matches
 	atf_add_test_case wv_combo_break
 	atf_add_test_case fgrep_sanity
@@ -855,5 +994,7 @@ atf_init_test_cases()
 	atf_add_test_case fgrep_oflag
 	atf_add_test_case cflag
 	atf_add_test_case mflag
+	atf_add_test_case mflag_trail_ctx
+	atf_add_test_case zgrep_multiple_files
 # End FreeBSD
 }

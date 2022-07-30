@@ -57,7 +57,7 @@ __RCSID("$NetBSD: t_o_search.c,v 1.10 2020/02/08 19:58:36 kamil Exp $");
 #define USE_O_SEARCH
 #endif
 
-#if defined(__FreeBSD__)
+#ifdef __FreeBSD__
 #define	statvfs		statfs
 #define	fstatvfs	fstatfs
 #endif

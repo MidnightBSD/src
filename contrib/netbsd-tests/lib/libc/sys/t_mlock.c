@@ -51,7 +51,7 @@ __RCSID("$NetBSD: t_mlock.c,v 1.6 2016/08/09 12:02:44 kre Exp $");
 #define _KMEMUSER
 #include <machine/vmparam.h>
 
-void set_vm_max_wired(int);
+void set_vm_max_wired(u_long);
 void restore_vm_max_wired(void);
 #endif
 
@@ -103,7 +103,7 @@ ATF_TC_BODY(mlock_err, tc)
 	unsigned long vmin = 0;
 	size_t len = sizeof(vmin);
 #endif
-#if !defined(__aarch64__) && !defined(__riscv__)
+#if !defined(__aarch64__) && !defined(__riscv)
 	void *invalid_ptr;
 #endif
 	int null_errno = ENOMEM;	/* error expected for NULL */
@@ -168,7 +168,7 @@ ATF_TC_BODY(mlock_err, tc)
 	(void)free(buf);
 
 /* There is no sbrk on AArch64 and RISC-V */
-#if !defined(__aarch64__) && !defined(__riscv__)
+#if !defined(__aarch64__) && !defined(__riscv)
 	/*
 	 * Try to create a pointer to an unmapped page - first after current
 	 * brk will likely do.
