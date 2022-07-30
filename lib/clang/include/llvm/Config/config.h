@@ -1,4 +1,3 @@
-/* $FreeBSD$ */
 #ifndef CONFIG_H
 #define CONFIG_H
 
@@ -9,7 +8,7 @@
 #include "llvm/Config/llvm-config.h"
 
 /* Bug report URL. */
-#define BUG_REPORT_URL "https://bugs.freebsd.org/submit/"
+#define BUG_REPORT_URL "https://bugreport.midnightbsd.org/"
 
 /* Define to 1 to enable backtraces, and to 0 otherwise. */
 #define ENABLE_BACKTRACES 1
@@ -146,7 +145,7 @@
 #endif
 
 /* Define to 1 if you have the `mallctl' function. */
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #define HAVE_MALLCTL 1
 #endif
 
@@ -247,7 +246,7 @@
 #define HAVE_SYS_TYPES_H 1
 
 /* Define if the setupterm() function is supported this platform. */
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 /*
  * This is only needed for terminalHasColors(). When disabled LLVM falls back
  * to checking a list of TERM prefixes which is sufficient for a bootstrap tool.
@@ -271,7 +270,7 @@
 /* #undef HAVE__CHSIZE_S */
 
 /* Define to 1 if you have the `_Unwind_Backtrace' function. */
-#if !defined(__FreeBSD__)
+#if !defined(__FreeBSD__) && !defined(__MidnightBSD__)
 #define HAVE__UNWIND_BACKTRACE 1
 #endif
 
