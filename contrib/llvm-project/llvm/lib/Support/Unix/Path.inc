@@ -234,7 +234,7 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   if (getprogpath(exe_path, argv0) != NULL)
     return exe_path;
 #elif defined(__NetBSD__) || defined(__OpenBSD__) || defined(__minix) ||       \
-    defined(__DragonFly__) || defined(__FreeBSD_kernel__) || defined(_AIX) || defined(__MidnightBSD__)
+    defined(__DragonFly__) || defined(__FreeBSD_kernel__) || defined(_AIX) || defined(__MidnightBSD_kernel__)
   const char *curproc = "/proc/curproc/file";
   char exe_path[PATH_MAX];
   if (sys::fs::exists(curproc)) {
