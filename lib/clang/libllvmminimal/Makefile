@@ -1,5 +1,3 @@
-# $FreeBSD$
-
 .include "../llvm.pre.mk"
 
 LIB=		llvmminimal
