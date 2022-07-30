@@ -127,7 +127,7 @@
 #  endif
 // Feature macros for disabling pre ABI v1 features. All of these options
 // are deprecated.
-#  if defined(__FreeBSD__)
+#  if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #    define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
 #  endif
 #endif
@@ -257,7 +257,7 @@
 #  endif // __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 #endif // __BYTE_ORDER__
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #  include <sys/endian.h>
 #  include <osreldate.h>
 #  if _BYTE_ORDER == _LITTLE_ENDIAN
@@ -365,7 +365,7 @@
 # define _LIBCPP_HAS_ALIGNED_ALLOC
 #else
 #if (defined(__ISO_C_VISIBLE) && (__ISO_C_VISIBLE >= 2011)) || __cplusplus >= 201103L
-#  if defined(__FreeBSD__)
+#  if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #    define _LIBCPP_HAS_ALIGNED_ALLOC
 #    define _LIBCPP_HAS_QUICK_EXIT
 #    if __FreeBSD_version >= 1300064 || \
@@ -940,11 +940,11 @@ typedef unsigned int   char32_t;
 #endif
 
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(_LIBCPP_MSVCRT_LIKE) || \
-    defined(__sun__) || defined(__NetBSD__) || defined(__CloudABI__)
+    defined(__sun__) || defined(__NetBSD__) || defined(__CloudABI__) || defined(__MidnightBSD__)
 #define _LIBCPP_LOCALE__L_EXTENSIONS 1
 #endif
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #define _DECLARE_C99_LDBL_MATH 1
 #endif
 
@@ -972,11 +972,11 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
 #endif
 
-#if defined(__APPLE__) || defined(__FreeBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__MidnightBSD__)
 #define _LIBCPP_HAS_DEFAULTRUNELOCALE
 #endif
 
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__sun__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__sun__) || defined(__MidnightBSD__)
 #define _LIBCPP_WCTYPE_IS_MASK
 #endif
 
@@ -1140,6 +1140,7 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
       defined(__wasi__) || \
       defined(__NetBSD__) || \
       defined(__OpenBSD__) || \
+      defined(__MidnightBSD__) || \
       defined(__NuttX__) || \
       defined(__linux__) || \
       defined(__GNU__) || \

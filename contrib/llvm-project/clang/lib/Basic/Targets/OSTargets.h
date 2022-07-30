@@ -194,6 +194,10 @@ public:
   }
 };
 
+#ifndef MIDNIGHTBSD_CC_VERSION
+#define MIDNIGHTBSD_CC_VERSION 0U
+#endif
+
 #ifndef FREEBSD_CC_VERSION
 #define FREEBSD_CC_VERSION 0U
 #endif
@@ -209,11 +213,14 @@ protected:
     unsigned Release = Triple.getOSMajorVersion();
     if (Release == 0U)
       Release = 8U;
-    unsigned CCVersion = FREEBSD_CC_VERSION;
+    unsigned CCVersion = MIDNIGHTBSD_CC_VERSION;
     if (CCVersion == 0U)
       CCVersion = Release * 100000U + 1U;
 
-    Builder.defineMacro("__FreeBSD__", Twine(Release));
+    Builder.defineMacro("__MidnightBSD__", Twine(Release));
+    Builder.defineMacro("__MidnightBSD_cc_version", Twine(CCVersion));
+    // freebsd compatibility
+    Builder.defineMacro("__FreeBSD__", Twine(12U));
     Builder.defineMacro("__FreeBSD_cc_version", Twine(CCVersion));
     Builder.defineMacro("__KPRINTF_ATTRIBUTE__");
     DefineStd(Builder, "unix", Opts);

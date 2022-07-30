@@ -199,7 +199,8 @@ public:
     Hurd,       // GNU/Hurd
     WASI,       // Experimental WebAssembly OS
     Emscripten,
-    LastOSType = Emscripten
+    MidnightBSD,
+    LastOSType = MidnightBSD
   };
   enum EnvironmentType {
     UnknownEnvironment,

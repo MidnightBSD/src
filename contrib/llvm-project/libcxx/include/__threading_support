@@ -51,7 +51,7 @@
 #define _LIBCPP_THREAD_ABI_VISIBILITY inline _LIBCPP_INLINE_VISIBILITY
 #endif
 
-#if defined(__FreeBSD__) && defined(__clang__) && __has_attribute(no_thread_safety_analysis)
+#if (defined(__FreeBSD__) || defined(__MidnightBSD__) ) && defined(__clang__) && __has_attribute(no_thread_safety_analysis)
 #define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS __attribute__((no_thread_safety_analysis))
 #else
 #define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
