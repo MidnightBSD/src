@@ -1,3 +1,0 @@
-# $FreeBSD: stable/11/sys/arm/xscale/std.xscale 239362 2012-08-18 05:48:19Z andrew $
-options		ARM_CACHE_LOCK_ENABLE
-options		NO_EVENTTIMERS

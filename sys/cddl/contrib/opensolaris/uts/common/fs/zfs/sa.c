@@ -35,6 +35,7 @@
 #include <sys/dmu.h>
 #include <sys/dmu_impl.h>
 #include <sys/dmu_objset.h>
+#include <sys/dmu_tx.h>
 #include <sys/dbuf.h>
 #include <sys/dnode.h>
 #include <sys/zap.h>
@@ -535,12 +536,11 @@ sa_copy_data(sa_data_locator_t *func, void *datastart, void *target, int buflen)
  */
 static int
 sa_find_sizes(sa_os_t *sa, sa_bulk_attr_t *attr_desc, int attr_count,
-    dmu_buf_t *db, sa_buf_type_t buftype, int *index, int *total,
-    boolean_t *will_spill)
+    dmu_buf_t *db, sa_buf_type_t buftype, int full_space, int *index,
+    int *total, boolean_t *will_spill)
 {
 	int var_size = 0;
 	int i;
-	int full_space;
 	int hdrsize;
 	int extra_hdrsize;
 
@@ -559,7 +559,6 @@ sa_find_sizes(sa_os_t *sa, sa_bulk_attr_t *attr_desc, int attr_count,
 	hdrsize = (SA_BONUSTYPE_FROM_DB(db) == DMU_OT_ZNODE) ? 0 :
 	    sizeof (sa_hdr_phys_t);
 
-	full_space = (buftype == SA_BONUS) ? DN_MAX_BONUSLEN : db->db_size;
 	ASSERT(IS_P2ALIGNED(full_space, 8));
 
 	for (i = 0; i != attr_count; i++) {
@@ -645,6 +644,7 @@ sa_build_layouts(sa_handle_t *hdl, sa_bulk_attr_t *attr_desc, int attr_count,
 	int buf_space;
 	sa_attr_type_t *attrs, *attrs_start;
 	int i, lot_count;
+	int dnodesize;
 	int hdrsize;
 	int spillhdrsize = 0;
 	int used;
@@ -652,20 +652,26 @@ sa_build_layouts(sa_handle_t *hdl, sa_bulk_attr_t *attr_desc, int attr_count,
 	sa_lot_t *lot;
 	int len_idx;
 	int spill_used;
+	int bonuslen;
 	boolean_t spilling;
 
 	dmu_buf_will_dirty(hdl->sa_bonus, tx);
 	bonustype = SA_BONUSTYPE_FROM_DB(hdl->sa_bonus);
+	dmu_object_dnsize_from_db(hdl->sa_bonus, &dnodesize);
+	bonuslen = DN_BONUS_SIZE(dnodesize);
+	
+	dmu_object_dnsize_from_db(hdl->sa_bonus, &dnodesize);
+	bonuslen = DN_BONUS_SIZE(dnodesize);
 
 	/* first determine bonus header size and sum of all attributes */
 	hdrsize = sa_find_sizes(sa, attr_desc, attr_count, hdl->sa_bonus,
-	    SA_BONUS, &i, &used, &spilling);
+	    SA_BONUS, bonuslen, &i, &used, &spilling);
 
 	if (used > SPA_OLD_MAXBLOCKSIZE)
 		return (SET_ERROR(EFBIG));
 
 	VERIFY(0 == dmu_set_bonus(hdl->sa_bonus, spilling ?
-	    MIN(DN_MAX_BONUSLEN - sizeof (blkptr_t), used + hdrsize) :
+	    MIN(bonuslen - sizeof (blkptr_t), used + hdrsize) :
 	    used + hdrsize, tx));
 
 	ASSERT((bonustype == DMU_OT_ZNODE && spilling == 0) ||
@@ -682,8 +688,8 @@ sa_build_layouts(sa_handle_t *hdl, sa_bulk_attr_t *attr_desc, int attr_count,
 		dmu_buf_will_dirty(hdl->sa_spill, tx);
 
 		spillhdrsize = sa_find_sizes(sa, &attr_desc[i],
-		    attr_count - i, hdl->sa_spill, SA_SPILL, &i,
-		    &spill_used, &dummy);
+		    attr_count - i, hdl->sa_spill, SA_SPILL,
+		    hdl->sa_spill->db_size, &i, &spill_used, &dummy);
 
 		if (spill_used > SPA_OLD_MAXBLOCKSIZE)
 			return (SET_ERROR(EFBIG));
@@ -1121,7 +1127,7 @@ sa_tear_down(objset_t *os)
 	while (layout = avl_destroy_nodes(&sa->sa_layout_hash_tree, &cookie)) {
 		sa_idx_tab_t *tab;
 		while (tab = list_head(&layout->lot_idx_tab)) {
-			ASSERT(refcount_count(&tab->sa_refcount));
+			ASSERT(zfs_refcount_count(&tab->sa_refcount));
 			sa_idx_tab_rele(os, tab);
 		}
 	}
@@ -1306,13 +1312,13 @@ sa_idx_tab_rele(objset_t *os, void *arg)
 		return;
 
 	mutex_enter(&sa->sa_lock);
-	if (refcount_remove(&idx_tab->sa_refcount, NULL) == 0) {
+	if (zfs_refcount_remove(&idx_tab->sa_refcount, NULL) == 0) {
 		list_remove(&idx_tab->sa_layout->lot_idx_tab, idx_tab);
 		if (idx_tab->sa_variable_lengths)
 			kmem_free(idx_tab->sa_variable_lengths,
 			    sizeof (uint16_t) *
 			    idx_tab->sa_layout->lot_var_sizes);
-		refcount_destroy(&idx_tab->sa_refcount);
+		zfs_refcount_destroy(&idx_tab->sa_refcount);
 		kmem_free(idx_tab->sa_idx_tab,
 		    sizeof (uint32_t) * sa->sa_num_attrs);
 		kmem_free(idx_tab, sizeof (sa_idx_tab_t));
@@ -1326,7 +1332,7 @@ sa_idx_tab_hold(objset_t *os, sa_idx_tab_t *idx_tab)
 	sa_os_t *sa = os->os_sa;
 
 	ASSERT(MUTEX_HELD(&sa->sa_lock));
-	(void) refcount_add(&idx_tab->sa_refcount, NULL);
+	(void) zfs_refcount_add(&idx_tab->sa_refcount, NULL);
 }
 
 void
@@ -1535,7 +1541,7 @@ sa_find_idx_tab(objset_t *os, dmu_object_type_t bonustype, sa_hdr_phys_t *hdr)
 	idx_tab->sa_idx_tab =
 	    kmem_zalloc(sizeof (uint32_t) * sa->sa_num_attrs, KM_SLEEP);
 	idx_tab->sa_layout = tb;
-	refcount_create(&idx_tab->sa_refcount);
+	zfs_refcount_create(&idx_tab->sa_refcount);
 	if (tb->lot_var_sizes)
 		idx_tab->sa_variable_lengths = kmem_alloc(sizeof (uint16_t) *
 		    tb->lot_var_sizes, KM_SLEEP);

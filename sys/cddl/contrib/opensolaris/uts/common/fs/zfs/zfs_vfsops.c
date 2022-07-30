@@ -65,6 +65,7 @@
 #include <sys/spa_boot.h>
 #include <sys/jail.h>
 #include <ufs/ufs/quota.h>
+#include <sys/rmlock.h>
 
 #include "zfs_comutil.h"
 
@@ -91,6 +92,9 @@ SYSCTL_INT(_vfs_zfs_version, OID_AUTO, spa, CTLFLAG_RD, &zfs_version_spa, 0,
 static int zfs_version_zpl = ZPL_VERSION;
 SYSCTL_INT(_vfs_zfs_version, OID_AUTO, zpl, CTLFLAG_RD, &zfs_version_zpl, 0,
     "ZPL_VERSION");
+
+static int zfs_root_setvnode(zfsvfs_t *zfsvfs);
+static void zfs_root_dropvnode(zfsvfs_t *zfsvfs);
 
 static int zfs_quotactl(vfs_t *vfsp, int cmds, uid_t id, void *arg);
 static int zfs_mount(vfs_t *vfsp);
@@ -264,7 +268,7 @@ zfs_quotactl(vfs_t *vfsp, int cmds, uid_t id, void *arg)
 		vfs_unbusy(vfsp);
 		break;
 	case Q_SETQUOTA:
-		error = copyin(&dqblk, arg, sizeof(dqblk));
+		error = copyin(arg, &dqblk, sizeof(dqblk));
 		if (error == 0)
 			error = zfs_set_userquota(zfsvfs, quota_type,
 						  "", id, dbtob(dqblk.dqb_bhardlimit));
@@ -342,7 +346,7 @@ zfs_sync(vfs_t *vfsp, int waitfor)
 	return (0);
 }
 
-#ifndef __MidnightBSD_kernel__
+#ifndef __FreeBSD_kernel__
 static int
 zfs_create_unique_device(dev_t *dev)
 {
@@ -394,7 +398,7 @@ zfs_create_unique_device(dev_t *dev)
 
 	return (0);
 }
-#endif	/* !__MidnightBSD_kernel__ */
+#endif	/* !__FreeBSD_kernel__ */
 
 static void
 atime_changed_cb(void *arg, uint64_t newval)
@@ -1133,7 +1137,7 @@ zfsvfs_init(zfsvfs_t *zfsvfs, objset_t *os)
 	return (0);
 }
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 taskq_t *zfsvfs_taskq;
 
 static void
@@ -1195,7 +1199,7 @@ zfsvfs_create_impl(zfsvfs_t **zfvp, zfsvfs_t *zfsvfs, objset_t *os)
 	mutex_init(&zfsvfs->z_lock, NULL, MUTEX_DEFAULT, NULL);
 	list_create(&zfsvfs->z_all_znodes, sizeof (znode_t),
 	    offsetof(znode_t, z_link_node));
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 	TASK_INIT(&zfsvfs->z_unlinked_drain_task, 0,
 	    zfsvfs_task_unlinked_drain, zfsvfs);
 #endif
@@ -1208,6 +1212,8 @@ zfsvfs_create_impl(zfsvfs_t **zfvp, zfsvfs_t *zfsvfs, objset_t *os)
 	rw_init(&zfsvfs->z_fuid_lock, NULL, RW_DEFAULT, NULL);
 	for (int i = 0; i != ZFS_OBJ_MTX_SZ; i++)
 		mutex_init(&zfsvfs->z_hold_mtx[i], NULL, MUTEX_DEFAULT, NULL);
+
+	rm_init(&zfsvfs->z_rootvnodelock, "zfs root vnode lock");
 
 	error = zfsvfs_init(zfsvfs, os);
 	if (error != 0) {
@@ -1238,6 +1244,9 @@ zfsvfs_setup(zfsvfs_t *zfsvfs, boolean_t mounting)
 	 */
 	if (mounting) {
 		boolean_t readonly;
+
+		ASSERT3P(zfsvfs->z_kstat.dk_kstats, ==, NULL);
+		dataset_kstats_create(&zfsvfs->z_kstat, zfsvfs->z_os);
 
 		/*
 		 * During replay we remove the read only flag to
@@ -1315,6 +1324,8 @@ zfsvfs_free(zfsvfs_t *zfsvfs)
 	rw_enter(&zfsvfs_lock, RW_READER);
 	rw_exit(&zfsvfs_lock);
 
+	rm_destroy(&zfsvfs->z_rootvnodelock);
+
 	zfs_fuid_destroy(zfsvfs);
 
 	mutex_destroy(&zfsvfs->z_znodes_lock);
@@ -1325,6 +1336,7 @@ zfsvfs_free(zfsvfs_t *zfsvfs)
 	rw_destroy(&zfsvfs->z_fuid_lock);
 	for (i = 0; i != ZFS_OBJ_MTX_SZ; i++)
 		mutex_destroy(&zfsvfs->z_hold_mtx[i]);
+	dataset_kstats_destroy(&zfsvfs->z_kstat);
 	kmem_free(zfsvfs, sizeof (zfsvfs_t));
 }
 
@@ -1392,6 +1404,7 @@ zfs_domount(vfs_t *vfsp, char *osname)
 	vfsp->mnt_kern_flag |= MNTK_SHARED_WRITES;
 	vfsp->mnt_kern_flag |= MNTK_EXTENDED_SHARED;
 	vfsp->mnt_kern_flag |= MNTK_NO_IOPF;	/* vn_io_fault can be used */
+	vfsp->mnt_kern_flag |= MNTK_VMSETSIZE_BUG;
 
 	/*
 	 * The fsid is 64 bits, composed of an 8-bit fs type, which
@@ -1816,9 +1829,6 @@ zfs_mount(vfs_t *vfsp)
 
 	osname = spn.pn_path;
 #else	/* !illumos */
-	if (!prison_allow(td->td_ucred, PR_ALLOW_MOUNT_ZFS))
-		return (SET_ERROR(EPERM));
-
 	if (vfs_getopt(vfsp->mnt_optnew, "from", (void **)&osname, NULL))
 		return (SET_ERROR(EINVAL));
 
@@ -1924,6 +1934,9 @@ zfs_mount(vfs_t *vfsp)
 	error = zfs_domount(vfsp, osname);
 	PICKUP_GIANT();
 
+	if (error == 0)
+		zfs_root_setvnode((zfsvfs_t *)vfsp->vfs_data);
+
 #ifdef illumos
 	/*
 	 * Add an extra VFS_HOLD on our parent vfs so that it can't
@@ -1996,14 +2009,65 @@ zfs_statfs(vfs_t *vfsp, struct statfs *statp)
 }
 
 static int
-zfs_root(vfs_t *vfsp, int flags, vnode_t **vpp)
+zfs_root_setvnode(zfsvfs_t *zfsvfs)
 {
-	zfsvfs_t *zfsvfs = vfsp->vfs_data;
 	znode_t *rootzp;
 	int error;
 
 	ZFS_ENTER(zfsvfs);
+	error = zfs_zget(zfsvfs, zfsvfs->z_root, &rootzp);
+	if (error != 0)
+		panic("could not zfs_zget for root vnode");
+	ZFS_EXIT(zfsvfs);
 
+	rm_wlock(&zfsvfs->z_rootvnodelock);
+	if (zfsvfs->z_rootvnode != NULL)
+		panic("zfs mount point already has a root vnode: %p\n",
+		    zfsvfs->z_rootvnode);
+	zfsvfs->z_rootvnode = ZTOV(rootzp);
+	rm_wunlock(&zfsvfs->z_rootvnodelock);
+	return (0);
+}
+
+static void
+zfs_root_putvnode(zfsvfs_t *zfsvfs)
+{
+	struct vnode *vp;
+
+	rm_wlock(&zfsvfs->z_rootvnodelock);
+	vp = zfsvfs->z_rootvnode;
+	zfsvfs->z_rootvnode = NULL;
+	rm_wunlock(&zfsvfs->z_rootvnodelock);
+	if (vp != NULL)
+		vrele(vp);
+}
+
+static int
+zfs_root(vfs_t *vfsp, int flags, vnode_t **vpp)
+{
+	struct rm_priotracker tracker;
+	zfsvfs_t *zfsvfs = vfsp->vfs_data;
+	znode_t *rootzp;
+	int error;
+
+	rm_rlock(&zfsvfs->z_rootvnodelock, &tracker);
+	*vpp = zfsvfs->z_rootvnode;
+	if (*vpp != NULL && (((*vpp)->v_iflag & VI_DOOMED) == 0)) {
+		vrefact(*vpp);
+		rm_runlock(&zfsvfs->z_rootvnodelock, &tracker);
+		goto lock;
+	}
+	rm_runlock(&zfsvfs->z_rootvnodelock, &tracker);
+
+	/*
+	 * We found the vnode but did not like it.
+	 */
+	if (*vpp != NULL) {
+		*vpp = NULL;
+		zfs_root_putvnode(zfsvfs);
+	}
+
+	ZFS_ENTER(zfsvfs);
 	error = zfs_zget(zfsvfs, zfsvfs->z_root, &rootzp);
 	if (error == 0)
 		*vpp = ZTOV(rootzp);
@@ -2011,6 +2075,7 @@ zfs_root(vfs_t *vfsp, int flags, vnode_t **vpp)
 	ZFS_EXIT(zfsvfs);
 
 	if (error == 0) {
+lock:
 		error = vn_lock(*vpp, flags);
 		if (error != 0) {
 			VN_RELE(*vpp);
@@ -2128,6 +2193,8 @@ zfs_umount(vfs_t *vfsp, int fflag)
 	objset_t *os;
 	cred_t *cr = td->td_ucred;
 	int ret;
+
+	zfs_root_putvnode(zfsvfs);
 
 	ret = secpolicy_fs_unmount(cr, vfsp);
 	if (ret) {
@@ -2566,7 +2633,7 @@ zfs_init(void)
 	zfs_vnodes_adjust();
 
 	dmu_objset_register_type(DMU_OST_ZFS, zfs_space_delta_cb);
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 	zfsvfs_taskq = taskq_create("zfsvfs", 1, minclsyspri, 0, 0, 0);
 #endif
 }
@@ -2574,7 +2641,7 @@ zfs_init(void)
 void
 zfs_fini(void)
 {
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 	taskq_destroy(zfsvfs_taskq);
 #endif
 	zfsctl_fini();

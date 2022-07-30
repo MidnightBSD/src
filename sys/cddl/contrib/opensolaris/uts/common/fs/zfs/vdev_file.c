@@ -120,11 +120,11 @@ vdev_file_open(vdev_t *vd, uint64_t *psize, uint64_t *max_psize,
 	 * Make sure it's a regular file.
 	 */
 	if (vp->v_type != VREG) {
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 		(void) VOP_CLOSE(vp, spa_mode(vd->vdev_spa), 1, 0, kcred, NULL);
 #endif
 		vd->vdev_stat.vs_aux = VDEV_AUX_OPEN_FAILED;
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 		kmem_free(vd->vdev_tsd, sizeof (vdev_file_t));
 		vd->vdev_tsd = NULL;
 #endif
@@ -239,6 +239,10 @@ vdev_file_io_start(zio_t *zio)
 
 		switch (zio->io_cmd) {
 		case DKIOCFLUSHWRITECACHE:
+
+			if (zfs_nocacheflush)
+				break;
+
 			zio->io_error = VOP_FSYNC(vf->vf_vnode, FSYNC | FDSYNC,
 			    kcred, NULL);
 			break;

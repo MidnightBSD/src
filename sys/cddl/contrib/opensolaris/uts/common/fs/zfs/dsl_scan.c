@@ -137,12 +137,6 @@ extern int zfs_vdev_async_write_active_min_dirty_percent;
  */
 int zfs_scan_strict_mem_lim = B_FALSE;
 
-/*
- * Maximum number of parallelly executing I/Os per top-level vdev.
- * Tune with care. Very high settings (hundreds) are known to trigger
- * some firmware bugs and resets on certain SSDs.
- */
-int zfs_top_maxinflight = 32;		/* maximum I/Os per top-level */
 unsigned int zfs_resilver_delay = 2;	/* number of ticks to delay resilver -- 2 is a good number */
 unsigned int zfs_scrub_delay = 4;	/* number of ticks to delay scrub -- 4 is a good number */
 unsigned int zfs_scan_idle = 50;	/* idle window in clock ticks */
@@ -186,8 +180,6 @@ boolean_t zfs_no_scrub_io = B_FALSE; /* set to disable scrub i/o */
 boolean_t zfs_no_scrub_prefetch = B_FALSE; /* set to disable scrub prefetch */
 
 SYSCTL_DECL(_vfs_zfs);
-SYSCTL_UINT(_vfs_zfs, OID_AUTO, top_maxinflight, CTLFLAG_RWTUN,
-    &zfs_top_maxinflight, 0, "Maximum I/Os per top-level vdev");
 SYSCTL_UINT(_vfs_zfs, OID_AUTO, resilver_delay, CTLFLAG_RWTUN,
     &zfs_resilver_delay, 0, "Number of ticks to delay resilver");
 SYSCTL_UINT(_vfs_zfs, OID_AUTO, scrub_delay, CTLFLAG_RWTUN,
@@ -319,7 +311,7 @@ struct dsl_scan_io_queue {
 
 /* private data for dsl_scan_prefetch_cb() */
 typedef struct scan_prefetch_ctx {
-	refcount_t spc_refcnt;		/* refcount for memory management */
+	zfs_refcount_t spc_refcnt;	/* refcount for memory management */
 	dsl_scan_t *spc_scn;		/* dsl_scan_t for the pool */
 	boolean_t spc_root;		/* is this prefetch for an objset? */
 	uint8_t spc_indblkshift;	/* dn_indblkshift of current dnode */
@@ -1338,8 +1330,8 @@ scan_prefetch_queue_compare(const void *a, const void *b)
 static void
 scan_prefetch_ctx_rele(scan_prefetch_ctx_t *spc, void *tag)
 {
-	if (refcount_remove(&spc->spc_refcnt, tag) == 0) {
-		refcount_destroy(&spc->spc_refcnt);
+	if (zfs_refcount_remove(&spc->spc_refcnt, tag) == 0) {
+		zfs_refcount_destroy(&spc->spc_refcnt);
 		kmem_free(spc, sizeof (scan_prefetch_ctx_t));
 	}
 }
@@ -1350,8 +1342,8 @@ scan_prefetch_ctx_create(dsl_scan_t *scn, dnode_phys_t *dnp, void *tag)
 	scan_prefetch_ctx_t *spc;
 
 	spc = kmem_alloc(sizeof (scan_prefetch_ctx_t), KM_SLEEP);
-	refcount_create(&spc->spc_refcnt);
-	refcount_add(&spc->spc_refcnt, tag);
+	zfs_refcount_create(&spc->spc_refcnt);
+	zfs_refcount_add(&spc->spc_refcnt, tag);
 	spc->spc_scn = scn;
 	if (dnp != NULL) {
 		spc->spc_datablkszsec = dnp->dn_datablkszsec;
@@ -1369,7 +1361,7 @@ scan_prefetch_ctx_create(dsl_scan_t *scn, dnode_phys_t *dnp, void *tag)
 static void
 scan_prefetch_ctx_add_ref(scan_prefetch_ctx_t *spc, void *tag)
 {
-	refcount_add(&spc->spc_refcnt, tag);
+	zfs_refcount_add(&spc->spc_refcnt, tag);
 }
 
 static boolean_t
@@ -1503,9 +1495,11 @@ dsl_scan_prefetch_cb(zio_t *zio, const zbookmark_phys_t *zb, const blkptr_t *bp,
 		int i;
 		int epb = BP_GET_LSIZE(bp) >> DNODE_SHIFT;
 
-		for (i = 0, cdnp = buf->b_data; i < epb; i++, cdnp++) {
+		for (i = 0, cdnp = buf->b_data; i < epb;
+		    i += cdnp->dn_extra_slots + 1,
+		    cdnp += cdnp->dn_extra_slots + 1) {
 			dsl_scan_prefetch_dnode(scn, cdnp,
-						zb->zb_objset, zb->zb_blkid * epb + i);
+			    zb->zb_objset, zb->zb_blkid * epb + i);
 		}
 	} else if (BP_GET_TYPE(bp) == DMU_OT_OBJSET) {
 		objset_phys_t *osp = buf->b_data;
@@ -1536,7 +1530,6 @@ dsl_scan_prefetch_thread(void *arg)
 	dsl_scan_t *scn = arg;
 	spa_t *spa = scn->scn_dp->dp_spa;
 	vdev_t *rvd = spa->spa_root_vdev;
-	uint64_t maxinflight = rvd->vdev_children * zfs_top_maxinflight;
 	scan_prefetch_issue_ctx_t *spic;
 
 	/* loop until we are told to stop */
@@ -1683,7 +1676,9 @@ dsl_scan_recurse(dsl_scan_t *scn, dsl_dataset_t *ds, dmu_objset_type_t ostype,
 			scn->scn_phys.scn_errors++;
 			return (err);
 		}
-		for (i = 0, cdnp = buf->b_data; i < epb; i++, cdnp++) {
+		for (i = 0, cdnp = buf->b_data; i < epb;
+		    i += cdnp->dn_extra_slots + 1,
+		    cdnp += cdnp->dn_extra_slots + 1) {
 			dsl_scan_visitdnode(scn, ds, ostype,
 			    cdnp, zb->zb_blkid * epb + i, tx);
 		}
@@ -1746,7 +1741,7 @@ dsl_scan_visitdnode(dsl_scan_t *scn, dsl_dataset_t *ds,
 		zbookmark_phys_t czb;
 		SET_BOOKMARK(&czb, ds ? ds->ds_object : 0, object,
 		    0, DMU_SPILL_BLKID);
-		dsl_scan_visitbp(&dnp->dn_spill,
+		dsl_scan_visitbp(DN_SPILL_BLKPTR(dnp),
 		    &czb, dnp, ds, scn, ostype, tx);
 	}
 }
@@ -1791,7 +1786,7 @@ dsl_scan_visitbp(blkptr_t *bp, const zbookmark_phys_t *zb,
 	*bp_toread = *bp;
 
 	if (dsl_scan_recurse(scn, ds, ostype, dnp, bp_toread, zb, tx) != 0)
-		return;
+		goto out;
 
 	/*
 	 * If dsl_scan_ddt() has already visited this block, it will have

@@ -26,7 +26,8 @@
  * Copyright (c) 2012, Martin Matuska <mm@FreeBSD.org>. All rights reserved.
  * Copyright (c) 2014 Integros [integros.com]
  * Copyright 2017 Joyent, Inc.
- * Copyright (c) 2017 Datto Inc.
+ * Copyright (c) 2019 Datto Inc.
+ * Copyright (c) 2017, Intel Corporation.
  */
 
 /* Portions Copyright 2010 Robert Milkowski */
@@ -147,10 +148,11 @@ typedef enum {
 	ZFS_PROP_USERREFS,
 	ZFS_PROP_LOGBIAS,
 	ZFS_PROP_UNIQUE,		/* not exposed to the user */
-	ZFS_PROP_OBJSETID,		/* not exposed to the user */
+	ZFS_PROP_OBJSETID,
 	ZFS_PROP_DEDUP,
 	ZFS_PROP_MLSLABEL,
 	ZFS_PROP_SYNC,
+	ZFS_PROP_DNODESIZE,
 	ZFS_PROP_REFRATIO,
 	ZFS_PROP_WRITTEN,
 	ZFS_PROP_CLONES,
@@ -166,6 +168,7 @@ typedef enum {
 	ZFS_PROP_PREV_SNAP,
 	ZFS_PROP_RECEIVE_RESUME_TOKEN,
 	ZFS_PROP_REMAPTXG,		/* not exposed to the user */
+	ZFS_PROP_SPECIAL_SMALL_BLOCKS,
 	ZFS_NUM_PROPS
 } zfs_prop_t;
 
@@ -215,6 +218,9 @@ typedef enum {
 	ZPOOL_PROP_BOOTSIZE,
 	ZPOOL_PROP_CHECKPOINT,
 	ZPOOL_PROP_TNAME,
+	ZPOOL_PROP_MAXDNODESIZE,
+	ZPOOL_PROP_MULTIHOST,
+	ZPOOL_PROP_LOAD_GUID,
 	ZPOOL_NUM_PROPS
 } zpool_prop_t;
 
@@ -374,6 +380,16 @@ typedef enum {
 	ZFS_VOLMODE_DEV = 2,
 	ZFS_VOLMODE_NONE = 3
 } zfs_volmode_t;
+
+typedef enum {
+	ZFS_DNSIZE_LEGACY = 0,
+	ZFS_DNSIZE_AUTO = 1,
+	ZFS_DNSIZE_1K = 1024,
+	ZFS_DNSIZE_2K = 2048,
+	ZFS_DNSIZE_4K = 4096,
+	ZFS_DNSIZE_8K = 8192,
+	ZFS_DNSIZE_16K = 16384
+} zfs_dnsize_type_t;
 
 typedef enum {
 	ZFS_REDUNDANT_METADATA_ALL,
@@ -578,6 +594,7 @@ typedef struct zpool_load_policy {
 #define	ZPOOL_CONFIG_RESILVER_TXG	"resilver_txg"
 #define	ZPOOL_CONFIG_COMMENT		"comment"
 #define	ZPOOL_CONFIG_SUSPENDED		"suspended"	/* not stored on disk */
+#define	ZPOOL_CONFIG_SUSPENDED_REASON	"suspended_reason"	/* not stored */
 #define	ZPOOL_CONFIG_TIMESTAMP		"timestamp"	/* not stored on disk */
 #define	ZPOOL_CONFIG_BOOTFS		"bootfs"	/* not stored on disk */
 #define	ZPOOL_CONFIG_MISSING_DEVICES	"missing_vdevs"	/* not stored on disk */
@@ -592,6 +609,13 @@ typedef struct zpool_load_policy {
 #define	ZPOOL_CONFIG_VDEV_LEAF_ZAP	"com.delphix:vdev_zap_leaf"
 #define	ZPOOL_CONFIG_HAS_PER_VDEV_ZAPS	"com.delphix:has_per_vdev_zaps"
 #define	ZPOOL_CONFIG_CACHEFILE		"cachefile"	/* not stored on disk */
+#define	ZPOOL_CONFIG_MMP_STATE		"mmp_state"	/* not stored on disk */
+#define	ZPOOL_CONFIG_MMP_TXG		"mmp_txg"	/* not stored on disk */
+#define	ZPOOL_CONFIG_MMP_SEQ		"mmp_seq"	/* not stored on disk */
+#define	ZPOOL_CONFIG_MMP_HOSTNAME	"mmp_hostname"	/* not stored on disk */
+#define	ZPOOL_CONFIG_MMP_HOSTID		"mmp_hostid"	/* not stored on disk */
+#define	ZPOOL_CONFIG_ALLOCATION_BIAS	"alloc_bias"	/* not stored on disk */
+
 /*
  * The persistent vdev state is stored as separate values rather than a single
  * 'vdev_state' entry.  This is because a device can be in multiple states, such
@@ -636,6 +660,14 @@ typedef struct zpool_load_policy {
 	"com.delphix:obsolete_counts_are_precise"
 #define	VDEV_TOP_ZAP_POOL_CHECKPOINT_SM \
 	"com.delphix:pool_checkpoint_sm"
+
+#define	VDEV_TOP_ZAP_ALLOCATION_BIAS \
+	"org.zfsonlinux:allocation_bias"
+
+/* vdev metaslab allocation bias */
+#define	VDEV_ALLOC_BIAS_LOG		"log"
+#define	VDEV_ALLOC_BIAS_SPECIAL		"special"
+#define	VDEV_ALLOC_BIAS_DEDUP		"dedup"
 
 #define	VDEV_LEAF_ZAP_INITIALIZE_LAST_OFFSET	\
 	"com.delphix:next_offset_to_initialize"
@@ -703,7 +735,8 @@ typedef enum vdev_aux {
 	VDEV_AUX_EXTERNAL,	/* external diagnosis			*/
 	VDEV_AUX_SPLIT_POOL,	/* vdev was split off into another pool	*/
 	VDEV_AUX_ASHIFT_TOO_BIG, /* vdev's min block size is too large   */
-	VDEV_AUX_CHILDREN_OFFLINE /* all children are offline		*/
+	VDEV_AUX_CHILDREN_OFFLINE, /* all children are offline		*/
+	VDEV_AUX_ACTIVE		/* vdev active on a different host	*/
 } vdev_aux_t;
 
 /*
@@ -722,6 +755,16 @@ typedef enum pool_state {
 	POOL_STATE_UNAVAIL,		/* Internal libzfs state	*/
 	POOL_STATE_POTENTIALLY_ACTIVE	/* Internal libzfs state	*/
 } pool_state_t;
+
+/*
+ * mmp state. The following states provide additional detail describing
+ * why a pool couldn't be safely imported.
+ */
+typedef enum mmp_state {
+	MMP_STATE_ACTIVE = 0,		/* In active use		*/
+	MMP_STATE_INACTIVE,		/* Inactive and safe to import	*/
+	MMP_STATE_NO_HOSTID		/* System hostid is not set	*/
+} mmp_state_t;
 
 /*
  * Scan Functions.
@@ -837,6 +880,13 @@ typedef enum {
 	VDEV_INITIALIZE_SUSPENDED,
 	VDEV_INITIALIZE_COMPLETE
 } vdev_initializing_state_t;
+
+/*
+ * nvlist name constants. Facilitate restricting snapshot iteration range for
+ * the "list next snapshot" ioctl
+ */
+#define	SNAP_ITER_MIN_TXG	"snap_iter_min_txg"
+#define	SNAP_ITER_MAX_TXG	"snap_iter_max_txg"
 
 /*
  * Vdev statistics.  Note: all fields should be 64-bit because this
@@ -1004,6 +1054,7 @@ typedef enum zfs_ioc {
 	ZFS_IOC_POOL_CHECKPOINT,
 	ZFS_IOC_POOL_DISCARD_CHECKPOINT,
 	ZFS_IOC_POOL_INITIALIZE,
+	ZFS_IOC_POOL_SYNC,
 	ZFS_IOC_LAST
 } zfs_ioc_t;
 
@@ -1092,6 +1143,7 @@ typedef enum {
 #define	ZFS_IMPORT_ONLY		0x8
 #define	ZFS_IMPORT_CHECKPOINT	0x10
 #define	ZFS_IMPORT_TEMP_NAME	0x20
+#define	ZFS_IMPORT_SKIP_MMP	0x40
 
 /*
  * Channel program argument/return nvlist keys and defaults.

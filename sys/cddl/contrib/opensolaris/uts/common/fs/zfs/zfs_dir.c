@@ -318,7 +318,7 @@ zfs_unlinked_drain(zfsvfs_t *zfsvfs)
 			continue;
 
 		vn_lock(ZTOV(zp), LK_EXCLUSIVE | LK_RETRY);
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 		/*
 		 * Due to changes in zfs_rmnode we need to make sure the
 		 * link count is set to zero here.
@@ -409,7 +409,7 @@ zfs_purgedir(znode_t *dzp)
 	return (skipped);
 }
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 extern taskq_t *zfsvfs_taskq;
 #endif
 
@@ -497,7 +497,7 @@ zfs_rmnode(znode_t *zp)
 		return;
 	}
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 	/*
 	 * FreeBSD's implemention of zfs_zget requires a vnode to back it.
 	 * This means that we could end up calling into getnewvnode while
@@ -531,7 +531,7 @@ zfs_rmnode(znode_t *zp)
 
 	dmu_tx_commit(tx);
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 	if (xattr_obj) {
 		/*
 		 * We're using the FreeBSD taskqueue API here instead of
@@ -572,12 +572,10 @@ zfs_link_create(znode_t *dzp, const char *name, znode_t *zp, dmu_tx_t *tx,
 
 	ASSERT_VOP_ELOCKED(ZTOV(dzp), __func__);
 	ASSERT_VOP_ELOCKED(ZTOV(zp), __func__);
-#if 0
+#ifdef __FreeBSD__
 	if (zp_is_dir) {
-		error = 0;
-		if (dzp->z_links >= LINK_MAX)
-			error = SET_ERROR(EMLINK);
-		return (error);
+		if (dzp->z_links >= ZFS_LINK_MAX)
+			return (SET_ERROR(EMLINK));
 	}
 #endif
 	if (!(flag & ZRENAMING)) {
@@ -585,8 +583,8 @@ zfs_link_create(znode_t *dzp, const char *name, znode_t *zp, dmu_tx_t *tx,
 			ASSERT(!(flag & (ZNEW | ZEXISTS)));
 			return (SET_ERROR(ENOENT));
 		}
-#if 0
-		if (zp->z_links >= LINK_MAX) {
+#ifdef __FreeBSD__
+		if (zp->z_links >= ZFS_LINK_MAX - zp_is_dir) {
 			return (SET_ERROR(EMLINK));
 		}
 #endif
@@ -804,7 +802,7 @@ zfs_make_xattrdir(znode_t *zp, vattr_t *vap, vnode_t **xvpp, cred_t *cr)
 	 * In FreeBSD, access checking for creating an EA is being done
 	 * in zfs_setextattr(),
 	 */
-#ifndef __MidnightBSD_kernel__
+#ifndef __FreeBSD_kernel__
 	if (error = zfs_zaccess(zp, ACE_WRITE_NAMED_ATTRS, 0, B_FALSE, cr))
 		return (error);
 #endif

@@ -43,6 +43,10 @@
 #include <sys/dsl_deleg.h>
 #include <sys/dmu_impl.h>
 #include <sys/zcp.h>
+#if defined(__FreeBSD__) && defined(_KERNEL)
+#include <sys/zvol.h>
+#endif
+
 
 int
 dsl_destroy_snapshot_check_impl(dsl_dataset_t *ds, boolean_t defer)
@@ -263,7 +267,7 @@ dsl_destroy_snapshot_sync_impl(dsl_dataset_t *ds, boolean_t defer, dmu_tx_t *tx)
 	rrw_enter(&ds->ds_bp_rwlock, RW_READER, FTAG);
 	ASSERT3U(dsl_dataset_phys(ds)->ds_bp.blk_birth, <=, tx->tx_txg);
 	rrw_exit(&ds->ds_bp_rwlock, FTAG);
-	ASSERT(refcount_is_zero(&ds->ds_longholds));
+	ASSERT(zfs_refcount_is_zero(&ds->ds_longholds));
 
 	if (defer &&
 	    (ds->ds_userrefs > 0 ||
@@ -489,6 +493,14 @@ dsl_destroy_snapshot_sync_impl(dsl_dataset_t *ds, boolean_t defer, dmu_tx_t *tx)
 	if (dsl_dataset_phys(ds)->ds_userrefs_obj != 0)
 		VERIFY0(zap_destroy(mos, dsl_dataset_phys(ds)->ds_userrefs_obj,
 		    tx));
+
+#if defined(__FreeBSD__) && defined(_KERNEL)
+	char dsname[ZFS_MAX_DATASET_NAME_LEN];
+
+	dsl_dataset_name(ds, dsname);
+	zvol_remove_minors(dp->dp_spa, dsname);
+#endif
+
 	dsl_dir_rele(ds->ds_dir, ds);
 	ds->ds_dir = NULL;
 	dmu_object_free_zapified(mos, obj, tx);
@@ -697,7 +709,7 @@ dsl_destroy_head_check_impl(dsl_dataset_t *ds, int expected_holds)
 	if (ds->ds_is_snapshot)
 		return (SET_ERROR(EINVAL));
 
-	if (refcount_count(&ds->ds_longholds) != expected_holds)
+	if (zfs_refcount_count(&ds->ds_longholds) != expected_holds)
 		return (SET_ERROR(EBUSY));
 
 	mos = ds->ds_dir->dd_pool->dp_meta_objset;
@@ -725,7 +737,7 @@ dsl_destroy_head_check_impl(dsl_dataset_t *ds, int expected_holds)
 	    dsl_dataset_phys(ds->ds_prev)->ds_num_children == 2 &&
 	    ds->ds_prev->ds_userrefs == 0) {
 		/* We need to remove the origin snapshot as well. */
-		if (!refcount_is_zero(&ds->ds_prev->ds_longholds))
+		if (!zfs_refcount_is_zero(&ds->ds_prev->ds_longholds))
 			return (SET_ERROR(EBUSY));
 	}
 	return (0);
@@ -786,6 +798,8 @@ dsl_dir_destroy_sync(uint64_t ddobj, dmu_tx_t *tx)
 
 	VERIFY0(zap_destroy(mos, dsl_dir_phys(dd)->dd_child_dir_zapobj, tx));
 	VERIFY0(zap_destroy(mos, dsl_dir_phys(dd)->dd_props_zapobj, tx));
+	if (dsl_dir_phys(dd)->dd_clones != 0)
+		VERIFY0(zap_destroy(mos, dsl_dir_phys(dd)->dd_clones, tx));
 	VERIFY0(dsl_deleg_destroy(mos, dsl_dir_phys(dd)->dd_deleg_zapobj, tx));
 	VERIFY0(zap_remove(mos,
 	    dsl_dir_phys(dd->dd_parent)->dd_child_dir_zapobj,
@@ -977,6 +991,9 @@ dsl_destroy_head_sync(void *arg, dmu_tx_t *tx)
 
 	VERIFY0(dsl_dataset_hold(dp, ddha->ddha_name, FTAG, &ds));
 	dsl_destroy_head_sync_impl(ds, tx);
+#if defined(__FreeBSD__) && defined(_KERNEL)
+	zvol_remove_minors(dp->dp_spa, ddha->ddha_name);
+#endif
 	dsl_dataset_rele(ds, FTAG);
 }
 

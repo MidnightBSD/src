@@ -499,7 +499,7 @@ zfsctl_common_getattr(vnode_t *vp, vattr_t *vap)
 	vap->va_blksize = 0;
 	vap->va_nblocks = 0;
 	vap->va_seq = 0;
-	vap->va_fsid = vp->v_mount->mnt_stat.f_fsid.val[0];
+	vn_fsid(vp, vap);
 	vap->va_mode = zfsctl_ctldir_mode;
 	vap->va_type = VDIR;
 	/*
@@ -744,7 +744,7 @@ zfsctl_common_pathconf(ap)
 	 */
 	switch (ap->a_name) {
 	case _PC_LINK_MAX:
-		*ap->a_retval = INT_MAX;
+		*ap->a_retval = MIN(LONG_MAX, ZFS_LINK_MAX);
 		return (0);
 
 	case _PC_FILESIZEBITS:
@@ -1094,6 +1094,8 @@ zfsctl_snapdir_readdir(ap)
 		strcpy(entry.d_name, snapname);
 		entry.d_namlen = strlen(entry.d_name);
 		entry.d_reclen = sizeof(entry);
+		/* NOTE: d_off is the offset for the *next* entry. */
+		entry.d_off = cookie + dots_offset;
 		dirent_terminate(&entry);
 		error = vfs_read_dirent(ap, &entry, uio->uio_offset);
 		if (error != 0) {
@@ -1118,12 +1120,13 @@ zfsctl_snapdir_getattr(ap)
 	vnode_t *vp = ap->a_vp;
 	vattr_t *vap = ap->a_vap;
 	zfsvfs_t *zfsvfs = vp->v_vfsp->vfs_data;
-	dsl_dataset_t *ds = dmu_objset_ds(zfsvfs->z_os);
+	dsl_dataset_t *ds;
 	sfs_node_t *node = vp->v_data;
 	uint64_t snap_count;
 	int err;
 
 	ZFS_ENTER(zfsvfs);
+	ds = dmu_objset_ds(zfsvfs->z_os);
 	zfsctl_common_getattr(vp, vap);
 	vap->va_ctime = dmu_objset_snap_cmtime(zfsvfs->z_os);
 	vap->va_mtime = vap->va_ctime;

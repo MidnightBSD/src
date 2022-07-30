@@ -1,8 +1,0 @@
-#$FreeBSD: stable/10/sys/arm/xscale/i80321/files.iq31244 278727 2015-02-13 22:32:02Z ian $
-arm/xscale/i80321/iq80321.c		standard
-arm/xscale/i80321/iq31244_machdep.c	standard
-arm/xscale/i80321/iq31244_7seg.c	optional	iq31244_7seg
-arm/xscale/i80321/obio.c		standard
-arm/xscale/i80321/uart_cpu_i80321.c	optional	uart
-arm/xscale/i80321/uart_bus_i80321.c	optional	uart
-dev/uart/uart_dev_ns8250.c		optional	uart

@@ -21,7 +21,7 @@
 /*
  * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  * Copyright 2011 Nexenta Systems, Inc. All rights reserved.
- * Copyright (c) 2012, 2017 by Delphix. All rights reserved.
+ * Copyright (c) 2012, 2017, 2018 by Delphix. All rights reserved.
  * Copyright (c) 2014 Integros [integros.com]
  */
 
@@ -96,6 +96,8 @@ zpool_prop_init(void)
 	    ZFS_TYPE_POOL, "<size>", "CAP");
 	zprop_register_number(ZPOOL_PROP_GUID, "guid", 0, PROP_READONLY,
 	    ZFS_TYPE_POOL, "<guid>", "GUID");
+	zprop_register_number(ZPOOL_PROP_LOAD_GUID, "load_guid", 0,
+	    PROP_READONLY, ZFS_TYPE_POOL, "<load_guid>", "LOAD_GUID");
 	zprop_register_number(ZPOOL_PROP_HEALTH, "health", 0, PROP_READONLY,
 	    ZFS_TYPE_POOL, "<state>", "HEALTH");
 	zprop_register_number(ZPOOL_PROP_DEDUPRATIO, "dedupratio", 0,
@@ -125,6 +127,9 @@ zpool_prop_init(void)
 	    PROP_DEFAULT, ZFS_TYPE_POOL, "on | off", "EXPAND", boolean_table);
 	zprop_register_index(ZPOOL_PROP_READONLY, "readonly", 0,
 	    PROP_DEFAULT, ZFS_TYPE_POOL, "on | off", "RDONLY", boolean_table);
+	zprop_register_index(ZPOOL_PROP_MULTIHOST, "multihost", 0,
+	    PROP_DEFAULT, ZFS_TYPE_POOL, "on | off", "MULTIHOST",
+	    boolean_table);
 
 	/* default index properties */
 	zprop_register_index(ZPOOL_PROP_FAILUREMODE, "failmode",
@@ -138,6 +143,8 @@ zpool_prop_init(void)
 	    PROP_TYPE_NUMBER, PROP_READONLY, ZFS_TYPE_POOL, "MAXBLOCKSIZE");
 	zprop_register_hidden(ZPOOL_PROP_TNAME, "tname", PROP_TYPE_STRING,
 	    PROP_ONETIME, ZFS_TYPE_POOL, "TNAME");
+	zprop_register_hidden(ZPOOL_PROP_MAXDNODESIZE, "maxdnodesize",
+	    PROP_TYPE_NUMBER, PROP_READONLY, ZFS_TYPE_POOL, "MAXDNODESIZE");
 }
 
 /*

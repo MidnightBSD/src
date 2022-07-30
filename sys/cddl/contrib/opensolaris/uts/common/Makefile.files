@@ -71,7 +71,9 @@ ZFS_COMMON_OBJS +=		\
 	bptree.o		\
 	bqueue.o		\
 	cityhash.o		\
+	dataset_kstats.c	\
 	dbuf.o			\
+	dbuf_stats.o		\
 	ddt.o			\
 	ddt_zap.o		\
 	dmu.o			\
@@ -97,9 +99,9 @@ ZFS_COMMON_OBJS +=		\
 	dsl_scan.o		\
 	zfeature.o		\
 	gzip.o			\
-	lz4.o			\
 	lzjb.o			\
 	metaslab.o		\
+	mmp.o			\
 	multilist.o		\
 	range_tree.o		\
 	refcount.o		\

@@ -20,11 +20,12 @@
  */
 
 /*
- * Copyright (c) 2011, 2017 by Delphix. All rights reserved.
+ * Copyright (c) 2011, 2018 by Delphix. All rights reserved.
  * Copyright (c) 2013 by Saso Kiselkov. All rights reserved.
  * Copyright (c) 2013, Joyent, Inc. All rights reserved.
  * Copyright (c) 2014, Nexenta Systems, Inc. All rights reserved.
  * Copyright (c) 2014 Integros [integros.com]
+ * Copyright (c) 2017, Intel Corporation.
  */
 
 #ifdef _KERNEL
@@ -243,6 +244,18 @@ zpool_feature_init(void)
 	    "org.open-zfs:large_blocks", "large_blocks",
 	    "Support for blocks larger than 128KB.",
 	    ZFEATURE_FLAG_PER_DATASET, large_blocks_deps);
+
+	{
+	static const spa_feature_t large_dnode_deps[] = {
+		SPA_FEATURE_EXTENSIBLE_DATASET,
+		SPA_FEATURE_NONE
+	};
+	zfeature_register(SPA_FEATURE_LARGE_DNODE,
+	    "org.zfsonlinux:large_dnode", "large_dnode",
+	    "Variable on-disk size of dnodes.",
+	    ZFEATURE_FLAG_PER_DATASET, large_dnode_deps);
+	}
+
 	static const spa_feature_t sha512_deps[] = {
 		SPA_FEATURE_EXTENSIBLE_DATASET,
 		SPA_FEATURE_NONE
@@ -287,4 +300,11 @@ zpool_feature_init(void)
 	    "Reduce memory used by removed devices when their blocks are "
 	    "freed or remapped.",
 	    ZFEATURE_FLAG_READONLY_COMPAT, obsolete_counts_deps);
+
+	{
+	zfeature_register(SPA_FEATURE_ALLOCATION_CLASSES,
+	    "org.zfsonlinux:allocation_classes", "allocation_classes",
+	    "Support for separate allocation classes.",
+	    ZFEATURE_FLAG_READONLY_COMPAT, NULL);
+	}
 }

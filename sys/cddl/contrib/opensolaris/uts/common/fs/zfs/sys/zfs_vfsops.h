@@ -20,6 +20,7 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018 by Delphix. All rights reserved.
  * Copyright (c) 2011 Pawel Jakub Dawidek <pawel@dawidek.net>.
  * All rights reserved.
  */
@@ -27,6 +28,7 @@
 #ifndef	_SYS_FS_ZFS_VFSOPS_H
 #define	_SYS_FS_ZFS_VFSOPS_H
 
+#include <sys/dataset_kstats.h>
 #include <sys/list.h>
 #include <sys/vfs.h>
 #include <sys/zil.h>
@@ -46,6 +48,8 @@ struct zfsvfs {
 	zfsvfs_t	*z_parent;	/* parent fs */
 	objset_t	*z_os;		/* objset reference */
 	uint64_t	z_root;		/* id of root znode */
+	struct vnode	*z_rootvnode;	/* root vnode */
+	struct rmlock	z_rootvnodelock;/* protection for root vnode */
 	uint64_t	z_unlinkedobj;	/* id of unlinked zapobj */
 	uint64_t	z_max_blksz;	/* maximum block size for files */
 	uint64_t	z_fuid_obj;	/* fuid table object number */
@@ -78,6 +82,7 @@ struct zfsvfs {
 	boolean_t	z_use_namecache;/* make use of FreeBSD name cache */
 	uint64_t	z_version;	/* ZPL version */
 	uint64_t	z_shares_dir;	/* hidden shares dir */
+	dataset_kstats_t	z_kstat;	/* fs kstats */
 	kmutex_t	z_lock;
 	uint64_t	z_userquota_obj;
 	uint64_t	z_groupquota_obj;

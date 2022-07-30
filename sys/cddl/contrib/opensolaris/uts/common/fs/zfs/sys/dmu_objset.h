@@ -20,7 +20,7 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2012, 2017 by Delphix. All rights reserved.
+ * Copyright (c) 2012, 2018 by Delphix. All rights reserved.
  * Copyright (c) 2013 by Saso Kiselkov. All rights reserved.
  * Copyright (c) 2014 Spectra Logic Corporation, All rights reserved.
  * Copyright (c) 2014 Integros [integros.com]
@@ -91,6 +91,7 @@ struct objset {
 	list_node_t os_evicting_node;
 
 	/* can change, under dsl_dir's locks: */
+	uint64_t os_dnodesize; /* default dnode size for new objects */
 	enum zio_checksum os_checksum;
 	enum zio_compress os_compress;
 	uint8_t os_copies;
@@ -112,6 +113,11 @@ struct objset {
 	uint64_t os_normalization;
 	uint64_t os_utf8only;
 	uint64_t os_casesensitivity;
+	/*
+	 * The largest zpl file block allowed in special class.
+	 * cached here instead of zfsvfs for easier access.
+	 */
+	int os_zpl_special_smallblock;
 
 	/*
 	 * Pointer is constant; the blkptr it points to is protected by
@@ -129,7 +135,11 @@ struct objset {
 
 	/* Protected by os_obj_lock */
 	kmutex_t os_obj_lock;
-	uint64_t os_obj_next;
+	uint64_t os_obj_next_chunk;
+
+	/* Per-CPU next object to allocate, protected by atomic ops. */
+	uint64_t *os_obj_next_percpu;
+	int os_obj_next_percpu_len;
 
 	/* Protected by os_lock */
 	kmutex_t os_lock;

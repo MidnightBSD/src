@@ -222,6 +222,17 @@ zfs_prop_init(void)
 		{ NULL }
 	};
 
+	static zprop_index_t dnsize_table[] = {
+		{ "legacy",	ZFS_DNSIZE_LEGACY },
+		{ "auto",	ZFS_DNSIZE_AUTO },
+		{ "1k",		ZFS_DNSIZE_1K },
+		{ "2k",		ZFS_DNSIZE_2K },
+		{ "4k",		ZFS_DNSIZE_4K },
+		{ "8k",		ZFS_DNSIZE_8K },
+		{ "16k",	ZFS_DNSIZE_16K },
+		{ NULL }
+	};
+
 	static zprop_index_t redundant_metadata_table[] = {
 		{ "all",	ZFS_REDUNDANT_METADATA_ALL },
 		{ "most",	ZFS_REDUNDANT_METADATA_MOST },
@@ -281,6 +292,10 @@ zfs_prop_init(void)
 	    ZFS_VOLMODE_DEFAULT, PROP_INHERIT,
 	    ZFS_TYPE_FILESYSTEM | ZFS_TYPE_SNAPSHOT | ZFS_TYPE_VOLUME,
 	    "default | geom | dev | none", "VOLMODE", volmode_table);
+ 
+	zprop_register_index(ZFS_PROP_DNODESIZE, "dnodesize",
+	    ZFS_DNSIZE_LEGACY, PROP_INHERIT, ZFS_TYPE_FILESYSTEM,
+	    "legacy | auto | 1k | 2k | 4k | 8k | 16k", "DNSIZE", dnsize_table);
 
 	/* inherit index (boolean) properties */
 	zprop_register_index(ZFS_PROP_ATIME, "atime", 1, PROP_INHERIT,
@@ -431,11 +446,16 @@ zfs_prop_init(void)
 	    ZFS_TYPE_DATASET | ZFS_TYPE_BOOKMARK, "<uint64>", "GUID");
 	zprop_register_number(ZFS_PROP_CREATETXG, "createtxg", 0, PROP_READONLY,
 	    ZFS_TYPE_DATASET | ZFS_TYPE_BOOKMARK, "<uint64>", "CREATETXG");
+	zprop_register_number(ZFS_PROP_OBJSETID, "objsetid", 0,
+	    PROP_READONLY, ZFS_TYPE_DATASET, "<uint64>", "OBJSETID");
 
 	/* inherit number properties */
 	zprop_register_number(ZFS_PROP_RECORDSIZE, "recordsize",
 	    SPA_OLD_MAXBLOCKSIZE, PROP_INHERIT,
 	    ZFS_TYPE_FILESYSTEM, "512 to 1M, power of 2", "RECSIZE");
+	zprop_register_number(ZFS_PROP_SPECIAL_SMALL_BLOCKS,
+	    "special_small_blocks", 0, PROP_INHERIT, ZFS_TYPE_FILESYSTEM,
+	    "zero or 512 to 128K, power of 2", "SPECIAL_SMALL_BLOCKS");
 
 	/* hidden properties */
 	zprop_register_hidden(ZFS_PROP_REMAPTXG, "remaptxg", PROP_TYPE_NUMBER,
@@ -454,8 +474,6 @@ zfs_prop_init(void)
 	    "USERACCOUNTING");
 	zprop_register_hidden(ZFS_PROP_UNIQUE, "unique", PROP_TYPE_NUMBER,
 	    PROP_READONLY, ZFS_TYPE_DATASET, "UNIQUE");
-	zprop_register_hidden(ZFS_PROP_OBJSETID, "objsetid", PROP_TYPE_NUMBER,
-	    PROP_READONLY, ZFS_TYPE_DATASET, "OBJSETID");
 	zprop_register_hidden(ZFS_PROP_INCONSISTENT, "inconsistent",
 	    PROP_TYPE_NUMBER, PROP_READONLY, ZFS_TYPE_DATASET, "INCONSISTENT");
 	zprop_register_hidden(ZFS_PROP_PREV_SNAP, "prevsnap", PROP_TYPE_STRING,

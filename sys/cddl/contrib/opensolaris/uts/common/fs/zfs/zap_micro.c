@@ -21,7 +21,7 @@
 
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2011, 2017 by Delphix. All rights reserved.
+ * Copyright (c) 2011, 2018 by Delphix. All rights reserved.
  * Copyright (c) 2014 Spectra Logic Corporation, All rights reserved.
  * Copyright (c) 2014 Integros [integros.com]
  * Copyright 2017 Nexenta Systems, Inc.
@@ -701,8 +701,16 @@ int
 zap_create_claim(objset_t *os, uint64_t obj, dmu_object_type_t ot,
     dmu_object_type_t bonustype, int bonuslen, dmu_tx_t *tx)
 {
-	return (zap_create_claim_norm(os, obj,
-	    0, ot, bonustype, bonuslen, tx));
+	return (zap_create_claim_dnsize(os, obj, ot, bonustype, bonuslen,
+	    0, tx));
+}
+
+int
+zap_create_claim_dnsize(objset_t *os, uint64_t obj, dmu_object_type_t ot,
+    dmu_object_type_t bonustype, int bonuslen, int dnodesize, dmu_tx_t *tx)
+{
+	return (zap_create_claim_norm_dnsize(os, obj,
+	    0, ot, bonustype, bonuslen, dnodesize, tx));
 }
 
 int
@@ -710,8 +718,19 @@ zap_create_claim_norm(objset_t *os, uint64_t obj, int normflags,
     dmu_object_type_t ot,
     dmu_object_type_t bonustype, int bonuslen, dmu_tx_t *tx)
 {
-	ASSERT3U(DMU_OT_BYTESWAP(ot), ==, DMU_BSWAP_ZAP);
-	int err = dmu_object_claim(os, obj, ot, 0, bonustype, bonuslen, tx);
+	return (zap_create_claim_norm_dnsize(os, obj, normflags, ot, bonustype,
+	    bonuslen, 0, tx));
+}
+
+int
+zap_create_claim_norm_dnsize(objset_t *os, uint64_t obj, int normflags,
+    dmu_object_type_t ot, dmu_object_type_t bonustype, int bonuslen,
+    int dnodesize, dmu_tx_t *tx)
+{
+	int err;
+
+	err = dmu_object_claim_dnsize(os, obj, ot, 0, bonustype, bonuslen,
+	    dnodesize, tx);
 	if (err != 0)
 		return (err);
 	mzap_create_impl(os, obj, normflags, 0, tx);
@@ -726,11 +745,28 @@ zap_create(objset_t *os, dmu_object_type_t ot,
 }
 
 uint64_t
+zap_create_dnsize(objset_t *os, dmu_object_type_t ot,
+    dmu_object_type_t bonustype, int bonuslen, int dnodesize, dmu_tx_t *tx)
+{
+	return (zap_create_norm_dnsize(os, 0, ot, bonustype, bonuslen,
+	    dnodesize, tx));
+}
+
+uint64_t
 zap_create_norm(objset_t *os, int normflags, dmu_object_type_t ot,
     dmu_object_type_t bonustype, int bonuslen, dmu_tx_t *tx)
 {
 	ASSERT3U(DMU_OT_BYTESWAP(ot), ==, DMU_BSWAP_ZAP);
-	uint64_t obj = dmu_object_alloc(os, ot, 0, bonustype, bonuslen, tx);
+	return (zap_create_norm_dnsize(os, normflags, ot, bonustype, bonuslen,
+	    0, tx));
+}
+
+uint64_t
+zap_create_norm_dnsize(objset_t *os, int normflags, dmu_object_type_t ot,
+    dmu_object_type_t bonustype, int bonuslen, int dnodesize, dmu_tx_t *tx)
+{
+	uint64_t obj = dmu_object_alloc_dnsize(os, ot, 0, bonustype, bonuslen,
+	    dnodesize, tx);
 
 	mzap_create_impl(os, obj, normflags, 0, tx);
 	return (obj);
@@ -742,7 +778,17 @@ zap_create_flags(objset_t *os, int normflags, zap_flags_t flags,
     dmu_object_type_t bonustype, int bonuslen, dmu_tx_t *tx)
 {
 	ASSERT3U(DMU_OT_BYTESWAP(ot), ==, DMU_BSWAP_ZAP);
-	uint64_t obj = dmu_object_alloc(os, ot, 0, bonustype, bonuslen, tx);
+	return (zap_create_flags_dnsize(os, normflags, flags, ot,
+	    leaf_blockshift, indirect_blockshift, bonustype, bonuslen, 0, tx));
+}
+
+uint64_t
+zap_create_flags_dnsize(objset_t *os, int normflags, zap_flags_t flags,
+    dmu_object_type_t ot, int leaf_blockshift, int indirect_blockshift,
+    dmu_object_type_t bonustype, int bonuslen, int dnodesize, dmu_tx_t *tx)
+{
+	uint64_t obj = dmu_object_alloc_dnsize(os, ot, 0, bonustype, bonuslen,
+	    dnodesize, tx);
 
 	ASSERT(leaf_blockshift >= SPA_MINBLOCKSHIFT &&
 	    leaf_blockshift <= SPA_OLD_MAXBLOCKSHIFT &&
@@ -1348,9 +1394,9 @@ zap_remove_uint64(objset_t *os, uint64_t zapobj, const uint64_t *key,
  * Routines for iterating over the attributes.
  */
 
-void
-zap_cursor_init_serialized(zap_cursor_t *zc, objset_t *os, uint64_t zapobj,
-    uint64_t serialized)
+static void
+zap_cursor_init_impl(zap_cursor_t *zc, objset_t *os, uint64_t zapobj,
+    uint64_t serialized, boolean_t prefetch)
 {
 	zc->zc_objset = os;
 	zc->zc_zap = NULL;
@@ -1359,12 +1405,33 @@ zap_cursor_init_serialized(zap_cursor_t *zc, objset_t *os, uint64_t zapobj,
 	zc->zc_serialized = serialized;
 	zc->zc_hash = 0;
 	zc->zc_cd = 0;
+	zc->zc_prefetch = prefetch;
+}
+void
+zap_cursor_init_serialized(zap_cursor_t *zc, objset_t *os, uint64_t zapobj,
+    uint64_t serialized)
+{
+	zap_cursor_init_impl(zc, os, zapobj, serialized, B_TRUE);
 }
 
+/*
+ * Initialize a cursor at the beginning of the ZAP object.  The entire
+ * ZAP object will be prefetched.
+ */
 void
 zap_cursor_init(zap_cursor_t *zc, objset_t *os, uint64_t zapobj)
 {
-	zap_cursor_init_serialized(zc, os, zapobj, 0);
+	zap_cursor_init_impl(zc, os, zapobj, 0, B_TRUE);
+}
+
+/*
+ * Initialize a cursor at the beginning, but request that we not prefetch
+ * the entire ZAP object.
+ */
+void
+zap_cursor_init_noprefetch(zap_cursor_t *zc, objset_t *os, uint64_t zapobj)
+{
+	zap_cursor_init_impl(zc, os, zapobj, 0, B_FALSE);
 }
 
 void

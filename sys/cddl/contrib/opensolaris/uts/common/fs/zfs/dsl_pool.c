@@ -50,8 +50,9 @@
 #include <sys/zfeature.h>
 #include <sys/zil_impl.h>
 #include <sys/dsl_userhold.h>
+#include <sys/mmp.h>
 
-#if defined(__MidnightBSD__) && defined(_KERNEL)
+#if defined(__FreeBSD__) && defined(_KERNEL)
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #endif
@@ -108,9 +109,11 @@ uint64_t zfs_dirty_data_max_max = 4ULL * 1024 * 1024 * 1024;
 int zfs_dirty_data_max_percent = 10;
 
 /*
- * If there is at least this much dirty data, push out a txg.
+ * If there's at least this much dirty data (as a percentage of
+ * zfs_dirty_data_max), push out a txg.  This should be less than
+ * zfs_vdev_async_write_active_min_dirty_percent.
  */
-uint64_t zfs_dirty_data_sync = 64 * 1024 * 1024;
+uint64_t zfs_dirty_data_sync_pct = 20;
 
 /*
  * Once there is this amount of dirty data, the dmu_tx_delay() will kick in
@@ -169,7 +172,7 @@ int zfs_zil_clean_taskq_nthr_pct = 100;
 int zfs_zil_clean_taskq_minalloc = 1024;
 int zfs_zil_clean_taskq_maxalloc = 1024 * 1024;
 
-#if defined(__MidnightBSD__) && defined(_KERNEL)
+#if defined(__FreeBSD__) && defined(_KERNEL)
 
 extern int zfs_vdev_async_write_active_max_dirty_percent;
 
@@ -190,9 +193,9 @@ SYSCTL_PROC(_vfs_zfs, OID_AUTO, dirty_data_max_percent,
     sysctl_zfs_dirty_data_max_percent, "I",
     "The percent of physical memory used to auto calculate dirty_data_max");
 
-SYSCTL_UQUAD(_vfs_zfs, OID_AUTO, dirty_data_sync, CTLFLAG_RWTUN,
-    &zfs_dirty_data_sync, 0,
-    "Force a txg if the number of dirty buffer bytes exceed this value");
+SYSCTL_UQUAD(_vfs_zfs, OID_AUTO, dirty_data_sync_pct, CTLFLAG_RWTUN,
+    &zfs_dirty_data_sync_pct, 0,
+    "Force a txg if the percent of dirty buffer bytes exceed this value");
 
 static int sysctl_zfs_delay_min_dirty_percent(SYSCTL_HANDLER_ARGS);
 /* No zfs_delay_min_dirty_percent tunable due to limit requirements */
@@ -290,6 +293,7 @@ dsl_pool_open_impl(spa_t *spa, uint64_t txg)
 	dp->dp_meta_rootbp = *bp;
 	rrw_init(&dp->dp_config_rwlock, B_TRUE);
 	txg_init(dp, txg);
+	mmp_init(spa);
 
 	txg_list_create(&dp->dp_dirty_datasets, spa,
 	    offsetof(dsl_dataset_t, ds_dirty_link));
@@ -491,6 +495,7 @@ dsl_pool_close(dsl_pool_t *dp)
 	 */
 	arc_flush(dp->dp_spa, FALSE);
 
+	mmp_fini(dp->dp_spa);
 	txg_fini(dp);
 	dsl_scan_fini(dp);
 	dmu_buf_user_evict_wait();
@@ -926,10 +931,12 @@ dsl_pool_need_dirty_delay(dsl_pool_t *dp)
 {
 	uint64_t delay_min_bytes =
 	    zfs_dirty_data_max * zfs_delay_min_dirty_percent / 100;
+	uint64_t dirty_min_bytes =
+	    zfs_dirty_data_max * zfs_dirty_data_sync_pct / 100;
 	boolean_t rv;
 
 	mutex_enter(&dp->dp_lock);
-	if (dp->dp_dirty_total > zfs_dirty_data_sync)
+	if (dp->dp_dirty_total > dirty_min_bytes)
 		txg_kick(dp);
 	rv = (dp->dp_dirty_total > delay_min_bytes);
 	mutex_exit(&dp->dp_lock);

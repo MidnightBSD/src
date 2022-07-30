@@ -432,7 +432,7 @@ dnode_evict_dbufs(dnode_t *dn)
 
 		mutex_enter(&db->db_mtx);
 		if (db->db_state != DB_EVICTING &&
-		    refcount_is_zero(&db->db_holds)) {
+		    zfs_refcount_is_zero(&db->db_holds)) {
 			db_marker.db_level = db->db_level;
 			db_marker.db_blkid = db->db_blkid;
 			db_marker.db_state = DB_SEARCH;
@@ -472,7 +472,7 @@ dnode_evict_bonus(dnode_t *dn)
 {
 	rw_enter(&dn->dn_struct_rwlock, RW_WRITER);
 	if (dn->dn_bonus != NULL) {
-		if (refcount_is_zero(&dn->dn_bonus->db_holds)) {
+		if (zfs_refcount_is_zero(&dn->dn_bonus->db_holds)) {
 			mutex_enter(&dn->dn_bonus->db_mtx);
 			dbuf_destroy(dn->dn_bonus);
 			dn->dn_bonus = NULL;
@@ -538,7 +538,7 @@ dnode_sync_free(dnode_t *dn, dmu_tx_t *tx)
 	 * zfs_obj_to_path() also depends on this being
 	 * commented out.
 	 *
-	 * ASSERT3U(refcount_count(&dn->dn_holds), ==, 1);
+	 * ASSERT3U(zfs_refcount_count(&dn->dn_holds), ==, 1);
 	 */
 
 	/* Undirty next bits */
@@ -553,7 +553,8 @@ dnode_sync_free(dnode_t *dn, dmu_tx_t *tx)
 	ASSERT(dn->dn_free_txg > 0);
 	if (dn->dn_allocated_txg != dn->dn_free_txg)
 		dmu_buf_will_dirty(&dn->dn_dbuf->db, tx);
-	bzero(dn->dn_phys, sizeof (dnode_phys_t));
+	bzero(dn->dn_phys, sizeof (dnode_phys_t) * dn->dn_num_slots);
+	dnode_free_interior_slots(dn);
 
 	mutex_enter(&dn->dn_mtx);
 	dn->dn_type = DMU_OT_NONE;
@@ -561,6 +562,7 @@ dnode_sync_free(dnode_t *dn, dmu_tx_t *tx)
 	dn->dn_allocated_txg = 0;
 	dn->dn_free_txg = 0;
 	dn->dn_have_spill = B_FALSE;
+	dn->dn_num_slots = 1;
 	mutex_exit(&dn->dn_mtx);
 
 	ASSERT(dn->dn_object != DMU_META_DNODE_OBJECT);
@@ -587,7 +589,7 @@ dnode_sync(dnode_t *dn, dmu_tx_t *tx)
 	ASSERT(dmu_tx_is_syncing(tx));
 	ASSERT(dnp->dn_type != DMU_OT_NONE || dn->dn_allocated_txg);
 	ASSERT(dnp->dn_type != DMU_OT_NONE ||
-	    bcmp(dnp, &zerodn, DNODE_SIZE) == 0);
+	    bcmp(dnp, &zerodn, DNODE_MIN_SIZE) == 0);
 	DNODE_VERIFY(dn);
 
 	ASSERT(dn->dn_dbuf == NULL || arc_released(dn->dn_dbuf->db_buf));
@@ -619,6 +621,9 @@ dnode_sync(dnode_t *dn, dmu_tx_t *tx)
 		dnp->dn_bonustype = dn->dn_bonustype;
 		dnp->dn_bonuslen = dn->dn_bonuslen;
 	}
+
+	dnp->dn_extra_slots = dn->dn_num_slots - 1;
+
 	ASSERT(dnp->dn_nlevels > 1 ||
 	    BP_IS_HOLE(&dnp->dn_blkptr[0]) ||
 	    BP_IS_EMBEDDED(&dnp->dn_blkptr[0]) ||
@@ -651,7 +656,8 @@ dnode_sync(dnode_t *dn, dmu_tx_t *tx)
 			dnp->dn_bonuslen = 0;
 		else
 			dnp->dn_bonuslen = dn->dn_next_bonuslen[txgoff];
-		ASSERT(dnp->dn_bonuslen <= DN_MAX_BONUSLEN);
+		ASSERT(dnp->dn_bonuslen <=
+		    DN_SLOTS_TO_BONUSLEN(dnp->dn_extra_slots + 1));
 		dn->dn_next_bonuslen[txgoff] = 0;
 	}
 
@@ -691,7 +697,7 @@ dnode_sync(dnode_t *dn, dmu_tx_t *tx)
 	mutex_exit(&dn->dn_mtx);
 
 	if (kill_spill) {
-		free_blocks(dn, &dn->dn_phys->dn_spill, 1, tx);
+		free_blocks(dn, DN_SPILL_BLKPTR(dn->dn_phys), 1, tx);
 		mutex_enter(&dn->dn_mtx);
 		dnp->dn_flags &= ~DNODE_FLAG_SPILL_BLKPTR;
 		mutex_exit(&dn->dn_mtx);
@@ -719,6 +725,14 @@ dnode_sync(dnode_t *dn, dmu_tx_t *tx)
 		dn->dn_objset->os_freed_dnodes++;
 		dnode_sync_free(dn, tx);
 		return;
+	}
+
+	if (dn->dn_num_slots > DNODE_MIN_SLOTS) {
+		dsl_dataset_t *ds = dn->dn_objset->os_dsl_dataset;
+		mutex_enter(&ds->ds_lock);
+		ds->ds_feature_activation_needed[SPA_FEATURE_LARGE_DNODE] =
+		    B_TRUE;
+		mutex_exit(&ds->ds_lock);
 	}
 
 	if (dn->dn_next_nlevels[txgoff]) {

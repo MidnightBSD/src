@@ -18,17 +18,17 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/11/sys/cddl/contrib/opensolaris/uts/common/sys/dtrace_impl.h 316210 2017-03-30 02:50:21Z gnn $
+ * $FreeBSD$
  */
 
 /*
  * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
- * Copyright (c) 2012 by Delphix. All rights reserved.
  * Use is subject to license terms.
  */
 
 /*
- * Copyright (c) 2011, Joyent, Inc. All rights reserved.
+ * Copyright 2016 Joyent, Inc.
+ * Copyright (c) 2012 by Delphix. All rights reserved.
  */
 
 #ifndef _SYS_DTRACE_IMPL_H
@@ -937,6 +937,7 @@ typedef struct dtrace_mstate {
 	int dtms_ipl;				/* cached interrupt pri lev */
 	int dtms_fltoffs;			/* faulting DIFO offset */
 	uintptr_t dtms_strtok;			/* saved strtok() pointer */
+	uintptr_t dtms_strtok_limit;		/* upper bound of strtok ptr */
 	uint32_t dtms_access;			/* memory access rights */
 	dtrace_difo_t *dtms_difo;		/* current dif object */
 	file_t *dtms_getf;			/* cached rval of getf() */
