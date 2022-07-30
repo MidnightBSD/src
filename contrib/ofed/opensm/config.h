@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/contrib/ofed/opensm/config.h 321936 2017-08-02 16:00:30Z hselasky $ */
+/* $FreeBSD$ */
 
 /* Define as 1 if you want Dual Sided RMPP Support */
 #define DUAL_SIDED_RMPP 1

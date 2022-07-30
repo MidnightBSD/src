@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/contrib/ofed/libmlx4/config.h 331769 2018-03-30 18:06:29Z hselasky $ */
+/* $FreeBSD$ */
 
 #ifdef	__LP64__
 #define	SIZEOF_LONG 8

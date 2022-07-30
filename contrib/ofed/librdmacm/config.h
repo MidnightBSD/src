@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/contrib/ofed/librdmacm/config.h 331769 2018-03-30 18:06:29Z hselasky $ */
+/* $FreeBSD$ */
 
 #define	min(a, b) ((a) > (b) ? (b) : (a))
 #define	VALGRIND_MAKE_MEM_DEFINED(...)	0
