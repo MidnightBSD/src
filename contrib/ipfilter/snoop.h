@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/11/contrib/ipfilter/snoop.h 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.

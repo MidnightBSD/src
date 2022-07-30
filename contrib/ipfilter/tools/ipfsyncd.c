@@ -43,17 +43,17 @@ extern  char    *sys_errlist[];
 #endif
 
 
-int	main __P((int, char *[]));
-void	usage __P((char *));
-void	printsynchdr __P((synchdr_t *));
-void	printtable __P((int));
-void	printsmcproto __P((char *));
-void	printcommand __P((int));
-int	do_kbuff __P((int, char *, int *));
-int	do_packet __P((int, char *));
-int	buildsocket __P((char *, struct sockaddr_in *));
-void	do_io __P((void));
-void	handleterm __P((int));
+int	main(int, char *[]);
+void	usage(char *);
+void	printsynchdr(synchdr_t *);
+void	printtable(int);
+void	printsmcproto(char *);
+void	printcommand(int);
+int	do_kbuff(int, char *, int *);
+int	do_packet(int, char *);
+int	buildsocket(char *, struct sockaddr_in *);
+void	do_io(void);
+void	handleterm(int);
 
 int	terminate = 0;
 int	igmpfd = -1;
@@ -131,7 +131,7 @@ main(argc, argv)
 
 	if (!debuglevel) {
 
-#if BSD >= 199306
+#ifdef BSD
 		daemon(0, 0);
 #else
 		int fd = open("/dev/null", O_RDWR);
@@ -385,7 +385,7 @@ buildsocket(nicname, sinp)
 			       (char *)&mreq, sizeof(mreq)) == -1) {
 			char buffer[80];
 
-			sprintf(buffer, "%s,", inet_ntoa(sinp->sin_addr));
+			snprintf(buffer, sizeof(buffer), "%s,", inet_ntoa(sinp->sin_addr));
 			strcat(buffer, inet_ntoa(reqip->sin_addr));
 
 			syslog(LOG_ERR,
