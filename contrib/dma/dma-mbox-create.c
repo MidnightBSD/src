@@ -38,7 +38,7 @@
  * user-supplied information.  Keep the root window as small as possible.
  */
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#ifdef __FreeBSD__
 #define	USE_CAPSICUM	1
 #endif
 
