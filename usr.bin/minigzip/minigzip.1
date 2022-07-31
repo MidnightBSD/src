@@ -24,7 +24,7 @@
 .\"
 .\" $FreeBSD: stable/11/usr.bin/minigzip/minigzip.1 235802 2012-05-22 19:40:54Z delphij $
 .\"
-.Dd May 22, 2012
+.Dd August 1, 2022
 .Dt MINIGZIP 1
 .Os
 .Sh NAME
@@ -74,6 +74,14 @@ option is specified,
 .Nm
 writes the results to standard output and keep the original files
 unchanged.
+.Sh DEPRECATION NOTICE
+.Nm
+is deprecated and will be removed from future versions of the
+.Fx
+base system.
+Users should use
+.Xr gzip 1
+instead.
 .Sh SEE ALSO
 .Xr gzip 1
 .Sh AUTHORS
