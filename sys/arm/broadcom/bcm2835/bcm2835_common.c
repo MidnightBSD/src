@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/broadcom/bcm2835/bcm2835_common.c 314506 2017-03-01 19:55:04Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

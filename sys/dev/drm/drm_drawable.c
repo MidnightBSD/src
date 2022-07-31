@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /** @file drm_drawable.c
  * This file implements ioctls to store information along with DRM drawables,

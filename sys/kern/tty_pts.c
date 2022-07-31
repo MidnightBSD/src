@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /* Add compatibility bits for FreeBSD. */
 #define PTS_COMPAT

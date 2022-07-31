@@ -41,7 +41,6 @@
  *	JNPR: trap.c,v 1.13.2.2 2007/08/29 10:03:49 girish
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 #include "opt_ktrace.h"
@@ -500,8 +499,6 @@ cpu_fetch_syscall_args(struct thread *td)
 	return (error);
 }
 
-#undef __FBSDID
-#define __FBSDID(x)
 #include "../../kern/subr_syscall.c"
 
 /*

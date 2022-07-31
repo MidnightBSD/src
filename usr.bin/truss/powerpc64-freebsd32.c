@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/truss/powerpc64-freebsd32.c 312084 2017-01-13 21:30:18Z jhb $");
 
 /* FreeBSD/powerpc64-freebsd32-specific system call handling. */
 

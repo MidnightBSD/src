@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/nfsuserd/nfsuserd.c 346464 2019-04-21 00:51:43Z rmacklem $");
 
 #include <sys/param.h>
 #include <sys/errno.h>

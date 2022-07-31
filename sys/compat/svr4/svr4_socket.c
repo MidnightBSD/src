@@ -41,7 +41,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/svr4/svr4_socket.c 298519 2016-04-23 20:29:55Z dchagin $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

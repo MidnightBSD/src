@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * EtherPower II 10/100 Fast Ethernet (SMC 9432 serie)

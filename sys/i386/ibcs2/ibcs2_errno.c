@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/errno.h>
 #include <i386/ibcs2/ibcs2_errno.h>

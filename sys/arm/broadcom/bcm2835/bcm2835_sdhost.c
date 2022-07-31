@@ -31,7 +31,6 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * pin 48-53 - card slot

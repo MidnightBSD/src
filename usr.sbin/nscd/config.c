@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/nscd/config.c 315600 2017-03-20 00:55:24Z pfg $");
 
 #include <sys/stat.h>
 #include <sys/time.h>

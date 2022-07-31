@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/asf/asf_kvm.c 338868 2018-09-21 21:15:43Z markj $");
 
 #include <sys/types.h>
 #include <sys/param.h>

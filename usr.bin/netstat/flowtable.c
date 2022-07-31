@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/netstat/flowtable.c 287649 2015-09-11 04:37:01Z markj $");
 
 #include <sys/param.h>
 

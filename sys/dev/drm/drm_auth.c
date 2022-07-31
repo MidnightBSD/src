@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /** @file drm_auth.c
  * Implementation of the get/authmagic ioctls implementing the authentication

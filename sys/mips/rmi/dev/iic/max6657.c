@@ -29,7 +29,6 @@
  * RMI_BSD */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/rmi/dev/iic/max6657.c 331722 2018-03-29 02:50:57Z eadler $");
 /*
  * temperature sensor chip sitting on the I2C bus.
  */

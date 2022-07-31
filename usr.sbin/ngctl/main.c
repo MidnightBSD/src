@@ -38,7 +38,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/ngctl/main.c 277258 2015-01-16 18:51:26Z glebius $");
 
 #include <sys/param.h>
 #include <sys/socket.h>

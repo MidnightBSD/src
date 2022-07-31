@@ -30,7 +30,6 @@
  * RMI_BSD */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/rmi/dev/iic/ds1374u.c 216410 2010-12-13 17:53:38Z jchandra $");
 /*
  *  RTC chip sitting on the I2C bus.
  */

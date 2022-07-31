@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/truss/i386-freebsd.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /* FreeBSD/i386-specific system call handling. */
 

@@ -1,5 +1,4 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/rt305x/rt305x_ehci.c 308401 2016-11-07 08:36:06Z hselasky $");
 
 /*-
  * Copyright (c) 2015 Stanislav Galabov. All rights reserved.

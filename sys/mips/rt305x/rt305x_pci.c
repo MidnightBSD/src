@@ -32,7 +32,6 @@
  * Developed by Semihalf.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/rt305x/rt305x_pci.c 295880 2016-02-22 09:02:20Z skra $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

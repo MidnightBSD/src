@@ -22,7 +22,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /**
  * \file drm_pci.h

@@ -37,7 +37,6 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/sentry5/uart_cpu_sbusart.c 202175 2010-01-12 21:36:08Z imp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

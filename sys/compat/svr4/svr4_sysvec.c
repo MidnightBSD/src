@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/svr4/svr4_sysvec.c 298519 2016-04-23 20:29:55Z dchagin $");
 
 /* XXX we use functions that might not exist. */
 #include "opt_compat.h"

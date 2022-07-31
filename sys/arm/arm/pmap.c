@@ -143,7 +143,6 @@
 #include "opt_vm.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/pmap.c 283931 2015-06-02 21:36:45Z imp $");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>

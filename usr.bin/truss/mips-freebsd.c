@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/truss/mips-freebsd.c 351798 2019-09-03 21:11:04Z kevans $");
 
 /* FreeBSD/mips-specific system call handling. */
 

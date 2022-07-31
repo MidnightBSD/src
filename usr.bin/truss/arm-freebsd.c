@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/truss/arm-freebsd.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /* FreeBSD/arm-specific system call handling. */
 

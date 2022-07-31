@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * Intel EtherExpress Pro/10, Pro/10+ Ethernet driver

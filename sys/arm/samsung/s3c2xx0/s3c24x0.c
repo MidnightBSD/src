@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/samsung/s3c2xx0/s3c24x0.c 278727 2015-02-13 22:32:02Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

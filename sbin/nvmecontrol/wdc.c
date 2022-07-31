@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/nvmecontrol/wdc.c 328732 2018-02-01 21:04:10Z mav $");
 
 #include <sys/param.h>
 #include <sys/ioccom.h>

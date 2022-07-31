@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/truss/amd64-cloudabi64.c 312084 2017-01-13 21:30:18Z jhb $");
 
 #include <sys/param.h>
 #include <sys/ptrace.h>

@@ -52,7 +52,6 @@ static const char sccsid[] = "@(#)rlogin.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/rlogin/rlogin.c 241737 2012-10-19 14:49:42Z ed $");
 
 /*
  * rlogin - remote login

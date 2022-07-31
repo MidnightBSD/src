@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/truss/amd64-freebsd32.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /* FreeBSD/amd64-freebsd32-specific system call handling. */
 

@@ -33,7 +33,6 @@
 
 #include <sys/param.h>
 
-__FBSDID("$FreeBSD: stable/11/sys/cam/ctl/ctl_scsi_all.c 287620 2015-09-10 10:46:21Z mav $");
 
 #include <sys/types.h>
 #ifdef _KERNEL

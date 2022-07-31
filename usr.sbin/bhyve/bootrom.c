@@ -27,7 +27,6 @@
  */
 
 #include <sys/param.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/mman.h>

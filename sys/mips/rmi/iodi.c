@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/rmi/iodi.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #define __RMAN_RESOURCE_VISIBLE
 #include <sys/param.h>

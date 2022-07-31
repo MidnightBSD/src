@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/nfsclient/nfs_bio.c 249623 2013-04-18 13:09:04Z rmacklem $");
 
 #include "opt_kdtrace.h"
 

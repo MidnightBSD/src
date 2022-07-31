@@ -1,6 +1,5 @@
 /* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/samsung/s3c2xx0/uart_bus_s3c2410.c 283327 2015-05-23 20:54:25Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

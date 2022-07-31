@@ -26,7 +26,6 @@
  * $FreeBSD: stable/11/sys/mips/rmi/bus_space_rmi.c 331722 2018-03-29 02:50:57Z eadler $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/rmi/bus_space_rmi.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

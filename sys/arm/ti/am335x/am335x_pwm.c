@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/ti/am335x/am335x_pwm.c 270237 2014-08-20 17:57:23Z loos $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

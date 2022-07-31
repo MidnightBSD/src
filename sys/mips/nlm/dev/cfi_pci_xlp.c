@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/nlm/dev/cfi_pci_xlp.c 233556 2012-03-27 15:16:38Z jchandra $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

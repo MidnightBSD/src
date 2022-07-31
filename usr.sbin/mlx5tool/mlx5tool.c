@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/mlx5tool/mlx5tool.c 353256 2019-10-07 10:24:19Z hselasky $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>

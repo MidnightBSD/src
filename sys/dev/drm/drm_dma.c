@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /** @file drm_dma.c
  * Support code for DMA buffer management.

@@ -39,7 +39,6 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/mv/mv_machdep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>

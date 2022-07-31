@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/broadcom/bcm_socinfo.c 302190 2016-06-25 04:34:54Z landonf $");
 
 #include <sys/param.h>
 #include "bcm_socinfo.h"

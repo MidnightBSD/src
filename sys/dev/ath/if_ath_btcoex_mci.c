@@ -30,7 +30,6 @@
  * $FreeBSD$
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * This implements the MCI bluetooth coexistence handling.

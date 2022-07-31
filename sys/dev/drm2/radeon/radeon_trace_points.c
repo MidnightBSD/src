@@ -2,7 +2,6 @@
  * Author : Dave Airlie <airlied@redhat.com>
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <drm/drmP.h>
 #include <drm/radeon_drm.h>

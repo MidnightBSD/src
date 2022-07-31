@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/geom/class/eli/geom_eli.c 348588 2019-06-03 21:04:23Z jhb $");
 
 #include <sys/param.h>
 #include <sys/mman.h>

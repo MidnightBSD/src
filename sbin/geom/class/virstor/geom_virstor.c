@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/geom/class/virstor/geom_virstor.c 330726 2018-03-10 02:15:45Z asomers $");
 
 #include <sys/param.h>
 #include <errno.h>

@@ -68,7 +68,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #ifdef INET6
 #include <sys/param.h>

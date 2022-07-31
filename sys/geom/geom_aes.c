@@ -41,7 +41,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/geom/geom_aes.c 332520 2018-04-16 00:18:57Z kevans $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -30,7 +30,6 @@
 #include "opt_kernname.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/arm/elf_trampoline.c 331891 2018-04-02 22:16:19Z gonzo $");
 #include <machine/asm.h>
 #include <sys/param.h>
 #include <sys/elf32.h>

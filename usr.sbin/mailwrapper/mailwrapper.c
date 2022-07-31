@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/mailwrapper/mailwrapper.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 

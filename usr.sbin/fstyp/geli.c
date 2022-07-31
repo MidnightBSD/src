@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/fstyp/geli.c 292829 2015-12-28 08:53:31Z delphij $");
 
 #include <sys/disk.h>
 #include <sys/types.h>

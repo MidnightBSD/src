@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * USB audio specs: http://www.usb.org/developers/devclass_docs/audio10.pdf

@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/svr4/svr4_ioctl.c 263233 2014-03-16 10:55:57Z rwatson $");
 
 #include <sys/param.h>
 #include <sys/proc.h>

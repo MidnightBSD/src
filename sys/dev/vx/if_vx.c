@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * Created from if_ep.c driver by Fred Gray (fgray@rice.edu) to support

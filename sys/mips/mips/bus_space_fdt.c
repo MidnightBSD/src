@@ -66,7 +66,6 @@
  * $FreeBSD: stable/10/sys/mips/mips/bus_space_fdt.c 263687 2014-03-24 13:48:04Z emaste $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/mips/mips/bus_space_fdt.c 263687 2014-03-24 13:48:04Z emaste $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

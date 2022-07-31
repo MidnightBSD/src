@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/samsung/s3c2xx0/board_ln2410sbc.c 272103 2014-09-25 11:38:26Z gavin $");
 #include <sys/param.h>
 #include <sys/systm.h>
 

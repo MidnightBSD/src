@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/busdma_machdep.c 318977 2017-05-27 08:17:59Z hselasky $");
 
 /*
  * ARM bus dma support routines.

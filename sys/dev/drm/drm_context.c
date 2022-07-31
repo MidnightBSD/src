@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /** @file drm_context.c
  * Implementation of the context management ioctls.

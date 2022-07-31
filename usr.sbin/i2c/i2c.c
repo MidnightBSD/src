@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/i2c/i2c.c 349836 2019-07-08 14:34:00Z ian $");
 
 #include <err.h>
 #include <errno.h>

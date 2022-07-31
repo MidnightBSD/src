@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/nfsclient/nfs_vfsops.c 249630 2013-04-18 23:20:16Z rmacklem $");
 
 
 #include "opt_bootp.h"

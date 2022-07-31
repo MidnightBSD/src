@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/geom/class/part/geom_part.c 346753 2019-04-26 16:26:01Z mav $");
 
 #include <sys/stat.h>
 #include <sys/vtoc.h>

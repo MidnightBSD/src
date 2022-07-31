@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * Mostek MK48T02, MK48T08, MK48T18, MK48T37 and MK48T59 time-of-day chip

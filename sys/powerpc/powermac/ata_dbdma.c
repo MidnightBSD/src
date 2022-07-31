@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("* $FreeBSD$");
 
 /*
  * Common routines for the DMA engine on both the Apple Kauai and MacIO

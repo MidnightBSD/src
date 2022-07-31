@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/arm/physmem.c 338694 2018-09-15 18:01:15Z markj $");
 
 #include "opt_ddb.h"
 

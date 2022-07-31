@@ -81,7 +81,6 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/arm/trap.c 294681 2016-01-24 19:58:58Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

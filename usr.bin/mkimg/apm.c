@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/mkimg/apm.c 329059 2018-02-09 09:15:43Z manu $");
 
 #include <sys/errno.h>
 #include <stdint.h>

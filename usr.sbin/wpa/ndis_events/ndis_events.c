@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/wpa/ndis_events/ndis_events.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * This program simulates the behavior of the ndis_events utility

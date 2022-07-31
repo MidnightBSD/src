@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/fstyp/cd9660.c 284582 2015-06-18 21:55:55Z trasz $");
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -43,7 +43,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/geom/geom_bsd.c 322860 2017-08-24 21:44:23Z mckusick $");
 
 #include <sys/param.h>
 #include <sys/endian.h>

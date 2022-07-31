@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/fmtree/specspec.c 356533 2020-01-09 01:17:01Z bdrewery $");
 
 #include <err.h>
 #include <grp.h>

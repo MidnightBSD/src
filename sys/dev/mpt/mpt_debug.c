@@ -66,7 +66,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <dev/mpt/mpt.h>
 

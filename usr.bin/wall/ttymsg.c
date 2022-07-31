@@ -31,7 +31,6 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD$");
 
 #ifndef lint
 static const char sccsid[] = "@(#)ttymsg.c	8.2 (Berkeley) 11/16/93";

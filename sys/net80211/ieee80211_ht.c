@@ -27,7 +27,6 @@
 
 #include <sys/cdefs.h>
 #ifdef __MidnightBSD__
-__FBSDID("$FreeBSD: stable/11/sys/net80211/ieee80211_ht.c 345761 2019-04-01 07:54:27Z avos $");
 #endif
 
 /*

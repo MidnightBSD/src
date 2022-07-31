@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/nfsclient/nfs_node.c 243311 2012-11-19 22:43:45Z attilio $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

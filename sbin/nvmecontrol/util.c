@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/nvmecontrol/util.c 328728 2018-02-01 19:46:41Z mav $");
 
 #include <sys/endian.h>
 #include "nvmecontrol.h"

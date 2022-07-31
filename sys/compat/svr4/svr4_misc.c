@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/svr4/svr4_misc.c 331330 2018-03-21 23:45:48Z emaste $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

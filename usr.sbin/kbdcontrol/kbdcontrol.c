@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/kbdcontrol/kbdcontrol.c 344124 2019-02-14 15:33:04Z se $");
 
 #include <ctype.h>
 #include <err.h>

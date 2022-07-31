@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/nfsclient/nfs_vnops.c 276500 2015-01-01 10:44:20Z kib $");
 
 /*
  * vnode op calls for Sun NFS version 2 and 3

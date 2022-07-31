@@ -41,7 +41,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/make/job.c 252679 2013-07-04 03:24:58Z kevlo $");
 
 /*-
  * job.c --

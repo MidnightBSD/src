@@ -30,7 +30,6 @@
 /* Simple UART console driver for Freescale i.MX515 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/freescale/imx/console.c 253914 2013-08-03 13:31:10Z ian $");
 
 #include <sys/types.h>
 #include <sys/param.h>

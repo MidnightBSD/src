@@ -1,6 +1,3 @@
-#
-# $MidnightBSD$
-#
 # This file add support for the WITHOUT_* and WITH_* knobs in src.conf(5) to
 # the check-old and delete-old* targets.
 #

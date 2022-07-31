@@ -41,7 +41,6 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/ti/ti_mmchs.c 266159 2014-05-15 16:59:47Z ian $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/gssd/gssd.c 346768 2019-04-26 21:34:08Z mav $");
 
 #include <sys/param.h>
 #include <sys/stat.h>

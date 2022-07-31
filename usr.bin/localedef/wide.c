@@ -35,7 +35,6 @@
  * this approach means that we need a method for each and every encoding.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <ctype.h>
 #include <stdlib.h>

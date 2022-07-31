@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/broadcom/bcm_mipscore.c 301698 2016-06-08 21:38:51Z landonf $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

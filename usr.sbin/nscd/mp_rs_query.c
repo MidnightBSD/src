@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/nscd/mp_rs_query.c 194104 2009-06-13 13:07:56Z des $");
 
 #include <sys/types.h>
 #include <sys/event.h>

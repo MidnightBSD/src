@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include "dev/drm/via_3d_reg.h"
 #include "dev/drm/drmP.h"

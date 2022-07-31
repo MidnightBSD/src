@@ -45,7 +45,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/rmi/dev/nlge/if_nlge.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"

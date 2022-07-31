@@ -20,7 +20,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * ZyDAS ZD1211/ZD1211B USB WLAN driver.

@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/geom/part/g_part.c 339286 2018-10-10 15:44:14Z emaste $");
 
 #include <sys/param.h>
 #include <sys/bio.h>

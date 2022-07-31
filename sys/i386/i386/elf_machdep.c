@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/i386/i386/elf_machdep.c 338867 2018-09-21 20:40:37Z markj $");
 
 #include "opt_cpu.h"
 

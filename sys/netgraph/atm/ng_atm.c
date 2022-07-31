@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/netgraph/atm/ng_atm.c 298813 2016-04-29 21:25:05Z pfg $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

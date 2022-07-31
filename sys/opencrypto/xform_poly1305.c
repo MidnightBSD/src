@@ -1,7 +1,6 @@
 /* This file is in the public domain. */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <opencrypto/xform_auth.h>
 #include <opencrypto/xform_poly1305.h>

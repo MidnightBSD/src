@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/catman/catman.c 300269 2016-05-20 06:24:16Z truckman $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

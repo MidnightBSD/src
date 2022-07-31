@@ -29,7 +29,6 @@
 /* Base class for all Synopsys DesignWare PCI/PCIe drivers */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 
 #include <sys/param.h>

@@ -47,7 +47,6 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/arm/samsung/s3c2xx0/s3c24x0_machdep.c 272103 2014-09-25 11:38:26Z gavin $");
 
 #define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>

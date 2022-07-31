@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/geom/class/cache/geom_cache.c 330726 2018-03-10 02:15:45Z asomers $");
 
 #include <errno.h>
 #include <stdio.h>

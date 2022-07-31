@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/inetd/builtins.c 356388 2020-01-05 21:35:02Z kevans $");
 
 #include <sys/filio.h>
 #include <sys/ioccom.h>

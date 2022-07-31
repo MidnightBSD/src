@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/mv/armada38x/rtc.c 294434 2016-01-20 14:18:49Z zbb $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

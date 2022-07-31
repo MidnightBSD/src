@@ -64,7 +64,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/svr4/svr4_ipc.c 298520 2016-04-23 20:31:18Z dchagin $");
 
 #include "opt_sysvipc.h"
 

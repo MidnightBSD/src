@@ -30,7 +30,6 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * Device specific driver for the EBus i2c devices found on some sun4u

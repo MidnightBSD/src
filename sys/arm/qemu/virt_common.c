@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/arm/qemu/virt_common.c 314506 2017-03-01 19:55:04Z ian $");
 
 #include "opt_platform.h"
 

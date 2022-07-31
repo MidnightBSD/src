@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/mips/rt305x/uart_dev_rt305x.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "opt_ddb.h"
 

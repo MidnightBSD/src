@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/fstyp/ext2fs.c 277128 2015-01-13 13:59:48Z trasz $");
 
 #include <stdio.h>
 #include <stdint.h>

@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/compat/svr4/svr4_fcntl.c 274476 2014-11-13 18:01:51Z kib $");
 
 #include <sys/param.h>
 #include <sys/capsicum.h>
