@@ -1,5 +1,3 @@
-# $FreeBSD$
-
 .include "../clang.pre.mk"
 
 .PATH:		${CLANG_SRCS}/lib/Headers

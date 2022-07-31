@@ -1,4 +1,3 @@
-/* $FreeBSD$ */
 
 #define	CLANG_VERSION			13.0.0
 #define	CLANG_VERSION_STRING		"13.0.0"
