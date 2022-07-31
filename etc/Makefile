@@ -22,10 +22,6 @@ BIN1=	\
 
 # NB: keep these sorted by MK_* knobs
 
-.if ${MK_MIDNIGHTBSD_UPDATE} != "no"
-BIN1+= midnightbsd-update.conf
-.endif
-
 .if ${MK_NTP} != "no"
 BIN1+=	ntpd.conf
 .endif
