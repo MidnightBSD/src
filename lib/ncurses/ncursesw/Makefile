@@ -1,5 +1,3 @@
-# $FreeBSD$
-
 ENABLE_WIDEC=
 
 .PATH: ${.CURDIR:H}/ncurses
