@@ -24,7 +24,6 @@ _PRIVATELIBS=	\
 		heimipcs \
 		ifconfig \
 		ldns \
-		sqlite3 \
 		ssh \
 		ucl \
 		unbound \
