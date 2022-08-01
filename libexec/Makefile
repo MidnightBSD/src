@@ -32,13 +32,11 @@ SUBDIR=	${_atf} \
 	${_pppoed} \
 	rc \
 	revnetgroup \
-	${_rlogind} \
 	rpc.rquotad \
 	rpc.rstatd \
 	rpc.rusersd \
 	rpc.rwalld \
 	rpc.sprayd \
-	${_rshd} \
 	${_rtld-elf} \
 	save-entropy \
 	${_smrsh} \
