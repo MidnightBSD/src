@@ -20,7 +20,7 @@
 #define LLVM_ENABLE_CRASH_DUMPS 0
 
 /* Define to 1 if you have the `backtrace' function. */
-#define HAVE_BACKTRACE TRUE
+/* LAH #define HAVE_BACKTRACE TRUE */
 
 #define BACKTRACE_HEADER <execinfo.h>
 
@@ -251,7 +251,7 @@
  * This is only needed for terminalHasColors(). When disabled LLVM falls back
  * to checking a list of TERM prefixes which is sufficient for a bootstrap tool.
  */
-#define LLVM_ENABLE_TERMINFO 1
+/* #define LLVM_ENABLE_TERMINFO 1 */
 #endif
 
 /* Define to 1 if you have the <termios.h> header file. */
