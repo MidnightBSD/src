@@ -1,6 +1,4 @@
-# /etc/crontab - root's crontab for FreeBSD
-#
-# $FreeBSD$
+# /etc/crontab - root's crontab for MidnightBSD
 #
 SHELL=/bin/sh
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
