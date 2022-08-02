@@ -34,7 +34,7 @@
 # --no-stats	-- don't show progress statistics while fetching files
 usage () {
 	cat <<EOF
-usage: `basename $0` [options] command ... [path]
+usage: `basename $0` [options] command ...
 
 Options:
   -b basedir   -- Operate on a system mounted at basedir
@@ -45,6 +45,7 @@ Options:
                   (default: /etc/midnightbsd-update.conf)
   -F           -- Force a fetch operation to proceed in the
                   case of an unfinished upgrade
+  -j jail      -- Operate on the given jail specified by jid or name
   -k KEY       -- Trust an RSA key with SHA256 hash of KEY
   -r release   -- Target for upgrade (e.g., 11.1-RELEASE)
   -s server    -- Server from which to fetch updates
@@ -322,6 +323,19 @@ config_SourceRelease () {
 	export UNAME_r
 }
 
+# Get the Jail's path and the version of its installed userland
+config_TargetJail () {
+	JAIL=$1
+	UNAME_r=$(midnightbsd-version -j ${JAIL})
+	BASEDIR=$(jls -j ${JAIL} -h path | awk 'NR == 2 {print}')
+	if [ -z ${BASEDIR} ] || [ -z ${UNAME_r} ]; then
+		echo "The specified jail either doesn't exist or" \
+		      "does not have midnightbsd-version."
+		exit 1
+	fi
+	export UNAME_r
+}
+
 # Define what happens to output of utilities
 config_VerboseLevel () {
 	if [ -z ${VERBOSELEVEL} ]; then
@@ -408,6 +422,23 @@ config_BackupKernelSymbolFiles () {
 	fi
 }
 
+config_CreateBootEnv () {
+	if [ -z ${BOOTENV} ]; then
+		case $1 in
+		[Yy][Ee][Ss])
+			BOOTENV=yes
+			;;
+		[Nn][Oo])
+			BOOTENV=no
+			;;
+		*)
+			return 1
+			;;
+		esac
+	else
+		return 1
+	fi
+}
 # Handle one line of configuration
 configline () {
 	if [ $# -eq 0 ]; then
@@ -472,6 +503,10 @@ parse_cmdline () {
 		-d)
 			if [ $# -eq 1 ]; then usage; fi; shift
 			config_WorkDir $1 || usage
+			;;
+		-j)
+			if [ $# -eq 1 ]; then usage; fi; shift
+			config_TargetJail $1 || usage
 			;;
 		-k)
 			if [ $# -eq 1 ]; then usage; fi; shift
@@ -584,6 +619,7 @@ default_params () {
 	config_BackupKernel yes
 	config_BackupKernelDir /boot/kernel.old
 	config_BackupKernelSymbolFiles no
+	config_CreateBootEnv yes
 
 	# Merge these defaults into the earlier-configured settings
 	mergeconfig
@@ -845,6 +881,49 @@ install_check_params () {
 	if ! [ -d ${KERNELDIR} ]; then
 		echo "Cannot identify running kernel"
 		exit 1
+	fi
+}
+
+# Creates a new boot environment
+install_create_be () {
+	# Figure out if we're running in a jail and return if we are
+	if [ `sysctl -n security.jail.jailed` = 1 ]; then
+		return 1
+	fi
+	# Operating on roots that aren't located at / will, more often than not,
+	# not touch the boot environment.
+	if [ "$BASEDIR" != "/" ]; then
+		return 1
+	fi
+	# Create a boot environment if enabled
+	if [ ${BOOTENV} = yes ]; then
+		bectl check 2>/dev/null
+		case $? in
+			0)
+				# Boot environment are supported
+				CREATEBE=yes
+				;;
+			255)
+				# Boot environments are not supported
+				CREATEBE=no
+				;;
+			*)
+				# If bectl returns an unexpected exit code, don't create a BE
+				CREATEBE=no
+				;;
+		esac
+		if [ ${CREATEBE} = yes ]; then
+			echo -n "Creating snapshot of existing boot environment... "
+			VERSION=`midnightbsd-version -ku | sort -V | tail -n 1`
+			TIMESTAMP=`date +"%Y-%m-%d_%H%M%S"`
+			bectl create ${VERSION}_${TIMESTAMP}
+			if [ $? -eq 0 ]; then
+				echo "done.";
+			else
+				echo "failed."
+				exit 1
+			fi
+		fi
 	fi
 }
 
@@ -1934,7 +2013,7 @@ fetch_files () {
 		echo ${NDEBUG} "files... "
 		lam -s "${FETCHDIR}/f/" - -s ".gz" < filelist |
 		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
-		    2>${QUIETREDIR}
+			2>${STATSREDIR} | fetch_progress
 
 		while read Y; do
 			if ! [ -f ${Y}.gz ]; then
@@ -2431,7 +2510,7 @@ upgrade_merge () {
 				cp merge/old/${F} merge/new/${F}
 				;;
 			*)
-				if ! merge -p -L "current version"	\
+				if ! diff3 -E -m -L "current version"	\
 				    -L "${OLDRELNUM}" -L "${RELNUM}"	\
 				    merge/old/${F}			\
 				    merge/${OLDRELNUM}/${F}		\
@@ -2945,24 +3024,17 @@ Kernel updates have been installed.  Please reboot and run
 			env DESTDIR=${BASEDIR} certctl rehash
 		fi
 
-		# Rebuild generated pwd files.
-		if [ ${BASEDIR}/etc/master.passwd -nt ${BASEDIR}/etc/spwd.db ] ||
-		    [ ${BASEDIR}/etc/master.passwd -nt ${BASEDIR}/etc/pwd.db ] ||
-		    [ ${BASEDIR}/etc/master.passwd -nt ${BASEDIR}/etc/passwd ]; then
-			pwd_mkdb -d ${BASEDIR}/etc -p ${BASEDIR}/etc/master.passwd
-		fi
-
-		# Rebuild /etc/login.conf.db if necessary.
-		if [ ${BASEDIR}/etc/login.conf -nt ${BASEDIR}/etc/login.conf.db ]; then
-			cap_mkdb ${BASEDIR}/etc/login.conf
-		fi
+		# Rebuild generated pwd files and /etc/login.conf.db.
+		pwd_mkdb -d ${BASEDIR}/etc -p ${BASEDIR}/etc/master.passwd
+		cap_mkdb ${BASEDIR}/etc/login.conf
 
 		# Rebuild man page databases, if necessary.
 		for D in /usr/share/man /usr/share/openssl/man; do
 			if [ ! -d ${BASEDIR}/$D ]; then
 				continue
 			fi
-			if [ -z "$(find ${BASEDIR}/$D -type f -newer ${BASEDIR}/$D/mandoc.db)" ]; then
+			if [ -f ${BASEDIR}/$D/mandoc.db ] && \
+			    [ -z "$(find ${BASEDIR}/$D -type f -newer ${BASEDIR}/$D/mandoc.db)" ]; then
 				continue;
 			fi
 			makewhatis ${BASEDIR}/$D
@@ -3296,12 +3368,12 @@ get_params () {
 	parse_cmdline $@
 	parse_conffile
 	default_params
-	finalize_components_config ${COMPONENTS}
 }
 
 # Fetch command.  Make sure that we're being called
 # interactively, then run fetch_check_params and fetch_run
 cmd_fetch () {
+	finalize_components_config ${COMPONENTS}
 	if [ ! -t 0 -a $NOTTYOK -eq 0 ]; then
 		echo -n "`basename $0` fetch should not "
 		echo "be run non-interactively."
@@ -3322,6 +3394,7 @@ cmd_cron () {
 	sleep `jot -r 1 0 3600`
 
 	TMPFILE=`mktemp /tmp/midnightbsd-update.XXXXXX` || exit 1
+	finalize_components_config ${COMPONENTS} >> ${TMPFILE}
 	if ! fetch_run >> ${TMPFILE} ||
 	    ! grep -q "No updates needed" ${TMPFILE} ||
 	    [ ${VERBOSELEVEL} = "debug" ]; then
@@ -3333,12 +3406,24 @@ cmd_cron () {
 
 # Fetch files for upgrading to a new release.
 cmd_upgrade () {
+	finalize_components_config ${COMPONENTS}
 	upgrade_check_params
 	upgrade_run || exit 1
 }
 
-# Check if there are fetched updates ready to install
+# Check if there are fetched updates ready to install.
+# Chdir into the working directory.
 cmd_updatesready () {
+	finalize_components_config ${COMPONENTS}
+	# Check if working directory exists (if not, no updates pending)
+	if ! [ -e "${WORKDIR}" ]; then
+		echo "No updates are available to install."
+		exit 2
+	fi
+	
+	# Change into working directory (fail if no permission/directory etc.)
+	cd ${WORKDIR} || exit 1
+
 	# Construct a unique name from ${BASEDIR}
 	BDHASH=`echo ${BASEDIR} | sha256 -q`
 
@@ -3354,24 +3439,29 @@ cmd_updatesready () {
 
 # Install downloaded updates.
 cmd_install () {
+	finalize_components_config ${COMPONENTS}
 	install_check_params
+	install_create_be
 	install_run || exit 1
 }
 
 # Rollback most recently installed updates.
 cmd_rollback () {
+	finalize_components_config ${COMPONENTS}
 	rollback_check_params
 	rollback_run || exit 1
 }
 
 # Compare system against a "known good" index.
 cmd_IDS () {
+	finalize_components_config ${COMPONENTS}
 	IDS_check_params
 	IDS_run || exit 1
 }
 
 # Output configuration.
 cmd_showconfig () {
+	finalize_components_config ${COMPONENTS}
 	for X in ${CONFIGOPTIONS}; do
 		echo $X=$(eval echo \$${X})
 	done
@@ -3384,7 +3474,7 @@ export PATH=/sbin:/bin:/usr/sbin:/usr/bin:${PATH}
 
 # Set a pager if the user doesn't
 if [ -z "$PAGER" ]; then
-	PAGER=/usr/bin/more
+	PAGER=/usr/bin/less
 fi
 
 # Set LC_ALL in order to avoid problems with character ranges like [A-Z].
