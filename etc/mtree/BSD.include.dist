@@ -6,14 +6,6 @@
 
 /set type=dir uname=root gname=wheel mode=0755
 .
-    apple
-        sys
-            _pthread
-            ..
-            _types
-            ..
-        ..
-    ..
     arpa
     ..
     atf-c
@@ -296,18 +288,8 @@
     ..
     lzma
     ..
-    mach
-        device
-        ..
-        i386
-        ..
-    ..
-    mach_debug
-    ..
     machine
         pc
-        ..
-        mach
         ..
     ..
     net
@@ -400,13 +382,7 @@
     ssp
     ..
     sys
-        mach
-            ipc
-            ..
-            device
-            ..
-        ..
-        mach_debug
+        disk
         ..
     ..
     teken

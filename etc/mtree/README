@@ -1,6 +1,3 @@
-$MidnightBSD$
-$FreeBSD: src/etc/mtree/README,v 1.7 2002/05/18 12:37:19 ru Exp $
-
 Note: If you modify these files, please keep hier(7) updated!
 
 These files are used to create empty file hierarchies for building the
