@@ -1,5 +1,3 @@
-# $FreeBSD: stable/11/targets/pseudo/universe/Makefile 291973 2015-12-08 00:22:24Z bdrewery $
-
 # This target is "special".
 #
 # The actual work is done via another target;

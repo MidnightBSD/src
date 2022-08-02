@@ -1,5 +1,3 @@
-# $FreeBSD$
-
 # building clang is particularly tedious - so avoid re-inventing wheels
 
 all: bootstrap-toolchain
@@ -27,7 +25,7 @@ BSENV= \
 .if !defined(OSRELDATE)
 ord_h= /usr/include/osreldate.h
 .if exists(${ord_h})
-OSRELDATE!= sed -n '/define.*__FreeBSD_version/{s,^[^0-9]*,,p;q;}' ${ord_h}
+OSRELDATE!= sed -n '/define.*__MidnightBSD_version/{s,^[^0-9]*,,p;q;}' ${ord_h}
 .endif
 OSRELDATE?= 0
 .endif
