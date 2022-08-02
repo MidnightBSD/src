@@ -1,6 +1,4 @@
 #
-# $FreeBSD$
-#
 # The user-driven targets are:
 #
 # universe            - *Really* build *everything* (buildworld and
@@ -48,7 +46,7 @@
 #                     - Install the files to the given DESTDIR/NXTP where
 #                       NXTP defaults to /nxb-bin.
 #
-# This makefile is simple by design. The FreeBSD make automatically reads
+# This makefile is simple by design. The MidnightBSD make automatically reads
 # the /usr/share/mk/sys.mk unless the -m argument is specified on the
 # command line. By keeping this makefile simple, it doesn't matter too
 # much how different the installed mk files are from those in the source
@@ -359,7 +357,7 @@ CHECK_TIME!= cmp=`mktemp`; find ${.CURDIR}/sys/sys/param.h -newer "$$cmp" && rm 
 # world
 #
 # Attempt to rebuild and reinstall everything. This target is not to be
-# used for upgrading an existing FreeBSD system, because the kernel is
+# used for upgrading an existing MidnightBSD system, because the kernel is
 # not included. One can argue that this target doesn't build everything
 # then.
 #
@@ -390,11 +388,11 @@ world: upgrade_checks .PHONY
 	@echo "--------------------------------------------------------------"
 .else
 world: .PHONY
-	@echo "WARNING: make world will overwrite your existing FreeBSD"
+	@echo "WARNING: make world will overwrite your existing MidnightBSD"
 	@echo "installation without also building and installing a new"
 	@echo "kernel.  This can be dangerous.  Please read the handbook,"
 	@echo "'Rebuilding world', for how to upgrade your system."
-	@echo "Define DESTDIR to where you want to install FreeBSD,"
+	@echo "Define DESTDIR to where you want to install MidnightBSD,"
 	@echo "including /, to override this warning and proceed as usual."
 	@echo ""
 	@echo "Bailing out now..."
@@ -475,7 +473,7 @@ worlds: .PHONY
 #
 .if make(universe) || make(universe_kernels) || make(tinderbox) || \
     make(targets) || make(universe-toolchain)
-TARGETS?=amd64 arm arm64 i386 mips powerpc riscv sparc64
+TARGETS?=amd64 arm arm64 i386 mips powerpc riscv
 _UNIVERSE_TARGETS=	${TARGETS}
 TARGET_ARCHES_arm?=	arm armv6 armv7
 TARGET_ARCHES_arm64?=	aarch64

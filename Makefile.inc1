@@ -800,12 +800,12 @@ LIBCOMPAT= SOFT
     !defined(NO_META_IGNORE_HOST) && !defined(NO_META_IGNORE_HOST_HEADERS) && \
     !defined(_MKSHOWCONFIG)
 # r318736 - ino64 major ABI breakage
-META_MODE_BAD_ABI_VERS+=	1200031
+META_MODE_BAD_ABI_VERS+=	300000
 
 .if !defined(OBJDIR_HOST_OSRELDATE)
 .if exists(${OBJTOP}/host-osreldate.h)
 OBJDIR_HOST_OSRELDATE!=	\
-    awk '/^\#define[[:space:]]*__FreeBSD_version/ { print $$3 }' \
+    awk '/^\#define[[:space:]]*__MidnightBSD_version/ { print $$3 }' \
     ${OBJTOP}/host-osreldate.h
 .elif exists(${WORLDTMP}/usr/include/osreldate.h)
 OBJDIR_HOST_OSRELDATE=	0
@@ -823,14 +823,14 @@ _meta_mode_need_rebuild=	${_ver}
 .endif
 .endfor
 .if defined(_meta_mode_need_rebuild)
-.info META_MODE: Rebuilding host tools due to ABI breakage in __FreeBSD_version ${_meta_mode_need_rebuild}.
+.info META_MODE: Rebuilding host tools due to ABI breakage in __MidnightBSD_version ${_meta_mode_need_rebuild}.
 NO_META_IGNORE_HOST_HEADERS=	1
 .export NO_META_IGNORE_HOST_HEADERS
 .endif	# defined(_meta_mode_need_rebuild)
 .endif	# defined(OBJDIR_HOST_OSRELDATE)
 .endif	# ${MK_META_MODE} == "yes" && defined(NO_CLEAN) ...
 # This is only used for META_MODE+filemon to track what the oldest
-# __FreeBSD_version is in WORLDTMP.  This purposely does NOT have
+# __MidnightBSD_version is in WORLDTMP.  This purposely does NOT have
 # a make dependency on /usr/include/osreldate.h as the file should
 # only be copied when it is missing or meta mode determines it has changed.
 # Since host files are normally ignored without NO_META_IGNORE_HOST
@@ -1063,7 +1063,7 @@ _worldtmp: .PHONY
 	@mkdir -p ${WORLDTMP}
 	@touch ${WORLDTMP}/${.TARGET}
 # We can't use mtree to create the worldtmp directories since it may not be
-# available on the target system (this happens e.g. when building on non-FreeBSD)
+# available on the target system (this happens e.g. when building on non-MidnightBSD)
 	cd ${.CURDIR}/tools/build; \
 	    ${MAKE} DIRPRFX=tools/build/ DESTDIR=${WORLDTMP}/legacy installdirs
 _legacy:
@@ -1951,8 +1951,8 @@ create-kernel-packages-flavor${flavor:C,^""$,${_default_flavor},}: _pkgbootstrap
 	sed -e "s/%VERSION%/${PKG_VERSION}/" \
 		-e "s/%PKGNAME%/kernel-${INSTALLKERNEL:tl}${flavor}/" \
 		-e "s/%KERNELDIR%/kernel/" \
-		-e "s/%COMMENT%/FreeBSD ${INSTALLKERNEL} kernel ${flavor}/" \
-		-e "s/%DESC%/FreeBSD ${INSTALLKERNEL} kernel ${flavor}/" \
+		-e "s/%COMMENT%/MidnightBSD ${INSTALLKERNEL} kernel ${flavor}/" \
+		-e "s/%DESC%/MidnightBSD ${INSTALLKERNEL} kernel ${flavor}/" \
 		-e "s/ %VCS_REVISION%/${VCS_REVISION}/" \
 		${SRCDIR}/release/packages/kernel.ucl \
 		> ${KSTAGEDIR}/${DISTDIR}/kernel.${INSTALLKERNEL}${flavor}.ucl ; \
@@ -1983,8 +1983,8 @@ create-kernel-packages-extra-flavor${flavor:C,^""$,${_default_flavor},}-${_kerne
 	sed -e "s/%VERSION%/${PKG_VERSION}/" \
 		-e "s/%PKGNAME%/kernel-${_kernel:tl}${flavor}/" \
 		-e "s/%KERNELDIR%/kernel.${_kernel}/" \
-		-e "s/%COMMENT%/FreeBSD ${_kernel} kernel ${flavor}/" \
-		-e "s/%DESC%/FreeBSD ${_kernel} kernel ${flavor}/" \
+		-e "s/%COMMENT%/MidnightBSD ${_kernel} kernel ${flavor}/" \
+		-e "s/%DESC%/MidnightBSD ${_kernel} kernel ${flavor}/" \
 		-e "s/ %VCS_REVISION%/${VCS_REVISION}/" \
 		${SRCDIR}/release/packages/kernel.ucl \
 		> ${KSTAGEDIR}/kernel.${_kernel}/kernel.${_kernel}${flavor}.ucl ; \
