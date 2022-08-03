@@ -24,16 +24,14 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD$
-#
 ##
-# Install a boot environment using the current FreeBSD source tree.
+# Install a boot environment using the current MidnightBSD source tree.
 # Requires a fully built world & kernel.
 #
-# Non-base tools required: beadm, pkg
+# Non-base tools required: beadm
 #
 # In a sandbox for the new boot environment, this script also runs etcupdate
-# and pkg upgrade automatically in the sandbox.  Upon successful completion,
+# and mport upgrade automatically in the sandbox.  Upon successful completion,
 # the system will be ready to boot into the new boot environment.  Upon
 # failure, the target boot environment will be destroyed.  In all cases, the
 # running system is left untouched.
@@ -42,7 +40,7 @@
 # beinstall [optional world/kernel flags e.g. KERNCONF]
 #
 ## User modifiable variables - set these in the environment if desired.
-# If not empty, 'pkg upgrade' will be skipped.
+# If not empty, 'mport upgrade' will be skipped.
 NO_PKG_UPGRADE="${NO_PKG_UPGRADE:-""}"
 # Config updater - 'etcupdate' and 'mergemaster' are supported.  Set to an
 # empty string to skip.
@@ -162,10 +160,10 @@ trap 'errx "Interrupt caught"' HUP INT TERM
 
 [ "$(whoami)" != "root" ] && errx "Must be run as root"
 
-[ ! -f "Makefile.inc1" ] && errx "Must be in FreeBSD source tree"
+[ ! -f "Makefile.inc1" ] && errx "Must be in MidnightBSD source tree"
 srcdir=$(pwd)
 objdir=$(make -V .OBJDIR 2>/dev/null)
-[ ! -d "${objdir}" ] && errx "Must have built FreeBSD from source tree"
+[ ! -d "${objdir}" ] && errx "Must have built MidnightBSD from source tree"
 
 # May be a worktree, in which case .git is a file, not a directory.
 if [ -e .git ] ; then
@@ -186,8 +184,8 @@ else
     errx "Unable to determine source control type"
 fi
 
-commit_ver=$(${objdir}/bin/freebsd-version/freebsd-version -u 2>/dev/null)
-[ -z "${commit_ver}" ] && errx "Unable to determine FreeBSD version"
+commit_ver=$(${objdir}/bin/freebsd-version/midnightbsd-version -u 2>/dev/null)
+[ -z "${commit_ver}" ] && errx "Unable to determine MidnightBSD version"
 
 BENAME="${commit_ver}-${commit_ts}"
 
@@ -226,9 +224,9 @@ if [ -n "${CONFIG_UPDATER}" ]; then
 	[ $? -ne 0 ] && errx "${CONFIG_UPDATER} (post-world) failed!"
 fi
 
-BE_PKG="chroot ${BE_MNTPT} env ASSUME_ALWAYS_YES=true pkg"
+BE_PKG="chroot ${BE_MNTPT} env ASSUME_ALWAYS_YES=true mport"
 if [ -z "${NO_PKG_UPGRADE}" ]; then
-	${BE_PKG} update || errx "Unable to update pkg"
+	${BE_PKG} index || errx "Unable to fetch mport index"
 	${BE_PKG} upgrade || errx "Unable to upgrade pkgs"
 fi
 
