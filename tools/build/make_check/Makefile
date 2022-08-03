@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .MAKE.MODE=	normal
 
@@ -80,7 +79,7 @@ double:
 .endif
 
 .if make(sysvmatch)
-# Some versions of FreeBSD make(1) do not handle a nil LHS in sysvsubst.
+# Some versions of MidnightBSD make(1) do not handle a nil LHS in sysvsubst.
 sysvmatch:
 	@echo EMPTY ${NIL:=foo} LHS | \
 		diff -u ${.CURDIR}/regress.sysvmatch.out - || false
