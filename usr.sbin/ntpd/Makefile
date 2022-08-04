@@ -4,6 +4,7 @@ NTPD_DIR=${SRCTOP}/contrib/openntpd
 SYSCONFDIR=/etc
 
 PROG=	ntpd
+CONFS=	ntpd.conf
 
 WARNS?=	2
 
