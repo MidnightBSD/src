@@ -95,8 +95,6 @@ distribution:
 .if ${MK_SENDMAIL} != "no"
 	${_+_}cd ${.CURDIR}/sendmail; ${MAKE} distribution
 .endif
-	cd ${.CURDIR}; ${INSTALL} -o root -g wheel -m 644 \
-	    ${.CURDIR}/../contrib/mDNSResponder/mDNSPosix/nss_mdns.conf ${DESTDIR}/etc
 .if ${MK_KERBEROS} != "no"
 	cd ${.CURDIR}/root; \
 	    ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
