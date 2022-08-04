@@ -482,6 +482,8 @@
         ..
         firmware
         ..
+        flua
+        ..
         games
             atc
             ..

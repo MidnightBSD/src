@@ -1,6 +1,3 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/etc/mtree/Makefile 260013 2013-12-28 20:05:31Z jmmv $
-
 .include <src.opts.mk>
 
 # NOTE: BSD.debug.dist is unconditionally installed for developer ease-of-use.
