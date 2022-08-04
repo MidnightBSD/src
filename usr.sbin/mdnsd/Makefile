@@ -2,6 +2,7 @@
 
 .PATH: ${SRCTOP}/contrib/mDNSResponder/mDNSPosix
 
+CONFS=	nss_mdns.conf
 PROG=   mdnsd
 
 WARNS=	2
