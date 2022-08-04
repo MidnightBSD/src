@@ -23,9 +23,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
-# $FreeBSD: src/etc/rc.firewall,v 1.47.10.1 2005/11/19 06:06:59 ume Exp $
-#
 
 #
 # Setup system for ipfw(4) firewall service.
