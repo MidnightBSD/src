@@ -46,37 +46,30 @@
 #define BSD4_3	1
 #define BSD4_4	1
 
-/*
- * __FreeBSD_version numbers are documented in the Porter's Handbook.
- * If you bump the version for any reason, you should update the documentation
- * there.
- * Currently this lives here in the doc/ repository:
- *
- *	documentation/content/en/books/porters-handbook/versions/_index.adoc
- *
+/* 
  * scheme is:  <major><two digit minor>Rxx
- *		'R' is in the range 0 to 4 if this is a release branch or
- *		X.0-CURRENT before releng/X.0 is created, otherwise 'R' is
- *		in the range 5 to 9.
+ *              For 0.x no major, 0.4 = 4RXX
+ *		'R' is in the range 0 to 4 if this is a release branch
+ * 		or r is 5-9 in stable after 1.0 is released.
  */
+#undef __MidnightBSD_version
+#define __MidnightBSD_version 300003	/* Master, propagated to newvers */
+
+/* Version of FreeBSD we're compatible with */
 #undef __FreeBSD_version
 #define __FreeBSD_version 1203507	/* Master, propagated to newvers */
 
 /*
- * __FreeBSD_kernel__ indicates that this system uses the kernel of FreeBSD,
- * which by definition is always true on FreeBSD. This macro is also defined
- * on other systems that use the kernel of FreeBSD, such as GNU/kFreeBSD.
- *
  * It is tempting to use this macro in userland code when we want to enable
  * kernel-specific routines, and in fact it's fine to do this in code that
- * is part of FreeBSD itself.  However, be aware that as presence of this
- * macro is still not widespread (e.g. older FreeBSD versions, 3rd party
+ * is part of MidnightBSD itself.  However, be aware that as presence of this
+ * macro is still not widespread (e.g. older BSD versions, 3rd party
  * compilers, etc), it is STRONGLY DISCOURAGED to check for this macro in
- * external applications without also checking for __FreeBSD__ as an
+ * external applications without also checking for __MidnightBSD__ as an
  * alternative.
  */
-#undef __FreeBSD_kernel__
-#define __FreeBSD_kernel__
+#undef __MidnightBSD_kernel__
+#define __MidnightBSD_kernel__
 
 #if defined(_KERNEL) || defined(IN_RTLD)
 #define	P_OSREL_SIGWAIT			700000
