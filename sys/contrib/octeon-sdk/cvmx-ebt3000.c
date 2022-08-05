@@ -52,7 +52,7 @@
  *
  */
 
-#if !defined(__FreeBSD__) || !defined(_KERNEL)
+#if !defined(__MidnightBSD__) || !defined(_KERNEL)
 #include "cvmx-config.h"
 #endif
 #include "cvmx.h"

@@ -425,7 +425,7 @@ ports attached to the switch)
  * is present in netmap_kern.h
  */
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #include <sys/cdefs.h> /* prerequisite */
 #include <sys/types.h>
 #include <sys/errno.h>
@@ -3422,7 +3422,7 @@ netmap_poll(struct netmap_priv_d *priv, int events, NM_SELRECORD_T *sr)
 	si[NR_RX] = priv->np_si[NR_RX];
 	si[NR_TX] = priv->np_si[NR_TX];
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	/*
 	 * We start with a lock free round which is cheap if we have
 	 * slots available. If this fails, then lock and call the sync
@@ -3691,12 +3691,12 @@ netmap_attach_common(struct netmap_adapter *na)
 		na->rx_buf_maxsize = PAGE_SIZE;
 	}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (na->na_flags & NAF_HOST_RINGS && na->ifp) {
 		na->if_input = na->ifp->if_input; /* for netmap_send_up */
 	}
 	na->pdev = na; /* make sure netmap_mem_map() is called */
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 	if (na->na_flags & NAF_HOST_RINGS) {
 		if (na->num_host_rx_rings == 0)
 			na->num_host_rx_rings = 1;
@@ -4019,9 +4019,9 @@ netmap_transmit(struct ifnet *ifp, struct mbuf *m)
 		goto done;
 	}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	ETHER_BPF_MTAP(ifp, m);
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 	/* protect against netmap_rxsync_from_host(), netmap_sw_to_nic()
 	 * and maybe other instances of netmap_transmit (the latter
@@ -4326,7 +4326,7 @@ netmap_init(void)
 	if (error)
 		goto fail;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	nm_os_vi_init_index();
 #endif
 

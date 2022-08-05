@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/cdefs.h>
 #endif
 

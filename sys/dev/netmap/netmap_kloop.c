@@ -30,7 +30,7 @@
 /*
  * common headers
  */
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/kernel.h>

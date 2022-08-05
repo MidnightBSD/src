@@ -346,7 +346,7 @@ zfs_sync(vfs_t *vfsp, int waitfor)
 	return (0);
 }
 
-#ifndef __FreeBSD_kernel__
+#ifndef __MidnightBSD_kernel__
 static int
 zfs_create_unique_device(dev_t *dev)
 {
@@ -398,7 +398,7 @@ zfs_create_unique_device(dev_t *dev)
 
 	return (0);
 }
-#endif	/* !__FreeBSD_kernel__ */
+#endif	/* !__MidnightBSD_kernel__ */
 
 static void
 atime_changed_cb(void *arg, uint64_t newval)
@@ -1137,7 +1137,7 @@ zfsvfs_init(zfsvfs_t *zfsvfs, objset_t *os)
 	return (0);
 }
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 taskq_t *zfsvfs_taskq;
 
 static void
@@ -1199,7 +1199,7 @@ zfsvfs_create_impl(zfsvfs_t **zfvp, zfsvfs_t *zfsvfs, objset_t *os)
 	mutex_init(&zfsvfs->z_lock, NULL, MUTEX_DEFAULT, NULL);
 	list_create(&zfsvfs->z_all_znodes, sizeof (znode_t),
 	    offsetof(znode_t, z_link_node));
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	TASK_INIT(&zfsvfs->z_unlinked_drain_task, 0,
 	    zfsvfs_task_unlinked_drain, zfsvfs);
 #endif
@@ -2633,7 +2633,7 @@ zfs_init(void)
 	zfs_vnodes_adjust();
 
 	dmu_objset_register_type(DMU_OST_ZFS, zfs_space_delta_cb);
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	zfsvfs_taskq = taskq_create("zfsvfs", 1, minclsyspri, 0, 0, 0);
 #endif
 }
@@ -2641,7 +2641,7 @@ zfs_init(void)
 void
 zfs_fini(void)
 {
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	taskq_destroy(zfsvfs_taskq);
 #endif
 	zfsctl_fini();

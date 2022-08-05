@@ -29,7 +29,7 @@
 # include <sys/protosw.h>
 #include <sys/socket.h>
 #if defined(_KERNEL)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #  include <sys/ctype.h>
 # endif
 # include <sys/systm.h>
@@ -37,7 +37,7 @@
 #  include <sys/mbuf.h>
 # endif
 #endif
-#if defined(_KERNEL) && defined(__FreeBSD__)
+#if defined(_KERNEL) && defined(__MidnightBSD__)
 # include <sys/filio.h>
 # include <sys/fcntl.h>
 #else
@@ -51,11 +51,11 @@
 # include <sys/stream.h>
 # include <sys/kmem.h>
 #endif
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 # include <sys/queue.h>
 #endif
 #include <net/if.h>
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 #include <net/vnet.h>
 #else
 #define CURVNET_SET(arg)
@@ -80,7 +80,7 @@
 #include "netinet/ip_nat.h"
 #include "netinet/ip_state.h"
 #include "netinet/ip_proxy.h"
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 # include <sys/malloc.h>
 #endif
 
@@ -884,7 +884,7 @@ ipf_proxy_check(fr_info_t *fin, nat_t *nat)
 	ip_t *ip;
 	short rv;
 	int err;
-#if !defined(_KERNEL) || SOLARIS || defined(__FreeBSD__)
+#if !defined(_KERNEL) || SOLARIS || defined(__MidnightBSD__)
 	u_32_t s1, s2, sd;
 #endif
 
@@ -976,7 +976,7 @@ ipf_proxy_check(fr_info_t *fin, nat_t *nat)
 		 * packet.
 		 */
 		adjlen = APR_INC(err);
-#if !defined(_KERNEL) || SOLARIS || defined(__FreeBSD__)
+#if !defined(_KERNEL) || SOLARIS || defined(__MidnightBSD__)
 		s1 = LONG_SUM(fin->fin_plen - adjlen);
 		s2 = LONG_SUM(fin->fin_plen);
 		CALC_SUMD(s1, s2, sd);

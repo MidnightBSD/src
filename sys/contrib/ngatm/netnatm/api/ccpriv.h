@@ -34,7 +34,7 @@
  * Private declarations.
  */
 #ifdef _KERNEL
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <netgraph/atm/ccatm/ng_ccatm_cust.h>
 #endif
 #else	/* !_KERNEL */

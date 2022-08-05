@@ -27,7 +27,7 @@
 # include <sys/uio.h>
 # undef _KERNEL
 #endif
-#if defined(_KERNEL) && defined(__FreeBSD__)
+#if defined(_KERNEL) && defined(__MidnightBSD__)
 # include <sys/filio.h>
 # include <sys/fcntl.h>
 #else
@@ -50,7 +50,7 @@
 # include <sys/stream.h>
 # include <sys/kmem.h>
 #endif
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 # include <sys/queue.h>
 #endif
 #if defined(__NetBSD__)
@@ -81,7 +81,7 @@
 # undef	KERNEL
 #endif
 #include <netinet/tcp.h>
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 # include <net/if_var.h>
 # define IF_QFULL _IF_QFULL
 # define IF_DROP _IF_DROP
@@ -96,11 +96,11 @@
 #include "netinet/ip_auth.h"
 #if !SOLARIS
 # include <net/netisr.h>
-# ifdef __FreeBSD__
+# ifdef __MidnightBSD__
 #  include <machine/cpufunc.h>
 # endif
 #endif
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 # include <sys/malloc.h>
 # if defined(_KERNEL) && !defined(IPFILTER_LKM)
 #  include <sys/libkern.h>

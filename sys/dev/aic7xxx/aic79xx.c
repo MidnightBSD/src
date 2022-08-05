@@ -2262,7 +2262,7 @@ ahd_handle_nonpkt_busfree(struct ahd_softc *ahd)
 			printerror = 0;
 		} else if (ahd_sent_msg(ahd, AHDMSG_1B,
 					MSG_BUS_DEV_RESET, TRUE)) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			/*
 			 * Don't mark the user's request for this BDR
 			 * as completing with CAM_BDR_SENT.  CAM3
@@ -5264,7 +5264,7 @@ ahd_alloc(void *platform_arg, char *name)
 {
 	struct  ahd_softc *ahd;
 
-#ifndef	__FreeBSD__
+#ifndef	__MidnightBSD__
 	ahd = malloc(sizeof(*ahd), M_DEVBUF, M_NOWAIT);
 	if (!ahd) {
 		printf("aic7xxx: cannot malloc softc!\n");
@@ -5278,7 +5278,7 @@ ahd_alloc(void *platform_arg, char *name)
 	ahd->seep_config = malloc(sizeof(*ahd->seep_config),
 				  M_DEVBUF, M_NOWAIT);
 	if (ahd->seep_config == NULL) {
-#ifndef	__FreeBSD__
+#ifndef	__MidnightBSD__
 		free(ahd, M_DEVBUF);
 #endif
 		free(name, M_DEVBUF);
@@ -5464,7 +5464,7 @@ ahd_free(struct ahd_softc *ahd)
 		free(ahd->seep_config, M_DEVBUF);
 	if (ahd->saved_stack != NULL)
 		free(ahd->saved_stack, M_DEVBUF);
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 	free(ahd, M_DEVBUF);
 #endif
 	return;

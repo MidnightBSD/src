@@ -22,7 +22,7 @@
 #define _TPMVAR_H
 
 struct tpm_softc {
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 	struct device sc_dev;
 #endif
 	void *sc_ih;
@@ -45,14 +45,14 @@ struct tpm_softc {
 #define	TPM_OPEN	0x0001
 
 	int	 sc_vector;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	void	*intr_cookie;
 	int mem_rid, irq_rid;
 	struct resource *mem_res, *irq_res;
 	struct cdev *sc_cdev;
 #endif
 
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 	void	*sc_powerhook;
 #endif
 	int	 sc_suspend;

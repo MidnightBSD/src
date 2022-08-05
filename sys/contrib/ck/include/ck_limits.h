@@ -40,7 +40,7 @@
 #define UINT64_MAX ULLONG_MAX
 #endif
 
-#elif defined(__FreeBSD__) && defined(_KERNEL)
+#elif defined(__MidnightBSD__) && defined(_KERNEL)
 #include <sys/stdint.h>
 #include <sys/limits.h>
 #else

@@ -62,7 +62,7 @@ struct mtop {
 #define MTCACHE		8	/* enable controller cache */
 #define MTNOCACHE	9	/* disable controller cache */
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 /* Set block size for device. If device is a variable size dev		*/
 /* a non zero parameter will change the device to a fixed block size	*/
 /* device with block size set to that of the parameter passed in.	*/
@@ -107,7 +107,7 @@ struct mtop {
 #define	MTIO_DSREG_UNL	45	/* Unloading */
 #define	MTIO_DSREG_LD	46	/* Loading */
 
-#endif	/* __FreeBSD__ */
+#endif	/* __MidnightBSD__ */
 
 /* structure for MTIOCGET - mag tape get status command */
 
@@ -124,7 +124,7 @@ struct mtget {
 	 * more accurate count.
 	 */
 	short	mt_resid;	/* residual count */
-#if defined (__FreeBSD__)
+#if defined (__MidnightBSD__)
 	int32_t mt_blksiz;	/* presently operating blocksize */
 	int32_t mt_density;	/* presently operating density */
 	u_int32_t mt_comp;	/* presently operating compression */

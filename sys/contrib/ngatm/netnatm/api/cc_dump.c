@@ -42,7 +42,7 @@
 #include <netnatm/api/ccpriv.h>
 
 #ifdef _KERNEL
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <machine/stdarg.h>
 #endif
 #else	/* !_KERNEL */

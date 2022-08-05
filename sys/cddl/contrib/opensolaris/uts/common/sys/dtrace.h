@@ -1421,7 +1421,7 @@ typedef struct dof_helper {
 	char dofhp_mod[DTRACE_MODNAMELEN];	/* executable or library name */
 	uint64_t dofhp_addr;			/* base address of object */
 	uint64_t dofhp_dof;			/* address of helper DOF */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	pid_t dofhp_pid;			/* target process ID */
 	int dofhp_gen;
 #endif

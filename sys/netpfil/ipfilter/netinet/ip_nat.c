@@ -31,7 +31,7 @@ struct file;
 # include <sys/uio.h>
 # undef KERNEL
 #endif
-#if defined(_KERNEL) && defined(__FreeBSD__)
+#if defined(_KERNEL) && defined(__MidnightBSD__)
 # include <sys/filio.h>
 # include <sys/fcntl.h>
 #else
@@ -55,11 +55,11 @@ struct file;
 # include <sys/stream.h>
 # include <sys/kmem.h>
 #endif
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 # include <sys/queue.h>
 #endif
 #include <net/if.h>
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 # include <net/if_var.h>
 #endif
 #ifdef sun
@@ -90,7 +90,7 @@ extern struct ifnet vpnif;
 #include "netinet/ip_lookup.h"
 #include "netinet/ip_dstlist.h"
 #include "netinet/ip_sync.h"
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 # include <sys/malloc.h>
 #endif
 #ifdef HAS_SYS_MD5_H
@@ -989,7 +989,7 @@ ipf_nat_ioctl(ipf_main_softc_t *softc, caddr_t data, ioctlcmd_t cmd,
 				     KAUTH_REQ_NETWORK_FIREWALL_FW,
 				     NULL, NULL, NULL))
 # else
-#  if defined(__FreeBSD__)
+#  if defined(__MidnightBSD__)
 	if (securelevel_ge(curthread->td_ucred, 3) && (mode & FWRITE))
 #  else
 	if ((securelevel >= 3) && (mode & FWRITE))
@@ -5021,7 +5021,7 @@ ipf_nat_out(fr_info_t *fin, nat_t *nat, int natadd, u_32_t nflags)
 		ipf_fix_outcksum(0, &fin->fin_ip->ip_sum, msumd, 0);
 	}
 #if !defined(_KERNEL) || SOLARIS || \
-    defined(BRIDGE_IPF) || defined(__FreeBSD__)
+    defined(BRIDGE_IPF) || defined(__MidnightBSD__)
 	else {
 		/*
 		 * We always do this on FreeBSD because this code doesn't
@@ -5131,7 +5131,7 @@ ipf_nat_out(fr_info_t *fin, nat_t *nat, int natadd, u_32_t nflags)
 		uh->uh_ulen += fin->fin_plen;
 		uh->uh_ulen = htons(uh->uh_ulen);
 #if !defined(_KERNEL) || SOLARIS || \
-    defined(BRIDGE_IPF) || defined(__FreeBSD__)
+    defined(BRIDGE_IPF) || defined(__MidnightBSD__)
 		ipf_fix_outcksum(0, &ip->ip_sum, sumd, 0);
 #endif
 

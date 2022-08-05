@@ -64,7 +64,7 @@
  *
  */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 
 #include <sys/cdefs.h> /* prerequisite */
 
@@ -480,7 +480,7 @@ generic_mbuf_destructor(struct mbuf *m)
 	/* Second, wake up clients. They will reclaim the event through
 	 * txsync. */
 	netmap_generic_irq(na, r, NULL);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #if __FreeBSD_version <= 1200050
 	void_mbuf_dtor(m, NULL, NULL);
 #else  /* __FreeBSD_version >= 1200051 */
@@ -1059,7 +1059,7 @@ generic_netmap_attach(struct ifnet *ifp)
 	int retval;
 	u_int num_tx_desc, num_rx_desc;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (ifp->if_type == IFT_LOOP) {
 		nm_prerr("if_loop is not supported by %s", __func__);
 		return EINVAL;

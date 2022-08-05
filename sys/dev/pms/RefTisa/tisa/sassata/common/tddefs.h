@@ -123,7 +123,7 @@
 /* the maximum number of interrupt coalesce context */
 #define TD_MAX_INT_COALESCE 512
 
-#if (defined(__FreeBSD__))
+#if (defined(__MidnightBSD__))
 #define MAX_OUTSTANDING_IO_PER_LUN   64
 #else
 #define MAX_OUTSTANDING_IO_PER_LUN  254  //64

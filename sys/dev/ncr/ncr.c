@@ -44,7 +44,7 @@
 
 #define NCR_GETCC_WITHMSG
 
-#if defined (__FreeBSD__) && defined(_KERNEL)
+#if defined (__MidnightBSD__) && defined(_KERNEL)
 #include "opt_ncr.h"
 #endif
 

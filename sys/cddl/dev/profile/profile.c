@@ -167,7 +167,7 @@ typedef struct profile_probe_percpu {
 	hrtime_t	profc_expected;
 	hrtime_t	profc_interval;
 	profile_probe_t	*profc_probe;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	struct callout	profc_cyclic;
 #endif
 } profile_probe_percpu_t;

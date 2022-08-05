@@ -317,7 +317,7 @@ extern "C" {
     )))
 
 #ifndef OCTEON_IS_MODEL
-#if defined(USE_RUNTIME_MODEL_CHECKS) || defined(__U_BOOT__) || (defined(__linux__) && defined(__KERNEL__)) || defined(CVMX_BUILD_FOR_TOOLCHAIN) || (defined(__FreeBSD__) && defined(_KERNEL) && !defined(OCTEON_MODEL))
+#if defined(USE_RUNTIME_MODEL_CHECKS) || defined(__U_BOOT__) || (defined(__linux__) && defined(__KERNEL__)) || defined(CVMX_BUILD_FOR_TOOLCHAIN) || (defined(__MidnightBSD__) && defined(_KERNEL) && !defined(OCTEON_MODEL))
 
 /* NOTE: This for internal use only!!!!! */
 static inline int __octeon_is_model_runtime__(uint32_t model)
@@ -370,7 +370,7 @@ const char *octeon_model_get_string_buffer(uint32_t chip_id, char * buffer);
  */
 static inline uint32_t cvmx_get_octeon_family(void)
 {
-#if defined(USE_RUNTIME_MODEL_CHECKS) || defined(__U_BOOT__) || (defined(__linux__) && defined(__KERNEL__)) || defined(CVMX_BUILD_FOR_TOOLCHAIN) || (defined(__FreeBSD__) && defined(_KERNEL))
+#if defined(USE_RUNTIME_MODEL_CHECKS) || defined(__U_BOOT__) || (defined(__linux__) && defined(__KERNEL__)) || defined(CVMX_BUILD_FOR_TOOLCHAIN) || (defined(__MidnightBSD__) && defined(_KERNEL))
     return (cvmx_get_proc_id() & OCTEON_FAMILY_MASK);
 #else
     return (OCTEON_MODEL & OCTEON_FAMILY_MASK);

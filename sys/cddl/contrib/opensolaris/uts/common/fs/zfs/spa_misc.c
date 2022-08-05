@@ -59,7 +59,7 @@
 #include "zfs_prop.h"
 #include <sys/zfeature.h>
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #endif
@@ -329,7 +329,7 @@ int zfs_deadman_enabled = -1;
  */
 int spa_asize_inflation = 24;
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 SYSCTL_DECL(_vfs_zfs);
 SYSCTL_INT(_vfs_zfs, OID_AUTO, recover, CTLFLAG_RWTUN, &zfs_recover, 0,
     "Try to recover from otherwise-fatal errors.");
@@ -482,7 +482,7 @@ int zfs_user_indirect_is_special = B_TRUE;
  */
 int zfs_special_class_metadata_reserve_pct = 25;
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 SYSCTL_INT(_vfs_zfs, OID_AUTO, ddt_data_is_special, CTLFLAG_RWTUN,
     &zfs_ddt_data_is_special, 0,
     "Whether DDT data is eligible for the special class vdevs");
@@ -688,7 +688,7 @@ spa_deadman(void *arg, int pending)
 	    ++spa->spa_deadman_calls);
 	if (zfs_deadman_enabled)
 		vdev_deadman(spa->spa_root_vdev);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #ifdef _KERNEL
 	callout_schedule(&spa->spa_deadman_cycid,
 	    hz * zfs_deadman_checktime_ms / MILLISEC);
@@ -696,7 +696,7 @@ spa_deadman(void *arg, int pending)
 #endif
 }
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 static void
 spa_deadman_timeout(void *arg)
 {

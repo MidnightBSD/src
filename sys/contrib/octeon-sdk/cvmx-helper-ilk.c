@@ -59,7 +59,7 @@
 #include <asm/octeon/cvmx-qlm.h>
 #include <asm/octeon/cvmx-ilk-defs.h>
 #else
-#if !defined(__FreeBSD__) || !defined(_KERNEL)
+#if !defined(__MidnightBSD__) || !defined(_KERNEL)
 #include "executive-config.h"
 #include "cvmx-config.h"
 #endif

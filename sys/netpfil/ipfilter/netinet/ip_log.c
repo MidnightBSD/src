@@ -15,7 +15,7 @@
 # define        KERNEL	1
 # define        _KERNEL	1
 #endif
-#if defined(__FreeBSD__) && !defined(_KERNEL)
+#if defined(__MidnightBSD__) && !defined(_KERNEL)
 # include <osreldate.h>
 #endif
 #ifndef SOLARIS
@@ -39,7 +39,7 @@
 # undef _KERNEL
 # undef KERNEL
 #endif
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 # include <sys/fcntl.h>
 # include <sys/filio.h>
 #else
@@ -52,12 +52,12 @@
 #  include <sys/proc.h>
 # endif
 #endif /* _KERNEL */
-# if defined(NetBSD) || defined(__FreeBSD__)
+# if defined(NetBSD) || defined(__MidnightBSD__)
 #  include <sys/dirent.h>
 # include <sys/mbuf.h>
 # include <sys/select.h>
 # endif
-# if defined(__FreeBSD__)
+# if defined(__MidnightBSD__)
 #  include <sys/selinfo.h>
 # endif
 #if SOLARIS && defined(_KERNEL)
@@ -78,7 +78,7 @@
 #ifdef sun
 # include <net/af.h>
 #endif
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 # include <net/if_var.h>
 #endif
 #include <netinet/in.h>
@@ -102,7 +102,7 @@
 #include "netinet/ip_frag.h"
 #include "netinet/ip_state.h"
 #include "netinet/ip_auth.h"
-#if defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__MidnightBSD__) || defined(__NetBSD__)
 # include <sys/malloc.h>
 #endif
 /* END OF INCLUDES */
@@ -434,7 +434,7 @@ ipf_log_pkt(fr_info_t *fin, u_int flags)
 	COPYIFNAME(fin->fin_v, ifp, ipfl.fl_ifname);
 # else
 #  if (defined(NetBSD) && (NetBSD  <= 1991011) && (NetBSD >= 199603)) || \
-      defined(__FreeBSD__)
+      defined(__MidnightBSD__)
 	COPYIFNAME(fin->fin_v, ifp, ipfl.fl_ifname);
 #  else
 	ipfl.fl_unit = (u_int)ifp->if_unit;

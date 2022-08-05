@@ -81,7 +81,7 @@ ipdn_bound_var(int *v, int dflt, int lo, int hi, const char *msg)
         return *v;
 }
 
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 int
 fls(int mask)
 {

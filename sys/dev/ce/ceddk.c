@@ -22,7 +22,7 @@
 
 #undef CE_DDK_DEBUG_ENABLED
 #ifdef CE_DDK_DEBUG_ENABLED
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 # define CE_DDK_DEBUG(b,c,s) \
 	do { \
 		if (c) { \

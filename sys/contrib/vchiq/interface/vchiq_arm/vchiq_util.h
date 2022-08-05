@@ -34,7 +34,7 @@
 #ifndef VCHIQ_UTIL_H
 #define VCHIQ_UTIL_H
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <interface/compat/vchi_bsd.h>
 #endif
 

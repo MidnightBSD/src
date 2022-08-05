@@ -1021,7 +1021,7 @@ dsl_dataset_create_sync(dsl_dir_t *pdd, const char *lastname,
 	return (dsobj);
 }
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 /* FreeBSD ioctl compat begin */
 struct destroyarg {
 	nvlist_t *nvl;
@@ -1059,7 +1059,7 @@ dmu_get_recursive_snaps_nvl(char *fsname, const char *snapname,
 	return (err);
 }
 /* FreeBSD ioctl compat end */
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 /*
  * The unique space in the head dataset can be calculated by subtracting
@@ -1572,7 +1572,7 @@ dsl_dataset_snapshot_sync(void *arg, dmu_tx_t *tx)
 			dsl_props_set_sync_impl(ds->ds_prev,
 			    ZPROP_SRC_LOCAL, ddsa->ddsa_props, tx);
 		}
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 		zvol_create_minors(dp->dp_spa, name);
 #endif
 		dsl_dataset_rele(ds, FTAG);
@@ -2485,7 +2485,7 @@ static int
 dsl_dataset_rename_snapshot_sync_impl(dsl_pool_t *dp,
     dsl_dataset_t *hds, void *arg)
 {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #ifdef _KERNEL
 	char *oldname, *newname;
 #endif
@@ -2518,7 +2518,7 @@ dsl_dataset_rename_snapshot_sync_impl(dsl_pool_t *dp,
 	    dsl_dataset_phys(hds)->ds_snapnames_zapobj,
 	    ds->ds_snapname, 8, 1, &ds->ds_object, tx));
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #ifdef _KERNEL
 	oldname = kmem_alloc(ZFS_MAX_DATASET_NAME_LEN, KM_SLEEP);
 	newname = kmem_alloc(ZFS_MAX_DATASET_NAME_LEN, KM_SLEEP);
@@ -3008,7 +3008,7 @@ dsl_dataset_promote_sync(void *arg, dmu_tx_t *tx)
 	dsl_dir_t *odd = NULL;
 	uint64_t oldnext_obj;
 	int64_t delta;
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 	char *oldname, *newname;
 #endif
 
@@ -3078,7 +3078,7 @@ dsl_dataset_promote_sync(void *arg, dmu_tx_t *tx)
 		    dsl_dir_phys(dd)->dd_clones, origin_head->ds_object, tx));
 	}
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 	oldname = kmem_alloc(ZFS_MAX_DATASET_NAME_LEN, KM_SLEEP);
 	newname = kmem_alloc(ZFS_MAX_DATASET_NAME_LEN, KM_SLEEP);
 #endif
@@ -3098,7 +3098,7 @@ dsl_dataset_promote_sync(void *arg, dmu_tx_t *tx)
 			ds->ds_objset = NULL;
 		}
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 		dsl_dataset_name(ds, oldname);
 #endif
 
@@ -3121,7 +3121,7 @@ dsl_dataset_promote_sync(void *arg, dmu_tx_t *tx)
 		VERIFY0(dsl_dir_hold_obj(dp, dd->dd_object,
 		    NULL, ds, &ds->ds_dir));
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 		dsl_dataset_name(ds, newname);
 		zfsvfs_update_fromname(oldname, newname);
 		zvol_rename_minors(dp->dp_spa, oldname, newname);
@@ -3165,7 +3165,7 @@ dsl_dataset_promote_sync(void *arg, dmu_tx_t *tx)
 		ASSERT(!dsl_prop_hascb(ds));
 	}
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 	kmem_free(newname, ZFS_MAX_DATASET_NAME_LEN);
 	kmem_free(oldname, ZFS_MAX_DATASET_NAME_LEN);
 #endif

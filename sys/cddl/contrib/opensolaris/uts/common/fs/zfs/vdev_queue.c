@@ -207,7 +207,7 @@ int zfs_vdev_queue_depth_pct = 300;
  */
 int zfs_vdev_def_queue_depth = 32;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #ifdef _KERNEL
 SYSCTL_DECL(_vfs_zfs_vdev);
 

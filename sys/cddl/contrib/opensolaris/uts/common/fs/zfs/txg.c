@@ -664,7 +664,7 @@ txg_wait_synced_impl(dsl_pool_t *dp, uint64_t txg, boolean_t wait_sig)
 			 * signal. The caller may call txg_wait_synced*() again
 			 * to resume waiting for this txg.
 			 */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			/*
 			 * FreeBSD returns EINTR or ERESTART if there is
 			 * a pending signal, zero if the conditional variable

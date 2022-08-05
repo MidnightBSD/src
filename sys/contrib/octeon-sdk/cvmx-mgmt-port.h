@@ -134,7 +134,7 @@ extern cvmx_mgmt_port_result_t cvmx_mgmt_port_disable(int port);
  */
 extern cvmx_mgmt_port_result_t cvmx_mgmt_port_send(int port, int packet_len, void *buffer);
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 /**
  * Send a packet out the management port. The packet is copied so
  * the input mbuf isn't used after this call.

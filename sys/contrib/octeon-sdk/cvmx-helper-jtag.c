@@ -51,12 +51,12 @@
 #include <asm/octeon/cvmx-clock.h>
 #include <asm/octeon/cvmx-helper-jtag.h>
 #else
-#if !defined(__FreeBSD__) || !defined(_KERNEL)
+#if !defined(__MidnightBSD__) || !defined(_KERNEL)
 #include "executive-config.h"
 #include "cvmx-config.h"
 #endif
 #include "cvmx.h"
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 #include "cvmx-helper-jtag.h"
 #endif
 #endif

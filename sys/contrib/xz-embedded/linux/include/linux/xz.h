@@ -15,7 +15,7 @@
 #	include <linux/stddef.h>
 #	include <linux/types.h>
 #else
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #	include <sys/stddef.h>
 #	include <sys/types.h>
 #else

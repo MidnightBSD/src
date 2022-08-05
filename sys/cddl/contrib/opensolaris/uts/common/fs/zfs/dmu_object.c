@@ -76,7 +76,7 @@ dmu_object_alloc_impl(objset_t *os, dmu_object_type_t ot, int blocksize,
 	if (dnodes_per_chunk > L1_dnode_count)
 		dnodes_per_chunk = L1_dnode_count;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	object = atomic_load_64(cpuobj);
 #else
 	object = *cpuobj;

@@ -30,7 +30,7 @@
 #ifndef _NET_NETMAP_BDG_H_
 #define _NET_NETMAP_BDG_H_
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #define BDG_RWLOCK_T		struct rwlock // struct rwlock
 
 #define	BDG_RWINIT(b)		\
@@ -42,7 +42,7 @@
 #define BDG_RUNLOCK(b)		rw_runlock(&(b)->bdg_lock)
 #define BDG_RWDESTROY(b)	rw_destroy(&(b)->bdg_lock)
 
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 /*
  * The following bridge-related functions are used by other

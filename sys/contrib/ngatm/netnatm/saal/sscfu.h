@@ -41,7 +41,7 @@
  * Define how a buffer looks like.
  */
 #ifdef _KERNEL
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #define SSCFU_MBUF_T mbuf
 #endif
 #else

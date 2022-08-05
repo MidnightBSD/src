@@ -52,7 +52,7 @@
  * Support the older kernel options on FreeBSD and OpenBSD.
  *
  */
-#if defined(__FreeBSD__) || defined(__OpenBSD__)
+#if defined(__MidnightBSD__) || defined(__OpenBSD__)
 #if defined(BROOKTREE_ALLOC_PAGES)
 #define BKTR_ALLOC_PAGES BROOKTREE_ALLOC_PAGES
 #endif
@@ -463,7 +463,7 @@ struct bktr_i2c_softc {
  * memory mapped structure method only works on 32 bit processors
  * with the right type of endianness.
  */
-#if defined(__NetBSD__) || defined(__FreeBSD__)
+#if defined(__NetBSD__) || defined(__MidnightBSD__)
 #define INB(bktr,offset)	bus_space_read_1((bktr)->memt,(bktr)->memh,(offset))
 #define INW(bktr,offset)	bus_space_read_2((bktr)->memt,(bktr)->memh,(offset))
 #define INL(bktr,offset)	bus_space_read_4((bktr)->memt,(bktr)->memh,(offset))
@@ -526,7 +526,7 @@ struct bktr_softc {
     vm_offset_t		phys_base;	/* Bt848 register physical address */
 #endif
 
-#if defined (__FreeBSD__)
+#if defined (__MidnightBSD__)
     int             mem_rid;	/* 4.x resource id */
     struct resource *res_mem;	/* 4.x resource descriptor for registers */
     int             irq_rid;	/* 4.x resource id */
@@ -719,7 +719,7 @@ struct bt848_card_sig {
 /* ioctl_cmd_t int on old versions, u_long on new versions */
 /***********************************************************/
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 typedef u_long ioctl_cmd_t;
 #endif
 

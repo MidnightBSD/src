@@ -29,13 +29,13 @@
  */
 
 #include <sys/cdefs.h>
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 #include <sys/param.h>
 #include <sys/limits.h>
 #include <sys/lock.h>
 #include <sys/systm.h>
 #define	teken_assert(x)		MPASS(x)
-#else /* !(__FreeBSD__ && _KERNEL) */
+#else /* !(__MidnightBSD__ && _KERNEL) */
 #include <sys/types.h>
 #include <assert.h>
 #include <limits.h>
@@ -43,7 +43,7 @@
 #include <stdio.h>
 #include <string.h>
 #define	teken_assert(x)		assert(x)
-#endif /* __FreeBSD__ && _KERNEL */
+#endif /* __MidnightBSD__ && _KERNEL */
 
 /* debug messages */
 #define	teken_printf(x,...)

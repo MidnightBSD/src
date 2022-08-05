@@ -101,7 +101,7 @@
  * There may be other, safe, kernels but this is not extensively tested yet.
  */
 # define HAVE_M_PULLDOWN
-# if !defined(IPFILTER_LKM) && defined(__FreeBSD__)
+# if !defined(IPFILTER_LKM) && defined(__MidnightBSD__)
 #  include "opt_ipfilter.h"
 # endif
 # define	COPYIN(a,b,c)	copyin((caddr_t)(a), (caddr_t)(b), (c))
@@ -282,7 +282,7 @@ typedef union {
 #define	ipf_isw		ipf_lkun_s.ipf_sw
 #define	ipf_magic	ipf_lkun_s.ipf_magic
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
      CTASSERT(sizeof(ipfrwlock_t) == KRWLOCK_FILL_SZ);
      CTASSERT(sizeof(ipfmutex_t) == KMUTEX_FILL_SZ);
 #endif
@@ -425,7 +425,7 @@ extern	mb_t	*allocmbt(size_t);
 
 
 #ifdef	USE_INET6
-# if defined(__NetBSD__) || defined(__FreeBSD__)
+# if defined(__NetBSD__) || defined(__MidnightBSD__)
 #  include <netinet/ip6.h>
 #  include <netinet/icmp6.h>
 #   if defined(_KERNEL)
@@ -448,7 +448,7 @@ typedef	struct ip6_hdr	ip6_t;
 #  define	COPYBACK	m_copyback
 # endif
 # if (defined(__NetBSD_Version__) && (__NetBSD_Version__ < 105180000)) || \
-      defined(__FreeBSD__)
+      defined(__MidnightBSD__)
 #  include <vm/vm.h>
 # endif
 # if NETBSD_GE_REV(105180000)

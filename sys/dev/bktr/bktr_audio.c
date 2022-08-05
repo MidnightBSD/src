@@ -55,7 +55,7 @@
 #include <sys/systm.h>
 #include <sys/kernel.h>
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 
 #if (__FreeBSD_version < 500000)
 #include <machine/clock.h>              /* for DELAY */

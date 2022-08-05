@@ -202,7 +202,7 @@ struct al_udma_q_params {
 	al_phys_addr_t desc_phy_base;	/**< submission ring descriptors
 					 * physical base address
 					 */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	bus_dma_tag_t desc_phy_base_tag;
 	bus_dmamap_t desc_phy_base_map;
 #endif
@@ -211,7 +211,7 @@ struct al_udma_q_params {
 	al_phys_addr_t cdesc_phy_base;	/**< completion descriptors ring
 					 * physical base address
 					 */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	bus_dma_tag_t cdesc_phy_base_tag;
 	bus_dmamap_t cdesc_phy_base_map;
 #endif

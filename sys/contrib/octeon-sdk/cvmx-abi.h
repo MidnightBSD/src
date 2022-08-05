@@ -50,7 +50,7 @@
 #ifndef __CVMX_ABI_H__
 #define __CVMX_ABI_H__
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 #include <machine/endian.h>
 #else
 #ifndef __U_BOOT__

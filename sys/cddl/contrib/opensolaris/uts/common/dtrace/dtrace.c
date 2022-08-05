@@ -630,7 +630,7 @@ dtrace_panic(const char *format, ...)
 	va_list alist;
 
 	va_start(alist, format);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	vpanic(format, alist);
 #else
 	dtrace_vpanic(format, alist);
@@ -3654,7 +3654,7 @@ dtrace_dif_variable(dtrace_mstate_t *mstate, dtrace_state_t *state, uint64_t v,
 		return (dtrace_dif_varstr(
 		    (uintptr_t)curthread->t_procp->p_zone->zone_name,
 		    state, mstate));
-#elif defined(__FreeBSD__)
+#elif defined(__MidnightBSD__)
 	/*
 	 * On FreeBSD, we introduce compatibility to zonename by falling through
 	 * into jailname.
@@ -10343,7 +10343,7 @@ dtrace_difo_validate_helper(dtrace_difo_t *dp)
 			    subr == DIF_SUBR_NTOHLL ||
 			    subr == DIF_SUBR_MEMREF)
 				break;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			if (subr == DIF_SUBR_MEMSTR)
 				break;
 #endif
@@ -12071,7 +12071,7 @@ dtrace_buffer_activate(dtrace_state_t *state)
 	dtrace_interrupt_enable(cookie);
 }
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 /*
  * Activate the specified per-CPU buffer.  This is used instead of
  * dtrace_buffer_activate() when APs have not yet started, i.e. when
@@ -12702,7 +12702,7 @@ dtrace_enabling_dump(dtrace_enabling_t *enab)
 	for (i = 0; i < enab->dten_ndesc; i++) {
 		dtrace_probedesc_t *desc = &enab->dten_desc[i]->dted_probe;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		printf("dtrace: enabling probe %d (%s:%s:%s:%s)\n", i,
 		    desc->dtpd_provider, desc->dtpd_mod,
 		    desc->dtpd_func, desc->dtpd_name);
@@ -13279,7 +13279,7 @@ dtrace_dof_copyin(uintptr_t uarg, int *errp)
 	return (dof);
 }
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 static dof_hdr_t *
 dtrace_dof_copyin_proc(struct proc *p, uintptr_t uarg, int *errp)
 {
@@ -13363,12 +13363,12 @@ dtrace_dof_char(char c)
 	/* Should not reach here. */
 	return (UCHAR_MAX);
 }
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 static dof_hdr_t *
 dtrace_dof_property(const char *name)
 {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	uint8_t *dofbuf;
 	u_char *data, *eol;
 	caddr_t doffile;
@@ -13443,7 +13443,7 @@ dtrace_dof_property(const char *name)
 doferr:
 	free(dof, M_SOLARIS);
 	return (NULL);
-#else /* __FreeBSD__ */
+#else /* __MidnightBSD__ */
 	uchar_t *buf;
 	uint64_t loadsz;
 	unsigned int len, i;
@@ -13484,7 +13484,7 @@ doferr:
 	ddi_prop_free(buf);
 
 	return (dof);
-#endif /* !__FreeBSD__ */
+#endif /* !__MidnightBSD__ */
 }
 
 static void
@@ -15185,7 +15185,7 @@ dtrace_state_go(dtrace_state_t *state, processorid_t *cpu)
 	if (state->dts_activity == DTRACE_ACTIVITY_WARMUP)
 		state->dts_activity = DTRACE_ACTIVITY_ACTIVE;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	/*
 	 * We enable anonymous tracing before APs are started, so we must
 	 * activate buffers using the current CPU.

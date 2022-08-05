@@ -12,7 +12,7 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/socket.h>
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 # if defined(_KERNEL)
 #  include <sys/libkern.h>
 # else
@@ -26,7 +26,7 @@
 #if !defined(__SVR4)
 # include <sys/mbuf.h>
 #endif
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 # include <sys/sockio.h>
 #if defined(_KERNEL)
 #include <net/vnet.h>

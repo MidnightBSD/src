@@ -120,11 +120,11 @@ vdev_file_open(vdev_t *vd, uint64_t *psize, uint64_t *max_psize,
 	 * Make sure it's a regular file.
 	 */
 	if (vp->v_type != VREG) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		(void) VOP_CLOSE(vp, spa_mode(vd->vdev_spa), 1, 0, kcred, NULL);
 #endif
 		vd->vdev_stat.vs_aux = VDEV_AUX_OPEN_FAILED;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		kmem_free(vd->vdev_tsd, sizeof (vdev_file_t));
 		vd->vdev_tsd = NULL;
 #endif

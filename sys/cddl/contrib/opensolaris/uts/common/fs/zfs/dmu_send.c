@@ -57,11 +57,11 @@
 #include <sys/dsl_bookmark.h>
 #include <sys/zfeature.h>
 #include <sys/bqueue.h>
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/zvol.h>
 #endif
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #undef dump_write
 #define dump_write dmu_dump_write
 #endif
@@ -3449,7 +3449,7 @@ dmu_recv_end_sync(void *arg, dmu_tx_t *tx)
 		    dsl_dataset_phys(drc->drc_ds)->ds_prev_snap_obj;
 	}
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 	zvol_create_minors(dp->dp_spa, drc->drc_tofs);
 #endif
 

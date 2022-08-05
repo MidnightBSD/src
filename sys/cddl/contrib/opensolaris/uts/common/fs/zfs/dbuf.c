@@ -731,7 +731,7 @@ dbuf_evict_thread(void *unused __unused)
 			(void) cv_timedwait_hires(&dbuf_evict_cv,
 			    &dbuf_evict_lock, SEC2NSEC(1), MSEC2NSEC(1), 0);
 			CALLB_CPR_SAFE_END(&cpr, &dbuf_evict_lock);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			if (dbuf_ksp != NULL)
 				dbuf_ksp->ks_update(dbuf_ksp, KSTAT_READ);
 #endif

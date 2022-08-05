@@ -78,7 +78,7 @@
 #include <asm/octeon/cvmx-helper-errata.h>
 #include <asm/octeon/cvmx-helper-cfg.h>
 #else
-#if !defined(__FreeBSD__) || !defined(_KERNEL)
+#if !defined(__MidnightBSD__) || !defined(_KERNEL)
 #include "executive-config.h"
 #endif
 #include "cvmx.h"
@@ -87,7 +87,7 @@
 #include "cvmx-version.h"
 #include "cvmx-helper-check-defines.h"
 #include "cvmx-gmx.h"
-#if !defined(__FreeBSD__) || !defined(_KERNEL)
+#if !defined(__MidnightBSD__) || !defined(_KERNEL)
 #include "cvmx-error.h"
 #include "cvmx-config.h"
 #endif

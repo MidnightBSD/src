@@ -93,7 +93,7 @@
 #include "opt_bktr.h"		/* Include any kernel config options */
 
 #if (                                                            \
-       (defined(__FreeBSD__))                                    \
+       (defined(__MidnightBSD__))                                    \
     || (defined(__bsdi__))                                       \
     || (defined(__OpenBSD__))                                    \
     || (defined(__NetBSD__))                                     \
@@ -103,7 +103,7 @@
 /*******************/
 /* *** FreeBSD *** */
 /*******************/
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -163,7 +163,7 @@ bktr_name(bktr_ptr_t bktr)
 }
 
 
-#endif  /* __FreeBSD__ */
+#endif  /* __MidnightBSD__ */
 
 
 /****************/
@@ -491,7 +491,7 @@ common_bktr_attach( bktr_ptr_t bktr, int unit, u_long pci_id, u_int rev )
                 buf = 0;
 #endif
 
-#if defined(__FreeBSD__) || defined(__bsdi__)
+#if defined(__MidnightBSD__) || defined(__bsdi__)
 
 /* If this is a module, check if there is any currently saved contiguous memory */
 #if defined(BKTR_FREEBSD_MODULE)
@@ -611,7 +611,7 @@ bktr_store_address(unit, BKTR_MEM_BUF,          buf);
         bktr->msp_source_selected = -1;
 	bktr->audio_mux_present = 1;
 
-#if defined(__FreeBSD__) 
+#if defined(__MidnightBSD__) 
 #ifdef BKTR_NEW_MSP34XX_DRIVER
 	/* get hint on short programming of the msp34xx, so we know */
 	/* if the decision what thread to start should be overwritten */

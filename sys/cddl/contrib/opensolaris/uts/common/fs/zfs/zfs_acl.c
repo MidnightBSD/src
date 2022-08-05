@@ -1655,7 +1655,7 @@ zfs_acl_ids_create(znode_t *dzp, int flag, vattr_t *vap, cred_t *cr,
 				acl_ids->z_fgid = 0;
 		}
 		if (acl_ids->z_fgid == 0) {
-#ifndef __FreeBSD_kernel__
+#ifndef __MidnightBSD_kernel__
 			if (dzp->z_mode & S_ISGID) {
 #endif
 				char		*domain;
@@ -1676,7 +1676,7 @@ zfs_acl_ids_create(znode_t *dzp, int flag, vattr_t *vap, cred_t *cr,
 					    FUID_INDEX(acl_ids->z_fgid),
 					    acl_ids->z_fgid, ZFS_GROUP);
 				}
-#ifndef __FreeBSD_kernel__
+#ifndef __MidnightBSD_kernel__
 			} else {
 				acl_ids->z_fgid = zfs_fuid_create_cred(zfsvfs,
 				    ZFS_GROUP, cr, &acl_ids->z_fuidp);
@@ -2421,7 +2421,7 @@ zfs_zaccess(znode_t *zp, int mode, int flags, boolean_t skipaclchk, cred_t *cr)
 
 	is_attr = ((zp->z_pflags & ZFS_XATTR) && (ZTOV(zp)->v_type == VDIR));
 
-#ifdef __FreeBSD_kernel__
+#ifdef __MidnightBSD_kernel__
 	/*
 	 * In FreeBSD, we don't care about permissions of individual ADS.
 	 * Note that not checking them is not just an optimization - without

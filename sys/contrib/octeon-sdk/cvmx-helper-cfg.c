@@ -67,7 +67,7 @@
 #include "cvmx-helper-cfg.h"
 #include "cvmx-ilk.h"
 #include "cvmx-helper-ilk.h"
-#if !defined(__FreeBSD__) || !defined(_KERNEL)
+#if !defined(__MidnightBSD__) || !defined(_KERNEL)
 #include "cvmx-config.h"
 #include "executive-config.h"
 #endif

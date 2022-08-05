@@ -176,7 +176,7 @@ dbuf_stats_hash_table_addr(kstat_t *ksp, off_t n)
 	return (NULL);
 }
 
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 /*
  * XXX The FreeBSD SPL is missing support for KSTAT_TYPE_RAW
  * we can enable this as soon as that's implemented. See the

@@ -403,7 +403,7 @@ ipfw_log(struct ip_fw_chain *chain, struct ip_fw *f, u_int hlen,
 				    (ipoff & IP_MF) ? "+" : "");
 		}
 	}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (oif || m->m_pkthdr.rcvif)
 		log(LOG_SECURITY | LOG_INFO,
 		    "ipfw: %d %s %s %s via %s%s\n",

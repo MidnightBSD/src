@@ -806,7 +806,7 @@ static inline void nm_ldld_barrier(void)
 }
 #endif /* !__KERNEL__ */
 
-#elif defined(__FreeBSD__)
+#elif defined(__MidnightBSD__)
 
 #ifdef _KERNEL
 #define nm_stst_barrier	atomic_thread_fence_rel
@@ -824,9 +824,9 @@ static inline void nm_ldld_barrier(void)
 }
 #endif /* !_KERNEL */
 
-#else  /* !__linux__ && !__FreeBSD__ */
+#else  /* !__linux__ && !__MidnightBSD__ */
 #error "OS not supported"
-#endif /* !__linux__ && !__FreeBSD__ */
+#endif /* !__linux__ && !__MidnightBSD__ */
 
 /* Application side of sync-kloop: Write ring pointers (cur, head) to the CSB.
  * This routine is coupled with sync_kloop_kernel_read(). */

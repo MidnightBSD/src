@@ -28,7 +28,7 @@
 #ifndef CLOUDABI_TYPES_COMMON_H
 #define CLOUDABI_TYPES_COMMON_H
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 #include <sys/types.h>
 #elif defined(__linux__) && defined(__KERNEL__)
 #include <linux/types.h>

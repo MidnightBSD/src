@@ -137,7 +137,7 @@ CK_PR_STORE_S(int, int, "stsw")
 #undef CK_PR_STORE
 
 /* Use the appropriate address space for atomics within the FreeBSD kernel. */
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 #include <sys/cdefs.h>
 #include <machine/atomic.h>
 #define CK_PR_INS_CAS "casa"

@@ -2,7 +2,7 @@
 #include <asm/octeon/cvmx.h>
 #include <asm/octeon/cvmx-qlm.h>
 #else
-#if !defined(__FreeBSD__) || !defined(_KERNEL)
+#if !defined(__MidnightBSD__) || !defined(_KERNEL)
 #include <cvmx.h>
 #include <cvmx-qlm.h>
 #else

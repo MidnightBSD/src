@@ -51,7 +51,7 @@
 #include <sys/proc.h>
 #endif
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #if (__FreeBSD_version < 500000)
 #include <machine/clock.h>              /* for DELAY */
 #include <pci/pcivar.h>

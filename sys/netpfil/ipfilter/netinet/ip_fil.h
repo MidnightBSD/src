@@ -358,7 +358,7 @@ typedef enum ipf_cksum_e {
 
 typedef	struct	fr_info	{
 	void	*fin_main_soft;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	struct ifnet	*fin_ifp;	/* interface packet is `on' */
 #else
 	void	*fin_ifp;		/* interface packet is `on' */
@@ -1378,7 +1378,7 @@ typedef	struct	ipftune	{
 ** HPUX Port
 */
 
-#if !defined(CDEV_MAJOR) && defined (__FreeBSD__)
+#if !defined(CDEV_MAJOR) && defined (__MidnightBSD__)
 # define	CDEV_MAJOR	79
 #endif
 
@@ -1572,7 +1572,7 @@ typedef struct ipf_main_softc_s {
 	frentry_t	*ipf_rule_explist[2];
 	ipftoken_t	*ipf_token_head;
 	ipftoken_t	**ipf_token_tail;
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 	struct callout ipf_slow_ch;
 #endif
 #if NETBSD_GE_REV(104040000)
@@ -1646,14 +1646,14 @@ extern	size_t	mbufchainlen(mb_t *);
 #  ifdef	IPFILTER_LKM
 extern	int	ipf_identify(char *);
 #  endif
-#  if defined(__FreeBSD__)
+#  if defined(__MidnightBSD__)
 extern	int	ipfioctl(struct cdev*, u_long, caddr_t, int, struct thread *);
 #  elif defined(__NetBSD__)
 extern	int	ipfioctl(dev_t, u_long, void *, int, struct lwp *);
 #  endif
 # endif /* SOLARIS */
 
-# if defined(__FreeBSD__)
+# if defined(__MidnightBSD__)
 extern	int	ipf_pfil_hook(void);
 extern	int	ipf_pfil_unhook(void);
 extern	void	ipf_event_reg(void);

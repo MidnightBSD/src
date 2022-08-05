@@ -49,7 +49,7 @@
 #elif defined(__GNUC__) && defined(__cplusplus)
 #include "types_bb_gpp.h"
 
-#elif defined(__FreeBSD__)
+#elif defined(__MidnightBSD__)
 #include "types_freebsd.h"
 
 #elif defined(__GNUC__)

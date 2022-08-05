@@ -37,9 +37,9 @@
 
 #define NTP_API		4		/* NTP API version */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/_timespec.h>
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 /*
  * The following defines establish the performance envelope of the
@@ -153,7 +153,7 @@ struct timex {
 	long	stbcnt;			/* stability limit exceeded (ro) */
 };
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 
 #ifdef _KERNEL
 void	ntp_update_second(int64_t *adjustment, time_t *newsec);
@@ -166,6 +166,6 @@ int	ntp_gettime(struct ntptimeval *);
 __END_DECLS
 #endif /* _KERNEL */
 
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 #endif /* !_SYS_TIMEX_H_ */

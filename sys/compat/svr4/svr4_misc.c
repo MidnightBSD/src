@@ -86,7 +86,7 @@
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 #include <vm/vm_map.h>
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #include <vm/uma.h>
 #include <vm/vm_extern.h>
 #endif

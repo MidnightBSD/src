@@ -47,7 +47,7 @@
 #ifndef __CVMX_UTILS_H__
 #define __CVMX_UTILS_H__
 
-#if !defined(__FreeBSD__) || !defined(_KERNEL)
+#if !defined(__MidnightBSD__) || !defined(_KERNEL)
 #include <stdarg.h>
 #endif
 

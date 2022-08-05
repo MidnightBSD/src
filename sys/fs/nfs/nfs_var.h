@@ -86,7 +86,7 @@ struct NFSSVCARGS;
 struct nfsdevice;
 struct pnfsdsfile;
 struct pnfsdsattr;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 NFS_ACCESS_ARGS;
 NFS_OPEN_ARGS;
 NFS_GETATTR_ARGS;

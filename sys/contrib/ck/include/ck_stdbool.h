@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 #include <sys/types.h>
 #else
 #include <stdbool.h>

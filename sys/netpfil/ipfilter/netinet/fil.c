@@ -20,7 +20,7 @@
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/time.h>
-#if defined(_KERNEL) && defined(__FreeBSD__)
+#if defined(_KERNEL) && defined(__MidnightBSD__)
 #  if !defined(IPFILTER_LKM)
 #   include "opt_inet6.h"
 #  endif
@@ -91,7 +91,7 @@
 #if defined(IPFILTER_BPF) && defined(_KERNEL)
 # include <net/bpf.h>
 #endif
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 # include <sys/malloc.h>
 #endif
 #include "netinet/ipl.h"
@@ -2830,7 +2830,7 @@ ipf_check(void *ctx, ip_t *ip, int hlen, struct ifnet *ifp, int out
 	 */
 	m->m_flags &= ~M_CANFASTFWD;
 #  endif /* M_CANFASTFWD */
-#  if defined(CSUM_DELAY_DATA) && !defined(__FreeBSD__)
+#  if defined(CSUM_DELAY_DATA) && !defined(__MidnightBSD__)
 	/*
 	 * disable delayed checksums.
 	 */
@@ -5981,7 +5981,7 @@ char *
 ipf_getifname(struct ifnet *ifp, char *buffer)
 {
 	static char namebuf[LIFNAMSIZ];
-# if SOLARIS || defined(__FreeBSD__)
+# if SOLARIS || defined(__MidnightBSD__)
 	int unit, space;
 	char temp[20];
 	char *s;
@@ -5991,7 +5991,7 @@ ipf_getifname(struct ifnet *ifp, char *buffer)
 		buffer = namebuf;
 	(void) strncpy(buffer, ifp->if_name, LIFNAMSIZ);
 	buffer[LIFNAMSIZ - 1] = '\0';
-# if SOLARIS || defined(__FreeBSD__)
+# if SOLARIS || defined(__MidnightBSD__)
 	for (s = buffer; *s; s++)
 		;
 	unit = ifp->if_unit;

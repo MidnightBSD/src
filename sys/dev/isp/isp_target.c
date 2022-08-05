@@ -41,7 +41,7 @@
 #ifdef	__NetBSD__
 #include <dev/ic/isp_netbsd.h>
 #endif
-#ifdef	__FreeBSD__
+#ifdef	__MidnightBSD__
 #include <sys/cdefs.h>
 #include <dev/isp/isp_freebsd.h>
 #endif

@@ -342,7 +342,7 @@ static int radeon_fence_wait_seq(struct radeon_device *rdev, u64 target_seq,
 		    ring, seq);
 
 		if (unlikely(!signaled)) {
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 			/* we were interrupted for some reason and fence
 			 * isn't signaled yet, resume waiting */
 			if (r) {
@@ -541,7 +541,7 @@ static int radeon_fence_wait_any_seq(struct radeon_device *rdev,
 		    ring, target_seq[ring]);
 
 		if (unlikely(!signaled)) {
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 			/* we were interrupted for some reason and fence
 			 * isn't signaled yet, resume waiting */
 			if (r) {

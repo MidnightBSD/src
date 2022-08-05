@@ -3022,7 +3022,7 @@ nfscl_dumpstate(struct nfsmount *nmp, int openowner, int opens,
 			    lp->nfsl_stateid.other[2]);
 		    LIST_FOREACH(lop, &lp->nfsl_lock, nfslo_list) {
 			if (locks)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			    printf("lck typ=%d fst=%ju end=%ju\n",
 				lop->nfslo_type, (intmax_t)lop->nfslo_first,
 				(intmax_t)lop->nfslo_end);
@@ -3058,7 +3058,7 @@ nfscl_dumpstate(struct nfsmount *nmp, int openowner, int opens,
 			    lp->nfsl_stateid.other[2]);
 		    LIST_FOREACH(lop, &lp->nfsl_lock, nfslo_list) {
 			if (locks)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			    printf("lck typ=%d fst=%ju end=%ju\n",
 				lop->nfslo_type, (intmax_t)lop->nfslo_first,
 				(intmax_t)lop->nfslo_end);

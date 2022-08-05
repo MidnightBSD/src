@@ -105,7 +105,7 @@
     /* To build the simple exec toolchain runtime (newlib) library. We
        should only use features available on all Octeon models.  */
     #define CVMX_BUILD_FOR_TOOLCHAIN
-#elif defined(__FreeBSD__) && defined(_KERNEL)
+#elif defined(__MidnightBSD__) && defined(_KERNEL)
     #define CVMX_BUILD_FOR_FREEBSD_KERNEL
 #else
     /* We are building a simple exec standalone image for Octeon */

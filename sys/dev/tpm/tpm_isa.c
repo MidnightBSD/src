@@ -24,7 +24,7 @@
 #include <sys/malloc.h>
 #include <sys/proc.h>
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/module.h>
 #include <sys/conf.h>
 #include <sys/uio.h>

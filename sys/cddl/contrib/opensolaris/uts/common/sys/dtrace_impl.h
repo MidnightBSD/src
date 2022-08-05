@@ -66,9 +66,9 @@ typedef	u_long			greg_t;
 #define	DTRACE_MAXPROPLEN		128
 #define	DTRACE_DYNVAR_CHUNKSIZE		256
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #define	NCPU		MAXCPU
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 struct dtrace_probe;
 struct dtrace_ecb;

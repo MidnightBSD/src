@@ -1053,7 +1053,7 @@ dmu_objset_create_sync(void *arg, dmu_tx_t *tx)
 		    doca->doca_cred, tx);
 	}
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 	zvol_create_minors(dp->dp_spa, doca->doca_name);
 #endif
 	spa_history_log_internal_ds(ds, "create", tx, "");
@@ -1151,7 +1151,7 @@ dmu_objset_clone_sync(void *arg, dmu_tx_t *tx)
 
 	VERIFY0(dsl_dataset_hold_obj(pdd->dd_pool, obj, FTAG, &ds));
 	dsl_dataset_name(origin, namebuf);
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 	zvol_create_minors(dp->dp_spa, doca->doca_clone);
 #endif
 	spa_history_log_internal_ds(ds, "clone", tx,

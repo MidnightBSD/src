@@ -31,7 +31,7 @@
  * Private SSCF-UNI definitions.
  */
 #ifdef _KERNEL
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <netgraph/atm/sscfu/ng_sscfu_cust.h>
 #endif
 #else

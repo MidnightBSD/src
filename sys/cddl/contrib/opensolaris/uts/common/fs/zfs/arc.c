@@ -419,7 +419,7 @@ static int sysctl_vfs_zfs_arc_max(SYSCTL_HANDLER_ARGS);
 static int sysctl_vfs_zfs_arc_min(SYSCTL_HANDLER_ARGS);
 static int sysctl_vfs_zfs_arc_no_grow_shift(SYSCTL_HANDLER_ARGS);
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 static void
 arc_free_target_init(void *unused __unused)
 {
@@ -683,7 +683,7 @@ typedef struct arc_stats {
 	 * Number of bytes consumed by bonus buffers.
 	 */
 	kstat_named_t arcstat_bonus_size;
-#if defined(__FreeBSD__) && defined(COMPAT_FREEBSD11)
+#if defined(__MidnightBSD__) && defined(COMPAT_FREEBSD11)
 	/*
 	 * Sum of the previous three counters, provided for compatibility.
 	 */
@@ -903,7 +903,7 @@ static arc_stats_t arc_stats = {
 	{ "dbuf_size",			KSTAT_DATA_UINT64 },
 	{ "dnode_size",			KSTAT_DATA_UINT64 },
 	{ "bonus_size",			KSTAT_DATA_UINT64 },
-#if defined(__FreeBSD__) && defined(COMPAT_FREEBSD11)
+#if defined(__MidnightBSD__) && defined(COMPAT_FREEBSD11)
 	{ "other_size",			KSTAT_DATA_UINT64 },
 #endif
 	{ "anon_size",			KSTAT_DATA_UINT64 },
@@ -1217,7 +1217,7 @@ struct arc_buf_hdr {
 	l1arc_buf_hdr_t		b_l1hdr;
 };
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 static int
 sysctl_vfs_zfs_arc_meta_limit(SYSCTL_HANDLER_ARGS)
 {
@@ -4674,7 +4674,7 @@ arc_available_memory(void)
 	free_memory_reason_t r = FMR_UNKNOWN;
 
 #ifdef _KERNEL
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	/*
 	 * Cooperate with pagedaemon when it's time for it to scan
 	 * and reclaim some pages.
@@ -4736,7 +4736,7 @@ arc_available_memory(void)
 		r = FMR_PAGES_PP_MAXIMUM;
 	}
 
-#endif	/* __FreeBSD__ */
+#endif	/* __MidnightBSD__ */
 #if defined(__i386) || !defined(UMA_MD_SMALL_ALLOC)
 	/*
 	 * If we're on an i386 platform, it's possible that we'll exhaust the
@@ -6902,7 +6902,7 @@ arc_kstat_update(kstat_t *ksp, int rw)
 		ARCSTAT(arcstat_bonus_size) = aggsum_value(&astat_bonus_size);
 		ARCSTAT(arcstat_dnode_size) = aggsum_value(&astat_dnode_size);
 		ARCSTAT(arcstat_dbuf_size) = aggsum_value(&astat_dbuf_size);
-#if defined(__FreeBSD__) && defined(COMPAT_FREEBSD11)
+#if defined(__MidnightBSD__) && defined(COMPAT_FREEBSD11)
 		ARCSTAT(arcstat_other_size) = aggsum_value(&astat_bonus_size) +
 		    aggsum_value(&astat_dnode_size) +
 		    aggsum_value(&astat_dbuf_size);
@@ -7176,7 +7176,7 @@ arc_init(void)
 	 * Metadata is stored in the kernel's heap.  Don't let us
 	 * use more than half the heap for the ARC.
 	 */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	arc_meta_limit = MIN(arc_meta_limit, uma_limit() / 2);
 	arc_dnode_limit = arc_meta_limit / 10;
 #else

@@ -33,7 +33,7 @@
 extern "C" {
 #endif
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #define	rangelock_init		zfs_rangelock_init
 #define	rangelock_fini		zfs_rangelock_fini
 #endif
@@ -48,7 +48,7 @@ struct locked_range;
 
 typedef void (rangelock_cb_t)(struct locked_range *, void *);
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 typedef struct zfs_rangelock {
 #else
 typedef struct rangelock {

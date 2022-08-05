@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #endif
 
 /*

@@ -56,7 +56,7 @@
 /*******************/
 /* *** FreeBSD *** */
 /*******************/
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1046,7 +1046,7 @@ typedef enum zfs_ioc {
 	ZFS_IOC_BOOKMARK,
 	ZFS_IOC_GET_BOOKMARKS,
 	ZFS_IOC_DESTROY_BOOKMARKS,
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	ZFS_IOC_NEXTBOOT,
 #endif
 	ZFS_IOC_CHANNEL_PROGRAM,

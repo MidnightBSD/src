@@ -158,7 +158,7 @@
  * stored in the uberblock.  The minimum allowed value is 100 ms.
  */
 ulong_t zfs_multihost_interval = MMP_DEFAULT_INTERVAL;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 SYSCTL_DECL(_vfs_zfs);
 SYSCTL_ULONG(_vfs_zfs, OID_AUTO, multihost_interval, CTLFLAG_RWTUN,
     &zfs_multihost_interval, 0, "Interval between MMP writes, milliseconds");
@@ -172,7 +172,7 @@ SYSCTL_ULONG(_vfs_zfs, OID_AUTO, multihost_interval, CTLFLAG_RWTUN,
  * treated as if it was set to 1.
  */
 uint_t zfs_multihost_import_intervals = MMP_DEFAULT_IMPORT_INTERVALS;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 SYSCTL_UINT(_vfs_zfs, OID_AUTO, multihost_import_intervals, CTLFLAG_RWTUN,
     &zfs_multihost_import_intervals, 0,
     "MMP activity check period for pool import, "
@@ -197,7 +197,7 @@ SYSCTL_UINT(_vfs_zfs, OID_AUTO, multihost_import_intervals, CTLFLAG_RWTUN,
  * pool to be suspended.
  */
 uint_t zfs_multihost_fail_intervals = MMP_DEFAULT_FAIL_INTERVALS;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 SYSCTL_UINT(_vfs_zfs, OID_AUTO, multihost_fail_intervals, CTLFLAG_RWTUN,
     &zfs_multihost_fail_intervals, 0,
     "How long to tolerate MMP write failures before suspending a pool, "

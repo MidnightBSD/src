@@ -66,7 +66,7 @@
 #include <asm/octeon/cvmx-dbg-defs.h>
 
 #else
-#if !defined(__FreeBSD__) || !defined(_KERNEL)
+#if !defined(__MidnightBSD__) || !defined(_KERNEL)
 #include "executive-config.h"
 #include "cvmx-config.h"
 #ifdef CVMX_ENABLE_PKO_FUNCTIONS

@@ -25,7 +25,7 @@
 
 #include <sys/param.h>
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #endif
@@ -44,7 +44,7 @@
 #include <sys/sockio.h>
 #include <sys/socket.h>
 #include <sys/syslog.h>
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #include <sys/random.h>
 #endif
 #include <sys/malloc.h>
@@ -78,7 +78,7 @@
 #include <netinet/tcp.h>
 #endif
 
-#if defined (__FreeBSD__) || defined (__OpenBSD__)
+#if defined (__MidnightBSD__) || defined (__OpenBSD__)
 #  include <netinet/if_ether.h>
 #else
 #  include <net/ethertypes.h>
@@ -144,7 +144,7 @@ struct arp_req {
 	unsigned short  ptarget2;
 } __packed;
 
-#if defined(__FreeBSD__) && __FreeBSD_version < 501113
+#if defined(__MidnightBSD__) && __FreeBSD_version < 501113
 #define	SPP_FMT		"%s%d: "
 #define	SPP_ARGS(ifp)	(ifp)->if_name, (ifp)->if_unit
 #else

@@ -658,7 +658,7 @@ typedef UINT64                          ACPI_INTEGER;
 /* Pointer/Integer type conversions */
 
 #define ACPI_TO_POINTER(i)              ACPI_CAST_PTR (void, (ACPI_SIZE) (i))
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #define ACPI_TO_INTEGER(p)              ((ACPI_SIZE) (p))
 #define ACPI_OFFSET(d, f)               ((ACPI_SIZE) __offsetof(d, f))
 #else

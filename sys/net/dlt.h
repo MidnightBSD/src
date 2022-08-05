@@ -96,7 +96,7 @@
  * for DLT_SLIP_BSDOS and DLT_PPP_BSDOS, which are 15 and 16, but they
  * didn't.  So it goes.
  */
-#if defined(__NetBSD__) || defined(__FreeBSD__) || defined(__MidnightBSD__)
+#if defined(__NetBSD__) || defined(__MidnightBSD__) || defined(__MidnightBSD__)
 #ifndef DLT_SLIP_BSDOS
 #define DLT_SLIP_BSDOS	13	/* BSD/OS Serial Line IP */
 #define DLT_PPP_BSDOS	14	/* BSD/OS Point-to-point Protocol */
@@ -350,7 +350,7 @@
  * treat pcap files written by any older versions of FreeBSD libpcap that
  * didn't map to 246 as DLT_PFSYNC files.
  */
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#if defined(__MidnightBSD__) || defined(__MidnightBSD__)
 #define DLT_PFSYNC		121
 #else
 #define DLT_HHDLC		121
@@ -1148,7 +1148,7 @@
  * them collide with something used elsewhere.  On platforms that
  * don't already define it, define it as 246.
  */
-#if !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(__DragonFly__) && !defined(__APPLE__) && !defined(__MidnightBSD__)
+#if !defined(__MidnightBSD__) && !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(__DragonFly__) && !defined(__APPLE__) && !defined(__MidnightBSD__)
 #define DLT_PFSYNC		246
 #endif
 

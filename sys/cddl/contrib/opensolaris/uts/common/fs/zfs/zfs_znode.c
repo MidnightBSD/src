@@ -1176,7 +1176,7 @@ again:
 	    doi.doi_bonus_size < sizeof (znode_phys_t)))) {
 		sa_buf_rele(db, NULL);
 		ZFS_OBJ_HOLD_EXIT(zfsvfs, obj_num);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		getnewvnode_drop_reserve();
 #endif
 		return (SET_ERROR(EINVAL));
