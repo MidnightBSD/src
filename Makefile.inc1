@@ -3229,6 +3229,8 @@ _xb-worldtmp: .PHONY
 	mkdir -p ${CDTMP}/usr
 	${WORLDTMP_MTREE} -f ${.CURDIR}/etc/mtree/BSD.usr.dist \
 	    -p ${CDTMP}/usr >/dev/null
+	${WORLDTMP_MTREE} -f ${.CURDIR}/etc/mtree/BSD.include.dist \
+	    -p ${CDTMP}/usr/include >/dev/null
 
 _xb-bootstrap-tools: .PHONY
 .for _tool in \
