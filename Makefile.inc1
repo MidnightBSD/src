@@ -2251,6 +2251,7 @@ ${_bt}-${_tool}: .PHONY .MAKE
 	${_+_}@${ECHODIR} "===> ${_tool} (obj,all,install)"; \
 		cd ${.CURDIR}/${_tool}; \
 		if [ -z "${NO_OBJWALK}" ]; then ${MAKE} DIRPRFX=${_tool}/ obj; fi; \
+		${MKDIR} -p ${WORLDTMP}/usr/include/xlocale; \
 		${MAKE} DIRPRFX=${_tool}/ all; \
 		${MAKE} DIRPRFX=${_tool}/ DESTDIR=${WORLDTMP}/legacy install
 
