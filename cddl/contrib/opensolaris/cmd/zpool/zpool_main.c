@@ -5632,7 +5632,7 @@ typedef struct upgrade_cbdata {
 	char		**cb_argv;
 } upgrade_cbdata_t;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 static int
 is_root_pool(zpool_handle_t *zhp)
 {
@@ -5764,10 +5764,10 @@ upgrade_cb(zpool_handle_t *zhp, void *arg)
 		ret = upgrade_version(zhp, cbp->cb_version);
 		if (ret != 0)
 			return (ret);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		root_pool_upgrade_check(zhp, cbp->cb_poolname,
 		    sizeof(cbp->cb_poolname));
-#endif	/* __FreeBSD__ */
+#endif	/* __MidnightBSD__ */
 		printnl = B_TRUE;
 
 #ifdef illumos
@@ -5791,10 +5791,10 @@ upgrade_cb(zpool_handle_t *zhp, void *arg)
 		if (count > 0) {
 			cbp->cb_first = B_FALSE;
 			printnl = B_TRUE;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			root_pool_upgrade_check(zhp, cbp->cb_poolname,
 			    sizeof(cbp->cb_poolname));
-#endif	/* __FreeBSD__ */
+#endif	/* __MidnightBSD__ */
 			/*
 			 * If they did "zpool upgrade -a", then we could
 			 * be doing ioctls to different pools.  We need
@@ -5978,10 +5978,10 @@ upgrade_one(zpool_handle_t *zhp, void *data)
 		ret = upgrade_version(zhp, cbp->cb_version);
 		if (ret != 0)
 			return (ret);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		root_pool_upgrade_check(zhp, cbp->cb_poolname,
 		    sizeof(cbp->cb_poolname));
-#endif	/* __FreeBSD__ */
+#endif	/* __MidnightBSD__ */
 	}
 
 	if (cbp->cb_version >= SPA_VERSION_FEATURES) {
@@ -5992,10 +5992,10 @@ upgrade_one(zpool_handle_t *zhp, void *data)
 
 		if (count != 0) {
 			printnl = B_TRUE;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			root_pool_upgrade_check(zhp, cbp->cb_poolname,
 			    sizeof(cbp->cb_poolname));
-#endif	/* __FreeBSD __*/
+#endif	/* __MidnightBSD __*/
 		} else if (cur_version == SPA_VERSION) {
 			(void) printf(gettext("Pool '%s' already has all "
 			    "supported features enabled.\n\n"),

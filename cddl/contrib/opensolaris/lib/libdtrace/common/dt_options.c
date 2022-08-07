@@ -280,7 +280,7 @@ dt_opt_ld_path(dtrace_hdl_t *dtp, const char *arg, uintptr_t option)
 	return (0);
 }
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 static int
 dt_opt_objcopy_path(dtrace_hdl_t *dtp, const char *arg, uintptr_t option)
 {
@@ -983,7 +983,7 @@ static const dt_option_t _dtrace_ctoptions[] = {
 	{ "linkmode", dt_opt_linkmode },
 	{ "linktype", dt_opt_linktype },
 	{ "nolibs", dt_opt_cflags, DTRACE_C_NOLIBS },
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	{ "objcopypath", dt_opt_objcopy_path },
 #endif
 	{ "pgmax", dt_opt_pgmax },

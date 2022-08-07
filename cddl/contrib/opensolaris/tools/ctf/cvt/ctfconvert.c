@@ -64,7 +64,7 @@ usage(void)
 static void
 terminate_cleanup(void)
 {
-#if !defined(__FreeBSD__)
+#if !defined(__MidnightBSD__)
 	if (!outfile) {
 		fprintf(stderr, "Removing %s\n", infile);
 		unlink(infile);

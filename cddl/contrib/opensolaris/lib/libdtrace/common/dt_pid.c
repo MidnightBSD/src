@@ -606,7 +606,7 @@ dt_pid_usdt_mapping(void *data, const prmap_t *pmp, const char *oname)
 		dt_pid_objname(dh.dofhp_mod, sizeof (dh.dofhp_mod),
 		    sip.prs_lmid, mname);
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		dh.dofhp_pid = proc_getpid(P);
 
 		if (fd == -1 &&
@@ -632,7 +632,7 @@ dt_pid_usdt_mapping(void *data, const prmap_t *pmp, const char *oname)
 	}
 
 	if (fd != -1)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		(void) close(fd);
 #else
 		(void) pr_close(P, fd);
@@ -729,7 +729,7 @@ dt_pid_create_probes(dtrace_probedesc_t *pdp, dtrace_hdl_t *dtp, dt_pcb_t *pcb)
 	(void) snprintf(provname, sizeof (provname), "pid%d", (int)pid);
 
 	if (gmatch(provname, pdp->dtpd_provider) != 0) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if ((P = dt_proc_grab(dtp, pid, 0, 1)) == NULL)
 #else
 		if ((P = dt_proc_grab(dtp, pid, PGRAB_RDONLY | PGRAB_FORCE,

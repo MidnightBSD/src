@@ -38,7 +38,7 @@
 #include <dt_impl.h>
 #include <dt_pid.h>
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <libproc_compat.h>
 #endif
 

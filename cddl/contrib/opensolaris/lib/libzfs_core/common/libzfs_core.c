@@ -91,7 +91,7 @@
 #include "libzfs_core_compat.h"
 #include "libzfs_compat.h"
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 extern int zfs_ioctl_version;
 #endif
 
@@ -139,7 +139,7 @@ lzc_ioctl(zfs_ioc_t ioc, const char *name,
 	zfs_cmd_t zc = { 0 };
 	int error = 0;
 	char *packed = NULL;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	nvlist_t *oldsource;
 #endif
 	size_t size = 0;
@@ -150,7 +150,7 @@ lzc_ioctl(zfs_ioc_t ioc, const char *name,
 	if (name != NULL)
 		(void) strlcpy(zc.zc_name, name, sizeof (zc.zc_name));
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (zfs_ioctl_version == ZFS_IOCVER_UNDEF)
 		zfs_ioctl_version = get_zfs_ioctl_version();
 
@@ -216,7 +216,7 @@ lzc_ioctl(zfs_ioc_t ioc, const char *name,
 		}
 	}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (zfs_ioctl_version < ZFS_IOCVER_LZC)
 		lzc_compat_post(&zc, ioc);
 #endif
@@ -224,12 +224,12 @@ lzc_ioctl(zfs_ioc_t ioc, const char *name,
 		*resultp = fnvlist_unpack((void *)(uintptr_t)zc.zc_nvlist_dst,
 		    zc.zc_nvlist_dst_size);
 	}
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (zfs_ioctl_version < ZFS_IOCVER_LZC)
 		lzc_compat_outnvl(&zc, ioc, resultp);
 #endif
 out:
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (zfs_ioctl_version < ZFS_IOCVER_LZC) {
 		if (source != oldsource)
 			nvlist_free(source);
