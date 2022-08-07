@@ -580,11 +580,17 @@
 #define	__IDSTRING(name,string)	static const char name[] __unused = string
 #endif
 
+#ifndef	__MBSDID
+#if !defined(lint) && !defined(STRIP_MBSDID)
+#define	__MBSDID(s)	__IDSTRING(__CONCAT(__rcsid_,__LINE__),s)
+#else
+#define	__MBSDID(s)	struct __hack
+#endif
+#endif
+
 /*
  * Embed the rcs id of a source file in the resulting library.  Note that in
  * more recent ELF binutils, we use .ident allowing the ID to be stripped.
- * Usage:
- *	__FBSDID("$FreeBSD$");
  */
 #ifndef	__FBSDID
 #if !defined(STRIP_FBSDID)
