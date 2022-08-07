@@ -1,3 +1,4 @@
+PACKAGE=lib${LIB}
 LIB=		sqlite3
 SHLIB_MAJOR=	1
 LIBADD+=	m pthread z
@@ -8,7 +9,7 @@ INCS=	sqlite3.h sqlite3ext.h
 SQLITE=	${SRCTOP}/contrib/sqlite3
 .PATH:	${SQLITE}
 
-WARNS?=		6
+WARNS?=		3
 CFLAGS+=	-I${SQLITE} \
 		-DUSE_PREAD=1 \
 		-DSTDC_HEADERS=1 \
