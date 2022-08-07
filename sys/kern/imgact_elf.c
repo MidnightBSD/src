@@ -211,6 +211,30 @@ __elfN(freebsd_trans_osrel)(const Elf_Note *note, int32_t *osrel)
 	return (true);
 }
 
+static const char MIDNIGHTBSD_ABI_VENDOR[] = "MidnightBSD";
+
+Elf_Brandnote __elfN(midnightbsd_brandnote) = {
+        .hdr.n_namesz   = sizeof(MIDNIGHTBSD_ABI_VENDOR),
+        .hdr.n_descsz   = sizeof(int32_t),
+        .hdr.n_type     = NT_MIDNIGHTBSD_ABI_TAG,
+        .vendor         = MIDNIGHTBSD_ABI_VENDOR,
+        .flags          = BN_TRANSLATE_OSREL,
+        .trans_osrel    = __elfN(midnightbsd_trans_osrel)
+};
+
+static bool
+__elfN(midnightbsd_trans_osrel)(const Elf_Note *note, int32_t *osrel)
+{
+        uintptr_t p;
+
+        p = (uintptr_t)(note + 1);
+        p += roundup2(note->n_namesz, ELF_NOTE_ROUNDSIZE);
+        *osrel = *(const int32_t *)(p);
+
+        return (true);
+}
+
+
 static const char GNU_ABI_VENDOR[] = "GNU";
 static int GNU_KFREEBSD_ABI_DESC = 3;
 
