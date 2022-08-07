@@ -91,7 +91,7 @@ dt_module_syminit32(dt_module_t *dmp)
 	uint_t i, n = dmp->dm_nsymelems;
 	uint_t asrsv = 0;
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 	GElf_Ehdr ehdr;
 	int is_elf_obj;
 
@@ -113,7 +113,7 @@ dt_module_syminit32(dt_module_t *dmp)
 		    (ELF32_ST_BIND(sym->st_info) != STB_LOCAL || sym->st_size)) {
 			asrsv++; /* reserve space in the address map */
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 			sym->st_value += (Elf_Addr) dmp->dm_reloc_offset;
 			if (is_elf_obj && sym->st_shndx != SHN_UNDEF &&
 			    sym->st_shndx < ehdr.e_shnum)
@@ -141,7 +141,7 @@ dt_module_syminit64(dt_module_t *dmp)
 	uint_t i, n = dmp->dm_nsymelems;
 	uint_t asrsv = 0;
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 	GElf_Ehdr ehdr;
 	int is_elf_obj;
 
@@ -162,7 +162,7 @@ dt_module_syminit64(dt_module_t *dmp)
 		if (sym->st_value != 0 &&
 		    (ELF64_ST_BIND(sym->st_info) != STB_LOCAL || sym->st_size)) {
 			asrsv++; /* reserve space in the address map */
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 			sym->st_value += (Elf_Addr) dmp->dm_reloc_offset;
 			if (is_elf_obj && sym->st_shndx != SHN_UNDEF &&
 			    sym->st_shndx < ehdr.e_shnum)
@@ -544,7 +544,7 @@ dt_module_lookup_by_ctf(dtrace_hdl_t *dtp, ctf_file_t *ctfp)
 	return (ctfp ? ctf_getspecific(ctfp) : NULL);
 }
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 dt_kmodule_t *
 dt_kmodule_lookup(dtrace_hdl_t *dtp, const char *name)
 {
@@ -976,7 +976,7 @@ dt_module_unload(dtrace_hdl_t *dtp, dt_module_t *dmp)
 		free(dmp->dm_asmap);
 		dmp->dm_asmap = NULL;
 	}
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 	if (dmp->dm_sec_offsets != NULL) {
 		free(dmp->dm_sec_offsets);
 		dmp->dm_sec_offsets = NULL;
@@ -1138,7 +1138,7 @@ dt_module_update(dtrace_hdl_t *dtp, struct kld_file_stat *k_stat)
 	char fname[MAXPATHLEN];
 	struct stat64 st;
 	int fd, err, bits;
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	struct module_stat ms;
 	dt_kmodule_t *dkmp;
 	uint_t h;
@@ -1206,7 +1206,7 @@ dt_module_update(dtrace_hdl_t *dtp, struct kld_file_stat *k_stat)
 		dt_module_destroy(dtp, dmp);
 		return;
 	}
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 	mapbase = (uintptr_t)k_stat->address;
 	gelf_getehdr(dmp->dm_elf, &ehdr);
 	is_elf_obj = (ehdr.e_type == ET_REL);
@@ -1228,7 +1228,7 @@ dt_module_update(dtrace_hdl_t *dtp, struct kld_file_stat *k_stat)
 		if (gelf_getshdr(sp, &sh) == NULL || sh.sh_type == SHT_NULL ||
 		    (s = elf_strptr(dmp->dm_elf, shstrs, sh.sh_name)) == NULL)
 			continue; /* skip any malformed sections */
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 		if (sh.sh_size == 0)
 			continue;
 		if (sh.sh_type == SHT_PROGBITS || sh.sh_type == SHT_NOBITS) {
@@ -1290,7 +1290,7 @@ dt_module_update(dtrace_hdl_t *dtp, struct kld_file_stat *k_stat)
 	if (dmp->dm_info.objfs_info_primary)
 		dmp->dm_flags |= DT_DM_PRIMARY;
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	ms.version = sizeof(ms);
 	for (modid = kldfirstmod(k_stat->id); modid > 0;
 	    modid = modnext(modid)) {
@@ -1330,7 +1330,7 @@ dtrace_update(dtrace_hdl_t *dtp)
 {
 	dt_module_t *dmp;
 	DIR *dirp;
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 	int fileid;
 #endif
 
@@ -1354,7 +1354,7 @@ dtrace_update(dtrace_hdl_t *dtp)
 
 		(void) closedir(dirp);
 	}
-#elif defined(__MidnightBSD__)
+#elif defined(__FreeBSD__)
 	/*
 	 * Use FreeBSD's kernel loader interface to discover what kernel
 	 * modules are loaded and create a libdtrace module for each one.

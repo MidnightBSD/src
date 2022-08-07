@@ -50,7 +50,7 @@
 #ifdef illumos
 #include <libproc.h>
 #endif
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #include <spawn.h>
 #endif
 
@@ -93,7 +93,7 @@ static int g_flowindent;
 static int g_intr;
 static int g_impatient;
 static int g_newline;
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 static int g_siginfo;
 #endif
 static int g_total;
@@ -403,7 +403,7 @@ dof_prune(const char *fname)
 	free(buf);
 }
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 /*
  * Use nextboot(8) to tell the loader to load DTrace kernel modules during
  * the next boot of the system. The nextboot(8) configuration is removed during
@@ -548,7 +548,7 @@ etcsystem_add(void)
 
 	error("added forceload directives to %s\n", g_ofile);
 }
-#endif /* !__MidnightBSD__ */
+#endif /* !__FreeBSD__ */
 
 static void
 print_probe_info(const dtrace_probeinfo_t *p)
@@ -681,9 +681,9 @@ anon_prog(const dtrace_cmd_t *dcp, dof_hdr_t *dof, int n)
 		dfatal("failed to create DOF image for '%s'", dcp->dc_name);
 
 	p = (uchar_t *)dof;
-	q = p + dof->dofh_loadsz;
+	q = p + dof->dofh_filesz;
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	/*
 	 * On FreeBSD, the DOF file is read directly during boot - just write
 	 * two hex characters per byte.
@@ -1263,7 +1263,7 @@ intr(int signo)
 		g_impatient = 1;
 }
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 static void
 siginfo(int signo __unused)
 {
@@ -1288,7 +1288,7 @@ installsighands(void)
 	if (sigaction(SIGTERM, NULL, &oact) == 0 && oact.sa_handler != SIG_IGN)
 		(void) sigaction(SIGTERM, &act, NULL);
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	if (sigaction(SIGPIPE, NULL, &oact) == 0 && oact.sa_handler != SIG_IGN)
 		(void) sigaction(SIGPIPE, &act, NULL);
 
@@ -1819,7 +1819,7 @@ main(int argc, char *argv[])
 		 */
 		error("saved anonymous enabling in %s\n", g_ofile);
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 		bootdof_add();
 #else
 		etcsystem_add();
@@ -1961,7 +1961,7 @@ main(int argc, char *argv[])
 		if (!g_intr && !done)
 			dtrace_sleep(g_dtp);
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 		if (g_siginfo) {
 			(void)dtrace_aggregate_print(g_dtp, g_ofp, NULL);
 			g_siginfo = 0;

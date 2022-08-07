@@ -28,9 +28,10 @@
  * Copyright (c) 2013 Martin Matuska. All rights reserved.
  * Copyright (c) 2013 Steven Hartland. All rights reserved.
  * Copyright (c) 2014 Integros [integros.com]
- * Copyright 2016 Igor Kozhukhov <ikozhukhov@gmail.com>
  * Copyright 2017 Nexenta Systems, Inc.
- * Copyright 2017 RackTop Systems.
+ * Copyright 2016 Igor Kozhukhov <ikozhukhov@gmail.com>
+ * Copyright 2017-2018 RackTop Systems.
+ * Copyright (c) 2019 Datto Inc.
  */
 
 #include <ctype.h>
@@ -439,6 +440,8 @@ make_dataset_handle_common(zfs_handle_t *zhp, zfs_cmd_t *zc)
 		zhp->zfs_head_type = ZFS_TYPE_VOLUME;
 	else if (zhp->zfs_dmustats.dds_type == DMU_OST_ZFS)
 		zhp->zfs_head_type = ZFS_TYPE_FILESYSTEM;
+	else if (zhp->zfs_dmustats.dds_type == DMU_OST_OTHER)
+		return (-1);
 	else
 		abort();
 
@@ -892,13 +895,25 @@ libzfs_mnttab_add(libzfs_handle_t *hdl, const char *special,
 	mnttab_node_t *mtn;
 
 	pthread_mutex_lock(&hdl->libzfs_mnttab_cache_lock);
-	if (avl_numnodes(&hdl->libzfs_mnttab_cache) == 0) {
+	if (avl_numnodes(&hdl->libzfs_mnttab_cache) != 0) {
 		mtn = zfs_alloc(hdl, sizeof (mnttab_node_t));
 		mtn->mtn_mt.mnt_special = zfs_strdup(hdl, special);
 		mtn->mtn_mt.mnt_mountp = zfs_strdup(hdl, mountp);
 		mtn->mtn_mt.mnt_fstype = zfs_strdup(hdl, MNTTYPE_ZFS);
 		mtn->mtn_mt.mnt_mntopts = zfs_strdup(hdl, mntopts);
-		avl_add(&hdl->libzfs_mnttab_cache, mtn);
+		/*
+		 * Another thread may have already added this entry
+		 * via libzfs_mnttab_update. If so we should skip it.
+		 */
+		if (avl_find(&hdl->libzfs_mnttab_cache, mtn, NULL) != NULL) {
+			free(mtn->mtn_mt.mnt_special);
+			free(mtn->mtn_mt.mnt_mountp);
+			free(mtn->mtn_mt.mnt_fstype);
+			free(mtn->mtn_mt.mnt_mntopts);
+			free(mtn);
+		} else {
+			avl_add(&hdl->libzfs_mnttab_cache, mtn);
+		}
 	}
 	pthread_mutex_unlock(&hdl->libzfs_mnttab_cache_lock);
 }		
@@ -1183,6 +1198,36 @@ zfs_valid_proplist(libzfs_handle_t *hdl, zfs_type_t type, nvlist_t *nvl,
 			}
 			break;
 		}
+
+		case ZFS_PROP_SPECIAL_SMALL_BLOCKS:
+			if (zpool_hdl != NULL) {
+				char state[64] = "";
+
+				/*
+				 * Issue a warning but do not fail so that
+				 * tests for setable properties succeed.
+				 */
+				if (zpool_prop_get_feature(zpool_hdl,
+				    "feature@allocation_classes", state,
+				    sizeof (state)) != 0 ||
+				    strcmp(state, ZFS_FEATURE_ACTIVE) != 0) {
+					(void) fprintf(stderr, gettext(
+					    "%s: property requires a special "
+					    "device in the pool\n"), propname);
+				}
+			}
+			if (intval != 0 &&
+			    (intval < SPA_MINBLOCKSIZE ||
+			    intval > SPA_OLD_MAXBLOCKSIZE || !ISP2(intval))) {
+				zfs_error_aux(hdl, dgettext(TEXT_DOMAIN,
+				    "invalid '%s=%d' property: must be zero or "
+				    "a power of 2 from 512B to 128K"), propname,
+				    intval);
+				(void) zfs_error(hdl, EZFS_BADPROP, errbuf);
+				goto error;
+			}
+			break;
+
 		case ZFS_PROP_MLSLABEL:
 		{
 #ifdef illumos
@@ -1842,13 +1887,18 @@ zfs_prop_set_list(zfs_handle_t *zhp, nvlist_t *props)
 	ret = zfs_ioctl(hdl, ZFS_IOC_SET_PROP, &zc);
 
 	if (ret != 0) {
+		if (zc.zc_nvlist_dst_filled == B_FALSE) {
+			(void) zfs_standard_error(hdl, errno, errbuf);
+			goto error;
+		}
+
 		/* Get the list of unset properties back and report them. */
 		nvlist_t *errorprops = NULL;
 		if (zcmd_read_dst_nvlist(hdl, &zc, &errorprops) != 0)
 			goto error;
-		for (nvpair_t *elem = nvlist_next_nvpair(nvl, NULL);
+		for (nvpair_t *elem = nvlist_next_nvpair(errorprops, NULL);
 		    elem != NULL;
-		    elem = nvlist_next_nvpair(nvl, elem)) {
+		    elem = nvlist_next_nvpair(errorprops, elem)) {
 			zfs_prop_t prop = zfs_name_to_prop(nvpair_name(elem));
 			zfs_setprop_error(hdl, prop, errno, errbuf);
 		}
@@ -4153,7 +4203,7 @@ zfs_rollback(zfs_handle_t *zhp, zfs_handle_t *snap, boolean_t force)
 	rollback_data_t cb = { 0 };
 	int err;
 	boolean_t restore_resv = 0;
-	uint64_t old_volsize = 0, new_volsize;
+	uint64_t min_txg = 0, old_volsize = 0, new_volsize;
 	zfs_prop_t resv_prop;
 
 	assert(zhp->zfs_type == ZFS_TYPE_FILESYSTEM ||
@@ -4165,7 +4215,13 @@ zfs_rollback(zfs_handle_t *zhp, zfs_handle_t *snap, boolean_t force)
 	cb.cb_force = force;
 	cb.cb_target = snap->zfs_name;
 	cb.cb_create = zfs_prop_get_int(snap, ZFS_PROP_CREATETXG);
-	(void) zfs_iter_snapshots(zhp, B_FALSE, rollback_destroy, &cb);
+
+	if (cb.cb_create > 0)
+		min_txg = cb.cb_create;
+
+	(void) zfs_iter_snapshots(zhp, B_FALSE, rollback_destroy, &cb,
+	    min_txg, 0);
+
 	(void) zfs_iter_bookmarks(zhp, rollback_destroy, &cb);
 
 	if (cb.cb_error)

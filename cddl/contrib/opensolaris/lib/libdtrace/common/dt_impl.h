@@ -26,7 +26,7 @@
 
 /*
  * Copyright (c) 2013, Joyent, Inc. All rights reserved.
- * Copyright (c) 2012 by Delphix. All rights reserved.
+ * Copyright (c) 2011, 2016 by Delphix. All rights reserved.
  */
 
 #ifndef	_DT_IMPL_H
@@ -156,7 +156,7 @@ typedef struct dt_module {
 #define	DT_DM_KERNEL	0x2	/* module is associated with a kernel object */
 #define	DT_DM_PRIMARY	0x4	/* module is a krtld primary kernel object */
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 /*
  * A representation of a FreeBSD kernel module, used when checking module
  * dependencies.  This differs from dt_module_t, which refers to a KLD in the
@@ -250,7 +250,7 @@ struct dtrace_hdl {
 	dt_idhash_t *dt_tls;	/* hash table of thread-local identifiers */
 	dt_list_t dt_modlist;	/* linked list of dt_module_t's */
 	dt_module_t **dt_mods;	/* hash table of dt_module_t's */
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	dt_kmodule_t **dt_kmods; /* hash table of dt_kmodule_t's */
 #endif
 	uint_t dt_modbuckets;	/* number of module hash buckets */
@@ -293,7 +293,7 @@ struct dtrace_hdl {
 	int dt_cpp_argc;	/* count of initialized cpp(1) arguments */
 	int dt_cpp_args;	/* size of dt_cpp_argv[] array */
 	char *dt_ld_path;	/* pathname of ld(1) to invoke if needed */
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	char *dt_objcopy_path;	/* pathname of objcopy(1) to invoke if needed */
 #endif
 	dt_list_t dt_lib_path;	/* linked-list forming library search path */
@@ -362,6 +362,7 @@ struct dtrace_hdl {
 	int dt_indent;		/* recommended flow indent */
 	dtrace_epid_t dt_last_epid;	/* most recently consumed EPID */
 	uint64_t dt_last_timestamp;	/* most recently consumed timestamp */
+	boolean_t dt_has_sugar;	/* syntactic sugar used? */
 };
 
 /*
@@ -487,7 +488,6 @@ struct dtrace_hdl {
 #define	DT_ACT_SETOPT		DT_ACT(28)	/* setopt() action */
 #define	DT_ACT_PRINT		DT_ACT(29)	/* print() action */
 #define	DT_ACT_PRINTM		DT_ACT(30)	/* printm() action */
-#define	DT_ACT_PRINTT		DT_ACT(31)	/* printt() action */
 
 /*
  * Sentinel to tell freopen() to restore the saved stdout.  This must not
@@ -744,7 +744,7 @@ extern int _dtrace_argmax;		/* default maximum probe arguments */
 extern const char *_dtrace_libdir;	/* default library directory */
 extern const char *_dtrace_moddir;	/* default kernel module directory */
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 extern int gmatch(const char *, const char *);
 extern int yylex(void);
 #endif

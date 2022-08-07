@@ -28,10 +28,11 @@
 .\" Copyright (c) 2014, Xin LI <delphij@FreeBSD.org>
 .\" Copyright (c) 2014-2015, The FreeBSD Foundation, All Rights Reserved.
 .\" Copyright 2019 Joyent, Inc.
+.\" Copyright (c) 2018 Datto Inc.
 .\"
-.\" $FreeBSD: stable/11/cddl/contrib/opensolaris/cmd/zfs/zfs.8 354190 2019-10-30 17:02:31Z avg $
+.\" $FreeBSD$
 .\"
-.Dd October 16, 2019
+.Dd September 12, 2020
 .Dt ZFS 8
 .Os
 .Sh NAME
@@ -293,7 +294,7 @@
 .Op Ar snapshot Ns | Ns Ar filesystem
 .Nm
 .Cm program
-.Op Fl n
+.Op Fl jn
 .Op Fl t Ar timeout
 .Op Fl m Ar memory_limit
 .Ar pool script
@@ -464,8 +465,11 @@ responsible for mounting and unmounting the file system.
 dataset can be attached to a jail by using the
 .Qq Nm Cm jail
 subcommand. You cannot attach a dataset to one jail and the children of the
-same dataset to another jails. To allow management of the dataset from within
-a jail, the
+same dataset to another jail. You can also not attach the root file system
+of the jail or any dataset which needs to be mounted before the zfs rc script
+is run inside the jail, as it would be attached unmounted until it is
+mounted from the rc script inside the jail. To allow management of the
+dataset from within a jail, the
 .Sy jailed
 property has to be set and the jail needs access to the
 .Pa /dev/zfs
@@ -631,6 +635,16 @@ property can be either
 .Cm yes
 or
 .Cm no .
+.It Sy objsetid
+A unique identifier for this dataset within the pool. Unlike the dataset's
+.Sy guid
+, the
+.Sy objsetid
+of a dataset is not transferred to other pools when the snapshot is copied
+with a send/receive operation.
+The
+.Sy objsetid
+can be reused (for a new datatset) after the dataset is deleted.
 .It Sy origin
 For cloned file systems or volumes, the snapshot from which the clone was
 created. See also the
@@ -997,9 +1011,9 @@ for more information on these algorithms.
 .Pp
 Changing this property affects only newly-written data.
 .Pp
-Salted checksum algorithms
-.Pq Cm edonr , skein
-are currently not supported for any filesystem on the boot pools.
+The salted checksum algorithm
+.Pq Cm edonr
+is currently not supported on FreeBSD.
 .It Sy compression Ns = Ns Cm on | off | lzjb | gzip | gzip- Ns Ar N | Cm zle | Cm lz4
 Controls the compression algorithm used for this dataset.
 Setting compression to
@@ -1130,8 +1144,23 @@ This feature must be enabled to be used
 .Po see
 .Xr zpool-features 7
 .Pc .
+.It Sy special_small_blocks Ns = Ns Ar size
+This value represents the threshold block size for including small file
+blocks into the special allocation class.
+Blocks smaller than or equal to this value will be assigned to the special
+allocation class while greater blocks will be assigned to the regular class.
+Valid values are zero or a power of two from 512B up to 128K.
+The default size is 0 which means no small file blocks will be allocated in
+the special class.
+.Pp
+Before setting this property, a special class vdev must be added to the
+pool.
+See
+.Xr zpool 8
+for more details on the special allocation class.
 .It Sy mountpoint Ns = Ns Ar path | Cm none | legacy
-Controls the mount point used for this file system. See the
+Controls the mount point used for this file system.
+See the
 .Qq Sx Mount Points
 section for more information on how this property is used.
 .Pp
@@ -2730,7 +2759,9 @@ feature.
 .It Fl c, -compressed
 Generate a more compact stream by using compressed WRITE records for blocks
 which are compressed on disk and in memory (see the
-.Sy compression property for details).  If the
+.Sy compression
+property for details).
+If the
 .Sy lz4_compress
 feature is active on the sending system, then the receiving system must have that
 feature enabled as well. If the
@@ -3015,7 +3046,7 @@ property of the filesystem or volume which is received into.
 To use this flag, the storage pool must have the
 .Sy extensible_dataset
 feature enabled.  See
-.Xr zpool-features 5
+.Xr zpool-features 7
 for details on ZFS feature flags.
 .El
 .It Xo
@@ -3390,7 +3421,7 @@ Display the path's inode change time as the first column of output.
 .It Xo
 .Nm
 .Cm program
-.Op Fl n
+.Op Fl jn
 .Op Fl t Ar timeout
 .Op Fl m Ar memory_limit
 .Ar pool script
@@ -3413,6 +3444,11 @@ For full documentation of the ZFS channel program interface, see the manual
 page for
 .Xr zfs-program 8 .
 .Bl -tag -width indent
+.It Fl j
+Display channel program output in JSON format.
+When this flag is specified and standard output is empty -
+channel program encountered an error.
+The details of such an error will be printed to standard error in plain text.
 .It Fl n
 Executes a read-only channel program, which runs faster.
 The program cannot change on-disk state by calling functions from
@@ -3918,6 +3954,11 @@ M       F       /tank/test/modified
 .Xr umount 8 ,
 .Xr zfs-program 8 ,
 .Xr zpool 8
+.Sh HISTORY
+The
+.Nm
+utility first appeared in
+.Fx 7.0 .
 .Sh AUTHORS
 This manual page is a
 .Xr mdoc 7

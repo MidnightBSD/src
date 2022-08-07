@@ -30,6 +30,7 @@
  * Copyright (c) 2014 Integros [integros.com]
  * Copyright 2016 Igor Kozhukhov <ikozhukhov@gmail.com>.
  * Copyright 2016 Nexenta Systems, Inc.
+ * Copyright (c) 2019 Datto Inc.
  */
 
 #include <assert.h>
@@ -352,7 +353,7 @@ get_usage(zfs_help_t idx)
 	case HELP_BOOKMARK:
 		return (gettext("\tbookmark <snapshot> <bookmark>\n"));
 	case HELP_CHANNEL_PROGRAM:
-		return (gettext("\tprogram [-n] [-t <instruction limit>] "
+		return (gettext("\tprogram [-jn] [-t <instruction limit>] "
 		    "[-m <memory limit (b)>] <pool> <program file> "
 		    "[lua args...]\n"));
 	}
@@ -1173,7 +1174,7 @@ destroy_print_snapshots(zfs_handle_t *fs_zhp, destroy_cbdata_t *cb)
 	int err = 0;
 	assert(cb->cb_firstsnap == NULL);
 	assert(cb->cb_prevsnap == NULL);
-	err = zfs_iter_snapshots_sorted(fs_zhp, destroy_print_cb, cb);
+	err = zfs_iter_snapshots_sorted(fs_zhp, destroy_print_cb, cb, 0, 0);
 	if (cb->cb_firstsnap != NULL) {
 		uint64_t used = 0;
 		if (err == 0) {
@@ -3436,6 +3437,7 @@ zfs_do_promote(int argc, char **argv)
  */
 typedef struct rollback_cbdata {
 	uint64_t	cb_create;
+	uint8_t		cb_younger_ds_printed;
 	boolean_t	cb_first;
 	int		cb_doclones;
 	char		*cb_target;
@@ -3466,15 +3468,20 @@ rollback_check_dependent(zfs_handle_t *zhp, void *data)
 }
 
 /*
- * Report any snapshots more recent than the one specified.  Used when '-r' is
- * not specified.  We reuse this same callback for the snapshot dependents - if
- * 'cb_dependent' is set, then this is a dependent and we should report it
- * without checking the transaction group.
+ * Report some snapshots/bookmarks more recent than the one specified.
+ * Used when '-r' is not specified. We reuse this same callback for the
+ * snapshot dependents - if 'cb_dependent' is set, then this is a
+ * dependent and we should report it without checking the transaction group.
  */
 static int
 rollback_check(zfs_handle_t *zhp, void *data)
 {
 	rollback_cbdata_t *cbp = data;
+	/*
+	 * Max number of younger snapshots and/or bookmarks to display before
+	 * we stop the iteration.
+	 */
+	const uint8_t max_younger = 32;
 
 	if (cbp->cb_doclones) {
 		zfs_close(zhp);
@@ -3503,9 +3510,24 @@ rollback_check(zfs_handle_t *zhp, void *data)
 		} else {
 			(void) fprintf(stderr, "%s\n",
 			    zfs_get_name(zhp));
+			cbp->cb_younger_ds_printed++;
 		}
 	}
 	zfs_close(zhp);
+
+	if (cbp->cb_younger_ds_printed == max_younger) {
+		/*
+		 * This non-recursive rollback is going to fail due to the
+		 * presence of snapshots and/or bookmarks that are younger than
+		 * the rollback target.
+		 * We printed some of the offending objects, now we stop
+		 * zfs_iter_snapshot/bookmark iteration so we can fail fast and
+		 * avoid iterating over the rest of the younger objects
+		 */
+		(void) fprintf(stderr, gettext("Output limited to %d "
+		    "snapshots/bookmarks\n"), max_younger);
+		return (-1);
+	}
 	return (0);
 }
 
@@ -3519,6 +3541,7 @@ zfs_do_rollback(int argc, char **argv)
 	zfs_handle_t *zhp, *snap;
 	char parentname[ZFS_MAX_DATASET_NAME_LEN];
 	char *delim;
+	uint64_t min_txg = 0;
 
 	/* check options */
 	while ((c = getopt(argc, argv, "rRf")) != -1) {
@@ -3574,7 +3597,12 @@ zfs_do_rollback(int argc, char **argv)
 	cb.cb_create = zfs_prop_get_int(snap, ZFS_PROP_CREATETXG);
 	cb.cb_first = B_TRUE;
 	cb.cb_error = 0;
-	if ((ret = zfs_iter_snapshots(zhp, B_FALSE, rollback_check, &cb)) != 0)
+
+	if (cb.cb_create > 0)
+		min_txg = cb.cb_create;
+
+	if ((ret = zfs_iter_snapshots(zhp, B_FALSE, rollback_check, &cb,
+	    min_txg, 0)) != 0)
 		goto out;
 	if ((ret = zfs_iter_bookmarks(zhp, rollback_check, &cb)) != 0)
 		goto out;
@@ -4665,6 +4693,14 @@ parse_fs_perm(fs_perm_t *fsperm, nvlist_t *nvl)
 						(void) strlcpy(
 						    node->who_perm.who_ug_name,
 						    nice_name, 256);
+					else {
+						/* User or group unknown */
+						(void) snprintf(
+						    node->who_perm.who_ug_name,
+						    sizeof (
+						    node->who_perm.who_ug_name),
+						    "(unknown: %d)", rid);
+					}
 				}
 
 				uu_avl_insert(avl, node, idx);
@@ -5163,9 +5199,9 @@ construct_fsacl_list(boolean_t un, struct allow_opts *opts, nvlist_t **nvlp)
 
 				if (p != NULL)
 					rid = p->pw_uid;
-				else {
+				else if (*endch != '\0') {
 					(void) snprintf(errbuf, 256, gettext(
-					    "invalid user %s"), curr);
+					    "invalid user %s\n"), curr);
 					allow_usage(un, B_TRUE, errbuf);
 				}
 			} else if (opts->group) {
@@ -5177,9 +5213,9 @@ construct_fsacl_list(boolean_t un, struct allow_opts *opts, nvlist_t **nvlp)
 
 				if (g != NULL)
 					rid = g->gr_gid;
-				else {
+				else if (*endch != '\0') {
 					(void) snprintf(errbuf, 256, gettext(
-					    "invalid group %s"),  curr);
+					    "invalid group %s\n"),  curr);
 					allow_usage(un, B_TRUE, errbuf);
 				}
 			} else {
@@ -5205,7 +5241,7 @@ construct_fsacl_list(boolean_t un, struct allow_opts *opts, nvlist_t **nvlp)
 					rid = g->gr_gid;
 				} else {
 					(void) snprintf(errbuf, 256, gettext(
-					    "invalid user/group %s"), curr);
+					    "invalid user/group %s\n"), curr);
 					allow_usage(un, B_TRUE, errbuf);
 				}
 			}
@@ -7244,12 +7280,12 @@ zfs_do_channel_program(int argc, char **argv)
 	nvlist_t *outnvl;
 	uint64_t instrlimit = ZCP_DEFAULT_INSTRLIMIT;
 	uint64_t memlimit = ZCP_DEFAULT_MEMLIMIT;
-	boolean_t sync_flag = B_TRUE;
+	boolean_t sync_flag = B_TRUE, json_output = B_FALSE;
 	zpool_handle_t *zhp;
 
 	/* check options */
 	while (-1 !=
-	    (c = getopt(argc, argv, "nt:(instr-limit)m:(memory-limit)"))) {
+	    (c = getopt(argc, argv, "jnt:(instr-limit)m:(memory-limit)"))) {
 		switch (c) {
 		case 't':
 		case 'm': {
@@ -7289,6 +7325,10 @@ zfs_do_channel_program(int argc, char **argv)
 		}
 		case 'n': {
 			sync_flag = B_FALSE;
+			break;
+		}
+		case 'j': {
+			json_output = B_TRUE;
 			break;
 		}
 		case '?':
@@ -7413,11 +7453,14 @@ zfs_do_channel_program(int argc, char **argv)
 		    gettext("Channel program execution failed:\n%s\n"),
 		    errstring);
 	} else {
-		(void) printf("Channel program fully executed ");
-		if (nvlist_empty(outnvl)) {
-			(void) printf("with no return value.\n");
+		if (json_output) {
+			(void) nvlist_print_json(stdout, outnvl);
+		} else if (nvlist_empty(outnvl)) {
+			(void) fprintf(stdout, gettext("Channel program fully "
+			    "executed and did not produce output.\n"));
 		} else {
-			(void) printf("with return value:\n");
+			(void) fprintf(stdout, gettext("Channel program fully "
+			    "executed and produced output:\n"));
 			dump_nvlist(outnvl, 4);
 		}
 	}
