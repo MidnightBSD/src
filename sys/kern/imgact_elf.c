@@ -224,7 +224,7 @@ Elf_Brandnote __elfN(midnightbsd_brandnote) = {
 };
 
 static bool
-__elfN(midnightbsd_trans_osrel)(const Elf_Note *note, int32_t *osrel)
+midnightbsd_trans_osrel(const Elf_Note *note, int32_t *osrel)
 {
         uintptr_t p;
 
