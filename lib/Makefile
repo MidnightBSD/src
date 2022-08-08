@@ -19,7 +19,8 @@ SUBDIR_BOOTSTRAP= \
 	libelf \
 	libssp \
 	libssp_nonshared \
-	msun
+	msun \
+	libblocksruntime
 
 # The main list; please keep these sorted alphabetically.
 
@@ -30,7 +31,6 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	libarchive \
 	libauditd \
 	libbegemot \
-	libblocksruntime \
 	libbsdstat \
 	libbsm \
 	libbz2 \
