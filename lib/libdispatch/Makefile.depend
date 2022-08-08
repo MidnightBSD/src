@@ -6,7 +6,8 @@ DIRDEPS = \
 	lib/${CSU_DIR} \
 	lib/libc \
 	lib/libcompiler_rt \ 
-	lib/libblocksruntime
+	lib/libthr \
+	lib/libblocksruntime \
 
 
 .include <dirdeps.mk>
