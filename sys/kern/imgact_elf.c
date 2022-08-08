@@ -220,7 +220,7 @@ Elf_Brandnote __elfN(midnightbsd_brandnote) = {
         .hdr.n_type     = NT_MIDNIGHTBSD_ABI_TAG,
         .vendor         = MIDNIGHTBSD_ABI_VENDOR,
         .flags          = BN_TRANSLATE_OSREL,
-        .trans_osrel    = __elfN(midnightbsd_trans_osrel)
+        .trans_osrel    = midnightbsd_trans_osrel
 };
 
 static bool
