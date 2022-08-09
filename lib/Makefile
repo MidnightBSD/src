@@ -43,7 +43,6 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	libdevctl \
 	libdevinfo \
 	libdevstat \
-	libdispatch \
 	${_libdl} \
 	libdns_sd \
 	libdwarf \
