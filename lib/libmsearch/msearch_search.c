@@ -92,7 +92,7 @@ msearch_search(msearch_query *query, msearch_result *result) {
 				current->filename = NULL;
 				if (lstat(sqlite3_column_text(stmt, 0), &sb) == 0) {
 					if (S_ISREG(sb.st_mode)) {
-						current->filename = strdup(basename(sqlite3_column_text(stmt, 0)));
+						current->filename = strdup(basename((char *)sqlite3_column_text(stmt, 0)));
 					}
 				}
 				current->path = strdup(sqlite3_column_text(stmt, 0));
