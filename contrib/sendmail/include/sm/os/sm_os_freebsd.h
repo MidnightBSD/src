@@ -15,24 +15,17 @@
 
 #define SM_CONF_SYS_CDEFS_H	1
 
-#if __FreeBSD__ >= 2
-#  include <osreldate.h> /* defines __FreeBSD_version */
-#  if __FreeBSD_version >= 199512	/* 2.2-current when it appeared */
-#     define MI_SOMAXCONN	-1	/* listen() max backlog for milter */
-#  endif /* __FreeBSD_version >= 199512 */
-#  if __FreeBSD_version >= 330000
-     /* 3.3.0-release and later have strlcpy()/strlcat() */
-#    ifndef SM_CONF_STRL
-#       define SM_CONF_STRL		1
-#    endif
-#  endif
+#include <osreldate.h> 
+#define MI_SOMAXCONN	-1	/* listen() max backlog for milter */
+#ifndef SM_CONF_STRL
+#define SM_CONF_STRL		1
 #endif
 
 #ifndef SM_CONF_SHM
 # define SM_CONF_SHM	1
 #endif
 #ifndef SM_CONF_SEM
-# if __FreeBSD_version >= 1200059
+# if __MidnightBSD_version >= 300000
 #  define SM_CONF_SEM	2 /* union semun is no longer declared by default */
 # else
 #  define SM_CONF_SEM	1
