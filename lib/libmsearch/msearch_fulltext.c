@@ -91,7 +91,7 @@ msearch_fulltext_search(msearch_query *query, msearch_result *result) {
                                 current->filename = NULL;
                                 if (lstat(sqlite3_column_text(stmt, 0), &sb) == 0) {
                                         if (S_ISREG(sb.st_mode)) {
-                                                current->filename = strdup(basename(sqlite3_column_text(stmt, 0)));
+                                                current->filename = strdup(basename((char *) sqlite3_column_text(stmt, 0)));
                                         }
 					current->size = sb.st_size;
 					current->uid = sb.st_uid;
