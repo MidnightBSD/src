@@ -466,14 +466,14 @@ mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd, con
                     max -= l;
                     break;
                 case 'B':
-                    name = dirname(last_file);
+                    name = dirname((char *)last_file);
                     (void) strlcpy(pos, name, max);
                     l = strlen(name);
                     pos += l;
                     max -= l;
                     break;
                 case 'f':
-                    name = basename(last_file);
+                    name = basename((char *)last_file);
                     (void) strlcpy(pos, name, max);
                     l = strlen(name);
                     pos += l;
