@@ -81,7 +81,7 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 		rc_script = sqlite3_column_text(stmt, 0);
 		if (rc_script == NULL)
 			continue;
-		service = basename(rc_script);
+		service = basename((char *)rc_script);
 		if (mport_xsystem(mport, "/usr/sbin/service %s onestop", service) != 0) {
 			mport_call_msg_cb(mport, "Unable to stop service %s\n", service);
 		}
