@@ -1551,7 +1551,6 @@ digest_notes(Obj_Entry *obj, Elf_Addr note_start, Elf_Addr note_end)
 		    sizeof(NOTE_MIDNIGHTBSD_VENDOR)) != 0)
 			continue;
 		switch (note->n_type) {
-		case NT_FREEBSD_ABI_TAG:
 		case NT_MIDNIGHTBSD_ABI_TAG:
 			/* MidnightBSD osrel note */
 			p = (uintptr_t)(note + 1);
@@ -1559,7 +1558,6 @@ digest_notes(Obj_Entry *obj, Elf_Addr note_start, Elf_Addr note_end)
 			obj->osrel = *(const int32_t *)(p);
 			dbg("note osrel %d", obj->osrel);
 			break;
-		case NT_FREEBSD_FEATURE_CTL:
 		case NT_MIDNIGHTBSD_FEATURE_CTL:
 			/* MidnightBSD ABI feature control note */
 			p = (uintptr_t)(note + 1);
@@ -1567,7 +1565,6 @@ digest_notes(Obj_Entry *obj, Elf_Addr note_start, Elf_Addr note_end)
 			obj->fctl0 = *(const uint32_t *)(p);
 			dbg("note fctl0 %#x", obj->fctl0);
 			break;
-		case NT_FREEBSD_NOINIT_TAG:
 		case NT_MIDNIGHTBSD_NOINIT_TAG:
 			/* MidnightBSD 'crt does not call init' note */
 			obj->crt_no_init = true;
