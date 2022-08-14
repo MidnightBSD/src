@@ -3,10 +3,9 @@
 
 .include <src.opts.mk>
 
-# XXX MISSING:		icheck ncheck
+# XXX MISSING:		badsect icheck ncheck
 
 SUBDIR=adjkerntz \
-	badsect \
 	camcontrol \
 	clri \
 	comcontrol \
