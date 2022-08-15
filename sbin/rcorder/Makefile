@@ -3,7 +3,7 @@
 
 PACKAGE=runtime
 PROG=   rcorder
-SRCS=   hash.c rcorder.c
+SRCS=   ealloc.c hash.c rcorder.c
 MAN=	rcorder.8
 
 LIBADD=	util
