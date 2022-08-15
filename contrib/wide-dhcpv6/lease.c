@@ -93,7 +93,7 @@ static struct hash_entry * hash_table_find __P((struct hash_table *, void *));
 int
 lease_init(void)
 {
-	wwdprintf(LOG_DEBUG, FNAME, "called");
+	wdprintf(LOG_DEBUG, FNAME, "called");
 
 	if (hash_table_init(&dhcp6_lease_table, DHCP6_LEASE_TABLE_SIZE,
 		in6_addr_hash, in6_addr_match) != 0) {
@@ -116,10 +116,10 @@ lease_address(addr)
 	if (!addr)
 		return (FALSE);
 
-	wwdprintf(LOG_DEBUG, FNAME, "addr=%s", in6addr2str(addr, 0));
+	wdprintf(LOG_DEBUG, FNAME, "addr=%s", in6addr2str(addr, 0));
 
 	if (hash_table_find(&dhcp6_lease_table, addr)) {
-		wwdprintf(LOG_WARNING, FNAME, "already leased: %s",
+		wdprintf(LOG_WARNING, FNAME, "already leased: %s",
 			in6addr2str(addr, 0));
 		return (FALSE);
 	}
@@ -138,10 +138,10 @@ release_address(addr)
 	if (!addr)
 		return;
 
-	wwdprintf(LOG_DEBUG, FNAME, "addr=%s", in6addr2str(addr, 0));
+	wdprintf(LOG_DEBUG, FNAME, "addr=%s", in6addr2str(addr, 0));
 
 	if (hash_table_remove(&dhcp6_lease_table, addr) != 0) {
-		wwdprintf(LOG_WARNING, FNAME, "not found: %s", in6addr2str(addr, 0));
+		wdprintf(LOG_WARNING, FNAME, "not found: %s", in6addr2str(addr, 0));
 	}
 }
 
@@ -154,11 +154,11 @@ decline_address(addr)
 	if (!addr)
 		return;
 
-	wwdprintf(LOG_DEBUG, FNAME, "addr=%s", in6addr2str(addr, 0));
+	wdprintf(LOG_DEBUG, FNAME, "addr=%s", in6addr2str(addr, 0));
 
 	entry = hash_table_find(&dhcp6_lease_table, addr);
 	if (entry == NULL) {
-		wwdprintf(LOG_WARNING, FNAME, "not found: %s",
+		wdprintf(LOG_WARNING, FNAME, "not found: %s",
 			in6addr2str(addr, 0));
 		return;
 	}

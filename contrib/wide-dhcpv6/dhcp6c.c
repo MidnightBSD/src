@@ -213,7 +213,7 @@ main(argc, argv)
 	client6_init();
 	while (argc-- > 0) { 
 		if ((ifp = ifinit(argv[0])) == NULL) {
-			wwdprintf(LOG_ERR, FNAME, "failed to initialize %s",
+			wdprintf(LOG_ERR, FNAME, "failed to initialize %s",
 			    argv[0]);
 			exit(1);
 		}
@@ -221,7 +221,7 @@ main(argc, argv)
 	}
 
 	if (infreq_mode == 0 && (cfparse(conffile)) != 0) {
-		wwdprintf(LOG_ERR, FNAME, "failed to parse configuration file");
+		wdprintf(LOG_ERR, FNAME, "failed to parse configuration file");
 		exit(1);
 	}
 
@@ -261,12 +261,12 @@ client6_init()
 
 	/* get our DUID */
 	if (get_duid(DUID_FILE, &client_duid)) {
-		wwdprintf(LOG_ERR, FNAME, "failed to get a DUID");
+		wdprintf(LOG_ERR, FNAME, "failed to get a DUID");
 		exit(1);
 	}
 
 	if (dhcp6_ctl_authinit(ctlkeyfile, &ctlkey, &ctldigestlen) != 0) {
-		wwdprintf(LOG_NOTICE, FNAME,
+		wdprintf(LOG_NOTICE, FNAME,
 		    "failed initialize control message authentication");
 		/* run the server anyway */
 	}
@@ -278,25 +278,25 @@ client6_init()
 	hints.ai_flags = AI_PASSIVE;
 	error = getaddrinfo(NULL, DH6PORT_DOWNSTREAM, &hints, &res);
 	if (error) {
-		wwdprintf(LOG_ERR, FNAME, "getaddrinfo: %s",
+		wdprintf(LOG_ERR, FNAME, "getaddrinfo: %s",
 		    gai_strerror(error));
 		exit(1);
 	}
 	sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 	if (sock < 0) {
-		wwdprintf(LOG_ERR, FNAME, "socket");
+		wdprintf(LOG_ERR, FNAME, "socket");
 		exit(1);
 	}
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT,
 		       &on, sizeof(on)) < 0) {
-		wwdprintf(LOG_ERR, FNAME,
+		wdprintf(LOG_ERR, FNAME,
 		    "setsockopt(SO_REUSEPORT): %s", strerror(errno));
 		exit(1);
 	}
 #ifdef IPV6_RECVPKTINFO
 	if (setsockopt(sock, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on,
 		       sizeof(on)) < 0) {
-		wwdprintf(LOG_ERR, FNAME,
+		wdprintf(LOG_ERR, FNAME,
 			"setsockopt(IPV6_RECVPKTINFO): %s",
 			strerror(errno));
 		exit(1);
@@ -304,7 +304,7 @@ client6_init()
 #else
 	if (setsockopt(sock, IPPROTO_IPV6, IPV6_PKTINFO, &on,
 		       sizeof(on)) < 0) {
-		wwdprintf(LOG_ERR, FNAME,
+		wdprintf(LOG_ERR, FNAME,
 		    "setsockopt(IPV6_PKTINFO): %s",
 		    strerror(errno));
 		exit(1);
@@ -312,7 +312,7 @@ client6_init()
 #endif
 	if (setsockopt(sock, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, &on,
 		       sizeof(on)) < 0) {
-		wwdprintf(LOG_ERR, FNAME,
+		wdprintf(LOG_ERR, FNAME,
 		    "setsockopt(sock, IPV6_MULTICAST_LOOP): %s",
 		    strerror(errno));
 		exit(1);
@@ -320,7 +320,7 @@ client6_init()
 #ifdef IPV6_V6ONLY
 	if (setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY,
 	    &on, sizeof(on)) < 0) {
-		wwdprintf(LOG_ERR, FNAME, "setsockopt(IPV6_V6ONLY): %s",
+		wdprintf(LOG_ERR, FNAME, "setsockopt(IPV6_V6ONLY): %s",
 		    strerror(errno));
 		exit(1);
 	}
@@ -332,14 +332,14 @@ client6_init()
 	 * the outgoing port is also bound to the DH6PORT_DOWNSTREAM.
 	 */
 	if (bind(sock, res->ai_addr, res->ai_addrlen) < 0) {
-		wwdprintf(LOG_ERR, FNAME, "bind: %s", strerror(errno));
+		wdprintf(LOG_ERR, FNAME, "bind: %s", strerror(errno));
 		exit(1);
 	}
 	freeaddrinfo(res);
 
 	/* open a routing socket to watch the routing table */
 	if ((rtsock = socket(PF_ROUTE, SOCK_RAW, 0)) < 0) {
-		wwdprintf(LOG_ERR, FNAME, "open a routing socket: %s",
+		wdprintf(LOG_ERR, FNAME, "open a routing socket: %s",
 		    strerror(errno));
 		exit(1);
 	}
@@ -350,7 +350,7 @@ client6_init()
 	hints.ai_protocol = IPPROTO_UDP;
 	error = getaddrinfo(DH6ADDR_ALLAGENT, DH6PORT_UPSTREAM, &hints, &res);
 	if (error) {
-		wwdprintf(LOG_ERR, FNAME, "getaddrinfo: %s",
+		wdprintf(LOG_ERR, FNAME, "getaddrinfo: %s",
 		    gai_strerror(error));
 		exit(1);
 	}
@@ -360,21 +360,21 @@ client6_init()
 
 	/* set up control socket */
 	if (ctlkey == NULL)
-		wwdprintf(LOG_NOTICE, FNAME, "skip opening control port");
+		wdprintf(LOG_NOTICE, FNAME, "skip opening control port");
 	else if (dhcp6_ctl_init(ctladdr, ctlport,
 	    DHCP6CTL_DEF_COMMANDQUEUELEN, &ctlsock)) {
-		wwdprintf(LOG_ERR, FNAME,
+		wdprintf(LOG_ERR, FNAME,
 		    "failed to initialize control channel");
 		exit(1);
 	}
 
 	if (signal(SIGHUP, client6_signal) == SIG_ERR) {
-		wwdprintf(LOG_WARNING, FNAME, "failed to set signal: %s",
+		wdprintf(LOG_WARNING, FNAME, "failed to set signal: %s",
 		    strerror(errno));
 		exit(1);
 	}
 	if (signal(SIGTERM, client6_signal) == SIG_ERR) {
-		wwdprintf(LOG_WARNING, FNAME, "failed to set signal: %s",
+		wdprintf(LOG_WARNING, FNAME, "failed to set signal: %s",
 		    strerror(errno));
 		exit(1);
 	}
@@ -388,28 +388,28 @@ client6_start(ifp)
 
 	/* make sure that the interface does not have a timer */
 	if (ifp->timer != NULL) {
-		wwdprintf(LOG_DEBUG, FNAME,
+		wdprintf(LOG_DEBUG, FNAME,
 		    "removed existing timer on %s", ifp->ifname);
 		dhcp6_remove_timer(&ifp->timer);
 	}
 
 	/* create an event for the initial delay */
 	if ((ev = dhcp6_create_event(ifp, DHCP6S_INIT)) == NULL) {
-		wwdprintf(LOG_NOTICE, FNAME, "failed to create an event");
+		wdprintf(LOG_NOTICE, FNAME, "failed to create an event");
 		return (-1);
 	}
 	TAILQ_INSERT_TAIL(&ifp->event_list, ev, link);
 
 	if ((ev->authparam = new_authparam(ifp->authproto,
 	    ifp->authalgorithm, ifp->authrdm)) == NULL) {
-		wwdprintf(LOG_WARNING, FNAME, "failed to allocate "
+		wdprintf(LOG_WARNING, FNAME, "failed to allocate "
 		    "authentication parameters");
 		dhcp6_remove_event(ev);
 		return (-1);
 	}
 
 	if ((ev->timer = dhcp6_add_timer(client6_timo, ev)) == NULL) {
-		wwdprintf(LOG_NOTICE, FNAME, "failed to add a timer for %s",
+		wdprintf(LOG_NOTICE, FNAME, "failed to add a timer for %s",
 		    ifp->ifname);
 		dhcp6_remove_event(ev);
 		return (-1);
@@ -427,7 +427,7 @@ client6_startall(isrestart)
 
 	for (ifp = dhcp6_if; ifp; ifp = ifp->next) {
 		if (isrestart &&ifreset(ifp)) {
-			wwdprintf(LOG_NOTICE, FNAME, "failed to reset %s",
+			wdprintf(LOG_NOTICE, FNAME, "failed to reset %s",
 			    ifp->ifname);
 			continue; /* XXX: try to recover? */
 		}
@@ -484,7 +484,7 @@ check_exit()
 	}
 
 	/* We have no existing event.  Do exit. */
-	wwdprintf(LOG_INFO, FNAME, "exiting");
+	wdprintf(LOG_INFO, FNAME, "exiting");
 
 	exit(0);
 }
@@ -499,7 +499,7 @@ process_signals()
 		check_exit();
 	}
 	if ((sig_flags & SIGF_HUP)) {
-		wwdprintf(LOG_INFO, FNAME, "restarting");
+		wdprintf(LOG_INFO, FNAME, "restarting");
 		free_resources(NULL);
 		client6_startall(1);
 	}
@@ -534,7 +534,7 @@ client6_mainloop()
 		switch (ret) {
 		case -1:
 			if (errno != EINTR) {
-				wwdprintf(LOG_ERR, FNAME, "select: %s",
+				wdprintf(LOG_ERR, FNAME, "select: %s",
 				    strerror(errno));
 				exit(1);
 			}
@@ -628,31 +628,31 @@ client6_do_ctlcommand(buf, len)
 	commandlen = (int)(ntohs(ctlhead->len));
 	version = ntohs(ctlhead->version);
 	if (len != sizeof(struct dhcp6ctl) + commandlen) {
-		wwdprintf(LOG_ERR, FNAME,
+		wdprintf(LOG_ERR, FNAME,
 		    "assumption failure: command length mismatch");
 		return (DHCP6CTL_R_FAILURE);
 	}
 
 	/* replay protection and message authentication */
 	if ((now = time(NULL)) < 0) {
-		wwdprintf(LOG_ERR, FNAME, "failed to get current time: %s",
+		wdprintf(LOG_ERR, FNAME, "failed to get current time: %s",
 		    strerror(errno));
 		return (DHCP6CTL_R_FAILURE);
 	}
 	ts0 = (u_int32_t)now;
 	ts = ntohl(ctlhead->timestamp);
 	if (ts + CTLSKEW < ts0 || (ts - CTLSKEW) > ts0) {
-		wwdprintf(LOG_INFO, FNAME, "timestamp is out of range");
+		wdprintf(LOG_INFO, FNAME, "timestamp is out of range");
 		return (DHCP6CTL_R_FAILURE);
 	}
 
 	if (ctlkey == NULL) {	/* should not happen!! */
-		wwdprintf(LOG_ERR, FNAME, "no secret key for control channel");
+		wdprintf(LOG_ERR, FNAME, "no secret key for control channel");
 		return (DHCP6CTL_R_FAILURE);
 	}
 	if (dhcp6_verify_mac(buf, len, DHCP6CTL_AUTHPROTO_UNDEF,
 	    DHCP6CTL_AUTHALG_HMACMD5, sizeof(*ctlhead), ctlkey) != 0) {
-		wwdprintf(LOG_INFO, FNAME, "authentication failure");
+		wdprintf(LOG_INFO, FNAME, "authentication failure");
 		return (DHCP6CTL_R_FAILURE);
 	}
 
@@ -660,14 +660,14 @@ client6_do_ctlcommand(buf, len)
 	commandlen -= ctldigestlen;
 
 	if (version > DHCP6CTL_VERSION) {
-		wwdprintf(LOG_INFO, FNAME, "unsupported version: %d", version);
+		wdprintf(LOG_INFO, FNAME, "unsupported version: %d", version);
 		return (DHCP6CTL_R_FAILURE);
 	}
 
 	switch (command) {
 	case DHCP6CTL_COMMAND_RELOAD:
 		if (commandlen != 0) {
-			wwdprintf(LOG_INFO, FNAME, "invalid command length "
+			wdprintf(LOG_INFO, FNAME, "invalid command length "
 			    "for reload: %d", commandlen);
 			return (DHCP6CTL_R_DONE);
 		}
@@ -686,7 +686,7 @@ client6_do_ctlcommand(buf, len)
 				return (DHCP6CTL_R_FAILURE);
 			break;
 		default:
-			wwdprintf(LOG_INFO, FNAME,
+			wdprintf(LOG_INFO, FNAME,
 			    "unknown start target: %ul", p32);
 			return (DHCP6CTL_R_FAILURE);
 		}
@@ -713,14 +713,14 @@ client6_do_ctlcommand(buf, len)
 				}
 				break;
 			default:
-				wwdprintf(LOG_INFO, FNAME,
+				wdprintf(LOG_INFO, FNAME,
 				    "unknown start target: %ul", p32);
 				return (DHCP6CTL_R_FAILURE);
 			}
 		}
 		break;
 	default:
-		wwdprintf(LOG_INFO, FNAME,
+		wdprintf(LOG_INFO, FNAME,
 		    "unknown control command: %d (len=%d)",
 		    (int)command, commandlen);
 		return (DHCP6CTL_R_FAILURE);
@@ -734,12 +734,12 @@ client6_reload()
 {
 	/* reload the configuration file */
 	if (cfparse(conffile) != 0) {
-		wwdprintf(LOG_WARNING, FNAME,
+		wdprintf(LOG_WARNING, FNAME,
 		    "failed to reload configuration file");
 		return;
 	}
 
-	wwdprintf(LOG_NOTICE, FNAME, "client reloaded");
+	wdprintf(LOG_NOTICE, FNAME, "client reloaded");
 
 	return;
 }
@@ -752,20 +752,20 @@ client6_ifctl(ifname, command)
 	struct dhcp6_if *ifp;
 
 	if ((ifp = find_ifconfbyname(ifname)) == NULL) {
-		wwdprintf(LOG_INFO, FNAME,
+		wdprintf(LOG_INFO, FNAME,
 		    "failed to find interface configuration for %s",
 		    ifname);
 		return (-1);
 	}
 
-	wwdprintf(LOG_DEBUG, FNAME, "%s interface %s",
+	wdprintf(LOG_DEBUG, FNAME, "%s interface %s",
 	    command == DHCP6CTL_COMMAND_START ? "start" : "stop", ifname);
 
 	switch(command) {
 	case DHCP6CTL_COMMAND_START:
 		free_resources(ifp);
 		if (client6_start(ifp)) {
-			wwdprintf(LOG_NOTICE, FNAME, "failed to restart %s",
+			wdprintf(LOG_NOTICE, FNAME, "failed to restart %s",
 			    ifname);
 			return (-1);
 		}
@@ -773,13 +773,13 @@ client6_ifctl(ifname, command)
 	case DHCP6CTL_COMMAND_STOP:
 		free_resources(ifp);
 		if (ifp->timer != NULL) {
-			wwdprintf(LOG_DEBUG, FNAME,
+			wdprintf(LOG_DEBUG, FNAME,
 			    "removed existing timer on %s", ifp->ifname);
 			dhcp6_remove_timer(&ifp->timer);
 		}
 		break;
 	default:		/* impossible case, should be a bug */
-		wwdprintf(LOG_ERR, FNAME, "unknown command: %d", (int)command);
+		wdprintf(LOG_ERR, FNAME, "unknown command: %d", (int)command);
 		break;
 	}
 
@@ -792,7 +792,7 @@ client6_expire_refreshtime(arg)
 {
 	struct dhcp6_if *ifp = arg;
 
-	wwdprintf(LOG_DEBUG, FNAME,
+	wdprintf(LOG_DEBUG, FNAME,
 	    "information refresh time on %s expired", ifp->ifname);
 
 	dhcp6_remove_timer(&ifp->timer);
@@ -818,7 +818,7 @@ client6_timo(arg)
 	 * [RFC3315 14.]
 	 */
 	if (ev->max_retrans_cnt && ev->timeouts >= ev->max_retrans_cnt) {
-		wwdprintf(LOG_INFO, FNAME, "no responses were received");
+		wdprintf(LOG_INFO, FNAME, "no responses were received");
 		dhcp6_remove_event(ev);
 
 		if (state == DHCP6S_RELEASE)
@@ -835,7 +835,7 @@ client6_timo(arg)
 		else {
 			ev->state = DHCP6S_SOLICIT;
 			if (construct_confdata(ifp, ev)) {
-				wwdprintf(LOG_ERR, FNAME, "can't send solicit");
+				wdprintf(LOG_ERR, FNAME, "can't send solicit");
 				exit(1); /* XXX */
 			}
 		}
@@ -851,7 +851,7 @@ client6_timo(arg)
 		if (!TAILQ_EMPTY(&ev->data_list))
 			client6_send(ev);
 		else {
-			wwdprintf(LOG_INFO, FNAME,
+			wdprintf(LOG_INFO, FNAME,
 			    "all information to be updated was canceled");
 			dhcp6_remove_event(ev);
 			return (NULL);
@@ -870,13 +870,13 @@ client6_timo(arg)
 			ev->current_server = select_server(ev);
 			if (ev->current_server == NULL) {
 				/* this should not happen! */
-				wwdprintf(LOG_NOTICE, FNAME,
+				wdprintf(LOG_NOTICE, FNAME,
 				    "can't find a server");
 				exit(1); /* XXX */
 			}
 			if (duidcpy(&ev->serverid,
 			    &ev->current_server->optinfo.serverID)) {
-				wwdprintf(LOG_NOTICE, FNAME,
+				wdprintf(LOG_NOTICE, FNAME,
 				    "can't copy server ID");
 				return (NULL); /* XXX: better recovery? */
 			}
@@ -891,7 +891,7 @@ client6_timo(arg)
 
 			if (construct_reqdata(ifp,
 			    &ev->current_server->optinfo, ev)) {
-				wwdprintf(LOG_NOTICE, FNAME,
+				wdprintf(LOG_NOTICE, FNAME,
 				    "failed to construct request data");
 				break;
 			}
@@ -925,7 +925,7 @@ construct_confdata(ifp, ev)
 
 		evd = NULL;
 		if ((evd = malloc(sizeof(*evd))) == NULL) {
-			wwdprintf(LOG_NOTICE, FNAME,
+			wdprintf(LOG_NOTICE, FNAME,
 			    "failed to create a new event data");
 			goto fail;
 		}
@@ -977,7 +977,7 @@ construct_confdata(ifp, ev)
 			TAILQ_INSERT_TAIL(&ev->data_list, evd, link);
 			break;
 		default:
-			wwdprintf(LOG_ERR, FNAME, "internal error");
+			wdprintf(LOG_ERR, FNAME, "internal error");
 			exit(1);
 		}
 	}
@@ -1073,7 +1073,7 @@ construct_reqdata(ifp, optinfo, ev)
 			TAILQ_INSERT_TAIL(&ev->data_list, evd, link);
 			break;
 		default:
-			wwdprintf(LOG_ERR, FNAME, "internal error");
+			wdprintf(LOG_ERR, FNAME, "internal error");
 			exit(1);
 		}
 	}
@@ -1097,7 +1097,7 @@ destruct_iadata(evd)
 	struct dhcp6_list *ial;
 
 	if (evd->type != DHCP6_EVDATA_IAPD && evd->type != DHCP6_EVDATA_IANA) {
-		wwdprintf(LOG_ERR, FNAME, "assumption failure %d", evd->type);
+		wdprintf(LOG_ERR, FNAME, "assumption failure %d", evd->type);
 		exit(1);
 	}
 
@@ -1119,7 +1119,7 @@ select_server(ev)
 	 */
 	for (s = ev->servers; s; s = s->next) {
 		if (s->active) {
-			wwdprintf(LOG_DEBUG, FNAME, "picked a server (ID: %s)",
+			wdprintf(LOG_DEBUG, FNAME, "picked a server (ID: %s)",
 			    duidstr(&s->optinfo.serverID));
 			return (s);
 		}
@@ -1180,7 +1180,7 @@ client6_send(ev)
 		dh6->dh6_msgtype = DH6_INFORM_REQ;
 		break;
 	default:
-		wwdprintf(LOG_ERR, FNAME, "unexpected state");
+		wdprintf(LOG_ERR, FNAME, "unexpected state");
 		exit(1);	/* XXX */
 	}
 
@@ -1198,7 +1198,7 @@ client6_send(ev)
 #else
 		ev->xid = random() & DH6_XIDMASK;
 #endif
-		wwdprintf(LOG_DEBUG, FNAME, "a new XID (%x) is generated",
+		wdprintf(LOG_DEBUG, FNAME, "a new XID (%x) is generated",
 		    ev->xid);
 	}
 	dh6->dh6_xid &= ~ntohl(DH6_XIDMASK);
@@ -1216,7 +1216,7 @@ client6_send(ev)
 	case DHCP6S_RENEW:
 	case DHCP6S_RELEASE:
 		if (duidcpy(&optinfo.serverID, &ev->serverid)) {
-			wwdprintf(LOG_ERR, FNAME, "failed to copy server ID");
+			wdprintf(LOG_ERR, FNAME, "failed to copy server ID");
 			goto end;
 		}
 		break;
@@ -1224,7 +1224,7 @@ client6_send(ev)
 
 	/* client ID */
 	if (duidcpy(&optinfo.clientID, &client_duid)) {
-		wwdprintf(LOG_ERR, FNAME, "failed to copy client ID");
+		wdprintf(LOG_ERR, FNAME, "failed to copy client ID");
 		goto end;
 	}
 
@@ -1269,7 +1269,7 @@ client6_send(ev)
 	/* option request options */
 	if (ev->state != DHCP6S_RELEASE &&
 	    dhcp6_copy_list(&optinfo.reqopt_list, &ifp->reqopt_list)) {
-		wwdprintf(LOG_ERR, FNAME, "failed to copy requested options");
+		wdprintf(LOG_ERR, FNAME, "failed to copy requested options");
 		goto end;
 	}
 
@@ -1280,7 +1280,7 @@ client6_send(ev)
 		case DHCP6_EVDATA_IAPD:
 			if (dhcp6_copy_list(&optinfo.iapd_list,
 			    (struct dhcp6_list *)evd->data)) {
-				wwdprintf(LOG_NOTICE, FNAME,
+				wdprintf(LOG_NOTICE, FNAME,
 				    "failed to add an IAPD");
 				goto end;
 			}
@@ -1288,13 +1288,13 @@ client6_send(ev)
 		case DHCP6_EVDATA_IANA:
 			if (dhcp6_copy_list(&optinfo.iana_list,
 			    (struct dhcp6_list *)evd->data)) {
-				wwdprintf(LOG_NOTICE, FNAME,
+				wdprintf(LOG_NOTICE, FNAME,
 				    "failed to add an IAPD");
 				goto end;
 			}
 			break;
 		default:
-			wwdprintf(LOG_ERR, FNAME, "unexpected event data (%d)",
+			wdprintf(LOG_ERR, FNAME, "unexpected event data (%d)",
 			    evd->type);
 			exit(1);
 		}
@@ -1302,7 +1302,7 @@ client6_send(ev)
 
 	/* authentication information */
 	if (set_auth(ev, &optinfo)) {
-		wwdprintf(LOG_INFO, FNAME,
+		wdprintf(LOG_INFO, FNAME,
 		    "failed to set authentication option");
 		goto end;
 	}
@@ -1311,7 +1311,7 @@ client6_send(ev)
 	if ((optlen = dhcp6_set_options(dh6->dh6_msgtype,
 	    (struct dhcp6opt *)(dh6 + 1),
 	    (struct dhcp6opt *)(buf + sizeof(buf)), &optinfo)) < 0) {
-		wwdprintf(LOG_INFO, FNAME, "failed to construct options");
+		wdprintf(LOG_INFO, FNAME, "failed to construct options");
 		goto end;
 	}
 	len += optlen;
@@ -1327,7 +1327,7 @@ client6_send(ev)
 			    optinfo.authproto, optinfo.authalgorithm,
 			    optinfo.delayedauth_offset + sizeof(*dh6),
 			    ev->authparam->key)) {
-				wwdprintf(LOG_WARNING, FNAME,
+				wdprintf(LOG_WARNING, FNAME,
 				    "failed to calculate MAC");
 				goto end;
 			}
@@ -1349,12 +1349,12 @@ client6_send(ev)
 
 	if (sendto(sock, buf, len, 0, (struct sockaddr *)&dst,
 	    sysdep_sa_len((struct sockaddr *)&dst)) == -1) {
-		wwdprintf(LOG_ERR, FNAME,
+		wdprintf(LOG_ERR, FNAME,
 		    "transmit failed: %s", strerror(errno));
 		goto end;
 	}
 
-	wwdprintf(LOG_DEBUG, FNAME, "send %s to %s",
+	wdprintf(LOG_DEBUG, FNAME, "send %s to %s",
 	    dhcp6msgstr(dh6->dh6_msgtype), addr2str((struct sockaddr *)&dst));
 
   end:
@@ -1412,7 +1412,7 @@ client6_recv()
 	mhdr.msg_control = (caddr_t)cmsgbuf;
 	mhdr.msg_controllen = sizeof(cmsgbuf);
 	if ((len = recvmsg(sock, &mhdr, 0)) < 0) {
-		wwdprintf(LOG_ERR, FNAME, "recvmsg: %s", strerror(errno));
+		wdprintf(LOG_ERR, FNAME, "recvmsg: %s", strerror(errno));
 		return;
 	}
 
@@ -1426,24 +1426,24 @@ client6_recv()
 		}
 	}
 	if (pi == NULL) {
-		wwdprintf(LOG_NOTICE, FNAME, "failed to get packet info");
+		wdprintf(LOG_NOTICE, FNAME, "failed to get packet info");
 		return;
 	}
 
 	if ((ifp = find_ifconfbyid((unsigned int)pi->ipi6_ifindex)) == NULL) {
-		wwdprintf(LOG_INFO, FNAME, "unexpected interface (%d)",
+		wdprintf(LOG_INFO, FNAME, "unexpected interface (%d)",
 		    (unsigned int)pi->ipi6_ifindex);
 		return;
 	}
 
 	if (len < sizeof(*dh6)) {
-		wwdprintf(LOG_INFO, FNAME, "short packet (%d bytes)", len);
+		wdprintf(LOG_INFO, FNAME, "short packet (%d bytes)", len);
 		return;
 	}
 
 	dh6 = (struct dhcp6 *)rbuf;
 
-	wwdprintf(LOG_DEBUG, FNAME, "receive %s from %s on %s",
+	wdprintf(LOG_DEBUG, FNAME, "receive %s from %s on %s",
 	    dhcp6msgstr(dh6->dh6_msgtype),
 	    addr2str((struct sockaddr *)&from), ifp->ifname);
 
@@ -1452,7 +1452,7 @@ client6_recv()
 	p = (struct dhcp6opt *)(dh6 + 1);
 	ep = (struct dhcp6opt *)((char *)dh6 + len);
 	if (dhcp6_get_options(p, ep, &optinfo) < 0) {
-		wwdprintf(LOG_INFO, FNAME, "failed to parse options");
+		wdprintf(LOG_INFO, FNAME, "failed to parse options");
 		return;
 	}
 
@@ -1464,7 +1464,7 @@ client6_recv()
 		(void)client6_recvreply(ifp, dh6, len, &optinfo);
 		break;
 	default:
-		wwdprintf(LOG_INFO, FNAME, "received an unexpected message (%s) "
+		wdprintf(LOG_INFO, FNAME, "received an unexpected message (%s) "
 		    "from %s", dhcp6msgstr(dh6->dh6_msgtype),
 		    addr2str((struct sockaddr *)&from));
 		break;
@@ -1489,32 +1489,32 @@ client6_recvadvert(ifp, dh6, len, optinfo)
 	/* find the corresponding event based on the received xid */
 	ev = find_event_withid(ifp, ntohl(dh6->dh6_xid) & DH6_XIDMASK);
 	if (ev == NULL) {
-		wwdprintf(LOG_INFO, FNAME, "XID mismatch");
+		wdprintf(LOG_INFO, FNAME, "XID mismatch");
 		return (-1);
 	}
 
 	/* packet validation based on Section 15.3 of RFC3315. */
 	if (optinfo->serverID.duid_len == 0) {
-		wwdprintf(LOG_INFO, FNAME, "no server ID option");
+		wdprintf(LOG_INFO, FNAME, "no server ID option");
 		return (-1);
 	} else {
-		wwdprintf(LOG_DEBUG, FNAME, "server ID: %s, pref=%d",
+		wdprintf(LOG_DEBUG, FNAME, "server ID: %s, pref=%d",
 		    duidstr(&optinfo->serverID),
 		    optinfo->pref);
 	}
 	if (optinfo->clientID.duid_len == 0) {
-		wwdprintf(LOG_INFO, FNAME, "no client ID option");
+		wdprintf(LOG_INFO, FNAME, "no client ID option");
 		return (-1);
 	}
 	if (duidcmp(&optinfo->clientID, &client_duid)) {
-		wwdprintf(LOG_INFO, FNAME, "client DUID mismatch");
+		wdprintf(LOG_INFO, FNAME, "client DUID mismatch");
 		return (-1);
 	}
 
 	/* validate authentication */
 	authparam0 = *ev->authparam;
 	if (process_auth(&authparam0, dh6, len, optinfo)) {
-		wwdprintf(LOG_INFO, FNAME, "failed to process authentication");
+		wdprintf(LOG_INFO, FNAME, "failed to process authentication");
 		return (-1);
 	}
 
@@ -1547,7 +1547,7 @@ client6_recvadvert(ifp, dh6, len, optinfo)
 		}
 		if (dhcp6_find_listval(&optinfo->stcode_list,
 		    DHCP6_LISTVAL_STCODE, &stcode, 0)) {
-			wwdprintf(LOG_INFO, FNAME,
+			wdprintf(LOG_INFO, FNAME,
 			    "advertise contains %s status", stcodestr);
 			return (-1);
 		}
@@ -1562,20 +1562,20 @@ client6_recvadvert(ifp, dh6, len, optinfo)
 		 * We process the message as if we expected the Advertise.
 		 * [RFC3315 Section 17.1.4]
 		 */
-		wwdprintf(LOG_INFO, FNAME, "unexpected advertise");
+		wdprintf(LOG_INFO, FNAME, "unexpected advertise");
 		/* proceed anyway */
 	}
 
 	/* ignore the server if it is known */
 	if (find_server(ev, &optinfo->serverID)) {
-		wwdprintf(LOG_INFO, FNAME, "duplicated server (ID: %s)",
+		wdprintf(LOG_INFO, FNAME, "duplicated server (ID: %s)",
 		    duidstr(&optinfo->serverID));
 		return (-1);
 	}
 
 	/* keep the server */
 	if ((newserver = malloc(sizeof(*newserver))) == NULL) {
-		wwdprintf(LOG_WARNING, FNAME,
+		wdprintf(LOG_WARNING, FNAME,
 		    "memory allocation failed for server");
 		return (-1);
 	}
@@ -1590,7 +1590,7 @@ client6_recvadvert(ifp, dh6, len, optinfo)
 	/* allocate new authentication parameter for the soliciting event */
 	if ((authparam = new_authparam(ev->authparam->authproto,
 	    ev->authparam->authalgorithm, ev->authparam->authrdm)) == NULL) {
-		wwdprintf(LOG_WARNING, FNAME, "memory allocation failed "
+		wdprintf(LOG_WARNING, FNAME, "memory allocation failed "
 		    "for authentication parameters");
 		free(newserver);
 		return (-1);
@@ -1600,7 +1600,7 @@ client6_recvadvert(ifp, dh6, len, optinfo)
 	/* copy options */
 	dhcp6_init_options(&newserver->optinfo);
 	if (dhcp6_copy_options(&newserver->optinfo, optinfo)) {
-		wwdprintf(LOG_ERR, FNAME, "failed to copy options");
+		wdprintf(LOG_ERR, FNAME, "failed to copy options");
 		if (newserver->authparam != NULL)
 			free(newserver->authparam);
 		free(newserver);
@@ -1628,11 +1628,11 @@ client6_recvadvert(ifp, dh6, len, optinfo)
 		ev->current_server = newserver;
 		if (duidcpy(&ev->serverid,
 		    &ev->current_server->optinfo.serverID)) {
-			wwdprintf(LOG_NOTICE, FNAME, "can't copy server ID");
+			wdprintf(LOG_NOTICE, FNAME, "can't copy server ID");
 			return (-1); /* XXX: better recovery? */
 		}
 		if (construct_reqdata(ifp, &ev->current_server->optinfo, ev)) {
-			wwdprintf(LOG_NOTICE, FNAME,
+			wdprintf(LOG_NOTICE, FNAME,
 			    "failed to construct request data");
 			return (-1); /* XXX */
 		}
@@ -1668,7 +1668,7 @@ client6_recvadvert(ifp, dh6, len, optinfo)
 		else
 			timo.tv_sec = timo.tv_usec = 0;
 
-		wwdprintf(LOG_DEBUG, FNAME, "reset timer for %s to %d.%06d",
+		wdprintf(LOG_DEBUG, FNAME, "reset timer for %s to %d.%06d",
 		    ifp->ifname, (int)timo.tv_sec, (int)timo.tv_usec);
 
 		dhcp6_set_timer(&timo, ev->timer);
@@ -1706,7 +1706,7 @@ client6_recvreply(ifp, dh6, len, optinfo)
 	/* find the corresponding event based on the received xid */
 	ev = find_event_withid(ifp, ntohl(dh6->dh6_xid) & DH6_XIDMASK);
 	if (ev == NULL) {
-		wwdprintf(LOG_INFO, FNAME, "XID mismatch");
+		wdprintf(LOG_INFO, FNAME, "XID mismatch");
 		return (-1);
 	}
 
@@ -1718,13 +1718,13 @@ client6_recvreply(ifp, dh6, len, optinfo)
 	    state != DHCP6S_RELEASE &&
 	    (state != DHCP6S_SOLICIT ||
 	     !(ifp->send_flags & DHCIFF_RAPID_COMMIT))) {
-		wwdprintf(LOG_INFO, FNAME, "unexpected reply");
+		wdprintf(LOG_INFO, FNAME, "unexpected reply");
 		return (-1);
 	}
 
 	/* A Reply message must contain a Server ID option */
 	if (optinfo->serverID.duid_len == 0) {
-		wwdprintf(LOG_INFO, FNAME, "no server ID option");
+		wdprintf(LOG_INFO, FNAME, "no server ID option");
 		return (-1);
 	}
 
@@ -1733,17 +1733,17 @@ client6_recvreply(ifp, dh6, len, optinfo)
 	 * client implementation) must match ours.
 	 */
 	if (optinfo->clientID.duid_len == 0) {
-		wwdprintf(LOG_INFO, FNAME, "no client ID option");
+		wdprintf(LOG_INFO, FNAME, "no client ID option");
 		return (-1);
 	}
 	if (duidcmp(&optinfo->clientID, &client_duid)) {
-		wwdprintf(LOG_INFO, FNAME, "client DUID mismatch");
+		wdprintf(LOG_INFO, FNAME, "client DUID mismatch");
 		return (-1);
 	}
 
 	/* validate authentication */
 	if (process_auth(ev->authparam, dh6, len, optinfo)) {
-		wwdprintf(LOG_INFO, FNAME, "failed to process authentication");
+		wdprintf(LOG_INFO, FNAME, "failed to process authentication");
 		return (-1);
 	}
 
@@ -1757,7 +1757,7 @@ client6_recvreply(ifp, dh6, len, optinfo)
 	if (state == DHCP6S_SOLICIT &&
 	    (ifp->send_flags & DHCIFF_RAPID_COMMIT) &&
 	    !optinfo->rapidcommit) {
-		wwdprintf(LOG_INFO, FNAME, "no rapid commit");
+		wdprintf(LOG_INFO, FNAME, "no rapid commit");
 		return (-1);
 	}
 
@@ -1768,7 +1768,7 @@ client6_recvreply(ifp, dh6, len, optinfo)
 	 */
 	for (lv = TAILQ_FIRST(&optinfo->stcode_list); lv;
 	     lv = TAILQ_NEXT(lv, link)) {
-		wwdprintf(LOG_INFO, FNAME, "status code: %s",
+		wdprintf(LOG_INFO, FNAME, "status code: %s",
 		    dhcp6_stcodestr(lv->val_num16));
 	}
 
@@ -1832,7 +1832,7 @@ client6_recvreply(ifp, dh6, len, optinfo)
 	 * configuration parameters.
 	 */
 	if (ifp->scriptpath != NULL && strlen(ifp->scriptpath) != 0) {
-		wwdprintf(LOG_DEBUG, FNAME, "executes %s", ifp->scriptpath);
+		wdprintf(LOG_DEBUG, FNAME, "executes %s", ifp->scriptpath);
 		client6_script(ifp->scriptpath, state, optinfo);
 	}
 
@@ -1850,7 +1850,7 @@ client6_recvreply(ifp, dh6, len, optinfo)
 
 		ifp->timer = dhcp6_add_timer(client6_expire_refreshtime, ifp);
 		if (ifp->timer == NULL) {
-			wwdprintf(LOG_WARNING, FNAME,
+			wdprintf(LOG_WARNING, FNAME,
 			    "failed to add timer for refresh time");
 		} else {
 			struct timeval tv;
@@ -1863,7 +1863,7 @@ client6_recvreply(ifp, dh6, len, optinfo)
 				 * XXX: tv_sec can overflow for an
 				 * unsigned 32bit value.
 				 */
-				wwdprintf(LOG_WARNING, FNAME,
+				wdprintf(LOG_WARNING, FNAME,
 				    "refresh time is too large: %lu",
 				    (u_int32_t)refreshtime);
 				tv.tv_sec = 0x7fffffff;	/* XXX */
@@ -1876,7 +1876,7 @@ client6_recvreply(ifp, dh6, len, optinfo)
 		 * draft-ietf-dhc-lifetime-02 clarifies that refresh time
 		 * is only used for information-request and reply exchanges.
 		 */
-		wwdprintf(LOG_INFO, FNAME,
+		wdprintf(LOG_INFO, FNAME,
 		    "unexpected information refresh time option (ignored)");
 	}
 
@@ -1901,7 +1901,7 @@ client6_recvreply(ifp, dh6, len, optinfo)
 		check_exit();
 	}
 
-	wwdprintf(LOG_DEBUG, FNAME, "got an expected reply, sleeping.");
+	wdprintf(LOG_DEBUG, FNAME, "got an expected reply, sleeping.");
 
 	if (infreq_mode) {
 		exit_ok = 1;
@@ -1944,19 +1944,19 @@ process_auth(authparam, dh6, len, optinfo)
 		break;
 	case DHCP6_AUTHPROTO_DELAYED:
 		if ((optinfo->authflags & DHCP6OPT_AUTHFLAG_NOINFO)) {
-			wwdprintf(LOG_INFO, FNAME, "server did not include "
+			wdprintf(LOG_INFO, FNAME, "server did not include "
 			    "authentication information");
 			break;
 		}
 
 		if (optinfo->authalgorithm != DHCP6_AUTHALG_HMACMD5) {
-			wwdprintf(LOG_INFO, FNAME, "unknown authentication "
+			wdprintf(LOG_INFO, FNAME, "unknown authentication "
 			    "algorithm (%d)", optinfo->authalgorithm);
 			break;
 		}
 
 		if (optinfo->authrdm != DHCP6_AUTHRDM_MONOCOUNTER) {
-			wwdprintf(LOG_INFO, FNAME,"unknown RDM (%d)",
+			wdprintf(LOG_INFO, FNAME,"unknown RDM (%d)",
 			    optinfo->authrdm);
 			break;
 		}
@@ -1966,12 +1966,12 @@ process_auth(authparam, dh6, len, optinfo)
 		 * we accept the message anyway (XXX).
 		 */
 		if ((authparam->flags & AUTHPARAM_FLAGS_NOPREVRD)) {
-			wwdprintf(LOG_WARNING, FNAME, "previous RD value is "
+			wdprintf(LOG_WARNING, FNAME, "previous RD value is "
 			    "unknown (accept it)");
 		} else {
 			if (dhcp6_auth_replaycheck(optinfo->authrdm,
 			    authparam->prevrd, optinfo->authrd)) {
-				wwdprintf(LOG_INFO, FNAME,
+				wdprintf(LOG_INFO, FNAME,
 				    "possible replay attack detected");
 				break;
 			}
@@ -1988,7 +1988,7 @@ process_auth(authparam, dh6, len, optinfo)
 			    optinfo->delayedauth_realmlen != key->realmlen ||
 			    memcmp(optinfo->delayedauth_realmval, key->realm,
 			    key->realmlen) != 0) {
-				wwdprintf(LOG_INFO, FNAME,
+				wdprintf(LOG_INFO, FNAME,
 				    "authentication key mismatch");
 				break;
 			}
@@ -1997,12 +1997,12 @@ process_auth(authparam, dh6, len, optinfo)
 			    optinfo->delayedauth_realmlen,
 			    optinfo->delayedauth_keyid);
 			if (key == NULL) {
-				wwdprintf(LOG_INFO, FNAME, "failed to find key "
+				wdprintf(LOG_INFO, FNAME, "failed to find key "
 				    "provided by the server (ID: %x)",
 				    optinfo->delayedauth_keyid);
 				break;
 			} else {
-				wwdprintf(LOG_DEBUG, FNAME, "found key for "
+				wdprintf(LOG_DEBUG, FNAME, "found key for "
 				    "authentication: %s", key->name);
 			}
 			authparam->key = key;
@@ -2010,7 +2010,7 @@ process_auth(authparam, dh6, len, optinfo)
 
 		/* check for the key lifetime */
 		if (dhcp6_validate_key(key)) {
-			wwdprintf(LOG_INFO, FNAME, "key %s has expired",
+			wdprintf(LOG_INFO, FNAME, "key %s has expired",
 			    key->name);
 			break;
 		}
@@ -2019,24 +2019,24 @@ process_auth(authparam, dh6, len, optinfo)
 		if (dhcp6_verify_mac((char *)dh6, len, optinfo->authproto,
 		    optinfo->authalgorithm,
 		    optinfo->delayedauth_offset + sizeof(*dh6), key) == 0) {
-			wwdprintf(LOG_DEBUG, FNAME, "message authentication "
+			wdprintf(LOG_DEBUG, FNAME, "message authentication "
 			    "validated");
 			authenticated = 1;
 		} else {
-			wwdprintf(LOG_INFO, FNAME, "invalid message "
+			wdprintf(LOG_INFO, FNAME, "invalid message "
 			    "authentication");
 		}
 
 		break;
 	default:
-		wwdprintf(LOG_INFO, FNAME, "server sent unsupported "
+		wdprintf(LOG_INFO, FNAME, "server sent unsupported "
 		    "authentication protocol (%d)", optinfo->authproto);
 		break;
 	}
 
 	if (authenticated == 0) {
 		if (authparam->authproto != DHCP6_AUTHPROTO_UNDEF) {
-			wwdprintf(LOG_INFO, FNAME, "message not authenticated "
+			wdprintf(LOG_INFO, FNAME, "message not authenticated "
 			    "while authentication required");
 
 			/*
@@ -2079,7 +2079,7 @@ set_auth(ev, optinfo)
 			 * exchanges doesn't work.  Specification is also
 			 * unclear on this usage.
 			 */
-			wwdprintf(LOG_WARNING, FNAME, "delayed authentication "
+			wdprintf(LOG_WARNING, FNAME, "delayed authentication "
 			    "cannot be used for Information-request yet");
 			return (-1);
 		}
@@ -2090,21 +2090,21 @@ set_auth(ev, optinfo)
 		}
 
 		if (authparam->key == NULL) {
-			wwdprintf(LOG_INFO, FNAME,
+			wdprintf(LOG_INFO, FNAME,
 			    "no authentication key for %s",
 			    dhcp6_event_statestr(ev));
 			return (-1);
 		}
 
 		if (dhcp6_validate_key(authparam->key)) {
-			wwdprintf(LOG_INFO, FNAME, "key %s is invalid",
+			wdprintf(LOG_INFO, FNAME, "key %s is invalid",
 			    authparam->key->name);
 			return (-1);
 		}
 
 		if (get_rdvalue(optinfo->authrdm, &optinfo->authrd,
 		    sizeof(optinfo->authrd))) {
-			wwdprintf(LOG_ERR, FNAME, "failed to get a replay "
+			wdprintf(LOG_ERR, FNAME, "failed to get a replay "
 			    "detection value");
 			return (-1);
 		}
@@ -2114,7 +2114,7 @@ set_auth(ev, optinfo)
 		optinfo->delayedauth_realmval =
 		    malloc(optinfo->delayedauth_realmlen);
 		if (optinfo->delayedauth_realmval == NULL) {
-			wwdprintf(LOG_ERR, FNAME, "failed to allocate memory "
+			wdprintf(LOG_ERR, FNAME, "failed to allocate memory "
 			    "for authentication realm");
 			return (-1);
 		}
@@ -2123,7 +2123,7 @@ set_auth(ev, optinfo)
 
 		break;
 	default:
-		wwdprintf(LOG_ERR, FNAME, "unsupported authentication protocol "
+		wdprintf(LOG_ERR, FNAME, "unsupported authentication protocol "
 		    "%d", authparam->authproto);
 		return (-1);
 	}
@@ -2140,7 +2140,7 @@ info_printf(const char *fmt, ...)
 	va_start(ap, fmt);
 	vsnprintf(logbuf, sizeof(logbuf), fmt, ap);
 
-	wwdprintf(LOG_DEBUG, FNAME, "%s", logbuf);
+	wdprintf(LOG_DEBUG, FNAME, "%s", logbuf);
 	if (infreq_mode)
 		printf("%s\n", logbuf);
 

@@ -60,12 +60,12 @@ ifinit(ifname)
 	struct dhcp6_if *ifp;
 
 	if ((ifp = find_ifconfbyname(ifname)) != NULL) {
-		wwdprintf(LOG_NOTICE, FNAME, "duplicated interface: %s", ifname);
+		wdprintf(LOG_NOTICE, FNAME, "duplicated interface: %s", ifname);
 		return (NULL);
 	}
 
 	if ((ifp = malloc(sizeof(*ifp))) == NULL) {
-		wwdprintf(LOG_ERR, FNAME, "malloc failed");
+		wdprintf(LOG_ERR, FNAME, "malloc failed");
 		goto fail;
 	}
 	memset(ifp, 0, sizeof(*ifp));
@@ -73,7 +73,7 @@ ifinit(ifname)
 	TAILQ_INIT(&ifp->event_list);
 
 	if ((ifp->ifname = strdup(ifname)) == NULL) {
-		wwdprintf(LOG_ERR, FNAME, "failed to copy ifname");
+		wdprintf(LOG_ERR, FNAME, "failed to copy ifname");
 		goto fail;
 	}
 
@@ -92,7 +92,7 @@ ifinit(ifname)
 		struct sockaddr_in6 *sin6;
 
 		if (getifaddrs(&ifap) < 0) {
-			wwdprintf(LOG_ERR, FNAME, "getifaddrs failed: %s",
+			wdprintf(LOG_ERR, FNAME, "getifaddrs failed: %s",
 			    strerror(errno));
 			goto fail;
 		}
@@ -134,14 +134,14 @@ ifreset(ifp)
 	u_int32_t linkid;
 
 	if ((ifid = if_nametoindex(ifp->ifname)) == 0) {
-		wwdprintf(LOG_ERR, FNAME, "invalid interface(%s): %s",
+		wdprintf(LOG_ERR, FNAME, "invalid interface(%s): %s",
 			ifp->ifname, strerror(errno));
 		return (-1);
 	}
 
 #ifdef HAVE_SCOPELIB
 	if (inet_zoneid(AF_INET6, 2, ifname, &linkid)) {
-		wwdprintf(LOG_ERR, FNAME, "failed to get link ID for %s",
+		wdprintf(LOG_ERR, FNAME, "failed to get link ID for %s",
 		    ifname);
 		return (-1);
 	}
