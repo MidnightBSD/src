@@ -1,7 +1,3 @@
-#
-# $FreeBSD$
-#
-
 .include <src.opts.mk>
 PACKAGE=	rescue
 MK_SSP=		no

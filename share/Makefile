@@ -14,7 +14,6 @@ SUBDIR=	${_colldef} \
 	${_i18n} \
 	keys \
 	${_man} \
-	${_me} \
 	misc \
 	${_mk} \
 	${_monetdef} \
