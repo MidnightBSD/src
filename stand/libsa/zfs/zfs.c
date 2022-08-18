@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  *	Stand-alone file reading package.
@@ -759,8 +758,8 @@ zfs_probe_partition(void *arg, const char *partname,
 	int ret;
 
 	/* Probe only freebsd-zfs and freebsd partitions */
-	if (part->type != PART_FREEBSD &&
-	    part->type != PART_FREEBSD_ZFS)
+	if (part->type != PART_MIDNIGHTBSD &&
+	    part->type != PART_MIDNIGHTBSD_ZFS)
 		return (0);
 
 	ppa = (struct zfs_probe_args *)arg;
@@ -774,7 +773,7 @@ zfs_probe_partition(void *arg, const char *partname,
 	if (ret == 0)
 		return (0);
 	/* Do we have BSD label here? */
-	if (part->type == PART_FREEBSD) {
+	if (part->type == PART_MIDNIGHTBSD) {
 		pa.devname = devname;
 		pa.pool_guid = ppa->pool_guid;
 		pa.secsz = ppa->secsz;
