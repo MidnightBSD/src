@@ -1,5 +1,6 @@
 /*	$NetBSD: rcorder.c,v 1.7 2000/08/04 07:33:55 enami Exp $	*/
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  * Copyright (c) 1998, 1999 Matthew R. Green
  * All rights reserved.
  * Copyright (c) 1998
