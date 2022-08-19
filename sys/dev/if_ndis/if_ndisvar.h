@@ -31,10 +31,9 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
  */
 
-#define NDIS_DEFAULT_NODENAME	"FreeBSD NDIS node"
+#define NDIS_DEFAULT_NODENAME	"MidnightBSD NDIS node"
 #define NDIS_NODENAME_LEN	32
 
 /* For setting/getting OIDs from userspace. */

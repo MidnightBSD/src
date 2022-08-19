@@ -80,7 +80,7 @@ static char *loader_envp;
 
 #if defined(LINUX_BOOT_ABI)
 #define LBABI_MAX_BANKS	10
-#define CMDLINE_GUARD "FreeBSD:"
+#define CMDLINE_GUARD "MidnightBSD:"
 static uint32_t board_id;
 static struct arm_lbabi_tag *atag_list;
 static char linux_command_line[LBABI_MAX_COMMAND_LINE + 1];
