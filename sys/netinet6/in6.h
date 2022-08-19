@@ -60,7 +60,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)in.h	8.3 (Berkeley) 1/3/94
- * $FreeBSD$
  */
 
 #ifndef __KAME_NETINET_IN_H_INCLUDED_
@@ -76,7 +75,7 @@
  * has the table of implementation/integration differences.
  */
 #define __KAME__
-#define __KAME_VERSION		"FreeBSD"
+#define __KAME_VERSION		"MidnightBSD"
 
 /*
  * IPv6 port allocation rules should mirror the IPv4 rules and are controlled
