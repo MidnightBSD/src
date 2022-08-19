@@ -30,8 +30,10 @@ CONFS=	DAEMON \
 	devfs \
 	devmatch \
 	dhclient \
+	dhcp6c \
 	dmesg \
 	dumpon \
+	firstboot \
 	fsck \
 	gbde \
 	geli \
@@ -64,6 +66,8 @@ CONFS=	DAEMON \
 	mountlate \
 	mdconfig \
 	mdconfig2 \
+	mdnsd \                                                                                                                                                           
+	mdnsresponder \ 
 	mountd \
 	msgs \
 	natd \
@@ -78,7 +82,6 @@ CONFS=	DAEMON \
 	nisdomain \
 	${_nscd} \
 	nsswitch \
-	ntpdate \
 	${_opensm} \
 	os-release \
 	pf \
@@ -92,6 +95,7 @@ CONFS=	DAEMON \
 	random \
 	rarpd \
 	rctl \
+	rdate \
 	resolv \
 	root \
 	route6d \
