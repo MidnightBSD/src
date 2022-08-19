@@ -626,9 +626,11 @@ enddef	:
 newdef	: defined(MidnightBSD)
 comment : MidnightBSD
 vendor	: defined(M_intel)				: "intel"
+vendor	: defined(M_amd64)				: "amd"
 hosttype:						: "MidnightBSD"
 ostype	:						: "MidnightBSD"
 machtype: defined(M_i386)				: "i386"
+machtype: defined(M_amd64)				: "x86_64"
 enddef	:
 
 

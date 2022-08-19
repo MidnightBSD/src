@@ -703,7 +703,7 @@ cpu_mp_announce(void)
 	printf("\n");
 
 	if (disabled_cpus) {
-		printf("FreeBSD/SMP Online: ");
+		printf("MidnightBSD/SMP Online: ");
 		if (topo_analyze(&topo_root, 0, &topology)) {
 			printf("%d package(s)",
 			    topology.entities[TOPO_LEVEL_PKG]);

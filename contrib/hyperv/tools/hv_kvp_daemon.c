@@ -982,7 +982,7 @@ kvp_set_ip_info(char *if_name, struct hv_kvp_ipaddr_value *new_val)
 	file = fopen(if_file, "w");
 
 	if (file == NULL) {
-		KVP_LOG(LOG_ERR, "FreeBSD Failed to open config file\n");
+		KVP_LOG(LOG_ERR, "MidnightBSD Failed to open config file\n");
 		return (errno);
 	}
 
