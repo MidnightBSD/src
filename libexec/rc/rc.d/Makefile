@@ -66,8 +66,8 @@ CONFS=	DAEMON \
 	mountlate \
 	mdconfig \
 	mdconfig2 \
-	mdnsd \                                                                                                                                                           
-	mdnsresponder \ 
+	mdnsd \
+	mdnsresponder \
 	mountd \
 	msgs \
 	natd \
