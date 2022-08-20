@@ -66,7 +66,6 @@ SUBDIR=	adduser \
 	pnfsdsfile \
 	pnfsdskill \
 	powerd \
-	procctl \
 	prometheus_sysctl_exporter \
 	pstat \
 	pw \
