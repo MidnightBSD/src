@@ -1036,7 +1036,7 @@ mprsas_action(struct cam_sim *sim, union ccb *ccb)
 		 * target IDs (including volumes).
 		 */
 		cpi->initiator_id = sassc->maxtargets;
-		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
 		strlcpy(cpi->hba_vid, "Avago Tech", HBA_IDLEN);
 		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);

@@ -2324,7 +2324,7 @@ umass_cam_action(struct cam_sim *sim, union ccb *ccb)
 			cpi->hba_eng_cnt = 0;
 			cpi->max_target = UMASS_SCSIID_MAX;	/* one target */
 			cpi->initiator_id = UMASS_SCSIID_HOST;
-			strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+			strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
 			strlcpy(cpi->hba_vid, "USB SCSI", HBA_IDLEN);
 			strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 			cpi->unit_number = cam_sim_unit(sim);

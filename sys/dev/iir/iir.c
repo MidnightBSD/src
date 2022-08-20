@@ -1367,7 +1367,7 @@ iir_action( struct cam_sim *sim, union ccb *ccb )
               cpi->initiator_id = 
                   (bus == gdt->sc_virt_bus ? 127 : gdt->sc_bus_id[bus]);
               cpi->base_transfer_speed = 3300;
-              strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+              strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
               if (gdt->sc_vendor == INTEL_VENDOR_ID_IIR)
                   strlcpy(cpi->hba_vid, "Intel Corp.", HBA_IDLEN);
               else

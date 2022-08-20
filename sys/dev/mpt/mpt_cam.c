@@ -3602,7 +3602,7 @@ mpt_action(struct cam_sim *sim, union ccb *ccb)
 		} else {
 			cpi->target_sprt = 0;
 		}
-		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
 		strlcpy(cpi->hba_vid, "LSI", HBA_IDLEN);
 		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);

@@ -2366,7 +2366,7 @@ static void hptiop_action(struct cam_sim *sim, union ccb *ccb)
 		cpi->initiator_id = hba->max_devices;
 		cpi->base_transfer_speed = 3300;
 
-		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
 		strlcpy(cpi->hba_vid, "HPT   ", HBA_IDLEN);
 		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->transport = XPORT_SPI;

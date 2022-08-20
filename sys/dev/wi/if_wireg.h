@@ -31,7 +31,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
  */
 
 #define WI_DELAY	5
@@ -87,7 +86,7 @@
 #define OS_STRING_NAME	"NetBSD"
 #endif
 #ifdef __MidnightBSD__
-#define OS_STRING_NAME	"FreeBSD"
+#define OS_STRING_NAME	"MidnightBSD"
 #endif
 #ifdef __OpenBSD__
 #define OS_STRING_NAME	"OpenBSD"

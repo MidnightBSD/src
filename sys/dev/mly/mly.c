@@ -2109,7 +2109,7 @@ mly_cam_action(struct cam_sim *sim, union ccb *ccb)
 	cpi->max_target = MLY_MAX_TARGETS - 1;
 	cpi->max_lun = MLY_MAX_LUNS - 1;
 	cpi->initiator_id = sc->mly_controllerparam->initiator_id;
-	strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+	strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
 	strlcpy(cpi->hba_vid, "Mylex", HBA_IDLEN);
 	strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 	cpi->unit_number = cam_sim_unit(sim);

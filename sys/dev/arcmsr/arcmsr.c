@@ -3226,7 +3226,7 @@ static void arcmsr_action(struct cam_sim *psim, union ccb *pccb)
 			cpi->max_lun = ARCMSR_MAX_TARGETLUN;	    /* 0-7 */
 			cpi->initiator_id = ARCMSR_SCSI_INITIATOR_ID; /* 255 */
 			cpi->bus_id = cam_sim_bus(psim);
-			strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+			strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
 			strlcpy(cpi->hba_vid, "ARCMSR", HBA_IDLEN);
 			strlcpy(cpi->dev_name, cam_sim_name(psim), DEV_IDLEN);
 			cpi->unit_number = cam_sim_unit(psim);
