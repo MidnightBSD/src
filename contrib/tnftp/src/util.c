@@ -803,7 +803,7 @@ const char *
 parse_rfc2616time(struct tm *parsed, const char *httpdate)
 {
 	const char *t;
-#if defined(HAVE_SETLOCALE)
+#if 0
 	const char *curlocale;
 
 	/* The representation of %a depends on the current locale. */
@@ -818,7 +818,7 @@ parse_rfc2616time(struct tm *parsed, const char *httpdate)
 	    (t = strptime(httpdate, "%a, %b %d %H:%M:%S %Y", parsed))) {
 		;			/* do nothing */
 	}
-#if defined(HAVE_SETLOCALE)
+#if 0
 	(void)setlocale(LC_TIME, curlocale);
 #endif
 	return t;
