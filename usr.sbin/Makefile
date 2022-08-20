@@ -20,7 +20,6 @@ SUBDIR=	adduser \
 	dconschat \
 	devctl \
 	devinfo \
-	digictl \
 	diskinfo \
 	dnsextd \
 	dumpcis \
