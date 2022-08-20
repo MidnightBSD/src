@@ -1615,7 +1615,9 @@ main(int argc, char *argv[])
 	progargs = argv;
 	nprogargs = argc;
 
-	snmp_serial_no = arc4random();
+	srandomdev();
+
+	snmp_serial_no = random();
 
 #ifdef USE_TCPWRAPPERS
 	/*
