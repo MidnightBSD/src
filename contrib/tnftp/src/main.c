@@ -151,7 +151,7 @@ main(int volatile argc, char **volatile argv)
 	size_t len;
 
 	tzset();
-#if defined(HAVE_SETLOCALE)
+#if 0	/* tnftp */	/* XXX */
 	setlocale(LC_ALL, "");
 #endif
 	setprogname(argv[0]);
