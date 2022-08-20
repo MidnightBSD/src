@@ -26,7 +26,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -2271,7 +2270,7 @@ emu10kx_prepare(struct emu_sc_info *sc, struct sbuf *s)
 {
 	int i;
 
-	sbuf_printf(s, "FreeBSD EMU10Kx Audio Driver\n");
+	sbuf_printf(s, "MidnightBSD EMU10Kx Audio Driver\n");
 	sbuf_printf(s, "\nHardware resource usage:\n");
 	sbuf_printf(s, "DSP General Purpose Registers: %d used, %d total\n", sc->rm->num_used, sc->rm->num_gprs);
 	sbuf_printf(s, "DSP Instruction Registers: %d used, %d total\n", sc->routing_code_end, sc->code_size);
