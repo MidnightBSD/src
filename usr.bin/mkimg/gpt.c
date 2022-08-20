@@ -45,16 +45,16 @@
     {0x74ba7dd9,0xa689,0x11e1,0xbd,0x04,{0x00,0xe0,0x81,0x28,0x6a,0xcf}}
 #endif
 
-static uuid_t gpt_uuid_efi = GPT_ENT_TYPE_EFI;
-static uuid_t gpt_uuid_mnbsd = GPT_ENT_TYPE_MIDNIGHTBSD;
-static uuid_t gpt_uuid_mnbsd_boot = GPT_ENT_TYPE_MIDNIGHTBSD_BOOT;
-static uuid_t gpt_uuid_mnbsd_nandfs = GPT_ENT_TYPE_MIDNIGHTBSD_NANDFS;
-static uuid_t gpt_uuid_mnbsd_swap = GPT_ENT_TYPE_MIDNIGHTBSD_SWAP;
-static uuid_t gpt_uuid_mnbsd_ufs = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
-static uuid_t gpt_uuid_mnbsd_vinum = GPT_ENT_TYPE_MIDNIGHTBSD_VINUM;
-static uuid_t gpt_uuid_mnbsd_zfs = GPT_ENT_TYPE_MIDNIGHTBSD_ZFS;
-static uuid_t gpt_uuid_mbr = GPT_ENT_TYPE_MBR;
-static uuid_t gpt_uuid_ms_basic_data = GPT_ENT_TYPE_MS_BASIC_DATA;
+static mkimg_uuid_t gpt_uuid_efi = GPT_ENT_TYPE_EFI;
+static mkimg_uuid_t gpt_uuid_mnbsd = GPT_ENT_TYPE_MIDNIGHTBSD;
+static mkimg_uuid_t gpt_uuid_mnbsd_boot = GPT_ENT_TYPE_MIDNIGHTBSD_BOOT;
+static mkimg_uuid_t gpt_uuid_mnbsd_nandfs = GPT_ENT_TYPE_MIDNIGHTBSD_NANDFS;
+static mkimg_uuid_t gpt_uuid_mnbsd_swap = GPT_ENT_TYPE_MIDNIGHTBSD_SWAP;
+static mkimg_uuid_t gpt_uuid_mnbsd_ufs = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
+static mkimg_uuid_t gpt_uuid_mnbsd_vinum = GPT_ENT_TYPE_MIDNIGHTBSD_VINUM;
+static mkimg_uuid_t gpt_uuid_mnbsd_zfs = GPT_ENT_TYPE_MIDNIGHTBSD_ZFS;
+static mkimg_uuid_t gpt_uuid_mbr = GPT_ENT_TYPE_MBR;
+static mkimg_uuid_t gpt_uuid_ms_basic_data = GPT_ENT_TYPE_MS_BASIC_DATA;
 
 static struct mkimg_alias gpt_aliases[] = {
     {	ALIAS_EFI, ALIAS_PTR2TYPE(&gpt_uuid_efi) },
