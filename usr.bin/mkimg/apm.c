@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Juniper Networks, Inc.
  * All rights reserved.
@@ -31,21 +30,13 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
-#include <sys/apm.h>
+#include <apm.h>
 
 #include "endian.h"
 #include "image.h"
 #include "mkimg.h"
 #include "scheme.h"
-
-#ifndef APM_ENT_TYPE_APPLE_BOOT
-#define	APM_ENT_TYPE_APPLE_BOOT		"Apple_Bootstrap"
-#endif
-#ifndef APM_ENT_TYPE_FREEBSD_NANDFS
-#define	APM_ENT_TYPE_FREEBSD_NANDFS	"FreeBSD-nandfs"
-#endif
 
 static struct mkimg_alias apm_aliases[] = {
     {	ALIAS_MIDNIGHTBSD, ALIAS_PTR2TYPE(APM_ENT_TYPE_FREEBSD) },
