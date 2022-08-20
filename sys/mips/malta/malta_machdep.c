@@ -142,7 +142,7 @@ malta_lcd_print(char *str)
 void
 lcd_init(void)
 {
-	malta_lcd_print("FreeBSD_");
+	malta_lcd_print("MidnightBSD_");
 }
 
 void

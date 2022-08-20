@@ -695,7 +695,7 @@ void isci_action(struct cam_sim *sim, union ccb *ccb)
 			cpi->bus_id = bus;
 			cpi->initiator_id = SCI_MAX_REMOTE_DEVICES;
 			cpi->base_transfer_speed = 300000;
-			strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+			strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
 			strlcpy(cpi->hba_vid, "Intel Corp.", HBA_IDLEN);
 			strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 			cpi->transport = XPORT_SAS;

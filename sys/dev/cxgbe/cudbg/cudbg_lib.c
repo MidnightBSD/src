@@ -621,7 +621,7 @@ static int collect_sw_state(struct cudbg_init *pdbg_init,
 
 	swstate->fw_state = t4_read_reg(padap, A_PCIE_FW);
 	snprintf(swstate->caller_string, sizeof(swstate->caller_string), "%s",
-	    "FreeBSD");
+	    "MidnightBSD");
 	swstate->os_type = 0;
 
 	rc = write_compression_hdr(&scratch_buff, dbg_buff);

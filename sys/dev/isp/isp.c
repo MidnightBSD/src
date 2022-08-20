@@ -4249,7 +4249,7 @@ isp_register_port_name_24xx(ispsoftc_t *isp, int chan)
 	len = offsetof(rspn_id_t, rspnid_name);
 	mtx_lock(&prison0.pr_mtx);
 	rp.rspnid_length += sprintf(&scp[len + rp.rspnid_length],
-	    "%s", prison0.pr_hostname[0] ? prison0.pr_hostname : "FreeBSD");
+	    "%s", prison0.pr_hostname[0] ? prison0.pr_hostname : "MidnightBSD");
 	mtx_unlock(&prison0.pr_mtx);
 	rp.rspnid_length += sprintf(&scp[len + rp.rspnid_length],
 	    ":%s", device_get_nameunit(isp->isp_dev));
@@ -4311,7 +4311,7 @@ isp_register_node_name_24xx(ispsoftc_t *isp, int chan)
 	len = offsetof(rsnn_nn_t, rsnnnn_name);
 	mtx_lock(&prison0.pr_mtx);
 	rp.rsnnnn_length += sprintf(&scp[len + rp.rsnnnn_length],
-	    "%s", prison0.pr_hostname[0] ? prison0.pr_hostname : "FreeBSD");
+	    "%s", prison0.pr_hostname[0] ? prison0.pr_hostname : "MidnightBSD");
 	mtx_unlock(&prison0.pr_mtx);
 	len += rp.rsnnnn_length;
 	ct->ct_bcnt_resid = (len - sizeof(ct_hdr_t)) >> 2;

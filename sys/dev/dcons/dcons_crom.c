@@ -34,7 +34,6 @@
  * SUCH DAMAGE.
  * 
  * $Id: dcons_crom.c,v 1.8 2003/10/23 15:47:21 simokawa Exp $
- * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -135,7 +134,7 @@ dcons_crom_post_busreset(void *arg)
 
 	crom_add_chunk(src, root, &sc->unit, CROM_UDIR);
 	crom_add_entry(&sc->unit, CSRKEY_SPEC, CSRVAL_VENDOR_PRIVATE);
-	crom_add_simple_text(src, &sc->unit, &sc->spec, "FreeBSD");
+	crom_add_simple_text(src, &sc->unit, &sc->spec, "MidnightBSD");
 	crom_add_entry(&sc->unit, CSRKEY_VER, DCONS_CSR_VAL_VER);
 	crom_add_simple_text(src, &sc->unit, &sc->ver, "dcons");
 	crom_add_entry(&sc->unit, DCONS_CSR_KEY_HI, ADDR_HI(dcons_paddr));

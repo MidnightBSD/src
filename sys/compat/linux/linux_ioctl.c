@@ -1797,7 +1797,7 @@ linux_ioctl_sound(struct thread *td, struct linux_ioctl_args *args)
 			struct linux_old_mixer_info info;
 			bzero(&info, sizeof(info));
 			strncpy(info.id, "OSS", sizeof(info.id) - 1);
-			strncpy(info.name, "FreeBSD OSS Mixer", sizeof(info.name) - 1);
+			strncpy(info.name, "MidnightBSD OSS Mixer", sizeof(info.name) - 1);
 			copyout(&info, (void *)args->arg, sizeof(info));
 			return (0);
 		}

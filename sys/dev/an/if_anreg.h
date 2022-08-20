@@ -31,7 +31,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
  */
 
 #define AN_TIMEOUT	65536
@@ -40,9 +39,9 @@
 #define AN_DEFAULT_NETNAME	""
 
 /* The nodename must be less than 16 bytes */
-#define AN_DEFAULT_NODENAME	"FreeBSD"
+#define AN_DEFAULT_NODENAME	"MidnightBSD"
 
-#define AN_DEFAULT_IBSS		"FreeBSD IBSS"
+#define AN_DEFAULT_IBSS		"MidnightBSD IBSS"
 
 /*
  * register space access macros

@@ -53,7 +53,7 @@ update_sim_properties(struct cam_sim *sim, struct ccb_pathinq *cpi)
 	cpi->max_target = 1088;
 	cpi->maxio = (softs->pqi_cap.max_sg_elem - 1) * PAGE_SIZE;
 	cpi->initiator_id = 255;
-	strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+	strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
 	strlcpy(cpi->hba_vid, "Microsemi", HBA_IDLEN);
 	strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 	cpi->unit_number = cam_sim_unit(sim);

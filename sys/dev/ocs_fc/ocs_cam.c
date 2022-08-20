@@ -2077,7 +2077,7 @@ ocs_action(struct cam_sim *sim, union ccb *ccb)
 		cpi->maxio = PAGE_SIZE *
 			(ocs_scsi_get_property(ocs, OCS_SCSI_MAX_SGL) - 1);
 
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strncpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
 		strncpy(cpi->hba_vid, "Emulex", HBA_IDLEN);
 		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);

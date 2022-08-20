@@ -231,7 +231,7 @@ aw_mmc_cam_action(struct cam_sim *sim, union ccb *ccb)
 		cpi->initiator_id = 1;
 		cpi->maxio = (sc->aw_mmc_conf->dma_xferlen *
 			      AW_MMC_DMA_SEGS) / MMC_SECTOR_SIZE;
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strncpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
 		strncpy(cpi->hba_vid, "Deglitch Networks", HBA_IDLEN);
 		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);

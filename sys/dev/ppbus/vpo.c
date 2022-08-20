@@ -392,7 +392,7 @@ vpo_action(struct cam_sim *sim, union ccb *ccb)
 		cpi->initiator_id = VP0_INITIATOR;
 		cpi->bus_id = sim->bus_id;
 		cpi->base_transfer_speed = 93;
-		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
 		strlcpy(cpi->hba_vid, "Iomega", HBA_IDLEN);
 		strlcpy(cpi->dev_name, sim->sim_name, DEV_IDLEN);
 		cpi->unit_number = sim->unit_number;
