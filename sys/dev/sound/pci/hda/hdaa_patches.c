@@ -382,7 +382,7 @@ hdac_pin_patch(struct hdaa_widget *w)
 	} else if (id == HDA_CODEC_ALC235 && subid == ASUS_GL553VE_SUBVENDOR) {
 		switch (nid) {
 		case 33:
-			patch_str = "as=1 seq=15";
+			patch = "as=1 seq=15";
 			break;
 		}
 	} else if (id == HDA_CODEC_ALC269 &&
@@ -468,10 +468,10 @@ hdac_pin_patch(struct hdaa_widget *w)
 	    (subid == LENOVO_L5AMD_SUBVENDOR)) {
 		switch (nid) {
 		case 20:
-			patch_str = "as=1 seq=0";
+			patch = "as=1 seq=0";
 			break;
 		case 33:
-			patch_str = "as=1 seq=15";
+			patch = "as=1 seq=15";
 			break;
 		}
 	} else if (id == HDA_CODEC_IDT92HD95B &&
