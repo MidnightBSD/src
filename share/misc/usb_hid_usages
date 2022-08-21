@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #
 # USB HID usage table
 # Syntax:
@@ -1280,8 +1279,8 @@
 	0x48	Top Corner Distortion Balance
 	0x4A	Bottom Corner Distortion Control
 	0x4C	Bottom Corner Distortion Balance
-	0x56	Horizontal Moirï¿½
-	0x58	Vertical Moirï¿½
+	0x56	Horizontal Moiré
+	0x58	Vertical Moiré
 	0x5E	Input Level Select
 	0x60	Input Source Select
 	0x6C	Red Video Black Level
