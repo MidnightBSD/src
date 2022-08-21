@@ -44,7 +44,7 @@
 volatile sig_atomic_t	 ntp_quit = 0;
 volatile sig_atomic_t	 ntp_report = 0;
 struct imsgbuf		*ibuf_main;
-struct ntpd_conf	*conf;
+//struct ntpd_conf	*conf;
 u_int			 peer_cnt;
 u_int			 sensors_cnt;
 time_t			 lastreport;
