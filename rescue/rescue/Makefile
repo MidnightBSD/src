@@ -50,7 +50,8 @@ CRUNCH_LIBS+= ${.OBJDIR}/../librescue/*.o
 # /usr/include/paths.h as well!  You were warned!
 #
 CRUNCH_SRCDIRS+= bin
-CRUNCH_PROGS_bin= cat chflags chio chmod cp date dd df echo 	\
+# TODO: re-add df
+CRUNCH_PROGS_bin= cat chflags chio chmod cp date dd echo 	\
 	 ed expr getfacl hostname kenv kill ln ls mkdir mv	\
 	 pkill ps pwd realpath rm rmdir setfacl sh sleep stty	\
 	 sync test
