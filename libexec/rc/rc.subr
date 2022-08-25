@@ -1,5 +1,4 @@
 # $NetBSD: rc.subr,v 1.67 2006/10/07 11:25:15 elad Exp $
-# $FreeBSD$
 #
 # Copyright (c) 1997-2004 The NetBSD Foundation, Inc.
 # All rights reserved.
@@ -1260,13 +1259,13 @@ $command $rc_flags $command_args"
 			# We cannot use protect(1) inside jails.
 			if [ -n "$_oomprotect" ] && [ -f "${PROTECT}" ] &&
 			    [ "$(sysctl -n security.jail.jailed)" -eq 0 ]; then
-				pid=$(check_process $command)
+				[ -z "${rc_pid}" ] && eval $_pidcmd
 				case $_oomprotect in
 				[Aa][Ll][Ll])
-					${PROTECT} -i -p ${pid}
+					${PROTECT} -i -p ${rc_pid}
 					;;
 				[Yy][Ee][Ss])
-					${PROTECT} -p ${pid}
+					${PROTECT} -p ${rc_pid}
 					;;
 				esac
 			fi
