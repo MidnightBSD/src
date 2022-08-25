@@ -5,7 +5,7 @@
 
 /* C99 systems have <inttypes.h>. Non-C99 systems may or may not. */
 
-#if defined(__FreeBSD__) || \
+#if defined(__MidnightBSD__) || \
     (defined (__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
 
 /* C99 says to define __STDC_LIMIT_MACROS before including stdint.h,

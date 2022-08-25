@@ -61,7 +61,6 @@ char *alloca ();
 #include <setjmp.h>
 #include <ctype.h>
 #include <string.h>
-#include <math.h>
 #endif
 #ifdef HAVE_ASSERT_H
 #include <assert.h>
@@ -171,6 +170,7 @@ char *alloca ();
  */
 #define NUMDATALINES 10
 
+/* Number of characters to print a line number, i.e., 1 + log10(INT_MAX) */
 #define NUMCHARLINES 10
 
 /* transition_struct_out() definitions. */
@@ -382,7 +382,7 @@ char *alloca ();
  * use_read - if true (-f, -F, or -Cr) then use read() for scanner input;
  *   otherwise, use fread().
  * yytext_is_array - if true (i.e., %array directive), then declare
- *   yytext as a array instead of a character pointer.  Nice and inefficient.
+ *   yytext as an array instead of a character pointer.  Nice and inefficient.
  * do_yywrap - do yywrap() processing on EOF.  If false, EOF treated as
  *   "no more files".
  * csize - size of character set for the scanner we're generating;
@@ -924,7 +924,7 @@ extern void mark_defs1 PROTO ((void));
 /* Mark the current position in the action array as the end of the prolog. */
 extern void mark_prolog PROTO ((void));
 
-/* Generate a data statment for a two-dimensional array. */
+/* Generate a data statement for a two-dimensional array. */
 extern void mk2data PROTO ((int));
 
 extern void mkdata PROTO ((int));	/* generate a data statement */
