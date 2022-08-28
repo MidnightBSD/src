@@ -43,6 +43,10 @@
         ..
         midnightbsd-update  mode=0700
         ..
+        mtree
+        ..
+        ntp             uname=ntpd gname=ntpd
+        ..
         mport
             downloads
             ..

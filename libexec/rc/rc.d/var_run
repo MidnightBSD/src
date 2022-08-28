@@ -3,7 +3,10 @@
 # PROVIDE: var_run
 # REQUIRE: mountcritlocal
 # BEFORE: cleanvar
+<<<<<<< HEAD
 # KEYWORD: shutdown
+=======
+>>>>>>> eb3e5718bfba (libexec/rc: Add var_run rc script)
 
 . /etc/rc.subr
 
