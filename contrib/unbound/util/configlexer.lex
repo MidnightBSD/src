@@ -7,7 +7,6 @@
  * See LICENSE for the license.
  *
  */
-#include "config.h"
 
 /* because flex keeps having sign-unsigned compare problems that are unfixed*/
 #if defined(__clang__)||(defined(__GNUC__)&&((__GNUC__ >4)||(defined(__GNUC_MINOR__)&&(__GNUC__ ==4)&&(__GNUC_MINOR__ >=2))))
@@ -21,7 +20,7 @@
 #endif
 
 #include "util/config_file.h"
-#include "configparser.h"
+#include "util/configparser.h"
 void ub_c_error(const char *message);
 
 #if 0
@@ -31,13 +30,13 @@ void ub_c_error(const char *message);
 #endif
 
 /** avoid warning in about fwrite return value */
-#define ECHO ub_c_error_msg("syntax error at text: %s", ub_c_text)
+#define ECHO ub_c_error_msg("syntax error at text: %s", yytext)
 
 /** A parser variable, this is a statement in the config file which is
  * of the form variable: value1 value2 ...  nargs is the number of values. */
 #define YDVAR(nargs, var) \
 	num_args=(nargs); \
-	LEXOUT(("v(%s%d) ", ub_c_text, num_args)); \
+	LEXOUT(("v(%s%d) ", yytext, num_args)); \
 	if(num_args > 0) { BEGIN(val); } \
 	return (var);
 
@@ -180,7 +179,7 @@ static void config_end_include(void)
 #define yy_set_bol(at_bol) \
         { \
 	        if ( ! yy_current_buffer ) \
-	                yy_current_buffer = yy_create_buffer( ub_c_in, YY_BUF_SIZE ); \
+	                yy_current_buffer = yy_create_buffer( yyin, YY_BUF_SIZE ); \
 	        yy_current_buffer->yy_ch_buf[0] = ((at_bol)?'\n':' '); \
         }
 #endif
@@ -214,7 +213,7 @@ SQANY     [^\'\n\r\\]|\\.
 	LEXOUT(("SP ")); /* ignore */ }
 <INITIAL,val>{SPACE}*{COMMENT}.*	{ 
 	/* note that flex makes the longest match and '.' is any but not nl */
-	LEXOUT(("comment(%s) ", ub_c_text)); /* ignore */ }
+	LEXOUT(("comment(%s) ", yytext)); /* ignore */ }
 server{COLON}			{ YDVAR(0, VAR_SERVER) }
 qname-minimisation{COLON}	{ YDVAR(1, VAR_QNAME_MINIMISATION) }
 qname-minimisation-strict{COLON} { YDVAR(1, VAR_QNAME_MINIMISATION_STRICT) }
@@ -236,6 +235,9 @@ tcp-upstream{COLON}		{ YDVAR(1, VAR_TCP_UPSTREAM) }
 tcp-mss{COLON}			{ YDVAR(1, VAR_TCP_MSS) }
 outgoing-tcp-mss{COLON}		{ YDVAR(1, VAR_OUTGOING_TCP_MSS) }
 tcp-idle-timeout{COLON}		{ YDVAR(1, VAR_TCP_IDLE_TIMEOUT) }
+max-reuse-tcp-queries{COLON}	{ YDVAR(1, VAR_MAX_REUSE_TCP_QUERIES) }
+tcp-reuse-timeout{COLON}	{ YDVAR(1, VAR_TCP_REUSE_TIMEOUT) }
+tcp-auth-query-timeout{COLON}	{ YDVAR(1, VAR_TCP_AUTH_QUERY_TIMEOUT) }
 edns-tcp-keepalive{COLON}	{ YDVAR(1, VAR_EDNS_TCP_KEEPALIVE) }
 edns-tcp-keepalive-timeout{COLON} { YDVAR(1, VAR_EDNS_TCP_KEEPALIVE_TIMEOUT) }
 ssl-upstream{COLON}		{ YDVAR(1, VAR_SSL_UPSTREAM) }
@@ -249,6 +251,7 @@ tls-port{COLON}			{ YDVAR(1, VAR_SSL_PORT) }
 ssl-cert-bundle{COLON}		{ YDVAR(1, VAR_TLS_CERT_BUNDLE) }
 tls-cert-bundle{COLON}		{ YDVAR(1, VAR_TLS_CERT_BUNDLE) }
 tls-win-cert{COLON}		{ YDVAR(1, VAR_TLS_WIN_CERT) }
+tls-system-cert{COLON}		{ YDVAR(1, VAR_TLS_WIN_CERT) }
 additional-ssl-port{COLON}	{ YDVAR(1, VAR_TLS_ADDITIONAL_PORT) }
 additional-tls-port{COLON}	{ YDVAR(1, VAR_TLS_ADDITIONAL_PORT) }
 tls-additional-ports{COLON}	{ YDVAR(1, VAR_TLS_ADDITIONAL_PORT) }
@@ -270,6 +273,7 @@ interface{COLON}		{ YDVAR(1, VAR_INTERFACE) }
 ip-address{COLON}		{ YDVAR(1, VAR_INTERFACE) }
 outgoing-interface{COLON}	{ YDVAR(1, VAR_OUTGOING_INTERFACE) }
 interface-automatic{COLON}	{ YDVAR(1, VAR_INTERFACE_AUTOMATIC) }
+interface-automatic-ports{COLON} { YDVAR(1, VAR_INTERFACE_AUTOMATIC_PORTS) }
 so-rcvbuf{COLON}		{ YDVAR(1, VAR_SO_RCVBUF) }
 so-sndbuf{COLON}		{ YDVAR(1, VAR_SO_SNDBUF) }
 so-reuseport{COLON}		{ YDVAR(1, VAR_SO_REUSEPORT) }
@@ -298,6 +302,7 @@ infra-cache-slabs{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_SLABS) }
 infra-cache-numhosts{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_NUMHOSTS) }
 infra-cache-lame-size{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_LAME_SIZE) }
 infra-cache-min-rtt{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_MIN_RTT) }
+infra-cache-max-rtt{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_MAX_RTT) }
 infra-keep-probing{COLON}	{ YDVAR(1, VAR_INFRA_KEEP_PROBING) }
 num-queries-per-thread{COLON}	{ YDVAR(1, VAR_NUM_QUERIES_PER_THREAD) }
 jostle-timeout{COLON}		{ YDVAR(1, VAR_JOSTLE_TIMEOUT) }
@@ -329,6 +334,7 @@ stub-first{COLON}		{ YDVAR(1, VAR_STUB_FIRST) }
 stub-no-cache{COLON}		{ YDVAR(1, VAR_STUB_NO_CACHE) }
 stub-ssl-upstream{COLON}	{ YDVAR(1, VAR_STUB_SSL_UPSTREAM) }
 stub-tls-upstream{COLON}	{ YDVAR(1, VAR_STUB_SSL_UPSTREAM) }
+stub-tcp-upstream{COLON}	{ YDVAR(1, VAR_STUB_TCP_UPSTREAM) }
 forward-zone{COLON}		{ YDVAR(0, VAR_FORWARD_ZONE) }
 forward-addr{COLON}		{ YDVAR(1, VAR_FORWARD_ADDR) }
 forward-host{COLON}		{ YDVAR(1, VAR_FORWARD_HOST) }
@@ -336,6 +342,7 @@ forward-first{COLON}		{ YDVAR(1, VAR_FORWARD_FIRST) }
 forward-no-cache{COLON}		{ YDVAR(1, VAR_FORWARD_NO_CACHE) }
 forward-ssl-upstream{COLON}	{ YDVAR(1, VAR_FORWARD_SSL_UPSTREAM) }
 forward-tls-upstream{COLON}	{ YDVAR(1, VAR_FORWARD_SSL_UPSTREAM) }
+forward-tcp-upstream{COLON}	{ YDVAR(1, VAR_FORWARD_TCP_UPSTREAM) }
 auth-zone{COLON}		{ YDVAR(0, VAR_AUTH_ZONE) }
 rpz{COLON}			{ YDVAR(0, VAR_RPZ) }
 tags{COLON}			{ YDVAR(1, VAR_TAGS) }
@@ -343,6 +350,7 @@ rpz-action-override{COLON}	{ YDVAR(1, VAR_RPZ_ACTION_OVERRIDE) }
 rpz-cname-override{COLON}	{ YDVAR(1, VAR_RPZ_CNAME_OVERRIDE) }
 rpz-log{COLON}			{ YDVAR(1, VAR_RPZ_LOG) }
 rpz-log-name{COLON}		{ YDVAR(1, VAR_RPZ_LOG_NAME) }
+rpz-signal-nxdomain-ra{COLON}	{ YDVAR(1, VAR_RPZ_SIGNAL_NXDOMAIN_RA) }
 zonefile{COLON}			{ YDVAR(1, VAR_ZONEFILE) }
 master{COLON}			{ YDVAR(1, VAR_MASTER) }
 primary{COLON}			{ YDVAR(1, VAR_MASTER) }
@@ -369,8 +377,10 @@ max-ecs-tree-size-ipv6{COLON}	{ YDVAR(1, VAR_MAX_ECS_TREE_SIZE_IPV6) }
 hide-identity{COLON}		{ YDVAR(1, VAR_HIDE_IDENTITY) }
 hide-version{COLON}		{ YDVAR(1, VAR_HIDE_VERSION) }
 hide-trustanchor{COLON}		{ YDVAR(1, VAR_HIDE_TRUSTANCHOR) }
+hide-http-user-agent{COLON}		{ YDVAR(1, VAR_HIDE_HTTP_USER_AGENT) }
 identity{COLON}			{ YDVAR(1, VAR_IDENTITY) }
 version{COLON}			{ YDVAR(1, VAR_VERSION) }
+http-user-agent{COLON}			{ YDVAR(1, VAR_HTTP_USER_AGENT) }
 module-config{COLON}     	{ YDVAR(1, VAR_MODULE_CONF) }
 dlv-anchor{COLON}		{ YDVAR(1, VAR_DLV_ANCHOR) }
 dlv-anchor-file{COLON}		{ YDVAR(1, VAR_DLV_ANCHOR_FILE) }
@@ -383,6 +393,7 @@ root-key-sentinel{COLON}	{ YDVAR(1, VAR_ROOT_KEY_SENTINEL) }
 val-override-date{COLON}	{ YDVAR(1, VAR_VAL_OVERRIDE_DATE) }
 val-sig-skew-min{COLON}		{ YDVAR(1, VAR_VAL_SIG_SKEW_MIN) }
 val-sig-skew-max{COLON}		{ YDVAR(1, VAR_VAL_SIG_SKEW_MAX) }
+val-max-restart{COLON}		{ YDVAR(1, VAR_VAL_MAX_RESTART) }
 val-bogus-ttl{COLON}		{ YDVAR(1, VAR_BOGUS_TTL) }
 val-clean-additional{COLON}	{ YDVAR(1, VAR_VAL_CLEAN_ADDITIONAL) }
 val-permissive-mode{COLON}	{ YDVAR(1, VAR_VAL_PERMISSIVE_MODE) }
@@ -393,6 +404,7 @@ serve-expired-ttl{COLON}	{ YDVAR(1, VAR_SERVE_EXPIRED_TTL) }
 serve-expired-ttl-reset{COLON}	{ YDVAR(1, VAR_SERVE_EXPIRED_TTL_RESET) }
 serve-expired-reply-ttl{COLON}	{ YDVAR(1, VAR_SERVE_EXPIRED_REPLY_TTL) }
 serve-expired-client-timeout{COLON}	{ YDVAR(1, VAR_SERVE_EXPIRED_CLIENT_TIMEOUT) }
+ede-serve-expired{COLON}	{ YDVAR(1, VAR_EDE_SERVE_EXPIRED) }
 serve-original-ttl{COLON}	{ YDVAR(1, VAR_SERVE_ORIGINAL_TTL) }
 fake-dsa{COLON}			{ YDVAR(1, VAR_FAKE_DSA) }
 fake-sha1{COLON}		{ YDVAR(1, VAR_FAKE_SHA1) }
@@ -402,6 +414,9 @@ key-cache-slabs{COLON}		{ YDVAR(1, VAR_KEY_CACHE_SLABS) }
 neg-cache-size{COLON}		{ YDVAR(1, VAR_NEG_CACHE_SIZE) }
 val-nsec3-keysize-iterations{COLON}	{ 
 				  YDVAR(1, VAR_VAL_NSEC3_KEYSIZE_ITERATIONS) }
+zonemd-permissive-mode{COLON}	{ YDVAR(1, VAR_ZONEMD_PERMISSIVE_MODE) }
+zonemd-check{COLON}		{ YDVAR(1, VAR_ZONEMD_CHECK) }
+zonemd-reject-absence{COLON}	{ YDVAR(1, VAR_ZONEMD_REJECT_ABSENCE) }
 add-holddown{COLON}		{ YDVAR(1, VAR_ADD_HOLDDOWN) }
 del-holddown{COLON}		{ YDVAR(1, VAR_DEL_HOLDDOWN) }
 keep-missing{COLON}		{ YDVAR(1, VAR_KEEP_MISSING) }
@@ -491,6 +506,9 @@ ratelimit-for-domain{COLON}	{ YDVAR(2, VAR_RATELIMIT_FOR_DOMAIN) }
 ratelimit-below-domain{COLON}	{ YDVAR(2, VAR_RATELIMIT_BELOW_DOMAIN) }
 ip-ratelimit-factor{COLON}		{ YDVAR(1, VAR_IP_RATELIMIT_FACTOR) }
 ratelimit-factor{COLON}		{ YDVAR(1, VAR_RATELIMIT_FACTOR) }
+ip-ratelimit-backoff{COLON}		{ YDVAR(1, VAR_IP_RATELIMIT_BACKOFF) }
+ratelimit-backoff{COLON}		{ YDVAR(1, VAR_RATELIMIT_BACKOFF) }
+outbound-msg-retry{COLON}		{ YDVAR(1, VAR_OUTBOUND_MSG_RETRY) }
 low-rtt{COLON}			{ YDVAR(1, VAR_LOW_RTT) }
 fast-server-num{COLON}		{ YDVAR(1, VAR_FAST_SERVER_NUM) }
 low-rtt-pct{COLON}		{ YDVAR(1, VAR_FAST_SERVER_PERMIL) }
@@ -538,76 +556,77 @@ tcp-connection-limit{COLON}	{ YDVAR(2, VAR_TCP_CONNECTION_LIMIT) }
 edns-client-string{COLON}	{ YDVAR(2, VAR_EDNS_CLIENT_STRING) }
 edns-client-string-opcode{COLON} { YDVAR(1, VAR_EDNS_CLIENT_STRING_OPCODE) }
 nsid{COLON}			{ YDVAR(1, VAR_NSID ) }
+ede{COLON}			{ YDVAR(1, VAR_EDE ) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */
 <val>\"			{ BEGIN(quotedstring); LEXOUT(("QS ")); }
 <quotedstring><<EOF>>   {
-        ub_c_error("EOF inside quoted string");
+        yyerror("EOF inside quoted string");
 	if(--num_args == 0) { BEGIN(INITIAL); }
 	else		    { BEGIN(val); }
 }
-<quotedstring>{DQANY}*  { LEXOUT(("STR(%s) ", ub_c_text)); yymore(); }
-<quotedstring>{NEWLINE} { ub_c_error("newline inside quoted string, no end \""); 
+<quotedstring>{DQANY}*  { LEXOUT(("STR(%s) ", yytext)); yymore(); }
+<quotedstring>{NEWLINE} { yyerror("newline inside quoted string, no end \""); 
 			  cfg_parser->line++; BEGIN(INITIAL); }
 <quotedstring>\" {
         LEXOUT(("QE "));
 	if(--num_args == 0) { BEGIN(INITIAL); }
 	else		    { BEGIN(val); }
-        ub_c_text[ub_c_leng - 1] = '\0';
-	ub_c_lval.str = strdup(ub_c_text);
-	if(!ub_c_lval.str)
-		ub_c_error("out of memory");
+        yytext[yyleng - 1] = '\0';
+	yylval.str = strdup(yytext);
+	if(!yylval.str)
+		yyerror("out of memory");
         return STRING_ARG;
 }
 
 	/* Single Quoted strings. Strip leading and ending quotes */
 <val>\'			{ BEGIN(singlequotedstr); LEXOUT(("SQS ")); }
 <singlequotedstr><<EOF>>   {
-        ub_c_error("EOF inside quoted string");
+        yyerror("EOF inside quoted string");
 	if(--num_args == 0) { BEGIN(INITIAL); }
 	else		    { BEGIN(val); }
 }
-<singlequotedstr>{SQANY}*  { LEXOUT(("STR(%s) ", ub_c_text)); yymore(); }
-<singlequotedstr>{NEWLINE} { ub_c_error("newline inside quoted string, no end '"); 
+<singlequotedstr>{SQANY}*  { LEXOUT(("STR(%s) ", yytext)); yymore(); }
+<singlequotedstr>{NEWLINE} { yyerror("newline inside quoted string, no end '"); 
 			     cfg_parser->line++; BEGIN(INITIAL); }
 <singlequotedstr>\' {
         LEXOUT(("SQE "));
 	if(--num_args == 0) { BEGIN(INITIAL); }
 	else		    { BEGIN(val); }
-        ub_c_text[ub_c_leng - 1] = '\0';
-	ub_c_lval.str = strdup(ub_c_text);
-	if(!ub_c_lval.str)
-		ub_c_error("out of memory");
+        yytext[yyleng - 1] = '\0';
+	yylval.str = strdup(yytext);
+	if(!yylval.str)
+		yyerror("out of memory");
         return STRING_ARG;
 }
 
 	/* include: directive */
 <INITIAL,val>include{COLON}	{ 
-	LEXOUT(("v(%s) ", ub_c_text)); inc_prev = YYSTATE; BEGIN(include); }
+	LEXOUT(("v(%s) ", yytext)); inc_prev = YYSTATE; BEGIN(include); }
 <include><<EOF>>	{
-        ub_c_error("EOF inside include directive");
+        yyerror("EOF inside include directive");
         BEGIN(inc_prev);
 }
 <include>{SPACE}*	{ LEXOUT(("ISP ")); /* ignore */ }
 <include>{NEWLINE}	{ LEXOUT(("NL\n")); cfg_parser->line++;}
 <include>\"		{ LEXOUT(("IQS ")); BEGIN(include_quoted); }
 <include>{UNQUOTEDLETTER}*	{
-	LEXOUT(("Iunquotedstr(%s) ", ub_c_text));
-	config_start_include_glob(ub_c_text, 0);
+	LEXOUT(("Iunquotedstr(%s) ", yytext));
+	config_start_include_glob(yytext, 0);
 	BEGIN(inc_prev);
 }
 <include_quoted><<EOF>>	{
-        ub_c_error("EOF inside quoted string");
+        yyerror("EOF inside quoted string");
         BEGIN(inc_prev);
 }
-<include_quoted>{DQANY}*	{ LEXOUT(("ISTR(%s) ", ub_c_text)); yymore(); }
-<include_quoted>{NEWLINE}	{ ub_c_error("newline before \" in include name"); 
+<include_quoted>{DQANY}*	{ LEXOUT(("ISTR(%s) ", yytext)); yymore(); }
+<include_quoted>{NEWLINE}	{ yyerror("newline before \" in include name"); 
 				  cfg_parser->line++; BEGIN(inc_prev); }
 <include_quoted>\"	{
 	LEXOUT(("IQE "));
-	ub_c_text[ub_c_leng - 1] = '\0';
-	config_start_include_glob(ub_c_text,0);
+	yytext[yyleng - 1] = '\0';
+	config_start_include_glob(yytext, 0);
 	BEGIN(inc_prev);
 }
 <INITIAL,val><<EOF>>	{
@@ -616,9 +635,8 @@ nsid{COLON}			{ YDVAR(1, VAR_NSID ) }
 	if (!config_include_stack) {
 		yyterminate();
 	} else {
-		fclose(yyin);
 		int prev_toplevel = inc_toplevel;
-		fclose(ub_c_in);
+		fclose(yyin);
 		config_end_include();
 		if(prev_toplevel) return (VAR_FORCE_TOPLEVEL);
 	}
@@ -626,48 +644,48 @@ nsid{COLON}			{ YDVAR(1, VAR_NSID ) }
 
 	/* include-toplevel: directive */
 <INITIAL,val>include-toplevel{COLON} {
-	LEXOUT(("v(%s) ", ub_c_text)); inc_prev = YYSTATE; BEGIN(include_toplevel);
+	LEXOUT(("v(%s) ", yytext)); inc_prev = YYSTATE; BEGIN(include_toplevel);
 }
 <include_toplevel><<EOF>> {
-	ub_c_error("EOF inside include_toplevel directive");
+	yyerror("EOF inside include_toplevel directive");
 	BEGIN(inc_prev);
 }
 <include_toplevel>{SPACE}* { LEXOUT(("ITSP ")); /* ignore */ }
 <include_toplevel>{NEWLINE} { LEXOUT(("NL\n")); cfg_parser->line++; }
 <include_toplevel>\" { LEXOUT(("ITQS ")); BEGIN(include_toplevel_quoted); }
 <include_toplevel>{UNQUOTEDLETTER}* {
-	LEXOUT(("ITunquotedstr(%s) ", ub_c_text));
-	config_start_include_glob(ub_c_text, 1);
+	LEXOUT(("ITunquotedstr(%s) ", yytext));
+	config_start_include_glob(yytext, 1);
 	BEGIN(inc_prev);
 	return (VAR_FORCE_TOPLEVEL);
 }
 <include_toplevel_quoted><<EOF>> {
-	ub_c_error("EOF inside quoted string");
+	yyerror("EOF inside quoted string");
 	BEGIN(inc_prev);
 }
-<include_toplevel_quoted>{DQANY}* { LEXOUT(("ITSTR(%s) ", ub_c_text)); yymore(); }
+<include_toplevel_quoted>{DQANY}* { LEXOUT(("ITSTR(%s) ", yytext)); yymore(); }
 <include_toplevel_quoted>{NEWLINE} {
-	ub_c_error("newline before \" in include name");
+	yyerror("newline before \" in include name");
 	cfg_parser->line++; BEGIN(inc_prev);
 }
 <include_toplevel_quoted>\" {
 	LEXOUT(("ITQE "));
-	ub_c_text[yyleng - 1] = '\0';
-	config_start_include_glob(ub_c_text, 1);
+	yytext[yyleng - 1] = '\0';
+	config_start_include_glob(yytext, 1);
 	BEGIN(inc_prev);
 	return (VAR_FORCE_TOPLEVEL);
 }
 
-<val>{UNQUOTEDLETTER}*	{ LEXOUT(("unquotedstr(%s) ", ub_c_text)); 
+<val>{UNQUOTEDLETTER}*	{ LEXOUT(("unquotedstr(%s) ", yytext)); 
 			if(--num_args == 0) { BEGIN(INITIAL); }
-			ub_c_lval.str = strdup(ub_c_text); return STRING_ARG; }
+			yylval.str = strdup(yytext); return STRING_ARG; }
 
 {UNQUOTEDLETTER_NOCOLON}*	{
-	ub_c_error_msg("unknown keyword '%s'", ub_c_text);
+	ub_c_error_msg("unknown keyword '%s'", yytext);
 	}
 
 <*>.	{
-	ub_c_error_msg("stray '%s'", ub_c_text);
+	ub_c_error_msg("stray '%s'", yytext);
 	}
 
 %%
