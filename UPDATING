@@ -3,6 +3,11 @@ Updating Information for MidnightBSD users.
 20220828:
 	unbound 1.16.2
 
+20220825:
+	OpenSSL 1.1.1q
+
+	re-enable web in wpa suppplicant
+
 20220820:
 	OpenSSL 1.1.1p
 
