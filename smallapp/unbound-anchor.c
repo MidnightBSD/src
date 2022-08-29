@@ -204,7 +204,7 @@ struct ip_list {
 static void
 usage(void)
 {
-	printf("Usage:	local-unbound-anchor [opts]\n");
+	printf("Usage:	unbound-anchor [opts]\n");
 	printf("	Setup or update root anchor. "
 		"Most options have defaults.\n");
 	printf("	Run this program before you start the validator.\n");
@@ -433,8 +433,14 @@ read_builtin_cert(void)
 {
 	const char* builtin_cert = get_builtin_cert();
 	STACK_OF(X509)* sk;
-	BIO *bio = BIO_new_mem_buf(builtin_cert,
-		(int)strlen(builtin_cert));
+	BIO *bio;
+	char* d = strdup(builtin_cert); /* to avoid const warnings in the
+		changed prototype of BIO_new_mem_buf */
+	if(!d) {
+		if(verb) printf("out of memory\n");
+		exit(0);
+	}
+	bio = BIO_new_mem_buf(d, (int)strlen(d));
 	if(!bio) {
 		if(verb) printf("out of memory\n");
 		exit(0);
@@ -445,6 +451,7 @@ read_builtin_cert(void)
 		exit(0);
 	}
 	BIO_free(bio);
+	free(d);
 	return sk;
 }
 
@@ -2037,13 +2044,13 @@ write_builtin_anchor(const char* file)
 	const char* builtin_root_anchor = get_builtin_ds();
 	FILE* out = fopen(file, "w");
 	if(!out) {
-		if(verb) printf("%s: %s\n", file, strerror(errno));
-		if(verb) printf("  could not write builtin anchor\n");
+		printf("could not write builtin anchor, to file %s: %s\n",
+			file, strerror(errno));
 		return;
 	}
 	if(!fwrite(builtin_root_anchor, strlen(builtin_root_anchor), 1, out)) {
-		if(verb) printf("%s: %s\n", file, strerror(errno));
-		if(verb) printf("  could not complete write builtin anchor\n");
+		printf("could not complete write builtin anchor, to file %s: %s\n",
+			file, strerror(errno));
 	}
 	fclose(out);
 }
