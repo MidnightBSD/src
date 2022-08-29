@@ -48,6 +48,12 @@
 #include "util/regional.h"
 #include "util/net_help.h"
 #include "sldns/sbuffer.h"
+#include "services/localzone.h"
+
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
+#include <sys/time.h>
 
 /** return code that means the function ran out of memory. negative so it does
  * not conflict with DNS rcodes. */
@@ -448,6 +454,7 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 	size_t i, j, owner_pos;
 	int r, owner_labs;
 	uint16_t owner_ptr = 0;
+	time_t adjust = 0;
 	struct packed_rrset_data* data = (struct packed_rrset_data*)
 		key->entry.data;
 	
@@ -457,6 +464,13 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 
 	owner_labs = dname_count_labels(key->rk.dname);
 	owner_pos = sldns_buffer_position(pkt);
+
+	/** Determine relative time adjustment for TTL values.
+	 * For an rrset with a fixed TTL, use the rrset's TTL as given. */
+	if((key->rk.flags & PACKED_RRSET_FIXEDTTL) != 0)
+		adjust = 0;
+	else
+		adjust = SERVE_ORIGINAL_TTL ? data->ttl_add : timenow;
 
 	if(do_data) {
 		const sldns_rr_descriptor* c = type_rdata_compressable(key);
@@ -469,10 +483,10 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 				return r;
 			sldns_buffer_write(pkt, &key->rk.type, 2);
 			sldns_buffer_write(pkt, &key->rk.rrset_class, 2);
-			if(data->rr_ttl[j] < timenow)
-				sldns_buffer_write_u32(pkt, 0);
-			else 	sldns_buffer_write_u32(pkt, 
-					data->rr_ttl[j]-timenow);
+			if(data->rr_ttl[j] < adjust)
+				sldns_buffer_write_u32(pkt,
+					SERVE_EXPIRED?SERVE_EXPIRED_REPLY_TTL:0);
+			else	sldns_buffer_write_u32(pkt, data->rr_ttl[j]-adjust);
 			if(c) {
 				if((r=compress_rdata(pkt, data->rr_data[j],
 					data->rr_len[j], region, tree, c))
@@ -506,10 +520,10 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, sldns_buffer* pkt,
 			}
 			sldns_buffer_write_u16(pkt, LDNS_RR_TYPE_RRSIG);
 			sldns_buffer_write(pkt, &key->rk.rrset_class, 2);
-			if(data->rr_ttl[i] < timenow)
-				sldns_buffer_write_u32(pkt, 0);
-			else 	sldns_buffer_write_u32(pkt, 
-					data->rr_ttl[i]-timenow);
+			if(data->rr_ttl[i] < adjust)
+				sldns_buffer_write_u32(pkt,
+					SERVE_EXPIRED?SERVE_EXPIRED_REPLY_TTL:0);
+			else	sldns_buffer_write_u32(pkt, data->rr_ttl[i]-adjust);
 			/* rrsig rdata cannot be compressed, perform 100+ byte
 			 * memcopy. */
 			sldns_buffer_write(pkt, data->rr_data[i],
@@ -534,7 +548,11 @@ insert_section(struct reply_info* rep, size_t num_rrsets, uint16_t* num_rrs,
 {
 	int r;
 	size_t i, setstart;
-	*num_rrs = 0;
+	/* we now allow this function to be called multiple times for the
+	 * same section, incrementally updating num_rrs.  The caller is
+	 * responsible for initializing it (which is the case in the current
+	 * implementation). */
+
 	if(s != LDNS_SECTION_ADDITIONAL) {
 		if(s == LDNS_SECTION_ANSWER && qtype == LDNS_RR_TYPE_ANY)
 			dnssec = 1; /* include all types in ANY answer */
@@ -581,17 +599,20 @@ static int
 insert_query(struct query_info* qinfo, struct compress_tree_node** tree, 
 	sldns_buffer* buffer, struct regional* region)
 {
+	uint8_t* qname = qinfo->local_alias ?
+		qinfo->local_alias->rrset->rk.dname : qinfo->qname;
+	size_t qname_len = qinfo->local_alias ?
+		qinfo->local_alias->rrset->rk.dname_len : qinfo->qname_len;
 	if(sldns_buffer_remaining(buffer) < 
 		qinfo->qname_len+sizeof(uint16_t)*2)
 		return RETVAL_TRUNC; /* buffer too small */
 	/* the query is the first name inserted into the tree */
-	if(!compress_tree_store(qinfo->qname, 
-		dname_count_labels(qinfo->qname), 
+	if(!compress_tree_store(qname, dname_count_labels(qname),
 		sldns_buffer_position(buffer), region, NULL, tree))
 		return RETVAL_OUTMEM;
-	if(sldns_buffer_current(buffer) == qinfo->qname)
-		sldns_buffer_skip(buffer, (ssize_t)qinfo->qname_len);
-	else	sldns_buffer_write(buffer, qinfo->qname, qinfo->qname_len);
+	if(sldns_buffer_current(buffer) == qname)
+		sldns_buffer_skip(buffer, (ssize_t)qname_len);
+	else	sldns_buffer_write(buffer, qname, qname_len);
 	sldns_buffer_write_u16(buffer, qinfo->qtype);
 	sldns_buffer_write_u16(buffer, qinfo->qclass);
 	return RETVAL_OK;
@@ -605,6 +626,9 @@ positive_answer(struct reply_info* rep, uint16_t qtype) {
 
 	for(i=0;i<rep->an_numrrsets; i++) {
 		if(ntohs(rep->rrsets[i]->rk.type) == qtype) {
+			/* for priming queries, type NS, include addresses */
+			if(qtype == LDNS_RR_TYPE_NS)
+				return 0;
 			/* in case it is a wildcard with DNSSEC, there will
 			 * be NSEC/NSEC3 records in the authority section
 			 * that we cannot remove */
@@ -622,15 +646,37 @@ positive_answer(struct reply_info* rep, uint16_t qtype) {
 	return 0;
 }
 
-int 
-reply_info_encode(struct query_info* qinfo, struct reply_info* rep, 
-	uint16_t id, uint16_t flags, sldns_buffer* buffer, time_t timenow, 
-	struct regional* region, uint16_t udpsize, int dnssec)
+static int
+negative_answer(struct reply_info* rep) {
+	size_t i;
+	int ns_seen = 0;
+	if(FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_NXDOMAIN)
+		return 1;
+	if(FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_NOERROR &&
+		rep->an_numrrsets != 0)
+		return 0; /* positive */
+	if(FLAGS_GET_RCODE(rep->flags) != LDNS_RCODE_NOERROR &&
+		FLAGS_GET_RCODE(rep->flags) != LDNS_RCODE_NXDOMAIN)
+		return 0;
+	for(i=rep->an_numrrsets; i<rep->an_numrrsets+rep->ns_numrrsets; i++){
+		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_SOA)
+			return 1;
+		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_NS)
+			ns_seen = 1;
+	}
+	if(ns_seen) return 0; /* could be referral, NS, but no SOA */
+	return 1;
+}
+
+int
+reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
+	uint16_t id, uint16_t flags, sldns_buffer* buffer, time_t timenow,
+	struct regional* region, uint16_t udpsize, int dnssec, int minimise)
 {
 	uint16_t ancount=0, nscount=0, arcount=0;
 	struct compress_tree_node* tree = 0;
 	int r;
-	size_t rr_offset; 
+	size_t rr_offset;
 
 	sldns_buffer_clear(buffer);
 	if(udpsize < sldns_buffer_limit(buffer))
@@ -646,7 +692,7 @@ reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 
 	/* insert query section */
 	if(rep->qdcount) {
-		if((r=insert_query(qinfo, &tree, buffer, region)) != 
+		if((r=insert_query(qinfo, &tree, buffer, region)) !=
 			RETVAL_OK) {
 			if(r == RETVAL_TRUNC) {
 				/* create truncated message */
@@ -660,11 +706,38 @@ reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 	}
 	/* roundrobin offset. using query id for random number.  With ntohs
 	 * for different roundrobins for sequential id client senders. */
-	rr_offset = RRSET_ROUNDROBIN?ntohs(id):0;
+	rr_offset = RRSET_ROUNDROBIN?ntohs(id)+(timenow?timenow:time(NULL)):0;
+
+	/* "prepend" any local alias records in the answer section if this
+	 * response is supposed to be authoritative.  Currently it should
+	 * be a single CNAME record (sanity-checked in worker_handle_request())
+	 * but it can be extended if and when we support more variations of
+	 * aliases. */
+	if(qinfo->local_alias && (flags & BIT_AA)) {
+		struct reply_info arep;
+		time_t timezero = 0; /* to use the 'authoritative' TTL */
+		memset(&arep, 0, sizeof(arep));
+		arep.flags = rep->flags;
+		arep.an_numrrsets = 1;
+		arep.rrset_count = 1;
+		arep.rrsets = &qinfo->local_alias->rrset;
+		if((r=insert_section(&arep, 1, &ancount, buffer, 0,
+			timezero, region, &tree, LDNS_SECTION_ANSWER,
+			qinfo->qtype, dnssec, rr_offset)) != RETVAL_OK) {
+			if(r == RETVAL_TRUNC) {
+				/* create truncated message */
+				sldns_buffer_write_u16_at(buffer, 6, ancount);
+				LDNS_TC_SET(sldns_buffer_begin(buffer));
+				sldns_buffer_flip(buffer);
+				return 1;
+			}
+			return 0;
+		}
+	}
 
 	/* insert answer section */
-	if((r=insert_section(rep, rep->an_numrrsets, &ancount, buffer, 
-		0, timenow, region, &tree, LDNS_SECTION_ANSWER, qinfo->qtype, 
+	if((r=insert_section(rep, rep->an_numrrsets, &ancount, buffer,
+		0, timenow, region, &tree, LDNS_SECTION_ANSWER, qinfo->qtype,
 		dnssec, rr_offset)) != RETVAL_OK) {
 		if(r == RETVAL_TRUNC) {
 			/* create truncated message */
@@ -678,9 +751,9 @@ reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 	sldns_buffer_write_u16_at(buffer, 6, ancount);
 
 	/* if response is positive answer, auth/add sections are not required */
-	if( ! (MINIMAL_RESPONSES && positive_answer(rep, qinfo->qtype)) ) {
+	if( ! (minimise && positive_answer(rep, qinfo->qtype)) ) {
 		/* insert auth section */
-		if((r=insert_section(rep, rep->ns_numrrsets, &nscount, buffer, 
+		if((r=insert_section(rep, rep->ns_numrrsets, &nscount, buffer,
 			rep->an_numrrsets, timenow, region, &tree,
 			LDNS_SECTION_AUTHORITY, qinfo->qtype,
 			dnssec, rr_offset)) != RETVAL_OK) {
@@ -695,20 +768,22 @@ reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 		}
 		sldns_buffer_write_u16_at(buffer, 8, nscount);
 
-		/* insert add section */
-		if((r=insert_section(rep, rep->ar_numrrsets, &arcount, buffer, 
-			rep->an_numrrsets + rep->ns_numrrsets, timenow, region, 
-			&tree, LDNS_SECTION_ADDITIONAL, qinfo->qtype, 
-			dnssec, rr_offset)) != RETVAL_OK) {
-			if(r == RETVAL_TRUNC) {
-				/* no need to set TC bit, this is the additional */
-				sldns_buffer_write_u16_at(buffer, 10, arcount);
-				sldns_buffer_flip(buffer);
-				return 1;
+		if(! (minimise && negative_answer(rep))) {
+			/* insert add section */
+			if((r=insert_section(rep, rep->ar_numrrsets, &arcount, buffer,
+				rep->an_numrrsets + rep->ns_numrrsets, timenow, region,
+				&tree, LDNS_SECTION_ADDITIONAL, qinfo->qtype,
+				dnssec, rr_offset)) != RETVAL_OK) {
+				if(r == RETVAL_TRUNC) {
+					/* no need to set TC bit, this is the additional */
+					sldns_buffer_write_u16_at(buffer, 10, arcount);
+					sldns_buffer_flip(buffer);
+					return 1;
+				}
+				return 0;
 			}
-			return 0;
+			sldns_buffer_write_u16_at(buffer, 10, arcount);
 		}
-		sldns_buffer_write_u16_at(buffer, 10, arcount);
 	}
 	sldns_buffer_flip(buffer);
 	return 1;
@@ -717,18 +792,25 @@ reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 uint16_t
 calc_edns_field_size(struct edns_data* edns)
 {
-	if(!edns || !edns->edns_present) 
+	size_t rdatalen = 0;
+	struct edns_option* opt;
+	if(!edns || !edns->edns_present)
 		return 0;
-	/* domain root '.' + type + class + ttl + rdatalen(=0) */
-	return 1 + 2 + 2 + 4 + 2;
+	for(opt = edns->opt_list; opt; opt = opt->next) {
+		rdatalen += 4 + opt->opt_len;
+	}
+	/* domain root '.' + type + class + ttl + rdatalen */
+	return 1 + 2 + 2 + 4 + 2 + rdatalen;
 }
 
-void
-attach_edns_record(sldns_buffer* pkt, struct edns_data* edns)
+static void
+attach_edns_record_max_msg_sz(sldns_buffer* pkt, struct edns_data* edns,
+	uint16_t max_msg_sz)
 {
 	size_t len;
-	if(!edns || !edns->edns_present)
-		return;
+	size_t rdatapos;
+	struct edns_option* opt;
+	struct edns_option* padding_option = NULL;
 	/* inc additional count */
 	sldns_buffer_write_u16_at(pkt, 10,
 		sldns_buffer_read_u16_at(pkt, 10) + 1);
@@ -742,8 +824,54 @@ attach_edns_record(sldns_buffer* pkt, struct edns_data* edns)
 	sldns_buffer_write_u8(pkt, edns->ext_rcode); /* ttl */
 	sldns_buffer_write_u8(pkt, edns->edns_version);
 	sldns_buffer_write_u16(pkt, edns->bits);
+	rdatapos = sldns_buffer_position(pkt);
 	sldns_buffer_write_u16(pkt, 0); /* rdatalen */
+	/* write rdata */
+	for(opt=edns->opt_list; opt; opt=opt->next) {
+		if (opt->opt_code == LDNS_EDNS_PADDING) {
+			padding_option = opt;
+			continue;
+		}
+		sldns_buffer_write_u16(pkt, opt->opt_code);
+		sldns_buffer_write_u16(pkt, opt->opt_len);
+		if(opt->opt_len != 0)
+			sldns_buffer_write(pkt, opt->opt_data, opt->opt_len);
+	}
+	if (padding_option && edns->padding_block_size ) {
+		size_t pad_pos = sldns_buffer_position(pkt);
+		size_t msg_sz = ((pad_pos + 3) / edns->padding_block_size + 1)
+		                               * edns->padding_block_size;
+		size_t pad_sz;
+		
+		if (msg_sz > max_msg_sz)
+			msg_sz = max_msg_sz;
+
+		/* By use of calc_edns_field_size, calling functions should
+		 * have made sure that there is enough space for at least a
+		 * zero sized padding option.
+		 */
+		log_assert(pad_pos + 4 <= msg_sz);
+
+		pad_sz = msg_sz - pad_pos - 4;
+		sldns_buffer_write_u16(pkt, LDNS_EDNS_PADDING);
+		sldns_buffer_write_u16(pkt, pad_sz);
+		if (pad_sz) {
+			memset(sldns_buffer_current(pkt), 0, pad_sz);
+			sldns_buffer_skip(pkt, pad_sz);
+		}
+	}
+	if(edns->opt_list)
+		sldns_buffer_write_u16_at(pkt, rdatapos, 
+			sldns_buffer_position(pkt)-rdatapos-2);
 	sldns_buffer_flip(pkt);
+}
+
+void
+attach_edns_record(sldns_buffer* pkt, struct edns_data* edns)
+{
+	if(!edns || !edns->edns_present)
+		return;
+	attach_edns_record_max_msg_sz(pkt, edns, edns->udp_size);
 }
 
 int 
@@ -753,7 +881,7 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 	struct edns_data* edns, int dnssec, int secure)
 {
 	uint16_t flags;
-	int attach_edns = 1;
+	unsigned int attach_edns = 0;
 
 	if(!cached || rep->authoritative) {
 		/* original flags, copy RD and CD bits from query. */
@@ -764,24 +892,37 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 	}
 	if(secure && (dnssec || (qflags&BIT_AD)))
 		flags |= BIT_AD;
+	/* restore AA bit if we have a local alias and the response can be
+	 * authoritative.  Also clear AD bit if set as the local data is the
+	 * primary answer. */
+	if(qinf->local_alias &&
+		(FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_NOERROR ||
+		FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_NXDOMAIN)) {
+		flags |= BIT_AA;
+		flags &= ~BIT_AD;
+	}
 	log_assert(flags & BIT_QR); /* QR bit must be on in our replies */
 	if(udpsize < LDNS_HEADER_SIZE)
 		return 0;
+	if(sldns_buffer_capacity(pkt) < udpsize)
+		udpsize = sldns_buffer_capacity(pkt);
 	if(udpsize < LDNS_HEADER_SIZE + calc_edns_field_size(edns)) {
 		/* packet too small to contain edns, omit it. */
 		attach_edns = 0;
 	} else {
 		/* reserve space for edns record */
-		udpsize -= calc_edns_field_size(edns);
+		attach_edns = (unsigned int)calc_edns_field_size(edns);
+		udpsize -= attach_edns;
 	}
 
 	if(!reply_info_encode(qinf, rep, id, flags, pkt, timenow, region,
-		udpsize, dnssec)) {
+		udpsize, dnssec, MINIMAL_RESPONSES)) {
 		log_err("reply encode: out of memory");
 		return 0;
 	}
-	if(attach_edns)
-		attach_edns_record(pkt, edns);
+	if(attach_edns && sldns_buffer_capacity(pkt) >=
+		sldns_buffer_limit(pkt)+attach_edns)
+		attach_edns_record_max_msg_sz(pkt, edns, udpsize+attach_edns);
 	return 1;
 }
 
@@ -789,13 +930,17 @@ void
 qinfo_query_encode(sldns_buffer* pkt, struct query_info* qinfo)
 {
 	uint16_t flags = 0; /* QUERY, NOERROR */
+	const uint8_t* qname = qinfo->local_alias ?
+		qinfo->local_alias->rrset->rk.dname : qinfo->qname;
+	size_t qname_len = qinfo->local_alias ?
+		qinfo->local_alias->rrset->rk.dname_len : qinfo->qname_len;
 	sldns_buffer_clear(pkt);
 	log_assert(sldns_buffer_remaining(pkt) >= 12+255+4/*max query*/);
 	sldns_buffer_skip(pkt, 2); /* id done later */
 	sldns_buffer_write_u16(pkt, flags);
 	sldns_buffer_write_u16(pkt, 1); /* query count */
 	sldns_buffer_write(pkt, "\000\000\000\000\000\000", 6); /* counts */
-	sldns_buffer_write(pkt, qinfo->qname, qinfo->qname_len);
+	sldns_buffer_write(pkt, qname, qname_len);
 	sldns_buffer_write_u16(pkt, qinfo->qtype);
 	sldns_buffer_write_u16(pkt, qinfo->qclass);
 	sldns_buffer_flip(pkt);
@@ -820,9 +965,14 @@ error_encode(sldns_buffer* buf, int r, struct query_info* qinfo,
 	sldns_buffer_write(buf, &flags, sizeof(uint16_t));
 	sldns_buffer_write(buf, &flags, sizeof(uint16_t));
 	if(qinfo) {
-		if(sldns_buffer_current(buf) == qinfo->qname)
-			sldns_buffer_skip(buf, (ssize_t)qinfo->qname_len);
-		else	sldns_buffer_write(buf, qinfo->qname, qinfo->qname_len);
+		const uint8_t* qname = qinfo->local_alias ?
+			qinfo->local_alias->rrset->rk.dname : qinfo->qname;
+		size_t qname_len = qinfo->local_alias ?
+			qinfo->local_alias->rrset->rk.dname_len :
+			qinfo->qname_len;
+		if(sldns_buffer_current(buf) == qname)
+			sldns_buffer_skip(buf, (ssize_t)qname_len);
+		else	sldns_buffer_write(buf, qname, qname_len);
 		sldns_buffer_write_u16(buf, qinfo->qtype);
 		sldns_buffer_write_u16(buf, qinfo->qclass);
 	}

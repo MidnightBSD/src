@@ -54,6 +54,12 @@
 
 #if defined(USE_MINI_EVENT) && !defined(USE_WINSOCK)
 
+#ifdef	HAVE_SYS_SELECT_H
+/* for fd_set on OpenBSD */
+#include <sys/select.h>
+#endif
+#include <sys/time.h>
+
 #ifndef HAVE_EVENT_BASE_FREE
 #define HAVE_EVENT_BASE_FREE
 #endif 
@@ -96,7 +102,7 @@
 struct event_base
 {
 	/** sorted by timeout (absolute), ptr */
-	rbtree_t* times;
+	rbtree_type* times;
 	/** array of 0 - maxfd of ptr to event for it */
 	struct event** fds;
 	/** max fd in use */
@@ -128,7 +134,7 @@ struct event_base
  */
 struct event {
 	/** node in timeout rbtree */
-	rbnode_t node;
+	rbnode_type node;
 	/** is event already added */
 	int added;
 

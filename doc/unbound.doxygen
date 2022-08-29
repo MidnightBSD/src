@@ -612,18 +612,26 @@ RECURSIVE              = YES
 
 EXCLUDE                = ./build \
                          ./compat \
+			 ./contrib \
                          util/configparser.c \
                          util/configparser.h \
                          util/configlexer.c \
                          util/locks.h \
+                         pythonmod/doc \
+                         pythonmod/examples \
                          pythonmod/unboundmodule.py \
                          pythonmod/interface.h \
-                         pythonmod/examples/resgen.py \
-                         pythonmod/examples/resmod.py \
-                         pythonmod/examples/resip.py \
+                         pythonmod/ubmodule-msg.py \
+                         pythonmod/ubmodule-tst.py \
+			 unboundmodule.py \
                          libunbound/python/unbound.py \
                          libunbound/python/libunbound_wrap.c \
-                         ./ldns-src
+                         libunbound/python/doc \
+                         libunbound/python/examples \
+                         ./ldns-src \
+			 README.md \
+			 doc/control_proto_spec.txt \
+			 doc/requirements.txt
 
 # The EXCLUDE_SYMLINKS tag can be used select whether or not files or
 # directories that are symbolic links (a Unix filesystem feature) are excluded
@@ -1135,7 +1143,7 @@ COMPACT_LATEX          = NO
 # by the printer. Possible values are: a4, a4wide, letter, legal and
 # executive. If left blank a4wide will be used.
 
-PAPER_TYPE             = a4wide
+#PAPER_TYPE             = a4wide
 
 # The EXTRA_PACKAGES tag can be to specify one or more names of LaTeX
 # packages that should be included in the LaTeX output.
@@ -1443,7 +1451,7 @@ EXTERNAL_GROUPS        = YES
 # The PERL_PATH should be the absolute path and name of the perl script
 # interpreter (i.e. the result of `which perl').
 
-PERL_PATH              = /usr/bin/perl
+#PERL_PATH              = /usr/bin/perl
 
 #---------------------------------------------------------------------------
 # Configuration options related to the dot tool
@@ -1465,7 +1473,7 @@ CLASS_DIAGRAMS         = YES
 # the mscgen tool resides. If left empty the tool is assumed to be found in the
 # default search path.
 
-MSCGEN_PATH            =
+#MSCGEN_PATH            =
 
 # If set to YES, the inheritance and collaboration graphs will hide
 # inheritance and usage relations if the target is undocumented

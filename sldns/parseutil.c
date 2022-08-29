@@ -165,20 +165,20 @@ sldns_gmtime64_r(int64_t clock, struct tm *result)
 #endif /* SIZEOF_TIME_T <= 4 */
 
 static int64_t
-sldns_serial_arithmitics_time(int32_t time, time_t now)
+sldns_serial_arithmetics_time(int32_t time, time_t now)
 {
-	int32_t offset = time - (int32_t) now;
+	int32_t offset = (int32_t)((uint32_t) time - (uint32_t) now);
 	return (int64_t) now + offset;
 }
 
 struct tm *
-sldns_serial_arithmitics_gmtime_r(int32_t time, time_t now, struct tm *result)
+sldns_serial_arithmetics_gmtime_r(int32_t time, time_t now, struct tm *result)
 {
 #if SIZEOF_TIME_T <= 4
-	int64_t secs_since_epoch = sldns_serial_arithmitics_time(time, now);
+	int64_t secs_since_epoch = sldns_serial_arithmetics_time(time, now);
 	return  sldns_gmtime64_r(secs_since_epoch, result);
 #else
-	time_t  secs_since_epoch = sldns_serial_arithmitics_time(time, now);
+	time_t  secs_since_epoch = sldns_serial_arithmetics_time(time, now);
 	return  gmtime_r(&secs_since_epoch, result);
 #endif
 }
@@ -402,10 +402,12 @@ sldns_b32_ntop_base(const uint8_t* src, size_t src_sz, char* dst, size_t dst_sz,
 
 		/* ........ ........ ....4444 4....... ........ */
 			 c =  src[3]         >> 7 ;
+		/* fallthrough */
 	case 3: dst[4] = b32[(src[2] & 0x0f) << 1 | c];
 
 		/* ........ .......3 3333.... ........ ........ */
 			 c =  src[2]         >> 4 ;
+		/* fallthrough */
 	case 2:	dst[3] = b32[(src[1] & 0x01) << 4 | c];
 
 		/* ........ ..22222. ........ ........ ........ */
@@ -413,6 +415,7 @@ sldns_b32_ntop_base(const uint8_t* src, size_t src_sz, char* dst, size_t dst_sz,
 
 		/* .....111 11...... ........ ........ ........ */
 			 c =  src[1]         >> 6 ;
+		/* fallthrough */
 	case 1:	dst[1] = b32[(src[0] & 0x07) << 2 | c];
 
 		/* 00000... ........ ........ ........ ........ */
@@ -423,9 +426,12 @@ sldns_b32_ntop_base(const uint8_t* src, size_t src_sz, char* dst, size_t dst_sz,
 		switch (src_sz) {
 			case 1: dst[2] = '=';
 				dst[3] = '=';
+				/* fallthrough */
 			case 2: dst[4] = '=';
+				/* fallthrough */
 			case 3: dst[5] = '=';
 				dst[6] = '=';
+				/* fallthrough */
 			case 4: dst[7] = '=';
 		}
 	}
@@ -537,15 +543,18 @@ sldns_b32_pton_base(const char* src, size_t src_sz, uint8_t* dst, size_t dst_sz,
 			/* ........ ........ ........ .55555.. ........ */
 			/* ........ ........ ....4444 4....... ........ */
 			dst[3] = buf[4] << 7 | buf[5] << 2 | buf[6] >> 3;
+			/* fallthrough */
 
 		case 5: /* ........ ........ ....4444 4....... ........ */
 			/* ........ .......3 3333.... ........ ........ */
 			dst[2] = buf[3] << 4 | buf[4] >> 1;
+			/* fallthrough */
 
 		case 4: /* ........ .......3 3333.... ........ ........ */
 			/* ........ ..22222. ........ ........ ........ */
 			/* .....111 11...... ........ ........ ........ */
 			dst[1] = buf[1] << 6 | buf[2] << 1 | buf[3] >> 4;
+			/* fallthrough */
 
 		case 2: /* .....111 11...... ........ ........ ........ */
 			/* 00000... ........ ........ ........ ........ */
@@ -610,13 +619,18 @@ size_t sldns_b64_ntop_calculate_size(size_t srcsize)
  *
  * This routine does not insert spaces or linebreaks after 76 characters.
  */
-int sldns_b64_ntop(uint8_t const *src, size_t srclength,
-	char *target, size_t targsize)
+static int sldns_b64_ntop_base(uint8_t const *src, size_t srclength,
+	char *target, size_t targsize, int base64url, int padding)
 {
-	const char* b64 =
-	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	char* b64;
 	const char pad64 = '=';
 	size_t i = 0, o = 0;
+	if(base64url)
+		b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123"
+			"456789-_";
+	else
+		b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123"
+			"456789+/";
 	if(targsize < sldns_b64_ntop_calculate_size(srclength))
 		return -1;
 	/* whole chunks: xxxxxxyy yyyyzzzz zzwwwwww */
@@ -636,18 +650,26 @@ int sldns_b64_ntop(uint8_t const *src, size_t srclength,
 		target[o] = b64[src[i] >> 2];
 		target[o+1] = b64[ ((src[i]&0x03)<<4) | (src[i+1]>>4) ];
 		target[o+2] = b64[ ((src[i+1]&0x0f)<<2) ];
-		target[o+3] = pad64;
-		i += 2;
-		o += 4;
+		if(padding) {
+			target[o+3] = pad64;
+			/* i += 2; */
+			o += 4;
+		} else {
+			o += 3;
+		}
 		break;
 	case 1:
 		/* one at end, converted into A B = = */
 		target[o] = b64[src[i] >> 2];
 		target[o+1] = b64[ ((src[i]&0x03)<<4) ];
-		target[o+2] = pad64;
-		target[o+3] = pad64;
-		i += 1;
-		o += 4;
+		if(padding) {
+			target[o+2] = pad64;
+			target[o+3] = pad64;
+			/* i += 1; */
+			o += 4;
+		} else {
+			o += 2;
+		}
 		break;
 	case 0:
 	default:
@@ -660,19 +682,36 @@ int sldns_b64_ntop(uint8_t const *src, size_t srclength,
 	return (int)o;
 }
 
+int sldns_b64_ntop(uint8_t const *src, size_t srclength, char *target,
+	size_t targsize)
+{
+	return sldns_b64_ntop_base(src, srclength, target, targsize,
+		0 /* no base64url */, 1 /* padding */);
+}
+
+int sldns_b64url_ntop(uint8_t const *src, size_t srclength, char *target,
+	size_t targsize)
+{
+	return sldns_b64_ntop_base(src, srclength, target, targsize,
+		1 /* base64url */, 0 /* no padding */);
+}
+
 size_t sldns_b64_pton_calculate_size(size_t srcsize)
 {
 	return (((((srcsize + 3) / 4) * 3)) + 1);
 }
 
-int sldns_b64_pton(char const *src, uint8_t *target, size_t targsize)
+/* padding not required if srcsize is set */
+static int sldns_b64_pton_base(char const *src, size_t srcsize, uint8_t *target,
+	size_t targsize, int base64url)
 {
 	const uint8_t pad64 = 64; /* is 64th in the b64 array */
 	const char* s = src;
 	uint8_t in[4];
 	size_t o = 0, incount = 0;
+	int check_padding = (srcsize) ? 0 : 1;
 
-	while(*s) {
+	while(*s && (check_padding || srcsize)) {
 		/* skip any character that is not base64 */
 		/* conceptually we do:
 		const char* b64 =      pad'=' is appended to array
@@ -681,30 +720,43 @@ int sldns_b64_pton(char const *src, uint8_t *target, size_t targsize)
 		and use d-b64;
 		*/
 		char d = *s++;
+		srcsize--;
 		if(d <= 'Z' && d >= 'A')
 			d -= 'A';
 		else if(d <= 'z' && d >= 'a')
 			d = d - 'a' + 26;
 		else if(d <= '9' && d >= '0')
 			d = d - '0' + 52;
-		else if(d == '+')
+		else if(!base64url && d == '+')
 			d = 62;
-		else if(d == '/')
+		else if(base64url && d == '-')
+			d = 62;
+		else if(!base64url && d == '/')
 			d = 63;
-		else if(d == '=')
+		else if(base64url && d == '_')
+			d = 63;
+		else if(d == '=') {
+			if(!check_padding)
+				continue;
 			d = 64;
-		else	continue;
+		} else	continue;
+
 		in[incount++] = (uint8_t)d;
-		if(incount != 4)
+		/* work on block of 4, unless padding is not used and there are
+		 * less than 4 chars left */
+		if(incount != 4 && (check_padding || srcsize))
 			continue;
+		assert(!check_padding || incount==4);
 		/* process whole block of 4 characters into 3 output bytes */
-		if(in[3] == pad64 && in[2] == pad64) { /* A B = = */
+		if((incount == 2 ||
+			(incount == 4 && in[3] == pad64 && in[2] == pad64))) { /* A B = = */
 			if(o+1 > targsize)
 				return -1;
 			target[o] = (in[0]<<2) | ((in[1]&0x30)>>4);
 			o += 1;
 			break; /* we are done */
-		} else if(in[3] == pad64) { /* A B C = */
+		} else if(incount == 3 ||
+			(incount == 4 && in[3] == pad64)) { /* A B C = */
 			if(o+2 > targsize)
 				return -1;
 			target[o] = (in[0]<<2) | ((in[1]&0x30)>>4);
@@ -712,7 +764,7 @@ int sldns_b64_pton(char const *src, uint8_t *target, size_t targsize)
 			o += 2;
 			break; /* we are done */
 		} else {
-			if(o+3 > targsize)
+			if(incount != 4 || o+3 > targsize)
 				return -1;
 			/* write xxxxxxyy yyyyzzzz zzwwwwww */
 			target[o] = (in[0]<<2) | ((in[1]&0x30)>>4);
@@ -723,4 +775,18 @@ int sldns_b64_pton(char const *src, uint8_t *target, size_t targsize)
 		incount = 0;
 	}
 	return (int)o;
+}
+
+int sldns_b64_pton(char const *src, uint8_t *target, size_t targsize)
+{
+	return sldns_b64_pton_base(src, 0, target, targsize, 0);
+}
+
+int sldns_b64url_pton(char const *src, size_t srcsize, uint8_t *target,
+	size_t targsize)
+{
+	if(!srcsize) {
+		return 0;
+	}
+	return sldns_b64_pton_base(src, srcsize, target, targsize, 1);
 }

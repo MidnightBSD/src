@@ -40,6 +40,7 @@
  */
 
 #include "config.h"
+#include "util/data/msgparse.h"
 #include "util/data/packed_rrset.h"
 #include "util/data/dname.h"
 #include "util/storage/lookup3.h"
@@ -57,11 +58,9 @@ ub_packed_rrset_parsedelete(struct ub_packed_rrset_key* pkey,
 {
 	if(!pkey)
 		return;
-	if(pkey->entry.data)
-		free(pkey->entry.data);
+	free(pkey->entry.data);
 	pkey->entry.data = NULL;
-	if(pkey->rk.dname)
-		free(pkey->rk.dname);
+	free(pkey->rk.dname);
 	pkey->rk.dname = NULL;
 	pkey->id = 0;
 	alloc_special_release(alloc, pkey);
@@ -160,14 +159,14 @@ rrsetdata_equal(struct packed_rrset_data* d1, struct packed_rrset_data* d2)
 	return 1;
 }
 
-hashvalue_t 
+hashvalue_type
 rrset_key_hash(struct packed_rrset_key* key)
 {
 	/* type is hashed in host order */
 	uint16_t t = ntohs(key->type);
 	/* Note this MUST be identical to pkt_hash_rrset in msgparse.c */
 	/* this routine does not have a compressed name */
-	hashvalue_t h = 0xab;
+	hashvalue_type h = 0xab;
 	h = dname_query_hash(key->dname, h);
 	h = hashlittle(&t, sizeof(t), h);
 	h = hashlittle(&key->rrset_class, sizeof(uint16_t), h);
@@ -221,6 +220,7 @@ packed_rrset_ttl_add(struct packed_rrset_data* data, time_t add)
 {
 	size_t i;
 	size_t total = data->count + data->rrsig_count;
+	data->ttl_add = add;
 	data->ttl += add;
 	for(i=0; i<total; i++)
 		data->rr_ttl[i] += add;
@@ -255,6 +255,7 @@ sec_status_to_string(enum sec_status s)
 	case sec_status_bogus: 		return "sec_status_bogus";
 	case sec_status_indeterminate: 	return "sec_status_indeterminate";
 	case sec_status_insecure: 	return "sec_status_insecure";
+	case sec_status_secure_sentinel_fail: 	return "sec_status_secure_sentinel_fail";
 	case sec_status_secure: 	return "sec_status_secure";
 	}
 	return "unknown_sec_status_value";
@@ -275,6 +276,7 @@ int packed_rr_to_string(struct ub_packed_rrset_key* rrset, size_t i,
 		entry.data;
 	uint8_t rr[65535];
 	size_t rlen = rrset->rk.dname_len + 2 + 2 + 4 + d->rr_len[i];
+	time_t adjust = 0;
 	log_assert(dest_len > 0 && dest);
 	if(rlen > dest_len) {
 		dest[0] = 0;
@@ -285,8 +287,10 @@ int packed_rr_to_string(struct ub_packed_rrset_key* rrset, size_t i,
 		memmove(rr+rrset->rk.dname_len, &rrset->rk.type, 2);
 	else	sldns_write_uint16(rr+rrset->rk.dname_len, LDNS_RR_TYPE_RRSIG);
 	memmove(rr+rrset->rk.dname_len+2, &rrset->rk.rrset_class, 2);
+	adjust = SERVE_ORIGINAL_TTL ? d->ttl_add : now;
+	if (d->rr_ttl[i] < adjust) adjust = d->rr_ttl[i]; /* Prevent negative TTL overflow */
 	sldns_write_uint32(rr+rrset->rk.dname_len+4,
-		(uint32_t)(d->rr_ttl[i]-now));
+		(uint32_t)(d->rr_ttl[i]-adjust));
 	memmove(rr+rrset->rk.dname_len+8, d->rr_data[i], d->rr_len[i]);
 	if(sldns_wire2str_rr_buf(rr, rlen, dest, dest_len) == -1) {
 		log_info("rrbuf failure %d %s", (int)d->rr_len[i], dest);
@@ -332,6 +336,7 @@ packed_rrset_copy_region(struct ub_packed_rrset_key* key,
 	struct packed_rrset_data* data = (struct packed_rrset_data*)
 		key->entry.data;
 	size_t dsize, i;
+	time_t adjust = 0;
 	if(!ck)
 		return NULL;
 	ck->id = key->id;
@@ -350,14 +355,16 @@ packed_rrset_copy_region(struct ub_packed_rrset_key* key,
 	ck->entry.data = d;
 	packed_rrset_ptr_fixup(d);
 	/* make TTLs relative - once per rrset */
+	adjust = SERVE_ORIGINAL_TTL ? data->ttl_add : now;
 	for(i=0; i<d->count + d->rrsig_count; i++) {
-		if(d->rr_ttl[i] < now)
-			d->rr_ttl[i] = 0;
-		else	d->rr_ttl[i] -= now;
+		if(d->rr_ttl[i] < adjust)
+			d->rr_ttl[i] = SERVE_EXPIRED?SERVE_EXPIRED_REPLY_TTL:0;
+		else	d->rr_ttl[i] -= adjust;
 	}
-	if(d->ttl < now)
-		d->ttl = 0;
-	else	d->ttl -= now;
+	if(d->ttl < adjust)
+		d->ttl = SERVE_EXPIRED?SERVE_EXPIRED_REPLY_TTL:0;
+	else	d->ttl -= adjust;
+	d->ttl_add = 0; /* TTLs have been made relative */
 	return ck;
 }
 
@@ -386,4 +393,20 @@ packed_rrset_copy_alloc(struct ub_packed_rrset_key* key,
 	dk->entry.data = (void*)dd;
 	packed_rrset_ttl_add(dd, now);
 	return dk;
+}
+
+int
+packed_rrset_find_rr(struct packed_rrset_data* d, uint8_t* rdata, size_t len,
+	size_t* index)
+{
+	size_t i;
+	for(i=0; i<d->count; i++) {
+		if(d->rr_len[i] != len)
+			continue;
+		if(memcmp(d->rr_data[i], rdata, len) == 0) {
+			*index = i;
+			return 1;
+		}
+	}
+	return 0;
 }

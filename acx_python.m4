@@ -22,8 +22,7 @@ AC_DEFUN([AC_PYTHON_DEVEL],[
         # Check if you have distutils, else fail
         #
         AC_MSG_CHECKING([for the distutils Python package])
-        ac_distutils_result=`$PYTHON -c "import distutils" 2>&1`
-        if test -z "$ac_distutils_result"; then
+        if ac_distutils_result=`$PYTHON -c "import distutils" 2>&1`; then
                 AC_MSG_RESULT([yes])
         else
                 AC_MSG_RESULT([no])
@@ -54,10 +53,15 @@ $ac_distutils_result])
         AC_MSG_CHECKING([for Python library path])
         if test -z "$PYTHON_LDFLAGS"; then
                 PYTHON_LDFLAGS=`$PYTHON -c "from distutils.sysconfig import *; \
-                        print(get_config_var('BLDLIBRARY'));"`
+                        print('-L'+get_config_var('LIBDIR')+' -L'+get_config_var('LIBDEST')+' '+get_config_var('BLDLIBRARY'));"`
         fi
         AC_MSG_RESULT([$PYTHON_LDFLAGS])
         AC_SUBST([PYTHON_LDFLAGS])
+
+        if test -z "$PYTHON_LIBDIR"; then
+                PYTHON_LIBDIR=`$PYTHON -c "from distutils.sysconfig import *; \
+                        print(get_config_var('LIBDIR'));"`
+        fi
 
         #
         # Check for site packages
@@ -81,11 +85,11 @@ $ac_distutils_result])
 
         LIBS="$LIBS $PYTHON_LDFLAGS"
         CPPFLAGS="$CPPFLAGS $PYTHON_CPPFLAGS"
-        AC_TRY_LINK([
+        AC_LINK_IFELSE([AC_LANG_PROGRAM([[
                 #include <Python.h>
-        ],[
+        ]],[[
                 Py_Initialize();
-        ],[pythonexists=yes],[pythonexists=no])
+        ]])],[pythonexists=yes],[pythonexists=no])
 
         AC_MSG_RESULT([$pythonexists])
 
