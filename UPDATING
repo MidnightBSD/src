@@ -1,6 +1,8 @@
 Updating Information for MidnightBSD users.
 
 20220831:
+	MidnightBSD 2.2.4 RELEASE
+
 	tzdata 2022c
 
 	zlib through 1.2.12 has a heap-based buffer over-read or buffer overflow
