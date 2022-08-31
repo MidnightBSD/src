@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20220831:
+	zlib through 1.2.12 has a heap-based buffer over-read or buffer overflow
+	in inflate in inflate.c via a large gzip header extra field.
+
 20220725:
 	MidnightBSD 2.2.2 RELEASE
 
