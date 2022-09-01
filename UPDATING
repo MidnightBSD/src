@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20220901:
+	MidnightBSD 1.2.11
+
+	zlib through 1.2.12 has a heap-based buffer over-read or buffer overflow
+	in inflate in inflate.c via a large gzip header extra field.
+
 20200927:
 	llvm-symbolizer added when CLANG_EXTRAS are turned on
 
