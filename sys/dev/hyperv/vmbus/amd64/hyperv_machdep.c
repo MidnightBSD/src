@@ -202,7 +202,7 @@ hyperv_tsc_tcinit(void *dummy __unused)
 		break;
 
 	default:
-		/* Unsupport CPU vendors. */
+		/* Unsupported CPU vendors. */
 		return;
 	}
 
