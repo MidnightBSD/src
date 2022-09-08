@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20220908:
+	Bump version to 2.2.5
+
+	tcp: Correctly compute the retransmit length for all 64-bit platforms.
+
+	fetch: accept -S param with >2GB
+
 20220831:
 	MidnightBSD 2.2.4 RELEASE
 
