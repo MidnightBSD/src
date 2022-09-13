@@ -985,7 +985,7 @@ llvm::Optional<ProgramStateRef> MallocChecker::performKernelMalloc(
   llvm::Triple::OSType OS = Ctx.getTargetInfo().getTriple().getOS();
 
   if (!KernelZeroFlagVal.hasValue()) {
-    if (OS == llvm::Triple::FreeBSD)
+    if (OS == llvm::Triple::FreeBSD || OS == llvm::Triple::MidnightBSD)
       KernelZeroFlagVal = 0x0100;
     else if (OS == llvm::Triple::NetBSD)
       KernelZeroFlagVal = 0x0002;

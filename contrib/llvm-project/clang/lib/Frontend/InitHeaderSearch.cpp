@@ -225,6 +225,7 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
     switch (os) {
     case llvm::Triple::CloudABI:
     case llvm::Triple::FreeBSD:
+    case llvm::Triple::MidnightBSD:
     case llvm::Triple::NetBSD:
     case llvm::Triple::OpenBSD:
     case llvm::Triple::NaCl:
