@@ -48,6 +48,11 @@
 #include "util/data/msgparse.h"
 #include "util/data/msgreply.h"
 
+#if 0
+/* XXX: remove me */
+#include "edns.h"
+#endif
+
 struct edns_strings* edns_strings_create(void)
 {
 	struct edns_strings* edns_strings = calloc(1,

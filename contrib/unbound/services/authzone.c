@@ -107,7 +107,7 @@ static void xfr_probe_send_or_end(struct auth_xfer* xfr,
 static int xfr_start_probe(struct auth_xfer* xfr, struct module_env* env,
 	struct auth_master* spec);
 /** delete xfer structure (not its tree entry) */
-void auth_xfer_delete(struct auth_xfer* xfr);
+static void auth_xfer_delete(struct auth_xfer* xfr);
 
 /** create new dns_msg */
 static struct dns_msg*
@@ -2310,7 +2310,7 @@ auth_free_masters(struct auth_master* list)
 /** delete auth xfer structure
  * @param xfr: delete this xfer and its tasks.
  */
-void
+static void
 auth_xfer_delete(struct auth_xfer* xfr)
 {
 	if(!xfr) return;

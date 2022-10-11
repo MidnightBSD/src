@@ -90,7 +90,7 @@ static void ssl_path_err(const char* s, const char *path) ATTR_NORETURN;
 static void
 usage(void)
 {
-	printf("Usage:	unbound-control [options] command\n");
+	printf("Usage:	local-unbound-control [options] command\n");
 	printf("	Remote control utility for unbound server.\n");
 	printf("Options:\n");
 	printf("  -c file	config file, default is %s\n", CONFIGFILE);

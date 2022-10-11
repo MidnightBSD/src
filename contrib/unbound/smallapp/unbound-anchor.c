@@ -204,7 +204,7 @@ struct ip_list {
 static void
 usage(void)
 {
-	printf("Usage:	unbound-anchor [opts]\n");
+	printf("Usage:	local-unbound-anchor [opts]\n");
 	printf("	Setup or update root anchor. "
 		"Most options have defaults.\n");
 	printf("	Run this program before you start the validator.\n");
@@ -433,14 +433,8 @@ read_builtin_cert(void)
 {
 	const char* builtin_cert = get_builtin_cert();
 	STACK_OF(X509)* sk;
-	BIO *bio;
-	char* d = strdup(builtin_cert); /* to avoid const warnings in the
-		changed prototype of BIO_new_mem_buf */
-	if(!d) {
-		if(verb) printf("out of memory\n");
-		exit(0);
-	}
-	bio = BIO_new_mem_buf(d, (int)strlen(d));
+	BIO *bio = BIO_new_mem_buf(builtin_cert,
+		(int)strlen(builtin_cert));
 	if(!bio) {
 		if(verb) printf("out of memory\n");
 		exit(0);
@@ -451,7 +445,6 @@ read_builtin_cert(void)
 		exit(0);
 	}
 	BIO_free(bio);
-	free(d);
 	return sk;
 }
 
