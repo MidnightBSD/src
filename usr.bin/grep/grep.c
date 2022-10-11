@@ -31,6 +31,8 @@
  * SUCH DAMAGE.
  */
 
+#define _WITH_GETLINE
+
 #include <sys/cdefs.h>
 
 #include <sys/stat.h>
