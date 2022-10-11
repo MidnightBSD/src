@@ -379,12 +379,6 @@ hdac_pin_patch(struct hdaa_widget *w)
 			patch = "as=2";
 			break;
 		}
-	} else if (id == HDA_CODEC_ALC235 && subid == ASUS_GL553VE_SUBVENDOR) {
-		switch (nid) {
-		case 33:
-			patch = "as=1 seq=15";
-			break;
-		}
 	} else if (id == HDA_CODEC_ALC269 &&
 	    (subid == LENOVO_X1CRBN_SUBVENDOR ||
 	    subid == LENOVO_T430_SUBVENDOR ||
@@ -462,23 +456,6 @@ hdac_pin_patch(struct hdaa_widget *w)
 			break;
 		case 33:
 			patch = "as=1 seq=15";
-			break;
-		}
-	} else if (id == HDA_CODEC_ALC257 &&
-	    (subid == LENOVO_L5AMD_SUBVENDOR)) {
-		switch (nid) {
-		case 20:
-			patch = "as=1 seq=0";
-			break;
-		case 33:
-			patch = "as=1 seq=15";
-			break;
-		}
-	} else if (id == HDA_CODEC_IDT92HD95B &&
-	    (subid == FRAMEWORK_LAPTOP_SUBVENDOR)) {
-		switch (nid) {
-		case 10:
-			patch_str = "as=1 seq=15 color=Black loc=Left";
 			break;
 		}
 	}
