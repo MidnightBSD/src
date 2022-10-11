@@ -286,8 +286,6 @@ SUBDIR.${MK_SENDMAIL}+=	vacation
 SUBDIR.${MK_TALK}+=	talk
 SUBDIR.${MK_TELNET}+=	telnet
 SUBDIR.${MK_TESTS}+=	tests
-SUBDIR.${MK_TEXTPROC}+=	checknr
-SUBDIR.${MK_TEXTPROC}+=	colcrt
 SUBDIR.${MK_TEXTPROC}+=	ul
 SUBDIR.${MK_TFTP}+=	tftp
 .if ${MK_LLVM_BINUTILS} == "no"
