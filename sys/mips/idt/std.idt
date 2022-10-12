@@ -1,6 +1,0 @@
-# $FreeBSD: stable/11/sys/mips/idt/std.idt 232896 2012-03-12 21:25:32Z jmallett $
-# Standard include file for IDT
-
-files	"../idt/files.idt"
-
-machine		mips mipsel

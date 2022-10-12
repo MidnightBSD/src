@@ -473,11 +473,10 @@ worlds: .PHONY
 #
 .if make(universe) || make(universe_kernels) || make(tinderbox) || \
     make(targets) || make(universe-toolchain)
-TARGETS?=amd64 arm arm64 i386 mips powerpc riscv
+TARGETS?=amd64 arm arm64 i386 powerpc riscv
 _UNIVERSE_TARGETS=	${TARGETS}
 TARGET_ARCHES_arm?=	arm armv6 armv7
 TARGET_ARCHES_arm64?=	aarch64
-TARGET_ARCHES_mips?=	mipsel mips mips64el mips64 mipsn32 mipselhf mipshf mips64elhf mips64hf
 TARGET_ARCHES_powerpc?=	powerpc powerpc64 powerpcspe
 TARGET_ARCHES_riscv?=	riscv64 riscv64sf
 .for target in ${TARGETS}

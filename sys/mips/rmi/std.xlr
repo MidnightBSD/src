@@ -1,5 +1,0 @@
-# $FreeBSD: stable/11/sys/mips/rmi/std.xlr 217636 2011-01-20 12:45:29Z jchandra $
-files	"../rmi/files.xlr"
-
-cpu	CPU_RMI
-option	NOFPU
