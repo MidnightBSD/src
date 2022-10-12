@@ -1,5 +1,3 @@
-$MidnightBSD: src/rescue/README,v 1.2 2006/08/14 11:00:08 laffer1 Exp $
-
 The /rescue build system here has three goals:
 
 1) Produce a reliable standalone set of /rescue tools.
@@ -18,8 +16,7 @@ normally found in /bin and /sbin.
 
 These Makefiles recompile each of the crunchgen components and include
 support for overriding specific library entries.  Such techniques
-should be useful elsewhere.  For example, boot floppies could use this
-to conditionally compile out features to reduce executable size.
+should be useful elsewhere.
 
 3) Produce a toolkit suitable for small distributions.
 
@@ -29,8 +26,9 @@ system.
 
 These tools have one big disadvantage: being statically linked, they
 cannot use some advanced library functions that rely on dynamic
-linking.  In particular, nsswitch, locales, and pam are likely to all
-rely on dynamic linking in the near future.
+linking.  In particular, nsswitch, locales, and pam all
+rely on dynamic linking.
+
 
 To compile:
 
