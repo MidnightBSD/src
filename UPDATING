@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20221012:
+	tzdata 2022d
+
 20220831:
 	zlib through 1.2.12 has a heap-based buffer over-read or buffer overflow
 	in inflate in inflate.c via a large gzip header extra field.
