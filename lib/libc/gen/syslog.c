@@ -61,7 +61,9 @@ static int	LogFile = -1;		/* fd for log */
 static int	status;			/* connection status */
 static int	opened;			/* have done openlog() */
 static int	LogStat = 0;		/* status bits, set by openlog() */
+static pid_t	LogPid = -1;		/* process id to tag the entry with */
 static const char *LogTag = NULL;	/* string to tag the entry with */
+static int	LogTagLength = -1;	/* usable part of LogTag */
 static int	LogFacility = LOG_USER;	/* default facility code */
 static int	LogMask = 0xff;		/* mask of priorities to be logged */
 static pthread_mutex_t	syslog_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -75,9 +77,13 @@ static pthread_mutex_t	syslog_mutex = PTHREAD_MUTEX_INITIALIZER;
 		if (__isthreaded) _pthread_mutex_unlock(&syslog_mutex);	\
 	} while(0)
 
+/* RFC5424 defined value. */
+#define NILVALUE "-"
+
 static void	disconnectlog(void); /* disconnect from syslogd */
 static void	connectlog(void);	/* (re)connect to syslogd */
 static void	openlog_unlocked(const char *, int, int);
+static void	parse_tag(void);	/* parse ident[NNN] if needed */
 
 enum {
 	NOCONN = 0,
@@ -190,25 +196,37 @@ vsyslog1(int pri, const char *fmt, va_list ap)
 		    tm.tm_hour, tm.tm_min, tm.tm_sec, now.tv_usec,
 		    tz_sign, tz_offset / 3600, (tz_offset % 3600) / 60);
 	} else
-		(void)fprintf(fp, "- ");
+		(void)fputs(NILVALUE " ", fp);
 	/* Hostname. */
 	(void)gethostname(hostname, sizeof(hostname));
-	(void)fprintf(fp, "%s ", hostname);
+	(void)fprintf(fp, "%s ",
+	    hostname[0] == '\0' ? NILVALUE : hostname);
 	if (LogStat & LOG_PERROR) {
 		/* Transfer to string buffer */
 		(void)fflush(fp);
 		stdp = tbuf + (sizeof(tbuf) - tbuf_cookie.left);
 	}
+	/* Application name. */
+	if (LogTag == NULL)
+		LogTag = _getprogname();
+	else if (LogTagLength == -1)
+		parse_tag();
+	if (LogTagLength > 0)
+		(void)fprintf(fp, "%.*s ", LogTagLength, LogTag);
+	else
+		(void)fprintf(fp, "%s ", LogTag == NULL ? NILVALUE : LogTag);
 	/*
-	 * Application name, process ID, message ID and structured data.
 	 * Provide the process ID regardless of whether LOG_PID has been
 	 * specified, as it provides valuable information. Many
 	 * applications tend not to use this, even though they should.
 	 */
-	if (LogTag == NULL)
-		LogTag = _getprogname();
-	(void)fprintf(fp, "%s %d - - ",
-	    LogTag == NULL ? "-" : LogTag, getpid());
+	if (LogPid == -1)
+		LogPid = getpid();
+	(void)fprintf(fp, "%d ", (int)LogPid);
+	/* Message ID. */
+	(void)fputs(NILVALUE " ", fp);
+	/* Structured data. */
+	(void)fputs(NILVALUE " ", fp);
 
 	/* Check to see if we can skip expanding the %m */
 	if (strstr(fmt, "%m")) {
@@ -251,6 +269,7 @@ vsyslog1(int pri, const char *fmt, va_list ap)
 		fmt = fmt_cpy;
 	}
 
+	/* Message. */
 	(void)vfprintf(fp, fmt, ap);
 	(void)fclose(fp);
 
@@ -435,9 +454,12 @@ connectlog(void)
 static void
 openlog_unlocked(const char *ident, int logstat, int logfac)
 {
-	if (ident != NULL)
+	if (ident != NULL) {
 		LogTag = ident;
+		LogTagLength = -1;
+	}
 	LogStat = logstat;
+	parse_tag();
 	if (logfac != 0 && (logfac &~ LOG_FACMASK) == 0)
 		LogFacility = logfac;
 
@@ -467,6 +489,7 @@ closelog(void)
 		LogFile = -1;
 	}
 	LogTag = NULL;
+	LogTagLength = -1;
 	status = NOCONN;
 	THREAD_UNLOCK();
 }
@@ -483,4 +506,38 @@ setlogmask(int pmask)
 		LogMask = pmask;
 	THREAD_UNLOCK();
 	return (omask);
+}
+
+/*
+ * Obtain LogPid from LogTag formatted as following: ident[NNN]
+ */
+static void
+parse_tag(void)
+{
+	char *begin, *end, *p;
+	pid_t pid;
+
+	if (LogTag == NULL || (LogStat & LOG_PID) != 0)
+		return;
+	/*
+	 * LogTagLength is -1 if LogTag was not parsed yet.
+	 * Avoid multiple passes over same LogTag.
+	 */
+	LogTagLength = 0;
+
+	/* Check for presence of opening [ and non-empty ident. */
+	if ((begin = strchr(LogTag, '[')) == NULL || begin == LogTag)
+		return;
+	/* Check for presence of closing ] at the very end and non-empty pid. */
+	if ((end = strchr(begin + 1, ']')) == NULL || end[1] != 0 ||
+	    (end - begin) < 2)
+		return;
+
+	/* Check for pid to contain digits only. */
+	pid = (pid_t)strtol(begin + 1, &p, 10);
+	if (p != end)
+		return;
+
+	LogPid = pid;
+	LogTagLength = begin - LogTag;
 }

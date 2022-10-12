@@ -1,2 +1,2 @@
-/* $FreeBSD$ */
+/* $MidnightBSD$ */
 GROUP ( @@SHLIB@@ @@LIBDIR@@/libc_nonshared.a )
