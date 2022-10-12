@@ -18,7 +18,7 @@ LEAPFILE=
 
 TZFILES=	africa antarctica asia australasia etcetera europe \
 		factory northamerica southamerica
-TZFILES+=	backward systemv
+TZFILES+=	backward
 POSIXRULES=	America/New_York
 
 TZFILES:=	${TZFILES:S/^/${CONTRIBDIR}/}
@@ -38,8 +38,7 @@ TZBUILDSUBDIRS=	\
 		Etc \
 		Europe \
 		Indian \
-		Pacific \
-		SystemV
+		Pacific
 TZBUILDSUBDIRS+= US Mexico Chile Canada Brazil
 
 .if !defined(_SKIP_BUILD)
