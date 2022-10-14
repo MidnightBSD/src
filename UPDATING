@@ -1,5 +1,18 @@
 Updating Information for MidnightBSD users.
 
+20221014:
+	Build instructions from 2.2.x to 3.0 
+
+	You may need to disable df in src/rescue/rescue/Makefile
+
+	There are issues with usr.bin/lex on some systems. A fix was
+	included after 2.2.5 for this bug.
+
+	When doing a major upgrade, sometimes it's necessary to disable
+	perl builds in usr.bin/Makefile. 
+
+	Don't try an upgrade from a system older than 2.2.x
+
 20221012:
 	tzdata 2022d
 
