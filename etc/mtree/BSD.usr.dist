@@ -25,6 +25,8 @@
                     ..
                 ..
             ..
+            sqlite3
+            ..
             ucl
             ..
             zstd
