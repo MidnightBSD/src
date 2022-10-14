@@ -1,5 +1,3 @@
-# $FreeBSD$
-#
 # list of users disallowed any ftp access.
 # read by ftpd(8).
 root
@@ -11,7 +9,7 @@ tty
 kmem
 games
 news
-ntpd
+_ntp
 man
 sshd
 smmsp
