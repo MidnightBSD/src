@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# $FreeBSD$
 #
 
 # PROVIDE: cfumass
@@ -21,7 +20,7 @@ reload_cmd="${name}_start"
 
 : ${cfumass_dir:=/var/cfumass}
 : ${cfumass_image:=/var/tmp/cfumass.img}
-: ${cfumass_vendor:="FreeBSD"}
+: ${cfumass_vendor:="MidnightBSD"}
 : ${cfumass_product:="cfumass(4)"}
 
 remove_luns()
