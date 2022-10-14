@@ -123,6 +123,7 @@ CONFS=	DAEMON \
 	ugidfw \
 	${_utx} \
 	var \
+	var_run \
 	watchdogd
 
 .if ${MK_NIS} != "no"
