@@ -45,16 +45,18 @@
         ..
         ipf             mode=0700
         ..
-	midnightbsd-update  mode=0700
-	..
+        midnightbsd-update  mode=0700
+        ..
         mport
             downloads
             ..
             infrastructure
             ..
         ..
-	msearch         uname=nobody
-	..
+        msearch         uname=nobody
+        ..
+        mtree
+        ..
         ports
         ..
         portsnap
