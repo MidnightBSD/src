@@ -7,7 +7,7 @@ pipeline {
         stage('BuildAndTest') {
             matrix {
                 agent {
-                    label "${ARCHITECTURE}"
+                    label "${ARCHITECTURE} && bsd"
                 }
                 
                 when { anyOf {
