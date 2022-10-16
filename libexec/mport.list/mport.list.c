@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010, 2011, 2013, 2014 Lucas Holt
  * Copyright (c) 2008 Chris Reinhardt
  * All rights reserved.

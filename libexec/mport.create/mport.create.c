@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 Lucas Holt
  * Copyright (c) 2007 Chris Reinhardt
  * All rights reserved.
@@ -58,7 +60,7 @@ int main(int argc, char *argv[])
 	// we need this to know if the user customized the "target_os" configuration.
 	// the caveat is that the userland it was built against could be wrong.
 	if (mport_instance_init(mport, NULL) != MPORT_OK) {
-		errx(EXIT_FAILURE, mport_err_string());
+		errx(EXIT_FAILURE, "%s", mport_err_string());
 	}
 
 	while ((ch = getopt(argc, argv, "C:D:E:M:O:P:S:c:d:e:f:i:j:l:m:n:o:p:r:s:t:v:x:")) != -1) {
