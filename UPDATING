@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20221016:
+	mport 2.2.4
+
 20221014:
 	Build instructions from 2.2.x to 3.0 
 
