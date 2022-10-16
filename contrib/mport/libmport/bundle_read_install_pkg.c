@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013-2015, 2021 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
@@ -78,6 +80,8 @@ static int mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMet
 static int load_pkg_msg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg, mportPackageMessage *packageMessage);
 
 static mportPackageMessage * pkg_message_from_ucl(mportInstance *mport, const ucl_object_t *obj, mportPackageMessage *msg);
+
+static int copy_metafile(mportInstance *, mportBundleRead *, mportPackageMeta *, char *);
 
 /**
  * This is a wrapper for all bundle read install operations
@@ -807,14 +811,24 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 }
 
 
-#define COPY_METAFILE(TYPE)    (void)snprintf(from, FILENAME_MAX, "%s/%s/%s-%s/%s", bundle->tmpdir, MPORT_STUB_INFRA_DIR, pkg->name, pkg->version, TYPE); \
-                                if (mport_file_exists(from)) { \
-                                  (void)snprintf(to, FILENAME_MAX, "%s%s/%s-%s/%s", mport->root, MPORT_INST_INFRA_DIR, pkg->name, pkg->version, TYPE); \
-                                  if (mport_mkdir(dirname(to)) != MPORT_OK) \
-                                    RETURN_CURRENT_ERROR; \
-                                  if (mport_copy_file(from, to) != MPORT_OK) \
-                                    RETURN_CURRENT_ERROR; \
-                                }
+static int
+copy_metafile(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg, char *type) 
+{
+	char from[FILENAME_MAX];
+	char to[FILENAME_MAX];
+	char todir[FILENAME_MAX];
+	
+	(void)snprintf(from, FILENAME_MAX, "%s/%s/%s-%s/%s", bundle->tmpdir, MPORT_STUB_INFRA_DIR, pkg->name, pkg->version, type);
+    if (mport_file_exists(from)) {
+		(void)snprintf(todir, FILENAME_MAX, "%s%s/%s-%s", mport->root, MPORT_INST_INFRA_DIR, pkg->name, pkg->version);
+		(void)snprintf(to, FILENAME_MAX, "%s%s/%s-%s/%s", mport->root, MPORT_INST_INFRA_DIR, pkg->name, pkg->version, type);
+        if (mport_mkdir(todir) != MPORT_OK)
+            RETURN_CURRENT_ERROR;
+        if (mport_copy_file(from, to) != MPORT_OK)
+    	    RETURN_CURRENT_ERROR; 
+	}
+	return (MPORT_OK);
+}
 
 static int
 mark_complete(mportInstance *mport, mportPackageMeta *pkg)
@@ -824,19 +838,18 @@ mark_complete(mportInstance *mport, mportPackageMeta *pkg)
 		RETURN_CURRENT_ERROR;
 	}
 
-	return MPORT_OK;
+	return (MPORT_OK);
 }
 
 
 static int
 do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
-	char to[FILENAME_MAX], from[FILENAME_MAX]; /* keep these for COPY_METAFILE */
-
-	COPY_METAFILE(MPORT_MTREE_FILE);
-	COPY_METAFILE(MPORT_INSTALL_FILE);
-	COPY_METAFILE(MPORT_DEINSTALL_FILE);
-	COPY_METAFILE(MPORT_MESSAGE_FILE);
+	
+	copy_metafile(mport, bundle, pkg, MPORT_MTREE_FILE);
+	copy_metafile(mport, bundle, pkg, MPORT_INSTALL_FILE);
+	copy_metafile(mport, bundle, pkg, MPORT_DEINSTALL_FILE);
+	copy_metafile(mport, bundle, pkg, MPORT_MESSAGE_FILE);
 
 	if (run_postexec(mport, pkg) != MPORT_OK)
 		RETURN_CURRENT_ERROR;

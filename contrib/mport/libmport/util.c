@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011, 2013, 2015, 2021 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
@@ -435,6 +437,7 @@ mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd, con
     char *cmnd;
     char *pos;
     char *name;
+    char *lfcpy;
     int ret;
     static int max = 0;
     size_t maxlen = sizeof(max);
@@ -466,14 +469,16 @@ mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd, con
                     max -= l;
                     break;
                 case 'B':
-                    name = dirname(last_file);
+                    lfcpy = malloc(strlen(last_file) * sizeof(char));
+                    name = dirname(lfcpy); /* dirname(3) in MidnightBSD 3.0 and higher modifies the source. */
                     (void) strlcpy(pos, name, max);
                     l = strlen(name);
                     pos += l;
                     max -= l;
+                    free(lfcpy);
                     break;
                 case 'f':
-                    name = basename(last_file);
+                    name = basename((char *)last_file);
                     (void) strlcpy(pos, name, max);
                     l = strlen(name);
                     pos += l;
