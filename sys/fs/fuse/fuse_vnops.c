@@ -455,7 +455,7 @@ fuse_vnop_advlock(struct vop_advlock_args *ap)
 	}
 
 out:
-	VOP_UNLOCK(vp);
+	VOP_UNLOCK(vp, 0);
 	return err;
 }
 
