@@ -28,7 +28,21 @@
 # SUCH DAMAGE.
 #
 #	@(#)newvers.sh	8.1 (Berkeley) 4/20/94
-# $FreeBSD: stable/11/sys/conf/newvers.sh 349884 2019-07-10 13:35:01Z gjb $
+
+# Command line options:
+#
+#     -r               Reproducible build.  Do not embed directory names, user
+#                      names, time stamps or other dynamic information into
+#                      the output file.  This is intended to allow two builds
+#                      done at different times and even by different people on
+#                      different hosts to produce identical output.
+#
+#     -R               Reproducible build if the tree represents an unmodified
+#                      checkout from a version control system.  Metadata is
+#                      included if the tree is modified.
+
+# Note: usr.sbin/amd/include/newvers.sh assumes all variable assignments of
+# upper case variables starting in column 1 are on one line w/o continuation.
 
 TYPE="MidnightBSD"
 REVISION="3.1.0"
