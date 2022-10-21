@@ -1,7 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 4/19/94
-# $FreeBSD$
 
-DB=	freebsd-tips
+DB=	freebsd-tips startrek
 
 BLDS=	${DB:S/$/.dat/}
 FILES=	${DB} ${BLDS}
