@@ -97,28 +97,12 @@ set -e # Everything must succeed
 
 mkdir -p ${CHROOTDIR}/usr/src
 ${SVN_CMD} co ${SVNROOT}/${BRANCHSRC} ${CHROOTDIR}/usr/src
-${SVN_CMD} co ${SVNROOTDOC}/${BRANCHDOC} ${CHROOTDIR}/usr/doc
 ${SVN_CMD} co ${SVNROOTPORTS}/${BRANCHPORTS} ${CHROOTDIR}/usr/mports
 
 ${SETENV} ${NWMAKE} -C ${CHROOTDIR}/usr/src ${WORLD_FLAGS} buildworld
 ${SETENV} ${NWMAKE} -C ${CHROOTDIR}/usr/src installworld distribution DESTDIR=${CHROOTDIR}
 mount -t devfs devfs ${CHROOTDIR}/dev
 trap "umount ${CHROOTDIR}/dev" EXIT # Clean up devfs mount on exit
-
-if [ -d ${CHROOTDIR}/usr/doc ]; then 
-	cp /etc/resolv.conf ${CHROOTDIR}/etc/resolv.conf
-
-	# Install docproj to build release documentation
-	${CHROOT_CMD} /etc/rc.d/ldconfig forcerestart
-	${CHROOT_CMD} /bin/sh -c \
-		'make -C /usr/mports/textproc/docproj \
-			BATCH=yes \
-			WITHOUT_SVN=yes \
-			WITHOUT_JADETEX=yes \
-			WITHOUT_X11=yes \
-			WITHOUT_PYTHON=yes \
-			install'
-fi
 
 ${CHROOT_CMD} ${SETENV} ${CROSSENV} ${WMAKE} buildworld
 ${CHROOT_CMD} ${SETENV} ${CROSSENV} ${KMAKE} buildkernel
