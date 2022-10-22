@@ -23,8 +23,6 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \
-\ $MidnightBSD$
-\ $FreeBSD: stable/10/sys/boot/forth/brand-fbsd.4th 281843 2015-04-22 01:08:40Z dteske $
 
 2 brandX ! 1 brandY ! \ Initialize brand placement defaults
 
