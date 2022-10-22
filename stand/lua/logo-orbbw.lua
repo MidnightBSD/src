@@ -1,7 +1,7 @@
 --
 -- SPDX-License-Identifier: BSD-2-Clause-FreeBSD
 --
--- Copyright (c) 2018 Kyle Evans <kevans@FreeBSD.org>
+-- Copyright (c) 2022 Lucas Holt <luke@midnightbsd.org>
 -- All rights reserved.
 --
 -- Redistribution and use in source and binary forms, with or without
@@ -25,27 +25,26 @@
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
 --
--- $FreeBSD: stable/11/stand/lua/logo-orbbw.lua 344220 2019-02-17 02:39:17Z kevans $
---
 
 local drawer = require("drawer")
 
 local orbbw = {
-"  ```                        `",
-" s` `.....---.......--.```   -/",
-" +o   .--`         /y:`      +.",
-"  yo`:.            :o      `+-",
-"   y/               -/`   -o/",
-"  .-                  ::/sy+:.",
-"  /                     `--  /",
-" `:                          :`",
-" `:                          :`",
-"  /                          /",
-"  .-                        -.",
-"   --                      -.",
-"    `:`                  `:`",
-"      .--             `--.",
-"         .---.....----."
+"       ;00#.      " 
+"     00.   :0'    " 
+"    0 `0     :0   " 
+"   0 #0       .0  " 
+"  0 #0`        +. " 
+"  0 00          0 " 
+" I #00          0 " 
+" 0 000       +  : " 
+" 0 000      #0  : " 
+" # 000'  : #00  + " 
+" .::000  .000#  0 " 
+"  0 0000  000   0 " 
+"  ':`0000000,: 0  " 
+"   0. 0000000 #:  " 
+"    0+  :+:  0:   " 
+"     .00::+00     " 
 }
 
 drawer.addLogo("orbbw", {

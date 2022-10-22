@@ -3,6 +3,7 @@
 --
 -- Copyright (c) 2015 Pedro Souza <pedrosouza@freebsd.org>
 -- Copyright (c) 2018 Kyle Evans <kevans@FreeBSD.org>
+-- Copyright (c) 2022 Lucas Holt <luke@midnightbsd.org>
 -- All rights reserved.
 --
 -- Redistribution and use in source and binary forms, with or without
@@ -26,8 +27,6 @@
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
 --
--- $FreeBSD$
---
 
 local color = require("color")
 local config = require("config")
@@ -36,7 +35,7 @@ local screen = require("screen")
 
 local drawer = {}
 
-local fbsd_brand
+local mbsd_brand
 local none
 
 local menu_name_handlers
@@ -341,14 +340,15 @@ local function drawlogo()
 	draw(x, y, logodef.graphic)
 end
 
-fbsd_brand = {
-"  ______               ____   _____ _____  ",
-" |  ____|             |  _ \\ / ____|  __ \\ ",
-" | |___ _ __ ___  ___ | |_) | (___ | |  | |",
-" |  ___| '__/ _ \\/ _ \\|  _ < \\___ \\| |  | |",
-" | |   | | |  __/  __/| |_) |____) | |__| |",
-" | |   | | |    |    ||     |      |      |",
-" |_|   |_|  \\___|\\___||____/|_____/|_____/ "
+
+mbsd_brand = {
+"                       ____   _____ _____  "
+"                      |  _ \ / ____|  __ \ "
+"                      | |_) | (___ | |  | |"
+"      M i d n i g h t |  _ < \___ \| |  | |"
+"                      | |_) |____) | |__| |"
+"                      |     |      |      |"
+"                      |____/|_____/|_____/ "
 }
 none = {""}
 
@@ -384,8 +384,8 @@ menu_name_handlers = {
 branddefs = {
 	-- Indexed by valid values for loader_brand in loader.conf(5). Valid
 	-- keys are: graphic (table depicting graphic)
-	["fbsd"] = {
-		graphic = fbsd_brand,
+	["mbsd"] = {
+		graphic = mbsd_brand,
 	},
 	["none"] = {
 		graphic = none,
@@ -397,10 +397,10 @@ logodefs = {
 	-- are: requires_color (boolean), graphic (table depicting graphic), and
 	-- shift (table containing x and y).
 	["tribute"] = {
-		graphic = fbsd_brand,
+		graphic = mbsd_brand,
 	},
 	["tributebw"] = {
-		graphic = fbsd_brand,
+		graphic = mbsd_brand,
 	},
 	["none"] = {
 		graphic = none,
@@ -416,7 +416,7 @@ default_shift = {x = 0, y = 0}
 shift = default_shift
 
 -- Module exports
-drawer.default_brand = 'fbsd'
+drawer.default_brand = 'mbsd'
 drawer.default_color_logodef = 'orb'
 drawer.default_bw_logodef = 'orbbw'
 -- For when things go terribly wrong; this def should be present here in the

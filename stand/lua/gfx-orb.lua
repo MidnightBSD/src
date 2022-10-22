@@ -1,7 +1,7 @@
 --
 -- SPDX-License-Identifier: BSD-2-Clause-FreeBSD
 --
--- Copyright (c) 2018 Kyle Evans <kevans@FreeBSD.org>
+-- Copyright (c) 2022 Lucas Holt <luke@midnightbsd.org>
 --
 -- Redistribution and use in source and binary forms, with or without
 -- modification, are permitted provided that the following conditions
@@ -24,27 +24,26 @@
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
 --
--- $FreeBSD$
---
 
 return {
 	logo = {
 		graphic = {
-		    "  \027[31m```                        \027[31;1m`\027[31m",
-		    " s` `.....---...\027[31;1m....--.```   -/\027[31m",
-		    " +o   .--`         \027[31;1m/y:`      +.\027[31m",
-		    "  yo`:.            \027[31;1m:o      `+-\027[31m",
-		    "   y/               \027[31;1m-/`   -o/\027[31m",
-		    "  .-                  \027[31;1m::/sy+:.\027[31m",
-		    "  /                     \027[31;1m`--  /\027[31m",
-		    " `:                          \027[31;1m:`\027[31m",
-		    " `:                          \027[31;1m:`\027[31m",
-		    "  /                          \027[31;1m/\027[31m",
-		    "  .-                        \027[31;1m-.\027[31m",
-		    "   --                      \027[31;1m-.\027[31m",
-		    "    `:`                  \027[31;1m`:`",
-		    "      \027[31;1m.--             `--.",
-		    "         .---.....----.\027[m",
+		    "       ;00#.       ",
+		    "     00.   :0'     ",
+		    "    0 `0     :0    ",
+	  	    "   0 #0       .0   ",
+		    "  0 #0`        +.  ",
+		    "  0 00          0  ",
+		    " I #00          0  ",
+		    " 0 000       +  :  ",
+		    " 0 000      #0  :  ",
+		    " # 000'  : #00  +  ",
+		    " .::000  .000#  0  ",
+		    "  0 0000  000   0  ",
+		    "  ':`0000000,: 0   ",
+		    "   0. 0000000 #:   ",
+		    "    0+  :+:  0:    ",
+		    "     .00::+00      ",
 		},
 		requires_color = true,
 		shift = {x = 2, y = 4},

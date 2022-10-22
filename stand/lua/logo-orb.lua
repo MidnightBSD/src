@@ -1,7 +1,7 @@
 --
 -- SPDX-License-Identifier: BSD-2-Clause-FreeBSD
 --
--- Copyright (c) 2018 Kyle Evans <kevans@FreeBSD.org>
+-- Copyright (c) 2022 Lucas Holt <luke@midnightbsd.org>
 -- All rights reserved.
 --
 -- Redistribution and use in source and binary forms, with or without
@@ -25,27 +25,26 @@
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
 --
--- $FreeBSD: stable/11/stand/lua/logo-orb.lua 344220 2019-02-17 02:39:17Z kevans $
---
 
 local drawer = require("drawer")
 
 local orb_color = {
-"  \027[31m```                        \027[31;1m`\027[31m",
-" s` `.....---...\027[31;1m....--.```   -/\027[31m",
-" +o   .--`         \027[31;1m/y:`      +.\027[31m",
-"  yo`:.            \027[31;1m:o      `+-\027[31m",
-"   y/               \027[31;1m-/`   -o/\027[31m",
-"  .-                  \027[31;1m::/sy+:.\027[31m",
-"  /                     \027[31;1m`--  /\027[31m",
-" `:                          \027[31;1m:`\027[31m",
-" `:                          \027[31;1m:`\027[31m",
-"  /                          \027[31;1m/\027[31m",
-"  .-                        \027[31;1m-.\027[31m",
-"   --                      \027[31;1m-.\027[31m",
-"    `:`                  \027[31;1m`:`",
-"      \027[31;1m.--             `--.",
-"         .---.....----.\027[m"
+"       ;00#.      "
+"     00.   :0'    "
+"    0 `0     :0   "
+"   0 #0       .0  "
+"  0 #0`        +. "
+"  0 00          0 "
+" I #00          0 "
+" 0 000       +  : "
+" 0 000      #0  : "
+" # 000'  : #00  + "
+" .::000  .000#  0 "
+"  0 0000  000   0 "
+"  ':`0000000,: 0  "
+"   0. 0000000 #:  "
+"    0+  :+:  0:   "
+"     .00::+00     "
 }
 
 drawer.addLogo("orb", {
