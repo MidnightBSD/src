@@ -1,5 +1,3 @@
-# $MidnightBSD$
-#
 # Makefile for building releases and release media.
 #
 # User-driven targets:
