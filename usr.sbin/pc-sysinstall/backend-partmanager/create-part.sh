@@ -64,7 +64,6 @@ case $TYPE in
 	ebr|EBR) ;;
 	gpt|GPT) ;;
 	mbr|MBR) ;;
-    vtoc8|VTOC8) ;;
 	*) echo "Error: Unknown gpart type: $TYPE" ; exit 1 ;;
 esac
 
