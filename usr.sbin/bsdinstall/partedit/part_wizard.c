@@ -25,7 +25,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bsdinstall/partedit/part_wizard.c 321166 2017-07-18 18:54:47Z ngie $
  */
 
 #include <sys/param.h>
