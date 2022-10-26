@@ -664,29 +664,6 @@ mk_geli_mbr_zfs_both() {
 # u-boot
 # powerpc
 
-mk_sparc64_nogeli_vtoc8_ufs_ofw() {
-    src=$1
-    img=$2
-    mntpt=$3
-    geli=$4
-    scheme=$5
-    fs=$6
-    bios=$7
-
-    cat > ${src}/etc/fstab <<EOF
-/dev/ada0a	/		ufs	rw	1	1
-EOF
-    makefs -t ffs -B big -s 200m ${img} ${src}
-    md=$(mdconfig -f ${img})
-    # For non-native builds, ensure that geom_part(4) supports VTOC8.
-    kldload geom_part_vtoc8.ko
-    gpart create -s VTOC8 ${md}
-    gpart add -t freebsd-ufs ${md}
-    ${SRCTOP}/tools/boot/install-boot.sh -g ${geli} -s ${scheme} -f ${fs} -b ${bios} -d ${src} ${md}
-    mdconfig -d -u ${md}
-    rm -f ${src}/etc/fstab
-}
-
 qser="-serial telnet::4444,server -nographic"
 
 # https://wiki.freebsd.org/QemuRecipes
@@ -795,9 +772,6 @@ make_one_image()
 # powerpc64
 # qemu-system-ppc64 -drive file=/path/to/disk.img,format=raw
 
-# sparc64
-# qemu-system-sparc64 -drive file=/path/to/disk.img,format=raw
-
 # Misc variables
 SRCTOP=$(make -v SRCTOP)
 cd ${SRCTOP}/stand
@@ -899,14 +873,3 @@ for arch in powerpc powerpc64; do
     done
 done
 
-for arch in sparc64; do
-    for geli in nogeli; do
-	for scheme in vtoc8; do
-	    for fs in ufs; do
-		for bios in ofw; do
-		    make_one_image ${arch} ${geli} ${scheme} ${fs} ${bios}
-		done
-	    done
-	done
-    done
-done
