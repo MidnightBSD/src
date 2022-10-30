@@ -33,7 +33,6 @@
 
 #ident	"@(#)key_call.c	1.25	94/04/24 SMI"
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * key_call.c, Interface to keyserver
@@ -353,7 +352,7 @@ getkeyserv_handle(int vers)
 		return ((CLIENT *) NULL);
 	}
         tpconf = NULL;
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	if (uname(&u) == -1)
 #else
 #if defined(i386)

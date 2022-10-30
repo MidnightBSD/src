@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libkvm/tests/kvm_geterr_test.c 346920 2019-04-29 19:36:46Z ngie $");
 
 #include <sys/param.h>
 #include <errno.h>

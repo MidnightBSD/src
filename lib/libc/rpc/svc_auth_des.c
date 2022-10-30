@@ -69,7 +69,6 @@
 static char sccsid[] = 	"@(#)svcauth_des.c	2.3 89/07/11 4.0 RPCSRC; from 1.15 88/02/08 SMI";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 extern int key_decryptsession_pk(const char *, netobj *, des_block *);
 
@@ -434,7 +433,7 @@ cache_spot(des_block *key, char *name, struct timeval *timestamp)
 }
 
 
-#if (defined(sun) || defined(vax) || defined(__FreeBSD__))
+#if (defined(sun) || defined(vax) || defined(__MidnightBSD__))
 /*
  * Local credential handling stuff.
  * NOTE: bsd unix dependent.
