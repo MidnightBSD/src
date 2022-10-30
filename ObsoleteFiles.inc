@@ -36,6 +36,19 @@
 #   xargs -n1 | sort | uniq -d;
 # done
 
+# 20221030:
+OLD_FILES+=usr/share/games/fortune/fortunes
+OLD_FILES+=usr/share/games/fortune/fortunes.dat
+OLD_FILES+=usr/share/games/fortune/gerrold.limerick
+OLD_FILES+=usr/share/games/fortune/gerrold.limerick.dat
+OLD_FILES+=usr/share/games/fortune/limerick
+OLD_FILES+=usr/share/games/fortune/limerick.dat
+OLD_FILES+=usr/share/games/fortune/murphy
+OLD_FILES+=usr/share/games/fortune/murphy-o
+OLD_FILES+=usr/share/games/fortune/murphy-o.dat
+OLD_FILES+=usr/share/games/fortune/murphy.dat
+OLD_FILES+=usr/share/games/fortune/zippy
+OLD_FILES+=usr/share/games/fortune/zippy.dat
 # 20220602:
 OLD_FILES+=usr/lib/perl5/5.32.0/bigint.pm
 OLD_FILES+=usr/lib/perl5/5.32.0/perlfaq.pm
