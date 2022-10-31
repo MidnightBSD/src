@@ -50,7 +50,7 @@
 #define MPORT_MASTER_VERSION 9
 #define MPORT_BUNDLE_VERSION 5
 #define MPORT_BUNDLE_VERSION_STR "5"
-#define MPORT_VERSION "2.2.4"
+#define MPORT_VERSION "2.2.5"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
@@ -169,6 +169,7 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_INST_DIR 		"/var/db/mport"
 #define MPORT_MASTER_DB_FILE	"/var/db/mport/master.db"
 #define MPORT_INST_INFRA_DIR	"/var/db/mport/infrastructure"
+#define MPORT_INDEX_FILE_SOURCE "index.db.bz2"
 #define MPORT_INDEX_FILE	"/var/db/mport/index.db"
 #define MPORT_INDEX_FILE_BZ2	"/var/db/mport/index.db.bz2"
 #define MPORT_INDEX_FILE_HASH	"/var/db/mport/index.db.bz2.md5"
@@ -201,7 +202,7 @@ int mport_set_errx(int , const char *, ...);
 /* fetch stuff */
 #define MPORT_URL_PATH			MPORT_ARCH "/" MPORT_OSVERSION
 #define MPORT_INDEX_URL_PATH		MPORT_URL_PATH "/index.db.bz2"
-#define MPORT_BOOTSTRAP_INDEX_URL 	"http://index.mport.midnightbsd.org/" MPORT_URL_PATH "/index.db.bz2"
+#define MPORT_BOOTSTRAP_INDEX_URL 	"http://index.mport.midnightbsd.org/"
 
 int mport_fetch_index(mportInstance *);
 int mport_fetch_bootstrap_index(mportInstance *);
@@ -213,6 +214,7 @@ int mport_index_get_mirror_list(mportInstance *, char ***, int *);
 #define MPORT_DAY 3600 * 24
 #define MPORT_MAX_INDEX_AGE MPORT_DAY * 7 /* one week */
 #define MPORT_SETTING_INDEX_LAST_CHECKED "index_last_check"
+#define MPORT_SETTING_REPO_AUTOUPDATE "index_autoupdate"
 
 /* Binaries we use */
 #define MPORT_MTREE_BIN		"/usr/sbin/mtree"

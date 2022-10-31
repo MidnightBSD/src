@@ -720,6 +720,17 @@ mport_version(mportInstance *mport)
     return version;
 }
 
+MPORT_PUBLIC_API char *
+mport_version_short(mportInstance *mport)
+{
+    char *version;
+    char *osrel = mport_get_osrelease(mport);
+    asprintf(&version, "%s\n", MPORT_VERSION);
+    free(osrel);
+
+    return version;
+}
+
 time_t
 mport_get_time(void)
 {
