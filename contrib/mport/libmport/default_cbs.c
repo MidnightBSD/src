@@ -105,7 +105,11 @@ void mport_default_progress_step_cb(int current, int total, const char *msg)
   }
 
   width = win.ws_col;
-  bar_width = width - 10;
+  if (width > 10) {
+    bar_width = width - 10;
+  } else {
+    bar_width = 10;
+  }
 
   if ((bar = (char *)calloc(width, sizeof(char))) == NULL) {
     /* no memory, we're outa here */
