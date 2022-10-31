@@ -53,6 +53,8 @@ typedef struct {
   int flags;
   sqlite3 *db;
   char *root;
+  char *outputPath; /* Download directory */
+  bool noIndex; /* Do not fetch mport index */
   mport_msg_cb msg_cb;
   mport_progress_init_cb progress_init_cb;
   mport_progress_step_cb progress_step_cb;
@@ -61,7 +63,7 @@ typedef struct {
 } mportInstance;
 
 mportInstance * mport_instance_new(void);
-int mport_instance_init(mportInstance *, const char *);
+int mport_instance_init(mportInstance *, const char *, const char *, bool noIndex);
 int mport_instance_free(mportInstance *);
 
 void mport_set_msg_cb(mportInstance *, mport_msg_cb);
@@ -260,8 +262,8 @@ int mport_verify_package(mportInstance *, mportPackageMeta *);
 int mport_version_cmp(const char *, const char *);
 
 /* fetch XXX: This should become private */
-int mport_fetch_bundle(mportInstance *, const char *);
-int mport_download(mportInstance *, const char *, char **);
+int mport_fetch_bundle(mportInstance *, const char *, const char *);
+int mport_download(mportInstance *, const char *, bool, char **);
 
 /* Errors */
 int mport_err_code(void);
@@ -285,6 +287,7 @@ void mport_parselist(char *, char ***);
 int mport_verify_hash(const char *, const char *);
 int mport_file_exists(const char *);
 char * mport_version(mportInstance *);
+char * mport_version_short(mportInstance *);
 char * mport_get_osrelease(mportInstance *);
 
 /* Locks */

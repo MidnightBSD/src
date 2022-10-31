@@ -41,7 +41,7 @@ mport_update(mportInstance *mport, const char *packageName) {
 		return (MPORT_ERR_WARN);
 	}
 
-	int result = mport_download(mport, packageName, &path);
+	int result = mport_download(mport, packageName, false, &path);
 	if (result != MPORT_OK)
 		return result;
 

@@ -77,7 +77,7 @@ main(int argc, char *argv[])
 
 	mport = mport_instance_new();
 
-	if (mport_instance_init(mport, NULL) != MPORT_OK) {
+	if (mport_instance_init(mport, NULL, NULL, false) != MPORT_OK) {
 		warnx("Init failed: %s", mport_err_string());
 		return EXIT_FAILURE;
 	}

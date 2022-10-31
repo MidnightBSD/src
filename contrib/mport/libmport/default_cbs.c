@@ -46,6 +46,10 @@ int mport_default_confirm_cb(const char *msg, const char *yes, const char *no, i
   size_t len;
   char *ans;
   
+  if (getenv("ASSUME_ALWAYS_YES") != NULL) {
+    return (MPORT_OK);
+  }
+
   (void)fprintf(stderr, "%s (Y/N) [%s]: ", msg, def == 1 ? yes : no);
   
   while (1) {
@@ -58,15 +62,15 @@ int mport_default_confirm_cb(const char *msg, const char *yes, const char *no, i
     }  
     
     if (*ans == 'Y' || *ans == 'y') 
-      return MPORT_OK;
+      return (MPORT_OK);
     if (*ans == 'N' || *ans == 'n')
-      return -1;
+      return (-1);
     
     (void)fprintf(stderr, "Please enter yes or no: ");   
   }
   
   /* Not reached */
-  return MPORT_OK;
+  return (MPORT_OK);
 }
 
 

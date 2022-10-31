@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
-	if (mport_instance_init(mport, NULL) != MPORT_OK) {
+	if (mport_instance_init(mport, NULL, NULL, false) != MPORT_OK) {
 		warnx("%s", mport_err_string());
 		exit(1);
 	}

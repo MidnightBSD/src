@@ -92,7 +92,7 @@ mport_install(mportInstance *mport, const char *pkgname, const char *version, co
   }
 
   if (!mport_file_exists(filename)) {
-    if (mport_fetch_bundle(mport, e[e_loc]->bundlefile) != MPORT_OK) {
+    if (mport_fetch_bundle(mport, MPORT_LOCAL_PKG_PATH, e[e_loc]->bundlefile) != MPORT_OK) {
       free(filename);
       filename = NULL;
       mport_index_entry_free_vec(e);
