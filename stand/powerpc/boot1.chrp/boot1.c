@@ -16,7 +16,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/dirent.h>
@@ -412,7 +411,7 @@ main(int ac, char **av)
 		}
 	}
 
-	printf(" \n>> FreeBSD/powerpc Open Firmware boot block\n"
+	printf(" \n>> MidnightBSD/powerpc Open Firmware boot block\n"
 	"   Boot path:   %s\n"
 	"   Boot loader: %s\n", bootpath, path);
 

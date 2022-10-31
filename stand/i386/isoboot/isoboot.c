@@ -289,7 +289,7 @@ main(void)
 
 	for (;;) {
 		if (!OPT_CHECK(RBX_QUIET)) {
-			printf("\nFreeBSD/x86 boot\n"
+			printf("\nMidnightBSD/x86 boot\n"
 			    "Default: %u:%s(%up%u)%s\n"
 			    "boot: ",
 			    dsk.drive & DRV_MASK, dev_nm[dsk.type], dsk.unit,

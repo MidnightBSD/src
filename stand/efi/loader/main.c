@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <stand.h>
 
@@ -867,7 +866,7 @@ read_loader_env(const char *name, char *def_fn, bool once)
 				free(fn);
 				fn = NULL;
 				printf(
-			    "Can't fetch FreeBSD::%s we know is there\n", name);
+			    "Can't fetch MidnightBSD::%s we know is there\n", name);
 			} else {
 				/*
 				 * if tagged as 'once' delete the env variable so we
@@ -885,7 +884,7 @@ read_loader_env(const char *name, char *def_fn, bool once)
 			}
 		} else {
 			printf(
-		    "Can't allocate %d bytes to fetch FreeBSD::%s env var\n",
+		    "Can't allocate %d bytes to fetch MidnightBSD::%s env var\n",
 			    len, name);
 		}
 	}
