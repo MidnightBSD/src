@@ -36,6 +36,15 @@
 #include "mport.h"
 #include "mport_private.h"
 
+#define KNRM  "\x1B[0m"
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define KYEL  "\x1B[33m"
+#define KBLU  "\x1B[34m"
+#define KMAG  "\x1B[35m"
+#define KCYN  "\x1B[36m"
+#define KWHT  "\x1B[37m"
+
 void mport_default_msg_cb(const char *msg) 
 {
   (void)printf("%s\n", msg);
@@ -50,7 +59,11 @@ int mport_default_confirm_cb(const char *msg, const char *yes, const char *no, i
     return (MPORT_OK);
   }
 
-  (void)fprintf(stderr, "%s (Y/N) [%s]: ", msg, def == 1 ? yes : no);
+  if( !strncmp( getenv("TERM"), "xterm", 5 ) && isatty(fileno(stdout)) ) {
+    (void)fprintf(stderr, "%s%s (Y/N) [%s]:%s ", KCYN, msg, def == 1 ? yes : no, KNRM);
+  } else {
+    (void)fprintf(stderr, "%s (Y/N) [%s]: ", msg, def == 1 ? yes : no);
+  }
   
   while (1) {
     /* get answer, if just \n, then default. */
@@ -66,7 +79,11 @@ int mport_default_confirm_cb(const char *msg, const char *yes, const char *no, i
     if (*ans == 'N' || *ans == 'n')
       return (-1);
     
-    (void)fprintf(stderr, "Please enter yes or no: ");   
+    if( !strncmp( getenv("TERM"), "xterm", 5 ) && isatty(fileno(stdout)) ) {
+      (void)fprintf(stderr, "%sPlease enter yes or no:%s ", KRED, KNRM);
+    } else {  
+      (void)fprintf(stderr, "Please enter yes or no: ");   
+    }
   }
   
   /* Not reached */
@@ -98,7 +115,7 @@ void mport_default_progress_step_cb(int current, int total, const char *msg)
   if (current > total)
     current = total;
 
-  if (!isatty(STDIN_FILENO) || (tcgetattr(STDIN_FILENO, &term) < 0) || (ioctl(STDIN_FILENO, TIOCGWINSZ, &win) < 0) || getenv("MAGUS") != NULL) {
+  if (!isatty(fileno(stdout)) || getenv("TERM") == NULL || (tcgetattr(STDIN_FILENO, &term) < 0) || (ioctl(STDIN_FILENO, TIOCGWINSZ, &win) < 0) || getenv("MAGUS") != NULL) {
     /* not a terminal or couldn't get terminal width*/
     (void)printf("%s\n", msg);
     return;
@@ -130,7 +147,11 @@ void mport_default_progress_step_cb(int current, int total, const char *msg)
   
   (void)printf(BACK DEL, width);
 //  (void)printf("%s\n", msg);
-  (void)printf("%s %3i/100%%", bar, (int)(percent * 100));
+  if( !strncmp( getenv("TERM"), "xterm", 5 ) && isatty(fileno(stdout)) ) {
+    (void)printf("%s%s %3i/100%%%s", KCYN, bar, (int)(percent * 100), KNRM);
+  } else {
+    (void)printf("%s %3i/100%%", bar, (int)(percent * 100));
+  }
   (void)fflush(stdout);
   
   free(bar);
