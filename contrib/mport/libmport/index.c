@@ -62,6 +62,13 @@ static void populate_row(sqlite3_stmt *stmt, mportIndexEntry *e);
 MPORT_PUBLIC_API int
 mport_index_load(mportInstance *mport)
 {
+	bool noIndex = mport->noIndex;
+
+	char *autoupdate = mport_setting_get(mport, MPORT_SETTING_REPO_AUTOUPDATE);
+	if (autoupdate != NULL && (strcmp("FALSE", autoupdate) == 0 || strcmp("false", autoupdate) == 0 ||
+			strcmp("NO", autoupdate) == 0 || strcmp("no", autoupdate) == 0)) {
+		noIndex = true;
+	}
 
 	if (mport_file_exists(MPORT_INDEX_FILE)) {
 		if (attach_index_db(mport->db) != MPORT_OK) {
@@ -70,7 +77,7 @@ mport_index_load(mportInstance *mport)
 
 		mport->flags |= MPORT_INST_HAVE_INDEX;
 
-		if (!index_is_recentish()) {
+		if (!index_is_recentish() && !noIndex && access(MPORT_INDEX_FILE, W_OK) == 0) {
 			if (index_last_checked_recentish(mport))
 				return (MPORT_OK);
 

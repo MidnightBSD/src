@@ -44,7 +44,7 @@
 
 static void usage(void);
 
-static void show_version(mportInstance *);
+static void show_version(mportInstance *, int);
 
 static void loadIndex(mportInstance *);
 
@@ -88,10 +88,14 @@ main(int argc, char *argv[]) {
 	char **searchQuery;
 	signed char ch;
 	const char *chroot_path = NULL;
+	const char *outputPath = NULL;
 	int version = 0;
+	int noIndex = 0;
 
 	struct option longopts[] = {
+		    {"no-index", no_argument, NULL, 'U'},
 			{"chroot",  required_argument, NULL, 'c'},
+			{"output",  required_argument, NULL, 'o'},
 			{"version", no_argument,       NULL, 'v'},
 			{NULL,      0,                 NULL, 0},
 	};
@@ -105,11 +109,17 @@ main(int argc, char *argv[]) {
 
 	setlocale(LC_ALL, "");
 
-	while ((ch = getopt_long(argc, argv, "+c:v", longopts, NULL)) != -1) {
+	while ((ch = getopt_long(argc, argv, "+c:o:Uv", longopts, NULL)) != -1) {
 		switch (ch) {
+			case 'U':
+				noIndex++;
+				break;
 			case 'c':
 				chroot_path = optarg;
 				break;
+			case 'o':
+				outputPath = optarg;
+                break;
 			case 'v':
 				version++;
 				break;
@@ -118,6 +128,8 @@ main(int argc, char *argv[]) {
 				break;
 		}
 	}
+	argc -= optind;
+	argv += optind;
 
 	if (chroot_path != NULL) {
 		if (chroot(chroot_path) == -1) {
@@ -127,92 +139,112 @@ main(int argc, char *argv[]) {
 
 	mport = mport_instance_new();
 
-	if (mport_instance_init(mport, NULL) != MPORT_OK) {
+	if (mport_instance_init(mport, NULL, outputPath, noIndex != 0) != MPORT_OK) {
 		errx(1, "%s", mport_err_string());
 	}
 
 	if (version == 1) {
-		show_version(mport);
+		show_version(mport, version);
 		mport_instance_free(mport);
 		exit(EXIT_SUCCESS);
 	}
 
-	if (!strcmp(argv[1], "install")) {
-		if (argc == 2) {
+	char *cmd = argv[0];
+
+	if (!strcmp(cmd, "install")) {
+		if (argc == 1) {
 			mport_instance_free(mport);
 			usage();
 		}
 		loadIndex(mport);
-		for (i = 2; i < argc; i++) {
+		for (i = 1; i < argc; i++) {
 			tempResultCode = install(mport, argv[i]);
 			if (tempResultCode != 0)
 				resultCode = tempResultCode;
 		}
-	} else if (!strcmp(argv[1], "delete")) {
-		if (argc == 2) {
+	} else if (!strcmp(cmd, "delete")) {
+		if (argc == 1) {
 			mport_instance_free(mport);
 			usage();
 		}
-		for (i = 2; i < argc; i++) {
+		for (i = 1; i < argc; i++) {
 			tempResultCode = delete(argv[i]);
 			if (tempResultCode != 0)
 				resultCode = tempResultCode;
 		}
-	} else if (!strcmp(argv[1], "update")) {
-		if (argc == 2) {
+	} else if (!strcmp(cmd, "update")) {
+		if (argc == 1) {
 			mport_instance_free(mport);
 			usage();
 		}
 		loadIndex(mport);
-		for (i = 2; i < argc; i++) {
+		for (i = 1; i < argc; i++) {
 			tempResultCode = mport_update(mport, argv[i]);
 			if (tempResultCode != 0)
 				resultCode = tempResultCode;
 		}
-	} else if (!strcmp(argv[1], "download")) {
+	} else if (!strcmp(cmd, "download")) {
 		loadIndex(mport);
 		char *path;
-		for (i = 2; i < argc; i++) {
-			tempResultCode = mport_download(mport, argv[i], &path);
+
+		int local_argc = argc;
+		char *const *local_argv = argv;
+		int dflag = 0;
+
+		if (local_argc > 1) {
+			int ch2;
+			while ((ch2 = getopt(local_argc, local_argv, "d")) != -1) {
+				switch (ch2) {
+					case 'd':
+						dflag = 1;
+						break;
+				}
+			}
+			local_argc -= optind;
+			local_argv += optind;
+		}
+
+		for (i = 1; i < argc; i++) {
+			tempResultCode = mport_download(mport, argv[i], dflag == 1, &path);
 			if (tempResultCode != 0) {
 				resultCode = tempResultCode;
 			} else if (path != NULL) {
 				free(path);
 			}
 		}
-	} else if (!strcmp(argv[1], "upgrade")) {
+	} else if (!strcmp(cmd, "upgrade")) {
 		loadIndex(mport);
 		resultCode = mport_upgrade(mport);
-	} else if (!strcmp(argv[1], "locks")) {
+	} else if (!strcmp(cmd, "locks")) {
 		asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.list");
 		flag = strdup("-l");
 		resultCode = execl(buf, "mport.list", flag, (char *) 0);
 		free(flag);
 		free(buf);
-	} else if (!strcmp(argv[1], "import")) {
+	} else if (!strcmp(cmd, "import")) {
 		loadIndex(mport);
 		resultCode = mport_import(mport, argv[2]);
-	} else if (!strcmp(argv[1], "export")) {
+	} else if (!strcmp(cmd, "export")) {
 		resultCode = mport_export(mport, argv[2]);
-	} else if (!strcmp(argv[1], "lock")) {
-		if (argc > 2) {
-			lock(mport, argv[2]);
+	} else if (!strcmp(cmd, "lock")) {
+		if (argc > 1) {
+			lock(mport, argv[1]);
 		} else {
 			usage();
 		}
-	} else if (!strcmp(argv[1], "unlock")) {
-		if (argc > 2) {
-			unlock(mport, argv[2]);
+	} else if (!strcmp(cmd, "unlock")) {
+		if (argc > 1) {
+			unlock(mport, argv[1]);
 		} else {
 			usage();
 		}
-	} else if (!strcmp(argv[1], "list")) {
+	} else if (!strcmp(cmd, "list")) {
 		asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.list");
-		if (argc > 2) {
-			if (!strcmp(argv[2], "updates") ||
-			    !strcmp(argv[2], "up")) {
+		if (argc > 1) {
+			if (!strcmp(argv[1], "updates") ||
+			    !strcmp(argv[1], "up")) {
 				flag = strdup("-u");
-			} else if (!strcmp(argv[2], "prime")) {
+			} else if (!strcmp(argv[1], "prime")) {
 				flag = strdup("-p");
 			} else {
 				mport_instance_free(mport);
@@ -224,63 +256,90 @@ main(int argc, char *argv[]) {
 		resultCode = execl(buf, "mport.list", flag, (char *) 0);
 		free(flag);
 		free(buf);
-	} else if (!strcmp(argv[1], "info")) {
+	} else if (!strcmp(cmd, "info")) {
 		loadIndex(mport);
-		resultCode = info(mport, argv[2]);
-	} else if (!strcmp(argv[1], "index")) {
+		resultCode = info(mport, argv[1]);
+	} else if (!strcmp(cmd, "index")) {
 		resultCode = mport_index_get(mport);
 		if (resultCode != MPORT_OK) {
 			fprintf(stderr, "Unable to fetch index: %s\n", mport_err_string());
 		}
-	} else if (!strcmp(argv[1], "search")) {
+	} else if (!strcmp(cmd, "search")) {
 		loadIndex(mport);
 		searchQuery = calloc((size_t) argc - 1, sizeof(char *));
-		for (i = 2; i < argc; i++) {
-			searchQuery[i - 2] = strdup(argv[i]);
+		for (i = 1; i < argc; i++) {
+			searchQuery[i - 1] = strdup(argv[i]);
 		}
 		resultCode = search(mport, searchQuery);
-		for (i = 2; i < argc; i++) {
-			free(searchQuery[i - 2]);
+		for (i = 1; i < argc; i++) {
+			free(searchQuery[i - 1]);
 		}
 		free(searchQuery);
-	} else if (!strcmp(argv[1], "stats")) {
+	} else if (!strcmp(cmd, "stats")) {
 		loadIndex(mport);
 		resultCode = stats(mport);
-	} else if (!strcmp(argv[1], "clean")) {
+	} else if (!strcmp(cmd, "clean")) {
 		loadIndex(mport);
 		resultCode = clean(mport);
-	} else if (!strcmp(argv[1], "config")) {
-		if (argc < 3) {
+	} else if (!strcmp(cmd, "config")) {
+		if (argc < 2) {
 			mport_instance_free(mport);
 			usage();
 		}
 
-		if (!strcmp(argv[2], "get")) {
-			resultCode = configGet(mport, argv[3]);
-		} else if (!strcmp(argv[2], "set")) {
-			resultCode = configSet(mport,
-			                       argv[3], argv[4]);
+		if (!strcmp(argv[1], "get")) {
+			resultCode = configGet(mport, argv[2]);
+		} else if (!strcmp(argv[1], "set")) {
+			resultCode = configSet(mport, argv[2], argv[3]);
 		}
-	} else if (!strcmp(argv[1], "mirror")) {
-		if (!strcmp(argv[2], "list")) {
+	} else if (!strcmp(cmd, "mirror")) {
+		if (!strcmp(argv[1], "list")) {
 			loadIndex(mport);
 			printf("To set a mirror, use the following command:\n");
 			printf("mport set config mirror_region <country>\n\n");
 			resultCode = mport_index_print_mirror_list(mport);
 		}
-	} else if (!strcmp(argv[1], "cpe")) {
+	} else if (!strcmp(cmd, "cpe")) {
 		resultCode = cpeList(mport);
-	} else if (!strcmp(argv[1], "deleteall")) {
+	} else if (!strcmp(cmd, "deleteall")) {
 		resultCode = deleteAll(mport);
-	} else if (!strcmp(argv[1], "autoremove")) {
+	} else if (!strcmp(cmd, "autoremove")) {
 		resultCode = mport_autoremove(mport);
-	} else if (!strcmp(argv[1], "verify")) {
+	} else if (!strcmp(cmd, "verify")) {
 		resultCode = verify(mport);
-	} else if (!strcmp(argv[1], "which")) {
+	} else if (!strcmp(cmd, "version")) {
 		int local_argc = argc;
 		char *const *local_argv = argv;
-		local_argv++;
-		if (local_argc > 2) {
+		if (local_argc > 1) {
+			int ch2, tflag;
+			tflag = 0;
+			while ((ch2 = getopt(local_argc, local_argv, "t")) != -1) {
+				switch (ch2) {
+					case 't':
+						tflag = 1;
+						break;
+				}
+			}
+			local_argc -= optind;
+			local_argv += optind;
+
+			if (tflag) {
+				if (local_argv[0] == NULL) {
+					fprintf(stderr, "Usage: mport version -t <v1> <v2>\n");
+					return -2;
+				}
+				if (local_argv[1] == NULL) {
+					fprintf(stderr, "Usage: mport version -t <v1> <v2>\n");
+					return -2;
+				}
+				resultCode = mport_version_cmp(local_argv[0], local_argv[1]);
+				printf("%c\n", resultCode == 0 ? '=' : resultCode == -1 ? '<' : '>');
+			}
+		}
+	} else if (!strcmp(cmd, "which")) {
+		int local_argc = argc;
+		char *const *local_argv = argv;
+		if (local_argc > 1) {
 			int ch2, qflag, oflag;
 			qflag = oflag = 0;
 			while ((ch2 = getopt(local_argc, local_argv, "qo")) != -1) {
@@ -295,7 +354,6 @@ main(int argc, char *argv[]) {
 			}
 			local_argc -= optind;
 			local_argv += optind;
-
 			which(mport, *local_argv, qflag, oflag);
 		} else {
 			usage();
@@ -311,18 +369,18 @@ main(int argc, char *argv[]) {
 
 void
 usage(void) {
-	show_version(NULL);
+	show_version(NULL, 2);
 
 	fprintf(stderr,
-	        "usage: mport <command> args:\n"
-	        "       mport autoremove  (experimental, use with caution!)\n"
+	        "usage: mport [-c chroot dir] [-U] [-o output] <command> args:\n"
+	        "       mport autoremove\n"
 	        "       mport clean\n"
 	        "       mport config get [setting name]\n"
 	        "       mport config set [setting name] [setting val]\n"
 	        "       mport cpe\n"
 	        "       mport delete [package name]\n"
 	        "       mport deleteall\n"
-	        "       mport download [package name]\n"
+	        "       mport download [-d] [package name]\n"
 	        "       mport export [filename]\n"
 	        "       mport import [filename]\n"
 	        "       mport index\n"
@@ -331,21 +389,26 @@ usage(void) {
 	        "       mport list [updates|prime]\n"
 	        "       mport lock [package name]\n"
 	        "       mport locks\n"
-			"       mport mirror list\n"
+		"       mport mirror list\n"
 	        "       mport search [query ...]\n"
 	        "       mport stats\n"
 	        "       mport unlock [package name]\n"
 	        "       mport update [package name]\n"
 	        "       mport upgrade\n"
 	        "       mport verify\n"
+		"       mport version -t [v1] [v2]\n"
 	        "       mport which [file path]\n"
 	);
 	exit(EXIT_FAILURE);
 }
 
 void
-show_version(mportInstance *mport) {
-	char *version = mport_version(mport);
+show_version(mportInstance *mport, int count) {
+	char *version;
+	if (count == 1)
+		version = mport_version_short(mport);
+	else
+		version = mport_version(mport);
 	fprintf(stderr, "%s", version);
 	if (mport == NULL)
 		fprintf(stderr, "(Host OS version, not configured)\n\n");
@@ -525,6 +588,28 @@ install(mportInstance *mport, const char *packageName) {
 	int choice;
 
 	indexEntry = lookupIndex(mport, packageName);
+	if (*indexEntry == NULL) {
+		int loc = -1;
+		size_t len = strlen(packageName);
+		for (int i = len -1; i >= 0; i--) {
+			if (packageName[i] == '-') {
+				loc = i;
+				break;
+			}
+		}
+
+		if (loc > 0) {
+			char *d = strdup(packageName);
+			char *v = &d[loc+1];
+			d[loc] = '\0'; /* hack off the version number */
+			indexEntry = lookupIndex(mport, d);
+			if (strcmp(v, (*indexEntry)->version) != 0) {
+				errx(4, "Package %s not found in the index.", packageName);	
+			}
+			free(d);
+		}
+	}
+
 	if (indexEntry == NULL || *indexEntry == NULL)
 		errx(4, "Package %s not found in the index.", packageName);
 

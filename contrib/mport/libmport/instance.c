@@ -49,15 +49,23 @@ mport_instance_new(void) {
  * Set up the master database, and related instance infrastructure.
  */
 MPORT_PUBLIC_API int
-mport_instance_init(mportInstance *mport, const char *root) {
+mport_instance_init(mportInstance *mport, const char *root, const char *outputPath, bool noIndex) {
 
 	char dir[FILENAME_MAX];
 	mport->flags = 0;
+
+	mport->noIndex = noIndex;
 
 	if (root != NULL) {
 		mport->root = strdup(root);
 	} else {
 		mport->root = strdup("");
+	}
+
+	if (outputPath == NULL) {
+		mport->outputPath = strdup(MPORT_LOCAL_PKG_PATH);
+	} else {
+		mport->outputPath = strdup(outputPath);
 	}
 
 	(void) snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_INST_DIR);
@@ -212,6 +220,7 @@ mport_instance_free(mportInstance *mport) {
     }
 
     free(mport->root);
+	free(mport->outputPath);
     free(mport);
     return MPORT_OK;
 }

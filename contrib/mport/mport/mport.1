@@ -1,4 +1,4 @@
-.\" Copyright (c) 2010, 2011, 2015, 2021 Lucas Holt
+.\" Copyright (c) 2010, 2011, 2015, 2021, 2022 Lucas Holt
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -23,16 +23,17 @@
 .\" SUCH DAMAGE.
 .\"
 .\"
-.Dd July 3, 2022
+.Dd October 25, 2022
 .Dt MPORT 1
 .Os
 .Sh NAME
 .Nm mport
-.Nd "mport utility"
+.Nd "mport package manager"
 .Sh SYNOPSIS
 .Nm
 .Op Fl v
 .Op Fl c Ao chroot path Ac
+.Op Fl o Ao output path Ac
 .Ao command Ac
 .Pp
 .Nm
@@ -64,6 +65,7 @@
 .Cm deleteall
 .Nm
 .Cm download
+.Op Fl d
 .Op Ar name
 .Nm
 .Cm index
@@ -101,6 +103,10 @@ Display the current version of
 will chroot in the
 .Ao chroot path Ac
 environment.
+.It Fl o Ao output path Ac , Cm --output Ao output path Ac
+.Nm
+will download packages into the 
+.Ao output path Ac
 .Sh COMMANDS
 The following commands are supported by
 .Nm :
@@ -123,19 +129,20 @@ List all currently installed packages
 List currently installed packages with updates available
 .It Cm list prime
 List all packages explicitly installed rather than as a dependency
-.It Cm info
+.It Cm info Ao name Ac
 Print detailed information about a package
-.It Cm delete
+.It Cm delete Ao name Ac
 Delete or uninstall a package
 .It Cm deleteall
 Delete or uninstall all packages on the system.  Useful for major OS upgrades,
 or testing.
-.It Cm download
+.It Cm download Ao name Ac
 Download a package, but do not install it. Useful for later offline installations.
+The d flag will allow it to download dependencies as well.
 .It Cm index
 Force a download of the index to refresh it without waiting for the timeout interval. This
 allows the user to get the latest list of packages.
-.It Cm install
+.It Cm install Ao name Ac
 Fetch and install a package
 .It Cm mirror list
 Lists all available package mirrors.
@@ -144,7 +151,7 @@ Search package names and descriptions.  Supports globbing queries such as
 "*php*".
 .It Cm stats
 List statistics about available and installed packages.
-.It Cm update
+.It Cm update Ao name Ac
 Fetch and update a specific package
 .It Cm upgrade
 Upgrade all currently installed packages with the latest version
@@ -155,14 +162,55 @@ installation.
 The
 .Nm
 command has the following settings that modify it's behavior:
-.It Cm mirror_region
+.Dl mirror_region
 Determines which mirror region to use to fetch packages.  Valid values are currently us, us2, us3, uk, jp
 The current list is always available in the mport index file in /var/db/mport/index.db in the mirrors table
-.It Cm target_os
+.Pp
+.Dl target_os
 Override the OS version used to fetch packages and install them. If undefined, we try /bin/midnightbsd-version first and
 fall back to the running kernel version.
-.It Cm index_last_check
+.Pp
+.Dl index_last_check
 This is the last time the index file was checked for an update.
+.Pp
+.Dl index_autoupdate
+Determines if the index file will be updated automatically. If set to NO or FALSE, it will be skipped unless
+it is missing entirely. A persistent version of the mport -U flag. 
+.Sh EXAMPLES
+Search for a package:
+.Dl $ mport search curl
+.Pp
+Install a package:
+.Dl Installing must specify a unique origin
+.Pp
+.Dl % mport install curl
+.Pp
+List installed packages:
+.Dl $ mport list
+.Pp
+Upgrade all installed packages:
+.Dl % mport upgrade
+.Pp
+Upgrade a single package:
+.Dl % mport update gmake
+.Pp
+List packages needing upgrades:
+.Dl $ mport list updates
+.Pp
+List non-automatic packages:
+.Dl $ mport list prime
+.Pp
+Delete an installed package:
+.Dl % mport delete curl
+.Pp
+Remove unneeded dependencies:
+.Dl % mport autoremove
+.Pp
+Determine which package installed a file:
+.Dl $ mport which /usr/local/bin/curl
+.Pp
+Check installed packages for checksum mismatches:
+.Dl # mport verify
 .Sh HISTORY
 The
 .Nm

@@ -1,7 +1,7 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
- * Copyright (c) 2011 Lucas Holt
+ * Copyright (c) 2011, 2022 Lucas Holt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,12 +48,19 @@ main(int argc, char *argv[]) {
 	bool verbose = false;
 	char *bundleFile = NULL;
 	const char *chroot_path = NULL;
+	const char *directory = NULL;
 
 	if (argc < 2)
 		usage();
 
-	while ((ch = getopt(argc, argv, "c:v")) != -1) {
+	while ((ch = getopt(argc, argv, "c:o:v")) != -1) {
 		switch (ch) {
+			case 'c':
+				chroot_path = optarg;
+				break;
+			case 'o':
+				directory = optarg;
+				break;
 			case 'v':
 				verbose = true;
 				break;
@@ -75,7 +82,7 @@ main(int argc, char *argv[]) {
 
 	mport = mport_instance_new();
 
-	if (mport_instance_init(mport, NULL) != MPORT_OK) {
+	if (mport_instance_init(mport, NULL, directory, false) != MPORT_OK) {
 		warnx("%s", mport_err_string());
 		mport_instance_free(mport);
 		exit(EXIT_FAILURE);
@@ -99,7 +106,7 @@ main(int argc, char *argv[]) {
 
 		if (verbose)
 			printf("Fetching %s\n", bundleFile);
-		if (mport_fetch_bundle(mport, bundleFile) != MPORT_OK) {
+		if (mport_fetch_bundle(mport, directory == NULL ? MPORT_LOCAL_PKG_PATH: directory, bundleFile) != MPORT_OK) {
 			fprintf(stderr, "%s\n", mport_err_string());
 			exit(mport_err_code());
 		}
