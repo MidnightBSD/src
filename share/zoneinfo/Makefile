@@ -46,12 +46,12 @@ all: zoneinfo
 .endif
 META_TARGETS+=	zoneinfo install-zoneinfo
 
-zoneinfo: yearistype ${TDATA}
+zoneinfo: ${TDATA}
 	mkdir -p ${TZBUILDDIR}
 	cd ${TZBUILDDIR}; mkdir -p ${TZBUILDSUBDIRS}
 	umask 022; cd ${.CURDIR}; \
 	zic -D -d ${TZBUILDDIR} -p ${POSIXRULES} -m ${NOBINMODE} \
-	    ${LEAPFILE} -y ${.OBJDIR}/yearistype ${TZFILES}
+	    ${LEAPFILE} ${TZFILES}
 
 #
 # Sort TZS to ensure they are the same every build. find -s might
