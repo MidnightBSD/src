@@ -1,6 +1,5 @@
 .include <src.opts.mk>
 
-CLEANFILES+=	yearistype
 CLEANDIRS+=	builddir
 CONTRIBDIR=	${SRCTOP}/contrib/tzdata/
 .PATH:		${CONTRIBDIR}
