@@ -19,7 +19,7 @@ along with GCC; see the file COPYING.  If not, write to the Free
 Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA
 02110-1301, USA.  */
 
-/* $FreeBSD: stable/11/contrib/gcc/c-decl.c 300822 2016-05-27 03:40:52Z cem $ */
+/* $FreeBSD$ */
 /* Merged C99 inline changes from gcc trunk 122565 2007-03-05 */
 /* Fixed problems with compiling inline-25.c and inline-26.c */
 /* XXX still fails inline-29.c, inline-31.c, and inline-32.c */

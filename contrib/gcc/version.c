@@ -1,4 +1,4 @@
-/* $FreeBSD: src/contrib/gcc/version.c,v 1.16 2007/08/14 03:04:42 kan Exp $ */
+/* $FreeBSD$ */
 #include "version.h"
 
 /* This is the trailing component of the string reported as the
@@ -9,7 +9,7 @@
    in parentheses.  You may also wish to include a number indicating
    the revision of your modified compiler.  */
 
-#define VERSUFFIX " [MidnightBSD]"
+#define VERSUFFIX " [FreeBSD]"
 
 /* This is the location of the online document giving instructions for
    reporting bugs.  If you distribute a modified version of GCC,
@@ -18,7 +18,7 @@
    forward us bugs reported to you, if you determine that they are
    not bugs in your modifications.)  */
 
-const char bug_report_url[] = "<URL:http://gcc.gnu.org/bugs.html>";
+const char bug_report_url[] = "<URL:http://www.freebsd.org/support.html>";
 
 /* The complete version string, assembled from several pieces.
    BASEVER, DATESTAMP, and DEVPHASE are defined by the Makefile.  */
