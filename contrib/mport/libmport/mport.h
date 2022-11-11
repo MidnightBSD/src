@@ -130,6 +130,12 @@ enum _Action{
 };
 typedef enum _Action mportAction;
 
+enum _Type{
+    MPORT_TYPE_APP, 
+    MPORT_TYPE_SYSTEM
+};
+typedef enum _Type mportType;
+
 /* Package Meta-data structure */
 typedef struct {
     char *name;
@@ -151,6 +157,7 @@ typedef struct {
     mportAutomatic automatic;
 	  time_t install_date;
     mportAction action; // not populated from package table
+    mportType type;
 } __attribute__ ((aligned (16)))  mportPackageMeta;
 
 int mport_asset_get_assetlist(mportInstance *, mportPackageMeta *, mportAssetList **);
@@ -173,6 +180,7 @@ typedef struct {
   char *bundlefile;
   char *license;
   char *hash;
+  mportType type;
 } mportIndexEntry;
 
 int mport_index_load(mportInstance *);

@@ -481,7 +481,7 @@ mport_index_search(mportInstance *mport, mportIndexEntry ***entry_vec, const cha
 	}
 
 	if (mport_db_prepare(db, &stmt,
-	                     "SELECT pkg, version, comment, bundlefile, license, hash FROM idx.packages WHERE %s", where) !=
+	                     "SELECT pkg, version, comment, bundlefile, license, hash, type FROM idx.packages WHERE %s", where) !=
 	    MPORT_OK) {
 		sqlite3_free(where);
 		sqlite3_finalize(stmt);
@@ -590,6 +590,10 @@ populate_row(sqlite3_stmt *stmt, mportIndexEntry *e)
 	e->bundlefile = strdup((const char *) sqlite3_column_text(stmt, 3));
 	e->license = strdup((const char *) sqlite3_column_text(stmt, 4));
 	e->hash = strdup((const char *) sqlite3_column_text(stmt, 5));
+
+	if (sqlite3_column_type(stmt, 6) == SQLITE_INTEGER) {
+        e->type = sqlite3_column_int(stmt, 6);
+	}
 }
 
 
