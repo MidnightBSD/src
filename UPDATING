@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20221111:
+	mport bug fixes for 3.0 packages
+
 20221104:
 	MidnightBSD 3.0 stable branch created. Continuing development on 3.1
 
