@@ -797,7 +797,7 @@ dhcpack(struct packet *packet)
             ACTION_SUPERSEDE)
 		ip->client->new->expiry = getULong(
 		    ip->client->config->defaults[DHO_DHCP_LEASE_TIME].data);
-        else if (ip->client->new->options[DHO_DHCP_LEASE_TIME].data)
+        else if (ip->client->new->options[DHO_DHCP_LEASE_TIME].len >= 4)
 		ip->client->new->expiry = getULong(
 		    ip->client->new->options[DHO_DHCP_LEASE_TIME].data);
 	else
@@ -820,7 +820,7 @@ dhcpack(struct packet *packet)
             ACTION_SUPERSEDE)
 		ip->client->new->renewal = getULong(
 		    ip->client->config->defaults[DHO_DHCP_RENEWAL_TIME].data);
-        else if (ip->client->new->options[DHO_DHCP_RENEWAL_TIME].len)
+        else if (ip->client->new->options[DHO_DHCP_RENEWAL_TIME].len >= 4)
 		ip->client->new->renewal = getULong(
 		    ip->client->new->options[DHO_DHCP_RENEWAL_TIME].data);
 	else
@@ -834,7 +834,7 @@ dhcpack(struct packet *packet)
             ACTION_SUPERSEDE)
 		ip->client->new->rebind = getULong(
 		    ip->client->config->defaults[DHO_DHCP_REBINDING_TIME].data);
-        else if (ip->client->new->options[DHO_DHCP_REBINDING_TIME].len)
+        else if (ip->client->new->options[DHO_DHCP_REBINDING_TIME].len >= 4)
 		ip->client->new->rebind = getULong(
 		    ip->client->new->options[DHO_DHCP_REBINDING_TIME].data);
 	else
