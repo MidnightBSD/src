@@ -179,6 +179,8 @@ int main(int argc, char *argv[])
 		usage();
 	}
 
+	pack->type = MPORT_TYPE_APP; /* Todo: This should be configurable */
+
 	if (mport_create_primative(mport, assetlist, pack, extra) != MPORT_OK) {
 		warnx("%s", mport_err_string());
 		exit(EXIT_FAILURE);
