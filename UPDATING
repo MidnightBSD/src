@@ -1,5 +1,17 @@
 Updating Information for MidnightBSD users.
 
+20221120:
+	Multiple security vulnerabilities have been discovered in the Heimdal
+	implementation of the Kerberos 5 network authentication protocols and KDC.
+
+	CVE-2022-42898 PAC parse integer overflows
+	CVE-2022-3437 Overflows and non-constant time leaks in DES{,3} and arcfour
+	CVE-2021-44758 NULL dereference DoS in SPNEGO acceptors
+	CVE-2022-44640 Heimdal KDC: invalid free in ASN.1 codec
+	CVE-2019-14870 Validate client attributes in protocol-transition
+	CVE-2019-14870 Apply forwardable policy in protocol-transition
+	CVE-2019-14870 Always lookup impersonate client in DB
+
 20221111:
 	mport bug fixes for 3.0 packages
 
