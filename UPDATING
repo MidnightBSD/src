@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20221121:
+	sqlite3 3.40.0
+
 20221120:
 	Multiple security vulnerabilities have been discovered in the Heimdal
 	implementation of the Kerberos 5 network authentication protocols and KDC.
