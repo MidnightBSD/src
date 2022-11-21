@@ -1,5 +1,0 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/binutils/libopcodes/Makefile.ia64 84954 2001-10-15 02:13:26Z obrien $
-
-SRCS+=	ia64-dis.c ia64-opc.c
-CFLAGS+= -DARCH_ia64
