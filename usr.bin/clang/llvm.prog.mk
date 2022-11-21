@@ -1,5 +1,3 @@
-# $FreeBSD$
-
 .include "${SRCTOP}/lib/clang/llvm.pre.mk"
 
 CFLAGS+=	-I${OBJTOP}/lib/clang/libllvm
@@ -22,7 +20,7 @@ LDADD+=		${OBJTOP}/lib/clang/lib${lib}/lib${lib}.a
 
 PACKAGE=	clang
 
-.if ${.MAKE.OS} == "FreeBSD" || !defined(BOOTSTRAPPING)
+.if ${.MAKE.OS} == "FreeBSD" || ${.MAKE.OS} == "MidnightBSD" || !defined(BOOTSTRAPPING)
 LIBADD+=	execinfo
 LIBADD+=	ncursesw
 .endif

@@ -1,5 +1,3 @@
-# $FreeBSD$
-
 .include <src.opts.mk>
 
 LLVM_BASE=	${SRCTOP}/contrib/llvm-project
@@ -104,7 +102,7 @@ DEPENDFILES+=	${TGHDRS:C/$/.d/}
 DPSRCS+=	${TGHDRS}
 CLEANFILES+=	${TGHDRS} ${TGHDRS:C/$/.d/}
 
-.if ${.MAKE.OS} == "FreeBSD" || !defined(BOOTSTRAPPING)
+.if ${.MAKE.OS} == "MidnightBSD" || ${.MAKE.OS} == "FreeBSD" || !defined(BOOTSTRAPPING)
 LIBADD+=	execinfo
 LIBADD+=	ncursesw
 .endif
