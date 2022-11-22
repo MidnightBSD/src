@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20221122:
+	sqlite3 3.40.0
+
 20221117:
 	mport bug fixes.
 
