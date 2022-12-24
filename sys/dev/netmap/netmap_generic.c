@@ -481,11 +481,7 @@ generic_mbuf_destructor(struct mbuf *m)
 	 * txsync. */
 	netmap_generic_irq(na, r, NULL);
 #ifdef __MidnightBSD__
-#if __FreeBSD_version <= 1200050
-	void_mbuf_dtor(m, NULL, NULL);
-#else  /* __FreeBSD_version >= 1200051 */
 	void_mbuf_dtor(m);
-#endif /* __FreeBSD_version >= 1200051 */
 #endif
 }
 
