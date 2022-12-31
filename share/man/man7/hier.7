@@ -26,9 +26,8 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)hier.7	8.1 (Berkeley) 6/5/93
-.\" $FreeBSD$
 .\"
-.Dd June 28, 2022
+.Dd June 30, 2022
 .Dt HIER 7
 .Os
 .Sh NAME
@@ -222,7 +221,7 @@ SCSI device on top of CAM
 .El
 .It Pa dev/
 C include files for programming various
-.Fx
+.Mx
 devices
 .Bl -tag -width "kerberos5/" -compact
 .It Pa ic/
@@ -358,13 +357,8 @@ shared and archive
 libraries
 .Pp
 .Bl -tag -width Fl -compact
-.It Pa aout/
-a.out archive libraries
 .It Pa compat/
 shared libraries for compatibility
-.Bl -tag -width Fl -compact
-.It Pa aout/
-a.out backward compatibility libraries
 .El
 .It Pa debug/
 standalone debug data for the kernel and base system libraries and binaries
@@ -434,14 +428,14 @@ and
 .Pa /etc Ns Pc .
 .It Pa obj/
 architecture-specific target tree produced by building
-.Fx
+.Mx
 from source;
 see
 .Xr build 7
 .It Pa ports/
 .Xr ports 7 ,
 the
-.Fx
+.Mx
 ports collection.
 .It Pa sbin/
 system daemons & system utilities (executed by users)
@@ -459,7 +453,7 @@ see
 .Xr look 1
 .Bl -tag -width Fl -compact
 .It Pa freebsd
-.Fx Ns -specific
+.Mx Ns -specific
 terms, proper names, and jargon
 .It Pa web2
 words from Webster's 2nd International
@@ -480,7 +474,7 @@ implementation notes for IPv6
 .It Pa es/
 Spanish translations of documents in /usr/share/doc
 .It Pa handbook/
-.Fx
+.Mx
 Handbook
 .It Pa ja/
 Japanese translations of documents in /usr/share/doc
@@ -495,7 +489,7 @@ HTML documents pertaining to the Network Time Protocol
 .It Pa ru/
 Russian translations of documents in /usr/share/doc
 .It Pa tutorials/
-.Fx
+.Mx
 tutorials
 .It Pa zh/
 Chinese translations of documents in /usr/share/doc
@@ -643,7 +637,7 @@ source code for files in
 .Pa /usr/libexec
 .It Pa release/
 files required to produce a
-.Fx
+.Mx
 release
 .It Pa rescue/
 source code for files in
@@ -713,8 +707,6 @@ RISC-V architecture support
 .Xr audit 4
 and
 .Xr mac 4
-.It Pa sparc64/
-SPARC64 architecture support
 .It Pa sys/
 kernel headers
 .It Pa ufs/
@@ -729,7 +721,7 @@ source code for files in
 .Pa /usr/tests
 .It Pa tools/
 tools used for maintenance and testing of
-.Fx
+.Mx
 .It Pa usr.bin/
 source code for files in
 .Pa /usr/bin
@@ -740,7 +732,7 @@ source code for files in
 .Pp
 .It Pa tests/
 The
-.Fx
+.Mx
 test suite.
 See
 .Xr tests 7
@@ -894,7 +886,7 @@ the NIS maps
 .El
 .Sh NOTES
 This manual page documents the default
-.Fx
+.Mx
 file system layout, but
 the actual hierarchy on a given system is defined at the system
 administrator's discretion.
