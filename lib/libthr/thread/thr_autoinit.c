@@ -41,7 +41,7 @@ __FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_autoinit.c 331722 2018-03-29
 #include "thr_private.h"
 
 /*
- * This module uses GCC extentions to initialize the
+ * This module uses GCC extensions to initialize the
  * threads package at program start-up time.
  */
 
