@@ -24,8 +24,6 @@ if [ ! "$_SYSRC_SUBR" ]; then _SYSRC_SUBR=1
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
-#
 ############################################################ INCLUDES
 
 BSDCFG_SHARE="/usr/share/bsdconfig"
@@ -560,7 +558,7 @@ f_sysrc_set()
 	#
 	if [ "$not_found" ]; then
 		# Add a newline if missing before appending to the file
-		awk 'BEGIN { wc = 0 } NR == 1 {
+		[ ! -e "$file" ] || awk 'BEGIN { wc = 0 } NR == 1 {	
 			(cmd = "wc -l " FILENAME) | getline
 			close(cmd)
 			wc = $1
