@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users.
 
+20230208:
+	tzdata 2022g
+
+	Fix for Intel 82599 ixgbe device which reported errors on the interface
+	incorrectly.
+
+	Fix for GELI silently omits the keyfile if read from stdin
+
 20221121:
 	sqlite3 3.40.0
 
