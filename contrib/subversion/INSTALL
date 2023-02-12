@@ -3,7 +3,7 @@
                           A Quick Guide
                ======================================
 
-$LastChangedDate: 2020-12-18 04:00:24 +0000 (Fri, 18 Dec 2020) $
+$LastChangedDate: 2022-03-31 13:42:40 +0000 (Thu, 31 Mar 2022) $
 
 
 Contents:
@@ -1033,6 +1033,12 @@ II.   INSTALLATION
 
       Note that you'd make sure to define ZLIB_WINAPI in the ZLib config
       header and move the lib-file into the zlib root-directory.
+
+      Please note that you MUST NOT build ZLib with the included assembler
+      optimized code. It is known to be buggy, see for example the discussion
+      https://svn.haxx.se/dev/archive-2013-10/0109.shtml.
+      This means that you must not define ASMV or ASMINF. Note that the VS
+      projects in contrib\visualstudio define these in the Debug configuration.
 
       Apache Serf
 
