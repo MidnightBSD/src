@@ -1,6 +1,5 @@
-/* $FreeBSD: stable/10/contrib/less/forwback.c 330571 2018-03-07 06:39:00Z delphij $ */
 /*
- * Copyright (C) 1984-2017  Mark Nudelman
+ * Copyright (C) 1984-2019  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -27,7 +26,6 @@ extern int sigs;
 extern int top_scroll;
 extern int quiet;
 extern int sc_width, sc_height;
-extern int less_is_more;
 extern int plusoption;
 extern int forw_scroll;
 extern int back_scroll;
@@ -48,7 +46,7 @@ extern char *tagoption;
  * Sound the bell to indicate user is trying to move past end of file.
  */
 	static void
-eof_bell()
+eof_bell(VOID_PARAM)
 {
 	if (quiet == NOT_QUIET)
 		bell();
@@ -60,7 +58,7 @@ eof_bell()
  * Check to see if the end of file is currently displayed.
  */
 	public int
-eof_displayed()
+eof_displayed(VOID_PARAM)
 {
 	POSITION pos;
 
@@ -87,7 +85,7 @@ eof_displayed()
  * Check to see if the entire file is currently displayed.
  */
 	public int
-entire_file_displayed()
+entire_file_displayed(VOID_PARAM)
 {
 	POSITION pos;
 
@@ -107,7 +105,7 @@ entire_file_displayed()
  * for the first time.
  */
 	public void
-squish_check()
+squish_check(VOID_PARAM)
 {
 	if (!squished)
 		return;
@@ -170,10 +168,8 @@ forw(n, pos, force, only_last, nblank)
 			pos_clear();
 			add_forw_pos(pos);
 			force = 1;
-			if (less_is_more == 0) {
-				clear();
-				home();
-			}
+			clear();
+			home();
 		}
 
 		if (pos != position(BOTTOM_PLUS_ONE) || empty_screen())
@@ -255,8 +251,7 @@ forw(n, pos, force, only_last, nblank)
 		 * start the display after the beginning of the file,
 		 * and it is not appropriate to squish in that case.
 		 */
-		if ((first_time || less_is_more) &&
-		    pos == NULL_POSITION && !top_scroll && 
+		if (first_time && pos == NULL_POSITION && !top_scroll && 
 #if TAGS
 		    tagoption == NULL &&
 #endif
@@ -439,7 +434,7 @@ backward(n, force, only_last)
  * top_scroll, as well as back_scroll.
  */
 	public int
-get_back_scroll()
+get_back_scroll(VOID_PARAM)
 {
 	if (no_back_scroll)
 		return (0);
@@ -451,19 +446,18 @@ get_back_scroll()
 }
 
 /*
- * Return number of displayable lines in the file.
- * Stop counting at screen height + 1.
+ * Will the entire file fit on one screen?
  */
 	public int
-get_line_count()
+get_one_screen(VOID_PARAM)
 {
 	int nlines;
 	POSITION pos = ch_zero();
 
-	for (nlines = 0;  nlines <= sc_height;  nlines++)
+	for (nlines = 0;  nlines < sc_height;  nlines++)
 	{
 		pos = forw_line(pos);
 		if (pos == NULL_POSITION) break;
 	}
-	return nlines;
+	return (nlines < sc_height);
 }

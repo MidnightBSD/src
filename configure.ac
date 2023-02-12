@@ -183,6 +183,8 @@ AH_TEMPLATE([HAVE_POSIX_REGCOMP],
 	[POSIX regcomp() and regex.h])
 AH_TEMPLATE([HAVE_PCRE],
 	[PCRE (Perl-compatible regular expression) library])
+AH_TEMPLATE([HAVE_PCRE2],
+	[PCRE2 (Perl-compatible regular expression) library])
 AH_TEMPLATE([HAVE_RE_COMP],
 	[BSD re_comp()])
 AH_TEMPLATE([HAVE_REGCMP],
@@ -251,9 +253,14 @@ AC_TRY_COMPILE([#include <sys/types.h>
   [struct stat s; dev_t dev = s.st_dev; ino_t ino = s.st_ino;],
   [AC_MSG_RESULT(yes); AC_DEFINE(HAVE_STAT_INO)], [AC_MSG_RESULT(no)])
 
+# Checks for ANSI function prototypes.
+AC_MSG_CHECKING(for ANSI function prototypes)
+AC_TRY_COMPILE([], [int f(int a) { return a; }],
+  [AC_MSG_RESULT(yes); AC_DEFINE(HAVE_ANSI_PROTOS)], [AC_MSG_RESULT(no)])
+
 # Checks for library functions.
 AC_TYPE_SIGNAL
-AC_CHECK_FUNCS([fsync popen _setjmp sigprocmask sigsetmask snprintf stat system fchmod])
+AC_CHECK_FUNCS([fsync popen _setjmp sigprocmask sigsetmask snprintf stat system fchmod realpath])
 
 # AC_CHECK_FUNCS may not work for inline functions, so test these separately.
 AC_MSG_CHECKING(for memcpy)
@@ -365,13 +372,13 @@ fi
 
 # Compile in secure mode?
 AC_ARG_WITH(secure,
-  [  --with-secure  Compile in secure mode],
+  [  --with-secure           Compile in secure mode],
   AC_DEFINE(SECURE_COMPILE, 1), AC_DEFINE(SECURE_COMPILE, 0))
 
 # Should we use floating point?
 AC_MSG_CHECKING(for floating point)
 AC_ARG_WITH(no-float,
-  [  --with-no-float  Do not use floating point],
+  [  --with-no-float         Do not use floating point],
   WANT_NO_FLOAT=1, WANT_NO_FLOAT=0)
 if test $WANT_NO_FLOAT = 0; then
   AC_TRY_LINK(, [double f1 = 12.5; double f2 = f1*f1/2.5;], 
@@ -388,7 +395,7 @@ supported_regex=""
 # Select a regular expression library.
 WANT_REGEX=auto
 AC_ARG_WITH(regex,
-  [  --with-regex={auto,gnu,pcre,posix,regcmp,re_comp,regcomp,regcomp-local,none}  Select a regular expression library  [auto]],
+  [  --with-regex=LIB        select regular expression library (LIB is one of auto,none,gnu,pcre,pcre2,posix,regcmp,re_comp,regcomp,regcomp-local) [[auto]]],
   WANT_REGEX="$withval")
 
 if test $have_regex = no; then
@@ -423,6 +430,13 @@ elif test $have_posix_regex = unknown; then
 else
   AC_MSG_RESULT(no)
 fi
+fi
+fi
+
+if test $have_regex = no; then
+if test $WANT_REGEX = auto -o $WANT_REGEX = pcre2; then
+AC_CHECK_LIB(pcre2-8, pcre2_compile_8, 
+[AC_DEFINE(HAVE_PCRE2) LIBS="$LIBS -lpcre2-8" have_regex=yes; supported_regex="$supported_regex pcre2"], [])
 fi
 fi
 
@@ -484,7 +498,7 @@ fi
 AC_MSG_RESULT(regular expression library: $supported_regex)
 
 AC_ARG_WITH(editor,
-  [  --with-editor=PROGRAM   use PROGRAM as the default editor [vi]],
+  [  --with-editor=PROGRAM   use PROGRAM as the default editor [[vi]]],
   AC_DEFINE_UNQUOTED(EDIT_PGM, "$withval"), AC_DEFINE(EDIT_PGM, "vi"))
 
 AH_TOP([
@@ -570,7 +584,7 @@ AH_TOP([
 #define	PIPEC		(!SECURE)
 
 /*
- * LOGFILE is 1 if you wish to allow the -l option (to create log files).
+ * LOGFILE is 1 if you wish to allow the -o option (to create log files).
  */
 #define	LOGFILE		(!SECURE)
 
@@ -621,6 +635,11 @@ AH_TOP([
 #define TGETENT_OK  1
 
 /*
+ * HAVE_ANSI_PROTOS	is 1 if your compiler supports ANSI function prototypes.
+ */
+#define HAVE_ANSI_PROTOS	1
+
+/*
  * HAVE_SYS_TYPES_H is 1 if your system has <sys/types.h>.
  */
 #define HAVE_SYS_TYPES_H	1
@@ -649,7 +668,7 @@ AH_TOP([
 /*
  * Default shell metacharacters and meta-escape character.
  */
-#define	DEF_METACHARS	"; *?\t\n'\"()<>[]|&^`#\\$%=~"
+#define	DEF_METACHARS	"; *?\t\n'\"()<>[]|&^`#\\$%=~{},"
 #define	DEF_METAESCAPE	"\\"
 
 /* 
