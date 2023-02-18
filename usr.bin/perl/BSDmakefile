@@ -75,7 +75,7 @@ MANSECTIONS= 1 3
 install.man: convertpods finalmaninstall
 
 convertpods:
-	@cd ${.OBJDIR} && LD_LIBRARY_PATH=${.OBJDIR}:${DESTDIR}/lib ./perl installman --destdir=${DESTDIR} --man1dir=${.OBJDIR}/rawmans/1 --man3dir=${.OBJDIR}/rawmans/3
+	@cd ${.OBJDIR} && LD_LIBRARY_PATH=${.OBJDIR}:${DESTDIR}/lib ./perl installman --destdir=${DESTDIR} --man1dir=${.OBJDIR}/rawmans/1 --man3dir=${.OBJDIR}/rawmans/3 --man1ext=1 --man3ext=3
 
 finalmaninstall:
 .for SEC in ${MANSECTIONS}
