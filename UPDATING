@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20230219:
+	Fixed a bug with perl man page installs
+
 20230212:
 	MidnightBSD 2.2.7
 	
