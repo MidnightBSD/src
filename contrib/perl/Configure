@@ -3599,6 +3599,7 @@ EOM
 		$2) case "$osname" in
 			*isc*) ;;
 			*freebsd*) ;;
+			*midnightbsd*) ;;
 			svr*)
 				: svr4.x or possibly later
 				case "svr$3" in
@@ -8834,7 +8835,7 @@ if "$useshrplib"; then
 	solaris)
 		xxx="-R $shrpdir"
 		;;
-	freebsd|minix|mirbsd|netbsd|openbsd|interix|dragonfly|bitrig)
+	freebsd|minix|mirbsd|netbsd|openbsd|interix|dragonfly|bitrig|midnightbsd)
 		xxx="-Wl,-R$shrpdir"
 		;;
 	bsdos|linux|irix*|dec_osf|gnu*|haiku)
@@ -16579,7 +16580,7 @@ case "$d_msgctl$d_msgget$d_msgsnd$d_msgrcv" in
 *"$undef"*) h_msg=false;;
 esac
 case "$osname" in
-freebsd)
+freebsd|midnightbsd)
     case "`ipcs 2>&1`" in
     "SVID messages"*"not configured"*)
 	echo "Your $osname does not have the msg*(2) configured." >&4
@@ -17798,7 +17799,7 @@ case "$d_semctl$d_semget$d_semop" in
 *"$undef"*) h_sem=false;;
 esac
 case "$osname" in
-freebsd)
+freebsd|midngihtbsd)
     case "`ipcs 2>&1`" in
     "SVID messages"*"not configured"*)
 	echo "Your $osname does not have the sem*(2) configured." >&4
@@ -18704,7 +18705,7 @@ case "$d_shmctl$d_shmget$d_shmat$d_shmdt" in
 *"$undef"*) h_shm=false;;
 esac
 case "$osname" in
-freebsd)
+freebsd|midnightbsd)
     case "`ipcs 2>&1`" in
     "SVID shared memory"*"not configured"*)
 	echo "Your $osname does not have the shm*(2) configured." >&4
