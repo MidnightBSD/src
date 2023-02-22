@@ -43,7 +43,7 @@
 "/usr/src/games"
 
 /* Each subdirectory of PATH_PORTS will be appended to PATH_SOURCES. */
-#define PATH_PORTS "/usr/ports"
+#define PATH_PORTS "/usr/mports"
 
 /* How to query the current manpath. */
 #define MANPATHCMD "manpath -q"
