@@ -267,6 +267,7 @@ grep_file(const char *filename, const char *destdir)
 	if (ferror(file) != 0)
 		err(EX_IOERR, "Error reading %s", filename);
 	
+	regfree(&regex);
 	fclose(file);
 	return ret;
 }

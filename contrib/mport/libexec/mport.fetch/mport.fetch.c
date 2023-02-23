@@ -93,6 +93,7 @@ main(int argc, char *argv[]) {
 
 	if (mport_index_lookup_pkgname(mport, argv[0], &indexEntries) != MPORT_OK) {
 		fprintf(stderr, "Error looking up package name %s: %d %s\n", argv[0], mport_err_code(), mport_err_string());
+		mport_instance_free(mport);
 		exit(mport_err_code());
 	}
 
@@ -108,6 +109,9 @@ main(int argc, char *argv[]) {
 			printf("Fetching %s\n", bundleFile);
 		if (mport_fetch_bundle(mport, directory == NULL ? MPORT_LOCAL_PKG_PATH: directory, bundleFile) != MPORT_OK) {
 			fprintf(stderr, "%s\n", mport_err_string());
+			free(bundleFile);
+			mport_instance_free(mport);
+			mport_index_entry_free_vec(indexEntries);
 			exit(mport_err_code());
 		}
 
@@ -115,6 +119,7 @@ main(int argc, char *argv[]) {
 	}
 
 	mport_instance_free(mport);
+	mport_index_entry_free_vec(indexEntries);
 
 	return (0);
 }
