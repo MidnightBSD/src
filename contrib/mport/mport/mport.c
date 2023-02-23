@@ -293,11 +293,13 @@ main(int argc, char *argv[]) {
 			resultCode = configSet(mport, argv[2], argv[3]);
 		}
 	} else if (!strcmp(cmd, "mirror")) {
-		if (!strcmp(argv[1], "list")) {
-			loadIndex(mport);
-			printf("To set a mirror, use the following command:\n");
-			printf("mport set config mirror_region <country>\n\n");
-			resultCode = mport_index_print_mirror_list(mport);
+		if (argc > 2) {
+			if (!strcmp(argv[1], "list")) {
+				loadIndex(mport);
+				printf("To set a mirror, use the following command:\n");
+				printf("mport set config mirror_region <country>\n\n");
+				resultCode = mport_index_print_mirror_list(mport);
+			}
 		}
 	} else if (!strcmp(cmd, "cpe")) {
 		resultCode = cpeList(mport);
@@ -603,7 +605,7 @@ install(mportInstance *mport, const char *packageName) {
 			char *v = &d[loc+1];
 			d[loc] = '\0'; /* hack off the version number */
 			indexEntry = lookupIndex(mport, d);
-			if (strcmp(v, (*indexEntry)->version) != 0) {
+			if (indexEntry == NULL || v == NULL || (*indexEntry) == NULL || strcmp(v, (*indexEntry)->version) != 0) {
 				errx(4, "Package %s not found in the index.", packageName);	
 			}
 			free(d);
