@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20230223:
+	mport 2.2.7
+
 20230212:
 	sqlite3 3.40.1
 
