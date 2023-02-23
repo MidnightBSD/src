@@ -41,8 +41,8 @@ static void usage(void);
 int main(int argc, char *argv[]) {
 	int ch, i;
 	mportInstance *mport;
-	mportPackageMeta **packs;
-	mportPackageMeta **depends;
+	mportPackageMeta **packs = NULL;
+	mportPackageMeta **depends = NULL;
 	const char *arg = NULL, *where = NULL;
 	const char *chroot_path = NULL;
 
