@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20230223:
+	mport 2.2.7
+
 20230219:
 	Fixed a bug with perl man page installs
 
