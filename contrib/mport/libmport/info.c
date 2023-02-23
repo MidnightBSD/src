@@ -49,6 +49,7 @@ mport_info(mportInstance *mport, const char *packageName) {
 	char *options;
 	char *desc;
 	mportAutomatic automatic;
+	mportType type;
 
 	if (mport == NULL) {
 		SET_ERROR(MPORT_ERR_FATAL, "mport not initialized");
@@ -85,6 +86,7 @@ mport_info(mportInstance *mport, const char *packageName) {
 		desc = strdup("");
 		automatic = MPORT_EXPLICIT;
 		installDate = 0;
+		type = 0;
 	} else {
 		status = (*packs)->version;
 		origin = (*packs)->origin;
@@ -111,6 +113,7 @@ mport_info(mportInstance *mport, const char *packageName) {
 		}
 		automatic = (*packs)->automatic;
 		installDate = (*packs)->install_date;
+		type = (*packs)->type;
 	}
 
 	asprintf(&info_text,
@@ -118,7 +121,7 @@ mport_info(mportInstance *mport, const char *packageName) {
 	         "Name            : %s\nVersion         : %s\nLatest          : %s\nLicenses        : %s\nOrigin          : %s\n"
 	         "Flavor          : %s\nOS              : %s\n"
 	         "CPE             : %s\nLocked          : %s\nPrime           : %s\nShared library  : %s\nDeprecated      : %s\nExpiration Date : %s\nInstall Date    : %s"
-	         "Comment         : %s\nOptions         : %s\nDescription     :\n%s\n",
+	         "Comment         : %s\nOptions         : %s\nType            : %s\nDescription     :\n%s\n",
 	         (*indexEntry)->pkgname, (*indexEntry)->version,
 	         (*indexEntry)->pkgname,
 	         status,
@@ -136,6 +139,7 @@ mport_info(mportInstance *mport, const char *packageName) {
 	         installDate == 0 ? "\n" : ctime(&installDate),
 	         (*indexEntry)->comment,
 	         options,
+			 type == MPORT_TYPE_APP ? "Application" : "System", 
 	         desc);
 
 	if (packs == NULL) {
