@@ -85,36 +85,49 @@ int main(int argc, char *argv[]) {
 
 	if (mport_instance_init(mport, NULL, NULL, false) != MPORT_OK) {
 		warnx("%s", mport_err_string());
+		mport_instance_free(mport);
+		mport_pkgmeta_vec_free(packs);
+		mport_pkgmeta_vec_free(depends);
 		exit(1);
 	}
 
 	if (mport_pkgmeta_search_master(mport, &packs, where, arg) != MPORT_OK) {
 		warnx("%s", mport_err_string());
 		mport_instance_free(mport);
+		mport_pkgmeta_vec_free(packs);
+		mport_pkgmeta_vec_free(depends);
 		exit(EXIT_FAILURE);
 	}
 
 	if (packs == NULL) {
 		warnx("No packages installed matching '%s'", arg);
 		mport_instance_free(mport);
+		if (depends != NULL)
+			mport_pkgmeta_vec_free(depends);
 		exit(3);
 	}
 
 	if (packs[1] != NULL) {
 		warnx("Ambiguous package identifier: %s", arg);
 		mport_instance_free(mport);
+		mport_pkgmeta_vec_free(packs);
+		mport_pkgmeta_vec_free(depends);
 		exit(3);
 	}
 
 	if (mport_pkgmeta_get_updepends(mport, packs[0], &depends) != MPORT_OK) {
 		warnx("%s", mport_err_string());
 		mport_instance_free(mport);
+		mport_pkgmeta_vec_free(packs);
+		mport_pkgmeta_vec_free(depends);
 		exit(EXIT_FAILURE);
 	}
 
 	if (depends == NULL) {
 		/* no depends, nothing to print. */
 		mport_instance_free(mport);
+		if (packs != NULL)
+			mport_pkgmeta_vec_free(depends);
 		exit(EXIT_SUCCESS);
 	}
 

@@ -93,6 +93,7 @@ int main(int argc, char *argv[]) {
 	if (mport_pkgmeta_search_master(mport, &packs, where) != MPORT_OK) {
 		warnx("(where: %s): %s", where, mport_err_string());
 		mport_instance_free(mport);
+		free(where);
 		exit(EXIT_FAILURE);
 	}
 
@@ -100,6 +101,7 @@ int main(int argc, char *argv[]) {
 		if (!quiet)
 			warnx("No packages installed matching.");
 		mport_instance_free(mport);
+		free(where);
 		exit(3);
 	}
 
@@ -118,6 +120,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	mport_instance_free(mport);
+	free(where);
 
 	return 0;
 }

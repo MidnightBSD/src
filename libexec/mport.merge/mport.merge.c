@@ -80,6 +80,7 @@ int main(int argc, char *argv[]) {
 	mport = mport_instance_new();
 	if (mport_instance_init(mport, NULL, NULL, false) != MPORT_OK) {
 		warnx("%s", mport_err_string());
+		mport_instance_free(mport); 
 		exit(EXIT_FAILURE);
 	}
 
@@ -96,6 +97,7 @@ int main(int argc, char *argv[]) {
 	if (mport_merge_primative(mport, (const char **) inputfiles, outfile) != MPORT_OK)
 		errx(EX_SOFTWARE, "Could not merge package files: %s", mport_err_string());
 
+	mport_instance_free(mport); 
 	free(inputfiles);
 
 	return 0;

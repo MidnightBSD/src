@@ -52,6 +52,7 @@ int main(int argc, char *argv[])
 	mportAssetList *assetlist = mport_assetlist_new();
 	FILE *fp;
 	struct tm expDate;
+	int result = EXIT_SUCCESS;
 
 	if (mport == NULL || pack == NULL || extra == NULL || assetlist == NULL) {
 		errx(EXIT_FAILURE, "Failed to allocate memory");
@@ -60,6 +61,10 @@ int main(int argc, char *argv[])
 	// we need this to know if the user customized the "target_os" configuration.
 	// the caveat is that the userland it was built against could be wrong.
 	if (mport_instance_init(mport, NULL, NULL, false) != MPORT_OK) {
+		mport_instance_free(mport);
+		mport_pkgmeta_free(pack);
+		mport_createextras_free(extra);
+		mport_assetlist_free(assetlist);
 		errx(EXIT_FAILURE, "%s", mport_err_string());
 	}
 
@@ -113,7 +118,8 @@ int main(int argc, char *argv[])
 				if (mport_parse_plistfile(fp, assetlist) != 0) {
 					warnx("Could not parse plist file '%s'.\n", optarg);
 					fclose(fp);
-					exit(1);
+					result = EXIT_FAILURE;
+					goto cleanup;
 				}
 				fclose(fp);
 
@@ -183,10 +189,17 @@ int main(int argc, char *argv[])
 
 	if (mport_create_primative(mport, assetlist, pack, extra) != MPORT_OK) {
 		warnx("%s", mport_err_string());
-		exit(EXIT_FAILURE);
+		result = EXIT_FAILURE;
+		goto cleanup;
 	}
 
-	return 0;
+cleanup:
+	mport_instance_free(mport);
+	mport_pkgmeta_free(pack);
+	mport_createextras_free(extra);
+	mport_assetlist_free(assetlist);
+
+	return result;
 }
 
 
