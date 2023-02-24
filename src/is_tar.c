@@ -40,7 +40,7 @@
 #include "file.h"
 
 #ifndef lint
-FILE_RCSID("@(#)$File: is_tar.c,v 1.39 2017/03/17 20:45:01 christos Exp $")
+FILE_RCSID("@(#)$File: is_tar.c,v 1.47 2022/09/13 18:46:07 christos Exp $")
 #endif
 
 #include "magic.h"
@@ -53,15 +53,17 @@ FILE_RCSID("@(#)$File: is_tar.c,v 1.39 2017/03/17 20:45:01 christos Exp $")
 private int is_tar(const unsigned char *, size_t);
 private int from_oct(const char *, size_t);	/* Decode octal number */
 
-static const char tartype[][32] = {
-	"tar archive",
+static const char tartype[][32] = {	/* should be equal to messages */
+	"tar archive",			/* found in ../magic/Magdir/archive */
 	"POSIX tar archive",
-	"POSIX tar archive (GNU)",
+	"POSIX tar archive (GNU)",	/*  */
 };
 
 protected int
-file_is_tar(struct magic_set *ms, const unsigned char *buf, size_t nbytes)
+file_is_tar(struct magic_set *ms, const struct buffer *b)
 {
+	const unsigned char *buf = CAST(const unsigned char *, b->fbuf);
+	size_t nbytes = b->flen;
 	/*
 	 * Do the tar test first, because if the first file in the tar
 	 * archive starts with a dot, we can confuse it with an nroff file.
@@ -76,9 +78,13 @@ file_is_tar(struct magic_set *ms, const unsigned char *buf, size_t nbytes)
 	if (tar < 1 || tar > 3)
 		return 0;
 
+	if (mime == MAGIC_MIME_ENCODING)
+		return 1;
+
 	if (file_printf(ms, "%s", mime ? "application/x-tar" :
 	    tartype[tar - 1]) == -1)
 		return -1;
+
 	return 1;
 }
 
@@ -92,13 +98,27 @@ file_is_tar(struct magic_set *ms, const unsigned char *buf, size_t nbytes)
 private int
 is_tar(const unsigned char *buf, size_t nbytes)
 {
-	const union record *header = (const union record *)(const void *)buf;
+	static const char gpkg_match[] = "/gpkg-1";
+
+	const union record *header = RCAST(const union record *,
+	    RCAST(const void *, buf));
 	size_t i;
 	int sum, recsum;
 	const unsigned char *p, *ep;
+	const char *nulp;
 
 	if (nbytes < sizeof(*header))
 		return 0;
+
+	/* If the file looks like Gentoo GLEP 78 binary package (GPKG),
+	 * don't waste time on further checks and fall back to magic rules.
+	 */
+	nulp = CAST(const char *,
+	    memchr(header->header.name, 0, sizeof(header->header.name)));
+	if (nulp != NULL && nulp >= header->header.name + sizeof(gpkg_match) &&
+	    memcmp(nulp - sizeof(gpkg_match) + 1, gpkg_match,
+	    sizeof(gpkg_match)) == 0)
+	    return 0;
 
 	recsum = from_oct(header->header.chksum, sizeof(header->header.chksum));
 
@@ -141,7 +161,7 @@ from_oct(const char *where, size_t digs)
 	if (digs == 0)
 		return -1;
 
-	while (isspace((unsigned char)*where)) {	/* Skip spaces */
+	while (isspace(CAST(unsigned char, *where))) {	/* Skip spaces */
 		where++;
 		if (digs-- == 0)
 			return -1;		/* All blank field */
@@ -152,7 +172,7 @@ from_oct(const char *where, size_t digs)
 		digs--;
 	}
 
-	if (digs > 0 && *where && !isspace((unsigned char)*where))
+	if (digs > 0 && *where && !isspace(CAST(unsigned char, *where)))
 		return -1;			/* Ended on non-(space/NUL) */
 
 	return value;

@@ -1,5 +1,5 @@
-.\" $File: file.man,v 1.125 2017/01/03 11:24:46 christos Exp $
-.Dd October 19, 2016
+.\" $File: file.man,v 1.146 2022/10/26 16:56:14 christos Exp $
+.Dd October 26, 2022
 .Dt FILE __CSECTION__
 .Os
 .Sh NAME
@@ -8,8 +8,9 @@
 .Sh SYNOPSIS
 .Nm
 .Bk -words
-.Op Fl bcdEhiklLNnprsvzZ0
+.Op Fl bcdEhiklLNnprsSvzZ0
 .Op Fl Fl apple
+.Op Fl Fl exclude-quiet
 .Op Fl Fl extension
 .Op Fl Fl mime-encoding
 .Op Fl Fl mime-type
@@ -58,7 +59,7 @@ or non-printable).
 Exceptions are well-known file formats (core files, tar archives)
 that are known to contain binary data.
 When modifying magic files or the program itself, make sure to
-.Em "preserve these keywords" .
+.Em preserve these keywords .
 Users depend on knowing that all the readable files in a directory
 have the word
 .Dq text
@@ -90,14 +91,14 @@ and possibly
 .In exec.h
 in the standard include directory.
 These files have a
-.Dq "magic number"
+.Dq magic number
 stored in a particular place
 near the beginning of the file that tells the
 .Tn UNIX
 operating system
 that the file is a binary executable, and which of several types thereof.
 The concept of a
-.Dq "magic"
+.Dq magic number
 has been applied by extension to data files.
 Any file with some invariant identifier at a small fixed
 offset into the file can usually be described in this way.
@@ -159,7 +160,7 @@ two groups, so they are performed last.
 The language test routines also test for some miscellany
 (such as
 .Xr tar 1
-archives).
+archives, JSON files).
 .Pp
 Any file that cannot be identified as having been written
 in any of the character sets listed above is simply said to be
@@ -167,9 +168,14 @@ in any of the character sets listed above is simply said to be
 .Sh OPTIONS
 .Bl -tag -width indent
 .It Fl Fl apple
-Causes the file command to output the file type and creator code as
-used by older MacOS versions. The code consists of eight letters,
+Causes the
+.Nm
+command to output the file type and creator code as
+used by older MacOS versions.
+The code consists of eight letters,
 the first describing the file type, the latter the creator.
+This option works properly only for file formats that have the
+apple-style output defined.
 .It Fl b , Fl Fl brief
 Do not prepend filenames to output lines (brief mode).
 .It Fl C , Fl Fl compile
@@ -180,7 +186,7 @@ output file that contains a pre-parsed version of the magic file or directory.
 Cause a checking printout of the parsed form of the magic file.
 This is usually used in conjunction with the
 .Fl m
-flag to debug a new magic file before installing it.
+option to debug a new magic file before installing it.
 .It Fl d
 Prints internal debugging information to stderr.
 .It Fl E
@@ -209,18 +215,32 @@ Ignored for backwards compatibility.
 Prints details of Compound Document Files.
 .It compress
 Checks for, and looks inside, compressed files.
+.It csv
+Checks Comma Separated Value files.
 .It elf
 Prints ELF file details, provided soft magic tests are enabled and the
 elf magic is found.
+.It json
+Examines JSON (RFC-7159) files by parsing them for compliance.
 .It soft
 Consults magic files.
 .It tar
-Examines tar files.
+Examines tar files by verifying the checksum of the 512 byte tar header.
+Excluding this test can provide more detailed content description by using
+the soft magic method.
 .It text
 A synonym for
 .Sq ascii .
 .El
-.It Fl Fl extension 
+.It Fl Fl exclude-quiet
+Like
+.Fl Fl exclude
+but ignore tests that
+.Nm
+does not know about.
+This is intended for compatibility with older versions of
+.Nm .
+.It Fl Fl extension
 Print a slash-separated list of valid extensions for the file type found.
 .It Fl F , Fl Fl separator Ar separator
 Use the specified string as the separator between the filename and the
@@ -252,13 +272,15 @@ the list of files, like:
 instead of:
 .Dq Fl f Ar namefile Fl F Ar @ .
 .It Fl h , Fl Fl no-dereference
-option causes symlinks not to be followed
+This option causes symlinks not to be followed
 (on systems that support symbolic links).
 This is the default if the environment variable
 .Dv POSIXLY_CORRECT
 is not defined.
 .It Fl i , Fl Fl mime
-Causes the file command to output mime type strings rather than the more
+Causes the
+.Nm
+command to output mime type strings rather than the more
 traditional human readable ones.
 Thus it may say
 .Sq text/plain; charset=us-ascii
@@ -282,13 +304,13 @@ The magic pattern with the highest strength (see the
 option) comes first.
 .It Fl l , Fl Fl list
 Shows a list of patterns and their strength sorted descending by
-.Xr magic 4
+.Xr magic __FSECTION__
 strength
 which is used for the matching (see also the
 .Fl k
 option).
 .It Fl L , Fl Fl dereference
-option causes symlinks to be followed, as the like-named option in
+This option causes symlinks to be followed, as the like-named option in
 .Xr ls 1
 (on systems that support symbolic links).
 This is the default if the environment variable
@@ -317,13 +339,14 @@ never read them.
 Set various parameter limits.
 .Bl -column "elf_phnum" "Default" "XXXXXXXXXXXXXXXXXXXXXXXXXXX" -offset indent
 .It Sy "Name" Ta Sy "Default" Ta Sy "Explanation"
-.It Li indir Ta 15 Ta recursion limit for indirect magic
-.It Li name Ta 30 Ta use count limit for name/use magic
-.It Li elf_notes Ta 256 Ta max ELF notes processed
-.It Li elf_phnum Ta 128 Ta max ELF program sections processed
-.It Li elf_shnum Ta 32768 Ta max ELF sections processed
-.It Li regex Ta 8192 Ta length limit for regex searches
 .It Li bytes Ta 1048576 Ta max number of bytes to read from file
+.It Li elf_notes Ta 256 Ta max ELF notes processed
+.It Li elf_phnum Ta 2048 Ta max ELF program sections processed
+.It Li elf_shnum Ta 32768 Ta max ELF sections processed
+.It Li encoding Ta 65536 Ta max number of bytes to scan for encoding evaluation
+.It Li indir Ta 50 Ta recursion limit for indirect magic
+.It Li name Ta 50 Ta use count limit for name/use magic
+.It Li regex Ta 8192 Ta length limit for regex searches
 .El
 .It Fl r , Fl Fl raw
 Don't translate unprintable characters to \eooo.
@@ -350,6 +373,19 @@ This option also causes
 to disregard the file size as reported by
 .Xr stat 2
 since on some systems it reports a zero size for raw disk partitions.
+.It Fl S , Fl Fl no-sandbox
+On systems where libseccomp
+.Pa ( https://github.com/seccomp/libseccomp )
+is available, the
+.Fl S
+option disables sandboxing which is enabled by default.
+This option is needed for
+.Nm
+to execute external decompressing programs,
+i.e. when the
+.Fl z
+option is specified and the built-in decompressors are not available.
+On systems where sandboxing is not available, this option has no effect.
 .It Fl v , Fl Fl version
 Print the version of the program and exit.
 .It Fl z , Fl Fl uncompress
@@ -366,19 +402,12 @@ Nice to
 the output.
 This does not affect the separator, which is still printed.
 .Pp
-If this option is repeated more than once, then 
+If this option is repeated more than once, then
 .Nm
 prints just the filename followed by a NUL followed by the description
 (or ERROR: text) followed by a second NUL for each entry.
 .It Fl -help
 Print a help message and exit.
-.El
-.Sh FILES
-.Bl -tag -width __MAGIC__.mgc -compact
-.It Pa __MAGIC__.mgc
-Default compiled list of magic.
-.It Pa __MAGIC__
-Directory containing default magic files.
 .El
 .Sh ENVIRONMENT
 The environment variable
@@ -392,11 +421,6 @@ will not attempt to open
 adds
 .Dq Pa .mgc
 to the value of this variable as appropriate.
-However,
-.Pa file
-has to exist in order for
-.Pa file.mime
-to be considered.
 The environment variable
 .Ev POSIXLY_CORRECT
 controls (on systems that support symbolic links), whether
@@ -410,12 +434,70 @@ This is also controlled by the
 and
 .Fl h
 options.
+.Sh FILES
+.Bl -tag -width __MAGIC__.mgc -compact
+.It Pa __MAGIC__.mgc
+Default compiled list of magic.
+.It Pa __MAGIC__
+Directory containing default magic files.
+.El
+.Sh EXIT STATUS
+.Nm
+will exit with
+.Dv 0
+if the operation was successful or
+.Dv >0
+if an error was encountered.
+The following errors cause diagnostic messages, but don't affect the program
+exit code (as POSIX requires), unless
+.Fl E
+is specified:
+.Bl -bullet -compact -offset indent
+.It
+A file cannot be found
+.It
+There is no permission to read a file
+.It
+The file type cannot be determined
+.El
+.Sh EXAMPLES
+.Bd -literal -offset indent
+$ file file.c file /dev/{wd0a,hda}
+file.c:	  C program text
+file:	  ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV),
+	  dynamically linked (uses shared libs), stripped
+/dev/wd0a: block special (0/0)
+/dev/hda: block special (3/0)
+
+$ file -s /dev/wd0{b,d}
+/dev/wd0b: data
+/dev/wd0d: x86 boot sector
+
+$ file -s /dev/hda{,1,2,3,4,5,6,7,8,9,10}
+/dev/hda:   x86 boot sector
+/dev/hda1:  Linux/i386 ext2 filesystem
+/dev/hda2:  x86 boot sector
+/dev/hda3:  x86 boot sector, extended partition table
+/dev/hda4:  Linux/i386 ext2 filesystem
+/dev/hda5:  Linux/i386 swap file
+/dev/hda6:  Linux/i386 swap file
+/dev/hda7:  Linux/i386 swap file
+/dev/hda8:  Linux/i386 swap file
+/dev/hda9:  empty
+/dev/hda10: empty
+
+$ file -i file.c file /dev/{wd0a,hda}
+file.c:	     text/x-c
+file:	     application/x-executable
+/dev/hda:    application/x-not-regular-file
+/dev/wd0a:   application/x-not-regular-file
+
+.Ed
 .Sh SEE ALSO
 .Xr hexdump 1 ,
 .Xr od 1 ,
 .Xr strings 1 ,
-.Xr magic __FSECTION__ ,
-.Xr fstyp 8
+.Xr magic __FSECTION__
 .Sh STANDARDS CONFORMANCE
 This program is believed to exceed the System V Interface Definition
 of FILE(CMD), as near as one can determine from the vague language
@@ -431,7 +513,7 @@ is that this version treats any white space
 as a delimiter, so that spaces in pattern strings must be escaped.
 For example,
 .Bd -literal -offset indent
-\*[Gt]10	string	language impress\ 	(imPRESS data)
+\*[Gt]10	string	language impress\	(imPRESS data)
 .Ed
 .Pp
 in an existing magic file would have to be changed to
@@ -462,6 +544,23 @@ for example,
 .Bd -literal -offset indent
 \*[Gt]16	long\*[Am]0x7fffffff	\*[Gt]0		not stripped
 .Ed
+.Sh SECURITY
+On systems where libseccomp
+.Pa ( https://github.com/seccomp/libseccomp )
+is available,
+.Nm
+is enforces limiting system calls to only the ones necessary for the
+operation of the program.
+This enforcement does not provide any security benefit when
+.Nm
+is asked to decompress input files running external programs with
+the
+.Fl z
+option.
+To enable execution of external decompressors, one needs to disable
+sandboxing using the
+.Fl S
+option.
 .Sh MAGIC DIRECTORY
 The magic file entries have been collected from various sources,
 mainly USENET, and contributed by various authors.
@@ -479,39 +578,6 @@ command uses a magic file,
 keep the old magic file around for comparison purposes
 (rename it to
 .Pa __MAGIC__.orig ) .
-.Sh EXAMPLES
-.Bd -literal -offset indent
-$ file file.c file /dev/{wd0a,hda}
-file.c:   C program text
-file:     ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV),
-          dynamically linked (uses shared libs), stripped
-/dev/wd0a: block special (0/0)
-/dev/hda: block special (3/0)
-
-$ file -s /dev/wd0{b,d}
-/dev/wd0b: data
-/dev/wd0d: x86 boot sector
-
-$ file -s /dev/hda{,1,2,3,4,5,6,7,8,9,10}
-/dev/hda:   x86 boot sector
-/dev/hda1:  Linux/i386 ext2 filesystem
-/dev/hda2:  x86 boot sector
-/dev/hda3:  x86 boot sector, extended partition table
-/dev/hda4:  Linux/i386 ext2 filesystem
-/dev/hda5:  Linux/i386 swap file
-/dev/hda6:  Linux/i386 swap file
-/dev/hda7:  Linux/i386 swap file
-/dev/hda8:  Linux/i386 swap file
-/dev/hda9:  empty
-/dev/hda10: empty
-
-$ file -i file.c file /dev/{wd0a,hda}
-file.c:      text/x-c
-file:        application/x-executable
-/dev/hda:    application/x-not-regular-file
-/dev/wd0a:   application/x-not-regular-file
-
-.Ed
 .Sh HISTORY
 There has been a
 .Nm
@@ -533,7 +599,7 @@ Geoff Collyer found several inadequacies
 and provided some magic file entries.
 Contributions of the
 .Sq \*[Am]
-operator by Rob McMahon, 
+operator by Rob McMahon,
 .Aq cudcv@warwick.ac.uk ,
 1989.
 .Pp
@@ -583,16 +649,13 @@ and
 were written by John Gilmore from his public-domain
 .Xr tar 1
 program, and are not covered by the above license.
-.Sh RETURN CODE
-.Nm
-returns 0 on success, and non-zero on error.
 .Sh BUGS
 Please report bugs and send patches to the bug tracker at
-.Pa http://bugs.gw.com/
+.Pa https://bugs.astron.com/
 or the mailing list at
-.Aq file@mx.gw.com
+.Aq file@astron.com
 (visit
-.Pa http://mx.gw.com/mailman/listinfo/file
+.Pa https://mailman.astron.com/mailman/listinfo/file
 first to subscribe).
 .Sh TODO
 Fix output so that tests for MIME and APPLE flags are not needed all
@@ -609,7 +672,7 @@ and printing \e012- between entries is clumsy and complicated; refactor
 and centralize.
 .Pp
 Some of the encoding logic is hard-coded in encoding.c and can be moved
-to the magic files if we had a !:charset annotation
+to the magic files if we had a !:charset annotation.
 .Pp
 Continue to squash all magic bugs.
 See Debian BTS for a good source.
@@ -662,9 +725,13 @@ If the offsets specified internally in the file exceed the buffer size
 .Dv HOWMANY
 variable in file.h), then we don't seek to that offset, but we give up.
 It would be better if buffer managements was done when the file descriptor
-is available so move around the file.
-One must be careful though because this has performance (and thus security
-considerations).
+is available so we can seek around the file.
+One must be careful though because this has performance and thus security
+considerations, because one can slow down things by repeateadly seeking.
+.Pp
+There is support now for keeping separate buffers and having offsets from
+the end of the file, but the internal buffer management still needs an
+overhaul.
 .Sh AVAILABILITY
 You can obtain the original author's latest version by anonymous FTP
 on

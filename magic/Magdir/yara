@@ -1,8 +1,8 @@
 
 
 #------------------------------------------------------------------------------
-# $File: yara,v 1.2 2017/05/25 20:07:23 christos Exp $
-# yara:  file(1) magic for http://virustotal.github.io/yara/
+# $File: yara,v 1.4 2021/04/26 15:56:00 christos Exp $
+# yara:  file(1) magic for https://virustotal.github.io/yara/
 #
 
 0	string	YARA
@@ -14,4 +14,4 @@
 >>8	byte	8	created with version 3.4.0
 >>8	byte	11	created with version 3.5.0
 >>8	default	x
->>>8	byte	x	development version 0x%02x
+>>>8	byte	x	development version %#02x
