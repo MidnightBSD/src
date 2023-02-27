@@ -38,6 +38,7 @@
 #include <sys/queue.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <sys/param.h>
 
 typedef void (*mport_msg_cb)(const char *);
 typedef void (*mport_progress_init_cb)(const char *);
@@ -96,11 +97,11 @@ typedef enum _AssetListEntryType mportAssetListEntryType;
 
 struct _AssetListEntry {
 	mportAssetListEntryType type;
+	char checksum[65];
+	char owner[MAXLOGNAME];
+	char group[MAXLOGNAME * 2]; /* no standard for this, just guess */
+	char mode[5];
 	char *data;
-	char *checksum;
-	char *owner;
-	char *group;
-	char *mode;
 
 	STAILQ_ENTRY(_AssetListEntry) next;
 };
