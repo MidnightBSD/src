@@ -151,15 +151,15 @@ mport_asset_get_assetlist(mportInstance *mport, mportPackageMeta *pack, mportAss
 		const unsigned char *group = sqlite3_column_text(stmt, 4);
 		const unsigned char *mode = sqlite3_column_text(stmt, 5);
 
-		e->data = data == NULL ? NULL : strdup((char *) data);
+		e->data = (data == NULL) ? NULL : strdup((char *) data);
 		if (checksum != NULL)
-			e->checksum = strdup((char *) checksum);
+			strlcpy(e->checksum, checksum, 65);
 		if (owner != NULL)
-			e->owner = strdup((char *) owner);
+			strlcpy(e->owner, owner, MAXLOGNAME);
 		if (group != NULL)
-			e->group = strdup((char *) group);
+			strlcpy(e->group, group, MAXLOGNAME * 2);
 		if (mode != NULL)
-			e->mode = strdup((char *) mode);
+			strlcpy(e->mode, mode, 5);
 
 		STAILQ_INSERT_TAIL(alist, e, next);
 	}
