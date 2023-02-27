@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 	while ((ch = getopt(argc, argv, "C:D:E:M:O:P:S:c:d:e:f:i:j:l:m:n:o:p:r:s:t:v:x:")) != -1) {
 		switch (ch) {
 			case 'o':
-				extra->pkg_filename = optarg;
+				extra->pkg_filename = strdup(optarg);
 				break;
 			case 'n':
 				if (optarg != NULL) {
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case 's':
-				extra->sourcedir = optarg;
+				extra->sourcedir = strdup(optarg);
 				break;
 			case 'd':
 				if (optarg != NULL) {
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
 				mport_parselist(optarg, &(extra->depends));
 				break;
 			case 'M':
-				extra->mtree = optarg;
+				extra->mtree = strdup(optarg);
 				break;
 			case 'O':
 				if (optarg != NULL) {
@@ -156,13 +156,13 @@ int main(int argc, char *argv[])
 					pack->no_provide_shlib = 0;
 				break;
 			case 'i':
-				extra->pkginstall = optarg;
+				extra->pkginstall = strdup(optarg);
 				break;
 			case 'j':
-				extra->pkgdeinstall = optarg;
+				extra->pkgdeinstall = strdup(optarg);
 				break;
 			case 'm':
-				extra->pkgmessage = optarg;
+				extra->pkgmessage = strdup(optarg);
 				break;
 			case 't':
 				mport_parselist(optarg, &(pack->categories));
@@ -194,10 +194,10 @@ int main(int argc, char *argv[])
 	}
 
 cleanup:
-	mport_instance_free(mport);
 	mport_pkgmeta_free(pack);
 	mport_createextras_free(extra);
 	mport_assetlist_free(assetlist);
+	mport_instance_free(mport);
 
 	return result;
 }
