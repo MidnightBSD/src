@@ -1,13 +1,13 @@
 PROG= mport.create
 
-CFLAGS+=	-fblocks -I${.CURDIR}/../../libmport/
+CFLAGS+=	-I${.CURDIR}/../../libmport/
 WARNS?= 	6
 
 MK_MAN= no
 
-LIBADD= mport dispatch BlocksRuntime pthread
+LIBADD= mport pthread
 
-LDFLAGS += -L../libmport -lmport -ldispatch -lBlocksRuntime -lpthread
+LDFLAGS += -L../libmport -lmport -lpthread
 
 BINDIR=/usr/libexec
 
