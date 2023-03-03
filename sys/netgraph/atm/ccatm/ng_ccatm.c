@@ -347,6 +347,8 @@ ng_ccatm_constructor(node_p node)
 {
 	struct ccnode *priv;
 
+	gone_in(14, "ng_ccatm: netgraph ATM modules");
+
 	priv = malloc(sizeof(*priv), M_NG_CCATM, M_WAITOK | M_ZERO);
 
 	priv->node = node;
