@@ -195,7 +195,7 @@ int main(int argc, char *argv[])
 
 cleanup:
 	mport_pkgmeta_free(pack);
-	mport_createextras_free(extra);
+/*	mport_createextras_free(extra); */
 	mport_assetlist_free(assetlist);
 	mport_instance_free(mport);
 
