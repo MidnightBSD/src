@@ -272,7 +272,8 @@ static void
 usage(void)
 {
 
-	fprintf(stderr, "usage: ldd [-a] [-v] [-f format] program ...\n");
+	fprintf(stderr,
+	    "usage: ldd [-a] [-v] [-f format [-f format]] program ...\n");
 	exit(1);
 }
 
