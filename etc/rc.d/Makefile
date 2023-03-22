@@ -90,6 +90,7 @@ FILES=	DAEMON \
 	${_nscd} \
 	nsswitch \
 	${_opensm} \
+	os-release \
 	pf \
 	pflog \
 	pfsync \
