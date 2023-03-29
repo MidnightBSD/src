@@ -1,5 +1,3 @@
-# $FreeBSD$
-
 .include <src.opts.mk>
 
 CONFGROUPS=	CONFS
@@ -11,6 +9,7 @@ CONFS=	100.clean-disks \
 	200.backup-passwd \
 	210.backup-aliases \
 	222.backup-gmirror \
+	220.backup-pkgdb \
 	221.backup-gpart \
 	330.news \
 	400.status-disks \
@@ -23,6 +22,7 @@ CONFS=	100.clean-disks \
 	420.status-network \
 	430.status-uptime \
 	450.status-security \
+	490.status-pkg-changes \
 	510.status-world-kernel \
 	999.local
 
@@ -41,11 +41,6 @@ CONFS+=	300.calendar
 
 .if ${MK_MAIL} != "no"
 CONFS+=	130.clean-msgs
-.endif
-
-.if ${MK_NTP} != "no"
-CONFS+=	480.status-ntpd \
-	480.leapfile-ntpd
 .endif
 
 .if ${MK_SENDMAIL} != "no"
