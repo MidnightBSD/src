@@ -3,6 +3,8 @@ Updating Information for MidnightBSD users.
 20230329:
 	doas 6.3p9
 
+	tzdata 2023c
+
 20230324:
 	MidnightBSD 3.0.0 release
 
