@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $OpenBSD: parse.y,v 1.18 2016/06/07 16:49:23 tedu Exp $ */
+/* $OpenBSD: parse.y,v 1.26 2017/01/02 01:40:20 tedu Exp $ */
 /*
  * Copyright (c) 2015 Ted Unangst <tedu@openbsd.org>
  *
@@ -38,6 +37,7 @@ typedef struct {
 			const char **cmdargs;
 			const char **envlist;
 		};
+		const char **strlist;
 		const char *str;
 	};
 	int lineno;
@@ -48,17 +48,30 @@ typedef struct {
 FILE *yyfp;
 
 struct rule **rules;
-int nrules, maxrules;
+size_t nrules = 0;
+static size_t maxrules = 0;
+
 int parse_errors = 0;
 
-void yyerror(const char *, ...);
-int yylex(void);
-int yyparse(void);
+static void yyerror(const char *, ...);
+static int yylex(void);
+
+static size_t
+arraylen(const char **arr)
+{
+	size_t cnt = 0;
+
+	while (*arr) {
+		cnt++;
+		arr++;
+	}
+	return cnt;
+}
 
 %}
 
 %token TPERMIT TDENY TAS TCMD TARGS
-%token TNOPASS TKEEPENV
+%token TNOPASS TNOLOG TPERSIST TKEEPENV TSETENV
 %token TSTRING
 
 %%
@@ -83,7 +96,7 @@ rule:		action ident target cmd {
 			r->cmdargs = $4.cmdargs;
 			if (nrules == maxrules) {
 				if (maxrules == 0)
-					maxrules = 63;
+					maxrules = 32;
 				else
 					maxrules *= 2;
 				if (!(rules = reallocarray(rules, maxrules,
@@ -99,15 +112,23 @@ action:		TPERMIT options {
 			$$.envlist = $2.envlist;
 		} | TDENY {
 			$$.action = DENY;
+			$$.options = 0;
+			$$.envlist = NULL;
 		} ;
 
-options:	/* none */
-		| options option {
+options:	/* none */ {
+			$$.options = 0;
+			$$.envlist = NULL;
+		} | options option {
 			$$.options = $1.options | $2.options;
 			$$.envlist = $1.envlist;
+			if (($$.options & (NOPASS|PERSIST)) == (NOPASS|PERSIST)) {
+				yyerror("can't combine nopass and persist");
+				YYERROR;
+			}
 			if ($2.envlist) {
 				if ($$.envlist) {
-					yyerror("can't have two keepenv sections");
+					yyerror("can't have two setenv sections");
 					YYERROR;
 				} else
 					$$.envlist = $2.envlist;
@@ -115,24 +136,32 @@ options:	/* none */
 		} ;
 option:		TNOPASS {
 			$$.options = NOPASS;
+			$$.envlist = NULL;
+                } | TNOLOG {
+			$$.options = NOLOG;
+			$$.envlist = NULL;
+		} | TPERSIST {
+			$$.options = PERSIST;
+			$$.envlist = NULL;
 		} | TKEEPENV {
 			$$.options = KEEPENV;
-		} | TKEEPENV '{' envlist '}' {
-			$$.options = KEEPENV;
-			$$.envlist = $3.envlist;
+			$$.envlist = NULL;
+		} | TSETENV '{' strlist '}' {
+			$$.options = 0;
+			$$.envlist = $3.strlist;
 		} ;
 
-envlist:	/* empty */ {
-			if (!($$.envlist = calloc(1, sizeof(char *))))
-				errx(1, "can't allocate envlist");
-		} | envlist TSTRING {
-			int nenv = arraylen($1.envlist);
-			if (!($$.envlist = reallocarray($1.envlist, nenv + 2,
+strlist:	/* empty */ {
+			if (!($$.strlist = calloc(1, sizeof(char *))))
+				errx(1, "can't allocate strlist");
+		} | strlist TSTRING {
+			int nstr = arraylen($1.strlist);
+			if (!($$.strlist = reallocarray($1.strlist, nstr + 2,
 			    sizeof(char *))))
-				errx(1, "can't allocate envlist");
-			$$.envlist[nenv] = $2.str;
-			$$.envlist[nenv + 1] = NULL;
-		}
+				errx(1, "can't allocate strlist");
+			$$.strlist[nstr] = $2.str;
+			$$.strlist[nstr + 1] = NULL;
+		} ;
 
 
 ident:		TSTRING {
@@ -155,20 +184,8 @@ cmd:		/* optional */ {
 
 args:		/* empty */ {
 			$$.cmdargs = NULL;
-		} | TARGS argslist {
-			$$.cmdargs = $2.cmdargs;
-		} ;
-
-argslist:	/* empty */ {
-			if (!($$.cmdargs = calloc(1, sizeof(char *))))
-				errx(1, "can't allocate args");
-		} | argslist TSTRING {
-			int nargs = arraylen($1.cmdargs);
-			if (!($$.cmdargs = reallocarray($1.cmdargs, nargs + 2,
-			    sizeof(char *))))
-				errx(1, "can't allocate args");
-			$$.cmdargs[nargs] = $2.str;
-			$$.cmdargs[nargs + 1] = NULL;
+		} | TARGS strlist {
+			$$.cmdargs = $2.strlist;
 		} ;
 
 %%
@@ -196,7 +213,10 @@ static struct keyword {
 	{ "cmd", TCMD },
 	{ "args", TARGS },
 	{ "nopass", TNOPASS },
+        { "nolog", TNOLOG },
+	{ "persist", TPERSIST },
 	{ "keepenv", TKEEPENV },
+	{ "setenv", TSETENV },
 };
 
 int
@@ -310,7 +330,7 @@ eow:
 			goto repeat;
 	}
 	if (!nonkw) {
-		for (i = 0; (size_t)i < sizeof(keywords) / sizeof(keywords[0]); i++) {
+		for (i = 0; i < sizeof(keywords) / sizeof(keywords[0]); i++) {
 			if (strcmp(buf, keywords[i].word) == 0)
 				return keywords[i].token;
 		}

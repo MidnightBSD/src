@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $OpenBSD: doas.c,v 1.57 2016/06/19 19:29:43 martijn Exp $ */
 /*
  * Copyright (c) 2015 Ted Unangst <tedu@openbsd.org>
@@ -18,19 +17,13 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 
 #if defined(HAVE_INTTYPES_H)
 #include <inttypes.h>
 #endif
 
 #include <limits.h>
-/*
-#include <login_cap.h>
-#include <bsd_auth.h>
-*/
-#ifndef linux
-#include <readpassphrase.h>
-#endif
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,6 +33,8 @@
 #include <grp.h>
 #include <syslog.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <paths.h>
 
 #if defined(HAVE_LOGIN_CAP_H)
 #include <login_cap.h>
@@ -47,74 +42,47 @@
 
 #if defined(USE_BSD_AUTH)
 #include <bsd_auth.h>
+#include <readpassphrase.h>
 #endif
 
 #if defined(USE_PAM)
 #include <security/pam_appl.h>
 
-#ifndef linux
+#if defined(OPENPAM) /* BSD, MacOS & certain Linux distros */
 #include <security/openpam.h>
 static struct pam_conv pamc = { openpam_ttyconv, NULL };
-#include <fcntl.h>
-#endif // BSD using PAM
 
-#ifdef linux
+#elif defined(__LINUX_PAM__) /* Linux */
 #include <security/pam_misc.h>
 static struct pam_conv pamc = { misc_conv, NULL };
-#endif // Linux using PAM
 
-#endif // PAM
+#elif defined(SOLARIS_PAM) /* illumos & Solaris */
+#include "pm_pam_conv.h"
+static struct pam_conv pamc = { pam_tty_conv, NULL };
+
+#endif /* OPENPAM */
+#endif /* USE_PAM */
 
 #include "doas.h"
 
 static void 
 usage(void)
 {
-	fprintf(stderr, "usage: doas [-ns] [-a style] [-C config] [-u user]"
+	fprintf(stderr, "usage: doas [-nSs] [-a style] [-C config] [-u user]"
 	    " command [args]\n");
 	exit(1);
-}
-
-#ifdef linux
-void
-errc(int eval, int code, const char *format)
-{
-   fprintf(stderr, format);
-   exit(code);
-}
-#endif
-
-size_t
-arraylen(const char **arr)
-{
-	size_t cnt = 0;
-
-	while (*arr) {
-		cnt++;
-		arr++;
-	}
-	return cnt;
 }
 
 static int
 parseuid(const char *s, uid_t *uid)
 {
 	struct passwd *pw;
-	const char *errstr;
-
-	if ((pw = getpwnam(s)) != NULL) {
+        pw = getpwnam(s);
+	if (pw != NULL) {
 		*uid = pw->pw_uid;
 		return 0;
 	}
-        #ifndef linux
-	*uid = strtonum(s, 0, UID_MAX, &errstr);
-        #endif
-        #ifdef linux
-        sscanf(s, "%d", uid);
-        #endif
-	if (errstr)
-		return -1;
-	return 0;
+	return -1;
 }
 
 static int
@@ -133,21 +101,12 @@ static int
 parsegid(const char *s, gid_t *gid)
 {
 	struct group *gr;
-	const char *errstr;
-
-	if ((gr = getgrnam(s)) != NULL) {
+        gr = getgrnam(s);
+	if (gr != NULL) {
 		*gid = gr->gr_gid;
 		return 0;
 	}
-        #ifndef linux
-	*gid = strtonum(s, 0, GID_MAX, &errstr);
-        #endif
-        #ifdef linux
-        sscanf(s, "%d", gid);
-        #endif
-	if (errstr)
-		return -1;
-	return 0;
+	return -1;
 }
 
 static int
@@ -239,8 +198,16 @@ checkconfig(const char *confpath, int argc, char **argv,
     uid_t uid, gid_t *groups, int ngroups, uid_t target)
 {
 	struct rule *rule;
+        int status;
 
-	setresuid(uid, uid, uid);
+	#if defined(__linux__) || defined(__FreeBSD__) || defined(__MidnightBSD__)
+	status = setresuid(uid, uid, uid);
+	#else
+	status = setreuid(uid, uid);
+	#endif
+	if (status == -1)
+		errx(1, "unable to set uid to %d", uid);
+
 	parseconfig(confpath, 0);
 	if (!argc)
 		exit(0);
@@ -255,64 +222,116 @@ checkconfig(const char *confpath, int argc, char **argv,
 	}
 }
 
+#if defined(USE_BSD_AUTH)      
+static void
+authuser(char *myname, char *login_style, int persist)
+{
+	char *challenge = NULL, *response, rbuf[1024], cbuf[128];
+	auth_session_t *as;
+	int fd = -1;
+
+	if (persist)
+		fd = open("/dev/tty", O_RDWR);
+	if (fd != -1) {
+		if (ioctl(fd, TIOCCHKVERAUTH) == 0)
+			goto good;
+	}
+
+	if (!(as = auth_userchallenge(myname, login_style, "auth-doas",
+	    &challenge)))
+		errx(1, "Authorization failed");
+	if (!challenge) {
+		char host[HOST_NAME_MAX + 1];
+		if (gethostname(host, sizeof(host)))
+			snprintf(host, sizeof(host), "?");
+		snprintf(cbuf, sizeof(cbuf),
+		    "\rdoas (%.32s@%.32s) password: ", myname, host);
+		challenge = cbuf;
+	}
+	response = readpassphrase(challenge, rbuf, sizeof(rbuf),
+	    RPP_REQUIRE_TTY);
+	if (response == NULL && errno == ENOTTY) {
+		syslog(LOG_AUTHPRIV | LOG_NOTICE,
+		    "tty required for %s", myname);
+		errx(1, "a tty is required");
+	}
+	if (!auth_userresponse(as, response, 0)) {
+		syslog(LOG_AUTHPRIV | LOG_NOTICE,
+		    "failed auth for %s", myname);
+		errc(1, EPERM, NULL);
+	}
+	explicit_bzero(rbuf, sizeof(rbuf));
+good:
+	if (fd != -1) {
+		int secs = 5 * 60;
+		ioctl(fd, TIOCSETVERAUTH, &secs);
+		close(fd);
+	}
+}
+#endif
+
 int
 main(int argc, char **argv)
 {
-	const char *safepath = "/bin:/sbin:/usr/bin:/usr/sbin:"
-	    "/usr/local/bin:/usr/local/sbin";
+	const char *safepath = SAFE_PATH;
 	const char *confpath = NULL;
 	char *shargv[] = { NULL, NULL };
 	char *sh;
 	const char *cmd;
 	char cmdline[LINE_MAX];
-	char myname[_PW_NAME_LEN + 1];
-	struct passwd *pw;
+	char myname[_PW_NAME_LEN + 1], targetname[_PW_NAME_LEN + 1];
+	struct passwd *original_pw, *target_pw, *temp_pw; 
 	struct rule *rule;
 	uid_t uid;
 	uid_t target = 0;
 	gid_t groups[NGROUPS_MAX + 1];
 	int ngroups;
 	int i, ch;
+	int Sflag = 0;
 	int sflag = 0;
 	int nflag = 0;
 	char cwdpath[PATH_MAX];
 	const char *cwd;
+        #if defined(USE_BSD_AUTH)
 	char *login_style = NULL;
+        #endif
 	char **envp;
-        #ifdef USE_PAM
-        int temp_stdout;
-        #endif
 
-        #ifndef linux
 	setprogname("doas");
-        #endif
 
-        /*
-	if (pledge("stdio rpath getpw tty proc exec id", NULL) == -1)
-		err(1, "pledge");
-        */
-
-        #ifndef linux
 	closefrom(STDERR_FILENO + 1);
-        #endif
 
 	uid = getuid();
+	targetname[0] = '\0';
 
-	while ((ch = getopt(argc, argv, "a:C:nsu:")) != -1) {
+	while ((ch = getopt(argc, argv, "+a:C:nSsu:")) != -1) {
 		switch (ch) {
+                #if defined(USE_BSD_AUTH)
 		case 'a':
 			login_style = optarg;
 			break;
+                #endif
 		case 'C':
 			confpath = optarg;
 			break;
+/*		case 'L':
+			i = open("/dev/tty", O_RDWR);
+			if (i != -1)
+				ioctl(i, TIOCCLRVERAUTH);
+			exit(i != -1);
+*/
 		case 'u':
-			if (parseuid(optarg, &target) != 0)
+                        targetname[0] = '\0';
+			if (strlcpy(targetname, optarg, sizeof(targetname)) >= sizeof(targetname))
+				errx(1, "pw_name too long");
+			if (parseuid(targetname, &target) != 0)
 				errx(1, "unknown user");
 			break;
 		case 'n':
 			nflag = 1;
 			break;
+		case 'S':
+			Sflag = 1;	
 		case 's':
 			sflag = 1;
 			break;
@@ -330,16 +349,13 @@ main(int argc, char **argv)
 	} else if ((!sflag && !argc) || (sflag && argc))
 		usage();
 
-	pw = getpwuid(uid);
-	if (!pw)
+	temp_pw = getpwuid(uid);
+        original_pw = copyenvpw(temp_pw);
+	if (! original_pw)
 		err(1, "getpwuid failed");
-        #ifndef linux
-	if (strlcpy(myname, pw->pw_name, sizeof(myname)) >= sizeof(myname))
+	if (strlcpy(myname, original_pw->pw_name, sizeof(myname)) >= sizeof(myname))
 		errx(1, "pw_name too long");
-        #endif
-        #ifdef linux
-        strncpy(myname, pw->pw_name, sizeof(myname));
-        #endif
+
 	ngroups = getgroups(NGROUPS_MAX, groups);
 	if (ngroups == -1)
 		err(1, "can't get groups");
@@ -347,9 +363,11 @@ main(int argc, char **argv)
 
 	if (sflag) {
 		sh = getenv("SHELL");
-		if (sh == NULL || *sh == '\0')
-			shargv[0] = pw->pw_shell;
-		else
+		if (sh == NULL || *sh == '\0') {
+			shargv[0] = strdup(original_pw->pw_shell);
+			if (shargv[0] == NULL)
+				err(1, NULL);
+		} else
 			shargv[0] = sh;
 		argv = shargv;
 		argc = 1;
@@ -361,72 +379,38 @@ main(int argc, char **argv)
 		exit(1);	/* fail safe */
 	}
 
-#if defined(USE_PAM)
-	pam_handle_t *pamh = NULL;
-	int pam_err;
-	int pam_silent = PAM_SILENT;
-#endif
+	if (geteuid())
+		errx(1, "not installed setuid");
 
 	parseconfig(DOAS_CONF, 1);
 
 	/* cmdline is used only for logging, no need to abort on truncate */
-        #ifndef linux
-	(void) strlcpy(cmdline, argv[0], sizeof(cmdline));
+	(void)strlcpy(cmdline, argv[0], sizeof(cmdline));
 	for (i = 1; i < argc; i++) {
 		if (strlcat(cmdline, " ", sizeof(cmdline)) >= sizeof(cmdline))
 			break;
 		if (strlcat(cmdline, argv[i], sizeof(cmdline)) >= sizeof(cmdline))
 			break;
 	}
-        #endif
-        #ifdef linux
-        strncpy(cmdline, argv[0], sizeof(cmdline));
-        for (i = 1; i < argc; i++) {
-                strncat(cmdline, " ", sizeof(cmdline));
-                strncat(cmdline, argv[i], sizeof(cmdline));
-        }
-        #endif
 
 	cmd = argv[0];
 	if (!permit(uid, groups, ngroups, &rule, target, cmd,
-	    (const char**)argv + 1)) {
+	    (const char **)argv + 1)) {
 		syslog(LOG_AUTHPRIV | LOG_NOTICE,
 		    "failed command for %s: %s", myname, cmdline);
 		errc(1, EPERM, NULL);
 	}
 
-	if (!(rule->options & NOPASS)) {
-#if defined(USE_BSD_AUTH)      
-		char *challenge = NULL, *response, rbuf[1024], cbuf[128];
-		auth_session_t *as;
+	if (Sflag) {
+		argv[0] = "-doas";
+	}
 
+	if (!(rule->options & NOPASS)) {
 		if (nflag)
 			errx(1, "Authorization required");
 
-		if (!(as = auth_userchallenge(myname, login_style, "auth-doas",
-		    &challenge)))
-			errx(1, "Authorization failed");
-		if (!challenge) {
-			char host[MAXHOSTNAME + 1];
-			if (gethostname(host, sizeof(host)))
-				snprintf(host, sizeof(host), "?");
-			snprintf(cbuf, sizeof(cbuf),
-			    "\rdoas (%.32s@%.32s) password: ", myname, host);
-			challenge = cbuf;
-		}
-		response = readpassphrase(challenge, rbuf, sizeof(rbuf),
-		    RPP_REQUIRE_TTY);
-		if (response == NULL && errno == ENOTTY) {
-			syslog(LOG_AUTHPRIV | LOG_NOTICE,
-			    "tty required for %s", myname);
-			errx(1, "a tty is required");
-		}
-		if (!auth_userresponse(as, response, 0)) {
-			syslog(LOG_AUTHPRIV | LOG_NOTICE,
-			    "failed auth for %s", myname);
-			errc(1, EPERM, NULL);
-		}
-		explicit_bzero(rbuf, sizeof(rbuf));
+#if defined(USE_BSD_AUTH) 
+		authuser(myname, login_style, rule->options & PERSIST);
 #elif defined(USE_PAM)
 #define PAM_END(msg) do { 						\
 	syslog(LOG_ERR, "%s: %s", msg, pam_strerror(pamh, pam_err)); 	\
@@ -434,11 +418,36 @@ main(int argc, char **argv)
 	pam_end(pamh, pam_err);						\
 	exit(EXIT_FAILURE);						\
 } while (/*CONSTCOND*/0)
+		pam_handle_t *pamh = NULL;
+		int pam_err;
 
-                /* force password prompt to display on stderr, not stdout */
-                temp_stdout = dup(1);
-                close(1);
-                dup2(2, 1);
+/* #ifndef linux */
+		int temp_stdin;
+
+		/* openpam_ttyconv checks if stdin is a terminal and
+		 * if it is then does not bother to open /dev/tty.
+		 * The result is that PAM writes the password prompt
+		 * directly to stdout.  In scenarios where stdin is a
+		 * terminal, but stdout is redirected to a file
+		 * e.g. by running doas ls &> ls.out interactively,
+		 * the password prompt gets written to ls.out as well.
+		 * By closing stdin first we forces PAM to read/write
+		 * to/from the terminal directly.  We restore stdin
+		 * after authenticating. */
+		temp_stdin = dup(STDIN_FILENO);
+		if (temp_stdin == -1)
+			err(1, "dup");
+		close(STDIN_FILENO);
+/* #else */
+		/* force password prompt to display on stderr, not stdout */
+		int temp_stdout = dup(1);
+		if (temp_stdout == -1)
+			err(1, "dup");
+		close(1);
+		if (dup2(2, 1) == -1)
+			err(1, "dup2");
+/* #endif */
+
 		pam_err = pam_start("doas", myname, &pamc, &pamh);
 		if (pam_err != PAM_SUCCESS) {
 			if (pamh != NULL)
@@ -448,15 +457,15 @@ main(int argc, char **argv)
 			errx(EXIT_FAILURE, "pam_start failed");
 		}
 
-		switch (pam_err = pam_authenticate(pamh, pam_silent)) {
+		switch (pam_err = pam_authenticate(pamh, PAM_SILENT)) {
 		case PAM_SUCCESS:
-			switch (pam_err = pam_acct_mgmt(pamh, pam_silent)) {
+			switch (pam_err = pam_acct_mgmt(pamh, PAM_SILENT)) {
 			case PAM_SUCCESS:
 				break;
 
 			case PAM_NEW_AUTHTOK_REQD:
 				pam_err = pam_chauthtok(pamh,
-				    pam_silent|PAM_CHANGE_EXPIRED_AUTHTOK);
+				    PAM_SILENT|PAM_CHANGE_EXPIRED_AUTHTOK);
 				if (pam_err != PAM_SUCCESS)
 					PAM_END("pam_chauthtok");
 				break;
@@ -488,25 +497,61 @@ main(int argc, char **argv)
 			break;
 		}
 		pam_end(pamh, pam_err);
+
+#ifndef linux
+		/* Re-establish stdin */
+		if (dup2(temp_stdin, STDIN_FILENO) == -1)
+			err(1, "dup2");
+		close(temp_stdin);
+#else 
+		/* Re-establish stdout */
+		close(1);
+		if (dup2(temp_stdout, 1) == -1)
+			err(1, "dup2");
+#endif
 #else
 #error	No auth module!
 #endif
-
 	}
 
         /*
 	if (pledge("stdio rpath getpw exec id", NULL) == -1)
 		err(1, "pledge");
         */
-	pw = getpwuid(target);
-	if (!pw)
+	if (targetname[0] == '\0')
+		temp_pw = getpwuid(target);
+	else
+		temp_pw = getpwnam(targetname);
+	if (temp_pw->pw_shell[0] == '\0')
+		temp_pw->pw_shell = strdup(_PATH_BSHELL);
+        target_pw = copyenvpw(temp_pw);
+	if (! target_pw)
 		errx(1, "no passwd entry for target");
 
+        
 #if defined(HAVE_LOGIN_CAP_H)
-	if (setusercontext(NULL, pw, target, LOGIN_SETGROUP |
-	    LOGIN_SETPRIORITY | LOGIN_SETRESOURCES | LOGIN_SETUMASK |
-	    LOGIN_SETUSER) != 0)
-		errx(1, "failed to set user context for target");
+        if (setusercontext(NULL, target_pw, target, 
+            LOGIN_SETGROUP | LOGIN_SETLOGINCLASS |
+            LOGIN_SETPRIORITY | LOGIN_SETRESOURCES | LOGIN_SETUMASK |
+            LOGIN_SETUSER) != 0)
+            errx(1, "failed to set user context for target");
+#else
+	#if defined(__linux__) || defined(__FreeBSD__) || defined(__MidnightBSD__)
+	if (setresgid(target_pw->pw_gid, target_pw->pw_gid, target_pw->pw_gid) == -1)
+		err(1, "setresgid");
+	#else
+	if (setregid(target_pw->pw_gid, target_pw->pw_gid) == -1)
+		err(1, "setregid");
+	#endif
+	if (initgroups(target_pw->pw_name, target_pw->pw_gid) == -1)
+		err(1, "initgroups");
+	#if defined(__linux__) || defined(__FreeBSD__) || defined(__MidnightBSD__)
+	if (setresuid(target, target, target) == -1)
+		err(1, "setresuid");
+	#else
+	if (setreuid(target, target) == -1)
+		err(1, "setreuid");
+	#endif
 #endif
         /*
 	if (pledge("stdio rpath exec", NULL) == -1)
@@ -522,28 +567,15 @@ main(int argc, char **argv)
         if (pledge("stdio exec", NULL) == -1)
 		err(1, "pledge");
         */
-        /* Re-establish stdout */
-        #ifdef USE_PAM
-        if (!(rule->options & NOPASS))
+
+        /* skip logging if NOLOG is set */
+        if (!(rule->options & NOLOG))
         {
-          close(1);
-          dup2(temp_stdout, 1);
+	    syslog(LOG_AUTHPRIV | LOG_INFO, "%s ran command %s as %s from %s",
+	            myname, cmdline, target_pw->pw_name, cwd);
         }
-        #endif
 
-#ifndef HAVE_LOGIN_CAP_H
-        /* If we effectively are root, set the UID to actually be root to avoid
-           permission errors. */
-        if (target != 0)
-           setuid(target);
-        if ( geteuid() == ROOT_UID )
-           setuid(ROOT_UID);
-#endif
-
-	syslog(LOG_AUTHPRIV | LOG_INFO, "%s ran command %s as %s from %s",
-	    myname, cmdline, pw->pw_name, cwd);
-
-	envp = prepenv(rule);
+	envp = prepenv(rule, original_pw, target_pw);
 
 	if (rule->cmd) {
 		if (setenv("PATH", safepath, 1) == -1)
@@ -554,3 +586,4 @@ main(int argc, char **argv)
 		errx(1, "%s: command not found", cmd);
 	err(1, "%s", cmd);
 }
+
