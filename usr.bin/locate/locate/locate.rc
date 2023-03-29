@@ -1,7 +1,6 @@
 #
 # /etc/locate.rc -  command script for updatedb(8)
 #
-# $FreeBSD$
 
 #
 # All commented values are the defaults
@@ -16,7 +15,7 @@
 #SEARCHPATHS="/"
 
 # paths unwanted in output
-#PRUNEPATHS="/tmp /usr/tmp /var/tmp /var/db/portsnap /var/db/freebsd-update"
+#PRUNEPATHS="/tmp /usr/tmp /var/tmp /var/db/portsnap /var/db/midnightbsd-update"
 
 # directories unwanted in output
 #PRUNEDIRS=".zfs"
