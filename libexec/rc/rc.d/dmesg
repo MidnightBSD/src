@@ -1,6 +1,4 @@
 #!/bin/sh
-#
-#
 
 # PROVIDE: dmesg
 # REQUIRE: mountcritremote FILESYSTEMS
