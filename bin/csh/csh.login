@@ -1,5 +1,3 @@
-# $FreeBSD$
-#
 # System-wide .login file for csh(1).
 #
 # For the setting of languages and character sets please see
