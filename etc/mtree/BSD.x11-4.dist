@@ -1,8 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: src/etc/mtree/BSD.x11-4.dist,v 1.27.2.1 2005/11/16 07:50:36 ru Exp $
-#
 # Please see the file src/etc/mtree/README before making changes to this file.
-#
 
 /set type=dir uname=root gname=wheel mode=0755
 .
