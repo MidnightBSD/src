@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #define _BSD_SOURCE
 

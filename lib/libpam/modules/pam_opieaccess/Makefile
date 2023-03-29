@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 LIB=	pam_opieaccess
 SRCS=	${LIB}.c
