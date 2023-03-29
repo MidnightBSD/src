@@ -1,5 +1,3 @@
-# $FreeBSD$
-#
 # .login - csh login script, read by login shell, after `.cshrc' at login.
 #
 # See also csh(1), environ(7).
