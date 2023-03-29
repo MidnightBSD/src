@@ -32,9 +32,6 @@ ETCMAIL+=Makefile README access.sample virtusertable.sample \
 	mailertable.sample
 .endif
 
-# Special top level files for FreeBSD
-FREEBSD=COPYRIGHT
-
 # Special top level files for MidnightBSD
 MIDNIGHTBSD=COPYRIGHT
 
