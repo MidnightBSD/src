@@ -1,8 +1,8 @@
-# $FreeBSD$
 
 .include <src.opts.mk>
 
 CONFS=	340.noid \
+	350.msearch \
 	450.status-security \
 	999.local
 
