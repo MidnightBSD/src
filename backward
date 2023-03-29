@@ -60,20 +60,36 @@ Link	Pacific/Easter		Chile/EasterIsland
 Link	America/Havana		Cuba
 Link	Africa/Cairo		Egypt
 Link	Europe/Dublin		Eire
+# Vanguard section, for most .zi parsers.
+#Link	GMT			Etc/GMT
+#Link	GMT			Etc/GMT+0
+#Link	GMT			Etc/GMT-0
+#Link	GMT			Etc/GMT0
+#Link	GMT			Etc/Greenwich
+# Rearguard section, for TZUpdater 2.3.2 and earlier.
+Link	Etc/GMT			Etc/GMT+0
+Link	Etc/GMT			Etc/GMT-0
+Link	Etc/GMT			Etc/GMT0
+Link	Etc/GMT			Etc/Greenwich
+# End of rearguard section.
 Link	Etc/UTC			Etc/UCT
-Link	Europe/London		Europe/Belfast
-Link	Europe/Kyiv		Europe/Kiev
-Link	Europe/Chisinau		Europe/Tiraspol
-Link	Europe/Kyiv		Europe/Uzhgorod
-Link	Europe/Kyiv		Europe/Zaporozhye
+Link	Etc/UTC			Etc/Universal
+Link	Etc/UTC			Etc/Zulu
 Link	Europe/London		GB
 Link	Europe/London		GB-Eire
+# Vanguard section, for most .zi parsers.
+#Link	GMT			GMT+0
+#Link	GMT			GMT-0
+#Link	GMT			GMT0
+#Link	GMT			Greenwich
+# Rearguard section, for TZUpdater 2.3.2 and earlier.
 Link	Etc/GMT			GMT+0
 Link	Etc/GMT			GMT-0
 Link	Etc/GMT			GMT0
 Link	Etc/GMT			Greenwich
+# End of rearguard section.
 Link	Asia/Hong_Kong		Hongkong
-Link	Africa/Abidjan		Iceland
+Link	Africa/Abidjan		Iceland	#= Atlantic/Reykjavik
 Link	Asia/Tehran		Iran
 Link	Asia/Jerusalem		Israel
 Link	America/Jamaica		Jamaica
@@ -258,6 +274,7 @@ Link	America/Argentina/Cordoba	America/Rosario
 Link	America/Tijuana		America/Santa_Isabel
 Link	America/Denver		America/Shiprock
 Link	America/Toronto		America/Thunder_Bay
+Link	America/Edmonton	America/Yellowknife
 Link	Pacific/Auckland	Antarctica/South_Pole
 Link	Asia/Shanghai		Asia/Chongqing
 Link	Asia/Shanghai		Asia/Harbin
