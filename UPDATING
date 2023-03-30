@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20230330:
+	Fix CVE-2020-10188 in telnetd
+
 20230329:
 	doas 6.3p9
 
