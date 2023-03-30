@@ -1,5 +1,3 @@
-# $FreeBSD: stable/11/lib/liblzma/Makefile 313538 2017-02-10 07:32:40Z ngie $
-
 PACKAGE=lib${LIB}
 LIB=		lzma
 LZMADIR=	${SRCTOP}/contrib/xz/src/liblzma
