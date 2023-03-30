@@ -4,6 +4,8 @@ Updating Information for MidnightBSD users.
 	add fix for CVE-2022-25147 (apr-util) 
 	workaround an integer overflow in apr_base64 functions.
 
+	Fix CVE-2020-10188 in telnetd
+
 20230329:
 	doas 6.3p9
 
