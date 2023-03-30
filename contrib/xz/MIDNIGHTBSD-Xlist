@@ -1,4 +1,3 @@
-$MidnightBSD$
 */*/*/Makefile.*
 */*/Makefile.*
 */.gitignore
@@ -28,9 +27,11 @@ dos/
 extra/
 lib/
 m4/
+macosx/
 makefile.am
+po/
+po4a/
 src/*/*.rc
-src/liblzma/liblzma.pc.in
 src/scripts/
 tests/
 version.sh
