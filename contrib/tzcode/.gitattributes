@@ -1,0 +1,20 @@
+* text=auto !eol
+stdtime/asctime.c -text
+stdtime/ctime.3 -text
+stdtime/difftime.c -text
+stdtime/localtime.c -text
+stdtime/private.h -text
+stdtime/time2posix.3 -text
+stdtime/tzfile.5 -text
+stdtime/tzfile.h -text
+zic/README -text
+zic/Theory -text
+zic/ialloc.c -text
+zic/private.h -text
+zic/scheck.c -text
+zic/zdump.8 -text
+zic/zdump.c -text
+zic/zdump/Makefile -text
+zic/zic.8 -text
+zic/zic.c -text
+zic/zic/Makefile -text
