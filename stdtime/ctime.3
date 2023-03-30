@@ -11,7 +11,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -28,9 +28,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)ctime.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/11/contrib/tzcode/stdtime/ctime.3 266111 2014-05-15 03:08:20Z gavin $
+.\" $FreeBSD$
 .\"
-.Dd January 2, 1999
+.Dd September 16, 2022
 .Dt CTIME 3
 .Os
 .Sh NAME
@@ -94,6 +94,10 @@ and returns a pointer to a
 (described below) which contains
 the broken-out time information for the value after adjusting for the current
 time zone (and any other factors such as Daylight Saving Time).
+When the specified time translates to a year that will not fit in an
+.Dv int ,
+.Fn localtime
+returns NULL.
 Time zone adjustments are performed as specified by the
 .Ev TZ
 environment variable (see
@@ -292,6 +296,7 @@ with positive
 values indicating east of the Prime Meridian.
 .Sh SEE ALSO
 .Xr date 1 ,
+.Xr clock_gettime 2 ,
 .Xr gettimeofday 2 ,
 .Xr getenv 3 ,
 .Xr time 3 ,
@@ -335,6 +340,33 @@ the time package contributed to Berkeley by
 .An Arthur Olson
 and which appeared in
 .Bx 4.3 .
+.Pp
+The functions
+.Fn asctime ,
+.Fn gmtime ,
+and
+.Fn localtime
+first appeared in
+.At v5 ,
+.Fn difftime
+and
+.Fn mktime
+in
+.Bx 4.3 Reno ,
+and
+.Fn timegm
+and
+.Fn timelocal
+in SunOS 4.0.
+.Pp
+The functions
+.Fn asctime_r ,
+.Fn ctime_r ,
+.Fn gmtime_r ,
+and
+.Fn localtime_r
+have been available since
+.Fx 8.0 .
 .Sh BUGS
 Except for
 .Fn difftime ,

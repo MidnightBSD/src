@@ -6,7 +6,7 @@
 ** This file is in the public domain, so clarified as of
 ** 1996-06-05 by Arthur David Olson.
 **
-** $FreeBSD: stable/11/contrib/tzcode/stdtime/private.h 289027 2015-10-08 11:42:15Z rodrigc $
+** $FreeBSD$
 */
 
 /* Stuff moved from Makefile.inc to reduce clutter */
