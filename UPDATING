@@ -9,6 +9,8 @@ Updating Information for MidnightBSD users.
 
 	openssl 1.1.1t
 
+	readelf - match GNU formatting
+
 20230224:
 	file 5.43
 
