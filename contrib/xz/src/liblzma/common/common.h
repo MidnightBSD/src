@@ -34,6 +34,46 @@
 
 #include "lzma.h"
 
+// The extra symbol versioning in the C files may only be used when
+// building a shared library. If HAVE_SYMBOL_VERSIONS_LINUX is defined
+// to 2 then symbol versioning is done only if also PIC is defined.
+// By default Libtool defines PIC when building a shared library and
+// doesn't define it when building a static library but it can be
+// overriden with --with-pic and --without-pic. configure let's rely
+// on PIC if neither --with-pic or --without-pic was used.
+#if defined(HAVE_SYMBOL_VERSIONS_LINUX) \
+		&& (HAVE_SYMBOL_VERSIONS_LINUX == 2 && !defined(PIC))
+#	undef HAVE_SYMBOL_VERSIONS_LINUX
+#endif
+
+#ifdef HAVE_SYMBOL_VERSIONS_LINUX
+// To keep link-time optimization (LTO, -flto) working with GCC,
+// the __symver__ attribute must be used instead of __asm__(".symver ...").
+// Otherwise the symbol versions may be lost, resulting in broken liblzma
+// that has wrong default versions in the exported symbol list!
+// The attribute was added in GCC 10; LTO with older GCC is not supported.
+//
+// To keep -Wmissing-prototypes happy, use LZMA_SYMVER_API only with function
+// declarations (including those with __alias__ attribute) and LZMA_API with
+// the function definitions. This means a little bit of silly copy-and-paste
+// between declarations and definitions though.
+//
+// As of GCC 12.2, the __symver__ attribute supports only @ and @@ but the
+// very convenient @@@ isn't supported (it's supported by GNU assembler
+// since 2000). When using @@ instead of @@@, the internal name must not be
+// the same as the external name to avoid problems in some situations. This
+// is why "#define foo_52 foo" is needed for the default symbol versions.
+#	if TUKLIB_GNUC_REQ(10, 0) && !defined(__INTEL_COMPILER)
+#		define LZMA_SYMVER_API(extnamever, type, intname) \
+			extern __attribute__((__symver__(extnamever))) \
+					LZMA_API(type) intname
+#	else
+#		define LZMA_SYMVER_API(extnamever, type, intname) \
+			__asm__(".symver " #intname "," extnamever); \
+			extern LZMA_API(type) intname
+#	endif
+#endif
+
 // These allow helping the compiler in some often-executed branches, whose
 // result is almost always the same.
 #ifdef __GNUC__
