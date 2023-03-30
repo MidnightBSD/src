@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20230330:
+	add fix for CVE-2022-25147 (apr-util) 
+	workaround an integer overflow in apr_base64 functions.
+
 20230329:
 	doas 6.3p9
 
