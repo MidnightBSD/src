@@ -102,10 +102,10 @@ mport_createextras_free(mportCreateExtras *extra)
             extra->conflicts[i] = NULL;
             i++;
         }
-    }
 
-    free(extra->conflicts);
-    extra->conflicts = NULL;
+        free(extra->conflicts);
+        extra->conflicts = NULL;
+    }
 
     i = 0;
     if (extra->depends != NULL) {
@@ -114,10 +114,10 @@ mport_createextras_free(mportCreateExtras *extra)
             extra->depends[i] = NULL;
             i++;
         }
-    }
 
-    free(extra->depends);
-    extra->depends = NULL;
+        free(extra->depends);
+        extra->depends = NULL;
+    }
 
     free(extra);
 }
