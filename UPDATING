@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20230402:
+	OpenSSL 1.1.1t
+
 20230330:
 	Fix CVE-2020-10188 in telnetd
 
