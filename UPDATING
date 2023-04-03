@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20230403:
+	libxo 1.0.4
+
 20230330:
 	add fix for CVE-2022-25147 (apr-util) 
 	workaround an integer overflow in apr_base64 functions.
