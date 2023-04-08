@@ -428,6 +428,81 @@ mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndex
 }
 
 
+/*
+ * Look up index entries containing the term. Supports unix style globs.
+ * e.g. mport_index_search_term(mport, &indexEntry, 'gmake');
+ * 
+ * Simplified version of mport_index_search();
+ */
+MPORT_PUBLIC_API int
+mport_index_search_term(mportInstance *mport, mportIndexEntry ***entry_vec, char *term) {
+
+	sqlite3_stmt *stmt;
+	int ret = MPORT_OK;
+	int len;
+	int i = 0, step;
+	mportIndexEntry **e;
+
+
+	if (mport == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
+	}
+
+	sqlite3 *db = mport->db;
+
+	if (mport_db_count(mport->db, &len, "SELECT count(*) FROM idx.packages WHERE pkg glob %Q or comment glob %Q", term, term) != MPORT_OK) {
+		RETURN_CURRENT_ERROR;
+	}
+
+	e = (mportIndexEntry **) calloc((size_t) len + 1, sizeof(mportIndexEntry *));
+	if (e == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "Could not allocate memory");
+	}
+	*entry_vec = e;
+
+	if (len == 0) {
+		return MPORT_OK;
+	}
+
+	if (mport_db_prepare(db, &stmt,
+	                     "SELECT pkg, version, comment, bundlefile, license, hash, type FROM idx.packages WHERE pkg glob %Q or comment glob %Q", term, term) !=
+	    MPORT_OK) {
+		sqlite3_finalize(stmt);
+		RETURN_CURRENT_ERROR;
+	}
+
+	while (1) {
+		step = sqlite3_step(stmt);
+
+		if (step == SQLITE_ROW) {
+			if ((e[i] = (mportIndexEntry *) calloc(1, sizeof(mportIndexEntry))) == NULL) {
+				ret = MPORT_ERR_FATAL;
+				break;
+			}
+
+			populate_row(stmt, e[i]);
+
+			if (e[i]->pkgname == NULL || e[i]->version == NULL || e[i]->comment == NULL || e[i]->license == NULL ||
+			    e[i]->bundlefile == NULL) {
+				ret = MPORT_ERR_FATAL;
+				break;
+			}
+
+			i++;
+		} else if (step == SQLITE_DONE) {
+			e[i] = NULL;
+			break;
+		} else {
+			ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			break;
+		}
+	}
+
+	sqlite3_finalize(stmt);
+
+	return ret;
+}
+
 /* mport_index_search(mportInstance *mport, mportIndexEntry ***entry_vec, const char *where, ...)
  *
  * Allocate and populate the index meta for the given package in the index.
