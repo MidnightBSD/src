@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20230408:
+	mport 2.3.0
+
+20230404:
+	MidnightBSD 3.0.1
+
 20230402:
 	OpenSSL 1.1.1t
 
