@@ -44,10 +44,7 @@ gce-check-depends:
 .endfor
 .if !exists(/usr/local/bin/gcloud)
 . if !exists(${PORTSDIR}/net/google-cloud-sdk/Makefile)
-.  if !exists(/usr/local/sbin/pkg-static)
-	env ASSUME_ALWAYS_YES=yes pkg bootstrap -yf
-.  endif
-	env ASSUME_ALWAYS_YES=yes pkg install -y net/google-cloud-sdk
+	env ASSUME_ALWAYS_YES=yes mport install google-cloud-sdk
 . else
 	make -C ${PORTSDIR}/net/google-cloud-sdk BATCH=1 all install clean
 . endif
