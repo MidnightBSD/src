@@ -558,7 +558,7 @@ get_groups() {
 
 	if [ -z "$configflag" ]; then
 		[ -z "$fflag" ] && echo -n "Login group is $_group. Invite $username"
-		[ -z "$fflag" ] && echo -n " into other groups? [$ugroups]: "
+		[ -z "$fflag" ] && echo -n " into other groups? (wheel for admin) [$ugroups]: "
 	else
 		[ -z "$fflag" ] && echo -n "Enter additional groups [$ugroups]: "
 	fi
