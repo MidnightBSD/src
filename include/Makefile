@@ -1,5 +1,4 @@
 #	@(#)Makefile	8.2 (Berkeley) 1/4/94
-# $FreeBSD$
 #
 # Doing a "make install" builds /usr/include.
 
@@ -10,7 +9,8 @@ TAGS+=	development
 CLEANFILES= osreldate.h version
 SUBDIR= arpa protocols rpcsvc rpc xlocale
 SUBDIR_PARALLEL=
-INCS=	a.out.h ar.h assert.h bitstring.h complex.h cpio.h _ctype.h ctype.h \
+INCS=	a.out.h ar.h assert.h bitstring.h byteswap.h \
+	complex.h cpio.h _ctype.h ctype.h \
 	db.h \
 	dirent.h dlfcn.h elf.h elf-hints.h err.h fmtmsg.h fnmatch.h fstab.h \
 	fts.h ftw.h getopt.h glob.h grp.h \
