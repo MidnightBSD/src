@@ -46,18 +46,40 @@ firstboot_start()
 
 		if [ ${installgui} = "yes" ]; then
 			echo -e "\r${red}Installing Graphical User Interface${lsuffix}"
-#			KDE CASE
-			if [ -f /usr/local/bin/kdm ]; then
-				echo "KDE detected"
-				echo "ttyv8 \"/usr/local/bin/kdm -nodaemon\" xterm on secure" >> /etc/ttys
-			else
-#			GNUSTEP/WindowMaker/mlogind
+#			xfce/mlogind
 				/sbin/ipfw disable firewall
 				/usr/sbin/mport install midnightbsd-desktop
 				/sbin/ipfw enable firewall
 				/usr/sbin/sysrc mlogind_enable=YES
 				/usr/sbin/sysrc dbus_enable=YES
 				/usr/sbin/sysrc hald_enable=YES
+
+			echo -e "\r${yellow}Do you wish to install drm kmod for amd or intel GPUs? (yes or no)${lsuffix}"
+			read drmkmod
+			if [ ${drmkmod} = "yes" ]; then
+				/usr/sbin/mport install drm-fbsd12.0-kmod
+				echo -e "\r${yellow}Which GPU module do you want to activate? (amd, radeonkms or intel)${lsuffix}"
+				read kmsmodule
+				if [ ${kmsmodule} = "intel" ]; then
+					/usr/sbin/sysrc kld_list="/boot/modules/i915kms.ko"
+				elif [ ${kmsmodule} = "amd" ]; then
+					/usr/sbin/sysrc kld_list="amdgpu"
+				else 
+					/usr/sbin/sysrc kld_list="/boot/modules/radeonkms.ko"
+				fi
+			fi
+
+			echo -e "\r${yellow}Do you wish to install nvidia GPU driver? (no, 340, 390, 470)${lsuffix}"
+			read nvidia
+			if [ ${nvidia} = "340" ]; then
+				/usr/sbin/mport install nvidia-driver-340
+				/usr/sbin/sysrc kld_list="nvidia"
+			elif [ ${nvidia} = "390" ]; then
+				/usr/sbin/mport install nvidia-driver-390
+				/usr/sbin/sysrc kld_list="nvidia"
+			elif [ $[nvidia} = 470" ]; then
+				/usr/sbin/mport install nvidia-driver-470
+				/usr/sbin/sysrc kld_list="nvidia"
 			fi
 			echo "Please restart to enable graphical login."
 			echo -e "\r${yellow}Done.${lsuffix}"
