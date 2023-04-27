@@ -54,6 +54,8 @@ firstboot_start()
 				/usr/sbin/sysrc dbus_enable=YES
 				/usr/sbin/sysrc hald_enable=YES
 
+			echo "The following options will help you install GPU drivers. You may need to perform further x.org configuration to make them work properly"
+
 			echo -e "\r${yellow}Do you wish to install drm kmod for amd or intel GPUs? (yes or no)${lsuffix}"
 			read drmkmod
 			if [ ${drmkmod} = "yes" ]; then
