@@ -47,7 +47,7 @@ firstboot_start()
 			mkdir -p /raven/etc/ravensw/keys
 			mkdir /raven/etc/ravensw/repos
 			mkdir /raven/sbin
-			echo MidnightBSD:3:amd64 > /raven/etc/ravensw.conf
+			echo 'ABI = "MidnightBSD:3:amd64"' > /raven/etc/ravensw.conf
 			cp /usr/share/ravenports/keys/ravenports.key /raven/etc/ravensw/keys/ravenports.key
 			cp /usr/share/ravenports/repos/01_raven.conf /raven/etc/ravensw/repos/01_raven.conf
 			cd /raven/sbin/ && fetch http://www.ravenports.com/repository/MidnightBSD:3:amd64/Latest/ravensw.gz && gunzip ravensw.gz
