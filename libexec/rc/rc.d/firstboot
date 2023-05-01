@@ -94,7 +94,7 @@ firstboot_start()
 			elif [ ${nvidia} = "390" ]; then
 				/usr/sbin/mport install nvidia-driver-390
 				/usr/sbin/sysrc kld_list="nvidia"
-			elif [ $[nvidia} = 470" ]; then
+			elif [ $[nvidia} = "470" ]; then
 				/usr/sbin/mport install nvidia-driver-470
 				/usr/sbin/sysrc kld_list="nvidia"
 			fi
