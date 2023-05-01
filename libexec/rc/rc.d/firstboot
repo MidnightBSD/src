@@ -41,25 +41,27 @@ firstboot_start()
 			/usr/sbin/sysrc bsdstats_enable=YES
 		fi
 
-		echo -e "\r${yellow}Would you like to install Ravenports, an alternative package manager? (yes or no)${lsuffix}"
-                read ravenports
-                if [ ${ravenports} = "yes" ]; then
-			mkdir -p /raven/etc/ravensw/keys
-			mkdir /raven/etc/ravensw/repos
-			mkdir /raven/sbin
-			echo 'ABI = "MidnightBSD:3:amd64"' > /raven/etc/ravensw.conf
-			cp /usr/share/ravenports/keys/ravenports.key /raven/etc/ravensw/keys/ravenports.key
-			cp /usr/share/ravenports/repos/01_raven.conf /raven/etc/ravensw/repos/01_raven.conf
-			cd /raven/sbin/ && fetch http://www.ravenports.com/repository/MidnightBSD:3:amd64/Latest/ravensw.gz && gunzip ravensw.gz
-			chmod 755 /raven/sbin/ravensw
+		if [ `uname -m` == 'amd64' ]; then
+			echo -e "\r${yellow}Would you like to install Ravenports, an alternative package manager? (yes or no)${lsuffix}"
+                	read ravenports
+                	if [ ${ravenports} = "yes" ]; then
+				mkdir -p /raven/etc/ravensw/keys
+				mkdir /raven/etc/ravensw/repos
+				mkdir /raven/sbin
+				echo 'ABI = "MidnightBSD:3:amd64"' > /raven/etc/ravensw.conf
+				cp /usr/share/ravenports/keys/ravenports.key /raven/etc/ravensw/keys/ravenports.key
+				cp /usr/share/ravenports/repos/01_raven.conf /raven/etc/ravensw/repos/01_raven.conf
+				cd /raven/sbin/ && fetch http://www.ravenports.com/repository/MidnightBSD:3:amd64/Latest/ravensw.gz && gunzip ravensw.gz
+				chmod 755 /raven/sbin/ravensw
 
-			sysrc local_startup+="/raven/etc/rc.d"
+				sysrc local_startup+="/raven/etc/rc.d"
 
-			/raven/sbin/ravensw upgrade
+				/raven/sbin/ravensw upgrade
 
-			echo "You can now use Ravenports or mports to install software on this system."
-			echo "Consult http://www.ravenports.com/catalog/ for a list of available software for Ravenports."
-                fi
+				echo "You can now use Ravenports or mports to install software on this system."
+				echo "Consult http://www.ravenports.com/catalog/ for a list of available software for Ravenports."
+			fi
+		fi
 
 		echo -e "\r${yellow}Do you wish to enable a graphical environment? (yes or no)${lsuffix}"
 		read installgui
