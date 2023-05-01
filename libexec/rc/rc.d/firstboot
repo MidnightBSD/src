@@ -44,10 +44,12 @@ firstboot_start()
 		echo -e "\r${yellow}Would you like to install Ravenports, an alternative package manager? (yes or no)${lsuffix}"
                 read ravenports
                 if [ ${ravenports} = "yes" ]; then
-			mkdir -p /raven/{etc/ravensw/{keys,repos},sbin}
+			mkdir -p /raven/etc/ravensw/keys
+			mkdir /raven/etc/ravensw/repos
+			mkdir /raven/sbin
 			echo MidnightBSD:3:amd64 > /raven/etc/ravensw.conf
-			${CP} /usr/share/ravenports/keys/ravenports.key /raven/etc/ravensw/keys/ravenports.key
-			${CP} /usr/share/ravenports/repos/01_raven.conf /raven/etc/ravensw/repos/01_raven.conf
+			cp /usr/share/ravenports/keys/ravenports.key /raven/etc/ravensw/keys/ravenports.key
+			cp /usr/share/ravenports/repos/01_raven.conf /raven/etc/ravensw/repos/01_raven.conf
 			cd /raven/sbin/ && fetch http://www.ravenports.com/repository/MidnightBSD:3:amd64/Latest/ravensw.gz && gunzip ravensw.gz
 
 			sysrc local_startup+="/raven/etc/rc.d"
