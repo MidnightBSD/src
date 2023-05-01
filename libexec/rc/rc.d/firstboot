@@ -55,6 +55,8 @@ firstboot_start()
 
 			sysrc local_startup+="/raven/etc/rc.d"
 
+			/raven/sbin/ravensw upgrade
+
 			echo "You can now use Ravenports or mports to install software on this system."
 			echo "Consult http://www.ravenports.com/catalog/ for a list of available software for Ravenports."
                 fi
