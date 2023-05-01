@@ -51,6 +51,7 @@ firstboot_start()
 			cp /usr/share/ravenports/keys/ravenports.key /raven/etc/ravensw/keys/ravenports.key
 			cp /usr/share/ravenports/repos/01_raven.conf /raven/etc/ravensw/repos/01_raven.conf
 			cd /raven/sbin/ && fetch http://www.ravenports.com/repository/MidnightBSD:3:amd64/Latest/ravensw.gz && gunzip ravensw.gz
+			chmod 755 /raven/sbin/ravensw
 
 			sysrc local_startup+="/raven/etc/rc.d"
 
