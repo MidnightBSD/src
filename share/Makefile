@@ -19,6 +19,7 @@ SUBDIR=	${_colldef} \
 	${_monetdef} \
 	${_msgdef} \
 	${_numericdef} \
+	ravenports \
 	${_sendmail} \
 	skel \
 	${_snmp} \

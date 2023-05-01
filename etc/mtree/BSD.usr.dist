@@ -970,8 +970,6 @@
                 ..
                 powerpc
                 ..
-                sparc64
-                ..
             ..
             cat5
             ..
@@ -985,8 +983,6 @@
                 i386
                 ..
                 powerpc
-                ..
-                sparc64
                 ..
             ..
             cat9
@@ -1007,8 +1003,6 @@
                     ..
                     powerpc
                     ..
-                    sparc64
-                    ..
                 ..
                 cat5
                 ..
@@ -1022,8 +1016,6 @@
                     i386
                     ..
                     powerpc
-                    ..
-                    sparc64
                     ..
                 ..
                 cat9
@@ -1045,8 +1037,6 @@
                     ..
                     powerpc
                     ..
-                    sparc64
-                    ..
                 ..
                 cat5
                 ..
@@ -1060,8 +1050,6 @@
                     i386
                     ..
                     powerpc
-                    ..
-                    sparc64
                     ..
                 ..
                 cat9
@@ -1121,8 +1109,6 @@
                 ..
                 powerpc
                 ..
-                sparc64
-                ..
             ..
             man5
             ..
@@ -1136,8 +1122,6 @@
                 i386
                 ..
                 powerpc
-                ..
-                sparc64
                 ..
             ..
             man9
@@ -1487,6 +1471,12 @@
                 ..
             ..
             doc
+            ..
+        ..
+        ravenports
+            keys
+            ..
+            repos
             ..
         ..
         security
