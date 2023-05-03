@@ -223,7 +223,7 @@ pmap_is_referenced(vm_page_t m)
 	return (MMU_IS_REFERENCED(mmu_obj, m));
 }
 
-boolean_t
+int
 pmap_ts_referenced(vm_page_t m)
 {
 
