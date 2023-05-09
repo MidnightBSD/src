@@ -63,7 +63,7 @@ void
 cuio_copydata(struct uio* uio, int off, int len, caddr_t cp)
 {
 	struct iovec *iov = uio->uio_iov;
-	int iol = uio->uio_iovcnt;
+	int iol __diagused = uio->uio_iovcnt;
 	unsigned count;
 
 	CUIO_SKIP();
@@ -83,7 +83,7 @@ void
 cuio_copyback(struct uio* uio, int off, int len, c_caddr_t cp)
 {
 	struct iovec *iov = uio->uio_iov;
-	int iol = uio->uio_iovcnt;
+	int iol __diagused = uio->uio_iovcnt;
 	unsigned count;
 
 	CUIO_SKIP();
@@ -136,7 +136,7 @@ cuio_apply(struct uio *uio, int off, int len, int (*f)(void *, void *, u_int),
     void *arg)
 {
 	struct iovec *iov = uio->uio_iov;
-	int iol = uio->uio_iovcnt;
+	int iol __diagused = uio->uio_iovcnt;
 	unsigned count;
 	int rval;
 

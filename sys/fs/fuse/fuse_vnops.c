@@ -712,7 +712,11 @@ fuse_vnop_create(struct vop_create_args *ap)
 	}
 
 	if (op == FUSE_CREATE) {
-		foo = (struct fuse_open_out*)(feo + 1);
+		if (fuse_libabi_geq(data, 7, 9))
+			foo = (struct fuse_open_out*)(feo + 1);
+		else
+			foo = (struct fuse_open_out*)((char*)feo +
+				FUSE_COMPAT_ENTRY_OUT_SIZE);
 	} else {
 		/* Issue a separate FUSE_OPEN */
 		struct fuse_open_in *foi;
@@ -944,6 +948,16 @@ fuse_vnop_link(struct vop_link_args *ap)
 	}
 	feo = fdi.answ;
 
+	if (fli.oldnodeid != feo->nodeid) {
+		struct fuse_data *data = fuse_get_mpdata(vnode_mount(vp));
+		fuse_warn(data, FSESS_WARN_ILLEGAL_INODE,
+			"Assigned wrong inode for a hard link.");
+		fuse_vnode_clear_attr_cache(vp);
+		fuse_vnode_clear_attr_cache(tdvp);
+		err = EIO;
+		goto out;
+	}
+
 	err = fuse_internal_checkentry(feo, vnode_vtype(vp));
 	if (!err) {
 		/* 
@@ -1003,6 +1017,7 @@ fuse_vnop_lookup(struct vop_lookup_args *ap)
 	struct mount *mp = vnode_mount(dvp);
 	struct fuse_data *data = fuse_get_mpdata(mp);
 	int default_permissions = data->dataflags & FSESS_DEFAULT_PERMISSIONS;
+	bool is_dot;
 
 	int err = 0;
 	int lookup_err = 0;
@@ -1031,6 +1046,7 @@ fuse_vnop_lookup(struct vop_lookup_args *ap)
 	else if ((err = fuse_internal_access(dvp, VEXEC, td, cred)))
 		return err;
 
+	is_dot = cnp->cn_namelen == 1 && *(cnp->cn_nameptr) == '.';
 	if ((flags & ISDOTDOT) && !(data->dataflags & FSESS_EXPORT_SUPPORT))
 	{
 		if (!(VTOFUD(dvp)->flag & FN_PARENT_NID)) {
@@ -1046,7 +1062,7 @@ fuse_vnop_lookup(struct vop_lookup_args *ap)
 		/* .. is obviously a directory */
 		vtyp = VDIR;
 		filesize = 0;
-	} else if (cnp->cn_namelen == 1 && *(cnp->cn_nameptr) == '.') {
+	} else if (is_dot) {
 		nid = VTOI(dvp);
 		/* . is obviously a directory */
 		vtyp = VDIR;
@@ -1167,8 +1183,17 @@ fuse_vnop_lookup(struct vop_lookup_args *ap)
 				&vp);
 			*vpp = vp;
 		} else if (nid == VTOI(dvp)) {
-			vref(dvp);
-			*vpp = dvp;
+			if (is_dot) {
+				vref(dvp);
+				*vpp = dvp;
+			} else {
+				fuse_warn(fuse_get_mpdata(mp),
+				    FSESS_WARN_ILLEGAL_INODE,
+				    "Assigned same inode to both parent and "
+				    "child.");
+				err = EIO;
+			}
+
 		} else {
 			struct fuse_vnode_data *fvdat;
 
@@ -1541,7 +1566,24 @@ fuse_vnop_reclaim(struct vop_reclaim_args *ap)
 		fuse_filehandle_close(vp, fufh, td, NULL);
 	}
 
-	if (!fuse_isdeadfs(vp) && fvdat->nlookup > 0) {
+	if (VTOI(vp) == 1) {
+		/*
+		 * Don't send FUSE_FORGET for the root inode, because
+		 * we never send FUSE_LOOKUP for it (see
+		 * fuse_vfsop_root) and we don't want the server to see
+		 * mismatched lookup counts.
+		 */
+		struct fuse_data *data;
+		struct vnode *vroot;
+
+		data = fuse_get_mpdata(vnode_mount(vp));
+		FUSE_LOCK();
+		vroot = data->vroot;
+		data->vroot = NULL;
+		FUSE_UNLOCK();
+		if (vroot)
+			vrele(vroot);
+	} else if (!fuse_isdeadfs(vp) && fvdat->nlookup > 0) {
 		fuse_internal_forget_send(vnode_mount(vp), td, NULL, VTOI(vp),
 		    fvdat->nlookup);
 	}
@@ -1646,7 +1688,7 @@ fuse_vnop_rename(struct vop_rename_args *ap)
 		cache_purge(tvp);
 	}
 	if (vnode_isdir(fvp)) {
-		if ((tvp != NULL) && vnode_isdir(tvp)) {
+		if (((tvp != NULL) && vnode_isdir(tvp)) || vnode_isdir(fvp)) {
 			cache_purge(tdvp);
 		}
 		cache_purge(fdvp);

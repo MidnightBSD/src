@@ -354,7 +354,7 @@ load(void)
 }
 
 static int
-parse()
+parse(void)
 {
 	char *arg, *ep, *p, *q;
 	const char *cp;

@@ -52,7 +52,7 @@
 #include <machine/vmparam.h>
 
 void
-db_md_list_watchpoints()
+db_md_list_watchpoints(void)
 {
 
 }

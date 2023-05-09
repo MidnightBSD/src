@@ -115,7 +115,7 @@ run_interrupt_driven_config_hooks_warning(int warned)
 }
 
 static void
-run_interrupt_driven_config_hooks()
+run_interrupt_driven_config_hooks(void)
 {
 	static int running;
 	struct intr_config_hook *hook_entry;

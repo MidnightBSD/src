@@ -42,7 +42,7 @@
 #include <machine/stack.h>
 
 void
-db_md_list_watchpoints()
+db_md_list_watchpoints(void)
 {
 
 	dbg_show_watchpoint();

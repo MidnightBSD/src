@@ -1178,7 +1178,7 @@ rufetchcalc(struct proc *p, struct rusage *ru, struct timeval *up,
  * reference count and mutex pointer.
  */
 struct plimit *
-lim_alloc()
+lim_alloc(void)
 {
 	struct plimit *limp;
 
@@ -1303,7 +1303,7 @@ lim_rlimit_proc(struct proc *p, int which, struct rlimit *rlp)
 }
 
 void
-uihashinit()
+uihashinit(void)
 {
 
 	uihashtbl = hashinit(maxproc / 16, M_UIDINFO, &uihash);
