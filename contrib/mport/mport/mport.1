@@ -23,7 +23,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"
-.Dd October 25, 2022
+.Dd April 29, 2023
 .Dt MPORT 1
 .Os
 .Sh NAME
@@ -34,6 +34,7 @@
 .Op Fl v
 .Op Fl c Ao chroot path Ac
 .Op Fl o Ao output path Ac
+.Op Fl q
 .Ao command Ac
 .Pp
 .Nm
@@ -47,6 +48,8 @@
 .Cm config set
 .Op Ar setting name
 .Op Ar setting value
+.Nm
+.Cm audit
 .Nm
 .Cm cpe
 .Nm
@@ -75,6 +78,8 @@
 .Nm
 .Cm mirror list
 .Nm
+.Cm purl
+.Nm
 .Cm search
 .Op Ar name ...
 .Nm
@@ -102,7 +107,8 @@ Display the current version of
 .Nm
 will chroot in the
 .Ao chroot path Ac
-environment.
+.It Fl q, Cm --quiet
+Make output less verbose and hide download progress.
 .It Fl o Ao output path Ac , Cm --output Ao output path Ac
 .Nm
 will download packages into the 
@@ -111,6 +117,9 @@ will download packages into the
 The following commands are supported by
 .Nm :
 .Bl -tag -width ".Cm install"
+.It Cm audit
+Displays vulnerable packages installed on the system. Uses CPE data to match against
+a NVD feed provided by the MidnightBSD project.
 .It Cm autoremove
 Experimental! Removes all packages installed as dependencies that are no longer needed
 as the original package depending on them has been removed.
@@ -146,6 +155,8 @@ allows the user to get the latest list of packages.
 Fetch and install a package
 .It Cm mirror list
 Lists all available package mirrors.
+.It Cm purl
+Lists PURL for each installed package
 .It Cm search
 Search package names and descriptions.  Supports globbing queries such as 
 "*php*".

@@ -53,12 +53,13 @@ static mportIndexEntry **lookupIndex(mportInstance *, const char *);
 static int install(mportInstance *, const char *);
 
 static int cpeList(mportInstance *);
+static int purlList(mportInstance *);
 
 static int configGet(mportInstance *, const char *);
 
 static int configSet(mportInstance *, const char *, const char *);
 
-static int delete(const char *);
+static int delete(mportInstance *, const char *);
 
 static int deleteAll(mportInstance *);
 
@@ -78,8 +79,11 @@ static int unlock(mportInstance *, const char *);
 
 static int which(mportInstance *, const char *, bool, bool);
 
+static int audit(mportInstance *, bool);
+
 int
-main(int argc, char *argv[]) {
+main(int argc, char *argv[])
+{
 	char *flag = NULL, *buf = NULL;
 	mportInstance *mport;
 	int resultCode = MPORT_ERR_FATAL;
@@ -91,13 +95,15 @@ main(int argc, char *argv[]) {
 	const char *outputPath = NULL;
 	int version = 0;
 	int noIndex = 0;
+	bool quiet = false;
 
 	struct option longopts[] = {
-		    {"no-index", no_argument, NULL, 'U'},
-			{"chroot",  required_argument, NULL, 'c'},
-			{"output",  required_argument, NULL, 'o'},
-			{"version", no_argument,       NULL, 'v'},
-			{NULL,      0,                 NULL, 0},
+		{ "no-index", no_argument, NULL, 'U' },
+		{ "chroot", required_argument, NULL, 'c' },
+		{ "output", required_argument, NULL, 'o' },
+		{ "quiet", no_argument, NULL, 'q'},
+		{ "version", no_argument, NULL, 'v' },
+		{ NULL, 0, NULL, 0 },
 	};
 
 	if (argc < 2)
@@ -106,26 +112,28 @@ main(int argc, char *argv[]) {
 	if (setenv("POSIXLY_CORRECT", "1", 1) == -1)
 		err(EXIT_FAILURE, "setenv() failed");
 
-
 	setlocale(LC_ALL, "");
 
-	while ((ch = getopt_long(argc, argv, "+c:o:Uv", longopts, NULL)) != -1) {
+	while ((ch = getopt_long(argc, argv, "+c:o:qUv", longopts, NULL)) != -1) {
 		switch (ch) {
-			case 'U':
-				noIndex++;
-				break;
-			case 'c':
-				chroot_path = optarg;
-				break;
-			case 'o':
-				outputPath = optarg;
-				break;
-			case 'v':
-				version++;
-				break;
-			default:
-				errx(EXIT_FAILURE, "Invalid argument provided");
-				break;
+		case 'U':
+			noIndex++;
+			break;
+		case 'c':
+			chroot_path = optarg;
+			break;
+		case 'o':
+			outputPath = optarg;
+			break;
+		case 'q':
+			quiet = true;
+			break;
+		case 'v':
+			version++;
+			break;
+		default:
+			errx(EXIT_FAILURE, "Invalid argument provided");
+			break;
 		}
 	}
 	argc -= optind;
@@ -139,7 +147,7 @@ main(int argc, char *argv[]) {
 
 	mport = mport_instance_new();
 
-	if (mport_instance_init(mport, NULL, outputPath, noIndex != 0) != MPORT_OK) {
+	if (mport_instance_init(mport, NULL, outputPath, noIndex != 0, quiet) != MPORT_OK) {
 		errx(1, "%s", mport_err_string());
 	}
 
@@ -168,7 +176,7 @@ main(int argc, char *argv[]) {
 			usage();
 		}
 		for (i = 1; i < argc; i++) {
-			tempResultCode = delete(argv[i]);
+			tempResultCode = delete(mport, argv[i]);
 			if (tempResultCode != 0)
 				resultCode = tempResultCode;
 		}
@@ -195,9 +203,9 @@ main(int argc, char *argv[]) {
 			int ch2;
 			while ((ch2 = getopt(local_argc, local_argv, "d")) != -1) {
 				switch (ch2) {
-					case 'd':
-						dflag = 1;
-						break;
+				case 'd':
+					dflag = 1;
+					break;
 				}
 			}
 			local_argc -= optind;
@@ -215,10 +223,31 @@ main(int argc, char *argv[]) {
 	} else if (!strcmp(cmd, "upgrade")) {
 		loadIndex(mport);
 		resultCode = mport_upgrade(mport);
+	} else if (!strcmp(cmd, "audit")) {
+		loadIndex(mport);
+
+		int local_argc = argc;
+		char *const *local_argv = argv;
+		int rflag = 0;
+
+		if (local_argc > 1) {
+			int ch2;
+			while ((ch2 = getopt(local_argc, local_argv, "r")) != -1) {
+				switch (ch2) {
+				case 'r':
+					rflag = 1;
+					break;
+				}
+			}
+			local_argc -= optind;
+			local_argv += optind;
+		}
+
+		resultCode = audit(mport, rflag > 0);
 	} else if (!strcmp(cmd, "locks")) {
 		asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.list");
 		flag = strdup("-l");
-		resultCode = execl(buf, "mport.list", flag, (char *) 0);
+		resultCode = execl(buf, "mport.list", flag, (char *)0);
 		free(flag);
 		free(buf);
 	} else if (!strcmp(cmd, "import")) {
@@ -241,8 +270,7 @@ main(int argc, char *argv[]) {
 	} else if (!strcmp(cmd, "list")) {
 		asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.list");
 		if (argc > 1) {
-			if (!strcmp(argv[1], "updates") ||
-			    !strcmp(argv[1], "up")) {
+			if (!strcmp(argv[1], "updates") || !strcmp(argv[1], "up")) {
 				flag = strdup("-u");
 			} else if (!strcmp(argv[1], "prime")) {
 				flag = strdup("-p");
@@ -253,7 +281,7 @@ main(int argc, char *argv[]) {
 		} else {
 			flag = strdup("-v");
 		}
-		resultCode = execl(buf, "mport.list", flag, (char *) 0);
+		resultCode = execl(buf, "mport.list", flag, (char *)0);
 		free(flag);
 		free(buf);
 	} else if (!strcmp(cmd, "info")) {
@@ -266,7 +294,7 @@ main(int argc, char *argv[]) {
 		}
 	} else if (!strcmp(cmd, "search")) {
 		loadIndex(mport);
-		searchQuery = calloc((size_t) argc, sizeof(char *));
+		searchQuery = calloc((size_t)argc, sizeof(char *));
 		for (i = 1; i < argc; i++) {
 			searchQuery[i - 1] = strdup(argv[i]);
 		}
@@ -305,6 +333,8 @@ main(int argc, char *argv[]) {
 		}
 	} else if (!strcmp(cmd, "cpe")) {
 		resultCode = cpeList(mport);
+	} else if (!strcmp(cmd, "purl")) {
+		resultCode = purlList(mport);
 	} else if (!strcmp(cmd, "deleteall")) {
 		resultCode = deleteAll(mport);
 	} else if (!strcmp(cmd, "autoremove")) {
@@ -319,9 +349,9 @@ main(int argc, char *argv[]) {
 			tflag = 0;
 			while ((ch2 = getopt(local_argc, local_argv, "t")) != -1) {
 				switch (ch2) {
-					case 't':
-						tflag = 1;
-						break;
+				case 't':
+					tflag = 1;
+					break;
 				}
 			}
 			local_argc -= optind;
@@ -337,7 +367,10 @@ main(int argc, char *argv[]) {
 					return -2;
 				}
 				resultCode = mport_version_cmp(local_argv[0], local_argv[1]);
-				printf("%c\n", resultCode == 0 ? '=' : resultCode == -1 ? '<' : '>');
+				printf("%c\n",
+				    resultCode == 0	 ? '=' :
+					resultCode == -1 ? '<' :
+							   '>');
 			}
 		}
 	} else if (!strcmp(cmd, "which")) {
@@ -348,12 +381,12 @@ main(int argc, char *argv[]) {
 			qflag = oflag = 0;
 			while ((ch2 = getopt(local_argc, local_argv, "qo")) != -1) {
 				switch (ch2) {
-					case 'q':
-						qflag = 1;
-						break;
-					case 'o':
-						oflag = 1;
-						break;
+				case 'q':
+					qflag = 1;
+					break;
+				case 'o':
+					oflag = 1;
+					break;
 				}
 			}
 			local_argc -= optind;
@@ -372,42 +405,45 @@ main(int argc, char *argv[]) {
 }
 
 void
-usage(void) {
+usage(void)
+{
 	show_version(NULL, 2);
 
 	fprintf(stderr,
-	        "usage: mport [-c chroot dir] [-U] [-o output] <command> args:\n"
-	        "       mport autoremove\n"
-	        "       mport clean\n"
-	        "       mport config get [setting name]\n"
-	        "       mport config set [setting name] [setting val]\n"
-	        "       mport cpe\n"
-	        "       mport delete [package name]\n"
-	        "       mport deleteall\n"
-	        "       mport download [-d] [package name]\n"
-	        "       mport export [filename]\n"
-	        "       mport import [filename]\n"
-	        "       mport index\n"
-	        "       mport info [package name]\n"
-	        "       mport install [package name]\n"
-	        "       mport list [updates|prime]\n"
-	        "       mport lock [package name]\n"
-	        "       mport locks\n"
-		"       mport mirror list\n"
-	        "       mport search [query ...]\n"
-	        "       mport stats\n"
-	        "       mport unlock [package name]\n"
-	        "       mport update [package name]\n"
-	        "       mport upgrade\n"
-	        "       mport verify\n"
-		"       mport version -t [v1] [v2]\n"
-	        "       mport which [file path]\n"
-	);
+	    "usage: mport [-c chroot dir] [-U] [-o output] [-q] <command> args:\n"
+	    "       mport audit\n"
+	    "       mport autoremove\n"
+	    "       mport clean\n"
+	    "       mport config get [setting name]\n"
+	    "       mport config set [setting name] [setting val]\n"
+	    "       mport cpe\n"
+	    "       mport delete [package name]\n"
+	    "       mport deleteall\n"
+	    "       mport download [-d] [package name]\n"
+	    "       mport export [filename]\n"
+	    "       mport import [filename]\n"
+	    "       mport index\n"
+	    "       mport info [package name]\n"
+	    "       mport install [package name]\n"
+	    "       mport list [updates|prime]\n"
+	    "       mport lock [package name]\n"
+	    "       mport locks\n"
+	    "       mport mirror list\n"
+	    "       mport purl\n"
+	    "       mport search [query ...]\n"
+	    "       mport stats\n"
+	    "       mport unlock [package name]\n"
+	    "       mport update [package name]\n"
+	    "       mport upgrade\n"
+	    "       mport verify\n"
+	    "       mport version -t [v1] [v2]\n"
+	    "       mport which [file path]\n");
 	exit(EXIT_FAILURE);
 }
 
 void
-show_version(mportInstance *mport, int count) {
+show_version(mportInstance *mport, int count)
+{
 	char *version = NULL;
 	if (count == 1)
 		version = mport_version_short(mport);
@@ -420,7 +456,8 @@ show_version(mportInstance *mport, int count) {
 }
 
 void
-loadIndex(mportInstance *mport) {
+loadIndex(mportInstance *mport)
+{
 	int result = mport_index_load(mport);
 	if (result == MPORT_ERR_WARN)
 		warnx("%s", mport_err_string());
@@ -429,12 +466,13 @@ loadIndex(mportInstance *mport) {
 }
 
 mportIndexEntry **
-lookupIndex(mportInstance *mport, const char *packageName) {
+lookupIndex(mportInstance *mport, const char *packageName)
+{
 	mportIndexEntry **indexEntries = NULL;
 
 	if (mport_index_lookup_pkgname(mport, packageName, &indexEntries) != MPORT_OK) {
-		fprintf(stderr, "Error looking up package name %s: %d %s\n",
-		        packageName, mport_err_code(), mport_err_string());
+		fprintf(stderr, "Error looking up package name %s: %d %s\n", packageName,
+		    mport_err_code(), mport_err_string());
 		errx(mport_err_code(), "%s", mport_err_string());
 	}
 
@@ -442,7 +480,8 @@ lookupIndex(mportInstance *mport, const char *packageName) {
 }
 
 int
-search(mportInstance *mport, char **query) {
+search(mportInstance *mport, char **query)
+{
 	mportIndexEntry **indexEntry = NULL;
 
 	if (query == NULL || *query == NULL) {
@@ -459,8 +498,7 @@ search(mportInstance *mport, char **query) {
 
 		while (indexEntry != NULL && *indexEntry != NULL) {
 			fprintf(stdout, "%s\t%s\t%s\n", (*indexEntry)->pkgname,
-			        (*indexEntry)->version,
-			        (*indexEntry)->comment);
+			    (*indexEntry)->version, (*indexEntry)->comment);
 			indexEntry++;
 		}
 
@@ -472,7 +510,8 @@ search(mportInstance *mport, char **query) {
 }
 
 int
-lock(mportInstance *mport, const char *packageName) {
+lock(mportInstance *mport, const char *packageName)
+{
 	mportPackageMeta **packs = NULL;
 
 	if (packageName == NULL) {
@@ -496,7 +535,8 @@ lock(mportInstance *mport, const char *packageName) {
 }
 
 int
-unlock(mportInstance *mport, const char *packageName) {
+unlock(mportInstance *mport, const char *packageName)
+{
 	mportPackageMeta **packs = NULL;
 
 	if (packageName == NULL) {
@@ -520,7 +560,8 @@ unlock(mportInstance *mport, const char *packageName) {
 }
 
 static int
-stats(mportInstance *mport) {
+stats(mportInstance *mport)
+{
 	mportStats *s = NULL;
 	if (mport_stats(mport, &s) != MPORT_OK) {
 		warnx("%s", mport_err_string());
@@ -536,7 +577,8 @@ stats(mportInstance *mport) {
 }
 
 int
-info(mportInstance *mport, const char *packageName) {
+info(mportInstance *mport, const char *packageName)
+{
 	if (packageName == NULL) {
 		warnx("%s", "Specify package name");
 		return (1);
@@ -555,7 +597,8 @@ info(mportInstance *mport, const char *packageName) {
 }
 
 int
-which(mportInstance *mport, const char *filePath, bool quiet, bool origin) {
+which(mportInstance *mport, const char *filePath, bool quiet, bool origin)
+{
 	mportPackageMeta *pack = NULL;
 
 	if (filePath == NULL) {
@@ -568,6 +611,8 @@ which(mportInstance *mport, const char *filePath, bool quiet, bool origin) {
 		return (1);
 	}
 
+	mport_drop_privileges();
+
 	if (pack != NULL && pack->origin != NULL) {
 		if (quiet && origin) {
 			printf("%s\n", pack->origin);
@@ -576,7 +621,8 @@ which(mportInstance *mport, const char *filePath, bool quiet, bool origin) {
 		} else if (origin) {
 			printf("%s was installed by package %s\n", filePath, pack->origin);
 		} else {
-			printf("%s was installed by package %s-%s\n", filePath, pack->name, pack->version);
+			printf("%s was installed by package %s-%s\n", filePath, pack->name,
+			    pack->version);
 		}
 	}
 
@@ -584,7 +630,8 @@ which(mportInstance *mport, const char *filePath, bool quiet, bool origin) {
 }
 
 int
-install(mportInstance *mport, const char *packageName) {
+install(mportInstance *mport, const char *packageName)
+{
 	mportIndexEntry **indexEntry = NULL;
 	mportIndexEntry **i2 = NULL;
 	int resultCode;
@@ -595,7 +642,7 @@ install(mportInstance *mport, const char *packageName) {
 	if (*indexEntry == NULL) {
 		int loc = -1;
 		size_t len = strlen(packageName);
-		for (int i = len -1; i >= 0; i--) {
+		for (int i = len - 1; i >= 0; i--) {
 			if (packageName[i] == '-') {
 				loc = i;
 				break;
@@ -604,11 +651,12 @@ install(mportInstance *mport, const char *packageName) {
 
 		if (loc > 0) {
 			char *d = strdup(packageName);
-			char *v = &d[loc+1];
+			char *v = &d[loc + 1];
 			d[loc] = '\0'; /* hack off the version number */
 			indexEntry = lookupIndex(mport, d);
-			if (indexEntry == NULL || v == NULL || (*indexEntry) == NULL || strcmp(v, (*indexEntry)->version) != 0) {
-				errx(4, "Package %s not found in the index.", packageName);	
+			if (indexEntry == NULL || v == NULL || (*indexEntry) == NULL ||
+			    strcmp(v, (*indexEntry)->version) != 0) {
+				errx(4, "Package %s not found in the index.", packageName);
 			}
 			free(d);
 		}
@@ -638,33 +686,53 @@ install(mportInstance *mport, const char *packageName) {
 		}
 	}
 
-	resultCode = mport_install_depends(mport, (*indexEntry)->pkgname, (*indexEntry)->version, MPORT_EXPLICIT);
+	resultCode = mport_install_depends(
+	    mport, (*indexEntry)->pkgname, (*indexEntry)->version, MPORT_EXPLICIT);
 
 	mport_index_entry_free_vec(indexEntry);
 
 	return (resultCode);
 }
 
-int
-delete(const char *packageName) {
-	char *buf = NULL;
-	int resultCode;
+int 
+delete(mportInstance *mport, const char *packageName)
+{
+	mportPackageMeta **packs = NULL;
+	int force = 0;
 
-	asprintf(&buf, "%s%s %s %s", MPORT_TOOLS_PATH, "mport.delete", "-n", packageName);
-	if (buf == NULL) {
-		warnx("Out of memory.");
-		return (1);
+	if (mport_pkgmeta_search_master(mport, &packs, "LOWER(pkg)=LOWER(%Q)", packageName) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		mport_pkgmeta_vec_free(packs);
+		return (MPORT_ERR_FATAL);
 	}
-	resultCode = system(buf);
-	free(buf);
 
-	return (resultCode);
+	if (packs == NULL) {
+		warnx("No packages installed matching '%s'", packageName);
+		return (MPORT_ERR_FATAL);
+	}
+
+	while (*packs != NULL) {
+		if (mport_delete_primative(mport, *packs, force) != MPORT_OK) {
+			warnx("%s", mport_err_string());
+			mport_pkgmeta_vec_free(packs);
+			return (MPORT_ERR_FATAL);
+		}
+		packs++;
+	}
+
+	mport_pkgmeta_vec_free(packs);
+
+	return (MPORT_OK);
 }
 
-int configGet(mportInstance *mport, const char *settingName) {
+int
+configGet(mportInstance *mport, const char *settingName)
+{
 	char *val = NULL;
 
 	val = mport_setting_get(mport, settingName);
+
+	mport_drop_privileges();
 
 	if (val != NULL) {
 		printf("Setting %s value is %s\n", settingName, val);
@@ -675,7 +743,9 @@ int configGet(mportInstance *mport, const char *settingName) {
 	return 0;
 }
 
-int configSet(mportInstance *mport, const char *settingName, const char *val) {
+int
+configSet(mportInstance *mport, const char *settingName, const char *val)
+{
 	int result = mport_setting_set(mport, settingName, val);
 
 	if (result != MPORT_OK) {
@@ -687,7 +757,41 @@ int configSet(mportInstance *mport, const char *settingName, const char *val) {
 }
 
 int
-cpeList(mportInstance *mport) {
+purlList(mportInstance *mport)
+{
+	mportPackageMeta **packs = NULL;
+	int purl_total = 0;
+
+	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		return mport_err_code();
+	}
+
+	mport_drop_privileges();
+
+	if (packs == NULL) {
+		warnx("No packages installed.");
+		return (1);
+	}
+
+	while (*packs != NULL) {
+		printf("pkg:mport/midnightbsd/%s@%s?arch=%s&osrel=%s\n", (*packs)->name,
+		    (*packs)->version, MPORT_ARCH, (*packs)->os_release);
+		purl_total++;
+		packs++;
+	}
+	mport_pkgmeta_vec_free(packs);
+
+	if (purl_total == 0) {
+		errx(EX_SOFTWARE, "No packages contained PURL information.");
+	}
+
+	return (0);
+}
+
+int
+cpeList(mportInstance *mport)
+{
 	mportPackageMeta **packs = NULL;
 	int cpe_total = 0;
 
@@ -695,6 +799,8 @@ cpeList(mportInstance *mport) {
 		warnx("%s", mport_err_string());
 		return mport_err_code();
 	}
+
+	mport_drop_privileges();
 
 	if (packs == NULL) {
 		warnx("No packages installed.");
@@ -718,7 +824,8 @@ cpeList(mportInstance *mport) {
 }
 
 int
-verify(mportInstance *mport) {
+verify(mportInstance *mport)
+{
 	mportPackageMeta **packs, **ref;
 	int total = 0;
 
@@ -746,7 +853,8 @@ verify(mportInstance *mport) {
 }
 
 int
-deleteAll(mportInstance *mport) {
+deleteAll(mportInstance *mport)
+{
 	mportPackageMeta **packs = NULL;
 	mportPackageMeta **depends = NULL;
 	int total = 0;
@@ -768,8 +876,9 @@ deleteAll(mportInstance *mport) {
 		while (*packs != NULL) {
 			if (mport_pkgmeta_get_updepends(mport, *packs, &depends) == MPORT_OK) {
 				if (depends == NULL) {
-					if (delete((*packs)->name) != 0) {
-						fprintf(stderr, "Error deleting %s\n", (*packs)->name);
+					if (delete (mport, (*packs)->name) != MPORT_OK) {
+						fprintf(
+						    stderr, "Error deleting %s\n", (*packs)->name);
 						errors++;
 					}
 					total++;
@@ -796,7 +905,8 @@ deleteAll(mportInstance *mport) {
 }
 
 int
-clean(mportInstance *mport) {
+clean(mportInstance *mport)
+{
 	int ret;
 
 	ret = mport_clean_database(mport);
@@ -805,3 +915,34 @@ clean(mportInstance *mport) {
 	return (ret);
 }
 
+int
+audit(mportInstance *mport, bool dependsOn)
+{
+	mportPackageMeta **packs = NULL;
+
+	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		return (1);
+	}
+
+	if (packs == NULL) {
+		fprintf(stderr, "No packages installed.\n");
+		return (1);
+	}
+
+	while (*packs != NULL) {
+		char *output = mport_audit(mport, (*packs)->name, dependsOn);
+		if (output != NULL && output[0] != '\0') {
+			if (mport->quiet)
+				printf("%s", output);
+			else
+				printf("%s\n", output);
+			free(output);
+		}
+		packs++;
+	}
+
+	mport_pkgmeta_vec_free(packs);
+
+	return (0);
+}

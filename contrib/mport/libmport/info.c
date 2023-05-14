@@ -50,6 +50,7 @@ mport_info(mportInstance *mport, const char *packageName) {
 	char *desc;
 	mportAutomatic automatic;
 	mportType type;
+	char purl[256];
 
 	if (mport == NULL) {
 		SET_ERROR(MPORT_ERR_FATAL, "mport not initialized");
@@ -87,6 +88,7 @@ mport_info(mportInstance *mport, const char *packageName) {
 		automatic = MPORT_EXPLICIT;
 		installDate = 0;
 		type = 0;
+		purl[0] = '\0';
 	} else {
 		status = (*packs)->version;
 		origin = (*packs)->origin;
@@ -114,13 +116,14 @@ mport_info(mportInstance *mport, const char *packageName) {
 		automatic = (*packs)->automatic;
 		installDate = (*packs)->install_date;
 		type = (*packs)->type;
+		snprintf(purl, sizeof(purl), "pkg:mport/midnightbsd/%s@%s?arch=%s&osrel=%s", (*indexEntry)->pkgname, (*packs)->version, MPORT_ARCH, os_release);
 	}
 
 	asprintf(&info_text,
 	         "%s-%s\n"
 	         "Name            : %s\nVersion         : %s\nLatest          : %s\nLicenses        : %s\nOrigin          : %s\n"
 	         "Flavor          : %s\nOS              : %s\n"
-	         "CPE             : %s\nLocked          : %s\nPrime           : %s\nShared library  : %s\nDeprecated      : %s\nExpiration Date : %s\nInstall Date    : %s"
+	         "CPE             : %s\nPURL            : %s\nLocked          : %s\nPrime           : %s\nShared library  : %s\nDeprecated      : %s\nExpiration Date : %s\nInstall Date    : %s"
 	         "Comment         : %s\nOptions         : %s\nType            : %s\nDescription     :\n%s\n",
 	         (*indexEntry)->pkgname, (*indexEntry)->version,
 	         (*indexEntry)->pkgname,
@@ -131,6 +134,7 @@ mport_info(mportInstance *mport, const char *packageName) {
 	         flavor,
 	         os_release,
 	         cpe,
+			 purl,
 	         locked ? "yes" : "no",
 	         automatic == MPORT_EXPLICIT ? "yes" : "no",
 	         no_shlib_provided ? "yes" : "no",
