@@ -55,6 +55,7 @@ main(int argc, char *argv[])
 	bool update = false;
 	bool locks = false;
     bool prime = false;
+	bool noIndex = false;
 	char *comment;
 	char *os_release;
 	char name_version[30];
@@ -63,7 +64,7 @@ main(int argc, char *argv[])
 	if (argc > 3)
 		usage();
     
-	while ((ch = getopt(argc, argv, "c:lopqvu")) != -1) {
+	while ((ch = getopt(argc, argv, "c:lopqvuU")) != -1) {
 		switch (ch) {
 			case 'c':
 				chroot_path = optarg;
@@ -86,6 +87,9 @@ main(int argc, char *argv[])
 			case 'u':
 				update = true;
 				break; 
+			case 'U':
+				noIndex = true;
+                break;
 			case '?':
 			default:
 				usage();
@@ -100,7 +104,7 @@ main(int argc, char *argv[])
 	}
 	
 	mport = mport_instance_new();
-	if (mport_instance_init(mport, NULL, NULL, false) != MPORT_OK) {
+	if (mport_instance_init(mport, NULL, NULL, noIndex, quiet) != MPORT_OK) {
 		warnx("%s", mport_err_string());
 		exit(EXIT_FAILURE);
 	}

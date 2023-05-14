@@ -304,6 +304,49 @@ mport_pkgmeta_list(mportInstance *mport, mportPackageMeta ***ref)
     return ret;
 }
 
+MPORT_PUBLIC_API int
+mport_pkgmeta_list_locked(mportInstance *mport, mportPackageMeta ***ref)
+{
+    sqlite3_stmt *stmt;
+    int ret, len;
+
+    if (mport == NULL)
+    	RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
+
+    sqlite3 *db = mport->db;
+
+    if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages where locked=1") != MPORT_OK) {
+        sqlite3_finalize(stmt);
+        RETURN_CURRENT_ERROR;
+    }
+
+    if (sqlite3_step(stmt) != SQLITE_ROW) {
+        sqlite3_finalize(stmt);
+        RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+    }
+
+    len = sqlite3_column_int(stmt, 0);
+    sqlite3_finalize(stmt);
+
+    if (len == 0) {
+        *ref = NULL;
+        return MPORT_OK;
+    }
+
+    if (mport_db_prepare(db, &stmt,
+                         "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, locked, deprecated, expiration_date, no_provide_shlib, flavor, automatic, install_date, type FROM packages where locked=1 ORDER BY pkg, version") !=
+        MPORT_OK) {
+        sqlite3_finalize(stmt);
+        RETURN_CURRENT_ERROR;
+    }
+
+    ret = populate_vec_from_stmt(ref, len, db, stmt);
+
+    sqlite3_finalize(stmt);
+
+    return ret;
+}
+
 /* mport_pkgmeta_get_downdepends(mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta ***pkg_vec)
  * 
  * Populate the depends of a pkg using the data in the master database.  

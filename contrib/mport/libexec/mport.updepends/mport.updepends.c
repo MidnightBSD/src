@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
-	if (mport_instance_init(mport, NULL, NULL, false) != MPORT_OK) {
+	if (mport_instance_init(mport, NULL, NULL, false, false) != MPORT_OK) {
 		warnx("%s", mport_err_string());
 		mport_instance_free(mport);
 		mport_pkgmeta_vec_free(packs);
