@@ -56,6 +56,7 @@ typedef struct {
   char *root;
   char *outputPath; /* Download directory */
   bool noIndex; /* Do not fetch mport index */
+  bool quiet;
   mport_msg_cb msg_cb;
   mport_progress_init_cb progress_init_cb;
   mport_progress_step_cb progress_step_cb;
@@ -64,7 +65,7 @@ typedef struct {
 } mportInstance;
 
 mportInstance * mport_instance_new(void);
-int mport_instance_init(mportInstance *, const char *, const char *, bool noIndex);
+int mport_instance_init(mportInstance *, const char *, const char *, bool noIndex, bool quiet);
 int mport_instance_free(mportInstance *);
 
 void mport_set_msg_cb(mportInstance *, mport_msg_cb);
@@ -169,6 +170,7 @@ void mport_pkgmeta_free(mportPackageMeta *);
 void mport_pkgmeta_vec_free(mportPackageMeta **);
 int mport_pkgmeta_search_master(mportInstance *, mportPackageMeta ***, const char *, ...);
 int mport_pkgmeta_list(mportInstance *mport, mportPackageMeta ***ref);
+int mport_pkgmeta_list_locked(mportInstance *mport, mportPackageMeta ***ref);
 int mport_pkgmeta_get_downdepends(mportInstance *, mportPackageMeta *, mportPackageMeta ***);
 int mport_pkgmeta_get_updepends(mportInstance *, mportPackageMeta *, mportPackageMeta ***);
 
@@ -275,6 +277,9 @@ int mport_version_cmp(const char *, const char *);
 int mport_fetch_bundle(mportInstance *, const char *, const char *);
 int mport_download(mportInstance *, const char *, bool, char **);
 
+/* Auditing for CVEs */
+char * mport_audit(mportInstance *, const char *, bool);
+
 /* Errors */
 int mport_err_code(void);
 const char * mport_err_string(void);
@@ -299,6 +304,7 @@ int mport_file_exists(const char *);
 char * mport_version(mportInstance *);
 char * mport_version_short(mportInstance *);
 char * mport_get_osrelease(mportInstance *);
+int mport_drop_privileges(void);
 
 /* Locks */
 enum _LockState {

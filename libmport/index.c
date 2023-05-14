@@ -448,8 +448,6 @@ mport_index_search_term(mportInstance *mport, mportIndexEntry ***entry_vec, char
 		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
 	}
 
-	sqlite3 *db = mport->db;
-
 	if (mport_db_count(mport->db, &len, "SELECT count(*) FROM idx.packages WHERE pkg glob %Q or comment glob %Q", term, term) != MPORT_OK) {
 		RETURN_CURRENT_ERROR;
 	}
@@ -464,7 +462,7 @@ mport_index_search_term(mportInstance *mport, mportIndexEntry ***entry_vec, char
 		return MPORT_OK;
 	}
 
-	if (mport_db_prepare(db, &stmt,
+	if (mport_db_prepare(mport->db, &stmt,
 	                     "SELECT pkg, version, comment, bundlefile, license, hash, type FROM idx.packages WHERE pkg glob %Q or comment glob %Q", term, term) !=
 	    MPORT_OK) {
 		sqlite3_finalize(stmt);
