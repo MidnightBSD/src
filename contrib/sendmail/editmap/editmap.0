@@ -1,4 +1,4 @@
-EDITMAP(8)                                                          EDITMAP(8)
+EDITMAP(8)                  System Manager's Manual                 EDITMAP(8)
 
 
 
@@ -14,14 +14,17 @@ DDEESSCCRRIIPPTTIIOONN
        map  lookups  in sendmail(8).  Arguments are passed on the command line
        and output (for queries) is directed to standard output.
 
-       Depending on how it is compiled, eeddiittmmaapp handles up to three  different
-       database formats, selected using the _m_a_p_t_y_p_e parameter.  They may be
+       Depending on how it is compiled,  eeddiittmmaapp  handles  different  database
+       formats, selected using the _m_a_p_t_y_p_e parameter.  They may be
 
        dbm    DBM format maps.  This requires the ndbm(3) library.
 
-       btree  B-Tree  format maps.  This requires the new Berkeley DB library.
+       btree  B-Tree format maps.  This requires the new Berkeley DB library.
 
        hash   Hash format maps.  This also requires the Berkeley DB library.
+
+       cdb    CDB  (Constant DataBase) format maps.  This requires the tinycdb
+              library.
 
        If the _T_r_u_s_t_e_d_U_s_e_r option is set in the sendmail configuration file and
        eeddiittmmaapp  is  invoked  as root, the generated files will be owned by the
@@ -40,8 +43,8 @@ DDEESSCCRRIIPPTTIIOONN
               is never case folded.
 
        --qq     Query  the  map for the specified key.  If found, print value to
-              standard output and exit with 0.  If not  found  then  print  an
-              error message to stdout and exit with EX_UNAVAILABLE.
+              standard output and exit with 0.  If not found then print an er-
+              ror message to stdout and exit with EX_UNAVAILABLE.
 
        --uu     Update  the record for _k_e_y with _v_a_l_u_e or inserts a new record if
               one doesn't exist.  Exits with 0 on success or EX_IOERR on fail-
