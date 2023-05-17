@@ -1,0 +1,39 @@
+PRALIASES(8)                                                      PRALIASES(8)
+
+
+
+[1mNAME[0m
+       praliases - display system mail aliases
+
+[1mSYNOPSIS[0m
+       [1mpraliases [22m[[1m-C [4m[22mfile[24m] [[1m-f [4m[22mfile[24m] [[4mkey[24m [4m...[24m]
+
+[1mDESCRIPTION[0m
+       The  [1mpraliases  [22mutility  displays  the  current system aliases, one per
+       line, in no particular order.  The special internal @:@ alias  will  be
+       displayed if present.
+
+       The options are as follows:
+
+       [1m-C [4m[22mfile[0m
+              Read  the  specified  sendmail configuration file instead of the
+              default [1msendmail [22mconfiguration file.
+
+       [1m-f [4m[22mfile[0m
+              Read the specified file instead of the configured [1msendmail  [22msys-
+              tem aliases file(s).
+
+       If  one  or  more  keys are specified on the command line, only entries
+       which match those keys are displayed.
+
+       The [1mpraliases [22mutility exits 0 on success, and >0 if an error occurs.
+
+[1mFILES[0m
+       /etc/mail/sendmail.cf    The default [1msendmail [22mconfiguration file.
+
+[1mSEE ALSO[0m
+       mailq(1), sendmail(8)
+
+
+
+                         $Date: 2013-11-22 20:51:53 $             PRALIASES(8)

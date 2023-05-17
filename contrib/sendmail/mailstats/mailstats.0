@@ -1,0 +1,64 @@
+MAILSTATS(8)                                                      MAILSTATS(8)
+
+
+
+[1mNAME[0m
+       mailstats - display mail statistics
+
+[1mSYNOPSIS[0m
+       [1mmailstats [22m[[1m-c[22m] [[1m-o[22m] [[1m-p[22m] [[1m-P[22m] [[1m-C [4m[22mcffile[24m] [[1m-f [4m[22mstfile[24m]
+
+[1mDESCRIPTION[0m
+       The [1mmailstats [22mutility displays the current mail statistics.
+
+       First, the time at which statistics started being kept is displayed, in
+       the format specified by ctime(3).  Then, the statistics for each mailer
+       are  displayed  on  a  single line, each with the following white space
+       separated fields:
+
+              [1mM           [22mThe mailer number.
+              [1mmsgsfr      [22mNumber of messages from the mailer.
+              [1mbytes_from  [22mKbytes from the mailer.
+              [1mmsgsto      [22mNumber of messages to the mailer.
+              [1mbytes_to    [22mKbytes to the mailer.
+              [1mmsgsrej     [22mNumber of messages rejected.
+              [1mmsgsdis     [22mNumber of messages discarded.
+              [1mmsgsqur     [22mNumber of messages quarantined.
+              [1mMailer      [22mThe name of the mailer.
+
+       After this display, a line totaling the values for all of  the  mailers
+       is  displayed  (preceded  with  a  ``T''),  separated from the previous
+       information by  a  line  containing  only  equals  (``='')  characters.
+       Another line preceded with a ``C'' lists the number of TCP connections.
+
+       The options are as follows:
+
+       [1m-C     [22mRead the specified file instead of the default [1msendmail [22mconfigu-
+              ration file.
+
+       [1m-c     [22mTry  to use submit.cf instead of the default [1msendmail [22mconfigura-
+              tion file.
+
+       [1m-f     [22mRead the specified statistics file  instead  of  the  statistics
+              file specified in the [1msendmail [22mconfiguration file.
+
+       [1m-P     [22mOutput  information  in  program-readable  mode without clearing
+              statistics.
+
+       [1m-p     [22mOutput information in program-readable mode  and  clear  statis-
+              tics.
+
+       [1m-o     [22mDon't display the name of the mailer in the output.
+
+       The [1mmailstats [22mutility exits 0 on success, and >0 if an error occurs.
+
+[1mFILES[0m
+       /etc/mail/sendmail.cf    The default [1msendmail [22mconfiguration file.
+       /etc/mail/statistics     The default [1msendmail [22mstatistics file.
+
+[1mSEE ALSO[0m
+       mailq(1), sendmail(8)
+
+
+
+                         $Date: 2013-11-22 20:51:51 $             MAILSTATS(8)
