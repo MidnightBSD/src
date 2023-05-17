@@ -241,12 +241,12 @@ main(argc, argv)
 
 	/* HACK: add U to all options - this should be only for USE_EAI */
 #if HASHSPOOL
-	while ((ch = getopt(argc, argv, "7bdD:f:h:r:lH:p:nUV")) != -1)
+	while ((ch = getopt(argc, argv, "7BbdD:f:h:r:lH:p:nsUV")) != -1)
 #else /* HASHSPOOL */
 # if _FFR_SPOOL_PATH
-	while ((ch = getopt(argc, argv, "7bdD:f:h:r:lp:UV")) != -1)
+	while ((ch = getopt(argc, argv, "7BbdD:f:h:r:lp:sUV")) != -1)
 # else
-	while ((ch = getopt(argc, argv, "7bdD:f:h:r:lUV")) != -1)
+	while ((ch = getopt(argc, argv, "7BbdD:f:h:r:lsUV")) != -1)
 # endif
 #endif /* HASHSPOOL */
 	{
@@ -1634,9 +1634,9 @@ usage()
 	ExitVal = EX_USAGE;
 	/* XXX add U to options for USE_EAI */
 #if _FFR_SPOOL_PATH
-	mailerr(NULL, "usage: mail.local [-7] [-b] [-d] [-l] [-f from|-r from] [-h filename] [-p path] user ...");
+	mailerr(NULL, "usage: mail.local [-7] [-B] [-b] [-d] [-l] [-s] [-f from|-r from] [-h filename] [-p path] user ...");
 #else
-	mailerr(NULL, "usage: mail.local [-7] [-b] [-d] [-l] [-f from|-r from] [-h filename] user ...");
+	mailerr(NULL, "usage: mail.local [-7] [-B] [-b] [-d] [-l] [-s] [-f from|-r from] [-h filename] user ...");
 #endif
 	sm_exit(ExitVal);
 }
