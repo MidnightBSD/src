@@ -16,9 +16,9 @@ mail.local
 \- store mail in a mailbox
 .SH SYNOPSIS
 .B mail.local
-.RB [ \-7 "] [" \-b "] [" \-d "] [" \-D
+.RB [ \-7 "] [" \-B "] [" \-b "] [" \-d "] [" \-D
 .IR mbdb ]
-.RB [ \-l "] [" \-f 
+.RB [ \-l "] [" \-s "] [" \-f 
 \fIfrom\fR|\fB\-r\fR
 .IR from ]
 .RB [ \-h
@@ -38,6 +38,9 @@ The options are as follows:
 .B \-7
 Do not advertise 8BITMIME support in LMTP mode.
 .TP 
+.B \-B
+Turn off the attempts to notify the ``biff'' service.
+.TP 
 .B \-b
 Return a permanent error instead of a temporary error
 if a mailbox exceeds quota.
@@ -56,6 +59,10 @@ Specify the sender's name.
 .TP
 .B \-l
 Turn on LMTP mode.
+.TP
+.B \-s
+Turn off the fsync(2) call that forces the mailbox to be committed
+to disk before returning a "success" status.
 .TP 
 .BI \-r " from"
 Specify the sender's name (for backward compatibility).
@@ -131,7 +138,6 @@ lock file for a user's default mailbox
 .PD
 .SH SEE ALSO
 mail(1), 
-xsend(1), 
 flock(2), 
 getservbyname(3), 
 comsat(8), 
@@ -150,3 +156,4 @@ appeared in
 Version 7 AT&T UNIX 
 as the program
 .BR mail .
+.\" $FreeBSD$

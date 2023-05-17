@@ -13,6 +13,8 @@
 #
 #	$Id: makeinfo.sh,v 8.15 2013-11-22 20:51:17 ca Exp $
 #
+# $FreeBSD$
+#
 
 usewhoami=0
 usehostname=0
@@ -52,7 +54,7 @@ then
 else
 	host=`uname -n`
 fi
-echo '#####' built by $user@$host on `date`
+echo '#####' built by $user@$host
 echo '#####' in `pwd` | sed 's/\/tmp_mnt//'
 echo '#####' using $1 as configuration include directory | sed 's/\/tmp_mnt//'
 echo "define(\`__HOST__', $host)dnl"
