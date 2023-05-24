@@ -22,7 +22,7 @@
 // We want to use much of the functionality provided by "mDNS.c",
 // except we'll steal the packets that would be sent to normal mDNSCoreReceive() routine
 #define mDNSCoreReceive __NOT__mDNSCoreReceive__NOT__
-#include "mDNS.c"
+#include "../mDNSCore/mDNS.c"
 #undef mDNSCoreReceive
 
 //*************************************************************************************************************
@@ -120,6 +120,7 @@ struct timeval tv_start, tv_end, tv_interval;
 static int FilterInterface = 0;
 static FilterList *Filters;
 #define ExactlyOneFilter (Filters && !Filters->next)
+static mDNSBool AddressType = mDNSAddrType_IPv4;
 
 static int NumPktQ, NumPktL, NumPktR, NumPktB;  // Query/Legacy/Response/Bad
 static int NumProbes, NumGoodbyes, NumQuestions, NumLegacy, NumAnswers, NumAdditionals;
@@ -127,6 +128,8 @@ static int NumProbes, NumGoodbyes, NumQuestions, NumLegacy, NumAnswers, NumAddit
 static ActivityStat *stats;
 
 #define OPBanner "Total Ops   Probe   Goodbye  BrowseQ  BrowseA ResolveQ ResolveA"
+
+mDNSexport void mDNSCoreReceive(mDNS *const m, DNSMessage *const msg, const mDNSu8 *const end, const mDNSAddr *const srcaddr, const mDNSIPPort srcport, const mDNSAddr *dstaddr, const mDNSIPPort dstport, const mDNSInterfaceID InterfaceID);
 
 //*************************************************************************************************************
 // Utilities
@@ -311,7 +314,7 @@ mDNSlocal void SendUnicastQuery(mDNS *const m, HostEntry *entry, domainname *nam
         InterfaceID = mDNSInterface_Any;    // Send query from our unicast reply socket
     }
 
-    mDNSSendDNSMessage(&mDNSStorage, &query, qptr, InterfaceID, mDNSNULL, target, MulticastDNSPort, mDNSNULL, mDNSNULL, mDNSfalse);
+    mDNSSendDNSMessage(m, &query, qptr, InterfaceID, mDNSNULL, mDNSNULL, target, MulticastDNSPort, mDNSNULL, mDNSfalse);
 }
 
 mDNSlocal void AnalyseHost(mDNS *const m, HostEntry *entry, const mDNSInterfaceID InterfaceID)
@@ -371,7 +374,7 @@ mDNSlocal void ShowSortedHostList(HostList *list, int max)
 //*************************************************************************************************************
 // Receive and process packets
 
-mDNSexport mDNSBool ExtractServiceType(const domainname *const fqdn, domainname *const srvtype)
+mDNSlocal mDNSBool ExtractServiceType(const domainname *const fqdn, domainname *const srvtype)
 {
     int i, len;
     const mDNSu8 *src = fqdn->c;
@@ -435,11 +438,11 @@ mDNSlocal void printstats(int max)
     if (!stats) return;
     for (i=0; i<max; i++)
     {
-        int max = 0;
+        int max_val = 0;
         ActivityStat *s, *m = NULL;
         for (s = stats; s; s=s->next)
-            if (!s->printed && max < s->totalops)
-            { m = s; max = s->totalops; }
+            if (!s->printed && max_val < s->totalops)
+            { m = s; max_val = s->totalops; }
         if (!m) return;
         m->printed = mDNStrue;
         if (i==0) mprintf("%-25s%s\n", "Service Type", OPBanner);
@@ -464,9 +467,9 @@ mDNSlocal const mDNSu8 *FindUpdate(mDNS *const m, const DNSMessage *const query,
 
 mDNSlocal void DisplayPacketHeader(mDNS *const m, const DNSMessage *const msg, const mDNSu8 *const end, const mDNSAddr *srcaddr, mDNSIPPort srcport, const mDNSAddr *dstaddr, const mDNSInterfaceID InterfaceID)
 {
-    const char *const ptype =   (msg->h.flags.b[0] & kDNSFlag0_QR_Response)             ? "-R- " :
+    const char *const ptype = (msg->h.flags.b[0] & kDNSFlag0_QR_Response)             ? "-R- " :
                               (srcport.NotAnInteger == MulticastDNSPort.NotAnInteger) ? "-Q- " : "-LQ-";
-
+    const unsigned length = end - (mDNSu8 *)msg;
     struct timeval tv;
     struct tm tm;
     const mDNSu32 index = mDNSPlatformInterfaceIndexfromInterfaceID(m, InterfaceID, mDNSfalse);
@@ -477,7 +480,7 @@ mDNSlocal void DisplayPacketHeader(mDNS *const m, const DNSMessage *const msg, c
     mprintf("\n%d:%02d:%02d.%06d Interface %d/%s\n", tm.tm_hour, tm.tm_min, tm.tm_sec, tv.tv_usec, index, if_name);
 
     mprintf("%#-16a %s             Q:%3d  Ans:%3d  Auth:%3d  Add:%3d  Size:%5d bytes",
-            srcaddr, ptype, msg->h.numQuestions, msg->h.numAnswers, msg->h.numAuthorities, msg->h.numAdditionals, end - (mDNSu8 *)msg);
+            srcaddr, ptype, msg->h.numQuestions, msg->h.numAnswers, msg->h.numAuthorities, msg->h.numAdditionals, length);
 
     if (msg->h.id.NotAnInteger) mprintf("  ID:%u", mDNSVal16(msg->h.id));
 
@@ -488,7 +491,27 @@ mDNSlocal void DisplayPacketHeader(mDNS *const m, const DNSMessage *const msg, c
         if (msg->h.flags.b[0] & kDNSFlag0_QR_Response) mprintf("   Truncated");
         else mprintf("   Truncated (KA list continues in next packet)");
     }
+
     mprintf("\n");
+
+    if (length < sizeof(DNSMessageHeader) + NormalMaxDNSMessageData - 192)
+        if (msg->h.flags.b[0] & kDNSFlag0_TC)
+            mprintf("%#-16a **** WARNING: Packet suspiciously small. Payload size (excluding IP and UDP headers)\n"
+                    "%#-16a **** should usually be closer to %d bytes before truncation becomes necessary.\n",
+                    srcaddr, srcaddr, sizeof(DNSMessageHeader) + NormalMaxDNSMessageData);
+}
+
+mDNSlocal void DisplaySizeCheck(const DNSMessage *const msg, const mDNSu8 *const end, const mDNSAddr *srcaddr, int num_opts)
+{
+    const unsigned length = end - (mDNSu8 *)msg;
+    const int num_records = msg->h.numAnswers + msg->h.numAuthorities + msg->h.numAdditionals - num_opts;
+
+    if (length > sizeof(DNSMessageHeader) + NormalMaxDNSMessageData)
+        if (num_records > 1)
+            mprintf("%#-16a **** ERROR: Oversized packet with %d records.\n"
+                    "%#-16a **** Many network devices cannot receive packets larger than %d bytes.\n"
+                    "%#-16a **** To minimize interoperability failures, oversized packets MUST be limited to a single resource record.\n",
+                    srcaddr, num_records, srcaddr, 40 + 8 + sizeof(DNSMessageHeader) + NormalMaxDNSMessageData, srcaddr);
 }
 
 mDNSlocal void DisplayResourceRecord(const mDNSAddr *const srcaddr, const char *const op, const ResourceRecord *const pktrr)
@@ -508,8 +531,8 @@ mDNSlocal void DisplayResourceRecord(const mDNSAddr *const srcaddr, const char *
     // Perhaps more (or all?) of the cases should do that?
     switch(pktrr->rrtype)
     {
-    case kDNSType_A:    n += mprintf("%.4a", &rd->ipv4); break;
-    case kDNSType_PTR:  n += mprintf("%##.*s", MaxWidth - n, rd->name.c); break;
+    case kDNSType_A:    mprintf("%.4a", &rd->ipv4); break;
+    case kDNSType_PTR:  mprintf("%##.*s", MaxWidth - n, rd->name.c); break;
     case kDNSType_HINFO:    // same as kDNSType_TXT below
     case kDNSType_TXT:  {
         mDNSu8 *t = rd->txt.c;
@@ -533,10 +556,10 @@ mDNSlocal void DisplayResourceRecord(const mDNSAddr *const srcaddr, const char *
             if (t < rdend && t[0]) { *p++ = '\\'; *p++ = ' '; }
         }
         *p++ = 0;
-        n += mprintf("%.*s", MaxWidth - n, buffer);
+        mprintf("%.*s", MaxWidth - n, buffer);
     } break;
-    case kDNSType_AAAA: n += mprintf("%.16a", &rd->ipv6); break;
-    case kDNSType_SRV:  n += mprintf("%##s:%d", rd->srv.target.c, mDNSVal16(rd->srv.port)); break;
+    case kDNSType_AAAA: mprintf("%.16a", &rd->ipv6); break;
+    case kDNSType_SRV:  mprintf("%##s:%d", rd->srv.target.c, mDNSVal16(rd->srv.port)); break;
     case kDNSType_OPT:  {
         char b[MaxMsg];
         // Quick hack: we don't want the prefix that GetRRDisplayString_rdb puts at the start of its
@@ -544,14 +567,14 @@ mDNSlocal void DisplayResourceRecord(const mDNSAddr *const srcaddr, const char *
         // length of that prefix and strip that many bytes off the beginning of the string we display.
         mDNSu32 striplen = mDNS_snprintf(b, MaxMsg-1, "%4d %##s %s ", pktrr->rdlength, pktrr->name->c, DNSTypeName(pktrr->rrtype));
         GetRRDisplayString_rdb(pktrr, &pktrr->rdata->u, b);
-        n += mprintf("%.*s", MaxWidth - n, b + striplen);
+        mprintf("%.*s", MaxWidth - n, b + striplen);
     } break;
     case kDNSType_NSEC: {
         char b[MaxMsg];
         // See the quick hack above
         mDNSu32 striplen = mDNS_snprintf(b, MaxMsg-1, "%4d %##s %s ", pktrr->rdlength, pktrr->name->c, DNSTypeName(pktrr->rrtype));
         GetRRDisplayString_rdb(pktrr, &pktrr->rdata->u, b);
-        n += mprintf("%s", b+striplen);
+        mprintf("%s", b+striplen);
     } break;
     default:            {
         mDNSu8 *s = rd->data;
@@ -570,7 +593,7 @@ mDNSlocal void DisplayResourceRecord(const mDNSAddr *const srcaddr, const char *
             s++;
         }
         *p++ = 0;
-        n += mprintf("%.*s", MaxWidth - n, buffer);
+        mprintf("%.*s", MaxWidth - n, buffer);
     } break;
     }
 
@@ -594,7 +617,7 @@ mDNSlocal void HexDump(const mDNSu8 *ptr, const mDNSu8 *const end)
 
 mDNSlocal void DisplayError(const mDNSAddr *srcaddr, const mDNSu8 *ptr, const mDNSu8 *const end, char *msg)
 {
-    mprintf("%#-16a **** ERROR: FAILED TO READ %s **** \n", srcaddr, msg);
+    mprintf("%#-16a **** ERROR: FAILED TO READ %s ****\n", srcaddr, msg);
     HexDump(ptr, end);
 }
 
@@ -602,6 +625,7 @@ mDNSlocal void DisplayQuery(mDNS *const m, const DNSMessage *const msg, const mD
                             const mDNSAddr *srcaddr, mDNSIPPort srcport, const mDNSAddr *dstaddr, const mDNSInterfaceID InterfaceID)
 {
     int i;
+    int num_opts = 0;
     const mDNSu8 *ptr = msg->data;
     const mDNSu8 *auth = LocateAuthorities(msg, end);
     mDNSBool MQ = (srcport.NotAnInteger == MulticastDNSPort.NotAnInteger);
@@ -611,7 +635,7 @@ mDNSlocal void DisplayQuery(mDNS *const m, const DNSMessage *const msg, const mD
     DisplayPacketHeader(m, msg, end, srcaddr, srcport, dstaddr, InterfaceID);
     if (msg->h.id.NotAnInteger != 0xFFFF)
     {
-        if (MQ) NumPktQ++;else NumPktL++;
+        if (MQ) NumPktQ++; else NumPktL++;
     }
 
     for (i=0; i<msg->h.numQuestions; i++)
@@ -648,6 +672,8 @@ mDNSlocal void DisplayQuery(mDNS *const m, const DNSMessage *const msg, const mD
         ptr = GetLargeResourceRecord(m, msg, ptr, end, InterfaceID, kDNSRecordTypePacketAns, &pkt);
         if (!ptr) { DisplayError(srcaddr, ep, end, "KNOWN ANSWER"); return; }
         DisplayResourceRecord(srcaddr, "(KA)", &pkt.r.resrec);
+        if (pkt.r.resrec.rrtype == kDNSType_OPT)
+            { num_opts++; mprintf("%#-16a **** ERROR: OPT RECORD IN ANSWER SECTION ****\n", srcaddr); }
 
         // In the case of queries with long multi-packet KA lists, we count each subsequent KA packet
         // the same as a single query, to more accurately reflect the burden on the network
@@ -664,6 +690,8 @@ mDNSlocal void DisplayQuery(mDNS *const m, const DNSMessage *const msg, const mD
         // After we display an Update record with its matching question (above) we zero out its type and class
         // If any remain that haven't been zero'd out, display them here
         if (pkt.r.resrec.rrtype || pkt.r.resrec.rrclass) DisplayResourceRecord(srcaddr, "(AU)", &pkt.r.resrec);
+        if (pkt.r.resrec.rrtype == kDNSType_OPT)
+            { num_opts++; mprintf("%#-16a **** ERROR: OPT RECORD IN AUTHORITY SECTION ****\n", srcaddr); }
     }
 
     for (i=0; i<msg->h.numAdditionals; i++)
@@ -672,7 +700,14 @@ mDNSlocal void DisplayQuery(mDNS *const m, const DNSMessage *const msg, const mD
         ptr = GetLargeResourceRecord(m, msg, ptr, end, InterfaceID, kDNSRecordTypePacketAdd, &pkt);
         if (!ptr) { DisplayError(srcaddr, ep, end, "ADDITIONAL"); return; }
         DisplayResourceRecord(srcaddr, pkt.r.resrec.rrtype == kDNSType_OPT ? "(OP)" : "(AD)", &pkt.r.resrec);
+        if (pkt.r.resrec.rrtype == kDNSType_OPT) num_opts++;
     }
+
+    DisplaySizeCheck(msg, end, srcaddr, num_opts);
+
+    // We don't hexdump the DNSMessageHeader here because those six fields (id, flags, numQuestions, numAnswers, numAuthorities, numAdditionals)
+    // have already been swapped to host byte order and displayed, so including them in the hexdump is confusing
+    if (num_opts > 1) { mprintf("%#-16a **** ERROR: MULTIPLE OPT RECORDS ****\n", srcaddr); HexDump(msg->data, end); }
 
     if (entry) AnalyseHost(m, entry, InterfaceID);
 }
@@ -681,6 +716,7 @@ mDNSlocal void DisplayResponse(mDNS *const m, const DNSMessage *const msg, const
                                const mDNSAddr *srcaddr, mDNSIPPort srcport, const mDNSAddr *dstaddr, const mDNSInterfaceID InterfaceID)
 {
     int i;
+    int num_opts = 0;
     const mDNSu8 *ptr = msg->data;
     HostEntry *entry = GotPacketFromHost(srcaddr, HostPkt_R, msg->h.id);
     LargeCacheRecord pkt;
@@ -718,6 +754,8 @@ mDNSlocal void DisplayResponse(mDNS *const m, const DNSMessage *const msg, const
             DisplayResourceRecord(srcaddr, "(DE)", &pkt.r.resrec);
             recordstat(entry, pkt.r.resrec.name, OP_goodbye, pkt.r.resrec.rrtype);
         }
+        if (pkt.r.resrec.rrtype == kDNSType_OPT)
+            { num_opts++; mprintf("%#-16a **** ERROR: OPT RECORD IN ANSWER SECTION ****\n", srcaddr); }
     }
 
     for (i=0; i<msg->h.numAuthorities; i++)
@@ -725,9 +763,12 @@ mDNSlocal void DisplayResponse(mDNS *const m, const DNSMessage *const msg, const
         const mDNSu8 *ep = ptr;
         ptr = GetLargeResourceRecord(m, msg, ptr, end, InterfaceID, kDNSRecordTypePacketAuth, &pkt);
         if (!ptr) { DisplayError(srcaddr, ep, end, "AUTHORITY"); return; }
-        if (pkt.r.resrec.rrtype != kDNSType_NSEC3)
+        DisplayResourceRecord(srcaddr, "(AU)", &pkt.r.resrec);
+        if (pkt.r.resrec.rrtype == kDNSType_OPT)
+            { num_opts++; mprintf("%#-16a **** ERROR: OPT RECORD IN AUTHORITY SECTION ****\n", srcaddr); }
+        else if (pkt.r.resrec.rrtype != kDNSType_NSEC3)
             mprintf("%#-16a (?)  **** ERROR: SHOULD NOT HAVE AUTHORITY IN mDNS RESPONSE **** %-5s %##s\n",
-                    srcaddr, DNSTypeName(pkt.r.resrec.rrtype), pkt.r.resrec.name->c);
+                srcaddr, DNSTypeName(pkt.r.resrec.rrtype), pkt.r.resrec.name->c);
     }
 
     for (i=0; i<msg->h.numAdditionals; i++)
@@ -736,11 +777,18 @@ mDNSlocal void DisplayResponse(mDNS *const m, const DNSMessage *const msg, const
         ptr = GetLargeResourceRecord(m, msg, ptr, end, InterfaceID, kDNSRecordTypePacketAdd, &pkt);
         if (!ptr) { DisplayError(srcaddr, ep, end, "ADDITIONAL"); return; }
         NumAdditionals++;
+        if (pkt.r.resrec.rrtype == kDNSType_OPT) num_opts++;
         DisplayResourceRecord(srcaddr,
                               pkt.r.resrec.rrtype == kDNSType_OPT ? "(OP)" : (pkt.r.resrec.RecordType & kDNSRecordTypePacketUniqueMask) ? "(AD)" : "(AD+)",
                               &pkt.r.resrec);
         if (entry) RecordHostInfo(entry, &pkt.r.resrec);
     }
+
+    DisplaySizeCheck(msg, end, srcaddr, num_opts);
+
+    // We don't hexdump the DNSMessageHeader here because those six fields (id, flags, numQuestions, numAnswers, numAuthorities, numAdditionals)
+    // have already been swapped to host byte order and displayed, so including them in the hexdump is confusing
+    if (num_opts > 1) { mprintf("%#-16a **** ERROR: MULTIPLE OPT RECORDS ****\n", srcaddr); HexDump(msg->data, end); }
 
     if (entry) AnalyseHost(m, entry, InterfaceID);
 }
@@ -763,7 +811,7 @@ mDNSlocal void ProcessUnicastResponse(mDNS *const m, const DNSMessage *const msg
 mDNSlocal mDNSBool AddressMatchesFilterList(const mDNSAddr *srcaddr)
 {
     FilterList *f;
-    if (!Filters) return(srcaddr->type == mDNSAddrType_IPv4);
+    if (!Filters) return(srcaddr->type == AddressType);
     for (f=Filters; f; f=f->next) if (mDNSSameAddress(srcaddr, &f->FilterAddr)) return(mDNStrue);
     return(mDNSfalse);
 }
@@ -844,7 +892,7 @@ mDNSlocal mStatus mDNSNetMonitor(void)
 
     do
     {
-        struct timeval timeout = { 0x3FFFFFFF, 0 };     // wait until SIGINT or SIGTERM
+        struct timeval timeout = { FutureTime, 0 };     // wait until SIGINT or SIGTERM
         mDNSBool gotSomething;
         mDNSPosixRunEventLoopOnce(&mDNSStorage, &timeout, &signals, &gotSomething);
     }
@@ -927,11 +975,21 @@ mDNSexport int main(int argc, char **argv)
 
     for (i=1; i<argc; i++)
     {
-        if (i+1 < argc && !strcmp(argv[i], "-i") && atoi(argv[i+1]))
+		if (i+1 < argc && !strcmp(argv[i], "-i"))
         {
-            FilterInterface = atoi(argv[i+1]);
-            i += 2;
-            printf("Monitoring interface %d\n", FilterInterface);
+			FilterInterface = if_nametoindex(argv[i+1]);
+			if (!FilterInterface) FilterInterface = atoi(argv[i+1]);
+			if (!FilterInterface) {
+				fprintf(stderr, "Unknown interface %s\n", argv[i+1]);
+				goto usage;
+			}
+            printf("Monitoring interface %d/%s\n", FilterInterface, argv[i+1]);
+			i += 1;
+        }
+        else if (!strcmp(argv[i], "-6"))
+        {
+            AddressType = mDNSAddrType_IPv6;
+            printf("Monitoring IPv6 traffic\n");
         }
         else
         {
@@ -968,8 +1026,9 @@ mDNSexport int main(int argc, char **argv)
 
 usage:
     fprintf(stderr, "\nmDNS traffic monitor\n");
-    fprintf(stderr, "Usage: %s [-i index] [host]\n", progname);
+    fprintf(stderr, "Usage: %s [-i index] [-6] [host]\n", progname);
     fprintf(stderr, "Optional [-i index] parameter displays only packets from that interface index\n");
+	fprintf(stderr, "Optional [-6] parameter displays only ipv6 packets (defaults to only ipv4 packets)\n");
     fprintf(stderr, "Optional [host] parameter displays only packets from that host\n");
 
     fprintf(stderr, "\nPer-packet header output:\n");

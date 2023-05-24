@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4 -*-
  *
- * Copyright (c) 2011 Apple Computer, Inc. All rights reserved.
+ * Copyright (c) 2011-2019 Apple Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "mDNSEmbeddedAPI.h"
 #include "DNSSECSupport.h"
 #include "DNSCommon.h"
@@ -86,6 +87,7 @@ mDNSlocal mDNSBool TrustedKeyPresent(mDNS *const m, DNSSECVerifier *dv);
 mDNSlocal mStatus ValidateDS(DNSSECVerifier *dv);
 mDNSlocal void DNSSECNegativeValidationCB(mDNS *const m, DNSSECVerifier *dv, CacheGroup *cg, ResourceRecord *answer, DNSSECStatus status);
 mDNSlocal RRVerifier* CopyRRVerifier(RRVerifier *from);
+mDNSlocal void FreeDNSSECAuthChainInfo(AuthChain *ac);
 
 // Currently we use this to convert a RRVerifier to resource record so that we can
 // use the standard DNS utility functions
@@ -223,7 +225,7 @@ mDNSexport int DNSSECCanonicalOrder(const domainname *const d1, const domainname
         return 0;
 }
 
-// Initialize the question enough so that it can be answered from the cache using SameNameRecordAnswersQuestion or
+// Initialize the question enough so that it can be answered from the cache using SameNameCacheRecordAnswersQuestion or
 // ResourceRecordAnswersQuestion.
 mDNSexport void InitializeQuestion(mDNS *const m, DNSQuestion *question, mDNSInterfaceID InterfaceID, const domainname *qname,
                                    mDNSu16 qtype, mDNSQuestionCallback *callback, void *context)
@@ -257,9 +259,8 @@ mDNSexport DNSSECVerifier *AllocateDNSSECVerifier(mDNS *const m, const domainnam
 {
     DNSSECVerifier *dv;
 
-    dv = (DNSSECVerifier *)mDNSPlatformMemAllocate(sizeof(DNSSECVerifier));
+    dv = (DNSSECVerifier *) mDNSPlatformMemAllocateClear(sizeof(*dv));
     if (!dv) { LogMsg("AllocateDNSSECVerifier: ERROR!! memory alloc failed"); return mDNSNULL; }
-    mDNSPlatformMemZero(dv, sizeof(*dv));
 
     LogDNSSEC("AllocateDNSSECVerifier called %p", dv);
 
@@ -295,11 +296,13 @@ mDNSlocal AuthChain *AuthChainCopy(AuthChain *ae)
 
     while (ae)
     {
-        ac = mDNSPlatformMemAllocate(sizeof(AuthChain));
+        ac = (AuthChain *) mDNSPlatformMemAllocateClear(sizeof(*ac));
         if (!ac)
         {
             LogMsg("AuthChainCopy: AuthChain alloc failure");
-            return mDNSfalse;
+            if (retac)
+                FreeDNSSECAuthChainInfo(retac);
+            return mDNSNULL;
         }
 
         ac->next  = mDNSNULL;
@@ -309,7 +312,7 @@ mDNSlocal AuthChain *AuthChainCopy(AuthChain *ae)
 
         rvfrom = ae->rrset;
         rvto = &ac->rrset;
-        while (rvfrom)
+        while (rvfrom && rvto)
         {
             *rvto = CopyRRVerifier(rvfrom);
             rvfrom = rvfrom->next;
@@ -318,7 +321,7 @@ mDNSlocal AuthChain *AuthChainCopy(AuthChain *ae)
 
         rvfrom = ae->rrsig;
         rvto = &ac->rrsig;
-        while (rvfrom)
+        while (rvfrom && rvto)
         {
             *rvto = CopyRRVerifier(rvfrom);
             rvfrom = rvfrom->next;
@@ -327,7 +330,7 @@ mDNSlocal AuthChain *AuthChainCopy(AuthChain *ae)
 
         rvfrom = ae->key;
         rvto = &ac->key;
-        while (rvfrom)
+        while (rvfrom && rvto)
         {
             *rvto = CopyRRVerifier(rvfrom);
             rvfrom = rvfrom->next;
@@ -492,7 +495,7 @@ mDNSlocal RRVerifier* CopyRRVerifier(RRVerifier *from)
 {
     RRVerifier *r;
 
-    r = mDNSPlatformMemAllocate(sizeof (RRVerifier) + from->rdlength);
+    r = (RRVerifier *) mDNSPlatformMemAllocate(sizeof(*r) + from->rdlength);
     if (!r)
     {
         LogMsg("CopyRRVerifier: memory failure");
@@ -509,7 +512,7 @@ mDNSexport RRVerifier* AllocateRRVerifier(const ResourceRecord *const rr, mStatu
 {
     RRVerifier *r;
 
-    r = mDNSPlatformMemAllocate(sizeof (RRVerifier) + rr->rdlength);
+    r = (RRVerifier *) mDNSPlatformMemAllocateClear(sizeof(*r) + rr->rdlength);
     if (!r)
     {
         LogMsg("AllocateRRVerifier: memory failure");
@@ -703,7 +706,6 @@ mDNSexport void ValidateRRSIG(DNSSECVerifier *dv, RRVerifierSet type, const Reso
 
 mDNSlocal mStatus CheckRRSIGForRRSet(mDNS *const m, DNSSECVerifier *dv, CacheRecord **negcr)
 {
-    mDNSu32 slot;
     CacheGroup *cg;
     CacheRecord *cr;
     RRVerifier *rv;
@@ -718,8 +720,7 @@ mDNSlocal mStatus CheckRRSIGForRRSet(mDNS *const m, DNSSECVerifier *dv, CacheRec
     }
 
     rv = dv->rrset;
-    slot = HashSlot(&rv->name);
-    cg = CacheGroupForName(m, slot, rv->namehash, &rv->name);
+    cg = CacheGroupForName(m, rv->namehash, &rv->name);
     if (!cg)
     {
         debugdnssec("CheckRRSIGForRRSet: cg null");
@@ -803,7 +804,6 @@ mDNSlocal void CheckOneKeyForRRSIG(DNSSECVerifier *dv, const ResourceRecord *con
 
 mDNSlocal mStatus CheckKeyForRRSIG(mDNS *const m, DNSSECVerifier *dv, CacheRecord **negcr)
 {
-    mDNSu32 slot;
     mDNSu32 namehash;
     CacheGroup *cg;
     CacheRecord *cr;
@@ -821,9 +821,8 @@ mDNSlocal mStatus CheckKeyForRRSIG(mDNS *const m, DNSSECVerifier *dv, CacheRecor
     rrsig = (rdataRRSig *)dv->rrsig->rdata;
     name = (domainname *)&rrsig->signerName;
 
-    slot = HashSlot(name);
     namehash = DomainNameHashValue(name);
-    cg = CacheGroupForName(m, slot, namehash, name);
+    cg = CacheGroupForName(m, namehash, name);
     if (!cg)
     {
         debugdnssec("CheckKeyForRRSIG: cg null for %##s", name->c);
@@ -883,7 +882,6 @@ mDNSlocal void CheckOneRRSIGForKey(DNSSECVerifier *dv, const ResourceRecord *con
 
 mDNSlocal mStatus CheckRRSIGForKey(mDNS *const m, DNSSECVerifier *dv, CacheRecord **negcr)
 {
-    mDNSu32 slot;
     mDNSu32 namehash;
     CacheGroup *cg;
     CacheRecord *cr;
@@ -905,9 +903,8 @@ mDNSlocal mStatus CheckRRSIGForKey(mDNS *const m, DNSSECVerifier *dv, CacheRecor
     rrsig = (rdataRRSig *)dv->rrsig->rdata;
     name = (domainname *)&rrsig->signerName;
 
-    slot = HashSlot(name);
     namehash = DomainNameHashValue(name);
-    cg = CacheGroupForName(m, slot, namehash, name);
+    cg = CacheGroupForName(m, namehash, name);
     if (!cg)
     {
         debugdnssec("CheckRRSIGForKey: cg null %##s", name->c);
@@ -1006,7 +1003,6 @@ mDNSlocal void CheckOneDSForKey(DNSSECVerifier *dv, const ResourceRecord *const 
 
 mDNSlocal mStatus CheckDSForKey(mDNS *const m, DNSSECVerifier *dv, CacheRecord **negcr)
 {
-    mDNSu32 slot;
     mDNSu32 namehash;
     CacheGroup *cg;
     CacheRecord *cr;
@@ -1026,9 +1022,8 @@ mDNSlocal mStatus CheckDSForKey(mDNS *const m, DNSSECVerifier *dv, CacheRecord *
     }
     rrsig = (rdataRRSig *)dv->rrsig->rdata;
     name = (domainname *)&rrsig->signerName;
-    slot = HashSlot(name);
     namehash = DomainNameHashValue(name);
-    cg = CacheGroupForName(m, slot, namehash, name);
+    cg = CacheGroupForName(m, namehash, name);
     if (!cg)
     {
         debugdnssec("CheckDSForKey: cg null for %s", name->c);
@@ -1065,7 +1060,6 @@ mDNSlocal mStatus CheckDSForKey(mDNS *const m, DNSSECVerifier *dv, CacheRecord *
         return mStatus_NoError;
     else
         return mStatus_NoSuchRecord;
-    return (dv->ds ? mStatus_NoError : mStatus_NoSuchRecord);
 }
 
 // It returns mDNStrue if we have all the rrsets for verification and mDNSfalse otherwise.
@@ -1972,19 +1966,17 @@ mDNSlocal mDNSBool ValidateSignatureWithKey(DNSSECVerifier *dv, RRVerifier *rrse
         nrrsets++;
 
     tmp = rrset;
-    start = ptr = mDNSPlatformMemAllocate(nrrsets * sizeof (rdataComp));
+    start = ptr = (rdataComp *) mDNSPlatformMemAllocateClear(nrrsets * sizeof(rdataComp));
     debugdnssec("ValidateSignatureWithKey: start %p, nrrsets %d", start, nrrsets);
     if (ptr)
     {
-        // Need to initialize for failure case below
-        mDNSPlatformMemZero(ptr, nrrsets * (sizeof (rdataComp)));
         while (tmp)
         {
             ptr->rdlength = tmp->rdlength;
             ptr->rrtype = tmp->rrtype;
             if (ptr->rdlength)
             {
-                ptr->rdata = mDNSPlatformMemAllocate(ptr->rdlength);
+                ptr->rdata = (mDNSu8 *) mDNSPlatformMemAllocate(ptr->rdlength);
                 if (ptr->rdata)
                 {
                     mDNSPlatformMemCopy(ptr->rdata, tmp->rdata, tmp->rdlength);
@@ -2291,7 +2283,7 @@ mDNSlocal mDNSBool AuthChainAdd(DNSSECVerifier *dv, RRVerifier *resultKey, RRVer
         return mDNSfalse;
     }
 
-    ae = mDNSPlatformMemAllocate(sizeof(AuthChain));
+    ae = (AuthChain *) mDNSPlatformMemAllocateClear(sizeof(*ae));
     if (!ae)
     {
         LogMsg("AuthChainAdd: AuthChain alloc failure");
@@ -2333,10 +2325,7 @@ mDNSlocal void SetTTLRRSet(mDNS *const m, DNSSECVerifier *dv, DNSSECStatus statu
     CacheRecord *rr;
     RRVerifier *rrsigv;
     rdataRRSig *rrsig;
-    mDNSu32 slot;
     CacheGroup *cg;
-    int sigNameLen, len;
-    mDNSu8 *ptr;
     mDNSu32 rrTTL, rrsigTTL, rrsigOrigTTL, rrsigTimeTTL;
     domainname *qname;
     mDNSu16 qtype;
@@ -2367,8 +2356,7 @@ mDNSlocal void SetTTLRRSet(mDNS *const m, DNSSECVerifier *dv, DNSSECStatus statu
 
     question.ThisQInterval = -1;
     InitializeQuestion(m, &question, dv->InterfaceID, qname, qtype, mDNSNULL, mDNSNULL);
-    slot = HashSlot(&question.qname);
-    cg = CacheGroupForName(m, slot, question.qnamehash, &question.qname);
+    cg = CacheGroupForName(m, question.qnamehash, &question.qname);
 
     if (!cg)
     {
@@ -2377,7 +2365,7 @@ mDNSlocal void SetTTLRRSet(mDNS *const m, DNSSECVerifier *dv, DNSSECStatus statu
     }
 
     for (rr = cg->members; rr; rr = rr->next)
-        if (SameNameRecordAnswersQuestion(&rr->resrec, &question))
+        if (SameNameCacheRecordAnswersQuestion(rr, &question))
         {
             // originalttl is never touched. The actual TTL is derived based on when it was
             // received.
@@ -2400,17 +2388,11 @@ mDNSlocal void SetTTLRRSet(mDNS *const m, DNSSECVerifier *dv, DNSSECStatus statu
     {
         rrsigv = dv->ac->rrsig;
         rrsig = (rdataRRSig *)rrsigv->rdata;
-        sigNameLen = DomainNameLength((domainname *)&rrsig->signerName);
-        // pointer to signature and the length
-        ptr = (mDNSu8 *)(rrsigv->rdata + sigNameLen + RRSIG_FIXED_SIZE);
-        len = rrsigv->rdlength - RRSIG_FIXED_SIZE - sigNameLen;
     }
     else
     {
         rrsigv = mDNSNULL;
         rrsig = mDNSNULL;
-        ptr = mDNSNULL;
-        sigNameLen = len = 0;
     }
 
     rrsigRR = mDNSNULL;
@@ -2511,7 +2493,7 @@ mDNSlocal void SetTTLRRSet(mDNS *const m, DNSSECVerifier *dv, DNSSECStatus statu
     // Find the RRset and set its TTL
     for (rr = cg ? cg->members : mDNSNULL; rr; rr=rr->next)
     {
-        if (SameNameRecordAnswersQuestion(&rr->resrec, &question))
+        if (SameNameCacheRecordAnswersQuestion(rr, &question))
         {
             LogDNSSEC("SetTTLRRSet: Setting the TTL %d for %s, question %##s (%s)", rrTTL, CRDisplayString(m, rr),
                       question.qname.c, DNSTypeName(rr->resrec.rrtype));
@@ -2531,7 +2513,9 @@ mDNSlocal void FinishDNSSECVerification(mDNS *const m, DNSSECVerifier *dv)
     LogDNSSEC("FinishDNSSECVerification: all rdata sets available for sig verification for %##s (%s)",
               dv->origName.c, DNSTypeName(dv->origType));
 
-    mDNS_StopQuery(m, &dv->q);
+    // Stop outstanding query if one exists
+    if (dv->q.ThisQInterval != -1)
+        mDNS_StopQuery(m, &dv->q);
     if (ValidateSignature(dv, &resultKey, &resultRRSig) == mStatus_NoError)
     {
         rdataDNSKey *key;
@@ -2694,7 +2678,7 @@ mDNSlocal void DNSSECNoResponse(mDNS *const m, DNSSECVerifier *dv)
 {
     CacheGroup *cg;
     CacheRecord *cr;
-    mDNSu32 slot, namehash;
+    mDNSu32 namehash;
     ResourceRecord *answer = mDNSNULL;
 
     LogDNSSEC("DNSSECNoResponse: called");
@@ -2707,10 +2691,9 @@ mDNSlocal void DNSSECNoResponse(mDNS *const m, DNSSECVerifier *dv)
 
     BumpDNSSECStats(m, kStatsActionSet, kStatsTypeStatus, DNSSEC_NoResponse);
 
-    slot = HashSlot(&dv->origName);
     namehash = DomainNameHashValue(&dv->origName);
 
-    cg = CacheGroupForName(m, (const mDNSu32)slot, namehash, &dv->origName);
+    cg = CacheGroupForName(m, namehash, &dv->origName);
     if (!cg)
     {
         LogDNSSEC("DNSSECNoResponse: cg NULL for %##s (%s)", dv->origName.c, DNSTypeName(dv->origType));
@@ -2723,7 +2706,7 @@ mDNSlocal void DNSSECNoResponse(mDNS *const m, DNSSECVerifier *dv)
     // RRSIGs that can match the original question
     for (cr = cg->members; cr; cr = cr->next)
     {
-        if (SameNameRecordAnswersQuestion(&cr->resrec, &dv->q))
+        if (SameNameCacheRecordAnswersQuestion(cr, &dv->q))
         {
             answer = &cr->resrec;
             break;
@@ -3036,7 +3019,7 @@ done:
 
 mDNSlocal void DNSSECValidationCB(mDNS *const m, DNSSECVerifier *dv, DNSSECStatus status)
 {
-    mDNSu32 slot, namehash;
+    mDNSu32 namehash;
     CacheGroup *cg;
     CacheRecord *cr;
 
@@ -3056,10 +3039,9 @@ mDNSlocal void DNSSECValidationCB(mDNS *const m, DNSSECVerifier *dv, DNSSECStatu
         ProveInsecure(m, dv, mDNSNULL, mDNSNULL);
         return;
     }
-    slot = HashSlot(&dv->origName);
     namehash = DomainNameHashValue(&dv->origName);
 
-    cg = CacheGroupForName(m, (const mDNSu32)slot, namehash, &dv->origName);
+    cg = CacheGroupForName(m, namehash, &dv->origName);
     if (!cg)
     {
         LogDNSSEC("DNSSECValidationCB: cg NULL for %##s (%s)", dv->origName.c, DNSTypeName(dv->origType));
@@ -3072,7 +3054,7 @@ mDNSlocal void DNSSECValidationCB(mDNS *const m, DNSSECVerifier *dv, DNSSECStatu
     dv->q.ValidatingResponse = mDNSfalse;
     for (cr = cg->members; cr; cr = cr->next)
     {
-        if (SameNameRecordAnswersQuestion(&cr->resrec, &dv->q))
+        if (SameNameCacheRecordAnswersQuestion(cr, &dv->q))
         {
             if (cr->resrec.RecordType == kDNSRecordTypePacketNegative)
                 DNSSECNegativeValidationCB(m, dv, cg, &cr->resrec, status);
@@ -3085,8 +3067,7 @@ mDNSlocal void DNSSECValidationCB(mDNS *const m, DNSSECVerifier *dv, DNSSECStatu
 
 mDNSexport void VerifySignature(mDNS *const m, DNSSECVerifier *dv, DNSQuestion *q)
 {
-    mDNSu32 slot = HashSlot(&q->qname);
-    CacheGroup *const cg = CacheGroupForName(m, slot, q->qnamehash, &q->qname);
+    CacheGroup *const cg = CacheGroupForName(m, q->qnamehash, &q->qname);
     CacheRecord *rr;
     mDNSBool first = mDNSfalse;
     static mDNSBool TrustAnchorsUpdated = mDNSfalse;
@@ -3100,7 +3081,7 @@ mDNSexport void VerifySignature(mDNS *const m, DNSSECVerifier *dv, DNSQuestion *
     if (!dv)
     {
         first = mDNStrue;
-        if (!q->qDNSServer || q->qDNSServer->cellIntf)
+        if (!q->qDNSServer || q->qDNSServer->isCell)
         {
             LogDNSSEC("VerifySignature: Disabled");
             return;
@@ -3123,7 +3104,7 @@ mDNSexport void VerifySignature(mDNS *const m, DNSSECVerifier *dv, DNSQuestion *
 
     // Walk the cache and get all the rrsets for verification.
     for (rr = cg ? cg->members : mDNSNULL; rr; rr=rr->next)
-        if (SameNameRecordAnswersQuestion(&rr->resrec, q))
+        if (SameNameCacheRecordAnswersQuestion(rr, q))
         {
             // We also get called for RRSIGs which matches qtype. We don't need that here as we are
             // building rrset for matching q->qname. Checking for RRSIG type is important as otherwise
@@ -3187,13 +3168,10 @@ mDNSexport void VerifySignature(mDNS *const m, DNSSECVerifier *dv, DNSQuestion *
 
 mDNSlocal mDNSBool TrustedKeyPresent(mDNS *const m, DNSSECVerifier *dv)
 {
-    rdataRRSig *rrsig;
     rdataDS *ds;
     rdataDNSKey *key;
     TrustAnchor *ta;
     RRVerifier *keyv;
-
-    rrsig = (rdataRRSig *)dv->rrsig->rdata;
 
     // Walk all our trusted DS Records to see if we have a matching DNS KEY record that verifies
     // the hash. If we find one, verify that this key was used to sign the KEY rrsets in
@@ -3325,14 +3303,12 @@ mDNSlocal mStatus TrustedKey(mDNS *const m, DNSSECVerifier *dv)
 
 mDNSlocal CacheRecord* NegativeCacheRecordForRR(mDNS *const m, const ResourceRecord *const rr)
 {
-    mDNSu32 slot;
     mDNSu32 namehash;
     CacheGroup *cg;
     CacheRecord *cr;
 
-    slot = HashSlot(rr->name);
     namehash = DomainNameHashValue(rr->name);
-    cg = CacheGroupForName(m, slot, namehash, rr->name);
+    cg = CacheGroupForName(m, namehash, rr->name);
     if (!cg)
     {
         LogMsg("NegativeCacheRecordForRR: cg null %##s", rr->name->c);
@@ -3855,10 +3831,10 @@ mDNSexport void ProveInsecure(mDNS *const m, DNSSECVerifier *dv, InsecureContext
 
     if (ic == mDNSNULL)
     {
-        ic = (InsecureContext *)mDNSPlatformMemAllocate(sizeof(InsecureContext));
+        ic = (InsecureContext *) mDNSPlatformMemAllocateClear(sizeof(*ic));
         if (!ic)
         {
-            LogMsg("mDNSPlatformMemAllocate: ERROR!! memory alloc failed for ic");
+            LogMsg("mDNSPlatformMemAllocateClear: ERROR!! memory alloc failed for ic");
             return;
         }
         

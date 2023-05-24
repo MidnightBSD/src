@@ -1,6 +1,5 @@
-/* -*- Mode: C; tab-width: 4 -*-
- *
- * Copyright (c) 2003-2004 Apple Computer, Inc. All rights reserved.
+/*
+ * Copyright (c) 2003-2019 Apple Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +36,7 @@
 #include <fcntl.h>
 #include <pwd.h>
 #include <sys/types.h>
+#include <sys/socket.h>
 
 #if __APPLE__
 #undef daemon
@@ -48,6 +48,7 @@ extern int daemon(int, int);
 #include "mDNSUNP.h"        // For daemon()
 #include "uds_daemon.h"
 #include "PlatformCommon.h"
+#include "posix_utilities.h"    // For getLocalTimestamp()
 
 #define CONFIG_FILE "/etc/mdnsd.conf"
 static domainname DynDNSZone;                // Default wide-area zone for service registration
@@ -118,12 +119,22 @@ mDNSlocal void ParseCmdLinArgs(int argc, char **argv)
     }
 }
 
-mDNSlocal void DumpStateLog(mDNS *const m)
+mDNSlocal void DumpStateLog()
 // Dump a little log of what we've been up to.
 {
-    LogMsg("---- BEGIN STATE LOG ----");
-    udsserver_info(m);
-    LogMsg("----  END STATE LOG  ----");
+    char timestamp[64]; // 64 is enough to store the UTC timestmp
+    
+    mDNSu32 major_version = _DNS_SD_H / 10000;
+    mDNSu32 minor_version1 = (_DNS_SD_H - major_version * 10000) / 100;
+    mDNSu32 minor_version2 = _DNS_SD_H % 100;
+
+    getLocalTimestamp(timestamp, sizeof(timestamp));
+    LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEFAULT, "---- BEGIN STATE LOG ---- (%s mDNSResponder Build %d.%02d.%02d)", timestamp, major_version, minor_version1, minor_version2);
+
+    udsserver_info_dump_to_fd(STDERR_FILENO);
+
+    getLocalTimestamp(timestamp, sizeof(timestamp));
+    LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEFAULT, "---- END STATE LOG ---- (%s mDNSResponder Build %d.%02d.%02d)", timestamp, major_version, minor_version1, minor_version2);
 }
 
 mDNSlocal mStatus MainLoop(mDNS *m) // Loop until we quit.
@@ -160,7 +171,7 @@ mDNSlocal mStatus MainLoop(mDNS *m) // Loop until we quit.
         (void) mDNSPosixRunEventLoopOnce(m, &timeout, &signals, &gotData);
 
         if (sigismember(&signals, SIGHUP )) Reconfigure(m);
-        if (sigismember(&signals, SIGUSR1)) DumpStateLog(m);
+        if (sigismember(&signals, SIGUSR1)) DumpStateLog();
         // SIGPIPE happens when we try to write to a dead client; death should be detected soon in request_callback() and cleaned up.
         if (sigismember(&signals, SIGPIPE)) LogMsg("Received SIGPIPE - ignoring");
         if (sigismember(&signals, SIGINT) || sigismember(&signals, SIGTERM)) break;
@@ -189,9 +200,21 @@ int main(int argc, char **argv)
     {
         const struct passwd *pw = getpwnam("nobody");
         if (pw != NULL)
-            setuid(pw->pw_uid);
+        {
+            if (setgid(pw->pw_gid) < 0)
+            {
+                LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_ERROR,
+                          "WARNING: mdnsd continuing as group root because setgid to \"nobody\" failed with " PUB_S, strerror(errno));
+            }
+            if (setuid(pw->pw_uid) < 0)
+            {
+                LogMsg("WARNING: mdnsd continuing as root because setuid to \"nobody\" failed with %s", strerror(errno));
+            }
+        }
         else
+        {
             LogMsg("WARNING: mdnsd continuing as root because user \"nobody\" does not exist");
+        }
     }
 
     if (mStatus_NoError == err)
@@ -205,7 +228,7 @@ int main(int argc, char **argv)
         LogMsg("ExitCallback: udsserver_exit failed");
 
  #if MDNS_DEBUGMSGS > 0
-    printf("mDNSResponder exiting normally with %ld\n", err);
+    printf("mDNSResponder exiting normally with %d\n", err);
  #endif
 
     return err;
@@ -235,9 +258,8 @@ mStatus udsSupportRemoveFDFromEventLoop(int fd, void *platform_data)        // N
     return err;
 }
 
-mDNSexport void RecordUpdatedNiceLabel(mDNS *const m, mDNSs32 delay)
+mDNSexport void RecordUpdatedNiceLabel(mDNSs32 delay)
 {
-    (void)m;
     (void)delay;
     // No-op, for now
 }
