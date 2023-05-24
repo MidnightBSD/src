@@ -25,14 +25,14 @@
 
 #ifdef HAVE_LINUX
 #include <linux/socket.h>
-#define IPV6_2292_PKTINFO  IPV6_2292PKTINFO
-#define IPV6_2292_HOPLIMIT IPV6_2292HOPLIMIT
+#define IPV6_2292_PKTINFO IPV6_PKTINFO
+#define IPV6_2292_HOPLIMIT IPV6_HOPLIMIT
 #else
 // The following are the supported non-linux posix OSes -
 // netbsd, freebsd and openbsd.
 #if HAVE_IPV6
-#define IPV6_2292_PKTINFO  19
-#define IPV6_2292_HOPLIMIT 20
+#define IPV6_2292_PKTINFO IPV6_PKTINFO
+#define IPV6_2292_HOPLIMIT IPV6_HOPLIMIT
 #endif
 #endif
 

@@ -62,8 +62,8 @@ else ifeq ($(SYSTEM), Linux)
   os=linux
 endif
 
-CC = cc
-BISON = bison
+CC ?= cc
+BISON = yacc
 FLEX = flex
 ST = strip
 LD = ld
@@ -144,9 +144,9 @@ else
 
 ifeq ($(os),freebsd)
 # If not already defined, set LOCALBASE to /usr/local
-LOCALBASE?=/usr/local
-INSTBASE=$(LOCALBASE)
-CFLAGS_OS = -DHAVE_IPV6
+LOCALBASE ?= /usr/local
+INSTBASE ?= $(DESTDIR)$(LOCALBASE)
+CFLAGS_OS = -DHAVE_IPV6 -DTARGET_OS_FREEBSD
 # FreeBSD 4 requires threaded code to be compiled and linked using the "-pthread" option,
 # and requires that the "-lpthread" link option NOT be used
 # This appies only to FreeBSD -- "man cc" on FreeBSD says:
@@ -211,11 +211,12 @@ endif
 endif
 
 # If directory /usr/share/man exists, then we install man pages into that, else /usr/man
-ifeq ($(wildcard /usr/share/man), /usr/share/man)
-MANPATH := /usr/share/man
-else
-MANPATH := /usr/man
-endif
+#ifeq ($(wildcard /usr/share/man), /usr/share/man)
+#MANPATH := /usr/share/man
+#else
+#MANPATH := /usr/man
+#endif
+MANPATH := $(DESTDIR)$(MAN_PATH)
 
 # If directories /etc/init.d/rc*.d exist, then we install into that (Suse)
 ifeq ($(wildcard /etc/init.d/rc2.d/), /etc/init.d/rc2.d/)
@@ -244,7 +245,7 @@ MDNSCFLAGS = $(CFLAGS) $(CFLAGS_COMMON) $(CFLAGS_OS) $(CFLAGS_DEBUGGING) $(CFLAG
 
 all: setup Daemon libdns_sd Clients SAClient SAResponder SAProxyResponder NetMonitor $(OPTIONALTARG)
 
-install: setup InstalledStartup InstalledDaemon InstalledLib InstalledManPages InstalledClients $(OPTINSTALL)
+install: setup InstalledDaemon InstalledLib InstalledManPages InstalledClients $(OPTINSTALL)
 
 # 'setup' sets up the build directory structure the way we want
 setup:
@@ -286,13 +287,13 @@ libdns_sd: setup $(BUILDDIR)/libdns_sd.$(LDSUFFIX)
 CLIENTLIBOBJS = $(OBJDIR)/dnssd_clientlib.c.so.o $(OBJDIR)/dnssd_clientstub.c.so.o $(OBJDIR)/dnssd_ipc.c.so.o
 
 $(BUILDDIR)/libdns_sd.$(LDSUFFIX): $(CLIENTLIBOBJS)
-	$(LD) $(SOOPTS) $(LINKOPTS) -o $@ $+
+	$(CC) $(SOOPTS) $(LINKOPTS) -Wl,-soname=libdns_sd.$(LDSUFFIX).$(LIBVERS) -o $@ $+
 	$(STRIP) $@
 
-Clients: setup libdns_sd ../Clients/build/dns-sd
+Clients: setup ../Clients/build/dns-sd
 	@echo "Clients done"
 
-../Clients/build/dns-sd: ../Clients/dns-sd.c
+../Clients/build/dns-sd: setup libdns_sd ../Clients/dns-sd.c
 	$(MAKE) -C ../Clients DEBUG=$(DEBUG) SUPMAKE_CFLAGS="$(MDNSCFLAGS)"
 
 # nss_mdns target builds the Name Service Switch module
@@ -300,7 +301,7 @@ nss_mdns: setup $(BUILDDIR)/$(NSSLIBFILE)
 	@echo "Name Service Switch module done"
 
 $(BUILDDIR)/$(NSSLIBFILE): $(CLIENTLIBOBJS) $(OBJDIR)/nss_mdns.c.so.o
-	$(LD) $(SOOPTS) $(LINKOPTS) -o $@ $+
+	$(CC) $(SOOPTS) $(LINKOPTS) -Wl,-soname=$(NSSLINKNAME) -o $@ $+
 	$(STRIP) $@
 
 #############################################################################
@@ -325,14 +326,12 @@ InstalledNSS: $(NSSINSTPATH)/$(NSSLINKNAME) /etc/nss_mdns.conf $(MANPATH)/man5/n
 	@echo $+ " installed"
 
 # Note: If daemon already installed, we make sure it's stopped before overwriting it
-$(INSTBASE)/sbin/mdnsd: $(BUILDDIR)/mdnsd $(STARTUPSCRIPTDIR)/$(STARTUPSCRIPTNAME)
-	if test -x $@; then $(STARTUPSCRIPTDIR)/$(STARTUPSCRIPTNAME) stop; fi
+$(INSTBASE)/sbin/mdnsd: $(BUILDDIR)/mdnsd
 	$(CP) $< $@
-	$(STARTUPSCRIPTDIR)/$(STARTUPSCRIPTNAME) start
 
 $(INSTBASE)/lib/libdns_sd.$(LDSUFFIX).$(LIBVERS): $(BUILDDIR)/libdns_sd.$(LDSUFFIX)
 	$(CP) $< $@
-	$(LN) $@ $(INSTBASE)/lib/libdns_sd.$(LDSUFFIX)
+	$(LN) $(notdir $@) $(INSTBASE)/lib/libdns_sd.$(LDSUFFIX)
 ifdef LDCONFIG
 	# -m means 'merge into existing database', -R means 'rescan directories'
 	$(LDCONFIG) -mR
@@ -365,7 +364,7 @@ $(MANPATH)/man8/%.8: %.8
 	cp $< $@
 	chmod 444 $@
 
-$(MANPATH)/man8/mdnsd.8: $(SHAREDDIR)/mDNSResponder.8
+$(MANPATH)/man8/mdnsd.8: $(SHAREDDIR)/mDNSResponderPosix.8
 	cp $< $@
 	chmod 444 $@
 
@@ -509,6 +508,8 @@ $(OBJDIR)/NetMonitor.c.o:            $(COREDIR)/mDNS.c # Note: NetMonitor.c text
 
 $(BUILDDIR)/dnsextd:                 $(DNSEXTDOBJ) $(OBJDIR)/dnsextd.c.threadsafe.o
 	$(CC) $+ -o $@ $(LINKOPTS) $(LINKOPTS_PTHREAD)
+
+$(OBJDIR)/dnsextd_lexer.l.o:         $(OBJDIR)/dnsextd_parser.y.o
 
 #############################################################################
 

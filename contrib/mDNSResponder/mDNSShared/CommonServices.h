@@ -64,6 +64,16 @@ extern "C" {
     #endif
 #endif
 
+// MidnightBSD
+
+#if ( !defined( TARGET_OS_MIDNIGHTBSD ) )
+    #if ( defined( __MidnightBSD__ ) )
+        #define TARGET_OS_MIDNIGHTBSD       1
+    #else
+        #define TARGET_OS_MIDNIGHTBSD       0
+    #endif
+#endif
+
 // Linux
 
 #if ( !defined( TARGET_OS_LINUX ) )
@@ -179,6 +189,15 @@ extern "C" {
 #elif ( TARGET_OS_FREEBSD )
 
 // FreeBSD
+    #include    <stdint.h>
+    #include    <pthread.h>
+    #include    <netinet/in.h>
+    #include    <arpa/inet.h>
+    #include    <sys/socket.h>
+
+#elif ( TARGET_OS_MIDNIGHTBSD )
+
+// MidnightBSD
     #include    <stdint.h>
     #include    <pthread.h>
     #include    <netinet/in.h>
@@ -439,7 +458,7 @@ typedef int socklen_t;
 // - Mac OS X when not building with BSD headers
 // - Windows
 
-#if ( !defined(_SSIZE_T) && ( TARGET_OS_WIN32 || !defined( _BSD_SSIZE_T_DEFINED_ ) ) && !TARGET_OS_FREEBSD && !TARGET_OS_LINUX && !TARGET_OS_MAC)
+#if ( !defined(_SSIZE_T) && ( TARGET_OS_WIN32 || !defined( _BSD_SSIZE_T_DEFINED_ ) ) && !TARGET_OS_FREEBSD && !TARGET_OS_LINUX && !TARGET_OS_MAC & !TARGET_OS_MIDNIGHTBSD)
 typedef int ssize_t;
 #endif
 
