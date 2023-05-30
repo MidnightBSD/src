@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libsmutil/Makefile 313538 2017-02-10 07:32:40Z ngie $
+.include <src.opts.mk>
 
 PACKAGE=lib${LIB}
 SENDMAIL_DIR=${SRCTOP}/contrib/sendmail
@@ -6,6 +6,11 @@ SENDMAIL_DIR=${SRCTOP}/contrib/sendmail
 
 CFLAGS+=-I${SENDMAIL_DIR}/src -I${SENDMAIL_DIR}/include -I.
 CFLAGS+=-DNEWDB -DNIS -DMAP_REGEX -DNOT_SENDMAIL
+
+.if ${MK_OPENSSL} != "no"
+# STARTTLS support
+CFLAGS+=-DSTARTTLS
+.endif
 
 # User customizations to the sendmail build environment
 CFLAGS+=${SENDMAIL_CFLAGS}
