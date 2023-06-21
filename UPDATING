@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20230621:
+	MidnightBSD 3.0.2
+
+	Fix security issues in OpenSSH and pam krb5.
+
+	Remove some unused files from contrib that trigger security scanners
+
 20230408:
 	mport 2.3.0
 
