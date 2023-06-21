@@ -593,7 +593,7 @@ ssh_update_card(int sock, int add, const char *reader_id, const char *pin,
     u_int life, u_int confirm)
 {
 	struct sshbuf *msg;
-	int r, constrained = (life || confirm);
+	int r, constrained = (life || confirm || dest_constraints);
 	u_char type;
 
 	if (add) {
