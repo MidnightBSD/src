@@ -204,7 +204,13 @@ static void
 close_socket(SocketEntry *e)
 {
 	size_t i;
+	int last = 0;
 
+	if (e->type == AUTH_CONNECTION) {
+		debug("xcount %d -> %d", xcount, xcount - 1);
+		if (--xcount == 0)
+			last = 1;
+	}
 	close(e->fd);
 	sshbuf_free(e->input);
 	sshbuf_free(e->output);

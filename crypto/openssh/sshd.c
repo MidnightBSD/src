@@ -923,10 +923,10 @@ usage(void)
 	    *options.version_addendum != '\0')
 		fprintf(stderr, "%s %s, %s\n",
 		    SSH_RELEASE,
-		    options.version_addendum, OPENSSL_VERSION_STRING);
+		    options.version_addendum, SSH_OPENSSL_VERSION);
 	else
 		fprintf(stderr, "%s, %s\n",
-		    SSH_RELEASE, OPENSSL_VERSION_STRING);
+		    SSH_RELEASE, SSH_OPENSSL_VERSION);
 	fprintf(stderr,
 "usage: sshd [-46DdeiqTt] [-C connection_spec] [-c host_cert_file]\n"
 "            [-E log_file] [-f config_file] [-g login_grace_time]\n"
@@ -1299,6 +1299,31 @@ server_accept_loop(int *sock_in, int *sock_out, int *newsock, int *config_s)
 					usleep(100 * 1000);
 				continue;
 			}
+#ifdef LIBWRAP
+			/* Check whether logins are denied from this host. */
+			request_set(&req, RQ_FILE, *newsock,
+			    RQ_CLIENT_NAME, "", RQ_CLIENT_ADDR, "", 0);
+			sock_host(&req);
+			if (!hosts_access(&req)) {
+				const struct linger l = { .l_onoff = 1,
+				    .l_linger  = 0 };
+
+				(void )setsockopt(*newsock, SOL_SOCKET,
+				    SO_LINGER, &l, sizeof(l));
+				(void )close(*newsock);
+				/*
+				 * Mimic message from libwrap's refuse()
+				 * exactly.  sshguard, and supposedly lots
+				 * of custom made scripts rely on it.
+				 */
+				syslog(deny_severity,
+				    "refused connect from %s (%s)",
+				    eval_client(&req),
+				    eval_hostaddr(req.client));
+				debug("Connection refused by tcp wrapper");
+				continue;
+			}
+#endif /* LIBWRAP */
 			if (unset_nonblock(*newsock) == -1) {
 				close(*newsock);
 				continue;

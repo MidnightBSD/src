@@ -197,6 +197,7 @@ initialize_server_options(ServerOptions *options)
 	options->disable_forwarding = -1;
 	options->expose_userauth_info = -1;
 	options->required_rsa_size = -1;
+	options->use_blacklist = -1;
 }
 
 /* Returns 1 if a string option is unset or set to "none" or 0 otherwise. */
@@ -436,7 +437,7 @@ fill_default_server_options(ServerOptions *options)
 	if (options->ip_qos_bulk == -1)
 		options->ip_qos_bulk = IPTOS_DSCP_CS1;
 	if (options->version_addendum == NULL)
-		options->version_addendum = xstrdup(SSH_VERSION_MIDNIGHTBSD);
+		options->version_addendum = xstrdup(SSH_VERSION_FREEBSD);
 	if (options->fwd_opts.streamlocal_bind_mask == (mode_t)-1)
 		options->fwd_opts.streamlocal_bind_mask = 0177;
 	if (options->fwd_opts.streamlocal_bind_unlink == -1)
@@ -451,6 +452,8 @@ fill_default_server_options(ServerOptions *options)
 		options->sk_provider = xstrdup("internal");
 	if (options->required_rsa_size == -1)
 		options->required_rsa_size = SSH_RSA_MINIMUM_MODULUS_SIZE;
+	if (options->use_blacklist == -1)
+		options->use_blacklist = 0;
 
 	assemble_algorithms(options);
 
@@ -528,6 +531,7 @@ typedef enum {
 	sAllowStreamLocalForwarding, sFingerprintHash, sDisableForwarding,
 	sExposeAuthInfo, sRDomain, sPubkeyAuthOptions, sSecurityKeyProvider,
 	sRequiredRSASize,
+	sUseBlacklist,
 	sDeprecated, sIgnore, sUnsupported
 } ServerOpCodes;
 
@@ -688,6 +692,12 @@ static struct {
 	{ "casignaturealgorithms", sCASignatureAlgorithms, SSHCFG_ALL },
 	{ "securitykeyprovider", sSecurityKeyProvider, SSHCFG_GLOBAL },
 	{ "requiredrsasize", sRequiredRSASize, SSHCFG_ALL },
+	{ "useblacklist", sUseBlacklist, SSHCFG_GLOBAL },
+	{ "useblocklist", sUseBlacklist, SSHCFG_GLOBAL }, /* alias */
+	{ "noneenabled", sUnsupported, SSHCFG_ALL },
+	{ "hpndisabled", sDeprecated, SSHCFG_ALL },
+	{ "hpnbuffersize", sDeprecated, SSHCFG_ALL },
+	{ "tcprcvbufpoll", sDeprecated, SSHCFG_ALL },
 	{ NULL, sBadOption, 0 }
 };
 
@@ -2453,6 +2463,10 @@ process_server_config_line_depth(ServerOptions *options, char *line,
 	case sRequiredRSASize:
 		intptr = &options->required_rsa_size;
 		goto parse_int;
+
+	case sUseBlacklist:
+		intptr = &options->use_blacklist;
+		goto parse_flag;
 
 	case sDeprecated:
 	case sIgnore:
