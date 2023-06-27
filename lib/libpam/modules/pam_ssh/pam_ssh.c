@@ -64,7 +64,7 @@
 #include "sshkey.h"
 
 #define ssh_add_identity(auth, key, comment) \
-	ssh_add_identity_constrained(auth, key, comment, 0, 0, 0, NULL)
+	ssh_add_identity_constrained(auth, key, comment, 0, 0, 0, NULL, NULL, 0)
 
 extern char **environ;
 
