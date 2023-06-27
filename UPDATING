@@ -1,6 +1,8 @@
 Updating Information for MidnightBSD users.
 
 20230627:
+	openssl 1.1.1u
+
 	zlib 1.2.13 for kernel use
 
 	libarchive 3.6.2 
