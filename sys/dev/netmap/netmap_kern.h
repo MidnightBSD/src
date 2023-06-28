@@ -2328,7 +2328,6 @@ nm_os_get_mbuf(struct ifnet *ifp, int len)
 	return m;
 }
 
-#endif /* __FreeBSD_version >= 1100000 */
 #endif /* __MidnightBSD__ */
 
 struct nmreq_option * nmreq_getoption(struct nmreq_header *, uint16_t);
