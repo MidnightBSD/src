@@ -2729,7 +2729,7 @@ fill_default_options(Options * options)
 	/* options->host_key_alias should not be set by default */
 	/* options->preferred_authentications will be set in ssh */
 	if (options->version_addendum == NULL)
-		options->version_addendum = xstrdup(SSH_VERSION_FREEBSD);
+		options->version_addendum = xstrdup(SSH_VERSION_MIDNIGHTBSD);
 
 	/* success */
 	ret = 0;
