@@ -45,7 +45,7 @@
         ..
         mtree
         ..
-        ntp             uname=ntpd gname=ntpd
+        ntp             uname=_ntp gname=_ntp
         ..
         mport
             downloads
