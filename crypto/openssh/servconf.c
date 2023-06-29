@@ -437,7 +437,7 @@ fill_default_server_options(ServerOptions *options)
 	if (options->ip_qos_bulk == -1)
 		options->ip_qos_bulk = IPTOS_DSCP_CS1;
 	if (options->version_addendum == NULL)
-		options->version_addendum = xstrdup(SSH_VERSION_FREEBSD);
+		options->version_addendum = xstrdup(SSH_VERSION_MIDNIGHTBSD);
 	if (options->fwd_opts.streamlocal_bind_mask == (mode_t)-1)
 		options->fwd_opts.streamlocal_bind_mask = 0177;
 	if (options->fwd_opts.streamlocal_bind_unlink == -1)
