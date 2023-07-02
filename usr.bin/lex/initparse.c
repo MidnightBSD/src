@@ -1,4 +1,3 @@
-/* $FreeBSD$ */
 #ifndef lint
 static const char yysccsid[] = "@(#)yaccpar	1.9 (Berkeley) 02/21/93";
 #endif

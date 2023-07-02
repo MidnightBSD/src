@@ -1,4 +1,3 @@
-/* $FreeBSD$ */
 
 /*
  * aux_conf.h:

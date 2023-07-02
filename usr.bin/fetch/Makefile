@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=		fetch
 CSTD?=		c99

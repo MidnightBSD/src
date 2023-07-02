@@ -1,7 +1,6 @@
 /*-
  * This file is in the public domain
  *
- * $FreeBSD$
  */
 
 /*
@@ -47,7 +46,6 @@
  *     %VERSREQ field in the Makefile.$ARCH of all the affected makefiles
  *     (typically all of them).
  *
- * $FreeBSD$
  */
 #define	CONFIGVERS	600016
 #define	MAJOR_VERS(x)	((x) / 100000)

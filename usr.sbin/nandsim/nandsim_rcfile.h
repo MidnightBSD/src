@@ -28,7 +28,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
  *
  * from: FreeBSD: src/lib/libncp/ncpl_rcfile.c,v 1.5 2007/01/09 23:27:39 imp Exp
  */

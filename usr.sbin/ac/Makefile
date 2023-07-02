@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	ac
 MAN=	ac.8

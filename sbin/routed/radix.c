@@ -30,7 +30,6 @@
  *
  *	@(#)radix.c	8.4 (Berkeley) 11/2/94
  *
- * $FreeBSD$
  */
 
 /*
@@ -42,7 +41,6 @@
 #ifdef __NetBSD__
 __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
-__RCSID("$FreeBSD$");
 #else
 __RCSID("$Revision: 2.23 $");
 #ident "$Revision: 2.23 $"

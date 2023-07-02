@@ -1,7 +1,6 @@
 /*
  * USA holiday
  *
- * $FreeBSD$
  */
 
 #ifndef _calendar_usholiday_

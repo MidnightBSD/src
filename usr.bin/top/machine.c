@@ -13,7 +13,6 @@
  *          Thomas Moestl <tmoestl@gmx.net>
  *          Eitan Adler <eadler@FreeBSD.org>
  *
- * $FreeBSD$
  */
 
 #include <sys/errno.h>

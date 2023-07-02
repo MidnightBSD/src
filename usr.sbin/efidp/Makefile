@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	efidp
 MAN=	efidp.8

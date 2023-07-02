@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	ibv_ud_pingpong
 MAN=	ibv_ud_pingpong.1

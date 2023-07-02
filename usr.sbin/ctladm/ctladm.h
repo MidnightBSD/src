@@ -27,7 +27,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
  * $Id: //depot/users/kenm/FreeBSD-test2/usr.sbin/ctladm/ctladm.h#1 $
  */
 

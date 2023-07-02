@@ -1,5 +1,4 @@
 /*
- * $FreeBSD$
  */
 
 #define CHARMAP_SYMBOL_LEN 64

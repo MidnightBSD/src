@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	vtfontcvt
 MAN8=	vtfontcvt.8

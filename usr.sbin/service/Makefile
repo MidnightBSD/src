@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 SCRIPTS=service.sh
 MAN=	service.8

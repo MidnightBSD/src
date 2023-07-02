@@ -1,4 +1,3 @@
-.\" $FreeBSD$
 Do not build or install GNU
 .Xr as 1 ,
 .Xr ld.bfd 1 , and

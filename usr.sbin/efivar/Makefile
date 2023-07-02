@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	efivar
 MAN=	efivar.8

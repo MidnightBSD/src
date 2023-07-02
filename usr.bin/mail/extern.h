@@ -30,7 +30,6 @@
  *
  *	@(#)extern.h	8.2 (Berkeley) 4/20/95 
  *
- * $FreeBSD$
  */
 
 struct name *cat(struct name *, struct name *);

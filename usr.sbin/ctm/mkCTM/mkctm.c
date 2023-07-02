@@ -1,4 +1,3 @@
-/* $FreeBSD$ */
 
 /* Still missing:
  *
@@ -14,7 +13,6 @@
  *	dir1		"Soll"
  *	dir2		"Ist"
  *
- * $FreeBSD$
  */
 
 #include <sys/types.h>

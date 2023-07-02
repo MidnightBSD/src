@@ -4,7 +4,6 @@
  *
  * David Xu <davidxu@freebsd.org>
  *
- * $FreeBSD$
  */
 
 #include <stdio.h>

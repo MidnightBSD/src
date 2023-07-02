@@ -1,7 +1,6 @@
 /*-
  * Test 0012:	BPF_LDX+BPF_MSH+BPF_B
  *
- * $FreeBSD$
  */
 
 /* BPF program */

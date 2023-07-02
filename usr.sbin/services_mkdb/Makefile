@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 CONFS=	services
 PROG=	services_mkdb

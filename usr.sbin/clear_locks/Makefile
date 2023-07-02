@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	clear_locks
 MAN=	clear_locks.8

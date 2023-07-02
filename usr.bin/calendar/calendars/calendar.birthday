@@ -1,7 +1,6 @@
 /*
  * Birthday
  *
- * $FreeBSD$
  */
 
 #ifndef _calendar_birthday_

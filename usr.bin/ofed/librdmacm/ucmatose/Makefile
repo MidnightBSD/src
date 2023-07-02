@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	ucmatose
 MAN=	ucmatose.1

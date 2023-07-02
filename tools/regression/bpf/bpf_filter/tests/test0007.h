@@ -1,7 +1,6 @@
 /*-
  * Test 0007:	BPF_LD+BPF_W+BPF_LEN
  *
- * $FreeBSD$
  */
 
 /* BPF program */

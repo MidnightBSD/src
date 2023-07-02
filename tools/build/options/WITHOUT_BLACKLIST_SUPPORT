@@ -1,4 +1,3 @@
-.\" $FreeBSD$
 Set to build some programs without
 .Xr libblacklist 3
 support, like

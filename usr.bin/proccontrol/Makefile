@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=   proccontrol
 WARNS?=	6

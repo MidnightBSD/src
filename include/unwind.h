@@ -1,4 +1,3 @@
-/* $FreeBSD$ */
 
 /*-
    libunwind - a platform-independent unwind library

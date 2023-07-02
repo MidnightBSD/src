@@ -17,7 +17,6 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD$";
 #endif
 
 

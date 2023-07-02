@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	pnfsdsfile
 MAN=	pnfsdsfile.8

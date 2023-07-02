@@ -1,4 +1,3 @@
-/* $FreeBSD$ */
 
 #include <sys/param.h>
 /*#define AMU_BUILD_VERSION 1 */

@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 CONFS=	periodic.conf
 CONFSDIR=	/etc/defaults

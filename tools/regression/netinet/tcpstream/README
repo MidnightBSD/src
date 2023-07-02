@@ -17,4 +17,3 @@ seed of 100:
 
     tcpstream client 192.168.10.10 8080 100
 
-$FreeBSD$

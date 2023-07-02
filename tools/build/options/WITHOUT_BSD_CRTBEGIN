@@ -1,4 +1,3 @@
-.\" $FreeBSD$
 Disable the BSD licensed
 .Pa crtbegin.o
 and

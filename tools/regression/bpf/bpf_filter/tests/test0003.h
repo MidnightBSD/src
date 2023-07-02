@@ -1,7 +1,6 @@
 /*-
  * Test 0003:	BPF_LD+BPF_IMM & BPF_RET+BPF_A
  *
- * $FreeBSD$
  */
 
 /* BPF program */

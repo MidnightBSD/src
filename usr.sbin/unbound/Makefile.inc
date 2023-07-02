@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 NO_WERROR=	true
 NO_WTHREAD_SAFETY= true

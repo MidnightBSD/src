@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	ibv_devices
 MAN=	ibv_devices.1

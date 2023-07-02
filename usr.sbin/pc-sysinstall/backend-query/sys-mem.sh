@@ -25,7 +25,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
 
 if smbios_mem=$(kenv -q smbios.memory.enabled); then
 	smbios_mem=$(expr $smbios_mem / 1024)

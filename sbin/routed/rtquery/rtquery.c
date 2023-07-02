@@ -28,7 +28,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
@@ -64,7 +63,6 @@ __COPYRIGHT("@(#) Copyright (c) 1983, 1988, 1993\n"
 #ifdef __NetBSD__
 __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
-__RCSID("$FreeBSD$");
 #else
 __RCSID("$Revision: 2.26 $");
 #ident "$Revision: 2.26 $"

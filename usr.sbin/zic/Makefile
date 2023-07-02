@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 # Vendor contact: tz@elsie.nci.nih.gov
 

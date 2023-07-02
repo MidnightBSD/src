@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	udaddy
 MAN=	udaddy.1

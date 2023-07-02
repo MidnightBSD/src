@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	logic
 WARNS=6

@@ -30,11 +30,9 @@
  *
  *	@(#)defs.h	8.1 (Berkeley) 6/5/93
  *
- * $FreeBSD$
  */
 
 #ifdef  sgi
-#ident "$FreeBSD$"
 #endif
 
 /* Definitions for RIPv2 routing process.

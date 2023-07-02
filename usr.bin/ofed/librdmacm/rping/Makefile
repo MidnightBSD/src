@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	rping
 MAN=	rping.1

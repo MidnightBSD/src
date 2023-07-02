@@ -5,7 +5,6 @@
  * be an unnamed public holiday in addition to the named holiday the day
  * before. This file format is not complex enough to reflect this, but
  * if it ever is, the change should be made.
- * $FreeBSD$
  */
 
 #ifndef _calendar_southafrica_

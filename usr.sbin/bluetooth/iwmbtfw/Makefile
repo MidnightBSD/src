@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 CONFS=		iwmbtfw.conf
 CONFSDIR=       /etc/devd

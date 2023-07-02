@@ -1,7 +1,6 @@
 /*
  * Calibration calendar for calendar(1)
  *
- * $FreeBSD$
  */
 
 LANG=C

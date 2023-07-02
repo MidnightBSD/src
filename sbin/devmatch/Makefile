@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	devmatch
 MAN=	devmatch.8

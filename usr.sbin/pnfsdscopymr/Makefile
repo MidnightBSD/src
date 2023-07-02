@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	pnfsdscopymr
 MAN=	pnfsdscopymr.8

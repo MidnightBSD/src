@@ -1,7 +1,6 @@
 /*
  * Ukrainian calendar files
  *
- * $FreeBSD$
  */
 
 #ifndef _calendar_ukrainian_

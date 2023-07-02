@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	spppcontrol
 MAN=	spppcontrol.8

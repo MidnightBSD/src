@@ -17,7 +17,6 @@
  *
  * Command line interface for IP firewall facility
  *
- * $FreeBSD$
  */
 
 #include <sys/wait.h>

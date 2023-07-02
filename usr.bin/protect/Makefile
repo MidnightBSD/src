@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=   protect
 WARNS?=	6

@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG = unzip
 CSTD = c99

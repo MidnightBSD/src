@@ -53,7 +53,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-__FBSDID("$FreeBSD$");
 
 static struct nlist	nl[] = {
 #define N_IFNET         0

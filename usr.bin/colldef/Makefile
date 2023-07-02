@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	colldef
 SRCS=	parse.y scan.l y.tab.h

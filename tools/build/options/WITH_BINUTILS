@@ -1,4 +1,3 @@
-.\" $FreeBSD$
 Set to build and install GNU
 .Xr as 1 ,
 .Xr objdump 1 ,

@@ -1,7 +1,6 @@
 /*
  * Croatian calendar files
  *
- * $FreeBSD$
  */
 
 #ifndef _calendar_croatian_

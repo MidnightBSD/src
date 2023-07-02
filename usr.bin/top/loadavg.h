@@ -11,7 +11,6 @@
  *	loaddouble(la) - convert load_avg to double.
  *	intload(i)     - convert integer to load_avg.
  *
- *	$FreeBSD$
  */
 
 #ifndef LOADAVG_H

@@ -1,4 +1,3 @@
-# $FreeBSD$
 # atf-sh, to be sourced by run.sh
 
 pf0001_descr () { echo "Pass with labels" ; }

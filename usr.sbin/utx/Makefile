@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	utx
 MAN=	utx.8

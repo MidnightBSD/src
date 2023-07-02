@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PROG=	devinfo
 MAN=	devinfo.8

@@ -24,7 +24,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD$
 
 SRCDIR=$(atf_get_srcdir)
 
@@ -38,7 +37,6 @@ check()
 	# to pass.
 	atf_check cp ${SRCDIR}/${tc}* .
 
-	# Remove $FreeBSD$ RCS expansions because they get re-indented, which
 	# changes the output
 	local out_file="${tc}.stdout"
 	if [ -f "${out_file}" ]; then

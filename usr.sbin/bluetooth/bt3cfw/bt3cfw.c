@@ -28,7 +28,6 @@
  * SUCH DAMAGE.
  *
  * $Id: bt3cfw.c,v 1.2 2003/05/21 22:40:29 max Exp $
- * $FreeBSD$
  */
 
 #include <sys/types.h>

@@ -1,7 +1,6 @@
 #! /bin/sh
 # ex:ts=8
 
-# $FreeBSD$
 
 case "$1" in
 	*.zip)
