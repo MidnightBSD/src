@@ -29,7 +29,6 @@
 #define __RV250D_H__
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #define R_00000D_SCLK_CNTL_M6                        0x00000D
 #define   S_00000D_SCLK_SRC_SEL(x)                     (((x) & 0x7) << 0)

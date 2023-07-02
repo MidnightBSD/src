@@ -22,7 +22,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #ifndef RADEON_ACPI_H
 #define RADEON_ACPI_H

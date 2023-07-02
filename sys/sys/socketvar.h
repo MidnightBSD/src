@@ -30,7 +30,6 @@
  *
  *	@(#)socketvar.h	8.3 (Berkeley) 2/19/95
  *
- * $FreeBSD$
  */
 
 #ifndef _SYS_SOCKETVAR_H_

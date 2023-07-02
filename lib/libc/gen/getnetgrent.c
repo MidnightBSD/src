@@ -34,7 +34,6 @@
 
 #include <sys/cdefs.h>
 __SCCSID("@(#)getnetgrent.c	8.2 (Berkeley) 4/27/95");
-__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 

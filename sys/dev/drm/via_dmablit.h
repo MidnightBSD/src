@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #ifndef _VIA_DMABLIT_H
 #define _VIA_DMABLIT_H

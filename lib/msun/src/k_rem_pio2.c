@@ -12,7 +12,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * __kernel_rem_pio2(x,y,e0,nx,prec)

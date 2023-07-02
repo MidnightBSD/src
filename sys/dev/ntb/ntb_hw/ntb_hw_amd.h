@@ -41,7 +41,6 @@
  * Contact Information :
  * Rajesh Kumar <rajesh1.kumar@amd.com>
  *
- * $FreeBSD$
  */
 
 #ifndef	NTB_HW_AMD_H

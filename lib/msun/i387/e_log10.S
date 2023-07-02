@@ -34,7 +34,6 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$")
 
 ENTRY(log10)
 	fldlg2

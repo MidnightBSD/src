@@ -28,7 +28,6 @@
  *
  * Author: Ruslan Ermilov <ru@FreeBSD.org>
  *
- * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_NG_VLAN_H_

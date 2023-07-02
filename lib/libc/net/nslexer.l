@@ -35,7 +35,6 @@
 #include <sys/cdefs.h>
 #if defined(LIBC_SCCS) && !defined(lint)
 static char *rcsid = 
-  "$FreeBSD$";
 #endif /* LIBC_SCCS and not lint */
 
 #include "namespace.h"

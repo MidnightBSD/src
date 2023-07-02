@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/wait.h>
 #include <errno.h>

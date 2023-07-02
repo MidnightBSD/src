@@ -31,7 +31,6 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD$
  */
 
 #define SCSISEQ		0x00	/* SCSI sequence control */

@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 SED_FIX_NOTE = -i "" -e '/\.note\.tag/s/progbits/note/'
 

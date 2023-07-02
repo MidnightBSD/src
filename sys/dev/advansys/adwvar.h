@@ -32,7 +32,6 @@
  * SUCH DAMAGE.
  * All rights reserved.
  *
- * $FreeBSD$
  */
 
 #ifndef _ADWVAR_H_

@@ -29,7 +29,6 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * strrchr(s, c)

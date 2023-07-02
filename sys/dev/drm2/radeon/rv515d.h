@@ -29,7 +29,6 @@
 #define __RV515D_H__
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * RV515 registers

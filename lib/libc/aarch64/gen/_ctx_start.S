@@ -28,7 +28,6 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
 
 ENTRY(_ctx_start)
 	blr	x19		/* Call func from makecontext */

@@ -29,7 +29,6 @@
 /*
  * Binary heap and hash tables, used in dummynet
  *
- * $FreeBSD$
  */
 
 #include <sys/cdefs.h>

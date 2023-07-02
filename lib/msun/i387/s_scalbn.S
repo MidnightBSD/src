@@ -34,7 +34,6 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$")
 
 ENTRY(scalbn)
 	fildl	12(%esp)

@@ -17,7 +17,6 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #define __EFI_HASH_PROTOCOL_H__
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #define CONST const
 

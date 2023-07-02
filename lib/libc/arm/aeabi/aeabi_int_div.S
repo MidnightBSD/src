@@ -26,7 +26,6 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * Due to bug in libcompiler_rt, all symbols declared by

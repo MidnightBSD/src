@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #ifndef __RADEON_ASIC_H__
 #define __RADEON_ASIC_H__

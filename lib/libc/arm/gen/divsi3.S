@@ -15,7 +15,6 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
 
 /* 
  * stack is aligned as there's a possibility of branching to L_overflow

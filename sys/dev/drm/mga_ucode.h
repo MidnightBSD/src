@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * WARP pipes are named according to the functions they perform, where:

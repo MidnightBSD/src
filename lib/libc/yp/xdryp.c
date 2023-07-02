@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <rpc/rpc.h>
 #include <rpcsvc/yp.h>

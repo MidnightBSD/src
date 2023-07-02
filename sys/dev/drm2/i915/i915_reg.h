@@ -23,7 +23,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #ifndef _I915_REG_H_
 #define _I915_REG_H_

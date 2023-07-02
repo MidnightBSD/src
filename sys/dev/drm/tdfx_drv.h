@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #ifndef __TDFX_H__
 #define __TDFX_H__

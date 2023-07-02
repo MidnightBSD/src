@@ -42,7 +42,6 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_macro_gram.y#5 $
  *
- * $FreeBSD$
  */
 
 #include <sys/types.h>

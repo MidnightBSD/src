@@ -18,7 +18,6 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD$
  */
 
 #pragma D depends_on module kernel

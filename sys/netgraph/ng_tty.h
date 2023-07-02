@@ -38,7 +38,6 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD$
  * $Whistle: ng_tty.h,v 1.7 1999/01/20 00:22:15 archie Exp $
  */
 

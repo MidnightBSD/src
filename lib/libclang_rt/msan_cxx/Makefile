@@ -1,5 +1,4 @@
 
-# $FreeBSD$
 
 .include <bsd.init.mk>
 

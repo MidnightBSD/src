@@ -25,11 +25,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD$
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
 
 #define ALIGN_TEXT      .p2align 4,0x90 /* 16-byte alignment, nop filled */
 

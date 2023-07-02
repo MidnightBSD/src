@@ -34,7 +34,6 @@
 
 #include "feeder_if.h"
 
-SND_DECLARE_FILE("$FreeBSD$");
 
 /* chain state */
 struct feeder_chain_state {

@@ -31,7 +31,6 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD$
  */
 
 /* Used by the XenStore character device to borrow kernel's store connection. */

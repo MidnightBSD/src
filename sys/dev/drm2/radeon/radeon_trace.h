@@ -1,5 +1,4 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #if !defined(_RADEON_TRACE_H) || defined(TRACE_HEADER_MULTI_READ)
 #define _RADEON_TRACE_H_

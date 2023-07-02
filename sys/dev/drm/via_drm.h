@@ -23,7 +23,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #ifndef _VIA_DRM_H_
 #define _VIA_DRM_H_

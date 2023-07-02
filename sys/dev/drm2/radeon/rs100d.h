@@ -29,7 +29,6 @@
 #define __RS100D_H__
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /* Registers */
 #define R_00015C_NB_TOM                              0x00015C

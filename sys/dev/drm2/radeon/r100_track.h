@@ -1,5 +1,4 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #define R100_TRACK_MAX_TEXTURE 3
 #define R200_TRACK_MAX_TEXTURE 6

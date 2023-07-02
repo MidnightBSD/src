@@ -1,6 +1,5 @@
 #!/usr/bin/perl -w 
 
-#$FreeBSD$
 
 if ($#ARGV != 1) {
   print "bin2h.pl <firmware> <headername>\n";

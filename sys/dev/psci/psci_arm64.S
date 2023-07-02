@@ -30,7 +30,6 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * uint64_t psci_hvc_despatch(uint64_t psci_fnid, uint64_t, uint64_t, uint64_t)

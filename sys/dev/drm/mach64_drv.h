@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #ifndef __MACH64_DRV_H__
 #define __MACH64_DRV_H__

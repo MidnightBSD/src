@@ -18,7 +18,6 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD$
  */
 /*
  * Copyright (c) 2018 Michael Tuexen <tuexen@FreeBSD.org>

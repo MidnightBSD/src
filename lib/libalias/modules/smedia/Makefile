@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 NAME=	smedia
 SRCS=	alias_smedia.c

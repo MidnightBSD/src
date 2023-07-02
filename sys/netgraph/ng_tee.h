@@ -38,7 +38,6 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD$
  * $Whistle: ng_tee.h,v 1.2 1999/01/20 00:22:14 archie Exp $
  */
 

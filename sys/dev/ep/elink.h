@@ -29,7 +29,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * $NetBSD: elink.h,v 1.3 1994/10/27 04:17:11 cgd Exp $
- * $FreeBSD$
  */
 
 #define	ELINK_ID_PORT	0x100

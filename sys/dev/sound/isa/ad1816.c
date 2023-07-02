@@ -39,7 +39,6 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD$");
 
 struct ad1816_info;
 

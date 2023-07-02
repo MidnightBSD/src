@@ -1,7 +1,6 @@
 /*-
  * Exported interface to downloadable microcode for AdvanSys SCSI Adapters
  *
- * $FreeBSD$
  *
  * Obtained from:
  *

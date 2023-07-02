@@ -33,7 +33,6 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
 
 ENTRY(cerror)
 	addi	sp, sp, -16

@@ -39,7 +39,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #define	_WANT_FREEBSD11_STAT

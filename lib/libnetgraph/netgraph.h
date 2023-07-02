@@ -36,7 +36,6 @@
  *
  * Author: Archie Cobbs <archie@whistle.com>
  *
- * $FreeBSD$
  * $Whistle: netgraph.h,v 1.7 1999/01/20 00:57:23 archie Exp $
  */
 

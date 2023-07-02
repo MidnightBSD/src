@@ -38,7 +38,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #define	__RUNETYPE_INTERNAL 1
 

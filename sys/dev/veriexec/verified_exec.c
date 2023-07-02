@@ -1,5 +1,4 @@
 /*
- * $FreeBSD$
  *
  * Copyright (c) 2011-2013, 2015, Juniper Networks, Inc.
  * All rights reserved.

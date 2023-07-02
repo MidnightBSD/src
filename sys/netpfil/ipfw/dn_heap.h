@@ -29,7 +29,6 @@
 /*
  * Binary heap and hash tables, header file
  *
- * $FreeBSD$
  */
 
 #ifndef _IP_DN_HEAP_H

@@ -41,7 +41,6 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aic79xx.h#107 $
  *
- * $FreeBSD$
  */
 
 #ifndef _AIC79XX_H_

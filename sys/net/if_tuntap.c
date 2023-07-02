@@ -43,7 +43,6 @@
  * UCL. This driver is based much more on read/write/poll mode of
  * operation though.
  *
- * $FreeBSD$
  */
 
 #include "opt_inet.h"

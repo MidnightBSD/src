@@ -54,7 +54,6 @@
  * copied and put under another distribution licence
  * [including the GNU Public Licence.]
  *
- * $FreeBSD$
  */
 
 #ifndef _SHA_H_

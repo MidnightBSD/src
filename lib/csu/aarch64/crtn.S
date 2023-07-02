@@ -28,7 +28,6 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
 
 	.section .init,"ax",@progbits
 	ldr	lr, [sp]

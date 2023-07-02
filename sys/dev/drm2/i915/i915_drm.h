@@ -28,7 +28,6 @@
 #define _UAPI_I915_DRM_H_
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drm.h>
 

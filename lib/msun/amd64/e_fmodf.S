@@ -4,7 +4,6 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$")
 
 ENTRY(fmodf)
 	movss	%xmm0,-4(%rsp)

@@ -1,5 +1,4 @@
 /*
- * $FreeBSD$
  */
 
 extern devclass_t stg_devclass;

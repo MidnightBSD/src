@@ -29,7 +29,6 @@
  *
  * Authors: Alan Somers         (Spectra Logic Corporation)
  *
- * $FreeBSD$
  */
 
 #include <gtest/gtest.h>

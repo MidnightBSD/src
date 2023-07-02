@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 NAME=	cuseeme
 SRCS=	alias_cuseeme.c

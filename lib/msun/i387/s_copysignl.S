@@ -4,7 +4,6 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$")
 
 ENTRY(copysignl)
 	movl	24(%esp),%edx

@@ -28,7 +28,6 @@
 #define AVIVOD_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 
 #define	D1CRTC_CONTROL					0x6080

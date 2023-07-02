@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #ifndef __RADEON_DRM_H__
 #define __RADEON_DRM_H__

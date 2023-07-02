@@ -43,7 +43,6 @@
 #include <dev/sound/pci/hda/hda_reg.h>
 #include <dev/sound/pci/hda/hdac.h>
 
-SND_DECLARE_FILE("$FreeBSD$");
 
 struct hdacc_fg {
 	device_t	dev;

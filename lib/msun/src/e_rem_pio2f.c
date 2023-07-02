@@ -15,7 +15,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /* __ieee754_rem_pio2f(x,y)
  *

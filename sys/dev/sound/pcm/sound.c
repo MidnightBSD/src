@@ -44,7 +44,6 @@
 
 #include "feeder_if.h"
 
-SND_DECLARE_FILE("$FreeBSD$");
 
 devclass_t pcm_devclass;
 

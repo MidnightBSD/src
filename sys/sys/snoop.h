@@ -12,7 +12,6 @@
  *
  * Snoop stuff.
  *
- * $FreeBSD$
  */
 
 #ifndef _SYS_SNOOP_H_

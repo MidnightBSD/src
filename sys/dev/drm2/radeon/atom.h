@@ -23,7 +23,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #ifndef ATOM_H
 #define ATOM_H

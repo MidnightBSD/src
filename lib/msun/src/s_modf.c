@@ -11,7 +11,6 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$FreeBSD$";
 #endif
 
 /*

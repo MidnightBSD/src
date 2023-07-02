@@ -28,7 +28,6 @@
 /*
  * File: ql_minidump.h
  *
- * $FreeBSD$
  */
 #ifndef _QL_MINIDUMP_H_
 #define _QL_MINIDUMP_H_

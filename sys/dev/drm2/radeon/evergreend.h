@@ -23,7 +23,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #ifndef EVERGREEND_H
 #define EVERGREEND_H

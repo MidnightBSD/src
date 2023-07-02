@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .PATH: ${SRCTOP}/cddl/compat/opensolaris/misc
 .PATH: ${SRCTOP}/sys/cddl/contrib/opensolaris/common/zfs

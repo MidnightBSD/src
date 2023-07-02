@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/cmd/zpool
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/cmd/stat/common

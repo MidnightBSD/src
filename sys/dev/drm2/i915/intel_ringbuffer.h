@@ -2,7 +2,6 @@
 #define _INTEL_RINGBUFFER_H_
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * Gen2 BSpec "1. Programming Environment" / 1.4.4.6 "Ring Buffer Use"

@@ -17,7 +17,6 @@
  *
  * From: Version 2.0, Fri Oct  6 20:39:21 MSK 1995
  *
- * $FreeBSD$
  */
 
 #ifndef _NET_IF_SPPP_H_

@@ -43,7 +43,6 @@
 #include "un-namespace.h"
 #include "libc_private.h"
 
-__FBSDID("$FreeBSD$");
 
 static int	we_askshell(const char *, wordexp_t *, int);
 static int	we_check(const char *);

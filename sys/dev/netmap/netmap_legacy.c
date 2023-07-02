@@ -26,7 +26,6 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD$ */
 
 #if defined(__MidnightBSD__)
 #include <sys/cdefs.h> /* prerequisite */

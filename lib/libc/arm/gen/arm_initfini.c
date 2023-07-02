@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * To properly implement setjmp/longjmp for the ARM AAPCS ABI, it has to be

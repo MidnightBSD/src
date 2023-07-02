@@ -30,7 +30,6 @@
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD$
  */
 
 #ifndef _SFXGE_VERSION_H

@@ -11,7 +11,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * __ieee754_jn(n, x), __ieee754_yn(n, x)

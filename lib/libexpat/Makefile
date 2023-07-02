@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PACKAGE=lib${LIB}
 EXPAT=		${SRCTOP}/contrib/expat

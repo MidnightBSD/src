@@ -35,7 +35,6 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD$")
 
 ENTRY(remainderl)
 	fldt	16(%esp)

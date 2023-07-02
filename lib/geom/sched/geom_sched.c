@@ -29,7 +29,6 @@
 
 /*
  * $Id$
- * $FreeBSD$
  *
  * This file implements the userspace library used by the 'geom'
  * command to load and manipulate disk schedulers.

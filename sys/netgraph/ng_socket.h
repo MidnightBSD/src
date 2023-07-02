@@ -37,7 +37,6 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD$
  * $Whistle: ng_socket.h,v 1.5 1999/01/20 00:22:14 archie Exp $
  */
 

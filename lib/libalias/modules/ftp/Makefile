@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 NAME=	ftp
 SRCS=	alias_ftp.c

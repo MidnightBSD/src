@@ -3,7 +3,6 @@
  *
  * SPDX-License-Identifier: (BSD-2-Clause OR GPL-2.0)
  *
- * $FreeBSD$
  */
 
 /* Defines the queue structure and helper functions to enqueue/dequeue items. */

@@ -1,6 +1,5 @@
 /*	$NetBSD: if_devar.h,v 1.32 1999/04/01 14:55:25 tsubai Exp $	*/
 
-/* $FreeBSD$ */
 
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-NetBSD

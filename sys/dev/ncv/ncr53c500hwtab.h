@@ -1,4 +1,3 @@
-/*	$FreeBSD$	*/
 /*	$NecBSD: ncr53c500hwtab.h,v 1.2.18.1 2001/06/08 06:27:44 honda Exp $	*/
 /*	$NetBSD$	*/
 

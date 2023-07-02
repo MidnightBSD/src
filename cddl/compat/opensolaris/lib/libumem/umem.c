@@ -18,7 +18,6 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD$
  */
 /*
  * Copyright 2006 Ricardo Correia.  All rights reserved.

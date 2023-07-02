@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 NAME=	skinny
 SRCS=	alias_skinny.c

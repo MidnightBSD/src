@@ -1,4 +1,3 @@
-/* $FreeBSD$ */
 /*
  *   MODULE: GFP_TX.H
  *

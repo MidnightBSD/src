@@ -29,7 +29,6 @@
  */
 
 /*
- * $FreeBSD$
  */
 
 #include <sys/rman.h>

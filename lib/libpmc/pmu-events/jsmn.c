@@ -21,7 +21,6 @@
  *
  * Slightly modified by AK to not assume 0 terminated input.
  *
- * $FreeBSD$
  *
  */
 

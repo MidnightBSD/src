@@ -1,4 +1,3 @@
-/* $FreeBSD$ */
 #ifndef JEVENTS_H
 #define JEVENTS_H 1
 

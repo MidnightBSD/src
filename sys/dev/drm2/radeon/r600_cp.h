@@ -1,6 +1,5 @@
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #ifndef __R600_CP_H__
 #define	__R600_CP_H__

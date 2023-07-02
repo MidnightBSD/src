@@ -23,7 +23,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #ifndef EVERGREEN_BLIT_SHADERS_H
 #define EVERGREEN_BLIT_SHADERS_H

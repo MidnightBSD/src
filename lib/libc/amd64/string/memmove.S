@@ -27,7 +27,6 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
 
 #define	ALIGN_TEXT	.p2align 4,0x90 /* 16-byte alignment, nop filled */
 

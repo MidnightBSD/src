@@ -13,7 +13,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /* __ieee754_atan2(y,x)
  * Method :

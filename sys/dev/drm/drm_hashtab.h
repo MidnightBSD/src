@@ -27,7 +27,6 @@
  **************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * Simple open hash tab implementation.

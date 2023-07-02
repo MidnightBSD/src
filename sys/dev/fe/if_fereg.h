@@ -24,7 +24,6 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD$ */
 
 /*
  * Registers on FMV-180 series' ISA bus interface ASIC.

@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/lib/libuutil/common
 .PATH: ${SRCTOP}/sys/cddl/contrib/opensolaris/common/avl

@@ -72,7 +72,6 @@
 #include "zfsd_exception.h"
 #include "zpool_list.h"
 
-__FBSDID("$FreeBSD$");
 
 /*============================ Namespace Control =============================*/
 using std::auto_ptr;

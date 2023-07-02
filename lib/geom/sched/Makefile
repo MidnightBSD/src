@@ -1,5 +1,4 @@
 # GEOM_LIBRARY_PATH
-# $FreeBSD$
 
 PACKAGE=runtime
 .PATH: ${.CURDIR:H:H}/misc

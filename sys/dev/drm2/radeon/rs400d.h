@@ -29,7 +29,6 @@
 #define __RS400D_H__
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /* Registers */
 #define R_000148_MC_FB_LOCATION                      0x000148

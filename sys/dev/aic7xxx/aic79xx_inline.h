@@ -41,7 +41,6 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aic79xx_inline.h#57 $
  *
- * $FreeBSD$
  */
 
 #ifndef _AIC79XX_INLINE_H_

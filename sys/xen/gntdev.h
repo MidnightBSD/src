@@ -107,7 +107,6 @@
  *    `event_channel_port`
  * In case of multiple notify ioctls, only the last one survives.
  *
- * $FreeBSD$
  */
 
 #ifndef __XEN_GNTDEV_H__

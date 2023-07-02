@@ -14,7 +14,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 /* __ieee754_gammaf_r(x, signgamp)
  * Reentrant version of the logarithm of the Gamma function
