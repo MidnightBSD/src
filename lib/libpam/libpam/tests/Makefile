@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # $FreeBSD: stable/10/lib/libpam/libpam/tests/Makefile 313488 2017-02-09 22:49:48Z ngie $
 
 OPENPAM=	${SRCTOP}/contrib/openpam

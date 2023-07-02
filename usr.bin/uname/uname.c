@@ -36,7 +36,6 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
 
 #ifndef lint
 static const char copyright[] =

@@ -2,7 +2,6 @@
 # mirroring op, and a cleaning pass can seriously thrash the disk, so you
 # want to stagger operations
 #
-# $MidnightBSD$
 # $DragonFly: src/bin/cpdup/scripts/crontab,v 1.1 2006/09/16 21:57:10 dillon Exp $
 10 1 1 * *	(cd ~/adm; /usr/bin/lockf -k -t 0 .lockmirror ./do_mirror 1)
 15 1 2-31 * *	(cd ~/adm; /usr/bin/lockf -k -t 0 .lockmirror ./do_mirror 2)

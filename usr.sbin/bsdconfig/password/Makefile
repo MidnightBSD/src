@@ -1,4 +1,3 @@
-# $MidnightBSD$
 
 NO_OBJ=
 

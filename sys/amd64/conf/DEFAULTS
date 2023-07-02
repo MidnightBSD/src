@@ -1,7 +1,6 @@
 #
 # DEFAULTS -- Default kernel configuration file for MidnightBSD/amd64
 #
-# $MidnightBSD$
 
 machine		amd64
 

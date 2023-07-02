@@ -29,7 +29,6 @@
 #
 # Common subroutines used to build arm SD card images.
 #
-# $MidnightBSD$
 #
 
 cleanup() {

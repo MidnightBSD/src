@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
 
 #include <err.h>
 #include <stdio.h>

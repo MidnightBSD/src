@@ -1,4 +1,3 @@
-# $MidnightBSD$
 
 KMOD=	fclone
 SRCS=	fclone.c

@@ -1,6 +1,5 @@
 #!/bin/csh
 #
-# $MidnightBSD$
 # $DragonFly: src/bin/cpdup/scripts/do_mirror_host,v 1.2 2006/09/21 00:18:13 dillon Exp $
 
 source params

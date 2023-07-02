@@ -3,7 +3,6 @@
  *
  * This module implements a simple remote control protocol
  *
- * $MidnightBSD$
  * $DragonFly: src/bin/cpdup/hcproto.c,v 1.8 2008/11/11 04:36:00 dillon Exp $
  */
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*- 
  * Copyright (c) 2008, 2013 Lucas Holt
  * All rights reserved.

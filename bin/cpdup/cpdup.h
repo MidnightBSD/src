@@ -1,7 +1,6 @@
 /*
  * CPDUP.H
  *
- * $MidnightBSD$
  * $DragonFly: src/bin/cpdup/cpdup.h,v 1.9 2008/04/14 05:40:51 dillon Exp $
  */
 

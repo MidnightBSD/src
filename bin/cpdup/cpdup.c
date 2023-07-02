@@ -45,7 +45,6 @@
  *	- Is able to do incremental mirroring/backups via hardlinks from
  *	  the 'previous' version (supplied with -H path).
  *
- * $MidnightBSD$
  * $DragonFly: src/bin/cpdup/cpdup.c,v 1.32 2008/11/11 04:36:00 dillon Exp $
  */
 

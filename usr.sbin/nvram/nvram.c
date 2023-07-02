@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2006 Maxim Sobolev <sobomax@FreeBSD.org>
  * All rights reserved.

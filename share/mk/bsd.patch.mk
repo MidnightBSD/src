@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #
 # Copyright (c) 2006  The MidnightBSD Project
 # All rights reserved.

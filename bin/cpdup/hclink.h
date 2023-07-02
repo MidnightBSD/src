@@ -1,7 +1,6 @@
 /*
  * HCLINK.H
  *
- * $MidnightBSD$
  * $DragonFly: src/bin/cpdup/hclink.h,v 1.7 2008/05/24 17:21:36 dillon Exp $
  */
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: katelib.h,v 1.3 2001/11/23 19:21:48 thorpej Exp $	*/
 
 /*-

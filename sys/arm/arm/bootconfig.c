@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: bootconfig.c,v 1.2 2002/03/10 19:56:39 lukem Exp $	*/
 
 /*-

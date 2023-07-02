@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Michael Bushkov <bushman@rsu.ru>
  * All rights reserved.

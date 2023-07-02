@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: look.c,v 1.2 2005/06/30 16:25:05 christos Exp $	*/
 
 /* derived from: OpenBSD: look.c,v 1.3 2003/06/03 02:56:16 millert Exp */

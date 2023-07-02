@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# $MidnightBSD$
 # $FreeBSD: stable/10/usr.bin/kdump/mkioctls 327847 2018-01-11 21:31:10Z bdrewery $
 #
 # When editing this script, keep in mind that truss also uses it.

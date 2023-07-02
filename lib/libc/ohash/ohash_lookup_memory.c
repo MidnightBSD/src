@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $OpenBSD: ohash_lookup_memory.c,v 1.3 2006/01/16 15:52:25 espie Exp $ */
 /* ex:ts=8 sw=4: 
  */

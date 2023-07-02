@@ -33,7 +33,6 @@
  *      EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * [original code from minix codebase]
- * $MidnightBSD$
  * $DragonFly: src/bin/mined/mined.h,v 1.5 2005/10/29 12:05:27 swildner Exp $*
  */
 /*========================================================================*

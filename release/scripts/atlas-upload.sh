@@ -23,7 +23,6 @@
 #
 # Upload a Vagrant image to Hashicorp's Atlas service
 #
-# $MidnightBSD$
 #
 
 ATLAS_API_URL=''

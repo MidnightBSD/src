@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * acm_ops.h: Xen access control module hypervisor commands
  *

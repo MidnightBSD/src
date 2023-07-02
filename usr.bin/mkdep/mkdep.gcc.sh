@@ -30,7 +30,6 @@
 # SUCH DAMAGE.
 #
 #	@(#)mkdep.gcc.sh	8.1 (Berkeley) 6/6/93
-# $MidnightBSD$
 
 D=.depend			# default dependency file is .depend
 append=0

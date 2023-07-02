@@ -5,7 +5,6 @@
  *     use and distribute based on the FreeBSD copyright.  Supplied as-is,
  *     USE WITH EXTREME CAUTION.
  *
- * $MidnightBSD$
  * $DragonFly: src/bin/cpdup/md5.c,v 1.3 2008/11/10 14:30:02 swildner Exp $
  */
 

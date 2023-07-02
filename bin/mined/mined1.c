@@ -447,7 +447,6 @@
  *  ========================================================================  */
 
 #include <sys/param.h>
-__MBSDID("$MidnightBSD$");
 
 #include "mined.h"
 #include <signal.h>

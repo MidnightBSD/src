@@ -25,7 +25,6 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/usr.sbin/unbound/local-setup/local-unbound-setup.sh 295691 2016-02-17 11:38:43Z des $
-# $MidnightBSD$
 
 #
 # Configuration variables

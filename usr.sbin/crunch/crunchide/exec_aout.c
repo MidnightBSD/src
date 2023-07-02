@@ -28,7 +28,6 @@
 #include <sys/cdefs.h>
 #ifndef lint
 __RCSID("$NetBSD: exec_aout.c,v 1.6 1997/08/02 21:30:17 perry Exp $");
-__MBSDID("$MidnightBSD$");
 #endif
  
 #include <unistd.h>

@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # $FreeBSD: stable/10/usr.bin/timeout/tests/timeout.sh 273771 2014-10-28 10:39:41Z bapt $
 
 atf_test_case nominal

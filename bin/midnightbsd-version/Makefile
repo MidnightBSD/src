@@ -1,4 +1,3 @@
-# $MidnightBSD$
 
 PACKAGE=runtime
 SCRIPTS = midnightbsd-version

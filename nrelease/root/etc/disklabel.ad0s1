@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # $DragonFly: src/nrelease/root/etc/disklabel.ad0s1,v 1.2 2004/01/23 00:36:23 dillon Exp $
 # Example disklabel for ad0s1.  Once initialized via the instructions in
 # the README you can edit the label and create partitions for your 

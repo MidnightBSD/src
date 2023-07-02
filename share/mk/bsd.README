@@ -1,6 +1,5 @@
 #	@(#)bsd.README	8.2 (Berkeley) 4/2/94
 # $FreeBSD: stable/10/share/mk/bsd.README 318165 2017-05-10 23:14:09Z jhb $
-# $MidnightBSD$
 
 This is the README file for the "include" files for the MidnightBSD
 source tree.  The files are installed in /usr/share/mk, and are by

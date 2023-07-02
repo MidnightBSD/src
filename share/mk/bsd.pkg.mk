@@ -1,5 +1,4 @@
 # $FreeBSD: src/share/mk/bsd.pkg.mk,v 1.1 2004/12/20 15:46:56 paul Exp $
-# $MidnightBSD$
 
 WRKDIR=${.OBJDIR}
 .if ${.OBJDIR} == ${.CURDIR}

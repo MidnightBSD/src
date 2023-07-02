@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2001 Mark R V Murray
  * All rights reserved.

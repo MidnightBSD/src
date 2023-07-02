@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #ifndef __XEN_PUBLIC_ELFSTRUCTS_H__
 #define __XEN_PUBLIC_ELFSTRUCTS_H__ 1
 /*

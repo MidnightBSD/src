@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: s3c24x0var.h,v 1.1 2003/07/31 19:49:44 bsh Exp $ */
 
 /*-

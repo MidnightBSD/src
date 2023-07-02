@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0

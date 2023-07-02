@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * acm.h: Xen access control module interface defintions
  *

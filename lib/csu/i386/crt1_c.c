@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* LINTLIBRARY */
 /*-
  * Copyright 1996-1998 John D. Polstra.

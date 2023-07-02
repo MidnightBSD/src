@@ -1,4 +1,3 @@
-# $MidnightBSD$
 
 .PATH: ${.CURDIR}/../../contrib/cflow/asmgraph
 

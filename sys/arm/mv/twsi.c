@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008 MARVELL INTERNATIONAL LTD.
  * All rights reserved.

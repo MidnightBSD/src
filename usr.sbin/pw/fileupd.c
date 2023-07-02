@@ -26,7 +26,6 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD$";
 #endif /* not lint */
 
 #include <stdio.h>

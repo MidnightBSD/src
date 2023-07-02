@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # $DragonFly: src/bin/mined/Makefile,v 1.2 2005/10/29 12:05:27 swildner Exp $
 #
 

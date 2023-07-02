@@ -1,3 +1,2 @@
-# $MidnightBSD$
 
 .include "../Makefile.inc"

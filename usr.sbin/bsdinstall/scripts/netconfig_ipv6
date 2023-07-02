@@ -30,7 +30,6 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/usr.sbin/bsdinstall/scripts/netconfig_ipv6 290290 2015-11-02 22:06:44Z dteske $
-# $MidnightBSD$
 #
 ############################################################ INCLUDES
 

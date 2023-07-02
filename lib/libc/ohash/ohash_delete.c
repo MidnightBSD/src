@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $OpenBSD: ohash_delete.c,v 1.2 2004/06/22 20:00:16 espie Exp $ */
 /* ex:ts=8 sw=4: 
  */

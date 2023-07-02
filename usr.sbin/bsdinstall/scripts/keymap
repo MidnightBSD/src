@@ -26,7 +26,6 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/usr.sbin/bsdinstall/scripts/keymap 290291 2015-11-02 22:07:25Z dteske $
-# $MidnightBSD$
 #
 ############################################################ INCLUDES
  

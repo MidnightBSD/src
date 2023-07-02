@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: sscom_var.h,v 1.5 2003/08/04 12:28:49 bsh Exp $ */
 
 /*-

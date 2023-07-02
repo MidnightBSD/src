@@ -7,7 +7,6 @@
 #
 # Usage: make-memstick.sh <directory tree> <image filename>
 #
-# $MidnightBSD$
 #
 
 set -e

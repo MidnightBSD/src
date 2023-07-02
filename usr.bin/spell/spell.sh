@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# $MidnightBSD$
 # $NetBSD: spell.sh,v 1.2 2005/07/06 08:01:13 wiz Exp $
 #
 # Taken from:

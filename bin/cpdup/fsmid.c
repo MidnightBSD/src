@@ -4,7 +4,6 @@
  * (c) Copyright 1997-1999,2006 by Matthew Dillon.  Permission to
  *     use and distribute based on the FreeBSD copyright.
  *
- * $MidnightBSD$
  * $DragonFly: src/bin/cpdup/fsmid.c,v 1.3 2008/11/10 14:30:02 swildner Exp $
  */
 

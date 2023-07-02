@@ -1,5 +1,4 @@
 # $DragonFly: src/bin/cpdup/Makefile,v 1.7 2008/04/10 22:09:08 dillon Exp $
-# $MidnightBSD$
 
 PROG=	cpdup
 SRCS=	cpdup.c hcproto.c hclink.c misc.c fsmid.c

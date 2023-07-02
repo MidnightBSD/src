@@ -1,6 +1,5 @@
 /* @(#)port.h.in	8.13 (Berkeley) 6/12/96 */
 
-/* $MidnightBSD$ */
 
 /*
  * Declare the basic types, if they aren't already declared.  Named and

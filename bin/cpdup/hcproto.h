@@ -1,7 +1,6 @@
 /*
  * HCPROTO.H
  *
- * $MidnightBSD$
  * $DragonFly: src/bin/cpdup/hcproto.h,v 1.4 2008/04/16 17:38:19 dillon Exp $
  */
 

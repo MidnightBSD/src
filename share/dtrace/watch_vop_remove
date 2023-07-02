@@ -24,7 +24,6 @@
  * SUCH DAMAGE.
  *
  * $Title: dtrace(1) script to log process(es) entering vfs::vop_remove $
- * $MidnightBSD$
  */
 
 #pragma D option quiet

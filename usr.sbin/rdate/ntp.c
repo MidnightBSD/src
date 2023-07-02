@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: ntp.c,v 1.31 2011/12/28 21:39:30 sthen Exp $	*/
 
 /*

@@ -26,7 +26,6 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/usr.sbin/bsdinstall/scripts/hostname 290294 2015-11-02 22:09:43Z dteske $
-# $MidnightBSD$
 
 : ${DIALOG_OK=0}
 : ${DIALOG_CANCEL=1}

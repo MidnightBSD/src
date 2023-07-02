@@ -1,6 +1,5 @@
 #! /bin/sh -
 #	@(#)makesyscalls.sh	8.1 (Berkeley) 6/10/93
-# $MidnightBSD$
 
 set -e
 

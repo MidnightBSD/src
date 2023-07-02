@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ath3kfw.c
  */

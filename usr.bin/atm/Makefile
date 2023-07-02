@@ -1,4 +1,3 @@
-# $MidnightBSD$
 
 SUBDIR=	sscop
 

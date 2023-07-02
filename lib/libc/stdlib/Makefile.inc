@@ -1,6 +1,5 @@
 #	from @(#)Makefile.inc	8.3 (Berkeley) 2/4/95
 # $FreeBSD: stable/10/lib/libc/stdlib/Makefile.inc 312590 2017-01-21 12:30:07Z kib $
-# $MidnightBSD$
 
 # machine-independent stdlib sources
 .PATH: ${LIBC_SRCTOP}/${LIBC_ARCH}/stdlib ${LIBC_SRCTOP}/stdlib

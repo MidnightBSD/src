@@ -2,7 +2,6 @@
 # Copyright 1990 W. Jolitz
 #	from: src/sys/conf/Makefile.alpha,v 1.76
 # $FreeBSD: stable/10/sys/conf/Makefile.ia64 170217 2007-06-02 21:30:39Z marcel $
-# $MidnightBSD$
 #
 # Makefile for MidnightBSD
 #

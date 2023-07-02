@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Ian Lepore
  * Copyright (c) 2004 Olivier Houchard

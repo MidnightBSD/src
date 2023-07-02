@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # $FreeBSD: stable/10/sys/i386/conf/GENERIC.hints 298957 2016-05-03 07:48:52Z mav $
 hint.fdc.0.at="isa"
 hint.fdc.0.port="0x3F0"

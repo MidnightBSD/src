@@ -30,7 +30,6 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/share/misc/scsi_modes 313444 2017-02-08 16:01:14Z mav $
-# $MidnightBSD$
 #
 # The ordering is alphabetical by page name, as it appears in the SCSI spec.
 

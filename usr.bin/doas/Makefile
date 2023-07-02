@@ -1,4 +1,3 @@
-# $MidnightBSD$
 SRCS=	parse.y doas.c env.c execvpe.c
 
 PROG=	doas

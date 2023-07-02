@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: efun.c,v 1.4 2006/09/27 16:20:03 christos Exp $	*/
 
 /*-

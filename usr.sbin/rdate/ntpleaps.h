@@ -1,5 +1,4 @@
 /*	$OpenBSD: ntpleaps.h,v 1.4 2007/11/25 16:40:04 jmc Exp $	*/
-/*	$MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Thorsten Glaser. All rights reserved.
  *

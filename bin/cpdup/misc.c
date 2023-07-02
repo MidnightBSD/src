@@ -1,7 +1,6 @@
 /*
  * MISC.C
  *
- * $MidnightBSD$
  * $DragonFly: src/bin/cpdup/misc.c,v 1.16 2008/09/15 20:13:16 thomas Exp $
  */
 

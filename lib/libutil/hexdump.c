@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <libutil.h>

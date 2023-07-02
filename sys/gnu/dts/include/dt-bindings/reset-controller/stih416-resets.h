@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * This header provides constants for the reset controller
  * based peripheral powerdown requests on the STMicroelectronics

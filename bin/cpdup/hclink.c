@@ -3,7 +3,6 @@
  *
  * This module implements a simple remote control protocol
  *
- * $MidnightBSD$
  * $DragonFly: src/bin/cpdup/hclink.c,v 1.10 2008/05/24 17:21:36 dillon Exp $
  */
 

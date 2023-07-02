@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* From: $NetBSD: pmap.c,v 1.148 2004/04/03 04:35:48 bsh Exp $ */
 /*-
  * Copyright 2004 Olivier Houchard.

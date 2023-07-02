@@ -25,7 +25,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/bsdinstall/partedit/diskeditor.h,v 1.1 2011/02/18 14:54:34 nwhitehorn Exp $
  */
 

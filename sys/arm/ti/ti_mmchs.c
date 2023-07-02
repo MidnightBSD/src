@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011
  *	Ben Gray <ben.r.gray@gmail.com>.

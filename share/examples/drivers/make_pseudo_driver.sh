@@ -6,7 +6,6 @@
 #
 # Trust me, RUN THIS SCRIPT :)
 #
-# $MidnightBSD$
 #
 #-------cut here------------------
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ng_fec.h
  */

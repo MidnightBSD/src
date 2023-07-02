@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $OpenBSD: ohash_qlookup.c,v 1.2 2004/06/22 20:00:17 espie Exp $ */
 /* ex:ts=8 sw=4: 
  */

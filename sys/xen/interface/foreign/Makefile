@@ -1,4 +1,3 @@
-# $MidnightBSD$
 XEN_ROOT=../../../..
 include $(XEN_ROOT)/Config.mk
 

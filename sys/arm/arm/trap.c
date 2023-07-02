@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: fault.c,v 1.45 2003/11/20 14:44:36 scw Exp $	*/
 
 /*-

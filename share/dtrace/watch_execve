@@ -24,7 +24,6 @@
  * SUCH DAMAGE.
  *
  * $Title: dtrace(1) script to log process(es) entering syscall::execve $
- * $MidnightBSD$
  */
 
 #pragma D option quiet

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $Id: fclone.c,v 1.1 2009-12-13 01:09:42 laffer1 Exp $ */
 
 #include <sys/param.h>

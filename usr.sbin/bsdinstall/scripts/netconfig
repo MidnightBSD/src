@@ -30,7 +30,6 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/usr.sbin/bsdinstall/scripts/netconfig 256361 2013-10-11 23:12:05Z dteske $
-# $MidnightBSD$
 
 INTERFACES=""
 DIALOG_TAGS=""

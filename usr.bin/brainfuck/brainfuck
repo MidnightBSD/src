@@ -1,5 +1,4 @@
 #!/usr/bin/perl
-# $MidnightBSD$
 # $MirOS: src/usr.bin/brainfuck/brainfuck,v 1.2 2010/07/01 20:10:38 tg Exp $
 # Public domain by Marko Nippula
 # Corrected by Thorsten Glaser

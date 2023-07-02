@@ -1,4 +1,3 @@
-# $MidnightBSD$
 
 PROG=	MidnightBSD_version
 NO_MAN=

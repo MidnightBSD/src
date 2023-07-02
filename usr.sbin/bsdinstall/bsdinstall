@@ -26,7 +26,6 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: stable/10/usr.sbin/bsdinstall/bsdinstall 259396 2013-12-14 20:55:53Z gjb $
-# $MidnightBSD$
 #
 ############################################################ INCLUDES
 

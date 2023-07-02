@@ -1,5 +1,4 @@
 #	$OpenBSD: Makefile,v 1.2 2004/02/01 15:18:01 jmc Exp $
-#	$MidnightBSD$
 
 DIR=	usd/05.dc
 SRCS=	dc
