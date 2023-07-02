@@ -29,7 +29,6 @@
 
 /*
  * $Id$
- * $FreeBSD$
  *
  * Main control module for geom-based disk schedulers ('sched').
  *

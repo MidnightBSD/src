@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 KMOD=	radeonkmsfw_SUMO_pfp
 IMG=	SUMO_pfp

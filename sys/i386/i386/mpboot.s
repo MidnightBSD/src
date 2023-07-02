@@ -26,7 +26,6 @@
  * mpboot.s:	FreeBSD machine support for the Intel MP Spec
  *		multiprocessor systems.
  *
- * $FreeBSD$
  */
 
 #include "opt_pmap.h"

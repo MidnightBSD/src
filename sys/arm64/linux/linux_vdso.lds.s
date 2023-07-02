@@ -2,7 +2,6 @@
  * Stub arm64 vdso linker script.
  * LINUXTODO: update along with VDSO implementation
  *
- * $FreeBSD$
  */
 
 SECTIONS

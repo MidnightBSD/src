@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 KMOD=	radeonkmsfw_PALM_pfp
 IMG=	PALM_pfp

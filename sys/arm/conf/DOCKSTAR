@@ -1,7 +1,6 @@
 #
 # Custom kernel for Seagate DockStar (Marvell SheevaPlug based) devices.
 #
-# $FreeBSD$
 #
 #    https://www.FreeBSD.org/doc/en_US.ISO8859-1/books/handbook/kernelconfig-config.html
 #
@@ -15,7 +14,6 @@
 # If you are in doubt as to the purpose or necessity of a line, check first 
 # in NOTES.
 #
-# $FreeBSD$
 #
 #NO_UNIVERSE
 

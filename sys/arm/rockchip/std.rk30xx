@@ -1,5 +1,4 @@
 # Rockchip rk30xx common options
-#$FreeBSD$
 
 cpu		CPU_CORTEXA
 machine		arm armv7

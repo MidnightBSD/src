@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 files		"../mv/files.mv"
 cpu		CPU_ARM9E

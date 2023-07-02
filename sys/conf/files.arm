@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 kern/kern_clocksource.c			standard
 

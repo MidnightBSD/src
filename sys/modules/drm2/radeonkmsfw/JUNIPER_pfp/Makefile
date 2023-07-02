@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 KMOD=	radeonkmsfw_JUNIPER_pfp
 IMG=	JUNIPER_pfp

@@ -28,7 +28,6 @@
  *
  * Freescale i.MX515 Device Tree Source.
  *
- * $FreeBSD$
  */
 
 / {

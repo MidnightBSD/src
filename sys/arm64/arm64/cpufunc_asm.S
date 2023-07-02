@@ -31,7 +31,6 @@
 
 #include <machine/asm.h>
 #include <machine/param.h>
-__FBSDID("$FreeBSD$");
 
 /*
  * FIXME:

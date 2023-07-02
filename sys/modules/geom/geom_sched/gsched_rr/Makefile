@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 KMOD=   gsched_rr
 SRCS=   gs_rr.c

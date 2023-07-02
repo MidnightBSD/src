@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 SUBDIR=									\
 	ARUBA_me							\

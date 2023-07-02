@@ -1,5 +1,4 @@
 #/bin/sh
-# $FreeBSD$
 #
 # These files are imported from Ian Campbell's git tree mirroring the linux
 # kernel.

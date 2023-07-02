@@ -50,7 +50,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #ifndef _STANDALONE
 #include <sys/stat.h>

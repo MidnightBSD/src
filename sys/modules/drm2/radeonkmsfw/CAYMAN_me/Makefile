@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 KMOD=	radeonkmsfw_CAYMAN_me
 IMG=	CAYMAN_me

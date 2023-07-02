@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 KMOD=	radeonkmsfw_TAHITI_me
 IMG=	TAHITI_me

@@ -18,7 +18,6 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD$
  *
  * ELF compatibility definitions for OpenSolaris source.
  *

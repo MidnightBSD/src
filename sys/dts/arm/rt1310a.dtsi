@@ -25,7 +25,6 @@
  *
  * Ralink RT1310A Device Tree Source.
  *
- * $FreeBSD$
  */
 
 / {

@@ -1,7 +1,6 @@
 #
 # Custom kernel for the TS-7800 board.
 #
-# $FreeBSD$
 #
 
 ident		TS7800

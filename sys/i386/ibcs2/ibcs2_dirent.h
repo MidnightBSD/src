@@ -1,5 +1,4 @@
 /*	$NetBSD: ibcs2_dirent.h,v 1.2 1994/10/26 02:52:51 cgd Exp $	*/
-/* $FreeBSD$ */
 
 /*-
  * SPDX-License-Identifier: BSD-4-Clause

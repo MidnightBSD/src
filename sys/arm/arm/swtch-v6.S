@@ -87,7 +87,6 @@
 #include <machine/sysreg.h>
 #include <machine/vfp.h>
 
-__FBSDID("$FreeBSD$");
 
 #if defined(SMP)
 #define GET_PCPU(tmp, tmp2) \

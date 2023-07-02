@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# $MidnightBSD$
 
 # PROVIDE: dhcp6c
 # REQUIRE: DAEMON

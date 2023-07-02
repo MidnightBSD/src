@@ -1,4 +1,3 @@
-# $FreeBSD$
 files		"../ralink/files.ralink"
 cpu		CPU_ARM9E
 machine 	arm

@@ -25,11 +25,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef lint
-static const char rcsid[] =
-  "$MidnightBSD$";
-#endif /* not lint */
-
 #ifndef __MidnightBSD__
 #define _POSIX_SOURCE 1
 

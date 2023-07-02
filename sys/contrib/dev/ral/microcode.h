@@ -1,4 +1,3 @@
-/*	$FreeBSD$	*/
 /*	$OpenBSD: microcode.h,v 1.7 2010/04/05 14:14:02 damien Exp $	*/
 
 /*-

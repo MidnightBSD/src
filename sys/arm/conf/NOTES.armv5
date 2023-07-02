@@ -3,7 +3,6 @@
 # The contents of sys/conf/NOTES, sys/arm/conf/NOTES, and this file are
 # concatenated (in that order) to create the LINT-V5 kernel config file.
 #
-# $FreeBSD$
 
 #NO_UNIVERSE  
 

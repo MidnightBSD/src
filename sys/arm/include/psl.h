@@ -43,7 +43,6 @@
  *
  * Created      : 21/07/95
  *
- * $FreeBSD$
  */
 
 #ifndef _MACHINE_PSL_H_

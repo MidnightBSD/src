@@ -33,7 +33,6 @@
  *
  * From: NetBSD: nilfs_mount.h,v 1.1 2009/07/18 16:31:42 reinoud
  *
- * $FreeBSD$
  */
 
 #ifndef _FS_NANDFS_NANDFS_MOUNT_H_

@@ -37,7 +37,6 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
 
 #ifndef ELF_TRAMPOLINE
 /*

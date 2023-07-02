@@ -1,4 +1,3 @@
-$FreeBSD$
 
 This is the part of the NgATM stuff that is shared by kernel and user.
 Be careful to feed changes back to the maintainer <harti@freebsd.org>,

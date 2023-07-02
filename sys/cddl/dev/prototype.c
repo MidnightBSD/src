@@ -2,7 +2,6 @@
  * This file is freeware. You are free to use it and add your own
  * license.
  *
- * $FreeBSD$
  *
  */
 

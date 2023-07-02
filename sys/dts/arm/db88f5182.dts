@@ -28,7 +28,6 @@
  *
  * Marvell DB-88F5182 Device Tree Source.
  *
- * $FreeBSD$
  */
 
 /dts-v1/;

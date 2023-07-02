@@ -37,7 +37,6 @@
  *
  * Define the interface structure required by the disassembler.
  *
- * $FreeBSD$
  */
 
 #ifndef _MACHINE_DISASSEM_H_

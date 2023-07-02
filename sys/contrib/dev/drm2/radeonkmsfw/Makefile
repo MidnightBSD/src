@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 all:
 	rm -f *.uu

@@ -1,4 +1,3 @@
-# $FreeBSD$
 # included by geom_sched children
 
 .PATH: ${SRCTOP}/sys/geom/sched

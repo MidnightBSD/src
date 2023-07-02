@@ -1,4 +1,3 @@
-# $FreeBSD$
 # Files to include in the import and merging....
 src/arm/animeo_ip.dts
 src/arm/at91-ariag25.dts

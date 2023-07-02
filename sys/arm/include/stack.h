@@ -26,7 +26,6 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD$
  */
 
 #ifndef _MACHINE_STACK_H_

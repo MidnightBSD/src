@@ -27,5 +27,4 @@
 
 double gloadavg(void);
 #if 0
-static char atrun_h_rcsid[] = "$MidnightBSD$";
 #endif

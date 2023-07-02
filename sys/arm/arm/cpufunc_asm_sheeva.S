@@ -30,7 +30,6 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD$");
 
 #include <machine/armreg.h>
 #include <machine/param.h>

@@ -1,4 +1,3 @@
-/* $FreeBSD$ */
 
 #include <sys/cdefs.h>
 #include <sys/errno.h>

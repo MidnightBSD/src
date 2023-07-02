@@ -39,7 +39,6 @@
 #include <machine/armreg.h>
 #include <machine/pte-v4.h>
 
-__FBSDID("$FreeBSD$");
 
 /* 2K initial stack is plenty, it is only used by initarm() */
 #define INIT_ARM_STACK_SIZE	2048

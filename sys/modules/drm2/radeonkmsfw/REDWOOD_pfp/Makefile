@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 KMOD=	radeonkmsfw_REDWOOD_pfp
 IMG=	REDWOOD_pfp

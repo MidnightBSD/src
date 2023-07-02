@@ -1,4 +1,3 @@
-#	$FreeBSD$
 
 FW_VERSION=3.1
 ALL=	ipw2200-bss.fw.uu ipw2200-ibss.fw.uu ipw2200-sniffer.fw.uu

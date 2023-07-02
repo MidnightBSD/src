@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 include	"../mv/std.mv"
 include "../mv/kirkwood/std.kirkwood"

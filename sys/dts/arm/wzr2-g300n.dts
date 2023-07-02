@@ -24,7 +24,6 @@
  *
  * Buffalo WZR2-G300N Device Tree Source.
  *
- * $FreeBSD$
  */
 
 /dts-v1/;

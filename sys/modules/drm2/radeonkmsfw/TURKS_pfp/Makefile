@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 KMOD=	radeonkmsfw_TURKS_pfp
 IMG=	TURKS_pfp

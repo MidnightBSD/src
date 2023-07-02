@@ -1,4 +1,3 @@
-#$FreeBSD$
 
 arm/amlogic/aml8726/aml8726_l2cache.c		standard
 

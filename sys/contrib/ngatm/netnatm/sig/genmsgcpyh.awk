@@ -36,7 +36,6 @@ function begin() {
 function first_entry() {
 	print "/* This file was created automatically"
 	print " * Source file: " id
-	print " * $FreeBSD$"
 	print " */"
 	print ""
 }

@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 include	"../mv/std.mv"
 files	"../mv/discovery/files.db78xxx"

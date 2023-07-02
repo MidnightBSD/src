@@ -27,7 +27,6 @@
 
 #include <machine/asm.h>
 #include <machine/armreg.h>
-__FBSDID("$FreeBSD$");
 
 #include "assym.inc"
 

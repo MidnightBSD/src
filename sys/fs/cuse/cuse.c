@@ -1,4 +1,3 @@
-/* $FreeBSD$ */
 /*-
  * Copyright (c) 2010-2020 Hans Petter Selasky. All rights reserved.
  *

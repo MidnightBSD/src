@@ -30,7 +30,6 @@
 
 /*
  * $Id$
- * $FreeBSD$
  *
  * A simple scheduler that just delays certain transactions by a certain
  * amount. We collect all the transactions that are 'done' and put them on

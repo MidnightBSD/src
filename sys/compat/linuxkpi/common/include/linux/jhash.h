@@ -21,7 +21,6 @@
  * I've modified Bob's hash to be useful in the Linux kernel, and
  * any bugs present are surely my fault.  -DaveM
  *
- * $FreeBSD$
  */
 
 /* NOTE: Arguments are modified. */

@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# $MidnightBSD$
 #
 
 # PROVIDE: ntpd

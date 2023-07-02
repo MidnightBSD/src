@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 # Makefile for the bktr Brooktree Bt848/Bt878 PCI video capture device
 

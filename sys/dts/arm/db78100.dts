@@ -28,7 +28,6 @@
  *
  * Marvell DB-78100 Device Tree Source.
  *
- * $FreeBSD$
  */
 
 /dts-v1/;

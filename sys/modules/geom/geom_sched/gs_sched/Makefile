@@ -1,4 +1,3 @@
-# $FreeBSD$
 KMOD=   geom_sched
 SRCS=   g_sched.c
 

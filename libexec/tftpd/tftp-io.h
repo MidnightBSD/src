@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
 
 #define RP_NONE		0
 #define	RP_RECVFROM	-1

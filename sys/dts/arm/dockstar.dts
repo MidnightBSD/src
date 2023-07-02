@@ -28,7 +28,6 @@
  *
  * Seagate DockStar (Marvell SheevaPlug based) Device Tree Source.
  *
- * $FreeBSD$
  */
 
 /dts-v1/;

@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #	$FreeBSD: stable/10/libexec/tftp-proxy/Makefile 321267 2017-07-20 00:52:11Z ngie $
 
 .PATH:	${SRCTOP}/contrib/pf/tftp-proxy
