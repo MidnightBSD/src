@@ -1,5 +1,9 @@
 .include <src.opts.mk>
 
+CONFS=  dot.mkshrc
+CONFSDIR_dot.mkshrc=   /root
+CONFSNAME_dot.mkshrc=  .mkshrc
+
 MKSHDIR= ${SRCTOP}/contrib/mksh
 .PATH: ${MKSHDIR}
 
@@ -53,5 +57,8 @@ MLINKS=	mksh.1 rksh.1 mksh.1 ulimit.1 mksh.1 ksh.1
 LINKS+=        ${BINDIR}/mksh ${BINDIR}/sh
 MLINKS= mksh.1 sh.1 mksh.1 rksh.1 mksh.1 ulimit.1 mksh.1 ksh.1
 .endif
+
+afterinstallconfig:
+	${INSTALL_LINK} ${TAG_ARGS} ${DESTDIR}/root/.mkshrc
 
 .include <bsd.prog.mk>
