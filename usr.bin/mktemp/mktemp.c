@@ -43,10 +43,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#ifndef lint
-static const char rcsid[] =
-#endif /* not lint */
-
 static void usage(void);
 
 int
