@@ -58,7 +58,10 @@ LINKS+=        ${BINDIR}/mksh ${BINDIR}/sh
 MLINKS= mksh.1 sh.1 mksh.1 rksh.1 mksh.1 ulimit.1 mksh.1 ksh.1
 .endif
 
+beforeinstallconfig:
+	rm -f ${DESTDIR}/.mkshrc
+
 afterinstallconfig:
-	${INSTALL_LINK} ${TAG_ARGS} ${DESTDIR}/root/.mkshrc
+	${INSTALL_LINK} ${TAG_ARGS} ${DESTDIR}/root/.mkshrc ${DESTDIR}/.mkshrc
 
 .include <bsd.prog.mk>
