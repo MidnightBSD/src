@@ -33,10 +33,6 @@
  * $DragonFly: src/usr.sbin/vidcontrol/vidcontrol.c,v 1.10 2005/03/02 06:08:29 joerg Exp $
  */
 
-#ifndef lint
-static const char rcsid[] =
-#endif /* not lint */
-
 #include <ctype.h>
 #include <err.h>
 #include <limits.h>

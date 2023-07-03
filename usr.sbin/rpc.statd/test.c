@@ -1,8 +1,4 @@
 
-#ifndef lint
-static const char rcsid[] =
-#endif /* not lint */
-
 #include <stdio.h>
 #include <rpc/rpc.h>
 #include <rpcsvc/sm_inter.h>
