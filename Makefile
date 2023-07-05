@@ -85,7 +85,7 @@
 #
 # See src/UPDATING `COMMON ITEMS' for more complete information.
 #
-# If TARGET=machine (e.g. powerpc, amd64, ...) is specified you can
+# If TARGET=machine (e.g. amd64, ...) is specified you can
 # cross build world for other machine types using the buildworld target,
 # and once the world is built you can cross build a kernel using the
 # buildkernel target.
@@ -473,11 +473,10 @@ worlds: .PHONY
 #
 .if make(universe) || make(universe_kernels) || make(tinderbox) || \
     make(targets) || make(universe-toolchain)
-TARGETS?=amd64 arm arm64 i386 powerpc riscv
+TARGETS?=amd64 arm arm64 i386 riscv
 _UNIVERSE_TARGETS=	${TARGETS}
 TARGET_ARCHES_arm?=	arm armv6 armv7
 TARGET_ARCHES_arm64?=	aarch64
-TARGET_ARCHES_powerpc?=	powerpc powerpc64 powerpcspe
 TARGET_ARCHES_riscv?=	riscv64 riscv64sf
 .for target in ${TARGETS}
 TARGET_ARCHES_${target}?= ${target}
