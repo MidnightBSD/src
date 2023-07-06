@@ -41,10 +41,6 @@
  *
  */
 
-#ifndef lint
-static const char rcsid[] =
-#endif /* not lint */
-
 #include <sys/param.h>
 
 #include <limits.h>

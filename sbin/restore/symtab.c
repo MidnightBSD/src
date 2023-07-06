@@ -33,7 +33,6 @@
 #if 0
 static char sccsid[] = "@(#)symtab.c	8.3 (Berkeley) 4/28/95";
 #endif
-static const char rcsid[] =
 #endif /* not lint */
 
 /*

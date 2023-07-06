@@ -27,11 +27,6 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD: stable/11/sbin/newfs_msdos/newfs_msdos.c 357516 2020-02-04 19:15:57Z dim $";
-#endif /* not lint */
-
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <err.h>

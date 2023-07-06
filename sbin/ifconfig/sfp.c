@@ -23,10 +23,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static const char rcsid[] =
-#endif /* not lint */
-
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/ioctl.h>
