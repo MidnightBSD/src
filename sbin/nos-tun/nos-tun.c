@@ -57,11 +57,6 @@
  *
  */
 
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD: stable/11/sbin/nos-tun/nos-tun.c 330449 2018-03-05 07:26:05Z eadler $";
-#endif /* not lint */
-
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/signal.h>
