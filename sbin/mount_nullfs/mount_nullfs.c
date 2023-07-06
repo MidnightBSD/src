@@ -42,7 +42,6 @@ static const char copyright[] =
 #if 0
 static char sccsid[] = "@(#)mount_null.c	8.6 (Berkeley) 4/26/95";
 #endif
-static const char rcsid[] =
 #endif /* not lint */
 
 #include <sys/param.h>

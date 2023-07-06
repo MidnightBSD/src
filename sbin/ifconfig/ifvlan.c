@@ -59,10 +59,6 @@
 
 #include "ifconfig.h"
 
-#ifndef lint
-static const char rcsid[] =
-#endif
-
 #define	NOTAG	((u_short) -1)
 
 static 	struct vlanreq params = {

@@ -49,7 +49,6 @@ All rights reserved.\n";
 #endif /* not lint */
 
 #ifndef lint
-static const char rcsid[] =
 #endif /* not lint */
 
 /* ********************************************************** INCLUDES ***** */

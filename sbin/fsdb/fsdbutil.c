@@ -30,10 +30,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef lint
-static const char rcsid[] =
-#endif /* not lint */
-
 #include <sys/param.h>
 #include <ctype.h>
 #include <err.h>
