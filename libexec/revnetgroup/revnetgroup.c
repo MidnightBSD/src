@@ -38,10 +38,6 @@
  * Columbia University, New York City
  */
 
-#ifndef lint
-static const char rcsid[] =
-#endif /* not lint */
-
 #include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
