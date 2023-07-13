@@ -1,4 +1,3 @@
- */
 
 #ifndef	BPTYPES_H
 #define	BPTYPES_H
