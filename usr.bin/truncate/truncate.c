@@ -27,8 +27,6 @@
  *
  */
 
-static const char rcsid[] =
-
 #include <sys/stat.h>
 
 #include <ctype.h>

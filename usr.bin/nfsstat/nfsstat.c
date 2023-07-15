@@ -70,7 +70,6 @@ static const char copyright[] =
 #if 0
 static char sccsid[] = "@(#)nfsstat.c	8.2 (Berkeley) 3/31/95";
 #endif
-static const char rcsid[] =
 #endif /* not lint */
 
 #include <sys/param.h>
