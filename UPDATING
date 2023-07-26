@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20230725:
+	perl 5.36.1
+
 20230627:
 	openssl 1.1.1u
 
