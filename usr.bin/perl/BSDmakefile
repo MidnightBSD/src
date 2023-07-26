@@ -25,12 +25,9 @@ CONFIGURE_ARGS= -des -Dprefix=/usr -Dsiteprefix=/usr/local -Dvendorprefix=/usr \
 		-Dsiteman1dir=/usr/local/man/man1 -Dsiteman3dir=/usr/local/man/man3 \
 		-Dmksymlinks -Dsrc=${SRCDIR} -Duse64bitint -Duseshrplib \
 		-Dusethreads=y -Ulocincpth='' -Ui_gdbm -Ut_gdbm \
-		-Dusedtrace=n
+		-Dusedtrace
 
-#.if defined(DTRACE)
-#CONFIGURE_ARGS+=	-Dusedtrace
-#LIBADD+=	dtrace
-#.endif
+LIBADD+=	dtrace
 
 .if !defined(TARGET_ARCH)
 TARGET_ARCH!= /usr/bin/uname -p
@@ -65,9 +62,9 @@ install.perl:
 	cd ${.OBJDIR} && LD_LIBRARY_PATH=${.OBJDIR}:${DESTDIR}/lib ./perl installperl --destdir=${DESTDIR}
 
 .if ${TARGET_ARCH} == "i386"
-	 ln -fs ${LIBDIR}/perl5/5.36.0/${TARGET_ARCH}-midnightbsd-thread-multi-64int/CORE/libperl.so ${DESTDIR}${LIBDIR}/libperl.so
+	 ln -fs ${LIBDIR}/perl5/5.36.1/${TARGET_ARCH}-midnightbsd-thread-multi-64int/CORE/libperl.so ${DESTDIR}${LIBDIR}/libperl.so
 .else
-	 ln -fs ${LIBDIR}/perl5/5.36.0/${TARGET_ARCH}-midnightbsd-thread-multi/CORE/libperl.so ${DESTDIR}${LIBDIR}/libperl.so
+	 ln -fs ${LIBDIR}/perl5/5.36.1/${TARGET_ARCH}-midnightbsd-thread-multi/CORE/libperl.so ${DESTDIR}${LIBDIR}/libperl.so
 .endif
 
 #
