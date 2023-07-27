@@ -143,7 +143,7 @@ struct arp_req {
 	unsigned short  ptarget2;
 } __packed;
 
-#if defined(__MidnightBSD__) && __FreeBSD_version < 501113
+#if defined(__FreeBSD__) && __FreeBSD_version < 501113
 #define	SPP_FMT		"%s%d: "
 #define	SPP_ARGS(ifp)	(ifp)->if_name, (ifp)->if_unit
 #else
