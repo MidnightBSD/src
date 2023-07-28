@@ -15,11 +15,6 @@
  * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
  */
 
-#if !defined(lint) && !defined(LINT)
-static const char rcsid[] =
-#endif
-
-
 #include "cron.h"
 
 
