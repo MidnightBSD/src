@@ -27,11 +27,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static const char rcsid[] =
-    "$FreeBSD: stable/11/usr.sbin/pciconf/err.c 330449 2018-03-05 07:26:05Z eadler $";
-#endif /* not lint */
-
 #include <sys/param.h>
 #include <sys/pciio.h>
 
