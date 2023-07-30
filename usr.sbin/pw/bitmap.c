@@ -26,11 +26,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD: stable/11/usr.sbin/pw/bitmap.c 330449 2018-03-05 07:26:05Z eadler $";
-#endif /* not lint */
-
 #include <stdlib.h>
 #include <string.h>
 

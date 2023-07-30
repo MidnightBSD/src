@@ -27,10 +27,6 @@
  *
  */
 
-#ifndef lint
-static const char rcsid[] =
-#endif /* not lint */
-
 #include <pwd.h>
 #include <grp.h>
 #include <libutil.h>
