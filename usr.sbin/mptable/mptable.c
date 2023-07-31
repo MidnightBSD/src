@@ -29,11 +29,6 @@
  * mptable.c
  */
 
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD: stable/11/usr.sbin/mptable/mptable.c 330449 2018-03-05 07:26:05Z eadler $";
-#endif /* not lint */
-
 /*
  * this will cause the raw mp table to be dumped to /tmp/mpdump
  *

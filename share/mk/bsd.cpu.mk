@@ -1,5 +1,3 @@
-# $FreeBSD$
-
 # Set default CPU compile flags and baseline CPUTYPE for each arch.  The
 # compile flags must support the minimum CPU type for each architecture but
 # may tune support for more advanced processors.
@@ -16,12 +14,8 @@ MACHINE_CPU = arm
 MACHINE_CPU = i486
 . elif ${MACHINE_CPUARCH} == "mips"
 MACHINE_CPU = mips
-. elif ${MACHINE_CPUARCH} == "powerpc"
-MACHINE_CPU = aim
 . elif ${MACHINE_CPUARCH} == "riscv"
 MACHINE_CPU = riscv
-. elif ${MACHINE_CPUARCH} == "sparc64"
-MACHINE_CPU = ultrasparc
 . endif
 .else
 
@@ -75,12 +69,6 @@ CPUTYPE = pentium-mmx
 CPUTYPE = pentium
 .   endif
 .  endif
-. elif ${MACHINE_ARCH} == "sparc64"
-.  if ${CPUTYPE} == "us"
-CPUTYPE = ultrasparc
-.  elif ${CPUTYPE} == "us3"
-CPUTYPE = ultrasparc3
-.  endif
 . endif
 
 ###############################################################################
@@ -130,16 +118,6 @@ _CPUCFLAGS = -march=${CPUTYPE}
 #	cortex-a72, exynos-m1
 _CPUCFLAGS = -mcpu=${CPUTYPE}
 . endif
-. elif ${MACHINE_ARCH} == "powerpc"
-.  if ${CPUTYPE} == "e500"
-_CPUCFLAGS = -Wa,-me500 -msoft-float
-.  else
-_CPUCFLAGS = -mcpu=${CPUTYPE} -mno-powerpc64
-.  endif
-. elif ${MACHINE_ARCH} == "powerpcspe"
-_CPUCFLAGS = -Wa,-me500 -mspe=yes -mabi=spe -mfloat-gprs=double -mcpu=8548
-. elif ${MACHINE_ARCH} == "powerpc64"
-_CPUCFLAGS = -mcpu=${CPUTYPE}
 . elif ${MACHINE_CPUARCH} == "mips"
 # mips[1234], mips32, mips64, and all later releases need to have mips
 # preserved (releases later than r2 require external toolchain)
@@ -154,14 +132,6 @@ _CPUCFLAGS = -march=${CPUTYPE}
 #	sb1, xlp, xlr
 _CPUCFLAGS = -march=${CPUTYPE:S/^mips//}
 . endif
-. elif ${MACHINE_ARCH} == "sparc64"
-.  if ${CPUTYPE} == "v9"
-_CPUCFLAGS = -mcpu=v9
-.  elif ${CPUTYPE} == "ultrasparc"
-_CPUCFLAGS = -mcpu=ultrasparc
-.  elif ${CPUTYPE} == "ultrasparc3"
-_CPUCFLAGS = -mcpu=ultrasparc3
-.  endif
 . elif ${MACHINE_CPUARCH} == "aarch64"
 _CPUCFLAGS = -mcpu=${CPUTYPE}
 . endif
@@ -290,23 +260,9 @@ MACHINE_CPU += amd64 sse2 sse mmx
 ########## Mips
 . elif ${MACHINE_CPUARCH} == "mips"
 MACHINE_CPU = mips
-########## powerpc
-. elif ${MACHINE_ARCH} == "powerpc"
-.  if ${CPUTYPE} == "e500"
-MACHINE_CPU = booke softfp
-.  endif
 ########## riscv
 . elif ${MACHINE_CPUARCH} == "riscv"
 MACHINE_CPU = riscv
-########## sparc64
-. elif ${MACHINE_ARCH} == "sparc64"
-.  if ${CPUTYPE} == "v9"
-MACHINE_CPU = v9
-.  elif ${CPUTYPE} == "ultrasparc"
-MACHINE_CPU = v9 ultrasparc
-.  elif ${CPUTYPE} == "ultrasparc3"
-MACHINE_CPU = v9 ultrasparc ultrasparc3
-.  endif
 . endif
 .endif
 
@@ -358,10 +314,6 @@ MACHINE_CPU += softfp
 # not a nice optimization.
 CFLAGS += -mfloat-abi=softfp
 .endif
-.endif
-
-.if ${MACHINE_ARCH} == "powerpcspe"
-CFLAGS += -mcpu=8548 -Wa,-me500 -mspe=yes -mabi=spe -mfloat-gprs=double
 .endif
 
 .if ${MACHINE_CPUARCH} == "riscv"
