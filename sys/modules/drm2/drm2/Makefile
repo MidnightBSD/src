@@ -47,16 +47,12 @@ SRCS	= \
 	ati_pcigart.c
 #ttm_page_alloc_dma.c
 
-.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_ARCH} == "powerpc64"
+.if ${MACHINE_CPUARCH} == "amd64"
 SRCS	+= drm_ioc32.c
 .endif
 
 SRCS	+=device_if.h bus_if.h pci_if.h device_if.h iicbus_if.h opt_drm.h \
 	opt_vm.h opt_syscons.h
 
-
-.if ${MACHINE_CPUARCH} == "powerpc"
-CWARNFLAGS+=-Wno-cast-qual
-.endif
 
 .include <bsd.kmod.mk>

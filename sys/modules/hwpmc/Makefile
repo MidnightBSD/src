@@ -1,6 +1,3 @@
-#
-#
-
 .PATH: ${SRCTOP}/sys/dev/hwpmc
 
 KMOD=	hwpmc
@@ -29,14 +26,6 @@ SRCS+= hwpmc_armv7.c
 SRCS+=	hwpmc_amd.c hwpmc_core.c hwpmc_intel.c
 SRCS+=	hwpmc_tsc.c hwpmc_x86.c hwpmc_uncore.c
 SRCS+=	device_if.h bus_if.h
-.endif
-
-.if ${MACHINE_CPUARCH} == "powerpc"
-SRCS+=	hwpmc_powerpc.c hwpmc_e500.c hwpmc_mpc7xxx.c hwpmc_ppc970.c
-.endif
-
-.if ${MACHINE_CPUARCH} == "sparc64"
-SRCS+=	hwpmc_sparc64.c
 .endif
 
 .include <bsd.kmod.mk>

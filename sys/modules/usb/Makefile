@@ -74,10 +74,8 @@ _kue=		kue
 _run=		run
 _rsu=		rsu
 
-.if ${MACHINE_CPUARCH} != "mips"
 _rsufw=		rsufw
 _runfw=		runfw
-.endif
 .endif
 
 .if ${MACHINE_CPUARCH} == "amd64"
@@ -97,10 +95,6 @@ _urtw=		urtw
 
 .if ${MACHINE_CPUARCH} == "avr32"
 _avr32dci=	avr32dci
-.endif
-
-.if ${MACHINE_CPUARCH} == "mips"
-_saf1761otg=	saf1761otg
 .endif
 
 .include <bsd.subdir.mk>

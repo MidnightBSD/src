@@ -89,10 +89,6 @@ CFLAGS+=-I${SUNW}/common
 CFLAGS+=-DBUILDING_ZFS
 CFLAGS.gcc+=-fms-extensions
 
-.if ${MACHINE_ARCH} == "powerpc64"
-CFLAGS.gcc+=-mminimal-toc
-.endif
-
 .ifdef ZFS_DEBUG
 CFLAGS+=-DDEBUG=1
 DEBUG_FLAGS=-g

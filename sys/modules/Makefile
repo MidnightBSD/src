@@ -151,8 +151,6 @@ SUBDIR=	\
 	${_hptnr} \
 	${_hptrr} \
 	hwpmc \
-	${_hwpmc_mips24k} \
-	${_hwpmc_mips74k} \
 	${_hyperv} \
 	i2c \
 	${_iavf} \
@@ -439,9 +437,7 @@ _autofs=	autofs
 .endif
 
 .if ${MK_CDDL} != "no" || defined(ALL_MODULES)
-.if (${MACHINE_CPUARCH} != "arm" || ${MACHINE_ARCH:Marmv[67]*} != "") && \
-	${MACHINE_CPUARCH} != "mips" && \
-	${MACHINE_CPUARCH} != "sparc64"
+.if (${MACHINE_CPUARCH} != "arm" || ${MACHINE_ARCH:Marmv[67]*} != "")
 SUBDIR+=	dtrace
 .endif
 SUBDIR+=	opensolaris
@@ -559,17 +555,13 @@ _sf=		sf
 _ti=		ti
 _txp=		txp
 
-.if ${MACHINE_CPUARCH} != "mips"
 _mwlfw=		mwlfw
 _otusfw=	otusfw
 _ralfw=		ralfw
 _rtwnfw=	rtwnfw
 .endif
-.endif
 
 .if ${MK_SOURCELESS_UCODE} != "no" && ${MACHINE_CPUARCH} != "arm" && \
-	${MACHINE_CPUARCH} != "mips" && \
-	${MACHINE_ARCH} != "powerpc" && ${MACHINE_ARCH} != "powerpcspe" && \
 	${MACHINE_CPUARCH} != "riscv"
 _cxgbe=		cxgbe
 .endif
@@ -582,10 +574,8 @@ _ice_ddp=	ice_ddp
 .endif
 
 # These rely on 64bit atomics
-.if ${MACHINE_ARCH} != "powerpc" && ${MACHINE_CPUARCH} != "mips"
 _mps=		mps
 _mpr=		mpr
-.endif
 
 .if ${MK_TESTS} != "no" || defined(ALL_MODULES)
 SUBDIR+=	tests
@@ -595,26 +585,18 @@ SUBDIR+=	tests
 SUBDIR+=	zfs
 .endif
 
-.if (${MACHINE_CPUARCH} == "mips" && ${MACHINE_ARCH:Mmips64} == "")
-_hwpmc_mips24k=	hwpmc_mips24k
-_hwpmc_mips74k=	hwpmc_mips74k
-.endif
-
 .if ${MACHINE_CPUARCH} != "aarch64" && ${MACHINE_CPUARCH} != "arm" && \
-	${MACHINE_CPUARCH} != "mips" && ${MACHINE_CPUARCH} != "powerpc" && \
 	${MACHINE_CPUARCH} != "riscv"
 _syscons=	syscons
 _vpo=		vpo
 .endif
 
-.if ${MACHINE_CPUARCH} != "mips"
 # no BUS_SPACE_UNSPECIFIED
 # No barrier instruction support (specific to this driver)
 _sym=		sym
 # intr_disable() is a macro, causes problems
 .if ${MK_SOURCELESS_UCODE} != "no"
 _cxgb=		cxgb
-.endif
 .endif
 
 .if ${MACHINE_CPUARCH} == "aarch64"
@@ -818,44 +800,6 @@ _ex=		ex
 .if ${MACHINE_CPUARCH} == "arm"
 _cfi=		cfi
 _cpsw=		cpsw
-.endif
-
-.if ${MACHINE_CPUARCH} == "powerpc"
-_agp=		agp
-_an=		an
-_bm=		bm
-_cardbus=	cardbus
-_cbb=		cbb
-_cfi=		cfi
-_cpufreq=	cpufreq
-.if ${MK_MODULE_DRM} != "no"
-_drm=		drm
-.endif
-_exca=		exca
-_ffec=		ffec
-_nvd=		nvd
-_nvme=		nvme
-_pccard=	pccard
-_wi=		wi
-.endif
-
-.if ${MACHINE_ARCH} == "powerpc64"
-.if ${MK_MODULE_DRM2} != "no"
-_drm2=		drm2
-.endif
-_ipmi=		ipmi
-_ixl=		ixl
-_nvram=		opal_nvram
-.endif
-.if ${MACHINE_ARCH} == "powerpc64" || ${MACHINE_ARCH} == "powerpc"
-# Don't build powermac_nvram for powerpcspe, it's never supported.
-_nvram=		powermac_nvram
-.endif
-
-.if ${MACHINE_CPUARCH} == "sparc64"
-_auxio=		auxio
-_em=		em
-_epic=		epic
 .endif
 
 .if (${MACHINE_CPUARCH} == "aarch64" || ${MACHINE_CPUARCH} == "amd64" || \
