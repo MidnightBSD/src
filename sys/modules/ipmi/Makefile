@@ -1,4 +1,3 @@
-
 .PATH: ${SRCTOP}/sys/dev/ipmi
 
 # XXX - ipmi_smbus and ipmi_ssif depend on smbus
@@ -13,5 +12,6 @@ SRCS+=	opt_acpi.h
 SRCS+=	acpi_if.h isa_if.h pci_if.h smbus_if.h
 
 SUBDIR+= ipmi_linux
+.endif
 
 .include <bsd.kmod.mk>
