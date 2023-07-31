@@ -271,9 +271,12 @@ __TT=${MACHINE}
 __LLVM_TARGETS= \
 		aarch64 \
 		arm \
+		mips \
+		powerpc \
 		riscv \
+		sparc \
 		x86
-__LLVM_TARGET_FILT=	C/(amd64|i386)/x86/:S/arm64/aarch64/
+__LLVM_TARGET_FILT=	C/(amd64|i386)/x86/:S/sparc64/sparc/:S/arm64/aarch64/
 .for __llt in ${__LLVM_TARGETS}
 # Default enable the given TARGET's LLVM_TARGET support
 .if ${__TT:${__LLVM_TARGET_FILT}} == ${__llt}
@@ -304,7 +307,7 @@ __DEFAULT_NO_OPTIONS+=LLVM_TARGET_BPF
 # Clang is enabled, and will be installed as the default /usr/bin/cc.
 __DEFAULT_YES_OPTIONS+=CLANG CLANG_BOOTSTRAP CLANG_IS_CC LLD
 __DEFAULT_NO_OPTIONS+=GCC GCC_BOOTSTRAP GNUCXX GPL_DTC
-.elif ${COMPILER_FEATURES:Mc++11}
+.elif ${COMPILER_FEATURES:Mc++11} && ${__T} != "sparc64"
 # If an external compiler that supports C++11 is used as ${CC} and Clang
 # supports the target, then Clang is enabled but GCC is installed as the
 # default /usr/bin/cc.
@@ -322,7 +325,8 @@ BROKEN_OPTIONS+=BINUTILS BINUTILS_BOOTSTRAP GCC GCC_BOOTSTRAP GDB
 .if ${__T:Mriscv*} != ""
 BROKEN_OPTIONS+=OFED
 .endif
-.if ${__T} == "aarch64" || ${__T} == "amd64" || ${__T} == "i386" || ${__T:Mriscv*} != "" 
+.if ${__T} == "aarch64" || ${__T} == "amd64" || ${__T} == "i386" || \
+    ${__T:Mriscv*} != "" || ${__TT} == "mips"
 __DEFAULT_YES_OPTIONS+=LLVM_LIBUNWIND
 .else
 __DEFAULT_NO_OPTIONS+=LLVM_LIBUNWIND
@@ -342,22 +346,46 @@ __DEFAULT_NO_OPTIONS+=LLDB
 .if ${__T} == "arm"
 BROKEN_OPTIONS+=LLDB
 .endif
-# GDB in base is generally less functional than GDB in ports.
+# GDB in base is generally less functional than GDB in ports.  Ports GDB
+# sparc64 kernel support has not been tested.
+.if ${__T} == "sparc64"
+__DEFAULT_NO_OPTIONS+=GDB_LIBEXEC
+.else
 __DEFAULT_YES_OPTIONS+=GDB_LIBEXEC
+.endif
 # Only doing soft float API stuff on armv6 and armv7
 .if ${__T} != "armv6" && ${__T} != "armv7"
 BROKEN_OPTIONS+=LIBSOFT
 .endif
-# EFI doesn't exist on riscv.
-.if ${__T:Mriscv*}
+.if ${__T:Mmips*}
+BROKEN_OPTIONS+=SSP
+.endif
+# EFI doesn't exist on mips, powerpc, sparc or riscv.
+.if ${__T:Mmips*} || ${__T:Mpowerpc*} || ${__T:Msparc64} || ${__T:Mriscv*}
 BROKEN_OPTIONS+=EFI
 .endif
-# UBOOT is only for arm and exclude others
-.if ${__T:Marm*} == ""
+# OFW is only for powerpc and sparc64, exclude others
+.if ${__T:Mpowerpc*} == "" && ${__T:Msparc64} == ""
+BROKEN_OPTIONS+=LOADER_OFW
+.endif
+# UBOOT is only for arm, mips and powerpc, exclude others
+.if ${__T:Marm*} == "" && ${__T:Mmips*} == "" && ${__T:Mpowerpc*} == ""
 BROKEN_OPTIONS+=LOADER_UBOOT
 .endif
+# GELI and Lua in loader currently cause boot failures on sparc64 and powerpc.
+# Further debugging is required -- probably they are just broken on big
+# endian systems generically (they jump to null pointers or try to read
+# crazy high addresses, which is typical of endianness problems).
+.if ${__T} == "sparc64" || ${__T:Mpowerpc*}
+BROKEN_OPTIONS+=LOADER_GELI LOADER_LUA
+.endif
 
-.if ${__T} == "aarch64" || ${__T} == "amd64" || ${__T} == "i386"
+.if ${__T:Mmips64*}
+# profiling won't work on MIPS64 because there is only assembly for o32
+BROKEN_OPTIONS+=PROFILE
+.endif
+.if ${__T} == "aarch64" || ${__T} == "amd64" || ${__T} == "i386" || \
+    ${__T} == "powerpc64" || ${__T} == "sparc64"
 __DEFAULT_YES_OPTIONS+=CXGBETOOL
 __DEFAULT_YES_OPTIONS+=MLX5TOOL
 .else
@@ -372,15 +400,21 @@ __DEFAULT_YES_OPTIONS+=HYPERV
 __DEFAULT_NO_OPTIONS+=HYPERV
 .endif
 
-# NVME is only x86
-.if ${__T} == "amd64" || ${__T} == "i386"
+# NVME is only x86 and powerpc64
+.if ${__T} == "amd64" || ${__T} == "i386" || ${__T} == "powerpc64"
 __DEFAULT_YES_OPTIONS+=NVME
 .else
 __DEFAULT_NO_OPTIONS+=NVME
 .endif
 
+# Sparc64 need extra crt*.o files
+.if ${__T:Msparc64}
+BROKEN_OPTIONS+=BSD_CRTBEGIN
+.endif
+
 .if ${COMPILER_FEATURES:Mc++11} && \
-    (${__T} == "aarch64" || ${__T} == "amd64" || ${__T} == "i386")
+    (${__T} == "aarch64" || ${__T} == "amd64" || ${__T} == "i386" || \
+     ${__T} == "powerpc64")
 __DEFAULT_YES_OPTIONS+=OPENMP
 .else
 __DEFAULT_NO_OPTIONS+=OPENMP

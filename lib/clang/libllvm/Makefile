@@ -8,15 +8,15 @@ CFLAGS+=	-I${.OBJDIR}
 
 .if ${MK_LLVM_TARGET_AARCH64} == "no" && ${MK_LLVM_TARGET_ARM} == "no" && \
     ${MK_LLVM_TARGET_BPF} == "no" && ${MK_LLVM_TARGET_MIPS} == "no" && \
-    ${MK_LLVM_TARGET_RISCV} == "no" && \
-    ${MK_LLVM_TARGET_X86} == "no"
+    ${MK_LLVM_TARGET_POWERPC} == "no" && ${MK_LLVM_TARGET_RISCV} == "no" && \
+    ${MK_LLVM_TARGET_SPARC} == "no" && ${MK_LLVM_TARGET_X86} == "no"
 .error Please enable at least one of: MK_LLVM_TARGET_AARCH64,\
  MK_LLVM_TARGET_ARM, MK_LLVM_TARGET_BPF, MK_LLVM_TARGET_MIPS, \
- MK_LLVM_TARGET_POWERPC, MK_LLVM_TARGET_RISCV, \
+ MK_LLVM_TARGET_POWERPC, MK_LLVM_TARGET_RISCV, MK_LLVM_TARGET_SPARC, \
  or MK_LLVM_TARGET_X86
 .endif
 
-.for arch in AArch64 ARM BPF Mips RISCV X86
+.for arch in AArch64 ARM BPF Mips PowerPC RISCV Sparc X86
 . if ${MK_LLVM_TARGET_${arch:tu}} != "no"
 CFLAGS+=	-I${LLVM_SRCS}/lib/Target/${arch}
 . endif
@@ -1274,6 +1274,61 @@ SRCS_MIN+=	Target/Mips/MipsTargetMachine.cpp
 SRCS_MIN+=	Target/Mips/MipsTargetObjectFile.cpp
 SRCS_MIN+=	Target/Mips/TargetInfo/MipsTargetInfo.cpp
 .endif # MK_LLVM_TARGET_MIPS
+.if ${MK_LLVM_TARGET_POWERPC} != "no"
+SRCS_MIN+=	Target/PowerPC/AsmParser/PPCAsmParser.cpp
+SRCS_MIN+=	Target/PowerPC/Disassembler/PPCDisassembler.cpp
+SRCS_MIN+=	Target/PowerPC/GISel/PPCCallLowering.cpp
+SRCS_MIN+=	Target/PowerPC/GISel/PPCInstructionSelector.cpp
+SRCS_MIN+=	Target/PowerPC/GISel/PPCLegalizerInfo.cpp
+SRCS_MIN+=	Target/PowerPC/GISel/PPCRegisterBankInfo.cpp
+SRCS_MIN+=	Target/PowerPC/MCTargetDesc/PPCAsmBackend.cpp
+SRCS_MIN+=	Target/PowerPC/MCTargetDesc/PPCELFObjectWriter.cpp
+SRCS_MIN+=	Target/PowerPC/MCTargetDesc/PPCELFStreamer.cpp
+SRCS_MIN+=	Target/PowerPC/MCTargetDesc/PPCInstPrinter.cpp
+SRCS_MIN+=	Target/PowerPC/MCTargetDesc/PPCMCAsmInfo.cpp
+SRCS_MIN+=	Target/PowerPC/MCTargetDesc/PPCMCCodeEmitter.cpp
+SRCS_MIN+=	Target/PowerPC/MCTargetDesc/PPCMCExpr.cpp
+SRCS_MIN+=	Target/PowerPC/MCTargetDesc/PPCMCTargetDesc.cpp
+SRCS_MIN+=	Target/PowerPC/MCTargetDesc/PPCPredicates.cpp
+SRCS_MIN+=	Target/PowerPC/MCTargetDesc/PPCXCOFFObjectWriter.cpp
+SRCS_MIN+=	Target/PowerPC/MCTargetDesc/PPCXCOFFStreamer.cpp
+SRCS_MIN+=	Target/PowerPC/PPCAsmPrinter.cpp
+SRCS_MIN+=	Target/PowerPC/PPCBoolRetToInt.cpp
+SRCS_MIN+=	Target/PowerPC/PPCBranchCoalescing.cpp
+SRCS_MIN+=	Target/PowerPC/PPCBranchSelector.cpp
+SRCS_MIN+=	Target/PowerPC/PPCCCState.cpp
+SRCS_MIN+=	Target/PowerPC/PPCCTRLoops.cpp
+SRCS_MIN+=	Target/PowerPC/PPCCallingConv.cpp
+SRCS_MIN+=	Target/PowerPC/PPCEarlyReturn.cpp
+SRCS_MIN+=	Target/PowerPC/PPCExpandAtomicPseudoInsts.cpp
+SRCS_MIN+=	Target/PowerPC/PPCExpandISEL.cpp
+SRCS_MIN+=	Target/PowerPC/PPCFastISel.cpp
+SRCS_MIN+=	Target/PowerPC/PPCFrameLowering.cpp
+SRCS_MIN+=	Target/PowerPC/PPCHazardRecognizers.cpp
+SRCS_MIN+=	Target/PowerPC/PPCISelDAGToDAG.cpp
+SRCS_MIN+=	Target/PowerPC/PPCISelLowering.cpp
+SRCS_MIN+=	Target/PowerPC/PPCInstrInfo.cpp
+SRCS_MIN+=	Target/PowerPC/PPCLoopInstrFormPrep.cpp
+SRCS_MIN+=	Target/PowerPC/PPCLowerMASSVEntries.cpp
+SRCS_MIN+=	Target/PowerPC/PPCMacroFusion.cpp
+SRCS_MIN+=	Target/PowerPC/PPCMCInstLower.cpp
+SRCS_MIN+=	Target/PowerPC/PPCMIPeephole.cpp
+SRCS_MIN+=	Target/PowerPC/PPCMachineFunctionInfo.cpp
+SRCS_MIN+=	Target/PowerPC/PPCMachineScheduler.cpp
+SRCS_MIN+=	Target/PowerPC/PPCPreEmitPeephole.cpp
+SRCS_MIN+=	Target/PowerPC/PPCReduceCRLogicals.cpp
+SRCS_MIN+=	Target/PowerPC/PPCRegisterInfo.cpp
+SRCS_MIN+=	Target/PowerPC/PPCSubtarget.cpp
+SRCS_MIN+=	Target/PowerPC/PPCTLSDynamicCall.cpp
+SRCS_MIN+=	Target/PowerPC/PPCTOCRegDeps.cpp
+SRCS_MIN+=	Target/PowerPC/PPCTargetMachine.cpp
+SRCS_MIN+=	Target/PowerPC/PPCTargetObjectFile.cpp
+SRCS_MIN+=	Target/PowerPC/PPCTargetTransformInfo.cpp
+SRCS_MIN+=	Target/PowerPC/PPCVSXCopy.cpp
+SRCS_MIN+=	Target/PowerPC/PPCVSXFMAMutate.cpp
+SRCS_MIN+=	Target/PowerPC/PPCVSXSwapRemoval.cpp
+SRCS_MIN+=	Target/PowerPC/TargetInfo/PowerPCTargetInfo.cpp
+.endif # MK_LLVM_TARGET_POWERPC
 .if ${MK_LLVM_TARGET_RISCV} != "no"
 SRCS_MIN+=	Target/RISCV/AsmParser/RISCVAsmParser.cpp
 SRCS_MIN+=	Target/RISCV/Disassembler/RISCVDisassembler.cpp
@@ -1309,6 +1364,32 @@ SRCS_MIN+=	Target/RISCV/RISCVTargetObjectFile.cpp
 SRCS_MIN+=	Target/RISCV/RISCVTargetTransformInfo.cpp
 SRCS_MIN+=	Target/RISCV/TargetInfo/RISCVTargetInfo.cpp
 .endif # MK_LLVM_TARGET_RISCV
+.if ${MK_LLVM_TARGET_SPARC} != "no"
+SRCS_MIN+=	Target/Sparc/AsmParser/SparcAsmParser.cpp
+SRCS_MIN+=	Target/Sparc/DelaySlotFiller.cpp
+SRCS_XDW+=	Target/Sparc/Disassembler/SparcDisassembler.cpp
+SRCS_MIN+=	Target/Sparc/LeonPasses.cpp
+SRCS_MIN+=	Target/Sparc/MCTargetDesc/SparcAsmBackend.cpp
+SRCS_MIN+=	Target/Sparc/MCTargetDesc/SparcELFObjectWriter.cpp
+SRCS_MIN+=	Target/Sparc/MCTargetDesc/SparcInstPrinter.cpp
+SRCS_MIN+=	Target/Sparc/MCTargetDesc/SparcMCAsmInfo.cpp
+SRCS_MIN+=	Target/Sparc/MCTargetDesc/SparcMCCodeEmitter.cpp
+SRCS_MIN+=	Target/Sparc/MCTargetDesc/SparcMCExpr.cpp
+SRCS_MIN+=	Target/Sparc/MCTargetDesc/SparcMCTargetDesc.cpp
+SRCS_MIN+=	Target/Sparc/MCTargetDesc/SparcTargetStreamer.cpp
+SRCS_MIN+=	Target/Sparc/SparcAsmPrinter.cpp
+SRCS_MIN+=	Target/Sparc/SparcFrameLowering.cpp
+SRCS_MIN+=	Target/Sparc/SparcISelDAGToDAG.cpp
+SRCS_MIN+=	Target/Sparc/SparcISelLowering.cpp
+SRCS_MIN+=	Target/Sparc/SparcInstrInfo.cpp
+SRCS_MIN+=	Target/Sparc/SparcMCInstLower.cpp
+SRCS_MIN+=	Target/Sparc/SparcMachineFunctionInfo.cpp
+SRCS_MIN+=	Target/Sparc/SparcRegisterInfo.cpp
+SRCS_MIN+=	Target/Sparc/SparcSubtarget.cpp
+SRCS_MIN+=	Target/Sparc/SparcTargetMachine.cpp
+SRCS_MIN+=	Target/Sparc/SparcTargetObjectFile.cpp
+SRCS_MIN+=	Target/Sparc/TargetInfo/SparcTargetInfo.cpp
+.endif # MK_LLVM_TARGET_SPARC
 SRCS_MIN+=	Target/Target.cpp
 SRCS_MIN+=	Target/TargetLoweringObjectFile.cpp
 SRCS_MIN+=	Target/TargetMachine.cpp
@@ -1740,7 +1821,7 @@ TGHDRS+=	llvm/IR/IntrinsicImpl.inc
 
 .for arch in \
 	AArch64/aarch64 AMDGPU/amdgcn ARM/arm BPF/bpf Hexagon/hexagon \
-	Mips/mips NVPTX/nvvm RISCV/riscv S390/s390 \
+	Mips/mips NVPTX/nvvm PowerPC/ppc R600/r600 RISCV/riscv S390/s390 \
 	VE/ve WebAssembly/wasm X86/x86 XCore/xcore
 llvm/IR/Intrinsics${arch:H}.h: ${LLVM_SRCS}/include/llvm/IR/Intrinsics.td
 	${LLVM_TBLGEN} -gen-intrinsic-enums -intrinsic-prefix=${arch:T} \
@@ -1775,7 +1856,7 @@ beforebuild:
 
 # Note: some rules are superfluous, not every combination is valid.
 .for arch in \
-	AArch64/AArch64 ARM/ARM BPF/BPF Mips/Mips \
+	AArch64/AArch64 ARM/ARM BPF/BPF Mips/Mips PowerPC/PPC Sparc/Sparc \
 	RISCV/RISCV X86/X86
 . for hdr in \
 	AsmMatcher/-gen-asm-matcher \
@@ -1872,6 +1953,20 @@ TGHDRS+=	MipsGenRegisterBank.inc
 TGHDRS+=	MipsGenRegisterInfo.inc
 TGHDRS+=	MipsGenSubtargetInfo.inc
 .endif # MK_LLVM_TARGET_MIPS
+.if ${MK_LLVM_TARGET_POWERPC} != "no"
+TGHDRS+=	PPCGenAsmMatcher.inc
+TGHDRS+=	PPCGenAsmWriter.inc
+TGHDRS+=	PPCGenCallingConv.inc
+TGHDRS+=	PPCGenDAGISel.inc
+TGHDRS+=	PPCGenDisassemblerTables.inc
+TGHDRS+=	PPCGenFastISel.inc
+TGHDRS+=	PPCGenGlobalISel.inc
+TGHDRS+=	PPCGenInstrInfo.inc
+TGHDRS+=	PPCGenMCCodeEmitter.inc
+TGHDRS+=	PPCGenRegisterBank.inc
+TGHDRS+=	PPCGenRegisterInfo.inc
+TGHDRS+=	PPCGenSubtargetInfo.inc
+.endif # MK_LLVM_TARGET_POWERPC
 .if ${MK_LLVM_TARGET_RISCV} != "no"
 TGHDRS+=	RISCVGenAsmMatcher.inc
 TGHDRS+=	RISCVGenAsmWriter.inc
@@ -1890,6 +1985,17 @@ TGHDRS+=	RISCVGenSearchableTables.inc
 TGHDRS+=	RISCVGenSubtargetInfo.inc
 TGHDRS+=	RISCVGenSystemOperands.inc
 .endif # MK_LLVM_TARGET_RISCV
+.if ${MK_LLVM_TARGET_SPARC} != "no"
+TGHDRS+=	SparcGenAsmMatcher.inc
+TGHDRS+=	SparcGenAsmWriter.inc
+TGHDRS+=	SparcGenCallingConv.inc
+TGHDRS+=	SparcGenDAGISel.inc
+TGHDRS+=	SparcGenDisassemblerTables.inc
+TGHDRS+=	SparcGenInstrInfo.inc
+TGHDRS+=	SparcGenMCCodeEmitter.inc
+TGHDRS+=	SparcGenRegisterInfo.inc
+TGHDRS+=	SparcGenSubtargetInfo.inc
+.endif # MK_LLVM_TARGET_SPARC
 .if ${MK_LLVM_TARGET_X86} != "no"
 TGHDRS+=	X86GenAsmMatcher.inc
 TGHDRS+=	X86GenAsmWriter.inc
