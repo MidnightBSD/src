@@ -271,7 +271,6 @@ __TT=${MACHINE}
 __LLVM_TARGETS= \
 		aarch64 \
 		arm \
-		mips \
 		riscv \
 		x86
 __LLVM_TARGET_FILT=	C/(amd64|i386)/x86/:S/arm64/aarch64/
@@ -323,8 +322,7 @@ BROKEN_OPTIONS+=BINUTILS BINUTILS_BOOTSTRAP GCC GCC_BOOTSTRAP GDB
 .if ${__T:Mriscv*} != ""
 BROKEN_OPTIONS+=OFED
 .endif
-.if ${__T} == "aarch64" || ${__T} == "amd64" || ${__T} == "i386" || \
-    ${__T:Mriscv*} != "" || ${__TT} == "mips"
+.if ${__T} == "aarch64" || ${__T} == "amd64" || ${__T} == "i386" || ${__T:Mriscv*} != "" 
 __DEFAULT_YES_OPTIONS+=LLVM_LIBUNWIND
 .else
 __DEFAULT_NO_OPTIONS+=LLVM_LIBUNWIND
@@ -350,22 +348,15 @@ __DEFAULT_YES_OPTIONS+=GDB_LIBEXEC
 .if ${__T} != "armv6" && ${__T} != "armv7"
 BROKEN_OPTIONS+=LIBSOFT
 .endif
-.if ${__T:Mmips*}
-BROKEN_OPTIONS+=SSP
-.endif
-# EFI doesn't exist on mips, or riscv.
-.if ${__T:Mmips*} || ${__T:Mriscv*}
+# EFI doesn't exist on riscv.
+.if ${__T:Mriscv*}
 BROKEN_OPTIONS+=EFI
 .endif
-# UBOOT is only for arm, mips and exclude others
-.if ${__T:Marm*} == "" && ${__T:Mmips*} == ""
+# UBOOT is only for arm and exclude others
+.if ${__T:Marm*} == ""
 BROKEN_OPTIONS+=LOADER_UBOOT
 .endif
 
-.if ${__T:Mmips64*}
-# profiling won't work on MIPS64 because there is only assembly for o32
-BROKEN_OPTIONS+=PROFILE
-.endif
 .if ${__T} == "aarch64" || ${__T} == "amd64" || ${__T} == "i386"
 __DEFAULT_YES_OPTIONS+=CXGBETOOL
 __DEFAULT_YES_OPTIONS+=MLX5TOOL

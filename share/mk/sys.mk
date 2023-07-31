@@ -13,7 +13,7 @@ unix		?=	We run MidnightBSD, not UNIX.
 # and/or endian.  This is called MACHINE_CPU in NetBSD, but that's used
 # for something different in MidnightBSD.
 #
-__TO_CPUARCH=C/mips(n32|64)?(el)?(hf)?/mips/:C/arm(v[67])?(eb)?/arm/:C/riscv64(sf)?/riscv/
+__TO_CPUARCH=C/arm(v[67])?(eb)?/arm/:C/riscv64(sf)?/riscv/
 MACHINE_CPUARCH=${MACHINE_ARCH:${__TO_CPUARCH}}
 .endif
 
@@ -166,7 +166,7 @@ CC		?=	c89
 CFLAGS		?=	-O
 .else
 CC		?=	cc
-.if ${MACHINE_CPUARCH} == "arm" || ${MACHINE_CPUARCH} == "mips"
+.if ${MACHINE_CPUARCH} == "arm"
 CFLAGS		?=	-O -pipe
 .else
 CFLAGS		?=	-O2 -pipe

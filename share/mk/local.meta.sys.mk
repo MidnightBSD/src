@@ -16,7 +16,6 @@ MK_INSTALL_AS_USER= yes
 # from src/Makefile (for universe)
 TARGET_ARCHES_arm?=     arm armv6 armv7
 TARGET_ARCHES_arm64?=   aarch64
-TARGET_ARCHES_mips?=    mipsel mips mips64el mips64 mipsn32 mipsn32el
 TARGET_ARCHES_riscv?=   riscv64 riscv64sf
 
 # some corner cases
@@ -24,7 +23,7 @@ BOOT_MACHINE_DIR.amd64 = boot/i386
 MACHINE_ARCH.host = ${_HOST_ARCH}
 
 # the list of machines we support
-ALL_MACHINE_LIST?= amd64 arm arm64 i386 mips riscv
+ALL_MACHINE_LIST?= amd64 arm arm64 i386 riscv
 .for m in ${ALL_MACHINE_LIST:O:u}
 MACHINE_ARCH_LIST.$m?= ${TARGET_ARCHES_${m}:U$m}
 MACHINE_ARCH.$m?= ${MACHINE_ARCH_LIST.$m:[1]}

@@ -235,7 +235,7 @@ CFLAGS.clang+=	 -Qunused-arguments
 CXXFLAGS.clang+=	 -Wno-c++11-extensions
 
 .if ${MK_SSP} != "no" && \
-    ${MACHINE_CPUARCH} != "arm" && ${MACHINE_CPUARCH} != "mips"
+    ${MACHINE_CPUARCH} != "arm"
 .if (${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 30500) || \
     (${COMPILER_TYPE} == "gcc" && \
      (${COMPILER_VERSION} == 40201 || ${COMPILER_VERSION} >= 40900))
