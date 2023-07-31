@@ -1,0 +1,2 @@
+
+MDASM+=	cerror.S

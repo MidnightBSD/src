@@ -143,8 +143,12 @@ KNOWN_ARCHES?=	aarch64/arm64 \
 		mipselhf/mips \
 		mips64elhf/mips \
 		mips64hf/mips \
+		powerpc \
+		powerpc64/powerpc \
+		powerpcspe/powerpc \
 		riscv64/riscv \
-		riscv64sf/riscv
+		riscv64sf/riscv \
+		sparc64
 
 .if ${TARGET} == ${TARGET_ARCH}
 _t=		${TARGET}
@@ -780,7 +784,7 @@ XCFLAGS+=	${BFLAGS}
 .endif
 
 .if ${MK_LIB32} != "no" && (${TARGET_ARCH} == "amd64" || \
-    ${TARGET_ARCH:Mmips64*} != "")
+    ${TARGET_ARCH} == "powerpc64" || ${TARGET_ARCH:Mmips64*} != "")
 LIBCOMPAT= 32
 .include "Makefile.libcompat"
 .elif ${MK_LIBSOFT} != "no" && ${TARGET_ARCH:Marmv[67]*} != ""
@@ -1587,7 +1591,11 @@ NO_KERNELOBJ=		t
 KERNCONF=${KERNFAST}
 .endif
 .endif
+.if ${TARGET_ARCH} == "powerpc64"
+KERNCONF?=	GENERIC64
+.else
 KERNCONF?=	GENERIC
+.endif
 INSTKERNNAME?=	kernel
 
 KERNSRCDIR?=	${.CURDIR}/sys
