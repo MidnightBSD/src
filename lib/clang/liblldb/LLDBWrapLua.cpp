@@ -70796,7 +70796,6 @@ static swig_lua_const_info swig_SwigModule_constants[]= {
     {SWIG_LUA_CONSTTAB_INT("eLanguageTypeC_plus_plus_14", lldb::eLanguageTypeC_plus_plus_14)},
     {SWIG_LUA_CONSTTAB_INT("eLanguageTypeFortran03", lldb::eLanguageTypeFortran03)},
     {SWIG_LUA_CONSTTAB_INT("eLanguageTypeFortran08", lldb::eLanguageTypeFortran08)},
-    {SWIG_LUA_CONSTTAB_INT("eLanguageTypeMipsAssembler", lldb::eLanguageTypeMipsAssembler)},
     {SWIG_LUA_CONSTTAB_INT("eLanguageTypeExtRenderScript", lldb::eLanguageTypeExtRenderScript)},
     {SWIG_LUA_CONSTTAB_INT("eNumLanguageTypes", lldb::eNumLanguageTypes)},
     {SWIG_LUA_CONSTTAB_INT("eInstrumentationRuntimeTypeAddressSanitizer", lldb::eInstrumentationRuntimeTypeAddressSanitizer)},

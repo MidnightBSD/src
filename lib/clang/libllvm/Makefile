@@ -665,7 +665,6 @@ SRCS_XDB+=	ExecutionEngine/RuntimeDyld/RuntimeDyldCOFF.cpp
 SRCS_XDB+=	ExecutionEngine/RuntimeDyld/RuntimeDyldChecker.cpp
 SRCS_XDB+=	ExecutionEngine/RuntimeDyld/RuntimeDyldELF.cpp
 SRCS_XDB+=	ExecutionEngine/RuntimeDyld/RuntimeDyldMachO.cpp
-SRCS_XDB+=	ExecutionEngine/RuntimeDyld/Targets/RuntimeDyldELFMips.cpp
 SRCS_XDB+=	ExecutionEngine/SectionMemoryManager.cpp
 SRCS_XDB+=	ExecutionEngine/TargetSelect.cpp
 SRCS_MIN+=	Frontend/OpenMP/OMP.cpp
@@ -1718,7 +1717,7 @@ beforebuild:
 
 # Note: some rules are superfluous, not every combination is valid.
 .for arch in \
-	AArch64/AArch64 ARM/ARM BPF/BPF Mips/Mips \
+	AArch64/AArch64 ARM/ARM BPF/BPF \
 	RISCV/RISCV X86/X86
 . for hdr in \
 	AsmMatcher/-gen-asm-matcher \
