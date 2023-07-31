@@ -12,10 +12,6 @@
  * Maybe you should write some free software too.
  */
 
-#ifndef lint
-static const char rcsid[] =
-#endif /* not lint */
-
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
