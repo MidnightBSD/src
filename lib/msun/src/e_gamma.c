@@ -14,10 +14,10 @@
 
 #include <sys/cdefs.h>
 
-/* __ieee754_gamma(x)
+/* gamma(x)
  * Return the logarithm of the Gamma function of x.
  *
- * Method: call __ieee754_gamma_r
+ * Method: call gamma_r
  */
 
 #include "math.h"
@@ -26,7 +26,7 @@
 extern int signgam;
 
 double
-__ieee754_gamma(double x)
+gamma(double x)
 {
-	return __ieee754_gamma_r(x,&signgam);
+	return gamma_r(x,&signgam);
 }
