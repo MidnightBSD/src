@@ -14,7 +14,7 @@
 #include <sys/cdefs.h>
 
 /*
- * __ieee754_scalb(x, fn) is provide for
+ * scalb(x, fn) is provide for
  * passing various standard test suite. One 
  * should use scalbn() instead.
  */
@@ -24,10 +24,10 @@
 
 #ifdef _SCALB_INT
 double
-__ieee754_scalb(double x, int fn)
+scalb(double x, int fn)
 #else
 double
-__ieee754_scalb(double x, double fn)
+scalb(double x, double fn)
 #endif
 {
 #ifdef _SCALB_INT
