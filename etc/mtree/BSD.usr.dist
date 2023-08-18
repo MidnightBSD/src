@@ -962,13 +962,13 @@
             cat3
             ..
             cat4
+                aarch64
+                ..
                 amd64
                 ..
                 arm
                 ..
                 i386
-                ..
-                powerpc
                 ..
             ..
             cat5
@@ -978,11 +978,11 @@
             cat7
             ..
             cat8
+                aarch64
+                ..
                 amd64
                 ..
                 i386
-                ..
-                powerpc
                 ..
             ..
             cat9
@@ -995,13 +995,13 @@
                 cat3
                 ..
                 cat4
+                    aarch64
+                    ..
                     amd64
                     ..
                     arm
                     ..
                     i386
-                    ..
-                    powerpc
                     ..
                 ..
                 cat5
@@ -1011,11 +1011,11 @@
                 cat7
                 ..
                 cat8
+                    aarch64
+                    ..
                     amd64
                     ..
                     i386
-                    ..
-                    powerpc
                     ..
                 ..
                 cat9
@@ -1035,8 +1035,6 @@
                     ..
                     i386
                     ..
-                    powerpc
-                    ..
                 ..
                 cat5
                 ..
@@ -1048,8 +1046,6 @@
                     amd64
                     ..
                     i386
-                    ..
-                    powerpc
                     ..
                 ..
                 cat9
@@ -1101,13 +1097,13 @@
             man3
             ..
             man4
+                aarch64
+                ..
                 amd64
                 ..
                 arm
                 ..
                 i386
-                ..
-                powerpc
                 ..
             ..
             man5
@@ -1120,8 +1116,6 @@
                 amd64
                 ..
                 i386
-                ..
-                powerpc
                 ..
             ..
             man9
