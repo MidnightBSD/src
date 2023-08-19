@@ -126,14 +126,14 @@ int		 mtree_specspec(FILE *, FILE *);
 void		 free_nodes(NODE *);
 char		*vispath(const char *);
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #define KEY_DIGEST "digest"
 #else
 #define KEY_DIGEST
 #endif
 
 #define	MD5KEY		"md5"		KEY_DIGEST
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #define	RMD160KEY	"ripemd160"	KEY_DIGEST
 #else
 #define	RMD160KEY	"rmd160"	KEY_DIGEST
