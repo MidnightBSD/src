@@ -43,10 +43,6 @@
         ..
         midnightbsd-update  mode=0700
         ..
-        mtree
-        ..
-        ntp             uname=_ntp gname=_ntp
-        ..
         mport
             downloads
             ..
@@ -56,6 +52,8 @@
         msearch         uname=nobody
         ..
         mtree
+        ..
+        ntp             uname=_ntp gname=_ntp
         ..
         ports
         ..
