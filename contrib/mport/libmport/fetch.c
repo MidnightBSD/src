@@ -246,6 +246,7 @@ fetch_to_file(mportInstance *mport, const char *url, FILE *local, bool progress)
 	size_t size;																	
 	size_t got = 0;
 	size_t wrote;
+	char msg[1024];
 
 	if (progress)	
 		mport_call_progress_init_cb(mport, "Downloading %s", url);
@@ -270,8 +271,10 @@ fetch_to_file(mportInstance *mport, const char *url, FILE *local, bool progress)
 	
 		got += size;
 
-		if (progress)	
-			(mport->progress_step_cb)(got, ustat.size, "XXX Rate");
+		if (progress) {	
+			snprintf(msg, 1024, "Downloading %s (%.2f%%)", url, (double)got / (double) ustat.size);
+			(mport->progress_step_cb)(got, ustat.size, msg);
+		}
 
 		for (ptr = buffer; size > 0; ptr += wrote, size -= wrote) {
 			wrote = fwrite(ptr, 1, size, local);

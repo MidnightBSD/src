@@ -908,11 +908,29 @@ int
 clean(mportInstance *mport)
 {
 	int ret;
+	int result = MPORT_OK;
 
 	ret = mport_clean_database(mport);
-	if (ret == MPORT_OK)
-		ret = mport_clean_oldpackages(mport);
-	return (ret);
+	if (ret != MPORT_OK) {
+		result = ret;
+	}
+
+	ret = mport_clean_oldpackages(mport);
+	if (ret != MPORT_OK) {
+		result = ret;
+	}
+
+	ret = mport_clean_oldmtree(mport);
+	if (ret != MPORT_OK) {
+		result = ret;
+	}
+	
+	ret = mport_clean_tempfiles(mport);
+	if (ret != MPORT_OK) {
+		result = ret;
+	}
+		
+	return (result);
 }
 
 int
