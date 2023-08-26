@@ -50,7 +50,7 @@
 #define MPORT_MASTER_VERSION 10
 #define MPORT_BUNDLE_VERSION 5
 #define MPORT_BUNDLE_VERSION_STR "5"
-#define MPORT_VERSION "2.4.2"
+#define MPORT_VERSION "2.4.3"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"

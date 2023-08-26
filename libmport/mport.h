@@ -186,6 +186,16 @@ typedef struct {
   mportType type;
 } mportIndexEntry;
 
+typedef struct {
+  char port[128];
+  char moved_to[128];
+  char why[128];
+  char date[32];
+
+  char pkgname[128];
+  char moved_to_pkgname[128];
+} mportIndexMovedEntry;
+
 int mport_index_load(mportInstance *);
 int mport_index_get(mportInstance *);
 int mport_index_check(mportInstance *, mportPackageMeta *);
@@ -197,6 +207,8 @@ void mport_index_entry_free_vec(mportIndexEntry **);
 void mport_index_entry_free(mportIndexEntry *);
 
 int mport_index_print_mirror_list(mportInstance *);
+
+int mport_moved_lookup(mportInstance *, const char *, mportIndexMovedEntry ***);
 
 /* Index Depends */
 
@@ -292,6 +304,8 @@ const char * mport_err_string(void);
 /* Clean */
 int mport_clean_database(mportInstance *);
 int mport_clean_oldpackages(mportInstance *);
+int mport_clean_oldmtree(mportInstance *);
+int mport_clean_tempfiles(mportInstance *);
 
 /* Setting */
 char * mport_setting_get(mportInstance *, const char *);

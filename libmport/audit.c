@@ -68,6 +68,7 @@ mport_audit(mportInstance *mport, const char *packageName, bool dependOn)
 			if (jsonData == NULL) {
 				SET_ERROR(MPORT_ERR_FATAL, "Error opening CVE file");
 				unlink(path);
+				free(path);
 				return (NULL);
 			}
 
@@ -82,6 +83,7 @@ mport_audit(mportInstance *mport, const char *packageName, bool dependOn)
 
 				free(jsonData);
 				unlink(path);
+				free(path);
 
 				return (NULL);
 			}
@@ -172,6 +174,10 @@ static char *readJsonFile(char *jsonFile)
 		size_t size;
 		char *buffer;
 
+		if (jsonFile == NULL) {
+			return (NULL);
+		}
+		
 		// Open the JSON file
 		fp = fopen(jsonFile, "rb");
 		if (!fp) {
