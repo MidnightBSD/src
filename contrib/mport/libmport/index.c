@@ -1,6 +1,7 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
+ * Copyright (c) 2023 Lucas Holt
  * Copyright (c) 2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -44,6 +45,7 @@ static int index_last_checked_recentish(mportInstance *);
 static int index_update_last_checked(mportInstance *);
 
 static int lookup_alias(mportInstance *, const char *, char **);
+static int lookup_alias_inverse(mportInstance *, const char *, char **);
 
 static int attach_index_db(sqlite3 *db);
 
@@ -254,8 +256,6 @@ index_update_last_checked(mportInstance *mport)
 /*
  * Fills the string vector with the list of the mirrors for the current
  * country.  
- * 
- * XXX - The country is currently hardcoded to the US.
  */
 int
 mport_index_get_mirror_list(mportInstance *mport, char ***list_p, int *list_size)
@@ -653,6 +653,86 @@ mport_index_list(mportInstance *mport, mportIndexEntry ***entry_vec)
 	return ret;
 }
 
+MPORT_PUBLIC_API int
+mport_moved_lookup(mportInstance *mport, const char *pkgname, mportIndexMovedEntry ***entry_vec)
+{
+	char *lookup = NULL;
+	int count;
+	int i = 0, step;
+	sqlite3_stmt *stmt;
+	int ret = MPORT_OK;
+	mportIndexMovedEntry **e = NULL;
+
+	if (mport == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
+	}
+
+	MPORT_CHECK_FOR_INDEX(mport, "mport_moved_lookup()")
+
+	if (lookup_alias_inverse(mport, pkgname, &lookup) != MPORT_OK) {
+		RETURN_CURRENT_ERROR;
+	}
+
+	if (mport_db_count(mport->db, &count, "SELECT count(*) FROM idx.moved  WHERE port = %Q", lookup) != MPORT_OK) {
+		RETURN_CURRENT_ERROR;
+	}
+
+	e = (mportIndexMovedEntry **) calloc((size_t) count + 1, sizeof(mportIndexMovedEntry *));
+	if (e == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "Could not allocate memory for moved entries");
+	}
+	*entry_vec = e;
+
+	if (count == 0) {
+		return MPORT_OK;
+	}
+
+	if (mport_db_prepare(mport->db, &stmt,
+	                     "SELECT port, moved_to, why, date FROM idx.moved WHERE port = %Q",
+	                     lookup) != MPORT_OK) {
+		ret = mport_err_code();
+		goto MOVED_DONE;
+	}
+
+	while (1) {
+		step = sqlite3_step(stmt);
+
+		if (step == SQLITE_ROW) {
+			if ((e[i] = (mportIndexMovedEntry *) calloc(1, sizeof(mportIndexMovedEntry))) == NULL) {
+				ret = MPORT_ERR_FATAL;
+				goto MOVED_DONE;
+			}
+
+			strlcpy(e[i]->port, sqlite3_column_text(stmt, 0), 128);
+			strlcpy(e[i]->moved_to, sqlite3_column_text(stmt, 0), 128);
+			strlcpy(e[i]->why, sqlite3_column_text(stmt, 0), 128);
+			strlcpy(e[i]->date, sqlite3_column_text(stmt, 0), 32);
+
+			strlcpy(e[i]->pkgname, pkgname, 128); // original package name
+
+			char *moved_pkg = NULL;
+			if (e[i]->moved_to[0] != '\0' && lookup_alias_inverse(mport, e[i]->moved_to, &moved_pkg) != MPORT_OK) {
+				ret = mport_err_code();
+				goto MOVED_DONE;
+			} else {
+				strlcpy(e[i]->moved_to_pkgname, moved_pkg, 128);
+			}
+
+			i++;
+		} else if (step == SQLITE_DONE) {
+			e[i] = NULL;
+			goto MOVED_DONE;
+		} else {
+			ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			goto MOVED_DONE;
+		}
+	}
+
+	MOVED_DONE:
+	sqlite3_finalize(stmt);
+	return ret;
+}
+
 static void
 populate_row(sqlite3_stmt *stmt, mportIndexEntry *e)
 {
@@ -667,6 +747,32 @@ populate_row(sqlite3_stmt *stmt, mportIndexEntry *e)
 	if (sqlite3_column_type(stmt, 6) == SQLITE_INTEGER) {
         e->type = sqlite3_column_int(stmt, 6);
 	}
+}
+
+static int
+lookup_alias_inverse(mportInstance *mport, const char *query, char **result)
+{
+	sqlite3_stmt *stmt;
+	int ret = MPORT_OK;
+
+	if (mport_db_prepare(mport->db, &stmt, "SELECT pkg FROM idx.aliases WHERE pkg=%Q", query) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	switch (sqlite3_step(stmt)) {
+		case SQLITE_ROW:
+			*result = strdup((const char *) sqlite3_column_text(stmt, 0));
+			break;
+		case SQLITE_DONE:
+			*result = strdup(query);
+			break;
+		default:
+			ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			break;
+	}
+
+	sqlite3_finalize(stmt);
+
+	return ret;
 }
 
 
