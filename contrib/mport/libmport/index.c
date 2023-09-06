@@ -343,6 +343,68 @@ mport_index_print_mirror_list(mportInstance *mport)
 	return MPORT_OK;
 }
 
+MPORT_PUBLIC_API int
+mport_index_mirror_list(mportInstance *mport, mportMirrorEntry ***entry_vec)
+{
+	
+	sqlite3_stmt *stmt;
+	int count;
+	mportMirrorEntry **e = NULL;
+	int ret = MPORT_OK;
+	int i = 0;
+
+	if (mport == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
+	}
+
+	MPORT_CHECK_FOR_INDEX(mport, "mport_index_lookup_pkgname()")
+
+
+	if (mport_db_count(mport->db, &count, "SELECT count(*) FROM idx.mirrors") != MPORT_OK) {
+		RETURN_CURRENT_ERROR;
+	}
+
+	e = (mportMirrorEntry **) calloc((size_t) count + 1, sizeof(mportMirrorEntry *));
+	if (e == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "Could not allocate memory for mirror entries");
+	}
+	*entry_vec = e;
+
+	if (count == 0) {	
+		return ret;
+	}
+
+	if (mport_db_prepare(mport->db, &stmt, "SELECT country, mirror FROM idx.mirrors ORDER BY country") != MPORT_OK) {
+		sqlite3_finalize(stmt);
+		RETURN_CURRENT_ERROR;
+	}
+
+	while (1) {
+		ret = sqlite3_step(stmt);
+
+		if (ret == SQLITE_ROW) {
+			if ((e[i] = (mportMirrorEntry *) calloc(1, sizeof(mportMirrorEntry))) == NULL) {
+				ret = MPORT_ERR_FATAL;
+				goto DONE;
+			}
+
+			strlcpy(e[i]->country, (const char *) sqlite3_column_text(stmt, 0), 5);
+			strlcpy(e[i]->url, (const char *) sqlite3_column_text(stmt, 1), 256);
+			i++;
+		} else if (ret == SQLITE_DONE) {
+			break;
+		} else {
+			sqlite3_finalize(stmt);
+			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+		}
+	}
+
+DONE:
+	sqlite3_finalize(stmt);
+	return ret;
+}
+
+
 /*
  * Looks up a pkgname from the index and fills a vector of index entries
  * with the result.
@@ -838,5 +900,34 @@ mport_index_entry_free(mportIndexEntry *e)
 	free(e->bundlefile);
 	free(e->license);
 	free(e->hash);
+	free(e);
+}
+
+MPORT_PUBLIC_API void
+mport_index_mirror_entry_free_vec(mportMirrorEntry **e)
+{
+	mportMirrorEntry **e_orig = e;
+
+	if (e == NULL) {
+		return;
+	}
+
+	while (*e != NULL) {
+		mport_index_mirror_entry_free(*e);
+		e++;
+	}
+
+	free(e_orig);
+	e_orig = NULL;
+}
+
+MPORT_PUBLIC_API void
+mport_index_mirror_entry_free(mportMirrorEntry *e)
+{
+
+	if (e == NULL) {
+		return;
+	}
+
 	free(e);
 }

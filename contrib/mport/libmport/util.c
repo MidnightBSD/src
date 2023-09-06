@@ -307,13 +307,27 @@ mport_rmdir(const char *dir, int ignore_nonempty)
 	return (MPORT_OK);
 }
 
+/**
+ * @brief register a new user shell 
+ * 
+ * @param shell_file path to shell file
+ * @return int MPORT_OK on success, MPORT_ERR_FATAL on failure
+ */
 int
 mport_shell_register(const char *shell_file)
 {
-	if (shell_file == NULL)
+	if (shell_file == NULL || shell_file[0] != '/')
 		RETURN_ERROR(MPORT_ERR_FATAL, "Shell to register is invalid.");
 
-	return mport_xsystem(NULL, "echo %s >> /etc/shells", shell_file);
+	FILE *fp;
+	fp = fopen("/etc/shells", "a");
+	if (fp == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Unable to open shell file.");
+
+	fprintf(fp, "%s\n", shell_file);
+	fclose(fp);
+
+	return (MPORT_OK);
 }
 
 int

@@ -23,7 +23,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"
-.Dd April 29, 2023
+.Dd September 4, 2023
 .Dt MPORT 1
 .Os
 .Sh NAME
@@ -78,10 +78,14 @@
 .Nm
 .Cm mirror list
 .Nm
+.Cm mirror select
+.Nm
 .Cm purl
 .Nm
 .Cm search
 .Op Ar name ...
+.Nm
+.Cm shell
 .Nm
 .Cm stats
 .Nm
@@ -155,11 +159,15 @@ allows the user to get the latest list of packages.
 Fetch and install a package
 .It Cm mirror list
 Lists all available package mirrors.
+.It Cm mirror select
+Pings various mirrors to attempt to select the closest and sets it as default.
 .It Cm purl
 Lists PURL for each installed package
 .It Cm search
 Search package names and descriptions.  Supports globbing queries such as 
 "*php*".
+.It Cm shell
+Starts a sqlite3 client connected to the mport master database.
 .It Cm stats
 List statistics about available and installed packages.
 .It Cm update Ao name Ac

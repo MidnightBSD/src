@@ -255,6 +255,15 @@ fetch_to_file(mportInstance *mport, const char *url, FILE *local, bool progress)
 		fclose(local);
 		RETURN_ERRORX(MPORT_ERR_FATAL, "Fetch error: %s: %s", url, fetchLastErrString);
 	}
+
+	char pkg[128];
+	char *loc = strrchr(url, '/');
+	if (loc!=NULL) {
+		strlcpy(pkg, loc + 1, 127);
+	} else {
+		strlcpy(pkg, url, 127);
+	}
+	double dlpercent = 0.0;
 	
 	while (1) {
 		size = fread(buffer, 1, BUFFSIZE, remote);
@@ -272,7 +281,11 @@ fetch_to_file(mportInstance *mport, const char *url, FILE *local, bool progress)
 		got += size;
 
 		if (progress) {	
-			snprintf(msg, 1024, "Downloading %s (%.2f%%)", url, (double)got / (double) ustat.size);
+			double val = ((double)got / (double) ustat.size) * 100;
+			if (val > dlpercent) {
+				dlpercent = val;
+             	snprintf(msg, 1024, "Downloading %s (%.2f%%)", pkg, dlpercent);
+			}
 			(mport->progress_step_cb)(got, ustat.size, msg);
 		}
 
