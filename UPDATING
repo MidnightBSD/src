@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20230905:
+	mport 2.4.5
+
+	(3.1 release happened on stable/3.1, continuing development)
+
 20230826:
 	mport 2.4.3
 
