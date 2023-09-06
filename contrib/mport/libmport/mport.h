@@ -160,6 +160,7 @@ typedef struct {
 	  time_t install_date;
     mportAction action; // not populated from package table
     mportType type;
+    int64_t flatsize;
 } __attribute__ ((aligned (16)))  mportPackageMeta;
 
 int mport_asset_get_assetlist(mportInstance *, mportPackageMeta *, mportAssetList **);
@@ -196,6 +197,11 @@ typedef struct {
   char moved_to_pkgname[128];
 } mportIndexMovedEntry;
 
+typedef struct {
+  char country[5];
+  char url[256];
+} mportMirrorEntry;
+
 int mport_index_load(mportInstance *);
 int mport_index_get(mportInstance *);
 int mport_index_check(mportInstance *, mportPackageMeta *);
@@ -207,6 +213,9 @@ void mport_index_entry_free_vec(mportIndexEntry **);
 void mport_index_entry_free(mportIndexEntry *);
 
 int mport_index_print_mirror_list(mportInstance *);
+int mport_index_mirror_list(mportInstance *, mportMirrorEntry ***);
+void mport_index_mirror_entry_free_vec(mportMirrorEntry **e);
+void mport_index_mirror_entry_free(mportMirrorEntry *);
 
 int mport_moved_lookup(mportInstance *, const char *, mportIndexMovedEntry ***);
 
@@ -310,6 +319,7 @@ int mport_clean_tempfiles(mportInstance *);
 /* Setting */
 char * mport_setting_get(mportInstance *, const char *);
 int mport_setting_set(mportInstance *, const char *, const char *);
+char ** mport_setting_list(mportInstance *);
 
 /* Utils */
 void mport_parselist(char *, char ***);
@@ -335,8 +345,8 @@ int mport_lock_islocked(mportPackageMeta *);
 typedef struct {
     unsigned int pkg_installed;
     unsigned int pkg_available;
-    /* off_t pkg_installed_size;
-       off_t pkg_available_size; */
+    int64_t pkg_installed_size;
+    /* TODO: int64_t pkg_available_size; */
 } mportStats;
 
 int mport_stats(mportInstance *, mportStats **);
@@ -346,5 +356,8 @@ mportStats * mport_stats_new(void);
 /* Import/Export */
 int mport_import(mportInstance*,  char *);
 int mport_export(mportInstance*, char *);
+
+/* Ping */
+long ping(char *hostname);
 
 #endif /* ! defined _MPORT_H */

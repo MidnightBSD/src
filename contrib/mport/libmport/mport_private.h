@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
- * Copyright (c) 2011, 2013, 2015, 2021, 2022 Lucas Holt
+ * Copyright (c) 2011, 2013, 2015, 2021, 2022, 2023 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -47,10 +47,10 @@
 
 #define MPORT_PUBLIC_API 
 
-#define MPORT_MASTER_VERSION 10
-#define MPORT_BUNDLE_VERSION 5
-#define MPORT_BUNDLE_VERSION_STR "5"
-#define MPORT_VERSION "2.4.3"
+#define MPORT_MASTER_VERSION 11
+#define MPORT_BUNDLE_VERSION 6
+#define MPORT_BUNDLE_VERSION_STR "6"
+#define MPORT_VERSION "2.4.5"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
@@ -184,7 +184,13 @@ int mport_set_errx(int , const char *, ...);
 #error "Unable to detect arch!"
 #endif
 
-#if __MidnightBSD_version >= 300000
+#if __MidnightBSD_version >= 400000
+#define MPORT_OSVERSION "4.0"
+#elif __MidnightBSD_version >= 302000
+#define MPORT_OSVERSION "3.2"
+#elif __MidnightBSD_version >= 301000
+#define MPORT_OSVERSION "3.1"
+#elif __MidnightBSD_version >= 300000
 #define MPORT_OSVERSION "3.0"
 #elif __MidnightBSD_version >= 202000
 #define MPORT_OSVERSION "2.2"
@@ -192,11 +198,8 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_OSVERSION "2.1"
 #elif __MidnightBSD_version >= 200000
 #define MPORT_OSVERSION "2.0"
-#elif __MidnightBSD_version >= 102000
-#define MPORT_OSVERSION "1.2"
-#elif __MidnightBSD_version >= 101000
 #else
-#error "libmport only supports MidnightBSD versions 1.2 and above."
+#error "libmport only supports MidnightBSD versions 2.0 and above."
 #endif
 
 /* fetch stuff */

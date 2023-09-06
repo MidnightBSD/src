@@ -1,8 +1,8 @@
 PROG= mport
 
-CFLAGS= -I ../libmport/ -g -L../libmport -lmport
+CFLAGS= -I ../libmport/ -g -L../libmport -lmport -lutil
 
-LIBADD+=	mport
+LIBADD+=	mport util
 
 BINDIR=	/usr/sbin
 
