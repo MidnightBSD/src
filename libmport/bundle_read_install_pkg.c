@@ -203,10 +203,10 @@ create_package_row(mportInstance *mport, mportPackageMeta *pkg)
 	/* Insert the package meta row into the packages table (We use pack here because things might have been twiddled) */
 	/* Note that this will be marked as dirty by default */
 	if (mport_db_do(mport->db,
-	                "INSERT INTO packages (pkg, version, origin, prefix, lang, options, comment, os_release, cpe, locked, deprecated, expiration_date, no_provide_shlib, flavor, automatic, install_date) VALUES (%Q,%Q,%Q,%Q,%Q,%Q,%Q,%Q,%Q,0,%Q,%ld,%d,%Q,%d,%ld)",
+	                "INSERT INTO packages (pkg, version, origin, prefix, lang, options, comment, os_release, cpe, locked, deprecated, expiration_date, no_provide_shlib, flavor, automatic, install_date, flatsize) VALUES (%Q,%Q,%Q,%Q,%Q,%Q,%Q,%Q,%Q,0,%Q,%ld,%d,%Q,%d,%ld,%ld)",
 	                pkg->name, pkg->version, pkg->origin, pkg->prefix, pkg->lang, pkg->options, pkg->comment,
 	                pkg->os_release, pkg->cpe, pkg->deprecated, pkg->expiration_date, pkg->no_provide_shlib,
-	                pkg->flavor, pkg->automatic, pkg->install_date) != MPORT_OK)
+	                pkg->flavor, pkg->automatic, pkg->install_date, pkg->flatsize) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	return MPORT_OK;

@@ -1,7 +1,7 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
- * Copyright (c) 2015, 2022 Lucas Holt
+ * Copyright (c) 2015, 2022, 2023 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -206,6 +206,8 @@ insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack,
 
 				if (sqlite3_bind_text(stmnt, 4, hash, -1, SQLITE_STATIC) != SQLITE_OK)
 					RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+
+				pack->flatsize += st.st_size;
 			} else {
 				sqlite3_bind_null(stmnt, 4);
 			}
@@ -236,7 +238,7 @@ insert_meta(mportInstance *mport, sqlite3 *db, mportPackageMeta *pack, mportCrea
 
 	sqlite3_stmt *stmnt = NULL;
 	const char *rest = 0;
-	char sql[] = "INSERT INTO packages (pkg, version, origin, lang, prefix, comment, os_release, cpe, deprecated, expiration_date, no_provide_shlib, flavor, type) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)";
+	char sql[] = "INSERT INTO packages (pkg, version, origin, lang, prefix, comment, os_release, cpe, deprecated, expiration_date, no_provide_shlib, flavor, type, flatsize) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
 	char *os_release = mport_get_osrelease(mport);
 	if (pack->cpe == NULL) {
@@ -306,6 +308,10 @@ insert_meta(mportInstance *mport, sqlite3 *db, mportPackageMeta *pack, mportCrea
 		return error_code;
 	}
 	if (sqlite3_bind_int(stmnt, 13, pack->type) != SQLITE_OK) {
+		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+		return error_code;
+	}
+	if (sqlite3_bind_int(stmnt, 14, pack->flatsize) != SQLITE_OK) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 		return error_code;
 	}

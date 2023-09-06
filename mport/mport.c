@@ -39,6 +39,7 @@
 #include <getopt.h>
 #include <mport.h>
 #include <mport_private.h>
+#include <libutil.h>
 
 #define MPORT_TOOLS_PATH "/usr/libexec/"
 
@@ -80,6 +81,8 @@ static int unlock(mportInstance *, const char *);
 static int which(mportInstance *, const char *, bool, bool);
 
 static int audit(mportInstance *, bool);
+
+static int selectMirror(mportInstance *mport);
 
 int
 main(int argc, char *argv[])
@@ -303,6 +306,12 @@ main(int argc, char *argv[])
 			free(searchQuery[i - 1]);
 		}
 		free(searchQuery);
+	} else if (!strcmp(cmd, "shell")) {
+		asprintf(&buf, "%s/%s", "/usr/bin", "sqlite3");
+                flag = strdup("/var/db/mport/master.db");
+                resultCode = execl(buf, "sqlite3", flag, (char *)0);
+                free(flag);
+                free(buf);
 	} else if (!strcmp(cmd, "stats")) {
 		loadIndex(mport);
 		resultCode = stats(mport);
@@ -315,7 +324,22 @@ main(int argc, char *argv[])
 			usage();
 		}
 
-		if (!strcmp(argv[1], "get")) {
+		if (!strcmp(argv[1], "list")) {
+			char** result = mport_setting_list(mport);
+			char **ptr = result;
+			if (result != NULL) {
+				int i = 0; 
+				while (*result != NULL) {
+					printf("%s\n", *result);
+					result++;
+					i++;
+				}
+				for (int j = 0; j < i; j++)
+					free(ptr[j]);
+				free(ptr);
+			}
+			resultCode = MPORT_OK;
+		} else if (!strcmp(argv[1], "get")) {
 			resultCode = configGet(mport, argv[2]);
 		} else if (!strcmp(argv[1], "set")) {
 			resultCode = configSet(mport, argv[2], argv[3]);
@@ -330,6 +354,9 @@ main(int argc, char *argv[])
 			printf("To set a mirror, use the following command:\n");
 			printf("mport set config mirror_region <country>\n\n");
 			resultCode = mport_index_print_mirror_list(mport);
+		} else if (!strcmp(argv[1], "select")) {
+			loadIndex(mport);
+			resultCode = selectMirror(mport);	
 		}
 	} else if (!strcmp(cmd, "cpe")) {
 		resultCode = cpeList(mport);
@@ -416,6 +443,7 @@ usage(void)
 	    "       mport clean\n"
 	    "       mport config get [setting name]\n"
 	    "       mport config set [setting name] [setting val]\n"
+	    "       mport config list\n"
 	    "       mport cpe\n"
 	    "       mport delete [package name]\n"
 	    "       mport deleteall\n"
@@ -429,8 +457,10 @@ usage(void)
 	    "       mport lock [package name]\n"
 	    "       mport locks\n"
 	    "       mport mirror list\n"
+	    "       mport mirror select\n"
 	    "       mport purl\n"
 	    "       mport search [query ...]\n"
+	    "       mport shell\n"
 	    "       mport stats\n"
 	    "       mport unlock [package name]\n"
 	    "       mport update [package name]\n"
@@ -477,6 +507,57 @@ lookupIndex(mportInstance *mport, const char *packageName)
 	}
 
 	return (indexEntries);
+}
+
+int
+selectMirror(mportInstance *mport)
+{
+
+	char *url = NULL;
+	int mirrorCount = 0;
+	mportMirrorEntry **mirrorEntry = NULL;
+	long rrts[32];
+	char hostname[256];
+ 
+	mport_index_mirror_list(mport, &mirrorEntry);
+	 
+	int fastest = 1000;
+	char *country = "us";
+
+	while(mirrorEntry != NULL && *mirrorEntry != NULL) {
+		char *p = strchr((*mirrorEntry)->url, '/');
+		if (p!= NULL) {
+			*p = '\0';
+			p++;
+			p++;
+        	}
+		char *end = strchr(p, '/');
+		if (end!= NULL) {
+			*end = '\0';
+       		}
+		strlcpy(hostname, p, sizeof(hostname));
+		mport_call_msg_cb(mport, "Trying mirror %s %s", (*mirrorEntry)->country, hostname);
+		long rtt = ping(hostname);
+
+		if (rtt != -1 && rtt < fastest) {
+			fastest = rtt;
+			country = (*mirrorEntry)->country;
+        	}
+
+		mirrorEntry++;
+	}
+
+	mport_call_msg_cb(mport, "Using mirror %s with rtt %d ms\n", country, fastest);
+	int result = mport_setting_set(mport, MPORT_SETTING_MIRROR_REGION, country);
+
+	if (result != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		return mport_err_code();
+	}
+
+	mport_index_mirror_entry_free_vec(mirrorEntry);
+
+	return MPORT_OK;
 }
 
 int
@@ -562,14 +643,18 @@ unlock(mportInstance *mport, const char *packageName)
 static int
 stats(mportInstance *mport)
 {
+	char flatsize_str[8];
 	mportStats *s = NULL;
 	if (mport_stats(mport, &s) != MPORT_OK) {
 		warnx("%s", mport_err_string());
 		return (1);
 	}
 
+	humanize_number(flatsize_str, sizeof(flatsize_str), s->pkg_installed_size, "B", HN_AUTOSCALE, HN_DECIMAL | HN_IEC_PREFIXES);
+
 	printf("Local package database:\n");
 	printf("\tInstalled packages: %d\n", s->pkg_installed);
+	printf("\tDisk space occupied: %s\n", flatsize_str);
 	printf("\nRemote package database:\n");
 	printf("\tPackages available: %d\n", s->pkg_available);
 
@@ -924,7 +1009,7 @@ clean(mportInstance *mport)
 	if (ret != MPORT_OK) {
 		result = ret;
 	}
-	
+
 	ret = mport_clean_tempfiles(mport);
 	if (ret != MPORT_OK) {
 		result = ret;
