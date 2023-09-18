@@ -518,7 +518,7 @@ selectMirror(mportInstance *mport)
 	mport_index_mirror_list(mport, &mirrorEntry);
 	 
 	int fastest = 1000;
-	char *country = (char *) "us";
+	const char *country = "us";
 
 	while(mirrorEntry != NULL && *mirrorEntry != NULL) {
 		char *p = strchr((*mirrorEntry)->url, '/');
