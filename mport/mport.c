@@ -328,13 +328,13 @@ main(int argc, char *argv[])
 			char** result = mport_setting_list(mport);
 			char **ptr = result;
 			if (result != NULL) {
-				int i = 0; 
+				int c = 0; 
 				while (*result != NULL) {
 					printf("%s\n", *result);
 					result++;
-					i++;
+					c++;
 				}
-				for (int j = 0; j < i; j++)
+				for (int j = 0; j < c; j++)
 					free(ptr[j]);
 				free(ptr);
 			}
@@ -512,17 +512,13 @@ lookupIndex(mportInstance *mport, const char *packageName)
 int
 selectMirror(mportInstance *mport)
 {
-
-	char *url = NULL;
-	int mirrorCount = 0;
 	mportMirrorEntry **mirrorEntry = NULL;
-	long rrts[32];
 	char hostname[256];
  
 	mport_index_mirror_list(mport, &mirrorEntry);
 	 
 	int fastest = 1000;
-	char *country = "us";
+	char *country = (char *) "us";
 
 	while(mirrorEntry != NULL && *mirrorEntry != NULL) {
 		char *p = strchr((*mirrorEntry)->url, '/');
