@@ -40,6 +40,7 @@ MPORT_PUBLIC_API char *
 mport_info(mportInstance *mport, const char *packageName) {
 	mportIndexEntry **indexEntry;
 	mportPackageMeta **packs;
+	mportIndexMovedEntry **movedEntries;
 	char *status, *origin, *flavor, *deprecated;
 	char *os_release;
 	char *cpe;
@@ -70,10 +71,14 @@ mport_info(mportInstance *mport, const char *packageName) {
 
 	if (indexEntry == NULL || *indexEntry == NULL) {
 		SET_ERROR(MPORT_ERR_FATAL, "Could not resolve package.");
-		return (NULL);
 	}
 
 	if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
+		return (NULL);
+	}
+
+	if (mport_moved_lookup(mport, packageName, &movedEntries) != MPORT_OK) {
+		SET_ERROR(MPORT_ERR_FATAL, "The moved lookup failed.");
 		return (NULL);
 	}
 
@@ -105,9 +110,18 @@ mport_info(mportInstance *mport, const char *packageName) {
 		}
 		deprecated = (*packs)->deprecated;
 		if (deprecated == NULL || deprecated[0] == '\0') {
-			deprecated = strdup("no");
+			if (movedEntries != NULL && *movedEntries!= NULL && (*movedEntries)->date[0] != '\0') {
+				deprecated = strdup("yes");
+            } else {
+				deprecated = strdup("no");
+			}
 		}
 		expirationDate = (*packs)->expiration_date;
+		if (expirationDate == 0 && movedEntries != NULL && *movedEntries!= NULL && (*movedEntries)->date[0] != '\0') {
+			struct tm expDate;
+			strptime((*movedEntries)->date, "%Y-%m-%d", &expDate);
+			expirationDate = mktime(&expDate);
+		}
 		options = (*packs)->options;
 		if (options == NULL) {
 			options = strdup("");
@@ -120,39 +134,34 @@ mport_info(mportInstance *mport, const char *packageName) {
 		installDate = (*packs)->install_date;
 		type = (*packs)->type;
 		flatsize = (*packs)->flatsize;
-		snprintf(purl, sizeof(purl), "pkg:mport/midnightbsd/%s@%s?arch=%s&osrel=%s", (*indexEntry)->pkgname, (*packs)->version, MPORT_ARCH, os_release);
+		if (indexEntry != NULL)
+			snprintf(purl, sizeof(purl), "pkg:mport/midnightbsd/%s@%s?arch=%s&osrel=%s", (*indexEntry)->pkgname, (*packs)->version, MPORT_ARCH, os_release);
+		else
+			purl[0] = '\0';	
 	}
 
 	char flatsize_str[8];
 	humanize_number(flatsize_str, sizeof(flatsize_str), flatsize, "B", HN_AUTOSCALE, HN_DECIMAL | HN_IEC_PREFIXES);
 
+	if (packs != NULL) {
 	asprintf(&info_text,
 	         "%s-%s\n"
 	         "Name            : %s\nVersion         : %s\nLatest          : %s\nLicenses        : %s\nOrigin          : %s\n"
 	         "Flavor          : %s\nOS              : %s\n"
 	         "CPE             : %s\nPURL            : %s\nLocked          : %s\nPrime           : %s\nShared library  : %s\nDeprecated      : %s\nExpiration Date : %s\nInstall Date    : %s"
 	         "Comment         : %s\nOptions         : %s\nType            : %s\nFlat Size       : %s\nDescription     :\n%s\n",
-	         (*indexEntry)->pkgname, (*indexEntry)->version,
-	         (*indexEntry)->pkgname,
-	         status,
-	         (*indexEntry)->version,
-	         (*indexEntry)->license,
-	         origin,
-	         flavor,
-	         os_release,
-	         cpe,
-			 purl,
-	         locked ? "yes" : "no",
-	         automatic == MPORT_EXPLICIT ? "yes" : "no",
-	         no_shlib_provided ? "yes" : "no",
-	         deprecated,
+	         (*packs)->name, (*packs)->version,
+	         (*packs)->name, status, indexEntry != NULL ? (*indexEntry)->version : "", indexEntry != NULL ? (*indexEntry)->license : "", origin,
+	         flavor, os_release,
+		 cpe, purl, locked ? "yes" : "no", automatic == MPORT_EXPLICIT ? "yes" : "no", no_shlib_provided ? "yes" : "no", deprecated,
 	         expirationDate == 0 ? "" : ctime(&expirationDate),
 	         installDate == 0 ? "\n" : ctime(&installDate),
-	         (*indexEntry)->comment,
+	         indexEntry != NULL ? (*indexEntry)->comment : "",
 	         options,
-			 type == MPORT_TYPE_APP ? "Application" : "System", 
-			 flatsize_str,
-	         desc);
+		 type == MPORT_TYPE_APP ? "Application" : "System", 
+		 flatsize_str,
+		 desc);
+	}
 
 	if (packs == NULL) {
 		free(status);
@@ -170,6 +179,9 @@ mport_info(mportInstance *mport, const char *packageName) {
 
 	mport_index_entry_free_vec(indexEntry);
 	indexEntry = NULL;
+
+	free(movedEntries);
+	movedEntries = NULL;
 
 	return info_text;
 }

@@ -67,6 +67,7 @@ mport_upgrade(mportInstance *mport) {
 	struct ohash h;
 	unsigned int slot;
 	char *key;
+	char *msg;
 
 	if (mport == NULL) {
 		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized\n");
@@ -84,6 +85,42 @@ mport_upgrade(mportInstance *mport) {
 
 	ohash_init(&h, 6, &info);
 
+	// check for moved/expired packages first
+	packs = packs_orig;
+	while (*packs != NULL) {
+		mportIndexMovedEntry **movedEntries;
+
+		slot = ohash_qlookup(&h, (*packs)->name);
+		key = ohash_find(&h, slot);
+		if (key != NULL) {
+			continue;
+		}
+
+		if (mport_moved_lookup(mport, (*packs)->name, &movedEntries) != MPORT_OK ||
+		    movedEntries == NULL || *movedEntries == NULL) {
+            continue;
+        }
+
+		if ((*movedEntries)->date[0] != '\0') {
+			asprintf(&msg, "Package %s is deprecated with expiration date %s. Do you want to remove it?", (*packs)->name, (*movedEntries)->date);
+			if ((mport->confirm_cb)(msg, "Delete", "Don't delete", 1) == MPORT_OK) {
+				mport_delete_primative(mport, (*packs), true);
+				ohash_insert(&h, slot, (*packs)->name);
+			}	
+
+			continue;
+		}		
+
+		if ((*movedEntries)->moved_to_pkgname != NULL && (*movedEntries)->moved_to_pkgname[0]!= '\0') {   
+			mport_call_msg_cb(mport, "Package %s has moved to %s. Migrating %s\n", (*packs)->name, (*movedEntries)->moved_to_pkgname,  (*movedEntries)->moved_to_pkgname);
+			mport_delete_primative(mport, (*packs), true);
+			mport_install(mport, (*movedEntries)->moved_to_pkgname,  NULL, NULL, (*packs)->automatic);
+			ohash_insert(&h, slot, (*packs)->name);
+			ohash_insert(&h, slot, (*movedEntries)->moved_to_pkgname);
+		}
+	}
+
+    // update packages that haven't moved already
 	packs = packs_orig;
 	while (*packs != NULL) {
 

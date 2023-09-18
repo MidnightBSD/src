@@ -65,6 +65,8 @@ void mport_call_progress_init_cb(mportInstance *, const char *, ...);
 #define MPORT_PRECHECK_CONFLICTS   4
 #define MPORT_PRECHECK_UPGRADEABLE 8
 #define MPORT_PRECHECK_OS          16
+#define MPORT_PRECHECK_MOVED       32
+#define MPORT_PRECHECK_DEPRECATED  64
 int mport_check_preconditions(mportInstance *, mportPackageMeta *, long);
 
 /* schema */
