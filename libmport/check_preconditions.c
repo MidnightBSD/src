@@ -33,7 +33,8 @@
 #include "mport.h"
 #include "mport_private.h"
 
-
+static int check_if_moved(mportInstance *, mportPackageMeta *);
+static int check_if_deprecated(mportInstance *, mportPackageMeta *);
 static int check_if_installed(mportInstance *mport, mportPackageMeta *);
 static int check_conflicts(mportInstance *mport, mportPackageMeta *);
 static int check_depends(mportInstance *mport, mportPackageMeta *);
@@ -48,6 +49,8 @@ static int check_if_older_os(mportInstance *, mportPackageMeta *);
  *   MPORT_PRECHECK_CONFLICTS  -- Fail if the package has a conflict
  *   MPORT_PRECHECK_DEPENDS    -- Fail if the dependencies are not resolved
  *   MPORT_PRECHECK_OS	       -- Fail if the os version of the installed is older
+ *   MPORT_PRECHECK_MOVED      -- Fail if the package has been moved to another location
+ *   MPORT_PRECHECK_DEPRECATED -- Fail if the package has been deprecated and print the expiration date
  *
  * The checks are run in the order listed above.  The first failure
  * encountered is the one reported.   
@@ -57,6 +60,10 @@ static int check_if_older_os(mportInstance *, mportPackageMeta *);
  */
 int mport_check_preconditions(mportInstance *mport, mportPackageMeta *pack, long flags)
 {
+	if (flags & MPORT_PRECHECK_MOVED && check_if_moved(mport, pack) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+	if (flags & MPORT_PRECHECK_DEPRECATED && check_if_deprecated(mport, pack) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
 	if (flags & MPORT_PRECHECK_INSTALLED && check_if_installed(mport, pack) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 	if (flags & MPORT_PRECHECK_UPGRADEABLE && check_if_older_installed(mport, pack) != MPORT_OK)
@@ -69,6 +76,51 @@ int mport_check_preconditions(mportInstance *mport, mportPackageMeta *pack, long
 		RETURN_CURRENT_ERROR;
 
 	return MPORT_OK;
+}
+
+static int check_if_moved(mportInstance *mport, mportPackageMeta *pack)
+{
+	mportIndexMovedEntry **movedEntries;
+
+	if (mport_moved_lookup(mport, pack->name, &movedEntries) != MPORT_OK) {
+		SET_ERROR(MPORT_ERR_FATAL, "The moved lookup failed.");
+		RETURN_CURRENT_ERROR;
+	}
+
+	if (movedEntries == NULL || *movedEntries!= NULL) {
+		return MPORT_OK;
+	}
+
+	if ((*movedEntries)->date[0] != '\0')
+		return MPORT_OK; // it expired, not moved
+
+	if ((*movedEntries)->moved_to != NULL && (*movedEntries)->moved_to[0]!= '\0') {
+		SET_ERRORX(MPORT_ERR_FATAL, "The package %s has been moved to %s", pack->name, (*movedEntries)->moved_to);
+        RETURN_CURRENT_ERROR;
+	}
+
+	return MPORT_OK; // just pass it if it didn't match either scenario
+}
+
+static int check_if_deprecated(mportInstance *mport, mportPackageMeta *pack)
+{
+	mportIndexMovedEntry **movedEntries;
+
+	if (mport_moved_lookup(mport, pack->name, &movedEntries) != MPORT_OK) {
+		SET_ERROR(MPORT_ERR_FATAL, "The moved lookup failed.");
+		RETURN_CURRENT_ERROR;
+	}
+
+	if (movedEntries == NULL || *movedEntries!= NULL) {
+		return MPORT_OK;
+	}
+
+	if ((*movedEntries)->date[0] != '\0') {
+		SET_ERRORX(MPORT_ERR_FATAL, "%s expires on %s.", pack->name, (*movedEntries)->date);
+		RETURN_CURRENT_ERROR;
+	}
+
+	return MPORT_OK;	
 }
 
 static int check_if_installed(mportInstance *mport, mportPackageMeta *pack)

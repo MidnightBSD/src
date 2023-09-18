@@ -50,6 +50,7 @@ static int run_special_unexec(mportInstance *, mportPackageMeta *);
 static int run_pkg_deinstall(mportInstance *, mportPackageMeta *, const char *);
 static int delete_pkg_infra(mportInstance *, mportPackageMeta *);
 static int check_for_upwards_depends(mportInstance *, mportPackageMeta *);
+static bool is_safe_to_delete_dir(mportInstance *, mportPackageMeta *, const char *);
 
 MPORT_PUBLIC_API int
 mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
@@ -291,9 +292,13 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 		case ASSET_DIRRM:
 		case ASSET_DIRRMTRY:
 		case ASSET_DIR_OWNER_MODE:
-			if (mport_rmdir(file, type == ASSET_DIRRMTRY ? 1 : 0) != MPORT_OK) {
-				mport_call_msg_cb(mport, "Could not remove directory '%s': %s",
-				    file, mport_err_string());
+			if (is_safe_to_delete_dir(mport, pack, file)) {
+				if (mport_rmdir(file, type == ASSET_DIRRMTRY ? 1 : 0) != MPORT_OK) {
+					mport_call_msg_cb(mport, "Could not remove directory '%s': %s",
+				    	file, mport_err_string());
+				}
+			} else {
+				mport_call_msg_cb(mport, "Directory in use by another package? '%s'", file);
 			}
 
 			break;
@@ -344,6 +349,31 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 	syslog(LOG_NOTICE, "%s-%s deinstalled", pack->name, pack->version);
 
 	return (MPORT_OK);
+}
+
+bool is_safe_to_delete_dir(mportInstance *mport, mportPackageMeta *pack, const char *path) 
+{
+	sqlite3_stmt *stmt;
+	int count;
+
+	if (mport_db_prepare(mport->db, &stmt,
+		"SELECT count(*) from assets where pkg!=%Q and type in (%d, %d, %d, %d) and data=%Q",
+		pack->name, ASSET_DIR, ASSET_DIRRM, ASSET_DIRRMTRY, ASSET_DIR_OWNER_MODE, path) != MPORT_OK) {
+		RETURN_CURRENT_ERROR;
+	}
+
+	switch (sqlite3_step(stmt)) {
+	case SQLITE_ROW:
+		count = sqlite3_column_int(stmt, 0);
+		break;
+	default:
+		SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+		sqlite3_finalize(stmt);
+		return false;
+	}
+
+	sqlite3_finalize(stmt);
+	return (count == 0);
 }
 
 static int
