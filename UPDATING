@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20230918:
+	mport (post 2.4.5 changes)
+
+	Adds support for delete checks on directory entries
+
+	Check MOVED data for expired ports and display in mport info command 
+
 20230905:
 	mport 2.4.5
 
