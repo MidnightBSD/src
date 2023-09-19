@@ -423,7 +423,9 @@ mport_parselist(char *opt, char ***list, size_t *list_size)
 	char *input;
 	char *field;
 
-	/* intentionally not freed in here */
+	if (opt == NULL || list_size == NULL || list == NULL)
+		return;
+
 	if ((input = strdup(opt)) == NULL) {
 		*list = NULL;
 		return;
@@ -436,11 +438,13 @@ mport_parselist(char *opt, char ***list, size_t *list_size)
 	}
 
 	if (*list_size == 0) {
-		**list = NULL;
+		*list = NULL;
+		free(input);
 		return;
 	}
 
 	if ((*list = (char **)calloc((*list_size + 1), sizeof(char *))) == NULL) {
+		free(input);
 		return;
 	}
 
@@ -452,7 +456,7 @@ mport_parselist(char *opt, char ***list, size_t *list_size)
 		if (loc == *list_size)
 			break;
 
-		if (*field == '\0')
+		if (field == NULL || *field == '\0')
 			continue;
 
 		*vec = strdup(field);
@@ -461,6 +465,7 @@ mport_parselist(char *opt, char ***list, size_t *list_size)
 	}
 
 	*vec = NULL;
+	free(input);
 }
 
 /*

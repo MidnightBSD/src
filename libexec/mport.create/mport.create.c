@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 	while ((ch = getopt(argc, argv, "C:D:E:M:O:P:S:c:d:e:f:i:j:l:m:n:o:p:r:s:t:v:x:")) != -1) {
 		switch (ch) {
 			case 'o':
-			    strlcpy(extra->pkg_filename, optarg, sizeof(extra->pkg_filename));
+				strlcpy(extra->pkg_filename, optarg, sizeof(extra->pkg_filename));
 				break;
 			case 'n':
 				if (optarg != NULL) {
