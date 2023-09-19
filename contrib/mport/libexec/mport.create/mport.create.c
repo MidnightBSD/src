@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 	while ((ch = getopt(argc, argv, "C:D:E:M:O:P:S:c:d:e:f:i:j:l:m:n:o:p:r:s:t:v:x:")) != -1) {
 		switch (ch) {
 			case 'o':
-				extra->pkg_filename = strdup(optarg);
+			    strlcpy(extra->pkg_filename, optarg, sizeof(extra->pkg_filename));
 				break;
 			case 'n':
 				if (optarg != NULL) {
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case 's':
-				extra->sourcedir = strdup(optarg);
+				strlcpy(extra->sourcedir, optarg, sizeof(extra->sourcedir));
 				break;
 			case 'd':
 				if (optarg != NULL) {
@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case 'D':
-				mport_parselist(optarg, &(extra->depends));
+				mport_parselist(optarg, &(extra->depends), &(extra->depends_count));
 				break;
 			case 'M':
 				extra->mtree = strdup(optarg);
@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case 'C':
-				mport_parselist(optarg, &(extra->conflicts));
+				mport_parselist(optarg, &(extra->conflicts), &(extra->conflicts_count));
 				break;
 			case 'E':
 				strptime(optarg, "%Y-%m-%d", &expDate);
@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
 				extra->pkgmessage = strdup(optarg);
 				break;
 			case 't':
-				mport_parselist(optarg, &(pack->categories));
+				mport_parselist(optarg, &(pack->categories), &(pack->categories_count));
 				break;
 			case 'x':
 				if (optarg != NULL) {

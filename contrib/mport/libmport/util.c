@@ -63,8 +63,8 @@ mport_createextras_new(void)
 	if (extra == NULL)
 		return NULL;
 
-	extra->pkg_filename = NULL;
-	extra->sourcedir = NULL;
+	extra->pkg_filename[0] = '\0';
+	extra->sourcedir[0] = '\0';
 	extra->mtree = NULL;
 	extra->pkginstall = NULL;
 	extra->pkgdeinstall = NULL;
@@ -78,15 +78,11 @@ mport_createextras_new(void)
 MPORT_PUBLIC_API void
 mport_createextras_free(mportCreateExtras *extra)
 {
-	int i;
+	size_t i;
 
 	if (extra == NULL)
 		return;
 
-	free(extra->pkg_filename);
-	extra->pkg_filename = NULL;
-	free(extra->sourcedir);
-	extra->sourcedir = NULL;
 	free(extra->mtree);
 	extra->mtree = NULL;
 	free(extra->pkginstall);
@@ -96,24 +92,26 @@ mport_createextras_free(mportCreateExtras *extra)
 	free(extra->pkgmessage);
 	extra->pkgmessage = NULL;
 
-	i = 0;
-	if (extra->conflicts != NULL) {
-		while (extra->conflicts[i] != NULL) {
+	if (extra->conflicts_count > 0 && extra->conflicts != NULL) {
+		for (i = 0; i < extra->conflicts_count; i++) {
+			if (extra->conflicts[i] == NULL) {
+				break;
+			}
 			free(extra->conflicts[i]);
 			extra->conflicts[i] = NULL;
-			i++;
 		}
-
+		
 		free(extra->conflicts);
 		extra->conflicts = NULL;
 	}
 
-	i = 0;
-	if (extra->depends != NULL) {
-		while (extra->depends[i] != NULL) {
+	if (extra->depends_count > 0 && extra->depends != NULL) {
+		for (i = 0; i < extra->depends_count; i++) {
+			if (extra->depends[i] == NULL) {
+				break;
+			}
 			free(extra->depends[i]);
 			extra->depends[i] = NULL;
-			i++;
 		}
 
 		free(extra->depends);
@@ -414,14 +412,14 @@ mport_xsystem(mportInstance *mport, const char *fmt, ...)
  *
  * char input[] = "foo bar baz"
  * char **list;
+ * size_t list_size;
  *
- * mport_parselist(input, &list);
+ * mport_parselist(input, &list, &list_size);
  * list = {"foo", "bar", "baz"};
  */
 void
-mport_parselist(char *opt, char ***list)
+mport_parselist(char *opt, char ***list, size_t *list_size)
 {
-	size_t len;
 	char *input;
 	char *field;
 
@@ -432,28 +430,33 @@ mport_parselist(char *opt, char ***list)
 	}
 
 	/* first we need to get the length of the dependency list */
-	for (len = 0; (field = strsep(&opt, " \t\n")) != NULL;) {
+	for (*list_size = 0; (field = strsep(&opt, " \t\n")) != NULL;) {
 		if (*field != '\0')
-			len++;
+			(*list_size)++;
 	}
 
-	if ((*list = (char **)calloc((len + 1), sizeof(char *))) == NULL) {
+	if (*list_size == 0) {
+		**list = NULL;
 		return;
 	}
 
-	if (len == 0) {
-		**list = NULL;
+	if ((*list = (char **)calloc((*list_size + 1), sizeof(char *))) == NULL) {
 		return;
 	}
 
 	/* dereference once so we don't lose our minds. */
 	char **vec = *list;
 
+	size_t loc = 0;
 	while ((field = strsep(&input, " \t\n")) != NULL) {
+		if (loc == *list_size)
+			break;
+
 		if (*field == '\0')
 			continue;
 
-		*vec = field;
+		*vec = strdup(field);
+		loc++;
 		vec++;
 	}
 
