@@ -124,8 +124,8 @@ static int build_create_extras(mportInstance *mport, mportPackageMeta *pkg, char
   extra = mport_createextras_new();
   *extra_p = extra;
  
-  extra->pkg_filename = strdup(tempfile); /* this MUST be on the heap, as it will be freed */
-  extra->sourcedir = strdup("");
+  strlcpy(extra->pkg_filename, tempfile, FILENAME_MAX);
+  extra->sourcedir[0] = '\0';
  
   if (build_create_extras_depends(mport, pkg, extra) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -205,6 +205,7 @@ static int build_create_extras_depends(mportInstance *mport, mportPackageMeta *p
 
   if ((extra->depends = (char **)calloc(count + 1, sizeof(char *))) == NULL)
     RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+  extra->depends_count = count;
  
   if (mport_db_prepare(mport->db, &stmt, "SELECT depend_pkgname, depend_pkgversion, depend_port FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK) {
 	  sqlite3_finalize(stmt);

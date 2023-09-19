@@ -149,6 +149,7 @@ typedef struct {
     char *prefix;
     char *origin;
     char **categories;
+    size_t categories_count;
     char *os_release;
     char *cpe;
     int locked;
@@ -253,11 +254,13 @@ typedef struct package_message {
 } mportPackageMessage;
 
 typedef struct {
-  char *pkg_filename;
-  char *sourcedir;
+  char pkg_filename[FILENAME_MAX];
+  char sourcedir[FILENAME_MAX];
   char **depends;
+  size_t depends_count;
   char *mtree;
   char **conflicts;
+  size_t conflicts_count;  
   char *pkginstall;
   char *pkgdeinstall;
   char *pkgmessage;
@@ -322,7 +325,7 @@ int mport_setting_set(mportInstance *, const char *, const char *);
 char ** mport_setting_list(mportInstance *);
 
 /* Utils */
-void mport_parselist(char *, char ***);
+void mport_parselist(char *, char ***, size_t *);
 int mport_verify_hash(const char *, const char *);
 int mport_file_exists(const char *);
 char * mport_version(mportInstance *);
