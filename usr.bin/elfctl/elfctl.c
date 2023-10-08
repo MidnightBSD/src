@@ -425,8 +425,8 @@ get_file_features(Elf *elf, int phcount, int fd, uint32_t *features,
 			}
 			read_total += namesz;
 
-			if (note.n_namesz != 8 ||
-			    strncmp("FreeBSD", name, 7) != 0 ||
+			if (note.n_namesz != 12 ||
+			    strncmp("MidnightBSD", name, 11) != 0 ||
 			    note.n_type != NT_FREEBSD_FEATURE_CTL) {
 				/* Not the right note. Skip the description */
 				if (lseek(fd, descsz, SEEK_CUR) < 0) {
