@@ -39,7 +39,10 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
-
+# 20231129: telnetd(8) removed
+OLD_FILES+=etc/pam.d/telnetd
+OLD_FILES+=usr/libexec/telnetd
+OLD_FILES+=usr/share/man/man8/telnetd.8.gz
 # 20230909: caroot bundle updated
 OLD_FILES+=usr/share/certs/trusted/E-Tugra_Certification_Authority.pem
 OLD_FILES+=usr/share/certs/trusted/E-Tugra_Global_Root_CA_ECC_v3.pem
