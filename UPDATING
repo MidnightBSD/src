@@ -3,6 +3,8 @@ Updating Information for MidnightBSD users.
 20231129:
 	telnetd(8) removed. Use mports/net/freebsd-telnetd if you need it
 
+	sqlite3 3.44.0
+
 20230905:
 	openssl 1.1.1w
 
