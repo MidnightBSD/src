@@ -1,5 +1,30 @@
 Updating Information for MidnightBSD users.
 
+20231205:
+        pf security issue: 
+        As part of its stateful TCP connection tracking implementation, pf
+        performs sequence number validation on inbound packets.  This makes it
+        difficult for a would-be attacker to spoof the sender and inject packets
+        into a TCP stream, since crafted packets must contain sequence numbers
+        which match the current connection state to avoid being rejected by the
+        firewall. A bug in the implementation of sequence number validation means that the
+        sequence number is not in fact validated, allowing an attacker who is
+        able to impersonate the remote host and guess the connection's port
+        numbers to inject packets into the TCP stream.
+
+20231009:
+	MidnightBSD 3.1.1 RELEASE
+
+	endian.h for linux compatibility.
+
+	regcomp fix
+
+	fix __sflush with line buffered streams
+
+	elfctl didn't work
+
+	openssl 1.1.1w
+
 20230918:
 	mport (post 2.4.5 changes)
 
