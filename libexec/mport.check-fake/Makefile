@@ -1,6 +1,6 @@
 PROG= mport.check-fake
 
-CFLAGS+=	-I${.CURDIR}/../../libmport/
+CFLAGS+=	-I${.CURDIR}/../../libmport/ -I/usr/include/private/ucl
 WARNS?= 	6
 
 MK_MAN=	no

@@ -1,7 +1,7 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
- * Copyright (c) 2010, 2021 Lucas Holt
+ * Copyright (c) 2010, 2021, 2023 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -36,20 +36,23 @@
 #include "mport.h"
 #include "mport_private.h"
 
+enum count_type { ALL, LOCKED, WHERE };
+
 static int populate_meta_from_stmt(mportPackageMeta *, sqlite3 *, sqlite3_stmt *);
 static int populate_vec_from_stmt(mportPackageMeta ***, int, sqlite3 *, sqlite3_stmt *);
-
+static int mport_pkgmeta_count(mportInstance *mport, enum count_type type, char *where);
 
 /* Package meta-data creation and destruction */
-MPORT_PUBLIC_API mportPackageMeta* 
-mport_pkgmeta_new(void) 
+MPORT_PUBLIC_API mportPackageMeta *
+mport_pkgmeta_new(void)
 {
-	mportPackageMeta *pack = (mportPackageMeta *) calloc(1, sizeof(mportPackageMeta));
+	mportPackageMeta *pack = (mportPackageMeta *)calloc(1, sizeof(mportPackageMeta));
 	if (pack == NULL) {
 		return NULL;
 	}
 
-	/* these items aren't always initialized from other sources and are needed to be an empty string for sqlite use. */
+	/* these items aren't always initialized from other sources and are needed to be an empty
+	 * string for sqlite use. */
 	pack->cpe = malloc(1 * sizeof(char));
 	pack->cpe[0] = '\0';
 
@@ -81,7 +84,7 @@ mport_pkgmeta_free(mportPackageMeta *pack)
 
 	free(pack->comment);
 	pack->comment = NULL;
-	
+
 	free(pack->desc);
 	pack->desc = NULL;
 
@@ -135,7 +138,6 @@ mport_pkgmeta_vec_free(mportPackageMeta **vec)
 	pkgmetas = NULL;
 }
 
-
 /* mport_pkgmeta_read_stub(mportInstance *mport, mportPackageMeta ***pack)
  *
  * Allocates and populates a vector of mportPackageMeta structs from the stub database
@@ -145,58 +147,63 @@ mport_pkgmeta_vec_free(mportPackageMeta **vec)
 int
 mport_pkgmeta_read_stub(mportInstance *mport, mportPackageMeta ***ref)
 {
-    sqlite3_stmt *stmt;
-    sqlite3 *db = mport->db;
-    int len, ret;
+	sqlite3_stmt *stmt;
+	sqlite3 *db = mport->db;
+	int len;
+	int ret;
 
-    if (mport_db_prepare(db, &stmt, "SELECT COUNT(*) FROM stub.packages") != MPORT_OK)
-        RETURN_CURRENT_ERROR;
+	if (mport_db_prepare(db, &stmt, "SELECT COUNT(*) FROM stub.packages") != MPORT_OK)
+		RETURN_CURRENT_ERROR;
 
-    if (sqlite3_step(stmt) != SQLITE_ROW) {
-        sqlite3_finalize(stmt);
-        RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-    }
+	if (sqlite3_step(stmt) != SQLITE_ROW) {
+		sqlite3_finalize(stmt);
+		RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+	}
 
-    len = sqlite3_column_int(stmt, 0);
-    sqlite3_finalize(stmt);
+	len = sqlite3_column_int(stmt, 0);
+	sqlite3_finalize(stmt);
 
-    if (len == 0) {
-        /* a stub should have packages! */
-        RETURN_ERROR(MPORT_ERR_FATAL, "stub database contains no packages.");
-    }
+	if (len == 0) {
+		/* a stub should have packages! */
+		RETURN_ERROR(MPORT_ERR_FATAL, "stub database contains no packages.");
+	}
 
-    // this is nasty, but we want to maintain backward compatibility with older packages. 
-    if (mport_db_prepare(db, &stmt,
-	    "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, 0 as locked, deprecated, expiration_date, no_provide_shlib, flavor, 0 as automatic, 0 as install_date, type, flatsize FROM stub.packages") != MPORT_OK) {
-	    sqlite3_finalize(stmt);
+	// this is nasty, but we want to maintain backward compatibility with older packages.
+	if (mport_db_prepare(db, &stmt,
+		"SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, 0 as locked, deprecated, expiration_date, no_provide_shlib, flavor, 0 as automatic, 0 as install_date, type, flatsize FROM stub.packages") !=
+	    MPORT_OK) {
+		sqlite3_finalize(stmt);
 
-	    if (mport_db_prepare(db, &stmt,
-		    "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, 0 as locked, deprecated, expiration_date, no_provide_shlib, flavor, 0 as automatic, 0 as install_date, type, 0 as flatsize FROM stub.packages") != MPORT_OK) {
+		if (mport_db_prepare(db, &stmt,
+			"SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, 0 as locked, deprecated, expiration_date, no_provide_shlib, flavor, 0 as automatic, 0 as install_date, type, 0 as flatsize FROM stub.packages") !=
+		    MPORT_OK) {
 			sqlite3_finalize(stmt);
 
 			if (mport_db_prepare(db, &stmt,
-				"SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, 0 as locked, deprecated, expiration_date, no_provide_shlib, flavor, 0 as automatic, 0 as install_date, 0 as type, 0 as flatsize FROM stub.packages") != MPORT_OK) {
+				"SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, 0 as locked, deprecated, expiration_date, no_provide_shlib, flavor, 0 as automatic, 0 as install_date, 0 as type, 0 as flatsize FROM stub.packages") !=
+			    MPORT_OK) {
 				sqlite3_finalize(stmt);
 				RETURN_CURRENT_ERROR;
 			}
-	    }
-    }
+		}
+	}
 
-    ret = populate_vec_from_stmt(ref, len, db, stmt);
+	ret = populate_vec_from_stmt(ref, len, db, stmt);
 
-    sqlite3_finalize(stmt);
+	sqlite3_finalize(stmt);
 
-    return ret;
+	return ret;
 }
 
-/* mport_pkgmeta_search_master(mportInstance *mport, mportPacakgeMeta ***pack, const char *where, ...)
+/* mport_pkgmeta_search_master(mportInstance *mport, mportPacakgeMeta ***pack, const char *where,
+ * ...)
  *
  * Allocate and populate the package meta for the given package from the
  * master database.
- * 
+ *
  * 'where' and the vargs are used to be build a where clause.  For example to search by
  * name:
- * 
+ *
  * mport_pkgmeta_search_master(mport, &packvec, "pkg=%Q", name);
  *
  * or by origin
@@ -208,251 +215,263 @@ mport_pkgmeta_read_stub(mportInstance *mport, mportPackageMeta ***ref)
 MPORT_PUBLIC_API int
 mport_pkgmeta_search_master(mportInstance *mport, mportPackageMeta ***ref, const char *fmt, ...)
 {
-    va_list args;
-    sqlite3_stmt *stmt;
-    int ret, len;
-    char *where;
-    sqlite3 *db = mport->db;
+	va_list args;
+	sqlite3_stmt *stmt;
+	int ret;
+	int len;
+	char *where;
+	sqlite3 *db = mport->db;
 
-    va_start(args, fmt);
-    where = sqlite3_vmprintf(fmt, args);
-    va_end(args);
+	va_start(args, fmt);
+	where = sqlite3_vmprintf(fmt, args);
+	va_end(args);
 
-    if (where == NULL)
-        RETURN_ERROR(MPORT_ERR_FATAL, "Could not build where clause");
+	if (where == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Could not build where clause");
 
-    if (mport == NULL)
-    	RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
+	if (mport == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
 
-    if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages WHERE %s", where) != MPORT_OK) {
-        sqlite3_finalize(stmt);
-        RETURN_CURRENT_ERROR;
-    }
+	len = mport_pkgmeta_count(mport, WHERE, where);
 
-    if (sqlite3_step(stmt) != SQLITE_ROW) {
-        sqlite3_finalize(stmt);
-        RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-    }
+	if (len == 0) {
+		sqlite3_free(where);
+		*ref = NULL;
+		return MPORT_OK;
+	}
 
-    len = sqlite3_column_int(stmt, 0);
-    sqlite3_finalize(stmt);
+	if (mport_db_prepare(db, &stmt,
+		"SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, locked, deprecated, expiration_date, no_provide_shlib, flavor, automatic, install_date, type, flatsize FROM packages WHERE %s",
+		where) != MPORT_OK) {
+		sqlite3_finalize(stmt);
+		RETURN_CURRENT_ERROR;
+	}
 
-    if (len == 0) {
-        sqlite3_free(where);
-        *ref = NULL;
-        return MPORT_OK;
-    }
+	ret = populate_vec_from_stmt(ref, len, db, stmt);
 
-    if (mport_db_prepare(db, &stmt,
-                         "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, locked, deprecated, expiration_date, no_provide_shlib, flavor, automatic, install_date, type, flatsize FROM packages WHERE %s",
-                         where) != MPORT_OK) {
-        sqlite3_finalize(stmt);
-        RETURN_CURRENT_ERROR;
-    }
+	sqlite3_free(where);
+	sqlite3_finalize(stmt);
 
-    ret = populate_vec_from_stmt(ref, len, db, stmt);
-
-    sqlite3_free(where);
-    sqlite3_finalize(stmt);
-
-    return ret;
+	return ret;
 }
 
+static int
+mport_pkgmeta_count(mportInstance *mport, enum count_type type, char *where)
+{
+	sqlite3_stmt *stmt = NULL;
+	int len = 0;
+	char *sql = NULL;
+
+	if (type == ALL)
+		sql = "SELECT count(*) FROM packages";
+	else if (type == LOCKED)
+		sql = "SELECT count(*) FROM packages WHERE locked = 1";
+	else if (type == WHERE)
+		sql = "SELECT count(*) FROM packages WHERE %s";
+
+	if (mport == NULL) return len;
+
+	if (type == WHERE && where != NULL) {
+		if (mport_db_prepare(mport->db, &stmt, sql, where) != MPORT_OK) {
+			sqlite3_finalize(stmt);
+			return len;
+		}
+	} else {
+		if (mport_db_prepare(mport->db, &stmt, sql) != MPORT_OK) {
+			sqlite3_finalize(stmt);
+			return len;
+		}
+	}
+
+	if (sqlite3_step(stmt) != SQLITE_ROW) {
+		sqlite3_finalize(stmt);
+		return len;
+	}
+
+	len = sqlite3_column_int(stmt, 0);
+	sqlite3_finalize(stmt);
+
+	return len;
+}
 
 /* int mport_pkgmeta_list(mportInstance *mport, mportPackageMeta ***ref)
  *
  * List all packages currently installed
- * 
+ *
  * pack is set to NULL and MPORT_OK is returned if no packages where found.
  */
 MPORT_PUBLIC_API int
 mport_pkgmeta_list(mportInstance *mport, mportPackageMeta ***ref)
 {
-    sqlite3_stmt *stmt;
-    int ret, len;
+	sqlite3_stmt *stmt;
+	int ret;
+	int len;
 
-    if (mport == NULL)
-    	RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
+	if (mport == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
 
-    sqlite3 *db = mport->db;
+	sqlite3 *db = mport->db;
 
-    if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages") != MPORT_OK) {
-        sqlite3_finalize(stmt);
-        RETURN_CURRENT_ERROR;
-    }
+	len = mport_pkgmeta_count(mport, ALL, NULL);
 
-    if (sqlite3_step(stmt) != SQLITE_ROW) {
-        sqlite3_finalize(stmt);
-        RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-    }
+	if (len == 0) {
+		*ref = NULL;
+		return MPORT_OK;
+	}
 
-    len = sqlite3_column_int(stmt, 0);
-    sqlite3_finalize(stmt);
+	if (mport_db_prepare(db, &stmt,
+		"SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, locked, deprecated, expiration_date, no_provide_shlib, flavor, automatic, install_date, type, flatsize FROM packages ORDER BY pkg, version") !=
+	    MPORT_OK) {
+		sqlite3_finalize(stmt);
+		RETURN_CURRENT_ERROR;
+	}
 
-    if (len == 0) {
-        *ref = NULL;
-        return MPORT_OK;
-    }
+	ret = populate_vec_from_stmt(ref, len, db, stmt);
 
-    if (mport_db_prepare(db, &stmt,
-                         "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, locked, deprecated, expiration_date, no_provide_shlib, flavor, automatic, install_date, type, flatsize FROM packages ORDER BY pkg, version") !=
-        MPORT_OK) {
-        sqlite3_finalize(stmt);
-        RETURN_CURRENT_ERROR;
-    }
+	sqlite3_finalize(stmt);
 
-    ret = populate_vec_from_stmt(ref, len, db, stmt);
-
-    sqlite3_finalize(stmt);
-
-    return ret;
+	return ret;
 }
 
 MPORT_PUBLIC_API int
 mport_pkgmeta_list_locked(mportInstance *mport, mportPackageMeta ***ref)
 {
-    sqlite3_stmt *stmt;
-    int ret, len;
+	sqlite3_stmt *stmt;
+	int ret, len;
 
-    if (mport == NULL)
-    	RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
+	if (mport == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
 
-    sqlite3 *db = mport->db;
+	sqlite3 *db = mport->db;
 
-    if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages where locked=1") != MPORT_OK) {
-        sqlite3_finalize(stmt);
-        RETURN_CURRENT_ERROR;
-    }
+	len = mport_pkgmeta_count(mport, LOCKED, NULL);
 
-    if (sqlite3_step(stmt) != SQLITE_ROW) {
-        sqlite3_finalize(stmt);
-        RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-    }
+	if (len == 0) {
+		*ref = NULL;
+		return MPORT_OK;
+	}
 
-    len = sqlite3_column_int(stmt, 0);
-    sqlite3_finalize(stmt);
+	if (mport_db_prepare(db, &stmt,
+		"SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, locked, deprecated, expiration_date, no_provide_shlib, flavor, automatic, install_date, type, flatsize FROM packages where locked=1 ORDER BY pkg, version") !=
+	    MPORT_OK) {
+		sqlite3_finalize(stmt);
+		RETURN_CURRENT_ERROR;
+	}
 
-    if (len == 0) {
-        *ref = NULL;
-        return MPORT_OK;
-    }
+	ret = populate_vec_from_stmt(ref, len, db, stmt);
 
-    if (mport_db_prepare(db, &stmt,
-                         "SELECT pkg, version, origin, lang, prefix, comment, os_release, cpe, locked, deprecated, expiration_date, no_provide_shlib, flavor, automatic, install_date, type, flatsize FROM packages where locked=1 ORDER BY pkg, version") !=
-        MPORT_OK) {
-        sqlite3_finalize(stmt);
-        RETURN_CURRENT_ERROR;
-    }
+	sqlite3_finalize(stmt);
 
-    ret = populate_vec_from_stmt(ref, len, db, stmt);
-
-    sqlite3_finalize(stmt);
-
-    return ret;
+	return ret;
 }
 
-/* mport_pkgmeta_get_downdepends(mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta ***pkg_vec)
- * 
- * Populate the depends of a pkg using the data in the master database.  
+/* mport_pkgmeta_get_downdepends(mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta
+ * ***pkg_vec)
+ *
+ * Populate the depends of a pkg using the data in the master database.
  */
 MPORT_PUBLIC_API int
-mport_pkgmeta_get_downdepends(mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta ***pkg_vec_p)
+mport_pkgmeta_get_downdepends(
+    mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta ***pkg_vec_p)
 {
-  int count = 0;
-  int ret;
-  sqlite3_stmt *stmt;
+	int count = 0;
+	int ret;
+	sqlite3_stmt *stmt;
 
-  if (mport == NULL)
-  	RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
-  
-  /* if the dependencies are set, there's nothing for us to do */
-  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK) {
-    sqlite3_finalize(stmt);
-    RETURN_CURRENT_ERROR;
-  }
-    
-  if (sqlite3_step(stmt) != SQLITE_ROW) {
-    sqlite3_finalize(stmt);
-    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-  }
-  
-  count = sqlite3_column_int(stmt, 0);
-  sqlite3_finalize(stmt);
-  
-  if (count == 0) {
-    *pkg_vec_p = NULL;
-    return MPORT_OK;  
-  }
+	if (mport == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
 
-  if (mport_db_prepare(mport->db, &stmt, 
-      "SELECT packages.pkg, packages.version, packages.origin, packages.lang, packages.prefix, packages.comment, packages.os_release, packages.cpe, packages.locked, packages.deprecated, packages.expiration_date, packages.no_provide_shlib, packages.flavor, packages.automatic, packages.install_date, packages.type, packages.flatsize FROM packages,depends WHERE packages.pkg=depends.depend_pkgname AND depends.pkg=%Q",
-      pkg->name) != MPORT_OK) {
-    sqlite3_finalize(stmt);
-    RETURN_CURRENT_ERROR;
-  }
+	/* if the dependencies are set, there's nothing for us to do */
+	if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM depends WHERE pkg=%Q",
+		pkg->name) != MPORT_OK) {
+		sqlite3_finalize(stmt);
+		RETURN_CURRENT_ERROR;
+	}
 
-  ret = populate_vec_from_stmt(pkg_vec_p, count, mport->db, stmt);
- 
-  sqlite3_finalize(stmt);
-  return ret; 
+	if (sqlite3_step(stmt) != SQLITE_ROW) {
+		sqlite3_finalize(stmt);
+		RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+	}
+
+	count = sqlite3_column_int(stmt, 0);
+	sqlite3_finalize(stmt);
+
+	if (count == 0) {
+		*pkg_vec_p = NULL;
+		return MPORT_OK;
+	}
+
+	if (mport_db_prepare(mport->db, &stmt,
+		"SELECT packages.pkg, packages.version, packages.origin, packages.lang, packages.prefix, packages.comment, packages.os_release, packages.cpe, packages.locked, packages.deprecated, packages.expiration_date, packages.no_provide_shlib, packages.flavor, packages.automatic, packages.install_date, packages.type, packages.flatsize FROM packages,depends WHERE packages.pkg=depends.depend_pkgname AND depends.pkg=%Q",
+		pkg->name) != MPORT_OK) {
+		sqlite3_finalize(stmt);
+		RETURN_CURRENT_ERROR;
+	}
+
+	ret = populate_vec_from_stmt(pkg_vec_p, count, mport->db, stmt);
+
+	sqlite3_finalize(stmt);
+	return ret;
 }
 
-/* mport_pkgmeta_get_updepends(mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta ***pkg_vec)
- * 
- * Populate the upwards depends of a pkg using the data in the master database.  
+/* mport_pkgmeta_get_updepends(mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta
+ * ***pkg_vec)
+ *
+ * Populate the upwards depends of a pkg using the data in the master database.
  */
 MPORT_PUBLIC_API int
-mport_pkgmeta_get_updepends(mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta ***pkg_vec_p)
+mport_pkgmeta_get_updepends(
+    mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta ***pkg_vec_p)
 {
-  int count = 0;
-  int ret;
-  sqlite3_stmt *stmt;
+	int count = 0;
+	int ret;
+	sqlite3_stmt *stmt;
 
-  if (mport == NULL)
-  	RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
-  
-  /* if the depends are set, there's nothing for us to do */
-  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM depends WHERE depend_pkgname=%Q", pkg->name) != MPORT_OK) {
-    sqlite3_finalize(stmt);
-    RETURN_CURRENT_ERROR;
-  }
-    
-  if (sqlite3_step(stmt) != SQLITE_ROW) {
-    sqlite3_finalize(stmt);
-    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-  }
-  
-  count = sqlite3_column_int(stmt, 0);
-  sqlite3_finalize(stmt);
-  
-  if (count == 0) {
-    *pkg_vec_p = NULL;
-    return MPORT_OK;  
-  }
+	if (mport == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
 
-  if (mport_db_prepare(mport->db, &stmt, 
-      "SELECT packages.pkg, packages.version, packages.origin, packages.lang, packages.prefix, packages.comment, packages.os_release, packages.cpe, packages.locked, packages.deprecated, packages.expiration_date, packages.no_provide_shlib, packages.flavor, packages.automatic, packages.install_date, packages.type, packages.flatsize FROM packages,depends WHERE packages.pkg=depends.pkg AND depends.depend_pkgname=%Q",
-                       pkg->name) != MPORT_OK) {
-    sqlite3_finalize(stmt);
-    RETURN_CURRENT_ERROR;
-  }
+	/* if the depends are set, there's nothing for us to do */
+	if (mport_db_prepare(mport->db, &stmt,
+		"SELECT COUNT(*) FROM depends WHERE depend_pkgname=%Q", pkg->name) != MPORT_OK) {
+		sqlite3_finalize(stmt);
+		RETURN_CURRENT_ERROR;
+	}
 
-  ret = populate_vec_from_stmt(pkg_vec_p, count, mport->db, stmt);
- 
-  sqlite3_finalize(stmt);
-  return ret; 
+	if (sqlite3_step(stmt) != SQLITE_ROW) {
+		sqlite3_finalize(stmt);
+		RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+	}
+
+	count = sqlite3_column_int(stmt, 0);
+	sqlite3_finalize(stmt);
+
+	if (count == 0) {
+		*pkg_vec_p = NULL;
+		return MPORT_OK;
+	}
+
+	if (mport_db_prepare(mport->db, &stmt,
+		"SELECT packages.pkg, packages.version, packages.origin, packages.lang, packages.prefix, packages.comment, packages.os_release, packages.cpe, packages.locked, packages.deprecated, packages.expiration_date, packages.no_provide_shlib, packages.flavor, packages.automatic, packages.install_date, packages.type, packages.flatsize FROM packages,depends WHERE packages.pkg=depends.pkg AND depends.depend_pkgname=%Q",
+		pkg->name) != MPORT_OK) {
+		sqlite3_finalize(stmt);
+		RETURN_CURRENT_ERROR;
+	}
+
+	ret = populate_vec_from_stmt(pkg_vec_p, count, mport->db, stmt);
+
+	sqlite3_finalize(stmt);
+	return ret;
 }
-
 
 /* mport_pkgmeta_logevent(mport, pkg, "Hi there!");
  *
  * Create an entry in the log table for this pkg (and version), using the given message.
  */
 int
-mport_pkgmeta_logevent(mportInstance *mport, mportPackageMeta *pkg, const char *msg) 
+mport_pkgmeta_logevent(mportInstance *mport, mportPackageMeta *pkg, const char *msg)
 {
 	struct timespec now;
-  
+
 	if (clock_gettime(CLOCK_REALTIME, &now) != 0) {
 		RETURN_ERROR(MPORT_ERR_FATAL, strerror(errno));
 	}
@@ -465,10 +484,10 @@ mport_pkgmeta_logevent(mportInstance *mport, mportPackageMeta *pkg, const char *
 
 	if (msg == NULL)
 		RETURN_ERROR(MPORT_ERR_WARN, "null message to log");
-          
-	return mport_db_do(mport->db, 
-	  "INSERT INTO log (pkg, version, date, msg) VALUES (%s,%s,%i,%s)", 
-		pkg->name, pkg->version, now.tv_sec, msg);
+
+	return mport_db_do(mport->db,
+	    "INSERT INTO log (pkg, version, date, msg) VALUES (%s,%s,%i,%s)", pkg->name,
+	    pkg->version, now.tv_sec, msg);
 }
 
 static int
@@ -476,29 +495,29 @@ populate_vec_from_stmt(mportPackageMeta ***ref, int len, sqlite3 *db, sqlite3_st
 {
 	mportPackageMeta **vec;
 	int done = 0;
-	vec = (mportPackageMeta **) calloc((1 + len), sizeof(mportPackageMeta *));
+	vec = (mportPackageMeta **)calloc((1 + len), sizeof(mportPackageMeta *));
 	*ref = vec;
 
 	while (!done) {
 		switch (sqlite3_step(stmt)) {
-			case SQLITE_ROW:
-				*vec = mport_pkgmeta_new();
-				if (*vec == NULL) {
-                    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate meta.");
-                }
-				if (populate_meta_from_stmt(*vec, db, stmt) != MPORT_OK) {
-                    RETURN_CURRENT_ERROR;
-                }
-				vec++;
-				break;
-			case SQLITE_DONE:
-				/* set the last cell in the array to null */
-				*vec = NULL;
-				done++;
-				break;
-			default:
-				RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-				break; /* not reached */
+		case SQLITE_ROW:
+			*vec = mport_pkgmeta_new();
+			if (*vec == NULL) {
+				RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate meta.");
+			}
+			if (populate_meta_from_stmt(*vec, db, stmt) != MPORT_OK) {
+				RETURN_CURRENT_ERROR;
+			}
+			vec++;
+			break;
+		case SQLITE_DONE:
+			/* set the last cell in the array to null */
+			*vec = NULL;
+			done++;
+			break;
+		default:
+			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			break; /* not reached */
 		}
 	}
 
@@ -506,13 +525,12 @@ populate_vec_from_stmt(mportPackageMeta ***ref, int len, sqlite3 *db, sqlite3_st
 	return MPORT_OK;
 }
 
-
 static int
 populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_stmt *stmt)
 {
 	const char *tmp = 0;
 
-    /* Copy pkg to pack->name */
+	/* Copy pkg to pack->name */
 	if ((tmp = sqlite3_column_text(stmt, 0)) == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 
@@ -561,8 +579,8 @@ populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_stmt *stmt)
 		if ((pack->os_release = strdup(MPORT_OSVERSION)) == NULL)
 			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 	} else {
-        if ((pack->os_release = strdup(tmp)) == NULL)
-            RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+		if ((pack->os_release = strdup(tmp)) == NULL)
+			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 	}
 
 	pack->locked = sqlite3_column_int(stmt, 8);
@@ -570,7 +588,7 @@ populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_stmt *stmt)
 	/* CPE */
 	if ((tmp = sqlite3_column_text(stmt, 7)) == NULL) {
 		if ((pack->cpe = strdup("")) == NULL)
-            RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 	} else {
 		if ((pack->cpe = strdup(tmp)) == NULL)
 			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
@@ -579,7 +597,7 @@ populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_stmt *stmt)
 	/* deprecated */
 	if ((tmp = sqlite3_column_text(stmt, 9)) == NULL) {
 		if ((pack->deprecated = strdup("")) == NULL)
-            RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 	} else {
 		if ((pack->deprecated = strdup(tmp)) == NULL)
 			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");

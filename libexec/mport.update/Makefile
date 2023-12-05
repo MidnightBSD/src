@@ -1,6 +1,6 @@
 PROG= mport.update
 
-CFLAGS+=	-I${.CURDIR}/../../libmport/ -fblocks
+CFLAGS+=	-I${.CURDIR}/../../libmport/ -I/usr/include/private/ucl
 WARNS?= 	4
 
 MK_MAN= no

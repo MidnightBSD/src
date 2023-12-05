@@ -335,6 +335,9 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 	if (mport_db_do(mport->db, "DELETE FROM categories WHERE pkg=%Q", pack->name) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
+	if (mport_pkg_message_display(mport, pack) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
 	if (delete_pkg_infra(mport, pack) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 

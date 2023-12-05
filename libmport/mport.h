@@ -56,6 +56,7 @@ typedef struct {
   char *root;
   char *outputPath; /* Download directory */
   bool noIndex; /* Do not fetch mport index */
+  bool offline; /* Installing packages from local files, etc. */
   bool quiet;
   mport_msg_cb msg_cb;
   mport_progress_init_cb progress_init_cb;

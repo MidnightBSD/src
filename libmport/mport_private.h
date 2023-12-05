@@ -43,6 +43,7 @@
 #endif
 #include <ohash.h>
 #include <sqlite3.h>
+#include <ucl.h>
 #include "bzlib.h"
 
 #define MPORT_PUBLIC_API 
@@ -50,7 +51,7 @@
 #define MPORT_MASTER_VERSION 11
 #define MPORT_BUNDLE_VERSION 6
 #define MPORT_BUNDLE_VERSION_STR "6"
-#define MPORT_VERSION "2.4.7"
+#define MPORT_VERSION "2.4.8"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
@@ -95,6 +96,7 @@ char* mport_hash_file(const char *);
 int mport_copy_file(const char *, const char *);
 uid_t mport_get_uid(const char *);
 gid_t mport_get_gid(const char *);
+char* mport_directory(const char *path);
 int mport_rmtree(const char *);
 int mport_mkdir(const char *);
 int mport_mkdirp(char *, mode_t);
@@ -149,6 +151,10 @@ int mport_update_down(mportInstance *, mportPackageMeta *, struct ohash_info *, 
 /* version compare functions */
 void mport_version_cmp_sqlite(sqlite3_context *, int, sqlite3_value **);
 int mport_version_require_check(const char *, const char *);
+
+int mport_pkg_message_display(mportInstance *, mportPackageMeta *);
+int mport_pkg_message_load(mportInstance *, mportPackageMeta *, mportPackageMessage *);
+mportPackageMessage* mport_pkg_message_from_ucl(mportInstance *, const ucl_object_t *, mportPackageMessage *);
 
 #define RETURN_CURRENT_ERROR return mport_err_code()
 #define RETURN_ERROR(code, msg) return mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))

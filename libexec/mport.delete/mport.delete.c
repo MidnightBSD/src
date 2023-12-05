@@ -108,6 +108,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	while (*packs != NULL) {
+		(*packs)->action = MPORT_ACTION_DELETE;
 		if (mport_delete_primative(mport, *packs, force) != MPORT_OK) {
 			warnx("%s", mport_err_string());
 			mport_instance_free(mport);
