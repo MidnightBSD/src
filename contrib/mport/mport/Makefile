@@ -1,6 +1,6 @@
 PROG= mport
 
-CFLAGS= -I ../libmport/ -g -L../libmport -lmport -lutil
+CFLAGS= -I ../libmport/ -I/usr/include/private/ucl -g -L../libmport -lmport -lutil
 CFLAGS+= -Werror -Wunused-variable -Wshadow -Wincompatible-pointer-types-discards-qualifiers
 
 LIBADD+=	mport util

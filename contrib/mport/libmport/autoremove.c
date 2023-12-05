@@ -79,6 +79,7 @@ mport_autoremove(mportInstance *mport) {
         depends = depends_start;
         while ((*depends) != NULL) {
             mport_call_msg_cb(mport, "Auto-removing %s", (*depends)->name);
+            (*depends)->action = MPORT_ACTION_DELETE;
             if (mport_delete_primative(mport, *depends, true) != MPORT_OK) {
                 mport_call_msg_cb(mport, "Unable to autoremove %s: %s", (*depends)->name, mport_err_string());
                 continue;

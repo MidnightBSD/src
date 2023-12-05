@@ -172,7 +172,7 @@ main(int argc, char *argv[])
 			}
 	
 			iestart = indexEntries;		
-			while (*indexEntries != NULL) {
+			while (indexEntries != NULL && *indexEntries != NULL) {
 				if (((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0) 
 					|| ((*packs)->version != NULL && mport_version_cmp((*packs)->os_release, os_release) < 0)) {
 

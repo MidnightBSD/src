@@ -104,6 +104,7 @@ mport_upgrade(mportInstance *mport) {
 		if ((*movedEntries)->date[0] != '\0') {
 			asprintf(&msg, "Package %s is deprecated with expiration date %s. Do you want to remove it?", (*packs)->name, (*movedEntries)->date);
 			if ((mport->confirm_cb)(msg, "Delete", "Don't delete", 1) == MPORT_OK) {
+				(*packs)->action = MPORT_ACTION_DELETE;
 				mport_delete_primative(mport, (*packs), true);
 				ohash_insert(&h, slot, (*packs)->name);
 			}	
@@ -113,7 +114,9 @@ mport_upgrade(mportInstance *mport) {
 
 		if ((*movedEntries)->moved_to_pkgname != NULL && (*movedEntries)->moved_to_pkgname[0]!= '\0') {   
 			mport_call_msg_cb(mport, "Package %s has moved to %s. Migrating %s\n", (*packs)->name, (*movedEntries)->moved_to_pkgname,  (*movedEntries)->moved_to_pkgname);
+			(*packs)->action = MPORT_ACTION_UPGRADE;
 			mport_delete_primative(mport, (*packs), true);
+			// TODO: how to mark this action as an update?
 			mport_install(mport, (*movedEntries)->moved_to_pkgname,  NULL, NULL, (*packs)->automatic);
 			ohash_insert(&h, slot, (*packs)->name);
 			ohash_insert(&h, slot, (*movedEntries)->moved_to_pkgname);
@@ -128,6 +131,7 @@ mport_upgrade(mportInstance *mport) {
 		key = ohash_find(&h, slot);
 		if (key == NULL) {
 			if (mport_index_check(mport, *packs)) {
+				(*packs)->action = MPORT_ACTION_UPGRADE;
 				updated += mport_update_down(mport, *packs, &info, &h);
 			}
 		}
@@ -158,6 +162,7 @@ mport_update_down(mportInstance *mport, mportPackageMeta *pack, struct ohash_inf
 			if (key == NULL) {
 				if (mport_index_check(mport, pack)) {
 					mport_call_msg_cb(mport, "Updating %s\n", pack->name);
+					pack->action = MPORT_ACTION_UPGRADE;
 					if (mport_update(mport, pack->name) !=0) {
 						mport_call_msg_cb(mport, "Error updating %s\n", pack->name);
 						ret = 0;
@@ -179,6 +184,7 @@ mport_update_down(mportInstance *mport, mportPackageMeta *pack, struct ohash_inf
 					ret += mport_update_down(mport, (*depends), info, h);
 					if (mport_index_check(mport, *depends)) {
 						mport_call_msg_cb(mport, "Updating depends %s\n", (*depends)->name);
+						(*depends)->action = MPORT_ACTION_UPGRADE;
 						if (mport_update(mport, (*depends)->name) != 0) {
 							mport_call_msg_cb(mport, "Error updating %s\n", (*depends)->name);
 						} else {
