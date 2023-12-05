@@ -12,6 +12,8 @@ Updating Information for MidnightBSD users.
         able to impersonate the remote host and guess the connection's port
         numbers to inject packets into the TCP stream.
 
+	mport 2.4.8
+
 20231009:
 	MidnightBSD 3.1.1 RELEASE
 
