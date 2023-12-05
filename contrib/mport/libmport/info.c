@@ -38,18 +38,18 @@
 
 MPORT_PUBLIC_API char *
 mport_info(mportInstance *mport, const char *packageName) {
-	mportIndexEntry **indexEntry;
-	mportPackageMeta **packs;
-	mportIndexMovedEntry **movedEntries;
+	mportIndexEntry **indexEntry = NULL;
+	mportPackageMeta **packs = NULL;
+	mportIndexMovedEntry **movedEntries = NULL;
 	char *status, *origin, *flavor, *deprecated;
-	char *os_release;
-	char *cpe;
+	char *os_release = NULL;
+	char *cpe = NULL;
 	int locked = 0;
 	int no_shlib_provided = 0;
 	char *info_text = NULL;
 	time_t expirationDate, installDate;
-	char *options;
-	char *desc;
+	char *options = NULL;
+	char *desc = NULL;
 	mportAutomatic automatic;
 	mportType type;
 	char purl[256];
@@ -112,10 +112,11 @@ mport_info(mportInstance *mport, const char *packageName) {
 		if (deprecated == NULL || deprecated[0] == '\0') {
 			if (movedEntries != NULL && *movedEntries!= NULL && (*movedEntries)->date[0] != '\0') {
 				deprecated = strdup("yes");
-            } else {
+			} else {
 				deprecated = strdup("no");
 			}
 		}
+
 		expirationDate = (*packs)->expiration_date;
 		if (expirationDate == 0 && movedEntries != NULL && *movedEntries!= NULL && (*movedEntries)->date[0] != '\0') {
 			struct tm expDate;
@@ -123,18 +124,24 @@ mport_info(mportInstance *mport, const char *packageName) {
 			expirationDate = mktime(&expDate);
 		}
 		options = (*packs)->options;
+
 		if (options == NULL) {
 			options = strdup("");
 		}
+
 		desc = (*packs)->desc;
 		if (desc == NULL) {
 			desc = strdup("");
 		}
+
 		automatic = (*packs)->automatic;
 		installDate = (*packs)->install_date;
 		type = (*packs)->type;
 		flatsize = (*packs)->flatsize;
-		if (indexEntry != NULL)
+
+		if (indexEntry == NULL || *indexEntry == NULL)
+			purl[0] = '\0';
+		else if (packs != NULL && (*indexEntry)->pkgname != NULL && (*packs)->version != NULL)
 			snprintf(purl, sizeof(purl), "pkg:mport/midnightbsd/%s@%s?arch=%s&osrel=%s", (*indexEntry)->pkgname, (*packs)->version, MPORT_ARCH, os_release);
 		else
 			purl[0] = '\0';	
@@ -143,20 +150,38 @@ mport_info(mportInstance *mport, const char *packageName) {
 	char flatsize_str[8];
 	humanize_number(flatsize_str, sizeof(flatsize_str), flatsize, "B", HN_AUTOSCALE, HN_DECIMAL | HN_IEC_PREFIXES);
 
-	if (packs != NULL) {
-	asprintf(&info_text,
+	if (indexEntry == NULL || *indexEntry == NULL) {
+		asprintf(&info_text,
 	         "%s-%s\n"
 	         "Name            : %s\nVersion         : %s\nLatest          : %s\nLicenses        : %s\nOrigin          : %s\n"
 	         "Flavor          : %s\nOS              : %s\n"
 	         "CPE             : %s\nPURL            : %s\nLocked          : %s\nPrime           : %s\nShared library  : %s\nDeprecated      : %s\nExpiration Date : %s\nInstall Date    : %s"
 	         "Comment         : %s\nOptions         : %s\nType            : %s\nFlat Size       : %s\nDescription     :\n%s\n",
 	         (*packs)->name, (*packs)->version,
-	         (*packs)->name, status, indexEntry != NULL ? (*indexEntry)->version : "", indexEntry != NULL ? (*indexEntry)->license : "", origin,
+	         (*packs)->name, status, "", "", origin,
 	         flavor, os_release,
 		 cpe, purl, locked ? "yes" : "no", automatic == MPORT_EXPLICIT ? "yes" : "no", no_shlib_provided ? "yes" : "no", deprecated,
 	         expirationDate == 0 ? "" : ctime(&expirationDate),
 	         installDate == 0 ? "\n" : ctime(&installDate),
-	         indexEntry != NULL ? (*indexEntry)->comment : "",
+	         "",
+	         options,
+		 type == MPORT_TYPE_APP ? "Application" : "System", 
+		 flatsize_str,
+		 desc);
+	} else if (packs != NULL) {
+		asprintf(&info_text,
+	         "%s-%s\n"
+	         "Name            : %s\nVersion         : %s\nLatest          : %s\nLicenses        : %s\nOrigin          : %s\n"
+	         "Flavor          : %s\nOS              : %s\n"
+	         "CPE             : %s\nPURL            : %s\nLocked          : %s\nPrime           : %s\nShared library  : %s\nDeprecated      : %s\nExpiration Date : %s\nInstall Date    : %s"
+	         "Comment         : %s\nOptions         : %s\nType            : %s\nFlat Size       : %s\nDescription     :\n%s\n",
+	         (*packs)->name, (*packs)->version,
+	         (*packs)->name, status, indexEntry == NULL ? "": (*indexEntry)->version, indexEntry == NULL ? "" : (*indexEntry)->license, origin,
+	         flavor, os_release,
+		 cpe, purl, locked ? "yes" : "no", automatic == MPORT_EXPLICIT ? "yes" : "no", no_shlib_provided ? "yes" : "no", deprecated,
+	         expirationDate == 0 ? "" : ctime(&expirationDate),
+	         installDate == 0 ? "\n" : ctime(&installDate),
+	         indexEntry == NULL ? "" : (*indexEntry)->comment,
 	         options,
 		 type == MPORT_TYPE_APP ? "Application" : "System", 
 		 flatsize_str,

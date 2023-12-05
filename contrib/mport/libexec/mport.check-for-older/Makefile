@@ -1,6 +1,6 @@
 PROG= mport.check-for-older
 
-CFLAGS+=	-I ../../libmport/
+CFLAGS+=	-I ../../libmport/ -I/usr/include/private/ucl
 WARNS?= 	4
 
 MK_MAN= no

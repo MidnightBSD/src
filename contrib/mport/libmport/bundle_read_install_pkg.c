@@ -1,7 +1,7 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
- * Copyright (c) 2013-2015, 2021 Lucas Holt
+ * Copyright (c) 2013-2015, 2021, 2023 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -59,8 +59,6 @@ static int run_pkg_install(mportInstance *, mportBundleRead *, mportPackageMeta 
 
 static int run_mtree(mportInstance *, mportBundleRead *, mportPackageMeta *);
 
-static int display_pkg_msg(mportInstance *, mportBundleRead *, mportPackageMeta *);
-
 static int get_file_count(mportInstance *, char *, int *);
 
 static int create_package_row(mportInstance *, mportPackageMeta *);
@@ -76,10 +74,6 @@ static char **parse_sample(char *input);
 static int mark_complete(mportInstance *, mportPackageMeta *);
 
 static int mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mportAssetList **alist_p, enum phase);
-
-static int load_pkg_msg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg, mportPackageMessage *packageMessage);
-
-static mportPackageMessage * pkg_message_from_ucl(mportInstance *mport, const ucl_object_t *obj, mportPackageMessage *msg);
 
 static int copy_metafile(mportInstance *, mportBundleRead *, mportPackageMeta *, char *);
 
@@ -854,7 +848,7 @@ do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
 	if (run_postexec(mport, pkg) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
-	if (display_pkg_msg(mport, bundle, pkg) != MPORT_OK)
+	if (mport_pkg_message_display(mport, pkg) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	if (run_pkg_install(mport, bundle, pkg, "POST-INSTALL") != MPORT_OK)
@@ -995,149 +989,4 @@ run_pkg_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
 	}
 
 	return MPORT_OK;
-}
-
-
-static int
-display_pkg_msg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
-{
-    mportPackageMessage packageMessage;
-    pkg_message_t expectedType;
-
-	packageMessage.minimum_version = NULL;
-	packageMessage.maximum_version = NULL;
-	packageMessage.str = NULL;
-	packageMessage.prev = NULL;
-	packageMessage.next = NULL;
-    packageMessage.type = PKG_MESSAGE_ALWAYS; // default type
-
-    if (load_pkg_msg(mport, bundle, pkg, &packageMessage) != MPORT_OK) {
-        RETURN_CURRENT_ERROR;
-    }
-
-    switch (pkg->action) {
-        case MPORT_ACTION_INSTALL:
-            expectedType = PKG_MESSAGE_INSTALL;
-            break;
-        case MPORT_ACTION_UPDATE:
-        case MPORT_ACTION_UPGRADE:
-            expectedType = PKG_MESSAGE_UPGRADE;
-            break;
-        case MPORT_ACTION_DELETE:
-            expectedType = PKG_MESSAGE_REMOVE;
-            break;
-        default:
-            expectedType = PKG_MESSAGE_INSTALL;
-    }
-
-    if (packageMessage.type == expectedType || packageMessage.type == PKG_MESSAGE_ALWAYS) {
-        if (packageMessage.str != NULL && packageMessage.str[0] != '\0')
-            mport_call_msg_cb(mport, "%s", packageMessage.str);
-    }
-
-    free(packageMessage.str);
-
-	return MPORT_OK;
-}
-
-
-static int
-load_pkg_msg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg, mportPackageMessage *packageMessage)
-{
-    char filename[FILENAME_MAX];
-    char *buf;
-    struct stat st;
-    FILE *file;
-    struct ucl_parser *parser;
-    ucl_object_t *obj;
-
-    (void) snprintf(filename, FILENAME_MAX, "%s/%s/%s-%s/%s", bundle->tmpdir, MPORT_STUB_INFRA_DIR, pkg->name,
-                    pkg->version, MPORT_MESSAGE_FILE);
-
-    if (stat(filename, &st) == -1) {
-        /* if we couldn't stat the file, we assume there isn't a pkg-msg */
-        return MPORT_OK;
-    }
-
-    if ((file = fopen(filename, "re")) == NULL)
-        RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open %s: %s", filename, strerror(errno));
-
-    if ((buf = (char *) calloc((size_t)(st.st_size + 1), sizeof(char))) == NULL)
-        RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
-
-    if (fread(buf, sizeof(char), (size_t) st.st_size, file) != (size_t) st.st_size) {
-        free(buf);
-        RETURN_ERRORX(MPORT_ERR_FATAL, "Read error: %s", strerror(errno));
-    }
-
-    buf[st.st_size] = '\0';
-
-    if (buf[0] == '[') {
-        parser = ucl_parser_new(0);
-        // remove leading/trailing array entries
-        buf[0] = ' ';
-        buf[st.st_size-1] = '\0';
-
-        if (ucl_parser_add_chunk(parser, (const unsigned char*)buf, st.st_size)) {
-            obj = ucl_parser_get_object(parser);
-            ucl_parser_free(parser);
-            free(buf);
-
-            packageMessage = pkg_message_from_ucl(mport, obj, packageMessage);
-            ucl_object_unref(obj);
-
-            return packageMessage == NULL ? MPORT_ERR_FATAL : MPORT_OK;
-        }
-
-        ucl_parser_free (parser);
-    } else {
-        /*obj = ucl_object_fromlstring(buf, st.st_size);
-        packageMessage = pkg_message_from_ucl(mport, obj, packageMessage);
-        ucl_object_unref(obj); */
-        packageMessage->str = strdup(buf);
-        packageMessage->type = PKG_MESSAGE_ALWAYS;
-        free(buf);
-    }
-
-    return MPORT_OK;
-}
-
-static mportPackageMessage *
-pkg_message_from_ucl(mportInstance *mport, const ucl_object_t *obj, mportPackageMessage *msg)
-{
-    const ucl_object_t *enhanced;
-
-    if (ucl_object_type(obj) == UCL_STRING) {
-        msg->str = strdup(ucl_object_tostring(obj));
-    } else if (ucl_object_type(obj) == UCL_OBJECT) {
-        /* New format of pkg message */
-        enhanced = ucl_object_find_key(obj, "message");
-        if (enhanced == NULL || ucl_object_type(enhanced) != UCL_STRING) {
-            return NULL;
-        }
-        msg->str = strdup(ucl_object_tostring(enhanced));
-
-        enhanced = ucl_object_find_key(obj, "minimum_version");
-        if (enhanced != NULL && ucl_object_type(enhanced) == UCL_STRING) {
-            msg->minimum_version = strdup(ucl_object_tostring(enhanced));
-        }
-
-        enhanced = ucl_object_find_key(obj, "type");
-        if (enhanced != NULL && ucl_object_type(enhanced) == UCL_STRING) {
-			const char *type = ucl_object_tostring(enhanced);
-			if (type != NULL) {
-				if (strcmp(type, "install") == 0) {
-					msg->type = PKG_MESSAGE_INSTALL;		
-				} else if (strcmp(type, "upgrade") == 0) {
-					msg->type = PKG_MESSAGE_UPGRADE;		
-				} else if (strcmp(type, "remove") == 0) {
-					msg->type = PKG_MESSAGE_REMOVE;	
-				} else {
-					msg->type = PKG_MESSAGE_ALWAYS;
-				}
-        	}
-		}
-    }
-
-    return msg;
 }

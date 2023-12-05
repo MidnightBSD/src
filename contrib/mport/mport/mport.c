@@ -51,6 +51,7 @@ static void loadIndex(mportInstance *);
 
 static mportIndexEntry **lookupIndex(mportInstance *, const char *);
 
+static int add(mportInstance *mport, const char *filename, mportAutomatic automatic);
 static int install(mportInstance *, const char *);
 
 static int cpeList(mportInstance *);
@@ -83,6 +84,8 @@ static int which(mportInstance *, const char *, bool, bool);
 static int audit(mportInstance *, bool);
 
 static int selectMirror(mportInstance *mport);
+
+static mportPackageMeta** lookup_for_lock(mportInstance *, const char *);
 
 int
 main(int argc, char *argv[])
@@ -162,7 +165,38 @@ main(int argc, char *argv[])
 
 	char *cmd = argv[0];
 
-	if (!strcmp(cmd, "install")) {
+	if (!strcmp(cmd, "add")) {
+		if (argc == 1) {
+			mport_instance_free(mport);
+			usage();
+		}
+
+		int local_argc = argc;
+		char *const *local_argv = argv;
+		int aflag = 0;
+
+		if (local_argc > 1) {
+			int ch2;
+			while ((ch2 = getopt(local_argc, local_argv, "A")) != -1) {
+				switch (ch2) {
+				case 'A':
+					aflag = 1;
+					break;
+				}
+			}
+			local_argc -= optind;
+			local_argv += optind;
+		}
+
+		mport->noIndex = true;
+		mport->offline = true;
+
+		for (i = 1; i < argc; i++) {
+			tempResultCode = add(mport, argv[i], aflag == 1 ? MPORT_AUTOMATIC : MPORT_EXPLICIT);
+			if (tempResultCode != 0)
+				resultCode = tempResultCode;
+		}
+	} else if (!strcmp(cmd, "install")) {
 		if (argc == 1) {
 			mport_instance_free(mport);
 			usage();
@@ -517,7 +551,7 @@ selectMirror(mportInstance *mport)
  
 	mport_index_mirror_list(mport, &mirrorEntry);
 	 
-	int fastest = 1000;
+	long fastest = 1000;
 	const char *country = "us";
 
 	while(mirrorEntry != NULL && *mirrorEntry != NULL) {
@@ -543,7 +577,7 @@ selectMirror(mportInstance *mport)
 		mirrorEntry++;
 	}
 
-	mport_call_msg_cb(mport, "Using mirror %s with rtt %d ms\n", country, fastest);
+	mport_call_msg_cb(mport, "Using mirror %s with rtt %ld ms\n", country, fastest);
 	int result = mport_setting_set(mport, MPORT_SETTING_MIRROR_REGION, country);
 
 	if (result != MPORT_OK) {
@@ -586,54 +620,54 @@ search(mportInstance *mport, char **query)
 	return (0);
 }
 
-int
-lock(mportInstance *mport, const char *packageName)
+static mportPackageMeta** 
+lookup_for_lock(mportInstance *mport, const char *packageName)
 {
 	mportPackageMeta **packs = NULL;
 
 	if (packageName == NULL) {
 		warnx("%s", "Specify package name");
-		return (1);
+		return (NULL);
 	}
 
 	if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
 		warnx("%s", mport_err_string());
-		return (1);
+		return (NULL);
 	}
 
 	if (packs == NULL) {
 		warnx("Package name not found, %s", packageName);
-		return (1);
-	} else {
-		mport_lock_lock(mport, (*packs));
 	}
 
-	return (0);
+	return (packs);
 }
 
-int
+static int
+lock(mportInstance *mport, const char *packageName)
+{
+	mportPackageMeta **packs = lookup_for_lock(mport, packageName);
+
+	if (packs != NULL) {
+		mport_lock_lock(mport, (*packs));
+		mport_pkgmeta_free(*packs);
+		return (MPORT_OK);
+	}
+
+	return (MPORT_ERR_FATAL);
+}
+
+static int
 unlock(mportInstance *mport, const char *packageName)
 {
-	mportPackageMeta **packs = NULL;
+	mportPackageMeta **packs = lookup_for_lock(mport, packageName);
 
-	if (packageName == NULL) {
-		warnx("%s", "Specify package name");
-		return (1);
-	}
-
-	if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
-		warnx("%s", mport_err_string());
-		return (1);
-	}
-
-	if (packs == NULL) {
-		warnx("Package name not found, %s", packageName);
-		return (1);
-	} else {
+	if (packs != NULL) {
 		mport_lock_unlock(mport, (*packs));
+		mport_pkgmeta_free(*packs);
+		return (MPORT_OK);
 	}
 
-	return (0);
+	return (MPORT_ERR_FATAL);
 }
 
 static int
@@ -711,16 +745,22 @@ which(mportInstance *mport, const char *filePath, bool quiet, bool origin)
 }
 
 int
+add(mportInstance *mport, const char *filename, mportAutomatic automatic) {
+	return mport_install_primative(mport, filename, NULL, automatic);
+}
+
+int
 install(mportInstance *mport, const char *packageName)
 {
 	mportIndexEntry **indexEntry = NULL;
+	mportIndexEntry **ie = NULL;
 	mportIndexEntry **i2 = NULL;
 	int resultCode;
 	int item;
 	int choice;
 
 	indexEntry = lookupIndex(mport, packageName);
-	if (*indexEntry == NULL) {
+	if (indexEntry == NULL || *indexEntry == NULL) {
 		int loc = -1;
 		size_t len = strlen(packageName);
 		for (int i = len - 1; i >= 0; i--) {
@@ -746,6 +786,7 @@ install(mportInstance *mport, const char *packageName)
 	if (indexEntry == NULL || *indexEntry == NULL)
 		errx(4, "Package %s not found in the index.", packageName);
 
+	ie = indexEntry;
 	if (indexEntry[1] != NULL) {
 		printf("Multiple packages found. Please select one:\n");
 		i2 = indexEntry;
@@ -767,10 +808,12 @@ install(mportInstance *mport, const char *packageName)
 		}
 	}
 
-	resultCode = mport_install_depends(
-	    mport, (*indexEntry)->pkgname, (*indexEntry)->version, MPORT_EXPLICIT);
+    if (indexEntry == NULL || *indexEntry == NULL) {
+		resultCode = mport_install_depends(
+	    	mport, (*indexEntry)->pkgname, (*indexEntry)->version, MPORT_EXPLICIT);
+	}
 
-	mport_index_entry_free_vec(indexEntry);
+	mport_index_entry_free_vec(ie);
 
 	return (resultCode);
 }
@@ -793,6 +836,7 @@ delete(mportInstance *mport, const char *packageName)
 	}
 
 	while (*packs != NULL) {
+		(*packs)->action = MPORT_ACTION_DELETE;
 		if (mport_delete_primative(mport, *packs, force) != MPORT_OK) {
 			warnx("%s", mport_err_string());
 			mport_pkgmeta_vec_free(packs);

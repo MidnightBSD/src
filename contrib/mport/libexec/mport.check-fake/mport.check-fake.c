@@ -89,10 +89,10 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	DIAG("assetlist = %s; destdir = %s; prefix = %s; skip = %s", assetlistfile, destdir, prefix, skip)
-
 	if (!prefix || !destdir || !assetlistfile) 
 		usage();
+
+	DIAG("assetlist = %s; destdir = %s; prefix = %s; skip = %s", assetlistfile, destdir, prefix, skip)
 
 	if (chroot_path != NULL) {
 		if (chroot(chroot_path) == -1) {

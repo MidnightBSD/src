@@ -56,6 +56,7 @@ mport_instance_init(mportInstance *mport, const char *root, const char *outputPa
 
 	mport->noIndex = noIndex;
 	mport->quiet = quiet;
+	mport->offline = false;
 
 	if (root != NULL) {
 		mport->root = strdup(root);

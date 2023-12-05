@@ -350,6 +350,34 @@ mport_file_exists(const char *file)
 	return (lstat(file, &st) == 0);
 }
 
+char *
+mport_directory(const char *path)
+{
+
+	if (path[0] == '/') {
+		// 'path' is a full path, so we can extract the directory directly
+		char *dir = strdup(path);
+		char *lastSlash = strrchr(dir, '/');
+		if (lastSlash != NULL) {
+			*lastSlash = '\0'; // Null-terminate at the last slash to get the directory
+			return dir;
+		} else {
+			free(dir);
+		}
+	} else {
+		// 'path' is just a filename, so get the current working directory
+		char currentDir[PATH_MAX];
+		if (getcwd(currentDir, sizeof(currentDir)) != NULL) {
+			// Construct the full path by appending the filename
+			strcat(currentDir, "/");
+			strcat(currentDir, path);
+			return strdup(currentDir);
+		}
+	}
+
+	return NULL;
+}
+
 /* mport_xsystem(mportInstance *mport, char *fmt, ...)
  *
  * Our own version on system that takes a format string and a list
@@ -433,7 +461,7 @@ mport_parselist(char *opt, char ***list, size_t *list_size)
 
 	/* first we need to get the length of the dependency list */
 	for (*list_size = 0; (field = strsep(&opt, " \t\n")) != NULL;) {
-		if (*field != '\0')
+		if (field != NULL && *field != '\0')
 			(*list_size)++;
 	}
 
