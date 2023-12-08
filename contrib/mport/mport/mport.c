@@ -755,7 +755,7 @@ install(mportInstance *mport, const char *packageName)
 	mportIndexEntry **indexEntry = NULL;
 	mportIndexEntry **ie = NULL;
 	mportIndexEntry **i2 = NULL;
-	int resultCode;
+	int resultCode = MPORT_OK;
 	int item;
 	int choice;
 
