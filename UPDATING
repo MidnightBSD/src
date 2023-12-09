@@ -1,7 +1,7 @@
 Updating Information for MidnightBSD users.
 
 20231209:
-	perl security vulnerability in regcomp.c 
+	CVE-2023-47038 perl security vulnerability in regcomp.c 
 	Input can be reparsed with different results.
 	
 
