@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20231209:
+	perl security vulnerability in regcomp.c 
+	Input can be reparsed with different results.
+	
+
 20231205:
         pf security issue: 
         As part of its stateful TCP connection tracking implementation, pf
