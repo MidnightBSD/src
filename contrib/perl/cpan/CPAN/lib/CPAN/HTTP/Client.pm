@@ -32,6 +32,7 @@ sub mirror {
 
     my $want_proxy = $self->_want_proxy($uri);
     my $http = HTTP::Tiny->new(
+        verify_SSL => 1,
         $want_proxy ? (proxy => $self->{proxy}) : ()
     );
 
