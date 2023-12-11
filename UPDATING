@@ -1,11 +1,18 @@
 Updating Information for MidnightBSD users.
 
+20231211:
+	mport 2.4.9 - fixes mport upgrade issue.
+
+	perl CPAN security fix with TLS certificates	
+
 20231209:
 	perl security vulnerability in regcomp.c 
 	Input can be reparsed with different results.
 	
 
 20231205:
+	MidnightBSD 3.1.2
+
         pf security issue: 
         As part of its stateful TCP connection tracking implementation, pf
         performs sequence number validation on inbound packets.  This makes it
