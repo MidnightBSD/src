@@ -93,13 +93,15 @@ mport_upgrade(mportInstance *mport) {
 		slot = ohash_qlookup(&h, (*packs)->name);
 		key = ohash_find(&h, slot);
 		if (key != NULL) {
+			packs++;
 			continue;
 		}
 
 		if (mport_moved_lookup(mport, (*packs)->name, &movedEntries) != MPORT_OK ||
 		    movedEntries == NULL || *movedEntries == NULL) {
-            continue;
-        }
+			packs++;
+			continue;
+		}
 
 		if ((*movedEntries)->date[0] != '\0') {
 			asprintf(&msg, "Package %s is deprecated with expiration date %s. Do you want to remove it?", (*packs)->name, (*movedEntries)->date);
@@ -109,6 +111,7 @@ mport_upgrade(mportInstance *mport) {
 				ohash_insert(&h, slot, (*packs)->name);
 			}	
 
+			packs++;
 			continue;
 		}		
 
@@ -121,6 +124,7 @@ mport_upgrade(mportInstance *mport) {
 			ohash_insert(&h, slot, (*packs)->name);
 			ohash_insert(&h, slot, (*movedEntries)->moved_to_pkgname);
 		}
+		packs++;
 	}
 
     // update packages that haven't moved already
