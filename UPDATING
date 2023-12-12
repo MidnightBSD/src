@@ -5,6 +5,8 @@ Updating Information for MidnightBSD users.
 
 	libevent 2.1.12
 
+	unbound 1.19.0
+
 20231211:
         mport 2.4.9 - fixes mport upgrade issue.
 
