@@ -101,6 +101,8 @@ struct delegpt_ns {
 	uint8_t* name;
 	/** length of name */
 	size_t namelen;
+	/** number of cache lookups for the name */
+	int cache_lookup_count;
 	/** 
 	 * If the name has been resolved. false if not queried for yet.
 	 * true if the A, AAAA queries have been generated.
@@ -454,5 +456,30 @@ int delegpt_add_target_mlc(struct delegpt* dp, uint8_t* name, size_t namelen,
 
 /** get memory in use by dp */
 size_t delegpt_get_mem(struct delegpt* dp);
+
+/**
+ * See if the addr is on the result list.
+ * @param dp: delegation point.
+ * @param find: the pointer is searched for on the result list.
+ * @return 1 if found, 0 if not found.
+ */
+int delegpt_addr_on_result_list(struct delegpt* dp, struct delegpt_addr* find);
+
+/**
+ * Remove the addr from the usable list.
+ * @param dp: the delegation point.
+ * @param del: the addr to remove from the list, the pointer is searched for.
+ */
+void delegpt_usable_list_remove_addr(struct delegpt* dp,
+	struct delegpt_addr* del);
+
+/**
+ * Add the delegpt_addr back to the result list, if it is not already on
+ * the result list. Also removes it from the usable list.
+ * @param dp: delegation point.
+ * @param a: addr to add, nothing happens if it is already on the result list.
+ *	It is removed from the usable list.
+ */
+void delegpt_add_to_result_list(struct delegpt* dp, struct delegpt_addr* a);
 
 #endif /* ITERATOR_ITER_DELEGPT_H */
