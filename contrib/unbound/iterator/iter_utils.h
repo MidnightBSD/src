@@ -62,6 +62,15 @@ struct ub_packed_rrset_key;
 struct module_stack;
 struct outside_network;
 
+/* max number of lookups in the cache for target nameserver names.
+ * This stops, for large delegations, N*N lookups in the cache. */
+#define ITERATOR_NAME_CACHELOOKUP_MAX	3
+/* max number of lookups in the cache for parentside glue for nameserver names
+ * This stops, for larger delegations, N*N lookups in the cache.
+ * It is a little larger than the nonpside max, so it allows a couple extra
+ * lookups of parent side glue. */
+#define ITERATOR_NAME_CACHELOOKUP_MAX_PSIDE	5
+
 /**
  * Process config options and set iterator module state.
  * Sets default values if no config is found.
@@ -180,10 +189,13 @@ void iter_mark_pside_cycle_targets(struct module_qstate* qstate,
  * 	if not, then the IPv4 addresses are useless.
  * @param supports_ipv6: if we support ipv6 for lookups to the target.
  * 	if not, then the IPv6 addresses are useless.
+ * @param use_nat64: if we support NAT64 for lookups to the target.
+ *	if yes, IPv4 addresses are useful even if we don't support IPv4.
  * @return true if dp is useless.
  */
-int iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags, 
-	struct delegpt* dp, int supports_ipv4, int supports_ipv6);
+int iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags,
+	struct delegpt* dp, int supports_ipv4, int supports_ipv6,
+	int use_nat64);
 
 /**
  * See if qname has DNSSEC needs.  This is true if there is a trust anchor above
