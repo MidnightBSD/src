@@ -7,6 +7,8 @@ Updating Information for MidnightBSD users.
 
 	unbound 1.19.0
 
+	Fix security issue in libpcap OSV-2020-1231
+
 20231211:
         mport 2.4.9 - fixes mport upgrade issue.
 
