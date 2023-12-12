@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20231212:
+	nvi 2.2.1
+
 20231211:
         mport 2.4.9 - fixes mport upgrade issue.
 
