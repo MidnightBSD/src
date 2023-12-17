@@ -39,10 +39,36 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20231217: Remove svn and svnlite
+OLD_FILES+=usr/bin/svn
+OLD_FILES+=usr/bin/svnadmin
+OLD_FILES+=usr/bin/svnbench
+OLD_FILES+=usr/bin/svndumpfilter
+OLD_FILES+=usr/bin/svnfsfs
+OLD_FILES+=usr/bin/svnlite
+OLD_FILES+=usr/bin/svnliteadmin
+OLD_FILES+=usr/bin/svnlitebench
+OLD_FILES+=usr/bin/svnlitedumpfilter
+OLD_FILES+=usr/bin/svnlitefsfs
+OLD_FILES+=usr/bin/svnlitelook
+OLD_FILES+=usr/bin/svnlitemucc
+OLD_FILES+=usr/bin/svnliterdump
+OLD_FILES+=usr/bin/svnliteserve
+OLD_FILES+=usr/bin/svnlitesync
+OLD_FILES+=usr/bin/svnliteversion
+OLD_FILES+=usr/bin/svnlook
+OLD_FILES+=usr/bin/svnmucc
+OLD_FILES+=usr/bin/svnrdump
+OLD_FILES+=usr/bin/svnserve
+OLD_FILES+=usr/bin/svnsync
+OLD_FILES+=usr/bin/svnversion
+OLD_FILES+=usr/share/man/man1/svnlite.1.gz
+
 # 20231129: telnetd(8) removed
 OLD_FILES+=etc/pam.d/telnetd
 OLD_FILES+=usr/libexec/telnetd
 OLD_FILES+=usr/share/man/man8/telnetd.8.gz
+
 # 20230909: caroot bundle updated
 OLD_FILES+=usr/share/certs/trusted/E-Tugra_Certification_Authority.pem
 OLD_FILES+=usr/share/certs/trusted/E-Tugra_Global_Root_CA_ECC_v3.pem
@@ -57,6 +83,7 @@ OLD_FILES+=usr/share/certs/trusted/Staat_der_Nederlanden_EV_Root_CA.pem
 OLD_FILES+=usr/share/certs/trusted/TrustCor_ECA-1.pem
 OLD_FILES+=usr/share/certs/trusted/TrustCor_RootCert_CA-1.pem
 OLD_FILES+=usr/share/certs/trusted/TrustCor_RootCert_CA-2.pem
+
 # 20230727
 OLD_FILES+=usr/lib/perl5/5.36.0/Dumpvalue.pm
 OLD_FILES+=usr/lib/perl5/5.36.0/less.pm
