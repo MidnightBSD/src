@@ -25,7 +25,7 @@ CONFIGURE_ARGS= -des -Dprefix=/usr -Dsiteprefix=/usr/local -Dvendorprefix=/usr \
 		-Dsiteman1dir=/usr/local/man/man1 -Dsiteman3dir=/usr/local/man/man3 \
 		-Dmksymlinks -Dsrc=${SRCDIR} -Duse64bitint -Duseshrplib \
 		-Dusethreads=y -Ulocincpth='' -Ui_gdbm -Ut_gdbm \
-		-Dusedtrace=true
+		-Dusedtrace=true -Ddtracexnolibs=true
 
 LIBADD+=	dtrace
 
