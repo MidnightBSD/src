@@ -25,12 +25,7 @@ SM_RCSID("@(#)$Id: daemon.c,v 8.698 2013-11-22 20:51:55 ca Exp $")
 # if NETINET || NETINET6
 #  include <arpa/inet.h>
 # endif
-# if NAMED_BIND
-#  ifndef NO_DATA
-#   define NO_DATA	NO_ADDRESS
-#  endif
-# endif /* NAMED_BIND */
-#endif /* defined(USE_SOCK_STREAM) */
+#endif
 
 #if STARTTLS
 # include <openssl/rand.h>
@@ -868,7 +863,6 @@ getrequests(e)
 			}
 			else
 				setbitn(t, Daemons[curdaemon].d_flags);
-
 #endif /* _FFR_XCNCT */
 
 #if XLA
@@ -1871,12 +1865,18 @@ static struct dflags	DaemonFlags[] =
 	{ "UNQUALOK",		D_UNQUALOK	},
 	{ "NOAUTH",		D_NOAUTH	},
 	{ "NOCANON",		D_NOCANON	},
+	{ "NODANE",		D_NODANE	},
 	{ "NOETRN",		D_NOETRN	},
+	{ "NOSTS",		D_NOSTS	},
 	{ "NOTLS",		D_NOTLS		},
 	{ "ETRNONLY",		D_ETRNONLY	},
 	{ "OPTIONAL",		D_OPTIONAL	},
 	{ "DISABLE",		D_DISABLE	},
 	{ "ISSET",		D_ISSET		},
+#if _FFR_XCNCT
+	{ "XCNCT",		D_XCNCT		},
+	{ "XCNCT_M",		D_XCNCT_M	},
+#endif
 	{ NULL,			0		}
 };
 
@@ -2160,7 +2160,7 @@ makeconnection(host, port, mci, e, enough
 #if NETINET6
 	volatile bool v6found = false;
 #endif
-	volatile int family = InetMode;
+	volatile int family;
 	SOCKADDR_LEN_T len;
 	volatile SOCKADDR_LEN_T socksize = 0;
 	volatile bool clt_bind;
@@ -2181,6 +2181,12 @@ makeconnection(host, port, mci, e, enough
 	tlsa_flags = *ptlsa_flags;
 	*ptlsa_flags &= ~(TLSAFLALWAYS|TLSAFLSECURE);
 #endif
+#if _FFR_M_ONLY_IPV4
+	if (bitnset(M_ONLY_IPV4, mci->mci_mailer->m_flags))
+		family = AF_INET;
+	else
+#endif
+		family = InetMode;
 
 	/* retranslate {daemon_flags} into bitmap */
 	clrbitmap(d_flags);
@@ -2428,7 +2434,7 @@ makeconnection(host, port, mci, e, enough
 				dns_free_data(rr);
 				rr = NULL;
 			}
-#endif
+#endif /* DANE */
 			if (hp == NULL)
 				hp = sm_gethostbyname(host, family);
 			if (hp == NULL && *p == '.')
@@ -2544,21 +2550,21 @@ gothostent:
 	}
 
 #if _FFR_TESTS
-		/*
-		**  Hack for testing.
-		**  Hardcoded:
-		**  10.1.1.12: see meta1.tns XREF IP address
-		**  8754: see common.sh XREF SNKPORT2
-		*/
+	/*
+	**  Hack for testing.
+	**  Hardcoded:
+	**  10.1.1.12: see meta1.tns XREF IP address
+	**  8754: see common.sh XREF SNKPORT2
+	*/
 
-		if (tTd(77, 101) && hp != NULL && hp->h_addrtype == AF_INET &&
-		    addr.sin.sin_addr.s_addr == inet_addr("10.1.1.12"))
-		{
-			addr.sin.sin_addr.s_addr = inet_addr("127.0.0.1");
-			port = htons(8754);
-			sm_dprintf("hack host=%s addr=[%s].%d\n", host,
-				anynet_ntoa(&addr), ntohs(port));
-		}
+	if (tTd(77, 101) && hp != NULL && hp->h_addrtype == AF_INET &&
+	    addr.sin.sin_addr.s_addr == inet_addr("10.1.1.12"))
+	{
+		addr.sin.sin_addr.s_addr = inet_addr("127.0.0.1");
+		port = htons(8754);
+		sm_dprintf("hack host=%s addr=[%s].%d\n", host,
+			anynet_ntoa(&addr), ntohs(port));
+	}
 #endif
 
 	/*
@@ -2568,16 +2574,34 @@ gothostent:
 	if (port == 0)
 	{
 #ifdef NO_GETSERVBYNAME
-		port = htons(25);
+# if _FFR_SMTPS_CLIENT
+		if (bitnset(M_SMTPS_CLIENT, mci->mci_mailer->m_flags))
+			port = htons(465);
+		else
+# endif /* _FFR_SMTPS_CLIENT */
+			port = htons(25);
 #else /* NO_GETSERVBYNAME */
-		register struct servent *sp = getservbyname("smtp", "tcp");
+		register struct servent *sp;
+
+# if _FFR_SMTPS_CLIENT
+		if (bitnset(M_SMTPS_CLIENT, mci->mci_mailer->m_flags))
+			p = "smtps";
+		else
+# endif /* _FFR_SMTPS_CLIENT */
+			p = "smtp";
+		sp = getservbyname(p, "tcp");
 
 		if (sp == NULL)
 		{
 			if (LogLevel > 2)
 				sm_syslog(LOG_ERR, NOQID,
-					  "makeconnection: service \"smtp\" unknown");
-			port = htons(25);
+					  "makeconnection: service \"%s\" unknown", p);
+# if _FFR_SMTPS_CLIENT
+			if (bitnset(M_SMTPS_CLIENT, mci->mci_mailer->m_flags))
+				port = htons(465);
+			else
+# endif /* _FFR_SMTPS_CLIENT */
+				port = htons(25);
 		}
 		else
 			port = sp->s_port;

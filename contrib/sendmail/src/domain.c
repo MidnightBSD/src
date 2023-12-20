@@ -13,9 +13,6 @@
 
 #include <sendmail.h>
 #include "map.h"
-#if USE_EAI
-#include <unicode/uidna.h>
-#endif
 
 #if NAMED_BIND
 SM_RCSID("@(#)$Id: domain.c,v 8.205 2013-11-22 20:51:55 ca Exp $ (with name server)")
@@ -27,13 +24,17 @@ SM_RCSID("@(#)$Id: domain.c,v 8.205 2013-11-22 20:51:55 ca Exp $ (without name s
 
 #if NAMED_BIND
 # include <arpa/inet.h>
-# include <sm_resolve.h>
+# include "sm_resolve.h"
 # if DANE
 #  include <tls.h>
 #  ifndef SM_NEG_TTL
 #   define SM_NEG_TTL 60 /* "negative" TTL */
 #  endif
 # endif
+
+#if USE_EAI
+#include <unicode/uidna.h>
+#endif
 
 
 # ifndef MXHOSTBUFSIZE
@@ -51,10 +52,6 @@ static char	MXHostBuf[MXHOSTBUFSIZE];
 
 # ifndef RES_DNSRCH_VARIABLE
 #  define RES_DNSRCH_VARIABLE	_res.dnsrch
-# endif
-
-# ifndef NO_DATA
-#  define NO_DATA	NO_ADDRESS
 # endif
 
 # ifndef HFIXEDSZ
@@ -104,7 +101,7 @@ tlsaadd(name, dr, dane_tlsa, dnsrc, n, pttl, level)
 	int level;
 {
 	RESOURCE_RECORD_T *rr;
-	unsigned int ttl;
+	unsigned int ttl, unsupp;
 	int nprev;
 
 	if (dnsrc != 0)
@@ -132,7 +129,7 @@ tlsaadd(name, dr, dane_tlsa, dnsrc, n, pttl, level)
 
 	/* first: try to find TLSA records */
 	nprev = n;
-	for (rr = dr->dns_r_head; rr != NULL && n < MAX_TLSA_RR;
+	for (rr = dr->dns_r_head, unsupp = 0; rr != NULL && n < MAX_TLSA_RR;
 	     rr = rr->rr_next)
 	{
 		int tlsa_chk;
@@ -146,8 +143,15 @@ tlsaadd(name, dr, dane_tlsa, dnsrc, n, pttl, level)
 		}
 		tlsa_chk = dane_tlsa_chk(rr->rr_u.rr_data, rr->rr_size, name,
 					true);
+		if (TLSA_UNSUPP == tlsa_chk)
+		{
+			++unsupp;
+			TLSA_SET_FL(dane_tlsa, TLSAFLUNS);
+		}
 		if (!TLSA_IS_VALID(tlsa_chk))
 			continue;
+		if (TLSA_IS_SUPPORTED(tlsa_chk))
+			TLSA_SET_FL(dane_tlsa, TLSAFLSUP);
 
 		/*
 		**  To do: the RRs should be sorted (by "complexity") --
@@ -158,11 +162,17 @@ tlsaadd(name, dr, dane_tlsa, dnsrc, n, pttl, level)
 		dane_tlsa->dane_tlsa_len[n] = rr->rr_size;
 		if (tTd(8, 2))
 		{
+			int i, l;
 			unsigned char *p;
 
 			p = rr->rr_u.rr_data;
-			sm_dprintf("tlsaadd(%s), n=%d, %d-%d-%d:%02x\n", name,
-				n, (int)p[0], (int)p[1], (int)p[2], (int)p[3]);
+			sm_dprintf("tlsaadd(%s), n=%d, len=%d, %02x-%02x-%02x",
+				name, n,  rr->rr_size,
+				(int)p[0], (int)p[1], (int)p[2]);
+			l = tTd(8, 8) ? rr->rr_size : 4;
+			for (i = 3; i < l; i++)
+				sm_dprintf(":%02X", (int)p[i]);
+			sm_dprintf("\n");
 		}
 
 		/* require some minimum TTL? */
@@ -207,7 +217,10 @@ tlsaadd(name, dr, dane_tlsa, dnsrc, n, pttl, level)
 		dns_free_data(drc);
 		drc = NULL;
 	}
-
+	if (unsupp > 0 && unsupp == n && LogLevel > 9)
+		sm_syslog(LOG_NOTICE, NOQID,
+			  "TLSA=%s, records=%d, unsupported=%d, status=all TLSA RRs are unsupported",
+			  name, n, unsupp);
 	*pttl = ttl;
 	return n;
 }
@@ -273,9 +286,9 @@ gettlsa(host, name, pste, flags, mxttl, port)
 	}
 	else
 		len = -1;
-	if (0 == port || tTd(66, 10))
+	if (0 == port || tTd(66, 101))
 		port = 25;
-	(void) sm_snprintf(key, sizeof(key), "_%u..%s", port, name);
+	(void) sm_snprintf(key, sizeof(key), "_%u.%s", port, name);
 	ste = stab(key, ST_TLSA_RR, ST_FIND);
 	if (tTd(8, 2))
 		sm_dprintf("gettlsa(%s, %s, ste=%p, pste=%p, flags=%lX, port=%d)\n",
@@ -426,15 +439,18 @@ getfallbackmxrr(host)
 	if (NumFallbackMXHosts > 0 && renew > curtime())
 		return NumFallbackMXHosts;
 
-	/* for DANE we need to invoke getmxrr() to get the TLSA RRs. */
-# if !DANE
-	if (host[0] == '[')
+	/*
+	**  For DANE we need to invoke getmxrr() to get the TLSA RRs.
+	**  Hack: don't do that if its not a FQHN (e.g., [localhost])
+	**  This also triggers for IPv4 addresses, but not IPv6!
+	*/
+
+	if (host[0] == '[' && (!Dane || strchr(host, '.') == NULL))
 	{
 		fbhosts[0] = host;
 		NumFallbackMXHosts = 1;
 	}
 	else
-# endif
 	{
 		/* free old data */
 		for (i = 0; i < NumFallbackMXHosts; i++)
@@ -448,7 +464,7 @@ getfallbackmxrr(host)
 
 		NumFallbackMXHosts = getmxrr(host, fbhosts, NULL,
 # if DANE
-					(DANE_SECURE == Dane) ?  ISAD :
+					(DANE_SECURE == Dane) ? ISAD :
 # endif
 					0,
 					&rcode, &ttl, 0);
@@ -538,7 +554,7 @@ hn2alabel(hostname)
 **		mxprefs -- a pointer to a return buffer of MX preferences.
 **			If NULL, don't try to populate.
 **		flags -- flags:
-**			DROPLOCALHOSt -- If true, all MX records less preferred
+**			DROPLOCALHOST -- If true, all MX records less preferred
 **			than the local host (as determined by $=w) will
 **			be discarded.
 **			TRYFALLBACK -- add also fallback MX host?

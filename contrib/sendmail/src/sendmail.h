@@ -46,16 +46,16 @@
 # endif
 #else /* STARTTLS */
 # if DANE
-#  ERROR "DANE set but STARTTLS not defined"
+#  error "DANE set but STARTTLS not defined"
 # endif
 # if _FFR_TLS_ALTNAMES
-#  ERROR "_FFR_TLS_ALTNAMES set but STARTTLS not defined"
+#  error "_FFR_TLS_ALTNAMES set but STARTTLS not defined"
 # endif
 # if _FFR_TLSFB2CLEAR
-#   ERROR "_FFR_TLSFB2CLEAR set but STARTTLS not defined"
+#   error "_FFR_TLSFB2CLEAR set but STARTTLS not defined"
 # endif
 # if _FFR_TLS_USE_CERTIFICATE_CHAIN_FILE
-#  ERROR "_FFR_TLS_USE_CERTIFICATE_CHAIN_FILE set but STARTTLS not defined"
+#  error "_FFR_TLS_USE_CERTIFICATE_CHAIN_FILE set but STARTTLS not defined"
 # endif
 #endif /* STARTTLS */
 
@@ -124,9 +124,12 @@ SM_UNUSED(static char SmailId[]) = "@(#)$Id: sendmail.h,v 8.1104 2013-11-22 20:5
 #  undef NOERROR		/* avoid <sys/streams.h> conflict */
 # endif
 # include <resolv.h>
+# if !defined(NO_DATA)
+#  define NO_DATA	NO_ADDRESS
+# endif
 #else /* NAMED_BIND */
-#  undef SM_SET_H_ERRNO
-#  define SM_SET_H_ERRNO(err)
+# undef SM_SET_H_ERRNO
+# define SM_SET_H_ERRNO(err)
 #endif /* NAMED_BIND */
 
 #if HESIOD
@@ -140,35 +143,49 @@ SM_UNUSED(static char SmailId[]) = "@(#)$Id: sendmail.h,v 8.1104 2013-11-22 20:5
 # define ALLOW_255 1
 #endif
 #if _FFR_EAI && _FFR_EIGHT_BIT_ADDR_OK
-# ERROR "Cannot enable both of these FFRs: _FFR_EAI _FFR_EIGHT_BIT_ADDR_OK"
+# error "Cannot enable both of these FFRs: _FFR_EAI _FFR_EIGHT_BIT_ADDR_OK"
 #endif
 
 #if _FFR_OCC && !SM_CONF_SHM
-# ERROR "_FFR_OCC requires SM_CONF_SHM"
+# error "_FFR_OCC requires SM_CONF_SHM"
 #endif
 
-#if _FFR_SM_LDAP_DBG && !(LDAPMAP && defined(LBER_OPT_LOG_PRINT_FN))
-# ERROR "_FFR_SM_LDAP_DBG requires LDAPMAP and LBER_OPT_LOG_PRINT_FN"
+#if !NOT_SENDMAIL
+# if _FFR_SM_LDAP_DBG && !(LDAPMAP && defined(LBER_OPT_LOG_PRINT_FN))
+#  error "_FFR_SM_LDAP_DBG requires LDAPMAP and LBER_OPT_LOG_PRINT_FN"
+# endif
 #endif
 
 #if _FFR_LOG_MORE1 > 1 || _FFR_LOG_MORE2 > 1
 # if _FFR_LOG_MORE1 != _FFR_LOG_MORE2
-#  ERROR "_FFR_LOG_MORE1 != _FFR_LOG_MORE2"
+#  error "_FFR_LOG_MORE1 != _FFR_LOG_MORE2"
 # endif
 #endif
 
-#if LDAP_NETWORK_TIMEOUT && !(LDAPMAP && defined(LDAP_OPT_NETWORK_TIMEOUT))
-# ERROR "LDAP_NETWORK_TIMEOUT requires LDAPMAP"
+#if !NOT_SENDMAIL
+# if LDAP_NETWORK_TIMEOUT && !(LDAPMAP && defined(LDAP_OPT_NETWORK_TIMEOUT))
+#  error "LDAP_NETWORK_TIMEOUT requires LDAPMAP"
+# endif
+#endif
+
+#if !NOT_SENDMAIL
+# if LDAP_REFERRALS && !LDAPMAP
+#  error "LDAP_REFERRALS requires LDAPMAP"
+# endif
 #endif
 
 #if _FFR_VRFY_TRUSTED_FIRST && !defined(X509_V_FLAG_TRUSTED_FIRST)
-# ERROR "_FFR_VRFY_TRUSTED_FIRST set but X509_V_FLAG_TRUSTED_FIRST not defined"
+# error "_FFR_VRFY_TRUSTED_FIRST set but X509_V_FLAG_TRUSTED_FIRST not defined"
 #endif
 
 #if _FFR_8BITENVADDR
 # define MAXNAME_I ((MAXNAME) * 2)
 #else
 # define MAXNAME_I MAXNAME
+#endif
+
+#if !defined(_FFR_M_ONLY_IPV4)
+# define _FFR_M_ONLY_IPV4 1
 #endif
 
 #define SM_IS_EMPTY(s)	(NULL == (s) || '\0' == *(s))
@@ -208,8 +225,8 @@ typedef struct tlsi_ctx_S tlsi_ctx_T, *tlsi_ctx_P;
 #define TLSI_FL_CRLREQ	'R'	/* CRL required */
 #define TLSI_FL_FB2CLR	'C'	/* fall back to clear text is ok */
 #define TLSI_FL_NOFB2CLR 'c'	/* do not fall back to clear text */
-#define TLSI_FL_NODANE	'd'	/* do not use/lookup DANE */
-#define TLSI_FL_NOSTS	'M'	/* do not use/lookup STS */
+#define TLSI_FL_NODANE	'd'	/* do not use/look up DANE */
+#define TLSI_FL_NOSTS	'M'	/* do not use/look up STS */
 /* internal */
 #define TLSI_FL_STS_NOFB2CLR	0x01	/* no clear text: STS is used */
 #define SM_TLSI_IS(tlsi_ctx, flag)	\
@@ -265,14 +282,14 @@ typedef int (*sasl_callback_ft)(void);
 #   define SASL SASL_VERSION
 #  else /* SASL == 1 || SASL == 2 */
 #   if SASL != SASL_VERSION
-#    ERROR "README: -DSASL (SASL) does not agree with the version of the CYRUS_SASL library (SASL_VERSION)"
-#    ERROR "README: see README!"
+#    error "README: -DSASL (SASL) does not agree with the version of the CYRUS_SASL library (SASL_VERSION)"
+#    error "README: see README!"
 #   endif /* SASL != SASL_VERSION */
 #  endif /* SASL == 1 || SASL == 2 */
 # else /* defined(SASL_VERSION_MAJOR) && defined(SASL_VERSION_MINOR) && defined(SASL_VERSION_STEP) */
 #  if SASL == 1
-#   ERROR "README: please set -DSASL to the version of the CYRUS_SASL library"
-#   ERROR "README: see README!"
+#   error "README: please set -DSASL to the version of the CYRUS_SASL library"
+#   error "README: see README!"
 #  endif /* SASL == 1 */
 # endif /* defined(SASL_VERSION_MAJOR) && defined(SASL_VERSION_MINOR) && defined(SASL_VERSION_STEP) */
 #endif /* SASL */
@@ -351,7 +368,7 @@ struct address
 	char		*q_paddr;	/* the printname for the address */
 	char		*q_user;	/* user name */
 	char		*q_ruser;	/* real user name, or NULL if q_user */
-	char		*q_host;	/* host name */
+	char		*q_host;	/* host name [x] */
 #if DANE
 	char		*q_qname;	/* original query (host) name */
 #endif
@@ -617,8 +634,8 @@ struct mailer
 #define M_NOMX		'0'	/* turn off MX lookups */
 #define M_NONULLS	'1'	/* don't send null bytes */
 #define M_FSMTP		'2'	/* force SMTP (no ESMTP even if offered) */
-		/*	'4'	   free? */
 #define M_EBCDIC	'3'	/* extend Q-P encoding for EBCDIC */
+#define M_ONLY_IPV4	'4'	/* Use only IPv4 */
 #define M_TRYRULESET5	'5'	/* use ruleset 5 after local aliasing */
 #define M_7BITHDRS	'6'	/* strip headers to 7 bits even in 8 bit path */
 #define M_7BITS		'7'	/* use 7-bit path */
@@ -633,6 +650,9 @@ struct mailer
 #define M_PLUS		'+'	/* Reserved: Used in mc for adding new flags */
 #define M_MINUS		'-'	/* Reserved: Used in mc for removing flags */
 #define M_NOMHHACK	'!'	/* Don't perform HM hack dropping explicit from */
+#if _FFR_SMTPS_CLIENT
+# define M_SMTPS_CLIENT	'_'	/* use SMTP over TLS (465/TCP) */
+#endif
 
 /* functions */
 extern void	initerrmailers __P((void));
@@ -767,12 +787,12 @@ extern bool	filesys_free __P((long));
 	(SASL_SEC_FORWARD_SECRECY & SASL_SEC_MASK) == 0 || \
 	(SASL_SEC_NOANONYMOUS & SASL_SEC_MASK) == 0 || \
 	(SASL_SEC_PASS_CREDENTIALS & SASL_SEC_MASK) == 0
-#   ERROR "change SASL_SEC_MASK notify sendmail.org!"
+#   error "change SASL_SEC_MASK notify sendmail.org!"
 #  endif /* SASL_SEC_NOPLAINTEXT & SASL_SEC_MASK) == 0 ... */
 # endif /* SASL >= 20101 */
 # define MAXOUTLEN 8192	/* length of output buffer, should be 2^n */
 # if (SASL_AUTH_AUTH & SASL_SEC_MASK) != 0
-#  ERROR "change SASL_AUTH_AUTH notify sendmail.org!"
+#  error "change SASL_AUTH_AUTH notify sendmail.org!"
 # endif
 
 /* functions */
@@ -875,7 +895,7 @@ MCI
 #define MCIF_8BITMIME	0x00000040	/* BODY=8BITMIME supported */
 #define MCIF_7BIT	0x00000080	/* strip this message to 7 bits */
 /* 0x00000100 unused, was MCIF_MULTSTAT: MAIL11V3: handles MULT status */
-#define MCIF_INHEADER	0x00000200	/* currently outputing header */
+#define MCIF_INHEADER	0x00000200	/* currently outputting header */
 #define MCIF_CVT8TO7	0x00000400	/* convert from 8 to 7 bits */
 #define MCIF_DSN	0x00000800	/* DSN extension supported */
 #define MCIF_8BITOK	0x00001000	/* OK to send 8 bit characters */
@@ -915,6 +935,7 @@ MCI
 #define MCIF_EXTENS	(MCIF_EXPN|MCIF_SIZE|MCIF_8BITMIME|MCIF_DSN|MCIF_8BITOK|MCIF_AUTH|MCIF_ENHSTAT|MCIF_PIPELINED|MCIF_VERB|MCIF_TLS|MCIF_DLVR_BY|MCIF_AUTH2|MCIF_EAI)
 
 /* states */
+/* XREF: deliver.c: mcis[] -- any changes here must be reflected there! */
 #define MCIS_CLOSED	0		/* no traffic on this connection */
 #define MCIS_OPENING	1		/* sending initial protocol */
 #define MCIS_OPEN	2		/* open, initial protocol sent */
@@ -1032,7 +1053,6 @@ TIMERS
 	TIMER	ti_overall;	/* the whole process */
 };
 
-
 #define PUSHTIMER(l, t)	{ if (tTd(98, l)) pushtimer(&t); }
 #define POPTIMER(l, t)	{ if (tTd(98, l)) poptimer(&t); }
 
@@ -1115,7 +1135,9 @@ struct envelope
 	MCI		*e_mci;		/* connection info */
 	char		*e_auth_param;	/* readonly; NULL or static storage or
 					 * allocated from e_rpool */
+#if _FFR_TIMERS
 	TIMERS		e_timers;	/* per job timers */
+#endif
 	long		e_deliver_by;	/* deliver by */
 	int		e_dlvr_flag;	/* deliver by flag */
 	SM_RPOOL_T	*e_rpool;	/* resource pool for this envelope */
@@ -1128,6 +1150,9 @@ struct envelope
 	int		e_rcode;	/* reply code */
 	char		e_renhsc[ENHSC_LEN];	/* enhanced status code */
 	char		*e_text;	/* reply text */
+#if _FFR_LOG_STAGE
+	int		e_estate;	/* protocol state when error happened */
+#endif
 };
 
 #define PRT_NONNEGL(v)	((v) < 0 ? LONG_MAX : (v))
@@ -1462,6 +1487,9 @@ MAP
 	short		map_return[MAXMAPACTIONS]; /* return bitmaps for stacked maps */
 };
 
+#if _FFR_DYN_CLASS
+# define map_tag	map_domain	/* overload map field */
+#endif
 
 /* bit values for map_mflags */
 #define MF_VALID	0x00000001	/* this entry is valid */
@@ -1474,7 +1502,8 @@ MAP
 #define MF_ALIAS	0x00000080	/* this is an alias file */
 #define MF_TRY0NULL	0x00000100	/* try with no null byte */
 #define MF_TRY1NULL	0x00000200	/* try with the null byte */
-#define MF_LOCKED	0x00000400	/* this map is currently locked */
+#define MF_LOCKED	0x00000400	/* map is locked (RDWR) */
+/* that means: no extra lockfile() calls must be made (in *map_lookup()) */
 #define MF_ALIASWAIT	0x00000800	/* alias map in aliaswait state */
 #define MF_IMPL_HASH	0x00001000	/* implicit: underlying hash database */
 #define MF_IMPL_NDBM	0x00002000	/* implicit: underlying NDBM database */
@@ -1491,6 +1520,7 @@ MAP
 #define MF_CLOSING	0x01000000	/* map is being closed */
 #define MF_SECURE	0x02000000	/* DNSSEC result is "secure" */
 #define MF_KEEPXFMT	0x04000000	/* keep [x] format */
+#define MF_CHKED_CHGD	0x08000000 /* checked whether underlying map changed */
 
 #define DYNOPENMAP(map) \
 	do		\
@@ -1551,6 +1581,11 @@ extern int	udbexpand __P((ADDRESS *, ADDRESS **, int, ENVELOPE *));
 #if USERDB
 extern void	_udbx_close __P((void));
 extern char	*udbsender __P((char *, SM_RPOOL_T *));
+#endif
+#if _FFR_MAP_CHK_FILE > 1
+extern void maps_reset_chged __P((const char *));
+#else
+# define maps_reset_chged(msg)
 #endif
 
 /*
@@ -1712,6 +1747,9 @@ struct symtab
 #if DANE
 		dane_tlsa_P	 sv_tlsa;	/* pointer to TLSA RRs */
 #endif
+#if _FFR_DYN_CLASS
+		MAP		sv_dynclass;	/* map for dynamic class */
+#endif
 	}	s_value;
 };
 
@@ -1746,9 +1784,12 @@ typedef struct symtab	STAB;
 #if DANE
 # define ST_TLSA_RR	17	/* cached TLSA RRs */
 #endif
+#if _FFR_DYN_CLASS
+# define ST_DYNMAP	18	/* dynamic map */
+#endif
 
 /* This entry must be last */
-#define ST_MCI		18	/* mailer connection info (offset) */
+#define ST_MCI		19	/* mailer connection info (offset) */
 
 #define s_class		s_value.sv_class
 #define s_mailer	s_value.sv_mailer
@@ -1774,6 +1815,9 @@ typedef struct symtab	STAB;
 #define s_quegrp	s_value.sv_queue
 #if DANE
 # define s_tlsa		s_value.sv_tlsa
+#endif
+#if _FFR_DYN_CLASS
+# define s_dynclass	s_value.sv_dynclass
 #endif
 
 /* opcodes to stab */
@@ -1960,6 +2004,7 @@ EXTERN unsigned long	PrivacyFlags;	/* privacy flags */
 #define RSF_COUNT		0x0004	/* count rejections (statistics)? */
 #define RSF_ADDR		0x0008	/* reassemble address */
 #define RSF_STRING		0x0010	/* reassemble address as string */
+#define RSF_STATUS		0x0020	/* log "status" instead of "reject" */
 
 /*
 **  Flags passed to mime8to7 and putheader.
@@ -2246,6 +2291,7 @@ extern void	sync_dir __P((char *, bool));
 #endif
 #if _FFR_DMTRIGGER
 extern bool	qm __P((void));
+extern int deliver __P((ENVELOPE *, ADDRESS *));
 #endif
 
 /*
@@ -2402,6 +2448,7 @@ extern unsigned char	tTdvect[100];	/* trace vector */
 	} while (0)
 
 /* reply types (text in SmtpMsgBuffer) */
+/* XREF: deliver.c: xs_states[] -- any changes here must be reflected there! */
 #define XS_DEFAULT	0	/* other commands, e.g., RSET */
 #define XS_STARTTLS	1
 #define XS_AUTH		2
@@ -2509,6 +2556,8 @@ EXTERN int	volatile CurChildren;	/* current number of daemonic children */
 EXTERN int	CurrentLA;	/* current load average */
 #if DANE
 EXTERN int	Dane;		/* DANE */
+#else
+# define Dane 0		/* XREF: see tls.h: #define DANE_NEVER */
 #endif
 EXTERN int	DefaultNotify;	/* default DSN notification flags */
 EXTERN int	DelayLA;	/* load average to delay connections */
@@ -2691,10 +2740,10 @@ extern int	skipaddrhost __P((const char *, bool));
 
 /* alias file */
 extern void	alias __P((ADDRESS *, ADDRESS **, int, ENVELOPE *));
-extern bool	aliaswait __P((MAP *, char *, bool));
+extern bool	aliaswait __P((MAP *, const char *, bool));
 extern void	forward __P((ADDRESS *, ADDRESS **, int, ENVELOPE *));
 extern void	readaliases __P((MAP *, SM_FILE_T *, bool, bool));
-extern bool	rebuildaliases __P((MAP *, bool));
+extern bool	rebuildaliases __P((MAP *));
 extern void	setalias __P((char *));
 
 /* logging */
@@ -2704,7 +2753,7 @@ extern void PRINTFLIKE(3, 4) sm_syslog __P((int, const char *, const char *, ...
 
 /* SMTP */
 extern void	giveresponse __P((int, char *, MAILER *, MCI *, ADDRESS *, time_t, ENVELOPE *, ADDRESS *));
-extern int	reply __P((MAILER *, MCI *, ENVELOPE *, time_t, void (*)__P((char *, bool, MAILER *, MCI *, ENVELOPE *)), char **, int));
+extern int	reply __P((MAILER *, MCI *, ENVELOPE *, time_t, void (*)__P((char *, bool, MAILER *, MCI *, ENVELOPE *)), char **, int, char **));
 extern void	smtp __P((char *volatile, BITMAP256, ENVELOPE *volatile));
 #if SASL
 extern int	smtpauth __P((MAILER *, MCI *, ENVELOPE *));
@@ -2784,9 +2833,12 @@ extern void	buildfname __P((char *, char *, char *, int));
 extern bool	chkclientmodifiers __P((int));
 extern bool	chkdaemonmodifiers __P((int));
 extern int	checkcompat __P((ADDRESS *, ENVELOPE *));
-#ifdef XDEBUG
+#if XDEBUG
 extern void	checkfd012 __P((char *));
 extern void	checkfdopen __P((int, char *));
+#else
+# define	checkfd012(str)	((void) 0)
+# define	checkfdopen(n, str)	((void) 0)
 #endif
 extern void	checkfds __P((char *));
 extern bool	chownsafe __P((int, bool));

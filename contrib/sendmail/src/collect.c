@@ -34,7 +34,7 @@ static SM_FILE_T *collect_eoh __P((ENVELOPE *, int, int));
 **		numhdrs -- number of headers
 **		hdrslen -- length of headers
 **
-**	Results:
+**	Returns:
 **		NULL, or handle to open data file
 **
 **	Side Effects:
@@ -82,7 +82,7 @@ collect_eoh(e, numhdrs, hdrslen)
 **	Parameters:
 **		e -- envelope
 **
-**	Results:
+**	Returns:
 **		none.
 **
 **	Side Effects:
@@ -179,7 +179,7 @@ collect_doheader(e)
 **	Parameters:
 **		e -- envelope
 **
-**	Results:
+**	Returns:
 **		NULL, or a pointer to an open data file,
 **		into which the message body will be written by collect().
 **
@@ -230,6 +230,40 @@ collect_dfopen(e)
 	}
 	e->e_flags |= EF_HAS_DF;
 	return df;
+}
+
+/*
+**  INCBUFLEN -- increase buflen for the header buffer in collect()
+**
+**	Parameters:
+**		buflen -- current size of buffer
+**
+**	Returns:
+**		new buflen
+*/
+
+static int incbuflen __P((int));
+static int
+incbuflen(buflen)
+	int buflen;
+{
+	int newlen;
+
+	/* this also handles the case of MaxMessageSize == 0 */
+	if (MaxMessageSize <= MEMCHUNKSIZE)
+	{
+		if (buflen < MEMCHUNKSIZE)
+			return buflen * 2;
+		else
+			return buflen + MEMCHUNKSIZE;
+	}
+
+	/* MaxMessageSize > MEMCHUNKSIZE */
+	newlen = buflen * 2;
+	if (newlen > 0 && newlen < MaxMessageSize)
+		return newlen;
+	else
+		return MaxMessageSize;
 }
 
 /*
@@ -540,10 +574,9 @@ bufferchar:
 
 				/* out of space for header */
 				obuf = buf;
-				if (buflen < MEMCHUNKSIZE)
-					buflen *= 2;
-				else
-					buflen += MEMCHUNKSIZE;
+				buflen = incbuflen(buflen);
+				if (tTd(30, 32))
+					sm_dprintf("buflen=%d, hdrslen=%d\n", buflen, hdrslen);
 				if (buflen <= 0)
 				{
 					sm_syslog(LOG_NOTICE, e->e_id,

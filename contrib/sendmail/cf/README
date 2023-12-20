@@ -1616,6 +1616,7 @@ sts		Experimental support for Strict Transport Security
 		for the default value).
 		For more information see doc/op/op.me.
 
+
 +-------+
 | HACKS |
 +-------+
@@ -1687,6 +1688,7 @@ least in the same company).
 The macro LOCAL_UUCP can be used to add rules into the generated
 cf file at the place where MAILER(`uucp') inserts its rules.  This
 should only be used if really necessary.
+
 
 +--------------------+
 | USING UUCP MAILERS |
@@ -3183,8 +3185,8 @@ VERIFY:bits	verification must have succeeded and ${cipher_bits} must
 ENCR:bits	${cipher_bits} must be greater than or equal bits.
 
 The RHS can optionally be prefixed by TEMP+ or PERM+ to select a temporary
-or permanent error.  The default is a temporary error code (403 4.7.0)
-unless the macro TLS_PERM_ERR is set during generation of the .cf file.
+or permanent error.  The default is a temporary error code unless
+the macro TLS_PERM_ERR is set during generation of the .cf file.
 
 If a certain level of encryption is required, then it might also be
 possible that this level is provided by the security layer from a SASL
@@ -3256,9 +3258,10 @@ default TLS options are not modified.
 About 2): the rulesets try_tls, srv_features, and clt_features can
 be used together with the access map.  Entries for the access map
 must be tagged with Try_TLS, Srv_Features, Clt_Features and refer
-to the hostname or IP address of the connecting system.  A default
-case can be specified by using just the tag.  For example, the
-following entries in the access map:
+to the hostname or IP address of the connecting system (the latter
+is not available for clt_features).  A default case can be specified
+by using just the tag.  For example, the following entries in the
+access map:
 
 	Try_TLS:broken.server	NO
 	Srv_Features:my.domain	v
@@ -3376,6 +3379,7 @@ or FEATURE(`authinfo') must be used which provides a separate map.
 Notice: It is not checked whether the map is actually
 group/world-unreadable, this is left to the user.
 
+
 +--------------------------------+
 | ADDING NEW MAILERS OR RULESETS |
 +--------------------------------+
@@ -3460,6 +3464,7 @@ groups can be defined using the command:
 	QUEUE_GROUP(`name', `equates')
 
 For details about queue groups, please see doc/op/op.{me,ps,txt}.
+
 
 +-------------------------------+
 | NON-SMTP BASED CONFIGURATIONS |
