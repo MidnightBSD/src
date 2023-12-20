@@ -61,6 +61,9 @@ smtpclrse(e)
 	e->e_rcode = 0;
 	e->e_renhsc[0] = '\0';
 	e->e_text = NULL;
+#if _FFR_LOG_STAGE
+	e->e_estate = -1;
+#endif
 
 	/*
 	**  Reset to avoid access to potentially dangling pointer
@@ -125,6 +128,7 @@ smtpinit(m, mci, e, onlyhelo)
 	e->e_rcode = 0;
 	e->e_renhsc[0] = '\0';
 	e->e_text = NULL;
+	maps_reset_chged("client:smtpinit");
 	switch (state)
 	{
 	  case MCIS_MAIL:
@@ -168,7 +172,8 @@ smtpinit(m, mci, e, onlyhelo)
 	SmtpPhase = mci->mci_phase = "client greeting";
 	sm_setproctitle(true, e, "%s %s: %s",
 			qid_printname(e), CurHostName, mci->mci_phase);
-	r = reply(m, mci, e, TimeOuts.to_initial, esmtp_check, NULL, XS_GREET);
+	r = reply(m, mci, e, TimeOuts.to_initial, esmtp_check, NULL, XS_GREET,
+		  NULL);
 	if (r < 0)
 		goto tempfail1;
 	if (REPLYTYPE(r) == 4)
@@ -224,7 +229,7 @@ tryhelo:
 	r = reply(m, mci, e,
 		  bitnset(M_LMTP, m->m_flags) ? TimeOuts.to_lhlo
 					      : TimeOuts.to_helo,
-		  helo_options, NULL, XS_EHLO);
+		  helo_options, NULL, XS_EHLO, NULL);
 	if (r < 0)
 		goto tempfail1;
 	else if (REPLYTYPE(r) == 5)
@@ -275,7 +280,7 @@ tryhelo:
 		/* tell it to be verbose */
 		smtpmessage("VERB", m, mci);
 		r = reply(m, mci, e, TimeOuts.to_miscshort, NULL, &enhsc,
-			XS_DEFAULT);
+			XS_DEFAULT, NULL);
 		if (r < 0)
 			goto tempfail1;
 	}
@@ -1840,7 +1845,7 @@ attemptauth(m, mci, e, sai)
 
 	/* get the reply */
 	smtpresult = reply(m, mci, e, TimeOuts.to_auth, getsasldata, NULL,
-			XS_AUTH);
+			XS_AUTH, NULL);
 
 	for (;;)
 	{
@@ -1884,7 +1889,7 @@ attemptauth(m, mci, e, sai)
 			*/
 
 			smtpresult = reply(m, mci, e, TimeOuts.to_auth,
-					   getsasldata, NULL, XS_AUTH);
+					   getsasldata, NULL, XS_AUTH, NULL);
 			return EX_NOPERM;
 		}
 
@@ -1906,7 +1911,7 @@ attemptauth(m, mci, e, sai)
 # endif
 		smtpmessage("%s", m, mci, in64);
 		smtpresult = reply(m, mci, e, TimeOuts.to_auth,
-				   getsasldata, NULL, XS_AUTH);
+				   getsasldata, NULL, XS_AUTH, NULL);
 	}
 	/* NOTREACHED */
 }
@@ -2248,6 +2253,7 @@ smtpmailfrom(m, mci, e)
 	**	Designates the sender.
 	*/
 
+	maps_reset_chged("client:MAIL");
 	mci->mci_state = MCIS_MAIL;
 
 #if !USE_EAI
@@ -2291,7 +2297,7 @@ smtpmailfrom(m, mci, e)
 	SmtpPhase = mci->mci_phase = "client MAIL";
 	sm_setproctitle(true, e, "%s %s: %s", qid_printname(e),
 			CurHostName, mci->mci_phase);
-	r = reply(m, mci, e, TimeOuts.to_mail, NULL, &enhsc, XS_MAIL);
+	r = reply(m, mci, e, TimeOuts.to_mail, NULL, &enhsc, XS_MAIL, NULL);
 	if (r < 0)
 	{
 		/* communications failure */
@@ -2562,9 +2568,9 @@ smtprcptstat(to, m, mci, e)
 	}
 
 	enhsc = NULL;
-	r = reply(m, mci, e, TimeOuts.to_rcpt, NULL, &enhsc, XS_RCPT);
+	r = reply(m, mci, e, TimeOuts.to_rcpt, NULL, &enhsc, XS_RCPT,
+		  &to->q_rstatus);
 	save_errno = errno;
-	to->q_rstatus = sm_rpool_strdup_x(e->e_rpool, SmtpReplyBuffer);
 	to->q_status = ENHSCN_RPOOL(enhsc, smtptodsn(r), e->e_rpool);
 	if (!bitnset(M_LMTP, m->m_flags))
 		to->q_statmta = mci->mci_host;
@@ -2719,7 +2725,7 @@ smtpdata(m, mci, e, ctladdr, xstart)
 	mci->mci_state = MCIS_DATA;
 	sm_setproctitle(true, e, "%s %s: %s",
 			qid_printname(e), CurHostName, mci->mci_phase);
-	r = reply(m, mci, e, TimeOuts.to_datainit, NULL, &enhsc, XS_DATA);
+	r = reply(m, mci, e, TimeOuts.to_datainit, NULL, &enhsc, XS_DATA, NULL);
 	if (r < 0 || REPLYTYPE(r) == 4)
 	{
 		if (r >= 0)
@@ -2840,7 +2846,7 @@ smtpdata(m, mci, e, ctladdr, xstart)
 			CurHostName, mci->mci_phase);
 	if (bitnset(M_LMTP, m->m_flags))
 		return EX_OK;
-	r = reply(m, mci, e, TimeOuts.to_datafinal, NULL, &enhsc, XS_EOM);
+	r = reply(m, mci, e, TimeOuts.to_datafinal, NULL, &enhsc, XS_EOM, NULL);
 	if (r < 0)
 		return EX_TEMPFAIL;
 	if (mci->mci_state == MCIS_DATA)
@@ -2928,7 +2934,8 @@ smtpgetstat(m, mci, e)
 	enhsc = NULL;
 
 	/* check for the results of the transaction */
-	r = reply(m, mci, e, TimeOuts.to_datafinal, NULL, &enhsc, XS_DATA2);
+	r = reply(m, mci, e, TimeOuts.to_datafinal, NULL, &enhsc, XS_DATA2,
+		  NULL);
 	if (r < 0)
 		return EX_TEMPFAIL;
 	xstat = EX_NOTSTICKY;
@@ -3010,7 +3017,8 @@ smtpquit(m, mci, e)
 		SmtpPhase = "client QUIT";
 		mci->mci_state = MCIS_QUITING;
 		smtpmessage("QUIT", m, mci);
-		(void) reply(m, mci, e, TimeOuts.to_quit, NULL, NULL, XS_QUIT);
+		(void) reply(m, mci, e, TimeOuts.to_quit, NULL, NULL, XS_QUIT,
+			     NULL);
 		SuprErrs = oldSuprErrs;
 		if (mci->mci_state == MCIS_CLOSED)
 			goto end;
@@ -3081,7 +3089,7 @@ smtprset(m, mci, e)
 
 	SmtpPhase = "client RSET";
 	smtpmessage("RSET", m, mci);
-	r = reply(m, mci, e, TimeOuts.to_rset, NULL, NULL, XS_DEFAULT);
+	r = reply(m, mci, e, TimeOuts.to_rset, NULL, NULL, XS_DEFAULT, NULL);
 	if (r < 0)
 		return;
 
@@ -3130,7 +3138,8 @@ smtpprobe(mci)
 	e = &BlankEnvelope;
 	SmtpPhase = "client probe";
 	smtpmessage("RSET", m, mci);
-	r = reply(m, mci, e, TimeOuts.to_miscshort, NULL, NULL, XS_DEFAULT);
+	r = reply(m, mci, e, TimeOuts.to_miscshort, NULL, NULL, XS_DEFAULT,
+		  NULL);
 	if (REPLYTYPE(r) != 2)
 		smtpquit(m, mci, e);
 	return r;
@@ -3147,16 +3156,18 @@ smtpprobe(mci)
 **			If null, no special processing is done.
 **		enhstat -- optional, returns enhanced error code string (if set)
 **		rtype -- type of SmtpMsgBuffer: does it contains secret data?
+**		rtext -- pointer to where to save first line of reply (if set)
 **
 **	Returns:
 **		reply code it reads.
+**		-1 on I/O errors etc.
 **
 **	Side Effects:
 **		flushes the mail file.
 */
 
 int
-reply(m, mci, e, timeout, pfunc, enhstat, rtype)
+reply(m, mci, e, timeout, pfunc, enhstat, rtype, rtext)
 	MAILER *m;
 	MCI *mci;
 	ENVELOPE *e;
@@ -3164,6 +3175,7 @@ reply(m, mci, e, timeout, pfunc, enhstat, rtype)
 	void (*pfunc) __P((char *, bool, MAILER *, MCI *, ENVELOPE *));
 	char **enhstat;
 	int rtype;
+	char **rtext;
 {
 	register char *bufp;
 	register int r;
@@ -3196,6 +3208,12 @@ reply(m, mci, e, timeout, pfunc, enhstat, rtype)
 			what = "greeting";
 		else
 			what = "unknown";
+#if PIPELINING
+		if (mci->mci_flags & MCIF_PIPELINED)
+			sm_dprintf("reply to %s [but PIPELINED]\n", what);
+		else
+#endif
+		/* "else" in #if code above */
 		sm_dprintf("reply to %s\n", what);
 	}
 
@@ -3274,7 +3292,7 @@ reply(m, mci, e, timeout, pfunc, enhstat, rtype)
 			mci->mci_errno = errno;
 			oldholderrs = HoldErrs;
 			HoldErrs = true;
-			usrerr("451 4.4.1 reply: read error from %s",
+			usrerr("451 4.4.2 reply: read error from %s",
 			       CURHOSTNAME);
 			mci_setstat(mci, EX_TEMPFAIL, "4.4.2", MsgBuf);
 
@@ -3307,6 +3325,8 @@ reply(m, mci, e, timeout, pfunc, enhstat, rtype)
 			return -1;
 		}
 		fixcrlf(bufp, true);
+		if (tTd(18, 4))
+			sm_dprintf("received=%s\n", bufp);
 
 		/* EHLO failure is not a real error */
 		if (e->e_xfp != NULL && (bufp[0] == '4' ||
@@ -3347,6 +3367,9 @@ reply(m, mci, e, timeout, pfunc, enhstat, rtype)
 		/* ignore improperly formatted input */
 		if (!ISSMTPREPLY(bufp))
 			continue;
+
+		if (NULL != rtext && firstline)
+			*rtext = sm_rpool_strdup_x(e->e_rpool, SmtpReplyBuffer);
 
 		if (bitset(MCIF_ENHSTAT, mci->mci_flags) &&
 		    enhstat != NULL &&
@@ -3409,6 +3432,9 @@ reply(m, mci, e, timeout, pfunc, enhstat, rtype)
 					e->e_rcode = r;
 					e->e_text = sm_rpool_strdup_x(
 							e->e_rpool, bufp + o);
+#if _FFR_LOG_STAGE
+					e->e_estate = rtype;
+#endif
 				}
 			}
 			if (tTd(87, 2))

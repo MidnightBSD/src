@@ -49,10 +49,10 @@ static SM_LDAP_RECURSE_ENTRY *sm_ldap_add_recurse __P((SM_LDAP_RECURSE_LIST **, 
 
 # if _FFR_LDAP_VERSION
 #  if defined(LDAP_VERSION_MAX) && _FFR_LDAP_VERSION > LDAP_VERSION_MAX
-#   ERROR "_FFR_LDAP_VERSION > LDAP_VERSION_MAX"
+#   error "_FFR_LDAP_VERSION > LDAP_VERSION_MAX"
 #  endif
 #  if defined(LDAP_VERSION_MIN) && _FFR_LDAP_VERSION < LDAP_VERSION_MIN
-#   ERROR "_FFR_LDAP_VERSION < LDAP_VERSION_MAX"
+#   error "_FFR_LDAP_VERSION < LDAP_VERSION_MAX"
 #  endif
 #  define SM_LDAP_VERSION_DEFAULT	_FFR_LDAP_VERSION
 # else /* _FFR_LDAP_VERSION */
@@ -536,7 +536,7 @@ sm_ldap_search_m(lmap, argv)
 		if (lmap->ldap_multi_args)
 		{
 # if SM_LDAP_ARGS < 10
-#  ERROR _SM_LDAP_ARGS must be 10
+#  error _SM_LDAP_ARGS must be 10
 # endif
 			if (q[1] == 's')
 				key = argv[0];

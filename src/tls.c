@@ -26,19 +26,18 @@ SM_RCSID("@(#)$Id: tls.c,v 8.127 2013-11-27 02:51:11 gshapiro Exp $")
 # include <tls.h>
 
 # if defined(OPENSSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER <= 0x00907000L
-#  ERROR "OpenSSL version OPENSSL_VERSION_NUMBER is unsupported."
+#  error "OpenSSL version OPENSSL_VERSION_NUMBER is unsupported."
 # endif
 
 /*
 **  *SSL version numbers:
-**  OpenSSL 0.9 - 1.1 (so far), 3.0 (in alpha)
+**  OpenSSL 0.9 - 1.1 (so far), 3.0
 **  LibreSSL 2.0 (0x20000000L - part of "These will never change")
 */
 
-# if (OPENSSL_VERSION_NUMBER >= 0x10100000L && OPENSSL_VERSION_NUMBER < 0x20000000L) || OPENSSL_VERSION_NUMBER >= 0x30000000L
+# if (OPENSSL_VERSION_NUMBER >= 0x10100000L && OPENSSL_VERSION_NUMBER < 0x20000000L) || OPENSSL_VERSION_NUMBER >= 0x30000000L || (defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER >= 0x2070000fL)
 #  define MTA_HAVE_DH_set0_pqg 1
 #  define MTA_HAVE_DSA_GENERATE_EX	1
-
 #  define MTA_HAVE_OPENSSL_init_ssl	1
 #  define MTA_ASN1_STRING_data ASN1_STRING_get0_data
 #  include <openssl/bn.h>
@@ -48,6 +47,19 @@ SM_RCSID("@(#)$Id: tls.c,v 8.127 2013-11-27 02:51:11 gshapiro Exp $")
 #  define MTA_RSA_TMP_CB	1
 #  define MTA_ASN1_STRING_data ASN1_STRING_data
 # endif
+
+/* Is this ok or use HAVE_SSL_get1_peer_certificate instead? */
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+# define MTA_SSL_get_peer_certificate SSL_get1_peer_certificate
+#else
+# define MTA_SSL_get_peer_certificate SSL_get_peer_certificate
+#endif
+
+#if HAVE_ERR_get_error_all
+# define MTA_SSL_ERR_get(f, l, d, fl, fct) ERR_get_error_all(f, l, fct, d, fl)
+#else /* if HAVE_ERR_get_error_line_data ? */
+# define MTA_SSL_ERR_get(f, l, d, fl, fct) ERR_get_error_line_data(f, l, d, fl)
+#endif
 
 # if !TLS_NO_RSA && MTA_RSA_TMP_CB
 static RSA *rsa_tmp = NULL;	/* temporary RSA key */
@@ -1466,7 +1478,6 @@ inittls(ctx, req, options, srv, certfile, keyfile, cacertpath, cacertfile, dhpar
 	}
 # endif /* !NO_DH */
 
-
 	/* XXX do we need this cache here? */
 	if (bitset(TLS_I_CACHE, req))
 	{
@@ -1495,33 +1506,11 @@ inittls(ctx, req, options, srv, certfile, keyfile, cacertpath, cacertfile, dhpar
 				SSL_CTX_set_tmp_rsa_callback(*ctx, tmp_rsa_key);
 # endif
 
-			/*
-			**  We have to install our own verify callback:
-			**  SSL_VERIFY_PEER requests a client cert but even
-			**  though *FAIL_IF* isn't set, the connection
-			**  will be aborted if the client presents a cert
-			**  that is not "liked" (can't be verified?) by
-			**  the TLS library :-(
-			*/
-
-			/*
-			**  XXX currently we could call tls_set_verify()
-			**  but we hope that that function will later on
-			**  only set the mode per connection.
-			*/
-
-			SSL_CTX_set_verify(*ctx,
-				bitset(TLS_I_NO_VRFY, req) ? SSL_VERIFY_NONE
-							   : SSL_VERIFY_PEER,
-				NULL);
-
 			if (srv)
 			{
 				SSL_CTX_set_client_CA_list(*ctx,
 					SSL_load_client_CA_file(cacertfile));
 			}
-			SSL_CTX_set_cert_verify_callback(*ctx, tls_verify_cb,
-							NULL);
 		}
 		else
 		{
@@ -1545,6 +1534,29 @@ inittls(ctx, req, options, srv, certfile, keyfile, cacertpath, cacertfile, dhpar
 				return false;
 		}
 	}
+
+	/*
+	**  XXX currently we could call tls_set_verify()
+	**  but we hope that that function will later on
+	**  only set the mode per connection.
+	*/
+
+	SSL_CTX_set_verify(*ctx,
+		bitset(TLS_I_NO_VRFY, req) ? SSL_VERIFY_NONE
+					   : SSL_VERIFY_PEER,
+		NULL);
+
+	/*
+	**  Always use our callback instead of the builtin version.
+	**  We have to install our own verify callback:
+	**  SSL_VERIFY_PEER requests a client cert but even
+	**  though *FAIL_IF* isn't set, the connection
+	**  will be aborted if the client presents a cert
+	**  that is not "liked" (can't be verified?) by
+	**  the TLS library :-(
+	*/
+
+	SSL_CTX_set_cert_verify_callback(*ctx, tls_verify_cb, NULL);
 
 	/* XXX: make this dependent on an option? */
 	if (tTd(96, 9))
@@ -1791,6 +1803,7 @@ tls_get_info(ssl, srv, host, mac, certreq)
 	X509 *cert;
 # if DANE
 	dane_vrfy_ctx_P dane_vrfy_ctx;
+	dane_tlsa_P dane_tlsa;
 # endif
 
 	c = SSL_get_current_cipher(ssl);
@@ -1809,7 +1822,7 @@ tls_get_info(ssl, srv, host, mac, certreq)
 	macdefine(mac, A_TEMP, macid("{tls_version}"), s);
 
 	who = srv ? "server" : "client";
-	cert = SSL_get_peer_certificate(ssl);
+	cert = MTA_SSL_get_peer_certificate(ssl);
 	verifyok = SSL_get_verify_result(ssl);
 	if (LogLevel > 14)
 		sm_syslog(LOG_INFO, NOQID,
@@ -1888,13 +1901,17 @@ tls_get_info(ssl, srv, host, mac, certreq)
 	}
 # if DANE
 	dane_vrfy_ctx = NULL;
+	dane_tlsa = NULL;
 	if (TLSsslidx >= 0)
 	{
 		tlsi_ctx_T *tlsi_ctx;
 
 		tlsi_ctx = (tlsi_ctx_P) SSL_get_ex_data(ssl, TLSsslidx);
 		if (tlsi_ctx != NULL)
+		{
 			dane_vrfy_ctx = &(tlsi_ctx->tlsi_dvc);
+			dane_tlsa = dane_get_tlsa(dane_vrfy_ctx);
+		}
 	}
 #  define DANE_VRFY_RES_IS(r) \
 	((dane_vrfy_ctx != NULL) && dane_vrfy_ctx->dane_vrfy_res == (r))
@@ -1951,7 +1968,7 @@ tls_get_info(ssl, srv, host, mac, certreq)
 # endif
 		/* XXX: maybe cut off ident info? */
 		sm_syslog(LOG_INFO, NOQID,
-			  "STARTTLS=%s, relay=%.100s, version=%.16s, verify=%.16s, cipher=%.64s, bits=%.6s/%.6s%s%s",
+			  "STARTTLS=%s, relay=%.100s, version=%.16s, verify=%.16s, cipher=%.64s, bits=%.6s/%.6s%s%s%s",
 			  who,
 			  host == NULL ? "local" : host,
 			  vers, s1, s2, /* sm_snprintf() can deal with NULL */
@@ -1960,8 +1977,13 @@ tls_get_info(ssl, srv, host, mac, certreq)
 # if DANE
 			, LOG_DANE_FP ? ", pubkey_fp=" : ""
 			, LOG_DANE_FP ? dane_vrfy_ctx->dane_vrfy_fp : ""
+			, (dane_tlsa != NULL
+			    && TLSA_IS_FL(dane_tlsa, TLSAFLUNS)
+			    && !TLSA_IS_FL(dane_tlsa, TLSAFLSUP)
+			   && DANE_VRFY_RES_IS(DANE_VRFY_NONE))
+			  ? "status=all TLSA RRs are unsupported" : ""
 # else
-			, "", ""
+			, "", "", ""
 # endif
 			);
 		if (LogLevel > 11)
@@ -2271,7 +2293,7 @@ tls_verify_log(ok, ctx, name)
 **  DANE_GET_TLSA -- Retrieve TLSA RR for DANE
 **
 **	Parameters:
-**		dane -- dane verify context
+**		dane_vrfy_ctx -- dane verify context
 **
 **	Returns:
 **		dane_tlsa if TLSA RR is available
@@ -2515,8 +2537,8 @@ tlslogerr(priority, ll, who)
 
 	if (LogLevel <= ll)
 		return;
-	while ((l = ERR_get_error_line_data((const char **) &file, &line,
-					    (const char **) &data, &flags))
+	while ((l = MTA_SSL_ERR_get((const char **) &file, &line,
+				    (const char **) &data, &flags, NULL))
 		!= 0)
 	{
 		sm_syslog(priority, NOQID,

@@ -16,8 +16,8 @@
 #if STARTTLS
 # include <tls.h>
 #endif
-#if DNSSEC_TEST
-# include <sm_resolve.h>
+#if DNSSEC_TEST || _FFR_NAMESERVER
+# include "sm_resolve.h"
 #endif
 
 SM_RCSID("@(#)$Id: readcf.c,v 8.692 2013-11-22 20:51:56 ca Exp $")
@@ -33,12 +33,18 @@ SM_RCSID("@(#)$Id: readcf.c,v 8.692 2013-11-22 20:51:56 ca Exp $")
 #define HOURS	HOUR
 
 static void	fileclass __P((int, char *, char *, bool, bool, bool));
+#if _FFR_DYN_CLASS
+static void	dynclass __P((int, char *));
+#endif
 static char	**makeargv __P((char *));
 static void	settimeout __P((char *, char *, bool));
 static void	toomany __P((int, int));
 static char	*extrquotstr __P((char *, char **, char *, bool *));
 static void	parse_class_words __P((int, char *));
 
+#if _FFR_CLASS_RM_ENTRY
+static void classrmentry __P((int, char *));
+#endif
 
 #if _FFR_BOUNCE_QUEUE
 static char *bouncequeue = NULL;
@@ -161,6 +167,11 @@ readcf(cfname, safe, e)
 	char pvpbuf[MAXLINE + MAXATOM];
 	static char *null_list[1] = { NULL };
 	extern unsigned char TokTypeNoC[];
+#if _FFR_CLASS_RM_ENTRY
+	int off;
+#else
+# define off 1
+#endif
 
 	FileName = cfname;
 	LineNumber = 0;
@@ -551,9 +562,15 @@ readcf(cfname, safe, e)
 
 		  case 'C':		/* word class */
 		  case 'T':		/* trusted user (set class `t') */
+#if _FFR_CLASS_RM_ENTRY
+			if (bp[0] != '\0' && bp[1] == '-')
+				off = 2;
+			else
+				off = 1;
+#endif
 			if (bp[0] == 'C')
 			{
-				mid = macid_parse(&bp[1], &ep);
+				mid = macid_parse(&bp[off], &ep);
 				if (mid == 0)
 					break;
 				expand(ep, exbuf, sizeof(exbuf), e);
@@ -565,7 +582,7 @@ readcf(cfname, safe, e)
 			else
 			{
 				mid = 't';
-				p = &bp[1];
+				p = &bp[off];
 			}
 			while (*p != '\0')
 			{
@@ -580,10 +597,28 @@ readcf(cfname, safe, e)
 				delim = *p;
 				*p = '\0';
 				if (wd[0] != '\0')
-					setclass(mid, wd);
+				{
+					if (off < 2)
+						setclass(mid, wd);
+#if _FFR_CLASS_RM_ENTRY
+					else
+						classrmentry(mid, wd);
+#endif /* _FFR_CLASS_RM_ENTRY */
+				}
 				*p = delim;
 			}
 			break;
+
+#if _FFR_DYN_CLASS
+		  case 'A':		/* dynamic class */
+			mid = macid_parse(&bp[1], &ep);
+			if (mid == 0)
+				break;
+			for (p = ep; SM_ISSPACE(*p); )
+				p++;
+			dynclass(mid, p);
+			break;
+#endif
 
 		  case 'F':		/* word class from file */
 			mid = macid_parse(&bp[1], &ep);
@@ -940,11 +975,11 @@ toomany(id, maxcnt)
 	syserr("too many %c lines, %d max", id, maxcnt);
 }
 /*
-**  FILECLASS -- read members of a class from a file
+**  FILECLASS -- read members of a class from a file, program, or map
 **
 **	Parameters:
 **		class -- class to define.
-**		filename -- name of file to read.
+**		filename -- name of file to read/specification of map and key.
 **		fmt -- scanf string to use for match.
 **		ismap -- if set, this is a map lookup.
 **		safe -- if set, this is a safe read.
@@ -955,8 +990,10 @@ toomany(id, maxcnt)
 **		none
 **
 **	Side Effects:
-**		puts all lines in filename that match a scanf into
-**			the named class.
+**		puts all entries retrieved from a file, program, or map
+**		into the named class:
+**		- file or |prg: all words in lines that match a scanf fmt
+**		- map: all words in value (rhs) of a map lookup of a key
 */
 
 /*
@@ -1228,6 +1265,123 @@ fileclass(class, filename, fmt, ismap, safe, optional)
 	if (pid > 0)
 		(void) waitfor(pid);
 }
+
+#if _FFR_DYN_CLASS
+
+/*
+**  DYNCLASS -- open a dynamic class
+**
+**	Parameters:
+**		class -- class to define.
+**		arg -- rest of class definition from cf.
+**
+**	Returns:
+**		none
+*/
+
+static void
+dynclass(class, arg)
+	int class;
+	char *arg;
+{
+	char *p;
+	char *tag;
+	char *mn;
+	char *maptype, *spec;
+	STAB *mapclass, *dynmap;
+
+	mn = newstr(macname(class));
+	if (*arg == '\0')
+	{
+		syserr("dynamic class: A{%s}: missing class definition", mn);
+		return;
+	}
+	tag = arg;
+	dynmap = stab(mn, ST_DYNMAP, ST_FIND);
+	if (NULL != dynmap)
+	{
+		syserr("dynamic class: A{%s}: already defined", mn);
+		goto error;
+	}
+
+	/* skip past tag */
+	if ((p = strchr(arg, '@')) == NULL)
+	{
+		/* should not happen */
+		syserr("dynamic class: A{%s}: bogus map specification", mn);
+		goto error;
+	}
+
+	/* skip past '@' */
+	*p++ = '\0';
+	maptype = p;
+
+	if ((spec = strchr(maptype, ':')) == NULL)
+	{
+		syserr("dynamic class: A{%s}: missing map class", mn);
+		goto error;
+	}
+	*spec++ ='\0';
+
+	/* set up map structure */
+	mapclass = stab(maptype, ST_MAPCLASS, ST_FIND);
+	if (NULL == mapclass)
+	{
+		syserr("dynamic class: A{%s}: map type %s not available",
+		       mn, maptype);
+		goto error;
+	}
+
+	if (tTd(37, 5))
+		sm_dprintf("dynamic class: A{%s}: type='%s', tag='%s', spec='%s'\n",
+			   mn, maptype, tag, spec);
+
+	/* enter map in stab */
+	dynmap = stab(mn, ST_DYNMAP, ST_ENTER);
+	if (NULL == dynmap)
+	{
+		syserr("dynamic class: A{%s}: cannot enter", mn);
+		goto error;
+	}
+	dynmap->s_dynclass.map_class = &mapclass->s_mapclass;
+	dynmap->s_dynclass.map_mname = newstr(mn);
+
+	/* parse map spec */
+	if (!dynmap->s_dynclass.map_class->map_parse(&dynmap->s_dynclass, spec))
+	{
+		/* map_parse() showed the error already */
+		goto error;
+	}
+
+	/* open map */
+	if (dynmap->s_dynclass.map_class->map_open(&dynmap->s_dynclass, O_RDONLY))
+	{
+		dynmap->s_dynclass.map_mflags |= MF_OPEN;
+		dynmap->s_dynclass.map_pid = getpid();
+	}
+	else
+	{
+		syserr("dynamic class: A{%s}: map open failed", mn);
+		goto error;
+	}
+	dynmap->s_dynclass.map_mflags |= MF_VALID;
+	dynmap->s_dynclass.map_tag = newstr(tag);
+
+#if 0
+	/* close map: where to do this? */
+	dynmap->s_dynclass.map_mflags |= MF_CLOSING;
+	dynmap->s_dynclass.map_class->map_close(&map);
+	dynmap->s_dynclass.map_mflags &= ~(MF_OPEN|MF_WRITABLE|MF_CLOSING);
+#endif
+	sm_free(mn);
+	return;
+
+  error:
+	dynmap->s_dynclass.map_mflags |= MF_OPENBOGUS;
+	sm_free(mn);
+	return;
+}
+#endif
 
 #if _FFR_RCPTFLAGS
 /* first character for dynamically created mailers */
@@ -2958,7 +3112,7 @@ static struct optioninfo
 #endif
 #if _FFR_EIGHT_BIT_ADDR_OK
 # if !ALLOW_255
-#  ERROR "_FFR_EIGHT_BIT_ADDR_OK requires ALLOW_255"
+#  error "_FFR_EIGHT_BIT_ADDR_OK requires ALLOW_255"
 # endif
 # define O_EIGHT_BIT_ADDR_OK	0xdf
 	{ "EightBitAddrOK",	O_EIGHT_BIT_ADDR_OK,	OI_NONE },
@@ -3013,7 +3167,7 @@ static struct optioninfo
 # define O_TLSFB2CLEAR		0xef
 	{ "TLSFallbacktoClear",	O_TLSFB2CLEAR,	OI_NONE	},
 #endif
-#if DNSSEC_TEST
+#if DNSSEC_TEST || _FFR_NAMESERVER
 # define O_NSPORTIP		0xf0
 	{ "NameServer",	O_NSPORTIP,	OI_NONE	},
 #endif
@@ -3021,7 +3175,7 @@ static struct optioninfo
 # define O_DANE		0xf1
 	{ "DANE",	O_DANE,	OI_NONE	},
 #endif
-#if DNSSEC_TEST
+#if DNSSEC_TEST || _FFR_NAMESERVER
 # define O_NSSRCHLIST		0xf2
 	{ "NameSearchList",	O_NSSRCHLIST,	OI_NONE	},
 #endif
@@ -4737,7 +4891,7 @@ setoption(opt, val, safe, sticky, e)
 		UseCompressedIPv6Addresses = atobool(val);
 		break;
 
-#if DNSSEC_TEST
+#if DNSSEC_TEST || _FFR_NAMESERVER
 	  case O_NSPORTIP:
 		nsportip(val);
 		break;
@@ -4861,6 +5015,42 @@ setclass(class, str)
 		setbitn(bitidx(class), s->s_class);
 	}
 }
+
+#if _FFR_CLASS_RM_ENTRY
+/*
+**  CLASSRMENTRY -- remove a string from a class
+**
+**	Parameters:
+**		class -- the class from which to remove the string.
+**		str -- the string to remove
+**
+**	Returns:
+**		none.
+**
+**	Side Effects:
+**		removes the string from the class (if it was in there).
+*/
+
+static void
+classrmentry(class, str)
+	int class;
+	char *str;
+{
+	STAB *s;
+
+	s = stab(str, ST_CLASS, ST_FIND);
+	if (NULL == s /* || ST_CLASS != s->s_symtype */)
+	{
+		if (tTd(37, 8))
+			sm_dprintf("classrmentry: entry=%s not in class %s\n", str, macname(class));
+		return;
+	}
+	clrbitn(bitidx(class), s->s_class);
+	if (tTd(37, 8))
+		sm_dprintf("classrmentry(%s, %s)=%d\n", macname(class), str, bitnset(bitidx(class), s->s_class));
+}
+#endif /* _FFR_CLASS_RM_ENTRY */
+
 /*
 **  MAKEMAPENTRY -- create a map entry
 **

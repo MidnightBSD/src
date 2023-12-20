@@ -21,7 +21,7 @@
 #  endif
 # endif /* !TLS_NO_RSA */
 
-# if OPENSSL_VERSION_NUMBER >= 0x10100000L && OPENSSL_VERSION_NUMBER < 0x20000000L
+# if (OPENSSL_VERSION_NUMBER >= 0x10100000L && OPENSSL_VERSION_NUMBER < 0x20000000L) || OPENSSL_VERSION_NUMBER >= 0x30000000L
 #  define TLS_version_num OpenSSL_version_num
 # else
 #  define TLS_version_num SSLeay
@@ -49,17 +49,19 @@
 
 #if DANE
 extern int gettlsa __P((char *, char *, STAB **, unsigned long, unsigned int, unsigned int));
-# define MAX_TLSA_RR	8
+# ifndef MAX_TLSA_RR
+#  define MAX_TLSA_RR	8
+# endif
 
 # define DANE_VRFY_NONE	0	/* no TLSAs */
-# define DANE_VRFY_OK		1	/* TLSA check was ok */
+# define DANE_VRFY_OK	1	/* TLSA check was ok */
 # define DANE_VRFY_FAIL	(-1)	/* TLSA check failed */
 
 /* return values for dane_tlsa_chk() */
 # define TLSA_BOGUS	(-10)
 # define TLSA_UNSUPP	(-1)
 /* note: anything >= 0 is ok and refers to the hash algorithm */
-# define TLSA_IS_KNOWN(r)	((r) >= 0)
+# define TLSA_IS_SUPPORTED(r)	((r) >= 0)
 # define TLSA_IS_VALID(r)	((r) >= TLSA_UNSUPP)
 
 struct dane_tlsa_S
@@ -87,7 +89,7 @@ struct dane_tlsa_S
 # define TLSAFLADTLSA	0x00000200	/* currently unused */
 
 /* could be used to replace DNSRC */
-# define TLSAFLTEMP	0x00001000
+# define TLSAFLTEMP	0x00001000	/* TLSA RR lookup tempfailed */
 /* no TLSA? -- _n == 0 */
 # define TLSAFLNOTLSA	0x00002000	/* currently unused */
 
@@ -100,6 +102,9 @@ struct dane_tlsa_S
 # define TLSAFLNOADMX	0x00010000
 # define TLSAFLNOADTLSA	0x00020000	/* TLSA: no AD - for DANE=always? */
 
+# define TLSAFLUNS	0x00100000	/* has unsupported TLSA RRs */
+# define TLSAFLSUP	0x00200000	/* has supported TLSA RRs */
+
 # define TLSA_SET_FL(dane_tlsa, fl)	(dane_tlsa)->dane_tlsa_flags |= (fl)
 # define TLSA_CLR_FL(dane_tlsa, fl)	(dane_tlsa)->dane_tlsa_flags &= ~(fl)
 # define TLSA_IS_FL(dane_tlsa, fl)	((dane_tlsa)->dane_tlsa_flags & (fl))
@@ -109,8 +114,8 @@ struct dane_tlsa_S
 # define GETTLSANOX(host, pste, port)	gettlsa(host, NULL, pste, TLSAFLNOEXP, 0, port)
 
 /* values for DANE option and dane_vrfy_chk */
-# define DANE_NEVER	TLSAFLNONE
-# define DANE_ALWAYS	TLSAFLALWAYS		/* NOT documented, testing... */
+# define DANE_NEVER	TLSAFLNONE /* XREF: see sendmail.h: #define Dane*/
+# define DANE_ALWAYS	TLSAFLALWAYS	/* NOT documented, testing... */
 # define DANE_SECURE	TLSAFLSECURE
 # define CHK_DANE(dane)	((dane) != DANE_NEVER)
 

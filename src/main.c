@@ -326,9 +326,7 @@ main(argc, argv, envp)
 	V6LoopbackAddrFound = false;
 # endif
 #endif
-#if XDEBUG
 	checkfd012("after openlog");
-#endif
 
 	tTsetup(tTdvect, sizeof(tTdvect), "0-99.1,*_trace_*.1");
 
@@ -672,6 +670,11 @@ main(argc, argv, envp)
 		sm_dprintf("       OpenSSL: linked   0x%08x\n",
 			   (uint) TLS_version_num());
 	}
+#  if defined(LIBRESSL_VERSION_NUMBER)
+	if (tTd(0, 15))
+		sm_dprintf("       LibreSSL: compiled 0x%08x\n",
+			   (uint) LIBRESSL_VERSION_NUMBER);
+#  endif
 #endif /* STARTTLS */
 
 	/* clear sendmail's environment */
@@ -1276,9 +1279,7 @@ main(argc, argv, envp)
 	**	Extract special fields for local use.
 	*/
 
-#if XDEBUG
 	checkfd012("before readcf");
-#endif
 	vendor_pre_defaults(&BlankEnvelope);
 
 	readcf(getcfname(OpMode, SubmitMode, cftype, conffile),
@@ -2014,9 +2015,7 @@ main(argc, argv, envp)
 	sm_sasl_init();
 #endif
 
-#if XDEBUG
 	checkfd012("before main() initmaps");
-#endif
 
 	/*
 	**  Do operation-mode-dependent initialization.
@@ -2625,7 +2624,6 @@ main(argc, argv, envp)
 		/* init TLS for server, ignore result for now */
 		(void) initsrvtls(tls_ok);
 #endif
-
 	nextreq:
 		p_flags = getrequests(&MainEnvelope);
 
@@ -2663,8 +2661,8 @@ main(argc, argv, envp)
 			authinfo = buf;
 			if (tTd(75, 9))
 				sm_syslog(LOG_INFO, NOQID,
-					"main: where=not_calling_getauthinfo, RealHostAddr=%s",
-					anynet_ntoa(&RealHostAddr));
+					"main: where=not_calling_getauthinfo, RealHostAddr=%s, RealHostName=%s",
+					anynet_ntoa(&RealHostAddr), RealHostName);
 		}
 		else
 		/* WARNING: "non-braced" else */
@@ -2921,17 +2919,6 @@ main(argc, argv, envp)
 	{
 		int savederrors;
 		unsigned long savedflags;
-
-		/*
-		**  workaround for compiler warning on Irix:
-		**  do not initialize variable in the definition, but
-		**  later on:
-		**  warning(1548): transfer of control bypasses
-		**  initialization of:
-		**  variable "savederrors" (declared at line 2570)
-		**  variable "savedflags" (declared at line 2571)
-		**  goto giveup;
-		*/
 
 		savederrors = Errors;
 		savedflags = MainEnvelope.e_flags & EF_FATALERRS;
@@ -3285,6 +3272,10 @@ sigterm(sig)
 	FIX_SYSV_SIGNAL(sig, sigterm);
 	ShutdownRequest = "signal";
 	errno = save_errno;
+#if _FFR_DMTRIGGER
+	/* temporary? */
+	proc_list_signal(PROC_QM, sig);
+#endif
 	return SIGFUNC_RETURN;
 }
 /*
@@ -3427,7 +3418,7 @@ intsig(sig)
 **		none
 **
 **	Side Effects:
-**		Trys to insure that we are immune to vagaries of
+**		Try to insure that we are immune to vagaries of
 **		the controlling tty.
 */
 
@@ -3530,9 +3521,7 @@ disconnect(droplev, e)
 		errno = 0;
 	}
 
-#if XDEBUG
 	checkfd012("disconnect");
-#endif
 
 	if (LogLevel > 71)
 		sm_syslog(LOG_DEBUG, LOGID(e), "in background, pid=%d",
@@ -4226,6 +4215,7 @@ testmodeline(line, e)
 
 	lbp = NULL;
 	eightbit = false;
+	maps_reset_chged("testmodeline");
 	switch (line[0])
 	{
 	  case '#':
@@ -4376,7 +4366,36 @@ testmodeline(line, e)
 	  case '$':
 		if (line[1] == '=')
 		{
+#if _FFR_DYN_CLASS
+			MAP *dynmap;
+			STAB *st;
+#endif
+
 			mid = macid(&line[2]);
+#if _FFR_DYN_CLASS
+			if (mid != 0 &&
+			    (st = stab(macname(mid), ST_DYNMAP, ST_FIND)) != NULL)
+			{
+				dynmap = &st->s_dynclass;
+				q = dynmap->map_class->map_cname;
+				if (SM_IS_EMPTY(q))
+					q = "implicit";
+				(void) sm_io_fprintf(smioout, SM_TIME_DEFAULT,
+					"$=%s not possible for a dynamic class, use\n",
+					line + 2);
+				(void) sm_io_fprintf(smioout, SM_TIME_DEFAULT,
+					"makemap -u %s %s",
+					q, dynmap->map_file);
+				if (!SM_IS_EMPTY(dynmap->map_tag))
+				{
+					(void) sm_io_fprintf(smioout, SM_TIME_DEFAULT,
+					" | grep -i '^%s:'",
+					dynmap->map_tag);
+				}
+				(void) sm_io_fprintf(smioout, SM_TIME_DEFAULT, "\n");
+				return;
+			}
+#endif
 			if (mid != 0)
 				stabapply(dump_class, mid);
 			return;

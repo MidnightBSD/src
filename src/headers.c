@@ -331,6 +331,12 @@ hse:
 				  case '\015': /* cr */
 					qval[l++] = ' ';
 					break;
+				  case '\\':
+					qval[l++] = fvalue[k];
+					++k;
+					XLEN(fvalue[k]);
+					qval[l++] = fvalue[k];
+					break;
 				  case '"':
 					XLEN('\\');
 					qval[l++] = '\\';
@@ -344,14 +350,22 @@ hse:
 			XLEN('"');
 			qval[l++] = '"';
 			qval[l] = '\0';
-			k += strlen(fvalue + k);
-			if (k >= sizeof(qval))
+			l = strlen(fvalue + k);
+
+			/*
+			**  If there is something left in fvalue
+			**  then it has been truncated.
+			**  Note: the log entry might not be correct
+			**  in the EAI case: to get the "real" length
+			**  ilenx() would have to be applied to fvalue.
+			*/
+
+			if (l > 0)
 			{
 				if (LogLevel > 9)
 					sm_syslog(LOG_WARNING, e->e_id,
 						  "Warning: truncated header '%s' before check with '%s' len=%d max=%d",
-						  fname, rs, k,
-						  (int) (sizeof(qval) - 1));
+						  fname, rs, xlen + l, MAXNAME);
 			}
 			macdefine(&e->e_macro, A_TEMP,
 				macid("{currHeader}"), qval);
@@ -1130,11 +1144,11 @@ eatheader(e, full, log)
 #  define FIRSTLOGLEN 850
 # else
 #  if MSGIDLOGLEN < 100
-#    ERROR "MSGIDLOGLEN too short"
+#    error "MSGIDLOGLEN too short"
 #  endif
 /* XREF: this is "sizeof(sbuf)", see above */
 #  if MSGIDLOGLEN >= MAXLINE / 2
-#    ERROR "MSGIDLOGLEN too long"
+#    error "MSGIDLOGLEN too long"
 #  endif
 
 /* 850 - 100 for original MSGIDLOGLEN */
@@ -1142,7 +1156,7 @@ eatheader(e, full, log)
 
 /* check that total length is ok */
 #  if FIRSTLOGLEN + 200 >= MAXLINE
-#    ERROR "MSGIDLOGLEN too long"
+#    error "MSGIDLOGLEN too long"
 #  endif
 #  if MSGIDLOGLEN > MAXNAME
 #    undef XBUFLEN
@@ -1371,7 +1385,7 @@ priencode(p)
 	} while (0)
 
 #if MAXNAME < 10
-# ERROR "MAXNAME must be at least 10"
+# error "MAXNAME must be at least 10"
 #endif
 
 char *

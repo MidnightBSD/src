@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2010, 2012-2014 Proofpoint, Inc. and its suppliers.
+ * Copyright (c) 1998-2010, 2012-2014,2021-2022 Proofpoint, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1983, 1995-1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -456,6 +456,57 @@ rcptmods(rcpt, e)
 # define rcptmods(a, e)
 #endif /* _FFR_RCPTFLAGS */
 
+#if _FFR_8BITENVADDR
+
+/*
+**  SEP_ARGS -- separate address and argument string for MAIL/RCPT command
+**
+**	Parameters:
+**		args -- arguments (converted to and from internal format)
+**		orig -- string after command (original data)
+**		id -- envelope id (for logging only)
+**		addr -- for logging only: address (original data)
+**
+**	Returns:
+**		nothing
+*/
+
+static void sep_args __P((char *, char *, const char *, const char *));
+
+static void
+sep_args(args, orig, id, addr)
+	char *args;
+	char *orig;
+	const char *id;
+	const char *addr;
+{
+	int lr, lo;
+	char *q;
+
+	lr = strlen(args);
+	lo = strlen(orig);
+	if (lr >= lo)
+	{
+		sm_syslog(LOG_ERR, id,
+			"ERROR=ARGS_NOT_FOUND, address='%s', rest='%s', orig='%s', strlen(rest)=%d, strlen(orig)=%d",
+			addr, args, orig, lr, lo);
+		return;
+	}
+
+	q = orig + (lo - lr);
+	if (!(q > orig && *--q == ' '))
+	{
+		sm_syslog(LOG_INFO, id,
+			"ERROR=ARGS_DO_NOT_MATCH, address='%s', rest='%s', orig='%s', q='%s', strlen(rest)=%d, strlen(orig)=%d, cmp=%d",
+			addr, args, orig, q, lr, lo, strcmp(args, q));
+		return;
+	}
+
+	for (; q > orig && *q == ' '; q--)
+		*q = '\0';
+}
+#endif /* _FFR_8BITENVADDR */
+
 /*
 **  SMTP -- run the SMTP protocol.
 **
@@ -579,7 +630,7 @@ static char	*CurSmtpClient;		/* who's at the other end of channel */
 # define MAXSHIFT 8
 #endif
 #if MAXSHIFT > 31
-# ERROR "MAXSHIFT > 31 is invalid"
+# error "MAXSHIFT > 31 is invalid"
 #endif
 
 
@@ -874,7 +925,7 @@ smtp(nullserver, d_flags, e)
 	char *args[MAXSMTPARGS];
 	char inp[MAXINPLINE];
 #if MAXINPLINE < MAXLINE
-# ERROR "MAXINPLINE must NOT be less than MAXLINE"
+# error "MAXINPLINE must NOT be less than MAXLINE"
 #endif
 	char cmdbuf[MAXLINE];
 #if SASL
@@ -914,6 +965,7 @@ smtp(nullserver, d_flags, e)
 	int rfd, wfd;
 	volatile bool tls_active = false;
 	volatile bool smtps = bitnset(D_SMTPS, d_flags);
+	bool gotostarttls = false;
 	bool saveQuickAbort;
 	bool saveSuprErrs;
 	time_t tlsstart;
@@ -940,6 +992,7 @@ smtp(nullserver, d_flags, e)
 #if _FFR_BADRCPT_SHUTDOWN
 	int n_badrcpts_adj;
 #endif
+	bool gotodoquit = false;
 
 	RESET_AUTH_FAIL_LOG_USER;
 	SevenBitInput_Saved = SevenBitInput;
@@ -984,6 +1037,8 @@ smtp(nullserver, d_flags, e)
 #endif
 
 	sm_setproctitle(true, e, "server %s startup", CurSmtpClient);
+
+	maps_reset_chged("server:smtp");
 
 	/* Set default features for server. */
 	features = ((bitset(PRIV_NOETRN, PrivacyFlags) ||
@@ -1046,7 +1101,8 @@ smtp(nullserver, d_flags, e)
 	{
 		/* Can't use ("%s", ...) due to message() requirements */
 		message(nullserver);
-		goto doquit;
+		gotodoquit = true;
+		goto cmdloop;
 	}
 
 	e->e_features = features;
@@ -1248,7 +1304,8 @@ smtp(nullserver, d_flags, e)
 			/* arrange to ignore send list */
 			e->e_sendqueue = NULL;
 			lognullconnection = false;
-			goto doquit;
+			gotodoquit = true;
+			goto cmdloop;
 		}
 	}
 
@@ -1313,7 +1370,8 @@ smtp(nullserver, d_flags, e)
 
 				/* arrange to ignore send list */
 				e->e_sendqueue = NULL;
-				goto doquit;
+				gotodoquit = true;
+				goto cmdloop;
 			}
 			else
 			{
@@ -1366,7 +1424,8 @@ smtp(nullserver, d_flags, e)
 
 			/* arrange to ignore send list */
 			e->e_sendqueue = NULL;
-			goto doquit;
+			gotodoquit = true;
+			goto cmdloop;
 		}
 		if (response != NULL)
 			sm_free(response);
@@ -1460,7 +1519,8 @@ smtp(nullserver, d_flags, e)
 		first = true;
 		gothello = false;
 		smtp.sm_gotmail = false;
-		goto starttls;
+		gotostarttls = true;
+		goto cmdloop;
 	}
 
   greeting:
@@ -1522,6 +1582,8 @@ smtp(nullserver, d_flags, e)
 	smtp.sm_gotmail = false;
 	for (;;)
 	{
+
+  cmdloop:
 	    SM_TRY
 	    {
 		QuickAbort = false;
@@ -1539,6 +1601,19 @@ smtp(nullserver, d_flags, e)
 		Errors = 0;
 		FileName = NULL;
 		(void) sm_io_flush(smioout, SM_TIME_DEFAULT);
+
+		if (gotodoquit)
+		{
+			gotodoquit = false;
+			goto doquit;
+		}
+#if STARTTLS
+		if (gotostarttls)
+		{
+			gotostarttls = false;
+			goto starttls;
+		}
+#endif
 
 		/* read the input line */
 		SmtpPhase = "server cmd read";
@@ -2253,7 +2328,7 @@ smtp(nullserver, d_flags, e)
 			    != EX_OK)
 			{
 				/* do not offer too much info to client */
-				message("454 4.3.3 TLS curently not available");
+				message("454 4.3.3 TLS currently not available");
 				SMTLSFAILED;
 			}
 			r = SSL_set_ex_data(srv_ssl, TLSsslidx, &tlsi_ctx);
@@ -2726,6 +2801,7 @@ smtp(nullserver, d_flags, e)
 			p = skipword(p, "from");
 			if (p == NULL)
 				break;
+			maps_reset_chged("server:MAIL");
 			if (tempfail)
 			{
 				if (LogLevel > 9)
@@ -2817,6 +2893,7 @@ smtp(nullserver, d_flags, e)
 #if _FFR_8BITENVADDR
 				len = sizeof(iaddr) - (delimptr - iaddr);
 				(void) dequote_internal_chars(delimptr, delimptr, len);
+				sep_args(delimptr, origp, e->e_id, p);
 #endif
 			}
 			if (Errors > 0)
@@ -3154,6 +3231,7 @@ smtp(nullserver, d_flags, e)
 #if _FFR_8BITENVADDR
 				len = sizeof(iaddr) - (delimptr - iaddr);
 				(void) dequote_internal_chars(delimptr, delimptr, len);
+				sep_args(delimptr, origp, e->e_id, p);
 #endif
 			}
 
@@ -3671,7 +3749,7 @@ smtp(nullserver, d_flags, e)
 			}
 #endif /* SASL */
 
-doquit:
+  doquit:
 			/* avoid future 050 messages */
 			disconnect(1, e);
 
@@ -4810,7 +4888,7 @@ skipword(p, w)
 }
 
 /*
-**  RESET_MAIL_ESMTP_ARGS -- process ESMTP arguments from MAIL line
+**  RESET_MAIL_ESMTP_ARGS -- reset ESMTP arguments for MAIL
 **
 **	Parameters:
 **		e -- the envelope.
@@ -5748,7 +5826,7 @@ reset_saslconn(sasl_conn_t **conn, char *hostname,
 	       sasl_external_properties_t * ext_ssf)
 # endif /* SASL >= 20000 */
 #else /* __STDC__ */
-# ERROR "SASL requires __STDC__"
+# error "SASL requires __STDC__"
 #endif /* __STDC__ */
 {
 	int result;
