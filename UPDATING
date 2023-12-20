@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20231220:
+	sendmail 8.17.2
+
 20231217:
 	Delete subversion from base system.
 	We've been on git for a few years.
