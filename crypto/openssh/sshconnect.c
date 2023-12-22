@@ -1,4 +1,4 @@
-/* $OpenBSD: sshconnect.c,v 1.360 2022/11/03 21:59:20 djm Exp $ */
+/* $OpenBSD: sshconnect.c,v 1.361 2023/01/13 02:44:02 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -1276,8 +1276,11 @@ check_host_key(char *hostname, const struct ssh_conn_info *cinfo,
 		}
 		/* The host key has changed. */
 		warn_changed_key(host_key);
-		error("Add correct host key in %.100s to get rid of this message.",
-		    user_hostfiles[0]);
+		if (num_user_hostfiles > 0 || num_system_hostfiles > 0) {
+			error("Add correct host key in %.100s to get rid "
+			    "of this message.", num_user_hostfiles > 0 ?
+			    user_hostfiles[0] : system_hostfiles[0]);
+		}
 		error("Offending %s key in %s:%lu",
 		    sshkey_type(host_found->key),
 		    host_found->file, host_found->line);
@@ -1564,8 +1567,7 @@ ssh_login(struct ssh *ssh, Sensitive *sensitive, const char *orighost,
 	lowercase(host);
 
 	/* Exchange protocol version identification strings with the server. */
-	if ((r = kex_exchange_identification(ssh, timeout_ms,
-	    options.version_addendum)) != 0)
+	if ((r = kex_exchange_identification(ssh, timeout_ms, NULL)) != 0)
 		sshpkt_fatal(ssh, r, "banner exchange");
 
 	/* Put the connection into non-blocking mode. */

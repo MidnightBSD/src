@@ -113,7 +113,7 @@
 /* #undef DISABLE_FD_PASSING */
 
 /* Define if you don't want to use lastlog */
-/* #undef DISABLE_LASTLOG */
+#define DISABLE_LASTLOG 1
 
 /* Define if you don't want to use your system's login() call */
 /* #undef DISABLE_LOGIN */
@@ -1504,7 +1504,7 @@
 #define HAVE_SYS_CDEFS_H 1
 
 /* Define to 1 if you have the <sys/dir.h> header file. */
-#define HAVE_SYS_DIR_H 1
+/* #undef HAVE_SYS_DIR_H */
 
 /* Define if your system defines sys_errlist[] */
 #define HAVE_SYS_ERRLIST 1
@@ -1941,14 +1941,13 @@
 #define SIZEOF_SHORT_INT 2
 
 /* The size of `time_t', as computed by sizeof. */
-#ifdef __i386__
-#define SIZEOF_TIME_T 4
-#else
 #define SIZEOF_TIME_T 8
-#endif
 
 /* Define as const if snprintf() can declare const char *fmt */
 #define SNPRINTF_CONST const
+
+/* sockaddr_in has sin_len */
+#define SOCK_HAS_LEN 1
 
 /* Define to a Set Process Title type if your system is supported by
    bsd-setproctitle.c */
