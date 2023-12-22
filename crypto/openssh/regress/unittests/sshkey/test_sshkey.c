@@ -1,4 +1,4 @@
-/* 	$OpenBSD: test_sshkey.c,v 1.22 2021/12/14 21:25:27 deraadt Exp $ */
+/* 	$OpenBSD: test_sshkey.c,v 1.23 2023/01/04 22:48:57 tb Exp $ */
 /*
  * Regress test for sshkey.h key management API
  *
@@ -8,6 +8,7 @@
 #include "includes.h"
 
 #include <sys/types.h>
+#include <paths.h>
 #include <stdio.h>
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
@@ -81,7 +82,7 @@ build_cert(struct sshbuf *b, struct sshkey *k, const char *type,
 
 	critopts = sshbuf_new();
 	ASSERT_PTR_NE(critopts, NULL);
-	put_opt(critopts, "force-command", "/usr/local/bin/nethack");
+	put_opt(critopts, "force-command", _PATH_LOCALBASE "/bin/nethack");
 	put_opt(critopts, "source-address", "192.168.0.0/24,127.0.0.1,::1");
 
 	exts = sshbuf_new();
@@ -144,7 +145,7 @@ banana(u_char *s, size_t l)
 			memcpy(s + o, "nanananana", l - o);
 			break;
 		}
-		memcpy(s + o, banana, sizeof(the_banana));
+		memcpy(s + o, the_banana, sizeof(the_banana));
 	}
 }
 
