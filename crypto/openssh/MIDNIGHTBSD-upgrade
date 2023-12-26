@@ -133,7 +133,7 @@
 
       - UsePAM defaults to "yes".
       - PermitRootLogin defaults to "no".
-      - X11Forwarding defaults to "yes".
+      - X11Forwarding defaults to "no".
       - PasswordAuthentication defaults to "no".
       - VersionAddendum defaults to "MidnightBSD-YYYYMMDD".
       - PrivilegeSeparation defaults to "sandbox".
