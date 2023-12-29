@@ -1,6 +1,6 @@
 #! /bin/sh
 #
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 #  Copyright (c) 2010 Gordon Tetlow
 #  All rights reserved.
@@ -893,9 +893,10 @@ setup_cattool() {
 	case "$1" in
 	*.bz)	cattool='/usr/bin/bzcat' ;;
 	*.bz2)	cattool='/usr/bin/bzcat' ;;
-	*.gz)	cattool='/usr/bin/zcat' ;;
+	*.gz)	cattool='/usr/bin/gzcat' ;;
 	*.lzma)	cattool='/usr/bin/lzcat' ;;
 	*.xz)	cattool='/usr/bin/xzcat' ;;
+	*.zst)	cattool='/usr/bin/zstdcat' ;;
 	*)	cattool='/usr/bin/zcat -f' ;;
 	esac
 }
@@ -1015,7 +1016,7 @@ STTY=/bin/stty
 SYSCTL=/sbin/sysctl
 
 debug=0
-man_default_sections='1:8:2:3:n:4:5:6:7:9:l'
+man_default_sections='1:8:2:3:3lua:n:4:5:6:7:9:l'
 man_default_path='/usr/share/man:/usr/share/openssl/man:/usr/local/share/man:/usr/local/man'
 cattool='/usr/bin/zcat -f'
 
