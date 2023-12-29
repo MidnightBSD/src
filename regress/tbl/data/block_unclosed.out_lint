@@ -1,2 +1,0 @@
-mandoc: block_unclosed.in:7:2: ERROR: data block open at end of tbl: TE
-mandoc: block_unclosed.in:30:2: ERROR: data block open at end of tbl: T&

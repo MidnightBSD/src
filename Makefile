@@ -1,7 +1,7 @@
-# $Id: Makefile,v 1.516 2017/07/20 16:24:53 schwarze Exp $
+# $Id: Makefile,v 1.530 2019/03/06 16:08:41 schwarze Exp $
 #
 # Copyright (c) 2010, 2011, 2012 Kristaps Dzonsons <kristaps@bsd.lv>
-# Copyright (c) 2011, 2013-2017 Ingo Schwarze <schwarze@openbsd.org>
+# Copyright (c) 2011, 2013-2019 Ingo Schwarze <schwarze@openbsd.org>
 #
 # Permission to use, copy, modify, and distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-VERSION = 1.14.3
+VERSION = 1.14.5
 
 # === LIST OF FILES ====================================================
 
@@ -30,15 +30,16 @@ TESTSRCS	 = test-be32toh.c \
 		   test-isblank.c \
 		   test-mkdtemp.c \
 		   test-nanosleep.c \
+		   test-noop.c \
 		   test-ntohl.c \
 		   test-O_DIRECTORY.c \
 		   test-ohash.c \
 		   test-PATH_MAX.c \
 		   test-pledge.c \
 		   test-progname.c \
-		   test-recvmsg.c \
 		   test-reallocarray.c \
 		   test-recallocarray.c \
+		   test-recvmsg.c \
 		   test-rewb-bsd.c \
 		   test-rewb-sysv.c \
 		   test-sandbox_init.c \
@@ -46,13 +47,15 @@ TESTSRCS	 = test-be32toh.c \
 		   test-stringlist.c \
 		   test-strlcat.c \
 		   test-strlcpy.c \
+		   test-strndup.c \
 		   test-strptime.c \
 		   test-strsep.c \
 		   test-strtonum.c \
 		   test-vasprintf.c \
 		   test-wchar.c
 
-SRCS		 = att.c \
+SRCS		 = arch.c \
+		   att.c \
 		   catman.c \
 		   cgi.c \
 		   chars.c \
@@ -70,6 +73,7 @@ SRCS		 = att.c \
 		   compat_stringlist.c \
 		   compat_strlcat.c \
 		   compat_strlcpy.c \
+		   compat_strndup.c \
 		   compat_strsep.c \
 		   compat_strtonum.c \
 		   compat_vasprintf.c \
@@ -93,6 +97,7 @@ SRCS		 = att.c \
 		   man_validate.c \
 		   mandoc.c \
 		   mandoc_aux.c \
+		   mandoc_msg.c \
 		   mandoc_ohash.c \
 		   mandoc_xr.c \
 		   mandocd.c \
@@ -152,13 +157,14 @@ DISTFILES	 = INSTALL \
 		   dbm_map.h \
 		   demandoc.1 \
 		   eqn.7 \
+		   eqn.h \
+		   eqn_parse.h \
 		   gmdiff \
 		   html.h \
 		   lib.in \
 		   libman.h \
 		   libmandoc.h \
 		   libmdoc.h \
-		   libroff.h \
 		   main.h \
 		   makewhatis.8 \
 		   man.1 \
@@ -181,6 +187,7 @@ DISTFILES	 = INSTALL \
 		   mandoc_html.3 \
 		   mandoc_malloc.3 \
 		   mandoc_ohash.h \
+		   mandoc_parse.h \
 		   mandoc_xr.h \
 		   mandocd.8 \
 		   mansearch.3 \
@@ -195,10 +202,12 @@ DISTFILES	 = INSTALL \
 		   roff.h \
 		   roff_int.h \
 		   soelim.1 \
-		   st.in \
 		   tag.h \
 		   tbl.3 \
 		   tbl.7 \
+		   tbl.h \
+		   tbl_int.h \
+		   tbl_parse.h \
 		   term.h \
 		   $(SRCS) \
 		   $(TESTSRCS)
@@ -227,9 +236,11 @@ LIBROFF_OBJS	 = eqn.o \
 LIBMANDOC_OBJS	 = $(LIBMAN_OBJS) \
 		   $(LIBMDOC_OBJS) \
 		   $(LIBROFF_OBJS) \
+		   arch.o \
 		   chars.o \
 		   mandoc.o \
 		   mandoc_aux.o \
+		   mandoc_msg.o \
 		   mandoc_ohash.o \
 		   mandoc_xr.o \
 		   msec.o \
@@ -249,6 +260,7 @@ COMPAT_OBJS	 = compat_err.o \
 		   compat_strcasestr.o \
 		   compat_strlcat.o \
 		   compat_strlcpy.o \
+		   compat_strndup.o \
 		   compat_strsep.o \
 		   compat_strtonum.o \
 		   compat_vasprintf.o
@@ -316,6 +328,7 @@ SOELIM_OBJS	 = soelim.o \
 WWW_MANS	 = apropos.1.html \
 		   demandoc.1.html \
 		   man.1.html \
+		   man.options.1.html \
 		   mandoc.1.html \
 		   soelim.1.html \
 		   man.cgi.3.html \
@@ -332,20 +345,27 @@ WWW_MANS	 = apropos.1.html \
 		   eqn.7.html \
 		   man.7.html \
 		   mandoc_char.7.html \
-		   mandocd.8.html \
 		   mdoc.7.html \
 		   roff.7.html \
 		   tbl.7.html \
 		   catman.8.html \
 		   makewhatis.8.html \
 		   man.cgi.8.html \
+		   mandocd.8.html
+
+WWW_INCS	 = eqn.h.html \
+		   html.h.html \
 		   man.h.html \
 		   manconf.h.html \
 		   mandoc.h.html \
 		   mandoc_aux.h.html \
+		   mandoc_parse.h.html \
 		   mansearch.h.html \
 		   mdoc.h.html \
-		   roff.h.html
+		   roff.h.html \
+		   tbl.h.html \
+		   tbl_int.h.html \
+		   tbl_parse.h.html
 
 # === USER CONFIGURATION ===============================================
 
@@ -357,9 +377,9 @@ all: mandoc demandoc soelim $(BUILD_TARGETS) Makefile.local
 
 install: base-install $(INSTALL_TARGETS)
 
-www: $(WWW_MANS)
+www: $(WWW_MANS) $(WWW_INCS)
 
-$(WWW_MANS): mandoc
+$(WWW_MANS) $(WWW_INCS): mandoc
 
 .PHONY: base-install cgi-install install www-install
 .PHONY: clean distclean depend
@@ -378,7 +398,7 @@ clean:
 	rm -f mandocd catman catman.o $(MANDOCD_OBJS)
 	rm -f demandoc $(DEMANDOC_OBJS)
 	rm -f soelim $(SOELIM_OBJS)
-	rm -f $(WWW_MANS) mandoc.tar.gz mandoc.sha256
+	rm -f $(WWW_MANS) $(WWW_INCS) mandoc*.tar.gz mandoc*.sha256
 	rm -rf *.dSYM
 
 base-install: mandoc demandoc soelim
@@ -416,8 +436,8 @@ lib-install: libmandoc.a
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
 	mkdir -p $(DESTDIR)$(MANDIR)/man3
 	$(INSTALL_LIB) libmandoc.a $(DESTDIR)$(LIBDIR)
-	$(INSTALL_LIB) man.h mandoc.h mandoc_aux.h mdoc.h roff.h \
-		$(DESTDIR)$(INCLUDEDIR)
+	$(INSTALL_LIB) eqn.h man.h mandoc.h mandoc_aux.h mandoc_parse.h \
+		mdoc.h roff.h tbl.h $(DESTDIR)$(INCLUDEDIR)
 	$(INSTALL_MAN) mandoc.3 mandoc_escape.3 mandoc_malloc.3 \
 		mansearch.3 mchars_alloc.3 tbl.3 $(DESTDIR)$(MANDIR)/man3
 
@@ -471,11 +491,14 @@ uninstall:
 	rm -f $(DESTDIR)$(MANDIR)/man3/mansearch.3
 	rm -f $(DESTDIR)$(MANDIR)/man3/mchars_alloc.3
 	rm -f $(DESTDIR)$(MANDIR)/man3/tbl.3
+	rm -f $(DESTDIR)$(INCLUDEDIR)/eqn.h
 	rm -f $(DESTDIR)$(INCLUDEDIR)/man.h
 	rm -f $(DESTDIR)$(INCLUDEDIR)/mandoc.h
 	rm -f $(DESTDIR)$(INCLUDEDIR)/mandoc_aux.h
+	rm -f $(DESTDIR)$(INCLUDEDIR)/mandoc_parse.h
 	rm -f $(DESTDIR)$(INCLUDEDIR)/mdoc.h
 	rm -f $(DESTDIR)$(INCLUDEDIR)/roff.h
+	rm -f $(DESTDIR)$(INCLUDEDIR)/tbl.h
 	[ ! -e $(DESTDIR)$(INCLUDEDIR) ] || rmdir $(DESTDIR)$(INCLUDEDIR)
 
 regress: all
@@ -512,7 +535,9 @@ soelim: $(SOELIM_OBJS)
 # --- maintainer targets ---
 
 www-install: www
-	$(INSTALL_DATA) $(WWW_MANS) mandoc.css $(HTDOCDIR)
+	$(INSTALL_DATA) mandoc.css $(HTDOCDIR)
+	$(INSTALL_DATA) $(WWW_MANS) $(HTDOCDIR)/man
+	$(INSTALL_DATA) $(WWW_INCS) $(HTDOCDIR)/includes
 
 depend: config.h
 	mkdep -f Makefile.depend $(CFLAGS) $(SRCS)
@@ -544,12 +569,12 @@ regress-distcheck:
 		! -path regress/regress.pl \
 		! -path regress/regress.pl.1
 
-dist: mandoc.sha256
+dist: mandoc-$(VERSION).sha256
 
-mandoc.sha256: mandoc.tar.gz
-	sha256 mandoc.tar.gz > $@
+mandoc-$(VERSION).sha256: mandoc-$(VERSION).tar.gz
+	sha256 mandoc-$(VERSION).tar.gz > $@
 
-mandoc.tar.gz: $(DISTFILES)
+mandoc-$(VERSION).tar.gz: $(DISTFILES)
 	ls regress/*/*/*.mandoc_* && exit 1 || true
 	mkdir -p .dist/mandoc-$(VERSION)/
 	$(INSTALL) -m 0644 $(DISTFILES) .dist/mandoc-$(VERSION)
@@ -560,6 +585,10 @@ mandoc.tar.gz: $(DISTFILES)
 	( cd .dist/ && tar zcf ../$@ mandoc-$(VERSION) )
 	rm -rf .dist/
 
+dist-install: dist
+	$(INSTALL_DATA) mandoc-$(VERSION).tar.gz mandoc-$(VERSION).sha256 \
+	    $(HTDOCDIR)/snapshots
+
 # === SUFFIX RULES =====================================================
 
 .SUFFIXES:	 .1       .3       .5       .7       .8       .h
@@ -569,5 +598,6 @@ mandoc.tar.gz: $(DISTFILES)
 	highlight -I $< > $@
 
 .1.1.html .3.3.html .5.5.html .7.7.html .8.8.html: mandoc
-	./mandoc -Thtml -Wall,stop \
-		-Ostyle=mandoc.css,man=%N.%S.html,includes=%I.html $< > $@
+	mandoc -Thtml -Wwarning,stop \
+		-O 'style=/mandoc.css,man=/man/%N.%S.html;https://man.openbsd.org/%N.%S,includes=/includes/%I.html' \
+		$< > $@

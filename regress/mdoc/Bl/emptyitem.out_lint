@@ -1,8 +1,0 @@
-mandoc: emptyitem.in:11:2: ERROR: skipping all arguments: It head argument
-mandoc: emptyitem.in:13:2: WARNING: empty list item: Bl -bullet It
-mandoc: emptyitem.in:21:2: WARNING: empty list item: Bl -dash It
-mandoc: emptyitem.in:21:2: ERROR: skipping all arguments: It head argument
-mandoc: emptyitem.in:29:2: WARNING: empty list item: Bl -enum It
-mandoc: emptyitem.in:30:2: ERROR: skipping all arguments: It head argument
-mandoc: emptyitem.in:35:2: ERROR: skipping all arguments: It Sy
-mandoc: emptyitem.in:37:2: WARNING: empty list item: Bl -hyphen It

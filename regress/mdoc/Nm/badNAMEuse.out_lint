@@ -1,2 +1,0 @@
-mandoc: badNAMEuse.in:6:2: ERROR: missing manual name, using "": Nm
-mandoc: badNAMEuse.in:6:5: WARNING: bad NAME section content: Bx

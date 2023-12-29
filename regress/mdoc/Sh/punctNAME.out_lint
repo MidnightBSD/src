@@ -1,4 +1,0 @@
-mandoc: punctNAME.in:7:2: WARNING: missing comma before name: Nm second_name
-mandoc: punctNAME.in:7:17: WARNING: bad NAME section content: text
-mandoc: punctNAME.in:8:2: WARNING: missing comma before name: Nm third_name
-mandoc: punctNAME.in:8:16: WARNING: bad NAME section content: text
