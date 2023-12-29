@@ -1,9 +1,0 @@
-mandoc: broken.in:29:11: WARNING: blocks badly nested: Bo breaks Pq
-mandoc: broken.in:6:2: WARNING: bad NAME section content: Oo
-mandoc: broken.in:10:1: WARNING: bad NAME section content: text
-mandoc: broken.in:5:2: WARNING: NAME section without Nm before Nd
-mandoc: broken.in:5:2: WARNING: NAME section without description
-mandoc: broken.in:17:2: WARNING: description line outside NAME section: Nd
-mandoc: broken.in:14:2: WARNING: moving content out of list: Bl
-mandoc: broken.in:19:1: WARNING: moving content out of list: text
-mandoc: broken.in:28:2: WARNING: description line outside NAME section: Nd

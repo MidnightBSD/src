@@ -1,3 +1,0 @@
-mandoc: lonelyRE.in:12:2: ERROR: skipping end of block that is not open: RE
-mandoc: lonelyRE.in:16:2: ERROR: skipping end of block that is not open: RE
-mandoc: lonelyRE.in:21:2: ERROR: skipping end of block that is not open: RE
