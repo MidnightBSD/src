@@ -1,2 +1,0 @@
-mandoc: dupe.in:5:2: ERROR: duplicate prologue macro: Dt
-mandoc: dupe.in:11:2: ERROR: skipping late title macro: Dt

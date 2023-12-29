@@ -1,5 +1,0 @@
-mandoc: tail.in:12:2: WARNING: blocks badly nested: Ao breaks Bo
-mandoc: tail.in:16:2: WARNING: blocks badly nested: Ao breaks Bo
-mandoc: tail.in:21:2: WARNING: blocks badly nested: Aq breaks Bo
-mandoc: tail.in:23:2: WARNING: blocks badly nested: Aq breaks Bo
-mandoc: tail.in:47:2: WARNING: blocks badly nested: Bro breaks Po

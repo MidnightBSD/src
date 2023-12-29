@@ -1,3 +1,0 @@
-mandoc: nostd.in:10:2: WARNING: missing -std argument, adding it: Rv
-mandoc: nostd.in:13:2: WARNING: missing -std argument, adding it: Rv
-mandoc: nostd.in:16:2: WARNING: missing -std argument, adding it: Rv
