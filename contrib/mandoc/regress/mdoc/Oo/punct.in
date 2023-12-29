@@ -1,0 +1,28 @@
+.\" $OpenBSD: punct.in,v 1.4 2017/07/04 14:53:26 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt OO-PUNCT 1
+.Os
+.Sh NAME
+.Nm Oo-punct
+.Nd punctuation handling by the Oo macro
+.Sh DESCRIPTION
+at the beginning:
+.Oo "(" z
+.Oo | z
+.Oo . z
+.Oc Oc "Sy" bold Oc
+.Pp
+in the middle:
+.Oo a "(" z
+.Oo a | z
+.Oo a . z
+.Oc Oc Oc
+.Pp
+at the end:
+.Oo Oo a (
+.Oc |
+.Oc
+.Pp
+missing blank:
+.Oo a.
+.Oc

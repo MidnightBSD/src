@@ -1,0 +1,12 @@
+.\" $OpenBSD: before.in,v 1.5 2017/07/28 12:37:51 schwarze Exp $
+.Dd $Mdocdate: July 28 2017 $
+.Dt SH-BEFORE 1
+.Os
+Plain text and
+.Em a macro
+before the first section header.
+.Sh NAME
+.Nm Sh-before
+.Nd content before the first section header
+.Sh DESCRIPTION
+some text

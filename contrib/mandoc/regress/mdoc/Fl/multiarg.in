@@ -1,0 +1,15 @@
+.\" $OpenBSD: multiarg.in,v 1.4 2017/07/04 14:53:25 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt FL-MULTIARG 1
+.Os
+.Sh NAME
+.Nm Fl-multiarg
+.Nd multiple arguments to a Fl macro
+.Sh DESCRIPTION
+Each group of flags in
+.Fl a b c def
+gets its own dash.
+.Pp
+Punctuation characters like in
+.Op Fl a | b
+get no dash.

@@ -1,0 +1,15 @@
+.\" $OpenBSD: brokenbreaker.in,v 1.2 2017/07/04 14:53:26 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BREAK-BROKENBREAKER 1
+.Os
+.Sh NAME
+.Nm break-brokenbreaker
+.Nd a broken block breaking another block
+.Sh DESCRIPTION
+.Po po
+.Ao ao pc
+.Pc
+.Bo bo pc
+.Pc ac
+.Ac bc
+.Bc

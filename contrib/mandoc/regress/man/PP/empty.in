@@ -1,0 +1,16 @@
+.\" $OpenBSD: empty.in,v 1.4 2017/07/04 14:53:23 schwarze Exp $
+.TH PP-EMPTY 1 "May 24, 2010"
+.SH NAME
+PP-empty \- handling of empty paragraphs
+.SH DESCRIPTION
+.PP
+empty PP between two PPs:
+.PP
+.PP
+empty PP between PP and IP:
+.PP
+.IP head
+empty PP between IP and PP:
+.PP
+.PP
+the end

@@ -1,0 +1,25 @@
+.\" $OpenBSD: emptyline.in,v 1.2 2017/07/04 14:53:27 schwarze Exp $
+.TH TBL-LAYOUT-EMPTYLINE 1 "January 29, 2015"
+.SH NAME
+tbl-layout-emptyline \- empty lines in table layouts
+.SH DESCRIPTION
+An empty line in the middle of a table joins with the next:
+.TS
+l
+|
+r.
+table text
+_
+bar
+right
+.TE
+.PP
+An empty line at the end of a table is discarded:
+.TS
+l
+r
+|.
+table text
+right
+.TE
+normal text

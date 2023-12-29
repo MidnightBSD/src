@@ -483,6 +483,8 @@ check_toptext(struct roff_man *mdoc, int ln, int pos, const char *p)
 		mandoc_msg(MANDOCERR_BX, ln, pos + (int)(cp - p), "Fx");
 	if ((cp = strstr(p, "DragonFly")) != NULL)
 		mandoc_msg(MANDOCERR_BX, ln, pos + (int)(cp - p), "Dx");
+	if ((cp = strstr(p, "MidnightBSD")) != NULL)
+		mandoc_msg(MANDOCERR_BX, ln, pos + (int)(cp - p), "Mx");
 
 	cp = p;
 	while ((cp = strstr(cp + 1, "()")) != NULL) {

@@ -1,0 +1,46 @@
+.\" $OpenBSD: manyargs.in,v 1.3 2017/07/04 14:53:24 schwarze Exp $
+.TH TP-MANYARGS 1 "January 4, 2011"
+.SH NAME
+TP-manyargs \- too many header args for indented blocks
+.SH DESCRIPTION
+regular
+text
+.TP 10n
+tag1
+indented
+text
+.PP
+regular
+text
+.TP 10n tag1
+tag2
+indented
+text
+.PP
+regular
+text
+.TP 10n tag2 tag1
+tag3
+indented
+text
+.nf
+literal
+text
+.TP 10n
+tag1
+indented
+text
+.PP
+literal
+text
+.TP 10n tag1
+tag2
+indented
+text
+.PP
+literal
+text
+.TP 10n tag2 tag1
+tag3
+indented
+text

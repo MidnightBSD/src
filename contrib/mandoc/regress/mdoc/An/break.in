@@ -1,0 +1,50 @@
+.\" $OpenBSD: break.in,v 1.7 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt AN-BREAK 1
+.Os
+.Sh NAME
+.Nm An-break
+.Nd line breaking of the author macro
+.Sh DESCRIPTION
+inline is the default:
+.An Kristaps ,
+.An Ingo ","
+and
+.An Joerg .
+empty
+.An
+trailing
+.An .
+.Pp
+.An -split -nosplit bogus
+split mode:
+.An Kristaps
+.An Ingo
+.An Joerg
+.Pp
+empty
+.An
+trailing
+.An .
+.An -nosplit
+.Sh AUTHORS
+split mode is the default:
+.An Kristaps
+.An Ingo
+.An Joerg
+.Pp
+empty
+.An
+trailing
+.An .
+.An -nosplit -split bogus
+.Pp
+inline:
+.An Kristaps ","
+.An Ingo,
+and
+.An Joerg .
+empty
+.An
+trailing
+.An .

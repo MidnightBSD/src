@@ -1,0 +1,17 @@
+.\" $OpenBSD: link.in,v 1.3 2017/07/04 14:53:25 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt LK-LINK 1
+.Os
+.Sh NAME
+.Nm Lk-link
+.Nd formatting of hyperlinks
+.Sh DESCRIPTION
+Here are some web sites of BSD operating systems:
+.Lk http://www.freebsd.org/ FreeBSD
+.Lk http://www.netbsd.org/ NetBSD
+.Lk http://www.openbsd.org/ OpenBSD
+.Sh SEE ALSO
+Here are some web sites of BSD operating systems:
+.Lk http://www.freebsd.org/ FreeBSD
+.Lk http://www.netbsd.org/ NetBSD
+.Lk http://www.openbsd.org/ OpenBSD

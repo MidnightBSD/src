@@ -1,0 +1,16 @@
+.\" $OpenBSD: broken.in,v 1.2 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BF-BROKEN 1
+.Os
+.Sh NAME
+.Nm Bf-broken
+.Nd font block broken by another block
+.Sh DESCRIPTION
+before both
+.Bo before font block
+.Bf Em
+inside both
+.Bc
+after bracket
+.Ef
+after both

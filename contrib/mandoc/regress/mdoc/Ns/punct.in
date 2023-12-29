@@ -1,0 +1,14 @@
+.\" $OpenBSD: punct.in,v 1.4 2017/07/04 14:53:25 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt NS-PUNCT 1
+.Os
+.Sh NAME
+.Nm Ns-punct
+.Nd punctuation after the no space macro
+.Sh DESCRIPTION
+Normal words:
+.No no Ns ns No no
+Opening punctuation:
+.No no Ns "(" ns No no
+Closing punctuation:
+.No no "Ns" ns ")" No no

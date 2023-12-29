@@ -1,0 +1,155 @@
+.\" $OpenBSD: tag.in,v 1.18 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BL-TAG 1
+.Os
+.Sh NAME
+.Nm Bl-tag
+.Nd tagged lists
+.Sh DESCRIPTION
+.Bl -tag -width -4n
+.It tag
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -tag -width -0.26i
+.It tag
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -tag -width -2n
+.It tag
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -tag -width -1n
+.It tag
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -tag -width 0n
+.It tag
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -tag -width 1n
+.It tag
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -tag -width 2n
+.It tag
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -tag -width 3n
+.It tag
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -tag -width 4n
+.It tag
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -tag -width 5n
+.It tag
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -tag -width 5n
+.It four
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -tag -width 5n
+.It quint
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -tag -width 0.46i
+.It indent
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -tag -width 5n
+.It septime
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -tag -width 5n
+.It achtacht
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -tag -width 5n
+.It neun neun
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -tag -width 5n
+.It zehn_ zehn
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -tag -width 5n
+.It This is a very long text contained in the tag, it is so long \
+that it overruns the line -
+and here comes the item body.
+.El
+.Bl -tag -width 100n
+.It hundred
+text text
+.El
+.Pp
+Trailing white space in the head:
+.Bl -tag -width 5n
+.It "a"
+none
+.It "a "
+one
+.It "a  "
+two
+.It "a   "
+three
+.It "a    "
+four
+.It "a     "
+five
+.It "a      "
+six
+.It " "
+white space only
+.El
+.Pp
+Non-numeric width specification:
+.Bl -tag -width xxx
+.It tag
+text
+.El
+.Bl -tag -width xxxxxxxxxx
+.It tag
+text
+.El
+.Pp
+Scaling units other than n:
+.Bl -tag -width 4m
+.It tag
+text
+.El
+.Bl -tag -width 800M
+.It tag
+text
+.El
+.Bl -tag -width 14
+.It tag
+text
+.El
+.Pp
+Default width:
+.Bl -tag
+.It tag
+text
+.It long tag
+long text
+.It Sy tag Em with markup
+text
+.El
+.Pp
+Indented list:
+.Bl -tag -offset 6n -width xxx
+.It one
+first text
+.It two
+second text
+.El
+.Pp
+Embedded paragraph:
+.Bl -tag -width Ds
+.It tag
+first paragraph
+.Pp
+second paragraph
+.El

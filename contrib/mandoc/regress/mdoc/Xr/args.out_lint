@@ -1,0 +1,7 @@
+mandoc: args.in:29:2: WARNING: skipping empty macro: Xr
+mandoc: args.in:31:2: WARNING: skipping empty macro: Xr
+mandoc: args.in:23:13: STYLE: no blank before trailing delimiter: Xr ... 1)
+mandoc: args.in:25:2: WARNING: missing section argument: Xr echo
+mandoc: args.in:27:2: WARNING: missing section argument: Xr echo,
+mandoc: args.in:27:9: STYLE: no blank before trailing delimiter: Xr echo,
+mandoc: args.in:23:8: STYLE: referenced manual not found: Xr echo 1)

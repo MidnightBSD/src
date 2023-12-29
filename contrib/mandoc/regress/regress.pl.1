@@ -1,0 +1,147 @@
+.\"	$Id: regress.pl.1,v 1.3 2017/07/18 18:47:06 schwarze Exp $
+.\"
+.\" Copyright (c) 2017 Ingo Schwarze <schwarze@openbsd.org>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate: July 18 2017 $
+.Dt REGRESS.PL 1
+.Os
+.Sh NAME
+.Nm regress.pl
+.Nd portable steering script for mandoc regression tests
+.Sh SYNOPSIS
+.Nm ./regress.pl
+.Oo
+.Ar directory Ns Op Pf / Ar test
+.Op Ar modifier ...
+.Oc
+.Sh DESCRIPTION
+The
+.Nm
+steering script allows running the
+.Xr mandoc 1
+regression suite on arbitrary operating systems,
+even though the suite was originally designed for OpenBSD only.
+.Pp
+When run without an argument,
+.Nm
+runs the complete regression suite.
+.Pp
+The first argument is a Perl regular expression to match test names,
+automatically anchored at the beginning of the names.
+Test names are names of test input files without the file name extension
+.Pa .in ,
+for example
+.Pa char/unicode/named .
+.Pp
+Any additional arguments modify the way the tests are run.
+The default is
+.Cm all .
+The following modifiers are available:
+.Bl -tag -width markdown
+.It Cm all
+Run all kinds of subtests.
+This implies all other modifiers except
+.Cm verbose
+and
+.Cm clean .
+.It Cm ascii
+Run subtests for
+.Fl T Cm ascii
+output mode.
+.It Cm clean
+Remove all output files created by running the tests.
+.It Cm html
+Run subtests for
+.Fl T Cm html
+output mode.
+.It Cm lint
+Run subtests for
+.Fl T Cm lint
+warning and error output.
+.It Cm man
+Run subtests for
+.Fl T Cm man
+output mode.
+.It Cm markdown
+Run subtests for
+.Fl T Cm markdown
+output mode.
+.It Cm utf8
+Run subtests for
+.Fl T Cm utf8
+output mode.
+.It Cm verbose
+Display approximate indications of what is being done.
+.El
+.Sh EXIT STATUS
+.Ex -std
+.Sh EXAMPLES
+The recommended invocation for casual users:
+.Pp
+.Dl ./regress.pl
+.Pp
+Maximum output:
+.Pp
+.Dl ./regress.pl \&. verbose
+.Pp
+Complete check, but keep the tree clean:
+.Pp
+.Dl ./regress.pl \&. all clean
+.Pp
+Investigate a specific failure:
+.Pp
+.Dl ./regress.pl mdoc/Bd/broken man verbose
+.Sh HISTORY
+The
+.Nm
+script appeared in release 1.14.1 of the portable
+.Sy mandoc
+distribution.
+.Sh AUTHORS
+.An Ingo Schwarze Aq Mt schwarze@openbsd.org
+.Sh CAVEATS
+This script is not optimized for elegance.
+Regression suites for other software should not copy the design.
+.Pp
+The problem it solves is that the
+.Sy mandoc
+regression suite is tightly integrated into the regression
+testing system of the OpenBSD base system, which requires
+both OpenBSD
+.Xr make 1 ,
+working neither with POSIX make nor with GNU make, and which
+also requires the OpenBSD-specific Makefile fragments in
+.Pa /usr/share/mk .
+The workaround of parsing the Makefiles by hand and constructing
+the required command lines by hand is unavoidably messy; it's
+the classic no-no of parsing a language with an ad-hoc incomplete
+parser.
+But the problem of providing this regression suite for other
+operating systems stood unsolved for many years, and no cleaner
+solution was found that could be implemented with reasonable effort.
+So maybe this is better than nothing.
+.Pp
+The top-level Makefiles for running this regression suite on
+OpenBSD are not included in the portable distribution.
+They are too OpenBSD-specific to be useful elsewhere,
+and on OpenBSD itself, the suite ought be run natively from
+.Pa /usr/src/regress/usr.bin/mandoc
+and not from the portable distribution.
+.Pp
+The
+.Pa db
+subdirectory of the regression suite is not included.
+It uses a Makefile structure that differs vastly from the
+rest of the suite.

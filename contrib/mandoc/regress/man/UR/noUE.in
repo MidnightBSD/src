@@ -1,0 +1,12 @@
+.\" $OpenBSD: noUE.in,v 1.2 2017/07/04 14:53:24 schwarze Exp $
+.TH UR-NOUE 1 "July 7, 2014"
+.SH NAME
+UR-noUE \- unclosed URI macro
+.SH DESCRIPTION
+lonely UE:
+.UE
+.PP
+argument plus text:
+.UR http://www.openbsd.org/
+OpenBSD
+homepage

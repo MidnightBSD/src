@@ -1,0 +1,37 @@
+BEGINTEST
+&#xFFFD;&#xFFFD;	&lt;control&gt; NULL
+&#xFFFD;&#xFFFD;	&lt;control&gt; START OF HEADING
+&#xFFFD;&#xFFFD;	&lt;control&gt; BELL
+&#xFFFD;&#xFFFD;	&lt;control&gt; BACKSPACE
+			&lt;control&gt; CHARACTER TABULATION
+&#xFFFD;&#xFFFD;	&lt;control&gt; LINE FEED
+&#xFFFD;&#xFFFD;	&lt;control&gt; LINE TABULATION
+&#xFFFD;&#xFFFD;	&lt;control&gt; FORM FEED
+&#xFFFD;&#xFFFD;	&lt;control&gt; CARRIAGE RETURN
+&#xFFFD;&#xFFFD;	&lt;control&gt; ESCAPE
+&#xFFFD;&#xFFFD;	&lt;control&gt; DELETE
+&#xFFFD;&#xFFFD;	&lt;control&gt; 0x80
+&#xFFFD;&#xFFFD;	&lt;control&gt; 0x81
+&#xFFFD;&#xFFFD;	&lt;control&gt; BREAK PERMITTED HERE
+&#xFFFD;&#xFFFD;	&lt;control&gt; NO BREAK HERE
+&#xFFFD;&#xFFFD;	&lt;control&gt; PRIVACY MESSAGE
+&#xFFFD;&#xFFFD;	&lt;control&gt; APPLICATION PROGRAM COMMAND
+&#x226A;&#x226A;	MUCH LESS-THAN
+&#x226B;&#x226B;	MUCH GREATER-THAN
+&#xFB00;&#xFB00;	LATIN SMALL LIGATURE FF
+&#xFB01;&#xFB01;	LATIN SMALL LIGATURE FI
+&#xFB02;&#xFB02;	LATIN SMALL LIGATURE FL
+&#xFB03;&#xFB03;	LATIN SMALL LIGATURE FFI
+&#xFB04;&#xFB04;	LATIN SMALL LIGATURE FFL
+&#xFFFD;	REPLACEMENT CHARACTER
+&#xFFFE;	&lt;undefined&gt;
+&#xFFFF;	&lt;undefined&gt;
+&#x10000;	LINEAR B SYLLABLE B008 A
+&#xFFFFD;	&lt;Plane 15 Private Use, Last&gt;
+&#xFFFFE;	&lt;undefined&gt;
+&#xFFFFF;	&lt;undefined&gt;
+&#x100000;	&lt;Plane 16 Private Use, First&gt;
+&#x10FFFD;	&lt;Plane 16 Private Use, Last&gt;
+&#x10FFFE;	&lt;undefined&gt;
+&#x10FFFF;	&lt;undefined&gt;
+ENDTEST

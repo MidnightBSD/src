@@ -1,0 +1,11 @@
+.\" $OpenBSD: font.in,v 1.2 2017/07/04 14:53:26 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt VA-FONT 1
+.Os
+.Sh NAME
+.Nm Va-font
+.Nd changing fonts inside the variable name macro
+.Sh DESCRIPTION
+normal text
+.Va emphasis\\fBbold\\fPback
+trailing text

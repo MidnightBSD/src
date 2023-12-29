@@ -1,0 +1,52 @@
+.\" $OpenBSD: badargs.in,v 1.6 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BD-BADARGS 1
+.Os
+.Sh NAME
+.Nm Bd-badargs
+.Nd display block with bad arguments
+.Sh DESCRIPTION
+trailing -offset:
+.Bd -ragged -offset
+is
+ignored
+.Ed tail argument
+double -compact and -offset:
+.Bd -ragged -compact -offset 42n -compact -offset 6n
+last
+wins
+.Ed
+no type:
+.Bd -offset 0n -bogus args
+displayed
+text
+.Ed
+double type:
+.Bd -ragged -compact -unfilled
+ragged
+unfilled
+.Ed
+.Bd -unfilled -compact -ragged
+unfilled
+ragged
+.Ed
+file /dev/null:
+.Bd -ragged -file /dev/null -offset indent
+ragged
+offset indent
+.Ed
+trailing -file:
+.Bd -ragged -offset indent -file
+ragged
+offset indent
+.Ed
+missing -file argument:
+.Bd -ragged -offset indent -file -compact
+ragged
+offset indent
+.Ed
+no argument whatsoever:
+.Bd
+no
+argument
+.Ed

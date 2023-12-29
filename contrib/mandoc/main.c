@@ -252,7 +252,13 @@ main(int argc, char *argv[])
 			outmode = OUTMODE_ALL;
 			break;
 		case 'M':
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+			defpaths = strdup(optarg);
+			if (defpaths == NULL)
+				err(1, "strdup");
+#else
 			defpaths = optarg;
+#endif
 			break;
 		case 'm':
 			auxpaths = optarg;
@@ -422,9 +428,34 @@ main(int argc, char *argv[])
 		    outmode == OUTMODE_ONE)
 			search.firstmatch = 1;
 
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+		/*
+		 * Use manpath(1) to populate defpaths if -M is not specified.
+		 * Don't treat any failures as fatal.
+		 */
+		if (defpaths == NULL) {
+			FILE *fp;
+			size_t linecap = 0;
+			ssize_t linelen;
+
+			if ((fp = popen("/usr/bin/manpath -q", "r")) != NULL) {
+				if ((linelen = getline(&defpaths,
+				    &linecap, fp)) > 0) {
+					/* Strip trailing newline */
+					defpaths[linelen - 1] = '\0';
+				}
+				pclose(fp);
+			}
+		}
+#endif
+
 		/* Access the mandoc database. */
 
 		manconf_parse(&conf, conf_file, defpaths, auxpaths);
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+		free(defpaths);
+#endif
+
 		if ( ! mansearch(&search, &conf.manpath,
 		    argc, argv, &res, &sz))
 			usage(search.argmode);
@@ -1169,7 +1200,7 @@ spawn_pager(struct tag_files *tag_files)
 	if (pager == NULL || *pager == '\0')
 		pager = getenv("PAGER");
 	if (pager == NULL || *pager == '\0')
-		pager = "more -s";
+		pager = "less -s";
 	cp = mandoc_strdup(pager);
 
 	/*

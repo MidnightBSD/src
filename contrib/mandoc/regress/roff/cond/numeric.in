@@ -1,0 +1,153 @@
+.\" $OpenBSD: numeric.in,v 1.5 2017/07/04 14:53:26 schwarze Exp $
+.TH COND-NUMERIC 1 "December 16, 2014"
+.SH NAME
+cond-numeric \- roff conditions involving numbers
+.SH DESCRIPTION
+positive number:
+plain
+.ie 42 (t)
+.el (f)
+negated
+.ie !42 (t)
+.el (f)
+.PP
+negative number:
+plain
+.ie -42 (t)
+.el (f)
+negated
+.ie !-42 (t)
+.el (f)
+.PP
+second number missing:
+.ie 42=bad worse
+.el ok
+.PP
+operator "<":
+smaller
+.ie 1<2 (t)
+.el (f)
+equal
+.ie 1<1 (t)
+.el (f)
+greater
+.ie 2<1 (t)
+.el (f)
+.PP
+operator "<=":
+smaller
+.ie 1<=2 (t)
+.el (f)
+equal
+.ie 1<=1 (t)
+.el (f)
+greater
+.ie 2<=1 (t)
+.el (f)
+.PP
+operator "=":
+smaller
+.ie 1=2 (t)
+.el (f)
+equal
+.ie 1=1 (t)
+.el (f)
+greater
+.ie 2=1 (t)
+.el (f)
+.PP
+operator "==":
+smaller
+.ie 1==2 (t)
+.el (f)
+equal
+.ie 1==1 (t)
+.el (f)
+greater
+.ie 2==1 (t)
+.el (f)
+.PP
+operator ">=":
+smaller
+.ie 1>=2 (t)
+.el (f)
+equal
+.ie 1>=1 (t)
+.el (f)
+greater
+.ie 2>=1 (t)
+.el (f)
+.PP
+operator ">":
+smaller
+.ie 1>2 (t)
+.el (f)
+equal
+.ie 1>1 (t)
+.el (f)
+greater
+.ie 2>1 (t)
+.el (f)
+.PP
+with negative numbers:
+mm
+.ie -2<-1 (t)
+.el (f)
+mp
+.ie -2<1 (t)
+.el (f)
+pm
+.ie 1>-2 (t)
+.el (f)
+.PP
+operator "&":
+00
+.ie 0&0 (t)
+.el (f)
+01
+.ie 0&1 (t)
+.el (f)
+10
+.ie 1&0 (t)
+.el (f)
+11
+.ie 1&1 (t)
+.el (f)
+.PP
+operator ":":
+00
+.ie 0:0 (t)
+.el (f)
+01
+.ie 0:1 (t)
+.el (f)
+10
+.ie 1:0 (t)
+.el (f)
+11
+.ie 1:1 (t)
+.el (f)
+.PP
+with scaling units:
+1i>2c
+.ie 1i>2c (t)
+.el (f)
+1i-6P
+.ie 1i-6P (t)
+.el (f)
+.PP
+unmatched parenthesis:
+.ie (
+(t)
+.el (f)
+one
+.ie (1 (t)
+.el (f)
+.PP
+negated unmatched parenthesis:
+.ie !(
+(t)
+.el (f)
+zero
+.ie !(0 (t)
+.el (f)

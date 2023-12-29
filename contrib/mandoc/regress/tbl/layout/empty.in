@@ -1,0 +1,16 @@
+.\" $OpenBSD: empty.in,v 1.2 2017/07/04 14:53:27 schwarze Exp $
+.TH TBL-LAYOUT-EMPTY 1 "January 29, 2015"
+.SH NAME
+tbl-layout-empty \- empty table layout
+.SH DESCRIPTION
+completely empty layout:
+.TS
+.
+table text
+.TE
+layout only contains a bar:
+.TS
+|.
+table text
+.TE
+normal text

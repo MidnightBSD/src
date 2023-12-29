@@ -1,0 +1,25 @@
+.\" $OpenBSD: an-margin.in,v 1.2 2017/07/04 14:53:23 schwarze Exp $
+.TH RS-AN-MARGIN 1 "June 13, 2017"
+.SH NAME
+RS-an-margin \- reStructuredText peeks at an internal register
+.SH DESCRIPTION
+regular
+text
+.RS 0.0
+zero
+indent
+\n[an-margin]
+.RS 3.5
+non-zero
+indent
+\n[an-margin]
+.RE
+back to
+zero
+indent
+\n[an-margin]
+.RE
+back to
+regular
+text
+\n[an-margin]

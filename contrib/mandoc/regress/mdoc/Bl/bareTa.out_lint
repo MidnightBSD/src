@@ -1,0 +1,5 @@
+mandoc: bareTa.in:10:2: ERROR: skipping column outside column list: Ta
+mandoc: bareTa.in:14:2: ERROR: skipping column outside column list: Ta
+mandoc: bareTa.in:19:5: ERROR: skipping column outside column list: Ta
+mandoc: bareTa.in:26:2: ERROR: skipping item outside list: It ignored arguments
+mandoc: bareTa.in:19:2: ERROR: skipping all arguments: It ignored arguments

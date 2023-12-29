@@ -1,0 +1,10 @@
+.\" $OpenBSD: late.in,v 1.2 2017/07/04 14:53:25 schwarze Exp $
+.Dt DD-LATE 1
+.Os
+.Sh NAME
+.Nm Dd-late
+.Nd late date macro
+.Sh DESCRIPTION
+initial text
+.Dd August 5, 2014
+final text

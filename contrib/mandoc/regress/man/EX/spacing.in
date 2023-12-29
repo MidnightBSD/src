@@ -1,0 +1,36 @@
+.\" $OpenBSD: spacing.in,v 1.2 2017/07/04 14:53:23 schwarze Exp $
+.TH EX-SPACING 1 "June 3, 2012"
+.SH NAME
+EX-spacing \- spacing around the example macro
+.SH DESCRIPTION
+regular
+text
+.EX
+example
+text
+.EE
+regular
+text
+.nf
+literal
+text
+.EX
+example
+text
+.EE
+regular
+text
+.PP
+.EX
+after PP, before nf
+.EE
+.nf
+.EX
+after nf, before fi
+.EE
+.fi
+after fi, before PP
+.EE
+.PP
+regular
+text

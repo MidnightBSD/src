@@ -1,0 +1,18 @@
+.\" $OpenBSD: append.in,v 1.2 2017/07/04 14:53:27 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt DS-APPEND 1
+.Os
+.Sh NAME
+.Nm ds-append
+.Nd appending to user-defined strings
+.Sh DESCRIPTION
+.ds foo first part
+first part: \*[foo]
+.br
+.as foo " second part
+with second part: \*[foo]
+.br
+.as foo " third part
+with third part: \*[foo]
+.br
+end of test document

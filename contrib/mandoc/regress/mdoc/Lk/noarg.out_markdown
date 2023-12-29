@@ -1,0 +1,20 @@
+LK-NOARG(1) - General Commands Manual
+
+# NAME
+
+**Lk-noarg** - hyperlink macro without arguments
+
+# DESCRIPTION
+
+multiple arguments
+[the bsd.lv project](http://www.bsd.lv/),
+[GNU troff](http://www.gnu.org/software/groff/),
+two arguments
+[mandoc,](http://mdocml.bsd.lv/)
+one argument
+[http://www.openbsd.org/,](http://www.openbsd.org/,)
+no argument
+
+end of test document
+
+OpenBSD - July 4, 2017

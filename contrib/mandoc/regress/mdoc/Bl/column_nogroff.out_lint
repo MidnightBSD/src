@@ -1,0 +1,2 @@
+mandoc: column_nogroff.in:11:2: WARNING: missing argument, using next line: Bl -column It
+mandoc: column_nogroff.in:19:2: WARNING: first macro on line: Ta

@@ -1,0 +1,90 @@
+.\" $OpenBSD: width.in,v 1.6 2017/07/04 14:53:24 schwarze Exp $
+.TH TP-WIDTH 1 "December 23, 2014"
+.SH NAME
+TP-width \- indentation width of indented paragraphs
+.SH DESCRIPTION
+Regular mode:
+.TP -10n
+tag
+indented
+.br
+text
+.TP -0.36i
+tag
+indented
+.br
+text
+.TP 0n
+tag
+indented
+.br
+text
+.TP 1n
+tag
+indented
+.br
+text
+.TP 0.16i
+tag
+indented
+.br
+text
+.TP 3n
+tag
+indented
+.br
+text
+.TP 4n
+tag
+indented
+.br
+text
+.TP 5n
+tag
+indented
+.br
+text
+.TP 100n
+tag
+indented
+.br
+text
+.PP
+Literal mode:
+.nf
+.TP -0.96i
+tag
+indented
+text
+.TP -4n
+tag
+indented
+text
+.TP 0n
+tag
+indented
+text
+.TP 1n
+tag
+indented
+text
+.TP 2n
+tag
+indented
+text
+.TP 0.26i
+tag
+indented
+text
+.TP 4n
+tag
+indented
+text
+.TP 5n
+tag
+indented
+text
+.TP 100n
+tag
+indented
+text

@@ -1,0 +1,2 @@
+mandoc: noME.in:7:2: ERROR: skipping end of block that is not open: ME
+mandoc: noME.in:10:2: ERROR: appending missing end of block: MT

@@ -1,0 +1,18 @@
+MT-SIMPLE(1) - General Commands Manual
+
+# NAME
+
+**Mt-simple** - mailto
+
+# DESCRIPTION
+
+Please send mail to
+[schwarze@openbsd.org](mailto:schwarze@openbsd.org); **bold**.
+
+Pay attention to
+[punctuation@localhost.](mailto:punctuation@localhost.)
+
+Do not send mail to
+[~](mailto:~).
+
+OpenBSD - July 4, 2017

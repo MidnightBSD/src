@@ -1,0 +1,29 @@
+.\" $OpenBSD: args.in,v 1.4 2017/07/04 14:53:23 schwarze Exp $
+.TH PD-ARGS 1 "December 23, 2014"
+.SH NAME
+PD-args \- unusual arguments to the PD macro
+.SH DESCRIPTION
+initial text
+.PP
+default spacing
+.PD 2
+.PP
+argument(2)
+.PD
+.PP
+no argument at all
+.PD 2v
+.PP
+argument(2v)
+.PD 2p
+.PP
+argument(2p)
+.PD 1cx
+.PP
+argument(1cx)
+.PD xxx
+.PP
+argument(xxx)
+.PD 0 zzz
+.PP
+excessive argument

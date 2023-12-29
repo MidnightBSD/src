@@ -1,0 +1,35 @@
+SS-NOARG(1)                 General Commands Manual                SS-NOARG(1)
+
+
+
+NNAAMMEE
+       SS-noarg - empty subsection header lines
+
+DDEESSCCRRIIPPTTIIOONN
+       initial text
+
+   SSuubbsseeccttiioonn
+       subsection text
+
+       tag   tagged list
+
+       tag   indented list
+
+       This is a hanged paragraph.  A bit more text is needed to see the
+             effect.
+
+       normal paragraph
+             indented paragraph
+       after the end of the indented paragraph hyperlink <www.openbsd.org>
+       after the end of the hyperlink
+
+       no-fill mode
+
+       back in fill mode
+
+   SSuubbsseeccttiioonn
+       with a blank line
+
+
+
+OpenBSD                         March 20, 2015                     SS-NOARG(1)

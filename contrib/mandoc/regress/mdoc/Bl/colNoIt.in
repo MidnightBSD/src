@@ -1,0 +1,16 @@
+.\" $OpenBSD: colNoIt.in,v 1.2 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BL-COLNOIT 1
+.Os
+.Sh NAME
+.Nm Bl-colNoIt
+.Nd column lists without item macros
+.Sh DESCRIPTION
+.Bl -column "a" "b"
+.Sy a Ta b
+.Em c Ta d
+.El
+.Bl -column "a" "b"
+a	b
+c	d
+.El

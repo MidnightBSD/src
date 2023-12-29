@@ -1,0 +1,46 @@
+.\" $OpenBSD: punct.in,v 1.6 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt AR-PUNCT 1
+.Os
+.Sh NAME
+.Nm Ar-punct
+.Nd punctuation handling by the Ar macro
+.Sh DESCRIPTION
+closing punctuation
+.Ar a )
+only one
+.Ar )
+only more than one
+.Ar ) )
+middle
+.Ar a ) z
+start
+.Ar ) z
+dot
+.Ar . z
+comma
+.Ar , z
+semicolon
+.Ar ; z
+colon
+.Ar : z
+quest
+.Ar ? z
+excl
+.Ar ! z
+paren
+.Ar ) z
+bracket
+.Ar ] z
+bar
+.Ar | m
+op paren
+.Ar ( a
+op bracket
+.Ar [ a
+.Pp
+quoted punctuation:
+.Ar a "(" b "|" c ")" d "," "Sy" bold .
+.Pp
+missing blank:
+.Ar arg.

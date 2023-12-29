@@ -1,0 +1,2 @@
+mandoc: badargs.in:16:2: WARNING: skipping empty macro: St
+mandoc: badargs.in:13:5: ERROR: unknown standard specifier: St -murks

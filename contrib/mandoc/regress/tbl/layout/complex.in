@@ -1,0 +1,38 @@
+.\" $OpenBSD: complex.in,v 1.2 2017/07/04 14:53:27 schwarze Exp $
+.TH TBL-LAYOUT-COMPLEX 1 "January 26, 2015"
+.SH NAME
+tbl-layout-complex \- complex table layout
+.SH DESCRIPTION
+normal text
+.TS
+box tab(:);
+l|p-1l bsil|||l,l|l	ilb^|i||l.
+a:b:c:d
+e:f:g:h:i
+.TE
+.PP
+normal text
+.TS
+box tab(:);
+l ^
+l l.
+a:b
+c:d
+.TE
+.PP
+normal text
+.TS
+tab(:);
+||l||l||
+|l|l|
+ll.
+_
+a:b
+_
+c:d
+_
+e:f
+_
+.TE
+.PP
+normal text

@@ -1,0 +1,17 @@
+.\" $OpenBSD: empty.in,v 1.2 2017/07/04 14:53:26 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt RS-EMPTY 1
+.Os
+.Sh NAME
+.Nm Rs-empty
+.Nd empty reference blocks
+.Sh DESCRIPTION
+initial text
+.Rs
+.Re
+final text
+.Sh SEE ALSO
+initial text
+.Rs
+.Re
+final text

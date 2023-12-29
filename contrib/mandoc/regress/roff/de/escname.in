@@ -1,0 +1,44 @@
+.\" $OpenBSD: escname.in,v 1.4 2017/07/04 14:53:27 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt DE-ESCNAME 1
+.Os
+.Sh NAME
+.Nm de-escname
+.Nd escape sequences in macro names
+.Sh DESCRIPTION
+initial text
+.Pp
+define second = val2
+.de second
+val2
+..
+.Pp
+define first\esecond = val3
+.de first\\second end3
+val3
+.end3
+.Pp
+define first = val1
+.de first\esecond
+val1
+..
+.Pp
+Values (first, second, first\esecond):
+.first
+.second
+.first\\second
+.Pp
+Remove all but second:
+.rm first\\second first\esecond second
+.first
+.second
+.first\\second
+.Pp
+macro seperated from argument by an escape sequence:
+.de witharg end4 excess arguments
+.Dq \\$1
+.end4 tail argument
+.witharg\(enargument
+.Pp
+.de\e
+final text

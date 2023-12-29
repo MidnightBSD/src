@@ -1,0 +1,70 @@
+.\" $OpenBSD: breakingIt.in,v 1.4 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BL-BREAKINGIT 1
+.Os
+.Sh NAME
+.Nm Bl-breakingIt
+.Nd items breaking other blocks
+.Sh DESCRIPTION
+.Ss Breaking partial explicit macros
+.Bl -tag -width Ds
+Stray text.
+.Ao
+More stray text
+.It tag
+Tagged text.
+.El
+.Bl -bullet
+Stray text.
+.Ao
+More stray text
+.It
+Bullet point.
+.El
+.Bl -tag -width Ds
+.It tag
+Tagged text.
+.Ao
+More tagged text
+.It tag2
+Yet more tagged text.
+.El
+.Bl -bullet
+.It
+Item text.
+.Ao
+More item text
+.It
+Bullet point.
+.El
+.Ss Breaking full explicit macros
+.Bl -tag -width Ds
+Stray text.
+.Bd -ragged -offset indent
+More stray text.
+.It tag
+Tagged text.
+.El
+.Bl -bullet
+Stray text.
+.Bd -ragged -offset indent
+More stray text.
+.It
+Bullet point.
+.El
+.Bl -tag -width Ds
+.It tag
+Tagged text.
+.Bd -ragged -offset indent
+Display text.
+.It tag2
+More tagged text.
+.El
+.Bl -bullet
+.It
+Item text.
+.Bd -ragged -offset indent
+Display text.
+.It
+Bullet point.
+.El

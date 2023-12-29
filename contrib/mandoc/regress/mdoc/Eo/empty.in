@@ -1,0 +1,52 @@
+.\" $OpenBSD: empty.in,v 1.5 2017/07/04 14:53:25 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt EO-EMPTY 1
+.Os
+.Sh NAME
+.Nm Eo-empty
+.Nd empty implicit enclosure macros
+.Sh DESCRIPTION
+completely empty
+.Eo
+.Ec
+closing only
+.Eo
+.Ec >>
+content only
+.Eo
+text
+.Ec
+opening only
+.Eo <<
+.Ec
+no opening
+.Eo
+text
+.Ec >>
+no content
+.Eo <<
+.Ec >>
+no closing
+.Eo <<
+text
+.Ec
+all
+.Eo <<
+text
+.Ec >> "Sy" bold
+completely empty
+.No prefix Ns Eo
+.Ec
+closing only
+.No prefix Ns Eo
+.Ec >>
+no opening
+.No prefix Ns Eo
+text
+.Ec >>
+no closing
+.Eo <<
+.No prefix Ns Ec
+stray closing
+.Ec >>
+end of file

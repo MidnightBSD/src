@@ -1,0 +1,53 @@
+IP-LITERAL(1)               General Commands Manual              IP-LITERAL(1)
+
+
+
+NNAAMMEE
+       IP-literal - indented paragraphs in literal context
+
+DDEESSCCRRIIPPTTIIOONN
+       regular text
+
+       tag       indented regular text
+
+       new regular paragraph
+       literal
+       text
+
+       tag       indented
+                 literal
+                 text
+
+       new
+       literal
+       paragraph
+       regular text
+
+   lliitteerraall iinnttoo iinnddeenntteedd ppaarraaggrraapphh
+       regular text
+       literal
+       text
+
+       tag       indented
+                 literal
+                 text
+                 indented regular text
+
+       new regular paragraph
+
+   lliitteerraall oouutt ooff iinnddeenntteedd ppaarraaggrraapphh
+       regular text
+
+       tag       indented regular text
+                 indented
+                 literal
+                 text
+
+       new
+       literal
+       paragraph
+       regular text
+
+
+
+OpenBSD                         January 4, 2011                  IP-LITERAL(1)

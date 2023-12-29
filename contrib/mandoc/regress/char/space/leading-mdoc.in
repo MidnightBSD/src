@@ -1,0 +1,25 @@
+.\" $OpenBSD: leading-mdoc.in,v 1.4 2017/07/04 14:53:23 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt SPACE-LEADING_MDOC 1
+.Os
+.Sh NAME
+.Nm space-leading-mdoc
+.Nd leading spaces on text lines in mdoc documents
+.Sh DESCRIPTION
+normal line of text
+second normal line
+ line with a leading space
+.Ux
+normal line after a macro line
+.Ux
+ leading space after a macro line
+.Bd -literal
+normal line in a literal display
+ leading space in a literal display
+another normal line
+.Ed
+.Bd -filled
+normal line in a filled display
+ leading space in a filled display
+another normal line
+.Ed

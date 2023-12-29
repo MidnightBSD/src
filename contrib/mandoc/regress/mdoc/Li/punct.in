@@ -1,0 +1,87 @@
+.\" $OpenBSD: punct.in,v 1.7 2017/07/04 14:53:25 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt LI-PUNCT 1
+.Os
+.Sh NAME
+.Nm Li-punct
+.Nd punctuation following a literal macro
+.Sh DESCRIPTION
+Leading punctuation:
+.Li ( b
+.Li "[" b
+.Li | b
+.Li . b
+.Li , b
+.Li ; b
+.Li : b
+.Li ? b
+.Li ! b
+.Li ) b
+.Li ] b
+.Pp
+Trailing punctuation:
+.Li a (
+.Li a [
+.Li a |
+.Li a .
+.Li a ","
+.Li a ;
+.Li a :
+.Li a ?
+.Li a !
+.Li a )
+.Li a ]
+.Pp
+Middle punctuation:
+.Li a ( b
+.Li a [ b
+.Li a | b
+.Li a . b
+.Li a , b
+.Li a ";" b
+.Li a : b
+.Li a ? b
+.Li a ! b
+.Li a ")" b
+.Li a ] b
+.Pp
+Isolated punctuation:
+.Li a Li ( Li b
+.Li a Li [ Li b
+.Li a Li | Li b
+.Li a Li . Li b
+.Li a Li , Li b
+.Li a Li ; Li b
+.Li a Li : Li b
+.Li a Li ? Li b
+.Li a Li ! Li b
+.Li a Li ) Li b
+.Li a Li ] Li b
+.Pp
+Isolated trailing punctuation:
+.Li a Li (
+.Li a Li [
+.Li a Li |
+.Li a Li .
+.Li a Li ,
+.Li a Li ;
+.Li a Li :
+.Li a Li ?
+.Li a Li !
+.Li a Li )
+.Li a Li ]
+.Pp
+Multiple isolated punctuation:
+.Li a Li ( [ Li b
+.Li a Li ) ] Li b
+.Pp
+Multiple punctuation:
+.Li [ ( arg ) ] .
+.Pp
+Quoted:
+.Li "a . b Nm" "Sy" bold
+.Li ". b Nm"
+.Li "."
+.Pp
+Missing blank:
+.Li a.

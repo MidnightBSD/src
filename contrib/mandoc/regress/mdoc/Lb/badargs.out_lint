@@ -1,0 +1,5 @@
+mandoc: badargs.in:10:2: WARNING: skipping empty macro: Lb
+mandoc: badargs.in:9:10: STYLE: no blank before trailing delimiter: Lb murks.
+mandoc: badargs.in:9:5: WARNING: unknown library name: Lb murks.
+mandoc: badargs.in:11:18: STYLE: no blank before trailing delimiter: Lb ... another.
+mandoc: badargs.in:11:5: WARNING: unknown library name: Lb mylib

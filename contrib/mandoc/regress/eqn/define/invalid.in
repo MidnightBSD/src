@@ -1,0 +1,37 @@
+.\" $OpenBSD: invalid.in,v 1.2 2017/07/04 14:53:23 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt DEFINE-INVALID 1
+.Os
+.Sh NAME
+.Nm define-invalid
+.Nd invalid define and undef statements
+.Sh DESCRIPTION
+define without variable name:
+.EQ
+define bruch 'over' 1 bruch 2 undef bruch bruch define
+.EN
+eol
+.Pp
+define without value:
+.EQ
+define bruch 'over' 1 bruch 2 undef bruch bruch define bruch
+.EN
+eol
+.Pp
+define without value:
+.EQ
+define bruch 'over' 1 bruch 2 undef bruch bruch undef
+.EN
+eol
+.Pp
+tdefine without variable name:
+.EQ
+tdefine
+.EN
+eol
+.Pp
+tdefine without value:
+.EQ
+tdefine bruch
+.EN
+eol

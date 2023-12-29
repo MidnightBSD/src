@@ -1,0 +1,76 @@
+.\" $OpenBSD: two.in,v 1.3 2017/07/04 14:53:27 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt ESC-TWO 1
+.Os
+.Sh NAME
+.Nm esc-two
+.Nd roff two-character escape sequences
+.Sh DESCRIPTION
+lines: \(ba \(br \(ul \(bb \(sl \(rs
+.\" groff doesn't know \(rl
+.br
+markers: \(bu \(lz \(sq \(lh \(rh \(at \(sh \(CR
+.\" the circle \(ci differs
+.\" the daggers \(dd and \(dg use backspace
+.\" \(ps and \(sc intentionally differ
+.\" groff doesn't know \(OK
+.br
+legal: \(co \(rg \(tm
+.br
+punctuation: \(em \(en \(hy
+.\" the inverted punctuation is intentionally different
+.br
+quotes: \(Bq \(bq \(oq \(cq \(aq \(dq \(Fo \(Fc \(fo \(fc
+.\" the double quotes \(lq and \(rq differ
+.br
+brackets: \(lB \(rB \(lC \(rC \(la \(ra \(bv \(lt \(lk \(rt \(rk \(rb
+.\" the left bottom \(lb differs
+.br
+arrows: \(<- \(-> \(lA \(rA \(hA
+.\" the left-right arrow \(<> differs
+.\" groff doesn't know \(va and \(vA
+.\" the vertical arrows \(da, \(ua, \(uA, \(dA use backspace
+.br
+logical: \(AN \(OR \(no \(te \(st \(tf \(3d \(or
+.\" the universal quantifier \(fa uses backspace
+.br
+mathematical: \(pl \(mi \(-+ \(+- \(pc \(mu \(di \(f/ \(**
+\(<= \(>= \(<< \(>> \(eq \(!= \(== \(ne \(=~ \(ap \(~~ \(~= \(pt
+\(es \(mo \(sb \(sp \(ca \(cu
+\(sr \(lc \(rc \(lf \(rf \(if \(Ah \(Im \(Re \(pd
+.\" groff doesn't know \(-~, \(nb, \(nc, \(-h
+.\" these differ: \(nm \(ib \(ip \(/_ \(pp \(gr
+.\" these use backspace: \(c* \(c+ \(is
+.br
+ligatures: \(ff \(fi \(fl \(Fi \(Fl \(AE \(ae \(OE \(oe \(IJ \(ij
+.\" the German eszett \(ss differs
+.br
+accents: \(a" \(a^ \(aa \(ga \(ab \(ac \(ad \(ah \(ao \(a~ \(ho \(ha \(ti
+.\" the macron \(a- differs
+.\" groff doesn't know \(a.
+.br
+accented and special letters:
+\('A \('E \('I \('O \('U \('a \('e \('i \('o \('u
+\(`A \(`E \(`I \(`O \(`U \(`a \(`e \(`i \(`o \(`u
+\(~A \(~N \(~O \(~a \(~n \(~o
+\(:A \(:E \(:I \(:O \(:U \(:a \(:e \(:i \(:o \(:u \(:y
+\(^A \(^E \(^I \(^O \(^U \(^a \(^e \(^i \(^o \(^u
+\(,C \(,c \(/L \(/l \(/O \(/o \(oA \(oa \(-D \(.i
+.\" these intentionally differ: \(Sd \(TP \(Tp
+.\" groff doesn't know \(.j
+.br
+currency: \(Do \(ct \(Eu \(eu \(Ye \(Fo
+.\" uses backspace: \(Cs
+.\" the GB pound \(Po is intentionally different
+.br
+units: \(fm \(mc
+.\" groff doesn't know \(%O
+.\" \(sd differs
+.\" \(de is intentionally different
+.br
+greek letters: \(*A \(*B \*D \(*E \(*Z \(*Y \*H \(*I \(*K \(*L
+\(*M \(*N \*C \(*O \(*P \(*R \(*T \(*U \*F \(*X \(*Q \(*W
+\(*a \(*b \(*g \(*d \(*e \(*z \(*y \(*h \(*i \(*k \(*l
+\(*m \(*n \(*c \(*o \(*p \(*r \(*s \(*t \(*u \(*f \(*x \(*q \(*w
+\(+h \(+f \+p \(+e \(ts
+.\" these differ: \(*G \(*S

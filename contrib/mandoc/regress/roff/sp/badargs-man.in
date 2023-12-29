@@ -1,0 +1,18 @@
+.\" $OpenBSD: badargs-man.in,v 1.5 2017/07/04 14:53:27 schwarze Exp $
+.TH SP-BADARGS-MAN 1 "December 23, 2014"
+.SH NAME
+sp-badargs-man \- bad arguments to .sp macros in man(7)
+.SH DESCRIPTION
+no arguments:
+.sp
+one argument:
+.sp 2v
+two arguments:
+.sp 3v 2i
+no scaling unit specified:
+.sp 1
+trailing garbage:
+.sp 2vx
+garbage only:
+.sp xxx
+end of test document

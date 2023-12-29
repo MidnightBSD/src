@@ -1,0 +1,13 @@
+.\" $OpenBSD: noarg.in,v 1.4 2017/07/04 14:53:26 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt SX-NOARG 1
+.Os
+.Sh NAME
+.Nm Sx-noarg
+.Nd internal cross reference without a target
+.Sh DESCRIPTION
+with target:
+.Sx DESCRIPTION ";" "Em" italic
+no target:
+.Sx
+end of test document

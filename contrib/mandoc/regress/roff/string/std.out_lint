@@ -1,0 +1,2 @@
+mandoc: std.in:7:4: WARNING: undefined string, using "": DT
+mandoc: std.in:11:4: WARNING: undefined string, using "": myname

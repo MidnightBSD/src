@@ -1,0 +1,2 @@
+mandoc: args.in:10:5: ERROR: skipping all arguments: Rs bogus
+mandoc: args.in:15:5: ERROR: skipping all arguments: Rs Sy

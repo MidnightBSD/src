@@ -1,0 +1,23 @@
+NS-POSITION(1)              General Commands Manual             NS-POSITION(1)
+
+NNAAMMEE
+     NNss--ppoossiittiioonn - effect of the position of the no space macro on the line
+
+DDEESSCCRRIIPPTTIIOONN
+     At the beginning of a macro line: [before] [after]
+
+     After just a block closing macro: [before][after]
+
+     After some macro and a block closing: [before still before][after]
+
+     In the middle of a macro line: [before][after]
+
+     After closing punctuation: [before]:[after]
+
+     Before closing punctuation: [before]: [after]
+
+     At the end of a macro line: [before][after]
+
+     At the end of partial implicit: [before][after]
+
+OpenBSD                          July 4, 2017                          OpenBSD

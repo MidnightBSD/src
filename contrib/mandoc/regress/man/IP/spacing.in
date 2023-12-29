@@ -1,0 +1,32 @@
+.\" $OpenBSD: spacing.in,v 1.4 2017/07/04 14:53:23 schwarze Exp $
+.TH IP-SPACING 1 "September 21, 2015"
+.SH NAME
+IP-spacing \- spacing in indentend paragraphs
+.SH DESCRIPTION
+Normal text.
+.IP tag
+Indented text.
+.IP four
+Indented text.
+.IP ffive
+Indented text.
+.IP sixsix
+Indented text.
+.IP seseven
+Indented text.
+.IP "a much longer tag"
+Indented text.
+.LP
+Tags with trailing space:
+.IP "tag "
+Three plus one makes four.
+.IP "tag  "
+Three plus two makes five.
+.IP "tag   "
+Three plus three makes six.
+.IP "tag    "
+Three plus four makes seven.
+.IP "tag     "
+Three plus five makes eight.
+.LP
+Normal text.

@@ -1,0 +1,82 @@
+.\" $OpenBSD: bullet.in,v 1.4 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BL-BULLET 1
+.Os
+.Sh NAME
+.Nm Bl-bullet
+.Nd bullet lists
+.Sh DESCRIPTION
+.Bl -bullet -width -4n
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -bullet -width -3n
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -bullet -width -2n
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -bullet -width -1n
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -bullet -width 0n
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -bullet -width 1n
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -bullet -width 2n
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -bullet -width 3n
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -bullet -width 4n
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -bullet -width 5n
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -bullet -width 6n
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -bullet -width 7n
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El
+.Bl -bullet -compact
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.It
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+.El

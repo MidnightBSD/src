@@ -1,0 +1,15 @@
+.\" $OpenBSD: indent.in,v 1.2 2017/07/04 14:53:24 schwarze Exp $
+.TH TP-INDENT 1 "June 17, 2017"
+.SH NAME
+TP-indent \- indent request inside TP head
+.SH DESCRIPTION
+initial text
+.TP 2n
+tag
+indented
+.TP 8n
+.in 3n
+tag
+indented
+.PP
+final text

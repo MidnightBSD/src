@@ -1,0 +1,29 @@
+.\" $OpenBSD: broken.in,v 1.3 2017/07/04 14:53:24 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt BL-BROKEN 1
+.Os
+.Sh NAME
+.Nm Bl-broken
+.Nd list broken by another block
+.Sh DESCRIPTION
+before both
+.Bo before list
+.Bl -enum -offset indent
+.It
+inside both
+.Bc
+after bracket
+.El
+after list
+.Bo before list
+.Bl -enum -offset indent
+.It
+inside list
+.Bd -ragged -offset indent
+inside display
+.Bc
+after bracket
+.It
+next item
+.El
+after list

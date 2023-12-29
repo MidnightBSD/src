@@ -1,0 +1,14 @@
+.\" $OpenBSD: punct.in,v 1.4 2017/07/04 14:53:25 schwarze Exp $
+.Dd $Mdocdate: July 4 2017 $
+.Dt FO-PUNCT 1
+.Os
+.Sh NAME
+.Nm Fo-punct
+.Nd punctuation on function input lines
+.Sh DESCRIPTION
+.Ft double
+.Fn sin. "," cos "Em" italic
+.Pp
+.Fa x "," y: "Sy" bold
+.Pp
+.Ft int "," float: "Sy" bold
