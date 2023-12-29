@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20231229:
+	mandoc 1.14.6
+
 20231227:
 	OpenSSH 9.3p2 - CVE-2023-38408
 
