@@ -1,3 +1,4 @@
+
 .include <src.opts.mk>
 
 MANDOCDIR=	${SRCTOP}/contrib/mandoc
@@ -12,6 +13,8 @@ MLINKS+=	apropos.1 whatis.1
 LINKS=	${BINDIR}/mandoc ${BINDIR}/whatis \
 	${BINDIR}/mandoc ${BINDIR}/makewhatis \
 	${BINDIR}/mandoc ${BINDIR}/apropos
+.elif defined(BOOTSTRAPPING)
+.error "MK_MAN_UTILS should be set to yes when bootstrapping"
 .endif
 
 LIBMAN_SRCS=	man.c \
@@ -68,6 +71,7 @@ TERM_SRCS=	eqn_term.c \
 		term_ascii.c \
 		term_ps.c \
 		term_tab.c \
+		term_tag.c \
 		tbl_term.c
 
 DBM_SRCS=	dbm.c \
