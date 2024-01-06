@@ -668,7 +668,8 @@ BSARGS= 	DESTDIR= \
 		MK_SSP=no \
 		MK_TESTS=no \
 		MK_WARNS=no \
-		MK_INCLUDES=yes
+		MK_INCLUDES=yes \
+		MK_MAN_UTILS=yes
 
 BMAKE=		\
 		${BMAKEENV} ${MAKE} ${WORLD_FLAGS} -f Makefile.inc1 \
