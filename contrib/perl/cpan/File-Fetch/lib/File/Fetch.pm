@@ -58,7 +58,7 @@ use constant ON_VMS     => ($^O eq 'VMS');
 use constant ON_UNIX    => (!ON_WIN);
 use constant HAS_VOL    => (ON_WIN);
 use constant HAS_SHARE  => (ON_WIN);
-use constant HAS_FETCH  => ( $^O =~ m!^(freebsd|netbsd|dragonfly)$! );
+use constant HAS_FETCH  => ( $^O =~ m!^(freebsd|netbsd|dragonfly|midnightbsd)$! );
 
 =pod
 
