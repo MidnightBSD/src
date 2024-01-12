@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20240112:
+	Fixed a configuration issue with how Perl is built.
+	man pages should not get installed correctly by mports.
+
+	Disabled dtrace in perl due to some issues with it running reliably.
+
 20240109:
 	tzdata 2023d
 
