@@ -17777,7 +17777,7 @@ case "$d_semctl$d_semget$d_semop" in
 *"$undef"*) h_sem=false;;
 esac
 case "$osname" in
-freebsd|midngihtbsd)
+freebsd|midnightbsd)
     case "`ipcs 2>&1`" in
     "SVID messages"*"not configured"*)
 	echo "Your $osname does not have the sem*(2) configured." >&4
