@@ -23,11 +23,11 @@ CFLAGS+=	-fno-strict-aliasing
 #
 CONFIGURE_ARGS= -des -Dprefix=/usr -Dsiteprefix=/usr/local -Dvendorprefix=/usr \
 		-Dsiteman1dir=/usr/local/man/man1 -Dsiteman3dir=/usr/local/man/man3 \
+		-Dman1dir=/usr/local/man/man1 -Dman3dir=/usr/local/man/man3 \
+		-Dman1ext=1 -Dman3ext=3 \
 		-Dmksymlinks -Dsrc=${SRCDIR} -Duse64bitint -Duseshrplib \
 		-Dusethreads=y -Ulocincpth='' -Ui_gdbm -Ut_gdbm \
-		-Dusedtrace=true
-
-LIBADD+=	dtrace
+		-Dusedtrace=false -Ddtracexnolibs=false
 
 .if !defined(TARGET_ARCH)
 TARGET_ARCH!= /usr/bin/uname -p
