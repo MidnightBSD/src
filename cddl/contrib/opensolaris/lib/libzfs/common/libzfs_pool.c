@@ -2968,11 +2968,11 @@ zpool_vdev_attach(zpool_handle_t *zhp,
 			(void) fprintf(stderr, dgettext(TEXT_DOMAIN, "If "
 			    "you boot from pool '%s', you may need to update\n"
 			    "boot code on newly attached disk '%s'.\n\n"
-			    "Assuming you use GPT partitioning and 'da0' is "
-			    "your new boot disk\n"
+			    "Assuming you use GPT partitioning with CSM in bios and 'da0' is "
+			    "your new boot disk and the mnbsd-boot partition is the first one on the disk\n"
 			    "you may use the following command:\n\n"
 			    "\tgpart bootcode -b /boot/pmbr -p "
-			    "/boot/gptzfsboot -i 1 da0\n\n"),
+			    "/boot/gptzfsboot -i 1 da0\n\nYou may need to update the loader.efi(8) on UEFI boot systems."),
 			    zhp->zpool_name, new_disk);
 		}
 		return (0);
