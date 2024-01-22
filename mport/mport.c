@@ -755,7 +755,7 @@ install(mportInstance *mport, const char *packageName)
 	mportIndexEntry **indexEntry = NULL;
 	mportIndexEntry **ie = NULL;
 	mportIndexEntry **i2 = NULL;
-	int resultCode;
+	int resultCode = MPORT_OK;
 	int item;
 	int choice;
 
@@ -808,7 +808,7 @@ install(mportInstance *mport, const char *packageName)
 		}
 	}
 
-    if (indexEntry == NULL || *indexEntry == NULL) {
+    if (indexEntry != NULL && *indexEntry != NULL) {
 		resultCode = mport_install_depends(
 	    	mport, (*indexEntry)->pkgname, (*indexEntry)->version, MPORT_EXPLICIT);
 	}

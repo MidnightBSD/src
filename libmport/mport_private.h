@@ -48,10 +48,10 @@
 
 #define MPORT_PUBLIC_API 
 
-#define MPORT_MASTER_VERSION 11
+#define MPORT_MASTER_VERSION 12
 #define MPORT_BUNDLE_VERSION 6
 #define MPORT_BUNDLE_VERSION_STR "6"
-#define MPORT_VERSION "2.4.9"
+#define MPORT_VERSION "2.5.1"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
@@ -90,6 +90,13 @@ int mport_db_count(sqlite3 *, int *, const char *, ...);
 int mport_pkgmeta_read_stub(mportInstance *, mportPackageMeta ***);
 int mport_pkgmeta_logevent(mportInstance *, mportPackageMeta *, const char *);
 
+/* Service */
+typedef enum {
+    SERVICE_START,
+    SERVICE_STOP
+} service_action_t;
+int mport_start_stop_service(mportInstance *mport, mportPackageMeta *pack, service_action_t action);
+
 /* Utils */
 bool mport_starts_with(const char *, const char *);
 char* mport_hash_file(const char *);
@@ -100,6 +107,7 @@ char* mport_directory(const char *path);
 int mport_rmtree(const char *);
 int mport_mkdir(const char *);
 int mport_mkdirp(char *, mode_t);
+int mport_removeflags(const char *, const char *);
 int mport_rmdir(const char *, int);
 int mport_chdir(mportInstance *, const char *);
 int mport_xsystem(mportInstance *, const char *, ...);
@@ -108,7 +116,9 @@ void mport_free_vec(void *);
 int mport_decompress_bzip2(const char *, const char *);
 int mport_shell_register(const char *);
 int mport_shell_unregister(const char *);
+char * mport_str_remove(const char *str, const char ch);
 time_t mport_get_time(void);
+bool mport_check_answer_bool(char *answer);
 
 /* Mport Bundle (a file containing packages) */
 typedef struct {
@@ -223,11 +233,12 @@ char * mport_fetch_cves(mportInstance *mport, char *cpe);
 /* a few index things */
 int mport_index_get_mirror_list(mportInstance *, char ***, int *);
 
-#define MPORT_CHECK_FOR_INDEX(mport, func) if (!(mport->flags & MPORT_INST_HAVE_INDEX)) RETURN_ERRORX(MPORT_ERR_FATAL, "Attempt to use %s before loading index.", func);
-#define MPORT_DAY 3600 * 24
-#define MPORT_MAX_INDEX_AGE MPORT_DAY * 7 /* one week */
+#define MPORT_CHECK_FOR_INDEX(mport, func) if (!(mport->flags & MPORT_INST_HAVE_INDEX)) RETURN_ERRORX(MPORT_ERR_FATAL, "Attempt to use %s before loading index.", (func));
+#define MPORT_DAY (3600 * 24)
+#define MPORT_MAX_INDEX_AGE (MPORT_DAY * 7) /* one week */
 #define MPORT_SETTING_INDEX_LAST_CHECKED "index_last_check"
 #define MPORT_SETTING_REPO_AUTOUPDATE "index_autoupdate"
+#define MPORT_SETTING_HANDLE_RC_SCRIPTS "handle_rc_scripts"
 
 /* Binaries we use */
 #define MPORT_MTREE_BIN		"/usr/sbin/mtree"

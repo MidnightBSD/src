@@ -195,6 +195,36 @@ This is the last time the index file was checked for an update.
 .Dl index_autoupdate
 Determines if the index file will be updated automatically. If set to NO or FALSE, it will be skipped unless
 it is missing entirely. A persistent version of the mport -U flag. 
+.Pp
+.Dl handle_rc_scripts
+When set to yes or true, will start and stop rc.d services included with the package. If set to no or false, will not run rc.d scripts.
+.Sh ENVIRONMENT
+.Bl -tag -width ".Ev FETCH_BIND_ADDRESS"
+.It Ev FETCH_BIND_ADDRESS
+Specifies a hostname or IP address to which sockets used for outgoing
+connections will be bound.
+.It Ev FTP_LOGIN
+Default FTP login if none was provided in the URL.
+.It Ev FTP_PASSIVE_MODE
+If set to
+.Ql no ,
+forces the FTP code to use active mode.
+If set to any other value, forces passive mode even if the application
+requested active mode.
+.It Ev FTP_PASSWORD
+Default FTP password if the remote server requests one and none was
+provided in the URL.
+.It Ev FTP_PROXY
+URL of the proxy to use for FTP requests.
+The document part is ignored.
+FTP and HTTP proxies are supported; if no scheme is specified, FTP is
+assumed.
+If the proxy is an FTP proxy,
+.It Ev ASSUME_ALWAYS_YES
+If set to a non empty value, will assume any question should be answered
+with a yes.
+.It Ev HANDLE_RC_SCRIPTS
+If set to a non empty value, will start/stop rc.d scripts included in the package.
 .Sh EXAMPLES
 Search for a package:
 .Dl $ mport search curl
