@@ -73,8 +73,10 @@ int mport_default_confirm_cb(const char *msg, const char *yes, const char *no, i
       /* user just hit return */
       return def == 1 ? MPORT_OK : -1;
     }  
+
+    bool answer = mport_check_answer_bool(ans);
     
-    if (*ans == 'Y' || *ans == 'y') 
+    if (answer) 
       return (MPORT_OK);
     if (*ans == 'N' || *ans == 'n')
       return (-1);

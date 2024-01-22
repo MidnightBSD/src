@@ -58,7 +58,7 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 	sqlite3_stmt *stmt;
 	int ret, current, total;
 	mportAssetListEntryType type;
-	const char *data, *checksum, *cwd, *service, *rc_script;
+	const char *data, *checksum, *cwd;
 	struct stat st;
 	char hash[65];
 
@@ -69,26 +69,7 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 
 	mport_call_progress_init_cb(mport, "Deleting %s-%s", pack->name, pack->version);
 
-	/* stop any services that might exist; this replaces @stopdaemon */
-	if (mport_db_prepare(mport->db, &stmt,
-		"select * from assets where data like '/usr/local/etc/rc.d/%%' and type=%i and pkg=%Q",
-		ASSET_FILE, pack->name) != MPORT_OK)
-		RETURN_CURRENT_ERROR;
-
-	while (1) {
-		ret = sqlite3_step(stmt);
-		if (ret != SQLITE_ROW) {
-			break;
-		}
-
-		rc_script = sqlite3_column_text(stmt, 0);
-		if (rc_script == NULL)
-			continue;
-		service = basename((char *)rc_script);
-		if (mport_xsystem(mport, "/usr/sbin/service %s onestop", service) != 0) {
-			mport_call_msg_cb(mport, "Unable to stop service %s\n", service);
-		}
-	}
+	mport_start_stop_service(mport, pack, SERVICE_STOP);
 
 	/* get the file count for the progress meter */
 	if (mport_db_prepare(mport->db, &stmt,
@@ -293,6 +274,7 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 		case ASSET_DIRRMTRY:
 		case ASSET_DIR_OWNER_MODE:
 			if (is_safe_to_delete_dir(mport, pack, file)) {
+				mport_removeflags(mport->root, file);
 				if (mport_rmdir(file, type == ASSET_DIRRMTRY ? 1 : 0) != MPORT_OK) {
 					mport_call_msg_cb(mport, "Could not remove directory '%s': %s",
 				    	file, mport_err_string());
@@ -358,11 +340,25 @@ bool is_safe_to_delete_dir(mportInstance *mport, mportPackageMeta *pack, const c
 {
 	sqlite3_stmt *stmt;
 	int count;
+    
+	if (mport == NULL || pack == NULL || path == NULL) {
+		return false;
+	}
+
+	/* Don't delete the root or the package prefix directories */
+	if (mport->root != NULL && strcmp(mport->root, path) == 0) {
+		mport_call_msg_cb(mport, "Skipping removal of root (DESTDIR) directory: '%s'", path);
+		return false;
+	}
+	if (pack->prefix != NULL && strcmp(pack->prefix, path) == 0) {
+		mport_call_msg_cb(mport, "Skipping removal of package prefix directory: '%s'", path);
+		return false;
+	}
 
 	if (mport_db_prepare(mport->db, &stmt,
 		"SELECT count(*) from assets where pkg!=%Q and type in (%d, %d, %d, %d) and data=%Q",
 		pack->name, ASSET_DIR, ASSET_DIRRM, ASSET_DIRRMTRY, ASSET_DIR_OWNER_MODE, path) != MPORT_OK) {
-		RETURN_CURRENT_ERROR;
+		return false;
 	}
 
 	switch (sqlite3_step(stmt)) {

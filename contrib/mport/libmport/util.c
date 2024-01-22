@@ -298,9 +298,40 @@ mport_rmdir(const char *dir, int ignore_nonempty)
 			return (MPORT_OK);
 		} else {
 			RETURN_ERRORX(
-			    MPORT_ERR_FATAL, "Couldn't rmdir %s: %s", dir, strerror(errno));
+			    MPORT_ERR_FATAL, "Couldn't rmdir %s: %s. With ZFS, this could indicate a snapshot is blocking removal.", dir, strerror(errno));
 		}
 	}
+
+	return (MPORT_OK);
+}
+
+/**
+ * @brief remove all flags from a directory rooted at root
+ * 
+ * @param root 
+ * @param dir 
+ * @return int 
+ */
+int mport_removeflags(const char *root, const char *dir) {
+	struct stat st;
+	int statresult;
+	
+	int rootfd = open(root, O_RDONLY | O_DIRECTORY);
+
+	if (mport_starts_with(root, dir)) {
+		statresult = lstat(dir, &st);
+	} else {
+		statresult = fstatat(rootfd, dir, &st, AT_SYMLINK_NOFOLLOW);
+	} 
+
+	if (statresult != -1) {
+		if (st.st_flags & (UF_IMMUTABLE | UF_APPEND | UF_NOUNLINK | SF_IMMUTABLE | SF_APPEND | SF_NOUNLINK)) {
+			/* Disable all flags*/
+			chflagsat(rootfd, dir, 0, AT_SYMLINK_NOFOLLOW);
+		}
+	}
+
+	close(rootfd);
 
 	return (MPORT_OK);
 }
@@ -338,6 +369,39 @@ mport_shell_unregister(const char *shell_file)
 	    "grep -v %s /etc/shells > /etc/shells.bak && mv /etc/shells.bak /etc/shells",
 	    shell_file);
 }
+
+/**
+ * @brief Remove a character from a string
+ * 
+ * @param str 
+ * @param ch 
+ * @return char* (must be freed)
+ */
+char * 
+mport_str_remove(const char *str, const char ch)
+{
+	size_t i;
+	size_t x;
+	size_t len;
+	char *output;
+	
+	if (str == NULL)
+		return NULL;
+	
+	len = strlen(str);
+	
+	output = calloc(len + 1, sizeof(char));
+	
+	for (i = 0, x = 0; i <= len; i++) {
+		if (str[i] != ch) {
+			output[x] = str[i];
+			x++;
+		}
+	}
+	output[len] = '\0';
+	
+	return (output);
+} 
 
 /*
  * Quick test to see if a file exists.
@@ -844,4 +908,17 @@ mport_drop_privileges(void)
 	}
 
 	return (MPORT_OK);
+}
+
+bool
+mport_check_answer_bool(char *ans) {
+	if (ans == NULL)
+	    return (false);
+
+    if (*ans == 'Y' || *ans == 'y' || *ans == 't' || *ans == 'T' || *ans == '1') 
+      return (true);
+    if (*ans == 'N' || *ans == 'n' || *ans == 'f' || *ans == 'F' || *ans == '0') 
+      return (false);
+
+	return (false);
 }
