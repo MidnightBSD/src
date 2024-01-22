@@ -42,6 +42,7 @@ static int mport_upgrade_master_schema_7to8(sqlite3 *);
 static int mport_upgrade_master_schema_8to9(sqlite3 *);
 static int mport_upgrade_master_schema_9to10(sqlite3 *);
 static int mport_upgrade_master_schema_10to11(sqlite3 *);
+static int mport_upgrade_master_schema_11to12(sqlite3 *);
 
 /* mport_db_do(sqlite3 *db, const char *sql, ...)
  * 
@@ -281,6 +282,9 @@ mport_upgrade_master_schema(sqlite3 *db, int databaseVersion)
 			mport_upgrade_master_schema_6to7(db);
 			mport_upgrade_master_schema_7to8(db);
 			mport_upgrade_master_schema_8to9(db);
+			mport_upgrade_master_schema_9to10(db);
+			mport_upgrade_master_schema_10to11(db);
+			mport_upgrade_master_schema_11to12(db);
 			mport_set_database_version(db);
 			break;
 		case 2:
@@ -306,13 +310,15 @@ mport_upgrade_master_schema(sqlite3 *db, int databaseVersion)
 		case 9:
 			/* falls through */
 	        mport_upgrade_master_schema_9to10(db);
-			mport_set_database_version(db);
 		case 10:
 			/* falls through */
 			mport_upgrade_master_schema_10to11(db);
-			mport_set_database_version(db);
 		case 11:
-			break;
+			/* falls through */
+            mport_upgrade_master_schema_11to12(db);
+            mport_set_database_version(db);
+		case 12:
+		    break;
 		default:
 			RETURN_ERROR(MPORT_ERR_FATAL, "Invalid master database version");
 	}
@@ -415,6 +421,15 @@ mport_upgrade_master_schema_10to11(sqlite3 *db)
 	return (MPORT_OK);
 }
 
+static int
+mport_upgrade_master_schema_11to12(sqlite3 *db)
+{
+	RUN_SQL(db, "INSERT INTO settings VALUES (\"" MPORT_SETTING_HANDLE_RC_SCRIPTS "\", \"yes\")");
+	RUN_SQL(db, "INSERT INTO settings VALUES (\"" MPORT_SETTING_REPO_AUTOUPDATE "\", \"yes\")");
+		
+	return (MPORT_OK);
+}
+
 int
 mport_generate_master_schema(sqlite3 *db)
 {
@@ -442,6 +457,9 @@ mport_generate_master_schema(sqlite3 *db)
 
 	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS settings (name text NOT NULL, val text NOT NULL)");
 	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS settings_name ON settings (name)");
+
+	RUN_SQL(db, "INSERT INTO settings VALUES (\"" MPORT_SETTING_HANDLE_RC_SCRIPTS "\", \"yes\")");
+	RUN_SQL(db, "INSERT INTO settings VALUES (\"" MPORT_SETTING_REPO_AUTOUPDATE "\", \"yes\")");
 
 	mport_set_database_version(db);
 

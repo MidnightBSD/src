@@ -306,6 +306,9 @@ parse_command(const char *s) {
     if (STRING_EQ(s, "desktop-file-utils")) {
         return ASSET_DESKTOP_FILE_UTILS;
     }
+    if (STRING_EQ(s, "touch")) {
+        return ASSET_TOUCH;
+    }
 
     /* special case, starts with ( as in @(root,wheel,0755) */
     if (s[0] == '(') {

@@ -126,8 +126,17 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
 
 	(void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
 
-	if (mport_chdir(mport, cwd) != MPORT_OK)
-		goto ERROR;
+	if (mport_chdir(mport, cwd) != MPORT_OK)  {
+		if (strcmp("/compat/linux", cwd) == 0) {
+			mport_mkdir("/compat");
+			mport_mkdir("/compat/linux");
+		} else {
+			mport_mkdir(cwd);
+		}
+		if (mport_chdir(mport, cwd) != MPORT_OK)  {
+			goto ERROR;
+		}
+	}
 
 	STAILQ_FOREACH(e, alist, next)
 	{
@@ -324,8 +333,8 @@ mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
 		}
 	} else if (state == POSTINSTALL) {
 		if (mport_db_prepare(mport->db, &stmt,
-		                     "SELECT type,data,checksum,owner,grp,mode FROM stub.assets WHERE pkg=%Q and type in (%d, %d, %d, %d, %d, %d)",
-		                     pkg->name, ASSET_CWD, ASSET_POSTEXEC, ASSET_LDCONFIG, ASSET_LDCONFIG_LINUX, ASSET_GLIB_SCHEMAS, ASSET_INFO) != MPORT_OK) {
+		                     "SELECT type,data,checksum,owner,grp,mode FROM stub.assets WHERE pkg=%Q and type in (%d, %d, %d, %d, %d, %d, %d)",
+		                     pkg->name, ASSET_CWD, ASSET_POSTEXEC, ASSET_LDCONFIG, ASSET_LDCONFIG_LINUX, ASSET_GLIB_SCHEMAS, ASSET_INFO, ASSET_TOUCH) != MPORT_OK) {
 			sqlite3_finalize(stmt);
 			RETURN_CURRENT_ERROR;
 		}
@@ -854,6 +863,8 @@ do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
 	if (run_pkg_install(mport, bundle, pkg, "POST-INSTALL") != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
+	mport_start_stop_service(mport, pack, SERVICE_START);
+
 	return mark_complete(mport, pkg);
 }
 
@@ -933,6 +944,10 @@ run_postexec(mportInstance *mport, mportPackageMeta *pkg)
 					goto ERROR;
 				}
 				break;
+			case ASSET_TOUCH:
+			    if (mport_xsystem(mport, "/usr/bin/touch %s", file)!= MPORT_OK) {
+                    goto ERROR;
+                }
 			default:
 				/* do nothing */
 				break;
