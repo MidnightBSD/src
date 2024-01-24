@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20240124:
+	mport 2.6.0
+
 20240112:
 	Fixed a configuration issue with how Perl is built.
 	man pages should not get installed correctly by mports.
