@@ -49,13 +49,13 @@ mport_instance_new(void) {
  * Set up the master database, and related instance infrastructure.
  */
 MPORT_PUBLIC_API int
-mport_instance_init(mportInstance *mport, const char *root, const char *outputPath, bool noIndex, bool quiet) {
+mport_instance_init(mportInstance *mport, const char *root, const char *outputPath, bool noIndex, mportVerbosity verbosity) {
 
 	char dir[FILENAME_MAX];
 	mport->flags = 0;
 
 	mport->noIndex = noIndex;
-	mport->quiet = quiet;
+	mport->verbosity = verbosity;
 	mport->offline = false;
 
 	if (root != NULL) {

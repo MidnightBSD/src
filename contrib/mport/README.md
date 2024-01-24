@@ -15,7 +15,15 @@ Versions prior to 2.1.0 also depended on
 * Blocksruntime
 
 ## Backward compatibility
-There was a breaking change in 2.1.6 in libmport with respect to mport_install and mport_install_primative use
+
+There was a breaking change in 2.1.6 in libmport with respect to mport_install and mport_install_primative use.
+
+There was a breaking change in 2.6.0 in libmport which changes the mport_init function to use mportVerbosity rather than a boolean for quiet mode.
+
+mportVerbosity has three values currently: 
+MPORT_VQUIET, MPORT_VNORMAL, MPORT_VVERBOSE 
+
+There's also the new mport_verbosity function which translates quiet and verbose flags into the right value.
 
 ## Using mport
 

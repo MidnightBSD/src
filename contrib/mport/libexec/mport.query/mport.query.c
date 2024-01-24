@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 
 	mport = mport_instance_new();
 
-	if (mport_instance_init(mport, NULL, NULL, false, false) != MPORT_OK) {
+	if (mport_instance_init(mport, NULL, NULL, false, quiet ? MPORT_VQUIET : MPORT_VNORMAL) != MPORT_OK) {
 		warnx("%s", mport_err_string());
 		mport_instance_free(mport);
 		exit(EXIT_FAILURE);
@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (packs == NULL) {
-		if (!quiet)
+		if (mport->verbosity != MPORT_VQUIET)
 			warnx("No packages installed matching.");
 		mport_instance_free(mport);
 		free(where);
@@ -106,9 +106,9 @@ int main(int argc, char *argv[]) {
 	}
 
 	while (*packs != NULL) {
-		if (quiet && origin) {
+		if (mport->verbosity == MPORT_VQUIET && origin) {
 			printf("%s\n", (*packs)->origin);
-		} else if (!quiet) {
+		} else if (mport->verbosity != MPORT_VQUIET) {
 			if (origin) {
 				printf("%s-%s\t\t%s\n", (*packs)->name, (*packs)->version,
 				       (*packs)->origin);

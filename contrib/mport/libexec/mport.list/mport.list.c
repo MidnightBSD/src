@@ -37,64 +37,55 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <mport.h>
-#include <mport_private.h>
 
 static void usage(void);
 
-int 
-main(int argc, char *argv[]) 
+int
+main(int argc, char *argv[])
 {
 	int ch;
 	mportInstance *mport;
-	mportPackageMeta **packs;
-	mportIndexEntry **indexEntries;
-	mportIndexEntry **iestart;
-	mportIndexMovedEntry **movedEntries;
+
+	mportListPrint printOpts;
+	bool noIndex = false;
 	bool quiet = false;
 	bool verbose = false;
-	bool origin = false;
-	bool update = false;
-	bool locks = false;
-    bool prime = false;
-	bool noIndex = false;
-	char *comment;
-	char *os_release;
-	char name_version[30];
+
 	const char *chroot_path = NULL;
-	
+
 	if (argc > 3)
 		usage();
-    
+
 	while ((ch = getopt(argc, argv, "c:lopqvuU")) != -1) {
 		switch (ch) {
-			case 'c':
-				chroot_path = optarg;
-				break;
-			case 'l':
-				locks = true;
-				break;
-			case 'o':
-				origin = true;
-				break;
-            case 'p':
-                prime = true;
-                break;
-			case 'q':
-				quiet = true;
-				break;
-			case 'v':
-				verbose = true;
-				break;
-			case 'u':
-				update = true;
-				break; 
-			case 'U':
-				noIndex = true;
-                break;
-			case '?':
-			default:
-				usage();
-				break; 
+		case 'c':
+			chroot_path = optarg;
+			break;
+		case 'l':
+			printOpts.locks = true;
+			break;
+		case 'o':
+			printOpts.origin = true;
+			break;
+		case 'p':
+			printOpts.prime = true;
+			break;
+		case 'q':
+			quiet = true;
+			break;
+		case 'v':
+			verbose = true;
+			break;
+		case 'u':
+			printOpts.update = true;
+			break;
+		case 'U':
+			noIndex = true;
+			break;
+		case '?':
+		default:
+			usage();
+			break;
 		}
 	}
 
@@ -103,122 +94,26 @@ main(int argc, char *argv[])
 			err(EXIT_FAILURE, "chroot failed");
 		}
 	}
-	
+
 	mport = mport_instance_new();
-	if (mport_instance_init(mport, NULL, NULL, noIndex, quiet) != MPORT_OK) {
+	if (mport_instance_init(mport, NULL, NULL, noIndex, mport_verbosity(quiet, verbose)) != MPORT_OK) {
 		warnx("%s", mport_err_string());
 		exit(EXIT_FAILURE);
 	}
 
-	os_release = mport_get_osrelease(mport);
-
-	if (update && mport_index_load(mport) != MPORT_OK) {
-                warnx("Unable to load updates index, %s", mport_err_string());
+	if (!noIndex && printOpts.update && mport_index_load(mport) != MPORT_OK) {
+		warnx("Unable to load updates index, %s", mport_err_string());
+		mport_instance_free(mport);
 		exit(8);
 	}
 
-	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
-		warnx("%s", mport_err_string());
-		mport_instance_free(mport);
-		mport_pkgmeta_vec_free(packs);
-		exit(EXIT_FAILURE);
-	}
-	
-	if (packs == NULL) {
-		if (!quiet)
-			warnx("No packages installed matching.");
-		mport_instance_free(mport);
-		exit(3);
-	}
-	
-	while (*packs != NULL) {
-		if (update) {
-			if (mport_index_lookup_pkgname(mport, (*packs)->name, &indexEntries) != MPORT_OK) {
-				mport_call_msg_cb(mport, "Error Looking up package name %s: %d %s", (*packs)->name,  mport_err_code(), mport_err_string());
-				exit(mport_err_code());
-			}
-
-			if (indexEntries == NULL || *indexEntries == NULL) {
-				if (mport_moved_lookup(mport, (*packs)->name, &movedEntries) != MPORT_OK) {
-					mport_call_msg_cb(mport,"%-25s %8s is not part of the package repository.", (*packs)->name, (*packs)->version);
-					packs++;
-					continue;
-				}
-
-				if (movedEntries == NULL || *movedEntries == NULL) {
-					mport_call_msg_cb(mport,"%-15s %8s is not part of the package repository.", (*packs)->name, (*packs)->version);
-					packs++;
-					continue;
-				}
-
-				if ((*movedEntries)->moved_to[0]!= '\0') {
-					mport_call_msg_cb(mport,"%-25s %8s was moved to %s", (*packs)->name, (*packs)->version, (*movedEntries)->moved_to);
-					free(movedEntries);
-					movedEntries = NULL;
-					packs++;
-					continue;
-				}
-
-				if ((*movedEntries)->date[0]!= '\0') {
-					mport_call_msg_cb(mport,"%-25s %8s expired on %s", (*packs)->name, (*packs)->version, (*movedEntries)->date);
-					free(movedEntries);
-					movedEntries = NULL;
-					packs++;
-					continue;
-				}
-
-				free(movedEntries);
-				movedEntries = NULL;
-			}
-	
-			iestart = indexEntries;		
-			while (indexEntries != NULL && *indexEntries != NULL) {
-				if (((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0) 
-					|| ((*packs)->version != NULL && mport_version_cmp((*packs)->os_release, os_release) < 0)) {
-
-					if (verbose) {
-						mport_call_msg_cb(mport,"%-25s %8s (%s)  <  %-s", (*packs)->name, (*packs)->version, (*packs)->os_release, (*indexEntries)->version);
-					} else {
-						mport_call_msg_cb(mport,"%-25s %8s  <  %-8s", (*packs)->name, (*packs)->version, (*indexEntries)->version);
-					}
-				}
-				indexEntries++;
-			}
-				
-			mport_index_entry_free_vec(iestart);
-			indexEntries = NULL;
-		} else if (verbose) {
-			comment = mport_str_remove((*packs)->comment, '\\');
-			snprintf(name_version, 30, "%s-%s", (*packs)->name, (*packs)->version);
-			
-			mport_call_msg_cb(mport,"%-30s\t%6s\t%s", name_version, (*packs)->os_release, comment);
-			free(comment);
-		}
-		else if (prime && (*packs)->automatic == 0)
-			mport_call_msg_cb(mport,"%s", (*packs)->name);
-		else if (quiet && !origin)
-			mport_call_msg_cb(mport,"%s", (*packs)->name);
-		else if (quiet && origin)
-			mport_call_msg_cb(mport,"%s", (*packs)->origin);
-		else if (origin)
-			mport_call_msg_cb(mport,"Information for %s-%s:\n\nOrigin:\n%s\n",
-						  (*packs)->name, (*packs)->version, (*packs)->origin);
-		else if (locks) {
-			if ((*packs)->locked == 1)
-				mport_call_msg_cb(mport,"%s-%s", (*packs)->name, (*packs)->version);
-
-		} else
-			mport_call_msg_cb(mport, "%s-%s", (*packs)->name, (*packs)->version);
-		packs++;
-	}
-	
-	mport_instance_free(mport); 
-	
-	return (0);
+	int ret = mport_list_print(mport, &printOpts);
+	mport_instance_free(mport);
+	return (ret);
 }
 
-static void 
-usage(void) 
+static void
+usage(void)
 {
 
 	fprintf(stderr, "Usage: mport.list [-q | -v | -u | -c <chroot path>]\n");

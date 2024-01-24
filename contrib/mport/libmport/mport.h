@@ -1,7 +1,7 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  * 
- * Copyright (c) 2013, 2014, 2021 Lucas Holt
+ * Copyright (c) 2013, 2014, 2021, 2024 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -50,6 +50,14 @@ typedef int (*mport_confirm_cb)(const char *, const char *, const char *, int);
 #define MPORT_INST_HAVE_INDEX 1
 #define MPORT_LOCAL_PKG_PATH "/var/db/mport/downloads"
 
+enum _Verbosity{
+    MPORT_VQUIET,
+    MPORT_VNORMAL,
+    MPORT_VVERBOSE
+};
+typedef enum _Verbosity mportVerbosity;
+mportVerbosity mport_verbosity(bool quiet, bool verbose);
+
 typedef struct {
   int flags;
   sqlite3 *db;
@@ -57,7 +65,7 @@ typedef struct {
   char *outputPath; /* Download directory */
   bool noIndex; /* Do not fetch mport index */
   bool offline; /* Installing packages from local files, etc. */
-  bool quiet;
+  mportVerbosity verbosity;
   mport_msg_cb msg_cb;
   mport_progress_init_cb progress_init_cb;
   mport_progress_step_cb progress_step_cb;
@@ -66,7 +74,7 @@ typedef struct {
 } mportInstance;
 
 mportInstance * mport_instance_new(void);
-int mport_instance_init(mportInstance *, const char *, const char *, bool noIndex, bool quiet);
+int mport_instance_init(mportInstance *, const char *, const char *, bool noIndex, mportVerbosity verbosity);
 int mport_instance_free(mportInstance *);
 
 void mport_set_msg_cb(mportInstance *, mport_msg_cb);
@@ -363,5 +371,16 @@ int mport_export(mportInstance*, char *);
 
 /* Ping */
 long ping(char *hostname);
+
+/* List Print */
+typedef struct {
+	bool verbose;
+	bool origin;
+	bool update;
+	bool locks;
+  bool prime;
+} mportListPrint;
+
+int mport_list_print(mportInstance *, mportListPrint *);
 
 #endif /* ! defined _MPORT_H */
