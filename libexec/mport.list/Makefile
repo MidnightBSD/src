@@ -1,6 +1,6 @@
 PROG= mport.list
 
-CFLAGS+=	-I${.CURDIR}/../../libmport/ -I/usr/include/private/ucl
+CFLAGS+=	-I${.CURDIR}/../../libmport/
 WARNS?= 	4
 
 MK_MAN= no

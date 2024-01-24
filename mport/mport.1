@@ -35,6 +35,7 @@
 .Op Fl c Ao chroot path Ac
 .Op Fl o Ao output path Ac
 .Op Fl q
+.Op Fl V
 .Ao command Ac
 .Pp
 .Nm
@@ -113,6 +114,8 @@ will chroot in the
 .Ao chroot path Ac
 .It Fl q, Cm --quiet
 Make output less verbose and hide download progress.
+.It Fl V, Cm --verbose
+Make output more verbose.
 .It Fl o Ao output path Ac , Cm --output Ao output path Ac
 .Nm
 will download packages into the 

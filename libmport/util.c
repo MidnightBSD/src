@@ -915,10 +915,24 @@ mport_check_answer_bool(char *ans) {
 	if (ans == NULL)
 	    return (false);
 
-    if (*ans == 'Y' || *ans == 'y' || *ans == 't' || *ans == 'T' || *ans == '1') 
-      return (true);
-    if (*ans == 'N' || *ans == 'n' || *ans == 'f' || *ans == 'F' || *ans == '0') 
-      return (false);
+	if (*ans == 'Y' || *ans == 'y' || *ans == 't' || *ans == 'T' || *ans == '1') 
+		return (true);
+	if (*ans == 'N' || *ans == 'n' || *ans == 'f' || *ans == 'F' || *ans == '0') 
+		return (false);
 
 	return (false);
+}
+
+MPORT_PUBLIC_API mportVerbosity 
+mport_verbosity(bool quiet, bool verbose) {
+	if (quiet && verbose)
+	    return (MPORT_VNORMAL);
+
+	if (quiet)
+		return (MPORT_VQUIET);
+
+	if (verbose)
+		return (MPORT_VVERBOSE);
+		
+	return (MPORT_VNORMAL);
 }

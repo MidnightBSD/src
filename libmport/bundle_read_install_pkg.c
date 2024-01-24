@@ -863,7 +863,7 @@ do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
 	if (run_pkg_install(mport, bundle, pkg, "POST-INSTALL") != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
-	mport_start_stop_service(mport, pack, SERVICE_START);
+	mport_start_stop_service(mport, pkg, SERVICE_START);
 
 	return mark_complete(mport, pkg);
 }

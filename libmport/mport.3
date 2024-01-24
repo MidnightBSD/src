@@ -1,5 +1,5 @@
 .\"-
-.\" Copyright (c) 2012, 2015 Lucas Holt
+.\" Copyright (c) 2012, 2015, 2022, 2024 Lucas Holt
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd October 24, 2022
+.Dd January 24, 2024
 .Dt MPORT 3
 .Os
 .Sh NAME
@@ -112,7 +112,7 @@
 .Ft int
 .Fn mport_instance_free "mportInstance *mport"
 .Ft int
-.Fn mport_instance_init "mportInstance *mport" "const char *root" "const char *outputPath" "bool noIndex"
+.Fn mport_instance_init "mportInstance *mport" "const char *root" "const char *outputPath" "bool noIndex" "mportVerbosity verbosity"
 .Ft mportInstance *
 .Fn mport_instance_new
 .Ft void

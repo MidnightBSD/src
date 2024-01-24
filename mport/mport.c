@@ -79,7 +79,7 @@ static int lock(mportInstance *, const char *);
 
 static int unlock(mportInstance *, const char *);
 
-static int which(mportInstance *, const char *, bool, bool);
+static int which(mportInstance *, const char *, bool);
 
 static int audit(mportInstance *, bool);
 
@@ -102,9 +102,11 @@ main(int argc, char *argv[])
 	int version = 0;
 	int noIndex = 0;
 	bool quiet = false;
+	bool verbose = false;
 
 	struct option longopts[] = {
 		{ "no-index", no_argument, NULL, 'U' },
+		{ "verbose", no_argument, NULL, 'V' },
 		{ "chroot", required_argument, NULL, 'c' },
 		{ "output", required_argument, NULL, 'o' },
 		{ "quiet", no_argument, NULL, 'q'},
@@ -120,10 +122,13 @@ main(int argc, char *argv[])
 
 	setlocale(LC_ALL, "");
 
-	while ((ch = getopt_long(argc, argv, "+c:o:qUv", longopts, NULL)) != -1) {
+	while ((ch = getopt_long(argc, argv, "+c:o:qUVv", longopts, NULL)) != -1) {
 		switch (ch) {
 		case 'U':
 			noIndex++;
+			break;
+		case 'V':
+		    verbose = true;
 			break;
 		case 'c':
 			chroot_path = optarg;
@@ -153,7 +158,7 @@ main(int argc, char *argv[])
 
 	mport = mport_instance_new();
 
-	if (mport_instance_init(mport, NULL, outputPath, noIndex != 0, quiet) != MPORT_OK) {
+	if (mport_instance_init(mport, NULL, outputPath, noIndex != 0, mport_verbosity(quiet, verbose)) != MPORT_OK) {
 		errx(1, "%s", mport_err_string());
 	}
 
@@ -164,6 +169,9 @@ main(int argc, char *argv[])
 	}
 
 	char *cmd = argv[0];
+
+	if (cmd == NULL)
+		usage();
 
 	if (!strcmp(cmd, "add")) {
 		if (argc == 1) {
@@ -452,7 +460,7 @@ main(int argc, char *argv[])
 			}
 			local_argc -= optind;
 			local_argv += optind;
-			which(mport, *local_argv, qflag, oflag);
+			which(mport, *local_argv, oflag);
 		} else {
 			usage();
 		}
@@ -471,7 +479,7 @@ usage(void)
 	show_version(NULL, 2);
 
 	fprintf(stderr,
-	    "usage: mport [-c chroot dir] [-U] [-o output] [-q] <command> args:\n"
+	    "usage: mport [-c chroot dir] [-U] [-o output] [-q] [-V] [-v] <command> args:\n"
 	    "       mport audit\n"
 	    "       mport autoremove\n"
 	    "       mport clean\n"
@@ -712,7 +720,7 @@ info(mportInstance *mport, const char *packageName)
 }
 
 int
-which(mportInstance *mport, const char *filePath, bool quiet, bool origin)
+which(mportInstance *mport, const char *filePath, bool origin)
 {
 	mportPackageMeta *pack = NULL;
 
@@ -729,9 +737,9 @@ which(mportInstance *mport, const char *filePath, bool quiet, bool origin)
 	mport_drop_privileges();
 
 	if (pack != NULL && pack->origin != NULL) {
-		if (quiet && origin) {
+		if (mport->verbosity == MPORT_VQUIET && origin) {
 			printf("%s\n", pack->origin);
-		} else if (quiet) {
+		} else if (mport->verbosity == MPORT_VQUIET) {
 			printf("%s-%s\n", pack->name, pack->version);
 		} else if (origin) {
 			printf("%s was installed by package %s\n", filePath, pack->origin);
@@ -1076,7 +1084,7 @@ audit(mportInstance *mport, bool dependsOn)
 	while (*packs != NULL) {
 		char *output = mport_audit(mport, (*packs)->name, dependsOn);
 		if (output != NULL && output[0] != '\0') {
-			if (mport->quiet)
+			if (mport->verbosity == MPORT_VQUIET)
 				printf("%s", output);
 			else
 				printf("%s\n", output);
