@@ -14,7 +14,7 @@ SRCS=	asset.c bundle_write.c bundle_read.c plist.c create_primative.c db.c \
     	fetch.c index.c index_depends.c install.c clean.c setting.c  \
    	stats.c verify.c lock.c mkdir.c \
 	import_export.c upgrade.c update.c autoremove.c ping.c message.c \
-	service.c
+	service.c list.c
 INCS=	mport.h
 
 CFLAGS+=	-I${.CURDIR} -I${MPORTDIR}/libmport
