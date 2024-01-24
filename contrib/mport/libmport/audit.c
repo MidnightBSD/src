@@ -111,7 +111,7 @@ mport_audit(mportInstance *mport, const char *packageName, bool dependOn)
 					continue;
 				}
 
-				if (mport->quiet) {
+				if (mport->verbosity == MPORT_VQUIET) {
 					fprintf(bufferFp, "%s-%s\n", (*packs)->name, (*packs)->version);
 					break;
 				}

@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
- * Copyright (c) 2011, 2013, 2015, 2021, 2022, 2023 Lucas Holt
+ * Copyright (c) 2011, 2013, 2015, 2021-2024 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -51,7 +51,7 @@
 #define MPORT_MASTER_VERSION 12
 #define MPORT_BUNDLE_VERSION 6
 #define MPORT_BUNDLE_VERSION_STR "6"
-#define MPORT_VERSION "2.5.1"
+#define MPORT_VERSION "2.6.0"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
