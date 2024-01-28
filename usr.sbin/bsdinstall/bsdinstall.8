@@ -452,7 +452,7 @@ DISTRIBUTIONS="kernel.txz base.txz"
 gpart bootcode -b /boot/pmbr -p /boot/gptboot -i 1 ada0
 sysrc ifconfig_em0=DHCP
 sysrc sshd_enable=YES
-pkg install puppet
+mport install puppet
 .Ed
 .Pp
 For a ZFS scripted installation, the script looks like this:
@@ -465,7 +465,7 @@ export nonInteractive="YES"
 #!/bin/sh
 echo "ifconfig_em0=DHCP" >> /etc/rc.conf
 echo "sshd_enable=YES" >> /etc/rc.conf
-pkg install puppet
+mport install puppet
 .Ed
 .Pp
 On
