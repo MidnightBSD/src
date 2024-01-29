@@ -52,7 +52,7 @@
  * 		or r is 5-9 in stable after 1.0 is released.
  */
 #undef __MidnightBSD_version
-#define __MidnightBSD_version 302000	/* Master, propagated to newvers */
+#define __MidnightBSD_version 302001	/* Master, propagated to newvers */
 
 /* Version of FreeBSD we're compatible with */
 #undef __FreeBSD_version
