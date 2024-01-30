@@ -1,9 +1,0 @@
-#!/usr/bin/perl
-# $MirOS: src/usr.bin/brainfuck/brainfuck,v 1.2 2010/07/01 20:10:38 tg Exp $
-# Public domain by Marko Nippula
-# Corrected by Thorsten Glaser
-
-$/=$a;while(<>){tr(+\-<>[].,){}cd;s/./$&;/g;
-s/\+|-/P$&$&/g;s/<|>/\$p$&$&/g;y/<>[]/-+{}/;
-s/{/while(P){/g;s/\./print chr P/g;s/,/P=ord
-getc/g;s/P/\$m[\$p]/g;eval$_;print$@if$@}
