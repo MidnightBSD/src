@@ -3,6 +3,8 @@ Updating Information for MidnightBSD users.
 20240129:
 	Remove perl from base system.  We'll migrate to mports for this.
 
+	Remove brainfuck as it depends on perl.
+
 20240124:
 	mport 2.6.0
 
