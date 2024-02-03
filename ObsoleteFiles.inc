@@ -42,6 +42,12 @@
 # 20240129: removal of Perl and brainfuck
 OLD_FILES+=usr/bin/brainfuck
 OLD_FILES+=usr/share/man/man1/brainfuck.1.gz
+OLD_FILES+=usr/bin/perl
+OLD_FILES+=usr/bin/perl5.36.1
+OLD_FILES+=usr/bin/perlbug
+OLD_FILES+=usr/bin/perldoc
+OLD_FILES+=usr/bin/perlivp
+OLD_FILES+=usr/bin/perlthanks
 OLD_LIBS+=usr/lib/libperl.so
 OLD_FILES+=usr/lib/perl5/5.36.1/AnyDBM_File.pm
 OLD_FILES+=usr/lib/perl5/5.36.1/fields.pm
