@@ -42,6 +42,7 @@
 # 20240129: removal of Perl and brainfuck
 OLD_FILES+=usr/bin/brainfuck
 OLD_FILES+=usr/share/man/man1/brainfuck.1.gz
+OLD_LIBS+=usr/lib/libperl.so
 OLD_FILES+=usr/lib/perl5/5.36.1/AnyDBM_File.pm
 OLD_FILES+=usr/lib/perl5/5.36.1/fields.pm
 OLD_FILES+=usr/lib/perl5/5.36.1/Attribute/Handlers.pm
@@ -2007,6 +2008,7 @@ OLD_FILES+=usr/lib/perl5/5.36.1/Term/ANSIColor.pm
 OLD_FILES+=usr/lib/perl5/5.36.1/Term/Cap.pm
 OLD_DIRS+=usr/lib/perl5/5.36.1/Term
 OLD_DIRS+=usr/lib/perl5/5.36.1
+OLD_DIRS+=usr/lib/perl5
 # 20240111: removal of groff
 OLD_FILES+=usr/bin/addftinfo
 OLD_FILES+=usr/bin/afmtodit
