@@ -67,6 +67,7 @@ OLD_FILES+=usr/bin/podchecker
 OLD_FILES+=usr/bin/prove
 OLD_FILES+=usr/bin/ptar
 OLD_FILES+=usr/bin/ptardiff
+OLD_FILES+=usr/bin/ptargrep
 OLD_FILES+=usr/bin/shasum
 OLD_FILES+=usr/bin/splain
 OLD_FILES+=usr/bin/streamzip
