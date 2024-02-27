@@ -121,9 +121,9 @@ mport_instance_init(mportInstance *mport, const char *root, const char *outputPa
  */
 int
 mport_get_database_version(sqlite3 *db) {
-    int databaseVersion = -1; /* ERROR condition */
+	int databaseVersion = -1; /* ERROR condition */
 
-		sqlite3_stmt *stmt_version;
+	sqlite3_stmt *stmt_version;
         if (sqlite3_prepare_v2(db, "PRAGMA user_version;", -1, &stmt_version, NULL) == SQLITE_OK) {
             while (sqlite3_step(stmt_version) == SQLITE_ROW) {
                 databaseVersion = sqlite3_column_int(stmt_version, 0);
@@ -131,7 +131,7 @@ mport_get_database_version(sqlite3 *db) {
         }
         sqlite3_finalize(stmt_version);
 
-    return databaseVersion;
+	return databaseVersion;
 }
 
 /**
@@ -189,7 +189,7 @@ mport_call_msg_cb(mportInstance *mport, const char *fmt, ...) {
 	(void) vasprintf(&msg, fmt, args);
 	va_end(args);
 
-    if (msg == NULL)
+	if (msg == NULL)
 		return; /* No message for you! */
 
 	(mport->msg_cb)(msg);
@@ -217,12 +217,13 @@ mport_call_progress_init_cb(mportInstance *mport, const char *fmt, ...) {
 
 MPORT_PUBLIC_API int
 mport_instance_free(mportInstance *mport) {
-    if (sqlite3_close(mport->db) != SQLITE_OK) {
-        RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-    }
+	if (sqlite3_close(mport->db) != SQLITE_OK) {
+		RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+	}
 
-    free(mport->root);
+	free(mport->root);
 	free(mport->outputPath);
-    free(mport);
-    return MPORT_OK;
+	free(mport);
+
+	return MPORT_OK;
 }
