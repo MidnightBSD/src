@@ -23,7 +23,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"
-.Dd September 4, 2023
+.Dd Januar 25, 2024
 .Dt MPORT 1
 .Os
 .Sh NAME
@@ -33,11 +33,16 @@
 .Nm
 .Op Fl v
 .Op Fl c Ao chroot path Ac
+.Op Fl f
 .Op Fl o Ao output path Ac
 .Op Fl q
 .Op Fl V
 .Ao command Ac
 .Pp
+.Nm
+.Cm add
+.Op Fl A
+.Op Ar name
 .Nm
 .Cm autoremove
 .Nm
@@ -75,6 +80,7 @@
 .Cm index
 .Nm
 .Cm install
+.Op Fl A
 .Op Ar name
 .Nm
 .Cm mirror list
@@ -116,6 +122,8 @@ will chroot in the
 Make output less verbose and hide download progress.
 .It Fl V, Cm --verbose
 Make output more verbose.
+.It Fl f, Cm --force
+Force the operation.  Supported for install and delete currently.
 .It Fl o Ao output path Ac , Cm --output Ao output path Ac
 .Nm
 will download packages into the 
@@ -124,6 +132,9 @@ will download packages into the
 The following commands are supported by
 .Nm :
 .Bl -tag -width ".Cm install"
+.It Cm add Ao name Ac
+Installs a local package file and also attempts to install any missing dependencies in the path specified.
+For online installs, use mport install instead.
 .It Cm audit
 Displays vulnerable packages installed on the system. Uses CPE data to match against
 a NVD feed provided by the MidnightBSD project.
@@ -158,8 +169,10 @@ The d flag will allow it to download dependencies as well.
 .It Cm index
 Force a download of the index to refresh it without waiting for the timeout interval. This
 allows the user to get the latest list of packages.
-.It Cm install Ao name Ac
-Fetch and install a package
+.It Cm install Fl A Ao name Ac
+Fetch and install a package.  
+With the A flag set, marks the installed packages as automatic.  Will be automatically
+removed	if no other packages depend on them.
 .It Cm mirror list
 Lists all available package mirrors.
 .It Cm mirror select
@@ -263,6 +276,9 @@ Determine which package installed a file:
 .Pp
 Check installed packages for checksum mismatches:
 .Dl # mport verify
+.Pp 
+Install a local package file:
+.Dl $ mport add /home/myuser/mypkg.mport 
 .Sh HISTORY
 The
 .Nm

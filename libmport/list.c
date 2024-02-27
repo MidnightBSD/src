@@ -41,28 +41,28 @@ mport_list_print(mportInstance *mport, mportListPrint *print)
 {
 
 	mportPackageMeta **packs;
-    mportIndexEntry **indexEntries;
+	mportIndexEntry **indexEntries;
 	mportIndexEntry **iestart;
 	mportIndexMovedEntry **movedEntries;
-    char *comment;
-    char *os_release;
-    char name_version[30];
+	char *comment;
+	char *os_release;
+	char name_version[30];
 
-    if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
+	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
 		mport_pkgmeta_vec_free(packs);
 		RETURN_CURRENT_ERROR;
 	}
 
-    if (packs == NULL) {
-        RETURN_ERROR(MPORT_ERR_WARN, "No packages installed matching.");
+	if (packs == NULL) {
+		RETURN_ERROR(MPORT_ERR_WARN, "No packages installed matching.");
 	}
 
-    os_release = mport_get_osrelease(mport);
-    
-    while (*packs != NULL) {
+	os_release = mport_get_osrelease(mport);
+
+	while (*packs != NULL) {
 		if (print->update) {
 			if (mport_index_lookup_pkgname(mport, (*packs)->name, &indexEntries) != MPORT_OK) {
-                RETURN_ERRORX(MPORT_ERR_FATAL, "Error looking up package name %s: %d %s", (*packs)->name, mport_err_code(), mport_err_string());
+				RETURN_ERRORX(MPORT_ERR_FATAL, "Error looking up package name %s: %d %s", (*packs)->name, mport_err_code(), mport_err_string());
 			}
 
 			if (indexEntries == NULL || *indexEntries == NULL) {
@@ -120,24 +120,26 @@ mport_list_print(mportInstance *mport, mportListPrint *print)
 			
 			mport_call_msg_cb(mport,"%-30s\t%6s\t%s", name_version, (*packs)->os_release, comment);
 			free(comment);
-		}
-		else if (print->prime && (*packs)->automatic == 0)
+		} else if (print->prime && (*packs)->automatic == 0) {
 			mport_call_msg_cb(mport,"%s", (*packs)->name);
-		else if (mport->verbosity == MPORT_VQUIET && !print->origin)
+		} else if (mport->verbosity == MPORT_VQUIET && !print->origin) {
 			mport_call_msg_cb(mport,"%s", (*packs)->name);
-		else if (mport->verbosity == MPORT_VQUIET && print->origin)
+		} else if (mport->verbosity == MPORT_VQUIET && print->origin) {
 			mport_call_msg_cb(mport,"%s", (*packs)->origin);
-		else if (print->origin)
+		} else if (print->origin) {
 			mport_call_msg_cb(mport,"Information for %s-%s:\n\nOrigin:\n%s\n",
 						  (*packs)->name, (*packs)->version, (*packs)->origin);
-		else if (print->locks) {
+		} else if (print->locks) {
 			if ((*packs)->locked == 1)
 				mport_call_msg_cb(mport,"%s-%s", (*packs)->name, (*packs)->version);
 
-		} else
+		} else {
 			mport_call_msg_cb(mport, "%s-%s", (*packs)->name, (*packs)->version);
+		}
 		packs++;
 	}
+
+	(mport->progress_free_cb)();
 
 	return (MPORT_OK);
 }

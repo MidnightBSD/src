@@ -66,6 +66,7 @@ typedef struct {
   bool noIndex; /* Do not fetch mport index */
   bool offline; /* Installing packages from local files, etc. */
   mportVerbosity verbosity;
+  bool force;
   mport_msg_cb msg_cb;
   mport_progress_init_cb progress_init_cb;
   mport_progress_step_cb progress_step_cb;

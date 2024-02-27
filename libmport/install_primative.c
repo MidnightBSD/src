@@ -121,7 +121,7 @@ mport_install_primative(mportInstance *mport, const char *filename, const char *
 	if (mport->offline) {
 		// temporarily open pkg file to get metadata.
 		if ((bundle = mport_bundle_read_new()) == NULL)
-				RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 
 		if (mport_bundle_read_init(bundle, filename) != MPORT_OK)
 			RETURN_CURRENT_ERROR;
@@ -133,9 +133,14 @@ mport_install_primative(mportInstance *mport, const char *filename, const char *
 			RETURN_CURRENT_ERROR;
 
 		if (mport_check_preconditions(mport, pkg, MPORT_PRECHECK_INSTALLED) != MPORT_OK) {
-			mport_call_msg_cb(mport, "%s-%s: already installed.", pkg->name, pkg->version);
-			return MPORT_OK;
+			if (mport->force) {
+				mport_delete_primative(mport, pkg, 1);
+			} else {
+				mport_call_msg_cb(mport, "%s-%s: already installed.", pkg->name, pkg->version);
+				return MPORT_OK;
+			}
 		}
+
 		if (mport_check_preconditions(mport, pkg, MPORT_PRECHECK_CONFLICTS) != MPORT_OK) {
 			mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pkg->name, pkg->version,
 			                  mport_err_string());

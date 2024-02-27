@@ -56,6 +56,11 @@ main(int argc, char *argv[])
 	if (argc > 3)
 		usage();
 
+	printOpts.update = false;
+	printOpts.prime = false;
+	printOpts.locks = false;
+	printOpts.origin = false;
+
 	while ((ch = getopt(argc, argv, "c:lopqvuU")) != -1) {
 		switch (ch) {
 		case 'c':
