@@ -319,22 +319,26 @@ main(int argc, char *argv[])
 			usage();
 		}
 	} else if (!strcmp(cmd, "list")) {
-		asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.list");
+		mportListPrint opts;
+		opts.verbose = false;
+		opts.locks = false;
+		opts.prime = false;
+		opts.update = false;
+		opts.origin = false;
+		
 		if (argc > 1) {
 			if (!strcmp(argv[1], "updates") || !strcmp(argv[1], "up")) {
-				flag = strdup("-u");
+				opts.update = true;
 			} else if (!strcmp(argv[1], "prime")) {
-				flag = strdup("-p");
+				opts.prime = true;
 			} else {
 				mport_instance_free(mport);
 				usage();
 			}
 		} else {
-			flag = strdup("-v");
+			opts.verbose = true;
 		}
-		resultCode = execl(buf, "mport.list", flag, (char *)0);
-		free(flag);
-		free(buf);
+		resultCode = mport_list_print(mport, &opts);
 	} else if (!strcmp(cmd, "info")) {
 		loadIndex(mport);
 		resultCode = info(mport, argv[1]);
@@ -452,12 +456,12 @@ main(int argc, char *argv[])
 		int local_argc = argc;
 		char *const *local_argv = argv;
 		if (local_argc > 1) {
-			int ch2, qflag, oflag;
-			qflag = oflag = 0;
+			int ch2, oflag;
+			oflag = 0;
 			while ((ch2 = getopt(local_argc, local_argv, "qo")) != -1) {
 				switch (ch2) {
 				case 'q':
-					qflag = 1;
+					mport->verbosity = MPORT_VQUIET;
 					break;
 				case 'o':
 					oflag = 1;
