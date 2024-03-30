@@ -114,7 +114,7 @@ mport_list_print(mportInstance *mport, mportListPrint *print)
 				
 			mport_index_entry_free_vec(iestart);
 			indexEntries = NULL;
-		} else if (mport->verbosity == MPORT_VVERBOSE) {
+		} else if (mport->verbosity == MPORT_VVERBOSE || print->verbose) {
 			comment = mport_str_remove((*packs)->comment, '\\');
 			snprintf(name_version, 30, "%s-%s", (*packs)->name, (*packs)->version);
 			

@@ -329,6 +329,7 @@ main(int argc, char *argv[])
 		if (argc > 1) {
 			if (!strcmp(argv[1], "updates") || !strcmp(argv[1], "up")) {
 				opts.update = true;
+				loadIndex(mport);
 			} else if (!strcmp(argv[1], "prime")) {
 				opts.prime = true;
 			} else {
