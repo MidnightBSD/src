@@ -354,7 +354,7 @@
 #define PACKAGE_NAME "XZ Utils"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "XZ Utils 5.2.9"
+#define PACKAGE_STRING "XZ Utils 5.4.5"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "xz"
@@ -363,7 +363,7 @@
 #define PACKAGE_URL "https://tukaani.org/xz/"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "5.2.9"
+#define PACKAGE_VERSION "5.4.5"
 
 /* Define to necessary symbol if this constant uses a non-standard name on
    your system. */
