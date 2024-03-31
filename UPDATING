@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20240331:
+	unbound 1.19.3
+
+	xz / lzma 5.4.5
+
 20240330:
 	mport 2.6.2
 
