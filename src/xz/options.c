@@ -49,12 +49,12 @@ typedef struct {
 /// is called, which should update the given value to filter-specific
 /// options structure.
 ///
+/// This returns only if no errors occur.
+///
 /// \param      str     String containing the options from the command line
 /// \param      opts    Filter-specific option map
 /// \param      set     Filter-specific function to update filter_options
 /// \param      filter_options  Pointer to filter-specific options structure
-///
-/// \return     Returns only if no errors occur.
 ///
 static void
 parse_options(const char *str, const option_map *opts,
@@ -241,7 +241,8 @@ enum {
 };
 
 
-static void lzma_attribute((__noreturn__))
+tuklib_attr_noreturn
+static void
 error_lzma_preset(const char *valuestr)
 {
 	message_fatal(_("Unsupported LZMA1/LZMA2 preset: %s"), valuestr);
@@ -353,11 +354,6 @@ options_lzma(const char *str)
 
 	if (options->lc + options->lp > LZMA_LCLP_MAX)
 		message_fatal(_("The sum of lc and lp must not exceed 4"));
-
-	const uint32_t nice_len_min = options->mf & 0x0F;
-	if (options->nice_len < nice_len_min)
-		message_fatal(_("The selected match finder requires at "
-				"least nice=%" PRIu32), nice_len_min);
 
 	return options;
 }

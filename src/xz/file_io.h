@@ -118,7 +118,7 @@ extern void io_close(file_pair *pair, bool success);
 ///
 /// \param      pair    File pair having the source file open for reading
 /// \param      buf     Destination buffer to hold the read data
-/// \param      size    Size of the buffer; assumed be smaller than SSIZE_MAX
+/// \param      size    Size of the buffer; must be at most IO_BUFFER_SIZE
 ///
 /// \return     On success, number of bytes read is returned. On end of
 ///             file zero is returned and pair->src_eof set to true.
@@ -139,6 +139,19 @@ extern size_t io_read(file_pair *pair, io_buf *buf, size_t size);
 extern void io_fix_src_pos(file_pair *pair, size_t rewind_size);
 
 
+/// \brief      Seek to the given absolute position in the source file
+///
+/// This calls lseek() and also clears pair->src_eof.
+///
+/// \param      pair    Seekable source file
+/// \param      pos     Offset relative to the beginning of the file,
+///                     from which the data should be read.
+///
+/// \return     On success, false is returned. On error, error message
+///             is printed and true is returned.
+extern bool io_seek_src(file_pair *pair, uint64_t pos);
+
+
 /// \brief      Read from source file from given offset to a buffer
 ///
 /// This is remotely similar to standard pread(). This uses lseek() though,
@@ -152,14 +165,14 @@ extern void io_fix_src_pos(file_pair *pair, size_t rewind_size);
 ///
 /// \return     On success, false is returned. On error, error message
 ///             is printed and true is returned.
-extern bool io_pread(file_pair *pair, io_buf *buf, size_t size, off_t pos);
+extern bool io_pread(file_pair *pair, io_buf *buf, size_t size, uint64_t pos);
 
 
 /// \brief      Writes a buffer to the destination file
 ///
 /// \param      pair    File pair having the destination file open for writing
 /// \param      buf     Buffer containing the data to be written
-/// \param      size    Size of the buffer; assumed be smaller than SSIZE_MAX
+/// \param      size    Size of the buffer; must be at most IO_BUFFER_SIZE
 ///
 /// \return     On success, zero is returned. On error, -1 is returned
 ///             and error message printed.
