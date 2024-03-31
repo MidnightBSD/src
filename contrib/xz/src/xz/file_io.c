@@ -140,7 +140,7 @@ io_write_to_user_abort_pipe(void)
 	// handler. So ignore the errors and try to avoid warnings with
 	// GCC and glibc when _FORTIFY_SOURCE=2 is used.
 	uint8_t b = '\0';
-	const int ret = write(user_abort_pipe[1], &b, 1);
+	const ssize_t ret = write(user_abort_pipe[1], &b, 1);
 	(void)ret;
 	return;
 }
@@ -192,14 +192,25 @@ io_sandbox_enter(int src_fd)
 	// Capsicum needs FreeBSD 10.0 or later.
 	cap_rights_t rights;
 
+	if (cap_enter())
+		goto error;
+
 	if (cap_rights_limit(src_fd, cap_rights_init(&rights,
 			CAP_EVENT, CAP_FCNTL, CAP_LOOKUP, CAP_READ, CAP_SEEK)) < 0 &&
 	    errno != ENOSYS)
 		goto error;
 
+	if (src_fd != STDIN_FILENO && cap_rights_limit(
+			STDIN_FILENO, cap_rights_clear(&rights)))
+		goto error;
+
 	if (cap_rights_limit(STDOUT_FILENO, cap_rights_init(&rights,
 			CAP_EVENT, CAP_FCNTL, CAP_FSTAT, CAP_LOOKUP,
 			CAP_WRITE, CAP_SEEK)) < 0 && errno != ENOSYS)
+		goto error;
+
+	if (cap_rights_limit(STDERR_FILENO, cap_rights_init(&rights,
+			CAP_WRITE)))
 		goto error;
 
 	if (cap_rights_limit(user_abort_pipe[0], cap_rights_init(&rights,
@@ -213,6 +224,8 @@ io_sandbox_enter(int src_fd)
 	if (cap_enter() < 0 && errno != ENOSYS)
 		goto error;
 
+	(void)src_fd;
+
 #else
 #	error ENABLE_SANDBOX is defined but no sandboxing method was found.
 #endif
@@ -222,7 +235,16 @@ io_sandbox_enter(int src_fd)
 	return;
 
 error:
-	message(V_DEBUG, _("Failed to enable the sandbox"));
+#ifdef HAVE_CAPSICUM
+	// If a kernel is configured without capability mode support or
+	// used in an emulator that does not implement the capability
+	// system calls, then the Capsicum system calls will fail and set
+	// errno to ENOSYS. In that case xz will silently run without
+	// the sandbox.
+	if (errno == ENOSYS)
+		return;
+#endif
+	message_fatal(_("Failed to enable the sandbox"));
 }
 #endif // ENABLE_SANDBOX
 
@@ -575,7 +597,7 @@ io_open_src_real(file_pair *pair)
 	if (!follow_symlinks) {
 		struct stat st;
 		if (lstat(pair->src_name, &st)) {
-			message_error("%s: %s", pair->src_name,
+			message_error(_("%s: %s"), pair->src_name,
 					strerror(errno));
 			return true;
 
@@ -649,7 +671,7 @@ io_open_src_real(file_pair *pair)
 			// Something else than O_NOFOLLOW failing
 			// (assuming that the race conditions didn't
 			// confuse us).
-			message_error("%s: %s", pair->src_name,
+			message_error(_("%s: %s"), pair->src_name,
 					strerror(errno));
 
 		return true;
@@ -739,7 +761,7 @@ io_open_src_real(file_pair *pair)
 	return false;
 
 error_msg:
-	message_error("%s: %s", pair->src_name, strerror(errno));
+	message_error(_("%s: %s"), pair->src_name, strerror(errno));
 error:
 	(void)close(pair->src_fd);
 	return true;
@@ -749,8 +771,10 @@ error:
 extern file_pair *
 io_open_src(const char *src_name)
 {
-	if (is_empty_filename(src_name))
+	if (src_name[0] == '\0') {
+		message_error(_("Empty filename, skipping"));
 		return NULL;
+	}
 
 	// Since we have only one file open at a time, we can use
 	// a statically allocated structure.
@@ -908,27 +932,48 @@ io_open_dest_real(file_pair *pair)
 		pair->dest_fd = open(pair->dest_name, flags, mode);
 
 		if (pair->dest_fd == -1) {
-			message_error("%s: %s", pair->dest_name,
+			message_error(_("%s: %s"), pair->dest_name,
 					strerror(errno));
 			free(pair->dest_name);
 			return true;
 		}
 	}
 
-#ifndef TUKLIB_DOSLIKE
-	// dest_st isn't used on DOS-like systems except as a dummy
-	// argument to io_unlink(), so don't fstat() on such systems.
 	if (fstat(pair->dest_fd, &pair->dest_st)) {
 		// If fstat() really fails, we have a safe fallback here.
-#	if defined(__VMS)
+#if defined(__VMS)
 		pair->dest_st.st_ino[0] = 0;
 		pair->dest_st.st_ino[1] = 0;
 		pair->dest_st.st_ino[2] = 0;
-#	else
+#else
 		pair->dest_st.st_dev = 0;
 		pair->dest_st.st_ino = 0;
-#	endif
-	} else if (try_sparse && opt_mode == MODE_DECOMPRESS) {
+#endif
+	}
+#if defined(TUKLIB_DOSLIKE) && !defined(__DJGPP__)
+	// Check that the output file is a regular file. We open with O_EXCL
+	// but that doesn't prevent open()/_open() on Windows from opening
+	// files like "con" or "nul".
+	//
+	// With DJGPP this check is done with stat() even before opening
+	// the output file. That method or a variant of it doesn't work on
+	// Windows because on Windows stat()/_stat64() sets st.st_mode so
+	// that S_ISREG(st.st_mode) will be true even for special files.
+	// With fstat()/_fstat64() it works.
+	else if (pair->dest_fd != STDOUT_FILENO
+			&& !S_ISREG(pair->dest_st.st_mode)) {
+		message_error("%s: Destination is not a regular file",
+				pair->dest_name);
+
+		// dest_fd needs to be reset to -1 to keep io_close() working.
+		(void)close(pair->dest_fd);
+		pair->dest_fd = -1;
+
+		free(pair->dest_name);
+		return true;
+	}
+#elif !defined(TUKLIB_DOSLIKE)
+	else if (try_sparse && opt_mode == MODE_DECOMPRESS) {
 		// When writing to standard output, we need to be extra
 		// careful:
 		//  - It may be connected to something else than
@@ -1128,8 +1173,7 @@ io_fix_src_pos(file_pair *pair, size_t rewind_size)
 extern size_t
 io_read(file_pair *pair, io_buf *buf, size_t size)
 {
-	// We use small buffers here.
-	assert(size < SSIZE_MAX);
+	assert(size <= IO_BUFFER_SIZE);
 
 	size_t pos = 0;
 
@@ -1196,15 +1240,35 @@ io_read(file_pair *pair, io_buf *buf, size_t size)
 
 
 extern bool
-io_pread(file_pair *pair, io_buf *buf, size_t size, off_t pos)
+io_seek_src(file_pair *pair, uint64_t pos)
 {
-	// Using lseek() and read() is more portable than pread() and
-	// for us it is as good as real pread().
-	if (lseek(pair->src_fd, pos, SEEK_SET) != pos) {
+	// Caller must not attempt to seek past the end of the input file
+	// (seeking to 100 in a 100-byte file is seeking to the end of
+	// the file, not past the end of the file, and thus that is allowed).
+	//
+	// This also validates that pos can be safely cast to off_t.
+	if (pos > (uint64_t)(pair->src_st.st_size))
+		message_bug();
+
+	if (lseek(pair->src_fd, (off_t)(pos), SEEK_SET) == -1) {
 		message_error(_("%s: Error seeking the file: %s"),
 				pair->src_name, strerror(errno));
 		return true;
 	}
+
+	pair->src_eof = false;
+
+	return false;
+}
+
+
+extern bool
+io_pread(file_pair *pair, io_buf *buf, size_t size, uint64_t pos)
+{
+	// Using lseek() and read() is more portable than pread() and
+	// for us it is as good as real pread().
+	if (io_seek_src(pair, pos))
+		return true;
 
 	const size_t amount = io_read(pair, buf, size);
 	if (amount == SIZE_MAX)
@@ -1236,7 +1300,7 @@ is_sparse(const io_buf *buf)
 static bool
 io_write_buf(file_pair *pair, const uint8_t *buf, size_t size)
 {
-	assert(size < SSIZE_MAX);
+	assert(size <= IO_BUFFER_SIZE);
 
 	while (size > 0) {
 		const ssize_t amount = write(pair->dest_fd, buf, size);

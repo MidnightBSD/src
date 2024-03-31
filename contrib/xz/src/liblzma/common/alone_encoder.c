@@ -75,7 +75,6 @@ alone_encoder_end(void *coder_ptr, const lzma_allocator *allocator)
 }
 
 
-// At least for now, this is not used by any internal function.
 static lzma_ret
 alone_encoder_init(lzma_next_coder *next, const lzma_allocator *allocator,
 		const lzma_options_lzma *options)
@@ -129,6 +128,7 @@ alone_encoder_init(lzma_next_coder *next, const lzma_allocator *allocator,
 	// Initialize the LZMA encoder.
 	const lzma_filter_info filters[2] = {
 		{
+			.id = LZMA_FILTER_LZMA1,
 			.init = &lzma_lzma_encoder_init,
 			.options = (void *)(options),
 		}, {
@@ -138,16 +138,6 @@ alone_encoder_init(lzma_next_coder *next, const lzma_allocator *allocator,
 
 	return lzma_next_filter_init(&coder->next, allocator, filters);
 }
-
-
-/*
-extern lzma_ret
-lzma_alone_encoder_init(lzma_next_coder *next, const lzma_allocator *allocator,
-		const lzma_options_alone *options)
-{
-	lzma_next_coder_init(&alone_encoder_init, next, allocator, options);
-}
-*/
 
 
 extern LZMA_API(lzma_ret)
