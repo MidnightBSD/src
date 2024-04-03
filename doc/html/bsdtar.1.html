@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.22.4 -->
-<!-- CreationDate: Fri Dec  9 13:39:25 2022 -->
+<!-- CreationDate: Mon Sep 11 22:06:22 2023 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -749,6 +749,23 @@ threads to use. Setting threads to a special value 0 makes
 zstd(1) use as many threads as there are CPU cores on the
 system.</p>
 
+<p><b>zstd:frame-per-file</b></p>
+
+<p style="margin-left:27%;">Start a new compression frame
+at the beginning of each file in the archive.</p>
+
+<p><b>zstd:min-frame-size</b>=<i>N</i></p>
+
+<p style="margin-left:27%;">In combination with
+<b>zstd:frame-per-file</b>, do not start a new compression
+frame unless the current frame is at least <i>N</i>
+bytes.</p>
+
+<p><b>zstd:max-frame-size</b>=<i>N</i></p>
+
+<p style="margin-left:27%;">Start a new compression frame
+as soon as the current frame exceeds <i>N</i> bytes.</p>
+
 <p><b>lzop:compression-level</b></p>
 
 <p style="margin-left:27%;">A decimal integer from 1 to 9
@@ -1404,7 +1421,7 @@ incompatible ways that different archive formats store
 hardlink information.)</p>
 
 <p style="margin-left:6%; margin-top: 1em">BSD
-January&nbsp;31, 2020 BSD</p>
+December&nbsp;1, 2022 BSD</p>
 <hr>
 </body>
 </html>

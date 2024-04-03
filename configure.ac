@@ -4,15 +4,16 @@ dnl First, define all of the version numbers up front.
 dnl In particular, this allows the version macro to be used in AC_INIT
 
 dnl These first two version numbers are updated automatically on each release.
-m4_define([LIBARCHIVE_VERSION_S],[3.6.2])
-m4_define([LIBARCHIVE_VERSION_N],[3006002])
+m4_define([LIBARCHIVE_VERSION_S],[3.7.2])
+m4_define([LIBARCHIVE_VERSION_N],[3007002])
 
 dnl bsdtar and bsdcpio versioning tracks libarchive
 m4_define([BSDTAR_VERSION_S],LIBARCHIVE_VERSION_S())
 m4_define([BSDCPIO_VERSION_S],LIBARCHIVE_VERSION_S())
 m4_define([BSDCAT_VERSION_S],LIBARCHIVE_VERSION_S())
+m4_define([BSDUNZIP_VERSION_S],LIBARCHIVE_VERSION_S())
 
-AC_PREREQ([2.69])
+AC_PREREQ([2.71])
 
 #
 # Now starts the "real" configure script.
@@ -59,6 +60,8 @@ AC_DEFINE([BSDTAR_VERSION_STRING],"BSDTAR_VERSION_S()",
 	[Version number of bsdtar])
 AC_DEFINE([BSDCAT_VERSION_STRING],"BSDTAR_VERSION_S()",
 	[Version number of bsdcat])
+AC_DEFINE([BSDUNZIP_VERSION_STRING],"BSDUNZIP_VERSION_S()",
+	[Version number of bsdunzip])
 
 # The shell variables here must be the same as the AC_SUBST() variables
 # below, but the shell variable names apparently cannot be the same as
@@ -66,6 +69,7 @@ AC_DEFINE([BSDCAT_VERSION_STRING],"BSDTAR_VERSION_S()",
 BSDCPIO_VERSION_STRING=BSDCPIO_VERSION_S()
 BSDTAR_VERSION_STRING=BSDTAR_VERSION_S()
 BSDCAT_VERSION_STRING=BSDCAT_VERSION_S()
+BSDUNZIP_VERSION_STRING=BSDUNZIP_VERSION_S()
 LIBARCHIVE_VERSION_STRING=LIBARCHIVE_VERSION_S()
 LIBARCHIVE_VERSION_NUMBER=LIBARCHIVE_VERSION_N()
 
@@ -76,6 +80,7 @@ AC_SUBST(ARCHIVE_LIBTOOL_VERSION)
 AC_SUBST(BSDCPIO_VERSION_STRING)
 AC_SUBST(BSDTAR_VERSION_STRING)
 AC_SUBST(BSDCAT_VERSION_STRING)
+AC_SUBST(BSDUNZIP_VERSION_STRING)
 AC_SUBST(LIBARCHIVE_VERSION_STRING)
 AC_SUBST(LIBARCHIVE_VERSION_NUMBER)
 
@@ -99,13 +104,12 @@ AM_CONDITIONAL([INC_CYGWIN_FILES], [test $inc_cygwin_files = yes])
 dnl Defines that are required for specific platforms (e.g. -D_POSIX_SOURCE, etc)
 PLATFORMCPPFLAGS=
 case "$host_os" in
-  *mingw* ) PLATFORMCPPFLAGS=-D__USE_MINGW_ANSI_STDIO ;;
+  *mingw* ) PLATFORMCPPFLAGS=-D__USE_MINGW_ANSI_STDIO -D__MINGW_USE_VC2005_COMPAT ;;
 esac
 AC_SUBST(PLATFORMCPPFLAGS)
 
 # Checks for programs.
 AC_PROG_CC
-AC_PROG_CC_C99
 AM_PROG_CC_C_O
 AC_PROG_CPP
 AC_USE_SYSTEM_EXTENSIONS
@@ -268,12 +272,64 @@ case $host in
   ;;
 esac
 
+#
+# Options for building bsdunzip.
+#
+# Default is to build bsdunzip, but allow people to override that.
+# Bsdunzip has not yet been ported for Windows
+#
+case "$host_os" in
+  *mingw* | *msys*)
+	enable_bsdunzip=no
+	;;
+  *)
+	AC_ARG_ENABLE([bsdunzip],
+	  [AS_HELP_STRING([--enable-bsdunzip], [enable build of bsdunzip (default)])
+	  AS_HELP_STRING([--enable-bsdunzip=static], [force static build of bsdunzip])
+	  AS_HELP_STRING([--enable-bsdunzip=shared], [force dynamic build of bsdunzip])
+	  AS_HELP_STRING([--disable-bsdunzip], [disable build of bsdunzip])],
+	  [], [enable_bsdunzip=yes])
+	;;
+esac
+
+case "$enable_bsdunzip" in
+yes)
+	if test "$enable_static" = "no"; then
+		static_bsdunzip=no
+	else
+		static_bsdunzip=yes
+	fi
+	build_bsdunzip=yes
+	;;
+dynamic|shared)
+	if test "$enable_shared" = "no"; then
+		AC_MSG_FAILURE([Shared linking of bsdunzip requires shared libarchive])
+	fi
+	build_bsdunzip=yes
+	static_bsdunzip=no
+	;;
+static)
+	build_bsdunzip=yes
+	static_bsdunzip=yes
+	;;
+no)
+	build_bsdunzip=no
+	static_bsdunzip=no
+	;;
+*)
+	AC_MSG_FAILURE([Unsupported value for --enable-bsdunzip])
+	;;
+esac
+
+AM_CONDITIONAL([BUILD_BSDUNZIP], [ test "$build_bsdunzip" = yes ])
+AM_CONDITIONAL([STATIC_BSDUNZIP], [ test "$static_bsdunzip" = yes ])
+
 # Checks for header files.
 AC_HEADER_DIRENT
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([acl/libacl.h attr/xattr.h])
 AC_CHECK_HEADERS([copyfile.h ctype.h])
-AC_CHECK_HEADERS([errno.h ext2fs/ext2_fs.h fcntl.h grp.h])
+AC_CHECK_HEADERS([errno.h ext2fs/ext2_fs.h fcntl.h fnmatch.h grp.h])
 
 AC_CACHE_CHECK([whether EXT2_IOC_GETFLAGS is usable],
     [ac_cv_have_decl_EXT2_IOC_GETFLAGS],
@@ -306,7 +362,7 @@ AC_CHECK_HEADERS([locale.h membership.h paths.h poll.h pthread.h pwd.h])
 AC_CHECK_HEADERS([readpassphrase.h signal.h spawn.h])
 AC_CHECK_HEADERS([stdarg.h stdint.h stdlib.h string.h])
 AC_CHECK_HEADERS([sys/acl.h sys/cdefs.h sys/ea.h sys/extattr.h])
-AC_CHECK_HEADERS([sys/ioctl.h sys/mkdev.h sys/mount.h])
+AC_CHECK_HEADERS([sys/ioctl.h sys/mkdev.h sys/mount.h sys/queue.h])
 AC_CHECK_HEADERS([sys/param.h sys/poll.h sys/richacl.h])
 AC_CHECK_HEADERS([sys/select.h sys/statfs.h sys/statvfs.h sys/sysmacros.h])
 AC_CHECK_HEADERS([sys/time.h sys/utime.h sys/utsname.h sys/vfs.h sys/xattr.h])
@@ -378,7 +434,9 @@ if test "x$with_iconv" != "xno"; then
     AC_CHECK_HEADERS([localcharset.h])
     am_save_LIBS="$LIBS"
     LIBS="${LIBS} ${LIBICONV}"
-    LIBSREQUIRED="$LIBSREQUIRED${LIBSREQUIRED:+ }iconv"
+    if test -n "$LIBICONV"; then
+      LIBSREQUIRED="$LIBSREQUIRED${LIBSREQUIRED:+ }iconv"
+    fi
     AC_CHECK_FUNCS([locale_charset])
     LIBS="${am_save_LIBS}"
     if test "x$ac_cv_func_locale_charset" != "xyes"; then
@@ -428,6 +486,19 @@ if test "x$with_lzma" != "xno"; then
       [ac_cv_lzma_has_mt=yes], [ac_cv_lzma_has_mt=no])])
   if test "x$ac_cv_lzma_has_mt" != xno; then
 	  AC_DEFINE([HAVE_LZMA_STREAM_ENCODER_MT], [1], [Define to 1 if you have the `lzma_stream_encoder_mt' function.])
+  fi
+
+  AC_CACHE_CHECK(
+    [whether we have ARM64 filter support in lzma],
+    ac_cv_lzma_has_arm64,
+    [AC_LINK_IFELSE([
+      AC_LANG_PROGRAM([[#include <lzma.h>]
+                       [#ifndef LZMA_FILTER_ARM64]
+                       [#error unsupported]
+                       [#endif]])],
+      [ac_cv_lzma_has_arm64=yes], [ac_cv_lzma_has_arm64=no])])
+  if test "x$ac_cv_lzma_has_arm64" != xno; then
+	  AC_DEFINE([HAVE_LZMA_FILTER_ARM64], [1], [Define to 1 if you have the `LZMA_FILTER_ARM64' macro.])
   fi
 fi
 
@@ -655,7 +726,7 @@ AC_CHECK_TYPE([wchar_t],
 AX_COMPILE_CHECK_SIZEOF(int)
 AX_COMPILE_CHECK_SIZEOF(long)
 
-AC_HEADER_TIME
+AC_CHECK_HEADERS_ONCE([sys/time.h])
 
 # Checks for library functions.
 AC_PROG_GCC_TRADITIONAL
@@ -673,10 +744,10 @@ AC_FUNC_VPRINTF
 # workarounds, we use 'void *' for 'struct SECURITY_ATTRIBUTES *'
 AC_CHECK_STDCALL_FUNC([CreateHardLinkA],[const char *, const char *, void *])
 AC_CHECK_FUNCS([arc4random_buf chflags chown chroot ctime_r])
-AC_CHECK_FUNCS([fchdir fchflags fchmod fchown fcntl fdopendir fork])
+AC_CHECK_FUNCS([fchdir fchflags fchmod fchown fcntl fdopendir fnmatch fork])
 AC_CHECK_FUNCS([fstat fstatat fstatfs fstatvfs ftruncate])
 AC_CHECK_FUNCS([futimens futimes futimesat])
-AC_CHECK_FUNCS([geteuid getpid getgrgid_r getgrnam_r])
+AC_CHECK_FUNCS([geteuid getline getpid getgrgid_r getgrnam_r])
 AC_CHECK_FUNCS([getpwnam_r getpwuid_r getvfsbyname gmtime_r])
 AC_CHECK_FUNCS([lchflags lchmod lchown link linkat localtime_r lstat lutimes])
 AC_CHECK_FUNCS([mbrtowc memmove memset])
@@ -687,8 +758,24 @@ AC_CHECK_FUNCS([select setenv setlocale sigaction statfs statvfs])
 AC_CHECK_FUNCS([strchr strdup strerror strncpy_s strnlen strrchr symlink])
 AC_CHECK_FUNCS([timegm tzset unlinkat unsetenv utime utimensat utimes vfork])
 AC_CHECK_FUNCS([wcrtomb wcscmp wcscpy wcslen wctomb wmemcmp wmemcpy wmemmove])
-AC_CHECK_FUNCS([_ctime64_s _fseeki64])
-AC_CHECK_FUNCS([_get_timezone _gmtime64_s _localtime64_s _mkgmtime64])
+AC_CHECK_FUNCS([_fseeki64 _get_timezone])
+AC_CHECK_DECL([cmtime_s],
+		[AC_DEFINE(HAVE_CMTIME_S, 1, [cmtime_s function])],
+		[],
+		[#include <time.h>])
+AC_CHECK_DECL([gmtime_s],
+		[AC_DEFINE(HAVE_GMTIME_S, 1, [gmtime_s function])],
+		[],
+		[#include <time.h>])
+AC_CHECK_TYPE([localtime_s],
+		[AC_DEFINE(HAVE_LOCALTIME_S, 1, [localtime_s function])],
+		[],
+		[#include <time.h>])
+AC_CHECK_DECL([_mkgmtime],
+		[AC_DEFINE(HAVE__MKGMTIME, 1, [_mkgmtime function])],
+		[],
+		[#include <time.h>])
+
 # detects cygwin-1.7, as opposed to older versions
 AC_CHECK_FUNCS([cygwin_conv_path])
 
@@ -1210,7 +1297,7 @@ fi
 if test "x$with_openssl" != "xno"; then
     AC_CHECK_HEADERS([openssl/evp.h])
     saved_LIBS=$LIBS
-    LIBSREQUIRED="$LIBSREQUIRED${LIBSREQUIRED:+ }libssl libcrypto"
+    LIBSREQUIRED="$LIBSREQUIRED${LIBSREQUIRED:+ }libcrypto"
     AC_CHECK_LIB(crypto,OPENSSL_config)
     CRYPTO_CHECK(MD5, OPENSSL, md5)
     CRYPTO_CHECK(RMD160, OPENSSL, rmd160)
