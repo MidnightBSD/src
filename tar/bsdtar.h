@@ -25,6 +25,9 @@
  * $FreeBSD: src/usr.bin/tar/bsdtar.h,v 1.37 2008/12/06 07:37:14 kientzle Exp $
  */
 
+#ifndef BSDTAR_H_INCLUDED
+#define BSDTAR_H_INCLUDED
+
 #include "bsdtar_platform.h"
 #include <stdio.h>
 
@@ -126,6 +129,8 @@ struct bsdtar {
 #define	OPTFLAG_FFLAGS		(0x00100000)	/* --fflags */
 #define	OPTFLAG_NO_MAC_METADATA	(0x00200000)	/* --no-mac-metadata */
 #define	OPTFLAG_MAC_METADATA	(0x00400000)	/* --mac-metadata */
+#define	OPTFLAG_NO_READ_SPARSE	(0x00800000)    /* --no-read-sparse */
+#define	OPTFLAG_READ_SPARSE		(0x01000000)    /* --read-sparse */
 
 /* Fake short equivalents for long options that otherwise lack them. */
 enum {
@@ -135,6 +140,7 @@ enum {
 	OPTION_CHROOT,
 	OPTION_CLEAR_NOCHANGE_FFLAGS,
 	OPTION_EXCLUDE,
+	OPTION_EXCLUDE_VCS,
 	OPTION_FFLAGS,
 	OPTION_FORMAT,
 	OPTION_GID,
@@ -160,6 +166,8 @@ enum {
 	OPTION_NO_ACLS,
 	OPTION_NO_FFLAGS,
 	OPTION_NO_MAC_METADATA,
+	OPTION_NO_READ_SPARSE,
+	OPTION_NO_SAFE_WRITES,
 	OPTION_NO_SAME_OWNER,
 	OPTION_NO_SAME_PERMISSIONS,
 	OPTION_NO_XATTRS,
@@ -173,6 +181,8 @@ enum {
 	OPTION_OPTIONS,
 	OPTION_PASSPHRASE,
 	OPTION_POSIX,
+	OPTION_READ_SPARSE,
+	OPTION_SAFE_WRITES,
 	OPTION_SAME_OWNER,
 	OPTION_STRIP_COMPONENTS,
 	OPTION_TOTALS,
@@ -181,7 +191,8 @@ enum {
 	OPTION_USE_COMPRESS_PROGRAM,
 	OPTION_UUENCODE,
 	OPTION_VERSION,
-	OPTION_XATTRS
+	OPTION_XATTRS,
+	OPTION_ZSTD,
 };
 
 int	bsdtar_getopt(struct bsdtar *);
@@ -222,3 +233,5 @@ const char * passphrase_callback(struct archive *, void *);
 void	     passphrase_free(char *);
 void	list_item_verbose(struct bsdtar *, FILE *,
 		    struct archive_entry *);
+
+#endif

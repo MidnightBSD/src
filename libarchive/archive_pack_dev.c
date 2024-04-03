@@ -57,6 +57,13 @@ __RCSID("$NetBSD$");
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
+#if MAJOR_IN_MKDEV
+#include <sys/mkdev.h>
+#define HAVE_MAJOR
+#elif MAJOR_IN_SYSMACROS
+#include <sys/sysmacros.h>
+#define HAVE_MAJOR
+#endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -70,7 +77,7 @@ static	pack_t	pack_12_20;
 static	pack_t	pack_14_18;
 static	pack_t	pack_8_24;
 static	pack_t	pack_bsdos;
-static	int	compare_format(const void *, const void *);
+static	int	__LA_LIBC_CC compare_format(const void *, const void *);
 
 static const char iMajorError[] = "invalid major number";
 static const char iMinorError[] = "invalid minor number";
@@ -303,6 +310,7 @@ static const struct format {
 };
 
 static int
+__LA_LIBC_CC
 compare_format(const void *key, const void *element)
 {
 	const char		*name;

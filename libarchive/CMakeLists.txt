@@ -5,6 +5,10 @@
 #
 ############################################
 
+if (ANDROID)
+  include_directories(${PROJECT_SOURCE_DIR}/contrib/android/include)
+endif()
+
 # Public headers
 SET(include_HEADERS
   archive.h
@@ -51,6 +55,8 @@ SET(libarchive_SOURCES
   archive_platform_acl.h
   archive_platform_xattr.h
   archive_ppmd_private.h
+  archive_ppmd8.c
+  archive_ppmd8_private.h
   archive_ppmd7.c
   archive_ppmd7_private.h
   archive_private.h
@@ -76,6 +82,7 @@ SET(libarchive_SOURCES
   archive_read_set_format.c
   archive_read_set_options.c
   archive_read_support_filter_all.c
+  archive_read_support_filter_by_code.c
   archive_read_support_filter_bzip2.c
   archive_read_support_filter_compress.c
   archive_read_support_filter_gzip.c
@@ -88,6 +95,7 @@ SET(libarchive_SOURCES
   archive_read_support_filter_rpm.c
   archive_read_support_filter_uu.c
   archive_read_support_filter_xz.c
+  archive_read_support_filter_zstd.c
   archive_read_support_format_7zip.c
   archive_read_support_format_all.c
   archive_read_support_format_ar.c
@@ -99,6 +107,7 @@ SET(libarchive_SOURCES
   archive_read_support_format_lha.c
   archive_read_support_format_mtree.c
   archive_read_support_format_rar.c
+  archive_read_support_format_rar5.c
   archive_read_support_format_raw.c
   archive_read_support_format_tar.c
   archive_read_support_format_warc.c
@@ -134,17 +143,21 @@ SET(libarchive_SOURCES
   archive_write_add_filter_program.c
   archive_write_add_filter_uuencode.c
   archive_write_add_filter_xz.c
+  archive_write_add_filter_zstd.c
   archive_write_set_format.c
   archive_write_set_format_7zip.c
   archive_write_set_format_ar.c
   archive_write_set_format_by_name.c
   archive_write_set_format_cpio.c
+  archive_write_set_format_cpio_binary.c
   archive_write_set_format_cpio_newc.c
+  archive_write_set_format_cpio_odc.c
   archive_write_set_format_filter_by_ext.c
   archive_write_set_format_gnutar.c
   archive_write_set_format_iso9660.c
   archive_write_set_format_mtree.c
   archive_write_set_format_pax.c
+  archive_write_set_format_private.h
   archive_write_set_format_raw.c
   archive_write_set_format_shar.c
   archive_write_set_format_ustar.c
@@ -165,6 +178,7 @@ SET(libarchive_MANS
   archive_entry.3
   archive_entry_acl.3
   archive_entry_linkify.3
+  archive_entry_misc.3
   archive_entry_paths.3
   archive_entry_perms.3
   archive_entry_stat.3
@@ -213,6 +227,11 @@ IF(WIN32 AND NOT CYGWIN)
   LIST(APPEND libarchive_SOURCES filter_fork_windows.c)
 ENDIF(WIN32 AND NOT CYGWIN)
 
+IF(ARCHIVE_BLAKE2)
+  LIST(APPEND libarchive_SOURCES archive_blake2sp_ref.c)
+  LIST(APPEND libarchive_SOURCES archive_blake2s_ref.c)
+ENDIF(ARCHIVE_BLAKE2)
+
 IF(ARCHIVE_ACL_DARWIN)
   LIST(APPEND libarchive_SOURCES archive_disk_acl_darwin.c)
 ELSEIF(ARCHIVE_ACL_FREEBSD)
@@ -225,6 +244,7 @@ ENDIF()
 
 # Libarchive is a shared library
 ADD_LIBRARY(archive SHARED ${libarchive_SOURCES} ${include_HEADERS})
+TARGET_INCLUDE_DIRECTORIES(archive PUBLIC .)
 TARGET_LINK_LIBRARIES(archive ${ADDITIONAL_LIBS})
 SET_TARGET_PROPERTIES(archive PROPERTIES SOVERSION ${SOVERSION})
 

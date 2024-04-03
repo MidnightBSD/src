@@ -52,12 +52,33 @@
 #error Oops: No config.h and no pre-built configuration in archive_platform.h.
 #endif
 
+/* On macOS check for some symbols based on the deployment target version.  */
+#if defined(__APPLE__)
+# undef HAVE_FUTIMENS
+# undef HAVE_UTIMENSAT
+# include <AvailabilityMacros.h>
+# if MAC_OS_X_VERSION_MIN_REQUIRED >= 101300
+#  define HAVE_FUTIMENS 1
+#  define HAVE_UTIMENSAT 1
+# endif
+#endif
+
 /* It should be possible to get rid of this by extending the feature-test
  * macros to cover Windows API functions, probably along with non-trivial
  * refactoring of code to find structures that sit more cleanly on top of
  * either Windows or Posix APIs. */
 #if (defined(__WIN32__) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
 #include "archive_windows.h"
+/* The C library on Windows specifies a calling convention for callback
+ * functions and exports; when we interact with them (capture pointers,
+ * call and pass function pointers) we need to match their calling
+ * convention.
+ * This only matters when libarchive is built with /Gr, /Gz or /Gv
+ * (which change the default calling convention.) */
+#define __LA_LIBC_CC __cdecl
+#else
+#define la_stat(path,stref)		stat(path,stref)
+#define __LA_LIBC_CC
 #endif
 
 /*
@@ -142,6 +163,28 @@
 #define	INTMAX_MIN ((intmax_t)(~INTMAX_MAX))
 #endif
 
+/* Some platforms lack the standard PRIxN/PRIdN definitions. */
+#if !HAVE_INTTYPES_H || !defined(PRIx32) || !defined(PRId32)
+#ifndef PRIx32
+#if SIZEOF_INT == 4
+#define PRIx32 "x"
+#elif SIZEOF_LONG == 4
+#define PRIx32 "lx"
+#else
+#error No suitable 32-bit unsigned integer type found for this platform
+#endif
+#endif // PRIx32
+#ifndef PRId32
+#if SIZEOF_INT == 4
+#define PRId32 "d"
+#elif SIZEOF_LONG == 4
+#define PRId32 "ld"
+#else
+#error No suitable 32-bit signed integer type found for this platform
+#endif
+#endif // PRId32
+#endif // !HAVE_INTTYPES_H || !defined(PRIx32) || !defined(PRId32)
+
 /*
  * If we can't restore metadata using a file descriptor, then
  * for compatibility's sake, close files before trying to restore metadata.
@@ -152,8 +195,9 @@
 
 /*
  * glibc 2.24 deprecates readdir_r
+ * bionic c deprecates readdir_r too
  */
-#if defined(HAVE_READDIR_R) && (!defined(__GLIBC__) || !defined(__GLIBC_MINOR__) || __GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 24))
+#if defined(HAVE_READDIR_R) && (!defined(__GLIBC__) || !defined(__GLIBC_MINOR__) || __GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 24)) && (!defined(__ANDROID__))
 #define	USE_READDIR_R	1
 #else
 #undef	USE_READDIR_R
@@ -178,6 +222,12 @@
 
 #ifndef ARCHIVE_ERRNO_MISC
 #define	ARCHIVE_ERRNO_MISC (-1)
+#endif
+
+#if defined(__GNUC__) && (__GNUC__ >= 7)
+#define	__LA_FALLTHROUGH	__attribute__((fallthrough))
+#else
+#define	__LA_FALLTHROUGH
 #endif
 
 #endif /* !ARCHIVE_PLATFORM_H_INCLUDED */

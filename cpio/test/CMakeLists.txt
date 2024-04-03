@@ -13,16 +13,17 @@ IF(ENABLE_CPIO AND ENABLE_TEST)
     test_0.c
     test_basic.c
     test_cmdline.c
-    test_extract_cpio_Z
-    test_extract_cpio_bz2
-    test_extract_cpio_grz
-    test_extract_cpio_gz
-    test_extract_cpio_lrz
-    test_extract_cpio_lz
-    test_extract_cpio_lz4
-    test_extract_cpio_lzma
-    test_extract_cpio_lzo
-    test_extract_cpio_xz
+    test_extract_cpio_Z.c
+    test_extract_cpio_bz2.c
+    test_extract_cpio_grz.c
+    test_extract_cpio_gz.c
+    test_extract_cpio_lrz.c
+    test_extract_cpio_lz.c
+    test_extract_cpio_lz4.c
+    test_extract_cpio_lzma.c
+    test_extract_cpio_lzo.c
+    test_extract_cpio_xz.c
+    test_extract_cpio_zstd.c
     test_format_newc.c
     test_gcpio_compat.c
     test_missing_file.c
@@ -53,6 +54,7 @@ IF(ENABLE_CPIO AND ENABLE_TEST)
     test_option_xz.c
     test_option_y.c
     test_option_z.c
+    test_option_zstd.c
     test_owner_parse.c
     test_passthrough_dotdot.c
     test_passthrough_reverse.c

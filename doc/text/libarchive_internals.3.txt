@@ -1,4 +1,4 @@
-LIBARCHIVE_INTERNALS(3)  BSD Library Functions Manual  LIBARCHIVE_INTERNALS(3)
+LIBARCHIVE_INTERNALS(3)	 BSD Library Functions Manual  LIBARCHIVE_INTERNALS(3)
 
 NAME
      libarchive_internals — description of libarchive internal interfaces
@@ -32,7 +32,7 @@ READ ARCHITECTURE
      archive object to read entries and bodies from an archive stream.	Inter‐
      nally, the archive object is cast to an archive_read object, which holds
      all read-specific data.  The API has four layers: The lowest layer is the
-     I/O layer.  This layer can be overridden by clients, but most clients use
+     I/O layer.	 This layer can be overridden by clients, but most clients use
      the packaged I/O callbacks provided, for example, by
      archive_read_open_memory(3), and archive_read_open_fd(3).	The compres‐
      sion layer calls the I/O layer to read bytes and decompresses them for
@@ -55,11 +55,11 @@ READ ARCHITECTURE
 
      The client read callback is expected to provide a block of data on each
      call.  A zero-length return does indicate end of file, but otherwise
-     blocks may be as small as one byte or as large as the entire file.  In
+     blocks may be as small as one byte or as large as the entire file.	 In
      particular, blocks may be of different sizes.
 
      The client skip callback returns the number of bytes actually skipped,
-     which may be much smaller than the skip requested.  The only requirement
+     which may be much smaller than the skip requested.	 The only requirement
      is that the skip not be larger.  In particular, clients are allowed to
      return zero for any skip that they don't want to handle.  The skip call‐
      back must never be invoked with a negative value.
@@ -96,7 +96,7 @@ READ ARCHITECTURE
 	     pression handler invokes the internal
 	     __archive_read_register_compression() function to provide bid and
 	     initialization functions.	This function returns NULL on error or
-	     else a pointer to a struct decompressor_t.  This structure con‐
+	     else a pointer to a struct decompressor_t.	 This structure con‐
 	     tains a void * config slot that can be used for storing any cus‐
 	     tomization information.
      Bid     The bid function is invoked with a pointer and size of a block of
@@ -108,12 +108,12 @@ READ ARCHITECTURE
 	     The value returned by the bid function indicates its suitability
 	     for handling this data stream.  A bid of zero will ensure that
 	     this decompressor is never invoked.  Return zero if magic number
-	     checks fail.  Otherwise, your initial implementation should
-	     return the number of bits actually checked.  For example, if you
+	     checks fail.  Otherwise, your initial implementation should re‐
+	     turn the number of bits actually checked.	For example, if you
 	     verify two full bytes and three bits of another byte, bid 19.
 	     Note that the initial block may be very short; be careful to only
-	     inspect the data you are given.  (The current decompressors
-	     require two bytes for correct bidding.)
+	     inspect the data you are given.  (The current decompressors re‐
+	     quire two bytes for correct bidding.)
      Initialize
 	     The winning bidder will have its init function called.  This
 	     function should initialize the remaining slots of the struct
@@ -139,16 +139,16 @@ READ ARCHITECTURE
      Bid     Formats bid by invoking the read_ahead() decompression method but
 	     not calling the consume() method.	This allows each bidder to
 	     look ahead in the input stream.  Bidders should not look further
-	     ahead than necessary, as long look aheads put pressure on the
-	     decompression layer to buffer lots of data.  Most formats only
-	     require a few hundred bytes of look ahead; look aheads of a few
+	     ahead than necessary, as long look aheads put pressure on the de‐
+	     compression layer to buffer lots of data.	Most formats only re‐
+	     quire a few hundred bytes of look ahead; look aheads of a few
 	     kilobytes are reasonable.	(The ISO9660 reader sometimes looks
 	     ahead by 48k, which should be considered an upper limit.)
      Read header
 	     The header read is usually the most complex part of any format.
 	     There are a few strategies worth mentioning: For formats such as
 	     tar or cpio, reading and parsing the header is straightforward
-	     since headers alternate with data.  For formats that store all
+	     since headers alternate with data.	 For formats that store all
 	     header data at the beginning of the file, the first header read
 	     request may have to read all headers into memory and store that
 	     data, sorted by the location of the file data.  Subsequent header
@@ -162,12 +162,12 @@ READ ARCHITECTURE
 	     ber that the decompressor will return as much data as it has.
 	     Generally, you will want to request one byte, examine the return
 	     value to see how much data is available, and possibly trim that
-	     to the amount you can use.  You should invoke consume for each
+	     to the amount you can use.	 You should invoke consume for each
 	     block just before you return it.
      Skip All Data
 	     The skip data call should skip over all file data and trailing
-	     padding.  This is called automatically by the API layer just
-	     before each header read.  It is also called in response to the
+	     padding.  This is called automatically by the API layer just be‐
+	     fore each header read.  It is also called in response to the
 	     client calling the public data_skip() function.
      Cleanup
 	     On cleanup, the format should release all of its allocated mem‐
@@ -202,23 +202,23 @@ WRITE_DISK ARCHITECTURE
 GENERAL SERVICES
      The archive_read, archive_write, and archive_write_disk objects all con‐
      tain an initial archive object which provides common support for a set of
-     standard services.  (Recall that ANSI/ISO C90 guarantees that you can
+     standard services.	 (Recall that ANSI/ISO C90 guarantees that you can
      cast freely between a pointer to a structure and a pointer to the first
      element of that structure.)  The archive object has a magic value that
-     indicates which API this object is associated with, slots for storing
-     error information, and function pointers for virtualized API functions.
+     indicates which API this object is associated with, slots for storing er‐
+     ror information, and function pointers for virtualized API functions.
 
 MISCELLANEOUS NOTES
      Connecting existing archiving libraries into libarchive is generally
      quite difficult.  In particular, many existing libraries strongly assume
      that you are reading from a file; they seek forwards and backwards as
-     necessary to locate various pieces of information.  In contrast,
+     necessary to locate various pieces of information.	 In contrast,
      libarchive never seeks backwards in its input, which sometimes requires
      very different approaches.
 
      For example, libarchive's ISO9660 support operates very differently from
-     most ISO9660 readers.  The libarchive support utilizes a work-queue
-     design that keeps a list of known entries sorted by their location in the
+     most ISO9660 readers.  The libarchive support utilizes a work-queue de‐
+     sign that keeps a list of known entries sorted by their location in the
      input.  Whenever libarchive's ISO9660 implementation is asked for the
      next header, checks this list to find the next item on the disk.  Direc‐
      tories are parsed when they are encountered and new items are added to
@@ -236,7 +236,7 @@ MISCELLANEOUS NOTES
 
 SEE ALSO
      archive_entry(3), archive_read(3), archive_write(3),
-     archive_write_disk(3) libarchive(3),
+     archive_write_disk(3), libarchive(3)
 
 HISTORY
      The libarchive library first appeared in FreeBSD 5.3.
@@ -244,4 +244,4 @@ HISTORY
 AUTHORS
      The libarchive library was written by Tim Kientzle <kientzle@acm.org>.
 
-BSD			       January 26, 2011 			   BSD
+BSD			       January 26, 2011				   BSD

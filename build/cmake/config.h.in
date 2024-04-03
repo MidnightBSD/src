@@ -1,4 +1,5 @@
 /* config.h.  Generated from build/cmake/config.h.in by cmake configure */
+#define __LIBARCHIVE_CONFIG_H_INCLUDED 1
 
 /*
  * Ensure we have C99-style int64_t, etc, all defined.
@@ -22,14 +23,14 @@
 #cmakedefine HAVE_UNSIGNED___INT64
 
 /* The sizes of various standard integer types. */
-@SIZE_OF_SHORT_CODE@
-@SIZE_OF_INT_CODE@
-@SIZE_OF_LONG_CODE@
-@SIZE_OF_LONG_LONG_CODE@
-@SIZE_OF_UNSIGNED_SHORT_CODE@
-@SIZE_OF_UNSIGNED_CODE@
-@SIZE_OF_UNSIGNED_LONG_CODE@
-@SIZE_OF_UNSIGNED_LONG_LONG_CODE@
+@SIZEOF_SHORT_CODE@
+@SIZEOF_INT_CODE@
+@SIZEOF_LONG_CODE@
+@SIZEOF_LONG_LONG_CODE@
+@SIZEOF_UNSIGNED_SHORT_CODE@
+@SIZEOF_UNSIGNED_CODE@
+@SIZEOF_UNSIGNED_LONG_CODE@
+@SIZEOF_UNSIGNED_LONG_LONG_CODE@
 
 /*
  * If we lack int64_t, define it to the first of __int64, int, long, and long long
@@ -40,17 +41,17 @@ typedef __int64 int64_t;
 #define HAVE_INT64_T
 #endif
 
-#if !defined(HAVE_INT64_T) && SIZE_OF_INT == 8
+#if !defined(HAVE_INT64_T) && SIZEOF_INT == 8
 typedef int int64_t;
 #define HAVE_INT64_T
 #endif
 
-#if !defined(HAVE_INT64_T) && SIZE_OF_LONG == 8
+#if !defined(HAVE_INT64_T) && SIZEOF_LONG == 8
 typedef long int64_t;
 #define HAVE_INT64_T
 #endif
 
-#if !defined(HAVE_INT64_T) && SIZE_OF_LONG_LONG == 8
+#if !defined(HAVE_INT64_T) && SIZEOF_LONG_LONG == 8
 typedef long long int64_t;
 #define HAVE_INT64_T
 #endif
@@ -62,12 +63,12 @@ typedef long long int64_t;
 /*
  * Similarly for int32_t
  */
-#if !defined(HAVE_INT32_T) && SIZE_OF_INT == 4
+#if !defined(HAVE_INT32_T) && SIZEOF_INT == 4
 typedef int int32_t;
 #define HAVE_INT32_T
 #endif
 
-#if !defined(HAVE_INT32_T) && SIZE_OF_LONG == 4
+#if !defined(HAVE_INT32_T) && SIZEOF_LONG == 4
 typedef long int32_t;
 #define HAVE_INT32_T
 #endif
@@ -79,12 +80,12 @@ typedef long int32_t;
 /*
  * Similarly for int16_t
  */
-#if !defined(HAVE_INT16_T) && SIZE_OF_INT == 2
+#if !defined(HAVE_INT16_T) && SIZEOF_INT == 2
 typedef int int16_t;
 #define HAVE_INT16_T
 #endif
 
-#if !defined(HAVE_INT16_T) && SIZE_OF_SHORT == 2
+#if !defined(HAVE_INT16_T) && SIZEOF_SHORT == 2
 typedef short int16_t;
 #define HAVE_INT16_T
 #endif
@@ -101,17 +102,17 @@ typedef unsigned __int64 uint64_t;
 #define HAVE_UINT64_T
 #endif
 
-#if !defined(HAVE_UINT64_T) && SIZE_OF_UNSIGNED == 8
+#if !defined(HAVE_UINT64_T) && SIZEOF_UNSIGNED == 8
 typedef unsigned uint64_t;
 #define HAVE_UINT64_T
 #endif
 
-#if !defined(HAVE_UINT64_T) && SIZE_OF_UNSIGNED_LONG == 8
+#if !defined(HAVE_UINT64_T) && SIZEOF_UNSIGNED_LONG == 8
 typedef unsigned long uint64_t;
 #define HAVE_UINT64_T
 #endif
 
-#if !defined(HAVE_UINT64_T) && SIZE_OF_UNSIGNED_LONG_LONG == 8
+#if !defined(HAVE_UINT64_T) && SIZEOF_UNSIGNED_LONG_LONG == 8
 typedef unsigned long long uint64_t;
 #define HAVE_UINT64_T
 #endif
@@ -124,12 +125,12 @@ typedef unsigned long long uint64_t;
 /*
  * Similarly for uint32_t
  */
-#if !defined(HAVE_UINT32_T) && SIZE_OF_UNSIGNED == 4
+#if !defined(HAVE_UINT32_T) && SIZEOF_UNSIGNED == 4
 typedef unsigned uint32_t;
 #define HAVE_UINT32_T
 #endif
 
-#if !defined(HAVE_UINT32_T) && SIZE_OF_UNSIGNED_LONG == 4
+#if !defined(HAVE_UINT32_T) && SIZEOF_UNSIGNED_LONG == 4
 typedef unsigned long uint32_t;
 #define HAVE_UINT32_T
 #endif
@@ -141,12 +142,12 @@ typedef unsigned long uint32_t;
 /*
  * Similarly for uint16_t
  */
-#if !defined(HAVE_UINT16_T) && SIZE_OF_UNSIGNED == 2
+#if !defined(HAVE_UINT16_T) && SIZEOF_UNSIGNED == 2
 typedef unsigned uint16_t;
 #define HAVE_UINT16_T
 #endif
 
-#if !defined(HAVE_UINT16_T) && SIZE_OF_UNSIGNED_SHORT == 2
+#if !defined(HAVE_UINT16_T) && SIZEOF_UNSIGNED_SHORT == 2
 typedef unsigned short uint16_t;
 #define HAVE_UINT16_T
 #endif
@@ -315,13 +316,13 @@ typedef uint64_t uintmax_t;
 #cmakedefine ARCHIVE_XATTR_LINUX 1
 
 /* Version number of bsdcpio */
-#cmakedefine BSDCPIO_VERSION_STRING "${BSDCPIO_VERSION_STRING}"
+#cmakedefine BSDCPIO_VERSION_STRING "@BSDCPIO_VERSION_STRING@"
 
 /* Version number of bsdtar */
-#cmakedefine BSDTAR_VERSION_STRING "${BSDTAR_VERSION_STRING}"
+#cmakedefine BSDTAR_VERSION_STRING "@BSDTAR_VERSION_STRING@"
 
 /* Version number of bsdcat */
-#cmakedefine BSDCAT_VERSION_STRING "${BSDCAT_VERSION_STRING}"
+#cmakedefine BSDCAT_VERSION_STRING "@BSDCAT_VERSION_STRING@"
 
 /* Define to 1 if you have the `acl_create_entry' function. */
 #cmakedefine HAVE_ACL_CREATE_ENTRY 1
@@ -680,6 +681,12 @@ typedef uint64_t uintmax_t;
 /* Define to 1 if you have the `bz2' library (-lbz2). */
 #cmakedefine HAVE_LIBBZ2 1
 
+/* Define to 1 if you have the `b2' library (-lb2). */
+#cmakedefine HAVE_LIBB2 1
+
+/* Define to 1 if you have the <blake2.h> header file. */
+#cmakedefine HAVE_BLAKE2_H 1
+
 /* Define to 1 if you have the `charset' library (-lcharset). */
 #cmakedefine HAVE_LIBCHARSET 1
 
@@ -704,6 +711,9 @@ typedef uint64_t uintmax_t;
 /* Define to 1 if you have the `lzo2' library (-llzo2). */
 #cmakedefine HAVE_LIBLZO2 1
 
+/* Define to 1 if you have the `mbedcrypto' library (-lmbedcrypto). */
+#cmakedefine HAVE_LIBMBEDCRYPTO 1
+
 /* Define to 1 if you have the `nettle' library (-lnettle). */
 #cmakedefine HAVE_LIBNETTLE 1
 
@@ -725,11 +735,21 @@ typedef uint64_t uintmax_t;
 /* Define to 1 if you have the `z' library (-lz). */
 #cmakedefine HAVE_LIBZ 1
 
+/* Define to 1 if you have the `zstd' library (-lzstd). */
+#cmakedefine HAVE_LIBZSTD 1
+
+/* Define to 1 if you have the `zstd' library (-lzstd) with compression
+   support. */
+#cmakedefine HAVE_LIBZSTD_COMPRESSOR 1
+
 /* Define to 1 if you have the <limits.h> header file. */
 #cmakedefine HAVE_LIMITS_H 1
 
 /* Define to 1 if you have the `link' function. */
 #cmakedefine HAVE_LINK 1
+
+/* Define to 1 if you have the `linkat' function. */
+#cmakedefine HAVE_LINKAT 1
 
 /* Define to 1 if you have the <linux/fiemap.h> header file. */
 #cmakedefine HAVE_LINUX_FIEMAP_H 1
@@ -946,6 +966,9 @@ typedef uint64_t uintmax_t;
 /* Define to 1 if you have the `strchr' function. */
 #cmakedefine HAVE_STRCHR 1
 
+/* Define to 1 if you have the `strnlen' function. */
+#cmakedefine HAVE_STRNLEN 1
+
 /* Define to 1 if you have the `strdup' function. */
 #cmakedefine HAVE_STRDUP 1
 
@@ -1065,6 +1088,10 @@ typedef uint64_t uintmax_t;
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #cmakedefine HAVE_SYS_STAT_H 1
 
+
+/* Define to 1 if you have the <sys/sysmacros.h> header file. */
+#cmakedefine HAVE_SYS_SYSMACROS_H 1
+
 /* Define to 1 if you have the <sys/time.h> header file. */
 #cmakedefine HAVE_SYS_TIME_H 1
 
@@ -1097,6 +1124,9 @@ typedef uint64_t uintmax_t;
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #cmakedefine HAVE_UNISTD_H 1
+
+/* Define to 1 if you have the `unlinkat' function. */
+#cmakedefine HAVE_UNLINKAT 1
 
 /* Define to 1 if you have the `unsetenv' function. */
 #cmakedefine HAVE_UNSETENV 1
@@ -1179,6 +1209,9 @@ typedef uint64_t uintmax_t;
 /* Define to 1 if you have the <zlib.h> header file. */
 #cmakedefine HAVE_ZLIB_H 1
 
+/* Define to 1 if you have the <zstd.h> header file. */
+#cmakedefine HAVE_ZSTD_H 1
+
 /* Define to 1 if you have the `_ctime64_s' function. */
 #cmakedefine HAVE__CTIME64_S 1
 
@@ -1188,6 +1221,9 @@ typedef uint64_t uintmax_t;
 /* Define to 1 if you have the `_get_timezone' function. */
 #cmakedefine HAVE__GET_TIMEZONE 1
 
+/* Define to 1 if you have the `_gmtime64_s' function. */
+#cmakedefine HAVE__GMTIME64_S 1
+
 /* Define to 1 if you have the `_localtime64_s' function. */
 #cmakedefine HAVE__LOCALTIME64_S 1
 
@@ -1195,13 +1231,13 @@ typedef uint64_t uintmax_t;
 #cmakedefine HAVE__MKGMTIME64 1
 
 /* Define as const if the declaration of iconv() needs const. */
-#define ICONV_CONST ${ICONV_CONST}
+#define ICONV_CONST @ICONV_CONST@
 
 /* Version number of libarchive as a single integer */
-#cmakedefine LIBARCHIVE_VERSION_NUMBER "${LIBARCHIVE_VERSION_NUMBER}"
+#cmakedefine LIBARCHIVE_VERSION_NUMBER "@LIBARCHIVE_VERSION_NUMBER@"
 
 /* Version number of libarchive */
-#cmakedefine LIBARCHIVE_VERSION_STRING "${LIBARCHIVE_VERSION_STRING}"
+#cmakedefine LIBARCHIVE_VERSION_STRING "@LIBARCHIVE_VERSION_STRING@"
 
 /* Define to 1 if `lstat' dereferences a symlink specified with a trailing
    slash. */
@@ -1219,7 +1255,7 @@ typedef uint64_t uintmax_t;
 #cmakedefine NO_MINUS_C_MINUS_O 1
 
 /* The size of `wchar_t', as computed by sizeof. */
-#cmakedefine SIZEOF_WCHAR_T ${SIZEOF_WCHAR_T}
+#cmakedefine SIZEOF_WCHAR_T @SIZEOF_WCHAR_T@
 
 /* Define to 1 if strerror_r returns char *. */
 #cmakedefine STRERROR_R_CHAR_P 1
@@ -1255,59 +1291,59 @@ typedef uint64_t uintmax_t;
 #endif /* SAFE_TO_DEFINE_EXTENSIONS */
 
 /* Version number of package */
-#cmakedefine VERSION "${VERSION}"
+#cmakedefine VERSION "@VERSION@"
 
 /* Number of bits in a file offset, on hosts where this is settable. */
-#cmakedefine _FILE_OFFSET_BITS ${_FILE_OFFSET_BITS}
+#cmakedefine _FILE_OFFSET_BITS @_FILE_OFFSET_BITS@
 
 /* Define to 1 to make fseeko visible on some hosts (e.g. glibc 2.2). */
 #cmakedefine _LARGEFILE_SOURCE 1
 
 /* Define for large files, on AIX-style hosts. */
-#cmakedefine _LARGE_FILES ${_LARGE_FILES}
+#cmakedefine _LARGE_FILES @_LARGE_FILES@
 
 /* Define to control Windows SDK version */
 #ifndef NTDDI_VERSION
-#cmakedefine NTDDI_VERSION ${NTDDI_VERSION}
+#cmakedefine NTDDI_VERSION @NTDDI_VERSION@
 #endif // NTDDI_VERSION
 
 #ifndef _WIN32_WINNT
-#cmakedefine _WIN32_WINNT ${_WIN32_WINNT}
+#cmakedefine _WIN32_WINNT @_WIN32_WINNT@
 #endif // _WIN32_WINNT
 
 #ifndef WINVER
-#cmakedefine WINVER ${WINVER}
+#cmakedefine WINVER @WINVER@
 #endif // WINVER
 
 /* Define to empty if `const' does not conform to ANSI C. */
-#cmakedefine const ${const}
+#cmakedefine const @const@
 
 /* Define to `int' if <sys/types.h> doesn't define. */
-#cmakedefine gid_t ${gid_t}
+#cmakedefine gid_t @gid_t@
 
 /* Define to `unsigned long' if <sys/types.h> does not define. */
-#cmakedefine id_t ${id_t}
+#cmakedefine id_t @id_t@
 
 /* Define to `int' if <sys/types.h> does not define. */
-#cmakedefine mode_t ${mode_t}
+#cmakedefine mode_t @mode_t@
 
 /* Define to `long long' if <sys/types.h> does not define. */
-#cmakedefine off_t ${off_t}
+#cmakedefine off_t @off_t@
 
 /* Define to `int' if <sys/types.h> doesn't define. */
-#cmakedefine pid_t ${pid_t}
+#cmakedefine pid_t @pid_t@
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
-#cmakedefine size_t ${size_t}
+#cmakedefine size_t @size_t@
 
 /* Define to `int' if <sys/types.h> does not define. */
-#cmakedefine ssize_t ${ssize_t}
+#cmakedefine ssize_t @ssize_t@
 
 /* Define to `int' if <sys/types.h> doesn't define. */
-#cmakedefine uid_t ${uid_t}
+#cmakedefine uid_t @uid_t@
 
 /* Define to `int' if <sys/types.h> does not define. */
-#cmakedefine intptr_t ${intptr_t}
+#cmakedefine intptr_t @intptr_t@
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
-#cmakedefine uintptr_t ${uintptr_t}
+#cmakedefine uintptr_t @uintptr_t@

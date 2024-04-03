@@ -62,8 +62,10 @@ struct cpio {
 	int		  option_list; /* -t */
 	char		  option_null; /* --null */
 	int		  option_numeric_uid_gid; /* -n */
+	int		  option_pwb; /* -6 */
 	int		  option_rename; /* -r */
 	char		 *destdir;
+	size_t		  destdir_len;
 	size_t		  pass_destpath_alloc;
 	char		 *pass_destpath;
 	int		  uid_override;
@@ -111,7 +113,8 @@ enum {
 	OPTION_PRESERVE_OWNER,
 	OPTION_QUIET,
 	OPTION_UUENCODE,
-	OPTION_VERSION
+	OPTION_VERSION,
+	OPTION_ZSTD,
 };
 
 int	cpio_getopt(struct cpio *cpio);

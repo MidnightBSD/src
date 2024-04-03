@@ -185,6 +185,8 @@ struct cpio {
 	struct archive_string_conv *opt_sconv;
 	struct archive_string_conv *sconv_default;
 	int			  init_default_conversion;
+
+	int			  option_pwb;
 };
 
 static int64_t	atol16(const char *, unsigned);
@@ -343,6 +345,10 @@ archive_read_format_cpio_options(struct archive_read *a,
 				ret = ARCHIVE_FATAL;
 		}
 		return (ret);
+	} else if (strcmp(key, "pwb")  == 0) {
+		if (val != NULL && val[0] != 0)
+			cpio->option_pwb = 1;
+		return (ARCHIVE_OK);
 	}
 
 	/* Note: The "warn" return is just to inform the options
@@ -633,6 +639,13 @@ header_newc(struct archive_read *a, struct cpio *cpio,
 	/* Pad name to 2 more than a multiple of 4. */
 	*name_pad = (2 - *namelength) & 3;
 
+	/* Make sure that the padded name length fits into size_t. */
+	if (*name_pad > SIZE_MAX - *namelength) {
+		archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+		    "cpio archive has invalid namelength");
+		return (ARCHIVE_FATAL);
+	}
+
 	/*
 	 * Note: entry_bytes_remaining is at least 64 bits and
 	 * therefore guaranteed to be big enough for a 33-bit file
@@ -884,6 +897,12 @@ header_bin_le(struct archive_read *a, struct cpio *cpio,
 	archive_entry_set_dev(entry, header[bin_dev_offset] + header[bin_dev_offset + 1] * 256);
 	archive_entry_set_ino(entry, header[bin_ino_offset] + header[bin_ino_offset + 1] * 256);
 	archive_entry_set_mode(entry, header[bin_mode_offset] + header[bin_mode_offset + 1] * 256);
+	if (cpio->option_pwb) {
+		/* turn off random bits left over from V6 inode */
+		archive_entry_set_mode(entry, archive_entry_mode(entry) & 067777);
+		if ((archive_entry_mode(entry) & AE_IFMT) == 0)
+			archive_entry_set_mode(entry, archive_entry_mode(entry) | AE_IFREG);
+	}
 	archive_entry_set_uid(entry, header[bin_uid_offset] + header[bin_uid_offset + 1] * 256);
 	archive_entry_set_gid(entry, header[bin_gid_offset] + header[bin_gid_offset + 1] * 256);
 	archive_entry_set_nlink(entry, header[bin_nlink_offset] + header[bin_nlink_offset + 1] * 256);
@@ -923,6 +942,12 @@ header_bin_be(struct archive_read *a, struct cpio *cpio,
 	archive_entry_set_dev(entry, header[bin_dev_offset] * 256 + header[bin_dev_offset + 1]);
 	archive_entry_set_ino(entry, header[bin_ino_offset] * 256 + header[bin_ino_offset + 1]);
 	archive_entry_set_mode(entry, header[bin_mode_offset] * 256 + header[bin_mode_offset + 1]);
+	if (cpio->option_pwb) {
+		/* turn off random bits left over from V6 inode */
+		archive_entry_set_mode(entry, archive_entry_mode(entry) & 067777);
+		if ((archive_entry_mode(entry) & AE_IFMT) == 0)
+			archive_entry_set_mode(entry, archive_entry_mode(entry) | AE_IFREG);
+	}
 	archive_entry_set_uid(entry, header[bin_uid_offset] * 256 + header[bin_uid_offset + 1]);
 	archive_entry_set_gid(entry, header[bin_gid_offset] * 256 + header[bin_gid_offset + 1]);
 	archive_entry_set_nlink(entry, header[bin_nlink_offset] * 256 + header[bin_nlink_offset + 1]);
@@ -948,8 +973,7 @@ archive_read_format_cpio_cleanup(struct archive_read *a)
         while (cpio->links_head != NULL) {
                 struct links_entry *lp = cpio->links_head->next;
 
-                if (cpio->links_head->name)
-                        free(cpio->links_head->name);
+                free(cpio->links_head->name);
                 free(cpio->links_head);
                 cpio->links_head = lp;
         }

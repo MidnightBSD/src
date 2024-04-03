@@ -89,6 +89,10 @@ archive_read_append_filter(struct archive *_a, int code)
       strcpy(str, "lz4");
       r1 = archive_read_support_filter_lz4(_a);
       break;
+    case ARCHIVE_FILTER_ZSTD:
+      strcpy(str, "zstd");
+      r1 = archive_read_support_filter_zstd(_a);
+      break;
     case ARCHIVE_FILTER_LZIP:
       strcpy(str, "lzip");
       r1 = archive_read_support_filter_lzip(_a);
@@ -131,7 +135,7 @@ archive_read_append_filter(struct archive *_a, int code)
     filter->archive = a;
     filter->upstream = a->filter;
     a->filter = filter;
-    r2 = (bidder->init)(a->filter);
+    r2 = (bidder->vtable->init)(a->filter);
     if (r2 != ARCHIVE_OK) {
       __archive_read_free_filters(a);
       return (ARCHIVE_FATAL);
@@ -188,7 +192,7 @@ archive_read_append_filter_program_signature(struct archive *_a,
   filter->archive = a;
   filter->upstream = a->filter;
   a->filter = filter;
-  r = (bidder->init)(a->filter);
+  r = (bidder->vtable->init)(a->filter);
   if (r != ARCHIVE_OK) {
     __archive_read_free_filters(a);
     return (ARCHIVE_FATAL);
