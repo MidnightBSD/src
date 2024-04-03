@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/test/test_extattr_freebsd.c 201247 2009-12-30 05:59:21Z kientzle $");
+__FBSDID("$FreeBSD$");
 
 #if defined(__FreeBSD__) && __FreeBSD__ > 4
 #include <sys/extattr.h>
@@ -47,7 +47,8 @@ DEFINE_TEST(test_extattr_freebsd)
 	struct stat st;
 	struct archive *a;
 	struct archive_entry *ae;
-	int n, fd;
+	ssize_t n;
+	int fd;
 
 	/*
 	 * First, do a quick manual set/read of an extended attribute

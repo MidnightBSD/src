@@ -26,7 +26,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_format_zip.c 201102 2009-12-28 03:11:36Z kientzle $");
+__FBSDID("$FreeBSD$");
 
 /*
  * The definitive documentation of the Zip file format is:
@@ -1667,7 +1667,7 @@ zipx_lzma_alone_init(struct archive_read *a, struct zip *zip)
 	 */
 
 	/* Read magic1,magic2,lzma_params from the ZIPX stream. */
-	if(zip->entry_bytes_remaining < 9 || (p = __archive_read_ahead(a, 9, NULL)) == NULL) {
+	if((p = __archive_read_ahead(a, 9, NULL)) == NULL) {
 		archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
 		    "Truncated lzma data");
 		return (ARCHIVE_FATAL);

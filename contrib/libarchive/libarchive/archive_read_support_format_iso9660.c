@@ -26,7 +26,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_format_iso9660.c 201246 2009-12-30 05:30:35Z kientzle $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -1007,8 +1007,7 @@ read_children(struct archive_read *a, struct file_info *parent)
 		p = b;
 		b += iso9660->logical_block_size;
 		step -= iso9660->logical_block_size;
-		for (; *p != 0 && p + DR_name_offset < b && p + *p <= b;
-			p += *p) {
+		for (; *p != 0 && p < b && p + *p <= b; p += *p) {
 			struct file_info *child;
 
 			/* N.B.: these special directory identifiers

@@ -26,7 +26,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: head/lib/libarchive/archive_read_support_format_tar.c 201161 2009-12-29 05:44:39Z kientzle $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -1882,9 +1882,11 @@ pax_attribute(struct archive_read *a, struct tar *tar,
 	long n;
 	int err = ARCHIVE_OK, r;
 
+#ifndef __FreeBSD__
 	if (value == NULL)
 		value = "";	/* Disable compiler warning; do not pass
 				 * NULL pointer to strlen().  */
+#endif
 	switch (key[0]) {
 	case 'G':
 		/* Reject GNU.sparse.* headers on non-regular files. */

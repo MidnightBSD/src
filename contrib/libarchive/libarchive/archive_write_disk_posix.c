@@ -4549,7 +4549,7 @@ set_xattrs(struct archive_write_disk *a)
 		size_t size;
 		archive_entry_xattr_next(entry, &name, &value, &size);
 		if (name != NULL) {
-			int e;
+			ssize_t e;
 			int namespace;
 
 			namespace = EXTATTR_NAMESPACE_USER;
@@ -4603,7 +4603,7 @@ set_xattrs(struct archive_write_disk *a)
 				    archive_entry_pathname(entry), namespace,
 				    name, value, size);
 			}
-			if (e != (int)size) {
+			if (e != (ssize_t)size) {
 				archive_strcat(&errlist, name);
 				archive_strappend_char(&errlist, ' ');
 				ret = ARCHIVE_WARN;
