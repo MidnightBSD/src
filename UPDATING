@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20240406:
+	Fix CVE-2023-52160 in wpa_supplicant
+
 20240330:
 	mport 2.6.2
 
