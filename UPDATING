@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20240406:
+	Fix for wpa supplicant CVE-2023-52160
+
 20240331:
 	unbound 1.19.3
 
