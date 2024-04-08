@@ -5,12 +5,6 @@
 [ -f .tpkg.var.test ] && source .tpkg.var.test
 
 PRE="../.."
-if grep "define WITH_PYTHONMODULE 1" $PRE/config.h; then
-	echo "have python module"
-else
-	echo "no python module"
-	exit 0
-fi
 
 if test "`uname 2>&1`" = "Darwin"; then
         ldnsdir=`grep ldnsdir= ../../Makefile | sed -e 's/ldnsdir=//'`
@@ -28,7 +22,7 @@ fi
 
 # do the test
 echo "> dig www.example.com."
-dig @localhost -p $UNBOUND_PORT www.example.com. | tee outfile
+dig @127.0.0.1 -p $UNBOUND_PORT www.example.com. | tee outfile
 echo "> cat logfiles"
 cat fwd.log 
 cat unbound.log
@@ -41,7 +35,7 @@ else
 fi
 
 echo "> dig www2.example.com."
-dig @localhost -p $UNBOUND_PORT www2.example.com. | tee outfile
+dig @127.0.0.1 -p $UNBOUND_PORT www2.example.com. | tee outfile
 echo "> cat logfiles"
 cat fwd.log 
 cat unbound.log

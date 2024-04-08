@@ -353,17 +353,21 @@ autr_tp_create(struct val_anchors* anchors, uint8_t* own, size_t own_len,
 
 	lock_basic_lock(&anchors->lock);
 	if(!rbtree_insert(anchors->tree, &tp->node)) {
+		char buf[LDNS_MAX_DOMAINLEN+1];
 		lock_basic_unlock(&anchors->lock);
-		log_err("trust anchor presented twice");
+		dname_str(tp->name, buf);
+		log_err("trust anchor for '%s' presented twice", buf);
 		free(tp->name);
 		free(tp->autr);
 		free(tp);
 		return NULL;
 	}
 	if(!rbtree_insert(&anchors->autr->probe, &tp->autr->pnode)) {
+		char buf[LDNS_MAX_DOMAINLEN+1];
 		(void)rbtree_delete(anchors->tree, tp);
 		lock_basic_unlock(&anchors->lock);
-		log_err("trust anchor in probetree twice");
+		dname_str(tp->name, buf);
+		log_err("trust anchor for '%s' in probetree twice", buf);
 		free(tp->name);
 		free(tp->autr);
 		free(tp);
@@ -2376,6 +2380,8 @@ probe_anchor(struct module_env* env, struct trust_anchor* tp)
 	edns.opt_list_out = NULL;
 	edns.opt_list_inplace_cb_out = NULL;
 	edns.padding_block_size = 0;
+	edns.cookie_present = 0;
+	edns.cookie_valid = 0;
 	if(sldns_buffer_capacity(buf) < 65535)
 		edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
 	else	edns.udp_size = 65535;

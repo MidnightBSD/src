@@ -7,12 +7,7 @@
 PRE="../.."
 . ../common.sh
 
-if test `hostname`"" = "dicht.nlnetlabs.nl"; then
-	echo "In jail, no ::1, skip test"
-	exit 0
-fi
-
-if fgrep "disable interface-automatic" unbound.log; then
+if grep -F "disable interface-automatic" unbound.log; then
 	echo "skip test"
 	exit 0
 fi

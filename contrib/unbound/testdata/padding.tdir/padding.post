@@ -7,16 +7,15 @@
 # do your teardown here
 . ../common.sh
 PRE="../.."
-if grep "define USE_DNSTAP 1" $PRE/config.h; then echo test enabled; else echo test skipped; exit 0; fi
 kill_pid $DNSTAP_SOCKET_PID
 kill_pid $FWD_PID
-kill_pid `cat unbound2.pid`
+kill_from_pidfile "unbound2.pid"
 if test -f unbound2.log; then
 	echo ">>> upstream log"
 	cat unbound2.log
 fi
 #kill_pid $UNBOUND_PID
-kill_pid `cat unbound.pid`
+kill_from_pidfile "unbound.pid"
 if test -f unbound.log; then
 	echo ">>> unbound log"
 	cat unbound.log

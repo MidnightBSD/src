@@ -78,6 +78,7 @@ struct delegpt* delegpt_copy(struct delegpt* dp, struct regional* region)
 		if(!delegpt_add_ns(copy, region, ns->name, ns->lame,
 			ns->tls_auth_name, ns->port))
 			return NULL;
+		copy->nslist->cache_lookup_count = ns->cache_lookup_count;
 		copy->nslist->resolved = ns->resolved;
 		copy->nslist->got4 = ns->got4;
 		copy->nslist->got6 = ns->got6;
@@ -121,6 +122,7 @@ delegpt_add_ns(struct delegpt* dp, struct regional* region, uint8_t* name,
 	ns->namelen = len;
 	dp->nslist = ns;
 	ns->name = regional_alloc_init(region, name, ns->namelen);
+	ns->cache_lookup_count = 0;
 	ns->resolved = 0;
 	ns->got4 = 0;
 	ns->got6 = 0;
@@ -317,6 +319,45 @@ void delegpt_log(enum verbosity_value v, struct delegpt* dp)
 			log_addr(VERB_ALGO, s, &a->addr, a->addrlen);
 		}
 	}
+}
+
+int
+delegpt_addr_on_result_list(struct delegpt* dp, struct delegpt_addr* find)
+{
+	struct delegpt_addr* a = dp->result_list;
+	while(a) {
+		if(a == find)
+			return 1;
+		a = a->next_result;
+	}
+	return 0;
+}
+
+void
+delegpt_usable_list_remove_addr(struct delegpt* dp, struct delegpt_addr* del)
+{
+	struct delegpt_addr* usa = dp->usable_list, *prev = NULL;
+	while(usa) {
+		if(usa == del) {
+			/* snip off the usable list */
+			if(prev)
+				prev->next_usable = usa->next_usable;
+			else	dp->usable_list = usa->next_usable;
+			return;
+		}
+		prev = usa;
+		usa = usa->next_usable;
+	}
+}
+
+void
+delegpt_add_to_result_list(struct delegpt* dp, struct delegpt_addr* a)
+{
+	if(delegpt_addr_on_result_list(dp, a))
+		return;
+	delegpt_usable_list_remove_addr(dp, a);
+	a->next_result = dp->result_list;
+	dp->result_list = a;
 }
 
 void 
@@ -620,6 +661,7 @@ int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, uint8_t lame,
 	}
 	ns->next = dp->nslist;
 	dp->nslist = ns;
+	ns->cache_lookup_count = 0;
 	ns->resolved = 0;
 	ns->got4 = 0;
 	ns->got6 = 0;
