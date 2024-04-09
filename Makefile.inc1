@@ -2079,8 +2079,8 @@ update: .PHONY
 
 # ELF Tool Chain libraries are needed for ELF tools and dtrace tools.
 # r296685 fix cross-endian objcopy
-.if ${BOOTSTRAPPING} < 400000
-_elftoolchain_libs= lib/libelf lib/libdwarf lib/libzstd
+.if ${BOOTSTRAPPING} < 200000
+_elftoolchain_libs= lib/libelf lib/libdwarf
 .endif
 
 # libnv and libl are both requirements for config(8), which is an unconditional
