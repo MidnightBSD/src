@@ -2079,8 +2079,8 @@ update: .PHONY
 
 # ELF Tool Chain libraries are needed for ELF tools and dtrace tools.
 # r296685 fix cross-endian objcopy
-.if ${BOOTSTRAPPING} < 200000
-_elftoolchain_libs= lib/libelf lib/libdwarf
+.if ${BOOTSTRAPPING} < 400000
+_elftoolchain_libs= lib/libelf lib/libdwarf lib/libzstd
 .endif
 
 # libnv and libl are both requirements for config(8), which is an unconditional
@@ -2683,6 +2683,7 @@ _prebuild_libs=	${_kerberos5_lib_libasn1} \
 		lib/libfigpar \
 		${_lib_libgssapi} \
 		lib/libkiconv lib/libkvm lib/liblzma lib/libmd lib/libnv \
+		lib/libzstd \
 		${_lib_casper} \
 		lib/ncurses/ncurses \
 		lib/libopie lib/libpam/libpam ${_lib_libthr} \
@@ -2745,6 +2746,7 @@ _lib_casper=	lib/libcasper
 lib/libpjdlog__L: lib/libutil__L
 lib/libcasper__L: lib/libnv__L
 lib/liblzma__L: lib/libmd__L lib/libthr__L
+lib/libzstd__L: lib/libthr__L
 
 _generic_libs=	${_cddl_lib} gnu/lib ${_kerberos5_lib} lib ${_secure_lib} usr.bin/lex/lib
 .if ${MK_IPFILTER} != "no"
