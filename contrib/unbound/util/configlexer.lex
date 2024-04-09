@@ -589,8 +589,8 @@ proxy-protocol-port{COLON}	{ YDVAR(1, VAR_PROXY_PROTOCOL_PORT) }
 	if(--num_args == 0) { BEGIN(INITIAL); }
 	else		    { BEGIN(val); }
 }
-<quotedstring>{DQANY}*  { LEXOUT(("STR(%s) ", yytext)); yymore(); }
-<quotedstring>{NEWLINE} { yyerror("newline inside quoted string, no end \"");
+<quotedstring>{DQANY}*  { LEXOUT(("STR(%s) ", ub_c_text)); yymore(); }
+<quotedstring>{NEWLINE} { ub_c_error("newline inside quoted string, no end \""); 
 			  cfg_parser->line++; BEGIN(INITIAL); }
 <quotedstring>\" {
         LEXOUT(("QE "));
@@ -610,8 +610,8 @@ proxy-protocol-port{COLON}	{ YDVAR(1, VAR_PROXY_PROTOCOL_PORT) }
 	if(--num_args == 0) { BEGIN(INITIAL); }
 	else		    { BEGIN(val); }
 }
-<singlequotedstr>{SQANY}*  { LEXOUT(("STR(%s) ", yytext)); yymore(); }
-<singlequotedstr>{NEWLINE} { yyerror("newline inside quoted string, no end '");
+<singlequotedstr>{SQANY}*  { LEXOUT(("STR(%s) ", ub_c_text)); yymore(); }
+<singlequotedstr>{NEWLINE} { ub_c_error("newline inside quoted string, no end '"); 
 			     cfg_parser->line++; BEGIN(INITIAL); }
 <singlequotedstr>\' {
         LEXOUT(("SQE "));
@@ -625,8 +625,8 @@ proxy-protocol-port{COLON}	{ YDVAR(1, VAR_PROXY_PROTOCOL_PORT) }
 }
 
 	/* include: directive */
-<INITIAL,val>include{COLON}	{
-	LEXOUT(("v(%s) ", yytext)); inc_prev = YYSTATE; BEGIN(include); }
+<INITIAL,val>include{COLON}	{ 
+	LEXOUT(("v(%s) ", ub_c_text)); inc_prev = YYSTATE; BEGIN(include); }
 <include><<EOF>>	{
         ub_c_error("EOF inside include directive");
         BEGIN(inc_prev);
@@ -643,8 +643,8 @@ proxy-protocol-port{COLON}	{ YDVAR(1, VAR_PROXY_PROTOCOL_PORT) }
         ub_c_error("EOF inside quoted string");
         BEGIN(inc_prev);
 }
-<include_quoted>{DQANY}*	{ LEXOUT(("ISTR(%s) ", yytext)); yymore(); }
-<include_quoted>{NEWLINE}	{ yyerror("newline before \" in include name");
+<include_quoted>{DQANY}*	{ LEXOUT(("ISTR(%s) ", ub_c_text)); yymore(); }
+<include_quoted>{NEWLINE}	{ ub_c_error("newline before \" in include name"); 
 				  cfg_parser->line++; BEGIN(inc_prev); }
 <include_quoted>\"	{
 	LEXOUT(("IQE "));
@@ -700,7 +700,7 @@ proxy-protocol-port{COLON}	{ YDVAR(1, VAR_PROXY_PROTOCOL_PORT) }
 	return (VAR_FORCE_TOPLEVEL);
 }
 
-<val>{UNQUOTEDLETTER}*	{ LEXOUT(("unquotedstr(%s) ", yytext));
+<val>{UNQUOTEDLETTER}*	{ LEXOUT(("unquotedstr(%s) ", ub_c_text)); 
 			if(--num_args == 0) { BEGIN(INITIAL); }
 			ub_c_lval.str = strdup(ub_c_text); return STRING_ARG; }
 
