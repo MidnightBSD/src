@@ -1,4 +1,6 @@
+#
 # Please see the file src/etc/mtree/README before making changes to this file.
+#
 
 /set type=dir uname=root gname=wheel mode=0755
 .
@@ -6,6 +8,8 @@
     ..
     include
         private
+            bsddialog
+            ..
             bsdstat
             ..
             event
@@ -71,10 +75,6 @@
         ..
         libxo
             encoder
-            ..
-        ..
-        perl5
-            5.36.1
             ..
         ..
     ..
