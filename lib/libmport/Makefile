@@ -27,6 +27,6 @@ WARNS=	3
 
 MK_PROFILE=no
 
-LIBADD=	md archive bz2 lzma z fetch sqlite3 ucl pthread util
+LIBADD=	md archive bz2 lzma z fetch sqlite3 ucl pthread util zstd
 
 .include <bsd.lib.mk>

@@ -18,6 +18,7 @@ DIRDEPS = \
 	lib/libthr \
 	lib/libucl \
 	lib/libz \
+	lib/libzstd \
 	lib/msun \
 	secure/lib/libcrypto \
 	secure/lib/libssl \
