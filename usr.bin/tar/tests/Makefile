@@ -1,5 +1,7 @@
 PACKAGE=	tests
 
+WARNS?=		3
+
 _LIBARCHIVEDIR=	${SRCTOP}/contrib/libarchive
 
 ATF_TESTS_SH+=	functional_test
