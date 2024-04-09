@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-present, Yann Collet, Facebook, Inc.
+ * Copyright (c) Yann Collet, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under both the BSD-style license (found in the
@@ -10,9 +10,10 @@
 
 
 /* ======   Dependencies   ======= */
-#include <stddef.h>  /* size_t */
+#include "zstd_deps.h" /* size_t */
+#include "debug.h"     /* assert */
+#include "zstd_internal.h"  /* ZSTD_customMalloc, ZSTD_customFree */
 #include "pool.h"
-#include "zstd_internal.h"  /* ZSTD_malloc, ZSTD_free */
 
 /* ======   Compiler specifics   ====== */
 #if defined(_MSC_VER)
@@ -33,8 +34,9 @@ typedef struct POOL_job_s {
 struct POOL_ctx_s {
     ZSTD_customMem customMem;
     /* Keep track of the threads */
-    ZSTD_pthread_t *threads;
-    size_t numThreads;
+    ZSTD_pthread_t* threads;
+    size_t threadCapacity;
+    size_t threadLimit;
 
     /* The queue is a circular buffer */
     POOL_job *queue;
@@ -58,10 +60,10 @@ struct POOL_ctx_s {
 };
 
 /* POOL_thread() :
-   Work thread for the thread pool.
-   Waits for jobs and executes them.
-   @returns : NULL on failure else non-null.
-*/
+ * Work thread for the thread pool.
+ * Waits for jobs and executes them.
+ * @returns : NULL on failure else non-null.
+ */
 static void* POOL_thread(void* opaque) {
     POOL_ctx* const ctx = (POOL_ctx*)opaque;
     if (!ctx) { return NULL; }
@@ -69,64 +71,79 @@ static void* POOL_thread(void* opaque) {
         /* Lock the mutex and wait for a non-empty queue or until shutdown */
         ZSTD_pthread_mutex_lock(&ctx->queueMutex);
 
-        while (ctx->queueEmpty && !ctx->shutdown) {
+        while ( ctx->queueEmpty
+            || (ctx->numThreadsBusy >= ctx->threadLimit) ) {
+            if (ctx->shutdown) {
+                /* even if !queueEmpty, (possible if numThreadsBusy >= threadLimit),
+                 * a few threads will be shutdown while !queueEmpty,
+                 * but enough threads will remain active to finish the queue */
+                ZSTD_pthread_mutex_unlock(&ctx->queueMutex);
+                return opaque;
+            }
             ZSTD_pthread_cond_wait(&ctx->queuePopCond, &ctx->queueMutex);
-        }
-        /* empty => shutting down: so stop */
-        if (ctx->queueEmpty) {
-            ZSTD_pthread_mutex_unlock(&ctx->queueMutex);
-            return opaque;
         }
         /* Pop a job off the queue */
         {   POOL_job const job = ctx->queue[ctx->queueHead];
             ctx->queueHead = (ctx->queueHead + 1) % ctx->queueSize;
             ctx->numThreadsBusy++;
-            ctx->queueEmpty = ctx->queueHead == ctx->queueTail;
+            ctx->queueEmpty = (ctx->queueHead == ctx->queueTail);
             /* Unlock the mutex, signal a pusher, and run the job */
-            ZSTD_pthread_mutex_unlock(&ctx->queueMutex);
             ZSTD_pthread_cond_signal(&ctx->queuePushCond);
+            ZSTD_pthread_mutex_unlock(&ctx->queueMutex);
 
             job.function(job.opaque);
 
             /* If the intended queue size was 0, signal after finishing job */
+            ZSTD_pthread_mutex_lock(&ctx->queueMutex);
+            ctx->numThreadsBusy--;
             if (ctx->queueSize == 1) {
-                ZSTD_pthread_mutex_lock(&ctx->queueMutex);
-                ctx->numThreadsBusy--;
-                ZSTD_pthread_mutex_unlock(&ctx->queueMutex);
                 ZSTD_pthread_cond_signal(&ctx->queuePushCond);
-        }   }
+            }
+            ZSTD_pthread_mutex_unlock(&ctx->queueMutex);
+        }
     }  /* for (;;) */
-    /* Unreachable */
+    assert(0);  /* Unreachable */
+}
+
+/* ZSTD_createThreadPool() : public access point */
+POOL_ctx* ZSTD_createThreadPool(size_t numThreads) {
+    return POOL_create (numThreads, 0);
 }
 
 POOL_ctx* POOL_create(size_t numThreads, size_t queueSize) {
     return POOL_create_advanced(numThreads, queueSize, ZSTD_defaultCMem);
 }
 
-POOL_ctx* POOL_create_advanced(size_t numThreads, size_t queueSize, ZSTD_customMem customMem) {
+POOL_ctx* POOL_create_advanced(size_t numThreads, size_t queueSize,
+                               ZSTD_customMem customMem)
+{
     POOL_ctx* ctx;
-    /* Check the parameters */
+    /* Check parameters */
     if (!numThreads) { return NULL; }
     /* Allocate the context and zero initialize */
-    ctx = (POOL_ctx*)ZSTD_calloc(sizeof(POOL_ctx), customMem);
+    ctx = (POOL_ctx*)ZSTD_customCalloc(sizeof(POOL_ctx), customMem);
     if (!ctx) { return NULL; }
     /* Initialize the job queue.
-     * It needs one extra space since one space is wasted to differentiate empty
-     * and full queues.
+     * It needs one extra space since one space is wasted to differentiate
+     * empty and full queues.
      */
     ctx->queueSize = queueSize + 1;
-    ctx->queue = (POOL_job*)ZSTD_malloc(ctx->queueSize * sizeof(POOL_job), customMem);
+    ctx->queue = (POOL_job*)ZSTD_customMalloc(ctx->queueSize * sizeof(POOL_job), customMem);
     ctx->queueHead = 0;
     ctx->queueTail = 0;
     ctx->numThreadsBusy = 0;
     ctx->queueEmpty = 1;
-    (void)ZSTD_pthread_mutex_init(&ctx->queueMutex, NULL);
-    (void)ZSTD_pthread_cond_init(&ctx->queuePushCond, NULL);
-    (void)ZSTD_pthread_cond_init(&ctx->queuePopCond, NULL);
+    {
+        int error = 0;
+        error |= ZSTD_pthread_mutex_init(&ctx->queueMutex, NULL);
+        error |= ZSTD_pthread_cond_init(&ctx->queuePushCond, NULL);
+        error |= ZSTD_pthread_cond_init(&ctx->queuePopCond, NULL);
+        if (error) { POOL_free(ctx); return NULL; }
+    }
     ctx->shutdown = 0;
     /* Allocate space for the thread handles */
-    ctx->threads = (ZSTD_pthread_t*)ZSTD_malloc(numThreads * sizeof(ZSTD_pthread_t), customMem);
-    ctx->numThreads = 0;
+    ctx->threads = (ZSTD_pthread_t*)ZSTD_customMalloc(numThreads * sizeof(ZSTD_pthread_t), customMem);
+    ctx->threadCapacity = 0;
     ctx->customMem = customMem;
     /* Check for errors */
     if (!ctx->threads || !ctx->queue) { POOL_free(ctx); return NULL; }
@@ -134,11 +151,12 @@ POOL_ctx* POOL_create_advanced(size_t numThreads, size_t queueSize, ZSTD_customM
     {   size_t i;
         for (i = 0; i < numThreads; ++i) {
             if (ZSTD_pthread_create(&ctx->threads[i], NULL, &POOL_thread, ctx)) {
-                ctx->numThreads = i;
+                ctx->threadCapacity = i;
                 POOL_free(ctx);
                 return NULL;
         }   }
-        ctx->numThreads = numThreads;
+        ctx->threadCapacity = numThreads;
+        ctx->threadLimit = numThreads;
     }
     return ctx;
 }
@@ -156,8 +174,8 @@ static void POOL_join(POOL_ctx* ctx) {
     ZSTD_pthread_cond_broadcast(&ctx->queuePopCond);
     /* Join all of the threads */
     {   size_t i;
-        for (i = 0; i < ctx->numThreads; ++i) {
-            ZSTD_pthread_join(ctx->threads[i], NULL);
+        for (i = 0; i < ctx->threadCapacity; ++i) {
+            ZSTD_pthread_join(ctx->threads[i], NULL);  /* note : could fail */
     }   }
 }
 
@@ -167,35 +185,82 @@ void POOL_free(POOL_ctx *ctx) {
     ZSTD_pthread_mutex_destroy(&ctx->queueMutex);
     ZSTD_pthread_cond_destroy(&ctx->queuePushCond);
     ZSTD_pthread_cond_destroy(&ctx->queuePopCond);
-    ZSTD_free(ctx->queue, ctx->customMem);
-    ZSTD_free(ctx->threads, ctx->customMem);
-    ZSTD_free(ctx, ctx->customMem);
+    ZSTD_customFree(ctx->queue, ctx->customMem);
+    ZSTD_customFree(ctx->threads, ctx->customMem);
+    ZSTD_customFree(ctx, ctx->customMem);
 }
 
-size_t POOL_sizeof(POOL_ctx *ctx) {
+void ZSTD_freeThreadPool (ZSTD_threadPool* pool) {
+  POOL_free (pool);
+}
+
+size_t POOL_sizeof(const POOL_ctx* ctx) {
     if (ctx==NULL) return 0;  /* supports sizeof NULL */
     return sizeof(*ctx)
         + ctx->queueSize * sizeof(POOL_job)
-        + ctx->numThreads * sizeof(ZSTD_pthread_t);
+        + ctx->threadCapacity * sizeof(ZSTD_pthread_t);
+}
+
+
+/* @return : 0 on success, 1 on error */
+static int POOL_resize_internal(POOL_ctx* ctx, size_t numThreads)
+{
+    if (numThreads <= ctx->threadCapacity) {
+        if (!numThreads) return 1;
+        ctx->threadLimit = numThreads;
+        return 0;
+    }
+    /* numThreads > threadCapacity */
+    {   ZSTD_pthread_t* const threadPool = (ZSTD_pthread_t*)ZSTD_customMalloc(numThreads * sizeof(ZSTD_pthread_t), ctx->customMem);
+        if (!threadPool) return 1;
+        /* replace existing thread pool */
+        ZSTD_memcpy(threadPool, ctx->threads, ctx->threadCapacity * sizeof(*threadPool));
+        ZSTD_customFree(ctx->threads, ctx->customMem);
+        ctx->threads = threadPool;
+        /* Initialize additional threads */
+        {   size_t threadId;
+            for (threadId = ctx->threadCapacity; threadId < numThreads; ++threadId) {
+                if (ZSTD_pthread_create(&threadPool[threadId], NULL, &POOL_thread, ctx)) {
+                    ctx->threadCapacity = threadId;
+                    return 1;
+            }   }
+    }   }
+    /* successfully expanded */
+    ctx->threadCapacity = numThreads;
+    ctx->threadLimit = numThreads;
+    return 0;
+}
+
+/* @return : 0 on success, 1 on error */
+int POOL_resize(POOL_ctx* ctx, size_t numThreads)
+{
+    int result;
+    if (ctx==NULL) return 1;
+    ZSTD_pthread_mutex_lock(&ctx->queueMutex);
+    result = POOL_resize_internal(ctx, numThreads);
+    ZSTD_pthread_cond_broadcast(&ctx->queuePopCond);
+    ZSTD_pthread_mutex_unlock(&ctx->queueMutex);
+    return result;
 }
 
 /**
  * Returns 1 if the queue is full and 0 otherwise.
  *
- * If the queueSize is 1 (the pool was created with an intended queueSize of 0),
- * then a queue is empty if there is a thread free and no job is waiting.
+ * When queueSize is 1 (pool was created with an intended queueSize of 0),
+ * then a queue is empty if there is a thread free _and_ no job is waiting.
  */
 static int isQueueFull(POOL_ctx const* ctx) {
     if (ctx->queueSize > 1) {
         return ctx->queueHead == ((ctx->queueTail + 1) % ctx->queueSize);
     } else {
-        return ctx->numThreadsBusy == ctx->numThreads ||
+        return (ctx->numThreadsBusy == ctx->threadLimit) ||
                !ctx->queueEmpty;
     }
 }
 
 
-static void POOL_add_internal(POOL_ctx* ctx, POOL_function function, void *opaque)
+static void
+POOL_add_internal(POOL_ctx* ctx, POOL_function function, void *opaque)
 {
     POOL_job const job = {function, opaque};
     assert(ctx != NULL);
@@ -245,22 +310,29 @@ int POOL_tryAdd(POOL_ctx* ctx, POOL_function function, void* opaque)
 struct POOL_ctx_s {
     int dummy;
 };
-static POOL_ctx g_ctx;
+static POOL_ctx g_poolCtx;
 
 POOL_ctx* POOL_create(size_t numThreads, size_t queueSize) {
     return POOL_create_advanced(numThreads, queueSize, ZSTD_defaultCMem);
 }
 
-POOL_ctx* POOL_create_advanced(size_t numThreads, size_t queueSize, ZSTD_customMem customMem) {
+POOL_ctx*
+POOL_create_advanced(size_t numThreads, size_t queueSize, ZSTD_customMem customMem)
+{
     (void)numThreads;
     (void)queueSize;
     (void)customMem;
-    return &g_ctx;
+    return &g_poolCtx;
 }
 
 void POOL_free(POOL_ctx* ctx) {
-    assert(!ctx || ctx == &g_ctx);
+    assert(!ctx || ctx == &g_poolCtx);
     (void)ctx;
+}
+
+int POOL_resize(POOL_ctx* ctx, size_t numThreads) {
+    (void)ctx; (void)numThreads;
+    return 0;
 }
 
 void POOL_add(POOL_ctx* ctx, POOL_function function, void* opaque) {
@@ -274,9 +346,9 @@ int POOL_tryAdd(POOL_ctx* ctx, POOL_function function, void* opaque) {
     return 1;
 }
 
-size_t POOL_sizeof(POOL_ctx* ctx) {
+size_t POOL_sizeof(const POOL_ctx* ctx) {
     if (ctx==NULL) return 0;  /* supports sizeof NULL */
-    assert(ctx == &g_ctx);
+    assert(ctx == &g_poolCtx);
     return sizeof(*ctx);
 }
 

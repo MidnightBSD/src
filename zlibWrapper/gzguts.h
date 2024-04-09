@@ -1,5 +1,5 @@
 /* gzguts.h contains minimal changes required to be compiled with zlibWrapper:
- * - #include "zlib.h" was changed to #include "zstd_zlibwrapper.h"        
+ * - #include "zlib.h" was changed to #include "zstd_zlibwrapper.h"
  * - gz_statep was converted to union to work with -Wstrict-aliasing=1      */
 
 /* gzguts.h -- zlib internal header definitions for gz* operations
@@ -38,13 +38,15 @@
 
 #ifdef _WIN32
 #  include <stddef.h>
+#else
+#  include <unistd.h>
 #endif
 
 #if defined(__TURBOC__) || defined(_MSC_VER) || defined(_WIN32)
 #  include <io.h>
 #endif
 
-#if defined(_WIN32) || defined(__CYGWIN__)
+#if defined(_WIN32)
 #  define WIDECHAR
 #endif
 

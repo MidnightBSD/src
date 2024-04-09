@@ -6,6 +6,8 @@
  * For conditions of distribution and use, see http://www.zlib.net/zlib_license.html
  */
 
+#include <assert.h>
+
 #include "gzguts.h"
 
 /* Local functions */
@@ -24,7 +26,7 @@ local int gz_init(state)
     z_streamp strm = &(state.state->strm);
 
     /* allocate input buffer (double size for gzprintf) */
-    state.state->in = (unsigned char *)malloc(state.state->want << 1);
+    state.state->in = (unsigned char*)malloc(state.state->want << 1);
     if (state.state->in == NULL) {
         gz_error(state, Z_MEM_ERROR, "out of memory");
         return -1;
@@ -33,7 +35,7 @@ local int gz_init(state)
     /* only need output buffer and deflate state if compressing */
     if (!state.state->direct) {
         /* allocate output buffer */
-        state.state->out = (unsigned char *)malloc(state.state->want);
+        state.state->out = (unsigned char*)malloc(state.state->want);
         if (state.state->out == NULL) {
             free(state.state->in);
             gz_error(state, Z_MEM_ERROR, "out of memory");
@@ -256,7 +258,7 @@ int ZEXPORT gzwrite(file, buf, len)
     /* get internal structure */
     if (file == NULL)
         return 0;
-    state = (gz_statep)file;
+    state.file = file;
 
     /* check that we're writing and that there's no error */
     if (state.state->mode != GZ_WRITE || state.state->err != Z_OK)
@@ -284,9 +286,10 @@ z_size_t ZEXPORT gzfwrite(buf, size, nitems, file)
     gz_statep state;
 
     /* get internal structure */
+    assert(size != 0);
     if (file == NULL)
         return 0;
-    state = (gz_statep)file;
+    state.file = file;
 
     /* check that we're writing and that there's no error */
     if (state.state->mode != GZ_WRITE || state.state->err != Z_OK)
@@ -294,7 +297,7 @@ z_size_t ZEXPORT gzfwrite(buf, size, nitems, file)
 
     /* compute bytes to read -- error on overflow */
     len = nitems * size;
-    if (size && len / size != nitems) {
+    if (size && (len / size != nitems)) {
         gz_error(state, Z_STREAM_ERROR, "request does not fit in a size_t");
         return 0;
     }
@@ -316,7 +319,7 @@ int ZEXPORT gzputc(file, c)
     /* get internal structure */
     if (file == NULL)
         return -1;
-    state = (gz_statep)file;
+    state.file = file;
     strm = &(state.state->strm);
 
     /* check that we're writing and that there's no error */
@@ -363,7 +366,7 @@ int ZEXPORT gzputs(file, str)
     /* get internal structure */
     if (file == NULL)
         return -1;
-    state = (gz_statep)file;
+    state.file = file;
 
     /* check that we're writing and that there's no error */
     if (state.state->mode != GZ_WRITE || state.state->err != Z_OK)
@@ -390,7 +393,7 @@ int ZEXPORTVA gzvprintf(gzFile file, const char *format, va_list va)
     /* get internal structure */
     if (file == NULL)
         return Z_STREAM_ERROR;
-    state = (gz_statep)file;
+    state.file = file;
     strm = &(state.state->strm);
 
     /* check that we're writing and that there's no error */
@@ -562,7 +565,7 @@ int ZEXPORT gzflush(file, flush)
     /* get internal structure */
     if (file == NULL)
         return Z_STREAM_ERROR;
-    state = (gz_statep)file;
+    state.file = file;
 
     /* check that we're writing and that there's no error */
     if (state.state->mode != GZ_WRITE || state.state->err != Z_OK)
@@ -596,7 +599,7 @@ int ZEXPORT gzsetparams(file, level, strategy)
     /* get internal structure */
     if (file == NULL)
         return Z_STREAM_ERROR;
-    state = (gz_statep)file;
+    state.file = file;
     strm = &(state.state->strm);
 
     /* check that we're writing and that there's no error */
@@ -636,7 +639,7 @@ int ZEXPORT gzclose_w(file)
     /* get internal structure */
     if (file == NULL)
         return Z_STREAM_ERROR;
-    state = (gz_statep)file;
+    state.file = file;
 
     /* check that we're writing */
     if (state.state->mode != GZ_WRITE)
