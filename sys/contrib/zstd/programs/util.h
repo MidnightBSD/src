@@ -748,7 +748,7 @@ failed:
     }
 }
 
-#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
+#elif defined(__MidnightBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
 
 /* Use apple-provided syscall
  * see: man 3 sysctl */
