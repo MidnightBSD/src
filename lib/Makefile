@@ -23,9 +23,12 @@ SUBDIR_BOOTSTRAP= \
 	libblocksruntime
 
 # The main list; please keep these sorted alphabetically.
+# The only exception is sqlite3: we place it at the start of the list since it
+# takes a long time to build and starting it first improves parallelism.
 
 SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	.WAIT \
+	libsqlite3 \
 	geom \
 	libalias \
 	libarchive \
@@ -86,7 +89,6 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	${_librtld_db} \
 	libsbuf \
 	libsmb \
-	libsqlite3 \
 	libstdbuf \
 	libstdthreads \
 	libsysdecode \
@@ -109,7 +111,7 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 # libraries, those libraries should be listed as build order dependencies here.
 
 SUBDIR_DEPEND_geom=	libufs
-SUBDIR_DEPEND_libarchive= libz libbz2 libexpat liblzma libmd
+SUBDIR_DEPEND_libarchive= libz libbz2 libexpat liblzma libmd libzstd
 SUBDIR_DEPEND_libauditdm= libbsm
 SUBDIR_DEPEND_libbsnmp= ${_libnetgraph}
 SUBDIR_DEPEND_libc++:= libcxxrt
@@ -125,7 +127,7 @@ SUBDIR_DEPEND_libgeom= libexpat libsbuf
 SUBDIR_DEPEND_librpcsec_gss= libgssapi
 SUBDIR_DEPEND_libmagic= libz
 SUBDIR_DEPEND_libmemstat= libkvm
-SUBDIR_DEPEND_libmport= libmd libarchive libbz2 liblzma libz libfetch libsqlite3 libucl
+SUBDIR_DEPEND_libmport= libmd libarchive libbz2 liblzma libz libfetch libsqlite3 libucl libzstd
 SUBDIR_DEPEND_libmsearch= libsqlite3 libmagic libz
 SUBDIR_DEPEND_libopie= libmd
 SUBDIR_DEPEND_libpam= libcrypt libopie ${_libradius} librpcsvc libtacplus libutil ${_libypclnt} ${_libcom_err} 
