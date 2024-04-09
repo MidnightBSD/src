@@ -10,9 +10,14 @@ SRCS=	entropy_common.c \
 	fse_compress.c \
 	huf_compress.c \
 	zstd_compress.c \
+	zstd_compress_literals.c \
+	zstd_compress_sequences.c \
+	zstd_compress_superblock.c \
 	zstdmt_compress.c \
 	huf_decompress.c \
+	zstd_ddict.c \
 	zstd_decompress.c \
+	zstd_decompress_block.c \
 	zbuff_common.c \
 	zbuff_compress.c \
 	zbuff_decompress.c \
@@ -23,12 +28,20 @@ SRCS=	entropy_common.c \
 	zstd_lazy.c \
 	zstd_ldm.c \
 	zstd_opt.c \
-	zstd_double_fast.c
+	zstd_double_fast.c \
+	debug.c \
+	hist.c \
+	fastcover.c
 WARNS?=	2
 INCS=	zstd.h
 CFLAGS+=	-I${ZSTDDIR}/lib -I${ZSTDDIR}/lib/common -DXXH_NAMESPACE=ZSTD_ \
-		-DZSTD_MULTITHREAD=1
+		-DZSTD_MULTITHREAD=1 -fvisibility=hidden
 LIBADD=	pthread
+
+# ZSTD_ASM_SUPPORTED is 0 on FreeBSD but 1 on macOS and Linux. Since we build
+# this as a bootstrap library and don't include any assembly sources in SRCS,
+# explicitly disable assembly.
+CFLAGS+=	-DZSTD_DISABLE_ASM
 
 PRIVATELIB=	yes
 
@@ -37,9 +50,17 @@ ZSTDDIR=	${SRCTOP}/sys/contrib/zstd
 	${ZSTDDIR}/lib/decompress ${ZSTDDIR}/lib/deprecated \
 	${ZSTDDIR}/lib/dictBuilder ${ZSTDDIR}/lib
 
-# Work around for LLVM bug 35023, https://bugs.llvm.org/show_bug.cgi?id=35023
-.if ${MACHINE_ARCH:Marm*} != ""
-CFLAGS.zstd_compress.c+= -O0
+.include <bsd.compiler.mk>
+
+CFLAGS.huf_decompress.c+=	${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+
+# https://github.com/facebook/zstd/commit/812e8f2a [zstd 1.4.1]
+# "Note that [GCC] autovectorization still does not do a good job on the
+# optimized version, so it's turned off via attribute and flag.  I found
+# that neither attribute nor command-line flag were entirely successful in
+# turning off vectorization, which is why there were both."
+.if ${COMPILER_TYPE} == "gcc"
+CFLAGS.zstd_decompress_block.c+=	-fno-tree-vectorize
 .endif
 
 # Work around lack of __bswap[sd]i2() intrinsics on riscv.  Probably should be
