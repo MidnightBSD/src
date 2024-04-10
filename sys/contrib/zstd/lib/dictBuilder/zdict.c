@@ -1047,6 +1047,9 @@ static size_t ZDICT_addEntropyTablesFromBuffer_advanced(
 *   Warning : `samplesBuffer` must be followed by noisy guard band !!!
 *   @return : size of dictionary, or an error code which can be tested with ZDICT_isError()
 */
+/* Begin FreeBSD - This symbol is needed by dll-linked CLI zstd(1). */
+ZSTDLIB_API
+/* End FreeBSD */
 static size_t ZDICT_trainFromBuffer_unsafe_legacy(
                             void* dictBuffer, size_t maxDictSize,
                             const void* samplesBuffer, const size_t* samplesSizes, unsigned nbSamples,

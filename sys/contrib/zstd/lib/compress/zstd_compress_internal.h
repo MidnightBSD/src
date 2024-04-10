@@ -1448,6 +1448,9 @@ size_t ZSTD_referenceExternalSequences(ZSTD_CCtx* cctx, rawSeq* seq, size_t nbSe
 
 /** ZSTD_cycleLog() :
  *  condition for correct operation : hashLog > 1 */
+/* Begin FreeBSD - This symbol is needed by dll-linked CLI zstd(1). */
+ZSTDLIB_API
+/* End FreeBSD */
 U32 ZSTD_cycleLog(U32 hashLog, ZSTD_strategy strat);
 
 /** ZSTD_CCtx_trace() :

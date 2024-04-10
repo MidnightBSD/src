@@ -695,6 +695,9 @@ typedef uint64_t XXH64_hash_t;
  * @see
  *    XXH64_createState(), XXH64_update(), XXH64_digest(): Streaming version.
  */
+/* Begin FreeBSD - This symbol is needed by dll-linked CLI zstd(1). */
+__attribute__((visibility ("default")))
+/* End FreeBSD */
 XXH_PUBLIC_API XXH64_hash_t XXH64(const void* input, size_t length, XXH64_hash_t seed);
 
 /*******   Streaming   *******/
