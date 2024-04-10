@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014, 2017 Mark Johnston <markj@FreeBSD.org>
  * Copyright (c) 2017 Conrad Meyer <cem@FreeBSD.org>
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_gzio.h"
 #include "opt_zstdio.h"
 
@@ -116,6 +115,13 @@ gz_init(size_t maxiosize, int level)
 	s->gz_stream.opaque = NULL;
 	s->gz_stream.next_in = Z_NULL;
 	s->gz_stream.avail_in = 0;
+
+	if (level != Z_DEFAULT_COMPRESSION) {
+		if (level < Z_BEST_SPEED)
+			level = Z_BEST_SPEED;
+		else if (level > Z_BEST_COMPRESSION)
+			level = Z_BEST_COMPRESSION;
+	}
 
 	error = deflateInit2(&s->gz_stream, level, Z_DEFLATED, -MAX_WBITS,
 	    DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY);
@@ -290,13 +296,13 @@ zstdio_init(size_t maxiosize, int level)
 		goto out;
 	}
 
-	rc = ZSTD_CCtx_setParameter(dump_compressor, ZSTD_p_checksumFlag, 1);
+	rc = ZSTD_CCtx_setParameter(dump_compressor, ZSTD_c_checksumFlag, 1);
 	if (ZSTD_isError(rc)) {
 		printf("%s: error setting checksumFlag: %s\n", __func__,
 		    ZSTD_getErrorName(rc));
 		goto out;
 	}
-	rc = ZSTD_CCtx_setParameter(dump_compressor, ZSTD_p_compressionLevel,
+	rc = ZSTD_CCtx_setParameter(dump_compressor, ZSTD_c_compressionLevel,
 	    level);
 	if (ZSTD_isError(rc)) {
 		printf("%s: error setting compressLevel: %s\n", __func__,
@@ -330,9 +336,14 @@ zstdio_reset(void *stream)
 	size_t res;
 
 	s = stream;
-	res = ZSTD_resetCStream(s->zst_stream, 0);
+	res = ZSTD_CCtx_reset(s->zst_stream, ZSTD_reset_session_only);
 	if (ZSTD_isError(res))
 		panic("%s: could not reset stream %p: %s\n", __func__, s,
+		    ZSTD_getErrorName(res));
+	res = ZSTD_CCtx_setPledgedSrcSize(s->zst_stream,
+	    ZSTD_CONTENTSIZE_UNKNOWN);
+	if (ZSTD_isError(res))
+		panic("%s: could not set src size on %p: %s\n", __func__, s,
 		    ZSTD_getErrorName(res));
 
 	s->zst_off = 0;
