@@ -40,7 +40,6 @@ DBT
 **	This depends on the 4.4BSD db package.
 */
 
-
 struct udbent
 {
 	char	*udb_spec;		/* string version of spec */
@@ -88,7 +87,6 @@ struct udbent
 # define UDB_HESIOD	5	/* look up via hesiod */
 
 # define MAXUDBENT	10	/* maximum number of UDB entries */
-
 
 struct udb_option
 {

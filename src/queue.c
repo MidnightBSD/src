@@ -298,7 +298,6 @@ hash_q(p, h)
 #define FILE_SYS_BLKSIZE(i)	FILE_SYS(i).fs_blksize
 #define FILE_SYS_DEV(i)	FILE_SYS(i).fs_dev
 
-
 /*
 **  Current qf file field assignments:
 **
@@ -747,6 +746,8 @@ queueup(e, flags)
 			(void) sm_io_putc(tfp, SM_TIME_DEFAULT, 'D');
 		if (bitset(QINTBCC, q->q_flags))
 			(void) sm_io_putc(tfp, SM_TIME_DEFAULT, 'B');
+		if (bitset(QMXSECURE, q->q_flags))
+			(void) sm_io_putc(tfp, SM_TIME_DEFAULT, 'X');
 		if (q->q_alias != NULL &&
 		    bitset(QALIAS, q->q_alias->q_flags))
 			(void) sm_io_putc(tfp, SM_TIME_DEFAULT, 'A');
@@ -1639,7 +1640,6 @@ runqueue(forkflag, verbose, persistent, runall)
 			INCR_MOD(h, NumWorkGroups);
 		}
 	}
-
 
 #if SM_HEAP_CHECK
 	if (sm_debug_active(&DebugLeakQ, 1))
@@ -4514,6 +4514,10 @@ readqf(e, openonly)
 						qflags |= QINTBCC;
 						break;
 
+					  case 'X':
+						qflags |= QMXSECURE;
+						break;
+
 					  case QDYNMAILFLG:
 						qflags |= QDYNMAILER;
 						break;
@@ -5628,7 +5632,6 @@ unlockqueue(e)
 		sm_dprintf("unlockqueue(%s)\n",
 			e->e_id == NULL ? "NOQUEUE" : e->e_id);
 
-
 	/* if there is a lock file in the envelope, close it */
 	SM_CLOSE_FP(e->e_lockfp);
 
@@ -6385,7 +6388,6 @@ multiqueue_cache(basedir, blen, qg, qn, phash)
 	if (chkqdir(subdir, sff))	\
 		qg->qg_qpaths[qg->qg_numqueues].qp_subdirs |= flag;	\
 	else
-
 
 			CHKRSUBDIR("qf", QP_SUBQF);
 			CHKRSUBDIR("df", QP_SUBDF);
@@ -7268,7 +7270,6 @@ init_shm(qn, owner, hash)
 }
 #endif /* SM_CONF_SHM */
 
-
 /*
 **  SETUP_QUEUES -- set up all queue groups
 **
@@ -7367,7 +7368,6 @@ setup_queues(owner)
 	now = curtime();
 	for (i = 0; i < NumQueue && Queue[i] != NULL; i++)
 		Queue[i]->qg_nextrun = now;
-
 
 	if (UseMSP && OpMode != MD_TEST)
 	{
@@ -8970,7 +8970,6 @@ quarantine_queue_item(qgrp, qdir, e, reason)
 				     sm_errstring(save_errno));
 		failing = true;
 	}
-
 
 	/* Figure out the new filename */
 	newtype = (reason == NULL ? NORMQF_LETTER : QUARQF_LETTER);

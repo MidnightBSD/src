@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2013 Proofpoint, Inc. and its suppliers.
+ * Copyright (c) 1998-2013, 2023,2024 Proofpoint, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1983, 1995-1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -192,22 +192,29 @@ SM_UNUSED(static char SmailId[]) = "@(#)$Id: sendmail.h,v 8.1104 2013-11-22 20:5
 
 #if STARTTLS
 # if DANE
+#  define DANE_FP_LOG_LEN	256
+#  define DANE_FP_DBG_LEN	4096
 struct dane_vrfy_ctx_S
 {
+	/* see tls.h: values for DANE option and dane_vrfy_chk */
 	int		 dane_vrfy_chk;
 	int		 dane_vrfy_res;
 	int		 dane_vrfy_port;
+
+	/* use OpenSSL functions for DANE checks? */
+	bool		 dane_vrfy_dane_enabled;
 
 	/* look up TLSA RRs, SNI unless dane_tlsa_sni is set. */
 	char		*dane_vrfy_host;
 	char		*dane_vrfy_sni;	/* if not NULL: use for SNI */
 
-			/* full fingerprint in printable format */
-	char		 dane_vrfy_fp[1024];
+	/* fingerprint in printable format - just for logging */
+	char		 dane_vrfy_fp[DANE_FP_LOG_LEN];
 };
 
 typedef struct dane_tlsa_S dane_tlsa_T, *dane_tlsa_P;
 typedef struct dane_vrfy_ctx_S dane_vrfy_ctx_T, *dane_vrfy_ctx_P;
+
 # endif /* DANE */
 
 /* TLS information context */
@@ -399,6 +406,18 @@ struct address
 
 typedef struct address ADDRESS;
 
+
+/*
+**  Note: only some of the flags are saved in the queue;
+**  the code in queue.c does not use the actual value but maps each flag
+**  to/from an associated character.
+**  If the values would not change then those could be stored/retrieved
+**  directly (applying a mask to select those flags which should be kep) --
+**  the mapping to/from characters provides a "defined" external interface
+**  provided those mappings are kept (and if an old mapping is removed then
+**  it should be kept as comment so it is not reused "too soon").
+*/
+
 /* bit values for q_flags */
 #define QGOODUID	0x00000001	/* the q_uid q_gid fields are good */
 #define QPRIMARY	0x00000002	/* set from RCPT or argv */
@@ -420,15 +439,18 @@ typedef struct address ADDRESS;
 #define QBYNRELAY	0x00020000	/* DeliverBy: notify, relayed */
 #define QINTBCC		0x00040000	/* internal Bcc */
 #define QDYNMAILER	0x00080000	/* "dynamic mailer" */
-#define QSECURE		0x00100000	/* DNSSEC ok */
+#define QSECURE		0x00100000	/* DNSSEC ok for host lookup */
 #define QQUEUED		0x00200000	/* queued */
 #define QINTREPLY	0x00400000	/* internally rejected (delivery) */
+#define QMXSECURE	0x00800000	/* DNSSEC ok for MX lookup */
 #define QTHISPASS	0x40000000	/* temp: address set this pass */
 #define QRCPTOK		0x80000000	/* recipient() processed address */
 
 #define QDYNMAILFLG	'Y'
 
 #define Q_PINGFLAGS	(QPINGONSUCCESS|QPINGONFAILURE|QPINGONDELAY)
+
+#define QISSECURE(r) (0 != ((r)->q_flags & QSECURE))
 
 #if _FFR_RCPTFLAGS
 # define QMATCHFLAGS (QINTBCC|QDYNMAILER)
@@ -1141,7 +1163,7 @@ struct envelope
 	long		e_deliver_by;	/* deliver by */
 	int		e_dlvr_flag;	/* deliver by flag */
 	SM_RPOOL_T	*e_rpool;	/* resource pool for this envelope */
-	unsigned int	e_features;	/* server features */
+	unsigned long	e_features;	/* server features */
 #define ENHSC_LEN	11
 #if _FFR_MILTER_ENHSC
 	char		e_enhsc[ENHSC_LEN];	/* enhanced status code */
@@ -1176,8 +1198,8 @@ struct envelope
 #define EF_LOGSENDER	0x00008000L	/* need to log the sender */
 #define EF_NORECEIPT	0x00010000L	/* suppress all return-receipts */
 #define EF_HAS8BIT	0x00020000L	/* at least one 8-bit char in body */
-/* was: EF_NL_NOT_EOL	0x00040000L	* don't accept raw NL as EOLine */
-/* was: EF_CRLF_NOT_EOL	0x00080000L	* don't accept CR-LF as EOLine */
+/* was: EF_NL_NOT_EOL	0x00040000L	* don't accept raw LF as EOLine */
+/* was: EF_CRLF_NOT_EOL	0x00080000L	* don't accept CRLF as EOLine */
 #define EF_RET_PARAM	0x00100000L	/* RCPT command had RET argument */
 #define EF_HAS_DF	0x00200000L	/* set when data file is instantiated */
 #define EF_IS_MIME	0x00400000L	/* really is a MIME message */
@@ -1188,6 +1210,7 @@ struct envelope
 #define EF_UNSAFE	0x08000000L	/* unsafe: read from untrusted source */
 #define EF_TOODEEP	0x10000000L	/* message is nested too deep */
 #define EF_SECURE	0x20000000L	/* DNSSEC for currently parsed addr */
+#define EF_7BITBODY	0x40000000L	/* strip body to 7bit on input */
 
 #define DLVR_NOTIFY	0x01
 #define DLVR_RETURN	0x02
@@ -1439,8 +1462,8 @@ typedef union
 
 /* functions */
 extern int	getcanonname __P((char *, int, bool, int *));
-extern int	getmxrr __P((char *, char **, unsigned short *, unsigned int, int *, int *, int));
-extern char	*hostsignature __P((MAILER *, char *, bool));
+extern int	getmxrr __P((char *, char **, unsigned short *, unsigned int, int *, int *, int, int *));
+extern char	*hostsignature __P((MAILER *, char *, bool, unsigned long *));
 extern int	getfallbackmxrr __P((char *));
 
 /*
@@ -1614,7 +1637,6 @@ struct lssvalues
 };
 
 /* functions */
-extern bool	ldapmap_parseargs __P((MAP *, char *));
 extern void	ldapmap_set_defaults __P((char *));
 #endif /* LDAPMAP */
 
@@ -2366,6 +2388,11 @@ extern void	inittimeouts __P((char *, bool));
 # define tTd(flag, level)	(tTdvect[flag] >= (unsigned char)level)
 #else
 # define tTd(flag, level)	(tTdvect[flag] >= (unsigned char)level && !IntSig)
+# if _FFR_TESTS
+#  define TTD(flag, level)	(tTdvect[flag] >= (unsigned char)level && !IntSig)
+# else
+#  define TTD(flag, level)	false
+# endif
 #endif
 #define tTdlevel(flag)		(tTdvect[flag])
 
@@ -2609,9 +2636,9 @@ EXTERN char	*MemoryResource;/* memory resource to look up */
 #endif /* _FFR_MEMSTAT */
 EXTERN int	SuperSafe;	/* be extra careful, even if expensive */
 #if USE_EAI
-EXTERN int	SMTPUTF8;	/* enable SMTPUTF8 support */
+EXTERN int	SMTP_UTF8;	/* enable SMTPUTF8 support */
 #else
-# define SMTPUTF8	false
+# define SMTP_UTF8	false
 #endif
 EXTERN int	VendorCode;	/* vendor-specific operation enhancements */
 EXTERN int	Verbose;	/* set if blow-by-blow desired */
@@ -2848,7 +2875,7 @@ extern void	cleanup_shm __P((bool));
 #endif
 extern void	close_sendmail_pid __P((void));
 extern void	clrdaemon __P((void));
-extern void	collect __P((SM_FILE_T *, bool, HDR **, ENVELOPE *, bool));
+extern void	collect __P((SM_FILE_T *, int, HDR **, ENVELOPE *, bool));
 extern time_t	convtime __P((char *, int));
 extern char	**copyplist __P((char **, bool, SM_RPOOL_T *));
 extern void	copy_class __P((int, int));
@@ -3031,6 +3058,15 @@ extern bool	xtextok __P((char *));
 extern int	xunlink __P((char *));
 extern char	*xuntextify __P((char *));
 
+/* flags for collect() */
+#define SMTPMODE_NO	0
+#define SMTPMODE_LAX	0x01
+#define SMTPMODE_CRLF	0x02	/* CRLF.CRLF required for EOM */
+#define SMTPMODE_LF_421	0x04	/* bare LF: drop connection */
+#define SMTPMODE_CR_421	0x08	/* bare CR: drop connection */
+#define SMTPMODE_LF_SP	0x10	/* bare LF: replace with space */
+#define SMTPMODE_CR_SP	0x20	/* bare CR: replace with space */
+
 #define ASSIGN_IFDIFF(old, new)		\
 	do				\
 	{				\
@@ -3044,6 +3080,7 @@ extern char	*xuntextify __P((char *));
 
 #if USE_EAI
 extern bool	addr_is_ascii __P((const char *));
+extern bool	str_is_print __P((const char *));
 extern const char	*hn2alabel __P((const char *));
 #endif
 

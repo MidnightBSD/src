@@ -165,7 +165,6 @@ getrequests(e)
 #endif
 	extern ENVELOPE BlankEnvelope;
 
-
 	/* initialize data for function that generates queue ids */
 	init_qid_alg();
 	for (idx = 0; idx < NDaemons; idx++)
@@ -1867,7 +1866,7 @@ static struct dflags	DaemonFlags[] =
 	{ "NOCANON",		D_NOCANON	},
 	{ "NODANE",		D_NODANE	},
 	{ "NOETRN",		D_NOETRN	},
-	{ "NOSTS",		D_NOSTS	},
+	{ "NOSTS",		D_NOSTS		},
 	{ "NOTLS",		D_NOTLS		},
 	{ "ETRNONLY",		D_ETRNONLY	},
 	{ "OPTIONAL",		D_OPTIONAL	},
@@ -2179,7 +2178,7 @@ makeconnection(host, port, mci, e, enough
 #if DANE
 	SM_REQUIRE(ptlsa_flags != NULL);
 	tlsa_flags = *ptlsa_flags;
-	*ptlsa_flags &= ~(TLSAFLALWAYS|TLSAFLSECURE);
+	*ptlsa_flags &= ~TLSAFLADIP;
 #endif
 #if _FFR_M_ONLY_IPV4
 	if (bitnset(M_ONLY_IPV4, mci->mci_mailer->m_flags))
@@ -2391,7 +2390,7 @@ makeconnection(host, port, mci, e, enough
 			p = &host[strlen(host) - 1];
 #if DANE
 			if (tTd(16, 40))
-				sm_dprintf("makeconnection: tlsa_flags=%lX, host=%s\n",
+				sm_dprintf("makeconnection: tlsa_flags=%#lx, host=%s\n",
 					tlsa_flags, host);
 			if (DANEMODE(tlsa_flags) == DANE_SECURE
 # if DNSSEC_TEST
@@ -2414,13 +2413,16 @@ makeconnection(host, port, mci, e, enough
 
 				if (rr != NULL && rr->dns_r_h.ad == 1)
 				{
-					*ptlsa_flags |= DANE_SECURE;
+					*ptlsa_flags |= TLSAFLADIP;
 					if ((TLSAFLTEMP & *ptlsa_flags) != 0)
 					{
 						dns_free_data(rr);
 						rr = NULL;
 						return EX_TEMPFAIL;
 					}
+				}
+				if (rr != NULL)
+				{
 					hp = dns2he(rr, family);
 # if NETINET6
 					hs = hp;
@@ -2811,6 +2813,9 @@ gothostent:
 		if (setjmp(CtxConnectTimeout) == 0)
 		{
 			int i;
+#if _FFR_TESTS
+			int c_errno;
+#endif
 
 			if (e->e_ntries <= 0 && TimeOuts.to_iconnect != 0)
 				ev = sm_setevent(TimeOuts.to_iconnect,
@@ -2820,6 +2825,28 @@ gothostent:
 						 connecttimeout, 0);
 			else
 				ev = NULL;
+#if _FFR_TESTS
+			i = 0;
+			c_errno = 0;
+			if (tTd(77, 101)
+			    /* && AF_INET == addr.sin.sin_family */
+			    && ntohl(addr.sin.sin_addr.s_addr) >=
+				ntohl(inet_addr("255.255.255.1"))
+			    && ntohl(addr.sin.sin_addr.s_addr) <=
+				ntohl(inet_addr("255.255.255.255"))
+			   )
+			{
+				i = -1;
+				c_errno = ntohl(addr.sin.sin_addr.s_addr) -
+					ntohl(inet_addr("255.255.255.0"));
+				sm_dprintf("hack: fail connection=%d, ip=%#x, lower=%#x\n",
+					c_errno
+					, ntohl(addr.sin.sin_addr.s_addr)
+					, ntohl(inet_addr("255.255.255.0")));
+			}
+			else
+#endif /* _FFR_TESTS */
+			/* "else" in #if code above */
 
 			switch (ConnectOnlyTo.sa.sa_family)
 			{
@@ -2853,24 +2880,11 @@ gothostent:
 					anynet_ntoa(&addr), ntohs(port));
 
 #if _FFR_TESTS
-			if (tTd(77, 101)
-			    /* && AF_INET == addr.sin.sin_family */
-			    && addr.sin.sin_addr.s_addr >=
-				inet_addr("255.255.255.1")
-			    && addr.sin.sin_addr.s_addr <=
-				inet_addr("255.255.255.255")
-			   )
-			{
-				i = -1;
-				save_errno = ntohl(addr.sin.sin_addr.s_addr) -
-					ntohl(inet_addr("255.255.255.0"));
-				sm_dprintf("hack: fail connection=%d\n",
-					save_errno);
-				errno = save_errno;
-			}
+			if (-1 == i)
+				errno = c_errno;
 			else
-				/* Watch out of changes below! */
-#endif /* _FFR_TESTS */
+#endif
+			/* "else" in #if code above */
 			i = connect(s, (struct sockaddr *) &addr, addrlen);
 			save_errno = errno;
 			if (ev != NULL)
@@ -4224,7 +4238,7 @@ host_map_lookup(map, name, av, statp)
 #if USE_EAI
 		bool utf8;
 
-		utf8 = !addr_is_ascii(name);
+		utf8 = !str_is_print(name);
 		if (utf8)
 		{
 			(void) sm_strlcpy(hbuf, hn2alabel(name), sizeof(hbuf));
@@ -4337,7 +4351,6 @@ host_map_lookup(map, name, av, statp)
 			sm_dprintf("FOUND %s\n", ans);
 		return cp;
 	}
-
 
 	/* No match found */
 	s->s_namecanon.nc_errno = errno;

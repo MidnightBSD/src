@@ -60,7 +60,7 @@ static bool	extract_canonname __P((char *, char *, char *, char[], int));
 static void	map_close __P((STAB *, int));
 static void	map_init __P((STAB *, int));
 #ifdef LDAPMAP
-static STAB *	ldapmap_findconn __P((SM_LDAP_STRUCT *));
+static STAB	*ldapmap_findconn __P((SM_LDAP_STRUCT *));
 #endif
 #if NISPLUS
 static bool	nisplus_getcanonname __P((char *, int, int *));

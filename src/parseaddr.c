@@ -399,7 +399,7 @@ hasctrlchar(addr, isrcpt, complain)
 				break;
 			}
 		}
-		if (!SMTPUTF8 && !EightBitAddrOK && (*addr & 0340) == 0200)
+		if (!SMTP_UTF8 && !EightBitAddrOK && (*addr & 0340) == 0200)
 		{
 			setstat(EX_USAGE);
 			result = "8-bit character";
@@ -448,7 +448,7 @@ allocaddr(a, flags, paddr, e)
 	ENVELOPE *e;
 {
 	if (tTd(24, 4))
-		sm_dprintf("allocaddr(flags=%x, paddr=%s, ad=%d)\n", flags, paddr, bitset(EF_SECURE, e->e_flags));
+		sm_dprintf("allocaddr: flags=%x, paddr=%s, ad=%d\n", flags, paddr, bitset(EF_SECURE, e->e_flags));
 
 	a->q_paddr = paddr;
 
@@ -688,7 +688,6 @@ unsigned char	TokTypeNoC[256] =
     /*  p   q   r   s   t   u   v   w    x   y   z   {   |   }   ~   del  */
 	ATM,ATM,ATM,ATM,ATM,ATM,ATM,ATM, ATM,ATM,ATM,ATM,ATM,ATM,ATM,ONE
 };
-
 
 #define NOCHAR		(-1)	/* signal nothing in lookahead token */
 
@@ -2495,6 +2494,7 @@ static struct qflags	AddressFlags[] =
 	{ "QSECURE",		QSECURE		},
 	{ "QQUEUED",		QQUEUED		},
 	{ "QINTREPLY",		QINTREPLY	},
+	{ "QMXSECURE",		QMXSECURE	},
 	{ "QTHISPASS",		QTHISPASS	},
 	{ "QRCPTOK",		QRCPTOK		},
 	{ NULL,			0		}
