@@ -1,6 +1,7 @@
 #include <ldns/config.h>
 
 #include <ldns/ldns.h>
+#include <ldns/internal.h>
 
 #include <ldns/dnssec.h>
 #include <ldns/dnssec_sign.h>
@@ -1367,8 +1368,6 @@ ldns_dnssec_zone_sign(ldns_dnssec_zone *zone,
 	return ldns_dnssec_zone_sign_flg(zone, new_rrs, key_list, func, arg, 0);
 }
 
-ldns_status dnssec_zone_equip_zonemd(ldns_dnssec_zone *zone,
-		ldns_rr_list *new_rrs, ldns_key_list *key_list, int flags);
 ldns_status
 ldns_dnssec_zone_sign_flg(ldns_dnssec_zone *zone,
 				  ldns_rr_list *new_rrs,

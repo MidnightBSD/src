@@ -13,6 +13,7 @@
 #include <ldns/config.h>
 
 #include <ldns/ldns.h>
+#include <ldns/internal.h>
 
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>

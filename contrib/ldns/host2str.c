@@ -13,6 +13,7 @@
 #include <ldns/config.h>
 
 #include <ldns/ldns.h>
+#include <ldns/internal.h>
 
 #include <limits.h>
 
@@ -42,10 +43,6 @@
 #ifndef INET6_ADDRSTRLEN
 #define INET6_ADDRSTRLEN 46
 #endif
-
-/* Internal helper function */
-ldns_edns_option_list*
-pkt_edns_data2edns_option_list(const ldns_rdf *edns_data);
 
 /* lookup tables for standard DNS stuff  */
 

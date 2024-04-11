@@ -9,6 +9,7 @@
 #include <ldns/config.h>
 
 #include <ldns/ldns.h>
+#include <ldns/internal.h>
 
 #include <strings.h>
 #include <limits.h>
@@ -188,10 +189,6 @@ ldns_zone_new_frm_fp(ldns_zone **z, FILE *fp, const ldns_rdf *origin, uint32_t t
 {
 	return ldns_zone_new_frm_fp_l(z, fp, origin, ttl, c, NULL);
 }
-
-ldns_status _ldns_rr_new_frm_fp_l_internal(ldns_rr **newrr, FILE *fp,
-		uint32_t *default_ttl, ldns_rdf **origin, ldns_rdf **prev,
-		int *line_nr, bool *explicit_ttl);
 
 /* XXX: class is never used */
 ldns_status

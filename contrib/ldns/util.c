@@ -316,6 +316,7 @@ ldns_serial_arithmetics_gmtime_r(int32_t time, time_t now, struct tm *result)
 #undef ldns_serial_arithmitics_gmtime_r
 #endif
 /* alias function because of previously used wrong spelling */
+struct tm *ldns_serial_arithmitics_gmtime_r(int32_t, time_t, struct tm *);
 struct tm *
 ldns_serial_arithmitics_gmtime_r(int32_t time, time_t now, struct tm *result)
 {

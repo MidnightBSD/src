@@ -5,6 +5,7 @@
 #include <ldns/config.h>
 
 #include <ldns/ldns.h>
+#include <ldns/internal.h>
 
 ldns_dnssec_rrs *
 ldns_dnssec_rrs_new(void)
@@ -604,10 +605,6 @@ ldns_todo_nsec3_ents_node_free(ldns_rbnode_t *node, void *arg) {
 	ldns_rdf_deep_free((ldns_rdf *)node->key);
 	LDNS_FREE(node);
 }
-
-ldns_status _ldns_rr_new_frm_fp_l_internal(ldns_rr **newrr, FILE *fp,
-		uint32_t *default_ttl, ldns_rdf **origin, ldns_rdf **prev,
-		int *line_nr, bool *explicit_ttl);
 
 ldns_status
 ldns_dnssec_zone_new_frm_fp_l(ldns_dnssec_zone** z, FILE* fp, const ldns_rdf* origin,
