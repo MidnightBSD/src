@@ -1,6 +1,8 @@
 Updating Information for MidnightBSD users.
 
 20240411:
+	ldns 1.8.3
+
 	sendmail 8.18.1
 
 	libarchive 3.7.2
