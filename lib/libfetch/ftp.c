@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Portions of this code were taken from or based on ftpio.c:
  *

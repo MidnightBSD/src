@@ -24,8 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"
-.Dd August 28, 2019
+.Dd October 7, 2023
 .Dt FETCH 3
 .Os
 .Sh NAME
@@ -410,19 +409,6 @@ library,
 is currently unimplemented.
 .Sh HTTPS SCHEME
 Based on HTTP SCHEME.
-By default the peer is verified using the CA bundle located in
-.Pa /usr/local/etc/ssl/cert.pem .
-If this file does not exist,
-.Pa /etc/ssl/cert.pem
-is used instead.
-If neither file exists, and
-.Ev SSL_CA_CERT_PATH
-has not been set,
-OpenSSL's default CA cert and path settings apply.
-The certificate bundle can contain multiple CA certificates.
-A common source of a current CA bundle is
-.Pa \%security/ca_root_nss .
-.Pp
 The CA bundle used for peer verification can be changed by setting the
 environment variables
 .Ev SSL_CA_CERT_FILE
@@ -456,20 +442,17 @@ the environment variable
 .Ev SSL_CLIENT_KEY_FILE
 can be set to point to the key file.
 In case the key uses a password, the user will be prompted on standard
-input (see
-.Xr PEM 3 ) .
+input.
 .Pp
 By default
 .Nm libfetch
 allows TLSv1 and newer when negotiating the connecting with the remote
 peer.
 You can change this behavior by setting the
-.Ev SSL_ALLOW_SSL3
-environment variable to allow SSLv3 and
 .Ev SSL_NO_TLS1 ,
 .Ev SSL_NO_TLS1_1 and
 .Ev SSL_NO_TLS1_2
-to disable TLS 1.0, 1.1 and 1.2 respectively.
+environment variables to disable TLS 1.0, 1.1 and 1.2 respectively.
 .Sh AUTHENTICATION
 Apart from setting the appropriate environment variables and
 specifying the user name and password in the URL or the
@@ -667,8 +650,13 @@ which proxies should not be used.
 Same as
 .Ev NO_PROXY ,
 for compatibility.
-.It Ev SSL_ALLOW_SSL3
-Allow SSL version 3 when negotiating the connection (not recommended).
+.It Ev SOCKS5_PROXY
+Uses SOCKS version 5 to make connection.
+The format must be the IP or hostname followed by a colon for the port.
+IPv6 addresses must enclose the address in brackets.
+If no port is specified, the default is 1080.
+This setting will supercede a connection to an
+.Ev HTTP_PROXY .
 .It Ev SSL_CA_CERT_FILE
 CA certificate bundle containing trusted CA certificates.
 Default value: See HTTPS SCHEME above.
@@ -723,6 +711,21 @@ host, define
 as follows:
 .Bd -literal -offset indent
 NO_PROXY=localhost,127.0.0.1
+.Ed
+.Pp
+To use a SOCKS5 proxy, set the
+.Ev SOCKS5_PROXY
+environment variable to a
+valid host or IP followed by an optional colon and the port.
+IPv6 addresses must be enclosed in brackets.
+The following are examples of valid settings:
+.Bd -literal -offset indent
+SOCKS5_PROXY=proxy.example.com
+SOCKS5_PROXY=proxy.example.com:1080
+SOCKS5_PROXY=192.0.2.0
+SOCKS5_PROXY=198.51.100.0:1080
+SOCKS5_PROXY=[2001:db8::1]
+SOCKS5_PROXY=[2001:db8::2]:1080
 .Ed
 .Pp
 Access HTTPS website without any certificate verification whatsoever:

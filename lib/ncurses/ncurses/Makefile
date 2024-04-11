@@ -1,6 +1,8 @@
 PACKAGE=	clibs
 SHLIBDIR?=	/lib
 
+WARNS=		0
+
 .include <src.opts.mk>
 
 .include "${.CURDIR:H}/config.mk"
