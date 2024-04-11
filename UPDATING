@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20240411:
+	libarchive 3.7.2
+
+20240410:
+	zstd 1.5.2
+
 20240406:
 	Fix for wpa supplicant CVE-2023-52160
 
