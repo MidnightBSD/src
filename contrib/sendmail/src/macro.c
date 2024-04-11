@@ -83,7 +83,6 @@ int		NextMacroId = 0240;	/* codes for long named macros */
 #define NEXTMACROID(mid)	((mid) + 1)
 #endif /* _FFR_MORE_MACROS */
 
-
 /*
 **  INITMACROS -- initialize the macro system
 **
@@ -445,8 +444,8 @@ macdefine(mac, vclass, id, value)
 		sm_dprintf(")\n");
 	}
 #if USE_EAI && 0
-	if (('j' == id || 'm' == id) && !addr_is_ascii(value))
-		return an error/warning to caller and let them handle it.
+//	if (('j' == id || 'm' == id) && !addr_is_ascii(value))
+//		return an error/warning to caller and let them handle it.
 #endif
 
 	if (mac->mac_rpool == NULL)

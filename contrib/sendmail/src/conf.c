@@ -81,7 +81,6 @@ static struct hostent *sm_getipnodebyaddr __P((const void *, size_t, int, int *)
 **		this file too much, you may be making a mistake!
 */
 
-
 /*
 **  Header info table
 **	Final (null) entry contains the flags used for any other field.
@@ -242,6 +241,7 @@ struct dbsval DontBlameSendmailValues[] =
 	{ "groupreadablekeyfile",	DBS_GROUPREADABLEKEYFILE	},
 	{ "groupreadabledefaultauthinfofile",
 					DBS_GROUPREADABLEAUTHINFOFILE	},
+	{ "certowner",			DBS_CERTOWNER			},
 	{ NULL,				0				}
 };
 
@@ -1409,7 +1409,6 @@ init_md(argc, argv)
 # endif /* _SCO_unix_ */
 #endif /* SECUREWARE || defined(_SCO_unix_) */
 
-
 #ifdef VENDOR_DEFAULT
 	VendorCode = VENDOR_DEFAULT;
 #else
@@ -2317,7 +2316,6 @@ refuseconnections(e, dn, active)
 			conncnt[dn] = 0;
 	}
 
-
 #if _FFR_MEMSTAT
 	if (RefuseLowMem > 0 &&
 	    sm_memstat_get(MemoryResource, &memfree) >= 0 &&
@@ -2431,7 +2429,6 @@ refuseconnections(e, dn, active)
 #ifndef SPT_TYPE
 # define SPT_TYPE	SPT_REUSEARGV
 #endif
-
 
 #if SPT_TYPE != SPT_NONE && SPT_TYPE != SPT_BUILTIN
 
@@ -3056,7 +3053,6 @@ dgux_inet_addr(host)
  * All rights reserved.  The Berkeley software License Agreement
  * specifies the terms and conditions for redistribution.
  */
-
 
 /*
 **  this version hacked to add `atend' flag to allow state machine
@@ -3985,7 +3981,6 @@ vendor_pre_defaults(e)
 	sm_setuserenv("SYSTYPE", NULL);
 #endif /* apollo */
 }
-
 
 void
 vendor_post_defaults(e)
@@ -5859,6 +5854,12 @@ char	*CompileOptions[] =
 #if DANE
 	"DANE",
 #endif
+#if HAVE_SSL_CTX_dane_enable
+	"HAVE_SSL_CTX_dane_enable",
+#endif
+#if MAX_TLSA_RR
+	"MAX_TLSA_RR=" SM_XSTR(MAX_TLSA_RR),
+#endif
 #if NAMED_BIND
 # if DNSMAP
 	"DNSMAP",
@@ -6078,7 +6079,6 @@ char	*CompileOptions[] =
 #endif
 	NULL
 };
-
 
 /*
 **  OS compile options.

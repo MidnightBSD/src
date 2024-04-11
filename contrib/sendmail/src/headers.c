@@ -512,7 +512,6 @@ hse:
 **		Contents of 'line' are destroyed.
 */
 
-
 unsigned long
 chompheader(line, pflag, hdrp, e)
 	char *line;
@@ -1135,7 +1134,6 @@ eatheader(e, full, log)
 **	Returns:
 **		none
 */
-
 
 #define XBUFLEN MAXNAME
 #if (SYSLOG_BUFSIZE) >= 256

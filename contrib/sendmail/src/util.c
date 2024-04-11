@@ -1030,7 +1030,6 @@ makelower_a(pp, rpool)
 	return orig;
 }
 
-
 #if 0
 makelower: Optimization for EAI case?
 
@@ -1088,15 +1087,15 @@ makelower_buf(str, buf, buflen)
 }
 
 /*
-**  FIXCRLF -- fix <CR><LF> in line.
+**  FIXCRLF -- fix CRLF in line.
 **
 **	XXX: Could this be a problem for EAI? That is, can there
 **		be a string with \n and the previous octet is \n
 **		but is part of a UTF8 "char"?
 **
-**	Looks for the <CR><LF> combination and turns it into the
-**	UNIX canonical <NL> character.  It only takes one line,
-**	i.e., it is assumed that the first <NL> found is the end
+**	Looks for the CRLF combination and turns it into the
+**	UNIX canonical LF character.  It only takes one line,
+**	i.e., it is assumed that the first LF found is the end
 **	of the line.
 **
 **	Parameters:
@@ -1175,7 +1174,6 @@ putline(l, mci)
 **	Side Effects:
 **		output of l to mci->mci_out.
 */
-
 
 #define PUTX(limit)							\
 	do								\
@@ -1424,7 +1422,6 @@ xunlink(f)
 **		buf otherwise.
 */
 
-
 char *
 sfgets(buf, siz, fp, timeout, during)
 	char *buf;
@@ -1533,7 +1530,7 @@ sfgets(buf, siz, fp, timeout, during)
 **	Side Effects:
 **		buf gets lines from f, with continuation lines (lines
 **		with leading white space) appended.  CRLF's are mapped
-**		into single newlines.  Any trailing NL is stripped.
+**		into single newlines.  Any trailing LF is stripped.
 **		Increases LineNumber for each line.
 */
 
@@ -1799,9 +1796,7 @@ checkfd012(where)
 	for (i = 0; i < 3; i++)
 		fill_fd(i, where);
 }
-#endif /* XDEBUG */
 
-#if XDEBUG
 /*
 **  CHECKFDOPEN -- make sure file descriptor is open -- for extended debugging
 **
@@ -2773,7 +2768,6 @@ proc_list_drop(pid, st, other)
 			break;
 		}
 	}
-
 
 	if (type == PROC_CONTROL && WIFEXITED(st))
 	{

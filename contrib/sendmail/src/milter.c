@@ -71,7 +71,6 @@ static void	milter_delrcpt __P((char *, ssize_t, ENVELOPE *, const char *));
 static int	milter_replbody __P((char *, ssize_t, bool, ENVELOPE *, const char *));
 static int	milter_set_macros __P((char *, char **, char *, int));
 
-
 /* milter states */
 # define SMFS_CLOSED		'C'	/* closed for all further actions */
 # define SMFS_OPEN		'O'	/* connected to remote milter filter */
@@ -1876,7 +1875,6 @@ milter_abort_filter(m, e)
 **	Returns:
 **		none
 */
-
 
 #if _FFR_TESTS
 # define TST_EO	\

@@ -12,13 +12,6 @@ distribution).
 
 This list is not guaranteed to be complete.
 
-* DANE requirements not enforced if TLS initialization fails.
-
-  If the code to set up TLS in the client fails, then {verify} will
-  be set to TEMP but DANE requirements will be ignored, i.e., by
-  default mail will be sent without STARTTLS.  This can be changed
-  via a LOCAL_TLS_SERVER ruleset.
-
 * Header values which are too long may be truncated.
 
   If a value of a structured header is longer than 256 (MAXNAME)

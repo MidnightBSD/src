@@ -2094,7 +2094,7 @@ smtpmailfrom(m, mci, e)
 			e->e_smtputf8 = true;
 	}
 
-	if (e->e_smtputf8 && !SMTPUTF8)
+	if (e->e_smtputf8 && !SMTP_UTF8)
 	{
 		extern char MsgBuf[];
 
@@ -2396,6 +2396,9 @@ smtprcpt(to, m, mci, e, ctladdr, xstart)
 	char buf[MAXNAME + 1];	/* EAI:ok */
 	int len, nlen;
 #endif
+#if PIPELINING
+	char *oldto;
+#endif
 
 #if PIPELINING
 	/*
@@ -2403,20 +2406,24 @@ smtprcpt(to, m, mci, e, ctladdr, xstart)
 	**  This should normally happen because of SMTP pipelining.
 	*/
 
+	oldto = e->e_to;
 	while (mci->mci_nextaddr != NULL &&
 	       sm_io_getinfo(mci->mci_in, SM_IO_IS_READABLE, NULL) > 0)
 	{
 		int r;
 
+		e->e_to = mci->mci_nextaddr->q_paddr;
 		r = smtprcptstat(mci->mci_nextaddr, m, mci, e);
 		if (r != EX_OK)
 		{
 			markfailure(e, mci->mci_nextaddr, mci, r, false);
 			giveresponse(r, mci->mci_nextaddr->q_status, m, mci,
-				     ctladdr, xstart, e, to);
+				     ctladdr, xstart, e, mci->mci_nextaddr);
 		}
 		mci->mci_nextaddr = mci->mci_nextaddr->q_pchain;
+		e->e_to = oldto;
 	}
+	e->e_to = oldto;
 #endif /* PIPELINING */
 
 	/*
@@ -3210,11 +3217,11 @@ reply(m, mci, e, timeout, pfunc, enhstat, rtype, rtext)
 			what = "unknown";
 #if PIPELINING
 		if (mci->mci_flags & MCIF_PIPELINED)
-			sm_dprintf("reply to %s [but PIPELINED]\n", what);
+			sm_dprintf("reply to %s:%d [but PIPELINED]\n", what, rtype);
 		else
 #endif
 		/* "else" in #if code above */
-		sm_dprintf("reply to %s\n", what);
+		sm_dprintf("reply to %s:%d\n", what, rtype);
 	}
 
 	/*
@@ -3546,7 +3553,5 @@ smtpmessage(f, m, mci, va_alist)
 							      : m->m_eol);
 	}
 	else if (tTd(18, 1))
-	{
 		sm_dprintf("smtpmessage: NULL mci_out\n");
-	}
 }

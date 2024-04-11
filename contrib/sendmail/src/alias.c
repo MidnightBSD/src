@@ -639,7 +639,6 @@ rebuildaliases(map)
 	return success;
 }
 
-
 /*
 **  CONTLINE -- handle potential continuation line
 **
@@ -760,7 +759,7 @@ readaliases(map, af, announcestats, logstats)
 			LineNumber++;
 		}
 #if _FFR_8BITENVADDR
-		if (SMTPUTF8 || EightBitAddrOK)
+		if (SMTP_UTF8 || EightBitAddrOK)
 		{
 			if (line != lbuf)
 				SM_FREE(line);
@@ -922,7 +921,7 @@ readaliases(map, af, announcestats, logstats)
 		else
 		{
 #if _FFR_8BITENVADDR
-			if (SMTPUTF8 || EightBitAddrOK)
+			if (SMTP_UTF8 || EightBitAddrOK)
 			{
 				dequote_internal_chars(al.q_user, lhsbuf, sizeof(lhsbuf));
 				dequote_internal_chars(rhs, rhsbuf, sizeof(rhsbuf));

@@ -6,6 +6,93 @@ of the sendmail configuration files, the date of release, and a
 summary of the changes in that release.
 
 
+8.18.1/8.18.1	2024/01/31
+	sendmail is now stricter in following the RFCs and rejects
+		some invalid input with respect to line endings
+		and pipelining:
+		- Prevent transaction stuffing by ensuring SMTP clients
+		wait for the HELO/EHLO and DATA response before sending
+		further SMTP commands.  This can be disabled using
+		the new srv_features option 'F'.  Issue reported by
+		Yepeng Pan and Christian Rossow from CISPA Helmholtz
+		Center for Information Security.
+		- Accept only CRLF . CRLF as end of an SMTP message
+		as required by the RFCs, which can disabled by the
+		new srv_features option 'O'.
+		- Do not accept a CR or LF except in the combination
+		CRLF (as required by the RFCs).  These checks can
+		be disabled by the new srv_features options
+		'U' and 'G', respectively.  In this case it is
+		suggested to use 'u2' and 'g2' instead so the server
+		replaces offending bare CR or bare LF with a space.
+		It is recommended to only turn these protections off
+		for trusted networks due to the potential for abuse.
+	Full DANE support is available if OpenSSL versions 1.1.1 or 3.x
+		are used, i.e., TLSA RR 2-x-y and 3-x-y are supported
+		as required by RFC 7672.
+	OpenSSL version 3.0.x is supported.  Note: OpenSSL 3 loads by
+		default an openssl.cnf file from a location specified
+		in the library which may cause unwanted behaviour
+		in sendmail.  Hence sendmail sets the environment
+		variable OPENSSL_CONF to /etc/mail/sendmail.ossl
+		to override the default.  The file name can be
+		changed by defining confOPENSSL_CNF in the mc file;
+		using an empty value prevents setting OPENSSL_CONF.
+		Note: referring to a file which does not exist does
+		not cause an an error.
+	Two new values have been added for {verify}:
+		"DANE_TEMP": DANE verification failed temporarily.
+		"DANE_NOTLS": DANE was required but STARTTLS was not
+		offered by the server.
+		The default rules return a temporary error for these
+		cases, so delivery is not attempted.
+	If the TLS setup code in the client fails and DANE requirements
+		exist then {verify} will be set to "DANE_TEMP" thus
+		preventing delivery by default.
+	DANE related logging has been slightly changed for clarification:
+		"DANE configured in DNS but no STARTTLS available"
+		changed to
+		"DANE configured in DNS but STARTTLS not offered"
+	When the compile time option USE_EAI is enabled, vacation could
+		fail to respond when it should (the code change in
+		8.17.2 was incomplete).  Problem reported by Alex
+		Hautequest.
+	If SMTPUTF8 BODY=7BIT are used as parameters for the MAIL command
+		the parsing of UTF8 addresses could fail (USE_EAI).
+	If a reply to a previous RCPT was received while sending
+		another RCPT in pipelining mode then parts of the
+		reply could have been assigned to the wrong RCPT.
+	New DontBlameSendmail option CertOwner to relax requirement
+		for certificate public and private key ownership.
+		Based on suggestion from Marius Strobl of the
+		FreeBSD project.
+	clt_features was not checked for connections via Unix domain
+		sockets.
+	CONFIG: FEATURE(`enhdnsbl') did not handle multiple replies
+		from DNS lookups thus potentially causing random
+		"false negatives".
+		Note: the fix creates an incompatibility:
+		the arguments must not have a trailing dot anymore
+		because the -a. option has been removed (as it only
+		applies to the entire result, not individual values).
+	CONFIG: New FEATURE(`fips3') for basic FIPS support in OpenSSL 3.
+	VACATION: Add support for Return-Path header to set sender
+		to match OpenBSD and NetBSD functionality.
+	VACATION: Honor RFC3834 and avoid an auto-reply if
+		'Auto-Submitted: no' is found in the headers to
+		match OpenBSD and NetBSD functionality.
+	VACATION: Avoid an auto-reply if a 'List-Id:' is found in
+		the headers to match OpenBSD functionality.
+	VACATION: Add support for $SUBJECT in .vacation.msg which
+		is replaced with the first line of the subject of the
+		original message to match OpenBSD and NetBSD
+		functionality.
+	Portability:
+		Add support for Darwin 23.
+	New Files:
+		cf/feature/fips3.m4
+		devtools/OS/Darwin.23.x
+
 8.17.2/8.17.2	2023/06/03
 	Make sure DANE checks (if enabled) are performed even if
 		CACertPath or CACertFile are not set or unusable.
@@ -5480,7 +5567,7 @@ summary of the changes in that release.
 		characters (in LMTP mode), mail.local split the incoming
 		line up into 2046-character output lines (excluding the
 		newline).  If an input line was 2047 characters long
-		(excluding CR-LF) and the last character was a '.',
+		(excluding CRLF) and the last character was a '.',
 		mail.local saw it as the end of input, transferred it to the
 		user mailbox and tried to write an `ok' back to sendmail.
 		If the message was much longer, both sendmail and
@@ -8502,7 +8589,7 @@ summary of the changes in that release.
 		should show the pathname rather than hex bytes.
 	Restore ``-ba'' mode -- this reads a file from stdin and parses
 		the header for envelope sender information and uses
-		CR-LF as message terminators.  It was thought to be
+		CRLF as message terminators.  It was thought to be
 		obsolete (used only for Arpanet NCP protocols), but it
 		turns out that the UK ``Grey Book'' protocols require
 		that functionality.

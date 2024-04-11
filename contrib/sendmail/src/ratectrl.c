@@ -419,7 +419,6 @@ conn_limits(e, now, saddr, clflags, hashary, ratelimit, conclimit)
 	}
 #endif
 
-
 #if RATECTL_DEBUG
 	logit = true;
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2010, 2012 Proofpoint, Inc. and its suppliers.
+ * Copyright (c) 1998-2010, 2012, 2020-2023 Proofpoint, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1983, 1995-1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -37,22 +37,68 @@ static int	deliver __P((ENVELOPE *, ADDRESS *));
 static void	dup_queue_file __P((ENVELOPE *, ENVELOPE *, int));
 static void	mailfiletimeout __P((int));
 static void	endwaittimeout __P((int));
-static int	parse_hostsignature __P((char *, char **, MAILER *));
+static int	parse_hostsignature __P((char *, char **, MAILER *
+#if DANE
+		, BITMAP256
+#endif
+		));
 static void	sendenvelope __P((ENVELOPE *, int));
 static int	coloncmp __P((const char *, const char *));
+
 
 #if STARTTLS
 # include <openssl/err.h>
 # if DANE
 static int	starttls __P((MAILER *, MCI *, ENVELOPE *, bool, dane_vrfy_ctx_P));
-# else
+
+# define MXADS_ISSET(mxads, i)	(0 != bitnset(bitidx(i), mxads))
+# define MXADS_SET(mxads, i)	setbitn(bitidx(i), mxads)
+
+/* use "marks" in hostsignature for "had ad"? (WIP) */
+#  ifndef HSMARKS
+#   define HSMARKS 1
+#  endif
+#  if HSMARKS
+#   define HSM_AD	'+'	/* mark for hostsignature: ad flag */
+#   define DANE_SEC(dane)	(DANE_SECURE == DANEMODE((dane)))
+#  endif
+# else /* DANE */
 static int	starttls __P((MAILER *, MCI *, ENVELOPE *, bool));
-# endif
+# define MXADS_ISSET(mxads, i)	0
+# endif /* DANE */
 static int	endtlsclt __P((MCI *));
 #endif /* STARTTLS */
 #if STARTTLS || SASL
 static bool	iscltflgset __P((ENVELOPE *, int));
 #endif
+
+#define SEP_MXHOSTS(endp, sep)	\
+		if (endp != NULL)	\
+		{	\
+			sep = *endp;	\
+			*endp = '\0';	\
+		}
+
+#if NETINET6
+# define FIX_MXHOSTS(hp, endp, sep)	\
+	do {	\
+		if (*hp == '[')	\
+		{	\
+			endp = strchr(hp + 1, ']'); \
+			if (endp != NULL)	\
+				endp = strpbrk(endp + 1, ":,");	\
+		}	\
+		else	\
+			endp = strpbrk(hp, ":,"); \
+		SEP_MXHOSTS(endp, sep);	\
+	} while (0)
+#else /* NETINET6 */
+# define FIX_MXHOSTS(hp, endp, sep)	\
+	do {	\
+		endp = strpbrk(hp, ":,"); \
+		SEP_MXHOSTS(endp, sep);	\
+	} while (0)
+#endif /* NETINET6 */
 
 #if _FFR_OCC
 # include <ratectrl.h>
@@ -1187,6 +1233,7 @@ dofork()
 **		HS_MATCH_FIRST -- "match" for the first MX preference
 **			(up to the first colon (':')).
 **		HS_MATCH_FULL -- match for the entire MX record.
+**		HS_MATCH_SKIP -- match but only one of the entries has a "mark"
 **
 **	Side Effects:
 **		none.
@@ -1195,6 +1242,7 @@ dofork()
 #define HS_MATCH_NO	0
 #define HS_MATCH_FIRST	1
 #define HS_MATCH_FULL	2
+#define HS_MATCH_SKIP	4
 
 static int
 coloncmp(a, b)
@@ -1203,7 +1251,21 @@ coloncmp(a, b)
 {
 	int ret = HS_MATCH_NO;
 	int braclev = 0;
+# if HSMARKS
+	bool a_hsmark = false;
+	bool b_hsmark = false;
 
+	if (HSM_AD == *a)
+	{
+		a_hsmark = true;
+		++a;
+	}
+	if (HSM_AD == *b)
+	{
+		b_hsmark = true;
+		++b;
+	}
+# endif
 	while (*a == *b++)
 	{
 		/* Need to account for IPv6 bracketed addresses */
@@ -1218,7 +1280,14 @@ coloncmp(a, b)
 			break;
 		}
 		else if (*a == '\0')
+		{
+# if HSMARKS
+			/* exactly one mark */
+			if (a_hsmark != b_hsmark)
+				return HS_MATCH_SKIP;
+# endif
 			return HS_MATCH_FULL; /* a full match */
+		}
 		a++;
 	}
 	if (ret == HS_MATCH_NO &&
@@ -1227,7 +1296,14 @@ coloncmp(a, b)
 	     (*a == ':' && *(b - 1) == '\0')))
 		return HS_MATCH_FIRST;
 	if (ret == HS_MATCH_FIRST && strcmp(a, b) == 0)
+	{
+# if HSMARKS
+		/* exactly one mark */
+		if (a_hsmark != b_hsmark)
+			return HS_MATCH_SKIP;
+# endif
 		return HS_MATCH_FULL;
+	}
 
 	return ret;
 }
@@ -1637,8 +1713,35 @@ deliver(e, firstto)
 # if DANE
 	dane_vrfy_ctx_T	dane_vrfy_ctx;
 	STAB *ste;
-# endif
-#endif
+	char *vrfy;
+	int dane_req;
+
+/* should this allow DANE_ALWAYS == DANEMODE(dane)? */
+#  define RCPT_MXSECURE(rcpt)	(0 != ((rcpt)->q_flags & QMXSECURE))
+
+#  define STE_HAS_TLSA(ste) ((ste) != NULL && (ste)->s_tlsa != NULL)
+
+/* NOTE: the following macros use some local variables directly! */
+#  define RCPT_HAS_DANE(rcpt)	(RCPT_MXSECURE(rcpt) \
+	&& !iscltflgset(e, D_NODANE)	\
+	&& STE_HAS_TLSA(ste)	\
+	&& (0 == (dane_vrfy_ctx.dane_vrfy_chk & TLSAFLTEMPVRFY))	\
+	&& (0 != (dane_vrfy_ctx.dane_vrfy_chk & TLSAFLADIP))	\
+	&& CHK_DANE(dane_vrfy_ctx.dane_vrfy_chk)	\
+	)
+
+#  define RCPT_REQ_DANE(rcpt)	(RCPT_HAS_DANE(rcpt) \
+	&& TLSA_IS_FL(ste->s_tlsa, TLSAFLSUP))
+
+#  define RCPT_REQ_TLS(rcpt)	(RCPT_HAS_DANE(rcpt) \
+	&& TLSA_IS_FL(ste->s_tlsa, TLSAFLUNS))
+
+#  define CHK_DANE_RCPT(dane, rcpt) (CHK_DANE(dane) && \
+	 (RCPT_MXSECURE(rcpt) || DANE_ALWAYS == DANEMODE(dane)))
+
+	BITMAP256 mxads;
+# endif /* DANE */
+#endif /* STARTTLS */
 	int strsize;
 	int rcptcount;
 	int ret;
@@ -1849,8 +1952,13 @@ deliver(e, firstto)
 	if (firstto->q_signature == NULL)
 		firstto->q_signature = hostsignature(firstto->q_mailer,
 						     firstto->q_host,
-						     firstto->q_flags & QSECURE);
+						     QISSECURE(firstto),
+						     &firstto->q_flags);
 	firstsig = firstto->q_signature;
+#if DANE
+# define NODANEREQYET	(-1)
+	dane_req = NODANEREQYET;
+#endif
 
 	for (; to != NULL; to = to->q_next)
 	{
@@ -1874,7 +1982,8 @@ deliver(e, firstto)
 		if (to->q_signature == NULL) /* for safety */
 			to->q_signature = hostsignature(to->q_mailer,
 							to->q_host,
-							to->q_flags & QSECURE);
+							QISSECURE(to),
+							&to->q_flags);
 
 		/*
 		**  This is for coincidental and tailcoat piggybacking messages
@@ -1893,6 +2002,10 @@ deliver(e, firstto)
 			skip_back = to;
 		else if (ret == HS_MATCH_NO)
 			break;
+# if HSMARKS
+		else if (ret == HS_MATCH_SKIP)
+			continue;
+# endif
 
 		if (!clever)
 		{
@@ -1904,6 +2017,45 @@ deliver(e, firstto)
 
 		if (++rcptcount > to->q_mailer->m_maxrcpt)
 			break;
+
+#if DANE
+		if (TTD(10, 30))
+		{
+			char sep = ':';
+
+			parse_hostsignature(to->q_signature, mxhosts, m, mxads);
+			FIX_MXHOSTS(mxhosts[0], p, sep);
+# if HSMARKS
+			if (MXADS_ISSET(mxads, 0))
+				to->q_flags |= QMXSECURE;
+			else
+				to->q_flags &= ~QMXSECURE;
+# endif
+
+			gettlsa(mxhosts[0], NULL, &ste, RCPT_MXSECURE(to) ? TLSAFLADMX : 0, 0, m->m_port);
+			sm_dprintf("tochain: to=%s, rcptcount=%d, QSECURE=%d, QMXSECURE=%d, MXADS[0]=%d, ste=%p\n",
+				to->q_user, rcptcount, QISSECURE(to),
+				RCPT_MXSECURE(to), MXADS_ISSET(mxads, 0), ste);
+			sm_dprintf("tochain: hostsig=%s, mx=%s, tlsa_n=%d, tlsa_flags=%#lx, chk_dane=%d, dane_req=%d\n"
+				, to->q_signature, mxhosts[0]
+				, STE_HAS_TLSA(ste) ? ste->s_tlsa->dane_tlsa_n : -1
+				, STE_HAS_TLSA(ste) ? ste->s_tlsa->dane_tlsa_flags : -1
+				, CHK_DANE_RCPT(Dane, to)
+				, dane_req
+				);
+			if (p != NULL)
+				*p = sep;
+		}
+		if (NODANEREQYET == dane_req)
+			dane_req = CHK_DANE_RCPT(Dane, to);
+		else if (dane_req != CHK_DANE_RCPT(Dane, to))
+		{
+			if (tTd(10, 30))
+				sm_dprintf("tochain: to=%s, rcptcount=%d, status=skip\n",
+					to->q_user, rcptcount);
+			continue;
+		}
+#endif /* DANE */
 
 		/*
 		**  prepare envelope for new session to avoid leakage
@@ -2360,7 +2512,9 @@ deliver(e, firstto)
 		{
 			CurHostName = pv[1];
 							/* XXX ??? */
-			curhost = hostsignature(m, pv[1], firstto->q_flags & QSECURE);
+			curhost = hostsignature(m, pv[1],
+					QISSECURE(firstto),
+					&firstto->q_flags);
 		}
 
 		if (curhost == NULL || curhost[0] == '\0')
@@ -2398,7 +2552,11 @@ deliver(e, firstto)
 			}
 		}
 
-		nummxhosts = parse_hostsignature(curhost, mxhosts, m);
+		nummxhosts = parse_hostsignature(curhost, mxhosts, m
+#if DANE
+				, mxads
+#endif
+				);
 		if (TimeOuts.to_aconnect > 0)
 			enough = curtime() + TimeOuts.to_aconnect;
 tryhost:
@@ -2410,27 +2568,17 @@ tryhost:
 			bool tried_fallbacksmarthost = false;
 #if DANE
 			unsigned long tlsa_flags;
+# if HSMARKS
+			bool mxsecure;
+# endif
 
 			ste = NULL;
 			tlsa_flags = 0;
-#endif
-#if NETINET6
-			if (*mxhosts[hostnum] == '[')
-			{
-				endp = strchr(mxhosts[hostnum] + 1, ']');
-				if (endp != NULL)
-					endp = strpbrk(endp + 1, ":,");
-			}
-			else
-				endp = strpbrk(mxhosts[hostnum], ":,");
-#else /* NETINET6 */
-			endp = strpbrk(mxhosts[hostnum], ":,");
-#endif /* NETINET6 */
-			if (endp != NULL)
-			{
-				sep = *endp;
-				*endp = '\0';
-			}
+# if HSMARKS
+			mxsecure = MXADS_ISSET(mxads, hostnum);
+# endif
+#endif /* DANE */
+			FIX_MXHOSTS(mxhosts[hostnum], endp, sep);
 
 			if (hostnum == 1 && skip_back != NULL)
 			{
@@ -2471,6 +2619,106 @@ tryhost:
 			/* see if we already know that this host is fried */
 			CurHostName = hostbuf;
 			mci = mci_get(hostbuf, m);
+
+#if DANE
+			tlsa_flags = 0;
+# if HSMARKS
+			if (mxsecure)
+				firstto->q_flags |= QMXSECURE;
+			else
+				firstto->q_flags &= ~QMXSECURE;
+# endif
+			if (TTD(90, 30))
+				sm_dprintf("deliver: mci_get: 1: mci=%p, host=%s, mx=%s, ste=%p, dane=%#x, mci_state=%d, QMXSECURE=%d, reqdane=%d, chk_dane_rcpt=%d, firstto=%s, to=%s\n",
+					mci, host, hostbuf, ste, Dane,
+					mci->mci_state, RCPT_MXSECURE(firstto),
+					RCPT_REQ_DANE(firstto),
+					CHK_DANE_RCPT(Dane, firstto),
+					firstto->q_user, e->e_to);
+
+			if (CHK_DANE_RCPT(Dane, firstto))
+			{
+				(void) gettlsa(hostbuf, NULL, &ste,
+					RCPT_MXSECURE(firstto) ? TLSAFLADMX : 0,
+					0, m->m_port);
+			}
+			if (TTD(90, 30))
+				sm_dprintf("deliver: host=%s, mx=%s, ste=%p, chk_dane=%d\n",
+					host, hostbuf, ste,
+					CHK_DANE_RCPT(Dane, firstto));
+
+			/* XXX: check expiration! */
+			if (ste != NULL && TLSA_RR_TEMPFAIL(ste->s_tlsa))
+			{
+				if (tTd(11, 1))
+					sm_dprintf("skip: host=%s, TLSA_RR_lookup=%d\n"
+						, hostbuf
+						, ste->s_tlsa->dane_tlsa_dnsrc);
+
+				tlsa_flags |= TLSAFLTEMP;
+			}
+			else if (ste != NULL && TTD(90, 30))
+			{
+				if (ste->s_tlsa != NULL)
+					sm_dprintf("deliver: host=%s, mx=%s, tlsa_n=%d, tlsa_flags=%#lx, ssl=%p, chk=%#x, res=%d\n"
+					, host, hostbuf
+					, ste->s_tlsa->dane_tlsa_n
+					, ste->s_tlsa->dane_tlsa_flags
+					, mci->mci_ssl
+					, mci->mci_tlsi.tlsi_dvc.dane_vrfy_chk
+					, mci->mci_tlsi.tlsi_dvc.dane_vrfy_res
+					);
+				else
+					sm_dprintf("deliver: host=%s, mx=%s, notlsa\n", host, hostbuf);
+			}
+
+			if (mci->mci_state != MCIS_CLOSED)
+			{
+				bool dane_old, dane_new, new_session;
+
+				/* CHK_DANE(Dane): implicit via ste != NULL */
+				dane_new = !iscltflgset(e, D_NODANE) &&
+					ste != NULL && ste->s_tlsa != NULL &&
+					TLSA_IS_FL(ste->s_tlsa, TLSAFLSUP);
+				dane_old = CHK_DANE(mci->mci_tlsi.tlsi_dvc.dane_vrfy_chk);
+				new_session = (dane_old != dane_new);
+				vrfy = "";
+				if (dane_old && new_session)
+				{
+					vrfy = macget(&mci->mci_macro, macid("{verify}"));
+					new_session = NULL == vrfy || strcmp("TRUSTED", vrfy) != 0;
+				}
+				if (TTD(11, 32))
+					sm_dprintf("deliver: host=%s, mx=%s, dane_old=%d, dane_new=%d, new_session=%d, vrfy=%s\n",
+						host, hostbuf, dane_old,
+						dane_new, new_session, vrfy);
+				if (new_session)
+				{
+					if (TTD(11, 34))
+						sm_dprintf("deliver: host=%s, mx=%s, old_mci=%p, state=%d\n",
+							host, hostbuf,
+							mci, mci->mci_state);
+					smtpquit(mci->mci_mailer, mci, e);
+					if (TTD(11, 34))
+						sm_dprintf("deliver: host=%s, mx=%s, new_mci=%p, state=%d\n",
+							host, hostbuf,
+							mci, mci->mci_state);
+				}
+				else
+				{
+					/* are tlsa_flags the same as dane_vrfy_chk? */
+					tlsa_flags = mci->mci_tlsi.tlsi_dvc.dane_vrfy_chk;
+					memcpy(&dane_vrfy_ctx,
+						&mci->mci_tlsi.tlsi_dvc.dane_vrfy_chk,
+						sizeof(dane_vrfy_ctx));
+					dane_vrfy_ctx.dane_vrfy_host = NULL;
+					dane_vrfy_ctx.dane_vrfy_sni = NULL;
+					if (TTD(90, 40))
+						sm_dprintf("deliver: host=%s, mx=%s, state=reuse, chk=%#x\n",
+							host, hostbuf, mci->mci_tlsi.tlsi_dvc.dane_vrfy_chk);
+				}
+			}
+#endif /* DANE */
 			if (mci->mci_state != MCIS_CLOSED)
 			{
 				char *type;
@@ -2493,22 +2741,6 @@ tryhost:
 				break;
 			}
 			mci->mci_mailer = m;
-#if DANE
-			tlsa_flags = 0;
-			if (CHK_DANE(Dane))
-				(void) GETTLSA(hostbuf, &ste, m->m_port);
-
-			/* XXX: check expiration! */
-			if (ste != NULL && TLSA_RR_TEMPFAIL(ste->s_tlsa))
-			{
-				if (tTd(11, 1))
-					sm_dprintf("skip: host=%s, TLSA_RR_lookup=%d\n"
-						, hostbuf
-						, ste->s_tlsa->dane_tlsa_dnsrc);
-
-				tlsa_flags |= TLSAFLTEMP;
-			}
-#endif /* DANE */
 
 			if (mci->mci_exitstat != EX_OK)
 			{
@@ -2535,18 +2767,57 @@ tryhost:
 			sm_setproctitle(true, e, "%s %s: %s",
 					qid_printname(e),
 					hostbuf, "user open");
+
+			i = EX_OK;
+			e->e_mci = mci;
+#if STARTTLS || SASL
+			if ((i = cltfeatures(e, hostbuf)) != EX_OK)
+			{
+				if (LogLevel > 8)
+					sm_syslog(LOG_WARNING, e->e_id,
+					  "clt_features=TEMPFAIL, host=%s, status=skipped"
+					  , hostbuf);
+				/* XXX handle error! */
+				(void) sm_strlcpy(SmtpError,
+					"clt_features=TEMPFAIL",
+					sizeof(SmtpError));
+# if DANE
+				tlsa_flags &= ~TLSAFLTEMP;
+# endif
+			}
+# if DANE
+			/* hack: disable DANE if requested */
+			if (iscltflgset(e, D_NODANE))
+				ste = NULL;
+			tlsa_flags |= ste != NULL ? Dane : DANE_NEVER;
+			dane_vrfy_ctx.dane_vrfy_chk = tlsa_flags;
+			dane_vrfy_ctx.dane_vrfy_port = m->m_port;
+			if (TTD(11, 11))
+				sm_dprintf("deliver: makeconnection=before, chk=%#x, tlsa_flags=%#lx, {client_flags}=%s, stat=%d, dane_enabled=%d\n",
+					dane_vrfy_ctx.dane_vrfy_chk,
+					tlsa_flags,
+					macvalue(macid("{client_flags}"), e),
+					i, dane_vrfy_ctx.dane_vrfy_dane_enabled);
+# endif /* DANE */
+#endif /* STARTTLS || SASL */
 #if NETUNIX
 			if (mux_path != NULL)
 			{
 				message("Connecting to %s via %s...",
 					mux_path, m->m_name);
-				i = makeconnection_ds((char *) mux_path, mci);
+				if (EX_OK == i)
+				{
+					i = makeconnection_ds((char *) mux_path, mci);
+#if DANE
+					/* fake it: "IP is secure" */
+					tlsa_flags |= TLSAFLADIP;
+#endif
+				}
 			}
 			else
 #endif /* NETUNIX */
 			/* "else" in #if code above */
 			{
-				i = EX_OK;
 				if (port == 0)
 					message("Connecting to %s via %s...",
 						hostbuf, m->m_name);
@@ -2560,33 +2831,6 @@ tryhost:
 				**  required to set {client_flags} in e->e_mci
 				*/
 
-				e->e_mci = mci;
-#if STARTTLS || SASL
-				if ((i = cltfeatures(e, hostbuf)) != EX_OK)
-				{
-					if (LogLevel > 8)
-						sm_syslog(LOG_WARNING, e->e_id,
-						  "clt_features=TEMPFAIL, host=%s, status=skipped"
-						  , hostbuf);
-					/* XXX handle error! */
-					(void) sm_strlcpy(SmtpError,
-						"clt_features=TEMPFAIL",
-						sizeof(SmtpError));
-# if DANE
-					tlsa_flags &= ~TLSAFLTEMP;
-# endif
-				}
-# if DANE
-				/* hack: disable DANE if requested */
-				if (iscltflgset(e, D_NODANE))
-					ste = NULL;
-				tlsa_flags |= ste != NULL ? Dane : DANE_NEVER;
-				dane_vrfy_ctx.dane_vrfy_chk = tlsa_flags;
-				dane_vrfy_ctx.dane_vrfy_port = m->m_port;
-				if (tTd(11, 11))
-					sm_dprintf("deliver: makeconnection=before, chk=%d, tlsa_flags=%lX, {client_flags}=%s, stat=%d\n", dane_vrfy_ctx.dane_vrfy_chk, tlsa_flags, macvalue(macid("{client_flags}"), e), i);
-# endif /* DANE */
-#endif /* STARTTLS || SASL */
 				if (EX_OK == i)
 					i = makeconnection(hostbuf, port, mci,
 						e, enough
@@ -2594,24 +2838,30 @@ tryhost:
 						, &tlsa_flags
 #endif
 						);
-#if DANE
-				if (tTd(11, 11))
-					sm_dprintf("deliver: makeconnection=after, chk=%d, tlsa_flags=%lX, stat=%d\n", dane_vrfy_ctx.dane_vrfy_chk, tlsa_flags, i);
-				if (dane_vrfy_ctx.dane_vrfy_chk != DANE_ALWAYS)
-					dane_vrfy_ctx.dane_vrfy_chk = DANEMODE(tlsa_flags);
-				if (EX_TEMPFAIL == i &&
-				    ((tlsa_flags & (TLSAFLTEMP|DANE_SECURE)) ==
-				     (TLSAFLTEMP|DANE_SECURE)))
-				{
-					(void) sm_strlcpy(SmtpError,
-						" for TLSA RR",
-						sizeof(SmtpError));
-# if NAMED_BIND
-					SM_SET_H_ERRNO(TRY_AGAIN);
-# endif
-				}
-#endif
 			}
+#if DANE
+			if (TTD(11, 11))
+				sm_dprintf("deliver: makeconnection=after, chk=%#x, tlsa_flags=%#lx, stat=%d\n",
+					dane_vrfy_ctx.dane_vrfy_chk,
+					tlsa_flags, i);
+#if OLD_WAY_TLSA_FLAGS
+			if (dane_vrfy_ctx.dane_vrfy_chk != DANE_ALWAYS)
+				dane_vrfy_ctx.dane_vrfy_chk = DANEMODE(tlsa_flags);
+#else
+			dane_vrfy_ctx.dane_vrfy_chk = tlsa_flags;
+#endif
+			if (EX_TEMPFAIL == i &&
+			    ((tlsa_flags & (TLSAFLTEMP|DANE_SECURE)) ==
+			     (TLSAFLTEMP|DANE_SECURE)))
+			{
+				(void) sm_strlcpy(SmtpError,
+					" for TLSA RR",
+					sizeof(SmtpError));
+# if NAMED_BIND
+				SM_SET_H_ERRNO(TRY_AGAIN);
+# endif
+			}
+#endif /* DANE */
 			mci->mci_errno = errno;
 			mci->mci_lastuse = curtime();
 			mci->mci_deliveries = 0;
@@ -3312,8 +3562,7 @@ tryhost:
 		SM_FREE(dane_vrfy_ctx.dane_vrfy_host);
 		SM_FREE(dane_vrfy_ctx.dane_vrfy_sni);
 		dane_vrfy_ctx.dane_vrfy_fp[0] = '\0';
-		if (ste != NULL && ste->s_tlsa != NULL &&
-		    ste->s_tlsa->dane_tlsa_sni != NULL)
+		if (STE_HAS_TLSA(ste) && ste->s_tlsa->dane_tlsa_sni != NULL)
 			dane_vrfy_ctx.dane_vrfy_sni = sm_strdup(ste->s_tlsa->dane_tlsa_sni);
 		dane_vrfy_ctx.dane_vrfy_host = sm_strdup(srvname);
 # endif /* DANE */
@@ -3325,10 +3574,16 @@ reconnect:	/* after switching to an encrypted connection */
 		if (DONE_STARTTLS(mci->mci_flags))
 		{
 			/* use a "reset" function? */
+			/* when is it required to "reset" this data? */
 			SM_FREE(dane_vrfy_ctx.dane_vrfy_host);
 			SM_FREE(dane_vrfy_ctx.dane_vrfy_sni);
 			dane_vrfy_ctx.dane_vrfy_fp[0] = '\0';
-			dane_vrfy_ctx.dane_vrfy_res = 0;
+			dane_vrfy_ctx.dane_vrfy_res = DANE_VRFY_NONE;
+			dane_vrfy_ctx.dane_vrfy_dane_enabled = false;
+			if (TTD(90, 40))
+				sm_dprintf("deliver: reset: chk=%#x, dane_enabled=%d\n",
+					dane_vrfy_ctx.dane_vrfy_chk,
+					dane_vrfy_ctx.dane_vrfy_dane_enabled);
 		}
 # endif /* DANE */
 
@@ -3360,7 +3615,7 @@ reconnect:	/* after switching to an encrypted connection */
 
 		macdefine(&e->e_macro, A_PERM, macid("{rcpt_addr}"), "");
 # if DANE
-		if (MTASTS && (ste != NULL && ste->s_tlsa != NULL))
+		if (MTASTS && STE_HAS_TLSA(ste))
 			macdefine(&e->e_macro, A_PERM, macid("{sts_sni}"), "DANE");
 		else
 # endif
@@ -3508,7 +3763,7 @@ dotls:
 # if DANE && _FFR_MTA_STS
 /* if DANE is used (and STS should be used): disable STS */
 /* also check MTASTS and NOSTS flag? */
-					if (ste != NULL && ste->s_tlsa != NULL &&
+					if (STE_HAS_TLSA(ste) &&
 					    !SM_TLSI_IS(&(mci->mci_tlsi), TLSI_FL_NODANE))
 						macdefine(&e->e_macro, A_PERM, macid("{rcpt_addr}"), "");
 # endif
@@ -3561,6 +3816,38 @@ dotls:
 						s = "FAILURE";
 						rcode = EX_TEMPFAIL;
 					}
+# if DANE
+					/*
+					**  TLSA found but STARTTLS "failed"?
+					**  What is the best way to "fail"?
+					**  XXX: check expiration!
+					*/
+
+					if (!iscltflgset(e, D_NODANE) &&
+					    STE_HAS_TLSA(ste) &&
+					    TLSA_HAS_RRs(ste->s_tlsa))
+					{
+						if (LogLevel > 8)
+							sm_syslog(LOG_NOTICE, NOQID,
+								"STARTTLS=client, relay=%.100s, warning=DANE configured in DNS but STARTTLS failed",
+								srvname);
+						/* XXX include TLSA RR from DNS? */
+
+						/*
+						**  Only override codes which
+						**  do not cause a failure
+						**  in the default rules.
+						*/
+
+						if (EX_PROTOCOL != rcode &&
+						    EX_SOFTWARE != rcode &&
+						    EX_CONFIG != rcode)
+						{
+							/* s = "DANE_TEMP"; */
+							dane_vrfy_ctx.dane_vrfy_chk |= TLSAFLNOTLS;
+						}
+					}
+# endif /* DANE */
 					macdefine(&e->e_macro, A_PERM,
 						  macid("{verify}"), s);
 				}
@@ -3577,17 +3864,14 @@ dotls:
 
 				if (!bitset(MCIF_TLS, mci->mci_flags) &&
 				    !iscltflgset(e, D_NODANE) &&
-				    ste != NULL &&
-				    ste->s_tlsa != NULL &&
-				    ste->s_tlsa->dane_tlsa_n > 0)
+				    STE_HAS_TLSA(ste) &&
+				    TLSA_HAS_RRs(ste->s_tlsa))
 				{
 					if (LogLevel > 8)
 						sm_syslog(LOG_NOTICE, NOQID,
-							"STARTTLS=client, relay=%.100s, warning=DANE configured in DNS but no STARTTLS available",
+							"STARTTLS=client, relay=%.100s, warning=DANE configured in DNS but STARTTLS not offered",
 							srvname);
 					/* XXX include TLSA RR from DNS? */
-
-					p = "DANE_FAIL";
 				}
 # endif /* DANE */
 				macdefine(&e->e_macro, A_PERM,
@@ -3634,7 +3918,7 @@ dotls:
 				if (rcode == EX_SOFTWARE)
 				{
 					/* drop the connection */
-					mci->mci_state = MCIS_QUITING;
+					mci->mci_state = MCIS_ERROR;
 					SM_CLOSE_FP(mci->mci_out);
 					mci->mci_flags &= ~MCIF_TLSACT;
 					(void) endmailer(mci, e, pv);
@@ -4012,9 +4296,91 @@ do_transfer:
 						macid("{rcpt_addr}"), "");
 #endif /* _FFR_MTA_STS */
 #if STARTTLS
+# if DANE
+				vrfy = macvalue(macid("{verify}"), e);
+				if (NULL == vrfy)
+					vrfy = "NONE";
+				vrfy = sm_strdup(vrfy);
+				if (TTD(10, 32))
+					sm_dprintf("deliver: 0: vrfy=%s, to=%s, mx=%s, QMXSECURE=%d, secure=%d, ste=%p, dane=%#x\n",
+						vrfy, to->q_user, CurHostName, RCPT_MXSECURE(to),
+						RCPT_REQ_DANE(to), ste, Dane);
+				if (NULL == ste && CHK_DANE_RCPT(Dane, to))
+				{
+					(void) gettlsa(CurHostName, NULL, &ste,
+						RCPT_MXSECURE(to) ? TLSAFLADMX : 0,
+						0, m->m_port);
+				}
+				if (TTD(10, 32))
+					sm_dprintf("deliver: 2: vrfy=%s, to=%s, QMXSECURE=%d, secure=%d, ste=%p, dane=%#x, SUP=%#x, !TEMP=%d, ADIP=%d, chk_dane=%d, vrfy_chk=%#x, mcif=%#lx\n",
+						vrfy, to->q_user,
+						RCPT_MXSECURE(to), RCPT_REQ_DANE(to), ste, Dane,
+						STE_HAS_TLSA(ste) ? TLSA_IS_FL(ste->s_tlsa, TLSAFLSUP) : -1,
+						(0 == (dane_vrfy_ctx.dane_vrfy_chk & TLSAFLTEMPVRFY)),
+						(0 != (dane_vrfy_ctx.dane_vrfy_chk & TLSAFLADIP)),
+						CHK_DANE(dane_vrfy_ctx.dane_vrfy_chk),
+						dane_vrfy_ctx.dane_vrfy_chk,
+						mci->mci_flags
+						);
+
+				if (strcmp("DANE_FAIL", vrfy) == 0)
+				{
+					if (!RCPT_REQ_DANE(to))
+						macdefine(&mci->mci_macro, A_PERM, macid("{verify}"), "FAIL");
+					else
+						SM_FREE(vrfy);
+				}
+
+				/*
+				**  Note: MCIF_TLS should be reset when
+				**  when starttls was successful because
+				**  the server should not offer it anymore.
+				*/
+
+				else if (strcmp("TRUSTED", vrfy) != 0 &&
+					 RCPT_REQ_DANE(to))
+				{
+					macdefine(&mci->mci_macro, A_PERM, macid("{verify}"),
+						(0 != (dane_vrfy_ctx.dane_vrfy_chk & TLSAFLNOTLS)) ?
+						"DANE_TEMP" :
+						(bitset(MCIF_TLS|MCIF_TLSACT, mci->mci_flags) ?
+						 "DANE_FAIL" : "DANE_NOTLS"));
+				}
+				/* DANE: unsupported types: require TLS but not available? */
+				else if (strcmp("TRUSTED", vrfy) != 0 &&
+					RCPT_REQ_TLS(to)
+					&& (!bitset(MCIF_TLS|MCIF_TLSACT, mci->mci_flags)
+					     || (0 != (dane_vrfy_ctx.dane_vrfy_chk & TLSAFLNOTLS))))
+				{
+					macdefine(&mci->mci_macro, A_PERM, macid("{verify}"),
+						(0 != (dane_vrfy_ctx.dane_vrfy_chk & TLSAFLNOTLS)) ?
+						"DANE_TEMP" : "DANE_NOTLS");
+				}
+				else
+					SM_FREE(vrfy);
+				if (TTD(10, 32))
+					sm_dprintf("deliver: 7: verify=%s, secure=%d\n",
+						macvalue(macid("{verify}"), e),
+						RCPT_REQ_DANE(to));
+# endif /* DANE */
+
 				rc = rscheck("tls_rcpt", to->q_user, NULL, e,
 					    RSF_RMCOMM|RSF_COUNT, 3,
 					    mci->mci_host, e->e_id, &addr, NULL);
+
+# if DANE
+				if (vrfy != NULL)
+				{
+					macdefine(&mci->mci_macro, A_PERM, macid("{verify}"), vrfy);
+					SM_FREE(vrfy);
+				}
+# endif
+
+				if (TTD(10, 32))
+					sm_dprintf("deliver: 9: verify=%s, to=%s, tls_rcpt=%d\n",
+						macvalue(macid("{verify}"), e),
+						to->q_user, rc);
+
 				if (rc != EX_OK)
 				{
 					char *dsn;
@@ -4926,7 +5292,6 @@ giveresponse(status, dsn, m, mci, ctladdr, xstart, e, to)
 #if _FFR_8BITENVADDR
 # define GET_HOST_VALUE	\
 	(void) dequote_internal_chars(p, xbuf, sizeof(xbuf));	\
-	sm_dprintf("dequote=%s\n", xbuf); \
 	p = xbuf;
 #else
 # define GET_HOST_VALUE
@@ -6579,7 +6944,7 @@ getmport(m)
 #endif /* DANE */
 
 /*
-**  HOSTSIGNATURE -- return the "signature" for a host.
+**  HOSTSIGNATURE -- return the "signature" for a host (list).
 **
 **	The signature describes how we are going to send this -- it
 **	can be just the hostname (for non-Internet hosts) or can be
@@ -6587,8 +6952,9 @@ getmport(m)
 **
 **	Parameters:
 **		m -- the mailer describing this host.
-**		host -- the host name.
-**		ad -- DNSSEC: ad
+**		host -- the host name (can be a list).
+**		ad -- DNSSEC: ad flag for lookup of host.
+**		pqflags -- (pointer to) q_flags (can be NULL)
 **
 **	Returns:
 **		The signature for this host.
@@ -6600,10 +6966,11 @@ getmport(m)
 #define MAXHOSTSIGNATURE	8192	/* max len of hostsignature */
 
 char *
-hostsignature(m, host, ad)
+hostsignature(m, host, ad, pqflags)
 	register MAILER *m;
 	char *host;
 	bool ad;
+	unsigned long *pqflags;
 {
 	register char *p;
 	register STAB *s;
@@ -6622,9 +6989,12 @@ hostsignature(m, host, ad)
 	char *mxhosts[MAXMXHOSTS + 1];
 	unsigned short mxprefs[MAXMXHOSTS + 1];
 #endif /* NAMED_BIND */
+	int admx;
 
 	if (tTd(17, 3))
-		sm_dprintf("hostsignature(%s), ad=%d\n", host, ad);
+		sm_dprintf("hostsignature: host=%s, ad=%d\n", host, ad);
+	if (pqflags != NULL && !ad)
+		*pqflags &= ~QMXSECURE;
 
 	/*
 	**  If local delivery (and not remote), just return a constant.
@@ -6669,7 +7039,7 @@ hostsignature(m, host, ad)
 		if (s->s_hostsig.hs_exp >= now)
 		{
 			if (tTd(17, 3))
-				sm_dprintf("hostsignature(): stab(%s) found %s\n", host,
+				sm_dprintf("hostsignature: stab(%s) found %s\n", host,
 					   s->s_hostsig.hs_sig);
 			return s->s_hostsig.hs_sig;
 		}
@@ -6721,9 +7091,11 @@ hostsignature(m, host, ad)
 			auto int rcode;
 			int ttl;
 
+			admx = 0;
 			nmx = getmxrr(hp, mxhosts, mxprefs,
-				      DROPLOCALHOST|TRYFALLBACK|(ad ? ISAD :0),
-				      &rcode, &ttl, GETMPORT(m));
+				      DROPLOCALHOST|(ad ? ISAD :0)|
+				      ((NULL == endp) ? TRYFALLBACK : 0),
+				      &rcode, &ttl, GETMPORT(m), &admx);
 			if (nmx <= 0)
 			{
 				int save_errno;
@@ -6748,9 +7120,17 @@ hostsignature(m, host, ad)
 				nmx = 1;
 				mxhosts[0] = hp;
 			}
+
+			/*
+			**  NOTE: this sets QMXSECURE if the ad flags is set
+			**  for at least one host in the host list. XXX
+			*/
+
+			if (pqflags != NULL && admx)
+				*pqflags |= QMXSECURE;
 			if (tTd(17, 3))
-				sm_dprintf("hostsignature(): getmxrr() returned %d, mxhosts[0]=%s\n",
-					   nmx, mxhosts[0]);
+				sm_dprintf("hostsignature: host=%s, getmxrr=%d, mxhosts[0]=%s, admx=%d\n",
+					   hp, nmx, mxhosts[0], admx);
 
 			/*
 			**  Set new TTL: we use only one!
@@ -6765,6 +7145,10 @@ hostsignature(m, host, ad)
 			len += strlen(mxhosts[i]) + 1;
 		if (s->s_hostsig.hs_sig != NULL)
 			len += strlen(s->s_hostsig.hs_sig) + 1;
+# if DANE && HSMARKS
+		if (admx && DANE_SEC(Dane))
+			len += nmx;
+# endif
 		if (len < 0 || len >= MAXHOSTSIGNATURE)
 		{
 			sm_syslog(LOG_WARNING, NOQID, "hostsignature for host '%s' exceeds maxlen (%d): %d",
@@ -6787,7 +7171,13 @@ hostsignature(m, host, ad)
 		for (i = 0; i < nmx; i++)
 		{
 			hl = strlen(mxhosts[i]);
-			if (len - 1 < hl || len <= 1)
+			if (len <= 1 ||
+# if DANE && HSMARKS
+			    len - 1 < (hl + ((admx && DANE_SEC(Dane)) ? 1 : 0))
+# else
+			    len - 1 < hl
+# endif
+				)
 			{
 				/* force to drop out of outer loop */
 				len = -1;
@@ -6801,6 +7191,13 @@ hostsignature(m, host, ad)
 					*p++ = ':';
 				len--;
 			}
+# if DANE && HSMARKS
+			if (admx && DANE_SEC(Dane))
+			{
+				*p++ = HSM_AD;
+				len--;
+			}
+# endif
 			(void) sm_strlcpy(p, mxhosts[i], len);
 			p += hl;
 			len -= hl;
@@ -6831,9 +7228,10 @@ hostsignature(m, host, ad)
 	s->s_hostsig.hs_sig = sm_pstrdup_x(host);
 #endif /* NAMED_BIND */
 	if (tTd(17, 1))
-		sm_dprintf("hostsignature(%s) = %s\n", host, s->s_hostsig.hs_sig);
+		sm_dprintf("hostsignature: host=%s, result=%s\n", host, s->s_hostsig.hs_sig);
 	return s->s_hostsig.hs_sig;
 }
+
 /*
 **  PARSE_HOSTSIGNATURE -- parse the "signature" and return MX host array.
 **
@@ -6850,15 +7248,27 @@ hostsignature(m, host, ad)
 **	Returns:
 **		The number of hosts inserted into mxhosts array.
 **
+**	NOTES:
+**		mxhosts must have at least MAXMXHOSTS entries
+**		mxhosts[] will point to elements in sig --
+**		hence any changes to mxhosts[] will modify sig!
+**
 **	Side Effects:
 **		Randomizes equal MX preference hosts in mxhosts.
 */
 
 static int
-parse_hostsignature(sig, mxhosts, mailer)
+parse_hostsignature(sig, mxhosts, mailer
+#if DANE
+	, mxads
+#endif
+	)
 	char *sig;
 	char **mxhosts;
 	MAILER *mailer;
+#if DANE
+	BITMAP256 mxads;
+#endif
 {
 	unsigned short curpref = 0;
 	int nmx = 0, i, j;	/* NOTE: i, j, and nmx must have same type */
@@ -6866,28 +7276,22 @@ parse_hostsignature(sig, mxhosts, mailer)
 	unsigned short prefer[MAXMXHOSTS];
 	long rndm[MAXMXHOSTS];
 
+#if DANE
+	clrbitmap(mxads);
+#endif
 	for (hp = sig; hp != NULL; hp = endp)
 	{
 		char sep = ':';
 
-#if NETINET6
-		if (*hp == '[')
+		FIX_MXHOSTS(hp, endp, sep);
+#if HSMARKS
+		if (HSM_AD == *hp)
 		{
-			endp = strchr(hp + 1, ']');
-			if (endp != NULL)
-				endp = strpbrk(endp + 1, ":,");
+			MXADS_SET(mxads, nmx);
+			mxhosts[nmx] = hp + 1;
 		}
 		else
-			endp = strpbrk(hp, ":,");
-#else /* NETINET6 */
-		endp = strpbrk(hp, ":,");
-#endif /* NETINET6 */
-		if (endp != NULL)
-		{
-			sep = *endp;
-			*endp = '\0';
-		}
-
+#endif
 		mxhosts[nmx] = hp;
 		prefer[nmx] = curpref;
 		if (mci_match(hp, mailer))
@@ -6951,6 +7355,9 @@ parse_hostsignature(sig, mxhosts, mailer)
 #if STARTTLS
 static SSL_CTX	*clt_ctx = NULL;
 static bool	tls_ok_clt = true;
+# if DANE
+static bool	ctx_dane_enabled = false;
+# endif
 
 /*
 **  SETCLTTLS -- client side TLS: allow/disallow.
@@ -6972,17 +7379,19 @@ setclttls(tls_ok)
 	tls_ok_clt = tls_ok;
 	return;
 }
+
 /*
 **  INITCLTTLS -- initialize client side TLS
 **
 **	Parameters:
-**		tls_ok -- should tls initialization be done?
+**		tls_ok -- should TLS initialization be done?
 **
 **	Returns:
 **		succeeded?
 **
 **	Side Effects:
-**		sets tls_ok_clt (static variable in this module)
+**		sets tls_ok_clt, ctx_dane_enabled (static variables
+**		in this module)
 */
 
 bool
@@ -7007,6 +7416,49 @@ initclttls(tls_ok)
 # endif
 				CACertFile,
 			DHParams);
+# if _FFR_TESTS
+	if (tls_ok_clt && tTd(90, 104))
+	{
+		sm_dprintf("test=simulate initclttls error\n");
+		tls_ok_clt = false;
+	}
+# endif /* _FFR_TESTS */
+# if DANE
+	if (tls_ok_clt && CHK_DANE(Dane))
+	{
+#  if HAVE_SSL_CTX_dane_enable
+		int r;
+
+		r = SSL_CTX_dane_enable(clt_ctx);
+#   if _FFR_TESTS
+		if (tTd(90, 103))
+		{
+			sm_dprintf("test=simulate SSL_CTX_dane_enable error\n");
+#    if defined(SSL_F_DANE_CTX_ENABLE)
+			SSLerr(SSL_F_DANE_CTX_ENABLE, ERR_R_MALLOC_FAILURE);
+#    endif
+			r = -1;
+		}
+#   endif /* _FFR_TESTS */
+		ctx_dane_enabled = (r > 0);
+		if (r <= 0)
+		{
+			if (LogLevel > 1)
+				sm_syslog(LOG_ERR, NOQID,
+					"SSL_CTX_dane_enable=%d", r);
+			tlslogerr(LOG_ERR, 7, "init_client");
+		}
+		else if (LogLevel > 13)
+			sm_syslog(LOG_DEBUG, NOQID,
+				"SSL_CTX_dane_enable=%d", r);
+#  else
+		ctx_dane_enabled = false;
+#  endif /* HAVE_SSL_CTX_dane_enable */
+	}
+	if (tTd(90, 90))
+		sm_dprintf("func=initclttls, ctx_dane_enabled=%d\n", ctx_dane_enabled);
+# endif /* DANE */
+
 	return tls_ok_clt;
 }
 
@@ -7047,6 +7499,11 @@ starttls(m, mci, e, implicit
 	time_t tlsstart;
 	extern int TLSsslidx;
 
+# if DANE
+	if (TTD(90, 60))
+		sm_dprintf("starttls=client: Dane=%d, dane_vrfy_chk=%#x\n",
+			Dane,dane_vrfy_ctx->dane_vrfy_chk);
+# endif
 	if (clt_ctx == NULL && !initclttls(true))
 		return EX_TEMPFAIL;
 
@@ -7107,7 +7564,7 @@ starttls(m, mci, e, implicit
 			ret = EX_USAGE;
 			goto fail;
 		}
-#endif
+#endif /* 0 */
 		if (smtpresult == -1)
 		{
 			ret = smtpresult;
@@ -7146,11 +7603,22 @@ starttls(m, mci, e, implicit
 # if DANE
 	if (SM_TLSI_IS(&(mci->mci_tlsi), TLSI_FL_NODANE))
 		dane_vrfy_ctx->dane_vrfy_chk = DANE_NEVER;
-	else
+	if (TTD(90, 60))
+		sm_dprintf("starttls=client: 2: dane_vrfy_chk=%#x CHK_DANE=%d\n",
+			dane_vrfy_ctx->dane_vrfy_chk,
+			CHK_DANE(dane_vrfy_ctx->dane_vrfy_chk));
+	if (CHK_DANE(dane_vrfy_ctx->dane_vrfy_chk))
 	{
 		int r;
 
 		/* set SNI only if there is a TLSA RR */
+		if (tTd(90, 40))
+			sm_dprintf("dane_get_tlsa=%p, dane_vrfy_host=%s, dane_vrfy_sni=%s, ctx_dane_enabled=%d, dane_enabled=%d\n",
+				dane_get_tlsa(dane_vrfy_ctx),
+				dane_vrfy_ctx->dane_vrfy_host,
+				dane_vrfy_ctx->dane_vrfy_sni,
+				ctx_dane_enabled,
+				dane_vrfy_ctx->dane_vrfy_dane_enabled);
 		if (dane_get_tlsa(dane_vrfy_ctx) != NULL &&
 		    !(SM_IS_EMPTY(dane_vrfy_ctx->dane_vrfy_host) &&
 		      SM_IS_EMPTY(dane_vrfy_ctx->dane_vrfy_sni)))
@@ -7158,6 +7626,23 @@ starttls(m, mci, e, implicit
 #  if _FFR_MTA_STS
 			SM_FREE(STS_SNI);
 #  endif
+			dane_vrfy_ctx->dane_vrfy_dane_enabled = ctx_dane_enabled;
+			if ((r = ssl_dane_enable(dane_vrfy_ctx, clt_ssl)) < 0)
+			{
+				dane_vrfy_ctx->dane_vrfy_dane_enabled = false;
+				if (LogLevel > 5)
+				{
+					sm_syslog(LOG_ERR, NOQID,
+						  "STARTTLS=client, host=%s, ssl_dane_enable=%d",
+						  dane_vrfy_ctx->dane_vrfy_host, r);
+				}
+			}
+			if (SM_NOTDONE == r)
+				dane_vrfy_ctx->dane_vrfy_dane_enabled = false;
+			if (tTd(90, 40))
+				sm_dprintf("ssl_dane_enable=%d, chk=%#x, dane_enabled=%d\n",
+					r, dane_vrfy_ctx->dane_vrfy_chk,
+					dane_vrfy_ctx->dane_vrfy_dane_enabled);
 			if ((r = SSL_set_tlsext_host_name(clt_ssl,
 				(!SM_IS_EMPTY(dane_vrfy_ctx->dane_vrfy_sni)
 				? dane_vrfy_ctx->dane_vrfy_sni
@@ -7310,3 +7795,51 @@ iscltflgset(e, flag)
 	return false;
 }
 #endif /* STARTTLS || SASL */
+
+#if _FFR_TESTS
+void
+t_parsehostsig(hs, mailer)
+	char *hs;
+	MAILER *mailer;
+{
+	int nummxhosts, i;
+	char *mxhosts[MAXMXHOSTS + 1];
+#if DANE
+	BITMAP256 mxads;
+#endif
+
+	if (NULL == mailer)
+		mailer = LocalMailer;
+	nummxhosts = parse_hostsignature(hs, mxhosts, mailer
+#if DANE
+			, mxads
+#endif
+			);
+	(void) sm_io_fprintf(smioout, SM_TIME_DEFAULT,
+		     "nummxhosts=%d\n", nummxhosts);
+	for (i = 0; i < nummxhosts; i++)
+		(void) sm_io_fprintf(smioout, SM_TIME_DEFAULT,
+		     "mx[%d]=%s, ad=%d\n", i, mxhosts[i], MXADS_ISSET(mxads, 0));
+}
+
+void
+t_hostsig(a, hs, mailer)
+	ADDRESS *a;
+	char *hs;
+	MAILER *mailer;
+{
+	char *q;
+
+	if (NULL != a)
+		q = hostsignature(a->q_mailer, a->q_host, true, &a->q_flags);
+	else if (NULL != hs)
+	{
+		SM_REQUIRE(NULL != mailer);
+		q = hostsignature(mailer, hs, true, NULL);
+	}
+	else
+		SM_REQUIRE(NULL != hs);
+	(void) sm_io_fprintf(smioout, SM_TIME_DEFAULT, "hostsig %s\n", q);
+	t_parsehostsig(q, (NULL != a) ? a->q_mailer : mailer);
+}
+#endif /* _FFR_TESTS */

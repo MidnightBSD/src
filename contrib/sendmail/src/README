@@ -767,6 +767,10 @@ From: Garrett Wollman <wollman@lcs.mit.edu>
     certificate authentication -- even some of those which already support
     SSL/TLS for confidentiality.
 
+OpenSSL 3 deprecated a lot of functionality which sendmail uses by
+default. However, the code can be disabled via compile time options
+if needed:
+-DNO_DH: related to DH and DSA.
 
 +------------------------------------+
 | SASL COMPILATION AND CONFIGURATION |

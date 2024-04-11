@@ -38,6 +38,10 @@ ${PRG} <<EOF
 1:ünchen
 7:ünchen\n
 0:üncheX
+22:iseadmin@somest.sld.br>\n
+1:iseadmin@somest.sld.br
+22:iseadmin@somest.sld.br
+1:iseadmin@somest.sld.br>\n
 EOF
 R=$?
 

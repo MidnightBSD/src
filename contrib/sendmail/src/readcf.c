@@ -474,7 +474,6 @@ readcf(cfname, safe, e)
 						endtoken = 0;
 						break;
 
-
 #if 0
 /*
 **  This doesn't work yet as there are maps defined *after* the cf
@@ -545,12 +544,12 @@ readcf(cfname, safe, e)
 			if (mid == 0)
 				break;
 #if USE_EAI && 0
-			if ('j' == mid && !addr_is_ascii(ep))
-			{
-				usrerr("hostname %s must be ASCII", ep);
-				finis(false, true, EX_CONFIG);
-				/* NOTREACHED */
-			}
+//			if ('j' == mid && !addr_is_ascii(ep))
+//			{
+//				usrerr("hostname %s must be ASCII", ep);
+//				finis(false, true, EX_CONFIG);
+//				/* NOTREACHED */
+//			}
 #endif
 			p = munchstring(ep, NULL, '\0');
 			macdefine(&e->e_macro, A_TEMP, mid, p);
@@ -1146,7 +1145,6 @@ fileclass(class, filename, fmt, ismap, safe, optional)
 			sm_dprintf("fileclass: F{%s}: map class %s, key %s, spec %s\n",
 				   mn, cl, key, spec);
 
-
 		/* parse map spec */
 		if (!map.map_class->map_parse(&map, spec))
 		{
@@ -1341,7 +1339,7 @@ dynclass(class, arg)
 	if (NULL == dynmap)
 	{
 		syserr("dynamic class: A{%s}: cannot enter", mn);
-		goto error;
+		goto error2;
 	}
 	dynmap->s_dynclass.map_class = &mapclass->s_mapclass;
 	dynmap->s_dynclass.map_mname = newstr(mn);
@@ -1378,6 +1376,7 @@ dynclass(class, arg)
 
   error:
 	dynmap->s_dynclass.map_mflags |= MF_OPENBOGUS;
+  error2:
 	sm_free(mn);
 	return;
 }
@@ -1533,7 +1532,6 @@ newmodmailer(rcpt, fl)
 **	Side Effects:
 **		enters the mailer into the mailer table.
 */
-
 
 void
 makemailer(line)
@@ -3898,7 +3896,6 @@ setoption(opt, val, safe, sticky, e)
 		WkTimeFact = atoi(val);
 		break;
 
-
 #if _FFR_QUEUE_GROUP_SORTORDER
 	/* coordinate this with makequeue() */
 #endif
@@ -4930,9 +4927,9 @@ setoption(opt, val, safe, sticky, e)
 #if USE_EAI
 		/* hack for testing */
 		if (isascii(*val) && isdigit(*val))
-			SMTPUTF8 = (int) strtol(val, NULL, 0);
+			SMTP_UTF8 = (int) strtol(val, NULL, 0);
 		else
-			SMTPUTF8 = atobool(val);
+			SMTP_UTF8 = atobool(val);
 #else
 		if (atobool(val))
 			syserr("readcf: option: %s set but no USE_EAI support",
@@ -5358,7 +5355,6 @@ static struct timeoutinfo
 	{ "queuereturn.dsn",		TO_QUEUERETURN_DSN		},
 	{ NULL,				0				},
 };
-
 
 static void
 settimeout(name, val, sticky)

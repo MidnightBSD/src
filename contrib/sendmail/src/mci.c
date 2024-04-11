@@ -351,7 +351,6 @@ mci_clear(mci)
 	mactabclear(&mci->mci_macro);
 }
 
-
 /*
 **  MCI_GET -- get information about a particular host
 **

@@ -78,7 +78,7 @@
 64	multiple	Milter
 65	main.c		permission checks
 #if DANE
-66	domain.c	force port=25 for TLSA RR lookups
+66,>99	domain.c	force port=25 for TLSA RR lookups
 #endif
 68	unused
 #if _FFR_QUEUE_SCHED_DBG
@@ -112,14 +112,16 @@
 #endif
 88,>99	tls.c		disable the effect of _FFR_VRFY_TRUSTED_FIRST
 89	conf.c		>=8 use sm_dprintf() instead of syslog()
-90	unused
+#if _FFR_TESTS
+90,>99	tls.c deliver.c	Simulate error for OpenSSL functions related to DANE
+#endif
 91	mci.c		syslogging of MCI cache information
 92	EF_LOGSENDER
 93,>99	*		Prevent daemon connection fork for profiling/debugging
 94,>99	srvrsmtp.c	cause commands to fail (for protocol testing)
 95	srvrsmtp.c	AUTH
 95	usersmtp.c	AUTH
-96	tls.c		DHparam info, activate SSL_CTX_set_info_callback()
+96	tls.c		DHparam info, activate SSL_CTX_set_info_callback(), etc
 97	srvrsmtp.c	Trace automode settings for I/O
 #if _FFR_TIMERS
 98	*		timers

@@ -247,7 +247,9 @@ DM`'MASQUERADE_NAME')
 # my name for error messages
 ifdef(`confMAILER_NAME', `Dn`'confMAILER_NAME', `#DnMAILER-DAEMON')
 
+ifdef(`confOPENSSL_CNF',, `define(`confOPENSSL_CNF', `/etc/mail/sendmail.ossl')')
 undivert(6)dnl LOCAL_CONFIG
+ifelse(defn(`confOPENSSL_CNF'), `', `', `EOPENSSL_CONF=confOPENSSL_CNF')
 include(_CF_DIR_`m4/version.m4')
 
 ###############
@@ -2804,6 +2806,18 @@ R:$* $| $-.$+	$: $(macro {TLS_Name} $@ .$3 $) $>TLS_NameInList :$1
 R$* ok		$@ $>STS_SAN
 R:$*:		$#error $@ 4.7.0 $: 450 $&{server_name} not found in " "$1', `dnl')
 
+ifdef(`TLS_PERM_ERR', `dnl
+define(`TLS_DSNCODE', `5.7.0')dnl
+define(`TLS_ERRCODE', `554')',`dnl
+define(`TLS_DSNCODE', `4.7.0')dnl
+define(`TLS_ERRCODE', `454')')dnl
+define(`SW_MSG', `TLS handshake failed.')dnl
+define(`DANE_MSG', `DANE check failed.')dnl
+define(`DANE_TEMP_MSG', `DANE check failed temporarily.')dnl
+define(`DANE_NOTLS_MSG', `DANE: missing STARTTLS.')dnl
+define(`PROT_MSG', `STARTTLS failed.')dnl
+define(`CNF_MSG', `STARTTLS temporarily not possible.')dnl
+
 ######################################################################
 ###  tls_rcpt: is connection with server "good" enough?
 ###	(done in client, per recipient)
@@ -2835,12 +2849,22 @@ R<?> $+			$: $1 $| <U:$1@> <E:>
 dnl look it up
 dnl also look up a default value via E:
 R$* $| $+	$: $1 $| $>SearchList <! TLS_RCPT_TAG> $| $2 <>
+dnl no applicable requirements; trigger an error on DANE_FAIL
+dnl note: this allows to disable DANE per RCPT.
+R$* $| <?>	$: $1 $| $&{verify} $| <?>
+R$* $| DANE_FAIL $| <?>	$#error $@ TLS_DSNCODE $: "TLS_ERRCODE DANE_MSG"
+R$* $| DANE_NOTLS $| <?>	$#error $@ TLS_DSNCODE $: "TLS_ERRCODE DANE_NOTLS_MSG"
+R$* $| DANE_TEMP $| <?>	$#error $@ TLS_DSNCODE $: "TLS_ERRCODE DANE_TEMP_MSG"
 dnl found nothing: stop here
 R$* $| <?>	$@ OK
 ifdef(`_ATMPF_', `dnl tempfail?
 R$* $| <$* _ATMPF_>	$#error $@ 4.3.0 $: _TMPFMSG_(`TR')', `dnl')
 dnl use the generic routine (for now)
-R$* $| <$+>	$@ $>"TLS_connection" $&{verify} $| <$2>')
+R$* $| <$+>		$@ $>"TLS_connection" $&{verify} $| <$2>', `dnl
+R$*			$: $1 $| $&{verify}
+R$* $| DANE_NOTLS	$#error $@ TLS_DSNCODE $: "TLS_ERRCODE DANE_NOTLS_MSG"
+R$* $| DANE_TEMP	$#error $@ TLS_DSNCODE $: "TLS_ERRCODE DANE_TEMP_MSG"
+R$* $| DANE_FAIL	$#error $@ TLS_DSNCODE $: "TLS_ERRCODE DANE_MSG"')
 
 ######################################################################
 ###  tls_client: is connection with client "good" enough?
@@ -2917,22 +2941,14 @@ dnl	[(PERM|TEMP)+] (VERIFY[:bits]|ENCR:bits) [+extensions]
 dnl	extensions: could be a list of further requirements
 dnl		for now: CN:string	{cn_subject} == string
 ######################################################################
-ifdef(`TLS_PERM_ERR', `dnl
-define(`TLS_DSNCODE', `5.7.0')dnl
-define(`TLS_ERRCODE', `554')',`dnl
-define(`TLS_DSNCODE', `4.7.0')dnl
-define(`TLS_ERRCODE', `454')')dnl
-define(`SW_MSG', `TLS handshake failed.')dnl
-define(`DANE_MSG', `DANE check failed.')dnl
-define(`PROT_MSG', `STARTTLS failed.')dnl
-define(`CNF_MSG', `STARTTLS temporarily not possible.')dnl
 STLS_connection
 ifdef(`_FULL_TLS_CONNECTION_CHECK_', `dnl', `dnl use default error
 dnl deal with TLS handshake failures: abort
 RSOFTWARE	$#error $@ TLS_DSNCODE $: "TLS_ERRCODE SW_MSG"
-RDANE_FAIL	$#error $@ TLS_DSNCODE $: "TLS_ERRCODE DANE_MSG"
+dnl RDANE_FAIL	$#error $@ TLS_DSNCODE $: "TLS_ERRCODE DANE_MSG"
 RPROTOCOL	$#error $@ TLS_DSNCODE $: "TLS_ERRCODE PROT_MSG"
 RCONFIG		$#error $@ TLS_DSNCODE $: "TLS_ERRCODE CNF_MSG"
+dnl RDANE_TEMP	$#error $@ 4.7.0 $: "454 DANE_TEMP_MSG"
 divert(-1)')
 dnl common ruleset for tls_{client|server}
 dnl input: ${verify} $| <ResultOfLookup> [<>]
@@ -2955,10 +2971,12 @@ R`'$1 $| $`'*		$`'#error $`'@ TLS_DSNCODE $: "TLS_ERRCODE $2"')dnl
 TLS_ERRORS(SOFTWARE,SW_MSG)
 # deal with TLS protocol errors: abort
 TLS_ERRORS(PROTOCOL,PROT_MSG)
-# deal with DANE errors: abort
-TLS_ERRORS(DANE_FAIL,DANE_MSG)
+dnl # deal with DANE errors: abort
+dnl TLS_ERRORS(DANE_FAIL,DANE_MSG)
 # deal with CONFIG (tls_clt_features) errors: abort
 TLS_ERRORS(CONFIG,CNF_MSG)
+dnl # deal with DANE tempfail: abort
+dnl TLS_ERRORS(DANE_TEMP,DANE_TEMP_MSG)
 R$* $| <$*> <VERIFY>		$: <$2> <VERIFY> <> $1
 dnl separate optional requirements
 R$* $| <$*> <VERIFY + $+>	$: <$2> <VERIFY> <$3> $1

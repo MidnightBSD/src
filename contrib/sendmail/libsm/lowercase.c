@@ -63,11 +63,12 @@ asciinstr(str, len)
 	unsigned char ch;
 	int n;
 
-	if  (str == NULL)
+	if (str == NULL)
 		return true;
 	SM_REQUIRE(len < INT_MAX);
 	n = 0;
-	while ((ch = (unsigned char)*str) != '\0' && ch >= 32 && ch < 127)
+	while (n < len && (ch = (unsigned char)*str) != '\0'
+	       && ch >= 32 && ch < 127)
 	{
 		n++;
 		str++;
