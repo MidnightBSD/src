@@ -87,6 +87,15 @@ CWARNFLAGS.clang+=	-Wno-unused-const-variable
 .if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 130000
 CWARNFLAGS.clang+=	-Wno-error=unused-but-set-variable
 .endif
+.endif
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 140000
+NO_WBITWISE_INSTEAD_OF_LOGICAL= -Wno-bitwise-instead-of-logical
+.endif
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 150000
+NO_WARRAY_PARAMETER=    -Wno-array-parameter
+NO_WSTRICT_PROTOTYPES=  -Wno-strict-prototypes
+NO_WDEPRECATED_NON_PROTOTYPE=-Wno-deprecated-non-prototype
+.endif
 .endif # WARNS <= 6
 .if ${WARNS} <= 3
 CWARNFLAGS.clang+=	-Wno-tautological-compare -Wno-unused-value\

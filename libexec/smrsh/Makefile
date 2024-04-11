@@ -1,5 +1,4 @@
 #	@(#)Makefile	8.1 (Berkeley) 7/2/95
-# $FreeBSD: stable/11/libexec/smrsh/Makefile 321269 2017-07-20 00:58:19Z ngie $
 
 PACKAGE=sendmail
 SENDMAIL_DIR=${SRCTOP}/contrib/sendmail
@@ -27,3 +26,5 @@ sm_os.h: ${SENDMAIL_DIR}/include/sm/os/sm_os_freebsd.h .NOMETA
 	ln -sf ${.ALLSRC} ${.TARGET}
 
 .include <bsd.prog.mk>
+
+CWARNFLAGS+= ${NO_WDEPRECATED_NON_PROTOTYPE}

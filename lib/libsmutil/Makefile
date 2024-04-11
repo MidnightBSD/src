@@ -1,3 +1,4 @@
+
 .include <src.opts.mk>
 
 PACKAGE=lib${LIB}
@@ -29,3 +30,5 @@ sm_os.h: ${SENDMAIL_DIR}/include/sm/os/sm_os_freebsd.h .NOMETA
 	ln -sf ${.ALLSRC} ${.TARGET}
 
 .include <bsd.lib.mk>
+
+CWARNFLAGS+= ${NO_WDEPRECATED_NON_PROTOTYPE}
