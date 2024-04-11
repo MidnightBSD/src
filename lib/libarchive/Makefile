@@ -1,5 +1,7 @@
 .include <src.opts.mk>
 
+WARNS=0	
+
 PACKAGE=lib${LIB}
 _LIBARCHIVEDIR=	${SRCTOP}/contrib/libarchive
 
