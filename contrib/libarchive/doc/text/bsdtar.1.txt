@@ -434,6 +434,16 @@ OPTIONS
 		     Specify the number of worker threads to use.  Setting
 		     threads to a special value 0 makes zstd(1) use as many
 		     threads as there are CPU cores on the system.
+	     zstd:frame-per-file
+		     Start a new compression frame at the beginning of each
+		     file in the archive.
+	     zstd:min-frame-size=N
+		     In combination with zstd:frame-per-file, do not start a
+		     new compression frame unless the current frame is at
+		     least N bytes.
+	     zstd:max-frame-size=N
+		     Start a new compression frame as soon as the current
+		     frame exceeds N bytes.
 	     lzop:compression-level
 		     A decimal integer from 1 to 9 specifying the lzop com‐
 		     pression level.
@@ -853,4 +863,4 @@ BUGS
      is a consequence of the incompatible ways that different archive formats
      store hardlink information.)
 
-BSD			       January 31, 2020				   BSD
+BSD			       December 1, 2022				   BSD

@@ -1,4 +1,4 @@
-.TH TAR 1 "January 31, 2020" ""
+.TH TAR 1 "December 1, 2022" ""
 .SH NAME
 .ad l
 \fB\%tar\fP
@@ -723,6 +723,22 @@ Specify the number of worker threads to use.
 Setting threads to a special value 0 makes
 \fBzstd\fP(1)
 use as many threads as there are CPU cores on the system.
+.TP
+\fBzstd:frame-per-file\fP
+Start a new compression frame at the beginning of each file in the
+archive.
+.TP
+\fBzstd:min-frame-size\fP=\fIN\fP
+In combination with
+\fBzstd:frame-per-file\fP,
+do not start a new compression frame unless the current frame is at least
+\fIN\fP
+bytes.
+.TP
+\fBzstd:max-frame-size\fP=\fIN\fP
+Start a new compression frame as soon as the current frame exceeds
+\fIN\fP
+bytes.
 .TP
 \fBlzop:compression-level\fP
 A decimal integer from 1 to 9 specifying the lzop compression level.

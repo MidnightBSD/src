@@ -130,6 +130,22 @@ OPTIONS
 		     multiple tar archives have been concatenated together.
 		     Without this option, only the contents of the first con‐
 		     catenated archive would be read.
+     Format zip
+	     compat-2x
+		     Libarchive 2.x incorrectly encoded Unicode filenames on
+		     some platforms.  This option mimics the libarchive 2.x
+		     filename handling so that such archives can be read cor‐
+		     rectly.
+	     hdrcharset
+		     The value is used as a character set name that will be
+		     used when translating file names.
+	     ignorecrc32
+		     Skip the CRC32 check.  Mostly used for testing.
+	     mac-ext
+		     Support Mac OS metadata extension that records data in
+		     special files beginning with a period and underscore.
+		     Defaults to enabled on Mac OS, disabled on other plat‐
+		     forms.  Use !mac-ext to disable.
 
 ERRORS
      Detailed error codes and textual descriptions are available from the

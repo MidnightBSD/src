@@ -177,6 +177,9 @@
 /* Version number of bsdtar */
 #undef BSDTAR_VERSION_STRING
 
+/* Version number of bsdunzip */
+#undef BSDUNZIP_VERSION_STRING
+
 /* Define to 1 if the system has the type `ace_t'. */
 #undef HAVE_ACE_T
 
@@ -314,6 +317,9 @@
 
 /* Define to 1 if you have the `chroot' function. */
 #undef HAVE_CHROOT
+
+/* cmtime_s function */
+#undef HAVE_CMTIME_S
 
 /* Define to 1 if you have the <copyfile.h> header file. */
 #undef HAVE_COPYFILE_H
@@ -514,6 +520,12 @@
 /* Define to 1 if you have the `flistxattr' function. */
 #undef HAVE_FLISTXATTR
 
+/* Define to 1 if you have the `fnmatch' function. */
+#undef HAVE_FNMATCH
+
+/* Define to 1 if you have the <fnmatch.h> header file. */
+#undef HAVE_FNMATCH_H
+
 /* Define to 1 if you have the `fork' function. */
 #undef HAVE_FORK
 
@@ -562,6 +574,9 @@
 /* Define to 1 if you have the `getgrnam_r' function. */
 #undef HAVE_GETGRNAM_R
 
+/* Define to 1 if you have the `getline' function. */
+#undef HAVE_GETLINE
+
 /* Define to 1 if you have the `getpid' function. */
 #undef HAVE_GETPID
 
@@ -579,6 +594,9 @@
 
 /* Define to 1 if you have the `gmtime_r' function. */
 #undef HAVE_GMTIME_R
+
+/* gmtime_s function */
+#undef HAVE_GMTIME_S
 
 /* Define to 1 if you have the <grp.h> header file. */
 #undef HAVE_GRP_H
@@ -728,6 +746,9 @@
 /* Define to 1 if you have the `localtime_r' function. */
 #undef HAVE_LOCALTIME_R
 
+/* localtime_s function */
+#undef HAVE_LOCALTIME_S
+
 /* Define to 1 if the system has the type `long long int'. */
 #undef HAVE_LONG_LONG_INT
 
@@ -752,6 +773,9 @@
 
 /* Define to 1 if you have the <lz4.h> header file. */
 #undef HAVE_LZ4_H
+
+/* Define to 1 if you have the `LZMA_FILTER_ARM64' macro. */
+#undef HAVE_LZMA_FILTER_ARM64
 
 /* Define to 1 if you have the <lzma.h> header file. */
 #undef HAVE_LZMA_H
@@ -1089,6 +1113,9 @@
 /* Define to 1 if you have the <sys/poll.h> header file. */
 #undef HAVE_SYS_POLL_H
 
+/* Define to 1 if you have the <sys/queue.h> header file. */
+#undef HAVE_SYS_QUEUE_H
+
 /* Define to 1 if you have the <sys/richacl.h> header file. */
 #undef HAVE_SYS_RICHACL_H
 
@@ -1227,23 +1254,14 @@
 /* Define to 1 if you have the <zstd.h> header file. */
 #undef HAVE_ZSTD_H
 
-/* Define to 1 if you have the `_ctime64_s' function. */
-#undef HAVE__CTIME64_S
-
 /* Define to 1 if you have the `_fseeki64' function. */
 #undef HAVE__FSEEKI64
 
 /* Define to 1 if you have the `_get_timezone' function. */
 #undef HAVE__GET_TIMEZONE
 
-/* Define to 1 if you have the `_gmtime64_s' function. */
-#undef HAVE__GMTIME64_S
-
-/* Define to 1 if you have the `_localtime64_s' function. */
-#undef HAVE__LOCALTIME64_S
-
-/* Define to 1 if you have the `_mkgmtime64' function. */
-#undef HAVE__MKGMTIME64
+/* _mkgmtime function */
+#undef HAVE__MKGMTIME
 
 /* Define as const if the declaration of iconv() needs const. */
 #undef ICONV_CONST
@@ -1312,10 +1330,6 @@
 
 /* Define to 1 if strerror_r returns char *. */
 #undef STRERROR_R_CHAR_P
-
-/* Define to 1 if you can safely include both <sys/time.h> and <time.h>. This
-   macro is obsolete. */
-#undef TIME_WITH_SYS_TIME
 
 /* Enable extensions on AIX 3, Interix.  */
 #ifndef _ALL_SOURCE

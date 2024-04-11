@@ -636,6 +636,19 @@ Specify the number of worker threads to use.
 Setting threads to a special value 0 makes 
 [[zstd(1)|http://www.freebsd.org/cgi/man.cgi?query=zstd&sektion=1]] 
 use as many threads as there are CPU cores on the system. 
+</dd><dt>'''zstd:frame-per-file'''</dt><dd> 
+Start a new compression frame at the beginning of each file in the 
+archive. 
+</dd><dt>'''zstd:min-frame-size'''=''N''</dt><dd> 
+In combination with 
+'''zstd:frame-per-file''', 
+do not start a new compression frame unless the current frame is at least 
+''N'' 
+bytes. 
+</dd><dt>'''zstd:max-frame-size'''=''N''</dt><dd> 
+Start a new compression frame as soon as the current frame exceeds 
+''N'' 
+bytes. 
 </dd><dt>'''lzop:compression-level'''</dt><dd> 
 A decimal integer from 1 to 9 specifying the lzop compression level. 
 </dd><dt>'''xz:compression-level'''</dt><dd> 
