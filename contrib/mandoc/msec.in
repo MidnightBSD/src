@@ -25,6 +25,7 @@
 LINE("1",		"MidnightBSD General Commands Manual")
 LINE("2",		"MidnightBSD System Calls Manual")
 LINE("3",		"MidnightBSD Library Functions Manual")
+LINE("3lua",		"Lua Library Functions Manual")
 LINE("3p",		"Perl Library Functions Manual")
 LINE("4",		"MidnightBSD Kernel Interfaces Manual")
 LINE("5",		"MidnightBSD File Formats Manual")

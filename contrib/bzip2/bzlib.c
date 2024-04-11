@@ -28,9 +28,6 @@
      bzBuffToBuffDecompress.  Fixed.
 */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/contrib/bzip2/bzlib.c 351007 2019-08-14 06:39:20Z delphij $");
-
 #include "bzlib_private.h"
 
 #ifndef BZ_NO_COMPRESS
