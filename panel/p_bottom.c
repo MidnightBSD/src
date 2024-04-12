@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 2020,2021 Thomas E. Dickey                                     *
  * Copyright 1998-2008,2010 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -34,13 +34,13 @@
  ****************************************************************************/
 
 /* p_bottom.c
- * Place a panel on bottom of the stack; may already be in the stack 
+ * Place a panel on bottom of the stack; may already be in the stack
  */
 #include "panel.priv.h"
 
-MODULE_ID("$Id: p_bottom.c,v 1.14 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: p_bottom.c,v 1.17 2021/06/17 21:20:30 tom Exp $")
 
-NCURSES_EXPORT(int)
+PANEL_EXPORT(int)
 bottom_panel(PANEL * pan)
 {
   int err = OK;
@@ -52,7 +52,7 @@ bottom_panel(PANEL * pan)
       if (!Is_Bottom(pan))
 	{
 
-	  dBug(("--> bottom_panel %s", USER_PTR(pan->user)));
+	  dBug(("--> bottom_panel %s", USER_PTR(pan->user, 1)));
 
 	  HIDE_PANEL(pan, err, OK);
 	  assert(_nc_bottom_panel == _nc_stdscr_pseudo_panel);

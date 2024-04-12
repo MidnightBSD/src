@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 2020,2021 Thomas E. Dickey                                     *
  * Copyright 1998-2004,2010 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -33,16 +33,16 @@
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: fld_opts.c,v 1.13 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: fld_opts.c,v 1.16 2021/06/17 21:20:30 tom Exp $")
 
 /*----------------------------------------------------------------------------
   Field-Options manipulation routines
   --------------------------------------------------------------------------*/
 
 /*---------------------------------------------------------------------------
-|   Facility      :  libnform  
+|   Facility      :  libnform
 |   Function      :  int set_field_opts(FIELD *field, Field_Options opts)
-|   
+|
 |   Description   :  Turns on the named options for this field and turns
 |                    off all the remaining options.
 |
@@ -51,7 +51,7 @@ MODULE_ID("$Id: fld_opts.c,v 1.13 2020/02/02 23:34:34 tom Exp $")
 |                    E_BAD_ARGUMENT  - invalid options
 |                    E_SYSTEM_ERROR  - system error
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
+FORM_EXPORT(int)
 set_field_opts(FIELD *field, Field_Options opts)
 {
   int res = E_BAD_ARGUMENT;
@@ -65,14 +65,14 @@ set_field_opts(FIELD *field, Field_Options opts)
 }
 
 /*---------------------------------------------------------------------------
-|   Facility      :  libnform  
+|   Facility      :  libnform
 |   Function      :  Field_Options field_opts(const FIELD *field)
-|   
-|   Description   :  Retrieve the fields options.
+|
+|   Description   :  Retrieve the field's options.
 |
 |   Return Values :  The options.
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(Field_Options)
+FORM_EXPORT(Field_Options)
 field_opts(const FIELD *field)
 {
   T((T_CALLED("field_opts(%p)"), (const void *)field));
@@ -81,10 +81,10 @@ field_opts(const FIELD *field)
 }
 
 /*---------------------------------------------------------------------------
-|   Facility      :  libnform  
+|   Facility      :  libnform
 |   Function      :  int field_opts_on(FIELD *field, Field_Options opts)
-|   
-|   Description   :  Turns on the named options for this field and all the 
+|
+|   Description   :  Turns on the named options for this field and all the
 |                    remaining options are unchanged.
 |
 |   Return Values :  E_OK            - success
@@ -92,7 +92,7 @@ field_opts(const FIELD *field)
 |                    E_BAD_ARGUMENT  - invalid options
 |                    E_SYSTEM_ERROR  - system error
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
+FORM_EXPORT(int)
 field_opts_on(FIELD *field, Field_Options opts)
 {
   int res = E_BAD_ARGUMENT;
@@ -109,10 +109,10 @@ field_opts_on(FIELD *field, Field_Options opts)
 }
 
 /*---------------------------------------------------------------------------
-|   Facility      :  libnform  
+|   Facility      :  libnform
 |   Function      :  int field_opts_off(FIELD *field, Field_Options opts)
-|   
-|   Description   :  Turns off the named options for this field and all the 
+|
+|   Description   :  Turns off the named options for this field and all the
 |                    remaining options are unchanged.
 |
 |   Return Values :  E_OK            - success
@@ -120,7 +120,7 @@ field_opts_on(FIELD *field, Field_Options opts)
 |                    E_BAD_ARGUMENT  - invalid options
 |                    E_SYSTEM_ERROR  - system error
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
+FORM_EXPORT(int)
 field_opts_off(FIELD *field, Field_Options opts)
 {
   int res = E_BAD_ARGUMENT;

@@ -64,7 +64,7 @@ MODULE_ID("$Id: entries.c,v 1.30 2020/02/02 23:34:34 tom Exp $")
 NCURSES_EXPORT_VAR(ENTRY *) _nc_head = 0;
 NCURSES_EXPORT_VAR(ENTRY *) _nc_tail = 0;
 
-ENTRY *
+static ENTRY *
 _nc_delink_entry(ENTRY * headp, TERMTYPE2 *tterm)
 /* delink the allocated storage for the given list entry */
 {

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 2020,2021 Thomas E. Dickey                                     *
  * Copyright 1998-2009,2010 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -33,18 +33,18 @@
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: frm_sub.c,v 1.13 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: frm_sub.c,v 1.15 2021/06/17 21:20:30 tom Exp $")
 
 /*---------------------------------------------------------------------------
-|   Facility      :  libnform  
+|   Facility      :  libnform
 |   Function      :  int set_form_sub(FORM *form, WINDOW *win)
-|   
-|   Description   :  Set the subwindow of the form to win. 
+|
+|   Description   :  Set the subwindow of the form to win.
 |
 |   Return Values :  E_OK       - success
 |                    E_POSTED   - form is posted
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
+FORM_EXPORT(int)
 set_form_sub(FORM *form, WINDOW *win)
 {
   T((T_CALLED("set_form_sub(%p,%p)"), (void *)form, (void *)win));
@@ -66,14 +66,14 @@ set_form_sub(FORM *form, WINDOW *win)
 }
 
 /*---------------------------------------------------------------------------
-|   Facility      :  libnform  
+|   Facility      :  libnform
 |   Function      :  WINDOW *form_sub(const FORM *)
-|   
+|
 |   Description   :  Retrieve the window of the form.
 |
 |   Return Values :  The pointer to the Subwindow.
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(WINDOW *)
+FORM_EXPORT(WINDOW *)
 form_sub(const FORM *form)
 {
   const FORM *f;

@@ -52,7 +52,7 @@
 #include <termcap.h>		/* ospeed */
 #include <tic.h>
 
-MODULE_ID("$Id: lib_tputs.c,v 1.107 2021/04/03 18:45:53 tom Exp $")
+MODULE_ID("$Id: lib_tputs.c,v 1.108 2021/05/08 23:27:40 tom Exp $")
 
 NCURSES_EXPORT_VAR(char) PC = 0;              /* used by termcap library */
 NCURSES_EXPORT_VAR(NCURSES_OSPEED) ospeed = 0;        /* used by termcap library */
@@ -120,16 +120,21 @@ delay_output(int ms)
 NCURSES_EXPORT(void)
 NCURSES_SP_NAME(_nc_flush) (NCURSES_SP_DCL0)
 {
+    T((T_CALLED("_nc_flush(%p)"), (void *) SP_PARM));
     if (SP_PARM != 0 && SP_PARM->_ofd >= 0) {
+	TR(TRACE_CHARPUT, ("ofd:%d inuse:%lu buffer:%p",
+			   SP_PARM->_ofd,
+			   (unsigned long) SP_PARM->out_inuse,
+			   SP_PARM->out_buffer));
 	if (SP_PARM->out_inuse) {
 	    char *buf = SP_PARM->out_buffer;
 	    size_t amount = SP->out_inuse;
 
 	    SP->out_inuse = 0;
-	    TR(TRACE_CHARPUT, ("flushing %ld bytes", (unsigned long) amount));
+	    TR(TRACE_CHARPUT, ("flushing %ld/%ld bytes",
+			       (unsigned long) amount, _nc_outchars));
 	    while (amount) {
 		ssize_t res = write(SP_PARM->_ofd, buf, amount);
-
 		if (res > 0) {
 		    /* if the write was incomplete, try again */
 		    amount -= (size_t) res;
@@ -142,10 +147,15 @@ NCURSES_SP_NAME(_nc_flush) (NCURSES_SP_DCL0)
 		    break;	/* an error we can not recover from */
 		}
 	    }
+	} else if (SP_PARM->out_buffer == 0) {
+	    TR(TRACE_CHARPUT, ("flushing stdout"));
+	    fflush(stdout);
 	}
     } else {
+	TR(TRACE_CHARPUT, ("flushing stdout"));
 	fflush(stdout);
     }
+    returnVoid;
 }
 
 #if NCURSES_SP_FUNCS
@@ -266,8 +276,8 @@ NCURSES_SP_NAME(tputs) (NCURSES_SP_DCLx
 			NCURSES_SP_OUTC outc)
 {
     NCURSES_SP_OUTC my_outch = GetOutCh();
-    bool always_delay;
-    bool normal_delay;
+    bool always_delay = FALSE;
+    bool normal_delay = FALSE;
     int number;
 #if BSD_TPUTS
     int trailpad;
@@ -295,32 +305,30 @@ NCURSES_SP_NAME(tputs) (NCURSES_SP_DCLx
     }
 #endif /* TRACE */
 
-    if (SP_PARM != 0 && !HasTInfoTerminal(SP_PARM))
-	return ERR;
-
     if (!VALID_STRING(string))
 	return ERR;
 
-    if (
+    if (SP_PARM != 0 && HasTInfoTerminal(SP_PARM)) {
+	if (
 #if NCURSES_SP_FUNCS
-	   (SP_PARM != 0 && SP_PARM->_term == 0)
+	       (SP_PARM != 0 && SP_PARM->_term == 0)
 #else
-	   cur_term == 0
+	       cur_term == 0
 #endif
-	) {
-	always_delay = FALSE;
-	normal_delay = TRUE;
-    } else {
-	always_delay = (string == bell) || (string == flash_screen);
-	normal_delay =
-	    !xon_xoff
-	    && padding_baud_rate
+	    ) {
+	    always_delay = FALSE;
+	    normal_delay = TRUE;
+	} else {
+	    always_delay = (string == bell) || (string == flash_screen);
+	    normal_delay =
+		!xon_xoff
+		&& padding_baud_rate
 #if NCURSES_NO_PADDING
-	    && !GetNoPadding(SP_PARM)
+		&& !GetNoPadding(SP_PARM)
 #endif
-	    && (_nc_baudrate(ospeed) >= padding_baud_rate);
+		&& (_nc_baudrate(ospeed) >= padding_baud_rate);
+	}
     }
-
 #if BSD_TPUTS
     /*
      * This ugly kluge deals with the fact that some ancient BSD programs

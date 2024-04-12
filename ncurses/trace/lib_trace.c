@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2018-2019,2020 Thomas E. Dickey                                *
+ * Copyright 2018-2020,2021 Thomas E. Dickey                                *
  * Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -37,7 +37,7 @@
 /*
  *	lib_trace.c - Tracing/Debugging routines
  *
- * The _tracef() function is originally from pcurses (by Pavel Curtis) in 1982. 
+ * The _tracef() function is originally from pcurses (by Pavel Curtis) in 1982.
  * pcurses allowed one to enable/disable tracing using traceon() and traceoff()
  * functions.  ncurses provides a trace() function which allows one to
  * selectively enable or disable several tracing features.
@@ -48,7 +48,7 @@
 
 #include <ctype.h>
 
-MODULE_ID("$Id: lib_trace.c,v 1.95 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: lib_trace.c,v 1.99 2021/06/26 20:44:59 tom Exp $")
 
 NCURSES_EXPORT_VAR(unsigned) _nc_tracing = 0; /* always define this */
 
@@ -118,8 +118,9 @@ curses_trace(unsigned tracelevel)
 		    _nc_STRCAT(MyPath, ".log", sizeof(MyPath));
 		}
 	    }
+#define SAFE_MODE (O_CREAT | O_EXCL | O_RDWR)
 	    if (_nc_access(MyPath, W_OK) < 0
-		|| (MyFD = open(MyPath, O_CREAT | O_EXCL | O_RDWR, 0600)) < 0
+		|| (MyFD = safe_open3(MyPath, SAFE_MODE, 0600)) < 0
 		|| (MyFP = fdopen(MyFD, BIN_W)) == 0) {
 		;		/* EMPTY */
 	    }
@@ -127,7 +128,7 @@ curses_trace(unsigned tracelevel)
 	_nc_tracing = tracelevel;
 	/* Try to set line-buffered mode, or (failing that) unbuffered,
 	 * so that the trace-output gets flushed automatically at the
-	 * end of each line.  This is useful in case the program dies. 
+	 * end of each line.  This is useful in case the program dies.
 	 */
 	if (MyFP != 0) {
 #if HAVE_SETVBUF		/* ANSI */
@@ -213,7 +214,7 @@ _nc_va_tracef(const char *fmt, va_list ap)
 # if USE_WEAK_SYMBOLS
 	if ((pthread_self))
 # endif
-#ifdef _WIN32
+#ifdef _NC_WINDOWS
 	    fprintf(fp, "%#lx:", (long) (intptr_t) pthread_self().p);
 #else
 	    fprintf(fp, "%#lx:", (long) (intptr_t) pthread_self());
@@ -349,7 +350,7 @@ _nc_fmt_funcptr(char *target, const char *source, size_t size)
 	if (ch != 0 || (n + 1) >= size)
 	    leading = FALSE;
 	if (!leading) {
-	    _nc_SPRINTF(dst, _nc_SLIMIT(TR_FUNC_LEN - (dst - target))
+	    _nc_SPRINTF(dst, _nc_SLIMIT(TR_FUNC_LEN - (size_t) (dst - target))
 			"%02x", ch & 0xff);
 	    dst += 2;
 	}

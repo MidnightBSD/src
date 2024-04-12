@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 2020,2021 Thomas E. Dickey                                     *
  * Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -33,8 +33,6 @@
  *     and: Thomas E. Dickey                        1996 on                 *
  ****************************************************************************/
 
-/* $FreeBSD$ */
-
 /*
  *	comp_scan.c --- Lexical scanner for terminfo compiler.
  *
@@ -53,7 +51,7 @@
 #include <ctype.h>
 #include <tic.h>
 
-MODULE_ID("$Id: comp_scan.c,v 1.109 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: comp_scan.c,v 1.112 2021/10/04 23:56:28 tom Exp $")
 
 /*
  * Maximum length of string capability we'll accept before raising an error.
@@ -138,7 +136,7 @@ last_char(int from_end)
 
     while (len--) {
 	if (!isspace(UChar(bufptr[len]))) {
-	    if (from_end < (int) len)
+	    if (from_end <= (int) len)
 		result = bufptr[(int) len - from_end];
 	    break;
 	}
@@ -558,7 +556,7 @@ _nc_get_token(bool silent)
 		 * Grrr...what we ought to do here is barf, complaining that
 		 * the entry is malformed.  But because a couple of name fields
 		 * in the 8.2 termcap file end with |\, we just have to assume
-		 * it's termcap syntax.
+		 * it is termcap syntax.
 		 */
 		_nc_syntax = SYN_TERMCAP;
 		separator = ':';
@@ -589,12 +587,11 @@ _nc_get_token(bool silent)
 	     */
 	    if (after_list != 0) {
 		if (!silent) {
-		    if (*after_list == '\0')
+		    if (*after_list == '\0' || strchr("|", after_list[1]) != NULL) {
 			_nc_warning("empty longname field");
-#ifndef FREEBSD_NATIVE
-		    else if (strchr(after_list, ' ') == 0)
+		    } else if (strchr(after_list, ' ') == 0) {
 			_nc_warning("older tic versions may treat the description field as an alias");
-#endif
+		    }
 		}
 	    } else {
 		after_list = tok_buf + strlen(tok_buf);

@@ -38,8 +38,6 @@
  * (but it has changed a lot)                                               *
  ****************************************************************************/
 
-/* $FreeBSD$ */
-
 #define __INTERNAL_CAPS_VISIBLE
 #include <curses.priv.h>
 
@@ -55,10 +53,6 @@ MODULE_ID("$Id: lib_termcap.c,v 1.88 2020/02/02 23:34:34 tom Exp $")
 
 NCURSES_EXPORT_VAR(char *) UP = 0;
 NCURSES_EXPORT_VAR(char *) BC = 0;
-
-#ifdef FREEBSD_NATIVE
-extern char _nc_termcap[];	/* buffer to copy out */
-#endif
 
 #define MyCache  _nc_globals.tgetent_cache
 #define CacheInx _nc_globals.tgetent_index
@@ -207,16 +201,6 @@ NCURSES_SP_NAME(tgetent) (NCURSES_SP_DCLx char *bufp, const char *name)
 #endif*/
 
     }
-
-#ifdef FREEBSD_NATIVE
-    /*
-     * This is a REALLY UGLY hack. Basically, if we originate with
-     * a termcap source, try and copy it out.
-     */
-    if (bufp && _nc_termcap[0])
-	strncpy(bufp, _nc_termcap, 1024);
-#endif
-
     returnCode(rc);
 }
 

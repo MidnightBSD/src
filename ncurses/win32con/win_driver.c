@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2018,2020 Thomas E. Dickey                                     *
+ * Copyright 2018-2020,2021 Thomas E. Dickey                                *
  * Copyright 2008-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -55,11 +55,9 @@
 
 #define CUR TerminalType(my_term).
 
-MODULE_ID("$Id: win_driver.c,v 1.63 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: win_driver.c,v 1.67 2021/09/04 10:54:35 tom Exp $")
 
-#ifndef __GNUC__
-#  error We need GCC to compile for MinGW
-#endif
+#define TypeAlloca(type,count) (type*) _alloca(sizeof(type) * (size_t) (count))
 
 #define WINMAGIC NCDRV_MAGIC(NCDRV_WINCONSOLE)
 
@@ -116,7 +114,7 @@ static const LONG ansi_keys[] =
 #define MAPSIZE (FKEYS + N_INI)
 #define NUMPAIRS 64
 
-/*   A process can only have a single console, so it's safe
+/*   A process can only have a single console, so it is safe
      to maintain all the information about it in a single
      static structure.
  */
@@ -262,7 +260,7 @@ static BOOL
 con_write16(TERMINAL_CONTROL_BLOCK * TCB, int y, int x, cchar_t *str, int limit)
 {
     int actual = 0;
-    CHAR_INFO ci[limit];
+    CHAR_INFO *ci = TypeAlloca(CHAR_INFO, limit);
     COORD loc, siz;
     SMALL_RECT rec;
     int i;
@@ -311,7 +309,7 @@ con_write16(TERMINAL_CONTROL_BLOCK * TCB, int y, int x, cchar_t *str, int limit)
 static BOOL
 con_write8(TERMINAL_CONTROL_BLOCK * TCB, int y, int x, chtype *str, int n)
 {
-    CHAR_INFO ci[n];
+    CHAR_INFO *ci = TypeAlloca(CHAR_INFO, n);
     COORD loc, siz;
     SMALL_RECT rec;
     int i;
@@ -510,7 +508,7 @@ wcon_doupdate(TERMINAL_CONTROL_BLOCK * TCB)
 	if ((CurScreen(sp)->_clear || NewScreen(sp)->_clear)) {
 	    int x;
 #if USE_WIDEC_SUPPORT
-	    cchar_t empty[Width];
+	    cchar_t *empty = TypeAlloca(cchar_t, Width);
 	    wchar_t blank[2] =
 	    {
 		L' ', L'\0'
@@ -519,7 +517,7 @@ wcon_doupdate(TERMINAL_CONTROL_BLOCK * TCB)
 	    for (x = 0; x < Width; x++)
 		setcchar(&empty[x], blank, 0, 0, 0);
 #else
-	    chtype empty[Width];
+	    chtype *empty = TypeAlloca(chtype, Width);
 
 	    for (x = 0; x < Width; x++)
 		empty[x] = ' ';
@@ -675,8 +673,8 @@ wcon_dobeepflash(TERMINAL_CONTROL_BLOCK * TCB,
     int max_cells = (high * wide);
     int i;
 
-    CHAR_INFO this_screen[max_cells];
-    CHAR_INFO that_screen[max_cells];
+    CHAR_INFO *this_screen = TypeAlloca(CHAR_INFO, max_cells);
+    CHAR_INFO *that_screen = TypeAlloca(CHAR_INFO, max_cells);
     COORD this_size;
     SMALL_RECT this_region;
     COORD bufferCoord;
@@ -701,7 +699,9 @@ wcon_dobeepflash(TERMINAL_CONTROL_BLOCK * TCB,
 			bufferCoord,
 			&this_region)) {
 
-	    memcpy(that_screen, this_screen, sizeof(that_screen));
+	    memcpy(that_screen,
+		   this_screen,
+		   sizeof(CHAR_INFO) * (size_t) max_cells);
 
 	    for (i = 0; i < max_cells; i++) {
 		that_screen[i].Attributes = RevAttr(that_screen[i].Attributes);
@@ -1867,7 +1867,7 @@ get_handle(int fd)
 #if WINVER >= 0x0600
 /*   This function tests, whether or not the ncurses application
      is running as a descendant of MSYS2/cygwin mintty terminal
-     application. mintty doesn't use Windows Console for it's screen
+     application. mintty doesn't use Windows Console for its screen
      I/O, so the native Windows _isatty doesn't recognize it as
      character device. But we can discover we are at the end of an
      Pipe and can query to server side of the pipe, looking whether
@@ -1974,7 +1974,7 @@ _nc_mingw_isatty(int fd)
 
 /*   This is used when running in terminfo mode to discover,
      whether or not the "terminal" is actually a Windows
-     Console. It's the responsibility of the console to deal
+     Console. It is the responsibility of the console to deal
      with the terminal escape sequences that are sent by
      terminfo.
  */

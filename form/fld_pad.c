@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 2020,2021 Thomas E. Dickey                                     *
  * Copyright 1998-2004,2010 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -33,12 +33,12 @@
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: fld_pad.c,v 1.11 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: fld_pad.c,v 1.14 2021/06/17 21:20:30 tom Exp $")
 
 /*---------------------------------------------------------------------------
-|   Facility      :  libnform  
+|   Facility      :  libnform
 |   Function      :  int set_field_pad(FIELD *field, int ch)
-|   
+|
 |   Description   :  Set the pad character used to fill the field. This must
 |                    be a printable character.
 |
@@ -46,7 +46,7 @@ MODULE_ID("$Id: fld_pad.c,v 1.11 2020/02/02 23:34:34 tom Exp $")
 |                    E_BAD_ARGUMENT - invalid field pointer or pad character
 |                    E_SYSTEM_ERROR - system error
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
+FORM_EXPORT(int)
 set_field_pad(FIELD *field, int ch)
 {
   int res = E_BAD_ARGUMENT;
@@ -68,14 +68,14 @@ set_field_pad(FIELD *field, int ch)
 }
 
 /*---------------------------------------------------------------------------
-|   Facility      :  libnform  
+|   Facility      :  libnform
 |   Function      :  int field_pad(const FIELD *field)
-|   
-|   Description   :  Retrieve the fields pad character.
+|
+|   Description   :  Retrieve the field's pad character.
 |
 |   Return Values :  The pad character.
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
+FORM_EXPORT(int)
 field_pad(const FIELD *field)
 {
   T((T_CALLED("field_pad(%p)"), (const void *)field));

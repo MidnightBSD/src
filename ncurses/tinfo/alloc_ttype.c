@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2018-2019,2020 Thomas E. Dickey                                *
+ * Copyright 2018-2020,2021 Thomas E. Dickey                                *
  * Copyright 1999-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -43,7 +43,7 @@
 
 #include <tic.h>
 
-MODULE_ID("$Id: alloc_ttype.c,v 1.33 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: alloc_ttype.c,v 1.35 2021/06/17 21:11:08 tom Exp $")
 
 #if NCURSES_XNAMES
 /*
@@ -429,7 +429,7 @@ _nc_align_termtype(TERMTYPE2 *to, TERMTYPE2 *from)
 	      na, to ? NonNull(to->term_names) : "?",
 	      nb, from ? NonNull(from->term_names) : "?"));
 
-    if (na != 0 || nb != 0) {
+    if (to != NULL && from != NULL && (na != 0 || nb != 0)) {
 	int ext_Booleans, ext_Numbers, ext_Strings;
 	bool used_ext_Names = FALSE;
 
@@ -450,7 +450,7 @@ _nc_align_termtype(TERMTYPE2 *to, TERMTYPE2 *from)
 		return;
 	}
 	/*
-	 * This is where we pay for having a simple extension representation. 
+	 * This is where we pay for having a simple extension representation.
 	 * Allocate a new ext_Names array and merge the two ext_Names arrays
 	 * into it, updating to's counts for booleans, etc.  Fortunately we do
 	 * this only for the terminfo compiler (tic) and comparer (infocmp).
