@@ -7,7 +7,7 @@ SHLIB_MAJOR=	1
 LIB=		dns_sd
 SRCS=		dnssd_clientlib.c dnssd_clientstub.c dnssd_ipc.c
 
-WARNS?= 2
+WARNS?= 0
 
 INCS=	dns_sd.h
 
