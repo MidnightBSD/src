@@ -455,7 +455,7 @@ ACLOCAL_AMFLAGS = -I m4
 LIBTOOLFLAGS = --verbose
 SUBDIRS = lib $(am__append_1) $(am__append_2) $(am__append_3)
 pkgconfig_DATA = expat.pc
-pkgconfigdir = $(libdir)/pkgconfig
+pkgconfigdir = $(prefix)/libdata/pkgconfig
 dist_cmake_DATA = \
     cmake/autotools/expat.cmake
 
