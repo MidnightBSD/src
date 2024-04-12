@@ -44,8 +44,6 @@ int
 uni_decode_head(struct uni_msg *msg, struct uni_all *out,
     struct unicx *cx __unused)
 {
-	u_int mlen;
-
 	cx->errcnt = 0;
 	(void)memset(out, 0, sizeof(struct uni_all));
 
@@ -91,19 +89,6 @@ uni_decode_head(struct uni_msg *msg, struct uni_all *out,
 		out->u.hdr.pass = 0;
 	
 	msg->b_rptr++;
-
-	mlen = *msg->b_rptr++ << 8;
-	mlen |= *msg->b_rptr++;
-
-	/*
-	 * If the message is longer than the indicated length
-	 * shorten it. If it is shorter, probably one of the IE
-	 * decoders will break, but we should proceed. 5.5.6.5
-	 */
-#if 0
-	if(uni_msg_len(msg) > mlen)
-		msg->b_wptr = msg->b_rptr + mlen;
-#endif
 
 	return 0;
 }
