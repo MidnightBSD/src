@@ -1,6 +1,8 @@
 
 .include <src.opts.mk>
 
+WARNS=	0
+
 PACKAGE=runtime
 PROG=	camcontrol
 SRCS=	camcontrol.c util.c
