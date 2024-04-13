@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2018-2020,2021 Thomas E. Dickey                                *
+ * Copyright 2018-2021,2022 Thomas E. Dickey                                *
  * Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -41,8 +41,11 @@
 **
 */
 
+#define NEW_PAIR_INTERNAL 1
+
 #include <curses.priv.h>
 #include <tic.h>
+#include <new_pair.h>
 
 #if USE_GPM_SUPPORT
 #ifdef HAVE_LIBDL
@@ -54,7 +57,7 @@
 #undef CUR
 #define CUR SP_TERMTYPE
 
-MODULE_ID("$Id: lib_set_term.c,v 1.179 2021/05/08 21:48:34 tom Exp $")
+MODULE_ID("$Id: lib_set_term.c,v 1.184 2022/12/10 21:34:12 tom Exp $")
 
 #ifdef USE_TERM_DRIVER
 #define MaxColors      InfoOf(sp).maxcolors
@@ -146,6 +149,9 @@ delscreen(SCREEN *sp)
 
     _nc_lock_global(curses);
     if (delink_screen(sp)) {
+	WINDOWLIST *wl;
+	bool is_current = (sp == CURRENT_SCREEN);
+
 #ifdef USE_SP_RIPOFF
 	if (safe_ripoff_sp && safe_ripoff_sp != safe_ripoff_stack) {
 	    ripoff_t *rop;
@@ -160,9 +166,13 @@ delscreen(SCREEN *sp)
 	}
 #endif
 
-	(void) _nc_freewin(CurScreen(sp));
-	(void) _nc_freewin(NewScreen(sp));
-	(void) _nc_freewin(StdScreen(sp));
+	/* delete all of the windows in this screen */
+      rescan:
+	for (each_window(sp, wl)) {
+	    if (_nc_freewin(&(wl->win)) == OK) {
+		goto rescan;
+	    }
+	}
 
 	if (sp->_slk != 0) {
 
@@ -187,6 +197,7 @@ delscreen(SCREEN *sp)
 
 	FreeIfNeeded(sp->_current_attr);
 
+	_nc_free_ordered_pairs(sp);
 	FreeIfNeeded(sp->_color_table);
 	FreeIfNeeded(sp->_color_pairs);
 
@@ -219,7 +230,7 @@ delscreen(SCREEN *sp)
 	 * application might try to use (except cur_term, which may have
 	 * multiple references in different screens).
 	 */
-	if (sp == CURRENT_SCREEN) {
+	if (is_current) {
 #if !USE_REENTRANT
 	    curscr = 0;
 	    newscr = 0;
@@ -234,6 +245,8 @@ delscreen(SCREEN *sp)
 		_nc_wacs = 0;
 	    }
 #endif
+	} else {
+	    set_term(CURRENT_SCREEN);
 	}
     }
     _nc_unlock_global(curses);
@@ -738,6 +751,7 @@ NCURSES_SP_NAME(_nc_setupscreen) (
     }
 
     T(("creating stdscr"));
+    (void) bottom_stolen;
     assert((sp->_lines_avail + sp->_topstolen + bottom_stolen) == slines);
     if ((StdScreen(sp) = NCURSES_SP_NAME(newwin) (NCURSES_SP_ARGx
 						  sp->_lines_avail,
@@ -819,10 +833,13 @@ NCURSES_EXPORT(int)
 _nc_ripoffline(int line, int (*init) (WINDOW *, int))
 {
     int rc;
+
+    _nc_init_pthreads();
     _nc_lock_global(prescreen);
     START_TRACE();
     rc = NCURSES_SP_NAME(_nc_ripoffline) (CURRENT_SCREEN_PRE, line, init);
     _nc_unlock_global(prescreen);
+
     return rc;
 }
 #endif
@@ -843,10 +860,13 @@ NCURSES_EXPORT(int)
 ripoffline(int line, int (*init) (WINDOW *, int))
 {
     int rc;
+
+    _nc_init_pthreads();
     _nc_lock_global(prescreen);
     START_TRACE();
     rc = NCURSES_SP_NAME(ripoffline) (CURRENT_SCREEN_PRE, line, init);
     _nc_unlock_global(prescreen);
+
     return rc;
 }
 #endif

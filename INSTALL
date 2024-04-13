@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
--- Copyright 2018-2020,2021 Thomas E. Dickey                                 --
+-- Copyright 2018-2021,2022 Thomas E. Dickey                                 --
 -- Copyright 1998-2017,2018 Free Software Foundation, Inc.                   --
 --                                                                           --
 -- Permission is hereby granted, free of charge, to any person obtaining a   --
@@ -26,7 +26,7 @@
 -- sale, use or other dealings in this Software without prior written        --
 -- authorization.                                                            --
 -------------------------------------------------------------------------------
--- $Id: INSTALL,v 1.235 2021/10/19 23:34:17 tom Exp $
+-- $Id: INSTALL,v 1.238 2022/12/29 20:30:06 tom Exp $
 ---------------------------------------------------------------------
              How to install Ncurses/Terminfo on your system
 ---------------------------------------------------------------------
@@ -1146,8 +1146,18 @@ CONFIGURE OPTIONS:
 	path.  The configure script allows only a single directory, because
 	that is used as the directory in which to install ".pc" files.
 
-	The automatic check for the library path selects the first directory
-	which currently exists.
+	The automatic check for the library path prefers the first directory
+	which currently exists.  If none of the directories listed by
+	pkg-config exist, the check prefers a pkgconfig directory under the
+	"libdir" set by the configure script (which may not be the system
+	default), or if pkg-config lists nothing suitable, the first one which
+	is listed by pkg-config is used.
+
+	Automatic selection is overridden by providing an option-value
+	beginning with "/".
+
+	If this option is omitted, the default directory for installing
+	".pc" files is ${libdir}/pkgconfig
 
     --with-profile
 	Generate profile-libraries These are named by adding "_p" to the root,
@@ -1400,6 +1410,27 @@ COMPATIBILITY WITH OLDER RELEASES:
     Here are some of the major interface changes, and related problems which
     you may encounter when building a system with different versions of
     ncurses:
+
+    6.4 (Dec 31, 2022)
+	Interface changes:
+
+	+ none
+
+	Added extensions:
+
+	+ none
+
+	Added internal functions (other than "_sp" variants):
+
+	+ add _nc_free_termtype1 and _nc_free_tparm, for memory-leaks
+
+	Removed internal functions:
+
+	+ none
+
+	Modified internal functions:
+
+	+ none
 
     6.3 (Oct 21, 2021)
 	Interface changes:

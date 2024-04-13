@@ -1,6 +1,6 @@
-# $Id: Makefile.in,v 1.52 2021/07/03 18:57:29 tom Exp $
+# $Id: Makefile.in,v 1.54 2022/10/22 16:36:40 tom Exp $
 ##############################################################################
-# Copyright 2019-2020,2021 Thomas E. Dickey                                  #
+# Copyright 2019-2021,2022 Thomas E. Dickey                                  #
 # Copyright 1998-2013,2015 Free Software Foundation, Inc.                    #
 #                                                                            #
 # Permission is hereby granted, free of charge, to any person obtaining a    #
@@ -99,8 +99,8 @@ mostlyclean :
 clean:	mostlyclean
 	rm -f terminfo.5
 
-../edit_man.sed : make_sed.sh @MANPAGE_RENAMES@
+../edit_man.sed : make_sed.sh
 	$(SHELL) $(srcdir)/make_sed.sh @MANPAGE_RENAMES@ >../edit_man.sed
 
 distclean realclean: clean
-	rm -f Makefile *-config.1 ../edit_man.* ../man_alias.*
+	-rm -f Makefile *-config.1 ../edit_man.* ../man_alias.* man_db.renames

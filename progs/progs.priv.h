@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2019-2020,2021 Thomas E. Dickey                                *
+ * Copyright 2019-2021,2022 Thomas E. Dickey                                *
  * Copyright 1998-2015,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -31,7 +31,7 @@
  *  Author: Thomas E. Dickey                    1997-on                     *
  ****************************************************************************/
 /*
- * $Id: progs.priv.h,v 1.53 2021/06/26 20:43:19 tom Exp $
+ * $Id: progs.priv.h,v 1.59 2022/09/17 18:58:05 tom Exp $
  *
  *	progs.priv.h
  *
@@ -147,8 +147,6 @@ extern int optind;
 #endif
 #endif
 
-#define VtoTrace(opt) (unsigned) ((opt > 0) ? opt : (opt == 0))
-
 /* error-returns for tput */
 #define ErrUsage	2
 #define ErrTermType	3
@@ -233,6 +231,26 @@ extern int optind;
 #define UChar(c)    ((unsigned char)(c))
 
 #define SIZEOF(v) (sizeof(v)/sizeof(v[0]))
+
+#define VtoTrace(opt) (unsigned) ((opt > 0) ? opt : (opt == 0))
+
+/*
+ * If configured for tracing, the debug- and trace-output are merged together
+ * in the trace file for "upper" levels of the verbose option.
+ */
+#ifdef TRACE
+#define use_verbosity(level) do { \
+ 		set_trace_level(level); \
+		if (_nc_tracing > DEBUG_LEVEL(2)) \
+		    _nc_tracing |= TRACE_MAXIMUM; \
+		else if (_nc_tracing == DEBUG_LEVEL(2)) \
+		    _nc_tracing |= TRACE_ORDINARY; \
+		if (level >= 2) \
+		    curses_trace(_nc_tracing); \
+	} while (0)
+#else
+#define use_verbosity(level) do { set_trace_level(level); } while (0)
+#endif
 
 #define NCURSES_EXT_NUMBERS (NCURSES_EXT_COLORS && HAVE_INIT_EXTENDED_COLOR)
 

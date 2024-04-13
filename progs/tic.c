@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2018-2020,2021 Thomas E. Dickey                                *
+ * Copyright 2018-2021,2022 Thomas E. Dickey                                *
  * Copyright 1998-2017,2018 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -49,7 +49,7 @@
 #include <parametrized.h>
 #include <transform.h>
 
-MODULE_ID("$Id: tic.c,v 1.307 2021/10/05 08:07:05 tom Exp $")
+MODULE_ID("$Id: tic.c,v 1.320 2022/09/17 18:55:28 tom Exp $")
 
 #define STDIN_NAME "<stdin>"
 
@@ -644,7 +644,7 @@ show_databases(const char *outdir)
     const char *tried = 0;
 
     if (outdir == NULL) {
-	outdir = _nc_tic_dir(0);
+	outdir = _nc_tic_dir(NULL);
     }
     if ((result = valid_db_path(outdir)) != 0) {
 	printf("%s\n", result);
@@ -682,7 +682,6 @@ int
 main(int argc, char *argv[])
 {
     char my_tmpname[PATH_MAX];
-    char my_altfile[PATH_MAX];
     int v_opt = -1;
     int smart_defaults = TRUE;
     char *termcap;
@@ -723,7 +722,8 @@ main(int argc, char *argv[])
 	sortmode = S_TERMCAP;
     }
 #if NCURSES_XNAMES
-    use_extended_names(FALSE);
+    /* set this directly to avoid interaction with -v and -D options */
+    _nc_user_definable = FALSE;
 #endif
     _nc_strict_bsd = 0;
 
@@ -776,7 +776,7 @@ main(int argc, char *argv[])
 	    break;
 	case 'D':
 	    debug_level = VtoTrace(v_opt);
-	    set_trace_level(debug_level);
+	    use_verbosity(debug_level);
 	    show_databases(outdir);
 	    ExitProgram(EXIT_SUCCESS);
 	    break;
@@ -854,7 +854,6 @@ main(int argc, char *argv[])
 	    _nc_disable_period = TRUE;
 	    /* FALLTHRU */
 	case 'x':
-	    use_extended_names(TRUE);
 	    using_extensions = TRUE;
 	    break;
 #endif
@@ -864,8 +863,23 @@ main(int argc, char *argv[])
 	last_opt = this_opt;
     }
 
+    /*
+     * If the -v option is set, it may override the $NCURSES_TRACE environment
+     * variable, e.g., for -v3 and up.
+     */
     debug_level = VtoTrace(v_opt);
-    set_trace_level(debug_level);
+    use_verbosity(debug_level);
+
+    /*
+     * Do this after setting debug_level, since the function calls START_TRACE,
+     * which uses the $NCURSES_TRACE environment variable if _nc_tracing bits
+     * for tracing are zero.
+     */
+#if NCURSES_XNAMES
+    if (using_extensions) {
+	use_extended_names(TRUE);
+    }
+#endif
 
     if (_nc_tracing) {
 	save_check_termtype = _nc_check_termtype2;
@@ -933,6 +947,7 @@ main(int argc, char *argv[])
     }
 
     if (tmp_fp == NULL) {
+	char my_altfile[PATH_MAX];
 	tmp_fp = open_input(source_file, my_altfile);
 	if (!strcmp(source_file, "-")) {
 	    source_file = STDIN_NAME;
@@ -1081,7 +1096,7 @@ main(int argc, char *argv[])
 	if (total != 0)
 	    fprintf(log_fp, "%d entries written to %s\n",
 		    total,
-		    _nc_tic_dir((char *) 0));
+		    _nc_tic_dir(NULL));
 	else
 	    fprintf(log_fp, "No entries written\n");
     }
@@ -1741,6 +1756,8 @@ check_screen(TERMTYPE2 *tp)
 	} else if (have_XT && screen_base) {
 	    _nc_warning("screen's \"screen\" entries should not have XT set");
 	} else if (have_XT) {
+	    char *s;
+
 	    if (!have_kmouse && is_screen) {
 		if (VALID_STRING(key_mouse)) {
 		    _nc_warning("value of kmous inconsistent with screen's usage");
@@ -1756,7 +1773,9 @@ check_screen(TERMTYPE2 *tp)
 				"to have 39/49 parameters", name_39_49);
 		}
 	    }
-	    if (VALID_STRING(to_status_line))
+	    if (VALID_STRING(to_status_line)
+		&& (s = strchr(to_status_line, ';')) != NULL
+		&& *++s == '\0')
 		_nc_warning("\"tsl\" capability is redundant, given XT");
 	} else {
 	    if (have_kmouse
@@ -2717,12 +2736,11 @@ show_fkey_name(NAME_VALUE * data)
 static void
 check_conflict(TERMTYPE2 *tp)
 {
-    bool conflict = FALSE;
-
     if (!(_nc_syntax == SYN_TERMCAP && capdump)) {
 	char *check = calloc((size_t) (NUM_STRINGS(tp) + 1), sizeof(char));
 	NAME_VALUE *given = get_fkey_list(tp);
 	unsigned j, k;
+	bool conflict = FALSE;
 
 	if (check == NULL)
 	    failed("check_conflict");
@@ -2974,6 +2992,186 @@ check_user_capability_type(const char *name, int actual)
 }
 #endif
 
+#define IN_DELAY "0123456789*/."
+
+static bool
+check_ANSI_cap(const char *value, int nparams, char final)
+{
+    bool result = FALSE;
+    if (VALID_STRING(value) && csi_length(value) > 0) {
+	char *p_is_s[NUM_PARM];
+	int popcount;
+	int analyzed = _nc_tparm_analyze(NULL, value, p_is_s, &popcount);
+	if (analyzed < popcount) {
+	    analyzed = popcount;
+	}
+	if (analyzed == nparams) {
+	    bool numbers = TRUE;
+	    int p;
+	    for (p = 0; p < nparams; ++p) {
+		if (p_is_s[p]) {
+		    numbers = FALSE;
+		    break;
+		}
+	    }
+	    if (numbers) {
+		int in_delay = 0;
+		p = (int) strlen(value);
+		while (p-- > 0) {
+		    char ch = value[p];
+		    if (ch == final) {
+			result = TRUE;
+			break;
+		    }
+		    switch (in_delay) {
+		    case 0:
+			if (ch == '>')
+			    in_delay = 1;
+			break;
+		    case 1:
+			if (strchr(IN_DELAY, value[p]) != NULL)
+			    break;
+			if (ch != '<')
+			    p = 0;
+			in_delay = 2;
+			break;
+		    case 2:
+			if (ch != '$')
+			    p = 0;
+			in_delay = 0;
+			break;
+		    }
+		}
+	    }
+	}
+    }
+    return result;
+}
+
+static const char *
+skip_Delay(const char *value)
+{
+    const char *result = value;
+
+    if (*value == '$') {
+	++result;
+	if (*result++ == '<') {
+	    while (strchr(IN_DELAY, *result) != NULL)
+		++result;
+	    if (*result++ != '>') {
+		result = value;
+	    }
+	} else {
+	    result = value;
+	}
+    }
+    return result;
+}
+
+static bool
+isValidString(const char *value, const char *expect)
+{
+    bool result = FALSE;
+    if (VALID_STRING(value)) {
+	if (!strcmp(value, expect))
+	    result = TRUE;
+    }
+    return result;
+}
+
+static bool
+isValidEscape(const char *value, const char *expect)
+{
+    bool result = FALSE;
+    if (VALID_STRING(value)) {
+	if (*value == '\033') {
+	    size_t need = strlen(expect);
+	    size_t have = strlen(value) - 1;
+	    if (have >= need && !strncmp(value + 1, expect, need)) {
+		if (*skip_Delay(value + need + 1) == '\0') {
+		    result = TRUE;
+		}
+	    }
+	}
+    }
+    return result;
+}
+
+static int
+guess_ANSI_VTxx(TERMTYPE2 *tp)
+{
+    int result = -1;
+    int checks = 0;
+
+    /* VT100s have scrolling region, but ANSI (ECMA-48) does not specify */
+    if (check_ANSI_cap(change_scroll_region, 2, 'r') &&
+	(isValidEscape(scroll_forward, "D") ||
+	 isValidString(scroll_forward, "\n") ||
+	 isValidEscape(scroll_forward, "6")) &&
+	(isValidEscape(scroll_reverse, "M") ||
+	 isValidEscape(scroll_reverse, "9"))) {
+	checks |= 2;
+    }
+    if (check_ANSI_cap(cursor_address, 2, 'H') &&
+	check_ANSI_cap(cursor_up, 0, 'A') &&
+	(check_ANSI_cap(cursor_down, 0, 'B') ||
+	 isValidString(cursor_down, "\n")) &&
+	check_ANSI_cap(cursor_right, 0, 'C') &&
+	(check_ANSI_cap(cursor_left, 0, 'D') ||
+	 isValidString(cursor_left, "\b")) &&
+	check_ANSI_cap(clr_eos, 0, 'J') &&
+	check_ANSI_cap(clr_bol, 0, 'K') &&
+	check_ANSI_cap(clr_eol, 0, 'K')) {
+	checks |= 1;
+    }
+    if (checks == 3)
+	result = 1;
+    if (checks == 1)
+	result = 0;
+    return result;
+}
+
+/*
+ * u6/u7 and u8/u9 are query/response extensions which most terminals support.
+ * In particular, any ECMA-48 terminal should support these, though the details
+ * for u9 are implementation dependent.
+ */
+static void
+check_user_6789(TERMTYPE2 *tp)
+{
+    /*
+     * Check if the terminal is known to not 
+     */
+#define NO_QUERY(longname,shortname) \
+	if (PRESENT(longname)) _nc_warning(#shortname " is not supported")
+    if (tigetflag("NQ") > 0) {
+	NO_QUERY(user6, u6);
+	NO_QUERY(user7, u7);
+	NO_QUERY(user8, u8);
+	NO_QUERY(user9, u9);
+	return;
+    }
+
+    PAIRED(user6, user7);
+    PAIRED(user8, user9);
+
+    if (strchr(tp->term_names, '+') != NULL)
+	return;
+
+    switch (guess_ANSI_VTxx(tp)) {
+    case 1:
+	if (!PRESENT(user8)) {
+	    _nc_warning("expected u8/u9 for device-attributes");
+	}
+	/* FALLTHRU */
+    case 0:
+	if (!PRESENT(user6)) {
+	    _nc_warning("expected u6/u7 for cursor-position");
+	}
+	break;
+    }
+}
+
 /* other sanity-checks (things that we don't want in the normal
  * logic that reads a terminfo entry)
  */
@@ -3022,6 +3220,7 @@ check_termtype(TERMTYPE2 *tp, bool literal)
     check_keypad(tp);
     check_printer(tp);
     check_screen(tp);
+    check_user_6789(tp);
 
     /*
      * These are probably both or none.

@@ -1,5 +1,5 @@
 dnl***************************************************************************
-dnl Copyright 2018-2020,2021 Thomas E. Dickey                                *
+dnl Copyright 2018-2021,2022 Thomas E. Dickey                                *
 dnl Copyright 1998-2017,2018 Free Software Foundation, Inc.                  *
 dnl                                                                          *
 dnl Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -29,7 +29,7 @@ dnl***************************************************************************
 dnl
 dnl Author: Thomas E. Dickey 1995-on
 dnl
-dnl $Id: aclocal.m4,v 1.981 2021/10/17 15:14:04 tom Exp $
+dnl $Id: aclocal.m4,v 1.1023 2022/11/05 20:13:19 tom Exp $
 dnl Macros used in NCURSES auto-configuration script.
 dnl
 dnl These macros are maintained separately from NCURSES.  The copyright on
@@ -65,37 +65,55 @@ AC_CACHE_CHECK([for nl_langinfo and CODESET], am_cv_langinfo_codeset,
 	fi
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_ABI_DEFAULTS version: 2 updated: 2015/06/06 13:49:58
+dnl CF_ABI_DEFAULTS version: 3 updated: 2022/01/22 19:13:38
 dnl ---------------
 dnl Provide configure-script defaults for different ncurses ABIs.
 AC_DEFUN([CF_ABI_DEFAULTS],[
 AC_REQUIRE([CF_NCURSES_WITH_ABI_VERSION])
+
+# ABI 5 defaults:
+cf_dft_ccharw_max=5
+cf_dft_chtype=auto
+cf_dft_ext_colors=no
+cf_dft_ext_const=no
+cf_dft_ext_mouse=no
+cf_dft_ext_putwin=no
+cf_dft_ext_spfuncs=no
+cf_dft_filter_syms=no
+cf_dft_interop=no
+cf_dft_mmask_t=auto
+cf_dft_opaque_curses=no
+cf_dft_ordinate_type=short
+cf_dft_signed_char=no
+cf_dft_tparm_arg=long
+cf_dft_with_lp64=no
+
+# ABI 6 defaults:
 case x$cf_cv_abi_version in
 (x[[6789]])
+	cf_dft_chtype=uint32_t
 	cf_dft_ext_colors=yes
 	cf_dft_ext_const=yes
 	cf_dft_ext_mouse=yes
 	cf_dft_ext_putwin=yes
 	cf_dft_ext_spfuncs=yes
 	cf_dft_filter_syms=yes
-	cf_dft_chtype=uint32_t
-	cf_dft_mmask_t=uint32_t
 	cf_dft_interop=yes
+	cf_dft_mmask_t=uint32_t
 	cf_dft_tparm_arg=intptr_t
 	cf_dft_with_lp64=yes
 	;;
-(*)
-	cf_dft_ext_colors=no
-	cf_dft_ext_const=no
-	cf_dft_ext_mouse=no
-	cf_dft_ext_putwin=no
-	cf_dft_ext_spfuncs=no
-	cf_dft_filter_syms=no
-	cf_dft_chtype=auto
-	cf_dft_mmask_t=auto
-	cf_dft_interop=no
-	cf_dft_tparm_arg=long
-	cf_dft_with_lp64=no
+esac
+
+# ABI 7 defaults:
+case x$cf_cv_abi_version in
+(x[[789]])
+	cf_dft_ccharw_max=6
+	cf_dft_mmask_t=uint64_t
+	cf_dft_opaque_curses=yes
+	cf_dft_ordinate_type=int
+	cf_dft_signed_char=yes
+	# also: remove the wgetch-events feature in ABI 7
 	;;
 esac
 ])dnl
@@ -721,7 +739,7 @@ if test "$cf_cv_type_of_bool" = unknown ; then
 fi
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_BUILD_CC version: 9 updated: 2021/01/02 09:31:20
+dnl CF_BUILD_CC version: 10 updated: 2022/09/24 16:36:41
 dnl -----------
 dnl If we're cross-compiling, allow the user to override the tools and their
 dnl options.  The configure script is oriented toward identifying the host
@@ -787,7 +805,30 @@ if test "$cross_compiling" = yes ; then
 
 	: ${BUILD_CC:='${CC}'}
 
-	if { test "$BUILD_CC" = "$CC" || test "$BUILD_CC" = '${CC}'; } ; then
+	AC_MSG_CHECKING(if the build-compiler "$BUILD_CC" works)
+
+	cf_save_crossed=$cross_compiling
+	cf_save_ac_link=$ac_link
+	cross_compiling=no
+	ac_link='$BUILD_CC -o "conftest$ac_exeext" $BUILD_CFLAGS $BUILD_CPPFLAGS $BUILD_LDFLAGS "conftest.$ac_ext" $BUILD_LIBS >&AS_MESSAGE_LOG_FD'
+
+	AC_TRY_RUN([#include <stdio.h>
+		int main(int argc, char *argv[])
+		{
+			${cf_cv_main_return:-return}(argc < 0 || argv == 0 || argv[0] == 0);
+		}
+	],
+		cf_ok_build_cc=yes,
+		cf_ok_build_cc=no,
+		cf_ok_build_cc=unknown)
+
+	cross_compiling=$cf_save_crossed
+	ac_link=$cf_save_ac_link
+
+	AC_MSG_RESULT($cf_ok_build_cc)
+
+	if test "$cf_ok_build_cc" != yes
+	then
 		AC_MSG_ERROR([Cross-build requires two compilers.
 Use --with-build-cc to specify the native compiler.])
 	fi
@@ -1347,6 +1388,37 @@ if test "$cf_cv_check_gpm_wgetch" != yes ; then
 fi
 ])])dnl
 dnl ---------------------------------------------------------------------------
+dnl CF_CHECK_LIBSSP version: 1 updated: 2021/10/30 10:40:19
+dnl ---------------
+dnl Check if libssp is needed, e.g., to work around misconfigured libraries
+dnl used in cross-compiling to MinGW.
+AC_DEFUN([CF_CHECK_LIBSSP],[
+AC_CACHE_CHECK(if ssp library is needed,cf_cv_need_libssp,[
+AC_TRY_LINK([
+#include <sys/types.h>
+#include <dirent.h>
+],[
+       DIR *dp = opendir(".");
+],cf_cv_need_libssp=no,[
+	cf_save_LIBS="$LIBS"
+	LIBS="$LIBS -lssp"
+	AC_TRY_LINK([
+#include <sys/types.h>
+#include <dirent.h>
+	],[
+		   DIR *dp = opendir(".");
+	],cf_cv_need_libssp=yes,
+	  cf_cv_need_libssp=maybe)
+	LIBS="$cf_save_LIBS"
+])dnl
+])
+
+if test "x$cf_cv_need_libssp" = xyes
+then
+	CF_ADD_LIB(ssp)
+fi
+])dnl
+dnl ---------------------------------------------------------------------------
 dnl CF_CHECK_LIBTOOL_VERSION version: 2 updated: 2021/05/01 16:24:34
 dnl ------------------------
 dnl Show the version of libtool
@@ -1680,6 +1752,42 @@ case "$cf_cv_const_x_string" in
 esac
 
 ])
+])dnl
+dnl ---------------------------------------------------------------------------
+dnl CF_CPP_OVERRIDE version: 1 updated: 2022/08/20 16:07:10
+dnl ---------------
+dnl Check if the C++ compiler accepts the override keyword.  This is a C++-11
+dnl feature.
+AC_DEFUN([CF_CPP_OVERRIDE],
+[
+if test -n "$CXX"; then
+AC_CACHE_CHECK(if $CXX accepts override keyword,cf_cv_cpp_override,[
+	AC_LANG_SAVE
+	AC_LANG_CPLUSPLUS
+	AC_TRY_RUN([
+
+class base
+{
+public:
+	virtual int foo(float x) = 0; 
+};
+
+
+class derived: public base
+{
+public:
+	int foo(float x) override { return x != 0.0 ? 1 : 0; }
+};
+
+int main(void) { }
+],
+	[cf_cv_cpp_override=yes],
+	[cf_cv_cpp_override=no],
+	[cf_cv_cpp_override=unknown])
+	AC_LANG_RESTORE
+])
+fi
+test "$cf_cv_cpp_override" = yes && AC_DEFINE(CPP_HAS_OVERRIDE,1,[Define to 1 if C++ has override keyword])
 ])dnl
 dnl ---------------------------------------------------------------------------
 dnl CF_CPP_PARAM_INIT version: 7 updated: 2017/01/21 11:06:25
@@ -2041,7 +2149,7 @@ fi
 AC_SUBST(BROKEN_LINKER)
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_ENABLE_PC_FILES version: 14 updated: 2021/10/17 11:12:47
+dnl CF_ENABLE_PC_FILES version: 16 updated: 2021/11/20 12:48:37
 dnl ------------------
 dnl This is the "--enable-pc-files" option, which is available if there is a
 dnl pkg-config configuration on the local machine.
@@ -2066,11 +2174,12 @@ if test "x$enable_pc_files" != xno
 then
 	MAKE_PC_FILES=
 	case "x$PKG_CONFIG_LIBDIR" in
-	(xno|xnone|xyes)
+	(xno|xnone|xyes|x)
 		AC_MSG_WARN(no PKG_CONFIG_LIBDIR was found)
 		;;
 	(*)
-		CF_PATH_SYNTAX(PKG_CONFIG_LIBDIR)
+		cf_pkg_config_libdir="$PKG_CONFIG_LIBDIR"
+		CF_PATH_SYNTAX(cf_pkg_config_libdir)
 		;;
 	esac
 else
@@ -2391,7 +2500,7 @@ AC_DEFUN([CF_FIXUP_ADAFLAGS],[
 	AC_MSG_RESULT($ADAFLAGS)
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_FIX_WARNINGS version: 3 updated: 2020/12/31 18:40:20
+dnl CF_FIX_WARNINGS version: 4 updated: 2021/12/16 18:22:31
 dnl ---------------
 dnl Warning flags do not belong in CFLAGS, CPPFLAGS, etc.  Any of gcc's
 dnl "-Werror" flags can interfere with configure-checks.  Those go into
@@ -2403,11 +2512,13 @@ if test "$GCC" = yes || test "$GXX" = yes
 then
 	case [$]$1 in
 	(*-Werror=*)
-		CF_VERBOSE(repairing $1: [$]$1)
 		cf_temp_flags=
 		for cf_temp_scan in [$]$1
 		do
 			case "x$cf_temp_scan" in
+			(x-Werror=format*)
+				CF_APPEND_TEXT(cf_temp_flags,$cf_temp_scan)
+				;;
 			(x-Werror=*)
 				CF_APPEND_TEXT(EXTRA_CFLAGS,$cf_temp_scan)
 				;;
@@ -2416,9 +2527,13 @@ then
 				;;
 			esac
 		done
-		$1="$cf_temp_flags"
-		CF_VERBOSE(... fixed [$]$1)
-		CF_VERBOSE(... extra $EXTRA_CFLAGS)
+		if test "x[$]$1" != "x$cf_temp_flags"
+		then
+			CF_VERBOSE(repairing $1: [$]$1)
+			$1="$cf_temp_flags"
+			CF_VERBOSE(... fixed [$]$1)
+			CF_VERBOSE(... extra $EXTRA_CFLAGS)
+		fi
 		;;
 	esac
 fi
@@ -2511,6 +2626,61 @@ else
 	AC_MSG_ERROR(Cannot find dlsym function)
 fi
 ])
+dnl ---------------------------------------------------------------------------
+dnl CF_FUNC_GETTTYNAM version: 1 updated: 2021/12/04 18:29:47
+dnl -----------------
+dnl Check if the 4.3BSD function getttyname exists, as well as if <ttyent.h>
+dnl defines the _PATH_TTYS symbol.  If the corresponding file exists, but the
+dnl other checks fail, just define HAVE_PATH_TTYS.
+AC_DEFUN([CF_FUNC_GETTTYNAM],[
+AC_CACHE_CHECK(if _PATH_TTYS is defined in ttyent.h,cf_cv_PATH_TTYS,[
+AC_TRY_COMPILE([
+#include <stdio.h>
+#include <ttyent.h>],[
+FILE *fp = fopen(_PATH_TTYS, "r"); (void)fp],
+	[cf_cv_PATH_TTYS=yes],
+	[cf_cv_PATH_TTYS=no])])
+
+if test $cf_cv_PATH_TTYS = no
+then
+	for cf_ttys in /etc/ttytype /etc/ttys
+	do
+		if test -f $cf_ttys
+		then
+			cf_cv_PATH_TTYS=maybe
+			AC_DEFINE(_PATH_TTYS,$cf_ttys,[define to pathname of file containing mapping from tty name to terminal type])
+			break
+		fi
+	done
+fi
+
+if test $cf_cv_PATH_TTYS != no
+then
+	AC_CACHE_CHECK(if _PATH_TTYS file exists,cf_cv_have_PATH_TTYS,[
+		AC_TRY_RUN([
+#include <stdio.h>
+#include <ttyent.h>
+int main(void) {
+	FILE *fp = fopen(_PATH_TTYS, "r");
+	${cf_cv_main_return:-return} (fp == 0);
+}],
+			[cf_cv_have_PATH_TTYS=yes],
+			[cf_cv_have_PATH_TTYS=no],
+			[cf_cv_have_PATH_TTYS=unknown])])
+	test "$cf_cv_have_PATH_TTYS" = no && cf_cv_PATH_TTYS=no
+fi
+
+if test $cf_cv_PATH_TTYS != no
+then
+	AC_DEFINE(HAVE_PATH_TTYS,1,[define to 1 if system can map tty name to terminal type])
+	AC_CACHE_CHECK(for getttynam,cf_cv_func_getttynam,[
+		AC_TRY_LINK([#include <ttyent.h>],
+		[struct ttyent *fp = getttynam("/dev/tty"); (void)fp],
+		[cf_cv_func_getttynam=yes],
+		[cf_cv_func_getttynam=no])])
+	test "$cf_cv_func_getttynam" = yes && AC_DEFINE(HAVE_GETTTYNAM)
+fi
+])dnl
 dnl ---------------------------------------------------------------------------
 dnl CF_FUNC_MEMMOVE version: 9 updated: 2017/01/21 11:06:25
 dnl ---------------
@@ -4162,7 +4332,7 @@ then
 fi
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_LD_SEARCHPATH version: 3 updated: 2021/03/05 19:13:35
+dnl CF_LD_SEARCHPATH version: 4 updated: 2022/08/27 15:43:08
 dnl ----------------
 dnl Try to obtain the linker's search-path, for use in scripts.
 dnl
@@ -4173,7 +4343,7 @@ AC_CACHE_CHECK(for linker search path,cf_cv_ld_searchpath,[
 if test "$cross_compiling" != yes ; then
 
 # GNU binutils' ld does not involve permissions which may stop ldconfig.
-cf_pathlist=`ld --verbose 2>/dev/null | grep SEARCH_DIR | sed -e 's,SEARCH_DIR[[("=]][[("=]]*,,g' -e 's/"[[)]];//gp' | sort -u`
+cf_pathlist=`${LD:-ld} --verbose 2>/dev/null | grep SEARCH_DIR | sed -e 's,SEARCH_DIR[[("=]][[("=]]*,,g' -e 's/"[[)]];//gp' | sort -u`
 
 # The -NX options tell newer versions of Linux ldconfig to not attempt to
 # update the cache, which makes it run faster.
@@ -5411,13 +5581,16 @@ AC_SUBST(MAKE_UPPER_TAGS)
 AC_SUBST(MAKE_LOWER_TAGS)
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_MANPAGE_FORMAT version: 15 updated: 2021/09/04 06:35:04
+dnl CF_MANPAGE_FORMAT version: 16 updated: 2022/11/05 16:12:11
 dnl -----------------
 dnl Option to allow user to override automatic configuration of manpage format.
 dnl There are several special cases:
 dnl
-dnl	gzip - man checks for, can display gzip'd files
 dnl	compress - man checks for, can display compressed files
+dnl	bzip2 - man checks for, can display bzip2'd files
+dnl	gzip - man checks for, can display gzip'd files
+dnl	xz - man checks for, can display xz'd files
+dnl
 dnl	BSDI - files in the cat-directories are suffixed ".0"
 dnl	formatted - installer should format (put files in cat-directory)
 dnl	catonly - installer should only format, e.g., for a turnkey system.
@@ -5431,8 +5604,9 @@ AC_REQUIRE([CF_PATHSEP])
 AC_MSG_CHECKING(format of man-pages)
 
 AC_ARG_WITH(manpage-format,
-	[  --with-manpage-format   specify manpage-format: gzip/compress/BSDI/normal and
-                          optionally formatted/catonly, e.g., gzip,formatted],
+	[  --with-manpage-format   specify manpage-format: gzip/compress/bzip2/xz,
+                          BSDI/normal and optionally formatted/catonly,
+                          e.g., gzip,formatted],
 	[MANPAGE_FORMAT=$withval],
 	[MANPAGE_FORMAT=unknown])
 
@@ -5462,10 +5636,12 @@ case "$MANPAGE_FORMAT" in
 			if test "x$cf_test" = "x$cf_name" ; then
 
 				case "$cf_name" in
-				(*.gz) MANPAGE_FORMAT="$MANPAGE_FORMAT gzip";;
-				(*.Z)  MANPAGE_FORMAT="$MANPAGE_FORMAT compress";;
-				(*.0)  MANPAGE_FORMAT="$MANPAGE_FORMAT BSDI";;
-				(*)    MANPAGE_FORMAT="$MANPAGE_FORMAT normal";;
+				(*.bz2) MANPAGE_FORMAT="$MANPAGE_FORMAT bzip2";;
+				(*.xz)  MANPAGE_FORMAT="$MANPAGE_FORMAT xz";;
+				(*.gz)  MANPAGE_FORMAT="$MANPAGE_FORMAT gzip";;
+				(*.Z)   MANPAGE_FORMAT="$MANPAGE_FORMAT compress";;
+				(*.0)   MANPAGE_FORMAT="$MANPAGE_FORMAT BSDI";;
+				(*)     MANPAGE_FORMAT="$MANPAGE_FORMAT normal";;
 				esac
 
 				case "$cf_name" in
@@ -5504,7 +5680,7 @@ case "$MANPAGE_FORMAT" in
 (*)
 	for cf_option in $MANPAGE_FORMAT; do
 	case "$cf_option" in
-	(gzip|compress|BSDI|normal|formatted|catonly)
+	(xz|bzip2|gzip|compress|BSDI|normal|formatted|catonly)
 		;;
 	(*)
 		cf_unknown="$cf_unknown $cf_option"
@@ -5520,7 +5696,7 @@ if test -n "$cf_unknown" ; then
 fi
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_MANPAGE_RENAMES version: 12 updated: 2021/01/01 16:53:59
+dnl CF_MANPAGE_RENAMES version: 17 updated: 2022/10/23 07:46:29
 dnl ------------------
 dnl The Debian people have their own naming convention for manpages.  This
 dnl option lets us override the name of the file containing renaming, or
@@ -5540,27 +5716,19 @@ case ".$MANPAGE_RENAMES" in
 (.|.yes)
 	# Debian 'man' program?
 	if test -f /etc/debian_version ; then
-		MANPAGE_RENAMES=`cd "$srcdir" && pwd`/man/man_db.renames
+		MANPAGE_RENAMES=man/man_db.renames
 	else
 		MANPAGE_RENAMES=no
 	fi
 	;;
 esac
 
-if test "$MANPAGE_RENAMES" != no ; then
-	if test -f "$srcdir/man/$MANPAGE_RENAMES" ; then
-		MANPAGE_RENAMES=`cd "$srcdir/man" && pwd`/$MANPAGE_RENAMES
-	elif test ! -f "$MANPAGE_RENAMES" ; then
-		AC_MSG_ERROR(not a filename: $MANPAGE_RENAMES)
-	fi
-
-	test ! -d man && mkdir man
-
-	# Construct a sed-script to perform renaming within man-pages
-	if test -n "$MANPAGE_RENAMES" ; then
-		test ! -d man && mkdir man
-		$SHELL "$srcdir/man/make_sed.sh" "$MANPAGE_RENAMES" >./edit_man.sed
-	fi
+if test "$MANPAGE_RENAMES" = man/man_db.renames ; then
+	MANPAGE_RENAMES=`pwd`/$MANPAGE_RENAMES
+elif test "$MANPAGE_RENAMES" = no ; then
+	:
+elif test ! -f "$MANPAGE_RENAMES" ; then
+	AC_MSG_ERROR(not a filename: $MANPAGE_RENAMES)
 fi
 
 AC_MSG_RESULT($MANPAGE_RENAMES)
@@ -5629,7 +5797,7 @@ AC_ARG_WITH(manpage-tbl,
 AC_MSG_RESULT($MANPAGE_TBL)
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_MAN_PAGES version: 51 updated: 2021/01/05 16:29:19
+dnl CF_MAN_PAGES version: 54 updated: 2022/11/05 16:12:11
 dnl ------------
 dnl Try to determine if the man-pages on the system are compressed, and if
 dnl so, what format is used.  Use this information to construct a script that
@@ -5667,16 +5835,27 @@ test ! -d man && mkdir man
 
 cf_so_strip=
 cf_compress=
-case "$MANPAGE_FORMAT" in
-(*compress*)
+for cf_manpage_format in $MANPAGE_FORMAT
+do
+case "$cf_manpage_format" in
+(compress)
 	cf_so_strip="Z"
 	cf_compress=compress
 	;;
-(*gzip*)
+(gzip)
 	cf_so_strip="gz"
 	cf_compress=gzip
 	;;
+(bzip2)
+	cf_so_strip="bz2"
+	cf_compress=bzip2
+	;;
+(xz)
+	cf_so_strip="xz"
+	cf_compress=xz
+	;;
 esac
+done
 
 cf_edit_man=./edit_man.sh
 cf_man_alias=`pwd`/man_alias.sed
@@ -5702,7 +5881,8 @@ INSTALL_DATA="$INSTALL_DATA"
 transform="$program_transform_name"
 
 TMP=\${TMPDIR:=/tmp}/man\$\$
-trap "rm -f \$TMP" 0 1 2 3 15
+trap "rm -f \$TMP; exit 1" 1 2 3 15
+trap "rm -f \$TMP" 0
 
 form=\[$]1
 shift || exit 1
@@ -5812,7 +5992,7 @@ cat >>$cf_edit_man <<CF_EOF
 	sed	-f "$cf_man_alias" \\
 CF_EOF
 
-if test -f "$MANPAGE_RENAMES" ; then
+if test "$MANPAGE_RENAMES" != no ; then
 cat >>$cf_edit_man <<CF_EOF
 		< "\$i" | sed -f `pwd`/edit_man.sed >\$TMP
 CF_EOF
@@ -5982,7 +6162,7 @@ CF_UPPER(cf_map_lib_basename,$2)
 eval $1="\$${cf_map_lib_basename}_NAME"
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_MATH_LIB version: 10 updated: 2020/12/31 18:40:20
+dnl CF_MATH_LIB version: 11 updated: 2022/07/27 19:01:48
 dnl -----------
 dnl Checks for libraries.  At least one UNIX system, Apple Macintosh
 dnl Rhapsody 5.5, does not have -lm.  We cannot use the simpler
@@ -5992,18 +6172,42 @@ AC_DEFUN([CF_MATH_LIB],
 AC_CACHE_CHECK(if -lm needed for math functions,
 	cf_cv_need_libm,[
 	AC_TRY_LINK([
-	#include <stdio.h>
-	#include <stdlib.h>
-	#include <math.h>
+		#include <stdio.h>
+		#include <stdlib.h>
+		#include <math.h>
 	],
 	[double x = rand(); printf("result = %g\\n", ]ifelse([$2],,sin(x),$2)[)],
 	[cf_cv_need_libm=no],
 	[cf_cv_need_libm=yes])])
+
 if test "$cf_cv_need_libm" = yes
 then
-ifelse($1,,[
-	CF_ADD_LIB(m)
-],[$1=-lm])
+
+	cf_save_LIBS="$LIBS"
+	LIBS="$LIBS -lm"
+	AC_CACHE_CHECK(if -lm is available for math functions,
+	cf_cv_have_libm,[
+	AC_TRY_LINK([
+		#include <stdio.h>
+		#include <stdlib.h>
+		#include <math.h>
+	],
+	[double x = rand(); printf("result = %g\\n", ]ifelse([$2],,sin(x),$2)[)],
+	[cf_cv_have_libm=yes],
+	[cf_cv_have_libm=no])])
+	LIBS="$cf_save_LIBS"
+
+	if test "$cf_cv_have_libm" = yes
+	then
+		ifelse($1,,[CF_ADD_LIB(m)],[$1=-lm])
+	fi
+else
+	cf_cv_have_libm=yes
+fi
+
+if test "$cf_cv_have_libm" = yes
+then
+	AC_DEFINE(HAVE_MATH_FUNCS,1,[Define to 1 if math functions are available])
 fi
 ])
 dnl ---------------------------------------------------------------------------
@@ -6215,6 +6419,21 @@ AC_DEFUN([CF_OBJ_SUBDIR],
 			$2='obj_s' ;;
 		esac
 	esac
+])dnl
+dnl ---------------------------------------------------------------------------
+dnl CF_OUTPUT_MANPAGE_RENAMES version: 2 updated: 2022/10/22 19:12:31
+dnl -------------------------
+dnl This runs in the output step to config.status, after man_db.renames has
+dnl been generated.
+AC_DEFUN([CF_OUTPUT_MANPAGE_RENAMES],
+[
+AC_REQUIRE([CF_MANPAGE_RENAMES])
+if test "$MANPAGE_RENAMES" != no ; then
+	# Construct a sed-script to perform renaming within man-pages
+	test -n "$verbose" && echo "creating edit_man.sed"
+	test ! -d man && mkdir man
+	FGREP="${FGREP-grep -F}" $SHELL "$srcdir/man/make_sed.sh" "$MANPAGE_RENAMES" >./edit_man.sed
+fi
 ])dnl
 dnl ---------------------------------------------------------------------------
 dnl CF_PATHSEP version: 8 updated: 2021/01/01 13:31:04
@@ -6733,7 +6952,7 @@ fi
 AC_SUBST(LDCONFIG)
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_PROG_LINT version: 4 updated: 2019/11/20 18:55:37
+dnl CF_PROG_LINT version: 5 updated: 2022/08/20 15:44:13
 dnl ------------
 AC_DEFUN([CF_PROG_LINT],
 [
@@ -6744,6 +6963,7 @@ case "x$LINT" in
 	;;
 esac
 AC_SUBST(LINT_OPTS)
+AC_SUBST(LINT_LIBS)
 ])dnl
 dnl ---------------------------------------------------------------------------
 dnl CF_PROG_LN_S version: 2 updated: 2010/08/14 18:25:37
@@ -8197,34 +8417,20 @@ else
 fi
 ])
 dnl ---------------------------------------------------------------------------
-dnl CF_TRY_XOPEN_SOURCE version: 3 updated: 2021/08/28 15:20:37
+dnl CF_TRY_XOPEN_SOURCE version: 4 updated: 2022/09/10 15:16:16
 dnl -------------------
 dnl If _XOPEN_SOURCE is not defined in the compile environment, check if we
 dnl can define it successfully.
 AC_DEFUN([CF_TRY_XOPEN_SOURCE],[
 AC_CACHE_CHECK(if we should define _XOPEN_SOURCE,cf_cv_xopen_source,[
-	AC_TRY_COMPILE([
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-],[
-#ifndef _XOPEN_SOURCE
-make an error
-#endif],
+	AC_TRY_COMPILE(CF__XOPEN_SOURCE_HEAD,CF__XOPEN_SOURCE_BODY,
 	[cf_cv_xopen_source=no],
 	[cf_save="$CPPFLAGS"
 	 CF_APPEND_TEXT(CPPFLAGS,-D_XOPEN_SOURCE=$cf_XOPEN_SOURCE)
-	 AC_TRY_COMPILE([
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-],[
-#ifdef _XOPEN_SOURCE
-make an error
-#endif],
-	[cf_cv_xopen_source=no],
-	[cf_cv_xopen_source=$cf_XOPEN_SOURCE])
-	CPPFLAGS="$cf_save"
+	 AC_TRY_COMPILE(CF__XOPEN_SOURCE_HEAD,CF__XOPEN_SOURCE_BODY,
+		[cf_cv_xopen_source=no],
+		[cf_cv_xopen_source=$cf_XOPEN_SOURCE])
+		CPPFLAGS="$cf_save"
 	])
 ])
 
@@ -9206,7 +9412,7 @@ if test "x$with_pcre2" != xno ; then
 fi
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_WITH_PKG_CONFIG_LIBDIR version: 13 updated: 2021/10/17 11:12:47
+dnl CF_WITH_PKG_CONFIG_LIBDIR version: 20 updated: 2022/01/29 17:03:42
 dnl -------------------------
 dnl Allow the choice of the pkg-config library directory to be overridden.
 dnl
@@ -9229,98 +9435,113 @@ case "$PKG_CONFIG" in
 	;;
 esac
 
+# if $PKG_CONFIG_LIBDIR is set, try to use that
 cf_search_path=`echo "$PKG_CONFIG_LIBDIR" | sed -e 's/:/ /g' -e 's,^[[ 	]]*,,'`
+
+# if the option is used, let that override.  otherwise default to "libdir"
 AC_ARG_WITH(pkg-config-libdir,
 	[  --with-pkg-config-libdir=XXX use given directory for installing pc-files],
 	[cf_search_path=$withval],
-	[test "x$PKG_CONFIG" != xnone && cf_search_path=yes])
+	[test "x$PKG_CONFIG" != xnone && test -z "$cf_search_path" && cf_search_path=libdir])
 
-case x$cf_search_path in
-(x/*)
-	;;
-(xyes)
+case "x$cf_search_path" in
+(xlibdir)
+	PKG_CONFIG_LIBDIR='${libdir}/pkgconfig'
+	AC_MSG_RESULT($PKG_CONFIG_LIBDIR)
 	cf_search_path=
-	CF_VERBOSE(auto...)
+	;;
+(x)
+	;;
+(x/*\ *)
+	PKG_CONFIG_LIBDIR=
+	;;
+(x/*)
+	PKG_CONFIG_LIBDIR="$cf_search_path"
+	AC_MSG_RESULT($PKG_CONFIG_LIBDIR)
+	cf_search_path=
+	;;
+(xyes|xauto)
+	AC_MSG_RESULT(auto)
+	cf_search_path=
 	# Look for the library directory using the same prefix as the executable
 	AC_MSG_CHECKING(for search-list)
-	if test "x$PKG_CONFIG" = xnone
+	if test "x$PKG_CONFIG" != xnone
 	then
-		cf_path=$prefix
-	else
-		cf_path=`echo "$PKG_CONFIG" | sed -e 's,/[[^/]]*/[[^/]]*$,,'`
+		# works for pkg-config since version 0.24 (2009)
+		# works for pkgconf since version 0.8.3 (2012)
+		for cf_pkg_program in \
+			`echo "$PKG_CONFIG" | sed -e 's,^.*/,,'` \
+			pkg-config \
+			pkgconf
+		do
+			cf_search_path=`"$PKG_CONFIG" --variable=pc_path "$cf_pkg_program" 2>/dev/null | tr : ' '`
+			test -n "$cf_search_path" && break
+		done
+
+		# works for pkg-config since import in 2005 of original 2001 HP code.
+		test -z "$cf_search_path" && \
 		cf_search_path=`
-		"$PKG_CONFIG" --debug --exists no-such-package 2>&1 | awk "\
-/^Scanning directory #[1-9][0-9]* '.*'$/{ \
+		"$PKG_CONFIG" --debug --exists no-such-package 2>&1 | $AWK "\
+/^Scanning directory (#[1-9][0-9]* )?'.*'$/{ \
 	sub(\"^[[^']]*'\",\"\"); \
 	sub(\"'.*\",\"\"); \
 	printf \" %s\", \\[$]0; } \
-/trying path:/{
-	sub(\"^.* trying path: \",\"\");
-	sub(\" for no-such-package.*$\",\"\");
-	printf \" %s\", \\[$]0;
-}
 { next; } \
 "`
 	fi
 
-	if test -z "$cf_search_path"
-	then
-		# If you don't like using the default architecture, you have to specify
-		# the intended library directory and corresponding compiler/linker
-		# options.
-		#
-		# This case allows for Debian's 2014-flavor of multiarch, along with
-		# the most common variations before that point.  Some other variants
-		# spell the directory differently, e.g., "pkg-config", and put it in
-		# unusual places.
-		#
-		# pkg-config has always been poorly standardized, which is ironic...
-		case x`(arch) 2>/dev/null` in
-		(*64)
-			cf_test_path="\
-				$cf_path/lib/*64-linux-gnu \
-				$cf_path/share \
-				$cf_path/lib64 \
-				$cf_path/lib32 \
-				$cf_path/lib"
-			;;
-		(*)
-			cf_test_path="\
-				$cf_path/lib/*-linux-gnu \
-				$cf_path/share \
-				$cf_path/lib32 \
-				$cf_path/lib \
-				$cf_path/libdata"
-			;;
-		esac
-		for cf_config in $cf_test_path
-		do
-			test -d "$cf_config/pkgconfig" && cf_search_path="$cf_search_path $cf_config/pkgconfig"
-		done
-	fi
-
 	AC_MSG_RESULT($cf_search_path)
-
 	;;
 (*)
+	AC_MSG_ERROR(Unexpected option value: $cf_search_path)
 	;;
 esac
 
-AC_MSG_CHECKING(for first directory)
-cf_pkg_config_path=none
-for cf_config in $cf_search_path
-do
-	if test -d "$cf_config"
-	then
-		cf_pkg_config_path=$cf_config
-		break
-	fi
-done
-AC_MSG_RESULT($cf_pkg_config_path)
+if test -n "$cf_search_path"
+then
+	AC_MSG_CHECKING(for first directory)
+	cf_pkg_config_path=none
+	for cf_config in $cf_search_path
+	do
+		if test -d "$cf_config"
+		then
+			cf_pkg_config_path=$cf_config
+			break
+		fi
+	done
+	AC_MSG_RESULT($cf_pkg_config_path)
 
-if test "x$cf_pkg_config_path" != xnone ; then
-	# limit this to the first directory found
-	PKG_CONFIG_LIBDIR="$cf_pkg_config_path"
+	if test "x$cf_pkg_config_path" != xnone ; then
+		# limit this to the first directory found
+		PKG_CONFIG_LIBDIR="$cf_pkg_config_path"
+	fi
+
+	if test -z "$PKG_CONFIG_LIBDIR" && test -n "$cf_search_path"
+	then
+		AC_MSG_CHECKING(for workaround)
+		if test "$prefix" = "NONE" ; then
+			cf_prefix="$ac_default_prefix"
+		else
+			cf_prefix="$prefix"
+		fi
+		eval cf_libdir=$libdir
+		cf_libdir=`echo "$cf_libdir" | sed -e "s,^NONE,$cf_prefix,"`
+		cf_backup=
+		for cf_config in $cf_search_path
+		do
+			case $cf_config in
+			$cf_libdir/pkgconfig)
+				PKG_CONFIG_LIBDIR=$cf_libdir/pkgconfig
+				break
+				;;
+			*)
+				test -z "$cf_backup" && cf_backup=$cf_config
+				;;
+			esac
+		done
+		test -z "$PKG_CONFIG_LIBDIR" && PKG_CONFIG_LIBDIR=$cf_backup
+		AC_MSG_RESULT($PKG_CONFIG_LIBDIR)
+	fi
 fi
 
 AC_SUBST(PKG_CONFIG_LIBDIR)
@@ -9676,7 +9897,7 @@ fi
 AC_SUBST(no_x11_rgb)
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_XOPEN_SOURCE version: 59 updated: 2021/08/28 15:20:37
+dnl CF_XOPEN_SOURCE version: 62 updated: 2022/10/02 19:55:56
 dnl ---------------
 dnl Try to get _XOPEN_SOURCE defined properly that we can use POSIX functions,
 dnl or adapt to the vendor's definitions to get equivalent functionality,
@@ -9727,7 +9948,7 @@ case "$host_os" in
 	cf_xopen_source="-D_SGI_SOURCE"
 	cf_XOPEN_SOURCE=
 	;;
-(linux*|uclinux*|gnu*|mint*|k*bsd*-gnu|cygwin)
+(linux*gnu|linux*gnuabi64|linux*gnuabin32|linux*gnueabi|linux*gnueabihf|linux*gnux32|uclinux*|gnu*|mint*|k*bsd*-gnu|cygwin)
 	CF_GNU_SOURCE($cf_XOPEN_SOURCE)
 	;;
 (minix*)
@@ -9776,7 +9997,13 @@ case "$host_os" in
 	;;
 (*)
 	CF_TRY_XOPEN_SOURCE
+	cf_save_xopen_cppflags="$CPPFLAGS"
 	CF_POSIX_C_SOURCE($cf_POSIX_C_SOURCE)
+	# Some of these niche implementations use copy/paste, double-check...
+	CF_VERBOSE(checking if _POSIX_C_SOURCE inteferes)
+	AC_TRY_COMPILE(CF__XOPEN_SOURCE_HEAD,CF__XOPEN_SOURCE_BODY,,[
+		AC_MSG_WARN(_POSIX_C_SOURCE definition is not usable)
+		CPPFLAGS="$cf_save_xopen_cppflags"])
 	;;
 esac
 
@@ -9820,3 +10047,23 @@ dnl ------------------
 dnl Trim something using sed, then trim extra whitespace
 dnl $1 = extra parameters, e.g., in CF_STRIP_G_OPT
 define([CF__SED_TRIMBLANKS],[sed ifelse($1,,,[$1] )-e 's%[[	]]% %g' -e 's% [[ ]]*% %g' -e 's%^ %%' -e 's% [$]%%'])dnl
+dnl ---------------------------------------------------------------------------
+dnl CF__XOPEN_SOURCE_BODY version: 1 updated: 2022/09/10 15:17:35
+dnl ---------------------
+dnl body of test when test-compiling for _XOPEN_SOURCE check
+define([CF__XOPEN_SOURCE_BODY],
+[
+#ifndef _XOPEN_SOURCE
+make an error
+#endif
+])
+dnl ---------------------------------------------------------------------------
+dnl CF__XOPEN_SOURCE_HEAD version: 1 updated: 2022/09/10 15:17:03
+dnl ---------------------
+dnl headers to include when test-compiling for _XOPEN_SOURCE check
+define([CF__XOPEN_SOURCE_HEAD],
+[
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+])

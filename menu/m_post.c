@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020,2021 Thomas E. Dickey                                     *
+ * Copyright 2020-2021,2022 Thomas E. Dickey                                *
  * Copyright 1998-2010,2012 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -38,7 +38,7 @@
 
 #include "menu.priv.h"
 
-MODULE_ID("$Id: m_post.c,v 1.36 2021/05/08 20:20:01 tom Exp $")
+MODULE_ID("$Id: m_post.c,v 1.38 2022/09/24 09:38:44 tom Exp $")
 
 /*---------------------------------------------------------------------------
 |   Facility      :  libnmenu
@@ -203,7 +203,6 @@ _nc_Draw_Menu(const MENU *menu)
   ITEM *item = menu->items[0];
   ITEM *lastvert;
   ITEM *hitem;
-  int y = 0;
   chtype s_bkgd;
 
   assert(item && menu->win);
@@ -217,6 +216,8 @@ _nc_Draw_Menu(const MENU *menu)
 
   if (item != NULL)
     {
+      int y = 0;
+
       do
 	{
 	  ITEM *lasthor;

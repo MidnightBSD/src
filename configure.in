@@ -1,5 +1,5 @@
 dnl***************************************************************************
-dnl Copyright 2018-2020,2021 Thomas E. Dickey                                *
+dnl Copyright 2018-2021,2022 Thomas E. Dickey                                *
 dnl Copyright 1998-2017,2018 Free Software Foundation, Inc.                  *
 dnl                                                                          *
 dnl Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -29,7 +29,7 @@ dnl***************************************************************************
 dnl
 dnl Author: Thomas E. Dickey 1995-on
 dnl
-dnl $Id: configure.in,v 1.736 2021/07/18 22:17:57 tom Exp $
+dnl $Id: configure.in,v 1.753 2022/11/05 20:14:56 tom Exp $
 dnl Process this file with autoconf to produce a configure script.
 dnl
 dnl For additional information, see
@@ -38,7 +38,7 @@ dnl     https://invisible-island.net/autoconf/my-autoconf.html
 dnl
 dnl ---------------------------------------------------------------------------
 AC_PREREQ(2.52.20210101)
-AC_REVISION($Revision: 1.736 $)
+AC_REVISION($Revision: 1.753 $)
 AC_INIT(ncurses/base/lib_initscr.c)
 AC_CONFIG_HEADER(include/ncurses_cfg.h:include/ncurses_cfg.hin)
 
@@ -693,6 +693,15 @@ AC_MSG_RESULT($with_xterm_new)
 WHICH_XTERM=$with_xterm_new
 AC_SUBST(WHICH_XTERM)
 
+case $host_os in
+(*linux-gnu|*cygwin|*mingw32|*msys)
+	want_xterm_kbs=DEL
+	;;
+(*)
+	want_xterm_kbs=BS
+	;;
+esac
+
 AC_MSG_CHECKING(if xterm backspace sends BS or DEL)
 AC_ARG_WITH(xterm-kbs,
 	[  --with-xterm-kbs=XXX    specify if xterm backspace sends BS or DEL],
@@ -712,6 +721,11 @@ esac
 AC_MSG_RESULT($with_xterm_kbs)
 XTERM_KBS=$with_xterm_kbs
 AC_SUBST(XTERM_KBS)
+
+if test "x$with_xterm_kbs" != "x$want_xterm_kbs"
+then
+	AC_MSG_WARN(expected --with-xterm-kbs=$want_xterm_kbs for $host_os)
+fi
 
 MAKE_TERMINFO=
 if test "$use_database" = no ; then
@@ -946,6 +960,15 @@ if test "x$with_widec" = xyes ; then
 	fi
 	AC_DEFINE(USE_WIDEC_SUPPORT,1,[Define to 1 to compile with wide-char/UTF-8 code])
 	AC_DEFINE(NCURSES_WIDECHAR,1,[Define to 1 to compile with wide-char/UTF-8 code])
+	case "$CPPFLAGS" in
+	(*_XOPEN_SOURCE=*)
+		;;
+	(*)
+		AC_MSG_WARN(_XOPEN_SOURCE feature test macro appears to be predefined)
+		# CPPFLAGS="$CPPFLAGS -DNCURSES_WIDECHAR"
+		CPPFLAGS_after_XOPEN="$CPPFLAGS_after_XOPEN -DNCURSES_WIDECHAR"
+		;;
+	esac
 
 	CF_CHECK_WCHAR_H
 	CF_CHECK_WCWIDTH_GRAPHICS
@@ -953,7 +976,7 @@ if test "x$with_widec" = xyes ; then
 
 	# with_overwrite=no
 	NCURSES_CH_T=cchar_t
-	AC_CHECK_FUNCS(putwc btowc wctob mbtowc wctomb mblen mbrlen mbrtowc wcsrtombs mbsrtowcs wcstombs mbstowcs)
+	AC_CHECK_FUNCS(putwc btowc wctob wmemchr mbtowc wctomb mblen mbrlen mbrtowc wcsrtombs mbsrtowcs wcstombs mbstowcs)
 	if test "x$ac_cv_func_putwc" != xyes ; then
 		CF_UTF8_LIB
 		if test "$cf_cv_utf8_lib" != no ; then
@@ -1050,7 +1073,11 @@ AC_ARG_WITH(caps,
 	[  --with-caps=alt         compile with alternate Caps file],
 	[TERMINFO_CAPS=Caps.$withval],
 	[TERMINFO_CAPS=Caps])
-test -f "${srcdir}/include/${TERMINFO_CAPS}" || TERMINFO_CAPS=Caps
+if test ! -f "${srcdir}/include/${TERMINFO_CAPS}"
+then
+	AC_MSG_WARN(file not found: "${srcdir}/include/${TERMINFO_CAPS}")
+	TERMINFO_CAPS=Caps
+fi
 AC_MSG_RESULT($TERMINFO_CAPS)
 AC_SUBST(TERMINFO_CAPS)
 
@@ -1084,7 +1111,7 @@ AC_MSG_CHECKING(for size CCHARW_MAX)
 AC_ARG_WITH(ccharw-max,
 	[  --with-ccharw-max=XXX   override size CCHARW_MAX],
 	[NCURSES_CCHARW_MAX="$withval"],
-	[NCURSES_CCHARW_MAX=5])
+	[NCURSES_CCHARW_MAX=$cf_dft_ccharw_max])
 AC_MSG_RESULT($NCURSES_CCHARW_MAX)
 AC_SUBST(NCURSES_CCHARW_MAX)
 
@@ -1098,7 +1125,7 @@ AC_MSG_CHECKING(if you want to use signed Boolean array in term.h)
 AC_ARG_ENABLE(signed-char,
 	[  --enable-signed-char    compile using signed Boolean's in term.h],
 	[with_signed_char=$enableval],
-	[with_signed_char=no])
+	[with_signed_char=$cf_dft_signed_char])
 AC_MSG_RESULT($with_signed_char)
 test "x$with_signed_char" != xyes && NCURSES_SBOOL="char"
 AC_SUBST(NCURSES_SBOOL)
@@ -1234,11 +1261,22 @@ AC_ARG_ENABLE(ext-mouse,
 	[with_ext_mouse=$enableval],
 	[with_ext_mouse=$cf_dft_ext_mouse])
 AC_MSG_RESULT($with_ext_mouse)
-NCURSES_MOUSE_VERSION=1
 if test "x$with_ext_mouse" = xyes ; then
-	NCURSES_MOUSE_VERSION=2
 	CF_NCURSES_ABI_6
 fi
+
+case $cf_cv_abi_version in
+(5)
+	NCURSES_MOUSE_VERSION=1
+	;;
+(6)
+	NCURSES_MOUSE_VERSION=2
+	;;
+([[789]])
+	NCURSES_MOUSE_VERSION=3
+	;;
+esac
+
 AC_SUBST(NCURSES_MOUSE_VERSION)
 
 ###   use option --enable-ext-putwin to turn on extended screendumps
@@ -1367,7 +1405,7 @@ if test "x$with_reentrant" = xyes ; then
 else
 	cf_cv_enable_reentrant=0
 	cf_cv_enable_opaque="NCURSES_OPAQUE"
-	NCURSES_SIZE_T=short
+	NCURSES_SIZE_T=$cf_dft_ordinate_type
 fi
 AC_SUBST(cf_cv_enable_reentrant)
 AC_SUBST(cf_cv_enable_opaque)
@@ -1379,7 +1417,7 @@ CF_ARG_ENABLE(opaque-curses,
 	[  --enable-opaque-curses  make curses WINDOW, etc., "opaque"],
 	[enable_opaque_curses=yes],[
 	 test "$cf_cv_enable_reentrant" = 1 && enable_opaque_curses=yes
-	 test "$cf_cv_enable_reentrant" = 1 || enable_opaque_curses=no
+	 test "$cf_cv_enable_reentrant" = 1 || enable_opaque_curses=$cf_dft_opaque_curses
 	])
 AC_MSG_RESULT($enable_opaque_curses)
 
@@ -1625,7 +1663,7 @@ AC_SUBST(INSTALL_OPT_P)
 CF_ENABLE_WARNINGS(Wno-unknown-pragmas Wswitch-enum,yes)
 
 if test "x$enable_warnings" = "xyes"; then
- 	CF_ADD_ADAFLAGS(-gnatg)
+ 	CF_ADD_ADAFLAGS(-gnatwa -gnatyg)
 	if test "x$cf_with_cxx" = xyes ; then
 		CF_GXX_WARNINGS(Wno-unused)
 	fi
@@ -1696,12 +1734,13 @@ CF_DISABLE_GNAT_PROJECTS
 ###	Checks for libraries.
 case "$cf_cv_system_name" in
 (*mingw32*|*mingw64*)
-	if test "x$with_exp_win32" = xyes ; then
-	CPPFLAGS="$CPPFLAGS -DWINVER=0x0600 -DWIN32_LEAN_AND_MEAN"
-	else
-	CPPFLAGS="$CPPFLAGS -DWINVER=0x0501 -DWIN32_LEAN_AND_MEAN"
-	fi
 	# Note: WINVER may be a problem with Windows 10
+	if test "x$with_exp_win32" = xyes ; then
+		CPPFLAGS="$CPPFLAGS -DWINVER=0x0600 -DWIN32_LEAN_AND_MEAN"
+	else
+		CPPFLAGS="$CPPFLAGS -DWINVER=0x0501 -DWIN32_LEAN_AND_MEAN"
+	fi
+	CF_CHECK_LIBSSP
 	;;
 (*)
 AC_CHECK_FUNC(gettimeofday,
@@ -1736,7 +1775,6 @@ sys/poll.h \
 sys/select.h \
 sys/time.h \
 sys/times.h \
-ttyent.h \
 unistd.h \
 wctype.h \
 )
@@ -1787,11 +1825,11 @@ CF_LINK_DATAONLY
 
 ###	Checks for library functions.
 AC_CHECK_FUNCS( \
+fpathconf \
 getcwd \
 getegid \
 geteuid \
 getopt \
-getttynam \
 issetugid \
 localeconv \
 poll \
@@ -1814,6 +1852,8 @@ times \
 tsearch \
 vsnprintf \
 )
+
+CF_FUNC_GETTTYNAM
 
 if test "x$ac_cv_func_getopt" = xno && \
    test "x$cf_with_progs$cf_with_tests" != xnono; then
@@ -1909,6 +1949,7 @@ if test -n "$CXX" ; then
 	CF_BOOL_DECL
 	CF_BOOL_SIZE
 	CF_ETIP_DEFINES
+	CF_CPP_OVERRIDE
 	CF_CPP_PARAM_INIT
 	CF_CPP_STATIC_CAST
 	CF_CXX_AR_FLAGS
@@ -2506,12 +2547,14 @@ AC_OUTPUT( \
 	include/ncurses_dll.h \
 	include/termcap.h \
 	include/unctrl.h \
+	man/man_db.renames \
 	$SUB_MAKEFILES \
 	Makefile,[
 if test "x$cf_with_tests" != xno ; then
 	CF_PRG_RULES(["$srcdir/test/mk-test.awk" INSTALL=no ECHO_LINK="$ECHO_LD"], test)
 fi
 CF_LIB_RULES($SRC_SUBDIRS)
+CF_OUTPUT_MANPAGE_RENAMES
 
 if test "x$cf_with_ada" = "xyes" && test "x$cf_cv_prog_gnat_correct" = "xyes"; then
 if test -z "$USE_OLD_MAKERULES" ; then
@@ -2539,6 +2582,7 @@ LIB_SUFFIX="$LIB_SUFFIX"
 LIB_TRACING="$LIB_TRACING"
 LN_S="$LN_S"
 MAKE_TERMINFO="$MAKE_TERMINFO"
+MANPAGE_RENAMES="$MANPAGE_RENAMES"
 MENU_NAME="$MENU_NAME"
 NCURSES_MAJOR="$NCURSES_MAJOR"
 NCURSES_MINOR="$NCURSES_MINOR"
@@ -2592,6 +2636,7 @@ cf_with_manpages="$cf_with_manpages"
 cf_with_tests="$cf_with_tests"
 host="$host"
 target="$target"
+verbose="$verbose"
 with_shared_cxx="$with_shared_cxx"
 
 ],cat)dnl

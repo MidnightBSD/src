@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020,2021 Thomas E. Dickey                                     *
+ * Copyright 2020-2021,2022 Thomas E. Dickey                                *
  * Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -43,7 +43,7 @@
 
 #include <dump_entry.h>
 
-MODULE_ID("$Id: infocmp.c,v 1.151 2021/06/17 21:11:08 tom Exp $")
+MODULE_ID("$Id: infocmp.c,v 1.156 2022/09/24 10:13:06 tom Exp $")
 
 #define MAX_STRING	1024	/* maximum formatted string */
 
@@ -124,17 +124,19 @@ failed(const char *s)
     ExitProgram(EXIT_FAILURE);
 }
 
-static char *
-canonical_name(char *ptr, char *buf)
+static void
+canonical_name(char *source, char *target)
 /* extract the terminal type's primary name */
 {
-    char *bp;
+    int limit = NAMESIZE;
 
-    _nc_STRCPY(buf, ptr, NAMESIZE);
-    if ((bp = strchr(buf, '|')) != 0)
-	*bp = '\0';
-
-    return (buf);
+    while (--limit > 0) {
+	char ch = *source++;
+	if (ch == '|')
+	    break;
+	*target++ = ch;
+    }
+    *target = '\0';
 }
 
 static bool
@@ -903,7 +905,6 @@ analyze_string(const char *name, const char *cap, TERMTYPE2 *tp)
 		       sizeof(buf2));
 	    _nc_STRNCPY(buf3, sp + csi, len);
 	    buf3[len] = '\0';
-	    len += (size_t) csi + 1;
 
 	    expansion = lookup_params(std_modes, buf2, buf3);
 	}
@@ -924,7 +925,6 @@ analyze_string(const char *name, const char *cap, TERMTYPE2 *tp)
 		       sizeof(buf2));
 	    _nc_STRNCPY(buf3, sp + csi + 1, len);
 	    buf3[len] = '\0';
-	    len += (size_t) csi + 2;
 
 	    expansion = lookup_params(private_modes, buf2, buf3);
 	}
@@ -1132,8 +1132,8 @@ file_comparison(int argc, char *argv[])
 	    if (entryeq(&qp->tterm, &rp->tterm) && useeq(qp, rp)) {
 		char name1[NAMESIZE], name2[NAMESIZE];
 
-		(void) canonical_name(qp->tterm.term_names, name1);
-		(void) canonical_name(rp->tterm.term_names, name2);
+		canonical_name(qp->tterm.term_names, name1);
+		canonical_name(rp->tterm.term_names, name2);
 
 		(void) printf("%s = %s\n", name1, name2);
 	    }
@@ -1161,8 +1161,8 @@ file_comparison(int argc, char *argv[])
 		entries[0] = *qp;
 		entries[1] = *rp;
 
-		(void) canonical_name(qp->tterm.term_names, name1);
-		(void) canonical_name(rp->tterm.term_names, name2);
+		canonical_name(qp->tterm.term_names, name1);
+		canonical_name(rp->tterm.term_names, name2);
 
 		switch (compare) {
 		case C_DIFFERENCE:
@@ -1725,7 +1725,7 @@ main(int argc, char *argv[])
 
 	case 'v':
 	    itrace = (unsigned) optarg_to_number();
-	    set_trace_level(itrace);
+	    use_verbosity(itrace);
 	    break;
 
 	case 'W':

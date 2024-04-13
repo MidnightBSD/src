@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2018-2020,2021 Thomas E. Dickey                                *
+ * Copyright 2018-2021,2022 Thomas E. Dickey                                *
  * Copyright 1998-2017,2018 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -35,7 +35,7 @@
  ****************************************************************************/
 
 /*
- * $Id: curses.priv.h,v 1.646 2021/09/24 16:09:35 tom Exp $
+ * $Id: curses.priv.h,v 1.653 2022/10/23 13:29:26 tom Exp $
  *
  *	curses.priv.h
  *
@@ -139,6 +139,10 @@ extern int errno;
 # if HAVE_STDINT_H
 #  include <stdint.h>
 # endif
+#endif
+
+#ifndef PRIxPTR
+# define PRIxPTR	"lx"
 #endif
 
 /* include signal.h before curses.h to work-around defect in glibc 2.1.3 */
@@ -575,6 +579,10 @@ NCURSES_EXPORT(int *)        _nc_ptr_Escdelay (SCREEN *);
 
 #endif
 
+#define IS_SUBWIN(w)         ((w)->_flags & _SUBWIN)
+#define IS_PAD(w)            ((w)->_flags & _ISPAD)
+#define IS_WRAPPED(w)        ((w)->_flags & _WRAPPED)
+
 #define HasHardTabs()	(NonEmpty(clear_all_tabs) && NonEmpty(set_tab))
 
 #define TR_MUTEX(data) _tracef("%s@%d: me:%08lX COUNT:%2u/%2d/%6d/%2d/%s%9u: " #data, \
@@ -668,8 +676,13 @@ extern NCURSES_EXPORT(int) _nc_sigprocmask(int, const sigset_t *, sigset_t *);
 #define _nc_lock_global(name)	/* nothing */
 #define _nc_try_global(name)    0
 #define _nc_unlock_global(name)	/* nothing */
-
 #endif /* USE_PTHREADS */
+
+#if USE_PTHREADS_EINTR
+extern NCURSES_EXPORT(void) _nc_set_read_thread(bool);
+#else
+#define _nc_set_read_thread(enable)	/* nothing */
+#endif
 
 /*
  * When using sp-funcs, locks are targeted to SCREEN-level granularity.
@@ -1502,6 +1515,13 @@ extern NCURSES_EXPORT_VAR(SIG_ATOMIC_T) _nc_have_sigwinch;
 		_nc_err_abort(MSG_NO_MEMORY); \
 	} while (0)
 
+#define TYPE_CALLOC(type, size, name) \
+	do { \
+	    name = typeCalloc(type, size); \
+	    if (name == 0) \
+		_nc_err_abort(MSG_NO_MEMORY); \
+	} while (0)
+
 #define TYPE_REALLOC(type, size, name) \
 	do { \
 	    name = typeRealloc(type, size, name); \
@@ -1615,6 +1635,8 @@ typedef void VoidFunc(void);
 #define returnWin(code)		TRACE_RETURN1(code,win)
 
 #define returnDB(rc)		do { TR(TRACE_DATABASE,(T_RETURN("code %d"), (rc))); return (rc); } while (0)
+#define returnPtrDB(rc)		do { TR(TRACE_DATABASE,(T_RETURN("%p"), (rc))); return (rc); } while (0)
+#define returnVoidDB		do { TR(TRACE_DATABASE,(T_RETURN(""))); return; } while (0)
 
 extern NCURSES_EXPORT(NCURSES_BOOL)     _nc_retrace_bool (int);
 extern NCURSES_EXPORT(NCURSES_CONST void *) _nc_retrace_cvoid_ptr (NCURSES_CONST void *);
@@ -1689,6 +1711,8 @@ extern NCURSES_EXPORT(const char *) _nc_viscbuf (const NCURSES_CH_T *, int);
 #define returnWin(code)		return code
 
 #define returnDB(code)		return code
+#define returnPtrDB(rc)		return rc
+#define returnVoidDB		return
 
 #endif /* TRACE/!TRACE */
 

@@ -2,10 +2,10 @@
 #
 # MKlib_gen.sh -- generate sources from curses.h macro definitions
 #
-# ($Id: MKlib_gen.sh,v 1.71 2021/09/26 22:08:53 tom Exp $)
+# ($Id: MKlib_gen.sh,v 1.73 2022/10/01 13:14:20 tom Exp $)
 #
 ##############################################################################
-# Copyright 2018-2020,2021 Thomas E. Dickey                                  #
+# Copyright 2018-2021,2022 Thomas E. Dickey                                  #
 # Copyright 1998-2016,2017 Free Software Foundation, Inc.                    #
 #                                                                            #
 # Permission is hereby granted, free of charge, to any person obtaining a    #
@@ -83,7 +83,7 @@ USE="$3"
 #	https://gcc.gnu.org/gcc-5/porting_to.html
 
 PRG=`echo "$1" | "$AWK" '{ sub(/^[ 	]*/,""); sub(/[ 	].*$/, ""); print; }' || exit 0`
-FSF=`("$PRG" --version 2>/dev/null || exit 0) | fgrep "Free Software Foundation" | head -n 1`
+FSF=`("$PRG" --version 2>/dev/null || exit 0) | ${FGREP-grep -F} "Free Software Foundation" | head -n 1`
 ALL=`"$PRG" -dumpversion 2>/dev/null || exit 0`
 ONE=`echo "$ALL" | sed -e 's/[^0-9].*$//'`
 if test -n "$FSF" && test -n "$ALL" && test -n "$ONE" ; then
@@ -101,7 +101,8 @@ ED4=sed4_${PID}.sed
 AW1=awk1_${PID}.awk
 AW2=awk2_${PID}.awk
 TMP=gen__${PID}.c
-trap "rm -f $ED1 $ED2 $ED3 $ED4 $AW1 $AW2 $TMP" 0 1 2 3 15
+trap "rm -f $ED1 $ED2 $ED3 $ED4 $AW1 $AW2 $TMP; exit 1" 1 2 3 15
+trap "rm -f $ED1 $ED2 $ED3 $ED4 $AW1 $AW2 $TMP" 0
 
 ALL=$USE
 if test "$USE" = implemented ; then

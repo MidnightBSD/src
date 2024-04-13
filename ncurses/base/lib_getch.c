@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2018-2020,2021 Thomas E. Dickey                                *
+ * Copyright 2018-2021,2022 Thomas E. Dickey                                *
  * Copyright 1998-2015,2016 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -44,7 +44,7 @@
 #define NEED_KEY_EVENT
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_getch.c,v 1.142 2021/09/04 10:52:55 tom Exp $")
+MODULE_ID("$Id: lib_getch.c,v 1.145 2022/12/24 22:38:38 tom Exp $")
 
 #include <fifo_defs.h>
 
@@ -309,16 +309,11 @@ fifo_push(SCREEN *sp EVENTLIST_2nd(_nc_eventlist * evl))
 	int buf;
 # if defined(EXP_WIN32_DRIVER)
 	if (NC_ISATTY(sp->_ifd) && IsTermInfoOnConsole(sp) && sp->_cbreak) {
-#  if USE_PTHREADS_EINTR
-	    if ((pthread_self) && (pthread_kill) && (pthread_equal))
-		_nc_globals.read_thread = pthread_self();
-#  endif
+	    _nc_set_read_thread(TRUE);
 	    n = _nc_console_read(sp,
 				 _nc_console_handle(sp->_ifd),
 				 &buf);
-#  if USE_PTHREADS_EINTR
-	    _nc_globals.read_thread = 0;
-#  endif
+	    _nc_set_read_thread(FALSE);
 	} else
 # elif defined(_NC_WINDOWS)
 	if (NC_ISATTY(sp->_ifd) && IsTermInfoOnConsole(sp) && sp->_cbreak)
@@ -334,12 +329,8 @@ fifo_push(SCREEN *sp EVENTLIST_2nd(_nc_eventlist * evl))
 	int buf;
 #endif
 	unsigned char c2 = 0;
-#if USE_PTHREADS_EINTR
-#if USE_WEAK_SYMBOLS
-	if ((pthread_self) && (pthread_kill) && (pthread_equal))
-#endif
-	    _nc_globals.read_thread = pthread_self();
-#endif
+
+	_nc_set_read_thread(TRUE);
 #if defined(EXP_WIN32_DRIVER)
 	n = _nc_console_read(sp,
 			     _nc_console_handle(sp->_ifd),
@@ -348,9 +339,7 @@ fifo_push(SCREEN *sp EVENTLIST_2nd(_nc_eventlist * evl))
 #else
 	n = (int) read(sp->_ifd, &c2, (size_t) 1);
 #endif
-#if USE_PTHREADS_EINTR
-	_nc_globals.read_thread = 0;
-#endif
+	_nc_set_read_thread(FALSE);
 	ch = c2;
 #endif /* USE_TERM_DRIVER */
     }
@@ -391,7 +380,17 @@ recur_wrefresh(WINDOW *win)
 {
 #ifdef USE_PTHREADS
     SCREEN *sp = _nc_screen_of(win);
-    if (_nc_use_pthreads && sp != CURRENT_SCREEN) {
+    bool same_sp;
+
+    if (_nc_use_pthreads) {
+	_nc_lock_global(curses);
+	same_sp = (sp == CURRENT_SCREEN);
+	_nc_unlock_global(curses);
+    } else {
+	same_sp = (sp == CURRENT_SCREEN);
+    }
+
+    if (_nc_use_pthreads && !same_sp) {
 	SCREEN *save_SP;
 
 	/* temporarily switch to the window's screen to check/refresh */
@@ -404,7 +403,7 @@ recur_wrefresh(WINDOW *win)
     } else
 #endif
 	if ((is_wintouched(win) || (win->_flags & _HASMOVED))
-	    && !(win->_flags & _ISPAD)) {
+	    && !IS_PAD(win)) {
 	wrefresh(win);
     }
 }
@@ -639,7 +638,7 @@ _nc_wgetch(WINDOW *win,
      * However, we provide the same visual result as Solaris, moving the
      * cursor to the left.
      */
-    if (sp->_echo && !(win->_flags & _ISPAD)) {
+    if (sp->_echo && !IS_PAD(win)) {
 	chtype backup = (chtype) ((ch == KEY_BACKSPACE) ? '\b' : ch);
 	if (backup < KEY_MIN)
 	    wechochar(win, backup);
