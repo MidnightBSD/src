@@ -33,10 +33,7 @@ azure-check-depends:
 .if !exists(/usr/local/bin/azure)
 . if !exists(/usr/local/bin/npm)
 .  if !exists(${PORTSDIR}/www/npm/Makefile)
-.   if !exists(/usr/local/sbin/pkg-static)
-	env ASSUME_ALWAYS_YES=yes pkg bootstrap -yf
-.   endif
-	env ASSUME_ALWAYS_YES=yes pkg install -y www/npm
+	env ASSUME_ALWAYS_YES=yes mport install www/npm
 .  else
 	make -C ${PORTSDIR}/www/npm BATCH=1 all install clean
 .  endif
