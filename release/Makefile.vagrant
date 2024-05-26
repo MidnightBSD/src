@@ -53,10 +53,7 @@ vagrant-check-depends:
 .endfor
 .if !exists(/usr/local/bin/curl)
 . if !exists(${PORTSDIR}/ftp/curl/Makefile)
-.  if !exists(/usr/local/sbin/pkg-static)
-	env ASSUME_ALWAYS_YES=yes pkg bootstrap -yf
-.  endif
-	env ASSUME_ALWAYS_YES=yes pkg install -y curl
+	env ASSUME_ALWAYS_YES=yes mport install curl
 . else
 	make -C ${PORTSDIR}/ftp/curl BATCH=1 all install clean
 . endif
