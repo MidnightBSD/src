@@ -237,7 +237,7 @@ extra_chroot_setup() {
 	[ -e /etc/resolv.conf -a ! -e ${CHROOTDIR}/etc/resolv.conf ] && \
 		cp /etc/resolv.conf ${CHROOTDIR}/etc/resolv.conf
 	# Run ldconfig(8) in the chroot directory so /var/run/ld-elf*.so.hints
-	# is created.  This is needed by ports-mgmt/pkg.
+	# is created.  This is needed by mport
 	eval chroot ${CHROOTDIR} /etc/rc.d/ldconfig forcerestart
 
 	# If MAKE_CONF and/or SRC_CONF are set and not character devices
