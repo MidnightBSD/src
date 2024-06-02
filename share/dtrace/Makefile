@@ -1,4 +1,3 @@
-# $FreeBSD$
 #
 # Hand installing our scripts and optionally (based on MK_CDDL) installing
 # the DTraceToolkit.
@@ -6,6 +5,7 @@
 
 .include <src.opts.mk>
 
+PACKAGE=	dtrace
 SCRIPTS=	blocking \
 		disklatency \
 		disklatencycmd \
