@@ -26,7 +26,7 @@ firstboot_start()
 		echo -e "\r${red}MidnightBSD FirstBoot Configuration${lsuffix}"
 		echo "This utility requires an active Internet connection."
 
-		echo -e "\r${yellow}Set your preferred package mirror? (us,us2,us3,uk,jp)${lsuffix}"
+		echo -e "\r${yellow}Set your preferred package mirror? (us,uk,jp)${lsuffix}"
 		read mportmirror
 		/usr/sbin/mport config set mirror_region ${mportmirror}
 
