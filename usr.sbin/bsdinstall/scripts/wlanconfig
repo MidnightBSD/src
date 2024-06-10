@@ -25,7 +25,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.sbin/bsdinstall/scripts/wlanconfig 326653 2017-12-07 03:57:11Z emaste $
 #
 ############################################################ INCLUDES
 

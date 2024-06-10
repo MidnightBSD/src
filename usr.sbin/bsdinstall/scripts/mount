@@ -24,9 +24,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/usr.sbin/bsdinstall/scripts/mount,v 1.1 2011/02/18 14:54:34 nwhitehorn Exp $
 
-TMP_FSTAB=/tmp/bsdinstall-tmp-fstab
+TMP_FSTAB=${TMPDIR:-"/tmp"}/bsdinstall-tmp-fstab
 
 cat $PATH_FSTAB | awk -v BSDINSTALL_CHROOT=$BSDINSTALL_CHROOT '{
 	if ($2 ~ "^/.*") {
@@ -53,3 +52,9 @@ done
 # User might want a shell and require devfs, so mount it
 mkdir $BSDINSTALL_CHROOT/dev 2>/dev/null
 mount -t devfs devfs $BSDINSTALL_CHROOT/dev
+
+# If installing from the DVD, mount packages where they'll be accessible
+if [ -d /packages ]; then
+	mkdir -p $BSDINSTALL_CHROOT/dist/packages
+	mount -t nullfs /packages $BSDINSTALL_CHROOT/dist/packages
+fi

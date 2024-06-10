@@ -24,7 +24,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/usr.sbin/bsdinstall/scripts/adduser 225065 2011-08-21 18:49:28Z nwhitehorn $
 
 clear
 echo "MidnightBSD Installer"

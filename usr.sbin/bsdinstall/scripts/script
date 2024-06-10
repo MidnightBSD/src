@@ -25,7 +25,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.sbin/bsdinstall/scripts/script 319124 2017-05-29 11:37:08Z royger $
 #
 ############################################################ INCLUDES
 
@@ -48,6 +47,8 @@ f_include $BSDCFG_SHARE/variable.subr
 : ${ZFSBOOT_POOL_NAME:=zroot}
 
 ############################################################ GLOBALS
+
+: ${TMPDIR:="/tmp"}
 
 #
 # Strings that should be moved to an i18n file and loaded with f_include_lang()
@@ -88,9 +89,9 @@ f_dprintf "Began Installation at %s" "$( date )"
 rm -rf $BSDINSTALL_TMPETC
 mkdir $BSDINSTALL_TMPETC
 
-split -a 2 -p '^#!.*' "$SCRIPT" /tmp/bsdinstall-installscript-
+split -a 2 -p '^#!.*' "$SCRIPT" $TMPDIR/bsdinstall-installscript-
 
-. /tmp/bsdinstall-installscript-aa
+. $TMPDIR/bsdinstall-installscript-aa
 : ${DISTRIBUTIONS="kernel.txz base.txz"}; export DISTRIBUTIONS
 export BSDINSTALL_DISTDIR
 
@@ -99,7 +100,7 @@ if [ "$BSDINSTALL_LOG" != "${debugFile#+}" ]; then
 	export debugFile="$BSDINSTALL_LOG"
 	f_quietly f_debug_init
 	# NB: Being scripted, let debug go to terminal for invalid debugFile
-	f_dprintf "Began Instalation at %s" "$( date )"
+	f_dprintf "Began Installation at %s" "$( date )"
 fi
 
 # Make partitions
@@ -109,19 +110,42 @@ if [ "$ZFSBOOT_DISKS" ]; then
 	bsdinstall zfsboot
 else
 	bsdinstall scriptedpart "$PARTITIONS"
-	bsdinstall mount
 fi
+bsdinstall mount
+
+# Fetch missing distribution files, if any
+(
+	exec 3>&1
+	export BSDINSTALL_DISTDIR=$(`dirname $0`/fetchmissingdists 2>&1 1>&3)
+	FETCH_RESULT=$?
+	exec 3>&-
+	return $FETCH_RESULT
+) || error "Could not fetch remote distributions"
 
 # Unpack distributions
 bsdinstall checksum
-for set in $DISTRIBUTIONS; do
-	f_dprintf "Extracting $BSDINSTALL_DISTDIR/$set"
-	# XXX: this will fail if any mountpoints are FAT, due to inability to
-	# set ctime/mtime on the root of FAT partitions. tar has no option to
-	# ignore this. We probably need to switch back to distextract here
-	# to properly support EFI.
-	tar -xf "$BSDINSTALL_DISTDIR/$set" -C $BSDINSTALL_CHROOT
-done
+if [ -t 0 ]; then
+	# If install is a tty, use distextract as normal
+	bsdinstall distextract
+else
+	# Otherwise, we need to use tar
+	for set in $DISTRIBUTIONS; do
+		f_dprintf "Extracting $BSDINSTALL_DISTDIR/$set"
+		# XXX: The below fails if any mountpoints are FAT, due to
+		# inability to set ctime/mtime on the root of FAT partitions,
+		# which is needed to support e.g. EFI system partitions. tar has
+		# no option to ignore this (distextract ignores them internally
+		# through a hack), and returns 1 on any warning or error,
+		# effectively turning all warnings into fatal errors.
+		# 
+		# Work around this in an extremely lame way for the specific
+		# case of EFI system partitions only. This *ONLY WORKS* if
+		# /boot/efi is empty and does not handle analagous problems on
+		# other systems (ARM, PPC64).
+		tar -xf "$BSDINSTALL_DISTDIR/$set" -C $BSDINSTALL_CHROOT --exclude boot/efi
+		mkdir -p $BSDINSTALL_CHROOT/boot/efi
+	done
+fi
 
 # Configure bootloader if needed
 bsdinstall bootconfig
@@ -135,8 +159,8 @@ if [ ! -f $BSDINSTALL_CHROOT/etc/resolv.conf -a -f /etc/resolv.conf ]; then
 fi
 
 # Run post-install script
-if [ -f /tmp/bsdinstall-installscript-ab ]; then
-	cp /tmp/bsdinstall-installscript-ab $BSDINSTALL_CHROOT/tmp/installscript
+if [ -f $TMPDIR/bsdinstall-installscript-ab ]; then
+	cp $TMPDIR/bsdinstall-installscript-ab $BSDINSTALL_CHROOT/tmp/installscript
 	chmod a+x $BSDINSTALL_CHROOT/tmp/installscript
 	mount -t devfs devfs "$BSDINSTALL_CHROOT/dev"
 	chroot $BSDINSTALL_CHROOT /tmp/installscript $@ 2>&1
@@ -145,10 +169,9 @@ if [ -f /tmp/bsdinstall-installscript-ab ]; then
 fi
 
 bsdinstall entropy
+bsdinstall umount
 if [ "$ZFSBOOT_DISKS" ]; then
 	zpool export $ZFSBOOT_POOL_NAME
-else
-	bsdinstall umount
 fi
 
 f_dprintf "Installation Completed at %s" "$( date )"

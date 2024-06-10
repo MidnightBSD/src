@@ -846,7 +846,7 @@ zfs_create_diskpart()
 		if [ "$ZFSBOOT_BOOT_TYPE" = "UEFI" -o "$ZFSBOOT_BOOT_TYPE" = "BIOS+UEFI" ]; then
 			f_eval_catch $funcname gpart \
 			             "$GPART_ADD_ALIGN_LABEL_WITH_SIZE" \
-			             "$align_small" efiboot$index efi 200M \
+			             "$align_small" efiboot$index efi 260M \
 				     $disk ||
 			             return $FAILURE
 
