@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
@@ -21,7 +23,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 #define __LIBARCHIVE_CONFIG_H_INCLUDED 1
 
@@ -87,8 +88,11 @@
 #define HAVE_DECL_UINT64_MAX 1
 #define HAVE_DECL_UINTMAX_MAX 1
 #define HAVE_DIRENT_H 1
+#define HAVE_DIRFD 1
 #define HAVE_DLFCN_H 1
+#ifndef __linux__
 #define HAVE_D_MD_ORDER 1
+#endif
 #define HAVE_EFTYPE 1
 #define HAVE_EILSEQ 1
 #define HAVE_ERRNO_H 1
@@ -99,6 +103,8 @@
 #define HAVE_FCNTL 1
 #define HAVE_FCNTL_H 1
 #define HAVE_FDOPENDIR 1
+#define HAVE_FNMATCH 1
+#define HAVE_FNMATCH_H 1
 #define HAVE_FORK 1
 #define HAVE_FSEEKO 1
 #define HAVE_FSTAT 1
@@ -111,6 +117,8 @@
 #define HAVE_GETEUID 1
 #define HAVE_GETGRGID_R 1
 #define HAVE_GETGRNAM_R 1
+#define HAVE_GETLINE 1
+#define HAVE_GETOPT_OPTRESET 1
 #define HAVE_GETPID 1
 #define HAVE_GETPWNAM_R 1
 #define HAVE_GETPWUID_R 1
@@ -126,6 +134,7 @@
 #define HAVE_LIBZ 1
 #define HAVE_LIMITS_H 1
 #define HAVE_LINK 1
+#define HAVE_LINKAT 1
 #define HAVE_LOCALE_H 1
 #define HAVE_LOCALTIME_R 1
 #define HAVE_LONG_LONG_INT 1
@@ -151,8 +160,10 @@
 #define HAVE_READDIR_R 1
 #define HAVE_READLINK 1
 #define HAVE_READLINKAT 1
+#ifndef __linux__
 #define HAVE_READPASSPHRASE 1
 #define HAVE_READPASSPHRASE_H 1
+#endif
 #define HAVE_REGEX_H 1
 #define HAVE_SELECT 1
 #define HAVE_SETENV 1
@@ -188,6 +199,7 @@
 #define HAVE_SYS_MOUNT_H 1
 #define HAVE_SYS_PARAM_H 1
 #define HAVE_SYS_POLL_H 1
+#define HAVE_SYS_QUEUE_H 1
 #define HAVE_SYS_SELECT_H 1
 #define HAVE_SYS_STATVFS_H 1
 #define HAVE_SYS_STAT_H 1
