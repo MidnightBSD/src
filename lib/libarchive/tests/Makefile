@@ -1,4 +1,8 @@
+.include <src.opts.mk>
+
 PACKAGE=	tests
+
+WARNS?=		3
 
 _LIBARCHIVEDIR=	${SRCTOP}/contrib/libarchive
 
@@ -89,7 +93,6 @@ TESTS_SRCS= \
 	test_entry_strmode.c			\
 	test_extattr_freebsd.c			\
 	test_filter_count.c			\
-	test_fuzz.c				\
 	test_gnutar_filename_encoding.c		\
 	test_link_resolver.c			\
 	test_open_fd.c				\
@@ -304,16 +307,24 @@ TESTS_SRCS= \
 	test_zip_filename_encoding.c
 
 # Deterministic failures:
-# Crashes with SIGBUS
-BROKEN_TESTS+=			test_archive_rmd160
-# Fails with `libarchive/test/test_archive_crypto.c:121: md != actualmd`
-BROKEN_TESTS+=			test_archive_sha384
 # Fails with `test_read_disk_directory_traversals.c:1094: File at has atime 886622, 1443306049 seconds ago`
 BROKEN_TESTS+=			test_read_disk_directory_traversals
 
+.if 0
+# test_fuzz.c is not a real test, but rather a simple fuzz-test using random().
+# Since this is not a regression/unit test, we don't include it by default.
+# If you would still like to include it, comment out the `.if 0`.
+TEST_SCRCS+=	test_fuzz.c
+${PACKAGE}FILES+=	test_fuzz.cab.uu
+${PACKAGE}FILES+=	test_fuzz.lzh.uu
+${PACKAGE}FILES+=	test_fuzz_1.iso.Z.uu
 # Non-deterministic failures:
 # (Times out?) [and] crashes
 BROKEN_TESTS+=			test_fuzz_rar
+.endif
+
+# https://bugs.freebsd.org/240683
+BROKEN_TESTS+=			test_write_filter_zstd
 
 # Build the test program.
 SRCS.libarchive_test=		\
@@ -389,9 +400,6 @@ ${PACKAGE}FILES+=	test_compat_zip_7.xps.uu
 ${PACKAGE}FILES+=	test_compat_zip_8.zip.uu
 ${PACKAGE}FILES+=	test_compat_zstd_1.tar.zst.uu
 ${PACKAGE}FILES+=	test_compat_zstd_2.tar.zst.uu
-${PACKAGE}FILES+=	test_fuzz.cab.uu
-${PACKAGE}FILES+=	test_fuzz.lzh.uu
-${PACKAGE}FILES+=	test_fuzz_1.iso.Z.uu
 ${PACKAGE}FILES+=	test_pax_filename_encoding.tar.uu
 ${PACKAGE}FILES+=	test_pax_xattr_header_all.tar.uu
 ${PACKAGE}FILES+=	test_pax_xattr_header_libarchive.tar.uu
@@ -424,6 +432,7 @@ ${PACKAGE}FILES+=	test_read_format_7zip_bcj2_copy_1.7z.uu
 ${PACKAGE}FILES+=	test_read_format_7zip_bcj2_copy_2.7z.uu
 ${PACKAGE}FILES+=	test_read_format_7zip_bcj2_copy_lzma.7z.uu
 ${PACKAGE}FILES+=	test_read_format_7zip_bcj2_deflate.7z.uu
+${PACKAGE}FILES+=	test_read_format_7zip_deflate_arm64.7z.uu
 ${PACKAGE}FILES+=	test_read_format_7zip_bcj2_lzma1_1.7z.uu
 ${PACKAGE}FILES+=	test_read_format_7zip_bcj2_lzma1_2.7z.uu
 ${PACKAGE}FILES+=	test_read_format_7zip_bcj2_lzma2_1.7z.uu
@@ -450,11 +459,18 @@ ${PACKAGE}FILES+=	test_read_format_7zip_lzma1.7z.uu
 ${PACKAGE}FILES+=	test_read_format_7zip_lzma1_2.7z.uu
 ${PACKAGE}FILES+=	test_read_format_7zip_lzma1_lzma2.7z.uu
 ${PACKAGE}FILES+=	test_read_format_7zip_lzma2.7z.uu
+${PACKAGE}FILES+=	test_read_format_7zip_lzma2_arm.7z.uu
+${PACKAGE}FILES+=	test_read_format_7zip_lzma2_arm64.7z.uu
 ${PACKAGE}FILES+=	test_read_format_7zip_malformed.7z.uu
 ${PACKAGE}FILES+=	test_read_format_7zip_malformed2.7z.uu
 ${PACKAGE}FILES+=	test_read_format_7zip_packinfo_digests.7z.uu
 ${PACKAGE}FILES+=	test_read_format_7zip_ppmd.7z.uu
+${PACKAGE}FILES+=	test_read_format_7zip_solid_zstd.7z.uu
 ${PACKAGE}FILES+=	test_read_format_7zip_symbolic_name.7z.uu
+${PACKAGE}FILES+=	test_read_format_7zip_zstd.7z.uu
+${PACKAGE}FILES+=	test_read_format_7zip_zstd_arm.7z.uu
+${PACKAGE}FILES+=	test_read_format_7zip_zstd_bcj.7z.uu
+${PACKAGE}FILES+=	test_read_format_7zip_zstd_nobcj.7z.uu
 ${PACKAGE}FILES+=	test_read_format_ar.ar.uu
 ${PACKAGE}FILES+=	test_read_format_cab_1.cab.uu
 ${PACKAGE}FILES+=	test_read_format_cab_2.cab.uu
@@ -542,12 +558,12 @@ ${PACKAGE}FILES+=	test_read_format_rar5_different_solid_window_size.rar.uu
 ${PACKAGE}FILES+=	test_read_format_rar5_different_window_size.rar.uu
 ${PACKAGE}FILES+=	test_read_format_rar5_different_winsize_on_merge.rar.uu
 ${PACKAGE}FILES+=	test_read_format_rar5_distance_overflow.rar.uu
-${PACKAGE}FILES+=	test_read_format_rar5_extra_field_version.rar.uu	
+${PACKAGE}FILES+=	test_read_format_rar5_extra_field_version.rar.uu
 ${PACKAGE}FILES+=	test_read_format_rar5_fileattr.rar.uu
-${PACKAGE}FILES+=	test_read_format_rar5_hardlink.rar.uu	
-${PACKAGE}FILES+=	test_read_format_rar5_invalid_dict_reference.rar.uu	
-${PACKAGE}FILES+=	test_read_format_rar5_leftshift1.rar.uu	
-${PACKAGE}FILES+=	test_read_format_rar5_leftshift2.rar.uu	
+${PACKAGE}FILES+=	test_read_format_rar5_hardlink.rar.uu
+${PACKAGE}FILES+=	test_read_format_rar5_invalid_dict_reference.rar.uu
+${PACKAGE}FILES+=	test_read_format_rar5_leftshift1.rar.uu
+${PACKAGE}FILES+=	test_read_format_rar5_leftshift2.rar.uu
 ${PACKAGE}FILES+=	test_read_format_rar5_multiarchive.part01.rar.uu
 ${PACKAGE}FILES+=	test_read_format_rar5_multiarchive.part02.rar.uu
 ${PACKAGE}FILES+=	test_read_format_rar5_multiarchive.part03.rar.uu
@@ -570,7 +586,7 @@ ${PACKAGE}FILES+=	test_read_format_rar5_solid.rar.uu
 ${PACKAGE}FILES+=	test_read_format_rar5_stored.rar.uu
 ${PACKAGE}FILES+=	test_read_format_rar5_stored_manyfiles.rar.uu
 ${PACKAGE}FILES+=	test_read_format_rar5_symlink.rar.uu
-${PACKAGE}FILES+=	test_read_format_rar5_truncated_huff.rar.uu	
+${PACKAGE}FILES+=	test_read_format_rar5_truncated_huff.rar.uu
 ${PACKAGE}FILES+=	test_read_format_rar5_win32.rar.uu
 ${PACKAGE}FILES+=	test_read_format_rar5_window_buf_and_size_desync.rar.uu
 ${PACKAGE}FILES+=	test_read_format_raw.bufr.uu
