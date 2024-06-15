@@ -26,8 +26,10 @@
 
 #include <sys/param.h>
 #include <sys/queue.h>
+
 #include <ar.h>
 #include <assert.h>
+#include <capsicum_helpers.h>
 #include <ctype.h>
 #include <dwarf.h>
 #include <err.h>
@@ -46,6 +48,9 @@
 #include <time.h>
 #include <unistd.h>
 #include <zlib.h>
+
+#include <libcasper.h>
+#include <casper/cap_fileargs.h>
 
 #include "_elftc.h"
 
@@ -222,6 +227,12 @@ struct eflags_desc {
 struct flag_desc {
 	uint64_t flag;
 	const char *desc;
+};
+
+struct flag_desc_list {
+	uint32_t type;
+	const char *desc_str;
+	struct flag_desc *desc;
 };
 
 struct mips_option {
@@ -1184,8 +1195,10 @@ note_type_freebsd_core(unsigned int nt)
 	case 17: return "NT_PTLWPINFO";
 	case 0x100: return "NT_PPC_VMX (ppc Altivec registers)";
 	case 0x102: return "NT_PPC_VSX (ppc VSX registers)";
+	case 0x200: return "NT_X86_SEGBASES (x86 segment base registers)";
 	case 0x202: return "NT_X86_XSTATE (x86 XSAVE extended state)";
 	case 0x400: return "NT_ARM_VFP (arm VFP registers)";
+	case 0x401: return "NT_ARM_TLS (arm TLS register)";
 	case 0x406: return "NT_ARM_ADDR_MASK (arm address mask)";
 	default: return (note_type_unknown(nt));
 	}
@@ -1216,6 +1229,16 @@ note_type_linux_core(unsigned int nt)
 	case 0x304: return "NT_S390_CTRS (s390 control registers)";
 	case 0x305: return "NT_S390_PREFIX (s390 prefix register)";
 	case 0x400: return "NT_ARM_VFP (arm VFP registers)";
+	case 0x401: return "NT_ARM_TLS (arm TLS register)";
+	case 0x402: return "NT_ARM_HW_BREAK (arm hardware breakpoint registers)";
+	case 0x403: return "NT_ARM_HW_WATCH (arm hardware watchpoint registers)";
+	case 0x404: return "NT_ARM_SYSTEM_CALL (arm system call number)";
+	case 0x405: return "NT_ARM_SVE (arm scalable vector extension registers)";
+	case 0x406: return "NT_ARM_PAC_MASK (arm pointer authentication code mask)";
+	case 0x407: return "NT_ARM_PACA_KEYS (arm pointer authentication address keys)";
+	case 0x408: return "NT_ARM_PACG_KEYS (arm pointer authentication generic keys)";
+	case 0x409: return "NT_ARM_TAGGED_ADDR_CTRL (arm64 tagged address control)";
+	case 0x40a: return "NT_ARM_PAC_ENABLED_KEYS (arm64 ptr auth enabled keys)";
 	case 0x46494c45UL: return "NT_FILE (mapped files)";
 	case 0x46E62B7FUL: return "NT_PRXFPREG (Linux user_xfpregs structure)";
 	case 0x53494749UL: return "NT_SIGINFO (siginfo_t data)";
@@ -2640,16 +2663,21 @@ dump_shdr(struct readelf *re)
 				    " %6.6jx %6.6jx %2.2jx  %2u %3u %2ju\n"
 				    "       %s\n", ST_CT);
 			else
-				printf("  [%2d] %-17.17s %-15.15s %8.8jx"
-				    " %6.6jx %6.6jx %2.2jx %3s %2u %3u %2ju\n",
-				    S_CT);
+				if (re->options & RE_WW)
+					printf("  [%2d] %-17s %-15.15s "
+					    "%8.8jx %6.6jx %6.6jx %2.2jx %3s "
+					    "%2u %3u %2ju\n", S_CT);
+				else
+					printf("  [%2d] %-17.17s %-15.15s "
+					    "%8.8jx %6.6jx %6.6jx %2.2jx %3s "
+					    "%2u %3u %2ju\n", S_CT);
 		} else if (re->options & RE_WW) {
 			if (re->options & RE_T)
 				printf("  [%2d] %s\n       %-15.15s %16.16jx"
 				    " %6.6jx %6.6jx %2.2jx  %2u %3u %2ju\n"
 				    "       %s\n", ST_CT);
 			else
-				printf("  [%2d] %-17.17s %-15.15s %16.16jx"
+				printf("  [%2d] %-17s %-15.15s %16.16jx"
 				    " %6.6jx %6.6jx %2.2jx %3s %2u %3u %2ju\n",
 				    S_CT);
 		} else {
@@ -3541,15 +3569,50 @@ dump_gnu_hash(struct readelf *re, struct section *s)
 	free(bl);
 }
 
+static struct flag_desc gnu_property_aarch64_feature_1_and_bits[] = {
+	{ GNU_PROPERTY_AARCH64_FEATURE_1_BTI,	"BTI" },
+	{ GNU_PROPERTY_AARCH64_FEATURE_1_PAC,	"PAC" },
+	{ 0, NULL }
+};
+
+static struct flag_desc_list gnu_property_aarch64[] = {
+	{
+	    GNU_PROPERTY_AARCH64_FEATURE_1_AND,
+	    "AArch64 features",
+	    gnu_property_aarch64_feature_1_and_bits
+	},
+	{ 0, NULL, NULL }
+};
+
 static struct flag_desc gnu_property_x86_feature_1_and_bits[] = {
 	{ GNU_PROPERTY_X86_FEATURE_1_IBT,	"IBT" },
 	{ GNU_PROPERTY_X86_FEATURE_1_SHSTK,	"SHSTK" },
 	{ 0, NULL }
 };
 
+static struct flag_desc_list gnu_property_x86[] = {
+	{
+	    GNU_PROPERTY_X86_FEATURE_1_AND,
+	    "x64 features",
+	    gnu_property_x86_feature_1_and_bits
+	},
+	{ 0, NULL, NULL }
+};
+
+static struct {
+	unsigned int emachine;
+	struct flag_desc_list *flag_list;
+} gnu_property_archs[] = {
+	{ EM_AARCH64, gnu_property_aarch64 },
+	{ EM_X86_64, gnu_property_x86 },
+	{ 0, NULL }
+};
+
 static void
 dump_gnu_property_type_0(struct readelf *re, const char *buf, size_t sz)
 {
+	struct flag_desc_list *desc_list;
+	struct flag_desc *desc;
 	size_t i;
 	uint32_t type, prop_sz;
 
@@ -3568,19 +3631,35 @@ dump_gnu_property_type_0(struct readelf *re, const char *buf, size_t sz)
 
 		if (type >= GNU_PROPERTY_LOPROC &&
 		    type <= GNU_PROPERTY_HIPROC) {
-			if (re->ehdr.e_machine != EM_X86_64) {
+			desc_list = NULL;
+			for (i = 0; gnu_property_archs[i].flag_list != NULL;
+			    i++) {
+				if (gnu_property_archs[i].emachine ==
+				    re->ehdr.e_machine) {
+					desc_list =
+					    gnu_property_archs[i].flag_list;
+					break;
+				}
+			}
+			if (desc_list == NULL) {
 				printf("machine type %x unknown\n",
 				    re->ehdr.e_machine);
 				goto unknown;
 			}
-			switch (type) {
-			case GNU_PROPERTY_X86_FEATURE_1_AND:
-				printf("x86 features:");
+
+			desc = NULL;
+			for (i = 0; desc_list[i].desc != NULL; i++) {
+				if (desc_list[i].type == type) {
+					desc = desc_list[i].desc;
+					break;
+				}
+			}
+			if (desc != NULL) {
+				printf("%s:", desc_list[i].desc_str);
 				if (prop_sz != 4)
 					goto bad;
-				dump_flags(gnu_property_x86_feature_1_and_bits,
+				dump_flags(desc,
 				    *(const uint32_t *)(const void *)buf);
-				break;
 			}
 		}
 
@@ -3688,7 +3767,6 @@ static struct flag_desc note_feature_ctl_flags[] = {
 	{ NT_FREEBSD_FCTL_STKGAP_DISABLE,	"STKGAP_DISABLE" },
 	{ NT_FREEBSD_FCTL_WXNEEDED,		"WXNEEDED" },
 	{ NT_FREEBSD_FCTL_LA48,			"LA48" },
-	{ NT_FREEBSD_FCTL_ASG_DISABLE,		"ASG_DISABLE" },
 	{ 0, NULL }
 };
 
@@ -3750,9 +3828,7 @@ dump_notes_data(struct readelf *re, const char *name, uint32_t type,
 			return;
 		/* NT_FREEBSD_NOINIT_TAG carries no data, treat as unknown. */
 		case NT_FREEBSD_ARCH_TAG:
-			if (sz != 4)
-				goto unknown;
-			printf("   Arch tag: %x\n", ubuf[0]);
+			printf("   Arch tag: %s\n", buf);
 			return;
 		case NT_FREEBSD_FEATURE_CTL:
 			if (sz != 4)
@@ -4862,8 +4938,10 @@ dump_dwarf_line(struct readelf *re)
 			return;
 		}
 		if (dwarf_attrval_unsigned(die, DW_AT_stmt_list, &offset,
-		    &de) != DW_DLV_OK)
+		    &de) != DW_DLV_OK) {
+			dwarf_dealloc(re->dbg, die, DW_DLA_DIE);
 			continue;
+		}
 
 		length = re->dw_read(d, &offset, 4);
 		if (length == 0xffffffff) {
@@ -4874,6 +4952,7 @@ dump_dwarf_line(struct readelf *re)
 
 		if (length > d->d_size - offset) {
 			warnx("invalid .dwarf_line section");
+			dwarf_dealloc(re->dbg, die, DW_DLA_DIE);
 			continue;
 		}
 
@@ -5071,9 +5150,8 @@ dump_dwarf_line(struct readelf *re)
 				    (uintmax_t) line);
 				p++;
 			}
-
-
 		}
+		dwarf_dealloc(re->dbg, die, DW_DLA_DIE);
 	}
 	if (ret == DW_DLV_ERROR)
 		warnx("dwarf_next_cu_header: %s", dwarf_errmsg(de));
@@ -5116,9 +5194,9 @@ dump_dwarf_line_decoded(struct readelf *re)
 		printf("%-37s %11s   %s\n", "Filename", "Line Number",
 		    "Starting Address");
 		if (dwarf_srclines(die, &linebuf, &linecount, &de) != DW_DLV_OK)
-			continue;
+			goto done;
 		if (dwarf_srcfiles(die, &srcfiles, &srccount, &de) != DW_DLV_OK)
-			continue;
+			goto done;
 		for (i = 0; i < linecount; i++) {
 			ln = linebuf[i];
 			if (dwarf_line_srcfileno(ln, &fn, &de) != DW_DLV_OK)
@@ -5132,6 +5210,8 @@ dump_dwarf_line_decoded(struct readelf *re)
 			    (uintmax_t) lineaddr);
 		}
 		putchar('\n');
+done:
+		dwarf_dealloc(re->dbg, die, DW_DLA_DIE);
 	}
 }
 
@@ -5764,7 +5844,8 @@ dump_dwarf_ranges_foreach(struct readelf *re, Dwarf_Die die, Dwarf_Addr base)
 	Dwarf_Addr base0;
 	Dwarf_Half attr;
 	Dwarf_Signed attr_count, cnt;
-	Dwarf_Unsigned off, bytecnt;
+	Dwarf_Unsigned bytecnt;
+	Dwarf_Off off;
 	int i, j, ret;
 
 	if ((ret = dwarf_attrlist(die, &attr_list, &attr_count, &de)) !=
@@ -5781,11 +5862,12 @@ dump_dwarf_ranges_foreach(struct readelf *re, Dwarf_Die die, Dwarf_Addr base)
 		}
 		if (attr != DW_AT_ranges)
 			continue;
-		if (dwarf_formudata(attr_list[i], &off, &de) != DW_DLV_OK) {
-			warnx("dwarf_formudata failed: %s", dwarf_errmsg(de));
+		if (dwarf_global_formref(attr_list[i], &off, &de) != DW_DLV_OK) {
+			warnx("dwarf_global_formref failed: %s",
+			    dwarf_errmsg(de));
 			continue;
 		}
-		if (dwarf_get_ranges(re->dbg, (Dwarf_Off) off, &ranges, &cnt,
+		if (dwarf_get_ranges(re->dbg, off, &ranges, &cnt,
 		    &bytecnt, &de) != DW_DLV_OK)
 			continue;
 		base0 = base;
@@ -5824,6 +5906,8 @@ cont_search:
 		warnx("dwarf_siblingof: %s", dwarf_errmsg(de));
 	else if (ret == DW_DLV_OK)
 		dump_dwarf_ranges_foreach(re, ret_die, base);
+
+	dwarf_dealloc(re->dbg, die, DW_DLA_DIE);
 }
 
 static void
@@ -6128,7 +6212,7 @@ dump_dwarf_frame_section(struct readelf *re, struct section *s, int alt)
 	Dwarf_Small cie_version;
 	Dwarf_Ptr fde_addr, fde_inst, cie_inst;
 	char *cie_aug, c;
-	int i, eh_frame;
+	int i, ret, eh_frame;
 	Dwarf_Error de;
 
 	printf("\nThe section %s contains:\n\n", s->name);
@@ -6143,10 +6227,13 @@ dump_dwarf_frame_section(struct readelf *re, struct section *s, int alt)
 		}
 	} else if (!strcmp(s->name, ".eh_frame")) {
 		eh_frame = 1;
-		if (dwarf_get_fde_list_eh(re->dbg, &cie_list, &cie_count,
-		    &fde_list, &fde_count, &de) != DW_DLV_OK) {
-			warnx("dwarf_get_fde_list_eh failed: %s",
-			    dwarf_errmsg(de));
+		ret = dwarf_get_fde_list_eh(re->dbg, &cie_list, &cie_count,
+		    &fde_list, &fde_count, &de);
+		if (ret != DW_DLV_OK) {
+			if (ret == DW_DLV_ERROR) {
+				warnx("dwarf_get_fde_list_eh failed: %s",
+				    dwarf_errmsg(de));
+			}
 			return;
 		}
 	} else
@@ -7780,6 +7867,8 @@ readelf_usage(int status)
 int
 main(int argc, char **argv)
 {
+	cap_rights_t	rights;
+	fileargs_t	*fa;
 	struct readelf	*re, re_storage;
 	unsigned long	 si;
 	int		 fd, opt, i, exit_code;
@@ -7908,10 +7997,25 @@ main(int argc, char **argv)
 		errx(EXIT_FAILURE, "ELF library initialization failed: %s",
 		    elf_errmsg(-1));
 
+	cap_rights_init(&rights, CAP_FCNTL, CAP_FSTAT, CAP_MMAP_R, CAP_SEEK);
+	fa = fileargs_init(argc, argv, O_RDONLY, 0, &rights, FA_OPEN);
+	if (fa == NULL)
+		err(1, "Unable to initialize casper fileargs");
+
+	caph_cache_catpages();
+	if (caph_limit_stdio() < 0) {
+		fileargs_free(fa);
+		err(1, "Unable to limit stdio rights");
+	}
+	if (caph_enter_casper() < 0) {
+		fileargs_free(fa);
+		err(1, "Unable to enter capability mode");
+	}
+
 	exit_code = EXIT_SUCCESS;
 	for (i = 0; i < argc; i++) {
 		re->filename = argv[i];
-		fd = open(re->filename, O_RDONLY);
+		fd = fileargs_open(fa, re->filename);
 		if (fd < 0) {
 			warn("open %s failed", re->filename);
 			exit_code = EXIT_FAILURE;
