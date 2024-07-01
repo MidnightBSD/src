@@ -45,7 +45,7 @@
 # upper case variables starting in column 1 are on one line w/o continuation.
 
 TYPE="MidnightBSD"
-REVISION="3.1.5"
+REVISION="3.1.6"
 RELEASE="${REVISION}"
 VERSION="${TYPE} ${RELEASE}"
 
