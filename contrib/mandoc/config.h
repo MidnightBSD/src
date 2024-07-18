@@ -10,7 +10,7 @@
 
 #define MAN_CONF_FILE "/etc/man.conf"
 #define MANPATH_BASE "/usr/share/man"
-#define MANPATH_DEFAULT "/usr/share/man:/usr/local/man"
+#define MANPATH_DEFAULT "/usr/share/man:/usr/local/share/man:/usr/local/man"
 #define OSENUM MANDOC_OS_OTHER
 #define UTF8_LOCALE "en_US.UTF-8"
 #define HAVE_CMSG_XPG42 0
@@ -18,7 +18,11 @@
 #define HAVE_ENDIAN 0
 #define HAVE_ERR 1
 #define HAVE_FTS 1
+#if defined(__linux__) || defined(__APPLE__)
+#define HAVE_FTS_COMPARE_CONST 0
+#else
 #define HAVE_FTS_COMPARE_CONST 1
+#endif
 #define HAVE_GETLINE 1
 #define HAVE_GETSUBOPT 1
 #define HAVE_ISBLANK 1
