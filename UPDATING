@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20240811:
+	Introduced a patch to lower default timeout on IPv6 temporary addresses.
+
+	Introduced a sysctl that allow 0.0.0.0/32 to be equivalent to 127.0.0.1/32.
+
 20240701:
 	OpenSSH security vulnerability
 
