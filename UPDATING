@@ -5,6 +5,11 @@ Updating Information for MidnightBSD users.
 
 	Introduced a sysctl that allow 0.0.0.0/32 to be equivalent to 127.0.0.1/32.
 
+20240808:
+        A signal handler in sshd(8) may call a logging function that is not sync-signal-safe.  
+
+        (another CVE-2024-6387 related bug with blacklistd support)
+
 20240701:
 	OpenSSH security vulnerability
 
