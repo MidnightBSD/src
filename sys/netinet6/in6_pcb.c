@@ -83,6 +83,7 @@
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/sockio.h>
+#include <sys/sysctl.h>
 #include <sys/errno.h>
 #include <sys/time.h>
 #include <sys/priv.h>
@@ -96,6 +97,7 @@
 #include <net/if_llatbl.h>
 #include <net/if_types.h>
 #include <net/route.h>
+#include <net/vnet.h>
 
 #include <netinet/in.h>
 #include <netinet/in_var.h>
@@ -109,6 +111,14 @@
 #include <netinet/in_pcb.h>
 #include <netinet6/in6_pcb.h>
 #include <netinet6/scope6_var.h>
+
+SYSCTL_DECL(_net_inet6);
+SYSCTL_DECL(_net_inet6_ip6);
+VNET_DEFINE_STATIC(int, connect_in6addr_wild) = 1;
+#define	V_connect_in6addr_wild	VNET(connect_in6addr_wild)
+SYSCTL_INT(_net_inet6_ip6, OID_AUTO, connect_in6addr_wild,
+    CTLFLAG_VNET | CTLFLAG_RW, &VNET_NAME(connect_in6addr_wild), 0,
+    "Allow connecting to the unspecified address for connect(2)");
 
 int
 in6_pcbbind(struct inpcb *inp, struct sockaddr *nam,
@@ -363,7 +373,7 @@ in6_pcbladdr(struct inpcb *inp, struct sockaddr *nam,
 	if ((error = sa6_embedscope(sin6, V_ip6_use_defzone)) != 0)
 		return(error);
 
-	if (!CK_STAILQ_EMPTY(&V_in6_ifaddrhead)) {
+	if (V_connect_in6addr_wild && !CK_STAILQ_EMPTY(&V_in6_ifaddrhead)) {
 		/*
 		 * If the destination address is UNSPECIFIED addr,
 		 * use the loopback addr, e.g ::1.
