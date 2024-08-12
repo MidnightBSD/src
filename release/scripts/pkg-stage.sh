@@ -59,7 +59,7 @@ fi
 # Print pkg(8) information to make debugging easier.
 ${PKGCMD} index
 cp /var/db/mport/index.db ${PKG_REPODIR}/index.db
-${PKGCMD} download -o ${PKG_REPODIR} -d ${DVD_PACKAGES}
+${PKGCMD} -o ${PKG_REPODIR} download -d ${DVD_PACKAGES}
 
 # Always exit '0', even if pkg(8) complains about conflicts.
 exit 0
