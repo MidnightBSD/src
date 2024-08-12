@@ -53,7 +53,7 @@ f_include_lang $BSDCFG_LIBE/include/messages.subr
 #
 # Package extensions to try
 #
-PACKAGE_EXTENSIONS=".txz .tbz .tbz2 .tgz"
+PACKAGE_EXTENSIONS=".mport .txz .tbz .tbz2 .tgz"
 
 #
 # Variables used to track runtime states
