@@ -83,6 +83,8 @@ static int which(mportInstance *, const char *, bool);
 
 static int audit(mportInstance *, bool);
 
+static int audit_package(mportInstance *, const char*, bool);
+
 static int selectMirror(mportInstance *mport);
 
 static mportPackageMeta** lookup_for_lock(mportInstance *, const char *);
@@ -104,10 +106,12 @@ main(int argc, char *argv[])
 	bool quiet = false;
 	bool verbose = false;
 	bool force = false;
+	bool brief = false;
 
 	struct option longopts[] = {
 		{ "no-index", no_argument, NULL, 'U' },
 		{ "verbose", no_argument, NULL, 'V' },
+		{ "brief", no_argument, NULL, 'b'},
 		{ "chroot", required_argument, NULL, 'c' },
 		{ "force", no_argument, NULL, 'f' },
 		{ "output", required_argument, NULL, 'o' },
@@ -124,13 +128,16 @@ main(int argc, char *argv[])
 
 	setlocale(LC_ALL, "");
 
-	while ((ch = getopt_long(argc, argv, "+c:o:fqUVv", longopts, NULL)) != -1) {
+	while ((ch = getopt_long(argc, argv, "+c:o:bfqUVv", longopts, NULL)) != -1) {
 		switch (ch) {
 		case 'U':
 			noIndex++;
 			break;
 		case 'V':
 			verbose = true;
+			break;
+		case 'b':
+			brief = true;
 			break;
 		case 'c':
 			chroot_path = optarg;
@@ -163,7 +170,7 @@ main(int argc, char *argv[])
 
 	mport = mport_instance_new();
 
-	if (mport_instance_init(mport, NULL, outputPath, noIndex != 0, mport_verbosity(quiet, verbose)) != MPORT_OK) {
+	if (mport_instance_init(mport, NULL, outputPath, noIndex != 0, mport_verbosity(quiet, verbose, brief)) != MPORT_OK) {
 		errx(1, "%s", mport_err_string());
 	}
 	mport->force = force;
@@ -248,12 +255,16 @@ main(int argc, char *argv[])
 
 		int local_argc = argc;
 		char *const *local_argv = argv;
+		int aflag = 0;
 		int dflag = 0;
 
 		if (local_argc > 1) {
 			int ch2;
-			while ((ch2 = getopt(local_argc, local_argv, "d")) != -1) {
+			while ((ch2 = getopt(local_argc, local_argv, "ad")) != -1) {
 				switch (ch2) {
+				case 'a':
+					aflag = 1;
+					break;
 				case 'd':
 					dflag = 1;
 					break;
@@ -263,12 +274,16 @@ main(int argc, char *argv[])
 			local_argv += optind;
 		}
 
-		for (i = 1; i < argc; i++) {
-			tempResultCode = mport_download(mport, argv[i], dflag == 1, &path);
-			if (tempResultCode != 0) {
-				resultCode = tempResultCode;
-			} else if (path != NULL) {
-				free(path);
+		if (aflag) {
+			resultCode = mport_download(mport, NULL, true, false, &path);
+		} else {
+			for (i = 1; i < argc; i++) {
+				tempResultCode = mport_download(mport, argv[i], aflag == 1, dflag == 1, &path);
+				if (tempResultCode != 0) {
+					resultCode = tempResultCode;
+				} else if (path != NULL) {
+					free(path);
+				}
 			}
 		}
 	} else if (!strcmp(cmd, "upgrade")) {
@@ -294,7 +309,11 @@ main(int argc, char *argv[])
 			local_argv += optind;
 		}
 
-		resultCode = audit(mport, rflag > 0);
+		if (argc > 1) {
+			resultCode = audit_package(mport, argv[1], rflag > 0);
+		} else {
+			resultCode = audit(mport, rflag > 0);
+		}
 	} else if (!strcmp(cmd, "locks")) {
 		asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.list");
 		flag = strdup("-l");
@@ -500,7 +519,7 @@ usage(void)
 	    "       mport cpe\n"
 	    "       mport delete [package name]\n"
 	    "       mport deleteall\n"
-	    "       mport download [-d] [package name]\n"
+	    "       mport download [-a] [-d] [package name]\n"
 	    "       mport export [filename]\n"
 	    "       mport import [filename]\n"
 	    "       mport index\n"
@@ -1088,6 +1107,39 @@ audit(mportInstance *mport, bool dependsOn)
 	if (packs == NULL) {
 		fprintf(stderr, "No packages installed.\n");
 		return (1);
+	}
+
+	while (*packs != NULL) {
+		char *output = mport_audit(mport, (*packs)->name, dependsOn);
+		if (output != NULL && output[0] != '\0') {
+			if (mport->verbosity == MPORT_VQUIET)
+				printf("%s", output);
+			else
+				printf("%s\n", output);
+			free(output);
+		}
+		packs++;
+	}
+
+	mport_pkgmeta_vec_free(packs);
+
+	return (0);
+}
+
+int 
+audit_package(mportInstance *mport, const char *packageName, bool dependsOn) 
+{
+	mportPackageMeta **packs = NULL;
+
+	if (mport_pkgmeta_search_master(mport, &packs, "LOWER(pkg)=LOWER(%Q)", packageName) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		mport_pkgmeta_vec_free(packs);
+		return (MPORT_ERR_FATAL);
+	}
+
+	if (packs == NULL) {
+		warnx("No packages installed matching '%s'", packageName);
+		return (MPORT_ERR_FATAL);
 	}
 
 	while (*packs != NULL) {
