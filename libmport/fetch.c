@@ -84,7 +84,7 @@ mport_fetch_index(mportInstance *mport)
 		}
 
 		if (fetch(mport, url, MPORT_INDEX_FILE_BZ2) == MPORT_OK) {
-			mport_decompress_bzip2(MPORT_INDEX_FILE_BZ2, MPORT_INDEX_FILE);
+			mport_decompress_bzip2(MPORT_INDEX_FILE_BZ2, mport_index_file_path());
 			free(url);
 			for (int mi = 0; mi < mirrorCount; mi++)
 				free(mirrors[mi]);
@@ -126,7 +126,7 @@ mport_fetch_bootstrap_index(mportInstance *mport)
 	asprintf(&url, "%s/%s/%s/%s", MPORT_BOOTSTRAP_INDEX_URL, MPORT_ARCH, osrel, MPORT_INDEX_FILE_SOURCE);
 
 	result = fetch(mport, url, MPORT_INDEX_FILE_BZ2);
-	mport_decompress_bzip2(MPORT_INDEX_FILE_BZ2, MPORT_INDEX_FILE);
+	mport_decompress_bzip2(MPORT_INDEX_FILE_BZ2, mport_index_file_path());
 
 	free(url);
 	free(osrel);
@@ -209,7 +209,7 @@ mport_fetch_cves(mportInstance *mport, char *cpe)
 		SET_ERRORX(MPORT_ERR_FATAL, "Couldn't make tmp file: %s", strerror(errno));
 	}
   
-	asprintf(&url, "%s/api/cpe/partial-match?cpe=%s", MPORT_SECURITY_URL, cpe);
+	asprintf(&url, "%s/api/cpe/partial-match?includeVersion=true&cpe=%s&startDate=2006-02-28", MPORT_SECURITY_URL, cpe);
 	result = fetch_to_file(mport, url, fdopen(fd, "w"), false);
 	free(url);
 
@@ -319,12 +319,31 @@ fetch_to_file(mportInstance *mport, const char *url, FILE *local, bool progress)
  * @param path returns the path of the saved file. Must be freed on success
  */
 int
-mport_download(mportInstance *mport, const char *packageName, bool includeDependencies, char **path) {
+mport_download(mportInstance *mport, const char *packageName, bool all, bool includeDependencies, char **path) {
 	mportIndexEntry **indexEntry = NULL;
 	mportDependsEntry **depends = NULL;
 	mportDependsEntry **depends_orig = NULL;
 	bool existed = true;
 	int retryCount = 0;
+
+	if (all) {
+		mportIndexEntry **ie2_orig;
+		mport_index_list(mport, &ie2_orig);
+		mportIndexEntry **ie2 = ie2_orig;
+
+		while (*ie2 != NULL) {
+			char *dpath;
+			if (mport_download(mport, (*ie2)->pkgname, false, false, &dpath) != MPORT_OK) {
+				mport_call_msg_cb(mport, "%s", mport_err_string());
+				mport_index_entry_free_vec(ie2_orig);
+				return mport_err_code();
+			}
+			free(dpath);
+			ie2++;
+		}
+		mport_index_entry_free_vec(ie2_orig);
+		return (MPORT_OK);
+	}
 
 	if (mport_index_lookup_pkgname(mport, packageName, &indexEntry) != MPORT_OK) {
 		RETURN_CURRENT_ERROR;
@@ -354,7 +373,7 @@ mport_download(mportInstance *mport, const char *packageName, bool includeDepend
 
 		while (*depends != NULL) {
 			char *dpath;
-			if (mport_download(mport, (*depends)->d_pkgname, includeDependencies, &dpath) != MPORT_OK) {
+			if (mport_download(mport, (*depends)->d_pkgname, false, includeDependencies, &dpath) != MPORT_OK) {
      			mport_call_msg_cb(mport, "%s", mport_err_string());
      			mport_index_depends_free_vec(depends_orig);
 				return mport_err_code();
@@ -404,6 +423,6 @@ getfile:
 	mport_index_entry_free_vec(indexEntry);
 	indexEntry = NULL;
 
-	return (0);
+	return (MPORT_OK);
 }
 

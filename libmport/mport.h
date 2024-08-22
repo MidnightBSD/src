@@ -52,11 +52,12 @@ typedef int (*mport_confirm_cb)(const char *, const char *, const char *, int);
 
 enum _Verbosity{
     MPORT_VQUIET,
+    MPORT_VBRIEF,
     MPORT_VNORMAL,
     MPORT_VVERBOSE
 };
 typedef enum _Verbosity mportVerbosity;
-mportVerbosity mport_verbosity(bool quiet, bool verbose);
+mportVerbosity mport_verbosity(bool quiet, bool verbose, bool brief);
 
 typedef struct {
   int flags;
@@ -309,7 +310,7 @@ int mport_version_cmp(const char *, const char *);
 
 /* fetch XXX: This should become private */
 int mport_fetch_bundle(mportInstance *, const char *, const char *);
-int mport_download(mportInstance *, const char *, bool, char **);
+int mport_download(mportInstance *, const char *, bool, bool, char **);
 
 /* Auditing for CVEs */
 char * mport_audit(mportInstance *, const char *, bool);

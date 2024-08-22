@@ -51,6 +51,27 @@ static int attach_index_db(sqlite3 *db);
 
 static void populate_row(sqlite3_stmt *stmt, mportIndexEntry *e);
 
+
+char *
+mport_index_file_path() {
+	char *envIndexFile = getenv("PKG_DB");
+
+	if (envIndexFile == NULL || strlen(envIndexFile) == 0)
+		return MPORT_INDEX_FILE;
+
+	/*
+	 * Reject any ".." components in the path.  This is a security
+	 * measure to prevent directory traversal attacks.
+	 */
+	char *dotDot = strstr(envIndexFile, "..");
+	if (dotDot != NULL) {
+		SET_ERROR(MPORT_ERR_WARN, "Relative path is not allowed in PKG_DB environment variable");
+		return MPORT_INDEX_FILE;
+	}
+
+	return envIndexFile;
+}
+
 /*
  * Loads the index database.  The index contains a list of bundles that are
  * available for download, a list of aliases (apache is aliased to apache22 for 
@@ -65,21 +86,22 @@ MPORT_PUBLIC_API int
 mport_index_load(mportInstance *mport)
 {
 	bool noIndex = mport->noIndex;
+	char *indexFile = mport_index_file_path();
 
 	char *autoupdate = mport_setting_get(mport, MPORT_SETTING_REPO_AUTOUPDATE);
 	if (autoupdate != NULL && (strcmp("FALSE", autoupdate) == 0 || strcmp("false", autoupdate) == 0 ||
 			strcmp("NO", autoupdate) == 0 || strcmp("no", autoupdate) == 0)) {
 		noIndex = true;
 	}
-
-	if (mport_file_exists(MPORT_INDEX_FILE)) {
+	
+	if (mport_file_exists(indexFile)) {
 		if (attach_index_db(mport->db) != MPORT_OK) {
 			RETURN_CURRENT_ERROR;
 		}
 
 		mport->flags |= MPORT_INST_HAVE_INDEX;
 
-		if (!index_is_recentish() && !noIndex && access(MPORT_INDEX_FILE, W_OK) == 0) {
+		if (!index_is_recentish() && !noIndex && access(indexFile, W_OK) == 0) {
 			if (index_last_checked_recentish(mport))
 				return (MPORT_OK);
 
@@ -90,7 +112,7 @@ mport_index_load(mportInstance *mport)
 			RETURN_CURRENT_ERROR;
 		}
 
-		if (!mport_file_exists(MPORT_INDEX_FILE)) {
+		if (!mport_file_exists(indexFile)) {
 			RETURN_ERROR(MPORT_ERR_FATAL, "Index file could not be extracted");
 		}
 
@@ -110,8 +132,9 @@ mport_index_load(mportInstance *mport)
 static int
 attach_index_db(sqlite3 *db)
 {
+	char *indexFile = mport_index_file_path();
 
-	if (mport_db_do(db, "ATTACH %Q AS idx", MPORT_INDEX_FILE) != MPORT_OK) {
+	if (mport_db_do(db, "ATTACH %Q AS idx", indexFile) != MPORT_OK) {
 		RETURN_CURRENT_ERROR;
 	}
 
@@ -207,7 +230,7 @@ index_is_recentish(void)
 {
 	struct stat st;
 
-	if (stat(MPORT_INDEX_FILE, &st) != 0) {
+	if (stat(mport_index_file_path(), &st) != 0) {
 		return 0;
 	}
 
