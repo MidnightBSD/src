@@ -924,12 +924,15 @@ mport_check_answer_bool(char *ans) {
 }
 
 MPORT_PUBLIC_API mportVerbosity 
-mport_verbosity(bool quiet, bool verbose) {
+mport_verbosity(bool quiet, bool verbose, bool brief) {
 
 	/* if both are specified, we need quiet for backward compatibility */
 
 	if (quiet)
 		return (MPORT_VQUIET);
+
+	if (brief)
+		return (MPORT_VBRIEF);
 
 	if (verbose)
 		return (MPORT_VVERBOSE);

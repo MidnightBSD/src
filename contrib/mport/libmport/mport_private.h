@@ -51,7 +51,7 @@
 #define MPORT_MASTER_VERSION 12
 #define MPORT_BUNDLE_VERSION 6
 #define MPORT_BUNDLE_VERSION_STR "6"
-#define MPORT_VERSION "2.6.2"
+#define MPORT_VERSION "2.6.4"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
@@ -232,6 +232,7 @@ char * mport_fetch_cves(mportInstance *mport, char *cpe);
 
 /* a few index things */
 int mport_index_get_mirror_list(mportInstance *, char ***, int *);
+char * mport_index_file_path(void);
 
 #define MPORT_CHECK_FOR_INDEX(mport, func) if (!(mport->flags & MPORT_INST_HAVE_INDEX)) RETURN_ERRORX(MPORT_ERR_FATAL, "Attempt to use %s before loading index.", (func));
 #define MPORT_DAY (3600 * 24)

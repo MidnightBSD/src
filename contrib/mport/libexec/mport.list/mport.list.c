@@ -50,6 +50,7 @@ main(int argc, char *argv[])
 	bool noIndex = false;
 	bool quiet = false;
 	bool verbose = false;
+	bool brief = false;
 
 	const char *chroot_path = NULL;
 
@@ -61,8 +62,11 @@ main(int argc, char *argv[])
 	printOpts.locks = false;
 	printOpts.origin = false;
 
-	while ((ch = getopt(argc, argv, "c:lopqvuU")) != -1) {
+	while ((ch = getopt(argc, argv, "bc:lopqvuU")) != -1) {
 		switch (ch) {
+		case 'b':
+			brief = true;
+			break;
 		case 'c':
 			chroot_path = optarg;
 			break;
@@ -101,7 +105,7 @@ main(int argc, char *argv[])
 	}
 
 	mport = mport_instance_new();
-	if (mport_instance_init(mport, NULL, NULL, noIndex, mport_verbosity(quiet, verbose)) != MPORT_OK) {
+	if (mport_instance_init(mport, NULL, NULL, noIndex, mport_verbosity(quiet, verbose, brief)) != MPORT_OK) {
 		warnx("%s", mport_err_string());
 		exit(EXIT_FAILURE);
 	}
