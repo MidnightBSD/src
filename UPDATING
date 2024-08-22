@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20240822:
+	mport 2.6.4
+
 20240811:
         Introduced a patch to lower default timeout on IPv6 temporary addresses.
 
