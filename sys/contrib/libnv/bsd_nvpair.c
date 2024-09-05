@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2013 The FreeBSD Foundation
  * Copyright (c) 2013-2015 Mariusz Zaborski <oshogbo@FreeBSD.org>
@@ -31,6 +31,7 @@
  */
 
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -985,6 +986,10 @@ nvpair_unpack_string_array(bool isbe __unused, nvpair_t *nvp,
 	for (ii = 0; ii < nvp->nvp_nitems; ii++) {
 		len = strnlen(tmp, size - 1) + 1;
 		size -= len;
+		if (tmp[len - 1] != '\0') {
+			ERRNO_SET(EINVAL);
+			return (NULL);
+		}
 		if (size < 0) {
 			ERRNO_SET(EINVAL);
 			return (NULL);
@@ -996,7 +1001,7 @@ nvpair_unpack_string_array(bool isbe __unused, nvpair_t *nvp,
 		return (NULL);
 	}
 
-	value = nv_malloc(sizeof(*value) * nvp->nvp_nitems);
+	value = nv_calloc(nvp->nvp_nitems, sizeof(*value));
 	if (value == NULL)
 		return (NULL);
 
@@ -1089,7 +1094,7 @@ nvpair_unpack_nvlist_array(bool isbe __unused, nvpair_t *nvp,
 		return (NULL);
 	}
 
-	value = nv_malloc(nvp->nvp_nitems * sizeof(*value));
+	value = nv_calloc(nvp->nvp_nitems, sizeof(*value));
 	if (value == NULL)
 		return (NULL);
 
@@ -1327,10 +1332,10 @@ nvpair_create_bool_array(const char *name, const bool *value, size_t nitems)
 		return (NULL);
 	}
 
-	size = sizeof(value[0]) * nitems;
-	data = nv_malloc(size);
+	data = nv_calloc(nitems, sizeof(value[0]));
 	if (data == NULL)
 		return (NULL);
+	size = sizeof(value[0]) * nitems;
 
 	memcpy(data, value, size);
 	nvp = nvpair_allocv(name, NV_TYPE_BOOL_ARRAY, (uint64_t)(uintptr_t)data,
@@ -1357,10 +1362,10 @@ nvpair_create_number_array(const char *name, const uint64_t *value,
 		return (NULL);
 	}
 
-	size = sizeof(value[0]) * nitems;
-	data = nv_malloc(size);
+	data = nv_calloc(nitems, sizeof(value[0]));
 	if (data == NULL)
 		return (NULL);
+	size = sizeof(value[0]) * nitems;
 
 	memcpy(data, value, size);
 	nvp = nvpair_allocv(name, NV_TYPE_NUMBER_ARRAY,
@@ -1390,7 +1395,7 @@ nvpair_create_string_array(const char *name, const char * const *value,
 
 	nvp = NULL;
 	datasize = 0;
-	data = nv_malloc(sizeof(value[0]) * nitems);
+	data = nv_calloc(nitems, sizeof(value[0]));
 	if (data == NULL)
 		return (NULL);
 
@@ -1437,7 +1442,7 @@ nvpair_create_nvlist_array(const char *name, const nvlist_t * const *value,
 		return (NULL);
 	}
 
-	nvls = nv_malloc(sizeof(value[0]) * nitems);
+	nvls = nv_calloc(nitems, sizeof(value[0]));
 	if (nvls == NULL)
 		return (NULL);
 
@@ -1504,7 +1509,7 @@ nvpair_create_descriptor_array(const char *name, const int *value,
 
 	nvp = NULL;
 
-	fds = nv_malloc(sizeof(value[0]) * nitems);
+	fds = nv_calloc(nitems, sizeof(value[0]));
 	if (fds == NULL)
 		return (NULL);
 	for (ii = 0; ii < nitems; ii++) {

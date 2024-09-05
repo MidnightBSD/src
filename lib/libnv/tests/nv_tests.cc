@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/nv.h>
 
 #include <atf-c++.hpp>
