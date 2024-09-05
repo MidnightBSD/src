@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Simple authentication database handling code.
  *
@@ -31,8 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$FreeBSD: src/lib/libutil/auth.c,v 1.6 2003/06/14 18:42:37 markm Exp $");
-
 #include <stdlib.h>
 
 #include <libutil.h>

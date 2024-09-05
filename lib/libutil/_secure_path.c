@@ -20,8 +20,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libutil/_secure_path.c 139012 2004-12-18 12:31:12Z ru $");
-
 #include <sys/types.h>
 #include <sys/stat.h>
 

@@ -1,7 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2008 Dag-Erling Coïdan Smørgrav
+ * Copyright (c) 2008 Dag-Erling Smørgrav
  * Copyright (c) 2008 Marshall Kirk McKusick
  * All rights reserved.
  *
@@ -26,8 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/lib/libutil/quotafile.c 351730 2019-09-03 04:50:39Z sef $
  */
 
 #include <sys/types.h>

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  *
  * Simple property list handling code.
@@ -34,9 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: src/lib/libutil/property.c,v 1.14 2005/11/28 16:30:16 jhb Exp $ */
-__MBSDID("$MidnightBSD: src/lib/libutil/property.c,v 1.4 2011/03/19 23:37:16 laffer1 Exp $");
-
 #include <sys/types.h>
 #include <ctype.h>
 #include <err.h>
