@@ -559,6 +559,22 @@ FEATURE(compat_freebsd6, "Compatible with FreeBSD 6");
 FEATURE(compat_freebsd7, "Compatible with FreeBSD 7");
 #endif
 
+#ifdef COMPAT_FREEBSD8
+FEATURE(compat_freebsd8, "Compatible with FreeBSD 8");
+#endif
+
+#ifdef COMPAT_FREEBSD9
+FEATURE(compat_freebsd9, "Compatible with FreeBSD 9");
+#endif
+
+#ifdef COMPAT_FREEBSD10
+FEATURE(compat_freebsd10, "Compatible with FreeBSD 10");
+#endif
+
+#ifdef COMPAT_FREEBSD11
+FEATURE(compat_freebsd11, "Compatible with FreeBSD 11");
+#endif
+
 /*
  * This is really cheating.  These actually live in the libc, something
  * which I'm not quite sure is a good idea anyway, but in order for
@@ -607,6 +623,11 @@ SYSCTL_INT(_user, USER_STREAM_MAX, stream_max, CTLFLAG_RD,
     SYSCTL_NULL_INT_PTR, 0, "Min Maximum number of streams a process may have open at one time");
 SYSCTL_INT(_user, USER_TZNAME_MAX, tzname_max, CTLFLAG_RD,
     SYSCTL_NULL_INT_PTR, 0, "Min Maximum number of types supported for timezone names");
+
+static char localbase[MAXPATHLEN] = "";
+
+SYSCTL_STRING(_user, USER_LOCALBASE, localbase, CTLFLAG_RWTUN,
+    localbase, sizeof(localbase), "Prefix used to install and locate add-on packages");
 
 #include <sys/vnode.h>
 SYSCTL_INT(_debug_sizeof, OID_AUTO, vnode, CTLFLAG_RD,
