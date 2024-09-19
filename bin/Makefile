@@ -28,6 +28,7 @@ SUBDIR= cat \
 	mksh \
 	mv \
 	notty \
+	nproc \
 	pax \
 	pkill \
 	ps \
