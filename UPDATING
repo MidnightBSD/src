@@ -1,5 +1,14 @@
 Updating Information for MidnightBSD users.
 
+20240919:
+	Version bump to 3.2.1
+
+	nproc(1) added. (clone of GNU utility)
+
+	ums(4) bug fixed with evdev eating mouse events
+
+	libalias fix.
+
 20240822:
 	mport 2.6.4
 
