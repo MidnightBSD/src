@@ -1027,6 +1027,10 @@ nvlist_pack(const nvlist_t *nvl, size_t *sizep)
 static bool
 nvlist_check_header(struct nvlist_header *nvlhdrp)
 {
+	if (nvlhdrp->nvlh_size > SIZE_MAX - sizeof(*nvlhdrp)) {
+ 		ERRNO_SET(EINVAL);
+ 		return (false);
+ 	}
 
 	if (nvlhdrp->nvlh_magic != NVLIST_HEADER_MAGIC) {
 		ERRNO_SET(EINVAL);
