@@ -65,6 +65,7 @@ MAN=	aac.4 \
 	ath_pci.4 \
 	atkbd.4 \
 	atkbdc.4 \
+	${_atlantic.4} \
 	atp.4 \
 	${_atf_test_case.4} \
 	${_atrtc.4} \
@@ -875,6 +876,7 @@ _xnb.4=		xnb.4
 .endif
 
 .if ${MACHINE_CPUARCH} == "amd64"
+_atlantic.4=	atlantic.4
 _if_ntb.4=	if_ntb.4
 _ioat.4=	ioat.4
 _ntb.4=		ntb.4

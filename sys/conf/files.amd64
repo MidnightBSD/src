@@ -224,6 +224,16 @@ dev/atkbdc/atkbdc.c		optional	atkbdc
 dev/atkbdc/atkbdc_isa.c		optional	atkbdc isa
 dev/atkbdc/atkbdc_subr.c	optional	atkbdc
 dev/atkbdc/psm.c		optional	psm atkbdc
+dev/atlantic/aq_main.c		optional	atlantic pci iflib
+dev/atlantic/aq_media.c		optional	atlantic pci iflib
+dev/atlantic/aq_irq.c		optional	atlantic pci iflib
+dev/atlantic/aq_ring.c		optional	atlantic pci iflib
+dev/atlantic/aq_hw.c		optional	atlantic pci iflib
+dev/atlantic/aq_hw_llh.c	optional	atlantic pci iflib
+dev/atlantic/aq_fw.c		optional	atlantic pci iflib
+dev/atlantic/aq_fw1x.c		optional	atlantic pci iflib
+dev/atlantic/aq_fw2x.c		optional	atlantic pci iflib
+dev/atlantic/aq_dbg.c		optional	atlantic pci iflib
 dev/bxe/bxe.c                   optional	bxe pci
 dev/bxe/bxe_stats.c             optional	bxe pci
 dev/bxe/bxe_debug.c             optional	bxe pci
