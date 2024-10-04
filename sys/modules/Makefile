@@ -59,6 +59,7 @@ SUBDIR=	\
 	ath_main \
 	ath_rate \
 	ath_pci \
+	${_atlantic} \
 	${_autofs} \
 	${_auxio} \
 	${_bce} \
@@ -738,6 +739,7 @@ _x86bios=	x86bios
 
 .if ${MACHINE_CPUARCH} == "amd64"
 _amdgpio=	amdgpio
+_atlantic=	atlantic
 _ccp=		ccp
 _efirt=		efirt
 _iavf=		iavf
