@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Orion Hodson <orion@freebsd.org>
  * Portions of this code derived from via82c686.c:
@@ -50,6 +50,7 @@
 
 #include <dev/sound/pci/via8233.h>
 
+SND_DECLARE_FILE("");
 
 #define VIA8233_PCI_ID 0x30591106
 
@@ -257,19 +258,18 @@ via_init_sysctls(device_t dev)
 	   as discussed on multimedia@ in msg-id <861wujij2q.fsf@xps.des.no> */
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
-	    "spdif_enabled",  CTLTYPE_INT | CTLFLAG_RW, dev, sizeof(dev),
-	    sysctl_via8233_spdif_enable, "I",
+	    "spdif_enabled", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+	    dev, sizeof(dev), sysctl_via8233_spdif_enable, "I",
 	    "Enable S/PDIF output on primary playback channel");
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
-	    "dxs_src", CTLTYPE_INT | CTLFLAG_RW, dev, sizeof(dev),
-	    sysctl_via8233_dxs_src, "I",
+	    "dxs_src", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+	    dev, sizeof(dev), sysctl_via8233_dxs_src, "I",
 	    "Enable VIA DXS Sample Rate Converter");
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
-	    "polling", CTLTYPE_INT | CTLFLAG_RW, dev, sizeof(dev),
-	    sysctl_via_polling, "I",
-	    "Enable polling mode");
+	    "polling", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+	    dev, sizeof(dev), sysctl_via_polling, "I", "Enable polling mode");
 }
 
 static __inline uint32_t
@@ -1426,7 +1426,6 @@ via_detach(device_t dev)
 	free(via, M_DEVBUF);
 	return (0);
 }
-
 
 static device_method_t via_methods[] = {
 	DEVMETHOD(device_probe,		via_probe),

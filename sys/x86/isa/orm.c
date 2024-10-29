@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Nikolai Saoukh
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Driver to take care of holes in ISA I/O memory occupied
  * by option rom(s)
@@ -162,7 +161,7 @@ orm_detach(device_t dev)
 {
 	int			i;
 	struct orm_softc	*sc = device_get_softc(dev);
-	
+
 	for (i = 0; i < sc->rnum; i++)
 		bus_release_resource(dev, SYS_RES_MEMORY, sc->rid[i],
 		    sc->res[i]);

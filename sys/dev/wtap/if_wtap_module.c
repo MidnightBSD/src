@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010-2011 Monthadar Al Jaberi, TerraNet AB
  * All rights reserved.
@@ -27,7 +27,6 @@
  * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
- *
  */
 #include <sys/param.h>
 #include <sys/module.h>
@@ -69,11 +68,9 @@
 
 #include <net/bpf.h>
 
-
 #include <sys/errno.h>
 #include <sys/conf.h>   /* cdevsw struct */
 #include <sys/uio.h>    /* uio struct */
-
 
 #include <netinet/in.h>
 #include <netinet/if_ether.h>
@@ -130,7 +127,6 @@ wtap_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
 	CURVNET_RESTORE();
 	return error;
 }
-
 
 /* The function called at load/unload. */
 static int

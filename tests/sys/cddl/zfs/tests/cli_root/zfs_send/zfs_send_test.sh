@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case zfs_send_001_pos cleanup
 zfs_send_001_pos_head()
 {
 	atf_set "descr" "Verify 'zfs send' can create valid send streams as expected."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_send_001_pos_body()
 {
@@ -54,7 +52,7 @@ atf_test_case zfs_send_002_pos cleanup
 zfs_send_002_pos_head()
 {
 	atf_set "descr" "Verify 'zfs send' generates valid streams with a property setup"
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_send_002_pos_body()
 {
@@ -78,7 +76,7 @@ atf_test_case zfs_send_003_pos cleanup
 zfs_send_003_pos_head()
 {
 	atf_set "descr" "'zfs send -i' can deal with abbreviated snapshot name."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_send_003_pos_body()
 {
@@ -102,7 +100,7 @@ atf_test_case zfs_send_004_neg cleanup
 zfs_send_004_neg_head()
 {
 	atf_set "descr" "Verify that invalid parameters to 'zfs send' are caught."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_send_004_neg_body()
 {

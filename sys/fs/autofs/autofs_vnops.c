@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Edward Tomasz Napierala under sponsorship
  * from the FreeBSD Foundation.
@@ -31,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -151,7 +149,7 @@ autofs_trigger_vn(struct vnode *vp, const char *path, int pathlen,
 	 */
 	lock_flags = VOP_ISLOCKED(vp);
 	vref(vp);
-	VOP_UNLOCK(vp, 0);
+	VOP_UNLOCK(vp);
 
 	sx_xlock(&autofs_softc->sc_lock);
 
@@ -168,8 +166,8 @@ mounted:
 	sx_xunlock(&autofs_softc->sc_lock);
 	vn_lock(vp, lock_flags | LK_RETRY);
 	vunref(vp);
-	if ((vp->v_iflag & VI_DOOMED) != 0) {
-		AUTOFS_DEBUG("VI_DOOMED");
+	if (VN_IS_DOOMED(vp)) {
+		AUTOFS_DEBUG("VIRF_DOOMED");
 		return (ENOENT);
 	}
 
@@ -202,7 +200,6 @@ static int
 autofs_vget_callback(struct mount *mp, void *arg, int flags,
     struct vnode **vpp)
 {
-
 
 	return (autofs_node_vn(arg, mp, flags, vpp));
 }
@@ -554,6 +551,7 @@ struct vop_vector autofs_vnodeops = {
 	.vop_write =		VOP_EOPNOTSUPP,
 	.vop_reclaim =		autofs_reclaim,
 };
+VFS_VOP_VECTOR_REGISTER(autofs_vnodeops);
 
 int
 autofs_node_new(struct autofs_node *parent, struct autofs_mount *amp,
@@ -655,13 +653,13 @@ autofs_node_vn(struct autofs_node *anp, struct mount *mp, int flags,
 
 	vp = anp->an_vnode;
 	if (vp != NULL) {
-		error = vget(vp, flags | LK_RETRY, curthread);
+		error = vget(vp, flags | LK_RETRY);
 		if (error != 0) {
 			AUTOFS_WARN("vget failed with error %d", error);
 			sx_xunlock(&anp->an_vnode_lock);
 			return (error);
 		}
-		if (vp->v_iflag & VI_DOOMED) {
+		if (VN_IS_DOOMED(vp)) {
 			/*
 			 * We got forcibly unmounted.
 			 */

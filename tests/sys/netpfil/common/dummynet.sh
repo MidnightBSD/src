@@ -1,6 +1,5 @@
-# $FreeBSD$
 #
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2021 Rubicon Communications, LLC (Netgate)
 #
@@ -129,7 +128,7 @@ queue_body()
 
 	ifconfig ${epair}a 192.0.2.1/24 up
 	jexec alcatraz ifconfig ${epair}b 192.0.2.2/24 up
-	jexec alcatraz /usr/sbin/inetd -p inetd-alcatraz.pid \
+	jexec alcatraz /usr/sbin/inetd -p ${PWD}/inetd-alcatraz.pid \
 	    $(atf_get_srcdir)/../pf/echo_inetd.conf
 
 	# Sanity check
@@ -231,7 +230,7 @@ queue_v6_body()
 
 	ifconfig ${epair}a inet6 2001:db8:42::1/64 no_dad up
 	jexec alcatraz ifconfig ${epair}b inet6 2001:db8:42::2 no_dad up
-	jexec alcatraz /usr/sbin/inetd -p inetd-alcatraz.pid \
+	jexec alcatraz /usr/sbin/inetd -p ${PWD}/inetd-alcatraz.pid \
 	    $(atf_get_srcdir)/../pf/echo_inetd.conf
 
 	# Sanity check

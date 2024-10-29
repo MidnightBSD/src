@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 
 #ifndef _KERNEL
@@ -44,10 +43,17 @@
 #include <ufs/ufs/dinode.h>
 #include <ufs/ffs/fs.h>
 
+uint32_t calculate_crc32c(uint32_t, const void *, size_t);
+uint32_t ffs_calc_sbhash(struct fs *);
 struct malloc_type;
 #define UFS_MALLOC(size, type, flags) malloc(size)
 #define UFS_FREE(ptr, type) free(ptr)
-#define UFS_TIME time(NULL)
+#define maxphys MAXPHYS
+/*
+ * Request standard superblock location in ffs_sbget
+ */
+#define	STDSB			-1	/* Fail if check-hash is bad */
+#define	STDSB_NOHASHFAIL	-2	/* Ignore check-hash failure */
 
 #else /* _KERNEL */
 #include <sys/systm.h>
@@ -58,6 +64,7 @@ struct malloc_type;
 #include <sys/vnode.h>
 #include <sys/bio.h>
 #include <sys/buf.h>
+#include <sys/sysctl.h>
 #include <sys/ucred.h>
 
 #include <ufs/ufs/quota.h>
@@ -70,127 +77,60 @@ struct malloc_type;
 
 #define UFS_MALLOC(size, type, flags) malloc(size, type, flags)
 #define UFS_FREE(ptr, type) free(ptr, type)
-#define UFS_TIME time_second
+
+#endif /* _KERNEL */
 
 /*
- * Return buffer with the contents of block "offset" from the beginning of
- * directory "ip".  If "res" is non-zero, fill it in with a pointer to the
- * remaining space in the directory.
+ * Verify an inode check-hash.
  */
 int
-ffs_blkatoff(struct vnode *vp, off_t offset, char **res, struct buf **bpp)
+ffs_verify_dinode_ckhash(struct fs *fs, struct ufs2_dinode *dip)
 {
-	struct inode *ip;
-	struct fs *fs;
-	struct buf *bp;
-	ufs_lbn_t lbn;
-	int bsize, error;
+	uint32_t ckhash, save_ckhash;
 
-	ip = VTOI(vp);
-	fs = ITOFS(ip);
-	lbn = lblkno(fs, offset);
-	bsize = blksize(fs, ip, lbn);
-
-	*bpp = NULL;
-	error = bread(vp, lbn, bsize, NOCRED, &bp);
-	if (error) {
-		brelse(bp);
-		return (error);
-	}
-	if (res)
-		*res = (char *)bp->b_data + blkoff(fs, offset);
-	*bpp = bp;
-	return (0);
+	/*
+	 * Return success if unallocated or we are not doing inode check-hash.
+	 */
+	if (dip->di_mode == 0 || (fs->fs_metackhash & CK_INODE) == 0)
+		return (0);
+	/*
+	 * Exclude di_ckhash from the crc32 calculation, e.g., always use
+	 * a check-hash value of zero when calculating the check-hash.
+	 */
+	save_ckhash = dip->di_ckhash;
+	dip->di_ckhash = 0;
+	ckhash = calculate_crc32c(~0L, (void *)dip, sizeof(*dip));
+	dip->di_ckhash = save_ckhash;
+	if (save_ckhash == ckhash)
+		return (0);
+	return (EINVAL);
 }
 
 /*
- * Load up the contents of an inode and copy the appropriate pieces
- * to the incore copy.
+ * Update an inode check-hash.
  */
 void
-ffs_load_inode(struct buf *bp, struct inode *ip, struct fs *fs, ino_t ino)
+ffs_update_dinode_ckhash(struct fs *fs, struct ufs2_dinode *dip)
 {
 
-	if (I_IS_UFS1(ip)) {
-		*ip->i_din1 =
-		    *((struct ufs1_dinode *)bp->b_data + ino_to_fsbo(fs, ino));
-		ip->i_mode = ip->i_din1->di_mode;
-		ip->i_nlink = ip->i_din1->di_nlink;
-		ip->i_size = ip->i_din1->di_size;
-		ip->i_flags = ip->i_din1->di_flags;
-		ip->i_gen = ip->i_din1->di_gen;
-		ip->i_uid = ip->i_din1->di_uid;
-		ip->i_gid = ip->i_din1->di_gid;
-	} else {
-		*ip->i_din2 =
-		    *((struct ufs2_dinode *)bp->b_data + ino_to_fsbo(fs, ino));
-		ip->i_mode = ip->i_din2->di_mode;
-		ip->i_nlink = ip->i_din2->di_nlink;
-		ip->i_size = ip->i_din2->di_size;
-		ip->i_flags = ip->i_din2->di_flags;
-		ip->i_gen = ip->i_din2->di_gen;
-		ip->i_uid = ip->i_din2->di_uid;
-		ip->i_gid = ip->i_din2->di_gid;
-	}
-}
-
-/*
- * Verify that a filesystem block number is a valid data block.
- * This routine is only called on untrusted filesystems.
- */
-int
-ffs_check_blkno(struct mount *mp, ino_t inum, ufs2_daddr_t daddr, int blksize)
-{
-	struct fs *fs;
-	struct ufsmount *ump;
-	ufs2_daddr_t end_daddr;
-	int cg, havemtx;
-
-	KASSERT((mp->mnt_flag & MNT_UNTRUSTED) != 0,
-	    ("ffs_check_blkno called on a trusted file system"));
-	ump = VFSTOUFS(mp);
-	fs = ump->um_fs;
-	cg = dtog(fs, daddr);
-	end_daddr = daddr + numfrags(fs, blksize);
+	if (dip->di_mode == 0 || (fs->fs_metackhash & CK_INODE) == 0)
+		return;
 	/*
-	 * Verify that the block number is a valid data block. Also check
-	 * that it does not point to an inode block or a superblock. Accept
-	 * blocks that are unalloacted (0) or part of snapshot metadata
-	 * (BLK_NOCOPY or BLK_SNAP).
-	 *
-	 * Thus, the block must be in a valid range for the filesystem and
-	 * either in the space before a backup superblock (except the first
-	 * cylinder group where that space is used by the bootstrap code) or
-	 * after the inode blocks and before the end of the cylinder group.
+	 * Exclude old di_ckhash from the crc32 calculation, e.g., always use
+	 * a check-hash value of zero when calculating the new check-hash.
 	 */
-	if ((uint64_t)daddr <= BLK_SNAP ||
-	    ((uint64_t)end_daddr <= fs->fs_size &&
-	    ((cg > 0 && end_daddr <= cgsblock(fs, cg)) ||
-	    (daddr >= cgdmin(fs, cg) &&
-	    end_daddr <= cgbase(fs, cg) + fs->fs_fpg))))
-		return (0);
-	if ((havemtx = mtx_owned(UFS_MTX(ump))) == 0)
-		UFS_LOCK(ump);
-	if (ppsratecheck(&ump->um_last_integritymsg,
-	    &ump->um_secs_integritymsg, 1)) {
-		UFS_UNLOCK(ump);
-		uprintf("\n%s: inode %jd, out-of-range indirect block "
-		    "number %jd\n", mp->mnt_stat.f_mntonname, inum, daddr);
-		if (havemtx)
-			UFS_LOCK(ump);
-	} else if (!havemtx)
-		UFS_UNLOCK(ump);
-	return (EIO);
+	dip->di_ckhash = 0;
+	dip->di_ckhash = calculate_crc32c(~0L, (void *)dip, sizeof(*dip));
 }
-#endif /* _KERNEL */
 
 /*
  * These are the low-level functions that actually read and write
  * the superblock and its associated data.
  */
 static off_t sblock_try[] = SBLOCKSEARCH;
-static int readsuper(void *, struct fs **, off_t, int,
+static int readsuper(void *, struct fs **, off_t, int, int,
 	int (*)(void *, off_t, void **, int));
+static int validate_sblock(struct fs *, int);
 
 /*
  * Read a superblock from the devfd device.
@@ -217,24 +157,29 @@ ffs_sbget(void *devfd, struct fs **fsp, off_t altsblock,
     int (*readfunc)(void *devfd, off_t loc, void **bufp, int size))
 {
 	struct fs *fs;
+	struct fs_summary_info *fs_si;
 	int i, error, size, blks;
 	uint8_t *space;
 	int32_t *lp;
+	int chkhash;
 	char *buf;
 
 	fs = NULL;
 	*fsp = NULL;
-	if (altsblock != -1) {
-		if ((error = readsuper(devfd, &fs, altsblock, 1,
+	if (altsblock >= 0) {
+		if ((error = readsuper(devfd, &fs, altsblock, 1, 0,
 		     readfunc)) != 0) {
 			if (fs != NULL)
 				UFS_FREE(fs, filltype);
 			return (error);
 		}
 	} else {
+		chkhash = 1;
+		if (altsblock == STDSB_NOHASHFAIL)
+			chkhash = 0;
 		for (i = 0; sblock_try[i] != -1; i++) {
 			if ((error = readsuper(devfd, &fs, sblock_try[i], 0,
-			     readfunc)) == 0)
+			     chkhash, readfunc)) == 0)
 				break;
 			if (fs != NULL) {
 				UFS_FREE(fs, filltype);
@@ -254,9 +199,16 @@ ffs_sbget(void *devfd, struct fs **fsp, off_t altsblock,
 	blks = howmany(size, fs->fs_fsize);
 	if (fs->fs_contigsumsize > 0)
 		size += fs->fs_ncg * sizeof(int32_t);
-	size += fs->fs_ncg * sizeof(u_int8_t);
+	size += fs->fs_ncg * sizeof(uint8_t);
 	/* When running in libufs or libsa, UFS_MALLOC may fail */
+	if ((fs_si = UFS_MALLOC(sizeof(*fs_si), filltype, M_WAITOK)) == NULL) {
+		UFS_FREE(fs, filltype);
+		return (ENOSPC);
+	}
+	bzero(fs_si, sizeof(*fs_si));
+	fs->fs_si = fs_si;
 	if ((space = UFS_MALLOC(size, filltype, M_WAITOK)) == NULL) {
+		UFS_FREE(fs->fs_si, filltype);
 		UFS_FREE(fs, filltype);
 		return (ENOSPC);
 	}
@@ -272,6 +224,7 @@ ffs_sbget(void *devfd, struct fs **fsp, off_t altsblock,
 			if (buf != NULL)
 				UFS_FREE(buf, filltype);
 			UFS_FREE(fs->fs_csp, filltype);
+			UFS_FREE(fs->fs_si, filltype);
 			UFS_FREE(fs, filltype);
 			return (error);
 		}
@@ -285,8 +238,8 @@ ffs_sbget(void *devfd, struct fs **fsp, off_t altsblock,
 			*lp++ = fs->fs_contigsumsize;
 		space = (uint8_t *)lp;
 	}
-	size = fs->fs_ncg * sizeof(u_int8_t);
-	fs->fs_contigdirs = (u_int8_t *)space;
+	size = fs->fs_ncg * sizeof(uint8_t);
+	fs->fs_contigdirs = (uint8_t *)space;
 	bzero(fs->fs_contigdirs, size);
 	*fsp = fs;
 	return (0);
@@ -298,10 +251,11 @@ ffs_sbget(void *devfd, struct fs **fsp, off_t altsblock,
  */
 static int
 readsuper(void *devfd, struct fs **fsp, off_t sblockloc, int isaltsblk,
-    int (*readfunc)(void *devfd, off_t loc, void **bufp, int size))
+    int chkhash, int (*readfunc)(void *devfd, off_t loc, void **bufp, int size))
 {
 	struct fs *fs;
-	int error;
+	int error, res;
+	uint32_t ckhash;
 
 	error = (*readfunc)(devfd, sblockloc, (void **)fsp, SBLOCKSIZE);
 	if (error != 0)
@@ -309,34 +263,273 @@ readsuper(void *devfd, struct fs **fsp, off_t sblockloc, int isaltsblk,
 	fs = *fsp;
 	if (fs->fs_magic == FS_BAD_MAGIC)
 		return (EINVAL);
-	if (((fs->fs_magic == FS_UFS1_MAGIC && (isaltsblk ||
-	      sblockloc <= SBLOCK_UFS1)) ||
-	     (fs->fs_magic == FS_UFS2_MAGIC && (isaltsblk ||
-	      sblockloc == fs->fs_sblockloc))) &&
-	    fs->fs_ncg >= 1 &&
-	    fs->fs_bsize >= MINBSIZE &&
-	    fs->fs_bsize <= MAXBSIZE &&
-	    fs->fs_bsize >= roundup(sizeof(struct fs), DEV_BSIZE) &&
-	    fs->fs_sbsize <= SBLOCKSIZE) {
+	/*
+	 * For UFS1 with a 65536 block size, the first backup superblock
+	 * is at the same location as the UFS2 superblock. Since SBLOCK_UFS2
+	 * is the first location checked, the first backup is the superblock
+	 * that will be accessed. Here we fail the lookup so that we can
+	 * retry with the correct location for the UFS1 superblock.
+	 */
+	if (fs->fs_magic == FS_UFS1_MAGIC && !isaltsblk &&
+	    fs->fs_bsize == SBLOCK_UFS2 && sblockloc == SBLOCK_UFS2)
+		return (ENOENT);
+	if ((error = validate_sblock(fs, isaltsblk)) > 0)
+		return (error);
+	/*
+	 * If the filesystem has been run on a kernel without
+	 * metadata check hashes, disable them.
+	 */
+	if ((fs->fs_flags & FS_METACKHASH) == 0)
+		fs->fs_metackhash = 0;
+	/*
+	 * Clear any check-hashes that are not maintained
+	 * by this kernel. Also clear any unsupported flags.
+	 */
+	fs->fs_metackhash &= CK_SUPPORTED;
+	fs->fs_flags &= FS_SUPPORTED;
+	if (fs->fs_ckhash != (ckhash = ffs_calc_sbhash(fs))) {
+#ifdef _KERNEL
+		res = uprintf("Superblock check-hash failed: recorded "
+		    "check-hash 0x%x != computed check-hash 0x%x%s\n",
+		    fs->fs_ckhash, ckhash,
+		    chkhash == 0 ? " (Ignored)" : "");
+#else
+		res = 0;
+#endif
 		/*
-		 * If the filesystem has been run on a kernel without
-		 * metadata check hashes, disable them.
+		 * Print check-hash failure if no controlling terminal
+		 * in kernel or always if in user-mode (libufs).
 		 */
-		if ((fs->fs_flags & FS_METACKHASH) == 0)
-			fs->fs_metackhash = 0;
-		/*
-		 * Clear any check-hashes that are not maintained
-		 * by this kernel. Also clear any unsupported flags.
-		 */
-		fs->fs_metackhash &= CK_SUPPORTED;
-		fs->fs_flags &= FS_SUPPORTED;
-		/* Have to set for old filesystems that predate this field */
-		fs->fs_sblockactualloc = sblockloc;
-		/* Not yet any summary information */
-		fs->fs_csp = NULL;
-		return (0);
+		if (res == 0)
+			printf("Superblock check-hash failed: recorded "
+			    "check-hash 0x%x != computed check-hash "
+			    "0x%x%s\n", fs->fs_ckhash, ckhash,
+			    chkhash == 0 ? " (Ignored)" : "");
+		/* STDSB_NOHASHFAIL */
+		if (chkhash == 0)
+			return (0);
+		return (EINTEGRITY);
 	}
-	return (ENOENT);
+	/* Have to set for old filesystems that predate this field */
+	fs->fs_sblockactualloc = sblockloc;
+	/* Not yet any summary information */
+	fs->fs_si = NULL;
+	return (0);
+}
+
+/*
+ * Verify the filesystem values.
+ */
+#define ILOG2(num)	(fls(num) - 1)
+#ifdef STANDALONE_SMALL
+#define MPRINT(...)	do { } while (0)
+#else
+#define MPRINT(...)	if (prtmsg) printf(__VA_ARGS__)
+/*
+ * Print error messages when bad superblock values are found.
+ */
+static int prtmsg = 1;
+#ifdef _KERNEL
+#ifdef FFS
+SYSCTL_DECL(_vfs_ffs);
+SYSCTL_INT(_vfs_ffs, OID_AUTO, prtsberrmsg, CTLFLAG_RWTUN, &prtmsg, 0,
+    "Print error messages when bad superblock values are found");
+#endif /* FFS */
+#endif /* _KERNEL */
+#endif /* STANDALONE_SMALL */
+#undef CHK
+#define CHK(lhs, op, rhs, fmt)						\
+	if (lhs op rhs) {						\
+		MPRINT("UFS%d superblock failed: %s (" #fmt ") %s %s ("	\
+		    #fmt ")\n", fs->fs_magic == FS_UFS1_MAGIC ? 1 : 2,	\
+		    #lhs, (intmax_t)lhs, #op, #rhs, (intmax_t)rhs);	\
+		if (error == 0)						\
+			error = ENOENT;					\
+	}
+#define CHK2(lhs1, op1, rhs1, lhs2, op2, rhs2, fmt)			\
+	if (lhs1 op1 rhs1 && lhs2 op2 rhs2) {				\
+		MPRINT("UFS%d superblock failed: %s (" #fmt ") %s %s ("	\
+		    #fmt ") && %s (" #fmt ") %s %s (" #fmt ")\n",	\
+		    fs->fs_magic == FS_UFS1_MAGIC ? 1 : 2, #lhs1,	\
+		    (intmax_t)lhs1, #op1, #rhs1, (intmax_t)rhs1, #lhs2,	\
+		    (intmax_t)lhs2, #op2, #rhs2, (intmax_t)rhs2);	\
+		if (error == 0)						\
+			error = ENOENT;					\
+	}
+
+static int
+validate_sblock(struct fs *fs, int isaltsblk)
+{
+	uint64_t i, sectorsize;
+	uint64_t maxfilesize, sizepb;
+	int error;
+
+	error = 0;
+	sectorsize = dbtob(1);
+	if (fs->fs_magic == FS_UFS2_MAGIC) {
+		if (!isaltsblk)
+			CHK2(fs->fs_sblockactualloc, !=, SBLOCK_UFS2,
+			    fs->fs_sblockactualloc, !=, 0, %jd);
+		CHK(fs->fs_sblockloc, !=, SBLOCK_UFS2, %#jx);
+		CHK(fs->fs_maxsymlinklen, !=, ((UFS_NDADDR + UFS_NIADDR) *
+			sizeof(ufs2_daddr_t)), %jd);
+		CHK(fs->fs_nindir, !=, fs->fs_bsize / sizeof(ufs2_daddr_t),
+		    %jd);
+		CHK(fs->fs_inopb, !=,
+		    fs->fs_bsize / sizeof(struct ufs2_dinode), %jd);
+	} else if (fs->fs_magic == FS_UFS1_MAGIC) {
+		if (!isaltsblk)
+			CHK(fs->fs_sblockactualloc, >, SBLOCK_UFS1, %jd);
+		CHK(fs->fs_sblockloc, <, 0, %jd);
+		CHK(fs->fs_sblockloc, >, SBLOCK_UFS1, %jd);
+		CHK(fs->fs_nindir, !=, fs->fs_bsize / sizeof(ufs1_daddr_t),
+		    %jd);
+		CHK(fs->fs_inopb, !=,
+		    fs->fs_bsize / sizeof(struct ufs1_dinode), %jd);
+		CHK(fs->fs_maxsymlinklen, !=, ((UFS_NDADDR + UFS_NIADDR) *
+			sizeof(ufs1_daddr_t)), %jd);
+		CHK(fs->fs_old_inodefmt, !=, FS_44INODEFMT, %jd);
+		CHK(fs->fs_old_rotdelay, !=, 0, %jd);
+		CHK(fs->fs_old_rps, !=, 60, %jd);
+		CHK(fs->fs_old_nspf, !=, fs->fs_fsize / sectorsize, %jd);
+		CHK(fs->fs_old_interleave, !=, 1, %jd);
+		CHK(fs->fs_old_trackskew, !=, 0, %jd);
+		CHK(fs->fs_old_cpc, !=, 0, %jd);
+		CHK(fs->fs_old_postblformat, !=, 1, %jd);
+		CHK(fs->fs_old_nrpos, !=, 1, %jd);
+		CHK(fs->fs_old_nsect, !=, fs->fs_old_spc, %jd);
+		CHK(fs->fs_old_npsect, !=, fs->fs_old_spc, %jd);
+	} else {
+		/* Bad magic number, so assume not a superblock */
+		return (ENOENT);
+	}
+	CHK(fs->fs_bsize, <, MINBSIZE, %jd);
+	CHK(fs->fs_bsize, >, MAXBSIZE, %jd);
+	CHK(fs->fs_bsize, <, roundup(sizeof(struct fs), DEV_BSIZE), %jd);
+	CHK(powerof2(fs->fs_bsize), ==, 0, %jd);
+	CHK(fs->fs_frag, <, 1, %jd);
+	CHK(fs->fs_frag, >, MAXFRAG, %jd);
+	CHK(fs->fs_frag, !=, numfrags(fs, fs->fs_bsize), %jd);
+	CHK(fs->fs_fsize, <, sectorsize, %jd);
+	CHK(fs->fs_fsize * fs->fs_frag, !=, fs->fs_bsize, %jd);
+	CHK(powerof2(fs->fs_fsize), ==, 0, %jd);
+	CHK(fs->fs_fpg, <, 3 * fs->fs_frag, %jd);
+	CHK(fs->fs_ncg, <, 1, %jd);
+	CHK(fs->fs_ipg, <, fs->fs_inopb, %jd);
+	CHK((uint64_t)fs->fs_ipg * fs->fs_ncg, >,
+	    (((int64_t)(1)) << 32) - INOPB(fs), %jd);
+	CHK(fs->fs_cstotal.cs_nifree, <, 0, %jd);
+	CHK(fs->fs_cstotal.cs_nifree, >, (uint64_t)fs->fs_ipg * fs->fs_ncg,
+	    %jd);
+	CHK(fs->fs_cstotal.cs_ndir, <, 0, %jd);
+	CHK(fs->fs_cstotal.cs_ndir, >,
+	    ((uint64_t)fs->fs_ipg * fs->fs_ncg) - fs->fs_cstotal.cs_nifree,
+	    %jd);
+	CHK(fs->fs_sbsize, >, SBLOCKSIZE, %jd);
+	CHK(fs->fs_sbsize, <, (unsigned)sizeof(struct fs), %jd);
+	/* fix for misconfigured filesystems */
+	if (fs->fs_maxbsize == 0)
+		fs->fs_maxbsize = fs->fs_bsize;
+	CHK(fs->fs_maxbsize, <, fs->fs_bsize, %jd);
+	CHK(powerof2(fs->fs_maxbsize), ==, 0, %jd);
+	CHK(fs->fs_maxbsize, >, FS_MAXCONTIG * fs->fs_bsize, %jd);
+	CHK(fs->fs_bmask, !=, ~(fs->fs_bsize - 1), %#jx);
+	CHK(fs->fs_fmask, !=, ~(fs->fs_fsize - 1), %#jx);
+	CHK(fs->fs_qbmask, !=, ~fs->fs_bmask, %#jx);
+	CHK(fs->fs_qfmask, !=, ~fs->fs_fmask, %#jx);
+	CHK(fs->fs_bshift, !=, ILOG2(fs->fs_bsize), %jd);
+	CHK(fs->fs_fshift, !=, ILOG2(fs->fs_fsize), %jd);
+	CHK(fs->fs_fragshift, !=, ILOG2(fs->fs_frag), %jd);
+	CHK(fs->fs_fsbtodb, !=, ILOG2(fs->fs_fsize / sectorsize), %jd);
+	CHK(fs->fs_old_cgoffset, <, 0, %jd);
+	CHK2(fs->fs_old_cgoffset, >, 0, ~fs->fs_old_cgmask, <, 0, %jd);
+	CHK(fs->fs_old_cgoffset * (~fs->fs_old_cgmask), >, fs->fs_fpg, %jd);
+	CHK(CGSIZE(fs), >, fs->fs_bsize, %jd);
+	/*
+	 * If anything has failed up to this point, it is usafe to proceed
+	 * as checks below may divide by zero or make other fatal calculations.
+	 * So if we have any errors at this point, give up.
+	 */
+	if (error)
+		return (error);
+	CHK(fs->fs_sbsize % dbtob(1), !=, 0, %jd);
+	CHK(fs->fs_ipg % fs->fs_inopb, !=, 0, %jd);
+	CHK(fs->fs_sblkno, !=, roundup(
+	    howmany(fs->fs_sblockloc + SBLOCKSIZE, fs->fs_fsize),
+	    fs->fs_frag), %jd);
+	CHK(fs->fs_cblkno, !=, fs->fs_sblkno +
+	    roundup(howmany(SBLOCKSIZE, fs->fs_fsize), fs->fs_frag), %jd);
+	CHK(fs->fs_iblkno, !=, fs->fs_cblkno + fs->fs_frag, %jd);
+	CHK(fs->fs_dblkno, !=, fs->fs_iblkno + fs->fs_ipg / INOPF(fs), %jd);
+	CHK(fs->fs_cgsize, >, fs->fs_bsize, %jd);
+	CHK(fs->fs_cgsize, <, fs->fs_fsize, %jd);
+	CHK(fs->fs_cgsize % fs->fs_fsize, !=, 0, %jd);
+	/*
+	 * This test is valid, however older versions of growfs failed
+	 * to correctly update fs_dsize so will fail this test. Thus we
+	 * exclude it from the requirements.
+	 */
+#ifdef notdef
+	CHK(fs->fs_dsize, !=, fs->fs_size - fs->fs_sblkno -
+		fs->fs_ncg * (fs->fs_dblkno - fs->fs_sblkno) -
+		howmany(fs->fs_cssize, fs->fs_fsize), %jd);
+#endif
+	CHK(fs->fs_metaspace, <, 0, %jd);
+	CHK(fs->fs_metaspace, >, fs->fs_fpg / 2, %jd);
+	CHK(fs->fs_minfree, >, 99, %jd%%);
+	maxfilesize = fs->fs_bsize * UFS_NDADDR - 1;
+	for (sizepb = fs->fs_bsize, i = 0; i < UFS_NIADDR; i++) {
+		sizepb *= NINDIR(fs);
+		maxfilesize += sizepb;
+	}
+	CHK(fs->fs_maxfilesize, !=, maxfilesize, %jd);
+	/*
+	 * These values have a tight interaction with each other that
+	 * makes it hard to tightly bound them. So we can only check
+	 * that they are within a broader possible range.
+	 *
+	 * The size cannot always be accurately determined, but ensure
+	 * that it is consistent with the number of cylinder groups (fs_ncg)
+	 * and the number of fragments per cylinder group (fs_fpg). Ensure
+	 * that the summary information size is correct and that it starts
+	 * and ends in the data area of the same cylinder group.
+	 */
+	CHK(fs->fs_size, <, 8 * fs->fs_frag, %jd);
+	CHK(fs->fs_size, <=, ((int64_t)fs->fs_ncg - 1) * fs->fs_fpg, %jd);
+	CHK(fs->fs_size, >, (int64_t)fs->fs_ncg * fs->fs_fpg, %jd);
+	CHK(fs->fs_csaddr, <, 0, %jd);
+	CHK(fs->fs_cssize, !=,
+	    fragroundup(fs, fs->fs_ncg * sizeof(struct csum)), %jd);
+	CHK(fs->fs_csaddr + howmany(fs->fs_cssize, fs->fs_fsize), >,
+	    fs->fs_size, %jd);
+	CHK(fs->fs_csaddr, <, cgdmin(fs, dtog(fs, fs->fs_csaddr)), %jd);
+	CHK(dtog(fs, fs->fs_csaddr + howmany(fs->fs_cssize, fs->fs_fsize)), >,
+	    dtog(fs, fs->fs_csaddr), %jd);
+	/*
+	 * With file system clustering it is possible to allocate
+	 * many contiguous blocks. The kernel variable maxphys defines
+	 * the maximum transfer size permitted by the controller and/or
+	 * buffering. The fs_maxcontig parameter controls the maximum
+	 * number of blocks that the filesystem will read or write
+	 * in a single transfer. It is calculated when the filesystem
+	 * is created as maxphys / fs_bsize. The loader uses a maxphys
+	 * of 128K even when running on a system that supports larger
+	 * values. If the filesystem was built on a system that supports
+	 * a larger maxphys (1M is typical) it will have configured
+	 * fs_maxcontig for that larger system. So we bound the upper
+	 * allowable limit for fs_maxconfig to be able to at least 
+	 * work with a 1M maxphys on the smallest block size filesystem:
+	 * 1M / 4096 == 256. There is no harm in allowing the mounting of
+	 * filesystems that make larger than maxphys I/O requests because
+	 * those (mostly 32-bit machines) can (very slowly) handle I/O
+	 * requests that exceed maxphys.
+	 */
+	CHK(fs->fs_maxcontig, <, 0, %jd);
+	CHK(fs->fs_maxcontig, >, MAX(256, maxphys / fs->fs_bsize), %jd);
+	CHK2(fs->fs_maxcontig, ==, 0, fs->fs_contigsumsize, !=, 0, %jd);
+	CHK2(fs->fs_maxcontig, >, 1, fs->fs_contigsumsize, !=,
+	    MIN(fs->fs_maxcontig, FS_MAXCONTIG), %jd);
+	return (error);
 }
 
 /*
@@ -359,7 +552,7 @@ ffs_sbput(void *devfd, struct fs *fs, off_t loc,
 	 * If there is summary information, write it first, so if there
 	 * is an error, the superblock will not be marked as clean.
 	 */
-	if (fs->fs_csp != NULL) {
+	if (fs->fs_si != NULL && fs->fs_csp != NULL) {
 		blks = howmany(fs->fs_cssize, fs->fs_fsize);
 		space = (uint8_t *)fs->fs_csp;
 		for (i = 0; i < blks; i += fs->fs_frag) {
@@ -374,10 +567,60 @@ ffs_sbput(void *devfd, struct fs *fs, off_t loc,
 		}
 	}
 	fs->fs_fmod = 0;
-	fs->fs_time = UFS_TIME;
-	if ((error = (*writefunc)(devfd, loc, fs, fs->fs_sbsize)) != 0)
-		return (error);
-	return (0);
+#ifndef _KERNEL
+	{
+		struct fs_summary_info *fs_si;
+
+		fs->fs_time = time(NULL);
+		/* Clear the pointers for the duration of writing. */
+		fs_si = fs->fs_si;
+		fs->fs_si = NULL;
+		fs->fs_ckhash = ffs_calc_sbhash(fs);
+		error = (*writefunc)(devfd, loc, fs, fs->fs_sbsize);
+		fs->fs_si = fs_si;
+	}
+#else /* _KERNEL */
+	fs->fs_time = time_second;
+	fs->fs_ckhash = ffs_calc_sbhash(fs);
+	error = (*writefunc)(devfd, loc, fs, fs->fs_sbsize);
+#endif /* _KERNEL */
+	return (error);
+}
+
+/*
+ * Calculate the check-hash for a superblock.
+ */
+uint32_t
+ffs_calc_sbhash(struct fs *fs)
+{
+	uint32_t ckhash, save_ckhash;
+
+	/*
+	 * A filesystem that was using a superblock ckhash may be moved
+	 * to an older kernel that does not support ckhashes. The
+	 * older kernel will clear the FS_METACKHASH flag indicating
+	 * that it does not update hashes. When the disk is moved back
+	 * to a kernel capable of ckhashes it disables them on mount:
+	 *
+	 *	if ((fs->fs_flags & FS_METACKHASH) == 0)
+	 *		fs->fs_metackhash = 0;
+	 *
+	 * This leaves (fs->fs_metackhash & CK_SUPERBLOCK) == 0) with an
+	 * old stale value in the fs->fs_ckhash field. Thus the need to
+	 * just accept what is there.
+	 */
+	if ((fs->fs_metackhash & CK_SUPERBLOCK) == 0)
+		return (fs->fs_ckhash);
+
+	save_ckhash = fs->fs_ckhash;
+	fs->fs_ckhash = 0;
+	/*
+	 * If newly read from disk, the caller is responsible for
+	 * verifying that fs->fs_sbsize <= SBLOCKSIZE.
+	 */
+	ckhash = calculate_crc32c(~0L, (void *)fs, fs->fs_sbsize);
+	fs->fs_ckhash = save_ckhash;
+	return (ckhash);
 }
 
 /*
@@ -446,9 +689,9 @@ ffs_isblock(struct fs *fs, unsigned char *cp, ufs1_daddr_t h)
  * check if a block is free
  */
 int
-ffs_isfreeblock(struct fs *fs, u_char *cp, ufs1_daddr_t h)
+ffs_isfreeblock(struct fs *fs, uint8_t *cp, ufs1_daddr_t h)
 {
- 
+
 	switch ((int)fs->fs_frag) {
 	case 8:
 		return (cp[h] == 0);
@@ -471,7 +714,7 @@ ffs_isfreeblock(struct fs *fs, u_char *cp, ufs1_daddr_t h)
  * take a block out of the map
  */
 void
-ffs_clrblock(struct fs *fs, u_char *cp, ufs1_daddr_t h)
+ffs_clrblock(struct fs *fs, uint8_t *cp, ufs1_daddr_t h)
 {
 
 	switch ((int)fs->fs_frag) {
@@ -503,7 +746,6 @@ ffs_setblock(struct fs *fs, unsigned char *cp, ufs1_daddr_t h)
 {
 
 	switch ((int)fs->fs_frag) {
-
 	case 8:
 		cp[h] = 0xff;
 		return;
@@ -534,9 +776,9 @@ ffs_clusteracct(struct fs *fs, struct cg *cgp, ufs1_daddr_t blkno, int cnt)
 {
 	int32_t *sump;
 	int32_t *lp;
-	u_char *freemapp, *mapp;
+	uint8_t *freemapp, *mapp;
 	int i, start, end, forw, back, map;
-	u_int bit;
+	uint64_t bit;
 
 	if (fs->fs_contigsumsize <= 0)
 		return;

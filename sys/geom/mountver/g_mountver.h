@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Edward Tomasz Napierala <trasz@FreeBSD.org>
  * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_G_MOUNTVER_H_
@@ -37,25 +36,10 @@
 
 #ifdef _KERNEL
 
-#define	G_MOUNTVER_DEBUG(lvl, ...)	do {				\
-	if (g_mountver_debug >= (lvl)) {				\
-		printf("GEOM_MOUNTVER");				\
-		if (g_mountver_debug > 0)				\
-			printf("[%u]", lvl);				\
-		printf(": ");						\
-		printf(__VA_ARGS__);					\
-		printf("\n");						\
-	}								\
-} while (0)
-#define	G_MOUNTVER_LOGREQ(bp, ...)	do {				\
-	if (g_mountver_debug >= 2) {					\
-		printf("GEOM_MOUNTVER[2]: ");				\
-		printf(__VA_ARGS__);					\
-		printf(" ");						\
-		g_print_bio(bp);					\
-		printf("\n");						\
-	}								\
-} while (0)
+#define	G_MOUNTVER_DEBUG(lvl, ...) \
+    _GEOM_DEBUG("GEOM_MOUNTVER", g_mountver_debug, (lvl), NULL, __VA_ARGS__)
+#define	G_MOUNTVER_LOGREQ(bp, ...) \
+    _GEOM_DEBUG("GEOM_MOUNTVER", g_mountver_debug, 2, (bp), __VA_ARGS__)
 
 struct g_mountver_softc {
 	TAILQ_HEAD(, bio)		sc_queue;

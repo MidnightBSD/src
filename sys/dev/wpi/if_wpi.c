@@ -18,7 +18,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Driver for Intel PRO/Wireless 3945ABG 802.11 network adapters.
  *
@@ -2767,7 +2766,7 @@ wpi_cmd2(struct wpi_softc *sc, struct wpi_buf *buf)
 		ring->pending = 0;
 		sc->sc_update_tx_ring(sc, ring);
 	} else
-		ieee80211_node_incref(data->ni);
+		(void) ieee80211_ref_node(data->ni);
 
 end:	DPRINTF(sc, WPI_DEBUG_TRACE, error ? TRACE_STR_END_ERR : TRACE_STR_END,
 	    __func__);
@@ -4543,6 +4542,7 @@ wpi_run(struct wpi_softc *sc, struct ieee80211vap *vap)
 	    sc->rxon.chan, sc->rxon.flags);
 
 	if ((error = wpi_send_rxon(sc, 0, 1)) != 0) {
+		WPI_RXON_UNLOCK(sc);
 		device_printf(sc->sc_dev, "%s: could not send RXON\n",
 		    __func__);
 		return error;

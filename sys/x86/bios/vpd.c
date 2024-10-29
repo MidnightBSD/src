@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Matthew N. Dodd <winter@jurai.net>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * VPD decoder for IBM systems (Thinkpads)
  * http://www-1.ibm.com/support/docview.wss?uid=psg1MIGR-45120
@@ -104,14 +103,29 @@ static int	vpd_modevent	(module_t, int, void *);
 
 static int	vpd_cksum	(struct vpd *);
 
-static SYSCTL_NODE(_hw, OID_AUTO, vpd, CTLFLAG_RD, NULL, NULL);
-static SYSCTL_NODE(_hw_vpd, OID_AUTO, machine, CTLFLAG_RD, NULL, NULL);
-static SYSCTL_NODE(_hw_vpd_machine, OID_AUTO, type, CTLFLAG_RD, NULL, NULL);
-static SYSCTL_NODE(_hw_vpd_machine, OID_AUTO, model, CTLFLAG_RD, NULL, NULL);
-static SYSCTL_NODE(_hw_vpd, OID_AUTO, build_id, CTLFLAG_RD, NULL, NULL);
-static SYSCTL_NODE(_hw_vpd, OID_AUTO, serial, CTLFLAG_RD, NULL, NULL);
-static SYSCTL_NODE(_hw_vpd_serial, OID_AUTO, box, CTLFLAG_RD, NULL, NULL);
-static SYSCTL_NODE(_hw_vpd_serial, OID_AUTO, planar, CTLFLAG_RD, NULL, NULL);
+static SYSCTL_NODE(_hw, OID_AUTO, vpd, CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
+    NULL);
+static SYSCTL_NODE(_hw_vpd, OID_AUTO, machine,
+    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
+    NULL);
+static SYSCTL_NODE(_hw_vpd_machine, OID_AUTO, type,
+    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
+    NULL);
+static SYSCTL_NODE(_hw_vpd_machine, OID_AUTO, model,
+    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
+    NULL);
+static SYSCTL_NODE(_hw_vpd, OID_AUTO, build_id,
+    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
+    NULL);
+static SYSCTL_NODE(_hw_vpd, OID_AUTO, serial,
+    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
+    NULL);
+static SYSCTL_NODE(_hw_vpd_serial, OID_AUTO, box,
+    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
+    NULL);
+static SYSCTL_NODE(_hw_vpd_serial, OID_AUTO, planar,
+    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
+    NULL);
 
 static void
 vpd_identify (driver_t *driver, device_t parent)

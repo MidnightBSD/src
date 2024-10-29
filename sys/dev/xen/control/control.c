@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-4-Clause
+ * SPDX-License-Identifier: BSD-2-Clause AND BSD-4-Clause
  *
  * Copyright (c) 2010 Justin T. Gibbs, Spectra Logic Corporation
  * All rights reserved.
@@ -91,7 +91,6 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-
 /**
  * \file control.c
  *
@@ -222,12 +221,11 @@ xctrl_suspend(void)
 	KASSERT((PCPU_GET(cpuid) == 0), ("Not running on CPU#0"));
 
 	/*
-	 * Be sure to hold Giant across DEVICE_SUSPEND/RESUME since non-MPSAFE
-	 * drivers need this.
+	 * Be sure to hold Giant across DEVICE_SUSPEND/RESUME.
 	 */
-	mtx_lock(&Giant);
+	bus_topo_lock();
 	if (DEVICE_SUSPEND(root_bus) != 0) {
-		mtx_unlock(&Giant);
+		bus_topo_unlock();
 		printf("%s: device_suspend failed\n", __func__);
 		return;
 	}
@@ -298,7 +296,7 @@ xctrl_suspend(void)
 	 * similar.
 	 */
 	DEVICE_RESUME(root_bus);
-	mtx_unlock(&Giant);
+	bus_topo_unlock();
 
 	/*
 	 * Warm up timecounter again and reset system clock.
@@ -358,7 +356,7 @@ xctrl_on_watch_event(struct xs_watch *watch, const char **vec, unsigned int len)
 	char *result;
 	int   error;
 	int   result_len;
-	
+
 	error = xs_read(XST_NIL, "control", "shutdown",
 			&result_len, (void **)&result);
 	if (error != 0 || result_len == 0)
@@ -372,7 +370,6 @@ xctrl_on_watch_event(struct xs_watch *watch, const char **vec, unsigned int len)
 	reason = xctrl_shutdown_reasons;
 	last_reason = reason + nitems(xctrl_shutdown_reasons);
 	while (reason < last_reason) {
-
 		if (!strcmp(result, reason->name)) {
 			reason->handler();
 			break;
@@ -477,11 +474,11 @@ static device_method_t xctrl_methods[] = {
 	DEVMETHOD(device_probe,         xctrl_probe), 
 	DEVMETHOD(device_attach,        xctrl_attach), 
 	DEVMETHOD(device_detach,        xctrl_detach), 
- 
+
 	DEVMETHOD_END
 }; 
 
 DEFINE_CLASS_0(xctrl, xctrl_driver, xctrl_methods, sizeof(struct xctrl_softc));
 devclass_t xctrl_devclass; 
- 
+
 DRIVER_MODULE(xctrl, xenstore, xctrl_driver, xctrl_devclass, NULL, NULL);

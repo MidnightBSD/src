@@ -7,7 +7,6 @@
 /* VMCI QueuePair API implementation. */
 
 #include <sys/cdefs.h>
-
 #include "vmci.h"
 #include "vmci_driver.h"
 #include "vmci_event.h"
@@ -840,7 +839,6 @@ vmci_queue_pair_detach_guest_work(struct vmci_handle handle)
 		result = vmci_queue_pair_detach_hypercall(handle);
 		if (entry->hibernate_failure) {
 			if (result == VMCI_ERROR_NOT_FOUND) {
-
 				/*
 				 * If a queue pair detach failed when entering
 				 * hibernation, the guest driver and the device
@@ -858,7 +856,6 @@ vmci_queue_pair_detach_guest_work(struct vmci_handle handle)
 			}
 		}
 		if (result < VMCI_SUCCESS) {
-
 			/*
 			 * We failed to notify a non-local queuepair. That other
 			 * queuepair might still be accessing the shared

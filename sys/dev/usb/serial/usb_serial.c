@@ -1,7 +1,7 @@
 /*	$NetBSD: ucom.c,v 1.40 2001/11/13 06:24:54 lukem Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001-2003, 2005, 2008
  *	Shunsuke Akiyama <akiyama@jp.FreeBSD.org>.
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*-
  * Copyright (c) 1998, 2000 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -96,7 +95,8 @@
 
 #include "opt_gdb.h"
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, ucom, CTLFLAG_RW, 0, "USB ucom");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, ucom, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB ucom");
 
 static int ucom_pps_mode;
 
@@ -352,7 +352,6 @@ ucom_detach(struct ucom_super_softc *ssc, struct ucom_softc *sc)
 
 	for (subunit = 0; subunit < ssc->sc_subunits; subunit++) {
 		if (sc[subunit].sc_flag & UCOM_FLAG_ATTACHED) {
-
 			ucom_detach_tty(ssc, &sc[subunit]);
 
 			/* avoid duplicate detach */
@@ -454,7 +453,6 @@ ucom_attach_tty(struct ucom_super_softc *ssc, struct ucom_softc *sc)
 	if ((ucom_cons_softc == NULL) && 
 	    (ssc->sc_unit == ucom_cons_unit) &&
 	    (sc->sc_subunit == ucom_cons_subunit)) {
-
 		DPRINTF("unit %d subunit %d is console",
 		    ssc->sc_unit, sc->sc_subunit);
 
@@ -725,11 +723,9 @@ ucom_cfg_open(struct usb_proc_msg *_task)
 	DPRINTF("\n");
 
 	if (sc->sc_flag & UCOM_FLAG_LL_READY) {
-
 		/* already opened */
 
 	} else {
-
 		sc->sc_flag |= UCOM_FLAG_LL_READY;
 
 		if (sc->sc_callback->ucom_cfg_open) {
@@ -795,7 +791,8 @@ ucom_open(struct tty *tp)
 	    &sc->sc_start_task[0].hdr, 
 	    &sc->sc_start_task[1].hdr);
 
-	ucom_modem(tp, SER_DTR | SER_RTS, 0);
+	if (sc->sc_tty == NULL || (sc->sc_tty->t_termios.c_cflag & CNO_RTSDTR) == 0)
+		ucom_modem(tp, SER_DTR | SER_RTS, 0);
 
 	ucom_ring(sc, 0);
 
@@ -954,7 +951,6 @@ ucom_modem(struct tty *tp, int sigon, int sigoff)
 		return (0);
 	}
 	if ((sigon == 0) && (sigoff == 0)) {
-
 		if (sc->sc_mcr & SER_DTR) {
 			sigon |= SER_DTR;
 		}
@@ -1198,7 +1194,6 @@ ucom_cfg_status_change(struct usb_proc_msg *_task)
 	}
 
 	if (msr_delta & SER_DCD) {
-
 		onoff = (sc->sc_msr & SER_DCD) ? 1 : 0;
 
 		DPRINTF("DCD changed to %d\n", onoff);
@@ -1207,7 +1202,6 @@ ucom_cfg_status_change(struct usb_proc_msg *_task)
 	}
 
 	if ((lsr_delta & ULSR_BI) && (sc->sc_lsr & ULSR_BI)) {
-
 		DPRINTF("BREAK detected\n");
 
 		ttydisc_rint(tp, 0, TRE_BREAK);
@@ -1215,7 +1209,6 @@ ucom_cfg_status_change(struct usb_proc_msg *_task)
 	}
 
 	if ((lsr_delta & ULSR_FE) && (sc->sc_lsr & ULSR_FE)) {
-
 		DPRINTF("Frame error detected\n");
 
 		ttydisc_rint(tp, 0, TRE_FRAMING);
@@ -1223,7 +1216,6 @@ ucom_cfg_status_change(struct usb_proc_msg *_task)
 	}
 
 	if ((lsr_delta & ULSR_PE) && (sc->sc_lsr & ULSR_PE)) {
-
 		DPRINTF("Parity error detected\n");
 
 		ttydisc_rint(tp, 0, TRE_PARITY);
@@ -1282,7 +1274,6 @@ ucom_param(struct tty *tp, struct termios *t)
 	error = 0;
 
 	if (!(sc->sc_flag & UCOM_FLAG_HL_READY)) {
-
 		/* XXX the TTY layer should call "open()" first! */
 		/*
 		 * Not quite: Its ordering is partly backwards, but
@@ -1438,7 +1429,6 @@ ucom_get_data(struct ucom_softc *sc, struct usb_page_cache *pc,
 	offset_orig = offset;
 
 	while (len != 0) {
-
 		usbd_get_page(pc, offset, &res);
 
 		if (res.length > len) {
@@ -1514,7 +1504,6 @@ ucom_put_data(struct ucom_softc *sc, struct usb_page_cache *pc,
 	/* set a flag to prevent recursation ? */
 
 	while (len > 0) {
-
 		usbd_get_page(pc, offset, &res);
 
 		if (res.length > len) {
@@ -1531,7 +1520,6 @@ ucom_put_data(struct ucom_softc *sc, struct usb_page_cache *pc,
 		/* first check if we can pass the buffer directly */
 
 		if (ttydisc_can_bypass(tp)) {
-
 			/* clear any jitter buffer */
 			sc->sc_jitterbuf_in = 0;
 			sc->sc_jitterbuf_out = 0;
@@ -1762,7 +1750,7 @@ static gdb_term_f ucom_gdbterm;
 static gdb_getc_f ucom_gdbgetc;
 static gdb_putc_f ucom_gdbputc;
 
-GDB_DBGPORT(sio, ucom_gdbprobe, ucom_gdbinit, ucom_gdbterm, ucom_gdbgetc, ucom_gdbputc);
+GDB_DBGPORT(ucom, ucom_gdbprobe, ucom_gdbinit, ucom_gdbterm, ucom_gdbgetc, ucom_gdbputc);
 
 static int
 ucom_gdbprobe(void)

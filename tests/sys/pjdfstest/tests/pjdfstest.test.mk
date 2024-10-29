@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/tests/sys/pjdfstest/tests/pjdfstest.test.mk 274016 2014-11-03 07:18:42Z ngie $
 
 PJDFSTEST_SRCDIR=	${.CURDIR:H:H:H:H:H}/contrib/pjdfstest
 

@@ -21,8 +21,6 @@
  * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -47,6 +45,8 @@
 #include <unistd.h>
 
 #include "utils.h"
+
+#include "freebsd_test_suite/macros.h"
 
 static pid_t pid;
 static int filedesc, status;
@@ -1512,14 +1512,7 @@ ATF_TC_HEAD(cap_enter_success, tc)
 
 ATF_TC_BODY(cap_enter_success, tc)
 {
-	int capinfo;
-	size_t len = sizeof(capinfo);
-	const char *capname = "kern.features.security_capability_mode";
-	ATF_REQUIRE_EQ(0, sysctlbyname(capname, &capinfo, &len, NULL, 0));
-
-	/* Without CAPABILITY_MODE enabled, cap_enter() returns ENOSYS */
-	if (!capinfo)
-		atf_tc_skip("Capsicum is not enabled in the system");
+	ATF_REQUIRE_FEATURE("security_capability_mode");
 
 	FILE *pipefd = setup(fds, auclass);
 	ATF_REQUIRE((pid = fork()) != -1);
@@ -1550,14 +1543,9 @@ ATF_TC_HEAD(cap_getmode_success, tc)
 
 ATF_TC_BODY(cap_getmode_success, tc)
 {
-	int capinfo, modep;
-	size_t len = sizeof(capinfo);
-	const char *capname = "kern.features.security_capability_mode";
-	ATF_REQUIRE_EQ(0, sysctlbyname(capname, &capinfo, &len, NULL, 0));
+	int modep;
 
-	/* Without CAPABILITY_MODE enabled, cap_getmode() returns ENOSYS */
-	if (!capinfo)
-		atf_tc_skip("Capsicum is not enabled in the system");
+	ATF_REQUIRE_FEATURE("security_capability_mode");
 
 	pid = getpid();
 	snprintf(pcregex, sizeof(pcregex), "cap_getmode.*%d.*success", pid);

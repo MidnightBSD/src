@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case zpool_set_001_pos
 zpool_set_001_pos_head()
 {
 	atf_set "descr" "zpool set usage message is displayed when called with no arguments"
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 }
 zpool_set_001_pos_body()
 {
@@ -44,7 +42,7 @@ atf_test_case zpool_set_002_neg
 zpool_set_002_neg_head()
 {
 	atf_set "descr" "Malformed zpool set commands are rejected"
-	atf_set "require.progs"  zpool zfs
+	atf_set "require.progs" "ksh93 zpool zfs"
 }
 zpool_set_002_neg_body()
 {
@@ -58,7 +56,7 @@ atf_test_case zpool_set_003_neg
 zpool_set_003_neg_head()
 {
 	atf_set "descr" "zpool set cannot set a readonly property"
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 }
 zpool_set_003_neg_body()
 {

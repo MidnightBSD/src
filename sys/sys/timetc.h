@@ -7,7 +7,6 @@
  * can do whatever you want with this stuff. If we meet some day, and you think
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
- *
  */
 
 #ifndef _SYS_TIMETC_H_
@@ -94,5 +93,12 @@ void	cpu_tick_calibration(void);
 #ifdef SYSCTL_DECL
 SYSCTL_DECL(_kern_timecounter);
 #endif
+
+/**
+ * clockcalib(clk, clkname):
+ * Return the frequency of the provided timer, as calibrated against the
+ * current best-available timecounter.
+ */
+uint64_t clockcalib(uint64_t (*)(void), const char *);
 
 #endif /* !_SYS_TIMETC_H_ */

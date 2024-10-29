@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Robert N. M. Watson
  * All rights reserved.
@@ -27,7 +27,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _NFSCL_NFS_KDTRACE_H_
@@ -64,7 +63,7 @@ extern uint32_t	nfscl_attrcache_load_done_id;
 		    nfscl_accesscache_get_hit_id, (vp), (uid),		\
 		    (mode));						\
 } while (0)
-	
+
 #define	KDTRACE_NFS_ACCESSCACHE_GET_MISS(vp, uid, mode)	do {		\
 	if (dtrace_nfscl_accesscache_get_miss_probe != NULL)		\
 		(dtrace_nfscl_accesscache_get_miss_probe)(		\

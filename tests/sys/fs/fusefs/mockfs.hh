@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 The FreeBSD Foundation
  *
@@ -26,8 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 extern "C" {
@@ -71,6 +69,14 @@ extern "C" {
 	)
 
 extern int verbosity;
+
+/*
+ * The maximum that a test case can set max_write, limited by the buffer
+ * supplied when reading from /dev/fuse.  This limitation is imposed by
+ * fusefs-libs, but not by the FUSE protocol.
+ */
+const uint32_t max_max_write = 0x20000;
+
 
 /* This struct isn't defined by fuse_kernel.h or libfuse, but it should be */
 struct fuse_create_out {
@@ -138,9 +144,20 @@ struct fuse_init_out_7_22 {
 union fuse_payloads_in {
 	fuse_access_in	access;
 	fuse_bmap_in	bmap;
-	/* value is from fuse_kern_chan.c in fusefs-libs */
-	uint8_t		bytes[0x21000 - sizeof(struct fuse_in_header)];
+	/*
+	 * In fusefs-libs 3.4.2 and below the buffer size is fixed at 0x21000
+	 * minus the header sizes.  fusefs-libs 3.4.3 (and FUSE Protocol 7.29)
+	 * add a FUSE_MAX_PAGES option that allows it to be greater.
+	 *
+	 * See fuse_kern_chan.c in fusefs-libs 2.9.9 and below, or
+	 * FUSE_DEFAULT_MAX_PAGES_PER_REQ in fusefs-libs 3.4.3 and above.
+	 */
+	uint8_t		bytes[
+	    max_max_write + 0x1000 - sizeof(struct fuse_in_header)
+	];
+	fuse_copy_file_range_in	copy_file_range;
 	fuse_create_in	create;
+	fuse_fallocate_in fallocate;
 	fuse_flush_in	flush;
 	fuse_fsync_in	fsync;
 	fuse_fsync_in	fsyncdir;
@@ -153,6 +170,7 @@ union fuse_payloads_in {
 	fuse_link_in	link;
 	fuse_listxattr_in listxattr;
 	char		lookup[0];
+	fuse_lseek_in	lseek;
 	fuse_mkdir_in	mkdir;
 	fuse_mknod_in	mknod;
 	fuse_open_in	open;
@@ -186,13 +204,14 @@ union fuse_payloads_out {
 	 * The protocol places no limits on the size of bytes.  Choose
 	 * a size big enough for anything we'll test.
 	 */
-	uint8_t			bytes[0x20000];
+	uint8_t			bytes[0x40000];
 	fuse_entry_out		entry;
 	fuse_entry_out_7_8	entry_7_8;
 	fuse_lk_out		getlk;
 	fuse_getxattr_out	getxattr;
 	fuse_init_out		init;
 	fuse_init_out_7_22	init_7_22;
+	fuse_lseek_out		lseek;
 	/* The inval_entry structure should be followed by the entry's name */
 	fuse_notify_inval_entry_out	inval_entry;
 	fuse_notify_inval_inode_out	inval_inode;
@@ -212,6 +231,8 @@ union fuse_payloads_out {
 struct mockfs_buf_out {
 	fuse_out_header		header;
 	union fuse_payloads_out	body;
+	/* the expected errno of the write to /dev/fuse */
+	int			expected_errno;
 
 	/* Default constructor: zero everything */
 	mockfs_buf_out() {
@@ -312,15 +333,12 @@ class MockFS {
 	 */
 	void read_request(mockfs_buf_in& in, ssize_t& res);
 
+	public:
 	/* Write a single response back to the kernel */
 	void write_response(const mockfs_buf_out &out);
 
-	public:
 	/* pid of child process, for two-process test cases */
 	pid_t m_child_pid;
-
-	/* the expected errno of the next write to /dev/fuse */
-	int m_expected_write_errno;
 
 	/* Maximum size of a FUSE_WRITE write */
 	uint32_t m_maxwrite;
@@ -340,7 +358,7 @@ class MockFS {
 		enum poll_method pm, uint32_t flags,
 		uint32_t kernel_minor_version, uint32_t max_write, bool async,
 		bool no_clusterr, unsigned time_gran, bool nointr,
-		bool noatime);
+		bool noatime, const char *fsname, const char *subtype);
 
 	virtual ~MockFS();
 

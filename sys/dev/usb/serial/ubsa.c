@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002, Alexander Kabaev <kan.FreeBSD.org>.
  * All rights reserved.
@@ -89,7 +89,8 @@
 #ifdef USB_DEBUG
 static int ubsa_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, ubsa, CTLFLAG_RW, 0, "USB ubsa");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, ubsa, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB ubsa");
 SYSCTL_INT(_hw_usb_ubsa, OID_AUTO, debug, CTLFLAG_RWTUN,
     &ubsa_debug, 0, "ubsa debug level");
 #endif
@@ -192,7 +193,6 @@ static void	ubsa_cfg_get_status(struct ucom_softc *, uint8_t *,
 static void	ubsa_poll(struct ucom_softc *ucom);
 
 static const struct usb_config ubsa_config[UBSA_N_TRANSFER] = {
-
 	[UBSA_BULK_DT_WR] = {
 		.type = UE_BULK,
 		.endpoint = UE_ADDR_ANY,
@@ -585,7 +585,6 @@ tr_setup:
 		pc = usbd_xfer_get_frame(xfer, 0);
 		if (ucom_get_data(&sc->sc_ucom, pc, 0,
 		    UBSA_BSIZE, &actlen)) {
-
 			usbd_xfer_set_frame_len(xfer, 0, actlen);
 			usbd_transfer_submit(xfer);
 		}
@@ -598,7 +597,6 @@ tr_setup:
 			goto tr_setup;
 		}
 		return;
-
 	}
 }
 
@@ -629,7 +627,6 @@ tr_setup:
 			goto tr_setup;
 		}
 		return;
-
 	}
 }
 
@@ -686,7 +683,6 @@ tr_setup:
 			goto tr_setup;
 		}
 		return;
-
 	}
 }
 

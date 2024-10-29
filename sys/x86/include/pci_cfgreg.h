@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997, Stefan Esser <se@freebsd.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  *
  */
 
@@ -57,14 +56,17 @@ enum {
 extern int cfgmech;
 
 rman_res_t	hostb_alloc_start(int type, rman_res_t start, rman_res_t end, rman_res_t count);
-int		pcie_cfgregopen(uint64_t base, uint8_t minbus, uint8_t maxbus);
+int		pcie_cfgregopen(uint64_t base, uint16_t domain, uint8_t minbus, uint8_t maxbus);
 int		pci_cfgregopen(void);
-u_int32_t	pci_cfgregread(int bus, int slot, int func, int reg, int bytes);
-void		pci_cfgregwrite(int bus, int slot, int func, int reg, u_int32_t data, int bytes);
+u_int32_t	pci_cfgregread_domain(int domain, int bus, int slot, int func, int reg, int bytes);
+void		pci_cfgregwrite_domain(int domain, int bus, int slot, int func, int reg, u_int32_t data, int bytes);
 #ifdef __HAVE_PIR
 void		pci_pir_open(void);
 int		pci_pir_probe(int bus, int require_parse);
 int		pci_pir_route_interrupt(int bus, int device, int func, int pin);
 #endif
+
+#define	pci_cfgregread		pci_cfgregread_domain
+#define	pci_cfgregwrite		pci_cfgregwrite_domain
 
 #endif /* !__X86_PCI_CFGREG_H__ */

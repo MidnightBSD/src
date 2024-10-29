@@ -58,7 +58,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _FUSE_IPC_H_
@@ -207,8 +206,17 @@ struct fuse_data {
 	struct selinfo			ks_rsel;
 
 	int				daemon_timeout;
+	int				linux_errnos;
 	unsigned			time_gran;
+	/* A bitmask of FUSE RPCs that are not implemented by the server */
 	uint64_t			notimpl;
+	/*
+	 * A bitmask of FUSE RPCs that are implemented by the server.
+	 * If an operation is not present in either notimpl or isimpl, then it
+	 * may be implemented by the server, but the kernel doesn't know for
+	 * sure.
+	 */
+	uint64_t			isimpl;
 	uint64_t			mnt_flag;
 	enum fuse_data_cache_mode	cache_mode;
 };
@@ -219,6 +227,8 @@ struct fuse_data {
                                          /* (and being observed by the daemon) */
 #define FSESS_PUSH_SYMLINKS_IN    0x0020 /* prefix absolute symlinks with mp */
 #define FSESS_DEFAULT_PERMISSIONS 0x0040 /* kernel does permission checking */
+#define FSESS_NO_OPEN_SUPPORT     0x0080 /* can elide FUSE_OPEN ops */
+#define FSESS_NO_OPENDIR_SUPPORT  0x0100 /* can elide FUSE_OPENDIR ops */
 #define FSESS_ASYNC_READ          0x1000 /* allow multiple reads of some file */
 #define FSESS_POSIX_LOCKS         0x2000 /* daemon supports POSIX locks */
 #define FSESS_EXPORT_SUPPORT      0x10000 /* daemon supports NFS-style lookups */
@@ -229,6 +239,7 @@ struct fuse_data {
 #define FSESS_WARN_CACHE_INCOHERENT 0x200000	/* Read cache incoherent */
 #define FSESS_WARN_WB_CACHE_INCOHERENT 0x400000	/* WB cache incoherent */
 #define	FSESS_WARN_ILLEGAL_INODE  0x800000 /* Illegal inode for new file */
+#define FSESS_WARN_READLINK_EMBEDDED_NUL 0x1000000 /* corrupt READLINK output */
 #define FSESS_MNTOPTS_MASK	( \
 	FSESS_DAEMON_CAN_SPY | FSESS_PUSH_SYMLINKS_IN | \
 	FSESS_DEFAULT_PERMISSIONS | FSESS_INTR)
@@ -242,13 +253,40 @@ fuse_get_mpdata(struct mount *mp)
 }
 
 static inline bool
-fsess_isimpl(struct mount *mp, int opcode)
+fsess_is_impl(struct mount *mp, int opcode)
+{
+	struct fuse_data *data = fuse_get_mpdata(mp);
+
+	return ((data->isimpl & (1ULL << opcode)) != 0);
+
+}
+
+static inline bool
+fsess_maybe_impl(struct mount *mp, int opcode)
 {
 	struct fuse_data *data = fuse_get_mpdata(mp);
 
 	return ((data->notimpl & (1ULL << opcode)) == 0);
 
 }
+
+static inline bool
+fsess_not_impl(struct mount *mp, int opcode)
+{
+	struct fuse_data *data = fuse_get_mpdata(mp);
+
+	return ((data->notimpl & (1ULL << opcode)) != 0);
+
+}
+
+static inline void
+fsess_set_impl(struct mount *mp, int opcode)
+{
+	struct fuse_data *data = fuse_get_mpdata(mp);
+
+	data->isimpl |= (1ULL << opcode);
+}
+
 static inline void
 fsess_set_notimpl(struct mount *mp, int opcode)
 {

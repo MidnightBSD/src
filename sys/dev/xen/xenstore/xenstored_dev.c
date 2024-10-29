@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/cdefs.h>
 #include <sys/errno.h>
@@ -51,7 +50,6 @@
 static int xsd_dev_read(struct cdev *dev, struct uio *uio, int ioflag);
 static int xsd_dev_mmap(struct cdev *dev, vm_ooffset_t offset,
     vm_paddr_t *paddr, int nprot, vm_memattr_t *memattr);
-
 
 static struct cdevsw xsd_dev_cdevsw = {
 	.d_version = D_VERSION,

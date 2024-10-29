@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/fcntl.h>
@@ -49,6 +48,8 @@
 #include <sys/taskqueue.h>
 #include <sys/vnode.h>
 
+#include <vm/vm_param.h>
+#include <vm/vnode_pager.h>
 #include <vm/uma.h>
 
 #include <fs/nfs/nfsport.h>
@@ -60,7 +61,6 @@
 #include <nfs/nfs_lock.h>
 
 extern struct vop_vector newnfs_vnodeops;
-extern struct buf_ops buf_ops_newnfs;
 MALLOC_DECLARE(M_NEWNFSREQ);
 
 uma_zone_t newnfsnode_zone;
@@ -132,7 +132,6 @@ ncl_nget(struct mount *mntp, u_int8_t *fhp, int fhsize, struct nfsnode **npp,
 	}
 	vp = nvp;
 	KASSERT(vp->v_bufobj.bo_bsize != 0, ("ncl_nget: bo_bsize == 0"));
-	vp->v_bufobj.bo_ops = &buf_ops_newnfs;
 	vp->v_data = np;
 	np->n_vnode = vp;
 	/* 
@@ -155,15 +154,15 @@ ncl_nget(struct mount *mntp, u_int8_t *fhp, int fhsize, struct nfsnode **npp,
 	 * Are we getting the root? If so, make sure the vnode flags
 	 * are correct 
 	 */
-	if ((fhsize == nmp->nm_fhsize) &&
-	    !bcmp(fhp, nmp->nm_fh, fhsize)) {
+	if (fhsize == NFSX_FHMAX + 1 || (fhsize == nmp->nm_fhsize &&
+	    !bcmp(fhp, nmp->nm_fh, fhsize))) {
 		if (vp->v_type == VNON)
 			vp->v_type = VDIR;
 		vp->v_vflag |= VV_ROOT;
 	}
 
 	vp->v_vflag |= VV_VMSIZEVNLOCK;
-	
+
 	np->n_fhp = malloc(sizeof (struct nfsfh) + fhsize,
 	    M_NFSFH, M_WAITOK);
 	bcopy(fhp, np->n_fhp->nfh_fh, fhsize);
@@ -238,31 +237,27 @@ ncl_inactive(struct vop_inactive_args *ap)
 {
 	struct vnode *vp = ap->a_vp;
 	struct nfsnode *np;
-	boolean_t retv;
+	struct thread *td;
 
+	td = curthread;
+	np = VTONFS(vp);
 	if (NFS_ISV4(vp) && vp->v_type == VREG) {
+		NFSLOCKNODE(np);
+		np->n_openstateid = NULL;
+		NFSUNLOCKNODE(np);
 		/*
 		 * Since mmap()'d files do I/O after VOP_CLOSE(), the NFSv4
 		 * Close operations are delayed until now. Any dirty
 		 * buffers/pages must be flushed before the close, so that the
 		 * stateid is available for the writes.
 		 */
-		if (vp->v_object != NULL) {
-			VM_OBJECT_WLOCK(vp->v_object);
-			retv = vm_object_page_clean(vp->v_object, 0, 0,
-			    OBJPC_SYNC);
-			VM_OBJECT_WUNLOCK(vp->v_object);
-		} else
-			retv = TRUE;
-		if (retv == TRUE) {
-			(void)ncl_flush(vp, MNT_WAIT, ap->a_td, 1, 0);
-			(void)nfsrpc_close(vp, 1, ap->a_td);
-		}
+		vnode_pager_clean_sync(vp);
+		(void)ncl_flush(vp, MNT_WAIT, td, 1, 0);
+		(void)nfsrpc_close(vp, 1, td);
 	}
 
-	np = VTONFS(vp);
 	NFSLOCKNODE(np);
-	ncl_releasesillyrename(vp, ap->a_td);
+	ncl_releasesillyrename(vp, td);
 
 	/*
 	 * NMODIFIED means that there might be dirty/stale buffers
@@ -285,8 +280,10 @@ ncl_reclaim(struct vop_reclaim_args *ap)
 	struct vnode *vp = ap->a_vp;
 	struct nfsnode *np = VTONFS(vp);
 	struct nfsdmap *dp, *dp2;
+	struct thread *td;
 	struct mount *mp;
 
+	td = curthread;
 	mp = vp->v_mount;
 
 	/*
@@ -297,22 +294,18 @@ ncl_reclaim(struct vop_reclaim_args *ap)
 		nfs_reclaim_p(ap);
 
 	NFSLOCKNODE(np);
-	ncl_releasesillyrename(vp, ap->a_td);
-	NFSUNLOCKNODE(np);
-
-	/*
-	 * Destroy the vm object and flush associated pages.
-	 */
-	vnode_destroy_vobject(vp);
+	ncl_releasesillyrename(vp, td);
 
 	if (NFS_ISV4(vp) && vp->v_type == VREG) {
+		np->n_openstateid = NULL;
+		NFSUNLOCKNODE(np);
 		/*
 		 * We can now safely close any remaining NFSv4 Opens for
 		 * this file. Most opens will have already been closed by
 		 * ncl_inactive(), but there are cases where it is not
 		 * called, so we need to do it again here.
 		 */
-		(void) nfsrpc_close(vp, 1, ap->a_td);
+		(void) nfsrpc_close(vp, 1, td);
 		/*
 		 * It it unlikely a delegation will still exist, but
 		 * if one does, it must be returned before calling
@@ -322,10 +315,11 @@ ncl_reclaim(struct vop_reclaim_args *ap)
 		MNT_ILOCK(mp);
 		if ((mp->mnt_kern_flag & MNTK_UNMOUNTF) == 0) {
 			MNT_IUNLOCK(mp);
-			nfscl_delegreturnvp(vp, ap->a_td);
+			nfscl_delegreturnvp(vp, td);
 		} else
 			MNT_IUNLOCK(mp);
-	}
+	} else
+		NFSUNLOCKNODE(np);
 
 	vfs_hash_remove(vp);
 

@@ -30,7 +30,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /*
@@ -394,7 +393,6 @@
  * - The behavior the WOL pattern programming registers at offset
  *   0xC0 (controls which pattern is set)
  */
-
 
 #define VGE_CAMCTL_WRITE	0x04	/* CAM write command */
 #define VGE_CAMCTL_READ		0x08	/* CAM read command */

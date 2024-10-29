@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifdef __amd64__
 #define	DEV_APIC
 #else
@@ -85,21 +84,32 @@ struct amd_et_state {
 
 struct mca_internal {
 	struct mca_record rec;
-	int		logged;
 	STAILQ_ENTRY(mca_internal) link;
+};
+
+struct mca_enumerator_ops {
+        unsigned int (*ctl)(int);
+        unsigned int (*status)(int);
+        unsigned int (*addr)(int);
+        unsigned int (*misc)(int);
 };
 
 static MALLOC_DEFINE(M_MCA, "MCA", "Machine Check Architecture");
 
 static volatile int mca_count;	/* Number of records stored. */
 static int mca_banks;		/* Number of per-CPU register banks. */
+static int mca_maxcount = -1;	/* Limit on records stored. (-1 = unlimited) */
 
-static SYSCTL_NODE(_hw, OID_AUTO, mca, CTLFLAG_RD, NULL,
+static SYSCTL_NODE(_hw, OID_AUTO, mca, CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
     "Machine Check Architecture");
 
 static int mca_enabled = 1;
 SYSCTL_INT(_hw_mca, OID_AUTO, enabled, CTLFLAG_RDTUN, &mca_enabled, 0,
     "Administrative toggle for machine check support");
+
+static int log_corrected = 1;
+SYSCTL_INT(_hw_mca, OID_AUTO, log_corrected, CTLFLAG_RWTUN, &log_corrected, 0,
+    "Log corrected errors to the console");
 
 static int amd10h_L1TP = 1;
 SYSCTL_INT(_hw_mca, OID_AUTO, amd10h_L1TP, CTLFLAG_RDTUN, &amd10h_L1TP, 0,
@@ -117,11 +127,67 @@ SYSCTL_INT(_hw_mca, OID_AUTO, erratum383, CTLFLAG_RDTUN,
 static STAILQ_HEAD(, mca_internal) mca_freelist;
 static int mca_freecount;
 static STAILQ_HEAD(, mca_internal) mca_records;
-static struct callout mca_timer;
-static int mca_ticks = 3600;	/* Check hourly by default. */
+static STAILQ_HEAD(, mca_internal) mca_pending;
+static int mca_ticks = 300;
 static struct taskqueue *mca_tq;
-static struct task mca_refill_task, mca_scan_task;
+static struct task mca_resize_task;
+static struct timeout_task mca_scan_task;
 static struct mtx mca_lock;
+
+static unsigned int
+mca_ia32_ctl_reg(int bank)
+{
+	return (MSR_MC_CTL(bank));
+}
+
+static unsigned int
+mca_ia32_status_reg(int bank)
+{
+	return (MSR_MC_STATUS(bank));
+}
+
+static unsigned int
+mca_ia32_addr_reg(int bank)
+{
+	return (MSR_MC_ADDR(bank));
+}
+
+static unsigned int
+mca_ia32_misc_reg(int bank)
+{
+	return (MSR_MC_MISC(bank));
+}
+
+static unsigned int
+mca_smca_ctl_reg(int bank)
+{
+        return (MSR_SMCA_MC_CTL(bank));
+}
+
+static unsigned int
+mca_smca_status_reg(int bank)
+{
+        return (MSR_SMCA_MC_STATUS(bank));
+}
+
+static unsigned int
+mca_smca_addr_reg(int bank)
+{
+        return (MSR_SMCA_MC_ADDR(bank));
+}
+
+static unsigned int
+mca_smca_misc_reg(int bank)
+{
+        return (MSR_SMCA_MC_MISC(bank));
+}
+
+static struct mca_enumerator_ops mca_msr_ops = {
+        .ctl    = mca_ia32_ctl_reg,
+        .status = mca_ia32_status_reg,
+        .addr   = mca_ia32_addr_reg,
+        .misc   = mca_ia32_misc_reg
+};
 
 #ifdef DEV_APIC
 static struct cmc_state **cmc_state;		/* Indexed by cpuid, bank. */
@@ -161,6 +227,26 @@ cmci_supported(uint64_t mcg_cap)
 	if (cpu_vendor_id != CPU_VENDOR_INTEL)
 		return (false);
 	return ((mcg_cap & MCG_CAP_CMCI_P) != 0);
+}
+
+static inline bool
+tes_supported(uint64_t mcg_cap)
+{
+
+	/*
+	 * MCG_CAP_TES_P bit is reserved in AMD documentation.  Until
+	 * it is defined, do not use it to check for TES support.
+	 */
+	if (cpu_vendor_id != CPU_VENDOR_INTEL)
+		return (false);
+	return ((mcg_cap & MCG_CAP_TES_P) != 0);
+}
+
+static inline bool
+ser_supported(uint64_t mcg_cap)
+{
+
+	return (tes_supported(mcg_cap) && (mcg_cap & MCG_CAP_SER_P) != 0);
 }
 
 static int
@@ -288,6 +374,25 @@ mca_error_mmtype(uint16_t mca_error)
 	return ("???");
 }
 
+static const char *
+mca_addres_mode(uint64_t mca_misc)
+{
+
+	switch ((mca_misc & MC_MISC_ADDRESS_MODE) >> 6) {
+	case 0x0:
+		return ("Segment Offset");
+	case 0x1:
+		return ("Linear Address");
+	case 0x2:
+		return ("Physical Address");
+	case 0x3:
+		return ("Memory Address");
+	case 0x7:
+		return ("Generic");
+	}
+	return ("???");
+}
+
 static int
 mca_mute(const struct mca_record *rec)
 {
@@ -323,7 +428,12 @@ mca_log(const struct mca_record *rec)
 	uint16_t mca_error;
 
 	if (mca_mute(rec))
-	    	return;
+		return;
+
+	if (!log_corrected && (rec->mr_status & MC_STATUS_UC) == 0 &&
+	    (!tes_supported(rec->mr_mcg_cap) ||
+	    ((rec->mr_status & MC_STATUS_TES_STATUS) >> 53) != 0x2))
+		return;
 
 	printf("MCA: Bank %d, Status 0x%016llx\n", rec->mr_bank,
 	    (long long)rec->mr_status);
@@ -339,9 +449,25 @@ mca_log(const struct mca_record *rec)
 		if (cmci_supported(rec->mr_mcg_cap))
 			printf("(%lld) ", ((long long)rec->mr_status &
 			    MC_STATUS_COR_COUNT) >> 38);
+		if (tes_supported(rec->mr_mcg_cap)) {
+			switch ((rec->mr_status & MC_STATUS_TES_STATUS) >> 53) {
+			case 0x1:
+				printf("(Green) ");
+			case 0x2:
+				printf("(Yellow) ");
+			}
+		}
 	}
+	if (rec->mr_status & MC_STATUS_EN)
+		printf("EN ");
 	if (rec->mr_status & MC_STATUS_PCC)
 		printf("PCC ");
+	if (ser_supported(rec->mr_mcg_cap)) {
+		if (rec->mr_status & MC_STATUS_S)
+			printf("S ");
+		if (rec->mr_status & MC_STATUS_AR)
+			printf("AR ");
+	}
 	if (rec->mr_status & MC_STATUS_OVER)
 		printf("OVER ");
 	mca_error = rec->mr_status & MC_STATUS_MCA_ERROR;
@@ -365,8 +491,22 @@ mca_log(const struct mca_record *rec)
 	case 0x0005:
 		printf("internal parity error");
 		break;
+	case 0x0006:
+		printf("SMM handler code access violation");
+		break;
 	case 0x0400:
 		printf("internal timer error");
+		break;
+	case 0x0e0b:
+		printf("generic I/O error");
+		if (rec->mr_cpu_vendor_id == CPU_VENDOR_INTEL &&
+		    (rec->mr_status & MC_STATUS_MISCV)) {
+			printf(" (pci%d:%d:%d:%d)",
+			    (int)((rec->mr_misc & MC_MISC_PCIE_SEG) >> 32),
+			    (int)((rec->mr_misc & MC_MISC_PCIE_BUS) >> 24),
+			    (int)((rec->mr_misc & MC_MISC_PCIE_SLOT) >> 19),
+			    (int)((rec->mr_misc & MC_MISC_PCIE_FUNC) >> 16));
+		}
 		break;
 	default:
 		if ((mca_error & 0xfc00) == 0x0400) {
@@ -399,7 +539,7 @@ mca_log(const struct mca_record *rec)
 			printf(" memory error");
 			break;
 		}
-		
+
 		/* Cache error. */
 		if ((mca_error & 0xef00) == 0x0100) {
 			printf("%sCACHE %s %s error",
@@ -409,8 +549,19 @@ mca_log(const struct mca_record *rec)
 			break;
 		}
 
+		/* Extended memory error. */
+		if ((mca_error & 0xef80) == 0x0280) {
+			printf("%s channel ", mca_error_mmtype(mca_error));
+			if ((mca_error & 0x000f) != 0x000f)
+				printf("%d", mca_error & 0x000f);
+			else
+				printf("??");
+			printf(" extended memory error");
+			break;
+		}
+
 		/* Bus and/or Interconnect error. */
-		if ((mca_error & 0xe800) == 0x0800) {			
+		if ((mca_error & 0xe800) == 0x0800) {
 			printf("BUS%s ", mca_error_level(mca_error));
 			switch ((mca_error & 0x0600) >> 9) {
 			case 0:
@@ -450,31 +601,83 @@ mca_log(const struct mca_record *rec)
 		break;
 	}
 	printf("\n");
-	if (rec->mr_status & MC_STATUS_ADDRV)
-		printf("MCA: Address 0x%llx\n", (long long)rec->mr_addr);
+	if (rec->mr_status & MC_STATUS_ADDRV) {
+		printf("MCA: Address 0x%llx", (long long)rec->mr_addr);
+		if (ser_supported(rec->mr_mcg_cap) &&
+		    (rec->mr_status & MC_STATUS_MISCV)) {
+			printf(" (Mode: %s, LSB: %d)",
+			    mca_addres_mode(rec->mr_misc),
+			    (int)(rec->mr_misc & MC_MISC_RA_LSB));
+		}
+		printf("\n");
+	}
 	if (rec->mr_status & MC_STATUS_MISCV)
 		printf("MCA: Misc 0x%llx\n", (long long)rec->mr_misc);
 }
 
+static bool
+mca_is_mce(uint64_t mcg_cap, uint64_t status, bool *recoverablep)
+{
+
+	/* Corrected error. */
+	if ((status & MC_STATUS_UC) == 0)
+		return (0);
+
+	/* Spurious MCA error. */
+	if ((status & MC_STATUS_EN) == 0)
+		return (0);
+
+	/* The processor does not support software error recovery. */
+	if (!ser_supported(mcg_cap)) {
+		*recoverablep = false;
+		return (1);
+	}
+
+	/* Context might have been corrupted. */
+	if (status & MC_STATUS_PCC) {
+		*recoverablep = false;
+		return (1);
+	}
+
+	/* Uncorrected software recoverable. */
+	if (status & MC_STATUS_S) {
+		/* Action required vs optional. */
+		if (status & MC_STATUS_AR)
+			*recoverablep = false;
+		return (1);
+	}
+
+	/* Uncorrected no action required. */
+	return (0);
+}
+
 static int
-mca_check_status(int bank, struct mca_record *rec)
+mca_check_status(enum scan_mode mode, uint64_t mcg_cap, int bank,
+    struct mca_record *rec, bool *recoverablep)
 {
 	uint64_t status;
 	u_int p[4];
+	bool mce, recover;
 
-	status = rdmsr(MSR_MC_STATUS(bank));
+	status = rdmsr(mca_msr_ops.status(bank));
 	if (!(status & MC_STATUS_VAL))
 		return (0);
+
+	recover = *recoverablep;
+	mce = mca_is_mce(mcg_cap, status, &recover);
+	if (mce != (mode == MCE))
+		return (0);
+	*recoverablep = recover;
 
 	/* Save exception information. */
 	rec->mr_status = status;
 	rec->mr_bank = bank;
 	rec->mr_addr = 0;
 	if (status & MC_STATUS_ADDRV)
-		rec->mr_addr = rdmsr(MSR_MC_ADDR(bank));
+		rec->mr_addr = rdmsr(mca_msr_ops.addr(bank));
 	rec->mr_misc = 0;
 	if (status & MC_STATUS_MISCV)
-		rec->mr_misc = rdmsr(MSR_MC_MISC(bank));
+		rec->mr_misc = rdmsr(mca_msr_ops.misc(bank));
 	rec->mr_tsc = rdtsc();
 	rec->mr_apic_id = PCPU_GET(apic_id);
 	rec->mr_mcg_cap = rdmsr(MSR_MCG_CAP);
@@ -487,40 +690,57 @@ mca_check_status(int bank, struct mca_record *rec)
 	 * Clear machine check.  Don't do this for uncorrectable
 	 * errors so that the BIOS can see them.
 	 */
-	if (!(rec->mr_status & (MC_STATUS_PCC | MC_STATUS_UC))) {
-		wrmsr(MSR_MC_STATUS(bank), 0);
+	if (!mce || recover) {
+		wrmsr(mca_msr_ops.status(bank), 0);
 		do_cpuid(0, p);
 	}
 	return (1);
 }
 
 static void
-mca_fill_freelist(void)
+mca_resize_freelist(void)
 {
-	struct mca_internal *rec;
-	int desired;
+	struct mca_internal *next, *rec;
+	STAILQ_HEAD(, mca_internal) tmplist;
+	int count, i, desired_max, desired_min;
 
 	/*
 	 * Ensure we have at least one record for each bank and one
-	 * record per CPU.
+	 * record per CPU, but no more than twice that amount.
 	 */
-	desired = imax(mp_ncpus, mca_banks);
+	desired_min = imax(mp_ncpus, mca_banks);
+	desired_max = imax(mp_ncpus, mca_banks) * 2;
+	STAILQ_INIT(&tmplist);
 	mtx_lock_spin(&mca_lock);
-	while (mca_freecount < desired) {
+	while (mca_freecount > desired_max) {
+		rec = STAILQ_FIRST(&mca_freelist);
+		KASSERT(rec != NULL, ("mca_freecount is %d, but list is empty",
+		    mca_freecount));
+		STAILQ_REMOVE_HEAD(&mca_freelist, link);
+		mca_freecount--;
+		STAILQ_INSERT_TAIL(&tmplist, rec, link);
+	}
+	while (mca_freecount < desired_min) {
+		count = desired_min - mca_freecount;
 		mtx_unlock_spin(&mca_lock);
-		rec = malloc(sizeof(*rec), M_MCA, M_WAITOK);
+		for (i = 0; i < count; i++) {
+			rec = malloc(sizeof(*rec), M_MCA, M_WAITOK);
+			STAILQ_INSERT_TAIL(&tmplist, rec, link);
+		}
 		mtx_lock_spin(&mca_lock);
-		STAILQ_INSERT_TAIL(&mca_freelist, rec, link);
-		mca_freecount++;
+		STAILQ_CONCAT(&mca_freelist, &tmplist);
+		mca_freecount += count;
 	}
 	mtx_unlock_spin(&mca_lock);
+	STAILQ_FOREACH_SAFE(rec, &tmplist, link, next)
+		free(rec, M_MCA);
 }
 
 static void
-mca_refill(void *context, int pending)
+mca_resize(void *context, int pending)
 {
 
-	mca_fill_freelist();
+	mca_resize_freelist();
 }
 
 static void
@@ -545,12 +765,8 @@ mca_record_entry(enum scan_mode mode, const struct mca_record *record)
 	}
 
 	rec->rec = *record;
-	rec->logged = 0;
-	STAILQ_INSERT_TAIL(&mca_records, rec, link);
-	mca_count++;
+	STAILQ_INSERT_TAIL(&mca_pending, rec, link);
 	mtx_unlock_spin(&mca_lock);
-	if (mode == CMCI && !cold)
-		taskqueue_enqueue(mca_tq, &mca_refill_task);
 }
 
 #ifdef DEV_APIC
@@ -648,7 +864,7 @@ amd_thresholding_update(enum scan_mode mode, int bank, int valid)
 	int count;
 
 	cc = &amd_et_state[PCPU_GET(cpuid)][bank];
-	misc = rdmsr(MSR_MC_MISC(bank));
+	misc = rdmsr(mca_msr_ops.misc(bank));
 	count = (misc & MC_MISC_AMD_CNT_MASK) >> MC_MISC_AMD_CNT_SHIFT;
 	count = count - (MC_MISC_AMD_CNT_MAX - cc->cur_threshold);
 
@@ -660,7 +876,7 @@ amd_thresholding_update(enum scan_mode mode, int bank, int valid)
 	misc |= (uint64_t)(MC_MISC_AMD_CNT_MAX - cc->cur_threshold)
 	    << MC_MISC_AMD_CNT_SHIFT;
 	misc &= ~MC_MISC_AMD_OVERFLOW;
-	wrmsr(MSR_MC_MISC(bank), misc);
+	wrmsr(mca_msr_ops.misc(bank), misc);
 	if (mode == CMCI && valid)
 		cc->last_intr = time_uptime;
 }
@@ -672,24 +888,15 @@ amd_thresholding_update(enum scan_mode mode, int bank, int valid)
  * reported immediately via mca_log().  The current thread must be
  * pinned when this is called.  The 'mode' parameter indicates if we
  * are being called from the MC exception handler, the CMCI handler,
- * or the periodic poller.  In the MC exception case this function
- * returns true if the system is restartable.  Otherwise, it returns a
- * count of the number of valid MC records found.
+ * or the periodic poller.
  */
 static int
-mca_scan(enum scan_mode mode, int *recoverablep)
+mca_scan(enum scan_mode mode, bool *recoverablep)
 {
 	struct mca_record rec;
-	uint64_t mcg_cap, ucmask;
-	int count, i, recoverable, valid;
+	uint64_t mcg_cap;
+	int count = 0, i, valid;
 
-	count = 0;
-	recoverable = 1;
-	ucmask = MC_STATUS_UC | MC_STATUS_PCC;
-
-	/* When handling a MCE#, treat the OVER flag as non-restartable. */
-	if (mode == MCE)
-		ucmask |= MC_STATUS_OVER;
 	mcg_cap = rdmsr(MSR_MCG_CAP);
 	for (i = 0; i < (mcg_cap & MCG_CAP_COUNT); i++) {
 #ifdef DEV_APIC
@@ -701,18 +908,15 @@ mca_scan(enum scan_mode mode, int *recoverablep)
 			continue;
 #endif
 
-		valid = mca_check_status(i, &rec);
+		valid = mca_check_status(mode, mcg_cap, i, &rec, recoverablep);
 		if (valid) {
 			count++;
-			if (rec.mr_status & ucmask) {
-				recoverable = 0;
-				mtx_lock_spin(&mca_lock);
+			if (*recoverablep)
+				mca_record_entry(mode, &rec);
+			else
 				mca_log(&rec);
-				mtx_unlock_spin(&mca_lock);
-			}
-			mca_record_entry(mode, &rec);
 		}
-	
+
 #ifdef DEV_APIC
 		/*
 		 * If this is a bank this CPU monitors via CMCI,
@@ -726,11 +930,64 @@ mca_scan(enum scan_mode mode, int *recoverablep)
 		}
 #endif
 	}
-	if (mode == POLLED)
-		mca_fill_freelist();
-	if (recoverablep != NULL)
-		*recoverablep = recoverable;
 	return (count);
+}
+
+/*
+ * Store a new record on the mca_records list while enforcing
+ * mca_maxcount.
+ */
+static void
+mca_store_record(struct mca_internal *mca)
+{
+
+	/*
+	 * If we are storing no records (mca_maxcount == 0),
+	 * we just free this record.
+	 *
+	 * If we are storing records (mca_maxcount != 0) and
+	 * we have free space on the list, store the record
+	 * and increment mca_count.
+	 *
+	 * If we are storing records and we do not have free
+	 * space on the list, store the new record at the
+	 * tail and free the oldest one from the head.
+	 */
+	if (mca_maxcount != 0)
+		STAILQ_INSERT_TAIL(&mca_records, mca, link);
+	if (mca_maxcount < 0 || mca_count < mca_maxcount)
+		mca_count++;
+	else {
+		if (mca_maxcount != 0) {
+			mca = STAILQ_FIRST(&mca_records);
+			STAILQ_REMOVE_HEAD(&mca_records, link);
+		}
+		STAILQ_INSERT_TAIL(&mca_freelist, mca, link);
+		mca_freecount++;
+	}
+}
+
+/*
+ * Do the work to process machine check records which have just been
+ * gathered. Print any pending logs to the console. Queue them for storage.
+ * Trigger a resizing of the free list.
+ */
+static void
+mca_process_records(enum scan_mode mode)
+{
+	struct mca_internal *mca;
+
+	mtx_lock_spin(&mca_lock);
+	while ((mca = STAILQ_FIRST(&mca_pending)) != NULL) {
+		STAILQ_REMOVE_HEAD(&mca_pending, link);
+		mca_log(&mca->rec);
+		mca_store_record(mca);
+	}
+	mtx_unlock_spin(&mca_lock);
+	if (mode == POLLED)
+		mca_resize_freelist();
+	else if (!cold)
+		taskqueue_enqueue(mca_tq, &mca_resize_task);
 }
 
 /*
@@ -741,40 +998,25 @@ mca_scan(enum scan_mode mode, int *recoverablep)
 static void
 mca_scan_cpus(void *context, int pending)
 {
-	struct mca_internal *mca;
 	struct thread *td;
-	int count, cpu;
+	int cpu;
+	bool recoverable = true;
 
-	mca_fill_freelist();
+	mca_resize_freelist();
 	td = curthread;
-	count = 0;
 	thread_lock(td);
 	CPU_FOREACH(cpu) {
 		sched_bind(td, cpu);
 		thread_unlock(td);
-		count += mca_scan(POLLED, NULL);
+		mca_scan(POLLED, &recoverable);
 		thread_lock(td);
 		sched_unbind(td);
 	}
 	thread_unlock(td);
-	if (count != 0) {
-		mtx_lock_spin(&mca_lock);
-		STAILQ_FOREACH(mca, &mca_records, link) {
-			if (!mca->logged) {
-				mca->logged = 1;
-				mca_log(&mca->rec);
-			}
-		}
-		mtx_unlock_spin(&mca_lock);
-	}
-}
-
-static void
-mca_periodic_scan(void *arg)
-{
-
-	taskqueue_enqueue(mca_tq, &mca_scan_task);
-	callout_reset(&mca_timer, mca_ticks * hz, mca_periodic_scan, NULL);
+	if (!STAILQ_EMPTY(&mca_pending))
+		mca_process_records(POLLED);
+	taskqueue_enqueue_timeout_sbt(mca_tq, &mca_scan_task,
+	    mca_ticks * SBT_1S, 0, C_PREL(1));
 }
 
 static int
@@ -787,24 +1029,39 @@ sysctl_mca_scan(SYSCTL_HANDLER_ARGS)
 	if (error)
 		return (error);
 	if (i)
-		taskqueue_enqueue(mca_tq, &mca_scan_task);
+		taskqueue_enqueue_timeout_sbt(mca_tq, &mca_scan_task,
+		    0, 0, 0);
 	return (0);
 }
 
-static void
-mca_createtq(void *dummy)
+static int
+sysctl_mca_maxcount(SYSCTL_HANDLER_ARGS)
 {
-	if (mca_banks <= 0)
-		return;
+	struct mca_internal *mca;
+	int error, i;
+	bool doresize;
 
-	mca_tq = taskqueue_create_fast("mca", M_WAITOK,
-	    taskqueue_thread_enqueue, &mca_tq);
-	taskqueue_start_threads(&mca_tq, 1, PI_SWI(SWI_TQ), "mca taskq");
-
-	/* CMCIs during boot may have claimed items from the freelist. */
-	mca_fill_freelist();
+	i = mca_maxcount;
+	error = sysctl_handle_int(oidp, &i, 0, req);
+	if (error || req->newptr == NULL)
+		return (error);
+	mtx_lock_spin(&mca_lock);
+	mca_maxcount = i;
+	doresize = false;
+	if (mca_maxcount >= 0)
+		while (mca_count > mca_maxcount) {
+			mca = STAILQ_FIRST(&mca_records);
+			STAILQ_REMOVE_HEAD(&mca_records, link);
+			mca_count--;
+			STAILQ_INSERT_TAIL(&mca_freelist, mca, link);
+			mca_freecount++;
+			doresize = true;
+		}
+	mtx_unlock_spin(&mca_lock);
+	if (doresize && !cold)
+		taskqueue_enqueue(mca_tq, &mca_resize_task);
+	return (error);
 }
-SYSINIT(mca_createtq, SI_SUB_CONFIGURE, SI_ORDER_ANY, mca_createtq, NULL);
 
 static void
 mca_startup(void *dummy)
@@ -813,7 +1070,12 @@ mca_startup(void *dummy)
 	if (mca_banks <= 0)
 		return;
 
-	callout_reset(&mca_timer, mca_ticks * hz, mca_periodic_scan, NULL);
+	/* CMCIs during boot may have claimed items from the freelist. */
+	mca_resize_freelist();
+
+	taskqueue_start_threads(&mca_tq, 1, PI_SWI(SWI_TQ), "mca taskq");
+	taskqueue_enqueue_timeout_sbt(mca_tq, &mca_scan_task,
+	    mca_ticks * SBT_1S, 0, C_PREL(1));
 }
 #ifdef EARLY_AP_STARTUP
 SYSINIT(mca_startup, SI_SUB_KICK_SCHEDULER, SI_ORDER_ANY, mca_startup, NULL);
@@ -833,7 +1095,7 @@ cmci_setup(void)
 		cmc_state[i] = malloc(sizeof(struct cmc_state) * mca_banks,
 		    M_MCA, M_WAITOK | M_ZERO);
 	SYSCTL_ADD_PROC(NULL, SYSCTL_STATIC_CHILDREN(_hw_mca), OID_AUTO,
-	    "cmc_throttle", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+	    "cmc_throttle", CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_MPSAFE,
 	    &cmc_throttle, 0, sysctl_positive_int, "I",
 	    "Interval in seconds to throttle corrected MC interrupts");
 }
@@ -849,7 +1111,7 @@ amd_thresholding_setup(void)
 		amd_et_state[i] = malloc(sizeof(struct amd_et_state) *
 		    mca_banks, M_MCA, M_WAITOK | M_ZERO);
 	SYSCTL_ADD_PROC(NULL, SYSCTL_STATIC_CHILDREN(_hw_mca), OID_AUTO,
-	    "cmc_throttle", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+	    "cmc_throttle", CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_MPSAFE,
 	    &cmc_throttle, 0, sysctl_positive_int, "I",
 	    "Interval in seconds to throttle corrected MC interrupts");
 }
@@ -871,20 +1133,27 @@ mca_setup(uint64_t mcg_cap)
 	mca_banks = mcg_cap & MCG_CAP_COUNT;
 	mtx_init(&mca_lock, "mca", NULL, MTX_SPIN);
 	STAILQ_INIT(&mca_records);
-	TASK_INIT(&mca_scan_task, 0, mca_scan_cpus, NULL);
-	callout_init(&mca_timer, 1);
+	STAILQ_INIT(&mca_pending);
+	mca_tq = taskqueue_create_fast("mca", M_WAITOK,
+	    taskqueue_thread_enqueue, &mca_tq);
+	TIMEOUT_TASK_INIT(mca_tq, &mca_scan_task, 0, mca_scan_cpus, NULL);
 	STAILQ_INIT(&mca_freelist);
-	TASK_INIT(&mca_refill_task, 0, mca_refill, NULL);
-	mca_fill_freelist();
+	TASK_INIT(&mca_resize_task, 0, mca_resize, NULL);
+	mca_resize_freelist();
 	SYSCTL_ADD_INT(NULL, SYSCTL_STATIC_CHILDREN(_hw_mca), OID_AUTO,
 	    "count", CTLFLAG_RD, (int *)(uintptr_t)&mca_count, 0,
 	    "Record count");
 	SYSCTL_ADD_PROC(NULL, SYSCTL_STATIC_CHILDREN(_hw_mca), OID_AUTO,
-	    "interval", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, &mca_ticks,
-	    0, sysctl_positive_int, "I",
+	    "maxcount", CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_MPSAFE,
+	    &mca_maxcount, 0, sysctl_mca_maxcount, "I",
+	    "Maximum record count (-1 is unlimited)");
+	SYSCTL_ADD_PROC(NULL, SYSCTL_STATIC_CHILDREN(_hw_mca), OID_AUTO,
+	    "interval", CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_MPSAFE,
+	    &mca_ticks, 0, sysctl_positive_int, "I",
 	    "Periodic interval in seconds to scan for machine checks");
 	SYSCTL_ADD_NODE(NULL, SYSCTL_STATIC_CHILDREN(_hw_mca), OID_AUTO,
-	    "records", CTLFLAG_RD, sysctl_mca_records, "Machine check records");
+	    "records", CTLFLAG_RD | CTLFLAG_MPSAFE, sysctl_mca_records,
+	    "Machine check records");
 	SYSCTL_ADD_PROC(NULL, SYSCTL_STATIC_CHILDREN(_hw_mca), OID_AUTO,
 	    "force_scan", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, NULL, 0,
 	    sysctl_mca_scan, "I", "Force an immediate scan for machine checks");
@@ -996,7 +1265,7 @@ amd_thresholding_start(struct amd_et_state *cc, int bank)
 
 	KASSERT(amd_elvt >= 0, ("ELVT offset is not set"));
 
-	misc = rdmsr(MSR_MC_MISC(bank));
+	misc = rdmsr(mca_msr_ops.misc(bank));
 
 	misc &= ~MC_MISC_AMD_INT_MASK;
 	misc |= MC_MISC_AMD_INT_LVT;
@@ -1011,7 +1280,7 @@ amd_thresholding_start(struct amd_et_state *cc, int bank)
 	misc &= ~MC_MISC_AMD_OVERFLOW;
 	misc |= MC_MISC_AMD_CNTEN;
 
-	wrmsr(MSR_MC_MISC(bank), misc);
+	wrmsr(mca_msr_ops.misc(bank), misc);
 }
 
 static void
@@ -1029,7 +1298,7 @@ amd_thresholding_monitor(int i)
 		return;
 
 	/* The counter must be valid and present. */
-	misc = rdmsr(MSR_MC_MISC(i));
+	misc = rdmsr(mca_msr_ops.misc(i));
 	if ((misc & (MC_MISC_AMD_VAL | MC_MISC_AMD_CNTP)) !=
 	    (MC_MISC_AMD_VAL | MC_MISC_AMD_CNTP))
 		return;
@@ -1064,11 +1333,6 @@ amd_thresholding_monitor(int i)
 		    __func__, i, amd_elvt);
 		return;
 	}
-
-	/* Re-use Intel CMC support infrastructure. */
-	if (bootverbose)
-		printf("%s: Starting AMD thresholding on bank %d\n", __func__,
-		    i);
 
 	cc = &amd_et_state[PCPU_GET(cpuid)][i];
 	cc->cur_threshold = 1;
@@ -1137,6 +1401,19 @@ _mca_init(int boot)
 			if ((mask & (1UL << 5)) == 0)
 				wrmsr(MSR_MC0_CTL_MASK, mask | (1UL << 5));
 		}
+		if (amd_rascap & AMDRAS_SCALABLE_MCA) {
+			mca_msr_ops.ctl = mca_smca_ctl_reg;
+			mca_msr_ops.status = mca_smca_status_reg;
+			mca_msr_ops.addr = mca_smca_addr_reg;
+			mca_msr_ops.misc = mca_smca_misc_reg;
+		}
+
+		/* Enable local MCE if supported. */
+		if (cpu_vendor_id == CPU_VENDOR_INTEL &&
+		    (mcg_cap & MCG_CAP_LMCE_P) &&
+		    (rdmsr(MSR_IA32_FEATURE_CONTROL) &
+		     IA32_FEATURE_CONTROL_LMCE_EN))
+			wrmsr(MSR_MCG_EXT_CTL, rdmsr(MSR_MCG_EXT_CTL) | 1);
 
 		/*
 		 * The cmci_monitor() must not be executed
@@ -1160,12 +1437,13 @@ _mca_init(int boot)
 					skip = 1;
 			} else if (cpu_vendor_id == CPU_VENDOR_AMD) {
 				/* BKDG for Family 10h: unset GartTblWkEn. */
-				if (i == MC_AMDNB_BANK && family >= 0xf)
+				if (i == MC_AMDNB_BANK && family >= 0xf &&
+				    family < 0x17)
 					ctl &= ~(1UL << 10);
 			}
 
 			if (!skip)
-				wrmsr(MSR_MC_CTL(i), ctl);
+				wrmsr(mca_msr_ops.ctl(i), ctl);
 
 #ifdef DEV_APIC
 			if (cmci_supported(mcg_cap)) {
@@ -1182,13 +1460,13 @@ _mca_init(int boot)
 #endif
 
 			/* Clear all errors. */
-			wrmsr(MSR_MC_STATUS(i), 0);
+			wrmsr(mca_msr_ops.status(i), 0);
 		}
 		if (boot)
 			mtx_unlock_spin(&mca_lock);
 
 #ifdef DEV_APIC
-		if (!amd_thresholding_supported() &&
+		if (cmci_supported(mcg_cap) &&
 		    PCPU_GET(cmci_mask) != 0 && boot)
 			lapic_enable_cmc();
 #endif
@@ -1231,7 +1509,8 @@ void
 mca_intr(void)
 {
 	uint64_t mcg_status;
-	int recoverable, count;
+	int count;
+	bool lmcs, recoverable;
 
 	if (!(cpu_feature & CPUID_MCA)) {
 		/*
@@ -1241,14 +1520,15 @@ mca_intr(void)
 		printf("MC Type: 0x%jx  Address: 0x%jx\n",
 		    (uintmax_t)rdmsr(MSR_P5_MC_TYPE),
 		    (uintmax_t)rdmsr(MSR_P5_MC_ADDR));
-		panic("Machine check");
+		panic("Machine check exception");
 	}
 
 	/* Scan the banks and check for any non-recoverable errors. */
-	count = mca_scan(MCE, &recoverable);
 	mcg_status = rdmsr(MSR_MCG_STATUS);
-	if (!(mcg_status & MCG_STATUS_RIPV))
-		recoverable = 0;
+	recoverable = (mcg_status & MCG_STATUS_RIPV) != 0;
+	lmcs = (cpu_vendor_id != CPU_VENDOR_INTEL ||
+	    (mcg_status & MCG_STATUS_LMCS));
+	count = mca_scan(MCE, &recoverable);
 
 	if (!recoverable) {
 		/*
@@ -1256,7 +1536,7 @@ mca_intr(void)
 		 * Some errors will assert a machine check on all CPUs, but
 		 * only certain CPUs will find a valid bank to log.
 		 */
-		while (count == 0)
+		while (!lmcs && count == 0)
 			cpu_spinwait();
 
 		panic("Unrecoverable machine check exception");
@@ -1271,25 +1551,15 @@ mca_intr(void)
 void
 cmc_intr(void)
 {
-	struct mca_internal *mca;
-	int count;
+	bool recoverable = true;
 
 	/*
 	 * Serialize MCA bank scanning to prevent collisions from
 	 * sibling threads.
+	 *
+	 * If we found anything, log them to the console.
 	 */
-	count = mca_scan(CMCI, NULL);
-
-	/* If we found anything, log them to the console. */
-	if (count != 0) {
-		mtx_lock_spin(&mca_lock);
-		STAILQ_FOREACH(mca, &mca_records, link) {
-			if (!mca->logged) {
-				mca->logged = 1;
-				mca_log(&mca->rec);
-			}
-		}
-		mtx_unlock_spin(&mca_lock);
-	}
+	if (mca_scan(CMCI, &recoverable) != 0)
+		mca_process_records(CMCI);
 }
 #endif

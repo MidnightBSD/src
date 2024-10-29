@@ -29,7 +29,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)socketvar.h	8.3 (Berkeley) 2/19/95
- *
  */
 #ifndef _SYS_SOCKBUF_H_
 #define _SYS_SOCKBUF_H_
@@ -37,6 +36,8 @@
 /*
  * Constants for sb_flags field of struct sockbuf/xsockbuf.
  */
+#define	SB_TLS_RX	0x01		/* using KTLS on RX */
+#define	SB_TLS_RX_RUNNING 0x02		/* KTLS RX operation running */
 #define	SB_WAIT		0x04		/* someone is waiting for data/space */
 #define	SB_SEL		0x08		/* someone is selecting */
 #define	SB_ASYNC	0x10		/* ASYNC I/O, need signals */
@@ -49,6 +50,7 @@
 #define	SB_AUTOSIZE	0x800		/* automatically size socket buffer */
 #define	SB_STOP		0x1000		/* backpressure indicator */
 #define	SB_AIO_RUNNING	0x2000		/* AIO operation running */
+#define	SB_TLS_IFNET	0x4000		/* has used / is using ifnet KTLS */
 
 #define	SBS_CANTSENDMORE	0x0010	/* can't send more data to peer */
 #define	SBS_CANTRCVMORE		0x0020	/* can't receive more data from peer */
@@ -62,6 +64,7 @@
 
 #define	SB_MAX		(2*1024*1024)	/* default for max chars in sockbuf */
 
+struct ktls_session;
 struct mbuf;
 struct sockaddr;
 struct socket;
@@ -95,9 +98,15 @@ struct	sockbuf {
 	u_int   sb_ccnt;        /* (a) number of clusters in buffer */
 	u_int	sb_mbmax;	/* (a) max chars of mbufs to use */
 	u_int	sb_ctl;		/* (a) non-data chars in buffer */
+	u_int	sb_tlscc;	/* (a) TLS chain characters */
+	u_int	sb_tlsdcc;	/* (a) TLS characters being decrypted */
 	int	sb_lowat;	/* (a) low water mark */
 	sbintime_t	sb_timeo;	/* (a) timeout for read/write */
-	short	sb_flags;	/* (a) flags, see below */
+	uint64_t sb_tls_seqno;	/* (a) TLS seqno */
+	struct	ktls_session *sb_tls_info; /* (a + b) TLS state */
+	struct	mbuf *sb_mtls;	/* (a) TLS mbuf chain */
+	struct	mbuf *sb_mtlstail; /* (a) last mbuf in TLS chain */
+	short	sb_flags;	/* (a) flags, see above */
 	int	(*sb_upcall)(struct socket *, void *, int); /* (a) */
 	void	*sb_upcallarg;	/* (a) */
 	TAILQ_HEAD(, kaiocb) sb_aiojobq; /* (a) pending AIO ops */
@@ -147,6 +156,9 @@ void	sbappendrecord_locked(struct sockbuf *sb, struct mbuf *m0);
 void	sbcompress(struct sockbuf *sb, struct mbuf *m, struct mbuf *n);
 struct mbuf *
 	sbcreatecontrol(caddr_t p, int size, int type, int level);
+struct mbuf *
+	sbcreatecontrol_how(void *p, int size, int type, int level,
+	    int wait);
 void	sbdestroy(struct sockbuf *sb, struct socket *so);
 void	sbdrop(struct sockbuf *sb, int len);
 void	sbdrop_locked(struct sockbuf *sb, int len);
@@ -162,19 +174,18 @@ void	sbrelease_locked(struct sockbuf *sb, struct socket *so);
 int	sbsetopt(struct socket *so, int cmd, u_long cc);
 int	sbreserve_locked(struct sockbuf *sb, u_long cc, struct socket *so,
 	    struct thread *td);
-struct mbuf *
-	sbsndptr(struct sockbuf *sb, u_int off, u_int len, u_int *moff);
+int	sbreserve_locked_limit(struct sockbuf *sb, u_long cc, struct socket *so,
+	    u_long buf_max, struct thread *td);
+void	sbsndptr_adv(struct sockbuf *sb, struct mbuf *mb, u_int len);
 struct mbuf *
 	sbsndptr_noadv(struct sockbuf *sb, u_int off, u_int *moff);
-void
-	sbsndptr_adv(struct sockbuf *sb, struct mbuf *mb, u_int len);
 struct mbuf *
 	sbsndmbuf(struct sockbuf *sb, u_int off, u_int *moff);
 int	sbwait(struct sockbuf *sb);
-int	sblock(struct sockbuf *sb, int flags);
-void	sbunlock(struct sockbuf *sb);
 void	sballoc(struct sockbuf *, struct mbuf *);
 void	sbfree(struct sockbuf *, struct mbuf *);
+void	sballoc_ktls_rx(struct sockbuf *sb, struct mbuf *m);
+void	sbfree_ktls_rx(struct sockbuf *sb, struct mbuf *m);
 int	sbready(struct sockbuf *, struct mbuf *, int);
 
 /*

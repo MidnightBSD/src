@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2020 Kristof Provost <kp@FreeBSD.org>
 #
@@ -32,6 +32,7 @@ unaligned_head()
 {
 	atf_set descr 'Test unaligned checksum updates'
 	atf_set require.user root
+	atf_set require.progs scapy
 }
 
 unaligned_body()
@@ -63,15 +64,15 @@ unaligned_body()
 		--sendif ${epair_in}a \
 		--to 198.51.100.2 \
 		--recvif ${epair_out}b \
-		--tcpsyn
+		--ping-type tcpsyn
 
 	# And unaligned
 	atf_check -s exit:0 ${common_dir}/pft_ping.py \
 		--sendif ${epair_in}a \
 		--to 198.51.100.2 \
 		--recvif ${epair_out}b \
-		--tcpsyn \
-		--tcpopt_unaligned
+		--ping-type tcpsyn \
+		--send-tcpopt-unaligned
 }
 
 unaligned_cleanup()

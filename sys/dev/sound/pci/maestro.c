@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000-2004 Taku YAMAMOTO <taku@tackymt.homeip.net>
  * All rights reserved.
@@ -60,6 +60,7 @@
 
 #include <dev/sound/pci/maestro_reg.h>
 
+SND_DECLARE_FILE("");
 
 /*
  * PCI IDs of supported chips:
@@ -87,11 +88,9 @@
 
 #define AGG_DEFAULT_BUFSZ	0x4000 /* 0x1000, but gets underflows */
 
-
 #ifndef PCIR_BAR
 #define PCIR_BAR(x)	(PCIR_MAPS + (x) * 4)
 #endif
-
 
 /* -----------------------------
  * Data structures.
@@ -174,7 +173,6 @@ struct agg_info {
 	volatile u_int8_t	curpwr;	/* current power status: D[0-3] */
 };
 
-
 /* -----------------------------
  * Sysctls for debug.
  */
@@ -189,7 +187,8 @@ static unsigned int powerstate_init   = PCI_POWERSTATE_D2;
 /* XXX: this should move to a device specific sysctl dev.pcm.X.debug.Y via
    device_get_sysctl_*() as discussed on multimedia@ in msg-id
    <861wujij2q.fsf@xps.des.no> */
-static SYSCTL_NODE(_debug, OID_AUTO, maestro, CTLFLAG_RD, 0, "");
+static SYSCTL_NODE(_debug, OID_AUTO, maestro, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "");
 SYSCTL_UINT(_debug_maestro, OID_AUTO, powerstate_active, CTLFLAG_RW,
 	    &powerstate_active, 0, "The Dx power state when active (0-1)");
 SYSCTL_UINT(_debug_maestro, OID_AUTO, powerstate_idle, CTLFLAG_RW,
@@ -197,7 +196,6 @@ SYSCTL_UINT(_debug_maestro, OID_AUTO, powerstate_idle, CTLFLAG_RW,
 SYSCTL_UINT(_debug_maestro, OID_AUTO, powerstate_init, CTLFLAG_RW,
 	    &powerstate_init, 0,
 	    "The Dx power state prior to the first use (0-2)");
-
 
 /* -----------------------------
  * Prototypes
@@ -264,7 +262,6 @@ static void	*dma_malloc(bus_dma_tag_t, u_int32_t, bus_addr_t*,
 		    bus_dmamap_t *);
 static void	dma_free(bus_dma_tag_t, void *, bus_dmamap_t);
 
-
 /* -----------------------------
  * Subsystems.
  */
@@ -283,7 +280,6 @@ agg_sleep(struct agg_info *sc, const char *wmesg, int msec)
 		timo = 1;
 	msleep(sc, &sc->lock, PWAIT, wmesg, timo);
 }
-
 
 /* I/O port */
 
@@ -348,7 +344,6 @@ agg_codec_wait4idle(struct agg_info *ess)
 	}
 	return 0;
 }
-
 
 static int
 agg_rdcodec(struct agg_info *ess, int regno)
@@ -579,7 +574,6 @@ agg_stopclock(struct agg_info *ess, int part, int st)
 		pci_write_config(ess->dev, CONF_ACPI_STOPCLOCK, data, 4);
 	}
 }
-
 
 /* -----------------------------
  * Controller.
@@ -1225,7 +1219,6 @@ set_timer(struct agg_info *ess)
 	wp_settimer(ess, dv);
 }
 
-
 /* -----------------------------
  * Newpcm glue.
  */
@@ -1264,7 +1257,6 @@ agg_ac97_write(kobj_t obj, void *sc, int regno, u_int32_t data)
 	return ret;
 }
 
-
 static kobj_method_t agg_ac97_methods[] = {
     	KOBJMETHOD(ac97_init,		agg_ac97_init),
     	KOBJMETHOD(ac97_read,		agg_ac97_read),
@@ -1272,7 +1264,6 @@ static kobj_method_t agg_ac97_methods[] = {
 	KOBJMETHOD_END
 };
 AC97_DECLARE(agg_ac97);
-
 
 /* -------------------------------------------------------------------- */
 
@@ -1468,7 +1459,6 @@ aggpch_getcaps(kobj_t obj, void *data)
 	return &playcaps;
 }
 
-
 static kobj_method_t aggpch_methods[] = {
     	KOBJMETHOD(channel_init,		aggpch_init),
     	KOBJMETHOD(channel_free,		aggpch_free),
@@ -1481,7 +1471,6 @@ static kobj_method_t aggpch_methods[] = {
 	KOBJMETHOD_END
 };
 CHANNEL_DECLARE(aggpch);
-
 
 /* -------------------------------------------------------------------- */
 
@@ -1621,7 +1610,6 @@ static kobj_method_t aggrch_methods[] = {
 	KOBJMETHOD_END
 };
 CHANNEL_DECLARE(aggrch);
-
 
 /* -----------------------------
  * Bus space.
@@ -2038,7 +2026,6 @@ agg_shutdown(device_t dev)
 	return 0;
 }
 
-
 static device_method_t agg_methods[] = {
     DEVMETHOD(device_probe,	agg_probe),
     DEVMETHOD(device_attach,	agg_attach),
@@ -2046,7 +2033,6 @@ static device_method_t agg_methods[] = {
     DEVMETHOD(device_suspend,	agg_suspend),
     DEVMETHOD(device_resume,	agg_resume),
     DEVMETHOD(device_shutdown,	agg_shutdown),
-
     { 0, 0 }
 };
 

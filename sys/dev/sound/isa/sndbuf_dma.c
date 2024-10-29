@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * All rights reserved.
@@ -34,6 +34,7 @@
 
 #include <isa/isavar.h>
 
+SND_DECLARE_FILE("");
 
 int
 sndbuf_dmasetup(struct snd_dbuf *b, struct resource *drq)

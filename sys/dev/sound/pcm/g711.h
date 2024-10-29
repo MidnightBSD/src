@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SND_G711_H_
@@ -172,12 +171,10 @@
 	  171,  171,  171,  171,  170,  170,  170,  170,		\
 	}
 
-
 #define _G711_TO_INTPCM(t, v)	((intpcm_t)				\
 				 ((int8_t)((t)[(uint8_t)(v)] ^ 0x80)))
 
 #define _INTPCM_TO_G711(t, v)	((t)[(uint8_t)((v) ^ 0x80)])
-
 
 #define G711_DECLARE_TABLE(t)						\
 static const struct {							\

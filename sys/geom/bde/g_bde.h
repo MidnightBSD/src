@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -30,7 +30,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SYS_GEOM_BDE_G_BDE_H_
@@ -52,7 +51,6 @@
 #define G_BDE_MAXKEYS	4
 #define G_BDE_LOCKSIZE	384
 #define NLOCK_FIELDS	13
-
 
 /* This just needs to be "large enough" */
 #define G_BDE_KEYBYTES	304

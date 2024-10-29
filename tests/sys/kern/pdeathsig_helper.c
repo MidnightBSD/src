@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <assert.h>
 #include <signal.h>
 #include <sys/procctl.h>

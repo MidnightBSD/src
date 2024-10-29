@@ -1,5 +1,4 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 5/31/93
-# $FreeBSD: src/bin/Makefile,v 1.25 2005/03/02 11:53:21 trhodes Exp $
 
 .include <src.opts.mk>
 
@@ -42,6 +41,7 @@ SUBDIR= cat \
 	stty \
 	sync \
 	test \
+	timeout \
 	uuidgen
 
 

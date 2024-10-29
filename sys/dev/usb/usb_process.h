@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -56,11 +56,7 @@ struct usb_process {
 	struct cv up_cv;
 	struct cv up_drain;
 
-#if (__FreeBSD_version >= 800000)
 	struct thread *up_ptr;
-#else
-	struct proc *up_ptr;
-#endif
 	struct thread *up_curtd;
 	struct mtx *up_mtx;
 

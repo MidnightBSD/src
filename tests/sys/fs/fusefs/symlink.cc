@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 The FreeBSD Foundation
  *
@@ -26,11 +26,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 extern "C" {
+#include <semaphore.h>
 #include <unistd.h>
 }
 
@@ -176,15 +175,22 @@ TEST_F(Symlink, parent_ino)
 	const char PPATH[] = "parent";
 	const char RELPATH[] = "src";
 	const char dst[] = "dst";
+	sem_t sem;
 	const uint64_t ino = 42;
+
+	ASSERT_EQ(0, sem_init(&sem, 0, 0)) << strerror(errno);
 
 	expect_lookup(PPATH, ino, S_IFDIR | 0755, 0, 1);
 	EXPECT_LOOKUP(ino, RELPATH)
 	.WillOnce(Invoke(ReturnErrno(ENOENT)));
 	expect_symlink(ino, dst, RELPATH);
+	expect_forget(ino, 1, &sem);
 
 	EXPECT_EQ(-1, symlink(dst, FULLPATH));
 	EXPECT_EQ(EIO, errno);
+
+	sem_wait(&sem);
+	sem_destroy(&sem);
 }
 
 TEST_F(Symlink_7_8, ok)

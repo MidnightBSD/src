@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Stephane E. Potvin <sepotvin@videotron.ca>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _HDA_REG_H_
@@ -667,7 +666,7 @@
 
 /* Channel Count Control */
 #define HDA_CMD_VERB_GET_CONV_CHAN_COUNT			0xf2d
-#define HDA_CMD_VERB_SET_CONV_CHAN_COUNT			0x72d 
+#define HDA_CMD_VERB_SET_CONV_CHAN_COUNT			0x72d
 
 #define HDA_CMD_GET_CONV_CHAN_COUNT(cad, nid)				\
     (HDA_CMD_12BIT((cad), (nid),					\
@@ -676,20 +675,20 @@
     (HDA_CMD_12BIT((cad), (nid),					\
     HDA_CMD_VERB_SET_CONV_CHAN_COUNT, (payload)))
 
-#define HDA_CMD_VERB_GET_HDMI_DIP_SIZE			0xf2e 
+#define HDA_CMD_VERB_GET_HDMI_DIP_SIZE			0xf2e
 
 #define HDA_CMD_GET_HDMI_DIP_SIZE(cad, nid, arg)			\
     (HDA_CMD_12BIT((cad), (nid),					\
     HDA_CMD_VERB_GET_HDMI_DIP_SIZE, (arg)))
 
-#define HDA_CMD_VERB_GET_HDMI_ELDD			0xf2f 
+#define HDA_CMD_VERB_GET_HDMI_ELDD			0xf2f
 
 #define HDA_CMD_GET_HDMI_ELDD(cad, nid, off)				\
     (HDA_CMD_12BIT((cad), (nid),					\
     HDA_CMD_VERB_GET_HDMI_ELDD, (off)))
 
-#define HDA_CMD_VERB_GET_HDMI_DIP_INDEX			0xf30 
-#define HDA_CMD_VERB_SET_HDMI_DIP_INDEX			0x730 
+#define HDA_CMD_VERB_GET_HDMI_DIP_INDEX			0xf30
+#define HDA_CMD_VERB_SET_HDMI_DIP_INDEX			0x730
 
 #define HDA_CMD_GET_HDMI_DIP_INDEX(cad, nid)				\
     (HDA_CMD_12BIT((cad), (nid),					\
@@ -698,8 +697,8 @@
     (HDA_CMD_12BIT((cad), (nid),					\
     HDA_CMD_VERB_SET_HDMI_DIP_INDEX, (payload)))
 
-#define HDA_CMD_VERB_GET_HDMI_DIP_DATA			0xf31 
-#define HDA_CMD_VERB_SET_HDMI_DIP_DATA			0x731 
+#define HDA_CMD_VERB_GET_HDMI_DIP_DATA			0xf31
+#define HDA_CMD_VERB_SET_HDMI_DIP_DATA			0x731
 
 #define HDA_CMD_GET_HDMI_DIP_DATA(cad, nid)				\
     (HDA_CMD_12BIT((cad), (nid),					\
@@ -708,8 +707,8 @@
     (HDA_CMD_12BIT((cad), (nid),					\
     HDA_CMD_VERB_SET_HDMI_DIP_DATA, (payload)))
 
-#define HDA_CMD_VERB_GET_HDMI_DIP_XMIT			0xf32 
-#define HDA_CMD_VERB_SET_HDMI_DIP_XMIT			0x732 
+#define HDA_CMD_VERB_GET_HDMI_DIP_XMIT			0xf32
+#define HDA_CMD_VERB_SET_HDMI_DIP_XMIT			0x732
 
 #define HDA_CMD_GET_HDMI_DIP_XMIT(cad, nid)				\
     (HDA_CMD_12BIT((cad), (nid),					\
@@ -718,11 +717,11 @@
     (HDA_CMD_12BIT((cad), (nid),					\
     HDA_CMD_VERB_SET_HDMI_DIP_XMIT, (payload)))
 
-#define HDA_CMD_VERB_GET_HDMI_CP_CTRL			0xf33 
-#define HDA_CMD_VERB_SET_HDMI_CP_CTRL			0x733 
+#define HDA_CMD_VERB_GET_HDMI_CP_CTRL			0xf33
+#define HDA_CMD_VERB_SET_HDMI_CP_CTRL			0x733
 
-#define HDA_CMD_VERB_GET_HDMI_CHAN_SLOT			0xf34 
-#define HDA_CMD_VERB_SET_HDMI_CHAN_SLOT			0x734 
+#define HDA_CMD_VERB_GET_HDMI_CHAN_SLOT			0xf34
+#define HDA_CMD_VERB_SET_HDMI_CHAN_SLOT			0x734
 
 #define HDA_CMD_GET_HDMI_CHAN_SLOT(cad, nid)				\
     (HDA_CMD_12BIT((cad), (nid),					\
@@ -754,7 +753,6 @@
 #define HDA_CMD_FUNCTION_RESET(cad, nid)				\
     (HDA_CMD_12BIT((cad), (nid),					\
     HDA_CMD_VERB_FUNCTION_RESET, 0x0))
-
 
 /****************************************************************************
  * HDA Device Parameters
@@ -1300,7 +1298,6 @@
 #define HDA_PARAM_VOLUME_KNOB_CAP_NUM_STEPS(param)			\
     (((param) & HDA_PARAM_VOLUME_KNOB_CAP_NUM_STEPS_MASK) >>		\
     HDA_PARAM_VOLUME_KNOB_CAP_NUM_STEPS_SHIFT)
-
 
 #define HDA_CONFIG_DEFAULTCONF_SEQUENCE_MASK		0x0000000f
 #define HDA_CONFIG_DEFAULTCONF_SEQUENCE_SHIFT		0

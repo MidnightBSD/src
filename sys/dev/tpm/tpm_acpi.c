@@ -16,7 +16,6 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -43,20 +42,19 @@
 #include <contrib/dev/acpica/include/accommon.h>
 #include <dev/acpica/acpivar.h>
 
-
-
 char *tpm_ids[] = {"ATM1200",  "BCM0102", "INTC0102", "SNO3504", "WEC1000",
     "PNP0C31", NULL};
 
 static int
 tpm_acpi_probe(device_t dev)
 {
-	if (ACPI_ID_PROBE(device_get_parent(dev), dev, tpm_ids) != NULL) {
+	int rv;
+
+	rv = ACPI_ID_PROBE(device_get_parent(dev), dev, tpm_ids, NULL);
+	if (rv <= 0)
 		device_set_desc(dev, "Trusted Platform Module");
-		return BUS_PROBE_DEFAULT;
-	}
-	
-	return ENXIO;
+		
+	return (rv);
 }
 
 static device_method_t tpm_acpi_methods[] = {

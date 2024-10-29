@@ -1,6 +1,5 @@
-# $FreeBSD$
 #
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2020 Kristof Provost <kp@FreeBSD.org>
 #
@@ -67,6 +66,7 @@ basic_v4_head()
 basic_v4_body()
 {
 	carp_init
+	vnet_init_bridge
 
 	bridge=$(vnet_mkbridge)
 	epair_one=$(vnet_mkepair)
@@ -111,6 +111,7 @@ basic_v6_head()
 basic_v6_body()
 {
 	carp_init
+	vnet_init_bridge
 
 	bridge=$(vnet_mkbridge)
 	epair_one=$(vnet_mkepair)
@@ -140,7 +141,7 @@ basic_v6_body()
 	    carp_basic_v6_three ${epair_two}b
 
 	atf_check -s exit:0 -o ignore jexec carp_basic_v6_one \
-	    ping6 -c 3 2001:db8::0:1
+	    ping -6 -c 3 2001:db8::0:1
 }
 
 basic_v6_cleanup()

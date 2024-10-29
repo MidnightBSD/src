@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case zfs_list_001_pos cleanup
 zfs_list_001_pos_head()
 {
 	atf_set "descr" "Verify 'zfs list [-rH] [-o property[,prop]*] [fs|clct|vol]'."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 	atf_set "require.user" root
 	atf_set "require.config" "unprivileged_user"
 }
@@ -58,7 +56,7 @@ atf_test_case zfs_list_002_pos cleanup
 zfs_list_002_pos_head()
 {
 	atf_set "descr" "The sort functionality in 'zfs list' works as expected."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 	atf_set "require.user" root
 	atf_set "require.config" "unprivileged_user"
 }
@@ -86,7 +84,7 @@ atf_test_case zfs_list_003_pos cleanup
 zfs_list_003_pos_head()
 {
 	atf_set "descr" "Verify 'zfs list -r' could display any children recursively."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 	atf_set "require.user" root
 	atf_set "require.config" "unprivileged_user"
 }
@@ -114,7 +112,7 @@ atf_test_case zfs_list_004_neg cleanup
 zfs_list_004_neg_head()
 {
 	atf_set "descr" "Verify 'zfs list [-r]' should fail while the givendataset/path does not exist or not belong to zfs."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 	atf_set "require.user" root
 	atf_set "require.config" "unprivileged_user"
 }
@@ -142,7 +140,7 @@ atf_test_case zfs_list_005_pos cleanup
 zfs_list_005_pos_head()
 {
 	atf_set "descr" "Verify 'zfs list' evaluate multiple '-s' optionsfrom left to right in decreasing order of importance."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 	atf_set "require.user" root
 	atf_set "require.config" "unprivileged_user"
 }
@@ -171,7 +169,7 @@ atf_test_case zfs_list_006_pos cleanup
 zfs_list_006_pos_head()
 {
 	atf_set "descr" "Verify 'zfs list' exclude list of snapshot."
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 	atf_set "require.user" root
 	atf_set "require.config" "unprivileged_user"
 }
@@ -199,7 +197,7 @@ atf_test_case zfs_list_007_pos cleanup
 zfs_list_007_pos_head()
 {
 	atf_set "descr" "'zfs list -d <n>' should get expected output."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 	atf_set "require.user" root
 	atf_set "require.config" "unprivileged_user"
 }
@@ -227,7 +225,7 @@ atf_test_case zfs_list_008_neg cleanup
 zfs_list_008_neg_head()
 {
 	atf_set "descr" "A negative depth or a non numeric depth should fail in 'zfs list -d <n>'"
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 	atf_set "require.user" root
 	atf_set "require.config" "unprivileged_user"
 }

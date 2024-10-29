@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case bootfs_001_pos
 bootfs_001_pos_head()
 {
 	atf_set "descr" "Valid datasets are accepted as bootfs property values"
-	atf_set "require.progs"  zpool zfs
+	atf_set "require.progs" "ksh93 zpool zfs"
 }
 bootfs_001_pos_body()
 {
@@ -45,7 +43,7 @@ atf_test_case bootfs_002_neg
 bootfs_002_neg_head()
 {
 	atf_set "descr" "Invalid datasets are rejected as boot property values"
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 }
 bootfs_002_neg_body()
 {
@@ -61,7 +59,7 @@ atf_test_case bootfs_003_pos
 bootfs_003_pos_head()
 {
 	atf_set "descr" "Valid pool names are accepted by zpool set bootfs"
-	atf_set "require.progs"  zpool zfs
+	atf_set "require.progs" "ksh93 zpool zfs"
 }
 bootfs_003_pos_body()
 {
@@ -76,7 +74,7 @@ atf_test_case bootfs_004_neg
 bootfs_004_neg_head()
 {
 	atf_set "descr" "Invalid pool names are rejected by zpool set bootfs"
-	atf_set "require.progs"  zpool zfs
+	atf_set "require.progs" "ksh93 zpool zfs"
 }
 bootfs_004_neg_body()
 {
@@ -91,7 +89,7 @@ atf_test_case bootfs_005_neg
 bootfs_005_neg_head()
 {
 	atf_set "descr" "Boot properties cannot be set on pools with older versions"
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 }
 bootfs_005_neg_body()
 {
@@ -107,7 +105,7 @@ atf_test_case bootfs_006_pos
 bootfs_006_pos_head()
 {
 	atf_set "descr" "Pools of correct vdev types accept boot property"
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 }
 bootfs_006_pos_body()
 {
@@ -122,7 +120,7 @@ atf_test_case bootfs_007_pos
 bootfs_007_pos_head()
 {
 	atf_set "descr" "setting bootfs on a pool which was configured with the whole disk will succeed"
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 }
 bootfs_007_pos_body()
 {
@@ -138,7 +136,7 @@ atf_test_case bootfs_008_neg
 bootfs_008_neg_head()
 {
 	atf_set "descr" "setting bootfs on a dataset which has gzip compression enabled will fail"
-	atf_set "require.progs"  zpool zfs
+	atf_set "require.progs" "ksh93 zpool zfs"
 }
 bootfs_008_neg_body()
 {
@@ -154,7 +152,7 @@ bootfs_009_neg_head()
 {
 	atf_set "descr" "Valid encrypted datasets can't be set bootfs property values"
 	atf_set "require.config" zfs_encryption
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 }
 bootfs_009_neg_body()
 {

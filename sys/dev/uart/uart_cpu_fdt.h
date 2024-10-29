@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_UART_CPU_FDT_H_
@@ -50,7 +49,7 @@ SET_DECLARE(uart_fdt_class_set, struct ofw_compat_data );
 	DATA_SET(uart_fdt_class_set, data)
 
 int uart_cpu_fdt_probe(struct uart_class **, bus_space_tag_t *,
-    bus_space_handle_t *, int *, u_int *, u_int *, u_int *);
+    bus_space_handle_t *, int *, u_int *, u_int *, u_int *, const int);
 int uart_fdt_get_clock(phandle_t node, pcell_t *cell);
 int uart_fdt_get_shift(phandle_t node, pcell_t *cell);
 int uart_fdt_get_io_width(phandle_t node, pcell_t *cell);

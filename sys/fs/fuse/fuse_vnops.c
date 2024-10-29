@@ -61,13 +61,13 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/systm.h>
 #include <sys/errno.h>
 #include <sys/kernel.h>
 #include <sys/conf.h>
+#include <sys/filio.h>
 #include <sys/uio.h>
 #include <sys/malloc.h>
 #include <sys/queue.h>
@@ -125,9 +125,11 @@ SDT_PROBE_DEFINE2(fusefs, , vnops, trace, "int", "char*");
 /* vnode ops */
 static vop_access_t fuse_vnop_access;
 static vop_advlock_t fuse_vnop_advlock;
+static vop_allocate_t fuse_vnop_allocate;
 static vop_bmap_t fuse_vnop_bmap;
 static vop_close_t fuse_fifo_close;
 static vop_close_t fuse_vnop_close;
+static vop_copy_file_range_t fuse_vnop_copy_file_range;
 static vop_create_t fuse_vnop_create;
 static vop_deleteextattr_t fuse_vnop_deleteextattr;
 static vop_fdatasync_t fuse_vnop_fdatasync;
@@ -135,6 +137,7 @@ static vop_fsync_t fuse_vnop_fsync;
 static vop_getattr_t fuse_vnop_getattr;
 static vop_getextattr_t fuse_vnop_getextattr;
 static vop_inactive_t fuse_vnop_inactive;
+static vop_ioctl_t fuse_vnop_ioctl;
 static vop_link_t fuse_vnop_link;
 static vop_listextattr_t fuse_vnop_listextattr;
 static vop_lookup_t fuse_vnop_lookup;
@@ -173,14 +176,16 @@ struct vop_vector fuse_fifoops = {
 	.vop_write =		VOP_PANIC,
 	.vop_vptofh =		fuse_vnop_vptofh,
 };
+VFS_VOP_VECTOR_REGISTER(fuse_fifoops);
 
 struct vop_vector fuse_vnops = {
-	.vop_allocate =	VOP_EINVAL,
+	.vop_allocate =	fuse_vnop_allocate,
 	.vop_default = &default_vnodeops,
 	.vop_access = fuse_vnop_access,
 	.vop_advlock = fuse_vnop_advlock,
 	.vop_bmap = fuse_vnop_bmap,
 	.vop_close = fuse_vnop_close,
+	.vop_copy_file_range = fuse_vnop_copy_file_range,
 	.vop_create = fuse_vnop_create,
 	.vop_deleteextattr = fuse_vnop_deleteextattr,
 	.vop_fsync = fuse_vnop_fsync,
@@ -188,11 +193,7 @@ struct vop_vector fuse_vnops = {
 	.vop_getattr = fuse_vnop_getattr,
 	.vop_getextattr = fuse_vnop_getextattr,
 	.vop_inactive = fuse_vnop_inactive,
-	/*
-	 * TODO: implement vop_ioctl after upgrading to protocol 7.16.
-	 * FUSE_IOCTL was added in 7.11, but 32-bit compat is broken until
-	 * 7.16.
-	 */
+	.vop_ioctl = fuse_vnop_ioctl,
 	.vop_link = fuse_vnop_link,
 	.vop_listextattr = fuse_vnop_listextattr,
 	.vop_lookup = fuse_vnop_lookup,
@@ -222,8 +223,7 @@ struct vop_vector fuse_vnops = {
 	.vop_print = fuse_vnop_print,
 	.vop_vptofh = fuse_vnop_vptofh,
 };
-
-int	fuse_pbuf_freecnt = -1;
+VFS_VOP_VECTOR_REGISTER(fuse_vnops);
 
 /* Check permission for extattr operations, much like extattr_check_cred */
 static int
@@ -247,8 +247,7 @@ fuse_extattr_check_cred(struct vnode *vp, int ns, struct ucred *cred,
 	switch (ns) {
 	case EXTATTR_NAMESPACE_SYSTEM:
 		if (default_permissions) {
-			return (priv_check_cred(cred, PRIV_VFS_EXTATTR_SYSTEM,
-			    0));
+			return (priv_check_cred(cred, PRIV_VFS_EXTATTR_SYSTEM));
 		}
 		return (0);
 	case EXTATTR_NAMESPACE_USER:
@@ -282,7 +281,7 @@ fuse_flush(struct vnode *vp, struct ucred *cred, pid_t pid, int fflag)
 	struct mount *mp = vnode_mount(vp);
 	int err;
 
-	if (!fsess_isimpl(vnode_mount(vp), FUSE_FLUSH))
+	if (fsess_not_impl(vnode_mount(vp), FUSE_FLUSH))
 		return 0;
 
 	err = fuse_filehandle_getrw(vp, fflag, &fufh, cred, pid);
@@ -316,6 +315,98 @@ fuse_fifo_close(struct vop_close_args *ap)
 	return (fifo_specops.vop_close(ap));
 }
 
+/* Invalidate a range of cached data, whether dirty of not */
+static int
+fuse_inval_buf_range(struct vnode *vp, off_t filesize, off_t start, off_t end)
+{
+	struct buf *bp;
+	daddr_t left_lbn, end_lbn, right_lbn;
+	off_t new_filesize;
+	int iosize, left_on, right_on, right_blksize;
+
+	iosize = fuse_iosize(vp);
+	left_lbn = start / iosize;
+	end_lbn = howmany(end, iosize);
+	left_on = start & (iosize - 1);
+	if (left_on != 0) {
+		bp = getblk(vp, left_lbn, iosize, PCATCH, 0, 0);
+		if ((bp->b_flags & B_CACHE) != 0 && bp->b_dirtyend >= left_on) {
+			/*
+			 * Flush the dirty buffer, because we don't have a
+			 * byte-granular way to record which parts of the
+			 * buffer are valid.
+			 */
+			bwrite(bp);
+			if (bp->b_error)
+				return (bp->b_error);
+		} else {
+			brelse(bp);
+		}
+	}
+	right_on = end & (iosize - 1);
+	if (right_on != 0) {
+		right_lbn = end / iosize;
+		new_filesize = MAX(filesize, end);
+		right_blksize = MIN(iosize, new_filesize - iosize * right_lbn);
+		bp = getblk(vp, right_lbn, right_blksize, PCATCH, 0, 0);
+		if ((bp->b_flags & B_CACHE) != 0 && bp->b_dirtyoff < right_on) {
+			/*
+			 * Flush the dirty buffer, because we don't have a
+			 * byte-granular way to record which parts of the
+			 * buffer are valid.
+			 */
+			bwrite(bp);
+			if (bp->b_error)
+				return (bp->b_error);
+		} else {
+			brelse(bp);
+		}
+	}
+
+	v_inval_buf_range(vp, left_lbn, end_lbn, iosize);
+	return (0);
+}
+
+
+/* Send FUSE_LSEEK for this node */
+static int
+fuse_vnop_do_lseek(struct vnode *vp, struct thread *td, struct ucred *cred,
+	pid_t pid, off_t *offp, int whence)
+{
+	struct fuse_dispatcher fdi;
+	struct fuse_filehandle *fufh;
+	struct fuse_lseek_in *flsi;
+	struct fuse_lseek_out *flso;
+	struct mount *mp = vnode_mount(vp);
+	int err;
+
+	ASSERT_VOP_LOCKED(vp, __func__);
+
+	err = fuse_filehandle_getrw(vp, FREAD, &fufh, cred, pid);
+	if (err)
+		return (err);
+	fdisp_init(&fdi, sizeof(*flsi));
+	fdisp_make_vp(&fdi, FUSE_LSEEK, vp, td, cred);
+	flsi = fdi.indata;
+	flsi->fh = fufh->fh_id;
+	flsi->offset = *offp;
+	flsi->whence = whence;
+	err = fdisp_wait_answ(&fdi);
+	if (err == ENOSYS) {
+		fsess_set_notimpl(mp, FUSE_LSEEK);
+	} else if (err == ENXIO) {
+		/* Note: ENXIO means "no more hole/data regions until EOF" */
+		fsess_set_impl(mp, FUSE_LSEEK);
+	} else if (err == 0) {
+		fsess_set_impl(mp, FUSE_LSEEK);
+		flso = fdi.answ;
+		*offp = flso->offset;
+	}
+	fdisp_destroy(&fdi);
+
+	return (err);
+}
+
 /*
     struct vnop_access_args {
 	struct vnode *a_vp;
@@ -347,7 +438,7 @@ fuse_vnop_access(struct vop_access_args *ap)
 	}
 	if (!(data->dataflags & FSESS_INITED)) {
 		if (vnode_isvroot(vp)) {
-			if (priv_check_cred(cred, PRIV_VFS_ADMIN, 0) ||
+			if (priv_check_cred(cred, PRIV_VFS_ADMIN) ||
 			    (fuse_match_cred(data->daemoncred, cred) == 0)) {
 				return 0;
 			}
@@ -485,8 +576,99 @@ fuse_vnop_advlock(struct vop_advlock_args *ap)
 	}
 
 out:
-	VOP_UNLOCK(vp, 0);
+	VOP_UNLOCK(vp);
 	return err;
+}
+
+static int
+fuse_vnop_allocate(struct vop_allocate_args *ap)
+{
+	struct vnode *vp = ap->a_vp;
+	off_t *len = ap->a_len;
+	off_t *offset = ap->a_offset;
+	struct ucred *cred = ap->a_cred;
+	struct fuse_filehandle *fufh;
+	struct mount *mp = vnode_mount(vp);
+	struct fuse_dispatcher fdi;
+	struct fuse_fallocate_in *ffi;
+	struct uio io;
+	pid_t pid = curthread->td_proc->p_pid;
+	struct fuse_vnode_data *fvdat = VTOFUD(vp);
+	off_t filesize;
+	int err;
+
+	if (fuse_isdeadfs(vp))
+		return (ENXIO);
+
+	switch (vp->v_type) {
+	case VFIFO:
+		return (ESPIPE);
+	case VLNK:
+	case VREG:
+		if (vfs_isrdonly(mp))
+			return (EROFS);
+		break;
+	default:
+		return (ENODEV);
+	}
+
+	if (vfs_isrdonly(mp))
+		return (EROFS);
+
+	if (fsess_not_impl(mp, FUSE_FALLOCATE))
+		return (EINVAL);
+
+	io.uio_offset = *offset;
+	io.uio_resid = *len;
+	err = vn_rlimit_fsize(vp, &io, curthread);
+	if (err)
+		return (err);
+
+	err = fuse_filehandle_getrw(vp, FWRITE, &fufh, cred, pid);
+	if (err)
+		return (err);
+
+	fuse_vnode_update(vp, FN_MTIMECHANGE | FN_CTIMECHANGE);
+
+	err = fuse_vnode_size(vp, &filesize, cred, curthread);
+	if (err)
+		return (err);
+	fuse_inval_buf_range(vp, filesize, *offset, *offset + *len);
+
+	fdisp_init(&fdi, sizeof(*ffi));
+	fdisp_make_vp(&fdi, FUSE_FALLOCATE, vp, curthread, cred);
+	ffi = fdi.indata;
+	ffi->fh = fufh->fh_id;
+	ffi->offset = *offset;
+	ffi->length = *len;
+	ffi->mode = 0;
+	err = fdisp_wait_answ(&fdi);
+
+	if (err == ENOSYS) {
+		fsess_set_notimpl(mp, FUSE_FALLOCATE);
+		err = EINVAL;
+	} else if (err == EOPNOTSUPP) {
+		/*
+		 * The file system server does not support FUSE_FALLOCATE with
+		 * the supplied mode.  That's effectively the same thing as
+		 * ENOSYS since we only ever issue mode=0.
+		 * TODO: revise this section once we support fspacectl.
+		 */
+		fsess_set_notimpl(mp, FUSE_FALLOCATE);
+		err = EINVAL;
+	} else if (!err) {
+		*offset += *len;
+		*len = 0;
+		fuse_vnode_undirty_cached_timestamps(vp, false);
+		fuse_internal_clear_suid_on_write(vp, cred, curthread);
+		if (*offset > fvdat->cached_attrs.va_size) {
+			fuse_vnode_setsize(vp, *offset, false);
+			getnanouptime(&fvdat->last_local_modify);
+		}
+	}
+
+	fdisp_destroy(&fdi);
+	return (err);
 }
 
 /* {
@@ -563,7 +745,7 @@ fuse_vnop_bmap(struct vop_bmap_args *ap)
 			*runp = 0;
 	}
 
-	if (fsess_isimpl(mp, FUSE_BMAP)) {
+	if (fsess_maybe_impl(mp, FUSE_BMAP)) {
 		fdisp_init(&fdi, sizeof(*fbi));
 		fdisp_make_vp(&fdi, FUSE_BMAP, vp, td, td->td_ucred);
 		fbi = fdi.indata;
@@ -601,6 +783,7 @@ static int
 fuse_vnop_close(struct vop_close_args *ap)
 {
 	struct vnode *vp = ap->a_vp;
+	struct mount *mp = vnode_mount(vp);
 	struct ucred *cred = ap->a_cred;
 	int fflag = ap->a_fflag;
 	struct thread *td = ap->a_td;
@@ -616,18 +799,165 @@ fuse_vnop_close(struct vop_close_args *ap)
 		return 0;
 
 	err = fuse_flush(vp, cred, pid, fflag);
-	if (err == 0 && (fvdat->flag & FN_ATIMECHANGE)) {
+	if (err == 0 && (fvdat->flag & FN_ATIMECHANGE) && !vfs_isrdonly(mp)) {
 		struct vattr vap;
+		struct fuse_data *data;
+		int dataflags;
+		int access_e = 0;
 
-		VATTR_NULL(&vap);
-		vap.va_atime = fvdat->cached_attrs.va_atime;
-		err = fuse_internal_setattr(vp, &vap, td, NULL);
+		data = fuse_get_mpdata(mp);
+		dataflags = data->dataflags;
+		if (dataflags & FSESS_DEFAULT_PERMISSIONS) {
+			struct vattr va;
+
+			fuse_internal_getattr(vp, &va, cred, td);
+			access_e = vaccess(vp->v_type, va.va_mode, va.va_uid,
+			    va.va_gid, VWRITE, cred);
+		}
+		if (access_e == 0) {
+			VATTR_NULL(&vap);
+			vap.va_atime = fvdat->cached_attrs.va_atime;
+			/*
+			 * Ignore errors setting when setting atime.  That
+			 * should not cause close(2) to fail.
+			 */
+			fuse_internal_setattr(vp, &vap, td, NULL);
+		}
 	}
 	/* TODO: close the file handle, if we're sure it's no longer used */
 	if ((fvdat->flag & FN_SIZECHANGE) != 0) {
 		fuse_vnode_savesize(vp, cred, td->td_proc->p_pid);
 	}
 	return err;
+}
+
+/*
+   struct vop_copy_file_range_args {
+	struct vop_generic_args a_gen;
+	struct vnode *a_invp;
+	off_t *a_inoffp;
+	struct vnode *a_outvp;
+	off_t *a_outoffp;
+	size_t *a_lenp;
+	unsigned int a_flags;
+	struct ucred *a_incred;
+	struct ucred *a_outcred;
+	struct thread *a_fsizetd;
+}
+ */
+static int
+fuse_vnop_copy_file_range(struct vop_copy_file_range_args *ap)
+{
+	struct vnode *invp = ap->a_invp;
+	struct vnode *outvp = ap->a_outvp;
+	struct mount *mp = vnode_mount(invp);
+	struct fuse_vnode_data *outfvdat = VTOFUD(outvp);
+	struct fuse_dispatcher fdi;
+	struct fuse_filehandle *infufh, *outfufh;
+	struct fuse_copy_file_range_in *fcfri;
+	struct ucred *incred = ap->a_incred;
+	struct ucred *outcred = ap->a_outcred;
+	struct fuse_write_out *fwo;
+	struct thread *td;
+	struct uio io;
+	off_t outfilesize;
+	ssize_t r = 0;
+	pid_t pid;
+	int err;
+
+	err = ENOSYS;
+	if (mp == NULL || mp != vnode_mount(outvp))
+		goto fallback;
+
+	if (incred->cr_uid != outcred->cr_uid)
+		goto fallback;
+
+	if (incred->cr_groups[0] != outcred->cr_groups[0])
+		goto fallback;
+
+	/* Caller busied mp, mnt_data can be safely accessed. */
+	if (fsess_not_impl(mp, FUSE_COPY_FILE_RANGE))
+		goto fallback;
+
+	if (ap->a_fsizetd == NULL)
+		td = curthread;
+	else
+		td = ap->a_fsizetd;
+	pid = td->td_proc->p_pid;
+
+	vn_lock_pair(invp, false, LK_SHARED, outvp, false, LK_EXCLUSIVE);
+	if (invp->v_data == NULL || outvp->v_data == NULL) {
+		err = EBADF;
+		goto unlock;
+	}
+
+	err = fuse_filehandle_getrw(invp, FREAD, &infufh, incred, pid);
+	if (err)
+		goto unlock;
+
+	err = fuse_filehandle_getrw(outvp, FWRITE, &outfufh, outcred, pid);
+	if (err)
+		goto unlock;
+
+	io.uio_resid = *ap->a_lenp;
+	if (ap->a_fsizetd) {
+		io.uio_offset = *ap->a_outoffp;
+		err = vn_rlimit_fsizex(outvp, &io, 0, &r, ap->a_fsizetd);
+		if (err != 0)
+			goto unlock;
+	}
+
+	err = fuse_vnode_size(outvp, &outfilesize, outcred, curthread);
+	if (err)
+		goto unlock;
+
+	vnode_pager_clean_sync(invp);
+	err = fuse_inval_buf_range(outvp, outfilesize, *ap->a_outoffp,
+		*ap->a_outoffp + io.uio_resid);
+	if (err)
+		goto unlock;
+
+	fdisp_init(&fdi, sizeof(*fcfri));
+	fdisp_make_vp(&fdi, FUSE_COPY_FILE_RANGE, invp, td, incred);
+	fcfri = fdi.indata;
+	fcfri->fh_in = infufh->fh_id;
+	fcfri->off_in = *ap->a_inoffp;
+	fcfri->nodeid_out = VTOI(outvp);
+	fcfri->fh_out = outfufh->fh_id;
+	fcfri->off_out = *ap->a_outoffp;
+	fcfri->len = io.uio_resid;
+	fcfri->flags = 0;
+
+	err = fdisp_wait_answ(&fdi);
+	if (err == 0) {
+		fwo = fdi.answ;
+		*ap->a_lenp = fwo->size;
+		*ap->a_inoffp += fwo->size;
+		*ap->a_outoffp += fwo->size;
+		fuse_internal_clear_suid_on_write(outvp, outcred, td);
+		if (*ap->a_outoffp > outfvdat->cached_attrs.va_size) {
+                        fuse_vnode_setsize(outvp, *ap->a_outoffp, false);
+			getnanouptime(&outfvdat->last_local_modify);
+		}
+		fuse_vnode_update(invp, FN_ATIMECHANGE);
+		fuse_vnode_update(outvp, FN_MTIMECHANGE | FN_CTIMECHANGE);
+	}
+	fdisp_destroy(&fdi);
+
+unlock:
+	if (invp != outvp)
+		VOP_UNLOCK(invp);
+	VOP_UNLOCK(outvp);
+
+	if (err == ENOSYS)
+		fsess_set_notimpl(mp, FUSE_COPY_FILE_RANGE);
+fallback:
+
+	/*
+	 * No need to call vn_rlimit_fsizex_res before return, since the uio is
+	 * local.
+	 */
+	return (err);
 }
 
 static void
@@ -707,7 +1037,7 @@ fuse_vnop_create(struct vop_create_args *ap)
 	if (vap->va_type != VREG)
 		return (EINVAL);
 
-	if (!fsess_isimpl(mp, FUSE_CREATE) || vap->va_type == VSOCK) {
+	if (fsess_not_impl(mp, FUSE_CREATE) || vap->va_type == VSOCK) {
 		/* Fallback to FUSE_MKNOD/FUSE_OPEN */
 		fdisp_make_mknod_for_fallback(fdip, cnp, dvp, parentnid, td,
 			cred, mode, &op);
@@ -723,7 +1053,7 @@ fuse_vnop_create(struct vop_create_args *ap)
 		fci->flags = O_CREAT | flags;
 		if (fuse_libabi_geq(data, 7, 12)) {
 			insize = sizeof(*fci);
-			fci->umask = td->td_proc->p_fd->fd_cmask;
+			fci->umask = td->td_proc->p_pd->pd_cmask;
 		} else {
 			insize = sizeof(struct fuse_open_in);
 		}
@@ -780,6 +1110,7 @@ fuse_vnop_create(struct vop_create_args *ap)
 		uint64_t nodeid = feo->nodeid;
 		uint64_t fh_id = foo->fh;
 
+		fdisp_destroy(fdip);
 		fdisp_init(fdip, sizeof(*fri));
 		fdisp_make(fdip, FUSE_RELEASE, mp, nodeid, td, cred);
 		fri = fdip->indata;
@@ -909,14 +1240,13 @@ fake:
 /*
     struct vnop_inactive_args {
 	struct vnode *a_vp;
-	struct thread *a_td;
     };
 */
 static int
 fuse_vnop_inactive(struct vop_inactive_args *ap)
 {
 	struct vnode *vp = ap->a_vp;
-	struct thread *td = ap->a_td;
+	struct thread *td = curthread;
 
 	struct fuse_vnode_data *fvdat = VTOFUD(vp);
 	struct fuse_filehandle *fufh, *fufh_tmp;
@@ -942,6 +1272,56 @@ fuse_vnop_inactive(struct vop_inactive_args *ap)
 
 	return 0;
 }
+
+/*
+    struct vnop_ioctl_args {
+	struct vnode *a_vp;
+	u_long a_command;
+	caddr_t a_data;
+	int a_fflag;
+	struct ucred *a_cred;
+	struct thread *a_td;
+    };
+*/
+static int
+fuse_vnop_ioctl(struct vop_ioctl_args *ap)
+{
+	struct vnode *vp = ap->a_vp;
+	struct mount *mp = vnode_mount(vp);
+	struct ucred *cred = ap->a_cred;
+	off_t *offp;
+	pid_t pid = ap->a_td->td_proc->p_pid;
+	int err;
+
+	switch (ap->a_command) {
+	case FIOSEEKDATA:
+	case FIOSEEKHOLE:
+		/* Call FUSE_LSEEK, if we can, or fall back to vop_stdioctl */
+		if (fsess_maybe_impl(mp, FUSE_LSEEK)) {
+			int whence;
+
+			offp = ap->a_data;
+			if (ap->a_command == FIOSEEKDATA)
+				whence = SEEK_DATA;
+			else
+				whence = SEEK_HOLE;
+
+			vn_lock(vp, LK_SHARED | LK_RETRY);
+			err = fuse_vnop_do_lseek(vp, ap->a_td, cred, pid, offp,
+			    whence);
+			VOP_UNLOCK(vp);
+		}
+		if (fsess_not_impl(mp, FUSE_LSEEK))
+			err = vop_stdioctl(ap);
+		break;
+	default:
+		/* TODO: implement FUSE_IOCTL */
+		err = ENOTTY;
+		break;
+	}
+	return (err);
+}
+
 
 /*
     struct vnop_link_args {
@@ -1069,7 +1449,6 @@ fuse_vnop_lookup(struct vop_lookup_args *ap)
 	bool did_lookup = false;
 	struct fuse_entry_out *feo = NULL;
 	enum vtype vtyp;	/* vnode type of target */
-	off_t filesize;		/* filesize of target */
 
 	uint64_t nid;
 
@@ -1103,16 +1482,15 @@ fuse_vnop_lookup(struct vop_lookup_args *ap)
 			return ENOENT;
 		/* .. is obviously a directory */
 		vtyp = VDIR;
-		filesize = 0;
 	} else if (is_dot) {
 		nid = VTOI(dvp);
 		/* . is obviously a directory */
 		vtyp = VDIR;
-		filesize = 0;
 	} else {
 		struct timespec timeout;
+		int ncpticks; /* here to accommodate for API contract */
 
-		err = cache_lookup(dvp, vpp, cnp, &timeout, NULL);
+		err = cache_lookup(dvp, vpp, cnp, &timeout, &ncpticks);
 		getnanouptime(&now);
 		SDT_PROBE3(fusefs, , vnops, cache_lookup, err, &timeout, &now);
 		switch (err) {
@@ -1139,7 +1517,6 @@ fuse_vnop_lookup(struct vop_lookup_args *ap)
 			break;
 
 		case ENOENT:		/* negative match */
-			getnanouptime(&now);
 			if (timespeccmp(&timeout, &now, <=)) {
 				/* Cache timeout */
 				cache_purge_negative(dvp);
@@ -1182,7 +1559,6 @@ fuse_vnop_lookup(struct vop_lookup_args *ap)
 				}
 			}
 			vtyp = IFTOVT(feo->attr.mode);
-			filesize = feo->attr.size;
 		}
 		if (lookup_err && (!fdi.answ_stat || lookup_err != ENOENT)) {
 			fdisp_destroy(&fdi);
@@ -1292,7 +1668,6 @@ fuse_vnop_lookup(struct vop_lookup_args *ap)
 				(nameiop == RENAME && wantparent))) {
 				cnp->cn_flags |= SAVENAME;
 			}
-
 		}
 	}
 out:
@@ -1331,7 +1706,7 @@ fuse_vnop_mkdir(struct vop_mkdir_args *ap)
 		return ENXIO;
 	}
 	fmdi.mode = MAKEIMODE(vap->va_type, vap->va_mode);
-	fmdi.umask = curthread->td_proc->p_fd->fd_cmask;
+	fmdi.umask = curthread->td_proc->p_pd->pd_cmask;
 
 	return (fuse_internal_newentry(dvp, vpp, cnp, FUSE_MKDIR, &fmdi,
 	    sizeof(fmdi), VDIR));
@@ -1377,7 +1752,6 @@ fuse_vnop_open(struct vop_open_args *ap)
 	struct thread *td = ap->a_td;
 	struct ucred *cred = ap->a_cred;
 	pid_t pid = td->td_proc->p_pid;
-	struct fuse_vnode_data *fvdat;
 
 	if (fuse_isdeadfs(vp))
 		return ENXIO;
@@ -1385,8 +1759,6 @@ fuse_vnop_open(struct vop_open_args *ap)
 		return (EOPNOTSUPP);
 	if ((a_mode & (FREAD | FWRITE | FEXEC)) == 0)
 		return EINVAL;
-
-	fvdat = VTOFUD(vp);
 
 	if (fuse_filehandle_validrw(vp, a_mode, cred, pid)) {
 		fuse_vnode_open(vp, 0, td);
@@ -1399,6 +1771,11 @@ fuse_vnop_open(struct vop_open_args *ap)
 static int
 fuse_vnop_pathconf(struct vop_pathconf_args *ap)
 {
+	struct vnode *vp = ap->a_vp;
+	struct mount *mp;
+	struct fuse_filehandle *fufh;
+	int err;
+	bool closefufh = false;
 
 	switch (ap->a_name) {
 	case _PC_FILESIZEBITS:
@@ -1416,11 +1793,64 @@ fuse_vnop_pathconf(struct vop_pathconf_args *ap)
 	case _PC_NO_TRUNC:
 		*ap->a_retval = 1;
 		return (0);
+	case _PC_MIN_HOLE_SIZE:
+		/*
+		 * The FUSE protocol provides no mechanism for a server to
+		 * report _PC_MIN_HOLE_SIZE.  It's a protocol bug.  Instead,
+		 * return EINVAL if the server does not support FUSE_LSEEK, or
+		 * 1 if it does.
+		 */
+		mp = vnode_mount(vp);
+		if (!fsess_is_impl(mp, FUSE_LSEEK) &&
+		    !fsess_not_impl(mp, FUSE_LSEEK)) {
+			off_t offset = 0;
+
+			/*
+			 * Issue a FUSE_LSEEK to find out if it's supported.
+			 * Use SEEK_DATA instead of SEEK_HOLE, because the
+			 * latter generally requires sequential scans of file
+			 * metadata, which can be slow.
+			 */
+			err = fuse_vnop_do_lseek(vp, curthread,
+			    curthread->td_ucred, curthread->td_proc->p_pid,
+			    &offset, SEEK_DATA);
+			if (err == EBADF) {
+				/*
+				 * pathconf() doesn't necessarily open the
+				 * file.  So we may need to do it here.
+				 */
+				err = fuse_filehandle_open(vp, FREAD, &fufh,
+				    curthread, curthread->td_ucred);
+				if (err == 0) {
+					closefufh = true;
+					err = fuse_vnop_do_lseek(vp, curthread,
+					    curthread->td_ucred,
+					    curthread->td_proc->p_pid, &offset,
+					    SEEK_DATA);
+				}
+				if (closefufh)
+					fuse_filehandle_close(vp, fufh,
+					    curthread, curthread->td_ucred);
+			}
+
+		}
+
+		if (fsess_is_impl(mp, FUSE_LSEEK)) {
+			*ap->a_retval = 1;
+			return (0);
+		} else if (fsess_not_impl(mp, FUSE_LSEEK)) {
+			/* FUSE_LSEEK is not implemented */
+			return (EINVAL);
+		} else {
+			return (err);
+		}
 	default:
 		return (vop_stdpathconf(ap));
 	}
 }
 
+SDT_PROBE_DEFINE3(fusefs, , vnops, filehandles_closed, "struct vnode*",
+    "struct uio*", "struct ucred*");
 /*
     struct vnop_read_args {
 	struct vnode *a_vp;
@@ -1437,6 +1867,11 @@ fuse_vnop_read(struct vop_read_args *ap)
 	int ioflag = ap->a_ioflag;
 	struct ucred *cred = ap->a_cred;
 	pid_t pid = curthread->td_proc->p_pid;
+	struct fuse_filehandle *fufh;
+	int err;
+	bool closefufh = false, directio;
+
+	MPASS(vp->v_type == VREG || vp->v_type == VDIR);
 
 	if (fuse_isdeadfs(vp)) {
 		return ENXIO;
@@ -1446,7 +1881,45 @@ fuse_vnop_read(struct vop_read_args *ap)
 		ioflag |= IO_DIRECT;
 	}
 
-	return fuse_io_dispatch(vp, uio, ioflag, cred, pid);
+	err = fuse_filehandle_getrw(vp, FREAD, &fufh, cred, pid);
+	if (err == EBADF && vnode_mount(vp)->mnt_flag & MNT_EXPORTED) {
+		/*
+		 * nfsd will do I/O without first doing VOP_OPEN.  We
+		 * must implicitly open the file here
+		 */
+		err = fuse_filehandle_open(vp, FREAD, &fufh, curthread, cred);
+		closefufh = true;
+	}
+	if (err) {
+		SDT_PROBE3(fusefs, , vnops, filehandles_closed, vp, uio, cred);
+		return err;
+	}
+
+	/*
+         * Ideally, when the daemon asks for direct io at open time, the
+         * standard file flag should be set according to this, so that would
+         * just change the default mode, which later on could be changed via
+         * fcntl(2).
+         * But this doesn't work, the O_DIRECT flag gets cleared at some point
+         * (don't know where). So to make any use of the Fuse direct_io option,
+         * we hardwire it into the file's private data (similarly to Linux,
+         * btw.).
+         */
+	directio = (ioflag & IO_DIRECT) || !fsess_opt_datacache(vnode_mount(vp));
+
+	fuse_vnode_update(vp, FN_ATIMECHANGE);
+	if (directio) {
+		SDT_PROBE2(fusefs, , vnops, trace, 1, "direct read of vnode");
+		err = fuse_read_directbackend(vp, uio, cred, fufh);
+	} else {
+		SDT_PROBE2(fusefs, , vnops, trace, 1, "buffered read of vnode");
+		err = fuse_read_biobackend(vp, uio, ioflag, cred, fufh, pid);
+	}
+
+	if (closefufh)
+		fuse_filehandle_close(vp, fufh, curthread, cred);
+
+	return (err);
 }
 
 /*
@@ -1466,10 +1939,10 @@ fuse_vnop_readdir(struct vop_readdir_args *ap)
 	struct uio *uio = ap->a_uio;
 	struct ucred *cred = ap->a_cred;
 	struct fuse_filehandle *fufh = NULL;
+	struct mount *mp = vnode_mount(vp);
 	struct fuse_iov cookediov;
 	int err = 0;
 	u_long *cookies;
-	off_t startoff;
 	ssize_t tresid;
 	int ncookies;
 	bool closefufh = false;
@@ -1486,24 +1959,17 @@ fuse_vnop_readdir(struct vop_readdir_args *ap)
 	}
 
 	tresid = uio->uio_resid;
-	startoff = uio->uio_offset;
 	err = fuse_filehandle_get_dir(vp, &fufh, cred, pid);
-	if (err == EBADF && vnode_mount(vp)->mnt_flag & MNT_EXPORTED) {
+	if (err == EBADF && mp->mnt_flag & MNT_EXPORTED) {
+		KASSERT(fuse_get_mpdata(mp)->dataflags
+				& FSESS_NO_OPENDIR_SUPPORT,
+			("FUSE file systems that don't set "
+			 "FUSE_NO_OPENDIR_SUPPORT should not be exported"));
 		/* 
 		 * nfsd will do VOP_READDIR without first doing VOP_OPEN.  We
-		 * must implicitly open the directory here
+		 * must implicitly open the directory here.
 		 */
 		err = fuse_filehandle_open(vp, FREAD, &fufh, curthread, cred);
-		if (err == 0) {
-			/*
-			 * When a directory is opened, it must be read from
-			 * the beginning.  Hopefully, the "startoff" still
-			 * exists as an offset cookie for the directory.
-			 * If not, it will read the entire directory without
-			 * returning any entries and just return eof.
-			 */
-			uio->uio_offset = 0;
-		}
 		closefufh = true;
 	}
 	if (err)
@@ -1521,7 +1987,7 @@ fuse_vnop_readdir(struct vop_readdir_args *ap)
 #define DIRCOOKEDSIZE FUSE_DIRENT_ALIGN(FUSE_NAME_OFFSET + MAXNAMLEN + 1)
 	fiov_init(&cookediov, DIRCOOKEDSIZE);
 
-	err = fuse_internal_readdir(vp, uio, startoff, fufh, &cookediov,
+	err = fuse_internal_readdir(vp, uio, fufh, &cookediov,
 		&ncookies, cookies);
 
 	fiov_teardown(&cookediov);
@@ -1571,6 +2037,13 @@ fuse_vnop_readlink(struct vop_readlink_args *ap)
 	if (err) {
 		goto out;
 	}
+	if (strnlen(fdi.answ, fdi.iosize) + 1 < fdi.iosize) {
+		struct fuse_data *data = fuse_get_mpdata(vnode_mount(vp));
+		fuse_warn(data, FSESS_WARN_READLINK_EMBEDDED_NUL,
+				"Returned an embedded NUL from FUSE_READLINK.");
+		err = EIO;
+		goto out;
+	}
 	if (((char *)fdi.answ)[0] == '/' &&
 	    fuse_get_mpdata(vnode_mount(vp))->dataflags & FSESS_PUSH_SYMLINKS_IN) {
 		char *mpth = vnode_mount(vp)->mnt_stat.f_mntonname;
@@ -1588,14 +2061,13 @@ out:
 /*
     struct vnop_reclaim_args {
 	struct vnode *a_vp;
-	struct thread *a_td;
     };
 */
 static int
 fuse_vnop_reclaim(struct vop_reclaim_args *ap)
 {
 	struct vnode *vp = ap->a_vp;
-	struct thread *td = ap->a_td;
+	struct thread *td = curthread;
 	struct fuse_vnode_data *fvdat = VTOFUD(vp);
 	struct fuse_filehandle *fufh, *fufh_tmp;
 
@@ -1631,7 +2103,6 @@ fuse_vnop_reclaim(struct vop_reclaim_args *ap)
 	}
 	cache_purge(vp);
 	vfs_hash_remove(vp);
-	vnode_destroy_vobject(vp);
 	fuse_vnode_destroy(vp);
 
 	return 0;
@@ -1817,7 +2288,7 @@ fuse_vnop_setattr(struct vop_setattr_args *ap)
 	if (vap->va_uid != (uid_t)VNOVAL) {
 		if (checkperm) {
 			/* Only root may change a file's owner */
-			err = priv_check_cred(cred, PRIV_VFS_CHOWN, 0);
+			err = priv_check_cred(cred, PRIV_VFS_CHOWN);
 			if (err) {
 				/* As a special case, allow the null chown */
 				err2 = fuse_internal_getattr(vp, &old_va, cred,
@@ -1835,7 +2306,7 @@ fuse_vnop_setattr(struct vop_setattr_args *ap)
 			accmode |= VADMIN;
 	}
 	if (vap->va_gid != (gid_t)VNOVAL) {
-		if (checkperm && priv_check_cred(cred, PRIV_VFS_CHOWN, 0))
+		if (checkperm && priv_check_cred(cred, PRIV_VFS_CHOWN))
 			drop_suid = true;
 		if (checkperm && !groupmember(vap->va_gid, cred))
 		{
@@ -1843,7 +2314,7 @@ fuse_vnop_setattr(struct vop_setattr_args *ap)
 			 * Non-root users may only chgrp to one of their own
 			 * groups 
 			 */
-			err = priv_check_cred(cred, PRIV_VFS_CHOWN, 0);
+			err = priv_check_cred(cred, PRIV_VFS_CHOWN);
 			if (err) {
 				/* As a special case, allow the null chgrp */
 				err2 = fuse_internal_getattr(vp, &old_va, cred,
@@ -1866,6 +2337,9 @@ fuse_vnop_setattr(struct vop_setattr_args *ap)
 		case VREG:
 			if (vfs_isrdonly(mp))
 				return (EROFS);
+			err = vn_rlimit_trunc(vap->va_size, td);
+			if (err)
+				return (err);
 			break;
 		default:
 			/*
@@ -1899,14 +2373,14 @@ fuse_vnop_setattr(struct vop_setattr_args *ap)
 	if (vap->va_mode != (mode_t)VNOVAL) {
 		/* Only root may set the sticky bit on non-directories */
 		if (checkperm && vp->v_type != VDIR && (vap->va_mode & S_ISTXT)
-		    && priv_check_cred(cred, PRIV_VFS_STICKYFILE, 0))
+		    && priv_check_cred(cred, PRIV_VFS_STICKYFILE))
 			return EFTYPE;
 		if (checkperm && (vap->va_mode & S_ISGID)) {
 			err = fuse_internal_getattr(vp, &old_va, cred, td);
 			if (err)
 				return (err);
 			if (!groupmember(old_va.va_gid, cred)) {
-				err = priv_check_cred(cred, PRIV_VFS_SETGID, 0);
+				err = priv_check_cred(cred, PRIV_VFS_SETGID);
 				if (err)
 					return (err);
 			}
@@ -1956,7 +2430,6 @@ fuse_vnop_strategy(struct vop_strategy_args *ap)
 	return 0;
 }
 
-
 /*
     struct vnop_symlink_args {
 	struct vnode *a_dvp;
@@ -1972,7 +2445,7 @@ fuse_vnop_symlink(struct vop_symlink_args *ap)
 	struct vnode *dvp = ap->a_dvp;
 	struct vnode **vpp = ap->a_vpp;
 	struct componentname *cnp = ap->a_cnp;
-	char *target = ap->a_target;
+	const char *target = ap->a_target;
 
 	struct fuse_dispatcher fdi;
 
@@ -2019,6 +2492,11 @@ fuse_vnop_write(struct vop_write_args *ap)
 	int ioflag = ap->a_ioflag;
 	struct ucred *cred = ap->a_cred;
 	pid_t pid = curthread->td_proc->p_pid;
+	struct fuse_filehandle *fufh;
+	int err;
+	bool closefufh = false, directio;
+
+	MPASS(vp->v_type == VREG || vp->v_type == VDIR);
 
 	if (fuse_isdeadfs(vp)) {
 		return ENXIO;
@@ -2028,7 +2506,67 @@ fuse_vnop_write(struct vop_write_args *ap)
 		ioflag |= IO_DIRECT;
 	}
 
-	return fuse_io_dispatch(vp, uio, ioflag, cred, pid);
+	err = fuse_filehandle_getrw(vp, FWRITE, &fufh, cred, pid);
+	if (err == EBADF && vnode_mount(vp)->mnt_flag & MNT_EXPORTED) {
+		/*
+		 * nfsd will do I/O without first doing VOP_OPEN.  We
+		 * must implicitly open the file here
+		 */
+		err = fuse_filehandle_open(vp, FWRITE, &fufh, curthread, cred);
+		closefufh = true;
+	}
+	if (err) {
+		SDT_PROBE3(fusefs, , vnops, filehandles_closed, vp, uio, cred);
+		return err;
+	}
+
+	/*
+         * Ideally, when the daemon asks for direct io at open time, the
+         * standard file flag should be set according to this, so that would
+         * just change the default mode, which later on could be changed via
+         * fcntl(2).
+         * But this doesn't work, the O_DIRECT flag gets cleared at some point
+         * (don't know where). So to make any use of the Fuse direct_io option,
+         * we hardwire it into the file's private data (similarly to Linux,
+         * btw.).
+         */
+	directio = (ioflag & IO_DIRECT) || !fsess_opt_datacache(vnode_mount(vp));
+
+	fuse_vnode_update(vp, FN_MTIMECHANGE | FN_CTIMECHANGE);
+	if (directio) {
+		off_t start, end, filesize;
+		bool pages = (ioflag & IO_VMIO) != 0;
+
+		SDT_PROBE2(fusefs, , vnops, trace, 1, "direct write of vnode");
+
+		err = fuse_vnode_size(vp, &filesize, cred, curthread);
+		if (err)
+			goto out;
+
+		start = uio->uio_offset;
+		end = start + uio->uio_resid;
+		if (!pages) {
+			err = fuse_inval_buf_range(vp, filesize, start,
+			    end);
+			if (err)
+				goto out;
+		}
+		err = fuse_write_directbackend(vp, uio, cred, fufh,
+			filesize, ioflag, pages);
+	} else {
+		SDT_PROBE2(fusefs, , vnops, trace, 1,
+			"buffered write of vnode");
+		if (!fsess_opt_writeback(vnode_mount(vp)))
+			ioflag |= IO_SYNC;
+		err = fuse_write_biobackend(vp, uio, cred, fufh, ioflag, pid);
+	}
+	fuse_internal_clear_suid_on_write(vp, cred, uio->uio_td);
+
+out:
+	if (closefufh)
+		fuse_filehandle_close(vp, fufh, curthread, cred);
+
+	return (err);
 }
 
 static daddr_t
@@ -2116,7 +2654,7 @@ fuse_vnop_getextattr(struct vop_getextattr_args *ap)
 	if (fuse_isdeadfs(vp))
 		return (ENXIO);
 
-	if (!fsess_isimpl(mp, FUSE_GETXATTR))
+	if (fsess_not_impl(mp, FUSE_GETXATTR))
 		return EOPNOTSUPP;
 
 	err = fuse_extattr_check_cred(vp, ap->a_attrnamespace, cred, td, VREAD);
@@ -2198,11 +2736,11 @@ fuse_vnop_setextattr(struct vop_setextattr_args *ap)
 	size_t len;
 	char *attr_str;
 	int err;
-	
+
 	if (fuse_isdeadfs(vp))
 		return (ENXIO);
 
-	if (!fsess_isimpl(mp, FUSE_SETXATTR))
+	if (fsess_not_impl(mp, FUSE_SETXATTR))
 		return EOPNOTSUPP;
 
 	if (vfs_isrdonly(mp))
@@ -2214,7 +2752,7 @@ fuse_vnop_setextattr(struct vop_setextattr_args *ap)
 		 * If we got here as fallback from VOP_DELETEEXTATTR, then
 		 * return EOPNOTSUPP.
 		 */
-		if (!fsess_isimpl(mp, FUSE_REMOVEXATTR))
+		if (fsess_not_impl(mp, FUSE_REMOVEXATTR))
 			return (EOPNOTSUPP);
 		else
 			return (EINVAL);
@@ -2367,7 +2905,7 @@ fuse_vnop_listextattr(struct vop_listextattr_args *ap)
 	if (fuse_isdeadfs(vp))
 		return (ENXIO);
 
-	if (!fsess_isimpl(mp, FUSE_LISTXATTR))
+	if (fsess_not_impl(mp, FUSE_LISTXATTR))
 		return EOPNOTSUPP;
 
 	err = fuse_extattr_check_cred(vp, ap->a_attrnamespace, cred, td, VREAD);
@@ -2493,7 +3031,7 @@ fuse_vnop_deleteextattr(struct vop_deleteextattr_args *ap)
 	if (fuse_isdeadfs(vp))
 		return (ENXIO);
 
-	if (!fsess_isimpl(mp, FUSE_REMOVEXATTR))
+	if (fsess_not_impl(mp, FUSE_REMOVEXATTR))
 		return EOPNOTSUPP;
 
 	if (vfs_isrdonly(mp))
@@ -2547,7 +3085,7 @@ fuse_vnop_print(struct vop_print_args *ap)
 
 	return 0;
 }
-	
+
 /*
  * Get an NFS filehandle for a FUSE file.
  *
@@ -2573,8 +3111,30 @@ fuse_vnop_vptofh(struct vop_vptofh_args *ap)
 	struct vattr va;
 	int err;
 
-	if (!(data->dataflags & FSESS_EXPORT_SUPPORT))
+	if (!(data->dataflags & FSESS_EXPORT_SUPPORT)) {
+		/* NFS requires lookups for "." and ".." */
+		SDT_PROBE2(fusefs, , vnops, trace, 1,
+			"VOP_VPTOFH without FUSE_EXPORT_SUPPORT");
 		return EOPNOTSUPP;
+	}
+	if ((mp->mnt_flag & MNT_EXPORTED) &&
+		!(data->dataflags & FSESS_NO_OPENDIR_SUPPORT))
+	{
+		/*
+		 * NFS is stateless, so nfsd must reopen a directory on every
+		 * call to VOP_READDIR, passing in the d_off field from the
+		 * final dirent of the previous invocation.  But without
+		 * FUSE_NO_OPENDIR_SUPPORT, the FUSE protocol does not
+		 * guarantee that d_off will be valid after a directory is
+		 * closed and reopened.  So prohibit exporting FUSE file
+		 * systems that don't set that flag.
+		 *
+		 * But userspace NFS servers don't have this problem.
+                 */
+		SDT_PROBE2(fusefs, , vnops, trace, 1,
+			"VOP_VPTOFH without FUSE_NO_OPENDIR_SUPPORT");
+		return EOPNOTSUPP;
+	}
 
 	err = fuse_internal_getattr(vp, &va, curthread->td_ucred, curthread);
 	if (err)
@@ -2590,5 +3150,3 @@ fuse_vnop_vptofh(struct vop_vptofh_args *ap)
 		return EOVERFLOW;
 	return (0);
 }
-
-

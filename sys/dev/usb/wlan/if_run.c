@@ -18,7 +18,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*-
  * Ralink Technology RT2700U/RT2800U/RT3000U/RT3900E chipset driver.
  * http://www.ralinktech.com/
@@ -27,6 +26,7 @@
 #include "opt_wlan.h"
 
 #include <sys/param.h>
+#include <sys/eventhandler.h>
 #include <sys/sockio.h>
 #include <sys/sysctl.h>
 #include <sys/lock.h>
@@ -83,7 +83,8 @@
 
 #ifdef	RUN_DEBUG
 int run_debug = 0;
-static SYSCTL_NODE(_hw_usb, OID_AUTO, run, CTLFLAG_RW, 0, "USB run");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, run, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB run");
 SYSCTL_INT(_hw_usb_run, OID_AUTO, debug, CTLFLAG_RWTUN, &run_debug, 0,
     "run debug level");
 
@@ -2784,7 +2785,6 @@ run_newassoc(struct ieee80211_node *ni, int isnew)
 
 	/* only interested in true associations */
 	if (isnew && ni->ni_associd != 0) {
-
 		/*
 		 * This function could is called though timeout function.
 		 * Need to defer.
@@ -3788,7 +3788,7 @@ run_raw_xmit(struct ieee80211_node *ni, struct mbuf *m,
 {
 	struct run_softc *sc = ni->ni_ic->ic_softc;
 	int error = 0;
- 
+
 	RUN_LOCK(sc);
 
 	/* prevent management frames from being sent if we're not ready */
@@ -6402,7 +6402,6 @@ run_delay(struct run_softc *sc, u_int ms)
 	usb_pause_mtx(mtx_owned(&sc->sc_mtx) ? 
 	    &sc->sc_mtx : NULL, USB_MS_TO_TICKS(ms));
 }
-
 
 static void
 run_update_chw(struct ieee80211com *ic)

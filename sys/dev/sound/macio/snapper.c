@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-3-Clause
+ * SPDX-License-Identifier: BSD-2-Clause AND BSD-3-Clause
  *
  * Copyright 2008 by Marco Trillo. All rights reserved.
  *
@@ -23,7 +23,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 /*-
  * Copyright (c) 2002, 2003 Tsubai Masanari.  All rights reserved.
@@ -107,7 +106,6 @@ static device_method_t snapper_methods[] = {
 	/* Device interface. */
 	DEVMETHOD(device_probe,		snapper_probe),
 	DEVMETHOD(device_attach,	snapper_attach),
-
 	{ 0, 0 }
 };
 
@@ -188,7 +186,6 @@ MIXER_DECLARE(snapper_mixer);
 #define  SNAPPER_ACR_INP_A	0x00	/*  A */
 #define  SNAPPER_ACR_INP_B	0x02	/*  B */
 #define SNAPPER_ACR_APD	0x01	/* Analog power down */
-
 
 struct snapper_reg {
 	u_char MCR1[1];
@@ -490,4 +487,3 @@ snapper_setrecsrc(struct snd_mixer *m, u_int32_t src)
 {
 	return (0);
 }
-

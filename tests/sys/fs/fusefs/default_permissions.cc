@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 The FreeBSD Foundation
  *
@@ -26,13 +26,11 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 /*
  * Tests for the "default_permissions" mount option.  They must be in their own
- * file so they can be run as an unprivileged user
+ * file so they can be run as an unprivileged user.
  */
 
 extern "C" {
@@ -109,6 +107,25 @@ void expect_create(const char *relpath, uint64_t ino)
 	})));
 }
 
+void expect_copy_file_range(uint64_t ino_in, uint64_t off_in, uint64_t ino_out,
+    uint64_t off_out, uint64_t len)
+{
+	EXPECT_CALL(*m_mock, process(
+		ResultOf([=](auto in) {
+			return (in.header.opcode == FUSE_COPY_FILE_RANGE &&
+				in.header.nodeid == ino_in &&
+				in.body.copy_file_range.off_in == off_in &&
+				in.body.copy_file_range.nodeid_out == ino_out &&
+				in.body.copy_file_range.off_out == off_out &&
+				in.body.copy_file_range.len == len);
+		}, Eq(true)),
+		_)
+	).WillOnce(Invoke(ReturnImmediate([=](auto in __unused, auto& out) {
+		SET_OUT_HEADER_LEN(out, write);
+		out.body.write.size = len;
+	})));
+}
+
 void expect_getattr(uint64_t ino, mode_t mode, uint64_t attr_valid, int times,
 	uid_t uid = 0, gid_t gid = 0)
 {
@@ -141,8 +158,11 @@ void expect_lookup(const char *relpath, uint64_t ino, mode_t mode,
 class Access: public DefaultPermissions {};
 class Chown: public DefaultPermissions {};
 class Chgrp: public DefaultPermissions {};
+class CopyFileRange: public DefaultPermissions {};
 class Lookup: public DefaultPermissions {};
 class Open: public DefaultPermissions {};
+class PosixFallocate: public DefaultPermissions {};
+class Read: public DefaultPermissions {};
 class Setattr: public DefaultPermissions {};
 class Unlink: public DefaultPermissions {};
 class Utimensat: public DefaultPermissions {};
@@ -477,6 +497,94 @@ TEST_F(Chgrp, ok)
 	EXPECT_EQ(0, chown(FULLPATH, -1, newgid)) << strerror(errno);
 }
 
+/* A write by a non-owner should clear a file's SGID bit */
+TEST_F(CopyFileRange, clear_sgid)
+{
+	const char FULLPATH_IN[] = "mountpoint/in.txt";
+	const char RELPATH_IN[] = "in.txt";
+	const char FULLPATH_OUT[] = "mountpoint/out.txt";
+	const char RELPATH_OUT[] = "out.txt";
+	struct stat sb;
+	uint64_t ino_in = 42;
+	uint64_t ino_out = 43;
+	mode_t oldmode = 02777;
+	mode_t newmode = 0777;
+	off_t fsize = 16;
+	off_t off_in = 0;
+	off_t off_out = 8;
+	off_t len = 8;
+	int fd_in, fd_out;
+
+	expect_getattr(FUSE_ROOT_ID, S_IFDIR | 0755, UINT64_MAX, 1);
+	FuseTest::expect_lookup(RELPATH_IN, ino_in, S_IFREG | oldmode, fsize, 1,
+	    UINT64_MAX, 0, 0);
+	expect_open(ino_in, 0, 1);
+	FuseTest::expect_lookup(RELPATH_OUT, ino_out, S_IFREG | oldmode, fsize,
+	    1, UINT64_MAX, 0, 0);
+	expect_open(ino_out, 0, 1);
+	expect_copy_file_range(ino_in, off_in, ino_out, off_out, len);
+	expect_chmod(ino_out, newmode, fsize);
+
+	fd_in = open(FULLPATH_IN, O_RDONLY);
+	ASSERT_LE(0, fd_in) << strerror(errno);
+	fd_out = open(FULLPATH_OUT, O_WRONLY);
+	ASSERT_LE(0, fd_out) << strerror(errno);
+	ASSERT_EQ(len,
+	    copy_file_range(fd_in, &off_in, fd_out, &off_out, len, 0))
+	    << strerror(errno);
+	ASSERT_EQ(0, fstat(fd_out, &sb)) << strerror(errno);
+	EXPECT_EQ(S_IFREG | newmode, sb.st_mode);
+	ASSERT_EQ(0, fstat(fd_in, &sb)) << strerror(errno);
+	EXPECT_EQ(S_IFREG | oldmode, sb.st_mode);
+
+	leak(fd_in);
+	leak(fd_out);
+}
+
+/* A write by a non-owner should clear a file's SUID bit */
+TEST_F(CopyFileRange, clear_suid)
+{
+	const char FULLPATH_IN[] = "mountpoint/in.txt";
+	const char RELPATH_IN[] = "in.txt";
+	const char FULLPATH_OUT[] = "mountpoint/out.txt";
+	const char RELPATH_OUT[] = "out.txt";
+	struct stat sb;
+	uint64_t ino_in = 42;
+	uint64_t ino_out = 43;
+	mode_t oldmode = 04777;
+	mode_t newmode = 0777;
+	off_t fsize = 16;
+	off_t off_in = 0;
+	off_t off_out = 8;
+	off_t len = 8;
+	int fd_in, fd_out;
+
+	expect_getattr(FUSE_ROOT_ID, S_IFDIR | 0755, UINT64_MAX, 1);
+	FuseTest::expect_lookup(RELPATH_IN, ino_in, S_IFREG | oldmode, fsize, 1,
+	    UINT64_MAX, 0, 0);
+	expect_open(ino_in, 0, 1);
+	FuseTest::expect_lookup(RELPATH_OUT, ino_out, S_IFREG | oldmode, fsize,
+	    1, UINT64_MAX, 0, 0);
+	expect_open(ino_out, 0, 1);
+	expect_copy_file_range(ino_in, off_in, ino_out, off_out, len);
+	expect_chmod(ino_out, newmode, fsize);
+
+	fd_in = open(FULLPATH_IN, O_RDONLY);
+	ASSERT_LE(0, fd_in) << strerror(errno);
+	fd_out = open(FULLPATH_OUT, O_WRONLY);
+	ASSERT_LE(0, fd_out) << strerror(errno);
+	ASSERT_EQ(len,
+	    copy_file_range(fd_in, &off_in, fd_out, &off_out, len, 0))
+	    << strerror(errno);
+	ASSERT_EQ(0, fstat(fd_out, &sb)) << strerror(errno);
+	EXPECT_EQ(S_IFREG | newmode, sb.st_mode);
+	ASSERT_EQ(0, fstat(fd_in, &sb)) << strerror(errno);
+	EXPECT_EQ(S_IFREG | oldmode, sb.st_mode);
+
+	leak(fd_in);
+	leak(fd_out);
+}
+
 TEST_F(Create, ok)
 {
 	const char FULLPATH[] = "mountpoint/some_file.txt";
@@ -769,6 +877,92 @@ TEST_F(Open, ok)
 	leak(fd);
 }
 
+/* A write by a non-owner should clear a file's SGID bit */
+TEST_F(PosixFallocate, clear_sgid)
+{
+	const char FULLPATH[] = "mountpoint/file.txt";
+	const char RELPATH[] = "file.txt";
+	struct stat sb;
+	uint64_t ino = 42;
+	mode_t oldmode = 02777;
+	mode_t newmode = 0777;
+	off_t fsize = 16;
+	off_t off = 8;
+	off_t len = 8;
+	int fd;
+
+	expect_getattr(FUSE_ROOT_ID, S_IFDIR | 0755, UINT64_MAX, 1);
+	FuseTest::expect_lookup(RELPATH, ino, S_IFREG | oldmode, fsize,
+	    1, UINT64_MAX, 0, 0);
+	expect_open(ino, 0, 1);
+	expect_fallocate(ino, off, len, 0, 0);
+	expect_chmod(ino, newmode, fsize);
+
+	fd = open(FULLPATH, O_WRONLY);
+	ASSERT_LE(0, fd) << strerror(errno);
+	EXPECT_EQ(0, posix_fallocate(fd, off, len)) << strerror(errno);
+	ASSERT_EQ(0, fstat(fd, &sb)) << strerror(errno);
+	EXPECT_EQ(S_IFREG | newmode, sb.st_mode);
+
+	leak(fd);
+}
+
+/* A write by a non-owner should clear a file's SUID bit */
+TEST_F(PosixFallocate, clear_suid)
+{
+	const char FULLPATH[] = "mountpoint/file.txt";
+	const char RELPATH[] = "file.txt";
+	struct stat sb;
+	uint64_t ino = 42;
+	mode_t oldmode = 04777;
+	mode_t newmode = 0777;
+	off_t fsize = 16;
+	off_t off = 8;
+	off_t len = 8;
+	int fd;
+
+	expect_getattr(FUSE_ROOT_ID, S_IFDIR | 0755, UINT64_MAX, 1);
+	FuseTest::expect_lookup(RELPATH, ino, S_IFREG | oldmode, fsize,
+	    1, UINT64_MAX, 0, 0);
+	expect_open(ino, 0, 1);
+	expect_fallocate(ino, off, len, 0, 0);
+	expect_chmod(ino, newmode, fsize);
+
+	fd = open(FULLPATH, O_WRONLY);
+	ASSERT_LE(0, fd) << strerror(errno);
+	EXPECT_EQ(0, posix_fallocate(fd, off, len)) << strerror(errno);
+	ASSERT_EQ(0, fstat(fd, &sb)) << strerror(errno);
+	EXPECT_EQ(S_IFREG | newmode, sb.st_mode);
+
+	leak(fd);
+}
+
+/*
+ * posix_fallcoate() of a file without writable permissions should succeed as
+ * long as the file descriptor is writable.  This is important when combined
+ * with O_CREAT
+ */
+TEST_F(PosixFallocate, posix_fallocate_of_newly_created_file)
+{
+	const char FULLPATH[] = "mountpoint/some_file.txt";
+	const char RELPATH[] = "some_file.txt";
+	const uint64_t ino = 42;
+	off_t off = 8;
+	off_t len = 8;
+	int fd;
+
+	expect_getattr(FUSE_ROOT_ID, S_IFDIR | 0777, UINT64_MAX, 1);
+	EXPECT_LOOKUP(FUSE_ROOT_ID, RELPATH)
+		.WillOnce(Invoke(ReturnErrno(ENOENT)));
+	expect_create(RELPATH, ino);
+	expect_fallocate(ino, off, len, 0, 0);
+
+	fd = open(FULLPATH, O_CREAT | O_RDWR, 0);
+	ASSERT_LE(0, fd) << strerror(errno);
+	EXPECT_EQ(0, posix_fallocate(fd, off, len)) << strerror(errno);
+	leak(fd);
+}
+
 TEST_F(Rename, eacces_on_srcdir)
 {
 	const char FULLDST[] = "mountpoint/d/dst";
@@ -945,6 +1139,44 @@ TEST_F(Rename, ok_to_remove_src_because_of_stickiness)
 	expect_rename(0);
 
 	ASSERT_EQ(0, rename(FULLSRC, FULLDST)) << strerror(errno);
+}
+
+// Don't update atime during close after read, if we lack permissions to write
+// that file.
+TEST_F(Read, atime_during_close)
+{
+	const char FULLPATH[] = "mountpoint/some_file.txt";
+	const char RELPATH[] = "some_file.txt";
+	uint64_t ino = 42;
+	int fd;
+	ssize_t bufsize = 100;
+	uint8_t buf[bufsize];
+	const char *CONTENTS = "abcdefgh";
+	ssize_t fsize = sizeof(CONTENTS);
+
+	expect_getattr(FUSE_ROOT_ID, S_IFDIR | 0755, UINT64_MAX, 1);
+	FuseTest::expect_lookup(RELPATH, ino, S_IFREG | 0755, fsize,
+		1, UINT64_MAX, 0, 0);
+	expect_open(ino, 0, 1);
+	expect_read(ino, 0, fsize, fsize, CONTENTS);
+	EXPECT_CALL(*m_mock, process(
+		ResultOf([&](auto in) {
+			return (in.header.opcode == FUSE_SETATTR);
+		}, Eq(true)),
+		_)
+	).Times(0);
+	expect_flush(ino, 1, ReturnErrno(0));
+	expect_release(ino, FuseTest::FH);
+
+	fd = open(FULLPATH, O_RDONLY);
+	ASSERT_LE(0, fd) << strerror(errno);
+
+	/* Ensure atime will be different than during lookup */
+	nap();
+
+	ASSERT_EQ(fsize, read(fd, buf, bufsize)) << strerror(errno);
+
+	close(fd);
 }
 
 TEST_F(Setattr, ok)
@@ -1311,5 +1543,3 @@ TEST_F(Write, recursion_panic_while_clearing_suid)
 	ASSERT_EQ(1, write(fd, wbuf, sizeof(wbuf))) << strerror(errno);
 	leak(fd);
 }
-
-

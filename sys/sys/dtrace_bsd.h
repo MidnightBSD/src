@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007-2008 John Birrell (jb@freebsd.org)
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  *
  * This file contains BSD shims for Sun's DTrace code.
  */
@@ -163,6 +162,11 @@ extern dtrace_nfsclient_nfs23_done_probe_func_t
  */
 size_t	kdtrace_proc_size(void);
 size_t	kdtrace_thread_size(void);
+
+void	kdtrace_proc_ctor(struct proc *p);
+void	kdtrace_proc_dtor(struct proc *p);
+void	kdtrace_thread_ctor(struct thread *td);
+void	kdtrace_thread_dtor(struct thread *td);
 
 /*
  * OpenSolaris compatible time functions returning nanoseconds.

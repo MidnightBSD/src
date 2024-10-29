@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999-2001 Robert N. M. Watson
  * Copyright (c) 2008 Edward Tomasz Napierała <trasz@FreeBSD.org>
@@ -27,7 +27,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 /* 
  * Developed by the TrustedBSD Project.
@@ -308,9 +307,9 @@ void			acl_nfs4_compute_inherited_acl(
 			    const struct acl *parent_aclp,
 			    struct acl *child_aclp, mode_t mode,
 			    int file_owner_id, int is_directory);
-int			acl_copy_oldacl_into_acl(const struct oldacl *source,
+int __result_use_check	acl_copy_oldacl_into_acl(const struct oldacl *source,
 			    struct acl *dest);
-int			acl_copy_acl_into_oldacl(const struct acl *source,
+int __result_use_check	acl_copy_acl_into_oldacl(const struct acl *source,
 			    struct oldacl *dest);
 
 /*

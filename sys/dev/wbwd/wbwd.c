@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 Sandvine Incorporated ULC.
  * Copyright (c) 2012 iXsystems, Inc.
@@ -40,7 +40,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
@@ -234,7 +233,6 @@ struct winbond_vendor_device_id {
 		.descr		= "Nuvoton NCT6795",
 	},
 };
-
 
 /*
  * Return the watchdog related registers as we last read them.  This will
@@ -627,14 +625,15 @@ wb_attach(device_t dev)
 	    "debug_verbose", CTLFLAG_RW, &sc->debug_verbose, 0,
             "Enables extra debugging information");
         SYSCTL_ADD_PROC(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "debug",
-	    CTLTYPE_STRING|CTLFLAG_RD, sc, 0, sysctl_wb_debug, "A",
+	    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE, sc, 0,
+	    sysctl_wb_debug, "A",
             "Selected register information from last change by driver");
         SYSCTL_ADD_PROC(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "debug_current",
-	    CTLTYPE_STRING|CTLFLAG_RD|CTLFLAG_SKIP, sc, 0,
-	     sysctl_wb_debug_current, "A",
+	    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_SKIP | CTLFLAG_MPSAFE,
+	    sc, 0, sysctl_wb_debug_current, "A",
 	     "Selected register information (may interfere)");
 	SYSCTL_ADD_PROC(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "force_timeout",
-	    CTLTYPE_INT|CTLFLAG_RW|CTLFLAG_SKIP, sc, 0,
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_SKIP | CTLFLAG_MPSAFE, sc, 0,
 	    sysctl_wb_force_test_nmi, "I", "Enable to force watchdog to fire.");
 
 	/* Register watchdog. */

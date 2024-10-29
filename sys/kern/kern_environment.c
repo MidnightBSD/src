@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 Michael Smith
  * All rights reserved.
@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/proc.h>
 #include <sys/queue.h>
@@ -45,9 +44,9 @@
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/priv.h>
+#include <sys/kenv.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
-#include <sys/sysent.h>
 #include <sys/sysproto.h>
 #include <sys/libkern.h>
 #include <sys/kenv.h>
@@ -295,7 +294,6 @@ done:
 void
 init_static_kenv(char *buf, size_t len)
 {
-	char *eval;
 
 	KASSERT(!dynamic_kenv, ("kenv: dynamic_kenv already initialized"));
 	/*
@@ -343,20 +341,17 @@ init_static_kenv(char *buf, size_t len)
 	 * if the static environment has disabled the loader environment.
 	 */
 	kern_envp = static_env;
-	eval = kern_getenv("loader_env.disabled");
-	if (eval == NULL || strcmp(eval, "1") != 0) {
+	if (!getenv_is_true("loader_env.disabled")) {
 		md_envp = buf;
 		md_env_len = len;
 		md_env_pos = 0;
 
-		eval = kern_getenv("static_env.disabled");
-		if (eval != NULL && strcmp(eval, "1") == 0) {
+		if (getenv_is_true("static_env.disabled")) {
 			kern_envp[0] = '\0';
 			kern_envp[1] = '\0';
 		}
 	}
-	eval = kern_getenv("static_hints.disabled");
-	if (eval != NULL && strcmp(eval, "1") == 0) {
+	if (getenv_is_true("static_hints.disabled")) {
 		static_hints[0] = '\0';
 		static_hints[1] = '\0';
 	}
@@ -659,8 +654,7 @@ kern_unsetenv(const char *name)
 			kenvp[i++] = kenvp[j];
 		kenvp[i] = NULL;
 		mtx_unlock(&kenv_lock);
-		explicit_bzero(oldenv, strlen(oldenv));
-		free(oldenv, M_KENV);
+		zfree(oldenv, M_KENV);
 		return (0);
 	}
 	mtx_unlock(&kenv_lock);
@@ -743,7 +737,6 @@ getenv_array(const char *name, void *pdata, int size, int *psize,
 	n = 0;
 
 	for (ptr = buf; *ptr != 0; ) {
-
 		value = strtoq(ptr, &end, 0);
 
 		/* check if signed numbers are allowed */
@@ -990,6 +983,65 @@ error:
 }
 
 /*
+ * Return a boolean value from an environment variable. This can be in
+ * numerical or string form, i.e. "1" or "true".
+ */
+int
+getenv_bool(const char *name, bool *data)
+{
+	char *val;
+	int ret = 0;
+
+	if (name == NULL)
+		return (0);
+
+	val = kern_getenv(name);
+	if (val == NULL)
+		return (0);
+
+	if ((strcmp(val, "1") == 0) || (strcasecmp(val, "true") == 0)) {
+		*data = true;
+		ret = 1;
+	} else if ((strcmp(val, "0") == 0) || (strcasecmp(val, "false") == 0)) {
+		*data = false;
+		ret = 1;
+	} else {
+		/* Spit out a warning for malformed boolean variables. */
+		printf("Environment variable %s has non-boolean value \"%s\"\n",
+		    name, val);
+	}
+	freeenv(val);
+
+	return (ret);
+}
+
+/*
+ * Wrapper around getenv_bool to easily check for true.
+ */
+bool
+getenv_is_true(const char *name)
+{
+	bool val;
+
+	if (getenv_bool(name, &val) != 0)
+		return (val);
+	return (false);
+}
+
+/*
+ * Wrapper around getenv_bool to easily check for false.
+ */
+bool
+getenv_is_false(const char *name)
+{
+	bool val;
+
+	if (getenv_bool(name, &val) != 0)
+		return (!val);
+	return (false);
+}
+
+/*
  * Find the next entry after the one which (cp) falls within, return a
  * pointer to its start or NULL if there are no more.
  */
@@ -1053,6 +1105,14 @@ tunable_quad_init(void *data)
 	struct tunable_quad *d = (struct tunable_quad *)data;
 
 	TUNABLE_QUAD_FETCH(d->path, d->var);
+}
+
+void
+tunable_bool_init(void *data)
+{
+	struct tunable_bool *d = (struct tunable_bool *)data;
+
+	TUNABLE_BOOL_FETCH(d->path, d->var);
 }
 
 void

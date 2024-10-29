@@ -25,7 +25,7 @@
  * SUCH DAMAGE.
  */
 /*-
- * SPDX-License-Identifier: BSD-4-Clause AND BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-4-Clause AND BSD-2-Clause
  *
  * Copyright (c) 1997, 1998, 1999, 2000
  *	Bill Paul <wpaul@ee.columbia.edu>.  All rights reserved.
@@ -59,7 +59,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * RealTek RTL8150 USB to fast ethernet controller driver.
  * Datasheet is available from
@@ -88,6 +87,10 @@
 
 #include <net/if.h>
 #include <net/if_var.h>
+#include <net/if_media.h>
+
+#include <dev/mii/mii.h>
+#include <dev/mii/miivar.h>
 
 #include <dev/usb/usb.h>
 #include <dev/usb/usbdi.h>
@@ -101,10 +104,13 @@
 #include <dev/usb/net/usb_ethernet.h>
 #include <dev/usb/net/if_ruereg.h>
 
+#include "miibus_if.h"
+
 #ifdef USB_DEBUG
 static int rue_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, rue, CTLFLAG_RW, 0, "USB rue");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, rue, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB rue");
 SYSCTL_INT(_hw_usb_rue, OID_AUTO, debug, CTLFLAG_RWTUN,
     &rue_debug, 0, "Debug level");
 #endif
@@ -154,7 +160,6 @@ static int	rue_ifmedia_upd(struct ifnet *);
 static void	rue_ifmedia_sts(struct ifnet *, struct ifmediareq *);
 
 static const struct usb_config rue_config[RUE_N_TRANSFER] = {
-
 	[RUE_BULK_DT_WR] = {
 		.type = UE_BULK,
 		.endpoint = UE_ADDR_ANY,
@@ -466,6 +471,21 @@ rue_setpromisc(struct usb_ether *ue)
 		RUE_CLRBIT(sc, RUE_RCR, RUE_RCR_AAP);
 }
 
+static u_int
+rue_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint32_t *hashes = arg;
+	int h;
+
+	h = ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN) >> 26;
+	if (h < 32)
+		hashes[0] |= (1 << h);
+	else
+		hashes[1] |= (1 << (h - 32));
+
+	return (1);
+}
+
 /*
  * Program the 64-bit multicast hash filter.
  */
@@ -475,10 +495,8 @@ rue_setmulti(struct usb_ether *ue)
 	struct rue_softc *sc = uether_getsc(ue);
 	struct ifnet *ifp = uether_getifp(ue);
 	uint16_t rxcfg;
-	int h = 0;
 	uint32_t hashes[2] = { 0, 0 };
-	struct ifmultiaddr *ifma;
-	int mcnt = 0;
+	int mcnt;
 
 	RUE_LOCK_ASSERT(sc, MA_OWNED);
 
@@ -498,20 +516,7 @@ rue_setmulti(struct usb_ether *ue)
 	rue_csr_write_4(sc, RUE_MAR4, 0);
 
 	/* now program new ones */
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH (ifma, &ifp->if_multiaddrs, ifma_link)
-	{
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		h = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-		    ifma->ifma_addr), ETHER_ADDR_LEN) >> 26;
-		if (h < 32)
-			hashes[0] |= (1 << h);
-		else
-			hashes[1] |= (1 << (h - 32));
-		mcnt++;
-	}
-	if_maddr_runlock(ifp);
+	mcnt = if_foreach_llmaddr(ifp, rue_hash_maddr, &hashes);
 
 	if (mcnt)
 		rxcfg |= RUE_RCR_AM;
@@ -646,7 +651,6 @@ rue_intr_callback(struct usb_xfer *xfer, usb_error_t error)
 
 		if (ifp && (ifp->if_drv_flags & IFF_DRV_RUNNING) &&
 		    actlen >= (int)sizeof(pkt)) {
-
 			pc = usbd_xfer_get_frame(xfer, 0);
 			usbd_copy_out(pc, 0, &pkt, sizeof(pkt));
 

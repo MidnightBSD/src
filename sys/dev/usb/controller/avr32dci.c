@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Hans Petter Selasky. All rights reserved.
  *
@@ -77,8 +77,7 @@
 #include <dev/usb/controller/avr32dci.h>
 
 #define	AVR32_BUS2SC(bus) \
-   ((struct avr32dci_softc *)(((uint8_t *)(bus)) - \
-    ((uint8_t *)&(((struct avr32dci_softc *)0)->sc_bus))))
+    __containerof(bus, struct avr32dci_softc, sc_bus)
 
 #define	AVR32_PC2SC(pc) \
    AVR32_BUS2SC(USB_DMATAG_TO_XROOT((pc)->tag_parent)->bus)
@@ -86,7 +85,9 @@
 #ifdef USB_DEBUG
 static int avr32dci_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, avr32dci, CTLFLAG_RW, 0, "USB AVR32 DCI");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, avr32dci,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB AVR32 DCI");
 SYSCTL_INT(_hw_usb_avr32dci, OID_AUTO, debug, CTLFLAG_RWTUN,
     &avr32dci_debug, 0, "AVR32 DCI debug level");
 #endif
@@ -113,7 +114,6 @@ static void avr32dci_root_intr(struct avr32dci_softc *sc);
  */
 static const struct usb_hw_ep_profile
 	avr32dci_ep_profile[4] = {
-
 	[0] = {
 		.max_in_frame_size = 64,
 		.max_out_frame_size = 64,
@@ -197,7 +197,6 @@ avr32dci_clocks_on(struct avr32dci_softc *sc)
 {
 	if (sc->sc_flags.clocks_off &&
 	    sc->sc_flags.port_powered) {
-
 		DPRINTFN(5, "\n");
 
 		/* turn on clocks */
@@ -213,7 +212,6 @@ static void
 avr32dci_clocks_off(struct avr32dci_softc *sc)
 {
 	if (!sc->sc_flags.clocks_off) {
-
 		DPRINTFN(5, "\n");
 
 		avr32dci_mod_ctrl(sc, 0, AVR32_CTRL_DEV_EN_USBA);
@@ -485,7 +483,6 @@ repeat:
 		count = td->remainder;
 	}
 	while (count > 0) {
-
 		usbd_get_page(td->pc, td->offset, &buf_res);
 
 		/* get correct length */
@@ -659,7 +656,6 @@ avr32dci_interrupt(struct avr32dci_softc *sc)
 
 	/* check for any bus state change interrupts */
 	if (status & AVR32_INT_ENDRESET) {
-
 		DPRINTFN(5, "end of reset\n");
 
 		/* set correct state */
@@ -681,7 +677,6 @@ avr32dci_interrupt(struct avr32dci_softc *sc)
 	 * milliseconds of inactivity on the USB BUS.
 	 */
 	if (status & AVR32_INT_WAKE_UP) {
-
 		DPRINTFN(5, "resume interrupt\n");
 
 		if (sc->sc_flags.status_suspend) {
@@ -697,7 +692,6 @@ avr32dci_interrupt(struct avr32dci_softc *sc)
 			avr32dci_root_intr(sc);
 		}
 	} else if (status & AVR32_INT_DET_SUSPD) {
-
 		DPRINTFN(5, "suspend interrupt\n");
 
 		if (!sc->sc_flags.status_suspend) {
@@ -715,7 +709,6 @@ avr32dci_interrupt(struct avr32dci_softc *sc)
 	}
 	/* check for any endpoint interrupts */
 	if (status & -AVR32_INT_EPT_INT(0)) {
-
 		DPRINTFN(5, "real endpoint interrupt\n");
 
 		avr32dci_interrupt_poll(sc);
@@ -783,7 +776,6 @@ avr32dci_setup_standard_chain(struct usb_xfer *xfer)
 
 	if (xfer->flags_int.control_xfr) {
 		if (xfer->flags_int.control_hdr) {
-
 			temp.func = &avr32dci_setup_rx;
 			temp.len = xfer->frlengths[0];
 			temp.pc = xfer->frbuffers + 0;
@@ -816,7 +808,6 @@ avr32dci_setup_standard_chain(struct usb_xfer *xfer)
 		need_sync = 0;
 	}
 	while (x != xfer->nframes) {
-
 		/* DATA0 / DATA1 message */
 
 		temp.len = xfer->frlengths[x];
@@ -833,13 +824,11 @@ avr32dci_setup_standard_chain(struct usb_xfer *xfer)
 			}
 		}
 		if (temp.len == 0) {
-
 			/* make sure that we send an USB packet */
 
 			temp.short_pkt = 0;
 
 		} else {
-
 			/* regular data transfer */
 
 			temp.short_pkt = (xfer->flags.force_short_xfer) ? 0 : 1;
@@ -856,7 +845,6 @@ avr32dci_setup_standard_chain(struct usb_xfer *xfer)
 	}
 
 	if (xfer->flags_int.control_xfr) {
-
 		/* always setup a valid "pc" pointer for status and sync */
 		temp.pc = xfer->frbuffers + 0;
 		temp.len = 0;
@@ -871,7 +859,6 @@ avr32dci_setup_standard_chain(struct usb_xfer *xfer)
 		}
 		/* check if we should append a status stage */
 		if (!xfer->flags_int.control_act) {
-
 			/*
 			 * Send a DATA1 message and invert the current
 			 * endpoint direction.
@@ -1025,9 +1012,7 @@ avr32dci_standard_done(struct usb_xfer *xfer)
 	xfer->td_transfer_cache = xfer->td_transfer_first;
 
 	if (xfer->flags_int.control_xfr) {
-
 		if (xfer->flags_int.control_hdr) {
-
 			err = avr32dci_standard_done_sub(xfer);
 		}
 		xfer->aframes = 1;
@@ -1037,7 +1022,6 @@ avr32dci_standard_done(struct usb_xfer *xfer)
 		}
 	}
 	while (xfer->aframes != xfer->nframes) {
-
 		err = avr32dci_standard_done_sub(xfer);
 		xfer->aframes++;
 
@@ -1048,7 +1032,6 @@ avr32dci_standard_done(struct usb_xfer *xfer)
 
 	if (xfer->flags_int.control_xfr &&
 	    !xfer->flags_int.control_act) {
-
 		err = avr32dci_standard_done_sub(xfer);
 	}
 done:
@@ -1370,7 +1353,6 @@ static void
 avr32dci_device_isoc_fs_enter(struct usb_xfer *xfer)
 {
 	struct avr32dci_softc *sc = AVR32_BUS2SC(xfer->xroot->bus);
-	uint32_t temp;
 	uint32_t nframes;
 	uint8_t ep_no;
 
@@ -1381,41 +1363,9 @@ avr32dci_device_isoc_fs_enter(struct usb_xfer *xfer)
 	ep_no = xfer->endpointno & UE_ADDR;
 	nframes = (AVR32_READ_4(sc, AVR32_FNUM) / 8);
 
-	nframes &= AVR32_FRAME_MASK;
-
-	/*
-	 * check if the frame index is within the window where the frames
-	 * will be inserted
-	 */
-	temp = (nframes - xfer->endpoint->isoc_next) & AVR32_FRAME_MASK;
-
-	if ((xfer->endpoint->is_synced == 0) ||
-	    (temp < xfer->nframes)) {
-		/*
-		 * If there is data underflow or the pipe queue is
-		 * empty we schedule the transfer a few frames ahead
-		 * of the current frame position. Else two isochronous
-		 * transfers might overlap.
-		 */
-		xfer->endpoint->isoc_next = (nframes + 3) & AVR32_FRAME_MASK;
-		xfer->endpoint->is_synced = 1;
+	if (usbd_xfer_get_isochronous_start_frame(
+	    xfer, nframes, 0, 1, AVR32_FRAME_MASK, NULL))
 		DPRINTFN(3, "start next=%d\n", xfer->endpoint->isoc_next);
-	}
-	/*
-	 * compute how many milliseconds the insertion is ahead of the
-	 * current frame position:
-	 */
-	temp = (xfer->endpoint->isoc_next - nframes) & AVR32_FRAME_MASK;
-
-	/*
-	 * pre-compute when the isochronous transfer will be finished:
-	 */
-	xfer->isoc_time_complete =
-	    usb_isoc_time_expand(&sc->sc_bus, nframes) + temp +
-	    xfer->nframes;
-
-	/* compute frame number for next insertion */
-	xfer->endpoint->isoc_next += xfer->nframes;
 
 	/* setup TDs */
 	avr32dci_setup_standard_chain(xfer);
@@ -1495,7 +1445,6 @@ static const struct avr32dci_config_desc avr32dci_confd = {
 		.bInterval = 255,
 	},
 };
-
 #define	HSETW(ptr, val) ptr = { (uint8_t)(val), (uint8_t)((val) >> 8) }
 
 static const struct usb_hub_descriptor_min avr32dci_hubd = {
@@ -1705,6 +1654,12 @@ tr_handle_get_descriptor:
 		}
 		len = sizeof(avr32dci_devd);
 		ptr = (const void *)&avr32dci_devd;
+		goto tr_valid;
+	case UDESC_DEVICE_QUALIFIER:
+		if (value & 0xff)
+			goto tr_stalled;
+		len = sizeof(avr32dci_odevd);
+		ptr = (const void *)&avr32dci_odevd;
 		goto tr_valid;
 	case UDESC_CONFIG:
 		if (value & 0xff) {
@@ -1974,11 +1929,9 @@ avr32dci_xfer_setup(struct usb_setup_params *parm)
 	 * compute maximum number of TDs
 	 */
 	if ((xfer->endpoint->edesc->bmAttributes & UE_XFERTYPE) == UE_CONTROL) {
-
 		ntd = xfer->nframes + 1 /* STATUS */ + 1	/* SYNC 1 */
 		    + 1 /* SYNC 2 */ ;
 	} else {
-
 		ntd = xfer->nframes + 1 /* SYNC */ ;
 	}
 
@@ -2008,7 +1961,6 @@ avr32dci_xfer_setup(struct usb_setup_params *parm)
 	parm->size[0] += ((-parm->size[0]) & (USB_HOST_ALIGN - 1));
 
 	for (n = 0; n != ntd; n++) {
-
 		struct avr32dci_td *td;
 
 		if (parm->buf) {
@@ -2054,7 +2006,6 @@ avr32dci_ep_init(struct usb_device *udev, struct usb_endpoint_descriptor *edesc,
 	    sc->sc_rt_addr, udev->device_index);
 
 	if (udev->device_index != sc->sc_rt_addr) {
-
 		if ((udev->speed != USB_SPEED_FULL) &&
 		    (udev->speed != USB_SPEED_HIGH)) {
 			/* not supported */

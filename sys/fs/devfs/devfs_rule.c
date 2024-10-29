@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Dima Dorfman.
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -46,7 +45,7 @@
  *
  * A note on "special" identifiers: Ruleset 0 is the NULL, or empty,
  * ruleset; it cannot be deleted or changed in any way.  This may be
- * assumed inside the code; e.g., a ruleset of 0 may be interpeted to
+ * assumed inside the code; e.g., a ruleset of 0 may be interpreted to
  * mean "no ruleset".  The interpretation of rule 0 is
  * command-dependent, but in no case is there a real rule with number
  * 0.

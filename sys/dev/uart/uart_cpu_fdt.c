@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2010 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Semihalf under sponsorship from
  * the FreeBSD Foundation.
@@ -30,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 
 #include <sys/param.h>
@@ -86,10 +84,8 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 	if (!err)
 		return (0);
 
-	if (devtype != UART_DEV_CONSOLE)
-		return (ENXIO);
-
-	err = uart_cpu_fdt_probe(&class, &bst, &bsh, &br, &rclk, &shift, &iowidth);
+	err = uart_cpu_fdt_probe(&class, &bst, &bsh, &br, &rclk,
+	    &shift, &iowidth, devtype);
 	if (err != 0)
 		return (err);
 

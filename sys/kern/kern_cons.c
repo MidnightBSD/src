@@ -40,7 +40,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ddb.h"
 #include "opt_syscons.h"
 
@@ -51,6 +50,7 @@
 #include <sys/conf.h>
 #include <sys/cons.h>
 #include <sys/fcntl.h>
+#include <sys/kbio.h>
 #include <sys/kdb.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
@@ -67,6 +67,8 @@
 #include <sys/vnode.h>
 
 #include <ddb/ddb.h>
+
+#include <dev/kbd/kbdreg.h>
 
 #include <machine/cpu.h>
 #include <machine/clock.h>
@@ -98,17 +100,32 @@ static char *consbuf;			/* buffer used by `consmsgbuf' */
 static struct callout conscallout;	/* callout for outputting to constty */
 struct msgbuf consmsgbuf;		/* message buffer for console tty */
 static u_char console_pausing;		/* pause after each line during probe */
-static char *console_pausestr=
+static const char console_pausestr[] =
 "<pause; press any key to proceed to next line or '.' to end pause mode>";
 struct tty *constty;			/* pointer to console "window" tty */
+static struct mtx constty_mtx;		/* Mutex for constty assignment. */
+MTX_SYSINIT(constty_mtx, &constty_mtx, "constty_mtx", MTX_DEF);
 static struct mtx cnputs_mtx;		/* Mutex for cnputs(). */
-static int use_cnputs_mtx = 0;		/* != 0 if cnputs_mtx locking reqd. */
+MTX_SYSINIT(cnputs_mtx, &cnputs_mtx, "cnputs_mtx", MTX_SPIN | MTX_NOWITNESS);
 
 static void constty_timeout(void *arg);
 
 static struct consdev cons_consdev;
 DATA_SET(cons_set, cons_consdev);
 SET_DECLARE(cons_set, struct consdev);
+
+/*
+ * Stub for configurations that don't actually have a keyboard driver. Inclusion
+ * of kbd.c is contingent on any number of keyboard/console drivers being
+ * present in the kernel; rather than trying to catch them all, we'll just
+ * maintain this weak kbdinit that will be overridden by the strong version in
+ * kbd.c if it's present.
+ */
+__weak_symbol void
+kbdinit(void)
+{
+
+}
 
 void
 cninit(void)
@@ -125,6 +142,14 @@ cninit(void)
 			|RB_SINGLE
 			|RB_VERBOSE
 			|RB_ASKNAME)) == RB_MUTE);
+
+	/*
+	 * Bring up the kbd layer just in time for cnprobe.  Console drivers
+	 * have a dependency on kbd being ready, so this fits nicely between the
+	 * machdep callers of cninit() and MI probing/initialization of consoles
+	 * here.
+	 */
+	kbdinit();
 
 	/*
 	 * Find the first console with the highest priority.
@@ -339,8 +364,10 @@ sysctl_kern_console(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
-SYSCTL_PROC(_kern, OID_AUTO, console, CTLTYPE_STRING|CTLFLAG_RW,
-	0, 0, sysctl_kern_console, "A", "Console device control");
+SYSCTL_PROC(_kern, OID_AUTO, console,
+    CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_NEEDGIANT, 0, 0,
+    sysctl_kern_console, "A",
+    "Console device control");
 
 void
 cngrab(void)
@@ -470,7 +497,7 @@ cnputc(int c)
 {
 	struct cn_device *cnd;
 	struct consdev *cn;
-	char *cp;
+	const char *cp;
 
 #ifdef EARLY_PRINTF
 	if (early_putc != NULL) {
@@ -506,13 +533,13 @@ cnputc(int c)
 }
 
 void
-cnputs(char *p)
+cnputsn(const char *p, size_t n)
 {
-	int c;
+	size_t i;
 	int unlock_reqd = 0;
 
-	if (use_cnputs_mtx) {
-	  	/*
+	if (mtx_initialized(&cnputs_mtx)) {
+		/*
 		 * NOTE: Debug prints and/or witness printouts in
 		 * console driver clients can cause the "cnputs_mtx"
 		 * mutex to recurse. Simply return if that happens.
@@ -523,56 +550,85 @@ cnputs(char *p)
 		unlock_reqd = 1;
 	}
 
-	while ((c = *p++) != '\0')
-		cnputc(c);
+	for (i = 0; i < n; i++)
+		cnputc(p[i]);
 
 	if (unlock_reqd)
 		mtx_unlock_spin(&cnputs_mtx);
 }
 
-static int consmsgbuf_size = 8192;
-SYSCTL_INT(_kern, OID_AUTO, consmsgbuf_size, CTLFLAG_RW, &consmsgbuf_size, 0,
-    "Console tty buffer size");
+void
+cnputs(const char *p)
+{
+	cnputsn(p, strlen(p));
+}
+
+static unsigned int consmsgbuf_size = 65536;
+SYSCTL_UINT(_kern, OID_AUTO, consmsgbuf_size, CTLFLAG_RWTUN, &consmsgbuf_size,
+    0, "Console tty buffer size");
 
 /*
  * Redirect console output to a tty.
  */
-void
+int
 constty_set(struct tty *tp)
 {
-	int size;
+	int size = consmsgbuf_size;
+	void *buf = NULL;
 
-	KASSERT(tp != NULL, ("constty_set: NULL tp"));
+	tty_assert_locked(tp);
+	if (constty == tp)
+		return (0);
+	if (constty != NULL)
+		return (EBUSY);
+
 	if (consbuf == NULL) {
-		size = consmsgbuf_size;
-		consbuf = malloc(size, M_TTYCONS, M_WAITOK);
-		msgbuf_init(&consmsgbuf, consbuf, size);
-		callout_init(&conscallout, 0);
+		tty_unlock(tp);
+		buf = malloc(size, M_TTYCONS, M_WAITOK);
+		tty_lock(tp);
 	}
+	mtx_lock(&constty_mtx);
+	if (constty != NULL) {
+		mtx_unlock(&constty_mtx);
+		free(buf, M_TTYCONS);
+		return (EBUSY);
+	}
+	if (consbuf == NULL) {
+		consbuf = buf;
+		msgbuf_init(&consmsgbuf, buf, size);
+	} else
+		free(buf, M_TTYCONS);
 	constty = tp;
-	constty_timeout(NULL);
+	mtx_unlock(&constty_mtx);
+
+	callout_init_mtx(&conscallout, tty_getlock(tp), 0);
+	constty_timeout(tp);
+	return (0);
 }
 
 /*
  * Disable console redirection to a tty.
  */
-void
-constty_clear(void)
+int
+constty_clear(struct tty *tp)
 {
 	int c;
 
-	constty = NULL;
-	if (consbuf == NULL)
-		return;
+	tty_assert_locked(tp);
+	if (constty != tp)
+		return (ENXIO);
 	callout_stop(&conscallout);
+	mtx_lock(&constty_mtx);
+	constty = NULL;
+	mtx_unlock(&constty_mtx);
 	while ((c = msgbuf_getchar(&consmsgbuf)) != -1)
 		cnputc(c);
-	free(consbuf, M_TTYCONS);
-	consbuf = NULL;
+	/* We never free consbuf because it can still be in use. */
+	return (0);
 }
 
 /* Times per second to check for pending console tty messages. */
-static int constty_wakeups_per_second = 5;
+static int constty_wakeups_per_second = 15;
 SYSCTL_INT(_kern, OID_AUTO, constty_wakeups_per_second, CTLFLAG_RW,
     &constty_wakeups_per_second, 0,
     "Times per second to check for pending console tty messages");
@@ -580,39 +636,19 @@ SYSCTL_INT(_kern, OID_AUTO, constty_wakeups_per_second, CTLFLAG_RW,
 static void
 constty_timeout(void *arg)
 {
+	struct tty *tp = arg;
 	int c;
 
-	if (constty != NULL) {
-		tty_lock(constty);
-		while ((c = msgbuf_getchar(&consmsgbuf)) != -1) {
-			if (tty_putchar(constty, c) < 0) {
-				tty_unlock(constty);
-				constty = NULL;
-				break;
-			}
+	tty_assert_locked(tp);
+	while ((c = msgbuf_getchar(&consmsgbuf)) != -1) {
+		if (tty_putchar(tp, c) < 0) {
+			constty_clear(tp);
+			return;
 		}
-
-		if (constty != NULL)
-			tty_unlock(constty);
 	}
-	if (constty != NULL) {
-		callout_reset(&conscallout, hz / constty_wakeups_per_second,
-		    constty_timeout, NULL);
-	} else {
-		/* Deallocate the constty buffer memory. */
-		constty_clear();
-	}
+	callout_reset_sbt(&conscallout, SBT_1S / constty_wakeups_per_second,
+	    0, constty_timeout, tp, C_PREL(1));
 }
-
-static void
-cn_drvinit(void *unused)
-{
-
-	mtx_init(&cnputs_mtx, "cnputs_mtx", NULL, MTX_SPIN | MTX_NOWITNESS);
-	use_cnputs_mtx = 1;
-}
-
-SYSINIT(cndev, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, cn_drvinit, NULL);
 
 /*
  * Sysbeep(), if we have hardware for it
@@ -620,7 +656,7 @@ SYSINIT(cndev, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, cn_drvinit, NULL);
 
 #ifdef HAS_TIMER_SPKR
 
-static int beeping;
+static bool beeping;
 static struct callout beeping_timer;
 
 static void
@@ -628,11 +664,11 @@ sysbeepstop(void *chan)
 {
 
 	timer_spkr_release();
-	beeping = 0;
+	beeping = false;
 }
 
 int
-sysbeep(int pitch, int period)
+sysbeep(int pitch, sbintime_t duration)
 {
 
 	if (timer_spkr_acquire()) {
@@ -643,8 +679,9 @@ sysbeep(int pitch, int period)
 	}
 	timer_spkr_setfreq(pitch);
 	if (!beeping) {
-		beeping = period;
-		callout_reset(&beeping_timer, period, sysbeepstop, NULL);
+		beeping = true;
+		callout_reset_sbt(&beeping_timer, duration, 0, sysbeepstop,
+		    NULL, C_PREL(5));
 	}
 	return (0);
 }
@@ -663,7 +700,7 @@ SYSINIT(sysbeep, SI_SUB_SOFTINTR, SI_ORDER_ANY, sysbeep_init, NULL);
  */
 
 int
-sysbeep(int pitch __unused, int period __unused)
+sysbeep(int pitch __unused, sbintime_t duration __unused)
 {
 
 	return (ENODEV);
@@ -730,4 +767,3 @@ vty_set_preferred(unsigned vty)
 	vty_prefer &= ~VTY_VT;
 #endif
 }
-

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997, Stefan Esser <se@FreeBSD.ORG>
  * Copyright (c) 1997, 1998, 1999, Kenneth D. Merry <ken@FreeBSD.ORG>
@@ -25,7 +25,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  *
  */
 
@@ -150,6 +149,17 @@ struct pci_bar_mmap {
 	int		pbm_memattr;
 };
 
+struct pci_bar_ioreq {
+	struct pcisel	pbi_sel;	/* device to operate on */
+#define	PCIBARIO_READ		0x1
+#define	PCIBARIO_WRITE		0x2
+	int		pbi_op;
+	uint32_t	pbi_bar;
+	uint32_t	pbi_offset;
+	uint32_t	pbi_width;
+	uint32_t	pbi_value;
+};
+
 #define	PCIIO_BAR_MMAP_FIXED	0x01
 #define	PCIIO_BAR_MMAP_EXCL	0x02
 #define	PCIIO_BAR_MMAP_RW	0x04
@@ -162,5 +172,6 @@ struct pci_bar_mmap {
 #define	PCIOCGETBAR	_IOWR('p', 6, struct pci_bar_io)
 #define	PCIOCLISTVPD	_IOWR('p', 7, struct pci_list_vpd_io)
 #define	PCIOCBARMMAP	_IOWR('p', 8, struct pci_bar_mmap)
+#define	PCIOCBARIO	_IOWR('p', 9, struct pci_bar_ioreq)
 
 #endif /* !_SYS_PCIIO_H_ */

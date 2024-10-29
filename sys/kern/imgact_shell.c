@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1993, David Greenman
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/vnode.h>
 #include <sys/proc.h>
@@ -195,19 +194,12 @@ exec_shell_imgact(struct image_params *imgp)
 	length = (imgp->args->argc == 0) ? 0 :
 	    strlen(imgp->args->begin_argv) + 1;		/* bytes to delete */
 
-	if (offset > imgp->args->stringspace + length) {
+	error = exec_args_adjust_args(imgp->args, length, offset);
+	if (error != 0) {
 		if (sname != NULL)
 			sbuf_delete(sname);
-		return (E2BIG);
+		return (error);
 	}
-
-	bcopy(imgp->args->begin_argv + length, imgp->args->begin_argv + offset,
-	    imgp->args->endp - (imgp->args->begin_argv + length));
-
-	offset -= length;		/* calculate actual adjustment */
-	imgp->args->begin_envv += offset;
-	imgp->args->endp += offset;
-	imgp->args->stringspace -= offset;
 
 	/*
 	 * If there was no arg[0] when we started, then the interpreter_name

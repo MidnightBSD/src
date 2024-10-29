@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/uio.h>
@@ -367,19 +366,12 @@ gntdev_alloc_gref(struct ioctl_gntdev_alloc_gref *arg)
 		grefs[i].file_index = file_offset + i * PAGE_SIZE;
 		grefs[i].gref_id = GRANT_REF_INVALID;
 		grefs[i].notify = NULL;
-		grefs[i].page = vm_page_alloc(NULL, 0, VM_ALLOC_NORMAL
-			| VM_ALLOC_NOOBJ | VM_ALLOC_WIRED | VM_ALLOC_ZERO);
+		grefs[i].page = vm_page_alloc_noobj(VM_ALLOC_WIRED |
+		    VM_ALLOC_ZERO);
 		if (grefs[i].page == NULL) {
 			log(LOG_ERR, "Page allocation failed.");
 			error = ENOMEM;
 			break;
-		}
-		if ((grefs[i].page->flags & PG_ZERO) == 0) {
-			/*
-			 * Zero the allocated page, as we don't want to 
-			 * leak our memory to other domains.
-			 */
-			pmap_zero_page(grefs[i].page);
 		}
 		grefs[i].page->valid = VM_PAGE_BITS_ALL;
 
@@ -390,6 +382,13 @@ gntdev_alloc_gref(struct ioctl_gntdev_alloc_gref *arg)
 			log(LOG_ERR, "Grant Table Hypercall failed.");
 			break;
 		}
+	}
+
+	/* Copy the output values. */
+	arg->index = file_offset;
+	for (i = 0; error == 0 && i < arg->count; i++) {
+		if (suword32(&arg->gref_ids[i], grefs[i].gref_id) != 0)
+			error = EFAULT;
 	}
 
 	if (error != 0) {
@@ -409,11 +408,6 @@ gntdev_alloc_gref(struct ioctl_gntdev_alloc_gref *arg)
 
 		return (error);
 	}
-
-	/* Copy the output values. */
-	arg->index = file_offset;
-	for (i = 0; i < arg->count; i++)
-		suword32(&arg->gref_ids[i], grefs[i].gref_id);
 
 	/* Modify the per user private data. */
 	mtx_lock(&priv_user->user_data_lock);
@@ -461,7 +455,7 @@ gntdev_dealloc_gref(struct ioctl_gntdev_dealloc_gref *arg)
 	}
 	mtx_unlock(&cleanup_data.to_kill_grefs_mtx);
 	mtx_unlock(&priv_user->user_data_lock);
-	
+
 	taskqueue_enqueue(taskqueue_thread, &cleanup_task);
 	put_file_offset(priv_user, arg->count, arg->index);
 
@@ -572,10 +566,10 @@ notify_unmap_cleanup(struct gntdev_gmap *gmap)
 	int error, count;
 	vm_page_t m;
 	struct gnttab_unmap_grant_ref *unmap_ops;
-	
+
 	unmap_ops = malloc(sizeof(struct gnttab_unmap_grant_ref) * gmap->count,
 			M_GNTDEV, M_WAITOK);
-	
+
 	/* Enumerate freeable maps. */
 	count = 0;
 	for (i = 0; i < gmap->count; i++) {
@@ -587,7 +581,7 @@ notify_unmap_cleanup(struct gntdev_gmap *gmap)
 			count++;
 		}
 	}
-	
+
 	/* Perform notification. */
 	if (count > 0 && gmap->notify) {
 		vm_page_t page;
@@ -597,7 +591,7 @@ notify_unmap_cleanup(struct gntdev_gmap *gmap)
 		page = PHYS_TO_VM_PAGE(gmap->map->phys_base_addr + page_offset);
 		notify(gmap->notify, page);
 	}
-	
+
 	/* Free the pages. */
 	VM_OBJECT_WLOCK(gmap->map->mem);
 retry:
@@ -605,21 +599,21 @@ retry:
 		m = vm_page_lookup(gmap->map->mem, i);
 		if (m == NULL)
 			continue;
-		if (vm_page_sleep_if_busy(m, "pcmdum"))
+		if (vm_page_busy_acquire(m, VM_ALLOC_WAITFAIL) == 0)
 			goto retry;
 		cdev_pager_free_page(gmap->map->mem, m);
 	}
 	VM_OBJECT_WUNLOCK(gmap->map->mem);
-	
+
 	/* Perform unmap hypercall. */
 	error = HYPERVISOR_grant_table_op(GNTTABOP_unmap_grant_ref,
 	    unmap_ops, count);
-	
+
 	for (i = 0; i < gmap->count; i++) {
 		gmap->grant_map_ops[i].handle = -1;
 		gmap->grant_map_ops[i].host_addr = 0;
 	}
-	
+
 	if (gmap->map) {
 		error = xenmem_free(gntdev_dev, gmap->map->pseudo_phys_res_id,
 		    gmap->map->pseudo_phys_res);
@@ -629,9 +623,9 @@ retry:
 		free(gmap->map, M_GNTDEV);
 		gmap->map = NULL;
 	}
-	
+
 	free(unmap_ops, M_GNTDEV);
-	
+
 	return (error);
 }
 
@@ -720,13 +714,13 @@ gntdev_unmap_grant_ref(struct ioctl_gntdev_unmap_grant_ref *arg)
 	STAILQ_INSERT_TAIL(&cleanup_data.to_kill_gmaps, gmap, gmap_next.list);
 	mtx_unlock(&cleanup_data.to_kill_gmaps_mtx);
 	mtx_unlock(&priv_user->user_data_lock);
-	
+
 	if (gmap->map)
 		vm_object_deallocate(gmap->map->mem);
 
 	taskqueue_enqueue(taskqueue_thread, &cleanup_task);
 	put_file_offset(priv_user, arg->count, arg->index);
-	
+
 	return (0);
 }
 
@@ -805,7 +799,7 @@ gntdev_gmap_pg_fault(vm_object_t object, vm_ooffset_t offset, int prot,
 {
 	struct gntdev_gmap *gmap = object->handle;
 	vm_pindex_t pidx, ridx;
-	vm_page_t page, oldm;
+	vm_page_t page;
 	vm_ooffset_t relative_offset;
 
 	if (gmap->map == NULL)
@@ -825,20 +819,15 @@ gntdev_gmap_pg_fault(vm_object_t object, vm_ooffset_t offset, int prot,
 
 	KASSERT((page->flags & PG_FICTITIOUS) != 0,
 	    ("not fictitious %p", page));
-	KASSERT(page->wire_count == 1, ("wire_count not 1 %p", page));
-	KASSERT(vm_page_busied(page) == 0, ("page %p is busy", page));
+	KASSERT(vm_page_wired(page), ("page %p is not wired", page));
+	KASSERT(!vm_page_busied(page), ("page %p is busy", page));
 
-	if (*mres != NULL) {
-		oldm = *mres;
-		vm_page_lock(oldm);
-		vm_page_free(oldm);
-		vm_page_unlock(oldm);
-		*mres = NULL;
-	}
-
-	vm_page_insert(page, object, pidx);
-	page->valid = VM_PAGE_BITS_ALL;
-	vm_page_xbusy(page);
+	vm_page_busy_acquire(page, 0);
+	vm_page_valid(page);
+	if (*mres != NULL)
+		vm_page_replace(page, object, pidx, *mres);
+	else
+		vm_page_insert(page, object, pidx);
 	*mres = page;
 	return (VM_PAGER_OK);
 }

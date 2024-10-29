@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-2006 Marcel Moolenaar
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -98,9 +97,6 @@ uart_scc_probe(device_t dev)
 	switch (cl) {
 	case SCC_CLASS_QUICC:
 		sc->sc_class = &uart_quicc_class;
-		break;
-	case SCC_CLASS_SAB82532:
-		sc->sc_class = &uart_sab82532_class;
 		break;
 	case SCC_CLASS_Z8530:
 		sc->sc_class = &uart_z8530_class;

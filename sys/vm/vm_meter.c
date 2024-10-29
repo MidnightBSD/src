@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -123,7 +122,7 @@ SYSCTL_UINT(_vm, OID_AUTO, v_free_severe,
 static int
 sysctl_vm_loadavg(SYSCTL_HANDLER_ARGS)
 {
-	
+
 #ifdef SCTL_MASK32
 	u_int32_t la[4];
 
@@ -140,21 +139,6 @@ sysctl_vm_loadavg(SYSCTL_HANDLER_ARGS)
 SYSCTL_PROC(_vm, VM_LOADAVG, loadavg, CTLTYPE_STRUCT | CTLFLAG_RD |
     CTLFLAG_MPSAFE, NULL, 0, sysctl_vm_loadavg, "S,loadavg",
     "Machine loadaverage history");
-
-/*
- * This function aims to determine if the object is mapped,
- * specifically, if it is referenced by a vm_map_entry.  Because
- * objects occasionally acquire transient references that do not
- * represent a mapping, the method used here is inexact.  However, it
- * has very low overhead and is good enough for the advisory
- * vm.vmtotal sysctl.
- */
-static bool
-is_object_active(vm_object_t obj)
-{
-
-	return (obj->ref_count > obj->shadow_count);
-}
 
 #if defined(COMPAT_FREEBSD11)
 struct vmtotal11 {
@@ -257,7 +241,7 @@ vmtotal(SYSCTL_HANDLER_ARGS)
 			continue;
 		}
 		if (object->ref_count == 1 &&
-		    (object->flags & OBJ_NOSPLIT) != 0) {
+		    (object->flags & (OBJ_ANON | OBJ_SWAP)) == OBJ_SWAP) {
 			/*
 			 * Also skip otherwise unreferenced swap
 			 * objects backing tmpfs vnodes, and POSIX or
@@ -267,7 +251,7 @@ vmtotal(SYSCTL_HANDLER_ARGS)
 		}
 		total.t_vm += object->size;
 		total.t_rm += object->resident_page_count;
-		if (is_object_active(object)) {
+		if (vm_object_is_active(object)) {
 			total.t_avm += object->size;
 			total.t_arm += object->resident_page_count;
 		}
@@ -275,7 +259,7 @@ vmtotal(SYSCTL_HANDLER_ARGS)
 			/* shared object */
 			total.t_vmshr += object->size;
 			total.t_rmshr += object->resident_page_count;
-			if (is_object_active(object)) {
+			if (vm_object_is_active(object)) {
 				total.t_avmshr += object->size;
 				total.t_armshr += object->resident_page_count;
 			}
@@ -312,12 +296,14 @@ vmtotal(SYSCTL_HANDLER_ARGS)
 SYSCTL_PROC(_vm, VM_TOTAL, vmtotal, CTLTYPE_OPAQUE | CTLFLAG_RD |
     CTLFLAG_MPSAFE, NULL, 0, vmtotal, "S,vmtotal",
     "System virtual memory statistics");
-SYSCTL_NODE(_vm, OID_AUTO, stats, CTLFLAG_RW, 0, "VM meter stats");
-static SYSCTL_NODE(_vm_stats, OID_AUTO, sys, CTLFLAG_RW, 0,
-	"VM meter sys stats");
-static SYSCTL_NODE(_vm_stats, OID_AUTO, vm, CTLFLAG_RW, 0,
-	"VM meter vm stats");
-SYSCTL_NODE(_vm_stats, OID_AUTO, misc, CTLFLAG_RW, 0, "VM meter misc stats");
+SYSCTL_NODE(_vm, OID_AUTO, stats, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "VM meter stats");
+static SYSCTL_NODE(_vm_stats, OID_AUTO, sys, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "VM meter sys stats");
+static SYSCTL_NODE(_vm_stats, OID_AUTO, vm, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "VM meter vm stats");
+SYSCTL_NODE(_vm_stats, OID_AUTO, misc, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "VM meter misc stats");
 
 static int
 sysctl_handle_vmstat(SYSCTL_HANDLER_ARGS)
@@ -500,9 +486,9 @@ vm_domain_stats_init(struct vm_domain *vmd, struct sysctl_oid *parent)
 	struct sysctl_oid *oid;
 
 	vmd->vmd_oid = SYSCTL_ADD_NODE(NULL, SYSCTL_CHILDREN(parent), OID_AUTO,
-	    vmd->vmd_name, CTLFLAG_RD, NULL, "");
+	    vmd->vmd_name, CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "");
 	oid = SYSCTL_ADD_NODE(NULL, SYSCTL_CHILDREN(vmd->vmd_oid), OID_AUTO,
-	    "stats", CTLFLAG_RD, NULL, "");
+	    "stats", CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "");
 	SYSCTL_ADD_UINT(NULL, SYSCTL_CHILDREN(oid), OID_AUTO,
 	    "free_count", CTLFLAG_RD, &vmd->vmd_free_count, 0,
 	    "Free pages");
@@ -549,6 +535,9 @@ vm_domain_stats_init(struct vm_domain *vmd, struct sysctl_oid *parent)
 	SYSCTL_ADD_UINT(NULL, SYSCTL_CHILDREN(oid), OID_AUTO,
 	    "free_severe", CTLFLAG_RD, &vmd->vmd_free_severe, 0,
 	    "Severe free pages");
+	SYSCTL_ADD_UINT(NULL, SYSCTL_CHILDREN(oid), OID_AUTO,
+	    "inactive_pps", CTLFLAG_RD, &vmd->vmd_inactive_pps, 0,
+	    "inactive pages freed/second");
 
 }
 
@@ -559,7 +548,7 @@ vm_stats_init(void *arg __unused)
 	int i;
 
 	oid = SYSCTL_ADD_NODE(NULL, SYSCTL_STATIC_CHILDREN(_vm), OID_AUTO,
-	    "domain", CTLFLAG_RD, NULL, "");
+	    "domain", CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "");
 	for (i = 0; i < vm_ndomains; i++)
 		vm_domain_stats_init(VM_DOMAIN(i), oid);
 }

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 Mitsuru IWASAKI
  * All rights reserved.
@@ -24,13 +24,12 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SYS_POWER_H_
 #define _SYS_POWER_H_
 
-#include <sys/eventhandler.h>
+#include <sys/_eventhandler.h>
 
 /* Power management system type */
 #define POWER_PM_TYPE_APM		0x00
@@ -63,4 +62,3 @@ typedef void (*power_profile_change_hook)(void *, int);
 EVENTHANDLER_DECLARE(power_profile_change, power_profile_change_hook);
 
 #endif	/* !_SYS_POWER_H_ */
-

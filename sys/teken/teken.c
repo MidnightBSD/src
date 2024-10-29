@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008-2009 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
@@ -34,7 +33,12 @@
 #include <sys/lock.h>
 #include <sys/systm.h>
 #define	teken_assert(x)		MPASS(x)
-#else /* !(__MidnightBSD__ && _KERNEL) */
+#elif defined(__FreeBSD__) && defined(_STANDALONE)
+#include <stand.h>
+#include <sys/limits.h>
+#include <assert.h>
+#define	teken_assert(x)		assert(x)
+#else /* !(__FreeBSD__ && _STANDALONE) */
 #include <sys/types.h>
 #include <assert.h>
 #include <limits.h>
@@ -42,7 +46,7 @@
 #include <stdio.h>
 #include <string.h>
 #define	teken_assert(x)		assert(x)
-#endif /* __MidnightBSD__ && _KERNEL */
+#endif /* __FreeBSD__ && _STANDALONE */
 
 /* debug messages */
 #define	teken_printf(x,...)
@@ -57,6 +61,7 @@
 #define	TS_CONS25	0x0040	/* cons25 emulation. */
 #define	TS_INSTRING	0x0080	/* Inside string. */
 #define	TS_CURSORKEYS	0x0100	/* Cursor keys mode. */
+#define	TS_CONS25KEYS	0x0400	/* Fuller cons25 emul (fix function keys). */
 
 /* Character that blanks a cell. */
 #define	BLANK	' '
@@ -413,6 +418,13 @@ teken_set_cons25(teken_t *t)
 	t->t_stateflags |= TS_CONS25;
 }
 
+void
+teken_set_cons25keys(teken_t *t)
+{
+
+	t->t_stateflags |= TS_CONS25KEYS;
+}
+
 /*
  * State machine.
  */
@@ -480,7 +492,7 @@ teken_state_numbers(teken_t *t, teken_char_t c)
 
 #define	k	TC_BLACK
 #define	b	TC_BLUE
-#define	y	TC_BROWN
+#define	y	TC_YELLOW
 #define	c	TC_CYAN
 #define	g	TC_GREEN
 #define	m	TC_MAGENTA
@@ -488,7 +500,7 @@ teken_state_numbers(teken_t *t, teken_char_t c)
 #define	w	TC_WHITE
 #define	K	(TC_BLACK | TC_LIGHT)
 #define	B	(TC_BLUE | TC_LIGHT)
-#define	Y	(TC_BROWN | TC_LIGHT)
+#define	Y	(TC_YELLOW | TC_LIGHT)
 #define	C	(TC_CYAN | TC_LIGHT)
 #define	G	(TC_GREEN | TC_LIGHT)
 #define	M	(TC_MAGENTA | TC_LIGHT)
@@ -721,6 +733,9 @@ teken_get_sequence(const teken_t *t, unsigned int k)
 {
 
 	/* Cons25 mode. */
+	if ((t->t_stateflags & (TS_CONS25 | TS_CONS25KEYS)) ==
+	    (TS_CONS25 | TS_CONS25KEYS))
+		return (NULL);	/* Don't override good kbd(4) strings. */
 	if (t->t_stateflags & TS_CONS25 &&
 	    k < sizeof special_strings_cons25 / sizeof(char *))
 		return (special_strings_cons25[k]);

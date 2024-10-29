@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Citrix Systems, Inc.
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -226,7 +225,6 @@ static device_method_t xenpci_methods[] = {
 	DEVMETHOD(device_attach,	xenpci_attach),
 	DEVMETHOD(device_detach,	xenpci_detach),
 	DEVMETHOD(device_resume,	xenpci_resume),
-
 	{ 0, 0 }
 };
 

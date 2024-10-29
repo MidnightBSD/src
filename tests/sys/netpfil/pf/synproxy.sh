@@ -1,6 +1,5 @@
-# $FreeBSD$
 #
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2018 Kristof Provost <kp@FreeBSD.org>
 #
@@ -53,7 +52,7 @@ synproxy_body()
 	jexec singsing ifconfig ${link}b 198.51.100.2/24 up
 	jexec singsing route add default 198.51.100.1
 
-	jexec singsing /usr/sbin/inetd -p inetd-singsing.pid $(atf_get_srcdir)/echo_inetd.conf
+	jexec singsing /usr/sbin/inetd -p ${PWD}/inetd-singsing.pid $(atf_get_srcdir)/echo_inetd.conf
 
 	jexec alcatraz pfctl -e
 	pft_set_rules alcatraz "set fail-policy return" \
@@ -75,7 +74,6 @@ synproxy_body()
 
 synproxy_cleanup()
 {
-	rm -f inetd-singsing.pid
 	pft_cleanup
 }
 
@@ -95,7 +93,7 @@ local_body()
 
 	vnet_mkjail alcatraz ${epair}b
 	jexec alcatraz ifconfig ${epair}b 192.0.2.1/24 up
-	jexec alcatraz /usr/sbin/inetd -p inetd-alcatraz.pid \
+	jexec alcatraz /usr/sbin/inetd -p ${PWD}/inetd-alcatraz.pid \
 		$(atf_get_srcdir)/echo_inetd.conf
 
 	jexec alcatraz pfctl -e
@@ -116,7 +114,6 @@ local_body()
 
 local_cleanup()
 {
-	rm -f inetd-alcatraz.pid
 	pft_cleanup
 }
 
@@ -132,11 +129,11 @@ local_v6_body()
 	pft_init
 
 	epair=$(vnet_mkepair)
-	ifconfig ${epair}a inet6 2001:db8:42::1/64 no_dad up
+	ifconfig ${epair}a inet6 2001:db8:42::1/64 up
 
 	vnet_mkjail alcatraz ${epair}b
-	jexec alcatraz ifconfig ${epair}b inet6 2001:db8:42::2/64 no_dad up
-	jexec alcatraz /usr/sbin/inetd -p inetd-alcatraz.pid \
+	jexec alcatraz ifconfig ${epair}b inet6 2001:db8:42::2/64 up
+	jexec alcatraz /usr/sbin/inetd -p ${PWD}/inetd-alcatraz.pid \
 		$(atf_get_srcdir)/echo_inetd.conf
 
 	jexec alcatraz pfctl -e
@@ -156,7 +153,6 @@ local_v6_body()
 
 local_v6_cleanup()
 {
-	rm -f inetd-alcatraz.pid
 	pft_cleanup
 }
 

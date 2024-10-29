@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Aleksandr Rybalko under sponsorship from the
  * FreeBSD Foundation.
@@ -30,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/vt/vt.h>
 
 #ifndef SC_NO_CUTPASTE

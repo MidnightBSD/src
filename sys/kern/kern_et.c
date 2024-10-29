@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010-2013 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/sbuf.h>
@@ -36,16 +35,17 @@
 #include <sys/queue.h>
 #include <sys/timeet.h>
 
-#include "opt_timer.h"
-
 SLIST_HEAD(et_eventtimers_list, eventtimer);
 static struct et_eventtimers_list eventtimers = SLIST_HEAD_INITIALIZER(et_eventtimers);
 
 struct mtx	et_eventtimers_mtx;
 MTX_SYSINIT(et_eventtimers_init, &et_eventtimers_mtx, "et_mtx", MTX_DEF);
 
-SYSCTL_NODE(_kern, OID_AUTO, eventtimer, CTLFLAG_RW, 0, "Event timers");
-static SYSCTL_NODE(_kern_eventtimer, OID_AUTO, et, CTLFLAG_RW, 0, "");
+SYSCTL_NODE(_kern, OID_AUTO, eventtimer, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "Event timers");
+static SYSCTL_NODE(_kern_eventtimer, OID_AUTO, et,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "");
 
 /*
  * Register a new event timer hardware.
@@ -69,7 +69,8 @@ et_register(struct eventtimer *et)
 	KASSERT(et->et_start, ("et_register: timer has no start function"));
 	et->et_sysctl = SYSCTL_ADD_NODE_WITH_LABEL(NULL,
 	    SYSCTL_STATIC_CHILDREN(_kern_eventtimer_et), OID_AUTO, et->et_name,
-	    CTLFLAG_RW, 0, "event timer description", "eventtimer");
+	    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+	    "event timer description", "eventtimer");
 	SYSCTL_ADD_INT(NULL, SYSCTL_CHILDREN(et->et_sysctl), OID_AUTO,
 	    "flags", CTLFLAG_RD, &(et->et_flags), 0,
 	    "Event timer capabilities");
@@ -125,9 +126,7 @@ void
 et_change_frequency(struct eventtimer *et, uint64_t newfreq)
 {
 
-#ifndef NO_EVENTTIMERS
 	cpu_et_frequency(et, newfreq);
-#endif
 }
 
 /*
@@ -263,4 +262,3 @@ sysctl_kern_eventtimer_choice(SYSCTL_HANDLER_ARGS)
 SYSCTL_PROC(_kern_eventtimer, OID_AUTO, choice,
     CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
     0, 0, sysctl_kern_eventtimer_choice, "A", "Present event timers");
-

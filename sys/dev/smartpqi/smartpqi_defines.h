@@ -880,6 +880,7 @@ typedef struct PCI_ACC_HANDLE {
 #define LEGACY_SIS_SRCV_MAILBOX	0x1000	/* mailbox (20 bytes) */
 #define LEGACY_SIS_SRCV_OFFSET_MAILBOX_7  0x101C   /* mailbox 7 register offset */
 
+
 #define LEGACY_SIS_ODR_SHIFT 	12	/* outbound doorbell shift */
 #define LEGACY_SIS_IDR_SHIFT 	9	/* inbound doorbell shift */
 
@@ -1074,10 +1075,6 @@ typedef struct sema OS_SEMA_LOCK_T;
 
 /* Debug facility */
 
-#define PQISRC_LOG_LEVEL  0x60
-
-static int logging_level  = PQISRC_LOG_LEVEL;
-
 #define	PQISRC_FLAGS_MASK		0x0000ffff
 #define	PQISRC_FLAGS_INIT 		0x00000001
 #define	PQISRC_FLAGS_INFO 		0x00000002
@@ -1088,6 +1085,9 @@ static int logging_level  = PQISRC_LOG_LEVEL;
 #define	PQISRC_FLAGS_ERROR		0x00000040
 #define	PQISRC_FLAGS_NOTE		0x00000080
 
+#define PQISRC_LOG_LEVEL  (PQISRC_FLAGS_WARN | PQISRC_FLAGS_ERROR | PQISRC_FLAGS_NOTE)
+
+static int logging_level  = PQISRC_LOG_LEVEL;
 
 #define	DBG_INIT(fmt,args...)						\
 		do {							\

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -36,11 +35,9 @@
  * Modifications by: Manjunath Ranganathaiah
  */
 
-
 /*
  * Common Layer miscellaneous functions.
  */
-
 
 #include "tw_osl_share.h"
 #include "tw_cl_share.h"
@@ -49,8 +46,6 @@
 #include "tw_cl.h"
 #include "tw_cl_externs.h"
 #include "tw_osl_ioctl.h"
-
-
 
 /* AEN severity table. */
 TW_INT8	*tw_cli_severity_string_table[] = {
@@ -61,8 +56,6 @@ TW_INT8	*tw_cli_severity_string_table[] = {
 	TW_CL_SEVERITY_DEBUG_STRING,
 	""
 };
-
-
 
 /*
  * Function name:	tw_cli_drain_complete_queue
@@ -116,8 +109,6 @@ tw_cli_drain_complete_queue(struct tw_cli_ctlr_context *ctlr)
 	} /* End of while loop */
 }
 
-
-
 /*
  * Function name:	tw_cli_drain_busy_queue
  * Description:		This function gets called during a controller reset.
@@ -170,8 +161,6 @@ tw_cli_drain_busy_queue(struct tw_cli_ctlr_context *ctlr)
 	} /* End of while loop */
 }
 
-
-
 /*
  * Function name:	tw_cli_drain_pending_queue
  * Description:		This function gets called during a controller reset.
@@ -190,7 +179,7 @@ tw_cli_drain_pending_queue(struct tw_cli_ctlr_context *ctlr)
 	struct tw_cl_req_packet		*req_pkt;
     
 	tw_cli_dbg_printf(3, ctlr->ctlr_handle, tw_osl_cur_func(), "entered");
-	
+
 	/*
 	 * Pull requests off the pending queue, and complete them.
 	 */
@@ -226,8 +215,6 @@ tw_cli_drain_pending_queue(struct tw_cli_ctlr_context *ctlr)
 	} /* End of while loop */
 }
 
-
-
 /*
  * Function name:	tw_cli_drain_response_queue
  * Description:		Drain the controller response queue.
@@ -254,8 +241,6 @@ tw_cli_drain_response_queue(struct tw_cli_ctlr_context *ctlr)
 		resp = TW_CLI_READ_RESPONSE_QUEUE(ctlr->ctlr_handle);
 	}
 }
-
-
 
 /*
  * Function name:	tw_cli_find_response
@@ -294,8 +279,6 @@ tw_cli_find_response(struct tw_cli_ctlr_context *ctlr, TW_INT32 req_id)
 			return(TW_OSL_ESUCCESS); /* found the req_id */
 	}
 }
-
-
 
 /*
  * Function name:	tw_cli_drain_aen_queue
@@ -386,8 +369,6 @@ out:
 	return(error);
 }
 
-
-
 /*
  * Function name:	tw_cli_find_aen
  * Description:		Reports whether a given AEN ever occurred.
@@ -422,8 +403,6 @@ tw_cli_find_aen(struct tw_cli_ctlr_context *ctlr, TW_UINT16 aen_code)
 	return(TW_OSL_EGENFAILURE);
 }
 
-
-
 /*
  * Function name:	tw_cli_poll_status
  * Description:		Poll for a given status to show up in the firmware
@@ -457,8 +436,6 @@ tw_cli_poll_status(struct tw_cli_ctlr_context *ctlr, TW_UINT32 status,
 
 	return(TW_OSL_ETIMEDOUT);
 }
-
-
 
 /*
  * Function name:	tw_cl_create_event
@@ -554,8 +531,6 @@ tw_cl_create_event(struct tw_cl_ctlr_handle *ctlr_handle,
 	tw_osl_notify_event(ctlr_handle, event);
 }
 
-
-
 /*
  * Function name:	tw_cli_get_request
  * Description:		Gets a request pkt from the free queue.
@@ -604,12 +579,9 @@ tw_cli_get_request(struct tw_cli_ctlr_context *ctlr
 		else
 			tw_osl_memzero(&(req->cmd_pkt->command),
 				28 /* max bytes before sglist */);
-
 	}
 	return(req);
 }
-
-
 
 /*
  * Function name:	tw_cli_dbg_printf
@@ -646,8 +618,6 @@ tw_cli_dbg_printf(TW_UINT8 dbg_level,
 	}
 #endif /* TW_OSL_DEBUG */
 }
-
-
 
 /*
  * Function name:	tw_cli_notify_ctlr_info
@@ -691,8 +661,6 @@ tw_cli_notify_ctlr_info(struct tw_cli_ctlr_context *ctlr)
 		error[0]?(TW_INT8 *)TW_CL_NULL:fw_ver,
 		error[1]?(TW_INT8 *)TW_CL_NULL:bios_ver);
 }
-
-
 
 /*
  * Function name:	tw_cli_check_ctlr_state
@@ -788,7 +756,6 @@ tw_cli_check_ctlr_state(struct tw_cli_ctlr_context *ctlr, TW_UINT32 status_reg)
 				TW_CLI_PCI_CONFIG_STATUS_OFFSET,
 				TWA_PCI_CONFIG_CLEAR_PCI_ABORT, 2);
 #endif /* TW_OSL_PCI_CONFIG_ACCESSIBLE */
-
 		}
 
 		if (status_reg & TWA_STATUS_QUEUE_ERROR_INTERRUPT) {
@@ -809,8 +776,6 @@ tw_cli_check_ctlr_state(struct tw_cli_ctlr_context *ctlr, TW_UINT32 status_reg)
 	}
 	return(error);
 }	
-
-
 
 /*
  * Function name:	tw_cli_describe_bits
@@ -852,8 +817,6 @@ tw_cli_describe_bits(TW_UINT32 reg, TW_INT8 *str)
 	tw_osl_strcpy(&str[tw_osl_strlen(str)], "]");
 	return(str);
 }
-
-
 
 #ifdef TW_OSL_DEBUG
 
@@ -900,8 +863,6 @@ tw_cl_print_ctlr_stats(struct tw_cl_ctlr_handle *ctlr_handle)
 			ctlr->aen_head, ctlr->aen_tail);
 }	
 
-
-
 /*
  * Function name:	tw_cl_reset_stats
  * Description:		Resets CL maintained statistics for the controller.
@@ -922,8 +883,6 @@ tw_cl_reset_stats(struct tw_cl_ctlr_handle *ctlr_handle)
 	ctlr->q_stats[TW_CLI_PENDING_Q].max_len = 0;
 	ctlr->q_stats[TW_CLI_COMPLETE_Q].max_len = 0;
 }
-
-
 
 /*
  * Function name:	tw_cli_print_req_info
@@ -1028,4 +987,3 @@ tw_cl_print_req_info(struct tw_cl_req_handle *req_handle)
 }
 
 #endif /* TW_OSL_DEBUG */
-

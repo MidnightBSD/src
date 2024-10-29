@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001-2003, Shunsuke Akiyama <akiyama@FreeBSD.org>.
  * All rights reserved.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * driver for RealTek RTL8150 internal PHY
  */

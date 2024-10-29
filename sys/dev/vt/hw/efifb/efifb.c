@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Aleksandr Rybalko under sponsorship from the
  * FreeBSD Foundation.
@@ -30,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -49,12 +47,14 @@
 #include <dev/vt/colors/vt_termcolors.h>
 
 static vd_init_t vt_efifb_init;
+static vd_fini_t vt_efifb_fini;
 static vd_probe_t vt_efifb_probe;
 
 static struct vt_driver vt_efifb_driver = {
 	.vd_name = "efifb",
 	.vd_probe = vt_efifb_probe,
 	.vd_init = vt_efifb_init,
+	.vd_fini = vt_efifb_fini,
 	.vd_blank = vt_fb_blank,
 	.vd_bitblt_text = vt_fb_bitblt_text,
 	.vd_invalidate_text = vt_fb_invalidate_text,
@@ -101,6 +101,32 @@ vt_efifb_init(struct vt_device *vd)
 	struct fb_info	*info;
 	struct efi_fb	*efifb;
 	caddr_t		kmdp;
+	int		memattr;
+	int		roff, goff, boff;
+	char		attr[16];
+
+	/*
+	 * XXX TODO: I think there's more nuance here than we're acknowledging,
+	 * and we should look into it.  It may be that the framebuffer lives in
+	 * a segment of memory that doesn't support one or both of these.  We
+	 * should likely be consulting the memory map for any applicable
+	 * cacheability attributes before making a final decision.
+	 */
+	memattr = VM_MEMATTR_WRITE_COMBINING;
+	if (TUNABLE_STR_FETCH("hw.efifb.cache_attr", attr, sizeof(attr))) {
+		/*
+		 * We'll allow WC but it's currently the default, UC is the only
+		 * other tested one at this time.
+		 */
+		if (strcasecmp(attr, "wc") != 0 &&
+		    strcasecmp(attr, "uc") != 0) {
+			printf("efifb: unsupported cache attr specified: %s\n",
+			    attr);
+			printf("efifb: expected \"wc\" or \"uc\"\n");
+		} else if (strcasecmp(attr, "uc") == 0) {
+			memattr = VM_MEMATTR_UNCACHEABLE;
+		}
+	}
 
 	info = vd->vd_softc;
 	if (info == NULL)
@@ -114,6 +140,7 @@ vt_efifb_init(struct vt_device *vd)
 	if (efifb == NULL)
 		return (CN_DEAD);
 
+	info->fb_type = FBTYPE_EFIFB;
 	info->fb_height = efifb->fb_height;
 	info->fb_width = efifb->fb_width;
 
@@ -125,17 +152,30 @@ vt_efifb_init(struct vt_device *vd)
 	/* Stride in bytes, not pixels */
 	info->fb_stride = efifb->fb_stride * (info->fb_bpp / NBBY);
 
+	roff = ffs(efifb->fb_mask_red) - 1;
+	goff = ffs(efifb->fb_mask_green) - 1;
+	boff = ffs(efifb->fb_mask_blue) - 1;
 	vt_generate_cons_palette(info->fb_cmap, COLOR_FORMAT_RGB,
-	    efifb->fb_mask_red, ffs(efifb->fb_mask_red) - 1,
-	    efifb->fb_mask_green, ffs(efifb->fb_mask_green) - 1,
-	    efifb->fb_mask_blue, ffs(efifb->fb_mask_blue) - 1);
+	    efifb->fb_mask_red >> roff, roff,
+	    efifb->fb_mask_green >> goff, goff,
+	    efifb->fb_mask_blue >> boff, boff);
+	info->fb_cmsize = NCOLORS;
 
 	info->fb_size = info->fb_height * info->fb_stride;
 	info->fb_pbase = efifb->fb_addr;
 	info->fb_vbase = (intptr_t)pmap_mapdev_attr(info->fb_pbase,
-	    info->fb_size, VM_MEMATTR_WRITE_COMBINING);
+	    info->fb_size, memattr);
 
 	vt_fb_init(vd);
 
 	return (CN_INTERNAL);
+}
+
+static void
+vt_efifb_fini(struct vt_device *vd, void *softc)
+{
+	struct fb_info	*info = softc;
+
+	vt_fb_fini(vd, softc);
+	pmap_unmapdev(info->fb_vbase, info->fb_size);
 }

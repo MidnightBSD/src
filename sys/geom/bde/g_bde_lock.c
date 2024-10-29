@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -30,7 +30,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 /* This souce file contains routines which operates on the lock sectors, both
  * for the kernel and the userland program gbde(1).
@@ -315,9 +314,9 @@ g_bde_keyloc_encrypt(u_char *sha2, uint64_t v0, uint64_t v1, void *output)
 	AES_init(&ci);
 	AES_makekey(&ki, DIR_ENCRYPT, G_BDE_KKEYBITS, sha2 + 0);
 	AES_encrypt(&ci, &ki, buf, output, sizeof buf);
-	bzero(buf, sizeof buf);
-	bzero(&ci, sizeof ci);
-	bzero(&ki, sizeof ki);
+	explicit_bzero(buf, sizeof buf);
+	explicit_bzero(&ci, sizeof ci);
+	explicit_bzero(&ki, sizeof ki);
 	return (0);
 }
 
@@ -332,9 +331,9 @@ g_bde_keyloc_decrypt(u_char *sha2, void *input, uint64_t *output)
 	AES_makekey(&ki, DIR_DECRYPT, G_BDE_KKEYBITS, sha2 + 0);
 	AES_decrypt(&ci, &ki, input, buf, sizeof buf);
 	*output = le64dec(buf);
-	bzero(buf, sizeof buf);
-	bzero(&ci, sizeof ci);
-	bzero(&ki, sizeof ki);
+	explicit_bzero(buf, sizeof buf);
+	explicit_bzero(&ci, sizeof ci);
+	explicit_bzero(&ki, sizeof ki);
 	return(0);
 }
 

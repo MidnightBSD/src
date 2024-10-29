@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
  *
@@ -32,7 +32,6 @@
  */
 
 #include <sys/param.h>
-
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/queue.h>
@@ -95,7 +94,8 @@ struct g_audio_softc {
 	uint8_t	sc_sample_rate[32];
 };
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, g_audio, CTLFLAG_RW, 0, "USB audio gadget");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, g_audio, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB audio gadget");
 
 #ifdef USB_DEBUG
 static int g_audio_debug = 0;
@@ -159,7 +159,6 @@ DRIVER_MODULE(g_audio, uhub, g_audio_driver, g_audio_devclass, 0, 0);
 MODULE_DEPEND(g_audio, usb, 1, 1, 1);
 
 static const struct usb_config g_audio_config[G_AUDIO_N_TRANSFER] = {
-
 	[G_AUDIO_ISOC0_RD] = {
 		.type = UE_ISOCHRONOUS,
 		.endpoint = UE_ADDR_ANY,
@@ -380,7 +379,6 @@ g_audio_detach(device_t dev)
 	return (0);
 }
 
-
 static int32_t
 g_noise(struct g_audio_softc *sc)
 {
@@ -410,7 +408,6 @@ g_audio_make_samples(struct g_audio_softc *sc, int16_t *ptr, int samples)
 	int j;
 
 	for (i = 0; i != samples; i++) {
-
 		j = g_noise(sc);
 
 		if ((sc->sc_state < 0) || (sc->sc_state >= sc->sc_pattern_len))
@@ -454,9 +451,7 @@ tr_setup:
 		ptr = sc->sc_data_buf[nr];
 
 		if (sc->sc_mode == G_AUDIO_MODE_PATTERN) {
-
 			for (i = 0; i != G_AUDIO_FRAMES; i++) {
-
 				usbd_xfer_set_frame_data(xfer, i, ptr, sc->sc_data_len[nr][i]);
 
 				g_audio_make_samples(sc, ptr, (G_AUDIO_BUFSIZE / G_AUDIO_FRAMES) / 2);
@@ -464,9 +459,7 @@ tr_setup:
 				ptr += (G_AUDIO_BUFSIZE / G_AUDIO_FRAMES) / 2;
 			}
 		} else if (sc->sc_mode == G_AUDIO_MODE_LOOP) {
-
 			for (i = 0; i != G_AUDIO_FRAMES; i++) {
-
 				usbd_xfer_set_frame_data(xfer, i, ptr, sc->sc_data_len[nr][i] & ~3);
 
 				g_audio_make_samples(sc, ptr, sc->sc_data_len[nr][i] / 4);
@@ -522,7 +515,6 @@ tr_setup:
 		ptr = sc->sc_data_buf[nr];
 
 		for (i = 0; i != G_AUDIO_FRAMES; i++) {
-
 			usbd_xfer_set_frame_data(xfer, i, ptr,
 			    G_AUDIO_BUFSIZE / G_AUDIO_FRAMES);
 
@@ -544,7 +536,6 @@ tr_setup:
 	}
 }
 
-
 static int
 g_audio_handle_request(device_t dev,
     const void *preq, void **pptr, uint16_t *plen,
@@ -557,7 +548,6 @@ g_audio_handle_request(device_t dev,
 	if (!is_complete) {
 		if ((req->bmRequestType == UT_READ_CLASS_INTERFACE) &&
 		    (req->bRequest == 0x82 /* get min */ )) {
-
 			if (offset == 0) {
 				USETW(sc->sc_volume_limit, 0);
 				*plen = 2;
@@ -568,7 +558,6 @@ g_audio_handle_request(device_t dev,
 			return (0);
 		} else if ((req->bmRequestType == UT_READ_CLASS_INTERFACE) &&
 		    (req->bRequest == 0x83 /* get max */ )) {
-
 			if (offset == 0) {
 				USETW(sc->sc_volume_limit, 0x2000);
 				*plen = 2;
@@ -579,7 +568,6 @@ g_audio_handle_request(device_t dev,
 			return (0);
 		} else if ((req->bmRequestType == UT_READ_CLASS_INTERFACE) &&
 		    (req->bRequest == 0x84 /* get residue */ )) {
-
 			if (offset == 0) {
 				USETW(sc->sc_volume_limit, 1);
 				*plen = 2;
@@ -590,7 +578,6 @@ g_audio_handle_request(device_t dev,
 			return (0);
 		} else if ((req->bmRequestType == UT_READ_CLASS_INTERFACE) &&
 		    (req->bRequest == 0x81 /* get value */ )) {
-
 			if (offset == 0) {
 				USETW(sc->sc_volume_setting, 0x2000);
 				*plen = sizeof(sc->sc_volume_setting);
@@ -601,7 +588,6 @@ g_audio_handle_request(device_t dev,
 			return (0);
 		} else if ((req->bmRequestType == UT_WRITE_CLASS_INTERFACE) &&
 		    (req->bRequest == 0x01 /* set value */ )) {
-
 			if (offset == 0) {
 				*plen = sizeof(sc->sc_volume_setting);
 				*pptr = &sc->sc_volume_setting;
@@ -611,7 +597,6 @@ g_audio_handle_request(device_t dev,
 			return (0);
 		} else if ((req->bmRequestType == UT_WRITE_CLASS_ENDPOINT) &&
 		    (req->bRequest == 0x01 /* set value */ )) {
-
 			if (offset == 0) {
 				*plen = sizeof(sc->sc_sample_rate);
 				*pptr = &sc->sc_sample_rate;

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_syscons.h"
 
 #include <sys/param.h>
@@ -657,12 +656,11 @@ sc_mouse_ioctl(struct tty *tp, u_long cmd, caddr_t data, struct thread *td)
     scr_stat *scp;
     struct proc *p1;
     int s;
-    int f;
+    int f __unused;
 
     scp = SC_STAT(tp);
 
     switch (cmd) {
-
     case CONS_MOUSECTL:		/* control mouse arrow */
     case OLD_CONS_MOUSECTL:
 

@@ -104,6 +104,7 @@ enum sysinit_sub_id {
 	SI_SUB_EVENTHANDLER	= 0x1C00000,	/* eventhandler init */
 	SI_SUB_VNET_PRELINK	= 0x1E00000,	/* vnet init before modules */
 	SI_SUB_KLD		= 0x2000000,	/* KLD and module setup */
+	SI_SUB_KHELP		= 0x2080000,	/* khelp modules */
 	SI_SUB_CPU		= 0x2100000,	/* CPU resource(s)*/
 	SI_SUB_RACCT		= 0x2110000,	/* resource accounting */
 	SI_SUB_KDTRACE		= 0x2140000,	/* Kernel dtrace hooks */
@@ -174,7 +175,6 @@ enum sysinit_sub_id {
 	SI_SUB_LAST		= 0xfffffff	/* final initialization */
 };
 
-
 /*
  * Some enumerated orders; "ANY" sorts last.
  */
@@ -190,7 +190,6 @@ enum sysinit_elem_order {
 	SI_ORDER_MIDDLE		= 0x1000000,	/* somewhere in the middle */
 	SI_ORDER_ANY		= 0xfffffff	/* last*/
 };
-
 
 /*
  * A system initialization call instance
@@ -297,6 +296,8 @@ sysinit_tslog_shim(const void * data)
 	(sysinit_cfunc_t)(sysinit_nfunc_t)func, (void *)(ident))
 
 void	sysinit_add(struct sysinit **set, struct sysinit **set_end);
+
+#ifdef _KERNEL
 
 /*
  * Infrastructure for tunable 'constants'.  Value may be specified at compile
@@ -422,6 +423,25 @@ struct tunable_quad {
 
 #define	TUNABLE_QUAD_FETCH(path, var)	getenv_quad((path), (var))
 
+/*
+ * bool
+ */
+extern void tunable_bool_init(void *);
+struct tunable_bool {
+	const char *path;
+	bool *var;
+};
+#define	TUNABLE_BOOL(path, var) \
+	static struct tunable_bool __CONCAT(__tunable_bool_, __LINE__) = { \
+		(path),						\
+		(var),						\
+	};							\
+	SYSINIT(__CONCAT(__Tunable_init_, __LINE__),		\
+	    SI_SUB_TUNABLES, SI_ORDER_MIDDLE, tunable_bool_init, \
+	    &__CONCAT(__tunable_bool_, __LINE__))
+
+#define	TUNABLE_BOOL_FETCH(path, var)	getenv_bool((path), (var))
+
 extern void tunable_str_init(void *);
 struct tunable_str {
 	const char *path;
@@ -440,6 +460,8 @@ struct tunable_str {
 
 #define	TUNABLE_STR_FETCH(path, var, size)			\
 	getenv_string((path), (var), (size))
+
+#endif /* _KERNEL */
 
 typedef void (*ich_func_t)(void *_arg);
 

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012-2016 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -24,10 +24,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #define	PCI_VENDOR_XILINX		0x10ee
+#define	PCI_VENDOR_RME			0x1d18 /* Newer firmware versions. */
 #define	PCI_DEVICE_XILINX_HDSPE		0x3fc6 /* AIO, MADI, AES, RayDAT */
 #define	PCI_CLASS_REVISION		0x08
 #define	PCI_REVISION_AIO		212

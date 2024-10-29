@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -57,11 +57,11 @@
 
 /* helper for converting pointers to integers */
 #define	USB_P2U(ptr) \
-  (((const uint8_t *)(ptr)) - ((const uint8_t *)0))
+  ((uintptr_t)(ptr))
 
 /* helper for computing offsets */
 #define	USB_ADD_BYTES(ptr,size) \
-  ((void *)(USB_P2U(ptr) + (size)))
+  ((void *)(__DECONST(char *, (ptr)) + (size)))
 
 /* debug macro */
 #define	USB_ASSERT KASSERT
@@ -87,7 +87,6 @@ struct usb_string_lang;
  * flags.
  */
 struct usb_xfer_flags_int {
-
 	enum usb_hc_mode usb_mode;	/* shadow copy of "udev->usb_mode" */
 	uint16_t control_rem;		/* remainder in bytes */
 

@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* Generic x86 routines to handle delay */
 
 #include <sys/param.h>

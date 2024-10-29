@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case zdb_001_neg cleanup
 zdb_001_neg_head()
 {
 	atf_set "descr" "Execute zdb using invalid parameters."
-	atf_set "require.progs"  zdb
+	atf_set "require.progs" "ksh93 zdb"
 }
 zdb_001_neg_body()
 {

@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #ifdef _KERNEL
 #include <sys/systm.h>
@@ -45,7 +44,7 @@
 #include <geom/eli/g_eli.h>
 
 void
-g_eli_crypto_hmac_init(struct hmac_ctx *ctx, const uint8_t *hkey,
+g_eli_crypto_hmac_init(struct hmac_ctx *ctx, const char *hkey,
     size_t hkeylen)
 {
 	u_char k_ipad[128], k_opad[128], key[128];
@@ -95,11 +94,11 @@ g_eli_crypto_hmac_final(struct hmac_ctx *ctx, uint8_t *md, size_t mdsize)
 
 	/* Complete inner hash */
 	SHA512_Final(digest, &ctx->innerctx);
-	
+
 	/* Complete outer hash */
 	SHA512_Update(&ctx->outerctx, digest, sizeof(digest));
 	SHA512_Final(digest, &ctx->outerctx);
-	
+
 	explicit_bzero(ctx, sizeof(*ctx));
 	/* mdsize == 0 means "Give me the whole hash!" */
 	if (mdsize == 0)
@@ -109,7 +108,7 @@ g_eli_crypto_hmac_final(struct hmac_ctx *ctx, uint8_t *md, size_t mdsize)
 }
 
 void
-g_eli_crypto_hmac(const uint8_t *hkey, size_t hkeysize, const uint8_t *data,
+g_eli_crypto_hmac(const char *hkey, size_t hkeysize, const uint8_t *data,
     size_t datasize, uint8_t *md, size_t mdsize)
 {
 	struct hmac_ctx ctx;

@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case utils_test_001_pos cleanup
 utils_test_001_pos_head()
 {
 	atf_set "descr" "Ensure that the clri(1M) utility fails on a ZFS file system."
-	atf_set "require.progs"  clri
+	atf_set "require.progs" "ksh93 clri"
 }
 utils_test_001_pos_body()
 {
@@ -56,7 +54,7 @@ atf_test_case utils_test_002_pos cleanup
 utils_test_002_pos_head()
 {
 	atf_set "descr" "Ensure that the labelit(1M) utility fails on a ZFS file system."
-	atf_set "require.progs"  zfs labelit
+	atf_set "require.progs" "ksh93 zfs labelit"
 }
 utils_test_002_pos_body()
 {
@@ -82,7 +80,7 @@ atf_test_case utils_test_003_pos cleanup
 utils_test_003_pos_head()
 {
 	atf_set "descr" "Ensure that the fsdb(1M) utility fails on a ZFS file system."
-	atf_set "require.progs"  fsdb
+	atf_set "require.progs" "ksh93 fsdb"
 }
 utils_test_003_pos_body()
 {
@@ -108,7 +106,7 @@ atf_test_case utils_test_004_pos cleanup
 utils_test_004_pos_head()
 {
 	atf_set "descr" "Ensure that the quotaon(1M) utility fails on a ZFS file system."
-	atf_set "require.progs"  zfs quotaon
+	atf_set "require.progs" "ksh93 zfs quotaon"
 }
 utils_test_004_pos_body()
 {
@@ -135,7 +133,7 @@ atf_test_case utils_test_005_pos cleanup
 utils_test_005_pos_head()
 {
 	atf_set "descr" "Ensure that the ff(1M) utility fails on a ZFS file system."
-	atf_set "require.progs"  ff
+	atf_set "require.progs" "ksh93 ff"
 }
 utils_test_005_pos_body()
 {
@@ -161,7 +159,7 @@ atf_test_case utils_test_006_pos cleanup
 utils_test_006_pos_head()
 {
 	atf_set "descr" "Ensure that the fsirand(1M) utility fails on a ZFS file system."
-	atf_set "require.progs"  zfs fsirand
+	atf_set "require.progs" "ksh93 zfs fsirand"
 }
 utils_test_006_pos_body()
 {
@@ -187,7 +185,7 @@ atf_test_case utils_test_007_pos cleanup
 utils_test_007_pos_head()
 {
 	atf_set "descr" "Ensure that the fstyp(1M) utility succeeds on a ZFS file system."
-	atf_set "require.progs"  zfs fstyp
+	atf_set "require.progs" "ksh93 zfs fstyp"
 }
 utils_test_007_pos_body()
 {
@@ -213,7 +211,7 @@ atf_test_case utils_test_008_pos cleanup
 utils_test_008_pos_head()
 {
 	atf_set "descr" "Ensure that the ncheck(1M) utility fails on a ZFS file system."
-	atf_set "require.progs"  zfs ncheck
+	atf_set "require.progs" "ksh93 zfs ncheck"
 }
 utils_test_008_pos_body()
 {
@@ -239,7 +237,7 @@ atf_test_case utils_test_009_pos cleanup
 utils_test_009_pos_head()
 {
 	atf_set "descr" "Ensure that the tunefs(1M) utility fails on a ZFS file system."
-	atf_set "require.progs"  tunefs
+	atf_set "require.progs" "ksh93 tunefs"
 }
 utils_test_009_pos_body()
 {

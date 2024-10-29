@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2021 Alan Somers
  *
@@ -23,8 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 extern "C" {
@@ -47,7 +45,7 @@ using namespace testing;
  *
  * This file tests a class of race conditions caused by one thread fetching a
  * file's size with FUSE_LOOKUP while another thread simultaneously modifies it
- * with FUSE_SETATTR, FUSE_WRITE or similar.  It's
+ * with FUSE_SETATTR, FUSE_WRITE, FUSE_COPY_FILE_RANGE or similar.  It's
  * possible for the second thread to start later yet finish first. If that
  * happens, the first thread must not override the size set by the second
  * thread.
@@ -62,6 +60,8 @@ using namespace testing;
  */
 
 enum Mutator {
+	VOP_ALLOCATE,
+	VOP_COPY_FILE_RANGE,
 	VOP_SETATTR,
 	VOP_WRITE,
 };
@@ -72,7 +72,11 @@ enum Mutator {
  * --gtest_list_tests
  */
 enum Mutator writer_from_str(const char* s) {
-	if (0 == strcmp("VOP_SETATTR", s))
+	if (0 == strcmp("VOP_ALLOCATE", s))
+		return VOP_ALLOCATE;
+	else if (0 == strcmp("VOP_COPY_FILE_RANGE", s))
+		return VOP_COPY_FILE_RANGE;
+	else if (0 == strcmp("VOP_SETATTR", s))
 		return VOP_SETATTR;
 	else
 		return VOP_WRITE;
@@ -80,6 +84,10 @@ enum Mutator writer_from_str(const char* s) {
 
 uint32_t fuse_op_from_mutator(enum Mutator mutator) {
 	switch(mutator) {
+	case VOP_ALLOCATE:
+		return(FUSE_FALLOCATE);
+	case VOP_COPY_FILE_RANGE:
+		return(FUSE_COPY_FILE_RANGE);
 	case VOP_SETATTR:
 		return(FUSE_SETATTR);
 	case VOP_WRITE:
@@ -96,6 +104,48 @@ virtual void SetUp() {
 }
 };
 
+static void* allocate_th(void* arg) {
+	int fd;
+	ssize_t r;
+	sem_t *sem = (sem_t*) arg;
+
+	if (sem)
+		sem_wait(sem);
+
+	fd = open("mountpoint/some_file.txt", O_RDWR);
+	if (fd < 0)
+		return (void*)(intptr_t)errno;
+
+	r = posix_fallocate(fd, 0, 15);
+	LastLocalModify::leak(fd);
+	if (r >= 0)
+		return 0;
+	else
+		return (void*)(intptr_t)errno;
+}
+
+static void* copy_file_range_th(void* arg) {
+	ssize_t r;
+	int fd;
+	sem_t *sem = (sem_t*) arg;
+	off_t off_in = 0;
+	off_t off_out = 10;
+	ssize_t len = 5;
+
+	if (sem)
+		sem_wait(sem);
+	fd = open("mountpoint/some_file.txt", O_RDWR);
+	if (fd < 0)
+		return (void*)(intptr_t)errno;
+
+	r = copy_file_range(fd, &off_in, fd, &off_out, len, 0);
+	if (r >= 0) {
+		LastLocalModify::leak(fd);
+		return 0;
+	} else
+		return (void*)(intptr_t)errno;
+}
+
 static void* setattr_th(void* arg) {
 	int fd;
 	ssize_t r;
@@ -109,6 +159,7 @@ static void* setattr_th(void* arg) {
 		return (void*)(intptr_t)errno;
 
 	r = ftruncate(fd, 15);
+	LastLocalModify::leak(fd);
 	if (r >= 0)
 		return 0;
 	else
@@ -206,6 +257,9 @@ TEST_P(LastLocalModify, lookup)
 		case VOP_WRITE:
 			mutator_size = in.body.write.size;
 			break;
+		case VOP_COPY_FILE_RANGE:
+			mutator_size = in.body.copy_file_range.len;
+			break;
 		default:
 			break;
 		}
@@ -231,6 +285,14 @@ TEST_P(LastLocalModify, lookup)
 		/* Then, respond to the mutator request */
 		out1->header.unique = mutator_unique;
 		switch(mutator) {
+		case VOP_ALLOCATE:
+			out1->header.error = 0;
+			out1->header.len = sizeof(out1->header);
+			break;
+		case VOP_COPY_FILE_RANGE:
+			SET_OUT_HEADER_LEN(*out1, write);
+			out1->body.write.size = mutator_size;
+			break;
 		case VOP_SETATTR:
 			SET_OUT_HEADER_LEN(*out1, attr);
 			out1->body.attr.attr.ino = ino;
@@ -248,6 +310,14 @@ TEST_P(LastLocalModify, lookup)
 
 	/* Start the mutator thread */
 	switch(mutator) {
+	case VOP_ALLOCATE:
+		ASSERT_EQ(0, pthread_create(&th0, NULL, allocate_th,
+			NULL)) << strerror(errno);
+		break;
+	case VOP_COPY_FILE_RANGE:
+		ASSERT_EQ(0, pthread_create(&th0, NULL, copy_file_range_th,
+			NULL)) << strerror(errno);
+		break;
 	case VOP_SETATTR:
 		ASSERT_EQ(0, pthread_create(&th0, NULL, setattr_th, NULL))
 			<< strerror(errno);
@@ -377,6 +447,14 @@ TEST_P(LastLocalModify, vfs_vget)
 		/* Then, respond to the mutator request */
 		out1->header.unique = in.header.unique;
 		switch(mutator) {
+		case VOP_ALLOCATE:
+			out1->header.error = 0;
+			out1->header.len = sizeof(out1->header);
+			break;
+		case VOP_COPY_FILE_RANGE:
+			SET_OUT_HEADER_LEN(*out1, write);
+			out1->body.write.size = in.body.copy_file_range.len;
+			break;
 		case VOP_SETATTR:
 			SET_OUT_HEADER_LEN(*out1, attr);
 			out1->body.attr.attr.ino = ino;
@@ -397,6 +475,14 @@ TEST_P(LastLocalModify, vfs_vget)
 
 	/* Start the mutator thread */
 	switch(mutator) {
+	case VOP_ALLOCATE:
+		ASSERT_EQ(0, pthread_create(&th0, NULL, allocate_th,
+			(void*)&sem)) << strerror(errno);
+		break;
+	case VOP_COPY_FILE_RANGE:
+		ASSERT_EQ(0, pthread_create(&th0, NULL, copy_file_range_th,
+			(void*)&sem)) << strerror(errno);
+		break;
 	case VOP_SETATTR:
 		ASSERT_EQ(0, pthread_create(&th0, NULL, setattr_th,
 			(void*)&sem)) << strerror(errno);
@@ -419,5 +505,10 @@ TEST_P(LastLocalModify, vfs_vget)
 
 
 INSTANTIATE_TEST_CASE_P(LLM, LastLocalModify,
-	Values("VOP_SETATTR", "VOP_WRITE")
+	Values(
+		"VOP_ALLOCATE",
+		"VOP_COPY_FILE_RANGE",
+		"VOP_SETATTR",
+		"VOP_WRITE"
+	)
 );

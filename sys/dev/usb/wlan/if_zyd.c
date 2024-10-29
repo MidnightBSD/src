@@ -19,7 +19,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * ZyDAS ZD1211/ZD1211B USB WLAN driver.
  */
@@ -75,7 +74,8 @@
 #ifdef USB_DEBUG
 static int zyd_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, zyd, CTLFLAG_RW, 0, "USB zyd");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, zyd, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB zyd");
 SYSCTL_INT(_hw_usb_zyd, OID_AUTO, debug, CTLFLAG_RWTUN, &zyd_debug, 0,
     "zyd debug level");
 
@@ -432,7 +432,6 @@ zyd_drain_mbufq(struct zyd_softc *sc)
 	}
 }
 
-
 static int
 zyd_detach(device_t dev)
 {
@@ -673,7 +672,6 @@ zyd_intr_read_callback(struct usb_xfer *xfer, usb_error_t error)
 					txs->status =
 					    IEEE80211_RATECTL_TX_SUCCESS;
 				}
-
 
 				ieee80211_ratectl_tx_complete(ni, txs);
 				ieee80211_free_node(ni);
@@ -1236,7 +1234,7 @@ zyd_al2230_bandedge6(struct zyd_rf *rf, struct ieee80211_channel *c)
 
 	if (chan == 1 || chan == 11)
 		r[0].val = 0x12;
-	
+
 	for (i = 0; i < nitems(r); i++)
 		zyd_write16_m(sc, r[i].reg, r[i].val);
 fail:

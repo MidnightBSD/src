@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2016-2017 Netflix, Inc.
  *
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/conf.h>
 #include <sys/fcntl.h>
@@ -87,7 +86,6 @@ static int	tcp_log_dev_ioctl(struct cdev *dev __unused, u_long cmd,
     caddr_t data, int fflag __unused, struct thread *td __unused);
 static int	tcp_log_dev_poll(struct cdev *dev __unused, int events,
     struct thread *td);
-
 
 enum tcp_log_dev_queue_lock_state {
 	QUEUE_UNLOCKED = 0,

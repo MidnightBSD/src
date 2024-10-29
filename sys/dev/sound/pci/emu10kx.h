@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Cameron Grant <gandalf@vilnya.demon.co.uk>
  * Copyright (c) 2003-2006 Yuriy Tsibizov <yuriy.tsibizov@gfk.ru>
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef EMU10KX_H
@@ -45,7 +44,6 @@
 #define	EMU_REC_BUFSZ	EMUPAGESIZE*16
 #define	EMU_MAX_BUFSZ	EMUPAGESIZE*16
 #define	EMU_MAXPAGES	8192
-
 
 #define	EMU_VAR_FUNC		0
 #define	EMU_VAR_ROUTE		1

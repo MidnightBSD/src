@@ -3,10 +3,9 @@
  *
  *  Aug 1995, Godmar Back (gback@cs.utah.edu)
  *  University of Utah, Department of Computer Science
- *
  */
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Aditya Sarawgi
  * All rights reserved.
@@ -158,6 +157,7 @@ struct m_ext2fs {
 	uint64_t e2fs_bcount;	  /* blocks count */
 	uint64_t e2fs_rbcount;	  /* reserved blocks count */
 	uint64_t e2fs_fbcount;	  /* free blocks count */
+	uint32_t e2fs_ficount;	  /* free inodes count */
 	uint32_t e2fs_bsize;	  /* Block size */
 	uint32_t e2fs_bshift;	  /* calc of logical block no */
 	uint32_t e2fs_bpg;	  /* Number of blocks per group */
@@ -182,6 +182,7 @@ struct m_ext2fs {
 	struct   csum *e2fs_clustersum; /* cluster summary in each cyl group */
 	int32_t  e2fs_uhash;	  /* 3 if hash should be signed, 0 if not */
 	uint32_t e2fs_csum_seed;  /* sb checksum seed */
+	uint64_t e2fs_maxsymlinklen; /* max size of short symlink */
 };
 
 /* cluster summary information */
@@ -343,11 +344,11 @@ static const struct ext2_feature incompat[] = {
  * Feature set definitions
  */
 #define	EXT2_HAS_COMPAT_FEATURE(sb,mask)			\
-	( EXT2_SB(sb)->e2fs->e2fs_features_compat & htole32(mask) )
+	( le32toh(EXT2_SB(sb)->e2fs->e2fs_features_compat) & mask)
 #define	EXT2_HAS_RO_COMPAT_FEATURE(sb,mask)			\
-	( EXT2_SB(sb)->e2fs->e2fs_features_rocompat & htole32(mask) )
+	( le32toh(EXT2_SB(sb)->e2fs->e2fs_features_rocompat) & mask)
 #define	EXT2_HAS_INCOMPAT_FEATURE(sb,mask)			\
-	( EXT2_SB(sb)->e2fs->e2fs_features_incompat & htole32(mask) )
+	( le32toh(EXT2_SB(sb)->e2fs->e2fs_features_incompat) & mask)
 
 /*
  * File clean flags
@@ -417,15 +418,14 @@ struct ext2_gd {
  * Macro-instructions used to manage group descriptors
  */
 #define	EXT2_BLOCKS_PER_GROUP(s)	(EXT2_SB(s)->e2fs_bpg)
-#define	EXT2_DESCS_PER_BLOCK(s)		(EXT2_HAS_INCOMPAT_FEATURE((s), \
-	EXT2F_INCOMPAT_64BIT) ? ((s)->e2fs_bsize / sizeof(struct ext2_gd)) : \
-	((s)->e2fs_bsize / E2FS_REV0_GD_SIZE))
+#define	EXT2_DESCS_PER_BLOCK(s)		(EXT2_HAS_INCOMPAT_FEATURE((s),  \
+    EXT2F_INCOMPAT_64BIT) ? ((s)->e2fs_bsize / sizeof(struct ext2_gd)) : \
+    ((s)->e2fs_bsize / E2FS_REV0_GD_SIZE))
 
 /*
  * Macro-instructions used to manage inodes
  */
-#define	EXT2_FIRST_INO(s)	((EXT2_SB(s)->e2fs->e2fs_rev == E2FS_REV0) ? \
-				 EXT2_FIRSTINO : \
-				 EXT2_SB(s)->e2fs->e2fs_first_ino)
+#define	EXT2_FIRST_INO(s)	(le32toh((EXT2_SB(s)->e2fs->e2fs_rev) == \
+    E2FS_REV0) ? EXT2_FIRSTINO : le32toh(EXT2_SB(s)->e2fs->e2fs_first_ino))
 
 #endif	/* !_FS_EXT2FS_EXT2FS_H_ */

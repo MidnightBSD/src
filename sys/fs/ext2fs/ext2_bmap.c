@@ -40,6 +40,7 @@
 #include <sys/systm.h>
 #include <sys/bio.h>
 #include <sys/buf.h>
+#include <sys/endian.h>
 #include <sys/proc.h>
 #include <sys/vnode.h>
 #include <sys/mount.h>
@@ -107,7 +108,7 @@ ext4_bmapext(struct vnode *vp, int32_t bn, int64_t *bnp, int *runp, int *runb)
 	ump = VFSTOEXT2(mp);
 	lbn = bn;
 	ehp = (struct ext4_extent_header *)ip->i_data;
-	depth = ehp->eh_depth;
+	depth = le16toh(ehp->eh_depth);
 	bsize = EXT2_BLOCK_SIZE(ump->um_e2fs);
 
 	*bnp = -1;
@@ -124,22 +125,26 @@ ext4_bmapext(struct vnode *vp, int32_t bn, int64_t *bnp, int *runp, int *runb)
 
 	ep = path[depth].ep_ext;
 	if(ep) {
-		if (lbn < ep->e_blk) {
+		if (lbn < le32toh(ep->e_blk)) {
 			if (runp != NULL) {
-				*runp = min(maxrun, ep->e_blk - lbn - 1);
+				*runp = min(maxrun, le32toh(ep->e_blk) - lbn - 1);
 			}
-		} else if (ep->e_blk <= lbn && lbn < ep->e_blk + ep->e_len) {
-			*bnp = fsbtodb(fs, lbn - ep->e_blk +
-			    (ep->e_start_lo | (daddr_t)ep->e_start_hi << 32));
+		} else if (le32toh(ep->e_blk) <= lbn &&
+			    lbn < le32toh(ep->e_blk) + le16toh(ep->e_len)) {
+			*bnp = fsbtodb(fs, lbn - le32toh(ep->e_blk) +
+			    (le32toh(ep->e_start_lo) |
+			    (daddr_t)le16toh(ep->e_start_hi) << 32));
 			if (runp != NULL) {
 				*runp = min(maxrun,
-				    ep->e_len - (lbn - ep->e_blk) - 1);
+				    le16toh(ep->e_len) -
+				    (lbn - le32toh(ep->e_blk)) - 1);
 			}
 			if (runb != NULL)
-				*runb = min(maxrun, lbn - ep->e_blk);
+				*runb = min(maxrun, lbn - le32toh(ep->e_blk));
 		} else {
 			if (runb != NULL)
-				*runb = min(maxrun, ep->e_blk + lbn - ep->e_len);
+				*runb = min(maxrun, le32toh(ep->e_blk) + lbn -
+				    le16toh(ep->e_len));
 		}
 	}
 
@@ -230,7 +235,6 @@ ext2_bmaparray(struct vnode *vp, daddr_t bn, daddr_t *bnp, int *runp, int *runb)
 	if (runb)
 		*runb = 0;
 
-
 	ap = a;
 	nump = &num;
 	error = ext2_getlbns(vp, bn, ap, nump);
@@ -282,7 +286,7 @@ ext2_bmaparray(struct vnode *vp, daddr_t bn, daddr_t *bnp, int *runp, int *runb)
 		if (error != 0)
 			return (error);
 
-		daddr = ((e2fs_daddr_t *)bp->b_data)[ap->in_off];
+		daddr = le32toh(((e2fs_daddr_t *)bp->b_data)[ap->in_off]);
 		if (num == 1 && daddr && runp) {
 			for (bn = ap->in_off + 1;
 			    bn < MNINDIR(ump) && *runp < maxrun &&
@@ -303,17 +307,6 @@ ext2_bmaparray(struct vnode *vp, daddr_t bn, daddr_t *bnp, int *runp, int *runb)
 	if (bp)
 		bqrelse(bp);
 
-	/*
-	 * Since this is FFS independent code, we are out of scope for the
-	 * definitions of BLK_NOCOPY and BLK_SNAP, but we do know that they
-	 * will fall in the range 1..um_seqinc, so we use that test and
-	 * return a request for a zeroed out buffer if attempts are made
-	 * to read a BLK_NOCOPY or BLK_SNAP block.
-	 */
-	if ((ip->i_flags & SF_SNAPSHOT) && daddr > 0 && daddr < ump->um_seqinc) {
-		*bnp = -1;
-		return (0);
-	}
 	*bnp = blkptrtodb(ump, daddr);
 	if (*bnp == 0) {
 		*bnp = -1;
@@ -351,7 +344,7 @@ ext2_bmap_seekdata(struct vnode *vp, off_t *offp)
 	mp = vp->v_mount;
 	ump = VFSTOEXT2(mp);
 
-	if (vp->v_type != VREG || (ip->i_flags & SF_SNAPSHOT) != 0)
+	if (vp->v_type != VREG)
 		return (EINVAL);
 	if (*offp < 0 || *offp >= ip->i_size)
 		return (ENXIO);
@@ -394,7 +387,7 @@ ext2_bmap_seekdata(struct vnode *vp, off_t *offp)
 			 */
 			off = ap->in_off;
 			do {
-				daddr = ((e2fs_daddr_t *)bp->b_data)[off];
+				daddr = le32toh(((e2fs_daddr_t *)bp->b_data)[off]);
 			} while (daddr == 0 && ++off < MNINDIR(ump));
 			nextbn += off * lbn_count(ump, num - 1);
 

@@ -32,9 +32,7 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
-
 
 /* bit's defination */
 
@@ -83,7 +81,6 @@
 #define TWS_SRC_FREEBSD_DRIVER                5
 #define TWS_SRC_FREEBSD_OS                    8
 
-
 enum tws_sense_severity {
     error = 1,
     warning ,
@@ -100,12 +97,10 @@ enum tws_sense_severity {
 #define TWS_ERROR_UNIT_OFFLINE                  0x0128
 #define TWS_ERROR_MORE_DATA                     0x0231
 
-
 /* AEN codes of interest. */
 #define TWS_AEN_QUEUE_EMPTY                     0x00
 #define TWS_AEN_SOFT_RESET                      0x01
 #define TWS_AEN_SYNC_TIME_WITH_HOST             0x31
-
 
 /* AEN severity */
 #define TWS_SEVERITY_ERROR                      0x1
@@ -125,10 +120,8 @@ enum tws_sense_severity {
 #define TWS_CURRENT_FW_BUILD                    4
 #define TWS_CURRENT_ARCH_ID                     0x000A
 
-
 #define TWS_FIFO_EMPTY                          0xFFFFFFFFFFFFFFFFull
 #define TWS_FIFO_EMPTY32                        0xFFFFFFFFull
-
 
 /* Register offsets from base address. */
 #define TWS_CONTROL_REGISTER_OFFSET             0x0
@@ -179,7 +172,6 @@ enum tws_sense_severity {
 #define TWS_FW_CMD_GET_PARAM               0x12
 #define TWS_FW_CMD_SET_PARAM               0x13
 
-
 #define BUILD_SGL_OFF__OPCODE(sgl_off, opcode)  \
         ((sgl_off << 5) & 0xE0) | (opcode & 0x1F)       /* 3:5 */
 
@@ -189,10 +181,7 @@ enum tws_sense_severity {
 #define GET_OPCODE(sgl_off__opcode)     \
         (sgl_off__opcode & 0x1F)                        /* 3:5 */
 
-
-
 /* end revisit */
-
 
 /* Table #'s and id's of parameters of interest in firmware's param table. */
 #define TWS_PARAM_VERSION_TABLE         0x0402
@@ -211,9 +200,7 @@ enum tws_sense_severity {
 
 #define TWS_9K_PARAM_DESCRIPTOR         0x8000
 
-
 /* ----------- request  ------------- */
-
 
 #pragma pack(1)
 
@@ -257,7 +244,6 @@ struct tws_cmd_reset_firmware {
     u_int8_t        param;
 };
 
-
 /* Structure for sending get/set param commands. */
 struct tws_cmd_param {
     u_int8_t        sgl_off__opcode;/* 3:5 */
@@ -280,9 +266,6 @@ struct tws_cmd_generic {
     u_int8_t        flags;
     u_int16_t       count;  /* block cnt, parameter cnt, message credits */
 };
-
-
-
 
 /* Command packet header. */
 struct tws_command_header {
@@ -353,7 +336,6 @@ struct tws_outbound_response {
     u_int32_t     request_id:16;  /* request id */
 };
 
-
 /* Scatter/Gather list entry with 32 bit addresses. */
 struct tws_sg_desc32 {
     u_int32_t     address;
@@ -386,8 +368,6 @@ struct tws_event_packet {
     u_int8_t        severity_str[20];
 };
 
-
-
 #pragma pack()
 
 struct tws_sense {
@@ -417,5 +397,3 @@ struct tws_request {
     struct tws_request *next;    /* pointer to next request */
     struct tws_request *prev;    /* pointer to prev request */
 };
-
-

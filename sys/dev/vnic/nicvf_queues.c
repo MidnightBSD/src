@@ -23,10 +23,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *
  */
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
@@ -889,7 +887,6 @@ nicvf_cmp_task(void *arg, int pending)
 		 * process the entire CQ due to Tx or Rx CQ parse error.
 		 */
 		taskqueue_enqueue(cq->cmp_taskq, &cq->cmp_task);
-
 	}
 
 	nicvf_clear_intr(nic, NICVF_INTR_CQ, cq->idx);
@@ -929,7 +926,7 @@ nicvf_init_cmp_queue(struct nicvf *nic, struct cmp_queue *cq, int q_len,
 	    &cq->mtx);
 
 	/* Allocate taskqueue */
-	TASK_INIT(&cq->cmp_task, 0, nicvf_cmp_task, cq);
+	NET_TASK_INIT(&cq->cmp_task, 0, nicvf_cmp_task, cq);
 	cq->cmp_taskq = taskqueue_create_fast("nicvf_cmp_taskq", M_WAITOK,
 	    taskqueue_thread_enqueue, &cq->cmp_taskq);
 	taskqueue_start_threads(&cq->cmp_taskq, 1, PI_NET, "%s: cmp_taskq(%d)",
@@ -1336,7 +1333,7 @@ nicvf_rcv_queue_config(struct nicvf *nic, struct queue_set *qs,
 	mbx.rq.msg = NIC_MBOX_MSG_RQ_CFG;
 	mbx.rq.qs_num = qs->vnic_id;
 	mbx.rq.rq_num = qidx;
-	mbx.rq.cfg = (rq->caching << 26) | (rq->cq_qs << 19) |
+	mbx.rq.cfg = ((uint64_t)rq->caching << 26) | (rq->cq_qs << 19) |
 	    (rq->cq_idx << 16) | (rq->cont_rbdr_qs << 9) |
 	    (rq->cont_qs_rbdr_idx << 8) | (rq->start_rbdr_qs << 1) |
 	    (rq->start_qs_rbdr_idx);
@@ -1531,7 +1528,6 @@ nicvf_free_resources(struct nicvf *nic)
 		while (taskqueue_cancel(qs->qs_err_taskq,
 		    &qs->qs_err_task,  NULL) != 0) {
 			taskqueue_drain(qs->qs_err_taskq, &qs->qs_err_task);
-
 		}
 		taskqueue_free(qs->qs_err_taskq);
 		qs->qs_err_taskq = NULL;
@@ -1575,7 +1571,7 @@ nicvf_alloc_resources(struct nicvf *nic)
 	}
 
 	/* Allocate QS error taskqueue */
-	TASK_INIT(&qs->qs_err_task, 0, nicvf_qs_err_task, nic);
+	NET_TASK_INIT(&qs->qs_err_task, 0, nicvf_qs_err_task, nic);
 	qs->qs_err_taskq = taskqueue_create_fast("nicvf_qs_err_taskq", M_WAITOK,
 	    taskqueue_thread_enqueue, &qs->qs_err_taskq);
 	taskqueue_start_threads(&qs->qs_err_taskq, 1, PI_NET, "%s: qs_taskq",
@@ -1748,10 +1744,15 @@ nicvf_sq_add_hdr_subdesc(struct snd_queue *sq, int qentry,
 	struct ether_vlan_header *eh;
 #ifdef INET
 	struct ip *ip;
+#endif
+#if defined(INET6) || defined(INET)
 	struct tcphdr *th;
 #endif
+#ifdef INET
+	int iphlen;
+#endif
+	int ehdrlen, poff, proto;
 	uint16_t etype;
-	int ehdrlen, iphlen, poff, proto;
 
 	nic = sq->nic;
 

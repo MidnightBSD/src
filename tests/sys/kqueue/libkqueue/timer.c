@@ -12,8 +12,6 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
- * $FreeBSD$
  */
 
 #include "common.h"
@@ -26,9 +24,6 @@
 #define	MS_TO_US(t)  ((t) * THOUSAND)	/* Convert milliseconds to microseconds. */
 #define	US_TO_NS(t)  ((t) * THOUSAND)	/* Convert microseconds to nanoseconds. */
 
-#ifndef CLOCK_BOOTTIME
-#define	CLOCK_BOOTTIME	CLOCK_UPTIME
-#endif
 
 /* Get the current time with microsecond precision. Used for
  * sub-second timing to make some timer tests run faster.
@@ -46,7 +41,7 @@ now(void)
 /* Sleep for a given number of milliseconds. The timeout is assumed to
  * be less than 1 second.
  */
-void
+static void
 mssleep(int t)
 {
     struct timespec stime = {
@@ -60,7 +55,7 @@ mssleep(int t)
 /* Sleep for a given number of microseconds. The timeout is assumed to
  * be less than 1 second.
  */
-void
+static void
 ussleep(int t)
 {
     struct timespec stime = {
@@ -71,7 +66,7 @@ ussleep(int t)
     nanosleep(&stime, NULL);
 }
 
-void
+static void
 test_kevent_timer_add(void)
 {
     const char *test_id = "kevent(EVFILT_TIMER, EV_ADD)";
@@ -86,7 +81,7 @@ test_kevent_timer_add(void)
     success();
 }
 
-void
+static void
 test_kevent_timer_del(void)
 {
     const char *test_id = "kevent(EVFILT_TIMER, EV_DELETE)";
@@ -103,7 +98,7 @@ test_kevent_timer_del(void)
     success();
 }
 
-void
+static void
 test_kevent_timer_get(void)
 {
     const char *test_id = "kevent(EVFILT_TIMER, wait)";
@@ -185,7 +180,84 @@ test_periodic(void)
 }
 
 static void
-disable_and_enable(void)
+test_periodic_modify(void)
+{
+    const char *test_id = "kevent(EVFILT_TIMER, periodic_modify)";
+    struct kevent kev;
+
+    test_begin(test_id);
+
+    test_no_kevents();
+
+    EV_SET(&kev, vnode_fd, EVFILT_TIMER, EV_ADD, 0, 1000, NULL);
+    if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0)
+        err(1, "%s", test_id);
+
+    /* Retrieve the event */
+    kev.flags = EV_ADD | EV_CLEAR;
+    kev.data = 1;
+    kevent_cmp(&kev, kevent_get(kqfd));
+
+    /* Check if the event occurs again */
+    EV_SET(&kev, vnode_fd, EVFILT_TIMER, EV_ADD, 0, 500, NULL);
+    if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0)
+        err(1, "%s", test_id);
+
+    kev.flags = EV_ADD | EV_CLEAR;
+    sleep(1);
+    kev.data = 2;	/* Should have fired twice */
+
+    kevent_cmp(&kev, kevent_get(kqfd));
+
+    /* Delete the event */
+    kev.flags = EV_DELETE;
+    if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0)
+        err(1, "%s", test_id);
+
+    success();
+}
+
+#if WITH_NATIVE_KQUEUE_BUGS
+static void
+test_periodic_to_oneshot(void)
+{
+    const char *test_id = "kevent(EVFILT_TIMER, period_to_oneshot)";
+    struct kevent kev;
+
+    test_begin(test_id);
+
+    test_no_kevents();
+
+    EV_SET(&kev, vnode_fd, EVFILT_TIMER, EV_ADD, 0, 1000, NULL);
+    if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0)
+        err(1, "%s", test_id);
+
+    /* Retrieve the event */
+    kev.flags = EV_ADD | EV_CLEAR;
+    kev.data = 1;
+    kevent_cmp(&kev, kevent_get(kqfd));
+
+    /* Check if the event occurs again */
+    sleep(1);
+    kevent_cmp(&kev, kevent_get(kqfd));
+
+    /* Switch to oneshot */
+    EV_SET(&kev, vnode_fd, EVFILT_TIMER, EV_ADD | EV_ONESHOT, 0, 500, NULL);
+    if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0)
+        err(1, "%s", test_id);
+    kev.flags = EV_ADD | EV_CLEAR | EV_ONESHOT;
+
+    sleep(1);
+    kev.data = 1;	/* Should have fired once */
+
+    kevent_cmp(&kev, kevent_get(kqfd));
+
+    success();
+}
+#endif
+
+static void
+test_disable_and_enable(void)
 {
     const char *test_id = "kevent(EVFILT_TIMER, EV_DISABLE and EV_ENABLE)";
     struct kevent kev;
@@ -621,8 +693,51 @@ test_update_timing(void)
     success();
 }
 
+static void
+test_dispatch(void)
+{
+    const char *test_id = "kevent(EVFILT_TIMER, EV_ADD | EV_DISPATCH)";
+    struct kevent kev;
+
+    test_no_kevents();
+
+    EV_SET(&kev, vnode_fd, EVFILT_TIMER, EV_ADD | EV_DISPATCH, 0, 200, NULL);
+    if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0)
+        err(1, "%s", test_id);
+
+    /* Get one event */
+    kev.flags = EV_ADD | EV_CLEAR | EV_DISPATCH;
+    kev.data = 1;
+    kevent_cmp(&kev, kevent_get(kqfd));
+
+    /* Confirm that the knote is disabled due to EV_DISPATCH */
+    usleep(500000);
+    test_no_kevents();
+
+    /* Enable the knote and make sure no events are pending */
+    EV_SET(&kev, vnode_fd, EVFILT_TIMER, EV_ADD | EV_ENABLE | EV_DISPATCH, 0, 200, NULL);
+    if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0)
+        err(1, "%s", test_id);
+    test_no_kevents();
+
+    /* Get the next event */
+    usleep(1100000); /* 1100 ms */
+    kev.flags = EV_ADD | EV_CLEAR | EV_DISPATCH;
+    kev.data = 5;
+    kevent_cmp(&kev, kevent_get(kqfd));
+
+    /* Remove the knote and ensure the event no longer fires */
+    EV_SET(&kev, vnode_fd, EVFILT_TIMER, EV_DELETE, 0, 0, NULL);
+    if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0)
+        err(1, "%s", test_id);
+    usleep(500000); /* 500ms */
+    test_no_kevents();
+
+    success();
+}
+
 void
-test_evfilt_timer()
+test_evfilt_timer(void)
 {
     kqfd = kqueue();
     test_kevent_timer_add();
@@ -630,6 +745,10 @@ test_evfilt_timer()
     test_kevent_timer_get();
     test_oneshot();
     test_periodic();
+    test_periodic_modify();
+#if WITH_NATIVE_KQUEUE_BUGS
+    test_periodic_to_oneshot();
+#endif
     test_abstime();
     test_abstime_epoch();
     test_abstime_preboot();
@@ -639,6 +758,7 @@ test_evfilt_timer()
     test_update_expired();
     test_update_timing();
     test_update_periodic();
-    disable_and_enable();
+    test_disable_and_enable();
+    test_dispatch();
     close(kqfd);
 }

@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * These functions support the macros and help fiddle mbuf chains for
  * the nfs op functions. They do things like create the rpc header and
@@ -55,7 +54,6 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/malloc.h>
-#include <sys/sysent.h>
 #include <sys/syscall.h>
 #include <sys/sysproto.h>
 #include <sys/taskqueue.h>
@@ -186,7 +184,7 @@ ncl_getattrcache(struct vnode *vp, struct vattr *vaper)
 	int timeo, mustflush;
 	u_quad_t nsize;
 	bool setnsize;
-	
+
 	np = VTONFS(vp);
 	vap = &np->n_vattr.na_vattr;
 	nmp = VFSTONFS(vp->v_mount);
@@ -272,7 +270,7 @@ ncl_getcookie(struct nfsnode *np, off_t off, int add)
 	struct nfsdmap *dp, *dp2;
 	int pos;
 	nfsuint64 *retval = NULL;
-	
+
 	pos = (uoff_t)off / NFS_DIRBLKSIZ;
 	if (pos == 0 || off < 0) {
 		KASSERT(!add, ("nfs getcookie add at <= 0"));
@@ -388,4 +386,3 @@ ncl_init(struct vfsconf *vfsp)
 
 	return (0);
 }
-

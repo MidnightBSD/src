@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Cameron Grant <gandalf@vilnya.demon.co.uk>
  * Copyright (c) 2003-2007 Yuriy Tsibizov <yuriy.tsibizov@gfk.ru>
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -114,7 +113,6 @@ struct emu_pcm_info {
 	int			mch_disabled;
 	unsigned int		emu10k1_volcache[2][2];
 };
-
 
 static uint32_t emu_rfmt_adc[] = {
 	SND_FORMAT(AFMT_S16_LE, 1, 0),
@@ -403,7 +401,7 @@ emu_dspmixer_setrecsrc(struct snd_mixer *m, u_int32_t src)
 	recmask = 0;
 	for (i=0; i < 8; i++)
 		input[i]=0;
-	
+
 	if (sc->sm != NULL)
 		if ((src & sc->ac97_recdevs) !=0)
 			if (mix_setrecsrc(sc->sm, src & sc->ac97_recdevs) == 0) {
@@ -455,7 +453,7 @@ emu_dspmixer_setrecsrc(struct snd_mixer *m, u_int32_t src)
 
 	emumix_set_volume(sc->card, M_IN6_REC_L, input[6] == 1 ? 100 : 0);
 	emumix_set_volume(sc->card, M_IN6_REC_R, input[6] == 1 ? 100 : 0);
-	
+
 	/* XXX check for K1/k2 differences? */
 	if ((src & (1 << SOUND_MIXER_PCM)) == (1 << SOUND_MIXER_PCM)) {
 		emumix_set_volume(sc->card, M_FX0_REC_L, emumix_get_volume(sc->card, M_FX0_FRONT_L));
@@ -683,7 +681,6 @@ static kobj_method_t emu_ac97_methods[] = {
 };
 AC97_DECLARE(emu_ac97);
 
-
 static int
 emu_k1_recval(int speed)
 {
@@ -715,7 +712,6 @@ emupchan_init(kobj_t obj __unused, void *devinfo, struct snd_dbuf *b, struct pcm
 
 	KASSERT(dir == PCMDIR_PLAY, ("emupchan_init: bad direction"));
 	KASSERT(sc->card != NULL, ("empchan_init: no soundcard"));
-
 
 	if (sc->pnum >= MAX_CHANNELS)
 		return (NULL);
@@ -1228,7 +1224,6 @@ static kobj_method_t emufxrchan_methods[] = {
 };
 CHANNEL_DECLARE(emufxrchan);
 
-
 static uint32_t
 emu_pcm_intr(void *pcm, uint32_t stat)
 {
@@ -1239,7 +1234,7 @@ emu_pcm_intr(void *pcm, uint32_t stat)
 	ack = 0;
 
 	snd_mtxlock(sc->lock);
-	
+
 	if (stat & EMU_IPR_INTERVALTIMER) {
 		ack |= EMU_IPR_INTERVALTIMER;
 		for (i = 0; i < MAX_CHANNELS; i++)
@@ -1262,7 +1257,6 @@ emu_pcm_intr(void *pcm, uint32_t stat)
 		 * buffer at least 32x times faster than ADC.
 		 */
 	}
-
 
 	if (stat & (EMU_IPR_ADCBUFFULL | EMU_IPR_ADCBUFHALFFULL)) {
 		ack |= stat & (EMU_IPR_ADCBUFFULL | EMU_IPR_ADCBUFHALFFULL);
@@ -1302,17 +1296,17 @@ emu_pcm_uninit(struct emu_pcm_info *sc __unused)
 static int
 emu_pcm_probe(device_t dev)
 {
-	uintptr_t func, route, r;
+	uintptr_t func, route;
 	const char *rt;
 	char buffer[255];
 
-	r = BUS_READ_IVAR(device_get_parent(dev), dev, EMU_VAR_FUNC, &func);
+	BUS_READ_IVAR(device_get_parent(dev), dev, EMU_VAR_FUNC, &func);
 
 	if (func != SCF_PCM)
 		return (ENXIO);
 
 	rt = "UNKNOWN";
-	r = BUS_READ_IVAR(device_get_parent(dev), dev, EMU_VAR_ROUTE, &route);
+	BUS_READ_IVAR(device_get_parent(dev), dev, EMU_VAR_ROUTE, &route);
 	switch (route) {
 	case RT_FRONT:
 		rt = "front";
@@ -1346,7 +1340,7 @@ emu_pcm_attach(device_t dev)
 	unsigned int i;
 	char status[SND_STATUSLEN];
 	uint32_t inte, ipr;
-	uintptr_t route, r, ivar;
+	uintptr_t route, ivar;
 
 	sc = malloc(sizeof(*sc), M_DEVBUF, M_WAITOK | M_ZERO);
 	sc->card = (struct emu_sc_info *)(device_get_softc(device_get_parent(dev)));
@@ -1359,10 +1353,10 @@ emu_pcm_attach(device_t dev)
 	sc->lock = snd_mtxcreate(device_get_nameunit(dev), "snd_emu10kx pcm softc");
 	sc->dev = dev;
 
-	r = BUS_READ_IVAR(device_get_parent(dev), dev, EMU_VAR_ISEMU10K1, &ivar);
+	BUS_READ_IVAR(device_get_parent(dev), dev, EMU_VAR_ISEMU10K1, &ivar);
 	sc->is_emu10k1 = ivar ? 1 : 0;
 
-	r = BUS_READ_IVAR(device_get_parent(dev), dev, EMU_VAR_MCH_DISABLED, &ivar);
+	BUS_READ_IVAR(device_get_parent(dev), dev, EMU_VAR_MCH_DISABLED, &ivar);
 	sc->mch_disabled = ivar ? 1 : 0;
 
 	sc->codec = NULL;
@@ -1385,7 +1379,7 @@ emu_pcm_attach(device_t dev)
 	sc->emu10k1_volcache[1][0] = 75;
 	sc->emu10k1_volcache[0][1] = 75;
 	sc->emu10k1_volcache[1][1] = 75;
-	r = BUS_READ_IVAR(device_get_parent(dev), dev, EMU_VAR_ROUTE, &route);
+	BUS_READ_IVAR(device_get_parent(dev), dev, EMU_VAR_ROUTE, &route);
 	sc->route = route;
 	switch (route) {
 	case RT_FRONT:

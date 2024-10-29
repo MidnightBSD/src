@@ -58,7 +58,6 @@
  *
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
- *
  */
 
 #ifndef _VM_VM_PAGEOUT_H_
@@ -74,7 +73,7 @@
  *	Exported data structures.
  */
 
-extern u_int vm_page_max_user_wired;
+extern u_long vm_page_max_user_wired;
 extern int vm_pageout_page_count;
 
 #define	VM_OOM_MEM	1
@@ -107,5 +106,6 @@ void vm_pageout_oom(int shortage);
 
 void vm_swapout_run(void);
 void vm_swapout_run_idle(void);
+
 #endif /* _KERNEL */
 #endif	/* _VM_VM_PAGEOUT_H_ */

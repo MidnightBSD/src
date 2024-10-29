@@ -56,7 +56,7 @@
 
 /* Version of FreeBSD we're compatible with */
 #undef __FreeBSD_version
-#define __FreeBSD_version 1204500	/* Master, propagated to newvers */
+#define __FreeBSD_version 1304500	/* Master, propagated to newvers */
 
 /*
  * It is tempting to use this macro in userland code when we want to enable
@@ -70,7 +70,7 @@
 #undef __MidnightBSD_kernel__
 #define __MidnightBSD_kernel__
 
-#if defined(_KERNEL) || defined(IN_RTLD)
+#if defined(_KERNEL) || defined(_WANT_P_OSREL)
 #define	P_OSREL_SIGWAIT			700000
 #define	P_OSREL_SIGSEGV			700004
 #define	P_OSREL_MAP_ANON		800104
@@ -80,6 +80,11 @@
 #define	P_OSREL_WRFSBASE		1200041
 #define	P_OSREL_CK_CYLGRP		1200046
 #define	P_OSREL_VMTOTAL64		1200054
+#define	P_OSREL_CK_SUPERBLOCK		1300000
+#define	P_OSREL_CK_INODE		1300005
+#define	P_OSREL_POWERPC_NEW_AUX_ARGS	1300070
+#define	P_OSREL_TIDPID			1400079
+#define	P_OSREL_TIDPID_13		1302501
 
 #define	P_OSREL_MAJOR(x)		((x) / 100000)
 #endif
@@ -105,7 +110,7 @@
 #define	NOFILE		OPEN_MAX	/* max open files per process */
 #define	NOGROUP		65535		/* marker for empty group set member */
 #define MAXHOSTNAMELEN	256		/* max hostname size */
-#define SPECNAMELEN	63		/* max length of devicename */
+#define SPECNAMELEN	255		/* max length of devicename */
 
 /* More types and definitions used throughout the kernel. */
 #ifdef _KERNEL
@@ -125,8 +130,10 @@
 #endif
 
 #ifndef _KERNEL
+#ifndef LOCORE
 /* Signals. */
 #include <sys/signal.h>
+#endif
 #endif
 
 /* Machine type dependent parameters. */
@@ -146,8 +153,12 @@
 #ifndef DFLTPHYS
 #define DFLTPHYS	(64 * 1024)	/* default max raw I/O transfer size */
 #endif
-#ifndef MAXPHYS
-#define MAXPHYS		(128 * 1024)	/* max raw I/O transfer size */
+#ifndef MAXPHYS				/* max raw I/O transfer size */
+#ifdef __ILP32__
+#define MAXPHYS		(128 * 1024)
+#else
+#define MAXPHYS		(1024 * 1024)
+#endif
 #endif
 #ifndef MAXDUMPPGS
 #define MAXDUMPPGS	(DFLTPHYS/PAGE_SIZE)
@@ -326,12 +337,12 @@ __END_DECLS
  * Scale factor for scaled integers used to count %cpu time and load avgs.
  *
  * The number of CPU `tick's that map to a unique `%age' can be expressed
- * by the formula (1 / (2 ^ (FSHIFT - 11))).  The maximum load average that
- * can be calculated (assuming 32 bits) can be closely approximated using
- * the formula (2 ^ (2 * (16 - FSHIFT))) for (FSHIFT < 15).
+ * by the formula (1 / (2 ^ (FSHIFT - 11))).  Since the intermediate
+ * calculation is done with 64-bit precision, the maximum load average that can
+ * be calculated is approximately 2^32 / FSCALE.
  *
  * For the scheduler to maintain a 1:1 mapping of CPU `tick' to `%age',
- * FSHIFT must be at least 11; this gives us a maximum load avg of ~1024.
+ * FSHIFT must be at least 11.  This gives a maximum load avg of 2 million.
  */
 #define	FSHIFT	11		/* bits to right of fixed binary point */
 #define FSCALE	(1<<FSHIFT)

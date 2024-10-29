@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
  * Copyright (c) 2001 Katsurajima Naoto <raven@katsurajima.seya.yokohama.jp>
@@ -25,9 +25,7 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THEPOSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
-
 
 /* -------------------------------------------------------------------- */
 
@@ -91,7 +89,7 @@
 #define ENVY24HT_CCSM_SPDIF_OUT      0x01 /* External S/PDIF Out implemented */
 
 /* Professional Multi-Track Control Registers */
- 
+
 #define ENVY24HT_MT_INT_STAT    0x00 /* DMA Interrupt Mask and Status Register */ 
 #define ENVY24HT_MT_INT_RSTAT   0x02 /* Multi-track record interrupt status */
 #define ENVY24HT_MT_INT_PSTAT   0x01 /* Multi-track playback interrupt status */
@@ -184,4 +182,3 @@
 #define ENVY24HT_CCS_GPIO_LMASK 0x16
 #define ENVY24HT_CCS_GPIO_HMASK 0x1F
 #define ENVY24HT_CCS_GPIO_CTLDIR 0x18
-

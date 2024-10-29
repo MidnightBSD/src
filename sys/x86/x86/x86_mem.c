@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
@@ -506,7 +505,6 @@ x86_mrsetvariable(struct mem_range_softc *sc, struct mem_range_desc *mrd,
 			/* Exact match? */
 			if (curr_md->mr_base == mrd->mr_base &&
 			    curr_md->mr_len == mrd->mr_len) {
-
 				/* Whoops, owned by someone. */
 				if (curr_md->mr_flags & MDF_BUSY)
 					return (EBUSY);

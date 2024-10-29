@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010-2011 Monthadar Al Jaberi, TerraNet AB
  * All rights reserved.
@@ -27,7 +27,6 @@
  * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
- *
  */
 #include <sys/param.h>
 #include <sys/module.h>
@@ -68,7 +67,6 @@
 #include <net80211/ieee80211_regdomain.h>
 
 #include <net/bpf.h>
-
 
 #include <sys/errno.h>
 #include <sys/conf.h>   /* cdevsw struct */
@@ -199,7 +197,6 @@ del_link(struct visibility_plugin *vis_plugin, struct link *l)
 #endif
 }
 
-
 int
 vis_ioctl(struct cdev *sdev, u_long cmd, caddr_t data,
     int fflag, struct thread *td)
@@ -238,4 +235,3 @@ vis_ioctl(struct cdev *sdev, u_long cmd, caddr_t data,
 	CURVNET_RESTORE();
 	return error;
 }
-

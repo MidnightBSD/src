@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PACKAGE=	tests
 
@@ -13,6 +12,9 @@ ATF_TESTS_SH+=	empty \
 		aesni_aes_cbc_256_hmac_sha2_256 \
 		aesni_aes_gcm_128 \
 		aesni_aes_gcm_256
+
+# Each test uses the same names for its jails, so they must be run serially.
+TEST_METADATA+=	is_exclusive=true
 
 ${PACKAGE}FILES+=	utils.subr
 

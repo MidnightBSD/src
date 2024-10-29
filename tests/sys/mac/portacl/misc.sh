@@ -1,5 +1,4 @@
 #!/bin/sh
-# $FreeBSD$
 
 sysctl security.mac.portacl >/dev/null 2>&1
 if [ $? -ne 0 ]; then
@@ -17,6 +16,7 @@ check_bind() {
 	local host idtype name proto port udpflag
 
 	host="127.0.0.1"
+	timeout=1
 
 	idtype=${1}
 	name=${2}
@@ -28,7 +28,7 @@ check_bind() {
 	out=$(
 		case "${idtype}" in
 		uid|gid)
-			( echo -n | su -m ${name} -c "nc ${udpflag} -l -w 10 $host $port" 2>&1 ) &
+			( echo -n | su -m ${name} -c "nc ${udpflag} -l -w ${timeout} $host $port" 2>&1 ) &
 			;;
 		jail)
 			kill $$
@@ -37,7 +37,7 @@ check_bind() {
 			kill $$
 		esac
 		sleep 0.3
-		echo | nc ${udpflag} -w 10 $host $port >/dev/null 2>&1
+		echo | nc ${udpflag} -w ${timeout} $host $port >/dev/null 2>&1
 		wait
 	)
 	case "${out}" in

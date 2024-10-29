@@ -12,8 +12,6 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
- * $FreeBSD$
  */
 
 #include <sys/stat.h>
@@ -27,7 +25,7 @@ static int sigusr1_caught = 0;
 
 
 static void
-sig_handler(int signum)
+sig_handler(__unused int signum)
 {
     sigusr1_caught = 1;
 }
@@ -203,10 +201,10 @@ proc_track(int sleep_time)
                 }
 
                 if (kevp->fflags & NOTE_EXIT) {
-                    if ((kevp->ident == pid) && (!child_exit)) {
+                    if ((kevp->ident == (uintptr_t)pid) && (!child_exit)) {
                         ++child_exit;
                         ++handled;
-                    } else if ((kevp->ident == gchild_pid) && (!gchild_exit)) {
+                    } else if ((kevp->ident == (uintptr_t)gchild_pid) && (!gchild_exit)) {
                         ++gchild_exit;
                         ++handled;
                     } else {
@@ -215,7 +213,7 @@ proc_track(int sleep_time)
                 }
 
                 if (kevp->fflags & NOTE_FORK) {
-                    if ((kevp->ident == pid) && (!child_fork)) {
+                    if ((kevp->ident == (uintptr_t)pid) && (!child_fork)) {
                         ++child_fork;
                         ++handled;
                     } else {
@@ -273,7 +271,7 @@ event_trigger(void)
     success();
 }
 
-void
+static void
 test_kevent_signal_disable(void)
 {
     const char *test_id = "kevent(EVFILT_SIGNAL, EV_DISABLE)";
@@ -397,7 +395,7 @@ test_kevent_signal_oneshot(void)
 #endif
 
 void
-test_evfilt_proc()
+test_evfilt_proc(void)
 {
     kqfd = kqueue();
 

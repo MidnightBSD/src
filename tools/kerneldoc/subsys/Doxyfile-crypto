@@ -1,11 +1,9 @@
 # Doxyfile 1.5.2
 
-# $MidnightBSD: stable/11/tools/kerneldoc/subsys/Doxyfile-crypto 196511 2009-08-24 13:10:55Z netchild $
-
 #---------------------------------------------------------------------------
 # Project related configuration options
 #---------------------------------------------------------------------------
-PROJECT_NAME           = "MidnightBSD kernel crypto code"
+PROJECT_NAME           = "FreeBSD kernel crypto code"
 OUTPUT_DIRECTORY       = $(DOXYGEN_DEST_PATH)/crypto/
 EXTRACT_ALL            = YES    # for undocumented src, no warnings enabled
 #--------------------------------------------------------------------------

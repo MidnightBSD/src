@@ -37,17 +37,21 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bio.h>
 #include <sys/buf.h>
 #include <sys/proc.h>
+#include <sys/rwlock.h>
 #include <sys/vnode.h>
 #include <sys/mount.h>
 #include <sys/racct.h>
 #include <sys/resourcevar.h>
 #include <sys/stat.h>
+
+#include <vm/vm.h>
+#include <vm/vm_object.h>
+#include <vm/vnode_pager.h>
 
 #include <ufs/ufs/extattr.h>
 #include <ufs/ufs/quota.h>
@@ -64,7 +68,7 @@ static int readindir(struct vnode *, ufs_lbn_t, ufs2_daddr_t, struct buf **);
  * number to index into the array of block pointers described by the dinode.
  */
 int
-ufs_bmap(ap)
+ufs_bmap(
 	struct vop_bmap_args /* {
 		struct vnode *a_vp;
 		daddr_t a_bn;
@@ -72,7 +76,7 @@ ufs_bmap(ap)
 		daddr_t *a_bnp;
 		int *a_runp;
 		int *a_runb;
-	} */ *ap;
+	} */ *ap)
 {
 	ufs2_daddr_t blkno;
 	int error;
@@ -93,11 +97,10 @@ ufs_bmap(ap)
 }
 
 static int
-readindir(vp, lbn, daddr, bpp)
-	struct vnode *vp;
-	ufs_lbn_t lbn;
-	ufs2_daddr_t daddr;
-	struct buf **bpp;
+readindir(struct vnode *vp,
+	ufs_lbn_t lbn,
+	ufs2_daddr_t daddr,
+	struct buf **bpp)
 {
 	struct buf *bp;
 	struct mount *mp;
@@ -152,13 +155,12 @@ readindir(vp, lbn, daddr, bpp)
  */
 
 int
-ufs_bmaparray(vp, bn, bnp, nbp, runp, runb)
-	struct vnode *vp;
-	ufs2_daddr_t bn;
-	ufs2_daddr_t *bnp;
-	struct buf *nbp;
-	int *runp;
-	int *runb;
+ufs_bmaparray(struct vnode *vp,
+	ufs2_daddr_t bn,
+	ufs2_daddr_t *bnp,
+	struct buf *nbp,
+	int *runp,
+	int *runb)
 {
 	struct inode *ip;
 	struct buf *bp;
@@ -183,7 +185,6 @@ ufs_bmaparray(vp, bn, bnp, nbp, runp, runb)
 	if (runb) {
 		*runb = 0;
 	}
-
 
 	ap = a;
 	nump = &num;
@@ -217,14 +218,12 @@ ufs_bmaparray(vp, bn, bnp, nbp, runp, runb)
 		 * return a request for a zeroed out buffer if attempts
 		 * are made to read a BLK_NOCOPY or BLK_SNAP block.
 		 */
-		if ((ip->i_flags & SF_SNAPSHOT) && DIP(ip, i_db[bn]) > 0 &&
+		if (IS_SNAPSHOT(ip) && DIP(ip, i_db[bn]) > 0 &&
 		    DIP(ip, i_db[bn]) < ump->um_seqinc) {
 			*bnp = -1;
 		} else if (*bnp == 0) {
-			if (ip->i_flags & SF_SNAPSHOT)
-				*bnp = blkptrtodb(ump, bn * ump->um_seqinc);
-			else
-				*bnp = -1;
+			*bnp = IS_SNAPSHOT(ip) ? blkptrtodb(ump,
+			    bn * ump->um_seqinc) : -1;
 		} else if (runp) {
 			ufs2_daddr_t bnb = bn;
 			for (++bn; bn < UFS_NDADDR && *runp < maxrun &&
@@ -241,7 +240,6 @@ ufs_bmaparray(vp, bn, bnp, nbp, runp, runb)
 		}
 		return (0);
 	}
-
 
 	/* Get disk address out of indirect block array */
 	daddr = DIP(ip, i_ib[ap->in_off]);
@@ -321,13 +319,13 @@ ufs_bmaparray(vp, bn, bnp, nbp, runp, runb)
 	 * return a request for a zeroed out buffer if attempts are made
 	 * to read a BLK_NOCOPY or BLK_SNAP block.
 	 */
-	if ((ip->i_flags & SF_SNAPSHOT) && daddr > 0 && daddr < ump->um_seqinc){
+	if (IS_SNAPSHOT(ip) && daddr > 0 && daddr < ump->um_seqinc){
 		*bnp = -1;
 		return (0);
 	}
 	*bnp = blkptrtodb(ump, daddr);
 	if (*bnp == 0) {
-		if (ip->i_flags & SF_SNAPSHOT)
+		if (IS_SNAPSHOT(ip))
 			*bnp = blkptrtodb(ump, bn * ump->um_seqinc);
 		else
 			*bnp = -1;
@@ -336,9 +334,7 @@ ufs_bmaparray(vp, bn, bnp, nbp, runp, runb)
 }
 
 static ufs_lbn_t
-lbn_count(ump, level)
-	struct ufsmount *ump;
-	int level;
+lbn_count(struct ufsmount *ump, int level)
 {
 	ufs_lbn_t blockcnt;
 
@@ -348,9 +344,7 @@ lbn_count(ump, level)
 }
 
 int
-ufs_bmap_seekdata(vp, offp)
-	struct vnode *vp;
-	off_t *offp;
+ufs_bmap_seekdata(struct vnode *vp, off_t *offp)
 {
 	struct buf *bp;
 	struct indir a[UFS_NIADDR + 1], *ap;
@@ -368,10 +362,18 @@ ufs_bmap_seekdata(vp, offp)
 	mp = vp->v_mount;
 	ump = VFSTOUFS(mp);
 
-	if (vp->v_type != VREG || (ip->i_flags & SF_SNAPSHOT) != 0)
+	if (vp->v_type != VREG || IS_SNAPSHOT(ip))
 		return (EINVAL);
 	if (*offp < 0 || *offp >= ip->i_size)
 		return (ENXIO);
+
+	/*
+	 * We could have pages on the vnode' object queue which still
+	 * do not have the data blocks allocated.  Convert all dirty
+	 * pages into buffer writes to ensure that we see all
+	 * allocated data.
+	 */
+	vnode_pager_clean_sync(vp);
 
 	bsize = mp->mnt_stat.f_iosize;
 	for (bn = *offp / bsize, numblks = howmany(ip->i_size, bsize);
@@ -451,11 +453,10 @@ ufs_bmap_seekdata(vp, offp)
  * once with the offset into the page itself.
  */
 int
-ufs_getlbns(vp, bn, ap, nump)
-	struct vnode *vp;
-	ufs2_daddr_t bn;
-	struct indir *ap;
-	int *nump;
+ufs_getlbns(struct vnode *vp,
+	ufs2_daddr_t bn,
+	struct indir *ap,
+	int *nump)
 {
 	ufs2_daddr_t blockcnt;
 	ufs_lbn_t metalbn, realbn;

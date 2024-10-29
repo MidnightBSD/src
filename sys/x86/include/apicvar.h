@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
  *
@@ -23,7 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _X86_APICVAR_H_
@@ -76,10 +75,15 @@
 
 #define	xAPIC_MAX_APIC_ID	0xfe
 #define	xAPIC_ID_ALL		0xff
-#define	MAX_APIC_ID		0x200
+#define	MAX_APIC_ID		0x800
 #define	APIC_ID_ALL		0xffffffff
 
-#define	IOAPIC_MAX_ID		xAPIC_MAX_APIC_ID
+/*
+ * The 0xff ID is used for broadcast IPIs for local APICs when not using
+ * x2APIC.  IPIs are not sent to I/O APICs so it's acceptable for an I/O APIC
+ * to use that ID.
+ */
+#define	IOAPIC_MAX_ID		0xff
 
 /* I/O Interrupts are used for external devices such as ISA, PCI, etc. */
 #define	APIC_IO_INTS	(IDT_IO_INTS + 16)
@@ -111,7 +115,8 @@
 #define	APIC_IPI_INTS	(APIC_LOCAL_INTS + 3)
 
 #define	IPI_RENDEZVOUS	(APIC_IPI_INTS)		/* Inter-CPU rendezvous. */
-#define	IPI_INVLTLB	(APIC_IPI_INTS + 1)	/* TLB Shootdown IPIs */
+#define	IPI_INVLOP	(APIC_IPI_INTS + 1)	/* TLB Shootdown IPIs, amd64 */
+#define	IPI_INVLTLB	(APIC_IPI_INTS + 1)	/* TLB Shootdown IPIs, i386 */
 #define	IPI_INVLPG	(APIC_IPI_INTS + 2)
 #define	IPI_INVLRNG	(APIC_IPI_INTS + 3)
 #define	IPI_INVLCACHE	(APIC_IPI_INTS + 4)
@@ -122,21 +127,21 @@
 #define	IPI_AST		0 	/* Generate software trap. */
 #define IPI_PREEMPT     1
 #define IPI_HARDCLOCK   2
-#define IPI_BITMAP_LAST IPI_HARDCLOCK
+#define	IPI_TRACE	3	/* Collect stack trace. */
+#define	IPI_BITMAP_LAST IPI_TRACE
 #define IPI_IS_BITMAPED(x) ((x) <= IPI_BITMAP_LAST)
 
 #define	IPI_STOP	(APIC_IPI_INTS + 6)	/* Stop CPU until restarted. */
 #define	IPI_SUSPEND	(APIC_IPI_INTS + 7)	/* Suspend CPU until restarted. */
 #define	IPI_SWI		(APIC_IPI_INTS + 8)	/* Run clk_intr_event. */
 #define	IPI_DYN_FIRST	(APIC_IPI_INTS + 9)
-#define	IPI_DYN_LAST	(253)			/* IPIs allocated at runtime */
+#define	IPI_DYN_LAST	(254)			/* IPIs allocated at runtime */
 
 /*
  * IPI_STOP_HARD does not need to occupy a slot in the IPI vector space since
  * it is delivered using an NMI anyways.
  */
-#define	IPI_NMI_FIRST	254
-#define	IPI_TRACE	254			/* Interrupt for tracing. */
+#define	IPI_NMI_FIRST	255
 #define	IPI_STOP_HARD	255			/* Stop CPU with a NMI. */
 
 /*
@@ -227,6 +232,8 @@ struct apic_ops {
 	void	(*disable_vector)(u_int, u_int);
 	void	(*free_vector)(u_int, u_int, u_int);
 
+	/* Timer */
+	void	(*calibrate_timer)(void);
 
 	/* PMC */
 	int	(*enable_pmc)(void);
@@ -373,6 +380,13 @@ apic_free_vector(u_int apic_id, u_int vector, u_int irq)
 {
 
 	apic_ops.free_vector(apic_id, vector, irq);
+}
+
+static inline void
+lapic_calibrate_timer(void)
+{
+
+	apic_ops.calibrate_timer();
 }
 
 static inline int

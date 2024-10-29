@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -156,7 +155,6 @@ static device_method_t nexus_xen_methods[] = {
 	DEVMETHOD(pcib_alloc_msix,	nexus_xen_alloc_msix),
 	DEVMETHOD(pcib_release_msix,	nexus_xen_release_msix),
 	DEVMETHOD(pcib_map_msi,		nexus_xen_map_msi),
-
 	{ 0, 0 }
 };
 

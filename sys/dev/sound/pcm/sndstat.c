@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Copyright (c) 2001 Cameron Grant <cg@FreeBSD.org>
@@ -36,8 +36,8 @@
 #include <dev/sound/version.h>
 #include <sys/sx.h>
 
+SND_DECLARE_FILE("");
 
-#define	SS_TYPE_MODULE		0
 #define	SS_TYPE_PCM		1
 #define	SS_TYPE_MIDI		2
 #define	SS_TYPE_SEQUENCER	3
@@ -99,8 +99,10 @@ sysctl_hw_sndverbose(SYSCTL_HANDLER_ARGS)
 	}
 	return (error);
 }
-SYSCTL_PROC(_hw_snd, OID_AUTO, verbose, CTLTYPE_INT | CTLFLAG_RWTUN,
-            0, sizeof(int), sysctl_hw_sndverbose, "I", "verbosity level");
+SYSCTL_PROC(_hw_snd, OID_AUTO, verbose,
+    CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_MPSAFE, 0, sizeof(int),
+    sysctl_hw_sndverbose, "I",
+    "verbosity level");
 
 static int
 sndstat_open(struct cdev *i_dev, int flags, int mode, struct thread *td)
@@ -237,21 +239,16 @@ sndstat_register(device_t dev, char *str, sndstat_handler handler)
 	const char *devtype;
 	int type, unit;
 
-	if (dev) {
-		unit = device_get_unit(dev);
-		devtype = device_get_name(dev);
-		if (!strcmp(devtype, "pcm"))
-			type = SS_TYPE_PCM;
-		else if (!strcmp(devtype, "midi"))
-			type = SS_TYPE_MIDI;
-		else if (!strcmp(devtype, "sequencer"))
-			type = SS_TYPE_SEQUENCER;
-		else
-			return (EINVAL);
-	} else {
-		type = SS_TYPE_MODULE;
-		unit = -1;
-	}
+	unit = device_get_unit(dev);
+	devtype = device_get_name(dev);
+	if (!strcmp(devtype, "pcm"))
+		type = SS_TYPE_PCM;
+	else if (!strcmp(devtype, "midi"))
+		type = SS_TYPE_MIDI;
+	else if (!strcmp(devtype, "sequencer"))
+		type = SS_TYPE_SEQUENCER;
+	else
+		return (EINVAL);
 
 	ent = malloc(sizeof *ent, M_DEVBUF, M_WAITOK | M_ZERO);
 	ent->dev = dev;
@@ -282,10 +279,9 @@ sndstat_register(device_t dev, char *str, sndstat_handler handler)
 	return (0);
 }
 
-int
-sndstat_registerfile(char *str)
+void
+sndstat_registerfile(void *dummy __unused)
 {
-	return (sndstat_register(NULL, str, NULL));
 }
 
 int
@@ -308,24 +304,9 @@ sndstat_unregister(device_t dev)
 	return (error);
 }
 
-int
-sndstat_unregisterfile(char *str)
+void
+sndstat_unregisterfile(void *dummy __unused)
 {
-	struct sndstat_entry *ent;
-	int error = ENXIO;
-
-	SNDSTAT_LOCK();
-	TAILQ_FOREACH(ent, &sndstat_devlist, link) {
-		if (ent->dev == NULL && ent->str == str) {
-			TAILQ_REMOVE(&sndstat_devlist, ent, link);
-			free(ent, M_DEVBUF);
-			error = 0;
-			break;
-		}
-	}
-	SNDSTAT_UNLOCK();
-
-	return (error);
 }
 
 /************************************************************************/
@@ -341,9 +322,9 @@ sndstat_prepare(struct sndstat_file *pf_self)
 
 	/* make sure buffer is reset */
 	sbuf_clear(s);
-	
+
 	if (snd_verbose > 0) {
-		sbuf_printf(s, "MidnightBSD Audio Driver (%ubit %d/%s)\n",
+		sbuf_printf(s, "FreeBSD Audio Driver (%ubit %d/%s)\n",
 		    (u_int)sizeof(intpcm32_t) << 3, SND_DRV_VERSION,
 		    MACHINE_ARCH);
 	}
@@ -351,8 +332,6 @@ sndstat_prepare(struct sndstat_file *pf_self)
 	/* generate list of installed devices */
 	k = 0;
 	TAILQ_FOREACH(ent, &sndstat_devlist, link) {
-		if (ent->dev == NULL)
-			continue;
 		d = device_get_softc(ent->dev);
 		if (!PCM_REGISTERED(d))
 			continue;
@@ -388,19 +367,6 @@ sndstat_prepare(struct sndstat_file *pf_self)
 	if (k == 0)
 		sbuf_printf(s, "No devices installed from userspace.\n");
 
-	/* append any file versions */
-	if (snd_verbose >= 3) {
-		k = 0;
-		TAILQ_FOREACH(ent, &sndstat_devlist, link) {
-			if (ent->dev == NULL && ent->str != NULL) {
-				if (!k++)
-					sbuf_printf(s, "\nFile Versions:\n");
-				sbuf_printf(s, "%s\n", ent->str);
-			}
-		}
-		if (k == 0)
-			sbuf_printf(s, "\nNo file versions.\n");
-	}
 	sbuf_finish(s);
     	return (sbuf_len(s));
 }

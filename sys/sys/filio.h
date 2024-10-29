@@ -69,5 +69,20 @@ struct fiobmap2_arg {
 };
 /* Get the file's bmap info for the logical block bn. */
 #define	FIOBMAP2	_IOWR('f', 99, struct fiobmap2_arg)
+/* POSIX shm largepage set/get config */
+#define	FIOSSHMLPGCNF	_IOW('f', 100, struct shm_largepage_conf)
+#define	FIOGSHMLPGCNF	_IOR('f', 101, struct shm_largepage_conf)
+
+#ifdef _KERNEL
+#ifdef COMPAT_FREEBSD32
+struct fiodgname_arg32 {
+	int		len;
+	uint32_t	buf;	/* (void *) */
+};
+#define	FIODGNAME_32	_IOC_NEWTYPE(FIODGNAME, struct fiodgname_arg32)
+#endif
+
+void	*fiodgname_buf_get_ptr(void *fgnp, u_long com);
+#endif
 
 #endif /* !_SYS_FILIO_H_ */

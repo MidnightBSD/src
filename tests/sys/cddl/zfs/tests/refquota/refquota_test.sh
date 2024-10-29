@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case refquota_001_pos cleanup
 refquota_001_pos_head()
 {
 	atf_set "descr" "refquota limits the amount of space a dataset can consume,but does not include space used by descendents."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 refquota_001_pos_body()
 {
@@ -54,7 +52,7 @@ atf_test_case refquota_002_pos cleanup
 refquota_002_pos_head()
 {
 	atf_set "descr" "Quotas are enforced using the minimum of the two properties"
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 refquota_002_pos_body()
 {
@@ -78,7 +76,7 @@ atf_test_case refquota_003_pos cleanup
 refquota_003_pos_head()
 {
 	atf_set "descr" "Sub-filesystem quotas are not enforced by property 'refquota'"
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 refquota_003_pos_body()
 {
@@ -102,7 +100,7 @@ atf_test_case refquota_004_pos cleanup
 refquota_004_pos_head()
 {
 	atf_set "descr" "refquotas are not limited by snapshots."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 refquota_004_pos_body()
 {
@@ -126,7 +124,7 @@ atf_test_case refquota_005_pos cleanup
 refquota_005_pos_head()
 {
 	atf_set "descr" "refquotas are not limited by sub-filesystem snapshots."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 refquota_005_pos_body()
 {
@@ -150,7 +148,7 @@ atf_test_case refquota_006_neg cleanup
 refquota_006_neg_head()
 {
 	atf_set "descr" "'zfs set refquota' can handle incorrect arguments correctly."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 refquota_006_neg_body()
 {

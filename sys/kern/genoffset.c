@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018, Matthew Macy <mmacy@freebsd.org>
  *
@@ -23,7 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef OFFSET_TEST
@@ -35,7 +34,6 @@
 #include <sys/proc.h>
 
 OFFSYM(td_priority, thread, u_char);
-OFFSYM(td_epochnest, thread, u_char);
 OFFSYM(td_critnest, thread, u_int);
 OFFSYM(td_pinned, thread, int);
 OFFSYM(td_owepreempt, thread, u_char);

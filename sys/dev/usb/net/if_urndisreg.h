@@ -35,7 +35,6 @@ enum {
 };
 
 struct urndis_softc {
-
 	struct usb_ether sc_ue;
 	struct mtx sc_mtx;
 

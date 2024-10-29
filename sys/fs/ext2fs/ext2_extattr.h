@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017, Fedor Uporov
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _FS_EXT2FS_EXT2_EXTARTTR_H_
@@ -51,7 +50,6 @@
 #define EXT2_EXTATTR_NAME_HASH_SHIFT		5
 #define EXT2_EXTATTR_VALUE_HASH_SHIFT		16
 #define EXT2_EXTATTR_BLOCK_HASH_SHIFT		16
-
 
 struct ext2fs_extattr_header {
 	int32_t	h_magic;	/* magic number for identification */

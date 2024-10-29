@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case hotplug_001_pos cleanup
 hotplug_001_pos_head()
 {
 	atf_set "descr" "When removing a device from a redundant pool, the device'sstate will be indicated as 'REMOVED'."
-	atf_set "require.progs"  zpool gnop
+	atf_set "require.progs" "ksh93 zpool gnop"
 }
 hotplug_001_pos_body()
 {
@@ -55,7 +53,7 @@ atf_test_case hotplug_008_pos cleanup
 hotplug_008_pos_head()
 {
 	atf_set "descr" "When removing hotspare device, verify device status is 'REMOVED'."
-	atf_set "require.progs"  zpool gnop
+	atf_set "require.progs" "ksh93 zpool gnop"
 }
 hotplug_008_pos_body()
 {
@@ -80,7 +78,7 @@ atf_test_case hotplug_011_pos cleanup
 hotplug_011_pos_head()
 {
 	atf_set "descr" "Removing device offlined, verify device status is UNAVAIL,when the system is onlined."
-	atf_set "require.progs"  zpool gnop
+	atf_set "require.progs" "ksh93 zpool gnop"
 }
 hotplug_011_pos_body()
 {

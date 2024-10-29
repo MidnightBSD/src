@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Stanislav Sedov
  * All rights reserved.
@@ -27,13 +27,13 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include <geom/label/g_label.h>
 
 #define REISERFS_NEW_DISK_OFFSET 64 * 1024
@@ -57,10 +57,13 @@ g_label_reiserfs_read_super(struct g_consumer *cp, off_t offset)
 
 	secsize = cp->provider->sectorsize;
 
+	KASSERT(secsize != 0, ("Tasting a disk with 0 sectorsize"));
+	if (secsize < sizeof(*fs))
+		return (NULL);
 	if ((offset % secsize) != 0)
 		return (NULL);
 
-	fs = (reiserfs_sb_t *)g_read_data(cp, offset, secsize, NULL);
+	fs = g_read_data(cp, offset, secsize, NULL);
 	if (fs == NULL)
 		return (NULL);
 
@@ -114,7 +117,7 @@ exit_free:
 
 struct g_label_desc g_label_reiserfs = {
 	.ld_taste = g_label_reiserfs_taste,
-	.ld_dir = "reiserfs",
+	.ld_dirprefix = "reiserfs/",
 	.ld_enabled = 1
 };
 

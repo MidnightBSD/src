@@ -17,14 +17,13 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/proc.h>
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #include <sys/module.h>
 #include <sys/conf.h>
 #include <sys/uio.h>

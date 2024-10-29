@@ -37,18 +37,7 @@
  * This driver is heavily based on VirtIO PCI interface driver.
  */
 
-/*
- * FDT example:
- *		virtio_block@1000 {
- *			compatible = "virtio,mmio";
- *			reg = <0x1000 0x100>;
- *			interrupts = <63>;
- *			interrupt-parent = <&GIC>;
- *		};
- */
-
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -56,14 +45,10 @@
 #include <sys/module.h>
 #include <sys/malloc.h>
 #include <sys/rman.h>
+#include <sys/endian.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>
-
-#include <dev/fdt/fdt_common.h>
-#include <dev/ofw/openfirm.h>
-#include <dev/ofw/ofw_bus.h>
-#include <dev/ofw/ofw_bus_subr.h>
 
 #include <dev/virtio/virtio.h>
 #include <dev/virtio/virtqueue.h>
@@ -73,32 +58,11 @@
 #include "virtio_bus_if.h"
 #include "virtio_if.h"
 
-#define	PAGE_SHIFT	12
-
 struct vtmmio_virtqueue {
 	struct virtqueue	*vtv_vq;
 	int			 vtv_no_intr;
 };
 
-struct vtmmio_softc {
-	device_t			dev;
-	device_t			platform;
-	struct resource			*res[2];
-
-	uint64_t			vtmmio_features;
-	uint32_t			vtmmio_flags;
-
-	/* This "bus" will only ever have one child. */
-	device_t			vtmmio_child_dev;
-	struct virtio_feature_desc	*vtmmio_child_feat_desc;
-
-	int				vtmmio_nvqs;
-	struct vtmmio_virtqueue		*vtmmio_vqs;
-	void				*ih;
-};
-
-static int	vtmmio_probe(device_t);
-static int	vtmmio_attach(device_t);
 static int	vtmmio_detach(device_t);
 static int	vtmmio_suspend(device_t);
 static int	vtmmio_resume(device_t);
@@ -109,6 +73,8 @@ static int	vtmmio_read_ivar(device_t, device_t, int, uintptr_t *);
 static int	vtmmio_write_ivar(device_t, device_t, int, uintptr_t);
 static uint64_t	vtmmio_negotiate_features(device_t, uint64_t);
 static int	vtmmio_with_feature(device_t, uint64_t);
+static void	vtmmio_set_virtqueue(struct vtmmio_softc *sc,
+		    struct virtqueue *vq, uint32_t size);
 static int	vtmmio_alloc_virtqueues(device_t, int, int,
 		    struct vq_alloc_info *);
 static int	vtmmio_setup_intr(device_t, enum intr_type);
@@ -116,11 +82,11 @@ static void	vtmmio_stop(device_t);
 static void	vtmmio_poll(device_t);
 static int	vtmmio_reinit(device_t, uint64_t);
 static void	vtmmio_reinit_complete(device_t);
-static void	vtmmio_notify_virtqueue(device_t, uint16_t);
+static void	vtmmio_notify_virtqueue(device_t, uint16_t, bus_size_t);
 static uint8_t	vtmmio_get_status(device_t);
 static void	vtmmio_set_status(device_t, uint8_t);
 static void	vtmmio_read_dev_config(device_t, bus_size_t, void *, int);
-static void	vtmmio_write_dev_config(device_t, bus_size_t, void *, int);
+static void	vtmmio_write_dev_config(device_t, bus_size_t, const void *, int);
 static void	vtmmio_describe_features(struct vtmmio_softc *, const char *,
 		    uint64_t);
 static void	vtmmio_probe_and_attach_child(struct vtmmio_softc *);
@@ -169,7 +135,6 @@ do {								\
 
 static device_method_t vtmmio_methods[] = {
 	/* Device interface. */
-	DEVMETHOD(device_probe,			  vtmmio_probe),
 	DEVMETHOD(device_attach,		  vtmmio_attach),
 	DEVMETHOD(device_detach,		  vtmmio_detach),
 	DEVMETHOD(device_suspend,		  vtmmio_suspend),
@@ -179,6 +144,7 @@ static device_method_t vtmmio_methods[] = {
 	/* Bus interface. */
 	DEVMETHOD(bus_driver_added,		  vtmmio_driver_added),
 	DEVMETHOD(bus_child_detached,		  vtmmio_child_detached),
+	DEVMETHOD(bus_child_pnpinfo_str,	  virtio_child_pnpinfo_str),
 	DEVMETHOD(bus_read_ivar,		  vtmmio_read_ivar),
 	DEVMETHOD(bus_write_ivar,		  vtmmio_write_ivar),
 
@@ -198,19 +164,52 @@ static device_method_t vtmmio_methods[] = {
 	DEVMETHOD_END
 };
 
-static driver_t vtmmio_driver = {
-	"virtio_mmio",
-	vtmmio_methods,
-	sizeof(struct vtmmio_softc)
-};
+DEFINE_CLASS_0(virtio_mmio, vtmmio_driver, vtmmio_methods,
+    sizeof(struct vtmmio_softc));
 
-devclass_t vtmmio_devclass;
-
-DRIVER_MODULE(virtio_mmio, simplebus, vtmmio_driver, vtmmio_devclass, 0, 0);
-DRIVER_MODULE(virtio_mmio, ofwbus, vtmmio_driver, vtmmio_devclass, 0, 0);
 MODULE_VERSION(virtio_mmio, 1);
-MODULE_DEPEND(virtio_mmio, simplebus, 1, 1, 1);
-MODULE_DEPEND(virtio_mmio, virtio, 1, 1, 1);
+
+int
+vtmmio_probe(device_t dev)
+{
+	struct vtmmio_softc *sc;
+	int rid;
+	uint32_t magic, version;
+
+	sc = device_get_softc(dev);
+
+	rid = 0;
+	sc->res[0] = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid,
+	    RF_ACTIVE);
+	if (sc->res[0] == NULL) {
+		device_printf(dev, "Cannot allocate memory window.\n");
+		return (ENXIO);
+	}
+
+	magic = vtmmio_read_config_4(sc, VIRTIO_MMIO_MAGIC_VALUE);
+	if (magic != VIRTIO_MMIO_MAGIC_VIRT) {
+		device_printf(dev, "Bad magic value %#x\n", magic);
+		bus_release_resource(dev, SYS_RES_MEMORY, rid, sc->res[0]);
+		return (ENXIO);
+	}
+
+	version = vtmmio_read_config_4(sc, VIRTIO_MMIO_VERSION);
+	if (version < 1 || version > 2) {
+		device_printf(dev, "Unsupported version: %#x\n", version);
+		bus_release_resource(dev, SYS_RES_MEMORY, rid, sc->res[0]);
+		return (ENXIO);
+	}
+
+	if (vtmmio_read_config_4(sc, VIRTIO_MMIO_DEVICE_ID) == 0) {
+		bus_release_resource(dev, SYS_RES_MEMORY, rid, sc->res[0]);
+		return (ENXIO);
+	}
+
+	bus_release_resource(dev, SYS_RES_MEMORY, rid, sc->res[0]);
+
+	device_set_desc(dev, "VirtIO MMIO adapter");
+	return (BUS_PROBE_DEFAULT);
+}
 
 static int
 vtmmio_setup_intr(device_t dev, enum intr_type type)
@@ -238,7 +237,7 @@ vtmmio_setup_intr(device_t dev, enum intr_type type)
 		return (ENXIO);
 	}
 
-	if (bus_setup_intr(dev, sc->res[1], INTR_TYPE_MISC | INTR_MPSAFE,
+	if (bus_setup_intr(dev, sc->res[1], type | INTR_MPSAFE,
 		NULL, vtmmio_vq_intr, sc, &sc->ih)) {
 		device_printf(dev, "Can't setup the interrupt\n");
 		return (ENXIO);
@@ -247,55 +246,7 @@ vtmmio_setup_intr(device_t dev, enum intr_type type)
 	return (0);
 }
 
-static int
-vtmmio_probe(device_t dev)
-{
-
-	if (!ofw_bus_status_okay(dev))
-		return (ENXIO);
-
-	if (!ofw_bus_is_compatible(dev, "virtio,mmio"))
-		return (ENXIO);
-
-	device_set_desc(dev, "VirtIO MMIO adapter");
-	return (BUS_PROBE_DEFAULT);
-}
-
-static int
-vtmmio_setup_platform(struct vtmmio_softc *sc)
-{
-	phandle_t platform_node;
-	struct fdt_ic *ic;
-	phandle_t xref;
-	phandle_t node;
-
-	sc->platform = NULL;
-
-	if ((node = ofw_bus_get_node(sc->dev)) == -1)
-		return (ENXIO);
-
-	if (OF_searchencprop(node, "platform", &xref,
-		sizeof(xref)) == -1) {
-		return (ENXIO);
-	}
-
-	platform_node = OF_node_from_xref(xref);
-
-	SLIST_FOREACH(ic, &fdt_ic_list_head, fdt_ics) {
-		if (ic->iph == platform_node) {
-			sc->platform = ic->dev;
-			break;
-		}
-	}
-
-	if (sc->platform == NULL) {
-		/* No platform-specific device. Ignore it. */
-	}
-
-	return (0);
-}
-
-static int
+int
 vtmmio_attach(device_t dev)
 {
 	struct vtmmio_softc *sc;
@@ -305,15 +256,15 @@ vtmmio_attach(device_t dev)
 	sc = device_get_softc(dev);
 	sc->dev = dev;
 
-	vtmmio_setup_platform(sc);
-
 	rid = 0;
 	sc->res[0] = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid,
 			RF_ACTIVE);
-	if (!sc->res[0]) {
+	if (sc->res[0] == NULL) {
 		device_printf(dev, "Cannot allocate memory window.\n");
 		return (ENXIO);
 	}
+
+	sc->vtmmio_version = vtmmio_read_config_4(sc, VIRTIO_MMIO_VERSION);
 
 	vtmmio_reset(sc);
 
@@ -425,6 +376,21 @@ vtmmio_read_ivar(device_t dev, device_t child, int index, uintptr_t *result)
 	case VIRTIO_IVAR_VENDOR:
 		*result = vtmmio_read_config_4(sc, VIRTIO_MMIO_VENDOR_ID);
 		break;
+	case VIRTIO_IVAR_SUBVENDOR:
+	case VIRTIO_IVAR_DEVICE:
+		/*
+		 * Dummy value for fields not present in this bus.  Used by
+		 * bus-agnostic virtio_child_pnpinfo_str.
+		 */
+		*result = 0;
+		break;
+	case VIRTIO_IVAR_MODERN:
+		/*
+		 * There are several modern (aka MMIO v2) spec compliance
+		 * issues with this driver, but keep the status quo.
+		 */
+		*result = sc->vtmmio_version > 1;
+		break;
 	default:
 		return (ENOENT);
 	}
@@ -461,7 +427,17 @@ vtmmio_negotiate_features(device_t dev, uint64_t child_features)
 
 	sc = device_get_softc(dev);
 
+	if (sc->vtmmio_version > 1) {
+		child_features |= VIRTIO_F_VERSION_1;
+	}
+
+	vtmmio_write_config_4(sc, VIRTIO_MMIO_HOST_FEATURES_SEL, 1);
 	host_features = vtmmio_read_config_4(sc, VIRTIO_MMIO_HOST_FEATURES);
+	host_features <<= 32;
+
+	vtmmio_write_config_4(sc, VIRTIO_MMIO_HOST_FEATURES_SEL, 0);
+	host_features |= vtmmio_read_config_4(sc, VIRTIO_MMIO_HOST_FEATURES);
+
 	vtmmio_describe_features(sc, "host", host_features);
 
 	/*
@@ -469,10 +445,15 @@ vtmmio_negotiate_features(device_t dev, uint64_t child_features)
 	 * host all support.
 	 */
 	features = host_features & child_features;
-	features = virtqueue_filter_features(features);
+	features = virtio_filter_transport_features(features);
 	sc->vtmmio_features = features;
 
 	vtmmio_describe_features(sc, "negotiated", features);
+
+	vtmmio_write_config_4(sc, VIRTIO_MMIO_GUEST_FEATURES_SEL, 1);
+	vtmmio_write_config_4(sc, VIRTIO_MMIO_GUEST_FEATURES, features >> 32);
+
+	vtmmio_write_config_4(sc, VIRTIO_MMIO_GUEST_FEATURES_SEL, 0);
 	vtmmio_write_config_4(sc, VIRTIO_MMIO_GUEST_FEATURES, features);
 
 	return (features);
@@ -486,6 +467,43 @@ vtmmio_with_feature(device_t dev, uint64_t feature)
 	sc = device_get_softc(dev);
 
 	return ((sc->vtmmio_features & feature) != 0);
+}
+
+static void
+vtmmio_set_virtqueue(struct vtmmio_softc *sc, struct virtqueue *vq,
+    uint32_t size)
+{
+	vm_paddr_t paddr;
+
+	vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_NUM, size);
+
+	if (sc->vtmmio_version == 1) {
+		vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_ALIGN,
+		    VIRTIO_MMIO_VRING_ALIGN);
+		paddr = virtqueue_paddr(vq);
+		vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_PFN,
+		    paddr >> PAGE_SHIFT);
+	} else {
+		paddr = virtqueue_desc_paddr(vq);
+		vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_DESC_LOW,
+		    paddr);
+		vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_DESC_HIGH,
+		    ((uint64_t)paddr) >> 32);
+
+		paddr = virtqueue_avail_paddr(vq);
+		vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_AVAIL_LOW,
+		    paddr);
+		vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_AVAIL_HIGH,
+		    ((uint64_t)paddr) >> 32);
+
+		paddr = virtqueue_used_paddr(vq);
+		vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_USED_LOW,
+		    paddr);
+		vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_USED_HIGH,
+		    ((uint64_t)paddr) >> 32);
+
+		vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_READY, 1);
+	}
 }
 
 static int
@@ -511,8 +529,10 @@ vtmmio_alloc_virtqueues(device_t dev, int flags, int nvqs,
 	if (sc->vtmmio_vqs == NULL)
 		return (ENOMEM);
 
-	vtmmio_write_config_4(sc, VIRTIO_MMIO_GUEST_PAGE_SIZE,
-	    (1 << PAGE_SHIFT));
+	if (sc->vtmmio_version == 1) {
+		vtmmio_write_config_4(sc, VIRTIO_MMIO_GUEST_PAGE_SIZE,
+		    (1 << PAGE_SHIFT));
+	}
 
 	for (idx = 0; idx < nvqs; idx++) {
 		vqx = &sc->vtmmio_vqs[idx];
@@ -524,7 +544,8 @@ vtmmio_alloc_virtqueues(device_t dev, int flags, int nvqs,
 		size = vtmmio_read_config_4(sc, VIRTIO_MMIO_QUEUE_NUM_MAX);
 
 		error = virtqueue_alloc(dev, idx, size,
-		    VIRTIO_MMIO_VRING_ALIGN, 0xFFFFFFFFUL, info, &vq);
+		    VIRTIO_MMIO_QUEUE_NOTIFY, VIRTIO_MMIO_VRING_ALIGN,
+		    ~(vm_paddr_t)0, info, &vq);
 		if (error) {
 			device_printf(dev,
 			    "cannot allocate virtqueue %d: %d\n",
@@ -532,15 +553,7 @@ vtmmio_alloc_virtqueues(device_t dev, int flags, int nvqs,
 			break;
 		}
 
-		vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_NUM, size);
-		vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_ALIGN,
-		    VIRTIO_MMIO_VRING_ALIGN);
-#if 0
-		device_printf(dev, "virtqueue paddr 0x%08lx\n",
-		    (uint64_t)virtqueue_paddr(vq));
-#endif
-		vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_PFN,
-		    virtqueue_paddr(vq) >> PAGE_SHIFT);
+		vtmmio_set_virtqueue(sc, vq, size);
 
 		vqx->vtv_vq = *info->vqai_vq = vq;
 		vqx->vtv_no_intr = info->vqai_intr == NULL;
@@ -592,8 +605,10 @@ vtmmio_reinit(device_t dev, uint64_t features)
 
 	vtmmio_negotiate_features(dev, features);
 
-	vtmmio_write_config_4(sc, VIRTIO_MMIO_GUEST_PAGE_SIZE,
-	    (1 << PAGE_SHIFT));
+	if (sc->vtmmio_version == 1) {
+		vtmmio_write_config_4(sc, VIRTIO_MMIO_GUEST_PAGE_SIZE,
+		    (1 << PAGE_SHIFT));
+	}
 
 	for (idx = 0; idx < sc->vtmmio_nvqs; idx++) {
 		error = vtmmio_reinit_virtqueue(sc, idx);
@@ -612,13 +627,14 @@ vtmmio_reinit_complete(device_t dev)
 }
 
 static void
-vtmmio_notify_virtqueue(device_t dev, uint16_t queue)
+vtmmio_notify_virtqueue(device_t dev, uint16_t queue, bus_size_t offset)
 {
 	struct vtmmio_softc *sc;
 
 	sc = device_get_softc(dev);
+	MPASS(offset == VIRTIO_MMIO_QUEUE_NOTIFY);
 
-	vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_NOTIFY, queue);
+	vtmmio_write_config_4(sc, offset, queue);
 }
 
 static uint8_t
@@ -652,9 +668,53 @@ vtmmio_read_dev_config(device_t dev, bus_size_t offset,
 	bus_size_t off;
 	uint8_t *d;
 	int size;
+	uint64_t low32, high32;
 
 	sc = device_get_softc(dev);
 	off = VIRTIO_MMIO_CONFIG + offset;
+
+	/*
+	 * The non-legacy MMIO specification adds the following restriction:
+	 *
+	 *   4.2.2.2: For the device-specific configuration space, the driver
+	 *   MUST use 8 bit wide accesses for 8 bit wide fields, 16 bit wide
+	 *   and aligned accesses for 16 bit wide fields and 32 bit wide and
+	 *   aligned accesses for 32 and 64 bit wide fields.
+	 *
+	 * The endianness also varies between non-legacy and legacy:
+	 *
+	 *   2.4: Note: The device configuration space uses the little-endian
+	 *   format for multi-byte fields.
+	 *
+	 *   2.4.3: Note that for legacy interfaces, device configuration space
+	 *   is generally the guest’s native endian, rather than PCI’s
+	 *   little-endian. The correct endian-ness is documented for each
+	 *   device.
+	 */
+	if (sc->vtmmio_version > 1) {
+		switch (length) {
+		case 1:
+			*(uint8_t *)dst = vtmmio_read_config_1(sc, off);
+			break;
+		case 2:
+			*(uint16_t *)dst =
+			    le16toh(vtmmio_read_config_2(sc, off));
+			break;
+		case 4:
+			*(uint32_t *)dst =
+			    le32toh(vtmmio_read_config_4(sc, off));
+			break;
+		case 8:
+			low32 = le32toh(vtmmio_read_config_4(sc, off));
+			high32 = le32toh(vtmmio_read_config_4(sc, off + 4));
+			*(uint64_t *)dst = (high32 << 32) | low32;
+			break;
+		default:
+			panic("%s: invalid length %d\n", __func__, length);
+		}
+
+		return;
+	}
 
 	for (d = dst; length > 0; d += size, off += size, length -= size) {
 #ifdef ALLOW_WORD_ALIGNED_ACCESS
@@ -675,15 +735,46 @@ vtmmio_read_dev_config(device_t dev, bus_size_t offset,
 
 static void
 vtmmio_write_dev_config(device_t dev, bus_size_t offset,
-    void *src, int length)
+    const void *src, int length)
 {
 	struct vtmmio_softc *sc;
 	bus_size_t off;
-	uint8_t *s;
+	const uint8_t *s;
 	int size;
 
 	sc = device_get_softc(dev);
 	off = VIRTIO_MMIO_CONFIG + offset;
+
+	/*
+	 * The non-legacy MMIO specification adds size and alignment
+	 * restrctions. It also changes the endianness from native-endian to
+	 * little-endian. See vtmmio_read_dev_config.
+	 */
+	if (sc->vtmmio_version > 1) {
+		switch (length) {
+		case 1:
+			vtmmio_write_config_1(sc, off, *(const uint8_t *)src);
+			break;
+		case 2:
+			vtmmio_write_config_2(sc, off,
+			    htole16(*(const uint16_t *)src));
+			break;
+		case 4:
+			vtmmio_write_config_4(sc, off,
+			    htole32(*(const uint32_t *)src));
+			break;
+		case 8:
+			vtmmio_write_config_4(sc, off,
+			    htole32(*(const uint64_t *)src));
+			vtmmio_write_config_4(sc, off + 4,
+			    htole32((*(const uint64_t *)src) >> 32));
+			break;
+		default:
+			panic("%s: invalid length %d\n", __func__, length);
+		}
+
+		return;
+	}
 
 	for (s = src; length > 0; s += size, off += size, length -= size) {
 #ifdef ALLOW_WORD_ALIGNED_ACCESS
@@ -769,15 +860,7 @@ vtmmio_reinit_virtqueue(struct vtmmio_softc *sc, int idx)
 	if (error)
 		return (error);
 
-	vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_NUM, size);
-	vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_ALIGN,
-	    VIRTIO_MMIO_VRING_ALIGN);
-#if 0
-	device_printf(sc->dev, "virtqueue paddr 0x%08lx\n",
-	    (uint64_t)virtqueue_paddr(vq));
-#endif
-	vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_PFN,
-	    virtqueue_paddr(vq) >> PAGE_SHIFT);
+	vtmmio_set_virtqueue(sc, vq, size);
 
 	return (0);
 }
@@ -803,7 +886,10 @@ vtmmio_free_virtqueues(struct vtmmio_softc *sc)
 		vqx = &sc->vtmmio_vqs[idx];
 
 		vtmmio_select_virtqueue(sc, idx);
-		vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_PFN, 0);
+		if (sc->vtmmio_version == 1)
+			vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_PFN, 0);
+		else
+			vtmmio_write_config_4(sc, VIRTIO_MMIO_QUEUE_READY, 0);
 
 		virtqueue_free(vqx->vtv_vq);
 		vqx->vtv_vq = NULL;

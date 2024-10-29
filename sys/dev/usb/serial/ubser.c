@@ -8,7 +8,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001-2002, Shunsuke Akiyama <akiyama@jp.FreeBSD.org>.
  * All rights reserved.
@@ -65,7 +65,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * BWCT serial adapter driver
  */
@@ -110,7 +109,8 @@
 #ifdef USB_DEBUG
 static int ubser_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, ubser, CTLFLAG_RW, 0, "USB ubser");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, ubser, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB ubser");
 SYSCTL_INT(_hw_usb_ubser, OID_AUTO, debug, CTLFLAG_RWTUN,
     &ubser_debug, 0, "ubser debug level");
 #endif
@@ -159,7 +159,6 @@ static void	ubser_stop_write(struct ucom_softc *);
 static void	ubser_poll(struct ucom_softc *ucom);
 
 static const struct usb_config ubser_config[UBSER_N_TRANSFER] = {
-
 	[UBSER_BULK_DT_WR] = {
 		.type = UE_BULK,
 		.endpoint = UE_ADDR_ANY,
@@ -414,7 +413,6 @@ tr_setup:
 			if (ucom_get_data(sc->sc_ucom + sc->sc_curr_tx_unit,
 			    pc, 1, sc->sc_tx_size - 1,
 			    &actlen)) {
-
 				buf[0] = sc->sc_curr_tx_unit;
 
 				usbd_copy_in(pc, 0, buf, 1);
@@ -439,7 +437,6 @@ tr_setup:
 			goto tr_setup;
 		}
 		return;
-
 	}
 }
 
@@ -481,7 +478,6 @@ tr_setup:
 			goto tr_setup;
 		}
 		return;
-
 	}
 }
 
@@ -494,7 +490,6 @@ ubser_cfg_set_break(struct ucom_softc *ucom, uint8_t onoff)
 	usb_error_t err;
 
 	if (onoff) {
-
 		req.bmRequestType = UT_READ_VENDOR_INTERFACE;
 		req.bRequest = VENDOR_SET_BREAK;
 		req.wValue[0] = x;

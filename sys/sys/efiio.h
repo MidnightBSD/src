@@ -21,7 +21,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef	_SYS_EFIIO_H_
@@ -30,12 +29,6 @@
 #include <sys/ioccom.h>
 #include <sys/uuid.h>
 #include <sys/efi.h>
-
-struct efi_get_table_ioc
-{
-	struct uuid uuid;	/* UUID to look up */
-	void *ptr;		/* Pointer to table in KVA space */
-};
 
 struct efi_var_ioc
 {
@@ -47,7 +40,6 @@ struct efi_var_ioc
 	size_t datasize;	/* Number of *bytes* in the data */
 };
 
-#define EFIIOC_GET_TABLE	_IOWR('E',  1, struct efi_get_table_ioc)
 #define EFIIOC_GET_TIME		_IOR('E',   2, struct efi_tm)
 #define EFIIOC_SET_TIME		_IOW('E',   3, struct efi_tm)
 #define EFIIOC_VAR_GET		_IOWR('E',  4, struct efi_var_ioc)

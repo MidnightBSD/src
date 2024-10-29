@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Edward Tomasz Napierala under sponsorship
  * from the FreeBSD Foundation.
@@ -27,20 +26,18 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
-#include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/buf.h>
-#include <sys/ioccom.h>
-#include <sys/mount.h>
-#include <sys/vnode.h>
 #include <sys/conf.h>
+#include <sys/filedesc.h>
+#include <sys/ioccom.h>
 #include <sys/jail.h>
+#include <sys/mount.h>
 #include <sys/sx.h>
+#include <sys/vnode.h>
 
 #include <security/mac/mac_framework.h>
 
@@ -194,10 +191,10 @@ ffs_susp_suspend(struct mount *mp)
 	 * device.  The permissions can change after we unlock the vnode;
 	 * it's harmless.
 	 */
-	vn_lock(ump->um_devvp, LK_EXCLUSIVE | LK_RETRY);
-	error = VOP_ACCESS(ump->um_devvp, VREAD | VWRITE,
+	vn_lock(ump->um_odevvp, LK_EXCLUSIVE | LK_RETRY);
+	error = VOP_ACCESS(ump->um_odevvp, VREAD | VWRITE,
 	    curthread->td_ucred, curthread);
-	VOP_UNLOCK(ump->um_devvp, 0);
+	VOP_UNLOCK(ump->um_odevvp);
 	if (error != 0)
 		return (error);
 #ifdef MAC
@@ -264,7 +261,7 @@ ffs_susp_dtor(void *data)
 	KASSERT((mp->mnt_kern_flag & MNTK_SUSPEND) != 0,
 	    ("MNTK_SUSPEND not set"));
 
-	error = ffs_reload(mp, curthread, FFSR_FORCE | FFSR_UNSUSPEND);
+	error = ffs_reload(mp, FFSR_FORCE | FFSR_UNSUSPEND);
 	if (error != 0)
 		panic("failed to unsuspend writes on %s", fs->fs_fsmnt);
 
@@ -302,6 +299,18 @@ ffs_susp_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flags,
 		vfs_rel(mp);
 		if (error != 0)
 			break;
+
+		/*
+		 * Require single-thread curproc so that the check is not racey.
+		 * XXXKIB: might consider to singlethread curproc instead.
+		 */
+		error = curproc->p_numthreads > 1 ? EDEADLK :
+		    descrip_check_write_mp(curproc->p_fd, mp);
+		if (error != 0) {
+			vfs_unbusy(mp);
+			break;
+		}
+
 		error = ffs_susp_suspend(mp);
 		if (error != 0) {
 			vfs_unbusy(mp);

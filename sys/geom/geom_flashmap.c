@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Semihalf
  * Copyright (c) 2009 Jakub Klama <jakub.klama@uj.edu.pl>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -41,8 +40,6 @@
 #include <geom/geom_disk.h>
 #include <geom/geom_flashmap.h>
 #include <geom/geom_slice.h>
-
-#include <dev/nand/nand_dev.h>
 
 struct g_flashmap_slice {
 	off_t		sl_start;
@@ -64,7 +61,6 @@ static struct {
 	{ "MMC::device",	NULL }
 };
 
-static g_ioctl_t g_flashmap_ioctl;
 static g_taste_t g_flashmap_taste;
 
 static int g_flashmap_load(device_t dev, struct g_provider *pp,
@@ -124,26 +120,6 @@ g_flashmap_modify(struct g_flashmap *gfp, struct g_geom *gp,
 	}
 
 	return (0);
-}
-
-static int
-g_flashmap_ioctl(struct g_provider *pp, u_long cmd, void *data, int fflag,
-    struct thread *td)
-{
-	struct g_consumer *cp;
-	struct g_geom *gp;
-
-	if (cmd != NAND_IO_GET_CHIP_PARAM)
-		return (ENOIOCTL);
-
-	cp = LIST_FIRST(&pp->geom->consumer);
-	if (cp == NULL)
-		return (ENOIOCTL);
-	gp = cp->provider->geom;
-	if (gp->ioctl == NULL)
-		return (ENOIOCTL);
-
-	return (gp->ioctl(cp->provider, cmd, data, fflag, td));
 }
 
 static struct g_geom *
@@ -244,7 +220,6 @@ static struct g_class g_flashmap_class = {
 	.name = FLASHMAP_CLASS_NAME,
 	.version = G_VERSION,
 	.taste = g_flashmap_taste,
-	.ioctl = g_flashmap_ioctl,
 };
 
 DECLARE_GEOM_CLASS(g_flashmap_class, g_flashmap);

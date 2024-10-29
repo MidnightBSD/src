@@ -1,7 +1,7 @@
 /*	$NetBSD: uftdi.c,v 1.13 2002/09/23 05:51:23 simonb Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * NOTE: all function names beginning like "uftdi_cfg_" can only
  * be called from within the config thread function !
@@ -83,7 +82,8 @@
 #include <dev/usb/serial/uftdi_reg.h>
 #include <dev/usb/uftdiio.h>
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, uftdi, CTLFLAG_RW, 0, "USB uftdi");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, uftdi, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB uftdi");
 
 #ifdef USB_DEBUG
 static int uftdi_debug = 0;
@@ -212,7 +212,6 @@ static void	uftdi_stop_write(struct ucom_softc *);
 static void	uftdi_poll(struct ucom_softc *ucom);
 
 static const struct usb_config uftdi_config[UFTDI_N_TRANSFER] = {
-
 	[UFTDI_BULK_DT_WR] = {
 		.type = UE_BULK,
 		.endpoint = UE_ADDR_ANY,
@@ -1103,7 +1102,6 @@ uftdi_attach(device_t dev)
 	mtx_init(&sc->sc_mtx, "uftdi", NULL, MTX_DEF);
 	ucom_ref(&sc->sc_super_ucom);
 
-
 	uftdi_devtype_setup(sc, uaa);
 
 	error = usbd_transfer_setup(uaa->device,
@@ -1213,14 +1211,9 @@ uftdi_write_callback(struct usb_xfer *xfer, usb_error_t error)
 	DPRINTFN(3, "\n");
 
 	switch (USB_GET_STATE(xfer)) {
-	default:			/* Error */
-		if (error != USB_ERR_CANCELLED) {
-			/* try to clear stall first */
-			usbd_xfer_set_stall(xfer);
-		}
-		/* FALLTHROUGH */
 	case USB_ST_SETUP:
 	case USB_ST_TRANSFERRED:
+tr_setup:
 		/*
 		 * If output packets don't require headers (the common case) we
 		 * can just load the buffer up with payload bytes all at once.
@@ -1253,6 +1246,13 @@ uftdi_write_callback(struct usb_xfer *xfer, usb_error_t error)
 		if (buflen != 0) {
 			usbd_xfer_set_frame_len(xfer, 0, buflen);
 			usbd_transfer_submit(xfer);
+		}
+		break;
+	default:			/* Error */
+		if (error != USB_ERR_CANCELLED) {
+			/* try to clear stall first */
+			usbd_xfer_set_stall(xfer);
+			goto tr_setup;
 		}
 		break;
 	}

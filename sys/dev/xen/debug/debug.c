@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_stack.h"
 #include "opt_ddb.h"
 
@@ -33,7 +32,9 @@
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/pcpu.h>
 #include <sys/smp.h>
 #include <sys/stack.h>

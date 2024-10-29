@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case zfs_rename_001_pos cleanup
 zfs_rename_001_pos_head()
 {
 	atf_set "descr" "'zfs rename' should successfully rename valid datasets"
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_rename_001_pos_body()
 {
@@ -56,7 +54,7 @@ atf_test_case zfs_rename_002_pos cleanup
 zfs_rename_002_pos_head()
 {
 	atf_set "descr" "'zfs rename' should successfully rename valid datasets"
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_rename_002_pos_body()
 {
@@ -82,7 +80,7 @@ atf_test_case zfs_rename_003_pos cleanup
 zfs_rename_003_pos_head()
 {
 	atf_set "descr" "'zfs rename' can address the abbreviated snapshot name."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_rename_003_pos_body()
 {
@@ -108,7 +106,7 @@ atf_test_case zfs_rename_004_neg cleanup
 zfs_rename_004_neg_head()
 {
 	atf_set "descr" "'zfs rename' should fail when datasets are of a different type."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_rename_004_neg_body()
 {
@@ -134,7 +132,7 @@ atf_test_case zfs_rename_005_neg cleanup
 zfs_rename_005_neg_head()
 {
 	atf_set "descr" "'zfs rename' should fail while datasets are within different pool."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_rename_005_neg_body()
 {
@@ -160,7 +158,7 @@ atf_test_case zfs_rename_006_pos cleanup
 zfs_rename_006_pos_head()
 {
 	atf_set "descr" "'zfs rename' can successfully rename a volume snapshot."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_rename_006_pos_body()
 {
@@ -186,7 +184,7 @@ atf_test_case zfs_rename_007_pos cleanup
 zfs_rename_007_pos_head()
 {
 	atf_set "descr" "Rename dataset, verify that the data haven't changed."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_rename_007_pos_body()
 {
@@ -212,7 +210,7 @@ atf_test_case zfs_rename_008_pos cleanup
 zfs_rename_008_pos_head()
 {
 	atf_set "descr" "zfs rename -r can rename snapshot recursively."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_rename_008_pos_body()
 {
@@ -238,7 +236,7 @@ atf_test_case zfs_rename_009_neg cleanup
 zfs_rename_009_neg_head()
 {
 	atf_set "descr" "zfs rename -r failed, when snapshot name is already existing."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_rename_009_neg_body()
 {
@@ -264,7 +262,7 @@ atf_test_case zfs_rename_010_neg cleanup
 zfs_rename_010_neg_head()
 {
 	atf_set "descr" "The recursive flag -r can only be used for snapshots."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_rename_010_neg_body()
 {
@@ -290,7 +288,7 @@ atf_test_case zfs_rename_011_pos cleanup
 zfs_rename_011_pos_head()
 {
 	atf_set "descr" "'zfs rename -p' should work as expected"
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_rename_011_pos_body()
 {
@@ -316,7 +314,7 @@ atf_test_case zfs_rename_012_neg cleanup
 zfs_rename_012_neg_head()
 {
 	atf_set "descr" "'zfs rename' should fail with bad option, null target dataset andtoo long target dataset name."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_rename_012_neg_body()
 {
@@ -342,7 +340,7 @@ atf_test_case zfs_rename_013_pos cleanup
 zfs_rename_013_pos_head()
 {
 	atf_set "descr" "zfs rename -r can rename snapshot when child datasetsdon't have a snapshot of the given name."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_rename_013_pos_body()
 {

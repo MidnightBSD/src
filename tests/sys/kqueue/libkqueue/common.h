@@ -12,8 +12,6 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
- * $FreeBSD$
  */
 
 #ifndef _COMMON_H
@@ -40,16 +38,15 @@
 
 #include <sys/event.h>
 
-extern char *cur_test_id;
 extern int vnode_fd;
 extern int kqfd;
 
-extern char * kevent_to_str(struct kevent *);
+char * kevent_to_str(struct kevent *);
 struct kevent * kevent_get(int);
 struct kevent * kevent_get_timeout(int, int);
 
-
-void kevent_cmp(struct kevent *, struct kevent *);
+#define kevent_cmp(a,b) _kevent_cmp(a,b, __FILE__, __LINE__)
+void _kevent_cmp(struct kevent *expected, struct kevent *got, const char *file, int line);
 
 void
 kevent_add(int kqfd, struct kevent *kev, 
@@ -71,10 +68,20 @@ kevent_add(int kqfd, struct kevent *kev,
 } while (0);
 
 /* Checks if any events are pending, which is an error. */
-extern void test_no_kevents(void);
-extern void test_no_kevents_quietly(void);
+#define test_no_kevents() _test_no_kevents(__FILE__, __LINE__)
+void _test_no_kevents(const char *, int);
+void test_no_kevents_quietly(void);
 
-extern void test_begin(const char *);
-extern void success(void);
+void test_begin(const char *);
+void success(void);
+
+void test_evfilt_read(void);
+void test_evfilt_signal(void);
+void test_evfilt_vnode(void);
+void test_evfilt_timer(void);
+void test_evfilt_proc(void);
+#if HAVE_EVFILT_USER
+void test_evfilt_user(void);
+#endif
 
 #endif  /* _COMMON_H */

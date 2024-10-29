@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007 Hans Petter Selasky. All rights reserved.
  *
@@ -114,7 +114,7 @@ static usb_error_t usb_temp_setup_by_index(struct usb_device *,
 		    uint16_t index);
 static void	usb_temp_init(void *);
 
-SYSCTL_NODE(_hw_usb, OID_AUTO, templates, CTLFLAG_RW, 0,
+SYSCTL_NODE(_hw_usb, OID_AUTO, templates, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "USB device side templates");
 SYSCTL_PROC(_hw_usb, OID_AUTO, template_power,
     CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_MPSAFE,
@@ -188,7 +188,6 @@ usb_temp_sysctl(SYSCTL_HANDLER_ARGS)
 
 	return (0);
 }
-
 
 /*------------------------------------------------------------------------*
  *	usb_make_raw_desc
@@ -670,7 +669,6 @@ usb_hw_ep_find_match(struct usb_hw_ep_scratch *ues,
 	}
 
 	for (n = 1; n != (USB_EP_MAX / 2); n++) {
-
 		/* get HW endpoint profile */
 		(ues->methods->get_hw_ep_profile) (ues->udev, &pf, n);
 		if (pf == NULL) {
@@ -779,10 +777,8 @@ usb_hw_ep_get_needs(struct usb_hw_ep_scratch *ues,
 repeat:
 
 	while ((desc = usb_desc_foreach(ues->cd, desc))) {
-
 		if ((desc->bDescriptorType == UDESC_INTERFACE) &&
 		    (desc->bLength >= sizeof(*id))) {
-
 			id = (void *)desc;
 
 			if (id->bAlternateSetting == 0) {
@@ -795,7 +791,6 @@ repeat:
 		}
 		if ((desc->bDescriptorType == UDESC_ENDPOINT) &&
 		    (desc->bLength >= sizeof(*ed))) {
-
 			ed = (void *)desc;
 
 			goto handle_endpoint_desc;
@@ -808,7 +803,6 @@ handle_endpoint_desc:
 	temp = (ed->bmAttributes & UE_XFERTYPE);
 
 	if (temp == ep_type) {
-
 		if (ep_curr == ep_end) {
 			/* too many endpoints */
 			return (1);	/* failure */
@@ -831,7 +825,6 @@ handle_endpoint_desc:
 		 */
 		ep_no = (ed->bEndpointAddress & UE_ADDR);
 		if (ep_no != 0) {
-
 			/* get HW endpoint profile */
 			(ues->methods->get_hw_ep_profile)
 			    (ues->udev, &pf, ep_no);
@@ -871,7 +864,6 @@ handle_endpoint_desc:
 				}
 			}
 		} else if (is_complete) {
-
 			/* check if we have enough buffer space */
 			if (wMaxPacketSize >
 			    ep_curr->max_frame_size) {
@@ -886,7 +878,6 @@ handle_endpoint_desc:
 			}
 
 		} else {
-
 			/* compute the maximum frame size */
 			if (ep_curr->max_frame_size < wMaxPacketSize) {
 				ep_curr->max_frame_size = wMaxPacketSize;
@@ -943,7 +934,6 @@ usb_hw_ep_resolve(struct usb_device *udev,
 		return (USB_ERR_INVAL);
 
 	if (desc->bDescriptorType == UDESC_DEVICE) {
-
 		if (desc->bLength < sizeof(*dd))
 			return (USB_ERR_INVAL);
 
@@ -1017,9 +1007,7 @@ usb_hw_ep_resolve(struct usb_device *udev,
 		return (USB_ERR_INVAL);
 	}
 	for (ep = ues->ep; ep != ues->ep_max; ep++) {
-
 		while (ep->needs_in || ep->needs_out) {
-
 			/*
 		         * First try to use a simplex endpoint.
 		         * Then try to use a duplex endpoint.
@@ -1389,7 +1377,6 @@ usb_temp_setup(struct usb_device *udev,
 		goto done;
 	}
 	for (n = 0;; n++) {
-
 		buf = usb_temp_get_config_desc(udev, NULL, n);
 		if (buf == NULL) {
 			break;

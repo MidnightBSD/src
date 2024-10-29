@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Benno Rice.  All rights reserved.
  *
@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Driver for SMSC LAN91C111, may work for older variants.
  */
@@ -79,6 +78,8 @@
 #include <dev/mii/mii_bitbang.h>
 #include <dev/mii/miivar.h>
 
+#include "miibus_if.h"
+
 #define	SMC_LOCK(sc)		mtx_lock(&(sc)->smc_mtx)
 #define	SMC_UNLOCK(sc)		mtx_unlock(&(sc)->smc_mtx)
 #define	SMC_ASSERT_LOCKED(sc)	mtx_assert(&(sc)->smc_mtx, MA_OWNED)
@@ -121,7 +122,7 @@ static void	smc_task_rx(void *, int);
 static void	smc_task_tx(void *, int);
 
 static driver_filter_t	smc_intr;
-static timeout_t	smc_watchdog;
+static callout_func_t	smc_watchdog;
 #ifdef DEVICE_POLLING
 static poll_handler_t	smc_poll;
 #endif
@@ -314,10 +315,6 @@ smc_attach(device_t dev)
 	sc->smc_dev = dev;
 
 	ifp = sc->smc_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		error = ENOSPC;
-		goto done;
-	}
 
 	mtx_init(&sc->smc_mtx, device_get_nameunit(dev), NULL, MTX_DEF);
 
@@ -394,7 +391,7 @@ smc_attach(device_t dev)
 
 	/* Set up taskqueue */
 	TASK_INIT(&sc->smc_intr, SMC_INTR_PRIORITY, smc_task_intr, ifp);
-	TASK_INIT(&sc->smc_rx, SMC_RX_PRIORITY, smc_task_rx, ifp);
+	NET_TASK_INIT(&sc->smc_rx, SMC_RX_PRIORITY, smc_task_rx, ifp);
 	TASK_INIT(&sc->smc_tx, SMC_TX_PRIORITY, smc_task_tx, ifp);
 	sc->smc_tq = taskqueue_create_fast("smc_taskq", M_NOWAIT,
 	    taskqueue_thread_enqueue, &sc->smc_tq);
@@ -431,10 +428,10 @@ smc_detach(device_t dev)
 	if (sc->smc_ifp != NULL) {
 		ether_ifdetach(sc->smc_ifp);
 	}
-	
+
 	callout_drain(&sc->smc_watchdog);
 	callout_drain(&sc->smc_mii_tick_ch);
-	
+
 #ifdef DEVICE_POLLING
 	if (sc->smc_ifp->if_capenable & IFCAP_POLLING)
 		ether_poll_deregister(sc->smc_ifp);
@@ -478,6 +475,26 @@ smc_detach(device_t dev)
 
 	return (0);
 }
+
+static device_method_t smc_methods[] = {
+	/* Device interface */
+	DEVMETHOD(device_attach,	smc_attach),
+	DEVMETHOD(device_detach,	smc_detach),
+
+	/* MII interface */
+	DEVMETHOD(miibus_readreg,	smc_miibus_readreg),
+	DEVMETHOD(miibus_writereg,	smc_miibus_writereg),
+	DEVMETHOD(miibus_statchg,	smc_miibus_statchg),
+	{ 0, 0 }
+};
+
+driver_t smc_driver = {
+	"smc",
+	smc_methods,
+	sizeof(struct smc_softc),
+};
+
+DRIVER_MODULE(miibus, smc, miibus_driver, miibus_devclass, 0, 0);
 
 static void
 smc_start(struct ifnet *ifp)
@@ -579,7 +596,7 @@ smc_task_tx(void *context, int pending)
 	sc = ifp->if_softc;
 
 	SMC_LOCK(sc);
-	
+
 	if (sc->smc_pending == NULL) {
 		SMC_UNLOCK(sc);
 		goto next_packet;
@@ -698,7 +715,7 @@ smc_task_rx(void *context, int pending)
 			m_freem(m);
 			break;
 		}
-	
+
 		/*
 		 * Point to the start of the packet.
 		 */
@@ -725,14 +742,14 @@ smc_task_rx(void *context, int pending)
 			m_freem(m);
 			break;
 		}
-	
+
 		/*
 		 * Set the mbuf up the way we want it.
 		 */
 		m->m_pkthdr.rcvif = ifp;
 		m->m_pkthdr.len = m->m_len = len + 2; /* XXX: Is this right? */
 		m_adj(m, ETHER_ALIGN);
-	
+
 		/*
 		 * Pull the packet out of the device.  Make sure we're in the
 		 * right bank first as things may have changed while we were
@@ -841,7 +858,7 @@ smc_task_intr(void *context, int pending)
 	sc = ifp->if_softc;
 
 	SMC_LOCK(sc);
-	
+
 	smc_select_bank(sc, 2);
 
 	/*
@@ -1152,9 +1169,9 @@ smc_reset(struct smc_softc *sc)
 	 * Set up the control register.
 	 */
 	smc_select_bank(sc, 1);
-	ctr = smc_read_2(sc, CTR);
-	ctr |= CTR_LE_ENABLE | CTR_AUTO_RELEASE;
-	smc_write_2(sc, CTR, ctr);
+	ctr = smc_read_2(sc, CTRL);
+	ctr |= CTRL_LE_ENABLE | CTRL_AUTO_RELEASE;
+	smc_write_2(sc, CTRL, ctr);
 
 	/*
 	 * Reset the MMU.
@@ -1231,7 +1248,7 @@ static void
 smc_watchdog(void *arg)
 {
 	struct smc_softc	*sc;
-	
+
 	sc = (struct smc_softc *)arg;
 	device_printf(sc->smc_dev, "watchdog timeout\n");
 	taskqueue_enqueue(sc->smc_tq, &sc->smc_intr);

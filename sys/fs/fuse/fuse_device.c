@@ -61,8 +61,8 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
+#include <sys/param.h>
 #include <sys/module.h>
 #include <sys/systm.h>
 #include <sys/errno.h>
@@ -87,6 +87,9 @@
 #include "fuse.h"
 #include "fuse_internal.h"
 #include "fuse_ipc.h"
+
+#include <compat/linux/linux_errno.h>
+#include <compat/linux/linux_errno.inc>
 
 SDT_PROVIDER_DECLARE(fusefs);
 /* 
@@ -447,6 +450,15 @@ fuse_device_write(struct cdev *dev, struct uio *uio, int ioflag)
 	}
 	if ((err = uiomove(&ohead, sizeof(struct fuse_out_header), uio)) != 0)
 		return (err);
+
+	if (data->linux_errnos != 0 && ohead.error != 0) {
+		err = -ohead.error;
+		if (err < 0 || err >= nitems(linux_to_bsd_errtbl))
+			return (EINVAL);
+
+		/* '-', because it will get flipped again below */
+		ohead.error = -linux_to_bsd_errtbl[err];
+	}
 
 	/*
 	 * We check header information (which is redundant) and compare it

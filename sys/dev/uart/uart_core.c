@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Marcel Moolenaar
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -208,8 +207,8 @@ uart_pps_init(struct uart_softc *sc)
 #endif
 	TUNABLE_INT_FETCH("hw.uart.pps_mode", &sc->sc_pps_mode);
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO, "pps_mode",
-	    CTLTYPE_INT | CTLFLAG_RWTUN, sc, 0, uart_pps_mode_sysctl, "I",
-	    "pulse mode: 0/1/2=disabled/CTS/DCD; "
+	    CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_MPSAFE, sc, 0,
+	    uart_pps_mode_sysctl, "I", "pulse mode: 0/1/2=disabled/CTS/DCD; "
 	    "add 0x10 to invert, 0x20 for narrow pulse");
 
 	if (!uart_pps_mode_valid(sc->sc_pps_mode)) {
@@ -447,7 +446,7 @@ uart_intr(void *arg)
 
 	if (sc->sc_polled) {
 		callout_reset(&sc->sc_timer, hz / uart_poll_freq,
-		    (timeout_t *)uart_intr, sc);
+		    (callout_func_t *)uart_intr, sc);
 	}
 
 	return ((cnt == 0) ? FILTER_STRAY :
@@ -712,7 +711,7 @@ uart_bus_attach(device_t dev)
 		sc->sc_polled = 1;
 		callout_init(&sc->sc_timer, 1);
 		callout_reset(&sc->sc_timer, hz / uart_poll_freq,
-		    (timeout_t *)uart_intr, sc);
+		    (callout_func_t *)uart_intr, sc);
 	}
 
 	if (bootverbose && (sc->sc_fastintr || sc->sc_polled)) {

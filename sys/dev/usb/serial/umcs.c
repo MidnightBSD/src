@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Lev Serebryakov <lev@FreeBSD.org>.
  * All rights reserved.
@@ -40,7 +40,6 @@
  *
  */
 #include <sys/cdefs.h>
-
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -80,10 +79,10 @@
 #ifdef USB_DEBUG
 static int umcs_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, umcs, CTLFLAG_RW, 0, "USB umcs quadport serial adapter");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, umcs, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB umcs quadport serial adapter");
 SYSCTL_INT(_hw_usb_umcs, OID_AUTO, debug, CTLFLAG_RWTUN, &umcs_debug, 0, "Debug level");
 #endif					/* USB_DEBUG */
-
 
 /*
  * Two-port devices (both with 7820 chip and 7840 chip configured as two-port)
@@ -498,7 +497,9 @@ umcs7840_cfg_open(struct ucom_softc *ucom)
 	 * Enable DTR/RTS on modem control, enable modem interrupts --
 	 * documented
 	 */
-	sc->sc_ports[pn].sc_mcr = MCS7840_UART_MCR_DTR | MCS7840_UART_MCR_RTS | MCS7840_UART_MCR_IE;
+	sc->sc_ports[pn].sc_mcr = MCS7840_UART_MCR_IE;
+	if (ucom->sc_tty == NULL || (ucom->sc_tty->t_termios.c_cflag & CNO_RTSDTR) == 0)
+		sc->sc_ports[pn].sc_mcr |= MCS7840_UART_MCR_DTR | MCS7840_UART_MCR_RTS;
 	if (umcs7840_set_UART_reg_sync(sc, pn, MCS7840_UART_REG_MCR, sc->sc_ports[pn].sc_mcr))
 		return;
 
@@ -515,7 +516,6 @@ umcs7840_cfg_open(struct ucom_softc *ucom)
 	/* Set speed 9600 */
 	if (umcs7840_set_baudrate(sc, pn, 9600))
 		return;
-
 
 	/* Finally enable all interrupts -- documented */
 	/*
@@ -605,7 +605,6 @@ umcs7840_cfg_set_break(struct ucom_softc *ucom, uint8_t onoff)
 	DPRINTF("Port %d BREAK set to: %s\n", pn, onoff ? "on" : "off");
 }
 
-
 static void
 umcs7840_cfg_param(struct ucom_softc *ucom, struct termios *t)
 {
@@ -680,7 +679,6 @@ umcs7840_cfg_param(struct ucom_softc *ucom, struct termios *t)
 
 	umcs7840_set_baudrate(sc, pn, t->c_ospeed);
 }
-
 
 static int
 umcs7840_pre_param(struct ucom_softc *ucom, struct termios *t)

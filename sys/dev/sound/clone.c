@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -99,70 +98,6 @@ struct snd_clone {
 #endif
 
 /*
- * Shamelessly ripped off from vfs_subr.c
- * We need at least 1/HZ precision as default timestamping.
- */
-enum { SND_TSP_SEC, SND_TSP_HZ, SND_TSP_USEC, SND_TSP_NSEC };
-
-static int snd_timestamp_precision = SND_TSP_HZ;
-TUNABLE_INT("hw.snd.timestamp_precision", &snd_timestamp_precision);
-
-void
-snd_timestamp(struct timespec *tsp)
-{
-	struct timeval tv;
-
-	switch (snd_timestamp_precision) {
-	case SND_TSP_SEC:
-		tsp->tv_sec = time_second;
-		tsp->tv_nsec = 0;
-		break;
-	case SND_TSP_HZ:
-		getnanouptime(tsp);
-		break;
-	case SND_TSP_USEC:
-		microuptime(&tv);
-		TIMEVAL_TO_TIMESPEC(&tv, tsp);
-		break;
-	case SND_TSP_NSEC:
-		nanouptime(tsp);
-		break;
-	default:
-		snd_timestamp_precision = SND_TSP_HZ;
-		getnanouptime(tsp);
-		break;
-	}
-}
-
-#if defined(SND_DIAGNOSTIC) || defined(SND_DEBUG)
-static int
-sysctl_hw_snd_timestamp_precision(SYSCTL_HANDLER_ARGS)
-{
-	int err, val;
-
-	val = snd_timestamp_precision;
-	err = sysctl_handle_int(oidp, &val, 0, req);
-	if (err == 0 && req->newptr != NULL) {
-		switch (val) {
-		case SND_TSP_SEC:
-		case SND_TSP_HZ:
-		case SND_TSP_USEC:
-		case SND_TSP_NSEC:
-			snd_timestamp_precision = val;
-			break;
-		default:
-			break;
-		}
-	}
-
-	return (err);
-}
-SYSCTL_PROC(_hw_snd, OID_AUTO, timestamp_precision, CTLTYPE_INT | CTLFLAG_RW,
-    0, sizeof(int), sysctl_hw_snd_timestamp_precision, "I",
-    "timestamp precision (0=s 1=hz 2=us 3=ns)");
-#endif
-
-/*
  * snd_clone_create() : Return opaque allocated clone manager.
  */
 struct snd_clone *
@@ -187,7 +122,7 @@ snd_clone_create(int typemask, int maxunit, int deadline, uint32_t flags)
 	    maxunit;
 	c->deadline = deadline;
 	c->flags = flags;
-	snd_timestamp(&c->tsp);
+	getnanouptime(&c->tsp);
 	TAILQ_INIT(&c->head);
 
 	return (c);
@@ -294,17 +229,6 @@ snd_clone_setdeadline(struct snd_clone *c, int deadline)
 	return (c->deadline);
 }
 
-int
-snd_clone_gettime(struct snd_clone *c, struct timespec *tsp)
-{
-	SND_CLONE_ASSERT(c != NULL, ("NULL snd_clone"));
-	SND_CLONE_ASSERT(tsp != NULL, ("NULL timespec"));
-
-	*tsp = c->tsp;
-
-	return (0);
-}
-
 uint32_t
 snd_clone_getflags(struct snd_clone *c)
 {
@@ -323,25 +247,6 @@ snd_clone_setflags(struct snd_clone *c, uint32_t flags)
 	c->flags = flags;
 
 	return (c->flags);
-}
-
-int
-snd_clone_getdevtime(struct cdev *dev, struct timespec *tsp)
-{
-	struct snd_clone_entry *ce;
-
-	SND_CLONE_ASSERT(dev != NULL, ("NULL dev"));
-	SND_CLONE_ASSERT(tsp != NULL, ("NULL timespec"));
-
-	ce = dev->si_drv2;
-	if (ce == NULL)
-		return (ENODEV);
-
-	SND_CLONE_ASSERT(ce->parent != NULL, ("NULL parent"));
-
-	*tsp = ce->tsp;
-
-	return (0);
 }
 
 uint32_t
@@ -409,7 +314,7 @@ snd_clone_gc(struct snd_clone *c)
 	if (!(c->flags & SND_CLONE_GC_ENABLE) || c->size == 0)
 		return (0);
 
-	snd_timestamp(&now);
+	getnanouptime(&now);
 
 	/*
 	 * Bail out if the last clone handler was invoked below the deadline
@@ -640,7 +545,7 @@ snd_clone_alloc(struct snd_clone *c, struct cdev **dev, int *unit, int tmask)
 	allocunit = (*unit == -1) ? 0 : *unit;
 	curpid = curthread->td_proc->p_pid;
 
-	snd_timestamp(&now);
+	getnanouptime(&now);
 
 	TAILQ_FOREACH(ce, &c->head, link) {
 		/*

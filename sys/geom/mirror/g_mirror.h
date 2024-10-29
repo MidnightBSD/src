@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_G_MIRROR_H_
@@ -77,30 +76,18 @@
 					 G_MIRROR_DEVICE_FLAG_NOFAILSYNC)
 
 #ifdef _KERNEL
+#define	G_MIRROR_DEVICE_FLAG_DESTROY	0x0100000000000000ULL
+#define	G_MIRROR_DEVICE_FLAG_DRAIN	0x0200000000000000ULL
+#define	G_MIRROR_DEVICE_FLAG_CLOSEWAIT	0x0400000000000000ULL
+#define	G_MIRROR_DEVICE_FLAG_TASTING	0x0800000000000000ULL
+#define	G_MIRROR_DEVICE_FLAG_WIPE	0x1000000000000000ULL
+
 extern int g_mirror_debug;
 
-#define	G_MIRROR_DEBUG(lvl, ...)	do {				\
-	if (g_mirror_debug >= (lvl)) {					\
-		printf("GEOM_MIRROR");					\
-		if (g_mirror_debug > 0)					\
-			printf("[%u]", lvl);				\
-		printf(": ");						\
-		printf(__VA_ARGS__);					\
-		printf("\n");						\
-	}								\
-} while (0)
-#define	G_MIRROR_LOGREQ(lvl, bp, ...)	do {				\
-	if (g_mirror_debug >= (lvl)) {					\
-		printf("GEOM_MIRROR");					\
-		if (g_mirror_debug > 0)					\
-			printf("[%u]", lvl);				\
-		printf(": ");						\
-		printf(__VA_ARGS__);					\
-		printf(" ");						\
-		g_print_bio(bp);					\
-		printf("\n");						\
-	}								\
-} while (0)
+#define G_MIRROR_DEBUG(lvl, ...) \
+    _GEOM_DEBUG("GEOM_MIRROR", g_mirror_debug, (lvl), NULL, __VA_ARGS__)
+#define G_MIRROR_LOGREQ(lvl, bp, ...) \
+    _GEOM_DEBUG("GEOM_MIRROR", g_mirror_debug, (lvl), (bp), __VA_ARGS__)
 
 #define	G_MIRROR_BIO_FLAG_REGULAR	0x01
 #define	G_MIRROR_BIO_FLAG_SYNC		0x02
@@ -147,6 +134,11 @@ struct g_mirror_disk {
 	u_int		 d_genid;	/* Disk's generation ID. */
 	struct g_mirror_disk_sync d_sync;/* Sync information. */
 	LIST_ENTRY(g_mirror_disk) d_next;
+	u_int		 d_init_ndisks;	/* Initial number of mirror components */
+	uint32_t	 d_init_slice;	/* Initial slice size */
+	uint8_t		 d_init_balance;/* Initial balance */
+	uint16_t	 d_rotation_rate;/* Disk's rotation rate */
+	uint64_t	 d_init_mediasize;/* Initial mediasize */
 };
 #define	d_name	d_consumer->provider->name
 
@@ -161,12 +153,6 @@ struct g_mirror_event {
 	int			 e_error;
 	TAILQ_ENTRY(g_mirror_event) e_next;
 };
-
-#define	G_MIRROR_DEVICE_FLAG_DESTROY	0x0100000000000000ULL
-#define	G_MIRROR_DEVICE_FLAG_DRAIN	0x0200000000000000ULL
-#define	G_MIRROR_DEVICE_FLAG_CLOSEWAIT	0x0400000000000000ULL
-#define	G_MIRROR_DEVICE_FLAG_TASTING	0x0800000000000000ULL
-#define	G_MIRROR_DEVICE_FLAG_WIPE	0x1000000000000000ULL
 
 #define	G_MIRROR_DEVICE_STATE_STARTING		0
 #define	G_MIRROR_DEVICE_STATE_RUNNING		1
@@ -220,6 +206,7 @@ struct g_mirror_softc {
 
 	TAILQ_HEAD(, g_mirror_event) sc_events;
 	struct mtx	sc_events_mtx;
+	struct g_mirror_event *sc_timeout_event;
 
 	struct callout	sc_callout;
 

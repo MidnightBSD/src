@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -92,7 +91,7 @@ xdrmbuf_append(XDR *xdrs, struct mbuf *madd)
 		m_freem(madd);
 		return;
 	}
-	
+
 	m = (struct mbuf *) xdrs->x_private;
 	m->m_next = madd;
 
@@ -205,7 +204,7 @@ xdrmbuf_getbytes(XDR *xdrs, char *addr, u_int len)
 			xdrs->x_handy = 0;
 		}
 	}
-	
+
 	return (TRUE);
 }
 
@@ -240,7 +239,7 @@ xdrmbuf_putbytes(XDR *xdrs, const char *addr, u_int len)
 			xdrs->x_handy = 0;
 		}
 	}
-	
+
 	return (TRUE);
 }
 

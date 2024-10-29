@@ -56,7 +56,6 @@
  *
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
- *
  */
 
 #ifndef VM_H
@@ -87,8 +86,17 @@ typedef u_char vm_prot_t;	/* protection codes */
 #define VM_PROT_RW		(VM_PROT_READ|VM_PROT_WRITE)
 #define	VM_PROT_DEFAULT		VM_PROT_ALL
 
-enum obj_type { OBJT_DEFAULT, OBJT_SWAP, OBJT_VNODE, OBJT_DEVICE, OBJT_PHYS,
-		OBJT_DEAD, OBJT_SG, OBJT_MGTDEVICE };
+enum obj_type {
+	OBJT_DEFAULT,
+	OBJT_SWAP,
+	OBJT_VNODE,
+	OBJT_DEVICE,
+	OBJT_PHYS,
+	OBJT_DEAD,
+	OBJT_SG,
+	OBJT_MGTDEVICE,
+	OBJT_FIRST_DYN,
+};
 typedef u_char objtype_t;
 
 union vm_map_object;
@@ -144,20 +152,29 @@ struct kva_md_info {
 	vm_offset_t	clean_eva;
 };
 
-extern struct kva_md_info	kmi;
-extern void vm_ksubmap_init(struct kva_md_info *);
+/* bits from overcommit */
+#define	SWAP_RESERVE_FORCE_ON		(1 << 0)
+#define	SWAP_RESERVE_RLIMIT_ON		(1 << 1)
+#define	SWAP_RESERVE_ALLOW_NONWIRED	(1 << 2)
 
-extern int old_mlock;
-
-extern int vm_ndomains;
-
+#ifdef _KERNEL
 struct ucred;
-int swap_reserve(vm_ooffset_t incr);
-int swap_reserve_by_cred(vm_ooffset_t incr, struct ucred *cred);
+
+void vm_ksubmap_init(struct kva_md_info *);
+bool swap_reserve(vm_ooffset_t incr);
+bool swap_reserve_by_cred(vm_ooffset_t incr, struct ucred *cred);
 void swap_reserve_force(vm_ooffset_t incr);
 void swap_release(vm_ooffset_t decr);
 void swap_release_by_cred(vm_ooffset_t decr, struct ucred *cred);
 void swapper(void);
 
-#endif				/* VM_H */
+extern struct kva_md_info	kmi;
+#define VA_IS_CLEANMAP(va)					\
+	((va) >= kmi.clean_sva && (va) < kmi.clean_eva)
 
+extern int old_mlock;
+extern int vm_ndomains;
+extern int vm_overcommit;
+#endif				/* _KERNEL */
+
+#endif				/* VM_H */

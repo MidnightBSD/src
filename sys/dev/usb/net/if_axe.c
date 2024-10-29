@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * ASIX Electronics AX88172/AX88178/AX88778 USB 2.0 ethernet driver.
  * Used in the LinkSys USB200M and various other adapters.
@@ -62,7 +61,7 @@
  *   to send any packets.
  *
  * Note that this device appears to only support loading the station
- * address via autload from the EEPROM (i.e. there's no way to manaully
+ * address via autload from the EEPROM (i.e. there's no way to manually
  * set it).
  *
  * (Adam Weinberger wanted me to name this driver if_gir.c.)
@@ -115,6 +114,8 @@
 #include <dev/usb/net/usb_ethernet.h>
 #include <dev/usb/net/if_axereg.h>
 
+#include "miibus_if.h"
+
 /*
  * AXE_178_MAX_FRAME_BURST
  * max frame burst size for Ax88178 and Ax88772
@@ -135,7 +136,8 @@
 #ifdef USB_DEBUG
 static int axe_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, axe, CTLFLAG_RW, 0, "USB axe");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, axe, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB axe");
 SYSCTL_INT(_hw_usb_axe, OID_AUTO, debug, CTLFLAG_RWTUN, &axe_debug, 0,
     "Debug level");
 #endif
@@ -217,7 +219,6 @@ static int	axe_rxeof(struct usb_ether *, struct usb_page_cache *,
 static void	axe_csum_cfg(struct usb_ether *);
 
 static const struct usb_config axe_config[AXE_N_TRANSFER] = {
-
 	[AXE_BULK_DT_WR] = {
 		.type = UE_BULK,
 		.endpoint = UE_ADDR_ANY,
@@ -478,13 +479,23 @@ axe_ifmedia_sts(struct ifnet *ifp, struct ifmediareq *ifmr)
 	AXE_UNLOCK(sc);
 }
 
+static u_int
+axe_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint8_t *hashtbl = arg;
+	uint32_t h;
+
+	h = ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN) >> 26;
+	hashtbl[h / 8] |= 1 << (h % 8);
+
+	return (1);
+}
+
 static void
 axe_setmulti(struct usb_ether *ue)
 {
 	struct axe_softc *sc = uether_getsc(ue);
 	struct ifnet *ifp = uether_getifp(ue);
-	struct ifmultiaddr *ifma;
-	uint32_t h = 0;
 	uint16_t rxmode;
 	uint8_t hashtbl[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
@@ -500,16 +511,7 @@ axe_setmulti(struct usb_ether *ue)
 	}
 	rxmode &= ~AXE_RXCMD_ALLMULTI;
 
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link)
-	{
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		h = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-		    ifma->ifma_addr), ETHER_ADDR_LEN) >> 26;
-		hashtbl[h / 8] |= 1 << (h % 8);
-	}
-	if_maddr_runlock(ifp);
+	if_foreach_llmaddr(ifp, axe_hash_maddr, &hashtbl);
 
 	axe_cmd(sc, AXE_CMD_WRITE_MCAST, 0, 0, (void *)&hashtbl);
 	axe_cmd(sc, AXE_CMD_RXCTL_WRITE, 0, rxmode, NULL);
@@ -705,9 +707,6 @@ axe_ax88772_init(struct axe_softc *sc)
 static void
 axe_ax88772_phywake(struct axe_softc *sc)
 {
-	struct usb_ether *ue;
-
-	ue = &sc->sc_ue;
 	if (sc->sc_phyno == AXE_772_PHY_NO_EPHY) {
 		/* Manually select internal(embedded) PHY - MAC mode. */
 		axe_cmd(sc, AXE_CMD_SW_PHY_SELECT, 0, AXE_SW_PHY_SELECT_SS_ENB |
@@ -900,11 +899,11 @@ axe_attach_post_sub(struct usb_ether *ue)
 		adv_pause = MIIF_DOPAUSE;
 	else
 		adv_pause = 0;
-	mtx_lock(&Giant);
+	bus_topo_lock();
 	error = mii_attach(ue->ue_dev, &ue->ue_miibus, ifp,
 	    uether_ifmedia_upd, ue->ue_methods->ue_mii_sts,
 	    BMSR_DEFCAPMASK, sc->sc_phyno, MII_OFFSET_ANY, adv_pause);
-	mtx_unlock(&Giant);
+	bus_topo_unlock();
 
 	return (error);
 }
@@ -1021,7 +1020,6 @@ tr_setup:
 			goto tr_setup;
 		}
 		return;
-
 	}
 }
 
@@ -1146,7 +1144,7 @@ axe_rxeof(struct usb_ether *ue, struct usb_page_cache *pc, unsigned int offset,
 		}
 	}
 
-	_IF_ENQUEUE(&ue->ue_rxq, m);
+	(void)mbufq_enqueue(&ue->ue_rxq, m);
 	return (0);
 }
 
@@ -1265,7 +1263,6 @@ tr_setup:
 			goto tr_setup;
 		}
 		return;
-
 	}
 }
 

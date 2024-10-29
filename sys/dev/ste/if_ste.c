@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
 #endif
@@ -404,14 +403,27 @@ ste_read_eeprom(struct ste_softc *sc, uint16_t *dest, int off, int cnt)
 	return (err ? 1 : 0);
 }
 
+static u_int
+ste_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint32_t *hashes = arg;
+	int h;
+
+	h = ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN) & 0x3F;
+	if (h < 32)
+		hashes[0] |= (1 << h);
+	else
+		hashes[1] |= (1 << (h - 32));
+
+	return (1);
+}
+
 static void
 ste_rxfilter(struct ste_softc *sc)
 {
 	struct ifnet *ifp;
-	struct ifmultiaddr *ifma;
 	uint32_t hashes[2] = { 0, 0 };
 	uint8_t rxcfg;
-	int h;
 
 	STE_LOCK_ASSERT(sc);
 
@@ -432,18 +444,7 @@ ste_rxfilter(struct ste_softc *sc)
 
 	rxcfg |= STE_RXMODE_MULTIHASH;
 	/* Now program new ones. */
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		h = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-		    ifma->ifma_addr), ETHER_ADDR_LEN) & 0x3F;
-		if (h < 32)
-			hashes[0] |= (1 << h);
-		else
-			hashes[1] |= (1 << (h - 32));
-	}
-	if_maddr_runlock(ifp);
+	if_foreach_llmaddr(ifp, ste_hash_maddr, hashes);
 
 chipit:
 	CSR_WRITE_2(sc, STE_MAR0, hashes[0] & 0xFFFF);
@@ -988,11 +989,6 @@ ste_attach(device_t dev)
 		goto fail;
 
 	ifp = sc->ste_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(dev, "can not if_alloc()\n");
-		error = ENOSPC;
-		goto fail;
-	}
 
 	/* Do MII setup. */
 	phy = MII_PHY_ANY;
@@ -2050,13 +2046,13 @@ ste_sysctl_node(struct ste_softc *sc)
 	resource_int_value(device_get_name(sc->ste_dev),
 	    device_get_unit(sc->ste_dev), "int_rx_mod", &sc->ste_int_rx_mod);
 
-	tree = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "stats", CTLFLAG_RD,
-	    NULL, "STE statistics");
+	tree = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "stats",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "STE statistics");
 	parent = SYSCTL_CHILDREN(tree);
 
 	/* Rx statistics. */
-	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "rx", CTLFLAG_RD,
-	    NULL, "Rx MAC statistics");
+	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "rx",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Rx MAC statistics");
 	child = SYSCTL_CHILDREN(tree);
 	STE_SYSCTL_STAT_ADD64(ctx, child, "good_octets",
 	    &stats->rx_bytes, "Good octets");
@@ -2070,8 +2066,8 @@ ste_sysctl_node(struct ste_softc *sc)
 	    &stats->rx_lost_frames, "Lost frames");
 
 	/* Tx statistics. */
-	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "tx", CTLFLAG_RD,
-	    NULL, "Tx MAC statistics");
+	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "tx",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Tx MAC statistics");
 	child = SYSCTL_CHILDREN(tree);
 	STE_SYSCTL_STAT_ADD64(ctx, child, "good_octets",
 	    &stats->tx_bytes, "Good octets");

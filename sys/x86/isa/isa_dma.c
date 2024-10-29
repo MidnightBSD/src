@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * code to manage AT bus
  *
@@ -93,7 +92,6 @@ isa_dma_init(int chan, u_int bouncebufsize, int flag)
 	if (chan & ~VALID_DMA_MASK)
 		panic("isa_dma_init: channel out of range");
 #endif
-
 
 	/* Try malloc() first.  It works better if it works. */
 	buf = malloc(bouncebufsize, M_DEVBUF, flag);
@@ -575,7 +573,7 @@ static int
 atdma_probe(device_t dev)
 {
 	int result;
-	
+
 	if ((result = ISA_PNP_PROBE(device_get_parent(dev), dev, atdma_ids)) <= 0)
 		device_quiet(dev);
 	return(result);

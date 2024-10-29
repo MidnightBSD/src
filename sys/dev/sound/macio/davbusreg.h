@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 2008 by Marco Trillo. All rights reserved.
  *
@@ -23,7 +23,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -76,7 +75,6 @@
 
 /* DAVBUS_CODEC_CTRL bit definitions. */
 #define DAVBUS_CODEC_BUSY	0x01000000
-
 
 /*
  * Burgundy Codec Control Bits
@@ -234,7 +232,6 @@
 #define SCREAMER_CODEC_EMSEL2	0x00800000
 #define SCREAMER_CODEC_EMSEL4	0x00c00000
 
-
 /* cc0 */
 /*
  * Bits 7-4 specify the left ADC input gain;
@@ -283,4 +280,3 @@
 #define SCREAMER_STATUS_REVSHFT	12
 
 #endif /* _SOUND_DAVBUS_H */
-

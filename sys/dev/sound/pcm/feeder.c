@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Copyright (c) 1999 Cameron Grant <cg@FreeBSD.org>
@@ -35,6 +35,7 @@
 
 #include "feeder_if.h"
 
+SND_DECLARE_FILE("");
 
 static MALLOC_DEFINE(M_FEEDER, "feeder", "pcm feeder");
 
@@ -471,7 +472,6 @@ feed_root(struct pcm_feeder *feeder, struct pcm_channel *ch, u_int8_t *buffer, u
 		sndbuf_dispose(src, buffer, l);
 		return l;
 	}
-
 
 	offset = count - l;
 

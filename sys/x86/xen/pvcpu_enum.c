@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Roger Pau Monné <roger.pau@citrix.com>
  * All rights reserved.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -198,7 +197,7 @@ xenpv_setup_io(void)
 		 * this is legacy code so just keep using the previous
 		 * behaviour and assume a maximum of 256 interrupts.
 		 */
-		num_io_irqs = max(MINIMUM_MSI_INT - 1, num_io_irqs);
+		num_io_irqs = max(255, num_io_irqs);
 
 		acpi_SetDefaultIntrModel(ACPI_INTR_APIC);
 	}

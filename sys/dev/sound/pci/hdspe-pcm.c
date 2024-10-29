@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012-2016 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -40,6 +40,7 @@
 
 #include <mixer_if.h>
 
+SND_DECLARE_FILE("");
 
 struct hdspe_latency {
 	uint32_t n;
@@ -78,7 +79,6 @@ static struct hdspe_rate rate_map[] = {
 
 	{ 0, 0 },
 };
-
 
 static int
 hdspe_hw_mixer(struct sc_chinfo *ch, unsigned int dst,
@@ -328,7 +328,6 @@ clean(struct sc_chinfo *ch)
 
 	return (0);
 }
-
 
 /* Channel interface. */
 static void *
@@ -658,7 +657,6 @@ static kobj_method_t hdspechan_methods[] = {
 	KOBJMETHOD_END
 };
 CHANNEL_DECLARE(hdspechan);
-
 
 static int
 hdspe_pcm_probe(device_t dev)

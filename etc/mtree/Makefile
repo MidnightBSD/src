@@ -1,5 +1,7 @@
 .include <src.opts.mk>
 
+PACKAGE=	mtree
+
 # NOTE: BSD.debug.dist is unconditionally installed for developer ease-of-use.
 FILES=	\
 	BSD.debug.dist \

@@ -1,11 +1,9 @@
 # Doxyfile 1.5.2
 
-# $MidnightBSD: stable/11/tools/kerneldoc/subsys/Doxyfile-dev_sound 230479 2012-01-23 11:37:40Z netchild $
-
 #---------------------------------------------------------------------------
 # Project related configuration options
 #---------------------------------------------------------------------------
-PROJECT_NAME           = "MidnightBSD kernel sound device code"
+PROJECT_NAME           = "FreeBSD kernel sound device code"
 OUTPUT_DIRECTORY       = $(DOXYGEN_DEST_PATH)/dev_sound/
 EXTRACT_ALL            = YES    # for undocumented src, no warnings enabled
 #---------------------------------------------------------------------------

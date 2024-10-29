@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002, 2003 Gordon Tetlow
  * Copyright (c) 2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -41,10 +40,8 @@
 #include <ufs/ffs/ffs_extern.h>
 
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include <geom/label/g_label.h>
-
-#define G_LABEL_UFS_VOLUME_DIR	"ufs"
-#define G_LABEL_UFS_ID_DIR	"ufsid"
 
 #define	G_LABEL_UFS_VOLUME	0
 #define	G_LABEL_UFS_ID		1
@@ -75,8 +72,9 @@ g_label_ufs_taste_common(struct g_consumer *cp, char *label, size_t size, int wh
 	label[0] = '\0';
 
 	fs = NULL;
-	if (SBLOCKSIZE % pp->sectorsize != 0 ||
-	    ffs_sbget(cp, &fs, -1, M_GEOM, g_use_g_read_data) != 0) {
+	KASSERT(pp->sectorsize != 0, ("Tasting a disk with 0 sectorsize"));
+	if (SBLOCKSIZE % pp->sectorsize != 0 || ffs_sbget(cp, &fs,
+	    STDSB_NOHASHFAIL, M_GEOM, g_use_g_read_data) != 0) {
 		KASSERT(fs == NULL,
 		    ("g_label_ufs_taste_common: non-NULL fs %p\n", fs));
 		return;
@@ -120,6 +118,7 @@ g_label_ufs_taste_common(struct g_consumer *cp, char *label, size_t size, int wh
 	}
 out:
 	g_free(fs->fs_csp);
+	g_free(fs->fs_si);
 	g_free(fs);
 }
 
@@ -139,13 +138,13 @@ g_label_ufs_id_taste(struct g_consumer *cp, char *label, size_t size)
 
 struct g_label_desc g_label_ufs_volume = {
 	.ld_taste = g_label_ufs_volume_taste,
-	.ld_dir = G_LABEL_UFS_VOLUME_DIR,
+	.ld_dirprefix = "ufs/",
 	.ld_enabled = 1
 };
 
 struct g_label_desc g_label_ufs_id = {
 	.ld_taste = g_label_ufs_id_taste,
-	.ld_dir = G_LABEL_UFS_ID_DIR,
+	.ld_dirprefix = "ufsid/",
 	.ld_enabled = 1
 };
 

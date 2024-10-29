@@ -3,11 +3,10 @@
 #include <sys/cdefs.h>
 #define UFOMA_HANDSFREE
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2005, Takanori Watanabe
- * Copyright (c) 2003, M. Warner Losh <imp@FreeBSD.org>.
- * All rights reserved.
+ * Copyright (c) 2005, Takanori Watanabe All rights reserved.
+ * Copyright (c) 2003 M. Warner Losh <imp@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -233,7 +232,6 @@ static int ufoma_sysctl_open(SYSCTL_HANDLER_ARGS);
 
 static const struct usb_config
 	ufoma_ctrl_config[UFOMA_CTRL_ENDPT_MAX] = {
-
 	[UFOMA_CTRL_ENDPT_INTR] = {
 		.type = UE_INTERRUPT,
 		.endpoint = UE_ADDR_ANY,
@@ -265,7 +263,6 @@ static const struct usb_config
 
 static const struct usb_config
 	ufoma_bulk_config[UFOMA_BULK_ENDPT_MAX] = {
-
 	[UFOMA_BULK_ENDPT_WRITE] = {
 		.type = UE_BULK,
 		.endpoint = UE_ADDR_ANY,
@@ -457,16 +454,16 @@ ufoma_attach(device_t dev)
 	soid = device_get_sysctl_tree(dev);
 
 	SYSCTL_ADD_PROC(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "supportmode",
-			CTLFLAG_RD|CTLTYPE_STRING, sc, 0, ufoma_sysctl_support,
-			"A", "Supporting port role");
+	    CTLFLAG_RD | CTLTYPE_STRING | CTLFLAG_MPSAFE, sc, 0,
+	    ufoma_sysctl_support, "A", "Supporting port role");
 
 	SYSCTL_ADD_PROC(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "currentmode",
-			CTLFLAG_RD|CTLTYPE_STRING, sc, 0, ufoma_sysctl_current,
-			"A", "Current port role");
+	CTLFLAG_RD | CTLTYPE_STRING | CTLFLAG_MPSAFE, sc, 0,
+	ufoma_sysctl_current, "A", "Current port role");
 
 	SYSCTL_ADD_PROC(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "openmode",
-			CTLFLAG_RW|CTLTYPE_STRING, sc, 0, ufoma_sysctl_open,
-			"A", "Mode to transit when port is opened");
+	CTLFLAG_RW | CTLTYPE_STRING | CTLFLAG_MPSAFE, sc, 0,
+	ufoma_sysctl_open, "A", "Mode to transit when port is opened");
 	SYSCTL_ADD_UINT(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "comunit",
 			CTLFLAG_RD, &(sc->sc_super_ucom.sc_unit), 0, 
 			"Unit number as USB serial");
@@ -523,7 +520,6 @@ ufoma_get_intconf(struct usb_config_descriptor *cd, struct usb_interface_descrip
 	struct usb_descriptor *desc = (void *)id;
 
 	while ((desc = usb_desc_foreach(cd, desc))) {
-
 		if (desc->bDescriptorType == UDESC_INTERFACE) {
 			return (NULL);
 		}
@@ -645,7 +641,6 @@ tr_transferred:
 	case USB_ST_SETUP:
 		pc = usbd_xfer_get_frame(xfer, 1);
 		if (ucom_get_data(&sc->sc_ucom, pc, 0, 1, &actlen)) {
-
 			req.bmRequestType = UT_WRITE_CLASS_INTERFACE;
 			req.bRequest = UCDC_SEND_ENCAPSULATED_COMMAND;
 			USETW(req.wIndex, sc->sc_ctrl_iface_no);
@@ -1064,11 +1059,9 @@ ufoma_modem_setup(device_t dev, struct ufoma_softc *sc,
 	/* get the data interface too */
 
 	for (i = 0;; i++) {
-
 		iface = usbd_get_iface(uaa->device, i);
 
 		if (iface) {
-
 			id = usbd_get_interface_descriptor(iface);
 
 			if (id && (id->bInterfaceNumber == sc->sc_data_iface_no)) {
@@ -1208,7 +1201,7 @@ static int ufoma_sysctl_support(SYSCTL_HANDLER_ARGS)
 	sbuf_finish(&sb);
 	sysctl_handle_string(oidp, sbuf_data(&sb), sbuf_len(&sb), req);
 	sbuf_delete(&sb);
-	
+
 	return 0;
 }
 static int ufoma_sysctl_current(SYSCTL_HANDLER_ARGS)
@@ -1222,9 +1215,9 @@ static int ufoma_sysctl_current(SYSCTL_HANDLER_ARGS)
 		snprintf(subbuf, sizeof(subbuf), "(%02x)", sc->sc_currentmode);
 	}
 	sysctl_handle_string(oidp, mode, strlen(mode), req);
-	
+
 	return 0;
-	
+
 }
 static int ufoma_sysctl_open(SYSCTL_HANDLER_ARGS)
 {
@@ -1245,18 +1238,18 @@ static int ufoma_sysctl_open(SYSCTL_HANDLER_ARGS)
 	if(error != 0 || req->newptr == NULL){
 		return error;
 	}
-	
+
 	if((newmode = ufoma_str_to_mode(subbuf)) == -1){
 		return EINVAL;
 	}
-	
+
 	for(i = 1 ; i < sc->sc_modetable[0] ; i++){
 		if(sc->sc_modetable[i] == newmode){
 			sc->sc_modetoactivate = newmode;
 			return 0;
 		}
 	}
-	
+
 	return EINVAL;
 }
 

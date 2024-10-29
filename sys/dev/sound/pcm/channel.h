@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Portions Copyright (c) Ryan Beasley <ryan.beasley@gmail.com> - GSoC 2006
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 struct pcmchan_caps {
@@ -165,7 +164,8 @@ struct pcm_channel {
 	struct pcmchan_matrix matrix;
   	struct pcmchan_matrix matrix_scratch;
 
-	int volume[SND_VOL_C_MAX][SND_CHN_T_VOL_MAX];
+	int16_t volume[SND_VOL_C_MAX][SND_CHN_T_VOL_MAX];
+  	int8_t muted[SND_VOL_C_MAX][SND_CHN_T_VOL_MAX];
 
 	void *data1, *data2;
 };
@@ -270,6 +270,9 @@ int chn_setvolume_multi(struct pcm_channel *c, int vc, int left, int right,
     int center);
 int chn_setvolume_matrix(struct pcm_channel *c, int vc, int vt, int val);
 int chn_getvolume_matrix(struct pcm_channel *c, int vc, int vt);
+int chn_setmute_multi(struct pcm_channel *c, int vc, int mute);
+int chn_setmute_matrix(struct pcm_channel *c, int vc, int vt, int mute);
+int chn_getmute_matrix(struct pcm_channel *c, int vc, int vt);
 void chn_vpc_reset(struct pcm_channel *c, int vc, int force);
 int chn_setparam(struct pcm_channel *c, uint32_t format, uint32_t speed);
 int chn_setspeed(struct pcm_channel *c, uint32_t speed);
@@ -306,6 +309,8 @@ int chn_syncdestroy(struct pcm_channel *c);
 #define CHN_GETVOLUME(x, y, z)		((x)->volume[y][z])
 #endif
 
+#define CHN_GETMUTE(x, y, z)		((x)->muted[y][z])
+
 #ifdef OSSV4_EXPERIMENT
 int chn_getpeaks(struct pcm_channel *c, int *lpeak, int *rpeak);
 #endif
@@ -323,7 +328,6 @@ uint32_t snd_str2afmt(const char *);
 uint32_t snd_afmt2str(uint32_t, char *, size_t);
 
 #define AFMTSTR_LEN	16
-
 
 extern int chn_latency;
 extern int chn_latency_profile;
@@ -393,7 +397,6 @@ extern int report_soft_matrix;
 				"\036BITPERFECT"			\
 				"\037PASSTHROUGH"			\
 				"\040EXCLUSIVE"
-
 
 #define CHN_F_RESET		(CHN_F_BUSY | CHN_F_DEAD |		\
 				 CHN_F_VIRTUAL | CHN_F_HAS_VCHAN |	\

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #ifdef _KERNEL
 #include <sys/systm.h>
@@ -96,7 +95,7 @@ static int
 pkcs5v2_probe(int iterations)
 {
 	uint8_t	key[G_ELI_USERKEYLEN], salt[G_ELI_SALTLEN];
-	uint8_t passphrase[] = "passphrase";
+	const char passphrase[] = "passphrase";
 	struct rusage start, end;
 	int usecs;
 

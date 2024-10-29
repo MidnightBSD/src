@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 Orion Hodson <oho@acm.org>
  * All rights reserved.
@@ -48,6 +48,7 @@
 
 #include "mixer_if.h"
 
+SND_DECLARE_FILE("");
 
 /* Debugging macro's */
 #undef DEB
@@ -311,7 +312,6 @@ als_set_speed(struct sc_chinfo *ch)
 
 /* ------------------------------------------------------------------------- */
 /* Playback channel implementation */
-
 #define ALS_8BIT_CMD(x, y)  { (x), (y), DSP_DMA8,  DSP_CMD_DMAPAUSE_8  }
 #define ALS_16BIT_CMD(x, y) { (x), (y),	DSP_DMA16, DSP_CMD_DMAPAUSE_16 }
 
@@ -894,7 +894,6 @@ static int
 als_pci_resume(device_t dev)
 {
 	struct sc_info *sc = pcm_getdevinfo(dev);
-
 
 	snd_mtxlock(sc->lock);
 	if (als_init(sc) != 0) {

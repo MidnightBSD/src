@@ -34,7 +34,6 @@ static char *sccsid2 = "@(#)xdr.c 1.35 87/08/12";
 static char *sccsid = "@(#)xdr.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-
 /*
  * xdr.c, Generic XDR routines implementation.
  *
@@ -80,7 +79,7 @@ void
 xdr_free(xdrproc_t proc, void *objp)
 {
 	XDR x;
-	
+
 	x.x_op = XDR_FREE;
 	(*proc)(&x, objp);
 }
@@ -95,7 +94,6 @@ xdr_void(void)
 	return (TRUE);
 }
 
-
 /*
  * XDR integers
  */
@@ -105,7 +103,6 @@ xdr_int(XDR *xdrs, int *ip)
 	long l;
 
 	switch (xdrs->x_op) {
-
 	case XDR_ENCODE:
 		l = (long) *ip;
 		return (XDR_PUTLONG(xdrs, &l));
@@ -133,7 +130,6 @@ xdr_u_int(XDR *xdrs, u_int *up)
 	u_long l;
 
 	switch (xdrs->x_op) {
-
 	case XDR_ENCODE:
 		l = (u_long) *up;
 		return (XDR_PUTLONG(xdrs, (long *)&l));
@@ -151,7 +147,6 @@ xdr_u_int(XDR *xdrs, u_int *up)
 	/* NOTREACHED */
 	return (FALSE);
 }
-
 
 /*
  * XDR long integers
@@ -191,7 +186,6 @@ xdr_u_long(XDR *xdrs, u_long *ulp)
 	return (FALSE);
 }
 
-
 /*
  * XDR 32-bit integers
  * same as xdr_uint32_t - open coded to save a proc call!
@@ -202,7 +196,6 @@ xdr_int32_t(XDR *xdrs, int32_t *int32_p)
 	long l;
 
 	switch (xdrs->x_op) {
-
 	case XDR_ENCODE:
 		l = (long) *int32_p;
 		return (XDR_PUTLONG(xdrs, &l));
@@ -231,7 +224,6 @@ xdr_uint32_t(XDR *xdrs, uint32_t *uint32_p)
 	u_long l;
 
 	switch (xdrs->x_op) {
-
 	case XDR_ENCODE:
 		l = (u_long) *uint32_p;
 		return (XDR_PUTLONG(xdrs, (long *)&l));
@@ -250,7 +242,6 @@ xdr_uint32_t(XDR *xdrs, uint32_t *uint32_p)
 	return (FALSE);
 }
 
-
 /*
  * XDR short integers
  */
@@ -260,7 +251,6 @@ xdr_short(XDR *xdrs, short *sp)
 	long l;
 
 	switch (xdrs->x_op) {
-
 	case XDR_ENCODE:
 		l = (long) *sp;
 		return (XDR_PUTLONG(xdrs, &l));
@@ -288,7 +278,6 @@ xdr_u_short(XDR *xdrs, u_short *usp)
 	u_long l;
 
 	switch (xdrs->x_op) {
-
 	case XDR_ENCODE:
 		l = (u_long) *usp;
 		return (XDR_PUTLONG(xdrs, (long *)&l));
@@ -307,7 +296,6 @@ xdr_u_short(XDR *xdrs, u_short *usp)
 	return (FALSE);
 }
 
-
 /*
  * XDR 16-bit integers
  */
@@ -317,7 +305,6 @@ xdr_int16_t(XDR *xdrs, int16_t *int16_p)
 	long l;
 
 	switch (xdrs->x_op) {
-
 	case XDR_ENCODE:
 		l = (long) *int16_p;
 		return (XDR_PUTLONG(xdrs, &l));
@@ -345,7 +332,6 @@ xdr_uint16_t(XDR *xdrs, uint16_t *uint16_p)
 	u_long l;
 
 	switch (xdrs->x_op) {
-
 	case XDR_ENCODE:
 		l = (u_long) *uint16_p;
 		return (XDR_PUTLONG(xdrs, (long *)&l));
@@ -363,7 +349,6 @@ xdr_uint16_t(XDR *xdrs, uint16_t *uint16_p)
 	/* NOTREACHED */
 	return (FALSE);
 }
-
 
 /*
  * XDR a char
@@ -406,7 +391,6 @@ xdr_bool(XDR *xdrs, bool_t *bp)
 	long lb;
 
 	switch (xdrs->x_op) {
-
 	case XDR_ENCODE:
 		lb = *bp ? XDR_TRUE : XDR_FALSE;
 		return (XDR_PUTLONG(xdrs, &lb));
@@ -523,7 +507,6 @@ xdr_bytes(XDR *xdrs, char **cpp, u_int *sizep, u_int maxsize)
 	 * now deal with the actual bytes
 	 */
 	switch (xdrs->x_op) {
-
 	case XDR_DECODE:
 		if (nodesize == 0) {
 			return (TRUE);
@@ -613,12 +596,10 @@ xdr_union(XDR *xdrs,
 	    (*dfault)(xdrs, unp));
 }
 
-
 /*
  * Non-portable xdr primitives.
  * Care should be taken when moving these routines to new architectures.
  */
-
 
 /*
  * XDR null terminated ASCII strings
@@ -663,7 +644,6 @@ xdr_string(XDR *xdrs, char **cpp, u_int maxsize)
 	 * now deal with the actual bytes
 	 */
 	switch (xdrs->x_op) {
-
 	case XDR_DECODE:
 		if (nodesize == 0) {
 			return (TRUE);
@@ -746,7 +726,6 @@ xdr_int64_t(XDR *xdrs, int64_t *llp)
 	return (FALSE);
 }
 
-
 /*
  * XDR unsigned 64-bit integers
  */
@@ -777,7 +756,6 @@ xdr_uint64_t(XDR *xdrs, uint64_t *ullp)
 	return (FALSE);
 }
 
-
 /*
  * XDR hypers
  */
@@ -791,7 +769,6 @@ xdr_hyper(XDR *xdrs, longlong_t *llp)
 	 */
 	return (xdr_int64_t(xdrs, (int64_t *)llp));
 }
-
 
 /*
  * XDR unsigned hypers
@@ -807,7 +784,6 @@ xdr_u_hyper(XDR *xdrs, u_longlong_t *ullp)
 	return (xdr_uint64_t(xdrs, (uint64_t *)ullp));
 }
 
-
 /*
  * XDR longlong_t's
  */
@@ -821,7 +797,6 @@ xdr_longlong_t(XDR *xdrs, longlong_t *llp)
 	 */
 	return (xdr_int64_t(xdrs, (int64_t *)llp));
 }
-
 
 /*
  * XDR u_longlong_t's

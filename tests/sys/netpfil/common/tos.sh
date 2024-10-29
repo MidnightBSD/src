@@ -1,5 +1,5 @@
 #-
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2019 Ahsan Barkati
 #
@@ -24,7 +24,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
 #
 
 . $(atf_get_srcdir)/utils.subr
@@ -68,7 +67,7 @@ tos_body()
 		--sendif ${epair_send}a \
 		--to 198.51.100.3 \
 		--recvif ${epair_recv}a \
-		--expect-tos 36
+		--expect-tc 36
 
 	# Check if the firewall is able to set the ToS bits
 	# and persists the EN bits (if already set)
@@ -82,8 +81,8 @@ tos_body()
 		--sendif ${epair_send}a \
 		--to 198.51.100.3 \
 		--recvif ${epair_recv}a \
-		--send-tos 3 \
-		--expect-tos 39
+		--send-tc 3 \
+		--expect-tc 39
 
 	# Check if the firewall is able to filter the
 	# packets based on the ToS value
@@ -97,13 +96,13 @@ tos_body()
 		--sendif ${epair_send}a \
 		--to 198.51.100.3 \
 		--recvif ${epair_recv}a \
-		--send-tos 36
+		--send-tc 36
 
 	atf_check -s exit:0 $(atf_get_srcdir)/pft_ping.py \
 		--sendif ${epair_send}a \
 		--to 198.51.100.3 \
 		--recvif ${epair_recv}a \
-		--send-tos 32
+		--send-tc 32
 }
 
 tos_cleanup()

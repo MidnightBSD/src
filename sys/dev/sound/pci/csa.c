@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Seigo Tanimura
  * All rights reserved.
@@ -54,6 +54,7 @@
 
 #include <dev/sound/pci/cs461x_dsp.h>
 
+SND_DECLARE_FILE("");
 
 /* This is the pci device id. */
 #define CS4610_PCI_ID 0x60011013
@@ -875,7 +876,7 @@ static int
 csa_transferimage(csa_res *resp, u_int32_t *src, u_long dest, u_long len)
 {
 	u_long ul;
-	
+
 	/*
 	 * We do not allow DMAs from host memory to host memory (although the DMA
 	 * can do it) and we do not allow DMAs which are not a multiple of 4 bytes

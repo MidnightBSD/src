@@ -1,7 +1,7 @@
 /*	$NetBSD: uaudioreg.h,v 1.12 2004/11/05 19:08:29 kent Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -350,7 +350,6 @@ struct usb_audio_extension_unit_1 {
 #define	UATF_RADIOXMIT		0x0711
 #define	UATF_MULTITRACK		0x0712
 #define	UATF_SYNTHESIZER	0x0713
-
 
 #define	SET_CUR 0x01
 #define	GET_CUR 0x81

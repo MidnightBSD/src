@@ -45,7 +45,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -68,11 +67,17 @@
 
 #include <net/if.h>
 #include <net/if_var.h>
+#include <net/if_media.h>
+
+#include <dev/mii/mii.h>
+#include <dev/mii/miivar.h>
 
 #include <dev/usb/usb.h>
 #include <dev/usb/usbdi.h>
 #include <dev/usb/usbdi_util.h>
 #include "usbdevs.h"
+
+#include "miibus_if.h"
 
 #define	USB_DEBUG_VAR udav_debug
 #include <dev/usb/usb_debug.h>
@@ -112,7 +117,6 @@ static miibus_writereg_t udav_miibus_writereg;
 static miibus_statchg_t udav_miibus_statchg;
 
 static const struct usb_config udav_config[UDAV_N_TRANSFER] = {
-
 	[UDAV_BULK_DT_WR] = {
 		.type = UE_BULK,
 		.endpoint = UE_ADDR_ANY,
@@ -213,7 +217,8 @@ static const struct usb_ether_methods udav_ue_methods_nophy = {
 #ifdef USB_DEBUG
 static int udav_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, udav, CTLFLAG_RW, 0, "USB udav");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, udav, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB udav");
 SYSCTL_INT(_hw_usb_udav, OID_AUTO, debug, CTLFLAG_RWTUN, &udav_debug, 0,
     "Debug level");
 #endif
@@ -496,15 +501,24 @@ udav_reset(struct udav_softc *sc)
 	uether_pause(&sc->sc_ue, hz / 100);
 }
 
-#define	UDAV_BITS	6
+static u_int
+udav_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint8_t *hashtbl = arg;
+	int h;
+
+	h = ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN) >> 26;
+	hashtbl[h / 8] |= 1 << (h % 8);
+
+	return (1);
+}
+
 static void
 udav_setmulti(struct usb_ether *ue)
 {
 	struct udav_softc *sc = ue->ue_sc;
 	struct ifnet *ifp = uether_getifp(&sc->sc_ue);
-	struct ifmultiaddr *ifma;
 	uint8_t hashtbl[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-	int h = 0;
 
 	UDAV_LOCK_ASSERT(sc, MA_OWNED);
 
@@ -519,16 +533,7 @@ udav_setmulti(struct usb_ether *ue)
 	udav_csr_write(sc, UDAV_MAR, hashtbl, sizeof(hashtbl));
 
 	/* now program new ones */
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link)
-	{
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		h = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-		    ifma->ifma_addr), ETHER_ADDR_LEN) >> 26;
-		hashtbl[h / 8] |= 1 << (h % 8);
-	}
-	if_maddr_runlock(ifp);
+	if_foreach_llmaddr(ifp, udav_hash_maddr, hashtbl);
 
 	/* disable all multicast */
 	UDAV_CLRBIT(sc, UDAV_RCR, UDAV_RCR_ALL);

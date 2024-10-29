@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_syscons.h"
 
 #include <sys/param.h>
@@ -490,7 +489,6 @@ sc_vid_ioctl(struct tty *tp, u_long cmd, caddr_t data, struct thread *td)
 	return ENODEV;
 
     switch (cmd) {
-
     case CONS_CURRENTADP:	/* get current adapter index */
     case FBIO_ADAPTER:
 	return fb_ioctl(adp, FBIO_ADAPTER, data);
@@ -614,14 +612,6 @@ sc_vid_ioctl(struct tty *tp, u_long cmd, caddr_t data, struct thread *td)
     case FBIOPUTCMAP:
     case FBIOGETCMAP:
     case FBIOGTYPE:
-    case FBIOGATTR:
-    case FBIOSVIDEO:
-    case FBIOGVIDEO:
-    case FBIOSCURSOR:
-    case FBIOGCURSOR:
-    case FBIOSCURPOS:
-    case FBIOGCURPOS:
-    case FBIOGCURMAX:
 	if (scp != scp->sc->cur_scp)
 	    return ENODEV;	/* XXX */
 	return fb_ioctl(adp, cmd, data);

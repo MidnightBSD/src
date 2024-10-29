@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -71,6 +71,7 @@ extern unsigned int usb_resume_delay;
 extern unsigned int usb_resume_wait;
 extern unsigned int usb_resume_recovery;
 extern unsigned int usb_extra_power_up_time;
+extern unsigned int usb_enum_nice_time;
 #else
 #define usb_port_reset_delay		USB_PORT_RESET_DELAY
 #define usb_port_root_reset_delay	USB_PORT_ROOT_RESET_DELAY
@@ -82,6 +83,7 @@ extern unsigned int usb_extra_power_up_time;
 #define usb_resume_wait			USB_RESUME_WAIT
 #define usb_resume_recovery		USB_RESUME_RECOVERY
 #define usb_extra_power_up_time		USB_EXTRA_POWER_UP_TIME
+#define usb_enum_nice_time		USB_ENUM_NICE_TIME
 #endif
 
 #endif					/* _USB_DEBUG_H_ */

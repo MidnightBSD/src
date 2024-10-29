@@ -1,11 +1,9 @@
 # Doxyfile 1.5.2
 
-# $MidnightBSD: stable/11/tools/kerneldoc/subsys/Doxyfile-dev_tdfx 230862 2012-02-01 10:59:19Z netchild $
-
 #---------------------------------------------------------------------------
 # Project related configuration options
 #---------------------------------------------------------------------------
-PROJECT_NAME           = "MidnightBSD kernel TDFX device code"
+PROJECT_NAME           = "FreeBSD kernel TDFX device code"
 OUTPUT_DIRECTORY       = $(DOXYGEN_DEST_PATH)/dev_tdfx/
 EXTRACT_ALL            = YES    # for undocumented src, no warnings enabled
 #---------------------------------------------------------------------------

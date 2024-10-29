@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -55,7 +53,7 @@ zfs_acl_chmod_002_pos_head()
 {
 	atf_set "descr" "Verify acl after upgrading."
 	atf_set "require.config" zfs_acl
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_acl_chmod_002_pos_body()
 {
@@ -80,7 +78,7 @@ zfs_acl_chmod_aclmode_001_pos_head()
 {
 	atf_set "descr" "Verify chmod have correct behaviour to directory and file whenfilesystem has the different aclmode setting."
 	atf_set "require.config" zfs_acl
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_acl_chmod_aclmode_001_pos_body()
 {
@@ -177,7 +175,7 @@ zfs_acl_chmod_inherit_002_pos_head()
 {
 	atf_set "descr" "Verify chmod have correct behaviour to directory and file whenfilesystem has the different aclinherit setting."
 	atf_set "require.config" zfs_acl
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_acl_chmod_inherit_002_pos_body()
 {
@@ -202,7 +200,7 @@ zfs_acl_chmod_inherit_003_pos_head()
 {
 	atf_set "descr" "Verify chmod have correct behaviour to directory and file whenfilesystem has the different aclinherit setting."
 	atf_set "require.config" zfs_acl
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_acl_chmod_inherit_003_pos_body()
 {
@@ -227,7 +225,7 @@ zfs_acl_chmod_inherit_004_pos_head()
 {
 	atf_set "descr" "Verify aclinherit=passthrough-x will inherit the 'x' bits while mode request."
 	atf_set "require.config" zfs_acl
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 }
 zfs_acl_chmod_inherit_004_pos_body()
 {
@@ -395,8 +393,8 @@ atf_test_case zfs_acl_chmod_xattr_001_pos cleanup
 zfs_acl_chmod_xattr_001_pos_head()
 {
 	atf_set "descr" "Verify that the permission of read_xattr/write_xattr forowner/group/everyone are correct."
-	atf_set "require.config" zfs_acl zfs_xattr
-	atf_set "require.progs"  runat
+	atf_set "require.config" "zfs_acl zfs_xattr"
+	atf_set "require.progs" "ksh93 runat"
 }
 zfs_acl_chmod_xattr_001_pos_body()
 {
@@ -421,7 +419,7 @@ zfs_acl_chmod_xattr_002_pos_head()
 {
 	atf_set "descr" "Verify that the permission of write_xattr forowner/group/everyone while remove extended attributes are correct."
 	atf_set "require.config" zfs_xattr
-	atf_set "require.progs"  runat
+	atf_set "require.progs" "ksh93 runat"
 }
 zfs_acl_chmod_xattr_002_pos_body()
 {
@@ -446,7 +444,7 @@ zfs_acl_cp_001_pos_head()
 {
 	atf_set "descr" "Verify that '$CP [-p]' supports ZFS ACLs."
 	atf_set "require.config" zfs_acl
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_acl_cp_001_pos_body()
 {
@@ -470,8 +468,8 @@ atf_test_case zfs_acl_cp_002_pos cleanup
 zfs_acl_cp_002_pos_head()
 {
 	atf_set "descr" "Verify that '$CP [-p]' supports ZFS ACLs."
-	atf_set "require.config" zfs_acl zfs_xattr
-	atf_set "require.progs"  zfs runat
+	atf_set "require.config" "zfs_acl zfs_xattr"
+	atf_set "require.progs" "ksh93 zfs runat"
 }
 zfs_acl_cp_002_pos_body()
 {
@@ -496,7 +494,7 @@ zfs_acl_cpio_001_pos_head()
 {
 	atf_set "descr" "Verify that '$CPIO' command supports to archive ZFS ACLs."
 	atf_set "require.config" zfs_acl
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_acl_cpio_001_pos_body()
 {
@@ -520,8 +518,8 @@ atf_test_case zfs_acl_cpio_002_pos cleanup
 zfs_acl_cpio_002_pos_head()
 {
 	atf_set "descr" "Verify that '$CPIO' command supports to archive ZFS ACLs & xattrs."
-	atf_set "require.config" zfs_acl zfs_xattr
-	atf_set "require.progs"  zfs runat
+	atf_set "require.config" "zfs_acl zfs_xattr"
+	atf_set "require.progs" "ksh93 zfs runat"
 }
 zfs_acl_cpio_002_pos_body()
 {
@@ -618,7 +616,7 @@ zfs_acl_tar_001_pos_head()
 {
 	atf_set "descr" "Verify that '$TAR' command supports to archive ZFS ACLs."
 	atf_set "require.config" zfs_acl
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_acl_tar_001_pos_body()
 {
@@ -642,8 +640,8 @@ atf_test_case zfs_acl_tar_002_pos cleanup
 zfs_acl_tar_002_pos_head()
 {
 	atf_set "descr" "Verify that '$TAR' command supports to archive ZFS ACLs & xattrs."
-	atf_set "require.config" zfs_acl zfs_xattr
-	atf_set "require.progs"  zfs runat
+	atf_set "require.config" "zfs_acl zfs_xattr"
+	atf_set "require.progs" "ksh93 zfs runat"
 }
 zfs_acl_tar_002_pos_body()
 {

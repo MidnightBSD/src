@@ -29,7 +29,6 @@
 #
 #  Authors: Alan Somers         (Spectra Logic Corporation)
 #
-# $FreeBSD$
 
 # All of the tests in this file requires the test-suite config variable "fibs"
 # to be defined to a space-delimited list of FIBs that may be used for testing.
@@ -677,6 +676,9 @@ udp_dontroute6_head()
 
 udp_dontroute6_body()
 {
+	if [ "$(atf_config_get ci false)" = "true" ]; then
+		atf_skip "https://bugs.freebsd.org/244172"
+	fi
 	# Configure the TAP interface to use an RFC3849 nonrouteable address
 	# and a non-default fib
 	ADDR0="2001:db8::2"

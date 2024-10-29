@@ -66,6 +66,7 @@
  */
 
 #include <sys/cdefs.h>
+#include "opt_param.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -76,6 +77,7 @@
 #include <sys/ucred.h>
 #include <sys/malloc.h>
 #include <sys/rwlock.h>
+#include <sys/user.h>
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -84,10 +86,12 @@
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
 #include <vm/vm_extern.h>
+#include <vm/uma.h>
 
-int cluster_pbuf_freecnt = -1;	/* unlimited to begin with */
-
-struct buf *swbuf;
+uma_zone_t pbuf_zone;
+static int	pbuf_init(void *, int, int);
+static int	pbuf_ctor(void *, int, void *, int);
+static void	pbuf_dtor(void *, int, void *);
 
 static int dead_pager_getpages(vm_object_t, vm_page_t *, int, int *, int *);
 static vm_object_t dead_pager_alloc(void *, vm_ooffset_t, vm_prot_t,
@@ -95,6 +99,7 @@ static vm_object_t dead_pager_alloc(void *, vm_ooffset_t, vm_prot_t,
 static void dead_pager_putpages(vm_object_t, vm_page_t *, int, int, int *);
 static boolean_t dead_pager_haspage(vm_object_t, vm_pindex_t, int *, int *);
 static void dead_pager_dealloc(vm_object_t);
+static void dead_pager_getvp(vm_object_t, struct vnode **, bool *);
 
 static int
 dead_pager_getpages(vm_object_t obj, vm_page_t *ma, int count, int *rbehind,
@@ -139,75 +144,100 @@ dead_pager_dealloc(vm_object_t object)
 
 }
 
-static struct pagerops deadpagerops = {
+static void
+dead_pager_getvp(vm_object_t object, struct vnode **vpp, bool *vp_heldp)
+{
+	/*
+	 * For OBJT_DEAD objects, v_writecount was handled in
+	 * vnode_pager_dealloc().
+	 */
+}
+
+static const struct pagerops deadpagerops = {
+	.pgo_kvme_type = KVME_TYPE_DEAD,
 	.pgo_alloc = 	dead_pager_alloc,
 	.pgo_dealloc =	dead_pager_dealloc,
 	.pgo_getpages =	dead_pager_getpages,
 	.pgo_putpages =	dead_pager_putpages,
 	.pgo_haspage =	dead_pager_haspage,
+	.pgo_getvp =	dead_pager_getvp,
 };
 
-struct pagerops *pagertab[] = {
-	&defaultpagerops,	/* OBJT_DEFAULT */
-	&swappagerops,		/* OBJT_SWAP */
-	&vnodepagerops,		/* OBJT_VNODE */
-	&devicepagerops,	/* OBJT_DEVICE */
-	&physpagerops,		/* OBJT_PHYS */
-	&deadpagerops,		/* OBJT_DEAD */
-	&sgpagerops,		/* OBJT_SG */
-	&mgtdevicepagerops,	/* OBJT_MGTDEVICE */
+const struct pagerops *pagertab[16] __read_mostly = {
+	[OBJT_DEFAULT] =	&defaultpagerops,
+	[OBJT_SWAP] =		&swappagerops,
+	[OBJT_VNODE] =		&vnodepagerops,
+	[OBJT_DEVICE] =		&devicepagerops,
+	[OBJT_PHYS] =		&physpagerops,
+	[OBJT_DEAD] =		&deadpagerops,
+	[OBJT_SG] = 		&sgpagerops,
+	[OBJT_MGTDEVICE] = 	&mgtdevicepagerops,
 };
-
-/*
- * Kernel address space for mapping pages.
- * Used by pagers where KVAs are needed for IO.
- *
- * XXX needs to be large enough to support the number of pending async
- * cleaning requests (NPENDINGIO == 64) * the maximum swap cluster size
- * (MAXPHYS == 64k) if you want to get the most efficiency.
- */
-struct mtx_padalign __exclusive_cache_line pbuf_mtx;
-static TAILQ_HEAD(swqueue, buf) bswlist;
-static int bswneeded;
-vm_offset_t swapbkva;		/* swap buffers kva */
+static struct mtx pagertab_lock;
 
 void
 vm_pager_init(void)
 {
-	struct pagerops **pgops;
+	const struct pagerops **pgops;
+	int i;
 
-	TAILQ_INIT(&bswlist);
+	mtx_init(&pagertab_lock, "dynpag", NULL, MTX_DEF);
+
 	/*
 	 * Initialize known pagers
 	 */
-	for (pgops = pagertab; pgops < &pagertab[nitems(pagertab)]; pgops++)
+	for (i = 0; i < OBJT_FIRST_DYN; i++) {
+		pgops = &pagertab[i];
 		if ((*pgops)->pgo_init != NULL)
 			(*(*pgops)->pgo_init)();
+	}
 }
+
+static int nswbuf_max;
 
 void
 vm_pager_bufferinit(void)
 {
-	struct buf *bp;
-	int i;
 
-	mtx_init(&pbuf_mtx, "pbuf mutex", NULL, MTX_DEF);
-	bp = swbuf;
-	/*
-	 * Now set up swap and physical I/O buffer headers.
-	 */
-	for (i = 0; i < nswbuf; i++, bp++) {
-		TAILQ_INSERT_HEAD(&bswlist, bp, b_freelist);
-		BUF_LOCKINIT(bp);
-		LIST_INIT(&bp->b_dep);
-		bp->b_rcred = bp->b_wcred = NOCRED;
-		bp->b_xflags = 0;
-	}
-
-	cluster_pbuf_freecnt = nswbuf / 2;
-	vnode_pbuf_freecnt = nswbuf / 2 + 1;
-	vnode_async_pbuf_freecnt = nswbuf / 2;
+	/* Main zone for paging bufs. */
+	pbuf_zone = uma_zcreate("pbuf",
+	    sizeof(struct buf) + PBUF_PAGES * sizeof(vm_page_t),
+	    pbuf_ctor, pbuf_dtor, pbuf_init, NULL, UMA_ALIGN_CACHE,
+	    UMA_ZONE_NOFREE);
+	/* Few systems may still use this zone directly, so it needs a limit. */
+	nswbuf_max += uma_zone_set_max(pbuf_zone, NSWBUF_MIN);
 }
+
+uma_zone_t
+pbuf_zsecond_create(const char *name, int max)
+{
+	uma_zone_t zone;
+
+	zone = uma_zsecond_create(name, pbuf_ctor, pbuf_dtor, NULL, NULL,
+	    pbuf_zone);
+	/*
+	 * uma_prealloc() rounds up to items per slab. If we would prealloc
+	 * immediately on every pbuf_zsecond_create(), we may accumulate too
+	 * much of difference between hard limit and prealloced items, which
+	 * means wasted memory.
+	 */
+	if (nswbuf_max > 0)
+		nswbuf_max += uma_zone_set_max(zone, max);
+	else
+		uma_prealloc(pbuf_zone, uma_zone_set_max(zone, max));
+
+	return (zone);
+}
+
+static void
+pbuf_prealloc(void *arg __unused)
+{
+
+	uma_prealloc(pbuf_zone, nswbuf_max);
+	nswbuf_max = -1;
+}
+
+SYSINIT(pbuf, SI_SUB_KTHREAD_BUF, SI_ORDER_ANY, pbuf_prealloc, NULL);
 
 /*
  * Allocate an instance of a pager of the given type.
@@ -218,15 +248,14 @@ vm_object_t
 vm_pager_allocate(objtype_t type, void *handle, vm_ooffset_t size,
     vm_prot_t prot, vm_ooffset_t off, struct ucred *cred)
 {
-	vm_object_t ret;
-	struct pagerops *ops;
+	vm_object_t object;
 
-	ops = pagertab[type];
-	if (ops)
-		ret = (*ops->pgo_alloc)(handle, size, prot, off, cred);
-	else
-		ret = NULL;
-	return (ret);
+	MPASS(type < nitems(pagertab));
+
+	object = (*pagertab[type]->pgo_alloc)(handle, size, prot, off, cred);
+	if (object != NULL)
+		object->type = type;
+	return (object);
 }
 
 /*
@@ -237,6 +266,7 @@ vm_pager_deallocate(vm_object_t object)
 {
 
 	VM_OBJECT_ASSERT_WLOCKED(object);
+	MPASS(object->type < nitems(pagertab));
 	(*pagertab[object->type]->pgo_dealloc) (object);
 }
 
@@ -245,15 +275,21 @@ vm_pager_assert_in(vm_object_t object, vm_page_t *m, int count)
 {
 #ifdef INVARIANTS
 
-	VM_OBJECT_ASSERT_WLOCKED(object);
-	KASSERT(count > 0, ("%s: 0 count", __func__));
 	/*
-	 * All pages must be busied, not mapped, not fully valid,
-	 * not dirty and belong to the proper object.
+	 * All pages must be consecutive, busied, not mapped, not fully valid,
+	 * not dirty and belong to the proper object.  Some pages may be the
+	 * bogus page, but the first and last pages must be a real ones.
 	 */
+
+	VM_OBJECT_ASSERT_UNLOCKED(object);
+	VM_OBJECT_ASSERT_PAGING(object);
+	KASSERT(count > 0, ("%s: 0 count", __func__));
 	for (int i = 0 ; i < count; i++) {
-		if (m[i] == bogus_page)
+		if (m[i] == bogus_page) {
+			KASSERT(i != 0 && i != count - 1,
+			    ("%s: page %d is the bogus page", __func__, i));
 			continue;
+		}
 		vm_page_assert_xbusied(m[i]);
 		KASSERT(!pmap_page_is_mapped(m[i]),
 		    ("%s: page %p is mapped", __func__, m[i]));
@@ -263,6 +299,8 @@ vm_pager_assert_in(vm_object_t object, vm_page_t *m, int count)
 		    ("%s: page %p is dirty", __func__, m[i]));
 		KASSERT(m[i]->object == object,
 		    ("%s: wrong object %p/%p", __func__, object, m[i]->object));
+		KASSERT(m[i]->pindex == m[0]->pindex + i,
+		    ("%s: page %p isn't consecutive", __func__, m[i]));
 	}
 #endif
 }
@@ -280,6 +318,7 @@ vm_pager_get_pages(vm_object_t object, vm_page_t *m, int count, int *rbehind,
 #endif
 	int r;
 
+	MPASS(object->type < nitems(pagertab));
 	vm_pager_assert_in(object, m, count);
 
 	r = (*pagertab[object->type]->pgo_getpages)(object, m, count, rbehind,
@@ -292,9 +331,12 @@ vm_pager_get_pages(vm_object_t object, vm_page_t *m, int count, int *rbehind,
 		 * If pager has replaced a page, assert that it had
 		 * updated the array.
 		 */
-		KASSERT(m[i] == vm_page_lookup(object, pindex++),
+#ifdef INVARIANTS
+		KASSERT(m[i] == vm_page_relookup(object, pindex++),
 		    ("%s: mismatch page %p pindex %ju", __func__,
 		    m[i], (uintmax_t )pindex - 1));
+#endif
+
 		/*
 		 * Zero out partially filled data.
 		 */
@@ -309,6 +351,7 @@ vm_pager_get_pages_async(vm_object_t object, vm_page_t *m, int count,
     int *rbehind, int *rahead, pgo_getpages_iodone_t iodone, void *arg)
 {
 
+	MPASS(object->type < nitems(pagertab));
 	vm_pager_assert_in(object, m, count);
 
 	return ((*pagertab[object->type]->pgo_getpages_async)(object, m,
@@ -346,110 +389,90 @@ vm_pager_object_lookup(struct pagerlst *pg_list, void *handle)
 	return (object);
 }
 
-/*
- * initialize a physical buffer
- */
-
-/*
- * XXX This probably belongs in vfs_bio.c
- */
-static void
-initpbuf(struct buf *bp)
+int
+vm_pager_alloc_dyn_type(struct pagerops *ops, int base_type)
 {
+	int res;
 
-	KASSERT(bp->b_bufobj == NULL, ("initpbuf with bufobj"));
-	KASSERT(bp->b_vp == NULL, ("initpbuf with vp"));
+	mtx_lock(&pagertab_lock);
+	MPASS(base_type == -1 ||
+	    (base_type >= OBJT_DEFAULT && base_type < nitems(pagertab)));
+	for (res = OBJT_FIRST_DYN; res < nitems(pagertab); res++) {
+		if (pagertab[res] == NULL)
+			break;
+	}
+	if (res == nitems(pagertab)) {
+		mtx_unlock(&pagertab_lock);
+		return (-1);
+	}
+	if (base_type != -1) {
+		MPASS(pagertab[base_type] != NULL);
+#define	FIX(n)								\
+		if (ops->pgo_##n == NULL)				\
+			ops->pgo_##n = pagertab[base_type]->pgo_##n
+		FIX(init);
+		FIX(alloc);
+		FIX(dealloc);
+		FIX(getpages);
+		FIX(getpages_async);
+		FIX(putpages);
+		FIX(haspage);
+		FIX(populate);
+		FIX(pageunswapped);
+		FIX(update_writecount);
+		FIX(release_writecount);
+		FIX(set_writeable_dirty);
+		FIX(mightbedirty);
+		FIX(getvp);
+		FIX(freespace);
+		FIX(page_inserted);
+		FIX(page_removed);
+		FIX(can_alloc_page);
+#undef FIX
+	}
+	pagertab[res] = ops;	/* XXXKIB should be rel, but acq is too much */
+	mtx_unlock(&pagertab_lock);
+	return (res);
+}
+
+void
+vm_pager_free_dyn_type(objtype_t type)
+{
+	MPASS(type >= OBJT_FIRST_DYN && type < nitems(pagertab));
+
+	mtx_lock(&pagertab_lock);
+	MPASS(pagertab[type] != NULL);
+	pagertab[type] = NULL;
+	mtx_unlock(&pagertab_lock);
+}
+
+static int
+pbuf_ctor(void *mem, int size, void *arg, int flags)
+{
+	struct buf *bp = mem;
+
+	bp->b_vp = NULL;
+	bp->b_bufobj = NULL;
+
+	/* copied from initpbuf() */
 	bp->b_rcred = NOCRED;
 	bp->b_wcred = NOCRED;
-	bp->b_qindex = 0;	/* On no queue (QUEUE_NONE) */
-	bp->b_kvabase = (caddr_t)(MAXPHYS * (bp - swbuf)) + swapbkva;
+	bp->b_qindex = 0;       /* On no queue (QUEUE_NONE) */
 	bp->b_data = bp->b_kvabase;
-	bp->b_kvasize = MAXPHYS;
-	bp->b_flags = 0;
 	bp->b_xflags = 0;
+	bp->b_flags = B_MAXPHYS;
 	bp->b_ioflags = 0;
 	bp->b_iodone = NULL;
 	bp->b_error = 0;
 	BUF_LOCK(bp, LK_EXCLUSIVE, NULL);
-	buf_track(bp, __func__);
+
+	return (0);
 }
 
-/*
- * allocate a physical buffer
- *
- *	There are a limited number (nswbuf) of physical buffers.  We need
- *	to make sure that no single subsystem is able to hog all of them,
- *	so each subsystem implements a counter which is typically initialized
- *	to 1/2 nswbuf.  getpbuf() decrements this counter in allocation and
- *	increments it on release, and blocks if the counter hits zero.  A
- *	subsystem may initialize the counter to -1 to disable the feature,
- *	but it must still be sure to match up all uses of getpbuf() with 
- *	relpbuf() using the same variable.
- *
- *	NOTE: pfreecnt can be NULL, but this 'feature' will be removed
- *	relatively soon when the rest of the subsystems get smart about it. XXX
- */
-struct buf *
-getpbuf(int *pfreecnt)
+static void
+pbuf_dtor(void *mem, int size, void *arg)
 {
-	struct buf *bp;
-
-	mtx_lock(&pbuf_mtx);
-	for (;;) {
-		if (pfreecnt != NULL) {
-			while (*pfreecnt == 0) {
-				msleep(pfreecnt, &pbuf_mtx, PVM, "wswbuf0", 0);
-			}
-		}
-
-		/* get a bp from the swap buffer header pool */
-		if ((bp = TAILQ_FIRST(&bswlist)) != NULL)
-			break;
-
-		bswneeded = 1;
-		msleep(&bswneeded, &pbuf_mtx, PVM, "wswbuf1", 0);
-		/* loop in case someone else grabbed one */
-	}
-	TAILQ_REMOVE(&bswlist, bp, b_freelist);
-	if (pfreecnt)
-		--*pfreecnt;
-	mtx_unlock(&pbuf_mtx);
-	initpbuf(bp);
-	return (bp);
-}
-
-/*
- * allocate a physical buffer, if one is available.
- *
- *	Note that there is no NULL hack here - all subsystems using this
- *	call understand how to use pfreecnt.
- */
-struct buf *
-trypbuf(int *pfreecnt)
-{
-	struct buf *bp;
-
-	mtx_lock(&pbuf_mtx);
-	if (*pfreecnt == 0 || (bp = TAILQ_FIRST(&bswlist)) == NULL) {
-		mtx_unlock(&pbuf_mtx);
-		return NULL;
-	}
-	TAILQ_REMOVE(&bswlist, bp, b_freelist);
-	--*pfreecnt;
-	mtx_unlock(&pbuf_mtx);
-	initpbuf(bp);
-	return (bp);
-}
-
-/*
- * release a physical buffer
- *
- *	NOTE: pfreecnt can be NULL, but this 'feature' will be removed
- *	relatively soon when the rest of the subsystems get smart about it. XXX
- */
-void
-relpbuf(struct buf *bp, int *pfreecnt)
-{
+	struct buf *bp = mem;
 
 	if (bp->b_rcred != NOCRED) {
 		crfree(bp->b_rcred);
@@ -460,24 +483,26 @@ relpbuf(struct buf *bp, int *pfreecnt)
 		bp->b_wcred = NOCRED;
 	}
 
-	KASSERT(bp->b_vp == NULL, ("relpbuf with vp"));
-	KASSERT(bp->b_bufobj == NULL, ("relpbuf with bufobj"));
-
-	buf_track(bp, __func__);
 	BUF_UNLOCK(bp);
+}
 
-	mtx_lock(&pbuf_mtx);
-	TAILQ_INSERT_HEAD(&bswlist, bp, b_freelist);
+static const char pbuf_wmesg[] = "pbufwait";
 
-	if (bswneeded) {
-		bswneeded = 0;
-		wakeup(&bswneeded);
-	}
-	if (pfreecnt) {
-		if (++*pfreecnt == 1)
-			wakeup(pfreecnt);
-	}
-	mtx_unlock(&pbuf_mtx);
+static int
+pbuf_init(void *mem, int size, int flags)
+{
+	struct buf *bp = mem;
+
+	bp->b_kvabase = (void *)kva_alloc(ptoa(PBUF_PAGES));
+	if (bp->b_kvabase == NULL)
+		return (ENOMEM);
+	bp->b_kvasize = ptoa(PBUF_PAGES);
+	BUF_LOCKINIT(bp, pbuf_wmesg);
+	LIST_INIT(&bp->b_dep);
+	bp->b_rcred = bp->b_wcred = NOCRED;
+	bp->b_xflags = 0;
+
+	return (0);
 }
 
 /*
@@ -548,4 +573,44 @@ pbrelbo(struct buf *bp)
 
 	bp->b_bufobj = NULL;
 	bp->b_flags &= ~B_PAGING;
+}
+
+void
+vm_object_set_writeable_dirty(vm_object_t object)
+{
+	pgo_set_writeable_dirty_t *method;
+
+	MPASS(object->type < nitems(pagertab));
+
+	method = pagertab[object->type]->pgo_set_writeable_dirty;
+	if (method != NULL)
+		method(object);
+}
+
+bool
+vm_object_mightbedirty(vm_object_t object)
+{
+	pgo_mightbedirty_t *method;
+
+	MPASS(object->type < nitems(pagertab));
+
+	method = pagertab[object->type]->pgo_mightbedirty;
+	if (method == NULL)
+		return (false);
+	return (method(object));
+}
+
+/*
+ * Return the kvme type of the given object.
+ * If vpp is not NULL, set it to the object's vm_object_vnode() or NULL.
+ */
+int
+vm_object_kvme_type(vm_object_t object, struct vnode **vpp)
+{
+	VM_OBJECT_ASSERT_LOCKED(object);
+	MPASS(object->type < nitems(pagertab));
+
+	if (vpp != NULL)
+		*vpp = vm_object_vnode(object);
+	return (pagertab[object->type]->pgo_kvme_type);
 }

@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case cache_001_pos cleanup
 cache_001_pos_head()
 {
 	atf_set "descr" "Creating a pool with a cache device succeeds."
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 	atf_set "timeout" 1200
 }
 cache_001_pos_body()
@@ -57,7 +55,7 @@ atf_test_case cache_002_pos cleanup
 cache_002_pos_head()
 {
 	atf_set "descr" "Adding a cache device to normal pool works."
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 	atf_set "timeout" 1200
 }
 cache_002_pos_body()
@@ -84,7 +82,7 @@ atf_test_case cache_003_pos cleanup
 cache_003_pos_head()
 {
 	atf_set "descr" "Adding an extra cache device works."
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 	atf_set "timeout" 1200
 }
 cache_003_pos_body()
@@ -111,7 +109,7 @@ atf_test_case cache_004_neg cleanup
 cache_004_neg_head()
 {
 	atf_set "descr" "Attaching a cache device fails."
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 	atf_set "timeout" 1200
 }
 cache_004_neg_body()
@@ -138,7 +136,7 @@ atf_test_case cache_005_neg cleanup
 cache_005_neg_head()
 {
 	atf_set "descr" "Replacing a cache device fails."
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 	atf_set "timeout" 1200
 }
 cache_005_neg_body()
@@ -165,7 +163,7 @@ atf_test_case cache_006_pos cleanup
 cache_006_pos_head()
 {
 	atf_set "descr" "Exporting and importing pool with cache devices passes."
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 	atf_set "timeout" 1200
 }
 cache_006_pos_body()
@@ -192,7 +190,7 @@ atf_test_case cache_007_neg cleanup
 cache_007_neg_head()
 {
 	atf_set "descr" "A mirror/raidz/raidz2 cache is not supported."
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 	atf_set "timeout" 1200
 }
 cache_007_neg_body()
@@ -219,7 +217,7 @@ atf_test_case cache_008_neg cleanup
 cache_008_neg_head()
 {
 	atf_set "descr" "A raidz/raidz2 cache can not be added to existed pool."
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 	atf_set "timeout" 1200
 }
 cache_008_neg_body()
@@ -246,7 +244,7 @@ atf_test_case cache_009_pos cleanup
 cache_009_pos_head()
 {
 	atf_set "descr" "Offline and online a cache device succeed."
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 	atf_set "timeout" 1200
 }
 cache_009_pos_body()
@@ -273,7 +271,7 @@ atf_test_case cache_010_neg cleanup
 cache_010_neg_head()
 {
 	atf_set "descr" "Cache device can only be disk or slice."
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 	atf_set "timeout" 1200
 }
 cache_010_neg_body()
@@ -300,7 +298,7 @@ atf_test_case cache_011_pos cleanup
 cache_011_pos_head()
 {
 	atf_set "descr" "Remove cache device from pool with spare device should succeed"
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 	atf_set "timeout" 1200
 }
 cache_011_pos_body()

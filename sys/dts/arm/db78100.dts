@@ -27,7 +27,6 @@
  * SUCH DAMAGE.
  *
  * Marvell DB-78100 Device Tree Source.
- *
  */
 
 /dts-v1/;

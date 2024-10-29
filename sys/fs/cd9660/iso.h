@@ -36,6 +36,9 @@
  *	@(#)iso.h	8.6 (Berkeley) 5/10/95
  */
 
+#ifndef _ISOFS_CD9660_ISO_H_
+#define _ISOFS_CD9660_ISO_H_
+
 #define ISODCL(from, to) (to - from + 1)
 
 struct iso_volume_descriptor {
@@ -236,6 +239,11 @@ struct iso_mnt {
 	struct g_consumer *im_cp;
 	struct bufobj *im_bo;
 
+	uid_t	im_uid;
+	gid_t	im_gid;
+	mode_t	im_fmask;
+	mode_t	im_dmask;
+
 	int logical_block_size;
 	int im_bshift;
 	int im_bmask;
@@ -364,3 +372,5 @@ isonum_733(const unsigned char *p)
  * Associated files have a leading '='.
  */
 #define	ASSOCCHAR	'='
+
+#endif /* _ISOFS_CD9660_ISO_H_ */

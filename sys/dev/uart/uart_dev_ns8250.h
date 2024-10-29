@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_UART_DEV_NS8250_H_
@@ -38,7 +37,7 @@ struct ns8250_softc {
 	uint8_t		fcr;
 	uint8_t		ier;
 	uint8_t		mcr;
-	
+
 	uint8_t		ier_mask;
 	uint8_t		ier_rxbits;
 	uint8_t		busy_detect;
@@ -58,6 +57,7 @@ int ns8250_bus_receive(struct uart_softc *);
 int ns8250_bus_setsig(struct uart_softc *, int);
 int ns8250_bus_transmit(struct uart_softc *);
 void ns8250_bus_grab(struct uart_softc *);
+bool ns8250_bus_txbusy(struct uart_softc *);
 void ns8250_bus_ungrab(struct uart_softc *);
 
 #endif /* _DEV_UART_DEV_NS8250_H_ */

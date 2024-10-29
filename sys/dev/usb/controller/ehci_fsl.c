@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010-2012 Semihalf
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_bus.h"
 
 #include <sys/param.h>
@@ -82,7 +81,6 @@ static device_method_t ehci_methods[] = {
 
 	/* Bus interface */
 	DEVMETHOD(bus_print_child, bus_generic_print_child),
-
 	{ 0, 0 }
 };
 
@@ -425,4 +423,3 @@ fsl_ehci_detach(device_t self)
 
 	return (0);
 }
-

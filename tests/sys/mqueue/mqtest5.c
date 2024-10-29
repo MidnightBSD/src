@@ -1,4 +1,3 @@
-/* $FreeBSD: stable/11/tests/sys/mqueue/mqtest5.c 282137 2015-04-28 10:56:59Z ngie $ */
 
 #include <sys/types.h>
 #include <sys/event.h>

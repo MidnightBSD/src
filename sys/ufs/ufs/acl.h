@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999-2001 Robert N. M. Watson
  * All rights reserved.
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 /*
  * Developed by the TrustedBSD Project.
@@ -38,8 +37,12 @@
 
 #ifdef _KERNEL
 
-int	ufs_getacl_nfs4_internal(struct vnode *vp, struct acl *aclp, struct thread *td);
-int	ufs_setacl_nfs4_internal(struct vnode *vp, struct acl *aclp, struct thread *td);
+struct inode;
+
+int	ufs_getacl_nfs4_internal(struct vnode *vp, struct acl *aclp,
+	    struct thread *td);
+int	ufs_setacl_nfs4_internal(struct vnode *vp, struct acl *aclp,
+	    struct thread *td);
 void	ufs_sync_acl_from_inode(struct inode *ip, struct acl *acl);
 void	ufs_sync_inode_from_acl(struct acl *acl, struct inode *ip);
 

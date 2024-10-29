@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_bus.h"
 
 #include <sys/param.h>
@@ -55,21 +54,17 @@
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
-#ifdef EXT_RESOURCES
 #include <dev/extres/clk/clk.h>
 #include <dev/extres/hwreset/hwreset.h>
 #include <dev/extres/phy/phy.h>
 #include <dev/extres/phy/phy_usb.h>
-#endif
 
 #include "generic_ehci.h"
 
-#ifdef EXT_RESOURCES
 struct clk_list {
 	TAILQ_ENTRY(clk_list)	next;
 	clk_t			clk;
 };
-
 
 struct hwrst_list {
 	TAILQ_ENTRY(hwrst_list)	next;
@@ -80,16 +75,13 @@ struct phy_list {
 	TAILQ_ENTRY(phy_list)	next;
 	phy_t			phy;
 };
-#endif
 
 struct generic_ehci_fdt_softc {
 	ehci_softc_t	ehci_sc;
 
-#ifdef EXT_RESOURCES
 	TAILQ_HEAD(, clk_list)	clk_list;
 	TAILQ_HEAD(, hwrst_list)	rst_list;
 	TAILQ_HEAD(, phy_list)		phy_list;
-#endif
 };
 
 static device_probe_t generic_ehci_fdt_probe;
@@ -113,7 +105,7 @@ generic_ehci_fdt_probe(device_t self)
 static int
 generic_ehci_fdt_attach(device_t dev)
 {
-#ifdef EXT_RESOURCES
+	int err;
 	struct generic_ehci_fdt_softc *sc;
 	struct clk_list *clkp;
 	clk_t clk;
@@ -121,7 +113,7 @@ generic_ehci_fdt_attach(device_t dev)
 	hwreset_t rst;
 	struct phy_list *phyp;
 	phy_t phy;
-	int err, off;
+	int off;
 
 	sc = device_get_softc(dev);
 
@@ -169,7 +161,6 @@ generic_ehci_fdt_attach(device_t dev)
 		phyp->phy = phy;
 		TAILQ_INSERT_TAIL(&sc->phy_list, phyp, next);
 	}
-#endif
 
 	err = generic_ehci_attach(dev);
 	if (err != 0)
@@ -185,19 +176,16 @@ error:
 static int
 generic_ehci_fdt_detach(device_t dev)
 {
-#ifdef EXT_RESOURCES
 	struct generic_ehci_fdt_softc *sc;
 	struct clk_list *clk, *clk_tmp;
 	struct hwrst_list *rst, *rst_tmp;
 	struct phy_list *phy, *phy_tmp;
-#endif
 	int err;
 
 	err = generic_ehci_detach(dev);
 	if (err != 0)
 		return (err);
 
-#ifdef EXT_RESOURCES
 	sc = device_get_softc(dev);
 
 	/* Disable clock */
@@ -231,7 +219,6 @@ generic_ehci_fdt_detach(device_t dev)
 		TAILQ_REMOVE(&sc->phy_list, phy, next);
 		free(phy, M_DEVBUF);
 	}
-#endif
 
 	return (0);
 }

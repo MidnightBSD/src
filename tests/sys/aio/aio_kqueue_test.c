@@ -21,8 +21,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 /* 
@@ -59,7 +57,7 @@ main (int argc, char *argv[])
 {
 	struct aiocb **iocb, *kq_iocb;
 	char *file, pathname[sizeof(PATH_TEMPLATE)+1];
-	struct kevent ke, kq_returned;
+	struct kevent kq_returned;
 	struct timespec ts;
 	char buffer[32768];
 	int max_queue_per_proc;
@@ -156,8 +154,7 @@ main (int argc, char *argv[])
 
 			for (;;) {
 
-				bzero(&ke, sizeof(ke));
-				bzero(&kq_returned, sizeof(ke));
+				bzero(&kq_returned, sizeof(kq_returned));
 				ts.tv_sec = 0;
 				ts.tv_nsec = 1;
 				result = kevent(kq, NULL, 0,

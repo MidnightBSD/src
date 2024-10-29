@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 1998, 2000 Marshall Kirk McKusick. All Rights Reserved.
  *
@@ -212,6 +212,11 @@ struct worklist {
 	struct mount		*wk_mp;		/* Mount we live in */
 	unsigned int		wk_type:8,	/* type of request */
 				wk_state:24;	/* state flags */
+	LIST_ENTRY(worklist)	wk_all;		/* list of deps of this type */
+#ifdef INVARIANTS
+	const char		*wk_func;	/* func where added / removed */
+	int			wk_line;	/* line where added / removed */
+#endif
 };
 #define	WK_DATA(wk) ((void *)(wk))
 #define	WK_PAGEDEP(wk) ((struct pagedep *)(wk))
@@ -352,6 +357,7 @@ struct inodedep {
 	struct	fs *id_fs;		/* associated filesystem */
 	ino_t	id_ino;			/* dependent inode */
 	nlink_t	id_nlinkdelta;		/* saved effective link count */
+	nlink_t	id_nlinkwrote;		/* i_nlink that we wrote to disk */
 	nlink_t	id_savednlink;		/* Link saved during rollback */
 	LIST_ENTRY(inodedep) id_deps;	/* bmsafemap's list of inodedep's */
 	struct	bmsafemap *id_bmsafemap; /* related bmsafemap (if pending) */
@@ -1056,7 +1062,7 @@ struct mount_softdeps {
 	struct	bmsafemap_hashhead *sd_bmhash;	/* bmsafemap hash table */
 	u_long	sd_bmhashsize;			/* bmsafemap hash table size-1*/
 	struct	indir_hashhead *sd_indirhash;	/* indir hash table */
-	u_long	sd_indirhashsize;		/* indir hash table size-1 */
+	uint64_t sd_indirhashsize;		/* indir hash table size-1 */
 	int	sd_on_journal;			/* Items on the journal list */
 	int	sd_on_worklist;			/* Items on the worklist */
 	int	sd_deps;			/* Total dependency count */
@@ -1067,7 +1073,8 @@ struct mount_softdeps {
 	struct	thread *sd_flushtd;		/* thread handling flushing */
 	TAILQ_ENTRY(mount_softdeps) sd_next;	/* List of softdep filesystem */
 	struct	ufsmount *sd_ump;		/* our ufsmount structure */
-	u_long	sd_curdeps[D_LAST + 1];		/* count of current deps */
+	uint64_t sd_curdeps[D_LAST + 1];	/* count of current deps */
+	struct	workhead sd_alldeps[D_LAST + 1];/* Lists of all deps */
 };
 /*
  * Flags for communicating with the syncer thread.
@@ -1076,6 +1083,8 @@ struct mount_softdeps {
 #define FLUSH_CLEANUP	0x0002	/* need to clear out softdep structures */
 #define	FLUSH_STARTING	0x0004	/* flush thread not yet started */
 #define	FLUSH_RC_ACTIVE	0x0008	/* a thread is flushing the mount point */
+#define	FLUSH_DI_ACTIVE	0x0010	/* a thread is processing delayed
+				   inactivations */
 
 /*
  * Keep the old names from when these were in the ufsmount structure.
@@ -1108,3 +1117,4 @@ struct mount_softdeps {
 #define	softdep_flags			um_softdep->sd_flags
 #define	softdep_flushtd			um_softdep->sd_flushtd
 #define	softdep_curdeps			um_softdep->sd_curdeps
+#define	softdep_alldeps			um_softdep->sd_alldeps

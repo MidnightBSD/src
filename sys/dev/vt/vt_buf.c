@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009, 2013 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Ed Schouten under sponsorship from the
  * FreeBSD Foundation.
@@ -33,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -415,24 +413,41 @@ vtbuf_init_rows(struct vt_buf *vb)
 		vb->vb_rows[r] = &vb->vb_buffer[r * vb->vb_scr_size.tp_col];
 }
 
-void
-vtbuf_init_early(struct vt_buf *vb)
+static void
+vtbuf_do_clearhistory(struct vt_buf *vb)
 {
 	term_rect_t rect;
+	const teken_attr_t *a;
+	term_char_t ch;
 
-	vb->vb_flags |= VBF_CURSOR;
+	a = teken_get_curattr(&vb->vb_terminal->tm_emulator);
+	ch = TCOLOR_FG(a->ta_fgcolor) | TCOLOR_BG(a->ta_bgcolor);
+
+	rect.tr_begin.tp_row = rect.tr_begin.tp_col = 0;
+	rect.tr_end.tp_col = vb->vb_scr_size.tp_col;
+	rect.tr_end.tp_row = vb->vb_history_size;
+
+	vtbuf_do_fill(vb, &rect, VTBUF_SPACE_CHAR(ch));
+}
+
+static void
+vtbuf_reset_scrollback(struct vt_buf *vb)
+{
 	vb->vb_roffset = 0;
 	vb->vb_curroffset = 0;
 	vb->vb_mark_start.tp_row = 0;
 	vb->vb_mark_start.tp_col = 0;
 	vb->vb_mark_end.tp_row = 0;
 	vb->vb_mark_end.tp_col = 0;
+}
 
+void
+vtbuf_init_early(struct vt_buf *vb)
+{
+	vb->vb_flags |= VBF_CURSOR;
+	vtbuf_reset_scrollback(vb);
 	vtbuf_init_rows(vb);
-	rect.tr_begin.tp_row = rect.tr_begin.tp_col = 0;
-	rect.tr_end.tp_col = vb->vb_scr_size.tp_col;
-	rect.tr_end.tp_row = vb->vb_history_size;
-	vtbuf_do_fill(vb, &rect, VTBUF_SPACE_CHAR(TERMINAL_NORM_ATTR));
+	vtbuf_do_clearhistory(vb);
 	vtbuf_make_undirty(vb);
 	if ((vb->vb_flags & VBF_MTX_INIT) == 0) {
 		mtx_init(&vb->vb_lock, "vtbuf", NULL, MTX_SPIN);
@@ -460,6 +475,16 @@ vtbuf_init(struct vt_buf *vb, const term_pos_t *p)
 }
 
 void
+vtbuf_clearhistory(struct vt_buf *vb)
+{
+	VTBUF_LOCK(vb);
+	vtbuf_do_clearhistory(vb);
+	vtbuf_reset_scrollback(vb);
+	vb->vb_flags &= ~VBF_HISTORY_FULL;
+	VTBUF_UNLOCK(vb);
+}
+
+void
 vtbuf_sethistory_size(struct vt_buf *vb, unsigned int size)
 {
 	term_pos_t p;
@@ -477,6 +502,11 @@ vtbuf_grow(struct vt_buf *vb, const term_pos_t *p, unsigned int history_size)
 	unsigned int w, h, c, r, old_history_size;
 	size_t bufsize, rowssize;
 	int history_full;
+	const teken_attr_t *a;
+	term_char_t ch;
+
+	a = teken_get_curattr(&vb->vb_terminal->tm_emulator);
+	ch = TCOLOR_FG(a->ta_fgcolor) | TCOLOR_BG(a->ta_bgcolor);
 
 	history_size = MAX(history_size, p->tp_row);
 
@@ -543,7 +573,7 @@ vtbuf_grow(struct vt_buf *vb, const term_pos_t *p, unsigned int history_size)
 			 * background color.
 			 */
 			for (c = MIN(p->tp_col, w); c < p->tp_col; c++) {
-				row[c] = VTBUF_SPACE_CHAR(TERMINAL_NORM_ATTR);
+				row[c] = VTBUF_SPACE_CHAR(ch);
 			}
 		}
 
@@ -551,7 +581,7 @@ vtbuf_grow(struct vt_buf *vb, const term_pos_t *p, unsigned int history_size)
 		for (r = old_history_size; r < history_size; r++) {
 			row = rows[r];
 			for (c = MIN(p->tp_col, w); c < p->tp_col; c++) {
-				row[c] = VTBUF_SPACE_CHAR(TERMINAL_NORM_ATTR);
+				row[c] = VTBUF_SPACE_CHAR(ch);
 			}
 		}
 
@@ -600,7 +630,7 @@ vtbuf_grow(struct vt_buf *vb, const term_pos_t *p, unsigned int history_size)
 			 * background color.
 			 */
 			for (c = MIN(p->tp_col, w); c < p->tp_col; c++) {
-				row[c] = VTBUF_SPACE_CHAR(TERMINAL_NORM_ATTR);
+				row[c] = VTBUF_SPACE_CHAR(ch);
 			}
 		}
 
@@ -673,7 +703,6 @@ vtbuf_flush_mark(struct vt_buf *vb)
 	/* Notify renderer to update marked region. */
 	if ((vb->vb_mark_start.tp_col != vb->vb_mark_end.tp_col) ||
 	    (vb->vb_mark_start.tp_row != vb->vb_mark_end.tp_row)) {
-
 		s = vtbuf_htw(vb, vb->vb_mark_start.tp_row);
 		e = vtbuf_htw(vb, vb->vb_mark_end.tp_row);
 
@@ -710,16 +739,39 @@ vtbuf_get_marked_len(struct vt_buf *vb)
 	si = s.tp_row * vb->vb_scr_size.tp_col + s.tp_col;
 	ei = e.tp_row * vb->vb_scr_size.tp_col + e.tp_col;
 
-	/* Number symbols and number of rows to inject \n */
-	sz = ei - si + ((e.tp_row - s.tp_row) * 2);
+	/* Number symbols and number of rows to inject \r */
+	sz = ei - si + (1 + e.tp_row - s.tp_row);
 
 	return (sz * sizeof(term_char_t));
 }
 
-void
-vtbuf_extract_marked(struct vt_buf *vb, term_char_t *buf, int sz)
+static bool
+tchar_is_word_separator(term_char_t ch)
 {
-	int i, r, c, cs, ce;
+	/* List of unicode word separator characters: */
+	switch (TCHAR_CHARACTER(ch)) {
+	case 0x0020: /* SPACE */
+	case 0x180E: /* MONGOLIAN VOWEL SEPARATOR */
+	case 0x2002: /* EN SPACE (nut) */
+	case 0x2003: /* EM SPACE (mutton) */
+	case 0x2004: /* THREE-PER-EM SPACE (thick space) */
+	case 0x2005: /* FOUR-PER-EM SPACE (mid space) */
+	case 0x2006: /* SIX-PER-EM SPACE */
+	case 0x2008: /* PUNCTUATION SPACE */
+	case 0x2009: /* THIN SPACE */
+	case 0x200A: /* HAIR SPACE */
+	case 0x200B: /* ZERO WIDTH SPACE */
+	case 0x3000: /* IDEOGRAPHIC SPACE */
+		return (true);
+	default:
+		return (false);
+	}
+}
+
+void
+vtbuf_extract_marked(struct vt_buf *vb, term_char_t *buf, int sz, int mark)
+{
+	int i, j, r, c, cs, ce;
 	term_pos_t s, e;
 
 	/* Swap according to window coordinates. */
@@ -738,15 +790,28 @@ vtbuf_extract_marked(struct vt_buf *vb, term_char_t *buf, int sz)
 	for (r = s.tp_row; r <= e.tp_row; r++) {
 		cs = (r == s.tp_row)?s.tp_col:0;
 		ce = (r == e.tp_row)?e.tp_col:vb->vb_scr_size.tp_col;
-		for (c = cs; c < ce; c++) {
+
+		/* Copy characters from terminal window. */
+		j = i;
+		for (c = cs; c < ce; c++)
 			buf[i++] = vb->vb_rows[r][c];
-		}
-		/* Add new line for all rows, but not for last one. */
-		if (r != e.tp_row) {
+
+		/* For all rows, but the last one. */
+		if (r != e.tp_row || mark == VTB_MARK_ROW) {
+			/* Trim trailing word separators, if any. */
+			for (; i != j; i--) {
+				if (!tchar_is_word_separator(buf[i - 1]))
+					break;
+			}
+			/* Add newline character as expected by TTY. */
 			buf[i++] = '\r';
-			buf[i++] = '\n';
 		}
 	}
+	/* Zero rest of expected buffer size, if any. */
+	while ((i * sizeof(buf[0])) < sz)
+		buf[i++] = '\0';
+
+	MPASS((i * sizeof(buf[0])) == sz);
 }
 
 int
@@ -780,7 +845,7 @@ vtbuf_set_mark(struct vt_buf *vb, int type, int col, int row)
 		    vtbuf_wth(vb, row);
 		r = vb->vb_rows[vb->vb_mark_start.tp_row];
 		for (i = col; i >= 0; i --) {
-			if (TCHAR_CHARACTER(r[i]) == ' ') {
+			if (tchar_is_word_separator(r[i])) {
 				vb->vb_mark_start.tp_col = i + 1;
 				break;
 			}
@@ -789,7 +854,7 @@ vtbuf_set_mark(struct vt_buf *vb, int type, int col, int row)
 		if (i == -1)
 			vb->vb_mark_start.tp_col = 0;
 		for (i = col; i < vb->vb_scr_size.tp_col; i++) {
-			if (TCHAR_CHARACTER(r[i]) == ' ') {
+			if (tchar_is_word_separator(r[i])) {
 				vb->vb_mark_end.tp_col = i;
 				break;
 			}

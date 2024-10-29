@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Jake Burkholder <jake@freebsd.org>.
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ktrace.h"
 
 #include <sys/param.h>
@@ -44,8 +43,9 @@
 #include <sys/sleepqueue.h>
 #include <sys/resourcevar.h>
 #ifdef KTRACE
-#include <sys/uio.h>
 #include <sys/ktrace.h>
+#include <sys/uio.h>
+#include <sys/user.h>
 #endif
 
 /*
@@ -108,24 +108,32 @@ void
 _cv_wait(struct cv *cvp, struct lock_object *lock)
 {
 	WITNESS_SAVE_DECL(lock_witness);
+#ifdef KTRACE
+	char wmesg[WMESGLEN + 1];
+#endif
 	struct lock_class *class;
 	struct thread *td;
 	uintptr_t lock_state;
 
 	td = curthread;
-	lock_state = 0;
-#ifdef KTRACE
-	if (KTRPOINT(td, KTR_CSW))
-		ktrcsw(1, 0, cv_wmesg(cvp));
-#endif
 	CV_ASSERT(cvp, lock, td);
 	WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, lock,
 	    "Waiting on \"%s\"", cvp->cv_description);
-	class = LOCK_CLASS(lock);
 
 	if (SCHEDULER_STOPPED_TD(td))
 		return;
 
+#ifdef KTRACE
+	if (KTRPOINT(td, KTR_CSW)) {
+		strlcpy(wmesg, cv_wmesg(cvp), sizeof(wmesg));
+		ktrcsw(1, 0, wmesg);
+	} else {
+		wmesg[0] = '\0';
+	}
+#endif
+
+	class = LOCK_CLASS(lock);
+	lock_state = 0;
 	sleepq_lock(cvp);
 
 	CV_WAITERS_INC(cvp);
@@ -146,7 +154,7 @@ _cv_wait(struct cv *cvp, struct lock_object *lock)
 
 #ifdef KTRACE
 	if (KTRPOINT(td, KTR_CSW))
-		ktrcsw(0, 0, cv_wmesg(cvp));
+		ktrcsw(0, 0, wmesg);
 #endif
 	PICKUP_GIANT();
 	if (lock != &Giant.lock_object) {
@@ -162,14 +170,13 @@ _cv_wait(struct cv *cvp, struct lock_object *lock)
 void
 _cv_wait_unlock(struct cv *cvp, struct lock_object *lock)
 {
+#ifdef KTRACE
+	char wmesg[WMESGLEN + 1];
+#endif
 	struct lock_class *class;
 	struct thread *td;
 
 	td = curthread;
-#ifdef KTRACE
-	if (KTRPOINT(td, KTR_CSW))
-		ktrcsw(1, 0, cv_wmesg(cvp));
-#endif
 	CV_ASSERT(cvp, lock, td);
 	WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, lock,
 	    "Waiting on \"%s\"", cvp->cv_description);
@@ -181,6 +188,15 @@ _cv_wait_unlock(struct cv *cvp, struct lock_object *lock)
 		class->lc_unlock(lock);
 		return;
 	}
+
+#ifdef KTRACE
+	if (KTRPOINT(td, KTR_CSW)) {
+		strlcpy(wmesg, cv_wmesg(cvp), sizeof(wmesg));
+		ktrcsw(1, 0, wmesg);
+	} else {
+		wmesg[0] = '\0';
+	}
+#endif
 
 	sleepq_lock(cvp);
 
@@ -197,7 +213,7 @@ _cv_wait_unlock(struct cv *cvp, struct lock_object *lock)
 
 #ifdef KTRACE
 	if (KTRPOINT(td, KTR_CSW))
-		ktrcsw(0, 0, cv_wmesg(cvp));
+		ktrcsw(0, 0, wmesg);
 #endif
 	PICKUP_GIANT();
 }
@@ -212,25 +228,33 @@ int
 _cv_wait_sig(struct cv *cvp, struct lock_object *lock)
 {
 	WITNESS_SAVE_DECL(lock_witness);
+#ifdef KTRACE
+	char wmesg[WMESGLEN + 1];
+#endif
 	struct lock_class *class;
 	struct thread *td;
 	uintptr_t lock_state;
 	int rval;
 
 	td = curthread;
-	lock_state = 0;
-#ifdef KTRACE
-	if (KTRPOINT(td, KTR_CSW))
-		ktrcsw(1, 0, cv_wmesg(cvp));
-#endif
 	CV_ASSERT(cvp, lock, td);
 	WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, lock,
 	    "Waiting on \"%s\"", cvp->cv_description);
-	class = LOCK_CLASS(lock);
 
 	if (SCHEDULER_STOPPED_TD(td))
 		return (0);
 
+#ifdef KTRACE
+	if (KTRPOINT(td, KTR_CSW)) {
+		strlcpy(wmesg, cv_wmesg(cvp), sizeof(wmesg));
+		ktrcsw(1, 0, wmesg);
+	} else {
+		wmesg[0] = '\0';
+	}
+#endif
+
+	class = LOCK_CLASS(lock);
+	lock_state = 0;
 	sleepq_lock(cvp);
 
 	CV_WAITERS_INC(cvp);
@@ -252,7 +276,7 @@ _cv_wait_sig(struct cv *cvp, struct lock_object *lock)
 
 #ifdef KTRACE
 	if (KTRPOINT(td, KTR_CSW))
-		ktrcsw(0, 0, cv_wmesg(cvp));
+		ktrcsw(0, 0, wmesg);
 #endif
 	PICKUP_GIANT();
 	if (lock != &Giant.lock_object) {
@@ -273,24 +297,32 @@ _cv_timedwait_sbt(struct cv *cvp, struct lock_object *lock, sbintime_t sbt,
     sbintime_t pr, int flags)
 {
 	WITNESS_SAVE_DECL(lock_witness);
+#ifdef KTRACE
+	char wmesg[WMESGLEN + 1];
+#endif
 	struct lock_class *class;
 	struct thread *td;
 	int lock_state, rval;
 
 	td = curthread;
-	lock_state = 0;
-#ifdef KTRACE
-	if (KTRPOINT(td, KTR_CSW))
-		ktrcsw(1, 0, cv_wmesg(cvp));
-#endif
 	CV_ASSERT(cvp, lock, td);
 	WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, lock,
 	    "Waiting on \"%s\"", cvp->cv_description);
-	class = LOCK_CLASS(lock);
 
 	if (SCHEDULER_STOPPED_TD(td))
 		return (0);
 
+#ifdef KTRACE
+	if (KTRPOINT(td, KTR_CSW)) {
+		strlcpy(wmesg, cv_wmesg(cvp), sizeof(wmesg));
+		ktrcsw(1, 0, wmesg);
+	} else {
+		wmesg[0] = '\0';
+	}
+#endif
+
+	class = LOCK_CLASS(lock);
+	lock_state = 0;
 	sleepq_lock(cvp);
 
 	CV_WAITERS_INC(cvp);
@@ -312,7 +344,7 @@ _cv_timedwait_sbt(struct cv *cvp, struct lock_object *lock, sbintime_t sbt,
 
 #ifdef KTRACE
 	if (KTRPOINT(td, KTR_CSW))
-		ktrcsw(0, 0, cv_wmesg(cvp));
+		ktrcsw(0, 0, wmesg);
 #endif
 	PICKUP_GIANT();
 	if (lock != &Giant.lock_object) {
@@ -335,24 +367,32 @@ _cv_timedwait_sig_sbt(struct cv *cvp, struct lock_object *lock,
     sbintime_t sbt, sbintime_t pr, int flags)
 {
 	WITNESS_SAVE_DECL(lock_witness);
+#ifdef KTRACE
+	char wmesg[WMESGLEN + 1];
+#endif
 	struct lock_class *class;
 	struct thread *td;
 	int lock_state, rval;
 
 	td = curthread;
-	lock_state = 0;
-#ifdef KTRACE
-	if (KTRPOINT(td, KTR_CSW))
-		ktrcsw(1, 0, cv_wmesg(cvp));
-#endif
 	CV_ASSERT(cvp, lock, td);
 	WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, lock,
 	    "Waiting on \"%s\"", cvp->cv_description);
-	class = LOCK_CLASS(lock);
 
 	if (SCHEDULER_STOPPED_TD(td))
 		return (0);
 
+#ifdef KTRACE
+	if (KTRPOINT(td, KTR_CSW)) {
+		strlcpy(wmesg, cv_wmesg(cvp), sizeof(wmesg));
+		ktrcsw(1, 0, wmesg);
+	} else {
+		wmesg[0] = '\0';
+	}
+#endif
+
+	class = LOCK_CLASS(lock);
+	lock_state = 0;
 	sleepq_lock(cvp);
 
 	CV_WAITERS_INC(cvp);
@@ -375,7 +415,7 @@ _cv_timedwait_sig_sbt(struct cv *cvp, struct lock_object *lock,
 
 #ifdef KTRACE
 	if (KTRPOINT(td, KTR_CSW))
-		ktrcsw(0, 0, cv_wmesg(cvp));
+		ktrcsw(0, 0, wmesg);
 #endif
 	PICKUP_GIANT();
 	if (lock != &Giant.lock_object) {
@@ -396,26 +436,23 @@ _cv_timedwait_sig_sbt(struct cv *cvp, struct lock_object *lock,
 void
 cv_signal(struct cv *cvp)
 {
-	int wakeup_swapper;
 
 	if (cvp->cv_waiters == 0)
 		return;
-	wakeup_swapper = 0;
 	sleepq_lock(cvp);
-	if (cvp->cv_waiters > 0) {
-		if (cvp->cv_waiters == CV_WAITERS_BOUND &&
-		    sleepq_lookup(cvp) == NULL) {
-			cvp->cv_waiters = 0;
-		} else {
-			if (cvp->cv_waiters < CV_WAITERS_BOUND)
-				cvp->cv_waiters--;
-			wakeup_swapper = sleepq_signal(cvp, SLEEPQ_CONDVAR, 0,
-			    0);
-		}
+	if (cvp->cv_waiters == 0) {
+		sleepq_release(cvp);
+		return;
 	}
-	sleepq_release(cvp);
-	if (wakeup_swapper)
-		kick_proc0();
+	if (cvp->cv_waiters == CV_WAITERS_BOUND && sleepq_lookup(cvp) == NULL) {
+		cvp->cv_waiters = 0;
+		sleepq_release(cvp);
+	} else {
+		if (cvp->cv_waiters < CV_WAITERS_BOUND)
+			cvp->cv_waiters--;
+		if (sleepq_signal(cvp, SLEEPQ_CONDVAR | SLEEPQ_DROP, 0, 0))
+			kick_proc0();
+	}
 }
 
 /*

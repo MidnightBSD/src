@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 Jeffrey Roberson <jeff@freebsd.org>
  * Copyright (c) 2016 Matthew Macy <mmacy@mattmacy.io>
@@ -25,16 +25,19 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SYS_GTASKQUEUE_H_
 #define _SYS_GTASKQUEUE_H_
-#include <sys/taskqueue.h>
 
 #ifndef _KERNEL
 #error "no user-serviceable parts inside"
 #endif
+
+#include <sys/_task.h>
+#include <sys/bus.h>
+#include <sys/taskqueue.h>
+#include <sys/types.h>
 
 struct gtaskqueue;
 
@@ -42,6 +45,18 @@ struct gtaskqueue;
  * Taskqueue groups.  Manages dynamic thread groups and irq binding for
  * device and other tasks.
  */
+
+struct grouptask {
+	struct gtask		gt_task;
+	void			*gt_taskqueue;
+	LIST_ENTRY(grouptask)	gt_list;
+	void			*gt_uniq;
+#define	GROUPTASK_NAMELEN	32
+	char			gt_name[GROUPTASK_NAMELEN];
+	device_t		gt_dev;
+	struct resource		*gt_irq;
+	int			gt_cpu;
+};
 
 void	gtaskqueue_block(struct gtaskqueue *queue);
 void	gtaskqueue_unblock(struct gtaskqueue *queue);
@@ -55,18 +70,15 @@ void	grouptask_unblock(struct grouptask *grouptask);
 int	grouptaskqueue_enqueue(struct gtaskqueue *queue, struct gtask *task);
 
 void	taskqgroup_attach(struct taskqgroup *qgroup, struct grouptask *grptask,
-	    void *uniq, int irq, const char *name);
+	    void *uniq, device_t dev, struct resource *irq, const char *name);
 int	taskqgroup_attach_cpu(struct taskqgroup *qgroup,
-	    struct grouptask *grptask, void *uniq, int cpu, int irq,
-	    const char *name);
+	    struct grouptask *grptask, void *uniq, int cpu, device_t dev,
+	    struct resource *irq, const char *name);
 void	taskqgroup_detach(struct taskqgroup *qgroup, struct grouptask *gtask);
-struct taskqgroup *taskqgroup_create(const char *name);
+struct taskqgroup *taskqgroup_create(const char *name, int cnt, int stride);
 void	taskqgroup_destroy(struct taskqgroup *qgroup);
-int	taskqgroup_adjust(struct taskqgroup *qgroup, int cnt, int stride);
-
-#define TASK_ENQUEUED			0x1
-#define TASK_SKIP_WAKEUP		0x2
-#define TASK_NOENQUEUE			0x4
+void	taskqgroup_bind(struct taskqgroup *qgroup);
+void	taskqgroup_drain_all(struct taskqgroup *qgroup);
 
 #define	GTASK_INIT(gtask, flags, priority, func, context) do {	\
 	(gtask)->ta_flags = flags;				\
@@ -76,7 +88,7 @@ int	taskqgroup_adjust(struct taskqgroup *qgroup, int cnt, int stride);
 } while (0)
 
 #define	GROUPTASK_INIT(gtask, priority, func, context)	\
-	GTASK_INIT(&(gtask)->gt_task, TASK_SKIP_WAKEUP, priority, func, context)
+	GTASK_INIT(&(gtask)->gt_task, 0, priority, func, context)
 
 #define	GROUPTASK_ENQUEUE(gtask)			\
 	grouptaskqueue_enqueue((gtask)->gt_taskqueue, &(gtask)->gt_task)
@@ -91,22 +103,19 @@ struct taskqgroup *qgroup_##name;					\
 static void								\
 taskqgroup_define_##name(void *arg)					\
 {									\
-	qgroup_##name = taskqgroup_create(#name);			\
+	qgroup_##name = taskqgroup_create(#name, (cnt), (stride));	\
 }									\
-									\
 SYSINIT(taskqgroup_##name, SI_SUB_TASKQ, SI_ORDER_FIRST,		\
-	taskqgroup_define_##name, NULL);				\
+    taskqgroup_define_##name, NULL);					\
 									\
 static void								\
-taskqgroup_adjust_##name(void *arg)					\
+taskqgroup_bind_##name(void *arg)					\
 {									\
-	taskqgroup_adjust(qgroup_##name, (cnt), (stride));		\
+	taskqgroup_bind(qgroup_##name);					\
 }									\
-									\
-SYSINIT(taskqgroup_adj_##name, SI_SUB_SMP, SI_ORDER_ANY,		\
-	taskqgroup_adjust_##name, NULL)
+SYSINIT(taskqgroup_bind_##name, SI_SUB_SMP, SI_ORDER_ANY,		\
+    taskqgroup_bind_##name, NULL)
 
-TASKQGROUP_DECLARE(net);
 TASKQGROUP_DECLARE(softirq);
 
 #endif /* !_SYS_GTASKQUEUE_H_ */

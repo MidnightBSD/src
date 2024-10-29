@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Benno Rice.  All rights reserved.
  *
@@ -22,7 +22,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  *
  */
 
@@ -52,7 +51,7 @@ struct smc_softc {
 	struct task		smc_tx;
 	struct mbuf		*smc_pending;
 	struct callout		smc_watchdog;
-	
+
 	/* MII support */
 	device_t		smc_miibus;
 	struct callout		smc_mii_tick_ch;
@@ -66,6 +65,8 @@ struct smc_softc {
 				    bus_addr_t, uint8_t *, bus_size_t);
 	void			*smc_read_arg;
 };
+
+DECLARE_CLASS(smc_driver);
 
 int	smc_probe(device_t);
 int	smc_attach(device_t);

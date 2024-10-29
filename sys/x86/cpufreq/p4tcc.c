@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Nate Lawson
  * All rights reserved.
@@ -39,7 +39,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -56,7 +55,7 @@
 
 #include <dev/acpica/acpivar.h>
 #include "acpi_if.h"
- 
+
 struct p4tcc_softc {
 	device_t	dev;
 	int		set_count;
@@ -96,7 +95,6 @@ static device_method_t p4tcc_methods[] = {
 
 	/* ACPI interface */
 	DEVMETHOD(acpi_get_features,	p4tcc_features),
-
 	{0, 0}
 };
 
@@ -135,7 +133,8 @@ p4tcc_identify(driver_t *driver, device_t parent)
 	 * of the IA32 Intel Architecture Software Developer's Manual,
 	 * Volume 3, for more info.
 	 */
-	if (BUS_ADD_CHILD(parent, 10, "p4tcc", -1) == NULL)
+	if (BUS_ADD_CHILD(parent, 10, "p4tcc", device_get_unit(parent))
+	    == NULL)
 		device_printf(parent, "add p4tcc child failed\n");
 }
 

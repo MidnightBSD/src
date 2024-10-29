@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/mount.h>
@@ -62,7 +61,6 @@ int
 cd9660_inactive(ap)
 	struct vop_inactive_args /* {
 		struct vnode *a_vp;
-		struct thread *a_td;
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
@@ -85,15 +83,10 @@ int
 cd9660_reclaim(ap)
 	struct vop_reclaim_args /* {
 		struct vnode *a_vp;
-		struct thread *a_td;
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
 
-	/*
-	 * Destroy the vm object and flush associated pages.
-	 */
-	vnode_destroy_vobject(vp);
 	/*
 	 * Remove the inode from its hash chain.
 	 */

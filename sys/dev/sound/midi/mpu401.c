@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Mathew Kanner
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/param.h>
@@ -239,7 +238,6 @@ mpu401_minit(struct snd_midi *sm, void *arg)
 	printf("mpu401_minit failed active sensing\n");
 	return 1;
 }
-
 
 int
 mpu401_muninit(struct snd_midi *sm, void *arg)

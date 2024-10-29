@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -36,11 +35,9 @@
  * Modifications by: Manjunath Ranganathaiah
  */
 
-
 /*
  * Common Layer I/O functions.
  */
-
 
 #include "tw_osl_share.h"
 #include "tw_cl_share.h"
@@ -53,8 +50,6 @@
 #include <cam/cam.h>
 #include <cam/cam_ccb.h>
 #include <cam/cam_xpt_sim.h>
-
-
 
 /*
  * Function name:	tw_cl_start_io
@@ -154,8 +149,6 @@ tw_cl_start_io(struct tw_cl_ctlr_handle *ctlr_handle,
 	return(error);
 }
 
-
-
 /*
  * Function name:	tw_cli_submit_cmd
  * Description:		Submits a cmd to firmware.
@@ -245,8 +238,6 @@ tw_cli_submit_cmd(struct tw_cli_req_context *req)
 
 	return(error);
 }
-
-
 
 /*
  * Function name:	tw_cl_fw_passthru
@@ -352,8 +343,6 @@ tw_cl_fw_passthru(struct tw_cl_ctlr_handle *ctlr_handle,
 	return(error);
 }
 
-
-
 /*
  * Function name:	tw_cl_ioctl
  * Description:		Handler of CL supported ioctl cmds.
@@ -420,7 +409,6 @@ tw_cl_ioctl(struct tw_cl_ctlr_handle *ctlr_handle, u_long cmd, TW_VOID *buf)
 
 		break;
 
-
 	case TW_CL_IOCTL_GET_LAST_EVENT:
 		tw_cli_dbg_printf(3, ctlr_handle, tw_osl_cur_func(),
 			"Get Last Event");
@@ -455,7 +443,6 @@ tw_cl_ioctl(struct tw_cl_ctlr_handle *ctlr_handle, u_long cmd, TW_VOID *buf)
 		ctlr->aen_queue[event_index].retrieved = TW_CL_AEN_RETRIEVED;
 		
 		break;
-
 
 	case TW_CL_IOCTL_GET_NEXT_EVENT:
 		tw_cli_dbg_printf(3, ctlr_handle, tw_osl_cur_func(),
@@ -534,7 +521,6 @@ tw_cl_ioctl(struct tw_cl_ctlr_handle *ctlr_handle, u_long cmd, TW_VOID *buf)
 
 		break;
 
-
 	case TW_CL_IOCTL_GET_PREVIOUS_EVENT:
 		tw_cli_dbg_printf(3, ctlr_handle, tw_osl_cur_func(),
 			"Get Previous Event");
@@ -597,7 +583,6 @@ tw_cl_ioctl(struct tw_cl_ctlr_handle *ctlr_handle, u_long cmd, TW_VOID *buf)
 
 		break;
 
-
 	case TW_CL_IOCTL_GET_LOCK:
 	{
 		struct tw_cl_lock_packet	lock_pkt;
@@ -633,7 +618,6 @@ tw_cl_ioctl(struct tw_cl_ctlr_handle *ctlr_handle, u_long cmd, TW_VOID *buf)
 		break;
 	}
 
-
 	case TW_CL_IOCTL_RELEASE_LOCK:
 		tw_cli_dbg_printf(3, ctlr_handle, tw_osl_cur_func(),
 			"Release ioctl lock");
@@ -650,7 +634,6 @@ tw_cl_ioctl(struct tw_cl_ctlr_handle *ctlr_handle, u_long cmd, TW_VOID *buf)
 			user_buf->driver_pkt.status = 0;
 		}
 		break;
-
 
 	case TW_CL_IOCTL_GET_COMPATIBILITY_INFO:
 	{
@@ -697,8 +680,6 @@ tw_cl_ioctl(struct tw_cl_ctlr_handle *ctlr_handle, u_long cmd, TW_VOID *buf)
 	tw_osl_free_lock(ctlr_handle, ctlr->gen_lock);
 	return(error);
 }
-
-
 
 /*
  * Function name:	tw_cli_get_param
@@ -815,8 +796,6 @@ out:
 	return(1);
 }
 
-
-
 /*
  * Function name:	tw_cli_set_param
  * Description:		Set a firmware parameter.
@@ -932,8 +911,6 @@ out:
 	return(error);
 }
 
-
-
 /*
  * Function name:	tw_cli_submit_and_poll_request
  * Description:		Sends down a firmware cmd, and waits for the completion
@@ -1033,8 +1010,6 @@ tw_cli_submit_and_poll_request(struct tw_cli_req_context *req,
 	return(TW_OSL_ETIMEDOUT);
 }
 
-
-
 /*
  * Function name:	tw_cl_reset_ctlr
  * Description:		Soft resets and then initializes the controller;
@@ -1060,7 +1035,6 @@ tw_cl_reset_ctlr(struct tw_cl_ctlr_handle *ctlr_handle)
 
 	ctlr->reset_in_progress = TW_CL_TRUE;
 	twa_teardown_intr(sc);
-
 
 	/*
 	 * Error back all requests in the complete, busy, and pending queues.
@@ -1158,8 +1132,6 @@ tw_cl_is_active(struct tw_cl_ctlr_handle *ctlr_handle)
 		return(ctlr->active);
 }
 
-
-
 /*
  * Function name:	tw_cli_soft_reset
  * Description:		Does the actual soft reset.
@@ -1252,7 +1224,7 @@ tw_cli_soft_reset(struct tw_cli_ctlr_context *ctlr)
 		tw_osl_free_lock(ctlr_handle, ctlr->io_lock);
 		return(error);
 	}
-	
+
 	tw_osl_free_lock(ctlr_handle, ctlr->io_lock);
 
 	if ((error = tw_cli_drain_aen_queue(ctlr))) {
@@ -1263,7 +1235,7 @@ tw_cli_soft_reset(struct tw_cli_ctlr_context *ctlr)
 			"error = %d", error);
 		return(error);
 	}
-	
+
 	if ((error = tw_cli_find_aen(ctlr, TWA_AEN_SOFT_RESET))) {
 		tw_cl_create_event(ctlr_handle, TW_CL_FALSE,
 			TW_CL_MESSAGE_SOURCE_COMMON_LAYER_EVENT,
@@ -1275,8 +1247,6 @@ tw_cli_soft_reset(struct tw_cli_ctlr_context *ctlr)
 
 	return(TW_OSL_ESUCCESS);
 }
-
-
 
 /*
  * Function name:	tw_cli_send_scsi_cmd
@@ -1349,8 +1319,6 @@ tw_cli_send_scsi_cmd(struct tw_cli_req_context *req, TW_INT32 cmd)
 	return(TW_OSL_ESUCCESS);
 }
 
-
-
 /*
  * Function name:	tw_cli_get_aen
  * Description:		Sends down a Request Sense cmd to fw to fetch an AEN.
@@ -1385,8 +1353,6 @@ tw_cli_get_aen(struct tw_cli_ctlr_context *ctlr)
 	}
 	return(error);
 }
-
-
 
 /*
  * Function name:	tw_cli_fill_sg_list
@@ -1437,4 +1403,3 @@ tw_cli_fill_sg_list(struct tw_cli_ctlr_context *ctlr, TW_VOID *sgl_src,
 		}
 	}
 }
-

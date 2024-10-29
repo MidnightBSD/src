@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2012 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Semihalf under sponsorship from
  * the FreeBSD Foundation.
@@ -27,7 +26,6 @@
  * SUCH DAMAGE.
  *
  * Freescale i.MX515 Device Tree Source.
- *
  */
 
 / {

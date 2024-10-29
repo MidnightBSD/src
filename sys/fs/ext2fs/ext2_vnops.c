@@ -134,7 +134,6 @@ static vop_listextattr_t	ext2_listextattr;
 static vop_setextattr_t	ext2_setextattr;
 static vop_vptofh_t	ext2_vptofh;
 static vop_close_t	ext2fifo_close;
-static vop_kqfilter_t	ext2fifo_kqfilter;
 
 /* Global vfs data structures for ext2. */
 struct vop_vector ext2_vnodeops = {
@@ -181,6 +180,7 @@ struct vop_vector ext2_vnodeops = {
 #endif /* UFS_ACL */
 	.vop_vptofh =		ext2_vptofh,
 };
+VFS_VOP_VECTOR_REGISTER(ext2_vnodeops);
 
 struct vop_vector ext2_fifoops = {
 	.vop_default =		&fifo_specops,
@@ -189,7 +189,6 @@ struct vop_vector ext2_fifoops = {
 	.vop_fsync =		ext2_fsync,
 	.vop_getattr =		ext2_getattr,
 	.vop_inactive =		ext2_inactive,
-	.vop_kqfilter =		ext2fifo_kqfilter,
 	.vop_pathconf =		ext2_pathconf,
 	.vop_print =		ext2_print,
 	.vop_read =		VOP_PANIC,
@@ -198,6 +197,7 @@ struct vop_vector ext2_fifoops = {
 	.vop_write =		VOP_PANIC,
 	.vop_vptofh =		ext2_vptofh,
 };
+VFS_VOP_VECTOR_REGISTER(ext2_fifoops);
 
 /*
  * A virgin directory (no blushing please).
@@ -206,12 +206,12 @@ struct vop_vector ext2_fifoops = {
  * endianness problems.
  */
 static struct dirtemplate mastertemplate = {
-	0, 12, 1, EXT2_FT_DIR, ".",
-	0, DIRBLKSIZ - 12, 2, EXT2_FT_DIR, ".."
+	0, htole16(12), 1, EXT2_FT_DIR, ".",
+	0, htole16(DIRBLKSIZ - 12), 2, EXT2_FT_DIR, ".."
 };
 static struct dirtemplate omastertemplate = {
-	0, 12, 1, EXT2_FT_UNKNOWN, ".",
-	0, DIRBLKSIZ - 12, 2, EXT2_FT_UNKNOWN, ".."
+	0, htole16(12), 1, EXT2_FT_UNKNOWN, ".",
+	0, htole16(DIRBLKSIZ - 12), 2, EXT2_FT_UNKNOWN, ".."
 };
 
 static void
@@ -341,11 +341,11 @@ ext2_access(struct vop_access_args *ap)
 	}
 
 	/* If immutable bit set, nobody gets to write it. */
-	if ((accmode & VWRITE) && (ip->i_flags & (SF_IMMUTABLE | SF_SNAPSHOT)))
+	if ((accmode & VWRITE) && (ip->i_flags & SF_IMMUTABLE))
 		return (EPERM);
 
 	error = vaccess(vp->v_type, ip->i_mode, ip->i_uid, ip->i_gid,
-	    ap->a_accmode, ap->a_cred, NULL);
+	    ap->a_accmode, ap->a_cred);
 	return (error);
 }
 
@@ -429,7 +429,7 @@ ext2_setattr(struct vop_setattr_args *ap)
 		 * Privileged non-jail processes may not modify system flags
 		 * if securelevel > 0 and any existing system flags are set.
 		 */
-		if (!priv_check_cred(cred, PRIV_VFS_SYSFLAGS, 0)) {
+		if (!priv_check_cred(cred, PRIV_VFS_SYSFLAGS)) {
 			if (ip->i_flags & (SF_IMMUTABLE | SF_APPEND)) {
 				error = securelevel_gt(cred, 0);
 				if (error)
@@ -540,12 +540,12 @@ ext2_chmod(struct vnode *vp, int mode, struct ucred *cred, struct thread *td)
 	 * process is not a member of.
 	 */
 	if (vp->v_type != VDIR && (mode & S_ISTXT)) {
-		error = priv_check_cred(cred, PRIV_VFS_STICKYFILE, 0);
+		error = priv_check_cred(cred, PRIV_VFS_STICKYFILE);
 		if (error)
 			return (EFTYPE);
 	}
 	if (!groupmember(ip->i_gid, cred) && (mode & ISGID)) {
-		error = priv_check_cred(cred, PRIV_VFS_SETGID, 0);
+		error = priv_check_cred(cred, PRIV_VFS_SETGID);
 		if (error)
 			return (error);
 	}
@@ -585,7 +585,7 @@ ext2_chown(struct vnode *vp, uid_t uid, gid_t gid, struct ucred *cred,
 	 */
 	if (uid != ip->i_uid || (gid != ip->i_gid &&
 	    !groupmember(gid, cred))) {
-		error = priv_check_cred(cred, PRIV_VFS_CHOWN, 0);
+		error = priv_check_cred(cred, PRIV_VFS_CHOWN);
 		if (error)
 			return (error);
 	}
@@ -595,7 +595,7 @@ ext2_chown(struct vnode *vp, uid_t uid, gid_t gid, struct ucred *cred,
 	ip->i_uid = uid;
 	ip->i_flag |= IN_CHANGE;
 	if ((ip->i_mode & (ISUID | ISGID)) && (ouid != uid || ogid != gid)) {
-		if (priv_check_cred(cred, PRIV_VFS_RETAINSUGID, 0) != 0)
+		if (priv_check_cred(cred, PRIV_VFS_RETAINSUGID) != 0)
 			ip->i_mode &= ~(ISUID | ISGID);
 	}
 	return (0);
@@ -834,13 +834,13 @@ abortit:
 	ip = VTOI(fvp);
 	if (ip->i_nlink >= EXT4_LINK_MAX &&
 	    !EXT2_HAS_RO_COMPAT_FEATURE(ip->i_e2fs, EXT2F_ROCOMPAT_DIR_NLINK)) {
-		VOP_UNLOCK(fvp, 0);
+		VOP_UNLOCK(fvp);
 		error = EMLINK;
 		goto abortit;
 	}
 	if ((ip->i_flags & (NOUNLINK | IMMUTABLE | APPEND))
 	    || (dp->i_flags & APPEND)) {
-		VOP_UNLOCK(fvp, 0);
+		VOP_UNLOCK(fvp);
 		error = EPERM;
 		goto abortit;
 	}
@@ -851,7 +851,7 @@ abortit:
 		if ((fcnp->cn_namelen == 1 && fcnp->cn_nameptr[0] == '.') ||
 		    dp == ip || (fcnp->cn_flags | tcnp->cn_flags) & ISDOTDOT ||
 		    (ip->i_flag & IN_RENAME)) {
-			VOP_UNLOCK(fvp, 0);
+			VOP_UNLOCK(fvp);
 			error = EINVAL;
 			goto abortit;
 		}
@@ -879,7 +879,7 @@ abortit:
 	ext2_inc_nlink(ip);
 	ip->i_flag |= IN_CHANGE;
 	if ((error = ext2_update(fvp, !DOINGASYNC(fvp))) != 0) {
-		VOP_UNLOCK(fvp, 0);
+		VOP_UNLOCK(fvp);
 		goto bad;
 	}
 
@@ -894,7 +894,7 @@ abortit:
 	 * call to checkpath().
 	 */
 	error = VOP_ACCESS(fvp, VWRITE, tcnp->cn_cred, tcnp->cn_thread);
-	VOP_UNLOCK(fvp, 0);
+	VOP_UNLOCK(fvp);
 	if (oldparent != dp->i_number)
 		newparent = dp->i_number;
 	if (doingdirectory && newparent) {
@@ -1087,7 +1087,7 @@ abortit:
 					ext2_dirbad(xp, (doff_t)12,
 					    "rename: mangled dir");
 				} else {
-					dirbuf->dotdot_ino = newparent;
+					dirbuf->dotdot_ino = htole32(newparent);
 					/*
 					 * dirblock 0 could be htree root,
 					 * try both csum update functions.
@@ -1373,18 +1373,20 @@ ext2_mkdir(struct vop_mkdir_args *ap)
 	else
 		dtp = &omastertemplate;
 	dirtemplate = *dtp;
-	dirtemplate.dot_ino = ip->i_number;
-	dirtemplate.dotdot_ino = dp->i_number;
+	dirtemplate.dot_ino = htole32(ip->i_number);
+	dirtemplate.dotdot_ino = htole32(dp->i_number);
 	/*
 	 * note that in ext2 DIRBLKSIZ == blocksize, not DEV_BSIZE so let's
 	 * just redefine it - for this function only
 	 */
 #undef  DIRBLKSIZ
 #define DIRBLKSIZ  VTOI(dvp)->i_e2fs->e2fs_bsize
-	dirtemplate.dotdot_reclen = DIRBLKSIZ - 12;
+	dirtemplate.dotdot_reclen = htole16(DIRBLKSIZ - 12);
 	buf = malloc(DIRBLKSIZ, M_TEMP, M_WAITOK | M_ZERO);
 	if (EXT2_HAS_RO_COMPAT_FEATURE(fs, EXT2F_ROCOMPAT_METADATA_CKSUM)) {
-		dirtemplate.dotdot_reclen -= sizeof(struct ext2fs_direct_tail);
+		dirtemplate.dotdot_reclen =
+		    htole16(le16toh(dirtemplate.dotdot_reclen) -
+		    sizeof(struct ext2fs_direct_tail));
 		ext2_init_dirent_tail(EXT2_DIRENT_TAIL(buf, DIRBLKSIZ));
 	}
 	memcpy(buf, &dirtemplate, sizeof(dirtemplate));
@@ -1482,7 +1484,7 @@ ext2_rmdir(struct vop_rmdir_args *ap)
 	ext2_dec_nlink(dp);
 	dp->i_flag |= IN_CHANGE;
 	cache_purge(dvp);
-	VOP_UNLOCK(dvp, 0);
+	VOP_UNLOCK(dvp);
 	/*
 	 * Truncate inode.  The only stuff left
 	 * in the directory is "." and "..".
@@ -1492,7 +1494,7 @@ ext2_rmdir(struct vop_rmdir_args *ap)
 	    cnp->cn_thread);
 	cache_purge(ITOV(ip));
 	if (vn_lock(dvp, LK_EXCLUSIVE | LK_NOWAIT) != 0) {
-		VOP_UNLOCK(vp, 0);
+		VOP_UNLOCK(vp);
 		vn_lock(dvp, LK_EXCLUSIVE | LK_RETRY);
 		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 	}
@@ -1516,14 +1518,14 @@ ext2_symlink(struct vop_symlink_args *ap)
 		return (error);
 	vp = *vpp;
 	len = strlen(ap->a_target);
-	if (len < vp->v_mount->mnt_maxsymlinklen) {
+	if (len < VFSTOEXT2(vp->v_mount)->um_e2fs->e2fs_maxsymlinklen) {
 		ip = VTOI(vp);
 		bcopy(ap->a_target, (char *)ip->i_shortlink, len);
 		ip->i_size = len;
 		ip->i_flag |= IN_CHANGE | IN_UPDATE;
 	} else
-		error = vn_rdwr(UIO_WRITE, vp, ap->a_target, len, (off_t)0,
-		    UIO_SYSSPACE, IO_NODELOCKED | IO_NOMACCHECK,
+		error = vn_rdwr(UIO_WRITE, vp, __DECONST(void *, ap->a_target),
+		    len, (off_t)0, UIO_SYSSPACE, IO_NODELOCKED | IO_NOMACCHECK,
 		    ap->a_cnp->cn_cred, NOCRED, NULL, NULL);
 	if (error)
 		vput(vp);
@@ -1541,7 +1543,7 @@ ext2_readlink(struct vop_readlink_args *ap)
 	int isize;
 
 	isize = ip->i_size;
-	if (isize < vp->v_mount->mnt_maxsymlinklen) {
+	if (isize < VFSTOEXT2(vp->v_mount)->um_e2fs->e2fs_maxsymlinklen) {
 		uiomove((char *)ip->i_shortlink, isize, ap->a_uio);
 		return (0);
 	}
@@ -1567,7 +1569,6 @@ ext2_strategy(struct vop_strategy_args *ap)
 	if (vp->v_type == VBLK || vp->v_type == VCHR)
 		panic("ext2_strategy: spec");
 	if (bp->b_blkno == bp->b_lblkno) {
-
 		if (VTOI(ap->a_vp)->i_flag & IN_E4EXTENTS)
 			error = ext4_bmapext(vp, bp->b_lblkno, &blkno, NULL, NULL);
 		else
@@ -1624,22 +1625,6 @@ ext2fifo_close(struct vop_close_args *ap)
 		ext2_itimes_locked(vp);
 	VI_UNLOCK(vp);
 	return (fifo_specops.vop_close(ap));
-}
-
-/*
- * Kqfilter wrapper for fifos.
- *
- * Fall through to ext2 kqfilter routines if needed
- */
-static int
-ext2fifo_kqfilter(struct vop_kqfilter_args *ap)
-{
-	int error;
-
-	error = fifo_specops.vop_kqfilter(ap);
-	if (error)
-		error = vfs_kqfilter(ap);
-	return (error);
 }
 
 /*
@@ -1989,7 +1974,7 @@ ext2_makeinode(int mode, struct vnode *dvp, struct vnode **vpp,
 	tvp->v_type = IFTOVT(mode);	/* Rest init'd in getnewvnode(). */
 	ip->i_nlink = 1;
 	if ((ip->i_mode & ISGID) && !groupmember(ip->i_gid, cnp->cn_cred)) {
-		if (priv_check_cred(cnp->cn_cred, PRIV_VFS_RETAINSUGID, 0))
+		if (priv_check_cred(cnp->cn_cred, PRIV_VFS_RETAINSUGID))
 			ip->i_mode &= ~ISGID;
 	}
 
@@ -2059,7 +2044,8 @@ ext2_read(struct vop_read_args *ap)
 		panic("%s: mode", "ext2_read");
 
 	if (vp->v_type == VLNK) {
-		if ((int)ip->i_size < vp->v_mount->mnt_maxsymlinklen)
+		if ((int)ip->i_size <
+		    VFSTOEXT2(vp->v_mount)->um_e2fs->e2fs_maxsymlinklen)
 			panic("%s: short symlink", "ext2_read");
 	} else if (vp->v_type != VREG && vp->v_type != VDIR)
 		panic("%s: type %d", "ext2_read", vp->v_type);
@@ -2156,7 +2142,7 @@ ext2_ioctl(struct vop_ioctl_args *ap)
 			if (error == 0) {
 				error = ext2_bmap_seekdata(vp,
 				    (off_t *)ap->a_data);
-				VOP_UNLOCK(vp, 0);
+				VOP_UNLOCK(vp);
 			} else
 				error = EBADF;
 			return (error);
@@ -2225,8 +2211,9 @@ ext2_write(struct vop_write_args *ap)
 	 * Maybe this should be above the vnode op call, but so long as
 	 * file servers have no limits, I don't think it matters.
 	 */
-	if (vn_rlimit_fsize(vp, uio, uio->uio_td))
-		return (EFBIG);
+	error = vn_rlimit_fsize(vp, uio, uio->uio_td);
+	if (error != 0)
+		return (error);
 
 	resid = uio->uio_resid;
 	osize = ip->i_size;
@@ -2330,7 +2317,7 @@ ext2_write(struct vop_write_args *ap)
 	 */
 	if ((ip->i_mode & (ISUID | ISGID)) && resid > uio->uio_resid &&
 	    ap->a_cred) {
-		if (priv_check_cred(ap->a_cred, PRIV_VFS_RETAINSUGID, 0))
+		if (priv_check_cred(ap->a_cred, PRIV_VFS_RETAINSUGID))
 			ip->i_mode &= ~(ISUID | ISGID);
 	}
 	if (error) {

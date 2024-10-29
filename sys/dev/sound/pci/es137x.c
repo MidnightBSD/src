@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-4-Clause
+ * SPDX-License-Identifier: BSD-2-Clause AND BSD-4-Clause
  *
  * Copyright (c) 1999 Russell Cattelan <cattelan@thebarn.com>
  * Copyright (c) 1998 Joachim Kuebart <joachim.kuebart@gmx.net>
@@ -90,6 +90,7 @@
 
 #include "mixer_if.h"
 
+SND_DECLARE_FILE("");
 
 #define MEM_MAP_REG 0x14
 
@@ -1646,8 +1647,8 @@ es_init_sysctls(device_t dev)
 		   <861wujij2q.fsf@xps.des.no> */
 		SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 		    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
-		    "spdif_enabled", CTLTYPE_INT | CTLFLAG_RW, dev, sizeof(dev),
-		    sysctl_es137x_spdif_enable, "I",
+		    "spdif_enabled", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+		    dev, sizeof(dev), sysctl_es137x_spdif_enable, "I",
 		    "Enable S/PDIF output on primary playback channel");
 	} else if (devid == ES1370_PCI_ID) {
 		/*
@@ -1662,7 +1663,8 @@ es_init_sysctls(device_t dev)
 		   <861wujij2q.fsf@xps.des.no> */
 			SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 			    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-			    OID_AUTO, "fixed_rate", CTLTYPE_INT | CTLFLAG_RW,
+			    OID_AUTO, "fixed_rate",
+			    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
 			    dev, sizeof(dev), sysctl_es137x_fixed_rate, "I",
 			    "Enable fixed rate playback/recording");
 		}
@@ -1679,8 +1681,8 @@ es_init_sysctls(device_t dev)
 			SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 			    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
 			    OID_AUTO, "single_pcm_mixer",
-			    CTLTYPE_INT | CTLFLAG_RW, dev, sizeof(dev),
-			    sysctl_es137x_single_pcm_mixer, "I",
+			    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, dev,
+			    sizeof(dev), sysctl_es137x_single_pcm_mixer, "I",
 			    "Single PCM mixer controller for both DAC1/DAC2");
 		}
 	}
@@ -1692,14 +1694,13 @@ es_init_sysctls(device_t dev)
 	   multimedia@ in msg-id <861wujij2q.fsf@xps.des.no> */
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
-	    "latency_timer", CTLTYPE_INT | CTLFLAG_RW, dev, sizeof(dev),
-	    sysctl_es137x_latency_timer, "I",
+	    "latency_timer", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+	    dev, sizeof(dev), sysctl_es137x_latency_timer, "I",
 	    "PCI Latency Timer configuration");
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
-	    "polling", CTLTYPE_INT | CTLFLAG_RW, dev, sizeof(dev),
-	    sysctl_es_polling, "I",
-	    "Enable polling mode");
+	    "polling", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, dev,
+	    sizeof(dev), sysctl_es_polling, "I", "Enable polling mode");
 }
 
 static int
@@ -1931,7 +1932,6 @@ static device_method_t es_methods[] = {
 	DEVMETHOD(device_probe,		es_pci_probe),
 	DEVMETHOD(device_attach,	es_pci_attach),
 	DEVMETHOD(device_detach,	es_pci_detach),
-
 	{ 0, 0 }
 };
 

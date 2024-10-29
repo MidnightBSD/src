@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -35,22 +34,17 @@
  * Modifications by: Adam Radford
  */
 
-
-
 #ifndef TW_CL_EXTERNS_H
 
 #define TW_CL_EXTERNS_H
-
 
 /*
  * Data structures and functions global to the Common Layer.
  */
 
-
 extern TW_INT8			tw_cli_fw_img[];
 extern TW_INT32			tw_cli_fw_img_size;
 extern TW_INT8			*tw_cli_severity_string_table[];
-
 
 /* Do controller initialization. */
 extern TW_INT32	tw_cli_start_ctlr(struct tw_cli_ctlr_context *ctlr);
@@ -63,8 +57,6 @@ extern TW_INT32	tw_cli_init_connection(struct tw_cli_ctlr_context *ctlr,
 	TW_UINT16 *fw_on_ctlr_srl, TW_UINT16 *fw_on_ctlr_arch_id,
 	TW_UINT16 *fw_on_ctlr_branch, TW_UINT16 *fw_on_ctlr_build,
 	TW_UINT32 *init_connect_result);
-
-
 
 /* Functions in tw_cl_io.c */
 
@@ -100,8 +92,6 @@ extern TW_INT32	tw_cli_get_aen(struct tw_cli_ctlr_context *ctlr);
 /* Fill in the scatter/gather list. */
 extern TW_VOID tw_cli_fill_sg_list(struct tw_cli_ctlr_context *ctlr,
 	TW_VOID *sgl_src, TW_VOID *sgl_dest, TW_INT32 num_sgl_entries);
-
-
 
 /* Functions in tw_cl_intr.c */
 
@@ -146,8 +136,6 @@ extern TW_VOID
 /* Disable controller interrupts. */
 extern TW_VOID
 	tw_cli_disable_interrupts(struct tw_cli_ctlr_context *ctlr_handle);
-
-
 
 /* Functions in tw_cl_misc.c */
 
@@ -197,7 +185,5 @@ extern TW_VOID	tw_cli_notify_ctlr_info(struct tw_cli_ctlr_context *ctlr);
 /* Make sure that the firmware status register reports a proper status. */
 extern TW_INT32	tw_cli_check_ctlr_state(struct tw_cli_ctlr_context *ctlr,
 	TW_UINT32 status_reg);
-
-
 
 #endif /* TW_CL_EXTERNS_H */

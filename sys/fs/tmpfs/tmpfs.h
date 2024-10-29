@@ -1,7 +1,7 @@
 /*	$NetBSD: tmpfs.h,v 1.26 2007/02/22 06:37:00 thorpej Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005, 2006 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -30,7 +30,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _FS_TMPFS_TMPFS_H_
@@ -43,6 +42,9 @@
 #ifdef	_SYS_MALLOC_H_
 MALLOC_DECLARE(M_TMPFSNAME);
 #endif
+
+#define	OBJ_TMPFS	OBJ_PAGERPRIV1	/* has tmpfs vnode allocated */
+#define	OBJ_TMPFS_VREF	OBJ_PAGERPRIV2	/* vnode is referenced */
 
 /*
  * Internal representation of a tmpfs directory entry.
@@ -144,6 +146,7 @@ RB_HEAD(tmpfs_dir, tmpfs_dirent);
  * (i)  tn_interlock
  * (m)  tmpfs_mount tm_allnode_lock
  * (c)  stable after creation
+ * (v)  tn_reg.tn_aobj vm_object lock
  */
 struct tmpfs_node {
 	/*
@@ -154,7 +157,9 @@ struct tmpfs_node {
 	 * when the node is removed from list and unlocked.
 	 */
 	LIST_ENTRY(tmpfs_node)	tn_entries;	/* (m) */
-	bool			tn_attached;	/* (m) */
+
+	/* Node identifier. */
+	ino_t			tn_id;		/* (c) */
 
 	/*
 	 * The node's type.  Any of 'VBLK', 'VCHR', 'VDIR', 'VFIFO',
@@ -164,18 +169,22 @@ struct tmpfs_node {
 	 */
 	enum vtype		tn_type;	/* (c) */
 
-	/* Node identifier. */
-	ino_t			tn_id;		/* (c) */
+	/*
+	 * See the top comment. Reordered here to fill LP64 hole.
+	 */
+	bool			tn_attached;	/* (m) */
 
 	/*
 	 * Node's internal status.  This is used by several file system
 	 * operations to do modifications to the node in a delayed
 	 * fashion.
+	 *
+	 * tn_accessed has a dedicated byte to allow update by store without
+	 * using atomics.  This provides a micro-optimization to e.g.
+	 * tmpfs_read_pgcache().
 	 */
-	int			tn_status;	/* (vi) */
-#define	TMPFS_NODE_ACCESSED	(1 << 1)
-#define	TMPFS_NODE_MODIFIED	(1 << 2)
-#define	TMPFS_NODE_CHANGED	(1 << 3)
+	uint8_t			tn_status;	/* (vi) */
+	uint8_t			tn_accessed;	/* unlocked */
 
 	/*
 	 * The node size.  It does not necessarily match the real amount
@@ -226,7 +235,7 @@ struct tmpfs_node {
 	int		tn_vpstate;		/* (i) */
 
 	/* Transient refcounter on this node. */
-	u_int		tn_refcount;		/* (m) + (i) */
+	u_int		tn_refcount;		/* 0<->1 (m) + (i) */
 
 	/* misc data field for different tn_type node */
 	union {
@@ -270,7 +279,10 @@ struct tmpfs_node {
 
 		/* Valid when tn_type == VLNK. */
 		/* The link's target, allocated from a string pool. */
-		char *			tn_link;	/* (c) */
+		struct tn_link {
+			char *			tn_link_target;	/* (c) */
+			char 			tn_link_smr;	/* (c) */
+		} tn_link;
 
 		/* Valid when tn_type == VREG. */
 		struct tn_reg {
@@ -285,6 +297,8 @@ struct tmpfs_node {
 			 * a position within the file is accessed.
 			 */
 			vm_object_t		tn_aobj;	/* (c) */
+			struct tmpfs_mount	*tn_tmp;	/* (c) */
+			vm_pindex_t		tn_pages;	/* (v) */
 		} tn_reg;
 	} tn_spec;	/* (v) */
 };
@@ -292,7 +306,8 @@ LIST_HEAD(tmpfs_node_list, tmpfs_node);
 
 #define tn_rdev tn_spec.tn_rdev
 #define tn_dir tn_spec.tn_dir
-#define tn_link tn_spec.tn_link
+#define tn_link_target tn_spec.tn_link.tn_link_target
+#define tn_link_smr tn_spec.tn_link.tn_link_smr
 #define tn_reg tn_spec.tn_reg
 #define tn_fifo tn_spec.tn_fifo
 
@@ -314,10 +329,15 @@ LIST_HEAD(tmpfs_node_list, tmpfs_node);
 #define TMPFS_ASSERT_LOCKED(node) (void)0
 #endif
 
+/* tn_vpstate */
 #define TMPFS_VNODE_ALLOCATING	1
 #define TMPFS_VNODE_WANT	2
 #define TMPFS_VNODE_DOOMED	4
 #define	TMPFS_VNODE_WRECLAIM	8
+
+/* tn_status */
+#define	TMPFS_NODE_MODIFIED	0x01
+#define	TMPFS_NODE_CHANGED	0x02
 
 /*
  * Internal representation of a tmpfs mount point.
@@ -381,6 +401,11 @@ struct tmpfs_mount {
 	bool			tm_ronly;
 	/* Do not use namecache. */
 	bool			tm_nonc;
+	/* Do not update mtime on writes through mmaped areas. */
+	bool			tm_nomtime;
+
+	/* Read from page cache directly. */
+	bool			tm_pgread;
 };
 #define	TMPFS_LOCK(tm) mtx_lock(&(tm)->tm_allnode_lock)
 #define	TMPFS_UNLOCK(tm) mtx_unlock(&(tm)->tm_allnode_lock)
@@ -408,10 +433,10 @@ struct tmpfs_dir_cursor {
  */
 
 void	tmpfs_ref_node(struct tmpfs_node *node);
-void	tmpfs_ref_node_locked(struct tmpfs_node *node);
 int	tmpfs_alloc_node(struct mount *mp, struct tmpfs_mount *, enum vtype,
 	    uid_t uid, gid_t gid, mode_t mode, struct tmpfs_node *,
-	    char *, dev_t, struct tmpfs_node **);
+	    const char *, dev_t, struct tmpfs_node **);
+int	tmpfs_fo_close(struct file *fp, struct thread *td);
 void	tmpfs_free_node(struct tmpfs_mount *, struct tmpfs_node *);
 bool	tmpfs_free_node_locked(struct tmpfs_mount *, struct tmpfs_node *, bool);
 void	tmpfs_free_tmp(struct tmpfs_mount *);
@@ -424,7 +449,7 @@ int	tmpfs_alloc_vp(struct mount *, struct tmpfs_node *, int,
 	    struct vnode **);
 void	tmpfs_free_vp(struct vnode *);
 int	tmpfs_alloc_file(struct vnode *, struct vnode **, struct vattr *,
-	    struct componentname *, char *);
+	    struct componentname *, const char *);
 void	tmpfs_check_mtime(struct vnode *);
 void	tmpfs_dir_attach(struct vnode *, struct tmpfs_dirent *);
 void	tmpfs_dir_detach(struct vnode *, struct tmpfs_dirent *);
@@ -447,20 +472,25 @@ int	tmpfs_chtimes(struct vnode *, struct vattr *, struct ucred *cred,
 void	tmpfs_itimes(struct vnode *, const struct timespec *,
 	    const struct timespec *);
 
+void	tmpfs_set_accessed(struct tmpfs_mount *tm, struct tmpfs_node *node);
 void	tmpfs_set_status(struct tmpfs_mount *tm, struct tmpfs_node *node,
 	    int status);
-void	tmpfs_update(struct vnode *);
 int	tmpfs_truncate(struct vnode *, off_t);
 struct tmpfs_dirent *tmpfs_dir_first(struct tmpfs_node *dnode,
 	    struct tmpfs_dir_cursor *dc);
 struct tmpfs_dirent *tmpfs_dir_next(struct tmpfs_node *dnode,
 	    struct tmpfs_dir_cursor *dc);
+static __inline void
+tmpfs_update(struct vnode *vp)
+{
+
+	tmpfs_itimes(vp, NULL, NULL);
+}
 
 /*
  * Convenience macros to simplify some logical expressions.
  */
 #define IMPLIES(a, b) (!(a) || (b))
-#define IFF(a, b) (IMPLIES(a, b) && IMPLIES(b, a))
 
 /*
  * Checks that the directory entry pointed by 'de' matches the name 'name'
@@ -483,17 +513,52 @@ struct tmpfs_dirent *tmpfs_dir_next(struct tmpfs_node *dnode,
  * Amount of memory pages to reserve for the system (e.g., to not use by
  * tmpfs).
  */
+#if !defined(TMPFS_PAGES_MINRESERVED)
 #define TMPFS_PAGES_MINRESERVED		(4 * 1024 * 1024 / PAGE_SIZE)
+#endif
 
 size_t tmpfs_mem_avail(void);
 size_t tmpfs_pages_used(struct tmpfs_mount *tmp);
-void tmpfs_subr_init(void);
+int tmpfs_subr_init(void);
 void tmpfs_subr_uninit(void);
+
+extern int tmpfs_pager_type;
 
 /*
  * Macros/functions to convert from generic data structures to tmpfs
  * specific ones.
  */
+
+static inline struct vnode *
+VM_TO_TMPFS_VP(vm_object_t obj)
+{
+	struct tmpfs_node *node;
+
+	if ((obj->flags & OBJ_TMPFS) == 0)
+		return (NULL);
+
+	/*
+	 * swp_priv is the back-pointer to the tmpfs node, if any,
+	 * which uses the vm object as backing store.  The object
+	 * handle is not used to avoid locking sw_alloc_sx on tmpfs
+	 * node instantiation/destroy.
+	 */
+	node = obj->un_pager.swp.swp_priv;
+	return (node->tn_vnode);
+}
+
+static inline struct tmpfs_mount *
+VM_TO_TMPFS_MP(vm_object_t obj)
+{
+	struct tmpfs_node *node;
+
+	if ((obj->flags & OBJ_TMPFS) == 0)
+		return (NULL);
+
+	node = obj->un_pager.swp.swp_priv;
+	MPASS(node->tn_type == VREG);
+	return (node->tn_reg.tn_tmp);
+}
 
 static inline struct tmpfs_mount *
 VFS_TO_TMPFS(struct mount *mp)
@@ -515,6 +580,9 @@ VP_TO_TMPFS_NODE(struct vnode *vp)
 	return (node);
 }
 
+#define	VP_TO_TMPFS_NODE_SMR(vp)	\
+	((struct tmpfs_node *)vn_load_v_data_smr(vp))
+
 static inline struct tmpfs_node *
 VP_TO_TMPFS_DIR(struct vnode *vp)
 {
@@ -531,6 +599,20 @@ tmpfs_use_nc(struct vnode *vp)
 
 	return (!(VFS_TO_TMPFS(vp->v_mount)->tm_nonc));
 }
+
+static inline void
+tmpfs_update_getattr(struct vnode *vp)
+{
+	struct tmpfs_node *node;
+
+	node = VP_TO_TMPFS_NODE(vp);
+	if (__predict_false((node->tn_status & (TMPFS_NODE_MODIFIED |
+	    TMPFS_NODE_CHANGED)) != 0 || node->tn_accessed))
+		tmpfs_update(vp);
+}
+
+extern struct fileops tmpfs_fnops;
+
 #endif /* _KERNEL */
 
 #endif /* _FS_TMPFS_TMPFS_H_ */

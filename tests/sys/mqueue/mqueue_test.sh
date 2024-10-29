@@ -23,7 +23,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/tests/sys/mqueue/mqueue_test.sh 324404 2017-10-07 23:10:16Z ngie $
 #
 
 mqtest1_head()

@@ -4,6 +4,7 @@
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
+ * Copyright (c) 2022 Alexander Motin <mav@FreeBSD.org>
  *
  * This software was developed for the FreeBSD Project by Poul-Henning Kamp
  * and NAI Labs, the Security Research Division of Network Associates, Inc.
@@ -36,22 +37,11 @@
  */
 
 #include <sys/cdefs.h>
-
-#include "opt_geom.h"
-
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/kernel.h>
-#include <sys/sysctl.h>
-#include <sys/bio.h>
 #include <sys/conf.h>
-#include <sys/disk.h>
 #include <sys/malloc.h>
-#include <sys/sysctl.h>
 #include <sys/sbuf.h>
-
-#include <sys/lock.h>
-#include <sys/mutex.h>
 
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
@@ -67,10 +57,13 @@ static d_ioctl_t g_ctl_ioctl;
 
 static struct cdevsw g_ctl_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	D_NEEDGIANT,
+	.d_flags =	0,
 	.d_ioctl =	g_ctl_ioctl,
 	.d_name =	"g_ctl",
 };
+
+CTASSERT(GCTL_PARAM_RD == VM_PROT_READ);
+CTASSERT(GCTL_PARAM_WR == VM_PROT_WRITE);
 
 void
 g_ctl_init(void)
@@ -78,10 +71,6 @@ g_ctl_init(void)
 
 	make_dev_credf(MAKEDEV_ETERNAL, &g_ctl_cdevsw, 0, NULL,
 	    UID_ROOT, GID_OPERATOR, 0640, PATH_GEOM_CTL);
-	KASSERT(GCTL_PARAM_RD == VM_PROT_READ,
-		("GCTL_PARAM_RD != VM_PROT_READ"));
-	KASSERT(GCTL_PARAM_WR == VM_PROT_WRITE,
-		("GCTL_PARAM_WR != VM_PROT_WRITE"));
 }
 
 /*
@@ -178,14 +167,18 @@ gctl_copyin(struct gctl_req *req)
 			gctl_error(req, "negative param length");
 			break;
 		}
-		p = geom_alloc_copyin(req, ap[i].value, ap[i].len);
-		if (p == NULL)
-			break;
-		if ((ap[i].flag & GCTL_PARAM_ASCII) &&
-		    p[ap[i].len - 1] != '\0') {
-			gctl_error(req, "unterminated param value");
-			g_free(p);
-			break;
+		if (ap[i].flag & GCTL_PARAM_RD) {
+			p = geom_alloc_copyin(req, ap[i].value, ap[i].len);
+			if (p == NULL)
+				break;
+			if ((ap[i].flag & GCTL_PARAM_ASCII) &&
+			    p[ap[i].len - 1] != '\0') {
+				gctl_error(req, "unterminated param value");
+				g_free(p);
+				break;
+			}
+		} else {
+			p = g_malloc(ap[i].len, M_WAITOK | M_ZERO);
 		}
 		ap[i].kvalue = p;
 		ap[i].flag |= GCTL_PARAM_VALUEKERNEL;
@@ -235,13 +228,13 @@ gctl_free(struct gctl_req *req)
 }
 
 static void
-gctl_dump(struct gctl_req *req)
+gctl_dump(struct gctl_req *req, const char *what)
 {
 	struct gctl_req_arg *ap;
 	u_int i;
 	int j;
 
-	printf("Dump of gctl request at %p:\n", req);
+	printf("Dump of gctl %s at %p:\n", what, req);
 	if (req->nerror > 0) {
 		printf("  nerror:\t%d\n", req->nerror);
 		if (sbuf_len(req->serror) > 0)
@@ -316,7 +309,7 @@ gctl_set_param_err(struct gctl_req *req, const char *param, void const *ptr,
 }
 
 void *
-gctl_get_param(struct gctl_req *req, const char *param, int *len)
+gctl_get_param_flags(struct gctl_req *req, const char *param, int flags, int *len)
 {
 	u_int i;
 	void *p;
@@ -326,7 +319,7 @@ gctl_get_param(struct gctl_req *req, const char *param, int *len)
 		ap = &req->arg[i];
 		if (strcmp(param, ap->name))
 			continue;
-		if (!(ap->flag & GCTL_PARAM_RD))
+		if ((ap->flag & flags) != flags)
 			continue;
 		p = ap->kvalue;
 		if (len != NULL)
@@ -336,46 +329,55 @@ gctl_get_param(struct gctl_req *req, const char *param, int *len)
 	return (NULL);
 }
 
+void *
+gctl_get_param(struct gctl_req *req, const char *param, int *len)
+{
+
+	return (gctl_get_param_flags(req, param, GCTL_PARAM_RD, len));
+}
+
 char const *
 gctl_get_asciiparam(struct gctl_req *req, const char *param)
 {
-	u_int i;
 	char const *p;
-	struct gctl_req_arg *ap;
+	int len;
 
-	for (i = 0; i < req->narg; i++) {
-		ap = &req->arg[i];
-		if (strcmp(param, ap->name))
-			continue;
-		if (!(ap->flag & GCTL_PARAM_RD))
-			continue;
-		p = ap->kvalue;
-		if (ap->len < 1) {
-			gctl_error(req, "No length argument (%s)", param);
-			return (NULL);
-		}
-		if (p[ap->len - 1] != '\0') {
-			gctl_error(req, "Unterminated argument (%s)", param);
-			return (NULL);
-		}
-		return (p);
+	p = gctl_get_param_flags(req, param, GCTL_PARAM_RD, &len);
+	if (p == NULL)
+		return (NULL);
+	if (len < 1) {
+		gctl_error(req, "Argument without length (%s)", param);
+		return (NULL);
 	}
-	return (NULL);
+	if (p[len - 1] != '\0') {
+		gctl_error(req, "Unterminated argument (%s)", param);
+		return (NULL);
+	}
+	return (p);
 }
 
 void *
-gctl_get_paraml(struct gctl_req *req, const char *param, int len)
+gctl_get_paraml_opt(struct gctl_req *req, const char *param, int len)
 {
 	int i;
 	void *p;
 
 	p = gctl_get_param(req, param, &i);
-	if (p == NULL)
-		gctl_error(req, "Missing %s argument", param);
-	else if (i != len) {
+	if (i != len) {
 		p = NULL;
 		gctl_error(req, "Wrong length %s argument", param);
 	}
+	return (p);
+}
+
+void *
+gctl_get_paraml(struct gctl_req *req, const char *param, int len)
+{
+	void *p;
+
+	p = gctl_get_paraml_opt(req, param, len);
+	if (p == NULL)
+		gctl_error(req, "Missing %s argument", param);
 	return (p);
 }
 
@@ -386,33 +388,33 @@ gctl_get_class(struct gctl_req *req, char const *arg)
 	struct g_class *cp;
 
 	p = gctl_get_asciiparam(req, arg);
-	if (p == NULL)
+	if (p == NULL) {
+		gctl_error(req, "Missing %s argument", arg);
 		return (NULL);
+	}
 	LIST_FOREACH(cp, &g_classes, class) {
 		if (!strcmp(p, cp->name))
 			return (cp);
 	}
+	gctl_error(req, "Class not found: \"%s\"", p);
 	return (NULL);
 }
 
 struct g_geom *
-gctl_get_geom(struct gctl_req *req, struct g_class *mpr, char const *arg)
+gctl_get_geom(struct gctl_req *req, struct g_class *mp, char const *arg)
 {
 	char const *p;
-	struct g_class *mp;
 	struct g_geom *gp;
 
+	MPASS(mp != NULL);
 	p = gctl_get_asciiparam(req, arg);
-	if (p == NULL)
+	if (p == NULL) {
+		gctl_error(req, "Missing %s argument", arg);
 		return (NULL);
-	LIST_FOREACH(mp, &g_classes, class) {
-		if (mpr != NULL && mpr != mp)
-			continue;
-		LIST_FOREACH(gp, &mp->geom, geom) {
-			if (!strcmp(p, gp->name))
-				return (gp);
-		}
 	}
+	LIST_FOREACH(gp, &mp->geom, geom)
+		if (!strcmp(p, gp->name))
+			return (gp);
 	gctl_error(req, "Geom not found: \"%s\"", p);
 	return (NULL);
 }
@@ -424,13 +426,71 @@ gctl_get_provider(struct gctl_req *req, char const *arg)
 	struct g_provider *pp;
 
 	p = gctl_get_asciiparam(req, arg);
-	if (p == NULL)
+	if (p == NULL) {
+		gctl_error(req, "Missing '%s' argument", arg);
 		return (NULL);
+	}
 	pp = g_provider_by_name(p);
 	if (pp != NULL)
 		return (pp);
 	gctl_error(req, "Provider not found: \"%s\"", p);
 	return (NULL);
+}
+
+static void
+g_ctl_getxml(struct gctl_req *req, struct g_class *mp)
+{
+	const char *name;
+	char *buf;
+	struct sbuf *sb;
+	int len, i = 0, n = 0, *parents;
+	struct g_geom *gp, **gps;
+	struct g_consumer *cp;
+
+	parents = gctl_get_paraml(req, "parents", sizeof(*parents));
+	if (parents == NULL)
+		return;
+	name = gctl_get_asciiparam(req, "arg0");
+	n = 0;
+	LIST_FOREACH(gp, &mp->geom, geom) {
+		if (name && strcmp(gp->name, name) != 0)
+			continue;
+		n++;
+		if (*parents) {
+			LIST_FOREACH(cp, &gp->consumer, consumer)
+				n++;
+		}
+	}
+	gps = g_malloc((n + 1) * sizeof(*gps), M_WAITOK);
+	i = 0;
+	LIST_FOREACH(gp, &mp->geom, geom) {
+		if (name && strcmp(gp->name, name) != 0)
+			continue;
+		gps[i++] = gp;
+		if (*parents) {
+			LIST_FOREACH(cp, &gp->consumer, consumer) {
+				if (cp->provider != NULL)
+					gps[i++] = cp->provider->geom;
+			}
+		}
+	}
+	KASSERT(i == n, ("different number of geoms found (%d != %d)",
+	    i, n));
+	gps[i] = 0;
+
+	buf = gctl_get_param_flags(req, "output", GCTL_PARAM_WR, &len);
+	if (buf == NULL) {
+		gctl_error(req, "output parameter missing");
+		g_free(gps);
+		return;
+	}
+	sb = sbuf_new(NULL, buf, len, SBUF_FIXEDLEN | SBUF_INCLUDENUL);
+	g_conf_specific(sb, gps);
+	gctl_set_param(req, "output", buf, 0);
+	if (sbuf_error(sb))
+		gctl_error(req, "output buffer overflow");
+	sbuf_delete(sb);
+	g_free(gps);
 }
 
 static void
@@ -443,23 +503,22 @@ g_ctl_req(void *arg, int flag __unused)
 	g_topology_assert();
 	req = arg;
 	mp = gctl_get_class(req, "class");
-	if (mp == NULL) {
-		gctl_error(req, "Class not found");
+	if (mp == NULL)
 		return;
-	}
-	if (mp->ctlreq == NULL) {
-		gctl_error(req, "Class takes no requests");
-		return;
-	}
 	verb = gctl_get_param(req, "verb", NULL);
 	if (verb == NULL) {
 		gctl_error(req, "Verb missing");
 		return;
 	}
-	mp->ctlreq(req, mp, verb);
+	if (strcmp(verb, "getxml") == 0) {
+		g_ctl_getxml(req, mp);
+	} else if (mp->ctlreq == NULL) {
+		gctl_error(req, "Class takes no requests");
+	} else {
+		mp->ctlreq(req, mp, verb);
+	}
 	g_topology_assert();
 }
-
 
 static int
 g_ctl_ioctl_ctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag, struct thread *td)
@@ -485,16 +544,22 @@ g_ctl_ioctl_ctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag, struct th
 		gctl_copyin(req);
 
 		if (g_debugflags & G_F_CTLDUMP)
-			gctl_dump(req);
+			gctl_dump(req, "request");
 
 		if (!req->nerror) {
 			g_waitfor_event(g_ctl_req, req, M_WAITOK, NULL);
+
+			if (g_debugflags & G_F_CTLDUMP)
+				gctl_dump(req, "result");
+
 			gctl_copyout(req);
 		}
 	}
 	if (sbuf_done(req->serror)) {
-		copyout(sbuf_data(req->serror), req->error,
+		nerror = copyout(sbuf_data(req->serror), req->error,
 		    imin(req->lerror, sbuf_len(req->serror) + 1));
+		if (nerror != 0 && req->nerror == 0)
+			req->nerror = nerror;
 	}
 
 	nerror = req->nerror;

@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case zfs_001_neg cleanup
 zfs_001_neg_head()
 {
 	atf_set "descr" "Badly-formed zfs sub-command should return an error."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_001_neg_body()
 {
@@ -54,7 +52,7 @@ atf_test_case zfs_002_pos cleanup
 zfs_002_pos_head()
 {
 	atf_set "descr" "With ZFS_ABORT set, all zfs commands can abort and generate a core file."
-	atf_set "require.progs"  zfs coreadm
+	atf_set "require.progs" "ksh93 zfs coreadm"
 }
 zfs_002_pos_body()
 {
@@ -78,7 +76,7 @@ atf_test_case zfs_003_neg cleanup
 zfs_003_neg_head()
 {
 	atf_set "descr" "zfs fails with unexpected scenarios."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_003_neg_body()
 {

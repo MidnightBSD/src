@@ -27,7 +27,6 @@
  * SUCH DAMAGE.
  *
  * Seagate DockStar (Marvell SheevaPlug based) Device Tree Source.
- *
  */
 
 /dts-v1/;

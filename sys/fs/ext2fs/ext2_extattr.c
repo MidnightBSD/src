@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017, Fedor Uporov
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -215,9 +214,9 @@ ext2_extattr_inode_list(struct inode *ip, int attrnamespace,
 
 	/* Check attributes magic value */
 	header = (struct ext2fs_extattr_dinode_header *)((char *)dinode +
-	    E2FS_REV0_INODE_SIZE + dinode->e2di_extra_isize);
+	    E2FS_REV0_INODE_SIZE + le16toh(dinode->e2di_extra_isize));
 
-	if (header->h_magic != EXTATTR_MAGIC) {
+	if (le32toh(header->h_magic) != EXTATTR_MAGIC) {
 		brelse(bp);
 		return (0);
 	}
@@ -279,13 +278,13 @@ ext2_extattr_block_list(struct inode *ip, int attrnamespace,
 	error = bread(ip->i_devvp, fsbtodb(fs, ip->i_facl),
 	    fs->e2fs_bsize, NOCRED, &bp);
 	if (error) {
-		brelse(bp);
 		return (error);
 	}
 
 	/* Check attributes magic value */
 	header = EXT2_HDR(bp);
-	if (header->h_magic != EXTATTR_MAGIC || header->h_blocks != 1) {
+	if (le32toh(header->h_magic) != EXTATTR_MAGIC ||
+	    le32toh(header->h_blocks) != 1) {
 		brelse(bp);
 		return (EINVAL);
 	}
@@ -356,9 +355,9 @@ ext2_extattr_inode_get(struct inode *ip, int attrnamespace,
 
 	/* Check attributes magic value */
 	header = (struct ext2fs_extattr_dinode_header *)((char *)dinode +
-	    E2FS_REV0_INODE_SIZE + dinode->e2di_extra_isize);
+	    E2FS_REV0_INODE_SIZE + le16toh(dinode->e2di_extra_isize));
 
-	if (header->h_magic != EXTATTR_MAGIC) {
+	if (le32toh(header->h_magic) != EXTATTR_MAGIC) {
 		brelse(bp);
 		return (ENOATTR);
 	}
@@ -387,11 +386,12 @@ ext2_extattr_inode_get(struct inode *ip, int attrnamespace,
 		if (strlen(name) == name_len &&
 		    0 == strncmp(attr_name, name, name_len)) {
 			if (size != NULL)
-				*size += entry->e_value_size;
+				*size += le32toh(entry->e_value_size);
 
 			if (uio != NULL)
 				error = uiomove(((char *)EXT2_IFIRST(header)) +
-				    entry->e_value_offs, entry->e_value_size, uio);
+				    le16toh(entry->e_value_offs),
+				    le32toh(entry->e_value_size), uio);
 
 			brelse(bp);
 			return (error);
@@ -420,13 +420,13 @@ ext2_extattr_block_get(struct inode *ip, int attrnamespace,
 	error = bread(ip->i_devvp, fsbtodb(fs, ip->i_facl),
 	    fs->e2fs_bsize, NOCRED, &bp);
 	if (error) {
-		brelse(bp);
 		return (error);
 	}
 
 	/* Check attributes magic value */
 	header = EXT2_HDR(bp);
-	if (header->h_magic != EXTATTR_MAGIC || header->h_blocks != 1) {
+	if (le32toh(header->h_magic) != EXTATTR_MAGIC ||
+	    le32toh(header->h_blocks) != 1) {
 		brelse(bp);
 		return (EINVAL);
 	}
@@ -454,11 +454,12 @@ ext2_extattr_block_get(struct inode *ip, int attrnamespace,
 		if (strlen(name) == name_len &&
 		    0 == strncmp(attr_name, name, name_len)) {
 			if (size != NULL)
-				*size += entry->e_value_size;
+				*size += le32toh(entry->e_value_size);
 
 			if (uio != NULL)
-				error = uiomove(bp->b_data + entry->e_value_offs,
-				    entry->e_value_size, uio);
+				error = uiomove(bp->b_data +
+				    le16toh(entry->e_value_offs),
+				    le32toh(entry->e_value_size), uio);
 
 			brelse(bp);
 			return (error);
@@ -481,8 +482,9 @@ ext2_extattr_delete_value(char *off,
 	min_offs = end - off;
 	next = first_entry;
 	while (!EXT2_IS_LAST_ENTRY(next)) {
-		if (min_offs > next->e_value_offs && next->e_value_offs > 0)
-			min_offs = next->e_value_offs;
+		if (min_offs > le16toh(next->e_value_offs) &&
+		    le16toh(next->e_value_offs) > 0)
+			min_offs = le16toh(next->e_value_offs);
 
 		next = EXT2_EXTATTR_NEXT(next);
 	}
@@ -490,22 +492,22 @@ ext2_extattr_delete_value(char *off,
 	if (entry->e_value_size == 0)
 		return (min_offs);
 
-	memmove(off + min_offs + EXT2_EXTATTR_SIZE(entry->e_value_size),
-	    off + min_offs, entry->e_value_offs - min_offs);
+	memmove(off + min_offs + EXT2_EXTATTR_SIZE(le32toh(entry->e_value_size)),
+	    off + min_offs, le16toh(entry->e_value_offs) - min_offs);
 
 	/* Adjust all value offsets */
 	next = first_entry;
 	while (!EXT2_IS_LAST_ENTRY(next))
 	{
-		if (next->e_value_offs > 0 &&
-		    next->e_value_offs < entry->e_value_offs)
-			next->e_value_offs +=
-			    EXT2_EXTATTR_SIZE(entry->e_value_size);
+		if (le16toh(next->e_value_offs) > 0 &&
+		    le16toh(next->e_value_offs) < le16toh(entry->e_value_offs))
+			next->e_value_offs = htole16(le16toh(next->e_value_offs) +
+			    EXT2_EXTATTR_SIZE(le32toh(entry->e_value_size)));
 
 		next = EXT2_EXTATTR_NEXT(next);
 	}
 
-	min_offs += EXT2_EXTATTR_SIZE(entry->e_value_size);
+	min_offs += EXT2_EXTATTR_SIZE(le32toh(entry->e_value_size));
 
 	return (min_offs);
 }
@@ -558,9 +560,9 @@ ext2_extattr_inode_delete(struct inode *ip, int attrnamespace, const char *name)
 
 	/* Check attributes magic value */
 	header = (struct ext2fs_extattr_dinode_header *)((char *)dinode +
-	    E2FS_REV0_INODE_SIZE + dinode->e2di_extra_isize);
+	    E2FS_REV0_INODE_SIZE + le16toh(dinode->e2di_extra_isize));
 
-	if (header->h_magic != EXTATTR_MAGIC) {
+	if (le32toh(header->h_magic) != EXTATTR_MAGIC) {
 		brelse(bp);
 		return (ENOATTR);
 	}
@@ -577,7 +579,6 @@ ext2_extattr_inode_delete(struct inode *ip, int attrnamespace, const char *name)
 	if ((EXT2_IS_LAST_ENTRY(EXT2_EXTATTR_NEXT(entry))) &&
 	    (ext2_extattr_attrnamespace_to_bsd(entry->e_name_index) ==
 	    attrnamespace)) {
-
 		name_len = entry->e_name_len;
 		attr_name = ext2_extattr_name_to_bsd(entry->e_name_index,
 		    entry->e_name, &name_len);
@@ -636,7 +637,8 @@ ext2_extattr_block_clone(struct inode *ip, struct buf **bpp)
 	sbp = *bpp;
 
 	header = EXT2_HDR(sbp);
-	if (header->h_magic != EXTATTR_MAGIC || header->h_refcount == 1)
+	if (le32toh(header->h_magic) != EXTATTR_MAGIC ||
+	    le32toh(header->h_refcount) == 1)
 		return (EINVAL);
 
 	facl = ext2_alloc_meta(ip);
@@ -650,14 +652,14 @@ ext2_extattr_block_clone(struct inode *ip, struct buf **bpp)
 	}
 
 	memcpy(cbp->b_data, sbp->b_data, fs->e2fs_bsize);
-	header->h_refcount--;
+	header->h_refcount = htole32(le32toh(header->h_refcount) - 1);
 	bwrite(sbp);
 
 	ip->i_facl = facl;
 	ext2_update(ip->i_vnode, 1);
 
 	header = EXT2_HDR(cbp);
-	header->h_refcount = 1;
+	header->h_refcount = htole32(1);
 
 	*bpp = cbp;
 
@@ -680,13 +682,13 @@ ext2_extattr_block_delete(struct inode *ip, int attrnamespace, const char *name)
 	error = bread(ip->i_devvp, fsbtodb(fs, ip->i_facl),
 	    fs->e2fs_bsize, NOCRED, &bp);
 	if (error) {
-		brelse(bp);
 		return (error);
 	}
 
 	/* Check attributes magic value */
 	header = EXT2_HDR(bp);
-	if (header->h_magic != EXTATTR_MAGIC || header->h_blocks != 1) {
+	if (le32toh(header->h_magic) != EXTATTR_MAGIC ||
+	    le32toh(header->h_blocks) != 1) {
 		brelse(bp);
 		return (EINVAL);
 	}
@@ -697,7 +699,7 @@ ext2_extattr_block_delete(struct inode *ip, int attrnamespace, const char *name)
 		return (error);
 	}
 
-	if (header->h_refcount > 1) {
+	if (le32toh(header->h_refcount) > 1) {
 		error = ext2_extattr_block_clone(ip, &bp);
 		if (error) {
 			brelse(bp);
@@ -710,7 +712,6 @@ ext2_extattr_block_delete(struct inode *ip, int attrnamespace, const char *name)
 	if (EXT2_IS_LAST_ENTRY(EXT2_EXTATTR_NEXT(entry)) &&
 	    (ext2_extattr_attrnamespace_to_bsd(entry->e_name_index) ==
 	    attrnamespace)) {
-
 		name_len = entry->e_name_len;
 		attr_name = ext2_extattr_name_to_bsd(entry->e_name_index,
 		    entry->e_name, &name_len);
@@ -776,10 +777,10 @@ allocate_entry(const char *name, int attrnamespace, uint16_t offs,
 
 	entry->e_name_len = name_len;
 	entry->e_name_index = ext2_extattr_attrnamespace_to_linux(attrnamespace, name);
-	entry->e_value_offs = offs;
+	entry->e_value_offs = htole16(offs);
 	entry->e_value_block = 0;
-	entry->e_value_size = size;
-	entry->e_hash = hash;
+	entry->e_value_size = htole32(size);
+	entry->e_hash = htole32(hash);
 	memcpy(entry->e_name, name, name_len);
 
 	return (entry);
@@ -813,7 +814,7 @@ ext2_extattr_get_size(struct ext2fs_extattr_entry *first_entry,
 		    entry = EXT2_EXTATTR_NEXT(entry)) {
 			if (entry != exist_entry)
 				size += EXT2_EXTATTR_LEN(entry->e_name_len) +
-				    EXT2_EXTATTR_SIZE(entry->e_value_size);
+				    EXT2_EXTATTR_SIZE(le32toh(entry->e_value_size));
 			else
 				size += EXT2_EXTATTR_LEN(entry->e_name_len) +
 				    EXT2_EXTATTR_SIZE(new_size);
@@ -832,14 +833,15 @@ ext2_extattr_set_exist_entry(char *off,
 
 	min_offs = ext2_extattr_delete_value(off, first_entry, entry, end);
 
-	entry->e_value_size = uio->uio_resid;
-	if (entry->e_value_size)
-		entry->e_value_offs = min_offs -
-		    EXT2_EXTATTR_SIZE(uio->uio_resid);
+	entry->e_value_size = htole32(uio->uio_resid);
+	if (le32toh(entry->e_value_size))
+		entry->e_value_offs = htole16(min_offs -
+		    EXT2_EXTATTR_SIZE(uio->uio_resid));
 	else
 		entry->e_value_offs = 0;
 
-	uiomove(off + entry->e_value_offs, entry->e_value_size, uio);
+	uiomove(off + le16toh(entry->e_value_offs),
+	    le32toh(entry->e_value_size), uio);
 }
 
 static struct ext2fs_extattr_entry *
@@ -856,8 +858,9 @@ ext2_extattr_set_new_entry(char *off, struct ext2fs_extattr_entry *first_entry,
 	min_offs = end - off;
 	entry = first_entry;
 	while (!EXT2_IS_LAST_ENTRY(entry)) {
-		if (min_offs > entry->e_value_offs && entry->e_value_offs > 0)
-			min_offs = entry->e_value_offs;
+		if (min_offs > le16toh(entry->e_value_offs) &&
+		    le16toh(entry->e_value_offs) > 0)
+			min_offs = le16toh(entry->e_value_offs);
 
 		entry = EXT2_EXTATTR_NEXT(entry);
 	}
@@ -885,11 +888,12 @@ ext2_extattr_set_new_entry(char *off, struct ext2fs_extattr_entry *first_entry,
 	free_entry(new_entry);
 
 	new_entry = entry;
-	if (new_entry->e_value_size > 0)
-		new_entry->e_value_offs = min_offs -
-		    EXT2_EXTATTR_SIZE(new_entry->e_value_size);
+	if (le32toh(new_entry->e_value_size) > 0)
+		new_entry->e_value_offs = htole16(min_offs -
+		    EXT2_EXTATTR_SIZE(le32toh(new_entry->e_value_size)));
 
-	uiomove(off + new_entry->e_value_offs, new_entry->e_value_size, uio);
+	uiomove(off + le16toh(new_entry->e_value_offs),
+	    le32toh(new_entry->e_value_size), uio);
 
 	return (new_entry);
 }
@@ -922,9 +926,9 @@ ext2_extattr_inode_set(struct inode *ip, int attrnamespace,
 
 	/* Check attributes magic value */
 	header = (struct ext2fs_extattr_dinode_header *)((char *)dinode +
-	    E2FS_REV0_INODE_SIZE + dinode->e2di_extra_isize);
+	    E2FS_REV0_INODE_SIZE + le16toh(dinode->e2di_extra_isize));
 
-	if (header->h_magic != EXTATTR_MAGIC) {
+	if (le32toh(header->h_magic) != EXTATTR_MAGIC) {
 		brelse(bp);
 		return (ENOSPC);
 	}
@@ -957,7 +961,7 @@ ext2_extattr_inode_set(struct inode *ip, int attrnamespace,
 	}
 
 	max_size = EXT2_INODE_SIZE(fs) - E2FS_REV0_INODE_SIZE -
-	    dinode->e2di_extra_isize;
+	    le16toh(dinode->e2di_extra_isize);
 
 	if (!EXT2_IS_LAST_ENTRY(entry)) {
 		size = ext2_extattr_get_size(EXT2_IFIRST(header), entry,
@@ -1015,16 +1019,17 @@ ext2_extattr_hash_entry(struct ext2fs_extattr_header *header,
 	}
 
 	if (entry->e_value_block == 0 && entry->e_value_size != 0) {
-		uint32_t *value = (uint32_t *)((char *)header + entry->e_value_offs);
-		for (n = (entry->e_value_size +
+		uint32_t *value = (uint32_t *)((char *)header +
+		    le16toh(entry->e_value_offs));
+		for (n = (le32toh(entry->e_value_size) +
 		    EXT2_EXTATTR_ROUND) >> EXT2_EXTATTR_PAD_BITS; n; n--) {
 			hash = (hash << EXT2_EXTATTR_VALUE_HASH_SHIFT) ^
 			    (hash >> (8*sizeof(hash) - EXT2_EXTATTR_VALUE_HASH_SHIFT)) ^
-			    (*value++);
+			    le32toh(*value++);
 		}
 	}
 
-	entry->e_hash = hash;
+	entry->e_hash = htole32(hash);
 }
 
 static void
@@ -1038,7 +1043,7 @@ ext2_extattr_rehash(struct ext2fs_extattr_header *header,
 
 	here = EXT2_ENTRY(header+1);
 	while (!EXT2_IS_LAST_ENTRY(here)) {
-		if (!here->e_hash) {
+		if (here->e_hash == 0) {
 			/* Block is not shared if an entry's hash value == 0 */
 			hash = 0;
 			break;
@@ -1046,12 +1051,12 @@ ext2_extattr_rehash(struct ext2fs_extattr_header *header,
 
 		hash = (hash << EXT2_EXTATTR_BLOCK_HASH_SHIFT) ^
 		    (hash >> (8*sizeof(hash) - EXT2_EXTATTR_BLOCK_HASH_SHIFT)) ^
-		    here->e_hash;
+		    le32toh(here->e_hash);
 
 		here = EXT2_EXTATTR_NEXT(here);
 	}
 
-	header->h_hash = hash;
+	header->h_hash = htole32(hash);
 }
 
 int
@@ -1073,13 +1078,13 @@ ext2_extattr_block_set(struct inode *ip, int attrnamespace,
 		error = bread(ip->i_devvp, fsbtodb(fs, ip->i_facl),
 		    fs->e2fs_bsize, NOCRED, &bp);
 		if (error) {
-			brelse(bp);
 			return (error);
 		}
 
 		/* Check attributes magic value */
 		header = EXT2_HDR(bp);
-		if (header->h_magic != EXTATTR_MAGIC || header->h_blocks != 1) {
+		if (le32toh(header->h_magic) != EXTATTR_MAGIC ||
+		    le32toh(header->h_blocks) != 1) {
 			brelse(bp);
 			return (EINVAL);
 		}
@@ -1090,7 +1095,7 @@ ext2_extattr_block_set(struct inode *ip, int attrnamespace,
 			return (error);
 		}
 
-		if (header->h_refcount > 1) {
+		if (le32toh(header->h_refcount) > 1) {
 			error = ext2_extattr_block_clone(ip, &bp);
 			if (error) {
 				brelse(bp);
@@ -1181,9 +1186,9 @@ ext2_extattr_block_set(struct inode *ip, int attrnamespace,
 	}
 
 	header = EXT2_HDR(bp);
-	header->h_magic = EXTATTR_MAGIC;
-	header->h_refcount = 1;
-	header->h_blocks = 1;
+	header->h_magic = htole32(EXTATTR_MAGIC);
+	header->h_refcount = htole32(1);
+	header->h_blocks = htole32(1);
 	header->h_hash = 0;
 	memset(header->h_reserved, 0, sizeof(header->h_reserved));
 	memcpy(bp->b_data, header, sizeof(struct ext2fs_extattr_header));
@@ -1220,13 +1225,13 @@ int ext2_extattr_free(struct inode *ip)
 	error = bread(ip->i_devvp, fsbtodb(fs, ip->i_facl),
 	    fs->e2fs_bsize, NOCRED, &bp);
 	if (error) {
-		brelse(bp);
 		return (error);
 	}
 
 	/* Check attributes magic value */
 	header = EXT2_HDR(bp);
-	if (header->h_magic != EXTATTR_MAGIC || header->h_blocks != 1) {
+	if (le32toh(header->h_magic) != EXTATTR_MAGIC ||
+	    le32toh(header->h_blocks) != 1) {
 		brelse(bp);
 		return (EINVAL);
 	}
@@ -1238,8 +1243,8 @@ int ext2_extattr_free(struct inode *ip)
 		return (error);
 	}
 
-	if (header->h_refcount > 1) {
-		header->h_refcount--;
+	if (le32toh(header->h_refcount) > 1) {
+		header->h_refcount = htole32(le32toh(header->h_refcount) - 1);
 		bwrite(bp);
 	} else {
 		ext2_blkfree(ip, ip->i_facl, ip->i_e2fs->e2fs_bsize);

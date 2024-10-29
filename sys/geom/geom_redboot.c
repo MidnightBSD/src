@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/errno.h>
 #include <sys/endian.h>
@@ -245,7 +244,7 @@ g_redboot_taste(struct g_class *mp, struct g_provider *pp, int insist)
 	int error, sectorsize, i;
 	struct fis_image_desc *fd, *head;
 	uint32_t offmask;
-	u_int blksize;		/* NB: flash block size stored as stripesize */
+	off_t blksize;		/* NB: flash block size stored as stripesize */
 	u_char *buf;
 	off_t offset;
 	const char *value;
@@ -282,9 +281,9 @@ g_redboot_taste(struct g_class *mp, struct g_provider *pp, int insist)
 	else
 		offmask = 0xffffffff;		/* XXX */
 	if (bootverbose)
-		printf("%s: mediasize %ld secsize %d blksize %d offmask 0x%x\n",
+		printf("%s: mediasize %ld secsize %d blksize %ju offmask 0x%x\n",
 		    __func__, (long) cp->provider->mediasize, sectorsize,
-		    blksize, offmask);
+		    (uintmax_t)blksize, offmask);
 	if (sectorsize < sizeof(struct fis_image_desc) ||
 	    (sectorsize % sizeof(struct fis_image_desc)))
 		return (NULL);
@@ -297,15 +296,13 @@ again:
 	if (buf != NULL)
 		head = parse_fis_directory(buf, blksize, offset, offmask);
 	if (head == NULL && offset != 0) {
-		if (buf != NULL)
-			g_free(buf);
+		g_free(buf);
 		offset = 0;			/* check the front */
 		goto again;
 	}
 	g_topology_lock();
 	if (head == NULL) {
-		if (buf != NULL)
-			g_free(buf);
+		g_free(buf);
 		return NULL;
 	}
 	/*
@@ -335,24 +332,11 @@ again:
 	return (gp);
 }
 
-static void
-g_redboot_config(struct gctl_req *req, struct g_class *mp, const char *verb)
-{
-	struct g_geom *gp;
-
-	g_topology_assert();
-	gp = gctl_get_geom(req, mp, "geom");
-	if (gp == NULL)
-		return;
-	gctl_error(req, "Unknown verb");
-}
-
 static struct g_class g_redboot_class	= {
 	.name		= REDBOOT_CLASS_NAME,
 	.version	= G_VERSION,
 	.taste		= g_redboot_taste,
 	.dumpconf	= g_redboot_dumpconf,
-	.ctlreq		= g_redboot_config,
 	.ioctl		= g_redboot_ioctl,
 };
 DECLARE_GEOM_CLASS(g_redboot_class, g_redboot);

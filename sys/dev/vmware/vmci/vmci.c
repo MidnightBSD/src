@@ -7,8 +7,7 @@
 /* Driver for VMware Virtual Machine Communication Interface (VMCI) device. */
 
 #include <sys/cdefs.h>
-
-#include <sys/types.h>
+#include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>

@@ -1,4 +1,3 @@
-/* $FreeBSD: stable/11/tests/sys/mqueue/mqtest3.c 306905 2016-10-09 12:34:56Z kib $ */
 
 #include <sys/types.h>
 #include <sys/select.h>

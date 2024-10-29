@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * Copyright (c) 2003-2007 Yuriy Tsibizov <yuriy.tsibizov@gfk.ru>
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -327,7 +326,6 @@ struct emu_sc_info {
 	struct sbuf	emu10kx_sbuf;
 	int		emu10kx_bufptr;
 
-
 	/* Resources */
 	struct resource	*reg;
 	struct resource	*irq;
@@ -603,7 +601,6 @@ emu_getcard(device_t dev)
 	return (thiscard);
 }
 
-
 /*
  * Base hardware interface are 32 (Audigy) or 64 (Audigy2) registers.
  * Some of them are used directly, some of them provide pointer / data pairs.
@@ -733,7 +730,6 @@ emu_wr_p16vptr(struct emu_sc_info *sc, uint16_t chn, uint16_t reg, uint32_t data
 static void
 emu_wr_cbptr(struct emu_sc_info *sc, uint32_t data)
 {
-	uint32_t val;
 
 	/*
 	 * 0x38 is IPE3 (CD S/PDIF interrupt pending register) on CA0102. Seems
@@ -741,9 +737,9 @@ emu_wr_cbptr(struct emu_sc_info *sc, uint32_t data)
 	 * CA0108, with value(?) in top 16 bit, address(?) in low 16
 	 */
 
-	val = emu_rd_nolock(sc, 0x38, 4);
+	emu_rd_nolock(sc, 0x38, 4);
 	emu_wr_nolock(sc, 0x38, data, 4);
-	val = emu_rd_nolock(sc, 0x38, 4);
+	emu_rd_nolock(sc, 0x38, 4);
 
 }
 
@@ -804,7 +800,6 @@ emu_enable_ir(struct emu_sc_info *sc)
 		sc->enable_ir = 1;
 	}
 }
-
 
 /*
  * emu_timer_ - HW timer management
@@ -1000,7 +995,6 @@ emu_intr(void *p)
 	if (sc->dbg_level > 1)
 		if (stat & (~ack))
 			device_printf(sc->dev, "Unhandled interrupt: %08x\n", stat & (~ack));
-
 	}
 
 	if ((sc->is_ca0102) || (sc->is_ca0108))
@@ -1031,7 +1025,6 @@ emu_intr(void *p)
 				 * after completion of S/PDIF interface */
 		}
 }
-
 
 /*
  * Get data from private emu10kx structure for PCM buffer allocation.
@@ -1187,7 +1180,6 @@ emu_memstart(struct emu_mem *mem, void *membuf)
 	return (blk->pte_start);
 }
 
-
 static uint32_t
 emu_rate_to_pitch(uint32_t rate)
 {
@@ -1272,10 +1264,9 @@ emu_valloc(struct emu_sc_info *sc)
 void
 emu_vfree(struct emu_sc_info *sc, struct emu_voice *v)
 {
-	int i, r;
 
 	mtx_lock(&sc->lock);
-	for (i = 0; i < NUM_G; i++) {
+	for (int i = 0; i < NUM_G; i++) {
 		if (v == &sc->voice[i] && sc->voice[i].busy) {
 			v->busy = 0;
 			/*
@@ -1284,7 +1275,7 @@ emu_vfree(struct emu_sc_info *sc, struct emu_voice *v)
 			 * this problem
 			 */
 			if (v->slave != NULL)
-				r = emu_memfree(&sc->mem, v->vbuf);
+				emu_memfree(&sc->mem, v->vbuf);
 		}
 	}
 	mtx_unlock(&sc->lock);
@@ -1385,7 +1376,6 @@ emu_vwrite(struct emu_sc_info *sc, struct emu_voice *v)
 
 	v->sa = v->start >> s;
 	v->ea = v->end >> s;
-
 
 	if (v->stereo) {
 		emu_wrptr(sc, v->vnum, EMU_CHAN_CPF, EMU_CHAN_CPF_STEREO_MASK);
@@ -1512,14 +1502,12 @@ emu_vpos(struct emu_sc_info *sc, struct emu_voice *v)
 	return (ptr & ~0x0000001f);
 }
 
-
 /* fx */
 static void
 emu_wrefx(struct emu_sc_info *sc, unsigned int pc, unsigned int data)
 {
 	emu_wrptr(sc, 0, sc->code_base + pc, data);
 }
-
 
 static void
 emu_addefxop(struct emu_sc_info *sc, unsigned int op, unsigned int z, unsigned int w, unsigned int x, unsigned int y, uint32_t * pc)
@@ -1576,10 +1564,9 @@ emu_addefxmixer(struct emu_sc_info *sc, const char *mix_name, const int mix_id, 
 		 */
 		snprintf(sysctl_name, 32, "_%s", mix_name);
 		SYSCTL_ADD_PROC(sc->ctx,
-			SYSCTL_CHILDREN(sc->root),
-			OID_AUTO, sysctl_name,
-			CTLTYPE_INT | CTLFLAG_RW, sc, mix_id,
-			sysctl_emu_mixer_control, "I", "");
+		    SYSCTL_CHILDREN(sc->root), OID_AUTO, sysctl_name,
+		    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, sc, mix_id,
+		    sysctl_emu_mixer_control, "I", "");
 	}
 
 	return (volgpr);
@@ -1617,11 +1604,10 @@ static void
 emu_digitalswitch(struct emu_sc_info *sc)
 {
 	/* XXX temporary? */
-	SYSCTL_ADD_PROC(sc->ctx,
-		SYSCTL_CHILDREN(sc->root),
-		OID_AUTO, "_digital",
-		CTLTYPE_INT | CTLFLAG_RW, sc, 0,
-		sysctl_emu_digitalswitch_control, "I", "Enable digital output");
+	SYSCTL_ADD_PROC(sc->ctx, SYSCTL_CHILDREN(sc->root), OID_AUTO,
+	    "_digital", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+	    sc, 0, sysctl_emu_digitalswitch_control, "I",
+	    "Enable digital output");
 
 	return;
 }
@@ -1699,7 +1685,6 @@ emu_digitalswitch(struct emu_sc_info *sc)
 		&pc);						\
 } while (0)
 
-
 static void
 emu_initefx(struct emu_sc_info *sc)
 {
@@ -1744,7 +1729,6 @@ emu_initefx(struct emu_sc_info *sc)
 	for (i = 0; i < 16 ; i++) {
 		emu_addefxop(sc, ACC3, OUTP(i), DSP_CONST(0), DSP_CONST(0), DSP_CONST(0), &pc);
 	}
-
 
 	if (sc->is_emu10k1) {
 		EFX_CACHE(C_FRONT_L);
@@ -1859,7 +1843,6 @@ emu_initefx(struct emu_sc_info *sc)
 				this output is shared with digital out */
 				EFX_SKIP(1, ANALOGMUTE);
 				EFX_OUTPUTD(C_SUB, M_MASTER_SUBWOOFER, OUT_A_SUB);
-
 			}
 		} else {
 			/* SND_EMU10KX_MULTICHANNEL_DISABLED */
@@ -2195,7 +2178,6 @@ static struct cdevsw emu10kx_cdevsw = {
 	.d_version = 	D_VERSION,
 };
 
-
 static int
 emu10kx_open(struct cdev *i_dev, int flags __unused, int mode __unused, struct thread *td __unused)
 {
@@ -2436,7 +2418,6 @@ emu_rm_gpr_alloc(struct emu_rm *rm, int count)
 			rm->allocmap[allocated_gpr] = count;
 			for (i = 1; i < count; i++)
 				rm->allocmap[allocated_gpr + i] = -(count - i);
-
 		}
 	}
 	if (allocated_gpr == rm->num_gprs)
@@ -2474,7 +2455,6 @@ emumix_set_mode(struct emu_sc_info *sc, int mode)
 		hcfg |= EMU_HCFG_LOCKTANKCACHE_MASK;
 	else
 		hcfg |= EMU_HCFG_CODECFMT_I2S | EMU_HCFG_JOYENABLE;
-
 
 	if (mode == MODE_DIGITAL) {
 		if (sc->broken_digital) {
@@ -2577,7 +2557,6 @@ static int l2l_f[L2L_POINTS] = {
 	0x00000000		/* 0 */
 };
 
-
 static int
 log2lin(int log_t)
 {
@@ -2599,7 +2578,6 @@ log2lin(int log_t)
 	lin_t = l2l_df[idx] * lin + l2l_f[idx];
 	return (lin_t);
 }
-
 
 void
 emumix_set_fxvol(struct emu_sc_info *sc, unsigned gpr, int32_t vol)
@@ -2806,7 +2784,6 @@ emu_init(struct emu_sc_info *sc)
 	 * 3. Allow EMU10K DSP inputs
 	 */
 	if ((sc->is_ca0102) || (sc->is_ca0108)) {
-
 		spdif_sr = emu_rdptr(sc, 0, EMU_A_SPDIF_SAMPLERATE);
 		spdif_sr &= 0xfffff1ff;
 		spdif_sr |= EMU_A_I2S_CAPTURE_96000;
@@ -3032,7 +3009,6 @@ emu_pci_probe(device_t dev)
 
 	return (BUS_PROBE_DEFAULT);
 }
-
 
 static int
 emu_pci_attach(device_t dev)
@@ -3444,7 +3420,7 @@ emu_pci_detach(device_t dev)
 	int r = 0;
 
 	sc = device_get_softc(dev);
-	
+
 	for (i = 0; i < RT_COUNT; i++) {
 		if (sc->pcm[i] != NULL) {
 			func = device_get_ivars(sc->pcm[i]);
@@ -3526,7 +3502,6 @@ static device_method_t emu_methods[] = {
 
 	DEVMETHOD_END
 };
-
 
 static driver_t emu_driver = {
 	"emu10kx",

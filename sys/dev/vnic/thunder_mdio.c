@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2015 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Semihalf under
  * the sponsorship of the FreeBSD Foundation.
@@ -28,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -140,7 +138,6 @@ MALLOC_DEFINE(M_THUNDER_MDIO, "ThunderX MDIO",
 
 #define	MDIO_LOCK_ASSERT(sc)				\
     mtx_assert(&(sc)->mtx, MA_OWNED)
-
 
 #define	mdio_reg_read(sc, reg)				\
     bus_read_8((sc)->reg_base, (reg))
@@ -457,10 +454,6 @@ thunder_mdio_phy_connect(device_t dev, int lmacid, int phy)
 		if (pd == NULL)
 			return (ENOMEM);
 		pd->ifp = if_alloc(IFT_ETHER);
-		if (pd->ifp == NULL) {
-			free(pd, M_THUNDER_MDIO);
-			return (ENOMEM);
-		}
 		pd->lmacid = lmacid;
 	}
 

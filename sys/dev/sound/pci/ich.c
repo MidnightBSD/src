@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Katsurajima Naoto <raven@katsurajima.seya.yokohama.jp>
  * Copyright (c) 2001 Cameron Grant <cg@freebsd.org>
@@ -38,6 +38,7 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
+SND_DECLARE_FILE("");
 
 /* -------------------------------------------------------------------- */
 
@@ -648,7 +649,6 @@ ich_intr(void *p)
 				lvi += cbi + ch->blkcnt - lbi;
 			lvi %= ICH_DTBL_LENGTH;
 			ich_wr(sc, ch->regbase + ICH_REG_X_LVI, lvi, 1);
-
 		}
 		/* clear status bit */
 		ich_wr(sc, ch->regbase +

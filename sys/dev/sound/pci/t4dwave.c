@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * All rights reserved.
@@ -37,6 +37,7 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
+SND_DECLARE_FILE("");
 
 /* -------------------------------------------------------------------- */
 
@@ -449,7 +450,6 @@ tr_rdch(struct tr_chinfo *ch)
 		cr[i]=tr_rd(tr, TR_REG_CHNBASE+(i<<2), 4);
 	snd_mtxunlock(tr->lock);
 
-
 	if (tr->type == ALI_PCI_ID)
 		ch->lba=(cr[1] & ALI_MAXADDR);
 	else
@@ -828,11 +828,6 @@ tr_pci_attach(device_t dev)
 	bus_addr_t	lowaddr;
 	int		i, dacn;
 	char 		status[SND_STATUSLEN];
-#ifdef __sparc64__
-	device_t	*children;
-	int		nchildren;
-	u_int32_t	data;
-#endif
 
 	tr = malloc(sizeof(*tr), M_DEVBUF, M_WAITOK | M_ZERO);
 	tr->type = pci_get_devid(dev);
@@ -899,34 +894,9 @@ tr_pci_attach(device_t dev)
 		 * using a low address of BUS_SPACE_MAXADDR_32BIT for both
 		 * we might end up with the play buffer being in the 32-bit
 		 * range while the record buffer isn't or vice versa. So we
-		 * limit enabling the 31st bit to sparc64, where the IOMMU
-		 * guarantees that we're using a 32-bit address (and in turn
-		 * requires it).
+		 * don't enabling the 31st bit.
 		 */
 		lowaddr = ALI_MAXADDR;
-#ifdef __sparc64__
-		if (device_get_children(device_get_parent(dev), &children,
-		    &nchildren) == 0) {
-			for (i = 0; i < nchildren; i++) {
-				if (pci_get_devid(children[i]) == 0x153310b9) {
-					lowaddr = BUS_SPACE_MAXADDR_32BIT;
-					data = pci_read_config(children[i],
-					    0x7e, 1);
-					if (bootverbose)
-						device_printf(dev,
-						    "M1533 0x7e: 0x%x -> ",
-						    data);
-					data |= 0x1;
-					if (bootverbose)
-						printf("0x%x\n", data);
-					pci_write_config(children[i], 0x7e,
-					    data, 1);
-					break;
-				}
-			}
-		}
-		free(children, M_TEMP);
-#endif
 		tr->hwchns = ALI_MAXHWCH;
 		tr->bufsz = ALI_BUFSZ;
 	} else {

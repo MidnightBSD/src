@@ -22,8 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 /*
@@ -75,19 +73,23 @@ initialize_constant_buffers(void)
 }
 
 static int
+lookup_crid(int fd, const char *devname)
+{
+	struct crypt_find_op find;
+
+	find.crid = -1;
+	strlcpy(find.name, devname, sizeof(find.name));
+	ATF_REQUIRE(ioctl(fd, CIOCFINDDEV, &find) != -1);
+	return (find.crid);
+}
+
+static int
 get_handle_fd(void)
 {
-	int dc_fd, fd;
+	int fd;
 
-	dc_fd = open("/dev/crypto", O_RDWR);
-
-	/*
-	 * Why do we do this dance instead of just operating on /dev/crypto
-	 * directly?  I have no idea.
-	 */
-	ATF_REQUIRE(dc_fd >= 0);
-	ATF_REQUIRE(ioctl(dc_fd, CRIOGET, &fd) != -1);
-	close(dc_fd);
+	fd = open("/dev/crypto", O_RDWR);
+	ATF_REQUIRE(fd >= 0);
 	return (fd);
 }
 
@@ -124,10 +126,10 @@ do_cryptop(int fd, int ses, size_t inlen, void *out)
 }
 
 static void
-test_blake2b_vectors(int crid, const char *modname)
+test_blake2b_vectors(const char *devname, const char *modname)
 {
 	uint8_t hash[BLAKE2B_OUTBYTES];
-	int fd, ses;
+	int crid, fd, ses;
 	size_t i;
 
 	ATF_REQUIRE_KERNEL_MODULE(modname);
@@ -135,6 +137,7 @@ test_blake2b_vectors(int crid, const char *modname)
 
 	initialize_constant_buffers();
 	fd = get_handle_fd();
+	crid = lookup_crid(fd, devname);
 	ses = create_session(fd, CRYPTO_BLAKE2B, crid, key2b, sizeof(key2b));
 
 	for (i = 0; i < sizeof(katbuf); i++) {
@@ -147,10 +150,10 @@ test_blake2b_vectors(int crid, const char *modname)
 }
 
 static void
-test_blake2s_vectors(int crid, const char *modname)
+test_blake2s_vectors(const char *devname, const char *modname)
 {
 	uint8_t hash[BLAKE2S_OUTBYTES];
-	int fd, ses;
+	int crid, fd, ses;
 	size_t i;
 
 	ATF_REQUIRE_KERNEL_MODULE(modname);
@@ -158,6 +161,7 @@ test_blake2s_vectors(int crid, const char *modname)
 
 	initialize_constant_buffers();
 	fd = get_handle_fd();
+	crid = lookup_crid(fd, devname);
 	ses = create_session(fd, CRYPTO_BLAKE2S, crid, key2s, sizeof(key2s));
 
 	for (i = 0; i < sizeof(katbuf); i++) {
@@ -172,28 +176,30 @@ test_blake2s_vectors(int crid, const char *modname)
 ATF_TC_WITHOUT_HEAD(blake2b_vectors);
 ATF_TC_BODY(blake2b_vectors, tc)
 {
-	ATF_REQUIRE_SYSCTL_INT("kern.cryptodevallowsoft", 1);
-	test_blake2b_vectors(CRYPTO_FLAG_SOFTWARE, "nexus/cryptosoft");
+	ATF_REQUIRE_SYSCTL_INT("kern.crypto.allow_soft", 1);
+	test_blake2b_vectors("cryptosoft0", "nexus/cryptosoft");
 }
 
 ATF_TC_WITHOUT_HEAD(blake2s_vectors);
 ATF_TC_BODY(blake2s_vectors, tc)
 {
-	ATF_REQUIRE_SYSCTL_INT("kern.cryptodevallowsoft", 1);
-	test_blake2s_vectors(CRYPTO_FLAG_SOFTWARE, "nexus/cryptosoft");
+	ATF_REQUIRE_SYSCTL_INT("kern.crypto.allow_soft", 1);
+	test_blake2s_vectors("cryptosoft0", "nexus/cryptosoft");
 }
 
 #if defined(__i386__) || defined(__amd64__)
 ATF_TC_WITHOUT_HEAD(blake2b_vectors_x86);
 ATF_TC_BODY(blake2b_vectors_x86, tc)
 {
-	test_blake2b_vectors(CRYPTO_FLAG_HARDWARE, "nexus/blake2");
+	ATF_REQUIRE_SYSCTL_INT("kern.crypto.allow_soft", 1);
+	test_blake2b_vectors("blaketwo0", "nexus/blake2");
 }
 
 ATF_TC_WITHOUT_HEAD(blake2s_vectors_x86);
 ATF_TC_BODY(blake2s_vectors_x86, tc)
 {
-	test_blake2s_vectors(CRYPTO_FLAG_HARDWARE, "nexus/blake2");
+	ATF_REQUIRE_SYSCTL_INT("kern.crypto.allow_soft", 1);
+	test_blake2s_vectors("blaketwo0", "nexus/blake2");
 }
 #endif
 

@@ -58,7 +58,6 @@
  *
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
- *
  */
 
 /*
@@ -113,6 +112,7 @@ struct xswdev {
 #define	KERN_NOT_RECEIVER	7
 #define	KERN_NO_ACCESS		8
 #define	KERN_OUT_OF_BOUNDS	9
+#define	KERN_RESTART		10
 
 #ifndef PA_LOCK_COUNT
 #ifdef SMP
@@ -121,6 +121,15 @@ struct xswdev {
 #define PA_LOCK_COUNT	1
 #endif	/* !SMP */
 #endif	/* !PA_LOCK_COUNT */
+
+#ifndef KSTACK_MAX_PAGES
+#define KSTACK_MAX_PAGES 32
+#endif
+
+#ifndef	PHYS_AVAIL_ENTRIES
+#define PHYS_AVAIL_ENTRIES      (VM_PHYSSEG_MAX * 2)
+#endif
+#define PHYS_AVAIL_COUNT        (PHYS_AVAIL_ENTRIES + 2)
 
 #ifndef ASSEMBLER
 #ifdef _KERNEL

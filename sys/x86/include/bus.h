@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-3-Clause AND BSD-2-Clause-NetBSDE
+ * SPDX-License-Identifier: BSD-3-Clause AND BSD-2-ClauseE
  *
  * Copyright (c) KATO Takenori, 1999.
  *
@@ -29,7 +29,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /*	$NetBSD: bus.h,v 1.12 1997/10/01 08:25:15 fvdl Exp $	*/
@@ -95,11 +94,12 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _X86_BUS_H_
-#define _X86_BUS_H_
+#ifndef _MACHINE_BUS_H_
+#define _MACHINE_BUS_H_
 
 #include <machine/_bus.h>
 #include <machine/cpufunc.h>
+#include <machine/bus_dma.h>
 
 #ifndef __GNUCLIKE_ASM
 #error "no assembler code for your compiler"
@@ -129,6 +129,13 @@
 
 #define BUS_SPACE_INVALID_DATA	(~0)
 #define BUS_SPACE_UNRESTRICTED	(~0)
+
+#define	BUS_SPACE_BARRIER_READ	0x01		/* force read barrier */
+#define	BUS_SPACE_BARRIER_WRITE	0x02		/* force write barrier */
+
+#if defined(SAN_NEEDS_INTERCEPTORS) && !defined(SAN_RUNTIME)
+#include <sys/bus_san.h>
+#else
 
 /*
  * Map a region of device bus space into CPU virtual address space.
@@ -184,7 +191,6 @@ bus_space_free(bus_space_tag_t t __unused, bus_space_handle_t bsh __unused,
 	       bus_size_t size __unused)
 {
 }
-
 
 /*
  * Read a 1, 2, 4, or 8 byte quantity from bus space
@@ -279,7 +285,6 @@ bus_space_read_multi_1(bus_space_tag_t tag, bus_space_handle_t bsh,
 	else {
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 		1:	movb (%2),%%al				\n\
 			stosb					\n\
 			loop 1b"				:
@@ -300,7 +305,6 @@ bus_space_read_multi_2(bus_space_tag_t tag, bus_space_handle_t bsh,
 	else {
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 		1:	movw (%2),%%ax				\n\
 			stosw					\n\
 			loop 1b"				:
@@ -321,7 +325,6 @@ bus_space_read_multi_4(bus_space_tag_t tag, bus_space_handle_t bsh,
 	else {
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 		1:	movl (%2),%%eax				\n\
 			stosl					\n\
 			loop 1b"				:
@@ -356,7 +359,6 @@ static __inline void bus_space_read_region_4(bus_space_tag_t tag,
 					     bus_size_t offset, u_int32_t *addr,
 					     size_t count);
 
-
 static __inline void
 bus_space_read_region_1(bus_space_tag_t tag, bus_space_handle_t bsh,
 			bus_size_t offset, u_int8_t *addr, size_t count)
@@ -366,7 +368,6 @@ bus_space_read_region_1(bus_space_tag_t tag, bus_space_handle_t bsh,
 		int _port_ = bsh + offset;
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 		1:	inb %w2,%%al				\n\
 			stosb					\n\
 			incl %2					\n\
@@ -379,7 +380,6 @@ bus_space_read_region_1(bus_space_tag_t tag, bus_space_handle_t bsh,
 		bus_space_handle_t _port_ = bsh + offset;
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 			repne					\n\
 			movsb"					:
 		    "=D" (addr), "=c" (count), "=S" (_port_)	:
@@ -398,7 +398,6 @@ bus_space_read_region_2(bus_space_tag_t tag, bus_space_handle_t bsh,
 		int _port_ = bsh + offset;
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 		1:	inw %w2,%%ax				\n\
 			stosw					\n\
 			addl $2,%2				\n\
@@ -411,7 +410,6 @@ bus_space_read_region_2(bus_space_tag_t tag, bus_space_handle_t bsh,
 		bus_space_handle_t _port_ = bsh + offset;
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 			repne					\n\
 			movsw"					:
 		    "=D" (addr), "=c" (count), "=S" (_port_)	:
@@ -430,7 +428,6 @@ bus_space_read_region_4(bus_space_tag_t tag, bus_space_handle_t bsh,
 		int _port_ = bsh + offset;
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 		1:	inl %w2,%%eax				\n\
 			stosl					\n\
 			addl $4,%2				\n\
@@ -443,7 +440,6 @@ bus_space_read_region_4(bus_space_tag_t tag, bus_space_handle_t bsh,
 		bus_space_handle_t _port_ = bsh + offset;
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 			repne					\n\
 			movsl"					:
 		    "=D" (addr), "=c" (count), "=S" (_port_)	:
@@ -558,7 +554,6 @@ bus_space_write_multi_1(bus_space_tag_t tag, bus_space_handle_t bsh,
 	else {
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 		1:	lodsb					\n\
 			movb %%al,(%2)				\n\
 			loop 1b"				:
@@ -579,7 +574,6 @@ bus_space_write_multi_2(bus_space_tag_t tag, bus_space_handle_t bsh,
 	else {
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 		1:	lodsw					\n\
 			movw %%ax,(%2)				\n\
 			loop 1b"				:
@@ -600,7 +594,6 @@ bus_space_write_multi_4(bus_space_tag_t tag, bus_space_handle_t bsh,
 	else {
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 		1:	lodsl					\n\
 			movl %%eax,(%2)				\n\
 			loop 1b"				:
@@ -646,7 +639,6 @@ bus_space_write_region_1(bus_space_tag_t tag, bus_space_handle_t bsh,
 		int _port_ = bsh + offset;
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 		1:	lodsb					\n\
 			outb %%al,%w0				\n\
 			incl %0					\n\
@@ -659,7 +651,6 @@ bus_space_write_region_1(bus_space_tag_t tag, bus_space_handle_t bsh,
 		bus_space_handle_t _port_ = bsh + offset;
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 			repne					\n\
 			movsb"					:
 		    "=D" (_port_), "=S" (addr), "=c" (count)	:
@@ -678,7 +669,6 @@ bus_space_write_region_2(bus_space_tag_t tag, bus_space_handle_t bsh,
 		int _port_ = bsh + offset;
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 		1:	lodsw					\n\
 			outw %%ax,%w0				\n\
 			addl $2,%0				\n\
@@ -691,7 +681,6 @@ bus_space_write_region_2(bus_space_tag_t tag, bus_space_handle_t bsh,
 		bus_space_handle_t _port_ = bsh + offset;
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 			repne					\n\
 			movsw"					:
 		    "=D" (_port_), "=S" (addr), "=c" (count)	:
@@ -710,7 +699,6 @@ bus_space_write_region_4(bus_space_tag_t tag, bus_space_handle_t bsh,
 		int _port_ = bsh + offset;
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 		1:	lodsl					\n\
 			outl %%eax,%w0				\n\
 			addl $4,%0				\n\
@@ -723,7 +711,6 @@ bus_space_write_region_4(bus_space_tag_t tag, bus_space_handle_t bsh,
 		bus_space_handle_t _port_ = bsh + offset;
 #ifdef __GNUCLIKE_ASM
 		__asm __volatile("				\n\
-			cld					\n\
 			repne					\n\
 			movsl"					:
 		    "=D" (_port_), "=S" (addr), "=c" (count)	:
@@ -1009,9 +996,6 @@ bus_space_copy_region_4(bus_space_tag_t tag, bus_space_handle_t bsh1,
  * prevent reordering by the compiler; all Intel x86 processors currently
  * retire operations outside the CPU in program order.
  */
-#define	BUS_SPACE_BARRIER_READ	0x01		/* force read barrier */
-#define	BUS_SPACE_BARRIER_WRITE	0x02		/* force write barrier */
-
 static __inline void
 bus_space_barrier(bus_space_tag_t tag __unused, bus_space_handle_t bsh __unused,
 		  bus_size_t offset __unused, bus_size_t len __unused, int flags)
@@ -1038,8 +1022,6 @@ bus_space_barrier(bus_space_tag_t tag __unused, bus_space_handle_t bsh __unused,
 #define outw(a, b) compiler_error
 #define outl(a, b) compiler_error
 #endif
-
-#include <machine/bus_dma.h>
 
 /*
  * Stream accesses are the same as normal accesses on x86; there are no
@@ -1105,4 +1087,38 @@ bus_space_barrier(bus_space_tag_t tag __unused, bus_space_handle_t bsh __unused,
 #define	bus_space_copy_region_stream_4(t, h1, o1, h2, o2, c) \
 	bus_space_copy_region_4((t), (h1), (o1), (h2), (o2), (c))
 
-#endif /* _X86_BUS_H_ */
+#define BUS_PEEK_FUNC(width, type)					\
+	static inline int						\
+	bus_space_peek_##width(bus_space_tag_t tag,			\
+	    bus_space_handle_t hnd, bus_size_t offset, type *value)	\
+	{								\
+		type tmp;						\
+		tmp = bus_space_read_##width(tag, hnd, offset);		\
+		*value = (type)tmp;					\
+		return (0);						\
+	}
+BUS_PEEK_FUNC(1, uint8_t)
+BUS_PEEK_FUNC(2, uint16_t)
+BUS_PEEK_FUNC(4, uint32_t)
+#ifdef __amd64__
+BUS_PEEK_FUNC(8, uint64_t)
+#endif
+
+#define BUS_POKE_FUNC(width, type)					\
+	static inline int						\
+	bus_space_poke_##width(bus_space_tag_t tag,			\
+	    bus_space_handle_t hnd, bus_size_t offset, type value)	\
+	{								\
+		bus_space_write_##width(tag, hnd, offset, value);	\
+		return (0); 						\
+	}
+BUS_POKE_FUNC(1, uint8_t)
+BUS_POKE_FUNC(2, uint16_t)
+BUS_POKE_FUNC(4, uint32_t)
+#ifdef __amd64__
+BUS_POKE_FUNC(8, uint64_t)
+#endif
+
+#endif /* !SAN_NEEDS_INTERCEPTORS && SAN_RUNTIME */
+
+#endif /* !_MACHINE_BUS_H_ */

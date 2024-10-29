@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PACKAGE=	tests
 PJDFSTEST_SRCDIR=	${SRCTOP}/contrib/pjdfstest
@@ -18,7 +17,7 @@ misc.sh: ${PJDFSTEST_SRCDIR}/tests/misc.sh
 afterinstall: install-tests-symlink
 install-tests-symlink: .PHONY
 	rm -f ${DESTDIR}${TESTSDIR}/tests
-	${INSTALL_SYMLINK} . ${DESTDIR}${TESTSDIR}/tests
+	${INSTALL_SYMLINK} -T "package=tests" . ${DESTDIR}${TESTSDIR}/tests
 
 TESTS_SUBDIRS=	chflags
 TESTS_SUBDIRS+=	chmod

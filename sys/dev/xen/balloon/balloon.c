@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/lock.h>
 #include <sys/kernel.h>
@@ -78,7 +77,9 @@ static struct balloon_stats balloon_stats;
 #define bs balloon_stats
 
 SYSCTL_DECL(_dev_xen);
-static SYSCTL_NODE(_dev_xen, OID_AUTO, balloon, CTLFLAG_RD, NULL, "Balloon");
+static SYSCTL_NODE(_dev_xen, OID_AUTO, balloon,
+    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
+    "Balloon");
 SYSCTL_ULONG(_dev_xen_balloon, OID_AUTO, current, CTLFLAG_RD,
     &bs.current_pages, 0, "Current allocation");
 SYSCTL_ULONG(_dev_xen_balloon, OID_AUTO, target, CTLFLAG_RD,
@@ -225,23 +226,16 @@ decrease_reservation(unsigned long nr_pages)
 		nr_pages = nitems(frame_list);
 
 	for (i = 0; i < nr_pages; i++) {
-		if ((page = vm_page_alloc(NULL, 0, 
-			    VM_ALLOC_NORMAL | VM_ALLOC_NOOBJ | 
-			    VM_ALLOC_ZERO)) == NULL) {
+		/*
+		 * Zero the page, or else we might be leaking important data to
+		 * other domains on the same host. Xen doesn't scrub ballooned
+		 * out memory pages, the guest is in charge of making sure that
+		 * no information is leaked.
+		 */
+		if ((page = vm_page_alloc_noobj(VM_ALLOC_ZERO)) == NULL) {
 			nr_pages = i;
 			need_sleep = 1;
 			break;
-		}
-
-		if ((page->flags & PG_ZERO) == 0) {
-			/*
-			 * Zero the page, or else we might be leaking
-			 * important data to other domains on the same
-			 * host. Xen doesn't scrub ballooned out memory
-			 * pages, the guest is in charge of making
-			 * sure that no information is leaked.
-			 */
-			pmap_zero_page(page);
 		}
 
 		frame_list[i] = (VM_PAGE_TO_PHYS(page) >> PAGE_SHIFT);
@@ -271,7 +265,7 @@ balloon_process(void *unused)
 {
 	int need_sleep = 0;
 	long credit;
-	
+
 	mtx_lock(&balloon_mutex);
 	for (;;) {
 		int sleep_time;

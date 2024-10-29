@@ -42,11 +42,24 @@
 #include <sys/lock.h>
 #include <sys/queue.h>
 #include <ufs/ufs/dinode.h>
+#include <sys/seqc.h>
+#ifdef DIAGNOSTIC
+#include <sys/stack.h>
+#endif
 
 /*
  * This must agree with the definition in <ufs/ufs/dir.h>.
  */
 #define	doff_t		int32_t
+
+#ifdef DIAGNOSTIC
+struct iown_tracker {
+	struct thread	*tr_owner;
+	struct stack	tr_st;
+	struct stack	tr_unlock;
+	int		tr_gen;
+};
+#endif
 
 /*
  * The inode is used to describe each active (or recently active) file in the
@@ -65,10 +78,10 @@
  * exclusive.
  */
 struct inode {
-	TAILQ_ENTRY(inode) i_nextsnap; /* snapshot file list. */
-	struct	vnode  *i_vnode;/* Vnode associated with this inode. */
-	struct 	ufsmount *i_ump;/* Ufsmount point associated with this inode. */
-	struct	 dquot *i_dquot[MAXQUOTAS]; /* Dquot structures. */
+	TAILQ_ENTRY(inode) i_nextsnap; /* Snapshot file list. */
+	struct vnode	*i_vnode; /* Vnode associated with this inode. */
+	struct ufsmount	*i_ump; /* Ufsmount point associated with this inode. */
+	struct dquot	*i_dquot[MAXQUOTAS]; /* Dquot structures. */
 	union {
 		struct dirhash *dirhash; /* Hashing for large directories. */
 		daddr_t *snapblklist;    /* Collect expunged snapshot blocks. */
@@ -82,9 +95,8 @@ struct inode {
 	} dinode_u;
 
 	ino_t	  i_number;	/* The identity of the inode. */
-	u_int32_t i_flag;	/* flags, see below */
-	int	  i_effnlink;	/* i_nlink when I/O completes */
-
+	uint32_t  i_flag;	/* flags, see below */
+	int32_t	  i_effnlink;	/* i_nlink when I/O completes */
 
 	/*
 	 * Side effects; used during directory lookup.
@@ -93,13 +105,19 @@ struct inode {
 	doff_t	  i_endoff;	/* End of useful stuff in directory. */
 	doff_t	  i_diroff;	/* Offset in dir, where we found last entry. */
 	doff_t	  i_offset;	/* Offset of free space in directory. */
+#ifdef DIAGNOSTIC
+	int			i_lock_gen;
+	struct iown_tracker	i_count_tracker;
+	struct iown_tracker	i_endoff_tracker;
+	struct iown_tracker	i_offset_tracker;
+#endif
 
 	int	i_nextclustercg; /* last cg searched for cluster */
 
 	/*
 	 * Data for extended attribute modification.
  	 */
-	u_char	  *i_ea_area;	/* Pointer to malloced copy of EA area */
+	uint8_t	  *i_ea_area;	/* Pointer to malloced copy of EA area */
 	unsigned  i_ea_len;	/* Length of i_ea_area */
 	int	  i_ea_error;	/* First errno in transaction */
 	int	  i_ea_refs;	/* Number of users of EA area */
@@ -107,13 +125,13 @@ struct inode {
 	/*
 	 * Copies from the on-disk dinode itself.
 	 */
-	u_int64_t i_size;	/* File byte count. */
-	u_int64_t i_gen;	/* Generation number. */
-	u_int32_t i_flags;	/* Status flags (chflags). */
-	u_int32_t i_uid;	/* File owner. */
-	u_int32_t i_gid;	/* File group. */
-	u_int16_t i_mode;	/* IFMT, permissions; see below. */
-	int16_t	  i_nlink;	/* File link count. */
+	uint64_t i_size;	/* File byte count. */
+	uint64_t i_gen;		/* Generation number. */
+	uint32_t i_flags;	/* Status flags (chflags). */
+	uint32_t i_uid;		/* File owner. */
+	uint32_t i_gid;		/* File group. */
+	int32_t  i_nlink;	/* File link count. */
+	uint16_t i_mode;	/* IFMT, permissions; see below. */
 };
 /*
  * These flags are kept in i_flag.
@@ -133,6 +151,55 @@ struct inode {
 #define	IN_IBLKDATA	0x0800		/* datasync requires inode block
 					   update */
 #define	IN_SIZEMOD	0x1000		/* Inode size has been modified */
+#define	IN_ENDOFF	0x2000		/* Free space at the end of directory,
+					   try to truncate when possible */
+
+#define PRINT_INODE_FLAGS "\20\20b16\17b15\16b14\15sizemod" \
+	"\14iblkdata\13is_ufs2\12truncated\11ea_lockwait\10ea_locked" \
+	"\7lazyaccess\6lazymod\5needsync\4modified\3update\2change\1access"
+
+#define UFS_INODE_FLAG_LAZY_MASK	\
+	(IN_ACCESS | IN_CHANGE | IN_MODIFIED | IN_UPDATE | IN_LAZYMOD | \
+	 IN_LAZYACCESS)
+/*
+ * Some flags can persist a vnode transitioning to 0 hold count and being tkaen
+ * off the list.
+ */
+#define UFS_INODE_FLAG_LAZY_MASK_ASSERTABLE \
+	(UFS_INODE_FLAG_LAZY_MASK & ~(IN_LAZYMOD | IN_LAZYACCESS))
+
+#define UFS_INODE_SET_MODE(ip, mode) do {			\
+	struct inode *_ip = (ip);				\
+	int _mode = (mode);					\
+								\
+	ASSERT_VOP_IN_SEQC(ITOV(_ip));				\
+	atomic_store_short(&(_ip)->i_mode, _mode);		\
+} while (0)
+
+#define UFS_INODE_SET_FLAG(ip, flags) do {			\
+	struct inode *_ip = (ip);				\
+	struct vnode *_vp = ITOV(_ip);				\
+	int _flags = (flags);					\
+								\
+	_ip->i_flag |= _flags;					\
+	if (_flags & UFS_INODE_FLAG_LAZY_MASK)			\
+		vlazy(_vp);					\
+} while (0)
+
+#define UFS_INODE_SET_FLAG_SHARED(ip, flags) do {		\
+	struct inode *_ip = (ip);				\
+	struct vnode *_vp = ITOV(_ip);				\
+	int _flags = (flags);					\
+								\
+	ASSERT_VI_UNLOCKED(_vp, __func__);			\
+	if ((_ip->i_flag & (_flags)) != _flags) {		\
+		VI_LOCK(_vp);					\
+		_ip->i_flag |= _flags;				\
+		if (_flags & UFS_INODE_FLAG_LAZY_MASK)		\
+			vlazy(_vp);				\
+		VI_UNLOCK(_vp);					\
+	}							\
+} while (0)
 
 #define	i_dirhash i_un.dirhash
 #define	i_snapblklist i_un.snapblklist
@@ -173,10 +240,15 @@ I_IS_UFS2(const struct inode *ip)
 	else							\
 		(ip)->i_din2->d##field = (val); 		\
 	} while (0)
+#define	DIP_SET_NLINK(ip, val) do {					\
+	KASSERT(ip->i_nlink >= 0, ("%s:%d %s(): setting negative "	\
+	    "nlink value %d for inode %jd\n", __FILE__, __LINE__,	\
+	    __FUNCTION__, (ip)->i_nlink, (ip)->i_number));		\
+	DIP_SET(ip, i_nlink, val);					\
+	} while (0)
 
-#define	SHORTLINK(ip)	(I_IS_UFS1(ip) ?			\
-    (caddr_t)(ip)->i_din1->di_db : (caddr_t)(ip)->i_din2->di_db)
 #define	IS_SNAPSHOT(ip)		((ip)->i_flags & SF_SNAPSHOT)
+#define	IS_UFS(vp)		((vp)->v_data != NULL)
 
 /*
  * Structure used to pass around logical block paths generated by
@@ -189,21 +261,52 @@ struct indir {
 
 /* Convert between inode pointers and vnode pointers. */
 #define	VTOI(vp)	((struct inode *)(vp)->v_data)
+#define	VTOI_SMR(vp)	((struct inode *)vn_load_v_data_smr(vp))
 #define	ITOV(ip)	((ip)->i_vnode)
 
 /* Determine if soft dependencies are being done */
-#define	DOINGSOFTDEP(vp)   ((vp)->v_mount->mnt_flag & (MNT_SOFTDEP | MNT_SUJ))
-#define	MOUNTEDSOFTDEP(mp) ((mp)->mnt_flag & (MNT_SOFTDEP | MNT_SUJ))
-#define	DOINGSUJ(vp)	   ((vp)->v_mount->mnt_flag & MNT_SUJ)
-#define	MOUNTEDSUJ(mp)	   ((mp)->mnt_flag & MNT_SUJ)
+#define	MOUNTEDSOFTDEP(mp)	(((mp)->mnt_flag & MNT_SOFTDEP) != 0)
+#define	DOINGSOFTDEP(vp)	MOUNTEDSOFTDEP((vp)->v_mount)
+#define	MOUNTEDSUJ(mp)		(((mp)->mnt_flag & (MNT_SOFTDEP | MNT_SUJ)) == \
+    (MNT_SOFTDEP | MNT_SUJ))
+#define	DOINGSUJ(vp)		MOUNTEDSUJ((vp)->v_mount)
 
 /* This overlays the fid structure (see mount.h). */
 struct ufid {
-	u_int16_t ufid_len;	/* Length of structure. */
-	u_int16_t ufid_pad;	/* Force 32-bit alignment. */
+	uint16_t ufid_len;	/* Length of structure. */
+	uint16_t ufid_pad;	/* Force 32-bit alignment. */
 	uint32_t  ufid_ino;	/* File number (ino). */
 	uint32_t  ufid_gen;	/* Generation number. */
 };
+
+#ifdef DIAGNOSTIC
+void ufs_init_trackers(struct inode *ip);
+void ufs_unlock_tracker(struct inode *ip);
+
+doff_t ufs_get_i_offset(struct inode *ip, const char *file, int line);
+void ufs_set_i_offset(struct inode *ip, doff_t off, const char *file, int line);
+#define	I_OFFSET(ip)		ufs_get_i_offset(ip, __FILE__, __LINE__)
+#define	SET_I_OFFSET(ip, off)	ufs_set_i_offset(ip, off, __FILE__, __LINE__)
+
+int32_t ufs_get_i_count(struct inode *ip, const char *file, int line);
+void ufs_set_i_count(struct inode *ip, int32_t cnt, const char *file, int line);
+#define	I_COUNT(ip)		ufs_get_i_count(ip, __FILE__, __LINE__)
+#define	SET_I_COUNT(ip, cnt)	ufs_set_i_count(ip, cnt, __FILE__, __LINE__)
+
+doff_t ufs_get_i_endoff(struct inode *ip, const char *file, int line);
+void ufs_set_i_endoff(struct inode *ip, doff_t off, const char *file, int line);
+#define	I_ENDOFF(ip)		ufs_get_i_endoff(ip, __FILE__, __LINE__)
+#define	SET_I_ENDOFF(ip, off)	ufs_set_i_endoff(ip, off, __FILE__, __LINE__)
+
+#else
+#define	I_OFFSET(ip)		((ip)->i_offset)
+#define	SET_I_OFFSET(ip, off)	((ip)->i_offset = (off))
+#define	I_COUNT(ip)		((ip)->i_count)
+#define	SET_I_COUNT(ip, cnt)	((ip)->i_count = cnt)
+#define	I_ENDOFF(ip)		((ip)->i_endoff)
+#define	SET_I_ENDOFF(ip, off)	((ip)->i_endoff = off)
+#endif
+
 #endif /* _KERNEL */
 
 #endif /* !_UFS_UFS_INODE_H_ */

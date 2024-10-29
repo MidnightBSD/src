@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case nestedfs_001_pos cleanup
 nestedfs_001_pos_head()
 {
 	atf_set "descr" "Verify a nested file system can be created/destroyed."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 nestedfs_001_pos_body()
 {

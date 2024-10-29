@@ -12,8 +12,6 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
- * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -21,22 +19,13 @@
 #include "config.h"
 #include "common.h"
 
-int testnum = 1;
-char *cur_test_id = NULL;
 int kqfd;
-
-extern void test_evfilt_read();
-extern void test_evfilt_signal();
-extern void test_evfilt_vnode();
-extern void test_evfilt_timer();
-extern void test_evfilt_proc();
-#if HAVE_EVFILT_USER
-extern void test_evfilt_user();
-#endif
+static char *cur_test_id = NULL;
+static int testnum = 1;
 
 /* Checks if any events are pending, which is an error. */
-void 
-test_no_kevents(void)
+void
+_test_no_kevents(const char *file, int line)
 {
     int nfds;
     struct timespec timeo;
@@ -47,7 +36,7 @@ test_no_kevents(void)
     memset(&timeo, 0, sizeof(timeo));
     nfds = kevent(kqfd, NULL, 0, &kev, 1, &timeo);
     if (nfds != 0) {
-        puts("\nUnexpected event:");
+        printf("\n[%s:%d]: Unexpected event:", file, line);
         kev_str = kevent_to_str(&kev);
         puts(kev_str);
         free(kev_str);
@@ -58,7 +47,7 @@ test_no_kevents(void)
 /* Checks if any events are pending, which is an error. Do not print
  * out anything unless events are found.
 */
-void 
+void
 test_no_kevents_quietly(void)
 {
     int nfds;
@@ -79,7 +68,7 @@ test_no_kevents_quietly(void)
 
 /* Retrieve a single kevent */
 struct kevent *
-kevent_get(int kqfd)
+kevent_get(int fd)
 {
     int nfds;
     struct kevent *kev;
@@ -87,7 +76,7 @@ kevent_get(int kqfd)
     if ((kev = calloc(1, sizeof(*kev))) == NULL)
         err(1, "out of memory");
     
-    nfds = kevent(kqfd, NULL, 0, kev, 1, NULL);
+    nfds = kevent(fd, NULL, 0, kev, 1, NULL);
     if (nfds < 1)
         err(1, "kevent(2)");
 
@@ -96,7 +85,7 @@ kevent_get(int kqfd)
 
 /* Retrieve a single kevent, specifying a maximum time to wait for it. */
 struct kevent *
-kevent_get_timeout(int kqfd, int seconds)
+kevent_get_timeout(int fd, int seconds)
 {
     int nfds;
     struct kevent *kev;
@@ -105,7 +94,7 @@ kevent_get_timeout(int kqfd, int seconds)
     if ((kev = calloc(1, sizeof(*kev))) == NULL)
         err(1, "out of memory");
     
-    nfds = kevent(kqfd, NULL, 0, kev, 1, &timeout);
+    nfds = kevent(fd, NULL, 0, kev, 1, &timeout);
     if (nfds < 0) {
         err(1, "kevent(2)");
     } else if (nfds == 0) {
@@ -116,7 +105,7 @@ kevent_get_timeout(int kqfd, int seconds)
     return (kev);
 }
 
-char *
+static char *
 kevent_fflags_dump(struct kevent *kev)
 {
     char *buf;
@@ -166,7 +155,7 @@ kevent_fflags_dump(struct kevent *kev)
     return (buf);
 }
 
-char *
+static char *
 kevent_flags_dump(struct kevent *kev)
 {
     char *buf;
@@ -227,7 +216,7 @@ kevent_to_str(struct kevent *kev)
 }
 
 void
-kevent_add(int kqfd, struct kevent *kev, 
+kevent_add(int fd, struct kevent *kev,
         uintptr_t ident,
         short     filter,
         u_short   flags,
@@ -237,8 +226,8 @@ kevent_add(int kqfd, struct kevent *kev,
 {
     char *kev_str;
     
-    EV_SET(kev, ident, filter, flags, fflags, data, NULL);    
-    if (kevent(kqfd, kev, 1, NULL, 0, NULL) < 0) {
+    EV_SET(kev, ident, filter, flags, fflags, data, udata);
+    if (kevent(fd, kev, 1, NULL, 0, NULL) < 0) {
         kev_str = kevent_to_str(kev);
         printf("Unable to add the following kevent:\n%s\n",
                 kev_str);
@@ -248,7 +237,7 @@ kevent_add(int kqfd, struct kevent *kev,
 }
 
 void
-kevent_cmp(struct kevent *k1, struct kevent *k2)
+_kevent_cmp(struct kevent *k1, struct kevent *k2, const char *file, int line)
 {
     char *kev1_str;
     char *kev2_str;
@@ -267,8 +256,8 @@ kevent_cmp(struct kevent *k1, struct kevent *k2)
       k1->ext[0] != k2->ext[2] || k1->ext[0] != k2->ext[3]) {
         kev1_str = kevent_to_str(k1);
         kev2_str = kevent_to_str(k2);
-        printf("kevent_cmp: mismatch:\n  %s !=\n  %s\n", 
-               kev1_str, kev2_str);
+        printf("[%s:%d]: kevent_cmp: mismatch:\n  %s !=\n  %s\n",
+	        file, line, kev1_str, kev2_str);
         free(kev1_str);
         free(kev2_str);
         abort();
@@ -295,7 +284,7 @@ success(void)
     cur_test_id = NULL;
 }
 
-void
+static void
 test_kqueue(void)
 {
     test_begin("kqueue()");
@@ -305,7 +294,7 @@ test_kqueue(void)
     success();
 }
 
-void
+static void
 test_kqueue_close(void)
 {
     test_begin("close(kq)");

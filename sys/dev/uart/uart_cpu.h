@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003, 2004 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_UART_CPU_H_
@@ -52,6 +51,14 @@ extern bus_space_tag_t uart_bus_space_io;
 extern bus_space_tag_t uart_bus_space_mem;
 
 /*
+ * PCI ID used for matching "unique" devices to a console.
+ */
+struct uart_pci_info {
+	uint16_t vendor;
+	uint16_t device;
+};
+
+/*
  * Console and debug port device info.
  */
 struct uart_devinfo {
@@ -71,6 +78,7 @@ struct uart_devinfo {
 	void	*cookie;		/* Type dependent use. */
 	struct mtx *hwmtx;
 	struct uart_softc *sc;		/* valid only from start of attach */
+	struct uart_pci_info pci_info;
 };
 
 int uart_cpu_eqres(struct uart_bas *, struct uart_bas *);

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Mathew Kanner
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -37,7 +37,6 @@
   */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/queue.h>
@@ -141,7 +140,6 @@ static synth_alloc_t midisynth_alloc;
 static synth_controller_t midisynth_controller;
 static synth_bender_t midisynth_bender;
 
-
 static kobj_method_t midisynth_methods[] = {
 	KOBJMETHOD(synth_open, midisynth_open),
 	KOBJMETHOD(synth_close, midisynth_close),
@@ -174,7 +172,6 @@ DEFINE_CLASS(midisynth, midisynth_methods, 0);
  *
  */
 
-
 /*
  * midi_devs tailq, holder of all rmidi instances protected by midistat_lock
  */
@@ -205,7 +202,6 @@ static struct cdevsw midistat_cdevsw = {
 	.d_read = midistat_read,
 	.d_name = "midistat",
 };
-
 
 /*
  * /dev/rmidi dev_t declarations, struct variable access is protected by
@@ -242,8 +238,10 @@ static int      midi_unload(void);
 /*
  * Misc declr.
  */
-SYSCTL_NODE(_hw, OID_AUTO, midi, CTLFLAG_RD, 0, "Midi driver");
-static SYSCTL_NODE(_hw_midi, OID_AUTO, stat, CTLFLAG_RD, 0, "Status device");
+SYSCTL_NODE(_hw, OID_AUTO, midi, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "Midi driver");
+static SYSCTL_NODE(_hw_midi, OID_AUTO, stat, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "Status device");
 
 int             midi_debug;
 /* XXX: should this be moved into debug.midi? */
@@ -449,7 +447,6 @@ static int midi_lengths[] = {2, 2, 2, 2, 1, 1, 2, 0};
 #define MIDI_SYSEX_START	0xF0
 #define MIDI_SYSEX_END	    0xF7
 
-
 int
 midi_in(struct snd_midi *m, MIDI_TYPE *buf, int size)
 {
@@ -478,7 +475,6 @@ midi_in(struct snd_midi *m, MIDI_TYPE *buf, int size)
 		return size;
 
 	for (i = sig = 0; i < size; i++) {
-
 		data = buf[i];
 		enq = 0;
 		if (data == MIDI_ACK)
@@ -617,7 +613,6 @@ midi_out(struct snd_midi *m, MIDI_TYPE *buf, int size)
 	mtx_unlock(&m->qlock);
 	return used;
 }
-
 
 /*
  * /dev/rmidi#.#	device access functions
@@ -813,7 +808,6 @@ midi_write(struct cdev *i_dev, struct uio *uio, int ioflag)
 	int used;
 	char buf[MIDI_WSIZE];
 
-
 	MIDI_DEBUG(4, printf("midi_write\n"));
 	retval = 0;
 	if (m == NULL)
@@ -861,7 +855,6 @@ midi_write(struct cdev *i_dev, struct uio *uio, int ioflag)
 		MIDI_DEBUG(5, printf("midiout: resid %zd len %jd avail %jd\n",
 		    uio->uio_resid, (intmax_t)MIDIQ_LEN(m->outq),
 		    (intmax_t)MIDIQ_AVAIL(m->outq)));
-
 
 		MIDI_DEBUG(5, printf("midi_write: uiomove cc=%d\n", used));
 		retval = uiomove(buf, used, uio);
@@ -1071,7 +1064,6 @@ midi_cmdname(int cmd)
  * midisynth
  */
 
-
 int
 midisynth_open(void *n, void *arg, int flags)
 {
@@ -1128,7 +1120,6 @@ midisynth_open(void *n, void *arg, int flags)
 	m->synth_flags = flags & (FREAD | FWRITE);
 
 	MPU_CALLBACK(m, m->cookie, m->flags);
-
 
 err:	mtx_unlock(&m->qlock);
 	mtx_unlock(&m->lock);
@@ -1276,7 +1267,6 @@ midisynth_killnote(void *n, uint8_t chn, uint8_t note, uint8_t vel)
 {
 	u_char c[3];
 
-
 	if (note > 127 || chn > 15)
 		return (EINVAL);
 
@@ -1351,7 +1341,6 @@ static int
 midisynth_bender(void *n, uint8_t chn, uint16_t val)
 {
 	u_char c[3];
-
 
 	if (val > 16383 || chn > 15)
 		return EINVAL;

@@ -27,7 +27,6 @@
  * SUCH DAMAGE.
  *
  * Marvell DB-88F5281 Device Tree Source.
- *
  */
 
 /dts-v1/;

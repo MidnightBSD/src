@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2015 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Konstantin Belousov <kib@FreeBSD.org>
  * under sponsorship from the FreeBSD Foundation.
@@ -28,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -36,26 +34,28 @@
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/memdesc.h>
+#include <sys/mutex.h>
 #include <sys/rman.h>
 #include <sys/rwlock.h>
+#include <sys/sysctl.h>
 #include <sys/taskqueue.h>
 #include <sys/tree.h>
 #include <sys/vmem.h>
-#include <machine/bus.h>
-#include <machine/intr_machdep.h>
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_kern.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
+#include <dev/pci/pcireg.h>
+#include <dev/pci/pcivar.h>
+#include <machine/bus.h>
+#include <machine/intr_machdep.h>
 #include <x86/include/apicreg.h>
 #include <x86/include/apicvar.h>
 #include <x86/include/busdma_impl.h>
+#include <dev/iommu/busdma_iommu.h>
 #include <x86/iommu/intel_reg.h>
-#include <x86/iommu/busdma_dmar.h>
-#include <dev/pci/pcireg.h>
 #include <x86/iommu/intel_dmar.h>
-#include <dev/pci/pcivar.h>
 #include <x86/iommu/iommu_intrmap.h>
 
 static struct dmar_unit *dmar_ir_find(device_t src, uint16_t *rid,
@@ -253,7 +253,7 @@ dmar_ir_find(device_t src, uint16_t *rid, int *is_dmar)
 	} else {
 		unit = dmar_find(src, bootverbose);
 		if (unit != NULL && rid != NULL)
-			dmar_get_requester(src, rid);
+			iommu_get_requester(src, rid);
 	}
 	return (unit);
 }

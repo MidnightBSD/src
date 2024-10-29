@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 2008 by Marco Trillo. All rights reserved.
  *
@@ -23,7 +23,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -77,7 +76,6 @@ static device_method_t pcm_davbus_methods[] = {
 	/* Device interface. */
 	DEVMETHOD(device_probe,		davbus_probe),
 	DEVMETHOD(device_attach, 	davbus_attach),
-
 	{ 0, 0 }
 };
 
@@ -104,7 +102,7 @@ davbus_probe(device_t self)
 
 	if (strcmp(name, "davbus") != 0)
 		return (ENXIO);
-	
+
 	device_set_desc(self, "Apple DAVBus Audio Controller");
 
 	return (0);
@@ -158,7 +156,7 @@ burgundy_init(struct snd_mixer *m)
 	mtx_lock(&d->mutex);
 
 	burgundy_write_locked(d, 0x16700, 0x40);
-	
+
 	burgundy_write_locked(d, BURGUNDY_MIX0_REG, 0); 
 	burgundy_write_locked(d, BURGUNDY_MIX1_REG, 0);
 	burgundy_write_locked(d, BURGUNDY_MIX2_REG, BURGUNDY_MIX_ISA);
@@ -373,7 +371,6 @@ screamer_reinit(struct snd_mixer *m)
 	return (0);
 }
 
-
 static void
 screamer_write_locked(struct davbus_softc *d, u_int reg, u_int val)
 {
@@ -528,7 +525,7 @@ davbus_attach(device_t self)
 		return (ENXIO);
 
 	oirq = rman_get_start(dbdma_irq);
-	
+
 	DPRINTF(("interrupting at irq %d\n", oirq));
 
 	err = powerpc_config_intr(oirq, INTR_TRIGGER_EDGE, INTR_POLARITY_LOW);
@@ -555,7 +552,7 @@ davbus_attach(device_t self)
 	if (cintr != NULL) 
 		bus_setup_intr(self, cintr, INTR_TYPE_MISC | INTR_MPSAFE,
 		    NULL, davbus_cint, sc, &cookie);
-	
+
 	/* Initialize controller registers. */
         bus_write_4(sc->reg, DAVBUS_SOUND_CTRL, DAVBUS_INPUT_SUBFRAME0 | 
 	    DAVBUS_OUTPUT_SUBFRAME0 | DAVBUS_RATE_44100 | DAVBUS_INTR_PORTCHG);
@@ -588,7 +585,6 @@ davbus_cint(void *ptr)
 		status = bus_read_4(d->reg, DAVBUS_CODEC_STATUS);
 		
 		if (d->read_status && d->set_outputs) {
-
 			mask = (*d->read_status)(d, status);
 			(*d->set_outputs)(d, mask);
 		}
@@ -599,4 +595,3 @@ davbus_cint(void *ptr)
 
 	mtx_unlock(&d->mutex);
 }
-

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010-2011 Monthadar Al Jaberi, TerraNet AB
  * All rights reserved.
@@ -30,7 +30,6 @@
  * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
- *
  */
 #include "if_wtapvar.h"
 #include <sys/uio.h>    /* uio struct */
@@ -90,6 +89,7 @@ wtap_node_write(struct cdev *dev, struct uio *uio, int ioflag)
 	struct ifnet *ifp;
 	struct wtap_softc *sc;
 	uint8_t buf[1024];
+	struct epoch_tracker et;
 	int buf_len;
 
 	uprintf("write device %s \"echo.\"\n", devtoname(dev));
@@ -105,7 +105,7 @@ wtap_node_write(struct cdev *dev, struct uio *uio, int ioflag)
 	m_copyback(m, 0, buf_len, buf);
 
 	CURVNET_SET(TD_TO_VNET(curthread));
-	IFNET_RLOCK_NOSLEEP();
+	NET_EPOCH_ENTER(et);
 
 	CK_STAILQ_FOREACH(ifp, &V_ifnet, if_link) {
 		printf("ifp->if_xname = %s\n", ifp->if_xname);
@@ -118,7 +118,7 @@ wtap_node_write(struct cdev *dev, struct uio *uio, int ioflag)
 		}
 	}
 
-	IFNET_RUNLOCK_NOSLEEP();
+	NET_EPOCH_EXIT(et);
 	CURVNET_RESTORE();
 
 	return(err);
@@ -436,41 +436,6 @@ wtap_inject(struct wtap_softc *sc, struct mbuf *m)
       mtx_unlock(&sc->sc_mtx);
 }
 
-void
-wtap_rx_deliver(struct wtap_softc *sc, struct mbuf *m)
-{
-	struct ieee80211com *ic = &sc->sc_ic;
-	struct ieee80211_node *ni;
-	int type;
-#if 0
-	DWTAP_PRINTF("%s\n", __func__);
-#endif
-
-	DWTAP_PRINTF("[%d] receiving m=%p\n", sc->id, m);
-	if (m == NULL) {		/* NB: shouldn't happen */
-		ic_printf(ic, "%s: no mbuf!\n", __func__);
-	}
-
-	ieee80211_dump_pkt(ic, mtod(m, caddr_t), 0,0,0);
-
-	/*
-	  * Locate the node for sender, track state, and then
-	  * pass the (referenced) node up to the 802.11 layer
-	  * for its use.
-	  */
-	ni = ieee80211_find_rxnode_withkey(ic,
-	    mtod(m, const struct ieee80211_frame_min *),IEEE80211_KEYIX_NONE);
-	if (ni != NULL) {
-		/*
-		 * Sending station is known, dispatch directly.
-		 */
-		type = ieee80211_input(ni, m, 1<<7, 10);
-		ieee80211_free_node(ni);
-	} else {
-		type = ieee80211_input_all(ic, m, 1<<7, 10);
-	}
-}
-
 static void
 wtap_rx_proc(void *arg, int npending)
 {
@@ -619,7 +584,7 @@ wtap_attach(struct wtap_softc *sc, const uint8_t *macaddr)
 	sc->sc_tq = taskqueue_create("wtap_taskq", M_NOWAIT | M_ZERO,
 	    taskqueue_thread_enqueue, &sc->sc_tq);
 	taskqueue_start_threads(&sc->sc_tq, 1, PI_SOFT, "%s taskQ", sc->name);
-	TASK_INIT(&sc->sc_rxtask, 0, wtap_rx_proc, sc);
+	NET_TASK_INIT(&sc->sc_rxtask, 0, wtap_rx_proc, sc);
 
 	ic->ic_softc = sc;
 	ic->ic_name = sc->name;

@@ -196,6 +196,20 @@
     RFPROCDESC | RFSPAWN | RFPPWAIT)
 #define	RFKERNELONLY	(RFSTOPPED | RFHIGHPID | RFPROCDESC)
 
+/* kcmp() options. */
+#define	KCMP_FILE	100
+#define	KCMP_FILEOBJ	101
+#define	KCMP_FILES	102
+#define	KCMP_SIGHAND	103
+#define	KCMP_VM		104
+
+#define	SWAPOFF_FORCE	0x00000001
+
+/*
+ * close_range() options.
+ */
+#define	CLOSE_RANGE_CLOEXEC	(1<<2)
+
 #endif /* __BSD_VISIBLE */
 
 #endif /* !_SYS_UNISTD_H_ */

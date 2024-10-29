@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-2009 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _G_GATE_H_
@@ -101,28 +100,10 @@ struct g_gate_softc {
 	struct mtx		 sc_read_mtx;
 };
 
-#define	G_GATE_DEBUG(lvl, ...)	do {					\
-	if (g_gate_debug >= (lvl)) {					\
-		printf("GEOM_GATE");					\
-		if (g_gate_debug > 0)					\
-			printf("[%u]", lvl);				\
-		printf(": ");						\
-		printf(__VA_ARGS__);					\
-		printf("\n");						\
-	}								\
-} while (0)
-#define	G_GATE_LOGREQ(lvl, bp, ...)	do {				\
-	if (g_gate_debug >= (lvl)) {					\
-		printf("GEOM_GATE");					\
-		if (g_gate_debug > 0)					\
-			printf("[%u]", lvl);				\
-		printf(": ");						\
-		printf(__VA_ARGS__);					\
-		printf(" ");						\
-		g_print_bio(bp);					\
-		printf("\n");						\
-	}								\
-} while (0)
+#define	G_GATE_DEBUG(lvl, ...) \
+    _GEOM_DEBUG("GEOM_GATE", g_gate_debug, (lvl), NULL, __VA_ARGS__)
+#define	G_GATE_LOGREQ(lvl, bp, ...) \
+    _GEOM_DEBUG("GEOM_GATE", g_gate_debug, (lvl), (bp), __VA_ARGS__)
 #endif	/* !_KERNEL */
 
 struct g_gate_ctl_create {

@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/condvar.h>
@@ -751,11 +750,9 @@ static void
 cp2112iic_intr_write_callback(struct usb_xfer *xfer, usb_error_t error)
 {
 	struct cp2112iic_softc *sc;
-	struct cp2112_softc *psc;
 	struct usb_page_cache *pc;
 
 	sc = usbd_xfer_softc(xfer);
-	psc = device_get_softc(device_get_parent(sc->dev));
 
 	mtx_assert(&sc->io.lock, MA_OWNED);
 
@@ -1078,7 +1075,6 @@ cp2112iic_read_data(struct cp2112iic_softc *sc, void *data, uint16_t in_len,
 out:
 	return (err);
 }
-
 
 static int
 cp2112iic_transfer(device_t dev, struct iic_msg *msgs, uint32_t nmsgs)

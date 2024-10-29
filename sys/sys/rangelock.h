@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Konstantin Belousov <kib@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef	_SYS_RANGELOCK_H
@@ -74,7 +73,11 @@ void	*rangelock_unlock_range(struct rangelock *lock, void *cookie,
 	    off_t start, off_t end, struct mtx *ilk);
 void	*rangelock_rlock(struct rangelock *lock, off_t start, off_t end,
 	    struct mtx *ilk);
+void	*rangelock_tryrlock(struct rangelock *lock, off_t start, off_t end,
+	    struct mtx *ilk);
 void	*rangelock_wlock(struct rangelock *lock, off_t start, off_t end,
+	    struct mtx *ilk);
+void	*rangelock_trywlock(struct rangelock *lock, off_t start, off_t end,
 	    struct mtx *ilk);
 void	 rlqentry_free(struct rl_q_entry *rlqe);
 #if defined(INVARIANTS) || defined(INVARIANT_SUPPORT)

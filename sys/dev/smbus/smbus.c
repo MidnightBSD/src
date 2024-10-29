@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998, 2001 Nicolas Souchu
  * All rights reserved.
@@ -132,7 +132,6 @@ smbus_hinted_child(device_t bus, const char *dname, int dunit)
 	devi = device_get_ivars(child);
 	devi->addr = addr;
 }
-
 
 static int
 smbus_child_location_str(device_t parent, device_t child, char *buf,

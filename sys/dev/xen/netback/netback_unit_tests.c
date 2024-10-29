@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2011 Spectra Logic Corporation
  * All rights reserved.
@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /**
  * \file netback_unit_tests.c
  *
@@ -44,7 +43,6 @@
  * Due to the driver's use of static functions, these tests cannot be compiled
  * standalone; they must be #include'd from the driver's .c file.
  */
-
 
 /** Helper macro used to snprintf to a buffer and update the buffer pointer */
 #define	SNCATF(buffer, buflen, ...) do {				\
@@ -73,7 +71,6 @@
 		  " Assertion Error: " #cond "\n", _buflen);		\
 	}								\
 	})
-
 
 /**
  * The signature used by all testcases.  If the test writes anything
@@ -643,7 +640,6 @@ xnb_ring2pkt_wraps(char *buffer, size_t buflen)
 	XNB_ASSERT(RING_GET_REQUEST(&xnb_unit_pvt.txb, pkt.cdr + 1) == req);
 }
 
-
 /**
  * xnb_txpkt2rsp should do nothing for an empty packet
  */
@@ -957,7 +953,6 @@ xnb_txpkt2rsp_wraps(char *buffer, size_t buflen)
 	XNB_ASSERT(rsp->id == req->id);
 	XNB_ASSERT(rsp->status == NETIF_RSP_OKAY);
 }
-
 
 /**
  * Helper function used to setup pkt2mbufc tests
@@ -1278,7 +1273,6 @@ xnb_txpkt2gnttab_2cluster(char *buffer, size_t buflen)
 	}
 	m_freem(pMbuf);
 }
-
 
 /**
  * xnb_update_mbufc on a short packet that only has one gnttab entry
@@ -2031,7 +2025,7 @@ xnb_rxpkt2rsp_copyerror(char *buffer, size_t buflen)
 	struct netif_rx_request *req;
 	struct netif_rx_response *rsp;
 	struct mbuf *mbuf;
-	
+
 	mbuf = m_getm(NULL, size, M_WAITOK, MT_DATA);
 	mbuf->m_flags |= M_PKTHDR;
 	mbuf->m_pkthdr.len = size;

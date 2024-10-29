@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015 Daisuke Aoyama. All rights reserved.
  * Copyright (c) 2012-2015 Hans Petter Selasky. All rights reserved.
@@ -65,6 +65,7 @@
 #include <sys/callout.h>
 #include <sys/malloc.h>
 #include <sys/priv.h>
+#include <sys/rman.h>
 
 #include <dev/usb/usb.h>
 #include <dev/usb/usbdi.h>
@@ -88,8 +89,7 @@
 #include <dev/usb/controller/dwc_otgreg.h>
 
 #define	DWC_OTG_BUS2SC(bus) \
-   ((struct dwc_otg_softc *)(((uint8_t *)(bus)) - \
-    ((uint8_t *)&(((struct dwc_otg_softc *)0)->sc_bus))))
+    __containerof(bus, struct dwc_otg_softc, sc_bus)
 
 #define	DWC_OTG_PC2UDEV(pc) \
    (USB_DMATAG_TO_XROOT((pc)->tag_parent)->udev)
@@ -105,7 +105,8 @@
 
 static int dwc_otg_phy_type = DWC_OTG_PHY_DEFAULT;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, dwc_otg, CTLFLAG_RW, 0, "USB DWC OTG");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, dwc_otg, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB DWC OTG");
 SYSCTL_INT(_hw_usb_dwc_otg, OID_AUTO, phy_type, CTLFLAG_RDTUN,
     &dwc_otg_phy_type, 0, "DWC OTG PHY TYPE - 0/1/2/3 - ULPI/HSIC/INTERNAL/UTMI+");
 
@@ -143,7 +144,6 @@ static void dwc_otg_interrupt_poll_locked(struct dwc_otg_softc *);
  * Here is a configuration that the chip supports.
  */
 static const struct usb_hw_ep_profile dwc_otg_ep_profile[1] = {
-
 	[0] = {
 		.max_in_frame_size = 64,/* fixed */
 		.max_out_frame_size = 64,	/* fixed */
@@ -328,7 +328,6 @@ dwc_otg_init_fifo(struct dwc_otg_softc *sc, uint8_t mode)
 	}
 
 	if (mode == DWC_MODE_HOST) {
-
 		/* reset active endpoints */
 		sc->sc_active_rx_ep = 0;
 
@@ -370,7 +369,6 @@ dwc_otg_init_fifo(struct dwc_otg_softc *sc, uint8_t mode)
 	}
 
 	if (mode == DWC_MODE_DEVICE) {
-
 	    DWC_OTG_WRITE_4(sc, DOTG_GNPTXFSIZ,
 		(0x10 << 16) | (tx_start / 4));
 	    fifo_size -= 0x40;
@@ -383,7 +381,6 @@ dwc_otg_init_fifo(struct dwc_otg_softc *sc, uint8_t mode)
 	    sc->sc_active_rx_ep = 1;
 
 	    for (x = 1; x != sc->sc_dev_ep_max; x++) {
-
 		pf = sc->sc_hw_ep_profile + x;
 
 		pf->usb.max_out_frame_size = 1024 * 3;
@@ -506,7 +503,6 @@ dwc_otg_clocks_on(struct dwc_otg_softc *sc)
 {
 	if (sc->sc_flags.clocks_off &&
 	    sc->sc_flags.port_powered) {
-
 		DPRINTFN(5, "\n");
 
 		/* TODO - platform specific */
@@ -519,7 +515,6 @@ static void
 dwc_otg_clocks_off(struct dwc_otg_softc *sc)
 {
 	if (!sc->sc_flags.clocks_off) {
-
 		DPRINTFN(5, "\n");
 
 		/* TODO - platform specific */
@@ -1832,7 +1827,6 @@ dwc_otg_host_data_tx(struct dwc_otg_softc *sc, struct dwc_otg_td *td)
 
 		if (hcint & (HCINT_ERRORS | HCINT_RETRY |
 		    HCINT_ACK | HCINT_NYET)) {
-
 			if (!(hcint & HCINT_ERRORS))
 				td->errcnt = 0;
 		}
@@ -1986,7 +1980,7 @@ send_pkt:
 	}
 
 	td->tx_bytes = 0;
-	
+
 	for (x = 0; x != td->max_packet_count; x++) {
 		uint32_t rem_bytes;
 
@@ -2150,12 +2144,10 @@ repeat:
 
 	if ((td->ep_no == 0) && (temp != 0) &&
 	    (GRXSTSRD_CHNUM_GET(temp) == 0)) {
-
 		if ((temp & GRXSTSRD_PKTSTS_MASK) !=
 		    GRXSTSRD_STP_DATA &&
 		    (temp & GRXSTSRD_PKTSTS_MASK) !=
 		    GRXSTSRD_STP_COMPLETE) {
-
 			/* dump data - wrong direction */
 			dwc_otg_common_rx_ack(sc);
 		} else {
@@ -2170,7 +2162,6 @@ repeat:
 
 	/* fill in more TX data, if possible */
 	if (td->tx_bytes != 0) {
-
 		uint16_t cpkt;
 
 		/* check if packets have been transferred */
@@ -2226,7 +2217,6 @@ repeat:
 	temp = DWC_OTG_READ_4(sc, DOTG_DIEPTSIZ(td->ep_no));
 
 	if (DXEPTSIZ_GET_NPKT(temp) != 0) {
-
 		DPRINTFN(5, "busy ep=%d npkt=%d DIEPTSIZ=0x%08x "
 		    "DIEPCTL=0x%08x\n", td->ep_no,
 		    DXEPTSIZ_GET_NPKT(temp),
@@ -2239,7 +2229,6 @@ repeat:
 
 	/* try to optimise by sending more data */
 	if ((max_buffer != 0) && ((td->max_packet_size & 3) == 0)) {
-
 		/* send multiple packets at the same time */
 		mpkt = max_buffer / td->max_packet_size;
 
@@ -2348,7 +2337,6 @@ not_complete:
 
 	if ((td->ep_no == 0) && (temp != 0) &&
 	    (GRXSTSRD_CHNUM_GET(temp) == 0)) {
-
 		if ((temp & GRXSTSRD_PKTSTS_MASK) ==
 		    GRXSTSRD_STP_DATA ||
 		    (temp & GRXSTSRD_PKTSTS_MASK) ==
@@ -2516,7 +2504,6 @@ dwc_otg_update_host_transfer_schedule_locked(struct dwc_otg_softc *sc)
 	TAILQ_INIT(&head);
 
 	if ((temp & 7) == 0) {
-
 		/* reset the schedule */
 		memset(sc->sc_tt_info, 0, sizeof(sc->sc_tt_info));
 
@@ -2664,7 +2651,6 @@ dwc_otg_update_host_transfer_schedule_locked(struct dwc_otg_softc *sc)
 	TAILQ_CONCAT(&sc->sc_bus.intr_q.head, &head, wait_entry);
 
 	if ((temp & 7) == 0) {
-
 		DPRINTFN(12, "SOF interrupt #%d, needsof=%d\n",
 		    (int)temp, (int)sc->sc_needsof);
 
@@ -2726,7 +2712,6 @@ repeat:
 	}
 
 	if (sc->sc_last_rx_status == 0) {
-
 		temp = DWC_OTG_READ_4(sc, DOTG_GINTSTS);
 		if (temp & GINTSTS_RXFLVL) {
 			/* pop current status */
@@ -2735,7 +2720,6 @@ repeat:
 		}
 
 		if (sc->sc_last_rx_status != 0) {
-
 			uint8_t ep_no;
 
 			temp = sc->sc_last_rx_status &
@@ -2839,7 +2823,6 @@ dwc_otg_vbus_interrupt(struct dwc_otg_softc *sc, uint8_t is_on)
 	 * present else rely on the input to this function:
 	 */
 	if ((is_on != 0) || (sc->sc_mode == DWC_MODE_HOST)) {
-
 		if (!sc->sc_flags.status_vbus) {
 			sc->sc_flags.status_vbus = 1;
 
@@ -2935,7 +2918,6 @@ dwc_otg_interrupt(void *arg)
 	    DWC_OTG_READ_4(sc, DOTG_HFNUM));
 
 	if (status & GINTSTS_USBRST) {
-
 		/* set correct state */
 		sc->sc_flags.status_device_mode = 1;
 		sc->sc_flags.status_bus_reset = 0;
@@ -2953,7 +2935,6 @@ dwc_otg_interrupt(void *arg)
 
 	/* check for any bus state change interrupts */
 	if (status & GINTSTS_ENUMDONE) {
-
 		uint32_t temp;
 
 		DPRINTFN(5, "end of reset\n");
@@ -3067,13 +3048,11 @@ dwc_otg_interrupt(void *arg)
 	 * milliseconds of inactivity on the USB BUS.
 	 */
 	if (status & GINTSTS_WKUPINT) {
-
 		DPRINTFN(5, "resume interrupt\n");
 
 		dwc_otg_resume_irq(sc);
 
 	} else if (status & GINTSTS_USBSUSP) {
-
 		DPRINTFN(5, "suspend interrupt\n");
 
 		dwc_otg_suspend_irq(sc);
@@ -3174,7 +3153,6 @@ dwc_otg_setup_standard_chain(struct usb_xfer *xfer)
 
 	if (xfer->flags_int.control_xfr) {
 		if (xfer->flags_int.control_hdr) {
-
 			if (is_host)
 				temp.func = &dwc_otg_host_setup_tx;
 			else
@@ -3223,7 +3201,6 @@ dwc_otg_setup_standard_chain(struct usb_xfer *xfer)
 		need_sync = 0;
 	}
 	while (x != xfer->nframes) {
-
 		/* DATA0 / DATA1 message */
 
 		temp.len = xfer->frlengths[x];
@@ -3240,13 +3217,11 @@ dwc_otg_setup_standard_chain(struct usb_xfer *xfer)
 			}
 		}
 		if (temp.len == 0) {
-
 			/* make sure that we send an USB packet */
 
 			temp.short_pkt = 0;
 
 		} else {
-
 			/* regular data transfer */
 
 			temp.short_pkt = (xfer->flags.force_short_xfer ? 0 : 1);
@@ -3263,7 +3238,6 @@ dwc_otg_setup_standard_chain(struct usb_xfer *xfer)
 	}
 
 	if (xfer->flags_int.control_xfr) {
-
 		/* always setup a valid "pc" pointer for status and sync */
 		temp.pc = xfer->frbuffers + 0;
 		temp.len = 0;
@@ -3279,7 +3253,6 @@ dwc_otg_setup_standard_chain(struct usb_xfer *xfer)
 
 		/* check if we should append a status stage */
 		if (!xfer->flags_int.control_act) {
-
 			/*
 			 * Send a DATA1 message and invert the current
 			 * endpoint direction.
@@ -3317,7 +3290,6 @@ dwc_otg_setup_standard_chain(struct usb_xfer *xfer)
 	} else {
 		/* check if we need to sync */
 		if (need_sync) {
-
 			temp.pc = xfer->frbuffers + 0;
 			temp.len = 0;
 			temp.short_pkt = 0;
@@ -3334,7 +3306,6 @@ dwc_otg_setup_standard_chain(struct usb_xfer *xfer)
 	xfer->td_transfer_last = td;
 
 	if (is_host) {
-
 		struct dwc_otg_softc *sc;
 		uint32_t hcchar;
 		uint32_t hcsplt;
@@ -3611,9 +3582,7 @@ dwc_otg_standard_done(struct usb_xfer *xfer)
 	xfer->td_transfer_cache = xfer->td_transfer_first;
 
 	if (xfer->flags_int.control_xfr) {
-
 		if (xfer->flags_int.control_hdr) {
-
 			err = dwc_otg_standard_done_sub(xfer);
 		}
 		xfer->aframes = 1;
@@ -3623,7 +3592,6 @@ dwc_otg_standard_done(struct usb_xfer *xfer)
 		}
 	}
 	while (xfer->aframes != xfer->nframes) {
-
 		err = dwc_otg_standard_done_sub(xfer);
 		xfer->aframes++;
 
@@ -3634,7 +3602,6 @@ dwc_otg_standard_done(struct usb_xfer *xfer)
 
 	if (xfer->flags_int.control_xfr &&
 	    !xfer->flags_int.control_act) {
-
 		err = dwc_otg_standard_done_sub(xfer);
 	}
 done:
@@ -3718,7 +3685,6 @@ dwc_otg_set_stall(struct usb_device *udev,
 
 	/* clear active OUT ep */
 	if (!(ep_no & UE_DIR_IN)) {
-
 		sc->sc_active_rx_ep &= ~(1U << (ep_no & UE_ADDR));
 
 		if (sc->sc_last_rx_status != 0 &&
@@ -3848,11 +3814,9 @@ dwc_otg_device_state_change(struct usb_device *udev)
 	/* deactivate all other endpoint but the control endpoint */
 	if (udev->state == USB_STATE_CONFIGURED ||
 	    udev->state == USB_STATE_ADDRESSED) {
-
 		USB_BUS_LOCK(&sc->sc_bus);
 
 		for (x = 1; x != sc->sc_dev_ep_max; x++) {
-
 			if (x < sc->sc_dev_in_ep_max) {
 				DWC_OTG_WRITE_4(sc, DOTG_DIEPCTL(x),
 				    DIEPCTL_EPDIS);
@@ -3871,12 +3835,40 @@ int
 dwc_otg_init(struct dwc_otg_softc *sc)
 {
 	uint32_t temp;
+	int err;
 
 	DPRINTF("start\n");
 
+	sc->sc_io_tag = rman_get_bustag(sc->sc_io_res);
+	sc->sc_io_hdl = rman_get_bushandle(sc->sc_io_res);
+	sc->sc_io_size = rman_get_size(sc->sc_io_res);
+
 	/* set up the bus structure */
+	sc->sc_bus.devices = sc->sc_devices;
+	sc->sc_bus.devices_max = DWC_OTG_MAX_DEVICES;
+	sc->sc_bus.dma_bits = 32;
 	sc->sc_bus.usbrev = USB_REV_2_0;
 	sc->sc_bus.methods = &dwc_otg_bus_methods;
+
+	/* get all DMA memory */
+	if (usb_bus_mem_alloc_all(&sc->sc_bus,
+	    USB_GET_DMA_TAG(sc->sc_bus.parent), NULL)) {
+		return (ENOMEM);
+	}
+
+	sc->sc_bus.bdev = device_add_child(sc->sc_bus.parent, "usbus", -1);
+	if (sc->sc_bus.bdev == NULL)
+		return (ENXIO);
+
+	device_set_ivars(sc->sc_bus.bdev, &sc->sc_bus);
+
+	err = bus_setup_intr(sc->sc_bus.parent, sc->sc_irq_res,
+	    INTR_TYPE_TTY | INTR_MPSAFE, &dwc_otg_filter_interrupt,
+	    &dwc_otg_interrupt, sc, &sc->sc_intr_hdl);
+	if (err) {
+		sc->sc_intr_hdl = NULL;
+		return (ENXIO);
+	}
 
 	usb_callout_init_mtx(&sc->sc_timer,
 	    &sc->sc_bus.bus_mtx, 0);
@@ -4026,7 +4018,6 @@ dwc_otg_init(struct dwc_otg_softc *sc)
 	DWC_OTG_WRITE_4(sc, DOTG_GINTMSK, sc->sc_irq_mask);
 
 	if (sc->sc_mode == DWC_MODE_OTG || sc->sc_mode == DWC_MODE_DEVICE) {
-
 		/* enable all endpoint interrupts */
 		temp = DWC_OTG_READ_4(sc, DOTG_GHWCFG2);
 		if (temp & GHWCFG2_MPI) {
@@ -4196,9 +4187,7 @@ dwc_otg_device_isoc_start(struct usb_xfer *xfer)
 {
 	struct dwc_otg_softc *sc = DWC_OTG_BUS2SC(xfer->xroot->bus);
 	uint32_t temp;
-	uint32_t msframes;
 	uint32_t framenum;
-	uint8_t shift = usbd_xfer_get_fps_shift(xfer);
 
 	DPRINTFN(6, "xfer=%p next=%d nframes=%d\n",
 	    xfer, xfer->endpoint->isoc_next, xfer->nframes);
@@ -4221,51 +4210,12 @@ dwc_otg_device_isoc_start(struct usb_xfer *xfer)
 	if (sc->sc_flags.status_high_speed)
 		framenum /= 8;
 
-	framenum &= DWC_OTG_FRAME_MASK;
-
-	/*
-	 * Compute number of milliseconds worth of data traffic for
-	 * this USB transfer:
-	 */ 
-	if (xfer->xroot->udev->speed == USB_SPEED_HIGH)
-		msframes = ((xfer->nframes << shift) + 7) / 8;
-	else
-		msframes = xfer->nframes;
-
-	/*
-	 * check if the frame index is within the window where the frames
-	 * will be inserted
-	 */
-	temp = (framenum - xfer->endpoint->isoc_next) & DWC_OTG_FRAME_MASK;
-
-	if ((xfer->endpoint->is_synced == 0) || (temp < msframes)) {
-		/*
-		 * If there is data underflow or the pipe queue is
-		 * empty we schedule the transfer a few frames ahead
-		 * of the current frame position. Else two isochronous
-		 * transfers might overlap.
-		 */
-		xfer->endpoint->isoc_next = (framenum + 3) & DWC_OTG_FRAME_MASK;
-		xfer->endpoint->is_synced = 1;
+	if (usbd_xfer_get_isochronous_start_frame(
+	    xfer, framenum, 0, 1, DWC_OTG_FRAME_MASK, NULL))
 		DPRINTFN(3, "start next=%d\n", xfer->endpoint->isoc_next);
-	}
-	/*
-	 * compute how many milliseconds the insertion is ahead of the
-	 * current frame position:
-	 */
-	temp = (xfer->endpoint->isoc_next - framenum) & DWC_OTG_FRAME_MASK;
-
-	/*
-	 * pre-compute when the isochronous transfer will be finished:
-	 */
-	xfer->isoc_time_complete =
-		usb_isoc_time_expand(&sc->sc_bus, framenum) + temp + msframes;
 
 	/* setup TDs */
 	dwc_otg_setup_standard_chain(xfer);
-
-	/* compute frame number for next insertion */
-	xfer->endpoint->isoc_next += msframes;
 
 	/* start TD chain */
 	dwc_otg_start_standard_chain(xfer);
@@ -4327,7 +4277,6 @@ static const struct dwc_otg_config_desc dwc_otg_confd = {
 		.bInterval = 255,
 	},
 };
-
 #define	HSETW(ptr, val) ptr = { (uint8_t)(val), (uint8_t)((val) >> 8) }
 
 static const struct usb_hub_descriptor_min dwc_otg_hubd = {
@@ -4697,7 +4646,6 @@ tr_handle_set_port_feature:
 
 	case UHF_PORT_RESET:
 		if (sc->sc_flags.status_device_mode == 0) {
-
 			DPRINTF("PORT RESET\n");
 
 			/* enable PORT reset */
@@ -4849,11 +4797,9 @@ dwc_otg_xfer_setup(struct usb_setup_params *parm)
 	ep_type = (xfer->endpoint->edesc->bmAttributes & UE_XFERTYPE);
 
 	if (ep_type == UE_CONTROL) {
-
 		ntd = xfer->nframes + 1 /* STATUS */ + 1 /* SYNC 1 */
 		    + 1 /* SYNC 2 */ + 1 /* SYNC 3 */;
 	} else {
-
 		ntd = xfer->nframes + 1 /* SYNC */ ;
 	}
 
@@ -4889,11 +4835,9 @@ dwc_otg_xfer_setup(struct usb_setup_params *parm)
 	parm->size[0] += ((-parm->size[0]) & (USB_HOST_ALIGN - 1));
 
 	for (n = 0; n != ntd; n++) {
-
 		struct dwc_otg_td *td;
 
 		if (parm->buf) {
-
 			td = USB_ADD_BYTES(parm->buf, parm->size[0]);
 
 			/* compute shared bandwidth resource index for TT */
@@ -4942,7 +4886,6 @@ dwc_otg_ep_init(struct usb_device *udev, struct usb_endpoint_descriptor *edesc,
 	    sc->sc_rt_addr, udev->device_index);
 
 	if (udev->device_index != sc->sc_rt_addr) {
-
 		if (udev->flags.usb_mode == USB_MODE_DEVICE) {
 			if (udev->speed != USB_SPEED_FULL &&
 			    udev->speed != USB_SPEED_HIGH) {

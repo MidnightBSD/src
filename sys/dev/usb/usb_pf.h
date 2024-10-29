@@ -32,7 +32,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_USB_PF_H
@@ -112,10 +111,10 @@ extern uint8_t usbpf_framehdr_size_ok[
 #define	USBPF_XFERTAP_SUBMIT	0
 #define	USBPF_XFERTAP_DONE	1
 
-#ifdef _KERNEL
+#if defined(_KERNEL) || defined(_STANDALONE)
 void	usbpf_attach(struct usb_bus *);
 void	usbpf_detach(struct usb_bus *);
 void	usbpf_xfertap(struct usb_xfer *, int);
-#endif
+#endif	/* _KERNEL || _STANDALONE */
+#endif	/* _DEV_USB_PF_H */
 
-#endif

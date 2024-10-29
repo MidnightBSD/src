@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2014 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Edward Tomasz Napierala under sponsorship
  * from the FreeBSD Foundation.
@@ -61,7 +60,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/buf.h>
@@ -118,7 +116,8 @@ int autofs_sig_set[] = {
 
 struct autofs_softc	*autofs_softc;
 
-SYSCTL_NODE(_vfs, OID_AUTO, autofs, CTLFLAG_RD, 0, "Automounter filesystem");
+SYSCTL_NODE(_vfs, OID_AUTO, autofs, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "Automounter filesystem");
 int autofs_debug = 1;
 TUNABLE_INT("vfs.autofs.debug", &autofs_debug);
 SYSCTL_INT(_vfs_autofs, OID_AUTO, debug, CTLFLAG_RWTUN,
@@ -466,8 +465,9 @@ autofs_trigger_one(struct autofs_node *anp,
 
 	request_error = ar->ar_error;
 	if (request_error != 0) {
-		AUTOFS_WARN("request for %s completed with error %d",
-		    ar->ar_path, request_error);
+		AUTOFS_WARN("request for %s completed with error %d, "
+		    "pid %d (%s)", ar->ar_path, request_error,
+		    curproc->p_pid, curproc->p_comm);
 	}
 
 	wildcards = ar->ar_wildcards;
@@ -532,7 +532,6 @@ autofs_trigger(struct autofs_node *anp,
 			    "error %d", anp->an_retries, error);
 			anp->an_retries = 0;
 			return (error);
-
 		}
 		AUTOFS_DEBUG("trigger failed with error %d; will retry in "
 		    "%d seconds, %d attempts left", error, autofs_retry_delay,

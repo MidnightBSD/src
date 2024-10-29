@@ -131,16 +131,18 @@
  * of pointers to blocks of struct csum; now there are just a few
  * pointers and the remaining space is padded with fs_ocsp[].
  *
- * NOCSPTRS determines the size of this padding. One pointer (fs_csp)
- * is taken away to point to a contiguous array of struct csum for
- * all cylinder groups; a second (fs_maxcluster) points to an array
- * of cluster sizes that is computed as cylinder groups are inspected,
- * and the third points to an array that tracks the creation of new
- * directories. A fourth pointer, fs_active, is used when creating
- * snapshots; it points to a bitmap of cylinder groups for which the
- * free-block bitmap has changed since the snapshot operation began.
+ * NOCSPTRS determines the size of this padding. Historically this
+ * space was used to store pointers to structures that summaried
+ * filesystem usage and layout information. However, these pointers
+ * left various kernel pointers in the superblock which made otherwise
+ * identical superblocks appear to have differences. So, all the
+ * pointers in the superblock were moved to a fs_summary_info structure
+ * reducing the superblock to having only a single pointer to this
+ * structure. When writing the superblock to disk, this pointer is
+ * temporarily NULL'ed out so that the kernel pointer will not appear
+ * in the on-disk copy of the superblock.
  */
-#define	NOCSPTRS	((128 / sizeof(void *)) - 4)
+#define	NOCSPTRS	((128 / sizeof(void *)) - 1)
 
 /*
  * A summary of contiguous blocks of various sizes is maintained
@@ -218,10 +220,11 @@
 #define	FFS_SET_CWD		12	/* set current directory */
 #define	FFS_SET_DOTDOT		13	/* set inode number for ".." */
 #define	FFS_UNLINK		14	/* remove a name in the filesystem */
-#define	FFS_SET_INODE		15	/* update an on-disk inode */
-#define	FFS_SET_BUFOUTPUT	16	/* set buffered writing on descriptor */
+/* Was FFS_SET_INODE		15 */
+/* Was FFS_SET_BUFOUTPUT	16 */
 #define	FFS_SET_SIZE		17	/* set inode size */
-#define	FFS_MAXID		17	/* number of valid ffs ids */
+#define	FFS_ADJ_DEPTH		18	/* adjust directory inode depth */
+#define	FFS_MAXID		18	/* number of valid ffs ids */
 
 /*
  * Command structure passed in to the filesystem to adjust filesystem values.
@@ -244,7 +247,7 @@ struct fsrecovery {
 	int32_t	fsr_fsbtodb;	/* fsbtodb and dbtofsb shift constant */
 	int32_t	fsr_sblkno;	/* offset of super-block in filesys */
 	int32_t	fsr_fpg;	/* blocks per group * fs_frag */
-	u_int32_t fsr_ncg;	/* number of cylinder groups */
+	uint32_t fsr_ncg;	/* number of cylinder groups */
 };
 
 /*
@@ -269,6 +272,32 @@ struct csum_total {
 };
 
 /*
+ * Pointers to super block summary information. Placed in a separate
+ * structure so there is just one pointer in the superblock.
+ *
+ * The pointers in this structure are used as follows:
+ *   fs_contigdirs references an array that tracks the creation of new
+ *	directories
+ *   fs_csp references a contiguous array of struct csum for
+ *	all cylinder groups
+ *   fs_maxcluster references an array of cluster sizes that is computed
+ *	as cylinder groups are inspected
+ *   fs_active is used when creating snapshots; it points to a bitmap
+ *	of cylinder groups for which the free-block bitmap has changed
+ *	since the snapshot operation began.
+ */
+struct fs_summary_info {
+	uint8_t	*si_contigdirs;		/* (u) # of contig. allocated dirs */
+	struct	csum *si_csp;		/* (u) cg summary info buffer */
+	int32_t	*si_maxcluster;		/* (u) max cluster in each cyl group */
+	uint64_t *si_active;		/* (u) used by snapshots to track fs */
+};
+#define fs_contigdirs	fs_si->si_contigdirs
+#define fs_csp		fs_si->si_csp
+#define fs_maxcluster	fs_si->si_maxcluster
+#define fs_active	fs_si->si_active
+
+/*
  * Super block for an FFS filesystem.
  */
 struct fs {
@@ -283,7 +312,7 @@ struct fs {
 	int32_t  fs_old_time;		/* last time written */
 	int32_t	 fs_old_size;		/* number of blocks in fs */
 	int32_t	 fs_old_dsize;		/* number of data blocks in fs */
-	u_int32_t fs_ncg;		/* number of cylinder groups */
+	uint32_t fs_ncg;		/* number of cylinder groups */
 	int32_t	 fs_bsize;		/* size of basic blocks in fs */
 	int32_t	 fs_fsize;		/* size of frag blocks in fs */
 	int32_t	 fs_frag;		/* number of frags in a block in fs */
@@ -306,7 +335,7 @@ struct fs {
 	int32_t	 fs_spare1[2];		/* old fs_csmask */
 					/* old fs_csshift */
 	int32_t	 fs_nindir;		/* value of NINDIR */
-	u_int32_t fs_inopb;		/* value of INOPB */
+	uint32_t fs_inopb;		/* value of INOPB */
 	int32_t	 fs_old_nspf;		/* value of NSPF */
 /* yet another configuration parameter */
 	int32_t	 fs_optim;		/* optimization preference, see below */
@@ -323,7 +352,7 @@ struct fs {
 	int32_t  fs_old_spc;		/* sectors per cylinder */
 	int32_t	 fs_old_ncyl;		/* cylinders in filesystem */
 	int32_t	 fs_old_cpg;		/* cylinders per group */
-	u_int32_t fs_ipg;		/* inodes per group */
+	uint32_t fs_ipg;		/* inodes per group */
 	int32_t	 fs_fpg;		/* blocks per group * fs_frag */
 /* this data must be re-computed after crashes */
 	struct	csum fs_old_cstotal;	/* cylinder summary information */
@@ -332,17 +361,14 @@ struct fs {
 	int8_t   fs_clean;		/* filesystem is clean flag */
 	int8_t 	 fs_ronly;		/* mounted read-only flag */
 	int8_t   fs_old_flags;		/* old FS_ flags */
-	u_char	 fs_fsmnt[MAXMNTLEN];	/* name mounted on */
-	u_char	 fs_volname[MAXVOLLEN];	/* volume name */
-	u_int64_t fs_swuid;		/* system-wide uid */
+	uint8_t	 fs_fsmnt[MAXMNTLEN];	/* name mounted on */
+	uint8_t	 fs_volname[MAXVOLLEN];	/* volume name */
+	uint64_t fs_swuid;		/* system-wide uid */
 	int32_t  fs_pad;		/* due to alignment of fs_swuid */
 /* these fields retain the current block allocation info */
 	int32_t	 fs_cgrotor;		/* last cg searched */
 	void 	*fs_ocsp[NOCSPTRS];	/* padding; was list of fs_cs buffers */
-	u_int8_t *fs_contigdirs;	/* (u) # of contig. allocated dirs */
-	struct	csum *fs_csp;		/* (u) cg summary info buffer */
-	int32_t	*fs_maxcluster;		/* (u) max cluster in each cyl group */
-	u_int	*fs_active;		/* (u) used by snapshots to track fs */
+	struct	 fs_summary_info *fs_si;/* In-core pointer to summary info */
 	int32_t	 fs_old_cpc;		/* cyl per cycle in postbl */
 	int32_t	 fs_maxbsize;		/* maximum blocking factor permitted */
 	int64_t	 fs_unrefs;		/* number of unreferenced inodes */
@@ -357,20 +383,21 @@ struct fs {
 	int64_t	 fs_dsize;		/* number of data blocks in fs */
 	ufs2_daddr_t fs_csaddr;		/* blk addr of cyl grp summary area */
 	int64_t	 fs_pendingblocks;	/* (u) blocks being freed */
-	u_int32_t fs_pendinginodes;	/* (u) inodes being freed */
+	uint32_t fs_pendinginodes;	/* (u) inodes being freed */
 	uint32_t fs_snapinum[FSMAXSNAP];/* list of snapshot inode numbers */
-	u_int32_t fs_avgfilesize;	/* expected average file size */
-	u_int32_t fs_avgfpdir;		/* expected # of files per directory */
+	uint32_t fs_avgfilesize;	/* expected average file size */
+	uint32_t fs_avgfpdir;		/* expected # of files per directory */
 	int32_t	 fs_save_cgsize;	/* save real cg size to use fs_bsize */
 	ufs_time_t fs_mtime;		/* Last mount or fsck time. */
 	int32_t  fs_sujfree;		/* SUJ free list */
-	int32_t	 fs_sparecon32[22];	/* reserved for future constants */
-	u_int32_t fs_metackhash;	/* metadata check-hash, see CK_ below */
+	int32_t	 fs_sparecon32[21];	/* reserved for future constants */
+	uint32_t fs_ckhash;		/* if CK_SUPERBLOCK, its check-hash */
+	uint32_t fs_metackhash;	/* metadata check-hash, see CK_ below */
 	int32_t  fs_flags;		/* see FS_ flags below */
 	int32_t	 fs_contigsumsize;	/* size of cluster summary array */ 
 	int32_t	 fs_maxsymlinklen;	/* max length of an internal symlink */
 	int32_t	 fs_old_inodefmt;	/* format of on-disk inodes */
-	u_int64_t fs_maxfilesize;	/* maximum representable file size */
+	uint64_t fs_maxfilesize;	/* maximum representable file size */
 	int64_t	 fs_qbmask;		/* ~fs_bmask for use with 64-bit size */
 	int64_t	 fs_qfmask;		/* ~fs_fmask for use with 64-bit size */
 	int32_t	 fs_state;		/* validate fs_clean field */
@@ -474,7 +501,7 @@ CTASSERT(sizeof(struct fs) == 1376);
 #define	CK_INODE	0x0004	/* inodes */
 #define	CK_INDIR	0x0008	/* indirect blocks */
 #define	CK_DIR		0x0010	/* directory contents */
-#define	CK_SUPPORTED	0x0002	/* supported flags, others cleared at mount */
+#define	CK_SUPPORTED	0x0007	/* supported flags, others cleared at mount */
 /*
  * The BX_FSPRIV buffer b_xflags are used to track types of data in buffers.
  */
@@ -489,9 +516,9 @@ CTASSERT(sizeof(struct fs) == 1376);
 /*
  * Macros to access bits in the fs_active array.
  */
-#define	ACTIVECGNUM(fs, cg)	((fs)->fs_active[(cg) / (NBBY * sizeof(int))])
-#define	ACTIVECGOFF(cg)		(1 << ((cg) % (NBBY * sizeof(int))))
-#define	ACTIVESET(fs, cg)	do {					\
+#define	ACTIVECGNUM(fs, cg)  ((fs)->fs_active[(cg) / (NBBY * sizeof(uint64_t))])
+#define	ACTIVECGOFF(cg)	     (1 << ((cg) % (NBBY * sizeof(uint64_t))))
+#define	ACTIVESET(fs, cg)    do {					\
 	if ((fs)->fs_active)						\
 		ACTIVECGNUM((fs), (cg)) |= ACTIVECGOFF((cg));		\
 } while (0)
@@ -507,11 +534,11 @@ CTASSERT(sizeof(struct fs) == 1376);
  * cylinder group and the (struct cg) size.
  */
 #define	CGSIZE(fs) \
-    /* base cg */	(sizeof(struct cg) + sizeof(int32_t) + \
+    /* base cg */	(sizeof(struct cg) + \
     /* old btotoff */	(fs)->fs_old_cpg * sizeof(int32_t) + \
-    /* old boff */	(fs)->fs_old_cpg * sizeof(u_int16_t) + \
+    /* old boff */	(fs)->fs_old_cpg * sizeof(uint16_t) + \
     /* inode map */	howmany((fs)->fs_ipg, NBBY) + \
-    /* block map */	howmany((fs)->fs_fpg, NBBY) +\
+    /* block map */	howmany((fs)->fs_fpg, NBBY) + sizeof(int32_t) + \
     /* if present */	((fs)->fs_contigsumsize <= 0 ? 0 : \
     /* cluster sum */	(fs)->fs_contigsumsize * sizeof(int32_t) + \
     /* cluster map */	howmany(fragstoblks(fs, (fs)->fs_fpg), NBBY)))
@@ -534,32 +561,31 @@ struct cg {
 	int32_t	 cg_firstfield;		/* historic cyl groups linked list */
 	int32_t	 cg_magic;		/* magic number */
 	int32_t  cg_old_time;		/* time last written */
-	u_int32_t cg_cgx;		/* we are the cgx'th cylinder group */
+	uint32_t cg_cgx;		/* we are the cgx'th cylinder group */
 	int16_t	 cg_old_ncyl;		/* number of cyl's this cg */
 	int16_t  cg_old_niblk;		/* number of inode blocks this cg */
-	u_int32_t cg_ndblk;		/* number of data blocks this cg */
+	uint32_t cg_ndblk;		/* number of data blocks this cg */
 	struct	 csum cg_cs;		/* cylinder summary information */
-	u_int32_t cg_rotor;		/* position of last used block */
-	u_int32_t cg_frotor;		/* position of last used frag */
-	u_int32_t cg_irotor;		/* position of last used inode */
-	u_int32_t cg_frsum[MAXFRAG];	/* counts of available frags */
+	uint32_t cg_rotor;		/* position of last used block */
+	uint32_t cg_frotor;		/* position of last used frag */
+	uint32_t cg_irotor;		/* position of last used inode */
+	uint32_t cg_frsum[MAXFRAG];	/* counts of available frags */
 	int32_t	 cg_old_btotoff;	/* (int32) block totals per cylinder */
-	int32_t	 cg_old_boff;		/* (u_int16) free block positions */
-	u_int32_t cg_iusedoff;		/* (u_int8) used inode map */
-	u_int32_t cg_freeoff;		/* (u_int8) free block map */
-	u_int32_t cg_nextfreeoff;	/* (u_int8) next available space */
-	u_int32_t cg_clustersumoff;	/* (u_int32) counts of avail clusters */
-	u_int32_t cg_clusteroff;		/* (u_int8) free cluster map */
-	u_int32_t cg_nclusterblks;	/* number of clusters this cg */
-	u_int32_t cg_niblk;		/* number of inode blocks this cg */
-	u_int32_t cg_initediblk;		/* last initialized inode */
-	u_int32_t cg_unrefs;		/* number of unreferenced inodes */
+	int32_t	 cg_old_boff;		/* (uint16) free block positions */
+	uint32_t cg_iusedoff;		/* (uint8) used inode map */
+	uint32_t cg_freeoff;		/* (uint8) free block map */
+	uint32_t cg_nextfreeoff;	/* (uint8) next available space */
+	uint32_t cg_clustersumoff;	/* (uint32) counts of avail clusters */
+	uint32_t cg_clusteroff;		/* (uint8) free cluster map */
+	uint32_t cg_nclusterblks;	/* number of clusters this cg */
+	uint32_t cg_niblk;		/* number of inode blocks this cg */
+	uint32_t cg_initediblk;		/* last initialized inode */
+	uint32_t cg_unrefs;		/* number of unreferenced inodes */
 	int32_t	 cg_sparecon32[1];	/* reserved for future use */
-	u_int32_t cg_ckhash;		/* check-hash of this cg */
+	uint32_t cg_ckhash;		/* check-hash of this cg */
 	ufs_time_t cg_time;		/* time last written */
 	int64_t	 cg_sparecon64[3];	/* reserved for future use */
-	u_int8_t cg_space[1];		/* space for cylinder group maps */
-/* actually longer */
+	/* actually longer - space used for cylinder group maps */
 };
 
 /*
@@ -567,11 +593,11 @@ struct cg {
  */
 #define	cg_chkmagic(cgp) ((cgp)->cg_magic == CG_MAGIC)
 #define	cg_inosused(cgp) \
-    ((u_int8_t *)((u_int8_t *)(cgp) + (cgp)->cg_iusedoff))
+    ((uint8_t *)((uint8_t *)(cgp) + (cgp)->cg_iusedoff))
 #define	cg_blksfree(cgp) \
-    ((u_int8_t *)((u_int8_t *)(cgp) + (cgp)->cg_freeoff))
+    ((uint8_t *)((uint8_t *)(cgp) + (cgp)->cg_freeoff))
 #define	cg_clustersfree(cgp) \
-    ((u_int8_t *)((u_int8_t *)(cgp) + (cgp)->cg_clusteroff))
+    ((uint8_t *)((uint8_t *)(cgp) + (cgp)->cg_clusteroff))
 #define	cg_clustersum(cgp) \
     ((int32_t *)((uintptr_t)(cgp) + (cgp)->cg_clustersumoff))
 
@@ -728,7 +754,7 @@ lbn_offset(struct fs *fs, int level)
 /*
  * Softdep journal record format.
  */
-
+#define	JOP_UNKNOWN	0	/* JOP operation is unknown */
 #define	JOP_ADDREF	1	/* Add a reference to an inode. */
 #define	JOP_REMREF	2	/* Remove a reference from an inode. */
 #define	JOP_NEWBLK	3	/* Allocate a block. */
@@ -736,11 +762,22 @@ lbn_offset(struct fs *fs, int level)
 #define	JOP_MVREF	5	/* Move a reference from one off to another. */
 #define	JOP_TRUNC	6	/* Partial truncation record. */
 #define	JOP_SYNC	7	/* fsync() complete record. */
+#define	JOP_NUMJOPTYPES	8
+#define JOP_NAMES {	\
+        "unknown",	\
+	"JOP_ADDREF",	\
+	"JOP_REMREF",	\
+	"JOP_NEWBLK",	\
+	"JOP_FREEBLK",	\
+	"JOP_MVREF",	\
+	"JOP_TRUNC",	\
+	"JOP_SYNC" }
+#define JOP_OPTYPE(op) \
+	(op) < JOP_NUMJOPTYPES ? joptype[op] : joptype[JOP_UNKNOWN]
 
 #define	JREC_SIZE	32	/* Record and segment header size. */
 
 #define	SUJ_MIN		(4 * 1024 * 1024)	/* Minimum journal size */
-#define	SUJ_MAX		(32 * 1024 * 1024)	/* Maximum journal size */
 #define	SUJ_FILE	".sujournal"		/* Journal file name */
 
 /*
@@ -829,7 +866,7 @@ CTASSERT(sizeof(union jrec) == JREC_SIZE);
 #endif
 
 extern int inside[], around[];
-extern u_char *fragtbl[];
+extern uint8_t *fragtbl[];
 
 /*
  * IOCTLs used for filesystem write suspension.

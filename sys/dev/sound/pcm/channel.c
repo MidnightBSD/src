@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Portions Copyright (c) Ryan Beasley <ryan.beasley@gmail.com> - GSoC 2006
@@ -40,6 +40,7 @@
 
 #include "feeder_if.h"
 
+SND_DECLARE_FILE("");
 
 int report_soft_formats = 1;
 SYSCTL_INT(_hw_snd, OID_AUTO, report_soft_formats, CTLFLAG_RW,
@@ -67,9 +68,10 @@ sysctl_hw_snd_latency(SYSCTL_HANDLER_ARGS)
 
 	return err;
 }
-SYSCTL_PROC(_hw_snd, OID_AUTO, latency, CTLTYPE_INT | CTLFLAG_RWTUN,
-	0, sizeof(int), sysctl_hw_snd_latency, "I",
-	"buffering latency (0=low ... 10=high)");
+SYSCTL_PROC(_hw_snd, OID_AUTO, latency,
+    CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_MPSAFE, 0, sizeof(int),
+    sysctl_hw_snd_latency, "I",
+    "buffering latency (0=low ... 10=high)");
 
 int chn_latency_profile = CHN_LATENCY_PROFILE_DEFAULT;
 
@@ -89,9 +91,10 @@ sysctl_hw_snd_latency_profile(SYSCTL_HANDLER_ARGS)
 
 	return err;
 }
-SYSCTL_PROC(_hw_snd, OID_AUTO, latency_profile, CTLTYPE_INT | CTLFLAG_RWTUN,
-	0, sizeof(int), sysctl_hw_snd_latency_profile, "I",
-	"buffering latency profile (0=aggressive 1=safe)");
+SYSCTL_PROC(_hw_snd, OID_AUTO, latency_profile,
+    CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_MPSAFE, 0, sizeof(int),
+    sysctl_hw_snd_latency_profile, "I",
+    "buffering latency profile (0=aggressive 1=safe)");
 
 static int chn_timeout = CHN_TIMEOUT;
 
@@ -111,9 +114,10 @@ sysctl_hw_snd_timeout(SYSCTL_HANDLER_ARGS)
 
 	return err;
 }
-SYSCTL_PROC(_hw_snd, OID_AUTO, timeout, CTLTYPE_INT | CTLFLAG_RWTUN,
-	0, sizeof(int), sysctl_hw_snd_timeout, "I",
-	"interrupt timeout (1 - 10) seconds");
+SYSCTL_PROC(_hw_snd, OID_AUTO, timeout,
+    CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_MPSAFE, 0, sizeof(int),
+    sysctl_hw_snd_timeout, "I",
+    "interrupt timeout (1 - 10) seconds");
 
 static int chn_vpc_autoreset = 1;
 SYSCTL_INT(_hw_snd, OID_AUTO, vpc_autoreset, CTLFLAG_RWTUN,
@@ -165,9 +169,10 @@ sysctl_hw_snd_vpc_0db(SYSCTL_HANDLER_ARGS)
 
 	return (0);
 }
-SYSCTL_PROC(_hw_snd, OID_AUTO, vpc_0db, CTLTYPE_INT | CTLFLAG_RWTUN,
-	0, sizeof(int), sysctl_hw_snd_vpc_0db, "I",
-	"0db relative level");
+SYSCTL_PROC(_hw_snd, OID_AUTO, vpc_0db,
+    CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_NEEDGIANT, 0, sizeof(int),
+    sysctl_hw_snd_vpc_0db, "I",
+    "0db relative level");
 
 static int
 sysctl_hw_snd_vpc_reset(SYSCTL_HANDLER_ARGS)
@@ -184,9 +189,10 @@ sysctl_hw_snd_vpc_reset(SYSCTL_HANDLER_ARGS)
 
 	return (0);
 }
-SYSCTL_PROC(_hw_snd, OID_AUTO, vpc_reset, CTLTYPE_INT | CTLFLAG_RW,
-	0, sizeof(int), sysctl_hw_snd_vpc_reset, "I",
-	"reset volume on all channels");
+SYSCTL_PROC(_hw_snd, OID_AUTO, vpc_reset,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, 0, sizeof(int),
+    sysctl_hw_snd_vpc_reset, "I",
+    "reset volume on all channels");
 
 static int chn_usefrags = 0;
 static int chn_syncdelay = -1;
@@ -1217,6 +1223,8 @@ chn_init(struct pcm_channel *c, void *devinfo, int dir, int direction)
 	c->volume[SND_VOL_C_MASTER][SND_CHN_T_VOL_0DB] = SND_VOL_0DB_MASTER;
 	c->volume[SND_VOL_C_PCM][SND_CHN_T_VOL_0DB] = chn_vol_0db_pcm;
 
+	memset(c->muted, 0, sizeof(c->muted));
+
 	chn_vpc_reset(c, SND_VOL_C_PCM, 1);
 
 	ret = ENODEV;
@@ -1386,6 +1394,75 @@ chn_getvolume_matrix(struct pcm_channel *c, int vc, int vt)
 	CHN_LOCKASSERT(c);
 
 	return (c->volume[vc][vt]);
+}
+
+int
+chn_setmute_multi(struct pcm_channel *c, int vc, int mute)
+{
+	int i, ret;
+
+	ret = 0;
+
+	for (i = 0; i < SND_CHN_T_MAX; i++) {
+		if ((1 << i) & SND_CHN_LEFT_MASK)
+			ret |= chn_setmute_matrix(c, vc, i, mute);
+		else if ((1 << i) & SND_CHN_RIGHT_MASK)
+			ret |= chn_setmute_matrix(c, vc, i, mute) << 8;
+		else
+			ret |= chn_setmute_matrix(c, vc, i, mute) << 16;
+	}
+	return (ret);
+}
+
+int
+chn_setmute_matrix(struct pcm_channel *c, int vc, int vt, int mute)
+{
+	int i;
+
+	KASSERT(c != NULL && vc >= SND_VOL_C_MASTER && vc < SND_VOL_C_MAX &&
+	    (vc == SND_VOL_C_MASTER || (vc & 1)) &&
+	    (vt == SND_CHN_T_VOL_0DB || (vt >= SND_CHN_T_BEGIN && vt <= SND_CHN_T_END)),
+	    ("%s(): invalid mute matrix c=%p vc=%d vt=%d mute=%d",
+	    __func__, c, vc, vt, mute));
+
+	CHN_LOCKASSERT(c);
+
+	mute = (mute != 0);
+
+	c->muted[vc][vt] = mute;
+
+	/*
+	 * Do relative calculation here and store it into class + 1
+	 * to ease the job of feeder_volume.
+	 */
+	if (vc == SND_VOL_C_MASTER) {
+		for (vc = SND_VOL_C_BEGIN; vc <= SND_VOL_C_END;
+		    vc += SND_VOL_C_STEP)
+			c->muted[SND_VOL_C_VAL(vc)][vt] = mute;
+	} else if (vc & 1) {
+		if (vt == SND_CHN_T_VOL_0DB) {
+			for (i = SND_CHN_T_BEGIN; i <= SND_CHN_T_END;
+			    i += SND_CHN_T_STEP) {
+				c->muted[SND_VOL_C_VAL(vc)][i] = mute;
+			}
+		} else {
+			c->muted[SND_VOL_C_VAL(vc)][vt] = mute;
+		}
+	}
+	return (mute);
+}
+
+int
+chn_getmute_matrix(struct pcm_channel *c, int vc, int vt)
+{
+	KASSERT(c != NULL && vc >= SND_VOL_C_MASTER && vc < SND_VOL_C_MAX &&
+	    (vt == SND_CHN_T_VOL_0DB ||
+	    (vt >= SND_CHN_T_BEGIN && vt <= SND_CHN_T_END)),
+	    ("%s(): invalid mute matrix c=%p vc=%d vt=%d",
+	    __func__, c, vc, vt));
+	CHN_LOCKASSERT(c);
+
+	return (c->muted[vc][vt]);
 }
 
 struct pcmchan_matrix *

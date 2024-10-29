@@ -33,7 +33,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 LIST_HEAD(class_list_head, g_class);
@@ -45,7 +44,7 @@ extern int g_collectstats;
 
 /* geom_dump.c */
 void g_confxml(void *, int flag);
-void g_conf_specific(struct sbuf *sb, struct g_class *mp, struct g_geom *gp, struct g_provider *pp, struct g_consumer *cp);
+void g_conf_specific(struct sbuf *sb, struct g_geom **gps);
 void g_conf_cat_escaped(struct sbuf *sb, const char *buf);
 void g_conf_printf_escaped(struct sbuf *sb, const char *fmt, ...);
 void g_confdot(void *, int flag);
@@ -68,6 +67,8 @@ void g_io_schedule_up(struct thread *tp);
 
 /* geom_kern.c / geom_kernsim.c */
 void g_init(void);
+extern struct thread *g_up_td;
+extern struct thread *g_down_td;
 extern int g_shutdown;
 extern int g_notaste;
 

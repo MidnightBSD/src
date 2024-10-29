@@ -24,7 +24,6 @@
  *
  */
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -165,9 +164,12 @@ kerntest_frwk_fini(void)
 
 static int kerntest_execute(SYSCTL_HANDLER_ARGS);
 
-SYSCTL_NODE(_kern, OID_AUTO, testfrwk, CTLFLAG_RW, 0, "Kernel Test Framework");
-SYSCTL_PROC(_kern_testfrwk, OID_AUTO, runtest, (CTLTYPE_STRUCT | CTLFLAG_RW),
-    0, 0, kerntest_execute, "IU", "Execute a kernel test");
+SYSCTL_NODE(_kern, OID_AUTO, testfrwk, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "Kernel Test Framework");
+SYSCTL_PROC(_kern_testfrwk, OID_AUTO, runtest,
+    CTLTYPE_STRUCT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    0, 0, kerntest_execute, "IU",
+    "Execute a kernel test");
 
 int
 kerntest_execute(SYSCTL_HANDLER_ARGS)
@@ -190,10 +192,6 @@ kerntest_execute(SYSCTL_HANDLER_ARGS)
 	}
 	/* Grab some memory */
 	kte = malloc(sizeof(struct kern_test_entry), M_KTFRWK, M_WAITOK);
-	if (kte == NULL) {
-		error = ENOMEM;
-		goto out;
-	}
 	KTFRWK_LOCK();
 	TAILQ_FOREACH(li, &kfrwk.kfrwk_testlist, next) {
 		if (strcmp(li->name, kt.name) == 0) {
@@ -242,10 +240,6 @@ kern_testframework_register(const char *name, kerntfunc func)
 		return (E2BIG);
 	}
 	te = malloc(sizeof(struct kern_test_list), M_KTFRWK, M_WAITOK);
-	if (te == NULL) {
-		error = ENOMEM;
-		goto out;
-	}
 	KTFRWK_LOCK();
 	/* First does it already exist? */
 	TAILQ_FOREACH(li, &kfrwk.kfrwk_testlist, next) {

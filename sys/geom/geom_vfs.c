@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004 Poul-Henning Kamp
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bio.h>
@@ -35,6 +34,7 @@
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
+#include <sys/sbuf.h>
 #include <sys/vnode.h>
 #include <sys/mount.h>
 
@@ -51,8 +51,10 @@
 struct g_vfs_softc {
 	struct mtx	 sc_mtx;
 	struct bufobj	*sc_bo;
+	struct g_event	*sc_event;
 	int		 sc_active;
 	int		 sc_orphaned;
+	int		 sc_enxio_active;
 };
 
 static struct buf_ops __g_vfs_bufops = {
@@ -93,6 +95,7 @@ static void
 g_vfs_done(struct bio *bip)
 {
 	struct g_consumer *cp;
+	struct g_event *event;
 	struct g_vfs_softc *sc;
 	struct buf *bp;
 	int destroy;
@@ -137,10 +140,13 @@ g_vfs_done(struct bio *bip)
 
 	cp = bip->bio_from;
 	sc = cp->geom->softc;
-	if (bip->bio_error) {
-		printf("g_vfs_done():");
-		g_print_bio(bip);
-		printf("error = %d\n", bip->bio_error);
+	if (bip->bio_error != 0 && bip->bio_error != EOPNOTSUPP) {
+		if ((bp->b_xflags & BX_CVTENXIO) != 0)
+			sc->sc_enxio_active = 1;
+		if (sc->sc_enxio_active)
+			bip->bio_error = ENXIO;
+		g_print_bio("g_vfs_done():", bip, "error = %d",
+		    bip->bio_error);
 	}
 	bp->b_error = bip->bio_error;
 	bp->b_ioflags = bip->bio_flags;
@@ -151,9 +157,14 @@ g_vfs_done(struct bio *bip)
 
 	mtx_lock(&sc->sc_mtx);
 	destroy = ((--sc->sc_active) == 0 && sc->sc_orphaned);
+	if (destroy) {
+		event = sc->sc_event;
+		sc->sc_event = NULL;
+	} else
+		event = NULL;
 	mtx_unlock(&sc->sc_mtx);
 	if (destroy)
-		g_post_event(g_vfs_destroy, cp, M_WAITOK, NULL);
+		g_post_event_ep(g_vfs_destroy, cp, event, NULL);
 
 	bufdone(bp);
 }
@@ -172,7 +183,7 @@ g_vfs_strategy(struct bufobj *bo, struct buf *bp)
 	 * If the provider has orphaned us, just return ENXIO.
 	 */
 	mtx_lock(&sc->sc_mtx);
-	if (sc->sc_orphaned) {
+	if (sc->sc_orphaned || sc->sc_enxio_active) {
 		mtx_unlock(&sc->sc_mtx);
 		bp->b_error = ENXIO;
 		bp->b_ioflags |= BIO_ERROR;
@@ -191,6 +202,8 @@ g_vfs_strategy(struct bufobj *bo, struct buf *bp)
 		bip->bio_flags |= BIO_ORDERED;
 		bp->b_flags &= ~B_BARRIER;
 	}
+	if (bp->b_iocmd == BIO_SPEEDUP)
+		bip->bio_flags |= bp->b_ioflags;
 	bip->bio_done = g_vfs_done;
 	bip->bio_caller2 = bp;
 #if defined(BUF_TRACKING) || defined(FULL_BUF_TRACKING)
@@ -204,6 +217,7 @@ static void
 g_vfs_orphan(struct g_consumer *cp)
 {
 	struct g_geom *gp;
+	struct g_event *event;
 	struct g_vfs_softc *sc;
 	int destroy;
 
@@ -214,12 +228,20 @@ g_vfs_orphan(struct g_consumer *cp)
 	sc = gp->softc;
 	if (sc == NULL)
 		return;
+	event = g_alloc_event(M_WAITOK);
 	mtx_lock(&sc->sc_mtx);
+	KASSERT(sc->sc_event == NULL, ("g_vfs %p already has an event", sc));
 	sc->sc_orphaned = 1;
 	destroy = (sc->sc_active == 0);
+	if (!destroy) {
+		sc->sc_event = event;
+		event = NULL;
+	}
 	mtx_unlock(&sc->sc_mtx);
-	if (destroy)
+	if (destroy) {
+		g_free(event);
 		g_vfs_destroy(cp, 0);
+	}
 
 	/*
 	 * Do not destroy the geom.  Filesystem will do that during unmount.
@@ -252,7 +274,11 @@ g_vfs_open(struct vnode *vp, struct g_consumer **cpp, const char *fsname, int wr
 	sc->sc_bo = bo;
 	gp->softc = sc;
 	cp = g_new_consumer(gp);
-	g_attach(cp, pp);
+	error = g_attach(cp, pp);
+	if (error) {
+		g_wither_geom(gp, ENXIO);
+		return (error);
+	}
 	error = g_access(cp, 1, wr, wr);
 	if (error) {
 		g_wither_geom(gp, ENXIO);
@@ -285,5 +311,6 @@ g_vfs_close(struct g_consumer *cp)
 	mtx_destroy(&sc->sc_mtx);
 	if (!sc->sc_orphaned || cp->provider == NULL)
 		g_wither_geom_close(gp, ENXIO);
+	KASSERT(sc->sc_event == NULL, ("g_vfs %p event is non-NULL", sc));
 	g_free(sc);
 }

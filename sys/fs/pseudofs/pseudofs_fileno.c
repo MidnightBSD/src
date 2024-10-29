@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_pseudofs.h"
 
 #include <sys/param.h>

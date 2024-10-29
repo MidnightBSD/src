@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 Scott Long <scottl@freebsd.org>
  * Copyright (c) 2001 Darrell Anderson <anderson@cs.duke.edu>
@@ -69,6 +69,7 @@
 #include <dev/sound/pci/allegro_reg.h>
 #include <dev/sound/pci/allegro_code.h>
 
+SND_DECLARE_FILE("");
 
 /* -------------------------------------------------------------------- */
 
@@ -1139,7 +1140,6 @@ m3_intr(void *p)
 			device_printf(sc->dev, "Unknown HWVOL event\n");
 		}
 		m3_wr_1(sc, HW_VOL_COUNTER_MASTER, 0x88);
-
 	}
 
 	if (status & ASSP_INT_PENDING) {

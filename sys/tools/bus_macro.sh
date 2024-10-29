@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2004-2005 Poul-Henning Kamp.
 # All rights reserved.
@@ -54,7 +54,8 @@ for w in 1 2 4 8
 do
 	# macro copy_region_$w so dh do c
 	# macro copy_region_stream_$w ?
-	# macro peek_$w
+	macro poke_$w o v
+	macro peek_$w o vp
 	for s in "" stream_
 	do
 		macro read_$s$w o

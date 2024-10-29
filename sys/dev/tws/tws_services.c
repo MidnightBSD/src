@@ -32,7 +32,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #include <dev/tws/tws.h>
@@ -51,8 +50,6 @@ struct tws_request * tws_q_remove_tail(struct tws_softc *sc, u_int8_t q_type );
 void tws_print_stats(void *arg);
 
 struct tws_sense *tws_find_sense_from_mfa(struct tws_softc *sc, u_int64_t mfa);
-
-
 
 static struct error_desc array[] = {
     { "Cannot add sysctl tree node", 0x2000, ERROR,
@@ -87,7 +84,6 @@ void
 tws_trace(const char *file, const char *fun, int linenum,
           struct tws_softc *sc, char *desc, u_int64_t val1, u_int64_t val2)
 { 
-
 
     struct tws_trace_rec *rec = (struct tws_trace_rec *)sc->trace_q.q;
     volatile u_int16_t head, tail;
@@ -141,7 +137,6 @@ tws_log(struct tws_softc *sc, int index)
 
 /* ----------- swap functions ----------- */
 
-
 u_int16_t 
 tws_swap16(u_int16_t val)
 {
@@ -155,7 +150,6 @@ tws_swap32(u_int32_t val)
            ((val >> 8) & (0xFF00)) | (val >> 24)));
 }
 
-
 u_int64_t 
 tws_swap64(u_int64_t val)
 {
@@ -163,9 +157,7 @@ tws_swap64(u_int64_t val)
            ((u_int32_t)(tws_swap32(((u_int32_t *)(&(val)))[0]))));
 }
 
-
 /* ----------- reg access ----------- */
-
 
 void
 tws_write_reg(struct tws_softc *sc, int offset, 
@@ -330,7 +322,6 @@ tws_q_remove_request(struct tws_softc *sc, struct tws_request *req,
     if ( req == sc->q_tail[q_type] )
         return(tws_q_remove_tail(sc, q_type));
 
-
     /* The given node is not at head or tail.
      * It's in the middle and there are more than
      * 2 elements on the q.
@@ -383,7 +374,6 @@ tws_find_sense_from_mfa(struct tws_softc *sc, u_int64_t mfa)
 
 /* --------------------- Q service end --------------------- */
 /* --------------------- misc service start --------------------- */
-
 
 void
 tws_print_stats(void *arg)

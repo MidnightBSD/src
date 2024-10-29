@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1996, by Steve Passe
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_mptable_force_htt.h"
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -496,7 +495,6 @@ mptable_probe_cpus_handler(u_char *entry, void *arg)
 	}
 }
 
-
 static void
 mptable_setup_cpus_handler(u_char *entry, void *arg)
 {
@@ -580,7 +578,6 @@ mptable_parse_apics_and_busses_handler(u_char *entry, void *arg __unused)
 	bus_entry_ptr bus;
 	enum busTypes bus_type;
 	int i;
-
 
 	switch (*entry) {
 	case MPCT_ENTRY_BUS:

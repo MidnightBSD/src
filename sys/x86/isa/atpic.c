@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
  *
@@ -30,12 +30,12 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_auto_eoi.h"
 #include "opt_isa.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/asan.h>
 #include <sys/bus.h>
 #include <sys/interrupt.h>
 #include <sys/kernel.h>
@@ -309,7 +309,6 @@ atpic_disable_intr(struct intsrc *isrc)
 {
 }
 
-
 static int
 atpic_vector(struct intsrc *isrc)
 {
@@ -522,6 +521,10 @@ atpic_handle_intr(u_int vector, struct trapframe *frame)
 {
 	struct intsrc *isrc;
 
+	/* The frame may have been written into a poisoned region. */
+	kasan_mark(frame, sizeof(*frame), sizeof(*frame), 0);
+	trap_check_kstack();
+
 	KASSERT(vector < NUM_ISA_IRQS, ("unknown int %u\n", vector));
 	isrc = &atintrs[vector].at_intsrc;
 
@@ -561,7 +564,7 @@ static int
 atpic_probe(device_t dev)
 {
 	int result;
-	
+
 	result = ISA_PNP_PROBE(device_get_parent(dev), dev, atpic_ids);
 	if (result <= 0)
 		device_quiet(dev);
@@ -589,21 +592,6 @@ atpic_attach(device_t dev)
 	if (res != NULL)
 		bus_release_resource(dev, SYS_RES_IRQ, rid, res);
 	return (0);
-}
-
-/*
- * Return a bitmap of the current interrupt requests.  This is 8259-specific
- * and is only suitable for use at probe time.
- */
-intrmask_t
-isa_irq_pending(void)
-{
-	u_char irr1;
-	u_char irr2;
-
-	irr1 = inb(IO_ICU1);
-	irr2 = inb(IO_ICU2);
-	return ((irr2 << 8) | irr1);
 }
 
 static device_method_t atpic_methods[] = {

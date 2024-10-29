@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Dmitry Dicky diwil@dataart.com
  * All rights reserved.
@@ -35,6 +35,7 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
+SND_DECLARE_FILE("");
 
 #define PCI_VENDOR_FORTEMEDIA	0x1319
 #define PCI_DEVICE_FORTEMEDIA1	0x08011319	/* Audio controller */
@@ -59,7 +60,6 @@
 #define FM_PLAY_DMABUF1         0x0c
 #define FM_PLAY_DMABUF2         0x10
 
-
 #define FM_REC_CTL              0x14
 #define  FM_REC_RATE_MASK               0x0f00
 #define  FM_REC_BUF1_LAST               0x0001
@@ -69,7 +69,6 @@
 #define  FM_REC_STOPNOW                 0x0080
 #define  FM_REC_16BIT                   0x4000
 #define  FM_REC_STEREO                  0x8000
-
 
 #define FM_REC_DMALEN           0x16
 #define FM_REC_DMABUF1          0x18
@@ -397,7 +396,6 @@ fm801ch_setspeed(kobj_t obj, void *data, u_int32_t speed)
 	struct fm801_info *fm801 = ch->parent;
 	int i;
 
-
 	for (i = 0; i < 10 && fm801_rates[i].limit <= speed; i++) ;
 
 	if(ch->dir == PCMDIR_PLAY) {
@@ -454,7 +452,6 @@ fm801ch_trigger(kobj_t obj, void *data, int go)
 
 	if (ch->dir == PCMDIR_PLAY) {
 		if (go == PCMTRIG_START) {
-
 			fm801->play_start = baseaddr;
 			fm801->play_nextblk = fm801->play_start + fm801->play_blksize;
 			fm801->play_flip = 0;

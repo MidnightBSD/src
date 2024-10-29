@@ -34,7 +34,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)procfs_mem.c	8.5 (Berkeley) 6/15/94
- *
  */
 
 #include <sys/param.h>

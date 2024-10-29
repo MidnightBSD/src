@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -36,8 +35,12 @@
 
 #include <vm/redzone.h>
 
+#ifdef KASAN
+#error KASAN and DEBUG_REDZONE cannot be configured together
+#endif
 
-static SYSCTL_NODE(_vm, OID_AUTO, redzone, CTLFLAG_RW, NULL, "RedZone data");
+static SYSCTL_NODE(_vm, OID_AUTO, redzone, CTLFLAG_RW | CTLFLAG_MPSAFE, NULL,
+    "RedZone data");
 static u_long redzone_extra_mem = 0;
 SYSCTL_ULONG(_vm_redzone, OID_AUTO, extra_mem, CTLFLAG_RD, &redzone_extra_mem,
     0, "Extra memory allocated by redzone");     

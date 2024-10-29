@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2012 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Oleksandr Rybalko under sponsorship
  * from the FreeBSD Foundation.
@@ -25,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_UART_DEV_IMX5XX_H
@@ -215,6 +213,5 @@
 #define	ENA(_bas, _r, _b)	SET((_bas), REG(_r), FLD(_r, _b))
 #define	DIS(_bas, _r, _b)	CLR((_bas), REG(_r), FLD(_r, _b))
 #define	IS(_bas, _r, _b)	IS_SET((_bas), REG(_r), FLD(_r, _b))
-
 
 #endif	/* _UART_DEV_IMX5XX_H */

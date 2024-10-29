@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 The FreeBSD Foundation
  *
@@ -26,8 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 extern "C" {
@@ -79,16 +77,18 @@ class BmapEof: public Bmap, public WithParamInterface<int> {};
 
 /*
  * Test FUSE_BMAP
- * XXX The FUSE protocol does not include the runp and runb variables, so those
- * must be guessed in-kernel.
  */
 TEST_F(Bmap, bmap)
 {
 	struct fiobmap2_arg arg;
-	const off_t filesize = 1 << 20;
-	const ino_t ino = 42;
-	int64_t lbn = 10;
+	/*
+	 * Pick fsize and lbn large enough that max length runs won't reach
+	 * either beginning or end of file
+	 */
+	const off_t filesize = 1 << 30;
+	int64_t lbn = 100;
 	int64_t pbn = 12345;
+	const ino_t ino = 42;
 	int fd;
 
 	expect_lookup(RELPATH, 42, filesize);
@@ -103,8 +103,21 @@ TEST_F(Bmap, bmap)
 	arg.runb = -1;
 	ASSERT_EQ(0, ioctl(fd, FIOBMAP2, &arg)) << strerror(errno);
 	EXPECT_EQ(arg.bn, pbn);
-	EXPECT_EQ(arg.runp, m_maxphys / m_maxbcachebuf - 1);
-	EXPECT_EQ(arg.runb, m_maxphys / m_maxbcachebuf - 1);
+       /*
+	* XXX The FUSE protocol does not include the runp and runb variables,
+	* so those must be guessed in-kernel.  There's no "right" answer, so
+	* just check that they're within reasonable limits.
+	*/
+	EXPECT_LE(arg.runb, lbn);
+	EXPECT_LE((unsigned long)arg.runb, m_maxreadahead / m_maxbcachebuf);
+	EXPECT_LE((unsigned long)arg.runb, m_maxphys / m_maxbcachebuf);
+	EXPECT_GT(arg.runb, 0);
+	EXPECT_LE(arg.runp, filesize / m_maxbcachebuf - lbn);
+	EXPECT_LE((unsigned long)arg.runp, m_maxreadahead / m_maxbcachebuf);
+	EXPECT_LE((unsigned long)arg.runp, m_maxphys / m_maxbcachebuf);
+	EXPECT_GT(arg.runp, 0);
+
+	leak(fd);
 }
 
 /* 
@@ -114,7 +127,7 @@ TEST_F(Bmap, bmap)
 TEST_F(Bmap, default_)
 {
 	struct fiobmap2_arg arg;
-	const off_t filesize = 1 << 20;
+	const off_t filesize = 1 << 30;
 	const ino_t ino = 42;
 	int64_t lbn;
 	int fd;
@@ -138,7 +151,7 @@ TEST_F(Bmap, default_)
 	arg.runb = -1;
 	ASSERT_EQ(0, ioctl(fd, FIOBMAP2, &arg)) << strerror(errno);
 	EXPECT_EQ(arg.bn, 0);
-	EXPECT_EQ(arg.runp, m_maxphys / m_maxbcachebuf - 1);
+	EXPECT_EQ((unsigned long )arg.runp, m_maxphys / m_maxbcachebuf - 1);
 	EXPECT_EQ(arg.runb, 0);
 
 	/* In the middle */
@@ -148,8 +161,8 @@ TEST_F(Bmap, default_)
 	arg.runb = -1;
 	ASSERT_EQ(0, ioctl(fd, FIOBMAP2, &arg)) << strerror(errno);
 	EXPECT_EQ(arg.bn, lbn * m_maxbcachebuf / DEV_BSIZE);
-	EXPECT_EQ(arg.runp, m_maxphys / m_maxbcachebuf - 1);
-	EXPECT_EQ(arg.runb, m_maxphys / m_maxbcachebuf - 1);
+	EXPECT_EQ((unsigned long )arg.runp, m_maxphys / m_maxbcachebuf - 1);
+	EXPECT_EQ((unsigned long )arg.runb, m_maxphys / m_maxbcachebuf - 1);
 
 	/* Last block */
 	lbn = filesize / m_maxbcachebuf - 1;
@@ -159,7 +172,7 @@ TEST_F(Bmap, default_)
 	ASSERT_EQ(0, ioctl(fd, FIOBMAP2, &arg)) << strerror(errno);
 	EXPECT_EQ(arg.bn, lbn * m_maxbcachebuf / DEV_BSIZE);
 	EXPECT_EQ(arg.runp, 0);
-	EXPECT_EQ(arg.runb, m_maxphys / m_maxbcachebuf - 1);
+	EXPECT_EQ((unsigned long )arg.runb, m_maxphys / m_maxbcachebuf - 1);
 
 	leak(fd);
 }
@@ -184,12 +197,11 @@ TEST_P(BmapEof, eof)
 	const off_t filesize = 2 * m_maxbcachebuf;
 	const ino_t ino = 42;
 	mode_t mode = S_IFREG | 0644;
-	void *contents, *buf;
+	char *buf;
 	int fd;
 	int ngetattrs;
 
 	ngetattrs = GetParam();
-	contents = calloc(1, filesize);
 	FuseTest::expect_lookup(RELPATH, ino, mode, filesize, 1, 0);
 	expect_open(ino, 0, 1);
 	// Depending on ngetattrs, FUSE_READ could be called with either
@@ -205,6 +217,8 @@ TEST_P(BmapEof, eof)
 		_)
 	).WillOnce(Invoke(ReturnImmediate([=](auto in, auto& out) {
 		size_t osize = in.body.read.size;
+
+		assert(osize < sizeof(out.body.bytes));
 		out.header.len = sizeof(struct fuse_out_header) + osize;
 		bzero(out.body.bytes, osize);
 	})));
@@ -238,10 +252,13 @@ TEST_P(BmapEof, eof)
 		out.body.attr.attr.size = filesize / 2;
 	})));
 
-	buf = calloc(1, filesize);
+	buf = new char[filesize]();
 	fd = open(FULLPATH, O_RDWR);
 	ASSERT_LE(0, fd) << strerror(errno);
 	read(fd, buf, filesize);
+
+	delete[] buf;
+	leak(fd);
 }
 
 INSTANTIATE_TEST_CASE_P(BE, BmapEof,

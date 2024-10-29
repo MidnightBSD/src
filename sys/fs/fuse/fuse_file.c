@@ -61,7 +61,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/counter.h>
@@ -123,44 +122,68 @@ int
 fuse_filehandle_open(struct vnode *vp, int a_mode,
     struct fuse_filehandle **fufhp, struct thread *td, struct ucred *cred)
 {
+	struct mount *mp = vnode_mount(vp);
+	struct fuse_data *data = fuse_get_mpdata(mp);
 	struct fuse_dispatcher fdi;
-	struct fuse_open_in *foi;
-	struct fuse_open_out *foo;
+	const struct fuse_open_out default_foo = {
+		.fh = 0,
+		.open_flags = FOPEN_KEEP_CACHE,
+		.padding = 0
+	};
+	struct fuse_open_in *foi = NULL;
+	const struct fuse_open_out *foo;
 	fufh_type_t fufh_type;
-
+	int dataflags = data->dataflags;
 	int err = 0;
 	int oflags = 0;
 	int op = FUSE_OPEN;
+	int relop = FUSE_RELEASE;
+	int fsess_no_op_support = FSESS_NO_OPEN_SUPPORT;
 
 	fufh_type = fflags_2_fufh_type(a_mode);
 	oflags = fufh_type_2_fflags(fufh_type);
 
 	if (vnode_isdir(vp)) {
 		op = FUSE_OPENDIR;
+		relop = FUSE_RELEASEDIR;
+		fsess_no_op_support = FSESS_NO_OPENDIR_SUPPORT;
 		/* vn_open_vnode already rejects FWRITE on directories */
 		MPASS(fufh_type == FUFH_RDONLY || fufh_type == FUFH_EXEC);
 	}
 	fdisp_init(&fdi, sizeof(*foi));
-	fdisp_make_vp(&fdi, op, vp, td, cred);
+	if (fsess_not_impl(mp, op) && dataflags & fsess_no_op_support) {
+		/* The operation implicitly succeeds */
+		foo = &default_foo;
+	} else {
+		fdisp_make_vp(&fdi, op, vp, td, cred);
 
-	foi = fdi.indata;
-	foi->flags = oflags;
+		foi = fdi.indata;
+		foi->flags = oflags;
 
-	if ((err = fdisp_wait_answ(&fdi))) {
-		SDT_PROBE2(fusefs, , file, trace, 1,
-			"OUCH ... daemon didn't give fh");
-		if (err == ENOENT) {
-			fuse_internal_vnode_disappear(vp);
+		err = fdisp_wait_answ(&fdi);
+		if (err == ENOSYS && dataflags & fsess_no_op_support) {
+			/* The operation implicitly succeeds */
+			foo = &default_foo;
+			fsess_set_notimpl(mp, op);
+			fsess_set_notimpl(mp, relop);
+			err = 0;
+		} else if (err) {
+			SDT_PROBE2(fusefs, , file, trace, 1,
+				"OUCH ... daemon didn't give fh");
+			if (err == ENOENT)
+				fuse_internal_vnode_disappear(vp);
+			goto out;
+		} else {
+			foo = fdi.answ;
 		}
-		goto out;
 	}
-	foo = fdi.answ;
 
 	fuse_filehandle_init(vp, fufh_type, fufhp, td, cred, foo);
 	fuse_vnode_open(vp, foo->open_flags, td);
 
 out:
-	fdisp_destroy(&fdi);
+	if (foi)
+		fdisp_destroy(&fdi);
 	return err;
 }
 
@@ -168,6 +191,7 @@ int
 fuse_filehandle_close(struct vnode *vp, struct fuse_filehandle *fufh,
     struct thread *td, struct ucred *cred)
 {
+	struct mount *mp = vnode_mount(vp);
 	struct fuse_dispatcher fdi;
 	struct fuse_release_in *fri;
 
@@ -179,6 +203,10 @@ fuse_filehandle_close(struct vnode *vp, struct fuse_filehandle *fufh,
 	}
 	if (vnode_isdir(vp))
 		op = FUSE_RELEASEDIR;
+
+	if (fsess_not_impl(mp, op))
+		goto out;
+
 	fdisp_init(&fdi, sizeof(*fri));
 	fdisp_make_vp(&fdi, op, vp, td, cred);
 	fri = fdi.indata;
@@ -326,8 +354,8 @@ fuse_filehandle_getrw(struct vnode *vp, int fflag,
 
 void
 fuse_filehandle_init(struct vnode *vp, fufh_type_t fufh_type,
-    struct fuse_filehandle **fufhp, struct thread *td, struct ucred *cred,
-    struct fuse_open_out *foo)
+    struct fuse_filehandle **fufhp, struct thread *td, const struct ucred *cred,
+    const struct fuse_open_out *foo)
 {
 	struct fuse_vnode_data *fvdat = VTOFUD(vp);
 	struct fuse_filehandle *fufh;

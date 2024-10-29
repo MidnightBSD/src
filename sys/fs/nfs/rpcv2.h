@@ -30,7 +30,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _NFS_RPCV2_H_
@@ -198,7 +197,7 @@
 #define	RPCMNT_NAMELEN	255
 #define	RPCMNT_PATHLEN	1024
 #define	RPCPROG_NFS	100003
- 
+
 /* Structs for common parts of the rpc's */
 struct rpcv2_time {
 	u_int32_t rpc_sec;

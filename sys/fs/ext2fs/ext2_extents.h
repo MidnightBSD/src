@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012, 2010 Zheng Liu <lz@freebsd.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 #ifndef _FS_EXT2FS_EXT2_EXTENTS_H_
 #define	_FS_EXT2FS_EXT2_EXTENTS_H_
@@ -107,14 +106,14 @@ struct ext4_extent_path {
     sizeof(struct ext4_extent_header)))
 #define EXT_FIRST_INDEX(hdr) ((struct ext4_extent_index *)(((char *)(hdr)) + \
     sizeof(struct ext4_extent_header)))
-#define EXT_LAST_EXTENT(hdr) (EXT_FIRST_EXTENT((hdr)) + (hdr)->eh_ecount - 1)
-#define EXT_LAST_INDEX(hdr) (EXT_FIRST_INDEX((hdr)) + (hdr)->eh_ecount - 1)
+#define EXT_LAST_EXTENT(hdr) (EXT_FIRST_EXTENT((hdr)) + le16toh((hdr)->eh_ecount) - 1)
+#define EXT_LAST_INDEX(hdr) (EXT_FIRST_INDEX((hdr)) + le16toh((hdr)->eh_ecount) - 1)
 #define EXT4_EXTENT_TAIL_OFFSET(hdr) (sizeof(struct ext4_extent_header) + \
-    (sizeof(struct ext4_extent) * (hdr)->eh_max))
+    (sizeof(struct ext4_extent) * le16toh((hdr)->eh_max)))
 #define EXT_HAS_FREE_INDEX(path) \
-    ((path)->ep_header->eh_ecount < (path)->ep_header->eh_max)
-#define EXT_MAX_EXTENT(hdr) (EXT_FIRST_EXTENT(hdr) + ((hdr)->eh_max) - 1)
-#define EXT_MAX_INDEX(hdr) (EXT_FIRST_INDEX((hdr)) + (hdr)->eh_max - 1)
+    (le16toh((path)->ep_header->eh_ecount) < le16toh((path)->ep_header->eh_max))
+#define EXT_MAX_EXTENT(hdr) (EXT_FIRST_EXTENT(hdr) + le16toh((hdr)->eh_max) - 1)
+#define EXT_MAX_INDEX(hdr) (EXT_FIRST_INDEX((hdr)) + le16toh((hdr)->eh_max) - 1)
 
 struct inode;
 struct m_ext2fs;

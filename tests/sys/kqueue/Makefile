@@ -1,9 +1,10 @@
-# $FreeBSD$
 
 TESTSRC=	${SRCTOP}/contrib/netbsd-tests/kernel/kqueue
 
 TESTSDIR=	${TESTSBASE}/sys/kqueue
 BINDIR=		${TESTSDIR}
+
+ATF_TESTS_C+=	kqueue_peek_signal
 
 NETBSD_ATF_TESTS_C=	proc1_test
 # XXX: fails `ke.fflags & NOTE_TRACKERR` invariant

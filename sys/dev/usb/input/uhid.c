@@ -5,9 +5,8 @@
  */
 
 #include <sys/cdefs.h>
-
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -42,6 +41,8 @@
  * HID spec: http://www.usb.org/developers/devclass_docs/HID1_11.pdf
  */
 
+#include "opt_hid.h"
+
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -63,6 +64,8 @@
 #include <sys/conf.h>
 #include <sys/fcntl.h>
 
+#include <dev/hid/hid.h>
+
 #include "usbdevs.h"
 #include <dev/usb/usb.h>
 #include <dev/usb/usbdi.h>
@@ -80,7 +83,8 @@
 #ifdef USB_DEBUG
 static int uhid_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, uhid, CTLFLAG_RW, 0, "USB uhid");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, uhid, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB uhid");
 SYSCTL_INT(_hw_usb_uhid, OID_AUTO, debug, CTLFLAG_RWTUN,
     &uhid_debug, 0, "Debug level");
 #endif
@@ -345,7 +349,6 @@ uhid_read_callback(struct usb_xfer *xfer, usb_error_t error)
 	case USB_ST_SETUP:
 
 		if (usb_fifo_put_bytes_max(sc->sc_fifo.fp[USB_FIFO_RX]) > 0) {
-
 			uhid_fill_get_report
 			    (&req, sc->sc_iface_no, UHID_INPUT_REPORT,
 			    sc->sc_iid, sc->sc_isize);
@@ -367,7 +370,6 @@ uhid_read_callback(struct usb_xfer *xfer, usb_error_t error)
 }
 
 static const struct usb_config uhid_config[UHID_N_TRANSFER] = {
-
 	[UHID_INTR_DT_WR] = {
 		.type = UE_INTERRUPT,
 		.endpoint = UE_ADDR_ANY,
@@ -552,13 +554,30 @@ uhid_ioctl(struct usb_fifo *fifo, u_long cmd, void *addr,
 {
 	struct uhid_softc *sc = usb_fifo_softc(fifo);
 	struct usb_gen_descriptor *ugd;
+#ifdef COMPAT_FREEBSD32
+	struct usb_gen_descriptor local_ugd;
+	struct usb_gen_descriptor32 *ugd32 = NULL;
+#endif
 	uint32_t size;
 	int error = 0;
 	uint8_t id;
 
+	ugd = addr;
+#ifdef COMPAT_FREEBSD32
+	switch (cmd) {
+	case USB_GET_REPORT_DESC32:
+	case USB_GET_REPORT32:
+	case USB_SET_REPORT32:
+		ugd32 = addr;
+		ugd = &local_ugd;
+		usb_gen_descriptor_from32(ugd, ugd32);
+		cmd = _IOC_NEWTYPE(cmd, struct usb_gen_descriptor);
+		break;
+	}
+#endif
+
 	switch (cmd) {
 	case USB_GET_REPORT_DESC:
-		ugd = addr;
 		if (sc->sc_repdesc_size > ugd->ugd_maxlen) {
 			size = ugd->ugd_maxlen;
 		} else {
@@ -576,7 +595,6 @@ uhid_ioctl(struct usb_fifo *fifo, u_long cmd, void *addr,
 			break;
 		}
 		if (*(int *)addr) {
-
 			/* do a test read */
 
 			error = uhid_get_report(sc, UHID_INPUT_REPORT,
@@ -599,7 +617,6 @@ uhid_ioctl(struct usb_fifo *fifo, u_long cmd, void *addr,
 			error = EPERM;
 			break;
 		}
-		ugd = addr;
 		switch (ugd->ugd_report_type) {
 		case UHID_INPUT_REPORT:
 			size = sc->sc_isize;
@@ -617,9 +634,10 @@ uhid_ioctl(struct usb_fifo *fifo, u_long cmd, void *addr,
 			return (EINVAL);
 		}
 		if (id != 0)
-			copyin(ugd->ugd_data, &id, 1);
-		error = uhid_get_report(sc, ugd->ugd_report_type, id,
-		    NULL, ugd->ugd_data, imin(ugd->ugd_maxlen, size));
+			error = copyin(ugd->ugd_data, &id, 1);
+		if (error == 0)
+			error = uhid_get_report(sc, ugd->ugd_report_type, id,
+			    NULL, ugd->ugd_data, imin(ugd->ugd_maxlen, size));
 		break;
 
 	case USB_SET_REPORT:
@@ -627,7 +645,6 @@ uhid_ioctl(struct usb_fifo *fifo, u_long cmd, void *addr,
 			error = EPERM;
 			break;
 		}
-		ugd = addr;
 		switch (ugd->ugd_report_type) {
 		case UHID_INPUT_REPORT:
 			size = sc->sc_isize;
@@ -645,9 +662,10 @@ uhid_ioctl(struct usb_fifo *fifo, u_long cmd, void *addr,
 			return (EINVAL);
 		}
 		if (id != 0)
-			copyin(ugd->ugd_data, &id, 1);
-		error = uhid_set_report(sc, ugd->ugd_report_type, id,
-		    NULL, ugd->ugd_data, imin(ugd->ugd_maxlen, size));
+			error = copyin(ugd->ugd_data, &id, 1);
+		if (error == 0)
+			error = uhid_set_report(sc, ugd->ugd_report_type, id,
+			    NULL, ugd->ugd_data, imin(ugd->ugd_maxlen, size));
 		break;
 
 	case USB_GET_REPORT_ID:
@@ -658,6 +676,10 @@ uhid_ioctl(struct usb_fifo *fifo, u_long cmd, void *addr,
 		error = ENOIOCTL;
 		break;
 	}
+#ifdef COMPAT_FREEBSD32
+	if (ugd32 != NULL)
+		update_usb_gen_descriptor32(ugd32, ugd);
+#endif
 	return (error);
 }
 
@@ -771,17 +793,14 @@ uhid_attach(device_t dev)
 		goto detach;
 	}
 	if (uaa->info.idVendor == USB_VENDOR_WACOM) {
-
 		/* the report descriptor for the Wacom Graphire is broken */
 
 		if (uaa->info.idProduct == USB_PRODUCT_WACOM_GRAPHIRE) {
-
 			sc->sc_repdesc_size = sizeof(uhid_graphire_report_descr);
 			sc->sc_repdesc_ptr = __DECONST(void *, &uhid_graphire_report_descr);
 			sc->sc_flags |= UHID_FLAG_STATIC_DESC;
 
 		} else if (uaa->info.idProduct == USB_PRODUCT_WACOM_GRAPHIRE3_4X5) {
-
 			static uint8_t reportbuf[] = {2, 2, 2};
 
 			/*
@@ -822,7 +841,6 @@ uhid_attach(device_t dev)
 		sc->sc_flags |= UHID_FLAG_STATIC_DESC;
 	}
 	if (sc->sc_repdesc_ptr == NULL) {
-
 		error = usbd_req_get_hid_desc(uaa->device, NULL,
 		    &sc->sc_repdesc_ptr, &sc->sc_repdesc_size,
 		    M_USBDEV, uaa->info.bIfaceIndex);
@@ -839,13 +857,13 @@ uhid_attach(device_t dev)
 		DPRINTF("set idle failed, error=%s (ignored)\n",
 		    usbd_errstr(error));
 	}
-	sc->sc_isize = hid_report_size
+	sc->sc_isize = hid_report_size_max
 	    (sc->sc_repdesc_ptr, sc->sc_repdesc_size, hid_input, &sc->sc_iid);
 
-	sc->sc_osize = hid_report_size
+	sc->sc_osize = hid_report_size_max
 	    (sc->sc_repdesc_ptr, sc->sc_repdesc_size, hid_output, &sc->sc_oid);
 
-	sc->sc_fsize = hid_report_size
+	sc->sc_fsize = hid_report_size_max
 	    (sc->sc_repdesc_ptr, sc->sc_repdesc_size, hid_feature, &sc->sc_fid);
 
 	if (sc->sc_isize > UHID_BSIZE) {
@@ -900,7 +918,9 @@ uhid_detach(device_t dev)
 	return (0);
 }
 
+#ifndef HIDRAW_MAKE_UHID_ALIAS
 static devclass_t uhid_devclass;
+#endif
 
 static device_method_t uhid_methods[] = {
 	DEVMETHOD(device_probe, uhid_probe),
@@ -911,12 +931,21 @@ static device_method_t uhid_methods[] = {
 };
 
 static driver_t uhid_driver = {
+#ifdef HIDRAW_MAKE_UHID_ALIAS
+	.name = "hidraw",
+#else
 	.name = "uhid",
+#endif
 	.methods = uhid_methods,
 	.size = sizeof(struct uhid_softc),
 };
 
+#ifdef HIDRAW_MAKE_UHID_ALIAS
+DRIVER_MODULE(uhid, uhub, uhid_driver, hidraw_devclass, NULL, 0);
+#else
 DRIVER_MODULE(uhid, uhub, uhid_driver, uhid_devclass, NULL, 0);
+#endif
 MODULE_DEPEND(uhid, usb, 1, 1, 1);
+MODULE_DEPEND(uhid, hid, 1, 1, 1);
 MODULE_VERSION(uhid, 1);
 USB_PNP_HOST_INFO(uhid_devs);

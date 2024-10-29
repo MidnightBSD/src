@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013-2015 Sandvine Inc.
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SYS_IOV_H_
@@ -46,6 +45,8 @@
 #define	TYPE_SCHEMA_NAME	"TYPE"
 #define	DEFAULT_SCHEMA_NAME	"DEFAULT"
 #define	REQUIRED_SCHEMA_NAME	"REQUIRED"
+
+#define	VF_VLAN_TRUNK		4096
 
 /*
  * Because each PF device is expected to expose a unique set of possible
@@ -255,4 +256,3 @@ struct pci_iov_arg
 #define	IOV_GET_SCHEMA	_IOWR('p', 12, struct pci_iov_schema)
 
 #endif
-

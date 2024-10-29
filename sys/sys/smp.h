@@ -7,7 +7,6 @@
  * can do whatever you want with this stuff. If we meet some day, and you think
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
- *
  */
 
 #ifndef _SYS_SMP_H_
@@ -80,6 +79,8 @@ struct cpu_group {
 	struct cpu_group *cg_child;	/* Optional children groups. */
 	cpuset_t	cg_mask;	/* Mask of cpus in this group. */
 	int32_t		cg_count;	/* Count of cpus in this group. */
+	int32_t		cg_first;	/* First cpu in this group. */
+	int32_t		cg_last;	/* Last cpu in this group. */
 	int16_t		cg_children;	/* Number of children groups. */
 	int8_t		cg_level;	/* Shared cache level. */
 	int8_t		cg_flags;	/* Traversal modifiers. */
@@ -104,6 +105,7 @@ typedef struct cpu_group *cpu_group_t;
 #define	CG_FLAG_HTT	0x01		/* Schedule the alternate core last. */
 #define	CG_FLAG_SMT	0x02		/* New age htt, less crippled. */
 #define	CG_FLAG_THREAD	(CG_FLAG_HTT | CG_FLAG_SMT)	/* Any threading. */
+#define	CG_FLAG_NODE	0x04		/* NUMA node. */
 
 /*
  * Convenience routines for building and traversing topologies.
@@ -153,7 +155,6 @@ struct cpu_group *smp_topo_2level(int l2share, int l2count, int l1share,
 struct cpu_group *smp_topo_find(struct cpu_group *top, int cpu);
 
 extern void (*cpustop_restartfunc)(void);
-extern int smp_cpus;
 /* The suspend/resume cpusets are x86 only, but minimize ifdefs. */
 extern volatile cpuset_t resuming_cpus;	/* woken up cpus in suspend pen */
 extern volatile cpuset_t started_cpus;	/* cpus to let out of stop pen */
@@ -168,6 +169,7 @@ extern u_int mp_maxid;
 extern int mp_maxcpus;
 extern int mp_ncores;
 extern int mp_ncpus;
+extern int smp_cpus;
 extern volatile int smp_started;
 extern int smp_threads_per_core;
 
@@ -263,6 +265,8 @@ extern	struct mtx smp_ipi_mtx;
 
 int	quiesce_all_cpus(const char *, int);
 int	quiesce_cpus(cpuset_t, const char *, int);
+void	quiesce_all_critical(void);
+void	cpus_fence_seq_cst(void);
 void	smp_no_rendezvous_barrier(void *);
 void	smp_rendezvous(void (*)(void *), 
 		       void (*)(void *),
@@ -273,6 +277,19 @@ void	smp_rendezvous_cpus(cpuset_t,
 		       void (*)(void *),
 		       void (*)(void *),
 		       void *arg);
+
+struct smp_rendezvous_cpus_retry_arg {
+	cpuset_t cpus;
+};
+void	smp_rendezvous_cpus_retry(cpuset_t,
+		       void (*)(void *),
+		       void (*)(void *),
+		       void (*)(void *),
+		       void (*)(void *, int),
+		       struct smp_rendezvous_cpus_retry_arg *);
+
+void	smp_rendezvous_cpus_done(struct smp_rendezvous_cpus_retry_arg *);
+
 #endif /* !LOCORE */
 #endif /* _KERNEL */
 #endif /* _SYS_SMP_H_ */

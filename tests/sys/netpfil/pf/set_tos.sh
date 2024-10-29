@@ -1,6 +1,5 @@
-# $FreeBSD$
 #
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2017 Kristof Provost <kp@FreeBSD.org>
 #
@@ -64,7 +63,7 @@ v4_body()
 		--sendif ${epair_send}a \
 		--to 198.51.100.3 \
 		--recvif ${epair_recv}a \
-		--expect-tos 42
+		--expect-tc 42
 
 	# The requested ToS is set
 	pft_set_rules alcatraz "scrub out proto icmp set-tos 42"
@@ -72,7 +71,7 @@ v4_body()
 		--sendif ${epair_send}a \
 		--to 198.51.100.3 \
 		--recvif ${epair_recv}a \
-		--expect-tos 42
+		--expect-tc 42
 
 	# ToS is not changed if the scrub rule does not match
 	pft_set_rules alcatraz "scrub out proto tcp set-tos 42"
@@ -80,7 +79,7 @@ v4_body()
 		--sendif ${epair_send}a \
 		--to 198.51.100.3 \
 		--recvif ${epair_recv}a \
-		--expect-tos 42
+		--expect-tc 42
 
 	# Multiple scrub rules match as expected
 	pft_set_rules alcatraz "scrub out proto tcp set-tos 13" \
@@ -89,15 +88,15 @@ v4_body()
 		--sendif ${epair_send}a \
 		--to 198.51.100.3 \
 		--recvif ${epair_recv}a \
-		--expect-tos 14
+		--expect-tc 14
 
 	# And this works even if the packet already has ToS values set
 	atf_check -s exit:0 ${common_dir}/pft_ping.py \
 		--sendif ${epair_send}a \
 		--to 198.51.100.3 \
 		--recvif ${epair_recv}a \
-		--send-tos 42 \
-		--expect-tos 14
+		--send-tc 42 \
+		--expect-tc 14
 
 	# ToS values are unmolested if the packets do not match a scrub rule
 	pft_set_rules alcatraz "scrub out proto tcp set-tos 13"
@@ -105,8 +104,8 @@ v4_body()
 		--sendif ${epair_send}a \
 		--to 198.51.100.3 \
 		--recvif ${epair_recv}a \
-		--send-tos 42 \
-		--expect-tos 42
+		--send-tc 42 \
+		--expect-tc 42
 }
 
 v4_cleanup()

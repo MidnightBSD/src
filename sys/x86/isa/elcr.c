@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004 John Baldwin <jhb@FreeBSD.org>
  *
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * The ELCR is a register that controls the trigger mode and polarity of
  * EISA and ISA interrupts.  In FreeBSD 3.x and 4.x, the ELCR was only

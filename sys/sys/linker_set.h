@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 John D. Polstra
  * Copyright (c) 1999,2001 Peter Wemm <peter@FreeBSD.org>
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SYS_LINKER_SET_H_
@@ -41,8 +40,11 @@
  * For ELF, this is done by constructing a separate segment for each set.
  */
 
-#if defined(__powerpc64__)
+#if defined(__powerpc64__) && (!defined(_CALL_ELF) || _CALL_ELF == 1)
 /*
+ * ELFv1 pointers to functions are actaully pointers to function
+ * descriptors.
+ *
  * Move the symbol pointer from ".text" to ".data" segment, to make
  * the GCC compiler happy:
  */
@@ -55,10 +57,22 @@
  * Private macros, not to be used outside this header file.
  */
 #ifdef __GNUCLIKE___SECTION
+
+/*
+ * The userspace address sanitizer inserts redzones around global variables,
+ * violating the assumption that linker set elements are packed.
+ */
+#ifdef _KERNEL
+#define	__NOASAN
+#else
+#define	__NOASAN	__nosanitizeaddress
+#endif
+
 #define __MAKE_SET_QV(set, sym, qv)			\
 	__WEAK(__CONCAT(__start_set_,set));		\
 	__WEAK(__CONCAT(__stop_set_,set));		\
 	static void const * qv				\
+	__NOASAN					\
 	__set_##set##_sym_##sym __section("set_" #set)	\
 	__used = &(sym)
 #define __MAKE_SET(set, sym)	__MAKE_SET_QV(set, sym, __MAKE_SET_CONST)

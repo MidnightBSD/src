@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2012 Ben Gray <bgray@freebsd.org>.
  * Copyright (C) 2018 The FreeBSD Foundation.
@@ -38,8 +38,6 @@
  */
 
 #include <sys/cdefs.h>
-
-#include <sys/param.h>
 #include <sys/gsb_crc32.h>
 #include <sys/eventhandler.h>
 #include <sys/stdint.h>
@@ -101,7 +99,8 @@ struct cdceem_softc {
 #define	CDCEEM_SC_FLAGS_ECHO_RESPONSE_PENDING	0x1
 #define	CDCEEM_SC_FLAGS_ECHO_PENDING		0x2
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, cdceem, CTLFLAG_RW, 0, "USB CDC EEM");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, cdceem, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB CDC EEM");
 static int cdceem_debug = 1;
 SYSCTL_INT(_hw_usb_cdceem, OID_AUTO, debug, CTLFLAG_RWTUN,
     &cdceem_debug, 0, "Debug level");
@@ -876,4 +875,3 @@ cdceem_resume(device_t dev)
 	CDCEEM_DEBUG(sc, "go");
 	return (0);
 }
-

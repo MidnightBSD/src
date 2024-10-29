@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998, 2001 Nicolas Souchu
  * All rights reserved.
@@ -67,7 +67,7 @@ smbus_error(int smb_error)
 
 	if (smb_error == SMB_ENOERR)
 		return (0);
-	
+
 	if (smb_error & (SMB_ENOTSUPP))
 		error = ENODEV;
 	else if (smb_error & (SMB_ENOACK))

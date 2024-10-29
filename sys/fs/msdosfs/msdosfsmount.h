@@ -52,11 +52,14 @@
 #ifndef _MSDOSFS_MSDOSFSMOUNT_H_
 #define	_MSDOSFS_MSDOSFSMOUNT_H_
 
-#ifdef _KERNEL
+#if defined (_KERNEL) || defined(MAKEFS)
 
 #include <sys/types.h>
+#ifndef MAKEFS
 #include <sys/lock.h>
 #include <sys/lockmgr.h>
+#include <sys/_task.h>
+#endif
 #include <sys/tree.h>
 
 #ifdef MALLOC_DECLARE
@@ -79,6 +82,7 @@ struct msdosfsmount {
 	mode_t pm_dirmask;	/* mask to and with file protection bits
 				   for directories */
 	struct vnode *pm_devvp;	/* vnode for character device mounted */
+	struct vnode *pm_odevvp;/* real devfs vnode */
 	struct cdev *pm_dev;	/* character device mounted */
 	struct bpb50 pm_bpb;	/* BIOS parameter blk for this fs */
 	u_long pm_BlkPerSec;	/* How many DEV_BSIZE blocks fit inside a physical sector */
@@ -103,13 +107,18 @@ struct msdosfsmount {
 	u_int pm_fatmult;	/* these 2 values are used in FAT */
 	u_int pm_fatdiv;	/*	offset computation */
 	u_int pm_curfat;	/* current FAT for FAT32 (0 otherwise) */
+	int pm_rootdirfree;	/* number of free slots in FAT12/16 root directory */
 	u_int *pm_inusemap;	/* ptr to bitmap of in-use clusters */
 	uint64_t pm_flags;	/* see below */
 	void *pm_u2w;	/* Local->Unicode iconv handle */
 	void *pm_w2u;	/* Unicode->Local iconv handle */
 	void *pm_u2d;	/* Unicode->DOS iconv handle */
 	void *pm_d2u;	/* DOS->Local iconv handle */
+#ifndef MAKEFS
 	struct lock pm_fatlock;	/* lockmgr protecting allocations */
+	struct lock pm_checkpath_lock; /* protects doscheckpath result */
+	struct task pm_rw2ro_task; /* context for emergency remount ro */
+#endif
 };
 
 /*
@@ -124,7 +133,6 @@ struct msdosfs_fileno {
 
 /* Byte offset in FAT on filesystem pmp, cluster cn */
 #define	FATOFS(pmp, cn)	((cn) * (pmp)->pm_fatmult / (pmp)->pm_fatdiv)
-
 
 #define	VFSTOMSDOSFS(mp)	((struct msdosfsmount *)mp->mnt_data)
 
@@ -214,6 +222,22 @@ struct msdosfs_fileno {
 	 ? roottobn((pmp), (dirofs)) \
 	 : cntobn((pmp), (dirclu)))
 
+/*
+ * Increment the number of used entries in a fixed size FAT12/16 root
+ * directory
+ */
+#define rootde_alloced(dep)			   \
+	if ((dep)->de_StartCluster == MSDOSFSROOT) \
+		(dep)->de_pmp->pm_rootdirfree--;
+
+/*
+ * Decrement the number of used entries in a fixed size FAT12/16 root
+ * directory
+ */
+#define rootde_freed(dep)			   \
+	if ((dep)->de_StartCluster == MSDOSFSROOT) \
+		(dep)->de_pmp->pm_rootdirfree++;
+
 #define	MSDOSFS_LOCK_MP(pmp) \
 	lockmgr(&(pmp)->pm_fatlock, LK_EXCLUSIVE, NULL)
 #define	MSDOSFS_UNLOCK_MP(pmp) \
@@ -221,8 +245,9 @@ struct msdosfs_fileno {
 #define	MSDOSFS_ASSERT_MP_LOCKED(pmp) \
 	lockmgr_assert(&(pmp)->pm_fatlock, KA_XLOCKED)
 
-#endif /* _KERNEL */
+#endif /* _KERNEL || MAKEFS */
 
+#ifndef MAKEFS
 /*
  *  Arguments to mount MSDOS filesystems.
  */
@@ -240,6 +265,7 @@ struct msdosfs_args {
 	char	*cs_local;	/* Local Charset */
 	mode_t	dirmask;	/* dir  mask to be applied for msdosfs perms */
 };
+#endif /* MAKEFS */
 
 /*
  * Msdosfs mount options:
@@ -256,5 +282,10 @@ struct msdosfs_args {
 #define	MSDOSFSMNT_WAITONFAT	0x40000000	/* mounted synchronous	*/
 #define	MSDOSFS_FATMIRROR	0x20000000	/* FAT is mirrored */
 #define	MSDOSFS_FSIMOD		0x01000000
+#define	MSDOSFS_ERR_RO		0x00800000	/* remouning ro due to error */
+
+#ifdef _KERNEL
+void msdosfs_integrity_error(struct msdosfsmount *pmp);
+#endif
 
 #endif /* !_MSDOSFS_MSDOSFSMOUNT_H_ */

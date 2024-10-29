@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Aleksandr Rybalko under sponsorship from the
  * FreeBSD Foundation.
@@ -30,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -232,10 +230,6 @@ vt_efb_init(struct vt_device *vd)
 		sc->sc_memt = &bs_be_tag;
 		bus_space_map(sc->sc_memt, info->fb_pbase, info->fb_size,
 		    BUS_SPACE_MAP_PREFETCHABLE, &info->fb_vbase);
-	#elif defined(__sparc64__)
-		OF_decode_addr(node, 0, &space, &phys);
-		sc->sc_memt = &vt_efb_memt[0];
-		info->addr = sparc64_fake_bustag(space, fb_phys, sc->sc_memt);
 	#else
 		bus_space_map(fdtbus_bs_tag, info->fb_pbase, info->fb_size,
 		    BUS_SPACE_MAP_PREFETCHABLE,
@@ -273,11 +267,6 @@ vt_efb_init(struct vt_device *vd)
 	#if defined(__powerpc__)
 		OF_decode_addr(node, info->fb_pbase, &sc->sc_memt,
 		    &info->fb_vbase);
-	#elif defined(__sparc64__)
-		OF_decode_addr(node, info->fb_pbase, &space, &info->fb_pbase);
-		sc->sc_memt = &vt_efb_memt[0];
-		info->fb_vbase = sparc64_fake_bustag(space, info->fb_pbase,
-		    sc->sc_memt);
 	#else
 		bus_space_map(fdtbus_bs_tag, info->fb_pbase, info->fb_size,
 		    BUS_SPACE_MAP_PREFETCHABLE,

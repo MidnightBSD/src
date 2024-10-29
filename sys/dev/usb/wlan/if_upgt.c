@@ -71,7 +71,7 @@
  * Sebastien Bourdeauducq <lekernel@prism54.org>.
  */
 
-static SYSCTL_NODE(_hw, OID_AUTO, upgt, CTLFLAG_RD, 0,
+static SYSCTL_NODE(_hw, OID_AUTO, upgt, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
     "USB PrismGT GW3887 driver parameters");
 
 #ifdef UPGT_DEBUG
@@ -894,7 +894,7 @@ upgt_set_chan(struct upgt_softc *sc, struct ieee80211_channel *c)
 		    "%s: invalid channel %x\n", __func__, channel);
 		return;
 	}
-	
+
 	DPRINTF(sc, UPGT_DEBUG_STATE, "%s: channel %d\n", __func__, channel);
 
 	data_cmd = upgt_getbuf(sc);
@@ -1055,7 +1055,6 @@ upgt_eeprom_parse(struct upgt_softc *sc)
 	    (sizeof(struct upgt_eeprom_header) + preamble_len));
 
 	while (!option_end) {
-
 		/* sanity check */
 		if (eeprom_option >= (struct upgt_eeprom_option *)
 		    (sc->sc_eeprom + UPGT_EEPROM_SIZE)) {
@@ -1274,7 +1273,7 @@ upgt_eeprom_read(struct upgt_softc *sc)
 	int block, error, offset;
 
 	UPGT_LOCK(sc);
-	usb_pause_mtx(&sc->sc_mtx, 100);
+	usb_pause_mtx(&sc->sc_mtx, USB_MS_TO_TICKS(100));
 
 	offset = 0;
 	block = UPGT_EEPROM_BLOCK_SIZE;
@@ -1482,7 +1481,7 @@ upgt_rx_rate(struct upgt_softc *sc, const int rate)
 	static const uint8_t cck_upgt2rate[4] = { 2, 4, 11, 22 };
 	static const uint8_t ofdm_upgt2rate[12] =
 	    { 2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108 };
-	
+
 	if (ic->ic_curmode == IEEE80211_MODE_11B &&
 	    !(rate < 0 || rate > 3))
 		return cck_upgt2rate[rate & 0xf];
@@ -1671,7 +1670,7 @@ static int
 upgt_fw_copy(const uint8_t *src, char *dst, int size)
 {
 	int i, j;
-	
+
 	for (i = 0, j = 0; i < size && j < size; i++) {
 		switch (src[i]) {
 		case 0x7e:
@@ -1887,7 +1886,7 @@ upgt_device_reset(struct upgt_softc *sc)
 	memcpy(data->buf, init_cmd, sizeof(init_cmd));
 	data->buflen = sizeof(init_cmd);
 	upgt_bulk_tx(sc, data);
-	usb_pause_mtx(&sc->sc_mtx, 100);
+	usb_pause_mtx(&sc->sc_mtx, USB_MS_TO_TICKS(100));
 
 	UPGT_UNLOCK(sc);
 	DPRINTF(sc, UPGT_DEBUG_FW, "%s: device initialized\n", __func__);
@@ -2040,8 +2039,8 @@ upgt_sysctl_node(struct upgt_softc *sc)
 	ctx = device_get_sysctl_ctx(sc->sc_dev);
 	child = SYSCTL_CHILDREN(device_get_sysctl_tree(sc->sc_dev));
 
-	tree = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "stats", CTLFLAG_RD,
-	    NULL, "UPGT statistics");
+	tree = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "stats",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "UPGT statistics");
 	child = SYSCTL_CHILDREN(tree);
 	UPGT_SYSCTL_STAT_ADD32(ctx, child, "tx_active",
 	    &stats->st_tx_active, "Active numbers in TX queue");

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000,2003 Doug Rabson
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SYS_KOBJ_H_
@@ -174,7 +173,6 @@ struct kobj_class classvar = {				\
 	#name, methods, size, name ## _baseclasses	\
 }
 
-
 /*
  * Compile the method table in a class.
  */
@@ -251,7 +249,6 @@ extern u_int kobj_lookup_misses;
 kobj_method_t* kobj_lookup_method(kobj_class_t cls,
 				  kobj_method_t **cep,
 				  kobjop_desc_t desc);
-
 
 /*
  * Default method implementation. Returns ENXIO.

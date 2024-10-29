@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case truncate_001_pos cleanup
 truncate_001_pos_head()
 {
 	atf_set "descr" "Ensure file with random blocks is truncated properly"
-	atf_set "require.progs" zdb
+	atf_set "require.progs" "ksh93 zdb"
 	atf_set "timeout" 3600
 }
 truncate_001_pos_body()

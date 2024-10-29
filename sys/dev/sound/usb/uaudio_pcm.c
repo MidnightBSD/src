@@ -1,6 +1,6 @@
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000-2002 Hiroyuki Aizu <aizu@navi.org>
  * Copyright (c) 2006 Hans Petter Selasky
@@ -26,7 +26,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_snd.h"
@@ -188,7 +187,6 @@ static kobj_method_t ua_mixer_methods[] = {
 
 MIXER_DECLARE(ua_mixer);
 /************************************************************/
-
 
 static int
 ua_probe(device_t dev)

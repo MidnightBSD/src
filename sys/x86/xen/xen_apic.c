@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -60,14 +59,17 @@
 #define XEN_APIC_UNSUPPORTED \
 	panic("%s: not available in Xen PV port.", __func__)
 
-
 /*--------------------------- Forward Declarations ---------------------------*/
 #ifdef SMP
 static driver_filter_t xen_smp_rendezvous_action;
+#ifdef __amd64__
+static driver_filter_t xen_invlop;
+#else
 static driver_filter_t xen_invltlb;
 static driver_filter_t xen_invlpg;
 static driver_filter_t xen_invlrng;
 static driver_filter_t xen_invlcache;
+#endif
 static driver_filter_t xen_ipi_bitmap_handler;
 static driver_filter_t xen_cpustop_handler;
 static driver_filter_t xen_cpususpend_handler;
@@ -88,16 +90,28 @@ struct xen_ipi_handler
 static struct xen_ipi_handler xen_ipis[] = 
 {
 	[IPI_TO_IDX(IPI_RENDEZVOUS)]	= { xen_smp_rendezvous_action,	"r"   },
+#ifdef __amd64__
+	[IPI_TO_IDX(IPI_INVLOP)]	= { xen_invlop,			"itlb"},
+#else
 	[IPI_TO_IDX(IPI_INVLTLB)]	= { xen_invltlb,		"itlb"},
 	[IPI_TO_IDX(IPI_INVLPG)]	= { xen_invlpg,			"ipg" },
 	[IPI_TO_IDX(IPI_INVLRNG)]	= { xen_invlrng,		"irg" },
 	[IPI_TO_IDX(IPI_INVLCACHE)]	= { xen_invlcache,		"ic"  },
+#endif
 	[IPI_TO_IDX(IPI_BITMAP_VECTOR)] = { xen_ipi_bitmap_handler,	"b"   },
 	[IPI_TO_IDX(IPI_STOP)]		= { xen_cpustop_handler,	"st"  },
 	[IPI_TO_IDX(IPI_SUSPEND)]	= { xen_cpususpend_handler,	"sp"  },
 	[IPI_TO_IDX(IPI_SWI)]		= { xen_ipi_swi_handler,	"sw"  },
 };
 #endif
+
+/*
+ * Save previous (native) handler as a fallback. Xen < 4.7 doesn't support
+ * VCPUOP_send_nmi for HVM guests, and thus we need a fallback in that case:
+ *
+ * https://lists.freebsd.org/archives/freebsd-xen/2022-January/000032.html
+ */
+void (*native_ipi_vectored)(u_int, int);
 
 /*------------------------------- Per-CPU Data -------------------------------*/
 #ifdef SMP
@@ -216,6 +230,12 @@ xen_pv_apic_free_vector(u_int apic_id, u_int vector, u_int irq)
 }
 
 static void
+xen_pv_lapic_calibrate_timer(void)
+{
+
+}
+
+static void
 xen_pv_lapic_set_logical_id(u_int apic_id, u_int cluster, u_int cluster_id)
 {
 
@@ -259,10 +279,11 @@ xen_pv_lapic_ipi_raw(register_t icrlo, u_int dest)
 }
 
 #define PCPU_ID_GET(id, field) (pcpu_find(id)->pc_##field)
-static void
+static int
 send_nmi(int dest)
 {
 	unsigned int cpu;
+	int rc = 0;
 
 	/*
 	 * NMIs are not routed over event channels, and instead delivered as on
@@ -272,24 +293,33 @@ send_nmi(int dest)
 	 */
 	switch(dest) {
 	case APIC_IPI_DEST_SELF:
-		HYPERVISOR_vcpu_op(VCPUOP_send_nmi, PCPU_GET(vcpu_id), NULL);
+		rc = HYPERVISOR_vcpu_op(VCPUOP_send_nmi, PCPU_GET(vcpu_id), NULL);
 		break;
 	case APIC_IPI_DEST_ALL:
-		CPU_FOREACH(cpu)
-			HYPERVISOR_vcpu_op(VCPUOP_send_nmi,
+		CPU_FOREACH(cpu) {
+			rc = HYPERVISOR_vcpu_op(VCPUOP_send_nmi,
 			    PCPU_ID_GET(cpu, vcpu_id), NULL);
+			if (rc != 0)
+				break;
+		}
 		break;
 	case APIC_IPI_DEST_OTHERS:
-		CPU_FOREACH(cpu)
-			if (cpu != PCPU_GET(cpuid))
-				HYPERVISOR_vcpu_op(VCPUOP_send_nmi,
+		CPU_FOREACH(cpu) {
+			if (cpu != PCPU_GET(cpuid)) {
+				rc = HYPERVISOR_vcpu_op(VCPUOP_send_nmi,
 				    PCPU_ID_GET(cpu, vcpu_id), NULL);
+				if (rc != 0)
+					break;
+			}
+		}
 		break;
 	default:
-		HYPERVISOR_vcpu_op(VCPUOP_send_nmi,
+		rc = HYPERVISOR_vcpu_op(VCPUOP_send_nmi,
 		    PCPU_ID_GET(apic_cpuid(dest), vcpu_id), NULL);
 		break;
 	}
+
+	return rc;
 }
 #undef PCPU_ID_GET
 
@@ -298,9 +328,21 @@ xen_pv_lapic_ipi_vectored(u_int vector, int dest)
 {
 	xen_intr_handle_t *ipi_handle;
 	int ipi_idx, to_cpu, self;
+	static bool pvnmi = true;
 
 	if (vector >= IPI_NMI_FIRST) {
-		send_nmi(dest);
+		if (pvnmi) {
+			int rc = send_nmi(dest);
+
+			if (rc != 0) {
+				printf(
+    "Sending NMI using hypercall failed (%d) switching to APIC\n", rc);
+				pvnmi = false;
+				native_ipi_vectored(vector, dest);
+			}
+		} else
+			native_ipi_vectored(vector, dest);
+
 		return;
 	}
 
@@ -412,6 +454,7 @@ struct apic_ops xen_apic_ops = {
 	.enable_vector		= xen_pv_apic_enable_vector,
 	.disable_vector		= xen_pv_apic_disable_vector,
 	.free_vector		= xen_pv_apic_free_vector,
+	.calibrate_timer	= xen_pv_lapic_calibrate_timer,
 	.enable_pmc		= xen_pv_lapic_enable_pmc,
 	.disable_pmc		= xen_pv_lapic_disable_pmc,
 	.reenable_pmc		= xen_pv_lapic_reenable_pmc,
@@ -455,6 +498,17 @@ xen_smp_rendezvous_action(void *arg)
 	return (FILTER_HANDLED);
 }
 
+#ifdef __amd64__
+static int
+xen_invlop(void *arg)
+{
+
+	invlop_handler();
+	return (FILTER_HANDLED);
+}
+
+#else /* __i386__ */
+
 static int
 xen_invltlb(void *arg)
 {
@@ -462,64 +516,6 @@ xen_invltlb(void *arg)
 	invltlb_handler();
 	return (FILTER_HANDLED);
 }
-
-#ifdef __amd64__
-static int
-xen_invltlb_invpcid(void *arg)
-{
-
-	invltlb_invpcid_handler();
-	return (FILTER_HANDLED);
-}
-
-static int
-xen_invltlb_pcid(void *arg)
-{
-
-	invltlb_pcid_handler();
-	return (FILTER_HANDLED);
-}
-
-static int
-xen_invltlb_invpcid_pti(void *arg)
-{
-
-	invltlb_invpcid_pti_handler();
-	return (FILTER_HANDLED);
-}
-
-static int
-xen_invlpg_invpcid_handler(void *arg)
-{
-
-	invlpg_invpcid_handler();
-	return (FILTER_HANDLED);
-}
-
-static int
-xen_invlpg_pcid_handler(void *arg)
-{
-
-	invlpg_pcid_handler();
-	return (FILTER_HANDLED);
-}
-
-static int
-xen_invlrng_invpcid_handler(void *arg)
-{
-
-	invlrng_invpcid_handler();
-	return (FILTER_HANDLED);
-}
-
-static int
-xen_invlrng_pcid_handler(void *arg)
-{
-
-	invlrng_pcid_handler();
-	return (FILTER_HANDLED);
-}
-#endif
 
 static int
 xen_invlpg(void *arg)
@@ -544,6 +540,7 @@ xen_invlcache(void *arg)
 	invlcache_handler();
 	return (FILTER_HANDLED);
 }
+#endif /* __amd64__ */
 
 static int
 xen_cpustop_handler(void *arg)
@@ -586,7 +583,6 @@ xen_cpu_ipi_init(int cpu)
 	ipi_handle = DPCPU_ID_GET(cpu, ipi_handle);
 
 	for (ipi = xen_ipis, idx = 0; idx < nitems(xen_ipis); ipi++, idx++) {
-
 		if (ipi->filter == NULL) {
 			ipi_handle[idx] = NULL;
 			continue;
@@ -608,28 +604,12 @@ xen_setup_cpus(void)
 	if (!xen_vector_callback_enabled)
 		return;
 
-#ifdef __amd64__
-	if (pmap_pcid_enabled) {
-		if (pti)
-			xen_ipis[IPI_TO_IDX(IPI_INVLTLB)].filter =
-			    invpcid_works ? xen_invltlb_invpcid_pti :
-			    xen_invltlb_pcid;
-		else
-			xen_ipis[IPI_TO_IDX(IPI_INVLTLB)].filter =
-			    invpcid_works ? xen_invltlb_invpcid :
-			    xen_invltlb_pcid;
-		xen_ipis[IPI_TO_IDX(IPI_INVLPG)].filter = invpcid_works ?
-		    xen_invlpg_invpcid_handler : xen_invlpg_pcid_handler;
-		xen_ipis[IPI_TO_IDX(IPI_INVLRNG)].filter = invpcid_works ?
-		    xen_invlrng_invpcid_handler : xen_invlrng_pcid_handler;
-	}
-#endif
 	CPU_FOREACH(i)
 		xen_cpu_ipi_init(i);
 
 	/* Set the xen pv ipi ops to replace the native ones */
-	if (xen_hvm_domain())
-		apic_ops.ipi_vectored = xen_pv_lapic_ipi_vectored;
+	native_ipi_vectored = apic_ops.ipi_vectored;
+	apic_ops.ipi_vectored = xen_pv_lapic_ipi_vectored;
 }
 
 /* Switch to using PV IPIs as soon as the vcpu_id is set. */

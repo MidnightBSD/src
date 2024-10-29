@@ -23,12 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *
  */
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bitset.h>
@@ -1050,7 +1048,7 @@ bgx_init_hw(struct bgx *bgx)
 static void
 bgx_get_qlm_mode(struct bgx *bgx)
 {
-	device_t dev = bgx->dev;;
+	device_t dev = bgx->dev;
 	int lmac_type;
 	int train_en;
 

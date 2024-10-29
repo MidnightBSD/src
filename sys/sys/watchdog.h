@@ -27,7 +27,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 #ifndef _SYS_WATCHDOG_H
 #define	_SYS_WATCHDOG_H
@@ -103,7 +102,7 @@
 
 #ifdef _KERNEL
 
-#include <sys/eventhandler.h>
+#include <sys/_eventhandler.h>
 
 typedef void (*watchdog_fn)(void *, u_int, int *);
 

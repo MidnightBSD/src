@@ -100,7 +100,7 @@ usbpf_uninit(void *arg)
 	struct usb_bus *ubus;
 	int error;
 	int i;
-	
+
 	if_clone_detach(usbpf_cloner);
 
 	dc = devclass_find(usbusname);
@@ -120,7 +120,7 @@ usbpf_uninit(void *arg)
 static int
 usbpf_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 {
-	
+
 	/* No configuration allowed. */
 	return (EINVAL);
 }
@@ -189,12 +189,6 @@ usbpf_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 		return (error);
 	}
 	ifp = ubus->ifp = if_alloc(IFT_USB);
-	if (ifp == NULL) {
-		ifc_free_unit(ifc, unit);
-		device_printf(ubus->parent, "usbpf: Could not allocate "
-		    "instance\n");
-		return (ENOSPC);
-	}
 	strlcpy(ifp->if_xname, name, sizeof(ifp->if_xname));
 	ifp->if_softc = ubus;
 	ifp->if_dname = usbusname;
@@ -202,7 +196,7 @@ usbpf_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 	ifp->if_ioctl = usbpf_ioctl;
 	if_attach(ifp);
 	ifp->if_flags |= IFF_UP;
-	rt_ifmsg(ifp);
+	rt_ifmsg_14(ifp, IFF_UP);
 	/*
 	 * XXX According to the specification of DLT_USB, it indicates
 	 * packets beginning with USB setup header. But not sure all
@@ -233,7 +227,7 @@ usbpf_clone_destroy(struct if_clone *ifc, struct ifnet *ifp)
 	if_detach(ifp);
 	if_free(ifp);
 	ifc_free_unit(ifc, unit);
-	
+
 	return (0);
 }
 

@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case zfs_rollback_001_pos cleanup
 zfs_rollback_001_pos_head()
 {
 	atf_set "descr" "'zfs rollback -r|-rf|-R|-Rf' will recursively destroy anysnapshots more recent than the one specified."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 	atf_set "timeout" 1800
 }
 zfs_rollback_001_pos_body()
@@ -57,7 +55,7 @@ atf_test_case zfs_rollback_002_pos cleanup
 zfs_rollback_002_pos_head()
 {
 	atf_set "descr" "'zfs rollback -f' will force unmount any filesystems."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 	atf_set "timeout" 1800
 }
 zfs_rollback_002_pos_body()
@@ -84,7 +82,7 @@ atf_test_case zfs_rollback_003_neg cleanup
 zfs_rollback_003_neg_head()
 {
 	atf_set "descr" "Separately verify 'zfs rollback ''|-f|-r|-rf will fail indifferent conditions."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 	atf_set "timeout" 1800
 }
 zfs_rollback_003_neg_body()
@@ -111,7 +109,7 @@ atf_test_case zfs_rollback_004_neg cleanup
 zfs_rollback_004_neg_head()
 {
 	atf_set "descr" "'zfs rollback' should fail with bad options,too many arguments,non-snapshot datasets or missing datasets."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 	atf_set "timeout" 1800
 }
 zfs_rollback_004_neg_body()

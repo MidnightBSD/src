@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005, Sam Leffler <sam@errno.com>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 #ifndef _SYS_FIRMWARE_H_
 #define _SYS_FIRMWARE_H_
@@ -59,7 +58,12 @@ struct firmware {
 const struct firmware	*firmware_register(const char *,
 	const void *, size_t, unsigned int, const struct firmware *);
 int	 firmware_unregister(const char *);
+
+#define	FIRMWARE_GET_NOWARN	0x0001	/* Do not warn if firmware not found. */
+const struct firmware *firmware_get_flags(const char *, uint32_t flags);
 const struct firmware *firmware_get(const char *);
+
 #define	FIRMWARE_UNLOAD		0x0001	/* unload if unreferenced */
 void		 firmware_put(const struct firmware *, int);
+
 #endif /* _SYS_FIRMWARE_H_ */

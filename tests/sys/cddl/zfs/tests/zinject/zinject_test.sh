@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case zinject_001_pos cleanup
 zinject_001_pos_head()
 {
 	atf_set "descr" "Verify fault inject handle content error successfully."
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 	atf_set "timeout" 1800
 }
 zinject_001_pos_body()
@@ -56,7 +54,7 @@ atf_test_case zinject_002_pos cleanup
 zinject_002_pos_head()
 {
 	atf_set "descr" "Verify fault inject handle metadnode error successfully."
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 	atf_set "timeout" 1800
 }
 zinject_002_pos_body()
@@ -82,7 +80,7 @@ atf_test_case zinject_003_pos cleanup
 zinject_003_pos_head()
 {
 	atf_set "descr" "Verify fault inject handle into first metadnodecause filesystem unmountable."
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 	atf_set "timeout" 1800
 }
 zinject_003_pos_body()
@@ -108,7 +106,7 @@ atf_test_case zinject_004_pos cleanup
 zinject_004_pos_head()
 {
 	atf_set "descr" "Verify fault inject handle device error successfully."
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 	atf_set "timeout" 1800
 }
 zinject_004_pos_body()

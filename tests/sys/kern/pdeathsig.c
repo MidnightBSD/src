@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <assert.h>
 #include <atf-c.h>
 #include <errno.h>

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 The FreeBSD Foundation
  *
@@ -26,8 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 extern "C" {
@@ -243,7 +241,6 @@ TEST_F(Mkdir, parent_inode)
 
 	ASSERT_EQ(-1, mkdir(FULLPATH, mode));
 	ASSERT_EQ(EIO, errno);
-	usleep(100000);
 }
 
 TEST_F(Mkdir_7_8, ok)

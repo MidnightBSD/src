@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Rick Macklem, University of Guelph
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _NFS_NFSRVSTATE_H_
@@ -57,18 +56,18 @@ LIST_HEAD(nfsdontlisthead, nfsdontlist);
 TAILQ_HEAD(nfsuserhashhead, nfsusrgrp);
 
 #define	NFSCLIENTHASH(id)						\
-	(&nfsclienthash[(id).lval[1] % nfsrv_clienthashsize])
+	(&NFSD_VNET(nfsclienthash)[(id).lval[1] % nfsrv_clienthashsize])
 #define	NFSSTATEHASH(clp, id)						\
 	(&((clp)->lc_stateid[(id).other[2] % nfsrv_statehashsize]))
 #define	NFSUSERHASH(id)							\
-	(&nfsuserhash[(id) % nfsrv_lughashsize])
+	(&NFSD_VNET(nfsuserhash)[(id) % nfsrv_lughashsize])
 #define	NFSUSERNAMEHASH(p, l)						\
-	(&nfsusernamehash[((l)>=4?(*(p)+*((p)+1)+*((p)+2)+*((p)+3)):*(p)) \
+	(&NFSD_VNET(nfsusernamehash)[((l)>=4?(*(p)+*((p)+1)+*((p)+2)+*((p)+3)):*(p)) \
 		% nfsrv_lughashsize])
 #define	NFSGROUPHASH(id)						\
-	(&nfsgrouphash[(id) % nfsrv_lughashsize])
+	(&NFSD_VNET(nfsgrouphash)[(id) % nfsrv_lughashsize])
 #define	NFSGROUPNAMEHASH(p, l)						\
-	(&nfsgroupnamehash[((l)>=4?(*(p)+*((p)+1)+*((p)+2)+*((p)+3)):*(p)) \
+	(&NFSD_VNET(nfsgroupnamehash)[((l)>=4?(*(p)+*((p)+1)+*((p)+2)+*((p)+3)):*(p)) \
 		% nfsrv_lughashsize])
 
 struct nfssessionhash {
@@ -76,7 +75,8 @@ struct nfssessionhash {
 	struct nfssessionhashhead	list;
 };
 #define	NFSSESSIONHASH(f) 						\
-	(&nfssessionhash[nfsrv_hashsessionid(f) % nfsrv_sessionhashsize])
+	(&NFSD_VNET(nfssessionhash)[nfsrv_hashsessionid(f) %		\
+	 nfsrv_sessionhashsize])
 
 struct nfslayouthash {
 	struct mtx		mtx;
@@ -98,6 +98,7 @@ struct nfsclient {
 	struct nfsstatehead lc_deleg;		/* Delegations */
 	struct nfsstatehead lc_olddeleg;	/* and old delegations */
 	struct nfssessionhead lc_session;	/* List of NFSv4.1 sessions */
+	uint64_t	lc_prevsess;		/* CreateSession cache */
 	time_t		lc_expiry;		/* Expiry time (sec) */
 	time_t		lc_delegtime;		/* Old deleg expiry (sec) */
 	nfsquad_t	lc_clientid;		/* 64 bit clientid */
@@ -131,6 +132,7 @@ struct nfslayout {
 	nfsv4stateid_t		lay_stateid;
 	nfsquad_t		lay_clientid;
 	fhandle_t		lay_fh;
+	char			lay_deviceid[NFSX_V4DEVICEID];
 	fsid_t			lay_fsid;
 	uint32_t		lay_layoutlen;
 	uint16_t		lay_mirrorcnt;
@@ -146,6 +148,7 @@ struct nfslayout {
 #define	NFSLAY_RECALL	0x0004
 #define	NFSLAY_RETURNED	0x0008
 #define	NFSLAY_CALLB	0x0010
+#define	NFSLAY_NOSPC	0x0020
 
 /*
  * Structure for an NFSv4.1 session.
@@ -328,7 +331,7 @@ struct nfsf_rec {
 	u_int32_t	numboots;		/* Number of boottimes */
 };
 
-void nfsrv_cleanclient(struct nfsclient *, NFSPROC_T *);
+void nfsrv_cleanclient(struct nfsclient *, NFSPROC_T *, bool, SVCXPRT **);
 void nfsrv_freedeleglist(struct nfsstatehead *);
 
 /*
@@ -352,6 +355,7 @@ struct nfsdevice {
 	char			*nfsdev_host;
 	fsid_t			nfsdev_mdsfsid;
 	uint32_t		nfsdev_nextdir;
+	bool			nfsdev_nospc;
 	vnode_t			nfsdev_dsdir[0];
 };
 

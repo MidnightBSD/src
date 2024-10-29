@@ -1,12 +1,10 @@
 /*	$NetBSD: umodem.c,v 1.45 2002/09/23 05:51:23 simonb Exp $	*/
 
 #include <sys/cdefs.h>
-
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2003, M. Warner Losh <imp@FreeBSD.org>.
- * All rights reserved.
+ * Copyright (c) 2003 M. Warner Losh <imp@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -113,7 +111,8 @@
 #ifdef USB_DEBUG
 static int umodem_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, umodem, CTLFLAG_RW, 0, "USB umodem");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, umodem, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB umodem");
 SYSCTL_INT(_hw_usb_umodem, OID_AUTO, debug, CTLFLAG_RWTUN,
     &umodem_debug, 0, "Debug level");
 #endif
@@ -145,6 +144,8 @@ static const STRUCT_USB_HOST_ID umodem_host_devs[] = {
 	{USB_VENDOR(USB_VENDOR_HUAWEI),USB_IFACE_CLASS(UICLASS_CDC),
 		USB_IFACE_SUBCLASS(UISUBCLASS_ABSTRACT_CONTROL_MODEL),
 		USB_IFACE_PROTOCOL(0xFF)},
+	{USB_VENDOR(USB_VENDOR_HUAWEI), USB_IFACE_CLASS(0xFF),
+		USB_IFACE_SUBCLASS(0xF), USB_IFACE_PROTOCOL(0xFF)},
 	/* Kyocera AH-K3001V */
 	{USB_VPI(USB_VENDOR_KYOCERA, USB_PRODUCT_KYOCERA_AHK3001V, 1)},
 	{USB_VPI(USB_VENDOR_SIERRA, USB_PRODUCT_SIERRA_MC5720, 1)},
@@ -229,7 +230,6 @@ static void	umodem_find_data_iface(struct usb_attach_arg *uaa,
 		    uint8_t, uint8_t *, uint8_t *);
 
 static const struct usb_config umodem_config[UMODEM_N_TRANSFER] = {
-
 	[UMODEM_BULK_WR] = {
 		.type = UE_BULK,
 		.endpoint = UE_ADDR_ANY,
@@ -359,10 +359,11 @@ umodem_attach(device_t dev)
 
 	/* get the data interface number */
 
-	cmd = umodem_get_desc(uaa, UDESC_CS_INTERFACE, UDESCSUB_CDC_CM);
+	cmd = NULL;
+	if (!usb_test_quirk(uaa, UQ_IGNORE_CDC_CM))
+		cmd = umodem_get_desc(uaa, UDESC_CS_INTERFACE, UDESCSUB_CDC_CM);
 
 	if ((cmd == NULL) || (cmd->bLength < sizeof(*cmd))) {
-
 		cud = usbd_find_descriptor(uaa->device, NULL,
 		    uaa->info.bIfaceIndex, UDESC_CS_INTERFACE,
 		    0xFF, UDESCSUB_CDC_UNION, 0xFF);
@@ -414,7 +415,6 @@ umodem_attach(device_t dev)
 		iface = usbd_get_iface(uaa->device, i);
 
 		if (iface) {
-
 			id = usbd_get_interface_descriptor(iface);
 
 			if (id && (id->bInterfaceNumber == sc->sc_data_iface_no)) {
@@ -433,7 +433,6 @@ umodem_attach(device_t dev)
 	} else {
 		if (sc->sc_cm_cap & USB_CDC_CM_OVER_DATA) {
 			if (sc->sc_acm_cap & USB_CDC_ACM_HAS_FEATURE) {
-
 				error = umodem_set_comm_feature
 				(uaa->device, sc->sc_ctrl_iface_no,
 				 UCDC_ABSTRACT_STATE, UCDC_DATA_MULTIPLEXED);
@@ -475,7 +474,7 @@ umodem_find_data_iface(struct usb_attach_arg *uaa,
 {
 	struct usb_interface_descriptor *id;
 	struct usb_interface *iface;
-	
+
 	iface = usbd_get_iface(uaa->device, iface_index);
 
 	/* check for end of interfaces */
@@ -729,7 +728,6 @@ umodem_cfg_set_break(struct ucom_softc *ucom, uint8_t onoff)
 	DPRINTF("onoff=%d\n", onoff);
 
 	if (sc->sc_acm_cap & USB_CDC_ACM_HAS_BREAK) {
-
 		temp = onoff ? UCDC_BREAK_ON : UCDC_BREAK_OFF;
 
 		req.bmRequestType = UT_WRITE_CLASS_INTERFACE;
@@ -859,7 +857,6 @@ tr_setup:
 			goto tr_setup;
 		}
 		return;
-
 	}
 }
 
@@ -877,7 +874,6 @@ tr_setup:
 		pc = usbd_xfer_get_frame(xfer, 0);
 		if (ucom_get_data(&sc->sc_ucom, pc, 0,
 		    UMODEM_BUF_SIZE, &actlen)) {
-
 			usbd_xfer_set_frame_len(xfer, 0, actlen);
 			usbd_transfer_submit(xfer);
 		}

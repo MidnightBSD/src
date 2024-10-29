@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-2005 Bruno Ducrot
  * Copyright (c) 2004 FUKUDA Nobuhiko <nfukuda@spa.is.uec.ac.jp>
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/cpu.h>
@@ -145,7 +144,6 @@ struct pst_header {
 #define ACPI_PN8_CTRL_TO_RVO(x)		(((x) >> 28) & 0x03)
 #define ACPI_PN8_CTRL_TO_IRT(x)		(((x) >> 30) & 0x03)
 
-
 #define WRITE_FIDVID(fid, vid, ctrl)	\
 	wrmsr(MSR_AMDK7_FIDVID_CTL,	\
 	    (((ctrl) << 32) | (1ULL << 16) | ((vid) << 8) | (fid)))
@@ -167,7 +165,6 @@ static int pn7_fid_to_mult[32] = {
 	30, 190, 40, 200, 130, 135, 140, 210,
 	150, 225, 160, 165, 170, 180, 0, 0,
 };
-
 
 static int pn8_fid_to_mult[64] = {
 	40, 45, 50, 55, 60, 65, 70, 75,
@@ -261,7 +258,6 @@ static device_method_t pn_methods[] = {
 	DEVMETHOD(cpufreq_drv_get, pn_get),
 	DEVMETHOD(cpufreq_drv_settings, pn_settings),
 	DEVMETHOD(cpufreq_drv_type, pn_type),
-
 	{0, 0}
 };
 
@@ -878,7 +874,8 @@ pn_identify(driver_t *driver, device_t parent)
 	}
 	if (device_find_child(parent, "powernow", -1) != NULL)
 		return;
-	if (BUS_ADD_CHILD(parent, 10, "powernow", -1) == NULL)
+	if (BUS_ADD_CHILD(parent, 10, "powernow", device_get_unit(parent))
+	    == NULL)
 		device_printf(parent, "powernow: add child failed\n");
 }
 

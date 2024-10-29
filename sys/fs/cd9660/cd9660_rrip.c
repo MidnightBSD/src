@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bio.h>
@@ -134,7 +133,6 @@ cd9660_rrip_slink(p,ana)
 	     pcomp < pcompe;
 	     pcomp = (ISO_RRIP_SLINK_COMPONENT *)((char *)pcomp + ISO_RRIP_SLSIZ
 						  + isonum_711(pcomp->clen))) {
-
 		if (!cont) {
 			if (len < ana->maxlen) {
 				len++;
@@ -147,7 +145,6 @@ cd9660_rrip_slink(p,ana)
 		wlen = 0;
 
 		switch (*pcomp->cflag) {
-
 		case ISO_SUSP_CFLAG_CURRENT:
 			/* Inserting Current */
 			wlen = 1;
@@ -206,7 +203,6 @@ cd9660_rrip_slink(p,ana)
 		memcpy(outbuf, inbuf, wlen);
 		outbuf += wlen;
 		len += wlen;
-
 	}
 	ana->outbuf = outbuf;
 	*ana->outlen = len;
@@ -390,7 +386,6 @@ cd9660_rrip_tstamp(p,ana)
 			cd9660_tstamp_conv17(ptime,&ana->inop->inode.iso_ctime);
 		else
 			ana->inop->inode.iso_ctime = ana->inop->inode.iso_mtime;
-
 	}
 	ana->fields &= ~ISO_SUSP_TSTAMP;
 	return ISO_SUSP_TSTAMP;

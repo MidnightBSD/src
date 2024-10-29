@@ -39,7 +39,7 @@
 #ifndef _SYS_TIMEB_H_
 #define _SYS_TIMEB_H_
 
-#if defined(__GNUC__) && !defined(_IN_LIBUITL)
+#ifdef __GNUC__
 #warning "this file includes <sys/timeb.h> which is deprecated"
 #endif
 

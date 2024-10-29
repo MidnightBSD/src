@@ -1,3 +1,4 @@
+
 # building clang is particularly tedious - so avoid re-inventing wheels
 
 all: bootstrap-toolchain
@@ -48,13 +49,15 @@ BSARGS= 	DESTDIR= \
 		MK_HTML=no \
 		MK_MAN=no \
 		MK_PROFILE=no \
+		MK_RETPOLINE=no \
 		MK_SSP=no \
 		MK_TESTS=no \
-		MK_WARNS=no \
-		MK_INCLUDES=yes
+		MK_WERROR=no \
+		MK_INCLUDES=yes \
+		MK_MAN_UTILS=yes
 
 # We will handle building the toolchain and cross-compiler.
-BSARGS+= MK_CROSS_COMPILER=no MK_CLANG=no MK_GCC=no MK_LLDB=no
+BSARGS+= MK_CROSS_COMPILER=no MK_CLANG=no MK_LLDB=no
 
 DISTRIB_ENV=	INSTALL="sh ${SRCTOP}/tools/install.sh" NO_FSCHG=1 MK_TESTS=no
 legacy: .MAKE ${META_DEPS}
@@ -84,8 +87,9 @@ BSTCENV= \
 	${BSENV:MPATH=*}
 
 BSTCARGS= \
-	${BSARGS:NDESTDIR=*:NOBJTOP=*:NOBJROOT=*:NMK_CROSS_COMPILER=*:NMK_CLANG=*:NMK_GCC=*} \
+	${BSARGS:NDESTDIR=*:NOBJTOP=*:NOBJROOT=*:NMK_CROSS_COMPILER=*:NMK_CLANG=*} \
 	BUILD_DIRDEPS=yes \
+	LLVM_MIN_TBLGEN=${TOOLSDIR}/usr/bin/llvm-min-tblgen \
 	LLVM_TBLGEN=${TOOLSDIR}/usr/bin/llvm-tblgen \
 	CLANG_TBLGEN=${TOOLSDIR}/usr/bin/clang-tblgen \
 	-DWITH_STAGING \

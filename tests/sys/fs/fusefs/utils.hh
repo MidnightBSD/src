@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 The FreeBSD Foundation
  *
@@ -26,8 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 struct _sem;
@@ -55,7 +53,6 @@ const char *cache_mode_to_s(enum cache_mode cm);
 bool is_unsafe_aio_enabled(void);
 
 extern const uint32_t libfuse_max_write;
-extern const uint32_t default_max_write;
 class FuseTest : public ::testing::Test {
 	protected:
 	uint32_t m_maxreadahead;
@@ -75,14 +72,16 @@ class FuseTest : public ::testing::Test {
 	MockFS *m_mock = NULL;
 	const static uint64_t FH = 0xdeadbeef1a7ebabe;
 	const char *reclaim_mib = "debug.try_reclaim_vnode";
+	const char *m_fsname;
+	const char *m_subtype;
 
 	public:
 	int m_maxbcachebuf;
-	int m_maxphys;
+	unsigned long m_maxphys;
 
 	FuseTest():
 		m_maxreadahead(0),
-		m_maxwrite(default_max_write),
+		m_maxwrite(0),
 		m_init_flags(0),
 		m_allow_other(false),
 		m_default_permissions(false),
@@ -95,6 +94,8 @@ class FuseTest : public ::testing::Test {
 		m_noclusterr(false),
 		m_nointr(false),
 		m_time_gran(1),
+		m_fsname(""),
+		m_subtype(""),
 		m_maxbcachebuf(0),
 		m_maxphys(0)
 	{}
@@ -114,6 +115,14 @@ class FuseTest : public ::testing::Test {
 
 	/* Expect FUSE_DESTROY and shutdown the daemon */
 	void expect_destroy(int error);
+
+	/*
+	 * Create an expectation that FUSE_FALLOCATE will be called with the
+	 * given inode, offset, length, and mode, exactly times times and
+	 * returning error
+	 */
+	void expect_fallocate(uint64_t ino, uint64_t offset, uint64_t length,
+		uint32_t mode, int error, int times=1);
 
 	/*
 	 * Create an expectation that FUSE_FLUSH will be called times times for
@@ -177,7 +186,8 @@ class FuseTest : public ::testing::Test {
 	 * nothing currently validates the size of the fuse_read_in struct.
 	 */
 	void expect_read(uint64_t ino, uint64_t offset, uint64_t isize,
-		uint64_t osize, const void *contents, int flags = -1);
+		uint64_t osize, const void *contents, int flags = -1,
+		uint64_t fh = FH);
 
 	/*
 	 * Create an expectation that FUSE_READIR will be called any number of

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Copyright (c) 1999 Cameron Grant <cg@FreeBSD.org>
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _PCM_MIXER_H_
@@ -59,8 +58,10 @@ device_t mix_get_dev(struct snd_mixer *m);
 
 void mix_setdevs(struct snd_mixer *m, u_int32_t v);
 void mix_setrecdevs(struct snd_mixer *m, u_int32_t v);
+void mix_setmutedevs(struct snd_mixer *m, u_int32_t v);
 u_int32_t mix_getdevs(struct snd_mixer *m);
 u_int32_t mix_getrecdevs(struct snd_mixer *m);
+u_int32_t mix_getmutedevs(struct snd_mixer *m);
 void mix_setparentchild(struct snd_mixer *m, u_int32_t parent, u_int32_t childs);
 void mix_setrealdev(struct snd_mixer *m, u_int32_t dev, u_int32_t realdev);
 u_int32_t mix_getparent(struct snd_mixer *m, u_int32_t dev);

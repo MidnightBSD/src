@@ -7,7 +7,6 @@
 /* This file implements the VMCI doorbell API. */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 
 #include "vmci_doorbell.h"
@@ -620,7 +619,6 @@ vmci_doorbell_destroy(struct vmci_handle handle)
 
 	result = vmci_doorbell_unlink(handle, entry->is_doorbell);
 	if (VMCI_SUCCESS != result) {
-
 		/*
 		 * The only reason this should fail would be an inconsistency
 		 * between guest and hypervisor state, where the guest believes

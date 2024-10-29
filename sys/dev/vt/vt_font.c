@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Ed Schouten under sponsorship from the
  * FreeBSD Foundation.
@@ -30,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
@@ -48,7 +46,7 @@ static MALLOC_DEFINE(M_VTFONT, "vtfont", "vt font");
 #define	VTFONT_MAXDIMENSION	128
 
 static uint16_t
-vtfont_bisearch(const struct vt_font_map *map, unsigned int len, uint32_t src)
+vtfont_bisearch(const vfnt_map_t *map, unsigned int len, uint32_t src)
 {
 	int min, mid, max;
 
@@ -136,7 +134,7 @@ vtfont_unref(struct vt_font *vf)
 }
 
 static int
-vtfont_validate_map(struct vt_font_map *vfm, unsigned int length,
+vtfont_validate_map(vfnt_map_t *vfm, unsigned int length,
     unsigned int glyph_count)
 {
 	unsigned int i, last = 0;
@@ -197,7 +195,7 @@ vtfont_load(vfnt_t *f, struct vt_font **ret)
 		vf->vf_map_count[i] = f->map_count[i];
 		if (f->map_count[i] == 0)
 			continue;
-		mapsize = f->map_count[i] * sizeof(struct vt_font_map);
+		mapsize = f->map_count[i] * sizeof(vfnt_map_t);
 		vf->vf_map[i] = malloc(mapsize, M_VTFONT, M_WAITOK);
 		error = copyin(f->map[i], vf->vf_map[i], mapsize);
 		if (error)

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008-2009 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 static void
@@ -64,7 +63,7 @@ teken_subr_cons25_set_local_cursor_type(const teken_t *t, unsigned int type)
 }
 
 static const teken_color_t cons25_colors[8] = { TC_BLACK, TC_BLUE,
-    TC_GREEN, TC_CYAN, TC_RED, TC_MAGENTA, TC_BROWN, TC_WHITE };
+    TC_GREEN, TC_CYAN, TC_RED, TC_MAGENTA, TC_YELLOW, TC_WHITE };
 
 static void
 teken_subr_cons25_set_default_background(teken_t *t, unsigned int c)

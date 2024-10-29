@@ -87,7 +87,7 @@
  */
 #define	KI_NSPARE_INT	2
 #define	KI_NSPARE_LONG	12
-#define	KI_NSPARE_PTR	6
+#define	KI_NSPARE_PTR	5
 
 #ifndef _KERNEL
 #ifndef KINFO_PROC_SIZE
@@ -127,7 +127,7 @@ struct kinfo_proc {
 	struct	vnode *ki_textvp;	/* pointer to executable file */
 	struct	filedesc *ki_fd;	/* pointer to open file info */
 	struct	vmspace *ki_vmspace;	/* pointer to kernel vmspace struct */
-	void	*ki_wchan;		/* sleep address */
+	const void *ki_wchan;		/* sleep address */
 	pid_t	ki_pid;			/* Process identifier */
 	pid_t	ki_ppid;		/* parent process id */
 	pid_t	ki_pgid;		/* process group id */
@@ -212,6 +212,7 @@ struct kinfo_proc {
 	 * front of ki_spareptrs, and longs from the end of ki_sparelongs.
 	 * That way the spare room from both arrays will remain contiguous.
 	 */
+	struct	pwddesc *ki_pd;	/* pointer to process paths info */
 	void	*ki_spareptrs[KI_NSPARE_PTR];	/* spare room for growth */
 	long	ki_sparelongs[KI_NSPARE_LONG];	/* spare room for growth */
 	long	ki_sflag;		/* PS_* flags */
@@ -255,13 +256,14 @@ struct user {
 #define	KF_TYPE_PIPE	3
 #define	KF_TYPE_FIFO	4
 #define	KF_TYPE_KQUEUE	5
-#define	KF_TYPE_CRYPTO	6
+/* was	KF_TYPE_CRYPTO	6 */
 #define	KF_TYPE_MQUEUE	7
 #define	KF_TYPE_SHM	8
 #define	KF_TYPE_SEM	9
 #define	KF_TYPE_PTS	10
 #define	KF_TYPE_PROCDESC	11
 #define	KF_TYPE_DEV	12
+#define	KF_TYPE_EVENTFD	13
 #define	KF_TYPE_UNKNOWN	255
 
 #define	KF_VTYPE_VNON	0
@@ -386,7 +388,9 @@ struct kinfo_file {
 				int		kf_file_type;
 				/* Space for future use */
 				int		kf_spareint[3];
-				uint64_t	kf_spareint64[30];
+				uint64_t	kf_spareint64[29];
+				/* Number of references to file. */
+				uint64_t	kf_file_nlink;
 				/* Vnode filesystem id. */
 				uint64_t	kf_file_fsid;
 				/* File device. */
@@ -417,8 +421,9 @@ struct kinfo_file {
 				uint64_t	kf_pipe_addr;
 				uint64_t	kf_pipe_peer;
 				uint32_t	kf_pipe_buffer_cnt;
-				/* Round to 64 bit alignment. */
-				uint32_t	kf_pipe_pad0[3];
+				uint32_t	kf_pipe_buffer_in;
+				uint32_t	kf_pipe_buffer_out;
+				uint32_t	kf_pipe_buffer_size;
 			} kf_pipe;
 			struct {
 				uint32_t	kf_spareint[4];
@@ -434,6 +439,17 @@ struct kinfo_file {
 				uint64_t	kf_spareint64[32];
 				pid_t		kf_pid;
 			} kf_proc;
+			struct {
+				uint64_t	kf_eventfd_value;
+				uint32_t	kf_eventfd_flags;
+				uint32_t	kf_eventfd_spareint[3];
+				uint64_t	kf_eventfd_addr;
+			} kf_eventfd;
+			struct {
+				uint64_t	kf_kqueue_addr;
+				int32_t		kf_kqueue_count;
+				int32_t		kf_kqueue_state;
+			} kf_kqueue;
 		} kf_un;
 	};
 	uint16_t	kf_status;		/* Status flags. */
@@ -444,6 +460,28 @@ struct kinfo_file {
 	/* Truncated before copyout in sysctl */
 	char		kf_path[PATH_MAX];	/* Path to file, if any. */
 };
+
+struct kinfo_lockf {
+	int		kl_structsize;		/* Variable size of record. */
+	int		kl_rw;
+	int		kl_type;
+	int		kl_pid;
+	int		kl_sysid;
+	int		kl_pad0;
+	uint64_t	kl_file_fsid;
+	uint64_t	kl_file_rdev;
+	uint64_t	kl_file_fileid;
+	off_t		kl_start;
+	off_t		kl_len;			/* len == 0 till the EOF */
+	char		kl_path[PATH_MAX];
+};
+
+#define	KLOCKF_RW_READ		0x01
+#define	KLOCKF_RW_WRITE		0x02
+
+#define	KLOCKF_TYPE_FLOCK	0x01
+#define	KLOCKF_TYPE_PID		0x02
+#define	KLOCKF_TYPE_REMOTE	0x03
 
 /*
  * The KERN_PROC_VMMAP sysctl allows a process to dump the VM layout of
@@ -522,12 +560,17 @@ struct kinfo_vmentry {
 	uint32_t kve_vn_rdev_freebsd11;		/* Device id if device. */
 	uint16_t kve_vn_mode;			/* File mode. */
 	uint16_t kve_status;			/* Status flags. */
-	uint64_t kve_vn_fsid;			/* dev_t of vnode location */
+	union {
+		uint64_t _kve_vn_fsid;		/* dev_t of vnode location */
+		uint64_t _kve_obj;		/* handle of anon obj */
+	} kve_type_spec;
 	uint64_t kve_vn_rdev;			/* Device id if device. */
 	int	 _kve_ispare[8];		/* Space for more stuff. */
 	/* Truncated before copyout in sysctl */
 	char	 kve_path[PATH_MAX];		/* Path to VM obj, if any. */
 };
+#define	kve_vn_fsid	kve_type_spec._kve_vn_fsid
+#define	kve_obj		kve_type_spec._kve_obj
 
 /*
  * The "vm.objects" sysctl provides a list of all VM objects in the system
@@ -545,11 +588,18 @@ struct kinfo_vmobject {
 	uint64_t kvo_resident;			/* Number of resident pages. */
 	uint64_t kvo_active;			/* Number of active pages. */
 	uint64_t kvo_inactive;			/* Number of inactive pages. */
-	uint64_t kvo_vn_fsid;
-	uint64_t _kvo_qspare[7];
-	uint32_t _kvo_ispare[8];
+	union {
+		uint64_t _kvo_vn_fsid;
+		uint64_t _kvo_backing_obj;	/* Handle for the backing obj */
+	} kvo_type_spec;			/* Type-specific union */
+	uint64_t kvo_me;			/* Uniq handle for anon obj */
+	uint64_t _kvo_qspare[6];
+	uint32_t kvo_swapped;			/* Number of swapped pages */
+	uint32_t _kvo_ispare[7];
 	char	kvo_path[PATH_MAX];		/* Pathname, if any. */
 };
+#define	kvo_vn_fsid	kvo_type_spec._kvo_vn_fsid
+#define	kvo_backing_obj	kvo_type_spec._kvo_backing_obj
 
 /*
  * The KERN_PROC_KSTACK sysctl allows a process to dump the kernel stacks of

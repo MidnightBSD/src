@@ -51,6 +51,7 @@ struct thread;
 struct uio;
 struct knote;
 struct vnode;
+struct nameidata;
 
 #endif /* _KERNEL */
 
@@ -67,7 +68,7 @@ struct vnode;
 #define	DTYPE_PTS	10	/* pseudo teletype master device */
 #define	DTYPE_DEV	11	/* Device specific fd type */
 #define	DTYPE_PROCDESC	12	/* process descriptor */
-#define	DTYPE_LINUXEFD	13	/* emulation eventfd type */
+#define	DTYPE_EVENTFD	13	/* eventfd */
 #define	DTYPE_LINUXTFD	14	/* emulation timerfd type */
 
 #ifdef _KERNEL
@@ -80,7 +81,8 @@ struct ucred;
 
 #define	FOF_OFFSET	0x01	/* Use the offset in uio argument */
 #define	FOF_NOLOCK	0x02	/* Do not take FOFFSET_LOCK */
-#define	FOF_NEXTOFF	0x04	/* Also update f_nextoff */
+#define	FOF_NEXTOFF_R	0x04	/* Also update f_nextoff[UIO_READ] */
+#define	FOF_NEXTOFF_W	0x08	/* Also update f_nextoff[UIO_WRITE] */
 #define	FOF_NOUPDATE	0x10	/* Do not update f_offset */
 off_t foffset_lock(struct file *fp, int flags);
 void foffset_lock_uio(struct file *fp, struct uio *uio, int flags);
@@ -122,6 +124,12 @@ typedef int fo_mmap_t(struct file *fp, vm_map_t map, vm_offset_t *addr,
 		    vm_size_t size, vm_prot_t prot, vm_prot_t cap_maxprot,
 		    int flags, vm_ooffset_t foff, struct thread *td);
 typedef int fo_aio_queue_t(struct file *fp, struct kaiocb *job);
+typedef int fo_add_seals_t(struct file *fp, int flags);
+typedef int fo_get_seals_t(struct file *fp, int *flags);
+typedef int fo_fallocate_t(struct file *fp, off_t offset, off_t len,
+		    struct thread *td);
+typedef int fo_cmp_t(struct file *fp, struct file *fp1, struct thread *td);
+typedef int fo_spare_t(struct file *fp);
 typedef	int fo_flags_t;
 
 struct fileops {
@@ -140,6 +148,11 @@ struct fileops {
 	fo_fill_kinfo_t	*fo_fill_kinfo;
 	fo_mmap_t	*fo_mmap;
 	fo_aio_queue_t	*fo_aio_queue;
+	fo_add_seals_t	*fo_add_seals;
+	fo_get_seals_t	*fo_get_seals;
+	fo_fallocate_t	*fo_fallocate;
+	fo_cmp_t	*fo_cmp;
+	fo_spare_t	*fo_spares[7];	/* Spare slots */
 	fo_flags_t	fo_flags;	/* DFLAG_* below */
 };
 
@@ -155,7 +168,7 @@ struct fileops {
  * Below is the list of locks that protects members in struct file.
  *
  * (a) f_vnode lock required (shared allows both reads and writes)
- * (f) protected with mtx_lock(mtx_pool_find(fp))
+ * (f) updated with atomics and blocking on sleepq
  * (d) cdevpriv_mtx
  * none	not locked
  */
@@ -168,22 +181,22 @@ struct fadvise_info {
 };
 
 struct file {
-	void		*f_data;	/* file descriptor specific data */
-	struct fileops	*f_ops;		/* File operations */
-	struct ucred	*f_cred;	/* associated credentials. */
-	struct vnode 	*f_vnode;	/* NULL or applicable vnode */
-	short		f_type;		/* descriptor type */
-	short		f_vnread_flags; /* (f) Sleep lock for f_offset */
 	volatile u_int	f_flag;		/* see fcntl.h */
 	volatile u_int 	f_count;	/* reference count */
+	void		*f_data;	/* file descriptor specific data */
+	struct fileops	*f_ops;		/* File operations */
+	struct vnode 	*f_vnode;	/* NULL or applicable vnode */
+	struct ucred	*f_cred;	/* associated credentials. */
+	short		f_type;		/* descriptor type */
+	short		f_vnread_flags; /* (f) Sleep lock for f_offset */
 	/*
 	 *  DTYPE_VNODE specific fields.
 	 */
 	union {
-		int16_t	f_seqcount;	/* (a) Count of sequential accesses. */
+		int16_t	f_seqcount[2];	/* (a) Count of seq. reads and writes. */
 		int	f_pipegen;
 	};
-	off_t		f_nextoff;	/* next expected read/write offset. */
+	off_t		f_nextoff[2];	/* next expected read/write offset. */
 	union {
 		struct cdev_privdata *fvn_cdevpriv;
 					/* (d) Private data for the cdev. */
@@ -193,10 +206,6 @@ struct file {
 	 *  DFLAG_SEEKABLE specific fields
 	 */
 	off_t		f_offset;
-	/*
-	 * Mandatory Access control information.
-	 */
-	void		*f_label;	/* Place-holder for MAC label. */
 };
 
 #define	f_cdevpriv	f_vnun.fvn_cdevpriv
@@ -204,7 +213,6 @@ struct file {
 
 #define	FOFFSET_LOCKED       0x1
 #define	FOFFSET_LOCK_WAITING 0x2
-#define	FDEVFS_VNODE	     0x4
 #endif /* __BSD_VISIBLE */
 
 #endif /* _KERNEL || _WANT_FILE */
@@ -238,10 +246,10 @@ struct xfile {
 
 extern struct fileops vnops;
 extern struct fileops badfileops;
+extern struct fileops path_fileops;
 extern struct fileops socketops;
 extern int maxfiles;		/* kernel limit on number of open files */
 extern int maxfilesperproc;	/* per process limit on number of open files */
-extern volatile int openfiles;	/* actual number of open files */
 
 int fget(struct thread *td, int fd, cap_rights_t *rightsp, struct file **fpp);
 int fget_mmap(struct thread *td, int fd, cap_rights_t *rightsp,
@@ -253,6 +261,7 @@ int fget_write(struct thread *td, int fd, cap_rights_t *rightsp,
 int fget_fcntl(struct thread *td, int fd, cap_rights_t *rightsp,
     int needfcntl, struct file **fpp);
 int _fdrop(struct file *fp, struct thread *td);
+int fget_remote(struct thread *td, struct proc *p, int fd, struct file **fpp);
 
 fo_rdwr_t	invfo_rdwr;
 fo_truncate_t	invfo_truncate;
@@ -262,13 +271,16 @@ fo_kqfilter_t	invfo_kqfilter;
 fo_chmod_t	invfo_chmod;
 fo_chown_t	invfo_chown;
 fo_sendfile_t	invfo_sendfile;
-
+fo_stat_t	vn_statfile;
 fo_sendfile_t	vn_sendfile;
 fo_seek_t	vn_seek;
 fo_fill_kinfo_t	vn_fill_kinfo;
+fo_kqfilter_t	vn_kqfilter_opath;
 int vn_fill_kinfo_vnode(struct vnode *vp, struct kinfo_file *kif);
+int file_kcmp_generic(struct file *fp1, struct file *fp2, struct thread *td);
 
 void finit(struct file *, u_int, short, void *, struct fileops *);
+void finit_vnode(struct file *, u_int, void *, struct fileops *);
 int fgetvp(struct thread *td, int fd, cap_rights_t *rightsp,
     struct vnode **vpp);
 int fgetvp_exec(struct thread *td, int fd, cap_rights_t *rightsp,
@@ -279,13 +291,8 @@ int fgetvp_read(struct thread *td, int fd, cap_rights_t *rightsp,
     struct vnode **vpp);
 int fgetvp_write(struct thread *td, int fd, cap_rights_t *rightsp,
     struct vnode **vpp);
-
-static __inline int
-_fnoop(void)
-{
-
-	return (0);
-}
+int fgetvp_lookup_smr(int fd, struct nameidata *ndp, struct vnode **vpp, bool *fsearch);
+int fgetvp_lookup(int fd, struct nameidata *ndp, struct vnode **vpp);
 
 static __inline __result_use_check bool
 fhold(struct file *fp)
@@ -293,8 +300,27 @@ fhold(struct file *fp)
 	return (refcount_acquire_checked(&fp->f_count));
 }
 
-#define	fdrop(fp, td)							\
-	(refcount_release(&(fp)->f_count) ? _fdrop((fp), (td)) : _fnoop())
+#define	fdrop(fp, td)		({				\
+	struct file *_fp;					\
+	int _error;						\
+								\
+	_error = 0;						\
+	_fp = (fp);						\
+	if (__predict_false(refcount_release(&_fp->f_count)))	\
+		_error = _fdrop(_fp, td);			\
+	_error;							\
+})
+
+#define	fdrop_close(fp, td)		({			\
+	struct file *_fp;					\
+	int _error;						\
+								\
+	_error = 0;						\
+	_fp = (fp);						\
+	if (__predict_true(refcount_release(&_fp->f_count)))	\
+		_error = _fdrop(_fp, td);			\
+	_error;							\
+})
 
 static __inline fo_rdwr_t	fo_read;
 static __inline fo_rdwr_t	fo_write;
@@ -427,6 +453,42 @@ fo_aio_queue(struct file *fp, struct kaiocb *job)
 {
 
 	return ((*fp->f_ops->fo_aio_queue)(fp, job));
+}
+
+static __inline int
+fo_add_seals(struct file *fp, int seals)
+{
+
+	if (fp->f_ops->fo_add_seals == NULL)
+		return (EINVAL);
+	return ((*fp->f_ops->fo_add_seals)(fp, seals));
+}
+
+static __inline int
+fo_get_seals(struct file *fp, int *seals)
+{
+
+	if (fp->f_ops->fo_get_seals == NULL)
+		return (EINVAL);
+	return ((*fp->f_ops->fo_get_seals)(fp, seals));
+}
+
+static __inline int
+fo_fallocate(struct file *fp, off_t offset, off_t len, struct thread *td)
+{
+
+	if (fp->f_ops->fo_fallocate == NULL)
+		return (ENODEV);
+	return ((*fp->f_ops->fo_fallocate)(fp, offset, len, td));
+}
+
+static __inline int
+fo_cmp(struct file *fp1, struct file *fp2, struct thread *td)
+{
+
+	if (fp1->f_ops->fo_cmp == NULL)
+		return (ENODEV);
+	return ((*fp1->f_ops->fo_cmp)(fp1, fp2, td));
 }
 
 #endif /* _KERNEL */

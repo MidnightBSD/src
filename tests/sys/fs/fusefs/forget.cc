@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 The FreeBSD Foundation
  *
@@ -26,8 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 extern "C" {
@@ -108,6 +106,7 @@ TEST_F(Forget, invalidate_names)
 	uint64_t file_ino = 43;
 
 	EXPECT_LOOKUP(FUSE_ROOT_ID, DNAME)
+	.Times(2)
 	.WillRepeatedly(Invoke(
 		ReturnImmediate([=](auto in __unused, auto& out) {
 		SET_OUT_HEADER_LEN(out, entry);
@@ -134,7 +133,7 @@ TEST_F(Forget, invalidate_names)
 		out.body.entry.attr_valid = UINT64_MAX;
 		out.body.entry.entry_valid = UINT64_MAX;
 	})));
-	expect_forget(dir_ino, 2);
+	expect_forget(dir_ino, 1);
 
 	/* Access the file to cache its name */
 	ASSERT_EQ(0, access(FULLFPATH, F_OK)) << strerror(errno);

@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "tpm20.h"
 
 /*
@@ -84,7 +83,6 @@ struct tpmcrb_sc {
 	size_t		rsp_buf_size;
 };
 
-
 int tpmcrb_transmit(struct tpm_sc *sc, size_t size);
 
 static int tpmcrb_acpi_probe(device_t dev);
@@ -104,18 +102,17 @@ char *tpmcrb_ids[] = {"MSFT0101", NULL};
 static int
 tpmcrb_acpi_probe(device_t dev)
 {
-	int err = 0;
+	int err;
 	ACPI_TABLE_TPM23 *tbl;
 	ACPI_STATUS status;
-
-	if (ACPI_ID_PROBE(device_get_parent(dev), dev, tpmcrb_ids) == NULL)
-		return (ENXIO);
-
+	err = ACPI_ID_PROBE(device_get_parent(dev), dev, tpmcrb_ids, NULL);
+	if (err > 0)
+		return (err);
 	/*Find TPM2 Header*/
 	status = AcpiGetTable(ACPI_SIG_TPM2, 1, (ACPI_TABLE_HEADER **) &tbl);
 	if(ACPI_FAILURE(status) ||
 	   tbl->StartMethod != TPM2_START_METHOD_CRB)
-		err = ENXIO;
+		return (ENXIO);
 
 	device_set_desc(dev, "Trusted Platform Module 2.0, CRB mode");
 	return (err);

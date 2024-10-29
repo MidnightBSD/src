@@ -27,7 +27,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SYS__RMLOCK_H_
@@ -65,6 +64,19 @@ struct rm_priotracker {
 	struct thread *rmp_thread;
 	int rmp_flags;
 	LIST_ENTRY(rm_priotracker) rmp_qentry;
+};
+
+#include <sys/_mutex.h>
+
+struct rmslock_pcpu;
+
+struct rmslock {
+	struct mtx mtx;
+	struct thread *owner;
+	struct rmslock_pcpu *pcpu;
+	int	writers;
+	int	readers;
+	int	debug_readers;
 };
 
 #endif /* !_SYS__RMLOCK_H_ */

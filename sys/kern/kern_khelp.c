@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010,2013 Lawrence Stewart <lstewart@freebsd.org>
  * Copyright (c) 2010 The FreeBSD Foundation
@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/hhook.h>
@@ -255,7 +254,7 @@ khelp_get_id(char *hname)
 }
 
 int
-khelp_add_hhook(struct hookinfo *hki, uint32_t flags)
+khelp_add_hhook(const struct hookinfo *hki, uint32_t flags)
 {
 	int error;
 
@@ -269,7 +268,7 @@ khelp_add_hhook(struct hookinfo *hki, uint32_t flags)
 }
 
 int
-khelp_remove_hhook(struct hookinfo *hki)
+khelp_remove_hhook(const struct hookinfo *hki)
 {
 	int error;
 

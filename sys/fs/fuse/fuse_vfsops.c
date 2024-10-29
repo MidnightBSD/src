@@ -61,7 +61,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/buf.h>
 #include <sys/module.h>
@@ -299,20 +298,21 @@ fuse_vfsop_mount(struct mount *mp)
 
 	uint64_t mntopts, __mntopts;
 	uint32_t max_read;
+	int linux_errnos;
 	int daemon_timeout;
 	int fd;
-
-	size_t len;
 
 	struct cdev *fdev;
 	struct fuse_data *data = NULL;
 	struct thread *td;
 	struct file *fp, *fptmp;
-	char *fspec, *subtype;
+	char *fspec, *subtype, *fsname = NULL;
+	int fsnamelen;
 	struct vfsoptlist *opts;
 
 	subtype = NULL;
 	max_read = ~0;
+	linux_errnos = 0;
 	err = 0;
 	mntopts = 0;
 	__mntopts = 0;
@@ -338,6 +338,7 @@ fuse_vfsop_mount(struct mount *mp)
 	FUSE_FLAGOPT(intr, FSESS_INTR);
 
 	(void)vfs_scanopt(opts, "max_read=", "%u", &max_read);
+	(void)vfs_scanopt(opts, "linux_errnos", "%d", &linux_errnos);
 	if (vfs_scanopt(opts, "timeout=", "%u", &daemon_timeout) == 1) {
 		if (daemon_timeout < FUSE_MIN_DAEMON_TIMEOUT)
 			daemon_timeout = FUSE_MIN_DAEMON_TIMEOUT;
@@ -412,6 +413,7 @@ fuse_vfsop_mount(struct mount *mp)
 	data->dataflags |= mntopts;
 	data->max_read = max_read;
 	data->daemon_timeout = daemon_timeout;
+	data->linux_errnos = linux_errnos;
 	data->mnt_flag = mp->mnt_flag & MNT_UPDATEMASK;
 	FUSE_UNLOCK();
 
@@ -436,9 +438,11 @@ fuse_vfsop_mount(struct mount *mp)
 		strlcat(mp->mnt_stat.f_fstypename, ".", MFSNAMELEN);
 		strlcat(mp->mnt_stat.f_fstypename, subtype, MFSNAMELEN);
 	}
-	copystr(fspec, mp->mnt_stat.f_mntfromname, MNAMELEN - 1, &len);
-	bzero(mp->mnt_stat.f_mntfromname + len, MNAMELEN - len);
-	mp->mnt_iosize_max = MAXPHYS;
+	memset(mp->mnt_stat.f_mntfromname, 0, MNAMELEN);
+	vfs_getopt(opts, "fsname=", (void**)&fsname, &fsnamelen);
+	strlcpy(mp->mnt_stat.f_mntfromname,
+		fsname == NULL ? fspec : fsname, MNAMELEN);
+	mp->mnt_iosize_max = maxphys;
 
 	/* Now handshaking with daemon */
 	fuse_internal_send_init(data, td);
@@ -498,7 +502,7 @@ fuse_vfsop_unmount(struct mount *mp, int mntflags)
 	if (fdata_get_dead(data)) {
 		goto alreadydead;
 	}
-	if (fsess_isimpl(mp, FUSE_DESTROY)) {
+	if (fsess_maybe_impl(mp, FUSE_DESTROY)) {
 		fdisp_init(&fdi, 0);
 		fdisp_make(&fdi, FUSE_DESTROY, mp, 0, td, NULL);
 
@@ -599,7 +603,7 @@ fuse_vfsop_root(struct mount *mp, int lkflags, struct vnode **vpp)
 	int err = 0;
 
 	if (data->vroot != NULL) {
-		err = vget(data->vroot, lkflags, curthread);
+		err = vget(data->vroot, lkflags);
 		if (err == 0)
 			*vpp = data->vroot;
 	} else {
@@ -618,7 +622,7 @@ fuse_vfsop_root(struct mount *mp, int lkflags, struct vnode **vpp)
 				SDT_PROBE2(fusefs, , vfsops, trace, 1,
 					"root vnode race");
 				FUSE_UNLOCK();
-				VOP_UNLOCK(*vpp, 0);
+				VOP_UNLOCK(*vpp);
 				vrele(*vpp);
 				vrecycle(*vpp);
 				*vpp = data->vroot;

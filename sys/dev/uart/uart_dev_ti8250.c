@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Ian Lepore
  * All rights reserved.
@@ -29,7 +29,6 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -37,9 +36,6 @@
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
 #include <machine/bus.h>
-
-#include <arm/ti/ti_prcm.h>
-#include <arm/ti/ti_hwmods.h>
 
 #include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
@@ -50,6 +46,8 @@
 #include <dev/uart/uart_cpu_fdt.h>
 #include <dev/uart/uart_bus.h>
 #include <dev/uart/uart_dev_ns8250.h>
+
+#include <arm/ti/ti_sysc.h>
 
 #include "uart_if.h"
 
@@ -73,16 +71,8 @@ static int
 ti8250_bus_probe(struct uart_softc *sc)
 {
 	int status;
-	clk_ident_t clkid;
 
-	/* Enable clocks for this device.  We can't continue if that fails.  */
-	clkid = ti_hwmods_get_clock(sc->sc_dev);
-	if (clkid == INVALID_CLK_IDENT) {
-		device_printf(sc->sc_dev,
-		    "failed to get clock based on hwmods\n");
-		clkid = UART1_CLK + device_get_unit(sc->sc_dev);
-	}
-	if ((status = ti_prcm_clk_enable(clkid)) != 0)
+	if ((status = ti_sysc_clock_enable(device_get_parent(sc->sc_dev))) != 0)
 		return (status);
 
 	/*
@@ -116,6 +106,7 @@ static kobj_method_t ti8250_methods[] = {
 	KOBJMETHOD(uart_receive,	ns8250_bus_receive),
 	KOBJMETHOD(uart_setsig,		ns8250_bus_setsig),
 	KOBJMETHOD(uart_transmit,	ns8250_bus_transmit),
+	KOBJMETHOD(uart_txbusy,		ns8250_bus_txbusy),
 	KOBJMETHOD_END
 };
 

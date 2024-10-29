@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Seigo Tanimura
  * All rights reserved.
@@ -36,6 +36,7 @@
 
 #include <isa/isavar.h>
 
+SND_DECLARE_FILE("");
 
 #define IO_MAX	3
 #define IRQ_MAX	1

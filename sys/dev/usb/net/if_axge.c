@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013-2014 Kevin Lo
  * All rights reserved.
@@ -27,9 +27,9 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
- * ASIX Electronics AX88178A/AX88179 USB 2.0/3.0 gigabit ethernet driver.
+ * ASIX Electronics AX88178A/AX88179/AX88179A USB 2.0/3.0 gigabit ethernet
+ * driver.
  */
 
 #include <sys/param.h>
@@ -47,6 +47,10 @@
 
 #include <net/if.h>
 #include <net/if_var.h>
+#include <net/if_media.h>
+
+#include <dev/mii/mii.h>
+#include <dev/mii/miivar.h>
 
 #include <dev/usb/usb.h>
 #include <dev/usb/usbdi.h>
@@ -60,18 +64,22 @@
 #include <dev/usb/net/usb_ethernet.h>
 #include <dev/usb/net/if_axgereg.h>
 
+#include "miibus_if.h"
+
 /*
  * Various supported device vendors/products.
  */
 
 static const STRUCT_USB_HOST_ID axge_devs[] = {
-#define	AXGE_DEV(v,p) { USB_VP(USB_VENDOR_##v, USB_PRODUCT_##v##_##p) }
-	AXGE_DEV(ASIX, AX88178A),
-	AXGE_DEV(ASIX, AX88179),
-	AXGE_DEV(BELKIN, B2B128),
-	AXGE_DEV(DLINK, DUB1312),
-	AXGE_DEV(LENOVO, GIGALAN),
-	AXGE_DEV(SITECOMEU, LN032),
+#define	AXGE_DEV(v,p,i,...)	\
+	{ USB_VPI(USB_VENDOR_##v, USB_PRODUCT_##v##_##p, i), __VA_ARGS__ }
+	AXGE_DEV(ASIX, AX88178A, AXGE_FLAG_178A),
+	AXGE_DEV(ASIX, AX88179, AXGE_FLAG_179, USB_DEV_BCD_LTEQ(0x0100)),
+	AXGE_DEV(ASIX, AX88179, AXGE_FLAG_179A, USB_DEV_BCD_GTEQ(0x0200)),
+	AXGE_DEV(BELKIN, B2B128, AXGE_FLAG_179),
+	AXGE_DEV(DLINK, DUB1312, AXGE_FLAG_179),
+	AXGE_DEV(LENOVO, GIGALAN, AXGE_FLAG_179),
+	AXGE_DEV(SITECOMEU, LN032, AXGE_FLAG_179),
 #undef AXGE_DEV
 };
 
@@ -136,7 +144,8 @@ static void	axge_csum_cfg(struct usb_ether *);
 #ifdef USB_DEBUG
 static int axge_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, axge, CTLFLAG_RW, 0, "USB axge");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, axge, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB axge");
 SYSCTL_INT(_hw_usb_axge, OID_AUTO, debug, CTLFLAG_RWTUN, &axge_debug, 0,
     "Debug level");
 #endif
@@ -406,6 +415,24 @@ axge_chip_init(struct axge_softc *sc)
 	axge_write_cmd_1(sc, AXGE_ACCESS_MAC, AXGE_CLK_SELECT,
 	    AXGE_CLK_SELECT_ACS | AXGE_CLK_SELECT_BCS);
 	uether_pause(&sc->sc_ue, hz / 10);
+
+	if ((sc->sc_flags & AXGE_FLAG_179A) != 0) {
+		/*
+		 * 179A chip has two firmware modes that each use different
+		 * transfer layouts for Ethernet over USB. The newer fw mode has
+		 * larger rx packet headers which seem to
+		 * accomodate for ethernet frames up to 9K length and a VLAN
+		 * field for hardware tagging, but is not backward compatible
+		 * with 178A/179 bulk transfer code due to the change in size
+		 * and field alignments. The other fw mode uses the same packet
+		 * headers as the older 178A/179 chips, which this driver uses.
+		 *
+		 * As we do not currently have VLAN hw tagging or jumbo support
+		 * in this driver anyway, we're ok forcing 179A into its compat
+		 * mode by default.
+		 */
+		axge_write_cmd_1(sc, AXGE_FW_MODE, AXGE_FW_MODE_178A179, 0);
+	}
 }
 
 static void
@@ -444,11 +471,9 @@ axge_attach_post(struct usb_ether *ue)
 static int
 axge_attach_post_sub(struct usb_ether *ue)
 {
-	struct axge_softc *sc;
 	struct ifnet *ifp;
 	int error;
 
-	sc = uether_getsc(ue);
 	ifp = ue->ue_ifp;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_start = uether_start;
@@ -462,11 +487,11 @@ axge_attach_post_sub(struct usb_ether *ue)
 	ifp->if_hwassist = AXGE_CSUM_FEATURES;
 	ifp->if_capenable = ifp->if_capabilities;
 
-	mtx_lock(&Giant);
+	bus_topo_lock();
 	error = mii_attach(ue->ue_dev, &ue->ue_miibus, ifp,
 	    uether_ifmedia_upd, ue->ue_methods->ue_mii_sts,
 	    BMSR_DEFCAPMASK, AXGE_PHY_ADDR, MII_OFFSET_ANY, MIIF_DOPAUSE);
-	mtx_unlock(&Giant);
+	bus_topo_unlock();
 
 	return (error);
 }
@@ -550,6 +575,8 @@ axge_attach(device_t dev)
 	device_set_usb_desc(dev);
 	mtx_init(&sc->sc_mtx, device_get_nameunit(dev), NULL, MTX_DEF);
 
+	sc->sc_flags = USB_GET_DRIVER_INFO(uaa);
+
 	iface_index = AXGE_IFACE_IDX;
 	error = usbd_transfer_setup(uaa->device, &iface_index,
 	    sc->sc_xfer, axge_config, AXGE_N_TRANSFER, sc, &sc->sc_mtx);
@@ -587,7 +614,6 @@ axge_detach(device_t dev)
 	sc = device_get_softc(dev);
 	ue = &sc->sc_ue;
 	if (device_is_attached(dev)) {
-
 		/* wait for any post attach or other command to complete */
 		usb_proc_drain(&ue->ue_tq);
 
@@ -733,7 +759,6 @@ tr_setup:
 			goto tr_setup;
 		}
 		return;
-
 	}
 }
 
@@ -750,19 +775,28 @@ axge_tick(struct usb_ether *ue)
 	mii_tick(mii);
 }
 
+static u_int
+axge_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint8_t *hashtbl = arg;
+	uint32_t h;
+
+	h = ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN) >> 26;
+	hashtbl[h / 8] |= 1 << (h % 8);
+
+	return (1);
+}
+
 static void
 axge_rxfilter(struct usb_ether *ue)
 {
 	struct axge_softc *sc;
 	struct ifnet *ifp;
-	struct ifmultiaddr *ifma;
-	uint32_t h;
 	uint16_t rxmode;
 	uint8_t hashtbl[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 	sc = uether_getsc(ue);
 	ifp = uether_getifp(ue);
-	h = 0;
 	AXGE_LOCK_ASSERT(sc, MA_OWNED);
 
 	/*
@@ -785,15 +819,7 @@ axge_rxfilter(struct usb_ether *ue)
 	}
 
 	rxmode |= RCR_ACPT_MCAST;
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		h = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-		    ifma->ifma_addr), ETHER_ADDR_LEN) >> 26;
-		hashtbl[h / 8] |= 1 << (h % 8);
-	}
-	if_maddr_runlock(ifp);
+	if_foreach_llmaddr(ifp, axge_hash_maddr, &hashtbl);
 
 	axge_write_mem(sc, AXGE_ACCESS_MAC, 8, AXGE_MFA, (void *)&hashtbl, 8);
 	axge_write_cmd_2(sc, AXGE_ACCESS_MAC, 2, AXGE_RCR, rxmode);
@@ -959,8 +985,16 @@ axge_rx_frame(struct usb_ether *ue, struct usb_page_cache *pc, int actlen)
 	hdr_off = pkt_end = (rxhdr >> 16) & 0xFFFF;
 
 	/*
+	 * On older firmware:
 	 * <----------------------- actlen ------------------------>
 	 * [frame #0]...[frame #N][pkt_hdr #0]...[pkt_hdr #N][rxhdr]
+	 *
+	 * On newer firmware:
+	 * <----------------------- actlen -----------------
+	 * [frame #0]...[frame #N][pkt_hdr #0][dummy_hdr]...
+	 *                         -------------------------------->
+	 *                         ...[pkt_hdr #N][dummy_hdr][rxhdr]
+	 *
 	 * Each RX frame would be aligned on 8 bytes boundary. If
 	 * RCR_IPE bit is set in AXGE_RCR register, there would be 2
 	 * padding bytes and 6 dummy bytes(as the padding also should
@@ -968,6 +1002,10 @@ axge_rx_frame(struct usb_ether *ue, struct usb_page_cache *pc, int actlen)
 	 * IP header on 32bits boundary.  Driver don't set RCR_IPE bit
 	 * of AXGE_RCR register, so there should be no padding bytes
 	 * which simplifies RX logic a lot.
+	 *
+	 * Further, newer firmware interweaves dummy headers that have
+	 * pktlen == 0 and should be skipped without being seen as
+	 * dropped frames.
 	 */
 	while (pkt_cnt--) {
 		/* verify the header offset */
@@ -978,6 +1016,12 @@ axge_rx_frame(struct usb_ether *ue, struct usb_page_cache *pc, int actlen)
 		usbd_copy_out(pc, hdr_off, &pkt_hdr, sizeof(pkt_hdr));
 		pkt_hdr.status = le32toh(pkt_hdr.status);
 		pktlen = AXGE_RXBYTES(pkt_hdr.status);
+		hdr_off += sizeof(pkt_hdr);
+
+		/* Skip dummy packet header. */
+		if (pktlen == 0)
+			continue;
+
 		if (pos + pktlen > pkt_end) {
 			DPRINTF("Data position reached end\n");
 			break;
@@ -989,7 +1033,6 @@ axge_rx_frame(struct usb_ether *ue, struct usb_page_cache *pc, int actlen)
 		} else
 			axge_rxeof(ue, pc, pos, pktlen, pkt_hdr.status);
 		pos += (pktlen + 7) & ~7;
-		hdr_off += sizeof(pkt_hdr);
 	}
 }
 
@@ -1035,7 +1078,7 @@ axge_rxeof(struct usb_ether *ue, struct usb_page_cache *pc, unsigned int offset,
 	}
 	if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 
-	_IF_ENQUEUE(&ue->ue_rxq, m);
+	(void)mbufq_enqueue(&ue->ue_rxq, m);
 }
 
 static void

@@ -7,7 +7,6 @@
 /* This file implements defines and helper functions. */
 
 #include <sys/cdefs.h>
-
 #include <sys/malloc.h>
 #include <sys/proc.h>
 #include <sys/uio.h>
@@ -69,7 +68,7 @@ void
 vmci_cleanup_lock(vmci_lock *lock)
 {
 
-	if mtx_initialized(lock)
+	if (mtx_initialized(lock))
 		mtx_destroy(lock);
 }
 
@@ -660,7 +659,6 @@ vmci_alloc_ppn_set(void *prod_q, uint64_t num_produce_pages, void *cons_q,
 		if (sizeof(pfn) >
 		    sizeof(*consume_ppns) && pfn != consume_ppns[i])
 			goto ppn_error;
-
 	}
 
 	ppn_set->num_produce_pages = num_produce_pages;

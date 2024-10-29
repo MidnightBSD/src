@@ -7,8 +7,8 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
+#include <sys/param.h>
 #include <sys/module.h>
 #include <dev/videomode/videomode.h>
 

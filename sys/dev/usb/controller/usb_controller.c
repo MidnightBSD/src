@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -85,7 +85,8 @@ static void	usb_attach_sub(device_t, struct usb_bus *);
 #ifdef USB_DEBUG
 static int usb_ctrl_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, ctrl, CTLFLAG_RW, 0, "USB controller");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, ctrl, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB controller");
 SYSCTL_INT(_hw_usb_ctrl, OID_AUTO, debug, CTLFLAG_RWTUN, &usb_ctrl_debug, 0,
     "Debug level");
 #endif
@@ -379,7 +380,6 @@ usb_bus_explore(struct usb_proc_msg *pm)
 	}
 
 	if (udev != NULL && udev->hub != NULL) {
-
 		if (bus->do_probe) {
 			bus->do_probe = 0;
 			bus->driver_added_refcount++;
@@ -415,6 +415,9 @@ usb_bus_explore(struct usb_proc_msg *pm)
 #if USB_HAVE_ROOT_MOUNT_HOLD
 	usb_root_mount_rel(bus);
 #endif
+
+	/* Nice the enumeration a bit, to avoid looping too fast. */
+	usb_pause_mtx(&bus->bus_mtx, USB_MS_TO_TICKS(usb_enum_nice_time));
 }
 
 /*------------------------------------------------------------------------*
@@ -437,9 +440,9 @@ usb_bus_detach(struct usb_proc_msg *pm)
 	USB_BUS_UNLOCK(bus);
 
 	/* detach children first */
-	mtx_lock(&Giant);
+	bus_topo_lock();
 	bus_generic_detach(dev);
-	mtx_unlock(&Giant);
+	bus_topo_unlock();
 
 	/*
 	 * Free USB device and all subdevices, if any.
@@ -654,7 +657,6 @@ usb_bus_cleanup(struct usb_proc_msg *pm)
 	bus = ((struct usb_bus_msg *)pm)->bus;
 
 	while ((pd = LIST_FIRST(&bus->pd_cleanup_list)) != NULL) {
-
 		LIST_REMOVE(pd, pd_next);
 		USB_BUS_UNLOCK(bus);
 
@@ -803,10 +805,10 @@ usb_bus_attach(struct usb_proc_msg *pm)
 static void
 usb_attach_sub(device_t dev, struct usb_bus *bus)
 {
-	mtx_lock(&Giant);
+	bus_topo_lock();
 	if (usb_devclass_ptr == NULL)
 		usb_devclass_ptr = devclass_find("usbus");
-	mtx_unlock(&Giant);
+	bus_topo_unlock();
 
 #if USB_HAVE_PF
 	usbpf_attach(bus);

@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case xattr_001_pos cleanup
 xattr_001_pos_head()
 {
 	atf_set "descr" "Create/read/write/append of xattrs works"
-	atf_set "require.progs"  svcadm svcs
+	atf_set "require.progs" "ksh93 svcadm svcs"
 }
 xattr_001_pos_body()
 {
@@ -55,7 +53,7 @@ atf_test_case xattr_002_neg cleanup
 xattr_002_neg_head()
 {
 	atf_set "descr" "A read of a non-existent xattr fails"
-	atf_set "require.progs"  svcadm svcs
+	atf_set "require.progs" "ksh93 svcadm svcs"
 }
 xattr_002_neg_body()
 {
@@ -80,7 +78,7 @@ atf_test_case xattr_003_neg cleanup
 xattr_003_neg_head()
 {
 	atf_set "descr" "read/write xattr on a file with no permissions fails"
-	atf_set "require.progs"  svcs svcadm runat runwattr
+	atf_set "require.progs" "ksh93 svcs svcadm runat runwattr"
 }
 xattr_003_neg_body()
 {
@@ -105,7 +103,7 @@ atf_test_case xattr_004_pos cleanup
 xattr_004_pos_head()
 {
 	atf_set "descr" "Files from ufs,tmpfs with xattrs copied to zfs retain xattr info."
-	atf_set "require.progs"  zfs svcadm runat svcs
+	atf_set "require.progs" "ksh93 zfs svcadm runat svcs"
 }
 xattr_004_pos_body()
 {
@@ -130,7 +128,7 @@ atf_test_case xattr_005_pos cleanup
 xattr_005_pos_head()
 {
 	atf_set "descr" "read/write/create/delete xattr on a clone filesystem"
-	atf_set "require.progs"  zfs svcadm svcs
+	atf_set "require.progs" "ksh93 zfs svcadm svcs"
 }
 xattr_005_pos_body()
 {
@@ -155,7 +153,7 @@ atf_test_case xattr_006_pos cleanup
 xattr_006_pos_head()
 {
 	atf_set "descr" "read xattr on a snapshot"
-	atf_set "require.progs"  zfs svcadm svcs
+	atf_set "require.progs" "ksh93 zfs svcadm svcs"
 }
 xattr_006_pos_body()
 {
@@ -180,7 +178,7 @@ atf_test_case xattr_007_neg cleanup
 xattr_007_neg_head()
 {
 	atf_set "descr" "create/write xattr on a snapshot fails"
-	atf_set "require.progs"  zfs svcadm runat svcs
+	atf_set "require.progs" "ksh93 zfs svcadm runat svcs"
 }
 xattr_007_neg_body()
 {
@@ -205,7 +203,7 @@ atf_test_case xattr_008_pos cleanup
 xattr_008_pos_head()
 {
 	atf_set "descr" "special . and .. dirs work as expected for xattrs"
-	atf_set "require.progs"  svcadm runat svcs
+	atf_set "require.progs" "ksh93 svcadm runat svcs"
 }
 xattr_008_pos_body()
 {
@@ -230,7 +228,7 @@ atf_test_case xattr_009_neg cleanup
 xattr_009_neg_head()
 {
 	atf_set "descr" "links between xattr and normal file namespace fail"
-	atf_set "require.progs"  svcadm runat svcs
+	atf_set "require.progs" "ksh93 svcadm runat svcs"
 }
 xattr_009_neg_body()
 {
@@ -255,7 +253,7 @@ atf_test_case xattr_010_neg cleanup
 xattr_010_neg_head()
 {
 	atf_set "descr" "mkdir, mknod fail"
-	atf_set "require.progs"  svcadm runat svcs
+	atf_set "require.progs" "ksh93 svcadm runat svcs"
 }
 xattr_010_neg_body()
 {
@@ -280,7 +278,7 @@ atf_test_case xattr_011_pos cleanup
 xattr_011_pos_head()
 {
 	atf_set "descr" "Basic applications work with xattrs: cpio cp find mv pax tar"
-	atf_set "require.progs"  pax svcadm runat svcs
+	atf_set "require.progs" "ksh93 pax svcadm runat svcs"
 }
 xattr_011_pos_body()
 {
@@ -305,7 +303,7 @@ atf_test_case xattr_012_pos cleanup
 xattr_012_pos_head()
 {
 	atf_set "descr" "xattr file sizes count towards normal disk usage"
-	atf_set "require.progs"  svcadm zfs runat zpool svcs
+	atf_set "require.progs" "ksh93 svcadm zfs runat zpool svcs"
 }
 xattr_012_pos_body()
 {
@@ -330,7 +328,7 @@ atf_test_case xattr_013_pos cleanup
 xattr_013_pos_head()
 {
 	atf_set "descr" "The noxattr mount option functions as expected"
-	atf_set "require.progs"  zfs svcadm runat svcs
+	atf_set "require.progs" "ksh93 zfs svcadm runat svcs"
 }
 xattr_013_pos_body()
 {

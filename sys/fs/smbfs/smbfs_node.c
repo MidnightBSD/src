@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -123,7 +122,7 @@ smbfs_node_alloc(struct mount *mp, struct vnode *dvp, const char *dirnm,
 		if (dvp == NULL)
 			return EINVAL;
 		vp = VTOSMB(VTOSMB(dvp)->n_parent)->n_vnode;
-		error = vget(vp, LK_EXCLUSIVE, td);
+		error = vget(vp, LK_EXCLUSIVE);
 		if (error == 0)
 			*vpp = vp;
 		return error;
@@ -256,28 +255,20 @@ smbfs_nget(struct mount *mp, struct vnode *dvp, const char *name, int nmlen,
  * Free smbnode, and give vnode back to system
  */
 int
-smbfs_reclaim(ap)                     
-        struct vop_reclaim_args /* {
-		struct vnode *a_vp;
-		struct thread *a_p;
-        } */ *ap;
+smbfs_reclaim(struct vop_reclaim_args *ap)
 {
 	struct vnode *vp = ap->a_vp;
 	struct vnode *dvp;
 	struct smbnode *np = VTOSMB(vp);
 	struct smbmount *smp = VTOSMBFS(vp);
-	
+
 	SMBVDEBUG("%s,%d\n", np->n_name, vrefcnt(vp));
 
 	KASSERT((np->n_flag & NOPEN) == 0, ("file not closed before reclaim"));
 
-	/*
-	 * Destroy the vm object and flush associated pages.
-	 */
-	vnode_destroy_vobject(vp);
 	dvp = (np->n_parent && (np->n_flag & NREFPARENT)) ?
 	    np->n_parent : NULL;
-	
+
 	/*
 	 * Remove the vnode from its hash chain.
 	 */
@@ -300,13 +291,9 @@ smbfs_reclaim(ap)
 }
 
 int
-smbfs_inactive(ap)
-	struct vop_inactive_args /* {
-		struct vnode *a_vp;
-		struct thread *a_td;
-	} */ *ap;
+smbfs_inactive(struct vop_inactive_args *ap)
 {
-	struct thread *td = ap->a_td;
+	struct thread *td = curthread;
 	struct ucred *cred = td->td_ucred;
 	struct vnode *vp = ap->a_vp;
 	struct smbnode *np = VTOSMB(vp);

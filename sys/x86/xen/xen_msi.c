@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -56,7 +55,7 @@ xen_msi_init(void)
 {
 
 	MPASS(num_io_irqs > 0);
-	first_msi_irq = min(MINIMUM_MSI_INT, num_io_irqs);
+	first_msi_irq = num_io_irqs;
 	if (num_msi_irqs > UINT_MAX - first_msi_irq)
 		panic("num_msi_irqs too high");
 	num_io_irqs = first_msi_irq + num_msi_irqs;

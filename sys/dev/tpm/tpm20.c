@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/random.h>
 
 #include "tpm20.h"
@@ -38,14 +37,14 @@
  * we don't want to execute this too often
  * as the chip is likely to be used by others too.
  */
-#define TPM_HARVEST_INTERVAL 10000000
+#define TPM_HARVEST_INTERVAL 10
 
 MALLOC_DECLARE(M_TPM20);
 MALLOC_DEFINE(M_TPM20, "tpm_buffer", "buffer for tpm 2.0 driver");
 
 static void tpm20_discard_buffer(void *arg);
 #ifdef TPM_HARVEST
-static void tpm20_harvest(void *arg);
+static void tpm20_harvest(void *arg, int unused);
 #endif
 static int  tpm20_save_state(device_t dev, bool suspend);
 
@@ -176,7 +175,6 @@ tpm20_close(struct cdev *dev, int flag, int mode, struct thread *td)
 	return (0);
 }
 
-
 int
 tpm20_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
     int flags, struct thread *td)
@@ -195,11 +193,6 @@ tpm20_init(struct tpm_sc *sc)
 	sx_init(&sc->dev_lock, "TPM driver lock");
 	cv_init(&sc->buf_cv, "TPM buffer cv");
 	callout_init(&sc->discard_buffer_callout, 1);
-#ifdef TPM_HARVEST
-	sc->harvest_ticks = TPM_HARVEST_INTERVAL / tick;
-	callout_init(&sc->harvest_callout, 1);
-	callout_reset(&sc->harvest_callout, 0, tpm20_harvest, sc);
-#endif
 	sc->pending_data_length = 0;
 
 	make_dev_args_init(&args);
@@ -212,6 +205,13 @@ tpm20_init(struct tpm_sc *sc)
 	if (result != 0)
 		tpm20_release(sc);
 
+#ifdef TPM_HARVEST
+	random_harvest_register_source(RANDOM_PURE_TPM);
+	TIMEOUT_TASK_INIT(taskqueue_thread, &sc->harvest_task, 0,
+	    tpm20_harvest, sc);
+	taskqueue_enqueue_timeout(taskqueue_thread, &sc->harvest_task, 0);
+#endif
+
 	return (result);
 
 }
@@ -221,7 +221,9 @@ tpm20_release(struct tpm_sc *sc)
 {
 
 #ifdef TPM_HARVEST
-	callout_drain(&sc->harvest_callout);
+	if (device_is_attached(sc->dev))
+		taskqueue_drain_timeout(taskqueue_thread, &sc->harvest_task);
+	random_harvest_deregister_source(RANDOM_PURE_TPM);
 #endif
 
 	if (sc->buf != NULL)
@@ -232,7 +234,6 @@ tpm20_release(struct tpm_sc *sc)
 	if (sc->sc_cdev != NULL)
 		destroy_dev(sc->sc_cdev);
 }
-
 
 int
 tpm20_suspend(device_t dev)
@@ -247,13 +248,12 @@ tpm20_shutdown(device_t dev)
 }
 
 #ifdef TPM_HARVEST
-
 /*
  * Get TPM_HARVEST_SIZE random bytes and add them
  * into system entropy pool.
  */
 static void
-tpm20_harvest(void *arg)
+tpm20_harvest(void *arg, int unused)
 {
 	struct tpm_sc *sc;
 	unsigned char entropy[TPM_HARVEST_SIZE];
@@ -265,7 +265,6 @@ tpm20_harvest(void *arg)
 		0x00, 0x00, 0x01, 0x7b,	/* cmd TPM_CC_GetRandom */
 		0x00, TPM_HARVEST_SIZE 	/* number of bytes requested */
 	};
-
 
 	sc = arg;
 	sx_xlock(&sc->dev_lock);
@@ -295,7 +294,8 @@ tpm20_harvest(void *arg)
 	if (entropy_size > 0)
 		random_harvest_queue(entropy, entropy_size, RANDOM_PURE_TPM);
 
-	callout_reset(&sc->harvest_callout, sc->harvest_ticks, tpm20_harvest, sc);
+	taskqueue_enqueue_timeout(taskqueue_thread, &sc->harvest_task,
+	    hz * TPM_HARVEST_INTERVAL);
 }
 #endif	/* TPM_HARVEST */
 

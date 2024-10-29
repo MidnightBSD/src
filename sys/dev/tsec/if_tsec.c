@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2007-2008 Semihalf, Rafal Jaworowski
  * Copyright (C) 2006-2007 Semihalf, Piotr Kruszynski
@@ -30,7 +30,6 @@
  * Freescale integrated Three-Speed Ethernet Controller (TSEC) driver.
  */
 #include <sys/cdefs.h>
-
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
 #endif
@@ -241,12 +240,6 @@ tsec_attach(struct tsec_softc *sc)
 
 	/* Create network interface for upper layers */
 	ifp = sc->tsec_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(sc->dev, "if_alloc() failed\n");
-		tsec_detach(sc);
-		return (ENOMEM);
-	}
-
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(sc->dev), device_get_unit(sc->dev));
 	ifp->if_flags = IFF_SIMPLEX | IFF_MULTICAST | IFF_BROADCAST;
@@ -268,7 +261,7 @@ tsec_attach(struct tsec_softc *sc)
 	/* Advertise that polling is supported */
 	ifp->if_capabilities |= IFCAP_POLLING;
 #endif
-	
+
 	/* Attach PHY(s) */
 	error = mii_attach(sc->dev, &sc->tsec_miibus, ifp, tsec_ifmedia_upd,
 	    tsec_ifmedia_sts, BMSR_DEFCAPMASK, sc->phyaddr, MII_OFFSET_ANY,
@@ -371,7 +364,6 @@ tsec_mii_wait(struct tsec_softc *sc, uint32_t flags)
 
 	return (timeout == 0);
 }
-
 
 static void
 tsec_init_locked(struct tsec_softc *sc)
@@ -555,7 +547,7 @@ tsec_init_locked(struct tsec_softc *sc)
 
 	/* Step 26: Setup multicast filters */
 	tsec_setup_multicast(sc);
-	
+
 	/* Step 27: Activate network interface */
 	ifp->if_drv_flags |= IFF_DRV_RUNNING;
 	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
@@ -741,7 +733,6 @@ tsec_start_locked(struct ifnet *ifp)
 	    BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
 
 	for (;;) {
-
 		if (TSEC_FREE_TX_DESC(sc) < TSEC_TX_MAX_DMA_SEGS) {
 			/* No free descriptors */
 			ifp->if_drv_flags |= IFF_DRV_OACTIVE;
@@ -805,7 +796,7 @@ tsec_encap(struct ifnet *ifp, struct tsec_softc *sc, struct mbuf *m0,
 
 	tx_idx = sc->tx_idx_head;
 	tx_bufmap = &sc->tx_bufmap[tx_idx];
- 
+
 	/* Create mapping in DMA memory */
 	error = bus_dmamap_load_mbuf_sg(sc->tsec_tx_mtag, tx_bufmap->map, m0,
 	    segs, &nsegs, BUS_DMA_NOWAIT);
@@ -830,7 +821,7 @@ tsec_encap(struct ifnet *ifp, struct tsec_softc *sc, struct mbuf *m0,
 	bus_dmamap_sync(sc->tsec_tx_mtag, tx_bufmap->map,
 	    BUS_DMASYNC_PREWRITE);
 	tx_bufmap->mbuf = m0;
- 
+
 	/*
 	 * Fill in the TX descriptors back to front so that READY bit in first
 	 * descriptor is set last.
@@ -1327,7 +1318,6 @@ tsec_receive_intr_locked(struct tsec_softc *sc, int count)
 
 		if (flags & (TSEC_RXBD_LG | TSEC_RXBD_SH | TSEC_RXBD_NO |
 		    TSEC_RXBD_CR | TSEC_RXBD_OV | TSEC_RXBD_TR)) {
-
 			rx_desc->length = 0;
 			rx_desc->flags = (rx_desc->flags &
 			    ~TSEC_RXBD_ZEROONINIT) | TSEC_RXBD_E | TSEC_RXBD_I;
@@ -1679,22 +1669,22 @@ tsec_add_sysctls(struct tsec_softc *sc)
 	ctx = device_get_sysctl_ctx(sc->dev);
 	children = SYSCTL_CHILDREN(device_get_sysctl_tree(sc->dev));
 	tree = SYSCTL_ADD_NODE(ctx, children, OID_AUTO, "int_coal",
-	    CTLFLAG_RD, 0, "TSEC Interrupts coalescing");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, 0, "TSEC Interrupts coalescing");
 	children = SYSCTL_CHILDREN(tree);
 
 	SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "rx_time",
-	    CTLTYPE_UINT | CTLFLAG_RW, sc, TSEC_IC_RX, tsec_sysctl_ic_time,
-	    "I", "IC RX time threshold (0-65535)");
+	    CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_MPSAFE, sc, TSEC_IC_RX,
+	    tsec_sysctl_ic_time, "I", "IC RX time threshold (0-65535)");
 	SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "rx_count",
-	    CTLTYPE_UINT | CTLFLAG_RW, sc, TSEC_IC_RX, tsec_sysctl_ic_count,
-	    "I", "IC RX frame count threshold (0-255)");
+	    CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_MPSAFE, sc, TSEC_IC_RX,
+	    tsec_sysctl_ic_count, "I", "IC RX frame count threshold (0-255)");
 
 	SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "tx_time",
-	    CTLTYPE_UINT | CTLFLAG_RW, sc, TSEC_IC_TX, tsec_sysctl_ic_time,
-	    "I", "IC TX time threshold (0-65535)");
+	    CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_MPSAFE, sc, TSEC_IC_TX,
+	    tsec_sysctl_ic_time, "I", "IC TX time threshold (0-65535)");
 	SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "tx_count",
-	    CTLTYPE_UINT | CTLFLAG_RW, sc, TSEC_IC_TX, tsec_sysctl_ic_count,
-	    "I", "IC TX frame count threshold (0-255)");
+	    CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_MPSAFE, sc, TSEC_IC_TX,
+	    tsec_sysctl_ic_count, "I", "IC TX frame count threshold (0-255)");
 }
 
 /*
@@ -1846,7 +1836,6 @@ tsec_offload_setup(struct tsec_softc *sc)
 	TSEC_WRITE(sc, TSEC_REG_RCTRL, reg);
 }
 
-
 static void
 tsec_offload_process_frame(struct tsec_softc *sc, struct mbuf *m)
 {
@@ -1870,7 +1859,6 @@ tsec_offload_process_frame(struct tsec_softc *sc, struct mbuf *m)
 	if ((protocol == IPPROTO_TCP || protocol == IPPROTO_UDP) &&
 	    TSEC_RX_FCB_TCP_UDP_CSUM_CHECKED(flags) &&
 	    (flags & TSEC_RX_FCB_TCP_UDP_CSUM_ERROR) == 0) {
-
 		csum_flags |= CSUM_DATA_VALID | CSUM_PSEUDO_HDR;
 		m->m_pkthdr.csum_data = 0xFFFF;
 	}
@@ -1885,13 +1873,22 @@ tsec_offload_process_frame(struct tsec_softc *sc, struct mbuf *m)
 	m_adj(m, sizeof(struct tsec_rx_fcb));
 }
 
+static u_int
+tsec_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint32_t h, *hashtable = arg;
+
+	h = (ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN) >> 24) & 0xFF;
+	hashtable[(h >> 5)] |= 1 << (0x1F - (h & 0x1F));
+
+	return (1);
+}
+
 static void
 tsec_setup_multicast(struct tsec_softc *sc)
 {
 	uint32_t hashtable[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 	struct ifnet *ifp = sc->tsec_ifp;
-	struct ifmultiaddr *ifma;
-	uint32_t h;
 	int i;
 
 	TSEC_GLOBAL_LOCK_ASSERT(sc);
@@ -1903,18 +1900,7 @@ tsec_setup_multicast(struct tsec_softc *sc)
 		return;
 	}
 
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-
-		h = (ether_crc32_be(LLADDR((struct sockaddr_dl *)
-		    ifma->ifma_addr), ETHER_ADDR_LEN) >> 24) & 0xFF;
-
-		hashtable[(h >> 5)] |= 1 << (0x1F - (h & 0x1F));
-	}
-	if_maddr_runlock(ifp);
+	if_foreach_llmaddr(ifp, tsec_hash_maddr, &hashtable);
 
 	for (i = 0; i < 8; i++)
 		TSEC_WRITE(sc, TSEC_REG_GADDR(i), hashtable[i]);

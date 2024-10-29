@@ -97,6 +97,7 @@
 #endif
 #if __BSD_VISIBLE
 #define	IMAXBEL		0x00002000	/* ring bell on input queue full */
+#define IUTF8		0x00004000	/* assume input is utf-8 encoded */
 #endif
 
 /*
@@ -142,8 +143,8 @@
 #define	CDTR_IFLOW	0x00040000	/* DTR flow control of input */
 #define	CDSR_OFLOW	0x00080000	/* DSR flow control of output */
 #define	CCAR_OFLOW	0x00100000	/* DCD flow control of output */
+#define	CNO_RTSDTR	0x00200000	/* Do not assert RTS or DTR automatically */
 #endif
-
 
 /*
  * "Local" flags - dumping ground for other state
@@ -207,7 +208,15 @@
 #define	B115200	115200
 #define	B230400	230400
 #define	B460800	460800
+#define B500000 500000
 #define	B921600	921600
+#define B1000000	1000000U
+#define B1500000	1500000U
+#define B2000000	2000000U
+#define B2500000	2500000U
+#define B3000000	3000000U
+#define B3500000	3500000U
+#define B4000000	4000000U
 #define	EXTA	19200
 #define	EXTB	38400
 #endif

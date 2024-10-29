@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -30,7 +30,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 /*
  * This source file contains the state-engine which makes things happen in the
@@ -75,6 +74,20 @@
 #include <crypto/sha2/sha512.h>
 #include <geom/geom.h>
 #include <geom/bde/g_bde.h>
+
+/*
+ * FIXME: This used to call malloc_last_fail which in practice was almost
+ * guaranteed to return time_uptime even in face of severe memory shortage.
+ * As GBDE is the only consumer the kludge below was added to facilitate the
+ * removal with minimial changes. The code should be fixed to respond to memory
+ * pressure (e.g., by using lowmem eventhandler) instead.
+ */
+static int
+g_bde_malloc_last_fail(void)
+{
+
+	return (time_uptime);
+}
 
 static void g_bde_delete_sector(struct g_bde_softc *wp, struct g_bde_sector *sp);
 static struct g_bde_sector * g_bde_new_sector(struct g_bde_work *wp, u_int len);
@@ -209,7 +222,7 @@ g_bde_get_keysector(struct g_bde_work *wp)
 	g_trace(G_T_TOPOLOGY, "g_bde_get_keysector(%p, %jd)", wp, (intmax_t)offset);
 	sc = wp->softc;
 
-	if (malloc_last_fail() < g_bde_ncache)
+	if (g_bde_malloc_last_fail() < g_bde_ncache)
 		g_bde_purge_sector(sc, -1);
 
 	sp = TAILQ_FIRST(&sc->freelist);
@@ -227,7 +240,7 @@ g_bde_get_keysector(struct g_bde_work *wp)
 		if (sp->ref == 1)
 			sp->owner = wp;
 	} else {
-		if (malloc_last_fail() < g_bde_ncache) {
+		if (g_bde_malloc_last_fail() < g_bde_ncache) {
 			TAILQ_FOREACH(sp, &sc->freelist, list)
 				if (sp->ref == 0)
 					break;
@@ -310,7 +323,7 @@ g_bde_purge_sector(struct g_bde_softc *sc, int fraction)
 	if (fraction > 0)
 		n = sc->ncache / fraction + 1;
 	else 
-		n = g_bde_ncache - malloc_last_fail();
+		n = g_bde_ncache - g_bde_malloc_last_fail();
 	if (n < 0)
 		return;
 	if (n > sc->ncache)

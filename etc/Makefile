@@ -1,8 +1,11 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
 
 .include <src.opts.mk>
+.include <src.tools.mk>
 
 FILESGROUPS=	FILES
+NLS_ALIASES=	POSIX C \
+		en_US.US_ASCII C
 
 # No need as it is empty and just causes rebuilds since this file does so much.
 UPDATE_DEPENDFILE=	no

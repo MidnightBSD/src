@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ddb.h"
 
 #include <sys/param.h>
@@ -59,6 +58,7 @@
 #include <machine/xen/xen-os.h>
 
 #include <xen/xen-os.h>
+#include <xen/hvm.h>
 #include <xen/hypervisor.h>
 #include <xen/xen_intr.h>
 #include <xen/evtchn/evtchnvar.h>
@@ -558,7 +558,6 @@ xen_intr_handle_upcall(struct trapframe *trap_frame)
 	(*pc->evtchn_intrcnt)++;
 
 	while (l1 != 0) {
-
 		l1i = (l1i + 1) % LONG_BIT;
 		masked_l1 = l1 & ((~0UL) << l1i);
 
@@ -619,6 +618,10 @@ xen_intr_handle_upcall(struct trapframe *trap_frame)
 			l1 &= ~(1UL << l1i);
 		}
 	}
+
+	if (xen_evtchn_needs_ack)
+		lapic_eoi();
+
 	critical_exit();
 }
 
@@ -1567,7 +1570,7 @@ xen_intr_port(xen_intr_handle_t handle)
 	isrc = xen_intr_isrc(handle);
 	if (isrc == NULL)
 		return (0);
-	
+
 	return (isrc->xi_port);
 }
 

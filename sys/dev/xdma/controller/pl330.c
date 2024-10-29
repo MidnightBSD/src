@@ -31,7 +31,6 @@
 /* ARM PrimeCell DMA Controller (PL330) driver. */
 
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 #include <sys/param.h>
 #include <sys/endian.h>

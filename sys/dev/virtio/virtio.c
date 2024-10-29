@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011, Bryan Venteicher <bryanv@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -59,25 +58,28 @@ static struct virtio_ident {
 	{ VIRTIO_ID_ENTROPY,		"Entropy"			},
 	{ VIRTIO_ID_BALLOON,		"Balloon"			},
 	{ VIRTIO_ID_IOMEMORY,		"IOMemory"			},
-	{ VIRTIO_ID_RPMSG,		"Remote Processor Messaging" 	},
+	{ VIRTIO_ID_RPMSG,		"Remote Processor Messaging"	},
 	{ VIRTIO_ID_SCSI,		"SCSI"				},
 	{ VIRTIO_ID_9P,			"9P Transport"			},
 	{ VIRTIO_ID_RPROC_SERIAL,	"Remote Processor Serial"	},
 	{ VIRTIO_ID_CAIF,		"CAIF"				},
 	{ VIRTIO_ID_GPU,		"GPU"				},
-	{ VIRTIO_ID_INPUT,		"Input" 			},
-	{ VIRTIO_ID_VSOCK,		"VSOCK Transport" 		},
-	{ VIRTIO_ID_CRYPTO,		"Crypto" 			},
+	{ VIRTIO_ID_INPUT,		"Input"				},
+	{ VIRTIO_ID_VSOCK,		"VSOCK Transport"		},
+	{ VIRTIO_ID_CRYPTO,		"Crypto"			},
 
 	{ 0, NULL }
 };
 
 /* Device independent features. */
 static struct virtio_feature_desc virtio_common_feature_desc[] = {
-	{ VIRTIO_F_NOTIFY_ON_EMPTY,	"NotifyOnEmpty"	},
-	{ VIRTIO_RING_F_INDIRECT_DESC,	"RingIndirect"	},
-	{ VIRTIO_RING_F_EVENT_IDX,	"EventIdx"	},
-	{ VIRTIO_F_BAD_FEATURE,		"BadFeature"	},
+	{ VIRTIO_F_NOTIFY_ON_EMPTY,	"NotifyOnEmpty"		}, /* Legacy */
+	{ VIRTIO_F_ANY_LAYOUT,		"AnyLayout"		}, /* Legacy */
+	{ VIRTIO_RING_F_INDIRECT_DESC,	"RingIndirectDesc"	},
+	{ VIRTIO_RING_F_EVENT_IDX,	"RingEventIdx"		},
+	{ VIRTIO_F_BAD_FEATURE,		"BadFeature"		}, /* Legacy */
+	{ VIRTIO_F_VERSION_1,		"Version1"		},
+	{ VIRTIO_F_IOMMU_PLATFORM,	"IOMMUPlatform"		},
 
 	{ 0, NULL }
 };
@@ -115,23 +117,15 @@ virtio_feature_name(uint64_t val, struct virtio_feature_desc *desc)
 	return (NULL);
 }
 
-void
-virtio_describe(device_t dev, const char *msg,
-    uint64_t features, struct virtio_feature_desc *desc)
+int
+virtio_describe_sbuf(struct sbuf *sb, uint64_t features,
+    struct virtio_feature_desc *desc)
 {
-	struct sbuf sb;
-	uint64_t val;
-	char *buf;
 	const char *name;
+	uint64_t val;
 	int n;
 
-	if ((buf = malloc(512, M_TEMP, M_NOWAIT)) == NULL) {
-		device_printf(dev, "%s features: %#jx\n", msg, (uintmax_t) features);
-		return;
-	}
-
-	sbuf_new(&sb, buf, 512, SBUF_FIXEDLEN);
-	sbuf_printf(&sb, "%s features: %#jx", msg, (uintmax_t) features);
+	sbuf_printf(sb, "%#jx", (uintmax_t) features);
 
 	for (n = 0, val = 1ULL << 63; val != 0; val >>= 1) {
 		/*
@@ -142,30 +136,93 @@ virtio_describe(device_t dev, const char *msg,
 			continue;
 
 		if (n++ == 0)
-			sbuf_cat(&sb, " <");
+			sbuf_cat(sb, " <");
 		else
-			sbuf_cat(&sb, ",");
+			sbuf_cat(sb, ",");
 
 		name = virtio_feature_name(val, desc);
 		if (name == NULL)
-			sbuf_printf(&sb, "%#jx", (uintmax_t) val);
+			sbuf_printf(sb, "%#jx", (uintmax_t) val);
 		else
-			sbuf_cat(&sb, name);
+			sbuf_cat(sb, name);
 	}
 
 	if (n > 0)
-		sbuf_cat(&sb, ">");
+		sbuf_cat(sb, ">");
 
-#if __FreeBSD_version < 900020
-	sbuf_finish(&sb);
-	if (sbuf_overflowed(&sb) == 0)
-#else
-	if (sbuf_finish(&sb) == 0)
-#endif
+	return (sbuf_finish(sb));
+}
+
+void
+virtio_describe(device_t dev, const char *msg, uint64_t features,
+    struct virtio_feature_desc *desc)
+{
+	struct sbuf sb;
+	char *buf;
+	int error;
+
+	if ((buf = malloc(1024, M_TEMP, M_NOWAIT)) == NULL) {
+		error = ENOMEM;
+		goto out;
+	}
+
+	sbuf_new(&sb, buf, 1024, SBUF_FIXEDLEN);
+	sbuf_printf(&sb, "%s features: ", msg);
+
+	error = virtio_describe_sbuf(&sb, features, desc);
+	if (error == 0)
 		device_printf(dev, "%s\n", sbuf_data(&sb));
 
 	sbuf_delete(&sb);
 	free(buf, M_TEMP);
+
+out:
+	if (error != 0) {
+		device_printf(dev, "%s features: %#jx\n", msg,
+		    (uintmax_t) features);
+	}
+}
+
+uint64_t
+virtio_filter_transport_features(uint64_t features)
+{
+	uint64_t transport, mask;
+
+	transport = (1ULL <<
+	    (VIRTIO_TRANSPORT_F_END - VIRTIO_TRANSPORT_F_START)) - 1;
+	transport <<= VIRTIO_TRANSPORT_F_START;
+
+	mask = -1ULL & ~transport;
+	mask |= VIRTIO_RING_F_INDIRECT_DESC;
+	mask |= VIRTIO_RING_F_EVENT_IDX;
+	mask |= VIRTIO_F_VERSION_1;
+
+	return (features & mask);
+}
+
+int
+virtio_bus_is_modern(device_t dev)
+{
+	uintptr_t modern;
+
+	virtio_read_ivar(dev, VIRTIO_IVAR_MODERN, &modern);
+	return (modern != 0);
+}
+
+void
+virtio_read_device_config_array(device_t dev, bus_size_t offset, void *dst,
+    int size, int count)
+{
+	int i, gen;
+
+	do {
+		gen = virtio_config_generation(dev);
+
+		for (i = 0; i < count; i++) {
+			virtio_read_device_config(dev, offset + i * size,
+			    (uint8_t *) dst + i * size, size);
+		}
+	} while (gen != virtio_config_generation(dev));
 }
 
 /*
@@ -193,6 +250,13 @@ virtio_negotiate_features(device_t dev, uint64_t child_features)
 
 	return (VIRTIO_BUS_NEGOTIATE_FEATURES(device_get_parent(dev),
 	    child_features));
+}
+
+int
+virtio_finalize_features(device_t dev)
+{
+
+	return (VIRTIO_BUS_FINALIZE_FEATURES(device_get_parent(dev)));
 }
 
 int
@@ -255,11 +319,35 @@ virtio_read_device_config(device_t dev, bus_size_t offset, void *dst, int len)
 }
 
 void
-virtio_write_device_config(device_t dev, bus_size_t offset, void *dst, int len)
+virtio_write_device_config(device_t dev, bus_size_t offset, const void *dst, int len)
 {
 
 	VIRTIO_BUS_WRITE_DEVICE_CONFIG(device_get_parent(dev),
 	    offset, dst, len);
+}
+
+int
+virtio_child_pnpinfo_str(device_t busdev __unused, device_t child, char *buf,
+    size_t buflen)
+{
+
+	/*
+	 * All of these PCI fields will be only 16 bits, but on the vtmmio bus
+	 * the corresponding fields (only "vendor" and "device_type") are 32
+	 * bits.  Many virtio drivers can attach below either bus.
+	 * Gratuitously expand these two fields to 32-bits to allow sharing PNP
+	 * match table data between the mostly-similar buses.
+	 *
+	 * Subdevice and device_type are redundant in both buses, so I don't
+	 * see a lot of PNP utility in exposing the same value under a
+	 * different name.
+	 */
+	snprintf(buf, buflen, "vendor=0x%08x device=0x%04x subvendor=0x%04x "
+	    "device_type=0x%08x", (unsigned)virtio_get_vendor(child),
+	    (unsigned)virtio_get_device(child),
+	    (unsigned)virtio_get_subvendor(child),
+	    (unsigned)virtio_get_device_type(child));
+	return (0);
 }
 
 static int

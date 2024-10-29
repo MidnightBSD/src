@@ -1,7 +1,5 @@
 # Doxyfile 1.5.2
 
-# $MidnightBSD: stable/11/tools/kerneldoc/subsys/common-Doxyfile 240518 2012-09-14 21:28:56Z eadler $
-
 #---------------------------------------------------------------------------
 # Project related configuration options
 #---------------------------------------------------------------------------
@@ -66,7 +64,6 @@ GENERATE_DEPRECATEDLIST= YES
 ENABLED_SECTIONS       = 
 MAX_INITIALIZER_LINES  = 30
 SHOW_USED_FILES        = YES
-SHOW_DIRECTORIES       = YES
 FILE_VERSION_FILTER    = 
 #---------------------------------------------------------------------------
 # configuration options related to warning and progress messages
@@ -159,7 +156,6 @@ HTML_FILE_EXTENSION    = .html
 HTML_HEADER            = 
 HTML_FOOTER            = 
 HTML_STYLESHEET        = 
-HTML_ALIGN_MEMBERS     = YES
 GENERATE_HTMLHELP      = NO
 CHM_FILE               = 
 HHC_LOCATION           = 
@@ -206,8 +202,6 @@ MAN_LINKS              = NO
 #---------------------------------------------------------------------------
 GENERATE_XML           = NO
 XML_OUTPUT             = xml
-XML_SCHEMA             = 
-XML_DTD                = 
 XML_PROGRAMLISTING     = YES
 #---------------------------------------------------------------------------
 # configuration options for the AutoGen Definitions output
@@ -230,12 +224,12 @@ SEARCH_INCLUDES        = YES
 INCLUDE_PATH           = $(DOXYGEN_SRC_INCLUDE_PATH) \
                          .
 INCLUDE_FILE_PATTERNS  = *.h
-# __MidnightBSD__ is normally defined to the major version number of
-# MidnightBSD. In the kernel source it is just checked if it is defined, and
-# __MidnightBSD_version is used for version dependend code.
-# To make live simple on major version bumps, just define __MidnightBSD__ to 1.
+# __FreeBSD__ is normally defined to the major version number of
+# FreeBSD. In the kernel source it is just checked if it is defined, and
+# __FreeBSD_version is used for version dependend code.
+# To make live simple on major version bumps, just define __FreeBSD__ to 1.
 PREDEFINED             = _KERNEL \
-                         __MidnightBSD__=1 \
+                         __FreeBSD__=1 \
                          __${TARGET_ARCH}__=1 \
                          __${TARGET_ARCH}=1
 EXPAND_AS_DEFINED      = 

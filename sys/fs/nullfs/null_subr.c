@@ -32,7 +32,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)null_subr.c	8.7 (Berkeley) 5/14/95
- *
  */
 
 #include <sys/param.h>
@@ -112,6 +111,8 @@ null_hashget(mp, lowervp)
 	 * reference count (but NOT the lower vnode's VREF counter).
 	 */
 	hd = NULL_NHASH(lowervp);
+	if (LIST_EMPTY(hd))
+		return (NULLVP);
 	rw_rlock(&null_hash_lock);
 	LIST_FOREACH(a, hd, null_hash) {
 		if (a->null_lowervp == lowervp && NULLTOV(a)->v_mount == mp) {
@@ -206,7 +207,7 @@ null_nodeget(mp, lowervp, vpp)
 	int error;
 
 	ASSERT_VOP_LOCKED(lowervp, "lowervp");
-	KASSERT(lowervp->v_usecount >= 1, ("Unreferenced vnode %p", lowervp));
+	VNPASS(lowervp->v_usecount > 0, lowervp);
 
 	/* Lookup the hash firstly. */
 	*vpp = null_hashget(mp, lowervp);
@@ -221,11 +222,8 @@ null_nodeget(mp, lowervp, vpp)
 	 * provide ready to use vnode.
 	 */
 	if (VOP_ISLOCKED(lowervp) != LK_EXCLUSIVE) {
-		KASSERT((MOUNTTONULLMOUNT(mp)->nullm_flags & NULLM_CACHE) != 0,
-		    ("lowervp %p is not excl locked and cache is disabled",
-		    lowervp));
 		vn_lock(lowervp, LK_UPGRADE | LK_RETRY);
-		if ((lowervp->v_iflag & VI_DOOMED) != 0) {
+		if (VN_IS_DOOMED(lowervp)) {
 			vput(lowervp);
 			return (ENOENT);
 		}
@@ -259,12 +257,31 @@ null_nodeget(mp, lowervp, vpp)
 		vp->v_vflag |= VV_ROOT;
 
 	/*
+	 * We might miss the case where lower vnode sets VIRF_PGREAD
+	 * some time after construction, which is typical case.
+	 * null_open rechecks.
+	 */
+	if ((vn_irflag_read(lowervp) & VIRF_PGREAD) != 0) {
+		MPASS(lowervp->v_object != NULL);
+		if ((vn_irflag_read(vp) & VIRF_PGREAD) == 0) {
+			if (vp->v_object == NULL)
+				vp->v_object = lowervp->v_object;
+			else
+				MPASS(vp->v_object == lowervp->v_object);
+			vn_irflag_set_cond(vp, VIRF_PGREAD);
+		} else {
+			MPASS(vp->v_object != NULL);
+		}
+	}
+
+	/*
 	 * Atomically insert our new node into the hash or vget existing 
 	 * if someone else has beaten us to it.
 	 */
 	*vpp = null_hashins(mp, xp);
 	if (*vpp != NULL) {
 		vrele(lowervp);
+		vp->v_object = NULL;	/* in case VIRF_PGREAD set it */
 		null_destroy_proto(vp, xp);
 		return (0);
 	}

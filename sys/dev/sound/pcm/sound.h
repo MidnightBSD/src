@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Copyright (c) 1999 Cameron Grant <cg@FreeBSD.org>
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -39,6 +38,7 @@
 #ifdef _KERNEL
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/eventhandler.h>
 #include <sys/ioccom.h>
 #include <sys/filio.h>
 #include <sys/sockio.h>
@@ -335,7 +335,6 @@ u_int32_t pcm_getflags(device_t dev);
 void pcm_setflags(device_t dev, u_int32_t val);
 void *pcm_getdevinfo(device_t dev);
 
-
 int snd_setup_intr(device_t dev, struct resource *res, int flags,
 		   driver_intr_t hand, void *param, void **cookiep);
 
@@ -347,20 +346,11 @@ void snd_mtxassert(void *m);
 
 typedef int (*sndstat_handler)(struct sbuf *s, device_t dev, int verbose);
 int sndstat_register(device_t dev, char *str, sndstat_handler handler);
-int sndstat_registerfile(char *str);
+void sndstat_registerfile(void *);
 int sndstat_unregister(device_t dev);
-int sndstat_unregisterfile(char *str);
+void sndstat_unregisterfile(void *);
 
-#define SND_DECLARE_FILE(version) \
-	_SND_DECLARE_FILE(__LINE__, version)
-
-#define _SND_DECLARE_FILE(uniq, version) \
-	__SND_DECLARE_FILE(uniq, version)
-
-#define __SND_DECLARE_FILE(uniq, version) \
-	static char sndstat_vinfo[] = version; \
-	SYSINIT(sdf_ ## uniq, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, sndstat_registerfile, sndstat_vinfo); \
-	SYSUNINIT(sdf_ ## uniq, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, sndstat_unregisterfile, sndstat_vinfo);
+#define SND_DECLARE_FILE(version)
 
 /* usage of flags in device config entry (config file) */
 #define DV_F_DRQ_MASK	0x00000007	/* mask for secondary drq */
@@ -409,6 +399,10 @@ struct snddev_info {
 
 void	sound_oss_sysinfo(oss_sysinfo *);
 int	sound_oss_card_info(oss_card_info *);
+
+#define	PCM_MODE_MIXER		0x01
+#define	PCM_MODE_PLAY		0x02
+#define	PCM_MODE_REC		0x04
 
 #define PCM_LOCKOWNED(d)	mtx_owned((d)->lock)
 #define	PCM_LOCK(d)		mtx_lock((d)->lock)

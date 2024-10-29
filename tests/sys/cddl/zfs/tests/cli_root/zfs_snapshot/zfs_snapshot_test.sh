@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case zfs_snapshot_001_neg cleanup
 zfs_snapshot_001_neg_head()
 {
 	atf_set "descr" "Badly-formed 'zfs snapshot' with inapplicable scenariosshould return an error."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_snapshot_001_neg_body()
 {
@@ -54,7 +52,7 @@ atf_test_case zfs_snapshot_002_neg cleanup
 zfs_snapshot_002_neg_head()
 {
 	atf_set "descr" "'zfs snapshot -r' fails with invalid arguments or scenarios."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_snapshot_002_neg_body()
 {
@@ -78,7 +76,7 @@ atf_test_case zfs_snapshot_003_neg cleanup
 zfs_snapshot_003_neg_head()
 {
 	atf_set "descr" "'zfs snapshot' fails with bad options, or too many arguments."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_snapshot_003_neg_body()
 {
@@ -102,7 +100,7 @@ atf_test_case zfs_snapshot_004_neg cleanup
 zfs_snapshot_004_neg_head()
 {
 	atf_set "descr" "Verify recursive snapshotting could not break ZFS."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_snapshot_004_neg_body()
 {
@@ -126,7 +124,7 @@ atf_test_case zfs_snapshot_005_neg cleanup
 zfs_snapshot_005_neg_head()
 {
 	atf_set "descr" "Verify long name filesystem with snapshot should not break ZFS."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_snapshot_005_neg_body()
 {
@@ -150,7 +148,7 @@ atf_test_case zfs_snapshot_006_pos cleanup
 zfs_snapshot_006_pos_head()
 {
 	atf_set "descr" "User property could be set upon snapshot via 'zfs snapshot -o'."
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 }
 zfs_snapshot_006_pos_body()
 {
@@ -174,7 +172,7 @@ atf_test_case zfs_snapshot_007_neg cleanup
 zfs_snapshot_007_neg_head()
 {
 	atf_set "descr" "'zfs snapshot -o' cannot set properties other than user property."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_snapshot_007_neg_body()
 {

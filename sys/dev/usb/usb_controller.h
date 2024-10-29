@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -53,7 +53,6 @@ typedef void (usb_bus_mem_cb_t)(struct usb_bus *bus, usb_bus_mem_sub_cb_t *scb);
  * callbacks.
  */
 struct usb_bus_methods {
-
 	/* USB Device and Host mode - Mandatory */
 
 	usb_handle_req_t *roothub_exec;
@@ -155,7 +154,6 @@ struct usb_bus_methods {
  * callbacks.
  */
 struct usb_pipe_methods {
-
 	/* Mandatory USB Device and Host mode callbacks: */
 
 	void	(*open)(struct usb_xfer *);

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * Copyright (c) 1997,1998 Luigi Rizzo
@@ -44,6 +44,7 @@
 
 #include "mixer_if.h"
 
+SND_DECLARE_FILE("");
 
 #define SB_DEFAULT_BUFSZ	4096
 
@@ -115,13 +116,11 @@ static int sb_stop(struct sb_chinfo *ch);
 
 static void
 sb_lock(struct sb_info *sb) {
-
 	sbc_lock(device_get_softc(sb->parent_dev));
 }
 
 static void
 sb_unlock(struct sb_info *sb) {
-
 	sbc_unlock(device_get_softc(sb->parent_dev));
 }
 
@@ -692,14 +691,14 @@ static int
 sb_probe(device_t dev)
 {
     	char buf[64];
-	uintptr_t func, ver, r, f;
+	uintptr_t func, ver, f;
 
 	/* The parent device has already been probed. */
-	r = BUS_READ_IVAR(device_get_parent(dev), dev, 0, &func);
+	BUS_READ_IVAR(device_get_parent(dev), dev, 0, &func);
 	if (func != SCF_PCM)
 		return (ENXIO);
 
-	r = BUS_READ_IVAR(device_get_parent(dev), dev, 1, &ver);
+	BUS_READ_IVAR(device_get_parent(dev), dev, 1, &ver);
 	f = (ver & 0xffff0000) >> 16;
 	ver &= 0x0000ffff;
 	if ((f & BD_F_ESS) || (ver >= 0x400))
@@ -789,7 +788,6 @@ static device_method_t sb_methods[] = {
 	DEVMETHOD(device_probe,		sb_probe),
 	DEVMETHOD(device_attach,	sb_attach),
 	DEVMETHOD(device_detach,	sb_detach),
-
 	{ 0, 0 }
 };
 
@@ -803,7 +801,3 @@ DRIVER_MODULE(snd_sb8, sbc, sb_driver, pcm_devclass, 0, 0);
 MODULE_DEPEND(snd_sb8, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_DEPEND(snd_sb8, snd_sbc, 1, 1, 1);
 MODULE_VERSION(snd_sb8, 1);
-
-
-
-

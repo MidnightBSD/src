@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1996-1997 John D. Polstra.
  * All rights reserved.
@@ -24,21 +24,17 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_ELF_H_
 #define	_MACHINE_ELF_H_ 1
 
 #if defined(__i386__) || defined(_MACHINE_ELF_WANT_32BIT)
-
-/*
- * ELF definitions for the i386 architecture.
- */
-
+/* ELF definitions for the i386 architecture. */
 #include <sys/elf32.h>	/* Definitions common to all 32 bit architectures. */
 #if defined(__ELF_WORD_SIZE) && __ELF_WORD_SIZE == 64
-#include <sys/elf64.h>	/* Definitions common to all 64 bit architectures. */
+/* Definitions common to all 64 bit architectures. */
+#include <sys/elf64.h>
 #endif
 
 #ifndef __ELF_WORD_SIZE
@@ -76,37 +72,6 @@ typedef struct {
 
 __ElfType(Auxinfo);
 
-/* Values for a_type. */
-#define	AT_NULL		0	/* Terminates the vector. */
-#define	AT_IGNORE	1	/* Ignored entry. */
-#define	AT_EXECFD	2	/* File descriptor of program to load. */
-#define	AT_PHDR		3	/* Program header of program already loaded. */
-#define	AT_PHENT	4	/* Size of each program header entry. */
-#define	AT_PHNUM	5	/* Number of program header entries. */
-#define	AT_PAGESZ	6	/* Page size in bytes. */
-#define	AT_BASE		7	/* Interpreter's base address. */
-#define	AT_FLAGS	8	/* Flags (unused for i386). */
-#define	AT_ENTRY	9	/* Where interpreter should transfer control. */
-#define	AT_NOTELF	10	/* Program is not ELF ?? */
-#define	AT_UID		11	/* Real uid. */
-#define	AT_EUID		12	/* Effective uid. */
-#define	AT_GID		13	/* Real gid. */
-#define	AT_EGID		14	/* Effective gid. */
-#define	AT_EXECPATH	15	/* Path to the executable. */
-#define	AT_CANARY	16	/* Canary for SSP. */
-#define	AT_CANARYLEN	17	/* Length of the canary. */
-#define	AT_OSRELDATE	18	/* OSRELDATE. */
-#define	AT_NCPUS	19	/* Number of CPUs. */
-#define	AT_PAGESIZES	20	/* Pagesizes. */
-#define	AT_PAGESIZESLEN	21	/* Number of pagesizes. */
-#define	AT_TIMEKEEP	22	/* Pointer to timehands. */
-#define	AT_STACKPROT	23	/* Initial stack protection. */
-#define	AT_EHDRFLAGS	24	/* e_flags field from elf hdr */
-#define	AT_HWCAP	25	/* CPU feature flags. */
-#define	AT_HWCAP2	26	/* CPU feature flags 2. */
-
-#define	AT_COUNT	27	/* Count of defined aux entry types. */
-
 /*
  * Relocation types.
  */
@@ -119,7 +84,7 @@ __ElfType(Auxinfo);
 #define	ELF_TARG_MACH	EM_386
 #define	ELF_TARG_VER	1
 
-#define	ET_DYN_LOAD_ADDR 0x01001000
+#define	ET_DYN_LOAD_ADDR 0x00002000
 
 #elif defined(__amd64__)
 
@@ -152,7 +117,6 @@ typedef struct {	/* Auxiliary vector entry on initial stack */
 	} a_un;
 } Elf32_Auxinfo;
 
-
 typedef struct {	/* Auxiliary vector entry on initial stack */
 	long	a_type;			/* Entry type. */
 	union {
@@ -163,37 +127,6 @@ typedef struct {	/* Auxiliary vector entry on initial stack */
 } Elf64_Auxinfo;
 
 __ElfType(Auxinfo);
-
-/* Values for a_type. */
-#define	AT_NULL		0	/* Terminates the vector. */
-#define	AT_IGNORE	1	/* Ignored entry. */
-#define	AT_EXECFD	2	/* File descriptor of program to load. */
-#define	AT_PHDR		3	/* Program header of program already loaded. */
-#define	AT_PHENT	4	/* Size of each program header entry. */
-#define	AT_PHNUM	5	/* Number of program header entries. */
-#define	AT_PAGESZ	6	/* Page size in bytes. */
-#define	AT_BASE		7	/* Interpreter's base address. */
-#define	AT_FLAGS	8	/* Flags (unused for i386). */
-#define	AT_ENTRY	9	/* Where interpreter should transfer control. */
-#define	AT_NOTELF	10	/* Program is not ELF ?? */
-#define	AT_UID		11	/* Real uid. */
-#define	AT_EUID		12	/* Effective uid. */
-#define	AT_GID		13	/* Real gid. */
-#define	AT_EGID		14	/* Effective gid. */
-#define	AT_EXECPATH	15	/* Path to the executable. */
-#define	AT_CANARY	16	/* Canary for SSP */
-#define	AT_CANARYLEN	17	/* Length of the canary. */
-#define	AT_OSRELDATE	18	/* OSRELDATE. */
-#define	AT_NCPUS	19	/* Number of CPUs. */
-#define	AT_PAGESIZES	20	/* Pagesizes. */
-#define	AT_PAGESIZESLEN	21	/* Number of pagesizes. */
-#define	AT_TIMEKEEP	22	/* Pointer to timehands. */
-#define	AT_STACKPROT	23	/* Initial stack protection. */
-#define	AT_EHDRFLAGS	24	/* e_flags field from elf hdr */
-#define	AT_HWCAP	25	/* CPU feature flags. */
-#define	AT_HWCAP2	26	/* CPU feature flags 2. */
-
-#define	AT_COUNT	27	/* Count of defined aux entry types. */
 
 /*
  * Relocation types.
@@ -212,7 +145,7 @@ __ElfType(Auxinfo);
 #define	ELF_TARG_VER	1
 
 #if __ELF_WORD_SIZE == 32
-#define	ET_DYN_LOAD_ADDR 0x01001000
+#define	ET_DYN_LOAD_ADDR 0x00002000
 #else
 #define	ET_DYN_LOAD_ADDR 0x01021000
 #endif

@@ -23,8 +23,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -33,6 +31,7 @@
 #include <err.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 /*
  * This program is intended to create a bunch of segment mappings, then dump
@@ -42,10 +41,11 @@ int
 main(int argc __unused, char **argv __unused)
 {
 	void *v;
-	size_t i, pages;
+	size_t i, pages, page_size;
 
+	page_size = getpagesize();
 	pages = UINT16_MAX + 1000;
-	v = mmap(NULL, pages * PAGE_SIZE, PROT_READ | PROT_WRITE,
+	v = mmap(NULL, pages * page_size, PROT_READ | PROT_WRITE,
 	    MAP_ANON | MAP_PRIVATE, -1, 0);
 	if (v == NULL)
 		err(1, "mmap");
@@ -54,7 +54,7 @@ main(int argc __unused, char **argv __unused)
 		 * Alternate protections to interleave RW and R PT_LOAD
 		 * segments.
 		 */
-		if (mprotect((char *)v + i * PAGE_SIZE, PAGE_SIZE,
+		if (mprotect((char *)v + i * page_size, page_size,
 		    PROT_READ) != 0)
 			err(1, "mprotect");
 	}

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-2009 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bio.h>
@@ -39,9 +38,14 @@
 #include <sys/sx.h>
 
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include <geom/geom_int.h>
 #include <geom/mirror/g_mirror.h>
 
+/*
+ * Configure, Rebuild, Remove, Deactivate, Forget, and Stop operations do not
+ * seem to depend on any particular g_mirror initialization state.
+ */
 static struct g_mirror_softc *
 g_mirror_find_device(struct g_class *mp, const char *name)
 {
@@ -59,11 +63,64 @@ g_mirror_find_device(struct g_class *mp, const char *name)
 		    strcmp(sc->sc_name, name) == 0) {
 			g_topology_unlock();
 			sx_xlock(&sc->sc_lock);
+			if ((sc->sc_flags & G_MIRROR_DEVICE_FLAG_DESTROY) != 0) {
+				sx_xunlock(&sc->sc_lock);
+				return (NULL);
+			}
 			return (sc);
 		}
 	}
 	g_topology_unlock();
 	return (NULL);
+}
+
+/* Insert and Resize operations depend on a launched GEOM (sc_provider). */
+#define	GMFL_VALID_FLAGS	(M_WAITOK | M_NOWAIT)
+static struct g_mirror_softc *
+g_mirror_find_launched_device(struct g_class *mp, const char *name, int flags)
+{
+	struct g_mirror_softc *sc;
+	int error;
+
+	KASSERT((flags & ~GMFL_VALID_FLAGS) == 0 &&
+	    flags != GMFL_VALID_FLAGS && flags != 0,
+	    ("%s: Invalid flags %x\n", __func__, (unsigned)flags));
+#undef	GMFL_VALID_FLAGS
+
+	while (true) {
+		sc = g_mirror_find_device(mp, name);
+		if (sc == NULL)
+			return (NULL);
+		if (sc->sc_provider != NULL)
+			return (sc);
+		if (flags & M_NOWAIT) {
+			sx_xunlock(&sc->sc_lock);
+			return (NULL);
+		}
+
+		/*
+		 * This is a dumb hack.  G_mirror does not expose any real
+		 * wakeup API for observing state changes, and even if it did,
+		 * its "RUNNING" state does not actually reflect all softc
+		 * elements being initialized.
+		 *
+		 * Revamping g_mirror to have a 3rd, ACTUALLY_RUNNING state and
+		 * updating all assertions and sc_state checks is a large work
+		 * and would be easy to introduce regressions.
+		 *
+		 * Revamping g_mirror to have a wakeup for state changes would
+		 * be difficult if one wanted to capture more than just
+		 * sc_state and sc_provider.
+		 *
+		 * For now, just dummy sleep-poll until sc_provider shows up,
+		 * the user cancels, or the g_mirror is destroyed.
+		 */
+		error = sx_sleep(&sc, &sc->sc_lock, PRIBIO | PCATCH | PDROP,
+		    "GM:launched", 1);
+		if (error != 0 && error != EWOULDBLOCK)
+			return (NULL);
+	}
+	__unreachable();
 }
 
 static struct g_mirror_disk *
@@ -72,7 +129,7 @@ g_mirror_find_disk(struct g_mirror_softc *sc, const char *name)
 	struct g_mirror_disk *disk;
 
 	sx_assert(&sc->sc_lock, SX_XLOCKED);
-	if (strncmp(name, "/dev/", 5) == 0)
+	if (strncmp(name, _PATH_DEV, 5) == 0)
 		name += 5;
 	LIST_FOREACH(disk, &sc->sc_disks, d_next) {
 		if (disk->d_consumer == NULL)
@@ -382,34 +439,29 @@ g_mirror_ctl_create(struct gctl_req *req, struct g_class *mp)
 	cp = g_new_consumer(gp);
 	for (no = 1; no < *nargs; no++) {
 		snprintf(param, sizeof(param), "arg%u", no);
-		name = gctl_get_asciiparam(req, param);
-		if (name == NULL) {
-			gctl_error(req, "No 'arg%u' argument.", no);
+		pp = gctl_get_provider(req, param);
+		if (pp == NULL) {
 err:
 			g_destroy_consumer(cp);
 			g_destroy_geom(gp);
 			g_topology_unlock();
 			return;
 		}
-		if (strncmp(name, "/dev/", strlen("/dev/")) == 0)
-			name += strlen("/dev/");
-		pp = g_provider_by_name(name);
-		if (pp == NULL) {
-			G_MIRROR_DEBUG(1, "Disk %s is invalid.", name);
-			gctl_error(req, "Disk %s is invalid.", name);
+		if (g_attach(cp, pp) != 0) {
+			G_MIRROR_DEBUG(1, "Can't attach disk %s.", pp->name);
+			gctl_error(req, "Can't attach disk %s.", pp->name);
 			goto err;
 		}
-		g_attach(cp, pp);
 		if (g_access(cp, 1, 0, 0) != 0) {
-			G_MIRROR_DEBUG(1, "Can't open disk %s.", name);
-			gctl_error(req, "Can't open disk %s.", name);
+			G_MIRROR_DEBUG(1, "Can't open disk %s.", pp->name);
+			gctl_error(req, "Can't open disk %s.", pp->name);
 err2:
 			g_detach(cp);
 			goto err;
 		}
 		if (pp->mediasize == 0 || pp->sectorsize == 0) {
-			G_MIRROR_DEBUG(1, "Disk %s has no media.", name);
-			gctl_error(req, "Disk %s has no media.", name);
+			G_MIRROR_DEBUG(1, "Disk %s has no media.", pp->name);
+			gctl_error(req, "Disk %s has no media.", pp->name);
 			g_access(cp, -1, 0, 0);
 			goto err2;
 		}
@@ -441,12 +493,10 @@ err2:
 	sbuf_printf(sb, "Can't attach disk(s) to %s:", gp->name);
 	for (attached = 0, no = 1; no < *nargs; no++) {
 		snprintf(param, sizeof(param), "arg%u", no);
-		name = gctl_get_asciiparam(req, param);
-		if (strncmp(name, "/dev/", strlen("/dev/")) == 0)
-			name += strlen("/dev/");
-		pp = g_provider_by_name(name);
+		pp = gctl_get_provider(req, param);
 		if (pp == NULL) {
-			G_MIRROR_DEBUG(1, "Provider %s disappear?!", name);
+			name = gctl_get_asciiparam(req, param);
+			MPASS(name != NULL);
 			sbuf_printf(sb, " %s", name);
 			continue;
 		}
@@ -603,7 +653,7 @@ g_mirror_ctl_insert(struct gctl_req *req, struct g_class *mp)
 		gctl_error(req, "No 'arg%u' argument.", 0);
 		return;
 	}
-	sc = g_mirror_find_device(mp, name);
+	sc = g_mirror_find_launched_device(mp, name, M_WAITOK);
 	if (sc == NULL) {
 		gctl_error(req, "No such device: %s.", name);
 		return;
@@ -618,30 +668,21 @@ g_mirror_ctl_insert(struct gctl_req *req, struct g_class *mp)
 	g_topology_lock();
 	for (i = 1, n = 0; i < (u_int)*nargs; i++) {
 		snprintf(param, sizeof(param), "arg%u", i);
-		name = gctl_get_asciiparam(req, param);
-		if (name == NULL) {
-			gctl_error(req, "No 'arg%u' argument.", i);
+		pp = gctl_get_provider(req, param);
+		if (pp == NULL)
 			continue;
-		}
-		if (g_mirror_find_disk(sc, name) != NULL) {
-			gctl_error(req, "Provider %s already inserted.", name);
-			continue;
-		}
-		if (strncmp(name, "/dev/", 5) == 0)
-			name += 5;
-		pp = g_provider_by_name(name);
-		if (pp == NULL) {
-			gctl_error(req, "Unknown provider %s.", name);
+		if (g_mirror_find_disk(sc, pp->name) != NULL) {
+			gctl_error(req, "Provider %s already inserted.", pp->name);
 			continue;
 		}
 		cp = g_new_consumer(sc->sc_geom);
 		if (g_attach(cp, pp) != 0) {
 			g_destroy_consumer(cp);
-			gctl_error(req, "Cannot attach to provider %s.", name);
+			gctl_error(req, "Cannot attach to provider %s.", pp->name);
 			continue;
 		}
 		if (g_access(cp, 0, 1, 1) != 0) {
-			gctl_error(req, "Cannot access provider %s.", name);
+			gctl_error(req, "Cannot access provider %s.", pp->name);
 err:
 			g_detach(cp);
 			g_destroy_consumer(cp);
@@ -650,14 +691,14 @@ err:
 		mdsize = (sc->sc_type == G_MIRROR_TYPE_AUTOMATIC) ?
 		    pp->sectorsize : 0;
 		if (sc->sc_provider->mediasize > pp->mediasize - mdsize) {
-			gctl_error(req, "Provider %s too small.", name);
+			gctl_error(req, "Provider %s too small.", pp->name);
 err2:
 			g_access(cp, 0, -1, -1);
 			goto err;
 		}
 		if ((sc->sc_provider->sectorsize % pp->sectorsize) != 0) {
 			gctl_error(req, "Invalid sectorsize of provider %s.",
-			    name);
+			    pp->name);
 			goto err2;
 		}
 		if (sc->sc_type != G_MIRROR_TYPE_AUTOMATIC) {
@@ -672,7 +713,7 @@ err2:
 				md.md_dflags |= G_MIRROR_DISK_FLAG_INACTIVE;
 			if (g_mirror_add_disk(sc, pp, &md) != 0) {
 				sc->sc_ndisks--;
-				gctl_error(req, "Disk %s not inserted.", name);
+				gctl_error(req, "Disk %s not inserted.", pp->name);
 			}
 			g_topology_lock();
 			continue;
@@ -704,7 +745,7 @@ again:
 			bzero(md.md_provider, sizeof(md.md_provider));
 		}
 		md.md_provsize = pp->mediasize;
-		sector = g_malloc(pp->sectorsize, M_WAITOK);
+		sector = g_malloc(pp->sectorsize, M_WAITOK | M_ZERO);
 		mirror_metadata_encode(&md, sector);
 		error = g_write_data(disks[i].consumer,
 		    pp->mediasize - pp->sectorsize, sector, pp->sectorsize);
@@ -845,7 +886,7 @@ g_mirror_ctl_resize(struct gctl_req *req, struct g_class *mp)
 		gctl_error(req, "Invalid '%s' argument.", "size");
 		return;
 	}
-	sc = g_mirror_find_device(mp, name);
+	sc = g_mirror_find_launched_device(mp, name, M_WAITOK);
 	if (sc == NULL) {
 		gctl_error(req, "No such device: %s.", name);
 		return;

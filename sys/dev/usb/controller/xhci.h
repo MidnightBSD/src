@@ -1,8 +1,8 @@
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
+ * Copyright (c) 2010-2022 Hans Petter Selasky
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +32,7 @@
 #define	XHCI_MAX_DEVICES	MIN(USB_MAX_DEVICES, 128)
 #define	XHCI_MAX_ENDPOINTS	32	/* hardcoded - do not change */
 #define	XHCI_MAX_SCRATCHPADS	256	/* theoretical max is 1023 */
-#define	XHCI_MAX_EVENTS		(16 * 13)
+#define	XHCI_MAX_EVENTS		232
 #define	XHCI_MAX_COMMANDS	(16 * 1)
 #define	XHCI_MAX_RSEG		1
 #define	XHCI_MAX_TRANSFERS	4
@@ -110,6 +110,11 @@ struct xhci_slot_ctx {
 	volatile uint32_t	dwSctx7;
 };
 
+struct xhci_slot_ctx64 {
+	struct xhci_slot_ctx	ctx;
+	volatile uint8_t	padding[32];
+};
+
 struct xhci_endp_ctx {
 	volatile uint32_t	dwEpCtx0;
 #define	XHCI_EPCTX_0_EPSTATE_SET(x)		((x) & 0x7)
@@ -155,6 +160,11 @@ struct xhci_endp_ctx {
 	volatile uint32_t	dwEpCtx7;
 };
 
+struct xhci_endp_ctx64 {
+	struct xhci_endp_ctx	ctx;
+	volatile uint8_t	padding[32];
+};
+
 struct xhci_input_ctx {
 #define	XHCI_INCTX_NON_CTRL_MASK	0xFFFFFFFCU
 	volatile uint32_t	dwInCtx0;
@@ -169,15 +179,31 @@ struct xhci_input_ctx {
 	volatile uint32_t	dwInCtx7;
 };
 
+struct xhci_input_ctx64 {
+	struct xhci_input_ctx	ctx;
+	volatile uint8_t	padding[32];
+};
+
 struct xhci_input_dev_ctx {
 	struct xhci_input_ctx	ctx_input;
 	struct xhci_slot_ctx	ctx_slot;
 	struct xhci_endp_ctx	ctx_ep[XHCI_MAX_ENDPOINTS - 1];
 };
 
+struct xhci_input_dev_ctx64 {
+	struct xhci_input_ctx64	ctx_input;
+	struct xhci_slot_ctx64	ctx_slot;
+	struct xhci_endp_ctx64	ctx_ep[XHCI_MAX_ENDPOINTS - 1];
+};
+
 struct xhci_dev_ctx {
 	struct xhci_slot_ctx	ctx_slot;
 	struct xhci_endp_ctx	ctx_ep[XHCI_MAX_ENDPOINTS - 1];
+} __aligned(XHCI_DEV_CTX_ALIGN);
+
+struct xhci_dev_ctx64 {
+	struct xhci_slot_ctx64	ctx_slot;
+	struct xhci_endp_ctx64	ctx_ep[XHCI_MAX_ENDPOINTS - 1];
 } __aligned(XHCI_DEV_CTX_ALIGN);
 
 struct xhci_stream_ctx {
@@ -382,6 +408,8 @@ struct xhci_hw_root {
 	struct xhci_trb			hwr_commands[XHCI_MAX_COMMANDS];
 };
 
+CTASSERT(sizeof(struct xhci_hw_root) == XHCI_PAGE_SIZE);
+
 struct xhci_endpoint_ext {
 	struct xhci_trb		*trb;
 	struct usb_xfer		*xfer[XHCI_MAX_TRANSFERS * XHCI_MAX_STREAMS];
@@ -458,6 +486,11 @@ union xhci_hub_desc {
 
 typedef int (xhci_port_route_t)(device_t, uint32_t, uint32_t);
 
+enum xhci_quirks {
+	XHCI_QUIRK_DISABLE_PORT_PED			= 0x00000001,
+	XHCI_QUIRK_DMA_32B				= 0x00000002,
+};
+
 struct xhci_softc {
 	struct xhci_hw_softc	sc_hw;
 	/* base device */
@@ -526,8 +559,17 @@ struct xhci_softc {
 	/* size of context */
 	uint8_t			sc_ctx_is_64_byte;
 
+	/* deconfiguring USB device is not fully supported */
+	uint8_t			sc_no_deconfigure;
+
+	/* Isochronous Scheduling Threshold */
+	uint8_t			sc_ist;
+
 	/* vendor string for root HUB */
 	char			sc_vendor[16];
+
+	/* XHCI quirks. */
+	uint32_t		sc_quirks;
 };
 
 #define	XHCI_CMD_LOCK(sc)	sx_xlock(&(sc)->sc_cmd_sx)
@@ -543,5 +585,8 @@ usb_error_t xhci_init(struct xhci_softc *, device_t, uint8_t);
 usb_error_t xhci_start_controller(struct xhci_softc *);
 void	xhci_interrupt(struct xhci_softc *);
 void	xhci_uninit(struct xhci_softc *);
+int	xhci_pci_attach(device_t);
+
+DECLARE_CLASS(xhci_pci_driver);
 
 #endif					/* _XHCI_H_ */

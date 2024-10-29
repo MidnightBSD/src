@@ -30,13 +30,15 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _NFSCLIENT_NFSMOUNT_H_
 #define	_NFSCLIENT_NFSMOUNT_H_
 
 #include <nfs/nfs_mountcommon.h>
+
+/* Maximum value for nm_nconnect. */
+#define	NFS_MAXNCONN	16
 
 /*
  * Mount structure.
@@ -46,6 +48,7 @@
 struct	nfsmount {
 	struct	nfsmount_common nm_com;	/* Common fields for nlm */
 	uint32_t nm_privflag;		/* Private flags */
+	uint32_t nm_newflag;		/* New mount flags */
 	int	nm_numgrps;		/* Max. size of groupslist */
 	u_char	nm_fh[NFSX_FHMAX];	/* File handle of root dir */
 	int	nm_fhsize;		/* Size of root file handle */
@@ -74,10 +77,16 @@ struct	nfsmount {
 	/* Newnfs additions */
 	TAILQ_HEAD(, nfsclds) nm_sess;	/* Session(s) for NFSv4.1. */
 	struct	nfsclclient *nm_clp;
+	char	*nm_tlscertname;	/* TLS certificate file name */
 	uid_t	nm_uid;			/* Uid for SetClientID etc. */
 	u_int64_t nm_clval;		/* identifies which clientid */
 	u_int64_t nm_fsid[2];		/* NFSv4 fsid */
 	int	nm_minorvers;		/* Minor version # for NFSv4 */
+	u_int	nm_aconnect;		/* additional TCP connections */
+	u_int	nm_nextaconn;		/* Next nm_aconn[] to use */
+					/* unclipped, wraps to 0 */
+	struct __rpc_client *nm_aconn[NFS_MAXNCONN - 1]; /* Additional nconn */
+					/* Locked via nm_sockreq.nr_mtx */
 	u_int16_t nm_krbnamelen;	/* Krb5 host principal, if any */
 	u_int16_t nm_dirpathlen;	/* and mount dirpath, for V4 */
 	u_int16_t nm_srvkrbnamelen;	/* and the server's target name */
@@ -104,6 +113,21 @@ struct	nfsmount {
 /* Private flags. */
 #define	NFSMNTP_FORCEDISM	0x00000001
 #define	NFSMNTP_CANCELRPCS	0x00000002
+#define	NFSMNTP_IOADVISETHRUMDS	0x00000004
+#define	NFSMNTP_NOCOPY		0x00000008
+#define	NFSMNTP_NOCONSECUTIVE	0x00000010
+#define	NFSMNTP_SEEK		0x00000020
+#define	NFSMNTP_SEEKTESTED	0x00000040
+#define	NFSMNTP_NOXATTR		0x00000080
+#define	NFSMNTP_NOADVISE	0x00000100
+#define	NFSMNTP_NOALLOCATE	0x00000200
+#define	NFSMNTP_DELEGISSUED	0x00000400
+#define	NFSMNTP_NODEALLOCATE	0x00000800
+#define	NFSMNTP_FAKEROOTFH	0x00001000
+
+/* New mount flags only used by the kernel via nmount(2). */
+#define	NFSMNT_TLS		0x00000001
+#define	NFSMNT_SYSKRB5		0x00000002
 
 #define	NFSMNT_DIRPATH(m)	(&((m)->nm_name[(m)->nm_krbnamelen + 1]))
 #define	NFSMNT_SRVKRBNAME(m)						\

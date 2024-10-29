@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2006-2007 Semihalf, Piotr Kruszynski
  * All rights reserved.
@@ -23,7 +23,6 @@
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _IF_TSEC_H
@@ -55,7 +54,7 @@ struct tsec_bufmap {
 struct tsec_softc {
 	/* XXX MII bus requires that struct ifnet is first!!! */
 	struct ifnet	*tsec_ifp;
-	
+
 	struct mtx	transmit_lock;	/* transmitter lock */
 	struct mtx	receive_lock;	/* receiver lock */
 

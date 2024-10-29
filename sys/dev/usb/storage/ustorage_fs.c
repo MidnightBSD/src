@@ -71,7 +71,8 @@
 #ifdef USB_DEBUG
 static int ustorage_fs_debug = 0;
 
-SYSCTL_NODE(_hw_usb, OID_AUTO, ustorage_fs, CTLFLAG_RW, 0, "USB ustorage_fs");
+SYSCTL_NODE(_hw_usb, OID_AUTO, ustorage_fs, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB ustorage_fs");
 SYSCTL_INT(_hw_usb_ustorage_fs, OID_AUTO, debug, CTLFLAG_RWTUN,
     &ustorage_fs_debug, 0, "ustorage_fs debug level");
 #endif
@@ -163,7 +164,6 @@ typedef struct {
 #define	USTORAGE_FS_BBB_CSW_SIZE	13
 
 struct ustorage_fs_lun {
-
 	uint8_t	*memory_image;
 
 	uint32_t num_sectors;
@@ -178,7 +178,6 @@ struct ustorage_fs_lun {
 };
 
 struct ustorage_fs_softc {
-
 	ustorage_fs_bbb_cbw_t *sc_cbw;	/* Command Wrapper Block */
 	ustorage_fs_bbb_csw_t *sc_csw;	/* Command Status Block */
 	void *sc_dma_ptr;		/* Main data buffer */
@@ -273,7 +272,6 @@ MODULE_VERSION(ustorage_fs, 0);
 MODULE_DEPEND(ustorage_fs, usb, 1, 1, 1);
 
 static struct usb_config ustorage_fs_bbb_config[USTORAGE_FS_T_BBB_MAX] = {
-
 	[USTORAGE_FS_T_BBB_COMMAND] = {
 		.type = UE_BULK,
 		.endpoint = UE_ADDR_ANY,
@@ -937,8 +935,6 @@ ustorage_fs_verify(struct ustorage_fs_softc *sc)
 	struct ustorage_fs_lun *currlun = sc->sc_transfer.currlun;
 	uint32_t lba;
 	uint32_t vlen;
-	uint64_t file_offset;
-	uint64_t amount_left;
 
 	/*
 	 * Get the starting Logical Block Address
@@ -958,12 +954,6 @@ ustorage_fs_verify(struct ustorage_fs_softc *sc)
 		goto done;
 	}
 	/* No default reply */
-
-	/* Prepare to carry out the file verify */
-	amount_left = vlen;
-	amount_left <<= 9;
-	file_offset = lba;
-	file_offset <<= 9;
 
 	/* Range check */
 	vlen += lba;
@@ -1486,7 +1476,6 @@ static uint8_t
 ustorage_fs_min_len(struct ustorage_fs_softc *sc, uint32_t len, uint32_t mask)
 {
 	if (len != sc->sc_transfer.data_rem) {
-
 		if (sc->sc_transfer.cbw_dir == DIR_READ) {
 			/*
 			 * there must be something wrong about this SCSI
@@ -1543,7 +1532,6 @@ ustorage_fs_check_cmd(struct ustorage_fs_softc *sc, uint8_t min_cmd_size,
 
 	/* Check if LUN is correct */
 	if (lun != sc->sc_transfer.lun) {
-
 	}
 	/* Check the LUN */
 	if (sc->sc_transfer.lun <= sc->sc_last_lun) {

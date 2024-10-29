@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Peter Wemm <peter@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SYS_KTHREAD_H_
@@ -75,6 +74,5 @@ void	kthread_shutdown(void *, int);
 void	kthread_start(const void *);
 int	kthread_suspend(struct thread *, int);
 void	kthread_suspend_check(void);
-
 
 #endif /* !_SYS_KTHREAD_H_ */

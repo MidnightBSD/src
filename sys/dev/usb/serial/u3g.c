@@ -15,7 +15,6 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
  */
 
 /*
@@ -29,12 +28,11 @@
  *
  */
 
-
+#include <sys/param.h>
+#include <sys/eventhandler.h>
 #include <sys/stdint.h>
 #include <sys/stddef.h>
-#include <sys/param.h>
 #include <sys/queue.h>
-#include <sys/types.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>
@@ -66,7 +64,8 @@
 #ifdef USB_DEBUG
 static int u3g_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, u3g, CTLFLAG_RW, 0, "USB 3g");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, u3g, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB 3g");
 SYSCTL_INT(_hw_usb_u3g, OID_AUTO, debug, CTLFLAG_RWTUN,
     &u3g_debug, 0, "Debug level");
 #endif
@@ -88,7 +87,9 @@ SYSCTL_INT(_hw_usb_u3g, OID_AUTO, debug, CTLFLAG_RWTUN,
 #define	U3GINIT_SAEL_M460	8	/* Requires vendor init */
 #define	U3GINIT_HUAWEISCSI	9	/* Requires Huawei SCSI init command */
 #define	U3GINIT_HUAWEISCSI2	10	/* Requires Huawei SCSI init command (2) */
-#define	U3GINIT_TCT		11	/* Requires TCT Mobile init command */
+#define	U3GINIT_HUAWEISCSI3	11	/* Requires Huawei SCSI init command (3) */
+#define	U3GINIT_HUAWEISCSI4	12	/* Requires Huawei SCSI init command (4) */
+#define	U3GINIT_TCT		13	/* Requires TCT Mobile init command */
 
 enum {
 	U3G_BULK_WR,
@@ -132,7 +133,6 @@ static void u3g_stop_write(struct ucom_softc *ucom);
 static void u3g_poll(struct ucom_softc *ucom);
 static void u3g_free(struct ucom_softc *ucom);
 
-
 static void u3g_test_autoinst(void *, struct usb_device *,
 		struct usb_attach_arg *);
 static int u3g_driver_loaded(struct module *mod, int what, void *arg);
@@ -140,7 +140,6 @@ static int u3g_driver_loaded(struct module *mod, int what, void *arg);
 static eventhandler_tag u3g_etag;
 
 static const struct usb_config u3g_config[U3G_N_TRANSFER] = {
-
 	[U3G_BULK_WR] = {
 		.type = UE_BULK,
 		.endpoint = UE_ADDR_ANY,
@@ -208,6 +207,7 @@ static const STRUCT_USB_HOST_ID u3g_devs[] = {
 	U3G_DEV(ALINK, 3GU, 0),
 	U3G_DEV(ALINK, DWM652U5, 0),
 	U3G_DEV(ALINK, SIM7600E, 0),
+	U3G_DEV(ALINK, SIM7600G, 0),
 	U3G_DEV(AMOI, H01, 0),
 	U3G_DEV(AMOI, H01A, 0),
 	U3G_DEV(AMOI, H02, 0),
@@ -249,6 +249,8 @@ static const STRUCT_USB_HOST_ID u3g_devs[] = {
 	U3G_DEV(DLINK, DWM157_2, 0),
 	U3G_DEV(DLINK, DWM222_CD, U3GINIT_SCSIEJECT),
 	U3G_DEV(DLINK, DWM222, 0),
+	U3G_DEV(DLINK, DWM222_CD_2, U3GINIT_SCSIEJECT),
+	U3G_DEV(DLINK, DWM222_2, 0),
 	U3G_DEV(DLINK3, DWM652, 0),
 	U3G_DEV(HP, EV2200, 0),
 	U3G_DEV(HP, HS2300, 0),
@@ -318,8 +320,6 @@ static const STRUCT_USB_HOST_ID u3g_devs[] = {
 	U3G_DEV(HUAWEI, E143F, U3GINIT_HUAWEI),
 	U3G_DEV(HUAWEI, E173, 0),
 	U3G_DEV(HUAWEI, E173_INIT, U3GINIT_HUAWEISCSI),
-	U3G_DEV(HUAWEI, E3131, 0),
-	U3G_DEV(HUAWEI, E3131_INIT, U3GINIT_HUAWEISCSI2),
 	U3G_DEV(HUAWEI, E180V, U3GINIT_HUAWEI),
 	U3G_DEV(HUAWEI, E220, U3GINIT_HUAWEI),
 	U3G_DEV(HUAWEI, E220BIS, U3GINIT_HUAWEI),
@@ -342,6 +342,13 @@ static const STRUCT_USB_HOST_ID u3g_devs[] = {
 	U3G_DEV(HUAWEI, ETS2055, U3GINIT_HUAWEI),
 	U3G_DEV(HUAWEI, E3272_INIT, U3GINIT_HUAWEISCSI2),
 	U3G_DEV(HUAWEI, E3272, 0),
+	U3G_DEV(HUAWEI, E3372_NCM, 0),
+	U3G_DEV(HUAWEI, E3372_INIT, U3GINIT_HUAWEISCSI3),
+	U3G_DEV(HUAWEI, E3372v153_INIT, U3GINIT_HUAWEISCSI2),
+	U3G_DEV(HUAWEI, E3372v153_NCM, 0),
+	U3G_DEV(HUAWEI, E5573Cs322_NCM, 0),
+	U3G_DEV(HUAWEI, E5573Cs322_ECM, 0),
+	U3G_DEV(HUAWEI, E5573Cs322_ACM, 0),
 	U3G_DEV(KYOCERA2, CDMA_MSM_K, 0),
 	U3G_DEV(KYOCERA2, KPC680, 0),
 	U3G_DEV(LONGCHEER, WM66, U3GINIT_HUAWEI),
@@ -505,6 +512,9 @@ static const STRUCT_USB_HOST_ID u3g_devs[] = {
 	U3G_DEV(QUANTA, Q101, 0),
 	U3G_DEV(QUANTA, Q111, 0),
 	U3G_DEV(QUECTEL, EC25, 0),
+	U3G_DEV(QUECTEL, EM05, 0),
+	U3G_DEV(QUECTEL, EM12_G, 0),
+	U3G_DEV(QUECTEL, EP06_E, 0),
 	U3G_DEV(SIERRA, AC402, 0),
 	U3G_DEV(SIERRA, AC595U, 0),
 	U3G_DEV(SIERRA, AC313U, 0),
@@ -540,6 +550,7 @@ static const STRUCT_USB_HOST_ID u3g_devs[] = {
 	U3G_DEV(SIERRA, MC5728, 0),
 	U3G_DEV(SIERRA, MC7354, 0),
 	U3G_DEV(SIERRA, MC7355, 0),
+	U3G_DEV(SIERRA, AC340U, 0),
 	U3G_DEV(SIERRA, MC7430, 0),
 	U3G_DEV(SIERRA, MC8700, 0),
 	U3G_DEV(SIERRA, MC8755, 0),
@@ -736,7 +747,6 @@ u3g_sael_m460_init(struct usb_device *udev)
 	}
 
 	for (n = 0; n != nitems(setup); n++) {
-
 		memcpy(&req, setup[n], sizeof(req));
 
 		len = UGETW(req.wLength);
@@ -812,6 +822,10 @@ u3g_test_autoinst(void *arg, struct usb_device *udev,
 		method = U3GINIT_HUAWEISCSI;
 	else if (usb_test_quirk(uaa, UQ_MSC_EJECT_HUAWEISCSI2))
 		method = U3GINIT_HUAWEISCSI2;
+	else if (usb_test_quirk(uaa, UQ_MSC_EJECT_HUAWEISCSI3))
+		method = U3GINIT_HUAWEISCSI3;
+	else if (usb_test_quirk(uaa, UQ_MSC_EJECT_HUAWEISCSI4))
+		method = U3GINIT_HUAWEISCSI4;
 	else if (usb_test_quirk(uaa, UQ_MSC_EJECT_TCT))
 		method = U3GINIT_TCT;
 	else if (usbd_lookup_id_by_uaa(u3g_devs, sizeof(u3g_devs), uaa) == 0)
@@ -834,6 +848,12 @@ u3g_test_autoinst(void *arg, struct usb_device *udev,
 			break;
 		case U3GINIT_HUAWEISCSI2:
 			error = usb_msc_eject(udev, 0, MSC_EJECT_HUAWEI2);
+			break;
+		case U3GINIT_HUAWEISCSI3:
+			error = usb_msc_eject(udev, 0, MSC_EJECT_HUAWEI3);
+			break;
+		case U3GINIT_HUAWEISCSI4:
+			error = usb_msc_eject(udev, 0, MSC_EJECT_HUAWEI4);
 			break;
 		case U3GINIT_SCSIEJECT:
 			error = usb_msc_eject(udev, 0, MSC_EJECT_STOPUNIT);
@@ -885,7 +905,7 @@ u3g_driver_loaded(struct module *mod, int what, void *arg)
 	default:
 		return (EOPNOTSUPP);
 	}
- 	return (0);
+	return (0);
 }
 
 static int

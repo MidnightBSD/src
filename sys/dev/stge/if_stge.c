@@ -1,7 +1,7 @@
 /*	$NetBSD: if_stge.c,v 1.32 2005/12/11 12:22:49 christos Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
 #endif
@@ -406,7 +405,6 @@ stge_read_eeprom(struct stge_softc *sc, int offset, uint16_t *data)
 	*data = CSR_READ_2(sc, STGE_EepromData);
 }
 
-
 static int
 stge_probe(device_t dev)
 {
@@ -475,13 +473,15 @@ stge_attach(device_t dev)
 
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
-	    "rxint_nframe", CTLTYPE_INT|CTLFLAG_RW, &sc->sc_rxint_nframe, 0,
-	    sysctl_hw_stge_rxint_nframe, "I", "stge rx interrupt nframe");
+	    "rxint_nframe", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+	    &sc->sc_rxint_nframe, 0, sysctl_hw_stge_rxint_nframe, "I",
+	    "stge rx interrupt nframe");
 
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
-	    "rxint_dmawait", CTLTYPE_INT|CTLFLAG_RW, &sc->sc_rxint_dmawait, 0,
-	    sysctl_hw_stge_rxint_dmawait, "I", "stge rx interrupt dmawait");
+	    "rxint_dmawait", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+	    &sc->sc_rxint_dmawait, 0, sysctl_hw_stge_rxint_dmawait, "I",
+	    "stge rx interrupt dmawait");
 
 	/* Pull in device tunables. */
 	sc->sc_rxint_nframe = STGE_RXINT_NFRAME_DEFAULT;
@@ -562,12 +562,6 @@ stge_attach(device_t dev)
 	}
 
 	ifp = sc->sc_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(sc->sc_dev, "failed to if_alloc()\n");
-		error = ENXIO;
-		goto fail;
-	}
-
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
@@ -697,7 +691,9 @@ stge_detach(device_t dev)
 		bus_teardown_intr(dev, sc->sc_res[1], sc->sc_ih);
 		sc->sc_ih = NULL;
 	}
-	bus_release_resources(dev, sc->sc_spec, sc->sc_res);
+
+	if (sc->sc_spec)
+		bus_release_resources(dev, sc->sc_spec, sc->sc_res);
 
 	mtx_destroy(&sc->sc_mii_mtx);
 	mtx_destroy(&sc->sc_mtx);
@@ -1812,7 +1808,6 @@ stge_poll(struct ifnet *ifp, enum poll_cmd cmd, int count)
 				}
 			}
 		}
-
 	}
 
 	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
@@ -2506,12 +2501,24 @@ stge_set_filter(struct stge_softc *sc)
 	CSR_WRITE_2(sc, STGE_ReceiveMode, mode);
 }
 
+static u_int
+stge_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint32_t crc, *mchash = arg;
+
+	crc = ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN);
+	/* Just want the 6 least significant bits. */
+	crc &= 0x3f;
+	/* Set the corresponding bit in the hash table. */
+	mchash[crc >> 5] |= 1 << (crc & 0x1f);
+
+	return (1);
+}
+
 static void
 stge_set_multi(struct stge_softc *sc)
 {
 	struct ifnet *ifp;
-	struct ifmultiaddr *ifma;
-	uint32_t crc;
 	uint32_t mchash[2];
 	uint16_t mode;
 	int count;
@@ -2541,25 +2548,8 @@ stge_set_multi(struct stge_softc *sc)
 	 * high order bits select the register, while the rest of the bits
 	 * select the bit within the register.
 	 */
-
 	bzero(mchash, sizeof(mchash));
-
-	count = 0;
-	if_maddr_rlock(sc->sc_ifp);
-	CK_STAILQ_FOREACH(ifma, &sc->sc_ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		crc = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-		    ifma->ifma_addr), ETHER_ADDR_LEN);
-
-		/* Just want the 6 least significant bits. */
-		crc &= 0x3f;
-
-		/* Set the corresponding bit in the hash table. */
-		mchash[crc >> 5] |= 1 << (crc & 0x1f);
-		count++;
-	}
-	if_maddr_runlock(ifp);
+	count = if_foreach_llmaddr(ifp, stge_hash_maddr, mchash);
 
 	mode &= ~(RM_ReceiveMulticast | RM_ReceiveAllFrames);
 	if (count > 0)

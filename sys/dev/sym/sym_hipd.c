@@ -58,7 +58,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #define SYM_DRIVER_NAME	"sym-1.6.5-20000902"
 
 /* #define SYM_DEBUG_GENERIC_SUPPORT */
@@ -88,11 +87,6 @@
 #include <machine/bus.h>
 #include <machine/resource.h>
 #include <machine/atomic.h>
-
-#ifdef __sparc64__
-#include <dev/ofw/openfirm.h>
-#include <machine/ofw_machdep.h>
-#endif
 
 #include <sys/rman.h>
 
@@ -133,8 +127,6 @@ typedef	u_int32_t u32;
 #define MEMORY_BARRIER()	do { ; } while(0)
 #elif	defined	__powerpc__
 #define MEMORY_BARRIER()	__asm__ volatile("eieio; sync" : : : "memory")
-#elif	defined	__sparc64__
-#define MEMORY_BARRIER()	__asm__ volatile("membar #Sync" : : : "memory")
 #elif	defined	__arm__
 #define MEMORY_BARRIER()	dmb()
 #elif	defined	__aarch64__
@@ -577,7 +569,7 @@ static void sym_mfree(void *ptr, int size, char *name)
  * BUS handle. A reverse table (hashed) is maintained for virtual
  * to BUS address translation.
  */
-static void getbaddrcb(void *arg, bus_dma_segment_t *segs, int nseg __unused,
+static void getbaddrcb(void *arg, bus_dma_segment_t *segs, int nseg __diagused,
     int error)
 {
 	bus_addr_t *baddr;
@@ -616,8 +608,6 @@ static m_addr_t ___dma_getp(m_pool_s *mp)
 		return (m_addr_t) vaddr;
 	}
 out_err:
-	if (baddr)
-		bus_dmamap_unload(mp->dmat, vbp->dmamap);
 	if (vaddr)
 		bus_dmamem_free(mp->dmat, vaddr, vbp->dmamap);
 	if (vbp)
@@ -2013,7 +2003,6 @@ static void sym_fw_bind_script (hcb_p np, u32 *start, int len)
 	end = start + len/4;
 
 	while (cur < end) {
-
 		opcode = *cur;
 
 		/*
@@ -2651,9 +2640,6 @@ static int sym_prepare_setting(hcb_p np, struct sym_nvram *nvram)
 	 */
 	np->myaddr = 255;
 	sym_nvram_setup_host (np, nvram);
-#ifdef __sparc64__
-	np->myaddr = OF_getscsinitid(np->device);
-#endif
 
 	/*
 	 *  Get SCSI addr of host adapter (set by bios?).
@@ -4690,6 +4676,7 @@ static void sym_sir_bad_scsi_status(hcb_p np, ccb_p cp)
 			PRINT_ADDR(cp);
 			printf (s_status == S_BUSY ? "BUSY" : "QUEUE FULL\n");
 		}
+		/* FALLTHROUGH */
 	default:	/* S_INT, S_INT_COND_MET, S_CONFLICT */
 		sym_complete_error (np, cp);
 		break;
@@ -5473,7 +5460,7 @@ out_reject:
  */
 static int sym_compute_residual(hcb_p np, ccb_p cp)
 {
-	int dp_sg, dp_sgmin, resid = 0;
+	int dp_sg, resid = 0;
 	int dp_ofs = 0;
 
 	/*
@@ -5520,7 +5507,6 @@ static int sym_compute_residual(hcb_p np, ccb_p cp)
 	 *  We are now full comfortable in the computation
 	 *  of the data residual (2's complement).
 	 */
-	dp_sgmin = SYM_CONF_MAX_SG - cp->segments;
 	resid = -cp->ext_ofs;
 	for (dp_sg = cp->ext_sg; dp_sg < SYM_CONF_MAX_SG; ++dp_sg) {
 		u_int tmp = scr_to_cpu(cp->phys.data[dp_sg].size);
@@ -6013,6 +5999,8 @@ static void sym_int_sir (hcb_p np)
 	 *  or has been auto-sensed.
 	 */
 	case SIR_COMPLETE_ERROR:
+		if (!cp)
+			goto out;
 		sym_complete_error(np, cp);
 		return;
 	/*
@@ -6238,6 +6226,8 @@ static void sym_int_sir (hcb_p np)
 	 *  Target does not want answer message.
 	 */
 	case SIR_NEGO_PROTO:
+		if (!cp)
+			goto out;
 		sym_nego_default(np, tp, cp);
 		goto out;
 	}
@@ -6299,13 +6289,12 @@ static	ccb_p sym_get_ccb (hcb_p np, u_char tn, u_char ln, u_char tag_order)
 			goto out_free;
 	} else {
 		/*
-		 *  If we have been asked for a tagged command.
+		 *  If we have been asked for a tagged command, refuse
+		 *  to overlap with an existing untagged one.
 		 */
 		if (tag_order) {
-			/*
-			 *  Debugging purpose.
-			 */
-			assert(lp->busy_itl == 0);
+			if (lp->busy_itl != 0)
+				goto out_free;
 			/*
 			 *  Allocate resources for tags if not yet.
 			 */
@@ -6338,22 +6327,17 @@ static	ccb_p sym_get_ccb (hcb_p np, u_char tn, u_char ln, u_char tag_order)
 		 *  one, refuse to overlap this untagged one.
 		 */
 		else {
-			/*
-			 *  Debugging purpose.
-			 */
-			assert(lp->busy_itl == 0 && lp->busy_itlq == 0);
+			if (lp->busy_itlq != 0 || lp->busy_itl != 0)
+				goto out_free;
 			/*
 			 *  Count this nexus for this LUN.
 			 *  Set up the CCB bus address for reselection.
 			 *  Toggle reselect path to untagged.
 			 */
-			if (++lp->busy_itl == 1) {
-				lp->head.itl_task_sa = cpu_to_scr(cp->ccb_ba);
-				lp->head.resel_sa =
-				      cpu_to_scr(SCRIPTA_BA (np, resel_no_tag));
-			}
-			else
-				goto out_free;
+			lp->busy_itl = 1;
+			lp->head.itl_task_sa = cpu_to_scr(cp->ccb_ba);
+			lp->head.resel_sa =
+			      cpu_to_scr(SCRIPTA_BA (np, resel_no_tag));
 		}
 	}
 	/*
@@ -6399,7 +6383,7 @@ static void sym_free_ccb(hcb_p np, ccb_p cp)
 	 */
 	if (lp) {
 		/*
-		 *  If tagged, release the tag, set the relect path
+		 *  If tagged, release the tag, set the reselect path.
 		 */
 		if (cp->tag != NO_TAG) {
 			/*
@@ -6420,7 +6404,7 @@ static void sym_free_ccb(hcb_p np, ccb_p cp)
 			 *  and uncount this CCB.
 			 */
 			lp->head.itl_task_sa = cpu_to_scr(np->bad_itl_ba);
-			--lp->busy_itl;
+			lp->busy_itl = 0;
 		}
 		/*
 		 *  If no JOB active, make the LUN reselect path invalid.
@@ -8048,7 +8032,7 @@ static void sym_action2(struct cam_sim *sim, union ccb *ccb)
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->initiator_id = np->myaddr;
 		cpi->base_transfer_speed = 3300;
-		strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
 		strlcpy(cpi->hba_vid, "Symbios", HBA_IDLEN);
 		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
@@ -8386,8 +8370,7 @@ sym_pci_probe(device_t dev)
 	chip = sym_find_pci_chip(dev);
 	if (chip && sym_find_firmware(chip)) {
 		device_set_desc(dev, chip->name);
-		return (chip->lp_probe_bit & SYM_SETUP_LP_PROBE_MAP)?
-		  BUS_PROBE_LOW_PRIORITY : BUS_PROBE_DEFAULT;
+		return BUS_PROBE_DEFAULT;
 	}
 	return ENXIO;
 }
@@ -9224,7 +9207,6 @@ static void S24C16_set_bit(hcb_p np, u_char write_bit, u_char *gpreg,
 	case CLR_CLK:
 		*gpreg &= 0xfd;
 		break;
-
 	}
 	OUTB (nc_gpreg, *gpreg);
 	UDELAY (5);
@@ -9536,7 +9518,6 @@ static int T93C46_Read_Data(hcb_p np, u_short *data,int len,u_char *gpreg)
 	int	x;
 
 	for (x = 0; x < len; x++)  {
-
 		/* output read command and address */
 		T93C46_Send_Command(np, 0x180 | x, &read_bit, gpreg);
 		if (read_bit & 0x01)

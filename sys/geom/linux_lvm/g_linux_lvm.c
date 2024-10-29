@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Andrew Thompson <thompsa@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/ctype.h>
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -39,6 +38,7 @@
 #include <sys/systm.h>
 
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include <sys/endian.h>
 
 #include <geom/linux_lvm/g_linux_lvm.h>
@@ -78,7 +78,7 @@ static int	llvm_textconf_decode_lv(char **, char *, struct g_llvm_vg *);
 static int	llvm_textconf_decode_sg(char **, char *, struct g_llvm_lv *);
 
 SYSCTL_DECL(_kern_geom);
-SYSCTL_NODE(_kern_geom, OID_AUTO, linux_lvm, CTLFLAG_RW, 0,
+SYSCTL_NODE(_kern_geom, OID_AUTO, linux_lvm, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "GEOM_LINUX_LVM stuff");
 static u_int g_llvm_debug = 0;
 SYSCTL_UINT(_kern_geom_linux_lvm, OID_AUTO, debug, CTLFLAG_RWTUN, &g_llvm_debug, 0,
@@ -214,6 +214,10 @@ g_llvm_start(struct bio *bp)
 	/* XXX BIO_GETATTR allowed? */
 		break;
 	default:
+		/*
+		 * BIO_SPEEDUP and BIO_FLUSH should pass through to all sg
+		 * elements, but aren't.
+		 */
 		g_io_deliver(bp, EOPNOTSUPP);
 		return;
 	}
@@ -508,7 +512,6 @@ g_llvm_free_vg(struct g_llvm_vg *vg)
 		LIST_REMOVE(lv, lv_next);
 		free(lv, M_GLLVM);
 	}
-	LIST_REMOVE(vg, vg_next);
 	free(vg, M_GLLVM);
 }
 
@@ -538,11 +541,14 @@ g_llvm_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	/* This orphan function should be never called. */
 	gp->orphan = g_llvm_taste_orphan;
 	cp = g_new_consumer(gp);
-	g_attach(cp, pp);
-	error = g_llvm_read_label(cp, &ll);
-	if (!error)
-		error = g_llvm_read_md(cp, &md, &ll);
-	g_detach(cp);
+	cp->flags |= G_CF_DIRECT_SEND | G_CF_DIRECT_RECEIVE;
+	error = g_attach(cp, pp);
+	if (error == 0) {
+		error = g_llvm_read_label(cp, &ll);
+		if (error == 0)
+			error = g_llvm_read_md(cp, &md, &ll);
+		g_detach(cp);
+	}
 	g_destroy_consumer(cp);
 	g_destroy_geom(gp);
 	if (error != 0)
@@ -589,7 +595,8 @@ g_llvm_destroy(struct g_llvm_vg *vg, int force)
 		}
 	}
 
-	g_llvm_free_vg(gp->softc);
+	LIST_REMOVE(vg, vg_next);
+	g_llvm_free_vg(vg);
 	gp->softc = NULL;
 	g_wither_geom(gp, ENXIO);
 	return (0);

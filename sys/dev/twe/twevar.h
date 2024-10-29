@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #define TWE_DRIVER_VERSION_STRING	"1.50.01.002"
@@ -107,7 +106,7 @@ struct twe_request
 			((tr)->tr_tag * sizeof(TWE_Command)))
 #define TWE_FIND_COMMANDPHYS(tr)	((tr)->tr_sc->twe_cmdphys +	\
 					 ((tr)->tr_tag * sizeof(TWE_Command)))
-	
+
 /*
  * Per-controller state.
  */
@@ -200,7 +199,6 @@ extern void	twe_unmap_request(struct twe_request *tr);	/* cleanup after transfer
 	    sc->twe_qstat[qname].q_max = 0;			\
 	    sc->twe_qstat[qname].q_min = 0xFFFFFFFF;		\
 	} while(0)
-
 
 #define TWEQ_REQUEST_QUEUE(name, index)					\
 static __inline void							\

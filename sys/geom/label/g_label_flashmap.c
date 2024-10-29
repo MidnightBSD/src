@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 Ian Lepore <ian@FreeBSD.org>
  *
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -37,8 +36,6 @@
 #include <geom/geom_flashmap.h>
 #include <geom/geom_slice.h>
 #include <geom/label/g_label.h>
-
-#define	G_LABEL_FLASHMAP_SLICE_DIR	"flash"
 
 static void
 g_label_flashmap_taste(struct g_consumer *cp, char *label, size_t size)
@@ -69,7 +66,7 @@ g_label_flashmap_taste(struct g_consumer *cp, char *label, size_t size)
 
 struct g_label_desc g_label_flashmap = {
 	.ld_taste = g_label_flashmap_taste,
-	.ld_dir = G_LABEL_FLASHMAP_SLICE_DIR,
+	.ld_dirprefix = "flash/",
 	.ld_enabled = 1
 };
 

@@ -24,8 +24,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
+#if defined(KASAN) || defined(KCSAN)
+#define	SAN_RUNTIME
+#endif
 
+#include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <x86/bus.h>

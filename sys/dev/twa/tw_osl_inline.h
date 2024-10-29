@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap.
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -35,21 +34,15 @@
  * Modifications by: Adam Radford
  */
 
-
-
 #ifndef TW_OSL_INLINE_H
 
 #define TW_OSL_INLINE_H
-
 
 /*
  * Inline functions shared between OSL and CL, and defined by OSL.
  */
 
-
 #include <dev/twa/tw_osl.h>
-
-
 
 /*
  * Function name:	tw_osl_init_lock
@@ -62,8 +55,6 @@
  */
 #define tw_osl_init_lock(ctlr_handle, lock_name, lock)	\
 	mtx_init(lock, lock_name, NULL, MTX_SPIN)
-
-
 
 /*
  * Function name:	tw_osl_destroy_lock
@@ -78,8 +69,6 @@
 #define tw_osl_destroy_lock(ctlr_handle, lock)	\
 	mtx_destroy(lock)
 
-
-
 /*
  * Function name:	tw_osl_get_lock
  * Description:		Acquires the specified lock.
@@ -93,8 +82,6 @@
 #define tw_osl_get_lock(ctlr_handle, lock)	\
 	mtx_lock_spin(lock)
 
-
-
 /*
  * Function name:	tw_osl_free_lock
  * Description:		Frees a previously acquired lock.
@@ -106,8 +93,6 @@
  */
 #define tw_osl_free_lock(ctlr_handle, lock)	\
 	mtx_unlock_spin(lock)
-
-
 
 #ifdef TW_OSL_DEBUG
 
@@ -126,8 +111,6 @@
 	twa_printf((ctlr_handle->osl_ctlr_ctxt), fmt, ##args)
 
 #endif /* TW_OSL_DEBUG */
-
-
 
 /*
  * Function name:	tw_osl_notify_event
@@ -148,8 +131,6 @@
 		event->parameter_data +					\
 			strlen(event->parameter_data) + 1,		\
 		event->parameter_data)
-
-
 
 /*
  * Function name:	tw_osl_read_reg
@@ -182,8 +163,6 @@ tw_osl_read_reg_inline(struct tw_cl_ctlr_handle *ctlr_handle,
 			offset));
 }
 
-
-
 /*
  * Function name:	tw_osl_write_reg
  * Description:		Writes to a register on the controller
@@ -213,8 +192,6 @@ tw_osl_write_reg_inline(struct tw_cl_ctlr_handle *ctlr_handle,
 		bus_space_write_1(bus_tag, bus_handle, offset, (TW_INT8)value);
 }
 
-
-
 #ifdef TW_OSL_PCI_CONFIG_ACCESSIBLE
 
 /*
@@ -231,8 +208,6 @@ tw_osl_write_reg_inline(struct tw_cl_ctlr_handle *ctlr_handle,
 	pci_read_config(						\
 		((struct twa_softc *)(ctlr_handle->osl_ctlr_ctxt))->bus_dev, \
 		offset, size)
-
-
 
 /*
  * Function name:	tw_osl_write_pci_config
@@ -252,8 +227,6 @@ tw_osl_write_reg_inline(struct tw_cl_ctlr_handle *ctlr_handle,
 
 #endif /* TW_OSL_PCI_CONFIG_ACCESSIBLE */
 
-
-
 /*
  * Function name:	tw_osl_get_local_time
  * Description:		Gets the local time
@@ -265,7 +238,6 @@ tw_osl_write_reg_inline(struct tw_cl_ctlr_handle *ctlr_handle,
 #define tw_osl_get_local_time()						\
 	(time_second - utc_offset())
 
-
 /*
  * Function name:	tw_osl_delay
  * Description:		Spin for the specified time
@@ -275,8 +247,6 @@ tw_osl_write_reg_inline(struct tw_cl_ctlr_handle *ctlr_handle,
  * Return value:	None
  */
 #define tw_osl_delay(usecs)	DELAY(usecs)
-
-
 
 #ifdef TW_OSL_CAN_SLEEP
 
@@ -295,8 +265,6 @@ tw_osl_write_reg_inline(struct tw_cl_ctlr_handle *ctlr_handle,
 #define tw_osl_sleep(ctlr_handle, sleep_handle, timeout)		\
 	tsleep((TW_VOID *)sleep_handle, PRIBIO, NULL, timeout)
 
-
-
 /*
  * Function name:	tw_osl_wakeup
  * Description:		Wake up a sleeping process
@@ -312,39 +280,28 @@ tw_osl_write_reg_inline(struct tw_cl_ctlr_handle *ctlr_handle,
 
 #endif /* TW_OSL_CAN_SLEEP */
 
-
-
 /* Allows setting breakpoints in the CL code for debugging purposes. */
 #define tw_osl_breakpoint()		breakpoint()
-
 
 /* Text name of current function. */
 #define tw_osl_cur_func()		__func__
 
-
 /* Copy 'size' bytes from 'src' to 'dest'. */
 #define tw_osl_memcpy(dest, src, size)	bcopy(src, dest, size)
-
 
 /* Zero 'size' bytes starting at 'addr'. */
 #define tw_osl_memzero			bzero
 
-
 /* Standard sprintf. */
 #define tw_osl_sprintf			sprintf
-
 
 /* Copy string 'src' to 'dest'. */
 #define tw_osl_strcpy			strcpy
 
-
 /* Return length of string pointed at by 'str'. */
 #define tw_osl_strlen			strlen
 
-
 /* Standard vsprintf. */
 #define tw_osl_vsprintf			vsprintf
-
-
 
 #endif /* TW_OSL_INLINE_H */

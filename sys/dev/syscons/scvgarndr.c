@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_syscons.h"
 #include "opt_vga.h"
 
@@ -322,7 +321,7 @@ static const struct mousedata * const mousesmall[] = {
 		writeb((pos), (uint8_t)(color));			\
 	}								\
 } while (0)
-	
+
 static uint32_t vga_palette32[16] = {
 	0x000000, 0x0000ad, 0x00ad00, 0x00adad,
 	0xad0000, 0xad00ad, 0xad5200, 0xadadad,

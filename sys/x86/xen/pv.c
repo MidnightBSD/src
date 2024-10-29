@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004 Christian Limpach.
  * Copyright (c) 2004-2006,2008 Kip Macy
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ddb.h"
 #include "opt_kstack_pages.h"
 
@@ -133,7 +132,6 @@ struct init_ops xen_pvh_init_ops = {
 	.early_delay			= xen_delay,
 	.parse_memmap			= xen_pvh_parse_memmap,
 #ifdef SMP
-	.mp_bootaddress			= mp_bootaddress,
 	.start_all_aps			= native_start_all_aps,
 #endif
 	.msi_init			= msi_init,
@@ -213,7 +211,7 @@ hammer_time_xen_legacy(start_info_t *si, uint64_t xenstack)
 		HYPERVISOR_shutdown(SHUTDOWN_crash);
 	}
 
-	xc_printf("MidnightBSD PVH running on %s\n", si->magic);
+	xc_printf("FreeBSD PVH running on %s\n", si->magic);
 
 	/* We use 3 pages of xen stack for the boot pagetables */
 	physfree = xenstack + 3 * PAGE_SIZE - KERNBASE;
@@ -405,7 +403,6 @@ xen_pv_start_all_aps(void)
 	mtx_init(&ap_boot_mtx, "ap boot", NULL, MTX_SPIN);
 
 	for (cpu = 1; cpu < mp_ncpus; cpu++) {
-
 		/* attempt to start the Application Processor */
 		if (!start_xen_ap(cpu))
 			panic("AP #%d failed to start!", cpu);
@@ -568,25 +565,60 @@ xen_pvh_parse_preload_data(uint64_t modulep)
 
 	if (start_info->modlist_paddr != 0) {
 		struct hvm_modlist_entry *mod;
+		const char *cmdline;
 
 		mod = (struct hvm_modlist_entry *)
 		    (start_info->modlist_paddr + KERNBASE);
-		preload_metadata = (caddr_t)(mod[0].paddr + KERNBASE);
+		cmdline = mod[0].cmdline_paddr ?
+		    (const char *)(mod[0].cmdline_paddr + KERNBASE) : NULL;
 
-		kmdp = preload_search_by_type("elf kernel");
-		if (kmdp == NULL)
-			kmdp = preload_search_by_type("elf64 kernel");
-		KASSERT(kmdp != NULL, ("unable to find kernel"));
+		if (strcmp(cmdline, "header") == 0) {
+			struct xen_header *header;
 
-		/*
-		 * Xen has relocated the metadata and the modules,
-		 * so we need to recalculate it's position. This is
-		 * done by saving the original modulep address and
-		 * then calculating the offset with mod_start,
-		 * which contains the relocated modulep address.
-		 */
-		metadata = MD_FETCH(kmdp, MODINFOMD_MODULEP, vm_paddr_t);
-		off = mod[0].paddr + KERNBASE - metadata;
+			header = (struct xen_header *)(mod[0].paddr + KERNBASE);
+
+			if ((header->flags & XENHEADER_HAS_MODULEP_OFFSET) !=
+			    XENHEADER_HAS_MODULEP_OFFSET) {
+				xc_printf("Unable to load module metadata\n");
+				HYPERVISOR_shutdown(SHUTDOWN_crash);
+			}
+
+			preload_metadata = (caddr_t)(mod[0].paddr +
+			    header->modulep_offset + KERNBASE);
+
+			kmdp = preload_search_by_type("elf kernel");
+			if (kmdp == NULL)
+				kmdp = preload_search_by_type("elf64 kernel");
+			if (kmdp == NULL) {
+				xc_printf("Unable to find kernel\n");
+				HYPERVISOR_shutdown(SHUTDOWN_crash);
+			}
+
+			/*
+			 * Xen has relocated the metadata and the modules, so
+			 * we need to recalculate it's position. This is done
+			 * by saving the original modulep address and then
+			 * calculating the offset from the real modulep
+			 * position.
+			 */
+			metadata = MD_FETCH(kmdp, MODINFOMD_MODULEP,
+			    vm_paddr_t);
+			off = mod[0].paddr + header->modulep_offset - metadata +
+			    KERNBASE;
+		} else {
+			preload_metadata = (caddr_t)(mod[0].paddr + KERNBASE);
+
+			kmdp = preload_search_by_type("elf kernel");
+			if (kmdp == NULL)
+				kmdp = preload_search_by_type("elf64 kernel");
+			if (kmdp == NULL) {
+				xc_printf("Unable to find kernel\n");
+				HYPERVISOR_shutdown(SHUTDOWN_crash);
+			}
+
+			metadata = MD_FETCH(kmdp, MODINFOMD_MODULEP, vm_paddr_t);
+			off = mod[0].paddr + KERNBASE - metadata;
+		}
 
 		preload_bootstrap_relocate(off);
 

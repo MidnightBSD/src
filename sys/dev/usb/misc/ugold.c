@@ -20,7 +20,6 @@
 /* Driver for Microdia's HID based TEMPer Temperature sensor */
 
 #include <sys/cdefs.h>
-
 #include <sys/stdint.h>
 #include <sys/stddef.h>
 #include <sys/param.h>
@@ -40,6 +39,8 @@
 #include <sys/malloc.h>
 #include <sys/priv.h>
 #include <sys/conf.h>
+
+#include <dev/hid/hid.h>
 
 #include <dev/usb/usb.h>
 #include <dev/usb/usbdi.h>
@@ -141,11 +142,11 @@ static const STRUCT_USB_HOST_ID ugold_devs[] = {
 
 DRIVER_MODULE(ugold, uhub, ugold_driver, ugold_devclass, NULL, NULL);
 MODULE_DEPEND(ugold, usb, 1, 1, 1);
+MODULE_DEPEND(ugold, hid, 1, 1, 1);
 MODULE_VERSION(ugold, 1);
 USB_PNP_HOST_INFO(ugold_devs);
 
 static const struct usb_config ugold_config[UGOLD_N_TRANSFER] = {
-
 	[UGOLD_INTR_DT] = {
 		.type = UE_INTERRUPT,
 		.endpoint = UE_ADDR_ANY,
@@ -226,7 +227,7 @@ ugold_attach(device_t dev)
 	if (error)
 		goto detach;
 
-	(void)hid_report_size(d_ptr, d_len, hid_input, &sc->sc_report_id);
+	(void)hid_report_size_max(d_ptr, d_len, hid_input, &sc->sc_report_id);
 
 	free(d_ptr, M_TEMP);
 
@@ -238,7 +239,7 @@ ugold_attach(device_t dev)
 
 	sensor_tree = SYSCTL_ADD_NODE(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO, "sensors",
-	    CTLFLAG_RD, NULL, "");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "");
 
 	if (sensor_tree == NULL) {
 		error = ENOMEM;
@@ -314,7 +315,6 @@ ugold_ds75_temp(uint8_t msb, uint8_t lsb)
 	int32_t temp = (msb << 24) | ((lsb & 0xF0) << 16);
 	return (((int64_t)temp * (int64_t)1000000LL) >> 24);
 }
-
 
 static void
 ugold_intr_callback(struct usb_xfer *xfer, usb_error_t error)

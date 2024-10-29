@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Takanori Watanabe
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -39,8 +38,6 @@
 #define	NTFS_A_VOLUMENAME	0x60
 #define	NTFS_FILEMAGIC		((uint32_t)(0x454C4946))
 #define	NTFS_VOLUMEINO		3
-
-#define G_LABEL_NTFS_DIR	"ntfs"
 
 struct ntfs_attr {
 	uint32_t	a_type;
@@ -110,16 +107,20 @@ g_label_ntfs_taste(struct g_consumer *cp, char *label, size_t size)
 
 	label[0] = '\0';
 	pp = cp->provider;
+	bf = NULL;
 	filerecp = NULL;
 
-	bf = (struct ntfs_bootfile *)g_read_data(cp, 0, pp->sectorsize, NULL);
+	if (pp->sectorsize < sizeof(*bf))
+		goto done;
+
+	bf = g_read_data(cp, 0, pp->sectorsize, NULL);
 	if (bf == NULL || strncmp(bf->bf_sysid, "NTFS    ", 8) != 0)
 		goto done;
 
 	mftrecsz = bf->bf_mftrecsz;
 	recsize = (mftrecsz > 0) ? (mftrecsz * bf->bf_bps * bf->bf_spc) :
 	    (1 << -mftrecsz);
-	if (recsize <= 0 || recsize > MAXPHYS || recsize % pp->sectorsize != 0)
+	if (recsize <= 0 || recsize > maxphys || recsize % pp->sectorsize != 0)
 		goto done;
 
 	voloff = bf->bf_mftcn * bf->bf_spc * bf->bf_bps +
@@ -172,15 +173,13 @@ g_label_ntfs_taste(struct g_consumer *cp, char *label, size_t size)
 		}
 	}
 done:
-	if (bf != NULL)
-		g_free(bf);
-	if (filerecp != NULL)
-		g_free(filerecp);
+	g_free(bf);
+	g_free(filerecp);
 }
 
 struct g_label_desc g_label_ntfs = {
 	.ld_taste = g_label_ntfs_taste,
-	.ld_dir = G_LABEL_NTFS_DIR,
+	.ld_dirprefix = "ntfs/",
 	.ld_enabled = 1
 };
 

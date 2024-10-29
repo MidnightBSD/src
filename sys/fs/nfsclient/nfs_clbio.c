@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bio.h>
@@ -69,7 +68,7 @@ extern struct nfsmount *ncl_iodmount[NFS_MAXASYNCDAEMON];
 extern int newnfs_directio_enable;
 extern int nfs_keep_dirty_on_error;
 
-int ncl_pbuf_freecnt = -1;	/* start out unlimited */
+uma_zone_t ncl_pbuf_zone;
 
 static struct buf *nfs_getcacheblk(struct vnode *vp, daddr_t bn, int size,
     struct thread *td);
@@ -174,7 +173,7 @@ ncl_getpages(struct vop_getpages_args *ap)
 	 * XXXGL: is that true for NFS, where short read can occur???
 	 */
 	VM_OBJECT_WLOCK(object);
-	if (pages[npages - 1]->valid != 0 && --npages == 0)
+	if (!vm_page_none_valid(pages[npages - 1]) && --npages == 0)
 		goto out;
 	VM_OBJECT_WUNLOCK(object);
 
@@ -182,7 +181,7 @@ ncl_getpages(struct vop_getpages_args *ap)
 	 * We use only the kva address for the buffer, but this is extremely
 	 * convenient and fast.
 	 */
-	bp = getpbuf(&ncl_pbuf_freecnt);
+	bp = uma_zalloc(ncl_pbuf_zone, M_WAITOK);
 
 	kva = (vm_offset_t) bp->b_data;
 	pmap_qenter(kva, pages, npages);
@@ -203,7 +202,7 @@ ncl_getpages(struct vop_getpages_args *ap)
 	error = ncl_readrpc(vp, &uio, cred);
 	pmap_qremove(kva, npages);
 
-	relpbuf(bp, &ncl_pbuf_freecnt);
+	uma_zfree(ncl_pbuf_zone, bp);
 
 	if (error && (uio.uio_resid == count)) {
 		printf("ncl_getpages: error %d\n", error);
@@ -227,14 +226,14 @@ ncl_getpages(struct vop_getpages_args *ap)
 			/*
 			 * Read operation filled an entire page
 			 */
-			m->valid = VM_PAGE_BITS_ALL;
+			vm_page_valid(m);
 			KASSERT(m->dirty == 0,
 			    ("nfs_getpages: page %p is dirty", m));
 		} else if (size > toff) {
 			/*
 			 * Read operation filled a partial page.
 			 */
-			m->valid = 0;
+			vm_page_invalid(m);
 			vm_page_set_valid_range(m, 0, size - toff);
 			KASSERT(m->dirty == 0,
 			    ("nfs_getpages: page %p is dirty", m));
@@ -370,7 +369,7 @@ nfs_bioread_check_cons(struct vnode *vp, struct thread *td, struct ucred *cred)
 	bool old_lock;
 
 	/*
-	 * Ensure the exclusove access to the node before checking
+	 * Ensure the exclusive access to the node before checking
 	 * whether the cache is consistent.
 	 */
 	old_lock = ncl_excl_start(vp);
@@ -416,6 +415,18 @@ nfs_bioread_check_cons(struct vnode *vp, struct thread *td, struct ucred *cred)
 out:
 	ncl_excl_finish(vp, old_lock);
 	return (error);
+}
+
+static bool
+ncl_bioread_dora(struct vnode *vp)
+{
+	vm_object_t obj;
+
+	obj = vp->v_object;
+	if (obj == NULL)
+		return (true);
+	return (!vm_object_mightbedirty(vp->v_object) &&
+	    vp->v_object->un_pager.vnp.writemappings == 0);
 }
 
 /*
@@ -485,9 +496,12 @@ ncl_bioread(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *cred)
 		on = uio->uio_offset - (lbn * biosize);
 
 		/*
-		 * Start the read ahead(s), as required.
+		 * Start the read ahead(s), as required.  Do not do
+		 * read-ahead if there are writeable mappings, since
+		 * unlocked read by nfsiod could obliterate changes
+		 * done by userspace.
 		 */
-		if (nmp->nm_readahead > 0) {
+		if (nmp->nm_readahead > 0 && ncl_bioread_dora(vp)) {
 		    for (nra = 0; nra < nmp->nm_readahead && nra < seqcount &&
 			(off_t)(lbn + 1 + nra) * biosize < nsize; nra++) {
 			rabn = lbn + 1 + nra;
@@ -674,7 +688,7 @@ ncl_bioread(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *cred)
 		 *  directory offset cookie of the next block.)
 		 */
 		NFSLOCKNODE(np);
-		if (nmp->nm_readahead > 0 &&
+		if (nmp->nm_readahead > 0 && ncl_bioread_dora(vp) &&
 		    (bp->b_flags & B_INVAL) == 0 &&
 		    (np->n_direofoffset == 0 ||
 		    (lbn + 1) * NFS_DIRBLKSIZ < np->n_direofoffset) &&
@@ -750,150 +764,61 @@ out:
  * later).
  */
 static int
-nfs_directio_write(vp, uiop, cred, ioflag)
-	struct vnode *vp;
-	struct uio *uiop;
-	struct ucred *cred;
-	int ioflag;
+nfs_directio_write(struct vnode *vp, struct uio *uiop, struct ucred *cred,
+    int ioflag)
 {
-	int error;
+	struct uio uio;
+	struct iovec iov;
 	struct nfsmount *nmp = VFSTONFS(vp->v_mount);
 	struct thread *td = uiop->uio_td;
-	int size;
-	int wsize;
+	int error, iomode, must_commit, size, wsize;
 
+	KASSERT((ioflag & IO_SYNC) != 0, ("nfs_directio_write: not sync"));
 	mtx_lock(&nmp->nm_mtx);
 	wsize = nmp->nm_wsize;
 	mtx_unlock(&nmp->nm_mtx);
-	if (ioflag & IO_SYNC) {
-		int iomode, must_commit;
-		struct uio uio;
-		struct iovec iov;
-do_sync:
-		while (uiop->uio_resid > 0) {
-			size = MIN(uiop->uio_resid, wsize);
-			size = MIN(uiop->uio_iov->iov_len, size);
-			iov.iov_base = uiop->uio_iov->iov_base;
-			iov.iov_len = size;
-			uio.uio_iov = &iov;
-			uio.uio_iovcnt = 1;
-			uio.uio_offset = uiop->uio_offset;
-			uio.uio_resid = size;
-			uio.uio_segflg = UIO_USERSPACE;
-			uio.uio_rw = UIO_WRITE;
-			uio.uio_td = td;
-			iomode = NFSWRITE_FILESYNC;
-			/*
-			 * When doing direct I/O we do not care if the
-			 * server's write verifier has changed, but we
-			 * do not want to update the verifier if it has
-			 * changed, since that hides the change from
-			 * writes being done through the buffer cache.
-			 * By passing must_commit in set to two, the code
-			 * in nfsrpc_writerpc() will not update the
-			 * verifier on the mount point.
-			 */
-			must_commit = 2;
-			error = ncl_writerpc(vp, &uio, cred, &iomode,
-			    &must_commit, 0);
-			KASSERT((must_commit == 2),
-			    ("ncl_directio_write: Updated write verifier"));
-			if (error)
-				return (error);
-			if (iomode != NFSWRITE_FILESYNC)
-				printf("nfs_directio_write: Broken server "
-				    "did not reply FILE_SYNC\n");
-			uiop->uio_offset += size;
-			uiop->uio_resid -= size;
-			if (uiop->uio_iov->iov_len <= size) {
-				uiop->uio_iovcnt--;
-				uiop->uio_iov++;
-			} else {
-				uiop->uio_iov->iov_base =
-					(char *)uiop->uio_iov->iov_base + size;
-				uiop->uio_iov->iov_len -= size;
-			}
-		}
-	} else {
-		struct uio *t_uio;
-		struct iovec *t_iov;
-		struct buf *bp;
-
+	while (uiop->uio_resid > 0) {
+		size = MIN(uiop->uio_resid, wsize);
+		size = MIN(uiop->uio_iov->iov_len, size);
+		iov.iov_base = uiop->uio_iov->iov_base;
+		iov.iov_len = size;
+		uio.uio_iov = &iov;
+		uio.uio_iovcnt = 1;
+		uio.uio_offset = uiop->uio_offset;
+		uio.uio_resid = size;
+		uio.uio_segflg = uiop->uio_segflg;
+		uio.uio_rw = UIO_WRITE;
+		uio.uio_td = td;
+		iomode = NFSWRITE_FILESYNC;
 		/*
-		 * Break up the write into blocksize chunks and hand these
-		 * over to nfsiod's for write back.
-		 * Unfortunately, this incurs a copy of the data. Since
-		 * the user could modify the buffer before the write is
-		 * initiated.
-		 *
-		 * The obvious optimization here is that one of the 2 copies
-		 * in the async write path can be eliminated by copying the
-		 * data here directly into mbufs and passing the mbuf chain
-		 * down. But that will require a fair amount of re-working
-		 * of the code and can be done if there's enough interest
-		 * in NFS directio access.
+		 * When doing direct I/O we do not care if the
+		 * server's write verifier has changed, but we
+		 * do not want to update the verifier if it has
+		 * changed, since that hides the change from
+		 * writes being done through the buffer cache.
+		 * By passing must_commit in set to two, the code
+		 * in nfsrpc_writerpc() will not update the
+		 * verifier on the mount point.
 		 */
-		while (uiop->uio_resid > 0) {
-			size = MIN(uiop->uio_resid, wsize);
-			size = MIN(uiop->uio_iov->iov_len, size);
-			bp = getpbuf(&ncl_pbuf_freecnt);
-			t_uio = malloc(sizeof(struct uio), M_NFSDIRECTIO, M_WAITOK);
-			t_iov = malloc(sizeof(struct iovec), M_NFSDIRECTIO, M_WAITOK);
-			t_iov->iov_base = malloc(size, M_NFSDIRECTIO, M_WAITOK);
-			t_iov->iov_len = size;
-			t_uio->uio_iov = t_iov;
-			t_uio->uio_iovcnt = 1;
-			t_uio->uio_offset = uiop->uio_offset;
-			t_uio->uio_resid = size;
-			t_uio->uio_segflg = UIO_SYSSPACE;
-			t_uio->uio_rw = UIO_WRITE;
-			t_uio->uio_td = td;
-			KASSERT(uiop->uio_segflg == UIO_USERSPACE ||
-			    uiop->uio_segflg == UIO_SYSSPACE,
-			    ("nfs_directio_write: Bad uio_segflg"));
-			if (uiop->uio_segflg == UIO_USERSPACE) {
-				error = copyin(uiop->uio_iov->iov_base,
-				    t_iov->iov_base, size);
-				if (error != 0)
-					goto err_free;
-			} else
-				/*
-				 * UIO_SYSSPACE may never happen, but handle
-				 * it just in case it does.
-				 */
-				bcopy(uiop->uio_iov->iov_base, t_iov->iov_base,
-				    size);
-			bp->b_flags |= B_DIRECT;
-			bp->b_iocmd = BIO_WRITE;
-			if (cred != NOCRED) {
-				crhold(cred);
-				bp->b_wcred = cred;
-			} else
-				bp->b_wcred = NOCRED;
-			bp->b_caller1 = (void *)t_uio;
-			bp->b_vp = vp;
-			error = ncl_asyncio(nmp, bp, NOCRED, td);
-err_free:
-			if (error) {
-				free(t_iov->iov_base, M_NFSDIRECTIO);
-				free(t_iov, M_NFSDIRECTIO);
-				free(t_uio, M_NFSDIRECTIO);
-				bp->b_vp = NULL;
-				relpbuf(bp, &ncl_pbuf_freecnt);
-				if (error == EINTR)
-					return (error);
-				goto do_sync;
-			}
-			uiop->uio_offset += size;
-			uiop->uio_resid -= size;
-			if (uiop->uio_iov->iov_len <= size) {
-				uiop->uio_iovcnt--;
-				uiop->uio_iov++;
-			} else {
-				uiop->uio_iov->iov_base =
-					(char *)uiop->uio_iov->iov_base + size;
-				uiop->uio_iov->iov_len -= size;
-			}
+		must_commit = 2;
+		error = ncl_writerpc(vp, &uio, cred, &iomode,
+		    &must_commit, 0, ioflag);
+		KASSERT(must_commit == 2,
+		    ("ncl_directio_write: Updated write verifier"));
+		if (error != 0)
+			return (error);
+		if (iomode != NFSWRITE_FILESYNC)
+			printf("nfs_directio_write: Broken server "
+			    "did not reply FILE_SYNC\n");
+		uiop->uio_offset += size;
+		uiop->uio_resid -= size;
+		if (uiop->uio_iov->iov_len <= size) {
+			uiop->uio_iovcnt--;
+			uiop->uio_iov++;
+		} else {
+			uiop->uio_iov->iov_base =
+				(char *)uiop->uio_iov->iov_base + size;
+			uiop->uio_iov->iov_len -= size;
 		}
 	}
 	return (0);
@@ -949,27 +874,33 @@ ncl_write(struct vop_write_args *ap)
 	 * Synchronously flush pending buffers if we are in synchronous
 	 * mode or if we are appending.
 	 */
-	if (ioflag & (IO_APPEND | IO_SYNC)) {
-		NFSLOCKNODE(np);
-		if (np->n_flag & NMODIFIED) {
-			NFSUNLOCKNODE(np);
-#ifdef notyet /* Needs matching nonblock semantics elsewhere, too. */
-			/*
-			 * Require non-blocking, synchronous writes to
-			 * dirty files to inform the program it needs
-			 * to fsync(2) explicitly.
-			 */
-			if (ioflag & IO_NDELAY)
-				return (EAGAIN);
-#endif
-			np->n_attrstamp = 0;
-			KDTRACE_NFS_ATTRCACHE_FLUSH_DONE(vp);
-			error = ncl_vinvalbuf(vp, V_SAVE | ((ioflag &
-			    IO_VMIO) != 0 ? V_VMIO : 0), td, 1);
-			if (error != 0)
-				return (error);
-		} else
-			NFSUNLOCKNODE(np);
+	if ((ioflag & IO_APPEND) || ((ioflag & IO_SYNC) && (np->n_flag &
+	    NMODIFIED))) {
+		/*
+		 * For the case where IO_APPEND is being done using a
+		 * direct output (to the NFS server) RPC and
+		 * newnfs_directio_enable is 0, all buffer cache buffers,
+		 * including ones not modified, must be invalidated.
+		 * This ensures that stale data is not read out of the
+		 * buffer cache.  The call also invalidates all mapped
+		 * pages and, since the exclusive lock is held on the vnode,
+		 * new pages cannot be faulted in.
+		 *
+		 * For the case where newnfs_directio_enable is set
+		 * (which is not the default), it is not obvious that
+		 * stale data should be left in the buffer cache, but
+		 * the code has been this way for over a decade without
+		 * complaints.  Note that, unlike doing IO_APPEND via
+		 * a direct write RPC when newnfs_directio_enable is not set,
+		 * when newnfs_directio_enable is set, reading is done via
+		 * direct to NFS server RPCs as well.
+		 */
+		np->n_attrstamp = 0;
+		KDTRACE_NFS_ATTRCACHE_FLUSH_DONE(vp);
+		error = ncl_vinvalbuf(vp, V_SAVE | ((ioflag &
+		    IO_VMIO) != 0 ? V_VMIO : 0), td, 1);
+		if (error != 0)
+			return (error);
 	}
 
 	orig_resid = uio->uio_resid;
@@ -982,11 +913,21 @@ ncl_write(struct vop_write_args *ap)
 	 * get the append lock.
 	 */
 	if (ioflag & IO_APPEND) {
-		np->n_attrstamp = 0;
-		KDTRACE_NFS_ATTRCACHE_FLUSH_DONE(vp);
-		error = VOP_GETATTR(vp, &vattr, cred);
-		if (error)
-			return (error);
+		/*
+		 * For NFSv4, the AppendWrite will Verify the size against
+		 * the file's size on the server.  If not the same, the
+		 * write will then be retried, using the file size returned
+		 * by the AppendWrite.  However, for NFSv2 and NFSv3, the
+		 * size must be acquired here via a Getattr RPC.
+		 * The AppendWrite is not done for a pNFS mount.
+		 */
+		if (!NFSHASNFSV4(nmp) || NFSHASPNFS(nmp)) {
+			np->n_attrstamp = 0;
+			KDTRACE_NFS_ATTRCACHE_FLUSH_DONE(vp);
+			error = VOP_GETATTR(vp, &vattr, cred);
+			if (error)
+				return (error);
+		}
 		NFSLOCKNODE(np);
 		uio->uio_offset = np->n_size;
 		NFSUNLOCKNODE(np);
@@ -1000,15 +941,29 @@ ncl_write(struct vop_write_args *ap)
 	if (uio->uio_resid == 0)
 		return (0);
 
-	if (newnfs_directio_enable && (ioflag & IO_DIRECT) && vp->v_type == VREG)
-		return nfs_directio_write(vp, uio, cred, ioflag);
+	/*
+	 * Do IO_APPEND writing via a synchronous direct write.
+	 * This can result in a significant performance improvement.
+	 */
+	if ((newnfs_directio_enable && (ioflag & IO_DIRECT)) ||
+	    (ioflag & IO_APPEND)) {
+		/*
+		 * Direct writes to the server must be done NFSWRITE_FILESYNC,
+		 * because the write data is not cached and, therefore, the
+		 * write cannot be redone after a server reboot.
+		 * Set IO_SYNC to make this happen.
+		 */
+		ioflag |= IO_SYNC;
+		return (nfs_directio_write(vp, uio, cred, ioflag));
+	}
 
 	/*
 	 * Maybe this should be above the vnode op call, but so long as
 	 * file servers have no limits, i don't think it matters
 	 */
-	if (vn_rlimit_fsize(vp, uio, td))
-		return (EFBIG);
+	error = vn_rlimit_fsize(vp, uio, td);
+	if (error != 0)
+		return (error);
 
 	save2 = curthread_pflags2_set(TDP2_SBPAGES);
 	biosize = vp->v_bufobj.bo_bsize;
@@ -1289,7 +1244,7 @@ again:
 			}
 		} else if ((n + on) == biosize || (ioflag & IO_ASYNC) != 0) {
 			bp->b_flags |= B_ASYNC;
-			(void) ncl_writebp(bp, 0, NULL);
+			(void) bwrite(bp);
 		} else {
 			bdwrite(bp);
 		}
@@ -1398,11 +1353,9 @@ ncl_vinvalbuf(struct vnode *vp, int flags, struct thread *td, int intrflg)
 	/*
 	 * Now, flush as required.
 	 */
-	if ((flags & (V_SAVE | V_VMIO)) == V_SAVE &&
-	     vp->v_bufobj.bo_object != NULL) {
-		VM_OBJECT_WLOCK(vp->v_bufobj.bo_object);
-		vm_object_page_clean(vp->v_bufobj.bo_object, 0, 0, OBJPC_SYNC);
-		VM_OBJECT_WUNLOCK(vp->v_bufobj.bo_object);
+	if ((flags & (V_SAVE | V_VMIO)) == V_SAVE) {
+		vnode_pager_clean_sync(vp);
+
 		/*
 		 * If the page clean was interrupted, fail the invalidation.
 		 * Not doing so, we run the risk of losing dirty pages in the
@@ -1431,7 +1384,7 @@ ncl_vinvalbuf(struct vnode *vp, int flags, struct thread *td, int intrflg)
 		nanouptime(&ts);
 		NFSLOCKNODE(np);
 	}
-	if (np->n_directio_asyncwr == 0 && (np->n_flag & NMODIFIED) != 0) {
+	if ((np->n_flag & NMODIFIED) != 0) {
 		np->n_localmodtime = ts;
 		np->n_flag &= ~NMODIFIED;
 	}
@@ -1576,12 +1529,8 @@ again:
 		BUF_KERNPROC(bp);
 		TAILQ_INSERT_TAIL(&nmp->nm_bufq, bp, b_freelist);
 		nmp->nm_bufqlen++;
-		if ((bp->b_flags & B_DIRECT) && bp->b_iocmd == BIO_WRITE) {
-			NFSLOCKNODE(VTONFS(bp->b_vp));
-			VTONFS(bp->b_vp)->n_flag |= NMODIFIED;
-			VTONFS(bp->b_vp)->n_directio_asyncwr++;
-			NFSUNLOCKNODE(VTONFS(bp->b_vp));
-		}
+		KASSERT((bp->b_flags & B_DIRECT) == 0,
+		    ("ncl_asyncio: B_DIRECT set"));
 		NFSUNLOCKIOD();
 		return (0);
 	}
@@ -1594,59 +1543,6 @@ again:
 	 */
 	NFS_DPF(ASYNCIO, ("ncl_asyncio: no iods available, i/o is synchronous\n"));
 	return (EIO);
-}
-
-void
-ncl_doio_directwrite(struct buf *bp)
-{
-	int iomode, must_commit;
-	struct uio *uiop = (struct uio *)bp->b_caller1;
-	char *iov_base = uiop->uio_iov->iov_base;
-
-	iomode = NFSWRITE_FILESYNC;
-	uiop->uio_td = NULL; /* NULL since we're in nfsiod */
-	/*
-	 * When doing direct I/O we do not care if the
-	 * server's write verifier has changed, but we
-	 * do not want to update the verifier if it has
-	 * changed, since that hides the change from
-	 * writes being done through the buffer cache.
-	 * By passing must_commit in set to two, the code
-	 * in nfsrpc_writerpc() will not update the
-	 * verifier on the mount point.
-	 */
-	must_commit = 2;
-	ncl_writerpc(bp->b_vp, uiop, bp->b_wcred, &iomode, &must_commit, 0);
-	KASSERT((must_commit == 2), ("ncl_doio_directwrite: Updated write"
-	    " verifier"));
-	if (iomode != NFSWRITE_FILESYNC)
-		printf("ncl_doio_directwrite: Broken server "
-		    "did not reply FILE_SYNC\n");
-	free(iov_base, M_NFSDIRECTIO);
-	free(uiop->uio_iov, M_NFSDIRECTIO);
-	free(uiop, M_NFSDIRECTIO);
-	if ((bp->b_flags & B_DIRECT) && bp->b_iocmd == BIO_WRITE) {
-		struct nfsnode *np = VTONFS(bp->b_vp);
-		NFSLOCKNODE(np);
-		if (NFSHASPNFS(VFSTONFS(vnode_mount(bp->b_vp)))) {
-			/*
-			 * Invalidate the attribute cache, since writes to a DS
-			 * won't update the size attribute.
-			 */
-			np->n_attrstamp = 0;
-		}
-		np->n_directio_asyncwr--;
-		if (np->n_directio_asyncwr == 0) {
-			np->n_flag &= ~NMODIFIED;
-			if ((np->n_flag & NFSYNCWAIT)) {
-				np->n_flag &= ~NFSYNCWAIT;
-				wakeup((caddr_t)&np->n_directio_asyncwr);
-			}
-		}
-		NFSUNLOCKNODE(np);
-	}
-	bp->b_vp = NULL;
-	relpbuf(bp, &ncl_pbuf_freecnt);
 }
 
 /*
@@ -1801,7 +1697,7 @@ ncl_doio(struct vnode *vp, struct buf *bp, struct ucred *cr, struct thread *td,
 		    iomode = NFSWRITE_FILESYNC;
 
 		error = ncl_writerpc(vp, uiop, cr, &iomode, &must_commit,
-		    called_from_strategy);
+		    called_from_strategy, 0);
 
 		/*
 		 * When setting B_NEEDCOMMIT also set B_CLUSTEROK to try
@@ -1946,4 +1842,3 @@ ncl_meta_setsize(struct vnode *vp, struct thread *td, u_quad_t nsize)
 	}
 	return(error);
 }
-

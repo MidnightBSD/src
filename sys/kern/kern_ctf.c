@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 John Birrell <jb@freebsd.org>
  * All rights reserved.
@@ -24,19 +24,13 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
+
+#include <sys/ctf.h>
 
 /*
  * Note this file is included by both link_elf.c and link_elf_obj.c.
- *
- * The CTF header structure definition can't be used here because it's
- * (annoyingly) covered by the CDDL. We will just use a few bytes from
- * it as an integer array where we 'know' what they mean.
  */
-#define CTF_HDR_SIZE		36
-#define CTF_HDR_STRTAB_U32	7
-#define CTF_HDR_STRLEN_U32	8
 
 #ifdef DDB_CTF
 #include <contrib/zlib/zlib.h>
@@ -58,7 +52,7 @@ link_elf_ctf_get(linker_file_t lf, linker_ctf_t *lc)
 	size_t sz;
 	struct nameidata nd;
 	struct thread *td = curthread;
-	uint8_t ctf_hdr[CTF_HDR_SIZE];
+	struct ctf_header cth;
 #endif
 	int error = 0;
 
@@ -173,45 +167,38 @@ link_elf_ctf_get(linker_file_t lf, linker_ctf_t *lc)
 	}
 
 	/* Read the CTF header. */
-	if ((error = vn_rdwr(UIO_READ, nd.ni_vp, ctf_hdr, sizeof(ctf_hdr),
+	if ((error = vn_rdwr(UIO_READ, nd.ni_vp, &cth, sizeof(cth),
 	    shdr[i].sh_offset, UIO_SYSSPACE, IO_NODELOCKED, td->td_ucred,
 	    NOCRED, NULL, td)) != 0)
 		goto out;
 
 	/* Check the CTF magic number. */
-#ifdef __LITTLE_ENDIAN__
-	if (ctf_hdr[0] != 0xf1 || ctf_hdr[1] != 0xcf) {
-#else
-	if (ctf_hdr[0] != 0xcf || ctf_hdr[1] != 0xf1) {
-#endif
+	if (cth.cth_magic != CTF_MAGIC) {
 		printf("%s(%d): module %s has invalid format\n",
 		    __func__, __LINE__, lf->pathname);
 		error = EFTYPE;
 		goto out;
 	}
 
-	/* Check if version 2. */
-	if (ctf_hdr[2] != 2) {
-		printf("%s(%d): module %s CTF format version is %d "
-		    "(2 expected)\n",
-		    __func__, __LINE__, lf->pathname, ctf_hdr[2]);
+	if (cth.cth_version != CTF_VERSION_2 &&
+	    cth.cth_version != CTF_VERSION_3) {
+		printf(
+		    "%s(%d): module %s CTF format has unsupported version %d\n",
+		    __func__, __LINE__, lf->pathname, cth.cth_version);
 		error = EFTYPE;
 		goto out;
 	}
 
 	/* Check if the data is compressed. */
-	if ((ctf_hdr[3] & 0x1) != 0) {
-		uint32_t *u32 = (uint32_t *) ctf_hdr;
-
+	if ((cth.cth_flags & CTF_F_COMPRESS) != 0) {
 		/*
 		 * The last two fields in the CTF header are the offset
 		 * from the end of the header to the start of the string
-		 * data and the length of that string data. se this
+		 * data and the length of that string data. Use this
 		 * information to determine the decompressed CTF data
 		 * buffer required.
 		 */
-		sz = u32[CTF_HDR_STRTAB_U32] + u32[CTF_HDR_STRLEN_U32] +
-		    sizeof(ctf_hdr);
+		sz = cth.cth_stroff + cth.cth_strlen + sizeof(cth);
 
 		/*
 		 * Allocate memory for the compressed CTF data, including
@@ -243,31 +230,21 @@ link_elf_ctf_get(linker_file_t lf, linker_ctf_t *lc)
 
 	/* Check if decompression is required. */
 	if (raw != NULL) {
-		z_stream zs;
+		uLongf destlen;
 		int ret;
 
 		/*
 		 * The header isn't compressed, so copy that into the
 		 * CTF buffer first.
 		 */
-		bcopy(ctf_hdr, ctftab, sizeof(ctf_hdr));
+		bcopy(&cth, ctftab, sizeof(cth));
 
-		/* Initialise the zlib structure. */
-		bzero(&zs, sizeof(zs));
-
-		if (inflateInit(&zs) != Z_OK) {
-			error = EIO;
-			goto out;
-		}
-
-		zs.avail_in = shdr[i].sh_size - sizeof(ctf_hdr);
-		zs.next_in = ((uint8_t *) raw) + sizeof(ctf_hdr);
-		zs.avail_out = sz - sizeof(ctf_hdr);
-		zs.next_out = ((uint8_t *) ctftab) + sizeof(ctf_hdr);
-		ret = inflate(&zs, Z_FINISH);
-		inflateEnd(&zs);
-		if (ret != Z_STREAM_END) {
-			printf("%s(%d): zlib inflate returned %d\n", __func__, __LINE__, ret);
+		destlen = sz - sizeof(cth);
+		ret = uncompress(ctftab + sizeof(cth), &destlen,
+		    raw + sizeof(cth), shdr[i].sh_size - sizeof(cth));
+		if (ret != Z_OK) {
+			printf("%s(%d): zlib uncompress returned %d\n",
+			    __func__, __LINE__, ret);
 			error = EIO;
 			goto out;
 		}
@@ -292,7 +269,7 @@ link_elf_ctf_get(linker_file_t lf, linker_ctf_t *lc)
 	lc->typlenp = &ef->typlen;
 
 out:
-	VOP_UNLOCK(nd.ni_vp, 0);
+	VOP_UNLOCK(nd.ni_vp);
 	vn_close(nd.ni_vp, FREAD, td->td_ucred, td);
 
 	if (hdr != NULL)

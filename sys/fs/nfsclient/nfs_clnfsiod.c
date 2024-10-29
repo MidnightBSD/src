@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/sysproto.h>
@@ -124,7 +123,7 @@ out:
 	return (0);
 }
 SYSCTL_PROC(_vfs_nfs, OID_AUTO, iodmin,
-    CTLTYPE_UINT | CTLFLAG_RWTUN | CTLFLAG_NOFETCH,
+    CTLTYPE_UINT | CTLFLAG_RWTUN | CTLFLAG_NOFETCH | CTLFLAG_MPSAFE,
     0, sizeof (nfs_iodmin), sysctl_iodmin, "IU",
     "Min number of nfsiod kthreads to keep as spares");
 
@@ -160,8 +159,9 @@ out:
 	NFSUNLOCKIOD();
 	return (0);
 }
-SYSCTL_PROC(_vfs_nfs, OID_AUTO, iodmax, CTLTYPE_UINT | CTLFLAG_RW, 0,
-    sizeof (ncl_iodmax), sysctl_iodmax, "IU",
+SYSCTL_PROC(_vfs_nfs, OID_AUTO, iodmax,
+    CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_MPSAFE, 0, sizeof (ncl_iodmax),
+    sysctl_iodmax, "IU",
     "Max number of nfsiod kthreads");
 
 static int
@@ -292,17 +292,14 @@ nfssvc_iod(void *instance)
 		    wakeup(&nmp->nm_bufq);
 		}
 		NFSUNLOCKIOD();
-		if (bp->b_flags & B_DIRECT) {
-			KASSERT((bp->b_iocmd == BIO_WRITE), ("nfscvs_iod: BIO_WRITE not set"));
-			(void)ncl_doio_directwrite(bp);
-		} else {
-			if (bp->b_iocmd == BIO_READ)
-				(void) ncl_doio(bp->b_vp, bp, bp->b_rcred,
-				    NULL, 0);
-			else
-				(void) ncl_doio(bp->b_vp, bp, bp->b_wcred,
-				    NULL, 0);
-		}
+		KASSERT((bp->b_flags & B_DIRECT) == 0,
+		    ("nfssvc_iod: B_DIRECT set"));
+		if (bp->b_iocmd == BIO_READ)
+			(void) ncl_doio(bp->b_vp, bp, bp->b_rcred,
+			    NULL, 0);
+		else
+			(void) ncl_doio(bp->b_vp, bp, bp->b_wcred,
+			    NULL, 0);
 		NFSLOCKIOD();
 		/*
 		 * Make sure the nmp hasn't been dismounted as soon as

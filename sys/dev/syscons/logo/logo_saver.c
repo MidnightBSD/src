@@ -26,7 +26,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -64,11 +63,11 @@ logo_blit(video_adapter_t *adp, int x, int y)
 {
 	int d, l, o, p;
 	int last_origin = -1;
-	
+
 	for (o = 0, p = y * bpsl + x; p > banksize; p -= banksize)
 		o += banksize;
 	SET_ORIGIN(adp, o);
-	
+
 	for (d = 0; d < logo_img_size; d += logo_w) {
 		if (p + logo_w < banksize) {
 			bcopy(logo_img + d, vid + p, logo_w);
@@ -93,7 +92,7 @@ logo_update(video_adapter_t *adp)
 {
 	static int xpos = 0, ypos = 0;
 	static int xinc = 1, yinc = 1;
-	
+
 	/* Turn when you hit the edge */
 	if ((xpos + logo_w + xinc > scrw) || (xpos + xinc < 0))
 		xinc = -xinc;
@@ -101,7 +100,7 @@ logo_update(video_adapter_t *adp)
 		yinc = -yinc;
 	xpos += xinc;
 	ypos += yinc;
-	
+
 	/* XXX Relies on margin around logo to erase trail */
 	logo_blit(adp, xpos, ypos);
 }
@@ -110,7 +109,7 @@ static int
 logo_saver(video_adapter_t *adp, int blank)
 {
 	int pl;
-	
+
 	if (blank) {
 		/* switch to graphics mode */
 		if (blanked <= 0) {
@@ -136,7 +135,7 @@ static int
 logo_init(video_adapter_t *adp)
 {
 	video_info_t info;
-	
+
 	if (!vidd_get_info(adp, M_VESA_CG800x600, &info)) {
 		scrmode = M_VESA_CG800x600;
 	} else if (!vidd_get_info(adp, M_VGA_CG320, &info)) {
@@ -147,10 +146,10 @@ logo_init(video_adapter_t *adp)
 		    SAVER_NAME);
 		return (ENODEV);
 	}
-	
+
 	scrw = info.vi_width;
 	scrh = info.vi_height;
-	
+
 	return (0);
 }
 

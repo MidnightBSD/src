@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 EMC Corp.
  * Copyright (c) 2011 Jeffrey Roberson <jeff@freebsd.org>
@@ -26,15 +26,26 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SYS_PCTRIE_H_
 #define _SYS_PCTRIE_H_
 
 #include <sys/_pctrie.h>
+#include <sys/_smr.h>
 
 #ifdef _KERNEL
+
+#define	PCTRIE_DEFINE_SMR(name, type, field, allocfn, freefn, smr)	\
+    PCTRIE_DEFINE(name, type, field, allocfn, freefn)			\
+									\
+static __inline struct type *						\
+name##_PCTRIE_LOOKUP_UNLOCKED(struct pctrie *ptree, uint64_t key)	\
+{									\
+									\
+	return name##_PCTRIE_VAL2PTR(pctrie_lookup_unlocked(ptree,	\
+	    key, (smr)));						\
+}									\
 
 #define	PCTRIE_DEFINE(name, type, field, allocfn, freefn)		\
 									\
@@ -113,6 +124,8 @@ int		pctrie_insert(struct pctrie *ptree, uint64_t *val,
 uint64_t	*pctrie_lookup(struct pctrie *ptree, uint64_t key);
 uint64_t	*pctrie_lookup_ge(struct pctrie *ptree, uint64_t key);
 uint64_t	*pctrie_lookup_le(struct pctrie *ptree, uint64_t key);
+uint64_t	*pctrie_lookup_unlocked(struct pctrie *ptree, uint64_t key,
+		    smr_t smr);
 void		pctrie_reclaim_allnodes(struct pctrie *ptree,
 		    pctrie_free_t freefn);
 void		pctrie_remove(struct pctrie *ptree, uint64_t key,
@@ -127,7 +140,7 @@ pctrie_init(struct pctrie *ptree)
 	ptree->pt_root = 0;
 }
 
-static __inline boolean_t
+static __inline bool
 pctrie_is_empty(struct pctrie *ptree)
 {
 

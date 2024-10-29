@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case iscsi_001_pos cleanup
 iscsi_001_pos_head()
 {
 	atf_set "descr" "Verify that setting shareiscsi property on volume will make itan iSCSI target as expected."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 iscsi_001_pos_body()
 {
@@ -55,7 +53,7 @@ atf_test_case iscsi_002_neg cleanup
 iscsi_002_neg_head()
 {
 	atf_set "descr" "Verify file systems and snapshots can not be shared via iSCSI."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 iscsi_002_neg_body()
 {
@@ -80,7 +78,7 @@ atf_test_case iscsi_003_neg cleanup
 iscsi_003_neg_head()
 {
 	atf_set "descr" "Verify invalid value of shareiscsi can not be set"
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 iscsi_003_neg_body()
 {
@@ -105,7 +103,7 @@ atf_test_case iscsi_004_pos cleanup
 iscsi_004_pos_head()
 {
 	atf_set "descr" "Verify renaming a volume does not change target's iSCSI name."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 iscsi_004_pos_body()
 {
@@ -130,7 +128,7 @@ atf_test_case iscsi_005_pos cleanup
 iscsi_005_pos_head()
 {
 	atf_set "descr" "Verify export/import have right effects on iSCSI targets."
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 }
 iscsi_005_pos_body()
 {
@@ -155,7 +153,7 @@ atf_test_case iscsi_006_neg cleanup
 iscsi_006_neg_head()
 {
 	atf_set "descr" "Verify iscsioptions can not be changed by zfs command."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 iscsi_006_neg_body()
 {

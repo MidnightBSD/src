@@ -1,7 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2005-2011 Pawel Jakub Dawidek <pawel@dawidek.net>
+ * Copyright (c) 2005-2019 Pawel Jakub Dawidek <pawel@dawidek.net>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_G_ELI_H_
@@ -103,6 +102,9 @@
 #define	G_ELI_FLAG_GELIBOOT		0x00000080
 /* Hide passphrase length in GELIboot. */
 #define	G_ELI_FLAG_GELIDISPLAYPASS	0x00000100
+/* Expand provider automatically. */
+#define	G_ELI_FLAG_AUTORESIZE		0x00000200
+
 /* RUNTIME FLAGS. */
 /* Provider was open for writing. */
 #define	G_ELI_FLAG_WOPEN		0x00010000
@@ -141,6 +143,7 @@
 #define	G_ELI_CRYPTO_UNKNOWN	0
 #define	G_ELI_CRYPTO_HW		1
 #define	G_ELI_CRYPTO_SW		2
+#define	G_ELI_CRYPTO_SW_ACCEL	3
 
 #ifdef _KERNEL
 #if (MAX_KEY_BYTES < G_ELI_DATAIVKEYLEN)
@@ -151,32 +154,15 @@ extern int g_eli_debug;
 extern u_int g_eli_overwrites;
 extern u_int g_eli_batch;
 
-#define	G_ELI_DEBUG(lvl, ...)	do {					\
-	if (g_eli_debug >= (lvl)) {					\
-		printf("GEOM_ELI");					\
-		if (g_eli_debug > 0)					\
-			printf("[%u]", lvl);				\
-		printf(": ");						\
-		printf(__VA_ARGS__);					\
-		printf("\n");						\
-	}								\
-} while (0)
-#define	G_ELI_LOGREQ(lvl, bp, ...)	do {				\
-	if (g_eli_debug >= (lvl)) {					\
-		printf("GEOM_ELI");					\
-		if (g_eli_debug > 0)					\
-			printf("[%u]", lvl);				\
-		printf(": ");						\
-		printf(__VA_ARGS__);					\
-		printf(" ");						\
-		g_print_bio(bp);					\
-		printf("\n");						\
-	}								\
-} while (0)
+#define	G_ELI_DEBUG(lvl, ...) \
+    _GEOM_DEBUG("GEOM_ELI", g_eli_debug, (lvl), NULL, __VA_ARGS__)
+#define	G_ELI_LOGREQ(lvl, bp, ...) \
+    _GEOM_DEBUG("GEOM_ELI", g_eli_debug, (lvl), (bp), __VA_ARGS__)
 
 struct g_eli_worker {
 	struct g_eli_softc	*w_softc;
 	struct proc		*w_proc;
+	void			*w_first_key;
 	u_int			 w_number;
 	crypto_session_t	 w_sid;
 	boolean_t		 w_active;
@@ -193,7 +179,9 @@ struct g_eli_softc {
 	uint8_t		 sc_ekey[G_ELI_DATAKEYLEN];
 	TAILQ_HEAD(, g_eli_key) sc_ekeys_queue;
 	RB_HEAD(g_eli_key_tree, g_eli_key) sc_ekeys_tree;
+#ifndef _STANDALONE
 	struct mtx	 sc_ekeys_lock;
+#endif
 	uint64_t	 sc_ekeys_total;
 	uint64_t	 sc_ekeys_allocated;
 	u_int		 sc_ealgo;
@@ -210,6 +198,7 @@ struct g_eli_softc {
 	int		 sc_inflight;
 	off_t		 sc_mediasize;
 	size_t		 sc_sectorsize;
+	off_t		 sc_provsize;
 	u_int		 sc_bytes_per_sector;
 	u_int		 sc_data_per_sector;
 #ifndef _KERNEL
@@ -429,18 +418,10 @@ g_eli_str2ealgo(const char *name)
 		return (CRYPTO_AES_CBC);
 	else if (strcasecmp("aes-xts", name) == 0)
 		return (CRYPTO_AES_XTS);
-	else if (strcasecmp("blowfish", name) == 0)
-		return (CRYPTO_BLF_CBC);
-	else if (strcasecmp("blowfish-cbc", name) == 0)
-		return (CRYPTO_BLF_CBC);
 	else if (strcasecmp("camellia", name) == 0)
 		return (CRYPTO_CAMELLIA_CBC);
 	else if (strcasecmp("camellia-cbc", name) == 0)
 		return (CRYPTO_CAMELLIA_CBC);
-	else if (strcasecmp("3des", name) == 0)
-		return (CRYPTO_3DES_CBC);
-	else if (strcasecmp("3des-cbc", name) == 0)
-		return (CRYPTO_3DES_CBC);
 	return (CRYPTO_ALGORITHM_MIN - 1);
 }
 
@@ -448,9 +429,7 @@ static __inline u_int
 g_eli_str2aalgo(const char *name)
 {
 
-	if (strcasecmp("hmac/md5", name) == 0)
-		return (CRYPTO_MD5_HMAC);
-	else if (strcasecmp("hmac/sha1", name) == 0)
+	if (strcasecmp("hmac/sha1", name) == 0)
 		return (CRYPTO_SHA1_HMAC);
 	else if (strcasecmp("hmac/ripemd160", name) == 0)
 		return (CRYPTO_RIPEMD160_HMAC);
@@ -474,14 +453,8 @@ g_eli_algo2str(u_int algo)
 		return ("AES-CBC");
 	case CRYPTO_AES_XTS:
 		return ("AES-XTS");
-	case CRYPTO_BLF_CBC:
-		return ("Blowfish-CBC");
 	case CRYPTO_CAMELLIA_CBC:
 		return ("CAMELLIA-CBC");
-	case CRYPTO_3DES_CBC:
-		return ("3DES-CBC");
-	case CRYPTO_MD5_HMAC:
-		return ("HMAC/MD5");
 	case CRYPTO_SHA1_HMAC:
 		return ("HMAC/SHA1");
 	case CRYPTO_RIPEMD160_HMAC:
@@ -534,6 +507,36 @@ eli_metadata_dump(const struct g_eli_metadata *md)
 	printf("  MD5 hash: %s\n", str);
 }
 
+#ifdef _KERNEL
+static __inline bool
+eli_metadata_crypto_supported(const struct g_eli_metadata *md)
+{
+
+	switch (md->md_ealgo) {
+	case CRYPTO_NULL_CBC:
+	case CRYPTO_AES_CBC:
+	case CRYPTO_CAMELLIA_CBC:
+	case CRYPTO_AES_XTS:
+		break;
+	default:
+		return (false);
+	}
+	if (md->md_flags & G_ELI_FLAG_AUTH) {
+		switch (md->md_aalgo) {
+		case CRYPTO_SHA1_HMAC:
+		case CRYPTO_RIPEMD160_HMAC:
+		case CRYPTO_SHA2_256_HMAC:
+		case CRYPTO_SHA2_384_HMAC:
+		case CRYPTO_SHA2_512_HMAC:
+			break;
+		default:
+			return (false);
+		}
+	}
+	return (true);
+}
+#endif
+
 static __inline u_int
 g_eli_keylen(u_int algo, u_int keylen)
 {
@@ -569,21 +572,24 @@ g_eli_keylen(u_int algo, u_int keylen)
 		default:
 			return (0);
 		}
-	case CRYPTO_BLF_CBC:
-		if (keylen == 0)
-			return (128);
-		if (keylen < 128 || keylen > 448)
-			return (0);
-		if ((keylen % 32) != 0)
-			return (0);
-		return (keylen);
-	case CRYPTO_3DES_CBC:
-		if (keylen == 0 || keylen == 192)
-			return (192);
-		return (0);
 	default:
 		return (0);
 	}
+}
+
+static __inline u_int
+g_eli_ivlen(u_int algo)
+{
+
+	switch (algo) {
+	case CRYPTO_AES_XTS:
+		return (AES_XTS_IV_LEN);
+	case CRYPTO_AES_CBC:
+		return (AES_BLOCK_LEN);
+	case CRYPTO_CAMELLIA_CBC:
+		return (CAMELLIA_BLOCK_LEN);
+	}
+	return (0);
 }
 
 static __inline u_int
@@ -591,8 +597,6 @@ g_eli_hashlen(u_int algo)
 {
 
 	switch (algo) {
-	case CRYPTO_MD5_HMAC:
-		return (16);
 	case CRYPTO_SHA1_HMAC:
 		return (20);
 	case CRYPTO_RIPEMD160_HMAC:
@@ -605,6 +609,23 @@ g_eli_hashlen(u_int algo)
 		return (64);
 	}
 	return (0);
+}
+
+static __inline off_t
+eli_mediasize(const struct g_eli_softc *sc, off_t mediasize, u_int sectorsize)
+{
+
+	if ((sc->sc_flags & G_ELI_FLAG_ONETIME) == 0) {
+		mediasize -= sectorsize;
+	}
+	if ((sc->sc_flags & G_ELI_FLAG_AUTH) == 0) {
+		mediasize -= (mediasize % sc->sc_sectorsize);
+	} else {
+		mediasize /= sc->sc_bytes_per_sector;
+		mediasize *= sc->sc_sectorsize;
+	}
+
+	return (mediasize);
 }
 
 static __inline void
@@ -648,16 +669,9 @@ eli_metadata_softc(struct g_eli_softc *sc, const struct g_eli_metadata *md,
 		    (md->md_sectorsize - 1) / sc->sc_data_per_sector + 1;
 		sc->sc_bytes_per_sector *= sectorsize;
 	}
+	sc->sc_provsize = mediasize;
 	sc->sc_sectorsize = md->md_sectorsize;
-	sc->sc_mediasize = mediasize;
-	if (!(sc->sc_flags & G_ELI_FLAG_ONETIME))
-		sc->sc_mediasize -= sectorsize;
-	if (!(sc->sc_flags & G_ELI_FLAG_AUTH))
-		sc->sc_mediasize -= (sc->sc_mediasize % sc->sc_sectorsize);
-	else {
-		sc->sc_mediasize /= sc->sc_bytes_per_sector;
-		sc->sc_mediasize *= sc->sc_sectorsize;
-	}
+	sc->sc_mediasize = eli_mediasize(sc, mediasize, sectorsize);
 	sc->sc_ekeylen = md->md_keylen;
 }
 
@@ -706,12 +720,12 @@ struct hmac_ctx {
 	SHA512_CTX	outerctx;
 };
 
-void g_eli_crypto_hmac_init(struct hmac_ctx *ctx, const uint8_t *hkey,
+void g_eli_crypto_hmac_init(struct hmac_ctx *ctx, const char *hkey,
     size_t hkeylen);
 void g_eli_crypto_hmac_update(struct hmac_ctx *ctx, const uint8_t *data,
     size_t datasize);
 void g_eli_crypto_hmac_final(struct hmac_ctx *ctx, uint8_t *md, size_t mdsize);
-void g_eli_crypto_hmac(const uint8_t *hkey, size_t hkeysize,
+void g_eli_crypto_hmac(const char *hkey, size_t hkeysize,
     const uint8_t *data, size_t datasize, uint8_t *md, size_t mdsize);
 
 void g_eli_key_fill(struct g_eli_softc *sc, struct g_eli_key *key,
@@ -719,6 +733,7 @@ void g_eli_key_fill(struct g_eli_softc *sc, struct g_eli_key *key,
 #ifdef _KERNEL
 void g_eli_key_init(struct g_eli_softc *sc);
 void g_eli_key_destroy(struct g_eli_softc *sc);
+void g_eli_key_resize(struct g_eli_softc *sc);
 uint8_t *g_eli_key_hold(struct g_eli_softc *sc, off_t offset, size_t blocksize);
 void g_eli_key_drop(struct g_eli_softc *sc, uint8_t *rawkey);
 #endif

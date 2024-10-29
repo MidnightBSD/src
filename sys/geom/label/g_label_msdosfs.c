@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * Copyright (c) 2006 Tobias Reifenberger
@@ -28,17 +28,16 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include <geom/label/g_label.h>
 #include <geom/label/g_label_msdosfs.h>
 
-#define G_LABEL_MSDOSFS_DIR	"msdosfs"
 #define LABEL_NO_NAME		"NO NAME    "
 
 static void
@@ -80,7 +79,6 @@ g_label_msdosfs_taste(struct g_consumer *cp, char *label, size_t size)
 		    pp->name);
 		goto error;
 	}
-
 
 	/*
 	 * Test if this is really a FAT volume and determine the FAT type.
@@ -152,6 +150,12 @@ g_label_msdosfs_taste(struct g_consumer *cp, char *label, size_t size)
 		G_LABEL_DEBUG(2,
 		    "MSDOSFS: FAT_FirstDataSector=0x%x, FAT_BytesPerSector=%d",
 		    fat_FirstDataSector, fat_BytesPerSector);
+		if (fat_BytesPerSector == 0 ||
+		    fat_BytesPerSector % pp->sectorsize != 0) {
+			G_LABEL_DEBUG(1, "MSDOSFS: %s: corrupted BPB",
+			    pp->name);
+			goto error;
+		}
 
 		for (offset = fat_BytesPerSector * fat_FirstDataSector;;
 		    offset += fat_BytesPerSector) {
@@ -203,15 +207,13 @@ endofchecks:
 	g_label_rtrim(label, size);
 
 error:
-	if (sector0 != NULL)
-		g_free(sector0);
-	if (sector != NULL)
-		g_free(sector);
+	g_free(sector0);
+	g_free(sector);
 }
 
 struct g_label_desc g_label_msdosfs = {
 	.ld_taste = g_label_msdosfs_taste,
-	.ld_dir = G_LABEL_MSDOSFS_DIR,
+	.ld_dirprefix = "msdosfs/",
 	.ld_enabled = 1
 };
 

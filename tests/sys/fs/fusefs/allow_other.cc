@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 The FreeBSD Foundation
  *
@@ -26,8 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 /*
@@ -94,6 +92,8 @@ TEST_F(AllowOther, allowed)
 				perror("open");
 				return(1);
 			}
+
+			leak(fd);
 			return 0;
 		}
 	);
@@ -201,6 +201,7 @@ TEST_F(NoAllowOther, disallowed)
 			fd = open(FULLPATH, O_RDONLY);
 			if (fd >= 0) {
 				fprintf(stderr, "open should've failed\n");
+				leak(fd);
 				return(1);
 			} else if (errno != EPERM) {
 				fprintf(stderr, "Unexpected error: %s\n",
@@ -245,6 +246,7 @@ TEST_F(NoAllowOther, disallowed_beneath_root)
 			fd = openat(dfd, RELPATH2, O_RDONLY);
 			if (fd >= 0) {
 				fprintf(stderr, "openat should've failed\n");
+				leak(fd);
 				return(1);
 			} else if (errno != EPERM) {
 				fprintf(stderr, "Unexpected error: %s\n",

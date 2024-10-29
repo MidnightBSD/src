@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap.
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -35,18 +34,14 @@
  * Modifications by: Adam Radford
  */
 
-
-
 #ifndef TW_OSL_SHARE_H
 
 #define TW_OSL_SHARE_H
-
 
 /*
  * Macros, structures and functions shared between OSL and CL,
  * and defined by OSL.
  */
-
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -66,7 +61,6 @@
 
 #include <dev/twa/tw_osl_types.h>
 #include "opt_twa.h"
-
 
 #ifdef TWA_DEBUG
 #define TW_OSL_DEBUG	TWA_DEBUG
@@ -96,7 +90,6 @@ typedef TW_VOID			*TW_SLEEP_HANDLE;
 extern TW_INT32		TW_OSL_DEBUG_LEVEL_FOR_CL;
 #endif /* TW_OSL_DEBUG */
 
-
 /* Possible return codes from/to Common Layer functions. */
 #define TW_OSL_ESUCCESS		0		/* success */
 #define TW_OSL_EGENFAILURE	1		/* general failure */
@@ -108,7 +101,5 @@ extern TW_INT32		TW_OSL_DEBUG_LEVEL_FOR_CL;
 #define TW_OSL_EBIG		EFBIG		/* request too big */
 #define TW_OSL_EWOULDBLOCK	EWOULDBLOCK	/* sleep timed out */
 #define TW_OSL_ERESTART		ERESTART /* sleep terminated by a signal */
-
-
 
 #endif /* TW_OSL_SHARE_H */

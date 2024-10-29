@@ -7,7 +7,6 @@
 /* Implementation of the VMCI Hashtable. */
 
 #include <sys/cdefs.h>
-
 #include "vmci.h"
 #include "vmci_driver.h"
 #include "vmci_hashtable.h"
@@ -367,7 +366,6 @@ vmci_hashtable_release_entry_locked(struct vmci_hashtable *table,
 	entry->ref_count--;
 	/* Check if this is last reference and report if so. */
 	if (entry->ref_count == 0) {
-
 		/*
 		 * Remove entry from hash table if not already removed. This
 		 * could have happened already because VMCIHashTable_RemoveEntry

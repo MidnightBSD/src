@@ -1,11 +1,9 @@
 # Doxyfile 1.5.2
 
-# $MidnightBSD: stable/11/tools/kerneldoc/subsys/Doxyfile-dev_syscons 230862 2012-02-01 10:59:19Z netchild $
-
 #---------------------------------------------------------------------------
 # Project related configuration options
 #---------------------------------------------------------------------------
-PROJECT_NAME           = "MidnightBSD kernel SYSCONS device code"
+PROJECT_NAME           = "FreeBSD kernel SYSCONS device code"
 OUTPUT_DIRECTORY       = $(DOXYGEN_DEST_PATH)/dev_syscons/
 EXTRACT_ALL            = YES    # for undocumented src, no warnings enabled
 #---------------------------------------------------------------------------

@@ -32,9 +32,7 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
-
 
 /* #define TWS_DEBUG on */
 
@@ -51,8 +49,6 @@ u_int32_t tws_swap32(u_int32_t val);
 u_int64_t tws_swap64(u_int64_t val);
 
 void tws_init_qs(struct tws_softc *sc);
-
-
 
 /* ----------------- trace ----------------- */
 
@@ -79,7 +75,6 @@ void tws_init_qs(struct tws_softc *sc);
 #endif
 
 /* ---------------- logging ---------------- */
-
 
 /* ---------------- logging ---------------- */
 enum error_index {
@@ -128,14 +123,6 @@ struct error_desc {
 #define TWS_REQ_RET_RESET          2
 #define TWS_REQ_RET_INVALID   0xdead
 
-
 /* ------------------------ */
-#if (__FreeBSD_version >= 700000)
 #include <sys/clock.h>
 #define TWS_LOCAL_TIME (time_second - utc_offset())
-#else
-#include <machine/clock.h>
-#define TWS_LOCAL_TIME (time_second - (tz_minuteswest * 60) -   \
-                  (wall_cmos_clock ? adjkerntz : 0))
-#endif
-

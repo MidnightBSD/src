@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SYS_POLL_H_
@@ -70,6 +69,7 @@ struct pollfd {
 #if __BSD_VISIBLE
 /* General FreeBSD extension (currently only supported for sockets): */
 #define	POLLINIGNEOF	0x2000		/* like POLLIN, except ignore EOF */
+#define	POLLRDHUP	0x4000		/* half shut down */
 #endif
 
 /*

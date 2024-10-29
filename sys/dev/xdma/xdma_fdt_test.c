@@ -31,7 +31,6 @@
 /* xDMA memcpy test driver. */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
@@ -216,7 +215,7 @@ xdmatest_test(struct xdmatest_softc *sc)
 	}
 
 	/* Setup callback. */
-	err = xdma_setup_intr(sc->xchan, xdmatest_intr, sc, &sc->ih);
+	err = xdma_setup_intr(sc->xchan, 0, xdmatest_intr, sc, &sc->ih);
 	if (err) {
 		device_printf(sc->dev, "Can't setup xDMA interrupt handler.\n");
 		return (-1);

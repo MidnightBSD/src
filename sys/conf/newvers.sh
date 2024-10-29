@@ -91,22 +91,22 @@ else
 		${SYSDIR}/sys/param.h)
 fi
 
-b=share/examples/etc/bsd-style-copyright
 if [ -r "${SYSDIR}/../COPYRIGHT" ]; then
 	year=$(sed -Ee '/^Copyright .* The MidnightBSD Project/!d;s/^.*2006-([0-9]*) .*$/\1/g' ${SYSDIR}/../COPYRIGHT)
 else
 	year=$(date +%Y)
 fi
 # look for copyright template
-for bsd_copyright in ../$b ../../$b ../../../$b /usr/src/$b /usr/$b
+b=share/examples/etc/bsd-style-copyright
+for bsd_copyright in $b ../$b ../../$b ../../../$b /usr/src/$b /usr/$b
 do
 	if [ -r "$bsd_copyright" ]; then
-		COPYRIGHT=`sed \
 		    -e "s/\[year\]/2006-$year/" \
 		    -e 's/\[your name here\]\.* /The MidnightBSD Project./' \
 		    -e 's/\[your name\]\.*/The MidnightBSD Project./' \
+		COPYRIGHT=$(sed \
 		    -e '/\[id for your version control system, if any\]/d' \
-		    $bsd_copyright` 
+		    $bsd_copyright)
 		break
 	fi
 done
@@ -124,11 +124,75 @@ fi
 COPYRIGHT="$COPYRIGHT
 "
 
+# We expand include_metadata later since we may set it to the
+# future value of modified.
+include_metadata=yes
+modified=no
+while getopts crRvV: opt; do
+	case "$opt" in
+	c)
+		echo "$COPYRIGHT"
+		exit 0
+		;;
+	r)
+		include_metadata=no
+		;;
+	R)
+		include_metadata=if-modified
+		;;
+	v)
+		# Only put variables that are single lines here.
+		for v in TYPE REVISION BRANCH RELEASE VERSION RELDATE; do
+			eval val=\$${v}
+			echo ${v}=\"${val}\"
+		done
+		exit 0
+		;;
+	V)
+		v=$OPTARG
+		eval val=\$${v}
+		echo ${v}=\"${val}\"
+		VARS_ONLY_EXIT=1
+		;;
+	esac
+done
+shift $((OPTIND - 1))
+
 # VARS_ONLY means no files should be generated, this is just being
 # included.
-if [ -n "$VARS_ONLY" ]; then
-	return 0
-fi
+[ -n "$VARS_ONLY" ] && return 0
+
+# VARS_ONLY_EXIT means no files should be generated, only the value of
+# variables are being output.
+[ -n "$VARS_ONLY_EXIT" ] && exit 0
+
+#
+# findvcs dir
+#	Looks up directory dir at world root and up the filesystem
+#
+findvcs()
+{
+	local savedir
+
+	savedir=$(pwd)
+	cd ${SYSDIR}/..
+	while [ $(pwd) != "/" ]; do
+		if [ -e "./$1" ]; then
+			VCSTOP=$(pwd)
+			VCSDIR=${VCSTOP}"/$1"
+			cd ${savedir}
+			return 0
+		fi
+		cd ..
+	done
+	cd ${savedir}
+	return 1
+}
+
+git_tree_modified()
+{
+	! $git_cmd "--work-tree=${VCSTOP}" -c core.checkStat=minimal -c core.fileMode=off diff --quiet
+}
 
 LC_ALL=C; export LC_ALL
 if [ ! -r version ]
@@ -137,19 +201,19 @@ then
 fi
 
 touch version
-v=`cat version`
+v=$(cat version)
 u=${USER:-root}
-d=`pwd`
-h=${HOSTNAME:-`hostname`}
+d=$(pwd)
+h=${HOSTNAME:-$(hostname)}
 if [ -n "$SOURCE_DATE_EPOCH" ]; then
-	if ! t=`date -r $SOURCE_DATE_EPOCH 2>/dev/null`; then
+	if ! t=$(date -r $SOURCE_DATE_EPOCH 2>/dev/null); then
 		echo "Invalid SOURCE_DATE_EPOCH" >&2
 		exit 1
 	fi
 else
-	t=`date`
+	t=$(date)
 fi
-i=`${MAKE:-make} -V KERN_IDENT`
+i=$(${MAKE:-make} -V KERN_IDENT)
 compiler_v=$($(${MAKE:-make} -V CC) -v 2>&1 | grep -w 'version')
 
 for dir in /usr/bin /usr/local/bin; do
@@ -177,16 +241,10 @@ if [ -z "${svnversion}" ] && [ -x /usr/bin/svnliteversion ] ; then
 	fi
 fi
 
-for dir in /usr/bin /usr/local/bin; do
-	if [ -x "${dir}/p4" ] && [ -z ${p4_cmd} ] ; then
-		p4_cmd=${dir}/p4
-	fi
-done
-
 if findvcs .git; then
 	for dir in /usr/bin /usr/local/bin; do
 		if [ -x "${dir}/git" ] ; then
-			git_cmd="${dir}/git --git-dir=${VCSDIR}"
+			git_cmd="${dir}/git -c help.autocorrect=0 --git-dir=${VCSDIR}"
 			break
 		fi
 	done
@@ -206,11 +264,11 @@ if findvcs .hg; then
 fi
 
 if [ -n "$svnversion" ] ; then
-	svn=`cd ${SYSDIR} && $svnversion 2>/dev/null`
+	svn=$(cd ${SYSDIR} && $svnversion 2>/dev/null)
 	case "$svn" in
 	[0-9]*[MSP]|*:*)
 		svn=" r${svn}"
-		modified=true
+		modified=yes
 		;;
 	[0-9]*)
 		svn=" r${svn}"
@@ -229,70 +287,39 @@ if [ -n "$git_cmd" ] ; then
 			git="n${git_cnt}-${git}"
 		fi
 	fi
-	git_b=`$git_cmd rev-parse --abbrev-ref HEAD`
-	if [ -n "$git_b" ] ; then
-		git="${git}(${git_b})"
+	git_b=$($git_cmd rev-parse --abbrev-ref HEAD)
+	if [ -n "$git_b" -a "$git_b" != "HEAD" ] ; then
+		git="${git_b}-${git}"
 	fi
 	if git_tree_modified; then
 		git="${git}-dirty"
-		modified=true
+		modified=yes
 	fi
+	git=" ${git}"
 fi
 
 if [ -n "$gituprevision" ] ; then
 	gitup=" $(awk -F: '{print $2}' $gituprevision)"
 fi
 
-if [ -n "$p4_cmd" ] ; then
-	p4version=`cd ${SYSDIR} && $p4_cmd changes -m1 "./...#have" 2>&1 | \
-		awk '{ print $2 }'`
-	case "$p4version" in
-	[0-9]*)
-		p4version=" ${p4version}"
-		p4opened=`cd ${SYSDIR} && $p4_cmd opened ./... 2>&1`
-		case "$p4opened" in
-		File*) ;;
-		//*)
-			p4version="${p4version}+edit"
-			modified=true
-			;;
-		esac
-		;;
-	*)	unset p4version ;;
-	esac
-fi
-
 if [ -n "$hg_cmd" ] ; then
-	hg=`$hg_cmd id 2>/dev/null`
-	svn=`$hg_cmd svn info 2>/dev/null | \
-		awk -F': ' '/Revision/ { print $2 }'`
-	if [ -n "$svn" ] ; then
-		svn=" r${svn}"
+	hg=$($hg_cmd id 2>/dev/null)
+	hgsvn=$($hg_cmd svn info 2>/dev/null | \
+		awk -F': ' '/Revision/ { print $2 }')
+	if [ -n "$hgsvn" ] ; then
+		svn=" r${hgsvn}"
 	fi
 	if [ -n "$hg" ] ; then
 		hg=" ${hg}"
 	fi
 fi
 
-include_metadata=true
-while getopts rR opt; do
-	case "$opt" in
-	r)
-		include_metadata=
-		;;
-	R)
-		if [ -z "${modified}" ]; then
-			include_metadata=
-		fi
-	esac
-done
-shift $((OPTIND - 1))
-
-if [ -z "${include_metadata}" ]; then
-	VERINFO="${VERSION}${svn}${git}${gitup}${hg}${p4version} ${i}"
+[ ${include_metadata} = "if-modified" -a ${modified} = "yes" ] && include_metadata=yes
+if [ ${include_metadata} != "yes" ]; then
+	VERINFO="${VERSION}${svn}${git}${gitup}${hg} ${i}"
 	VERSTR="${VERINFO}\\n"
 else
-	VERINFO="${VERSION} #${v}${svn}${git}${gitup}${hg}${p4version}: ${t}"
+	VERINFO="${VERSION} #${v}${svn}${git}${gitup}${hg}: ${t}"
 	VERSTR="${VERINFO}\\n    ${u}@${h}:${d}\\n"
 fi
 
@@ -302,18 +329,18 @@ $COPYRIGHT
 #define VERSTR "${VERSTR}"
 #define RELSTR "${RELEASE}"
 
-char sccs[sizeof(SCCSSTR) > 128 ? sizeof(SCCSSTR) : 128] = SCCSSTR;
-char version[sizeof(VERSTR) > 256 ? sizeof(VERSTR) : 256] = VERSTR;
-char compiler_version[] = "${compiler_v}";
-char ostype[] = "${TYPE}";
-char osrelease[sizeof(RELSTR) > 32 ? sizeof(RELSTR) : 32] = RELSTR;
-int osreldate = ${RELDATE};
-char kern_ident[] = "${i}";
+const char sccs[sizeof(SCCSSTR) > 128 ? sizeof(SCCSSTR) : 128] = SCCSSTR;
+const char version[sizeof(VERSTR) > 256 ? sizeof(VERSTR) : 256] = VERSTR;
+const char compiler_version[] = "${compiler_v}";
+const char ostype[] = "${TYPE}";
+const char osrelease[sizeof(RELSTR) > 32 ? sizeof(RELSTR) : 32] = RELSTR;
+const int osreldate = ${RELDATE};
+const char kern_ident[] = "${i}";
 EOF
 )
 vers_content_old=$(cat vers.c 2>/dev/null || true)
 if [ "$vers_content_new" != "$vers_content_old" ]; then
-	echo "$vers_content_new" > vers.c
+	printf "%s\n" "$vers_content_new" > vers.c
 fi
 
 echo $((v + 1)) > version

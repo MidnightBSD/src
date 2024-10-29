@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SND_CLONE_H_
@@ -98,9 +97,6 @@ struct snd_clone;
 
 #define SND_CLONE_DEVMASK	SND_CLONE_ALLOC
 
-
-void snd_timestamp(struct timespec *);
-
 struct snd_clone *snd_clone_create(int, int, int, uint32_t);
 int snd_clone_busy(struct snd_clone *);
 int snd_clone_enable(struct snd_clone *);
@@ -110,10 +106,8 @@ int snd_clone_getmaxunit(struct snd_clone *);
 int snd_clone_setmaxunit(struct snd_clone *, int);
 int snd_clone_getdeadline(struct snd_clone *);
 int snd_clone_setdeadline(struct snd_clone *, int);
-int snd_clone_gettime(struct snd_clone *, struct timespec *);
 uint32_t snd_clone_getflags(struct snd_clone *);
 uint32_t snd_clone_setflags(struct snd_clone *, uint32_t);
-int snd_clone_getdevtime(struct cdev *, struct timespec *);
 uint32_t snd_clone_getdevflags(struct cdev *);
 uint32_t snd_clone_setdevflags(struct cdev *, uint32_t);
 int snd_clone_gc(struct snd_clone *);

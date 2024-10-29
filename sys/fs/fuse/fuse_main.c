@@ -61,8 +61,8 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
+#include <sys/param.h>
 #include <sys/module.h>
 #include <sys/systm.h>
 #include <sys/errno.h>
@@ -94,7 +94,6 @@ struct mtx fuse_mtx;
 extern struct vfsops fuse_vfsops;
 extern struct cdevsw fuse_cdevsw;
 extern struct vop_vector fuse_fifonops;
-extern int fuse_pbuf_freecnt;
 
 static struct vfsconf fuse_vfsconf = {
 	.vfc_version = VFS_VERSION,
@@ -104,8 +103,10 @@ static struct vfsconf fuse_vfsconf = {
 	.vfc_flags = VFCF_JAIL | VFCF_SYNTHETIC
 };
 
-SYSCTL_NODE(_vfs, OID_AUTO, fusefs, CTLFLAG_RW, 0, "FUSE tunables");
-SYSCTL_NODE(_vfs_fusefs, OID_AUTO, stats, CTLFLAG_RW, 0, "FUSE statistics");
+SYSCTL_NODE(_vfs, OID_AUTO, fusefs, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "FUSE tunables");
+SYSCTL_NODE(_vfs_fusefs, OID_AUTO, stats, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "FUSE statistics");
 SYSCTL_INT(_vfs_fusefs, OID_AUTO, kernelabi_major, CTLFLAG_RD,
     SYSCTL_NULL_INT_PTR, FUSE_KERNEL_VERSION, "FUSE kernel abi major version");
 SYSCTL_INT(_vfs_fusefs, OID_AUTO, kernelabi_minor, CTLFLAG_RD,
@@ -137,7 +138,6 @@ fuse_loader(struct module *m, int what, void *arg)
 
 	switch (what) {
 	case MOD_LOAD:			/* kldload */
-		fuse_pbuf_freecnt = nswbuf / 2 + 1;
 		mtx_init(&fuse_mtx, "fuse_mtx", NULL, MTX_DEF);
 		err = fuse_device_init();
 		if (err) {

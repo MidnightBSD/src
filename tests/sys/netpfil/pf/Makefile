@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PACKAGE=	tests
 
@@ -7,40 +6,49 @@ TESTS_SUBDIRS+=	ioctl
 
 ATF_TESTS_SH+=	altq \
 		anchor \
-		pass_block \
 		checksum \
+		dup \
 		forward \
 		fragmentation \
 		get_state \
 		icmp \
+		icmp6 \
 		killstate \
 		macro \
 		map_e \
 		names \
 		nat \
-		rules_counter \
-		set_tos \
-		src_track \
-		rdr \
+		pass_block \
+		pfsync	\
+		proxy \
 		ridentifier \
 		route_to \
+		rules_counter \
+		sctp \
+		set_skip \
+		set_tos \
+		src_track \
 		syncookie \
 		synproxy \
-		set_skip \
-		pfsync \
-		proxy \
 		table \
+		tcp \
 		tos
 
-${PACKAGE}FILES+=	utils.subr \
-			echo_inetd.conf \
-			CVE-2019-5597.py \
+ATF_TESTS_PYTEST+=	frag6.py
+ATF_TESTS_PYTEST+=	sctp.py
+
+# Tests reuse jail names and so cannot run in parallel.
+TEST_METADATA+=	is_exclusive=true
+
+${PACKAGE}FILES+=	CVE-2019-5597.py \
 			CVE-2019-5598.py \
+			echo_inetd.conf \
 			fragcommon.py \
 			frag-overindex.py \
 			frag-overlimit.py \
 			frag-overreplace.py \
-			pfsync_defer.py
+			pfsync_defer.py \
+			utils.subr
 
 ${PACKAGE}FILESMODE_CVE-2019-5597.py=	0555
 ${PACKAGE}FILESMODE_CVE-2019-5598.py=	0555

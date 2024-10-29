@@ -7,7 +7,6 @@
 /* This file implements VMCI Event code. */
 
 #include <sys/cdefs.h>
-
 #include "vmci.h"
 #include "vmci_driver.h"
 #include "vmci_event.h"
@@ -103,7 +102,6 @@ vmci_event_exit(void)
 	for (e = 0; e < VMCI_EVENT_MAX; e++) {
 		vmci_list_scan_safe(iter, &subscriber_array[e],
 		    subscriber_list_item, iter_2) {
-
 			/*
 			 * We should never get here because all events should
 			 * have been unregistered before we try to unload the

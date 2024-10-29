@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2013 Dmitry Chagin
- * All rights reserved.
+ * Copyright (c) 2013 Dmitry Chagin <dchagin@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,14 +26,10 @@
  */
 
 #include <sys/cdefs.h>
-
-#include "opt_compat.h"
-
 #include <sys/param.h>
 #include <sys/kernel.h>
-#include <sys/sdt.h>
-#include <sys/systm.h>
 #include <sys/proc.h>
+#include <sys/sdt.h>
 
 #ifdef COMPAT_LINUX32
 #include <machine/../linux32/linux.h>
@@ -56,13 +51,3 @@ DUMMY(quotactl);
 DUMMY(inotify_init);
 /* Linux 2.6.22: */
 DUMMY(signalfd);
-/* Linux 4.11: */
-DUMMY(statx);
-/* Linux 4.18: */
-DUMMY(io_pgetevents);
-DUMMY(rseq);
-/* Linux 5.0: */
-DUMMY(pidfd_send_signal);
-DUMMY(io_uring_setup);
-DUMMY(io_uring_enter);
-DUMMY(io_uring_register);

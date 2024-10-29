@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Setup the system to run on the current machine.
  *

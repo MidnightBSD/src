@@ -32,20 +32,20 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>        /* defines used in kernel.h */
-#include <sys/module.h>
-#include <sys/systm.h>
-#include <sys/proc.h>
+#include <sys/bus.h>          /* structs, prototypes for pci bus stuff */
+#include <sys/conf.h>         /* cdevsw struct */
 #include <sys/errno.h>
 #include <sys/kernel.h>       /* types used in module initialization */
-#include <sys/conf.h>         /* cdevsw struct */
-#include <sys/uio.h>          /* uio struct */
+#include <sys/lock.h>
 #include <sys/malloc.h>
-#include <sys/bus.h>          /* structs, prototypes for pci bus stuff */
-
+#include <sys/module.h>
+#include <sys/mutex.h>
+#include <sys/proc.h>
+#include <sys/systm.h>
+#include <sys/uio.h>          /* uio struct */
 
 #include <machine/bus.h>
 #include <sys/rman.h>
@@ -58,13 +58,11 @@
 #include <sys/sysctl.h>
 #include <sys/stat.h>
 
-
 #define TWS_PULL_MODE_ENABLE 1
 
 MALLOC_DECLARE(M_TWS);
 /* externs */
 extern int tws_queue_depth;
-
 
 #define TWS_DRIVER_VERSION_STRING "10.80.00.005"
 #define TWS_MAX_NUM_UNITS             65 
@@ -140,7 +138,7 @@ enum tws_req_flags {
     TWS_DIR_NONE = 0x8,
     TWS_DATA_CCB = 0x10,
 };
- 
+
 enum tws_intrs {
      TWS_INTx,
      TWS_MSI,
@@ -158,7 +156,6 @@ struct tws_ioctl_lock {
     u_int32_t       lock;
     time_t          timeout;
 };
- 
 
 #define TWS_TRACE_FNAME_LEN  10
 #define TWS_TRACE_FUNC_LEN   15
@@ -180,8 +177,6 @@ struct tws_circular_q {
     u_int8_t  overflow;
     void *    q;
 };
- 
-
 
 struct tws_stats {
     u_int64_t reqs_in;
@@ -203,7 +198,6 @@ struct tws_init_connect_info {
     u_int16_t     fw_on_ctlr_build;
 
 };
-
 
 /* ------------ boolean types ------------------- */
 

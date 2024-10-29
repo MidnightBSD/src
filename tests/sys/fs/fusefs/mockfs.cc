@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 The FreeBSD Foundation
  *
@@ -26,8 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 extern "C" {
@@ -62,8 +60,7 @@ int verbosity = 0;
 
 const char* opcode2opname(uint32_t opcode)
 {
-	const int NUM_OPS = 39;
-	const char* table[NUM_OPS] = {
+	const char* table[] = {
 		"Unknown (opcode 0)",
 		"LOOKUP",
 		"FORGET",
@@ -102,9 +99,18 @@ const char* opcode2opname(uint32_t opcode)
 		"CREATE",
 		"INTERRUPT",
 		"BMAP",
-		"DESTROY"
+		"DESTROY",
+		"IOCTL",
+		"POLL",
+		"NOTIFY_REPLY",
+		"BATCH_FORGET",
+		"FALLOCATE",
+		"READDIRPLUS",
+		"RENAME2",
+		"LSEEK",
+		"COPY_FILE_RANGE",
 	};
-	if (opcode >= NUM_OPS)
+	if (opcode >= nitems(table))
 		return ("Unknown (opcode > max)");
 	else
 		return (table[opcode]);
@@ -175,6 +181,20 @@ void MockFS::debug_request(const mockfs_buf_in &in, ssize_t buflen)
 			printf(" block=%" PRIx64 " blocksize=%#x",
 				in.body.bmap.block, in.body.bmap.blocksize);
 			break;
+		case FUSE_COPY_FILE_RANGE:
+			printf(" off_in=%" PRIu64 " ino_out=%" PRIu64
+			       " off_out=%" PRIu64 " size=%" PRIu64,
+			       in.body.copy_file_range.off_in,
+			       in.body.copy_file_range.nodeid_out,
+			       in.body.copy_file_range.off_out,
+			       in.body.copy_file_range.len);
+			if (verbosity > 1)
+				printf(" fh_in=%" PRIu64 " fh_out=%" PRIu64
+				       " flags=%" PRIx64,
+				       in.body.copy_file_range.fh_in,
+				       in.body.copy_file_range.fh_out,
+				       in.body.copy_file_range.flags);
+			break;
 		case FUSE_CREATE:
 			if (m_kernel_minor_version >= 12)
 				name = (const char*)in.body.bytes +
@@ -184,6 +204,14 @@ void MockFS::debug_request(const mockfs_buf_in &in, ssize_t buflen)
 					sizeof(fuse_open_in);
 			printf(" flags=%#x name=%s",
 				in.body.open.flags, name);
+			break;
+		case FUSE_FALLOCATE:
+			printf(" fh=%#" PRIx64 " offset=%" PRIu64
+				" length=%" PRIx64 " mode=%#x",
+				in.body.fallocate.fh,
+				in.body.fallocate.offset,
+				in.body.fallocate.length,
+				in.body.fallocate.mode);
 			break;
 		case FUSE_FLUSH:
 			printf(" fh=%#" PRIx64 " lock_owner=%" PRIu64,
@@ -222,6 +250,22 @@ void MockFS::debug_request(const mockfs_buf_in &in, ssize_t buflen)
 			break;
 		case FUSE_LOOKUP:
 			printf(" %s", in.body.lookup);
+			break;
+		case FUSE_LSEEK:
+			switch (in.body.lseek.whence) {
+			case SEEK_HOLE:
+				printf(" SEEK_HOLE offset=%jd",
+				    in.body.lseek.offset);
+				break;
+			case SEEK_DATA:
+				printf(" SEEK_DATA offset=%jd",
+				    in.body.lseek.offset);
+				break;
+			default:
+				printf(" whence=%u offset=%jd",
+				    in.body.lseek.whence, in.body.lseek.offset);
+				break;
+			}
 			break;
 		case FUSE_MKDIR:
 			name = (const char*)in.body.bytes +
@@ -375,7 +419,8 @@ void MockFS::debug_response(const mockfs_buf_out &out) {
 MockFS::MockFS(int max_readahead, bool allow_other, bool default_permissions,
 	bool push_symlinks_in, bool ro, enum poll_method pm, uint32_t flags,
 	uint32_t kernel_minor_version, uint32_t max_write, bool async,
-	bool noclusterr, unsigned time_gran, bool nointr, bool noatime)
+	bool noclusterr, unsigned time_gran, bool nointr, bool noatime,
+	const char *fsname, const char *subtype)
 {
 	struct sigaction sa;
 	struct iovec *iov = NULL;
@@ -384,10 +429,9 @@ MockFS::MockFS(int max_readahead, bool allow_other, bool default_permissions,
 	const bool trueval = true;
 
 	m_daemon_id = NULL;
-	m_expected_write_errno = 0;
 	m_kernel_minor_version = kernel_minor_version;
 	m_maxreadahead = max_readahead;
-	m_maxwrite = max_write;
+	m_maxwrite = MIN(max_write, max_max_write);
 	m_nready = -1;
 	m_pm = pm;
 	m_time_gran = time_gran;
@@ -466,9 +510,18 @@ MockFS::MockFS(int max_readahead, bool allow_other, bool default_permissions,
 		build_iovec(&iov, &iovlen, "intr",
 			__DECONST(void*, &trueval), sizeof(bool));
 	}
+	if (*fsname) {
+		build_iovec(&iov, &iovlen, "fsname=",
+			__DECONST(void*, fsname), -1);
+	}
+	if (*subtype) {
+		build_iovec(&iov, &iovlen, "subtype=",
+			__DECONST(void*, subtype), -1);
+	}
 	if (nmount(iov, iovlen, 0))
 		throw(std::system_error(errno, std::system_category(),
 			"Couldn't mount filesystem"));
+	free_iovec(&iov, &iovlen);
 
 	// Setup default handler
 	ON_CALL(*this, process(_, _))
@@ -659,13 +712,25 @@ void MockFS::audit_request(const mockfs_buf_in &in, ssize_t buflen) {
 		EXPECT_EQ(inlen, fih + sizeof(in.body.interrupt));
 		EXPECT_EQ((size_t)buflen, inlen);
 		break;
+	case FUSE_FALLOCATE:
+		EXPECT_EQ(inlen, fih + sizeof(in.body.fallocate));
+		EXPECT_EQ((size_t)buflen, inlen);
+		break;
 	case FUSE_BMAP:
 		EXPECT_EQ(inlen, fih + sizeof(in.body.bmap));
 		EXPECT_EQ((size_t)buflen, inlen);
 		break;
+	case FUSE_LSEEK:
+		EXPECT_EQ(inlen, fih + sizeof(in.body.lseek));
+		EXPECT_EQ((size_t)buflen, inlen);
+		break;
+	case FUSE_COPY_FILE_RANGE:
+		EXPECT_EQ(inlen, fih + sizeof(in.body.copy_file_range));
+		EXPECT_EQ(0ul, in.body.copy_file_range.flags);
+		EXPECT_EQ((size_t)buflen, inlen);
+		break;
 	case FUSE_NOTIFY_REPLY:
 	case FUSE_BATCH_FORGET:
-	case FUSE_FALLOCATE:
 	case FUSE_IOCTL:
 	case FUSE_POLL:
 	case FUSE_READDIRPLUS:
@@ -734,7 +799,6 @@ void MockFS::loop() {
 
 		bzero(in.get(), sizeof(*in));
 		read_request(*in, buflen);
-		m_expected_write_errno = 0;
 		if (m_quit)
 			break;
 		if (verbosity > 0)
@@ -967,9 +1031,9 @@ void MockFS::write_response(const mockfs_buf_out &out) {
 		FAIL() << "not yet implemented";
 	}
 	r = write(m_fuse_fd, &out, out.header.len);
-	if (m_expected_write_errno) {
+	if (out.expected_errno) {
 		ASSERT_EQ(-1, r);
-		ASSERT_EQ(m_expected_write_errno, errno) << strerror(errno);
+		ASSERT_EQ(out.expected_errno, errno) << strerror(errno);
 	} else {
 		ASSERT_TRUE(r > 0 || errno == EAGAIN) << strerror(errno);
 	}

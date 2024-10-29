@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001, 2002 Ian Dowse.  All rights reserved.
  *
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ufs.h"
 
 #ifdef UFS_DIRHASH
@@ -64,7 +63,6 @@
 
 #define WRAPINCR(val, limit)	(((val) + 1 == (limit)) ? 0 : ((val) + 1))
 #define WRAPDECR(val, limit)	(((val) == 0) ? ((limit) - 1) : ((val) - 1))
-#define OFSFMT(vp)		((vp)->v_mount->mnt_maxsymlinklen <= 0)
 #define BLKFREE2IDX(n)		((n) > DH_NFSTATS ? DH_NFSTATS : (n))
 
 static MALLOC_DEFINE(M_DIRHASH, "ufs_dirhash", "UFS directory hash tables");
@@ -89,9 +87,9 @@ SYSCTL_INT(_vfs_ufs, OID_AUTO, dirhash_lowmemcount, CTLFLAG_RD,
 static int ufs_dirhashreclaimpercent = 10;
 static int ufsdirhash_set_reclaimpercent(SYSCTL_HANDLER_ARGS);
 SYSCTL_PROC(_vfs_ufs, OID_AUTO, dirhash_reclaimpercent,
-    CTLTYPE_INT | CTLFLAG_RW, 0, 0, ufsdirhash_set_reclaimpercent, "I",
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    0, 0, ufsdirhash_set_reclaimpercent, "I",
     "set percentage of dirhash cache to be removed in low VM events");
-
 
 static int ufsdirhash_hash(struct dirhash *dh, char *name, int namelen);
 static void ufsdirhash_adjfree(struct dirhash *dh, doff_t offset, int diff);
@@ -348,7 +346,7 @@ ufsdirhash_build(struct inode *ip)
 	struct direct *ep;
 	struct vnode *vp;
 	doff_t bmask, pos;
-	u_int dirblocks, i, narrays, nblocks, nslots;
+	uint64_t dirblocks, i, narrays, nblocks, nslots;
 	int j, memreqd, slot;
 
 	/* Take care of a decreased sysctl value. */
@@ -811,7 +809,7 @@ ufsdirhash_add(struct inode *ip, struct direct *dirp, doff_t offset)
 
 	if ((dh = ufsdirhash_acquire(ip)) == NULL)
 		return;
-	
+
 	KASSERT(offset < dh->dh_dirblks * DIRBLKSIZ,
 	    ("ufsdirhash_add: bad offset"));
 	/*
@@ -1034,7 +1032,7 @@ ufsdirhash_checkblock(struct inode *ip, char *buf, doff_t offset)
 static int
 ufsdirhash_hash(struct dirhash *dh, char *name, int namelen)
 {
-	u_int32_t hash;
+	uint32_t hash;
 
 	/*
 	 * We hash the name and then some other bit of data that is
@@ -1181,11 +1179,11 @@ static int
 ufsdirhash_destroy(struct dirhash *dh)
 {
 	doff_t **hash;
-	u_int8_t *blkfree;
+	uint8_t *blkfree;
 	int i, mem, narrays;
 
 	KASSERT(dh->dh_hash != NULL, ("dirhash: NULL hash on list"));
-	
+
 	/* Remove it from the list and detach its memory. */
 	TAILQ_REMOVE(&ufsdirhash_list, dh, dh_list);
 	dh->dh_onlist = 0;

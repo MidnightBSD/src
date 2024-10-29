@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
@@ -54,6 +54,7 @@
 #define SND_USE_FXDIV
 #include "snd_fxdiv_gen.h"
 
+SND_DECLARE_FILE("");
 #endif
 
 #define FEEDMATRIX_RESERVOIR	(SND_CHN_MAX * PCM_32_BPS)
@@ -295,7 +296,6 @@ feed_matrix_setup(struct feed_matrix_info *info, struct pcmchan_matrix *m_in,
 {
 	uint32_t i, j, ch, in_mask, merge_mask;
 	int mul, shift;
-
 
 	if (info == NULL || m_in == NULL || m_out == NULL ||
 	    AFMT_CHANNEL(info->in) != m_in->channels ||

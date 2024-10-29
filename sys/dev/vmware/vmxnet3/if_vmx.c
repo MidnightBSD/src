@@ -21,7 +21,6 @@
 /* Driver for VMware vmxnet3 virtual ethernet devices. */
 
 #include <sys/cdefs.h>
-
 #include "opt_rss.h"
 
 #include <sys/param.h>
@@ -75,11 +74,10 @@
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
-
 #define VMXNET3_VMWARE_VENDOR_ID	0x15AD
 #define VMXNET3_VMWARE_DEVICE_ID	0x07B0
 
-static pci_vendor_info_t vmxnet3_vendor_info_array[] =
+static const pci_vendor_info_t vmxnet3_vendor_info_array[] =
 {
 	PVID(VMXNET3_VMWARE_VENDOR_ID, VMXNET3_VMWARE_DEVICE_ID, "VMware VMXNET3 Ethernet Adapter"),
 	/* required last entry */
@@ -182,6 +180,7 @@ static void	vmxnet3_enable_intr(struct vmxnet3_softc *, int);
 static void	vmxnet3_disable_intr(struct vmxnet3_softc *, int);
 static void	vmxnet3_intr_enable_all(if_ctx_t);
 static void	vmxnet3_intr_disable_all(if_ctx_t);
+static bool	vmxnet3_if_needs_restart(if_ctx_t, enum iflib_restart_event);
 
 typedef enum {
 	VMXNET3_BARRIER_RD,
@@ -190,7 +189,6 @@ typedef enum {
 } vmxnet3_barrier_t;
 
 static void	vmxnet3_barrier(struct vmxnet3_softc *, vmxnet3_barrier_t);
-
 
 static device_method_t vmxnet3_methods[] = {
 	/* Device interface */
@@ -250,6 +248,8 @@ static device_method_t vmxnet3_iflib_methods[] = {
 	DEVMETHOD(ifdi_shutdown, vmxnet3_shutdown),
 	DEVMETHOD(ifdi_suspend, vmxnet3_suspend),
 	DEVMETHOD(ifdi_resume, vmxnet3_resume),
+
+	DEVMETHOD(ifdi_needs_restart, vmxnet3_if_needs_restart),
 
 	DEVMETHOD_END
 };
@@ -419,7 +419,7 @@ vmxnet3_attach_pre(if_ctx_t ctx)
 	/*
 	 * Configure the softc context to attempt to configure the interrupt
 	 * mode now indicated by intr_config.  iflib will follow the usual
-	 * fallback path MSIX -> MSI -> LEGACY, starting at the configured
+	 * fallback path MSI-X -> MSI -> LEGACY, starting at the configured
 	 * starting mode.
 	 */
 	switch (intr_config & 0x03) {
@@ -475,7 +475,7 @@ vmxnet3_msix_intr_assign(if_ctx_t ctx, int msix)
 
 	sc = iflib_get_softc(ctx);
 	scctx = sc->vmx_scctx;
-	
+
 	for (i = 0; i < scctx->isc_nrxqsets; i++) {
 		snprintf(irq_name, sizeof(irq_name), "rxq%d", i);
 
@@ -736,7 +736,7 @@ vmxnet3_queues_shared_alloc(struct vmxnet3_softc *sc)
 	if_softc_ctx_t scctx;
 	int size;
 	int error;
-	
+
 	scctx = sc->vmx_scctx;
 
 	/*
@@ -762,7 +762,7 @@ vmxnet3_init_txq(struct vmxnet3_softc *sc, int q)
 	struct vmxnet3_comp_ring *txc;
 	struct vmxnet3_txring *txr;
 	if_softc_ctx_t scctx;
-	
+
 	txq = &sc->vmx_txq[q];
 	txc = &txq->vxtxq_comp_ring;
 	txr = &txq->vxtxq_cmd_ring;
@@ -785,7 +785,7 @@ vmxnet3_tx_queues_alloc(if_ctx_t ctx, caddr_t *vaddrs, uint64_t *paddrs,
 	int q;
 	int error;
 	caddr_t kva;
-	
+
 	sc = iflib_get_softc(ctx);
 
 	/* Allocate the array of transmit queues */
@@ -880,7 +880,7 @@ vmxnet3_rx_queues_alloc(if_ctx_t ctx, caddr_t *vaddrs, uint64_t *paddrs,
 	int i;
 	int error;
 	caddr_t kva;
-	
+
 	sc = iflib_get_softc(ctx);
 	scctx = sc->vmx_scctx;
 
@@ -1207,11 +1207,11 @@ vmxnet3_reinit_shared_data(struct vmxnet3_softc *sc)
 	struct ifnet *ifp;
 	struct vmxnet3_driver_shared *ds;
 	if_softc_ctx_t scctx;
-	
+
 	ifp = sc->vmx_ifp;
 	ds = sc->vmx_ds;
 	scctx = sc->vmx_scctx;
-	
+
 	ds->mtu = ifp->if_mtu;
 	ds->ntxqueue = scctx->isc_ntxqsets;
 	ds->nrxqueue = scctx->isc_nrxqsets;
@@ -1415,7 +1415,7 @@ vmxnet3_isc_txd_credits_update(void *vsc, uint16_t txqid, bool clear)
 	struct vmxnet3_txcompdesc *txcd;
 	struct vmxnet3_txring *txr;
 	int processed;
-	
+
 	sc = vsc;
 	txq = &sc->vmx_txq[txqid];
 	txc = &txq->vxtxq_comp_ring;
@@ -1492,7 +1492,7 @@ vmxnet3_isc_rxd_available(void *vsc, uint16_t rxqid, qidx_t idx, qidx_t budget)
 			completed_gen ^= 1;
 		}
 	}
-	
+
 	return (avail);
 }
 
@@ -1734,7 +1734,7 @@ vmxnet3_isc_rxd_flush(void *vsc, uint16_t rxqid, uint8_t flid, qidx_t pidx)
 	struct vmxnet3_rxqueue *rxq;
 	struct vmxnet3_rxring *rxr;
 	bus_size_t r;
-	
+
 	sc = vsc;
 	rxq = &sc->vmx_rxq[rxqid];
 	rxr = &rxq->vxrxq_cmd_ring[flid];
@@ -1753,7 +1753,7 @@ vmxnet3_legacy_intr(void *xsc)
 	struct vmxnet3_softc *sc;
 	if_softc_ctx_t scctx;
 	if_ctx_t ctx;
-	
+
 	sc = xsc;
 	scctx = sc->vmx_scctx;
 	ctx = sc->vmx_ctx;
@@ -1834,7 +1834,7 @@ vmxnet3_txinit(struct vmxnet3_softc *sc, struct vmxnet3_txqueue *txq)
 	struct vmxnet3_comp_ring *txc;
 
 	txq->vxtxq_last_flush = -1;
-	
+
 	txr = &txq->vxtxq_cmd_ring;
 	txr->vxtxr_next = 0;
 	txr->vxtxr_gen = VMXNET3_INIT_GEN;
@@ -1954,7 +1954,7 @@ static void
 vmxnet3_init(if_ctx_t ctx)
 {
 	struct vmxnet3_softc *sc;
-	
+
 	sc = iflib_get_softc(ctx);
 
 	/* Use the current MAC address. */
@@ -2112,12 +2112,23 @@ vmxnet3_vlan_unregister(if_ctx_t ctx, uint16_t tag)
 	vmxnet3_update_vlan_filter(iflib_get_softc(ctx), 0, tag);
 }
 
+static u_int
+vmxnet3_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int count)
+{
+	struct vmxnet3_softc *sc = arg;
+
+	if (count < VMXNET3_MULTICAST_MAX)
+		bcopy(LLADDR(sdl), &sc->vmx_mcast[count * ETHER_ADDR_LEN],
+		    ETHER_ADDR_LEN);
+
+	return (1);
+}
+
 static void
 vmxnet3_set_rxfilter(struct vmxnet3_softc *sc, int flags)
 {
 	struct ifnet *ifp;
 	struct vmxnet3_driver_shared *ds;
-	struct ifmultiaddr *ifma;
 	u_int mode;
 
 	ifp = sc->vmx_ifp;
@@ -2129,24 +2140,10 @@ vmxnet3_set_rxfilter(struct vmxnet3_softc *sc, int flags)
 	if (flags & IFF_ALLMULTI)
 		mode |= VMXNET3_RXMODE_ALLMULTI;
 	else {
-		int cnt = 0, overflow = 0;
+		int cnt;
 
-		if_maddr_rlock(ifp);
-		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-			if (ifma->ifma_addr->sa_family != AF_LINK)
-				continue;
-			else if (cnt == VMXNET3_MULTICAST_MAX) {
-				overflow = 1;
-				break;
-			}
-
-			bcopy(LLADDR((struct sockaddr_dl *)ifma->ifma_addr),
-			   &sc->vmx_mcast[cnt*ETHER_ADDR_LEN], ETHER_ADDR_LEN);
-			cnt++;
-		}
-		if_maddr_runlock(ifp);
-
-		if (overflow != 0) {
+		cnt = if_foreach_llmaddr(ifp, vmxnet3_hash_maddr, sc);
+		if (cnt >= VMXNET3_MULTICAST_MAX) {
 			cnt = 0;
 			mode |= VMXNET3_RXMODE_ALLMULTI;
 		} else if (cnt > 0)
@@ -2186,7 +2183,7 @@ vmxnet3_link_status(struct vmxnet3_softc *sc)
 	ctx = sc->vmx_ctx;
 	link = vmxnet3_link_is_up(sc);
 	speed = IF_Gbps(10);
-	
+
 	if (link != 0 && sc->vmx_link_active == 0) {
 		sc->vmx_link_active = 1;
 		iflib_link_state_change(ctx, LINK_STATE_UP, speed);
@@ -2240,16 +2237,16 @@ vmxnet3_setup_txq_sysctl(struct vmxnet3_txqueue *txq,
 	txstats = &txq->vxtxq_ts->stats;
 
 	snprintf(namebuf, sizeof(namebuf), "txq%d", txq->vxtxq_id);
-	node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, namebuf, CTLFLAG_RD,
-	    NULL, "Transmit Queue");
+	node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, namebuf,
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Transmit Queue");
 	txq->vxtxq_sysctl = list = SYSCTL_CHILDREN(node);
 
 	/*
 	 * Add statistics reported by the host. These are updated by the
 	 * iflib txq timer on txq 0.
 	 */
-	txsnode = SYSCTL_ADD_NODE(ctx, list, OID_AUTO, "hstats", CTLFLAG_RD,
-	    NULL, "Host Statistics");
+	txsnode = SYSCTL_ADD_NODE(ctx, list, OID_AUTO, "hstats",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Host Statistics");
 	txslist = SYSCTL_CHILDREN(txsnode);
 	SYSCTL_ADD_UQUAD(ctx, txslist, OID_AUTO, "tso_packets", CTLFLAG_RD,
 	    &txstats->TSO_packets, "TSO packets");
@@ -2281,16 +2278,16 @@ vmxnet3_setup_rxq_sysctl(struct vmxnet3_rxqueue *rxq,
 	rxstats = &rxq->vxrxq_rs->stats;
 
 	snprintf(namebuf, sizeof(namebuf), "rxq%d", rxq->vxrxq_id);
-	node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, namebuf, CTLFLAG_RD,
-	    NULL, "Receive Queue");
+	node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, namebuf,
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Receive Queue");
 	rxq->vxrxq_sysctl = list = SYSCTL_CHILDREN(node);
 
 	/*
 	 * Add statistics reported by the host. These are updated by the
 	 * iflib txq timer on txq 0.
 	 */
-	rxsnode = SYSCTL_ADD_NODE(ctx, list, OID_AUTO, "hstats", CTLFLAG_RD,
-	    NULL, "Host Statistics");
+	rxsnode = SYSCTL_ADD_NODE(ctx, list, OID_AUTO, "hstats",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Host Statistics");
 	rxslist = SYSCTL_CHILDREN(rxsnode);
 	SYSCTL_ADD_UQUAD(ctx, rxslist, OID_AUTO, "lro_packets", CTLFLAG_RD,
 	    &rxstats->LRO_packets, "LRO packets");
@@ -2324,12 +2321,12 @@ vmxnet3_setup_debug_sysctl(struct vmxnet3_softc *sc,
 	int i;
 
 	scctx = sc->vmx_scctx;
-	
+
 	for (i = 0; i < scctx->isc_ntxqsets; i++) {
 		struct vmxnet3_txqueue *txq = &sc->vmx_txq[i];
 
 		node = SYSCTL_ADD_NODE(ctx, txq->vxtxq_sysctl, OID_AUTO,
-		    "debug", CTLFLAG_RD, NULL, "");
+		    "debug", CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "");
 		list = SYSCTL_CHILDREN(node);
 
 		SYSCTL_ADD_UINT(ctx, list, OID_AUTO, "cmd_next", CTLFLAG_RD,
@@ -2350,7 +2347,7 @@ vmxnet3_setup_debug_sysctl(struct vmxnet3_softc *sc,
 		struct vmxnet3_rxqueue *rxq = &sc->vmx_rxq[i];
 
 		node = SYSCTL_ADD_NODE(ctx, rxq->vxrxq_sysctl, OID_AUTO,
-		    "debug", CTLFLAG_RD, NULL, "");
+		    "debug", CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "");
 		list = SYSCTL_CHILDREN(node);
 
 		SYSCTL_ADD_UINT(ctx, list, OID_AUTO, "cmd0_ndesc", CTLFLAG_RD,
@@ -2387,7 +2384,7 @@ vmxnet3_setup_queue_sysctl(struct vmxnet3_softc *sc,
 	int i;
 
 	scctx = sc->vmx_scctx;
-	
+
 	for (i = 0; i < scctx->isc_ntxqsets; i++)
 		vmxnet3_setup_txq_sysctl(&sc->vmx_txq[i], ctx, child);
 	for (i = 0; i < scctx->isc_nrxqsets; i++)
@@ -2520,6 +2517,17 @@ vmxnet3_intr_disable_all(if_ctx_t ctx)
 		sc->vmx_ds->ictrl |= VMXNET3_ICTRL_DISABLE_ALL;
 	for (i = 0; i < VMXNET3_MAX_INTRS; i++)
 		vmxnet3_disable_intr(sc, i);
+}
+
+static bool
+vmxnet3_if_needs_restart(if_ctx_t ctx __unused, enum iflib_restart_event event)
+{
+	switch (event) {
+	case IFLIB_RESTART_VLAN_CONFIG:
+		return (true);
+	default:
+		return (false);
+	}
 }
 
 /*

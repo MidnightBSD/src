@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case atime_001_pos cleanup
 atime_001_pos_head()
 {
 	atf_set "descr" "Setting atime=on, the access time for files is updated when read."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 atime_001_pos_body()
 {
@@ -56,7 +54,7 @@ atf_test_case atime_002_neg cleanup
 atime_002_neg_head()
 {
 	atf_set "descr" "Setting atime=off, the access time for files will not be updatedwhen read."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 atime_002_neg_body()
 {

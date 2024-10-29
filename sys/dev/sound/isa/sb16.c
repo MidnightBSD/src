@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * Copyright (c) 1997,1998 Luigi Rizzo
@@ -44,6 +44,7 @@
 
 #include "mixer_if.h"
 
+SND_DECLARE_FILE("");
 
 #define SB16_BUFFSIZE	4096
 #define PLAIN_SB16(x) ((((x)->bd_flags) & (BD_F_SB16|BD_F_SB16X)) == BD_F_SB16)
@@ -124,19 +125,16 @@ static void sb_intr(void *arg);
 
 static void
 sb_lock(struct sb_info *sb) {
-
 	sbc_lock(device_get_softc(sb->parent_dev));
 }
 
 static void
 sb_lockassert(struct sb_info *sb) {
-
 	sbc_lockassert(device_get_softc(sb->parent_dev));
 }
 
 static void
 sb_unlock(struct sb_info *sb) {
-
 	sbc_unlock(device_get_softc(sb->parent_dev));
 }
 
@@ -335,7 +333,7 @@ static int
 rel2abs_volume(int x, int max)
 {
 	int temp;
-	
+
 	temp = ((x * max) + 50) / 100;
 	if (temp > max)
 		temp = max;
@@ -790,14 +788,14 @@ static int
 sb16_probe(device_t dev)
 {
     	char buf[64];
-	uintptr_t func, ver, r, f;
+	uintptr_t func, ver, f;
 
 	/* The parent device has already been probed. */
-	r = BUS_READ_IVAR(device_get_parent(dev), dev, 0, &func);
+	BUS_READ_IVAR(device_get_parent(dev), dev, 0, &func);
 	if (func != SCF_PCM)
 		return (ENXIO);
 
-	r = BUS_READ_IVAR(device_get_parent(dev), dev, 1, &ver);
+	BUS_READ_IVAR(device_get_parent(dev), dev, 1, &ver);
 	f = (ver & 0xffff0000) >> 16;
 	ver &= 0x0000ffff;
 	if (f & BD_F_SB16) {
@@ -899,7 +897,6 @@ static device_method_t sb16_methods[] = {
 	DEVMETHOD(device_probe,		sb16_probe),
 	DEVMETHOD(device_attach,	sb16_attach),
 	DEVMETHOD(device_detach,	sb16_detach),
-
 	{ 0, 0 }
 };
 

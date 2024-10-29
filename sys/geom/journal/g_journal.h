@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_G_JOURNAL_H_
@@ -48,28 +47,10 @@
 #ifdef _KERNEL
 extern int g_journal_debug;
 
-#define	GJ_DEBUG(lvl, ...)	do {					\
-	if (g_journal_debug >= (lvl)) {					\
-		printf("GEOM_JOURNAL");					\
-		if (g_journal_debug > 0)				\
-			printf("[%u]", lvl);				\
-		printf(": ");						\
-		printf(__VA_ARGS__);					\
-		printf("\n");						\
-	}								\
-} while (0)
-#define	GJ_LOGREQ(lvl, bp, ...)	do {					\
-	if (g_journal_debug >= (lvl)) {					\
-		printf("GEOM_JOURNAL");					\
-		if (g_journal_debug > 0)				\
-			printf("[%u]", lvl);				\
-		printf(": ");						\
-		printf(__VA_ARGS__);					\
-		printf(" ");						\
-		g_print_bio(bp);					\
-		printf("\n");						\
-	}								\
-} while (0)
+#define	GJ_DEBUG(lvl, ...) \
+    _GEOM_DEBUG("GEOM_JOURNAL", g_journal_debug, (lvl), NULL, __VA_ARGS__)
+#define	GJ_LOGREQ(lvl, bp, ...) \
+    _GEOM_DEBUG("GEOM_JOURNAL", g_journal_debug, (lvl), (bp), __VA_ARGS__)
 
 #define	JEMPTY(sc)	((sc)->sc_journal_offset -			\
 			 (sc)->sc_jprovider->sectorsize ==		\
@@ -232,7 +213,7 @@ struct g_journal_entry {
 #define	GJ_RECORD_HEADER_MAGIC		"GJRHDR"
 #define	GJ_RECORD_HEADER_NENTRIES	(20)
 #define	GJ_RECORD_MAX_SIZE(sc)	\
-	((sc)->sc_jprovider->sectorsize + GJ_RECORD_HEADER_NENTRIES * MAXPHYS)
+	((sc)->sc_jprovider->sectorsize + GJ_RECORD_HEADER_NENTRIES * maxphys)
 #define	GJ_VALIDATE_OFFSET(offset, sc)	do {				\
 	if ((offset) + GJ_RECORD_MAX_SIZE(sc) >= (sc)->sc_jend) {	\
 		(offset) = (sc)->sc_jstart;				\

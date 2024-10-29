@@ -19,7 +19,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*-
  * Ralink Technology RT2501USB/RT2601USB chipset driver
  * http://www.ralinktech.com.tw/
@@ -78,7 +77,8 @@
 #ifdef USB_DEBUG
 static int rum_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, rum, CTLFLAG_RW, 0, "USB rum");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, rum, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB rum");
 SYSCTL_INT(_hw_usb_rum, OID_AUTO, debug, CTLFLAG_RWTUN, &rum_debug, 0,
     "Debug level");
 #endif
@@ -719,10 +719,12 @@ rum_vap_delete(struct ieee80211vap *vap)
 	struct rum_vap *rvp = RUM_VAP(vap);
 	struct ieee80211com *ic = vap->iv_ic;
 	struct rum_softc *sc = ic->ic_softc;
+	int i;
 
 	/* Put vap into INIT state. */
 	ieee80211_new_state(vap, IEEE80211_S_INIT, -1);
-	ieee80211_draintask(ic, &vap->iv_nstate_task);
+	for (i = 0; i < NET80211_IV_NSTATE_NUM; i++)
+		ieee80211_draintask(ic, &vap->iv_nstate_task[i]);
 
 	RUM_LOCK(sc);
 	/* Cancel any unfinished Tx. */

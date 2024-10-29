@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_syscons.h"
 
 #ifndef SC_NO_HISTORY
@@ -43,8 +42,7 @@
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 
-#if defined(__arm__) || defined(__mips__) || \
-	defined(__powerpc__) || defined(__sparc64__)
+#if defined(__arm__) || defined(__mips__) || defined(__powerpc__)
 #include <machine/sc_machdep.h>
 #else
 #include <machine/pc/display.h>
@@ -299,7 +297,6 @@ sc_hist_ioctl(struct tty *tp, u_long cmd, caddr_t data, struct thread *td)
 	int error;
 
 	switch (cmd) {
-
 	case CONS_HISTORY:  	/* set history size */
 		scp = SC_STAT(tp);
 		if (*(int *)data <= 0)

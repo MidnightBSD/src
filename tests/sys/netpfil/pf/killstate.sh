@@ -1,6 +1,5 @@
-# $FreeBSD$
 #
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2021 Rubicon Communications, LLC (Netgate)
 #
@@ -49,7 +48,8 @@ v4_body()
 	jexec alcatraz pfctl -e
 
 	pft_set_rules alcatraz "block all" \
-		"pass in proto icmp"
+		"pass in proto icmp" \
+		"set skip on lo"
 
 	# Sanity check & establish state
 	# Note: use pft_ping so we always use the same ID, so pf considers all
@@ -101,6 +101,74 @@ v4_cleanup()
 	pft_cleanup
 }
 
+atf_test_case "v6" "cleanup"
+v6_head()
+{
+	atf_set descr 'Test killing states by IPv6 address'
+	atf_set require.user root
+	atf_set require.progs scapy
+}
+
+v6_body()
+{
+	pft_init
+
+	epair=$(vnet_mkepair)
+	ifconfig ${epair}a inet6 2001:db8::1/64 up no_dad
+
+	vnet_mkjail alcatraz ${epair}b
+	jexec alcatraz ifconfig ${epair}b inet6 2001:db8::2/64 up no_dad
+	jexec alcatraz pfctl -e
+
+	pft_set_rules alcatraz "block all" \
+		"pass in proto icmp6" \
+		"set skip on lo"
+
+	# Sanity check & establish state
+	# Note: use pft_ping so we always use the same ID, so pf considers all
+	# echo requests part of the same flow.
+	atf_check -s exit:0 -o ignore ${common_dir}/pft_ping.py \
+		--sendif ${epair}a \
+		--to 2001:db8::2 \
+		--replyif ${epair}a
+
+	# Change rules to now deny the ICMP traffic
+	pft_set_rules noflush alcatraz "block all"
+
+	# Established state means we can still ping alcatraz
+	atf_check -s exit:0 -o ignore ${common_dir}/pft_ping.py \
+		--sendif ${epair}a \
+		--to 2001:db8::2 \
+		--replyif ${epair}a
+
+	# Killing with the wrong IP doesn't affect our state
+	jexec alcatraz pfctl -k 2001:db8::3
+	atf_check -s exit:0 -o ignore ${common_dir}/pft_ping.py \
+		--sendif ${epair}a \
+		--to 2001:db8::2 \
+		--replyif ${epair}a
+
+	# Killing with one correct address and one incorrect doesn't kill the state
+	jexec alcatraz pfctl -k 2001:db8::1 -k 2001:db8::3
+	atf_check -s exit:0 -o ignore ${common_dir}/pft_ping.py \
+		--sendif ${epair}a \
+		--to 2001:db8::2 \
+		--replyif ${epair}a
+
+	# Killing with correct address does remove the state
+	jexec alcatraz pfctl -k 2001:db8::1
+	atf_check -s exit:1 -o ignore ${common_dir}/pft_ping.py \
+		--sendif ${epair}a \
+		--to 2001:db8::2 \
+		--replyif ${epair}a
+
+}
+
+v6_cleanup()
+{
+	pft_cleanup
+}
+
 atf_test_case "label" "cleanup"
 label_head()
 {
@@ -122,7 +190,8 @@ label_body()
 
 	pft_set_rules alcatraz "block all" \
 		"pass in proto tcp label bar" \
-		"pass in proto icmp label foo"
+		"pass in proto icmp label foo" \
+		"set skip on lo"
 
 	# Sanity check & establish state
 	# Note: use pft_ping so we always use the same ID, so pf considers all
@@ -188,7 +257,8 @@ multilabel_body()
 	jexec alcatraz pfctl -e
 
 	pft_set_rules alcatraz "block all" \
-		"pass in proto icmp label foo label bar"
+		"pass in proto icmp label foo label bar" \
+		"set skip on lo"
 
 	# Sanity check & establish state
 	# Note: use pft_ping so we always use the same ID, so pf considers all
@@ -222,7 +292,8 @@ multilabel_body()
 		--replyif ${epair}a
 
 	pft_set_rules alcatraz "block all" \
-		"pass in proto icmp label foo label bar"
+		"pass in proto icmp label foo label bar" \
+		"set skip on lo"
 
 	# Reestablish state
 	atf_check -s exit:0 -o ignore ${common_dir}/pft_ping.py \
@@ -266,7 +337,8 @@ gateway_body()
 	jexec alcatraz pfctl -e
 
 	pft_set_rules alcatraz "block all" \
-		"pass in reply-to (${epair}b 192.0.2.1) proto icmp"
+		"pass in reply-to (${epair}b 192.0.2.1) proto icmp" \
+		"set skip on lo"
 
 	# Sanity check & establish state
 	# Note: use pft_ping so we always use the same ID, so pf considers all
@@ -341,7 +413,7 @@ match_body()
 	vnet_mkjail singsing ${epair_two}b
 	jexec singsing ifconfig ${epair_two}b 198.51.100.2/24 up
 	jexec singsing route add default 198.51.100.1
-	jexec singsing /usr/sbin/inetd -p inetd-echo.pid \
+	jexec singsing /usr/sbin/inetd -p ${PWD}/inetd-echo.pid \
 	    $(atf_get_srcdir)/echo_inetd.conf
 
 	route add 198.51.100.0/24 192.0.2.2
@@ -408,7 +480,8 @@ interface_body()
 	jexec alcatraz pfctl -e
 
 	pft_set_rules alcatraz "block all" \
-		"pass in proto icmp"
+		"pass in proto icmp" \
+		"set skip on lo"
 
 	# Sanity check & establish state
 	# Note: use pft_ping so we always use the same ID, so pf considers all
@@ -468,7 +541,8 @@ id_body()
 
 	pft_set_rules alcatraz "block all" \
 		"pass in proto tcp" \
-		"pass in proto icmp"
+		"pass in proto icmp" \
+		"set skip on lo"
 
 	# Sanity check & establish state
 	# Note: use pft_ping so we always use the same ID, so pf considers all
@@ -514,6 +588,7 @@ id_cleanup()
 atf_init_test_cases()
 {
 	atf_add_test_case "v4"
+	atf_add_test_case "v6"
 	atf_add_test_case "label"
 	atf_add_test_case "multilabel"
 	atf_add_test_case "gateway"

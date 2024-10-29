@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ffs.h"
 
 #include <sys/param.h>
@@ -79,7 +78,7 @@ static int chkdqchg(struct inode *, ufs2_daddr_t, struct ucred *, int, int *);
 static int chkiqchg(struct inode *, int, struct ucred *, int, int *);
 static int dqopen(struct vnode *, struct ufsmount *, int);
 static int dqget(struct vnode *,
-	u_long, struct ufsmount *, int, struct dquot **);
+	uint64_t, struct ufsmount *, int, struct dquot **);
 static int dqsync(struct vnode *, struct dquot *);
 static int dqflush(struct vnode *);
 static int quotaoff1(struct thread *td, struct mount *mp, int type);
@@ -195,7 +194,7 @@ chkdq(struct inode *ip, ufs2_daddr_t change, struct ucred *cred, int flags)
 		return (0);
 	}
 	if ((flags & FORCE) == 0 &&
-	    priv_check_cred(cred, PRIV_VFS_EXCEEDQUOTA, 0))
+	    priv_check_cred(cred, PRIV_VFS_EXCEEDQUOTA))
 		do_check = 1;
 	else
 		do_check = 0;
@@ -335,7 +334,7 @@ chkiq(struct inode *ip, int change, struct ucred *cred, int flags)
 		return (0);
 	}
 	if ((flags & FORCE) == 0 &&
-	    priv_check_cred(cred, PRIV_VFS_EXCEEDQUOTA, 0))
+	    priv_check_cred(cred, PRIV_VFS_EXCEEDQUOTA))
 		do_check = 1;
 	else
 		do_check = 0;
@@ -534,7 +533,7 @@ quotaon(struct thread *td, struct mount *mp, int type, void *fname)
 		}
 	}
 	if (error != 0) {
-		VOP_UNLOCK(vp, 0);
+		VOP_UNLOCK(vp);
 		(void) vn_close(vp, FREAD|FWRITE, td->td_ucred, td);
 		return (error);
 	}
@@ -542,7 +541,7 @@ quotaon(struct thread *td, struct mount *mp, int type, void *fname)
 	UFS_LOCK(ump);
 	if ((ump->um_qflags[type] & (QTF_OPENING|QTF_CLOSING)) != 0) {
 		UFS_UNLOCK(ump);
-		VOP_UNLOCK(vp, 0);
+		VOP_UNLOCK(vp);
 		(void) vn_close(vp, FREAD|FWRITE, td->td_ucred, td);
 		vfs_unbusy(mp);
 		return (EALREADY);
@@ -550,7 +549,7 @@ quotaon(struct thread *td, struct mount *mp, int type, void *fname)
 	ump->um_qflags[type] |= QTF_OPENING|QTF_CLOSING;
 	UFS_UNLOCK(ump);
 	if ((error = dqopen(vp, ump, type)) != 0) {
-		VOP_UNLOCK(vp, 0);
+		VOP_UNLOCK(vp);
 		UFS_LOCK(ump);
 		ump->um_qflags[type] &= ~(QTF_OPENING|QTF_CLOSING);
 		UFS_UNLOCK(ump);
@@ -558,7 +557,7 @@ quotaon(struct thread *td, struct mount *mp, int type, void *fname)
 		vfs_unbusy(mp);
 		return (error);
 	}
-	VOP_UNLOCK(vp, 0);
+	VOP_UNLOCK(vp);
 	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_QUOTA;
 	mp->mnt_stat.f_flags |= MNT_QUOTA;
@@ -583,8 +582,17 @@ quotaon(struct thread *td, struct mount *mp, int type, void *fname)
 	vp->v_vflag |= VV_SYSTEM;
 	VN_LOCK_AREC(vp);
 	VN_LOCK_DSHARE(vp);
-	VOP_UNLOCK(vp, 0);
+	VOP_UNLOCK(vp);
 	*vpp = vp;
+
+	/*
+	 * Allow the getdq from getinoquota below to read the quota
+	 * from file.
+	 */
+	UFS_LOCK(ump);
+	ump->um_qflags[type] &= ~QTF_CLOSING;
+	UFS_UNLOCK(ump);
+
 	/*
 	 * Save the credential of the process that turned on quotas.
 	 * Set up the time limits for this quota.
@@ -600,30 +608,23 @@ quotaon(struct thread *td, struct mount *mp, int type, void *fname)
 		dqrele(NULLVP, dq);
 	}
 	/*
-	 * Allow the getdq from getinoquota below to read the quota
-	 * from file.
-	 */
-	UFS_LOCK(ump);
-	ump->um_qflags[type] &= ~QTF_CLOSING;
-	UFS_UNLOCK(ump);
-	/*
 	 * Search vnodes associated with this mount point,
 	 * adding references to quota file being opened.
 	 * NB: only need to add dquot's for inodes being modified.
 	 */
 again:
 	MNT_VNODE_FOREACH_ALL(vp, mp, mvp) {
-		if (vget(vp, LK_EXCLUSIVE | LK_INTERLOCK, td)) {
+		if (vget(vp, LK_EXCLUSIVE | LK_INTERLOCK)) {
 			MNT_VNODE_FOREACH_ALL_ABORT(mp, mvp);
 			goto again;
 		}
 		if (vp->v_type == VNON || vp->v_writecount <= 0) {
-			VOP_UNLOCK(vp, 0);
+			VOP_UNLOCK(vp);
 			vrele(vp);
 			continue;
 		}
 		error = getinoquota(VTOI(vp));
-		VOP_UNLOCK(vp, 0);
+		VOP_UNLOCK(vp);
 		vrele(vp);
 		if (error) {
 			MNT_VNODE_FOREACH_ALL_ABORT(mp, mvp);
@@ -680,7 +681,7 @@ again:
 			VI_UNLOCK(vp);
 			continue;
 		}
-		if (vget(vp, LK_EXCLUSIVE | LK_INTERLOCK, td)) {
+		if (vget(vp, LK_EXCLUSIVE | LK_INTERLOCK)) {
 			MNT_VNODE_FOREACH_ALL_ABORT(mp, mvp);
 			goto again;
 		}
@@ -688,7 +689,7 @@ again:
 		dq = ip->i_dquot[type];
 		ip->i_dquot[type] = NODQUOT;
 		dqrele(vp, dq);
-		VOP_UNLOCK(vp, 0);
+		VOP_UNLOCK(vp);
 		vrele(vp);
 	}
 
@@ -707,7 +708,7 @@ again:
 
 	vn_lock(qvp, LK_EXCLUSIVE | LK_RETRY);
 	qvp->v_vflag &= ~VV_SYSTEM;
-	VOP_UNLOCK(qvp, 0);
+	VOP_UNLOCK(qvp);
 	error = vn_close(qvp, FREAD|FWRITE, td->td_ucred, td);
 	crfree(cr);
 
@@ -800,7 +801,7 @@ quotaoff(struct thread *td, struct mount *mp, int type)
  * Q_GETQUOTA - return current values in a dqblk structure.
  */
 static int
-_getquota(struct thread *td, struct mount *mp, u_long id, int type,
+_getquota(struct thread *td, struct mount *mp, uint64_t id, int type,
     struct dqblk64 *dqb)
 {
 	struct dquot *dq;
@@ -841,7 +842,7 @@ _getquota(struct thread *td, struct mount *mp, u_long id, int type,
  * Q_SETQUOTA - assign an entire dqblk structure.
  */
 static int
-_setquota(struct thread *td, struct mount *mp, u_long id, int type,
+_setquota(struct thread *td, struct mount *mp, uint64_t id, int type,
     struct dqblk64 *dqb)
 {
 	struct dquot *dq;
@@ -904,7 +905,7 @@ _setquota(struct thread *td, struct mount *mp, u_long id, int type,
  * Q_SETUSE - set current inode and block usage.
  */
 static int
-_setuse(struct thread *td, struct mount *mp, u_long id, int type,
+_setuse(struct thread *td, struct mount *mp, uint64_t id, int type,
     struct dqblk64 *dqb)
 {
 	struct dquot *dq;
@@ -951,7 +952,8 @@ _setuse(struct thread *td, struct mount *mp, u_long id, int type,
 }
 
 int
-getquota32(struct thread *td, struct mount *mp, u_long id, int type, void *addr)
+getquota32(struct thread *td, struct mount *mp, uint64_t id, int type,
+    void *addr)
 {
 	struct dqblk32 dqb32;
 	struct dqblk64 dqb64;
@@ -966,7 +968,8 @@ getquota32(struct thread *td, struct mount *mp, u_long id, int type, void *addr)
 }
 
 int
-setquota32(struct thread *td, struct mount *mp, u_long id, int type, void *addr)
+setquota32(struct thread *td, struct mount *mp, uint64_t id, int type,
+    void *addr)
 {
 	struct dqblk32 dqb32;
 	struct dqblk64 dqb64;
@@ -981,7 +984,7 @@ setquota32(struct thread *td, struct mount *mp, u_long id, int type, void *addr)
 }
 
 int
-setuse32(struct thread *td, struct mount *mp, u_long id, int type, void *addr)
+setuse32(struct thread *td, struct mount *mp, uint64_t id, int type, void *addr)
 {
 	struct dqblk32 dqb32;
 	struct dqblk64 dqb64;
@@ -996,7 +999,7 @@ setuse32(struct thread *td, struct mount *mp, u_long id, int type, void *addr)
 }
 
 int
-getquota(struct thread *td, struct mount *mp, u_long id, int type, void *addr)
+getquota(struct thread *td, struct mount *mp, uint64_t id, int type, void *addr)
 {
 	struct dqblk64 dqb64;
 	int error;
@@ -1009,7 +1012,7 @@ getquota(struct thread *td, struct mount *mp, u_long id, int type, void *addr)
 }
 
 int
-setquota(struct thread *td, struct mount *mp, u_long id, int type, void *addr)
+setquota(struct thread *td, struct mount *mp, uint64_t id, int type, void *addr)
 {
 	struct dqblk64 dqb64;
 	int error;
@@ -1022,7 +1025,7 @@ setquota(struct thread *td, struct mount *mp, u_long id, int type, void *addr)
 }
 
 int
-setuse(struct thread *td, struct mount *mp, u_long id, int type, void *addr)
+setuse(struct thread *td, struct mount *mp, uint64_t id, int type, void *addr)
 {
 	struct dqblk64 dqb64;
 	int error;
@@ -1038,7 +1041,7 @@ setuse(struct thread *td, struct mount *mp, u_long id, int type, void *addr)
  * Q_GETQUOTASIZE - get bit-size of quota file fields
  */
 int
-getquotasize(struct thread *td, struct mount *mp, u_long id, int type,
+getquotasize(struct thread *td, struct mount *mp, uint64_t id, int type,
     void *sizep)
 {
 	struct ufsmount *ump = VFSTOUFS(mp);
@@ -1065,7 +1068,6 @@ int
 qsync(struct mount *mp)
 {
 	struct ufsmount *ump = VFSTOUFS(mp);
-	struct thread *td = curthread;		/* XXX */
 	struct vnode *vp, *mvp;
 	struct dquot *dq;
 	int i, error;
@@ -1084,15 +1086,15 @@ qsync(struct mount *mp)
 	 * synchronizing any modified dquot structures.
 	 */
 again:
-	MNT_VNODE_FOREACH_ACTIVE(vp, mp, mvp) {
+	MNT_VNODE_FOREACH_ALL(vp, mp, mvp) {
 		if (vp->v_type == VNON) {
 			VI_UNLOCK(vp);
 			continue;
 		}
-		error = vget(vp, LK_EXCLUSIVE | LK_INTERLOCK, td);
+		error = vget(vp, LK_EXCLUSIVE | LK_INTERLOCK);
 		if (error) {
 			if (error == ENOENT) {
-				MNT_VNODE_FOREACH_ACTIVE_ABORT(mp, mvp);
+				MNT_VNODE_FOREACH_ALL_ABORT(mp, mvp);
 				goto again;
 			}
 			continue;
@@ -1162,7 +1164,7 @@ struct mtx dqhlock;
 #define	DQH_LOCK()	mtx_lock(&dqhlock)
 #define	DQH_UNLOCK()	mtx_unlock(&dqhlock)
 
-static struct dquot *dqhashfind(struct dqhash *dqh, u_long id,
+static struct dquot *dqhashfind(struct dqhash *dqh, uint64_t id,
 	struct vnode *dqvp);
 
 /*
@@ -1195,7 +1197,7 @@ dquninit(void)
 }
 
 static struct dquot *
-dqhashfind(struct dqhash *dqh, u_long id, struct vnode *dqvp)
+dqhashfind(struct dqhash *dqh, uint64_t id, struct vnode *dqvp)
 {
 	struct dquot *dq;
 
@@ -1274,7 +1276,7 @@ dqopen(struct vnode *vp, struct ufsmount *ump, int type)
  * reading the information from the file if necessary.
  */
 static int
-dqget(struct vnode *vp, u_long id, struct ufsmount *ump, int type,
+dqget(struct vnode *vp, uint64_t id, struct ufsmount *ump, int type,
     struct dquot **dqp)
 {
 	uint8_t buf[sizeof(struct dqblk64)];
@@ -1686,9 +1688,7 @@ dqflush(struct vnode *vp)
  * Return count of number of quota structures found.
  */
 int
-quotaref(vp, qrp)
-	struct vnode *vp;
-	struct dquot **qrp;
+quotaref(struct vnode *vp, struct dquot **qrp)
 {
 	struct inode *ip;
 	struct dquot *dq;
@@ -1723,8 +1723,7 @@ quotaref(vp, qrp)
  * Release a set of quota structures obtained from a vnode.
  */
 void
-quotarele(qrp)
-	struct dquot **qrp;
+quotarele(struct dquot **qrp)
 {
 	struct dquot *dq;
 	int i;
@@ -1741,10 +1740,7 @@ quotarele(qrp)
  * Positive numbers when adding blocks; negative numbers when freeing blocks.
  */
 void
-quotaadj(qrp, ump, blkcount)
-	struct dquot **qrp;
-	struct ufsmount *ump;
-	int64_t blkcount;
+quotaadj(struct dquot **qrp, struct ufsmount *ump, int64_t blkcount)
 {
 	struct dquot *dq;
 	ufs2_daddr_t ncurblocks;

@@ -1,7 +1,7 @@
 /*	$NetBSD: uchcom.c,v 1.1 2007/09/03 17:57:37 tshiozak Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007, Takanori Watanabe
  * All rights reserved.
@@ -58,7 +58,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Driver for WinChipHead CH341/340, the worst USB-serial chip in the
  * world.
@@ -97,7 +96,8 @@
 #ifdef USB_DEBUG
 static int uchcom_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, uchcom, CTLFLAG_RW, 0, "USB uchcom");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, uchcom, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB uchcom");
 SYSCTL_INT(_hw_usb_uchcom, OID_AUTO, debug, CTLFLAG_RWTUN,
     &uchcom_debug, 0, "uchcom debug level");
 #endif
@@ -204,6 +204,7 @@ static const STRUCT_USB_HOST_ID uchcom_devs[] = {
 	{USB_VPI(USB_VENDOR_WCH, USB_PRODUCT_WCH_CH341SER, 0)},
 	{USB_VPI(USB_VENDOR_WCH2, USB_PRODUCT_WCH2_CH341SER, 0)},
 	{USB_VPI(USB_VENDOR_WCH2, USB_PRODUCT_WCH2_CH341SER_2, 0)},
+	{USB_VPI(USB_VENDOR_WCH2, USB_PRODUCT_WCH2_CH341SER_3, 0)},
 };
 
 /* protypes */
@@ -239,7 +240,6 @@ static usb_callback_t uchcom_write_callback;
 static usb_callback_t uchcom_read_callback;
 
 static const struct usb_config uchcom_config_data[UCHCOM_N_TRANSFER] = {
-
 	[UCHCOM_BULK_DT_WR] = {
 		.type = UE_BULK,
 		.endpoint = UE_ADDR_ANY,
@@ -328,6 +328,7 @@ uchcom_attach(device_t dev)
 		device_printf(dev, "CH340 detected\n");
 		break;
 	case USB_PRODUCT_WCH2_CH341SER_2:
+	case USB_PRODUCT_WCH2_CH341SER_3:
 		device_printf(dev, "CH341 detected\n");
 		break;
 	default:
@@ -502,7 +503,6 @@ uchcom_set_dtr_rts_20(struct uchcom_softc *sc, uint8_t val)
 	uchcom_ctrl_write(sc, UCHCOM_REQ_SET_DTRRTS, val, 0);
 }
 
-
 /* ----------------------------------------------------------------------
  * middle layer
  */
@@ -532,7 +532,6 @@ uchcom_update_status(struct uchcom_softc *sc)
 	uchcom_get_status(sc, &cur);
 	uchcom_convert_status(sc, cur);
 }
-
 
 static void
 uchcom_set_dtr_rts(struct uchcom_softc *sc)
@@ -832,7 +831,6 @@ tr_setup:
 		pc = usbd_xfer_get_frame(xfer, 0);
 		if (ucom_get_data(&sc->sc_ucom, pc, 0,
 		    usbd_xfer_max_len(xfer), &actlen)) {
-
 			DPRINTF("actlen = %d\n", actlen);
 
 			usbd_xfer_set_frame_len(xfer, 0, actlen);

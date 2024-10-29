@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/proc.h>
@@ -140,7 +139,7 @@ test_modinit(void)
 	int i, error, pri_range, pri_off;
 
 	pri_range = PRI_MIN_TIMESHARE - PRI_MIN_REALTIME;
-	test_epoch = epoch_alloc(EPOCH_PREEMPT);
+	test_epoch = epoch_alloc("test_epoch", EPOCH_PREEMPT);
 	for (i = 0; i < mp_ncpus*2; i++) {
 		etilist[i].threadid = i;
 		error = kthread_add(testloop, &etilist[i], NULL, &testthreads[i],
@@ -184,9 +183,12 @@ epochtest_execute(SYSCTL_HANDLER_ARGS)
 	return (0);
 }
 
-SYSCTL_NODE(_kern, OID_AUTO, epochtest, CTLFLAG_RW, 0, "Epoch Test Framework");
-SYSCTL_PROC(_kern_epochtest, OID_AUTO, runtest, (CTLTYPE_INT | CTLFLAG_RW),
-			0, 0, epochtest_execute, "I", "Execute an epoch test");
+SYSCTL_NODE(_kern, OID_AUTO, epochtest, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "Epoch Test Framework");
+SYSCTL_PROC(_kern_epochtest, OID_AUTO, runtest,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+    0, 0, epochtest_execute, "I",
+    "Execute an epoch test");
 
 static int
 epoch_test_module_event_handler(module_t mod, int what, void *arg __unused)
@@ -205,6 +207,7 @@ epoch_test_module_event_handler(module_t mod, int what, void *arg __unused)
 		mtx_unlock(&state_mtx);
 		/* yes --- gross */
 		pause("epoch unload", 3*hz);
+		epoch_free(test_epoch);
 		break;
 	default:
 		return (EOPNOTSUPP);

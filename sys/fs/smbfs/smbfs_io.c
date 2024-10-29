@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  *
  */
 #include <sys/param.h>
@@ -62,13 +61,12 @@
 
 /*#define SMBFS_RWGENERIC*/
 
-extern int smbfs_pbuf_freecnt;
+extern uma_zone_t smbfs_pbuf_zone;
 
 static int smbfs_fastlookup = 1;
 
 SYSCTL_DECL(_vfs_smbfs);
 SYSCTL_INT(_vfs_smbfs, OID_AUTO, fastlookup, CTLFLAG_RW, &smbfs_fastlookup, 0, "");
-
 
 #define DE_SIZE	(sizeof(struct dirent))
 
@@ -285,9 +283,10 @@ smbfs_writevnode(struct vnode *vp, struct uio *uiop,
 	if (uiop->uio_resid == 0)
 		return 0;
 
-	if (vn_rlimit_fsize(vp, uiop, td))
-		return (EFBIG);
-	
+	error = vn_rlimit_fsize(vp, uiop, td);
+	if (error != 0)
+		return (error);
+
 	scred = smbfs_malloc_scred();
 	smb_makescred(scred, td, cred);
 	error = smb_write(smp->sm_share, np->n_fid, uiop, scred);
@@ -412,13 +411,7 @@ smbfs_doio(struct vnode *vp, struct buf *bp, struct ucred *cr, struct thread *td
  * Wish wish .... get rid from multiple IO routines
  */
 int
-smbfs_getpages(ap)
-	struct vop_getpages_args /* {
-		struct vnode *a_vp;
-		vm_page_t *a_m;
-		int a_count;
-		int a_reqpage;
-	} */ *ap;
+smbfs_getpages(struct vop_getpages_args *ap)
 {
 #ifdef SMBFS_RWGENERIC
 	return vop_stdgetpages(ap);
@@ -458,14 +451,14 @@ smbfs_getpages(ap)
 	 * XXXGL: is that true for SMB filesystem?
 	 */
 	VM_OBJECT_WLOCK(object);
-	if (pages[npages - 1]->valid != 0 && --npages == 0)
+	if (!vm_page_none_valid(pages[npages - 1]) && --npages == 0)
 		goto out;
 	VM_OBJECT_WUNLOCK(object);
 
 	scred = smbfs_malloc_scred();
 	smb_makescred(scred, td, cred);
 
-	bp = getpbuf(&smbfs_pbuf_freecnt);
+	bp = uma_zalloc(smbfs_pbuf_zone, M_WAITOK);
 
 	kva = (vm_offset_t) bp->b_data;
 	pmap_qenter(kva, pages, npages);
@@ -487,7 +480,7 @@ smbfs_getpages(ap)
 	smbfs_free_scred(scred);
 	pmap_qremove(kva, npages);
 
-	relpbuf(bp, &smbfs_pbuf_freecnt);
+	uma_zfree(smbfs_pbuf_zone, bp);
 
 	if (error && (uio.uio_resid == count)) {
 		printf("smbfs_getpages: error %d\n",error);
@@ -506,14 +499,14 @@ smbfs_getpages(ap)
 			/*
 			 * Read operation filled an entire page
 			 */
-			m->valid = VM_PAGE_BITS_ALL;
+			vm_page_valid(m);
 			KASSERT(m->dirty == 0,
 			    ("smbfs_getpages: page %p is dirty", m));
 		} else if (size > toff) {
 			/*
 			 * Read operation filled a partial page.
 			 */
-			m->valid = 0;
+			vm_page_invalid(m);
 			vm_page_set_valid_range(m, 0, size - toff);
 			KASSERT(m->dirty == 0,
 			    ("smbfs_getpages: page %p is dirty", m));
@@ -543,14 +536,7 @@ out:
  * not necessary to open vnode.
  */
 int
-smbfs_putpages(ap)
-	struct vop_putpages_args /* {
-		struct vnode *a_vp;
-		vm_page_t *a_m;
-		int a_count;
-		int a_sync;
-		int *a_rtvals;
-	} */ *ap;
+smbfs_putpages(struct vop_putpages_args *ap)
 {
 	int error;
 	struct vnode *vp = ap->a_vp;
@@ -590,7 +576,7 @@ smbfs_putpages(ap)
 		rtvals[i] = VM_PAGER_ERROR;
 	}
 
-	bp = getpbuf(&smbfs_pbuf_freecnt);
+	bp = uma_zalloc(smbfs_pbuf_zone, M_WAITOK);
 
 	kva = (vm_offset_t) bp->b_data;
 	pmap_qenter(kva, pages, npages);
@@ -618,7 +604,7 @@ smbfs_putpages(ap)
 
 	pmap_qremove(kva, npages);
 
-	relpbuf(bp, &smbfs_pbuf_freecnt);
+	uma_zfree(smbfs_pbuf_zone, bp);
 
 	if (error == 0) {
 		vnode_pager_undirty_pages(pages, rtvals, count - uio.uio_resid,
@@ -638,7 +624,7 @@ smbfs_vinvalbuf(struct vnode *vp, struct thread *td)
 	struct smbnode *np = VTOSMB(vp);
 	int error = 0;
 
-	if (vp->v_iflag & VI_DOOMED)
+	if (VN_IS_DOOMED(vp))
 		return 0;
 
 	while (np->n_flag & NFLUSHINPROG) {
@@ -650,12 +636,7 @@ smbfs_vinvalbuf(struct vnode *vp, struct thread *td)
 	}
 	np->n_flag |= NFLUSHINPROG;
 
-	if (vp->v_bufobj.bo_object != NULL) {
-		VM_OBJECT_WLOCK(vp->v_bufobj.bo_object);
-		vm_object_page_clean(vp->v_bufobj.bo_object, 0, 0, OBJPC_SYNC);
-		VM_OBJECT_WUNLOCK(vp->v_bufobj.bo_object);
-	}
-
+	vnode_pager_clean_sync(vp);
 	error = vinvalbuf(vp, V_SAVE, PCATCH, 0);
 	while (error) {
 		if (error == ERESTART || error == EINTR) {

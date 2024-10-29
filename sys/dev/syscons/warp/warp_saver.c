@@ -26,7 +26,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -99,7 +98,7 @@ static int
 warp_saver(video_adapter_t *adp, int blank)
 {
 	int pl;
-	
+
 	if (blank) {
 		/* switch to graphics mode */
 		if (blanked <= 0) {
@@ -127,7 +126,7 @@ warp_init(video_adapter_t *adp)
 {
 	video_info_t info;
 	int i;
-	
+
 	if (!vidd_get_info(adp, M_VGA_CG320, &info)) {
 		scrmode = M_VGA_CG320;
 	} else {
@@ -136,14 +135,14 @@ warp_init(video_adapter_t *adp)
 		    SAVER_NAME);
 		return (ENODEV);
 	}
-	
+
 	scrw = info.vi_width;
 	scrh = info.vi_height;
 
 	/* randomize the star field */
 	for (i = 0; i < STARS; i++)
 		star[i] = random() % (scrw * scrh);
-	
+
 	return (0);
 }
 

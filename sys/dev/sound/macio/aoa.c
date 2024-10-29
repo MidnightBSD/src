@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 2008 by Marco Trillo. All rights reserved.
  *
@@ -23,7 +23,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -129,7 +128,7 @@ aoa_dma_create(struct aoa_softc *sc)
 	dma->tag = tag;
 	dma->bufsz = AOA_BUFFER_SIZE;
 	dma->blksz = PAGE_SIZE; /* initial blocksize */
-	
+
 	mtx_init(&dma->mutex, "AOA", NULL, MTX_DEF);
 
 	sc->sc_intrp = dma;
@@ -214,7 +213,7 @@ aoa_chan_getptr(kobj_t obj, void *data)
 
 	if (!dma->running)
 		return (0);
-	
+
 	return (dma->slot * dma->blksz);
 }
 
@@ -326,7 +325,6 @@ aoa_interrupt(void *xsc)
 	mtx_lock(&dma->mutex);
 
 	while (dbdma_get_cmd_status(dma->channel, dma->slot)) {
-
 		dbdma_clear_cmd_status(dma->channel, dma->slot);
 		dma->slot = (dma->slot + 1) % dma->slots;
 
@@ -388,4 +386,3 @@ aoa_attach(void *xsc)
 
 	return (0);
 }
-

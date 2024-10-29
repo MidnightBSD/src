@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_evdev.h"
 #include "opt_syscons.h"
 
@@ -136,7 +135,6 @@ smdev_ioctl(struct tty *tp, u_long cmd, caddr_t data, struct thread *td)
 	mousemode_t *mode;
 
 	switch (cmd) {
-
 	case MOUSE_GETHWINFO:	/* get device information */
 		hw = (mousehw_t *)data;
 		hw->buttons = 10;		/* XXX unknown */
@@ -295,6 +293,8 @@ sysmouse_event(mouse_info_t *info)
 
 #ifdef EVDEV_SUPPORT
 	smdev_evdev_write(x, y, z, mouse_status.button);
+	if (evdev_is_grabbed(sysmouse_evdev))
+		goto done;
 #endif
 
 	if (!tty_opened(sysmouse_tty))

@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case online_offline_001_pos cleanup
 online_offline_001_pos_head()
 {
 	atf_set "descr" "Turning a disk offline and back online during I/O completes."
-	atf_set "require.progs"  zpool zdb
+	atf_set "require.progs" "ksh93 zpool zdb"
 	atf_set "timeout" 3600
 }
 online_offline_001_pos_body()
@@ -54,7 +52,7 @@ atf_test_case online_offline_002_neg cleanup
 online_offline_002_neg_head()
 {
 	atf_set "descr" "Offlining a disk should fail if the pool would go critical"
-	atf_set "require.progs"  zpool zdb
+	atf_set "require.progs" "ksh93 zpool zdb"
 	atf_set "timeout" 3600
 }
 online_offline_002_neg_body()

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 The FreeBSD Foundation
  *
@@ -26,8 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 extern "C" {
@@ -52,10 +50,7 @@ using namespace testing;
 class Write: public FuseTest {
 
 public:
-static sig_atomic_t s_sigxfsz;
-
 void SetUp() {
-	s_sigxfsz = 0;
 	FuseTest::SetUp();
 }
 
@@ -100,6 +95,8 @@ void maybe_expect_write(uint64_t ino, uint64_t offset, uint64_t size,
 			const char *buf = (const char*)in.body.bytes +
 				sizeof(struct fuse_write_in);
 
+			assert(size <= sizeof(in.body.bytes) -
+				sizeof(struct fuse_write_in));
 			return (in.header.opcode == FUSE_WRITE &&
 				in.header.nodeid == ino &&
 				in.body.write.offset == offset  &&
@@ -117,8 +114,6 @@ void maybe_expect_write(uint64_t ino, uint64_t offset, uint64_t size,
 }
 
 };
-
-sig_atomic_t Write::s_sigxfsz = 0;
 
 class Write_7_8: public FuseTest {
 
@@ -166,6 +161,7 @@ class WriteBackAsync: public WriteBack {
 public:
 virtual void SetUp() {
 	m_async = true;
+	m_maxwrite = 65536;
 	WriteBack::SetUp();
 }
 };
@@ -183,23 +179,55 @@ class WriteCluster: public WriteBack {
 public:
 virtual void SetUp() {
 	m_async = true;
-	m_maxwrite = 1 << 25;	// Anything larger than MAXPHYS will suffice
+	m_maxwrite = UINT32_MAX; // Anything larger than MAXPHYS will suffice
 	WriteBack::SetUp();
 	if (m_maxphys < 2 * DFLTPHYS)
 		GTEST_SKIP() << "MAXPHYS must be at least twice DFLTPHYS"
 			<< " for this test";
-	if (m_maxphys < 2 * m_maxbcachebuf)
+	if (m_maxphys < 2 * (unsigned long )m_maxbcachebuf)
 		GTEST_SKIP() << "MAXPHYS must be at least twice maxbcachebuf"
 			<< " for this test";
 }
 };
 
+/* Tests relating to the server's max_write property */
+class WriteMaxWrite: public Write {
+public:
+virtual void SetUp() {
+	/*
+	 * For this test, m_maxwrite must be less than either m_maxbcachebuf or
+	 * maxphys.
+	 */
+	m_maxwrite = 32768;
+	Write::SetUp();
+}
+};
 
 class WriteEofDuringVnopStrategy: public Write, public WithParamInterface<int>
 {};
 
+class WriteRlimitFsize: public Write, public WithParamInterface<int> {
+public:
+static sig_atomic_t s_sigxfsz;
+struct rlimit	m_initial_limit;
+
+void SetUp() {
+	s_sigxfsz = 0;
+	getrlimit(RLIMIT_FSIZE, &m_initial_limit);
+	FuseTest::SetUp();
+}
+
+void TearDown() {
+	setrlimit(RLIMIT_FSIZE, &m_initial_limit);
+
+	FuseTest::TearDown();
+}
+};
+
+sig_atomic_t WriteRlimitFsize::s_sigxfsz = 0;
+
 void sigxfsz_handler(int __unused sig) {
-	Write::s_sigxfsz = 1;
+	WriteRlimitFsize::s_sigxfsz = 1;
 }
 
 /* AIO writes need to set the header's pid field correctly */
@@ -283,10 +311,8 @@ TEST_F(Write, append_to_cached)
 	uint64_t oldsize = m_maxbcachebuf / 2;
 	int fd;
 
-	oldcontents = (char*)calloc(1, oldsize);
-	ASSERT_NE(nullptr, oldcontents) << strerror(errno);
-	oldbuf = (char*)malloc(oldsize);
-	ASSERT_NE(nullptr, oldbuf) << strerror(errno);
+	oldcontents = new char[oldsize]();
+	oldbuf = new char[oldsize];
 
 	expect_lookup(RELPATH, ino, oldsize);
 	expect_open(ino, 0, 1);
@@ -304,8 +330,8 @@ TEST_F(Write, append_to_cached)
 	/* Write the new data.  There should be no more read operations */
 	ASSERT_EQ(BUFSIZE, write(fd, CONTENTS, BUFSIZE)) << strerror(errno);
 	leak(fd);
-	free(oldbuf);
-	free(oldcontents);
+	delete[] oldbuf;
+	delete[] oldcontents;
 }
 
 TEST_F(Write, append_direct_io)
@@ -518,7 +544,7 @@ TEST_F(Write, direct_io_short_write_iov)
 }
 
 /* fusefs should respect RLIMIT_FSIZE */
-TEST_F(Write, rlimit_fsize)
+TEST_P(WriteRlimitFsize, rlimit_fsize)
 {
 	const char FULLPATH[] = "mountpoint/some_file.txt";
 	const char RELPATH[] = "some_file.txt";
@@ -527,17 +553,19 @@ TEST_F(Write, rlimit_fsize)
 	ssize_t bufsize = strlen(CONTENTS);
 	off_t offset = 1'000'000'000;
 	uint64_t ino = 42;
-	int fd;
+	int fd, oflag;
+
+	oflag = GetParam();
 
 	expect_lookup(RELPATH, ino, 0);
 	expect_open(ino, 0, 1);
 
 	rl.rlim_cur = offset;
-	rl.rlim_max = 10 * offset;
+	rl.rlim_max = m_initial_limit.rlim_max;
 	ASSERT_EQ(0, setrlimit(RLIMIT_FSIZE, &rl)) << strerror(errno);
 	ASSERT_NE(SIG_ERR, signal(SIGXFSZ, sigxfsz_handler)) << strerror(errno);
 
-	fd = open(FULLPATH, O_WRONLY);
+	fd = open(FULLPATH, O_WRONLY | oflag);
 
 	ASSERT_LE(0, fd) << strerror(errno);
 
@@ -546,6 +574,47 @@ TEST_F(Write, rlimit_fsize)
 	EXPECT_EQ(1, s_sigxfsz);
 	leak(fd);
 }
+
+/*
+ * When crossing the RLIMIT_FSIZE boundary, writes should be truncated, not
+ * aborted.
+ * https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=164793
+ */
+TEST_P(WriteRlimitFsize, rlimit_fsize_truncate)
+{
+	const char FULLPATH[] = "mountpoint/some_file.txt";
+	const char RELPATH[] = "some_file.txt";
+	const char *CONTENTS = "abcdefghijklmnopqrstuvwxyz";
+	struct rlimit rl;
+	ssize_t bufsize = strlen(CONTENTS);
+	uint64_t ino = 42;
+	off_t offset = 1 << 30;
+	off_t limit = offset + strlen(CONTENTS) / 2;
+	int fd, oflag;
+
+	oflag = GetParam();
+
+	expect_lookup(RELPATH, ino, 0);
+	expect_open(ino, 0, 1);
+	expect_write(ino, offset, bufsize / 2, bufsize / 2, CONTENTS);
+
+	rl.rlim_cur = limit;
+	rl.rlim_max = m_initial_limit.rlim_max;
+	ASSERT_EQ(0, setrlimit(RLIMIT_FSIZE, &rl)) << strerror(errno);
+	ASSERT_NE(SIG_ERR, signal(SIGXFSZ, sigxfsz_handler)) << strerror(errno);
+
+	fd = open(FULLPATH, O_WRONLY | oflag);
+
+	ASSERT_LE(0, fd) << strerror(errno);
+
+	ASSERT_EQ(bufsize / 2, pwrite(fd, CONTENTS, bufsize, offset))
+		<< strerror(errno);
+	leak(fd);
+}
+
+INSTANTIATE_TEST_CASE_P(W, WriteRlimitFsize,
+	Values(0, O_DIRECT)
+);
 
 /* 
  * A short read indicates EOF.  Test that nothing bad happens if we get EOF
@@ -559,17 +628,14 @@ TEST_F(Write, eof_during_rmw)
 	const char *INITIAL   = "XXXXXXXXXX";
 	uint64_t ino = 42;
 	uint64_t offset = 1;
-	ssize_t bufsize = strlen(CONTENTS);
+	ssize_t bufsize = strlen(CONTENTS) + 1;
 	off_t orig_fsize = 10;
 	off_t truncated_fsize = 5;
-	off_t final_fsize = bufsize;
 	int fd;
 
 	FuseTest::expect_lookup(RELPATH, ino, S_IFREG | 0644, orig_fsize, 1);
 	expect_open(ino, 0, 1);
 	expect_read(ino, 0, orig_fsize, truncated_fsize, INITIAL, O_RDWR);
-	expect_getattr(ino, truncated_fsize);
-	expect_read(ino, 0, final_fsize, final_fsize, INITIAL, O_RDWR);
 	maybe_expect_write(ino, offset, bufsize, CONTENTS);
 
 	fd = open(FULLPATH, O_RDWR);
@@ -591,7 +657,7 @@ TEST_P(WriteEofDuringVnopStrategy, eof_during_vop_strategy)
 	const char RELPATH[] = "some_file.txt";
 	Sequence seq;
 	const off_t filesize = 2 * m_maxbcachebuf;
-	void *contents;
+	char *contents;
 	uint64_t ino = 42;
 	uint64_t attr_valid = 0;
 	uint64_t attr_valid_nsec = 0;
@@ -600,7 +666,7 @@ TEST_P(WriteEofDuringVnopStrategy, eof_during_vop_strategy)
 	int ngetattrs;
 
 	ngetattrs = GetParam();
-	contents = calloc(1, filesize);
+	contents = new char[filesize]();
 
 	EXPECT_LOOKUP(FUSE_ROOT_ID, RELPATH)
 	.WillRepeatedly(Invoke(
@@ -674,14 +740,12 @@ TEST_F(Write, mmap)
 	void *p;
 	uint64_t offset = 10;
 	size_t len;
-	void *zeros, *expected;
+	char *zeros, *expected;
 
 	len = getpagesize();
 
-	zeros = calloc(1, len);
-	ASSERT_NE(nullptr, zeros);
-	expected = calloc(1, len);
-	ASSERT_NE(nullptr, expected);
+	zeros = new char[len]();
+	expected = new char[len]();
 	memmove((uint8_t*)expected + offset, CONTENTS, bufsize);
 
 	expect_lookup(RELPATH, ino, len);
@@ -706,8 +770,8 @@ TEST_F(Write, mmap)
 	ASSERT_EQ(0, munmap(p, len)) << strerror(errno);
 	close(fd);	// Write mmap'd data on close
 
-	free(expected);
-	free(zeros);
+	delete[] expected;
+	delete[] zeros;
 
 	leak(fd);
 }
@@ -786,7 +850,7 @@ TEST_F(Write, write)
 }
 
 /* fuse(4) should not issue writes of greater size than the daemon requests */
-TEST_F(Write, write_large)
+TEST_F(WriteMaxWrite, write)
 {
 	const char FULLPATH[] = "mountpoint/some_file.txt";
 	const char RELPATH[] = "some_file.txt";
@@ -796,9 +860,11 @@ TEST_F(Write, write_large)
 	ssize_t halfbufsize, bufsize;
 
 	halfbufsize = m_mock->m_maxwrite;
+	if (halfbufsize >= m_maxbcachebuf ||
+	    (unsigned long )halfbufsize >= m_maxphys)
+		GTEST_SKIP() << "Must lower m_maxwrite for this test";
 	bufsize = halfbufsize * 2;
-	contents = (int*)malloc(bufsize);
-	ASSERT_NE(nullptr, contents);
+	contents = new int[bufsize / sizeof(int)];
 	for (int i = 0; i < (int)bufsize / (int)sizeof(i); i++) {
 		contents[i] = i;
 	}
@@ -815,7 +881,7 @@ TEST_F(Write, write_large)
 	ASSERT_EQ(bufsize, write(fd, contents, bufsize)) << strerror(errno);
 	leak(fd);
 
-	free(contents);
+	delete[] contents;
 }
 
 TEST_F(Write, write_nothing)
@@ -896,15 +962,13 @@ TEST_F(WriteCluster, clustering)
 	const char RELPATH[] = "some_file.txt";
 	uint64_t ino = 42;
 	int i, fd;
-	void *wbuf, *wbuf2x;
+	char *wbuf, *wbuf2x;
 	ssize_t bufsize = m_maxbcachebuf;
 	off_t filesize = 5 * bufsize;
 
-	wbuf = malloc(bufsize);
-	ASSERT_NE(nullptr, wbuf) << strerror(errno);
+	wbuf = new char[bufsize];
 	memset(wbuf, 'X', bufsize);
-	wbuf2x = malloc(2 * bufsize);
-	ASSERT_NE(nullptr, wbuf2x) << strerror(errno);
+	wbuf2x = new char[2 * bufsize];
 	memset(wbuf2x, 'X', 2 * bufsize);
 
 	expect_lookup(RELPATH, ino, filesize);
@@ -927,8 +991,8 @@ TEST_F(WriteCluster, clustering)
 			<< strerror(errno);
 	}
 	close(fd);
-	free(wbuf2x);
-	free(wbuf);
+	delete[] wbuf2x;
+	delete[] wbuf;
 }
 
 /* 
@@ -945,12 +1009,11 @@ TEST_F(WriteCluster, cluster_write_err)
 	const char RELPATH[] = "some_file.txt";
 	uint64_t ino = 42;
 	int i, fd;
-	void *wbuf;
+	char *wbuf;
 	ssize_t bufsize = m_maxbcachebuf;
 	off_t filesize = 4 * bufsize;
 
-	wbuf = malloc(bufsize);
-	ASSERT_NE(nullptr, wbuf) << strerror(errno);
+	wbuf = new char[bufsize];
 	memset(wbuf, 'X', bufsize);
 
 	expect_lookup(RELPATH, ino, filesize);
@@ -972,7 +1035,7 @@ TEST_F(WriteCluster, cluster_write_err)
 			<< strerror(errno);
 	}
 	close(fd);
-	free(wbuf);
+	delete[] wbuf;
 }
 
 /*
@@ -1109,11 +1172,11 @@ TEST_F(WriteBack, mmap_direct_io)
 	int fd;
 	size_t len;
 	ssize_t bufsize = strlen(CONTENTS);
-	void *p, *zeros;
+	char *zeros;
+	void *p;
 
 	len = getpagesize();
-	zeros = calloc(1, len);
-	ASSERT_NE(nullptr, zeros);
+	zeros = new char[len]();
 
 	expect_lookup(RELPATH, ino, len);
 	expect_open(ino, FOPEN_DIRECT_IO, 1);
@@ -1133,7 +1196,7 @@ TEST_F(WriteBack, mmap_direct_io)
 	ASSERT_EQ(0, munmap(p, len)) << strerror(errno);
 	close(fd);	// Write mmap'd data on close
 
-	free(zeros);
+	delete[] zeros;
 }
 
 /*
@@ -1182,10 +1245,9 @@ TEST_F(WriteBackAsync, direct_io_ignores_unrelated_cached)
 	ssize_t bufsize = strlen(CONTENTS0) + 1;
 	ssize_t fsize = 2 * m_maxbcachebuf;
 	char readbuf[bufsize];
-	void *zeros;
+	char *zeros;
 
-	zeros = calloc(1, m_maxbcachebuf);
-	ASSERT_NE(nullptr, zeros);
+	zeros = new char[m_maxbcachebuf]();
 
 	expect_lookup(RELPATH, ino, fsize);
 	expect_open(ino, 0, 1);
@@ -1212,7 +1274,7 @@ TEST_F(WriteBackAsync, direct_io_ignores_unrelated_cached)
 	ASSERT_STREQ(readbuf, CONTENTS0);
 
 	leak(fd);
-	free(zeros);
+	delete[] zeros;
 }
 
 /*
@@ -1228,20 +1290,15 @@ TEST_F(WriteBackAsync, direct_io_partially_overlaps_cached_block)
 	int fd;
 	off_t bs = m_maxbcachebuf;
 	ssize_t fsize = 3 * bs;
-	void *readbuf, *zeros, *ones, *zeroones, *onezeros;
+	char *readbuf, *zeros, *ones, *zeroones, *onezeros;
 
-	readbuf = malloc(bs);
-	ASSERT_NE(nullptr, readbuf) << strerror(errno);
-	zeros = calloc(1, 3 * bs);
-	ASSERT_NE(nullptr, zeros);
-	ones = calloc(1, 2 * bs);
-	ASSERT_NE(nullptr, ones);
+	readbuf = new char[bs];
+	zeros = new char[3 * bs]();
+	ones = new char[2 * bs];
 	memset(ones, 1, 2 * bs);
-	zeroones = calloc(1, bs);
-	ASSERT_NE(nullptr, zeroones);
+	zeroones = new char[bs]();
 	memset((uint8_t*)zeroones + bs / 2, 1, bs / 2);
-	onezeros = calloc(1, bs);
-	ASSERT_NE(nullptr, onezeros);
+	onezeros = new char[bs]();
 	memset(onezeros, 1, bs / 2);
 
 	expect_lookup(RELPATH, ino, fsize);
@@ -1286,11 +1343,11 @@ TEST_F(WriteBackAsync, direct_io_partially_overlaps_cached_block)
 	EXPECT_EQ(0, memcmp(ones, readbuf, bs / 2));
 
 	leak(fd);
-	free(zeroones);
-	free(onezeros);
-	free(ones);
-	free(zeros);
-	free(readbuf);
+	delete[] zeroones;
+	delete[] onezeros;
+	delete[] ones;
+	delete[] zeros;
+	delete[] readbuf;
 }
 
 /*

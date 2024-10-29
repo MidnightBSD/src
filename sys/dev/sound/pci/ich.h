@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Katsurajima Naoto <raven@katsurajima.seya.yokohama.jp>
  * Copyright (c) 2001 Cameron Grant <cg@freebsd.org>
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THEPOSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #define PCIR_NAMBAR 0x10
@@ -96,4 +95,3 @@
 /* play/record buffer */
 #define ICH_BDC_IOC 0x80000000
 #define ICH_BDC_BUP 0x40000000
-

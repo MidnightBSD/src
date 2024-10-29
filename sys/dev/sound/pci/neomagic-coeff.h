@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * All rights reserved.
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THEPOSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #define NM_TOTAL_COEFF_COUNT 0x3158
@@ -4635,5 +4634,3 @@ coefficientSizes[] = {
     /* Record */
     0x0020, 0x1260, 0x0020, 0x1260, 0x0000, 0x0040, 0x1260, 0x0000,
 };
-
-

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Seigo Tanimura
  * Copyright (c) 1999 Ville-Pertti Keinonen
@@ -48,6 +48,7 @@
 #include <isa/isavar.h>
 #include <isa/isa_common.h>
 
+SND_DECLARE_FILE("");
 
 #define LOGICALID_NOPNP 0
 #define LOGICALID_PCM   0x0000561e
@@ -289,7 +290,6 @@ gusisa_probe(device_t dev)
 		device_set_desc(dev, "Gravis UltraSound MAX");
 		return 0;
 	} else {
-
 		/*
 		 * TODO: Support even older GUS cards.  MIDI should work on
 		 * all models.

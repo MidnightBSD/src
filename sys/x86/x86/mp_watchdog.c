@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include "opt_mp_watchdog.h"
@@ -148,8 +147,10 @@ sysctl_watchdog(SYSCTL_HANDLER_ARGS)
 		watchdog_change(temp);
 	return (0);
 }
-SYSCTL_PROC(_debug, OID_AUTO, watchdog, CTLTYPE_INT|CTLFLAG_RW, 0, 0,
-    sysctl_watchdog, "I", "");
+SYSCTL_PROC(_debug, OID_AUTO, watchdog,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+    0, 0, sysctl_watchdog, "I",
+    "");
 
 /*
  * Drop into the debugger by sending an IPI NMI to the boot processor.

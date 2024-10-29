@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case zpool_export_001_pos cleanup
 zpool_export_001_pos_head()
 {
 	atf_set "descr" "Verify a pool can be exported."
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 }
 zpool_export_001_pos_body()
 {
@@ -54,7 +52,7 @@ atf_test_case zpool_export_002_pos cleanup
 zpool_export_002_pos_head()
 {
 	atf_set "descr" "Verify a busy ZPOOL cannot be exported."
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 }
 zpool_export_002_pos_body()
 {
@@ -78,7 +76,7 @@ atf_test_case zpool_export_003_neg cleanup
 zpool_export_003_neg_head()
 {
 	atf_set "descr" "'zpool export' should return an error with badly-formed parameters."
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 }
 zpool_export_003_neg_body()
 {
@@ -102,7 +100,7 @@ atf_test_case zpool_export_004_pos cleanup
 zpool_export_004_pos_head()
 {
 	atf_set "descr" "Verify zpool export succeed or fail with spare."
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 }
 zpool_export_004_pos_body()
 {

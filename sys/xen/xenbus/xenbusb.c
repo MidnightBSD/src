@@ -52,7 +52,6 @@
  *                        xnb1
  */
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -241,7 +240,7 @@ xenbusb_delete_child(device_t dev, device_t child)
 		xs_unregister_watch(&ivars->xd_otherend_watch);
 	if (ivars->xd_local_watch.node != NULL)
 		xs_unregister_watch(&ivars->xd_local_watch);
-	
+
 	device_delete_child(dev, child);
 	xenbusb_free_child_ivars(ivars);
 }
@@ -254,7 +253,6 @@ static void
 xenbusb_verify_device(device_t dev, device_t child)
 {
 	if (xs_exists(XST_NIL, xenbus_get_node(child), "") == 0) {
-
 		/*
 		 * Device tree has been removed from Xenbus.
 		 * Tear down the device.
@@ -350,7 +348,7 @@ xenbusb_device_sysctl_init(device_t dev)
 			SYSCTL_CHILDREN(tree),
 			OID_AUTO,
 			"xenstore_path",
-			CTLTYPE_STRING | CTLFLAG_RD,
+			CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
 			dev,
 			XENBUS_IVAR_NODE,
 			xenbusb_device_sysctl_handler,
@@ -361,7 +359,7 @@ xenbusb_device_sysctl_init(device_t dev)
 			SYSCTL_CHILDREN(tree),
 			OID_AUTO,
 			"xenbus_dev_type",
-			CTLTYPE_STRING | CTLFLAG_RD,
+			CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
 			dev,
 			XENBUS_IVAR_TYPE,
 			xenbusb_device_sysctl_handler,
@@ -372,7 +370,7 @@ xenbusb_device_sysctl_init(device_t dev)
 			SYSCTL_CHILDREN(tree),
 			OID_AUTO,
 			"xenbus_connection_state",
-			CTLTYPE_STRING | CTLFLAG_RD,
+			CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
 			dev,
 			XENBUS_IVAR_STATE,
 			xenbusb_device_sysctl_handler,
@@ -383,7 +381,7 @@ xenbusb_device_sysctl_init(device_t dev)
 			SYSCTL_CHILDREN(tree),
 			OID_AUTO,
 			"xenbus_peer_domid",
-			CTLTYPE_INT | CTLFLAG_RD,
+			CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE,
 			dev,
 			XENBUS_IVAR_OTHEREND_ID,
 			xenbusb_device_sysctl_handler,
@@ -394,7 +392,7 @@ xenbusb_device_sysctl_init(device_t dev)
 			SYSCTL_CHILDREN(tree),
 			OID_AUTO,
 			"xenstore_peer_path",
-			CTLTYPE_STRING | CTLFLAG_RD,
+			CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
 			dev,
 			XENBUS_IVAR_OTHEREND_PATH,
 			xenbusb_device_sysctl_handler,
@@ -533,12 +531,9 @@ xenbusb_probe_children_cb(void *arg, int pending __unused)
 {
 	device_t dev = (device_t)arg;
 
-	/*
-	 * Hold Giant until the Giant free newbus changes are committed.
-	 */
-	mtx_lock(&Giant);
+	bus_topo_lock();
 	xenbusb_probe_children(dev);
-	mtx_unlock(&Giant);
+	bus_topo_unlock();
 }
 
 /**

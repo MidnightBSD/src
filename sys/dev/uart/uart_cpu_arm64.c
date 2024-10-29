@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2016 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Andrew Turner under sponsorship from
  * the FreeBSD Foundation.
@@ -31,7 +30,6 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -79,37 +77,17 @@ uart_cpu_eqres(struct uart_bas *b1, struct uart_bas *b2)
 	return ((pmap_kextract(b1->bsh) == pmap_kextract(b2->bsh)) ? 1 : 0);
 }
 
-int
-uart_cpu_getdev(int devtype, struct uart_devinfo *di)
+#ifdef FDT
+static int
+uart_cpu_fdt_setup(struct uart_class *class, int devtype, struct uart_devinfo *di)
 {
-	struct uart_class *class;
 	bus_space_handle_t bsh;
 	bus_space_tag_t bst;
 	u_int rclk, shift, iowidth;
 	int br, err;
 
-	/* Allow overriding the FDT using the environment. */
-	class = &uart_ns8250_class;
-	err = uart_getenv(devtype, di, class);
-	if (err == 0)
-		return (0);
-
-#ifdef DEV_ACPI
-	/* Check if SPCR can tell us what console to use. */
-	if (uart_cpu_acpi_spcr(devtype, di) == 0)
-		return (0);
-#endif
-
-	if (devtype != UART_DEV_CONSOLE)
-		return (ENXIO);
-
-	err = ENXIO;
-#ifdef FDT
-	if (err != 0) {
-		err = uart_cpu_fdt_probe(&class, &bst, &bsh, &br, &rclk,
-		    &shift, &iowidth);
-	}
-#endif
+	err = uart_cpu_fdt_probe(&class, &bst, &bsh, &br, &rclk,
+	    &shift, &iowidth, devtype);
 	if (err != 0)
 		return (err);
 
@@ -131,4 +109,30 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 	uart_bus_space_io = NULL;
 
 	return (0);
+}
+#endif
+
+int
+uart_cpu_getdev(int devtype, struct uart_devinfo *di)
+{
+	struct uart_class *class;
+	int err;
+
+	/* Allow overriding ACPI/FDT using the environment. */
+	class = &uart_ns8250_class;
+	err = uart_getenv(devtype, di, class);
+	if (err == 0)
+		return (0);
+
+#ifdef DEV_ACPI
+	/* Check if SPCR can tell us what console to use. */
+	if (uart_cpu_acpi_spcr(devtype, di) == 0)
+		return (0);
+#endif
+#ifdef FDT
+	if (uart_cpu_fdt_setup(class, devtype, di) == 0)
+		return (0);
+#endif
+
+	return (ENXIO);
 }

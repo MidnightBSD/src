@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000-2015, 2017 Mark R. V. Murray
  * All rights reserved.
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef	_SYS_RANDOM_H_
@@ -53,7 +52,6 @@ struct uio;
  * p_random_alg_context is a macro for the public visibility
  * &random_alg_context.)
  */
-#if defined(DEV_RANDOM)
 #if defined(RANDOM_LOADABLE)
 extern void (*_read_random)(void *, u_int);
 extern int (*_read_random_uio)(struct uio *, bool);
@@ -65,32 +63,12 @@ extern bool (*_is_random_seeded)(void);
 void read_random(void *, u_int);
 int read_random_uio(struct uio *, bool);
 bool is_random_seeded(void);
-#endif	//RANDOM_LOADABLE
-
-#else
-static __inline int
-read_random_uio(void *a __unused, u_int b __unused)
-{
-	return (0);
-}
-static __inline void
-read_random(void *a __unused, u_int b __unused)
-{
-}
-static __inline bool
-is_random_seeded(void)
-{
-	return (false);
-}
-#endif	//DEV_RANDOM
+#endif
 
 /*
  * Note: if you add or remove members of random_entropy_source, remember to
  * also update the strings in the static array random_source_descr[] in
  * random_harvestq.c.
- *
- * NOTE: complain loudly to markm@ or on the lists if this enum gets more than 32
- * distinct values (0-31)! ENTROPYSOURCE may be == 32, but not > 32.
  */
 enum random_entropy_source {
 	RANDOM_START = 0,
@@ -112,7 +90,6 @@ enum random_entropy_source {
 	RANDOM_PURE_OCTEON = RANDOM_PURE_START,
 	RANDOM_PURE_SAFE,
 	RANDOM_PURE_GLXSB,
-	RANDOM_PURE_UBSEC,
 	RANDOM_PURE_HIFN,
 	RANDOM_PURE_RDRAND,
 	RANDOM_PURE_NEHEMIAH,
@@ -122,15 +99,15 @@ enum random_entropy_source {
 	RANDOM_PURE_CCP,
 	RANDOM_PURE_DARN,
 	RANDOM_PURE_TPM,
+	RANDOM_PURE_VMGENID,
 	ENTROPYSOURCE
 };
-
-#define RANDOM_HARVEST_EVERYTHING_MASK ((1 << (RANDOM_ENVIRONMENTAL_END + 1)) - 1)
-#define RANDOM_HARVEST_PURE_MASK (((1 << ENTROPYSOURCE) - 1) & (-1UL << RANDOM_PURE_START))
+_Static_assert(ENTROPYSOURCE <= 32,
+    "hardcoded assumption that values fit in a typical word-sized bitset");
 
 #define RANDOM_CACHED_BOOT_ENTROPY_MODULE	"boot_entropy_cache"
+#define RANDOM_PLATFORM_BOOT_ENTROPY_MODULE	"boot_entropy_platform"
 
-#if defined(DEV_RANDOM)
 extern u_int hc_source_mask;
 void random_harvest_queue_(const void *, u_int, enum random_entropy_source);
 void random_harvest_fast_(const void *, u_int);
@@ -162,13 +139,6 @@ random_harvest_direct(const void *entropy, u_int size, enum random_entropy_sourc
 
 void random_harvest_register_source(enum random_entropy_source);
 void random_harvest_deregister_source(enum random_entropy_source);
-#else
-#define random_harvest_queue(a, b, c) do {} while (0)
-#define random_harvest_fast(a, b, c) do {} while (0)
-#define random_harvest_direct(a, b, c) do {} while (0)
-#define random_harvest_register_source(a) do {} while (0)
-#define random_harvest_deregister_source(a) do {} while (0)
-#endif
 
 #if defined(RANDOM_ENABLE_UMA)
 #define random_harvest_fast_uma(a, b, c)	random_harvest_fast(a, b, c)
@@ -182,11 +152,11 @@ void random_harvest_deregister_source(enum random_entropy_source);
 #define random_harvest_queue_ether(a, b)	do {} while (0)
 #endif /* defined(RANDOM_ENABLE_ETHER) */
 
-
 #endif /* _KERNEL */
 
 #define GRND_NONBLOCK	0x1
 #define GRND_RANDOM	0x2
+#define GRND_INSECURE	0x4
 
 __BEGIN_DECLS
 ssize_t getrandom(void *buf, size_t buflen, unsigned int flags);

@@ -29,7 +29,6 @@
 #
 #  Authors: Alan Somers         (Spectra Logic Corporation)
 #
-# $FreeBSD$
 
 # Outline:
 # For each cloned interface type, do three tests
@@ -69,6 +68,34 @@ epair_up_stress_cleanup()
 	cleanup_ifaces
 }
 
+atf_test_case epair_destroy_race cleanup
+epair_destroy_race_head()
+{
+	atf_set "descr" "Race if_detach() and if_vmove()"
+	atf_set "require.user" "root"
+}
+epair_destroy_race_body()
+{
+	for i in `seq 1 10`
+	do
+		epair_a=$(ifconfig epair create)
+		echo $epair_a >> devices_to_cleanup
+		epair_b=${epair_a%a}b
+
+		jail -c vnet name="epair_destroy" nopersist path=/ \
+		  host.hostname="epair_destroy" vnet.interface="$epair_b" \
+		  command=sh -c "ifconfig $epair_b 192.0.2.1/24; sleep 0.1"&
+		pid=$!
+		ifconfig "$epair_a" destroy
+		wait $pid
+	done
+	true
+}
+epair_destroy_race_cleanup()
+{
+	cleanup_ifaces
+}
+
 atf_test_case epair_ipv6_up_stress cleanup
 epair_ipv6_up_stress_head()
 {
@@ -77,7 +104,6 @@ epair_ipv6_up_stress_head()
 }
 epair_ipv6_up_stress_body()
 {
-	atf_skip "Quickly panics: page fault in in6_unlink_ifa (PR 225438)"
 	do_up_stress "epair" "6" ""
 }
 epair_ipv6_up_stress_cleanup()
@@ -108,7 +134,6 @@ faith_up_stress_head()
 }
 faith_up_stress_body()
 {
-	atf_skip "Quickly panics: if_freemulti: protospec not NULL"
 	do_up_stress "faith" "" ""
 }
 faith_up_stress_cleanup()
@@ -124,7 +149,6 @@ faith_ipv6_up_stress_head()
 }
 faith_ipv6_up_stress_body()
 {
-	atf_skip "Quickly panics: if_freemulti: protospec not NULL"
 	do_up_stress "faith" "6" ""
 }
 faith_ipv6_up_stress_cleanup()
@@ -155,7 +179,6 @@ gif_up_stress_head()
 }
 gif_up_stress_body()
 {
-	atf_skip "Quickly panics: if_freemulti: protospec not NULL"
 	do_up_stress "gif" "" "p2p"
 }
 gif_up_stress_cleanup()
@@ -171,7 +194,6 @@ gif_ipv6_up_stress_head()
 }
 gif_ipv6_up_stress_body()
 {
-	atf_skip "Quickly panics: rt_tables_get_rnh_ptr: fam out of bounds."
 	do_up_stress "gif" "6" "p2p"
 }
 gif_ipv6_up_stress_cleanup()
@@ -202,7 +224,6 @@ lo_up_stress_head()
 }
 lo_up_stress_body()
 {
-	atf_skip "Quickly panics: GPF in rtsock_routemsg"
 	do_up_stress "lo" "" ""
 }
 lo_up_stress_cleanup()
@@ -218,7 +239,6 @@ lo_ipv6_up_stress_head()
 }
 lo_ipv6_up_stress_body()
 {
-	atf_skip "Quickly panics: page fault in rtsock_addrmsg"
 	do_up_stress "lo" "6" ""
 }
 lo_ipv6_up_stress_cleanup()
@@ -249,7 +269,6 @@ tap_up_stress_head()
 }
 tap_up_stress_body()
 {
-	atf_skip "Quickly panics: if_freemulti: protospec not NULL"
 	do_up_stress "tap" "" ""
 }
 tap_up_stress_cleanup()
@@ -296,7 +315,6 @@ tun_up_stress_head()
 }
 tun_up_stress_body()
 {
-	atf_skip "Quickly panics: if_freemulti: protospec not NULL"
 	do_up_stress "tun" "" "p2p"
 }
 tun_up_stress_cleanup()
@@ -312,7 +330,6 @@ tun_ipv6_up_stress_head()
 }
 tun_ipv6_up_stress_body()
 {
-	atf_skip "Quickly panics: if_freemulti: protospec not NULL"
 	do_up_stress "tun" "6" "p2p"
 }
 tun_ipv6_up_stress_cleanup()
@@ -343,7 +360,6 @@ vlan_up_stress_head()
 }
 vlan_up_stress_body()
 {
-	atf_skip "Quickly panics: if_freemulti: protospec not NULL"
 	do_up_stress "vlan" "" ""
 }
 vlan_up_stress_cleanup()
@@ -359,7 +375,6 @@ vlan_ipv6_up_stress_head()
 }
 vlan_ipv6_up_stress_body()
 {
-	atf_skip "Quickly panics: if_freemulti: protospec not NULL"
 	do_up_stress "vlan" "6" ""
 }
 vlan_ipv6_up_stress_cleanup()
@@ -405,7 +420,6 @@ vmnet_ipv6_up_stress_head()
 }
 vmnet_ipv6_up_stress_body()
 {
-	atf_skip "Quickly panics: if_freemulti: protospec not NULL"
 	do_up_stress "vmnet" "6" ""
 }
 vmnet_ipv6_up_stress_cleanup()
@@ -418,6 +432,7 @@ atf_init_test_cases()
 	atf_add_test_case epair_ipv6_up_stress
 	atf_add_test_case epair_stress
 	atf_add_test_case epair_up_stress
+	atf_add_test_case epair_destroy_race
 	atf_add_test_case faith_ipv6_up_stress
 	atf_add_test_case faith_stress
 	atf_add_test_case faith_up_stress
@@ -456,7 +471,7 @@ do_stress()
 	CREATOR_PID=$!
 
 	# Second thread: destroy the lagg
-	while true; do 
+	while true; do
 		ifconfig $IFACE destroy 2>/dev/null && \
 			echo -n . >> destroyer_count.txt
 	done &

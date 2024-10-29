@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_quota.h"
 #include "opt_ufs.h"
 
@@ -67,10 +66,7 @@ MALLOC_DEFINE(M_UFSMNT, "ufs_mount", "UFS mount structure");
  * Return the root of a filesystem.
  */
 int
-ufs_root(mp, flags, vpp)
-	struct mount *mp;
-	int flags;
-	struct vnode **vpp;
+ufs_root(struct mount *mp, int flags, struct vnode **vpp)
 {
 	struct vnode *nvp;
 	int error;
@@ -86,11 +82,7 @@ ufs_root(mp, flags, vpp)
  * Do operations associated with quotas
  */
 int
-ufs_quotactl(mp, cmds, id, arg)
-	struct mount *mp;
-	int cmds;
-	uid_t id;
-	void *arg;
+ufs_quotactl(struct mount *mp, int cmds, uid_t id, void *arg)
 {
 #ifndef QUOTA
 	if ((cmds >> SUBCMDSHIFT) == Q_QUOTAON ||
@@ -107,7 +99,6 @@ ufs_quotactl(mp, cmds, id, arg)
 	type = cmds & SUBCMDMASK;
 	if (id == -1) {
 		switch (type) {
-
 		case USRQUOTA:
 			id = td->td_ucred->cr_ruid;
 			break;
@@ -122,7 +113,7 @@ ufs_quotactl(mp, cmds, id, arg)
 			return (EINVAL);
 		}
 	}
-	if ((u_int)type >= MAXQUOTAS) {
+	if ((uint64_t)type >= MAXQUOTAS) {
 		if (cmd == Q_QUOTAON || cmd == Q_QUOTAOFF)
 			vfs_unbusy(mp);
 		return (EINVAL);
@@ -185,8 +176,7 @@ ufs_quotactl(mp, cmds, id, arg)
  * Initial UFS filesystems, done only once.
  */
 int
-ufs_init(vfsp)
-	struct vfsconf *vfsp;
+ufs_init(struct vfsconf *vfsp)
 {
 
 #ifdef QUOTA
@@ -202,8 +192,7 @@ ufs_init(vfsp)
  * Uninitialise UFS filesystems, done before module unload.
  */
 int
-ufs_uninit(vfsp)
-	struct vfsconf *vfsp;
+ufs_uninit(struct vfsconf *vfsp)
 {
 
 #ifdef QUOTA
@@ -212,39 +201,5 @@ ufs_uninit(vfsp)
 #ifdef UFS_DIRHASH
 	ufsdirhash_uninit();
 #endif
-	return (0);
-}
-
-/*
- * This is the generic part of fhtovp called after the underlying
- * filesystem has validated the file handle.
- *
- * Call the VFS_CHECKEXP beforehand to verify access.
- */
-int
-ufs_fhtovp(mp, ufhp, flags, vpp)
-	struct mount *mp;
-	struct ufid *ufhp;
-	int flags;
-	struct vnode **vpp;
-{
-	struct inode *ip;
-	struct vnode *nvp;
-	int error;
-
-	error = VFS_VGET(mp, ufhp->ufid_ino, flags, &nvp);
-	if (error) {
-		*vpp = NULLVP;
-		return (error);
-	}
-	ip = VTOI(nvp);
-	if (ip->i_mode == 0 || ip->i_gen != ufhp->ufid_gen ||
-	    ip->i_effnlink <= 0) {
-		vput(nvp);
-		*vpp = NULLVP;
-		return (ESTALE);
-	}
-	*vpp = nvp;
-	vnode_create_vobject(*vpp, DIP(ip, i_size), curthread);
 	return (0);
 }

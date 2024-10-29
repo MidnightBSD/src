@@ -1,4 +1,6 @@
-/*--
+/*-
+ * SPDX-License-Identifier: ((GPL-2.0 WITH Linux-syscall-note) OR BSD-2-Clause)
+ *
  * This file defines the kernel interface of FUSE
  * Copyright (C) 2001-2008  Miklos Szeredi <miklos@szeredi.hu>
  *
@@ -30,7 +32,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -38,22 +39,61 @@
  *
  * Protocol changelog:
  *
+ * 7.1:
+ *  - add the following messages:
+ *      FUSE_SETATTR, FUSE_SYMLINK, FUSE_MKNOD, FUSE_MKDIR, FUSE_UNLINK,
+ *      FUSE_RMDIR, FUSE_RENAME, FUSE_LINK, FUSE_OPEN, FUSE_READ, FUSE_WRITE,
+ *      FUSE_RELEASE, FUSE_FSYNC, FUSE_FLUSH, FUSE_SETXATTR, FUSE_GETXATTR,
+ *      FUSE_LISTXATTR, FUSE_REMOVEXATTR, FUSE_OPENDIR, FUSE_READDIR,
+ *      FUSE_RELEASEDIR
+ *  - add padding to messages to accommodate 32-bit servers on 64-bit kernels
+ *
+ * 7.2:
+ *  - add FOPEN_DIRECT_IO and FOPEN_KEEP_CACHE flags
+ *  - add FUSE_FSYNCDIR message
+ *
+ * 7.3:
+ *  - add FUSE_ACCESS message
+ *  - add FUSE_CREATE message
+ *  - add filehandle to fuse_setattr_in
+ *
+ * 7.4:
+ *  - add frsize to fuse_kstatfs
+ *  - clean up request size limit checking
+ *
+ * 7.5:
+ *  - add flags and max_write to fuse_init_out
+ *
+ * 7.6:
+ *  - add max_readahead to fuse_init_in and fuse_init_out
+ *
+ * 7.7:
+ *  - add FUSE_INTERRUPT message
+ *  - add POSIX file lock support
+ *
+ * 7.8:
+ *  - add lock_owner and flags fields to fuse_release_in
+ *  - add FUSE_BMAP message
+ *  - add FUSE_DESTROY message
+ *
  * 7.9:
  *  - new fuse_getattr_in input argument of GETATTR
  *  - add lk_flags in fuse_lk_in
  *  - add lock_owner field to fuse_setattr_in, fuse_read_in and fuse_write_in
  *  - add blksize field to fuse_attr
  *  - add file flags field to fuse_read_in and fuse_write_in
+ *  - Add ATIME_NOW and MTIME_NOW flags to fuse_setattr_in
  *
  * 7.10
  *  - add nonseekable open flag
  *
- *  7.11
+ * 7.11
  *  - add IOCTL message
  *  - add unsolicited notification support
+ *  - add POLL message and NOTIFY_POLL notification
  *
- *  7.12
- *  - add umask flag to input argument of open, mknod and mkdir
+ * 7.12
+ *  - add umask flag to input argument of create, mknod and mkdir
  *  - add notification messages for invalidation of inodes and
  *    directory entries
  *
@@ -86,6 +126,7 @@
  *
  * 7.20
  *  - add FUSE_AUTO_INVAL_DATA
+ *
  * 7.21
  *  - add FUSE_READDIRPLUS
  *  - send the requested events in POLL request
@@ -101,22 +142,61 @@
  *  - add ctime and ctimensec to fuse_setattr_in
  *  - add FUSE_RENAME2 request
  *  - add FUSE_NO_OPEN_SUPPORT flag
+ *
+ *  7.24
+ *  - add FUSE_LSEEK for SEEK_HOLE and SEEK_DATA support
+ *
+ *  7.25
+ *  - add FUSE_PARALLEL_DIROPS
+ *
+ *  7.26
+ *  - add FUSE_HANDLE_KILLPRIV
+ *  - add FUSE_POSIX_ACL
+ *
+ *  7.27
+ *  - add FUSE_ABORT_ERROR
+ *
+ *  7.28
+ *  - add FUSE_COPY_FILE_RANGE
+ *  - add FOPEN_CACHE_DIR
+ *  - add FUSE_MAX_PAGES, add max_pages to init_out
+ *  - add FUSE_CACHE_SYMLINKS
  */
 
 #ifndef _FUSE_FUSE_KERNEL_H
 #define _FUSE_FUSE_KERNEL_H
- 
+
 #ifdef __linux__
 #include <linux/types.h>
 #else
 #include <sys/types.h>
 #endif
 
+/*
+ * Version negotiation:
+ *
+ * Both the kernel and userspace send the version they support in the
+ * INIT request and reply respectively.
+ *
+ * If the major versions match then both shall use the smallest
+ * of the two minor versions for communication.
+ *
+ * If the kernel supports a larger major version, then userspace shall
+ * reply with the major version it supports, ignore the rest of the
+ * INIT message and expect a new INIT message from the kernel with a
+ * matching major version.
+ *
+ * If the library supports a larger major version, then it shall fall
+ * back to the major protocol version sent by the kernel for
+ * communication and reply with that major version (and an arbitrary
+ * supported minor version).
+ */
+
 /** Version number of this interface */
 #define FUSE_KERNEL_VERSION 7
 
 /** Minor version number of this interface */
-#define FUSE_KERNEL_MINOR_VERSION 23
+#define FUSE_KERNEL_MINOR_VERSION 29
 
 /** The node ID of the root inode */
 #define FUSE_ROOT_ID 1
@@ -184,10 +264,12 @@ struct fuse_file_lock {
  * FOPEN_DIRECT_IO: bypass page cache for this open file
  * FOPEN_KEEP_CACHE: don't invalidate the data cache on open
  * FOPEN_NONSEEKABLE: the file is not seekable
+ * FOPEN_CACHE_DIR: allow caching this directory
  */
 #define FOPEN_DIRECT_IO		(1 << 0)
 #define FOPEN_KEEP_CACHE	(1 << 1)
 #define FOPEN_NONSEEKABLE	(1 << 2)
+#define FOPEN_CACHE_DIR		(1 << 3)
 
 /**
  * INIT request/reply flags
@@ -210,6 +292,13 @@ struct fuse_file_lock {
  * FUSE_ASYNC_DIO: asynchronous direct I/O submission
  * FUSE_WRITEBACK_CACHE: use writeback cache for buffered writes
  * FUSE_NO_OPEN_SUPPORT: kernel supports zero-message opens
+ * FUSE_PARALLEL_DIROPS: allow parallel lookups and readdir
+ * FUSE_HANDLE_KILLPRIV: fs handles killing suid/sgid/cap on write/chown/trunc
+ * FUSE_POSIX_ACL: filesystem supports posix acls
+ * FUSE_ABORT_ERROR: reading the device after abort returns ECONNABORTED
+ * FUSE_MAX_PAGES: init_out.max_pages contains the max number of req pages
+ * FUSE_CACHE_SYMLINKS: cache READLINK responses
+ * FUSE_NO_OPENDIR_SUPPORT: kernel supports zero-message opendir
  */
 #define FUSE_ASYNC_READ		(1 << 0)
 #define FUSE_POSIX_LOCKS	(1 << 1)
@@ -229,6 +318,13 @@ struct fuse_file_lock {
 #define FUSE_ASYNC_DIO		(1 << 15)
 #define FUSE_WRITEBACK_CACHE	(1 << 16)
 #define FUSE_NO_OPEN_SUPPORT	(1 << 17)
+#define FUSE_PARALLEL_DIROPS    (1 << 18)
+#define FUSE_HANDLE_KILLPRIV	(1 << 19)
+#define FUSE_POSIX_ACL		(1 << 20)
+#define FUSE_ABORT_ERROR	(1 << 21)
+#define FUSE_MAX_PAGES		(1 << 22)
+#define FUSE_CACHE_SYMLINKS	(1 << 23)
+#define FUSE_NO_OPENDIR_SUPPORT (1 << 24)
 
 #ifdef linux
 /**
@@ -295,54 +391,63 @@ struct fuse_file_lock {
  */
 #define FUSE_POLL_SCHEDULE_NOTIFY (1 << 0)
 
+/**
+ * Fsync flags
+ *
+ * FUSE_FSYNC_FDATASYNC: Sync data only, not metadata
+ */
+#define FUSE_FSYNC_FDATASYNC	(1 << 0)
+
 enum fuse_opcode {
-	FUSE_LOOKUP	   = 1,
-	FUSE_FORGET	   = 2,  /* no reply */
-	FUSE_GETATTR	   = 3,
-	FUSE_SETATTR	   = 4,
-	FUSE_READLINK	   = 5,
-	FUSE_SYMLINK	   = 6,
-	FUSE_MKNOD	   = 8,
-	FUSE_MKDIR	   = 9,
-	FUSE_UNLINK	   = 10,
-	FUSE_RMDIR	   = 11,
-	FUSE_RENAME	   = 12,
-	FUSE_LINK	   = 13,
-	FUSE_OPEN	   = 14,
-	FUSE_READ	   = 15,
-	FUSE_WRITE	   = 16,
-	FUSE_STATFS	   = 17,
-	FUSE_RELEASE       = 18,
-	FUSE_FSYNC         = 20,
-	FUSE_SETXATTR      = 21,
-	FUSE_GETXATTR      = 22,
-	FUSE_LISTXATTR     = 23,
-	FUSE_REMOVEXATTR   = 24,
-	FUSE_FLUSH         = 25,
-	FUSE_INIT          = 26,
-	FUSE_OPENDIR       = 27,
-	FUSE_READDIR       = 28,
-	FUSE_RELEASEDIR    = 29,
-	FUSE_FSYNCDIR      = 30,
-	FUSE_GETLK         = 31,
-	FUSE_SETLK         = 32,
-	FUSE_SETLKW        = 33,
-	FUSE_ACCESS        = 34,
-	FUSE_CREATE        = 35,
-	FUSE_INTERRUPT     = 36,
-	FUSE_BMAP          = 37,
-	FUSE_DESTROY       = 38,
-	FUSE_IOCTL         = 39,
-	FUSE_POLL          = 40,
-	FUSE_NOTIFY_REPLY  = 41,
-	FUSE_BATCH_FORGET  = 42,
-	FUSE_FALLOCATE     = 43,
-	FUSE_READDIRPLUS   = 44,
-	FUSE_RENAME2       = 45,
+	FUSE_LOOKUP		= 1,
+	FUSE_FORGET		= 2,  /* no reply */
+	FUSE_GETATTR		= 3,
+	FUSE_SETATTR		= 4,
+	FUSE_READLINK		= 5,
+	FUSE_SYMLINK		= 6,
+	FUSE_MKNOD		= 8,
+	FUSE_MKDIR		= 9,
+	FUSE_UNLINK		= 10,
+	FUSE_RMDIR		= 11,
+	FUSE_RENAME		= 12,
+	FUSE_LINK		= 13,
+	FUSE_OPEN		= 14,
+	FUSE_READ		= 15,
+	FUSE_WRITE		= 16,
+	FUSE_STATFS		= 17,
+	FUSE_RELEASE		= 18,
+	FUSE_FSYNC		= 20,
+	FUSE_SETXATTR		= 21,
+	FUSE_GETXATTR		= 22,
+	FUSE_LISTXATTR		= 23,
+	FUSE_REMOVEXATTR	= 24,
+	FUSE_FLUSH		= 25,
+	FUSE_INIT		= 26,
+	FUSE_OPENDIR		= 27,
+	FUSE_READDIR		= 28,
+	FUSE_RELEASEDIR		= 29,
+	FUSE_FSYNCDIR		= 30,
+	FUSE_GETLK		= 31,
+	FUSE_SETLK		= 32,
+	FUSE_SETLKW		= 33,
+	FUSE_ACCESS		= 34,
+	FUSE_CREATE		= 35,
+	FUSE_INTERRUPT		= 36,
+	FUSE_BMAP		= 37,
+	FUSE_DESTROY		= 38,
+	FUSE_IOCTL		= 39,
+	FUSE_POLL		= 40,
+	FUSE_NOTIFY_REPLY	= 41,
+	FUSE_BATCH_FORGET	= 42,
+	FUSE_FALLOCATE		= 43,
+	FUSE_READDIRPLUS	= 44,
+	FUSE_RENAME2		= 45,
+	FUSE_LSEEK		= 46,
+	FUSE_COPY_FILE_RANGE	= 47,
 
 #ifdef linux
 	/* CUSE specific operations */
-	CUSE_INIT          = 4096,
+	CUSE_INIT		= 4096,
 #endif /* linux */
 };
 
@@ -580,7 +685,9 @@ struct fuse_init_out {
 	uint16_t	congestion_threshold;
 	uint32_t	max_write;
 	uint32_t	time_gran;
-	uint32_t	unused[9];
+	uint16_t	max_pages;
+	uint16_t	padding;
+	uint32_t	unused[8];
 };
 
 #ifdef linux
@@ -748,6 +855,27 @@ struct fuse_notify_retrieve_in {
 	uint32_t	dummy2;
 	uint64_t	dummy3;
 	uint64_t	dummy4;
+};
+
+struct fuse_lseek_in {
+	uint64_t	fh;
+	uint64_t	offset;
+	uint32_t	whence;
+	uint32_t	padding;
+};
+
+struct fuse_lseek_out {
+	uint64_t	offset;
+};
+
+struct fuse_copy_file_range_in {
+	uint64_t	fh_in;
+	uint64_t	off_in;
+	uint64_t	nodeid_out;
+	uint64_t	fh_out;
+	uint64_t	off_out;
+	uint64_t	len;
+	uint64_t	flags;
 };
 
 #endif /* _FUSE_FUSE_KERNEL_H */

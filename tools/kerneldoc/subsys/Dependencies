@@ -1,5 +1,4 @@
 #
-# $MidnightBSD: stable/11/tools/kerneldoc/subsys/Dependencies 196511 2009-08-24 13:10:55Z netchild $
 #
 # makefile dependencies for doxygen tag files
 #

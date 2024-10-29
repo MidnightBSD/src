@@ -1,4 +1,3 @@
-# $FreeBSD$
 # VNAT/jail utility functions
 ##
 
@@ -13,7 +12,15 @@ vnet_mkepair()
 {
 	ifname=$(ifconfig epair create)
 	echo $ifname >> created_interfaces.lst
+	echo ${ifname%a}b >> created_interfaces.lst
 	echo ${ifname%a}
+}
+
+vnet_init_bridge()
+{
+	if ! kldstat -q -m if_bridge; then
+		atf_skip "This test requires if_bridge"
+	fi
 }
 
 vnet_mkbridge()
@@ -27,6 +34,13 @@ vnet_mkvlan()
 {
 	ifname=$(ifconfig vlan create)
 	echo ${ifname} >> created_interfaces.lst
+	echo ${ifname}
+}
+
+vnet_mkloopback()
+{
+	ifname=$(ifconfig lo create)
+	echo $ifname >> created_interfaces.lst
 	echo ${ifname}
 }
 

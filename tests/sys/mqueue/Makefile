@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 TESTSDIR=	${TESTSBASE}/sys/mqueue
 
@@ -15,7 +14,5 @@ PROGS+=		mqtest4
 PROGS+=		mqtest5
 
 LIBADD+=	rt
-
-WARNS?=		6
 
 .include <bsd.test.mk>

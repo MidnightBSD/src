@@ -1,6 +1,5 @@
-# $FreeBSD$
 #
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2018 Kristof Provost <kp@FreeBSD.org>
 #
@@ -141,7 +140,7 @@ multiwan_body()
 	jexec srv sysctl net.inet.ip.forwarding=1
 
 	# Run echo server in srv jail
-	jexec srv /usr/sbin/inetd -p multiwan.pid $(atf_get_srcdir)/echo_inetd.conf
+	jexec srv /usr/sbin/inetd -p ${PWD}/multiwan.pid $(atf_get_srcdir)/echo_inetd.conf
 
 	jexec srv pfctl -e
 	pft_set_rules srv \
@@ -179,7 +178,6 @@ multiwan_body()
 
 multiwan_cleanup()
 {
-	rm -f multiwan.pid
 	pft_cleanup
 }
 
@@ -230,7 +228,8 @@ multiwanlocal_body()
 		"block in"	\
 		"block out"	\
 		"pass out quick route-to (${epair_cl_two}a 203.0.113.129) inet proto tcp from 203.0.113.128 to any port 7" \
-		"pass out on ${epair_cl_one}a inet proto tcp from any to any port 7"
+		"pass out on ${epair_cl_one}a inet proto tcp from any to any port 7" \
+		"set skip on lo"
 
 	# This should work
 	result=$(jexec client nc -N -w 1 192.0.2.2 7 | wc -c)

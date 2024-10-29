@@ -1,6 +1,5 @@
-# $FreeBSD$
 #
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2021 Rubicon Communications, LLC (Netgate)
 #
@@ -51,7 +50,7 @@ atf_test_case "6to4" "cleanup"
 	jexec relay ifconfig ${epair}a 192.0.2.1/24 up
 	# Simple gif to terminate 6to4
 	gif=$(jexec relay ifconfig gif create)
-	jexec relay ifconfig $gif inet6 2002:c000:0201::1/64 up no_dad
+	jexec relay ifconfig $gif inet6 2002:c000:0201::1/64 up
 	jexec relay ifconfig $gif tunnel 192.0.2.1 192.0.2.2
 	jexec relay route -6 add default -interface $gif
 
@@ -59,7 +58,7 @@ atf_test_case "6to4" "cleanup"
 	jexec client ifconfig lo0 up
 	jexec client ifconfig ${epair}b 192.0.2.2/24 up
 	stf=$(jexec client ifconfig stf create)
-	jexec client ifconfig $stf inet6 2002:c000:0202::1/32 up no_dad
+	jexec client ifconfig $stf inet6 2002:c000:0202::1/32 up
 	jexec client route -6 add default 2002:c000:0201::1
 
 	# Sanity check

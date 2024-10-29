@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Rick Macklem, University of Guelph
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _NFS_NFSCLSTATE_H_
@@ -41,6 +40,7 @@ LIST_HEAD(nfsclhead, nfsclclient);
 LIST_HEAD(nfsclownerhead, nfsclowner);
 TAILQ_HEAD(nfscldeleghead, nfscldeleg);
 LIST_HEAD(nfscldeleghash, nfscldeleg);
+LIST_HEAD(nfsclopenhash, nfsclopen);
 TAILQ_HEAD(nfscllayouthead, nfscllayout);
 LIST_HEAD(nfscllayouthash, nfscllayout);
 LIST_HEAD(nfsclflayouthead, nfsclflayout);
@@ -49,6 +49,10 @@ LIST_HEAD(nfsclrecalllayouthead, nfsclrecalllayout);
 #define	NFSCLDELEGHASHSIZE	256
 #define	NFSCLDELEGHASH(c, f, l)							\
 	(&((c)->nfsc_deleghash[ncl_hash((f), (l)) % NFSCLDELEGHASHSIZE]))
+#define	NFSCLOPENHASHSIZE	256
+#define	NFSCLOPENHASHFUNC(f, l) (ncl_hash((f), (l)) % NFSCLOPENHASHSIZE)
+#define	NFSCLOPENHASH(c, f, l)							\
+	(&((c)->nfsc_openhash[NFSCLOPENHASHFUNC((f), (l))]))
 #define	NFSCLLAYOUTHASHSIZE	256
 #define	NFSCLLAYOUTHASH(c, f, l)						\
 	(&((c)->nfsc_layouthash[ncl_hash((f), (l)) % NFSCLLAYOUTHASHSIZE]))
@@ -61,8 +65,11 @@ struct nfsclsession {
 	SVCXPRT		*nfsess_xprt;		/* For backchannel callback */
 	uint32_t	nfsess_slotseq[64];	/* Max for 64bit nm_slots */
 	uint64_t	nfsess_slots;
+	uint64_t	nfsess_badslots;	/* Slots possibly broken */
 	uint32_t	nfsess_sequenceid;
 	uint32_t	nfsess_maxcache;	/* Max size for cached reply. */
+	uint32_t	nfsess_maxreq;		/* Max request size. */
+	uint32_t	nfsess_maxresp;		/* Max reply size. */
 	uint16_t	nfsess_foreslots;
 	uint16_t	nfsess_backslots;
 	uint8_t		nfsess_sessionid[NFSX_V4SESSIONID];
@@ -71,7 +78,7 @@ struct nfsclsession {
 
 /*
  * This structure holds the session, clientid and related information
- * needed for an NFSv4.1 Meta Data Server (MDS) or Data Server (DS).
+ * needed for an NFSv4.1 or NFSv4.2 Meta Data Server (MDS) or Data Server (DS).
  * It is malloc'd to the correct length.
  */
 struct nfsclds {
@@ -94,12 +101,14 @@ struct nfsclds {
 #define	NFSCLDS_DS		0x0004
 #define	NFSCLDS_CLOSED		0x0008
 #define	NFSCLDS_SAMECONN	0x0010
+#define	NFSCLDS_MINORV2		0x0020
 
 struct nfsclclient {
 	LIST_ENTRY(nfsclclient) nfsc_list;
 	struct nfsclownerhead	nfsc_owner;
 	struct nfscldeleghead	nfsc_deleg;
 	struct nfscldeleghash	nfsc_deleghash[NFSCLDELEGHASHSIZE];
+	struct nfsclopenhash	nfsc_openhash[NFSCLOPENHASHSIZE];
 	struct nfscllayouthead	nfsc_layout;
 	struct nfscllayouthash	nfsc_layouthash[NFSCLLAYOUTHASHSIZE];
 	struct nfscldevinfohead	nfsc_devinfo;
@@ -179,6 +188,7 @@ struct nfscldeleg {
  */
 struct nfsclopen {
 	LIST_ENTRY(nfsclopen)	nfso_list;
+	LIST_ENTRY(nfsclopen)	nfso_hash;
 	struct nfscllockownerhead nfso_lock;
 	nfsv4stateid_t		nfso_stateid;
 	struct nfsclowner	*nfso_own;

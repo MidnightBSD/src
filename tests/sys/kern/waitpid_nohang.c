@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/wait.h>
 
 #include <atf-c.h>

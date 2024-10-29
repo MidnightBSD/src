@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_quota.h"
 #include "opt_ufs.h"
 
@@ -62,15 +61,49 @@
 #include <ufs/ufs/gjournal.h>
 #endif
 
+int
+ufs_need_inactive(struct vop_need_inactive_args *ap)
+{
+	struct vnode *vp;
+	struct inode *ip;
+#ifdef QUOTA
+	int i;
+#endif
+
+	vp = ap->a_vp;
+	ip = VTOI(vp);
+	if (UFS_RDONLY(ip))
+		return (0);
+	if (vn_need_pageq_flush(vp))
+		return (1);
+	if (ip->i_mode == 0 ||  ip->i_nlink <= 0 ||
+	    (ip->i_effnlink == 0 && DOINGSOFTDEP(vp)) ||
+	    (ip->i_flag & (IN_ACCESS | IN_CHANGE | IN_MODIFIED |
+	    IN_UPDATE)) != 0 ||
+	    (ip->i_effnlink <= 0 && (ip->i_size != 0 || (I_IS_UFS2(ip) &&
+	    ip->i_din2->di_extsize != 0))))
+		return (1);
+#ifdef QUOTA
+	for (i = 0; i < MAXQUOTAS; i++) {
+		if (ip->i_dquot[i] != NULL)
+			return (1);
+	}
+#endif
+	/*
+	 * No need to check ufs_gjournal_close() condition since we
+	 * return 1 if only i_nlink <= 0.
+	 */
+	return (0);
+}
+
 /*
  * Last reference to an inode.  If necessary, write or delete it.
  */
 int
-ufs_inactive(ap)
+ufs_inactive(
 	struct vop_inactive_args /* {
 		struct vnode *a_vp;
-		struct thread *a_td;
-	} */ *ap;
+	} */ *ap)
 {
 	struct vnode *vp = ap->a_vp;
 	struct inode *ip = VTOI(vp);
@@ -101,7 +134,7 @@ ufs_inactive(ap)
 	loop:
 		if (vn_start_secondary_write(vp, &mp, V_NOWAIT) != 0) {
 			/* Cannot delete file while file system is suspended */
-			if ((vp->v_iflag & VI_DOOMED) != 0) {
+			if (VN_IS_DOOMED(vp)) {
 				/* Cannot return before file is deleted */
 				(void) vn_start_secondary_write(vp, &mp,
 								V_WAIT);
@@ -130,13 +163,14 @@ ufs_inactive(ap)
 		isize += ip->i_din2->di_extsize;
 	if (ip->i_effnlink <= 0 && isize && !UFS_RDONLY(ip))
 		error = UFS_TRUNCATE(vp, (off_t)0, IO_EXT | IO_NORMAL, NOCRED);
-	if (ip->i_nlink <= 0 && ip->i_mode && !UFS_RDONLY(ip)) {
+	if (ip->i_nlink <= 0 && ip->i_mode != 0 && !UFS_RDONLY(ip) &&
+	    (vp->v_iflag & VI_OWEINACT) == 0) {
 #ifdef QUOTA
 		if (!getinoquota(ip))
 			(void)chkiq(ip, -1, NOCRED, FORCE);
 #endif
 #ifdef UFS_EXTATTR
-		ufs_extattr_vnode_inactive(vp, ap->a_td);
+		ufs_extattr_vnode_inactive(vp);
 #endif
 		/*
 		 * Setting the mode to zero needs to wait for the inode
@@ -148,7 +182,7 @@ ufs_inactive(ap)
 		mode = ip->i_mode;
 		ip->i_mode = 0;
 		DIP_SET(ip, i_mode, 0);
-		ip->i_flag |= IN_CHANGE | IN_UPDATE;
+		UFS_INODE_SET_FLAG(ip, IN_CHANGE | IN_UPDATE);
 		if (DOINGSOFTDEP(vp))
 			softdep_change_linkcnt(ip);
 		UFS_VFREE(vp, ip->i_number, mode);
@@ -171,25 +205,27 @@ out:
 	 * If we are done with the inode, reclaim it
 	 * so that it can be reused immediately.
 	 */
-	if (ip->i_mode == 0)
+	if (ip->i_mode == 0 && (vp->v_iflag & VI_OWEINACT) == 0)
 		vrecycle(vp);
 	if (mp != NULL)
 		vn_finished_secondary_write(mp);
 	return (error);
 }
 
-void
-ufs_prepare_reclaim(struct vnode *vp)
+/*
+ * Reclaim an inode so that it can be used for other purposes.
+ */
+int
+ufs_reclaim(
+	struct vop_reclaim_args /* {
+		struct vnode *a_vp;
+	} */ *ap)
 {
-	struct inode *ip;
+	struct vnode *vp = ap->a_vp;
+	struct inode *ip = VTOI(vp);
 #ifdef QUOTA
 	int i;
-#endif
 
-	ip = VTOI(vp);
-
-	vnode_destroy_vobject(vp);
-#ifdef QUOTA
 	for (i = 0; i < MAXQUOTAS; i++) {
 		if (ip->i_dquot[i] != NODQUOT) {
 			dqrele(vp, ip->i_dquot[i]);
@@ -201,25 +237,9 @@ ufs_prepare_reclaim(struct vnode *vp)
 	if (ip->i_dirhash != NULL)
 		ufsdirhash_free(ip);
 #endif
-}
-
-/*
- * Reclaim an inode so that it can be used for other purposes.
- */
-int
-ufs_reclaim(ap)
-	struct vop_reclaim_args /* {
-		struct vnode *a_vp;
-		struct thread *a_td;
-	} */ *ap;
-{
-	struct vnode *vp = ap->a_vp;
-	struct inode *ip = VTOI(vp);
-
-	ufs_prepare_reclaim(vp);
 
 	if (ip->i_flag & IN_LAZYMOD)
-		ip->i_flag |= IN_MODIFIED;
+		UFS_INODE_SET_FLAG(ip, IN_MODIFIED);
 	UFS_UPDATE(vp, 0);
 	/*
 	 * Remove the inode from its hash chain.

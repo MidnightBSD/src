@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Stephane E. Potvin <sepotvin@videotron.ca>
  * Copyright (c) 2006 Ariff Abdullah <ariff@FreeBSD.org>
@@ -43,6 +43,7 @@
 #include <dev/sound/pci/hda/hda_reg.h>
 #include <dev/sound/pci/hda/hdac.h>
 
+SND_DECLARE_FILE("");
 
 struct hdacc_fg {
 	device_t	dev;
@@ -64,7 +65,6 @@ struct hdacc_softc {
 #define hdacc_lock(codec)	snd_mtxlock((codec)->lock)
 #define hdacc_unlock(codec)	snd_mtxunlock((codec)->lock)
 #define hdacc_lockassert(codec)	snd_mtxassert((codec)->lock)
-#define hdacc_lockowned(codec)	mtx_owned((codec)->lock)
 
 MALLOC_DEFINE(M_HDACC, "hdacc", "HDA CODEC");
 
@@ -197,19 +197,19 @@ static const struct {
 	{ HDA_CODEC_STAC9229D, 0,	"Sigmatel STAC9229D" },
 	{ HDA_CODEC_STAC9230X, 0,	"Sigmatel STAC9230X" },
 	{ HDA_CODEC_STAC9230D, 0,	"Sigmatel STAC9230D" },
-	{ HDA_CODEC_STAC9250, 0, 	"Sigmatel STAC9250" },
-	{ HDA_CODEC_STAC9251, 0, 	"Sigmatel STAC9251" },
-	{ HDA_CODEC_STAC9255, 0, 	"Sigmatel STAC9255" },
-	{ HDA_CODEC_STAC9255D, 0, 	"Sigmatel STAC9255D" },
-	{ HDA_CODEC_STAC9254, 0, 	"Sigmatel STAC9254" },
-	{ HDA_CODEC_STAC9254D, 0, 	"Sigmatel STAC9254D" },
+	{ HDA_CODEC_STAC9250, 0,	"Sigmatel STAC9250" },
+	{ HDA_CODEC_STAC9251, 0,	"Sigmatel STAC9251" },
+	{ HDA_CODEC_STAC9255, 0,	"Sigmatel STAC9255" },
+	{ HDA_CODEC_STAC9255D, 0,	"Sigmatel STAC9255D" },
+	{ HDA_CODEC_STAC9254, 0,	"Sigmatel STAC9254" },
+	{ HDA_CODEC_STAC9254D, 0,	"Sigmatel STAC9254D" },
 	{ HDA_CODEC_STAC9271X, 0,	"Sigmatel STAC9271X" },
 	{ HDA_CODEC_STAC9271D, 0,	"Sigmatel STAC9271D" },
 	{ HDA_CODEC_STAC9272X, 0,	"Sigmatel STAC9272X" },
 	{ HDA_CODEC_STAC9272D, 0,	"Sigmatel STAC9272D" },
 	{ HDA_CODEC_STAC9273X, 0,	"Sigmatel STAC9273X" },
 	{ HDA_CODEC_STAC9273D, 0,	"Sigmatel STAC9273D" },
-	{ HDA_CODEC_STAC9274, 0, 	"Sigmatel STAC9274" },
+	{ HDA_CODEC_STAC9274, 0,	"Sigmatel STAC9274" },
 	{ HDA_CODEC_STAC9274D, 0,	"Sigmatel STAC9274D" },
 	{ HDA_CODEC_STAC9274X5NH, 0,	"Sigmatel STAC9274X5NH" },
 	{ HDA_CODEC_STAC9274D5NH, 0,	"Sigmatel STAC9274D5NH" },
@@ -269,6 +269,7 @@ static const struct {
 	{ HDA_CODEC_IDT92HD90BXX, 0,	"IDT 92HD90BXX" },
 	{ HDA_CODEC_IDT92HD91BXX, 0,	"IDT 92HD91BXX" },
 	{ HDA_CODEC_IDT92HD93BXX, 0,	"IDT 92HD93BXX" },
+	{ HDA_CODEC_IDT92HD95B, 0,	"Tempo 92HD95B" },
 	{ HDA_CODEC_IDT92HD98BXX, 0,	"IDT 92HD98BXX" },
 	{ HDA_CODEC_IDT92HD99BXX, 0,	"IDT 92HD99BXX" },
 	{ HDA_CODEC_CX20549, 0,		"Conexant CX20549 (Venice)" },
@@ -396,6 +397,7 @@ static const struct {
 	{ HDA_CODEC_INTELALLK, 0,	"Intel Alder Lake" },
 	{ HDA_CODEC_SII1390, 0,		"Silicon Image SiI1390" },
 	{ HDA_CODEC_SII1392, 0,		"Silicon Image SiI1392" },
+	{ HDA_CODEC_VMWARE, 0,		"VMware" },
 	/* Unknown CODECs */
 	{ HDA_CODEC_ADXXXX, 0,		"Analog Devices" },
 	{ HDA_CODEC_AGEREXXXX, 0,	"Lucent/Agere Systems" },
@@ -413,6 +415,7 @@ static const struct {
 	{ HDA_CODEC_NVIDIAXXXX, 0,	"NVIDIA" },
 	{ HDA_CODEC_SIIXXXX, 0,		"Silicon Image" },
 	{ HDA_CODEC_STACXXXX, 0,	"Sigmatel" },
+	{ HDA_CODEC_VMWAREXXXX, 0,	"VMware" },
 	{ HDA_CODEC_VTXXXX, 0,		"VIA" },
 };
 
@@ -452,7 +455,8 @@ hdacc_probe(device_t dev)
 	int i;
 
 	id = ((uint32_t)hda_get_vendor_id(dev) << 16) + hda_get_device_id(dev);
-	revid = ((uint32_t)hda_get_revision_id(dev) << 8) + hda_get_stepping_id(dev);
+	revid = ((uint32_t)hda_get_revision_id(dev) << 8) +
+	    hda_get_stepping_id(dev);
 
 	for (i = 0; i < nitems(hdacc_codecs); i++) {
 		if (!HDA_DEV_MATCH(hdacc_codecs[i].id, id))
@@ -537,14 +541,14 @@ hdacc_detach(device_t dev)
 	struct hdacc_softc *codec = device_get_softc(dev);
 	int error;
 
-	error = device_delete_children(dev);
+	if ((error = device_delete_children(dev)) != 0)
+		return (error);
 	free(codec->fgs, M_HDACC);
-	return (error);
+	return (0);
 }
 
 static int
-hdacc_child_location_str(device_t dev, device_t child, char *buf,
-    size_t buflen)
+hdacc_child_location_str(device_t dev, device_t child, char *buf, size_t buflen)
 {
 	struct hdacc_fg *fg = device_get_ivars(child);
 
@@ -663,8 +667,8 @@ hdacc_stream_free(device_t dev, device_t child, int dir, int stream)
 }
 
 static int
-hdacc_stream_start(device_t dev, device_t child,
-    int dir, int stream, bus_addr_t buf, int blksz, int blkcnt)
+hdacc_stream_start(device_t dev, device_t child, int dir, int stream,
+    bus_addr_t buf, int blksz, int blkcnt)
 {
 
 	return (HDAC_STREAM_START(device_get_parent(dev), dev,

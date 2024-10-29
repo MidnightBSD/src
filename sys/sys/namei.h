@@ -37,16 +37,20 @@
 #include <sys/caprights.h>
 #include <sys/filedesc.h>
 #include <sys/queue.h>
+#include <sys/_seqc.h>
 #include <sys/_uio.h>
+
+enum nameiop { LOOKUP, CREATE, DELETE, RENAME };
 
 struct componentname {
 	/*
 	 * Arguments to lookup.
 	 */
-	u_long	cn_nameiop;	/* namei operation */
+	u_int64_t cn_origflags;	/* flags to namei */
 	u_int64_t cn_flags;	/* flags to namei */
 	struct	thread *cn_thread;/* thread requesting lookup */
 	struct	ucred *cn_cred;	/* credentials */
+	enum nameiop cn_nameiop;	/* namei operation */
 	int	cn_lkflags;	/* Lock flags LK_EXCLUSIVE or LK_SHARED */
 	/*
 	 * Shared between lookup and commit routines.
@@ -68,7 +72,7 @@ struct nameidata {
 	 */
 	const	char *ni_dirp;		/* pathname pointer */
 	enum	uio_seg ni_segflg;	/* location of pathname */
-	cap_rights_t ni_rightsneeded;	/* rights required to look up vnode */
+	cap_rights_t *ni_rightsneeded;	/* rights required to look up vnode */
 	/*
 	 * Arguments to lookup.
 	 */
@@ -91,11 +95,15 @@ struct nameidata {
 	 */
 	u_int	ni_resflags;
 	/*
+	 * Debug for validating API use by the callers.
+	 */
+	u_short	ni_debugflags;
+	/*
 	 * Shared between namei and lookup/commit routines.
 	 */
+	u_short	ni_loopcnt;		/* count of symlinks encountered */
 	size_t	ni_pathlen;		/* remaining chars in path */
 	char	*ni_next;		/* next location in pathname */
-	u_int	ni_loopcnt;		/* count of symlinks encountered */
 	/*
 	 * Lookup parameters: this structure describes the subset of
 	 * information from the nameidata structure that is passed
@@ -103,29 +111,51 @@ struct nameidata {
 	 */
 	struct componentname ni_cnd;
 	struct nameicap_tracker_head ni_cap_tracker;
+	/*
+	 * Private helper data for UFS, must be at the end.  See
+	 * NDINIT_PREFILL().
+	 */
+	seqc_t	ni_dvp_seqc;
+	seqc_t	ni_vp_seqc;
 };
 
 #ifdef _KERNEL
+
+enum cache_fpl_status { CACHE_FPL_STATUS_DESTROYED, CACHE_FPL_STATUS_ABORTED,
+    CACHE_FPL_STATUS_PARTIAL, CACHE_FPL_STATUS_HANDLED, CACHE_FPL_STATUS_UNSET };
+int	cache_fplookup(struct nameidata *ndp, enum cache_fpl_status *status,
+    struct pwd **pwdp);
+
 /*
- * namei operations
+ * Flags for namei.
+ *
+ * If modifying the list make sure to check whether NDVALIDATE needs updating.
  */
-#define	LOOKUP		0	/* perform name lookup only */
-#define	CREATE		1	/* setup for file creation */
-#define	DELETE		2	/* setup for file deletion */
-#define	RENAME		3	/* setup for file renaming */
-#define	OPMASK		3	/* mask for operation */
+
+/*
+ * Debug.
+ */
+#define	NAMEI_DBG_INITED	0x0001
+#define	NAMEI_DBG_CALLED	0x0002
+#define	NAMEI_DBG_HADSTARTDIR	0x0004
+
 /*
  * namei operational modifier flags, stored in ni_cnd.flags
  */
+#define	NC_NOMAKEENTRY	0x0001	/* name must not be added to cache */
+#define	NC_KEEPPOSENTRY	0x0002	/* don't evict a positive entry */
+#define	NOCACHE		NC_NOMAKEENTRY	/* for compatibility with older code */
 #define	LOCKLEAF	0x0004	/* lock vnode on return */
 #define	LOCKPARENT	0x0008	/* want parent vnode returned locked */
 #define	WANTPARENT	0x0010	/* want parent vnode returned unlocked */
-#define	NOCACHE		0x0020	/* name must not be left in cache */
+#define	FAILIFEXISTS	0x0020	/* return EEXIST if found */
 #define	FOLLOW		0x0040	/* follow symbolic links */
+#define	EMPTYPATH	0x0080	/* Allow empty path for *at */
 #define	LOCKSHARED	0x0100	/* Shared lock leaf */
 #define	NOFOLLOW	0x0000	/* do not follow symbolic links (pseudo) */
 #define	RBENEATH	0x100000000ULL /* No escape, even tmp, from start dir */
-#define	MODMASK		0xf000001fcULL	/* mask of operational modifiers */
+#define	MODMASK		0xf000001ffULL	/* mask of operational modifiers */
+
 /*
  * Namei parameter descriptors.
  *
@@ -141,32 +171,42 @@ struct nameidata {
  * buffer and for vrele'ing ni_startdir.
  */
 #define	RDONLY		0x00000200 /* lookup with read-only semantics */
-#define	HASBUF		0x00000400 /* has allocated pathname buffer */
-#define	SAVENAME	0x00000800 /* save pathname buffer */
-#define	SAVESTART	0x00001000 /* save starting directory */
-#define	ISDOTDOT	0x00002000 /* current component name is .. */
-#define	MAKEENTRY	0x00004000 /* entry is to be added to name cache */
-#define	ISLASTCN	0x00008000 /* this is last component of pathname */
-#define	ISSYMLINK	0x00010000 /* symlink needs interpretation */
-#define	ISWHITEOUT	0x00020000 /* found whiteout */
-#define	DOWHITEOUT	0x00040000 /* do whiteouts */
-#define	WILLBEDIR	0x00080000 /* new files will be dirs; allow trailing / */
-#define	ISUNICODE	0x00100000 /* current component name is unicode*/
-#define	ISOPEN		0x00200000 /* caller is opening; return a real vnode. */
-#define	NOCROSSMOUNT	0x00400000 /* do not cross mount points */
-#define	NOMACCHECK	0x00800000 /* do not perform MAC checks */
-#define	AUDITVNODE1	0x04000000 /* audit the looked up vnode information */
-#define	AUDITVNODE2	0x08000000 /* audit the looked up vnode information */
-#define	TRAILINGSLASH	0x10000000 /* path ended in a slash */
-#define	NOCAPCHECK	0x20000000 /* do not perform capability checks */
-#define	NOEXECCHECK	0x40000000 /* do not perform exec check on dir */
+#define	SAVENAME	0x00000400 /* save pathname buffer */
+#define	SAVESTART	0x00000800 /* save starting directory */
+#define	ISWHITEOUT	0x00001000 /* found whiteout */
+#define	DOWHITEOUT	0x00002000 /* do whiteouts */
+#define	WILLBEDIR	0x00004000 /* new files will be dirs; allow trailing / */
+#define	ISOPEN		0x00008000 /* caller is opening; return a real vnode. */
+#define	NOCROSSMOUNT	0x00010000 /* do not cross mount points */
+#define	NOMACCHECK	0x00020000 /* do not perform MAC checks */
+#define	AUDITVNODE1	0x00040000 /* audit the looked up vnode information */
+#define	AUDITVNODE2	0x00080000 /* audit the looked up vnode information */
+#define	NOCAPCHECK	0x00100000 /* do not perform capability checks */
+/* UNUSED		0x00200000 */
+/* UNUSED		0x00400000 */
+#define	WANTIOCTLCAPS	0x00800000 /* leave ioctl caps for the caller */
+#define	HASBUF		0x01000000 /* has allocated pathname buffer */
+#define	NOEXECCHECK	0x02000000 /* do not perform exec check on dir */
+#define	MAKEENTRY	0x04000000 /* entry is to be added to name cache */
+#define	ISSYMLINK	0x08000000 /* symlink needs interpretation */
+#define	ISLASTCN	0x10000000 /* this is last component of pathname */
+#define	ISDOTDOT	0x20000000 /* current component name is .. */
+#define	TRAILINGSLASH	0x40000000 /* path ended in a slash */
 #define	PARAMASK	0x7ffffe00 /* mask of parameter descriptors */
+
+/*
+ * Flags which must not be passed in by callers.
+ */
+#define NAMEI_INTERNAL_FLAGS	\
+	(HASBUF | NOEXECCHECK | MAKEENTRY | ISSYMLINK | ISLASTCN | ISDOTDOT | \
+	 TRAILINGSLASH)
 
 /*
  * Namei results flags
  */
 #define	NIRES_ABS	0x00000001 /* Path was absolute */
 #define	NIRES_STRICTREL	0x00000002 /* Restricted lookup result */
+#define	NIRES_EMPTYPATH	0x00000004 /* EMPTYPATH used */
 
 /*
  * Flags in ni_lcf, valid for the duration of the namei call.
@@ -178,17 +218,65 @@ struct nameidata {
  * Initialization of a nameidata structure.
  */
 #define	NDINIT(ndp, op, flags, segflg, namep, td)			\
-	NDINIT_ALL(ndp, op, flags, segflg, namep, AT_FDCWD, NULL, 0, td)
+	NDINIT_ALL(ndp, op, flags, segflg, namep, AT_FDCWD, NULL, &cap_no_rights, td)
 #define	NDINIT_AT(ndp, op, flags, segflg, namep, dirfd, td)		\
-	NDINIT_ALL(ndp, op, flags, segflg, namep, dirfd, NULL, 0, td)
+	NDINIT_ALL(ndp, op, flags, segflg, namep, dirfd, NULL, &cap_no_rights, td)
 #define	NDINIT_ATRIGHTS(ndp, op, flags, segflg, namep, dirfd, rightsp, td) \
 	NDINIT_ALL(ndp, op, flags, segflg, namep, dirfd, NULL, rightsp, td)
 #define	NDINIT_ATVP(ndp, op, flags, segflg, namep, vp, td)		\
-	NDINIT_ALL(ndp, op, flags, segflg, namep, AT_FDCWD, vp, 0, td)
+	NDINIT_ALL(ndp, op, flags, segflg, namep, AT_FDCWD, vp, &cap_no_rights, td)
 
-void NDINIT_ALL(struct nameidata *ndp, u_long op, u_long flags,
-    enum uio_seg segflg, const char *namep, int dirfd, struct vnode *startdir,
-    cap_rights_t *rightsp, struct thread *td);
+/*
+ * Note the constant pattern may *hide* bugs.
+ */
+#ifdef INVARIANTS
+#define NDINIT_PREFILL(arg)	memset(arg, 0xff, offsetof(struct nameidata,	\
+    ni_dvp_seqc))
+#define NDINIT_DBG(arg)		{ (arg)->ni_debugflags = NAMEI_DBG_INITED; }
+#define NDREINIT_DBG(arg)	{						\
+	if (((arg)->ni_debugflags & NAMEI_DBG_INITED) == 0)			\
+		panic("namei data not inited");					\
+	if (((arg)->ni_debugflags & NAMEI_DBG_HADSTARTDIR) != 0)		\
+		panic("NDREINIT on namei data with NAMEI_DBG_HADSTARTDIR");	\
+	(arg)->ni_debugflags = NAMEI_DBG_INITED;				\
+}
+#else
+#define NDINIT_PREFILL(arg)	do { } while (0)
+#define NDINIT_DBG(arg)		do { } while (0)
+#define NDREINIT_DBG(arg)	do { } while (0)
+#endif
+
+#define NDINIT_ALL(ndp, op, flags, segflg, namep, dirfd, startdir, rightsp, td)	\
+do {										\
+	struct nameidata *_ndp = (ndp);						\
+	cap_rights_t *_rightsp = (rightsp);					\
+	MPASS(_rightsp != NULL);						\
+	NDINIT_PREFILL(_ndp);							\
+	NDINIT_DBG(_ndp);							\
+	_ndp->ni_cnd.cn_nameiop = op;						\
+	_ndp->ni_cnd.cn_flags = flags;						\
+	_ndp->ni_segflg = segflg;						\
+	_ndp->ni_dirp = namep;							\
+	_ndp->ni_dirfd = dirfd;							\
+	_ndp->ni_startdir = startdir;						\
+	_ndp->ni_resflags = 0;							\
+	filecaps_init(&_ndp->ni_filecaps);					\
+	_ndp->ni_cnd.cn_thread = td;						\
+	_ndp->ni_rightsneeded = _rightsp;					\
+} while (0)
+
+#define NDREINIT(ndp)	do {							\
+	struct nameidata *_ndp = (ndp);						\
+	NDREINIT_DBG(_ndp);							\
+	filecaps_free(&_ndp->ni_filecaps);					\
+	_ndp->ni_resflags = 0;							\
+	_ndp->ni_startdir = NULL;						\
+} while (0)
+
+#define	NDPREINIT(ndp) do {							\
+	(ndp)->ni_dvp_seqc = SEQC_MOD;						\
+	(ndp)->ni_vp_seqc = SEQC_MOD;						\
+} while (0)
 
 #define NDF_NO_DVP_RELE		0x00000001
 #define NDF_NO_DVP_UNLOCK	0x00000002
@@ -200,7 +288,27 @@ void NDINIT_ALL(struct nameidata *ndp, u_long op, u_long flags,
 #define NDF_NO_FREE_PNBUF	0x00000020
 #define NDF_ONLY_PNBUF		(~NDF_NO_FREE_PNBUF)
 
+#define NDFREE_IOCTLCAPS(ndp) do {						\
+	struct nameidata *_ndp = (ndp);						\
+	filecaps_free(&_ndp->ni_filecaps);					\
+} while (0)
+void NDFREE_PNBUF(struct nameidata *);
 void NDFREE(struct nameidata *, const u_int);
+#define NDFREE(ndp, flags) do {						\
+	struct nameidata *_ndp = (ndp);					\
+	if (__builtin_constant_p(flags) && flags == NDF_ONLY_PNBUF)	\
+		NDFREE_PNBUF(_ndp);					\
+	else								\
+		NDFREE(_ndp, flags);					\
+} while (0)
+
+#ifdef INVARIANTS
+void NDFREE_NOTHING(struct nameidata *);
+void NDVALIDATE(struct nameidata *);
+#else
+#define NDFREE_NOTHING(ndp)	do { } while (0)
+#define NDVALIDATE(ndp)	do { } while (0)
+#endif
 
 int	namei(struct nameidata *ndp);
 int	lookup(struct nameidata *ndp);

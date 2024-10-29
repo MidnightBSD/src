@@ -22,12 +22,13 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
+
+#define _WANT_ALL_LIO_OPCODES
 
 #include <sys/param.h>
 #include <sys/event.h>
+#include <sys/uio.h>
 
 #include <aio.h>
 #include <fcntl.h>
@@ -130,6 +131,15 @@ ATF_TC_BODY(lio_listio_empty_wait, tc)
 	ATF_REQUIRE_EQ(0, lio_listio(LIO_WAIT, &list, 0, NULL));
 }
 
+/* With LIO_NOWAIT, an empty lio_listio should return immediately */
+ATF_TC_WITHOUT_HEAD(lio_listio_empty_nowait);
+ATF_TC_BODY(lio_listio_empty_nowait, tc)
+{
+	struct aiocb *list = NULL;
+
+	ATF_REQUIRE_EQ(0, lio_listio(LIO_NOWAIT, &list, 0, NULL));
+}
+
 /*
  * With LIO_NOWAIT, an empty lio_listio should send completion notification
  * immediately
@@ -198,15 +208,129 @@ ATF_TC_BODY(lio_listio_empty_nowait_thread, tc)
 	ATF_REQUIRE_EQ(0, sem_destroy(&completions));
 }
 
+/*
+ * A simple check that the allowed operations work.
+ */
+ATF_TC_WITHOUT_HEAD(lio_listio_opcodes);
+ATF_TC_BODY(lio_listio_opcodes, tc)
+{
+	struct aiocb write_cb, read_cb, writev_cb, readv_cb;
+	struct aiocb *list[] = {&write_cb, &read_cb, &writev_cb, &readv_cb};
+	struct iovec writev_iov[2];
+	struct iovec readv_iov[2];
+	char buffer[6];
+	int fd;
+
+	fd = open("testfile", O_CREAT | O_RDWR);
+	ATF_REQUIRE_MSG(fd >= 0, "open: %s", strerror(errno));
+
+	/* We start with numbers in a file and letters in memory... */
+	ATF_CHECK_EQ(6, write(fd, "123456", 6));
+	memcpy(buffer, "abcdef", 6);
+
+	/* a -> 1 */
+	bzero(&write_cb, sizeof(write_cb));
+	write_cb.aio_sigevent.sigev_notify = SIGEV_NONE;
+	write_cb.aio_fildes = fd;
+	write_cb.aio_lio_opcode = LIO_WRITE;
+	write_cb.aio_buf = &buffer[0];
+	write_cb.aio_nbytes = 1;
+	write_cb.aio_offset = 0;
+
+	/* b <- 2 */
+	bzero(&read_cb, sizeof(read_cb));
+	read_cb.aio_sigevent.sigev_notify = SIGEV_NONE;
+	read_cb.aio_fildes = fd;
+	read_cb.aio_lio_opcode = LIO_READ;
+	read_cb.aio_buf = &buffer[1];
+	read_cb.aio_nbytes = 1;
+	read_cb.aio_offset = 1;
+
+	/* d -> 3, c -> 4 */
+	writev_iov[0].iov_base = &buffer[3];
+	writev_iov[0].iov_len = 1;
+	writev_iov[1].iov_base = &buffer[2];
+	writev_iov[1].iov_len = 1;
+	bzero(&writev_cb, sizeof(writev_cb));
+	writev_cb.aio_sigevent.sigev_notify = SIGEV_NONE;
+	writev_cb.aio_fildes = fd;
+	writev_cb.aio_lio_opcode = LIO_WRITEV;
+	writev_cb.aio_iov = &writev_iov;
+	writev_cb.aio_iovcnt = 2;
+	writev_cb.aio_offset = 2;
+
+	/* f <- 5, e <- 6 */
+	readv_iov[0].iov_base = &buffer[5];
+	readv_iov[0].iov_len = 1;
+	readv_iov[1].iov_base = &buffer[4];
+	readv_iov[1].iov_len = 1;
+	bzero(&readv_cb, sizeof(readv_cb));
+	readv_cb.aio_sigevent.sigev_notify = SIGEV_NONE;
+	readv_cb.aio_fildes = fd;
+	readv_cb.aio_lio_opcode = LIO_READV;
+	readv_cb.aio_iov = &readv_iov;
+	readv_cb.aio_iovcnt = 2;
+	readv_cb.aio_offset = 4;
+
+	ATF_CHECK_EQ(0, lio_listio(LIO_WAIT, list, nitems(list), NULL));
+	ATF_CHECK_EQ(0, aio_error(&write_cb));
+	ATF_CHECK_EQ(1, aio_return(&write_cb));
+	ATF_CHECK_EQ(0, aio_error(&read_cb));
+	ATF_CHECK_EQ(1, aio_return(&read_cb));
+	ATF_CHECK_EQ(0, aio_error(&writev_cb));
+	ATF_CHECK_EQ(2, aio_return(&writev_cb));
+	ATF_CHECK_EQ(0, aio_error(&readv_cb));
+	ATF_CHECK_EQ(2, aio_return(&readv_cb));
+
+	ATF_CHECK_EQ(0, memcmp(buffer, "a2cd65", 6));
+	ATF_CHECK_EQ(6, pread(fd, buffer, 6, 0));
+	ATF_CHECK_EQ(0, memcmp(buffer, "a2dc56", 6));
+
+	close(fd);
+}
+
+
+/*
+ * Only select opcodes are allowed with lio_listio
+ */
+ATF_TC_WITHOUT_HEAD(lio_listio_invalid_opcode);
+ATF_TC_BODY(lio_listio_invalid_opcode, tc)
+{
+	struct aiocb sync_cb, mlock_cb;
+	struct aiocb *list[] = {&sync_cb, &mlock_cb};
+	int fd;
+
+	fd = open("testfile", O_CREAT | O_RDWR);
+	ATF_REQUIRE_MSG(fd >= 0, "open: %s", strerror(errno));
+
+	bzero(&sync_cb, sizeof(sync_cb));
+	sync_cb.aio_fildes = fd;
+	sync_cb.aio_lio_opcode = LIO_SYNC;
+
+	bzero(&mlock_cb, sizeof(mlock_cb));
+	mlock_cb.aio_lio_opcode = LIO_MLOCK;
+
+	ATF_CHECK_ERRNO(EIO, lio_listio(LIO_WAIT, list, nitems(list), NULL));
+	ATF_CHECK_EQ(EINVAL, aio_error(&sync_cb));
+	ATF_CHECK_ERRNO(EINVAL, aio_return(&sync_cb) < 0);
+	ATF_CHECK_EQ(EINVAL, aio_error(&mlock_cb));
+	ATF_CHECK_ERRNO(EINVAL, aio_return(&mlock_cb) < 0);
+
+	close(fd);
+}
+
 
 ATF_TP_ADD_TCS(tp)
 {
 
 	ATF_TP_ADD_TC(tp, lio_listio_eagain_kevent);
+	ATF_TP_ADD_TC(tp, lio_listio_empty_nowait);
 	ATF_TP_ADD_TC(tp, lio_listio_empty_nowait_kevent);
 	ATF_TP_ADD_TC(tp, lio_listio_empty_nowait_signal);
 	ATF_TP_ADD_TC(tp, lio_listio_empty_nowait_thread);
 	ATF_TP_ADD_TC(tp, lio_listio_empty_wait);
+	ATF_TP_ADD_TC(tp, lio_listio_opcodes);
+	ATF_TP_ADD_TC(tp, lio_listio_invalid_opcode);
 
 	return (atf_no_error());
 }

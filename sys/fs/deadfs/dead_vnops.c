@@ -44,6 +44,7 @@
  */
 static vop_lookup_t	dead_lookup;
 static vop_open_t	dead_open;
+static vop_close_t	dead_close;
 static vop_getwritemount_t dead_getwritemount;
 static vop_rename_t	dead_rename;
 static vop_unset_text_t	dead_unset_text;
@@ -54,6 +55,7 @@ struct vop_vector dead_vnodeops = {
 	.vop_access =		VOP_EBADF,
 	.vop_advlock =		VOP_EBADF,
 	.vop_bmap =		VOP_EBADF,
+	.vop_close =		dead_close,
 	.vop_create =		VOP_PANIC,
 	.vop_getattr =		VOP_EBADF,
 	.vop_getwritemount =	dead_getwritemount,
@@ -78,7 +80,10 @@ struct vop_vector dead_vnodeops = {
 	.vop_vptocnp =		VOP_EBADF,
 	.vop_unset_text =	dead_unset_text,
 	.vop_write =		dead_write,
+	.vop_fplookup_vexec =	VOP_EOPNOTSUPP,
+	.vop_fplookup_symlink =	VOP_EAGAIN,
 };
+VFS_VOP_VECTOR_REGISTER(dead_vnodeops);
 
 static int
 dead_getwritemount(struct vop_getwritemount_args *ap)
@@ -100,13 +105,18 @@ dead_lookup(struct vop_lookup_args *ap)
 }
 
 /*
- * Open always fails as if device did not exist.
+ * Silently succeed open and close.
  */
 static int
 dead_open(struct vop_open_args *ap)
 {
+	return (0);
+}
 
-	return (ENXIO);
+static int
+dead_close(struct vop_close_args *ap)
+{
+	return (0);
 }
 
 int

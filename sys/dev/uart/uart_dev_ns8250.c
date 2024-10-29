@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Marcel Moolenaar
  * All rights reserved.
@@ -31,7 +31,6 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -56,6 +55,7 @@
 #include <dev/uart/uart_ppstypes.h>
 #ifdef DEV_ACPI
 #include <dev/uart/uart_cpu_acpi.h>
+#include <contrib/dev/acpica/include/acpi.h>
 #endif
 
 #include <dev/ic/ns16550.h>
@@ -392,9 +392,10 @@ static kobj_method_t ns8250_methods[] = {
 	KOBJMETHOD(uart_receive,	ns8250_bus_receive),
 	KOBJMETHOD(uart_setsig,		ns8250_bus_setsig),
 	KOBJMETHOD(uart_transmit,	ns8250_bus_transmit),
+	KOBJMETHOD(uart_txbusy,		ns8250_bus_txbusy),
 	KOBJMETHOD(uart_grab,		ns8250_bus_grab),
 	KOBJMETHOD(uart_ungrab,		ns8250_bus_ungrab),
-	{ 0, 0 }
+	KOBJMETHOD_END
 };
 
 struct uart_class uart_ns8250_class = {
@@ -414,6 +415,10 @@ struct uart_class uart_ns8250_class = {
 static struct acpi_uart_compat_data acpi_compat_data[] = {
 	{"AMD0020",	&uart_ns8250_class, 0, 2, 0, 48000000, UART_F_BUSY_DETECT, "AMD / Synopsys Designware UART"},
 	{"AMDI0020", &uart_ns8250_class, 0, 2, 0, 48000000, UART_F_BUSY_DETECT, "AMD / Synopsys Designware UART"},
+	{"APMC0D08", &uart_ns8250_class, ACPI_DBG2_16550_COMPATIBLE, 2, 4, 0, 0, "APM compatible UART"},
+	{"MRVL0001", &uart_ns8250_class, ACPI_DBG2_16550_SUBSET, 2, 0, 200000000, UART_F_BUSY_DETECT, "Marvell / Synopsys Designware UART"},
+	{"SCX0006",  &uart_ns8250_class, 0, 2, 0, 62500000, UART_F_BUSY_DETECT, "SynQuacer / Synopsys Designware UART"},
+	{"HISI0031", &uart_ns8250_class, 0, 2, 0, 200000000, UART_F_BUSY_DETECT, "HiSilicon / Synopsys Designware UART"},
 	{"PNP0500", &uart_ns8250_class, 0, 0, 0, 0, 0, "Standard PC COM port"},
 	{"PNP0501", &uart_ns8250_class, 0, 0, 0, 0, 0, "16550A-compatible COM port"},
 	{"PNP0502", &uart_ns8250_class, 0, 0, 0, 0, 0, "Multiport serial device (non-intelligent 16550)"},
@@ -510,19 +515,19 @@ ns8250_bus_attach(struct uart_softc *sc)
 			ns8250->fcr |= FCR_RX_MEDH;
 	} else 
 		ns8250->fcr |= FCR_RX_MEDH;
-	
+
 	/* Get IER mask */
 	ivar = 0xf0;
 	resource_int_value("uart", device_get_unit(sc->sc_dev), "ier_mask",
 	    &ivar);
 	ns8250->ier_mask = (uint8_t)(ivar & 0xff);
-	
+
 	/* Get IER RX interrupt bits */
 	ivar = IER_EMSC | IER_ERLS | IER_ERXRDY;
 	resource_int_value("uart", device_get_unit(sc->sc_dev), "ier_rxbits",
 	    &ivar);
 	ns8250->ier_rxbits = (uint8_t)(ivar & 0xff);
-	
+
 	uart_setreg(bas, REG_FCR, ns8250->fcr);
 	uart_barrier(bas);
 	ns8250_bus_flush(sc, UART_FLUSH_RECEIVER|UART_FLUSH_TRANSMITTER);
@@ -787,13 +792,11 @@ ns8250_bus_param(struct uart_softc *sc, int baudrate, int databits,
 int
 ns8250_bus_probe(struct uart_softc *sc)
 {
-	struct ns8250_softc *ns8250;
 	struct uart_bas *bas;
 	int count, delay, error, limit;
 	uint8_t lsr, mcr, ier;
 	uint8_t val;
 
-	ns8250 = (struct ns8250_softc *)sc;
 	bas = &sc->sc_bas;
 
 	error = ns8250_probe(bas);
@@ -888,7 +891,8 @@ ns8250_bus_probe(struct uart_softc *sc)
 		    --limit)
 			DELAY(delay);
 		if (limit == 0) {
-			ier = uart_getreg(bas, REG_IER) & ns8250->ier_mask;
+			/* See the comment in ns8250_init(). */
+			ier = uart_getreg(bas, REG_IER) & 0xe0;
 			uart_setreg(bas, REG_IER, ier);
 			uart_setreg(bas, REG_MCR, mcr);
 			val = 0;
@@ -1044,6 +1048,17 @@ ns8250_bus_transmit(struct uart_softc *sc)
 	if (broken_txfifo)
 		uart_sched_softih(sc, SER_INT_TXIDLE);
 	return (0);
+}
+
+bool
+ns8250_bus_txbusy(struct uart_softc *sc)
+{
+	struct uart_bas *bas = &sc->sc_bas;
+
+	if ((uart_getreg(bas, REG_LSR) & (LSR_TEMT | LSR_THRE)) !=
+	    (LSR_TEMT | LSR_THRE))
+		return (true);
+	return (false);
 }
 
 void

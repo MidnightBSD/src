@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -35,17 +34,13 @@
  * Modifications by: Adam Radford
  */
 
-
-
 #ifndef TW_CL_FWIF_H
 
 #define TW_CL_FWIF_H
 
-
 /*
  * Macros and data structures for interfacing with the firmware.
  */
-
 
 /* Register offsets from base address. */
 #define	TWA_CONTROL_REGISTER_OFFSET		0x0
@@ -55,7 +50,6 @@
 #define	TWA_COMMAND_QUEUE_OFFSET_LOW		0x20
 #define	TWA_COMMAND_QUEUE_OFFSET_HIGH		0x24
 #define	TWA_LARGE_RESPONSE_QUEUE_OFFSET		0x30
-
 
 /* Control register bit definitions. */
 #define TWA_CONTROL_ISSUE_HOST_INTERRUPT	0x00000020
@@ -71,7 +65,6 @@
 #define TWA_CONTROL_CLEAR_PCI_ABORT		0x00100000
 #define TWA_CONTROL_CLEAR_QUEUE_ERROR		0x00400000
 #define TWA_CONTROL_CLEAR_PARITY_ERROR		0x00800000
-
 
 /* Status register bit definitions. */
 #define TWA_STATUS_ROM_BIOS_IN_SBUF		0x00000002
@@ -92,7 +85,6 @@
 
 #define TWA_STATUS_UNEXPECTED_BITS		0x00D00000
 
-
 /* PCI related defines. */
 #define TWA_IO_CONFIG_REG			0x10
 
@@ -101,7 +93,6 @@
 
 #define TWA_RESET_PHASE1_NOTIFICATION_RESPONSE	0xFFFF
 #define TWA_RESET_PHASE1_WAIT_TIME_MS		500
-
 
 /* Command packet opcodes. */
 #define TWA_FW_CMD_NOP				0x00
@@ -133,7 +124,6 @@
 
 #define TWA_FW_CMD_DIAGNOSTICS			0x1F
 
-
 /* Misc defines. */
 #define TWA_SHUTDOWN_MESSAGE_CREDITS	0x001
 #define TWA_64BIT_SG_ADDRESSES		0x00000001
@@ -154,7 +144,6 @@
 #define TWA_CTLR_FW_COMPATIBLE		0x00000002
 #define TWA_SENSE_DATA_LENGTH		18
 
-
 #define TWA_ARCH_ID(device_id)						\
 	(((device_id) == TW_CL_DEVICE_ID_9K) ? TWA_ARCH_ID_9K :		\
 	TWA_ARCH_ID_9K_X)
@@ -174,7 +163,6 @@
 #define TWA_SG_ELEMENT_SIZE_FACTOR(device_id)		\
 	(((device_id) == TW_CL_DEVICE_ID_9K) ? 512 : 4)
 
-
 /*
  * Some errors of interest (in cmd_hdr->status_block.error) when a command
  * is completed by the firmware with a bad status.
@@ -183,12 +171,10 @@
 #define TWA_ERROR_UNIT_OFFLINE			0x0128
 #define TWA_ERROR_MORE_DATA			0x0231
 
-
 /* AEN codes of interest. */
 #define TWA_AEN_QUEUE_EMPTY		0x00
 #define TWA_AEN_SOFT_RESET		0x01
 #define TWA_AEN_SYNC_TIME_WITH_HOST	0x31
-
 
 /* Table #'s and id's of parameters of interest in firmware's param table. */
 #define TWA_PARAM_VERSION_TABLE		0x0402
@@ -203,7 +189,6 @@
 #define TWA_PARAM_TIME_SCHED_TIME	0x3
 
 #define TWA_9K_PARAM_DESCRIPTOR		0x8000
-
 
 #pragma pack(1)
 /* 7000 structures. */
@@ -223,7 +208,6 @@ struct tw_cl_command_init_connect {
 	TW_UINT32	result;
 };
 
-
 /* Structure for downloading firmware onto the controller. */
 struct tw_cl_command_download_firmware {
 	TW_UINT8	sgl_off__opcode;/* 3:5 */
@@ -235,7 +219,6 @@ struct tw_cl_command_download_firmware {
 	TW_UINT16	param;
 	TW_UINT8	sgl[1];
 };
-
 
 /* Structure for hard resetting the controller. */
 struct tw_cl_command_reset_firmware {
@@ -249,7 +232,6 @@ struct tw_cl_command_reset_firmware {
 	TW_UINT8	param;
 };
 
-
 /* Structure for sending get/set param commands. */
 struct tw_cl_command_param {
 	TW_UINT8	sgl_off__opcode;/* 3:5 */
@@ -262,7 +244,6 @@ struct tw_cl_command_param {
 	TW_UINT8	sgl[1];
 };
 
-
 /* Generic command packet. */
 struct tw_cl_command_generic {
 	TW_UINT8	sgl_off__opcode;/* 3:5 */
@@ -273,7 +254,6 @@ struct tw_cl_command_generic {
 	TW_UINT8	flags;
 	TW_UINT16	count;	/* block cnt, parameter cnt, message credits */
 };
-
 
 /* Command packet header. */
 struct tw_cl_command_header {
@@ -292,7 +272,6 @@ struct tw_cl_command_header {
 	} header_desc;
 };
 
-
 /* 7000 Command packet. */
 union tw_cl_command_7k {
 	struct tw_cl_command_init_connect	init_connect;
@@ -302,7 +281,6 @@ union tw_cl_command_7k {
 	struct tw_cl_command_generic		generic;
 	TW_UINT8	padding[1024 - sizeof(struct tw_cl_command_header)];
 };
-
 
 /* 9000 Command Packet. */
 struct tw_cl_command_9k {
@@ -318,7 +296,6 @@ struct tw_cl_command_9k {
 					1024-sizeof(cmd_hdr) */
 };
 
-
 /* Full command packet. */
 struct tw_cl_command_packet {
 	struct tw_cl_command_header	cmd_hdr;
@@ -327,7 +304,6 @@ struct tw_cl_command_packet {
 		struct tw_cl_command_9k cmd_pkt_9k;
 	} command;
 };
-
 
 /* Structure describing payload for get/set param commands. */
 struct tw_cl_param_9k {
@@ -340,15 +316,12 @@ struct tw_cl_param_9k {
 };
 #pragma pack()
 
-
 /* Functions to read from, and write to registers */
 #define TW_CLI_WRITE_CONTROL_REGISTER(ctlr_handle, value)		\
 	tw_osl_write_reg(ctlr_handle, TWA_CONTROL_REGISTER_OFFSET, value, 4)
 
-
 #define TW_CLI_READ_STATUS_REGISTER(ctlr_handle)			\
 	tw_osl_read_reg(ctlr_handle, TWA_STATUS_REGISTER_OFFSET, 4)
-
 
 #define TW_CLI_WRITE_COMMAND_QUEUE(ctlr_handle, value)	do {		\
 	if (ctlr->flags & TW_CL_64BIT_ADDRESSES) {			\
@@ -362,14 +335,11 @@ struct tw_cl_param_9k {
 					(TW_UINT32)(value), 4);		\
 } while (0)
 
-
 #define TW_CLI_READ_RESPONSE_QUEUE(ctlr_handle)				\
 	tw_osl_read_reg(ctlr_handle, TWA_RESPONSE_QUEUE_OFFSET, 4)
 
-
 #define TW_CLI_READ_LARGE_RESPONSE_QUEUE(ctlr_handle)			\
 	tw_osl_read_reg(ctlr_handle, TWA_LARGE_RESPONSE_QUEUE_OFFSET, 4)
-
 
 #define TW_CLI_SOFT_RESET(ctlr)					\
 	TW_CLI_WRITE_CONTROL_REGISTER(ctlr,			\
@@ -384,7 +354,6 @@ struct tw_cl_param_9k {
 #define TW_CLI_STATUS_ERRORS(x)					\
 	((x & TWA_STATUS_UNEXPECTED_BITS) &&			\
 	 (x & TWA_STATUS_MICROCONTROLLER_READY))
-
 
 /*
  * Functions for making transparent, the bit fields in firmware
@@ -407,7 +376,6 @@ struct tw_cl_param_9k {
 
 #define BUILD_LUN_H4__SGL_ENTRIES(lun, sgl_entries)	\
 	(((lun << 8) & 0xF000) | (sgl_entries & 0xFFF))	/* 4:12 */
-
 
 #define GET_OPCODE(sgl_off__opcode)	\
 	(sgl_off__opcode & 0x1F)		/* 3:5 */
@@ -444,7 +412,5 @@ struct tw_cl_param_9k {
 
 #define GET_LUN_H4(lun_h4__sgl_entries)	\
 	((lun_h4__sgl_entries >> 12) & 0xF)	/* 4:12 */
-
-
 
 #endif /* TW_CL_FWIF_H */

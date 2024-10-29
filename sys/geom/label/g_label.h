@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_G_LABEL_H_
@@ -44,26 +43,18 @@
  * 2 - Added md_provsize field to metadata.
  */
 #define	G_LABEL_VERSION		2
-#define	G_LABEL_DIR		"label"
 
 #ifdef _KERNEL
 extern u_int g_label_debug;
 
-#define	G_LABEL_DEBUG(lvl, ...)	do {					\
-	if (g_label_debug >= (lvl)) {					\
-		printf("GEOM_LABEL");					\
-		if (g_label_debug > 0)					\
-			printf("[%u]", lvl);				\
-		printf(": ");						\
-		printf(__VA_ARGS__);					\
-		printf("\n");						\
-	}								\
-} while (0)
+#define G_LABEL_DEBUG(lvl, ...) \
+    _GEOM_DEBUG("GEOM_LABEL", g_label_debug, (lvl), NULL, __VA_ARGS__)
 
 SYSCTL_DECL(_kern_geom_label);
 
 #define	G_LABEL_INIT(kind, label, descr) 				\
-	SYSCTL_NODE(_kern_geom_label, OID_AUTO, kind, CTLFLAG_RD,	\
+	SYSCTL_NODE(_kern_geom_label, OID_AUTO, kind,			\
+	    CTLFLAG_RD | CTLFLAG_MPSAFE,				\
 	    NULL, "");							\
 	SYSCTL_INT(_kern_geom_label_##kind, OID_AUTO, enable, 		\
 	    CTLFLAG_RWTUN, &label.ld_enabled, 1, descr)
@@ -72,7 +63,7 @@ typedef void g_label_taste_t (struct g_consumer *cp, char *label, size_t size);
 
 struct g_label_desc {
 	g_label_taste_t	*ld_taste;
-	char		*ld_dir;
+	char		*ld_dirprefix;
 	int		 ld_enabled;
 };
 

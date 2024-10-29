@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Cameron Grant <cg@freebsd.org>
  * All rights reserved.
@@ -39,6 +39,7 @@
 #include <dev/sound/pci/ds1.h>
 #include <dev/sound/pci/ds1-fw.h>
 
+SND_DECLARE_FILE("");
 
 /* -------------------------------------------------------------------- */
 
@@ -764,7 +765,6 @@ ds_intr(void *p)
 		i = ds_rd(sc, YDSXGR_MODE, 4);
 		if (x)
 			ds_wr(sc, YDSXGR_MODE, i | 0x00000002, 4);
-
 	}
 	snd_mtxunlock(sc->lock);
 }

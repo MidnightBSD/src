@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Bruno Ducrot
  *
@@ -38,12 +38,12 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/cpu.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/systm.h>
 
 #include <machine/bus.h>
@@ -98,7 +98,6 @@ static device_method_t smist_methods[] = {
 	DEVMETHOD(cpufreq_drv_get,	smist_get),
 	DEVMETHOD(cpufreq_drv_type,	smist_type),
 	DEVMETHOD(cpufreq_drv_settings,	smist_settings),
-
 	{0, 0}
 };
 
@@ -204,8 +203,7 @@ set_ownership(device_t dev)
 	    /*alignment*/ PAGE_SIZE, /*no boundary*/ 0,
 	    /*lowaddr*/ BUS_SPACE_MAXADDR_32BIT, /*highaddr*/ BUS_SPACE_MAXADDR,
 	    NULL, NULL, /*maxsize*/ PAGE_SIZE, /*segments*/ 1,
-	    /*maxsegsize*/ PAGE_SIZE, 0, busdma_lock_mutex, &Giant,
-	    &tag) != 0) {
+	    /*maxsegsize*/ PAGE_SIZE, 0, NULL, NULL, &tag) != 0) {
 		device_printf(dev, "can't create mem tag\n");
 		return (ENXIO);
 	}
@@ -310,7 +308,8 @@ smist_identify(driver_t *driver, device_t parent)
 
 	if (device_find_child(parent, "smist", -1) != NULL)
 		return;
-	if (BUS_ADD_CHILD(parent, 30, "smist", -1) == NULL)
+	if (BUS_ADD_CHILD(parent, 30, "smist", device_get_unit(parent))
+	    == NULL)
 		device_printf(parent, "smist: add child failed\n");
 }
 

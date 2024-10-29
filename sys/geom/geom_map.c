@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010-2011 Aleksandr Rybalko <ray@dlink.ua>
  *   based on geom_redboot.c
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/errno.h>
@@ -171,7 +170,6 @@ find_marker(struct g_consumer *cp, const char *line, off_t *offset)
 	for (search_offset = search_start;
 	     search_offset < cp->provider->mediasize;
 	     search_offset += search_step) {
-
 		g_topology_unlock();
 		buf = g_read_data(cp, rounddown(search_offset, sectorsize),
 		    roundup(strlen(search_key), sectorsize), NULL);
@@ -375,7 +373,6 @@ g_map_taste(struct g_class *mp, struct g_provider *pp, int insist __unused)
 	for (i = 0; i < MAP_MAXSLICE; i++)
 		g_map_parse_part(mp, pp, cp, gp, sc, i);
 
-
 	g_access(cp, -1, 0, 0);
 	if (LIST_EMPTY(&gp->provider)) {
 		if (bootverbose)
@@ -386,24 +383,11 @@ g_map_taste(struct g_class *mp, struct g_provider *pp, int insist __unused)
 	return (gp);
 }
 
-static void
-g_map_config(struct gctl_req *req, struct g_class *mp, const char *verb)
-{
-	struct g_geom *gp;
-
-	g_topology_assert();
-	gp = gctl_get_geom(req, mp, "geom");
-	if (gp == NULL)
-		return;
-	gctl_error(req, "Unknown verb");
-}
-
 static struct g_class g_map_class = {
 	.name = MAP_CLASS_NAME,
 	.version = G_VERSION,
 	.taste = g_map_taste,
 	.dumpconf = g_map_dumpconf,
-	.ctlreq = g_map_config,
 };
 DECLARE_GEOM_CLASS(g_map_class, g_map);
 MODULE_VERSION(geom_map, 0);

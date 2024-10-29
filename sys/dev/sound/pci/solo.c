@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  *
@@ -39,6 +39,7 @@
 
 #include "mixer_if.h"
 
+SND_DECLARE_FILE("");
 
 #define SOLO_DEFAULT_BUFSZ 16384
 #define ABS(x) (((x) < 0)? -(x) : (x))
@@ -491,7 +492,6 @@ ess_setupch(struct ess_info *sc, int ch, int dir, int spd, u_int32_t fmt, int le
 			/* filter cutoff */
 			ess_setmixer(sc, 0x72, ess_calcfilter(spd));
 		}
-
 	}
 	return 0;
 }
@@ -794,7 +794,6 @@ ess_dmapos(struct ess_info *sc, int ch)
 
 	KASSERT(ch == 1 || ch == 2, ("bad ch"));
 	if (ch == 1) {
-
 /*
  * During recording, this register is known to give back
  * garbage if it's not quiescent while being read. That's
@@ -951,7 +950,7 @@ ess_resume(device_t dev)
 {
 	uint16_t ddma;
 	struct ess_info *sc = pcm_getdevinfo(dev);
-	
+
 	ess_lock(sc);
 	ddma = rman_get_start(sc->vc) | 1;
 	pci_write_config(dev, ESS_PCI_LEGACYCONTROL, 0x805f, 2);
@@ -1091,7 +1090,6 @@ static device_method_t ess_methods[] = {
 	DEVMETHOD(device_detach,	ess_detach),
 	DEVMETHOD(device_resume,	ess_resume),
 	DEVMETHOD(device_suspend,	ess_suspend),
-
 	{ 0, 0 }
 };
 
@@ -1104,6 +1102,3 @@ static driver_t ess_driver = {
 DRIVER_MODULE(snd_solo, pci, ess_driver, pcm_devclass, 0, 0);
 MODULE_DEPEND(snd_solo, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_solo, 1);
-
-
-

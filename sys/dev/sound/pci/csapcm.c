@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Seigo Tanimura
  * All rights reserved.
@@ -43,6 +43,7 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
+SND_DECLARE_FILE("");
 
 /* Buffer size on dma transfer. Fixed for CS416x. */
 #define CS461x_BUFFSIZE   (4 * 1024)
@@ -776,13 +777,11 @@ pcmcsa_attach(device_t dev)
 {
 	struct csa_info *csa;
 	csa_res *resp;
-	int unit;
 	char status[SND_STATUSLEN];
 	struct ac97_info *codec;
 	struct sndcard_func *func;
 
 	csa = malloc(sizeof(*csa), M_DEVBUF, M_WAITOK | M_ZERO);
-	unit = device_get_unit(dev);
 	func = device_get_ivars(dev);
 	csa->binfo = func->varinfo;
 	/*

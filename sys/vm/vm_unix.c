@@ -43,7 +43,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
@@ -54,6 +53,9 @@
 #include <sys/sysent.h>
 #include <sys/sysproto.h>
 #include <sys/systm.h>
+#if defined(__amd64__) || defined(__i386__) /* for i386_read_exec */
+#include <machine/md_var.h>
+#endif
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -174,11 +176,9 @@ kern_break(struct thread *td, uintptr_t *addr)
 		}
 #endif
 		prot = VM_PROT_RW;
-#ifdef COMPAT_FREEBSD32
-#if defined(__amd64__)
+#if (defined(COMPAT_FREEBSD32) && defined(__amd64__)) || defined(__i386__)
 		if (i386_read_exec && SV_PROC_FLAG(td->td_proc, SV_ILP32))
 			prot |= VM_PROT_EXECUTE;
-#endif
 #endif
 		rv = vm_map_insert(map, NULL, 0, old, new, prot, VM_PROT_ALL,
 		    0);

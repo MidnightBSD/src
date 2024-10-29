@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case zpool_scrub_001_neg cleanup
 zpool_scrub_001_neg_head()
 {
 	atf_set "descr" "Execute 'zpool scrub' using invalid parameters."
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 }
 zpool_scrub_001_neg_body()
 {
@@ -54,7 +52,7 @@ atf_test_case zpool_scrub_002_pos cleanup
 zpool_scrub_002_pos_head()
 {
 	atf_set "descr" "Verify scrub -s works correctly."
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 }
 zpool_scrub_002_pos_body()
 {
@@ -78,7 +76,7 @@ atf_test_case zpool_scrub_003_pos cleanup
 zpool_scrub_003_pos_head()
 {
 	atf_set "descr" "scrub command terminates the existing scrub process and starts a new scrub."
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 }
 zpool_scrub_003_pos_body()
 {
@@ -102,7 +100,7 @@ atf_test_case zpool_scrub_004_pos cleanup
 zpool_scrub_004_pos_head()
 {
 	atf_set "descr" "Resilver prevent scrub from starting until the resilver completes"
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 }
 zpool_scrub_004_pos_body()
 {
@@ -126,7 +124,7 @@ atf_test_case zpool_scrub_005_pos cleanup
 zpool_scrub_005_pos_head()
 {
 	atf_set "descr" "When scrubbing, detach device should not break system."
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 }
 zpool_scrub_005_pos_body()
 {

@@ -58,7 +58,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _FUSE_INTERNAL_H_
@@ -198,7 +197,6 @@ fuse_validity_2_timespec(const struct fuse_entry_out *feo,
 	}
 }
 
-
 /* VFS ops */
 int
 fuse_internal_get_cached_vnode(struct mount*, ino_t, int, struct vnode**);
@@ -250,12 +248,12 @@ int fuse_internal_mknod(struct vnode *dvp, struct vnode **vpp,
 struct pseudo_dirent {
 	uint32_t d_namlen;
 };
-int fuse_internal_readdir(struct vnode *vp, struct uio *uio, off_t startoff,
+int fuse_internal_readdir(struct vnode *vp, struct uio *uio,
     struct fuse_filehandle *fufh, struct fuse_iov *cookediov, int *ncookies,
     u_long *cookies);
-int fuse_internal_readdir_processdata(struct uio *uio, off_t startoff,
-    int *fnd_start, size_t reqsize, void *buf, size_t bufsize,
-    struct fuse_iov *cookediov, int *ncookies, u_long **cookiesp);
+int fuse_internal_readdir_processdata(struct uio *uio, size_t reqsize,
+    void *buf, size_t bufsize, struct fuse_iov *cookediov, int *ncookies,
+    u_long **cookiesp);
 
 /* remove */
 
@@ -274,6 +272,10 @@ void fuse_internal_vnode_disappear(struct vnode *vp);
 /* setattr */
 int fuse_internal_setattr(struct vnode *vp, struct vattr *va,
 	struct thread *td, struct ucred *cred);
+
+/* write */
+void fuse_internal_clear_suid_on_write(struct vnode *vp, struct ucred *cred,
+    struct thread *td);
 
 /* strategy */
 

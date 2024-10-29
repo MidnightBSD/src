@@ -1,9 +1,8 @@
 #! /usr/bin/awk -f
 #	$NetBSD: devlist2h.awk,v 1.3 1998/09/05 14:42:06 christos Exp $
-# $FreeBSD$
 
 #-
-# SPDX-License-Identifier: BSD-2-Clause-NetBSD AND BSD-4-Clause
+# SPDX-License-Identifier: BSD-2-Clause AND BSD-4-Clause
 #
 # Copyright (c) 1998 The NetBSD Foundation, Inc.
 # All rights reserved.
@@ -92,16 +91,9 @@ BEGIN {
 	hfile="pccarddevs.h"
 }
 NR == 1 {
-	VERSION = $0
-	gsub("\\$", "", VERSION)
-
-	printf("/*\t\$FreeBSD\$\t*/\n\n") > hfile
 	printf("/*\n") > hfile
 	printf(" * THIS FILE AUTOMATICALLY GENERATED.  DO NOT EDIT.\n") \
 	    > hfile
-	printf(" *\n") > hfile
-	printf(" * generated from:\n") > hfile
-	printf(" *\t%s\n", VERSION) > hfile
 	printf(" */\n") > hfile
 
 	next

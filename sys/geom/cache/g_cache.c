@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Ruslan Ermilov <ru@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -42,6 +41,7 @@
 #include <sys/time.h>
 #include <vm/uma.h>
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include <geom/cache/g_cache.h>
 
 FEATURE(geom_cache, "GEOM cache module");
@@ -49,7 +49,7 @@ FEATURE(geom_cache, "GEOM cache module");
 static MALLOC_DEFINE(M_GCACHE, "gcache_data", "GEOM_CACHE Data");
 
 SYSCTL_DECL(_kern_geom);
-static SYSCTL_NODE(_kern_geom, OID_AUTO, cache, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_kern_geom, OID_AUTO, cache, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "GEOM_CACHE stuff");
 static u_int g_cache_debug = 0;
 SYSCTL_UINT(_kern_geom_cache, OID_AUTO, debug, CTLFLAG_RW, &g_cache_debug, 0,
@@ -82,11 +82,14 @@ sysctl_handle_pct(SYSCTL_HANDLER_ARGS)
 	*(u_int *)arg1 = val;
 	return (0);
 }
-SYSCTL_PROC(_kern_geom_cache, OID_AUTO, used_lo, CTLTYPE_UINT|CTLFLAG_RW,
-	&g_cache_used_lo, 0, sysctl_handle_pct, "IU", "");
-SYSCTL_PROC(_kern_geom_cache, OID_AUTO, used_hi, CTLTYPE_UINT|CTLFLAG_RW,
-	&g_cache_used_hi, 0, sysctl_handle_pct, "IU", "");
-
+SYSCTL_PROC(_kern_geom_cache, OID_AUTO, used_lo,
+    CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_MPSAFE, &g_cache_used_lo, 0,
+    sysctl_handle_pct, "IU",
+    "");
+SYSCTL_PROC(_kern_geom_cache, OID_AUTO, used_hi,
+    CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_MPSAFE, &g_cache_used_hi, 0,
+    sysctl_handle_pct, "IU",
+    "");
 
 static int g_cache_destroy(struct g_cache_softc *sc, boolean_t force);
 static g_ctl_destroy_geom_t g_cache_destroy_geom;
@@ -105,7 +108,6 @@ struct g_class g_cache_class = {
 
 #define	OFF2BNO(off, sc)	((off) >> (sc)->sc_bshift)
 #define	BNO2OFF(bno, sc)	((bno) << (sc)->sc_bshift)
-
 
 static struct g_cache_desc *
 g_cache_alloc(struct g_cache_softc *sc)
@@ -490,7 +492,7 @@ g_cache_create(struct g_class *mp, struct g_provider *pp,
 
 	/* Block size restrictions. */
 	bshift = ffs(md->md_bsize) - 1;
-	if (md->md_bsize == 0 || md->md_bsize > MAXPHYS ||
+	if (md->md_bsize == 0 || md->md_bsize > maxphys ||
 	    md->md_bsize != 1 << bshift ||
 	    (md->md_bsize % pp->sectorsize) != 0) {
 		G_CACHE_DEBUG(0, "Invalid blocksize for provider %s.", pp->name);
@@ -669,9 +671,12 @@ g_cache_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	gp->orphan = g_cache_orphan;
 	gp->access = g_cache_access;
 	cp = g_new_consumer(gp);
-	g_attach(cp, pp);
-	error = g_cache_read_metadata(cp, &md);
-	g_detach(cp);
+	cp->flags |= G_CF_DIRECT_SEND | G_CF_DIRECT_RECEIVE;
+	error = g_attach(cp, pp);
+	if (error == 0) {
+		error = g_cache_read_metadata(cp, &md);
+		g_detach(cp);
+	}
 	g_destroy_consumer(cp);
 	g_destroy_geom(gp);
 	if (error != 0)
@@ -751,19 +756,9 @@ g_cache_ctl_create(struct gctl_req *req, struct g_class *mp)
 	/* This field is not important here. */
 	md.md_provsize = 0;
 
-	name = gctl_get_asciiparam(req, "arg1");
-	if (name == NULL) {
-		gctl_error(req, "No 'arg1' argument");
+	pp = gctl_get_provider(req, "arg1");
+	if (pp == NULL)
 		return;
-	}
-	if (strncmp(name, "/dev/", strlen("/dev/")) == 0)
-		name += strlen("/dev/");
-	pp = g_provider_by_name(name);
-	if (pp == NULL) {
-		G_CACHE_DEBUG(1, "Provider %s is invalid.", name);
-		gctl_error(req, "Provider %s is invalid.", name);
-		return;
-	}
 	gp = g_cache_create(mp, pp, &md, G_CACHE_TYPE_MANUAL);
 	if (gp == NULL) {
 		gctl_error(req, "Can't create %s.", md.md_name);

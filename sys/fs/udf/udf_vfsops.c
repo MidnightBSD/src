@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001, 2002 Scott Long <scottl@freebsd.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /* udf_vfsops.c */
@@ -232,7 +231,7 @@ udf_mount(struct mount *mp)
 	NDFREE(ndp, NDF_ONLY_PNBUF);
 	devvp = ndp->ni_vp;
 
-	if (vn_isdisk(devvp, &error) == 0) {
+	if (!vn_isdisk_error(devvp, &error)) {
 		vput(devvp);
 		return (error);
 	}
@@ -329,7 +328,7 @@ udf_mountfs(struct vnode *devvp, struct mount *mp)
 	g_topology_lock();
 	error = g_vfs_open(devvp, &cp, "udf", 0);
 	g_topology_unlock();
-	VOP_UNLOCK(devvp, 0);
+	VOP_UNLOCK(devvp);
 	if (error)
 		goto bail;
 
@@ -337,8 +336,8 @@ udf_mountfs(struct vnode *devvp, struct mount *mp)
 
 	if (devvp->v_rdev->si_iosize_max != 0)
 		mp->mnt_iosize_max = devvp->v_rdev->si_iosize_max;
-	if (mp->mnt_iosize_max > MAXPHYS)
-		mp->mnt_iosize_max = MAXPHYS;
+	if (mp->mnt_iosize_max > maxphys)
+		mp->mnt_iosize_max = maxphys;
 
 	/* XXX: should be M_WAITOK */
 	udfmp = malloc(sizeof(struct udf_mnt), M_UDFMOUNT,
@@ -412,6 +411,11 @@ udf_mountfs(struct vnode *devvp, struct mount *mp)
 		lvd = (struct logvol_desc *)bp->b_data;
 		if (!udf_checktag(&lvd->tag, TAGID_LOGVOL)) {
 			udfmp->bsize = le32toh(lvd->lb_size);
+			if (udfmp->bsize < 0 || udfmp->bsize > maxbcachebuf) {
+				printf("lvd block size %d\n", udfmp->bsize);
+				error = EINVAL;
+				goto bail;
+			}
 			udfmp->bmask = udfmp->bsize - 1;
 			udfmp->bshift = ffs(udfmp->bsize) - 1;
 			fsd_part = le16toh(lvd->_lvd_use.fsd_loc.loc.part_num);
@@ -444,7 +448,6 @@ udf_mountfs(struct vnode *devvp, struct mount *mp)
 		error = EINVAL;
 		goto bail;
 	}
-
 
 	/*
 	 * Grab the Fileset Descriptor
@@ -547,10 +550,6 @@ udf_unmount(struct mount *mp, int mntflags)
 	free(udfmp, M_UDFMOUNT);
 
 	mp->mnt_data = NULL;
-	MNT_ILOCK(mp);
-	mp->mnt_flag &= ~MNT_LOCAL;
-	MNT_IUNLOCK(mp);
-
 	return (0);
 }
 
@@ -684,7 +683,7 @@ udf_vget(struct mount *mp, ino_t ino, int flags, struct vnode **vpp)
 	}
 
 	bcopy(bp->b_data, unode->fentry, size);
-	
+
 	brelse(bp);
 	bp = NULL;
 

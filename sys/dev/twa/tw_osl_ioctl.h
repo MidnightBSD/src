@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap.
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -35,23 +34,16 @@
  * Modifications by: Adam Radford
  */
 
-
-
 #ifndef TW_OSL_IOCTL_H
 
 #define TW_OSL_IOCTL_H
-
 
 /*
  * Macros and structures for OS Layer/Common Layer handled ioctls.
  */
 
-
-
 #include <dev/twa/tw_cl_fwif.h>
 #include <dev/twa/tw_cl_ioctl.h>
-
-
 
 #pragma pack(1)
 /*
@@ -76,7 +68,6 @@ typedef struct tw_osli_ioctl_no_data_buf {
 	_IO('T', 200)
 #define TW_OSL_IOCTL_FIRMWARE_PASS_THROUGH		\
 	_IOWR('T', 202, TW_OSLI_IOCTL_NO_DATA_BUF)
-
 
 #include <sys/ioccom.h>
 
@@ -111,7 +102,5 @@ typedef struct tw_osli_ioctl_with_payload {
 	_IOWR('T', 208, TW_OSLI_IOCTL_WITH_PAYLOAD)
 #define TW_CL_IOCTL_GET_COMPATIBILITY_INFO		\
 	_IOWR('T', 209, TW_OSLI_IOCTL_WITH_PAYLOAD)
-
-
 
 #endif /* TW_OSL_IOCTL_H */

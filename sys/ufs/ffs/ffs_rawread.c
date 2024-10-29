@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000-2003 Tor Egge
  * All rights reserved.
@@ -26,24 +26,21 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
-#include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/bio.h>
+#include <sys/buf.h>
+#include <sys/conf.h>
 #include <sys/fcntl.h>
-#include <sys/file.h>
-#include <sys/stat.h>
-#include <sys/proc.h>
+#include <sys/kernel.h>
 #include <sys/limits.h>
 #include <sys/mount.h>
 #include <sys/namei.h>
-#include <sys/vnode.h>
-#include <sys/conf.h>
-#include <sys/filio.h>
-#include <sys/ttycom.h>
-#include <sys/bio.h>
-#include <sys/buf.h>
+#include <sys/proc.h>
 #include <sys/rwlock.h>
+#include <sys/stat.h>
+#include <sys/sysctl.h>
+#include <sys/vnode.h>
+
 #include <ufs/ufs/extattr.h>
 #include <ufs/ufs/quota.h>
 #include <ufs/ufs/inode.h>
@@ -55,8 +52,7 @@
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_object.h>
-#include <sys/kernel.h>
-#include <sys/sysctl.h>
+#include <vm/vnode_pager.h>
 
 static int ffs_rawread_readahead(struct vnode *vp,
 				 caddr_t udata,
@@ -73,9 +69,7 @@ int ffs_rawread(struct vnode *vp, struct uio *uio, int *workdone);
 
 SYSCTL_DECL(_vfs_ffs);
 
-static int ffsrawbufcnt = 4;
-SYSCTL_INT(_vfs_ffs, OID_AUTO, ffsrawbufcnt, CTLFLAG_RD, &ffsrawbufcnt, 0,
-	   "Buffers available for raw reads");
+static uma_zone_t ffsraw_pbuf_zone;
 
 static int allowrawread = 1;
 SYSCTL_INT(_vfs_ffs, OID_AUTO, allowrawread, CTLFLAG_RW, &allowrawread, 0,
@@ -89,7 +83,8 @@ static void
 ffs_rawread_setup(void *arg __unused)
 {
 
-	ffsrawbufcnt = (nswbuf > 100 ) ? (nswbuf - (nswbuf >> 4)) : nswbuf - 8;
+	ffsraw_pbuf_zone = pbuf_zsecond_create("ffsrawpbuf",
+	    (nswbuf > 100 ) ?  (nswbuf - (nswbuf >> 4)) : nswbuf - 8);
 }
 SYSINIT(ffs_raw, SI_SUB_VM_CONF, SI_ORDER_ANY, ffs_rawread_setup, NULL);
 
@@ -109,7 +104,7 @@ ffs_rawread_sync(struct vnode *vp)
 	if (bo->bo_numoutput > 0 ||
 	    bo->bo_dirty.bv_cnt > 0 ||
 	    ((obj = vp->v_object) != NULL &&
-	     (obj->flags & OBJ_MIGHTBEDIRTY) != 0)) {
+	     vm_object_mightbedirty(obj))) {
 		VI_UNLOCK(vp);
 		BO_UNLOCK(bo);
 		
@@ -118,7 +113,7 @@ ffs_rawread_sync(struct vnode *vp)
 				upgraded = 1;
 			else
 				upgraded = 0;
-			VOP_UNLOCK(vp, 0);
+			VOP_UNLOCK(vp);
 			(void) vn_start_write(vp, &mp, V_WAIT);
 			VOP_LOCK(vp, LK_EXCLUSIVE);
 		} else if (VOP_ISLOCKED(vp) != LK_EXCLUSIVE) {
@@ -131,22 +126,17 @@ ffs_rawread_sync(struct vnode *vp)
 		
 		VI_LOCK(vp);
 		/* Check if vnode was reclaimed while unlocked. */
-		if ((vp->v_iflag & VI_DOOMED) != 0) {
+		if (VN_IS_DOOMED(vp)) {
 			VI_UNLOCK(vp);
 			if (upgraded != 0)
 				VOP_LOCK(vp, LK_DOWNGRADE);
 			vn_finished_write(mp);
 			return (EIO);
 		}
-		/* Attempt to msync mmap() regions to clean dirty mmap */ 
-		if ((obj = vp->v_object) != NULL &&
-		    (obj->flags & OBJ_MIGHTBEDIRTY) != 0) {
-			VI_UNLOCK(vp);
-			VM_OBJECT_WLOCK(obj);
-			vm_object_page_clean(obj, 0, 0, OBJPC_SYNC);
-			VM_OBJECT_WUNLOCK(obj);
-		} else
-			VI_UNLOCK(vp);
+		VI_UNLOCK(vp);
+
+		/* Attempt to msync mmap() regions to clean dirty mmap */
+		vnode_pager_clean_sync(vp);
 
 		/* Wait for pending writes to complete */
 		BO_LOCK(bo);
@@ -183,7 +173,6 @@ ffs_rawread_sync(struct vnode *vp)
 	return 0;
 }
 
-
 static int
 ffs_rawread_readahead(struct vnode *vp,
 		      caddr_t udata,
@@ -193,7 +182,7 @@ ffs_rawread_readahead(struct vnode *vp,
 		      struct buf *bp)
 {
 	int error;
-	u_int iolen;
+	uint64_t iolen;
 	off_t blockno;
 	int blockoff;
 	int bsize;
@@ -201,9 +190,9 @@ ffs_rawread_readahead(struct vnode *vp,
 	int bforwards;
 	struct inode *ip;
 	ufs2_daddr_t blkno;
-	
+
 	bsize = vp->v_mount->mnt_stat.f_iosize;
-	
+
 	ip = VTOI(vp);
 	dp = ITODEVVP(ip);
 
@@ -222,14 +211,13 @@ ffs_rawread_readahead(struct vnode *vp,
 	if ((daddr_t) blockno != blockno) {
 		return EINVAL; /* blockno overflow */
 	}
-	
+
 	bp->b_lblkno = bp->b_blkno = blockno;
-	
+
 	error = ufs_bmaparray(vp, bp->b_lblkno, &blkno, NULL, &bforwards, NULL);
 	if (error != 0)
 		return error;
 	if (blkno == -1) {
-
 		/* Fill holes with NULs to preserve semantics */
 		
 		if (bp->b_bcount + blockoff * DEV_BSIZE > bsize)
@@ -249,17 +237,16 @@ ffs_rawread_readahead(struct vnode *vp,
 	}
 	bp->b_blkno = blkno + blockoff;
 	bp->b_offset = bp->b_iooffset = (blkno + blockoff) * DEV_BSIZE;
-	
+
 	if (bp->b_bcount + blockoff * DEV_BSIZE > bsize * (1 + bforwards))
 		bp->b_bcount = bsize * (1 + bforwards) - blockoff * DEV_BSIZE;
-	
+
 	if (vmapbuf(bp, udata, bp->b_bcount, 1) < 0)
 		return EFAULT;
-	
+
 	BO_STRATEGY(&dp->v_bufobj, bp);
 	return 0;
 }
-
 
 static int
 ffs_rawread_main(struct vnode *vp,
@@ -267,12 +254,12 @@ ffs_rawread_main(struct vnode *vp,
 {
 	int error, nerror;
 	struct buf *bp, *nbp, *tbp;
-	u_int iolen;
+	uint64_t iolen;
 	caddr_t udata;
 	long resid;
 	off_t offset;
 	struct thread *td;
-	
+
 	td = uio->uio_td ? uio->uio_td : curthread;
 	udata = uio->uio_iov->iov_base;
 	resid = uio->uio_resid;
@@ -282,18 +269,17 @@ ffs_rawread_main(struct vnode *vp,
 	 * keep the process from being swapped
 	 */
 	PHOLD(td->td_proc);
-	
+
 	error = 0;
 	nerror = 0;
-	
+
 	bp = NULL;
 	nbp = NULL;
-	
+
 	while (resid > 0) {
 		
 		if (bp == NULL) { /* Setup first read */
-			/* XXX: Leave some bufs for swap */
-			bp = getpbuf(&ffsrawbufcnt);
+			bp = uma_zalloc(ffsraw_pbuf_zone, M_WAITOK);
 			pbgetvp(vp, bp);
 			error = ffs_rawread_readahead(vp, udata, offset,
 						     resid, td, bp);
@@ -301,9 +287,9 @@ ffs_rawread_main(struct vnode *vp,
 				break;
 			
 			if (resid > bp->b_bufsize) { /* Setup fist readahead */
-				/* XXX: Leave bufs for swap */
 				if (rawreadahead != 0) 
-					nbp = trypbuf(&ffsrawbufcnt);
+					nbp = uma_zalloc(ffsraw_pbuf_zone,
+					    M_NOWAIT);
 				else
 					nbp = NULL;
 				if (nbp != NULL) {
@@ -320,7 +306,8 @@ ffs_rawread_main(struct vnode *vp,
 								       nbp);
 					if (nerror) {
 						pbrelvp(nbp);
-						relpbuf(nbp, &ffsrawbufcnt);
+						uma_zfree(ffsraw_pbuf_zone,
+						    nbp);
 						nbp = NULL;
 					}
 				}
@@ -361,7 +348,7 @@ ffs_rawread_main(struct vnode *vp,
 			
 			if (resid <= bp->b_bufsize) { /* No more readaheads */
 				pbrelvp(nbp);
-				relpbuf(nbp, &ffsrawbufcnt);
+				uma_zfree(ffsraw_pbuf_zone, nbp);
 				nbp = NULL;
 			} else { /* Setup next readahead */
 				nerror = ffs_rawread_readahead(vp,
@@ -375,7 +362,7 @@ ffs_rawread_main(struct vnode *vp,
 							       nbp);
 				if (nerror != 0) {
 					pbrelvp(nbp);
-					relpbuf(nbp, &ffsrawbufcnt);
+					uma_zfree(ffsraw_pbuf_zone, nbp);
 					nbp = NULL;
 				}
 			}
@@ -388,18 +375,18 @@ ffs_rawread_main(struct vnode *vp,
 				break;
 		}
 	}
-	
+
 	if (bp != NULL) {
 		pbrelvp(bp);
-		relpbuf(bp, &ffsrawbufcnt);
+		uma_zfree(ffsraw_pbuf_zone, bp);
 	}
 	if (nbp != NULL) {			/* Run down readahead buffer */
 		bwait(nbp, PRIBIO, "rawrd");
 		vunmapbuf(nbp);
 		pbrelvp(nbp);
-		relpbuf(nbp, &ffsrawbufcnt);
+		uma_zfree(ffsraw_pbuf_zone, nbp);
 	}
-	
+
 	if (error == 0)
 		error = nerror;
 	PRELE(td->td_proc);
@@ -408,7 +395,6 @@ ffs_rawread_main(struct vnode *vp,
 	uio->uio_offset = offset;
 	return error;
 }
-
 
 int
 ffs_rawread(struct vnode *vp,

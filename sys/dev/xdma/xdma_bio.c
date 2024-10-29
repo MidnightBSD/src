@@ -29,13 +29,14 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 #include <sys/param.h>
 #include <sys/conf.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
+#include <sys/mutex.h>
 
 #include <machine/bus.h>
 
@@ -74,9 +75,6 @@ xdma_enqueue_bio(xdma_channel_t *xchan, struct bio **bp,
     enum xdma_direction dir)
 {
 	struct xdma_request *xr;
-	xdma_controller_t *xdma;
-
-	xdma = xchan->xdma;
 
 	xr = xchan_bank_get(xchan);
 	if (xr == NULL)

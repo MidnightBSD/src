@@ -23,10 +23,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *
  */
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
@@ -143,7 +141,7 @@ static void nicvf_config_cpi(struct nicvf *);
 static int nicvf_rss_init(struct nicvf *);
 static int nicvf_init_resources(struct nicvf *);
 
-static int nicvf_setup_ifnet(struct nicvf *);
+static void nicvf_setup_ifnet(struct nicvf *);
 static int nicvf_setup_ifmedia(struct nicvf *);
 static void nicvf_hw_addr_random(uint8_t *);
 
@@ -251,11 +249,7 @@ nicvf_attach(device_t dev)
 		nicvf_rss_init(nic);
 	NICVF_CORE_UNLOCK(nic);
 
-	err = nicvf_setup_ifnet(nic);
-	if (err != 0) {
-		device_printf(dev, "Could not set-up ifnet\n");
-		goto err_release_intr;
-	}
+	nicvf_setup_ifnet(nic);
 
 	err = nicvf_setup_ifmedia(nic);
 	if (err != 0) {
@@ -333,17 +327,12 @@ nicvf_hw_addr_random(uint8_t *hwaddr)
 	memcpy(hwaddr, addr, ETHER_ADDR_LEN);
 }
 
-static int
+static void
 nicvf_setup_ifnet(struct nicvf *nic)
 {
 	struct ifnet *ifp;
 
 	ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(nic->dev, "Could not allocate ifnet structure\n");
-		return (ENOMEM);
-	}
-
 	nic->ifp = ifp;
 
 	if_setsoftc(ifp, nic);
@@ -383,8 +372,6 @@ nicvf_setup_ifnet(struct nicvf *nic)
 	if (nic->hw_tso)
 		if_sethwassistbits(ifp, (CSUM_TSO), 0);
 	if_setcapenable(ifp, if_getcapabilities(ifp));
-
-	return (0);
 }
 
 static int
@@ -423,6 +410,7 @@ nicvf_if_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	struct nicvf *nic;
 	struct rcv_queue *rq;
 	struct ifreq *ifr;
+	uint32_t flags;
 	int mask, err;
 	int rq_idx;
 #if defined(INET) || defined(INET6)
@@ -477,22 +465,19 @@ nicvf_if_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		break;
 	case SIOCSIFFLAGS:
 		NICVF_CORE_LOCK(nic);
-		if (if_getflags(ifp) & IFF_UP) {
+		flags = if_getflags(ifp);
+		if (flags & IFF_UP) {
 			if (if_getdrvflags(ifp) & IFF_DRV_RUNNING) {
-				if ((nic->if_flags & if_getflags(ifp)) &
-				    IFF_PROMISC) {
+				if ((flags ^ nic->if_flags) & IFF_PROMISC) {
 					/* Change promiscous mode */
-#if 0
-					/* ARM64TODO */
+#if 0 /* XXX */
 					nicvf_set_promiscous(nic);
 #endif
 				}
 
-				if ((nic->if_flags ^ if_getflags(ifp)) &
-				    IFF_ALLMULTI) {
+				if ((flags ^ nic->if_flags) & IFF_ALLMULTI) {
 					/* Change multicasting settings */
-#if 0
-					/* ARM64TODO */
+#if 0 /* XXX */
 					nicvf_set_multicast(nic);
 #endif
 				}
@@ -502,7 +487,7 @@ nicvf_if_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		} else if (if_getdrvflags(ifp) & IFF_DRV_RUNNING)
 			nicvf_stop_locked(nic);
 
-		nic->if_flags = if_getflags(ifp);
+		nic->if_flags = flags;
 		NICVF_CORE_UNLOCK(nic);
 		break;
 
@@ -653,7 +638,6 @@ nicvf_if_transmit(struct ifnet *ifp, struct mbuf *mbuf)
 	struct mbuf *mtmp;
 	int qidx;
 	int err = 0;
-
 
 	if (__predict_false(qs == NULL)) {
 		panic("%s: missing queue set for %s", __func__,

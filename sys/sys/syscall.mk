@@ -275,7 +275,7 @@ MIASM =  \
 	getcontext.o \
 	setcontext.o \
 	swapcontext.o \
-	swapoff.o \
+	freebsd13_swapoff.o \
 	__acl_get_link.o \
 	__acl_set_link.o \
 	__acl_delete_link.o \
@@ -285,6 +285,8 @@ MIASM =  \
 	thr_exit.o \
 	thr_self.o \
 	thr_kill.o \
+	freebsd10__umtx_lock.o \
+	freebsd10__umtx_unlock.o \
 	jail_attach.o \
 	extattr_list_fd.o \
 	extattr_list_file.o \
@@ -326,7 +328,7 @@ MIASM =  \
 	truncate.o \
 	ftruncate.o \
 	thr_kill2.o \
-	shm_open.o \
+	freebsd12_shm_open.o \
 	shm_unlink.o \
 	cpuset.o \
 	cpuset_setid.o \
@@ -353,7 +355,7 @@ MIASM =  \
 	jail_get.o \
 	jail_set.o \
 	jail_remove.o \
-	closefrom.o \
+	freebsd12_closefrom.o \
 	__semctl.o \
 	msgctl.o \
 	shmctl.o \
@@ -408,5 +410,20 @@ MIASM =  \
 	fhlink.o \
 	fhlinkat.o \
 	fhreadlink.o \
+	funlinkat.o \
+	copy_file_range.o \
 	__sysctlbyname.o \
-	close_range.o
+	shm_open2.o \
+	shm_rename.o \
+	sigfastblock.o \
+	__realpathat.o \
+	close_range.o \
+	rpctls_syscall.o \
+	__specialfd.o \
+	aio_writev.o \
+	aio_readv.o \
+	sched_getcpu.o \
+	swapoff.o \
+	kqueuex.o \
+	membarrier.o \
+	kcmp.o

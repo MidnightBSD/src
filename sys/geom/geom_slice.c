@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -87,10 +86,8 @@ g_slice_free(struct g_geom *gp)
 	if (gsp == NULL)
 		return;
 	g_free(gsp->slices);
-	if (gsp->hotspot != NULL)
-		g_free(gsp->hotspot);
-	if (gsp->softc != NULL)
-		g_free(gsp->softc);
+	g_free(gsp->hotspot);
+	g_free(gsp->softc);
 	g_free(gsp);
 }
 
@@ -311,6 +308,7 @@ g_slice_start(struct bio *bp)
 			/* now, pass it on downwards... */
 		}
 		/* FALLTHROUGH */
+	case BIO_SPEEDUP:
 	case BIO_FLUSH:
 		bp2 = g_clone_bio(bp);
 		if (bp2 == NULL) {

@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/namei.h>
@@ -100,16 +99,20 @@ static int
 cd9660_cmount(struct mntarg *ma, void *data, uint64_t flags)
 {
 	struct iso_args args;
-	struct export_args exp;
 	int error;
 
 	error = copyin(data, &args, sizeof args);
 	if (error)
 		return (error);
-	vfs_oexport_conv(&args.export, &exp);
 
 	ma = mount_argsu(ma, "from", args.fspec, MAXPATHLEN);
-	ma = mount_arg(ma, "export", &exp, sizeof(exp));
+	ma = mount_arg(ma, "export", &args.export, sizeof(args.export));
+	if (args.flags & ISOFSMNT_UID)
+		ma = mount_argf(ma, "uid", "%d", args.uid);
+	if (args.flags & ISOFSMNT_GID)
+		ma = mount_argf(ma, "gid", "%d", args.gid);
+	ma = mount_argf(ma, "mask", "%d", args.fmask);
+	ma = mount_argf(ma, "dirmask", "%d", args.dmask);
 	ma = mount_argsu(ma, "cs_disk", args.cs_disk, 64);
 	ma = mount_argsu(ma, "cs_local", args.cs_local, 64);
 	ma = mount_argf(ma, "ssector", "%u", args.ssector);
@@ -166,7 +169,7 @@ cd9660_mount(struct mount *mp)
 	NDFREE(&ndp, NDF_ONLY_PNBUF);
 	devvp = ndp.ni_vp;
 
-	if (!vn_isdisk(devvp, &error)) {
+	if (!vn_isdisk_error(devvp, &error)) {
 		vput(devvp);
 		return (error);
 	}
@@ -226,6 +229,7 @@ iso_mountfs(devvp, mp)
 	struct g_consumer *cp;
 	struct bufobj *bo;
 	char *cs_local, *cs_disk;
+	int v;
 
 	dev = devvp->v_rdev;
 	dev_ref(dev);
@@ -234,13 +238,13 @@ iso_mountfs(devvp, mp)
 	if (error == 0)
 		g_getattr("MNT::verified", cp, &isverified);
 	g_topology_unlock();
-	VOP_UNLOCK(devvp, 0);
+	VOP_UNLOCK(devvp);
 	if (error)
 		goto out;
 	if (devvp->v_rdev->si_iosize_max != 0)
 		mp->mnt_iosize_max = devvp->v_rdev->si_iosize_max;
-	if (mp->mnt_iosize_max > MAXPHYS)
-		mp->mnt_iosize_max = MAXPHYS;
+	if (mp->mnt_iosize_max > maxphys)
+		mp->mnt_iosize_max = maxphys;
 
 	bo = &devvp->v_bufobj;
 
@@ -386,7 +390,6 @@ iso_mountfs(devvp, mp)
 	mp->mnt_data = isomp;
 	mp->mnt_stat.f_fsid.val[0] = dev2udev(dev);
 	mp->mnt_stat.f_fsid.val[1] = mp->mnt_vfc->vfc_typenum;
-	mp->mnt_maxsymlinklen = 0;
 	MNT_ILOCK(mp);
 	if (isverified)
 		mp->mnt_flag |= MNT_VERIFIED;
@@ -396,12 +399,28 @@ iso_mountfs(devvp, mp)
 	isomp->im_mountp = mp;
 	isomp->im_dev = dev;
 	isomp->im_devvp = devvp;
+	isomp->im_fmask = isomp->im_dmask = ACCESSPERMS;
 
 	vfs_flagopt(mp->mnt_optnew, "norrip", &isomp->im_flags, ISOFSMNT_NORRIP);
 	vfs_flagopt(mp->mnt_optnew, "gens", &isomp->im_flags, ISOFSMNT_GENS);
 	vfs_flagopt(mp->mnt_optnew, "extatt", &isomp->im_flags, ISOFSMNT_EXTATT);
 	vfs_flagopt(mp->mnt_optnew, "nojoliet", &isomp->im_flags, ISOFSMNT_NOJOLIET);
 	vfs_flagopt(mp->mnt_optnew, "kiconv", &isomp->im_flags, ISOFSMNT_KICONV);
+
+	if (vfs_scanopt(mp->mnt_optnew, "uid", "%d", &v) == 1) {
+		isomp->im_flags |= ISOFSMNT_UID;
+		isomp->im_uid = v;
+	}
+	if (vfs_scanopt(mp->mnt_optnew, "gid", "%d", &v) == 1) {
+		isomp->im_flags |= ISOFSMNT_GID;
+		isomp->im_gid = v;
+	}
+	if (vfs_scanopt(mp->mnt_optnew, "mask", "%d", &v) == 1) {
+		isomp->im_fmask &= v;
+	}
+	if (vfs_scanopt(mp->mnt_optnew, "dirmask", "%d", &v) == 1) {
+		isomp->im_dmask &= v;
+	}
 
 	/* Check the Rock Ridge Extension support */
 	if (!(isomp->im_flags & ISOFSMNT_NORRIP)) {
@@ -536,9 +555,6 @@ cd9660_unmount(mp, mntflags)
 	dev_rel(isomp->im_dev);
 	free(isomp, M_ISOFSMNT);
 	mp->mnt_data = NULL;
-	MNT_ILOCK(mp);
-	mp->mnt_flag &= ~MNT_LOCAL;
-	MNT_IUNLOCK(mp);
 	return (error);
 }
 
@@ -759,7 +775,6 @@ cd9660_vget_internal(mp, ino, flags, vpp, relocated, isodir)
 			      imp->logical_block_size, NOCRED, &bp);
 		if (error) {
 			vput(vp);
-			brelse(bp);
 			printf("fhtovp: bread error %d\n",error);
 			return (error);
 		}

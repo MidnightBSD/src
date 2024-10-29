@@ -71,7 +71,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_kstack_pages.h"
 #include "opt_kstack_max_pages.h"
 #include "opt_vm.h"
@@ -84,12 +83,12 @@
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
-#include <sys/_kstack_cache.h>
 #include <sys/kthread.h>
 #include <sys/ktr.h>
 #include <sys/mount.h>
 #include <sys/racct.h>
 #include <sys/resourcevar.h>
+#include <sys/refcount.h>
 #include <sys/sched.h>
 #include <sys/sdt.h>
 #include <sys/signalvar.h>
@@ -103,6 +102,7 @@
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
+#include <vm/vm_kern.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
 #include <vm/vm_map.h>
@@ -151,6 +151,11 @@ SYSCTL_INT(_vm, OID_AUTO, swap_idle_threshold2, CTLFLAG_RW,
     &swap_idle_threshold2, 0,
     "Time before a process will be swapped out");
 
+static int vm_daemon_timeout = 0;
+SYSCTL_INT(_vm, OID_AUTO, vmdaemon_timeout, CTLFLAG_RW,
+    &vm_daemon_timeout, 0,
+    "Time between vmdaemon runs");
+
 static int vm_pageout_req_swapout;	/* XXX */
 static int vm_daemon_needed;
 static struct mtx vm_daemon_mtx;
@@ -164,13 +169,37 @@ static int last_swapin;
 static void swapclear(struct proc *);
 static int swapout(struct proc *);
 static void vm_swapout_map_deactivate_pages(vm_map_t, long);
-static void vm_swapout_object_deactivate_pages(pmap_t, vm_object_t, long);
+static void vm_swapout_object_deactivate(pmap_t, vm_object_t, long);
 static void swapout_procs(int action);
 static void vm_req_vmdaemon(int req);
 static void vm_thread_swapout(struct thread *td);
 
+static void
+vm_swapout_object_deactivate_page(pmap_t pmap, vm_page_t m, bool unmap)
+{
+
+	/*
+	 * Ignore unreclaimable wired pages.  Repeat the check after busying
+	 * since a busy holder may wire the page.
+	 */
+	if (vm_page_wired(m) || !vm_page_tryxbusy(m))
+		return;
+
+	if (vm_page_wired(m) || !pmap_page_exists_quick(pmap, m)) {
+		vm_page_xunbusy(m);
+		return;
+	}
+	if (!pmap_is_referenced(m)) {
+		if (!vm_page_active(m))
+			(void)vm_page_try_remove_all(m);
+		else if (unmap && vm_page_try_remove_all(m))
+			vm_page_deactivate(m);
+	}
+	vm_page_xunbusy(m);
+}
+
 /*
- *	vm_swapout_object_deactivate_pages
+ *	vm_swapout_object_deactivate
  *
  *	Deactivate enough pages to satisfy the inactive target
  *	requirements.
@@ -178,12 +207,12 @@ static void vm_thread_swapout(struct thread *td);
  *	The object and map must be locked.
  */
 static void
-vm_swapout_object_deactivate_pages(pmap_t pmap, vm_object_t first_object,
+vm_swapout_object_deactivate(pmap_t pmap, vm_object_t first_object,
     long desired)
 {
 	vm_object_t backing_object, object;
-	vm_page_t p;
-	int act_delta, remove_mode;
+	vm_page_t m;
+	bool unmap;
 
 	VM_OBJECT_ASSERT_LOCKED(first_object);
 	if ((first_object->flags & OBJ_FICTITIOUS) != 0)
@@ -193,59 +222,22 @@ vm_swapout_object_deactivate_pages(pmap_t pmap, vm_object_t first_object,
 			goto unlock_return;
 		VM_OBJECT_ASSERT_LOCKED(object);
 		if ((object->flags & OBJ_UNMANAGED) != 0 ||
-		    object->paging_in_progress != 0)
+		    blockcount_read(&object->paging_in_progress) > 0)
 			goto unlock_return;
 
-		remove_mode = 0;
+		unmap = true;
 		if (object->shadow_count > 1)
-			remove_mode = 1;
+			unmap = false;
+
 		/*
 		 * Scan the object's entire memory queue.
 		 */
-		TAILQ_FOREACH(p, &object->memq, listq) {
+		TAILQ_FOREACH(m, &object->memq, listq) {
 			if (pmap_resident_count(pmap) <= desired)
 				goto unlock_return;
 			if (should_yield())
 				goto unlock_return;
-			if (vm_page_busied(p))
-				continue;
-			VM_CNT_INC(v_pdpages);
-			vm_page_lock(p);
-			if (vm_page_held(p) ||
-			    !pmap_page_exists_quick(pmap, p)) {
-				vm_page_unlock(p);
-				continue;
-			}
-			act_delta = pmap_ts_referenced(p);
-			if ((p->aflags & PGA_REFERENCED) != 0) {
-				if (act_delta == 0)
-					act_delta = 1;
-				vm_page_aflag_clear(p, PGA_REFERENCED);
-			}
-			if (!vm_page_active(p) && act_delta != 0) {
-				vm_page_activate(p);
-				p->act_count += act_delta;
-			} else if (vm_page_active(p)) {
-				/*
-				 * The page daemon does not requeue pages
-				 * after modifying their activation count.
-				 */
-				if (act_delta == 0) {
-					p->act_count -= min(p->act_count,
-					    ACT_DECLINE);
-					if (!remove_mode && p->act_count == 0) {
-						pmap_remove_all(p);
-						vm_page_deactivate(p);
-					}
-				} else {
-					vm_page_activate(p);
-					if (p->act_count < ACT_MAX -
-					    ACT_ADVANCE)
-						p->act_count += ACT_ADVANCE;
-				}
-			} else if (vm_page_inactive(p))
-				pmap_remove_all(p);
-			vm_page_unlock(p);
+			vm_swapout_object_deactivate_page(pmap, m, unmap);
 		}
 		if ((backing_object = object->backing_object) == NULL)
 			goto unlock_return;
@@ -279,8 +271,7 @@ vm_swapout_map_deactivate_pages(vm_map_t map, long desired)
 	 * first, search out the biggest object, and try to free pages from
 	 * that.
 	 */
-	tmpe = map->header.next;
-	while (tmpe != &map->header) {
+	VM_MAP_ENTRY_FOREACH(tmpe, map) {
 		if ((tmpe->eflags & MAP_ENTRY_IS_SUB_MAP) == 0) {
 			obj = tmpe->object.vm_object;
 			if (obj != NULL && VM_OBJECT_TRYRLOCK(obj)) {
@@ -297,31 +288,28 @@ vm_swapout_map_deactivate_pages(vm_map_t map, long desired)
 		}
 		if (tmpe->wired_count > 0)
 			nothingwired = FALSE;
-		tmpe = tmpe->next;
 	}
 
 	if (bigobj != NULL) {
-		vm_swapout_object_deactivate_pages(map->pmap, bigobj, desired);
+		vm_swapout_object_deactivate(map->pmap, bigobj, desired);
 		VM_OBJECT_RUNLOCK(bigobj);
 	}
 	/*
 	 * Next, hunt around for other pages to deactivate.  We actually
 	 * do this search sort of wrong -- .text first is not the best idea.
 	 */
-	tmpe = map->header.next;
-	while (tmpe != &map->header) {
+	VM_MAP_ENTRY_FOREACH(tmpe, map) {
 		if (pmap_resident_count(vm_map_pmap(map)) <= desired)
 			break;
 		if ((tmpe->eflags & MAP_ENTRY_IS_SUB_MAP) == 0) {
 			obj = tmpe->object.vm_object;
 			if (obj != NULL) {
 				VM_OBJECT_RLOCK(obj);
-				vm_swapout_object_deactivate_pages(map->pmap,
-				    obj, desired);
+				vm_swapout_object_deactivate(map->pmap, obj,
+				    desired);
 				VM_OBJECT_RUNLOCK(obj);
 			}
 		}
-		tmpe = tmpe->next;
 	}
 
 	/*
@@ -389,17 +377,15 @@ vm_daemon(void)
 	int breakout, swapout_flags, tryagain, attempts;
 #ifdef RACCT
 	uint64_t rsize, ravailable;
+
+	if (racct_enable && vm_daemon_timeout == 0)
+		vm_daemon_timeout = hz;
 #endif
 
 	while (TRUE) {
 		mtx_lock(&vm_daemon_mtx);
 		msleep(&vm_daemon_needed, &vm_daemon_mtx, PPAUSE, "psleep",
-#ifdef RACCT
-		    racct_enable ? hz : 0
-#else
-		    0
-#endif
-		);
+		    vm_daemon_timeout);
 		swapout_flags = vm_pageout_req_swapout;
 		vm_pageout_req_swapout = 0;
 		mtx_unlock(&vm_daemon_mtx);
@@ -409,7 +395,7 @@ vm_daemon(void)
 			 * avoidance measure.
 			 */
 			if ((swapout_flags & VM_SWAP_NORMAL) != 0)
-				vm_page_drain_pqbatch();
+				vm_page_pqbatch_drain();
 			swapout_procs(swapout_flags);
 		}
 
@@ -542,25 +528,26 @@ again:
 static void
 vm_thread_swapout(struct thread *td)
 {
-	vm_object_t ksobj;
 	vm_page_t m;
+	vm_offset_t kaddr;
+	vm_pindex_t pindex;
 	int i, pages;
 
 	cpu_thread_swapout(td);
+	kaddr = td->td_kstack;
 	pages = td->td_kstack_pages;
-	ksobj = td->td_kstack_obj;
-	pmap_qremove(td->td_kstack, pages);
-	VM_OBJECT_WLOCK(ksobj);
+	pindex = atop(kaddr - VM_MIN_KERNEL_ADDRESS);
+	pmap_qremove(kaddr, pages);
+	VM_OBJECT_WLOCK(kstack_object);
 	for (i = 0; i < pages; i++) {
-		m = vm_page_lookup(ksobj, i);
+		m = vm_page_lookup(kstack_object, pindex + i);
 		if (m == NULL)
 			panic("vm_thread_swapout: kstack already missing?");
 		vm_page_dirty(m);
-		vm_page_lock(m);
+		vm_page_xunbusy_unchecked(m);
 		vm_page_unwire(m, PQ_LAUNDRY);
-		vm_page_unlock(m);
 	}
-	VM_OBJECT_WUNLOCK(ksobj);
+	VM_OBJECT_WUNLOCK(kstack_object);
 }
 
 /*
@@ -569,39 +556,36 @@ vm_thread_swapout(struct thread *td)
 static void
 vm_thread_swapin(struct thread *td, int oom_alloc)
 {
-	vm_object_t ksobj;
 	vm_page_t ma[KSTACK_MAX_PAGES];
+	vm_offset_t kaddr;
 	int a, count, i, j, pages, rv;
 
+	kaddr = td->td_kstack;
 	pages = td->td_kstack_pages;
-	ksobj = td->td_kstack_obj;
-	VM_OBJECT_WLOCK(ksobj);
-	(void)vm_page_grab_pages(ksobj, 0, oom_alloc | VM_ALLOC_WIRED, ma,
-	    pages);
+	vm_thread_stack_back(td->td_domain.dr_policy, kaddr, ma, pages,
+	    oom_alloc);
 	for (i = 0; i < pages;) {
 		vm_page_assert_xbusied(ma[i]);
-		if (ma[i]->valid == VM_PAGE_BITS_ALL) {
-			vm_page_xunbusy(ma[i]);
+		if (vm_page_all_valid(ma[i])) {
 			i++;
 			continue;
 		}
-		vm_object_pip_add(ksobj, 1);
+		vm_object_pip_add(kstack_object, 1);
 		for (j = i + 1; j < pages; j++)
-			if (ma[j]->valid == VM_PAGE_BITS_ALL)
+			if (vm_page_all_valid(ma[j]))
 				break;
-		rv = vm_pager_has_page(ksobj, ma[i]->pindex, NULL, &a);
+		VM_OBJECT_WLOCK(kstack_object);
+		rv = vm_pager_has_page(kstack_object, ma[i]->pindex, NULL, &a);
+		VM_OBJECT_WUNLOCK(kstack_object);
 		KASSERT(rv == 1, ("%s: missing page %p", __func__, ma[i]));
 		count = min(a + 1, j - i);
-		rv = vm_pager_get_pages(ksobj, ma + i, count, NULL, NULL);
+		rv = vm_pager_get_pages(kstack_object, ma + i, count, NULL, NULL);
 		KASSERT(rv == VM_PAGER_OK, ("%s: cannot get kstack for proc %d",
 		    __func__, td->td_proc->p_pid));
-		vm_object_pip_wakeup(ksobj);
-		for (j = i; j < i + count; j++)
-			vm_page_xunbusy(ma[j]);
+		vm_object_pip_wakeup(kstack_object);
 		i += count;
 	}
-	VM_OBJECT_WUNLOCK(ksobj);
-	pmap_qenter(td->td_kstack, ma, pages);
+	pmap_qenter(kaddr, ma, pages);
 	cpu_thread_swapin(td);
 }
 
@@ -743,8 +727,7 @@ swapper_selector(bool wkilled_only)
 /*
  * Limit swapper to swap in one non-WKILLED process in MAXSLP/2
  * interval, assuming that there is:
- * - there exists at least one domain that is not suffering from a shortage of
- *   free memory;
+ * - at least one domain that is not suffering from a shortage of free memory;
  * - no parallel swap-ins;
  * - no other swap-ins in the current SWAPIN_INTERVAL.
  */
@@ -893,8 +876,8 @@ swapclear(struct proc *p)
 		td->td_flags |= TDF_INMEM;
 		td->td_flags &= ~TDF_SWAPINREQ;
 		TD_CLR_SWAPPED(td);
-		if (TD_CAN_RUN(td))
-			if (setrunnable(td)) {
+		if (TD_CAN_RUN(td)) {
+			if (setrunnable(td, 0)) {
 #ifdef INVARIANTS
 				/*
 				 * XXX: We just cleared TDI_SWAPPED
@@ -904,7 +887,8 @@ swapclear(struct proc *p)
 				panic("not waking up swapper");
 #endif
 			}
-		thread_unlock(td);
+		} else
+			thread_unlock(td);
 	}
 	p->p_flag &= ~(P_SWAPPINGIN | P_SWAPPINGOUT);
 	p->p_flag |= P_INMEM;

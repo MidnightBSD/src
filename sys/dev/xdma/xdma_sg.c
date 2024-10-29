@@ -30,19 +30,21 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 #include <sys/param.h>
 #include <sys/conf.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
+#include <sys/mutex.h>
 #include <sys/rwlock.h>
 
 #include <machine/bus.h>
 
 #include <vm/vm.h>
+#include <vm/pmap.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_page.h>
 
@@ -285,7 +287,7 @@ xdma_prep_sg(xdma_channel_t *xchan, uint32_t xr_num,
 	}
 
 	/* Allocate buffers if required. */
-	if ((xchan->caps & XCHAN_CAP_NOBUFS) == 0) {
+	if (xchan->caps & (XCHAN_CAP_BUSDMA | XCHAN_CAP_BOUNCE)) {
 		ret = xchan_bufs_alloc(xchan);
 		if (ret != 0) {
 			device_printf(xdma->dev,
@@ -320,10 +322,8 @@ xchan_seg_done(xdma_channel_t *xchan,
     struct xdma_transfer_status *st)
 {
 	struct xdma_request *xr;
-	xdma_controller_t *xdma;
 	struct xchan_buf *b;
-
-	xdma = xchan->xdma;
+	bus_addr_t addr;
 
 	xr = TAILQ_FIRST(&xchan->processing);
 	if (xr == NULL)
@@ -342,12 +342,17 @@ xchan_seg_done(xdma_channel_t *xchan,
 				bus_dmamap_sync(xchan->dma_tag_bufs, b->map, 
 				    BUS_DMASYNC_POSTREAD);
 			bus_dmamap_unload(xchan->dma_tag_bufs, b->map);
-		} else {
-			if ((xchan->caps & XCHAN_CAP_NOBUFS) == 0 &&
-			    xr->req_type == XR_TYPE_MBUF &&
+		} else if (xchan->caps & XCHAN_CAP_BOUNCE) {
+			if (xr->req_type == XR_TYPE_MBUF &&
 			    xr->direction == XDMA_DEV_TO_MEM)
 				m_copyback(xr->m, 0, st->transferred,
 				    (void *)xr->buf.vaddr);
+		} else if (xchan->caps & XCHAN_CAP_IOMMU) {
+			if (xr->direction == XDMA_MEM_TO_DEV)
+				addr = xr->src_addr;
+			else
+				addr = xr->dst_addr;
+			xdma_iommu_remove_entry(xchan, addr);
 		}
 		xr->status.error = st->error;
 		xr->status.transferred = st->transferred;
@@ -477,23 +482,47 @@ static int
 _xdma_load_data(xdma_channel_t *xchan, struct xdma_request *xr,
     struct bus_dma_segment *seg)
 {
-	xdma_controller_t *xdma;
 	struct mbuf *m;
 	uint32_t nsegs;
-
-	xdma = xchan->xdma;
+	vm_offset_t va, addr;
+	bus_addr_t pa;
+	vm_prot_t prot;
 
 	m = xr->m;
+
+	KASSERT(xchan->caps & (XCHAN_CAP_NOSEG | XCHAN_CAP_BOUNCE),
+	    ("Handling segmented data is not implemented here."));
 
 	nsegs = 1;
 
 	switch (xr->req_type) {
 	case XR_TYPE_MBUF:
-		if ((xchan->caps & XCHAN_CAP_NOBUFS) == 0) {
+		if (xchan->caps & XCHAN_CAP_BOUNCE) {
 			if (xr->direction == XDMA_MEM_TO_DEV)
 				m_copydata(m, 0, m->m_pkthdr.len,
 				    (void *)xr->buf.vaddr);
 			seg[0].ds_addr = (bus_addr_t)xr->buf.paddr;
+		} else if (xchan->caps & XCHAN_CAP_IOMMU) {
+			addr = mtod(m, bus_addr_t);
+			pa = vtophys(addr);
+
+			if (xr->direction == XDMA_MEM_TO_DEV)
+				prot = VM_PROT_READ;
+			else
+				prot = VM_PROT_WRITE;
+
+			xdma_iommu_add_entry(xchan, &va,
+			    pa, m->m_pkthdr.len, prot);
+
+			/*
+			 * Save VA so we can unload data later
+			 * after completion of this transfer.
+			 */
+			if (xr->direction == XDMA_MEM_TO_DEV)
+				xr->src_addr = va;
+			else
+				xr->dst_addr = va;
+			seg[0].ds_addr = va;
 		} else
 			seg[0].ds_addr = mtod(m, bus_addr_t);
 		seg[0].ds_len = m->m_pkthdr.len;
@@ -511,13 +540,8 @@ static int
 xdma_load_data(xdma_channel_t *xchan,
     struct xdma_request *xr, struct bus_dma_segment *seg)
 {
-	xdma_controller_t *xdma;
-	int error;
 	int nsegs;
 
-	xdma = xchan->xdma;
-
-	error = 0;
 	nsegs = 0;
 
 	if (xchan->caps & XCHAN_CAP_BUSDMA)
@@ -621,7 +645,7 @@ xdma_queue_submit_sg(xdma_channel_t *xchan)
 
 	sg = xchan->sg;
 
-	if ((xchan->caps & XCHAN_CAP_NOBUFS) == 0 &&
+	if ((xchan->caps & (XCHAN_CAP_BOUNCE | XCHAN_CAP_BUSDMA)) &&
 	   (xchan->flags & XCHAN_BUFS_ALLOCATED) == 0) {
 		device_printf(xdma->dev,
 		    "%s: Can't submit a transfer: no bufs\n",

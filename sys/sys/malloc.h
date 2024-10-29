@@ -36,6 +36,7 @@
 #ifndef _SYS_MALLOC_H_
 #define	_SYS_MALLOC_H_
 
+#ifndef _STANDALONE
 #include <sys/param.h>
 #ifdef _KERNEL
 #include <sys/systm.h>
@@ -52,6 +53,7 @@
  */
 #define	M_NOWAIT	0x0001		/* do not block */
 #define	M_WAITOK	0x0002		/* ok to block */
+#define	M_NORECLAIM	0x0080		/* do not reclaim after failure */
 #define	M_ZERO		0x0100		/* bzero the allocation */
 #define	M_NOVM		0x0200		/* don't ask VM for pages */
 #define	M_USE_RESERVE	0x0400		/* can alloc out of reserve memory */
@@ -61,7 +63,7 @@
 #define	M_EXEC		0x4000		/* allocate executable space */
 #define	M_NEXTFIT	0x8000		/* only for vmem, follow cursor */
 
-#define	M_MAGIC		877983977	/* time when first defined :-) */
+#define	M_VERSION	2020110501
 
 /*
  * Two malloc type structures are present: malloc_type, which is used by a
@@ -90,6 +92,9 @@ struct malloc_type_stats {
 	uint64_t	_mts_reserved3;	/* Reserved field. */
 };
 
+_Static_assert(sizeof(struct malloc_type_stats) == 64,
+    "allocations come from pcpu_zone_64");
+
 /*
  * Index definitions for the mti_probes[] array.
  */
@@ -102,18 +107,17 @@ struct malloc_type_internal {
 					/* DTrace probe ID array. */
 	u_char		mti_zone;
 	struct malloc_type_stats	*mti_stats;
+	u_long		mti_spare[8];
 };
 
 /*
- * Public data structure describing a malloc type.  Private data is hung off
- * of ks_handle to avoid encoding internal malloc(9) data structures in
- * modules, which will statically allocate struct malloc_type.
+ * Public data structure describing a malloc type.
  */
 struct malloc_type {
 	struct malloc_type *ks_next;	/* Next in global chain. */
-	u_long		 ks_magic;	/* Detect programmer error. */
+	u_long		 ks_version;	/* Detect programmer error. */
 	const char	*ks_shortdesc;	/* Printable type name. */
-	void		*ks_handle;	/* Priv. data, was lo_class. */
+	struct malloc_type_internal ks_mti;
 };
 
 /*
@@ -139,7 +143,11 @@ struct malloc_type_header {
 #ifdef _KERNEL
 #define	MALLOC_DEFINE(type, shortdesc, longdesc)			\
 	struct malloc_type type[1] = {					\
-		{ NULL, M_MAGIC, shortdesc, NULL }			\
+		{							\
+			.ks_next = NULL,				\
+			.ks_version = M_VERSION,			\
+			.ks_shortdesc = shortdesc,			\
+		}							\
 	};								\
 	SYSINIT(type##_init, SI_SUB_KMEM, SI_ORDER_THIRD, malloc_init,	\
 	    type);							\
@@ -178,7 +186,7 @@ void	*contigmalloc_domainset(unsigned long size, struct malloc_type *type,
 	    unsigned long alignment, vm_paddr_t boundary)
 	    __malloc_like __result_use_check __alloc_size(1) __alloc_align(7);
 void	free(void *addr, struct malloc_type *type);
-void	free_domain(void *addr, struct malloc_type *type);
+void	zfree(void *addr, struct malloc_type *type);
 void	*malloc(size_t size, struct malloc_type *type, int flags) __malloc_like
 	    __result_use_check __alloc_size(1);
 /*
@@ -240,12 +248,17 @@ void	*mallocarray(size_t nmemb, size_t size, struct malloc_type *type,
 void	*mallocarray_domainset(size_t nmemb, size_t size, struct malloc_type *type,
 	    struct domainset *ds, int flags) __malloc_like __result_use_check
 	    __alloc_size2(1, 2);
+void	*malloc_exec(size_t size, struct malloc_type *type, int flags) __malloc_like
+	    __result_use_check __alloc_size(1);
+void	*malloc_domainset_exec(size_t size, struct malloc_type *type,
+	    struct domainset *ds, int flags) __malloc_like __result_use_check
+	    __alloc_size(1);
 void	malloc_init(void *);
-int	malloc_last_fail(void);
 void	malloc_type_allocated(struct malloc_type *type, unsigned long size);
 void	malloc_type_freed(struct malloc_type *type, unsigned long size);
 void	malloc_type_list(malloc_type_list_func_t *, void *);
 void	malloc_uninit(void *);
+size_t	malloc_size(size_t);
 size_t	malloc_usable_size(const void *);
 void	*realloc(void *addr, size_t size, struct malloc_type *type, int flags)
 	    __result_use_check __alloc_size(2);
@@ -274,4 +287,39 @@ WOULD_OVERFLOW(size_t nmemb, size_t size)
 #undef MUL_NO_OVERFLOW
 #endif /* _KERNEL */
 
+#else
+/*
+ * The native stand malloc / free interface we're mapping to
+ */
+extern void Free(void *p, const char *file, int line);
+extern void *Malloc(size_t bytes, const char *file, int line);
+
+/*
+ * Minimal standalone malloc implementation / environment. None of the
+ * flags mean anything and there's no need declare malloc types.
+ * Define the simple alloc / free routines in terms of Malloc and
+ * Free. None of the kernel features that this stuff disables are needed.
+ */
+#define M_WAITOK 1
+#define M_ZERO 0
+#define M_NOWAIT 2
+#define MALLOC_DECLARE(x)
+
+#define kmem_zalloc(size, flags) ({					\
+	void *p = Malloc((size), __FILE__, __LINE__);			\
+	if (p == NULL && (flags &  M_WAITOK) != 0)			\
+		panic("Could not malloc %zd bytes with M_WAITOK from %s line %d", \
+		    (size_t)size, __FILE__, __LINE__);			\
+	p;								\
+})
+
+#define kmem_free(p, size) Free(p, __FILE__, __LINE__)
+
+/*
+ * ZFS mem.h define that's the OpenZFS porting layer way of saying
+ * M_WAITOK. Given the above, it will also be a nop.
+ */
+#define KM_SLEEP M_WAITOK
+#define KM_NOSLEEP M_NOWAIT
+#endif /* _STANDALONE */
 #endif /* !_SYS_MALLOC_H_ */

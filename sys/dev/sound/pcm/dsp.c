@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Portions Copyright (c) Ryan Beasley <ryan.beasley@gmail.com> - GSoC 2006
@@ -43,6 +43,7 @@
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
 
+SND_DECLARE_FILE("");
 
 static int dsp_mmap_allow_prot_exec = 0;
 SYSCTL_INT(_hw_snd, OID_AUTO, compat_linux_mmap, CTLFLAG_RWTUN,
@@ -648,7 +649,6 @@ dsp_open(struct cdev *i_dev, int flags, int mode, struct thread *td)
 		}
 	}
 
-
 	PCM_LOCK(d);
 
 	/*
@@ -965,6 +965,7 @@ dsp_ioctl_channel(struct cdev *dev, struct pcm_channel *volch, u_long cmd,
 	struct snddev_info *d;
 	struct pcm_channel *rdch, *wrch;
 	int j, devtype, ret;
+	int left, right, center, mute;
 
 	d = dsp_get_info(dev);
 	if (!PCM_REGISTERED(d) || !(dsp_get_flags(dev) & SD_F_VPC))
@@ -1003,67 +1004,95 @@ dsp_ioctl_channel(struct cdev *dev, struct pcm_channel *volch, u_long cmd,
 	}
 
 	/* Final validation */
-	if (volch != NULL) {
-		CHN_LOCK(volch);
-		if (!(volch->feederflags & (1 << FEEDER_VOLUME))) {
-			CHN_UNLOCK(volch);
-			return (-1);
-		}
-		if (volch->direction == PCMDIR_PLAY)
-			wrch = volch;
-		else
-			rdch = volch;
+	if (volch == NULL)
+		return (EINVAL);
+
+	CHN_LOCK(volch);
+	if (!(volch->feederflags & (1 << FEEDER_VOLUME))) {
+		CHN_UNLOCK(volch);
+		return (EINVAL);
 	}
 
-	ret = EINVAL;
-
-	if (volch != NULL &&
-	    ((j == SOUND_MIXER_PCM && volch->direction == PCMDIR_PLAY) ||
-	    (j == SOUND_MIXER_RECLEV && volch->direction == PCMDIR_REC))) {
-		if ((cmd & ~0xff) == MIXER_WRITE(0)) {
-			int left, right, center;
-
+	switch (cmd & ~0xff) {
+	case MIXER_WRITE(0):
+		switch (j) {
+		case SOUND_MIXER_MUTE:
+			if (volch->direction == PCMDIR_REC) {
+				chn_setmute_multi(volch, SND_VOL_C_PCM, (*(int *)arg & SOUND_MASK_RECLEV) != 0);
+			} else {
+				chn_setmute_multi(volch, SND_VOL_C_PCM, (*(int *)arg & SOUND_MASK_PCM) != 0);
+			}
+			break;
+		case SOUND_MIXER_PCM:
+			if (volch->direction != PCMDIR_PLAY)
+				break;
 			left = *(int *)arg & 0x7f;
 			right = ((*(int *)arg) >> 8) & 0x7f;
 			center = (left + right) >> 1;
-			chn_setvolume_multi(volch, SND_VOL_C_PCM, left, right,
-			    center);
-		} else if ((cmd & ~0xff) == MIXER_READ(0)) {
-			*(int *)arg = CHN_GETVOLUME(volch,
-				SND_VOL_C_PCM, SND_CHN_T_FL);
-			*(int *)arg |= CHN_GETVOLUME(volch,
-				SND_VOL_C_PCM, SND_CHN_T_FR) << 8;
+			chn_setvolume_multi(volch, SND_VOL_C_PCM,
+			    left, right, center);
+			break;
+		case SOUND_MIXER_RECLEV:
+			if (volch->direction != PCMDIR_REC)
+				break;
+			left = *(int *)arg & 0x7f;
+			right = ((*(int *)arg) >> 8) & 0x7f;
+			center = (left + right) >> 1;
+			chn_setvolume_multi(volch, SND_VOL_C_PCM,
+			    left, right, center);
+			break;
+		default:
+			/* ignore all other mixer writes */
+			break;
 		}
-		ret = 0;
-	} else if (rdch != NULL || wrch != NULL) {
+		break;
+
+	case MIXER_READ(0):
 		switch (j) {
+		case SOUND_MIXER_MUTE:
+			mute = CHN_GETMUTE(volch, SND_VOL_C_PCM, SND_CHN_T_FL) ||
+			    CHN_GETMUTE(volch, SND_VOL_C_PCM, SND_CHN_T_FR);
+			if (volch->direction == PCMDIR_REC) {
+				*(int *)arg = mute << SOUND_MIXER_RECLEV;
+			} else {
+				*(int *)arg = mute << SOUND_MIXER_PCM;
+			}
+			break;
+		case SOUND_MIXER_PCM:
+			if (volch->direction != PCMDIR_PLAY)
+				break;
+			*(int *)arg = CHN_GETVOLUME(volch,
+			    SND_VOL_C_PCM, SND_CHN_T_FL);
+			*(int *)arg |= CHN_GETVOLUME(volch,
+			    SND_VOL_C_PCM, SND_CHN_T_FR) << 8;
+			break;
+		case SOUND_MIXER_RECLEV:
+			if (volch->direction != PCMDIR_REC)
+				break;
+			*(int *)arg = CHN_GETVOLUME(volch,
+			    SND_VOL_C_PCM, SND_CHN_T_FL);
+			*(int *)arg |= CHN_GETVOLUME(volch,
+			    SND_VOL_C_PCM, SND_CHN_T_FR) << 8;
+			break;
 		case SOUND_MIXER_DEVMASK:
 		case SOUND_MIXER_CAPS:
 		case SOUND_MIXER_STEREODEVS:
-			if ((cmd & ~0xff) == MIXER_READ(0)) {
-				*(int *)arg = 0;
-				if (rdch != NULL)
-					*(int *)arg |= SOUND_MASK_RECLEV;
-				if (wrch != NULL)
-					*(int *)arg |= SOUND_MASK_PCM;
-			}
-			ret = 0;
-			break;
-		case SOUND_MIXER_RECMASK:
-		case SOUND_MIXER_RECSRC:
-			if ((cmd & ~0xff) == MIXER_READ(0))
-				*(int *)arg = 0;
-			ret = 0;
+			if (volch->direction == PCMDIR_REC)
+				*(int *)arg = SOUND_MASK_RECLEV;
+			else
+				*(int *)arg = SOUND_MASK_PCM;
 			break;
 		default:
+			*(int *)arg = 0;
 			break;
 		}
+		break;
+
+	default:
+		break;
 	}
-
-	if (volch != NULL)
-		CHN_UNLOCK(volch);
-
-	return (ret);
+	CHN_UNLOCK(volch);
+	return (0);
 }
 
 static int
@@ -2262,7 +2291,7 @@ dsp_mmap_single(struct cdev *i_dev, vm_ooffset_t *offset,
 
 	c = ((nprot & PROT_WRITE) != 0) ? wrch : rdch;
 	if (c == NULL || (c->flags & CHN_F_MMAP_INVALID) ||
-	    (*offset  + size) > sndbuf_getsize(c->bufsoft) ||
+	    (*offset  + size) > sndbuf_getallocsize(c->bufsoft) ||
 	    (wrch != NULL && (wrch->flags & CHN_F_MMAP_INVALID)) ||
 	    (rdch != NULL && (rdch->flags & CHN_F_MMAP_INVALID))) {
 		relchns(i_dev, rdch, wrch, SD_F_PRIO_RD | SD_F_PRIO_WR);
@@ -2893,7 +2922,6 @@ dsp_oss_syncgroup(struct pcm_channel *wrch, struct pcm_channel *rdch, oss_syncgr
 		wrch->flags |= CHN_F_NOTRIGGER;
 		wrch->sm = smwr;
 	}
-
 
 out:
 	if (ret != 0) {

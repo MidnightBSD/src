@@ -44,40 +44,44 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ddb.h"
+#include "opt_kdb.h"
 #include "opt_init_path.h"
 #include "opt_verbose_sysinit.h"
 
 #include <sys/param.h>
-#include <sys/kernel.h>
+#include <sys/systm.h>
+#include <sys/conf.h>
+#include <sys/cpuset.h>
+#include <sys/dtrace_bsd.h>
+#include <sys/epoch.h>
+#include <sys/eventhandler.h>
 #include <sys/exec.h>
 #include <sys/file.h>
 #include <sys/filedesc.h>
+#include <sys/imgact.h>
 #include <sys/jail.h>
+#include <sys/kernel.h>
 #include <sys/ktr.h>
 #include <sys/lock.h>
 #include <sys/loginclass.h>
+#include <sys/malloc.h>
 #include <sys/mount.h>
 #include <sys/mutex.h>
-#include <sys/syscallsubr.h>
-#include <sys/sysctl.h>
 #include <sys/proc.h>
 #include <sys/racct.h>
-#include <sys/resourcevar.h>
-#include <sys/systm.h>
-#include <sys/signalvar.h>
-#include <sys/vnode.h>
-#include <sys/sysent.h>
 #include <sys/reboot.h>
+#include <sys/resourcevar.h>
 #include <sys/sched.h>
+#include <sys/signalvar.h>
 #include <sys/sx.h>
+#include <sys/syscallsubr.h>
+#include <sys/sysctl.h>
+#include <sys/sysent.h>
 #include <sys/sysproto.h>
-#include <sys/vmmeter.h>
 #include <sys/unistd.h>
-#include <sys/malloc.h>
-#include <sys/conf.h>
-#include <sys/cpuset.h>
+#include <sys/vmmeter.h>
+#include <sys/vnode.h>
 
 #include <machine/cpu.h>
 
@@ -103,6 +107,13 @@ struct	proc proc0;
 struct thread0_storage thread0_st __aligned(32);
 struct	vmspace vmspace0;
 struct	proc *initproc;
+
+int
+linux_alloc_current_noop(struct thread *td __unused, int flags __unused)
+{
+	return (0);
+}
+int (*lkpi_alloc_current)(struct thread *, int) = linux_alloc_current_noop;
 
 #ifndef BOOTHOWTO
 #define	BOOTHOWTO	0
@@ -148,11 +159,6 @@ SYSINIT(placeholder, SI_SUB_DUMMY, SI_ORDER_ANY, NULL, NULL);
 SET_DECLARE(sysinit_set, struct sysinit);
 struct sysinit **sysinit, **sysinit_end;
 struct sysinit **newsysinit, **newsysinit_end;
-
-EVENTHANDLER_LIST_DECLARE(process_init);
-EVENTHANDLER_LIST_DECLARE(thread_init);
-EVENTHANDLER_LIST_DECLARE(process_ctor);
-EVENTHANDLER_LIST_DECLARE(thread_ctor);
 
 /*
  * Merge a new sysinit set into the current set, reallocating it if
@@ -271,7 +277,6 @@ restart:
 	 * Perform each task, and continue on to the next task.
 	 */
 	for (sipp = sysinit; sipp < sysinit_end; sipp++) {
-
 		if ((*sipp)->subsystem == SI_SUB_DUMMY)
 			continue;	/* skip dummy task(s)*/
 
@@ -339,13 +344,13 @@ restart:
 }
 
 static void
-print_caddr_t(void *data)
+print_caddr_t(const void *data)
 {
-	printf("%s", (char *)data);
+	printf("%s", (const char *)data);
 }
 
 static void
-print_version(void *data __unused)
+print_version(const void *data __unused)
 {
 	int len;
 
@@ -357,28 +362,37 @@ print_version(void *data __unused)
 	printf("%s\n", compiler_version);
 }
 
-SYSINIT(announce, SI_SUB_COPYRIGHT, SI_ORDER_FIRST, print_caddr_t,
+C_SYSINIT(announce, SI_SUB_COPYRIGHT, SI_ORDER_FIRST, print_caddr_t,
     copyright);
-SYSINIT(trademark, SI_SUB_COPYRIGHT, SI_ORDER_SECOND, print_caddr_t,
+C_SYSINIT(trademark, SI_SUB_COPYRIGHT, SI_ORDER_SECOND, print_caddr_t,
     trademark);
-SYSINIT(version, SI_SUB_COPYRIGHT, SI_ORDER_THIRD, print_version, NULL);
+C_SYSINIT(version, SI_SUB_COPYRIGHT, SI_ORDER_THIRD, print_version, NULL);
 
 #ifdef WITNESS
-static char wit_warn[] =
+static const char wit_warn[] =
      "WARNING: WITNESS option enabled, expect reduced performance.\n";
-SYSINIT(witwarn, SI_SUB_COPYRIGHT, SI_ORDER_FOURTH,
+C_SYSINIT(witwarn, SI_SUB_COPYRIGHT, SI_ORDER_FOURTH,
    print_caddr_t, wit_warn);
-SYSINIT(witwarn2, SI_SUB_LAST, SI_ORDER_FOURTH,
+C_SYSINIT(witwarn2, SI_SUB_LAST, SI_ORDER_FOURTH,
    print_caddr_t, wit_warn);
 #endif
 
 #ifdef DIAGNOSTIC
-static char diag_warn[] =
+static const char diag_warn[] =
      "WARNING: DIAGNOSTIC option enabled, expect reduced performance.\n";
-SYSINIT(diagwarn, SI_SUB_COPYRIGHT, SI_ORDER_FIFTH,
+C_SYSINIT(diagwarn, SI_SUB_COPYRIGHT, SI_ORDER_FIFTH,
     print_caddr_t, diag_warn);
-SYSINIT(diagwarn2, SI_SUB_LAST, SI_ORDER_FIFTH,
+C_SYSINIT(diagwarn2, SI_SUB_LAST, SI_ORDER_FIFTH,
     print_caddr_t, diag_warn);
+#endif
+
+#if __SIZEOF_LONG__ == 4
+static const char ilp32_warn[] =
+    "WARNING: 32-bit kernels are deprecated and may be removed in FreeBSD 15.0.\n";
+C_SYSINIT(ilp32warn, SI_SUB_COPYRIGHT, SI_ORDER_FIFTH,
+    print_caddr_t, ilp32_warn);
+C_SYSINIT(ilp32warn2, SI_SUB_LAST, SI_ORDER_FIFTH,
+    print_caddr_t, ilp32_warn);
 #endif
 
 static int
@@ -395,13 +409,15 @@ null_set_syscall_retval(struct thread *td __unused, int error __unused)
 	panic("null_set_syscall_retval");
 }
 
+static void
+null_set_fork_retval(struct thread *td __unused)
+{
+
+}
+
 struct sysentvec null_sysvec = {
 	.sv_size	= 0,
 	.sv_table	= NULL,
-	.sv_mask	= 0,
-	.sv_errsize	= 0,
-	.sv_errtbl	= NULL,
-	.sv_transtrap	= NULL,
 	.sv_fixup	= NULL,
 	.sv_sendsig	= NULL,
 	.sv_sigcode	= NULL,
@@ -414,6 +430,7 @@ struct sysentvec null_sysvec = {
 	.sv_maxuser	= VM_MAXUSER_ADDRESS,
 	.sv_usrstack	= USRSTACK,
 	.sv_psstrings	= PS_STRINGS,
+	.sv_psstringssz	= sizeof(struct ps_strings),
 	.sv_stackprot	= VM_PROT_ALL,
 	.sv_copyout_strings	= NULL,
 	.sv_setregs	= NULL,
@@ -426,6 +443,9 @@ struct sysentvec null_sysvec = {
 	.sv_schedtail	= NULL,
 	.sv_thread_detach = NULL,
 	.sv_trap	= NULL,
+	.sv_regset_begin = NULL,
+	.sv_regset_end  = NULL,
+	.sv_set_fork_retval = null_set_fork_retval,
 };
 
 /*
@@ -451,7 +471,7 @@ proc0_init(void *dummy __unused)
 	GIANT_REQUIRED;
 	p = &proc0;
 	td = &thread0;
-	
+
 	/*
 	 * Initialize magic number and osrel.
 	 */
@@ -476,6 +496,7 @@ proc0_init(void *dummy __unused)
 	LIST_INSERT_HEAD(&allproc, p, p_list);
 	LIST_INSERT_HEAD(PIDHASH(0), p, p_hash);
 	mtx_init(&pgrp0.pg_mtx, "process group", NULL, MTX_DEF | MTX_DUPOK);
+	sx_init(&pgrp0.pg_killsx, "killpg racer");
 	p->p_pgrp = &pgrp0;
 	LIST_INSERT_HEAD(PGRPHASH(0), &pgrp0, pg_hash);
 	LIST_INIT(&pgrp0.pg_members);
@@ -493,9 +514,8 @@ proc0_init(void *dummy __unused)
 	p->p_klist = knlist_alloc(&p->p_mtx);
 	STAILQ_INIT(&p->p_ktr);
 	p->p_nice = NZERO;
-	/* pid_max cannot be greater than PID_MAX */
-	td->td_tid = PID_MAX + 1;
-	LIST_INSERT_HEAD(TIDHASH(td->td_tid), td, td_hash);
+	td->td_tid = THREAD0_TID;
+	tidhash_add(td);
 	td->td_state = TDS_RUNNING;
 	td->td_pri_class = PRI_TIMESHARE;
 	td->td_user_pri = PUSER;
@@ -521,6 +541,7 @@ proc0_init(void *dummy __unused)
 	callout_init_mtx(&p->p_itcallout, &p->p_mtx, 0);
 	callout_init_mtx(&p->p_limco, &p->p_mtx, 0);
 	callout_init(&td->td_slpcallout, 1);
+	TAILQ_INIT(&p->p_kqtim_stop);
 
 	/* Create credentials. */
 	newcred = crget();
@@ -536,7 +557,10 @@ proc0_init(void *dummy __unused)
 	/* End hack. creds get properly set later with thread_cow_get_proc */
 	curthread->td_ucred = NULL;
 	newcred->cr_prison = &prison0;
+	newcred->cr_users++; /* avoid assertion failure */
 	proc_set_cred_init(p, newcred);
+	newcred->cr_users--;
+	crfree(newcred);
 #ifdef AUDIT
 	audit_cred_kproc0(newcred);
 #endif
@@ -550,7 +574,8 @@ proc0_init(void *dummy __unused)
 	siginit(&proc0);
 
 	/* Create the file descriptor table. */
-	p->p_fd = fdinit(NULL, false);
+	p->p_pd = pdinit(NULL, false);
+	p->p_fd = fdinit(NULL, false, NULL);
 	p->p_fdtol = NULL;
 
 	/* Create the limits structures. */
@@ -585,7 +610,7 @@ proc0_init(void *dummy __unused)
 
 	/* Allocate a prototype map so we have something to fork. */
 	p->p_vmspace = &vmspace0;
-	vmspace0.vm_refcnt = 1;
+	refcount_init(&vmspace0.vm_refcnt, 1);
 	pmap_pinit0(vmspace_pmap(&vmspace0));
 
 	/*
@@ -601,6 +626,10 @@ proc0_init(void *dummy __unused)
 	 */
 	EVENTHANDLER_DIRECT_INVOKE(process_init, p);
 	EVENTHANDLER_DIRECT_INVOKE(thread_init, td);
+#ifdef KDTRACE_HOOKS
+	kdtrace_proc_ctor(p);
+	kdtrace_thread_ctor(td);
+#endif
 	EVENTHANDLER_DIRECT_INVOKE(process_ctor, p);
 	EVENTHANDLER_DIRECT_INVOKE(thread_ctor, td);
 
@@ -618,7 +647,6 @@ SYSINIT(p0init, SI_SUB_INTRINSIC, SI_ORDER_FIRST, proc0_init, NULL);
 static void
 proc0_post(void *dummy __unused)
 {
-	struct timespec ts;
 	struct proc *p;
 	struct rusage ru;
 	struct thread *td;
@@ -650,27 +678,8 @@ proc0_post(void *dummy __unused)
 	sx_sunlock(&allproc_lock);
 	PCPU_SET(switchtime, cpu_ticks());
 	PCPU_SET(switchticks, ticks);
-
-	/*
-	 * Give the ``random'' number generator a thump.
-	 */
-	nanotime(&ts);
-	srandom(ts.tv_sec ^ ts.tv_nsec);
 }
 SYSINIT(p0post, SI_SUB_INTRINSIC_POST, SI_ORDER_FIRST, proc0_post, NULL);
-
-static void
-random_init(void *dummy __unused)
-{
-
-	/*
-	 * After CPU has been started we have some randomness on most
-	 * platforms via get_cyclecount().  For platforms that don't
-	 * we will reseed random(9) in proc0_post() as well.
-	 */
-	srandom(get_cyclecount());
-}
-SYSINIT(random, SI_SUB_RANDOM, SI_ORDER_FIRST, random_init, NULL);
 
 /*
  ***************************************************************************
@@ -712,15 +721,13 @@ SYSCTL_INT(_kern, OID_AUTO, init_shutdown_timeout,
 static void
 start_init(void *dummy)
 {
-	vm_offset_t addr;
-	struct execve_args args;
-	int options, error;
-	size_t pathlen;
+	struct image_args args;
+	int error;
 	char *var, *path;
 	char *free_init_path, *tmp_init_path;
-	char *ucp, **uap, *arg0, *arg1;
 	struct thread *td;
 	struct proc *p;
+	struct vmspace *oldvmspace;
 
 	TSENTER();	/* Here so we don't overlap with mi_startup. */
 
@@ -731,16 +738,6 @@ start_init(void *dummy)
 
 	/* Wipe GELI passphrase from the environment. */
 	kern_unsetenv("kern.geom.eli.passphrase");
-
-	/*
-	 * Need just enough stack to hold the faked-up "execve()" arguments.
-	 */
-	addr = p->p_sysent->sv_usrstack - PAGE_SIZE;
-	if (vm_map_find(&p->p_vmspace->vm_map, NULL, 0, &addr, PAGE_SIZE, 0,
-	    VMFS_NO_SPACE, VM_PROT_ALL, VM_PROT_ALL, 0) != 0)
-		panic("init: couldn't allocate argument space");
-	p->p_vmspace->vm_maxsaddr = (caddr_t)addr;
-	p->p_vmspace->vm_ssize = 1;
 
 	/* For Multicons, report which console is primary to both */
 	if (boothowto & RB_MULTIPLE) {
@@ -755,60 +752,27 @@ start_init(void *dummy)
 		freeenv(var);
 	}
 	free_init_path = tmp_init_path = strdup(init_path, M_TEMP);
-	
+
 	while ((path = strsep(&tmp_init_path, ":")) != NULL) {
-		pathlen = strlen(path) + 1;
 		if (bootverbose)
 			printf("start_init: trying %s\n", path);
 
-		/*
-		 * Move out the boot flag argument.
-		 */
-		options = 0;
-		ucp = (char *)p->p_sysent->sv_usrstack;
-		(void)subyte(--ucp, 0);		/* trailing zero */
-		if (boothowto & RB_SINGLE) {
-			(void)subyte(--ucp, 's');
-			options = 1;
-		}
-#ifdef notyet
-                if (boothowto & RB_FASTBOOT) {
-			(void)subyte(--ucp, 'f');
-			options = 1;
-		}
-#endif
+		memset(&args, 0, sizeof(args));
+		error = exec_alloc_args(&args);
+		if (error != 0)
+			panic("%s: Can't allocate space for init arguments %d",
+			    __func__, error);
 
-#ifdef BOOTCDROM
-		(void)subyte(--ucp, 'C');
-		options = 1;
-#endif
-
-		if (options == 0)
-			(void)subyte(--ucp, '-');
-		(void)subyte(--ucp, '-');		/* leading hyphen */
-		arg1 = ucp;
-
-		/*
-		 * Move out the file name (also arg 0).
-		 */
-		ucp -= pathlen;
-		copyout(path, ucp, pathlen);
-		arg0 = ucp;
-
-		/*
-		 * Move out the arg pointers.
-		 */
-		uap = (char **)rounddown2((intptr_t)ucp, sizeof(intptr_t));
-		(void)suword((caddr_t)--uap, (long)0);	/* terminator */
-		(void)suword((caddr_t)--uap, (long)(intptr_t)arg1);
-		(void)suword((caddr_t)--uap, (long)(intptr_t)arg0);
-
-		/*
-		 * Point at the arguments.
-		 */
-		args.fname = arg0;
-		args.argv = uap;
-		args.envv = NULL;
+		error = exec_args_add_fname(&args, path, UIO_SYSSPACE);
+		if (error != 0)
+			panic("%s: Can't add fname %d", __func__, error);
+		error = exec_args_add_arg(&args, path, UIO_SYSSPACE);
+		if (error != 0)
+			panic("%s: Can't add argv[0] %d", __func__, error);
+		if (boothowto & RB_SINGLE)
+			error = exec_args_add_arg(&args, "-s", UIO_SYSSPACE);
+		if (error != 0)
+			panic("%s: Can't add argv[0] %d", __func__, error);
 
 		/*
 		 * Now try to exec the program.  If can't for any reason
@@ -817,7 +781,15 @@ start_init(void *dummy)
 		 * Otherwise, return via fork_trampoline() all the way
 		 * to user mode as init!
 		 */
-		if ((error = sys_execve(td, &args)) == EJUSTRETURN) {
+		KASSERT((td->td_pflags & TDP_EXECVMSPC) == 0,
+		    ("nested execve"));
+		memset(td->td_frame, 0, sizeof(*td->td_frame));
+		oldvmspace = p->p_vmspace;
+		error = kern_execve(td, &args, NULL, oldvmspace);
+		KASSERT(error != 0,
+		    ("kern_execve returned success, not EJUSTRETURN"));
+		if (error == EJUSTRETURN) {
+			exec_cleanup(td, oldvmspace);
 			free(free_init_path, M_TEMP);
 			TSEXIT();
 			return;
@@ -866,8 +838,9 @@ create_init(const void *udata __unused)
 #endif
 	proc_set_cred(initproc, newcred);
 	td = FIRST_THREAD_IN_PROC(initproc);
-	crfree(td->td_ucred);
-	td->td_ucred = crhold(initproc->p_ucred);
+	crcowfree(td);
+	td->td_realucred = crcowget(initproc->p_ucred);
+	td->td_ucred = td->td_realucred;
 	PROC_UNLOCK(initproc);
 	sx_xunlock(&proctree_lock);
 	crfree(oldcred);
@@ -888,6 +861,53 @@ kick_init(const void *udata __unused)
 	thread_lock(td);
 	TD_SET_CAN_RUN(td);
 	sched_add(td, SRQ_BORING);
-	thread_unlock(td);
 }
 SYSINIT(kickinit, SI_SUB_KTHREAD_INIT, SI_ORDER_MIDDLE, kick_init, NULL);
+
+/*
+ * DDB(4).
+ */
+#ifdef DDB
+static void
+db_show_print_syinit(struct sysinit *sip, bool ddb)
+{
+	const char *sname, *funcname;
+	c_db_sym_t sym;
+	db_expr_t  offset;
+
+#define xprint(...)							\
+	if (ddb)							\
+		db_printf(__VA_ARGS__);					\
+	else								\
+		printf(__VA_ARGS__)
+
+	if (sip == NULL) {
+		xprint("%s: no sysinit * given\n", __func__);
+		return;
+	}
+
+	sym = db_search_symbol((vm_offset_t)sip, DB_STGY_ANY, &offset);
+	db_symbol_values(sym, &sname, NULL);
+	sym = db_search_symbol((vm_offset_t)sip->func, DB_STGY_PROC, &offset);
+	db_symbol_values(sym, &funcname, NULL);
+	xprint("%s(%p)\n", (sname != NULL) ? sname : "", sip);
+	xprint("  %#08x %#08x\n", sip->subsystem, sip->order);
+	xprint("  %p(%s)(%p)\n",
+	    sip->func, (funcname != NULL) ? funcname : "", sip->udata);
+#undef xprint
+}
+
+DB_SHOW_COMMAND(sysinit, db_show_sysinit)
+{
+	struct sysinit **sipp;
+
+	db_printf("SYSINIT vs Name(Ptr)\n");
+	db_printf("  Subsystem  Order\n");
+	db_printf("  Function(Name)(Arg)\n");
+	for (sipp = sysinit; sipp < sysinit_end; sipp++) {
+		db_show_print_syinit(*sipp, true);
+		if (db_pager_quit)
+			break;
+	}
+}
+#endif /* DDB */

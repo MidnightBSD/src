@@ -21,8 +21,6 @@
  * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -341,10 +339,16 @@ ATF_TC_CLEANUP(auditctl_success, tc)
 	 * at the configured path. To reset this, we need to stop and start the
 	 * auditd(8) again. Here, we check if auditd(8) was running already
 	 * before the test started. If so, we stop and start it again.
+	 *
+	 * TODO: should we skip this test if auditd(8) is already running to
+	 * avoid restarting it?
 	 */
-	system("service auditd onestop > /dev/null 2>&1");
-	if (!atf_utils_file_exists("started_auditd"))
+	if (!atf_utils_file_exists("started_fake_auditd")) {
+		system("service auditd onestop > /dev/null 2>&1");
 		system("service auditd onestart > /dev/null 2>&1");
+	} else {
+		cleanup();
+	}
 }
 
 
@@ -1599,7 +1603,7 @@ ATF_TC_BODY(swapoff_failure, tc)
 
 	FILE *pipefd = setup(fds, auclass);
 	/* Failure reason: Block device required */
-	ATF_REQUIRE_EQ(-1, swapoff(path));
+	ATF_REQUIRE_EQ(-1, swapoff(path, 0));
 	check_audit(fds, adregex, pipefd);
 }
 

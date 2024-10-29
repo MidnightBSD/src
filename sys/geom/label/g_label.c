@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_geom.h"
 
 #include <sys/param.h>
@@ -44,13 +43,15 @@
 #include <sys/stddef.h>
 #include <sys/sysctl.h>
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include <geom/geom_slice.h>
 #include <geom/label/g_label.h>
 
 FEATURE(geom_label, "GEOM labeling support");
 
 SYSCTL_DECL(_kern_geom);
-SYSCTL_NODE(_kern_geom, OID_AUTO, label, CTLFLAG_RW, 0, "GEOM_LABEL stuff");
+SYSCTL_NODE(_kern_geom, OID_AUTO, label, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "GEOM_LABEL stuff");
 u_int g_label_debug = 0;
 SYSCTL_UINT(_kern_geom_label, OID_AUTO, debug, CTLFLAG_RWTUN, &g_label_debug, 0,
     "Debug level");
@@ -60,8 +61,11 @@ static int g_label_destroy_geom(struct gctl_req *req, struct g_class *mp,
 static int g_label_destroy(struct g_geom *gp, boolean_t force);
 static struct g_geom *g_label_taste(struct g_class *mp, struct g_provider *pp,
     int flags __unused);
+static void g_label_generic_taste(struct g_consumer *, char *, size_t);
 static void g_label_config(struct gctl_req *req, struct g_class *mp,
     const char *verb);
+
+#define	G_LABEL_DIRPREFIX	"label/"
 
 struct g_class g_label_class = {
 	.name = G_LABEL_CLASS_NAME,
@@ -69,6 +73,12 @@ struct g_class g_label_class = {
 	.ctlreq = g_label_config,
 	.taste = g_label_taste,
 	.destroy_geom = g_label_destroy_geom
+};
+
+static struct g_label_desc g_label_generic = {
+        .ld_taste = g_label_generic_taste,
+        .ld_dirprefix = G_LABEL_DIRPREFIX,
+        .ld_enabled = 1
 };
 
 /*
@@ -96,6 +106,7 @@ const struct g_label_desc *g_labels[] = {
 	&g_label_disk_ident,
 	&g_label_flashmap,
 #endif
+	&g_label_generic,
 	NULL
 };
 
@@ -177,9 +188,24 @@ g_label_mangle_name(char *label, size_t size)
 {
 	struct sbuf *sb;
 	const u_char *c;
+	size_t len, i;
+
+	/* Trim trailing whitespace. */
+	len = strlen(label);
+	for (i = len; i > 0; i--) {
+		if (isspace(label[i - 1]))
+			label[i - 1] = '\0';
+		else
+			break;
+	}
+	if (*label == '\0')
+		return;
 
 	sb = sbuf_new(NULL, NULL, size, SBUF_FIXEDLEN);
 	for (c = label; *c != '\0'; c++) {
+		/* Trim leading whitespace. */
+		if (isspace(*c) && sbuf_len(sb) == 0)
+			continue;
 		if (!isprint(*c) || isspace(*c) || *c =='"' || *c == '%')
 			sbuf_printf(sb, "%%%02X", *c);
 		else
@@ -194,7 +220,7 @@ g_label_mangle_name(char *label, size_t size)
 
 static struct g_geom *
 g_label_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
-    const char *label, const char *dir, off_t mediasize)
+    const char *label, const char *dirprefix, off_t mediasize)
 {
 	struct g_geom *gp;
 	struct g_provider *pp2;
@@ -213,7 +239,7 @@ g_label_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
 	}
 	gp = NULL;
 	cp = NULL;
-	if (snprintf(name, sizeof(name), "%s/%s", dir, label) >= sizeof(name)) {
+	if (snprintf(name, sizeof(name), "%s%s", dirprefix, label) >= sizeof(name)) {
 		if (req != NULL)
 			gctl_error(req, "Label name %s is too long.", label);
 		return (NULL);
@@ -281,13 +307,11 @@ g_label_read_metadata(struct g_consumer *cp, struct g_label_metadata *md)
 	u_char *buf;
 	int error;
 
-	g_topology_assert();
-
 	pp = cp->provider;
-	g_topology_unlock();
+	if (pp->sectorsize < sizeof(*md))
+		return (EINVAL);
 	buf = g_read_data(cp, pp->mediasize - pp->sectorsize, pp->sectorsize,
 	    &error);
-	g_topology_lock();
 	if (buf == NULL)
 		return (error);
 	/* Decode metadata. */
@@ -320,12 +344,43 @@ g_label_access_taste(struct g_provider *pp __unused, int dr __unused,
 	return (EOPNOTSUPP);
 }
 
+static void
+g_label_generic_taste(struct g_consumer *cp, char *label, size_t size)
+{
+	struct g_provider *pp;
+	struct g_label_metadata md;
+
+	g_topology_assert_not();
+	label[0] = '\0';
+	pp = cp->provider;
+
+	if (g_label_read_metadata(cp, &md) != 0)
+		return;
+
+	if (strcmp(md.md_magic, G_LABEL_MAGIC) != 0)
+		return;
+
+	if (md.md_version > G_LABEL_VERSION) {
+		printf("geom_label.ko module is too old to handle %s.\n",
+			pp->name);
+		return;
+	}
+	/*
+	 * Backward compatibility: there was no md_provsize field in
+	 * earlier versions of metadata, so only check if we have it.
+	 */
+	if (md.md_version >= 2 && md.md_provsize != pp->mediasize)
+		return;
+
+	strlcpy(label, md.md_label, size);
+}
+
 static struct g_geom *
 g_label_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 {
-	struct g_label_metadata md;
 	struct g_consumer *cp;
 	struct g_geom *gp;
+	off_t mediasize;
 	int i;
 
 	g_trace(G_T_TOPOLOGY, "%s(%s, %s)", __func__, mp->name, pp->name);
@@ -337,6 +392,10 @@ g_label_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	if (pp->acw > 0)
 		return (NULL);
 
+	/* Skip broken disks that don't set their sector size */
+	if (pp->sectorsize == 0)
+		return (NULL);
+
 	if (strcmp(pp->geom->class->name, mp->name) == 0)
 		return (NULL);
 
@@ -345,36 +404,11 @@ g_label_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	gp->access = g_label_access_taste;
 	gp->orphan = g_label_orphan_taste;
 	cp = g_new_consumer(gp);
-	g_attach(cp, pp);
+	cp->flags |= G_CF_DIRECT_SEND | G_CF_DIRECT_RECEIVE;
+	if (g_attach(cp, pp) != 0)
+		goto end2;
 	if (g_access(cp, 1, 0, 0) != 0)
 		goto end;
-	do {
-		if (g_label_read_metadata(cp, &md) != 0)
-			break;
-		if (strcmp(md.md_magic, G_LABEL_MAGIC) != 0)
-			break;
-		if (md.md_version > G_LABEL_VERSION) {
-			printf("geom_label.ko module is too old to handle %s.\n",
-			    pp->name);
-			break;
-		}
-
-		/*
-		 * Backward compatibility:
-		 */
-		/*
-		 * There was no md_provsize field in earlier versions of
-		 * metadata.
-		 */
-		if (md.md_version < 2)
-			md.md_provsize = pp->mediasize;
-
-		if (md.md_provsize != pp->mediasize)
-			break;
-
-		g_label_create(NULL, mp, pp, md.md_label, G_LABEL_DIR,
-		    pp->mediasize - pp->sectorsize);
-	} while (0);
 	for (i = 0; g_labels[i] != NULL; i++) {
 		char label[128];
 
@@ -386,12 +420,18 @@ g_label_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 		g_topology_lock();
 		if (label[0] == '\0')
 			continue;
-		g_label_create(NULL, mp, pp, label, g_labels[i]->ld_dir,
-		    pp->mediasize);
+		if (g_labels[i] != &g_label_generic) {
+			mediasize = pp->mediasize;
+		} else {
+			mediasize = pp->mediasize - pp->sectorsize;
+		}
+		g_label_create(NULL, mp, pp, label,
+		    g_labels[i]->ld_dirprefix, mediasize);
 	}
 	g_access(cp, -1, 0, 0);
 end:
 	g_detach(cp);
+end2:
 	g_destroy_consumer(cp);
 	g_destroy_geom(gp);
 	return (NULL);
@@ -418,19 +458,9 @@ g_label_ctl_create(struct gctl_req *req, struct g_class *mp)
 	/*
 	 * arg1 is the name of provider.
 	 */
-	name = gctl_get_asciiparam(req, "arg1");
-	if (name == NULL) {
-		gctl_error(req, "No 'arg%d' argument", 1);
+	pp = gctl_get_provider(req, "arg1");
+	if (pp == NULL)
 		return;
-	}
-	if (strncmp(name, "/dev/", strlen("/dev/")) == 0)
-		name += strlen("/dev/");
-	pp = g_provider_by_name(name);
-	if (pp == NULL) {
-		G_LABEL_DEBUG(1, "Provider %s is invalid.", name);
-		gctl_error(req, "Provider %s is invalid.", name);
-		return;
-	}
 	/*
 	 * arg0 is the label.
 	 */
@@ -439,23 +469,20 @@ g_label_ctl_create(struct gctl_req *req, struct g_class *mp)
 		gctl_error(req, "No 'arg%d' argument", 0);
 		return;
 	}
-	g_label_create(req, mp, pp, name, G_LABEL_DIR, pp->mediasize);
+	g_label_create(req, mp, pp, name, G_LABEL_DIRPREFIX, pp->mediasize);
 }
 
 static const char *
 g_label_skip_dir(const char *name)
 {
-	char path[64];
 	u_int i;
 
-	if (strncmp(name, "/dev/", strlen("/dev/")) == 0)
-		name += strlen("/dev/");
-	if (strncmp(name, G_LABEL_DIR "/", strlen(G_LABEL_DIR "/")) == 0)
-		name += strlen(G_LABEL_DIR "/");
+	if (strncmp(name, _PATH_DEV, strlen(_PATH_DEV)) == 0)
+		name += strlen(_PATH_DEV);
 	for (i = 0; g_labels[i] != NULL; i++) {
-		snprintf(path, sizeof(path), "%s/", g_labels[i]->ld_dir);
-		if (strncmp(name, path, strlen(path)) == 0) {
-			name += strlen(path);
+		if (strncmp(name, g_labels[i]->ld_dirprefix,
+		    strlen(g_labels[i]->ld_dirprefix)) == 0) {
+			name += strlen(g_labels[i]->ld_dirprefix);
 			break;
 		}
 	}

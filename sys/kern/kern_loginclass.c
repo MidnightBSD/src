@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Edward Tomasz Napierala under sponsorship
  * from the FreeBSD Foundation.
@@ -27,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -44,7 +42,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/eventhandler.h>
 #include <sys/kernel.h>
@@ -82,10 +79,8 @@ loginclass_hold(struct loginclass *lc)
 void
 loginclass_free(struct loginclass *lc)
 {
-	int old;
 
-	old = lc->lc_refcount;
-	if (old > 1 && atomic_cmpset_int(&lc->lc_refcount, old, old - 1))
+	if (refcount_release_if_not_last(&lc->lc_refcount))
 		return;
 
 	rw_wlock(&loginclasses_lock);

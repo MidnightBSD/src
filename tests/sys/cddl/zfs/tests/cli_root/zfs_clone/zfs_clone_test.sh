@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case zfs_clone_001_neg cleanup
 zfs_clone_001_neg_head()
 {
 	atf_set "descr" "Badly-formed 'zfs clone' with inapplicable scenariosshould return an error."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_clone_001_neg_body()
 {
@@ -54,7 +52,7 @@ atf_test_case zfs_clone_002_pos cleanup
 zfs_clone_002_pos_head()
 {
 	atf_set "descr" "clone -p should work as expected."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_clone_002_pos_body()
 {
@@ -78,7 +76,7 @@ atf_test_case zfs_clone_003_pos cleanup
 zfs_clone_003_pos_head()
 {
 	atf_set "descr" "'zfs clone -o property=value filesystem' can successfully createa ZFS clone filesystem with correct property set."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_clone_003_pos_body()
 {
@@ -102,7 +100,7 @@ atf_test_case zfs_clone_004_pos cleanup
 zfs_clone_004_pos_head()
 {
 	atf_set "descr" "'zfs clone -o property=value filesystem' can successfully createa ZFS clone filesystem with multiple properties set."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_clone_004_pos_body()
 {
@@ -126,7 +124,7 @@ atf_test_case zfs_clone_005_pos cleanup
 zfs_clone_005_pos_head()
 {
 	atf_set "descr" "'zfs clone -o property=value -V size volume' can successfullycreate a ZFS clone volume with correct property set."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_clone_005_pos_body()
 {
@@ -150,7 +148,7 @@ atf_test_case zfs_clone_006_pos cleanup
 zfs_clone_006_pos_head()
 {
 	atf_set "descr" "'zfs clone -o property=value volume' can successfullycreate a ZFS clone volume with multiple correct properties set."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_clone_006_pos_body()
 {
@@ -174,7 +172,7 @@ atf_test_case zfs_clone_007_pos cleanup
 zfs_clone_007_pos_head()
 {
 	atf_set "descr" "'zfs clone -o version=' could upgrade version,but downgrade is denied."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_clone_007_pos_body()
 {
@@ -198,7 +196,7 @@ atf_test_case zfs_clone_008_neg cleanup
 zfs_clone_008_neg_head()
 {
 	atf_set "descr" "Verify 'zfs clone -o <filesystem>' fails with bad <filesystem> argument."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_clone_008_neg_body()
 {
@@ -222,7 +220,7 @@ atf_test_case zfs_clone_009_neg cleanup
 zfs_clone_009_neg_head()
 {
 	atf_set "descr" "Verify 'zfs clone -o <volume>' fails with bad <volume> argument."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_clone_009_neg_body()
 {

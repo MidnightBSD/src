@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 Bryan Venteicher <bryanv@FreeBSD.org>
  * Copyright (c) 2021 Mathieu Chouquet-Stringer
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -63,6 +62,7 @@ static inline bool
 kvm_cpuid_features_leaf_supported(void)
 {
 	return (vm_guest == VM_GUEST_KVM &&
+	    KVM_CPUID_FEATURES_LEAF > hv_base &&
 	    KVM_CPUID_FEATURES_LEAF <= hv_high);
 }
 

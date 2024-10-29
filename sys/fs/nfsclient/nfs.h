@@ -30,7 +30,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _NFSCLIENT_NFS_H_
@@ -91,7 +90,6 @@ enum nfsiod_state {
  * Function prototypes.
  */
 int ncl_meta_setsize(struct vnode *, struct thread *, u_quad_t);
-void ncl_doio_directwrite(struct buf *);
 int ncl_bioread(struct vnode *, struct uio *, int, struct ucred *);
 int ncl_biowrite(struct vnode *, struct uio *, int, struct ucred *);
 int ncl_vinvalbuf(struct vnode *, int, struct thread *, int);
@@ -106,13 +104,12 @@ void ncl_nodeunlock(struct nfsnode *);
 int ncl_getattrcache(struct vnode *, struct vattr *);
 int ncl_readrpc(struct vnode *, struct uio *, struct ucred *);
 int ncl_writerpc(struct vnode *, struct uio *, struct ucred *, int *, int *,
-    int);
+    int, int);
 int ncl_readlinkrpc(struct vnode *, struct uio *, struct ucred *);
 int ncl_readdirrpc(struct vnode *, struct uio *, struct ucred *,
     struct thread *);
 int ncl_readdirplusrpc(struct vnode *, struct uio *, struct ucred *,
     struct thread *);
-int ncl_writebp(struct buf *, int, struct thread *);
 int ncl_commit(struct vnode *, u_quad_t, int, struct ucred *, struct thread *);
 void ncl_clearcommit(struct mount *);
 int ncl_fsinfo(struct nfsmount *, struct vnode *, struct ucred *,

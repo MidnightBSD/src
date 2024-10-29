@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017, 2018 Dell EMC
  * Copyright (c) 2000, 2001, 2008, 2011, David E. O'Brien
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SYS_ELF_COMMON_H_
@@ -45,12 +44,14 @@
  * not include the padding.
  */
 
+#if !defined(LOCORE) && !defined(__ASSEMBLER__)
 typedef struct {
 	u_int32_t	n_namesz;	/* Length of name. */
 	u_int32_t	n_descsz;	/* Length of descriptor. */
 	u_int32_t	n_type;		/* Type of this note. */
 } Elf_Note;
 typedef Elf_Note Elf_Nhdr;
+#endif
 
 /*
  * Option kinds.
@@ -111,12 +112,14 @@ typedef Elf_Note Elf_Nhdr;
  * The header for GNU-style hash sections.
  */
 
+#if !defined(LOCORE) && !defined(__ASSEMBLER__)
 typedef struct {
 	u_int32_t	gh_nbuckets;	/* Number of hash buckets. */
 	u_int32_t	gh_symndx;	/* First visible symbol in .dynsym. */
 	u_int32_t	gh_maskwords;	/* #maskwords used in bloom filter. */
 	u_int32_t	gh_shift2;	/* Bloom filter shift count. */
 } Elf_GNU_Hash_Header;
+#endif
 
 /* Indexes into the e_ident array.  Keep synced with
    http://www.sco.com/developers/gabi/latest/ch4.eheader.html */
@@ -174,6 +177,7 @@ typedef struct {
 #define	ELFOSABI_AROS		15	/* Amiga Research OS */
 #define	ELFOSABI_FENIXOS	16	/* FenixOS */
 #define	ELFOSABI_CLOUDABI	17	/* Nuxi CloudABI */
+#define	ELFOSABI_OPENVOS	18	/* Stratus Technologies OpenVOS */
 #define	ELFOSABI_ARM_AEABI	64	/* ARM EABI */
 #define	ELFOSABI_ARM		97	/* ARM */
 #define	ELFOSABI_STANDALONE	255	/* Standalone (embedded) application */
@@ -611,6 +615,9 @@ typedef struct {
 #define	DT_PREINIT_ARRAYSZ 33	/* Size in bytes of the array of
 				   pre-initialization functions. */
 #define	DT_MAXPOSTAGS	34	/* number of positive tags */
+#define	DT_RELRSZ	35	/* Total size of ElfNN_Relr relocations. */
+#define	DT_RELR		36	/* Address of ElfNN_Relr relocations. */
+#define	DT_RELRENT	37	/* Size of each ElfNN_Relr relocation. */
 #define	DT_LOOS		0x6000000d	/* First OS-specific */
 #define	DT_SUNW_AUXILIARY	0x6000000d	/* symbol auxiliary name */
 #define	DT_SUNW_RTLDINF		0x6000000e	/* ld.so.1 info (private) */
@@ -672,6 +679,10 @@ typedef struct {
 
 #define	DT_LOPROC	0x70000000	/* First processor-specific type. */
 
+#define	DT_AARCH64_BTI_PLT		0x70000001
+#define	DT_AARCH64_PAC_PLT		0x70000003
+#define	DT_AARCH64_VARIANT_PCS		0x70000005
+
 #define	DT_ARM_SYMTABSZ			0x70000001
 #define	DT_ARM_PREEMPTMAP		0x70000002
 
@@ -723,6 +734,7 @@ typedef struct {
 #define	DT_MIPS_PLTGOT			0x70000032
 #define	DT_MIPS_RLD_OBJ_UPDATE		0x70000033
 #define	DT_MIPS_RWPLT			0x70000034
+#define	DT_MIPS_RLD_MAP_REL		0x70000035
 
 #define	DT_PPC_GOT			0x70000000
 #define	DT_PPC_TLSOPT			0x70000001
@@ -801,7 +813,7 @@ typedef struct {
 #define	NT_FREEBSD_FCTL_STKGAP_DISABLE	0x00000004
 #define	NT_FREEBSD_FCTL_WXNEEDED	0x00000008
 #define	NT_FREEBSD_FCTL_LA48		0x00000010
-#define	NT_FREEBSD_FCTL_ASG_DISABLE	0x00000020 /* ASLR STACK GAP Disable */
+/* was ASG_DISABLE, do not reuse	0x00000020 */
 
 /* Values for n_type.  Used in core files. */
 #define	NT_PRSTATUS	1	/* Process status. */
@@ -820,8 +832,10 @@ typedef struct {
 #define	NT_PTLWPINFO		17	/* Thread ptrace miscellaneous info. */
 #define	NT_PPC_VMX	0x100	/* PowerPC Altivec/VMX registers */
 #define	NT_PPC_VSX	0x102	/* PowerPC VSX registers */
+#define	NT_X86_SEGBASES	0x200	/* x86 FS/GS base addresses. */
 #define	NT_X86_XSTATE	0x202	/* x86 XSAVE extended state. */
 #define	NT_ARM_VFP	0x400	/* ARM VFP registers */
+#define	NT_ARM_TLS	0x401	/* ARM TLS register */
 
 /* GNU note types. */
 #define	NT_GNU_ABI_TAG		1
@@ -832,6 +846,11 @@ typedef struct {
 
 #define	GNU_PROPERTY_LOPROC			0xc0000000
 #define	GNU_PROPERTY_HIPROC			0xdfffffff
+
+#define	GNU_PROPERTY_AARCH64_FEATURE_1_AND	0xc0000000
+
+#define	GNU_PROPERTY_AARCH64_FEATURE_1_BTI	0x00000001
+#define	GNU_PROPERTY_AARCH64_FEATURE_1_PAC	0x00000002
 
 #define	GNU_PROPERTY_X86_FEATURE_1_AND		0xc0000002
 
@@ -872,6 +891,9 @@ typedef struct {
 #define	STV_EXPORTED	0x4
 #define	STV_SINGLETON	0x5
 #define	STV_ELIMINATE	0x6
+
+/* Architecture specific data - st_other */
+#define	STO_AARCH64_VARIANT_PCS 0x80
 
 /* Special symbol table indexes. */
 #define	STN_UNDEF	0	/* Undefined symbol index. */
@@ -938,6 +960,47 @@ typedef struct {
 #define	ELFCOMPRESS_HIOS	0x6fffffff
 #define	ELFCOMPRESS_LOPROC	0x70000000	/* Processor-specific */
 #define	ELFCOMPRESS_HIPROC	0x7fffffff
+
+/* Values for a_type. */
+#define	AT_NULL		0	/* Terminates the vector. */
+#define	AT_IGNORE	1	/* Ignored entry. */
+#define	AT_EXECFD	2	/* File descriptor of program to load. */
+#define	AT_PHDR		3	/* Program header of program already loaded. */
+#define	AT_PHENT	4	/* Size of each program header entry. */
+#define	AT_PHNUM	5	/* Number of program header entries. */
+#define	AT_PAGESZ	6	/* Page size in bytes. */
+#define	AT_BASE		7	/* Interpreter's base address. */
+#define	AT_FLAGS	8	/* Flags. */
+#define	AT_ENTRY	9	/* Where interpreter should transfer control. */
+#define	AT_NOTELF	10	/* Program is not ELF ?? */
+#define	AT_UID		11	/* Real uid. */
+#define	AT_EUID		12	/* Effective uid. */
+#define	AT_GID		13	/* Real gid. */
+#define	AT_EGID		14	/* Effective gid. */
+#define	AT_EXECPATH	15	/* Path to the executable. */
+#define	AT_CANARY	16	/* Canary for SSP. */
+#define	AT_CANARYLEN	17	/* Length of the canary. */
+#define	AT_OSRELDATE	18	/* OSRELDATE. */
+#define	AT_NCPUS	19	/* Number of CPUs. */
+#define	AT_PAGESIZES	20	/* Pagesizes. */
+#define	AT_PAGESIZESLEN	21	/* Number of pagesizes. */
+#define	AT_TIMEKEEP	22	/* Pointer to timehands. */
+#define	AT_STACKPROT	23	/* Initial stack protection. */
+#define	AT_EHDRFLAGS	24	/* e_flags field from elf hdr */
+#define	AT_HWCAP	25	/* CPU feature flags. */
+#define	AT_HWCAP2	26	/* CPU feature flags 2. */
+#define	AT_BSDFLAGS	27	/* ELF BSD Flags. */
+#define	AT_ARGC		28	/* Argument count */
+#define	AT_ARGV		29	/* Argument vector */
+#define	AT_ENVC		30	/* Environment count */
+#define	AT_ENVV		31	/* Environment vector */
+#define	AT_PS_STRINGS	32	/* struct ps_strings */
+#define	AT_FXRNG	33	/* Pointer to root RNG seed version. */
+#define	AT_KPRELOAD	34	/* Base of vdso, preloaded by rtld */
+#define	AT_USRSTACKBASE	35	/* Top of user stack */
+#define	AT_USRSTACKLIM	36	/* Grow limit of user stack */
+
+#define	AT_COUNT	37	/* Count of defined aux entry types. */
 
 /*
  * Relocation types.
@@ -1194,6 +1257,7 @@ typedef struct {
 #define	R_PPC_SECTOFF_LO	34
 #define	R_PPC_SECTOFF_HI	35
 #define	R_PPC_SECTOFF_HA	36
+#define	R_PPC_IRELATIVE		248
 
 /*
  * 64-bit relocations
@@ -1310,8 +1374,6 @@ typedef struct {
 #define	R_RISCV_SUB16		38
 #define	R_RISCV_SUB32		39
 #define	R_RISCV_SUB64		40
-#define	R_RISCV_GNU_VTINHERIT	41
-#define	R_RISCV_GNU_VTENTRY	42
 #define	R_RISCV_ALIGN		43
 #define	R_RISCV_RVC_BRANCH	44
 #define	R_RISCV_RVC_JUMP	45
@@ -1453,5 +1515,7 @@ typedef struct {
 #define	R_X86_64_GOTPCRELX	41
 #define	R_X86_64_REX_GOTPCRELX	42
 
+#define	ELF_BSDF_SIGFASTBLK	0x0001	/* Kernel supports fast sigblock */
+#define	ELF_BSDF_VMNOOVERCOMMIT	0x0002
 
 #endif /* !_SYS_ELF_COMMON_H_ */

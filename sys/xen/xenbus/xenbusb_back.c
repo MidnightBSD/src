@@ -36,7 +36,6 @@
  * Xen split devices.
  */
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -56,7 +55,6 @@
 #include <xen/gnttab.h>
 #include <xen/xenbus/xenbusvar.h>
 #include <xen/xenbus/xenbusb.h>
-
 
 /*------------------ Private Device Attachment Functions  --------------------*/
 /**
@@ -292,7 +290,7 @@ static device_method_t xenbusb_back_methods[] = {
 	DEVMETHOD(device_shutdown,      bus_generic_shutdown), 
 	DEVMETHOD(device_suspend,       bus_generic_suspend), 
 	DEVMETHOD(device_resume,        xenbusb_resume), 
- 
+
 	/* Bus Interface */ 
 	DEVMETHOD(bus_print_child,      xenbusb_print_child),
 	DEVMETHOD(bus_read_ivar,        xenbusb_read_ivar), 
@@ -301,7 +299,7 @@ static device_method_t xenbusb_back_methods[] = {
 	DEVMETHOD(bus_release_resource, bus_generic_release_resource),
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
 	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
- 
+
 	/* XenBus Bus Interface */
 	DEVMETHOD(xenbusb_enumerate_type, xenbusb_back_enumerate_type),
 	DEVMETHOD(xenbusb_get_otherend_node, xenbusb_back_get_otherend_node),
@@ -313,6 +311,6 @@ static device_method_t xenbusb_back_methods[] = {
 DEFINE_CLASS_0(xenbusb_back, xenbusb_back_driver, xenbusb_back_methods,
 	       sizeof(struct xenbusb_softc));
 devclass_t xenbusb_back_devclass; 
- 
+
 DRIVER_MODULE(xenbusb_back, xenstore, xenbusb_back_driver,
 	      xenbusb_back_devclass, 0, 0);

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -28,8 +28,12 @@
 #ifndef _USB_UTIL_H_
 #define	_USB_UTIL_H_
 
+struct usb_device;
+struct usb_device_request;
+
 uint8_t	usb_make_str_desc(void *ptr, uint16_t max_len, const char *s);
 void	usb_printbcd(char *p, uint16_t p_len, uint16_t bcd);
 void	usb_trim_spaces(char *p);
+int	usb_check_request(struct usb_device *, struct usb_device_request *);
 
 #endif					/* _USB_UTIL_H_ */

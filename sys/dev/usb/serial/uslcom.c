@@ -1,7 +1,6 @@
 /*	$OpenBSD: uslcom.c,v 1.17 2007/11/24 10:52:12 jsg Exp $	*/
 
 #include <sys/cdefs.h>
-
 /*
  * Copyright (c) 2006 Jonathan Gray <jsg@openbsd.org>
  *
@@ -58,7 +57,8 @@
 #ifdef USB_DEBUG
 static int uslcom_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, uslcom, CTLFLAG_RW, 0, "USB uslcom");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, uslcom, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB uslcom");
 SYSCTL_INT(_hw_usb_uslcom, OID_AUTO, debug, CTLFLAG_RWTUN,
     &uslcom_debug, 0, "Debug level");
 #endif
@@ -439,12 +439,6 @@ uslcom_attach(device_t dev)
 		    "error=%s\n", usbd_errstr(error));
 		goto detach;
 	}
-	/* clear stall at first run */
-	mtx_lock(&sc->sc_mtx);
-	usbd_xfer_set_stall(sc->sc_xfer[USLCOM_BULK_DT_WR]);
-	usbd_xfer_set_stall(sc->sc_xfer[USLCOM_BULK_DT_RD]);
-	mtx_unlock(&sc->sc_mtx);
-
 	sc->sc_partnum = uslcom_get_partnum(sc);
 
 	error = ucom_attach(&sc->sc_super_ucom, &sc->sc_ucom, 1, sc,
@@ -513,6 +507,10 @@ uslcom_cfg_open(struct ucom_softc *ucom)
 	    &req, NULL, 0, 1000)) {
 		DPRINTF("UART enable failed (ignored)\n");
 	}
+
+	/* clear stall */
+	usbd_xfer_set_stall(sc->sc_xfer[USLCOM_BULK_DT_WR]);
+	usbd_xfer_set_stall(sc->sc_xfer[USLCOM_BULK_DT_RD]);
 
 	/* start polling status */
 	uslcom_watchdog(sc);
@@ -820,7 +818,6 @@ tr_setup:
 		pc = usbd_xfer_get_frame(xfer, 0);
 		if (ucom_get_data(&sc->sc_ucom, pc, 0,
 		    USLCOM_BULK_BUF_SIZE, &actlen)) {
-
 			DPRINTF("actlen = %d\n", actlen);
 
 			usbd_xfer_set_frame_len(xfer, 0, actlen);

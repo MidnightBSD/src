@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001, 2002 Scott Long <scottl@freebsd.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /* udf_vnops.c */
@@ -96,6 +95,7 @@ static struct vop_vector udf_vnodeops = {
 	.vop_strategy =		udf_strategy,
 	.vop_vptofh =		udf_vptofh,
 };
+VFS_VOP_VECTOR_REGISTER(udf_vnodeops);
 
 struct vop_vector udf_fifoops = {
 	.vop_default =		&fifo_specops,
@@ -107,6 +107,7 @@ struct vop_vector udf_fifoops = {
 	.vop_setattr =		udf_setattr,
 	.vop_vptofh =		udf_vptofh,
 };
+VFS_VOP_VECTOR_REGISTER(udf_fifoops);
 
 static MALLOC_DEFINE(M_UDFFID, "udf_fid", "UDF FileId structure");
 static MALLOC_DEFINE(M_UDFDS, "udf_ds", "UDF Dirstream structure");
@@ -177,7 +178,7 @@ udf_access(struct vop_access_args *a)
 	mode = udf_permtomode(node);
 
 	return (vaccess(vp->v_type, mode, node->fentry->uid, node->fentry->gid,
-	    accmode, a->a_cred, NULL));
+	    accmode, a->a_cred));
 }
 
 static int
@@ -687,7 +688,6 @@ udf_getfid(struct udf_dirstream *ds)
 	 */
 	if (ds->off + UDF_FID_SIZE > ds->size ||
 	    ds->off + le16toh(fid->l_iu) + fid->l_fi + UDF_FID_SIZE > ds->size){
-
 		/* Copy what we have of the fid into a buffer */
 		frag_size = ds->size - ds->off;
 		if (frag_size >= ds->udfmp->bsize) {
@@ -804,8 +804,6 @@ udf_readdir(struct vop_readdir_args *a)
 		ncookies = uio->uio_resid / 8;
 		cookies = malloc(sizeof(u_long) * ncookies,
 		    M_TEMP, M_WAITOK);
-		if (cookies == NULL)
-			return (ENOMEM);
 		uiodir.ncookies = ncookies;
 		uiodir.cookies = cookies;
 		uiodir.acookies = 0;
@@ -821,7 +819,6 @@ udf_readdir(struct vop_readdir_args *a)
 	    node->udfmp);
 
 	while ((fid = udf_getfid(ds)) != NULL) {
-
 		/* XXX Should we return an error on a bad fid? */
 		if (udf_checktag(&fid->tag, TAGID_FID)) {
 			printf("Invalid FID tag\n");
@@ -1160,7 +1157,6 @@ lookloop:
 	ds = udf_opendir(node, offset, fsize, udfmp);
 
 	while ((fid = udf_getfid(ds)) != NULL) {
-
 		/* XXX Should we return an error on a bad fid? */
 		if (udf_checktag(&fid->tag, TAGID_FID)) {
 			printf("udf_lookup: Invalid tag\n");
@@ -1264,11 +1260,6 @@ udf_reclaim(struct vop_reclaim_args *a)
 
 	vp = a->a_vp;
 	unode = VTON(vp);
-
-	/*
-	 * Destroy the vm object and flush associated pages.
-	 */
-	vnode_destroy_vobject(vp);
 
 	if (unode != NULL) {
 		vfs_hash_remove(vp);

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997 Sandro Sigala, Brescia, Italy.
  * Copyright (c) 1997 Chris Shenton
@@ -26,7 +26,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -358,7 +357,7 @@ daemon_init(video_adapter_t *adp)
 	for (;;) {
 		hostlen = strlen(prison0.pr_hostname);
 		mtx_unlock(&prison0.pr_mtx);
-	
+
 		messagelen = hostlen + 3 + strlen(ostype) + 1 +
 		    strlen(osrelease);
 		message = malloc(messagelen + 1, M_DEVBUF, M_WAITOK);

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006-2009 Ariff Abdullah <ariff@FreeBSD.org>
  * Copyright (c) 2001 Cameron Grant <cg@FreeBSD.org>
@@ -36,6 +36,7 @@
 #include <dev/sound/pcm/sound.h>
 #include <dev/sound/pcm/vchan.h>
 
+SND_DECLARE_FILE("");
 
 /*
  * [ac3 , dts , linear , 0, linear, 0]
@@ -821,7 +822,7 @@ vchan_create(struct pcm_channel *parent, int num)
 			d->rvchanrate = parent->speed;
 		}
 	}
-	
+
 	/*
 	 * If the parent channel supports digital format,
 	 * enable passthrough mode.
@@ -947,45 +948,52 @@ vchan_initsys(device_t dev)
 	/* Play */
 	SYSCTL_ADD_PROC(&d->play_sysctl_ctx,
 	    SYSCTL_CHILDREN(d->play_sysctl_tree),
-	    OID_AUTO, "vchans", CTLTYPE_INT | CTLFLAG_RWTUN,
+	    OID_AUTO, "vchans", CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_MPSAFE,
 	    VCHAN_SYSCTL_DATA(unit, PLAY), VCHAN_SYSCTL_DATA_SIZE,
 	    sysctl_dev_pcm_vchans, "I", "total allocated virtual channel");
 	SYSCTL_ADD_PROC(&d->play_sysctl_ctx,
 	    SYSCTL_CHILDREN(d->play_sysctl_tree),
-	    OID_AUTO, "vchanmode", CTLTYPE_STRING | CTLFLAG_RWTUN,
+	    OID_AUTO, "vchanmode",
+	    CTLTYPE_STRING | CTLFLAG_RWTUN | CTLFLAG_MPSAFE,
 	    VCHAN_SYSCTL_DATA(unit, PLAY), VCHAN_SYSCTL_DATA_SIZE,
 	    sysctl_dev_pcm_vchanmode, "A",
 	    "vchan format/rate selection: 0=fixed, 1=passthrough, 2=adaptive");
 	SYSCTL_ADD_PROC(&d->play_sysctl_ctx,
 	    SYSCTL_CHILDREN(d->play_sysctl_tree),
-	    OID_AUTO, "vchanrate", CTLTYPE_INT | CTLFLAG_RWTUN,
+	    OID_AUTO, "vchanrate",
+	    CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_MPSAFE,
 	    VCHAN_SYSCTL_DATA(unit, PLAY), VCHAN_SYSCTL_DATA_SIZE,
 	    sysctl_dev_pcm_vchanrate, "I", "virtual channel mixing speed/rate");
 	SYSCTL_ADD_PROC(&d->play_sysctl_ctx,
 	    SYSCTL_CHILDREN(d->play_sysctl_tree),
-	    OID_AUTO, "vchanformat", CTLTYPE_STRING | CTLFLAG_RWTUN,
+	    OID_AUTO, "vchanformat",
+	    CTLTYPE_STRING | CTLFLAG_RWTUN | CTLFLAG_MPSAFE,
 	    VCHAN_SYSCTL_DATA(unit, PLAY), VCHAN_SYSCTL_DATA_SIZE,
 	    sysctl_dev_pcm_vchanformat, "A", "virtual channel mixing format");
 	/* Rec */
 	SYSCTL_ADD_PROC(&d->rec_sysctl_ctx,
 	    SYSCTL_CHILDREN(d->rec_sysctl_tree),
-	    OID_AUTO, "vchans", CTLTYPE_INT | CTLFLAG_RWTUN,
+	    OID_AUTO, "vchans",
+	    CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_MPSAFE,
 	    VCHAN_SYSCTL_DATA(unit, REC), VCHAN_SYSCTL_DATA_SIZE,
 	    sysctl_dev_pcm_vchans, "I", "total allocated virtual channel");
 	SYSCTL_ADD_PROC(&d->rec_sysctl_ctx,
 	    SYSCTL_CHILDREN(d->rec_sysctl_tree),
-	    OID_AUTO, "vchanmode", CTLTYPE_STRING | CTLFLAG_RWTUN,
+	    OID_AUTO, "vchanmode",
+	    CTLTYPE_STRING | CTLFLAG_RWTUN | CTLFLAG_MPSAFE,
 	    VCHAN_SYSCTL_DATA(unit, REC), VCHAN_SYSCTL_DATA_SIZE,
 	    sysctl_dev_pcm_vchanmode, "A",
 	    "vchan format/rate selection: 0=fixed, 1=passthrough, 2=adaptive");
 	SYSCTL_ADD_PROC(&d->rec_sysctl_ctx,
 	    SYSCTL_CHILDREN(d->rec_sysctl_tree),
-	    OID_AUTO, "vchanrate", CTLTYPE_INT | CTLFLAG_RWTUN,
+	    OID_AUTO, "vchanrate",
+	    CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_MPSAFE,
 	    VCHAN_SYSCTL_DATA(unit, REC), VCHAN_SYSCTL_DATA_SIZE,
 	    sysctl_dev_pcm_vchanrate, "I", "virtual channel mixing speed/rate");
 	SYSCTL_ADD_PROC(&d->rec_sysctl_ctx,
 	    SYSCTL_CHILDREN(d->rec_sysctl_tree),
-	    OID_AUTO, "vchanformat", CTLTYPE_STRING | CTLFLAG_RWTUN,
+	    OID_AUTO, "vchanformat",
+	    CTLTYPE_STRING | CTLFLAG_RWTUN | CTLFLAG_MPSAFE,
 	    VCHAN_SYSCTL_DATA(unit, REC), VCHAN_SYSCTL_DATA_SIZE,
 	    sysctl_dev_pcm_vchanformat, "A", "virtual channel mixing format");
 }

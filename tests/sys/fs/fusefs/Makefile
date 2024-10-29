@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .include <bsd.compiler.mk>
 
@@ -11,13 +10,16 @@ TESTSDIR=	${TESTSBASE}/sys/fs/fusefs
 # out, so we get more granular reporting.
 GTESTS+=	access
 GTESTS+=	allow_other
+GTESTS+=	bad_server
 GTESTS+=	bmap
 GTESTS+=	cache
+GTESTS+=	copy_file_range
 GTESTS+=	create
 GTESTS+=	default_permissions
 GTESTS+=	default_permissions_privileged
 GTESTS+=	destroy
 GTESTS+=	dev_fuse_poll
+GTESTS+=	fallocate
 GTESTS+=	fifo
 GTESTS+=	flush
 GTESTS+=	forget
@@ -30,6 +32,7 @@ GTESTS+=	last_local_modify
 GTESTS+=	link
 GTESTS+=	locks
 GTESTS+=	lookup
+GTESTS+=	lseek
 GTESTS+=	mkdir
 GTESTS+=	mknod
 GTESTS+=	mount
@@ -78,6 +81,10 @@ CXXWARNFLAGS+=	-Wno-class-memaccess
 .endif
 # Supress warnings about deprecated implicit copy constructors in gtest.
 CXXWARNFLAGS+=  -Wno-deprecated-copy
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 180000
+# clang 18.0.0 introduces a new warning about variable length arrays in C++.
+CXXWARNFLAGS+=	-Wno-vla-cxx-extension
+.endif
 CXXFLAGS+=	-I${SRCTOP}/tests
 CXXFLAGS+=	-I${FUSEFS}
 CXXFLAGS+=	-I${MOUNT}
@@ -87,7 +94,5 @@ CXXSTD=		c++14
 LIBADD+=	pthread
 LIBADD+=	gmock gtest
 LIBADD+=	util
-
-WARNS?=	6
 
 .include <bsd.test.mk>

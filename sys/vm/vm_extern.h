@@ -41,12 +41,15 @@ struct vnode;
 struct vmem;
 
 #ifdef _KERNEL
+#include <sys/kassert.h>
+
 struct cdev;
 struct cdevsw;
 struct domainset;
 
 /* These operate on kernel virtual addresses only. */
 vm_offset_t kva_alloc(vm_size_t);
+vm_offset_t kva_alloc_aligned(vm_size_t, vm_size_t);
 void kva_free(vm_offset_t, vm_size_t);
 
 /* These operate on pageable virtual addresses. */
@@ -76,8 +79,8 @@ void kmem_unback(vm_object_t, vm_offset_t, vm_size_t);
 
 /* Bootstrapping. */
 void kmem_bootstrap_free(vm_offset_t, vm_size_t);
-vm_map_t kmem_suballoc(vm_map_t, vm_offset_t *, vm_offset_t *, vm_size_t,
-    boolean_t);
+void kmem_subinit(vm_map_t, vm_map_t, vm_offset_t *, vm_offset_t *, vm_size_t,
+    bool);
 void kmem_init(vm_offset_t, vm_offset_t);
 void kmem_init_zero_region(void);
 void kmeminit(void);
@@ -125,9 +128,48 @@ struct sf_buf *vm_imgact_map_page(vm_object_t object, vm_ooffset_t offset);
 void vm_imgact_unmap_page(struct sf_buf *sf);
 void vm_thread_dispose(struct thread *td);
 int vm_thread_new(struct thread *td, int pages);
+void vm_thread_stack_back(struct domainset *ds, vm_offset_t kaddr,
+    vm_page_t ma[], int npages, int req_class);
 u_int vm_active_count(void);
 u_int vm_inactive_count(void);
 u_int vm_laundry_count(void);
 u_int vm_wait_count(void);
+
+/*
+ * Is pa a multiple of alignment, which is a power-of-two?
+ */
+static inline bool
+vm_addr_align_ok(vm_paddr_t pa, u_long alignment)
+{
+#ifdef INVARIANTS
+	if (!powerof2(alignment))
+		panic("%s: alignment is not a power of 2: %#lx",
+		    __func__, alignment);
+#endif
+	return ((pa & (alignment - 1)) == 0);
+}
+
+/*
+ * Do the first and last addresses of a range match in all bits except the ones
+ * in -boundary (a power-of-two)?  For boundary == 0, all addresses match.
+ */
+static inline bool
+vm_addr_bound_ok(vm_paddr_t pa, vm_paddr_t size, vm_paddr_t boundary)
+{
+#ifdef INVARIANTS
+	if (!powerof2(boundary))
+		panic("%s: boundary is not a power of 2: %#jx",
+		    __func__, (uintmax_t)boundary);
+#endif
+	return (((pa ^ (pa + size - 1)) & -boundary) == 0);
+}
+
+static inline bool
+vm_addr_ok(vm_paddr_t pa, vm_paddr_t size, u_long alignment,
+    vm_paddr_t boundary)
+{
+	return (vm_addr_align_ok(pa, alignment) &&
+	    vm_addr_bound_ok(pa, size, boundary));
+}
 #endif				/* _KERNEL */
 #endif				/* !_VM_EXTERN_H_ */

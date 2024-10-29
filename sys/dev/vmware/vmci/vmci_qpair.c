@@ -15,7 +15,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "vmci_kernel_api.h"
 #include "vmci_kernel_defs.h"
 #include "vmci_kernel_if.h"

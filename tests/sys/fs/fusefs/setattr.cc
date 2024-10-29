@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 The FreeBSD Foundation
  *
@@ -26,15 +26,17 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 extern "C" {
+#include <sys/types.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 
 #include <fcntl.h>
 #include <semaphore.h>
+#include <signal.h>
 }
 
 #include "mockfs.hh"
@@ -42,11 +44,15 @@ extern "C" {
 
 using namespace testing;
 
-class Setattr : public FuseTest {};
+class Setattr : public FuseTest {
+public:
+static sig_atomic_t s_sigxfsz;
+};
 
 class RofsSetattr: public Setattr {
 public:
 virtual void SetUp() {
+	s_sigxfsz = 0;
 	m_ro = true;
 	Setattr::SetUp();
 }
@@ -60,6 +66,12 @@ virtual void SetUp() {
 }
 };
 
+
+sig_atomic_t Setattr::s_sigxfsz = 0;
+
+void sigxfsz_handler(int __unused sig) {
+	Setattr::s_sigxfsz = 1;
+}
 
 /*
  * If setattr returns a non-zero cache timeout, then subsequent VOP_GETATTRs
@@ -436,7 +448,7 @@ TEST_F(Setattr, truncate) {
 TEST_F(Setattr, truncate_discards_cached_data) {
 	const char FULLPATH[] = "mountpoint/some_file.txt";
 	const char RELPATH[] = "some_file.txt";
-	void *w0buf, *r0buf, *r1buf, *expected;
+	char *w0buf, *r0buf, *r1buf, *expected;
 	off_t w0_offset = 0;
 	size_t w0_size = 0x30000;
 	off_t r0_offset = 0;
@@ -451,18 +463,13 @@ TEST_F(Setattr, truncate_discards_cached_data) {
 	int fd, r;
 	bool should_have_data = false;
 
-	w0buf = malloc(w0_size);
-	ASSERT_NE(nullptr, w0buf) << strerror(errno);
+	w0buf = new char[w0_size];
 	memset(w0buf, 'X', w0_size);
 
-	r0buf = malloc(r0_size);
-	ASSERT_NE(nullptr, r0buf) << strerror(errno);
-	r1buf = malloc(r1_size);
-	ASSERT_NE(nullptr, r1buf) << strerror(errno);
+	r0buf = new char[r0_size];
+	r1buf = new char[r1_size];
 
-	expected = malloc(r1_size);
-	ASSERT_NE(nullptr, expected) << strerror(errno);
-	memset(expected, 0, r1_size);
+	expected = new char[r1_size]();
 
 	expect_lookup(RELPATH, ino, mode, 0, 1);
 	expect_open(ino, O_RDWR, 1);
@@ -516,6 +523,7 @@ TEST_F(Setattr, truncate_discards_cached_data) {
 		auto osize = std::min(
 			static_cast<uint64_t>(cur_size) - in.body.read.offset,
 			static_cast<uint64_t>(in.body.read.size));
+		assert(osize <= sizeof(out.body.bytes));
 		out.header.len = sizeof(struct fuse_out_header) + osize;
 		if (should_have_data)
 			memset(out.body.bytes, 'X', osize);
@@ -545,12 +553,40 @@ TEST_F(Setattr, truncate_discards_cached_data) {
 	r = memcmp(expected, r1buf, r1_size);
 	ASSERT_EQ(0, r);
 
-	free(expected);
-	free(r1buf);
-	free(r0buf);
-	free(w0buf);
+	delete[] expected;
+	delete[] r1buf;
+	delete[] r0buf;
+	delete[] w0buf;
 
 	leak(fd);
+}
+
+/* truncate should fail if it would cause the file to exceed RLIMIT_FSIZE */
+TEST_F(Setattr, truncate_rlimit_rsize)
+{
+	const char FULLPATH[] = "mountpoint/some_file.txt";
+	const char RELPATH[] = "some_file.txt";
+	struct rlimit rl;
+	const uint64_t ino = 42;
+	const uint64_t oldsize = 0;
+	const uint64_t newsize = 100'000'000;
+
+	EXPECT_LOOKUP(FUSE_ROOT_ID, RELPATH)
+	.WillOnce(Invoke(ReturnImmediate([=](auto in __unused, auto& out) {
+		SET_OUT_HEADER_LEN(out, entry);
+		out.body.entry.attr.mode = S_IFREG | 0644;
+		out.body.entry.nodeid = ino;
+		out.body.entry.attr.size = oldsize;
+	})));
+
+	rl.rlim_cur = newsize / 2;
+	rl.rlim_max = 10 * newsize;
+	ASSERT_EQ(0, setrlimit(RLIMIT_FSIZE, &rl)) << strerror(errno);
+	ASSERT_NE(SIG_ERR, signal(SIGXFSZ, sigxfsz_handler)) << strerror(errno);
+
+	EXPECT_EQ(-1, truncate(FULLPATH, newsize));
+	EXPECT_EQ(EFBIG, errno);
+	EXPECT_EQ(1, s_sigxfsz);
 }
 
 /* Change a file's timestamps */

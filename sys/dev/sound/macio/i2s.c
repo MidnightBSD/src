@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-3-Clause
+ * SPDX-License-Identifier: BSD-2-Clause AND BSD-3-Clause
  *
  * Copyright 2008 by Marco Trillo. All rights reserved.
  *
@@ -23,7 +23,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 /*-
  * Copyright (c) 2002, 2003 Tsubai Masanari.  All rights reserved.
@@ -110,7 +109,6 @@ static device_method_t pcm_i2s_methods[] = {
 	/* Device interface. */
 	DEVMETHOD(device_probe,		i2s_probe),
 	DEVMETHOD(device_attach, 	i2s_attach),
-
 	{ 0, 0 }
 };
 
@@ -130,7 +128,6 @@ static device_method_t aoagpio_methods[] = {
 	/* Device interface. */
 	DEVMETHOD(device_probe,		aoagpio_probe),
 	DEVMETHOD(device_attach,	aoagpio_attach),
-
 	{ 0, 0 }
 };
 
@@ -150,7 +147,6 @@ static driver_t aoagpio_driver = {
 static devclass_t aoagpio_devclass;
 
 DRIVER_MODULE(aoagpio, macgpio, aoagpio_driver, aoagpio_devclass, 0, 0);
-
 
 /*****************************************************************************
 			Probe and attachment routines.
@@ -178,7 +174,7 @@ i2s_probe(device_t self)
 	if (subchild != 0 && OF_getprop(subchild, "name", subchildname,
 	    sizeof(subchildname)) > 0 && strcmp(subchildname, "lightshow") == 0)
 		return (ENXIO);
-	
+
 	device_set_desc(self, "Apple I2S Audio Controller");
 
 	return (0);
@@ -194,7 +190,7 @@ i2s_attach(device_t self)
 	void			*dbdma_ih;
 	int 			 rid, oirq, err;
 	phandle_t 		 port;
-	
+
 	sc = malloc(sizeof(*sc), M_DEVBUF, M_WAITOK | M_ZERO);
 
 	sc->aoa.sc_dev = self;
@@ -206,7 +202,7 @@ i2s_attach(device_t self)
 	sc->soundnode = of_find_firstchild_byname(port, "sound");
 	if (sc->soundnode == -1)
 		return (ENXIO);
- 
+
 	mtx_init(&sc->port_mtx, "port_mtx", NULL, MTX_DEF);
 
 	/* Map the controller register space. */
@@ -246,10 +242,8 @@ i2s_attach(device_t self)
 	 * Register a hook for delayed attach in order to allow
 	 * the I2C controller to attach.
 	 */
-	if ((i2s_delayed_attach = malloc(sizeof(struct intr_config_hook), 
-	    M_TEMP, M_WAITOK | M_ZERO)) == NULL)
-		return (ENOMEM);
-
+	i2s_delayed_attach = malloc(sizeof(struct intr_config_hook),
+	    M_TEMP, M_WAITOK | M_ZERO);
 	i2s_delayed_attach->ich_func = i2s_postattach;
 	i2s_delayed_attach->ich_arg = sc;
 
@@ -304,7 +298,7 @@ aoagpio_int(void *cookie)
 	struct aoagpio_softc	*sc;
 
 	sc = device_get_softc(self);
-	
+
 	if (macgpio_read(self) & GPIO_LEVEL_RO)
 		sc->level = sc->detect_active;
 	else
@@ -459,7 +453,7 @@ i2s_setup(struct i2s_softc *sc, u_int rate, u_int wordsize, u_int sclk_fs)
 
 	if (sclk_fs != 32 && sclk_fs != 64)
 		return (EINVAL);
-	
+
 	/*
 	 *	Find a clock source to derive the master clock (MCLK)
 	 *	and the I2S bit block (SCLK) and set the divisors as
@@ -477,7 +471,7 @@ i2s_setup(struct i2s_softc *sc, u_int rate, u_int wordsize, u_int sclk_fs)
 	}
 	if (reg == 0)
 		return (EINVAL);
-	
+
 	switch (mdiv) {
 	/* exception cases */
 	case 1:
@@ -513,7 +507,7 @@ i2s_setup(struct i2s_softc *sc, u_int rate, u_int wordsize, u_int sclk_fs)
 	 * 	revisited if we want to add recording from SPDIF some day.
 	 */
 	reg |= SCLK_MASTER;
-	
+
 	switch (sclk_fs) {
 	case 64:
 		reg |= SERIAL_64x;
@@ -581,7 +575,6 @@ i2s_setup(struct i2s_softc *sc, u_int rate, u_int wordsize, u_int sclk_fs)
 	return (0);
 }
 
-
 /* XXX this does not belong here. */
 static phandle_t
 of_find_firstchild_byname(phandle_t node, const char *req_name)
@@ -599,7 +592,6 @@ of_find_firstchild_byname(phandle_t node, const char *req_name)
 
 	return (-1);
 }
-
 
 static u_int
 gpio_read(enum gpio_ctrl ctrl)
@@ -668,7 +660,7 @@ i2s_audio_hw_reset(struct i2s_softc *sc)
 
 		gpio_write(AUDIO_HW_RESET, !reset_active);   /* Negate RESET */
 		DELAY(RESET_RELEASE_TIME);
-	
+
 	} else {
 		DPRINTF(("no audio_hw_reset\n"));
 	}
@@ -761,4 +753,3 @@ i2s_postattach(void *xsc)
 	config_intrhook_disestablish(i2s_delayed_attach);
 	free(i2s_delayed_attach, M_TEMP);
 }
-

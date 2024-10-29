@@ -29,7 +29,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_SYSCONS_SYSCONS_H_
@@ -87,15 +86,7 @@
 
 #define DPRINTF(l, p)	if (SC_DEBUG_LEVEL >= (l)) printf p
 
-#ifndef __sparc64__
 #define SC_DRIVER_NAME	"sc"
-#else
-/*
- * Use a different driver name on sparc64 so it does not get confused
- * with the system controller devices which are also termed 'sc' in OFW.
- */
-#define SC_DRIVER_NAME	"syscons"
-#endif
 #define SC_VTY(dev)	(((sc_ttysoftc *)tty_softc(tp))->st_index)
 #define SC_DEV(sc, vty)	((sc)->dev[(vty) - (sc)->first_vty])
 #define SC_STAT(tp)	(*((scr_stat **)&((sc_ttysoftc *)tty_softc(tp))->st_stat))
@@ -216,8 +207,7 @@ typedef struct sc_softc {
 #define	SC_INIT_DONE	(1 << 16)
 #define	SC_SPLASH_SCRN	(1 << 17)
 
-	int		keyboard;		/* -1 if unavailable */
-	struct keyboard	*kbd;
+	struct keyboard	*kbd;			/* NULL if unavailable. */
 
 	int		adapter;
 	struct video_adapter *adp;
@@ -287,9 +277,7 @@ typedef struct scr_stat {
 	int		index;			/* index of this vty */
 	struct sc_softc *sc;			/* pointer to softc */
 	struct sc_rndr_sw *rndr;		/* renderer */
-#ifndef __sparc64__
 	sc_vtb_t	scr;
-#endif
 	sc_vtb_t	vtb;
 
 	int 		xpos;			/* current X position */
@@ -377,7 +365,7 @@ typedef struct sc_ttysoftc {
 /* terminal emulator */
 
 #ifndef SC_DFLT_TERM
-#define SC_DFLT_TERM	"*"			/* any */
+#define SC_DFLT_TERM	"scteken"
 #endif
 
 typedef int	sc_term_init_t(scr_stat *scp, void **tcp, int code);

@@ -34,6 +34,8 @@
 #ifndef _SYS_PROTOSW_H_
 #define _SYS_PROTOSW_H_
 
+#include <sys/queue.h>
+
 /* Forward declare these structures referenced from prototypes below. */
 struct kaiocb;
 struct mbuf;
@@ -92,6 +94,8 @@ struct protosw {
 	pr_drain_t *pr_drain;		/* flush any excess space possible */
 
 	struct	pr_usrreqs *pr_usrreqs;	/* user-protocol hook */
+	LIST_ENTRY(protosw)  pr_fasttimos;
+	LIST_ENTRY(protosw)  pr_slowtimos;
 };
 /*#endif*/
 
@@ -342,7 +346,6 @@ char	*prcorequests[] = {
 
 #ifdef _KERNEL
 void	pfctlinput(int, struct sockaddr *);
-void	pfctlinput2(int, struct sockaddr *, void *);
 struct domain *pffinddomain(int family);
 struct protosw *pffindproto(int family, int protocol, int type);
 struct protosw *pffindtype(int family, int type);

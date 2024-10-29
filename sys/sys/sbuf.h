@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000-2008 Poul-Henning Kamp
  * Copyright (c) 2000-2008 Dag-Erling Coïdan Smørgrav
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SYS_SBUF_H_
@@ -57,6 +56,7 @@ struct sbuf {
 #define	SBUF_FINISHED	0x00020000	/* set by sbuf_finish() */
 #define	SBUF_DYNSTRUCT	0x00080000	/* sbuf must be freed */
 #define	SBUF_INSECTION	0x00100000	/* set by sbuf_start_section() */
+#define	SBUF_DRAINATEOL	0x00200000	/* drained contents ended in \n */
 	int		 s_flags;	/* flags */
 	ssize_t		 s_sect_len;	/* current length of section */
 	ssize_t		 s_rec_off;	/* current record start offset */
@@ -90,6 +90,7 @@ int		 sbuf_printf(struct sbuf *, const char *, ...)
 	__printflike(2, 3);
 int		 sbuf_vprintf(struct sbuf *, const char *, __va_list)
 	__printflike(2, 0);
+int		 sbuf_nl_terminate(struct sbuf *);
 int		 sbuf_putc(struct sbuf *, int);
 void		 sbuf_set_drain(struct sbuf *, sbuf_drain_func *, void *);
 int		 sbuf_drain(struct sbuf *);
@@ -105,6 +106,7 @@ ssize_t		 sbuf_end_section(struct sbuf *, ssize_t, size_t, int);
 void		 sbuf_hexdump(struct sbuf *, const void *, int, const char *,
 		     int);
 int		 sbuf_count_drain(void *arg, const char *data, int len);
+int		 sbuf_printf_drain(void *arg, const char *data, int len);
 void		 sbuf_putbuf(struct sbuf *);
 
 #ifdef _KERNEL

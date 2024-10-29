@@ -37,8 +37,8 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_acpi.h"
+#include "opt_iommu.h"
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -114,14 +114,15 @@ struct msi_intsrc {
 	struct intsrc msi_intsrc;
 	device_t msi_dev;		/* Owning device. (g) */
 	struct msi_intsrc *msi_first;	/* First source in group. */
+	u_int *msi_irqs;		/* Group's IRQ list. (g) */
 	u_int msi_irq;			/* IRQ cookie. */
-	u_int msi_msix;			/* MSI-X message. */
-	u_int msi_vector:8;		/* IDT vector. */
 	u_int msi_cpu;			/* Local APIC ID. (g) */
+	u_int msi_remap_cookie;		/* IOMMU cookie. */
+	u_int msi_vector:8;		/* IDT vector. */
 	u_int msi_count:8;		/* Messages in this group. (g) */
 	u_int msi_maxcount:8;		/* Alignment for this group. (g) */
-	u_int *msi_irqs;		/* Group's IRQ list. (g) */
-	u_int msi_remap_cookie;
+	u_int msi_enabled:8;		/* Enabled messages in this group. (g) */
+	bool msi_msix;			/* MSI-X message. */
 };
 
 static void	msi_create_source(void);
@@ -152,6 +153,8 @@ struct pic msi_pic = {
 };
 
 u_int first_msi_irq;
+SYSCTL_UINT(_machdep, OID_AUTO, first_msi_irq, CTLFLAG_RD, &first_msi_irq, 0,
+    "Number of first IRQ reserved for MSI and MSI-X interrupts");
 
 u_int num_msi_irqs = 2048;
 SYSCTL_UINT(_machdep, OID_AUTO, num_msi_irqs, CTLFLAG_RDTUN, &num_msi_irqs, 0,
@@ -202,7 +205,12 @@ msi_enable_intr(struct intsrc *isrc)
 {
 	struct msi_intsrc *msi = (struct msi_intsrc *)isrc;
 
-	apic_enable_vector(msi->msi_cpu, msi->msi_vector);
+	msi = msi->msi_first;
+	if (msi->msi_enabled == 0) {
+		for (u_int i = 0; i < msi->msi_count; i++)
+			apic_enable_vector(msi->msi_cpu, msi->msi_vector + i);
+	}
+	msi->msi_enabled++;
 }
 
 static void
@@ -210,7 +218,12 @@ msi_disable_intr(struct intsrc *isrc)
 {
 	struct msi_intsrc *msi = (struct msi_intsrc *)isrc;
 
-	apic_disable_vector(msi->msi_cpu, msi->msi_vector);
+	msi = msi->msi_first;
+	msi->msi_enabled--;
+	if (msi->msi_enabled == 0) {
+		for (u_int i = 0; i < msi->msi_count; i++)
+			apic_disable_vector(msi->msi_cpu, msi->msi_vector + i);
+	}
 }
 
 static int
@@ -242,7 +255,7 @@ msi_assign_cpu(struct intsrc *isrc, u_int apic_id)
 	struct msi_intsrc *sib, *msi = (struct msi_intsrc *)isrc;
 	int old_vector;
 	u_int old_id;
-	int i, vector;
+	int error, i, vector;
 
 	/*
 	 * Only allow CPUs to be assigned to the first message for an
@@ -264,7 +277,7 @@ msi_assign_cpu(struct intsrc *isrc, u_int apic_id)
 
 	/* Allocate IDT vectors on this cpu. */
 	if (msi->msi_count > 1) {
-		KASSERT(msi->msi_msix == 0, ("MSI-X message group"));
+		KASSERT(!msi->msi_msix, ("MSI-X message group"));
 		vector = apic_alloc_vectors(apic_id, msi->msi_irqs,
 		    msi->msi_count, msi->msi_maxcount);
 	} else
@@ -272,42 +285,54 @@ msi_assign_cpu(struct intsrc *isrc, u_int apic_id)
 	if (vector == 0)
 		return (ENOSPC);
 
+	/* Must be set before BUS_REMAP_INTR as it may call back into MSI. */
 	msi->msi_cpu = apic_id;
 	msi->msi_vector = vector;
-	if (msi->msi_intsrc.is_handlers > 0)
-		apic_enable_vector(msi->msi_cpu, msi->msi_vector);
-	if (bootverbose)
-		printf("msi: Assigning %s IRQ %d to local APIC %u vector %u\n",
-		    msi->msi_msix ? "MSI-X" : "MSI", msi->msi_irq,
-		    msi->msi_cpu, msi->msi_vector);
-	for (i = 1; i < msi->msi_count; i++) {
-		sib = (struct msi_intsrc *)intr_lookup_source(msi->msi_irqs[i]);
-		sib->msi_cpu = apic_id;
-		sib->msi_vector = vector + i;
-		if (sib->msi_intsrc.is_handlers > 0)
-			apic_enable_vector(sib->msi_cpu, sib->msi_vector);
-		if (bootverbose)
-			printf(
-		    "msi: Assigning MSI IRQ %d to local APIC %u vector %u\n",
-			    sib->msi_irq, sib->msi_cpu, sib->msi_vector);
+	if (msi->msi_enabled > 0) {
+		for (i = 0; i < msi->msi_count; i++)
+			apic_enable_vector(apic_id, vector + i);
 	}
-	BUS_REMAP_INTR(device_get_parent(msi->msi_dev), msi->msi_dev,
+	error = BUS_REMAP_INTR(device_get_parent(msi->msi_dev), msi->msi_dev,
 	    msi->msi_irq);
+	if (error == 0) {
+		if (bootverbose) {
+			printf("msi: Assigning %s IRQ %d to local APIC %u vector %u\n",
+			    msi->msi_msix ? "MSI-X" : "MSI", msi->msi_irq,
+			    msi->msi_cpu, msi->msi_vector);
+		}
+		for (i = 1; i < msi->msi_count; i++) {
+			sib = (struct msi_intsrc *)intr_lookup_source(
+			    msi->msi_irqs[i]);
+			sib->msi_cpu = apic_id;
+			sib->msi_vector = vector + i;
+			if (bootverbose)
+				printf("msi: Assigning MSI IRQ %d to local APIC %u vector %u\n",
+				    sib->msi_irq, sib->msi_cpu,
+				    sib->msi_vector);
+		}
+	} else {
+		device_printf(msi->msi_dev,
+		    "remap irq %u to APIC ID %u failed (error %d)\n",
+		    msi->msi_irq, apic_id, error);
+		msi->msi_cpu = old_id;
+		msi->msi_vector = old_vector;
+		old_id = apic_id;
+		old_vector = vector;
+	}
 
 	/*
 	 * Free the old vector after the new one is established.  This is done
-	 * to prevent races where we could miss an interrupt.
+	 * to prevent races where we could miss an interrupt.  If BUS_REMAP_INTR
+	 * failed then we disable and free the new, unused vector(s).
 	 */
-	if (msi->msi_intsrc.is_handlers > 0)
-		apic_disable_vector(old_id, old_vector);
-	apic_free_vector(old_id, old_vector, msi->msi_irq);
-	for (i = 1; i < msi->msi_count; i++) {
-		sib = (struct msi_intsrc *)intr_lookup_source(msi->msi_irqs[i]);
-		if (sib->msi_intsrc.is_handlers > 0)
+	if (msi->msi_enabled > 0) {
+		for (i = 0; i < msi->msi_count; i++)
 			apic_disable_vector(old_id, old_vector + i);
-		apic_free_vector(old_id, old_vector + i, msi->msi_irqs[i]);
 	}
-	return (0);
+	apic_free_vector(old_id, old_vector, msi->msi_irq);
+	for (i = 1; i < msi->msi_count; i++)
+		apic_free_vector(old_id, old_vector + i, msi->msi_irqs[i]);
+	return (error);
 }
 
 void
@@ -339,7 +364,7 @@ msi_init(void)
 	if (num_msi_irqs == 0)
 		return;
 
-	first_msi_irq = max(MINIMUM_MSI_INT, num_io_irqs);
+	first_msi_irq = num_io_irqs;
 	if (num_msi_irqs > UINT_MAX - first_msi_irq)
 		panic("num_msi_irqs too high");
 	num_io_irqs = first_msi_irq + num_msi_irqs;
@@ -380,7 +405,7 @@ msi_alloc(device_t dev, int count, int maxcount, int *irqs)
 	struct msi_intsrc *msi, *fsrc;
 	u_int cpu, domain, *mirqs;
 	int cnt, i, vector;
-#ifdef ACPI_DMAR
+#ifdef IOMMU
 	u_int cookies[count];
 	int error;
 #endif
@@ -446,7 +471,7 @@ again:
 		return (ENOSPC);
 	}
 
-#ifdef ACPI_DMAR
+#ifdef IOMMU
 	mtx_unlock(&msi_lock);
 	error = iommu_alloc_msi_intr(dev, cookies, count);
 	mtx_lock(&msi_lock);
@@ -528,7 +553,7 @@ msi_release(int *irqs, int count)
 		msi = (struct msi_intsrc *)intr_lookup_source(irqs[i]);
 		KASSERT(msi->msi_first == first, ("message not in group"));
 		KASSERT(msi->msi_dev == first->msi_dev, ("owner mismatch"));
-#ifdef ACPI_DMAR
+#ifdef IOMMU
 		iommu_unmap_msi_intr(first->msi_dev, msi->msi_remap_cookie);
 #endif
 		msi->msi_first = NULL;
@@ -538,7 +563,7 @@ msi_release(int *irqs, int count)
 	}
 
 	/* Clear out the first message. */
-#ifdef ACPI_DMAR
+#ifdef IOMMU
 	mtx_unlock(&msi_lock);
 	iommu_unmap_msi_intr(first->msi_dev, first->msi_remap_cookie);
 	mtx_lock(&msi_lock);
@@ -561,7 +586,7 @@ msi_map(int irq, uint64_t *addr, uint32_t *data)
 {
 	struct msi_intsrc *msi;
 	int error;
-#ifdef ACPI_DMAR
+#ifdef IOMMU
 	struct msi_intsrc *msi1;
 	int i, k;
 #endif
@@ -592,7 +617,7 @@ msi_map(int irq, uint64_t *addr, uint32_t *data)
 		msi = msi->msi_first;
 	}
 
-#ifdef ACPI_DMAR
+#ifdef IOMMU
 	if (!msi->msi_msix) {
 		for (k = msi->msi_count - 1, i = first_msi_irq; k > 0 &&
 		    i < first_msi_irq + num_msi_irqs; i++) {
@@ -616,6 +641,11 @@ msi_map(int irq, uint64_t *addr, uint32_t *data)
 	mtx_unlock(&msi_lock);
 	error = EOPNOTSUPP;
 #endif
+	if (error == EOPNOTSUPP && msi->msi_cpu > 0xff) {
+		printf("%s: unsupported destination APIC ID %u\n", __func__,
+		    msi->msi_cpu);
+		error = EINVAL;
+	}
 	if (error == EOPNOTSUPP) {
 		*addr = INTEL_ADDR(msi);
 		*data = INTEL_DATA(msi);
@@ -630,7 +660,7 @@ msix_alloc(device_t dev, int *irq)
 	struct msi_intsrc *msi;
 	u_int cpu, domain;
 	int i, vector;
-#ifdef ACPI_DMAR
+#ifdef IOMMU
 	u_int cookie;
 	int error;
 #endif
@@ -681,7 +711,7 @@ again:
 	}
 
 	msi->msi_dev = dev;
-#ifdef ACPI_DMAR
+#ifdef IOMMU
 	mtx_unlock(&msi_lock);
 	error = iommu_alloc_msi_intr(dev, &cookie, 1);
 	mtx_lock(&msi_lock);
@@ -703,7 +733,7 @@ again:
 	msi->msi_cpu = cpu;
 	msi->msi_first = msi;
 	msi->msi_vector = vector;
-	msi->msi_msix = 1;
+	msi->msi_msix = true;
 	msi->msi_count = 1;
 	msi->msi_maxcount = 1;
 	msi->msi_irqs = NULL;
@@ -736,7 +766,7 @@ msix_release(int irq)
 	KASSERT(msi->msi_dev != NULL, ("unowned message"));
 
 	/* Clear out the message. */
-#ifdef ACPI_DMAR
+#ifdef IOMMU
 	mtx_unlock(&msi_lock);
 	iommu_unmap_msi_intr(msi->msi_dev, msi->msi_remap_cookie);
 	mtx_lock(&msi_lock);
@@ -745,7 +775,7 @@ msix_release(int irq)
 	msi->msi_dev = NULL;
 	apic_free_vector(msi->msi_cpu, msi->msi_vector, msi->msi_irq);
 	msi->msi_vector = 0;
-	msi->msi_msix = 0;
+	msi->msi_msix = false;
 	msi->msi_count = 0;
 	msi->msi_maxcount = 0;
 

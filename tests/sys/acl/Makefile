@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 PACKAGE=	tests
 
@@ -21,7 +20,9 @@ TAP_TESTS_SH+=	03
 TAP_TESTS_SH+=	04
 
 .for t in ${TAP_TESTS_SH}
-TEST_METADATA.$t+=	required_user="root"
+# Tests hard-code a ZFS pool name of "acltools" and so cannot run in parallel.
+TEST_METADATA.$t+=	required_user="root" \
+			is_exclusive=true
 .endfor
 
 _ACL_PROGS=		getfacl setfacl
@@ -30,8 +31,8 @@ _ACL_PROGS=		getfacl setfacl
 TEST_METADATA.$t+=	required_programs="perl zpool ${_ACL_PROGS}"
 .endfor
 
-# .for t in 00 02
-# TEST_METADATA.$t+=	required_programs="perl ${_ACL_PROGS}"
-# .endfor
+.for t in 00 02
+TEST_METADATA.$t+=	required_programs="perl ${_ACL_PROGS}"
+.endfor
 
 .include <bsd.test.mk>

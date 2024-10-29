@@ -29,7 +29,6 @@
 #define	_TPM20_H_
 
 #include <sys/cdefs.h>
-
 #include <sys/endian.h>
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -43,6 +42,7 @@
 #include <sys/module.h>
 #include <sys/rman.h>
 #include <sys/sx.h>
+#include <sys/taskqueue.h>
 #include <sys/uio.h>
 
 #include <machine/bus.h>
@@ -94,7 +94,6 @@
 #define	TPM_CDEV_NAME			"tpm0"
 #define	TPM_CDEV_PERM_FLAG		0600
 
-
 #define	TPM2_START_METHOD_ACPI		2
 #define	TPM2_START_METHOD_TIS		6
 #define	TPM2_START_METHOD_CRB		7
@@ -123,8 +122,7 @@ struct tpm_sc {
 
 	struct callout 	discard_buffer_callout;
 #ifdef TPM_HARVEST
-	struct callout 	harvest_callout;
-	int		harvest_ticks;
+	struct timeout_task 	harvest_task;
 #endif
 
 	int		(*transmit)(struct tpm_sc *, size_t);

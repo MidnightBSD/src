@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Mitsuru IWASAKI
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /******************************************************************************
@@ -69,7 +68,7 @@ int	acpi_release_global_lock(volatile uint32_t *);
 #define	ACPI_RELEASE_GLOBAL_LOCK(GLptr, Acq)	do {			\
 	(Acq) = acpi_release_global_lock(&((GLptr)->GlobalLock));	\
 } while (0)
- 
+
 enum intr_trigger;
 enum intr_polarity;
 

@@ -12,8 +12,6 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
- * $FreeBSD$
  */
 
 #include "common.h"
@@ -114,7 +112,7 @@ oneshot(void)
 }
 
 void
-test_evfilt_user()
+test_evfilt_user(void)
 {
     kqfd = kqueue();
 

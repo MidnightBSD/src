@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 Anybots Inc
  * written by Akinori Furukoshi <moonlightakkiy@yahoo.ca>
@@ -28,8 +28,8 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
+#include <sys/eventhandler.h>
 #include <sys/systm.h>
 #include <sys/queue.h>
 #include <sys/systm.h>
@@ -82,7 +82,8 @@
 #ifdef	USB_DEBUG
 static int usie_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, usie, CTLFLAG_RW, 0, "sierra USB modem");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, usie, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "sierra USB modem");
 SYSCTL_INT(_hw_usb_usie, OID_AUTO, debug, CTLFLAG_RWTUN, &usie_debug, 0,
     "usie debug level");
 #endif
@@ -431,11 +432,6 @@ usie_attach(device_t self)
 
 	/* setup ifnet (Direct IP) */
 	sc->sc_ifp = ifp = if_alloc(IFT_OTHER);
-
-	if (ifp == NULL) {
-		device_printf(self, "Could not allocate a network interface\n");
-		goto detach;
-	}
 	if_initname(ifp, "usie", device_get_unit(self));
 
 	ifp->if_softc = sc;
@@ -492,7 +488,6 @@ usie_detach(device_t self)
 
 	for (x = 0; x != USIE_UCOM_MAX; x++)
 		usbd_transfer_unsetup(sc->sc_uc_xfer[x], USIE_UC_N_XFER);
-
 
 	device_claim_softc(self);
 
@@ -631,14 +626,12 @@ usie_uc_rx_callback(struct usb_xfer *xfer, usb_error_t error)
 
 		/* handle CnS response */
 		if (ucom == sc->sc_ucom && actlen >= USIE_HIPCNS_MIN) {
-
 			DPRINTF("transferred=%u\n", actlen);
 
 			/* check if it is really CnS reply */
 			usbd_copy_out(pc, 0, sc->sc_resp_temp, 1);
 
 			if (sc->sc_resp_temp[0] == USIE_HIP_FRM_CHR) {
-
 				/* verify actlen */
 				if (actlen > USIE_BUFSIZE)
 					actlen = USIE_BUFSIZE;
@@ -771,6 +764,7 @@ tr_setup:
 static void
 usie_if_rx_callback(struct usb_xfer *xfer, usb_error_t error)
 {
+	struct epoch_tracker et;
 	struct usie_softc *sc = usbd_xfer_softc(xfer);
 	struct ifnet *ifp = sc->sc_ifp;
 	struct mbuf *m0;
@@ -850,6 +844,7 @@ tr_setup:
 	err = pkt = 0;
 
 	/* HW can aggregate multiple frames in a single USB xfer */
+	NET_EPOCH_ENTER(et);
 	for (;;) {
 		rxd = mtod(m, struct usie_desc *);
 
@@ -916,6 +911,7 @@ tr_setup:
 		m->m_data += diff;
 		m->m_pkthdr.len = (m->m_len -= diff);
 	}
+	NET_EPOCH_EXIT(et);
 
 	mtx_lock(&sc->sc_mtx);
 
@@ -1516,7 +1512,6 @@ usie_hip_rsp(struct usie_softc *sc, uint8_t *rsp, uint32_t len)
 	uint8_t tmp[USIE_HIPCNS_MAX] __aligned(4);
 
 	for (off = 0; (off + USIE_HIPCNS_MIN) <= len; off++) {
-
 		uint8_t pad;
 
 		while ((off < len) && (rsp[off] == USIE_HIP_FRM_CHR))
@@ -1525,7 +1520,6 @@ usie_hip_rsp(struct usie_softc *sc, uint8_t *rsp, uint32_t len)
 		/* Unstuff the bytes */
 		for (i = j = 0; ((i + off) < len) &&
 		    (j < USIE_HIPCNS_MAX); i++) {
-
 			if (rsp[i + off] == USIE_HIP_FRM_CHR)
 				break;
 
@@ -1613,4 +1607,3 @@ usie_driver_loaded(struct module *mod, int what, void *arg)
 	}
 	return (0);
 }
-

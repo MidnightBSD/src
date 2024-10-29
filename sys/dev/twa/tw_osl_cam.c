@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap.
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -36,11 +35,9 @@
  * Modifications by: Manjunath Ranganathaiah
  */
 
-
 /*
  * FreeBSD CAM related functions.
  */
-
 
 #include <dev/twa/tw_osl_includes.h>
 
@@ -59,8 +56,6 @@ static TW_VOID	twa_poll(struct cam_sim *sim);
 
 static TW_INT32	tw_osli_execute_scsi(struct tw_osli_req_context *req,
 	union ccb *ccb);
-
-
 
 /*
  * Function name:	tw_osli_cam_attach
@@ -153,8 +148,6 @@ tw_osli_cam_attach(struct twa_softc *sc)
 	return(0);
 }
 
-
-
 /*
  * Function name:	tw_osli_cam_detach
  * Description:		Detaches the driver from CAM.
@@ -180,8 +173,6 @@ tw_osli_cam_detach(struct twa_softc *sc)
 	/* It's ok have 1 hold count while destroying the mutex */
 	mtx_destroy(sc->sim_lock);
 }
-
-
 
 /*
  * Function name:	tw_osli_execute_scsi
@@ -298,8 +289,6 @@ tw_osli_execute_scsi(struct tw_osli_req_context *req, union ccb *ccb)
 	}
 	return(error);
 }
-
-
 
 /*
  * Function name:	twa_action
@@ -425,7 +414,7 @@ twa_action(struct cam_sim *sim, union ccb *ccb)
 		path_inq->bus_id = cam_sim_bus(sim);
 		path_inq->initiator_id = TW_CL_MAX_NUM_UNITS;
 		path_inq->base_transfer_speed = 100000;
-		strlcpy(path_inq->sim_vid, "MidnightBSD", SIM_IDLEN);
+		strlcpy(path_inq->sim_vid, "FreeBSD", SIM_IDLEN);
 		strlcpy(path_inq->hba_vid, "3ware", HBA_IDLEN);
 		strlcpy(path_inq->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		path_inq->transport = XPORT_SPI;
@@ -446,8 +435,6 @@ twa_action(struct cam_sim *sim, union ccb *ccb)
 	}
 }
 
-
-
 /*
  * Function name:	twa_poll
  * Description:		Driver entry point called when interrupts are not
@@ -466,8 +453,6 @@ twa_poll(struct cam_sim *sim)
 	tw_cl_interrupt(&(sc->ctlr_handle));
 	tw_osli_dbg_dprintf(3, sc, "exiting; sc = %p", sc);
 }
-
-
 
 /*
  * Function name:	tw_osli_request_bus_scan
@@ -503,8 +488,6 @@ tw_osli_request_bus_scan(struct twa_softc *sc)
 	return(0);
 }
 
-
-
 /*
  * Function name:	tw_osli_disallow_new_requests
  * Description:		Calls the appropriate CAM function, so as to freeze
@@ -529,8 +512,6 @@ tw_osli_disallow_new_requests(struct twa_softc *sc,
 	}
 }
 
-
-
 /*
  * Function name:	tw_osl_timeout
  * Description:		Call to timeout().
@@ -549,8 +530,6 @@ tw_osl_timeout(struct tw_cl_req_handle *req_handle)
 	req->deadline = tw_osl_get_local_time() + (ccb_h->timeout / 1000);
 }
 
-
-
 /*
  * Function name:	tw_osl_untimeout
  * Description:		Inverse of call to timeout().
@@ -566,8 +545,6 @@ tw_osl_untimeout(struct tw_cl_req_handle *req_handle)
 
 	req->deadline = 0;
 }
-
-
 
 /*
  * Function name:	tw_osl_scan_bus
@@ -591,8 +568,6 @@ tw_osl_scan_bus(struct tw_cl_ctlr_handle *ctlr_handle)
 			"Bus scan request to CAM failed",
 			error);
 }
-
-
 
 /*
  * Function name:	tw_osl_complete_io
@@ -684,4 +659,3 @@ tw_osl_complete_io(struct tw_cl_req_handle *req_handle)
 		 /* twa_action will free the request otherwise */
 		tw_osli_req_q_insert_tail(req, TW_OSLI_FREE_Q);
 }
-

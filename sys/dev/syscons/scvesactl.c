@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_vga.h"
 
 #ifndef VGA_NO_MODE_CHANGE
@@ -60,7 +59,6 @@ vesa_ioctl(struct tty *tp, u_long cmd, caddr_t data, struct thread *td)
 	scp = SC_STAT(tp);
 
 	switch (cmd) {
-
 	/* generic text modes */
 	case SW_TEXT_132x25: case SW_TEXT_132x30:
 	case SW_TEXT_132x43: case SW_TEXT_132x50:

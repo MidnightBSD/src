@@ -81,7 +81,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Moschip MCS7730/MCS7830/MCS7832 USB to Ethernet controller
  * The datasheet is available at the following URL:
@@ -119,6 +118,10 @@
 
 #include <net/if.h>
 #include <net/if_var.h>
+#include <net/if_media.h>
+
+#include <dev/mii/mii.h>
+#include <dev/mii/miivar.h>
 
 #include <dev/usb/usb.h>
 #include <dev/usb/usbdi.h>
@@ -131,13 +134,16 @@
 
 #include <dev/usb/net/usb_ethernet.h>
 
+#include "miibus_if.h"
+
 //#include <dev/usb/net/if_mosreg.h>
 #include "if_mosreg.h"
 
 #ifdef USB_DEBUG
 static int mos_debug = 0;
 
-static SYSCTL_NODE(_hw_usb, OID_AUTO, mos, CTLFLAG_RW, 0, "USB mos");
+static SYSCTL_NODE(_hw_usb, OID_AUTO, mos, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "USB mos");
 SYSCTL_INT(_hw_usb_mos, OID_AUTO, debug, CTLFLAG_RWTUN, &mos_debug, 0,
     "Debug level");
 #endif
@@ -147,8 +153,6 @@ SYSCTL_INT(_hw_usb_mos, OID_AUTO, debug, CTLFLAG_RWTUN, &mos_debug, 0,
 
 #define	USB_PRODUCT_MOSCHIP_MCS7730	0x7730
 #define	USB_PRODUCT_SITECOMEU_LN030	0x0021
-
-
 
 /* Various supported device vendors/products. */
 static const STRUCT_USB_HOST_ID mos_devs[] = {
@@ -190,7 +194,6 @@ static void mos_setmulti(struct usb_ether *);
 static void mos_setpromisc(struct usb_ether *);
 
 static const struct usb_config mos_config[MOS_ENDPT_MAX] = {
-
 	[MOS_ENDPT_TX] = {
 		.type = UE_BULK,
 		.endpoint = UE_ADDR_ANY,
@@ -261,7 +264,6 @@ static const struct usb_ether_methods mos_ue_methods = {
 	.ue_mii_upd = mos_ifmedia_upd,
 	.ue_mii_sts = mos_ifmedia_sts,
 };
-
 
 static int
 mos_reg_read_1(struct mos_softc *sc, int reg)
@@ -422,10 +424,7 @@ static int
 mos_miibus_readreg(device_t dev, int phy, int reg)
 {
 	struct mos_softc *sc = device_get_softc(dev);
-	uWord val;
 	int i, res, locked;
-
-	USETW(val, 0);
 
 	locked = mtx_owned(&sc->sc_mtx);
 	if (!locked)
@@ -582,16 +581,23 @@ mos_setpromisc(struct usb_ether *ue)
 	mos_reg_write_1(sc, MOS_CTL, rxmode);
 }
 
+static u_int
+mos_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint8_t *hashtbl = arg;
+	uint32_t h;
 
+	h = ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN) >> 26;
+	hashtbl[h / 8] |= 1 << (h % 8);
+
+	return (1);
+}
 
 static void
 mos_setmulti(struct usb_ether *ue)
 {
 	struct mos_softc *sc = uether_getsc(ue);
 	struct ifnet *ifp = uether_getifp(ue);
-	struct ifmultiaddr *ifma;
-
-	uint32_t h = 0;
 	uint8_t rxmode;
 	uint8_t hashtbl[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 	int allmulti = 0;
@@ -604,17 +610,7 @@ mos_setmulti(struct usb_ether *ue)
 		allmulti = 1;
 
 	/* get all new ones */
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK) {
-			allmulti = 1;
-			continue;
-		}
-		h = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-		    ifma->ifma_addr), ETHER_ADDR_LEN) >> 26;
-		hashtbl[h / 8] |= 1 << (h % 8);
-	}
-	if_maddr_runlock(ifp);
+	if_foreach_llmaddr(ifp, mos_hash_maddr, &hashtbl);
 
 	/* now program new ones */
 	if (allmulti == 1) {
@@ -716,7 +712,6 @@ mos_attach(device_t dev)
 	ue->ue_mtx = &sc->sc_mtx;
 	ue->ue_methods = &mos_ue_methods;
 
-
 	if (sc->mos_flags & MCS7730) {
 		MOS_DPRINTFN("model: MCS7730");
 	} else if (sc->mos_flags & MCS7830) {
@@ -731,12 +726,10 @@ mos_attach(device_t dev)
 	}
 	return (0);
 
-
 detach:
 	mos_detach(dev);
 	return (ENXIO);
 }
-
 
 static void
 mos_attach_post(struct usb_ether *ue)
@@ -767,9 +760,6 @@ mos_detach(device_t dev)
 
 	return (0);
 }
-
-
-
 
 /*
  * A frame has been uploaded: pass the resulting mbuf chain up to
@@ -856,8 +846,6 @@ mos_bulk_write_callback(struct usb_xfer *xfer, usb_error_t error)
 	struct usb_page_cache *pc;
 	struct mbuf *m;
 
-
-
 	switch (USB_GET_STATE(xfer)) {
 	case USB_ST_TRANSFERRED:
 		MOS_DPRINTFN("transfer of complete");
@@ -876,7 +864,6 @@ tr_setup:
 		usbd_m_copy_in(pc, 0, m, 0, m->m_pkthdr.len);
 
 		usbd_xfer_set_frame_len(xfer, 0, m->m_pkthdr.len);
-
 
 		/*
 		 * if there's a BPF listener, bounce a copy
@@ -917,7 +904,6 @@ mos_tick(struct usb_ether *ue)
 		mos_start(ue);
 	}
 }
-
 
 static void
 mos_start(struct usb_ether *ue)
@@ -973,7 +959,6 @@ mos_init(struct usb_ether *ue)
 	mos_start(ue);
 }
 
-
 static void
 mos_intr_callback(struct usb_xfer *xfer, usb_error_t error)
 {
@@ -1005,7 +990,6 @@ tr_setup:
 		return;
 	}
 }
-
 
 /*
  * Stop the adapter and free any mbufs allocated to the

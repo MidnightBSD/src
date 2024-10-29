@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 John Baldwin <jhb@FreeBSD.org>
  *
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -229,7 +228,6 @@ static device_method_t mptable_pcib_pci_methods[] = {
 
 	/* pcib interface */
 	DEVMETHOD(pcib_route_interrupt,	mptable_pci_route_interrupt),
-
 	{0, 0}
 };
 

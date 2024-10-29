@@ -93,6 +93,7 @@ struct unpcb {
 	unp_gen_t unp_gencnt;		/* (g) generation count of this item */
 	struct	file *unp_file;		/* (g) back-pointer to file for gc */
 	u_int	unp_msgcount;		/* (g) references from message queue */
+	u_int	unp_gcrefs;		/* (g) garbage collector refcount */
 	ino_t	unp_ino;		/* (g) fake inode number */
 	LIST_ENTRY(unpcb) unp_dead;	/* (g) link in dead list */
 } __aligned(CACHE_LINE_SIZE);
@@ -105,9 +106,12 @@ struct unpcb {
  * to determine whether the contents should be sent to the user or
  * not.
  */
-#define UNP_HAVEPC			0x001
-#define	UNP_WANTCRED			0x004	/* credentials wanted */
+#define	UNP_HAVEPC			0x001
+#define	UNP_WANTCRED_ALWAYS		0x002	/* credentials wanted always */
+#define	UNP_WANTCRED_ONESHOT		0x004	/* credentials wanted once */
 #define	UNP_CONNWAIT			0x008	/* connect blocks until accepted */
+
+#define	UNP_WANTCRED_MASK	(UNP_WANTCRED_ONESHOT | UNP_WANTCRED_ALWAYS)
 
 /*
  * These flags are used to handle non-atomicity in connect() and bind()
@@ -121,10 +125,8 @@ struct unpcb {
 /*
  * Flags in unp_gcflag.
  */
-#define	UNPGC_REF			0x1	/* unpcb has external ref. */
-#define	UNPGC_DEAD			0x2	/* unpcb might be dead. */
-#define	UNPGC_SCANNED			0x4	/* Has been scanned. */
-#define	UNPGC_IGNORE_RIGHTS		0x8	/* Attached rights are freed */
+#define	UNPGC_DEAD			0x1	/* unpcb might be dead. */
+#define	UNPGC_IGNORE_RIGHTS		0x2	/* Attached rights are freed */
 
 #define	sotounpcb(so)	((struct unpcb *)((so)->so_pcb))
 

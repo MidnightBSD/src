@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012-2016 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -40,6 +40,7 @@
 
 #include <mixer_if.h>
 
+SND_DECLARE_FILE("");
 
 static struct hdspe_channel chan_map_aio[] = {
 	{  0,  1,   "line", 1, 1 },
@@ -121,10 +122,6 @@ hdspe_intr(void *p)
 static void
 hdspe_dmapsetmap(void *arg, bus_dma_segment_t *segs, int nseg, int error)
 {
-	struct sc_info *sc;
-
-	sc = (struct sc_info *)arg;
-
 #if 0
 	device_printf(sc->dev, "hdspe_dmapsetmap()\n");
 #endif
@@ -234,7 +231,8 @@ hdspe_probe(device_t dev)
 {
 	uint32_t rev;
 
-	if (pci_get_vendor(dev) == PCI_VENDOR_XILINX &&
+	if ((pci_get_vendor(dev) == PCI_VENDOR_XILINX ||
+	    pci_get_vendor(dev) == PCI_VENDOR_RME) &&
 	    pci_get_device(dev) == PCI_DEVICE_XILINX_HDSPE) {
 		rev = pci_get_revid(dev);
 		switch (rev) {

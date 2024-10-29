@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998, 2001 Nicolas Souchu
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -67,7 +66,6 @@ static device_method_t smb_methods[] = {
 
 	/* smbus interface */
 	DEVMETHOD(smbus_intr,		smbus_generic_intr),
-
 	{ 0, 0 }
 };
 
@@ -103,7 +101,7 @@ smb_probe(device_t dev)
 	device_set_desc(dev, "SMBus generic I/O");
 	return (BUS_PROBE_NOWILDCARD);
 }
-	
+
 static int
 smb_attach(device_t dev)
 {

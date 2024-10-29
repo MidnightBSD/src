@@ -1,6 +1,5 @@
 /*
  * Prototypes for the OSTA functions
- *
  */
 
 /*-

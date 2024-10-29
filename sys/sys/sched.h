@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-4-Clause
+ * SPDX-License-Identifier: (BSD-4-Clause AND BSD-2-Clause)
  *
  * Copyright (c) 1996, 1997
  *      HD Associates, Inc.  All rights reserved.
@@ -57,7 +57,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _SCHED_H_
@@ -95,15 +94,15 @@ u_int	sched_estcpu(struct thread *td);
 void	sched_fork_thread(struct thread *td, struct thread *child);
 void	sched_lend_prio(struct thread *td, u_char prio);
 void	sched_lend_user_prio(struct thread *td, u_char pri);
+void	sched_lend_user_prio_cond(struct thread *td, u_char pri);
 fixpt_t	sched_pctcpu(struct thread *td);
 void	sched_prio(struct thread *td, u_char prio);
 void	sched_sleep(struct thread *td, int prio);
-void	sched_switch(struct thread *td, struct thread *newtd, int flags);
+void	sched_switch(struct thread *td, int flags);
 void	sched_throw(struct thread *td);
 void	sched_unlend_prio(struct thread *td, u_char prio);
 void	sched_user_prio(struct thread *td, u_char prio);
 void	sched_userret_slowpath(struct thread *td);
-void	sched_wakeup(struct thread *td);
 #ifdef	RACCT
 #ifdef	SCHED_4BSD
 fixpt_t	sched_pctcpu_delta(struct thread *td);
@@ -133,12 +132,13 @@ sched_userret(struct thread *td)
  * Threads are moved on and off of run queues
  */
 void	sched_add(struct thread *td, int flags);
-void	sched_clock(struct thread *td);
-void	sched_preempt(struct thread *td);
-void	sched_rem(struct thread *td);
-void	sched_relinquish(struct thread *td);
 struct thread *sched_choose(void);
+void	sched_clock(struct thread *td, int cnt);
 void	sched_idletd(void *);
+void	sched_preempt(struct thread *td);
+void	sched_relinquish(struct thread *td);
+void	sched_rem(struct thread *td);
+void	sched_wakeup(struct thread *td, int srqflags);
 
 /*
  * Binding makes cpu affinity permanent while pinning is used to temporarily
@@ -171,13 +171,13 @@ static __inline void
 sched_pin(void)
 {
 	curthread->td_pinned++;
-	__compiler_membar();
+	atomic_interrupt_fence();
 }
 
 static __inline void
 sched_unpin(void)
 {
-	__compiler_membar();
+	atomic_interrupt_fence();
 	curthread->td_pinned--;
 }
 
@@ -188,6 +188,8 @@ sched_unpin(void)
 #define	SRQ_INTR	0x0004		/* It is probably urgent. */
 #define	SRQ_PREEMPTED	0x0008		/* has been preempted.. be kind */
 #define	SRQ_BORROWING	0x0010		/* Priority updated due to prio_lend */
+#define	SRQ_HOLD	0x0020		/* Return holding original td lock */
+#define	SRQ_HOLDTD	0x0040		/* Return holding td lock */
 
 /* Scheduler stats. */
 #ifdef SCHED_STATS
@@ -222,6 +224,11 @@ SYSINIT(name, SI_SUB_LAST, SI_ORDER_MIDDLE, name ## _add_proc, NULL);
  * Fixup scheduler state for proc0 and thread0
  */
 void schedinit(void);
+
+/*
+ * Fixup scheduler state for secondary APs
+ */
+void schedinit_ap(void);
 #endif /* _KERNEL */
 
 /* POSIX 1003.1b Process Scheduling */

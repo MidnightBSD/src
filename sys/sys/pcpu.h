@@ -28,7 +28,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SYS_PCPU_H_
@@ -38,6 +37,7 @@
 #error "no assembler-serviceable parts inside"
 #endif
 
+#include <sys/param.h>
 #include <sys/_cpuset.h>
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
@@ -83,7 +83,8 @@ extern uintptr_t dpcpu_off[];
 /* struct _hack is to stop this from being used with the static keyword. */
 #define	DPCPU_DEFINE(t, n)	\
     struct _hack; t DPCPU_NAME(n) __section(DPCPU_SETNAME) __used
-#if defined(KLD_MODULE) && (defined(__aarch64__) || defined(__riscv))
+#if defined(KLD_MODULE) && (defined(__aarch64__) || defined(__riscv) \
+		|| defined(__powerpc64__))
 /*
  * On some architectures the compiler will use PC-relative load to
  * find the address of DPCPU data with the static keyword. We then
@@ -177,19 +178,22 @@ struct pcpu {
 	struct thread	*pc_fpcurthread;	/* Fp state owner */
 	struct thread	*pc_deadthread;		/* Zombie thread or NULL */
 	struct pcb	*pc_curpcb;		/* Current pcb */
+	void		*pc_sched;		/* Scheduler state */
 	uint64_t	pc_switchtime;		/* cpu_ticks() at last csw */
 	int		pc_switchticks;		/* `ticks' at last csw */
 	u_int		pc_cpuid;		/* This cpu number */
 	STAILQ_ENTRY(pcpu) pc_allcpu;
 	struct lock_list_entry *pc_spinlocks;
 	long		pc_cp_time[CPUSTATES];	/* statclock ticks */
-	struct device	*pc_device;
+	struct _device	*pc_device;		/* CPU device handle */
 	void		*pc_netisr;		/* netisr SWI cookie */
-	int		pc_unused1;		/* unused field */
+	int8_t		pc_vfs_freevnodes;	/* freevnodes counter */
+	char		pc_unused1[3];		/* unused pad */
 	int		pc_domain;		/* Memory domain. */
 	struct rm_queue	pc_rm_queue;		/* rmlock list of trackers */
 	uintptr_t	pc_dynamic;		/* Dynamic per-cpu data area */
 	uint64_t	pc_early_dummy_counter;	/* Startup time counter(9) */
+	uintptr_t	pc_zpcpu_offset;	/* Offset into zpcpu allocs */
 
 	/*
 	 * Keep MD fields last, so that CPU-specific variations on a
@@ -223,20 +227,85 @@ extern struct pcpu *cpuid_to_pcpu[];
 #endif
 #define	curproc		(curthread->td_proc)
 
+#ifndef ZPCPU_ASSERT_PROTECTED
+#define ZPCPU_ASSERT_PROTECTED() MPASS(curthread->td_critnest > 0)
+#endif
+
+#ifndef zpcpu_offset_cpu
+#define zpcpu_offset_cpu(cpu)	(UMA_PCPU_ALLOC_SIZE * cpu)
+#endif
+#ifndef zpcpu_offset
+#define zpcpu_offset()		(PCPU_GET(zpcpu_offset))
+#endif
+
+#ifndef zpcpu_base_to_offset
+#define zpcpu_base_to_offset(base) (base)
+#endif
+#ifndef zpcpu_offset_to_base
+#define zpcpu_offset_to_base(base) (base)
+#endif
+
 /* Accessor to elements allocated via UMA_ZONE_PCPU zone. */
-static inline void *
-zpcpu_get(void *base)
-{
+#define zpcpu_get(base) ({								\
+	__typeof(base) _ptr = (void *)((char *)(base) + zpcpu_offset());		\
+	_ptr;										\
+})
 
-	return ((char *)(base) + UMA_PCPU_ALLOC_SIZE * curcpu);
-}
+#define zpcpu_get_cpu(base, cpu) ({							\
+	__typeof(base) _ptr = (void *)((char *)(base) +	zpcpu_offset_cpu(cpu));		\
+	_ptr;										\
+})
 
-static inline void *
-zpcpu_get_cpu(void *base, int cpu)
-{
+/*
+ * This operation is NOT atomic and does not post any barriers.
+ * If you use this the assumption is that the target CPU will not
+ * be modifying this variable.
+ * If you need atomicity use xchg.
+ * */
+#define zpcpu_replace(base, val) ({					\
+	__typeof(val) *_ptr = zpcpu_get(base);				\
+	__typeof(val) _old;						\
+									\
+	_old = *_ptr;							\
+	*_ptr = val;							\
+	_old;								\
+})
 
-	return ((char *)(base) + UMA_PCPU_ALLOC_SIZE * cpu);
-}
+#define zpcpu_replace_cpu(base, val, cpu) ({				\
+	__typeof(val) *_ptr = zpcpu_get_cpu(base, cpu);			\
+	__typeof(val) _old;						\
+									\
+	_old = *_ptr;							\
+	*_ptr = val;							\
+	_old;								\
+})
+
+#ifndef zpcpu_set_protected
+#define zpcpu_set_protected(base, val) ({				\
+	ZPCPU_ASSERT_PROTECTED();					\
+	__typeof(val) *_ptr = zpcpu_get(base);				\
+									\
+	*_ptr = (val);							\
+})
+#endif
+
+#ifndef zpcpu_add_protected
+#define zpcpu_add_protected(base, val) ({				\
+	ZPCPU_ASSERT_PROTECTED();					\
+	__typeof(val) *_ptr = zpcpu_get(base);				\
+									\
+	*_ptr += (val);							\
+})
+#endif
+
+#ifndef zpcpu_sub_protected
+#define zpcpu_sub_protected(base, val) ({				\
+	ZPCPU_ASSERT_PROTECTED();					\
+	__typeof(val) *_ptr = zpcpu_get(base);				\
+									\
+	*_ptr -= (val);							\
+})
+#endif
 
 /*
  * Machine dependent callouts.  cpu_pcpu_init() is responsible for

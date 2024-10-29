@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999-2003 Robert N. M. Watson
  * All rights reserved.
@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ufs.h"
 #include "opt_quota.h"
 
@@ -86,7 +85,7 @@ ufs_sync_acl_from_inode(struct inode *ip, struct acl *acl)
 			    ACL_USER_OBJ, ip->i_mode);
 			acl->acl_entry[i].ae_id = ACL_UNDEFINED_ID;
 			break;
-	
+
 		case ACL_GROUP_OBJ:
 			acl_group_obj = &acl->acl_entry[i];
 			acl->acl_entry[i].ae_id = ACL_UNDEFINED_ID;
@@ -106,7 +105,7 @@ ufs_sync_acl_from_inode(struct inode *ip, struct acl *acl)
 		case ACL_USER:
 		case ACL_GROUP:
 			break;
-	
+
 		default:
 			panic("ufs_sync_acl_from_inode(): bad ae_tag");
 		}
@@ -138,9 +137,11 @@ ufs_sync_acl_from_inode(struct inode *ip, struct acl *acl)
 void
 ufs_sync_inode_from_acl(struct acl *acl, struct inode *ip)
 {
+	int newmode;
 
-	ip->i_mode &= ACL_PRESERVE_MASK;
-	ip->i_mode |= acl_posix1e_acl_to_mode(acl);
+	newmode = ip->i_mode & ACL_PRESERVE_MASK;
+	newmode |= acl_posix1e_acl_to_mode(acl);
+	UFS_INODE_SET_MODE(ip, newmode);
 	DIP_SET(ip, i_mode, ip->i_mode);
 }
 
@@ -380,7 +381,7 @@ int
 ufs_setacl_nfs4_internal(struct vnode *vp, struct acl *aclp, struct thread *td)
 {
 	int error;
-	mode_t mode;
+	mode_t mode, newmode;
 	struct inode *ip = VTOI(vp);
 
 	KASSERT(acl_nfs4_check(aclp, vp->v_type == VDIR) == 0,
@@ -417,10 +418,11 @@ ufs_setacl_nfs4_internal(struct vnode *vp, struct acl *aclp, struct thread *td)
 
 	acl_nfs4_sync_mode_from_acl(&mode, aclp);
 
-	ip->i_mode &= ACL_PRESERVE_MASK;
-	ip->i_mode |= mode;
+	newmode = ip->i_mode & ACL_PRESERVE_MASK;
+	newmode |= mode;
+	UFS_INODE_SET_MODE(ip, newmode);
 	DIP_SET(ip, i_mode, ip->i_mode);
-	ip->i_flag |= IN_CHANGE;
+	UFS_INODE_SET_FLAG(ip, IN_CHANGE);
 
 	VN_KNOTE_UNLOCKED(vp, NOTE_ATTRIB);
 
@@ -593,7 +595,7 @@ ufs_setacl_posix1e(struct vop_setacl_args *ap)
 		 * inode and mark it as changed.
 		 */
 		ufs_sync_inode_from_acl(ap->a_aclp, ip);
-		ip->i_flag |= IN_CHANGE;
+		UFS_INODE_SET_FLAG(ip, IN_CHANGE);
 		error = UFS_UPDATE(ap->a_vp, 0);
 	}
 

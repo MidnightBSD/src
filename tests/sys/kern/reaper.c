@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/procctl.h>
 #include <sys/procdesc.h>
 #include <sys/wait.h>

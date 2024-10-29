@@ -1,9 +1,8 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2006 Marcel Moolenaar
- * Copyright (c) 2001 M. Warner Losh
- * All rights reserved.
+ * Copyright (c) 2006 Marcel Moolenaar All rights reserved.
+ * Copyright (c) 2001 M. Warner Losh <imp@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -42,6 +40,7 @@
 
 #include <dev/uart/uart.h>
 #include <dev/uart/uart_bus.h>
+#include <dev/uart/uart_cpu.h>
 
 #define	DEFAULT_RCLK	1843200
 
@@ -73,6 +72,11 @@ struct pci_id {
 	int		rid;
 	int		rclk;
 	int		regshft;
+};
+
+struct pci_unique_id {
+	uint16_t	vendor;
+	uint16_t	device;
 };
 
 static const struct pci_id pci_ns8250_ids[] = {
@@ -124,6 +128,7 @@ static const struct pci_id pci_ns8250_ids[] = {
 	128 * DEFAULT_RCLK, 2},
 { 0x14e4, 0x4344, 0xffff, 0, "Sony Ericsson GC89 PC Card", 0x10},
 { 0x151f, 0x0000, 0xffff, 0, "TOPIC Semiconductor TP560 56k modem", 0x10 },
+{ 0x1d0f, 0x8250, 0x0000, 0, "Amazon PCI serial device", 0x10 },
 { 0x1d0f, 0x8250, 0x1d0f, 0, "Amazon PCI serial device", 0x10 },
 { 0x1fd4, 0x1999, 0x1fd4, 0x0001, "Sunix SER5xxxx Serial Port", 0x10,
 	8 * DEFAULT_RCLK },
@@ -168,6 +173,8 @@ static const struct pci_id pci_ns8250_ids[] = {
 { 0x8086, 0x8814, 0xffff, 0, "Intel EG20T Serial Port 3", 0x10 },
 { 0x8086, 0x8c3d, 0xffff, 0, "Intel Lynx Point KT Controller", 0x10 },
 { 0x8086, 0x8cbd, 0xffff, 0, "Intel Wildcat Point KT Controller", 0x10 },
+{ 0x8086, 0x8d3d, 0xffff, 0,
+	"Intel Corporation C610/X99 series chipset KT Controller", 0x10 },
 { 0x8086, 0x9c3d, 0xffff, 0, "Intel Lynx Point-LP HECI KT", 0x10 },
 { 0x8086, 0xa13d, 0xffff, 0,
 	"100 Series/C230 Series Chipset Family KT Redirection", 0x10 },
@@ -208,6 +215,44 @@ uart_pci_match(device_t dev, const struct pci_id *id)
 	return ((id->vendor == vendor && id->device == device) ? id : NULL);
 }
 
+extern SLIST_HEAD(uart_devinfo_list, uart_devinfo) uart_sysdevs;
+
+/* PCI vendor/device pairs of devices guaranteed to be unique on a system. */
+static const struct pci_unique_id pci_unique_devices[] = {
+{ 0x1d0f, 0x8250 }	/* Amazon PCI serial device */
+};
+
+/* Match a UART to a console if it's a PCI device known to be unique. */
+static void
+uart_pci_unique_console_match(device_t dev)
+{
+	struct uart_softc *sc;
+	struct uart_devinfo * sysdev;
+	const struct pci_unique_id * id;
+	uint16_t vendor, device;
+
+	sc = device_get_softc(dev);
+	vendor = pci_get_vendor(dev);
+	device = pci_get_device(dev);
+
+	/* Is this a device known to exist only once in a system? */
+	for (id = pci_unique_devices; ; id++) {
+		if (id == &pci_unique_devices[nitems(pci_unique_devices)])
+			return;
+		if (id->vendor == vendor && id->device == device)
+			break;
+	}
+
+	/* If it matches a console, it must be the same device. */
+	SLIST_FOREACH(sysdev, &uart_sysdevs, next) {
+		if (sysdev->pci_info.vendor == vendor &&
+		    sysdev->pci_info.device == device) {
+			sc->sc_sysdev = sysdev;
+			sysdev->bas.rclk = sc->sc_bas.rclk;
+		}
+	}
+}
+
 static int
 uart_pci_probe(device_t dev)
 {
@@ -230,6 +275,13 @@ uart_pci_probe(device_t dev)
 	/* Bail out on error. */
 	if (result > 0)
 		return (result);
+	/*
+	 * If we haven't already matched this to a console, check if it's a
+	 * PCI device which is known to only exist once in any given system
+	 * and we can match it that way.
+	 */
+	if (sc->sc_sysdev == NULL)
+		uart_pci_unique_console_match(dev);
 	/* Set/override the device description. */
 	if (id->desc)
 		device_set_desc(dev, id->desc);
@@ -245,10 +297,10 @@ uart_pci_attach(device_t dev)
 	sc = device_get_softc(dev);
 
 	/*
-	 * Use MSI in preference to legacy IRQ if available.
-	 * Whilst some PCIe UARTs support >1 MSI vector, use only the first.
+	 * Use MSI in preference to legacy IRQ if available. However, experience
+	 * suggests this is only reliable when one MSI vector is advertised.
 	 */
-	if (pci_msi_count(dev) > 0) {
+	if (pci_msi_count(dev) == 1) {
 		count = 1;
 		if (pci_alloc_msi(dev, &count) == 0) {
 			sc->sc_irid = 1;

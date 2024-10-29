@@ -11,7 +11,6 @@
  * use.
  *
  * Aug, 1994	Implemented on FreeBSD 1.1.5.1R (Toshiba AVS001WD)
- *
  */
 
 #ifndef _X86_APM_BIOS_H_
@@ -74,7 +73,6 @@
 #define APME_CANTENTERSTATE	0x60
 #define APME_NOPMEVENT		0x80
 #define APME_NOAPMPRESENT	0x86
-
 
 /* device code */
 #define PMDV_APMBIOS		0x0000

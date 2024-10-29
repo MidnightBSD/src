@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997, Stefan Esser <se@freebsd.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _SYS_INTERRUPT_H_
@@ -54,10 +53,10 @@ struct intr_handler {
 	int		 ih_need;	/* Needs service. */
 	CK_SLIST_ENTRY(intr_handler) ih_next; /* Next handler for this event. */
 	u_char		 ih_pri;	/* Priority of this handler. */
-	struct intr_thread *ih_thread;	/* Ithread for filtered handler. */
 };
 
 /* Interrupt handle flags kept in ih_flags */
+#define	IH_NET		0x00000001	/* Network. */
 #define	IH_EXCLUSIVE	0x00000002	/* Exclusive interrupt. */
 #define	IH_ENTROPY	0x00000004	/* Device is a good entropy source. */
 #define	IH_DEAD		0x00000008	/* Handler should be removed. */
@@ -118,6 +117,7 @@ struct intr_event {
 	void		(*ie_post_filter)(void *);
 	int		(*ie_assign_cpu)(void *, int);
 	int		ie_flags;
+	int		ie_hflags;	/* Cumulative flags of all handlers. */
 	int		ie_count;	/* Loop counter. */
 	int		ie_warncnt;	/* Rate-check interrupt storm warns. */
 	struct timeval	ie_warntm;
@@ -129,7 +129,6 @@ struct intr_event {
 
 /* Interrupt event flags kept in ie_flags. */
 #define	IE_SOFT		0x000001	/* Software interrupt. */
-#define	IE_ENTROPY	0x000002	/* Interrupt is an entropy source. */
 #define	IE_ADDING_THREAD 0x000004	/* Currently building an ithread. */
 
 /* Flags to pass to swi_sched. */
@@ -143,7 +142,7 @@ struct intr_event {
 #define	SWI_TTY		0
 #define	SWI_NET		1
 #define	SWI_CAMBIO	2
-#define	SWI_VM		3
+#define	SWI_BUSDMA	3
 #define	SWI_CLOCK	4
 #define	SWI_TQ_FAST	5
 #define	SWI_TQ		6
@@ -151,18 +150,11 @@ struct intr_event {
 
 struct proc;
 
-extern struct	intr_event *tty_intr_event;
 extern struct	intr_event *clk_intr_event;
-extern void	*vm_ih;
 
 /* Counts and names for statistics (defined in MD code). */
-#if defined(__amd64__) || defined(__i386__)
-extern u_long 	*intrcnt;	/* counts for for each device and stray */
+extern u_long 	*intrcnt;	/* counts for each device and stray */
 extern char 	*intrnames;	/* string table containing device names */
-#else
-extern u_long 	intrcnt[];	/* counts for for each device and stray */
-extern char 	intrnames[];	/* string table containing device names */
-#endif
 extern size_t	sintrcnt;	/* size of intrcnt table */
 extern size_t	sintrnames;	/* size of intrnames table */
 
@@ -176,6 +168,9 @@ int	intr_event_add_handler(struct intr_event *ie, const char *name,
 int	intr_event_bind(struct intr_event *ie, int cpu);
 int	intr_event_bind_irqonly(struct intr_event *ie, int cpu);
 int	intr_event_bind_ithread(struct intr_event *ie, int cpu);
+struct _cpuset;
+int	intr_event_bind_ithread_cpuset(struct intr_event *ie,
+	    struct _cpuset *mask);
 int	intr_event_create(struct intr_event **event, void *source,
 	    int flags, int irq, void (*pre_ithread)(void *),
 	    void (*post_ithread)(void *), void (*post_filter)(void *),

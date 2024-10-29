@@ -32,7 +32,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)fdesc_vnops.c	8.9 (Berkeley) 1/21/94
- *
  */
 
 /*
@@ -90,6 +89,7 @@ static struct vop_vector fdesc_vnodeops = {
 	.vop_reclaim =		fdesc_reclaim,
 	.vop_setattr =		fdesc_setattr,
 };
+VFS_VOP_VECTOR_REGISTER(fdesc_vnodeops);
 
 static void fdesc_insmntque_dtr(struct vnode *, void *);
 static void fdesc_remove_entry(struct fdescnode *);
@@ -158,6 +158,7 @@ fdesc_allocvp(fdntype ftype, unsigned fd_fd, int ix, struct mount *mp,
 	struct fdescnode *fd, *fd2;
 	struct vnode *vp, *vp2;
 	struct thread *td;
+	enum vgetstate vgs;
 	int error;
 
 	td = curthread;
@@ -178,9 +179,9 @@ loop:
 		if (fd->fd_ix == ix && fd->fd_vnode->v_mount == mp) {
 			/* Get reference to vnode in case it's being free'd */
 			vp = fd->fd_vnode;
-			VI_LOCK(vp);
+			vgs = vget_prep(vp);
 			mtx_unlock(&fdesc_hashmtx);
-			if (vget(vp, LK_EXCLUSIVE | LK_INTERLOCK, td))
+			if (vget_finish(vp, LK_EXCLUSIVE, vgs) != 0)
 				goto loop;
 			*vpp = vp;
 			return (0);
@@ -201,8 +202,12 @@ loop:
 	fd->fd_type = ftype;
 	fd->fd_fd = fd_fd;
 	fd->fd_ix = ix;
-	if (ftype == Fdesc && fmp->flags & FMNT_LINRDLNKF)
-		vp->v_vflag |= VV_READLINK;
+	if (ftype == Fdesc) {
+		if ((fmp->flags & FMNT_RDLNKF) != 0)
+			vp->v_type = VLNK;
+		else if ((fmp->flags & FMNT_LINRDLNKF) != 0)
+			vp->v_vflag |= VV_READLINK;
+	}
 	error = insmntque1(vp, mp, fdesc_insmntque_dtr, NULL);
 	if (error != 0) {
 		*vpp = NULLVP;
@@ -228,9 +233,9 @@ loop:
 		if (fd2->fd_ix == ix && fd2->fd_vnode->v_mount == mp) {
 			/* Get reference to vnode in case it's being free'd */
 			vp2 = fd2->fd_vnode;
-			VI_LOCK(vp2);
+			vgs = vget_prep(vp2);
 			mtx_unlock(&fdesc_hashmtx);
-			error = vget(vp2, LK_EXCLUSIVE | LK_INTERLOCK, td);
+			error = vget_finish(vp2, LK_EXCLUSIVE, vgs);
 			/* Someone beat us, dec use count and wait for reclaim */
 			vgone(vp);
 			vput(vp);
@@ -255,6 +260,7 @@ struct fdesc_get_ino_args {
 	int ix;
 	struct file *fp;
 	struct thread *td;
+	bool fdropped;
 };
 
 static int
@@ -262,14 +268,24 @@ fdesc_get_ino_alloc(struct mount *mp, void *arg, int lkflags,
     struct vnode **rvp)
 {
 	struct fdesc_get_ino_args *a;
+	struct fdescmount *fdm;
+	struct vnode *vp;
 	int error;
 
 	a = arg;
-	error = fdesc_allocvp(a->ftype, a->fd_fd, a->ix, mp, rvp);
+	fdm = VFSTOFDESC(mp);
+	if ((fdm->flags & FMNT_NODUP) != 0 && a->fp->f_type == DTYPE_VNODE) {
+		vp = a->fp->f_vnode;
+		vget(vp, lkflags | LK_RETRY);
+		*rvp = vp;
+		error = 0;
+	} else {
+		error = fdesc_allocvp(a->ftype, a->fd_fd, a->ix, mp, rvp);
+	}
 	fdrop(a->fp, a->td);
+	a->fdropped = true;
 	return (error);
 }
-
 
 /*
  * vp is the current namei directory
@@ -332,38 +348,36 @@ fdesc_lookup(struct vop_lookup_args *ap)
 	if ((error = fget(td, fd, &cap_no_rights, &fp)) != 0)
 		goto bad;
 
-	/* Check if we're looking up ourselves. */
-	if (VTOFDESC(dvp)->fd_ix == FD_DESC + fd) {
+	/*
+	 * Make sure we do not deadlock looking up the dvp itself.
+	 *
+	 * Unlock our root node (dvp) when doing this, since we might
+	 * deadlock since the vnode might be locked by another thread
+	 * and the root vnode lock will be obtained afterwards (in case
+	 * we're looking up the fd of the root vnode), which will be the
+	 * opposite lock order.
+	 */
+	arg.ftype = Fdesc;
+	arg.fd_fd = fd;
+	arg.ix = FD_DESC + fd;
+	arg.fp = fp;
+	arg.td = td;
+	arg.fdropped = false;
+	error = vn_vget_ino_gen(dvp, fdesc_get_ino_alloc, &arg,
+	    LK_EXCLUSIVE, &fvp);
+
+	if (!arg.fdropped) {
 		/*
 		 * In case we're holding the last reference to the file, the dvp
 		 * will be re-acquired.
 		 */
-		vhold(dvp);
-		VOP_UNLOCK(dvp, 0);
+		VOP_UNLOCK(dvp);
 		fdrop(fp, td);
 
-		/* Re-aquire the lock afterwards. */
 		vn_lock(dvp, LK_RETRY | LK_EXCLUSIVE);
-		vdrop(dvp);
 		fvp = dvp;
-		if ((dvp->v_iflag & VI_DOOMED) != 0)
+		if (error == 0 && VN_IS_DOOMED(dvp))
 			error = ENOENT;
-	} else {
-		/*
-		 * Unlock our root node (dvp) when doing this, since we might
-		 * deadlock since the vnode might be locked by another thread
-		 * and the root vnode lock will be obtained afterwards (in case
-		 * we're looking up the fd of the root vnode), which will be the
-		 * opposite lock order. Vhold the root vnode first so we don't
-		 * lose it.
-		 */
-		arg.ftype = Fdesc;
-		arg.fd_fd = fd;
-		arg.ix = FD_DESC + fd;
-		arg.fp = fp;
-		arg.td = td;
-		error = vn_vget_ino_gen(dvp, fdesc_get_ino_alloc, &arg,
-		    LK_EXCLUSIVE, &fvp);
 	}
 
 	if (error)
@@ -416,7 +430,7 @@ fdesc_pathconf(struct vop_pathconf_args *ap)
 		if (VTOFDESC(vp)->fd_type == Froot)
 			return (vop_stdpathconf(ap));
 		vref(vp);
-		VOP_UNLOCK(vp, 0);
+		VOP_UNLOCK(vp);
 		error = kern_fpathconf(curthread, VTOFDESC(vp)->fd_fd,
 		    ap->a_name, ap->a_retval);
 		vn_lock(vp, LK_SHARED | LK_RETRY);
@@ -456,7 +470,8 @@ fdesc_getattr(struct vop_getattr_args *ap)
 		break;
 
 	case Fdesc:
-		vap->va_type = (vp->v_vflag & VV_READLINK) == 0 ? VCHR : VLNK;
+		vap->va_type = (VFSTOFDESC(vp->v_mount)->flags &
+		    (FMNT_RDLNKF | FMNT_LINRDLNKF)) == 0 ? VCHR : VLNK;
 		vap->va_nlink = 1;
 		vap->va_size = 0;
 		vap->va_rdev = makedev(0, vap->va_fileid);
@@ -493,9 +508,15 @@ fdesc_setattr(struct vop_setattr_args *ap)
 
 	/*
 	 * Allow setattr where there is an underlying vnode.
+	 * For O_PATH descriptors, disallow truncate.
 	 */
-	error = getvnode(td, fd,
-	    cap_rights_init(&rights, CAP_EXTATTR_SET), &fp);
+	if (vap->va_size != VNOVAL) {
+		error = getvnode(td, fd,
+		    cap_rights_init_one(&rights, CAP_EXTATTR_SET), &fp);
+	} else {
+		error = getvnode_path(td, fd,
+		    cap_rights_init_one(&rights, CAP_EXTATTR_SET), &fp);
+	}
 	if (error) {
 		/*
 		 * getvnode() returns EINVAL if the file descriptor is not
@@ -514,7 +535,7 @@ fdesc_setattr(struct vop_setattr_args *ap)
 	if ((error = vn_start_write(vp, &mp, V_WAIT | PCATCH)) == 0) {
 		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 		error = VOP_SETATTR(vp, ap->a_vap, ap->a_cred);
-		VOP_UNLOCK(vp, 0);
+		VOP_UNLOCK(vp);
 		vn_finished_write(mp);
 	}
 	fdrop(fp, td);
@@ -568,8 +589,8 @@ fdesc_readdir(struct vop_readdir_args *ap)
 				break;
 			dp->d_namlen = sprintf(dp->d_name, "%d", fcnt);
 			dp->d_reclen = UIO_MX;
-			dp->d_type = (fmp->flags & FMNT_LINRDLNKF) == 0 ?
-			    DT_CHR : DT_LNK;
+			dp->d_type = (fmp->flags & (FMNT_RDLNKF |
+			    FMNT_LINRDLNKF)) == 0 ? DT_CHR : DT_LNK;
 			dp->d_fileno = i + FD_DESC;
 			dirent_terminate(dp);
 			break;
@@ -628,7 +649,7 @@ fdesc_readlink(struct vop_readlink_args *va)
 		panic("fdesc_readlink: not fdescfs link");
 	fd_fd = ((struct fdescnode *)vn->v_data)->fd_fd;
 	lockflags = VOP_ISLOCKED(vn);
-	VOP_UNLOCK(vn, 0);
+	VOP_UNLOCK(vn);
 
 	td = curthread;
 	error = fget_cap(td, fd_fd, &cap_no_rights, &fp, NULL);
@@ -638,7 +659,7 @@ fdesc_readlink(struct vop_readlink_args *va)
 	switch (fp->f_type) {
 	case DTYPE_VNODE:
 		vp = fp->f_vnode;
-		error = vn_fullpath(td, vp, &fullpath, &freepath);
+		error = vn_fullpath(vp, &fullpath, &freepath);
 		break;
 	default:
 		fullpath = "anon_inode:[unknown]";

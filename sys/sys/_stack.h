@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Antoine Brodin
  * All rights reserved.
@@ -24,13 +24,12 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SYS__STACK_H_
 #define	_SYS__STACK_H_
 
-#define	STACK_MAX	18	/* Don't change, stack_ktr relies on this. */
+#define	STACK_MAX	18
 
 struct stack {
 	int		depth;

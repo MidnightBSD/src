@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_bus.h"
 
 #include <sys/param.h>
@@ -205,7 +204,6 @@ ehci_msm_detach(device_t dev)
 
 	return (0);
 }
-
 
 static device_method_t ehci_methods[] = {
 	/* Device interface */

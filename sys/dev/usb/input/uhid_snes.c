@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 2013, Michael Terrell <vashisnotatree@gmail.com>
  * Copyright 2018, Johannes Lundberg <johalun0@gmail.com>
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -68,7 +67,6 @@
 #define	RIGHT_T 0x02
 
 static const uint8_t uhid_snes_report_descr[] = { UHID_SNES_REPORT_DESCR() };
-
 #define	SNES_DEV(v,p,i) { USB_VPI(v,p,i) }
 
 static const STRUCT_USB_HOST_ID snes_devs[] = {
@@ -94,7 +92,6 @@ struct uhid_snes_softc {
 	int sc_fflags;
 	struct usb_fifo *sc_fifo_open[2];
 	uint8_t sc_zero_length_packets;
-	uint8_t sc_previous_status;
 	uint8_t sc_iid;
 	uint8_t sc_oid;
 	uint8_t sc_fid;
@@ -281,13 +278,30 @@ uhid_snes_ioctl(struct usb_fifo *fifo, u_long cmd, void *data, int fflags)
 {
 	struct uhid_snes_softc *sc = usb_fifo_softc(fifo);
 	struct usb_gen_descriptor *ugd;
+#ifdef COMPAT_FREEBSD32
+	struct usb_gen_descriptor local_ugd;
+	struct usb_gen_descriptor32 *ugd32 = NULL;
+#endif
 	uint32_t size;
 	int error = 0;
 	uint8_t id;
 
+	ugd = data;
+#ifdef COMPAT_FREEBSD32
+	switch (cmd) {
+	case USB_GET_REPORT_DESC32:
+	case USB_GET_REPORT32:
+	case USB_SET_REPORT32:
+		ugd32 = data;
+		ugd = &local_ugd;
+		usb_gen_descriptor_from32(ugd, ugd32);
+		cmd = _IOC_NEWTYPE(cmd, struct usb_gen_descriptor);
+		break;
+	}
+#endif
+
 	switch (cmd) {
 	case USB_GET_REPORT_DESC:
-		ugd = data;
 		if (sc->sc_repdesc_size > ugd->ugd_maxlen) {
 			size = ugd->ugd_maxlen;
 		} else {
@@ -328,7 +342,6 @@ uhid_snes_ioctl(struct usb_fifo *fifo, u_long cmd, void *data, int fflags)
 			error = EPERM;
 			break;
 		}
-		ugd = data;
 		switch (ugd->ugd_report_type) {
 		case UHID_INPUT_REPORT:
 			size = sc->sc_isize;
@@ -346,9 +359,10 @@ uhid_snes_ioctl(struct usb_fifo *fifo, u_long cmd, void *data, int fflags)
 			return (EINVAL);
 		}
 		if (id != 0)
-			copyin(ugd->ugd_data, &id, 1);
-		error = uhid_get_report(sc, ugd->ugd_report_type, id,
-		    NULL, ugd->ugd_data, imin(ugd->ugd_maxlen, size));
+			error = copyin(ugd->ugd_data, &id, 1);
+		if (error == 0)
+			error = uhid_get_report(sc, ugd->ugd_report_type, id,
+			    NULL, ugd->ugd_data, imin(ugd->ugd_maxlen, size));
 		break;
 
 	case USB_SET_REPORT:
@@ -356,7 +370,6 @@ uhid_snes_ioctl(struct usb_fifo *fifo, u_long cmd, void *data, int fflags)
 			error = EPERM;
 			break;
 		}
-		ugd = data;
 		switch (ugd->ugd_report_type) {
 		case UHID_INPUT_REPORT:
 			size = sc->sc_isize;
@@ -374,9 +387,10 @@ uhid_snes_ioctl(struct usb_fifo *fifo, u_long cmd, void *data, int fflags)
 			return (EINVAL);
 		}
 		if (id != 0)
-			copyin(ugd->ugd_data, &id, 1);
-		error = uhid_set_report(sc, ugd->ugd_report_type, id,
-		    NULL, ugd->ugd_data, imin(ugd->ugd_maxlen, size));
+			error = copyin(ugd->ugd_data, &id, 1);
+		if (error == 0)
+			error = uhid_set_report(sc, ugd->ugd_report_type, id,
+			    NULL, ugd->ugd_data, imin(ugd->ugd_maxlen, size));
 		break;
 
 	case USB_GET_REPORT_ID:
@@ -388,6 +402,11 @@ uhid_snes_ioctl(struct usb_fifo *fifo, u_long cmd, void *data, int fflags)
 		error = EINVAL;
 		break;
 	}
+
+#ifdef COMPAT_FREEBSD32
+	if (ugd32 != NULL)
+		update_usb_gen_descriptor32(ugd32, ugd);
+#endif
 	return (error);
 }
 
@@ -478,7 +497,6 @@ uhid_snes_status_callback(struct usb_xfer *transfer, usb_error_t error)
 	struct uhid_snes_softc *sc = usbd_xfer_softc(transfer);
 	struct usb_device_request req;
 	struct usb_page_cache *pc;
-	uint8_t current_status, new_status;
 
 	switch (USB_GET_STATE(transfer)) {
 	case USB_ST_SETUP:
@@ -495,13 +513,6 @@ uhid_snes_status_callback(struct usb_xfer *transfer, usb_error_t error)
 		usbd_xfer_set_frame_len(transfer, 1, 1);
 		usbd_xfer_set_frames(transfer, 2);
 		usbd_transfer_submit(transfer);
-		break;
-
-	case USB_ST_TRANSFERRED:
-		pc = usbd_xfer_get_frame(transfer, 1);
-		usbd_copy_out(pc, 0, &current_status, 1);
-		new_status = current_status & ~sc->sc_previous_status;
-		sc->sc_previous_status = current_status;
 		break;
 
 	default:
@@ -581,7 +592,6 @@ found:
 	    iface_index, UID_ROOT, GID_OPERATOR, 0644);
 	sc->sc_repdesc_size = sizeof(uhid_snes_report_descr);
 	sc->sc_repdesc_ptr = __DECONST(void*, &uhid_snes_report_descr);
-
 
 	if (error)
 		goto detach;

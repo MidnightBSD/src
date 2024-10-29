@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009, 2013 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Ed Schouten under sponsorship from the
  * FreeBSD Foundation.
@@ -30,7 +29,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_VT_VT_H_
@@ -47,6 +45,8 @@
 #include <sys/mouse.h>
 #include <sys/terminal.h>
 #include <sys/sysctl.h>
+#include <sys/font.h>
+#include <sys/taskqueue.h>
 
 #include "opt_syscons.h"
 #include "opt_splash.h"
@@ -89,8 +89,8 @@ SYSCTL_INT(_kern_vt, OID_AUTO, _name, CTLFLAG_RWTUN, &vt_##_name, 0, _descr)
 
 struct vt_driver;
 
-void vt_allocate(const struct vt_driver *, void *);
-void vt_deallocate(const struct vt_driver *, void *);
+int vt_allocate(const struct vt_driver *, void *);
+int vt_deallocate(const struct vt_driver *, void *);
 
 typedef unsigned int	vt_axis_t;
 
@@ -122,6 +122,7 @@ struct vt_device {
 	struct vt_window	*vd_windows[VT_MAXWINDOWS]; /* (c) Windows. */
 	struct vt_window	*vd_curwindow;	/* (d) Current window. */
 	struct vt_window	*vd_savedwindow;/* (?) Saved for suspend. */
+	struct vt_window	*vd_grabwindow;	/* (?) Saved before cngrab. */
 	struct vt_pastebuf	 vd_pastebuf;	/* (?) Copy/paste buf. */
 	const struct vt_driver	*vd_driver;	/* (c) Graphics driver. */
 	void			*vd_softc;	/* (u) Driver data. */
@@ -157,7 +158,7 @@ struct vt_device {
 #define	VDF_QUIET_BELL	0x80	/* Disable bell. */
 #define	VDF_SUSPENDED	0x100	/* Device has been suspended. */
 #define	VDF_DOWNGRADE	0x8000	/* The driver is being downgraded. */
-	int			 vd_keyboard;	/* (G) Keyboard index. */
+	struct keyboard		*vd_keyboard;	/* (G) Keyboard. */
 	unsigned int		 vd_kbstate;	/* (?) Device unit. */
 	unsigned int		 vd_unit;	/* (c) Device unit. */
 	int			 vd_altbrk;	/* (?) Alt break seq. state */
@@ -191,6 +192,7 @@ void vt_suspend(struct vt_device *vd);
 
 struct vt_buf {
 	struct mtx		 vb_lock;	/* Buffer lock. */
+	struct terminal		*vb_terminal;
 	term_pos_t		 vb_scr_size;	/* (b) Screen dimensions. */
 	int			 vb_flags;	/* (b) Flags. */
 #define	VBF_CURSOR	0x1	/* Cursor visible. */
@@ -229,12 +231,13 @@ void vtbuf_scroll_mode(struct vt_buf *vb, int yes);
 void vtbuf_dirty(struct vt_buf *vb, const term_rect_t *area);
 void vtbuf_undirty(struct vt_buf *, term_rect_t *);
 void vtbuf_sethistory_size(struct vt_buf *, unsigned int);
+void vtbuf_clearhistory(struct vt_buf *);
 int vtbuf_iscursor(const struct vt_buf *vb, int row, int col);
 void vtbuf_cursor_visibility(struct vt_buf *, int);
 #ifndef SC_NO_CUTPASTE
 int vtbuf_set_mark(struct vt_buf *vb, int type, int col, int row);
 int vtbuf_get_marked_len(struct vt_buf *vb);
-void vtbuf_extract_marked(struct vt_buf *vb, term_char_t *buf, int sz);
+void vtbuf_extract_marked(struct vt_buf *vb, term_char_t *buf, int sz, int mark);
 #endif
 
 #define	VTB_MARK_NONE		0
@@ -302,8 +305,10 @@ struct vt_window {
 	pid_t			 vw_pid;	/* Terminal holding process */
 	struct proc		*vw_proc;
 	struct vt_mode		 vw_smode;	/* switch mode */
-	struct callout		 vw_proc_dead_timer;
+	struct timeout_task	 vw_timeout_task_dead;
 	struct vt_window	*vw_switch_to;
+	int			 vw_bell_pitch;	/* (?) Bell pitch */
+	sbintime_t		 vw_bell_duration; /* (?) Bell duration */
 };
 
 #define	VT_AUTO		0		/* switching is automatic */
@@ -380,8 +385,6 @@ struct vt_driver {
  */
 
 extern struct vt_device vt_consdev;
-extern struct terminal vt_consterm;
-extern const struct terminal_class vt_termclass;
 void vt_upgrade(struct vt_device *vd);
 
 #define	PIXEL_WIDTH(w)	((w) / 8)
@@ -396,30 +399,6 @@ void vt_upgrade(struct vt_device *vd);
 
 /* name argument is not used yet. */
 #define VT_DRIVER_DECLARE(name, drv) DATA_SET(vt_drv_set, drv)
-
-/*
- * Fonts.
- *
- * Remapping tables are used to map Unicode points to glyphs.  They need
- * to be sorted, because vtfont_lookup() performs a binary search.  Each
- * font has two remapping tables, for normal and bold.  When a character
- * is not present in bold, it uses a normal glyph.  When no glyph is
- * available, it uses glyph 0, which is normally equal to U+FFFD.
- */
-
-struct vt_font_map {
-	uint32_t		 vfm_src;
-	uint16_t		 vfm_dst;
-	uint16_t		 vfm_len;
-};
-
-struct vt_font {
-	struct vt_font_map	*vf_map[VFNT_MAPS];
-	uint8_t			*vf_bytes;
-	unsigned int		 vf_height, vf_width;
-	unsigned int		 vf_map_count[VFNT_MAPS];
-	unsigned int		 vf_refcount;
-};
 
 #ifndef SC_NO_CUTPASTE
 struct vt_mouse_cursor {
@@ -470,4 +449,3 @@ extern const unsigned int vt_logo_sprite_width;
 void vtterm_draw_cpu_logos(struct vt_device *);
 
 #endif /* !_DEV_VT_VT_H_ */
-

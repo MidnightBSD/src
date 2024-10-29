@@ -249,7 +249,7 @@ msdosfs_access(struct vop_access_args *ap)
 	}
 
 	return (vaccess(vp->v_type, file_mode, pmp->pm_uid, pmp->pm_gid,
-	    ap->a_accmode, ap->a_cred, NULL));
+	    ap->a_accmode, ap->a_cred));
 }
 
 static int
@@ -317,8 +317,11 @@ msdosfs_getattr(struct vop_getattr_args *ap)
 		vap->va_flags |= UF_SYSTEM;
 	vap->va_gen = 0;
 	vap->va_blocksize = pmp->pm_bpcluster;
-	vap->va_bytes =
-	    (dep->de_FileSize + pmp->pm_crbomask) & ~pmp->pm_crbomask;
+	if (dep->de_StartCluster != MSDOSFSROOT)
+		vap->va_bytes =
+		    (dep->de_FileSize + pmp->pm_crbomask) & ~pmp->pm_crbomask;
+	else
+		vap->va_bytes = 0; /* FAT12/FAT16 root dir in reserved area */
 	vap->va_type = ap->a_vp->v_type;
 	vap->va_filerev = dep->de_modrev;
 	return (0);
@@ -377,7 +380,7 @@ msdosfs_setattr(struct vop_setattr_args *ap)
 		if (vp->v_mount->mnt_flag & MNT_RDONLY)
 			return (EROFS);
 		if (cred->cr_uid != pmp->pm_uid) {
-			error = priv_check_cred(cred, PRIV_VFS_ADMIN, 0);
+			error = priv_check_cred(cred, PRIV_VFS_ADMIN);
 			if (error)
 				return (error);
 		}
@@ -426,7 +429,7 @@ msdosfs_setattr(struct vop_setattr_args *ap)
 			gid = pmp->pm_gid;
 		if (cred->cr_uid != pmp->pm_uid || uid != pmp->pm_uid ||
 		    (gid != pmp->pm_gid && !groupmember(gid, cred))) {
-			error = priv_check_cred(cred, PRIV_VFS_CHOWN, 0);
+			error = priv_check_cred(cred, PRIV_VFS_CHOWN);
 			if (error)
 				return (error);
 		}
@@ -459,6 +462,9 @@ msdosfs_setattr(struct vop_setattr_args *ap)
 			 */
 			break;
 		}
+		error = vn_rlimit_trunc(vap->va_size, td);
+		if (error != 0)
+			return (error);
 		error = detrunc(dep, vap->va_size, 0, cred);
 		if (error)
 			return error;
@@ -497,7 +503,7 @@ msdosfs_setattr(struct vop_setattr_args *ap)
 		if (vp->v_mount->mnt_flag & MNT_RDONLY)
 			return (EROFS);
 		if (cred->cr_uid != pmp->pm_uid) {
-			error = priv_check_cred(cred, PRIV_VFS_ADMIN, 0);
+			error = priv_check_cred(cred, PRIV_VFS_ADMIN);
 			if (error)
 				return (error);
 		}
@@ -614,7 +620,7 @@ msdosfs_write(struct vop_write_args *ap)
 {
 	int n;
 	int croffset;
-	ssize_t resid;
+	ssize_t resid, r;
 	u_long osize;
 	int error = 0;
 	u_long count;
@@ -659,15 +665,15 @@ msdosfs_write(struct vop_write_args *ap)
 	/*
 	 * The caller is supposed to ensure that
 	 * uio->uio_offset >= 0 and uio->uio_resid >= 0.
-	 */
-	if ((uoff_t)uio->uio_offset + uio->uio_resid > MSDOSFS_FILESIZE_MAX)
-		return (EFBIG);
-
-	/*
+	 *
 	 * If they've exceeded their filesize limit, tell them about it.
 	 */
-	if (vn_rlimit_fsize(vp, uio, uio->uio_td))
-		return (EFBIG);
+	error = vn_rlimit_fsizex(vp, uio, MSDOSFS_FILESIZE_MAX, &r,
+	    uio->uio_td);
+	if (error != 0) {
+		vn_rlimit_fsizex_res(uio, r);
+		return (error);
+	}
 
 	/*
 	 * If the offset we are starting the write at is beyond the end of
@@ -677,8 +683,10 @@ msdosfs_write(struct vop_write_args *ap)
 	 */
 	if (uio->uio_offset > dep->de_FileSize) {
 		error = deextend(dep, uio->uio_offset, cred);
-		if (error)
+		if (error != 0) {
+			vn_rlimit_fsizex_res(uio, r);
 			return (error);
+		}
 	}
 
 	/*
@@ -757,7 +765,6 @@ msdosfs_write(struct vop_write_args *ap)
 			 */
 			error = bread(thisvp, bn, pmp->pm_bpcluster, cred, &bp);
 			if (error) {
-				brelse(bp);
 				break;
 			}
 		}
@@ -822,6 +829,7 @@ errexit:
 		}
 	} else if (ioflag & IO_SYNC)
 		error = deupdat(dep, 1);
+	vn_rlimit_fsizex_res(uio, r);
 	return (error);
 }
 
@@ -852,7 +860,7 @@ msdosfs_fsync(struct vop_fsync_args *ap)
 		devvp = VTODE(ap->a_vp)->de_pmp->pm_devvp;
 		vn_lock(devvp, LK_EXCLUSIVE | LK_RETRY);
 		allerror = VOP_FSYNC(devvp, MNT_WAIT, ap->a_td);
-		VOP_UNLOCK(devvp, 0);
+		VOP_UNLOCK(devvp);
 	} else
 		allerror = 0;
 
@@ -937,24 +945,25 @@ msdosfs_link(struct vop_link_args *ap)
 static int
 msdosfs_rename(struct vop_rename_args *ap)
 {
-	struct vnode *tdvp = ap->a_tdvp;
-	struct vnode *fvp = ap->a_fvp;
-	struct vnode *fdvp = ap->a_fdvp;
-	struct vnode *tvp = ap->a_tvp;
-	struct componentname *tcnp = ap->a_tcnp;
-	struct componentname *fcnp = ap->a_fcnp;
-	struct denode *ip, *xp, *dp, *zp;
+	struct vnode *fdvp, *fvp, *tdvp, *tvp, *vp;
+	struct componentname *fcnp, *tcnp;
+	struct denode *fdip, *fip, *tdip, *tip, *nip;
 	u_char toname[12], oldname[11];
-	u_long from_diroffset, to_diroffset;
-	u_char to_count;
-	int doingdirectory = 0, newparent = 0;
+	u_long to_diroffset;
+	bool checkpath_locked, doingdirectory, newparent;
 	int error;
-	u_long cn, pcl;
-	daddr_t bn;
+	u_long cn, pcl, blkoff;
+	daddr_t bn, wait_scn, scn;
 	struct msdosfsmount *pmp;
 	struct direntry *dotdotp;
 	struct buf *bp;
 
+	tdvp = ap->a_tdvp;
+	fvp = ap->a_fvp;
+	fdvp = ap->a_fdvp;
+	tvp = ap->a_tvp;
+	tcnp = ap->a_tcnp;
+	fcnp = ap->a_fcnp;
 	pmp = VFSTOMSDOSFS(fdvp->v_mount);
 
 #ifdef DIAGNOSTIC
@@ -966,18 +975,9 @@ msdosfs_rename(struct vop_rename_args *ap)
 	 * Check for cross-device rename.
 	 */
 	if (fvp->v_mount != tdvp->v_mount ||
-	    (tvp && fvp->v_mount != tvp->v_mount)) {
+	    (tvp != NULL && fvp->v_mount != tvp->v_mount)) {
 		error = EXDEV;
-abortit:
-		if (tdvp == tvp)
-			vrele(tdvp);
-		else
-			vput(tdvp);
-		if (tvp)
-			vput(tvp);
-		vrele(fdvp);
-		vrele(fvp);
-		return (error);
+		goto abortit;
 	}
 
 	/*
@@ -988,11 +988,99 @@ abortit:
 		goto abortit;
 	}
 
-	error = vn_lock(fvp, LK_EXCLUSIVE);
-	if (error)
-		goto abortit;
-	dp = VTODE(fdvp);
-	ip = VTODE(fvp);
+	/*
+	 * When the target exists, both the directory
+	 * and target vnodes are passed locked.
+	 */
+	VOP_UNLOCK(tdvp);
+	if (tvp != NULL && tvp != tdvp)
+		VOP_UNLOCK(tvp);
+
+	checkpath_locked = false;
+
+relock:
+	doingdirectory = newparent = false;
+
+	error = vn_lock(fdvp, LK_EXCLUSIVE);
+	if (error != 0)
+		goto releout;
+	if (vn_lock(tdvp, LK_EXCLUSIVE | LK_NOWAIT) != 0) {
+		VOP_UNLOCK(fdvp);
+		error = vn_lock(tdvp, LK_EXCLUSIVE);
+		if (error != 0)
+			goto releout;
+		VOP_UNLOCK(tdvp);
+		goto relock;
+	}
+
+	error = msdosfs_lookup_ino(fdvp, NULL, fcnp, &scn, &blkoff);
+	if (error != 0) {
+		VOP_UNLOCK(fdvp);
+		VOP_UNLOCK(tdvp);
+		goto releout;
+	}
+	error = deget(pmp, scn, blkoff, LK_EXCLUSIVE | LK_NOWAIT, &nip);
+	if (error != 0) {
+		VOP_UNLOCK(fdvp);
+		VOP_UNLOCK(tdvp);
+		if (error != EBUSY)
+			goto releout;
+		error = deget(pmp, scn, blkoff, LK_EXCLUSIVE, &nip);
+		if (error != 0)
+			goto releout;
+		vp = fvp;
+		fvp = DETOV(nip);
+		VOP_UNLOCK(fvp);
+		vrele(vp);
+		goto relock;
+	}
+	vrele(fvp);
+	fvp = DETOV(nip);
+
+	error = msdosfs_lookup_ino(tdvp, NULL, tcnp, &scn, &blkoff);
+	if (error != 0 && error != EJUSTRETURN) {
+		VOP_UNLOCK(fdvp);
+		VOP_UNLOCK(tdvp);
+		VOP_UNLOCK(fvp);
+		goto releout;
+	}
+	if (error == EJUSTRETURN && tvp != NULL) {
+		vrele(tvp);
+		tvp = NULL;
+	}
+	if (error == 0) {
+		nip = NULL;
+		error = deget(pmp, scn, blkoff, LK_EXCLUSIVE | LK_NOWAIT,
+		    &nip);
+		if (tvp != NULL) {
+			vrele(tvp);
+			tvp = NULL;
+		}
+		if (error != 0) {
+			VOP_UNLOCK(fdvp);
+			VOP_UNLOCK(tdvp);
+			VOP_UNLOCK(fvp);
+			if (error != EBUSY)
+				goto releout;
+			error = deget(pmp, scn, blkoff, LK_EXCLUSIVE,
+			    &nip);
+			if (error != 0)
+				goto releout;
+			vput(DETOV(nip));
+			goto relock;
+		}
+		tvp = DETOV(nip);
+	}
+
+	fdip = VTODE(fdvp);
+	fip = VTODE(fvp);
+	tdip = VTODE(tdvp);
+	tip = tvp != NULL ? VTODE(tvp) : NULL;
+
+	/*
+	 * Remember direntry place to use for destination
+	 */
+	to_diroffset = tdip->de_fndoffset;
 
 	/*
 	 * Be sure we are not renaming ".", "..", or an alias of ".". This
@@ -1000,34 +1088,19 @@ abortit:
 	 * "ls" or "pwd" with the "." directory entry missing, and "cd .."
 	 * doesn't work if the ".." entry is missing.
 	 */
-	if (ip->de_Attributes & ATTR_DIRECTORY) {
+	if ((fip->de_Attributes & ATTR_DIRECTORY) != 0) {
 		/*
 		 * Avoid ".", "..", and aliases of "." for obvious reasons.
 		 */
 		if ((fcnp->cn_namelen == 1 && fcnp->cn_nameptr[0] == '.') ||
-		    dp == ip ||
-		    (fcnp->cn_flags & ISDOTDOT) ||
-		    (tcnp->cn_flags & ISDOTDOT) ||
-		    (ip->de_flag & DE_RENAME)) {
-			VOP_UNLOCK(fvp, 0);
+		    fdip == fip ||
+		    (fcnp->cn_flags & ISDOTDOT) != 0 ||
+		    (tcnp->cn_flags & ISDOTDOT) != 0) {
 			error = EINVAL;
-			goto abortit;
+			goto unlock;
 		}
-		ip->de_flag |= DE_RENAME;
-		doingdirectory++;
+		doingdirectory = true;
 	}
-
-	/*
-	 * When the target exists, both the directory
-	 * and target vnodes are returned locked.
-	 */
-	dp = VTODE(tdvp);
-	xp = tvp ? VTODE(tvp) : NULL;
-	/*
-	 * Remember direntry place to use for destination
-	 */
-	to_diroffset = dp->de_fndoffset;
-	to_count = dp->de_fndcnt;
 
 	/*
 	 * If ".." must be changed (ie the directory gets a new
@@ -1040,55 +1113,63 @@ abortit:
 	 * call to doscheckpath().
 	 */
 	error = VOP_ACCESS(fvp, VWRITE, tcnp->cn_cred, tcnp->cn_thread);
-	VOP_UNLOCK(fvp, 0);
-	if (VTODE(fdvp)->de_StartCluster != VTODE(tdvp)->de_StartCluster)
-		newparent = 1;
+	if (fdip->de_StartCluster != tdip->de_StartCluster)
+		newparent = true;
 	if (doingdirectory && newparent) {
-		if (error)	/* write access check above */
-			goto bad;
-		if (xp != NULL)
-			vput(tvp);
-		/*
-		 * doscheckpath() vput()'s dp,
-		 * so we have to do a relookup afterwards
-		 */
-		error = doscheckpath(ip, dp);
-		if (error)
-			goto out;
+		if (error != 0)	/* write access check above */
+			goto unlock;
+		lockmgr(&pmp->pm_checkpath_lock, LK_EXCLUSIVE, NULL);
+		checkpath_locked = true;
+		error = doscheckpath(fip, tdip, &wait_scn);
+		if (wait_scn != 0) {
+			lockmgr(&pmp->pm_checkpath_lock, LK_RELEASE, NULL);
+			checkpath_locked = false;
+			VOP_UNLOCK(fdvp);
+			VOP_UNLOCK(tdvp);
+			VOP_UNLOCK(fvp);
+			if (tvp != NULL && tvp != tdvp)
+				VOP_UNLOCK(tvp);
+			error = deget(pmp, wait_scn, 0, LK_EXCLUSIVE,
+			    &nip);
+			if (error == 0) {
+				vput(DETOV(nip));
+				goto relock;
+			}
+		}
+		if (error != 0)
+			goto unlock;
 		if ((tcnp->cn_flags & SAVESTART) == 0)
 			panic("msdosfs_rename: lost to startdir");
-		error = relookup(tdvp, &tvp, tcnp);
-		if (error)
-			goto out;
-		dp = VTODE(tdvp);
-		xp = tvp ? VTODE(tvp) : NULL;
 	}
 
-	if (xp != NULL) {
+	if (tip != NULL) {
 		/*
 		 * Target must be empty if a directory and have no links
 		 * to it. Also, ensure source and target are compatible
 		 * (both directories, or both not directories).
 		 */
-		if (xp->de_Attributes & ATTR_DIRECTORY) {
-			if (!dosdirempty(xp)) {
+		if ((tip->de_Attributes & ATTR_DIRECTORY) != 0) {
+			if (!dosdirempty(tip)) {
 				error = ENOTEMPTY;
-				goto bad;
+				goto unlock;
 			}
 			if (!doingdirectory) {
 				error = ENOTDIR;
-				goto bad;
+				goto unlock;
 			}
 			cache_purge(tdvp);
 		} else if (doingdirectory) {
 			error = EISDIR;
-			goto bad;
+			goto unlock;
 		}
-		error = removede(dp, xp);
-		if (error)
-			goto bad;
+		error = msdosfs_lookup_ino(tdvp, NULL, tcnp, &scn, &blkoff);
+		MPASS(error == 0);
+		error = removede(tdip, tip);
+		if (error != 0)
+			goto unlock;
 		vput(tvp);
-		xp = NULL;
+		tvp = NULL;
+		tip = NULL;
 	}
 
 	/*
@@ -1096,140 +1177,91 @@ abortit:
 	 * into the denode and directory entry for the destination
 	 * file/directory.
 	 */
-	error = uniqdosname(VTODE(tdvp), tcnp, toname);
-	if (error)
-		goto abortit;
+	error = uniqdosname(tdip, tcnp, toname);
+	if (error != 0)
+		goto unlock;
 
 	/*
-	 * Since from wasn't locked at various places above,
-	 * have to do a relookup here.
+	 * First write a new entry in the destination
+	 * directory and mark the entry in the source directory
+	 * as deleted.  Then move the denode to the correct hash
+	 * chain for its new location in the filesystem.  And, if
+	 * we moved a directory, then update its .. entry to point
+	 * to the new parent directory.
 	 */
-	fcnp->cn_flags &= ~MODMASK;
-	fcnp->cn_flags |= LOCKPARENT | LOCKLEAF;
-	if ((fcnp->cn_flags & SAVESTART) == 0)
-		panic("msdosfs_rename: lost from startdir");
-	if (!newparent)
-		VOP_UNLOCK(tdvp, 0);
-	if (relookup(fdvp, &fvp, fcnp) == 0)
-		vrele(fdvp);
-	if (fvp == NULL) {
-		/*
-		 * From name has disappeared.
-		 */
-		if (doingdirectory)
-			panic("rename: lost dir entry");
-		if (newparent)
-			VOP_UNLOCK(tdvp, 0);
-		vrele(tdvp);
-		vrele(ap->a_fvp);
-		return 0;
+	memcpy(oldname, fip->de_Name, 11);
+	memcpy(fip->de_Name, toname, 11);	/* update denode */
+	error = msdosfs_lookup_ino(tdvp, NULL, tcnp, &scn, &blkoff);
+	if (error == EJUSTRETURN) {
+		tdip->de_fndoffset = to_diroffset;
+		error = createde(fip, tdip, NULL, tcnp);
 	}
-	xp = VTODE(fvp);
-	zp = VTODE(fdvp);
-	from_diroffset = zp->de_fndoffset;
+	if (error != 0) {
+		memcpy(fip->de_Name, oldname, 11);
+		goto unlock;
+	}
 
 	/*
-	 * Ensure that the directory entry still exists and has not
-	 * changed till now. If the source is a file the entry may
-	 * have been unlinked or renamed. In either case there is
-	 * no further work to be done. If the source is a directory
-	 * then it cannot have been rmdir'ed or renamed; this is
-	 * prohibited by the DE_RENAME flag.
+	 * If fip is for a directory, then its name should always
+	 * be "." since it is for the directory entry in the
+	 * directory itself (msdosfs_lookup() always translates
+	 * to the "." entry so as to get a unique denode, except
+	 * for the root directory there are different
+	 * complications).  However, we just corrupted its name
+	 * to pass the correct name to createde().  Undo this.
 	 */
-	if (xp != ip) {
-		if (doingdirectory)
-			panic("rename: lost dir entry");
-		VOP_UNLOCK(fvp, 0);
-		if (newparent)
-			VOP_UNLOCK(fdvp, 0);
-		vrele(ap->a_fvp);
-		xp = NULL;
-	} else {
-		vrele(fvp);
-		xp = NULL;
-
-		/*
-		 * First write a new entry in the destination
-		 * directory and mark the entry in the source directory
-		 * as deleted.  Then move the denode to the correct hash
-		 * chain for its new location in the filesystem.  And, if
-		 * we moved a directory, then update its .. entry to point
-		 * to the new parent directory.
-		 */
-		memcpy(oldname, ip->de_Name, 11);
-		memcpy(ip->de_Name, toname, 11);	/* update denode */
-		dp->de_fndoffset = to_diroffset;
-		dp->de_fndcnt = to_count;
-		error = createde(ip, dp, (struct denode **)0, tcnp);
-		if (error) {
-			memcpy(ip->de_Name, oldname, 11);
-			if (newparent)
-				VOP_UNLOCK(fdvp, 0);
-			VOP_UNLOCK(fvp, 0);
-			goto bad;
-		}
-		/*
-		 * If ip is for a directory, then its name should always
-		 * be "." since it is for the directory entry in the
-		 * directory itself (msdosfs_lookup() always translates
-		 * to the "." entry so as to get a unique denode, except
-		 * for the root directory there are different
-		 * complications).  However, we just corrupted its name
-		 * to pass the correct name to createde().  Undo this.
-		 */
-		if ((ip->de_Attributes & ATTR_DIRECTORY) != 0)
-			memcpy(ip->de_Name, oldname, 11);
-		ip->de_refcnt++;
-		zp->de_fndoffset = from_diroffset;
-		error = removede(zp, ip);
-		if (error) {
-			/* XXX should downgrade to ro here, fs is corrupt */
-			if (newparent)
-				VOP_UNLOCK(fdvp, 0);
-			VOP_UNLOCK(fvp, 0);
-			goto bad;
-		}
-		if (!doingdirectory) {
-			error = pcbmap(dp, de_cluster(pmp, to_diroffset), 0,
-				       &ip->de_dirclust, 0);
-			if (error) {
-				/* XXX should downgrade to ro here, fs is corrupt */
-				if (newparent)
-					VOP_UNLOCK(fdvp, 0);
-				VOP_UNLOCK(fvp, 0);
-				goto bad;
-			}
-			if (ip->de_dirclust == MSDOSFSROOT)
-				ip->de_diroffset = to_diroffset;
-			else
-				ip->de_diroffset = to_diroffset & pmp->pm_crbomask;
-		}
-		reinsert(ip);
-		if (newparent)
-			VOP_UNLOCK(fdvp, 0);
+	if ((fip->de_Attributes & ATTR_DIRECTORY) != 0)
+		memcpy(fip->de_Name, oldname, 11);
+	fip->de_refcnt++;
+	error = msdosfs_lookup_ino(fdvp, NULL, fcnp, &scn, &blkoff);
+	MPASS(error == 0);
+	error = removede(fdip, fip);
+	if (error != 0) {
+		printf("%s: removede %s %s err %d\n",
+		    pmp->pm_mountp->mnt_stat.f_mntonname,
+		    fdip->de_Name, fip->de_Name, error);
+		msdosfs_integrity_error(pmp);
+		goto unlock;
 	}
+	if (!doingdirectory) {
+		error = pcbmap(tdip, de_cluster(pmp, to_diroffset), 0,
+		    &fip->de_dirclust, 0);
+		if (error != 0) {
+			/*
+			 * XXX should downgrade to ro here,
+			 * fs is corrupt
+			 */
+			goto unlock;
+		}
+		if (fip->de_dirclust == MSDOSFSROOT)
+			fip->de_diroffset = to_diroffset;
+		else
+			fip->de_diroffset = to_diroffset & pmp->pm_crbomask;
+	}
+	reinsert(fip);
 
 	/*
 	 * If we moved a directory to a new parent directory, then we must
 	 * fixup the ".." entry in the moved directory.
 	 */
 	if (doingdirectory && newparent) {
-		cn = ip->de_StartCluster;
+		cn = fip->de_StartCluster;
 		if (cn == MSDOSFSROOT) {
 			/* this should never happen */
 			panic("msdosfs_rename(): updating .. in root directory?");
 		} else
 			bn = cntobn(pmp, cn);
 		error = bread(pmp->pm_devvp, bn, pmp->pm_bpcluster,
-			      NOCRED, &bp);
-		if (error) {
-			/* XXX should downgrade to ro here, fs is corrupt */
-			brelse(bp);
-			VOP_UNLOCK(fvp, 0);
-			goto bad;
+		    NOCRED, &bp);
+		if (error != 0) {
+			printf("%s: block read error %d while renaming dir\n",
+			    pmp->pm_mountp->mnt_stat.f_mntonname,
+			    error);
+			msdosfs_integrity_error(pmp);
+			goto unlock;
 		}
 		dotdotp = (struct direntry *)bp->b_data + 1;
-		pcl = dp->de_StartCluster;
+		pcl = tdip->de_StartCluster;
 		if (FAT32(pmp) && pcl == pmp->pm_rootdirblk)
 			pcl = MSDOSFSROOT;
 		putushort(dotdotp->deStartCluster, pcl);
@@ -1238,9 +1270,11 @@ abortit:
 		if (DOINGASYNC(fvp))
 			bdwrite(bp);
 		else if ((error = bwrite(bp)) != 0) {
-			/* XXX should downgrade to ro here, fs is corrupt */
-			VOP_UNLOCK(fvp, 0);
-			goto bad;
+			printf("%s: block write error %d while renaming dir\n",
+			    pmp->pm_mountp->mnt_stat.f_mntonname,
+			    error);
+			msdosfs_integrity_error(pmp);
+			goto unlock;
 		}
 	}
 
@@ -1252,17 +1286,38 @@ abortit:
 	 * namecache entries that were installed for this direntry.
 	 */
 	cache_purge(fvp);
-	VOP_UNLOCK(fvp, 0);
-bad:
-	if (xp)
-		vput(tvp);
+
+unlock:
+	if (checkpath_locked)
+		lockmgr(&pmp->pm_checkpath_lock, LK_RELEASE, NULL);
+	vput(fdvp);
+	vput(fvp);
+	if (tvp != NULL) {
+		if (tvp != tdvp)
+			vput(tvp);
+		else
+			vrele(tvp);
+	}
 	vput(tdvp);
-out:
-	ip->de_flag &= ~DE_RENAME;
+	return (error);
+releout:
+	MPASS(!checkpath_locked);
+	vrele(tdvp);
+	if (tvp != NULL)
+		vrele(tvp);
 	vrele(fdvp);
 	vrele(fvp);
 	return (error);
-
+abortit:
+	if (tdvp == tvp)
+		vrele(tdvp);
+	else
+		vput(tdvp);
+	if (tvp != NULL)
+		vput(tvp);
+	vrele(fdvp);
+	vrele(fvp);
+	return (error);
 }
 
 static struct {
@@ -1397,7 +1452,7 @@ msdosfs_mkdir(struct vop_mkdir_args *ap)
 	return (0);
 
 bad:
-	clusterfree(pmp, newcluster, NULL);
+	clusterfree(pmp, newcluster);
 bad2:
 	return (error);
 }
@@ -1422,7 +1477,7 @@ msdosfs_rmdir(struct vop_rmdir_args *ap)
 	 *  non-empty.)
 	 */
 	error = 0;
-	if (!dosdirempty(ip) || ip->de_flag & DE_RENAME) {
+	if (!dosdirempty(ip)) {
 		error = ENOTEMPTY;
 		goto out;
 	}
@@ -1592,7 +1647,6 @@ msdosfs_readdir(struct vop_readdir_args *ap)
 			break;
 		error = bread(pmp->pm_devvp, bn, blsize, NOCRED, &bp);
 		if (error) {
-			brelse(bp);
 			return (error);
 		}
 		n = min(n, blsize - bp->b_resid);
@@ -1740,6 +1794,7 @@ out:
 static int
 msdosfs_bmap(struct vop_bmap_args *ap)
 {
+	struct fatcache savefc;
 	struct denode *dep;
 	struct mount *mp;
 	struct msdosfsmount *pmp;
@@ -1766,6 +1821,20 @@ msdosfs_bmap(struct vop_bmap_args *ap)
 	if (error != 0 || (ap->a_runp == NULL && ap->a_runb == NULL))
 		return (error);
 
+	/*
+	 * Prepare to back out updates of the fatchain cache after the one
+	 * for the first block done by pcbmap() above.  Without the backout,
+	 * then whenever the caller doesn't do i/o to all of the blocks that
+	 * we find, the single useful cache entry would be too far in advance
+	 * of the actual i/o to work for the next sequential i/o.  Then the
+	 * FAT would be searched from the beginning.  With the backout, the
+	 * FAT is searched starting at most a few blocks early.  This wastes
+	 * much less time.  Time is also wasted finding more blocks than the
+	 * caller will do i/o to.  This is necessary because the runlength
+	 * parameters are output-only.
+	 */
+	savefc = dep->de_fc[FC_LASTMAP];
+
 	mp = vp->v_mount;
 	maxio = mp->mnt_iosize_max / mp->mnt_stat.f_iosize;
 	bnpercn = de_cn2bn(pmp, 1);
@@ -1787,10 +1856,12 @@ msdosfs_bmap(struct vop_bmap_args *ap)
 		}
 		*ap->a_runb = run - 1;
 	}
+	dep->de_fc[FC_LASTMAP] = savefc;
 	return (0);
 }
 
-SYSCTL_NODE(_vfs, OID_AUTO, msdosfs, CTLFLAG_RW, 0, "msdos filesystem");
+SYSCTL_NODE(_vfs, OID_AUTO, msdosfs, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "msdos filesystem");
 static int use_buf_pager = 1;
 SYSCTL_INT(_vfs_msdosfs, OID_AUTO, use_buf_pager, CTLFLAG_RWTUN,
     &use_buf_pager, 0,
@@ -1950,3 +2021,4 @@ struct vop_vector msdosfs_vnodeops = {
 	.vop_write =		msdosfs_write,
 	.vop_vptofh =		msdosfs_vptofh,
 };
+VFS_VOP_VECTOR_REGISTER(msdosfs_vnodeops);

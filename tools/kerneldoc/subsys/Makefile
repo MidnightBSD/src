@@ -1,5 +1,4 @@
 #
-# $MidnightBSD: stable/11/tools/kerneldoc/subsys/Makefile 298129 2016-04-16 20:41:13Z netchild $
 #
 
 _ALL!=	cd ${.CURDIR} && ls Doxyfile-*
@@ -10,7 +9,7 @@ TARGET_ARCH?=	${MACHINE_ARCH}
 S?=/usr/src/sys
 LOCALBASE?=/usr/local
 
-MFILES!= find ${S} -name \*.m | sed -e 's:${S}/::g'
+MFILES!= find ${S} -name \*.m | egrep '/(dev|libkern|kgssapi|opencrypto|isa|geom|kern|xen|net|${TARGET_ARCH})/' | sed -e 's:${S}/::g'
 HFILES=	${MFILES:T:S/.m$/.h/}
 AWK?=	awk
 

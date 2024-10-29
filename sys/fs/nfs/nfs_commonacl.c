@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Rick Macklem, University of Guelph
  * All rights reserved.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <fs/nfs/nfsport.h>
 
 extern int nfsrv_useacl;
@@ -41,7 +40,7 @@ static int nfsrv_acemasktoperm(u_int32_t acetype, u_int32_t mask, int owner,
  */
 int
 nfsrv_dissectace(struct nfsrv_descript *nd, struct acl_entry *acep,
-    int *aceerrp, int *acesizep, NFSPROC_T *p)
+    bool server, int *aceerrp, int *acesizep, NFSPROC_T *p)
 {
 	u_int32_t *tl;
 	int len, gotid = 0, owner = 0, error = 0, aceerr = 0;
@@ -104,12 +103,12 @@ nfsrv_dissectace(struct nfsrv_descript *nd, struct acl_entry *acep,
 	if (gotid == 0) {
 		if (flag & NFSV4ACE_IDENTIFIERGROUP) {
 			acep->ae_tag = ACL_GROUP;
-			aceerr = nfsv4_strtogid(nd, name, len, &gid, p);
+			aceerr = nfsv4_strtogid(nd, name, len, &gid);
 			if (aceerr == 0)
 				acep->ae_id = (uid_t)gid;
 		} else {
 			acep->ae_tag = ACL_USER;
-			aceerr = nfsv4_strtouid(nd, name, len, &uid, p);
+			aceerr = nfsv4_strtouid(nd, name, len, &uid);
 			if (aceerr == 0)
 				acep->ae_id = uid;
 		}
@@ -153,9 +152,9 @@ nfsrv_dissectace(struct nfsrv_descript *nd, struct acl_entry *acep,
 			acep->ae_entry_type = ACL_ENTRY_TYPE_ALLOW;
 		else if (acetype == NFSV4ACE_DENIEDTYPE)
 			acep->ae_entry_type = ACL_ENTRY_TYPE_DENY;
-		else if (acetype == NFSV4ACE_AUDITTYPE)
+		else if (!server && acetype == NFSV4ACE_AUDITTYPE)
 			acep->ae_entry_type = ACL_ENTRY_TYPE_AUDIT;
-		else if (acetype == NFSV4ACE_ALARMTYPE)
+		else if (!server && acetype == NFSV4ACE_ALARMTYPE)
 			acep->ae_entry_type = ACL_ENTRY_TYPE_ALARM;
 		else
 			aceerr = NFSERR_ATTRNOTSUPP;
@@ -425,7 +424,7 @@ nfsrv_buildacl(struct nfsrv_descript *nd, NFSACL_T *aclp, enum vtype type,
 		case ACL_USER:
 			name = namestr;
 			nfsv4_uidtostr(aclp->acl_entry[i].ae_id, &name,
-			    &namelen, p);
+			    &namelen);
 			if (name != namestr)
 				malloced = 1;
 			break;
@@ -433,7 +432,7 @@ nfsrv_buildacl(struct nfsrv_descript *nd, NFSACL_T *aclp, enum vtype type,
 			isgroup = 1;
 			name = namestr;
 			nfsv4_gidtostr((gid_t)aclp->acl_entry[i].ae_id, &name,
-			    &namelen, p);
+			    &namelen);
 			if (name != namestr)
 				malloced = 1;
 			break;

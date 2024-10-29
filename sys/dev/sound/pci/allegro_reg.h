@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1996-2008, 4Front Technologies
  * Copyright (C) 1992-2000  Don Kim (don.kim@esstech.com)
@@ -146,7 +146,6 @@
 
 #define PCI_DDMA_CTRL           0x60
 #define DDMA_ENABLE             0x00000001
-
 
 /* Allegro registers */
 #define HOST_INT_CTRL           0x18
@@ -445,7 +444,6 @@
 #error Data memory map length too short.
 #endif
 
-
 /*
  * Kernel code memory definition
  */
@@ -454,7 +452,6 @@
 #define KCODE_VECTORS_END               0x002F
 #define KCODE_VECTORS_UNIT_LENGTH       0x0002
 #define KCODE_VECTORS_LENGTH            (KCODE_VECTORS_END - KCODE_VECTORS_BEGIN + 1)
-
 
 /*
  * Kernel data memory definition

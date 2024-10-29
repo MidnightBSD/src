@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * All rights reserved.
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THEPOSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _NM256_H_
@@ -115,6 +114,5 @@
 #define NM_PBUFFER_END   (NM_PLAYBACK_REG_OFFSET + 0x14)
 #define NM_PBUFFER_WMARK (NM_PLAYBACK_REG_OFFSET + 0xc)
 #define NM_PBUFFER_CURRP (NM_PLAYBACK_REG_OFFSET + 0x8)
-
 
 #endif

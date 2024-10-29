@@ -1,8 +1,9 @@
-# $FreeBSD$
 
 .PATH: ${SRCTOP}/sys/geom/eli ${SRCTOP}/sys/crypto/sha2
 
 PACKAGE=	tests
+
+WARNS?=		3
 
 TESTSDIR=	${TESTSBASE}/sys/geom/class/${.CURDIR:T}
 
@@ -16,6 +17,7 @@ ATF_TESTS_SH+=	integrity_test
 ATF_TESTS_SH+=	kill_test
 ATF_TESTS_SH+=	misc_test
 ATF_TESTS_SH+=	onetime_test
+ATF_TESTS_SH+=	online_resize_test
 ATF_TESTS_SH+=	reentrancy_test
 ATF_TESTS_SH+=	resize_test
 ATF_TESTS_SH+=	setkey_test
@@ -33,6 +35,9 @@ SRCS.pbkdf2_test=	\
 		sha256c.c
 
 LIBADD.pbkdf2_test= crypto
+
+PROGS+= unaligned_io
+BINDIR?= ${TESTSDIR}
 
 testvect.h:
 	python gentestvect.py > ${.TARGET}

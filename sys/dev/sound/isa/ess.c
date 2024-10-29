@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * Copyright (c) 1997,1998 Luigi Rizzo
@@ -44,6 +44,7 @@
 
 #include "mixer_if.h"
 
+SND_DECLARE_FILE("");
 
 #define ESS_BUFFSIZE (4096)
 #define ABS(x) (((x) < 0)? -(x) : (x))
@@ -142,13 +143,11 @@ static int ess_stop(struct ess_chinfo *ch);
 
 static void
 ess_lock(struct ess_info *sc) {
-
 	sbc_lock(device_get_softc(sc->parent_dev));
 }
 
 static void
 ess_unlock(struct ess_info *sc) {
-
 	sbc_unlock(device_get_softc(sc->parent_dev));
 }
 
@@ -466,7 +465,6 @@ ess_setupch(struct ess_info *sc, int ch, int dir, int spd, u_int32_t fmt, int le
 	int stereo = (AFMT_CHANNEL(fmt) > 1)? 1 : 0;
 	int unsign = (fmt == AFMT_U8 || fmt == AFMT_U16_LE)? 1 : 0;
 	u_int8_t spdval, fmtval;
-
 
 	spdval = (sc->newspeed)? ess_calcspeed9(&spd) : ess_calcspeed8(&spd);
 	len = -len;
@@ -790,14 +788,14 @@ MIXER_DECLARE(essmixer);
 static int
 ess_probe(device_t dev)
 {
-	uintptr_t func, ver, r, f;
+	uintptr_t func, ver, f;
 
 	/* The parent device has already been probed. */
-	r = BUS_READ_IVAR(device_get_parent(dev), dev, 0, &func);
+	BUS_READ_IVAR(device_get_parent(dev), dev, 0, &func);
 	if (func != SCF_PCM)
 		return (ENXIO);
 
-	r = BUS_READ_IVAR(device_get_parent(dev), dev, 1, &ver);
+	BUS_READ_IVAR(device_get_parent(dev), dev, 1, &ver);
 	f = (ver & 0xffff0000) >> 16;
 	if (!(f & BD_F_ESS))
 		return (ENXIO);
@@ -932,7 +930,6 @@ static device_method_t ess_methods[] = {
 	DEVMETHOD(device_attach,	ess_attach),
 	DEVMETHOD(device_detach,	ess_detach),
 	DEVMETHOD(device_resume,	ess_resume),
-
 	{ 0, 0 }
 };
 
@@ -1004,7 +1001,6 @@ static device_method_t esscontrol_methods[] = {
 	DEVMETHOD(device_probe,		esscontrol_probe),
 	DEVMETHOD(device_attach,	esscontrol_attach),
 	DEVMETHOD(device_detach,	esscontrol_detach),
-
 	{ 0, 0 }
 };
 

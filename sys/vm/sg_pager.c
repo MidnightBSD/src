@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * This pager manages OBJT_SG objects.  These objects are backed by
  * a scatter/gather list of physical address ranges.
@@ -39,6 +38,7 @@
 #include <sys/mutex.h>
 #include <sys/rwlock.h>
 #include <sys/sglist.h>
+#include <sys/user.h>
 #include <sys/vmmeter.h>
 
 #include <vm/vm.h>
@@ -58,7 +58,8 @@ static void sg_pager_putpages(vm_object_t, vm_page_t *, int,
 static boolean_t sg_pager_haspage(vm_object_t, vm_pindex_t, int *,
 		int *);
 
-struct pagerops sgpagerops = {
+const struct pagerops sgpagerops = {
+	.pgo_kvme_type = KVME_TYPE_SG,
 	.pgo_alloc =	sg_pager_alloc,
 	.pgo_dealloc =	sg_pager_dealloc,
 	.pgo_getpages =	sg_pager_getpages,
@@ -128,10 +129,12 @@ sg_pager_dealloc(vm_object_t object)
 	 * Free up our fake pages.
 	 */
 	while ((m = TAILQ_FIRST(&object->un_pager.sgp.sgp_pglist)) != 0) {
+		if (vm_page_busy_acquire(m, VM_ALLOC_WAITFAIL) == 0)
+			continue;
 		TAILQ_REMOVE(&object->un_pager.sgp.sgp_pglist, m, plinks.q);
 		vm_page_putfake(m);
 	}
-	
+
 	sg = object->handle;
 	sglist_free(sg);
 	object->handle = NULL;
@@ -152,10 +155,9 @@ sg_pager_getpages(vm_object_t object, vm_page_t *m, int count, int *rbehind,
 
 	/* Since our haspage reports zero after/before, the count is 1. */
 	KASSERT(count == 1, ("%s: count %d", __func__, count));
-	VM_OBJECT_ASSERT_WLOCKED(object);
+	/* Handle is stable while paging is in progress. */
 	sg = object->handle;
 	memattr = object->memattr;
-	VM_OBJECT_WUNLOCK(object);
 	offset = m[0]->pindex;
 
 	/*
@@ -192,12 +194,10 @@ sg_pager_getpages(vm_object_t object, vm_page_t *m, int count, int *rbehind,
 	page = vm_page_getfake(paddr, memattr);
 	VM_OBJECT_WLOCK(object);
 	TAILQ_INSERT_TAIL(&object->un_pager.sgp.sgp_pglist, page, plinks.q);
-	vm_page_replace_checked(page, object, offset, m[0]);
-	vm_page_lock(m[0]);
-	vm_page_free(m[0]);
-	vm_page_unlock(m[0]);
+	vm_page_replace(page, object, offset, m[0]);
+	VM_OBJECT_WUNLOCK(object);
 	m[0] = page;
-	page->valid = VM_PAGE_BITS_ALL;
+	vm_page_valid(page);
 
 	if (rbehind)
 		*rbehind = 0;

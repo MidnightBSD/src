@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * These functions support the macros and help fiddle mbuf chains for
  * the nfs op functions. They do things like create the rpc header and
@@ -48,20 +47,18 @@ extern enum vtype newnv2tov_type[8];
 extern enum vtype nv34tov_type[8];
 NFSCLSTATEMUTEX;
 
-static nfsuint64 nfs_nullcookie = {{ 0, 0 }};
-
 /*
  * copies a uio scatter/gather list to an mbuf chain.
  * NOTE: can only handle iovcnt == 1
  */
-void
+int
 nfsm_uiombuf(struct nfsrv_descript *nd, struct uio *uiop, int siz)
 {
 	char *uiocp;
 	struct mbuf *mp, *mp2;
-	int xfer, left, mlen;
+	int error, xfer, left, mlen;
 	int uiosiz, clflg, rem;
-	char *cp, *tcp;
+	char *mcp, *tcp;
 
 	KASSERT(uiop->uio_iovcnt == 1, ("nfsm_uiotombuf: iovcnt != 1"));
 
@@ -71,6 +68,127 @@ nfsm_uiombuf(struct nfsrv_descript *nd, struct uio *uiop, int siz)
 		clflg = 0;
 	rem = NFSM_RNDUP(siz) - siz;
 	mp = mp2 = nd->nd_mb;
+	mcp = nd->nd_bpos;
+	while (siz > 0) {
+		KASSERT((nd->nd_flag & ND_EXTPG) != 0 || mcp ==
+		    mtod(mp, char *) + mp->m_len, ("nfsm_uiombuf: mcp wrong"));
+		left = uiop->uio_iov->iov_len;
+		uiocp = uiop->uio_iov->iov_base;
+		if (left > siz)
+			left = siz;
+		uiosiz = left;
+		while (left > 0) {
+			if ((nd->nd_flag & ND_EXTPG) != 0)
+				mlen = nd->nd_bextpgsiz;
+			else
+				mlen = M_TRAILINGSPACE(mp);
+			if (mlen == 0) {
+				if ((nd->nd_flag & ND_EXTPG) != 0) {
+					mp = nfsm_add_ext_pgs(mp,
+					    nd->nd_maxextsiz, &nd->nd_bextpg);
+					mcp = (char *)(void *)PHYS_TO_DMAP(
+					  mp->m_epg_pa[nd->nd_bextpg]);
+					nd->nd_bextpgsiz = mlen = PAGE_SIZE;
+				} else {
+					if (clflg)
+						NFSMCLGET(mp, M_WAITOK);
+					else
+						NFSMGET(mp);
+					mp->m_len = 0;
+					mlen = M_TRAILINGSPACE(mp);
+					mcp = mtod(mp, char *);
+					mp2->m_next = mp;
+					mp2 = mp;
+				}
+			}
+			xfer = (left > mlen) ? mlen : left;
+			if (uiop->uio_segflg == UIO_SYSSPACE)
+				NFSBCOPY(uiocp, mcp, xfer);
+			else {
+				error = copyin(uiocp, mcp, xfer);
+				if (error != 0)
+					return (error);
+			}
+			mp->m_len += xfer;
+			left -= xfer;
+			uiocp += xfer;
+			mcp += xfer;
+			if ((nd->nd_flag & ND_EXTPG) != 0) {
+				nd->nd_bextpgsiz -= xfer;
+				mp->m_epg_last_len += xfer;
+			}
+			uiop->uio_offset += xfer;
+			uiop->uio_resid -= xfer;
+		}
+		tcp = (char *)uiop->uio_iov->iov_base;
+		tcp += uiosiz;
+		uiop->uio_iov->iov_base = (void *)tcp;
+		uiop->uio_iov->iov_len -= uiosiz;
+		siz -= uiosiz;
+	}
+	if (rem > 0) {
+		if ((nd->nd_flag & ND_EXTPG) == 0 && rem >
+		    M_TRAILINGSPACE(mp)) {
+			NFSMGET(mp);
+			mp->m_len = 0;
+			mp2->m_next = mp;
+			mcp = mtod(mp, char *);
+		} else if ((nd->nd_flag & ND_EXTPG) != 0 && rem >
+		    nd->nd_bextpgsiz) {
+			mp = nfsm_add_ext_pgs(mp, nd->nd_maxextsiz,
+			    &nd->nd_bextpg);
+			mcp = (char *)(void *)
+			    PHYS_TO_DMAP(mp->m_epg_pa[nd->nd_bextpg]);
+			nd->nd_bextpgsiz = PAGE_SIZE;
+		}
+		for (left = 0; left < rem; left++)
+			*mcp++ = '\0';
+		mp->m_len += rem;
+		if ((nd->nd_flag & ND_EXTPG) != 0) {
+			nd->nd_bextpgsiz -= rem;
+			mp->m_epg_last_len += rem;
+		}
+	}
+	nd->nd_bpos = mcp;
+	nd->nd_mb = mp;
+	return (0);
+}
+
+/*
+ * copies a uio scatter/gather list to an mbuf chain.
+ * This version returns the mbuf list and does not use "nd".
+ * NOTE: can only handle iovcnt == 1
+ */
+struct mbuf *
+nfsm_uiombuflist(struct uio *uiop, int siz, u_int maxext)
+{
+	char *uiocp;
+	struct mbuf *mp, *mp2, *firstmp;
+	int error, extpg, extpgsiz = 0, i, left, mlen, rem, xfer;
+	int uiosiz, clflg;
+	char *mcp, *tcp;
+
+	KASSERT(uiop->uio_iovcnt == 1, ("nfsm_uiotombuf: iovcnt != 1"));
+
+	if (maxext > 0) {
+		mp = mb_alloc_ext_plus_pages(PAGE_SIZE, M_WAITOK);
+		mcp = (char *)(void *)PHYS_TO_DMAP(mp->m_epg_pa[0]);
+		extpg = 0;
+		extpgsiz = PAGE_SIZE;
+	} else {
+		if (siz > ncl_mbuf_mlen) /* or should it >= MCLBYTES ?? */
+			clflg = 1;
+		else
+			clflg = 0;
+		if (clflg != 0)
+			NFSMCLGET(mp, M_WAITOK);
+		else
+			NFSMGET(mp);
+		mcp = mtod(mp, char *);
+	}
+	mp->m_len = 0;
+	firstmp = mp2 = mp;
+	rem = NFSM_RNDUP(siz) - siz;
 	while (siz > 0) {
 		left = uiop->uio_iov->iov_len;
 		uiocp = uiop->uio_iov->iov_base;
@@ -78,33 +196,45 @@ nfsm_uiombuf(struct nfsrv_descript *nd, struct uio *uiop, int siz)
 			left = siz;
 		uiosiz = left;
 		while (left > 0) {
-			mlen = M_TRAILINGSPACE(mp);
-			if (mlen == 0) {
-				if (clflg)
-					NFSMCLGET(mp, M_WAITOK);
-				else
-					NFSMGET(mp);
-				mbuf_setlen(mp, 0);
-				mbuf_setnext(mp2, mp);
-				mp2 = mp;
+			if (maxext > 0)
+				mlen = extpgsiz;
+			else
 				mlen = M_TRAILINGSPACE(mp);
+			if (mlen == 0) {
+				if (maxext > 0) {
+					mp = nfsm_add_ext_pgs(mp, maxext,
+					    &extpg);
+					mlen = extpgsiz = PAGE_SIZE;
+					mcp = (char *)(void *)PHYS_TO_DMAP(
+					    mp->m_epg_pa[extpg]);
+				} else {
+					if (clflg)
+						NFSMCLGET(mp, M_WAITOK);
+					else
+						NFSMGET(mp);
+					mcp = mtod(mp, char *);
+					mlen = M_TRAILINGSPACE(mp);
+					mp->m_len = 0;
+					mp2->m_next = mp;
+					mp2 = mp;
+				}
 			}
 			xfer = (left > mlen) ? mlen : left;
-#ifdef notdef
-			/* Not Yet.. */
-			if (uiop->uio_iov->iov_op != NULL)
-				(*(uiop->uio_iov->iov_op))
-				(uiocp, NFSMTOD(mp, caddr_t) + mbuf_len(mp),
-				    xfer);
-			else
-#endif
 			if (uiop->uio_segflg == UIO_SYSSPACE)
-			    NFSBCOPY(uiocp, NFSMTOD(mp, caddr_t) + mbuf_len(mp),
-				xfer);
-			else
-			    copyin(CAST_USER_ADDR_T(uiocp), NFSMTOD(mp, caddr_t)
-				+ mbuf_len(mp), xfer);
-			mbuf_setlen(mp, mbuf_len(mp) + xfer);
+				NFSBCOPY(uiocp, mcp, xfer);
+			else {
+				error = copyin(uiocp, mcp, xfer);
+				if (error != 0) {
+					m_freem(firstmp);
+					return (NULL);
+				}
+			}
+			mp->m_len += xfer;
+			mcp += xfer;
+			if (maxext > 0) {
+				extpgsiz -= xfer;
+				mp->m_epg_last_len += xfer;
+			}
 			left -= xfer;
 			uiocp += xfer;
 			uiop->uio_offset += xfer;
@@ -117,88 +247,15 @@ nfsm_uiombuf(struct nfsrv_descript *nd, struct uio *uiop, int siz)
 		siz -= uiosiz;
 	}
 	if (rem > 0) {
-		if (rem > M_TRAILINGSPACE(mp)) {
-			NFSMGET(mp);
-			mbuf_setlen(mp, 0);
-			mbuf_setnext(mp2, mp);
-		}
-		cp = NFSMTOD(mp, caddr_t) + mbuf_len(mp);
-		for (left = 0; left < rem; left++)
-			*cp++ = '\0';
-		mbuf_setlen(mp, mbuf_len(mp) + rem);
-		nd->nd_bpos = cp;
-	} else
-		nd->nd_bpos = NFSMTOD(mp, caddr_t) + mbuf_len(mp);
-	nd->nd_mb = mp;
-}
-
-/*
- * copies a uio scatter/gather list to an mbuf chain.
- * This version returns the mbuf list and does not use "nd".
- * NOTE: can only handle iovcnt == 1
- */
-struct mbuf *
-nfsm_uiombuflist(struct uio *uiop, int siz, struct mbuf **mbp, char **cpp)
-{
-	char *uiocp;
-	struct mbuf *mp, *mp2, *firstmp;
-	int xfer, left, mlen;
-	int uiosiz, clflg;
-	char *tcp;
-
-	KASSERT(uiop->uio_iovcnt == 1, ("nfsm_uiotombuf: iovcnt != 1"));
-
-	if (siz > ncl_mbuf_mlen)	/* or should it >= MCLBYTES ?? */
-		clflg = 1;
-	else
-		clflg = 0;
-	if (clflg != 0)
-		NFSMCLGET(mp, M_WAITOK);
-	else
-		NFSMGET(mp);
-	mbuf_setlen(mp, 0);
-	firstmp = mp2 = mp;
-	while (siz > 0) {
-		left = uiop->uio_iov->iov_len;
-		uiocp = uiop->uio_iov->iov_base;
-		if (left > siz)
-			left = siz;
-		uiosiz = left;
-		while (left > 0) {
-			mlen = M_TRAILINGSPACE(mp);
-			if (mlen == 0) {
-				if (clflg)
-					NFSMCLGET(mp, M_WAITOK);
-				else
-					NFSMGET(mp);
-				mbuf_setlen(mp, 0);
-				mbuf_setnext(mp2, mp);
-				mp2 = mp;
-				mlen = M_TRAILINGSPACE(mp);
-			}
-			xfer = (left > mlen) ? mlen : left;
-			if (uiop->uio_segflg == UIO_SYSSPACE)
-				NFSBCOPY(uiocp, NFSMTOD(mp, caddr_t) +
-				    mbuf_len(mp), xfer);
-			else
-				copyin(uiocp, NFSMTOD(mp, caddr_t) +
-				    mbuf_len(mp), xfer);
-			mbuf_setlen(mp, mbuf_len(mp) + xfer);
-			left -= xfer;
-			uiocp += xfer;
-			uiop->uio_offset += xfer;
-			uiop->uio_resid -= xfer;
-		}
-		tcp = (char *)uiop->uio_iov->iov_base;
-		tcp += uiosiz;
-		uiop->uio_iov->iov_base = (void *)tcp;
-		uiop->uio_iov->iov_len -= uiosiz;
-		siz -= uiosiz;
+		KASSERT((mp->m_flags & M_EXTPG) != 0 ||
+		    rem <= M_TRAILINGSPACE(mp),
+		    ("nfsm_uiombuflist: no space for padding"));
+		for (i = 0; i < rem; i++)
+			*mcp++ = '\0';
+		mp->m_len += rem;
+		if (maxext > 0)
+			mp->m_epg_last_len += rem;
 	}
-	if (cpp != NULL)
-		*cpp = NFSMTOD(mp, caddr_t) + mbuf_len(mp);
-	if (mbp != NULL)
-		*mbp = mp;
 	return (firstmp);
 }
 
@@ -232,6 +289,8 @@ nfsm_loadattr(struct nfsrv_descript *nd, struct nfsvattr *nap)
 		fxdr_nfsv3time(&fp->fa3_atime, &nap->na_atime);
 		fxdr_nfsv3time(&fp->fa3_ctime, &nap->na_ctime);
 		fxdr_nfsv3time(&fp->fa3_mtime, &nap->na_mtime);
+		nap->na_btime.tv_sec = -1;
+		nap->na_btime.tv_nsec = 0;
 		nap->na_flags = 0;
 		nap->na_gen = 0;
 		nap->na_filerev = 0;
@@ -263,62 +322,13 @@ nfsm_loadattr(struct nfsrv_descript *nd, struct nfsvattr *nap)
 		nap->na_ctime.tv_sec = fxdr_unsigned(u_int32_t,
 		    fp->fa2_ctime.nfsv2_sec);
 		nap->na_ctime.tv_nsec = 0;
+		nap->na_btime.tv_sec = -1;
+		nap->na_btime.tv_nsec = 0;
 		nap->na_gen = fxdr_unsigned(u_int32_t,fp->fa2_ctime.nfsv2_usec);
 		nap->na_filerev = 0;
 	}
 nfsmout:
 	return (error);
-}
-
-/*
- * This function finds the directory cookie that corresponds to the
- * logical byte offset given.
- */
-nfsuint64 *
-nfscl_getcookie(struct nfsnode *np, off_t off, int add)
-{
-	struct nfsdmap *dp, *dp2;
-	int pos;
-
-	pos = off / NFS_DIRBLKSIZ;
-	if (pos == 0) {
-		KASSERT(!add, ("nfs getcookie add at 0"));
-		return (&nfs_nullcookie);
-	}
-	pos--;
-	dp = LIST_FIRST(&np->n_cookies);
-	if (!dp) {
-		if (add) {
-			dp = malloc(sizeof (struct nfsdmap),
-				M_NFSDIROFF, M_WAITOK);
-			dp->ndm_eocookie = 0;
-			LIST_INSERT_HEAD(&np->n_cookies, dp, ndm_list);
-		} else
-			return (NULL);
-	}
-	while (pos >= NFSNUMCOOKIES) {
-		pos -= NFSNUMCOOKIES;
-		if (LIST_NEXT(dp, ndm_list) != NULL) {
-			if (!add && dp->ndm_eocookie < NFSNUMCOOKIES &&
-				pos >= dp->ndm_eocookie)
-				return (NULL);
-			dp = LIST_NEXT(dp, ndm_list);
-		} else if (add) {
-			dp2 = malloc(sizeof (struct nfsdmap),
-				M_NFSDIROFF, M_WAITOK);
-			dp2->ndm_eocookie = 0;
-			LIST_INSERT_AFTER(dp, dp2, ndm_list);
-			dp = dp2;
-		} else
-			return (NULL);
-	}
-	if (pos >= dp->ndm_eocookie) {
-		if (add)
-			dp->ndm_eocookie = pos + 1;
-		else
-			return (NULL);
-	}
-	return (&dp->ndm_cookies[pos]);
 }
 
 /*
@@ -434,4 +444,3 @@ nfscl_lockderef(struct nfsv4lock *lckp)
 	}
 	NFSUNLOCKCLSTATE();
 }
-

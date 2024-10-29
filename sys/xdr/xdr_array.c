@@ -34,9 +34,8 @@ static char *sccsid2 = "@(#)xdr_array.c 1.10 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)xdr_array.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-
 /*
- * xdr_array.c, Generic XDR routines impelmentation.
+ * xdr_array.c, Generic XDR routines implementation.
  *
  * Copyright (C) 1984, Sun Microsystems, Inc.
  *
@@ -107,7 +106,7 @@ xdr_array(XDR *xdrs,
 		case XDR_ENCODE:
 			break;
 	}
-	
+
 	/*
 	 * now we xdr each element of array
 	 */

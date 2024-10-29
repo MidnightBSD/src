@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case zpool_destroy_001_pos cleanup
 zpool_destroy_001_pos_head()
 {
 	atf_set "descr" "'zpool destroy <pool>' can destroy a specified pool."
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 }
 zpool_destroy_001_pos_body()
 {
@@ -54,7 +52,7 @@ atf_test_case zpool_destroy_002_pos cleanup
 zpool_destroy_002_pos_head()
 {
 	atf_set "descr" "'zpool destroy -f <pool>' can forcely destroy the specified pool"
-	atf_set "require.progs"  zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 }
 zpool_destroy_002_pos_body()
 {
@@ -77,7 +75,7 @@ atf_test_case zpool_destroy_003_neg cleanup
 zpool_destroy_003_neg_head()
 {
 	atf_set "descr" "'zpool destroy' should return an error with badly-formed parameters."
-	atf_set "require.progs"  zpool
+	atf_set "require.progs" "ksh93 zpool"
 }
 zpool_destroy_003_neg_body()
 {
@@ -99,7 +97,7 @@ atf_test_case zpool_destroy_004_pos cleanup
 zpool_destroy_004_pos_head()
 {
 	atf_set "descr" "'zpool destroy -f' should work on active pools."
-	atf_set "require.progs" zfs zpool
+	atf_set "require.progs" "ksh93 zfs zpool"
 	atf_set "timeout" 2000
 }
 zpool_destroy_004_pos_body()

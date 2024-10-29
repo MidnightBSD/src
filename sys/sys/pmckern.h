@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003-2007, Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
@@ -28,7 +28,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -225,7 +224,7 @@ do {						\
  */
 #define	PMC_CALL_HOOK_UNLOCKED(t, cmd, arg)	\
 do {						\
-	if (pmc_hook != NULL)				\
+	if (pmc_hook != NULL)			\
 		(pmc_hook)((t), (cmd), (arg));	\
 } while (0)
 

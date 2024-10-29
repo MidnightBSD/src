@@ -25,21 +25,26 @@
  */
 
 #include <sys/cdefs.h>
-
+#include "opt_acpi.h"
 #ifdef __i386__
 #include "opt_apic.h"
 #endif
 #include "opt_cpu.h"
+#include "opt_ddb.h"
+#include "opt_gdb.h"
 #include "opt_kstack_pages.h"
 #include "opt_pmap.h"
 #include "opt_sched.h"
 #include "opt_smp.h"
+#include "opt_stack.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/asan.h>
 #include <sys/bus.h>
 #include <sys/cons.h>	/* cngetc() */
 #include <sys/cpuset.h>
+#include <sys/csan.h>
 #ifdef GPROF 
 #include <sys/gmon.h>
 #endif
@@ -74,7 +79,13 @@
 #include <machine/psl.h>
 #include <machine/smp.h>
 #include <machine/specialreg.h>
+#include <machine/stack.h>
 #include <x86/ucode.h>
+
+#ifdef DEV_ACPI
+#include <contrib/dev/acpica/include/acpi.h>
+#include <dev/acpica/acpivar.h>
+#endif
 
 static MALLOC_DEFINE(M_CPUS, "cpus", "CPU items");
 
@@ -137,15 +148,17 @@ _Static_assert(MAXCPU <= MAX_APIC_ID,
 _Static_assert(xAPIC_MAX_APIC_ID <= MAX_APIC_ID,
     "xAPIC_MAX_APIC_ID cannot be larger that MAX_APIC_ID");
 
-/* Holds pending bitmap based IPIs per CPU */
-volatile u_int cpu_ipi_pending[MAXCPU];
-
 static void	release_aps(void *dummy);
 static void	cpustop_handler_post(u_int cpu);
 
 static int	hyperthreading_allowed = 1;
 SYSCTL_INT(_machdep, OID_AUTO, hyperthreading_allowed, CTLFLAG_RDTUN,
 	&hyperthreading_allowed, 0, "Use Intel HTT logical CPUs");
+
+static int	hyperthreading_intr_allowed = 0;
+SYSCTL_INT(_machdep, OID_AUTO, hyperthreading_intr_allowed, CTLFLAG_RDTUN,
+	&hyperthreading_intr_allowed, 0,
+	"Allow interrupts on HTT logical CPUs");
 
 static struct topo_node topo_root;
 
@@ -159,9 +172,9 @@ struct cache_info {
 	int	present;
 } static caches[MAX_CACHE_LEVELS];
 
-unsigned int boot_address;
-
-#define MiB(v)	(v ## ULL << 20)
+static bool stop_mwait = false;
+SYSCTL_BOOL(_machdep, OID_AUTO, stop_mwait, CTLFLAG_RWTUN, &stop_mwait, 0,
+    "Use MONITOR/MWAIT when stopping CPU, if available");
 
 void
 mem_range_AP_init(void)
@@ -502,13 +515,16 @@ topo_probe(void)
 		int type;
 		int subtype;
 		int id_shift;
-	} topo_layers[MAX_CACHE_LEVELS + 4];
+	} topo_layers[MAX_CACHE_LEVELS + 5];
 	struct topo_node *parent;
 	struct topo_node *node;
 	int layer;
 	int nlayers;
 	int node_id;
 	int i;
+#if defined(DEV_ACPI) && MAXMEMDOM > 1
+	int d, domain;
+#endif
 
 	if (cpu_topo_probed)
 		return;
@@ -583,6 +599,31 @@ topo_probe(void)
 	topo_layers[nlayers].id_shift = 0;
 	nlayers++;
 
+#if defined(DEV_ACPI) && MAXMEMDOM > 1
+	if (vm_ndomains > 1) {
+		for (layer = 0; layer < nlayers; ++layer) {
+			for (i = 0; i <= max_apic_id; ++i) {
+				if ((i & ((1 << topo_layers[layer].id_shift) - 1)) == 0)
+					domain = -1;
+				if (!cpu_info[i].cpu_present)
+					continue;
+				d = acpi_pxm_get_cpu_locality(i);
+				if (domain >= 0 && domain != d)
+					break;
+				domain = d;
+			}
+			if (i > max_apic_id)
+				break;
+		}
+		KASSERT(layer < nlayers, ("NUMA domain smaller than PU"));
+		memmove(&topo_layers[layer+1], &topo_layers[layer],
+		    sizeof(*topo_layers) * (nlayers - layer));
+		topo_layers[layer].type = TOPO_TYPE_NODE;
+		topo_layers[layer].subtype = CG_SHARE_NONE;
+		nlayers++;
+	}
+#endif
+
 	topo_init_root(&topo_root);
 	for (i = 0; i <= max_apic_id; ++i) {
 		if (!cpu_info[i].cpu_present)
@@ -590,7 +631,12 @@ topo_probe(void)
 
 		parent = &topo_root;
 		for (layer = 0; layer < nlayers; ++layer) {
-			node_id = i >> topo_layers[layer].id_shift;
+#if defined(DEV_ACPI) && MAXMEMDOM > 1
+			if (topo_layers[layer].type == TOPO_TYPE_NODE) {
+				node_id = acpi_pxm_get_cpu_locality(i);
+			} else
+#endif
+				node_id = i >> topo_layers[layer].id_shift;
 			parent = topo_add_node_by_hwid(parent, node_id,
 			    topo_layers[layer].type,
 			    topo_layers[layer].subtype);
@@ -599,7 +645,12 @@ topo_probe(void)
 
 	parent = &topo_root;
 	for (layer = 0; layer < nlayers; ++layer) {
-		node_id = boot_cpu_id >> topo_layers[layer].id_shift;
+#if defined(DEV_ACPI) && MAXMEMDOM > 1
+		if (topo_layers[layer].type == TOPO_TYPE_NODE)
+			node_id = acpi_pxm_get_cpu_locality(boot_cpu_id);
+		else
+#endif
+			node_id = boot_cpu_id >> topo_layers[layer].id_shift;
 		node = topo_find_node_by_hwid(parent, node_id,
 		    topo_layers[layer].type,
 		    topo_layers[layer].subtype);
@@ -774,14 +825,18 @@ x86topo_add_sched_group(struct topo_node *root, struct cpu_group *cg_root)
 	int i;
 
 	KASSERT(root->type == TOPO_TYPE_SYSTEM || root->type == TOPO_TYPE_CACHE ||
-	    root->type == TOPO_TYPE_GROUP,
+	    root->type == TOPO_TYPE_NODE || root->type == TOPO_TYPE_GROUP,
 	    ("x86topo_add_sched_group: bad type: %u", root->type));
 	CPU_COPY(&root->cpuset, &cg_root->cg_mask);
 	cg_root->cg_count = root->cpu_count;
-	if (root->type == TOPO_TYPE_SYSTEM)
-		cg_root->cg_level = CG_SHARE_NONE;
-	else
+	if (root->type == TOPO_TYPE_CACHE)
 		cg_root->cg_level = root->subtype;
+	else
+		cg_root->cg_level = CG_SHARE_NONE;
+	if (root->type == TOPO_TYPE_NODE)
+		cg_root->cg_flags = CG_FLAG_NODE;
+	else
+		cg_root->cg_flags = 0;
 
 	/*
 	 * Check how many core nodes we have under the given root node.
@@ -802,7 +857,7 @@ x86topo_add_sched_group(struct topo_node *root, struct cpu_group *cg_root)
 
 	if (cg_root->cg_level != CG_SHARE_NONE &&
 	    root->cpu_count > 1 && ncores < 2)
-		cg_root->cg_flags = CG_FLAG_SMT;
+		cg_root->cg_flags |= CG_FLAG_SMT;
 
 	/*
 	 * Find out how many cache nodes we have under the given root node.
@@ -814,10 +869,37 @@ x86topo_add_sched_group(struct topo_node *root, struct cpu_group *cg_root)
 	nchildren = 0;
 	node = root;
 	while (node != NULL) {
-		if ((node->type != TOPO_TYPE_GROUP &&
-		    node->type != TOPO_TYPE_CACHE) ||
-		    (root->type != TOPO_TYPE_SYSTEM &&
-		    CPU_CMP(&node->cpuset, &root->cpuset) == 0)) {
+		/*
+		 * When some APICs are disabled by tunables, nodes can end up
+		 * with an empty cpuset. Nodes with an empty cpuset will be
+		 * translated into cpu groups with empty cpusets. smp_topo_fill
+		 * will then set cg_first and cg_last to -1. This isn't
+		 * correctly handled in all functions. E.g. when
+		 * cpu_search_lowest and cpu_search_highest loop through all
+		 * cpus, they call CPU_ISSET on cpu -1 which ends up in a
+		 * general protection fault.
+		 *
+		 * We could fix the scheduler to handle empty cpu groups
+		 * correctly. Nevertheless, empty cpu groups are causing
+		 * overhead for no value. So, it makes more sense to just don't
+		 * create them.
+		 */
+		if (CPU_EMPTY(&node->cpuset)) {
+			node = topo_next_node(root, node);
+			continue;
+		}
+		if (CPU_CMP(&node->cpuset, &root->cpuset) == 0) {
+			if (node->type == TOPO_TYPE_CACHE &&
+			    cg_root->cg_level < node->subtype)
+				cg_root->cg_level = node->subtype;
+			if (node->type == TOPO_TYPE_NODE)
+				cg_root->cg_flags |= CG_FLAG_NODE;
+			node = topo_next_node(root, node);
+			continue;
+		}
+		if (node->type != TOPO_TYPE_GROUP &&
+		    node->type != TOPO_TYPE_NODE &&
+		    node->type != TOPO_TYPE_CACHE) {
 			node = topo_next_node(root, node);
 			continue;
 		}
@@ -831,8 +913,14 @@ x86topo_add_sched_group(struct topo_node *root, struct cpu_group *cg_root)
 	if (nchildren == root->cpu_count)
 		return;
 
-	cg_root->cg_child = smp_topo_alloc(nchildren);
+	/*
+	 * We are not interested in nodes without children.
+	 */
 	cg_root->cg_children = nchildren;
+	if (nchildren == 0)
+		return;
+
+	cg_root->cg_child = smp_topo_alloc(nchildren);
 
 	/*
 	 * Now find again the same cache nodes as above and recursively
@@ -842,9 +930,10 @@ x86topo_add_sched_group(struct topo_node *root, struct cpu_group *cg_root)
 	i = 0;
 	while (node != NULL) {
 		if ((node->type != TOPO_TYPE_GROUP &&
+		    node->type != TOPO_TYPE_NODE &&
 		    node->type != TOPO_TYPE_CACHE) ||
-		    (root->type != TOPO_TYPE_SYSTEM &&
-		    CPU_CMP(&node->cpuset, &root->cpuset) == 0)) {
+		    CPU_CMP(&node->cpuset, &root->cpuset) == 0 ||
+		    CPU_EMPTY(&node->cpuset)) {
 			node = topo_next_node(root, node);
 			continue;
 		}
@@ -892,10 +981,9 @@ void
 cpu_add(u_int apic_id, char boot_cpu)
 {
 
-	if (apic_id > max_apic_id) {
+	if (apic_id > max_apic_id)
 		panic("SMP: APIC ID %d too high", apic_id);
-		return;
-	}
+
 	KASSERT(cpu_info[apic_id].cpu_present == 0, ("CPU %u added twice",
 	    apic_id));
 	cpu_info[apic_id].cpu_present = 1;
@@ -933,56 +1021,6 @@ cpu_mp_probe(void)
 	 */
 	CPU_SETOF(0, &all_cpus);
 	return (mp_ncpus > 1);
-}
-
-/* Allocate memory for the AP trampoline. */
-void
-alloc_ap_trampoline(vm_paddr_t *physmap, unsigned int *physmap_idx)
-{
-	unsigned int i;
-	bool allocated;
-
-	allocated = false;
-	for (i = *physmap_idx; i <= *physmap_idx; i -= 2) {
-		/*
-		 * Find a memory region big enough and below the 1MB boundary
-		 * for the trampoline code.
-		 * NB: needs to be page aligned.
-		 */
-		if (physmap[i] >= MiB(1) ||
-		    (trunc_page(physmap[i + 1]) - round_page(physmap[i])) <
-		    round_page(bootMP_size))
-			continue;
-
-		allocated = true;
-		/*
-		 * Try to steal from the end of the region to mimic previous
-		 * behaviour, else fallback to steal from the start.
-		 */
-		if (physmap[i + 1] < MiB(1)) {
-			boot_address = trunc_page(physmap[i + 1]);
-			if ((physmap[i + 1] - boot_address) < bootMP_size)
-				boot_address -= round_page(bootMP_size);
-			physmap[i + 1] = boot_address;
-		} else {
-			boot_address = round_page(physmap[i]);
-			physmap[i] = boot_address + round_page(bootMP_size);
-		}
-		if (physmap[i] == physmap[i + 1] && *physmap_idx != 0) {
-			memmove(&physmap[i], &physmap[i + 2],
-			    sizeof(*physmap) * (*physmap_idx - i + 2));
-			*physmap_idx -= 2;
-		}
-		break;
-	}
-
-	if (!allocated) {
-		boot_address = basemem * 1024 - bootMP_size;
-		if (bootverbose)
-			printf(
-"Cannot find enough space for the boot trampoline, placing it at %#x",
-			    boot_address);
-	}
 }
 
 /*
@@ -1034,6 +1072,7 @@ init_secondary_tail(void)
 	/* Initialize curthread. */
 	KASSERT(PCPU_GET(idlethread) != NULL, ("no idle thread"));
 	PCPU_SET(curthread, PCPU_GET(idlethread));
+	schedinit_ap();
 
 	mtx_lock_spin(&ap_boot_mtx);
 
@@ -1067,11 +1106,6 @@ init_secondary_tail(void)
 	}
 
 #ifdef __amd64__
-	/*
-	 * Enable global pages TLB extension
-	 * This also implicitly flushes the TLB 
-	 */
-	load_cr4(rcr4() | CR4_PGE);
 	if (pmap_pcid_enabled)
 		load_cr4(rcr4() | CR4_PCIDE);
 	load_ds(_udatasel);
@@ -1090,10 +1124,7 @@ init_secondary_tail(void)
 	cpu_initclocks_ap();
 #endif
 
-	/*
-	 * Assert that smp_after_idle_runnable condition is reasonable.
-	 */
-	MPASS(PCPU_GET(curpcb) == NULL);
+	kcsan_cpu_init(cpuid);
 
 	sched_throw(NULL);
 
@@ -1104,13 +1135,22 @@ init_secondary_tail(void)
 static void
 smp_after_idle_runnable(void *arg __unused)
 {
-	struct pcpu *pc;
 	int cpu;
 
+	if (mp_ncpus == 1)
+		return;
+
+	KASSERT(smp_started != 0, ("%s: SMP not started yet", __func__));
+
+	/*
+	 * Wait for all APs to handle an interrupt.  After that, we know that
+	 * the APs have entered the scheduler at least once, so the boot stacks
+	 * are safe to free.
+	 */
+	smp_rendezvous(smp_no_rendezvous_barrier, NULL,
+	    smp_no_rendezvous_barrier, NULL);
+
 	for (cpu = 1; cpu < mp_ncpus; cpu++) {
-		pc = pcpu_find(cpu);
-		while (atomic_load_ptr(&pc->pc_curpcb) == NULL)
-			cpu_spinwait();
 		kmem_free((vm_offset_t)bootstacks[cpu], kstack_pages *
 		    PAGE_SIZE);
 	}
@@ -1140,19 +1180,27 @@ set_interrupt_apic_ids(void)
 			continue;
 
 		/* Don't let hyperthreads service interrupts. */
-		if (cpu_info[apic_id].cpu_hyperthread)
+		if (cpu_info[apic_id].cpu_hyperthread &&
+		    !hyperthreading_intr_allowed)
+			continue;
+
+		/*
+		 * Currently Hyper-V only supports intr on first
+		 * 64 cpus.
+		 */
+		if (vm_guest == VM_GUEST_HV && i > 63)
 			continue;
 
 		intr_add_cpu(i);
 	}
 }
 
-
 #ifdef COUNT_XINVLTLB_HITS
 u_int xhits_gbl[MAXCPU];
 u_int xhits_pg[MAXCPU];
 u_int xhits_rng[MAXCPU];
-static SYSCTL_NODE(_debug, OID_AUTO, xhits, CTLFLAG_RW, 0, "");
+static SYSCTL_NODE(_debug, OID_AUTO, xhits, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "");
 SYSCTL_OPAQUE(_debug_xhits, OID_AUTO, global, CTLFLAG_RW, &xhits_gbl,
     sizeof(xhits_gbl), "IU", "");
 SYSCTL_OPAQUE(_debug_xhits, OID_AUTO, page, CTLFLAG_RW, &xhits_pg,
@@ -1234,26 +1282,39 @@ ipi_startup(int apic_id, int vector)
 	DELAY(200);		/* wait ~200uS */
 }
 
+static bool
+ipi_bitmap_set(int cpu, u_int ipi)
+{
+	u_int bitmap, old, new;
+	u_int *cpu_bitmap;
+
+	bitmap = 1 << ipi;
+	cpu_bitmap = &cpuid_to_pcpu[cpu]->pc_ipi_bitmap;
+	old = *cpu_bitmap;
+	for (;;) {
+		if ((old & bitmap) != 0)
+			break;
+		new = old | bitmap;
+		if (atomic_fcmpset_int(cpu_bitmap, &old, new))
+			break;
+	}
+	return (old != 0);
+}
+
 /*
  * Send an IPI to specified CPU handling the bitmap logic.
  */
-void
+static void
 ipi_send_cpu(int cpu, u_int ipi)
 {
-	u_int bitmap, old_pending, new_pending;
 
-	KASSERT(cpu_apic_ids[cpu] != -1, ("IPI to non-existent CPU %d", cpu));
+	KASSERT((u_int)cpu < MAXCPU && cpu_apic_ids[cpu] != -1,
+	    ("IPI to non-existent CPU %d", cpu));
 
 	if (IPI_IS_BITMAPED(ipi)) {
-		bitmap = 1 << ipi;
-		ipi = IPI_BITMAP_VECTOR;
-		do {
-			old_pending = cpu_ipi_pending[cpu];
-			new_pending = old_pending | bitmap;
-		} while  (!atomic_cmpset_int(&cpu_ipi_pending[cpu],
-		    old_pending, new_pending));	
-		if (old_pending)
+		if (ipi_bitmap_set(cpu, ipi))
 			return;
+		ipi = IPI_BITMAP_VECTOR;
 	}
 	lapic_ipi_vectored(ipi, cpu_apic_ids[cpu]);
 }
@@ -1266,12 +1327,29 @@ ipi_bitmap_handler(struct trapframe frame)
 	int cpu = PCPU_GET(cpuid);
 	u_int ipi_bitmap;
 
-	critical_enter();
+	kasan_mark(&frame, sizeof(frame), sizeof(frame), 0);
+
 	td = curthread;
+	ipi_bitmap = atomic_readandclear_int(&cpuid_to_pcpu[cpu]->
+	    pc_ipi_bitmap);
+
+	/*
+	 * sched_preempt() must be called to clear the pending preempt
+	 * IPI to enable delivery of further preempts.  However, the
+	 * critical section will cause extra scheduler lock thrashing
+	 * when used unconditionally.  Only critical_enter() if
+	 * hardclock must also run, which requires the section entry.
+	 */
+	if (ipi_bitmap & (1 << IPI_HARDCLOCK))
+		critical_enter();
+
 	td->td_intr_nesting_level++;
 	oldframe = td->td_intr_frame;
 	td->td_intr_frame = &frame;
-	ipi_bitmap = atomic_readandclear_int(&cpu_ipi_pending[cpu]);
+#if defined(STACK) || defined(DDB)
+	if (ipi_bitmap & (1 << IPI_TRACE))
+		stack_capture_intr();
+#endif
 	if (ipi_bitmap & (1 << IPI_PREEMPT)) {
 #ifdef COUNT_IPIS
 		(*ipi_preempt_counts[cpu])++;
@@ -1292,7 +1370,8 @@ ipi_bitmap_handler(struct trapframe frame)
 	}
 	td->td_intr_frame = oldframe;
 	td->td_intr_nesting_level--;
-	critical_exit();
+	if (ipi_bitmap & (1 << IPI_HARDCLOCK))
+		critical_exit();
 }
 
 /*
@@ -1311,9 +1390,7 @@ ipi_selected(cpuset_t cpus, u_int ipi)
 	if (ipi == IPI_STOP_HARD)
 		CPU_OR_ATOMIC(&ipi_stop_nmi_pending, &cpus);
 
-	while ((cpu = CPU_FFS(&cpus)) != 0) {
-		cpu--;
-		CPU_CLR(cpu, &cpus);
+	CPU_FOREACH_ISSET(cpu, &cpus) {
 		CTR3(KTR_SMP, "%s: cpu: %d ipi: %x", __func__, cpu, ipi);
 		ipi_send_cpu(cpu, ipi);
 	}
@@ -1345,23 +1422,28 @@ void
 ipi_all_but_self(u_int ipi)
 {
 	cpuset_t other_cpus;
-
-	other_cpus = all_cpus;
-	CPU_CLR(PCPU_GET(cpuid), &other_cpus);
-	if (IPI_IS_BITMAPED(ipi)) {
-		ipi_selected(other_cpus, ipi);
-		return;
-	}
+	int cpu, c;
 
 	/*
 	 * IPI_STOP_HARD maps to a NMI and the trap handler needs a bit
 	 * of help in order to understand what is the source.
 	 * Set the mask of receiving CPUs for this purpose.
 	 */
-	if (ipi == IPI_STOP_HARD)
+	if (ipi == IPI_STOP_HARD) {
+		other_cpus = all_cpus;
+		CPU_CLR(PCPU_GET(cpuid), &other_cpus);
 		CPU_OR_ATOMIC(&ipi_stop_nmi_pending, &other_cpus);
+	}
 
 	CTR2(KTR_SMP, "%s: ipi: %x", __func__, ipi);
+	if (IPI_IS_BITMAPED(ipi)) {
+		cpu = PCPU_GET(cpuid);
+		CPU_FOREACH(c) {
+			if (c != cpu)
+				ipi_bitmap_set(c, ipi);
+		}
+		ipi = IPI_BITMAP_VECTOR;
+	}
 	lapic_ipi_vectored(ipi, APIC_IPI_DEST_OTHERS);
 }
 
@@ -1373,7 +1455,7 @@ ipi_self_from_nmi(u_int vector)
 
 	/* Wait for IPI to finish. */
 	if (!lapic_ipi_wait(50000)) {
-		if (panicstr != NULL)
+		if (KERNEL_PANICKED())
 			return;
 		else
 			panic("APIC: IPI is stuck");
@@ -1425,24 +1507,51 @@ nmi_call_kdb_smp(u_int type, struct trapframe *frame)
 }
 
 /*
- * Handle an IPI_STOP by saving our current context and spinning until we
- * are resumed.
+ * Handle an IPI_STOP by saving our current context and spinning (or mwaiting,
+ * if available) until we are resumed.
  */
 void
 cpustop_handler(void)
 {
+	struct monitorbuf *mb;
 	u_int cpu;
+	bool use_mwait;
 
 	cpu = PCPU_GET(cpuid);
 
 	savectx(&stoppcbs[cpu]);
 
+	use_mwait = (stop_mwait && (cpu_feature2 & CPUID2_MON) != 0 &&
+	    !mwait_cpustop_broken);
+	if (use_mwait) {
+		mb = PCPU_PTR(monitorbuf);
+		atomic_store_int(&mb->stop_state,
+		    MONITOR_STOPSTATE_STOPPED);
+	}
+
 	/* Indicate that we are stopped */
 	CPU_SET_ATOMIC(cpu, &stopped_cpus);
 
 	/* Wait for restart */
-	while (!CPU_ISSET(cpu, &started_cpus))
-	    ia32_pause();
+	while (!CPU_ISSET(cpu, &started_cpus)) {
+		if (use_mwait) {
+			cpu_monitor(mb, 0, 0);
+			if (atomic_load_int(&mb->stop_state) ==
+			    MONITOR_STOPSTATE_STOPPED)
+				cpu_mwait(0, MWAIT_C1);
+			continue;
+		}
+
+		ia32_pause();
+
+		/*
+		 * Halt non-BSP CPUs on panic -- we're never going to need them
+		 * again, and might as well save power / release resources
+		 * (e.g., overprovisioned VM infrastructure).
+		 */
+		while (__predict_false(!IS_BSP() && KERNEL_PANICKED()))
+			halt();
+	}
 
 	cpustop_handler_post(cpu);
 }
@@ -1460,7 +1569,7 @@ cpustop_handler_post(u_int cpu)
 	 */
 	invltlb_glob();
 
-#if defined(__amd64__) && defined(DDB)
+#if defined(__amd64__) && (defined(DDB) || defined(GDB))
 	amd64_db_resume_dbreg();
 #endif
 
@@ -1560,28 +1669,6 @@ cpususpend_handler(void)
 	CPU_CLR_ATOMIC(cpu, &toresume_cpus);
 }
 
-
-void
-invlcache_handler(void)
-{
-	uint32_t generation;
-
-#ifdef COUNT_IPIS
-	(*ipi_invlcache_counts[PCPU_GET(cpuid)])++;
-#endif /* COUNT_IPIS */
-
-	/*
-	 * Reading the generation here allows greater parallelism
-	 * since wbinvd is a serializing instruction.  Without the
-	 * temporary, we'd wait for wbinvd to complete, then the read
-	 * would execute, then the dependent write, which must then
-	 * complete before return from interrupt.
-	 */
-	generation = smp_tlb_generation;
-	wbinvd();
-	PCPU_SET(smp_tlb_done, generation);
-}
-
 /*
  * Handle an IPI_SWI by waking delayed SWI thread.
  */
@@ -1635,234 +1722,7 @@ mp_ipi_intrcnt(void *dummy)
 		intrcnt_add(buf, &ipi_rendezvous_counts[i]);
 		snprintf(buf, sizeof(buf), "cpu%d:hardclock", i);
 		intrcnt_add(buf, &ipi_hardclock_counts[i]);
-	}		
+	}
 }
 SYSINIT(mp_ipi_intrcnt, SI_SUB_INTR, SI_ORDER_MIDDLE, mp_ipi_intrcnt, NULL);
 #endif
-
-/*
- * Flush the TLB on other CPU's
- */
-
-/* Variables needed for SMP tlb shootdown. */
-vm_offset_t smp_tlb_addr1, smp_tlb_addr2;
-pmap_t smp_tlb_pmap;
-volatile uint32_t smp_tlb_generation;
-
-#ifdef __amd64__
-#define	read_eflags() read_rflags()
-#endif
-
-/*
- * Used by pmap to request invalidation of TLB or cache on local and
- * remote processors.  Mask provides the set of remote CPUs which are
- * to be signalled with the IPI specified by vector.  The curcpu_cb
- * callback is invoked on the calling CPU in a critical section while
- * waiting for remote CPUs to complete the operation.
- *
- * The callback function is called unconditionally on the caller's
- * underlying processor, even when this processor is not set in the
- * mask.  So, the callback function must be prepared to handle such
- * spurious invocations.
- *
- * This function must be called with the thread pinned, and it unpins on
- * completion.
- */
-static void
-smp_targeted_tlb_shootdown(cpuset_t mask, u_int vector, pmap_t pmap,
-    vm_offset_t addr1, vm_offset_t addr2, smp_invl_cb_t curcpu_cb)
-{
-	cpuset_t other_cpus;
-	volatile uint32_t *p_cpudone;
-	uint32_t generation;
-	int cpu;
-
-#ifdef __i386__
-	sched_pin();
-#endif
-
-	/*
-	 * It is not necessary to signal other CPUs while booting or
-	 * when in the debugger.
-	 */
-	if (kdb_active || panicstr != NULL || !smp_started)
-		goto local_cb;
-
-	KASSERT(curthread->td_pinned > 0, ("curthread not pinned"));
-
-	/*
-	 * Check for other cpus.  Return if none.
-	 */
-	if (CPU_ISFULLSET(&mask)) {
-		if (mp_ncpus <= 1)
-			goto local_cb;
-	} else {
-		CPU_CLR(PCPU_GET(cpuid), &mask);
-		if (CPU_EMPTY(&mask))
-			goto local_cb;
-	}
-
-	if (!(read_eflags() & PSL_I))
-		panic("%s: interrupts disabled", __func__);
-	mtx_lock_spin(&smp_ipi_mtx);
-	smp_tlb_addr1 = addr1;
-	smp_tlb_addr2 = addr2;
-	smp_tlb_pmap = pmap;
-	generation = ++smp_tlb_generation;
-	if (CPU_ISFULLSET(&mask)) {
-		ipi_all_but_self(vector);
-		other_cpus = all_cpus;
-		CPU_CLR(PCPU_GET(cpuid), &other_cpus);
-	} else {
-		other_cpus = mask;
-		while ((cpu = CPU_FFS(&mask)) != 0) {
-			cpu--;
-			CPU_CLR(cpu, &mask);
-			CTR3(KTR_SMP, "%s: cpu: %d ipi: %x", __func__,
-			    cpu, vector);
-			ipi_send_cpu(cpu, vector);
-		}
-	}
-	curcpu_cb(pmap, addr1, addr2);
-	while ((cpu = CPU_FFS(&other_cpus)) != 0) {
-		cpu--;
-		CPU_CLR(cpu, &other_cpus);
-		p_cpudone = &cpuid_to_pcpu[cpu]->pc_smp_tlb_done;
-		while (*p_cpudone != generation)
-			ia32_pause();
-	}
-
-	/*
-	 * Unpin before unlocking smp_ipi_mtx.  If the thread owes
-	 * preemption, this allows scheduler to select thread on any
-	 * CPU from its cpuset.
-	 */
-	sched_unpin();
-	mtx_unlock_spin(&smp_ipi_mtx);
-
-	return;
-
-local_cb:
-	critical_enter();
-	curcpu_cb(pmap, addr1, addr2);
-	sched_unpin();
-	critical_exit();
-}
-
-void
-smp_masked_invltlb(cpuset_t mask, pmap_t pmap, smp_invl_cb_t curcpu_cb)
-{
-
-	smp_targeted_tlb_shootdown(mask, IPI_INVLTLB, pmap, 0, 0, curcpu_cb);
-#ifdef COUNT_XINVLTLB_HITS
-	ipi_global++;
-#endif
-}
-
-void
-smp_masked_invlpg(cpuset_t mask, vm_offset_t addr, pmap_t pmap,
-    smp_invl_cb_t curcpu_cb)
-{
-
-	smp_targeted_tlb_shootdown(mask, IPI_INVLPG, pmap, addr, 0, curcpu_cb);
-#ifdef COUNT_XINVLTLB_HITS
-	ipi_page++;
-#endif
-}
-
-void
-smp_masked_invlpg_range(cpuset_t mask, vm_offset_t addr1, vm_offset_t addr2,
-    pmap_t pmap, smp_invl_cb_t curcpu_cb)
-{
-
-	smp_targeted_tlb_shootdown(mask, IPI_INVLRNG, pmap, addr1, addr2,
-	    curcpu_cb);
-#ifdef COUNT_XINVLTLB_HITS
-	ipi_range++;
-	ipi_range_size += (addr2 - addr1) / PAGE_SIZE;
-#endif
-}
-
-void
-smp_cache_flush(smp_invl_cb_t curcpu_cb)
-{
-
-	smp_targeted_tlb_shootdown(all_cpus, IPI_INVLCACHE, NULL, 0, 0,
-	    curcpu_cb);
-}
-
-/*
- * Handlers for TLB related IPIs
- */
-void
-invltlb_handler(void)
-{
-	uint32_t generation;
-  
-#ifdef COUNT_XINVLTLB_HITS
-	xhits_gbl[PCPU_GET(cpuid)]++;
-#endif /* COUNT_XINVLTLB_HITS */
-#ifdef COUNT_IPIS
-	(*ipi_invltlb_counts[PCPU_GET(cpuid)])++;
-#endif /* COUNT_IPIS */
-
-	/*
-	 * Reading the generation here allows greater parallelism
-	 * since invalidating the TLB is a serializing operation.
-	 */
-	generation = smp_tlb_generation;
-	if (smp_tlb_pmap == kernel_pmap)
-		invltlb_glob();
-#ifdef __amd64__
-	else
-		invltlb();
-#endif
-	PCPU_SET(smp_tlb_done, generation);
-}
-
-void
-invlpg_handler(void)
-{
-	uint32_t generation;
-
-#ifdef COUNT_XINVLTLB_HITS
-	xhits_pg[PCPU_GET(cpuid)]++;
-#endif /* COUNT_XINVLTLB_HITS */
-#ifdef COUNT_IPIS
-	(*ipi_invlpg_counts[PCPU_GET(cpuid)])++;
-#endif /* COUNT_IPIS */
-
-	generation = smp_tlb_generation;	/* Overlap with serialization */
-#ifdef __i386__
-	if (smp_tlb_pmap == kernel_pmap)
-#endif
-		invlpg(smp_tlb_addr1);
-	PCPU_SET(smp_tlb_done, generation);
-}
-
-void
-invlrng_handler(void)
-{
-	vm_offset_t addr, addr2;
-	uint32_t generation;
-
-#ifdef COUNT_XINVLTLB_HITS
-	xhits_rng[PCPU_GET(cpuid)]++;
-#endif /* COUNT_XINVLTLB_HITS */
-#ifdef COUNT_IPIS
-	(*ipi_invlrng_counts[PCPU_GET(cpuid)])++;
-#endif /* COUNT_IPIS */
-
-	addr = smp_tlb_addr1;
-	addr2 = smp_tlb_addr2;
-	generation = smp_tlb_generation;	/* Overlap with serialization */
-#ifdef __i386__
-	if (smp_tlb_pmap == kernel_pmap)
-#endif
-		do {
-			invlpg(addr);
-			addr += PAGE_SIZE;
-		} while (addr < addr2);
-
-	PCPU_SET(smp_tlb_done, generation);
-}

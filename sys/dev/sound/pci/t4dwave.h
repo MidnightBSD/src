@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _T4DWAVE_REG_H
@@ -85,7 +84,6 @@
 #define		TNX_CDC_DAC1ON	0x02
 #define		TNX_CDC_RESET	0x01
 #define		TNX_CDC_ON	(TNX_CDC_ADC1ON|TNX_CDC_DAC1ON)
-
 
 #define	TR_REG_STARTA	0x80
 #define TR_REG_STOPA	0x84

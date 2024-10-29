@@ -90,6 +90,7 @@
  * _CLASS_ENTRY			+	+	+	+
  * _INIT			+	+	+	+
  * _EMPTY			+	+	+	+
+ * _END				+	+	+	+
  * _FIRST			+	+	+	+
  * _NEXT			+	+	+	+
  * _PREV			-	+	-	+
@@ -154,18 +155,14 @@ struct qm_trace {
 #endif	/* QUEUE_MACRO_DEBUG_TRACE */
 
 #ifdef QUEUE_MACRO_DEBUG_TRASH
+#define	QMD_SAVELINK(name, link)	void **name = (void *)&(link)
 #define	TRASHIT(x)		do {(x) = (void *)-1;} while (0)
 #define	QMD_IS_TRASHED(x)	((x) == (void *)(intptr_t)-1)
 #else	/* !QUEUE_MACRO_DEBUG_TRASH */
+#define	QMD_SAVELINK(name, link)
 #define	TRASHIT(x)
 #define	QMD_IS_TRASHED(x)	0
 #endif	/* QUEUE_MACRO_DEBUG_TRASH */
-
-#if defined(QUEUE_MACRO_DEBUG_TRACE) || defined(QUEUE_MACRO_DEBUG_TRASH)
-#define	QMD_SAVELINK(name, link)	void **name = (void *)&(link)
-#else	/* !QUEUE_MACRO_DEBUG_TRACE && !QUEUE_MACRO_DEBUG_TRASH */
-#define	QMD_SAVELINK(name, link)
-#endif	/* QUEUE_MACRO_DEBUG_TRACE || QUEUE_MACRO_DEBUG_TRASH */
 
 #ifdef __cplusplus
 /*
@@ -310,6 +307,8 @@ struct {								\
 	SLIST_FIRST(head2) = swap_first;				\
 } while (0)
 
+#define	SLIST_END(head)		NULL
+
 /*
  * Singly-linked Tail queue declarations.
  */
@@ -441,6 +440,8 @@ struct {								\
 	if (STAILQ_EMPTY(head2))					\
 		(head2)->stqh_last = &STAILQ_FIRST(head2);		\
 } while (0)
+
+#define	STAILQ_END(head)	NULL
 
 
 /*
@@ -616,6 +617,8 @@ struct {								\
 	if ((swap_tmp = LIST_FIRST((head2))) != NULL)			\
 		swap_tmp->field.le_prev = &LIST_FIRST((head2));		\
 } while (0)
+
+#define	LIST_END(head)	NULL
 
 /*
  * Tail queue declarations.
@@ -822,7 +825,7 @@ struct {								\
 /*
  * The FAST function is fast in that it causes no data access other
  * then the access to the head. The standard LAST function above
- * will cause a data access of both the element you want and 
+ * will cause a data access of both the element you want and
  * the previous element. FAST is very useful for instances when
  * you may want to prefetch the last data element.
  */
@@ -872,5 +875,7 @@ struct {								\
 	else								\
 		(head2)->tqh_last = &(head2)->tqh_first;		\
 } while (0)
+
+#define	TAILQ_END(head)		NULL
 
 #endif /* !_SYS_QUEUE_H_ */

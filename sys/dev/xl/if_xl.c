@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * 3Com 3c90x Etherlink XL PCI NIC driver
  *
@@ -605,11 +604,20 @@ xl_rxfilter(struct xl_softc *sc)
  * NICs older than the 3c905B have only one multicast option, which
  * is to enable reception of all multicast frames.
  */
+static u_int
+xl_check_maddr_90x(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint8_t *rxfilt = arg;
+
+	*rxfilt |= XL_RXFILTER_ALLMULTI;
+
+	return (1);
+}
+
 static void
 xl_rxfilter_90x(struct xl_softc *sc)
 {
 	struct ifnet		*ifp;
-	struct ifmultiaddr	*ifma;
 	u_int8_t		rxfilt;
 
 	XL_LOCK_ASSERT(sc);
@@ -633,16 +641,8 @@ xl_rxfilter_90x(struct xl_softc *sc)
 			rxfilt |= XL_RXFILTER_ALLFRAMES;
 		if (ifp->if_flags & IFF_ALLMULTI)
 			rxfilt |= XL_RXFILTER_ALLMULTI;
-	} else {
-		if_maddr_rlock(ifp);
-		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-			if (ifma->ifma_addr->sa_family != AF_LINK)
-				continue;
-			rxfilt |= XL_RXFILTER_ALLMULTI;
-			break;
-		}
-		if_maddr_runlock(ifp);
-	}
+	} else
+		if_foreach_llmaddr(sc->xl_ifp, xl_check_maddr_90x, &rxfilt);
 
 	CSR_WRITE_2(sc, XL_COMMAND, rxfilt | XL_CMD_RX_SET_FILT);
 	XL_SEL_WIN(7);
@@ -650,14 +650,34 @@ xl_rxfilter_90x(struct xl_softc *sc)
 
 /*
  * 3c905B adapters have a hash filter that we can program.
+ * Note: the 3c905B currently only supports a 64-bit
+ * hash table, which means we really only need 6 bits,
+ * but the manual indicates that future chip revisions
+ * will have a 256-bit hash table, hence the routine
+ * is set up to calculate 8 bits of position info in
+ * case we need it some day.
+ * Note II, The Sequel: _CURRENT_ versions of the
+ * 3c905B have a 256 bit hash table. This means we have
+ * to use all 8 bits regardless.  On older cards, the
+ * upper 2 bits will be ignored. Grrrr....
  */
+static u_int
+xl_check_maddr_90xB(void *arg, struct sockaddr_dl *sdl, u_int count)
+{
+	struct xl_softc *sc = arg;
+	uint16_t h;
+
+	h = ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN) & 0xFF;
+	CSR_WRITE_2(sc, XL_COMMAND, h | XL_CMD_RX_SET_HASH | XL_HASH_SET);
+
+	return (1);
+}
+
 static void
 xl_rxfilter_90xB(struct xl_softc *sc)
 {
 	struct ifnet		*ifp;
-	struct ifmultiaddr	*ifma;
-	int			i, mcnt;
-	u_int16_t		h;
+	int			i;
 	u_int8_t		rxfilt;
 
 	XL_LOCK_ASSERT(sc);
@@ -688,31 +708,7 @@ xl_rxfilter_90xB(struct xl_softc *sc)
 			CSR_WRITE_2(sc, XL_COMMAND, XL_CMD_RX_SET_HASH | i);
 
 		/* Now program new ones. */
-		mcnt = 0;
-		if_maddr_rlock(ifp);
-		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-			if (ifma->ifma_addr->sa_family != AF_LINK)
-				continue;
-			/*
-			 * Note: the 3c905B currently only supports a 64-bit
-			 * hash table, which means we really only need 6 bits,
-			 * but the manual indicates that future chip revisions
-			 * will have a 256-bit hash table, hence the routine
-			 * is set up to calculate 8 bits of position info in
-			 * case we need it some day.
-			 * Note II, The Sequel: _CURRENT_ versions of the
-			 * 3c905B have a 256 bit hash table. This means we have
-			 * to use all 8 bits regardless.  On older cards, the
-			 * upper 2 bits will be ignored. Grrrr....
-			 */
-			h = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-			    ifma->ifma_addr), ETHER_ADDR_LEN) & 0xFF;
-			CSR_WRITE_2(sc, XL_COMMAND,
-			    h | XL_CMD_RX_SET_HASH | XL_HASH_SET);
-			mcnt++;
-		}
-		if_maddr_runlock(ifp);
-		if (mcnt > 0)
+		if (if_foreach_llmaddr(sc->xl_ifp, xl_check_maddr_90xB, sc) > 0)
 			rxfilt |= XL_RXFILTER_MULTIHASH;
 	}
 
@@ -1071,13 +1067,11 @@ xl_attach(device_t dev)
 	struct xl_softc		*sc;
 	struct ifnet		*ifp;
 	int			media, pmcap;
-	int			error = 0, phy, rid, res, unit;
+	int			error = 0, phy, rid, res;
 	uint16_t		did;
 
 	sc = device_get_softc(dev);
 	sc->xl_dev = dev;
-
-	unit = device_get_unit(dev);
 
 	mtx_init(&sc->xl_mtx, device_get_nameunit(dev), MTX_NETWORK_LOCK,
 	    MTX_DEF);
@@ -1197,11 +1191,6 @@ xl_attach(device_t dev)
 
 	/* Initialize interface name. */
 	ifp = sc->xl_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(dev, "can not if_alloc()\n");
-		error = ENOSPC;
-		goto fail;
-	}
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 
@@ -1220,7 +1209,7 @@ xl_attach(device_t dev)
 	}
 
 	callout_init_mtx(&sc->xl_tick_callout, &sc->xl_mtx, 0);
-	TASK_INIT(&sc->xl_task, 0, xl_rxeof_task, sc);
+	NET_TASK_INIT(&sc->xl_task, 0, xl_rxeof_task, sc);
 
 	/*
 	 * Now allocate a tag for the DMA descriptor lists and a chunk

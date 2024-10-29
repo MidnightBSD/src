@@ -1,6 +1,5 @@
-# $FreeBSD$
 #
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2021 KUROSAWA Takahiro <takahiro.kurosawa@gmail.com>
 #
@@ -54,7 +53,7 @@ map_e_body()
 	jexec map_e sysctl net.inet.ip.forwarding=1
 
 	jexec echo ifconfig ${epair_echo}b 198.51.100.2/24 up
-	jexec echo /usr/sbin/inetd -p inetd-echo.pid $(atf_get_srcdir)/echo_inetd.conf
+	jexec echo /usr/sbin/inetd -p ${PWD}/inetd-echo.pid $(atf_get_srcdir)/echo_inetd.conf
 
 	# Enable pf!
 	jexec map_e pfctl -e
@@ -66,7 +65,8 @@ map_e_body()
 	pft_set_rules echo "block return all" \
 		"pass in on ${epair_echo}b inet proto tcp from 198.51.100.1 port 19720:19723 to (${epair_echo}b) port 7" \
 		"pass in on ${epair_echo}b inet proto tcp from 198.51.100.1 port 36104:36107 to (${epair_echo}b) port 7" \
-		"pass in on ${epair_echo}b inet proto tcp from 198.51.100.1 port 52488:52491 to (${epair_echo}b) port 7"
+		"pass in on ${epair_echo}b inet proto tcp from 198.51.100.1 port 52488:52491 to (${epair_echo}b) port 7" \
+		"set skip on lo"
 
 	i=0
 	while [ ${i} -lt ${NC_TRY_COUNT} ]
@@ -81,7 +81,6 @@ map_e_body()
 
 map_e_cleanup()
 {
-	rm -f inetd-echo.pid
 	pft_cleanup
 }
 

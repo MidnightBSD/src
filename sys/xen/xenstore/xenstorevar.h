@@ -27,7 +27,6 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
- *
  */
 
 #ifndef _XEN_XENSTORE_XENSTOREVAR_H
@@ -340,7 +339,7 @@ int xs_gather(struct xs_transaction t, const char *dir, ...);
  *          xenbus_watch objects, to watch the same path in the XenStore.
  */
 int xs_register_watch(struct xs_watch *watch);
- 
+
 /**
  * Unregister a XenStore watch.
  *
@@ -376,4 +375,3 @@ void xs_lock(void);
 void xs_unlock(void);
 
 #endif /* _XEN_XENSTORE_XENSTOREVAR_H */
-

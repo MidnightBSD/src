@@ -7,7 +7,6 @@
 /* Implementation of the VMCI Resource Access Control API. */
 
 #include <sys/cdefs.h>
-
 #include "vmci_driver.h"
 #include "vmci_kernel_defs.h"
 #include "vmci_resource.h"

@@ -27,7 +27,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_XDMA_XDMA_H_
@@ -35,6 +34,14 @@
 
 #include <sys/proc.h>
 #include <sys/vmem.h>
+
+#ifdef FDT
+#include <dev/fdt/fdt_common.h>
+#include <dev/ofw/openfirm.h>
+#endif
+
+#include <vm/vm.h>
+#include <vm/pmap.h>
 
 enum xdma_direction {
 	XDMA_MEM_TO_MEM,
@@ -120,6 +127,12 @@ struct xdma_sglist {
 	bool				last;
 };
 
+struct xdma_iommu {
+	struct pmap p;
+	vmem_t *vmem;		/* VA space */
+	device_t dev;		/* IOMMU device */
+};
+
 struct xdma_channel {
 	xdma_controller_t		*xdma;
 	vmem_t				*vmem;
@@ -136,7 +149,8 @@ struct xdma_channel {
 	uint32_t			caps;
 #define	XCHAN_CAP_BUSDMA		(1 << 0)
 #define	XCHAN_CAP_NOSEG			(1 << 1)
-#define	XCHAN_CAP_NOBUFS		(1 << 2)
+#define	XCHAN_CAP_BOUNCE		(1 << 2)
+#define	XCHAN_CAP_IOMMU			(1 << 3)
 
 	/* A real hardware driver channel. */
 	void				*chan;
@@ -170,12 +184,17 @@ struct xdma_channel {
 	TAILQ_HEAD(, xdma_request)	queue_in;
 	TAILQ_HEAD(, xdma_request)	queue_out;
 	TAILQ_HEAD(, xdma_request)	processing;
+
+	/* iommu */
+	struct xdma_iommu		xio;
 };
 
 typedef struct xdma_channel xdma_channel_t;
 
 struct xdma_intr_handler {
 	int		(*cb)(void *cb_user, xdma_transfer_status_t *status);
+	int		flags;
+#define	XDMA_INTR_NET	(1 << 0)
 	void		*cb_user;
 	TAILQ_ENTRY(xdma_intr_handler)	ih_next;
 };
@@ -212,9 +231,13 @@ static MALLOC_DEFINE(M_XDMA, "xdma", "xDMA framework");
 
 /* xDMA controller ops */
 xdma_controller_t *xdma_ofw_get(device_t dev, const char *prop);
+xdma_controller_t *xdma_get(device_t dev, device_t dma_dev);
 int xdma_put(xdma_controller_t *xdma);
 vmem_t * xdma_get_memory(device_t dev);
 void xdma_put_memory(vmem_t *vmem);
+#ifdef FDT
+int xdma_handle_mem_node(vmem_t *vmem, phandle_t memory);
+#endif
 
 /* xDMA channel ops */
 xdma_channel_t * xdma_channel_alloc(xdma_controller_t *, uint32_t caps);
@@ -252,7 +275,7 @@ uint32_t xdma_mbuf_chain_count(struct mbuf *m0);
 int xdma_control(xdma_channel_t *xchan, enum xdma_command cmd);
 
 /* Interrupt callback */
-int xdma_setup_intr(xdma_channel_t *xchan, int (*cb)(void *,
+int xdma_setup_intr(xdma_channel_t *xchan, int flags, int (*cb)(void *,
     xdma_transfer_status_t *), void *arg, void **);
 int xdma_teardown_intr(xdma_channel_t *xchan, struct xdma_intr_handler *ih);
 int xdma_teardown_all_intr(xdma_channel_t *xchan);
@@ -269,5 +292,12 @@ void xchan_bank_init(xdma_channel_t *xchan);
 int xchan_bank_free(xdma_channel_t *xchan);
 struct xdma_request * xchan_bank_get(xdma_channel_t *xchan);
 int xchan_bank_put(xdma_channel_t *xchan, struct xdma_request *xr);
+
+/* IOMMU */
+void xdma_iommu_add_entry(xdma_channel_t *xchan, vm_offset_t *va,
+    vm_paddr_t pa, vm_size_t size, vm_prot_t prot);
+void xdma_iommu_remove_entry(xdma_channel_t *xchan, vm_offset_t va);
+int xdma_iommu_init(struct xdma_iommu *xio);
+int xdma_iommu_release(struct xdma_iommu *xio);
 
 #endif /* !_DEV_XDMA_XDMA_H_ */

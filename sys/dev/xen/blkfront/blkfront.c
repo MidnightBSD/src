@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -82,7 +81,8 @@ static void xbd_startio(struct xbd_softc *sc);
 static MALLOC_DEFINE(M_XENBLOCKFRONT, "xbd", "Xen Block Front driver data");
 
 static int xbd_enable_indirect = 1;
-SYSCTL_NODE(_hw, OID_AUTO, xbd, CTLFLAG_RD, 0, "xbd driver parameters");
+SYSCTL_NODE(_hw, OID_AUTO, xbd, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "xbd driver parameters");
 SYSCTL_INT(_hw_xbd, OID_AUTO, xbd_enable_indirect, CTLFLAG_RDTUN,
     &xbd_enable_indirect, 0, "Enable xbd indirect segments");
 
@@ -160,7 +160,8 @@ xbd_free_command(struct xbd_command *cm)
 static void
 xbd_mksegarray(bus_dma_segment_t *segs, int nsegs,
     grant_ref_t * gref_head, int otherend_id, int readonly,
-    grant_ref_t * sg_ref, struct blkif_request_segment *sg)
+    grant_ref_t * sg_ref, struct blkif_request_segment *sg,
+    unsigned int sector_size)
 {
 	struct blkif_request_segment *last_block_sg = sg + nsegs;
 	vm_paddr_t buffer_ma;
@@ -168,9 +169,9 @@ xbd_mksegarray(bus_dma_segment_t *segs, int nsegs,
 	int ref;
 
 	while (sg < last_block_sg) {
-		KASSERT(segs->ds_addr % (1 << XBD_SECTOR_SHFT) == 0,
+		KASSERT((segs->ds_addr & (sector_size - 1)) == 0,
 		    ("XEN disk driver I/O must be sector aligned"));
-		KASSERT(segs->ds_len % (1 << XBD_SECTOR_SHFT) == 0,
+		KASSERT((segs->ds_len & (sector_size - 1)) == 0,
 		    ("XEN disk driver I/Os must be a multiple of "
 		    "the sector length"));
 		buffer_ma = segs->ds_addr;
@@ -243,7 +244,8 @@ xbd_queue_cb(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 		xbd_mksegarray(segs, nsegs, &cm->cm_gref_head,
 		    xenbus_get_otherend_id(sc->xbd_dev),
 		    cm->cm_operation == BLKIF_OP_WRITE,
-		    cm->cm_sg_refs, ring_req->seg);
+		    cm->cm_sg_refs, ring_req->seg,
+		    sc->xbd_disk->d_sectorsize);
 	} else {
 		blkif_request_indirect_t *ring_req;
 
@@ -261,7 +263,8 @@ xbd_queue_cb(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 		xbd_mksegarray(segs, nsegs, &cm->cm_gref_head,
 		    xenbus_get_otherend_id(sc->xbd_dev),
 		    cm->cm_operation == BLKIF_OP_WRITE,
-		    cm->cm_sg_refs, cm->cm_indirectionpages);
+		    cm->cm_sg_refs, cm->cm_indirectionpages,
+		    sc->xbd_disk->d_sectorsize);
 		memcpy(ring_req->indirect_grefs, &cm->cm_indirectionrefs,
 		    sizeof(grant_ref_t) * sc->xbd_max_request_indirectpages);
 	}
@@ -361,7 +364,9 @@ xbd_bio_command(struct xbd_softc *sc)
 	}
 
 	cm->cm_bp = bp;
-	cm->cm_sector_number = (blkif_sector_t)bp->bio_pblkno;
+	cm->cm_sector_number =
+	    ((blkif_sector_t)bp->bio_pblkno * sc->xbd_disk->d_sectorsize) >>
+	    XBD_SECTOR_SHFT;
 
 	switch (bp->bio_cmd) {
 	case BIO_READ:
@@ -398,7 +403,9 @@ xbd_bio_command(struct xbd_softc *sc)
 			panic("flush request, but no flush support available");
 		break;
 	default:
-		panic("unknown bio command %d", bp->bio_cmd);
+		biofinish(bp, NULL, EOPNOTSUPP);
+		xbd_enqueue_cm(cm, XBD_Q_FREE);
+		return (NULL);
 	}
 
 	return (cm);
@@ -423,7 +430,6 @@ xbd_startio(struct xbd_softc *sc)
 		return;
 
 	while (!RING_FULL(&sc->xbd_ring)) {
-
 		if (sc->xbd_qfrozen_cnt != 0)
 			break;
 
@@ -591,8 +597,7 @@ xbd_dump_complete(struct xbd_command *cm)
 }
 
 static int
-xbd_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset,
-    size_t length)
+xbd_dump(void *arg, void *virtual, off_t offset, size_t length)
 {
 	struct disk *dp = arg;
 	struct xbd_softc *sc = dp->d_drv1;
@@ -633,7 +638,7 @@ xbd_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset,
 		cm->cm_data = virtual;
 		cm->cm_datalen = chunk;
 		cm->cm_operation = BLKIF_OP_WRITE;
-		cm->cm_sector_number = offset / dp->d_sectorsize;
+		cm->cm_sector_number = offset >> XBD_SECTOR_SHFT;
 		cm->cm_complete = xbd_dump_complete;
 
 		xbd_enqueue_cm(cm, XBD_Q_READY);
@@ -763,7 +768,6 @@ xbd_alloc_ring(struct xbd_softc *sc)
 	for (i = 0, sring_page_addr = (uintptr_t)sring;
 	     i < sc->xbd_ring_pages;
 	     i++, sring_page_addr += PAGE_SIZE) {
-
 		error = xenbus_grant_ring(sc->xbd_dev,
 		    (vtophys(sring_page_addr) >> PAGE_SHIFT),
 		    &sc->xbd_ring_ref[i]);
@@ -894,7 +898,7 @@ xbd_setup_sysctl(struct xbd_softc *xbd)
 	struct sysctl_ctx_list *sysctl_ctx = NULL;
 	struct sysctl_oid *sysctl_tree = NULL;
 	struct sysctl_oid_list *children;
-	
+
 	sysctl_ctx = device_get_sysctl_ctx(xbd->xbd_dev);
 	if (sysctl_ctx == NULL)
 		return;
@@ -922,8 +926,8 @@ xbd_setup_sysctl(struct xbd_softc *xbd)
 	    "communication channel pages (negotiated)");
 
 	SYSCTL_ADD_PROC(sysctl_ctx, children, OID_AUTO,
-	    "features", CTLTYPE_STRING|CTLFLAG_RD, xbd, 0,
-	    xbd_sysctl_features, "A", "protocol features (negotiated)");
+	    "features", CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE, xbd,
+	    0, xbd_sysctl_features, "A", "protocol features (negotiated)");
 }
 
 /*
@@ -1028,7 +1032,19 @@ xbd_instance_create(struct xbd_softc *sc, blkif_sector_t sectors,
 	sc->xbd_disk->d_stripesize = phys_sector_size;
 	sc->xbd_disk->d_stripeoffset = 0;
 
-	sc->xbd_disk->d_mediasize = sectors * sector_size;
+	/*
+	 * The 'sectors' xenbus node is always in units of 512b, regardless of
+	 * the 'sector-size' xenbus node value.
+	 */
+	sc->xbd_disk->d_mediasize = sectors << XBD_SECTOR_SHFT;
+	if ((sc->xbd_disk->d_mediasize % sc->xbd_disk->d_sectorsize) != 0) {
+		error = EINVAL;
+		xenbus_dev_fatal(sc->xbd_dev, error,
+		    "Disk size (%ju) not a multiple of sector size (%ju)",
+		    (uintmax_t)sc->xbd_disk->d_mediasize,
+		    (uintmax_t)sc->xbd_disk->d_sectorsize);
+		return (error);
+	}
 	sc->xbd_disk->d_maxsize = sc->xbd_max_request_size;
 	sc->xbd_disk->d_flags = DISKFLAG_UNMAPPED_BIO;
 	if ((sc->xbd_flags & (XBDF_FLUSH|XBDF_BARRIER)) != 0) {
@@ -1045,7 +1061,7 @@ static void
 xbd_free(struct xbd_softc *sc)
 {
 	int i;
-	
+
 	/* Prevent new requests being issued until we fix things up. */
 	mtx_lock(&sc->xbd_io_lock);
 	sc->xbd_state = XBD_STATE_DISCONNECTED; 
@@ -1054,7 +1070,6 @@ xbd_free(struct xbd_softc *sc)
 	/* Free resources associated with old device channel. */
 	xbd_free_ring(sc);
 	if (sc->xbd_shadow) {
-
 		for (i = 0; i < sc->xbd_max_requests; i++) {
 			struct xbd_command *cm;
 
@@ -1220,19 +1235,49 @@ static void
 xbd_connect(struct xbd_softc *sc)
 {
 	device_t dev = sc->xbd_dev;
-	unsigned long sectors, sector_size, phys_sector_size;
+	blkif_sector_t sectors;
+	unsigned long sector_size, phys_sector_size;
 	unsigned int binfo;
 	int err, feature_barrier, feature_flush;
 	int i, j;
 
-	if (sc->xbd_state == XBD_STATE_CONNECTED || 
-	    sc->xbd_state == XBD_STATE_SUSPENDED)
-		return;
-
 	DPRINTK("blkfront.c:connect:%s.\n", xenbus_get_otherend_path(dev));
 
+	if (sc->xbd_state == XBD_STATE_SUSPENDED) {
+		return;
+	}
+
+	if (sc->xbd_state == XBD_STATE_CONNECTED) {
+		struct disk *disk;
+
+		disk = sc->xbd_disk;
+		if (disk == NULL) {
+			return;
+		}
+		err = xs_gather(XST_NIL, xenbus_get_otherend_path(dev),
+		    "sectors", "%"PRIu64, &sectors, NULL);
+		if (err != 0) {
+			xenbus_dev_error(dev, err,
+			    "reading sectors at %s",
+			    xenbus_get_otherend_path(dev));
+			return;
+		}
+		disk->d_mediasize = disk->d_sectorsize * sectors;
+		err = disk_resize(disk, M_NOWAIT);
+		if (err) {
+			xenbus_dev_error(dev, err,
+			    "unable to resize disk %s%u",
+			    disk->d_name, disk->d_unit);
+			return;
+		}
+		device_printf(sc->xbd_dev,
+		    "changed capacity to %jd\n",
+		    (intmax_t)disk->d_mediasize);
+		return;
+	}
+
 	err = xs_gather(XST_NIL, xenbus_get_otherend_path(dev),
-	    "sectors", "%lu", &sectors,
+	    "sectors", "%"PRIu64, &sectors,
 	    "info", "%u", &binfo,
 	    "sector-size", "%lu", &sector_size,
 	    NULL);
@@ -1245,7 +1290,7 @@ xbd_connect(struct xbd_softc *sc)
 	if ((sectors == 0) || (sector_size == 0)) {
 		xenbus_dev_fatal(dev, 0,
 		    "invalid parameters from %s:"
-		    " sectors = %lu, sector_size = %lu",
+		    " sectors = %"PRIu64", sector_size = %lu",
 		    xenbus_get_otherend_path(dev),
 		    sectors, sector_size);
 		return;
@@ -1274,8 +1319,8 @@ xbd_connect(struct xbd_softc *sc)
 		sc->xbd_max_request_segments = 0;
 	if (sc->xbd_max_request_segments > XBD_MAX_INDIRECT_SEGMENTS)
 		sc->xbd_max_request_segments = XBD_MAX_INDIRECT_SEGMENTS;
-	if (sc->xbd_max_request_segments > XBD_SIZE_TO_SEGS(MAXPHYS))
-		sc->xbd_max_request_segments = XBD_SIZE_TO_SEGS(MAXPHYS);
+	if (sc->xbd_max_request_segments > XBD_SIZE_TO_SEGS(maxphys))
+		sc->xbd_max_request_segments = XBD_SIZE_TO_SEGS(maxphys);
 	sc->xbd_max_request_indirectpages =
 	    XBD_INDIRECT_SEGS_TO_PAGES(sc->xbd_max_request_segments);
 	if (sc->xbd_max_request_segments < BLKIF_MAX_SEGMENTS_PER_REQUEST)
@@ -1286,7 +1331,7 @@ xbd_connect(struct xbd_softc *sc)
 	/* Allocate datastructures based on negotiated values. */
 	err = bus_dma_tag_create(
 	    bus_get_dma_tag(sc->xbd_dev),	/* parent */
-	    512, PAGE_SIZE,			/* algnmnt, boundary */
+	    sector_size, PAGE_SIZE,		/* algnmnt, boundary */
 	    BUS_SPACE_MAXADDR,			/* lowaddr */
 	    BUS_SPACE_MAXADDR,			/* highaddr */
 	    NULL, NULL,				/* filter, filterarg */
@@ -1358,13 +1403,17 @@ xbd_connect(struct xbd_softc *sc)
 
 	if (sc->xbd_disk == NULL) {
 		device_printf(dev, "%juMB <%s> at %s",
-		    (uintmax_t) sectors / (1048576 / sector_size),
+		    (uintmax_t)((sectors << XBD_SECTOR_SHFT) / 1048576),
 		    device_get_desc(dev),
 		    xenbus_get_node(dev));
 		bus_print_child_footer(device_get_parent(dev), dev);
 
-		xbd_instance_create(sc, sectors, sc->xbd_vdevice, binfo,
+		err = xbd_instance_create(sc, sectors, sc->xbd_vdevice, binfo,
 		    sector_size, phys_sector_size);
+		if (err != 0) {
+			xenbus_dev_fatal(dev, err, "Unable to create instance");
+			return;
+		}
 	}
 
 	(void)xenbus_set_state(dev, XenbusStateConnected); 
@@ -1603,7 +1652,7 @@ static device_method_t xbd_methods[] = {
 	DEVMETHOD(device_shutdown,      bus_generic_shutdown), 
 	DEVMETHOD(device_suspend,       xbd_suspend), 
 	DEVMETHOD(device_resume,        xbd_resume), 
- 
+
 	/* Xenbus interface */
 	DEVMETHOD(xenbus_otherend_changed, xbd_backend_changed),
 
@@ -1616,5 +1665,5 @@ static driver_t xbd_driver = {
 	sizeof(struct xbd_softc),                      
 }; 
 devclass_t xbd_devclass; 
- 
+
 DRIVER_MODULE(xbd, xenbusb_front, xbd_driver, xbd_devclass, 0, 0); 

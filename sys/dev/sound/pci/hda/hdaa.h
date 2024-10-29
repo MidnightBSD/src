@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Stephane E. Potvin <sepotvin@videotron.ca>
  * Copyright (c) 2006 Ariff Abdullah <ariff@FreeBSD.org>
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -251,10 +250,10 @@ struct hdaa_chan {
 #define RANGEQDB(ctl)							\
 	((ctl)->step * ((ctl)->size + 1))
 
-#define VAL2QDB(ctl, val) 						\
+#define VAL2QDB(ctl, val)						\
 	(((ctl)->size + 1) * ((int)(val) - (ctl)->offset))
 
-#define QDB2VAL(ctl, qdb) 						\
+#define QDB2VAL(ctl, qdb)						\
 	imax(imin((((qdb) + (ctl)->size / 2 * ((qdb) > 0 ? 1 : -1)) /	\
 	 ((ctl)->size + 1) + (ctl)->offset), (ctl)->step), 0)
 

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -119,7 +118,7 @@ qpi_probe_pcib(device_t dev, int bus)
 	 * the bus is not present.
 	 */
 	for (s = 0; s <= PCI_SLOTMAX; s++) {
-		devid = pci_cfgregread(bus, s, 0, PCIR_DEVVENDOR, 4);
+		devid = pci_cfgregread(0, bus, s, 0, PCIR_DEVVENDOR, 4);
 		if (devid != 0xffffffff)
 			break;
 	}
@@ -210,7 +209,6 @@ static device_method_t qpi_methods[] = {
 	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
 	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),
 	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
-
 	{ 0, 0 }
 };
 

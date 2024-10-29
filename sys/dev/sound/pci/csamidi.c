@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
 
  * Copyright (c) 2015-2018 Tai-hwa Liang <avatar@FreeBSD.org>
  * All rights reserved
@@ -54,6 +54,7 @@
 
 #include "mpufoi_if.h"
 
+SND_DECLARE_FILE("");
 
 /* pulled from mpu401.c */
 #define	MPU_DATAPORT	0
@@ -201,11 +202,9 @@ static int
 midicsa_attach(device_t dev)
 {
 	struct csa_midi_softc *scp;
-	struct sndcard_func *func;
 	int rc = ENXIO;
 
 	scp = device_get_softc(dev);
-	func = device_get_ivars(dev);
 
 	bzero(scp, sizeof(struct csa_midi_softc));
 	scp->dev = dev;

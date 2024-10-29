@@ -18,8 +18,6 @@
 # CDDL HEADER END
 #
 
-# $FreeBSD$
-
 #
 # Copyright 2012 Spectra Logic.  All rights reserved.
 # Use is subject to license terms.
@@ -30,7 +28,7 @@ atf_test_case zfs_upgrade_001_pos cleanup
 zfs_upgrade_001_pos_head()
 {
 	atf_set "descr" "Executing 'zfs upgrade' command succeeds."
-	atf_set "require.progs"  zfs nawk
+	atf_set "require.progs" "ksh93 zfs nawk"
 }
 zfs_upgrade_001_pos_body()
 {
@@ -56,7 +54,7 @@ atf_test_case zfs_upgrade_002_pos cleanup
 zfs_upgrade_002_pos_head()
 {
 	atf_set "descr" "Executing 'zfs upgrade -v' command succeeds."
-	atf_set "require.progs"  zfs nawk
+	atf_set "require.progs" "ksh93 zfs nawk"
 }
 zfs_upgrade_002_pos_body()
 {
@@ -82,7 +80,7 @@ atf_test_case zfs_upgrade_003_pos cleanup
 zfs_upgrade_003_pos_head()
 {
 	atf_set "descr" "Executing 'zfs upgrade [-V version] filesystem' command succeeds."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_upgrade_003_pos_body()
 {
@@ -108,7 +106,7 @@ atf_test_case zfs_upgrade_004_pos cleanup
 zfs_upgrade_004_pos_head()
 {
 	atf_set "descr" "Executing 'zfs upgrade -r [-V version] filesystem' command succeeds."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_upgrade_004_pos_body()
 {
@@ -134,7 +132,7 @@ atf_test_case zfs_upgrade_005_pos cleanup
 zfs_upgrade_005_pos_head()
 {
 	atf_set "descr" "Executing 'zfs upgrade [-V version] -a' command succeeds."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_upgrade_005_pos_body()
 {
@@ -164,7 +162,7 @@ atf_test_case zfs_upgrade_006_neg cleanup
 zfs_upgrade_006_neg_head()
 {
 	atf_set "descr" "Badly-formed 'zfs upgrade' should return an error."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_upgrade_006_neg_body()
 {
@@ -190,7 +188,7 @@ atf_test_case zfs_upgrade_007_neg cleanup
 zfs_upgrade_007_neg_head()
 {
 	atf_set "descr" "Set invalid value or non-digit version should fail as expected."
-	atf_set "require.progs"  zfs
+	atf_set "require.progs" "ksh93 zfs"
 }
 zfs_upgrade_007_neg_body()
 {

@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "tpm20.h"
 
 /*
@@ -100,12 +99,13 @@ char *tpmtis_ids[] = {"MSFT0101", NULL};
 static int
 tpmtis_acpi_probe(device_t dev)
 {
-	int err = 0;
+	int err;
 	ACPI_TABLE_TPM23 *tbl;
 	ACPI_STATUS status;
 
-	if (ACPI_ID_PROBE(device_get_parent(dev), dev, tpmtis_ids) == NULL)
-		return (ENXIO);
+	err = ACPI_ID_PROBE(device_get_parent(dev), dev, tpmtis_ids, NULL);
+	if (err > 0)
+		return (err);
 	/*Find TPM2 Header*/
 	status = AcpiGetTable(ACPI_SIG_TPM2, 1, (ACPI_TABLE_HEADER **) &tbl);
 	if(ACPI_FAILURE(status) ||
@@ -329,7 +329,6 @@ tpmtis_write_bytes(struct tpm_sc *sc, size_t count, uint8_t *buf)
 	return (true);
 }
 
-
 static bool
 tpmtis_request_locality(struct tpm_sc *sc, int locality)
 {
@@ -384,12 +383,11 @@ tpmtis_go_ready(struct tpm_sc *sc)
 	mask = TPM_STS_CMD_RDY;
 	sc->intr_type = TPM_INT_STS_CMD_RDY;
 
-	OR4(sc, TPM_STS, TPM_STS_CMD_RDY);
+	WR4(sc, TPM_STS, TPM_STS_CMD_RDY);
 	bus_barrier(sc->mem_res, TPM_STS, 4, BUS_SPACE_BARRIER_WRITE);
 	if (!tpm_wait_for_u32(sc, TPM_STS, mask, mask, TPM_TIMEOUT_B))
 		return (false);
 
-	AND4(sc, TPM_STS, ~TPM_STS_CMD_RDY);
 	return (true);
 }
 

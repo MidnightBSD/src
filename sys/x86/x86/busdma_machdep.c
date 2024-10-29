@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997, 1998 Justin T. Gibbs.
  * Copyright (c) 2013 The FreeBSD Foundation
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_acpi.h"
 
 #include <sys/param.h>
@@ -56,9 +55,7 @@
 
 /*
  * Convenience function for manipulating driver locks from busdma (during
- * busdma_swi, for example).  Drivers that don't provide their own locks
- * should specify &Giant to dmat->lockfuncarg.  Drivers that use their own
- * non-mutex locking scheme don't have to use this at all.
+ * busdma_swi, for example).
  */
 void
 busdma_lock_mutex(void *arg, bus_dma_lock_op_t op)
@@ -108,7 +105,7 @@ bus_dma_run_filter(struct bus_dma_tag_common *tc, vm_paddr_t paddr)
 	do {
 		if ((paddr >= BUS_SPACE_MAXADDR ||
 		    (paddr > tc->lowaddr && paddr <= tc->highaddr) ||
-		    (paddr & (tc->alignment - 1)) != 0) &&
+		    !vm_addr_align_ok(paddr, tc->alignment)) &&
 		    (tc->filter == NULL ||
 		    (*tc->filter)(tc->filterarg, paddr) != 0))
 			retval = 1;
@@ -222,6 +219,10 @@ bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 	struct bus_dma_tag_common *tc;
 	int error;
 
+	/* Filters are deprecated, emit a warning. */
+	if (filter != NULL || filterarg != NULL)
+		printf("Warning: use of filters is deprecated; see busdma(9)\n");
+
 	if (parent == NULL) {
 		error = bus_dma_bounce_impl.tag_create(parent, alignment,
 		    boundary, lowaddr, highaddr, filter, filterarg, maxsize,
@@ -235,6 +236,29 @@ bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 	return (error);
 }
 
+void
+bus_dma_template_clone(bus_dma_template_t *t, bus_dma_tag_t dmat)
+{
+	struct bus_dma_tag_common *common;
+
+	if (t == NULL || dmat == NULL)
+		return;
+
+	common = (struct bus_dma_tag_common *)dmat;
+
+	t->parent = (bus_dma_tag_t)common->parent;
+	t->alignment = common->alignment;
+	t->boundary = common->boundary;
+	t->lowaddr = common->lowaddr;
+	t->highaddr = common->highaddr;
+	t->maxsize = common->maxsize;
+	t->nsegments = common->nsegments;
+	t->maxsegsize = common->maxsegsz;
+	t->flags = common->flags;
+	t->lockfunc = common->lockfunc;
+	t->lockfuncarg = common->lockfuncarg;
+}
+
 int
 bus_dma_tag_destroy(bus_dma_tag_t dmat)
 {
@@ -243,18 +267,3 @@ bus_dma_tag_destroy(bus_dma_tag_t dmat)
 	tc = (struct bus_dma_tag_common *)dmat;
 	return (tc->impl->tag_destroy(dmat));
 }
-
-#ifndef ACPI_DMAR
-bool
-bus_dma_dmar_set_buswide(device_t dev)
-{
-	return (false);
-}
-
-int
-bus_dma_dmar_load_ident(bus_dma_tag_t dmat, bus_dmamap_t map,
-    vm_paddr_t start, vm_size_t length, int flags)
-{
-	return (0);
-}
-#endif

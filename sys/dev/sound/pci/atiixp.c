@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Ariff Abdullah <ariff@FreeBSD.org>
  * All rights reserved.
@@ -69,6 +69,7 @@
 
 #include <dev/sound/pci/atiixp.h>
 
+SND_DECLARE_FILE("");
 
 #define ATI_IXP_DMA_RETRY_MAX	100
 
@@ -1095,8 +1096,8 @@ atiixp_chip_post_init(void *arg)
 
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(sc->dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(sc->dev)), OID_AUTO,
-	    "polling", CTLTYPE_INT | CTLFLAG_RW, sc->dev, sizeof(sc->dev),
-	    sysctl_atiixp_polling, "I", "Enable polling mode");
+	    "polling", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, sc->dev,
+	    sizeof(sc->dev), sysctl_atiixp_polling, "I", "Enable polling mode");
 
 	snprintf(status, SND_STATUSLEN, "at memory 0x%jx irq %jd %s",
 	    rman_get_start(sc->reg), rman_get_start(sc->irq),
@@ -1289,7 +1290,6 @@ atiixp_pci_attach(device_t dev)
 	    ATI_IXP_DMA_CHSEGS_MAX * ATI_IXP_NCHANS *
 	    sizeof(struct atiixp_dma_op), atiixp_dma_cb, sc, 0))
 		goto bad;
-
 
 	atiixp_chip_pre_init(sc);
 

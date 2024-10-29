@@ -1,7 +1,7 @@
 /*-
  * vkbd_var.h
  *
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -49,4 +49,3 @@ typedef struct vkbd_status	vkbd_status_t;
 typedef struct vkbd_status *	vkbd_status_p;
 
 #endif /* ndef _VKBD_VAR_H_ */
-

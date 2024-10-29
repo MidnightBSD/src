@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 David Jones <dej@ox.org>
  * All rights reserved.
@@ -39,6 +39,7 @@
 
 #include <dev/sound/pci/via82c686.h>
 
+SND_DECLARE_FILE("");
 
 #define VIA_PCI_ID 0x30581106
 #define	NSEGS		4	/* Number of segments in SGD table */
@@ -120,7 +121,6 @@ via_rd(struct via_info *via, int regno, int size)
 	}
 }
 
-
 static __inline void
 via_wr(struct via_info *via, int regno, u_int32_t data, int size)
 {
@@ -158,7 +158,6 @@ via_waitready_codec(struct via_info *via)
 	return 0;
 }
 
-
 static int
 via_waitvalid_codec(struct via_info *via)
 {
@@ -176,7 +175,6 @@ via_waitvalid_codec(struct via_info *via)
 	return 0;
 }
 
-
 static int
 via_write_codec(kobj_t obj, void *addr, int reg, u_int32_t val)
 {
@@ -188,7 +186,6 @@ via_write_codec(kobj_t obj, void *addr, int reg, u_int32_t val)
 
 	return 0;
 }
-
 
 static int
 via_read_codec(kobj_t obj, void *addr, int reg)
@@ -466,14 +463,12 @@ via_probe(device_t dev)
 	return ENXIO;
 }
 
-
 static void
 dma_cb(void *p, bus_dma_segment_t *bds, int a, int b)
 {
 	struct via_info *via = (struct via_info *)p;
 	via->sgd_addr = bds->ds_addr;
 }
-
 
 static int
 via_attach(device_t dev)
@@ -637,7 +632,6 @@ via_detach(device_t dev)
 	free(via, M_DEVBUF);
 	return 0;
 }
-
 
 static device_method_t via_methods[] = {
 	DEVMETHOD(device_probe,		via_probe),

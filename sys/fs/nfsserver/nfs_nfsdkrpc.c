@@ -34,23 +34,22 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet6.h"
 #include "opt_kgssapi.h"
+#include "opt_kern_tls.h"
 
 #include <fs/nfs/nfsport.h>
 
 #include <rpc/rpc.h>
 #include <rpc/rpcsec_gss.h>
+#include <rpc/rpcsec_tls.h>
 
-#include <nfs/nfs_fha.h>
 #include <fs/nfsserver/nfs_fha_new.h>
 
 #include <security/mac/mac_framework.h>
 
 NFSDLOCKMUTEX;
 NFSV4ROOTLOCKMUTEX;
-struct nfsv4lock nfsd_suspend_lock;
 char *nfsrv_zeropnfsdat = NULL;
 
 /*
@@ -81,34 +80,40 @@ int newnfs_nfsv3_procid[NFS_V3NPROCS] = {
 	NFSPROC_NOOP,
 };
 
-
 SYSCTL_DECL(_vfs_nfsd);
 
-SVCPOOL		*nfsrvd_pool;
-
-static int	nfs_privport = 0;
-SYSCTL_INT(_vfs_nfsd, OID_AUTO, nfs_privport, CTLFLAG_RWTUN,
-    &nfs_privport, 0,
+NFSD_VNET_DEFINE_STATIC(int, nfs_privport) = 0;
+SYSCTL_INT(_vfs_nfsd, OID_AUTO, nfs_privport, CTLFLAG_NFSD_VNET | CTLFLAG_RWTUN,
+    &NFSD_VNET_NAME(nfs_privport), 0,
     "Only allow clients using a privileged port for NFSv2, 3 and 4");
 
-static int	nfs_minvers = NFS_VER2;
-SYSCTL_INT(_vfs_nfsd, OID_AUTO, server_min_nfsvers, CTLFLAG_RWTUN,
-    &nfs_minvers, 0, "The lowest version of NFS handled by the server");
+NFSD_VNET_DEFINE_STATIC(int, nfs_minvers) = NFS_VER2;
+SYSCTL_INT(_vfs_nfsd, OID_AUTO, server_min_nfsvers,
+    CTLFLAG_NFSD_VNET | CTLFLAG_RWTUN, &NFSD_VNET_NAME(nfs_minvers), 0,
+    "The lowest version of NFS handled by the server");
 
-static int	nfs_maxvers = NFS_VER4;
-SYSCTL_INT(_vfs_nfsd, OID_AUTO, server_max_nfsvers, CTLFLAG_RWTUN,
-    &nfs_maxvers, 0, "The highest version of NFS handled by the server");
+NFSD_VNET_DEFINE_STATIC(int, nfs_maxvers) = NFS_VER4;
+SYSCTL_INT(_vfs_nfsd, OID_AUTO, server_max_nfsvers,
+    CTLFLAG_NFSD_VNET | CTLFLAG_RWTUN, &NFSD_VNET_NAME(nfs_maxvers), 0,
+    "The highest version of NFS handled by the server");
 
 static int nfs_proc(struct nfsrv_descript *, u_int32_t, SVCXPRT *xprt,
     struct nfsrvcache **);
 
 extern u_long sb_max_adj;
 extern int newnfs_numnfsd;
-extern struct proc *nfsd_master_proc;
 extern time_t nfsdev_time;
 extern int nfsrv_writerpc[NFS_NPROCS];
 extern volatile int nfsrv_devidcnt;
-extern struct nfsv4_opflag nfsv4_opflag[NFSV41_NOPS];
+extern struct nfsv4_opflag nfsv4_opflag[NFSV42_NOPS];
+
+NFSD_VNET_DECLARE(struct proc *, nfsd_master_proc);
+
+NFSD_VNET_DEFINE(SVCPOOL *, nfsrvd_pool);
+NFSD_VNET_DEFINE(int, nfsrv_numnfsd) = 0;
+NFSD_VNET_DEFINE(struct nfsv4lock, nfsd_suspend_lock);
+
+NFSD_VNET_DEFINE_STATIC(bool, nfsrvd_inited) = false;
 
 /*
  * NFS server system calls
@@ -120,7 +125,11 @@ nfssvc_program(struct svc_req *rqst, SVCXPRT *xprt)
 	struct nfsrv_descript nd;
 	struct nfsrvcache *rp = NULL;
 	int cacherep, credflavor;
+#ifdef KERN_TLS
+	u_int maxlen;
+#endif
 
+	NFSD_CURVNET_SET_QUIET(NFSD_TD_TO_VNET(curthread));
 	memset(&nd, 0, sizeof(nd));
 	if (rqst->rq_vers == NFS_VER2) {
 		if (rqst->rq_proc > NFSV2PROC_STATFS ||
@@ -165,7 +174,7 @@ nfssvc_program(struct svc_req *rqst, SVCXPRT *xprt)
 	nd.nd_mreq = NULL;
 	nd.nd_cred = NULL;
 
-	if (nfs_privport != 0) {
+	if (NFSD_VNET(nfs_privport) != 0) {
 		/* Check if source port is privileged */
 		u_short port;
 		struct sockaddr *nam = nd.nd_nam;
@@ -234,6 +243,14 @@ nfssvc_program(struct svc_req *rqst, SVCXPRT *xprt)
 			goto out;
 		}
 
+		if ((xprt->xp_tls & RPCTLS_FLAGS_HANDSHAKE) != 0) {
+			nd.nd_flag |= ND_TLS;
+			if ((xprt->xp_tls & RPCTLS_FLAGS_VERIFIED) != 0)
+				nd.nd_flag |= ND_TLSCERT;
+			if ((xprt->xp_tls & RPCTLS_FLAGS_CERTUSER) != 0)
+				nd.nd_flag |= ND_TLSCERTUSER;
+		}
+		nd.nd_maxextsiz = 16384;
 #ifdef MAC
 		mac_cred_associate_nfsd(nd.nd_cred);
 #endif
@@ -249,17 +266,17 @@ nfssvc_program(struct svc_req *rqst, SVCXPRT *xprt)
 		 * nfsv4root exports by nfsvno_v4rootexport().
 		 */
 		NFSLOCKV4ROOTMUTEX();
-		nfsv4_lock(&nfsd_suspend_lock, 0, NULL, NFSV4ROOTLOCKMUTEXPTR,
-		    NULL);
-		nfsv4_getref(&nfsd_suspend_lock, NULL, NFSV4ROOTLOCKMUTEXPTR,
-		    NULL);
+		nfsv4_lock(&NFSD_VNET(nfsd_suspend_lock), 0, NULL,
+		    NFSV4ROOTLOCKMUTEXPTR, NULL);
+		nfsv4_getref(&NFSD_VNET(nfsd_suspend_lock), NULL,
+		    NFSV4ROOTLOCKMUTEXPTR, NULL);
 		NFSUNLOCKV4ROOTMUTEX();
 
 		if ((nd.nd_flag & ND_NFSV4) != 0) {
 			nd.nd_repstat = nfsvno_v4rootexport(&nd);
 			if (nd.nd_repstat != 0) {
 				NFSLOCKV4ROOTMUTEX();
-				nfsv4_relref(&nfsd_suspend_lock);
+				nfsv4_relref(&NFSD_VNET(nfsd_suspend_lock));
 				NFSUNLOCKV4ROOTMUTEX();
 				svcerr_weakauth(rqst);
 				svc_freereq(rqst);
@@ -268,9 +285,14 @@ nfssvc_program(struct svc_req *rqst, SVCXPRT *xprt)
 			}
 		}
 
+#ifdef KERN_TLS
+		if ((xprt->xp_tls & RPCTLS_FLAGS_HANDSHAKE) != 0 &&
+		    rpctls_getinfo(&maxlen, false, false))
+			nd.nd_maxextsiz = maxlen;
+#endif
 		cacherep = nfs_proc(&nd, rqst->rq_xid, xprt, &rp);
 		NFSLOCKV4ROOTMUTEX();
-		nfsv4_relref(&nfsd_suspend_lock);
+		nfsv4_relref(&NFSD_VNET(nfsd_suspend_lock));
 		NFSUNLOCKV4ROOTMUTEX();
 	} else {
 		NFSMGET(nd.nd_mreq);
@@ -310,6 +332,7 @@ nfssvc_program(struct svc_req *rqst, SVCXPRT *xprt)
 	svc_freereq(rqst);
 
 out:
+	NFSD_CURVNET_RESTORE();
 	td_softdep_cleanup(curthread);
 	NFSEXITCODE(0);
 }
@@ -322,7 +345,6 @@ static int
 nfs_proc(struct nfsrv_descript *nd, u_int32_t xid, SVCXPRT *xprt,
     struct nfsrvcache **rpp)
 {
-	struct thread *td = curthread;
 	int cacherep = RC_DOIT, isdgram, taglen = -1;
 	struct mbuf *m;
 	u_char tag[NFSV4_SMALLSTR + 1], *tagstr = NULL;
@@ -383,7 +405,7 @@ nfs_proc(struct nfsrv_descript *nd, u_int32_t xid, SVCXPRT *xprt,
 	if (cacherep == RC_DOIT) {
 		if ((nd->nd_flag & ND_NFSV41) != 0)
 			nd->nd_xprt = xprt;
-		nfsrvd_dorpc(nd, isdgram, tagstr, taglen, minorvers, td);
+		nfsrvd_dorpc(nd, isdgram, tagstr, taglen, minorvers);
 		if ((nd->nd_flag & ND_NFSV41) != 0) {
 			if (nd->nd_repstat != NFSERR_REPLYFROMCACHE &&
 			    (nd->nd_flag & ND_SAVEREPLY) != 0) {
@@ -424,7 +446,9 @@ nfssvc_loss(SVCXPRT *xprt)
 
 	ack = 0;
 	SVC_ACK(xprt, &ack);
+	NFSD_CURVNET_SET(NFSD_TD_TO_VNET(curthread));
 	nfsrc_trimcache(xprt->xp_sockref, ack, 1);
+	NFSD_CURVNET_RESTORE();
 }
 
 /*
@@ -451,26 +475,28 @@ nfsrvd_addsock(struct file *fp)
 	 * unexpectedly.
 	 */
 	if (so->so_type == SOCK_DGRAM)
-		xprt = svc_dg_create(nfsrvd_pool, so, 0, 0);
+		xprt = svc_dg_create(NFSD_VNET(nfsrvd_pool), so, 0, 0);
 	else
-		xprt = svc_vc_create(nfsrvd_pool, so, 0, 0);
+		xprt = svc_vc_create(NFSD_VNET(nfsrvd_pool), so, 0, 0);
 	if (xprt) {
 		fp->f_ops = &badfileops;
 		fp->f_data = NULL;
 		xprt->xp_sockref = ++sockref;
-		if (nfs_minvers == NFS_VER2)
+		if (NFSD_VNET(nfs_minvers) == NFS_VER2)
 			svc_reg(xprt, NFS_PROG, NFS_VER2, nfssvc_program,
 			    NULL);
-		if (nfs_minvers <= NFS_VER3 && nfs_maxvers >= NFS_VER3)
+		if (NFSD_VNET(nfs_minvers) <= NFS_VER3 &&
+		    NFSD_VNET(nfs_maxvers) >= NFS_VER3)
 			svc_reg(xprt, NFS_PROG, NFS_VER3, nfssvc_program,
 			    NULL);
-		if (nfs_maxvers >= NFS_VER4)
+		if (NFSD_VNET(nfs_maxvers) >= NFS_VER4)
 			svc_reg(xprt, NFS_PROG, NFS_VER4, nfssvc_program,
 			    NULL);
 		if (so->so_type == SOCK_STREAM)
 			svc_loss_reg(xprt, nfssvc_loss);
 		SVC_RELEASE(xprt);
-	}
+	} else
+		error = EPERM;
 
 out:
 	NFSEXITCODE(error);
@@ -502,13 +528,14 @@ nfsrvd_nfsd(struct thread *td, struct nfsd_nfsd_args *args)
 	 * use.
 	 */
 	NFSD_LOCK();
-	if (newnfs_numnfsd == 0) {
+	if (NFSD_VNET(nfsrv_numnfsd) == 0) {
 		nfsdev_time = time_second;
 		p = td->td_proc;
 		PROC_LOCK(p);
 		p->p_flag2 |= P2_AST_SU;
 		PROC_UNLOCK(p);
-		newnfs_numnfsd++;
+		newnfs_numnfsd++;	/* Total num for all vnets. */
+		NFSD_VNET(nfsrv_numnfsd)++;	/* Num for this vnet. */
 
 		NFSD_UNLOCK();
 		error = nfsrv_createdevids(args, td);
@@ -524,14 +551,17 @@ nfsrvd_nfsd(struct thread *td, struct nfsd_nfsd_args *args)
 				ret4 = rpc_gss_set_svc_name_call(principal,
 				    "kerberosv5", GSS_C_INDEFINITE, NFS_PROG,
 				    NFS_VER4);
-	
+
 				if (!ret2 || !ret3 || !ret4)
-					printf(
-					    "nfsd: can't register svc name\n");
+					printf("nfsd: can't register svc "
+					    "name %s jid:%d\n", principal,
+					    td->td_ucred->cr_prison->pr_id);
 			}
-	
-			nfsrvd_pool->sp_minthreads = args->minthreads;
-			nfsrvd_pool->sp_maxthreads = args->maxthreads;
+
+			NFSD_VNET(nfsrvd_pool)->sp_minthreads =
+			    args->minthreads;
+			NFSD_VNET(nfsrvd_pool)->sp_maxthreads =
+			    args->maxthreads;
 				
 			/*
 			 * If this is a pNFS service, make Getattr do a
@@ -542,8 +572,8 @@ nfsrvd_nfsd(struct thread *td, struct nfsd_nfsd_args *args)
 				nfsv4_opflag[NFSV4OP_GETATTR].modifyfs = 1;
 			}
 
-			svc_run(nfsrvd_pool);
-	
+			svc_run(NFSD_VNET(nfsrvd_pool));
+
 			/* Reset Getattr to not do a vn_start_write(). */
 			nfsrv_writerpc[NFSPROC_GETATTR] = 0;
 			nfsv4_opflag[NFSV4OP_GETATTR].modifyfs = 0;
@@ -556,6 +586,7 @@ nfsrvd_nfsd(struct thread *td, struct nfsd_nfsd_args *args)
 		}
 		NFSD_LOCK();
 		newnfs_numnfsd--;
+		NFSD_VNET(nfsrv_numnfsd)--;
 		nfsrvd_init(1);
 		PROC_LOCK(p);
 		p->p_flag2 &= ~P2_AST_SU;
@@ -580,22 +611,25 @@ nfsrvd_init(int terminating)
 	NFSD_LOCK_ASSERT();
 
 	if (terminating) {
-		nfsd_master_proc = NULL;
+		NFSD_VNET(nfsd_master_proc) = NULL;
 		NFSD_UNLOCK();
 		nfsrv_freealllayoutsanddevids();
 		nfsrv_freeallbackchannel_xprts();
-		svcpool_close(nfsrvd_pool);
+		svcpool_close(NFSD_VNET(nfsrvd_pool));
 		free(nfsrv_zeropnfsdat, M_TEMP);
 		nfsrv_zeropnfsdat = NULL;
 		NFSD_LOCK();
 	} else {
+		/* Initialize per-vnet globals once per vnet. */
+		if (NFSD_VNET(nfsrvd_inited))
+			return;
+		NFSD_VNET(nfsrvd_inited) = true;
 		NFSD_UNLOCK();
-		nfsrvd_pool = svcpool_create("nfsd",
+		NFSD_VNET(nfsrvd_pool) = svcpool_create("nfsd",
 		    SYSCTL_STATIC_CHILDREN(_vfs_nfsd));
-		nfsrvd_pool->sp_rcache = NULL;
-		nfsrvd_pool->sp_assign = fhanew_assign;
-		nfsrvd_pool->sp_done = fha_nd_complete;
+		NFSD_VNET(nfsrvd_pool)->sp_rcache = NULL;
+		NFSD_VNET(nfsrvd_pool)->sp_assign = fhanew_assign;
+		NFSD_VNET(nfsrvd_pool)->sp_done = fhanew_nd_complete;
 		NFSD_LOCK();
 	}
 }
-

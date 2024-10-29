@@ -1,4 +1,3 @@
-# $FreeBSD$
 #-
 # SPDX-License-Identifier: BSD-2-Clause
 #
@@ -219,6 +218,9 @@ frag6_07_head() {
 }
 
 frag6_07_body() {
+	if [ "$(atf_config_get ci false)" = "true" ]; then
+		atf_skip "https://bugs.freebsd.org/244170"
+	fi
 	frag6_body 7 frag6_07_check_stats
 }
 

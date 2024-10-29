@@ -3,7 +3,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -36,6 +36,7 @@
 
 #include <sys/param.h>
 #include <sys/conf.h>
+#include <sys/eventhandler.h>
 #include <sys/fcntl.h>
 #include <sys/kbio.h>
 #include <sys/kernel.h>
@@ -190,6 +191,8 @@ vkbd_dev_clone(void *arg, struct ucred *cred, char *name, int namelen,
 		*dev = make_dev_credf(MAKEDEV_REF, &vkbd_dev_cdevsw, unit,
 			cred, UID_ROOT, GID_WHEEL, 0600, DEVICE_NAME "%d",
 			unit);
+	else
+		dev_ref(*dev);
 }
 
 /* Open device */
@@ -342,7 +345,7 @@ done:
 	state->ks_flags &= ~READ;
 
 	VKBD_UNLOCK(state);
-	
+
 	return (error);
 }
 
@@ -647,7 +650,7 @@ vkbd_init(int unit, keyboard_t **kbdp, void *arg, int flags)
 			imin(fkeymap_size*sizeof(fkeymap[0]), sizeof(fkey_tab)));
 		kbd_set_maps(kbd, keymap, accmap, fkeymap, fkeymap_size);
 		kbd->kb_data = (void *)state;
-	
+
 		KBD_FOUND_DEVICE(kbd);
 		KBD_PROBE_DONE(kbd);
 
@@ -1069,7 +1072,7 @@ vkbd_check_char(keyboard_t *kbd)
 		return (FALSE);
 
 	state = (vkbd_state_t *) kbd->kb_data;
-	
+
 	VKBD_LOCK(state);
 	if (!(state->ks_flags & COMPOSE) && (state->ks_composed_char > 0))
 		ready = TRUE;
@@ -1205,6 +1208,7 @@ vkbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 	case OPIO_KEYMAP:	/* set keyboard translation table (compat) */
 	case PIO_KEYMAPENT:	/* set keyboard translation table entry */
 	case PIO_DEADKEYMAP:	/* set accent key translation table */
+	case OPIO_DEADKEYMAP:	/* set accent key translation table (compat) */
 		state->ks_accents = 0;
 		/* FALLTHROUGH */
 
@@ -1375,4 +1379,3 @@ vkbd_modevent(module_t mod, int type, void *data)
 }
 
 DEV_MODULE(vkbd, vkbd_modevent, NULL);
-
