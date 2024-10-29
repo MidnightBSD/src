@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_FB_VGAREG_H_
@@ -90,7 +89,7 @@ int		vga_write(struct cdev *dev, vga_softc_t *sc, struct uio *uio, int flag);
 int		vga_ioctl(struct cdev *dev, vga_softc_t *sc, u_long cmd, caddr_t arg,
 			  int flag, struct thread *td);
 int		vga_mmap(struct cdev *dev, vga_softc_t *sc, vm_ooffset_t offset,
-			 vm_offset_t *paddr, int prot, vm_memattr_t *memattr);
+			 vm_paddr_t *paddr, int prot, vm_memattr_t *memattr);
 #endif
 
 extern int	(*vga_sub_configure)(int flags);

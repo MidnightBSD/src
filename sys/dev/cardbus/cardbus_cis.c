@@ -1,9 +1,9 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2005-2008, M. Warner Losh
- * Copyright (c) 2000,2001 Jonathan Chen.
- * All rights reserved.
+ * Copyright (c) 2000,2001 Jonathan Chen All rights reserved.
+ * Copyright (c) 2005-2008 M. Warner Losh <imp@FreeBSD.org>
+ * 
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * CIS Handling for the Cardbus Bus
  */
@@ -107,7 +106,6 @@ static int	decode_tuple(device_t cbdev, device_t child, int tupleid,
 		    int len, uint8_t *tupledata, uint32_t start,
 		    uint32_t *off, struct tuple_callbacks *callbacks,
 		    void *);
-
 #define	MAKETUPLE(NAME,FUNC) { CISTPL_ ## NAME, #NAME, decode_tuple_ ## FUNC }
 
 static char *funcnames[] = {

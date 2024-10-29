@@ -40,7 +40,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/limits.h>
 
 #ifdef _KERNEL

@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef _DRM_LINUX_LIST_H_
 #define _DRM_LINUX_LIST_H_
 

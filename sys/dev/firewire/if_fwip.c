@@ -98,7 +98,7 @@ static int rx_queue_len = FWMAXQUEUE;
 static MALLOC_DEFINE(M_FWIP, "if_fwip", "IP over FireWire interface");
 SYSCTL_INT(_debug, OID_AUTO, if_fwip_debug, CTLFLAG_RW, &fwipdebug, 0, "");
 SYSCTL_DECL(_hw_firewire);
-static SYSCTL_NODE(_hw_firewire, OID_AUTO, fwip, CTLFLAG_RD, 0,
+static SYSCTL_NODE(_hw_firewire, OID_AUTO, fwip, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
 	"Firewire ip subsystem");
 SYSCTL_INT(_hw_firewire_fwip, OID_AUTO, rx_queue_len, CTLFLAG_RWTUN, &rx_queue_len,
 	0, "Length of the receive queue");
@@ -153,8 +153,6 @@ fwip_attach(device_t dev)
 	fwip = ((struct fwip_softc *)device_get_softc(dev));
 	unit = device_get_unit(dev);
 	ifp = fwip->fw_softc.fwip_ifp = if_alloc(IFT_IEEE1394);
-	if (ifp == NULL)
-		return (ENOSPC);
 
 	mtx_init(&fwip->mtx, "fwip", NULL, MTX_DEF);
 	/* XXX */
@@ -199,7 +197,7 @@ fwip_attach(device_t dev)
 	splx(s);
 
 	FWIPDEBUG(ifp, "interface created\n");
-	return 0;
+	return (0);
 }
 
 static void
@@ -306,13 +304,9 @@ fwip_init(void *arg)
 		xferq->psize = MCLBYTES;
 		xferq->queued = 0;
 		xferq->buf = NULL;
-		xferq->bulkxfer = (struct fw_bulkxfer *) malloc(
+		xferq->bulkxfer = malloc(
 			sizeof(struct fw_bulkxfer) * xferq->bnchunk,
 							M_FWIP, M_WAITOK);
-		if (xferq->bulkxfer == NULL) {
-			printf("if_fwip: malloc failed\n");
-			return;
-		}
 		STAILQ_INIT(&xferq->stvalid);
 		STAILQ_INIT(&xferq->stfree);
 		STAILQ_INIT(&xferq->stdma);
@@ -707,6 +701,7 @@ fwip_start_send (void *arg, int count)
 static void
 fwip_stream_input(struct fw_xferq *xferq)
 {
+	struct epoch_tracker et;
 	struct mbuf *m, *m0;
 	struct m_tag *mtag;
 	struct ifnet *ifp;
@@ -716,10 +711,10 @@ fwip_stream_input(struct fw_xferq *xferq)
 	uint16_t src;
 	uint32_t *p;
 
-
 	fwip = (struct fwip_softc *)xferq->sc;
 	ifp = fwip->fw_softc.fwip_ifp;
 
+	NET_EPOCH_ENTER(et);
 	while ((sxfer = STAILQ_FIRST(&xferq->stvalid)) != NULL) {
 		STAILQ_REMOVE_HEAD(&xferq->stvalid, link);
 		fp = mtod(sxfer->mbuf, struct fw_pkt *);
@@ -808,6 +803,7 @@ fwip_stream_input(struct fw_xferq *xferq)
 		firewire_input(ifp, m, src);
 		if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 	}
+	NET_EPOCH_EXIT(et);
 	if (STAILQ_FIRST(&xferq->stfree) != NULL)
 		fwip->fd.fc->irx_enable(fwip->fd.fc, fwip->dma_ch);
 }
@@ -835,6 +831,7 @@ fwip_unicast_input(struct fw_xfer *xfer)
 	uint64_t address;
 	struct mbuf *m;
 	struct m_tag *mtag;
+	struct epoch_tracker et;
 	struct ifnet *ifp;
 	struct fwip_softc *fwip;
 	struct fw_pkt *fp;
@@ -860,6 +857,7 @@ fwip_unicast_input(struct fw_xfer *xfer)
 	} else {
 		rtcode = FWRCODE_COMPLETE;
 	}
+	NET_EPOCH_ENTER(et);
 
 	/*
 	 * Pick up a new mbuf and stick it on the back of the receive
@@ -873,7 +871,7 @@ fwip_unicast_input(struct fw_xfer *xfer)
 	if (rtcode != FWRCODE_COMPLETE) {
 		m_freem(m);
 		if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
-		return;
+		goto done;
 	}
 
 	if (bpf_peers_present(ifp->if_bpf)) {
@@ -908,6 +906,8 @@ fwip_unicast_input(struct fw_xfer *xfer)
 	m->m_pkthdr.rcvif = ifp;
 	firewire_input(ifp, m, fp->mode.wreqb.src);
 	if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
+done:
+	NET_EPOCH_EXIT(et);
 }
 
 static devclass_t fwip_devclass;

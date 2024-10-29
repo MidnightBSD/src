@@ -24,7 +24,6 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
 
 #ifndef __ECORE_PROTO_IF_H__
@@ -89,7 +88,6 @@ struct ecore_fcoe_pf_params {
 
 /* Most of the the parameters below are described in the FW iSCSI / TCP HSI */
 struct ecore_iscsi_pf_params {
-
 	u64		glbl_q_params_addr;
 	u64		bdq_pbl_base_addr[3];
 	u16		cq_num_entries;
@@ -171,5 +169,3 @@ struct ecore_pf_params {
 };
 
 #endif
-
-

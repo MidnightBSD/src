@@ -29,7 +29,6 @@
  * File : ecore_dev.c
  */
 #include <sys/cdefs.h>
-
 #include "bcm_osal.h"
 #include "reg_addr.h"
 #include "ecore_gtt_reg_addr.h"
@@ -231,7 +230,6 @@ enum _ecore_status_t ecore_db_recovery_del(struct ecore_dev *p_dev,
 				 &p_hwfn->db_recovery_info.list,
 				 list_entry,
 				 struct ecore_db_recovery_entry) {
-
 		/* search according to db_data addr since db_addr is not unique (roce) */
 		if (db_entry->db_data == db_data) {
 			ecore_db_recovery_dp_entry(p_hwfn, db_entry, "Deleting");
@@ -1836,7 +1834,6 @@ static u32 ecore_get_pq_flags(struct ecore_hwfn *p_hwfn)
 
 	return flags;
 }
-
 
 /* Getters for resource amounts necessary for qm initialization */
 u8 ecore_init_qm_get_num_tcs(struct ecore_hwfn *p_hwfn)

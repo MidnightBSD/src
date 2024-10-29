@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 
 #include <ddb/ddb.h>
@@ -89,4 +88,3 @@ db_write_cmd(db_expr_t address, bool have_addr, db_expr_t count,
 
 	db_skip_to_eol();
 }
-

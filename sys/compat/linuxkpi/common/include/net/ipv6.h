@@ -25,16 +25,21 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef _LINUX_NET_IPV6_H_
-#define	_LINUX_NET_IPV6_H_
+#ifndef _LINUXKPI_NET_IPV6_H_
+#define	_LINUXKPI_NET_IPV6_H_
 
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <linux/types.h>
+#include <linux/bitops.h>
 
 #define	IPV6_DEFAULT_HOPLIMIT 64
+
+#define	NEXTHDR_HOP		IPPROTO_HOPOPTS
+#define	NEXTHDR_ROUTING		IPPROTO_ROUTING
+#define	NEXTHDR_NONE		IPPROTO_NONE
+#define	NEXTHDR_DEST		IPPROTO_DSTOPTS
 
 #define	ipv6_addr_loopback(addr) IN6_IS_ADDR_LOOPBACK(addr)
 #define	ipv6_addr_any(addr) IN6_IS_ADDR_UNSPECIFIED(addr)
@@ -109,5 +114,4 @@ static inline int ipv6_addr_cmp(const struct in6_addr *a1, const struct in6_addr
 	return memcmp(a1, a2, sizeof(struct in6_addr));
 }
 
-
-#endif	/* _LINUX_NET_IPV6_H_ */
+#endif	/* _LINUXKPI_NET_IPV6_H_ */

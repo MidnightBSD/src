@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009, Oleksandr Tymoshenko <gonzo@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef __MX25LREG_H__
@@ -41,6 +40,8 @@
 #define CMD_WRITE_STATUS	0x01
 #define CMD_READ		0x03
 #define CMD_FAST_READ		0x0B
+#define CMD_READ_DUAL_IO	0xBB
+#define CMD_READ_QUAD_OUTPUT	0x6B
 #define CMD_PAGE_PROGRAM	0x02
 #define CMD_SECTOR_ERASE	0xD8
 #define CMD_BULK_ERASE		0xC7

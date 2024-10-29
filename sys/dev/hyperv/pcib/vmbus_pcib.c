@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifdef NEW_PCIB
 
 #include <sys/param.h>
@@ -64,6 +63,7 @@
 
 #include <machine/intr_machdep.h>
 #include <x86/apicreg.h>
+#include <x86/apicvar.h>
 
 #include <dev/hyperv/include/hyperv.h>
 #include <dev/hyperv/include/hyperv_busdma.h>
@@ -559,14 +559,14 @@ hv_pci_delete_device(struct hv_pci_dev *hpdev)
 
 	devfn = wslot_to_devfn(hpdev->desc.wslot.val);
 
-	mtx_lock(&Giant);
+	bus_topo_lock();
 
 	pci_dev = pci_find_dbsf(hbus->pci_domain,
 	    0, PCI_SLOT(devfn), PCI_FUNC(devfn));
 	if (pci_dev)
 		device_delete_child(hbus->pci_bus, pci_dev);
 
-	mtx_unlock(&Giant);
+	bus_topo_unlock();
 
 	mtx_lock(&hbus->device_list_lock);
 	TAILQ_REMOVE(&hbus->children, hpdev, link);
@@ -1805,9 +1805,16 @@ vmbus_pcib_map_msi(device_t pcib, device_t child, int irq,
 		}
 	}
 
-	cpu = (v_addr & MSI_INTEL_ADDR_DEST) >> 12;
+	cpu = apic_cpuid((v_addr & MSI_INTEL_ADDR_DEST) >> 12);
 	vcpu_id = VMBUS_GET_VCPU_ID(device_get_parent(pcib), pcib, cpu);
 	vector = v_data & MSI_INTEL_DATA_INTVEC;
+
+	if (vcpu_id > 63) {
+		/* We only support vcpu_id < 64 on current vPCI version*/
+		device_printf(pcib,
+		    "Error: vcpu_id %u overflowed\n", vcpu_id);
+		return (ENODEV);
+	}
 
 	init_completion(&comp.comp_pkt.host_event);
 

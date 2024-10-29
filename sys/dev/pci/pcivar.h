@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 1997, Stefan Esser <se@freebsd.org>
- * All rights reserved.
+ * Copyright 1997, Stefan Esser <se@freebsd.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +30,7 @@
 #define	_PCIVAR_H_
 
 #include <sys/queue.h>
-#include <sys/eventhandler.h>
+#include <sys/_eventhandler.h>
 
 /* some PCI bus constants */
 #define	PCI_MAXMAPS_0	6	/* max. no. of memory/port maps */
@@ -258,6 +257,13 @@ typedef struct {
 extern uint32_t pci_numdevs;
 extern int pci_enable_aspm;
 
+/*
+ * The bitfield has to be stable and match the fields below (so that
+ * match_flag_vendor must be bit 0) so we have to do the endian dance. We can't
+ * use enums or #define constants because then the macros for subsetting matches
+ * wouldn't work. These tables are parsed by devmatch and others to connect
+ * modules with devices on the PCI bus.
+ */
 struct pci_device_table {
 #if BYTE_ORDER == LITTLE_ENDIAN
 	uint16_t
@@ -658,6 +664,7 @@ device_t pci_find_bsf(uint8_t, uint8_t, uint8_t);
 device_t pci_find_dbsf(uint32_t, uint8_t, uint8_t, uint8_t);
 device_t pci_find_device(uint16_t, uint16_t);
 device_t pci_find_class(uint8_t class, uint8_t subclass);
+device_t pci_find_class_from(uint8_t class, uint8_t subclass, device_t devfrom);
 
 /* Can be used by drivers to manage the MSI-X table. */
 int	pci_pending_msix(device_t dev, u_int index);

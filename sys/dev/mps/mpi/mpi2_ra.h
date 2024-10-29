@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2015 LSI Corp.
  * Copyright (c) 2013-2015 Avago Technologies
@@ -27,7 +27,6 @@
  * SUCH DAMAGE.
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
- *
  */
 
 /*
@@ -63,7 +62,6 @@ typedef struct _MPI2_RAID_ACCELERATOR_CONTROL_BLOCK
   Mpi2RAIDAcceleratorControlBlock_t,
   MPI2_POINTER pMpi2RAIDAcceleratorControlBlock_t;
 
-
 /******************************************************************************
 *
 *        RAID Accelerator Messages
@@ -92,7 +90,6 @@ typedef struct _MPI2_RAID_ACCELERATOR_REQUEST
 } MPI2_RAID_ACCELERATOR_REQUEST, MPI2_POINTER PTR_MPI2_RAID_ACCELERATOR_REQUEST,
   Mpi2RAIDAcceleratorRequest_t, MPI2_POINTER pMpi2RAIDAcceleratorRequest_t;
 
-
 /* RAID Accelerator Error Reply Message */
 typedef struct _MPI2_RAID_ACCELERATOR_REPLY
 {
@@ -112,7 +109,4 @@ typedef struct _MPI2_RAID_ACCELERATOR_REPLY
 } MPI2_RAID_ACCELERATOR_REPLY, MPI2_POINTER PTR_MPI2_RAID_ACCELERATOR_REPLY,
   Mpi2RAIDAcceleratorReply_t, MPI2_POINTER pMpi2RAIDAcceleratorReply_t;
 
-
 #endif
-
-

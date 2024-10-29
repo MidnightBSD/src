@@ -27,14 +27,12 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
  * @file
  * Declarations for the interface exported by ocs_fabric
  */
-
 
 #if !defined(__OCS_FABRIC_H__)
 #define __OCS_FABRIC_H__

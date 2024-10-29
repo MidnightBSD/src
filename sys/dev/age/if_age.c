@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008, Pyun YongHyeon <yongari@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +30,6 @@
 /* Driver for Attansic Technology Corp. L1 Gigabit Ethernet. */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -155,7 +154,6 @@ static int sysctl_int_range(SYSCTL_HANDLER_ARGS, int, int);
 static int sysctl_hw_age_proc_limit(SYSCTL_HANDLER_ARGS);
 static int sysctl_hw_age_int_mod(SYSCTL_HANDLER_ARGS);
 
-
 static device_method_t age_methods[] = {
 	/* Device interface. */
 	DEVMETHOD(device_probe,		age_probe),
@@ -169,7 +167,6 @@ static device_method_t age_methods[] = {
 	DEVMETHOD(miibus_readreg,	age_miibus_readreg),
 	DEVMETHOD(miibus_writereg,	age_miibus_writereg),
 	DEVMETHOD(miibus_statchg,	age_miibus_statchg),
-
 	{ NULL, NULL }
 };
 
@@ -565,7 +562,6 @@ age_attach(device_t dev)
 		goto fail;
 	}
 
-
 	/* Get DMA parameters from PCIe device control register. */
 	if (pci_find_cap(dev, PCIY_EXPRESS, &i) == 0) {
 		sc->age_flags |= AGE_FLAG_PCIE;
@@ -597,12 +593,6 @@ age_attach(device_t dev)
 	age_get_macaddr(sc);
 
 	ifp = sc->age_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(dev, "cannot allocate ifnet structure.\n");
-		error = ENXIO;
-		goto fail;
-	}
-
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
@@ -642,12 +632,6 @@ age_attach(device_t dev)
 	/* Create local taskq. */
 	sc->age_tq = taskqueue_create_fast("age_taskq", M_WAITOK,
 	    taskqueue_thread_enqueue, &sc->age_tq);
-	if (sc->age_tq == NULL) {
-		device_printf(dev, "could not create taskqueue.\n");
-		ether_ifdetach(ifp);
-		error = ENXIO;
-		goto fail;
-	}
 	taskqueue_start_threads(&sc->age_tq, 1, PI_NET, "%s taskq",
 	    device_get_nameunit(sc->age_dev));
 
@@ -748,13 +732,14 @@ age_sysctl_node(struct age_softc *sc)
 
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(sc->age_dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(sc->age_dev)), OID_AUTO,
-	    "stats", CTLTYPE_INT | CTLFLAG_RW, sc, 0, sysctl_age_stats,
-	    "I", "Statistics");
+	    "stats", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+	    sc, 0, sysctl_age_stats, "I", "Statistics");
 
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(sc->age_dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(sc->age_dev)), OID_AUTO,
-	    "int_mod", CTLTYPE_INT | CTLFLAG_RW, &sc->age_int_mod, 0,
-	    sysctl_hw_age_int_mod, "I", "age interrupt moderation");
+	    "int_mod", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+	    &sc->age_int_mod, 0, sysctl_hw_age_int_mod, "I",
+	    "age interrupt moderation");
 
 	/* Pull in device tunables. */
 	sc->age_int_mod = AGE_IM_TIMER_DEFAULT;
@@ -772,8 +757,8 @@ age_sysctl_node(struct age_softc *sc)
 
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(sc->age_dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(sc->age_dev)), OID_AUTO,
-	    "process_limit", CTLTYPE_INT | CTLFLAG_RW, &sc->age_process_limit,
-	    0, sysctl_hw_age_proc_limit, "I",
+	    "process_limit", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+	    &sc->age_process_limit, 0, sysctl_hw_age_proc_limit, "I",
 	    "max number of Rx events to process");
 
 	/* Pull in device tunables. */
@@ -3139,12 +3124,22 @@ age_rxvlan(struct age_softc *sc)
 	CSR_WRITE_4(sc, AGE_MAC_CFG, reg);
 }
 
+static u_int
+age_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint32_t *mchash = arg;
+	uint32_t crc;
+
+	crc = ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN);
+	mchash[crc >> 31] |= 1 << ((crc >> 26) & 0x1f);
+
+	return (1);
+}
+
 static void
 age_rxfilter(struct age_softc *sc)
 {
 	struct ifnet *ifp;
-	struct ifmultiaddr *ifma;
-	uint32_t crc;
 	uint32_t mchash[2];
 	uint32_t rxcfg;
 
@@ -3169,16 +3164,7 @@ age_rxfilter(struct age_softc *sc)
 
 	/* Program new filter. */
 	bzero(mchash, sizeof(mchash));
-
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &sc->age_ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		crc = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-		    ifma->ifma_addr), ETHER_ADDR_LEN);
-		mchash[crc >> 31] |= 1 << ((crc >> 26) & 0x1f);
-	}
-	if_maddr_runlock(ifp);
+	if_foreach_llmaddr(ifp, age_hash_maddr, mchash);
 
 	CSR_WRITE_4(sc, AGE_MAR0, mchash[0]);
 	CSR_WRITE_4(sc, AGE_MAR1, mchash[1]);

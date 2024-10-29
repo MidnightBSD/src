@@ -1,7 +1,7 @@
 /*	$NetBSD: mii.c,v 1.12 1999/08/03 19:41:49 drochner Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * MII bus layer, glues MII-capable network interface drivers to sharable
  * PHY drivers.  This exports an interface compatible with BSD/OS 3.0's,
@@ -58,7 +57,6 @@ MODULE_VERSION(miibus, 1);
 
 #include "miibus_if.h"
 
-static device_attach_t miibus_attach;
 static bus_child_detached_t miibus_child_detached;
 static bus_child_location_str_t miibus_child_location_str;
 static bus_child_pnpinfo_str_t miibus_child_pnpinfo_str;
@@ -101,12 +99,7 @@ static device_method_t miibus_methods[] = {
 };
 
 devclass_t miibus_devclass;
-
-driver_t miibus_driver = {
-	"miibus",
-	miibus_methods,
-	sizeof(struct mii_data)
-};
+DEFINE_CLASS_0(miibus, miibus_driver, miibus_methods, sizeof(struct mii_data));
 
 struct miibus_ivars {
 	if_t		ifp;
@@ -125,7 +118,7 @@ miibus_probe(device_t dev)
 	return (BUS_PROBE_SPECIFIC);
 }
 
-static int
+int
 miibus_attach(device_t dev)
 {
 	struct miibus_ivars	*ivars;

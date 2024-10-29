@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Luiz Otavio O Souza.
  * Copyright (c) 2011-2012 Stefan Bethke.
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -125,12 +124,6 @@ ukswitch_attach_phys(struct ukswitch_softc *sc)
 		sc->ifpport[phy] = port;
 		sc->portphy[port] = phy;
 		sc->ifp[port] = if_alloc(IFT_ETHER);
-		if (sc->ifp[port] == NULL) {
-			device_printf(sc->sc_dev, "couldn't allocate ifnet structure\n");
-			err = ENOMEM;
-			break;
-		}
-
 		sc->ifp[port]->if_softc = sc;
 		sc->ifp[port]->if_flags |= IFF_UP | IFF_BROADCAST |
 		    IFF_DRV_RUNNING | IFF_SIMPLEX;
@@ -515,7 +508,7 @@ ukswitch_writephy(device_t dev, int phy, int reg, int data)
 static int
 ukswitch_readreg(device_t dev, int addr)
 {
-	struct ukswitch_softc *sc;
+	struct ukswitch_softc *sc __diagused;
 
 	sc = device_get_softc(dev);
 	UKSWITCH_LOCK_ASSERT(sc, MA_OWNED);
@@ -527,7 +520,7 @@ ukswitch_readreg(device_t dev, int addr)
 static int
 ukswitch_writereg(device_t dev, int addr, int value)
 {
-	struct ukswitch_softc *sc;
+	struct ukswitch_softc *sc __diagused;
 
 	sc = device_get_softc(dev);
 	UKSWITCH_LOCK_ASSERT(sc, MA_OWNED);

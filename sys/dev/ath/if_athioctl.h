@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -27,7 +27,6 @@
  * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
- *
  */
 
 /*
@@ -47,10 +46,14 @@ struct ath_tx_aggr_stats {
 	u_int32_t	aggr_rts_aggr_limited;
 };
 
+#define	ATH_IOCTL_INTR_NUM_SYNC_INTR		32
 struct ath_intr_stats {
-	u_int32_t	sync_intr[32];
+	u_int32_t	sync_intr[ATH_IOCTL_INTR_NUM_SYNC_INTR];
 };
 
+#define	ATH_IOCTL_STATS_NUM_RX_PHYERR		64
+#define	ATH_IOCTL_STATS_NUM_TX_ANTENNA		8
+#define	ATH_IOCTL_STATS_NUM_RX_ANTENNA		8
 struct ath_stats {
 	u_int32_t	ast_watchdog;	/* device reset by watchdog */
 	u_int32_t	ast_hardware;	/* fatal hardware error interrupts */
@@ -95,7 +98,8 @@ struct ath_stats {
 	u_int32_t	ast_rx_badcrypt;/* rx failed 'cuz decryption */
 	u_int32_t	ast_rx_badmic;	/* rx failed 'cuz MIC failure */
 	u_int32_t	ast_rx_phyerr;	/* rx failed 'cuz of PHY err */
-	u_int32_t	ast_rx_phy[64];	/* rx PHY error per-code counts */
+	u_int32_t	ast_rx_phy[ATH_IOCTL_STATS_NUM_RX_PHYERR];
+					/* rx PHY error per-code counts */
 	u_int32_t	ast_rx_tooshort;/* rx discarded 'cuz frame too short */
 	u_int32_t	ast_rx_toobig;	/* rx discarded 'cuz frame too large */
 	u_int32_t	ast_rx_packets;	/* packet recv on the interface */
@@ -114,8 +118,10 @@ struct ath_stats {
 	u_int32_t	ast_rate_drop;	/* rate control dropped xmit rate */
 	u_int32_t	ast_ant_defswitch;/* rx/default antenna switches */
 	u_int32_t	ast_ant_txswitch;/* tx antenna switches */
-	u_int32_t	ast_ant_rx[8];	/* rx frames with antenna */
-	u_int32_t	ast_ant_tx[8];	/* tx frames with antenna */
+	u_int32_t	ast_ant_rx[ATH_IOCTL_STATS_NUM_RX_ANTENNA];
+					/* rx frames with antenna */
+	u_int32_t	ast_ant_tx[ATH_IOCTL_STATS_NUM_TX_ANTENNA];
+					/* tx frames with antenna */
 	u_int32_t	ast_cabq_xmit;	/* cabq frames transmitted */
 	u_int32_t	ast_cabq_busy;	/* cabq found busy */
 	u_int32_t	ast_tx_raw;	/* tx frames through raw api */

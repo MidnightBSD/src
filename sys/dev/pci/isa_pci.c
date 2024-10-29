@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * PCI:ISA bridge support
  */
@@ -144,7 +143,7 @@ isab_pci_probe(device_t dev)
 		       pci_get_subclass(dev));
 	    matched = 1;
 	    break;
-	
+
 	default:
 	    break;
 	}

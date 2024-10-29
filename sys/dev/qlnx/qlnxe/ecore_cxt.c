@@ -29,7 +29,6 @@
  * File : ecore_cxt.c
  */
 #include <sys/cdefs.h>
-
 #include "bcm_osal.h"
 #include "reg_addr.h"
 #include "common_hsi.h"
@@ -1061,7 +1060,6 @@ t2_fail:
 			continue;		\
 		} else				\
 
-
 /* Total number of ILT lines used by this PF */
 static u32 ecore_cxt_ilt_shadow_size(struct ecore_ilt_client_cfg *ilt_clients)
 {
@@ -1589,7 +1587,6 @@ static void ecore_cdu_init_pf(struct ecore_hwfn *p_hwfn)
 		SET_FIELD(cdu_seg_params, CDU_SEG_REG_OFFSET, offset);
 		STORE_RT_REG(p_hwfn, rt_type_offset_fl_arr[i],
 			     cdu_seg_params);
-
 	}
 }
 

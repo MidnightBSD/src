@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011-2013 Qlogic Corporation
  * All rights reserved.
@@ -25,7 +25,6 @@
  *  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /*
@@ -140,7 +139,7 @@ struct qla_host {
 	int			msix_count;
 	void			*intr_handle;
 	qla_ivec_t		irq_vec[Q8_MSI_COUNT];
-	
+
 	/* parent dma tag */
 	bus_dma_tag_t           parent_tag;
 

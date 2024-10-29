@@ -53,7 +53,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /**
  * @file
  *

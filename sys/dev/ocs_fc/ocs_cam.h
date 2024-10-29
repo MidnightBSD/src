@@ -27,7 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef __OCS_CAM_H__
@@ -40,7 +39,6 @@
 #include <cam/cam_xpt_sim.h>
 
 #include <cam/scsi/scsi_message.h>
-
 
 #define ccb_ocs_ptr     spriv_ptr0
 #define ccb_io_ptr      spriv_ptr1
@@ -118,4 +116,3 @@ extern int32_t ocs_cam_attach(ocs_t *ocs);
 extern int32_t ocs_cam_detach(ocs_t *ocs);
 
 #endif /* __OCS_CAM_H__ */
-

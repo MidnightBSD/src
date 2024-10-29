@@ -1,7 +1,7 @@
 /*	$NetBSD: lance.c,v 1.34 2005/12/24 20:27:30 perry Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997, 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -67,7 +67,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/endian.h>
@@ -113,8 +112,6 @@ lance_config(struct lance_softc *sc, const char* name, int unit)
 		return (ENXIO);
 
 	ifp = sc->sc_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL)
-		return (ENOSPC);
 
 	callout_init_mtx(&sc->sc_wdog_ch, &sc->sc_mtx, 0);
 
@@ -201,6 +198,8 @@ lance_attach(struct lance_softc *sc)
 	ifp->if_hdrlen = sizeof(struct ether_vlan_header);
 	ifp->if_capabilities |= IFCAP_VLAN_MTU;
 	ifp->if_capenable |= IFCAP_VLAN_MTU;
+
+	gone_in(15, "le: 10/100 NIC no longer needed for Qemu/MIPS");
 }
 
 void
@@ -576,6 +575,27 @@ lance_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	return (error);
 }
 
+struct lance_hash_maddr_ctx {
+	struct lance_softc *sc;
+	uint16_t *af;
+};
+
+static u_int
+lance_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	struct lance_hash_maddr_ctx *ctx = arg;
+	struct lance_softc *sc = ctx->sc;
+	uint32_t crc;
+
+	crc = ether_crc32_le(LLADDR(sdl), ETHER_ADDR_LEN);
+	/* Just want the 6 most significant bits. */
+	crc >>= 26;
+	/* Set the corresponding bit in the filter. */
+	ctx->af[crc >> 4] |= LE_HTOLE16(1 << (crc & 0xf));
+
+	return (1);
+}
+
 /*
  * Set up the logical address filter.
  */
@@ -583,8 +603,7 @@ void
 lance_setladrf(struct lance_softc *sc, uint16_t *af)
 {
 	struct ifnet *ifp = sc->sc_ifp;
-	struct ifmultiaddr *ifma;
-	uint32_t crc;
+	struct lance_hash_maddr_ctx ctx = { sc, af };
 
 	/*
 	 * Set up multicast address filter by passing all multicast addresses
@@ -600,21 +619,7 @@ lance_setladrf(struct lance_softc *sc, uint16_t *af)
 	}
 
 	af[0] = af[1] = af[2] = af[3] = 0x0000;
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-
-		crc = ether_crc32_le(LLADDR((struct sockaddr_dl *)
-		    ifma->ifma_addr), ETHER_ADDR_LEN);
-
-		/* Just want the 6 most significant bits. */
-		crc >>= 26;
-
-		/* Set the corresponding bit in the filter. */
-		af[crc >> 4] |= LE_HTOLE16(1 << (crc & 0xf));
-	}
-	if_maddr_runlock(ifp);
+	if_foreach_llmaddr(ifp, lance_hash_maddr, &ctx);
 }
 
 /*

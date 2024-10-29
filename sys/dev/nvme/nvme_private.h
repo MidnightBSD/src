@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2012-2014 Intel Corporation
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef __NVME_PRIVATE_H__
@@ -86,6 +85,7 @@ MALLOC_DECLARE(M_NVME);
 #define NVME_MAX_CONSUMERS	(2)
 #define NVME_MAX_ASYNC_EVENTS	(8)
 
+#define NVME_ADMIN_TIMEOUT_PERIOD	(60)    /* in seconds */
 #define NVME_DEFAULT_TIMEOUT_PERIOD	(30)    /* in seconds */
 #define NVME_MIN_TIMEOUT_PERIOD		(5)
 #define NVME_MAX_TIMEOUT_PERIOD		(120)
@@ -109,7 +109,6 @@ extern int32_t		nvme_retry_count;
 extern bool		nvme_verbose_cmd_dump;
 
 struct nvme_completion_poll_status {
-
 	struct nvme_completion	cpl;
 	int			done;
 };
@@ -123,7 +122,6 @@ extern devclass_t nvme_devclass;
 #define NVME_REQUEST_CCB        5
 
 struct nvme_request {
-
 	struct nvme_command		cmd;
 	struct nvme_qpair		*qpair;
 	union {
@@ -140,7 +138,6 @@ struct nvme_request {
 };
 
 struct nvme_async_event_request {
-
 	struct nvme_controller		*ctrlr;
 	struct nvme_request		*req;
 	struct nvme_completion		cpl;
@@ -150,11 +147,10 @@ struct nvme_async_event_request {
 };
 
 struct nvme_tracker {
-
 	TAILQ_ENTRY(nvme_tracker)	tailq;
 	struct nvme_request		*req;
 	struct nvme_qpair		*qpair;
-	struct callout			timer;
+	sbintime_t			deadline;
 	bus_dmamap_t			payload_dma_map;
 	uint16_t			cid;
 
@@ -162,8 +158,13 @@ struct nvme_tracker {
 	bus_addr_t			prp_bus_addr;
 };
 
+enum nvme_recovery {
+	RECOVERY_NONE = 0,		/* Normal operations */
+	RECOVERY_START,			/* Deadline has passed, start recovering */
+	RECOVERY_RESET,			/* This pass, initiate reset of controller */
+	RECOVERY_WAITING,		/* waiting for the reset to complete */
+};
 struct nvme_qpair {
-
 	struct nvme_controller	*ctrlr;
 	uint32_t		id;
 	int			domain;
@@ -173,6 +174,11 @@ struct nvme_qpair {
 	int			rid;
 	struct resource		*res;
 	void 			*tag;
+
+	struct callout		timer;
+	sbintime_t		deadline;
+	bool			timer_armed;
+	enum nvme_recovery	recovery_state;
 
 	uint32_t		num_entries;
 	uint32_t		num_trackers;
@@ -188,6 +194,7 @@ struct nvme_qpair {
 	int64_t			num_intr_handler_calls;
 	int64_t			num_retries;
 	int64_t			num_failures;
+	int64_t			num_ignored;
 
 	struct nvme_command	*cmd;
 	struct nvme_completion	*cpl;
@@ -205,14 +212,11 @@ struct nvme_qpair {
 
 	struct nvme_tracker	**act_tr;
 
-	bool			is_enabled;
-
 	struct mtx		lock __aligned(CACHE_LINE_SIZE);
 
 } __aligned(CACHE_LINE_SIZE);
 
 struct nvme_namespace {
-
 	struct nvme_controller		*ctrlr;
 	struct nvme_namespace_data	data;
 	uint32_t			id;
@@ -227,7 +231,6 @@ struct nvme_namespace {
  * One of these per allocated PCI device.
  */
 struct nvme_controller {
-
 	device_t		dev;
 
 	struct mtx		lock;
@@ -236,6 +239,8 @@ struct nvme_controller {
 	uint32_t		quirks;
 #define	QUIRK_DELAY_B4_CHK_RDY	1		/* Can't touch MMIO on disable */
 #define	QUIRK_DISABLE_TIMEOUT	2		/* Disable broken completion timeout feature */
+#define	QUIRK_INTEL_ALIGNMENT	4		/* Pre NVMe 1.3 performance alignment */
+#define QUIRK_AHCI		8		/* Attached via AHCI redirect */
 
 	bus_space_tag_t		bus_tag;
 	bus_space_handle_t	bus_handle;
@@ -283,6 +288,7 @@ struct nvme_controller {
 	uint32_t		int_coal_threshold;
 
 	/** timeout period in seconds */
+	uint32_t		admin_timeout_period;
 	uint32_t		timeout_period;
 
 	/** doorbell stride */
@@ -311,6 +317,7 @@ struct nvme_controller {
 	uint32_t			notification_sent;
 
 	bool				is_failed;
+	bool				is_dying;
 	STAILQ_HEAD(, nvme_request)	fail_req;
 
 	/* Host Memory Buffer */
@@ -450,25 +457,32 @@ int	nvme_shutdown(device_t dev);
 int	nvme_detach(device_t dev);
 
 /*
- * Wait for a command to complete using the nvme_completion_poll_cb.
- * Used in limited contexts where the caller knows it's OK to block
- * briefly while the command runs. The ISR will run the callback which
- * will set status->done to true, usually within microseconds. If not,
- * then after one second timeout handler should reset the controller
- * and abort all outstanding requests including this polled one. If
- * still not after ten seconds, then something is wrong with the driver,
- * and panic is the only way to recover.
+ * Wait for a command to complete using the nvme_completion_poll_cb.  Used in
+ * limited contexts where the caller knows it's OK to block briefly while the
+ * command runs. The ISR will run the callback which will set status->done to
+ * true, usually within microseconds. If not, then after one second timeout
+ * handler should reset the controller and abort all outstanding requests
+ * including this polled one. If still not after ten seconds, then something is
+ * wrong with the driver, and panic is the only way to recover.
+ *
+ * Most commands using this interface aren't actual I/O to the drive's media so
+ * complete within a few microseconds. Adaptively spin for one tick to catch the
+ * vast majority of these without waiting for a tick plus scheduling delays. Since
+ * these are on startup, this drastically reduces startup time.
  */
 static __inline
 void
 nvme_completion_poll(struct nvme_completion_poll_status *status)
 {
-	int sanity = hz * 10;
+	int timeout = ticks + 10 * hz;
+	sbintime_t delta_t = SBT_1US;
 
-	while (!atomic_load_acq_int(&status->done) && --sanity > 0)
-		pause("nvme", 1);
-	if (sanity <= 0)
-		panic("NVME polled command failed to complete within 10s.");
+	while (!atomic_load_acq_int(&status->done)) {
+		if (timeout - ticks < 0)
+			panic("NVME polled command failed to complete within 10s.");
+		pause_sbt("nvme", delta_t, 0, C_PREL(1));
+		delta_t = min(SBT_1MS, delta_t * 3 / 2);
+	}
 }
 
 static __inline void

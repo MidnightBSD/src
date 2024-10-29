@@ -21,12 +21,14 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
+
+#include "opt_rss.h"
+#include "opt_ratelimit.h"
 
 #include <dev/mlx5/driver.h>
 #include <linux/module.h>
-#include "mlx5_core.h"
+#include <dev/mlx5/mlx5_core/mlx5_core.h>
 
 static int mlx5_cmd_query_adapter(struct mlx5_core_dev *dev, u32 *out,
 				  int outlen)
@@ -222,6 +224,12 @@ int mlx5_query_hca_caps(struct mlx5_core_dev *dev)
 
 	if (MLX5_CAP_GEN(dev, pcam_reg)) {
 		err = mlx5_get_pcam_reg(dev);
+		if (err)
+			return err;
+	}
+
+	if (MLX5_CAP_GEN(dev, tls_tx)) {
+		err = mlx5_core_get_caps(dev, MLX5_CAP_TLS);
 		if (err)
 			return err;
 	}

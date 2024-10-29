@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Bjoern A. Zeeb
  * All rights reserved.
@@ -28,7 +28,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_IF_ATSEREG_H
@@ -116,7 +115,6 @@ static char *fifo_memory_block[] = {
 #define	PCS_TXRX_EXP_POWER_DOWN_SIGNAL	0	/* Export power down signal. */
 #define	PCS_TXRX_ENABLE_DYNAMIC_RECONF	0	/* Dynamic trans. reconfig. */
 #define	PCS_TXRX_STARTING_CHANNEL	0	/* 0..284. */
-
 
 /* -------------------------------------------------------------------------- */
 
@@ -396,7 +394,6 @@ static char *fifo_memory_block[] = {
 /* 0xC8 - 0xCF, Reserved; set to zero, ignore on read. */
 /* 0xD7 - 0xFF, Reserved; set to zero, ignore on read. */
 
-
 /* -------------------------------------------------------------------------- */
 
 /* DE4 Intel Strata Flash Ethernet Option Bits area. */
@@ -455,7 +452,6 @@ struct atse_softc {
 	struct buf_ring		*br;
 	struct mtx		br_mtx;
 };
-
 
 int	atse_attach(device_t);
 int	atse_detach_dev(device_t);

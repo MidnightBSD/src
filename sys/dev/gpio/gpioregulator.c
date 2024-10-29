@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2016 Jared McNeill <jmcneill@invisible.ca>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,7 +21,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -30,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -246,7 +243,7 @@ gpioregulator_parse_fdt(struct gpioregulator_softc *sc)
 	/* "gpios" property */
 	sc->init_def.npins = 32 - __builtin_clz(mask);
 	sc->init_def.pins = malloc(sc->init_def.npins *
-	    sizeof(sc->init_def.pins), M_DEVBUF, M_WAITOK);
+	    sizeof(sc->init_def.pins), M_DEVBUF, M_WAITOK | M_ZERO);
 	for (n = 0; n < sc->init_def.npins; n++) {
 		error = gpio_pin_get_by_ofw_idx(sc->dev, node, n,
 		    &sc->init_def.pins[n]);

@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _NTB_H_
@@ -282,7 +281,7 @@ int ntb_mw_set_wc(device_t ntb, unsigned mw_idx, vm_memattr_t mode);
 uint8_t ntb_spad_count(device_t ntb);
 
 /*
- * ntb_get_max_spads() - zero local scratch registers
+ * ntb_spad_clear() - zero local scratch registers
  * @ntb: pointer to ntb_softc instance
  *
  * This functions overwrites all local scratchpad registers with zeroes.

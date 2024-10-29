@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
@@ -25,7 +25,6 @@
  *  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
- *
  */
 /*
  * File: ql_tmplt.h
@@ -33,7 +32,6 @@
  */
 #ifndef _QL_TMPLT_H_
 #define _QL_TMPLT_H_
-
 
 typedef struct _q8_tmplt_hdr {
 	uint16_t	version;
@@ -45,7 +43,6 @@ typedef struct _q8_tmplt_hdr {
 	uint16_t	init_seq_off;
 	uint16_t	start_seq_off;
 } __packed q8_tmplt_hdr_t;
-
 
 typedef struct _q8_ce_hdr {
 	uint16_t	opcode;

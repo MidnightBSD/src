@@ -25,9 +25,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 #include <sys/cdefs.h>
-
 #include "bcm_osal.h"
 #include "ecore.h"
 #include "ecore_hsi_eth.h"
@@ -580,7 +578,6 @@ enum _ecore_status_t ecore_vf_hw_prepare(struct ecore_hwfn *p_hwfn)
 						(u8 *)p_hwfn->p_dev->doorbells;
 		}
 #endif
-
 	}
 
 	/* Allocate vf2pf msg */

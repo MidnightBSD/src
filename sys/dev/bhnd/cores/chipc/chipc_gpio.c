@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Landon Fuller under sponsorship from
  * the FreeBSD Foundation.
@@ -27,11 +26,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>
@@ -72,7 +69,6 @@ static int			chipc_gpio_commit_update(
 static chipc_gpio_pin_mode	chipc_gpio_pin_get_mode(
 				    struct chipc_gpio_softc *sc,
 				    uint32_t pin_num);
-
 
 /* Debugging flags */
 static u_long chipc_gpio_debug = 0;
@@ -428,7 +424,7 @@ chipc_gpio_pin_getname(device_t dev, uint32_t pin_num, char *name)
 
 	if (ret >= GPIOMAXNAME)
 		return (ENOMEM);
-	
+
 	return (0);
 }
 
@@ -438,7 +434,7 @@ chipc_gpio_pin_setflags(device_t dev, uint32_t pin_num, uint32_t flags)
 	struct chipc_gpio_softc		*sc;
 	struct chipc_gpio_update	 upd;
 	int				 error;
-	
+
 	sc = device_get_softc(dev);
 
 	if (!CC_GPIO_VALID_PIN(pin_num))
@@ -546,7 +542,7 @@ chipc_gpio_pin_config_32(device_t dev, uint32_t first_pin, uint32_t num_pins,
 	struct chipc_gpio_softc		*sc;
 	struct chipc_gpio_update	 upd;
 	int				 error;
-	
+
 	sc = device_get_softc(dev);
 
 	if (!CC_GPIO_VALID_PINS(first_pin, num_pins))
@@ -577,7 +573,6 @@ chipc_gpio_pin_config_32(device_t dev, uint32_t first_pin, uint32_t num_pins,
 
 	return (error);
 }
-
 
 /**
  * Commit a single @p reg register update.
@@ -740,7 +735,7 @@ chipc_gpio_check_flags(struct chipc_gpio_softc *sc, uint32_t pin_num,
 			/* Check for unhandled flags */
 			if ((flags & ~(mode_flag | output_flag)) != 0)
 				return (EINVAL);
-	
+
 			*mode = CC_GPIO_PIN_OUTPUT;
 			return (0);
 

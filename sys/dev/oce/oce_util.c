@@ -59,7 +59,6 @@ oce_dma_alloc(POCE_SOFTC sc, bus_size_t size, POCE_DMA_MEM dma, int flags)
 {
 	int rc;
 
-
 	memset(dma, 0, sizeof(OCE_DMA_MEM));
 
 	rc = bus_dma_tag_create(bus_get_dma_tag(sc->dev),
@@ -120,11 +119,9 @@ oce_dma_free(POCE_SOFTC sc, POCE_DMA_MEM dma)
 
 	bus_dma_tag_destroy(dma->tag);
 	dma->tag = NULL;
-	
+
 	return;
 }
-
-
 
 /**
  * @brief		Map DMA memory segment addresses
@@ -144,8 +141,6 @@ oce_dma_map_addr(void *arg, bus_dma_segment_t * segs, int nseg, int error)
 		*paddr = segs->ds_addr;
 }
 
-
-
 /**
  * @brief		Destroy a ring buffer
  * @param sc		software handle to the device
@@ -159,8 +154,6 @@ oce_destroy_ring_buffer(POCE_SOFTC sc, oce_ring_buffer_t *ring)
 	free(ring, M_DEVBUF);
 }
 
-
-
 oce_ring_buffer_t *
 oce_create_ring_buffer(POCE_SOFTC sc,
 		uint32_t q_len, uint32_t item_size)
@@ -168,7 +161,6 @@ oce_create_ring_buffer(POCE_SOFTC sc,
 	uint32_t size = q_len * item_size;
 	int rc;
 	oce_ring_buffer_t *ring;
-
 
 	ring = malloc(sizeof(oce_ring_buffer_t), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (ring == NULL) 
@@ -186,7 +178,6 @@ oce_create_ring_buffer(POCE_SOFTC sc,
 	if (rc)
 		goto fail;
 
-
 	rc = bus_dmamem_alloc(ring->dma.tag,
 				&ring->dma.ptr,
 				BUS_DMA_NOWAIT | BUS_DMA_COHERENT,
@@ -198,9 +189,9 @@ oce_create_ring_buffer(POCE_SOFTC sc,
 	bus_dmamap_sync(ring->dma.tag, ring->dma.map,
 			BUS_DMASYNC_PREREAD | BUS_DMASYNC_PREWRITE);
 	ring->dma.paddr = 0;
-	
+
 	return ring;
-	
+
 fail:
 	oce_dma_free(sc, &ring->dma);
 	free(ring, M_DEVBUF);
@@ -208,15 +199,11 @@ fail:
 	return NULL;
 }
 
-
-
 struct _oce_dmamap_paddr_table {
 	uint32_t max_entries;
 	uint32_t num_entries;
 	struct phys_addr *paddrs;
 };
-
-
 
 /**
  * @brief		Map ring buffer
@@ -242,8 +229,6 @@ oce_dma_map_ring(void *arg, bus_dma_segment_t * segs, int nseg, int error)
 		}
 	}
 }
-
-
 
 /**
  * @brief		Load bus dma map for a ring buffer

@@ -50,7 +50,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 #ifndef _SCI_CONTROLLER_CONSTANTS_H_
 #define _SCI_CONTROLLER_CONSTANTS_H_
@@ -156,7 +155,7 @@ extern "C" {
  * posted to hardware always contain pairs of elements (with second
  * element set to zeroes if not needed).
  */
-#define __MAXPHYS_ELEMENTS ((MAXPHYS / PAGE_SIZE) + 1)
+#define __MAXPHYS_ELEMENTS ((maxphys / PAGE_SIZE) + 1)
 #define SCI_MAX_SCATTER_GATHER_ELEMENTS  ((__MAXPHYS_ELEMENTS + 1) & ~0x1)
 #endif
 

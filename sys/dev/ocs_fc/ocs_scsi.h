@@ -27,7 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
@@ -42,7 +41,6 @@
 #include "ocs_ddump.h"
 #include "ocs_mgmt.h"
 #include "ocs_utils.h"
-
 
 /* ocs_scsi_rcv_cmd() ocs_scsi_rcv_tmf() flags */
 #define OCS_SCSI_CMD_DIR_IN		(1U << 0)
@@ -130,8 +128,6 @@ typedef enum {
 #define SCSI_STATUS_TASK_SET_FULL			0x28
 #define SCSI_STATUS_ACA_ACTIVE				0x30
 #define SCSI_STATUS_TASK_ABORTED			0x40
-
-
 
 /* Callback used by send_rd_data(), recv_wr_data(), send_resp() */
 typedef int32_t (*ocs_scsi_io_cb_t)(ocs_io_t *io, ocs_scsi_io_status_e status, uint32_t flags,
@@ -233,7 +229,6 @@ typedef struct ocs_scsi_sgl_s {
 	size_t		len;			/**< length */
 } ocs_scsi_sgl_t;
 
-
 /**
  * @brief T10 DIF information passed to the transport
  */
@@ -304,7 +299,6 @@ extern int32_t ocs_scsi_recv_tmf(ocs_io_t *tmfio, uint64_t lun, ocs_scsi_tmf_cmd
 	uint32_t flags);
 extern ocs_sport_t *ocs_sport_get_instance(ocs_domain_t *domain, uint32_t index);
 extern ocs_domain_t *ocs_domain_get_instance(ocs_t *ocs, uint32_t index);
-
 
 /* Calls from target-server to base driver */
 
@@ -397,7 +391,6 @@ extern int32_t ocs_scsi_dif_set_blocksize(ocs_scsi_dif_info_t *dif_info, uint32_
 extern int32_t ocs_scsi_dif_mem_blocksize(ocs_scsi_dif_info_t *dif_info, int wiretomem);
 extern int32_t ocs_scsi_dif_wire_blocksize(ocs_scsi_dif_info_t *dif_info, int wiretomem);
 
-
 uint32_t ocs_get_crn(ocs_node_t *node, uint8_t *crn, uint64_t lun);
 void ocs_del_crn(ocs_node_t *node);
 void ocs_reset_crn(ocs_node_t *node, uint64_t lun);
@@ -435,7 +428,6 @@ ocs_scsi_notify_sport_force_free(ocs_sport_t *sport)
 	/* Nothing to do */
 	return;
 }
-
 
 /**
  * @brief Notification from base driver that node is in force-free path.

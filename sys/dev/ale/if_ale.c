@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008, Pyun YongHyeon <yongari@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +30,6 @@
 /* Driver for Atheros AR8121/AR8113/AR8114 PCIe Ethernet. */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -466,7 +465,7 @@ ale_attach(device_t dev)
 	mtx_init(&sc->ale_mtx, device_get_nameunit(dev), MTX_NETWORK_LOCK,
 	    MTX_DEF);
 	callout_init_mtx(&sc->ale_tick_ch, &sc->ale_mtx, 0);
-	TASK_INIT(&sc->ale_int_task, 0, ale_int_task, sc);
+	NET_TASK_INIT(&sc->ale_int_task, 0, ale_int_task, sc);
 
 	/* Map the device. */
 	pci_enable_busmaster(dev);
@@ -613,12 +612,6 @@ ale_attach(device_t dev)
 	ale_get_macaddr(sc);
 
 	ifp = sc->ale_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(dev, "cannot allocate ifnet structure.\n");
-		error = ENXIO;
-		goto fail;
-	}
-
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
@@ -666,12 +659,6 @@ ale_attach(device_t dev)
 	/* Create local taskq. */
 	sc->ale_tq = taskqueue_create_fast("ale_taskq", M_WAITOK,
 	    taskqueue_thread_enqueue, &sc->ale_tq);
-	if (sc->ale_tq == NULL) {
-		device_printf(dev, "could not create taskqueue.\n");
-		ether_ifdetach(ifp);
-		error = ENXIO;
-		goto fail;
-	}
 	taskqueue_start_threads(&sc->ale_tq, 1, PI_NET, "%s taskq",
 	    device_get_nameunit(sc->ale_dev));
 
@@ -766,16 +753,8 @@ ale_detach(device_t dev)
 #define	ALE_SYSCTL_STAT_ADD32(c, h, n, p, d)	\
 	    SYSCTL_ADD_UINT(c, h, OID_AUTO, n, CTLFLAG_RD, p, 0, d)
 
-#if __FreeBSD_version >= 900030
 #define	ALE_SYSCTL_STAT_ADD64(c, h, n, p, d)	\
 	    SYSCTL_ADD_UQUAD(c, h, OID_AUTO, n, CTLFLAG_RD, p, d)
-#elif __FreeBSD_version > 800000
-#define	ALE_SYSCTL_STAT_ADD64(c, h, n, p, d)	\
-	    SYSCTL_ADD_QUAD(c, h, OID_AUTO, n, CTLFLAG_RD, p, d)
-#else
-#define	ALE_SYSCTL_STAT_ADD64(c, h, n, p, d)	\
-	    SYSCTL_ADD_ULONG(c, h, OID_AUTO, n, CTLFLAG_RD, p, d)
-#endif
 
 static void
 ale_sysctl_node(struct ale_softc *sc)
@@ -791,11 +770,11 @@ ale_sysctl_node(struct ale_softc *sc)
 	child = SYSCTL_CHILDREN(device_get_sysctl_tree(sc->ale_dev));
 
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "int_rx_mod",
-	    CTLTYPE_INT | CTLFLAG_RW, &sc->ale_int_rx_mod, 0,
-	    sysctl_hw_ale_int_mod, "I", "ale Rx interrupt moderation");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, &sc->ale_int_rx_mod,
+	    0, sysctl_hw_ale_int_mod, "I", "ale Rx interrupt moderation");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "int_tx_mod",
-	    CTLTYPE_INT | CTLFLAG_RW, &sc->ale_int_tx_mod, 0,
-	    sysctl_hw_ale_int_mod, "I", "ale Tx interrupt moderation");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, &sc->ale_int_tx_mod,
+	    0, sysctl_hw_ale_int_mod, "I", "ale Tx interrupt moderation");
 	/* Pull in device tunables. */
 	sc->ale_int_rx_mod = ALE_IM_RX_TIMER_DEFAULT;
 	error = resource_int_value(device_get_name(sc->ale_dev),
@@ -822,8 +801,8 @@ ale_sysctl_node(struct ale_softc *sc)
 		}
 	}
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "process_limit",
-	    CTLTYPE_INT | CTLFLAG_RW, &sc->ale_process_limit, 0,
-	    sysctl_hw_ale_proc_limit, "I",
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+	    &sc->ale_process_limit, 0, sysctl_hw_ale_proc_limit, "I",
 	    "max number of Rx events to process");
 	/* Pull in device tunables. */
 	sc->ale_process_limit = ALE_PROC_DEFAULT;
@@ -845,13 +824,13 @@ ale_sysctl_node(struct ale_softc *sc)
 	    &stats->reset_brk_seq,
 	    "Controller resets due to broken Rx sequnce number");
 
-	tree = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "stats", CTLFLAG_RD,
-	    NULL, "ATE statistics");
+	tree = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "stats",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "ATE statistics");
 	parent = SYSCTL_CHILDREN(tree);
 
 	/* Rx statistics. */
-	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "rx", CTLFLAG_RD,
-	    NULL, "Rx MAC statistics");
+	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "rx",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Rx MAC statistics");
 	child = SYSCTL_CHILDREN(tree);
 	ALE_SYSCTL_STAT_ADD32(ctx, child, "good_frames",
 	    &stats->rx_frames, "Good frames");
@@ -904,8 +883,8 @@ ale_sysctl_node(struct ale_softc *sc)
 	    "Frames dropped due to address filtering");
 
 	/* Tx statistics. */
-	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "tx", CTLFLAG_RD,
-	    NULL, "Tx MAC statistics");
+	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "tx",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Tx MAC statistics");
 	child = SYSCTL_CHILDREN(tree);
 	ALE_SYSCTL_STAT_ADD32(ctx, child, "good_frames",
 	    &stats->tx_frames, "Good frames");
@@ -2401,7 +2380,6 @@ ale_rx_update_page(struct ale_softc *sc, struct ale_rx_page **page,
 	}
 }
 
-
 /*
  * It seems that AR81xx controller can compute partial checksum.
  * The partial checksum value can be used to accelerate checksum
@@ -3007,12 +2985,21 @@ ale_rxvlan(struct ale_softc *sc)
 	CSR_WRITE_4(sc, ALE_MAC_CFG, reg);
 }
 
+static u_int
+ale_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint32_t crc, *mchash = arg;
+
+	crc = ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN);
+	mchash[crc >> 31] |= 1 << ((crc >> 26) & 0x1f);
+
+	return (1);
+}
+
 static void
 ale_rxfilter(struct ale_softc *sc)
 {
 	struct ifnet *ifp;
-	struct ifmultiaddr *ifma;
-	uint32_t crc;
 	uint32_t mchash[2];
 	uint32_t rxcfg;
 
@@ -3037,16 +3024,7 @@ ale_rxfilter(struct ale_softc *sc)
 
 	/* Program new filter. */
 	bzero(mchash, sizeof(mchash));
-
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &sc->ale_ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		crc = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-		    ifma->ifma_addr), ETHER_ADDR_LEN);
-		mchash[crc >> 31] |= 1 << ((crc >> 26) & 0x1f);
-	}
-	if_maddr_runlock(ifp);
+	if_foreach_llmaddr(ifp, ale_hash_maddr, &mchash);
 
 	CSR_WRITE_4(sc, ALE_MAR0, mchash[0]);
 	CSR_WRITE_4(sc, ALE_MAR1, mchash[1]);

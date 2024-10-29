@@ -23,7 +23,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef DRM_FIXED_H
 #define DRM_FIXED_H
 

@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
@@ -252,10 +251,6 @@ get_params__post_init(struct adapter *sc)
 		return (EINVAL);
 	}
 
-	rc = t4_read_chip_settings(sc);
-	if (rc != 0)
-		return (rc);
-
 	/*
 	 * Grab our Virtual Interface resource allocation, extract the
 	 * features that we're interested in and do a bit of sanity testing on
@@ -288,6 +283,11 @@ get_params__post_init(struct adapter *sc)
 		sc->params.max_pkts_per_eth_tx_pkts_wr = val;
 	else
 		sc->params.max_pkts_per_eth_tx_pkts_wr = 14;
+
+	rc = t4_verify_chip_settings(sc);
+	if (rc != 0)
+		return (rc);
+	t4_init_rx_buf_info(sc);
 
 	return (0);
 }
@@ -487,6 +487,7 @@ t4vf_attach(device_t dev)
 
 	sc = device_get_softc(dev);
 	sc->dev = dev;
+	sysctl_ctx_init(&sc->ctx);
 	pci_enable_busmaster(dev);
 	pci_set_max_read_req(dev, 4096);
 	sc->params.pci.mps = pci_get_max_payload(dev);
@@ -588,6 +589,10 @@ t4vf_attach(device_t dev)
 	if (rc != 0)
 		goto done; /* error message displayed already */
 
+	rc = t4_adj_doorbells(sc);
+	if (rc != 0)
+		goto done; /* error message displayed already */
+
 	rc = t4_create_dma_tag(sc);
 	if (rc != 0)
 		goto done; /* error message displayed already */
@@ -654,6 +659,8 @@ t4vf_attach(device_t dev)
 		if (rc == 0 && n == 1)
 			t4_os_set_hw_addr(pi, mac);
 		pmask &= ~(1 << p);
+
+		sc->vlan_id = t4vf_get_vf_vlan(sc);
 
 		/* No t4_link_start. */
 

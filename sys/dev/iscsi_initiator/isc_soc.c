@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
@@ -30,7 +30,6 @@
  | $Id: isc_soc.c 998 2009-12-20 10:32:45Z danny $
  */
 #include <sys/cdefs.h>
-
 #include "opt_iscsi_initiator.h"
 
 #include <sys/param.h>
@@ -337,21 +336,13 @@ so_getbhs(isc_session_t *sp)
 
      if(error)
 	  debug(2, 
-#if __FreeBSD_version > 800000
 		"error=%d so_error=%d uio->uio_resid=%zd iov.iov_len=%zd",
-#else
-		"error=%d so_error=%d uio->uio_resid=%d iov.iov_len=%zd",
-#endif
 		error,
 		sp->soc->so_error, uio->uio_resid, iov->iov_len);
      if(!error && (uio->uio_resid > 0)) {
 	  error = EPIPE; // was EAGAIN
 	  debug(2,
-#if __FreeBSD_version > 800000
 		"error=%d so_error=%d uio->uio_resid=%zd iov.iov_len=%zd so_state=%x",
-#else
-		"error=%d so_error=%d uio->uio_resid=%d iov.iov_len=%zd so_state=%x",
-#endif
 		error,
 		sp->soc->so_error, uio->uio_resid, iov->iov_len, sp->soc->so_state);
      }
@@ -410,11 +401,7 @@ so_recv(isc_session_t *sp, pduq_t *pq)
 	  // XXX: this needs work! it hangs iscontrol
 	  if(error || uio->uio_resid) {
 	       debug(2, 
-#if __FreeBSD_version > 800000
 		     "len=%d error=%d uio->uio_resid=%zd",
-#else
-		     "len=%d error=%d uio->uio_resid=%d",
-#endif
 		     len, error, uio->uio_resid);
 	       goto out;
 	  }
@@ -647,11 +634,7 @@ isc_in(void *vp)
      mtx_unlock(&sp->io_mtx);
 
      sdebug(2, "dropped ISC_CON_RUNNING");
-#if __FreeBSD_version >= 800000
      kproc_exit(0);
-#else
-     kthread_exit(0);
-#endif
 }
 
 void
@@ -691,10 +674,5 @@ isc_start_receiver(isc_session_t *sp)
      debug_called(8);
 
      sp->flags |= ISC_CON_RUN | ISC_LINK_UP;
-#if __FreeBSD_version >= 800000
-     kproc_create
-#else
-     kthread_create
-#endif
-	  (isc_in, sp, &sp->soc_proc, 0, 0, "isc_in %d", sp->sid);
+     kproc_create(isc_in, sp, &sp->soc_proc, 0, 0, "isc_in %d", sp->sid);
 }

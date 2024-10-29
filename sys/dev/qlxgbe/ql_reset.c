@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "ql_os.h"
 
 unsigned int ql83xx_resetseq_version_major = 5;
@@ -1408,4 +1407,3 @@ unsigned char ql83xx_resetseq[] = {
   0xdf, 0xfa, 0x8f, 0x87
 };
 unsigned int ql83xx_resetseq_len = 16384;
-

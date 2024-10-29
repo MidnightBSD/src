@@ -22,7 +22,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/ucred.h>
 #include <sys/proc.h>
@@ -62,7 +61,7 @@
 #   define PP_CISCO IFF_LINK2
 #   include <net/bpf.h>
 #endif
-#include <dev/cx/machdep.h>
+#include <dev/cp/machdep.h>
 #include <dev/cp/cpddk.h>
 #include <machine/cserial.h>
 #include <machine/resource.h>

@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/isci/isci.h>
 
 #include <dev/isci/scil/scif_controller.h>

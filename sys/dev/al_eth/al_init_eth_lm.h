@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /**
@@ -131,7 +130,6 @@ enum al_eth_lm_led_config_speed {
 struct al_eth_lm_led_config_data {
 	enum al_eth_lm_led_config_speed	speed;
 };
-
 
 struct al_eth_lm_context {
 	struct al_hal_eth_adapter	*adapter;

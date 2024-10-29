@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011-2013 Qlogic Corporation
  * All rights reserved.
@@ -25,7 +25,6 @@
  *  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
- *
  */
 /*
  * File: qla_hw.h
@@ -54,7 +53,7 @@ typedef struct qla_cdrp {
 	uint32_t rsp_arg2;
 	uint32_t rsp_arg3;
 } qla_cdrp_t;
- 
+
 #define Q8_CMD_RD_MAX_RDS_PER_CNTXT	0x80000002
 #define Q8_CMD_RD_MAX_SDS_PER_CNTXT	0x80000003
 #define Q8_CMD_RD_MAX_RULES_PER_CNTXT	0x80000004
@@ -96,7 +95,6 @@ typedef struct qla_cdrp {
 #define Q8_RSP_CMD_INVALID		0x00000010
 #define Q8_RSP_TIMEOUT			0x00000011
 
-
 /*
  * Transmit Related Definitions
  */
@@ -127,7 +125,6 @@ typedef struct _q80_tx_cntxt_req {
 	uint32_t num_entries;		/* number of entries in transmit ring */
 	uint8_t rsrvd3[128];
 } __packed q80_tx_cntxt_req_t; /* 188 bytes total */
-	
 
 /*
  * Transmit Context - Response from Firmware to Q8_CMD_CREATE_TX_CNTXT
@@ -207,7 +204,6 @@ typedef struct _q80_tx_cmd {
 #define Q8_TX_CMD_TSO_ALIGN	2
 #define Q8_TX_MAX_SEGMENTS	14
 
-
 /*
  * Receive Related Definitions
  */
@@ -280,7 +276,6 @@ typedef struct _q80_rsp_rcv_cntxt {
 	uint8_t rsrvd[128];
 	uint8_t data[0];
 } __packed q80_rsp_rcv_cntxt_t; /* 152 bytes header + rds + sds ring rspncs */
-
 
 /*
  * Note:
@@ -582,7 +577,6 @@ typedef struct _qla_link_event_req {
 	uint8_t			pad[6];
 } __packed qla_link_event_req_t;
 
-
 /*
  * Set MAC Receive Mode
  */
@@ -619,7 +613,6 @@ typedef struct _qla_config_lro {
 	uint64_t		cmd;
 #define Q8_CONFIG_LRO_ENABLE		0x08
 } __packed qla_config_lro_t;
-
 
 /*
  * Control Messages Received on SDS Ring
@@ -761,7 +754,7 @@ typedef struct _qla_hw {
 	uint16_t	num_sds_rings;
 
         qla_dmabuf_t	dma_buf;
-	
+
 	/* Transmit Side */
 
 	q80_tx_cmd_t	*tx_ring_base;
@@ -792,7 +785,7 @@ typedef struct _qla_hw {
 	bus_addr_t	rx_cntxt_req_paddr;
 	q80_rcv_cntxt_rsp_t *rx_cntxt_rsp; /* Rcv Context Response */
 	bus_addr_t	rx_cntxt_rsp_paddr;
-	
+
 	qla_sds_t	sds[MAX_SDS_RINGS]; 
 
 	uint8_t		frame_hdr[QL_FRAME_HDR_SIZE];
@@ -829,7 +822,6 @@ typedef struct _qla_hw {
 		rsp_sds = &((ha->hw.rx_cntxt_rsp)->sds_rsp[sds_index]);\
 		WRITE_REG32(ha, (rsp_sds->intr_mask_reg + 0x1b2000), 0x0);\
 	}
-
 
 #define QL_BUFFER_ALIGN                16
 

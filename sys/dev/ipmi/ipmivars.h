@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 IronPort Systems Inc. <ambrisko@ironport.com>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef __IPMIVARS_H__
@@ -53,7 +52,14 @@ struct ipmi_request {
 	uint8_t		ir_addr;
 	uint8_t		ir_command;
 	uint8_t		ir_compcode;
+	bool		ir_ipmb;
+	uint8_t		ir_ipmb_addr;
+	uint8_t		ir_ipmb_command;
 };
+
+#define	IPMI_IF_KCS_NRES		2
+#define	IPMI_IF_SMIC_NRES		3
+#define	IPMI_IF_BT_NRES			3
 
 #define	MAX_RES				3
 #define KCS_DATA			0
@@ -76,6 +82,10 @@ struct ipmi_device {
 	u_char			ipmi_lun;
 };
 
+struct ipmi_bt {
+	uint8_t	seq;
+};
+
 struct ipmi_kcs {
 };
 
@@ -90,6 +100,7 @@ struct ipmi_ssif {
 struct ipmi_softc {
 	device_t		ipmi_dev;
 	union {
+		struct ipmi_bt bt;
 		struct ipmi_kcs kcs;
 		struct ipmi_smic smic;
 		struct ipmi_ssif ssif;
@@ -126,15 +137,12 @@ struct ipmi_softc {
 
 #define	ipmi_ssif_smbus_address		_iface.ssif.smbus_address
 #define	ipmi_ssif_smbus			_iface.ssif.smbus
+#define	ipmi_bt_seq			_iface.bt.seq
 
-struct ipmi_ipmb {
-	u_char foo;
-};
-
-#define KCS_MODE		0x01
-#define SMIC_MODE		0x02
-#define	BT_MODE			0x03
-#define SSIF_MODE		0x04
+#define	KCS_MODE			0x01
+#define	SMIC_MODE			0x02
+#define	BT_MODE				0x03
+#define	SSIF_MODE			0x04
 
 /* KCS status flags */
 #define KCS_STATUS_OBF			0x01 /* Data Out ready from BMC */
@@ -229,6 +237,8 @@ int	ipmi_detach(device_t);
 void	ipmi_release_resources(device_t);
 
 /* Manage requests. */
+void ipmi_init_request(struct ipmi_request *, struct ipmi_device *, long,
+	    uint8_t, uint8_t, size_t, size_t);
 struct ipmi_request *ipmi_alloc_request(struct ipmi_device *, long, uint8_t,
 	    uint8_t, size_t, size_t);
 void	ipmi_complete_request(struct ipmi_softc *, struct ipmi_request *);
@@ -248,11 +258,8 @@ const char *ipmi_pci_match(uint16_t, uint16_t);
 int	ipmi_kcs_attach(struct ipmi_softc *);
 int	ipmi_kcs_probe_align(struct ipmi_softc *);
 int	ipmi_smic_attach(struct ipmi_softc *);
+int	ipmi_bt_attach(struct ipmi_softc *);
 int	ipmi_ssif_attach(struct ipmi_softc *, device_t, int);
-
-#ifdef IPMB
-int	ipmi_handle_attn(struct ipmi_softc *);
-#endif
 
 extern devclass_t ipmi_devclass;
 extern int ipmi_attached;

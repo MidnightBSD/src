@@ -39,7 +39,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * AMRR rate control. See:
  * http://www-sop.inria.fr/rapports/sophia/RR-5208.html

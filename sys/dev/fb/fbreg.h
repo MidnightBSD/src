@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_FB_FBREG_H_
@@ -50,13 +49,6 @@ copyw(uint16_t *src, uint16_t *dst, size_t size)
 #define bzero_io(d, c)		bzero((void *)(d), (c))
 #define fill_io(p, d, c)	fill((p), (void *)(d), (c))
 #define fillw_io(p, d, c)	fillw((p), (void *)(d), (c))
-#elif defined(__sparc64__)
-static __inline void
-fillw(int val, uint16_t *buf, size_t size)
-{
-	while (size--)
-		*buf++ = val;
-}
 #elif defined(__powerpc__)
 
 #define bcopy_io(s, d, c)	ofwfb_bcopy((void *)(s), (void *)(d), (c))
@@ -101,7 +93,7 @@ fillw(int val, uint16_t *buf, size_t size)
 #define	writew(a, v)		(*(uint16_t*)(a) = (v))
 #endif
 
-#else /* !__i386__ && !__amd64__ && !__sparc64__ && !__powerpc__ */
+#else /* !__i386__ && !__amd64__ && !__powerpc__ */
 #define bcopy_io(s, d, c)	memcpy_io((d), (s), (c))
 #define bcopy_toio(s, d, c)	memcpy_toio((d), (void *)(s), (c))
 #define bcopy_fromio(s, d, c)	memcpy_fromio((void *)(d), (s), (c))
@@ -326,7 +318,7 @@ int		genfbwrite(genfb_softc_t *sc, video_adapter_t *adp,
 int		genfbioctl(genfb_softc_t *sc, video_adapter_t *adp,
 			   u_long cmd, caddr_t arg, int flag, struct thread *td);
 int		genfbmmap(genfb_softc_t *sc, video_adapter_t *adp,
-			  vm_ooffset_t offset, vm_offset_t *paddr,
+			  vm_ooffset_t offset, vm_paddr_t *paddr,
 			  int prot, vm_memattr_t *memattr);
 
 #endif /* FB_INSTALL_CDEV */

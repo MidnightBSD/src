@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/isci/isci.h>
 #include <vm/vm.h>
 #include <vm/pmap.h>

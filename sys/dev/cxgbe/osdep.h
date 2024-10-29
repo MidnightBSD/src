@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Chelsio Communications, Inc.
  * All rights reserved.
@@ -26,7 +26,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *
  */
 
 #ifndef __CXGBE_OSDEP_H_
@@ -42,13 +41,13 @@
 #include <dev/pci/pcireg.h>
 
 #define CH_ERR(adap, fmt, ...) log(LOG_ERR, "%s: " fmt, \
-    device_get_nameunit(adap->dev), ##__VA_ARGS__)
+    device_get_nameunit((adap)->dev), ##__VA_ARGS__)
 #define CH_WARN(adap, fmt, ...) log(LOG_WARNING, "%s: " fmt, \
-    device_get_nameunit(adap->dev), ##__VA_ARGS__)
+    device_get_nameunit((adap)->dev), ##__VA_ARGS__)
 #define CH_ALERT(adap, fmt, ...) log(LOG_ALERT, "%s: " fmt, \
-    device_get_nameunit(adap->dev), ##__VA_ARGS__)
+    device_get_nameunit((adap)->dev), ##__VA_ARGS__)
 #define CH_WARN_RATELIMIT(adap, fmt, ...) log(LOG_WARNING, "%s: " fmt, \
-    device_get_nameunit(adap->dev), ##__VA_ARGS__)
+    device_get_nameunit((adap)->dev), ##__VA_ARGS__)
 
 #ifndef LINUX_TYPES_DEFINED
 typedef int8_t  s8;

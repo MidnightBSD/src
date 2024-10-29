@@ -24,9 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
-
 
 #ifndef __TCP_COMMON__
 #define __TCP_COMMON__ 
@@ -35,7 +33,6 @@
 /********************/
 
 #define TCP_INVALID_TIMEOUT_VAL -1
-
 
 /*
  * OOO opaque data received from LL2
@@ -49,7 +46,6 @@ struct ooo_opaque
 	u8 ooo_isle /* OOO isle number to add the packet to */;
 };
 
-
 /*
  * tcp connect mode enum
  */
@@ -59,7 +55,6 @@ enum tcp_connect_mode
 	TCP_CONNECT_PASSIVE,
 	MAX_TCP_CONNECT_MODE
 };
-
 
 /*
  * tcp function init parameters
@@ -72,7 +67,6 @@ struct tcp_init_params
 	u8 reserved[9];
 };
 
-
 /*
  * tcp IPv4/IPv6 enum
  */
@@ -82,7 +76,6 @@ enum tcp_ip_version
 	TCP_IPV6,
 	MAX_TCP_IP_VERSION
 };
-
 
 /*
  * tcp offload parameters
@@ -163,7 +156,6 @@ struct tcp_offload_params
 	__le32 reserved3;
 };
 
-
 /*
  * tcp offload parameters
  */
@@ -211,7 +203,6 @@ struct tcp_offload_params_opt2
 	__le32 reserved3[16];
 };
 
-
 /*
  * tcp IPv4/IPv6 enum
  */
@@ -226,7 +217,6 @@ enum tcp_seg_placement_event
 	TCP_EVENT_NOP,
 	MAX_TCP_SEG_PLACEMENT_EVENT
 };
-
 
 /*
  * tcp init parameters
@@ -280,7 +270,6 @@ struct tcp_update_params
 	u8 ka_max_probe_cnt;
 	u8 reserved1[7];
 };
-
 
 /*
  * toe upload parameters

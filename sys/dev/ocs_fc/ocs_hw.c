@@ -27,7 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
@@ -125,7 +124,6 @@ static ocs_hw_rtn_e ocs_hw_config_sli_port_health_check(ocs_hw_t *hw, uint8_t qu
 static int32_t ocs_hw_domain_add(ocs_hw_t *, ocs_domain_t *);
 static int32_t ocs_hw_domain_del(ocs_hw_t *, ocs_domain_t *);
 
-
 /* Port state machine */
 static void *__ocs_hw_port_alloc_init(ocs_sm_ctx_t *, ocs_sm_event_t, void *);
 static void *__ocs_hw_port_alloc_read_sparm64(ocs_sm_ctx_t *, ocs_sm_event_t, void *);
@@ -150,17 +148,29 @@ static void ocs_hw_check_sec_hio_list(ocs_hw_t *hw);
 static void target_wqe_timer_cb(void *arg);
 static void shutdown_target_wqe_timer(ocs_hw_t *hw);
 
+/* WQE timeout for initiator IOs */
+static inline uint8_t
+ocs_hw_set_io_wqe_timeout(ocs_hw_io_t *io, uint32_t timeout)
+{
+	if (timeout > 255) {
+		io->wqe_timeout = timeout;
+		return 0;
+	} else {
+		return timeout;
+	}
+}
+
 static inline void
 ocs_hw_add_io_timed_wqe(ocs_hw_t *hw, ocs_hw_io_t *io)
 {
-	if (hw->config.emulate_tgt_wqe_timeout && io->tgt_wqe_timeout) {
+	if (hw->config.emulate_wqe_timeout && io->wqe_timeout) {
 		/*
 		 * Active WQE list currently only used for
 		 * target WQE timeouts.
 		 */
 		ocs_lock(&hw->io_lock);
 			ocs_list_add_tail(&hw->io_timed_wqe, io);
-			io->submit_ticks = ocs_get_os_ticks();
+			getmicrouptime(&io->submit_time);
 		ocs_unlock(&hw->io_lock);
 	}
 }
@@ -168,7 +178,7 @@ ocs_hw_add_io_timed_wqe(ocs_hw_t *hw, ocs_hw_io_t *io)
 static inline void
 ocs_hw_remove_io_timed_wqe(ocs_hw_t *hw, ocs_hw_io_t *io)
 {
-	if (hw->config.emulate_tgt_wqe_timeout) {
+	if (hw->config.emulate_wqe_timeout) {
 		/*
 		 * If target wqe timeouts are enabled,
 		 * remove from active wqe list.
@@ -241,10 +251,7 @@ ocs_hw_get_num_chutes(ocs_hw_t *hw)
 static ocs_hw_rtn_e
 ocs_hw_link_event_init(ocs_hw_t *hw)
 {
-	if (hw == NULL) {
-		ocs_log_err(hw->os, "bad parameter hw=%p\n", hw);
-		return OCS_HW_RTN_ERROR;
-	}
+	ocs_hw_assert(hw);
 
 	hw->link.status = SLI_LINK_STATUS_MAX;
 	hw->link.topology = SLI_LINK_TOPO_NONE;
@@ -375,7 +382,6 @@ ocs_hw_setup(ocs_hw_t *hw, ocs_os_handle_t os, sli4_port_type_e port_type)
 	hw->config.auto_xfer_rdy_app_tag_valid =  OCS_HW_AUTO_XFER_RDY_APP_TAG_VALID_DEFAULT;
 	hw->config.auto_xfer_rdy_app_tag_value = OCS_HW_AUTO_XFER_RDY_APP_TAG_VALUE_DEFAULT;
 
-
 	if (sli_setup(&hw->sli, hw->os, port_type)) {
 		ocs_log_err(hw->os, "SLI setup failed\n");
 		return OCS_HW_RTN_ERROR;
@@ -487,7 +493,7 @@ ocs_hw_setup(ocs_hw_t *hw, ocs_os_handle_t os, sli4_port_type_e port_type)
 				OCS_HW_MAX_NUM_EQ);
 		return OCS_HW_RTN_ERROR;
 	}
-	
+
 	if (hw->config.n_cq > OCS_HW_MAX_NUM_CQ) {
 		ocs_log_crit(hw->os, "Max supported CQs = %d\n",
 				OCS_HW_MAX_NUM_CQ);
@@ -615,7 +621,7 @@ ocs_hw_init(ocs_hw_t *hw)
 	if (hw->config.n_rq == 1) {
 		hw->sli.config.features.flag.mrqp = FALSE;
 	}
-	
+
 	if (sli_init(&hw->sli)) {
 		ocs_log_err(hw->os, "SLI failed to initialize\n");
 		return OCS_HW_RTN_ERROR;
@@ -698,7 +704,7 @@ ocs_hw_init(ocs_hw_t *hw)
 			    hw->config.n_mq, q_count);
 		return OCS_HW_RTN_ERROR;
 	}
-	
+
 	q_count = MIN(sli_get_max_queue(&hw->sli, SLI_QTYPE_RQ),
 					OCS_HW_MAX_NUM_RQ);
 	if (hw->config.n_rq > q_count) {
@@ -727,7 +733,6 @@ ocs_hw_init(ocs_hw_t *hw)
 	ocs_memset(hw->wq_hash, 0, sizeof(hw->wq_hash));
 	ocs_log_debug(hw->os, "Max WQs %d, hash size = %d\n",
 			OCS_HW_MAX_NUM_WQ, OCS_HW_Q_HASH_SIZE);
-
 
 	rc = ocs_hw_init_queues(hw, hw->qtop);
 	if (rc != OCS_HW_RTN_SUCCESS) {
@@ -821,7 +826,6 @@ ocs_hw_init(ocs_hw_t *hw)
 
 	/* Register a FCFI to allow unsolicited frames to be routed to the driver */
 	if (sli_get_medium(&hw->sli) == SLI_LINK_MEDIUM_FC) {
-
 		if (hw->hw_mrq_count) {
 			ocs_log_debug(hw->os, "using REG_FCFI MRQ\n");
 
@@ -879,7 +883,6 @@ ocs_hw_init(ocs_hw_t *hw)
 			}
 			hw->fcf_indicator = ((sli4_cmd_reg_fcfi_t *)buf)->fcfi;
 		}
-
 	}
 
 	/*
@@ -974,7 +977,7 @@ ocs_hw_init(ocs_hw_t *hw)
 	}
 
 	/* finally kick off periodic timer to check for timed out target WQEs */
-	if (hw->config.emulate_tgt_wqe_timeout) {
+	if (hw->config.emulate_wqe_timeout) {
 		ocs_setup_timer(hw->os, &hw->wqe_timer, target_wqe_timer_cb, hw,
 				OCS_HW_WQ_TIMER_PERIOD_MS);
 	}
@@ -1185,7 +1188,6 @@ ocs_hw_teardown(ocs_hw_t *hw)
 	}
 
 	if (hw->state != OCS_HW_STATE_QUEUES_ALLOCATED) {
-
 		hw->state = OCS_HW_STATE_TEARDOWN_IN_PROGRESS;
 
 		ocs_hw_flush(hw);
@@ -1255,11 +1257,9 @@ ocs_hw_teardown(ocs_hw_t *hw)
 	ocs_lock_free(&hw->io_lock);
 	ocs_lock_free(&hw->io_abort_lock);
 
-
 	for (i = 0; i < hw->wq_count; i++) {
 		sli_queue_free(&hw->sli, &hw->wq[i], destroy_queues, free_memory);
 	}
-
 
 	for (i = 0; i < hw->rq_count; i++) {
 		sli_queue_free(&hw->sli, &hw->rq[i], destroy_queues, free_memory);
@@ -1448,7 +1448,6 @@ ocs_hw_reset(ocs_hw_t *hw, ocs_hw_reset_e reset)
 		/* Teardown the HW queue topology */
 		hw_queue_teardown(hw);
 	} else {
-
 		/* Free rq buffers */
 		ocs_hw_rx_free(hw);
 	}
@@ -1478,7 +1477,6 @@ ocs_hw_get_fw_timed_out(ocs_hw_t *hw)
 	return (sli_reg_read(&hw->sli, SLI4_REG_SLIPORT_ERROR1) == 0x2 &&
 		sli_reg_read(&hw->sli, SLI4_REG_SLIPORT_ERROR2) == 0x10);
 }
-
 
 ocs_hw_rtn_e
 ocs_hw_get(ocs_hw_t *hw, ocs_hw_property_e prop, uint32_t *value)
@@ -1709,8 +1707,8 @@ ocs_hw_get(ocs_hw_t *hw, ocs_hw_property_e prop, uint32_t *value)
 	case OCS_HW_EMULATE_I_ONLY_AAB:
 		*value = hw->config.i_only_aab;
 		break;
-	case OCS_HW_EMULATE_TARGET_WQE_TIMEOUT:
-		*value = hw->config.emulate_tgt_wqe_timeout;
+	case OCS_HW_EMULATE_WQE_TIMEOUT:
+		*value = hw->config.emulate_wqe_timeout;
 		break;
 	case OCS_HW_VPD_LEN:
 		*value = sli_get_vpd_len(&hw->sli);
@@ -1759,6 +1757,7 @@ ocs_hw_get(ocs_hw_t *hw, ocs_hw_property_e prop, uint32_t *value)
 		break;
 	case OCS_HW_MAX_VPORTS:
 		*value = sli_get_max_rsrc(&hw->sli, SLI_RSRC_FCOE_VPI);
+		break;
 	default:
 		ocs_log_test(hw->os, "unsupported property %#x\n", prop);
 		rc = OCS_HW_RTN_ERROR;
@@ -1806,8 +1805,6 @@ ocs_hw_get_ptr(ocs_hw_t *hw, ocs_hw_property_e prop)
 
 	return rc;
 }
-
-
 
 ocs_hw_rtn_e
 ocs_hw_set(ocs_hw_t *hw, ocs_hw_property_e prop, uint32_t value)
@@ -1998,6 +1995,7 @@ ocs_hw_set(ocs_hw_t *hw, ocs_hw_property_e prop, uint32_t value)
 		break;
 	case OCS_ESOC:
 		hw->config.esoc = value;
+		break;
 	case OCS_HW_HIGH_LOGIN_MODE:
 		rc = sli_set_hlm(&hw->sli, value);
 		break;
@@ -2010,8 +2008,8 @@ ocs_hw_set(ocs_hw_t *hw, ocs_hw_property_e prop, uint32_t value)
 	case OCS_HW_EMULATE_I_ONLY_AAB:
 		hw->config.i_only_aab = value;
 		break;
-	case OCS_HW_EMULATE_TARGET_WQE_TIMEOUT:
-		hw->config.emulate_tgt_wqe_timeout = value;
+	case OCS_HW_EMULATE_WQE_TIMEOUT:
+		hw->config.emulate_wqe_timeout = value;
 		break;
 	case OCS_HW_BOUNCE:
 		hw->config.bounce = value;
@@ -2029,7 +2027,6 @@ ocs_hw_set(ocs_hw_t *hw, ocs_hw_property_e prop, uint32_t value)
 
 	return rc;
 }
-
 
 ocs_hw_rtn_e
 ocs_hw_set_ptr(ocs_hw_t *hw, ocs_hw_property_e prop, void *value)
@@ -2221,7 +2218,6 @@ ocs_hw_eq_process(ocs_hw_t *hw, hw_eq_t *eq, uint32_t max_isr_time_msec)
 			}
 		}
 
-
 		if (eq->queue->n_posted > (eq->queue->posted_limit)) {
 			sli_queue_arm(&hw->sli, eq->queue, FALSE);
 		}
@@ -2323,7 +2319,6 @@ ocs_hw_command(ocs_hw_t *hw, uint8_t *cmd, uint32_t opts, void *cb, void *arg)
 	}
 
 	if (OCS_CMD_POLL == opts) {
-
 		ocs_lock(&hw->cmd_lock);
 		if (hw->mq->length && !sli_queue_is_empty(&hw->sli, hw->mq)) {
 			/*
@@ -2685,7 +2680,6 @@ ocs_hw_port_control(ocs_hw_t *hw, ocs_hw_port_e ctrl, uintptr_t value, ocs_hw_po
 			return OCS_HW_RTN_NO_MEMORY;
 		}
 
-
 		if (sli_cmd_init_link(&hw->sli, init_link, SLI4_BMBX_SIZE, speed, reset_alpa)) {
 			rc = ocs_hw_command(hw, init_link, OCS_CMD_NOWAIT,
 						ocs_hw_cb_port_control, NULL);
@@ -2727,7 +2721,6 @@ ocs_hw_port_control(ocs_hw_t *hw, ocs_hw_port_e ctrl, uintptr_t value, ocs_hw_po
 
 	return rc;
 }
-
 
 /**
  * @ingroup port
@@ -3110,7 +3103,6 @@ ocs_hw_node_free_resources(ocs_hw_t *hw, ocs_remote_node_t *rnode)
 	return rc;
 }
 
-
 /**
  * @ingroup node
  * @brief Free a remote node object.
@@ -3344,7 +3336,7 @@ ocs_hw_init_free_io(ocs_hw_io_t *io)
 	io->type = 0xFFFF;
 	io->wq = NULL;
 	io->ul_io = NULL;
-	io->tgt_wqe_timeout = 0;
+	io->wqe_timeout = 0;
 }
 
 /**
@@ -3758,7 +3750,7 @@ ocs_hw_check_sec_hio_list(ocs_hw_t *hw)
 			flags &= ~SLI4_IO_CONTINUATION;
 		}
 
-		io->tgt_wqe_timeout = io->sec_iparam.fcp_tgt.timeout;
+		io->wqe_timeout = io->sec_iparam.fcp_tgt.timeout;
 
 		/* Complete (continue) TRECV IO */
 		if (io->xbusy) {
@@ -4061,6 +4053,7 @@ ocs_hw_io_send(ocs_hw_t *hw, ocs_hw_io_type_e type, ocs_hw_io_t *io,
 	ocs_hw_rtn_e	rc = OCS_HW_RTN_SUCCESS;
 	uint32_t	rpi;
 	uint8_t		send_wqe = TRUE;
+	uint8_t		timeout = 0;
 
 	CPUTRACE("");
 
@@ -4095,6 +4088,8 @@ ocs_hw_io_send(ocs_hw_t *hw, ocs_hw_io_type_e type, ocs_hw_io_t *io,
 	 */
 	switch (type) {
 	case OCS_HW_IO_INITIATOR_READ:
+		timeout = ocs_hw_set_io_wqe_timeout(io, iparam->fcp_ini.timeout);
+
 		/*
 		 * If use_dif_quarantine workaround is in effect, and dif_separates then mark the
 		 * initiator read IO for quarantine
@@ -4110,12 +4105,14 @@ ocs_hw_io_send(ocs_hw_t *hw, ocs_hw_io_type_e type, ocs_hw_io_t *io,
 		if (sli_fcp_iread64_wqe(&hw->sli, io->wqe.wqebuf, hw->sli.config.wqe_size, &io->def_sgl, io->first_data_sge, len,
 					io->indicator, io->reqtag, SLI4_CQ_DEFAULT, rpi, rnode,
 					iparam->fcp_ini.dif_oper, iparam->fcp_ini.blk_size,
-					iparam->fcp_ini.timeout)) {
+					timeout)) {
 			ocs_log_err(hw->os, "IREAD WQE error\n");
 			rc = OCS_HW_RTN_ERROR;
 		}
 		break;
 	case OCS_HW_IO_INITIATOR_WRITE:
+		timeout = ocs_hw_set_io_wqe_timeout(io, iparam->fcp_ini.timeout);
+
 		ocs_hw_io_ini_sge(hw, io, iparam->fcp_ini.cmnd, iparam->fcp_ini.cmnd_size,
 				iparam->fcp_ini.rsp);
 
@@ -4124,18 +4121,20 @@ ocs_hw_io_send(ocs_hw_t *hw, ocs_hw_io_type_e type, ocs_hw_io_t *io,
 					 io->indicator, io->reqtag,
 					SLI4_CQ_DEFAULT, rpi, rnode,
 					iparam->fcp_ini.dif_oper, iparam->fcp_ini.blk_size,
-					iparam->fcp_ini.timeout)) {
+					timeout)) {
 			ocs_log_err(hw->os, "IWRITE WQE error\n");
 			rc = OCS_HW_RTN_ERROR;
 		}
 		break;
 	case OCS_HW_IO_INITIATOR_NODATA:
+		timeout = ocs_hw_set_io_wqe_timeout(io, iparam->fcp_ini.timeout);
+
 		ocs_hw_io_ini_sge(hw, io, iparam->fcp_ini.cmnd, iparam->fcp_ini.cmnd_size,
 				iparam->fcp_ini.rsp);
 
 		if (sli_fcp_icmnd64_wqe(&hw->sli, io->wqe.wqebuf, hw->sli.config.wqe_size, &io->def_sgl,
 					io->indicator, io->reqtag, SLI4_CQ_DEFAULT,
-					rpi, rnode, iparam->fcp_ini.timeout)) {
+					rpi, rnode, timeout)) {
 			ocs_log_err(hw->os, "ICMND WQE error\n");
 			rc = OCS_HW_RTN_ERROR;
 		}
@@ -4157,7 +4156,7 @@ ocs_hw_io_send(ocs_hw_t *hw, ocs_hw_io_type_e type, ocs_hw_io_t *io,
 			flags &= ~SLI4_IO_CONTINUATION;
 		}
 
-		io->tgt_wqe_timeout = iparam->fcp_tgt.timeout;
+		io->wqe_timeout = iparam->fcp_tgt.timeout;
 
 		/*
 		 * If use_dif_quarantine workaround is in effect, and this is a DIF enabled IO
@@ -4177,7 +4176,6 @@ ocs_hw_io_send(ocs_hw_t *hw, ocs_hw_io_type_e type, ocs_hw_io_t *io,
 		 * data phase, it is marked for quarantine.
 		 */
 		if (hw->workaround.use_dif_sec_xri && (iparam->fcp_tgt.dif_oper != OCS_HW_DIF_OPER_DISABLED)) {
-
 			/*
 			 * If we have allocated a chained SGL for skyhawk, then
 			 * we can re-use this for the sec_hio.
@@ -4248,7 +4246,7 @@ ocs_hw_io_send(ocs_hw_t *hw, ocs_hw_io_type_e type, ocs_hw_io_t *io,
 			flags &= ~SLI4_IO_CONTINUATION;
 		}
 
-		io->tgt_wqe_timeout = iparam->fcp_tgt.timeout;
+		io->wqe_timeout = iparam->fcp_tgt.timeout;
 		if (sli_fcp_tsend64_wqe(&hw->sli, io->wqe.wqebuf, hw->sli.config.wqe_size, &io->def_sgl, io->first_data_sge,
 					iparam->fcp_tgt.offset, len, io->indicator, io->reqtag,
 					SLI4_CQ_DEFAULT,
@@ -4281,7 +4279,7 @@ ocs_hw_io_send(ocs_hw_t *hw, ocs_hw_io_type_e type, ocs_hw_io_t *io,
 			}
 		}
 
-		io->tgt_wqe_timeout = iparam->fcp_tgt.timeout;
+		io->wqe_timeout = iparam->fcp_tgt.timeout;
 		if (sli_fcp_trsp64_wqe(&hw->sli, io->wqe.wqebuf, hw->sli.config.wqe_size,
 					&io->def_sgl,
 					len,
@@ -4397,7 +4395,7 @@ ocs_hw_send_frame(ocs_hw_t *hw, fc_header_le_t *hdr, uint8_t sof, uint8_t eof, o
 
 	OCS_STAT(wq->use_count++);
 
-	return rc ? OCS_HW_RTN_ERROR : OCS_HW_RTN_SUCCESS;
+	return OCS_HW_RTN_SUCCESS;
 }
 
 ocs_hw_rtn_e
@@ -4698,7 +4696,7 @@ ocs_hw_io_overflow_sgl(ocs_hw_t *hw, ocs_hw_io_t *io)
 	}
 
 	/* fail if we don't have an overflow SGL registered */
-	if (io->ovfl_sgl == NULL) {
+	if (io->ovfl_io == NULL || io->ovfl_sgl == NULL) {
 		return OCS_HW_RTN_ERROR;
 	}
 
@@ -5032,7 +5030,6 @@ ocs_hw_io_get_xid(ocs_hw_t *hw, ocs_hw_io_t *io)
 
 	return io->indicator;
 }
-
 
 typedef struct ocs_hw_fw_write_cb_arg {
 	ocs_hw_fw_cb_t cb;
@@ -5607,7 +5604,6 @@ ocs_hw_get_host_stats(ocs_hw_t *hw, uint8_t cc, ocs_hw_host_stat_cb_t cb, void *
 	return rc;
 }
 
-
 /**
  * @brief Called when the READ_STATUS command completes.
  *
@@ -5651,7 +5647,6 @@ ocs_hw_cb_host_stat(ocs_hw_t *hw, int32_t status, uint8_t *mqe, void  *arg)
 	counts[OCS_HW_HOST_STAT_EMPTY_RQ_TIMEOUT_COUNT].counter = mbox_rsp->empty_rq_timeout_count;
 	counts[OCS_HW_HOST_STAT_DROP_FRM_DUE_TO_NO_XRI_COUNT].counter = mbox_rsp->dropped_frames_due_to_no_xri_count;
 	counts[OCS_HW_HOST_STAT_EMPTY_XRI_POOL_COUNT].counter = mbox_rsp->empty_xri_pool_count;
-
 
 	if (cb_arg) {
 		if (cb_arg->cb) {
@@ -6104,7 +6099,6 @@ ocs_hw_get_linkcfg_lancer(ocs_hw_t *hw, uint32_t opts, ocs_hw_port_control_cb_t 
 	return rc;
 }
 
-
 /**
  * @brief Get the link configuration callback.
  *
@@ -6244,7 +6238,6 @@ ocs_hw_set_dif_seed(ocs_hw_t *hw)
 	return rc;
 }
 
-
 /**
  * @brief Sets the DIF mode value.
  *
@@ -6324,6 +6317,11 @@ ocs_hw_config_watchdog_timer(ocs_hw_t *hw)
 	ocs_hw_rtn_e rc = OCS_HW_RTN_SUCCESS;
 	uint8_t *buf = ocs_malloc(hw->os, SLI4_BMBX_SIZE, OCS_M_NOWAIT);
 
+	if (!buf) {
+		ocs_log_err(hw->os, "no buffer for command\n");
+		return OCS_HW_RTN_NO_MEMORY;
+	}
+
 	sli4_cmd_lowlevel_set_watchdog(&hw->sli, buf, SLI4_BMBX_SIZE, hw->watchdog_timeout);
 	rc = ocs_hw_command(hw, buf, OCS_CMD_NOWAIT, ocs_hw_cb_cfg_watchdog, NULL);
 	if (rc) {
@@ -6373,7 +6371,6 @@ ocs_hw_config_auto_xfer_rdy_t10pi(ocs_hw_t *hw, uint8_t *buf)
 				    sizeof(param),
 				    &param);
 
-
 	rc = ocs_hw_command(hw, buf, OCS_CMD_POLL, NULL, NULL);
 	if (rc) {
 		ocs_log_err(hw->os, "ocs_hw_command returns %d\n", rc);
@@ -6385,7 +6382,6 @@ ocs_hw_config_auto_xfer_rdy_t10pi(ocs_hw_t *hw, uint8_t *buf)
 
 	return rc;
 }
-
 
 /**
  * @brief enable sli port health check
@@ -6447,7 +6443,6 @@ ocs_hw_config_set_fdt_xfer_hint(ocs_hw_t *hw, uint32_t fdt_xfer_hint)
 				    SLI4_SET_FEATURES_SET_FTD_XFER_HINT,
 				    sizeof(param),
 				    &param);
-
 
 	rc = ocs_hw_command(hw, buf, OCS_CMD_POLL, NULL, NULL);
 	if (rc) {
@@ -6595,7 +6590,6 @@ ocs_hw_set_dump_location(ocs_hw_t *hw, uint32_t num_buffers, ocs_dma_t *dump_buf
 	return rc;
 }
 
-
 /**
  * @brief Set the Ethernet license.
  *
@@ -6734,7 +6728,6 @@ ocs_hw_exec_dmtf_clp_cmd(ocs_hw_t *hw, ocs_dma_t *dma_cmd, ocs_dma_t *dma_resp, 
 
 	return rc;
 }
-
 
 /**
  * @brief Called when the DMTF CLP command completes.
@@ -6953,7 +6946,6 @@ ocs_hw_cb_dump_get(ocs_hw_t *hw, int32_t status, uint8_t *mqe, void  *arg)
 
 	return 0;
 }
-
 
 /**
  * @brief Read a dump image to the host.
@@ -7195,7 +7187,6 @@ ocs_hw_get_port_protocol_cb(ocs_hw_t *hw, int32_t status,
 
 	if (cb_arg->cb) {
 		cb_arg->cb(status, port_protocol, cb_arg->arg);
-
 	}
 
 	ocs_dma_free(hw->os, &cb_arg->payload);
@@ -7244,7 +7235,6 @@ ocs_hw_get_port_protocol(ocs_hw_t *hw, uint32_t pci_func,
 		ocs_log_err(hw->os, "failed to malloc mbox\n");
 		return OCS_HW_RTN_NO_MEMORY;
 	}
-
 
 	/* cb_arg holds the data that will be passed to the callback on completion */
 	cb_arg = ocs_malloc(hw->os, sizeof(ocs_hw_get_port_protocol_cb_arg_t), OCS_M_NOWAIT);
@@ -7386,7 +7376,6 @@ ocs_hw_set_port_protocol_cb1(ocs_hw_t *hw, int32_t status, uint8_t *mqe, void *a
 		return OCS_HW_RTN_NO_MEMORY;
 	}
 
-
 	/* cb_arg holds the data that will be passed to the callback on completion */
 	new_cb_arg = ocs_malloc(hw->os, sizeof(ocs_hw_set_port_protocol_cb_arg_t), OCS_M_NOWAIT);
 	if (new_cb_arg == NULL) {
@@ -7441,7 +7430,6 @@ ocs_hw_set_port_protocol_cb1(ocs_hw_t *hw, int32_t status, uint8_t *mqe, void *a
 					pcie_desc_p->pf_type = SLI4_PROTOCOL_DEFAULT;
 					break;
 				}
-
 			}
 
 			if (pcie_desc_p->pf_type == SLI4_PROTOCOL_FCOE) {
@@ -7477,7 +7465,6 @@ ocs_hw_set_port_protocol_cb1(ocs_hw_t *hw, int32_t status, uint8_t *mqe, void *a
 	ocs_free(hw->os, mqe, SLI4_BMBX_SIZE);
 	ocs_free(hw->os, cb_arg, sizeof(ocs_hw_set_port_protocol_cb_arg_t));
 
-
 	/* Send a SET_PROFILE_CONFIG mailbox command with the new descriptors */
 	rc = ocs_hw_command(hw, mbxdata, OCS_CMD_NOWAIT, ocs_hw_set_port_protocol_cb2, new_cb_arg);
 	if (rc) {
@@ -7492,7 +7479,6 @@ ocs_hw_set_port_protocol_cb1(ocs_hw_t *hw, int32_t status, uint8_t *mqe, void *a
 		ocs_free(hw->os, mbxdata, SLI4_BMBX_SIZE);
 		ocs_free(hw->os, new_cb_arg, sizeof(ocs_hw_set_port_protocol_cb_arg_t));
 	}
-
 
 	return rc;
 }
@@ -7542,7 +7528,6 @@ ocs_hw_set_port_protocol(ocs_hw_t *hw, ocs_hw_port_protocol_e new_protocol,
 		ocs_log_err(hw->os, "failed to malloc mbox\n");
 		return OCS_HW_RTN_NO_MEMORY;
 	}
-
 
 	/* cb_arg holds the data that will be passed to the callback on completion */
 	cb_arg = ocs_malloc(hw->os, sizeof(ocs_hw_set_port_protocol_cb_arg_t), OCS_M_NOWAIT);
@@ -7683,7 +7668,6 @@ ocs_hw_get_profile_list(ocs_hw_t *hw, ocs_get_profile_list_cb_t cb, void* ul_arg
 		ocs_log_err(hw->os, "failed to malloc mbox\n");
 		return OCS_HW_RTN_NO_MEMORY;
 	}
-
 
 	/* cb_arg holds the data that will be passed to the callback on completion */
 	cb_arg = ocs_malloc(hw->os, sizeof(ocs_hw_get_profile_list_cb_arg_t), OCS_M_NOWAIT);
@@ -8008,8 +7992,6 @@ ocs_hw_set_nvparms(ocs_hw_t *hw, ocs_set_nvparms_cb_t cb, uint8_t *wwpn,
 	return rc;
 }
 
-
-
 /**
  * @brief Called to obtain the count for the specified type.
  *
@@ -8155,7 +8137,6 @@ ocs_hw_set_active_profile(ocs_hw_t *hw, ocs_set_active_profile_cb_t cb, uint32_t
 		return OCS_HW_RTN_NO_MEMORY;
 	}
 
-
 	/* cb_arg holds the data that will be passed to the callback on completion */
 	cb_arg = ocs_malloc(hw->os, sizeof(ocs_hw_set_active_profile_cb_arg_t), OCS_M_NOWAIT);
 	if (cb_arg == NULL) {
@@ -8179,8 +8160,6 @@ ocs_hw_set_active_profile(ocs_hw_t *hw, ocs_set_active_profile_cb_t cb, uint32_t
 
 	return rc;
 }
-
-
 
 /*
  * Private functions
@@ -8494,7 +8473,14 @@ ocs_hw_cq_process(ocs_hw_t *hw, hw_cq_t *cq)
 			break;
 		case SLI_QENTRY_WQ_RELEASE: {
 			uint32_t wq_id = rid;
-			uint32_t index = ocs_hw_queue_hash_find(hw->wq_hash, wq_id);
+			int32_t index = ocs_hw_queue_hash_find(hw->wq_hash, wq_id);
+
+			if (unlikely(index < 0)) {
+				ocs_log_err(hw->os, "unknown idx=%#x rid=%#x\n",
+					    index, rid);
+				break;
+			}
+
 			hw_wq_t *wq = hw->hw_wq[index];
 
 			/* Submit any HW IOs that are on the WQ pending list */
@@ -8511,7 +8497,6 @@ ocs_hw_cq_process(ocs_hw_t *hw, hw_cq_t *cq)
 			CPUTRACE("xabt");
 			ocs_hw_xabt_process(hw, cq, cqe, rid);
 			break;
-
 		}
 		default:
 			ocs_log_test(hw->os, "unhandled ctype=%#x rid=%#x\n", ctype, rid);
@@ -8957,8 +8942,6 @@ ocs_hw_xabt_process(ocs_hw_t *hw, hw_cq_t *cq, uint8_t *cqe, uint16_t rid)
                ocs_unlock(&hw->io_lock);
        }
 
-
-
 	/* For IOs that were aborted internally, we need to issue any pending callback here. */
 	if (io->done != NULL) {
 		ocs_hw_done_t  done = io->done;
@@ -9101,9 +9084,6 @@ ocs_hw_command_process(ocs_hw_t *hw, int32_t status, uint8_t *mqe, size_t size)
 
 	return 0;
 }
-
-
-
 
 /**
  * @brief Process entries on the given mailbox queue.
@@ -9308,7 +9288,8 @@ ocs_hw_cb_link(void *ctx, void *e)
 
 		hw->link.status = event->status;
 
-		for (i = 0; d = hw->domains[i], i < SLI4_MAX_FCFI; i++) {
+		for (i = 0; i < SLI4_MAX_FCFI; i++) {
+			d = hw->domains[i];
 			if (d != NULL &&
 			    hw->callback.domain != NULL) {
 				hw->callback.domain(hw->args.domain, OCS_HW_DOMAIN_LOST, d);
@@ -9330,6 +9311,9 @@ ocs_hw_cb_fip(void *ctx, void *e)
 	ocs_domain_t	*domain = NULL;
 	sli4_fip_event_t *event = e;
 
+	ocs_hw_assert(event);
+	ocs_hw_assert(hw);
+
 	/* Find the associated domain object */
 	if (event->type == SLI4_FCOE_FIP_FCF_CLEAR_VLINK) {
 		ocs_domain_t *d = NULL;
@@ -9338,7 +9322,8 @@ ocs_hw_cb_fip(void *ctx, void *e)
 		/* Clear VLINK is different from the other FIP events as it passes back
 		 * a VPI instead of a FCF index. Check all attached SLI ports for a
 		 * matching VPI */
-		for (i = 0; d = hw->domains[i], i < SLI4_MAX_FCFI; i++) {
+		for (i = 0; i < SLI4_MAX_FCFI; i++) {
+			d = hw->domains[i];
 			if (d != NULL) {
 				ocs_sport_t	*sport = NULL;
 
@@ -11029,7 +11014,6 @@ __ocs_hw_domain_freed(ocs_sm_ctx_t *ctx, ocs_sm_event_t evt, void *data)
 	return NULL;
 }
 
-
 static void *
 __ocs_hw_domain_free_redisc_fcf(ocs_sm_ctx_t *ctx, ocs_sm_event_t evt, void *data)
 {
@@ -11208,8 +11192,8 @@ target_wqe_timer_nop_cb(ocs_hw_t *hw, int32_t status, uint8_t *mqe, void *arg)
 {
 	ocs_hw_io_t *io = NULL;
 	ocs_hw_io_t *io_next = NULL;
-	uint64_t ticks_current = ocs_get_os_ticks();
-	uint32_t sec_elapsed;
+	ocs_hw_rtn_e rc;
+	struct timeval cur_time;
 
 	sli4_mbox_command_header_t	*hdr = (sli4_mbox_command_header_t *)mqe;
 
@@ -11221,34 +11205,40 @@ target_wqe_timer_nop_cb(ocs_hw_t *hw, int32_t status, uint8_t *mqe, void *arg)
 
 	/* loop through active WQE list and check for timeouts */
 	ocs_lock(&hw->io_lock);
-		ocs_list_foreach_safe(&hw->io_timed_wqe, io, io_next) {
-			sec_elapsed = ((ticks_current - io->submit_ticks) / ocs_get_os_tick_freq());
+	ocs_list_foreach_safe(&hw->io_timed_wqe, io, io_next) {
 
-			/*
-			 * If elapsed time > timeout, abort it. No need to check type since
-			 * it wouldn't be on this list unless it was a target WQE
-			 */
-			if (sec_elapsed > io->tgt_wqe_timeout) {
-				ocs_log_test(hw->os, "IO timeout xri=0x%x tag=0x%x type=%d\n",
-					     io->indicator, io->reqtag, io->type);
+		/*
+		 * If elapsed time > timeout, abort it. No need to check type since
+		 * it wouldn't be on this list unless it was a target WQE
+		 */
+		getmicrouptime(&cur_time);
+		timevalsub(&cur_time, &io->submit_time);
+		if (cur_time.tv_sec > io->wqe_timeout) {
+			ocs_log_info(hw->os, "IO timeout xri=0x%x tag=0x%x type=%d elapsed time:%u\n",
+				     io->indicator, io->reqtag, io->type, cur_time.tv_sec);
 
-				/* remove from active_wqe list so won't try to abort again */
-				ocs_list_remove(&hw->io_timed_wqe, io);
+			/* remove from active_wqe list so won't try to abort again */
+			ocs_list_remove(&hw->io_timed_wqe, io);
 
-				/* save status of "timed out" for when abort completes */
-				io->status_saved = 1;
-				io->saved_status = SLI4_FC_WCQE_STATUS_TARGET_WQE_TIMEOUT;
-				io->saved_ext = 0;
-				io->saved_len = 0;
+			/* save status of "timed out" for when abort completes */
+			io->status_saved = 1;
+			io->saved_status = SLI4_FC_WCQE_STATUS_WQE_TIMEOUT;
+			io->saved_ext = 0;
+			io->saved_len = 0;
 
-				/* now abort outstanding IO */
-				ocs_hw_io_abort(hw, io, FALSE, NULL, NULL);
+			/* now abort outstanding IO */
+			rc = ocs_hw_io_abort(hw, io, TRUE, NULL, NULL);
+			if (rc) {
+				ocs_log_test(hw->os,
+					"abort failed xri=%#x tag=%#x rc=%d\n",
+					io->indicator, io->reqtag, rc);
 			}
-			/*
-			 * need to go through entire list since each IO could have a
-			 * different timeout value
-			 */
 		}
+		/*
+		 * need to go through entire list since each IO could have a
+		 * different timeout value
+		 */
+	}
 	ocs_unlock(&hw->io_lock);
 
 	/* if we're not in the middle of shutting down, schedule next timer */
@@ -11266,7 +11256,6 @@ target_wqe_timer_cb(void *arg)
 
 	/* delete existing timer; will kick off new timer after checking wqe timeouts */
 	hw->in_active_wqe_timer = TRUE;
-	ocs_del_timer(&hw->wqe_timer);
 
 	/* Forward timer callback to execute in the mailbox completion processing context */
 	if (ocs_hw_async_call(hw, target_wqe_timer_nop_cb, hw)) {
@@ -11279,7 +11268,7 @@ shutdown_target_wqe_timer(ocs_hw_t *hw)
 {
 	uint32_t	iters = 100;
 
-	if (hw->config.emulate_tgt_wqe_timeout) {
+	if (hw->config.emulate_wqe_timeout) {
 		/* request active wqe timer shutdown, then wait for it to complete */
 		hw->active_wqe_timer_shutdown = TRUE;
 
@@ -11465,7 +11454,6 @@ ocs_hw_xri_move_to_port_owned(ocs_hw_t *hw, uint32_t num_xri)
 	ocs_lock(&hw->io_lock);
 
 	for (i = 0; i < num_xri; i++) {
-
 		if (NULL != (io = ocs_list_remove_head(&hw->io_free))) {
 			ocs_hw_rtn_e rc;
 
@@ -11576,7 +11564,6 @@ ocs_hw_xri_move_to_host_owned(ocs_hw_t *hw, uint8_t num_xri)
 	}
 	return rc;
 }
-
 
 /**
  * @brief Allocate an ocs_hw_rx_buffer_t array.
@@ -12054,7 +12041,7 @@ ocs_hw_reque_xri( ocs_hw_t *hw, ocs_hw_io_t *io )
 	 */
 	OCS_STAT(hw->tcmd_wq_submit[io->wq->instance]++);
 	OCS_STAT(io->wq->use_count++);
-	
+
 	rc = hw_wq_write(io->wq, &io->wqe);
 	if (rc < 0) {
 		ocs_log_err(hw->os, "sli_queue_write reque xri failed: %d\n", rc);
@@ -12399,9 +12386,6 @@ ocs_hw_set_persistent_topology(ocs_hw_t *hw, uint32_t topology, uint32_t opts)
  *
  */
 
-
-
-
 /**
  * This contains all hw runtime workaround code.  Based on the asic type,
  * asic revision, and range of fw revisions, a particular workaround may be enabled.
@@ -12416,7 +12400,6 @@ ocs_hw_set_persistent_topology(ocs_hw_t *hw, uint32_t topology, uint32_t opts)
  * what we might previously see as "if this is a BE3, then do xxx"
  *
  */
-
 
 #define HW_FWREV_ZERO		(0ull)
 #define HW_FWREV_MAX		(~0ull)
@@ -12627,7 +12610,6 @@ ocs_hw_workaround_setup(struct ocs_hw_s *hw)
 	for (i = 0, w = hw_workarounds; i < ARRAY_SIZE(hw_workarounds); i++, w++) {
 		if (ocs_hw_workaround_match(hw, w)) {
 			switch(w->workaround) {
-
 			case HW_WORKAROUND_TEST: {
 				ocs_log_debug(hw->os, "Override: test: %d\n", w->value);
 				break;

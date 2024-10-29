@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 Michael Smith
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -692,7 +691,7 @@ struct ciss_bmic_id_table {
 /*
  * Below here I have no documentation on the rest of this data structure.  It is
  * inferred from the opensource cciss_vol_status application.  I assume that this 
- * data strucutre is 512 bytes in total size, do not exceed it.
+ * data structure is 512 bytes in total size, do not exceed it.
  */
     u_int8_t	bDdffVersion[4];         /* DDFF update engine version          */
     u_int16_t	usMaxLogicalUnits;       /* Maximum logical units supported */
@@ -853,7 +852,5 @@ struct ciss_bmic_flush_cache {
 #define CISS_TL_SIMPLE_ENABLE_INTERRUPTS(sc) \
 	CISS_TL_SIMPLE_WRITE(sc, CISS_TL_SIMPLE_IMR, \
 			     CISS_TL_SIMPLE_READ(sc, CISS_TL_SIMPLE_IMR) & ~(sc)->ciss_interrupt_mask)
-
-
 
 #endif /* _KERNEL */

@@ -27,7 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
@@ -44,7 +43,6 @@
 #include "ocs_utils.h"
 
 typedef struct ocs_hw_io_s ocs_hw_io_t;
-
 
 #if defined(OCS_INCLUDE_DEBUG)
 #else
@@ -213,7 +211,7 @@ typedef enum {
 	OCS_HW_WAR_VERSION,
 	OCS_HW_DISABLE_AR_TGT_DIF,
 	OCS_HW_EMULATE_I_ONLY_AAB, /**< emulate IAAB=0 for initiator-commands only */
-	OCS_HW_EMULATE_TARGET_WQE_TIMEOUT, /**< enable driver timeouts for target WQEs */
+	OCS_HW_EMULATE_WQE_TIMEOUT, /**< enable driver timeouts for WQEs */
 	OCS_HW_LINK_CONFIG_SPEED,
 	OCS_HW_CONFIG_TOPOLOGY,
 	OCS_HW_BOUNCE,
@@ -275,7 +273,6 @@ typedef struct {
 	uint32_t			num_descriptors;
 	ocs_hw_profile_descriptor_t	descriptors[OCS_HW_MAX_PROFILES];
 } ocs_hw_profile_list_t;
-
 
 /**
  * @brief Defines DIF operation modes
@@ -466,7 +463,6 @@ typedef struct ocs_hw_sgl_s {
  */
 typedef int32_t	(*ocs_hw_done_t)(struct ocs_hw_io_s *, ocs_remote_node_t *, uint32_t len, int32_t status, uint32_t ext, void *ul_arg);
 
-
 typedef union ocs_hw_io_param_u {
 	struct {
 		uint16_t ox_id;
@@ -524,7 +520,7 @@ typedef union ocs_hw_io_param_u {
 		ocs_hw_dif_blk_size_e blk_size;
 		uint32_t	cmnd_size;
 		uint16_t	flags;
-		uint8_t		timeout;
+		uint32_t	timeout;
 		uint32_t	first_burst;
 	} fcp_ini;
 } ocs_hw_io_param_t;
@@ -580,8 +576,8 @@ struct ocs_hw_io_s {
 	void		*abort_arg;	/**< argument passed to "abort done" callback */
 	ocs_ref_t	ref;		/**< refcount object */
 	size_t		length;		/**< needed for bug O127585: length of IO */
-	uint8_t		tgt_wqe_timeout; /**< timeout value for target WQEs */
-	uint64_t	submit_ticks;	/**< timestamp when current WQE was submitted */
+	uint32_t	wqe_timeout;	/**< timeout value for WQEs */
+	struct timeval  submit_time;	/**< timestamp when current WQE was submitted */
 
 	uint32_t	status_saved:1, /**< if TRUE, latched status should be returned */
 			abort_in_progress:1, /**< if TRUE, abort is in progress */
@@ -884,8 +880,6 @@ typedef struct {
 
 } ocs_hw_workaround_t;
 
-
-
 /**
  * @brief HW object
  */
@@ -921,7 +915,7 @@ struct ocs_hw_s {
 		uint16_t	auto_xfer_rdy_app_tag_value;
 		uint8_t		dif_mode; /**< DIF mode to use */
 		uint8_t		i_only_aab; /** Enable initiator-only auto-abort */
-		uint8_t		emulate_tgt_wqe_timeout; /** Enable driver target wqe timeouts */
+		uint8_t		emulate_wqe_timeout; /** Enable driver wqe timeouts */
 		uint32_t	bounce:1;
 		const char	*queue_topology;		/**< Queue topology string */
 		uint8_t		auto_xfer_rdy_t10_enable;	/** Enable t10 PI for auto xfer ready */
@@ -981,7 +975,6 @@ struct ocs_hw_s {
 	ocs_list_t	cmd_head;
 	ocs_list_t	cmd_pending;
 	uint32_t	cmd_head_count;
-
 
 	sli4_link_event_t link;
 	ocs_hw_linkcfg_e linkcfg; /**< link configuration setting */
@@ -1087,7 +1080,6 @@ struct ocs_hw_s {
 
 	ocs_atomic_t	send_frame_seq_id;	/**< send frame sequence ID */
 };
-
 
 typedef enum {
 	OCS_HW_IO_INUSE_COUNT,
@@ -1375,7 +1367,6 @@ extern ocs_hw_rtn_e ocs_hw_dump_clear(ocs_hw_t *, ocs_hw_dump_clear_cb_t, void *
 
 extern uint8_t ocs_hw_is_io_port_owned(ocs_hw_t *hw, ocs_hw_io_t *io);
 
-
 extern uint8_t ocs_hw_is_xri_port_owned(ocs_hw_t *hw, uint32_t xri);
 extern ocs_hw_io_t * ocs_hw_io_lookup(ocs_hw_t *hw, uint32_t indicator);
 extern uint32_t ocs_hw_xri_move_to_port_owned(ocs_hw_t *hw, uint32_t num_xri);
@@ -1383,7 +1374,6 @@ extern ocs_hw_rtn_e ocs_hw_xri_move_to_host_owned(ocs_hw_t *hw, uint8_t num_xri)
 extern int32_t ocs_hw_reque_xri(ocs_hw_t *hw, ocs_hw_io_t *io);
 ocs_hw_rtn_e ocs_hw_set_persistent_topology(ocs_hw_t *hw, uint32_t topology, uint32_t opts);
 extern uint32_t ocs_hw_get_config_persistent_topology(ocs_hw_t *hw);
-
 
 typedef struct {
 	/* structure elements used by HW */
@@ -1398,7 +1388,6 @@ typedef struct {
 	ocs_dma_t payload;		/**> a payload DMA buffer */
 } ocs_hw_send_frame_context_t;
 
-
 #define OCS_HW_OBJECT_G5              0xfeaa0001
 #define OCS_HW_OBJECT_G6              0xfeaa0003
 #define OCS_FILE_TYPE_GROUP            0xf7
@@ -1411,7 +1400,6 @@ struct ocs_hw_grp_hdr {
         uint8_t date[12];
         uint8_t revision[32];
 };                              
-
 
 ocs_hw_rtn_e
 ocs_hw_send_frame(ocs_hw_t *hw, fc_header_le_t *hdr, uint8_t sof, uint8_t eof, ocs_dma_t *payload,
@@ -1462,7 +1450,6 @@ extern void ocs_hw_reqtag_free(ocs_hw_t *hw, hw_wq_callback_t *wqcb);
 extern hw_wq_callback_t *ocs_hw_reqtag_get_instance(ocs_hw_t *hw, uint32_t instance_index);
 extern void ocs_hw_reqtag_reset(ocs_hw_t *hw);
 
-
 extern uint32_t ocs_hw_dif_blocksize(ocs_hw_dif_info_t *dif_info);
 extern int32_t ocs_hw_dif_mem_blocksize(ocs_hw_dif_info_t *dif_info, int wiretomem);
 extern int32_t ocs_hw_dif_wire_blocksize(ocs_hw_dif_info_t *dif_info, int wiretomem);
@@ -1477,7 +1464,6 @@ extern uint32_t ocs_hw_get_def_wwn(ocs_t *ocs, uint32_t chan, uint64_t *wwpn, ui
 #define CPUTRACE(...)
 #endif
 
-
 /* Two levels of macro needed due to expansion */
 #define HW_FWREV(a,b,c,d) (((uint64_t)(a) << 48) | ((uint64_t)(b) << 32) | ((uint64_t)(c) << 16) | ((uint64_t)(d)))
 #define HW_FWREV_1(x) HW_FWREV(x)
@@ -1489,7 +1475,6 @@ extern uint32_t ocs_hw_get_def_wwn(ocs_t *ocs, uint32_t chan, uint64_t *wwpn, ui
 #define OCS_MIN_FW_VER_SKYHAWK 10,4,255,0
 
 extern void ocs_hw_workaround_setup(struct ocs_hw_s *hw);
-
 
 /**
  * @brief Defines the number of the RQ buffers for each RQ

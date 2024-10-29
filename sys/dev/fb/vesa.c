@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 Kazutaka YOKOTA and Michael Smith
  * Copyright (c) 2009-2013 Jung-uk Kim <jkim@FreeBSD.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_vga.h"
 #include "opt_vesa.h"
 
@@ -101,7 +100,8 @@ static size_t vesa_bios_size;
 /* VESA video adapter */
 static video_adapter_t *vesa_adp;
 
-static SYSCTL_NODE(_debug, OID_AUTO, vesa, CTLFLAG_RD, NULL, "VESA debugging");
+static SYSCTL_NODE(_debug, OID_AUTO, vesa, CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
+    "VESA debugging");
 static int vesa_shadow_rom;
 SYSCTL_INT(_debug_vesa, OID_AUTO, shadow_rom, CTLFLAG_RDTUN, &vesa_shadow_rom,
     0, "Enable video BIOS shadow");

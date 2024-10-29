@@ -27,7 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
@@ -66,7 +65,6 @@ static ocs_mgmt_functions_t node_mgmt_functions = {
 	.set_handler		=	ocs_mgmt_node_set,
 	.exec_handler		=	ocs_mgmt_node_exec,
 };
-
 
 /**
  * @ingroup node_common
@@ -204,7 +202,7 @@ ocs_node_find(ocs_sport_t *sport, uint32_t port_id)
 ocs_node_t *
 ocs_node_find_wwpn(ocs_sport_t *sport, uint64_t wwpn)
 {
-	ocs_node_t *node = NULL;;
+	ocs_node_t *node = NULL;
 
 	ocs_assert(sport, NULL);
 
@@ -252,7 +250,7 @@ ocs_node_create_pool(ocs_t *ocs, uint32_t node_count)
 
 	if (0 == ocs_hw_get(&ocs->hw, OCS_HW_MAX_SGE, &max_sge) &&
 	    0 == ocs_hw_get(&ocs->hw, OCS_HW_N_SGL, &num_sgl)) {
-		max_xfer_size = max_sge * num_sgl;
+		max_xfer_size = (max_sge * (uint64_t)num_sgl);
 	} else {
 		max_xfer_size = 65536;
 	}
@@ -261,7 +259,6 @@ ocs_node_create_pool(ocs_t *ocs, uint32_t node_count)
 		max_xfer_size = 65536;
 
 	ocs_list_init(&xport->nodes_free_list, ocs_node_t, link);
-
 
 	for (i = 0; i < node_count; i ++) {
 		node = ocs_malloc(ocs, sizeof(ocs_node_t), OCS_M_ZERO | OCS_M_NOWAIT);
@@ -838,7 +835,6 @@ __ocs_node_shutdown(ocs_sm_ctx_t *ctx, ocs_sm_event_t evt, void *arg)
 				 * (or both); in either case, return to initial state
 				 */
 				ocs_node_init_device(node, send_plogi);
-
 			}
 			/* else: let node shutdown occur */
 			break;
@@ -930,7 +926,6 @@ ocs_node_initiate_cleanup(ocs_node_t *node)
 	/* first cleanup ELS's that are pending (not yet active) */
 	ocs_lock(&node->active_ios_lock);
 		ocs_list_foreach_safe(&node->els_io_pend_list, els, els_next) {
-
 			/* skip the ELS IO for which a response will be sent after shutdown */
 			if ((node->send_ls_acc != OCS_NODE_SEND_LS_ACC_NONE) &&
 			    (els == node->ls_acc_io)) {
@@ -1001,7 +996,6 @@ __ocs_node_wait_els_shutdown(ocs_sm_ctx_t *ctx, ocs_sm_event_t evt, void *arg)
 	node_sm_trace();
 
 	switch(evt) {
-
 	case OCS_EVT_ENTER: {
 		ocs_node_hold_frames(node);
 		if (ocs_els_io_list_empty(node, &node->els_io_active_list)) {
@@ -1088,7 +1082,6 @@ __ocs_node_wait_node_free(ocs_sm_ctx_t *ctx, ocs_sm_event_t evt, void *arg)
 	node_sm_trace();
 
 	switch(evt) {
-
 	case OCS_EVT_ENTER:
 		ocs_node_hold_frames(node);
 		break;
@@ -1339,7 +1332,6 @@ __ocs_node_common(const char *funcname, ocs_sm_ctx_t *ctx, ocs_sm_event_t evt, v
 	}
 	return NULL;
 }
-
 
 /**
  * @ingroup node_common
@@ -1696,7 +1688,6 @@ node_check_ns_req(ocs_sm_ctx_t *ctx, ocs_sm_event_t evt, void *arg, uint32_t cmd
 	return 0;
 }
 
-
 void
 ocs_mgmt_node_list(ocs_textbuf_t *textbuf, void *object)
 {
@@ -1906,7 +1897,6 @@ ocs_mgmt_node_set(char *parent, char *name, char *value, void *object)
 
 	/* If it doesn't start with my qualifier I don't know what to do with it */
 	if (ocs_strncmp(name, qualifier, strlen(qualifier)) == 0) {
-
 		ocs_lock(&node->active_ios_lock);
 		ocs_list_foreach(&node->active_ios, io) {
 			if ((io->mgmt_functions) && (io->mgmt_functions->set_handler)) {
@@ -1916,10 +1906,8 @@ ocs_mgmt_node_set(char *parent, char *name, char *value, void *object)
 			if (retval == 0) {
 				break;
 			}
-
 		}
 		ocs_unlock(&node->active_ios_lock);
-
 	}
 
 	return retval;
@@ -1956,7 +1944,6 @@ ocs_mgmt_node_exec(char *parent, char *action, void *arg_in, uint32_t arg_in_len
 					if (retval == 0) {
 						break;
 					}
-
 				}
 			ocs_unlock(&node->active_ios_lock);
 		}
@@ -1964,8 +1951,6 @@ ocs_mgmt_node_exec(char *parent, char *action, void *arg_in, uint32_t arg_in_len
 
 	return retval;
 }
-
-
 
 /**
  * @brief Return TRUE if active ios list is empty

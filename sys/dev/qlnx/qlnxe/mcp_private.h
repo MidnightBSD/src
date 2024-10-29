@@ -24,7 +24,6 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
 
 /****************************************************************************
@@ -170,7 +169,6 @@ struct private_path {
 	struct load_rsp_stc drv_load_params;
 	u64 ecc_events;
 };
-
 
 /**************************************/
 /*                                    */
@@ -476,7 +474,6 @@ struct private_func {
 	struct pf_sb_t sb;
 	struct dci_info_func dci_func;
 };
-
 
 /**************************************/
 /*                                    */

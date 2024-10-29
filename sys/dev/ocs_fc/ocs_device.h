@@ -27,7 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
@@ -46,7 +45,6 @@
 #define OCS_FC_RQ_SIZE_DEFAULT			1024
 #endif
 
-
 /***************************************************************************
  * IO Configuration
  */
@@ -57,7 +55,6 @@
 #ifndef OCS_FC_MAX_SGL
 #define OCS_FC_MAX_SGL		256
 #endif
-
 
 /***************************************************************************
  * DIF Configuration

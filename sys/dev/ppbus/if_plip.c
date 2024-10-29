@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997 Poul-Henning Kamp
  * All rights reserved.
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Parallel port TCP/IP interfaces added.  I looked at the driver from
  * MACH but this is a complete rewrite, and btw. incompatible, and it
@@ -252,10 +251,6 @@ lp_attach(device_t dev)
 	}
 
 	ifp = lp->sc_ifp = if_alloc(IFT_PARA);
-	if (ifp == NULL) {
-		return (ENOSPC);
-	}
-
 	ifp->if_softc = lp;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_mtu = LPMTU;
@@ -538,7 +533,6 @@ lp_intr(void *arg)
 
 	ppb_assert_locked(ppbus);
 	if (sc->sc_ifp->if_flags & IFF_LINK0) {
-
 		/* Ack. the request */
 		ppb_wdtr(ppbus, 0x01);
 
@@ -598,7 +592,6 @@ lp_intr(void *arg)
 		len = sc->sc_ifp->if_mtu + LPIPHDRLEN;
 		bp  = sc->sc_ifbuf;
 		while (len--) {
-
 			cl = ppb_rstr(ppbus);
 			ppb_wdtr(ppbus, 8);
 
@@ -841,7 +834,6 @@ static device_method_t lp_methods[] = {
 	DEVMETHOD(device_probe,		lp_probe),
 	DEVMETHOD(device_attach,	lp_attach),
 	DEVMETHOD(device_detach,	lp_detach),
-
 	{ 0, 0 }
 };
 

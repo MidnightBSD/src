@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /** @file drm_vm.c
  * Support code for mapping of DRM maps.
  */

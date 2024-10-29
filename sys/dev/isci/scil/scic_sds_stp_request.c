@@ -53,7 +53,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/isci/scil/intel_sat.h>
 #include <dev/isci/scil/intel_sata.h>
 #include <dev/isci/scil/sci_types.h>

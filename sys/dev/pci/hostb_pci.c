@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 1997, Stefan Esser <se@freebsd.org>
- * All rights reserved.
+ * Copyright 1997, Stefan Esser <se@freebsd.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -51,7 +49,6 @@ pci_hostb_probe(device_t dev)
 	id = pci_get_devid(dev);
 
 	switch (id) {
-
 	/* VIA VT82C596 Power Management Function */
 	case 0x30501106:
 		return (ENXIO);
@@ -280,7 +277,6 @@ static device_method_t pci_hostb_methods[] = {
 	DEVMETHOD(pci_find_next_extcap,	pci_hostb_find_next_extcap),
 	DEVMETHOD(pci_find_htcap,	pci_hostb_find_htcap),
 	DEVMETHOD(pci_find_next_htcap,	pci_hostb_find_next_htcap),
-
 	{ 0, 0 }
 };
 

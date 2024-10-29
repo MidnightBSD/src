@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/endian.h>
@@ -235,11 +234,6 @@ et_attach(device_t dev)
 	callout_init_mtx(&sc->sc_tick, &sc->sc_mtx, 0);
 
 	ifp = sc->ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(dev, "can not if_alloc()\n");
-		error = ENOSPC;
-		goto fail;
-	}
 
 	/*
 	 * Initialize tunables
@@ -1559,13 +1553,36 @@ et_free_rx_ring(struct et_softc *sc)
 	}
 }
 
+static u_int
+et_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint32_t h, *hp, *hash = arg;
+
+	h = ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN);
+	h = (h & 0x3f800000) >> 23;
+
+	hp = &hash[0];
+	if (h >= 32 && h < 64) {
+		h -= 32;
+		hp = &hash[1];
+	} else if (h >= 64 && h < 96) {
+		h -= 64;
+		hp = &hash[2];
+	} else if (h >= 96) {
+		h -= 96;
+		hp = &hash[3];
+	}
+	*hp |= (1 << h);
+
+	return (1);
+}
+
 static void
 et_setmulti(struct et_softc *sc)
 {
 	struct ifnet *ifp;
 	uint32_t hash[4] = { 0, 0, 0, 0 };
 	uint32_t rxmac_ctrl, pktfilt;
-	struct ifmultiaddr *ifma;
 	int i, count;
 
 	ET_LOCK_ASSERT(sc);
@@ -1580,34 +1597,7 @@ et_setmulti(struct et_softc *sc)
 		goto back;
 	}
 
-	count = 0;
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		uint32_t *hp, h;
-
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-
-		h = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-				   ifma->ifma_addr), ETHER_ADDR_LEN);
-		h = (h & 0x3f800000) >> 23;
-
-		hp = &hash[0];
-		if (h >= 32 && h < 64) {
-			h -= 32;
-			hp = &hash[1];
-		} else if (h >= 64 && h < 96) {
-			h -= 64;
-			hp = &hash[2];
-		} else if (h >= 96) {
-			h -= 96;
-			hp = &hash[3];
-		}
-		*hp |= (1 << h);
-
-		++count;
-	}
-	if_maddr_runlock(ifp);
+	count = if_foreach_llmaddr(ifp, et_hash_maddr, &hash);
 
 	for (i = 0; i < 4; ++i)
 		CSR_WRITE_4(sc, ET_MULTI_HASH + (i * 4), hash[i]);
@@ -2453,10 +2443,11 @@ et_add_sysctls(struct et_softc * sc)
 	children = SYSCTL_CHILDREN(device_get_sysctl_tree(sc->dev));
 
 	SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "rx_intr_npkts",
-	    CTLTYPE_INT | CTLFLAG_RW, sc, 0, et_sysctl_rx_intr_npkts, "I",
-	    "RX IM, # packets per RX interrupt");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, sc, 0,
+	    et_sysctl_rx_intr_npkts, "I", "RX IM, # packets per RX interrupt");
 	SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "rx_intr_delay",
-	    CTLTYPE_INT | CTLFLAG_RW, sc, 0, et_sysctl_rx_intr_delay, "I",
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, sc, 0,
+	    et_sysctl_rx_intr_delay, "I",
 	    "RX IM, RX interrupt delay (x10 usec)");
 	SYSCTL_ADD_INT(ctx, children, OID_AUTO, "tx_intr_nsegs",
 	    CTLFLAG_RW, &sc->sc_tx_intr_nsegs, 0,
@@ -2464,8 +2455,8 @@ et_add_sysctls(struct et_softc * sc)
 	SYSCTL_ADD_UINT(ctx, children, OID_AUTO, "timer",
 	    CTLFLAG_RW, &sc->sc_timer, 0, "TX timer");
 
-	tree = SYSCTL_ADD_NODE(ctx, children, OID_AUTO, "stats", CTLFLAG_RD,
-	    NULL, "ET statistics");
+	tree = SYSCTL_ADD_NODE(ctx, children, OID_AUTO, "stats",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "ET statistics");
         parent = SYSCTL_CHILDREN(tree);
 
 	/* TX/RX statistics. */
@@ -2486,8 +2477,8 @@ et_add_sysctls(struct et_softc * sc)
 	    "1519 to 1522 bytes frames");
 
 	/* RX statistics. */
-	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "rx", CTLFLAG_RD,
-	    NULL, "RX MAC statistics");
+	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "rx",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "RX MAC statistics");
 	children = SYSCTL_CHILDREN(tree);
 	ET_SYSCTL_STAT_ADD64(ctx, children, "bytes",
 	    &stats->rx_bytes, "Good bytes");
@@ -2525,8 +2516,8 @@ et_add_sysctls(struct et_softc * sc)
 	    &stats->rx_drop, "Dropped frames");
 
 	/* TX statistics. */
-	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "tx", CTLFLAG_RD,
-	    NULL, "TX MAC statistics");
+	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "tx",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "TX MAC statistics");
 	children = SYSCTL_CHILDREN(tree);
 	ET_SYSCTL_STAT_ADD64(ctx, children, "bytes",
 	    &stats->tx_bytes, "Good bytes");

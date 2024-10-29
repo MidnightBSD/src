@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015 Landon Fuller <landon@landonf.org>
  * All rights reserved.
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>
@@ -98,7 +97,7 @@ bcma_bhndb_suspend_child(device_t dev, device_t child)
 
 	if (device_get_parent(child) != dev)
 		BUS_SUSPEND_CHILD(device_get_parent(dev), child);
-	
+
 	if (device_is_suspended(child))
 		return (EBUSY);
 
@@ -112,7 +111,7 @@ bcma_bhndb_suspend_child(device_t dev, device_t child)
 	if (dinfo->res_agent != NULL)
 		BHNDB_SUSPEND_RESOURCE(device_get_parent(dev), dev,
 		    SYS_RES_MEMORY, dinfo->res_agent->res);
-	
+
 	return (0);
 }
 
@@ -168,7 +167,7 @@ DEFINE_CLASS_2(bhnd, bcma_bhndb_driver, bcma_bhndb_methods,
     sizeof(struct bcma_softc), bhnd_bhndb_driver, bcma_driver);
 
 DRIVER_MODULE(bcma_bhndb, bhndb, bcma_bhndb_driver, bhnd_devclass, NULL, NULL);
- 
+
 MODULE_VERSION(bcma_bhndb, 1);
 MODULE_DEPEND(bcma_bhndb, bcma, 1, 1, 1);
 MODULE_DEPEND(bcma_bhndb, bhnd, 1, 1, 1);

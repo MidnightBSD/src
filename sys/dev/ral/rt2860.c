@@ -18,7 +18,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*-
  * Ralink Technology RT2860/RT3090/RT3390/RT3562/RT5390/RT5392 chipset driver
  * http://www.ralinktech.com/
@@ -502,7 +501,6 @@ rt2860_dma_map_addr(void *arg, bus_dma_segment_t *segs, int nseg, int error)
 
 	*(bus_addr_t *)arg = segs[0].ds_addr;
 }
-
 
 static int
 rt2860_alloc_tx_ring(struct rt2860_softc *sc, struct rt2860_tx_ring *ring)
@@ -2219,7 +2217,7 @@ static void
 rt2860_enable_mrr(struct rt2860_softc *sc)
 {
 #define CCK(mcs)	(mcs)
-#define OFDM(mcs)	(1 << 3 | (mcs))
+#define	OFDM(mcs)	(1U << 3 | (mcs))
 	RAL_WRITE(sc, RT2860_LG_FBK_CFG0,
 	    OFDM(6) << 28 |	/* 54->48 */
 	    OFDM(5) << 24 |	/* 48->36 */
@@ -2587,7 +2585,7 @@ rt5390_set_chan(struct rt2860_softc *sc, u_int chan)
 	rf = MIN(rf, 0x5f);
 	if (tmp != rf)
 		rt2860_mcu_cmd(sc, 0x74, (tmp << 8 ) | rf, 0);
-	
+
 	if (sc->mac_ver == 0x5390) {
 		if (chan <= 4)
 			rf = 0x73;
@@ -3324,7 +3322,7 @@ b4inc(uint32_t b32, int8_t delta)
 			b4 = 0;
 		else if (b4 > 0xf)
 			b4 = 0xf;
-		b32 = b32 >> 4 | b4 << 28;
+		b32 = b32 >> 4 | (uint32_t)b4 << 28;
 	}
 	return b32;
 }

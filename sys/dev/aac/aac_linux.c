@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Scott Long
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Linux ioctl handler for the aac device driver
  */
@@ -81,7 +80,8 @@ aac_linux_ioctl(struct thread *td, struct linux_ioctl_args *args)
 	u_long cmd;
 	int error;
 
-	error = fget(td, args->fd, cap_rights_init(&rights, CAP_IOCTL), &fp);
+	error = fget(td, args->fd, cap_rights_init_one(&rights, CAP_IOCTL),
+	    &fp);
 	if (error != 0)
 		return (error);
 	cmd = args->cmd;

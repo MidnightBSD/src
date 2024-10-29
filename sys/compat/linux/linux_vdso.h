@@ -1,6 +1,5 @@
 /*-
- * Copyright (c) 2013 Dmitry Chagin
- * All rights reserved.
+ * Copyright (c) 2013-2021 Dmitry Chagin <dchagin@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,7 +21,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _LINUX_VDSO_H_
@@ -37,11 +35,13 @@ struct linux_vdso_sym {
 	char		symname[];
 };
 
-vm_object_t __elfN(linux_shared_page_init)(char **);
-void	__elfN(linux_shared_page_fini)(vm_object_t);
-void	__elfN(linux_vdso_fixup)(struct sysentvec *);
-void	__elfN(linux_vdso_reloc)(struct sysentvec *);
+vm_object_t __elfN(linux_shared_page_init)(char **, vm_size_t);
+void	__elfN(linux_shared_page_fini)(vm_object_t, void *, vm_size_t);
+void	__elfN(linux_vdso_fixup)(char *, vm_offset_t);
 void	__elfN(linux_vdso_sym_init)(struct linux_vdso_sym *);
+
+int	linux_map_vdso(struct proc *, vm_object_t, vm_offset_t,
+	    vm_offset_t, struct image_params *);
 
 #define	LINUX_VDSO_SYM_INTPTR(name)				\
 uintptr_t name;							\

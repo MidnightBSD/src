@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef ECORE_REG_H
 #define ECORE_REG_H
 

@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>
@@ -66,7 +65,6 @@ static int	bhnd_pwrctl_updateclk(struct bhnd_pwrctl_softc *sc,
 		    bhnd_pwrctl_wars wars);
 
 static struct bhnd_device_quirk pwrctl_quirks[];
-
 
 /* Supported parent core device identifiers */
 static const struct bhnd_device pwrctl_devices[] = {
@@ -121,7 +119,6 @@ bhnd_pwrctl_attach(device_t dev)
 	struct chipc_softc		*chipc_sc;
 	bhnd_devclass_t			 hostb_class;
 	device_t			 hostb_dev;
-	device_t			 bus;
 	int				 error;
 
 	sc = device_get_softc(dev);
@@ -130,8 +127,6 @@ bhnd_pwrctl_attach(device_t dev)
 	sc->chipc_dev = device_get_parent(dev);
 	sc->quirks = bhnd_device_quirks(sc->chipc_dev, pwrctl_devices,
 	    sizeof(pwrctl_devices[0]));
-
-	bus = device_get_parent(sc->chipc_dev);
 
 	/* On devices that lack a slow clock source, HT must always be
 	 * enabled. */
@@ -470,7 +465,6 @@ bhnd_pwrctl_request_clock(device_t dev, device_t child, bhnd_clock clock)
 	PWRCTL_UNLOCK(sc);
 	return (error);
 }
-
 
 static device_method_t bhnd_pwrctl_methods[] = {
 	/* Device interface */

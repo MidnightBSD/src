@@ -32,21 +32,17 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
+#include <sys/types.h>
 #include <sys/bus.h>
+#include <sys/conf.h>
 #include <sys/fcntl.h>
-#include <sys/lock.h>
+#include <sys/jail.h>
 #include <sys/malloc.h>
-#include <sys/kernel.h>
-#include <sys/linker_set.h>
-#include <sys/mutex.h>
 #include <sys/namei.h>
 #include <sys/proc.h>
-#include <sys/sdt.h>
+#include <sys/stat.h>
 #include <sys/syscallsubr.h>
-#include <sys/sysctl.h>
-#include <sys/systm.h>
 #include <sys/vnode.h>
 
 #include <machine/stdarg.h>
@@ -57,8 +53,6 @@
 
 MALLOC_DEFINE(M_LINUX, "linux", "Linux mode structures");
 MALLOC_DEFINE(M_EPOLL, "lepoll", "Linux events structures");
-MALLOC_DEFINE(M_FUTEX, "futex", "Linux futexes");
-MALLOC_DEFINE(M_FUTEX_WP, "futex wp", "Linux futex waiting proc");
 
 FEATURE(linuxulator_v4l, "V4L ioctl wrapper support in the linuxulator");
 FEATURE(linuxulator_v4l2, "V4L2 ioctl wrapper support in the linuxulator");
@@ -91,12 +85,12 @@ SYSCTL_STRING(_compat_linux, OID_AUTO, emul_path, CTLFLAG_RWTUN,
  * named file, i.e. we check if the directory it should be in exists.
  */
 int
-linux_emul_convpath(struct thread *td, const char *path, enum uio_seg pathseg,
+linux_emul_convpath(const char *path, enum uio_seg pathseg,
     char **pbuf, int cflag, int dfd)
 {
 	int retval;
 
-	retval = kern_alternate_path(td, linux_emul_path, path, pathseg, pbuf,
+	retval = kern_alternate_path(curthread, linux_emul_path, path, pathseg, pbuf,
 	    cflag, dfd);
 
 	return (retval);
@@ -112,7 +106,8 @@ linux_msg(const struct thread *td, const char *fmt, ...)
 		return;
 
 	p = td->td_proc;
-	printf("linux: pid %d (%s): ", (int)p->p_pid, p->p_comm);
+	printf("linux: jid %d pid %d (%s): ", p->p_ucred->cr_prison->pr_id,
+	    (int)p->p_pid, p->p_comm);
 	va_start(ap, fmt);
 	vprintf(fmt, ap);
 	va_end(ap);
@@ -210,6 +205,49 @@ linux_driver_get_major_minor(const char *node, int *major, int *minor)
 	}
 
 	return (1);
+}
+
+int
+linux_vn_get_major_minor(const struct vnode *vp, int *major, int *minor)
+{
+	int error;
+
+	if (vp->v_type != VCHR)
+		return (ENOTBLK);
+	dev_lock();
+	if (vp->v_rdev == NULL) {
+		dev_unlock();
+		return (ENXIO);
+	}
+	error = linux_driver_get_major_minor(devtoname(vp->v_rdev),
+	    major, minor);
+	dev_unlock();
+	return (error);
+}
+
+void
+translate_vnhook_major_minor(struct vnode *vp, struct stat *sb)
+{
+	int major, minor;
+
+	if (vn_isdisk(vp)) {
+		sb->st_mode &= ~S_IFMT;
+		sb->st_mode |= S_IFBLK;
+	}
+
+	/*
+	 * Return the same st_dev for every devfs instance.  The reason
+	 * for this is to work around an idiosyncrasy of glibc getttynam()
+	 * implementation: it checks whether st_dev returned for fd 0
+	 * is the same as st_dev returned for the target of /proc/self/fd/0
+	 * symlink, and with linux chroots having their own devfs instance,
+	 * the check will fail if you chroot into it.
+	 */
+	if (rootdevmp != NULL && vp->v_mount->mnt_vfc == rootdevmp->mnt_vfc)
+		sb->st_dev = rootdevmp->mnt_stat.f_fsid.val[0];
+
+	if (linux_vn_get_major_minor(vp, &major, &minor) == 0)
+		sb->st_rdev = makedev(major, minor);
 }
 
 char *

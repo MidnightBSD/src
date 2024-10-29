@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015-2016 Hiroki Mori.
  * Copyright (c) 2011-2012 Stefan Bethke.
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include "opt_etherswitch.h"
@@ -106,7 +105,8 @@ struct rtl8366rb_softc {
 static int callout_blocked = 0;
 static int iic_select_retries = 0;
 static int phy_access_retries = 0;
-static SYSCTL_NODE(_debug, OID_AUTO, rtl8366rb, CTLFLAG_RD, 0, "rtl8366rb");
+static SYSCTL_NODE(_debug, OID_AUTO, rtl8366rb, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "rtl8366rb");
 SYSCTL_INT(_debug_rtl8366rb, OID_AUTO, callout_blocked, CTLFLAG_RW, &callout_blocked, 0,
 	"number of times the callout couldn't acquire the bus");
 SYSCTL_INT(_debug_rtl8366rb, OID_AUTO, iic_select_retries, CTLFLAG_RW, &iic_select_retries, 0,
@@ -238,12 +238,6 @@ rtl8366rb_attach(device_t dev)
 	/* PHYs need an interface, so we generate a dummy one */
 	for (i = 0; i < sc->numphys; i++) {
 		sc->ifp[i] = if_alloc(IFT_ETHER);
-		if (sc->ifp[i] == NULL) {
-			device_printf(dev, "couldn't allocate ifnet structure\n");
-			err = ENOMEM;
-			break;
-		}
-
 		sc->ifp[i]->if_softc = sc;
 		sc->ifp[i]->if_flags |= IFF_UP | IFF_BROADCAST | IFF_DRV_RUNNING
 			| IFF_SIMPLEX;

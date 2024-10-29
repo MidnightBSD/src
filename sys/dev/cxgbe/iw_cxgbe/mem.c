@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2013 Chelsio, Inc. All rights reserved.
  *
@@ -32,7 +32,6 @@
  * SOFTWARE.
  */
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 
 #ifdef TCP_OFFLOAD
@@ -488,7 +487,7 @@ struct ib_mr *c4iw_reg_user_mr(struct ib_pd *pd, u64 start, u64 length,
 	}
 
 	shift = ffs(mhp->umem->page_size) - 1;
-	
+
 	n = mhp->umem->nmap;
 	err = alloc_pbl(mhp, n);
 	if (err)
@@ -623,8 +622,7 @@ struct ib_mr *c4iw_alloc_mr(struct ib_pd *pd,
 	rhp = php->rhp;
 
 	if (mr_type != IB_MR_TYPE_MEM_REG ||
-	    max_num_sg > t4_max_fr_depth(
-		    rhp->rdev.adap->params.ulptx_memwrite_dsgl && use_dsgl))
+	    max_num_sg > t4_max_fr_depth(&rhp->rdev, use_dsgl))
 		return ERR_PTR(-EINVAL);
 
 	mhp = kzalloc(sizeof(*mhp), GFP_KERNEL);

@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -114,7 +113,6 @@ iop_pci_detach(device_t dev)
     mtx_destroy(&sc->mtx);
     return (0);
 }
-
 
 static device_method_t pst_pci_methods[] = {
     DEVMETHOD(device_probe,		iop_pci_probe),

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 - 2003 by Thomas Moestl <tmm@FreeBSD.org>.
  * Copyright (c) 2005 Marius Strobl <marius@FreeBSD.org>
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -146,7 +145,7 @@ ofw_bus_gen_get_node(device_t bus, device_t dev)
 
 	obd = OFW_BUS_GET_DEVINFO(bus, dev);
 	if (obd == NULL)
-		return (0);
+		return ((phandle_t)-1);
 	return (obd->obd_node);
 }
 
@@ -182,7 +181,7 @@ ofw_bus_status_okay(device_t dev)
 	if (status == NULL || strcmp(status, "okay") == 0 ||
 	    strcmp(status, "ok") == 0)
 		return (1);
-	
+
 	return (0);
 }
 

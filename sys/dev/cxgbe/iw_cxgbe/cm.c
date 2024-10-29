@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2013, 2016 Chelsio, Inc. All rights reserved.
  *
@@ -32,7 +32,6 @@
  * SOFTWARE.
  */
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 
 #ifdef TCP_OFFLOAD
@@ -44,6 +43,7 @@
 #include <sys/taskqueue.h>
 #include <netinet/in.h>
 #include <net/route.h>
+#include <net/route/nhop.h>
 
 #include <netinet/in_systm.h>
 #include <netinet/in_pcb.h>
@@ -71,8 +71,6 @@ struct cpl_set_tcb_rpl;
 #include "iw_cxgbe.h"
 #include <linux/module.h>
 #include <linux/workqueue.h>
-#include <linux/notifier.h>
-#include <linux/inetdevice.h>
 #include <linux/if_vlan.h>
 #include <net/netevent.h>
 #include <rdma/rdma_cm.h>
@@ -234,8 +232,8 @@ struct listen_port_info {
  *   |listen_port_list  |
  *   |------------------|
  *            |
- *            |              |-----------|       |-----------|  
- *            |              | port_num:X|       | port_num:X|  
+ *            |              |-----------|       |-----------|
+ *            |              | port_num:X|       | port_num:X|
  *            |--------------|-list------|-------|-list------|-------....
  *                           | lep_list----|     | lep_list----|
  *                           | refcnt    | |     | refcnt    | |
@@ -245,13 +243,13 @@ struct listen_port_info {
  *                                         |                   |
  *                                         |                   |
  *                                         |                   |
- *                                         |                   |         lep1                  lep2         
+ *                                         |                   |         lep1                  lep2
  *                                         |                   |    |----------------|    |----------------|
  *                                         |                   |----| listen_ep_list |----| listen_ep_list |
  *                                         |                        |----------------|    |----------------|
  *                                         |
  *                                         |
- *                                         |        lep1                  lep2         
+ *                                         |        lep1                  lep2
  *                                         |   |----------------|    |----------------|
  *                                         |---| listen_ep_list |----| listen_ep_list |
  *                                             |----------------|    |----------------|
@@ -260,7 +258,7 @@ struct listen_port_info {
  * each TCP port number.
  *
  * Here 'lep1' is always marked as Master lep, because solisten() is always
- * called through first lep. 
+ * called through first lep.
  *
  */
 static struct listen_port_info *
@@ -536,32 +534,29 @@ static int
 get_ifnet_from_raddr(struct sockaddr_storage *raddr, struct ifnet **ifp)
 {
 	int err = 0;
+	struct nhop_object *nh;
 
 	if (raddr->ss_family == AF_INET) {
 		struct sockaddr_in *raddr4 = (struct sockaddr_in *)raddr;
-		struct nhop4_extended nh4 = {0};
 
-		err = fib4_lookup_nh_ext(RT_DEFAULT_FIB, raddr4->sin_addr,
-				NHR_REF, 0, &nh4);
-		*ifp = nh4.nh_ifp;
-		if (err)
-			fib4_free_nh_ext(RT_DEFAULT_FIB, &nh4);
+		nh = fib4_lookup(RT_DEFAULT_FIB, raddr4->sin_addr, 0,
+				NHR_NONE, 0);
 	} else {
 		struct sockaddr_in6 *raddr6 = (struct sockaddr_in6 *)raddr;
-		struct nhop6_extended nh6 = {0};
 		struct in6_addr addr6;
 		uint32_t scopeid;
 
 		memset(&addr6, 0, sizeof(addr6));
 		in6_splitscope((struct in6_addr *)&raddr6->sin6_addr,
 					&addr6, &scopeid);
-		err = fib6_lookup_nh_ext(RT_DEFAULT_FIB, &addr6, scopeid,
-				NHR_REF, 0, &nh6);
-		*ifp = nh6.nh_ifp;
-		if (err)
-			fib6_free_nh_ext(RT_DEFAULT_FIB, &nh6);
+		nh = fib6_lookup(RT_DEFAULT_FIB, &addr6, scopeid,
+				NHR_NONE, 0);
 	}
 
+	if (nh == NULL)
+		err = EHOSTUNREACH;
+	else
+		*ifp = nh->nh_ifp;
 	CTR2(KTR_IW_CXGBE, "%s: return: %d", __func__, err);
 	return err;
 }
@@ -941,8 +936,7 @@ static inline int c4iw_zero_addr(struct sockaddr *addr)
 	struct in6_addr *ip6;
 
 	if (addr->sa_family == AF_INET)
-		return IN_ZERONET(
-			ntohl(((struct sockaddr_in *)addr)->sin_addr.s_addr));
+		return (((struct sockaddr_in *)addr)->sin_addr.s_addr == 0);
 	else {
 		ip6 = &((struct sockaddr_in6 *) addr)->sin6_addr;
 		return (ip6->s6_addr32[0] | ip6->s6_addr32[1] |
@@ -1084,7 +1078,7 @@ c4iw_so_upcall(struct socket *so, void *arg, int waitflag)
 	 * Wake up any threads waiting in rdma_init()/rdma_fini(),
 	 * with locks held.
 	 */
-	if (so->so_error)
+	if (so->so_error || (ep->com.dev->rdev.flags & T4_FATAL_ERROR))
 		c4iw_wake_up(&ep->com.wr_wait, -ECONNRESET);
 	add_ep_to_req_list(ep, C4IW_EVENT_SOCKET);
 
@@ -1121,7 +1115,7 @@ process_socket_event(struct c4iw_ep *ep)
 
 	if (ep->com.state == DEAD) {
 		CTR3(KTR_IW_CXGBE, "%s: Pending socket event discarded "
-			"ep %p ep_state %s", __func__, ep, states[state]); 
+		    "ep %p ep_state %s", __func__, ep, states[state]);
 		return;
 	}
 
@@ -1205,7 +1199,8 @@ process_socket_event(struct c4iw_ep *ep)
 
 }
 
-SYSCTL_NODE(_hw, OID_AUTO, iw_cxgbe, CTLFLAG_RD, 0, "iw_cxgbe driver parameters");
+SYSCTL_NODE(_hw, OID_AUTO, iw_cxgbe, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "iw_cxgbe driver parameters");
 
 static int dack_mode = 0;
 SYSCTL_INT(_hw_iw_cxgbe, OID_AUTO, dack_mode, CTLFLAG_RWTUN, &dack_mode, 0,
@@ -1324,10 +1319,14 @@ alloc_ep(int size, gfp_t gfp)
 void _c4iw_free_ep(struct kref *kref)
 {
 	struct c4iw_ep *ep;
+#if defined(KTR) || defined(INVARIANTS)
 	struct c4iw_ep_common *epc;
+#endif
 
 	ep = container_of(kref, struct c4iw_ep, com.kref);
+#if defined(KTR) || defined(INVARIANTS)
 	epc = &ep->com;
+#endif
 	KASSERT(!epc->entry.tqe_prev, ("%s epc %p still on req list",
 	    __func__, epc));
 	if (test_bit(QP_REFERENCED, &ep->com.flags))
@@ -2354,7 +2353,9 @@ err_out:
  */
 int c4iw_reject_cr(struct iw_cm_id *cm_id, const void *pdata, u8 pdata_len)
 {
+#ifdef KTR
 	int err;
+#endif
 	struct c4iw_ep *ep = to_ep(cm_id);
 	int abort = 0;
 
@@ -2382,7 +2383,11 @@ int c4iw_reject_cr(struct iw_cm_id *cm_id, const void *pdata, u8 pdata_len)
 		abort = send_mpa_reject(ep, pdata, pdata_len);
 	}
 	STOP_EP_TIMER(ep);
+#ifdef KTR
 	err = c4iw_ep_disconnect(ep, abort != 0, GFP_KERNEL);
+#else
+	c4iw_ep_disconnect(ep, abort != 0, GFP_KERNEL);
+#endif
 	mutex_unlock(&ep->com.mutex);
 	c4iw_put_ep(&ep->com);
 	CTR3(KTR_IW_CXGBE, "%s:crc4 %p, err: %d", __func__, ep, err);
@@ -2587,6 +2592,7 @@ int c4iw_connect(struct iw_cm_id *cm_id, struct iw_cm_conn_param *conn_param)
 	struct c4iw_dev *dev = to_c4iw_dev(cm_id->device);
 	struct c4iw_ep *ep = NULL;
 	struct ifnet    *nh_ifp;        /* Logical egress interface */
+	struct epoch_tracker et;
 #ifdef VIMAGE
 	struct rdma_cm_id *rdma_id = (struct rdma_cm_id*)cm_id->context;
 	struct vnet *vnet = rdma_id->route.addr.dev_addr.net;
@@ -2637,9 +2643,11 @@ int c4iw_connect(struct iw_cm_id *cm_id, struct iw_cm_conn_param *conn_param)
 	ref_qp(ep);
 	ep->com.thread = curthread;
 
+	NET_EPOCH_ENTER(et);
 	CURVNET_SET(vnet);
 	err = get_ifnet_from_raddr(&cm_id->remote_addr, &nh_ifp);
 	CURVNET_RESTORE();
+	NET_EPOCH_EXIT(et);
 
 	if (err) {
 
@@ -2698,6 +2706,11 @@ c4iw_create_listen(struct iw_cm_id *cm_id, int backlog)
 
 	CTR3(KTR_IW_CXGBE, "%s: cm_id %p, backlog %s", __func__, cm_id,
 			backlog);
+	if (c4iw_fatal_error(&dev->rdev)) {
+		CTR2(KTR_IW_CXGBE, "%s: cm_id %p, fatal error", __func__,
+			       cm_id);
+		return -EIO;
+	}
 	lep = alloc_ep(sizeof(*lep), GFP_KERNEL);
 	lep->com.cm_id = cm_id;
 	ref_cm_id(&lep->com);
@@ -2722,7 +2735,7 @@ c4iw_create_listen(struct iw_cm_id *cm_id, int backlog)
 	if (c4iw_any_addr((struct sockaddr *)&lep->com.local_addr)) {
 		port_info = add_ep_to_listenlist(lep);
 		/* skip solisten() if refcnt > 1, as the listeners were
-		 * alredy created by 'Master lep'
+		 * already created by 'Master lep'
 		 */
 		if (port_info->refcnt > 1) {
 			/* As there will be only one listener socket for a TCP
@@ -2798,7 +2811,6 @@ int c4iw_ep_disconnect(struct c4iw_ep *ep, int abrupt, gfp_t gfp)
 {
 	int ret = 0;
 	int close = 0;
-	int fatal = 0;
 	struct c4iw_rdev *rdev;
 
 
@@ -2807,12 +2819,14 @@ int c4iw_ep_disconnect(struct c4iw_ep *ep, int abrupt, gfp_t gfp)
 	rdev = &ep->com.dev->rdev;
 
 	if (c4iw_fatal_error(rdev)) {
-
-		CTR2(KTR_IW_CXGBE, "%s:ced1 %p", __func__, ep);
-		fatal = 1;
+		CTR3(KTR_IW_CXGBE, "%s:ced1 fatal error %p %s", __func__, ep,
+					states[ep->com.state]);
+		if (ep->com.state != DEAD) {
+			send_abort(ep);
+			ep->com.state = DEAD;
+		}
 		close_complete_upcall(ep, -ECONNRESET);
-		send_abort(ep);
-		ep->com.state = DEAD;
+		return ECONNRESET;
 	}
 	CTR3(KTR_IW_CXGBE, "%s:ced2 %p %s", __func__, ep,
 	    states[ep->com.state]);
@@ -2875,9 +2889,7 @@ int c4iw_ep_disconnect(struct c4iw_ep *ep, int abrupt, gfp_t gfp)
 			CTR2(KTR_IW_CXGBE, "%s:ced4 %p", __func__, ep);
 			set_bit(EP_DISC_ABORT, &ep->com.history);
 			close_complete_upcall(ep, -ECONNRESET);
-			ret = send_abort(ep);
-			if (ret)
-				fatal = 1;
+			send_abort(ep);
 		} else {
 
 			CTR2(KTR_IW_CXGBE, "%s:ced5 %p", __func__, ep);
@@ -2887,33 +2899,28 @@ int c4iw_ep_disconnect(struct c4iw_ep *ep, int abrupt, gfp_t gfp)
 				ep->com.state = MORIBUND;
 
 			CURVNET_SET(ep->com.so->so_vnet);
-			sodisconnect(ep->com.so);
+			ret = sodisconnect(ep->com.so);
 			CURVNET_RESTORE();
-		}
-
-	}
-
-	if (fatal) {
-		set_bit(EP_DISC_FAIL, &ep->com.history);
-		if (!abrupt) {
-			STOP_EP_TIMER(ep);
-			close_complete_upcall(ep, -EIO);
-		}
-		if (ep->com.qp) {
-			struct c4iw_qp_attributes attrs = {0};
-
-			attrs.next_state = C4IW_QP_STATE_ERROR;
-			ret = c4iw_modify_qp(ep->com.dev, ep->com.qp,
-						C4IW_QP_ATTR_NEXT_STATE,
-						&attrs, 1);
 			if (ret) {
-				CTR2(KTR_IW_CXGBE, "%s:ced7 %p", __func__, ep);
-				printf("%s - qp <- error failed!\n", __func__);
+				CTR2(KTR_IW_CXGBE, "%s:ced6 %p", __func__, ep);
+				STOP_EP_TIMER(ep);
+				send_abort(ep);
+				ep->com.state = DEAD;
+				close_complete_upcall(ep, -ECONNRESET);
+				set_bit(EP_DISC_FAIL, &ep->com.history);
+				if (ep->com.qp) {
+					struct c4iw_qp_attributes attrs = {0};
+
+					attrs.next_state = C4IW_QP_STATE_ERROR;
+					ret = c4iw_modify_qp(
+							ep->com.dev, ep->com.qp,
+							C4IW_QP_ATTR_NEXT_STATE,
+							&attrs, 1);
+					CTR3(KTR_IW_CXGBE, "%s:ced7 %p ret %d",
+						__func__, ep, ret);
+				}
 			}
 		}
-		release_ep_resources(ep);
-		ep->com.state = DEAD;
-		CTR2(KTR_IW_CXGBE, "%s:ced6 %p", __func__, ep);
 	}
 	c4iw_put_ep(&ep->com);
 	CTR2(KTR_IW_CXGBE, "%s:cedE %p", __func__, ep);

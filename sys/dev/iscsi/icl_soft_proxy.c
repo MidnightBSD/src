@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2012 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Edward Tomasz Napierala under sponsorship
  * from the FreeBSD Foundation.
@@ -68,14 +67,15 @@
 #ifdef ICL_KERNEL_PROXY
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/capsicum.h>
 #include <sys/condvar.h>
 #include <sys/conf.h>
+#include <sys/lock.h>
 #include <sys/kernel.h>
 #include <sys/kthread.h>
 #include <sys/malloc.h>
+#include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
@@ -189,7 +189,7 @@ icl_listen_free(struct icl_listen *il)
 			pause("icl_unlisten", 1 * hz);
 			sx_xlock(&il->il_lock);
 		}
-	
+
 		TAILQ_REMOVE(&il->il_sockets, ils, ils_next);
 		soclose(ils->ils_socket);
 		free(ils, M_ICL_PROXY);
@@ -322,7 +322,6 @@ icl_listen_add(struct icl_listen *il, bool rdma, int domain, int socktype,
 		ICL_DEBUG("RDMA not supported");
 		return (EOPNOTSUPP);
 	}
-
 
 	return (icl_listen_add_tcp(il, domain, socktype, protocol, sa,
 	    portal_id));

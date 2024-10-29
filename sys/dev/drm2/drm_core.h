@@ -22,7 +22,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #define CORE_AUTHOR		"Gareth Hughes, Leif Delgass, José Fonseca, Jon Smirl"
 
 #define CORE_NAME		"drm"

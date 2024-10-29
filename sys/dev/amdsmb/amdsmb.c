@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -149,7 +148,7 @@ amdsmb_attach(device_t dev)
 
 	/* Allocate I/O space */
 	amdsmb_sc->rid = PCIR_BAR(0);
-	
+
 	amdsmb_sc->res = bus_alloc_resource_any(dev, SYS_RES_IOPORT,
 		&amdsmb_sc->rid, RF_ACTIVE);
 
@@ -562,7 +561,6 @@ static device_method_t amdsmb_methods[] = {
 	DEVMETHOD(smbus_readw,		amdsmb_readw),
 	DEVMETHOD(smbus_bwrite,		amdsmb_bwrite),
 	DEVMETHOD(smbus_bread,		amdsmb_bread),
-
 	{ 0, 0 }
 };
 

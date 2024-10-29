@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * driver for Intel 82553 and 82555 PHYs
  */

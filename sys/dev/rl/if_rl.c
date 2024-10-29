@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * RealTek 8129/8139 PCI NIC driver
  *
@@ -508,6 +507,21 @@ rl_miibus_statchg(device_t dev)
 	 */
 }
 
+static u_int
+rl_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint32_t *hashes = arg;
+	int h;
+
+	h = ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN) >> 26;
+	if (h < 32)
+		hashes[0] |= (1 << h);
+	else
+		hashes[1] |= (1 << (h - 32));
+
+	return (1);
+}
+
 /*
  * Program the 64-bit multicast hash filter.
  */
@@ -515,9 +529,7 @@ static void
 rl_rxfilter(struct rl_softc *sc)
 {
 	struct ifnet		*ifp = sc->rl_ifp;
-	int			h = 0;
 	uint32_t		hashes[2] = { 0, 0 };
-	struct ifmultiaddr	*ifma;
 	uint32_t		rxfilt;
 
 	RL_LOCK_ASSERT(sc);
@@ -538,18 +550,7 @@ rl_rxfilter(struct rl_softc *sc)
 		hashes[1] = 0xFFFFFFFF;
 	} else {
 		/* Now program new ones. */
-		if_maddr_rlock(ifp);
-		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-			if (ifma->ifma_addr->sa_family != AF_LINK)
-				continue;
-			h = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-			    ifma->ifma_addr), ETHER_ADDR_LEN) >> 26;
-			if (h < 32)
-				hashes[0] |= (1 << h);
-			else
-				hashes[1] |= (1 << (h - 32));
-		}
-		if_maddr_runlock(ifp);
+		if_foreach_llmaddr(ifp, rl_hash_maddr, hashes);
 		if (hashes[0] != 0 || hashes[1] != 0)
 			rxfilt |= RL_RXCFG_RX_MULTI;
 	}
@@ -587,7 +588,7 @@ rl_probe(device_t dev)
 	const struct rl_type	*t;
 	uint16_t		devid, revid, vendor;
 	int			i;
-	
+
 	vendor = pci_get_vendor(dev);
 	devid = pci_get_device(dev);
 	revid = pci_get_revid(dev);
@@ -663,7 +664,6 @@ rl_attach(device_t dev)
 	callout_init_mtx(&sc->rl_stat_callout, &sc->rl_mtx, 0);
 
 	pci_enable_busmaster(dev);
-
 
 	/*
 	 * Map control/status registers.
@@ -782,11 +782,6 @@ rl_attach(device_t dev)
 		goto fail;
 
 	ifp = sc->rl_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(dev, "can not if_alloc()\n");
-		error = ENOSPC;
-		goto fail;
-	}
 
 #define	RL_PHYAD_INTERNAL	0
 
@@ -1390,7 +1385,7 @@ rl_twister_update(struct rl_softc *sc)
 	case DONE:
 		break;
 	}
-	
+
 }
 
 static void
@@ -1633,7 +1628,6 @@ rl_start_locked(struct ifnet *ifp)
 		return;
 
 	while (RL_CUR_TXMBUF(sc) == NULL) {
-
 		IFQ_DRV_DEQUEUE(&ifp->if_snd, m_head);
 
 		if (m_head == NULL)

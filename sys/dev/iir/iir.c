@@ -45,7 +45,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #define _IIR_C_
 
 /* #include "opt_iir.h" */

@@ -1,5 +1,5 @@
 /**************************************************************************
-SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+SPDX-License-Identifier: BSD-2-Clause
 
 Copyright (c) 2007, Chelsio Inc.
 All rights reserved.
@@ -25,8 +25,6 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
-
-
 
 ***************************************************************************/
 
@@ -69,36 +67,10 @@ struct t3_mbuf_hdr {
 } while (0)
 #endif
 
-#if __FreeBSD_version < 800054
-#if defined (__GNUC__)
-  #if #cpu(i386) || defined __i386 || defined i386 || defined __i386__ || #cpu(x86_64) || defined __x86_64__
-    #define mb()  __asm__ __volatile__ ("mfence;": : :"memory")
-    #define wmb()  __asm__ __volatile__ ("sfence;": : :"memory")
-    #define rmb()  __asm__ __volatile__ ("lfence;": : :"memory")
-  #elif #cpu(sparc64) || defined sparc64 || defined __sparcv9 
-    #define mb()  __asm__ __volatile__ ("membar #MemIssue": : :"memory")
-    #define wmb() mb()
-    #define rmb() mb()
-  #elif #cpu(sparc) || defined sparc || defined __sparc__
-    #define mb()  __asm__ __volatile__ ("stbar;": : :"memory")
-    #define wmb() mb()
-    #define rmb() mb()
-#else
-    #define wmb() mb()
-    #define rmb() mb()
-    #define mb() 	/* XXX just to make this compile */
-  #endif
-#else
-  #error "unknown compiler"
-#endif
-#endif
-
 /*
  * Workaround for weird Chelsio issue
  */
-#if __FreeBSD_version > 700029
 #define PRIV_SUPPORTED
-#endif
 
 #define CXGB_TX_CLEANUP_THRESHOLD        32
 
@@ -119,28 +91,19 @@ struct t3_mbuf_hdr {
 #define TX_WR_COUNT_MAX         7              /* the maximum total number of packets that can be
 						* aggregated into a single TX WR
 						*/
-#if defined(__i386__) || defined(__amd64__)  
 
-static __inline
-void prefetch(void *x) 
-{ 
-        __asm volatile("prefetcht0 %0" :: "m" (*(unsigned long *)x));
-}
+#define prefetch(x) __builtin_prefetch(x)
 
+#if defined(__i386__) || defined(__amd64__)
 #define smp_mb() mb()
-
-#define L1_CACHE_BYTES 128
 #define WARN_ON(condition) do { \
 	if (__predict_false((condition)!=0)) {  \
                 log(LOG_WARNING, "BUG: warning at %s:%d/%s()\n", __FILE__, __LINE__, __FUNCTION__); \
                 kdb_backtrace(); \
         } \
 } while (0)
-
-#else 
+#else
 #define smp_mb()
-#define prefetch(x)
-#define L1_CACHE_BYTES 32
 #endif
 
 #define DBG_RX          (1 << 0)

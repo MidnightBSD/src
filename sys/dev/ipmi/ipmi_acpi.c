@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 IronPort Systems Inc. <ambrisko@ironport.com>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -60,17 +59,18 @@ int
 ipmi_acpi_probe(device_t dev)
 {
 	static char *ipmi_ids[] = {"IPI0001", NULL};
+	int rv;
 
 	if (ipmi_attached)
 		return (EBUSY);
 
-	if (acpi_disabled("ipmi") ||
-	    ACPI_ID_PROBE(device_get_parent(dev), dev, ipmi_ids) == NULL)
+	if (acpi_disabled("ipmi"))
 		return (ENXIO);
+	rv = ACPI_ID_PROBE(device_get_parent(dev), dev, ipmi_ids, NULL);
+	if (rv <= 0)
+		device_set_desc(dev, "IPMI System Interface");
 
-	device_set_desc(dev, "IPMI System Interface");
-
-	return (0);
+	return (rv);
 }
 
 static int
@@ -93,16 +93,17 @@ ipmi_acpi_attach(device_t dev)
 
 	switch (interface_type) {
 	case KCS_MODE:
-		count = 2;
+		count = IPMI_IF_KCS_NRES;
 		mode = "KCS";
 		break;
 	case SMIC_MODE:
-		count = 3;
+		count = IPMI_IF_SMIC_NRES;
 		mode = "SMIC";
 		break;
 	case BT_MODE:
-		device_printf(dev, "BT interface not supported\n");
-		return (ENXIO);
+		count = IPMI_IF_BT_NRES;
+		mode = "BT";
+		break;
 	case SSIF_MODE:
 		if (ACPI_FAILURE(acpi_GetInteger(devh, "_ADR", &flags)))
 			return (ENXIO);
@@ -172,18 +173,20 @@ ipmi_acpi_attach(device_t dev)
 	 * We assume an alignment of 1 byte as currently the IPMI spec
 	 * doesn't provide any way to determine the alignment via ACPI.
 	 */
+	error = ENXIO;
 	switch (interface_type) {
 	case KCS_MODE:
 		error = ipmi_kcs_attach(sc);
-		if (error)
-			goto bad;
 		break;
 	case SMIC_MODE:
 		error = ipmi_smic_attach(sc);
-		if (error)
-			goto bad;
+		break;
+	case BT_MODE:
+		error = ipmi_bt_attach(sc);
 		break;
 	}
+	if (error)
+		goto bad;
 	error = ipmi_attach(dev);
 	if (error)
 		goto bad;

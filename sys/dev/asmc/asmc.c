@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007, 2008 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
@@ -129,7 +128,7 @@ struct asmc_model {
 	const char 	*smc_tempdescs[ASMC_TEMP_MAX];
 };
 
-static struct asmc_model *asmc_match(device_t dev);
+static const struct asmc_model *asmc_match(device_t dev);
 
 #define ASMC_SMS_FUNCS	asmc_mb_sysctl_sms_x, asmc_mb_sysctl_sms_y, \
 			asmc_mb_sysctl_sms_z
@@ -152,7 +151,7 @@ static struct asmc_model *asmc_match(device_t dev);
 
 #define ASMC_LIGHT_FUNCS_DISABLED NULL, NULL, NULL
 
-struct asmc_model asmc_models[] = {
+static const struct asmc_model asmc_models[] = {
 	{
 	  "MacBook1,1", "Apple SMC MacBook Core Duo",
 	  ASMC_SMS_FUNCS, ASMC_FAN_FUNCS, NULL, NULL, NULL,
@@ -226,6 +225,12 @@ struct asmc_model asmc_models[] = {
 	},
 
 	{
+	  "MacBookPro6,2", "Apple SMC MacBook Pro (Mid 2010, 15-inch)",
+	  ASMC_SMS_FUNCS, ASMC_FAN_FUNCS, ASMC_LIGHT_FUNCS,
+	  ASMC_MBP62_TEMPS, ASMC_MBP62_TEMPNAMES, ASMC_MBP62_TEMPDESCS
+	},
+
+	{
 	  "MacBookPro8,1", "Apple SMC MacBook Pro (early 2011, 13-inch)",
 	  ASMC_SMS_FUNCS_DISABLED, ASMC_FAN_FUNCS2, ASMC_LIGHT_FUNCS,
 	  ASMC_MBP81_TEMPS, ASMC_MBP81_TEMPNAMES, ASMC_MBP81_TEMPDESCS
@@ -238,9 +243,15 @@ struct asmc_model asmc_models[] = {
 	},
 
 	{
-	 "MacBookPro9,2", "Apple SMC MacBook Pro (mid 2012)",
+	  "MacBookPro9,1", "Apple SMC MacBook Pro (mid 2012, 15-inch)",
 	  ASMC_SMS_FUNCS_DISABLED, ASMC_FAN_FUNCS, ASMC_LIGHT_FUNCS,
-	  ASMC_MBP9_TEMPS, ASMC_MBP9_TEMPNAMES, ASMC_MBP9_TEMPDESCS
+	  ASMC_MBP91_TEMPS, ASMC_MBP91_TEMPNAMES, ASMC_MBP91_TEMPDESCS
+	},
+
+	{
+	 "MacBookPro9,2", "Apple SMC MacBook Pro (mid 2012, 13-inch)",
+	  ASMC_SMS_FUNCS_DISABLED, ASMC_FAN_FUNCS, ASMC_LIGHT_FUNCS,
+	  ASMC_MBP92_TEMPS, ASMC_MBP92_TEMPNAMES, ASMC_MBP92_TEMPDESCS
 	},
 
 	{
@@ -264,14 +275,14 @@ struct asmc_model asmc_models[] = {
 	  ASMC_MM_TEMPS, ASMC_MM_TEMPNAMES, ASMC_MM_TEMPDESCS
 	},
 
-        /* The Mac Mini 2,1 has no SMS */
-        {
-          "Macmini2,1", "Apple SMC Mac Mini 2,1",
-          ASMC_SMS_FUNCS_DISABLED,
-          ASMC_FAN_FUNCS,
-          ASMC_LIGHT_FUNCS_DISABLED,
-          ASMC_MM21_TEMPS, ASMC_MM21_TEMPNAMES, ASMC_MM21_TEMPDESCS
-        },
+	/* The Mac Mini 2,1 has no SMS */
+	{
+	  "Macmini2,1", "Apple SMC Mac Mini 2,1",
+	  ASMC_SMS_FUNCS_DISABLED,
+	  ASMC_FAN_FUNCS,
+	  ASMC_LIGHT_FUNCS_DISABLED,
+	  ASMC_MM21_TEMPS, ASMC_MM21_TEMPNAMES, ASMC_MM21_TEMPDESCS
+	},
 
 	/* The Mac Mini 3,1 has no SMS */
 	{
@@ -283,7 +294,7 @@ struct asmc_model asmc_models[] = {
 	},
 
 	/* The Mac Mini 4,1 (Mid-2010) has no SMS */
-	{ 
+	{
 	  "Macmini4,1", "Apple SMC Mac mini 4,1 (Mid-2010)",
 	  ASMC_SMS_FUNCS_DISABLED,
 	  ASMC_FAN_FUNCS,
@@ -291,13 +302,42 @@ struct asmc_model asmc_models[] = {
 	  ASMC_MM41_TEMPS, ASMC_MM41_TEMPNAMES, ASMC_MM41_TEMPDESCS
 	},
 
+	/* The Mac Mini 5,1 has no SMS */
+	/* - same sensors as Mac Mini 5,2 */
+	{
+	  "Macmini5,1", "Apple SMC Mac Mini 5,1",
+	  NULL, NULL, NULL,
+	  ASMC_FAN_FUNCS2,
+	  NULL, NULL, NULL,
+	  ASMC_MM52_TEMPS, ASMC_MM52_TEMPNAMES, ASMC_MM52_TEMPDESCS
+	},
+
 	/* The Mac Mini 5,2 has no SMS */
-	{ 
+	{
 	  "Macmini5,2", "Apple SMC Mac Mini 5,2",
 	  NULL, NULL, NULL,
 	  ASMC_FAN_FUNCS2,
 	  NULL, NULL, NULL,
 	  ASMC_MM52_TEMPS, ASMC_MM52_TEMPNAMES, ASMC_MM52_TEMPDESCS
+	},
+
+	/* The Mac Mini 5,3 has no SMS */
+	/* - same sensors as Mac Mini 5,2 */
+	{
+	  "Macmini5,3", "Apple SMC Mac Mini 5,3",
+	  NULL, NULL, NULL,
+	  ASMC_FAN_FUNCS2,
+	  NULL, NULL, NULL,
+	  ASMC_MM52_TEMPS, ASMC_MM52_TEMPNAMES, ASMC_MM52_TEMPDESCS
+	},
+
+	/* The Mac Mini 7,1 has no SMS */
+	{
+	  "Macmini7,1", "Apple SMC Mac Mini 7,1",
+	  NULL, NULL, NULL,
+	  ASMC_FAN_FUNCS2,
+	  NULL, NULL, NULL,
+	  ASMC_MM71_TEMPS, ASMC_MM71_TEMPNAMES, ASMC_MM71_TEMPDESCS
 	},
 
 	/* Idem for the Mac Pro "Quad Core" (original) */
@@ -327,6 +367,15 @@ struct asmc_model asmc_models[] = {
 	  ASMC_MP5_TEMPS, ASMC_MP5_TEMPNAMES, ASMC_MP5_TEMPDESCS
 	},
 
+	/* Idem for the Mac Pro 2013 (cylinder) */
+	{
+	  "MacPro6,1", "Apple SMC Mac Pro (2013)",
+	  ASMC_SMS_FUNCS_DISABLED,
+	  ASMC_FAN_FUNCS2,
+	  ASMC_LIGHT_FUNCS_DISABLED,
+	  ASMC_MP6_TEMPS, ASMC_MP6_TEMPNAMES, ASMC_MP6_TEMPDESCS
+	},
+
 	{
 	  "MacBookAir1,1", "Apple SMC MacBook Air",
 	  ASMC_SMS_FUNCS, ASMC_FAN_FUNCS, NULL, NULL, NULL,
@@ -337,6 +386,22 @@ struct asmc_model asmc_models[] = {
 	  "MacBookAir3,1", "Apple SMC MacBook Air Core 2 Duo (Late 2010)",
 	  ASMC_SMS_FUNCS, ASMC_FAN_FUNCS, NULL, NULL, NULL,
 	  ASMC_MBA3_TEMPS, ASMC_MBA3_TEMPNAMES, ASMC_MBA3_TEMPDESCS
+	},
+
+	{
+	  "MacBookAir4,1", "Apple SMC Macbook Air 11-inch (Mid 2011)",
+	  ASMC_SMS_FUNCS_DISABLED,
+	  ASMC_FAN_FUNCS2, 
+	  ASMC_LIGHT_FUNCS,
+	  ASMC_MBA4_TEMPS, ASMC_MBA4_TEMPNAMES, ASMC_MBA4_TEMPDESCS
+	},
+
+	{
+	  "MacBookAir4,2", "Apple SMC Macbook Air 13-inch (Mid 2011)",
+	  ASMC_SMS_FUNCS_DISABLED,
+	  ASMC_FAN_FUNCS2, 
+	  ASMC_LIGHT_FUNCS,
+	  ASMC_MBA4_TEMPS, ASMC_MBA4_TEMPNAMES, ASMC_MBA4_TEMPDESCS
 	},
 
 	{
@@ -370,7 +435,6 @@ struct asmc_model asmc_models[] = {
 	  ASMC_LIGHT_FUNCS,
 	  ASMC_MBA7_TEMPS, ASMC_MBA7_TEMPNAMES, ASMC_MBA7_TEMPDESCS
 	},
-
 	{ NULL, NULL }
 };
 
@@ -388,7 +452,6 @@ static device_method_t	asmc_methods[] = {
 	DEVMETHOD(device_attach,	asmc_attach),
 	DEVMETHOD(device_detach,	asmc_detach),
 	DEVMETHOD(device_resume,	asmc_resume),
-
 	{ 0, 0 }
 };
 
@@ -419,7 +482,7 @@ static unsigned int light_control = 0;
 DRIVER_MODULE(asmc, acpi, asmc_driver, asmc_devclass, NULL, NULL);
 MODULE_DEPEND(asmc, acpi, 1, 1, 1);
 
-static struct asmc_model *
+static const struct asmc_model *
 asmc_match(device_t dev)
 {
 	int i;
@@ -443,12 +506,14 @@ asmc_match(device_t dev)
 static int
 asmc_probe(device_t dev)
 {
-	struct asmc_model *model;
+	const struct asmc_model *model;
+	int rv;
 
 	if (resource_disabled("asmc", 0))
 		return (ENXIO);
-	if (ACPI_ID_PROBE(device_get_parent(dev), dev, asmc_ids) == NULL)
-		return (ENXIO);
+	rv = ACPI_ID_PROBE(device_get_parent(dev), dev, asmc_ids, NULL);
+	if (rv > 0)
+		return (rv);
 
 	model = asmc_match(dev);
 	if (!model) {
@@ -457,7 +522,7 @@ asmc_probe(device_t dev)
 	}
 	device_set_desc(dev, model->smc_desc);
 
-	return (BUS_PROBE_DEFAULT);
+	return (rv);
 }
 
 static int
@@ -469,7 +534,7 @@ asmc_attach(device_t dev)
 	struct asmc_softc *sc = device_get_softc(dev);
 	struct sysctl_ctx_list *sysctlctx;
 	struct sysctl_oid *sysctlnode;
-	struct asmc_model *model;
+	const struct asmc_model *model;
 
 	sc->sc_ioport = bus_alloc_resource_any(dev, SYS_RES_IOPORT,
 	    &sc->sc_rid_port, RF_ACTIVE);
@@ -493,7 +558,7 @@ asmc_attach(device_t dev)
 	 */
 	sc->sc_fan_tree[0] = SYSCTL_ADD_NODE(sysctlctx,
 	    SYSCTL_CHILDREN(sysctlnode), OID_AUTO, "fan",
-	    CTLFLAG_RD, 0, "Fan Root Tree");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, 0, "Fan Root Tree");
 
 	for (i = 1; i <= sc->sc_nfan; i++) {
 		j = i - 1;
@@ -501,46 +566,48 @@ asmc_attach(device_t dev)
 		name[1] = 0;
 		sc->sc_fan_tree[i] = SYSCTL_ADD_NODE(sysctlctx,
 		    SYSCTL_CHILDREN(sc->sc_fan_tree[0]),
-		    OID_AUTO, name, CTLFLAG_RD, 0,
+		    OID_AUTO, name, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
 		    "Fan Subtree");
 
 		SYSCTL_ADD_PROC(sysctlctx,
 		    SYSCTL_CHILDREN(sc->sc_fan_tree[i]),
-		    OID_AUTO, "id", CTLTYPE_STRING | CTLFLAG_RD,
+		    OID_AUTO, "id",
+		    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 		    dev, j, model->smc_fan_id, "I",
 		    "Fan ID");
 
 		SYSCTL_ADD_PROC(sysctlctx,
 		    SYSCTL_CHILDREN(sc->sc_fan_tree[i]),
-		    OID_AUTO, "speed", CTLTYPE_INT | CTLFLAG_RD,
+		    OID_AUTO, "speed",
+		    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 		    dev, j, model->smc_fan_speed, "I",
 		    "Fan speed in RPM");
 
 		SYSCTL_ADD_PROC(sysctlctx,
 		    SYSCTL_CHILDREN(sc->sc_fan_tree[i]),
 		    OID_AUTO, "safespeed",
-		    CTLTYPE_INT | CTLFLAG_RD,
+		    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 		    dev, j, model->smc_fan_safespeed, "I",
 		    "Fan safe speed in RPM");
 
 		SYSCTL_ADD_PROC(sysctlctx,
 		    SYSCTL_CHILDREN(sc->sc_fan_tree[i]),
 		    OID_AUTO, "minspeed",
-		    CTLTYPE_INT | CTLFLAG_RW,
+		    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
 		    dev, j, model->smc_fan_minspeed, "I",
 		    "Fan minimum speed in RPM");
 
 		SYSCTL_ADD_PROC(sysctlctx,
 		    SYSCTL_CHILDREN(sc->sc_fan_tree[i]),
 		    OID_AUTO, "maxspeed",
-		    CTLTYPE_INT | CTLFLAG_RW,
+		    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
 		    dev, j, model->smc_fan_maxspeed, "I",
 		    "Fan maximum speed in RPM");
 
 		SYSCTL_ADD_PROC(sysctlctx,
 		    SYSCTL_CHILDREN(sc->sc_fan_tree[i]),
 		    OID_AUTO, "targetspeed",
-		    CTLTYPE_INT | CTLFLAG_RW,
+		    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
 		    dev, j, model->smc_fan_targetspeed, "I",
 		    "Fan target speed in RPM");
 	}
@@ -550,13 +617,13 @@ asmc_attach(device_t dev)
 	 */
 	sc->sc_temp_tree = SYSCTL_ADD_NODE(sysctlctx,
 	    SYSCTL_CHILDREN(sysctlnode), OID_AUTO, "temp",
-	    CTLFLAG_RD, 0, "Temperature sensors");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, 0, "Temperature sensors");
 
 	for (i = 0; model->smc_temps[i]; i++) {
 		SYSCTL_ADD_PROC(sysctlctx,
 		    SYSCTL_CHILDREN(sc->sc_temp_tree),
 		    OID_AUTO, model->smc_tempnames[i],
-		    CTLTYPE_INT | CTLFLAG_RD,
+		    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 		    dev, i, asmc_temp_sysctl, "I",
 		    model->smc_tempdescs[i]);
 	}
@@ -567,25 +634,29 @@ asmc_attach(device_t dev)
 	if (model->smc_light_left) {
 		sc->sc_light_tree = SYSCTL_ADD_NODE(sysctlctx,
 		    SYSCTL_CHILDREN(sysctlnode), OID_AUTO, "light",
-		    CTLFLAG_RD, 0, "Keyboard backlight sensors");
+		    CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+		    "Keyboard backlight sensors");
 
 		SYSCTL_ADD_PROC(sysctlctx,
 		    SYSCTL_CHILDREN(sc->sc_light_tree),
-		    OID_AUTO, "left", CTLTYPE_INT | CTLFLAG_RD,
+		    OID_AUTO, "left",
+		    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 		    dev, 0, model->smc_light_left, "I",
 		    "Keyboard backlight left sensor");
 
 		SYSCTL_ADD_PROC(sysctlctx,
 		    SYSCTL_CHILDREN(sc->sc_light_tree),
-		    OID_AUTO, "right", CTLTYPE_INT | CTLFLAG_RD,
+		    OID_AUTO, "right",
+		    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 		    dev, 0, model->smc_light_right, "I",
 		    "Keyboard backlight right sensor");
 
 		SYSCTL_ADD_PROC(sysctlctx,
 		    SYSCTL_CHILDREN(sc->sc_light_tree),
 		    OID_AUTO, "control",
-		    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_ANYBODY,
-		    dev, 0, model->smc_light_control, "I",
+		    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_ANYBODY |
+		    CTLFLAG_NEEDGIANT, dev, 0,
+		    model->smc_light_control, "I",
 		    "Keyboard backlight brightness control");
 	}
 
@@ -597,23 +668,26 @@ asmc_attach(device_t dev)
 	 */
 	sc->sc_sms_tree = SYSCTL_ADD_NODE(sysctlctx,
 	    SYSCTL_CHILDREN(sysctlnode), OID_AUTO, "sms",
-	    CTLFLAG_RD, 0, "Sudden Motion Sensor");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, 0, "Sudden Motion Sensor");
 
 	SYSCTL_ADD_PROC(sysctlctx,
 	    SYSCTL_CHILDREN(sc->sc_sms_tree),
-	    OID_AUTO, "x", CTLTYPE_INT | CTLFLAG_RD,
+	    OID_AUTO, "x",
+	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 	    dev, 0, model->smc_sms_x, "I",
 	    "Sudden Motion Sensor X value");
 
 	SYSCTL_ADD_PROC(sysctlctx,
 	    SYSCTL_CHILDREN(sc->sc_sms_tree),
-	    OID_AUTO, "y", CTLTYPE_INT | CTLFLAG_RD,
+	    OID_AUTO, "y",
+	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 	    dev, 0, model->smc_sms_y, "I",
 	    "Sudden Motion Sensor Y value");
 
 	SYSCTL_ADD_PROC(sysctlctx,
 	    SYSCTL_CHILDREN(sc->sc_sms_tree),
-	    OID_AUTO, "z", CTLTYPE_INT | CTLFLAG_RD,
+	    OID_AUTO, "z",
+	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 	    dev, 0, model->smc_sms_z, "I",
 	    "Sudden Motion Sensor Z value");
 
@@ -699,7 +773,6 @@ asmc_resume(device_t dev)
     asmc_key_write(dev, ASMC_KEY_LIGHTVALUE, buf, sizeof buf);
     return (0);
 }
-
 
 #ifdef DEBUG
 void asmc_dumpall(device_t dev)
@@ -859,7 +932,6 @@ asmc_wait(device_t dev, uint8_t val)
  */
 static int
 asmc_command(device_t dev, uint8_t command) {
-
 	int i;
 	struct asmc_softc *sc = device_get_softc(dev);
 
@@ -1159,7 +1231,6 @@ asmc_mb_sysctl_fansafespeed(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
-
 static int
 asmc_mb_sysctl_fanminspeed(SYSCTL_HANDLER_ARGS)
 {
@@ -1304,11 +1375,10 @@ asmc_sms_intrfast(void *arg)
 	return (FILTER_HANDLED);
 }
 
-
-
 static void
 asmc_sms_printintr(device_t dev, uint8_t type)
 {
+	struct asmc_softc *sc = device_get_softc(dev);
 
 	switch (type) {
 	case ASMC_SMS_INTFF:
@@ -1320,8 +1390,17 @@ asmc_sms_printintr(device_t dev, uint8_t type)
 	case ASMC_SMS_INTSH:
 		device_printf(dev, "WARNING: possible shock!\n");
 		break;
+	case ASMC_ALSL_INT2A:
+		/*
+		 * This suppresses console and log messages for the ambient
+		 * light sensor for the only model known to generate this
+		 * interrupt.
+		 */
+		if (strcmp(sc->sc_model->smc_model, "MacBookPro6,2") == 0)
+			break;
+		/* FALLTHROUGH */
 	default:
-		device_printf(dev, "%s unknown interrupt\n", __func__);
+		device_printf(dev, "unknown interrupt: 0x%x\n", type);
 	}
 }
 

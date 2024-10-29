@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -150,17 +149,9 @@ ata_pci_detach(device_t dev)
     if (ctlr->chipdeinit != NULL)
 	ctlr->chipdeinit(dev);
     if (ctlr->r_res2) {
-#ifdef __sparc64__
-	bus_space_unmap(rman_get_bustag(ctlr->r_res2),
-	    rman_get_bushandle(ctlr->r_res2), rman_get_size(ctlr->r_res2));
-#endif
 	bus_release_resource(dev, ctlr->r_type2, ctlr->r_rid2, ctlr->r_res2);
     }
     if (ctlr->r_res1) {
-#ifdef __sparc64__
-	bus_space_unmap(rman_get_bustag(ctlr->r_res1),
-	    rman_get_bushandle(ctlr->r_res1), rman_get_size(ctlr->r_res1));
-#endif
 	bus_release_resource(dev, ctlr->r_type1, ctlr->r_rid1, ctlr->r_res1);
     }
 
@@ -172,7 +163,7 @@ ata_pci_suspend(device_t dev)
 {
     struct ata_pci_controller *ctlr = device_get_softc(dev);
     int error = 0;
- 
+
     bus_generic_suspend(dev);
     if (ctlr->suspend)
 	error = ctlr->suspend(dev);
@@ -184,7 +175,7 @@ ata_pci_resume(device_t dev)
 {
     struct ata_pci_controller *ctlr = device_get_softc(dev);
     int error = 0;
- 
+
     if (ctlr->resume)
 	error = ctlr->resume(dev);
     bus_generic_resume(dev);

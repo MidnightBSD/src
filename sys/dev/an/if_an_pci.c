@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * This is a PCI shim for the Aironet PC4500/4800 wireless network
  * driver. Aironet makes PCMCIA, ISA and PCI versions of these devices,
@@ -241,7 +240,7 @@ static int
 an_suspend_pci(device_t dev)
 {
 	an_shutdown(dev);
-	
+
 	return (0);
 }
 

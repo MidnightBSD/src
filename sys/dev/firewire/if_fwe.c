@@ -32,7 +32,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
@@ -84,8 +83,8 @@ static int rx_queue_len = FWMAXQUEUE;
 static MALLOC_DEFINE(M_FWE, "if_fwe", "Ethernet over FireWire interface");
 SYSCTL_INT(_debug, OID_AUTO, if_fwe_debug, CTLFLAG_RWTUN, &fwedebug, 0, "");
 SYSCTL_DECL(_hw_firewire);
-static SYSCTL_NODE(_hw_firewire, OID_AUTO, fwe, CTLFLAG_RD, 0,
-	"Ethernet emulation subsystem");
+static SYSCTL_NODE(_hw_firewire, OID_AUTO, fwe, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "Ethernet emulation subsystem");
 SYSCTL_INT(_hw_firewire_fwe, OID_AUTO, stream_ch, CTLFLAG_RWTUN, &stream_ch, 0,
 	"Stream channel to use");
 SYSCTL_INT(_hw_firewire_fwe, OID_AUTO, tx_speed, CTLFLAG_RWTUN, &tx_speed, 0,
@@ -179,12 +178,7 @@ fwe_attach(device_t dev)
 
 	/* fill the rest and attach interface */
 	ifp = fwe->eth_softc.ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(dev, "can not if_alloc()\n");
-		return (ENOSPC);
-	}
 	ifp->if_softc = &fwe->eth_softc;
-
 	if_initname(ifp, device_get_name(dev), unit);
 	ifp->if_init = fwe_init;
 	ifp->if_start = fwe_start;
@@ -202,7 +196,7 @@ fwe_attach(device_t dev)
 	ifp->if_capenable |= IFCAP_VLAN_MTU;
 
 	FWEDEBUG(ifp, "interface created\n");
-	return 0;
+	return (0);
 }
 
 static void

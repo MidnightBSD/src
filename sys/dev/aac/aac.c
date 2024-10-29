@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Driver for the Adaptec 'FSA' family of PCI/SCSI RAID adapters.
  */
@@ -214,7 +213,7 @@ static struct aac_mntinforesp *
 
 static struct cdevsw aac_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	D_NEEDGIANT,
+	.d_flags =	0,
 	.d_open =	aac_open,
 	.d_ioctl =	aac_ioctl,
 	.d_poll =	aac_poll,
@@ -224,7 +223,8 @@ static struct cdevsw aac_cdevsw = {
 static MALLOC_DEFINE(M_AACBUF, "aacbuf", "Buffers for the AAC driver");
 
 /* sysctl node */
-SYSCTL_NODE(_hw, OID_AUTO, aac, CTLFLAG_RD, 0, "AAC driver parameters");
+SYSCTL_NODE(_hw, OID_AUTO, aac, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "AAC driver parameters");
 
 /*
  * Device Interface
@@ -1027,7 +1027,6 @@ aac_command_thread(struct aac_softc *sc)
 	sc->aifflags = AAC_AIFFLAGS_RUNNING;
 
 	while ((sc->aifflags & AAC_AIFFLAGS_EXIT) == 0) {
-
 		retval = 0;
 		if ((sc->aifflags & AAC_AIFFLAGS_PENDING) == 0)
 			retval = msleep(sc->aifthread, &sc->aac_io_lock, PRIBIO,
@@ -1531,7 +1530,6 @@ aac_free_commands(struct aac_softc *sc)
 	fwprintf(sc, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	while ((fm = TAILQ_FIRST(&sc->aac_fibmap_tqh)) != NULL) {
-
 		TAILQ_REMOVE(&sc->aac_fibmap_tqh, fm, fm_link);
 		/*
 		 * We check against total_fibs to handle partially
@@ -3209,9 +3207,7 @@ aac_cdevpriv_dtor(void *arg)
 
 	sc = arg;
 	fwprintf(sc, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
-	mtx_lock(&Giant);
 	device_unbusy(sc->aac_dev);
-	mtx_unlock(&Giant);
 }
 
 /*
@@ -3307,10 +3303,10 @@ aac_handle_aif(struct aac_softc *sc, struct aac_fib *fib)
 			while (co != NULL) {
 				if (co->co_found == 0) {
 					mtx_unlock(&sc->aac_io_lock);
-					mtx_lock(&Giant);
+					bus_topo_lock();
 					device_delete_child(sc->aac_dev,
 							    co->co_disk);
-					mtx_unlock(&Giant);
+					bus_topo_unlock();
 					mtx_lock(&sc->aac_io_lock);
 					co_next = TAILQ_NEXT(co, co_link);
 					mtx_lock(&sc->aac_container_lock);
@@ -3328,9 +3324,9 @@ aac_handle_aif(struct aac_softc *sc, struct aac_fib *fib)
 			/* Attach the newly created containers */
 			if (added) {
 				mtx_unlock(&sc->aac_io_lock);
-				mtx_lock(&Giant);
+				bus_topo_lock();
 				bus_generic_attach(sc->aac_dev);
-				mtx_unlock(&Giant);
+				bus_topo_unlock();
 				mtx_lock(&sc->aac_io_lock);
 			}
 

@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_FS_H_
-#define	_LINUX_FS_H_
+#ifndef	_LINUXKPI_LINUX_FS_H_
+#define	_LINUXKPI_LINUX_FS_H_
 
 #include <sys/cdefs.h>
 #include <sys/param.h>
@@ -42,6 +41,10 @@
 #include <linux/semaphore.h>
 #include <linux/spinlock.h>
 #include <linux/dcache.h>
+#include <linux/capability.h>
+#include <linux/wait_bit.h>
+#include <linux/kernel.h>
+#include <linux/mutex.h>
 
 struct module;
 struct kiocb;
@@ -62,7 +65,6 @@ struct linux_cdev;
 
 #define	S_IRUGO	(S_IRUSR | S_IRGRP | S_IROTH)
 #define	S_IWUGO	(S_IWUSR | S_IWGRP | S_IWOTH)
-
 
 typedef struct files_struct *fl_owner_t;
 
@@ -108,6 +110,8 @@ struct linux_file {
 
 	/* pointer to associated character device, if any */
 	struct linux_cdev *f_cdev;
+
+	struct rcu_head	rcu;
 };
 
 #define	file		linux_file
@@ -128,25 +132,25 @@ do {									\
 		pgsigio(*(queue), (sig), 0);				\
 } while (0)
 
-typedef int (*filldir_t)(void *, const char *, int, loff_t, u64, unsigned);
+typedef int (*filldir_t)(void *, const char *, int, off_t, u64, unsigned);
 
 struct file_operations {
 	struct module *owner;
-	ssize_t (*read)(struct file *, char __user *, size_t, loff_t *);
-	ssize_t (*write)(struct file *, const char __user *, size_t, loff_t *);
-	unsigned int (*poll) (struct file *, struct poll_table_struct *);
-	long (*unlocked_ioctl)(struct file *, unsigned int, unsigned long);
-	long (*compat_ioctl)(struct file *, unsigned int, unsigned long);
-	int (*mmap)(struct file *, struct vm_area_struct *);
+	ssize_t (*read)(struct linux_file *, char __user *, size_t, off_t *);
+	ssize_t (*write)(struct linux_file *, const char __user *, size_t, off_t *);
+	unsigned int (*poll) (struct linux_file *, struct poll_table_struct *);
+	long (*unlocked_ioctl)(struct linux_file *, unsigned int, unsigned long);
+	long (*compat_ioctl)(struct linux_file *, unsigned int, unsigned long);
+	int (*mmap)(struct linux_file *, struct vm_area_struct *);
 	int (*open)(struct inode *, struct file *);
-	int (*release)(struct inode *, struct file *);
-	int (*fasync)(int, struct file *, int);
+	int (*release)(struct inode *, struct linux_file *);
+	int (*fasync)(int, struct linux_file *, int);
 
 /* Although not supported in FreeBSD, to align with Linux code
  * we are adding llseek() only when it is mapped to no_llseek which returns
  * an illegal seek error
  */
-	loff_t (*llseek)(struct file *, loff_t, int);
+	off_t (*llseek)(struct linux_file *, off_t, int);
 #if 0
 	/* We do not support these methods.  Don't permit them to compile. */
 	loff_t (*llseek)(struct file *, loff_t, int);
@@ -180,7 +184,7 @@ struct file_operations {
 #define	FMODE_READ	FREAD
 #define	FMODE_WRITE	FWRITE
 #define	FMODE_EXEC	FEXEC
-
+#define	FMODE_UNSIGNED_OFFSET	0x2000
 int __register_chrdev(unsigned int major, unsigned int baseminor,
     unsigned int count, const char *name,
     const struct file_operations *fops);
@@ -243,6 +247,13 @@ nonseekable_open(struct inode *inode, struct file *filp)
 	return 0;
 }
 
+static inline int
+simple_open(struct inode *inode, struct file *filp)
+{
+	filp->private_data = inode->i_private;
+	return 0;
+}
+
 extern unsigned int linux_iminor(struct inode *);
 #define	iminor(...) linux_iminor(__VA_ARGS__)
 
@@ -254,12 +265,19 @@ get_file(struct linux_file *f)
 	return (f);
 }
 
+static inline bool
+get_file_rcu(struct linux_file *f)
+{
+	return (refcount_acquire_if_not_zero(
+	    f->_file == NULL ? &f->f_count : &f->_file->f_count));
+}
+
 static inline struct inode *
 igrab(struct inode *inode)
 {
 	int error;
 
-	error = vget(inode, 0, curthread);
+	error = vget(inode, 0);
 	if (error)
 		return (NULL);
 
@@ -278,6 +296,18 @@ no_llseek(struct file *file, loff_t offset, int whence)
 {
 
 	return (-ESPIPE);
+}
+
+static inline loff_t
+default_llseek(struct file *file, loff_t offset, int whence)
+{
+	return (no_llseek(file, offset, whence));
+}
+
+static inline loff_t
+generic_file_llseek(struct file *file, loff_t offset, int whence)
+{
+	return (no_llseek(file, offset, whence));
 }
 
 static inline loff_t
@@ -301,25 +331,73 @@ call_mmap(struct linux_file *file, struct vm_area_struct *vma)
 	return (file->f_op->mmap(file, vma));
 }
 
-/* Shared memory support */
-unsigned long linux_invalidate_mapping_pages(vm_object_t, pgoff_t, pgoff_t);
-struct page *linux_shmem_read_mapping_page_gfp(vm_object_t, int, gfp_t);
-struct linux_file *linux_shmem_file_setup(const char *, loff_t, unsigned long);
-void linux_shmem_truncate_range(vm_object_t, loff_t, loff_t);
+static inline void
+i_size_write(struct inode *inode, loff_t i_size)
+{
+}
 
-#define	invalidate_mapping_pages(...) \
-  linux_invalidate_mapping_pages(__VA_ARGS__)
+/*
+ * simple_read_from_buffer: copy data from kernel-space origin
+ * buffer into user-space destination buffer
+ *
+ * @dest: destination buffer
+ * @read_size: number of bytes to be transferred
+ * @ppos: starting transfer position pointer
+ * @orig: origin buffer
+ * @buf_size: size of destination and origin buffers
+ *
+ * Return value:
+ * On success, total bytes copied with *ppos incremented accordingly.
+ * On failure, negative value.
+ */
+static inline ssize_t
+simple_read_from_buffer(void __user *dest, size_t read_size, loff_t *ppos,
+    void *orig, size_t buf_size)
+{
+	void *read_pos = ((char *) orig) + *ppos;
+	size_t buf_remain = buf_size - *ppos;
+	ssize_t num_read;
 
-#define	shmem_read_mapping_page(...) \
-  linux_shmem_read_mapping_page_gfp(__VA_ARGS__, 0)
+	if (buf_remain < 0 || buf_remain > buf_size)
+		return -EINVAL;
 
-#define	shmem_read_mapping_page_gfp(...) \
-  linux_shmem_read_mapping_page_gfp(__VA_ARGS__)
+	if (read_size > buf_remain)
+		read_size = buf_remain;
 
-#define	shmem_file_setup(...) \
-  linux_shmem_file_setup(__VA_ARGS__)
+	/* copy_to_user returns number of bytes NOT read */
+	num_read = read_size - copy_to_user(dest, read_pos, read_size);
+	if (num_read == 0)
+		return -EFAULT;
+	*ppos += num_read;
 
-#define	shmem_truncate_range(...) \
-  linux_shmem_truncate_range(__VA_ARGS__)
+	return (num_read);
+}
 
-#endif /* _LINUX_FS_H_ */
+MALLOC_DECLARE(M_LSATTR);
+
+#define DEFINE_SIMPLE_ATTRIBUTE(__fops, __get, __set, __fmt)		\
+static inline int							\
+__fops ## _open(struct inode *inode, struct file *filp)			\
+{									\
+	return (simple_attr_open(inode, filp, __get, __set, __fmt));	\
+}									\
+static const struct file_operations __fops = {				\
+	.owner	 = THIS_MODULE,						\
+	.open	 = __fops ## _open,					\
+	.release = simple_attr_release,					\
+	.read	 = simple_attr_read,					\
+	.write	 = simple_attr_write,					\
+	.llseek	 = no_llseek						\
+}
+
+int simple_attr_open(struct inode *inode, struct file *filp,
+    int (*get)(void *, uint64_t *), int (*set)(void *, uint64_t),
+    const char *fmt);
+
+int simple_attr_release(struct inode *inode, struct file *filp);
+
+ssize_t simple_attr_read(struct file *filp, char *buf, size_t read_size, loff_t *ppos);
+
+ssize_t simple_attr_write(struct file *filp, const char *buf, size_t write_size, loff_t *ppos);
+
+#endif /* _LINUXKPI_LINUX_FS_H_ */

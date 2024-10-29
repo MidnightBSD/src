@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * This file contains routines for relocating and dynamically linking
  * executable object code files in the Windows(r) PE (Portable Executable)

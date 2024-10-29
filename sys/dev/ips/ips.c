@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Written by: David Jeffery
  * Copyright (c) 2002 Adaptec Inc.
@@ -28,11 +28,14 @@
  */
 
 #include <sys/cdefs.h>
+#include <sys/types.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
+#include <sys/stat.h>
+#include <sys/time.h>
 
 #include <dev/ips/ipsreg.h>
 #include <dev/ips/ips.h>
-#include <sys/stat.h>
-#include <sys/time.h>
 
 static d_open_t ips_open;
 static d_close_t ips_close;

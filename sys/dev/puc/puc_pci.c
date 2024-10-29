@@ -1,10 +1,10 @@
 /*	$NetBSD: puc.c,v 1.7 2000/07/29 17:43:38 jlam Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-3-Clause
+ * SPDX-License-Identifier: BSD-2-Clause AND BSD-3-Clause
  *
  * Copyright (c) 2002 JF Hay.  All rights reserved.
- * Copyright (c) 2000 M. Warner Losh.  All rights reserved.
+ * Copyright (c) 2000 M. Warner Losh <imp@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,7 +60,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -159,7 +158,7 @@ puc_pci_detach(device_t dev)
 	int error;
 
 	sc = device_get_softc(dev);
-	
+
 	error = puc_bfe_detach(dev);
 
 	if (error != 0)
@@ -170,7 +169,6 @@ puc_pci_detach(device_t dev)
 
 	return (error);
 }
-
 
 static device_method_t puc_pci_methods[] = {
     /* Device interface */

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000-2001 Scott Long
@@ -28,7 +28,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -1341,7 +1340,6 @@ typedef enum {
 	CMUNSTABLE
 } AAC_CommitLevel;
 
-
 #define	CT_FIB_PARAMS			6
 #define	MAX_FIB_PARAMS			10
 #define	CT_PACKET_SIZE \
@@ -1588,7 +1586,6 @@ enum {
 /* Sunrise Lake dual core reset */
 #define AAC_IRCSR		0x38	/* inbound dual cores reset */
 #define AAC_IRCSR_CORES_RST	3
-
 
 /*
  * Common bit definitions for the doorbell registers.

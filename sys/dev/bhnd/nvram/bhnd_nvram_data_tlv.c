@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifdef _KERNEL
 #include <sys/param.h>
 #include <sys/ctype.h>
@@ -87,7 +86,6 @@ struct bhnd_nvram_tlv_env {
 #define	NVRAM_TLV_ENVP_DATA_MAX_LEN	\
 	(UINT8_MAX - sizeof(uint8_t) /* flags */)
 
-	
 static int				 bhnd_nvram_tlv_parse_size(
 					     struct bhnd_nvram_io *io,
 					     size_t *size);
@@ -313,7 +311,7 @@ bhnd_nvram_tlv_serialize(bhnd_nvram_data_class *cls, bhnd_nvram_plist *props,
 		if (p != NULL) {
 			memcpy(p, &env, sizeof(env));
 			p += sizeof(env);
-	
+
 			memcpy(p, name, name_len - 1);
 			p[name_len - 1] = '=';
 			p += name_len;
@@ -414,7 +412,7 @@ bhnd_nvram_tlv_init(struct bhnd_nvram_tlv *tlv, struct bhnd_nvram_io *src)
 static int
 bhnd_nvram_tlv_new(struct bhnd_nvram_data *nv, struct bhnd_nvram_io *io)
 {
-	
+
 	struct bhnd_nvram_tlv	*tlv;
 	int			 error;
 
@@ -445,7 +443,6 @@ bhnd_nvram_tlv_count(struct bhnd_nvram_data *nv)
 	struct bhnd_nvram_tlv *tlv = (struct bhnd_nvram_tlv *)nv;
 	return (tlv->count);
 }
-
 
 static bhnd_nvram_plist *
 bhnd_nvram_tlv_options(struct bhnd_nvram_data *nv)
@@ -799,7 +796,7 @@ bhnd_nvram_tlv_get_env(struct bhnd_nvram_tlv *tlv, void *cookiep)
 	size_t				 navail;
 	size_t				 io_offset, io_size;
 	int				 error;
-	
+
 	io_size = bhnd_nvram_io_getsize(tlv->data);
 	io_offset = bhnd_nvram_tlv_to_offset(tlv, cookiep);
 

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 IronPort Systems Inc. <ambrisko@ironport.com>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -37,6 +36,7 @@
 #include <sys/module.h>
 #include <sys/rman.h>
 #include <sys/selinfo.h>
+#include <sys/efi.h>
 
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
@@ -110,8 +110,8 @@ ipmi_pci_attach(device_t dev)
 		mode = "SMIC";
 		break;
 	case BT_MODE:
-		device_printf(dev, "BT mode is unsupported\n");
-		return (ENXIO);
+		mode = "BT";
+		break;
 	default:
 		device_printf(dev, "No IPMI interface found\n");
 		return (ENXIO);
@@ -141,18 +141,20 @@ ipmi_pci_attach(device_t dev)
 	sc->ipmi_irq_res = bus_alloc_resource_any(dev, SYS_RES_IRQ,
 	    &sc->ipmi_irq_rid, RF_SHAREABLE | RF_ACTIVE);
 
+	error = ENXIO;
 	switch (info.iface_type) {
 	case KCS_MODE:
 		error = ipmi_kcs_attach(sc);
-		if (error)
-			goto bad;
 		break;
 	case SMIC_MODE:
 		error = ipmi_smic_attach(sc);
-		if (error)
-			goto bad;
+		break;
+	case BT_MODE:
+		error = ipmi_bt_attach(sc);
 		break;
 	}
+	if (error)
+		goto bad;
 	error = ipmi_attach(dev);
 	if (error)
 		goto bad;
@@ -213,8 +215,7 @@ ipmi2_pci_attach(device_t dev)
 		break;
 	case PCIP_SERIALBUS_IPMI_BT:
 		iface = BT_MODE;
-		device_printf(dev, "BT interface unsupported\n");
-		return (ENXIO);
+		break;
 	default:
 		device_printf(dev, "Unsupported interface: %d\n",
 		    pci_get_progif(dev));
@@ -240,6 +241,7 @@ ipmi2_pci_attach(device_t dev)
 	sc->ipmi_irq_res = bus_alloc_resource_any(dev, SYS_RES_IRQ,
 	    &sc->ipmi_irq_rid, RF_SHAREABLE | RF_ACTIVE);
 
+	error = ENXIO;
 	switch (iface) {
 	case KCS_MODE:
 		device_printf(dev, "using KSC interface\n");
@@ -250,7 +252,6 @@ ipmi2_pci_attach(device_t dev)
 		 */
 		if (!ipmi_kcs_probe_align(sc)) {
 			device_printf(dev, "Unable to determine alignment\n");
-			error = ENXIO;
 			goto bad;
 		}
 
@@ -260,12 +261,15 @@ ipmi2_pci_attach(device_t dev)
 		break;
 	case SMIC_MODE:
 		device_printf(dev, "using SMIC interface\n");
-
 		error = ipmi_smic_attach(sc);
-		if (error)
-			goto bad;
+		break;
+	case BT_MODE:
+		device_printf(dev, "using BT interface\n");
+		error = ipmi_bt_attach(sc);
 		break;
 	}
+	if (error)
+		goto bad;
 	error = ipmi_attach(dev);
 	if (error)
 		goto bad;
@@ -291,3 +295,6 @@ static driver_t ipmi2_pci_driver = {
 };
 
 DRIVER_MODULE(ipmi2_pci, pci, ipmi2_pci_driver, ipmi_devclass, 0, 0);
+#ifdef ARCH_MAY_USE_EFI
+MODULE_DEPEND(ipmi2_pci, efirt, 1, 1, 1);
+#endif

@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_gpio.h"
 
 #include <sys/param.h>

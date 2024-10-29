@@ -481,13 +481,29 @@ lio_get_new_flags(struct ifnet *ifp)
 		 * Accept all multicast addresses if there are more than we
 		 * can handle
 		 */
-		if (if_getamcount(ifp) > LIO_MAX_MULTICAST_ADDR)
+		if (if_llmaddr_count(ifp) > LIO_MAX_MULTICAST_ADDR)
 			f |= LIO_IFFLAG_ALLMULTI;
 	}
 	if (if_getflags(ifp) & IFF_BROADCAST)
 		f |= LIO_IFFLAG_BROADCAST;
 
 	return (f);
+}
+
+static u_int
+lio_copy_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint64_t *mc = arg;
+
+	if (cnt == LIO_MAX_MULTICAST_ADDR)
+		return (0);
+
+	mc += cnt;
+	*mc = 0;
+	memcpy(((uint8_t *)mc) + 2, LLADDR(sdl), ETHER_ADDR_LEN);
+	/* no need to swap bytes */
+
+	return (1);
 }
 
 /* @param ifp network device */
@@ -497,9 +513,7 @@ lio_set_mcast_list(struct ifnet *ifp)
 	struct lio		*lio = if_getsoftc(ifp);
 	struct octeon_device	*oct = lio->oct_dev;
 	struct lio_ctrl_pkt	nctrl;
-	struct ifmultiaddr	*ifma;
-	uint64_t		*mc;
-	int	mc_count = 0;
+	int	mc_count;
 	int	ret;
 
 	bzero(&nctrl, sizeof(struct lio_ctrl_pkt));
@@ -513,26 +527,7 @@ lio_set_mcast_list(struct ifnet *ifp)
 	nctrl.cb_fn = lio_ctrl_cmd_completion;
 
 	/* copy all the addresses into the udd */
-	mc = &nctrl.udd[0];
-
-	/* to protect access to if_multiaddrs */
-	if_maddr_rlock(ifp);
-
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		*mc = 0;
-		memcpy(((uint8_t *)mc) + 2,
-		       LLADDR((struct sockaddr_dl *)ifma->ifma_addr),
-		       ETHER_ADDR_LEN);
-		/* no need to swap bytes */
-
-		mc_count++;
-		if (++mc > &nctrl.udd[LIO_MAX_MULTICAST_ADDR])
-			break;
-	}
-
-	if_maddr_runlock(ifp);
+	mc_count = if_foreach_llmaddr(ifp, lio_copy_maddr, &nctrl.udd[0]);
 
 	/*
 	 * Apparently, any activity in this call from the kernel has to

@@ -17,7 +17,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*-
  * Ralink Technology RT2561, RT2561S and RT2661 chipset driver
  * http://www.ralinktech.com/
@@ -330,7 +329,7 @@ rt2661_detach(void *xsc)
 {
 	struct rt2661_softc *sc = xsc;
 	struct ieee80211com *ic = &sc->sc_ic;
-	
+
 	RAL_LOCK(sc);
 	rt2661_stop_locked(sc);
 	RAL_UNLOCK(sc);
@@ -1438,7 +1437,7 @@ rt2661_tx_data(struct rt2661_softc *sc, struct mbuf *m0,
 	}
 	rate &= IEEE80211_RATE_VAL;
 
-	if (wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_QOS)
+	if (wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_QOS_DATA)
 		noack = !! ieee80211_wme_vap_ac_is_noack(vap, ac);
 
 	if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {

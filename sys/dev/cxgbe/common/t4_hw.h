@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011, 2016 Chelsio Communications, Inc.
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  *
  */
 
@@ -54,6 +53,7 @@ enum {
 	NTRACE          = 4,     /* # of tracing filters */
 	TRACE_LEN       = 112,   /* length of trace data and mask */
 	FILTER_OPT_LEN  = 36,    /* filter tuple width of optional components */
+	T5_FILTER_OPT_LEN = 40,
 	NWOL_PAT        = 8,     /* # of WoL patterns */
 	WOL_PAT_LEN     = 128,   /* length of WoL patterns */
 	UDBS_SEG_SIZE   = 128,   /* Segment size of BAR2 doorbells */
@@ -66,7 +66,8 @@ enum {
 	CIM_NUM_IBQ    = 6,     /* # of CIM IBQs */
 	CIM_NUM_OBQ    = 6,     /* # of CIM OBQs */
 	CIM_NUM_OBQ_T5 = 8,     /* # of CIM OBQs for T5 adapter */
-	CIMLA_SIZE     = 2048,  /* # of 32-bit words in CIM LA */
+	CIMLA_SIZE     = 256 * 8,  /* 256 rows * ceil(235/32) 32-bit words */
+	CIMLA_SIZE_T6  = 256 * 10, /* 256 rows * ceil(311/32) 32-bit words */
 	CIM_PIFLA_SIZE = 64,    /* # of 192-bit words in CIM PIF LA */
 	CIM_MALA_SIZE  = 64,    /* # of 160-bit words in CIM MA LA */
 	CIM_IBQ_SIZE   = 128,   /* # of 128-bit words in a CIM IBQ */

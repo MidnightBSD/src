@@ -19868,7 +19868,7 @@ bit32 satAddNComparebit32(bit8 *a, bit8 *b)
   }
 
 
-  return agFALSE;;
+  return agFALSE;
 }
 
 /*****************************************************************************/

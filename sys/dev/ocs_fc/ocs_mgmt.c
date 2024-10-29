@@ -27,7 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
@@ -251,7 +250,6 @@ ocs_mgmt_get_list(ocs_t *ocs, ocs_textbuf_t *textbuf)
 
 	/* Have each of my children add their actions */
 	if (ocs_device_lock_try(ocs) == TRUE) {
-
 		/* If we get here then we are holding the device lock */
 		ocs_list_foreach(&ocs->domain_list, domain) {
 			if ((domain->mgmt_functions) && (domain->mgmt_functions->get_list_handler)) {
@@ -291,7 +289,6 @@ ocs_mgmt_get_list(ocs_t *ocs, ocs_textbuf_t *textbuf)
  * @return Returns 0 if the value was found and returned, or -1 if an error occurred.
  */
 
-
 int
 ocs_mgmt_get(ocs_t *ocs, char *name, ocs_textbuf_t *textbuf)
 {
@@ -301,7 +298,6 @@ ocs_mgmt_get(ocs_t *ocs, char *name, ocs_textbuf_t *textbuf)
 	uint32_t i;
 
 	ocs_mgmt_start_unnumbered_section(textbuf, "ocs");
-
 
 	snprintf(qualifier, sizeof(qualifier), "/ocs");
 
@@ -342,19 +338,15 @@ ocs_mgmt_get(ocs_t *ocs, char *name, ocs_textbuf_t *textbuf)
 				if (retval ==  0) {
 					break;
 				}
-
-
 			}
 			ocs_device_unlock(ocs);
 		}
-
 	}
 
 	ocs_mgmt_end_unnumbered_section(textbuf, "ocs");
 
 	return retval;
 }
-
 
 /**
  * @ingroup mgmt
@@ -427,8 +419,6 @@ ocs_mgmt_set(ocs_t *ocs, char *name, char *value)
 			}
 			ocs_device_unlock(ocs);
 		}
-
-
 	}
 
 	return result;
@@ -485,7 +475,6 @@ ocs_mgmt_exec(ocs_t *ocs, char *action, void *arg_in,
 					return mgmt_table[i].action_handler(ocs, action, arg_in, arg_in_length,
 							arg_out, arg_out_length);
 				}
-
 			}
 		}
 
@@ -525,7 +514,6 @@ ocs_mgmt_exec(ocs_t *ocs, char *action, void *arg_in,
 			}
 			ocs_device_unlock(ocs);
 		}
-
 	}
 
 	return result;
@@ -648,8 +636,6 @@ ocs_mgmt_firmware_write(ocs_t *ocs, char *name, void *buf, uint32_t buf_len, voi
 	}
 
 	while (bytes_left > 0) {
-
-
 		if (bytes_left > FW_WRITE_BUFSIZE) {
 			xfer_size = FW_WRITE_BUFSIZE;
 		} else {
@@ -698,7 +684,6 @@ ocs_mgmt_firmware_write(ocs_t *ocs, char *name, void *buf, uint32_t buf_len, voi
 		bytes_left -= result.actual_xfer;
 		offset += result.actual_xfer;
 		userp += result.actual_xfer;
-
 	}
 
 	/* Create string with status and copy to userland */
@@ -712,7 +697,6 @@ ocs_mgmt_firmware_write(ocs_t *ocs, char *name, void *buf, uint32_t buf_len, voi
 			ocs_log_test(ocs, "copy to user failed for change_status\n");
 		}
 	}
-
 
 	ocs_dma_free(ocs, &dma);
 
@@ -767,7 +751,7 @@ static int32_t
 ocs_mgmt_get_sfp(ocs_t *ocs, uint16_t page, void *buf, uint32_t buf_len)
 {
 	int rc = 0;
-	ocs_mgmt_sfp_result_t *result = ocs_malloc(ocs, sizeof(ocs_mgmt_sfp_result_t),  OCS_M_ZERO | OCS_M_NOWAIT);;
+	ocs_mgmt_sfp_result_t *result = ocs_malloc(ocs, sizeof(ocs_mgmt_sfp_result_t),  OCS_M_ZERO | OCS_M_NOWAIT);
 
 	ocs_sem_init(&(result->semaphore), 0, "get_sfp");
 	ocs_lock_init(ocs, &(result->cb_lock), "get_sfp");
@@ -1875,7 +1859,6 @@ typedef struct ocs_mgmt_get_port_protocol_result {
 	ocs_hw_port_protocol_e port_protocol;
 } ocs_mgmt_get_port_protocol_result_t;
 
-
 static void
 ocs_mgmt_get_port_protocol_cb(int32_t status,
 			      ocs_hw_port_protocol_e port_protocol,
@@ -1933,8 +1916,6 @@ typedef struct ocs_mgmt_set_port_protocol_result {
 	int32_t status;
 } ocs_mgmt_set_port_protocol_result_t;
 
-
-
 static void
 ocs_mgmt_set_port_protocol_cb(int32_t status,
 			      void    *arg)
@@ -1989,7 +1970,7 @@ set_port_protocol(ocs_t *ocs, char *name, char *value)
 		if (ocs_sem_p(&(result.semaphore), OCS_SEM_FOREVER) != 0) {
 			/* Undefined failure */
 			ocs_log_err(ocs, "ocs_sem_p failed\n");
-			rc = -ENXIO;
+			return -ENXIO;
 		}
 		if (result.status == 0) {
 			/* Success. */
@@ -2068,7 +2049,6 @@ get_profile_list(ocs_t *ocs, char *name, ocs_textbuf_t *textbuf)
 				}
 			}
 
-
 			ocs_mgmt_emit_string(textbuf, MGMT_MODE_RD, "profile_list", result_buf);
 
 			ocs_free(ocs, result_buf, BUFFER_SIZE);
@@ -2140,7 +2120,6 @@ typedef struct ocs_mgmt_set_active_profile_result {
 	int32_t status;
 } ocs_mgmt_set_active_profile_result_t;
 
-
 static void
 ocs_mgmt_set_active_profile_cb(int32_t status, void *ul_arg)
 {
@@ -2181,7 +2160,7 @@ set_active_profile(ocs_t *ocs, char *name, char *value)
 		if (ocs_sem_p(&(result.semaphore), OCS_SEM_FOREVER) != 0) {
 			/* Undefined failure */
 			ocs_log_err(ocs, "ocs_sem_p failed\n");
-			rc = -ENXIO;
+			return -ENXIO;
 		}
 		if (result.status == 0) {
 			/* Success. */
@@ -2356,7 +2335,6 @@ typedef struct ocs_mgmt_set_nvparms_result {
 	int32_t status;
 } ocs_mgmt_set_nvparms_result_t;
 
-
 static void
 ocs_mgmt_set_nvparms_cb(int32_t status, void *ul_arg)
 {
@@ -2387,8 +2365,8 @@ set_nv_wwn(ocs_t *ocs, char *name, char *wwn_p)
 	char *wwpn_p = NULL;
 	char *wwnn_p = NULL;
 	int32_t rc = -1;
-	int wwpn;
-	int wwnn;
+	int wwpn = 0;
+	int wwnn = 0;
 	int i;
 
 	/* This is a read-modify-write operation, so first we have to read
@@ -2416,8 +2394,13 @@ set_nv_wwn(ocs_t *ocs, char *name, char *wwn_p)
 		wwnn_p = wwn_p;
 	}
 
-	wwpn = ocs_strcmp(wwpn_p, "NA");
-	wwnn = ocs_strcmp(wwnn_p, "NA");
+	if (wwpn_p != NULL) {
+		wwpn = ocs_strcmp(wwpn_p, "NA");
+	}
+
+	if (wwnn_p != NULL) {
+		wwnn = ocs_strcmp(wwnn_p, "NA");
+	}
 
 	/* Parse the new WWPN */
 	if ((wwpn_p != NULL) && (wwpn != 0)) {
@@ -2583,10 +2566,7 @@ parse_wwn(char *wwn_in, uint64_t *wwn_out)
 	}
 }
 
-
-
 static char *mode_string(int mode);
-
 
 /**
  * @ingroup mgmt

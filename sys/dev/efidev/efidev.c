@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -52,14 +51,6 @@ efidev_ioctl(struct cdev *dev __unused, u_long cmd, caddr_t addr,
 	int error;
 
 	switch (cmd) {
-	case EFIIOC_GET_TABLE:
-	{
-		struct efi_get_table_ioc *egtioc =
-		    (struct efi_get_table_ioc *)addr;
-
-		error = efi_get_table(&egtioc->uuid, &egtioc->ptr);
-		break;
-	}
 	case EFIIOC_GET_TIME:
 	{
 		struct efi_tm *tm = (struct efi_tm *)addr;

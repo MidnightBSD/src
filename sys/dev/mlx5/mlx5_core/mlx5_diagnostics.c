@@ -21,8 +21,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
+
+#include "opt_rss.h"
+#include "opt_ratelimit.h"
 
 #include <dev/mlx5/driver.h>
 #include <dev/mlx5/port.h>

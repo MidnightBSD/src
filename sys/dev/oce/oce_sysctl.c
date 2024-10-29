@@ -63,7 +63,6 @@ static void oce_add_stats_sysctls_xe201(POCE_SOFTC sc,
 				struct sysctl_ctx_list *ctx,
 				struct sysctl_oid *stats_node);
 
-
 extern char component_revision[32];
 uint8_t sfp_vpd_dump_buffer[TRANSCEIVER_DATA_SIZE];
 
@@ -127,16 +126,16 @@ oce_add_sysctls(POCE_SOFTC sc)
 				0,"PVID");
 
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "loop_back",
-		CTLTYPE_INT | CTLFLAG_RW, (void *)sc, 0,
-		oce_sysctl_loopback, "I", "Loop Back Tests");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, (void *)sc, 0,
+	    oce_sysctl_loopback, "I", "Loop Back Tests");
 
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "fw_upgrade",
-		CTLTYPE_STRING | CTLFLAG_RW, (void *)sc, 0,
-		oce_sys_fwupgrade, "A", "Firmware ufi file");
+	    CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_NEEDGIANT, (void *)sc, 0,
+	    oce_sys_fwupgrade, "A", "Firmware ufi file");
 
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "aic_enable",
-		CTLTYPE_INT | CTLFLAG_RW, (void *)sc, 1,
-		oce_sys_aic_enable, "I", "aic flags");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, (void *)sc, 1,
+	    oce_sys_aic_enable, "I", "aic flags");
 
         /*
          *  Dumps Transceiver data
@@ -145,23 +144,21 @@ oce_add_sysctls(POCE_SOFTC sc)
          *  "sysctl -b dev.oce.0.sfp_vpd_dump_buffer > sfp.bin" for binary dump
          */
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "sfp_vpd_dump",
-			CTLTYPE_INT | CTLFLAG_RW, (void *)sc, 0, oce_sysctl_sfp_vpd_dump,
-			"I", "Initiate a sfp_vpd_dump operation");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, (void *)sc, 0,
+	    oce_sysctl_sfp_vpd_dump, "I", "Initiate a sfp_vpd_dump operation");
 	SYSCTL_ADD_OPAQUE(ctx, child, OID_AUTO, "sfp_vpd_dump_buffer",
 			CTLFLAG_RD, sfp_vpd_dump_buffer,
 			TRANSCEIVER_DATA_SIZE, "IU", "Access sfp_vpd_dump buffer");
 
 	stats_node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "stats",
-				CTLFLAG_RD, NULL, "Ethernet Statistics");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Ethernet Statistics");
 
 	if (IS_BE(sc) || IS_SH(sc))
 		oce_add_stats_sysctls_be3(sc, ctx, stats_node);
 	else
 		oce_add_stats_sysctls_xe201(sc, ctx, stats_node);
 
-
 }
-
 
 static uint32_t
 oce_loopback_test(struct oce_softc *sc, uint8_t loopback_type)
@@ -247,7 +244,6 @@ oce_sysctl_loopback(SYSCTL_HANDLER_ARGS)
 
 	return 0;
 }
-
 
 static int
 oce_sys_fwupgrade(SYSCTL_HANDLER_ARGS)
@@ -434,7 +430,6 @@ oce_sh_be3_flashdata(POCE_SOFTC sc, const struct firmware *fw, int32_t num_imgs)
 		num_imgs = MAX_FLASH_COMP;
 
 	for (i = 0; i < num_imgs; i++) {
-
 		bzero(&imgatt, sizeof(struct flash_img_attri));
 
 		oce_fill_flash_img_data(sc, fsec, &imgatt, i, fw, bin_offset);
@@ -451,7 +446,6 @@ oce_sh_be3_flashdata(POCE_SOFTC sc, const struct firmware *fw, int32_t num_imgs)
 		}
 
 		while (imgatt.img_size) {
-
 			if (imgatt.img_size > 32*1024)
 				num_bytes = 32*1024;
 			else
@@ -476,9 +470,7 @@ oce_sh_be3_flashdata(POCE_SOFTC sc, const struct firmware *fw, int32_t num_imgs)
 			}
 			/* Leave the CPU for others for some time */
 			pause("yield", 10);
-
 		}
-
 	}
 
 ret:
@@ -515,7 +507,6 @@ be_get_ufi_exit:
                 "UFI and Interface are not compatible for flashing\n");
         return -1;
 }
-
 
 static int
 oce_skyhawk_fwupgrade(POCE_SOFTC sc, const struct firmware *fw)
@@ -558,7 +549,6 @@ oce_skyhawk_fwupgrade(POCE_SOFTC sc, const struct firmware *fw)
 			default:
 				rc = -1;
 				break;
-
 		}
 	}
 
@@ -595,7 +585,6 @@ oce_be3_fwupgrade(POCE_SOFTC sc, const struct firmware *fw)
 	return rc;
 }
 
-
 static boolean_t
 oce_phy_flashing_required(POCE_SOFTC sc)
 {
@@ -613,7 +602,6 @@ oce_phy_flashing_required(POCE_SOFTC sc)
 
 	return FALSE;
 }
-
 
 static boolean_t
 oce_img_flashing_required(POCE_SOFTC sc, const char *p,
@@ -639,7 +627,6 @@ oce_img_flashing_required(POCE_SOFTC sc, const char *p,
 	else
 		return FALSE;
 }
-
 
 static int
 oce_lancer_fwupgrade(POCE_SOFTC sc, const struct firmware *fw)
@@ -685,7 +672,6 @@ oce_lancer_fwupgrade(POCE_SOFTC sc, const struct firmware *fw)
 		data	+= data_written;
 		offset	+= data_written;
 		pause("yield", 10);
-
 	}
 
 	if (!rc)
@@ -701,7 +687,6 @@ oce_lancer_fwupgrade(POCE_SOFTC sc, const struct firmware *fw)
 	return rc;
 
 }
-
 
 static void
 oce_add_stats_sysctls_be3(POCE_SOFTC sc,
@@ -719,12 +704,10 @@ oce_add_stats_sysctls_be3(POCE_SOFTC sc,
 	stats = &sc->oce_stats_info;
 
 	rx_stats_node = SYSCTL_ADD_NODE(ctx,
-					SYSCTL_CHILDREN(stats_node), 
-					OID_AUTO,"rx", CTLFLAG_RD, 
-					NULL, "RX Ethernet Statistics");
+	    SYSCTL_CHILDREN(stats_node), OID_AUTO,"rx",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "RX Ethernet Statistics");
 	rx_stat_list = SYSCTL_CHILDREN(rx_stats_node);
 
-	
 	SYSCTL_ADD_QUAD(ctx, rx_stat_list, OID_AUTO, "total_pkts",
 			CTLFLAG_RD, &stats->rx.t_rx_pkts,
 			"Total Received Packets");
@@ -752,13 +735,12 @@ oce_add_stats_sysctls_be3(POCE_SOFTC sc,
 	SYSCTL_ADD_UINT(ctx, rx_stat_list, OID_AUTO, "control_frames",
 			CTLFLAG_RD, &stats->u0.be.rx_control_frames, 0,
 			"Control Frames");
-	
+
 	for (i = 0; i < sc->nrqs; i++) {
 		sprintf(prefix, "queue%d",i);
 		queue_stats_node = SYSCTL_ADD_NODE(ctx, 
-						SYSCTL_CHILDREN(rx_stats_node),
-						OID_AUTO, prefix, CTLFLAG_RD,
-						NULL, "Queue name");
+		    SYSCTL_CHILDREN(rx_stats_node), OID_AUTO, prefix,
+		    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Queue name");
 		queue_stats_list = SYSCTL_CHILDREN(queue_stats_node);
 		
 		SYSCTL_ADD_QUAD(ctx, queue_stats_list, OID_AUTO, "rx_pkts",
@@ -787,13 +769,12 @@ oce_add_stats_sysctls_be3(POCE_SOFTC sc,
                         	"num of packet drops due to no fragments");
 		}
 	}
-	
+
 	rx_stats_node = SYSCTL_ADD_NODE(ctx,
-					SYSCTL_CHILDREN(rx_stats_node),
-					OID_AUTO, "err", CTLFLAG_RD,
-					NULL, "Receive Error Stats");
+	    SYSCTL_CHILDREN(rx_stats_node), OID_AUTO, "err",
+	        CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Receive Error Stats");
 	rx_stat_list = SYSCTL_CHILDREN(rx_stats_node);
-	
+
 	SYSCTL_ADD_UINT(ctx, rx_stat_list, OID_AUTO, "crc_errs",
 			CTLFLAG_RD, &stats->u0.be.rx_crc_errors, 0,
 			"CRC Errors");
@@ -852,9 +833,9 @@ oce_add_stats_sysctls_be3(POCE_SOFTC sc,
 			"Input FIFO Overflow Drop");
 
 	tx_stats_node = SYSCTL_ADD_NODE(ctx,
-					SYSCTL_CHILDREN(stats_node), OID_AUTO,
-					"tx",CTLFLAG_RD, NULL,
-					"TX Ethernet Statistics");
+	    SYSCTL_CHILDREN(stats_node), OID_AUTO,
+	        "tx", CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
+		"TX Ethernet Statistics");
 	tx_stat_list = SYSCTL_CHILDREN(tx_stats_node);
 
 	SYSCTL_ADD_QUAD(ctx, tx_stat_list, OID_AUTO, "total_tx_pkts",
@@ -892,9 +873,8 @@ oce_add_stats_sysctls_be3(POCE_SOFTC sc,
 	for (i = 0; i < sc->nwqs; i++) {
 		sprintf(prefix, "queue%d",i);
 		queue_stats_node = SYSCTL_ADD_NODE(ctx, 
-						SYSCTL_CHILDREN(tx_stats_node),
-						OID_AUTO, prefix, CTLFLAG_RD,
-						NULL, "Queue name");
+		    SYSCTL_CHILDREN(tx_stats_node), OID_AUTO, prefix,
+		        CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Queue name");
 		queue_stats_list = SYSCTL_CHILDREN(queue_stats_node);
 
 		SYSCTL_ADD_QUAD(ctx, queue_stats_list, OID_AUTO, "tx_pkts",
@@ -919,11 +899,9 @@ oce_add_stats_sysctls_be3(POCE_SOFTC sc,
 			"ipv6_ext_hdr_tx_drop",CTLFLAG_RD,
 			&sc->wq[i]->tx_stats.ipv6_ext_hdr_tx_drop, 0,
 			"Transmit IPV6 Ext Header Drop");
-
 	}
 	return;
 }
-
 
 static void
 oce_add_stats_sysctls_xe201(POCE_SOFTC sc,
@@ -941,12 +919,11 @@ oce_add_stats_sysctls_xe201(POCE_SOFTC sc,
 	stats = &sc->oce_stats_info;
 
 	rx_stats_node = SYSCTL_ADD_NODE(ctx,
-					SYSCTL_CHILDREN(stats_node),
-					OID_AUTO, "rx", CTLFLAG_RD,
-					NULL, "RX Ethernet Statistics");
+	    SYSCTL_CHILDREN(stats_node), OID_AUTO, "rx",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
+	    "RX Ethernet Statistics");
 	rx_stat_list = SYSCTL_CHILDREN(rx_stats_node);
 
-	
 	SYSCTL_ADD_QUAD(ctx, rx_stat_list, OID_AUTO, "total_pkts",
 			CTLFLAG_RD, &stats->rx.t_rx_pkts,
 			"Total Received Packets");
@@ -971,13 +948,12 @@ oce_add_stats_sysctls_xe201(POCE_SOFTC sc,
 	SYSCTL_ADD_UQUAD(ctx, rx_stat_list, OID_AUTO, "control_frames",
 			CTLFLAG_RD, &stats->u0.xe201.rx_control_frames,
 			"Control Frames");
-	
+
 	for (i = 0; i < sc->nrqs; i++) {
 		sprintf(prefix, "queue%d",i);
 		queue_stats_node = SYSCTL_ADD_NODE(ctx, 
-						SYSCTL_CHILDREN(rx_stats_node),
-						OID_AUTO, prefix, CTLFLAG_RD,
-						NULL, "Queue name");
+		    SYSCTL_CHILDREN(rx_stats_node), OID_AUTO, prefix,
+		    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Queue name");
 		queue_stats_list = SYSCTL_CHILDREN(queue_stats_node);
 		
 		SYSCTL_ADD_QUAD(ctx, queue_stats_list, OID_AUTO, "rx_pkts",
@@ -1004,11 +980,10 @@ oce_add_stats_sysctls_xe201(POCE_SOFTC sc,
 	}
 
 	rx_stats_node = SYSCTL_ADD_NODE(ctx,
-					SYSCTL_CHILDREN(rx_stats_node),
-					OID_AUTO, "err", CTLFLAG_RD,
-					NULL, "Receive Error Stats");
+	    SYSCTL_CHILDREN(rx_stats_node), OID_AUTO, "err",
+	        CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Receive Error Stats");
 	rx_stat_list = SYSCTL_CHILDREN(rx_stats_node);
-	
+
 	SYSCTL_ADD_UQUAD(ctx, rx_stat_list, OID_AUTO, "crc_errs",
 			CTLFLAG_RD, &stats->u0.xe201.rx_crc_errors,
 			"CRC Errors");
@@ -1058,9 +1033,8 @@ oce_add_stats_sysctls_xe201(POCE_SOFTC sc,
 			"Input FIFO Overflow Drop");
 
 	tx_stats_node = SYSCTL_ADD_NODE(ctx,
-					SYSCTL_CHILDREN(stats_node),
-					OID_AUTO, "tx", CTLFLAG_RD,
-					NULL, "TX Ethernet Statistics");
+	    SYSCTL_CHILDREN(stats_node), OID_AUTO, "tx",
+	        CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "TX Ethernet Statistics");
 	tx_stat_list = SYSCTL_CHILDREN(tx_stats_node);
 
 	SYSCTL_ADD_QUAD(ctx, tx_stat_list, OID_AUTO, "total_tx_pkts",
@@ -1095,9 +1069,8 @@ oce_add_stats_sysctls_xe201(POCE_SOFTC sc,
 	for (i = 0; i < sc->nwqs; i++) {
 		sprintf(prefix, "queue%d",i);
 		queue_stats_node = SYSCTL_ADD_NODE(ctx, 
-						SYSCTL_CHILDREN(tx_stats_node),
-						OID_AUTO, prefix, CTLFLAG_RD,
-						NULL, "Queue name");
+		    SYSCTL_CHILDREN(tx_stats_node), OID_AUTO, prefix,
+		        CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Queue name");
 		queue_stats_list = SYSCTL_CHILDREN(queue_stats_node);
 
 		SYSCTL_ADD_QUAD(ctx, queue_stats_list, OID_AUTO, "tx_pkts",
@@ -1122,11 +1095,9 @@ oce_add_stats_sysctls_xe201(POCE_SOFTC sc,
 			"ipv6_ext_hdr_tx_drop", CTLFLAG_RD,
 			&sc->wq[i]->tx_stats.ipv6_ext_hdr_tx_drop, 0,
 			"Transmit IPV6 Ext Header Drop");
-
 	}
 	return;
 }
-
 
 void 
 oce_refresh_queue_stats(POCE_SOFTC sc)
@@ -1135,9 +1106,9 @@ oce_refresh_queue_stats(POCE_SOFTC sc)
 	int i;
 
 	adapter_stats = &sc->oce_stats_info;
-	
+
 	/* Caluculate total TX and TXstats from all queues */
-	
+
 	bzero(&adapter_stats->rx, sizeof(struct oce_rx_stats));
 	for (i = 0; i < sc->nrqs; i++) {
 		
@@ -1164,8 +1135,6 @@ oce_refresh_queue_stats(POCE_SOFTC sc)
 	}
 
 }
-
-
 
 static void
 copy_stats_to_sc_xe201(POCE_SOFTC sc)
@@ -1306,8 +1275,6 @@ copy_stats_to_sc_xe201(POCE_SOFTC sc)
 		port_stats->rx_pkts_8192_to_9216_bytes;
 }
 
-
-
 static void
 copy_stats_to_sc_be2(POCE_SOFTC sc)
 {
@@ -1322,10 +1289,9 @@ copy_stats_to_sc_be2(POCE_SOFTC sc)
 	pmem = &nic_mbx->params.rsp.stats.pmem;
 	rxf_stats = &nic_mbx->params.rsp.stats.rxf;
 	port_stats = &nic_mbx->params.rsp.stats.rxf.port[port];
-	
+
 	adapter_stats = &sc->oce_stats_info.u0.be;
 
-	
 	/* Update stats */
 	adapter_stats->rx_pause_frames = port_stats->rx_pause_frames;
 	adapter_stats->rx_crc_errors = port_stats->rx_crc_errors;
@@ -1353,7 +1319,7 @@ copy_stats_to_sc_be2(POCE_SOFTC sc)
 		port_stats->rx_alignment_symbol_errors;
 	adapter_stats->tx_pauseframes = port_stats->tx_pauseframes;
 	adapter_stats->tx_controlframes = port_stats->tx_controlframes;
-	
+
 	if (sc->if_id)
 		adapter_stats->jabber_events = rxf_stats->port1_jabber_events;
 	else
@@ -1371,7 +1337,6 @@ copy_stats_to_sc_be2(POCE_SOFTC sc)
 		rxf_stats->rx_drops_too_many_frags;
 	adapter_stats->eth_red_drops = pmem->eth_red_drops;
 }
-
 
 static void
 copy_stats_to_sc_be3(POCE_SOFTC sc)
@@ -1507,13 +1472,10 @@ copy_stats_to_sc_sh(POCE_SOFTC sc)
 		sc->rq[i]->rx_stats.rx_drops_no_frags = erx_stats->rx_drops_no_fragments[sc->rq[i]->rq_id];
 }
 
-
-
 int
 oce_stats_init(POCE_SOFTC sc)
 {
 	int rc = 0, sz = 0;
-
 
         if( IS_BE2(sc) ) 
 		sz = sizeof(struct mbx_get_nic_stats_v0);
@@ -1529,7 +1491,6 @@ oce_stats_init(POCE_SOFTC sc)
 	return rc;
 }
 
-
 void
 oce_stats_free(POCE_SOFTC sc)
 {
@@ -1537,7 +1498,6 @@ oce_stats_free(POCE_SOFTC sc)
 	oce_dma_free(sc, &sc->stats_mem);
 
 }
-
 
 int
 oce_refresh_nic_stats(POCE_SOFTC sc)

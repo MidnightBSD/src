@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Pawel Jakub Dawidek under sponsorship from
  * the FreeBSD Foundation.
@@ -27,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_COMPAT_FREEBSD32_MISC_H_
@@ -37,12 +35,12 @@
 
 #if BYTE_ORDER == BIG_ENDIAN
 #define	PAIR32TO64(type, name)	((name ## 2) | ((type)(name ## 1) << 32))
-#define	RETVAL_HI	0	
-#define	RETVAL_LO	1	
+#define	RETVAL_HI	0
+#define	RETVAL_LO	1
 #else
 #define	PAIR32TO64(type, name)	((name ## 1) | ((type)(name ## 2) << 32))
-#define	RETVAL_HI	1	
-#define	RETVAL_LO	0	
+#define	RETVAL_HI	1
+#define	RETVAL_LO	0
 #endif
 
 #endif	/* !_COMPAT_FREEBSD32_MISC_H_ */

@@ -26,7 +26,6 @@
  * 
  */
 
-
 #ifndef NVRAM2ENV_NVRAM2ENV_H_
 #define	NVRAM2ENV_NVRAM2ENV_H_
 

@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <dev/hyperv/vmbus/hyperv_machdep.h>
 

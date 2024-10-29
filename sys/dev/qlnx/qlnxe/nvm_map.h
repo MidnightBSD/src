@@ -24,9 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
-
 
 /****************************************************************************
  * Name:        nvm_map.h
@@ -291,7 +289,6 @@ struct nvm_image {
 };				/* 0x134 */
 
 #define NVM_OFFSET(f)       ((u32_t)((int_ptr_t)(&(((struct nvm_image*)0)->f))))
-
 
 struct hw_set_info {
 	u32 reg_type;

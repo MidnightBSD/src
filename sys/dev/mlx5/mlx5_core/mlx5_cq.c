@@ -21,8 +21,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
+
+#include "opt_rss.h"
+#include "opt_ratelimit.h"
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -30,10 +32,9 @@
 #include <dev/mlx5/driver.h>
 #include <rdma/ib_verbs.h>
 #include <dev/mlx5/cq.h>
-#include "mlx5_core.h"
+#include <dev/mlx5/mlx5_core/mlx5_core.h>
 
 #include <sys/epoch.h>
-#include <net/if_var.h>
 
 static void
 mlx5_cq_table_write_lock(struct mlx5_cq_table *table)
@@ -65,7 +66,7 @@ void mlx5_cq_completion(struct mlx5_core_dev *dev, struct mlx5_eqe *eqe)
 
 	cqn = be32_to_cpu(eqe->data.comp.cqn) & 0xffffff;
 
-	NET_EPOCH_ENTER_ET(et);
+	NET_EPOCH_ENTER(et);
 
 	do_lock = atomic_read(&table->writercount) != 0;
 	if (unlikely(do_lock))
@@ -87,7 +88,7 @@ void mlx5_cq_completion(struct mlx5_core_dev *dev, struct mlx5_eqe *eqe)
 		    "Completion event for bogus CQ 0x%x\n", cqn);
 	}
 
-	NET_EPOCH_EXIT_ET(et);
+	NET_EPOCH_EXIT(et);
 }
 
 void mlx5_cq_event(struct mlx5_core_dev *dev, u32 cqn, int event_type)
@@ -97,7 +98,7 @@ void mlx5_cq_event(struct mlx5_core_dev *dev, u32 cqn, int event_type)
 	struct epoch_tracker et;
 	bool do_lock;
 
-	NET_EPOCH_ENTER_ET(et);
+	NET_EPOCH_ENTER(et);
 
 	do_lock = atomic_read(&table->writercount) != 0;
 	if (unlikely(do_lock))
@@ -118,7 +119,7 @@ void mlx5_cq_event(struct mlx5_core_dev *dev, u32 cqn, int event_type)
 		    "Asynchronous event for bogus CQ 0x%x\n", cqn);
 	}
 
-	NET_EPOCH_EXIT_ET(et);
+	NET_EPOCH_EXIT(et);
 }
 
 int mlx5_core_create_cq(struct mlx5_core_dev *dev, struct mlx5_core_cq *cq,
@@ -149,6 +150,7 @@ int mlx5_core_create_cq(struct mlx5_core_dev *dev, struct mlx5_core_cq *cq,
 		goto err_cmd;
 
 	cq->pid = curthread->td_proc->p_pid;
+	cq->uar = dev->priv.uar;
 
 	return 0;
 
@@ -215,18 +217,9 @@ int mlx5_core_modify_cq_moderation(struct mlx5_core_dev *dev,
 				   u16 cq_period,
 				   u16 cq_max_count)
 {
-	u32 in[MLX5_ST_SZ_DW(modify_cq_in)] = {0};
-	void *cqc;
-
-	MLX5_SET(modify_cq_in, in, cqn, cq->cqn);
-	cqc = MLX5_ADDR_OF(modify_cq_in, in, cq_context);
-	MLX5_SET(cqc, cqc, cq_period, cq_period);
-	MLX5_SET(cqc, cqc, cq_max_count, cq_max_count);
-	MLX5_SET(modify_cq_in, in,
-		 modify_field_select_resize_field_select.modify_field_select.modify_field_select,
-		 MLX5_CQ_MODIFY_PERIOD | MLX5_CQ_MODIFY_COUNT);
-
-	return mlx5_core_modify_cq(dev, cq, in, sizeof(in));
+	return (mlx5_core_modify_cq_by_mask(dev, cq,
+	    MLX5_CQ_MODIFY_PERIOD | MLX5_CQ_MODIFY_COUNT,
+	    cq_period, cq_max_count, 0, 0));
 }
 
 int mlx5_core_modify_cq_moderation_mode(struct mlx5_core_dev *dev,
@@ -235,19 +228,34 @@ int mlx5_core_modify_cq_moderation_mode(struct mlx5_core_dev *dev,
 					u16 cq_max_count,
 					u8 cq_mode)
 {
-	u32 in[MLX5_ST_SZ_DW(modify_cq_in)] = {0};
+	return (mlx5_core_modify_cq_by_mask(dev, cq,
+	    MLX5_CQ_MODIFY_PERIOD | MLX5_CQ_MODIFY_COUNT | MLX5_CQ_MODIFY_PERIOD_MODE,
+	    cq_period, cq_max_count, cq_mode, 0));
+}
+
+int
+mlx5_core_modify_cq_by_mask(struct mlx5_core_dev *dev,
+    struct mlx5_core_cq *cq, u32 mask,
+    u16 cq_period, u16 cq_max_count, u8 cq_mode, u8 cq_eqn)
+{
+	u32 in[MLX5_ST_SZ_DW(modify_cq_in)] = {};
 	void *cqc;
 
 	MLX5_SET(modify_cq_in, in, cqn, cq->cqn);
 	cqc = MLX5_ADDR_OF(modify_cq_in, in, cq_context);
-	MLX5_SET(cqc, cqc, cq_period, cq_period);
-	MLX5_SET(cqc, cqc, cq_max_count, cq_max_count);
-	MLX5_SET(cqc, cqc, cq_period_mode, cq_mode);
-	MLX5_SET(modify_cq_in, in,
-		 modify_field_select_resize_field_select.modify_field_select.modify_field_select,
-		 MLX5_CQ_MODIFY_PERIOD | MLX5_CQ_MODIFY_COUNT | MLX5_CQ_MODIFY_PERIOD_MODE);
+	if (mask & MLX5_CQ_MODIFY_PERIOD)
+		MLX5_SET(cqc, cqc, cq_period, cq_period);
+	if (mask & MLX5_CQ_MODIFY_COUNT)
+		MLX5_SET(cqc, cqc, cq_max_count, cq_max_count);
+	if (mask & MLX5_CQ_MODIFY_PERIOD_MODE)
+		MLX5_SET(cqc, cqc, cq_period_mode, cq_mode);
+	if (mask & MLX5_CQ_MODIFY_EQN)
+		MLX5_SET(cqc, cqc, c_eqn, cq_eqn);
 
-	return mlx5_core_modify_cq(dev, cq, in, sizeof(in));
+	MLX5_SET(modify_cq_in, in,
+	    modify_field_select_resize_field_select.modify_field_select.modify_field_select, mask);
+
+	return (mlx5_core_modify_cq(dev, cq, in, sizeof(in)));
 }
 
 int mlx5_init_cq_table(struct mlx5_core_dev *dev)

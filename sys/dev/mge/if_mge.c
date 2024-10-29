@@ -38,7 +38,6 @@
 #endif
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/endian.h>
@@ -627,12 +626,11 @@ mge_alloc_desc_dma(struct mge_softc *sc, struct mge_desc_wrapper* tab,
 static int
 mge_allocate_dma(struct mge_softc *sc)
 {
-	int error;
 	struct mge_desc_wrapper *dw;
 	int i;
 
 	/* Allocate a busdma tag and DMA safe memory for TX/RX descriptors. */
-	error = bus_dma_tag_create(bus_get_dma_tag(sc->dev),	/* parent */
+	bus_dma_tag_create(bus_get_dma_tag(sc->dev),	/* parent */
 	    16, 0,				/* alignment, boundary */
 	    BUS_SPACE_MAXADDR_32BIT,		/* lowaddr */
 	    BUS_SPACE_MAXADDR,			/* highaddr */
@@ -851,12 +849,6 @@ mge_attach(device_t dev)
 
 	/* Allocate network interface */
 	ifp = sc->ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(dev, "if_alloc() failed\n");
-		mge_detach(dev);
-		return (ENOMEM);
-	}
-
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_softc = sc;
 	ifp->if_flags = IFF_SIMPLEX | IFF_MULTICAST | IFF_BROADCAST;
@@ -882,7 +874,7 @@ mge_attach(device_t dev)
 
 	mge_get_mac_address(sc, hwaddr);
 	ether_ifattach(ifp, hwaddr);
-	callout_init(&sc->wd_callout, 0);
+	callout_init(&sc->wd_callout, 1);
 
 	/* Attach PHY(s) */
 	if (sc->phy_attached) {
@@ -928,9 +920,8 @@ mge_attach(device_t dev)
 	}
 
 	if (sc->switch_attached) {
-		device_t child;
 		MGE_WRITE(sc, MGE_REG_PHYDEV, MGE_SWITCH_PHYDEV);
-		child = device_add_child(dev, "mdio", -1);
+		device_add_child(dev, "mdio", -1);
 		bus_generic_attach(dev);
 	}
 
@@ -1581,8 +1572,6 @@ mge_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 static int
 mge_miibus_readreg(device_t dev, int phy, int reg)
 {
-	struct mge_softc *sc;
-	sc = device_get_softc(dev);
 
 	KASSERT(!switch_attached, ("miibus used with switch attached"));
 
@@ -1592,8 +1581,6 @@ mge_miibus_readreg(device_t dev, int phy, int reg)
 static int
 mge_miibus_writereg(device_t dev, int phy, int reg, int value)
 {
-	struct mge_softc *sc;
-	sc = device_get_softc(dev);
 
 	KASSERT(!switch_attached, ("miibus used with switch attached"));
 
@@ -1647,14 +1634,11 @@ static int
 mge_encap(struct mge_softc *sc, struct mbuf *m0)
 {
 	struct mge_desc_wrapper *dw = NULL;
-	struct ifnet *ifp;
 	bus_dma_segment_t segs[MGE_TX_DESC_NUM];
 	bus_dmamap_t mapp;
 	int error;
 	int seg, nsegs;
 	int desc_no;
-
-	ifp = sc->ifp;
 
 	/* Fetch unused map */
 	desc_no = sc->tx_desc_curr;
@@ -2031,45 +2015,51 @@ mge_crc8(uint8_t *data, int size)
 	return(crc);
 }
 
+struct mge_hash_maddr_ctx {
+	uint32_t smt[MGE_MCAST_REG_NUMBER];
+	uint32_t omt[MGE_MCAST_REG_NUMBER];
+};
+
+static u_int
+mge_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	static const uint8_t special[5] = { 0x01, 0x00, 0x5E, 0x00, 0x00 };
+	struct mge_hash_maddr_ctx *ctx = arg;
+	static const uint8_t v = (MGE_RX_DEFAULT_QUEUE << 1) | 1;
+	uint8_t *mac;
+	int i;
+
+	mac = LLADDR(sdl);
+	if (memcmp(mac, special, sizeof(special)) == 0) {
+		i = mac[5];
+		ctx->smt[i >> 2] |= v << ((i & 0x03) << 3);
+	} else {
+		i = mge_crc8(mac, ETHER_ADDR_LEN);
+		ctx->omt[i >> 2] |= v << ((i & 0x03) << 3);
+	}
+	return (1);
+}
+
 static void
 mge_setup_multicast(struct mge_softc *sc)
 {
-	uint8_t special[5] = { 0x01, 0x00, 0x5E, 0x00, 0x00 };
-	uint8_t v = (MGE_RX_DEFAULT_QUEUE << 1) | 1;
-	uint32_t smt[MGE_MCAST_REG_NUMBER];
-	uint32_t omt[MGE_MCAST_REG_NUMBER];
+	struct mge_hash_maddr_ctx ctx;
 	struct ifnet *ifp = sc->ifp;
-	struct ifmultiaddr *ifma;
-	uint8_t *mac;
+	static const uint8_t v = (MGE_RX_DEFAULT_QUEUE << 1) | 1;
 	int i;
 
 	if (ifp->if_flags & IFF_ALLMULTI) {
 		for (i = 0; i < MGE_MCAST_REG_NUMBER; i++)
-			smt[i] = omt[i] = (v << 24) | (v << 16) | (v << 8) | v;
+			ctx.smt[i] = ctx.omt[i] =
+			    (v << 24) | (v << 16) | (v << 8) | v;
 	} else {
-		memset(smt, 0, sizeof(smt));
-		memset(omt, 0, sizeof(omt));
-
-		if_maddr_rlock(ifp);
-		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-			if (ifma->ifma_addr->sa_family != AF_LINK)
-				continue;
-
-			mac = LLADDR((struct sockaddr_dl *)ifma->ifma_addr);
-			if (memcmp(mac, special, sizeof(special)) == 0) {
-				i = mac[5];
-				smt[i >> 2] |= v << ((i & 0x03) << 3);
-			} else {
-				i = mge_crc8(mac, ETHER_ADDR_LEN);
-				omt[i >> 2] |= v << ((i & 0x03) << 3);
-			}
-		}
-		if_maddr_runlock(ifp);
+		memset(&ctx, 0, sizeof(ctx));
+		if_foreach_llmaddr(ifp, mge_hash_maddr, &ctx);
 	}
 
 	for (i = 0; i < MGE_MCAST_REG_NUMBER; i++) {
-		MGE_WRITE(sc, MGE_DA_FILTER_SPEC_MCAST(i), smt[i]);
-		MGE_WRITE(sc, MGE_DA_FILTER_OTH_MCAST(i), omt[i]);
+		MGE_WRITE(sc, MGE_DA_FILTER_SPEC_MCAST(i), ctx.smt[i]);
+		MGE_WRITE(sc, MGE_DA_FILTER_OTH_MCAST(i), ctx.omt[i]);
 	}
 }
 
@@ -2136,15 +2126,15 @@ mge_add_sysctls(struct mge_softc *sc)
 	ctx = device_get_sysctl_ctx(sc->dev);
 	children = SYSCTL_CHILDREN(device_get_sysctl_tree(sc->dev));
 	tree = SYSCTL_ADD_NODE(ctx, children, OID_AUTO, "int_coal",
-	    CTLFLAG_RD, 0, "MGE Interrupts coalescing");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, 0, "MGE Interrupts coalescing");
 	children = SYSCTL_CHILDREN(tree);
 
 	SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "rx_time",
-	    CTLTYPE_UINT | CTLFLAG_RW, sc, MGE_IC_RX, mge_sysctl_ic,
-	    "I", "IC RX time threshold");
+	    CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_MPSAFE, sc, MGE_IC_RX,
+	    mge_sysctl_ic, "I", "IC RX time threshold");
 	SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "tx_time",
-	    CTLTYPE_UINT | CTLFLAG_RW, sc, MGE_IC_TX, mge_sysctl_ic,
-	    "I", "IC TX time threshold");
+	    CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_MPSAFE, sc, MGE_IC_TX,
+	    mge_sysctl_ic, "I", "IC TX time threshold");
 }
 
 static int

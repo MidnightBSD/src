@@ -301,7 +301,6 @@ static int mthca_cmd_post(struct mthca_dev *dev,
 	return err;
 }
 
-
 static int mthca_status_to_errno(u8 status)
 {
 	static const int trans_table[] = {
@@ -331,7 +330,6 @@ static int mthca_status_to_errno(u8 status)
 
 	return trans_table[status];
 }
-
 
 static int mthca_cmd_poll(struct mthca_dev *dev,
 			  u64 in_param,
@@ -858,9 +856,11 @@ int mthca_QUERY_FW(struct mthca_dev *dev)
 		 * Round up number of system pages needed in case
 		 * MTHCA_ICM_PAGE_SIZE < PAGE_SIZE.
 		 */
+#if MTHCA_ICM_PAGE_SIZE < PAGE_SIZE
 		dev->fw.arbel.fw_pages =
 			ALIGN(dev->fw.arbel.fw_pages, PAGE_SIZE / MTHCA_ICM_PAGE_SIZE) >>
 				(PAGE_SHIFT - MTHCA_ICM_PAGE_SHIFT);
+#endif
 
 		mthca_dbg(dev, "Clear int @ %llx, EQ arm @ %llx, EQ set CI @ %llx\n",
 			  (unsigned long long) dev->fw.arbel.clr_int_base,
@@ -1594,8 +1594,10 @@ int mthca_SET_ICM_SIZE(struct mthca_dev *dev, u64 icm_size, u64 *aux_pages)
 	 * Round up number of system pages needed in case
 	 * MTHCA_ICM_PAGE_SIZE < PAGE_SIZE.
 	 */
+#if MTHCA_ICM_PAGE_SIZE < PAGE_SIZE
 	*aux_pages = ALIGN(*aux_pages, PAGE_SIZE / MTHCA_ICM_PAGE_SIZE) >>
 		(PAGE_SHIFT - MTHCA_ICM_PAGE_SHIFT);
+#endif
 
 	return 0;
 }

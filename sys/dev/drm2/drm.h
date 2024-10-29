@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef _DRM_H_
 #define _DRM_H_
 

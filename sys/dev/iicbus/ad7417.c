@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Andreas Tobler
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/systm.h>
@@ -142,7 +140,7 @@ ad7417_write(device_t dev, uint32_t addr, uint8_t reg, uint8_t *buff, int len)
 
 	for (;;)
 	{
-		if (iicbus_transfer(dev, msg, 1) == 0)
+		if (iicbus_transfer(dev, msg, nitems(msg)) == 0)
 			return (0);
 
 		if (++try > 5) {
@@ -166,7 +164,7 @@ ad7417_read_1(device_t dev, uint32_t addr, uint8_t reg, uint8_t *data)
 
 	for (;;)
 	{
-		err = iicbus_transfer(dev, msg, 2);
+		err = iicbus_transfer(dev, msg, nitems(msg));
 		if (err != 0)
 			goto retry;
 
@@ -194,7 +192,7 @@ ad7417_read_2(device_t dev, uint32_t addr, uint8_t reg, uint16_t *data)
 
 	for (;;)
 	{
-		err = iicbus_transfer(dev, msg, 2);
+		err = iicbus_transfer(dev, msg, nitems(msg));
 		if (err != 0)
 			goto retry;
 
@@ -229,7 +227,7 @@ ad7417_write_read(device_t dev, uint32_t addr, struct write_data out,
 
 	for (;;)
 	{
-		err = iicbus_transfer(dev, msg, 3);
+		err = iicbus_transfer(dev, msg, nitems(msg));
 		if (err != 0)
 			goto retry;
 
@@ -257,18 +255,18 @@ ad7417_init_adc(device_t dev, uint32_t addr)
 	/* Clear Config2 */
 	buf = 0;
 
-	err = ad7417_write(dev, addr, AD7417_CONFIG2, &buf, 1);
+	err = ad7417_write(dev, addr, AD7417_CONFIG2, &buf, sizeof(buf));
 
 	 /* Read & cache Config1 */
 	buf = 0;
-	err = ad7417_write(dev, addr, AD7417_CONFIG, &buf, 1);
+	err = ad7417_write(dev, addr, AD7417_CONFIG, &buf, sizeof(buf));
 	err = ad7417_read_1(dev, addr, AD7417_CONFIG, &buf);
 	adc741x_config = (uint8_t)buf;
 
 	/* Disable shutdown mode */
 	adc741x_config &= 0xfe;
 	buf = adc741x_config;
-	err = ad7417_write(dev, addr, AD7417_CONFIG, &buf, 1);
+	err = ad7417_write(dev, addr, AD7417_CONFIG, &buf, sizeof(buf));
 	if (err < 0)
 		return (-1);
 
@@ -309,7 +307,7 @@ ad7417_probe(device_t dev)
 static int
 ad7417_fill_sensor_prop(device_t dev)
 {
-	phandle_t child;
+	phandle_t child, node;
 	struct ad7417_softc *sc;
 	u_int id[10];
 	char location[96];
@@ -358,13 +356,27 @@ ad7417_fill_sensor_prop(device_t dev)
 	for (j = 0; j < i; j++)
 		sc->sc_sensors[j].therm.zone = id[j];
 
+	/* Some PowerMac's have the real location of the sensors on
+	   child nodes of the hwsensor-location node. Check for and
+	   fix the name if needed.
+	   This is needed to apply the below HACK with the diode.
+	*/
+	j = 0;
+	for (node = OF_child(child); node != 0; node = OF_peer(node)) {
+	    
+	    OF_getprop(node, "location", location, sizeof(location));
+	    strcpy(sc->sc_sensors[i].therm.name, location);
+	    j++; 
+	}
+
 	/* Finish setting up sensor properties */
 	for (j = 0; j < i; j++) {
 		sc->sc_sensors[j].dev = dev;
 	
 		/* HACK: Apple wired a random diode to the ADC line */
-		if (strstr(sc->sc_sensors[j].therm.name, "DIODE TEMP")
-		    != NULL) {
+		if ((strstr(sc->sc_sensors[j].therm.name, "DIODE TEMP")
+		    != NULL)
+		    || (strstr(sc->sc_sensors[j].therm.name, "AD1") != NULL)) {
 			sc->sc_sensors[j].type = ADC7417_TEMP_SENSOR;
 			sc->sc_sensors[j].therm.read =
 			    (int (*)(struct pmac_therm *))(ad7417_diode_read);
@@ -415,7 +427,7 @@ ad7417_attach(device_t dev)
 	ctx = device_get_sysctl_ctx(dev);
 	sensroot_oid = SYSCTL_ADD_NODE(ctx,
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO, "sensor",
-	    CTLFLAG_RD, 0, "AD7417 Sensor Information");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, 0, "AD7417 Sensor Information");
 
 	/* Now we can fill the properties into the allocated struct. */
 	sc->sc_nsensors = ad7417_fill_sensor_prop(dev);
@@ -431,9 +443,8 @@ ad7417_attach(device_t dev)
 		sysctl_name[j] = 0;
 
 		oid = SYSCTL_ADD_NODE(ctx, SYSCTL_CHILDREN(sensroot_oid),
-				      OID_AUTO,
-				      sysctl_name, CTLFLAG_RD, 0,
-				      "Sensor Information");
+		    OID_AUTO, sysctl_name, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+		    "Sensor Information");
 
 		if (sc->sc_sensors[i].type == ADC7417_TEMP_SENSOR) {
 			unit = "temp";
@@ -444,8 +455,8 @@ ad7417_attach(device_t dev)
 		}
 		/* I use i to pass the sensor id. */
 		SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(oid), OID_AUTO,
-				unit, CTLTYPE_INT | CTLFLAG_RD, dev,
-				i, ad7417_sensor_sysctl,
+				unit, CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE,
+				dev, i, ad7417_sensor_sysctl,
 				sc->sc_sensors[i].type == ADC7417_TEMP_SENSOR ?
 				"IK" : "I", desc);
 	}

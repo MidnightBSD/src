@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_ratelimit.h"
@@ -62,7 +61,10 @@ set_sched_class_config(struct adapter *sc, int minmax)
 	rc = begin_synchronized_op(sc, NULL, SLEEP_OK | INTR_OK, "t4sscc");
 	if (rc)
 		return (rc);
-	rc = -t4_sched_config(sc, FW_SCHED_TYPE_PKTSCHED, minmax, 1);
+	if (hw_off_limits(sc))
+		rc = ENXIO;
+	else
+		rc = -t4_sched_config(sc, FW_SCHED_TYPE_PKTSCHED, minmax, 1);
 	end_synchronized_op(sc, 0);
 
 	return (rc);
@@ -167,7 +169,7 @@ set_sched_class_params(struct adapter *sc, struct t4_sched_class_params *p,
 		 */
 		if (p->cl < 0)
 			return (EINVAL);
-		if (!in_range(p->cl, 0, sc->chip_params->nsched_cls - 1))
+		if (!in_range(p->cl, 0, sc->params.nsched_cls - 1))
 			return (ERANGE);
 	}
 
@@ -181,17 +183,19 @@ set_sched_class_params(struct adapter *sc, struct t4_sched_class_params *p,
 	if (p->level == SCHED_CLASS_LEVEL_CL_RL) {
 		tc = &pi->sched_params->cl_rl[p->cl];
 		mtx_lock(&sc->tc_lock);
-		if (tc->refcount > 0 || tc->flags & (CLRL_SYNC | CLRL_ASYNC))
+		if (tc->refcount > 0 || tc->state == CS_HW_UPDATE_IN_PROGRESS)
 			rc = EBUSY;
 		else {
-			tc->flags |= CLRL_SYNC | CLRL_USER;
+			old = *tc;
+
+			tc->flags |= CF_USER;
+			tc->state = CS_HW_UPDATE_IN_PROGRESS;
 			tc->ratemode = fw_ratemode;
 			tc->rateunit = fw_rateunit;
 			tc->mode = fw_mode;
 			tc->maxrate = p->maxrate;
 			tc->pktsize = p->pktsize;
 			rc = 0;
-			old= *tc;
 		}
 		mtx_unlock(&sc->tc_lock);
 		if (rc != 0)
@@ -203,27 +207,40 @@ set_sched_class_params(struct adapter *sc, struct t4_sched_class_params *p,
 	if (rc != 0) {
 		if (p->level == SCHED_CLASS_LEVEL_CL_RL) {
 			mtx_lock(&sc->tc_lock);
+			MPASS(tc->refcount == 0);
+			MPASS(tc->flags & CF_USER);
+			MPASS(tc->state == CS_HW_UPDATE_IN_PROGRESS);
 			*tc = old;
 			mtx_unlock(&sc->tc_lock);
 		}
 		return (rc);
 	}
-	rc = -t4_sched_params(sc, FW_SCHED_TYPE_PKTSCHED, fw_level, fw_mode,
-	    fw_rateunit, fw_ratemode, p->channel, p->cl, p->minrate, p->maxrate,
-	    p->weight, p->pktsize, 0, sleep_ok);
+	if (!hw_off_limits(sc)) {
+		rc = -t4_sched_params(sc, FW_SCHED_TYPE_PKTSCHED, fw_level,
+		    fw_mode, fw_rateunit, fw_ratemode, p->channel, p->cl,
+		    p->minrate, p->maxrate, p->weight, p->pktsize, 0, sleep_ok);
+	}
 	end_synchronized_op(sc, sleep_ok ? 0 : LOCK_HELD);
 
 	if (p->level == SCHED_CLASS_LEVEL_CL_RL) {
 		mtx_lock(&sc->tc_lock);
-		MPASS(tc->flags & CLRL_SYNC);
-		MPASS(tc->flags & CLRL_USER);
 		MPASS(tc->refcount == 0);
+		MPASS(tc->flags & CF_USER);
+		MPASS(tc->state == CS_HW_UPDATE_IN_PROGRESS);
 
-		tc->flags &= ~CLRL_SYNC;
 		if (rc == 0)
-			tc->flags &= ~CLRL_ERR;
-		else
-			tc->flags |= CLRL_ERR;
+			tc->state = CS_HW_CONFIGURED;
+		else {
+			/* parameters failed so we don't park at params_set */
+			tc->state = CS_UNINITIALIZED;
+			tc->flags &= ~CF_USER;
+			CH_ERR(pi, "failed to configure traffic class %d: %d.  "
+			    "params: mode %d, rateunit %d, ratemode %d, "
+			    "channel %d, minrate %d, maxrate %d, pktsize %d, "
+			    "burstsize %d\n", p->cl, rc, fw_mode, fw_rateunit,
+			    fw_ratemode, p->channel, p->minrate, p->maxrate,
+			    p->pktsize, 0);
+		}
 		mtx_unlock(&sc->tc_lock);
 	}
 
@@ -237,7 +254,7 @@ update_tx_sched(void *context, int pending)
 	struct port_info *pi;
 	struct tx_cl_rl_params *tc;
 	struct adapter *sc = context;
-	const int n = sc->chip_params->nsched_cls;
+	const int n = sc->params.nsched_cls;
 
 	mtx_lock(&sc->tc_lock);
 	for_each_port(sc, i) {
@@ -245,7 +262,7 @@ update_tx_sched(void *context, int pending)
 		tc = &pi->sched_params->cl_rl[0];
 		for (j = 0; j < n; j++, tc++) {
 			MPASS(mtx_owned(&sc->tc_lock));
-			if ((tc->flags & CLRL_ASYNC) == 0)
+			if (tc->state != CS_HW_UPDATE_REQUESTED)
 				continue;
 			mtx_unlock(&sc->tc_lock);
 
@@ -261,12 +278,22 @@ update_tx_sched(void *context, int pending)
 			end_synchronized_op(sc, 0);
 
 			mtx_lock(&sc->tc_lock);
-			MPASS(tc->flags & CLRL_ASYNC);
-			tc->flags &= ~CLRL_ASYNC;
-			if (rc == 0)
-				tc->flags &= ~CLRL_ERR;
+			MPASS(tc->state == CS_HW_UPDATE_REQUESTED);
+			if (rc == 0) {
+				tc->state = CS_HW_CONFIGURED;
+				continue;
+			}
+			/* parameters failed so we try to avoid params_set */
+			if (tc->refcount > 0)
+				tc->state = CS_PARAMS_SET;
 			else
-				tc->flags |= CLRL_ERR;
+				tc->state = CS_UNINITIALIZED;
+			CH_ERR(pi, "failed to configure traffic class %d: %d.  "
+			    "params: mode %d, rateunit %d, ratemode %d, "
+			    "channel %d, minrate %d, maxrate %d, pktsize %d, "
+			    "burstsize %d\n", j, rc, tc->mode, tc->rateunit,
+			    tc->ratemode, pi->tx_chan, 0, tc->maxrate,
+			    tc->pktsize, tc->burstsize);
 		}
 	}
 	mtx_unlock(&sc->tc_lock);
@@ -295,8 +322,8 @@ bind_txq_to_traffic_class(struct adapter *sc, struct sge_txq *txq, int idx)
 	int rc, old_idx;
 	uint32_t fw_mnem, fw_class;
 
-	if (!(txq->eq.flags & EQ_ALLOCATED))
-		return (EAGAIN);
+	if (!(txq->eq.flags & EQ_HW_ALLOCATED))
+		return (ENXIO);
 
 	mtx_lock(&sc->tc_lock);
 	if (txq->tc_idx == -2) {
@@ -308,13 +335,13 @@ bind_txq_to_traffic_class(struct adapter *sc, struct sge_txq *txq, int idx)
 		goto done;
 	}
 
-	tc0 = &sc->port[txq->eq.tx_chan]->sched_params->cl_rl[0];
+	tc0 = &sc->port[txq->eq.port_id]->sched_params->cl_rl[0];
 	if (idx != -1) {
 		/*
 		 * Bind to a different class at index idx.
 		 */
 		tc = &tc0[idx];
-		if (tc->flags & CLRL_ERR) {
+		if (tc->state != CS_HW_CONFIGURED) {
 			rc = ENXIO;
 			goto done;
 		} else {
@@ -332,14 +359,15 @@ bind_txq_to_traffic_class(struct adapter *sc, struct sge_txq *txq, int idx)
 	mtx_unlock(&sc->tc_lock);
 
 	rc = begin_synchronized_op(sc, NULL, SLEEP_OK | INTR_OK, "t4btxq");
-	if (rc != 0)
-		return (rc);
-	fw_mnem = (V_FW_PARAMS_MNEM(FW_PARAMS_MNEM_DMAQ) |
-	    V_FW_PARAMS_PARAM_X(FW_PARAMS_PARAM_DMAQ_EQ_SCHEDCLASS_ETH) |
-	    V_FW_PARAMS_PARAM_YZ(txq->eq.cntxt_id));
-	fw_class = idx < 0 ? 0xffffffff : idx;
-	rc = -t4_set_params(sc, sc->mbox, sc->pf, 0, 1, &fw_mnem, &fw_class);
-	end_synchronized_op(sc, 0);
+	if (rc == 0) {
+		fw_mnem = (V_FW_PARAMS_MNEM(FW_PARAMS_MNEM_DMAQ) |
+		    V_FW_PARAMS_PARAM_X(FW_PARAMS_PARAM_DMAQ_EQ_SCHEDCLASS_ETH) |
+		    V_FW_PARAMS_PARAM_YZ(txq->eq.cntxt_id));
+		fw_class = idx < 0 ? 0xffffffff : idx;
+		rc = -t4_set_params(sc, sc->mbox, sc->pf, 0, 1, &fw_mnem,
+		    &fw_class);
+		end_synchronized_op(sc, 0);
+	}
 
 	mtx_lock(&sc->tc_lock);
 	MPASS(txq->tc_idx == -2);
@@ -367,7 +395,7 @@ bind_txq_to_traffic_class(struct adapter *sc, struct sge_txq *txq, int idx)
 		txq->tc_idx = old_idx;
 	}
 done:
-	MPASS(txq->tc_idx >= -1 && txq->tc_idx < sc->chip_params->nsched_cls);
+	MPASS(txq->tc_idx >= -1 && txq->tc_idx < sc->params.nsched_cls);
 	mtx_unlock(&sc->tc_lock);
 	return (rc);
 }
@@ -396,7 +424,7 @@ t4_set_sched_queue(struct adapter *sc, struct t4_sched_queue *p)
 	MPASS(vi->ntxq > 0);
 
 	if (!in_range(p->queue, 0, vi->ntxq - 1) ||
-	    !in_range(p->cl, 0, sc->chip_params->nsched_cls - 1))
+	    !in_range(p->cl, 0, sc->params.nsched_cls - 1))
 		return (EINVAL);
 
 	if (p->queue < 0) {
@@ -424,29 +452,16 @@ t4_set_sched_queue(struct adapter *sc, struct t4_sched_queue *p)
 int
 t4_init_tx_sched(struct adapter *sc)
 {
-	int i, j;
-	const int n = sc->chip_params->nsched_cls;
+	int i;
+	const int n = sc->params.nsched_cls;
 	struct port_info *pi;
-	struct tx_cl_rl_params *tc;
 
 	mtx_init(&sc->tc_lock, "tx_sched lock", NULL, MTX_DEF);
 	TASK_INIT(&sc->tc_task, 0, update_tx_sched, sc);
 	for_each_port(sc, i) {
 		pi = sc->port[i];
 		pi->sched_params = malloc(sizeof(*pi->sched_params) +
-		    n * sizeof(*tc), M_CXGBE, M_ZERO | M_WAITOK);
-		tc = &pi->sched_params->cl_rl[0];
-		for (j = 0; j < n; j++, tc++) {
-			tc->refcount = 0;
-			tc->ratemode = FW_SCHED_PARAMS_RATE_ABS;
-			tc->rateunit = FW_SCHED_PARAMS_UNIT_BITRATE;
-			tc->mode = FW_SCHED_PARAMS_MODE_CLASS;
-			tc->maxrate = 1000 * 1000;	/* 1 Gbps.  Arbitrary */
-
-			if (t4_sched_params_cl_rl_kbps(sc, pi->tx_chan, j,
-			    tc->mode, tc->maxrate, tc->pktsize, 1) != 0)
-				tc->flags = CLRL_ERR;
-		}
+		    n * sizeof(struct tx_cl_rl_params), M_CXGBE, M_ZERO | M_WAITOK);
 	}
 
 	return (0);
@@ -481,7 +496,7 @@ int
 t4_reserve_cl_rl_kbps(struct adapter *sc, int port_id, u_int maxrate,
     int *tc_idx)
 {
-	int rc = 0, fa = -1, i, pktsize, burstsize;
+	int rc = 0, fa, fa2, i, pktsize, burstsize;
 	bool update;
 	struct tx_cl_rl_params *tc;
 	struct port_info *pi;
@@ -500,30 +515,47 @@ t4_reserve_cl_rl_kbps(struct adapter *sc, int port_id, u_int maxrate,
 	tc = &pi->sched_params->cl_rl[0];
 
 	update = false;
+	fa = fa2 = -1;
 	mtx_lock(&sc->tc_lock);
-	for (i = 0; i < sc->chip_params->nsched_cls; i++, tc++) {
-		if (fa < 0 && tc->refcount == 0 && !(tc->flags & CLRL_USER))
-			fa = i;		/* first available */
-
-		if (tc->ratemode == FW_SCHED_PARAMS_RATE_ABS &&
+	for (i = 0; i < sc->params.nsched_cls; i++, tc++) {
+		if (tc->state >= CS_PARAMS_SET &&
+		    tc->ratemode == FW_SCHED_PARAMS_RATE_ABS &&
 		    tc->rateunit == FW_SCHED_PARAMS_UNIT_BITRATE &&
 		    tc->mode == FW_SCHED_PARAMS_MODE_FLOW &&
 		    tc->maxrate == maxrate && tc->pktsize == pktsize &&
 		    tc->burstsize == burstsize) {
 			tc->refcount++;
 			*tc_idx = i;
-			if ((tc->flags & (CLRL_ERR | CLRL_ASYNC | CLRL_SYNC)) ==
-			    CLRL_ERR) {
+			if (tc->state == CS_PARAMS_SET) {
+				tc->state = CS_HW_UPDATE_REQUESTED;
 				update = true;
 			}
 			goto done;
 		}
+
+		if (fa < 0 && tc->state == CS_UNINITIALIZED) {
+			MPASS(tc->refcount == 0);
+			fa = i;		/* first available, never used. */
+		}
+		if (fa2 < 0 && tc->refcount == 0 && !(tc->flags & CF_USER)) {
+			fa2 = i;	/* first available, used previously.  */
+		}
 	}
 	/* Not found */
-	MPASS(i == sc->chip_params->nsched_cls);
-	if (fa != -1) {
+	MPASS(i == sc->params.nsched_cls);
+	if (fa == -1)
+		fa = fa2;
+	if (fa == -1) {
+		*tc_idx = -1;
+		rc = ENOSPC;
+	} else {
+		MPASS(fa >= 0 && fa < sc->params.nsched_cls);
 		tc = &pi->sched_params->cl_rl[fa];
+		MPASS(!(tc->flags & CF_USER));
+		MPASS(tc->refcount == 0);
+
 		tc->refcount = 1;
+		tc->state = CS_HW_UPDATE_REQUESTED;
 		tc->ratemode = FW_SCHED_PARAMS_RATE_ABS;
 		tc->rateunit = FW_SCHED_PARAMS_UNIT_BITRATE;
 		tc->mode = FW_SCHED_PARAMS_MODE_FLOW;
@@ -532,16 +564,11 @@ t4_reserve_cl_rl_kbps(struct adapter *sc, int port_id, u_int maxrate,
 		tc->burstsize = burstsize;
 		*tc_idx = fa;
 		update = true;
-	} else {
-		*tc_idx = -1;
-		rc = ENOSPC;
 	}
 done:
 	mtx_unlock(&sc->tc_lock);
-	if (update) {
-		tc->flags |= CLRL_ASYNC;
+	if (update)
 		t4_update_tx_sched(sc);
-	}
 	return (rc);
 }
 
@@ -551,7 +578,7 @@ t4_release_cl_rl(struct adapter *sc, int port_id, int tc_idx)
 	struct tx_cl_rl_params *tc;
 
 	MPASS(port_id >= 0 && port_id < sc->params.nports);
-	MPASS(tc_idx >= 0 && tc_idx < sc->chip_params->nsched_cls);
+	MPASS(tc_idx >= 0 && tc_idx < sc->params.nsched_cls);
 
 	mtx_lock(&sc->tc_lock);
 	tc = &sc->port[port_id]->sched_params->cl_rl[tc_idx];
@@ -564,16 +591,13 @@ int
 sysctl_tc(SYSCTL_HANDLER_ARGS)
 {
 	struct vi_info *vi = arg1;
-	struct port_info *pi;
-	struct adapter *sc;
+	struct adapter *sc = vi->adapter;
 	struct sge_txq *txq;
 	int qidx = arg2, rc, tc_idx;
 
-	MPASS(qidx >= 0 && qidx < vi->ntxq);
-	pi = vi->pi;
-	sc = pi->adapter;
-	txq = &sc->sge.txq[vi->first_txq + qidx];
+	MPASS(qidx >= vi->first_txq && qidx < vi->first_txq + vi->ntxq);
 
+	txq = &sc->sge.txq[qidx];
 	tc_idx = txq->tc_idx;
 	rc = sysctl_handle_int(oidp, &tc_idx, 0, req);
 	if (rc != 0 || req->newptr == NULL)
@@ -581,7 +605,7 @@ sysctl_tc(SYSCTL_HANDLER_ARGS)
 
 	if (sc->flags & IS_VF)
 		return (EPERM);
-	if (!in_range(tc_idx, 0, sc->chip_params->nsched_cls - 1))
+	if (!in_range(tc_idx, 0, sc->params.nsched_cls - 1))
 		return (EINVAL);
 
 	return (bind_txq_to_traffic_class(sc, txq, tc_idx));
@@ -607,11 +631,16 @@ sysctl_tc_params(SYSCTL_HANDLER_ARGS)
 	MPASS(port_id < sc->params.nports);
 	MPASS(sc->port[port_id] != NULL);
 	i = arg2 & 0xffff;
-	MPASS(i < sc->chip_params->nsched_cls);
+	MPASS(i < sc->params.nsched_cls);
 
 	mtx_lock(&sc->tc_lock);
 	tc = sc->port[port_id]->sched_params->cl_rl[i];
 	mtx_unlock(&sc->tc_lock);
+
+	if (tc.state < CS_PARAMS_SET) {
+		sbuf_printf(sb, "uninitialized");
+		goto done;
+	}
 
 	switch (tc.rateunit) {
 	case SCHED_CLASS_RATEUNIT_BITS:
@@ -646,6 +675,7 @@ sysctl_tc_params(SYSCTL_HANDLER_ARGS)
 
 	switch (tc.mode) {
 	case SCHED_CLASS_MODE_CLASS:
+		/* Note that pktsize and burstsize are not used in this mode. */
 		sbuf_printf(sb, " aggregate");
 		break;
 	case SCHED_CLASS_MODE_FLOW:
@@ -710,11 +740,11 @@ t4_free_etid_table(struct adapter *sc)
 }
 
 /* etid services */
-static int alloc_etid(struct adapter *, struct cxgbe_snd_tag *);
+static int alloc_etid(struct adapter *, struct cxgbe_rate_tag *);
 static void free_etid(struct adapter *, int);
 
 static int
-alloc_etid(struct adapter *sc, struct cxgbe_snd_tag *cst)
+alloc_etid(struct adapter *sc, struct cxgbe_rate_tag *cst)
 {
 	struct tid_info *t = &sc->tids;
 	int etid = -1;
@@ -732,7 +762,7 @@ alloc_etid(struct adapter *sc, struct cxgbe_snd_tag *cst)
 	return (etid);
 }
 
-struct cxgbe_snd_tag *
+struct cxgbe_rate_tag *
 lookup_etid(struct adapter *sc, int etid)
 {
 	struct tid_info *t = &sc->tids;
@@ -754,23 +784,22 @@ free_etid(struct adapter *sc, int etid)
 }
 
 int
-cxgbe_snd_tag_alloc(struct ifnet *ifp, union if_snd_tag_alloc_params *params,
+cxgbe_rate_tag_alloc(struct ifnet *ifp, union if_snd_tag_alloc_params *params,
     struct m_snd_tag **pt)
 {
 	int rc, schedcl;
 	struct vi_info *vi = ifp->if_softc;
 	struct port_info *pi = vi->pi;
 	struct adapter *sc = pi->adapter;
-	struct cxgbe_snd_tag *cst;
+	struct cxgbe_rate_tag *cst;
 
-	if (params->hdr.type != IF_SND_TAG_TYPE_RATE_LIMIT)
-		return (ENOTSUP);
+	MPASS(params->hdr.type == IF_SND_TAG_TYPE_RATE_LIMIT);
 
 	rc = t4_reserve_cl_rl_kbps(sc, pi->port_id,
 	    (params->rate_limit.max_rate * 8ULL / 1000), &schedcl);
 	if (rc != 0)
 		return (rc);
-	MPASS(schedcl >= 0 && schedcl < sc->chip_params->nsched_cls);
+	MPASS(schedcl >= 0 && schedcl < sc->params.nsched_cls);
 
 	cst = malloc(sizeof(*cst), M_CXGBE, M_ZERO | M_NOWAIT);
 	if (cst == NULL) {
@@ -788,7 +817,7 @@ failed:
 	mtx_init(&cst->lock, "cst_lock", NULL, MTX_DEF);
 	mbufq_init(&cst->pending_tx, INT_MAX);
 	mbufq_init(&cst->pending_fwack, INT_MAX);
-	cst->com.ifp = ifp;
+	m_snd_tag_init(&cst->com, ifp, IF_SND_TAG_TYPE_RATE_LIMIT);
 	cst->flags |= EO_FLOWC_PENDING | EO_SND_TAG_REF;
 	cst->adapter = sc;
 	cst->port_id = pi->port_id;
@@ -813,15 +842,15 @@ failed:
  * Change in parameters, no change in ifp.
  */
 int
-cxgbe_snd_tag_modify(struct m_snd_tag *mst,
+cxgbe_rate_tag_modify(struct m_snd_tag *mst,
     union if_snd_tag_modify_params *params)
 {
 	int rc, schedcl;
-	struct cxgbe_snd_tag *cst = mst_to_cst(mst);
+	struct cxgbe_rate_tag *cst = mst_to_crt(mst);
 	struct adapter *sc = cst->adapter;
 
 	/* XXX: is schedcl -1 ok here? */
-	MPASS(cst->schedcl >= 0 && cst->schedcl < sc->chip_params->nsched_cls);
+	MPASS(cst->schedcl >= 0 && cst->schedcl < sc->params.nsched_cls);
 
 	mtx_lock(&cst->lock);
 	MPASS(cst->flags & EO_SND_TAG_REF);
@@ -829,7 +858,7 @@ cxgbe_snd_tag_modify(struct m_snd_tag *mst,
 	    (params->rate_limit.max_rate * 8ULL / 1000), &schedcl);
 	if (rc != 0)
 		return (rc);
-	MPASS(schedcl >= 0 && schedcl < sc->chip_params->nsched_cls);
+	MPASS(schedcl >= 0 && schedcl < sc->params.nsched_cls);
 	t4_release_cl_rl(sc, cst->port_id, cst->schedcl);
 	cst->schedcl = schedcl;
 	cst->max_rate = params->rate_limit.max_rate;
@@ -839,10 +868,10 @@ cxgbe_snd_tag_modify(struct m_snd_tag *mst,
 }
 
 int
-cxgbe_snd_tag_query(struct m_snd_tag *mst,
+cxgbe_rate_tag_query(struct m_snd_tag *mst,
     union if_snd_tag_query_params *params)
 {
-	struct cxgbe_snd_tag *cst = mst_to_cst(mst);
+	struct cxgbe_rate_tag *cst = mst_to_crt(mst);
 
 	params->rate_limit.max_rate = cst->max_rate;
 
@@ -857,7 +886,7 @@ cxgbe_snd_tag_query(struct m_snd_tag *mst,
  * Unlocks cst and frees it.
  */
 void
-cxgbe_snd_tag_free_locked(struct cxgbe_snd_tag *cst)
+cxgbe_rate_tag_free_locked(struct cxgbe_rate_tag *cst)
 {
 	struct adapter *sc = cst->adapter;
 
@@ -878,9 +907,9 @@ cxgbe_snd_tag_free_locked(struct cxgbe_snd_tag *cst)
 }
 
 void
-cxgbe_snd_tag_free(struct m_snd_tag *mst)
+cxgbe_rate_tag_free(struct m_snd_tag *mst)
 {
-	struct cxgbe_snd_tag *cst = mst_to_cst(mst);
+	struct cxgbe_rate_tag *cst = mst_to_crt(mst);
 
 	mtx_lock(&cst->lock);
 
@@ -895,11 +924,54 @@ cxgbe_snd_tag_free(struct m_snd_tag *mst)
 		 * credits for the etid otherwise.
 		 */
 		if (cst->tx_credits == cst->tx_total) {
-			cxgbe_snd_tag_free_locked(cst);
+			cxgbe_rate_tag_free_locked(cst);
 			return;	/* cst is gone. */
 		}
 		send_etid_flush_wr(cst);
 	}
 	mtx_unlock(&cst->lock);
+}
+
+void
+cxgbe_ratelimit_query(struct ifnet *ifp, struct if_ratelimit_query_results *q)
+{
+	struct vi_info *vi = ifp->if_softc;
+	struct adapter *sc = vi->adapter;
+
+	q->rate_table = NULL;
+	q->flags = RT_IS_SELECTABLE;
+	/*
+	 * Absolute max limits from the firmware configuration.  Practical
+	 * limits depend on the burstsize, pktsize (ifp->if_mtu ultimately) and
+	 * the card's cclk.
+	 */
+	q->max_flows = sc->tids.netids;
+	q->number_of_rates = sc->params.nsched_cls;
+	q->min_segment_burst = 4; /* matches PKTSCHED_BURST in the firmware. */
+
+#if 1
+	if (chip_id(sc) < CHELSIO_T6) {
+		/* Based on testing by rrs@ with a T580 at burstsize = 4. */
+		MPASS(q->min_segment_burst == 4);
+		q->max_flows = min(4000, q->max_flows);
+	} else {
+		/* XXX: TBD, carried forward from T5 for now. */
+		q->max_flows = min(4000, q->max_flows);
+	}
+
+	/*
+	 * XXX: tcp_ratelimit.c grabs all available rates on link-up before it
+	 * even knows whether hw pacing will be used or not.  This prevents
+	 * other consumers like SO_MAX_PACING_RATE or those using cxgbetool or
+	 * the private ioctls from using any of traffic classes.
+	 *
+	 * Underreport the number of rates to tcp_ratelimit so that it doesn't
+	 * hog all of them.  This can be removed if/when tcp_ratelimit switches
+	 * to making its allocations on first-use rather than link-up.  There is
+	 * nothing wrong with one particular consumer reserving all the classes
+	 * but it should do so only if it'll actually use hw rate limiting.
+	 */
+	q->number_of_rates /= 4;
+#endif
 }
 #endif

@@ -25,15 +25,18 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef _NET_IF_INET6_H_
-#define	_NET_IF_INET6_H_
+#ifndef _LINUXKPI_NET_IF_INET6_H_
+#define	_LINUXKPI_NET_IF_INET6_H_
 
 #include <sys/types.h>
 #include <netinet/in.h>
 
 #include <asm/types.h>
+
+struct inet6_dev {
+	/* XXX currently unused but in a declaration. */
+};
 
 static inline void ipv6_eth_mc_map(const struct in6_addr *addr, char *buf)
 {
@@ -49,4 +52,4 @@ static inline void ipv6_eth_mc_map(const struct in6_addr *addr, char *buf)
 	memcpy(buf + 2, &addr->s6_addr32[3], sizeof(__u32));
 }
 
-#endif	/* _NET_IF_INET6_H_ */
+#endif	/* _LINUXKPI_NET_IF_INET6_H_ */

@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef _LINUX_VMALLOC_H_
-#define	_LINUX_VMALLOC_H_
+#ifndef _LINUXKPI_LINUX_VMALLOC_H_
+#define	_LINUXKPI_LINUX_VMALLOC_H_
 
 #include <linux/page.h>
 
@@ -39,4 +38,4 @@ void *vmap(struct page **pages, unsigned int count, unsigned long flags,
     int prot);
 void vunmap(void *addr);
 
-#endif	/* _LINUX_VMALLOC_H_ */
+#endif	/* _LINUXKPI_LINUX_VMALLOC_H_ */

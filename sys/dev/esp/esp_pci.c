@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause AND BSD-2-Clause
  *
  * Copyright (c) 2011 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
@@ -67,7 +67,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>

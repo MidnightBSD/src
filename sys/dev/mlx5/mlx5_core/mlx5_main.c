@@ -1,5 +1,6 @@
 /*-
- * Copyright (c) 2013-2019, Mellanox Technologies, Ltd.  All rights reserved.
+ * Copyright (c) 2013-2021, Mellanox Technologies, Ltd.  All rights reserved.
+ * Copyright (c) 2022 NVIDIA corporation & affiliates.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -21,8 +22,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
+
+#include "opt_rss.h"
+#include "opt_ratelimit.h"
 
 #include <linux/kmod.h>
 #include <linux/module.h>
@@ -43,26 +46,31 @@
 #include <dev/mlx5/mlx5_ifc.h>
 #include <dev/mlx5/mlx5_fpga/core.h>
 #include <dev/mlx5/mlx5_lib/mlx5.h>
-#include "mlx5_core.h"
-#include "eswitch.h"
-#include "fs_core.h"
+#include <dev/mlx5/mlx5_core/mlx5_core.h>
+#include <dev/mlx5/mlx5_core/eswitch.h>
+#include <dev/mlx5/mlx5_core/fs_core.h>
+#include <dev/mlx5/mlx5_core/diag_cnt.h>
 #ifdef PCI_IOV
 #include <sys/nv.h>
+#include <sys/socket.h>
 #include <dev/pci/pci_iov.h>
 #include <sys/iov_schema.h>
+#include <sys/iov.h>
+#include <net/if.h>
+#include <net/if_vlan_var.h>
 #endif
 
 static const char mlx5_version[] = "Mellanox Core driver "
 	DRIVER_VERSION " (" DRIVER_RELDATE ")";
-MODULE_AUTHOR("Eli Cohen <eli@mellanox.com>");
-MODULE_DESCRIPTION("Mellanox Connect-IB, ConnectX-4 core driver");
+MODULE_DESCRIPTION("Mellanox ConnectX-4 and onwards core driver");
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_DEPEND(mlx5, linuxkpi, 1, 1, 1);
 MODULE_DEPEND(mlx5, mlxfw, 1, 1, 1);
 MODULE_DEPEND(mlx5, firmware, 1, 1, 1);
 MODULE_VERSION(mlx5, 1);
 
-SYSCTL_NODE(_hw, OID_AUTO, mlx5, CTLFLAG_RW, 0, "mlx5 hardware controls");
+SYSCTL_NODE(_hw, OID_AUTO, mlx5, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "mlx5 hardware controls");
 
 int mlx5_core_debug_mask;
 SYSCTL_INT(_hw_mlx5, OID_AUTO, debug_mask, CTLFLAG_RWTUN,
@@ -80,7 +88,10 @@ SYSCTL_INT(_hw_mlx5, OID_AUTO, fast_unload_enabled, CTLFLAG_RWTUN,
     &mlx5_fast_unload_enabled, 0,
     "Set to enable fast unload. Clear to disable.");
 
-#define NUMA_NO_NODE       -1
+static int mlx5_core_comp_eq_size = 1024;
+SYSCTL_INT(_hw_mlx5, OID_AUTO, comp_eq_size, CTLFLAG_RDTUN | CTLFLAG_MPSAFE,
+    &mlx5_core_comp_eq_size, 0,
+    "Set default completion EQ size between 1024 and 16384 inclusivly. Value should be power of two.");
 
 static LIST_HEAD(intf_list);
 static LIST_HEAD(dev_list);
@@ -176,8 +187,49 @@ static struct mlx5_profile profiles[] = {
 	},
 };
 
+static int
+mlx5_core_get_comp_eq_size(void)
+{
+	int value = mlx5_core_comp_eq_size;
+
+	if (value < 1024)
+		value = 1024;
+	else if (value > 16384)
+		value = 16384;
+
+	/* make value power of two, rounded down */
+	while (value & (value - 1))
+		value &= (value - 1);
+	return (value);
+}
+
+static void mlx5_set_driver_version(struct mlx5_core_dev *dev)
+{
+	const size_t driver_ver_sz =
+	    MLX5_FLD_SZ_BYTES(set_driver_version_in, driver_version);
+	u8 in[MLX5_ST_SZ_BYTES(set_driver_version_in)] = {};
+	u8 out[MLX5_ST_SZ_BYTES(set_driver_version_out)] = {};
+	char *string;
+
+	if (!MLX5_CAP_GEN(dev, driver_version))
+		return;
+
+	string = MLX5_ADDR_OF(set_driver_version_in, in, driver_version);
+
+	snprintf(string, driver_ver_sz, "FreeBSD,mlx5_core,%u.%u.%u," DRIVER_VERSION,
+	    __FreeBSD_version / 100000, (__FreeBSD_version / 1000) % 100,
+	    __FreeBSD_version % 1000);
+
+	/* Send the command */
+	MLX5_SET(set_driver_version_in, in, opcode,
+	    MLX5_CMD_OP_SET_DRIVER_VERSION);
+
+	mlx5_cmd_exec(dev, in, sizeof(in), out, sizeof(out));
+}
+
 #ifdef PCI_IOV
 static const char iov_mac_addr_name[] = "mac-addr";
+static const char iov_vlan_name[] = "vlan";
 static const char iov_node_guid_name[] = "node-guid";
 static const char iov_port_guid_name[] = "port-guid";
 #endif
@@ -453,6 +505,12 @@ static int handle_hca_cap(struct mlx5_core_dev *dev)
 	/* disable cmdif checksum */
 	MLX5_SET(cmd_hca_cap, set_hca_cap, cmdif_checksum, 0);
 
+	/* Enable 4K UAR only when HCA supports it and page size is bigger
+	 * than 4K.
+	 */
+	if (MLX5_CAP_GEN_MAX(dev, uar_4k) && PAGE_SIZE > 4096)
+		MLX5_SET(cmd_hca_cap, set_hca_cap, uar_4k, 1);
+
 	/* enable drain sigerr */
 	MLX5_SET(cmd_hca_cap, set_hca_cap, drain_sigerr, 1);
 
@@ -522,6 +580,17 @@ static int set_hca_ctrl(struct mlx5_core_dev *dev)
 					&he_out, sizeof(he_out),
 					MLX5_REG_HOST_ENDIANNESS, 0, 1);
 	return err;
+}
+
+static int mlx5_core_set_hca_defaults(struct mlx5_core_dev *dev)
+{
+	int ret = 0;
+
+	/* Disable local_lb by default */
+	if (MLX5_CAP_GEN(dev, port_type) == MLX5_CAP_PORT_TYPE_ETH)
+		ret = mlx5_nic_vport_update_local_lb(dev, false);
+
+       return ret;
 }
 
 static int mlx5_core_enable_hca(struct mlx5_core_dev *dev, u16 func_id)
@@ -643,13 +712,12 @@ static int alloc_comp_eqs(struct mlx5_core_dev *dev)
 
 	INIT_LIST_HEAD(&table->comp_eqs_list);
 	ncomp_vec = table->num_comp_vectors;
-	nent = MLX5_COMP_EQ_SIZE;
+	nent = mlx5_core_get_comp_eq_size();
 	for (i = 0; i < ncomp_vec; i++) {
-		eq = kzalloc(sizeof(*eq), GFP_KERNEL);
+		eq = kzalloc_node(sizeof(*eq), GFP_KERNEL, dev->priv.numa_node);
 
 		err = mlx5_create_map_eq(dev, eq,
-					 i + MLX5_EQ_VEC_COMP_BASE, nent, 0,
-					 &dev->priv.uuari.uars[0]);
+					 i + MLX5_EQ_VEC_COMP_BASE, nent, 0);
 		if (err) {
 			kfree(eq);
 			goto clean;
@@ -666,22 +734,6 @@ static int alloc_comp_eqs(struct mlx5_core_dev *dev)
 clean:
 	free_comp_eqs(dev);
 	return err;
-}
-
-static int map_bf_area(struct mlx5_core_dev *dev)
-{
-	resource_size_t bf_start = pci_resource_start(dev->pdev, 0);
-	resource_size_t bf_len = pci_resource_len(dev->pdev, 0);
-
-	dev->priv.bf_mapping = io_mapping_create_wc(bf_start, bf_len);
-
-	return dev->priv.bf_mapping ? 0 : -ENOMEM;
-}
-
-static void unmap_bf_area(struct mlx5_core_dev *dev)
-{
-	if (dev->priv.bf_mapping)
-		io_mapping_free(dev->priv.bf_mapping);
 }
 
 static inline int fw_initializing(struct mlx5_core_dev *dev)
@@ -724,7 +776,7 @@ static void mlx5_add_device(struct mlx5_interface *intf, struct mlx5_priv *priv)
 	struct mlx5_device_context *dev_ctx;
 	struct mlx5_core_dev *dev = container_of(priv, struct mlx5_core_dev, priv);
 
-	dev_ctx = kzalloc(sizeof(*dev_ctx), GFP_KERNEL);
+	dev_ctx = kzalloc_node(sizeof(*dev_ctx), GFP_KERNEL, priv->numa_node);
 	if (!dev_ctx)
 		return;
 
@@ -877,8 +929,6 @@ static int mlx5_pci_init(struct mlx5_core_dev *dev, struct mlx5_priv *priv)
 	mutex_init(&priv->pgdir_mutex);
 	INIT_LIST_HEAD(&priv->pgdir_list);
 	spin_lock_init(&priv->mkey_lock);
-
-	priv->numa_node = NUMA_NO_NODE;
 
 	err = mlx5_pci_enable_device(dev);
 	if (err) {
@@ -1108,29 +1158,32 @@ static int mlx5_load_one(struct mlx5_core_dev *dev, struct mlx5_priv *priv,
 		goto reclaim_boot_pages;
 	}
 
+	mlx5_set_driver_version(dev);
+
 	mlx5_start_health_poll(dev);
 
-	if (boot && mlx5_init_once(dev, priv)) {
+	if (boot && (err = mlx5_init_once(dev, priv))) {
 		mlx5_core_err(dev, "sw objs init failed\n");
 		goto err_stop_poll;
+	}
+
+	dev->priv.uar = mlx5_get_uars_page(dev);
+	if (IS_ERR(dev->priv.uar)) {
+		mlx5_core_err(dev, "Failed allocating uar, aborting\n");
+		err = PTR_ERR(dev->priv.uar);
+		goto err_cleanup_once;
 	}
 
 	err = mlx5_enable_msix(dev);
 	if (err) {
 		mlx5_core_err(dev, "enable msix failed\n");
-		goto err_cleanup_once;
-	}
-
-	err = mlx5_alloc_uuars(dev, &priv->uuari);
-	if (err) {
-		mlx5_core_err(dev, "Failed allocating uar, aborting\n");
-		goto err_disable_msix;
+		goto err_cleanup_uar;
 	}
 
 	err = mlx5_start_eqs(dev);
 	if (err) {
 		mlx5_core_err(dev, "Failed to start pages and async EQs\n");
-		goto err_free_uar;
+		goto err_disable_msix;
 	}
 
 	err = alloc_comp_eqs(dev);
@@ -1139,12 +1192,15 @@ static int mlx5_load_one(struct mlx5_core_dev *dev, struct mlx5_priv *priv,
 		goto err_stop_eqs;
 	}
 
-	if (map_bf_area(dev))
-		mlx5_core_err(dev, "Failed to map blue flame area\n");
-
 	err = mlx5_init_fs(dev);
 	if (err) {
 		mlx5_core_err(dev, "flow steering init %d\n", err);
+		goto err_free_comp_eqs;
+	}
+
+	err = mlx5_core_set_hca_defaults(dev);
+	if (err) {
+		mlx5_core_err(dev, "Failed to set HCA defaults %d\n", err);
 		goto err_free_comp_eqs;
 	}
 
@@ -1160,10 +1216,16 @@ static int mlx5_load_one(struct mlx5_core_dev *dev, struct mlx5_priv *priv,
 		goto err_mpfs;
 	}
 
+	err = mlx5_diag_cnt_init(dev);
+	if (err) {
+		mlx5_core_err(dev, "diag cnt init failed %d\n", err);
+		goto err_fpga;
+	}
+
 	err = mlx5_register_device(dev);
 	if (err) {
 		mlx5_core_err(dev, "mlx5_register_device failed %d\n", err);
-		goto err_fpga;
+		goto err_diag_cnt;
 	}
 
 	set_bit(MLX5_INTERFACE_STATE_UP, &dev->intf_state);
@@ -1171,6 +1233,9 @@ static int mlx5_load_one(struct mlx5_core_dev *dev, struct mlx5_priv *priv,
 out:
 	mutex_unlock(&dev->intf_state_mutex);
 	return 0;
+
+err_diag_cnt:
+	mlx5_diag_cnt_cleanup(dev);
 
 err_fpga:
 	mlx5_fpga_device_stop(dev);
@@ -1183,16 +1248,15 @@ err_fs:
 
 err_free_comp_eqs:
 	free_comp_eqs(dev);
-	unmap_bf_area(dev);
 
 err_stop_eqs:
 	mlx5_stop_eqs(dev);
 
-err_free_uar:
-	mlx5_free_uuars(dev, &priv->uuari);
-
 err_disable_msix:
 	mlx5_disable_msix(dev);
+
+err_cleanup_uar:
+	mlx5_put_uars_page(dev, dev->priv.uar);
 
 err_cleanup_once:
 	if (boot)
@@ -1243,15 +1307,15 @@ static int mlx5_unload_one(struct mlx5_core_dev *dev, struct mlx5_priv *priv,
 	mlx5_unregister_device(dev);
 
 	mlx5_eswitch_cleanup(dev->priv.eswitch);
+	mlx5_diag_cnt_cleanup(dev);
 	mlx5_fpga_device_stop(dev);
 	mlx5_mpfs_destroy(dev);
 	mlx5_cleanup_fs(dev);
-	unmap_bf_area(dev);
 	mlx5_wait_for_reclaim_vfs_pages(dev);
 	free_comp_eqs(dev);
 	mlx5_stop_eqs(dev);
-	mlx5_free_uuars(dev, &priv->uuari);
 	mlx5_disable_msix(dev);
+	mlx5_put_uars_page(dev, dev->priv.uar);
         if (cleanup)
                 mlx5_cleanup_once(dev);
 	mlx5_stop_health_poll(dev, cleanup);
@@ -1327,14 +1391,22 @@ static int init_one(struct pci_dev *pdev,
 	int num_vfs, sriov_pos;
 #endif
 	int i,err;
+	int numa_node;
 	struct sysctl_oid *pme_sysctl_node;
 	struct sysctl_oid *pme_err_sysctl_node;
 	struct sysctl_oid *cap_sysctl_node;
 	struct sysctl_oid *current_cap_sysctl_node;
 	struct sysctl_oid *max_cap_sysctl_node;
 
-	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
+	printk_once("mlx5: %s", mlx5_version);
+
+	numa_node = dev_to_node(&pdev->dev);
+
+	dev = kzalloc_node(sizeof(*dev), GFP_KERNEL, numa_node);
+
 	priv = &dev->priv;
+	priv->numa_node = numa_node;
+
 	if (id)
 		priv->pci_dev_data = id->driver_data;
 
@@ -1367,7 +1439,7 @@ static int init_one(struct pci_dev *pdev,
 
 	pme_sysctl_node = SYSCTL_ADD_NODE(&dev->sysctl_ctx,
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(bsddev)),
-	    OID_AUTO, "pme_stats", CTLFLAG_RD, NULL,
+	    OID_AUTO, "pme_stats", CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
 	    "Port module event statistics");
 	if (pme_sysctl_node == NULL) {
 		err = -ENOMEM;
@@ -1375,7 +1447,7 @@ static int init_one(struct pci_dev *pdev,
 	}
 	pme_err_sysctl_node = SYSCTL_ADD_NODE(&dev->sysctl_ctx,
 	    SYSCTL_CHILDREN(pme_sysctl_node),
-	    OID_AUTO, "errors", CTLFLAG_RD, NULL,
+	    OID_AUTO, "errors", CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
 	    "Port module event error statistics");
 	if (pme_err_sysctl_node == NULL) {
 		err = -ENOMEM;
@@ -1584,6 +1656,12 @@ static int init_one(struct pci_dev *pdev,
 	spin_lock_init(&priv->ctx_lock);
 	mutex_init(&dev->pci_status_mutex);
 	mutex_init(&dev->intf_state_mutex);
+
+	mutex_init(&priv->bfregs.reg_head.lock);
+	mutex_init(&priv->bfregs.wc_head.lock);
+	INIT_LIST_HEAD(&priv->bfregs.reg_head.list);
+	INIT_LIST_HEAD(&priv->bfregs.wc_head.list);
+
 	mtx_init(&dev->dump_lock, "mlx5dmp", NULL, MTX_DEF | MTX_NEW);
 	err = mlx5_pci_init(dev, priv);
 	if (err) {
@@ -1624,12 +1702,16 @@ static int init_one(struct pci_dev *pdev,
 			vf_schema = pci_iov_schema_alloc_node();
 			pci_iov_schema_add_unicast_mac(vf_schema,
 			    iov_mac_addr_name, 0, NULL);
+			pci_iov_schema_add_vlan(vf_schema,
+			    iov_vlan_name, 0, 0);
 			pci_iov_schema_add_uint64(vf_schema, iov_node_guid_name,
 			    0, 0);
 			pci_iov_schema_add_uint64(vf_schema, iov_port_guid_name,
 			    0, 0);
 			err = pci_iov_attach(bsddev, pf_schema, vf_schema);
-			if (err != 0) {
+			if (err == 0) {
+				dev->iov_pf = true;
+			} else {
 				device_printf(bsddev,
 			    "Failed to initialize SR-IOV support, error %d\n",
 				    err);
@@ -1641,7 +1723,7 @@ static int init_one(struct pci_dev *pdev,
 	}
 #endif
 
-	pci_save_state(bsddev);
+	pci_save_state(pdev);
 	return 0;
 
 clean_health:
@@ -1663,8 +1745,11 @@ static void remove_one(struct pci_dev *pdev)
 	struct mlx5_priv *priv = &dev->priv;
 
 #ifdef PCI_IOV
-	pci_iov_detach(pdev->dev.bsddev);
-	mlx5_eswitch_disable_sriov(priv->eswitch);
+	if (dev->iov_pf) {
+		pci_iov_detach(pdev->dev.bsddev);
+		mlx5_eswitch_disable_sriov(priv->eswitch);
+		dev->iov_pf = false;
+	}
 #endif
 
 	if (mlx5_unload_one(dev, priv, true)) {
@@ -1716,8 +1801,8 @@ static pci_ers_result_t mlx5_pci_slot_reset(struct pci_dev *pdev)
 	}
 	pci_set_master(pdev);
 	pci_set_powerstate(pdev->dev.bsddev, PCI_POWERSTATE_D0);
-	pci_restore_state(pdev->dev.bsddev);
-	pci_save_state(pdev->dev.bsddev);
+	pci_restore_state(pdev);
+	pci_save_state(pdev);
 
 	return err ? PCI_ERS_RESULT_DISCONNECT : PCI_ERS_RESULT_RECOVERED;
 }
@@ -1855,6 +1940,25 @@ mlx5_iov_add_vf(device_t dev, uint16_t vfnum, const nvlist_t *vf_config)
 		}
 	}
 
+	if (nvlist_exists_number(vf_config, iov_vlan_name)) {
+		uint16_t vlan = nvlist_get_number(vf_config, iov_vlan_name);
+
+		if (vlan == 0)
+			error = ENOTSUP;
+		else {
+			if (vlan == VF_VLAN_TRUNK)
+				vlan = 0;
+
+			error = -mlx5_eswitch_set_vport_vlan(priv->eswitch,
+			    vfnum + 1, vlan, 0);
+		}
+		if (error != 0) {
+			mlx5_core_err(core_dev,
+			    "setting VLAN for VF %d failed, error %d\n",
+			    vfnum + 1, error);
+		}
+	}
+
 	if (nvlist_exists_number(vf_config, iov_node_guid_name)) {
 		node_guid = nvlist_get_number(vf_config, iov_node_guid_name);
 		error = -mlx5_modify_nic_vport_node_guid(core_dev, vfnum + 1,
@@ -1978,19 +2082,19 @@ static const struct pci_device_id mlx5_core_pci_table[] = {
 	{ PCI_VDEVICE(MELLANOX, 4116) }, /* ConnectX-4 VF */
 	{ PCI_VDEVICE(MELLANOX, 4117) }, /* ConnectX-4LX */
 	{ PCI_VDEVICE(MELLANOX, 4118) }, /* ConnectX-4LX VF */
-	{ PCI_VDEVICE(MELLANOX, 4119) }, /* ConnectX-5 */
+	{ PCI_VDEVICE(MELLANOX, 4119) }, /* ConnectX-5, PCIe 3.0 */
 	{ PCI_VDEVICE(MELLANOX, 4120) }, /* ConnectX-5 VF */
-	{ PCI_VDEVICE(MELLANOX, 4121) },
-	{ PCI_VDEVICE(MELLANOX, 4122) },
-	{ PCI_VDEVICE(MELLANOX, 4123) },
-	{ PCI_VDEVICE(MELLANOX, 4124) },
-	{ PCI_VDEVICE(MELLANOX, 4125) },
-	{ PCI_VDEVICE(MELLANOX, 4126) },
-	{ PCI_VDEVICE(MELLANOX, 4127) },
+	{ PCI_VDEVICE(MELLANOX, 4121) }, /* ConnectX-5 Ex */
+	{ PCI_VDEVICE(MELLANOX, 4122) }, /* ConnectX-5 Ex VF */
+	{ PCI_VDEVICE(MELLANOX, 4123) }, /* ConnectX-6 */
+	{ PCI_VDEVICE(MELLANOX, 4124) }, /* ConnectX-6 VF */
+	{ PCI_VDEVICE(MELLANOX, 4125) }, /* ConnectX-6 Dx */
+	{ PCI_VDEVICE(MELLANOX, 4126) }, /* ConnectX Family mlx5Gen Virtual Function */
+	{ PCI_VDEVICE(MELLANOX, 4127) }, /* ConnectX-6 LX */
 	{ PCI_VDEVICE(MELLANOX, 4128) },
-	{ PCI_VDEVICE(MELLANOX, 4129) },
+	{ PCI_VDEVICE(MELLANOX, 4129) }, /* ConnectX-7 */
 	{ PCI_VDEVICE(MELLANOX, 4130) },
-	{ PCI_VDEVICE(MELLANOX, 4131) },
+	{ PCI_VDEVICE(MELLANOX, 4131) }, /* ConnectX-8 */
 	{ PCI_VDEVICE(MELLANOX, 4132) },
 	{ PCI_VDEVICE(MELLANOX, 4133) },
 	{ PCI_VDEVICE(MELLANOX, 4134) },
@@ -2004,7 +2108,12 @@ static const struct pci_device_id mlx5_core_pci_table[] = {
 	{ PCI_VDEVICE(MELLANOX, 4142) },
 	{ PCI_VDEVICE(MELLANOX, 4143) },
 	{ PCI_VDEVICE(MELLANOX, 4144) },
-	{ 0, }
+	{ PCI_VDEVICE(MELLANOX, 0xa2d2) }, /* BlueField integrated ConnectX-5 network controller */
+	{ PCI_VDEVICE(MELLANOX, 0xa2d3) }, /* BlueField integrated ConnectX-5 network controller VF */
+	{ PCI_VDEVICE(MELLANOX, 0xa2d6) }, /* BlueField-2 integrated ConnectX-6 Dx network controller */
+	{ PCI_VDEVICE(MELLANOX, 0xa2dc) }, /* BlueField-3 integrated ConnectX-7 network controller */
+	{ PCI_VDEVICE(MELLANOX, 0xa2df) }, /* BlueField-4 integrated ConnectX-8 network controller */
+	{ }
 };
 
 MODULE_DEVICE_TABLE(pci, mlx5_core_pci_table);

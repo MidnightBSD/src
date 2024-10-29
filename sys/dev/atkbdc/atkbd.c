@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_kbd.h"
 #include "opt_atkbd.h"
 #include "opt_evdev.h"
@@ -41,6 +40,7 @@
 #include <sys/proc.h>
 #include <sys/limits.h>
 #include <sys/malloc.h>
+#include <sys/sysctl.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>
@@ -72,8 +72,14 @@ typedef struct atkbd_state {
 #endif
 } atkbd_state_t;
 
+static SYSCTL_NODE(_hw, OID_AUTO, atkbd, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "AT keyboard");
+
+static int atkbdhz = 1;
+SYSCTL_INT(_hw_atkbd, OID_AUTO, hz, CTLFLAG_RWTUN, &atkbdhz, 0,
+    "Polling frequency (in hz)");
+
 static void		atkbd_timeout(void *arg);
-static void		atkbd_shutdown_final(void *v);
 static int		atkbd_reset(KBDC kbdc, int flags, int c);
 
 #define HAS_QUIRK(p, q)		(((atkbdc_softc_t *)(p))->quirks & q)
@@ -150,9 +156,6 @@ atkbd_attach_unit(device_t dev, keyboard_t **kbd, int irq, int flags)
 	if (bootverbose)
 		(*sw->diag)(*kbd, bootverbose);
 
-	EVENTHANDLER_REGISTER(shutdown_final, atkbd_shutdown_final, *kbd,
-	    SHUTDOWN_PRI_DEFAULT);
-
 	return 0;
 }
 
@@ -201,8 +204,11 @@ atkbd_timeout(void *arg)
 			kbdd_intr(kbd, NULL);
 	}
 	splx(s);
-	state = (atkbd_state_t *)kbd->kb_data;
-	callout_reset(&state->ks_timer, hz / 10, atkbd_timeout, arg);
+	if (atkbdhz > 0) {
+		state = (atkbd_state_t *)kbd->kb_data;
+		callout_reset_sbt(&state->ks_timer, SBT_1S / atkbdhz, 0,
+		    atkbd_timeout, arg, C_PREL(1));
+	}
 }
 
 /* LOW-LEVEL */
@@ -317,7 +323,7 @@ atkbd_configure(int flags)
 		}
 		return 0;
 	}
-	
+
 	/* XXX: a kludge to obtain the device configuration flags */
 	if (resource_int_value("atkbd", ATKBD_DEFAULT, "flags", &i) == 0)
 		flags |= i;
@@ -430,7 +436,7 @@ atkbd_init(int unit, keyboard_t **kbdp, void *arg, int flags)
 		    imin(fkeymap_size * sizeof(fkeymap[0]), sizeof(fkey_tab)));
 		kbd_set_maps(kbd, keymap, accmap, fkeymap, fkeymap_size);
 		kbd->kb_data = (void *)state;
-	
+
 		if (probe_keyboard(state->kbdc, flags)) { /* shouldn't happen */
 			if (flags & KB_CONF_FAIL_IF_NO_KBD) {
 				error = ENXIO;
@@ -676,6 +682,16 @@ next_code:
 #ifdef EVDEV_SUPPORT
 	/* push evdev event */
 	if (evdev_rcpt_mask & EVDEV_RCPT_HW_KBD && state->ks_evdev != NULL) {
+		/* "hancha" and "han/yong" korean keys handling */
+		if (state->ks_evdev_state == 0 &&
+		    (scancode == 0xF1 || scancode == 0xF2)) {
+			keycode = evdev_scancode2key(&state->ks_evdev_state,
+				scancode & 0x7F);
+			evdev_push_event(state->ks_evdev, EV_KEY,
+			    (uint16_t)keycode, 1);
+			evdev_sync(state->ks_evdev);
+		}
+
 		keycode = evdev_scancode2key(&state->ks_evdev_state,
 		    scancode);
 
@@ -685,6 +701,9 @@ next_code:
 			evdev_sync(state->ks_evdev);
 		}
 	}
+
+	if (state->ks_evdev != NULL && evdev_is_grabbed(state->ks_evdev))
+		return (NOKEY);
 #endif
 
 	/* return the byte as is for the K_RAW mode */
@@ -931,7 +950,6 @@ atkbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 
 	s = spltty();
 	switch (cmd) {
-
 	case KDGKBMODE:		/* get keyboard mode */
 		*(int *)arg = state->ks_mode;
 		break;
@@ -1071,6 +1089,7 @@ atkbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 	case OPIO_KEYMAP:	/* set keyboard translation table (compat) */
 	case PIO_KEYMAPENT:	/* set keyboard translation table entry */
 	case PIO_DEADKEYMAP:	/* set accent key translation table */
+	case OPIO_DEADKEYMAP:	/* set accent key translation table (compat) */
 		state->ks_accents = 0;
 		/* FALLTHROUGH */
 	default:
@@ -1145,30 +1164,6 @@ atkbd_poll(keyboard_t *kbd, int on)
 		--state->ks_polling;
 	splx(s);
 	return 0;
-}
-
-static void
-atkbd_shutdown_final(void *v)
-{
-#ifdef __sparc64__
-	keyboard_t *kbd = v;
-	KBDC kbdc = ((atkbd_state_t *)kbd->kb_data)->kbdc;
-
-	/*
-	 * Turn off the translation in preparation for handing the keyboard
-	 * over to the OFW as the OBP driver doesn't use translation and
-	 * also doesn't disable it itself resulting in a broken keymap at
-	 * the boot prompt. Also disable the aux port and the interrupts as
-	 * the OBP driver doesn't use them, i.e. polls the keyboard. Not
-	 * disabling the interrupts doesn't cause real problems but the
-	 * responsiveness is a bit better when they are turned off.
-	 */
-	send_kbd_command(kbdc, KBDC_DISABLE_KBD);
-	set_controller_command_byte(kbdc,
-	    KBD_AUX_CONTROL_BITS | KBD_KBD_CONTROL_BITS | KBD_TRANSLATION,
-	    KBD_DISABLE_AUX_PORT | KBD_DISABLE_KBD_INT | KBD_ENABLE_KBD_PORT);
-	send_kbd_command(kbdc, KBDC_ENABLE_KBD);
-#endif
 }
 
 static int
@@ -1413,7 +1408,7 @@ init_keyboard(KBDC kbdc, int *type, int flags)
 	if (bootverbose)
 		printf("atkbd: scancode set %d\n", codeset);
 #endif /* KBD_DETECT_XT_KEYBOARD */
- 
+
 	*type = KB_OTHER;
 	id = get_kbd_id(kbdc);
 	switch(id) {
@@ -1466,14 +1461,6 @@ init_keyboard(KBDC kbdc, int *type, int flags)
 			return EIO;
 		}
 	}
-
-#if defined(__sparc64__)
-	if (send_kbd_command_and_data(
-		kbdc, KBDC_SET_SCANCODE_SET, 2) != KBD_ACK) {
-		printf("atkbd: can't set translation.\n");
-	}
-	c |= KBD_TRANSLATION;
-#endif
 
 	/*
 	 * Some keyboards require a SETLEDS command to be sent after

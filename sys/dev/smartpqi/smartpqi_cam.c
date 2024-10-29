@@ -52,7 +52,7 @@ update_sim_properties(struct cam_sim *sim, struct ccb_pathinq *cpi)
 	cpi->max_target = 1088;
 	cpi->maxio = (softs->pqi_cap.max_sg_elem - 1) * PAGE_SIZE;
 	cpi->initiator_id = 255;
-	strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
+	strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
 	strlcpy(cpi->hba_vid, "Microsemi", HBA_IDLEN);
 	strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 	cpi->unit_number = cam_sim_unit(sim);
@@ -506,7 +506,7 @@ os_aio_response_error(rcb_t *rcb, aio_path_error_info_elem_t *err_info)
 		unsigned sense_data_len = LE_16(err_info->data_len);
 		if (sense_data_len)
 			sense_data = err_info->data;
-		DBG_ERR_BTL(rcb->dvp, "SCSI_STATUS_CHECK_COND  sense size %u\n",
+		DBG_INFO("SCSI_STATUS_CHECK_COND  sense size %u\n",
 			sense_data_len);
 		copy_sense_data_to_csio(csio, sense_data, sense_data_len);
 		csio->ccb_h.status = CAM_SCSI_STATUS_ERROR | CAM_AUTOSNS_VALID;
@@ -1139,6 +1139,7 @@ smartpqi_adjust_queue_depth(struct cam_path *path, uint32_t queue_depth)
 
 	DBG_INFO("IN\n");
 
+	memset(&crs, 0, sizeof(crs));
 	xpt_setup_ccb(&crs.ccb_h, path, 5);
 	crs.ccb_h.func_code = XPT_REL_SIMQ;
 	crs.ccb_h.flags = CAM_DEV_QFREEZE;
@@ -1261,6 +1262,7 @@ register_sim(struct pqisrc_softstate *softs, int card_index)
 	 * derived from the FW.
  	 */
 	softs->os_specific.path = ccb->ccb_h.path;
+	memset(&csa, 0, sizeof(csa));
 	xpt_setup_ccb(&csa.ccb_h, softs->os_specific.path, 5);
 	csa.ccb_h.func_code = XPT_SASYNC_CB;
 	csa.event_enable = AC_FOUND_DEVICE;
@@ -1293,6 +1295,7 @@ deregister_sim(struct pqisrc_softstate *softs)
 	}
 
 
+	memset(&csa, 0, sizeof(csa));
 	xpt_setup_ccb(&csa.ccb_h, softs->os_specific.path, 5);
 	csa.ccb_h.func_code = XPT_SASYNC_CB;
 	csa.event_enable = 0;

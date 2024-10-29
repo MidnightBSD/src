@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * driver for homePNA PHYs
  * This is really just a stub that allows us to identify homePNA-based

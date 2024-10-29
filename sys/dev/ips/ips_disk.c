@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Written by: David Jeffery
  * Copyright (c) 2002 Adaptec Inc.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/ips/ipsreg.h>
 #include <dev/ips/ips.h>
 #include <dev/ips/ips_disk.h>
@@ -38,8 +37,7 @@ static int ipsd_probe(device_t dev);
 static int ipsd_attach(device_t dev);
 static int ipsd_detach(device_t dev);
 
-static int ipsd_dump(void *arg, void *virtual, vm_offset_t physical,
-		     off_t offset, size_t length);
+static int ipsd_dump(void *arg, void *virtual, off_t offset, size_t length);
 static void ipsd_dump_map_sg(void *arg, bus_dma_segment_t *segs, int nsegs,
 			     int error);
 static void ipsd_dump_block_complete(ips_command_t *command);
@@ -108,6 +106,13 @@ static void ipsd_strategy(struct bio *iobuf)
 	dsc = iobuf->bio_disk->d_drv1;	
 	DEVICE_PRINTF(8,dsc->dev,"in strategy\n");
 	iobuf->bio_driver1 = (void *)(uintptr_t)dsc->sc->drives[dsc->disk_number].drivenum;
+
+	if ((iobuf->bio_cmd != BIO_READ) &&
+	    (iobuf->bio_cmd != BIO_WRITE)) {
+		biofinish(iobuf, NULL, EOPNOTSUPP);
+		return;
+	}
+
 	mtx_lock(&dsc->sc->queue_mtx);
 	bioq_insert_tail(&dsc->sc->queue, iobuf);
 	ips_start_io_request(dsc->sc);
@@ -178,8 +183,7 @@ static int ipsd_detach(device_t dev)
 }
 
 static int
-ipsd_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset,
-	  size_t length)
+ipsd_dump(void *arg, void *virtual, off_t offset, size_t length)
 {
 	ipsdisk_softc_t *dsc;
 	ips_softc_t *sc;

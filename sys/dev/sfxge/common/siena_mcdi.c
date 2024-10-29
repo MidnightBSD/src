@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "efx.h"
 #include "efx_impl.h"
 
@@ -49,7 +48,6 @@
 	(((emip)->emi_port == 1)		\
 	? MC_SMEM_P0_STATUS_OFST >> 2		\
 	: MC_SMEM_P1_STATUS_OFST >> 2)
-
 
 			void
 siena_mcdi_send_request(
@@ -149,17 +147,21 @@ siena_mcdi_read_response(
 {
 	efx_mcdi_iface_t *emip = &(enp->en_mcdi.em_emip);
 	unsigned int pdur;
-	unsigned int pos;
+	unsigned int pos = 0;
 	efx_dword_t data;
+	size_t remaining = length;
 
 	EFSYS_ASSERT(emip->emi_port == 1 || emip->emi_port == 2);
 	pdur = SIENA_MCDI_PDU(emip);
 
-	for (pos = 0; pos < length; pos += sizeof (efx_dword_t)) {
+	while (remaining > 0) {
+		size_t chunk = MIN(remaining, sizeof (data));
+
 		EFX_BAR_TBL_READD(enp, FR_CZ_MC_TREG_SMEM,
 		    pdur + ((offset + pos) >> 2), &data, B_FALSE);
-		memcpy((uint8_t *)bufferp + pos, &data,
-		    MIN(sizeof (data), length - pos));
+		memcpy((uint8_t *)bufferp + pos, &data, chunk);
+		pos += chunk;
+		remaining -= chunk;
 	}
 }
 
@@ -259,6 +261,5 @@ siena_mcdi_get_timeout(
 
 	*timeoutp = SIENA_MCDI_CMD_TIMEOUT_US;
 }
-
 
 #endif	/* EFSYS_OPT_SIENA && EFSYS_OPT_MCDI */

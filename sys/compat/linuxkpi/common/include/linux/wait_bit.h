@@ -24,11 +24,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
-#ifndef __LINUX_WAITBIT_H__
-#define	__LINUX_WAITBIT_H__
+#ifndef __LINUXKPI_LINUX_WAITBIT_H__
+#define	__LINUXKPI_LINUX_WAITBIT_H__
 
 #include <linux/wait.h>
 #include <linux/bitops.h>
@@ -38,6 +37,9 @@ extern wait_queue_head_t linux_var_waitq;
 
 #define	wait_var_event_killable(var, cond) \
 	wait_event_killable(linux_var_waitq, cond)
+
+#define	wait_var_event_interruptible(var, cond) \
+	wait_event_interruptible(linux_var_waitq, cond)
 
 static inline void
 clear_and_wake_up_bit(int bit, void *word)
@@ -60,4 +62,10 @@ wake_up_var(void *var)
 	wake_up(&linux_var_waitq);
 }
 
-#endif	/* __LINUX_WAITBIT_H__ */
+static inline wait_queue_head_t *
+__var_waitqueue(void *p)
+{
+	return (&linux_var_waitq);
+}
+
+#endif	/* __LINUXKPI_LINUX_WAITBIT_H__ */

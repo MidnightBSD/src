@@ -1,6 +1,5 @@
 /*-
- * Copyright (c) 2015 M. Warner Losh <imp@freebsd.org>
- * All rights reserved.
+ * Copyright (c) 2015 M. Warner Losh <imp@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,7 +21,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef DEV_OW_OW_H
@@ -35,7 +33,7 @@ enum ow_device_ivars {
 
 #define OW_ACCESSOR(var, ivar, type)					\
 	__BUS_ACCESSOR(ow, var, OW, ivar, type);
-	
+
 OW_ACCESSOR(family,	FAMILY,	uint8_t)
 OW_ACCESSOR(romid,	ROMID, uint8_t *)
 

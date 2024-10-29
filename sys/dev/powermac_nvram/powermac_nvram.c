@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Maxim Sobolev <sobomax@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -33,6 +32,8 @@
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
+#include <sys/sx.h>
 #include <sys/uio.h>
 
 #include <dev/ofw/openfirm.h>
@@ -73,7 +74,6 @@ static device_method_t	powermac_nvram_methods[] = {
 	DEVMETHOD(device_probe,		powermac_nvram_probe),
 	DEVMETHOD(device_attach,	powermac_nvram_attach),
 	DEVMETHOD(device_detach,	powermac_nvram_detach),
-
 	{ 0, 0 }
 };
 
@@ -98,7 +98,6 @@ static	d_write_t	powermac_nvram_write;
 
 static struct cdevsw powermac_nvram_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	D_NEEDGIANT,
 	.d_open =	powermac_nvram_open,
 	.d_close =	powermac_nvram_close,
 	.d_read =	powermac_nvram_read,
@@ -179,6 +178,8 @@ powermac_nvram_attach(device_t dev)
 	    "powermac_nvram");
 	sc->sc_cdev->si_drv1 = sc;
 
+	sx_init(&sc->sc_lock, "powermac_nvram");
+
 	return 0;
 }
 
@@ -194,7 +195,9 @@ powermac_nvram_detach(device_t dev)
 
 	if (sc->sc_cdev != NULL)
 		destroy_dev(sc->sc_cdev);
-	
+
+	sx_destroy(&sc->sc_lock);
+
 	return 0;
 }
 
@@ -202,12 +205,18 @@ static int
 powermac_nvram_open(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
 	struct powermac_nvram_softc *sc = dev->si_drv1;
+	int err;
 
+	err = 0;
+	sx_xlock(&sc->sc_lock);
 	if (sc->sc_isopen)
-		return EBUSY;
-	sc->sc_isopen = 1;
+		err = EBUSY;
+	else
+		sc->sc_isopen = 1;
 	sc->sc_rpos = sc->sc_wpos = 0;
-	return 0;
+	sx_xunlock(&sc->sc_lock);
+
+	return (err);
 }
 
 static int
@@ -217,10 +226,12 @@ powermac_nvram_close(struct cdev *dev, int fflag, int devtype, struct thread *td
 	struct core99_header *header;
 	vm_offset_t bank;
 
+	sx_xlock(&sc->sc_lock);
 	if (sc->sc_wpos != sizeof(sc->sc_data)) {
 		/* Short write, restore in-memory copy */
 		bcopy((void *)sc->sc_bank, (void *)sc->sc_data, NVRAM_SIZE);
 		sc->sc_isopen = 0;
+		sx_xunlock(&sc->sc_lock);
 		return 0;
 	}
 
@@ -241,10 +252,12 @@ powermac_nvram_close(struct cdev *dev, int fflag, int devtype, struct thread *td
 	if (erase_bank(sc->sc_dev, (uint8_t *)bank) != 0 ||
 	    write_bank(sc->sc_dev, (uint8_t *)bank, sc->sc_data) != 0) {
 		sc->sc_isopen = 0;
+		sx_xunlock(&sc->sc_lock);
 		return ENOSPC;
 	}
 	sc->sc_bank = bank;
 	sc->sc_isopen = 0;
+	sx_xunlock(&sc->sc_lock);
 	return 0;
 }
 
@@ -255,6 +268,8 @@ powermac_nvram_read(struct cdev *dev, struct uio *uio, int ioflag)
 	struct powermac_nvram_softc *sc = dev->si_drv1;
 
 	rv = 0;
+
+	sx_xlock(&sc->sc_lock);
 	while (uio->uio_resid > 0) {
 		data_available = sizeof(sc->sc_data) - sc->sc_rpos;
 		if (data_available > 0) {
@@ -268,6 +283,8 @@ powermac_nvram_read(struct cdev *dev, struct uio *uio, int ioflag)
 			break;
 		}
 	}
+	sx_xunlock(&sc->sc_lock);
+
 	return rv;
 }
 
@@ -281,6 +298,8 @@ powermac_nvram_write(struct cdev *dev, struct uio *uio, int ioflag)
 		return EINVAL;
 
 	rv = 0;
+
+	sx_xlock(&sc->sc_lock);
 	while (uio->uio_resid > 0) {
 		data_available = sizeof(sc->sc_data) - sc->sc_wpos;
 		if (data_available > 0) {
@@ -294,6 +313,8 @@ powermac_nvram_write(struct cdev *dev, struct uio *uio, int ioflag)
 			break;
 		}
 	}
+	sx_xunlock(&sc->sc_lock);
+
 	return rv;
 }
 
@@ -339,7 +360,7 @@ adler_checksum(uint8_t *data, int len)
 	high = 0;
 	for (i = 0; i < len; i++) {
 		if ((i % 5000) == 0) {
-			high %= 65521UL;
+			low %= 65521UL;
 			high %= 65521UL;
 		}
 		low += data[i];
@@ -499,6 +520,8 @@ erase_bank(device_t dev, uint8_t *bank)
 	struct powermac_nvram_softc *sc;
 
 	sc = device_get_softc(dev);
+
+	sx_assert(&sc->sc_lock, SA_XLOCKED);
 	if (sc->sc_type == FLASH_TYPE_AMD)
 		return (erase_bank_amd(dev, bank));
 	else
@@ -511,6 +534,8 @@ write_bank(device_t dev, uint8_t *bank, uint8_t *data)
 	struct powermac_nvram_softc *sc;
 
 	sc = device_get_softc(dev);
+
+	sx_assert(&sc->sc_lock, SA_XLOCKED);
 	if (sc->sc_type == FLASH_TYPE_AMD)
 		return (write_bank_amd(dev, bank, data));
 	else

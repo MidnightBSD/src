@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-2005 HighPoint Technologies, Inc.
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 #ifndef _GLOBAL_H_
 #define _GLOBAL_H_
@@ -197,7 +196,7 @@ int HPTLIBAPI fDeSetReadAhead(PDevice pDev, int enable);
 #include <dev/hptmv/raid5n.h>
 #include <dev/hptmv/vdevice.h>
 
-#if defined(__MidnightBSD__) && defined(HPTLIBAPI)
+#if defined(__FreeBSD__) && defined(HPTLIBAPI)
 #undef HPTLIBAPI
 #define HPTLIBAPI 
 #endif

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Fabien Thomas
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/pmc.h>
 #include <sys/pmckern.h>
@@ -158,8 +157,6 @@ soft_config_pmc(int cpu, int ri, struct pmc *pm)
 static int
 soft_describe(int cpu, int ri, struct pmc_info *pi, struct pmc **ppmc)
 {
-	int error;
-	size_t copied;
 	const struct soft_descr *pd;
 	struct pmc_hw *phw;
 
@@ -171,10 +168,7 @@ soft_describe(int cpu, int ri, struct pmc_info *pi, struct pmc **ppmc)
 	phw = &soft_pcpu[cpu]->soft_hw[ri];
 	pd  = &soft_pmcdesc[ri];
 
-	if ((error = copystr(pd->pm_descr.pd_name, pi->pm_name,
-	    PMC_NAME_MAX, &copied)) != 0)
-		return (error);
-
+	strlcpy(pi->pm_name, pd->pm_descr.pd_name, sizeof(pi->pm_name));
 	pi->pm_class = pd->pm_descr.pd_class;
 
 	if (phw->phw_state & PMC_PHW_FLAG_IS_ENABLED) {
@@ -261,21 +255,13 @@ soft_pcpu_init(struct pmc_mdep *md, int cpu)
 }
 
 static int
-soft_read_pmc(int cpu, int ri, pmc_value_t *v)
+soft_read_pmc(int cpu, int ri, struct pmc *pm __unused, pmc_value_t *v)
 {
-	struct pmc *pm;
-	const struct pmc_hw *phw;
 
 	KASSERT(cpu >= 0 && cpu < pmc_cpu_max(),
 	    ("[soft,%d] illegal CPU value %d", __LINE__, cpu));
 	KASSERT(ri >= 0 && ri < SOFT_NPMCS,
 	    ("[soft,%d] illegal row-index %d", __LINE__, ri));
-
-	phw = &soft_pcpu[cpu]->soft_hw[ri];
-	pm  = phw->phw_pmc;
-
-	KASSERT(pm != NULL,
-	    ("[soft,%d] no owner for PHW [cpu%d,pmc%d]", __LINE__, cpu, ri));
 
 	PMCDBG1(MDP,REA,1,"soft-read id=%d", ri);
 
@@ -285,21 +271,12 @@ soft_read_pmc(int cpu, int ri, pmc_value_t *v)
 }
 
 static int
-soft_write_pmc(int cpu, int ri, pmc_value_t v)
+soft_write_pmc(int cpu, int ri, struct pmc *pm __unused, pmc_value_t v)
 {
-	struct pmc *pm;
-	const struct soft_descr *pd;
-
 	KASSERT(cpu >= 0 && cpu < pmc_cpu_max(),
 	    ("[soft,%d] illegal cpu value %d", __LINE__, cpu));
 	KASSERT(ri >= 0 && ri < SOFT_NPMCS,
 	    ("[soft,%d] illegal row-index %d", __LINE__, ri));
-
-	pm = soft_pcpu[cpu]->soft_hw[ri].phw_pmc;
-	pd = &soft_pmcdesc[ri];
-
-	KASSERT(pm,
-	    ("[soft,%d] cpu %d ri %d pmc not configured", __LINE__, cpu, ri));
 
 	PMCDBG3(MDP,WRI,1, "soft-write cpu=%d ri=%d v=%jx", cpu, ri, v);
 
@@ -311,7 +288,7 @@ soft_write_pmc(int cpu, int ri, pmc_value_t v)
 static int
 soft_release_pmc(int cpu, int ri, struct pmc *pmc)
 {
-	struct pmc_hw *phw;
+	struct pmc_hw *phw __diagused;
 	enum pmc_event ev;
 	struct pmc_soft *ps;
 
@@ -341,22 +318,14 @@ soft_release_pmc(int cpu, int ri, struct pmc *pmc)
 }
 
 static int
-soft_start_pmc(int cpu, int ri)
+soft_start_pmc(int cpu, int ri, struct pmc *pm)
 {
-	struct pmc *pm;
-	struct soft_cpu *pc;
 	struct pmc_soft *ps;
 
 	KASSERT(cpu >= 0 && cpu < pmc_cpu_max(),
 	    ("[soft,%d] illegal CPU value %d", __LINE__, cpu));
 	KASSERT(ri >= 0 && ri < SOFT_NPMCS,
 	    ("[soft,%d] illegal row-index %d", __LINE__, ri));
-
-	pc = soft_pcpu[cpu];
-	pm = pc->soft_hw[ri].phw_pmc;
-
-	KASSERT(pm,
-	    ("[soft,%d] cpu %d ri %d pmc not configured", __LINE__, cpu, ri));
 
 	ps = pmc_soft_ev_acquire(pm->pm_event);
 	if (ps == NULL)
@@ -368,22 +337,14 @@ soft_start_pmc(int cpu, int ri)
 }
 
 static int
-soft_stop_pmc(int cpu, int ri)
+soft_stop_pmc(int cpu, int ri, struct pmc *pm)
 {
-	struct pmc *pm;
-	struct soft_cpu *pc;
 	struct pmc_soft *ps;
 
 	KASSERT(cpu >= 0 && cpu < pmc_cpu_max(),
 	    ("[soft,%d] illegal CPU value %d", __LINE__, cpu));
 	KASSERT(ri >= 0 && ri < SOFT_NPMCS,
 	    ("[soft,%d] illegal row-index %d", __LINE__, ri));
-
-	pc = soft_pcpu[cpu];
-	pm = pc->soft_hw[ri].phw_pmc;
-
-	KASSERT(pm,
-	    ("[soft,%d] cpu %d ri %d pmc not configured", __LINE__, cpu, ri));
 
 	ps = pmc_soft_ev_acquire(pm->pm_event);
 	/* event unregistered ? */
@@ -426,7 +387,7 @@ pmc_soft_intr(struct pmckern_soft *ks)
 			user_mode = TRAPF_USERMODE(ks->pm_tf);
 			error = pmc_process_interrupt(PMC_SR, pm, ks->pm_tf);
 			if (error) {
-				soft_stop_pmc(ks->pm_cpu, ri);
+				soft_stop_pmc(ks->pm_cpu, ri, pm);
 				continue;
 			}
 

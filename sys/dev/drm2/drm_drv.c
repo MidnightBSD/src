@@ -47,7 +47,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/sysent.h>
 
 #include <dev/drm2/drmP.h>

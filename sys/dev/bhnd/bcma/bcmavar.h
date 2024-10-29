@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015-2016 Landon Fuller <landon@landonf.org>
  * Copyright (c) 2017 The FreeBSD Foundation
@@ -60,7 +60,6 @@
  */
 #define	BCMA_DINFO_COREIDX(_dinfo)	\
 	((_dinfo)->corecfg->core_info.core_idx)
-
 
 /** BCMA port identifier. */
 typedef u_int		bcma_pid_t;
@@ -164,10 +163,10 @@ struct bcma_corecfg {
 
 	u_long		num_dev_ports;		/**< number of device slave port descriptors. */
 	struct bcma_sport_list	dev_ports;	/**< device port descriptors */
-	
+
 	u_long		num_bridge_ports;	/**< number of bridge slave port descriptors. */
 	struct bcma_sport_list	bridge_ports;	/**< bridge port descriptors */
-	
+
 	u_long		num_wrapper_ports;	/**< number of wrapper slave port descriptors. */	
 	struct bcma_sport_list	wrapper_ports;	/**< wrapper port descriptors */	
 };
@@ -188,7 +187,6 @@ struct bcma_devinfo {
 
 	void			*pmu_info;	/**< Bus-managed PMU state, or NULL */
 };
-
 
 /** BMCA per-instance state */
 struct bcma_softc {

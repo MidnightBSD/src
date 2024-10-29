@@ -38,7 +38,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * John Bicket's SampleRate control algorithm.
  */
@@ -1434,10 +1433,12 @@ ath_rate_fetch_node_stats(struct ath_softc *sc, struct ath_node *an,
 	const HAL_RATE_TABLE *rt = sc->sc_currates;
 	struct ath_rateioctl_tlv av;
 	struct ath_rateioctl_rt *tv;
-	int y;
+	int error, y;
 	int o = 0;
 
 	ATH_NODE_LOCK_ASSERT(an);
+
+	error = 0;
 
 	/*
 	 * Ensure there's enough space for the statistics.
@@ -1479,9 +1480,13 @@ ath_rate_fetch_node_stats(struct ath_softc *sc, struct ath_node *an,
 	 */
 	av.tlv_id = ATH_RATE_TLV_RATETABLE;
 	av.tlv_len = sizeof(struct ath_rateioctl_rt);
-	copyout(&av, rs->buf + o, sizeof(struct ath_rateioctl_tlv));
+	error = copyout(&av, rs->buf + o, sizeof(struct ath_rateioctl_tlv));
+	if (error != 0)
+		goto out;
 	o += sizeof(struct ath_rateioctl_tlv);
-	copyout(tv, rs->buf + o, sizeof(struct ath_rateioctl_rt));
+	error = copyout(tv, rs->buf + o, sizeof(struct ath_rateioctl_rt));
+	if (error != 0)
+		goto out;
 	o += sizeof(struct ath_rateioctl_rt);
 
 	/*
@@ -1489,18 +1494,22 @@ ath_rate_fetch_node_stats(struct ath_softc *sc, struct ath_node *an,
 	 */
 	av.tlv_id = ATH_RATE_TLV_SAMPLENODE;
 	av.tlv_len = sizeof(struct sample_node);
-	copyout(&av, rs->buf + o, sizeof(struct ath_rateioctl_tlv));
+	error = copyout(&av, rs->buf + o, sizeof(struct ath_rateioctl_tlv));
+	if (error != 0)
+		goto out;
 	o += sizeof(struct ath_rateioctl_tlv);
 
 	/*
 	 * Copy the statistics over to the provided buffer.
 	 */
-	copyout(sn, rs->buf + o, sizeof(struct sample_node));
+	error = copyout(sn, rs->buf + o, sizeof(struct sample_node));
+	if (error != 0)
+		goto out;
 	o += sizeof(struct sample_node);
 
+out:
 	free(tv, M_TEMP);
-
-	return (0);
+	return (error);
 }
 
 static void
@@ -1612,17 +1621,17 @@ ath_rate_sysctlattach(struct ath_softc *sc, struct sample_softc *ssc)
 	struct sysctl_oid *tree = device_get_sysctl_tree(sc->sc_dev);
 
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-	    "smoothing_rate", CTLTYPE_INT | CTLFLAG_RW, ssc, 0,
-	    ath_rate_sysctl_smoothing_rate, "I",
+	    "smoothing_rate", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+	    ssc, 0, ath_rate_sysctl_smoothing_rate, "I",
 	    "sample: smoothing rate for avg tx time (%%)");
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-	    "sample_rate", CTLTYPE_INT | CTLFLAG_RW, ssc, 0,
-	    ath_rate_sysctl_sample_rate, "I",
+	    "sample_rate", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+	    ssc, 0, ath_rate_sysctl_sample_rate, "I",
 	    "sample: percent air time devoted to sampling new rates (%%)");
 	/* XXX max_successive_failures, stale_failure_timeout, min_switch */
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-	    "sample_stats", CTLTYPE_INT | CTLFLAG_RW, sc, 0,
-	    ath_rate_sysctl_stats, "I", "sample: print statistics");
+	    "sample_stats", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+	    sc, 0, ath_rate_sysctl_stats, "I", "sample: print statistics");
 }
 
 struct ath_ratectrl *

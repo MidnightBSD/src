@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Driver for realtime clock EPSON RTC-8583
  */

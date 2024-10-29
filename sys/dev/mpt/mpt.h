@@ -2,7 +2,7 @@
  * Generic defines for LSI '909 FC  adapters.
  * FreeBSD Version.
  *
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-3-Clause
+ * SPDX-License-Identifier: BSD-2-Clause AND BSD-3-Clause
  *
  * Copyright (c)  2000, 2001 by Greg Ansley
  *
@@ -120,11 +120,6 @@
 #include <machine/bus.h>
 #include <machine/cpu.h>
 #include <machine/resource.h>
-
-#ifdef __sparc64__
-#include <dev/ofw/openfirm.h>
-#include <machine/ofw_machdep.h>
-#endif
 
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
@@ -672,7 +667,7 @@ struct mpt_softc {
 	bus_addr_t		request_phys;	/* BusAddr of request memory */
 
 	uint32_t		max_seg_cnt;	/* calculated after IOC facts */
-	uint32_t		max_cam_seg_cnt;/* calculated from MAXPHYS*/
+	uint32_t		max_cam_seg_cnt;/* calculated from maxphys */
 
 	/*
 	 * Hardware management
@@ -686,7 +681,6 @@ struct mpt_softc {
 	struct req_queue	request_free_list;
 	struct req_queue	request_pending_list;
 	struct req_queue	request_timeout_list;
-
 
 	struct cam_sim	       *sim;
 	struct cam_path	       *path;

@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Driver for the Atheros Wireless LAN controller.
  *

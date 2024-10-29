@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
@@ -41,6 +40,8 @@
 #include <sys/module.h>
 #include <sys/rman.h>
 #include <sys/sysctl.h>
+#include <sys/taskqueue.h>
+#include <sys/tree.h>
 #include <vm/vm.h>
 #include <vm/pmap.h>
 #include <machine/bus.h>
@@ -48,6 +49,7 @@
 #include <machine/resource.h>
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
+#include <dev/iommu/iommu.h>
 
 #include "../ntb.h"
 
@@ -342,7 +344,7 @@ ntb_plx_attach(device_t dev)
 	 * The device occupies whole bus.  In translated TLP slot field
 	 * keeps LUT index (original bus/slot), function is passed through.
 	 */
-	bus_dma_dmar_set_buswide(dev);
+	bus_dma_iommu_set_buswide(dev);
 
 	/* Identify chip port we are connected to. */
 	val = bus_read_4(sc->conf_res, 0x360);
@@ -878,17 +880,33 @@ static int
 ntb_plx_spad_write(device_t dev, unsigned int idx, uint32_t val)
 {
 	struct ntb_plx_softc *sc = device_get_softc(dev);
-	u_int off;
+	u_int off, t;
 
 	if (idx >= sc->spad_count1 + sc->spad_count2)
 		return (EINVAL);
 
-	if (idx < sc->spad_count1)
+	if (idx < sc->spad_count1) {
 		off = sc->spad_off1 + idx * 4;
-	else
+		bus_write_4(sc->conf_res, off, val);
+		return (0);
+	} else {
 		off = sc->spad_off2 + (idx - sc->spad_count1) * 4;
-	bus_write_4(sc->conf_res, off, val);
-	return (0);
+		/*
+		 * For some reason when link goes down Test Pattern registers
+		 * we use as additional scratchpad become read-only for about
+		 * 100us.  I see no explanation in specs, so just wait a bit.
+		 */
+		for (t = 0; t <= 1000; t++) {
+			bus_write_4(sc->conf_res, off, val);
+			if (bus_read_4(sc->conf_res, off) == val)
+				return (0);
+			DELAY(1);
+		}
+		device_printf(dev,
+		    "Can't write Physical Layer User Test Pattern (0x%x)\n",
+		    off);
+		return (EIO);
+	}
 }
 
 static void

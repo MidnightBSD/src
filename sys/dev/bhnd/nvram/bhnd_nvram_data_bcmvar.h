@@ -25,7 +25,6 @@
  * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
- *
  */
 
 #ifndef _BHND_NVRAM_BHND_NVRAM_BCMVAR_H_
@@ -58,7 +57,7 @@ struct bhnd_nvram_bcm_hvar {
 	/** variable data */
 	union bhnd_nvram_bcm_hvar_value value;
 };
-	
+
 /** BCM NVRAM header */
 struct bhnd_nvram_bcmhdr {
 	uint32_t magic;

@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef _BNXT_IOCTL_H
 #define _BNXT_IOCTL_H
 

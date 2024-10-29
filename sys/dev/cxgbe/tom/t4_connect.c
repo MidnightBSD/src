@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Chelsio Communications, Inc.
  * All rights reserved.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
@@ -48,6 +47,7 @@
 #include <net/if_types.h>
 #include <net/if_vlan_var.h>
 #include <net/route.h>
+#include <net/route/nhop.h>
 #include <netinet/in.h>
 #include <netinet/in_pcb.h>
 #include <netinet/ip.h>
@@ -100,9 +100,8 @@ do_act_establish(struct sge_iq *iq, const struct rss_header *rss,
 
 	make_established(toep, be32toh(cpl->snd_isn) - 1,
 	    be32toh(cpl->rcv_isn) - 1, cpl->tcp_opt);
-
-	if (ulp_mode(toep) == ULP_MODE_TLS)
-		tls_establish(toep);
+	inp->inp_flowtype = M_HASHTYPE_OPAQUE;
+	inp->inp_flowid = tid;
 
 done:
 	INP_WUNLOCK(inp);
@@ -123,12 +122,12 @@ act_open_failure_cleanup(struct adapter *sc, u_int atid, u_int status)
 
 	CURVNET_SET(toep->vnet);
 	if (status != EAGAIN)
-		INP_INFO_RLOCK_ET(&V_tcbinfo, et);
+		NET_EPOCH_ENTER(et);
 	INP_WLOCK(inp);
 	toe_connect_failed(tod, inp, status);
 	final_cpl_received(toep);	/* unlocks inp */
 	if (status != EAGAIN)
-		INP_INFO_RUNLOCK_ET(&V_tcbinfo, et);
+		NET_EPOCH_EXIT(et);
 	CURVNET_RESTORE();
 }
 
@@ -181,11 +180,18 @@ t4_uninit_connect_cpl_handlers(void)
 	t4_register_shared_cpl_handler(CPL_ACT_OPEN_RPL, NULL, CPL_COOKIE_TOM);
 }
 
+#ifdef KTR
 #define DONT_OFFLOAD_ACTIVE_OPEN(x)	do { \
 	reason = __LINE__; \
 	rc = (x); \
 	goto failed; \
 } while (0)
+#else
+#define DONT_OFFLOAD_ACTIVE_OPEN(x)	do { \
+	rc = (x); \
+	goto failed; \
+} while (0)
+#endif
 
 static inline int
 act_open_cpl_size(struct adapter *sc, int isipv6)
@@ -223,19 +229,22 @@ act_open_cpl_size(struct adapter *sc, int isipv6)
  * rtalloc1, RT_UNLOCK on rt.
  */
 int
-t4_connect(struct toedev *tod, struct socket *so, struct rtentry *rt,
+t4_connect(struct toedev *tod, struct socket *so, struct nhop_object *nh,
     struct sockaddr *nam)
 {
 	struct adapter *sc = tod->tod_softc;
 	struct toepcb *toep = NULL;
 	struct wrqe *wr = NULL;
-	struct ifnet *rt_ifp = rt->rt_ifp;
+	struct ifnet *rt_ifp = nh->nh_ifp;
 	struct vi_info *vi;
 	int qid_atid, rc, isipv6;
 	struct inpcb *inp = sotoinpcb(so);
 	struct tcpcb *tp = intotcpcb(inp);
+#ifdef KTR
 	int reason;
+#endif
 	struct offload_settings settings;
+	struct epoch_tracker et;
 	uint16_t vid = 0xfff, pcp = 0;
 
 	INP_WLOCK_ASSERT(inp);
@@ -254,6 +263,8 @@ t4_connect(struct toedev *tod, struct socket *so, struct rtentry *rt,
 		DONT_OFFLOAD_ACTIVE_OPEN(ENOSYS); /* XXX: implement lagg+TOE */
 	else
 		DONT_OFFLOAD_ACTIVE_OPEN(ENOTSUP);
+	if (sc->flags & KERN_TLS_ON)
+		DONT_OFFLOAD_ACTIVE_OPEN(ENOTSUP);
 
 	rw_rlock(&sc->policy_lock);
 	settings = *lookup_offload_policy(sc, OPEN_TYPE_ACTIVE, NULL,
@@ -271,7 +282,7 @@ t4_connect(struct toedev *tod, struct socket *so, struct rtentry *rt,
 		DONT_OFFLOAD_ACTIVE_OPEN(ENOMEM);
 
 	toep->l2te = t4_l2t_get(vi->pi, rt_ifp,
-	    rt->rt_flags & RTF_GATEWAY ? rt->rt_gateway : nam);
+	    nh->nh_flags & NHF_GATEWAY ? &nh->gw_sa : nam);
 	if (toep->l2te == NULL)
 		DONT_OFFLOAD_ACTIVE_OPEN(ENOMEM);
 
@@ -296,7 +307,7 @@ t4_connect(struct toedev *tod, struct socket *so, struct rtentry *rt,
 		if ((inp->inp_vflag & INP_IPV6) == 0)
 			DONT_OFFLOAD_ACTIVE_OPEN(ENOTSUP);
 
-		toep->ce = t4_hold_lip(sc, &inp->in6p_laddr, NULL);
+		toep->ce = t4_get_clip_entry(sc, &inp->in6p_laddr, true);
 		if (toep->ce == NULL)
 			DONT_OFFLOAD_ACTIVE_OPEN(ENOENT);
 
@@ -368,14 +379,18 @@ t4_connect(struct toedev *tod, struct socket *so, struct rtentry *rt,
 	}
 
 	offload_socket(so, toep);
+	NET_EPOCH_ENTER(et);
 	rc = t4_l2t_send(sc, wr, toep->l2te);
+	NET_EPOCH_EXIT(et);
 	if (rc == 0) {
 		toep->flags |= TPF_CPL_PENDING;
 		return (0);
 	}
 
 	undo_offload_socket(so);
+#if defined(KTR)
 	reason = __LINE__;
+#endif
 failed:
 	CTR3(KTR_CXGBE, "%s: not offloading (%d), rc %d", __func__, reason, rc);
 
@@ -388,7 +403,7 @@ failed:
 		if (toep->l2te)
 			t4_l2t_release(toep->l2te);
 		if (toep->ce)
-			t4_release_lip(sc, toep->ce);
+			t4_release_clip_entry(sc, toep->ce);
 		free_toepcb(toep);
 	}
 

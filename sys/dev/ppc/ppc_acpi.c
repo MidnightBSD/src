@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Marcel Moolenaar
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_isa.h"
 
 #include <sys/param.h>
@@ -80,7 +79,6 @@ static device_method_t ppc_acpi_methods[] = {
 #else
 	DEVMETHOD(ppbus_write,		ppc_write),
 #endif
-
 	{ 0, 0 }
 };
 

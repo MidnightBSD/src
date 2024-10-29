@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_aac.h"
 
 #include <sys/param.h>
@@ -99,7 +98,7 @@ aac_disk_open(struct disk *dp)
 	fwprintf(NULL, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	sc = (struct aac_disk *)dp->d_drv1;
-	
+
 	if (sc == NULL) {
 		printf("aac_disk_open: No Softc\n");
 		return (ENXIO);
@@ -128,7 +127,7 @@ aac_disk_close(struct disk *dp)
 	fwprintf(NULL, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	sc = (struct aac_disk *)dp->d_drv1;
-	
+
 	if (sc == NULL)
 		return (ENXIO);
 
@@ -159,6 +158,11 @@ aac_disk_strategy(struct bio *bp)
 	if (bp->bio_bcount == 0) {
 		bp->bio_resid = bp->bio_bcount;
 		biodone(bp);
+		return;
+	}
+
+	if ((bp->bio_cmd != BIO_READ) && (bp->bio_cmd != BIO_WRITE)) {
+		biofinish(bp, NULL, EOPNOTSUPP);
 		return;
 	}
 
@@ -228,7 +232,7 @@ aac_dump_map_sg64(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
  * Send out one command at a time with up to maxio of data.
  */
 static int
-aac_disk_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset, size_t length)
+aac_disk_dump(void *arg, void *virtual, off_t offset, size_t length)
 {
 	struct aac_disk *ad;
 	struct aac_softc *sc;
@@ -307,8 +311,8 @@ aac_disk_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset, size
 
 		if (aac_sync_fib(sc, command, 0, fib, size)) {
 			device_printf(sc->aac_dev,
-			     "Error dumping block 0x%jx\n",
-			     (uintmax_t)physical);
+			     "Error dumping block to 0x%jx\n",
+			     (uintmax_t)offset);
 			return (EIO);
 		}
 
@@ -360,7 +364,7 @@ static int
 aac_disk_attach(device_t dev)
 {
 	struct aac_disk	*sc;
-	
+
 	sc = (struct aac_disk *)device_get_softc(dev);
 	fwprintf(NULL, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 

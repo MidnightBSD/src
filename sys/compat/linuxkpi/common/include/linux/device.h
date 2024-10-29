@@ -4,6 +4,10 @@
  * Copyright (c) 2010 Panasas, Inc.
  * Copyright (c) 2013-2016 Mellanox Technologies, Ltd.
  * All rights reserved.
+ * Copyright (c) 2021-2022 The FreeBSD Foundation
+ *
+ * Portions of this software were developed by Björn Zeeb
+ * under sponsorship from the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +29,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_DEVICE_H_
-#define	_LINUX_DEVICE_H_
+#ifndef	_LINUXKPI_LINUX_DEVICE_H_
+#define	_LINUXKPI_LINUX_DEVICE_H_
 
 #include <linux/err.h>
 #include <linux/types.h>
@@ -36,16 +39,20 @@
 #include <linux/sysfs.h>
 #include <linux/list.h>
 #include <linux/compiler.h>
-#include <linux/types.h>
 #include <linux/module.h>
 #include <linux/workqueue.h>
 #include <linux/kdev_t.h>
+#include <linux/backlight.h>
+#include <linux/pm.h>
+#include <linux/idr.h>
+#include <linux/ratelimit.h>	/* via linux/dev_printk.h */
+#include <linux/fwnode.h>
 #include <asm/atomic.h>
 
 #include <sys/bus.h>
+#include <sys/backlight.h>
 
 struct device;
-struct fwnode_handle;
 
 struct class {
 	const char	*name;
@@ -60,9 +67,8 @@ struct class {
 };
 
 struct dev_pm_ops {
-#if defined(LINUXKPI_VERSION) && LINUXKPI_VERSION >= 50000
 	int (*prepare)(struct device *dev);
-#endif
+	void (*complete)(struct device *dev);
 	int (*suspend)(struct device *dev);
 	int (*suspend_late)(struct device *dev);
 	int (*resume)(struct device *dev);
@@ -107,10 +113,7 @@ struct device {
 	struct class	*class;
 	void		(*release)(struct device *dev);
 	struct kobject	kobj;
-	union {
-		const u64 *dma_mask;	/* XXX for backwards compat */
-		void	*dma_priv;
-	};
+	void		*dma_priv;
 	void		*driver_data;
 	unsigned int	irq;
 #define	LINUX_IRQ_INVALID	65535
@@ -118,6 +121,8 @@ struct device {
 	unsigned int	irq_end;
 	const struct attribute_group **groups;
 	struct fwnode_handle *fwnode;
+	struct cdev	*backlight_dev;
+	struct backlight_device	*bd;
 
 	spinlock_t	devres_lock;
 	struct list_head devres_head;
@@ -180,13 +185,33 @@ show_class_attr_string(struct class *class,
 	struct class_attribute_string class_attr_##_name = \
 		_CLASS_ATTR_STRING(_name, _mode, _str)
 
-#define	dev_err(dev, fmt, ...)	device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
-#define	dev_warn(dev, fmt, ...)	device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
-#define	dev_info(dev, fmt, ...)	device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
-#define	dev_notice(dev, fmt, ...)	device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
-#define	dev_dbg(dev, fmt, ...)	do { } while (0)
 #define	dev_printk(lvl, dev, fmt, ...)					\
-	    device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
+    device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
+
+#define	dev_emerg(dev, fmt, ...)	device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
+#define	dev_alert(dev, fmt, ...)	device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
+#define	dev_crit(dev, fmt, ...)		device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
+#define	dev_err(dev, fmt, ...)		device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
+#define	dev_warn(dev, fmt, ...)		device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
+#define	dev_notice(dev, fmt, ...)	device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
+#define	dev_info(dev, fmt, ...)		device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
+#define	dev_dbg(dev, fmt, ...)		do { } while (0)
+
+#define dev_info_once(dev, ...) do {		\
+	static bool __dev_info_once;		\
+	if (!__dev_info_once) {			\
+	__dev_info_once = true;			\
+	dev_info(dev, __VA_ARGS__);		\
+	}					\
+} while (0)
+
+#define	dev_warn_once(dev, ...) do {		\
+	static bool __dev_warn_once;		\
+	if (!__dev_warn_once) {			\
+		__dev_warn_once = 1;		\
+		dev_warn(dev, __VA_ARGS__);	\
+	}					\
+} while (0)
 
 #define	dev_err_once(dev, ...) do {		\
 	static bool __dev_err_once;		\
@@ -207,6 +232,47 @@ show_class_attr_string(struct class *class,
 	if (linux_ratelimited(&__ratelimited))	\
 		dev_warn(dev, __VA_ARGS__);	\
 } while (0)
+
+#define	dev_dbg_ratelimited(dev, ...) do {	\
+	static linux_ratelimit_t __ratelimited;	\
+	if (linux_ratelimited(&__ratelimited))	\
+		dev_dbg(dev, __VA_ARGS__);	\
+} while (0)
+
+/* Public and LinuxKPI internal devres functions. */
+void *lkpi_devres_alloc(void(*release)(struct device *, void *), size_t, gfp_t);
+void lkpi_devres_add(struct device *, void *);
+void lkpi_devres_free(void *);
+void *lkpi_devres_find(struct device *, void(*release)(struct device *, void *),
+    int (*match)(struct device *, void *, void *), void *);
+int lkpi_devres_destroy(struct device *, void(*release)(struct device *, void *),
+    int (*match)(struct device *, void *, void *), void *);
+#define	devres_alloc(_r, _s, _g)	lkpi_devres_alloc(_r, _s, _g)
+#define	devres_add(_d, _p)		lkpi_devres_add(_d, _p)
+#define	devres_free(_p)			lkpi_devres_free(_p)
+#define	devres_find(_d, _rfn, _mfn, _mp) \
+					lkpi_devres_find(_d, _rfn, _mfn, _mp)
+#define	devres_destroy(_d, _rfn, _mfn, _mp) \
+					lkpi_devres_destroy(_d, _rfn, _mfn, _mp)
+void lkpi_devres_release_free_list(struct device *);
+void lkpi_devres_unlink(struct device *, void *);
+void lkpi_devm_kmalloc_release(struct device *, void *);
+#define	devm_kfree(_d, _p)		lkpi_devm_kmalloc_release(_d, _p)
+
+static inline const char *
+dev_driver_string(const struct device *dev)
+{
+	driver_t *drv;
+	const char *str = "";
+
+	if (dev->bsddev != NULL) {
+		drv = device_get_driver(dev->bsddev);
+		if (drv != NULL)
+			str = drv->name;
+	}
+
+	return (str);
+}
 
 static inline void *
 dev_get_drvdata(const struct device *dev)
@@ -250,6 +316,8 @@ put_device(struct device *dev)
 		kobject_put(&dev->kobj);
 }
 
+struct class *class_create(struct module *owner, const char *name);
+
 static inline int
 class_register(struct class *class)
 {
@@ -273,6 +341,12 @@ static inline struct device *kobj_to_dev(struct kobject *kobj)
 {
 	return container_of(kobj, struct device, kobj);
 }
+
+struct device *device_create(struct class *class, struct device *parent,
+	    dev_t devt, void *drvdata, const char *fmt, ...);
+struct device *device_create_groups_vargs(struct class *class, struct device *parent,
+    dev_t devt, void *drvdata, const struct attribute_group **groups,
+    const char *fmt, va_list args);
 
 /*
  * Devices are registered and created for exporting to sysfs. Create
@@ -331,47 +405,6 @@ static inline void
 device_create_release(struct device *dev)
 {
 	kfree(dev);
-}
-
-static inline struct device *
-device_create_groups_vargs(struct class *class, struct device *parent,
-    dev_t devt, void *drvdata, const struct attribute_group **groups,
-    const char *fmt, va_list args)
-{
-	struct device *dev = NULL;
-	int retval = -ENODEV;
-
-	if (class == NULL || IS_ERR(class))
-		goto error;
-
-	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
-	if (!dev) {
-		retval = -ENOMEM;
-		goto error;
-	}
-
-	dev->devt = devt;
-	dev->class = class;
-	dev->parent = parent;
-	dev->groups = groups;
-	dev->release = device_create_release;
-	/* device_initialize() needs the class and parent to be set */
-	device_initialize(dev);
-	dev_set_drvdata(dev, drvdata);
-
-	retval = kobject_set_name_vargs(&dev->kobj, fmt, args);
-	if (retval)
-		goto error;
-
-	retval = device_add(dev);
-	if (retval)
-		goto error;
-
-	return dev;
-
-error:
-	put_device(dev);
-	return ERR_PTR(retval);
 }
 
 static inline struct device *
@@ -445,9 +478,9 @@ device_unregister(struct device *dev)
 	dev->bsddev = NULL;
 
 	if (bsddev != NULL && dev->bsddev_attached_here) {
-		mtx_lock(&Giant);
+		bus_topo_lock();
 		device_delete_child(device_get_parent(bsddev), bsddev);
-		mtx_unlock(&Giant);
+		bus_topo_unlock();
 	}
 	put_device(dev);
 }
@@ -461,14 +494,11 @@ device_del(struct device *dev)
 	dev->bsddev = NULL;
 
 	if (bsddev != NULL && dev->bsddev_attached_here) {
-		mtx_lock(&Giant);
+		bus_topo_lock();
 		device_delete_child(device_get_parent(bsddev), bsddev);
-		mtx_unlock(&Giant);
+		bus_topo_unlock();
 	}
 }
-
-struct device *device_create(struct class *class, struct device *parent,
-	    dev_t devt, void *drvdata, const char *fmt, ...);
 
 static inline void
 device_destroy(struct class *class, dev_t devt)
@@ -482,6 +512,56 @@ device_destroy(struct class *class, dev_t devt)
 		device_unregister(device_get_softc(bsddev));
 }
 
+static inline void
+device_release_driver(struct device *dev)
+{
+
+#if 0
+	/* This leads to panics. Disable temporarily. Keep to rework. */
+
+	/* We also need to cleanup LinuxKPI bits. What else? */
+	lkpi_devres_release_free_list(dev);
+	dev_set_drvdata(dev, NULL);
+	/* Do not call dev->release! */
+
+	mtx_lock(&Giant);
+	if (device_is_attached(dev->bsddev))
+		device_detach(dev->bsddev);
+	mtx_unlock(&Giant);
+#endif
+}
+
+static inline int
+device_reprobe(struct device *dev)
+{
+	int error;
+
+	device_release_driver(dev);
+	mtx_lock(&Giant);
+	error = device_probe_and_attach(dev->bsddev);
+	mtx_unlock(&Giant);
+
+	return (-error);
+}
+
+static inline void
+device_set_wakeup_enable(struct device *dev __unused, bool enable __unused)
+{
+
+	/*
+	 * XXX-BZ TODO This is used by wireless drivers supporting WoWLAN which
+	 * we currently do not support.
+	 */
+}
+
+static inline int
+device_wakeup_enable(struct device *dev)
+{
+
+	device_set_wakeup_enable(dev, true);
+	return (0);
+}
+
 #define	dev_pm_set_driver_flags(dev, flags) do { \
 } while (0)
 
@@ -490,25 +570,6 @@ linux_class_kfree(struct class *class)
 {
 
 	kfree(class);
-}
-
-static inline struct class *
-class_create(struct module *owner, const char *name)
-{
-	struct class *class;
-	int error;
-
-	class = kzalloc(sizeof(*class), M_WAITOK);
-	class->owner = owner;
-	class->name = name;
-	class->class_release = linux_class_kfree;
-	error = class_register(class);
-	if (error) {
-		kfree(class);
-		return (NULL);
-	}
-
-	return (class);
 }
 
 static inline void
@@ -560,5 +621,42 @@ int linux_dev_to_node(struct device *);
 
 char *kvasprintf(gfp_t, const char *, va_list);
 char *kasprintf(gfp_t, const char *, ...);
+char *lkpi_devm_kasprintf(struct device *, gfp_t, const char *, ...);
 
-#endif	/* _LINUX_DEVICE_H_ */
+#define	devm_kasprintf(_dev, _gfp, _fmt, ...)			\
+    lkpi_devm_kasprintf(_dev, _gfp, _fmt, ##__VA_ARGS__)
+
+static __inline void *
+devm_kmalloc(struct device *dev, size_t size, gfp_t gfp)
+{
+	void *p;
+
+	p = lkpi_devres_alloc(lkpi_devm_kmalloc_release, size, gfp);
+	if (p != NULL)
+		lkpi_devres_add(dev, p);
+
+	return (p);
+}
+
+static inline void *
+devm_kmemdup(struct device *dev, const void *src, size_t len, gfp_t gfp)
+{
+	void *dst;
+
+	if (len == 0)
+		return (NULL);
+
+	dst = devm_kmalloc(dev, len, gfp);
+	if (dst != NULL)
+		memcpy(dst, src, len);
+
+	return (dst);
+}
+
+#define	devm_kzalloc(_dev, _size, _gfp)				\
+    devm_kmalloc((_dev), (_size), (_gfp) | __GFP_ZERO)
+
+#define	devm_kcalloc(_dev, _sizen, _size, _gfp)			\
+    devm_kmalloc((_dev), ((_sizen) * (_size)), (_gfp) | __GFP_ZERO)
+
+#endif	/* _LINUXKPI_LINUX_DEVICE_H_ */

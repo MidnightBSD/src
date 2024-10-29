@@ -23,7 +23,6 @@
  *  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef __ECORE_TCP_IP_H
@@ -56,7 +55,6 @@
 #ifndef ntohs
 #define ntohs(val) OSAL_BE16_TO_CPU(val)
 #endif
-
 
 struct ecore_ethhdr {
 	unsigned char	h_dest[ETH_ALEN];	/* destination eth addr	*/

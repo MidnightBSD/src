@@ -27,7 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
@@ -165,7 +164,6 @@ __ocs_fabric_flogi_wait_rsp(ocs_sm_ctx_t *ctx, ocs_sm_event_t evt, void *arg)
 
 	switch(evt) {
 	case OCS_EVT_SRRS_ELS_REQ_OK: {
-
 		if (node_check_els_req(ctx, evt, arg, FC_ELS_CMD_FLOGI, __ocs_fabric_common, __func__)) {
 			return NULL;
 		}
@@ -324,7 +322,6 @@ __ocs_fabric_fdisc_wait_rsp(ocs_sm_ctx_t *ctx, ocs_sm_event_t evt, void *arg)
 		ocs_sport_attach(node->sport, cbdata->ext_status);
 		ocs_node_transition(node, __ocs_fabric_wait_domain_attach, NULL);
 		break;
-
 	}
 
 	case OCS_EVT_SRRS_ELS_REQ_RJT:
@@ -797,7 +794,6 @@ __ocs_ns_gidpt_wait_rsp(ocs_sm_ctx_t *ctx, ocs_sm_event_t evt, void *arg)
 
 	return NULL;
 }
-
 
 /**
  * @ingroup ns_sm
@@ -1520,7 +1516,6 @@ __ocs_p2p_wait_flogi_acc_cmpl(ocs_sm_ctx_t *ctx, ocs_sm_event_t evt, void *arg)
 
 	return NULL;
 }
-
 
 /**
  * @ingroup p2p_sm

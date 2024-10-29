@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -49,7 +48,8 @@
 #endif
 #include <dev/extres/clk/clk.h>
 
-SYSCTL_NODE(_hw, OID_AUTO, clock, CTLFLAG_RD, NULL, "Clocks");
+SYSCTL_NODE(_hw, OID_AUTO, clock, CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
+    "Clocks");
 
 MALLOC_DEFINE(M_CLOCK, "clocks", "Clock framework");
 
@@ -183,6 +183,8 @@ enum clknode_sysctl_type {
 	CLKNODE_SYSCTL_PARENT,
 	CLKNODE_SYSCTL_PARENTS_LIST,
 	CLKNODE_SYSCTL_CHILDREN_LIST,
+	CLKNODE_SYSCTL_FREQUENCY,
+	CLKNODE_SYSCTL_GATE,
 };
 
 static int clknode_sysctl(SYSCTL_HANDLER_ARGS);
@@ -399,12 +401,11 @@ clkdom_create(device_t dev)
 #endif
 
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
-	  SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-	  OID_AUTO, "clocks",
-	  CTLTYPE_STRING | CTLFLAG_RD,
-		    clkdom, 0, clkdom_sysctl,
-		    "A",
-		    "Clock list for the domain");
+	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
+	    OID_AUTO, "clocks",
+	    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
+	    clkdom, 0, clkdom_sysctl, "A",
+	    "Clock list for the domain");
 
 	return (clkdom);
 }
@@ -529,6 +530,8 @@ clknode_create(struct clkdom * clkdom, clknode_class_t clknode_class,
 	struct clknode *clknode;
 	struct sysctl_oid *clknode_oid;
 	bool replaced;
+	kobjop_desc_t kobj_desc;
+	kobj_method_t *kobj_method;
 
 	KASSERT(def->name != NULL, ("clock name is NULL"));
 	KASSERT(def->name[0] != '\0', ("clock name is empty"));
@@ -623,36 +626,55 @@ clknode_create(struct clkdom * clkdom, clknode_class_t clknode_class,
 	clknode->parent_idx = CLKNODE_IDX_NONE;
 
 	if (replaced)
-			return (clknode);
+		return (clknode);
 
 	sysctl_ctx_init(&clknode->sysctl_ctx);
 	clknode_oid = SYSCTL_ADD_NODE(&clknode->sysctl_ctx,
 	    SYSCTL_STATIC_CHILDREN(_hw_clock),
 	    OID_AUTO, clknode->name,
-	    CTLFLAG_RD, 0, "A clock node");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, 0, "A clock node");
 
-	SYSCTL_ADD_U64(&clknode->sysctl_ctx,
+	SYSCTL_ADD_PROC(&clknode->sysctl_ctx,
 	    SYSCTL_CHILDREN(clknode_oid),
 	    OID_AUTO, "frequency",
-	    CTLFLAG_RD, &clknode->freq, 0, "The clock frequency");
+	    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
+	    clknode, CLKNODE_SYSCTL_FREQUENCY, clknode_sysctl,
+	    "A",
+	    "The clock frequency");
+
+	/* Install gate handler only if clknode have 'set_gate' method */
+	kobj_desc = &clknode_set_gate_desc;
+	kobj_method = kobj_lookup_method(((kobj_t)clknode)->ops->cls, NULL,
+	    kobj_desc);
+	if (kobj_method != &kobj_desc->deflt &&
+	    kobj_method->func != (kobjop_t)clknode_method_set_gate) {
+		SYSCTL_ADD_PROC(&clknode->sysctl_ctx,
+		    SYSCTL_CHILDREN(clknode_oid),
+		    OID_AUTO, "gate",
+		    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
+		    clknode, CLKNODE_SYSCTL_GATE, clknode_sysctl,
+		    "A",
+		    "The clock gate status");
+	}
+
 	SYSCTL_ADD_PROC(&clknode->sysctl_ctx,
 	    SYSCTL_CHILDREN(clknode_oid),
 	    OID_AUTO, "parent",
-	    CTLTYPE_STRING | CTLFLAG_RD,
+	    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
 	    clknode, CLKNODE_SYSCTL_PARENT, clknode_sysctl,
 	    "A",
 	    "The clock parent");
 	SYSCTL_ADD_PROC(&clknode->sysctl_ctx,
 	    SYSCTL_CHILDREN(clknode_oid),
 	    OID_AUTO, "parents",
-	    CTLTYPE_STRING | CTLFLAG_RD,
+	    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
 	    clknode, CLKNODE_SYSCTL_PARENTS_LIST, clknode_sysctl,
 	    "A",
 	    "The clock parents list");
 	SYSCTL_ADD_PROC(&clknode->sysctl_ctx,
 	    SYSCTL_CHILDREN(clknode_oid),
 	    OID_AUTO, "childrens",
-	    CTLTYPE_STRING | CTLFLAG_RD,
+	    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
 	    clknode, CLKNODE_SYSCTL_CHILDREN_LIST, clknode_sysctl,
 	    "A",
 	    "The clock childrens list");
@@ -1611,6 +1633,8 @@ clknode_sysctl(SYSCTL_HANDLER_ARGS)
 	enum clknode_sysctl_type type = arg2;
 	struct sbuf *sb;
 	const char **parent_names;
+	uint64_t freq;
+	bool enable;
 	int ret, i;
 
 	clknode = arg1;
@@ -1633,6 +1657,24 @@ clknode_sysctl(SYSCTL_HANDLER_ARGS)
 		TAILQ_FOREACH(children, &(clknode->children), sibling_link) {
 			sbuf_printf(sb, "%s ", children->name);
 		}
+		break;
+	case CLKNODE_SYSCTL_FREQUENCY:
+		ret = clknode_get_freq(clknode, &freq);
+		if (ret == 0)
+			sbuf_printf(sb, "%ju ", (uintmax_t)freq);
+		else
+			sbuf_printf(sb, "Error: %d ", ret);
+		break;
+	case CLKNODE_SYSCTL_GATE:
+		ret = CLKNODE_GET_GATE(clknode, &enable);
+		if (ret == 0)
+			sbuf_printf(sb, enable ? "enabled": "disabled");
+		else if (ret == ENXIO)
+			sbuf_printf(sb, "unimplemented");
+		else if (ret == ENOENT)
+			sbuf_printf(sb, "unreadable");
+		else
+			sbuf_printf(sb, "Error: %d ", ret);
 		break;
 	}
 	CLK_TOPO_UNLOCK();

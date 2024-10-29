@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -27,7 +27,6 @@
  * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
- *
  */
 
 /*
@@ -779,7 +778,8 @@ struct ath_softc {
 	ath_bufhead		sc_bbuf;	/* beacon buffers */
 	u_int			sc_bhalq;	/* HAL q for outgoing beacons */
 	u_int			sc_bmisscount;	/* missed beacon transmits */
-	u_int32_t		sc_ant_tx[8];	/* recent tx frames/antenna */
+	u_int32_t		sc_ant_tx[ATH_IOCTL_STATS_NUM_TX_ANTENNA];
+						/* recent tx frames/antenna */
 	struct ath_txq		*sc_cabq;	/* tx q for cab frames */
 	struct task		sc_bmisstask;	/* bmiss int processing */
 	struct task		sc_bstucktask;	/* stuck beacon processing */

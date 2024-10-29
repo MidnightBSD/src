@@ -24,12 +24,10 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
 
 #ifndef __ECORE_L2_H__
 #define __ECORE_L2_H__
-
 
 #include "ecore.h"
 #include "ecore_hw.h"

@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "efx.h"
 #include "efx_impl.h"
 

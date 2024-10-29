@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/unistd.h>
@@ -101,7 +100,6 @@ static image_patch_table kernndis_functbl[] = {
 	IMPORT_SFUNC(ndis_sendrsrcavail_func, 1),
 	IMPORT_SFUNC(ndis_intrsetup, 4),
 	IMPORT_SFUNC(ndis_return, 1),
-
 	{ NULL, NULL, NULL }
 };
 
@@ -589,7 +587,6 @@ ndis_convert_res(arg)
 	brl = BUS_GET_RESOURCE_LIST(dev, dev);
 
 	if (brl != NULL) {
-
 		STAILQ_FOREACH(brle, brl, link) {
 			switch (brle->type) {
 			case SYS_RES_IOPORT:

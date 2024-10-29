@@ -25,13 +25,13 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef _LINUX_LIST_H_
-#define _LINUX_LIST_H_
+#ifndef _LINUXKPI_LINUX_LIST_H_
+#define _LINUXKPI_LINUX_LIST_H_
 
+#ifndef _STANDALONE
 /*
- * Since LIST_HEAD conflicts with the linux definition we must include any
+ * Since LIST_HEAD conflicts with the Linux definition we must include any
  * FreeBSD header which requires it here so it is resolved with the correct
  * definition prior to the undef.
  */
@@ -51,6 +51,7 @@
 #include <sys/mbuf.h>
 
 #include <net/bpf.h>
+#include <net/ethernet.h>
 #include <net/if.h>
 #include <net/if_var.h>
 #include <net/if_types.h>
@@ -65,9 +66,14 @@
 #include <netinet6/in6_var.h>
 #include <netinet6/nd6.h>
 
+#include <net80211/ieee80211.h>
+#include <net80211/ieee80211_var.h>
+#include <net80211/ieee80211_node.h>
+
 #include <vm/vm.h>
 #include <vm/vm_object.h>
 #include <vm/pmap.h>
+#endif
 
 #ifndef prefetch
 #define	prefetch(x)
@@ -77,14 +83,6 @@
 
 #define LINUX_LIST_HEAD(name) \
 	struct list_head name = LINUX_LIST_HEAD_INIT(name)
-
-#ifndef LIST_HEAD_DEF
-#define	LIST_HEAD_DEF
-struct list_head {
-	struct list_head *next;
-	struct list_head *prev;
-};
-#endif
 
 static inline void
 INIT_LIST_HEAD(struct list_head *list)
@@ -262,6 +260,13 @@ list_move_tail(struct list_head *entry, struct list_head *head)
 }
 
 static inline void
+list_rotate_to_front(struct list_head *entry, struct list_head *head)
+{
+
+	list_move_tail(entry, head);
+}
+
+static inline void
 list_bulk_move_tail(struct list_head *head, struct list_head *first,
     struct list_head *last)
 {
@@ -323,7 +328,6 @@ list_splice_tail_init(struct list_head *list, struct list_head *head)
 #undef LIST_HEAD
 #define LIST_HEAD(name)	struct list_head name = { &(name), &(name) }
 
-
 struct hlist_head {
 	struct hlist_node *first;
 };
@@ -331,7 +335,6 @@ struct hlist_head {
 struct hlist_node {
 	struct hlist_node *next, **pprev;
 };
-
 #define	HLIST_HEAD_INIT { }
 #define	HLIST_HEAD(name) struct hlist_head name = HLIST_HEAD_INIT
 #define	INIT_HLIST_HEAD(head) (head)->first = NULL
@@ -461,6 +464,20 @@ static inline int list_is_last(const struct list_head *list,
 	return list->next == head;
 }
 
+static inline size_t
+list_count_nodes(const struct list_head *list)
+{
+	const struct list_head *lh;
+	size_t count;
+
+	count = 0;
+	list_for_each(lh, list) {
+		count++;
+	}
+
+	return (count);
+}
+
 #define	hlist_entry(ptr, type, field)	container_of(ptr, type, field)
 
 #define	hlist_for_each(p, head)						\
@@ -491,7 +508,12 @@ static inline int list_is_last(const struct list_head *list,
 	     (pos) && ({ n = (pos)->member.next; 1; });			\
 	     pos = hlist_entry_safe(n, typeof(*(pos)), member))
 
+#if defined(LINUXKPI_VERSION) && LINUXKPI_VERSION >= 51300
+extern void list_sort(void *priv, struct list_head *head, int (*cmp)(void *priv,
+    const struct list_head *a, const struct list_head *b));
+#else
 extern void list_sort(void *priv, struct list_head *head, int (*cmp)(void *priv,
     struct list_head *a, struct list_head *b));
+#endif
 
-#endif /* _LINUX_LIST_H_ */
+#endif /* _LINUXKPI_LINUX_LIST_H_ */

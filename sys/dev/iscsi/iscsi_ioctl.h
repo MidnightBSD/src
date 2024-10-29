@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Edward Tomasz Napierala under sponsorship
  * from the FreeBSD Foundation.
@@ -27,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef ISCSI_IOCTL_H
@@ -70,7 +68,8 @@ struct iscsi_session_conf {
 	char		isc_offload[ISCSI_OFFLOAD_LEN];
 	int		isc_enable;
 	int		isc_dscp;
-	int		isc_spare[3];
+	int		isc_pcp;
+	int		isc_spare[2];
 };
 
 /*
@@ -115,8 +114,13 @@ struct iscsi_daemon_request {
 	uint8_t				idr_isid[6];
 	uint16_t			idr_tsih;
 	uint16_t			idr_spare_cid;
-	struct iscsi_session_limits	idr_limits;
 	int				idr_spare[4];
+};
+
+struct iscsi_daemon_limits {
+	unsigned int			idl_session_id;
+	int				idl_socket;
+	struct iscsi_session_limits	idl_limits;
 };
 
 struct iscsi_daemon_handoff {
@@ -148,6 +152,7 @@ struct iscsi_daemon_fail {
 #define	ISCSIDWAIT	_IOR('I', 0x01, struct iscsi_daemon_request)
 #define	ISCSIDHANDOFF	_IOW('I', 0x02, struct iscsi_daemon_handoff)
 #define	ISCSIDFAIL	_IOW('I', 0x03, struct iscsi_daemon_fail)
+#define	ISCSIDLIMITS	_IOWR('I', 0x07, struct iscsi_daemon_limits)
 
 #ifdef ICL_KERNEL_PROXY
 

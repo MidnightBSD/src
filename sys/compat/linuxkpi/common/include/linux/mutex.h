@@ -25,16 +25,17 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_MUTEX_H_
-#define	_LINUX_MUTEX_H_
+#ifndef	_LINUXKPI_LINUX_MUTEX_H_
+#define	_LINUXKPI_LINUX_MUTEX_H_
 
 #include <sys/param.h>
 #include <sys/proc.h>
 #include <sys/lock.h>
 #include <sys/sx.h>
 
+#include <linux/kernel.h>
+#include <linux/list.h>
 #include <linux/spinlock.h>
 #include <asm/atomic.h>
 
@@ -172,4 +173,4 @@ linux_mutex_destroy(mutex_t *m)
 
 extern int linux_mutex_lock_interruptible(mutex_t *m);
 
-#endif					/* _LINUX_MUTEX_H_ */
+#endif					/* _LINUXKPI_LINUX_MUTEX_H_ */

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * PCI/Cardbus front-end for the Atheros Wireless LAN controller driver.
  */
@@ -270,11 +269,6 @@ ath_pci_attach(device_t dev)
 		    __func__, fw->data);
 		sc->sc_eepromdata =
 		    malloc(fw->datasize, M_TEMP, M_WAITOK | M_ZERO);
-		if (! sc->sc_eepromdata) {
-			device_printf(dev, "%s: can't malloc eepromdata\n",
-			    __func__);
-			goto bad4;
-		}
 		memcpy(sc->sc_eepromdata, fw->data, fw->datasize);
 		firmware_put(fw, 0);
 	}

@@ -1,7 +1,7 @@
 /*-
  * HighPoint RAID Driver for FreeBSD
  *
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2005-2011 HighPoint Technologies, Inc. All Rights Reserved.
  * All rights reserved.
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <dev/hpt27xx/hpt27xx_config.h>
@@ -91,19 +90,19 @@ BUS_ADDRESS get_dmapool_phy_addr(void *osext, void * dmapool_virt_addr)
 /* PCI space access */
 HPT_U8 pcicfg_read_byte (HPT_U8 bus, HPT_U8 dev, HPT_U8 func, HPT_U8 reg)
 {
-	return (HPT_U8)pci_cfgregread(bus, dev, func, reg, 1);
+	return (HPT_U8)pci_cfgregread(0, bus, dev, func, reg, 1);
 }
 HPT_U32 pcicfg_read_dword(HPT_U8 bus, HPT_U8 dev, HPT_U8 func, HPT_U8 reg)
 {
-	return (HPT_U32)pci_cfgregread(bus, dev, func, reg, 4);
+	return (HPT_U32)pci_cfgregread(0, bus, dev, func, reg, 4);
 }
 void pcicfg_write_byte (HPT_U8 bus, HPT_U8 dev, HPT_U8 func, HPT_U8 reg, HPT_U8 v)
 {
-	pci_cfgregwrite(bus, dev, func, reg, v, 1);
+	pci_cfgregwrite(0, bus, dev, func, reg, v, 1);
 }
 void pcicfg_write_dword(HPT_U8 bus, HPT_U8 dev, HPT_U8 func, HPT_U8 reg, HPT_U32 v)
 {
-	pci_cfgregwrite(bus, dev, func, reg, v, 4);
+	pci_cfgregwrite(0, bus, dev, func, reg, v, 4);
 }/* PCI space access */
 
 void *os_map_pci_bar(
@@ -249,14 +248,8 @@ void  os_request_timer(void * osext, HPT_U32 interval)
 	PVBUS_EXT vbus_ext = osext;
 
 	HPT_ASSERT(vbus_ext->ext_type==EXT_TYPE_VBUS);
-
-#if (__FreeBSD_version >= 1000510)
 	callout_reset_sbt(&vbus_ext->timer, SBT_1US * interval, 0,
 	    os_timer_for_ldm, vbus_ext, 0);
-#else 
-	untimeout(os_timer_for_ldm, vbus_ext, vbus_ext->timer);
-	vbus_ext->timer = timeout(os_timer_for_ldm, vbus_ext, interval * hz / 1000000);
-#endif
 }
 
 HPT_TIME os_query_time(void)

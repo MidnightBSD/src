@@ -25,20 +25,14 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
-#include <sys/systm.h>
 #include <sys/exec.h>
 #include <sys/imgact.h>
-#include <sys/imgact_elf.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
-#include <sys/eventhandler.h>
 #include <sys/sx.h>
 
 #include <compat/linux/linux.h>
-#include <compat/linux/linux_emul.h>
-#include <compat/linux/linux_ioctl.h>
 #include <compat/linux/linux_mib.h>
 #include <compat/linux/linux_util.h>
 
@@ -49,11 +43,6 @@ TAILQ_HEAD(, linux_ioctl_handler_element) linux_ioctl_handlers =
 struct sx linux_ioctl_sx;
 SX_SYSINIT(linux_ioctl, &linux_ioctl_sx, "Linux ioctl handlers");
 
-static eventhandler_tag linux_exec_tag;
-static eventhandler_tag linux_thread_dtor_tag;
-static eventhandler_tag	linux_exit_tag;
-
-
 static int
 linux_common_modevent(module_t mod, int type, void *data)
 {
@@ -61,28 +50,21 @@ linux_common_modevent(module_t mod, int type, void *data)
 
 	switch(type) {
 	case MOD_LOAD:
+#ifdef INVARIANTS
+		linux_check_errtbl();
+#endif
 		linux_dev_shm_create();
 		linux_osd_jail_register();
-		linux_exit_tag = EVENTHANDLER_REGISTER(process_exit,
-		    linux_proc_exit, NULL, 1000);
-		linux_exec_tag = EVENTHANDLER_REGISTER(process_exec,
-		    linux_proc_exec, NULL, 1000);
-		linux_thread_dtor_tag = EVENTHANDLER_REGISTER(thread_dtor,
-		    linux_thread_dtor, NULL, EVENTHANDLER_PRI_ANY);
 		SET_FOREACH(ldhp, linux_device_handler_set)
 			linux_device_register_handler(*ldhp);
-		LIST_INIT(&futex_list);
-		mtx_init(&futex_mtx, "ftllk", NULL, MTX_DEF);
+		linux_netlink_register();
 		break;
 	case MOD_UNLOAD:
 		linux_dev_shm_destroy();
 		linux_osd_jail_deregister();
 		SET_FOREACH(ldhp, linux_device_handler_set)
 			linux_device_unregister_handler(*ldhp);
-		mtx_destroy(&futex_mtx);
-		EVENTHANDLER_DEREGISTER(process_exit, linux_exit_tag);
-		EVENTHANDLER_DEREGISTER(process_exec, linux_exec_tag);
-		EVENTHANDLER_DEREGISTER(thread_dtor, linux_thread_dtor_tag);
+		linux_netlink_deregister();
 		break;
 	default:
 		return (EOPNOTSUPP);
@@ -98,3 +80,4 @@ static moduledata_t linux_common_mod = {
 
 DECLARE_MODULE(linux_common, linux_common_mod, SI_SUB_EXEC, SI_ORDER_ANY);
 MODULE_VERSION(linux_common, 1);
+MODULE_DEPEND(linux_common, netlink, 1, 1, 1);

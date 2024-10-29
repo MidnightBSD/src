@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_acpi.h"
 #include "opt_ddb.h"
 
@@ -129,6 +128,19 @@ static struct nvdimm_SPA_uuid_list_elm {
 };
 
 enum SPA_mapping_type
+nvdimm_spa_type_from_name(const char *name)
+{
+	int j;
+
+	for (j = 0; j < nitems(nvdimm_SPA_uuid_list); j++) {
+		if (strcmp(name, nvdimm_SPA_uuid_list[j].u_name) != 0)
+			continue;
+		return (j);
+	}
+	return (SPA_TYPE_UNKNOWN);
+}
+
+enum SPA_mapping_type
 nvdimm_spa_type_from_uuid(struct uuid *uuid)
 {
 	int j;
@@ -141,25 +153,34 @@ nvdimm_spa_type_from_uuid(struct uuid *uuid)
 	return (SPA_TYPE_UNKNOWN);
 }
 
+bool
+nvdimm_spa_type_user_accessible(enum SPA_mapping_type spa_type)
+{
+
+	if ((int)spa_type < 0 || spa_type >= nitems(nvdimm_SPA_uuid_list))
+		return (false);
+	return (nvdimm_SPA_uuid_list[spa_type].u_usr_acc);
+}
+
 static vm_memattr_t
-nvdimm_spa_memattr(struct nvdimm_spa_dev *dev)
+nvdimm_spa_memattr(uint64_t efi_mem_flags)
 {
 	vm_memattr_t mode;
 
-	if ((dev->spa_efi_mem_flags & EFI_MD_ATTR_WB) != 0)
+	if ((efi_mem_flags & EFI_MD_ATTR_WB) != 0)
 		mode = VM_MEMATTR_WRITE_BACK;
-	else if ((dev->spa_efi_mem_flags & EFI_MD_ATTR_WT) != 0)
+	else if ((efi_mem_flags & EFI_MD_ATTR_WT) != 0)
 		mode = VM_MEMATTR_WRITE_THROUGH;
-	else if ((dev->spa_efi_mem_flags & EFI_MD_ATTR_WC) != 0)
+	else if ((efi_mem_flags & EFI_MD_ATTR_WC) != 0)
 		mode = VM_MEMATTR_WRITE_COMBINING;
-	else if ((dev->spa_efi_mem_flags & EFI_MD_ATTR_WP) != 0)
+	else if ((efi_mem_flags & EFI_MD_ATTR_WP) != 0)
 		mode = VM_MEMATTR_WRITE_PROTECTED;
-	else if ((dev->spa_efi_mem_flags & EFI_MD_ATTR_UC) != 0)
+	else if ((efi_mem_flags & EFI_MD_ATTR_UC) != 0)
 		mode = VM_MEMATTR_UNCACHEABLE;
 	else {
 		if (bootverbose)
 			printf("SPA mapping attr %#lx unsupported\n",
-			    dev->spa_efi_mem_flags);
+			    efi_mem_flags);
 		mode = VM_MEMATTR_UNCACHEABLE;
 	}
 	return (mode);
@@ -173,8 +194,10 @@ nvdimm_spa_uio(struct nvdimm_spa_dev *dev, struct uio *uio)
 	vm_memattr_t mattr;
 	int error, n;
 
+	error = 0;
 	if (dev->spa_kva == NULL) {
-		mattr = nvdimm_spa_memattr(dev);
+		mattr = dev->spa_memattr;
+		bzero(&m, sizeof(m));
 		vm_page_initfake(&m, 0, mattr);
 		ma = &m;
 		while (uio->uio_resid > 0) {
@@ -272,9 +295,9 @@ nvdimm_spa_g_all_unmapped(struct nvdimm_spa_dev *dev, struct bio *bp, int rw)
 	vm_memattr_t mattr;
 	int i;
 
-	mattr = nvdimm_spa_memattr(dev);
+	mattr = dev->spa_memattr;
 	for (i = 0; i < nitems(ma); i++) {
-		maa[i].flags = 0;
+		bzero(&maa[i], sizeof(maa[i]));
 		vm_page_initfake(&maa[i], dev->spa_phys_base +
 		    trunc_page(bp->bio_offset) + PAGE_SIZE * i, mattr);
 		ma[i] = &maa[i];
@@ -329,8 +352,7 @@ nvdimm_spa_g_thread(void *arg)
 				pmap_flush_cache_phys_range(
 				    (vm_paddr_t)sc->dev->spa_phys_base,
 				    (vm_paddr_t)sc->dev->spa_phys_base +
-				    sc->dev->spa_len,
-				    nvdimm_spa_memattr(sc->dev));
+				    sc->dev->spa_len, sc->dev->spa_memattr);
 			}
 			/*
 			 * XXX flush IMC
@@ -389,9 +411,7 @@ nvdimm_spa_g_start(struct bio *bp)
 
 	sc = bp->bio_to->geom->softc;
 	if (bp->bio_cmd == BIO_READ || bp->bio_cmd == BIO_WRITE) {
-		mtx_lock(&sc->spa_g_stat_mtx);
 		devstat_start_transaction_bio(sc->spa_g_devstat, bp);
-		mtx_unlock(&sc->spa_g_stat_mtx);
 	}
 	mtx_lock(&sc->spa_g_mtx);
 	bioq_disksort(&sc->spa_g_queue, bp);
@@ -442,17 +462,18 @@ nvdimm_spa_init(struct SPA_mapping *spa, ACPI_NFIT_SYSTEM_ADDRESS *nfitaddr,
 		    nvdimm_SPA_uuid_list[spa_type].u_name,
 		    spa->dev.spa_efi_mem_flags);
 	}
+	spa->dev.spa_memattr = nvdimm_spa_memattr(nfitaddr->MemoryMapping);
 	if (!nvdimm_SPA_uuid_list[spa_type].u_usr_acc)
 		return (0);
 
 	asprintf(&name, M_NVDIMM, "spa%d", spa->spa_nfit_idx);
-	error = nvdimm_spa_dev_init(&spa->dev, name);
+	error = nvdimm_spa_dev_init(&spa->dev, name, spa->spa_nfit_idx);
 	free(name, M_NVDIMM);
 	return (error);
 }
 
 int
-nvdimm_spa_dev_init(struct nvdimm_spa_dev *dev, const char *name)
+nvdimm_spa_dev_init(struct nvdimm_spa_dev *dev, const char *name, int unit)
 {
 	struct make_dev_args mda;
 	struct sglist *spa_sg;
@@ -460,7 +481,7 @@ nvdimm_spa_dev_init(struct nvdimm_spa_dev *dev, const char *name)
 	int error, error1;
 
 	error1 = pmap_large_map(dev->spa_phys_base, dev->spa_len,
-	    &dev->spa_kva, nvdimm_spa_memattr(dev));
+	    &dev->spa_kva, dev->spa_memattr);
 	if (error1 != 0) {
 		printf("NVDIMM %s cannot map into KVA, error %d\n", name,
 		    error1);
@@ -491,6 +512,7 @@ nvdimm_spa_dev_init(struct nvdimm_spa_dev *dev, const char *name)
 	mda.mda_gid = GID_OPERATOR;
 	mda.mda_mode = 0660;
 	mda.mda_si_drv1 = dev;
+	mda.mda_unit = unit;
 	asprintf(&devname, M_NVDIMM, "nvdimm_%s", name);
 	error = make_dev_s(&mda, &dev->spa_dev, "%s", devname);
 	free(devname, M_NVDIMM);
@@ -518,14 +540,12 @@ nvdimm_spa_g_create(struct nvdimm_spa_dev *dev, const char *name)
 	sc->dev = dev;
 	bioq_init(&sc->spa_g_queue);
 	mtx_init(&sc->spa_g_mtx, "spag", NULL, MTX_DEF);
-	mtx_init(&sc->spa_g_stat_mtx, "spagst", NULL, MTX_DEF);
 	sc->spa_g_proc_run = true;
 	sc->spa_g_proc_exiting = false;
 	error = kproc_create(nvdimm_spa_g_thread, sc, &sc->spa_g_proc, 0, 0,
 	    "g_spa");
 	if (error != 0) {
 		mtx_destroy(&sc->spa_g_mtx);
-		mtx_destroy(&sc->spa_g_stat_mtx);
 		free(sc, M_NVDIMM);
 		printf("NVDIMM %s cannot create geom worker, error %d\n", name,
 		    error);
@@ -595,7 +615,6 @@ nvdimm_spa_g_destroy_geom(struct gctl_req *req, struct g_class *cp,
 		sc->spa_g_devstat = NULL;
 	}
 	mtx_destroy(&sc->spa_g_mtx);
-	mtx_destroy(&sc->spa_g_stat_mtx);
 	free(sc, M_NVDIMM);
 	return (0);
 }

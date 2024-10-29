@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_acpi.h"
 #include "opt_evdev.h"
 #include <sys/param.h>
@@ -106,11 +105,14 @@ acpi_button_probe(device_t dev)
 {
     struct acpi_button_softc *sc;
     char *str; 
+    int rv;
 
-    if (acpi_disabled("button") ||
-	(str = ACPI_ID_PROBE(device_get_parent(dev), dev, btn_ids)) == NULL)
+    if (acpi_disabled("button"))
 	return (ENXIO);
-
+    rv = ACPI_ID_PROBE(device_get_parent(dev), dev, btn_ids, &str);
+    if (rv > 0)
+	return (ENXIO);
+    
     sc = device_get_softc(dev);
     if (strcmp(str, "PNP0C0C") == 0) {
 	device_set_desc(dev, "Power Button");
@@ -128,7 +130,7 @@ acpi_button_probe(device_t dev)
 	sc->fixed = 1;
     }
 
-    return (0);
+    return (rv);
 }
 
 static int

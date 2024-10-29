@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_acpi.h"
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -78,6 +77,12 @@ static int	acpi_timer_sysctl_freq(SYSCTL_HANDLER_ARGS);
 static void	acpi_timer_boot_test(void);
 
 static int	acpi_timer_test(void);
+#ifdef __i386__
+static int	acpi_timer_test_enabled = 1;
+#else
+static int	acpi_timer_test_enabled = 0;
+#endif
+TUNABLE_INT("hw.acpi.timer_test_enabled", &acpi_timer_test_enabled);
 
 static device_method_t acpi_timer_methods[] = {
     DEVMETHOD(device_identify,	acpi_timer_identify),
@@ -353,7 +358,7 @@ acpi_timer_sysctl_freq(SYSCTL_HANDLER_ARGS)
 {
     int error;
     u_int freq;
- 
+
     if (acpi_timer_timecounter.tc_frequency == 0)
 	return (EOPNOTSUPP);
     freq = acpi_timer_frequency;
@@ -365,9 +370,11 @@ acpi_timer_sysctl_freq(SYSCTL_HANDLER_ARGS)
 
     return (error);
 }
- 
-SYSCTL_PROC(_machdep, OID_AUTO, acpi_timer_freq, CTLTYPE_INT | CTLFLAG_RW,
-    0, sizeof(u_int), acpi_timer_sysctl_freq, "I", "ACPI timer frequency");
+
+SYSCTL_PROC(_machdep, OID_AUTO, acpi_timer_freq,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, 0, 0,
+    acpi_timer_sysctl_freq, "I",
+    "ACPI timer frequency");
 
 /*
  * Some ACPI timers are known or believed to suffer from implementation
@@ -401,6 +408,12 @@ acpi_timer_test(void)
     int delta, max, max2, min, n;
     register_t s;
 
+    /* Skip the test based on the hw.acpi.timer_test_enabled tunable. */
+    if (!acpi_timer_test_enabled)
+	return (1);
+
+    TSENTER();
+
     min = INT32_MAX;
     max = max2 = 0;
 
@@ -430,6 +443,8 @@ acpi_timer_test(void)
 	n = 1;
     if (bootverbose)
 	printf(" %d/%d", n, delta);
+
+    TSEXIT();
 
     return (n);
 }

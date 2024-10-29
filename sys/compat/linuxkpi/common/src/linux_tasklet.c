@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/malloc.h>
 #include <sys/gtaskqueue.h>
@@ -116,7 +115,7 @@ tasklet_subsystem_init(void *arg __unused)
 		GROUPTASK_INIT(&tw->gtask, 0, tasklet_handler, tw);
 		snprintf(buf, sizeof(buf), "softirq%d", i);
 		taskqgroup_attach_cpu(qgroup_softirq, &tw->gtask,
-		    "tasklet", i, -1, buf);
+		    "tasklet", i, NULL, NULL, buf);
        }
 }
 SYSINIT(linux_tasklet, SI_SUB_TASKQ, SI_ORDER_THIRD, tasklet_subsystem_init, NULL);
@@ -126,6 +125,8 @@ tasklet_subsystem_uninit(void *arg __unused)
 {
 	struct tasklet_worker *tw;
 	int i;
+
+	taskqgroup_drain_all(qgroup_softirq);
 
 	CPU_FOREACH(i) {
 		if (CPU_ABSENT(i))
@@ -224,6 +225,13 @@ tasklet_disable(struct tasklet_struct *ts)
 
 	atomic_inc(&ts->count);
 	tasklet_unlock_wait(ts);
+}
+
+void
+tasklet_disable_nosync(struct tasklet_struct *ts)
+{
+	atomic_inc(&ts->count);
+	barrier();
 }
 
 int

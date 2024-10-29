@@ -21,7 +21,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef MLX5_CMD_H
@@ -48,5 +47,9 @@ int mlx5_cmd_query_cong_counter(struct mlx5_core_dev *dev,
 int mlx5_cmd_query_cong_params(struct mlx5_core_dev *dev, int cong_point,
                                void *out, int out_size);
 int mlx5_cmd_modify_cong_params(struct mlx5_core_dev *mdev,
+                                void *in, int in_size);
+int mlx5_cmd_query_cong_status(struct mlx5_core_dev *dev, int cong_point,
+                               int prio, void *out, int out_size);
+int mlx5_cmd_modify_cong_status(struct mlx5_core_dev *mdev,
                                 void *in, int in_size);
 #endif /* MLX5_CMD_H */

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2007-2009 Marvell Semiconductor, Inc.
@@ -28,7 +28,6 @@
  * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
- *
  */
 
 #include <sys/param.h>
@@ -191,7 +190,7 @@ static void dumpresult(struct mwl_hal_priv *, int showresult);
 #endif /* MWLHAL_DEBUG */
 
 SYSCTL_DECL(_hw_mwl);
-static SYSCTL_NODE(_hw_mwl, OID_AUTO, hal, CTLFLAG_RD, 0,
+static SYSCTL_NODE(_hw_mwl, OID_AUTO, hal, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
     "Marvell HAL parameters");
 
 static __inline void

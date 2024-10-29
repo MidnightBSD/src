@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_STRING_H_
-#define	_LINUX_STRING_H_
+#ifndef	_LINUXKPI_LINUX_STRING_H_
+#define	_LINUXKPI_LINUX_STRING_H_
 
 #include <sys/ctype.h>
 
@@ -37,6 +36,8 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/err.h>
+#include <linux/bitops.h> /* for BITS_PER_LONG */
+#include <linux/stdarg.h>
 
 #include <sys/libkern.h>
 
@@ -94,6 +95,27 @@ kmemdup(const void *src, size_t len, gfp_t gfp)
 	if (dst != NULL)
 		memcpy(dst, src, len);
 	return (dst);
+}
+
+/* See slab.h for kvmalloc/kvfree(). */
+static inline void *
+kvmemdup(const void *src, size_t len, gfp_t gfp)
+{
+	void *dst;
+
+	dst = kvmalloc(len, gfp);
+	if (dst != NULL)
+		memcpy(dst, src, len);
+	return (dst);
+}
+
+static inline char *
+strndup_user(const char __user *ustr, long n)
+{
+	if (n < 1)
+		return (ERR_PTR(-EINVAL));
+
+	return (memdup_user_nul(ustr, n - 1));
 }
 
 static inline char *
@@ -166,4 +188,108 @@ str_has_prefix(const char *str, const char *prefix)
 	return (strncmp(str, prefix, len) == 0 ? len : 0);
 }
 
-#endif					/* _LINUX_STRING_H_ */
+static inline char *
+strreplace(char *str, char old, char new)
+{
+	char *p;
+
+	p = strchrnul(str, old);
+	while (p != NULL && *p != '\0') {
+		*p = new;
+		p = strchrnul(str, old);
+	}
+	return (p);
+}
+
+static inline ssize_t
+strscpy(char* dst, const char* src, size_t len)
+{
+	size_t i;
+
+	if (len <= INT_MAX) {
+		for (i = 0; i < len; i++)
+			if ('\0' == (dst[i] = src[i]))
+				return ((ssize_t)i);
+		if (i != 0)
+			dst[--i] = '\0';
+	}
+
+	return (-E2BIG);
+}
+
+static inline ssize_t
+strscpy_pad(char* dst, const char* src, size_t len)
+{
+
+	bzero(dst, len);
+
+	return (strscpy(dst, src, len));
+}
+
+static inline void *
+memset32(uint32_t *b, uint32_t c, size_t len)
+{
+	uint32_t *dst = b;
+
+	while (len--)
+		*dst++ = c;
+	return (b);
+}
+
+static inline void *
+memset64(uint64_t *b, uint64_t c, size_t len)
+{
+	uint64_t *dst = b;
+
+	while (len--)
+		*dst++ = c;
+	return (b);
+}
+
+static inline void *
+memset_p(void **p, void *v, size_t n)
+{
+
+	if (BITS_PER_LONG == 32)
+		return (memset32((uint32_t *)p, (uintptr_t)v, n));
+	else
+		return (memset64((uint64_t *)p, (uintptr_t)v, n));
+}
+
+static inline void
+memcpy_and_pad(void *dst, size_t dstlen, const void *src, size_t len, int ch)
+{
+
+	if (len >= dstlen) {
+		memcpy(dst, src, dstlen);
+	} else {
+		memcpy(dst, src, len);
+		/* Pad with given padding character. */
+		memset((char *)dst + len, ch, dstlen - len);
+	}
+}
+
+#define	memset_startat(ptr, bytepat, smember)				\
+({									\
+	uint8_t *_ptr = (uint8_t *)(ptr);				\
+	int _c = (int)(bytepat);					\
+	size_t _o = offsetof(typeof(*(ptr)), smember);			\
+	memset(_ptr + _o, _c, sizeof(*(ptr)) - _o);			\
+})
+
+#define	memset_after(ptr, bytepat, smember)				\
+({									\
+	uint8_t *_ptr = (uint8_t *)(ptr);				\
+	int _c = (int)(bytepat);					\
+	size_t _o = offsetofend(typeof(*(ptr)), smember);		\
+	memset(_ptr + _o, _c, sizeof(*(ptr)) - _o);			\
+})
+
+static inline void
+memzero_explicit(void *p, size_t s)
+{
+	memset(p, 0, s);
+	__asm__ __volatile__("": :"r"(p) :"memory");
+}
+
+#endif	/* _LINUXKPI_LINUX_STRING_H_ */

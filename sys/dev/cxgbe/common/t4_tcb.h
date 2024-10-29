@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011, 2016 Chelsio Communications, Inc.
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  *
  */
 
@@ -751,6 +750,9 @@
 
 #define S_TF_CCTRL_RFR    62
 #define V_TF_CCTRL_RFR(x) ((__u64)(x) << S_TF_CCTRL_RFR)
+
+#define S_TF_CORE_BYPASS    63
+#define V_TF_CORE_BYPASS(x) ((__u64)(x) << S_TF_CORE_BYPASS)
 
 #define S_TF_DDP_INDICATE_OUT    16
 #define V_TF_DDP_INDICATE_OUT(x) ((x) << S_TF_DDP_INDICATE_OUT)

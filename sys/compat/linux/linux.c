@@ -1,6 +1,5 @@
 /*-
- * Copyright (c) 2015 Dmitry Chagin
- * All rights reserved.
+ * Copyright (c) 2015 Dmitry Chagin <dchagin@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,16 +24,18 @@
  */
 
 #include <sys/cdefs.h>
-
-#include <opt_inet6.h>
+#include "opt_inet6.h"
 
 #include <sys/param.h>
-#include <sys/systm.h>
 #include <sys/conf.h>
 #include <sys/ctype.h>
+#include <sys/file.h>
+#include <sys/filedesc.h>
 #include <sys/jail.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
+#include <sys/poll.h>
+#include <sys/proc.h>
 #include <sys/signalvar.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
@@ -43,18 +44,22 @@
 #include <net/if_var.h>
 #include <net/if_dl.h>
 #include <net/if_types.h>
+#include <netlink/netlink.h>
 
 #include <sys/un.h>
 #include <netinet/in.h>
 
 #include <compat/linux/linux.h>
 #include <compat/linux/linux_common.h>
+#include <compat/linux/linux_mib.h>
 #include <compat/linux/linux_util.h>
 
-struct futex_list futex_list;
-struct mtx futex_mtx;			/* protects the futex list */
-
 CTASSERT(LINUX_IFNAMSIZ == IFNAMSIZ);
+
+static bool use_real_ifnames = false;
+SYSCTL_BOOL(_compat_linux, OID_AUTO, use_real_ifnames, CTLFLAG_RWTUN,
+    &use_real_ifnames, 0,
+    "Use FreeBSD interface names instead of generating ethN aliases");
 
 static int bsd_to_linux_sigtbl[LINUX_SIGTBLSZ] = {
 	LINUX_SIGHUP,	/* SIGHUP */
@@ -89,6 +94,8 @@ static int bsd_to_linux_sigtbl[LINUX_SIGTBLSZ] = {
 	LINUX_SIGUSR1,	/* SIGUSR1 */
 	LINUX_SIGUSR2	/* SIGUSR2 */
 };
+
+#define	LINUX_SIGPWREMU	(SIGRTMIN + (LINUX_SIGRTMAX - LINUX_SIGRTMIN) + 1)
 
 static int linux_to_bsd_sigtbl[LINUX_SIGTBLSZ] = {
 	SIGHUP,		/* LINUX_SIGHUP */
@@ -125,7 +132,7 @@ static int linux_to_bsd_sigtbl[LINUX_SIGTBLSZ] = {
 	 * to the first unused FreeBSD signal number. Since Linux supports
 	 * signals from 1 to 64 we are ok here as our SIGRTMIN = 65.
 	 */
-	SIGRTMIN,	/* LINUX_SIGPWR */
+	LINUX_SIGPWREMU,/* LINUX_SIGPWR */
 	SIGSYS		/* LINUX_SIGSYS */
 };
 
@@ -142,14 +149,14 @@ static inline int
 linux_to_bsd_rt_signal(int sig)
 {
 
-	return (SIGRTMIN + 1 + sig - LINUX_SIGRTMIN);
+	return (SIGRTMIN + sig - LINUX_SIGRTMIN);
 }
 
 static inline int
 bsd_to_linux_rt_signal(int sig)
 {
 
-	return (sig - SIGRTMIN - 1 + LINUX_SIGRTMIN);
+	return (sig - SIGRTMIN + LINUX_SIGRTMIN);
 }
 
 int
@@ -170,7 +177,7 @@ bsd_to_linux_signal(int sig)
 
 	if (sig <= LINUX_SIGTBLSZ)
 		return (bsd_to_linux_sigtbl[_SIG_IDX(sig)]);
-	if (sig == SIGRTMIN)
+	if (sig == LINUX_SIGPWREMU)
 		return (LINUX_SIGPWR);
 
 	return (bsd_to_linux_rt_signal(sig));
@@ -233,6 +240,84 @@ bsd_to_linux_sigset(sigset_t *bss, l_sigset_t *lss)
 }
 
 /*
+ * Translate a FreeBSD interface name to a Linux interface name
+ * by interface name, and return the number of bytes copied to lxname.
+ */
+int
+ifname_bsd_to_linux_name(const char *bsdname, char *lxname, size_t len)
+{
+	struct epoch_tracker et;
+	struct ifnet *ifp;
+	int ret;
+
+	CURVNET_ASSERT_SET();
+
+	ret = 0;
+	NET_EPOCH_ENTER(et);
+	ifp = ifunit(bsdname);
+	if (ifp != NULL)
+		ret = ifname_bsd_to_linux_ifp(ifp, lxname, len);
+	NET_EPOCH_EXIT(et);
+	return (ret);
+}
+
+/*
+ * Translate a FreeBSD interface name to a Linux interface name
+ * by interface index, and return the number of bytes copied to lxname.
+ */
+int
+ifname_bsd_to_linux_idx(u_int idx, char *lxname, size_t len)
+{
+	struct epoch_tracker et;
+	struct ifnet *ifp;
+	int ret;
+
+	ret = 0;
+	CURVNET_SET(TD_TO_VNET(curthread));
+	NET_EPOCH_ENTER(et);
+	ifp = ifnet_byindex(idx);
+	if (ifp != NULL)
+		ret = ifname_bsd_to_linux_ifp(ifp, lxname, len);
+	NET_EPOCH_EXIT(et);
+	CURVNET_RESTORE();
+	return (ret);
+}
+
+/*
+ * Translate a FreeBSD interface name to a Linux interface name,
+ * and return the number of bytes copied to lxname.
+ */
+int
+ifname_bsd_to_linux_ifp(struct ifnet *ifp, char *lxname, size_t len)
+{
+	struct ifnet *ifscan;
+	int unit;
+
+	NET_EPOCH_ASSERT();
+
+	/*
+	 * Linux loopback interface name is lo (not lo0),
+	 * we translate lo to lo0, loX to loX.
+	 */
+	if (IFP_IS_LOOP(ifp) && strncmp(ifp->if_xname, "lo0", IFNAMSIZ) == 0)
+		return (strlcpy(lxname, "lo", len));
+
+	/* Short-circuit non ethernet interfaces. */
+	if (!IFP_IS_ETH(ifp) || linux_use_real_ifname(ifp))
+		return (strlcpy(lxname, ifp->if_xname, len));
+
+	/* Determine the (relative) unit number for ethernet interfaces. */
+	unit = 0;
+	CK_STAILQ_FOREACH(ifscan, &V_ifnet, if_link) {
+		if (ifscan == ifp)
+			return (snprintf(lxname, len, "eth%d", unit));
+		if (IFP_IS_ETH(ifscan))
+			unit++;
+	}
+	return (0);
+}
+
+/*
  * Translate a Linux interface name to a FreeBSD interface name,
  * and return the associated ifnet structure
  * bsdname and lxname need to be least IFNAMSIZ bytes long, but
@@ -252,8 +337,11 @@ ifname_linux_to_bsd(struct thread *td, const char *lxname, char *bsdname)
 			break;
 	if (len == 0 || len == LINUX_IFNAMSIZ)
 		return (NULL);
-	/* Linux loopback interface name is lo (not lo0) */
-	is_lo = (len == 2 && strncmp(lxname, "lo", len) == 0);
+	/*
+	 * Linux loopback interface name is lo (not lo0),
+	 * we translate lo to lo0, loX to loX.
+	 */
+	is_lo = (len == 2 && strncmp(lxname, "lo", LINUX_IFNAMSIZ) == 0);
 	unit = (int)strtoul(lxname + len, &ep, 10);
 	if ((ep == NULL || ep == lxname + len || ep >= lxname + LINUX_IFNAMSIZ) &&
 	    is_lo == 0)
@@ -360,6 +448,8 @@ linux_to_bsd_domain(int domain)
 		return (AF_IPX);
 	case LINUX_AF_APPLETALK:
 		return (AF_APPLETALK);
+	case LINUX_AF_NETLINK:
+		return (AF_NETLINK);
 	}
 	return (-1);
 }
@@ -383,6 +473,8 @@ bsd_to_linux_domain(int domain)
 		return (LINUX_AF_IPX);
 	case AF_APPLETALK:
 		return (LINUX_AF_APPLETALK);
+	case AF_NETLINK:
+		return (LINUX_AF_NETLINK);
 	}
 	return (-1);
 }
@@ -398,28 +490,20 @@ bsd_to_linux_sockaddr(const struct sockaddr *sa, struct l_sockaddr **lsa,
     socklen_t len)
 {
 	struct l_sockaddr *kosa;
-	int error, bdom;
+	int bdom;
 
 	*lsa = NULL;
 	if (len < 2 || len > UCHAR_MAX)
 		return (EINVAL);
-
-	kosa = malloc(len, M_SONAME, M_WAITOK);
-	bcopy(sa, kosa, len);
-
 	bdom = bsd_to_linux_domain(sa->sa_family);
-	if (bdom == -1) {
-		error = EAFNOSUPPORT;
-		goto out;
-	}
+	if (bdom == -1)
+		return (EAFNOSUPPORT);
 
+	kosa = malloc(len, M_LINUX, M_WAITOK);
+	bcopy(sa, kosa, len);
 	kosa->sa_family = bdom;
 	*lsa = kosa;
 	return (0);
-
-out:
-	free(kosa, M_SONAME);
-	return (error);
 }
 
 int
@@ -518,6 +602,14 @@ linux_to_bsd_sockaddr(const struct l_sockaddr *osa, struct sockaddr **sap,
 		}
 	}
 
+	if (bdom == AF_NETLINK) {
+		if (salen < sizeof(struct sockaddr_nl)) {
+			error = EINVAL;
+			goto out;
+		}
+		salen = sizeof(struct sockaddr_nl);
+	}
+
 	sa = (struct sockaddr *)kosa;
 	sa->sa_family = bdom;
 	sa->sa_len = salen;
@@ -549,4 +641,178 @@ linux_dev_shm_destroy(void)
 {
 
 	destroy_dev(dev_shm_cdev);
+}
+
+int
+bsd_to_linux_bits_(int value, struct bsd_to_linux_bitmap *bitmap,
+    size_t mapcnt, int no_value)
+{
+	int bsd_mask, bsd_value, linux_mask, linux_value;
+	int linux_ret;
+	size_t i;
+	bool applied;
+
+	applied = false;
+	linux_ret = 0;
+	for (i = 0; i < mapcnt; ++i) {
+		bsd_mask = bitmap[i].bsd_mask;
+		bsd_value = bitmap[i].bsd_value;
+		if (bsd_mask == 0)
+			bsd_mask = bsd_value;
+
+		linux_mask = bitmap[i].linux_mask;
+		linux_value = bitmap[i].linux_value;
+		if (linux_mask == 0)
+			linux_mask = linux_value;
+
+		/*
+		 * If a mask larger than just the value is set, we explicitly
+		 * want to make sure that only this bit we mapped within that
+		 * mask is set.
+		 */
+		if ((value & bsd_mask) == bsd_value) {
+			linux_ret = (linux_ret & ~linux_mask) | linux_value;
+			applied = true;
+		}
+	}
+
+	if (!applied)
+		return (no_value);
+	return (linux_ret);
+}
+
+int
+linux_to_bsd_bits_(int value, struct bsd_to_linux_bitmap *bitmap,
+    size_t mapcnt, int no_value)
+{
+	int bsd_mask, bsd_value, linux_mask, linux_value;
+	int bsd_ret;
+	size_t i;
+	bool applied;
+
+	applied = false;
+	bsd_ret = 0;
+	for (i = 0; i < mapcnt; ++i) {
+		bsd_mask = bitmap[i].bsd_mask;
+		bsd_value = bitmap[i].bsd_value;
+		if (bsd_mask == 0)
+			bsd_mask = bsd_value;
+
+		linux_mask = bitmap[i].linux_mask;
+		linux_value = bitmap[i].linux_value;
+		if (linux_mask == 0)
+			linux_mask = linux_value;
+
+		/*
+		 * If a mask larger than just the value is set, we explicitly
+		 * want to make sure that only this bit we mapped within that
+		 * mask is set.
+		 */
+		if ((value & linux_mask) == linux_value) {
+			bsd_ret = (bsd_ret & ~bsd_mask) | bsd_value;
+			applied = true;
+		}
+	}
+
+	if (!applied)
+		return (no_value);
+	return (bsd_ret);
+}
+
+void
+linux_to_bsd_poll_events(struct thread *td, int fd, short lev,
+    short *bev)
+{
+	struct proc *p = td->td_proc;
+	struct filedesc *fdp;
+	struct file *fp;
+	int error;
+	short bits = 0;
+
+	if (lev & LINUX_POLLIN)
+		bits |= POLLIN;
+	if (lev & LINUX_POLLPRI)
+		bits |=	POLLPRI;
+	if (lev & LINUX_POLLOUT)
+		bits |= POLLOUT;
+	if (lev & LINUX_POLLERR)
+		bits |= POLLERR;
+	if (lev & LINUX_POLLHUP)
+		bits |= POLLHUP;
+	if (lev & LINUX_POLLNVAL)
+		bits |= POLLNVAL;
+	if (lev & LINUX_POLLRDNORM)
+		bits |= POLLRDNORM;
+	if (lev & LINUX_POLLRDBAND)
+		bits |= POLLRDBAND;
+	if (lev & LINUX_POLLWRBAND)
+		bits |= POLLWRBAND;
+	if (lev & LINUX_POLLWRNORM)
+		bits |= POLLWRNORM;
+
+	if (lev & LINUX_POLLRDHUP) {
+		/*
+		 * It seems that the Linux silencly ignores POLLRDHUP
+		 * on non-socket file descriptors unlike FreeBSD, where
+		 * events bits is more strictly checked (POLLSTANDARD).
+		 */
+		fdp = p->p_fd;
+		error = fget_unlocked(fdp, fd, &cap_no_rights, &fp);
+		if (error == 0) {
+			/*
+			 * XXX. On FreeBSD POLLRDHUP applies only to
+			 * stream sockets.
+			 */
+			if (fp->f_type == DTYPE_SOCKET)
+				bits |= POLLRDHUP;
+			fdrop(fp, td);
+		}
+	}
+
+	if (lev & LINUX_POLLMSG)
+		LINUX_RATELIMIT_MSG_OPT1("unsupported POLLMSG, events(%d)", lev);
+	if (lev & LINUX_POLLREMOVE)
+		LINUX_RATELIMIT_MSG_OPT1("unsupported POLLREMOVE, events(%d)", lev);
+
+	*bev = bits;
+}
+
+void
+bsd_to_linux_poll_events(short bev, short *lev)
+{
+	short bits = 0;
+
+	if (bev & POLLIN)
+		bits |= LINUX_POLLIN;
+	if (bev & POLLPRI)
+		bits |=	LINUX_POLLPRI;
+	if (bev & (POLLOUT | POLLWRNORM))
+		/*
+		 * POLLWRNORM is equal to POLLOUT on FreeBSD,
+		 * but not on Linux
+		 */
+		bits |= LINUX_POLLOUT;
+	if (bev & POLLERR)
+		bits |= LINUX_POLLERR;
+	if (bev & POLLHUP)
+		bits |= LINUX_POLLHUP;
+	if (bev & POLLNVAL)
+		bits |= LINUX_POLLNVAL;
+	if (bev & POLLRDNORM)
+		bits |= LINUX_POLLRDNORM;
+	if (bev & POLLRDBAND)
+		bits |= LINUX_POLLRDBAND;
+	if (bev & POLLWRBAND)
+		bits |= LINUX_POLLWRBAND;
+	if (bev & POLLRDHUP)
+		bits |= LINUX_POLLRDHUP;
+
+	*lev = bits;
+}
+
+bool
+linux_use_real_ifname(const struct ifnet *ifp)
+{
+
+	return (use_real_ifnames);
 }

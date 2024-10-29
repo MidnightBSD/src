@@ -25,15 +25,17 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_NOTIFIER_H_
-#define	_LINUX_NOTIFIER_H_
+#ifndef	_LINUXKPI_LINUX_NOTIFIER_H_
+#define	_LINUXKPI_LINUX_NOTIFIER_H_
 
 #include <sys/types.h>
 #include <sys/eventhandler.h>
 
-#define	NOTIFY_DONE	0
+#define	NOTIFY_DONE		0
+#define	NOTIFY_OK		0x0001
+#define	NOTIFY_STOP_MASK	0x8000
+#define	NOTIFY_BAD		(NOTIFY_STOP_MASK | 0x0002)
 
 enum {
 	NETDEV_CHANGE,
@@ -53,4 +55,4 @@ struct notifier_block {
 	eventhandler_tag tags[LINUX_NOTIFY_TAGS];
 };
 
-#endif					/* _LINUX_NOTIFIER_H_ */
+#endif					/* _LINUXKPI_LINUX_NOTIFIER_H_ */

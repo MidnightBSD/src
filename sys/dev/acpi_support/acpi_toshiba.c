@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_acpi.h"
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -219,14 +218,15 @@ static int
 acpi_toshiba_probe(device_t dev)
 {
 	static char *tosh_ids[] = { "TOS6200", "TOS6207", "TOS6208", NULL };
+	int rv;
 
 	if (acpi_disabled("toshiba") ||
-	    ACPI_ID_PROBE(device_get_parent(dev), dev, tosh_ids) == NULL ||
 	    device_get_unit(dev) != 0)
 		return (ENXIO);
-
-	device_set_desc(dev, "Toshiba HCI Extras");
-	return (0);
+	rv = ACPI_ID_PROBE(device_get_parent(dev), dev, tosh_ids, NULL);
+	if (rv <= 0)
+		device_set_desc(dev, "Toshiba HCI Extras");
+	return (rv);
 }
 
 static int
@@ -245,14 +245,14 @@ acpi_toshiba_attach(device_t dev)
 	sysctl_ctx_init(&sc->sysctl_ctx);
 	sc->sysctl_tree = SYSCTL_ADD_NODE(&sc->sysctl_ctx,
 	    SYSCTL_CHILDREN(acpi_sc->acpi_sysctl_tree), OID_AUTO,
-	    "toshiba", CTLFLAG_RD, 0, "");
+	    "toshiba", CTLFLAG_RD | CTLFLAG_MPSAFE, 0, "");
 
 	for (i = 0; sysctl_table[i].name != NULL; i++) {
 		SYSCTL_ADD_PROC(&sc->sysctl_ctx,
 		    SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
 		    sysctl_table[i].name,
-		    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_ANYBODY,
-		    sc, i, acpi_toshiba_sysctl, "I", "");
+		    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_ANYBODY |
+		    CTLFLAG_MPSAFE, sc, i, acpi_toshiba_sysctl, "I", "");
 	}
 
 	if (enable_fn_keys != 0) {
@@ -542,15 +542,17 @@ static int
 acpi_toshiba_video_probe(device_t dev)
 {
 	static char *vid_ids[] = { "TOS6201", NULL };
+	int rv;
 
 	if (acpi_disabled("toshiba") ||
-	    ACPI_ID_PROBE(device_get_parent(dev), dev, vid_ids) == NULL ||
 	    device_get_unit(dev) != 0)
 		return (ENXIO);
 
 	device_quiet(dev);
-	device_set_desc(dev, "Toshiba Video");
-	return (0);
+	rv = ACPI_ID_PROBE(device_get_parent(dev), dev, vid_ids, NULL);
+	if (rv <= 0)
+		device_set_desc(dev, "Toshiba Video");
+	return (rv);
 }
 
 static int
@@ -558,9 +560,7 @@ acpi_toshiba_video_attach(device_t dev)
 {
 	struct		acpi_toshiba_softc *sc;
 
-	sc = devclass_get_softc(acpi_toshiba_devclass, 0);
-	if (sc == NULL)
-		return (ENXIO);
+	sc = device_get_softc(dev);
 	sc->video_handle = acpi_get_handle(dev);
 	return (0);
 }

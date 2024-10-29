@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
@@ -25,7 +25,6 @@
  *  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
- *
  */
 /*
  * File: ql_glbl.h
@@ -122,6 +121,5 @@ extern void ql_sp_log(qla_host_t *ha, uint16_t fmtstr_idx, uint16_t num_params,
 		uint32_t param3, uint32_t param4);
 extern void ql_alloc_sp_log_buffer(qla_host_t *ha);
 extern void ql_free_sp_log_buffer(qla_host_t *ha);
-
 
 #endif /* #ifndef_QL_GLBL_H_ */

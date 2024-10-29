@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_RADIX_TREE_H_
-#define	_LINUX_RADIX_TREE_H_
+#ifndef	_LINUXKPI_LINUX_RADIX_TREE_H_
+#define	_LINUXKPI_LINUX_RADIX_TREE_H_
 
 #include <linux/types.h>
 
@@ -81,4 +80,4 @@ int	radix_tree_store(struct radix_tree_root *, unsigned long, void **);
 bool	radix_tree_iter_find(struct radix_tree_root *, struct radix_tree_iter *, void ***);
 void	radix_tree_iter_delete(struct radix_tree_root *, struct radix_tree_iter *, void **);
 
-#endif	/* _LINUX_RADIX_TREE_H_ */
+#endif	/* _LINUXKPI_LINUX_RADIX_TREE_H_ */

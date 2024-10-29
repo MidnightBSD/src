@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kdb.h>
@@ -54,20 +53,10 @@ void
 db_set_thread(db_expr_t tid, bool hastid, db_expr_t cnt, char *mod)
 {
 	struct thread *thr;
-	db_expr_t radix;
 	int err;
 
-	/*
-	 * We parse our own arguments. We don't like the default radix.
-	 */
-	radix = db_radix;
-	db_radix = 10;
-	hastid = db_expression(&tid);
-	db_radix = radix;
-	db_skip_to_eol();
-
 	if (hastid) {
-		thr = kdb_thr_lookup(tid);
+		thr = db_lookup_thread(tid, false);
 		if (thr != NULL) {
 			err = kdb_thr_select(thr);
 			if (err != 0) {
@@ -99,8 +88,11 @@ db_show_threads(db_expr_t addr, bool hasaddr, db_expr_t cnt, char *mod)
 		    (void *)thr->td_kstack);
 		prev_jb = kdb_jmpbuf(jb);
 		if (setjmp(jb) == 0) {
-			if (db_trace_thread(thr, 1) != 0)
-				db_printf("***\n");
+			if (thr->td_proc->p_flag & P_INMEM) {
+				if (db_trace_thread(thr, 1) != 0)
+					db_printf("***\n");
+			} else
+				db_printf("*** swapped out\n");
 		}
 		kdb_jmpbuf(prev_jb);
 		thr = kdb_thr_next(thr);
@@ -120,7 +112,6 @@ db_lookup_thread(db_expr_t addr, bool check_pid)
 {
 	struct thread *td;
 	db_expr_t decaddr;
-	struct proc *p;
 
 	/*
 	 * If the parsed address was not a valid decimal expression,
@@ -134,14 +125,9 @@ db_lookup_thread(db_expr_t addr, bool check_pid)
 	if (td != NULL)
 		return (td);
 	if (check_pid) {
-		FOREACH_PROC_IN_SYSTEM(p) {
-			if (p->p_pid == decaddr)
-				return (FIRST_THREAD_IN_PROC(p));
-		}
-		LIST_FOREACH(p, &zombproc, p_list) {
-			if (p->p_pid == decaddr)
-				return (FIRST_THREAD_IN_PROC(p));
-		}
+		td = kdb_thr_from_pid(decaddr);
+		if (td != NULL)
+			return (td);
 	}
 	return ((struct thread *)addr);
 }
@@ -160,11 +146,7 @@ db_lookup_proc(db_expr_t addr)
 
 	decaddr = db_hex2dec(addr);
 	if (decaddr != -1) {
-		FOREACH_PROC_IN_SYSTEM(p) {
-			if (p->p_pid == decaddr)
-				return (p);
-		}
-		LIST_FOREACH(p, &zombproc, p_list) {
+		LIST_FOREACH(p, PIDHASH(decaddr), p_hash) {
 			if (p->p_pid == decaddr)
 				return (p);
 		}

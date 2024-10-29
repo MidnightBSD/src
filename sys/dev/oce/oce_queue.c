@@ -77,8 +77,6 @@ struct oce_cq *oce_cq_create(POCE_SOFTC sc,
 			     uint32_t nodelay, uint32_t ncoalesce);
 static void oce_cq_del(POCE_SOFTC sc, struct oce_cq *cq);
 
-
-
 /**
  * @brief	Create and initialize all the queues on the board
  * @param sc	software handle to the device
@@ -121,7 +119,7 @@ oce_queue_init_all(POCE_SOFTC sc)
 		aic->min_eqd = OCE_MIN_EQD;
 		aic->et_eqd = OCE_MIN_EQD;
 		aic->enable = TRUE;
-	
+
 		sc->eq[vector] = oce_eq_create(sc, sc->enable_hwlro ? EQ_LEN_2048 : EQ_LEN_1024,
 						EQE_SIZE_4,0, vector);	
 
@@ -156,8 +154,6 @@ error:
 	oce_queue_release_all(sc);
 	return 1;
 }
-
-
 
 /**
  * @brief Releases all mailbox queues created
@@ -197,8 +193,6 @@ oce_queue_release_all(POCE_SOFTC sc)
 			oce_eq_del(sc->eq[i]);
 	}
 }
-
-
 
 /**
  * @brief 		Function to create a WQ for NIC Tx
@@ -247,7 +241,6 @@ oce_wq *oce_wq_init(POCE_SOFTC sc, uint32_t q_len, uint32_t wq_type)
 	if (rc)
 		goto free_wq;
 
-
 	for (i = 0; i < OCE_WQ_PACKET_ARRAY_SIZE; i++) {
 		rc = bus_dmamap_create(wq->tag, 0, &wq->pckts[i].map);
 		if (rc) 
@@ -258,27 +251,21 @@ oce_wq *oce_wq_init(POCE_SOFTC sc, uint32_t q_len, uint32_t wq_type)
 	if (!wq->ring)
 		goto free_wq;
 
-
 	LOCK_CREATE(&wq->tx_lock, "TX_lock");
 	LOCK_CREATE(&wq->tx_compl_lock, "WQ_HANDLER_LOCK");
-	
-#if __FreeBSD_version >= 800000
+
 	/* Allocate buf ring for multiqueue*/
 	wq->br = buf_ring_alloc(4096, M_DEVBUF,
 			M_WAITOK, &wq->tx_lock.mutex);
 	if (!wq->br)
 		goto free_wq;
-#endif
 	return wq;
-
 
 free_wq:
 	device_printf(sc->dev, "Create WQ failed\n");
 	oce_wq_free(wq);
 	return NULL;
 }
-
-
 
 /**
  * @brief 		Frees the work queue
@@ -315,8 +302,6 @@ oce_wq_free(struct oce_wq *wq)
 	free(wq, M_DEVBUF);
 }
 
-
-
 /**
  * @brief 		Create a work queue
  * @param wq		pointer to work queue
@@ -336,7 +321,6 @@ oce_wq_create(struct oce_wq *wq, struct oce_eq *eq)
 			   sizeof(struct oce_nic_tx_cqe), 0, 1, 0, 3);
 	if (!cq)
 		return ENXIO;
-
 
 	wq->cq = cq;
 
@@ -361,9 +345,6 @@ error:
 	oce_wq_del(wq);
 	return rc;
 }
-
-
-
 
 /**
  * @brief 		Delete a work queue
@@ -392,8 +373,6 @@ oce_wq_del(struct oce_wq *wq)
 	}
 }
 
-
-
 /**
  * @brief 		function to allocate receive queue resources
  * @param sc		software handle to the device
@@ -414,7 +393,7 @@ oce_rq *oce_rq_init(POCE_SOFTC sc,
 
 	if (OCE_LOG2(frag_size) <= 0)
 		return NULL;
-	
+
 	if ((q_len == 0) || (q_len > 1024))
 		return NULL;
 
@@ -423,7 +402,6 @@ oce_rq *oce_rq_init(POCE_SOFTC sc,
 	if (!rq) 
 		return NULL;
 
-	
 	rq->cfg.q_len = q_len;
 	rq->cfg.frag_size = frag_size;
 	rq->cfg.mtu = mtu;
@@ -466,9 +444,6 @@ free_rq:
 	return NULL;
 }
 
-
-
-
 /**
  * @brief 		Free a receive queue
  * @param rq		pointer to receive queue
@@ -501,9 +476,6 @@ oce_rq_free(struct oce_rq *rq)
 	LOCK_DESTROY(&rq->rx_lock);
 	free(rq, M_DEVBUF);
 }
-
-
-
 
 /**
  * @brief 		Create a receive queue
@@ -540,9 +512,6 @@ oce_rq_create(struct oce_rq *rq, uint32_t if_id, struct oce_eq *eq)
 
 }
 
-
-
-
 /**
  * @brief 		Delete a receive queue
  * @param rq		receive queue
@@ -576,8 +545,6 @@ oce_rq_del(struct oce_rq *rq)
 	}
 }
 
-
-
 /**
  * @brief		function to create an event queue
  * @param sc		software handle to the device
@@ -606,7 +573,7 @@ oce_eq *oce_eq_create(POCE_SOFTC sc, uint32_t q_len,
 	eq->ring = oce_create_ring_buffer(sc, q_len, item_size);
 	if (!eq->ring)
 		goto free_eq;
-	
+
 	eq->eq_cfg.q_len = q_len;
 	eq->eq_cfg.item_size = item_size;
 	eq->eq_cfg.cur_eqd = (uint8_t) eq_delay;
@@ -623,9 +590,6 @@ free_eq:
 	oce_eq_del(eq);
 	return NULL;
 }
-
-
-
 
 /**
  * @brief 		Function to delete an event queue
@@ -654,9 +618,6 @@ oce_eq_del(struct oce_eq *eq)
 	free(eq, M_DEVBUF);
 
 }
-
-
-
 
 /**
  * @brief		Function to create an MQ
@@ -767,10 +728,6 @@ error:
 	return mq;
 }
 
-
-
-
-
 /**
  * @brief		Function to free a mailbox queue
  * @param mq		pointer to a mailbox queue
@@ -807,8 +764,6 @@ oce_mq_free(struct oce_mq *mq)
 	free(mq, M_DEVBUF);
 	mq = NULL;
 }
-
-
 
 /**
  * @brief		Function to delete a EQ, CQ, MQ, WQ or RQ
@@ -870,8 +825,6 @@ oce_destroy_q(POCE_SOFTC sc, struct oce_mbx *mbx, size_t req_size,
 	return rc;
 }
 
-
-
 /**
  * @brief		Function to create a completion queue
  * @param sc		software handle to the device
@@ -902,7 +855,7 @@ oce_cq_create(POCE_SOFTC sc, struct oce_eq *eq,
 	cq->ring = oce_create_ring_buffer(sc, q_len, item_size);
 	if (!cq->ring)
 		goto error;
-	
+
 	cq->parent = sc;
 	cq->eq = eq;
 	cq->cq_cfg.q_len = q_len;
@@ -923,8 +876,6 @@ error:
 	return NULL;
 }
 
-
-
 /**
  * @brief		Deletes the completion queue
  * @param sc		software handle to the device
@@ -937,7 +888,6 @@ oce_cq_del(POCE_SOFTC sc, struct oce_cq *cq)
 	struct mbx_destroy_common_cq *fwcmd;
 
 	if (cq->ring != NULL) {
-
 		bzero(&mbx, sizeof(struct oce_mbx));
 		/* now fill the command */
 		fwcmd = (struct mbx_destroy_common_cq *)&mbx.payload;
@@ -952,8 +902,6 @@ oce_cq_del(POCE_SOFTC sc, struct oce_cq *cq)
 	free(cq, M_DEVBUF);
 	cq = NULL;
 }
-
-
 
 /**
  * @brief		Start a receive queue
@@ -976,8 +924,6 @@ oce_start_rq(struct oce_rq *rq)
 	return rc;
 }
 
-
-
 /**
  * @brief		Start a work queue
  * @param wq		pointer to a work queue
@@ -989,8 +935,6 @@ oce_start_wq(struct oce_wq *wq)
 	return 0;
 }
 
-
-
 /**
  * @brief		Start a mailbox queue
  * @param mq		pointer to a mailbox queue
@@ -1001,8 +945,6 @@ oce_start_mq(struct oce_mq *mq)
 	oce_arm_cq(mq->parent, mq->cq->cq_id, 0, TRUE);
 	return 0;
 }
-
-
 
 /**
  * @brief		Function to arm an EQ so that it can generate events
@@ -1028,9 +970,6 @@ oce_arm_eq(POCE_SOFTC sc,
 
 }
 
-
-
-
 /**
  * @brief		Function to arm a CQ with CQEs
  * @param sc		software handle to the device
@@ -1049,9 +988,6 @@ void oce_arm_cq(POCE_SOFTC sc, int16_t qid, int npopped, uint32_t rearm)
 	OCE_WRITE_REG32(sc, db, PD_CQ_DB, cq_db.dw0);
 
 }
-
-
-
 
 /*
  * @brief		function to cleanup the eqs used during stop
@@ -1079,10 +1015,8 @@ oce_drain_eq(struct oce_eq *eq)
 	} while (TRUE);
 
 	oce_arm_eq(sc, eq->eq_id, num_eqe, FALSE, TRUE);
-	
+
 }
-
-
 
 void
 oce_drain_wq_cq(struct oce_wq *wq)
@@ -1111,7 +1045,6 @@ oce_drain_wq_cq(struct oce_wq *wq)
 
 }
 
-
 /*
  * @brief		function to drain a MCQ and process its CQEs
  * @param dev		software handle to the device
@@ -1124,8 +1057,6 @@ oce_drain_mq_cq(void *arg)
 	/* TODO: additional code. */
 	return;
 }
-
-
 
 /**
  * @brief		function to process a Recieve queue
@@ -1156,14 +1087,12 @@ oce_drain_rq_cq(struct oce_rq *rq)
 	return;
 }
 
-
 void
 oce_free_posted_rxbuf(struct oce_rq *rq)
 {
 	struct oce_packet_desc *pd;
-	
-	while (rq->pending) {
 
+	while (rq->pending) {
 		pd = &rq->pckts[rq->ring->cidx];
 		bus_dmamap_sync(rq->tag, pd->map, BUS_DMASYNC_POSTWRITE);
 		bus_dmamap_unload(rq->tag, pd->map);
@@ -1255,7 +1184,6 @@ exit_rx_cq_clean_hwlro:
 	return;
 }
 
-
 void
 oce_rx_cq_clean(struct oce_rq *rq)
 {
@@ -1266,7 +1194,7 @@ oce_rx_cq_clean(struct oce_rq *rq)
 	int flush_compl = 0;
         sc = rq->parent;
         cq = rq->cq;
-	
+
 	for (;;) {
 		bus_dmamap_sync(cq->ring->dma.tag,
 			cq->ring->dma.map, BUS_DMASYNC_POSTWRITE);
@@ -1304,13 +1232,15 @@ oce_rx_cq_clean(struct oce_rq *rq)
 void
 oce_stop_rx(POCE_SOFTC sc)
 {
+        struct epoch_tracker et;
         struct oce_mbx mbx;
         struct mbx_delete_nic_rq *fwcmd;
         struct mbx_delete_nic_rq_v1 *fwcmd1;
         struct oce_rq *rq;
         int i = 0;
- 
-       /* before deleting disable hwlro */
+
+        NET_EPOCH_ENTER(et);
+        /* before deleting disable hwlro */
 	if(sc->enable_hwlro)
         	oce_mbox_nic_set_iface_lro_config(sc, 0);
 
@@ -1345,16 +1275,15 @@ oce_stop_rx(POCE_SOFTC sc)
 			UNLOCK(&rq->rx_lock);
                 }
         }
+        NET_EPOCH_EXIT(et);
 }
-
-
 
 int
 oce_start_rx(POCE_SOFTC sc)
 {
 	struct oce_rq *rq;
 	int rc = 0, i;
-	
+
 	for_all_rq_queues(sc, rq, i) {
 		if (rq->qstate == QCREATED)
 			continue;
@@ -1375,7 +1304,7 @@ oce_start_rx(POCE_SOFTC sc)
                 rq->ring->cidx   = 0;
                 rq->ring->pidx   = 0;
 	}
-	
+
 	if(sc->enable_hwlro) {
 		rc = oce_mbox_nic_set_iface_lro_config(sc, 1);
 		if (rc)
@@ -1383,13 +1312,12 @@ oce_start_rx(POCE_SOFTC sc)
 	}
 
 	DELAY(1);
-	
+
 	/* RSS config */
 	if (is_rss_enabled(sc)) {
 		rc = oce_config_nic_rss(sc, (uint8_t) sc->if_id, RSS_ENABLE);
 		if (rc)
 			goto error;
-
 	}
 
 	DELAY(1);
@@ -1399,6 +1327,3 @@ error:
 	return rc;
 
 }
-
-
-

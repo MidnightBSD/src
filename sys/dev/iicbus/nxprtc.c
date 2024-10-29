@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Driver for NXP real-time clock/calendar chips:
  *  - PCF8563 = low power, countdown timer
@@ -417,7 +416,7 @@ pcf8523_battery_check(struct nxprtc_softc *sc)
 		device_printf(sc->dev, "cannot write CS3 reg\n");
 		return (err);
 	}
-	pause_sbt("nxpbat", mstosbt(10), 0, 0);
+	pause_sbt("nxpbat", mstosbt(100), 0, 0);
 	if ((err = read_reg(sc, PCF8523_R_CS3, &cs3)) != 0) {
 		device_printf(sc->dev, "cannot read CS3 reg\n");
 		return (err);

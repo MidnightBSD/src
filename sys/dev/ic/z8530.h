@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Marcel Moolenaar
  * All rights reserved.
@@ -24,22 +24,20 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_IC_Z8530_H_
 #define	_DEV_IC_Z8530_H_
 
 /*
- * Channel B control:	0
- * Channel B data:	1
- * Channel A control:	2
- * Channel A data:	3
+ * legacy:	SUN compatible
+ * escc: 	Macintosh
+ *			legacy		escc
+ * Channel B control:	0		0
+ * Channel B data:	1		1
+ * Channel A control:	2		16
+ * Channel A data:	3		17
  */
-
-/* The following apply when using a device-scoped bus handle */
-#define	CHAN_A		2
-#define	CHAN_B		0
 
 #define	REG_CTRL	0
 #define	REG_DATA	1

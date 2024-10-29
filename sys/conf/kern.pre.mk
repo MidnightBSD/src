@@ -45,29 +45,20 @@ M=		${MACHINE}
 
 AWK?=		awk
 CP?=		cp
+ELFDUMP?=	elfdump
 NM?=		nm
 OBJCOPY?=	objcopy
 SIZE?=		size
 
 .if defined(DEBUG)
-_MINUS_O=	-O
 CTFFLAGS+=	-g
-.else
-.if ${MACHINE_CPUARCH} == "powerpc"
-_MINUS_O=	-O	# gcc miscompiles some code at -O2
-.else
-_MINUS_O=	-O2
 .endif
-.endif
-.if ${MACHINE_CPUARCH} == "amd64"
-.if ${COMPILER_TYPE} == "clang"
-COPTFLAGS?=-O2 -pipe
+.if ${MACHINE_CPUARCH} == "amd64" && ${COMPILER_TYPE} != "clang"
+_COPTFLAGS_EXTRA=-frename-registers
 .else
-COPTFLAGS?=-O2 -frename-registers -pipe
+_COPTFLAGS_EXTRA=
 .endif
-.else
-COPTFLAGS?=${_MINUS_O} -pipe
-.endif
+COPTFLAGS?=-O2 -pipe ${_COPTFLAGS_EXTRA}
 .if !empty(COPTFLAGS:M-O[23s]) && empty(COPTFLAGS:M-fno-strict-aliasing)
 COPTFLAGS+= -fno-strict-aliasing
 .endif
@@ -92,18 +83,14 @@ CFLAGS.gcc+= -fms-extensions
 .if defined(CFLAGS_ARCH_PARAMS)
 CFLAGS.gcc+=${CFLAGS_ARCH_PARAMS}
 .endif
-.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} < 50000
-WERROR?=	-Wno-error
-.else
 WERROR?=	-Werror
-.endif
 # The following should be removed no earlier than LLVM11 being imported into the
 # tree, to ensure we don't regress the build.  LLVM11 and GCC10 will switch the
 # default over to -fno-common, making this redundant.
 CFLAGS+=	-fno-common
 
 # XXX LOCORE means "don't declare C stuff" not "for locore.s".
-ASM_CFLAGS= -x assembler-with-cpp -DLOCORE ${CFLAGS} ${ASM_CFLAGS.${.IMPSRC:T}} 
+ASM_CFLAGS= -x assembler-with-cpp -DLOCORE ${CFLAGS} ${ASM_CFLAGS.${.IMPSRC:T}}
 
 .if defined(PROFLEVEL) && ${PROFLEVEL} >= 1
 CFLAGS+=	-DGPROF
@@ -120,6 +107,65 @@ PROF=		-pg
 .endif
 DEFINED_PROF=	${PROF}
 
+COMPAT_FREEBSD32_ENABLED!= grep COMPAT_FREEBSD32 opt_global.h || true ; echo
+
+KASAN_ENABLED!=	grep KASAN opt_global.h || true ; echo
+.if !empty(KASAN_ENABLED)
+SAN_CFLAGS+=	-DSAN_NEEDS_INTERCEPTORS -DSAN_INTERCEPTOR_PREFIX=kasan \
+		-fsanitize=kernel-address \
+		-mllvm -asan-stack=true \
+		-mllvm -asan-instrument-dynamic-allocas=true \
+		-mllvm -asan-globals=true \
+		-mllvm -asan-use-after-scope=true \
+		-mllvm -asan-instrumentation-with-call-threshold=0 \
+		-mllvm -asan-instrument-byval=false
+
+.if ${MACHINE_CPUARCH} == "amd64" && \
+      ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 180000
+# Work around https://github.com/llvm/llvm-project/issues/87923, which leads to
+# an assertion failure compiling dtrace.c with asan enabled.
+SAN_CFLAGS+=	-mllvm -asan-use-stack-safety=0
+.endif
+.endif
+
+KCSAN_ENABLED!=	grep KCSAN opt_global.h || true ; echo
+.if !empty(KCSAN_ENABLED)
+SAN_CFLAGS+=	-DSAN_NEEDS_INTERCEPTORS -DSAN_INTERCEPTOR_PREFIX=kcsan \
+		-fsanitize=thread
+.endif
+
+KMSAN_ENABLED!= grep KMSAN opt_global.h || true ; echo
+.if !empty(KMSAN_ENABLED)
+SAN_CFLAGS+=	-DSAN_NEEDS_INTERCEPTORS -DSAN_INTERCEPTOR_PREFIX=kmsan \
+		-fsanitize=kernel-memory
+.endif
+
+KUBSAN_ENABLED!=	grep KUBSAN opt_global.h || true ; echo
+.if !empty(KUBSAN_ENABLED)
+SAN_CFLAGS+=	-fsanitize=undefined
+.endif
+
+COVERAGE_ENABLED!=	grep COVERAGE opt_global.h || true ; echo
+.if !empty(COVERAGE_ENABLED)
+.if ${COMPILER_TYPE} == "clang" || \
+    (${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 80100)
+SAN_CFLAGS+=	-fsanitize-coverage=trace-pc,trace-cmp
+.else
+SAN_CFLAGS+=	-fsanitize-coverage=trace-pc
+.endif
+.endif
+
+CFLAGS+=	${SAN_CFLAGS}
+
+GCOV_ENABLED!=	grep GCOV opt_global.h || true ; echo
+.if !empty(GCOV_ENABLED)
+.if ${COMPILER_TYPE} == "gcc"
+GCOV_CFLAGS+=	 -fprofile-arcs -ftest-coverage
+.endif
+.endif
+
+CFLAGS+=	${GCOV_CFLAGS}
+
 # Put configuration-specific C flags last (except for ${PROF}) so that they
 # can override the others.
 CFLAGS+=	${CONF_CFLAGS}
@@ -129,19 +175,23 @@ LDFLAGS+=	--build-id=sha1
 .endif
 
 .if (${MACHINE_CPUARCH} == "aarch64" || ${MACHINE_CPUARCH} == "amd64" || \
-    ${MACHINE_CPUARCH} == "i386") && \
+    ${MACHINE_CPUARCH} == "i386" || ${MACHINE} == "powerpc") && \
     defined(LINKER_FEATURES) && ${LINKER_FEATURES:Mifunc} == "" && \
     !make(install)
-.error amd64/arm64/i386 kernel requires linker ifunc support
+.error amd64/arm64/i386/ppc* kernel requires linker ifunc support
 .endif
 .if ${MACHINE_CPUARCH} == "amd64"
 LDFLAGS+=	-z max-page-size=2097152
 .if ${LINKER_TYPE} != "lld"
 LDFLAGS+=	-z common-page-size=4096
 .else
+.if defined(LINKER_FEATURES) && !${LINKER_FEATURES:Mifunc-noplt}
+.warning "Linker ${LD} does not support -z ifunc-noplt -> ifunc calls are unoptimized."
+.else
 LDFLAGS+=	-z notext -z ifunc-noplt
 .endif
 .endif
+.endif  # ${MACHINE_CPUARCH} == "amd64"
 
 .if ${MACHINE_CPUARCH} == "riscv"
 # Hack: Work around undefined weak symbols being out of range when linking with
@@ -163,13 +213,16 @@ NORMAL_M= ${AWK} -f $S/tools/makeobjops.awk ${.IMPSRC} -c ; \
 	  ${CC} -c ${CFLAGS} ${WERROR} ${PROF} ${.PREFIX}.c
 
 NORMAL_FW= uudecode -o ${.TARGET} ${.ALLSRC}
-NORMAL_FWO= ${LD} -b binary --no-warn-mismatch -d -warn-common -r \
-	-m ${LD_EMULATION} -o ${.TARGET} ${.ALLSRC:M*.fw}
+NORMAL_FWO= ${CC:N${CCACHE_BIN}} -c ${ASM_CFLAGS} ${WERROR} -o ${.TARGET} \
+	$S/kern/firmw.S -DFIRMW_FILE="${.ALLSRC:M*.fw}" \
+	-DFIRMW_SYMBOL="${.ALLSRC:M*.fw:C/[-.\/]/_/g}"
 
 # for ZSTD in the kernel (include zstd/lib/freebsd before other CFLAGS)
 ZSTD_C= ${CC} -c -DZSTD_HEAPMODE=1 -I$S/contrib/zstd/lib/freebsd ${CFLAGS} \
 	-I$S/contrib/zstd/lib -I$S/contrib/zstd/lib/common ${WERROR} \
-	-Wno-inline -Wno-missing-prototypes ${PROF} -U__BMI__ -DZSTD_NO_INTRINSICS ${.IMPSRC}
+	-Wno-missing-prototypes ${PROF} -U__BMI__ \
+	-DZSTD_NO_INTRINSICS \
+	${.IMPSRC}
 # https://github.com/facebook/zstd/commit/812e8f2a [zstd 1.4.1]
 # "Note that [GCC] autovectorization still does not do a good job on the
 # optimized version, so it's turned off via attribute and flag.  I found
@@ -179,34 +232,82 @@ ZSTD_C= ${CC} -c -DZSTD_HEAPMODE=1 -I$S/contrib/zstd/lib/freebsd ${CFLAGS} \
 ZSTD_DECOMPRESS_BLOCK_FLAGS= -fno-tree-vectorize
 .endif
 
+ZINCDIR=$S/contrib/openzfs/include
 # Common for dtrace / zfs
-CDDL_CFLAGS=	-DFREEBSD_NAMECACHE -nostdinc -I$S/cddl/compat/opensolaris -I$S/cddl/contrib/opensolaris/uts/common -I$S -I$S/cddl/contrib/opensolaris/common ${CFLAGS} -Wno-unknown-pragmas -Wno-missing-prototypes -Wno-undef -Wno-strict-prototypes -Wno-cast-qual -Wno-parentheses -Wno-missing-braces -Wno-uninitialized -Wno-unused -Wno-inline -Wno-switch -Wno-pointer-arith -Wno-unknown-pragmas
-CDDL_CFLAGS+=	-include $S/cddl/compat/opensolaris/sys/debug_compat.h
+CDDL_CFLAGS=	\
+	-DFREEBSD_NAMECACHE \
+	-D_SYS_VMEM_H_ \
+	-D__KERNEL \
+	-D__KERNEL__ \
+	-nostdinc \
+	-include $S/modules/zfs/static_ccompile.h \
+	-I${ZINCDIR} \
+	-I${ZINCDIR}/os/freebsd \
+	-I${ZINCDIR}/os/freebsd/spl \
+	-I${ZINCDIR}/os/freebsd/zfs  \
+	-I$S/modules/zfs \
+	-I$S/contrib/openzfs/module/zstd/include \
+	${CFLAGS} \
+	-Wno-cast-qual \
+	-Wno-duplicate-decl-specifier \
+	-Wno-missing-braces \
+	-Wno-missing-prototypes \
+	-Wno-parentheses \
+	-Wno-pointer-arith \
+	-Wno-strict-prototypes \
+	-Wno-switch \
+	-Wno-undef \
+	-Wno-uninitialized \
+	-Wno-unknown-pragmas \
+	-Wno-unused \
+	-include ${ZINCDIR}/os/freebsd/spl/sys/ccompile.h \
+	-I$S/cddl/contrib/opensolaris/uts/common \
+	-I$S -I$S/cddl/compat/opensolaris
 CDDL_C=		${CC} -c ${CDDL_CFLAGS} ${WERROR} ${PROF} ${.IMPSRC}
 
 # Special flags for managing the compat compiles for ZFS
-ZFS_CFLAGS=	-DBUILDING_ZFS -I$S/cddl/contrib/opensolaris/uts/common/fs/zfs
-ZFS_CFLAGS+=	-I$S/cddl/contrib/opensolaris/uts/common/fs/zfs/lua
-ZFS_CFLAGS+=	-I$S/cddl/contrib/opensolaris/uts/common/zmod
-ZFS_CFLAGS+=	-I$S/cddl/contrib/opensolaris/common/lz4
-ZFS_CFLAGS+=	-I$S/cddl/contrib/opensolaris/common/zfs
-ZFS_CFLAGS+=	${CDDL_CFLAGS}
+ZFS_CFLAGS+=	${CDDL_CFLAGS} -DBUILDING_ZFS -DHAVE_UIO_ZEROCOPY \
+	-DWITH_NETDUMP -D__KERNEL__ -D_SYS_CONDVAR_H_ -DSMP \
+	-DIN_FREEBSD_BASE
+
+.if ${MACHINE_ARCH} == "amd64"
+ZFS_CFLAGS+= -DHAVE_AVX2 -DHAVE_AVX -D__x86_64 -DHAVE_SSE2 -DHAVE_AVX512F \
+	-DHAVE_SSSE3 -DHAVE_AVX512BW
+.endif
+
+.if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "powerpc" || \
+	${MACHINE_ARCH} == "powerpcspe" || ${MACHINE_ARCH} == "arm"
+ZFS_CFLAGS+= -DBITS_PER_LONG=32
+.else
+ZFS_CFLAGS+= -DBITS_PER_LONG=64
+.endif
+
+
 ZFS_ASM_CFLAGS= -x assembler-with-cpp -DLOCORE ${ZFS_CFLAGS}
 ZFS_C=		${CC} -c ${ZFS_CFLAGS} ${WERROR} ${PROF} ${.IMPSRC}
+ZFS_RPC_C=	${CC} -c ${ZFS_CFLAGS} -DHAVE_RPC_TYPES ${WERROR} ${PROF} ${.IMPSRC}
 ZFS_S=		${CC} -c ${ZFS_ASM_CFLAGS} ${WERROR} ${.IMPSRC}
+
+
 
 # Special flags for managing the compat compiles for DTrace
 DTRACE_CFLAGS=	-DBUILDING_DTRACE ${CDDL_CFLAGS} -I$S/cddl/dev/dtrace -I$S/cddl/dev/dtrace/${MACHINE_CPUARCH}
 .if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
 DTRACE_CFLAGS+=	-I$S/cddl/contrib/opensolaris/uts/intel -I$S/cddl/dev/dtrace/x86
 .endif
-DTRACE_CFLAGS+=	-I$S/cddl/contrib/opensolaris/common/util -I$S -DDIS_MEM -DSMP
+DTRACE_CFLAGS+=	-I$S/cddl/contrib/opensolaris/common/util -I$S -DDIS_MEM -DSMP -I$S/cddl/compat/opensolaris
+DTRACE_CFLAGS+=	-I$S/cddl/contrib/opensolaris/uts/common
 DTRACE_ASM_CFLAGS=	-x assembler-with-cpp -DLOCORE ${DTRACE_CFLAGS}
 DTRACE_C=	${CC} -c ${DTRACE_CFLAGS}	${WERROR} ${PROF} ${.IMPSRC}
 DTRACE_S=	${CC} -c ${DTRACE_ASM_CFLAGS}	${WERROR} ${.IMPSRC}
 
+# zlib code supports systems that are quite old, but will fix this issue once C2x gets radified.
+# see https://github.com/madler/zlib/issues/633 for details
+ZLIB_CFLAGS=	-Wno-cast-qual ${NO_WDEPRECATED_NON_PROTOTYPE} -Wno-strict-prototypes
+ZLIB_C=		${CC} -c ${CFLAGS} ${WERROR} ${ZLIB_CFLAGS} ${.IMPSRC}
+
 # Special flags for managing the compat compiles for DTrace/FBT
-FBT_CFLAGS=	-DBUILDING_DTRACE -nostdinc -I$S/cddl/dev/fbt/${MACHINE_CPUARCH} -I$S/cddl/dev/fbt -I$S/cddl/compat/opensolaris -I$S/cddl/contrib/opensolaris/uts/common -I$S ${CDDL_CFLAGS}
+FBT_CFLAGS=	-DBUILDING_DTRACE -nostdinc -I$S/cddl/dev/fbt/${MACHINE_CPUARCH} -I$S/cddl/dev/fbt ${CDDL_CFLAGS} -I$S/cddl/compat/opensolaris -I$S/cddl/contrib/opensolaris/uts/common  
 .if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
 FBT_CFLAGS+=	-I$S/cddl/dev/fbt/x86
 .endif
@@ -221,7 +322,8 @@ NORMAL_CTFCONVERT=	@:
 .endif
 
 # Linux Kernel Programming Interface C-flags
-LINUXKPI_INCLUDES=	-I$S/compat/linuxkpi/common/include
+LINUXKPI_INCLUDES=	-I$S/compat/linuxkpi/common/include \
+			-I$S/compat/linuxkpi/dummy/include
 LINUXKPI_C=		${NORMAL_C} ${LINUXKPI_INCLUDES}
 
 # Infiniband C flags.  Correct include paths and omit errors that linux
@@ -246,16 +348,20 @@ SYSTEM_OBJS= locore.o ${MDOBJS} ${OBJS}
 SYSTEM_OBJS+= ${SYSTEM_CFILES:.c=.o}
 SYSTEM_OBJS+= hack.pico
 
+KEYMAP=kbdcontrol -P ${SRCTOP}/share/vt/keymaps -P ${SRCTOP}/share/syscons/keymaps
+KEYMAP_FIX=sed -e 's/^static keymap_t.* = /static keymap_t key_map = /' -e 's/^static accentmap_t.* = /static accentmap_t accent_map = /'
+
 MD_ROOT_SIZE_CONFIGURED!=	grep MD_ROOT_SIZE opt_md.h || true ; echo
 .if ${MFS_IMAGE:Uno} != "no"
 .if empty(MD_ROOT_SIZE_CONFIGURED)
 SYSTEM_OBJS+= embedfs_${MFS_IMAGE:T:R}.o
 .endif
 .endif
-SYSTEM_LD= @${LD} -m ${LD_EMULATION} -Bdynamic -T ${LDSCRIPT} ${_LDFLAGS} \
+SYSTEM_LD_BASECMD= \
+	${LD} -m ${LD_EMULATION} -Bdynamic -T ${LDSCRIPT} ${_LDFLAGS} \
 	--no-warn-mismatch --warn-common --export-dynamic \
-	--dynamic-linker /red/herring \
-	-o ${.TARGET} -X ${SYSTEM_OBJS} vers.o
+	--dynamic-linker /red/herring -X
+SYSTEM_LD= @${SYSTEM_LD_BASECMD} -o ${.TARGET} ${SYSTEM_OBJS} vers.o
 SYSTEM_LD_TAIL= @${OBJCOPY} --strip-symbol gcc2_compiled. ${.TARGET} ; \
 	${SIZE} ${.TARGET} ; chmod 755 ${.TARGET}
 SYSTEM_DEP+= ${LDSCRIPT}
@@ -289,5 +395,5 @@ MKMODULESENV+=	__MPATH="${__MPATH}"
 
 # Detect kernel config options that force stack frames to be turned on.
 DDB_ENABLED!=	grep DDB opt_ddb.h || true ; echo
-DTR_ENABLED!=	grep KDTRACE_FRAME opt_kdtrace.h || true ; echo
+DTRACE_ENABLED!=grep KDTRACE_FRAME opt_kdtrace.h || true ; echo
 HWPMC_ENABLED!=	grep HWPMC opt_hwpmc_hooks.h || true ; echo

@@ -28,8 +28,6 @@
  * File : ecore_spq.c
  */
 #include <sys/cdefs.h>
-
-
 #include "bcm_osal.h"
 #include "reg_addr.h"
 #include "ecore_gtt_reg_addr.h"
@@ -734,7 +732,6 @@ enum _ecore_status_t ecore_spq_get_entry(struct ecore_hwfn *p_hwfn,
 	OSAL_SPIN_LOCK(&p_spq->lock);
 
 	if (OSAL_LIST_IS_EMPTY(&p_spq->free_pool)) {
-
 		p_ent = OSAL_ZALLOC(p_hwfn->p_dev, GFP_ATOMIC, sizeof(*p_ent));
 		if (!p_ent) {
 			DP_NOTICE(p_hwfn, false, "Failed to allocate an SPQ entry for a pending ramrod\n");
@@ -794,7 +791,6 @@ static enum _ecore_status_t ecore_spq_add_entry(struct ecore_hwfn *p_hwfn,
 
 	if (p_ent->queue == &p_spq->unlimited_pending) {
 		if (OSAL_LIST_IS_EMPTY(&p_spq->free_pool)) {
-
 			OSAL_LIST_PUSH_TAIL(&p_ent->list,
 					    &p_spq->unlimited_pending);
 			p_spq->unlimited_pending_count++;
@@ -1042,7 +1038,6 @@ enum _ecore_status_t ecore_spq_completion(struct ecore_hwfn *p_hwfn,
 				      &p_spq->completion_pending,
 				      list,
 				      struct ecore_spq_entry) {
-
 		if (p_ent->elem.hdr.echo == echo) {
 			OSAL_LIST_REMOVE_ENTRY(&p_ent->list,
 					       &p_spq->completion_pending);

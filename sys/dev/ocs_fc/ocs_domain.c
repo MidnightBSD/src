@@ -27,7 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
@@ -75,8 +74,6 @@ static ocs_mgmt_functions_t domain_mgmt_functions = {
 	.set_handler = ocs_mgmt_domain_set,
 	.exec_handler = ocs_mgmt_domain_exec,
 };
-
-
 
 /**
  * @brief Accept domain callback events from the HW.
@@ -173,7 +170,6 @@ ocs_domain_cb(void *arg, ocs_hw_domain_event_e event, void *data)
 	return rc;
 }
 
-
 /**
  * @brief Find the domain, given its FCF_WWN.
  *
@@ -224,7 +220,6 @@ ocs_domain_alloc(ocs_t *ocs, uint64_t fcf_wwn)
 
 	domain = ocs_malloc(ocs, sizeof(*domain), OCS_M_NOWAIT | OCS_M_ZERO);
 	if (domain) {
-
 		domain->ocs = ocs;
 		domain->instance_index = ocs->domain_instance_count++;
 		domain->drvsm.app = domain;
@@ -256,7 +251,6 @@ ocs_domain_alloc(ocs_t *ocs, uint64_t fcf_wwn)
 	} else {
 		ocs_log_err(ocs, "domain allocation failed\n");
 	}
-
 
 	return domain;
 }
@@ -961,7 +955,6 @@ __ocs_domain_ready(ocs_sm_ctx_t *ctx, ocs_sm_event_t evt, void *arg)
 
 	switch(evt) {
 	case OCS_EVT_ENTER: {
-
 		/* start any pending vports */
 		if (ocs_vport_start(domain)) {
 			ocs_log_debug(domain->ocs, "ocs_vport_start() did not start all vports\n");
@@ -1196,8 +1189,6 @@ __ocs_domain_wait_domain_lost(ocs_sm_ctx_t *ctx, ocs_sm_event_t evt, void *arg)
 	return NULL;
 }
 
-
-
 /**
  * @brief Save the port's service parameters.
  *
@@ -1280,7 +1271,6 @@ ocs_domain_post_event(ocs_domain_t *domain, ocs_sm_event_t event, void *arg)
 
 	return rc;
 }
-
 
 /**
  * @brief Return the WWN as a uint64_t.
@@ -1366,7 +1356,6 @@ ocs_ddump_domain(ocs_textbuf_t *textbuf, ocs_domain_t *domain)
 	return retval;
 }
 
-
 void
 ocs_mgmt_domain_list(ocs_textbuf_t *textbuf, void *object)
 {
@@ -1389,8 +1378,6 @@ ocs_mgmt_domain_list(ocs_textbuf_t *textbuf, void *object)
 #endif
 
 	if (ocs_domain_lock_try(domain) == TRUE) {
-
-
 		/* If we get here, then we are holding the domain lock */
 		ocs_list_foreach(&domain->sport_list, sport) {
 			if ((sport->mgmt_functions) && (sport->mgmt_functions->get_list_handler)) {
@@ -1467,7 +1454,6 @@ ocs_mgmt_domain_get(ocs_textbuf_t *textbuf, char *parent, char *name, void *obje
 				if (retval == 0) {
 					break;
 				}
-
 			}
 			ocs_domain_unlock(domain);
 		}
@@ -1506,7 +1492,6 @@ ocs_mgmt_domain_get_all(ocs_textbuf_t *textbuf, void *object)
 	}
 	ocs_domain_unlock(domain);
 
-
 	ocs_mgmt_end_unnumbered_section(textbuf, "domain");
 
 }
@@ -1523,11 +1508,9 @@ ocs_mgmt_domain_set(char *parent, char *name, char *value, void *object)
 
 	/* If it doesn't start with my qualifier I don't know what to do with it */
 	if (ocs_strncmp(name, qualifier, strlen(qualifier)) == 0) {
-
 		/* See if it's a value I can supply */
 
 		/* if (ocs_strcmp(unqualified_name, "display_name") == 0) {
-
 		} else */
 		{
 			/* If I didn't know the value of this status pass the request to each of my children */
@@ -1540,7 +1523,6 @@ ocs_mgmt_domain_set(char *parent, char *name, char *value, void *object)
 				if (retval == 0) {
 					break;
 				}
-
 			}
 			ocs_domain_unlock(domain);
 		}
@@ -1562,7 +1544,6 @@ ocs_mgmt_domain_exec(char *parent, char *action, void *arg_in, uint32_t arg_in_l
 
 	/* If it doesn't start with my qualifier I don't know what to do with it */
 	if (ocs_strncmp(action, qualifier, strlen(qualifier)) == 0) {
-
 		{
 			/* If I didn't know how to do this action pass the request to each of my children */
 			ocs_domain_lock(domain);
@@ -1574,7 +1555,6 @@ ocs_mgmt_domain_exec(char *parent, char *action, void *arg_in, uint32_t arg_in_l
 				if (retval == 0) {
 					break;
 				}
-
 			}
 			ocs_domain_unlock(domain);
 		}

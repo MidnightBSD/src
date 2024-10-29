@@ -27,7 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
@@ -116,7 +115,6 @@ ocs_hw_init_queues(ocs_hw_t *hw, ocs_hw_qtop_t *qtop)
 		}
 	}
 
-
 	ocs_hw_assert(qtop != NULL);
 
 	for (i = 0, qt = qtop->entries; i < qtop->inuse_count; i++, qt++) {
@@ -148,19 +146,21 @@ ocs_hw_init_queues(ocs_hw_t *hw, ocs_hw_qtop_t *qtop)
 				default_lengths[QTOP_CQ] = len;
 				break;
 			}
+			
+			if (!eq || !next_qt) {
+				goto fail;
+			}
 
 			/* If this CQ is for MRQ, then delay the creation */
 			if (!use_mrq || next_qt->entry != QTOP_RQ) {
 				cq = hw_new_cq(eq, len);
 				if (cq == NULL) {
-					hw_queue_teardown(hw);
-					return OCS_HW_RTN_NO_MEMORY;
+					goto fail;
 				}
 			}
 			break;
 
 		case QTOP_WQ: {
-
 			len = (qt->len) ? qt->len : default_lengths[QTOP_WQ];
 			if (qt->set_default) {
 				default_lengths[QTOP_WQ] = len;
@@ -172,11 +172,13 @@ ocs_hw_init_queues(ocs_hw_t *hw, ocs_hw_qtop_t *qtop)
 				hw_queue_teardown(hw);
 				return OCS_HW_RTN_NO_MEMORY;
 			}
+			
+			if (cq == NULL)
+				goto fail;
 
 			wq = hw_new_wq(cq, len, qt->class, hw->ulp_start + qt->ulp);
 			if (wq == NULL) {
-				hw_queue_teardown(hw);
-				return OCS_HW_RTN_NO_MEMORY;
+				goto fail;
 			}
 
 			/* Place this WQ on the EQ WQ array */
@@ -248,10 +250,12 @@ ocs_hw_init_queues(ocs_hw_t *hw, ocs_hw_qtop_t *qtop)
 				break;
 			}
 
+			if (cq == NULL)
+				goto fail;
+
 			mq = hw_new_mq(cq, len);
 			if (mq == NULL) {
-				hw_queue_teardown(hw);
-				return OCS_HW_RTN_NO_MEMORY;
+				goto fail;
 			}
 			break;
 
@@ -331,6 +335,9 @@ ocs_hw_init_queues(ocs_hw_t *hw, ocs_hw_qtop_t *qtop)
 	}
 
 	return OCS_HW_RTN_SUCCESS;
+fail:
+	hw_queue_teardown(hw);
+	return OCS_HW_RTN_NO_MEMORY;
 
 }
 
@@ -481,7 +488,6 @@ error:
 	return -1;
 }
 
-
 /**
  * @brief Allocate a new MQ object
  *
@@ -589,7 +595,6 @@ hw_new_rq(hw_cq_t *cq, uint32_t entry_count, uint32_t ulp)
 
 	ocs_hw_get(hw, OCS_HW_MAX_RQ_ENTRIES, &max_hw_rq);
 
-
 	if (rq != NULL) {
 		rq->instance = hw->hw_rq_count++;
 		rq->cq = cq;
@@ -648,7 +653,6 @@ hw_new_rq(hw_cq_t *cq, uint32_t entry_count, uint32_t ulp)
 	}
 	return rq;
 }
-
 
 /**
  * @brief Allocate a hw_rq_t object SET
@@ -718,7 +722,6 @@ hw_new_rq_set(hw_cq_t *cqs[], hw_rq_t *rqs[], uint32_t num_rq_pairs, uint32_t en
 		goto error;
 	}
 
-
 	for (i = 0; i < num_rq_pairs; i++) {
 		hw->hw_rq[rqs[i]->instance] = rqs[i];
 		ocs_list_add_tail(&cqs[i]->q_list, rqs[i]);
@@ -736,8 +739,9 @@ error:
 	for (i = 0; i < num_rq_pairs; i++) {
 		if (rqs[i] != NULL) {
 			if (rqs[i]->rq_tracker != NULL) {
-				ocs_free(hw->os, rq->rq_tracker,
-					 sizeof(ocs_hw_sequence_t*) * rq->entry_count);
+				ocs_free(hw->os, rqs[i]->rq_tracker,
+					 sizeof(ocs_hw_sequence_t*) *
+					 rqs[i]->entry_count);
 			}
 			ocs_free(hw->os, rqs[i], sizeof(*rqs[i]));
 		}
@@ -745,7 +749,6 @@ error:
 
 	return -1;
 }
-
 
 /**
  * @brief Free an EQ object
@@ -860,9 +863,9 @@ hw_del_wq(hw_wq_t *wq)
 void
 hw_del_rq(hw_rq_t *rq)
 {
-	ocs_hw_t *hw = rq->cq->eq->hw;
 
 	if (rq != NULL) {
+		ocs_hw_t *hw = rq->cq->eq->hw;
 		/* Free RQ tracker */
 		if (rq->rq_tracker != NULL) {
 			ocs_free(hw->os, rq->rq_tracker, sizeof(ocs_hw_sequence_t*) * rq->entry_count);
@@ -1407,7 +1410,6 @@ tok_getnumber(ocs_hw_t *hw, ocs_hw_qtop_t *qtop, tok_t *tok)
 	return rval;
 }
 
-
 /**
  * @brief parse an array of tokens
  *
@@ -1453,7 +1455,6 @@ parse_topology(ocs_hw_t *hw, tokarray_t *tokarray, ocs_hw_qtop_t *qtop)
 					((tok[3].type == TOK_NUMBER) ||
 					 (tok[3].type == TOK_NUMBER_VALUE) ||
 					 (tok[3].type == TOK_NUMBER_LIST))) {
-
 					switch (tok[1].subtype) {
 					case TOK_SUB_LEN:
 						qt->len = tok_getnumber(hw, qtop, &tok[3]);
@@ -1613,7 +1614,7 @@ ocs_hw_qtop_parse(ocs_hw_t *hw, const char *qtop_string)
 	/* Parse the tokens */
 	for (s = qtop_string; (tokarray.inuse_count < tokarray.alloc_count) &&
 	     ((s = tokenize(s, &tokarray.tokens[tokarray.inuse_count]))) != NULL; ) {
-		tokarray.inuse_count++;;
+		tokarray.inuse_count++;
 	}
 
 	/* Allocate a queue topology structure */
@@ -1913,7 +1914,6 @@ ocs_hw_rqpair_process_auto_xfr_rdy_cmd(ocs_hw_t *hw, hw_cq_t *cq, uint8_t *cqe)
 	if (seq->auto_xrdy) {
 		/* If data cqe came before cmd cqe in out of order in case of AXR */
 		if(seq->hio->axr_buf->data_cqe == 1) {
-
 #if defined(OCS_DISC_SPIN_DELAY)
 			if (ocs_get_property("disk_spin_delay", prop_buf, sizeof(prop_buf)) == 0) {
 				delay = ocs_strtoul(prop_buf, 0, 0);
@@ -1987,7 +1987,6 @@ ocs_hw_rqpair_process_auto_xfr_rdy_data(ocs_hw_t *hw, hw_cq_t *cq, uint8_t *cqe)
 	seq->payload->dma.len = opt_wr->total_data_placed;
 	seq->fcfi = buf->fcfi;
 	seq->hw_priv = cq->eq;
-
 
 	if (opt_wr->status == SLI4_FC_WCQE_STATUS_SUCCESS) {
 		seq->status = OCS_HW_UNSOL_SUCCESS;
@@ -2381,7 +2380,6 @@ ocs_hw_rqpair_auto_xfer_rdy_move_to_host(ocs_hw_t *hw, ocs_hw_io_t *io)
 	}
 	return;
 }
-
 
 /**
  * @brief Posts an auto xfer rdy buffer to an IO.

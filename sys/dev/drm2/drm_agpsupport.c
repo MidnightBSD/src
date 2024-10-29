@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/drm2/drmP.h>
 
 #if __OS_HAS_AGP

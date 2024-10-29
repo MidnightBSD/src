@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _LINUX_IPC_H_
@@ -36,6 +35,7 @@
 #define	LINUX_SEMOP		1
 #define	LINUX_SEMGET		2
 #define	LINUX_SEMCTL		3
+#define	LINUX_SEMTIMEDOP	4
 #define	LINUX_MSGSND		11
 #define	LINUX_MSGRCV		12
 #define	LINUX_MSGGET		13
@@ -82,15 +82,15 @@
 				   message sizes, etc. */
 
 #if defined(__i386__) || (defined(__amd64__) && defined(COMPAT_LINUX32))
-
-struct linux_semop_args
+struct linux_semtimedop_args
 {
 	l_int		semid;
-	struct l_sembuf *tsops;
+	struct sembuf	*tsops;
 	l_uint		nsops;
+	struct l_timespec *timeout;
 };
 
-int linux_semop(struct thread *, struct linux_semop_args *);
-#endif	/* __i386__ || (__amd64__ && COMPAT_LINUX32) */
+int linux_semtimedop(struct thread *, struct linux_semtimedop_args *);
+#endif /* __i386__ || (__amd64__ && COMPAT_LINUX32) */
 
 #endif /* _LINUX_IPC_H_ */

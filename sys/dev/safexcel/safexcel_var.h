@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2020 Rubicon Communications, LLC (Netgate)
  *
@@ -22,7 +22,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _SAFEXCEL_VAR_H_
@@ -272,11 +271,6 @@ struct safexcel_instr {
 #define	SAFEXCEL_INSTR_VERIFY_HASH		(1u << 16)
 #define	SAFEXCEL_INSTR_VERIFY_PADDING		(1u << 5)
 
-#define	SAFEXCEL_INSTR_CTX_ACCESS_WRITE		(1u << 11)
-#define	SAFEXCEL_INSTR_CTX_ACCESS_PASS		(1u << 12)
-#define	SAFEXCEL_INSTR_CTX_ACCESS_FAIL		(1u << 13)
-#define	SAFEXCEL_INSTR_CTX_ACCESS_HASHRES	(0x1c)
-
 #define	SAFEXCEL_TOKEN_TYPE_BYPASS	0x0
 #define	SAFEXCEL_TOKEN_TYPE_AUTONOMOUS	0x3
 
@@ -339,26 +333,21 @@ struct safexcel_res_descr_ring {
 	int				read;
 };
 
+struct safexcel_context_template {
+	struct safexcel_context_record	ctx;
+	int				len;
+};
+
 struct safexcel_session {
+	crypto_session_t	cses;
 	uint32_t		alg;		/* cipher algorithm */
 	uint32_t		digest;		/* digest type */
 	uint32_t		hash;		/* hash algorithm */
 	uint32_t		mode;		/* cipher mode of operation */
 	unsigned int		digestlen;	/* digest length */
 	unsigned int		statelen;	/* HMAC hash state length */
-	uint8_t			key[AES_MAX_KEY * 2];
-	unsigned int		klen;		/* cipher key length */
-	unsigned int		ivlen;
-	union {
-		uint32_t	ghash_key[AES_BLOCK_LEN / sizeof(uint32_t)];
-		uint32_t	xcbc_key[(AES_BLOCK_LEN * 2 + AES_MAX_KEY) /
-				    sizeof(uint32_t)];
-		uint8_t		tweak_key[AES_MAX_KEY];
-	};
-	struct {
-		uint8_t		hmac_ipad[HMAC_MAX_BLOCK_LEN];
-		uint8_t		hmac_opad[HMAC_MAX_BLOCK_LEN];
-	};
+
+	struct safexcel_context_template encctx, decctx;
 };
 
 struct safexcel_softc;
@@ -375,7 +364,6 @@ struct safexcel_request {
 	struct safexcel_dma_mem		ctx;
 	struct safexcel_session		*sess;
 	struct cryptop			*crp;
-	struct cryptodesc		*enc, *mac;
 	struct safexcel_softc		*sc;
 };
 

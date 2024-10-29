@@ -24,7 +24,6 @@
  *
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
- *
  */
 
 #ifndef _DDB_DB_OUTPUT_H_

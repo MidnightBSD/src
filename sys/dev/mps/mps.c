@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Yahoo! Inc.
  * Copyright (c) 2011-2015 LSI Corp.
@@ -28,11 +28,9 @@
  * SUCH DAMAGE.
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
- *
  */
 
 #include <sys/cdefs.h>
-
 /* Communications core for Avago Technologies (LSI) MPT2 */
 
 /* TODO Move headers to mpsvar */
@@ -108,7 +106,8 @@ static int mps_debug_sysctl(SYSCTL_HANDLER_ARGS);
 static int mps_dump_reqs(SYSCTL_HANDLER_ARGS);
 static void mps_parse_debug(struct mps_softc *sc, char *list);
 
-SYSCTL_NODE(_hw, OID_AUTO, mps, CTLFLAG_RD, 0, "MPS Driver Parameters");
+SYSCTL_NODE(_hw, OID_AUTO, mps, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "MPS Driver Parameters");
 
 MALLOC_DEFINE(M_MPT2, "mps", "mpt2 driver memory");
 MALLOC_DECLARE(M_MPSUSER);
@@ -125,13 +124,13 @@ static char mpt2_reset_magic[] = { 0x00, 0x0f, 0x04, 0x0b, 0x02, 0x07, 0x0d };
  * "aggregate value used where an integer was expected"
  */
 
-typedef union _reply_descriptor {
+typedef union {
         u64 word;
         struct {
                 u32 low;
                 u32 high;
         } u;
-}reply_descriptor,address_descriptor;
+} request_descriptor_t;
 
 /* Rate limit chain-fail messages to 1 per minute */
 static struct timeval mps_chainfail_interval = { 60, 0 };
@@ -166,7 +165,7 @@ mps_diag_reset(struct mps_softc *sc,int sleep_flag)
 		sleep_flag = NO_SLEEP;
 
 	mps_dprint(sc, MPS_INIT, "sequence start, sleep_flag= %d\n", sleep_flag);
- 
+
 	/* Push the magic sequence */
 	error = ETIMEDOUT;
 	while (tries++ < 20) {
@@ -335,7 +334,7 @@ mps_transition_ready(struct mps_softc *sc)
 			error = EINVAL;
 			break;
 		}
-	
+
 		/* Wait 50ms for things to settle down. */
 		DELAY(50000);
 	}
@@ -415,14 +414,14 @@ mps_resize_queues(struct mps_softc *sc)
 
 	/*
 	 * If I/O size limitation requested, then use it and pass up to CAM.
-	 * If not, use MAXPHYS as an optimization hint, but report HW limit.
+	 * If not, use maxphys as an optimization hint, but report HW limit.
 	 */
 	if (sc->max_io_pages > 0) {
 		maxio = min(maxio, sc->max_io_pages * PAGE_SIZE);
 		sc->maxio = maxio;
 	} else {
 		sc->maxio = maxio;
-		maxio = min(maxio, MAXPHYS);
+		maxio = min(maxio, maxphys);
 	}
 
 	sc->num_chains = (maxio / PAGE_SIZE + sges_per_frame - 2) /
@@ -1095,7 +1094,7 @@ mps_request_sync(struct mps_softc *sc, void *req, MPI2_DEFAULT_REPLY *reply,
 static void
 mps_enqueue_request(struct mps_softc *sc, struct mps_command *cm)
 {
-	reply_descriptor rd;
+	request_descriptor_t rd;
 	MPS_FUNCTRACE(sc);
 	mps_dprint(sc, MPS_TRACE, "SMID %u cm %p ccb %p\n",
 	    cm->cm_desc.Default.SMID, cm, cm->cm_ccb);
@@ -1109,7 +1108,8 @@ mps_enqueue_request(struct mps_softc *sc, struct mps_command *cm)
 	rd.u.high = cm->cm_desc.Words.High;
 	rd.word = htole64(rd.word);
 
-	KASSERT(cm->cm_state == MPS_CM_STATE_BUSY, ("command not busy\n"));
+	KASSERT(cm->cm_state == MPS_CM_STATE_BUSY,
+	    ("command not busy, state = %u\n", cm->cm_state));
 	cm->cm_state = MPS_CM_STATE_INQUEUE;
 
 	/* TODO-We may need to make below regwrite atomic */
@@ -1127,7 +1127,7 @@ mps_get_iocfacts(struct mps_softc *sc, MPI2_IOC_FACTS_REPLY *facts)
 {
 	MPI2_DEFAULT_REPLY *reply;
 	MPI2_IOC_FACTS_REQUEST request;
-	int error, req_sz, reply_sz;
+	int error, req_sz, reply_sz, retry = 0;
 
 	MPS_FUNCTRACE(sc);
 	mps_dprint(sc, MPS_INIT, "%s entered\n", __func__);
@@ -1136,10 +1136,21 @@ mps_get_iocfacts(struct mps_softc *sc, MPI2_IOC_FACTS_REPLY *facts)
 	reply_sz = sizeof(MPI2_IOC_FACTS_REPLY);
 	reply = (MPI2_DEFAULT_REPLY *)facts;
 
+	/*
+	 * Retry sending the initialization sequence. Sometimes, especially with
+	 * older firmware, the initialization process fails. Retrying allows the
+	 * error to clear in the firmware.
+	 */
 	bzero(&request, req_sz);
 	request.Function = MPI2_FUNCTION_IOC_FACTS;
-	error = mps_request_sync(sc, &request, reply, req_sz, reply_sz, 5);
-	mps_dprint(sc, MPS_INIT, "%s exit error= %d\n", __func__, error);
+	while (retry < 5) {
+		error = mps_request_sync(sc, &request, reply, req_sz, reply_sz, 5);
+		if (error == 0)
+			break;
+		mps_dprint(sc, MPS_FAULT, "%s failed retry %d\n", __func__, retry);
+		DELAY(1000);
+                retry++;
+	}
 
 	return (error);
 }
@@ -1149,7 +1160,7 @@ mps_send_iocinit(struct mps_softc *sc)
 {
 	MPI2_IOC_INIT_REQUEST	init;
 	MPI2_DEFAULT_REPLY	reply;
-	int req_sz, reply_sz, error;
+	int req_sz, reply_sz, error, retry = 0;
 	struct timeval now;
 	uint64_t time_in_msec;
 
@@ -1193,10 +1204,21 @@ mps_send_iocinit(struct mps_softc *sc)
 	time_in_msec = (now.tv_sec * 1000 + now.tv_usec/1000);
 	init.TimeStamp.High = htole32((time_in_msec >> 32) & 0xFFFFFFFF);
 	init.TimeStamp.Low = htole32(time_in_msec & 0xFFFFFFFF);
-
-	error = mps_request_sync(sc, &init, &reply, req_sz, reply_sz, 5);
-	if ((reply.IOCStatus & MPI2_IOCSTATUS_MASK) != MPI2_IOCSTATUS_SUCCESS)
-		error = ENXIO;
+	/*
+	 * Retry sending the initialization sequence. Sometimes, especially with
+	 * older firmware, the initialization process fails. Retrying allows the
+	 * error to clear in the firmware.
+	 */
+	while (retry < 5) {
+		error = mps_request_sync(sc, &init, &reply, req_sz, reply_sz, 5);
+		if ((reply.IOCStatus & MPI2_IOCSTATUS_MASK) != MPI2_IOCSTATUS_SUCCESS)
+			error = ENXIO;
+                if (error == 0)
+                        break;
+                mps_dprint(sc, MPS_FAULT, "%s failed retry %d\n", __func__, retry);
+		DELAY(1000);
+                retry++;
+        }
 
 	mps_dprint(sc, MPS_INIT, "IOCInit status= 0x%x\n", reply.IOCStatus);
 	mps_dprint(sc, MPS_INIT, "%s exit\n", __func__);
@@ -1275,6 +1297,7 @@ mps_alloc_queues(struct mps_softc *sc)
 static int
 mps_alloc_hw_queues(struct mps_softc *sc)
 {
+	bus_dma_template_t t;
 	bus_addr_t queues_busaddr;
 	uint8_t *queues;
 	int qsize, fqsize, pqsize;
@@ -1296,17 +1319,11 @@ mps_alloc_hw_queues(struct mps_softc *sc)
 	pqsize = sc->pqdepth * 8;
 	qsize = fqsize + pqsize;
 
-        if (bus_dma_tag_create( sc->mps_parent_dmat,    /* parent */
-				16, 0,			/* algnmnt, boundary */
-				BUS_SPACE_MAXADDR_32BIT,/* lowaddr */
-				BUS_SPACE_MAXADDR,	/* highaddr */
-				NULL, NULL,		/* filter, filterarg */
-                                qsize,			/* maxsize */
-                                1,			/* nsegments */
-                                qsize,			/* maxsegsize */
-                                0,			/* flags */
-                                NULL, NULL,		/* lockfunc, lockarg */
-                                &sc->queues_dmat)) {
+	bus_dma_template_init(&t, sc->mps_parent_dmat);
+	BUS_DMA_TEMPLATE_FILL(&t, BD_ALIGNMENT(16), BD_MAXSIZE(qsize),
+	    BD_MAXSEGSIZE(qsize), BD_NSEGMENTS(1),
+	    BD_LOWADDR(BUS_SPACE_MAXADDR_32BIT));
+	if (bus_dma_template_tag(&t, &sc->queues_dmat)) {
 		mps_dprint(sc, MPS_ERROR, "Cannot allocate queues DMA tag\n");
 		return (ENOMEM);
         }
@@ -1334,6 +1351,7 @@ mps_alloc_hw_queues(struct mps_softc *sc)
 static int
 mps_alloc_replies(struct mps_softc *sc)
 {
+	bus_dma_template_t t;
 	int rsize, num_replies;
 
 	/* Store the reply frame size in bytes rather than as 32bit words */
@@ -1347,17 +1365,11 @@ mps_alloc_replies(struct mps_softc *sc)
 	num_replies = max(sc->fqdepth, sc->num_replies);
 
 	rsize = sc->replyframesz * num_replies; 
-        if (bus_dma_tag_create( sc->mps_parent_dmat,    /* parent */
-				4, 0,			/* algnmnt, boundary */
-				BUS_SPACE_MAXADDR_32BIT,/* lowaddr */
-				BUS_SPACE_MAXADDR,	/* highaddr */
-				NULL, NULL,		/* filter, filterarg */
-                                rsize,			/* maxsize */
-                                1,			/* nsegments */
-                                rsize,			/* maxsegsize */
-                                0,			/* flags */
-                                NULL, NULL,		/* lockfunc, lockarg */
-                                &sc->reply_dmat)) {
+	bus_dma_template_init(&t, sc->mps_parent_dmat);
+	BUS_DMA_TEMPLATE_FILL(&t, BD_ALIGNMENT(4), BD_MAXSIZE(rsize),
+	    BD_MAXSEGSIZE(rsize), BD_NSEGMENTS(1),
+	    BD_LOWADDR(BUS_SPACE_MAXADDR_32BIT));
+	if (bus_dma_template_tag(&t, &sc->reply_dmat)) {
 		mps_dprint(sc, MPS_ERROR, "Cannot allocate replies DMA tag\n");
 		return (ENOMEM);
         }
@@ -1405,21 +1417,16 @@ mps_load_chains_cb(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 static int
 mps_alloc_requests(struct mps_softc *sc)
 {
+	bus_dma_template_t t;
 	struct mps_command *cm;
 	int i, rsize, nsegs;
 
 	rsize = sc->reqframesz * sc->num_reqs;
-        if (bus_dma_tag_create( sc->mps_parent_dmat,    /* parent */
-				16, 0,			/* algnmnt, boundary */
-				BUS_SPACE_MAXADDR_32BIT,/* lowaddr */
-				BUS_SPACE_MAXADDR,	/* highaddr */
-				NULL, NULL,		/* filter, filterarg */
-                                rsize,			/* maxsize */
-                                1,			/* nsegments */
-                                rsize,			/* maxsegsize */
-                                0,			/* flags */
-                                NULL, NULL,		/* lockfunc, lockarg */
-                                &sc->req_dmat)) {
+	bus_dma_template_init(&t, sc->mps_parent_dmat);
+	BUS_DMA_TEMPLATE_FILL(&t, BD_ALIGNMENT(16), BD_MAXSIZE(rsize),
+	    BD_MAXSEGSIZE(rsize), BD_NSEGMENTS(1),
+	    BD_LOWADDR(BUS_SPACE_MAXADDR_32BIT));
+        if (bus_dma_template_tag(&t, &sc->req_dmat)) {
 		mps_dprint(sc, MPS_ERROR, "Cannot allocate request DMA tag\n");
 		return (ENOMEM);
         }
@@ -1441,17 +1448,11 @@ mps_alloc_requests(struct mps_softc *sc)
 		return (ENOMEM);
 	}
 	rsize = sc->reqframesz * sc->num_chains;
-	if (bus_dma_tag_create( sc->mps_parent_dmat,	/* parent */
-				16, 0,			/* algnmnt, boundary */
-				BUS_SPACE_MAXADDR_32BIT,/* lowaddr */
-				BUS_SPACE_MAXADDR,	/* highaddr */
-				NULL, NULL,		/* filter, filterarg */
-				rsize,			/* maxsize */
-				howmany(rsize, PAGE_SIZE), /* nsegments */
-				rsize,			/* maxsegsize */
-				0,			/* flags */
-				NULL, NULL,		/* lockfunc, lockarg */
-				&sc->chain_dmat)) {
+	bus_dma_template_clone(&t, sc->req_dmat);
+	BUS_DMA_TEMPLATE_FILL(&t, BD_MAXSIZE(rsize), BD_MAXSEGSIZE(rsize),
+	    BD_NSEGMENTS(howmany(rsize, PAGE_SIZE)),
+	    BD_BOUNDARY(BUS_SPACE_MAXSIZE_32BIT+1));
+	if (bus_dma_template_tag(&t, &sc->chain_dmat)) {
 		mps_dprint(sc, MPS_ERROR, "Cannot allocate chain DMA tag\n");
 		return (ENOMEM);
 	}
@@ -1469,17 +1470,10 @@ mps_alloc_requests(struct mps_softc *sc)
 	}
 
 	rsize = MPS_SENSE_LEN * sc->num_reqs;
-        if (bus_dma_tag_create( sc->mps_parent_dmat,    /* parent */
-				1, 0,			/* algnmnt, boundary */
-				BUS_SPACE_MAXADDR_32BIT,/* lowaddr */
-				BUS_SPACE_MAXADDR,	/* highaddr */
-				NULL, NULL,		/* filter, filterarg */
-                                rsize,			/* maxsize */
-                                1,			/* nsegments */
-                                rsize,			/* maxsegsize */
-                                0,			/* flags */
-                                NULL, NULL,		/* lockfunc, lockarg */
-                                &sc->sense_dmat)) {
+	bus_dma_template_clone(&t, sc->req_dmat);
+	BUS_DMA_TEMPLATE_FILL(&t, BD_ALIGNMENT(1), BD_MAXSIZE(rsize),
+	    BD_MAXSEGSIZE(rsize));
+        if (bus_dma_template_tag(&t, &sc->sense_dmat)) {
 		mps_dprint(sc, MPS_ERROR, "Cannot allocate sense DMA tag\n");
 		return (ENOMEM);
         }
@@ -1495,18 +1489,13 @@ mps_alloc_requests(struct mps_softc *sc)
 	    (uintmax_t)sc->sense_busaddr, rsize);
 
 	nsegs = (sc->maxio / PAGE_SIZE) + 1;
-        if (bus_dma_tag_create( sc->mps_parent_dmat,    /* parent */
-				1, 0,			/* algnmnt, boundary */
-				BUS_SPACE_MAXADDR,	/* lowaddr */
-				BUS_SPACE_MAXADDR,	/* highaddr */
-				NULL, NULL,		/* filter, filterarg */
-                                BUS_SPACE_MAXSIZE_32BIT,/* maxsize */
-                                nsegs,			/* nsegments */
-                                BUS_SPACE_MAXSIZE_24BIT,/* maxsegsize */
-                                BUS_DMA_ALLOCNOW,	/* flags */
-                                busdma_lock_mutex,	/* lockfunc */
-				&sc->mps_mtx,		/* lockarg */
-                                &sc->buffer_dmat)) {
+	bus_dma_template_init(&t, sc->mps_parent_dmat);
+	BUS_DMA_TEMPLATE_FILL(&t, BD_MAXSIZE(BUS_SPACE_MAXSIZE_32BIT),
+	    BD_NSEGMENTS(nsegs), BD_MAXSEGSIZE(BUS_SPACE_MAXSIZE_24BIT),
+	    BD_FLAGS(BUS_DMA_ALLOCNOW), BD_LOCKFUNC(busdma_lock_mutex),
+	    BD_LOCKFUNCARG(&sc->mps_mtx),
+	    BD_BOUNDARY(BUS_SPACE_MAXSIZE_32BIT+1));
+        if (bus_dma_template_tag(&t, &sc->buffer_dmat)) {
 		mps_dprint(sc, MPS_ERROR, "Cannot allocate buffer DMA tag\n");
 		return (ENOMEM);
         }
@@ -1698,7 +1687,7 @@ mps_setup_sysctl(struct mps_softc *sc)
 		sysctl_ctx_init(&sc->sysctl_ctx);
 		sc->sysctl_tree = SYSCTL_ADD_NODE(&sc->sysctl_ctx,
 		    SYSCTL_STATIC_CHILDREN(_hw_mps), OID_AUTO, tmpstr2,
-		    CTLFLAG_RD, 0, tmpstr);
+		    CTLFLAG_RD | CTLFLAG_MPSAFE, 0, tmpstr);
 		if (sc->sysctl_tree == NULL)
 			return;
 		sysctl_ctx = &sc->sysctl_ctx;
@@ -1792,16 +1781,24 @@ mps_setup_sysctl(struct mps_softc *sc)
 	    "spinup after SATA ID error");
 
 	SYSCTL_ADD_PROC(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree),
-	    OID_AUTO, "mapping_table_dump", CTLTYPE_STRING | CTLFLAG_RD, sc, 0,
+	    OID_AUTO, "mapping_table_dump",
+	    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE, sc, 0,
 	    mps_mapping_dump, "A", "Mapping Table Dump");
 
 	SYSCTL_ADD_PROC(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree),
-	    OID_AUTO, "encl_table_dump", CTLTYPE_STRING | CTLFLAG_RD, sc, 0,
+	    OID_AUTO, "encl_table_dump",
+	    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE, sc, 0,
 	    mps_mapping_encl_dump, "A", "Enclosure Table Dump");
 
 	SYSCTL_ADD_PROC(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree),
-	    OID_AUTO, "dump_reqs", CTLTYPE_OPAQUE | CTLFLAG_RD | CTLFLAG_SKIP, sc, 0,
-	    mps_dump_reqs, "I", "Dump Active Requests");
+	    OID_AUTO, "dump_reqs",
+	    CTLTYPE_OPAQUE | CTLFLAG_RD | CTLFLAG_SKIP | CTLFLAG_MPSAFE,
+	    sc, 0, mps_dump_reqs, "I", "Dump Active Requests");
+
+	SYSCTL_ADD_INT(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree),
+	    OID_AUTO, "dump_reqs_alltypes", CTLFLAG_RW,
+	    &sc->dump_reqs_alltypes, 0,
+	    "dump all request types not just inqueue");
 
 	SYSCTL_ADD_INT(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree),
 	    OID_AUTO, "use_phy_num", CTLFLAG_RD, &sc->use_phynum, 0,
@@ -1904,7 +1901,6 @@ mps_parse_debug(struct mps_softc *sc, char *list)
 	flags = 0;
 	sz = sizeof(mps_debug_strings) / sizeof(mps_debug_strings[0]);
 	while ((token = strsep(&list, ":,")) != NULL) {
-
 		/* Handle integer flags */
 		flags |= strtol(token, &endtoken, 0);
 		if (token != endtoken)
@@ -1977,7 +1973,7 @@ mps_dump_reqs(SYSCTL_HANDLER_ARGS)
 	/* Best effort, no locking */
 	for (i = smid; i < numreqs; i++) {
 		cm = &sc->commands[i];
-		if (cm->cm_state != state)
+		if ((sc->dump_reqs_alltypes == 0) && (cm->cm_state != state))
 			continue;
 		hdr.smid = i;
 		hdr.state = cm->cm_state;
@@ -2116,7 +2112,8 @@ mps_periodic(void *arg)
 		mps_reinit(sc);
 	}
 
-	callout_reset(&sc->periodic, MPS_PERIODIC_DELAY * hz, mps_periodic, sc);
+	callout_reset_sbt(&sc->periodic, MPS_PERIODIC_DELAY * SBT_1S, 0,
+	    mps_periodic, sc, C_PREL(1));
 }
 
 static void
@@ -2236,6 +2233,9 @@ mps_complete_command(struct mps_softc *sc, struct mps_command *cm)
 		return;
 	}
 
+	KASSERT(cm->cm_state == MPS_CM_STATE_INQUEUE,
+	    ("command not inqueue, state = %u\n", cm->cm_state));
+	cm->cm_state = MPS_CM_STATE_BUSY; 
 	if (cm->cm_flags & MPS_CM_FLAGS_POLLED)
 		cm->cm_flags |= MPS_CM_FLAGS_COMPLETE;
 
@@ -2259,7 +2259,6 @@ mps_complete_command(struct mps_softc *sc, struct mps_command *cm)
 		    "out of sync - resynching to 0\n");
 	}
 }
-
 
 static void
 mps_sas_log_info(struct mps_softc *sc , u32 log_info)
@@ -2413,9 +2412,6 @@ mps_intr_locked(void *data)
 		switch (flags) {
 		case MPI2_RPY_DESCRIPT_FLAGS_SCSI_IO_SUCCESS:
 			cm = &sc->commands[le16toh(desc->SCSIIOSuccess.SMID)];
-			KASSERT(cm->cm_state == MPS_CM_STATE_INQUEUE,
-			    ("command not inqueue\n"));
-			cm->cm_state = MPS_CM_STATE_BUSY;
 			cm->cm_reply = NULL;
 			break;
 		case MPI2_RPY_DESCRIPT_FLAGS_ADDRESS_REPLY:
@@ -2491,7 +2487,6 @@ mps_intr_locked(void *data)
 				cm = &sc->commands[
 				    le16toh(desc->AddressReply.SMID)];
 				if (cm->cm_state == MPS_CM_STATE_INQUEUE) {
-					cm->cm_state = MPS_CM_STATE_BUSY;
 					cm->cm_reply = reply;
 					cm->cm_reply_data = le32toh(
 					    desc->AddressReply.ReplyFrameAddress);
@@ -2618,7 +2613,6 @@ mps_update_events(struct mps_softc *sc, struct mps_event_handle *handle,
 
 	for (i = 0; i < MPI2_EVENT_NOTIFY_EVENTMASK_WORDS; i++)
 		sc->event_mask[i] &= ~handle->mask[i];
-
 
 	if ((cm = mps_alloc_command(sc)) == NULL)
 		return (EBUSY);
@@ -3005,6 +2999,7 @@ mps_data_cb(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 				mps_dprint(sc, MPS_INFO, "Out of chain frames, "
 				    "consider increasing hw.mps.max_chains.\n");
 			cm->cm_flags |= MPS_CM_FLAGS_CHAIN_FAILED;
+			cm->cm_state = MPS_CM_STATE_INQUEUE;
 			mps_complete_command(sc, cm);
 			return;
 		}

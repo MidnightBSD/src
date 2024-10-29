@@ -1,7 +1,6 @@
 /*	$NetBSD: openfirmio.c,v 1.4 2002/09/06 13:23:19 gehenna Exp $ */
 
 #include <sys/cdefs.h>
-
 /*-
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -65,7 +64,7 @@ static d_ioctl_t openfirm_ioctl;
 
 static struct cdevsw openfirm_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	D_NEEDGIANT,
+	.d_flags =	D_NEEDGIANT | D_GIANTOK,
 	.d_ioctl =	openfirm_ioctl,
 	.d_name =	"openfirm",
 };
@@ -150,7 +149,6 @@ openfirm_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags,
 	name = value = NULL;
 	error = 0;
 	switch (cmd) {
-
 	case OFIOCGET:
 	case OFIOCGETPROPLEN:
 		if (node == 0)

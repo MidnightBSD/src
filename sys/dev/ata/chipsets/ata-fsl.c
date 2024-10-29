@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Oleksandr Rybalko under sponsorship
  * from the FreeBSD Foundation.
@@ -30,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/systm.h>
@@ -152,7 +150,6 @@ imx_ata_ch_attach(device_t dev)
 	DELAY(100);
 	bus_write_2(ctrl->r_res1, 0x24, 0xc0);
 	DELAY(100);
-
 
 	/* Write TIME_OFF/ON/1/2W */
 	bus_write_1(ctrl->r_res1, 0x00, 3);

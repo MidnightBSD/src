@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 #include "opt_kbd.h"
 #include "opt_evdev.h"
@@ -192,6 +191,10 @@ gpiokeys_key_event(struct gpiokeys_softc *sc, struct gpiokey *key, int pressed)
 	    (evdev_rcpt_mask & EVDEV_RCPT_HW_KBD) != 0) {
 		evdev_push_key(sc->sc_evdev, key->evcode, pressed);
 		evdev_sync(sc->sc_evdev);
+	}
+	if (evdev_is_grabbed(sc->sc_evdev)) {
+		GPIOKEYS_UNLOCK(sc);
+		return;
 	}
 #endif
 	if (key->keycode != GPIOKEY_NONE) {
@@ -894,6 +897,7 @@ gpiokeys_ioctl_locked(keyboard_t *kbd, u_long cmd, caddr_t arg)
 	case PIO_KEYMAPENT:		/* set keyboard translation table
 					 * entry */
 	case PIO_DEADKEYMAP:		/* set accent key translation table */
+	case OPIO_DEADKEYMAP:		/* set accent key translation table (compat) */
 		sc->sc_accents = 0;
 		/* FALLTHROUGH */
 	default:

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Eric Anholt
  * All rights reserved.
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -73,7 +72,6 @@ struct agp_ati_softc {
 	u_int32_t      *ag_vdir;	/* virtual address of page dir */
 	vm_offset_t	ag_pdir;	/* physical address of page dir */
 };
-
 
 static const char*
 agp_ati_match(device_t dev)
@@ -165,7 +163,6 @@ agp_ati_alloc_gatt(device_t dev)
 
 	return 0;
 }
-
 
 static int
 agp_ati_attach(device_t dev)
@@ -368,7 +365,6 @@ static device_method_t agp_ati_methods[] = {
 	DEVMETHOD(agp_free_memory,	agp_generic_free_memory),
 	DEVMETHOD(agp_bind_memory,	agp_generic_bind_memory),
 	DEVMETHOD(agp_unbind_memory,	agp_generic_unbind_memory),
-
 	{ 0, 0 }
 };
 

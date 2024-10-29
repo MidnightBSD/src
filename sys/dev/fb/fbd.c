@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Aleksandr Rybalko under sponsorship from the
  * FreeBSD Foundation.
@@ -27,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /* Generic framebuffer */
@@ -35,11 +33,11 @@
 /* TODO done normal /dev/fb methods */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
+#include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
@@ -173,7 +171,7 @@ fb_mmap(struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr, int nprot,
 	if (info->fb_flags & FB_FLAG_NOMMAP)
 		return (ENODEV);
 
-	if (offset >= 0 && offset < info->fb_size) {
+	if (offset < info->fb_size) {
 		if (info->fb_pbase == 0)
 			*paddr = vtophys((uint8_t *)info->fb_vbase + offset);
 		else
@@ -208,8 +206,8 @@ fbd_list(void)
 		return (ENOENT);
 
 	LIST_FOREACH(entry, &fb_list_head, fb_list) {
-		printf("FB %s @%p\n", entry->fb_info->fb_name,
-		    (void *)entry->fb_info->fb_pbase);
+		printf("FB %s @%#jx\n", entry->fb_info->fb_name,
+		    (uintmax_t)entry->fb_info->fb_pbase);
 	}
 
 	return (0);

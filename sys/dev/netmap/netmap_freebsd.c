@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2013-2014 Universita` di Pisa. All rights reserved.
  *
@@ -31,6 +31,7 @@
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/errno.h>
+#include <sys/eventhandler.h>
 #include <sys/jail.h>
 #include <sys/poll.h>  /* POLLIN, POLLOUT */
 #include <sys/kernel.h> /* types used in module initialization */
@@ -258,7 +259,7 @@ nm_os_csum_tcpudp_ipv4(struct nm_iphdr *iph, void *data,
 #ifdef INET
 	uint16_t pseudolen = datalen + iph->protocol;
 
-	/* Compute and insert the pseudo-header cheksum. */
+	/* Compute and insert the pseudo-header checksum. */
 	*check = in_pseudo(iph->saddr, iph->daddr,
 				 htobe16(pseudolen));
 	/* Compute the checksum on TCP/UDP header + payload
@@ -323,12 +324,17 @@ freebsd_generic_rx_handler(struct ifnet *ifp, struct mbuf *m)
 		return;
 	}
 
-	stolen = generic_rx_handler(ifp, m);
-	if (!stolen) {
-		struct netmap_generic_adapter *gna =
-				(struct netmap_generic_adapter *)NA(ifp);
-		gna->save_if_input(ifp, m);
-	}
+	do {
+		struct mbuf *n;
+
+		n = m->m_nextpkt;
+		m->m_nextpkt = NULL;
+		stolen = generic_rx_handler(ifp, m);
+		if (!stolen) {
+			NA(ifp)->if_input(ifp, m);
+		}
+		m = n;
+	} while (m != NULL);
 }
 
 /*
@@ -344,24 +350,10 @@ nm_os_catch_rx(struct netmap_generic_adapter *gna, int intercept)
 
 	nm_os_ifnet_lock();
 	if (intercept) {
-		if (gna->save_if_input) {
-			nm_prerr("RX on %s already intercepted", na->name);
-			ret = EBUSY; /* already set */
-			goto out;
-		}
-		gna->save_if_input = ifp->if_input;
 		ifp->if_input = freebsd_generic_rx_handler;
 	} else {
-		if (!gna->save_if_input) {
-			nm_prerr("Failed to undo RX intercept on %s",
-				na->name);
-			ret = EINVAL;  /* not saved */
-			goto out;
-		}
-		ifp->if_input = gna->save_if_input;
-		gna->save_if_input = NULL;
+		ifp->if_input = na->if_input;
 	}
-out:
 	nm_os_ifnet_unlock();
 
 	return ret;
@@ -609,10 +601,6 @@ nm_os_vi_persist(const char *name, struct ifnet **ret)
 	eaddr[5] = (uint8_t)unit;
 
 	ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		nm_prerr("if_alloc failed");
-		return ENOMEM;
-	}
 	if_initname(ifp, name, IF_DUNIT_NONE);
 	ifp->if_mtu = 65536;
 	ifp->if_flags = IFF_UP | IFF_SIMPLEX | IFF_MULTICAST;
@@ -1002,12 +990,10 @@ netmap_dev_pager_fault(vm_object_t object, vm_ooffset_t offset,
 	vm_paddr_t paddr;
 	vm_page_t page;
 	vm_memattr_t memattr;
-	vm_pindex_t pidx;
 
 	nm_prdis("object %p offset %jd prot %d mres %p",
 			object, (intmax_t)offset, prot, mres);
 	memattr = object->memattr;
-	pidx = OFF_TO_IDX(offset);
 	paddr = netmap_mem_ofstophys(na->nm_mem, offset);
 	if (paddr == 0)
 		return VM_PAGER_FAIL;
@@ -1024,21 +1010,13 @@ netmap_dev_pager_fault(vm_object_t object, vm_ooffset_t offset,
 		 * Replace the passed in reqpage page with our own fake page and
 		 * free up the all of the original pages.
 		 */
-#ifndef VM_OBJECT_WUNLOCK	/* FreeBSD < 10.x */
-#define VM_OBJECT_WUNLOCK VM_OBJECT_UNLOCK
-#define VM_OBJECT_WLOCK	VM_OBJECT_LOCK
-#endif /* VM_OBJECT_WUNLOCK */
-
 		VM_OBJECT_WUNLOCK(object);
 		page = vm_page_getfake(paddr, memattr);
 		VM_OBJECT_WLOCK(object);
-		vm_page_lock(*mres);
-		vm_page_free(*mres);
-		vm_page_unlock(*mres);
+		vm_page_replace(page, object, (*mres)->pindex, *mres);
 		*mres = page;
-		vm_page_insert(page, object, pidx);
 	}
-	page->valid = VM_PAGE_BITS_ALL;
+	vm_page_valid(page);
 	return (VM_PAGER_OK);
 }
 

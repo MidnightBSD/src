@@ -31,7 +31,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _LINUX_FUTEX_H
@@ -50,9 +49,13 @@
 #define LINUX_FUTEX_WAKE_BITSET		10
 #define LINUX_FUTEX_WAIT_REQUEUE_PI	11
 #define LINUX_FUTEX_CMP_REQUEUE_PI	12
+#define LINUX_FUTEX_LOCK_PI2		13
 
 #define LINUX_FUTEX_PRIVATE_FLAG	128
 #define LINUX_FUTEX_CLOCK_REALTIME	256
+
+#define LINUX_FUTEX_CMD_MASK		~(LINUX_FUTEX_PRIVATE_FLAG | \
+					    LINUX_FUTEX_CLOCK_REALTIME)
 
 #define FUTEX_OP_SET            0	/* *(int *)UADDR2 = OPARG; */
 #define FUTEX_OP_ADD            1	/* *(int *)UADDR2 += OPARG; */
@@ -74,11 +77,23 @@
 #define	FUTEX_TID_MASK		0x3fffffff
 #define	FUTEX_BITSET_MATCH_ANY	0xffffffff
 
+/* robust futexes */
+struct linux_robust_list {
+	l_uintptr_t			next;
+};
+
+struct linux_robust_list_head {
+	struct linux_robust_list	list;
+	l_long				futex_offset;
+	l_uintptr_t			pending_list;
+};
+
 int futex_xchgl(int oparg, uint32_t *uaddr, int *oldval);
 int futex_addl(int oparg, uint32_t *uaddr, int *oldval);
 int futex_orl(int oparg, uint32_t *uaddr, int *oldval);
 int futex_andl(int oparg, uint32_t *uaddr, int *oldval);
 int futex_xorl(int oparg, uint32_t *uaddr, int *oldval);
+int futex_wake(struct thread *td, uint32_t *uaddr, int val, bool shared);
 void	release_futexes(struct thread *,
 			struct linux_emuldata *);
 

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Aleksandr Rybalko.
  * All rights reserved.
@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -85,7 +84,6 @@ nvram2env_probe(device_t dev)
 		if (resource_int_value("nvram", device_get_unit(dev), "flags",
 		    &sc->flags) != 0 || sc->flags == 0)
 			sc->flags = NVRAM_FLAGS_GENERIC;
-
 
 	for (i = 0; i < 2; i ++)
 	{
@@ -159,7 +157,6 @@ static uint32_t read_4(struct nvram2env_softc * sc, int offset)
 		return (bus_space_read_4(sc->bst, sc->bsh, offset));
 }
 
-
 int
 nvram2env_attach(device_t dev)
 {
@@ -186,10 +183,8 @@ nvram2env_attach(device_t dev)
 
 	size = (size > sc->maxsize)?sc->maxsize:size;
 
-
 	if (sig == sc->sig || (sc->flags & NVRAM_FLAGS_UBOOT))
 	{
-
 		/* align size to 32bit size*/
 		size += 3;
 		size &= ~3;
@@ -228,7 +223,6 @@ nvram2env_attach(device_t dev)
 		/* iterate over buffer till end. tmp points to end of NVRAM */
 		for ( ; pair < (char*)tmp; 
 		    pair += strlen(pair) + strlen(value) + 2 ) {
-
 			if (!pair || (strlen(pair) == 0))
 				break;
 
@@ -265,7 +259,6 @@ nvram2env_attach(device_t dev)
 				bootverbose = strtoul(value, 0, 0);
 			if (strcmp(pair, "boothowto"  ) == 0)
 				boothowto   = strtoul(value, 0, 0);
-
 		}
 		free(nv, M_DEVBUF);
 	}

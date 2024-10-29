@@ -33,7 +33,6 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -46,8 +45,8 @@
 /* Assume 1.0 until we detect a later version */
 static uint32_t	smccc_version = SMCCC_VERSION_1_0;
 
-static void
-smccc_init(void *dummy)
+void
+smccc_init(void)
 {
 	int32_t features;
 	uint32_t ret;
@@ -66,7 +65,12 @@ smccc_init(void *dummy)
 		    SMCCC_VERSION_MINOR(smccc_version));
 	}
 }
-SYSINIT(smccc_start, SI_SUB_CONFIGURE, SI_ORDER_ANY, smccc_init, NULL);
+
+uint32_t
+smccc_get_version(void)
+{
+	return (smccc_version);
+}
 
 int32_t
 smccc_arch_features(uint32_t smccc_func_id)

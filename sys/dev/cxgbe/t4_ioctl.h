@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 Chelsio Communications, Inc.
  * All rights reserved.
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  *
  */
 
@@ -62,6 +61,9 @@ enum {
 	T4_LOAD_BOOT,			/* flash boot rom */
 	T4_LOAD_BOOTCFG,		/* flash bootcfg */
 	T4_CUDBG_DUMP,			/* debug dump of chip state */
+	T4_SET_FILTER_MASK,		/* set filter mask (hashfilter mode) */
+	T4_HOLD_CLIP_ADDR,		/* add ref on an IP in the CLIP */
+	T4_RELEASE_CLIP_ADDR,		/* remove ref from an IP in the CLIP */
 };
 
 struct t4_reg {
@@ -109,7 +111,7 @@ struct t4_i2c_data {
 #define T4_FILTER_IP_DPORT	0x20	/* Destination IP port */
 #define T4_FILTER_FCoE		0x40	/* Fibre Channel over Ethernet packet */
 #define T4_FILTER_PORT		0x80	/* Physical ingress port */
-#define T4_FILTER_VNIC		0x100	/* VNIC id or outer VLAN */
+#define T4_FILTER_VNIC		0x100	/* See the IC_* bits towards the end */
 #define T4_FILTER_VLAN		0x200	/* VLAN ID */
 #define T4_FILTER_IP_TOS	0x400	/* IPv4 TOS/IPv6 Traffic Class */
 #define T4_FILTER_IP_PROTO	0x800	/* IP protocol */
@@ -117,12 +119,12 @@ struct t4_i2c_data {
 #define T4_FILTER_MAC_IDX	0x2000	/* MPS MAC address match index */
 #define T4_FILTER_MPS_HIT_TYPE	0x4000	/* MPS match type */
 #define T4_FILTER_IP_FRAGMENT	0x8000	/* IP fragment */
-
-#define T4_FILTER_IC_VNIC	0x80000000	/* TP Ingress Config's F_VNIC
-						   bit.  It indicates whether
-						   T4_FILTER_VNIC bit means VNIC
-						   id (PF/VF) or outer VLAN.
-						   0 = oVLAN, 1 = VNIC */
+/*
+ * T4_FILTER_VNIC's real meaning depends on the ingress config.
+ */
+#define T4_FILTER_IC_OVLAN	0		/* outer VLAN */
+#define T4_FILTER_IC_VNIC	0x80000000	/* VNIC id (PF/VF) */
+#define T4_FILTER_IC_ENCAP	0x40000000
 
 /* Filter action */
 enum {
@@ -372,6 +374,11 @@ enum {
 	OPEN_TYPE_DONTCARE = 'D',
 };
 
+enum {
+	QUEUE_RANDOM = -1,
+	QUEUE_ROUNDROBIN = -2,
+};
+
 struct offload_settings {
 	int8_t offload;
 	int8_t rx_coalesce;
@@ -403,6 +410,12 @@ struct t4_offload_policy {
 	struct offload_rule *rule;
 };
 
+/* Address/mask entry in the CLIP.  FW_CLIP2_CMD is aware of the mask. */
+struct t4_clip_addr {
+	uint8_t addr[16];
+	uint8_t mask[16];
+};
+
 #define CHELSIO_T4_GETREG	_IOWR('f', T4_GETREG, struct t4_reg)
 #define CHELSIO_T4_SETREG	_IOW('f', T4_SETREG, struct t4_reg)
 #define CHELSIO_T4_REGDUMP	_IOWR('f', T4_REGDUMP, struct t4_regdump)
@@ -428,4 +441,7 @@ struct t4_offload_policy {
 #define CHELSIO_T4_LOAD_BOOTCFG	_IOW('f', T4_LOAD_BOOTCFG, struct t4_data)
 #define CHELSIO_T4_CUDBG_DUMP	_IOWR('f', T4_CUDBG_DUMP, struct t4_cudbg_dump)
 #define CHELSIO_T4_SET_OFLD_POLICY _IOW('f', T4_SET_OFLD_POLICY, struct t4_offload_policy)
+#define CHELSIO_T4_SET_FILTER_MASK _IOW('f', T4_SET_FILTER_MASK, uint32_t)
+#define CHELSIO_T4_HOLD_CLIP_ADDR _IOW('f', T4_HOLD_CLIP_ADDR, struct t4_clip_addr)
+#define CHELSIO_T4_RELEASE_CLIP_ADDR _IOW('f', T4_RELEASE_CLIP_ADDR, struct t4_clip_addr)
 #endif

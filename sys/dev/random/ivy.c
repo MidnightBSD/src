@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/conf.h>
@@ -59,7 +58,7 @@ static struct random_source random_ivy = {
 	.rs_read = random_ivy_read
 };
 
-SYSCTL_NODE(_kern_random, OID_AUTO, rdrand, CTLFLAG_RW, 0,
+SYSCTL_NODE(_kern_random, OID_AUTO, rdrand, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "rdrand (ivy) entropy source");
 static bool acquire_independent_seed_samples = false;
 SYSCTL_BOOL(_kern_random_rdrand, OID_AUTO, rdrand_independent_seed,
@@ -127,7 +126,7 @@ x86_unimpl_store(u_long *buf __unused)
 	panic("%s called", __func__);
 }
 
-DEFINE_IFUNC(static, bool, x86_rng_store, (u_long *buf), static)
+DEFINE_IFUNC(static, bool, x86_rng_store, (u_long *buf))
 {
 	has_rdrand = (cpu_feature2 & CPUID2_RDRAND);
 	has_rdseed = (cpu_stdext_feature & CPUID_STDEXT_RDSEED);

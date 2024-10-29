@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2012 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/systm.h>
@@ -66,7 +65,7 @@ static void ahci_ch_intr_main(struct ahci_channel *ch, uint32_t istatus);
 static void ahci_begin_transaction(struct ahci_channel *ch, union ccb *ccb);
 static void ahci_dmasetprd(void *arg, bus_dma_segment_t *segs, int nsegs, int error);
 static void ahci_execute_transaction(struct ahci_slot *slot);
-static void ahci_timeout(struct ahci_slot *slot);
+static void ahci_timeout(void *arg);
 static void ahci_end_transaction(struct ahci_slot *slot, enum ahci_err_type et);
 static int ahci_setup_fis(struct ahci_channel *ch, struct ahci_cmd_tab *ctp, union ccb *ccb, int tag);
 static void ahci_dmainit(device_t dev);
@@ -147,7 +146,6 @@ ahci_ctlr_reset(device_t dev)
 	if ((ATA_INL(ctlr->r_mem, AHCI_VS) >= 0x00010200) &&
 	    (ATA_INL(ctlr->r_mem, AHCI_CAP2) & AHCI_CAP2_BOH) &&
 	    ((v = ATA_INL(ctlr->r_mem, AHCI_BOHC)) & AHCI_BOHC_OOS) == 0) {
-
 		/* Request OS ownership. */
 		ATA_OUTL(ctlr->r_mem, AHCI_BOHC, v | AHCI_BOHC_OOS);
 
@@ -191,7 +189,6 @@ ahci_ctlr_reset(device_t dev)
 
 	return (0);
 }
-
 
 int
 ahci_attach(device_t dev)
@@ -376,7 +373,10 @@ ahci_attach(device_t dev)
 		device_set_ivars(child, (void *)(intptr_t)(unit | AHCI_REMAPPED_UNIT));
 	}
 
-	if (ctlr->caps & AHCI_CAP_EMS) {
+	int em = (ctlr->caps & AHCI_CAP_EMS) != 0;
+	resource_int_value(device_get_name(dev), device_get_unit(dev),
+	    "em", &em);
+	if (em) {
 		child = device_add_child(dev, "ahciem", -1);
 		if (child == NULL)
 			device_printf(dev, "failed to add enclosure device\n");
@@ -602,6 +602,8 @@ ahci_alloc_resource(device_t dev, device_t child, int type, int *rid,
 		} else if (!is_em) {
 			offset = AHCI_OFFSET + (unit << 7);
 			size = 128;
+		} else if ((ctlr->caps & AHCI_CAP_EMS) == 0) {
+			break;
 		} else if (*rid == 0) {
 			offset = AHCI_EM_CTL;
 			size = 4;
@@ -923,8 +925,8 @@ ahci_ch_attach(device_t dev)
 	ctx = device_get_sysctl_ctx(dev);
 	tree = device_get_sysctl_tree(dev);
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO, "disable_phy",
-	    CTLFLAG_RW | CTLTYPE_UINT, ch, 0, ahci_ch_disablephy_proc, "IU",
-	    "Disable PHY");
+	    CTLFLAG_RW | CTLTYPE_UINT | CTLFLAG_MPSAFE, ch,
+	    0, ahci_ch_disablephy_proc, "IU", "Disable PHY");
 	return (0);
 
 err3:
@@ -1125,8 +1127,7 @@ ahci_dmainit(device_t dev)
 	error = bus_dma_tag_create(bus_get_dma_tag(dev), 2, 0,
 	    BUS_SPACE_MAXADDR, BUS_SPACE_MAXADDR,
 	    NULL, NULL,
-	    AHCI_SG_ENTRIES * PAGE_SIZE * ch->numslots,
-	    AHCI_SG_ENTRIES, AHCI_PRD_MAX,
+	    AHCI_SG_ENTRIES * PAGE_SIZE, AHCI_SG_ENTRIES, AHCI_PRD_MAX,
 	    0, busdma_lock_mutex, &ch->mtx, &ch->dma.data_tag);
 	if (error != 0)
 		goto error;
@@ -1188,6 +1189,7 @@ ahci_slotsalloc(device_t dev)
 		slot->ch = ch;
 		slot->slot = i;
 		slot->state = AHCI_SLOT_EMPTY;
+		slot->ct_offset = AHCI_CT_OFFSET + AHCI_CT_SIZE * i;
 		slot->ccb = NULL;
 		callout_init_mtx(&slot->timeout, &ch->mtx, 0);
 
@@ -1643,8 +1645,7 @@ ahci_dmasetprd(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 	}
 	KASSERT(nsegs <= AHCI_SG_ENTRIES, ("too many DMA segment entries\n"));
 	/* Get a piece of the workspace for this request */
-	ctp = (struct ahci_cmd_tab *)
-		(ch->dma.work + AHCI_CT_OFFSET + (AHCI_CT_SIZE * slot->slot));
+	ctp = (struct ahci_cmd_tab *)(ch->dma.work + slot->ct_offset);
 	/* Fill S/G table */
 	prd = &ctp->prd_tab[0];
 	for (i = 0; i < nsegs; i++) {
@@ -1673,8 +1674,7 @@ ahci_execute_transaction(struct ahci_slot *slot)
 	uint16_t cmd_flags;
 
 	/* Get a piece of the workspace for this request */
-	ctp = (struct ahci_cmd_tab *)
-		(ch->dma.work + AHCI_CT_OFFSET + (AHCI_CT_SIZE * slot->slot));
+	ctp = (struct ahci_cmd_tab *)(ch->dma.work + slot->ct_offset);
 	/* Setup the FIS for this request */
 	if (!(fis_size = ahci_setup_fis(ch, ctp, ccb, slot->slot))) {
 		device_printf(ch->dev, "Setting up SATA FIS failed\n");
@@ -1711,8 +1711,7 @@ ahci_execute_transaction(struct ahci_slot *slot)
 		softreset = 0;
 	clp->bytecount = 0;
 	clp->cmd_flags = htole16(cmd_flags);
-	clp->cmd_table_phys = htole64(ch->dma.work_bus + AHCI_CT_OFFSET +
-				  (AHCI_CT_SIZE * slot->slot));
+	clp->cmd_table_phys = htole64(ch->dma.work_bus + slot->ct_offset);
 	bus_dmamap_sync(ch->dma.work_tag, ch->dma.work_map,
 	    BUS_DMASYNC_PREREAD | BUS_DMASYNC_PREWRITE);
 	bus_dmamap_sync(ch->dma.rfis_tag, ch->dma.rfis_map,
@@ -1812,7 +1811,7 @@ ahci_execute_transaction(struct ahci_slot *slot)
 	}
 	/* Start command execution timeout */
 	callout_reset_sbt(&slot->timeout, SBT_1MS * ccb->ccb_h.timeout / 2,
-	    0, (timeout_t*)ahci_timeout, slot, 0);
+	    0, ahci_timeout, slot, 0);
 	return;
 }
 
@@ -1849,14 +1848,15 @@ ahci_rearm_timeout(struct ahci_channel *ch)
 			continue;
 		callout_reset_sbt(&slot->timeout,
     	    	    SBT_1MS * slot->ccb->ccb_h.timeout / 2, 0,
-		    (timeout_t*)ahci_timeout, slot, 0);
+		    ahci_timeout, slot, 0);
 	}
 }
 
 /* Locked by callout mechanism. */
 static void
-ahci_timeout(struct ahci_slot *slot)
+ahci_timeout(void *arg)
 {
+	struct ahci_slot *slot = arg;
 	struct ahci_channel *ch = slot->ch;
 	device_t dev = ch->dev;
 	uint32_t sstatus;
@@ -1883,7 +1883,7 @@ ahci_timeout(struct ahci_slot *slot)
 
 		callout_reset_sbt(&slot->timeout,
 	    	    SBT_1MS * slot->ccb->ccb_h.timeout / 2, 0,
-		    (timeout_t*)ahci_timeout, slot, 0);
+		    ahci_timeout, slot, 0);
 		return;
 	}
 
@@ -2603,10 +2603,14 @@ static int
 ahci_sata_connect(struct ahci_channel *ch)
 {
 	u_int32_t status;
-	int timeout, found = 0;
+	int timeout, timeoutslot, found = 0;
 
-	/* Wait up to 100ms for "connect well" */
-	for (timeout = 0; timeout < 1000 ; timeout++) {
+	/*
+	 * Wait for "connect well", up to 100ms by default and
+	 * up to 500ms for devices with the SLOWDEV quirk.
+	 */
+	timeoutslot = ((ch->quirks & AHCI_Q_SLOWDEV) ? 5000 : 1000);
+	for (timeout = 0; timeout < timeoutslot; timeout++) {
 		status = ATA_INL(ch->r_mem, AHCI_P_SSTS);
 		if ((status & ATA_SS_DET_MASK) != ATA_SS_DET_NO_DEVICE)
 			found = 1;
@@ -2625,7 +2629,7 @@ ahci_sata_connect(struct ahci_channel *ch)
 			break;
 		DELAY(100);
 	}
-	if (timeout >= 1000 || !found) {
+	if (timeout >= timeoutslot || !found) {
 		if (bootverbose) {
 			device_printf(ch->dev,
 			    "SATA connect timeout time=%dus status=%08x\n",
@@ -2860,7 +2864,7 @@ ahciaction(struct cam_sim *sim, union ccb *ccb)
 		cpi->initiator_id = 0;
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 150000;
-		strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
 		strlcpy(cpi->hba_vid, "AHCI", HBA_IDLEN);
 		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
@@ -2868,7 +2872,7 @@ ahciaction(struct cam_sim *sim, union ccb *ccb)
 		cpi->transport_version = XPORT_VERSION_UNSPECIFIED;
 		cpi->protocol = PROTO_ATA;
 		cpi->protocol_version = PROTO_VERSION_UNSPECIFIED;
-		cpi->maxio = MAXPHYS;
+		cpi->maxio = ctob(AHCI_SG_ENTRIES - 1);
 		/* ATI SB600 can't handle 256 sectors with FPDMA (NCQ). */
 		if (ch->quirks & AHCI_Q_MAXIO_64K)
 			cpi->maxio = min(cpi->maxio, 128 * 512);

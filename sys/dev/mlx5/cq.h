@@ -21,7 +21,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef MLX5_CORE_CQ_H
@@ -41,7 +40,7 @@ struct mlx5_core_cq {
 	int			irqn;
 	void (*comp)		(struct mlx5_core_cq *, struct mlx5_eqe *);
 	void (*event)		(struct mlx5_core_cq *, int);
-	struct mlx5_uar	       *uar;
+	struct mlx5_uars_page  *uar;
 	u32			cons_index;
 	unsigned		arm_sn;
 	struct mlx5_rsc_debug	*dbg;
@@ -85,6 +84,7 @@ enum {
 	MLX5_CQ_MODIFY_PERIOD	= 1 << 0,
 	MLX5_CQ_MODIFY_COUNT	= 1 << 1,
 	MLX5_CQ_MODIFY_OVERRUN	= 1 << 2,
+	MLX5_CQ_MODIFY_EQN	= 1 << 3,
 	MLX5_CQ_MODIFY_PERIOD_MODE = 1 << 4,
 };
 
@@ -168,6 +168,10 @@ int mlx5_core_modify_cq_moderation_mode(struct mlx5_core_dev *dev,
 					u16 cq_period,
 					u16 cq_max_count,
 					u8 cq_mode);
+int mlx5_core_modify_cq_by_mask(struct mlx5_core_dev *,
+				struct mlx5_core_cq *, u32 mask,
+				u16 cq_period, u16 cq_max_count,
+				u8 cq_mode, u8 cq_eqn);
 int mlx5_debug_cq_add(struct mlx5_core_dev *dev, struct mlx5_core_cq *cq);
 void mlx5_debug_cq_remove(struct mlx5_core_dev *dev, struct mlx5_core_cq *cq);
 

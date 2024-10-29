@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011-2012 Qlogic Corporation
  * All rights reserved.
@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "qla_os.h"
 #include "qla_reg.h"
 #include "qla_hw.h"
@@ -154,7 +153,7 @@ qla_alloc_dma(qla_host_t *ha)
 	ha->hw.dma_buf.tx_ring.alignment = 8;
 	ha->hw.dma_buf.tx_ring.size =
 		(sizeof(q80_tx_cmd_t)) * NUM_TX_DESCRIPTORS;
-	
+
         if (qla_alloc_dmabuf(ha, &ha->hw.dma_buf.tx_ring)) {
                 device_printf(dev, "%s: tx ring alloc failed\n", __func__);
                 goto qla_alloc_dma_exit;
@@ -180,7 +179,7 @@ qla_alloc_dma(qla_host_t *ha)
 					NUM_RX_JUMBO_DESCRIPTORS;
 		} else
 			break;
-	
+
 		if (qla_alloc_dmabuf(ha, &ha->hw.dma_buf.rds_ring[i])) {
 			QL_DPRINT4((dev, "%s: rds ring alloc failed\n",
 				__func__));
@@ -238,10 +237,10 @@ qla_alloc_dma(qla_host_t *ha)
 	size += sizeof (uint32_t); /* for tx consumer index */
 
 	size = QL_ALIGN(size, PAGE_SIZE);
-	
+
 	ha->hw.dma_buf.context.alignment = 8;
 	ha->hw.dma_buf.context.size = size;
-	
+
         if (qla_alloc_dmabuf(ha, &ha->hw.dma_buf.context)) {
                 device_printf(dev, "%s: context alloc failed\n", __func__);
                 goto qla_alloc_dma_exit;
@@ -280,11 +279,10 @@ qla_init_cntxt_regions(qla_host_t *ha)
 	hw = &ha->hw;
 
 	hw->tx_ring_base = hw->dma_buf.tx_ring.dma_b;
-	
+
 	for (i = 0; i < ha->hw.num_sds_rings; i++)
 		hw->sds[i].sds_ring_base =
 			(q80_stat_desc_t *)hw->dma_buf.sds_ring[i].dma_b;
-
 
 	phys_addr = hw->dma_buf.context.dma_addr;
 
@@ -330,7 +328,7 @@ qla_init_cntxt_regions(qla_host_t *ha)
 
 	tx_cntxt_req->caps[0] = qla_host_to_le32((CNTXT_CAP0_BASEFW |
 					CNTXT_CAP0_LEGACY_MN | CNTXT_CAP0_LSO));
-	
+
 	tx_cntxt_req->intr_mode = qla_host_to_le32(CNTXT_INTR_MODE_SHARED);
 
 	tx_cntxt_req->phys_addr =
@@ -422,7 +420,7 @@ qla_issue_cmd(qla_host_t *ha, qla_cdrp_t *cdrp)
 	signature = 0xcafe0000 | 0x0100 | ha->pci_func;
 
 	ret = qla_sem_lock(ha, Q8_SEM5_LOCK, 0, (uint32_t)ha->pci_func);
-	
+
 	if (ret) {
 		device_printf(dev, "%s: SEM5_LOCK lock failed\n", __func__);
 		return (ret);
@@ -555,7 +553,7 @@ qla_config_rss(qla_host_t *ha, uint16_t cntxt_id)
 	rss_config.flags = Q8_FWCD_RSS_FLAGS_ENABLE_RSS;
 
 	rss_config.ind_tbl_mask = 0x7;
-	
+
 	for (i = 0; i < 5; i++)
 		rss_config.rss_key[i] = rss_key[i];
 
@@ -579,7 +577,7 @@ qla_config_intr_coalesce(qla_host_t *ha, uint16_t cntxt_id, int tenable)
 	intr_coalesce.hdr.cmd = Q8_FWCD_CNTRL_REQ;
 	intr_coalesce.hdr.opcode = Q8_FWCD_OPCODE_CONFIG_INTR_COALESCING;
 	intr_coalesce.hdr.cntxt_id = cntxt_id;
-	
+
 	intr_coalesce.flags = 0x04;
 	intr_coalesce.max_rcv_pkts = 256;
 	intr_coalesce.max_rcv_usecs = 3;
@@ -598,7 +596,6 @@ qla_config_intr_coalesce(qla_host_t *ha, uint16_t cntxt_id, int tenable)
 
 	return ret;
 }
-
 
 /*
  * Name: qla_config_mac_addr
@@ -622,7 +619,7 @@ qla_config_mac_addr(qla_host_t *ha, uint8_t *mac_addr, uint16_t cntxt_id,
 	mac_config.hdr.cmd = Q8_FWCD_CNTRL_REQ;
 	mac_config.hdr.opcode = Q8_FWCD_OPCODE_CONFIG_MAC_ADDR;
 	mac_config.hdr.cntxt_id = cntxt_id;
-	
+
 	if (add_multi)
 		mac_config.cmd = Q8_FWCD_ADD_MAC_ADDR;
 	else
@@ -633,7 +630,6 @@ qla_config_mac_addr(qla_host_t *ha, uint8_t *mac_addr, uint16_t cntxt_id,
 
 	return ret;
 }
-
 
 /*
  * Name: qla_set_mac_rcv_mode
@@ -650,7 +646,7 @@ qla_set_mac_rcv_mode(qla_host_t *ha, uint16_t cntxt_id, uint32_t mode)
 	rcv_mode.hdr.cmd = Q8_FWCD_CNTRL_REQ;
 	rcv_mode.hdr.opcode = Q8_FWCD_OPCODE_CONFIG_MAC_RCV_MODE;
 	rcv_mode.hdr.cntxt_id = cntxt_id;
-	
+
 	rcv_mode.mode = mode;
 
 	ret = qla_fw_cmd(ha, &rcv_mode, sizeof(qla_set_mac_rcv_mode_t));
@@ -696,7 +692,7 @@ qla_config_ipv4_addr(qla_host_t *ha, uint32_t ipv4_addr)
 	ip_conf.hdr.cmd = Q8_FWCD_CNTRL_REQ;
 	ip_conf.hdr.opcode = Q8_FWCD_OPCODE_CONFIG_IPADDR;
 	ip_conf.hdr.cntxt_id = (ha->hw.rx_cntxt_rsp)->rx_rsp.cntxt_id;
-	
+
 	ip_conf.cmd = (uint64_t)Q8_CONFIG_CMD_IP_ENABLE;
 	ip_conf.ipv4_addr = (uint64_t)ipv4_addr;
 
@@ -769,7 +765,6 @@ qla_tx_tso(qla_host_t *ha, struct mbuf *mp, q80_tx_cmd_t *tx_cmd, uint8_t *hdr)
 
 	tcp_hlen = th->th_off << 2;
 
-
 	hdrlen = ehdrlen + ip_hlen + tcp_hlen;
 
 	if (mp->m_len < hdrlen) {
@@ -785,12 +780,10 @@ qla_tx_tso(qla_host_t *ha, struct mbuf *mp, q80_tx_cmd_t *tx_cmd, uint8_t *hdr)
 	}
 
 	if ((mp->m_pkthdr.csum_flags & CSUM_TSO) == 0) {
-
 		/* If TCP options are preset only time stamp option is supported */
 		if ((tcp_hlen - sizeof(struct tcphdr)) != 10) 
 			return -1;
 		else {
-
 			if (mp->m_len < hdrlen) {
 				tcp_opt = &hdr[tcp_opt_off];
 			} else {
@@ -954,7 +947,6 @@ qla_hw_send(qla_host_t *ha, bus_dma_segment_t *segs, int nsegs,
 	eh = mtod(mp, struct ether_vlan_header *);
 
 	if ((mp->m_pkthdr.len > ha->max_frame_size)||(nsegs > Q8_TX_MAX_SEGMENTS)) {
-
 		bzero((void *)&tso_cmd, sizeof(q80_tx_cmd_t));
 
 		src = ha->hw.frame_hdr;
@@ -967,7 +959,7 @@ qla_hw_send(qla_host_t *ha, bus_dma_segment_t *segs, int nsegs,
 
 			bytes = sizeof(q80_tx_cmd_t) - Q8_TX_CMD_TSO_ALIGN;
 			bytes = QL_MIN(bytes, hdr_len);
-	
+
 			num_tx_cmds++;
 			hdr_len -= bytes;
 
@@ -1023,7 +1015,6 @@ qla_hw_send(qla_host_t *ha, bus_dma_segment_t *segs, int nsegs,
 		tx_cmd->vlan_tci = mp->m_pkthdr.ether_vtag;
 	}
 
-
         tx_cmd->n_bufs = (uint8_t)nsegs;
         tx_cmd->data_len_lo = (uint8_t)(total_length & 0xFF);
         tx_cmd->data_len_hi = qla_host_to_le16(((uint16_t)(total_length >> 8)));
@@ -1033,7 +1024,6 @@ qla_hw_send(qla_host_t *ha, bus_dma_segment_t *segs, int nsegs,
 
 	while (1) {
 		for (i = 0; ((i < Q8_TX_CMD_MAX_SEGMENTS) && nsegs); i++) {
-
 			switch (i) {
 			case 0:
 				tx_cmd->buf1_addr = c_seg->ds_addr;
@@ -1142,10 +1132,10 @@ qla_del_hw_if(qla_host_t *ha)
 
 	for (i = 0; i < ha->hw.num_sds_rings; i++)
 		QL_DISABLE_INTERRUPTS(ha, i);
-	
+
 	qla_del_rcv_cntxt(ha);
 	qla_del_xmt_cntxt(ha);
-	
+
 	ha->hw.flags.lro = 0;
 }
 
@@ -1248,7 +1238,7 @@ qla_init_rcv_cntxt(qla_host_t *ha)
 	cdrp.cmd_arg1 = (uint32_t)(phys_addr >> 32);
 	cdrp.cmd_arg2 = (uint32_t)(phys_addr);
 	cdrp.cmd_arg3 = (uint32_t)(sizeof (q80_rcv_cntxt_req_t));
-	
+
 	if (qla_issue_cmd(ha, &cdrp)) {
 		device_printf(dev, "%s: Q8_CMD_CREATE_RX_CNTXT failed\n",
 			__func__);
@@ -1349,7 +1339,7 @@ qla_init_xmt_cntxt(qla_host_t *ha)
 	cdrp.cmd_arg1 = (uint32_t)(phys_addr >> 32);
 	cdrp.cmd_arg2 = (uint32_t)(phys_addr);
 	cdrp.cmd_arg3 = (uint32_t)(sizeof (q80_tx_cntxt_req_t));
-	
+
 	if (qla_issue_cmd(ha, &cdrp)) {
 		device_printf(dev, "%s: Q8_CMD_CREATE_TX_CNTXT failed\n",
 			__func__);
@@ -1704,7 +1694,6 @@ qla_hw_tx_done_locked(qla_host_t *ha)
 	comp_idx = qla_le32_to_host(*(hw->tx_cons));
 
 	while (comp_idx != hw->txr_comp) {
-
 		txb = &ha->tx_buf[hw->txr_comp];
 
 		hw->txr_comp++;
@@ -1785,6 +1774,7 @@ qla_update_link_state(qla_host_t *ha)
 int
 qla_config_lro(qla_host_t *ha)
 {
+#if defined(INET) || defined(INET6)
 	int i;
         qla_hw_t *hw = &ha->hw;
 	struct lro_ctrl *lro;
@@ -1801,12 +1791,14 @@ qla_config_lro(qla_host_t *ha)
 	ha->flags.lro_init = 1;
 
 	QL_DPRINT2((ha->pci_dev, "%s: LRO initialized\n", __func__));
+#endif
 	return (0);
 }
 
 void
 qla_free_lro(qla_host_t *ha)
 {
+#if defined(INET) || defined(INET6)
 	int i;
         qla_hw_t *hw = &ha->hw;
 	struct lro_ctrl *lro;
@@ -1819,6 +1811,7 @@ qla_free_lro(qla_host_t *ha)
 		tcp_lro_free(lro);
 	}
 	ha->flags.lro_init = 0;
+#endif
 }
 
 void
@@ -1838,4 +1831,3 @@ qla_hw_stop_rcv(qla_host_t *ha)
 			qla_mdelay(__func__, 10);
 	}
 }
-

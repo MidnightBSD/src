@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_fb.h"
 
 #include <sys/param.h>
@@ -512,7 +511,7 @@ int genfbioctl(genfb_softc_t *sc, video_adapter_t *adp, u_long cmd,
 }
 
 int genfbmmap(genfb_softc_t *sc, video_adapter_t *adp, vm_ooffset_t offset,
-	      vm_offset_t *paddr, int prot, vm_memattr_t *memattr)
+	      vm_paddr_t *paddr, int prot, vm_memattr_t *memattr)
 {
 	return vidd_mmap(adp, offset, paddr, prot, memattr);
 }
@@ -728,8 +727,6 @@ fb_commonioctl(video_adapter_t *adp, u_long cmd, caddr_t arg)
 
 	case FBIOPUTCMAP:
 	case FBIOGETCMAP:
-	case FBIOPUTCMAPI:
-	case FBIOGETCMAPI:
 		/* XXX */
 
 	case FBIO_SETWINORG:	/* set frame buffer window origin */
@@ -737,17 +734,6 @@ fb_commonioctl(video_adapter_t *adp, u_long cmd, caddr_t arg)
 	case FBIO_SETLINEWIDTH:	/* set scan line width in pixel */
 
 	case FBIOGTYPE:
-	case FBIOGATTR:
-	case FBIOSVIDEO:
-	case FBIOGVIDEO:
-	case FBIOVERTICAL:
-	case FBIOSCURSOR:
-	case FBIOGCURSOR:
-	case FBIOSCURPOS:
-	case FBIOGCURPOS:
-	case FBIOGCURMAX:
-	case FBIOMONINFO:
-	case FBIOGXINFO:
 
 	default:
 		error = ENODEV;

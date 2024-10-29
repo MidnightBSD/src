@@ -24,7 +24,6 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
 
 #ifndef _DBG_FW_FUNCS_H
@@ -891,6 +890,5 @@ enum dbg_status ecore_dbg_print_attn(struct ecore_hwfn *p_hwfn,
 bool ecore_is_block_in_reset(struct ecore_hwfn *p_hwfn,
 							 struct ecore_ptt *p_ptt,
 							 enum block_id block);
-
 
 #endif

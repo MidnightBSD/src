@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000, 2001 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /********************************************************************************
@@ -307,7 +306,6 @@ struct mly_softc {
 	    sc->mly_qstat[qname].q_length = 0;	\
 	    sc->mly_qstat[qname].q_max = 0;	\
 	} while(0)
-
 
 #define MLYQ_COMMAND_QUEUE(name, index)					\
 static __inline void							\

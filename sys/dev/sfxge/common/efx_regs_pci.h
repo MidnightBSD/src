@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -28,7 +28,6 @@
  * The views and conclusions contained in the software and documentation are
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
- *
  */
 
 #ifndef	_SYS_EFX_REGS_PCI_H
@@ -49,7 +48,6 @@ extern "C" {
 #define	PCRF_AZ_VEND_ID_LBN 0
 #define	PCRF_AZ_VEND_ID_WIDTH 16
 
-
 /*
  * PC_DEV_ID_REG(16bit):
  * Device ID register
@@ -60,7 +58,6 @@ extern "C" {
 
 #define	PCRF_AZ_DEV_ID_LBN 0
 #define	PCRF_AZ_DEV_ID_WIDTH 16
-
 
 /*
  * PC_CMD_REG(16bit):
@@ -93,7 +90,6 @@ extern "C" {
 #define	PCRF_AZ_IO_EN_LBN 0
 #define	PCRF_AZ_IO_EN_WIDTH 1
 
-
 /*
  * PC_STAT_REG(16bit):
  * Status register
@@ -125,7 +121,6 @@ extern "C" {
 #define	PCRF_AZ_INTX_STAT_LBN 3
 #define	PCRF_AZ_INTX_STAT_WIDTH 1
 
-
 /*
  * PC_REV_ID_REG(8bit):
  * Class code & revision ID register
@@ -136,7 +131,6 @@ extern "C" {
 
 #define	PCRF_AZ_REV_ID_LBN 0
 #define	PCRF_AZ_REV_ID_WIDTH 8
-
 
 /*
  * PC_CC_REG(24bit):
@@ -153,7 +147,6 @@ extern "C" {
 #define	PCRF_AZ_PROG_IF_LBN 0
 #define	PCRF_AZ_PROG_IF_WIDTH 8
 
-
 /*
  * PC_CACHE_LSIZE_REG(8bit):
  * Cache line size
@@ -165,7 +158,6 @@ extern "C" {
 #define	PCRF_AZ_CACHE_LSIZE_LBN 0
 #define	PCRF_AZ_CACHE_LSIZE_WIDTH 8
 
-
 /*
  * PC_MST_LAT_REG(8bit):
  * Master latency timer register
@@ -176,7 +168,6 @@ extern "C" {
 
 #define	PCRF_AZ_MST_LAT_LBN 0
 #define	PCRF_AZ_MST_LAT_WIDTH 8
-
 
 /*
  * PC_HDR_TYPE_REG(8bit):
@@ -191,7 +182,6 @@ extern "C" {
 #define	PCRF_AZ_TYPE_LBN 0
 #define	PCRF_AZ_TYPE_WIDTH 7
 
-
 /*
  * PC_BIST_REG(8bit):
  * BIST register
@@ -202,7 +192,6 @@ extern "C" {
 
 #define	PCRF_AZ_BIST_LBN 0
 #define	PCRF_AZ_BIST_WIDTH 8
-
 
 /*
  * PC_BAR0_REG(32bit):
@@ -221,7 +210,6 @@ extern "C" {
 #define	PCRF_AZ_BAR0_IOM_LBN 0
 #define	PCRF_AZ_BAR0_IOM_WIDTH 1
 
-
 /*
  * PC_BAR1_REG(32bit):
  * Primary function base address register 1, BAR1 is not implemented so read only.
@@ -232,7 +220,6 @@ extern "C" {
 
 #define	PCRF_DZ_BAR1_LBN 0
 #define	PCRF_DZ_BAR1_WIDTH 32
-
 
 /*
  * PC_BAR2_LO_REG(32bit):
@@ -251,7 +238,6 @@ extern "C" {
 #define	PCRF_AZ_BAR2_IOM_LBN 0
 #define	PCRF_AZ_BAR2_IOM_WIDTH 1
 
-
 /*
  * PC_BAR2_HI_REG(32bit):
  * Primary function base address register 2 high bits
@@ -262,7 +248,6 @@ extern "C" {
 
 #define	PCRF_AZ_BAR2_HI_LBN 0
 #define	PCRF_AZ_BAR2_HI_WIDTH 32
-
 
 /*
  * PC_BAR4_LO_REG(32bit):
@@ -281,7 +266,6 @@ extern "C" {
 #define	PCRF_CZ_BAR4_IOM_LBN 0
 #define	PCRF_CZ_BAR4_IOM_WIDTH 1
 
-
 /*
  * PC_BAR4_HI_REG(32bit):
  * Primary function base address register 2 high bits
@@ -292,7 +276,6 @@ extern "C" {
 
 #define	PCRF_CZ_BAR4_HI_LBN 0
 #define	PCRF_CZ_BAR4_HI_WIDTH 32
-
 
 /*
  * PC_SS_VEND_ID_REG(16bit):
@@ -305,7 +288,6 @@ extern "C" {
 #define	PCRF_AZ_SS_VEND_ID_LBN 0
 #define	PCRF_AZ_SS_VEND_ID_WIDTH 16
 
-
 /*
  * PC_SS_ID_REG(16bit):
  * Sub-system ID register
@@ -316,7 +298,6 @@ extern "C" {
 
 #define	PCRF_AZ_SS_ID_LBN 0
 #define	PCRF_AZ_SS_ID_WIDTH 16
-
 
 /*
  * PC_EXPROM_BAR_REG(32bit):
@@ -337,7 +318,6 @@ extern "C" {
 #define	PCRF_AZ_EXPROM_EN_LBN 0
 #define	PCRF_AZ_EXPROM_EN_WIDTH 1
 
-
 /*
  * PC_CAP_PTR_REG(8bit):
  * Capability pointer register
@@ -349,7 +329,6 @@ extern "C" {
 #define	PCRF_AZ_CAP_PTR_LBN 0
 #define	PCRF_AZ_CAP_PTR_WIDTH 8
 
-
 /*
  * PC_INT_LINE_REG(8bit):
  * Interrupt line register
@@ -360,7 +339,6 @@ extern "C" {
 
 #define	PCRF_AZ_INT_LINE_LBN 0
 #define	PCRF_AZ_INT_LINE_WIDTH 8
-
 
 /*
  * PC_INT_PIN_REG(8bit):
@@ -377,7 +355,6 @@ extern "C" {
 #define	PCFE_DZ_INTPIN_INTB 2
 #define	PCFE_DZ_INTPIN_INTA 1
 
-
 /*
  * PC_PM_CAP_ID_REG(8bit):
  * Power management capability ID
@@ -389,7 +366,6 @@ extern "C" {
 #define	PCRF_AZ_PM_CAP_ID_LBN 0
 #define	PCRF_AZ_PM_CAP_ID_WIDTH 8
 
-
 /*
  * PC_PM_NXT_PTR_REG(8bit):
  * Power management next item pointer
@@ -400,7 +376,6 @@ extern "C" {
 
 #define	PCRF_AZ_PM_NXT_PTR_LBN 0
 #define	PCRF_AZ_PM_NXT_PTR_WIDTH 8
-
 
 /*
  * PC_PM_CAP_REG(16bit):
@@ -425,7 +400,6 @@ extern "C" {
 #define	PCRF_AZ_PM_PME_VER_LBN 0
 #define	PCRF_AZ_PM_PME_VER_WIDTH 3
 
-
 /*
  * PC_PM_CS_REG(16bit):
  * Power management control & status register
@@ -447,7 +421,6 @@ extern "C" {
 #define	PCRF_AZ_PM_PWR_ST_LBN 0
 #define	PCRF_AZ_PM_PWR_ST_WIDTH 2
 
-
 /*
  * PC_MSI_CAP_ID_REG(8bit):
  * MSI capability ID
@@ -459,7 +432,6 @@ extern "C" {
 #define	PCRF_AZ_MSI_CAP_ID_LBN 0
 #define	PCRF_AZ_MSI_CAP_ID_WIDTH 8
 
-
 /*
  * PC_MSI_NXT_PTR_REG(8bit):
  * MSI next item pointer
@@ -470,7 +442,6 @@ extern "C" {
 
 #define	PCRF_AZ_MSI_NXT_PTR_LBN 0
 #define	PCRF_AZ_MSI_NXT_PTR_WIDTH 8
-
 
 /*
  * PC_MSI_CTL_REG(16bit):
@@ -489,7 +460,6 @@ extern "C" {
 #define	PCRF_AZ_MSI_EN_LBN 0
 #define	PCRF_AZ_MSI_EN_WIDTH 1
 
-
 /*
  * PC_MSI_ADR_LO_REG(32bit):
  * MSI low 32 bits address register
@@ -500,7 +470,6 @@ extern "C" {
 
 #define	PCRF_AZ_MSI_ADR_LO_LBN 2
 #define	PCRF_AZ_MSI_ADR_LO_WIDTH 30
-
 
 /*
  * PC_MSI_ADR_HI_REG(32bit):
@@ -513,7 +482,6 @@ extern "C" {
 #define	PCRF_AZ_MSI_ADR_HI_LBN 0
 #define	PCRF_AZ_MSI_ADR_HI_WIDTH 32
 
-
 /*
  * PC_MSI_DAT_REG(16bit):
  * MSI data register
@@ -524,7 +492,6 @@ extern "C" {
 
 #define	PCRF_AZ_MSI_DAT_LBN 0
 #define	PCRF_AZ_MSI_DAT_WIDTH 16
-
 
 /*
  * PC_PCIE_CAP_LIST_REG(16bit):
@@ -541,7 +508,6 @@ extern "C" {
 #define	PCRF_AZ_PCIE_NXT_PTR_WIDTH 8
 #define	PCRF_AZ_PCIE_CAP_ID_LBN 0
 #define	PCRF_AZ_PCIE_CAP_ID_WIDTH 8
-
 
 /*
  * PC_PCIE_CAP_REG(16bit):
@@ -562,7 +528,6 @@ extern "C" {
 #define	PCRF_AZ_PCIE_DEV_PORT_TYPE_WIDTH 4
 #define	PCRF_AZ_PCIE_CAP_VER_LBN 0
 #define	PCRF_AZ_PCIE_CAP_VER_WIDTH 4
-
 
 /*
  * PC_DEV_CAP_REG(32bit):
@@ -599,7 +564,6 @@ extern "C" {
 #define	PCRF_AZ_PHAN_FUNC_WIDTH 2
 #define	PCRF_AZ_MAX_PAYL_SIZE_SUPT_LBN 0
 #define	PCRF_AZ_MAX_PAYL_SIZE_SUPT_WIDTH 3
-
 
 /*
  * PC_DEV_CTL_REG(16bit):
@@ -651,7 +615,6 @@ extern "C" {
 #define	PCRF_AZ_CORR_ERR_RPT_EN_LBN 0
 #define	PCRF_AZ_CORR_ERR_RPT_EN_WIDTH 1
 
-
 /*
  * PC_DEV_STAT_REG(16bit):
  * PCIe device status register
@@ -675,7 +638,6 @@ extern "C" {
 #define	PCRF_AZ_NONFATAL_ERR_DET_WIDTH 1
 #define	PCRF_AZ_CORR_ERR_DET_LBN 0
 #define	PCRF_AZ_CORR_ERR_DET_WIDTH 1
-
 
 /*
  * PC_LNK_CAP_REG(32bit):
@@ -711,7 +673,6 @@ extern "C" {
 #define	PCRF_AZ_MAX_LNK_SP_LBN 0
 #define	PCRF_AZ_MAX_LNK_SP_WIDTH 4
 
-
 /*
  * PC_LNK_CTL_REG(16bit):
  * PCIe link control register
@@ -738,7 +699,6 @@ extern "C" {
 #define	PCRF_AZ_ACT_ST_LNK_PM_CTL_LBN 0
 #define	PCRF_AZ_ACT_ST_LNK_PM_CTL_WIDTH 2
 
-
 /*
  * PC_LNK_STAT_REG(16bit):
  * PCIe link status register
@@ -760,7 +720,6 @@ extern "C" {
 #define	PCRF_AZ_LNK_WIDTH_WIDTH 6
 #define	PCRF_AZ_LNK_SP_LBN 0
 #define	PCRF_AZ_LNK_SP_WIDTH 4
-
 
 /*
  * PC_SLOT_CAP_REG(32bit):
@@ -791,7 +750,6 @@ extern "C" {
 #define	PCRF_AB_SLOT_ATTN_BUT_PRST_LBN 0
 #define	PCRF_AB_SLOT_ATTN_BUT_PRST_WIDTH 1
 
-
 /*
  * PC_SLOT_CTL_REG(16bit):
  * PCIe slot control register
@@ -819,7 +777,6 @@ extern "C" {
 #define	PCRF_AB_SLOT_ATTN_BUT_EN_LBN 0
 #define	PCRF_AB_SLOT_ATTN_BUT_EN_WIDTH 1
 
-
 /*
  * PC_SLOT_STAT_REG(16bit):
  * PCIe slot status register
@@ -843,7 +800,6 @@ extern "C" {
 #define	PCRF_AB_ATTN_BUTDET_LBN 0
 #define	PCRF_AB_ATTN_BUTDET_WIDTH 1
 
-
 /*
  * PC_MSIX_CAP_ID_REG(8bit):
  * MSIX Capability ID
@@ -858,7 +814,6 @@ extern "C" {
 #define	PCRF_BZ_MSIX_CAP_ID_LBN 0
 #define	PCRF_BZ_MSIX_CAP_ID_WIDTH 8
 
-
 /*
  * PC_MSIX_NXT_PTR_REG(8bit):
  * MSIX Capability Next Capability Ptr
@@ -872,7 +827,6 @@ extern "C" {
 
 #define	PCRF_BZ_MSIX_NXT_PTR_LBN 0
 #define	PCRF_BZ_MSIX_NXT_PTR_WIDTH 8
-
 
 /*
  * PC_MSIX_CTL_REG(16bit):
@@ -892,7 +846,6 @@ extern "C" {
 #define	PCRF_BZ_MSIX_TBL_SIZE_LBN 0
 #define	PCRF_BZ_MSIX_TBL_SIZE_WIDTH 11
 
-
 /*
  * PC_MSIX_TBL_BASE_REG(32bit):
  * MSIX Capability Vector Table Base
@@ -908,7 +861,6 @@ extern "C" {
 #define	PCRF_BZ_MSIX_TBL_OFF_WIDTH 29
 #define	PCRF_BZ_MSIX_TBL_BIR_LBN 0
 #define	PCRF_BZ_MSIX_TBL_BIR_WIDTH 3
-
 
 /*
  * PC_DEV_CAP2_REG(32bit):
@@ -940,7 +892,6 @@ extern "C" {
 #define	PCFE_CZ_CMPL_TIMEOUT_50_TO_100US 1
 #define	PCFE_CZ_CMPL_TIMEOUT_DEFAULT 0
 
-
 /*
  * PC_DEV_CTL2_REG(16bit):
  * PCIe Device Control 2
@@ -962,7 +913,6 @@ extern "C" {
 #define	PCRF_CZ_CMPL_TIMEOUT_CTL_LBN 0
 #define	PCRF_CZ_CMPL_TIMEOUT_CTL_WIDTH 4
 
-
 /*
  * PC_MSIX_PBA_BASE_REG(32bit):
  * MSIX Capability PBA Base
@@ -979,7 +929,6 @@ extern "C" {
 #define	PCRF_BZ_MSIX_PBA_BIR_LBN 0
 #define	PCRF_BZ_MSIX_PBA_BIR_WIDTH 3
 
-
 /*
  * PC_LNK_CAP2_REG(32bit):
  * PCIe Link Capability 2
@@ -990,7 +939,6 @@ extern "C" {
 
 #define	PCRF_DZ_LNK_SPEED_SUP_LBN 1
 #define	PCRF_DZ_LNK_SPEED_SUP_WIDTH 7
-
 
 /*
  * PC_LNK_CTL2_REG(16bit):
@@ -1020,7 +968,6 @@ extern "C" {
 #define	PCFE_DZ_LCTL2_TGT_SPEED_GEN2 2
 #define	PCFE_DZ_LCTL2_TGT_SPEED_GEN1 1
 
-
 /*
  * PC_LNK_STAT2_REG(16bit):
  * PCIe Link Status 2
@@ -1031,7 +978,6 @@ extern "C" {
 
 #define	PCRF_CZ_CURRENT_DEEMPH_LBN 0
 #define	PCRF_CZ_CURRENT_DEEMPH_WIDTH 1
-
 
 /*
  * PC_VPD_CAP_ID_REG(8bit):
@@ -1044,7 +990,6 @@ extern "C" {
 #define	PCRF_AB_VPD_CAP_ID_LBN 0
 #define	PCRF_AB_VPD_CAP_ID_WIDTH 8
 
-
 /*
  * PC_VPD_NXT_PTR_REG(8bit):
  * VPD next item pointer
@@ -1055,7 +1000,6 @@ extern "C" {
 
 #define	PCRF_AB_VPD_NXT_PTR_LBN 0
 #define	PCRF_AB_VPD_NXT_PTR_WIDTH 8
-
 
 /*
  * PC_VPD_ADDR_REG(16bit):
@@ -1070,7 +1014,6 @@ extern "C" {
 #define	PCRF_AB_VPD_ADDR_LBN 0
 #define	PCRF_AB_VPD_ADDR_WIDTH 15
 
-
 /*
  * PC_VPD_CAP_DATA_REG(32bit):
  * documentation to be written for sum_PC_VPD_CAP_DATA_REG
@@ -1084,7 +1027,6 @@ extern "C" {
 
 #define	PCRF_AZ_VPD_DATA_LBN 0
 #define	PCRF_AZ_VPD_DATA_WIDTH 32
-
 
 /*
  * PC_VPD_CAP_CTL_REG(8bit):
@@ -1103,7 +1045,6 @@ extern "C" {
 #define	PCRF_CZ_VPD_CAP_ID_LBN 0
 #define	PCRF_CZ_VPD_CAP_ID_WIDTH 8
 
-
 /*
  * PC_AER_CAP_HDR_REG(32bit):
  * AER capability header register
@@ -1118,7 +1059,6 @@ extern "C" {
 #define	PCRF_AZ_AERCAPHDR_VER_WIDTH 4
 #define	PCRF_AZ_AERCAPHDR_ID_LBN 0
 #define	PCRF_AZ_AERCAPHDR_ID_WIDTH 16
-
 
 /*
  * PC_AER_UNCORR_ERR_STAT_REG(32bit):
@@ -1150,7 +1090,6 @@ extern "C" {
 #define	PCRF_AZ_DL_PROTO_ERR_STAT_WIDTH 1
 #define	PCRF_AB_TRAIN_ERR_STAT_LBN 0
 #define	PCRF_AB_TRAIN_ERR_STAT_WIDTH 1
-
 
 /*
  * PC_AER_UNCORR_ERR_MASK_REG(32bit):
@@ -1187,7 +1126,6 @@ extern "C" {
 #define	PCRF_AB_TRAIN_ERR_MASK_LBN 0
 #define	PCRF_AB_TRAIN_ERR_MASK_WIDTH 1
 
-
 /*
  * PC_AER_UNCORR_ERR_SEV_REG(32bit):
  * AER Uncorrectable error severity register
@@ -1219,7 +1157,6 @@ extern "C" {
 #define	PCRF_AB_TRAIN_ERR_SEV_LBN 0
 #define	PCRF_AB_TRAIN_ERR_SEV_WIDTH 1
 
-
 /*
  * PC_AER_CORR_ERR_STAT_REG(32bit):
  * AER Correctable error status register
@@ -1240,7 +1177,6 @@ extern "C" {
 #define	PCRF_AZ_BAD_TLP_STAT_WIDTH 1
 #define	PCRF_AZ_RX_ERR_STAT_LBN 0
 #define	PCRF_AZ_RX_ERR_STAT_WIDTH 1
-
 
 /*
  * PC_AER_CORR_ERR_MASK_REG(32bit):
@@ -1263,7 +1199,6 @@ extern "C" {
 #define	PCRF_AZ_RX_ERR_MASK_LBN 0
 #define	PCRF_AZ_RX_ERR_MASK_WIDTH 1
 
-
 /*
  * PC_AER_CAP_CTL_REG(32bit):
  * AER capability and control register
@@ -1283,7 +1218,6 @@ extern "C" {
 #define	PCRF_AZ_1ST_ERR_PTR_LBN 0
 #define	PCRF_AZ_1ST_ERR_PTR_WIDTH 5
 
-
 /*
  * PC_AER_HDR_LOG_REG(128bit):
  * AER Header log register
@@ -1294,7 +1228,6 @@ extern "C" {
 
 #define	PCRF_AZ_HDR_LOG_LBN 0
 #define	PCRF_AZ_HDR_LOG_WIDTH 128
-
 
 /*
  * PC_DEVSN_CAP_HDR_REG(32bit):
@@ -1311,7 +1244,6 @@ extern "C" {
 #define	PCRF_CZ_DEVSNCAPHDR_ID_LBN 0
 #define	PCRF_CZ_DEVSNCAPHDR_ID_WIDTH 16
 
-
 /*
  * PC_DEVSN_DWORD0_REG(32bit):
  * Device serial number DWORD0
@@ -1323,7 +1255,6 @@ extern "C" {
 #define	PCRF_CZ_DEVSN_DWORD0_LBN 0
 #define	PCRF_CZ_DEVSN_DWORD0_WIDTH 32
 
-
 /*
  * PC_DEVSN_DWORD1_REG(32bit):
  * Device serial number DWORD0
@@ -1334,7 +1265,6 @@ extern "C" {
 
 #define	PCRF_CZ_DEVSN_DWORD1_LBN 0
 #define	PCRF_CZ_DEVSN_DWORD1_WIDTH 32
-
 
 /*
  * PC_ARI_CAP_HDR_REG(32bit):
@@ -1351,7 +1281,6 @@ extern "C" {
 #define	PCRF_CZ_ARICAPHDR_ID_LBN 0
 #define	PCRF_CZ_ARICAPHDR_ID_WIDTH 16
 
-
 /*
  * PC_ARI_CAP_REG(16bit):
  * ARI Capabilities
@@ -1366,7 +1295,6 @@ extern "C" {
 #define	PCRF_CZ_ARI_ACS_FNGRP_CAP_WIDTH 1
 #define	PCRF_CZ_ARI_MFVC_FNGRP_CAP_LBN 0
 #define	PCRF_CZ_ARI_MFVC_FNGRP_CAP_WIDTH 1
-
 
 /*
  * PC_ARI_CTL_REG(16bit):
@@ -1383,7 +1311,6 @@ extern "C" {
 #define	PCRF_CZ_ARI_MFVC_FNGRP_EN_LBN 0
 #define	PCRF_CZ_ARI_MFVC_FNGRP_EN_WIDTH 1
 
-
 /*
  * PC_SEC_PCIE_CAP_REG(32bit):
  * Secondary PCIE Capability Register
@@ -1398,7 +1325,6 @@ extern "C" {
 #define	PCRF_DZ_SEC_VERSION_WIDTH 4
 #define	PCRF_DZ_SEC_EXT_CAP_ID_LBN 0
 #define	PCRF_DZ_SEC_EXT_CAP_ID_WIDTH 16
-
 
 /*
  * PC_SRIOV_CAP_HDR_REG(32bit):
@@ -1418,7 +1344,6 @@ extern "C" {
 #define	PCRF_CZ_SRIOVCAPHDR_ID_LBN 0
 #define	PCRF_CZ_SRIOVCAPHDR_ID_WIDTH 16
 
-
 /*
  * PC_SRIOV_CAP_REG(32bit):
  * SRIOV Capabilities
@@ -1437,7 +1362,6 @@ extern "C" {
 #define	PCRF_CZ_VF_MIGR_CAP_LBN 0
 #define	PCRF_CZ_VF_MIGR_CAP_WIDTH 1
 
-
 /*
  * PC_LINK_CONTROL3_REG(32bit):
  * Link Control 3.
@@ -1451,7 +1375,6 @@ extern "C" {
 #define	PCRF_DZ_PERFORM_EQL_LBN 0
 #define	PCRF_DZ_PERFORM_EQL_WIDTH 1
 
-
 /*
  * PC_LANE_ERROR_STAT_REG(32bit):
  * Lane Error Status Register.
@@ -1462,7 +1385,6 @@ extern "C" {
 
 #define	PCRF_DZ_LANE_STATUS_LBN 0
 #define	PCRF_DZ_LANE_STATUS_WIDTH 8
-
 
 /*
  * PC_SRIOV_CTL_REG(16bit):
@@ -1486,7 +1408,6 @@ extern "C" {
 #define	PCRF_CZ_VF_EN_LBN 0
 #define	PCRF_CZ_VF_EN_WIDTH 1
 
-
 /*
  * PC_SRIOV_STAT_REG(16bit):
  * SRIOV Status
@@ -1501,7 +1422,6 @@ extern "C" {
 #define	PCRF_CZ_VF_MIGR_STAT_LBN 0
 #define	PCRF_CZ_VF_MIGR_STAT_WIDTH 1
 
-
 /*
  * PC_LANE01_EQU_CONTROL_REG(32bit):
  * Lanes 0,1 Equalization Control Register.
@@ -1514,7 +1434,6 @@ extern "C" {
 #define	PCRF_DZ_LANE1_EQ_CTRL_WIDTH 16
 #define	PCRF_DZ_LANE0_EQ_CTRL_LBN 0
 #define	PCRF_DZ_LANE0_EQ_CTRL_WIDTH 16
-
 
 /*
  * PC_SRIOV_INITIALVFS_REG(16bit):
@@ -1530,7 +1449,6 @@ extern "C" {
 #define	PCRF_CZ_VF_INITIALVFS_LBN 0
 #define	PCRF_CZ_VF_INITIALVFS_WIDTH 16
 
-
 /*
  * PC_SRIOV_TOTALVFS_REG(10bit):
  * SRIOV Total VFs
@@ -1544,7 +1462,6 @@ extern "C" {
 
 #define	PCRF_CZ_VF_TOTALVFS_LBN 0
 #define	PCRF_CZ_VF_TOTALVFS_WIDTH 16
-
 
 /*
  * PC_SRIOV_NUMVFS_REG(16bit):
@@ -1560,7 +1477,6 @@ extern "C" {
 #define	PCRF_CZ_VF_NUMVFS_LBN 0
 #define	PCRF_CZ_VF_NUMVFS_WIDTH 16
 
-
 /*
  * PC_LANE23_EQU_CONTROL_REG(32bit):
  * Lanes 2,3 Equalization Control Register.
@@ -1573,7 +1489,6 @@ extern "C" {
 #define	PCRF_DZ_LANE3_EQ_CTRL_WIDTH 16
 #define	PCRF_DZ_LANE2_EQ_CTRL_LBN 0
 #define	PCRF_DZ_LANE2_EQ_CTRL_WIDTH 16
-
 
 /*
  * PC_SRIOV_FN_DPND_LNK_REG(16bit):
@@ -1589,7 +1504,6 @@ extern "C" {
 #define	PCRF_CZ_SRIOV_FN_DPND_LNK_LBN 0
 #define	PCRF_CZ_SRIOV_FN_DPND_LNK_WIDTH 8
 
-
 /*
  * PC_SRIOV_1STVF_OFFSET_REG(16bit):
  * SRIOV First VF Offset
@@ -1604,7 +1518,6 @@ extern "C" {
 #define	PCRF_CZ_VF_1STVF_OFFSET_LBN 0
 #define	PCRF_CZ_VF_1STVF_OFFSET_WIDTH 16
 
-
 /*
  * PC_LANE45_EQU_CONTROL_REG(32bit):
  * Lanes 4,5 Equalization Control Register.
@@ -1617,7 +1530,6 @@ extern "C" {
 #define	PCRF_DZ_LANE5_EQ_CTRL_WIDTH 16
 #define	PCRF_DZ_LANE4_EQ_CTRL_LBN 0
 #define	PCRF_DZ_LANE4_EQ_CTRL_WIDTH 16
-
 
 /*
  * PC_SRIOV_VFSTRIDE_REG(16bit):
@@ -1633,7 +1545,6 @@ extern "C" {
 #define	PCRF_CZ_VF_VFSTRIDE_LBN 0
 #define	PCRF_CZ_VF_VFSTRIDE_WIDTH 16
 
-
 /*
  * PC_LANE67_EQU_CONTROL_REG(32bit):
  * Lanes 6,7 Equalization Control Register.
@@ -1646,7 +1557,6 @@ extern "C" {
 #define	PCRF_DZ_LANE7_EQ_CTRL_WIDTH 16
 #define	PCRF_DZ_LANE6_EQ_CTRL_LBN 0
 #define	PCRF_DZ_LANE6_EQ_CTRL_WIDTH 16
-
 
 /*
  * PC_SRIOV_DEVID_REG(16bit):
@@ -1662,7 +1572,6 @@ extern "C" {
 #define	PCRF_CZ_VF_DEVID_LBN 0
 #define	PCRF_CZ_VF_DEVID_WIDTH 16
 
-
 /*
  * PC_SRIOV_SUP_PAGESZ_REG(16bit):
  * SRIOV Supported Page Sizes
@@ -1677,7 +1586,6 @@ extern "C" {
 #define	PCRF_CZ_VF_SUP_PAGESZ_LBN 0
 #define	PCRF_CZ_VF_SUP_PAGESZ_WIDTH 16
 
-
 /*
  * PC_SRIOV_SYS_PAGESZ_REG(32bit):
  * SRIOV System Page Size
@@ -1691,7 +1599,6 @@ extern "C" {
 
 #define	PCRF_CZ_VF_SYS_PAGESZ_LBN 0
 #define	PCRF_CZ_VF_SYS_PAGESZ_WIDTH 16
-
 
 /*
  * PC_SRIOV_BAR0_REG(32bit):
@@ -1715,7 +1622,6 @@ extern "C" {
 #define	PCRF_DZ_VF_BAR0_IOM_LBN 0
 #define	PCRF_DZ_VF_BAR0_IOM_WIDTH 1
 
-
 /*
  * PC_SRIOV_BAR1_REG(32bit):
  * SRIOV Bar1
@@ -1731,7 +1637,6 @@ extern "C" {
 /* defined as PCRF_CC_VF_BAR_ADDRESS_WIDTH 32 */
 #define	PCRF_DZ_VF_BAR1_ADDRESS_LBN 0
 #define	PCRF_DZ_VF_BAR1_ADDRESS_WIDTH 32
-
 
 /*
  * PC_SRIOV_BAR2_REG(32bit):
@@ -1755,7 +1660,6 @@ extern "C" {
 #define	PCRF_DZ_VF_BAR2_IOM_LBN 0
 #define	PCRF_DZ_VF_BAR2_IOM_WIDTH 1
 
-
 /*
  * PC_SRIOV_BAR3_REG(32bit):
  * SRIOV Bar3
@@ -1771,7 +1675,6 @@ extern "C" {
 /* defined as PCRF_CC_VF_BAR_ADDRESS_WIDTH 32 */
 #define	PCRF_DZ_VF_BAR3_ADDRESS_LBN 0
 #define	PCRF_DZ_VF_BAR3_ADDRESS_WIDTH 32
-
 
 /*
  * PC_SRIOV_BAR4_REG(32bit):
@@ -1789,7 +1692,6 @@ extern "C" {
 #define	PCRF_DZ_VF_BAR4_ADDRESS_LBN 0
 #define	PCRF_DZ_VF_BAR4_ADDRESS_WIDTH 32
 
-
 /*
  * PC_SRIOV_BAR5_REG(32bit):
  * SRIOV Bar5
@@ -1806,7 +1708,6 @@ extern "C" {
 #define	PCRF_DZ_VF_BAR5_ADDRESS_LBN 0
 #define	PCRF_DZ_VF_BAR5_ADDRESS_WIDTH 32
 
-
 /*
  * PC_SRIOV_RSVD_REG(16bit):
  * Reserved register
@@ -1817,7 +1718,6 @@ extern "C" {
 
 #define	PCRF_DZ_VF_RSVD_LBN 0
 #define	PCRF_DZ_VF_RSVD_WIDTH 16
-
 
 /*
  * PC_SRIOV_MIBR_SARRAY_OFFSET_REG(32bit):
@@ -1835,7 +1735,6 @@ extern "C" {
 #define	PCRF_CZ_VF_MIGR_BIR_LBN 0
 #define	PCRF_CZ_VF_MIGR_BIR_WIDTH 3
 
-
 /*
  * PC_TPH_CAP_HDR_REG(32bit):
  * TPH Capability Header Register
@@ -1850,7 +1749,6 @@ extern "C" {
 #define	PCRF_DZ_TPH_VERSION_WIDTH 4
 #define	PCRF_DZ_TPH_EXT_CAP_ID_LBN 0
 #define	PCRF_DZ_TPH_EXT_CAP_ID_WIDTH 16
-
 
 /*
  * PC_TPH_REQ_CAP_REG(32bit):
@@ -1873,7 +1771,6 @@ extern "C" {
 #define	PCRF_DZ_TPH_NOST_MODE_SUP_LBN 0
 #define	PCRF_DZ_TPH_NOST_MODE_SUP_WIDTH 1
 
-
 /*
  * PC_TPH_REQ_CTL_REG(32bit):
  * TPH Requester Control Register
@@ -1886,7 +1783,6 @@ extern "C" {
 #define	PCRF_DZ_TPH_REQ_ENABLE_WIDTH 2
 #define	PCRF_DZ_TPH_ST_MODE_LBN 0
 #define	PCRF_DZ_TPH_ST_MODE_WIDTH 3
-
 
 /*
  * PC_LTR_CAP_HDR_REG(32bit):
@@ -1902,7 +1798,6 @@ extern "C" {
 #define	PCRF_DZ_LTR_VERSION_WIDTH 4
 #define	PCRF_DZ_LTR_EXT_CAP_ID_LBN 0
 #define	PCRF_DZ_LTR_EXT_CAP_ID_WIDTH 16
-
 
 /*
  * PC_LTR_MAX_SNOOP_REG(32bit):
@@ -1921,7 +1816,6 @@ extern "C" {
 #define	PCRF_DZ_LTR_MAX_SNOOP_LAT_LBN 0
 #define	PCRF_DZ_LTR_MAX_SNOOP_LAT_WIDTH 10
 
-
 /*
  * PC_ACK_LAT_TMR_REG(32bit):
  * ACK latency timer & replay timer register
@@ -1934,7 +1828,6 @@ extern "C" {
 #define	PCRF_AC_RT_WIDTH 16
 #define	PCRF_AC_ALT_LBN 0
 #define	PCRF_AC_ALT_WIDTH 16
-
 
 /*
  * PC_OTHER_MSG_REG(32bit):
@@ -1953,7 +1846,6 @@ extern "C" {
 #define	PCRF_AC_OM_CRPT0_LBN 0
 #define	PCRF_AC_OM_CRPT0_WIDTH 8
 
-
 /*
  * PC_FORCE_LNK_REG(24bit):
  * Port force link register
@@ -1968,7 +1860,6 @@ extern "C" {
 #define	PCRF_AC_FL_WIDTH 1
 #define	PCRF_AC_LN_LBN 0
 #define	PCRF_AC_LN_WIDTH 8
-
 
 /*
  * PC_ACK_FREQ_REG(32bit):
@@ -1992,7 +1883,6 @@ extern "C" {
 #define	PCRF_AC_MAX_FTS_WIDTH 8
 #define	PCRF_AC_ACK_FREQ_LBN 0
 #define	PCRF_AC_ACK_FREQ_WIDTH 8
-
 
 /*
  * PC_PORT_LNK_CTL_REG(32bit):
@@ -2031,7 +1921,6 @@ extern "C" {
 #define	PCRF_AC_OMR_LBN 0
 #define	PCRF_AC_OMR_WIDTH 1
 
-
 /*
  * PC_LN_SKEW_REG(32bit):
  * Lane skew register
@@ -2054,7 +1943,6 @@ extern "C" {
 #define	PCRF_AC_LS1_WIDTH 8
 #define	PCRF_AC_LS0_LBN 0
 #define	PCRF_AC_LS0_WIDTH 8
-
 
 /*
  * PC_SYM_NUM_REG(16bit):
@@ -2083,7 +1971,6 @@ extern "C" {
 #define	PCRF_AC_TS1_LBN 0
 #define	PCRF_AC_TS1_WIDTH 4
 
-
 /*
  * PC_SYM_TMR_FLT_MSK_REG(16bit):
  * Symbol timer and Filter Mask Register
@@ -2103,7 +1990,6 @@ extern "C" {
 #define	PCRF_CC_SI0_LBN 0
 #define	PCRF_CC_SI0_WIDTH 8
 
-
 /*
  * PC_SYM_TMR_REG(16bit):
  * Symbol timer register
@@ -2119,7 +2005,6 @@ extern "C" {
 #define	PCRF_AB_SI0_LBN 0
 #define	PCRF_AB_SI0_WIDTH 8
 
-
 /*
  * PC_FLT_MSK_REG(32bit):
  * Filter Mask Register 2
@@ -2130,7 +2015,6 @@ extern "C" {
 
 #define	PCRF_CC_DEFAULT_FLT_MSK2_LBN 0
 #define	PCRF_CC_DEFAULT_FLT_MSK2_WIDTH 32
-
 
 /*
  * PC_PHY_STAT_REG(32bit):
@@ -2151,7 +2035,6 @@ extern "C" {
 #define	PCRF_AC_SSCL_WIDTH 1
 #define	PCRF_AC_SSCD_LBN 0
 #define	PCRF_AC_SSCD_WIDTH 1
-
 
 /*
  * PC_PHY_CTL_REG(32bit):
@@ -2181,7 +2064,6 @@ extern "C" {
 #define	PCRF_AC_FORCE_LOS_EN_LBN 0
 #define	PCRF_AC_FORCE_LOS_EN_WIDTH 1
 
-
 /*
  * PC_DEBUG0_REG(32bit):
  * Debug register 0
@@ -2200,7 +2082,6 @@ extern "C" {
 #define	PCRF_AC_CDI01_WIDTH 8
 #define	PCRF_AC_CDI00_LBN 0
 #define	PCRF_AC_CDI00_WIDTH 8
-
 
 /*
  * PC_DEBUG1_REG(32bit):
@@ -2221,7 +2102,6 @@ extern "C" {
 #define	PCRF_AC_CDI10_LBN 0
 #define	PCRF_AC_CDI10_WIDTH 8
 
-
 /*
  * PC_XPFCC_STAT_REG(24bit):
  * documentation to be written for sum_PC_XPFCC_STAT_REG
@@ -2234,7 +2114,6 @@ extern "C" {
 #define	PCRF_AC_XPDC_WIDTH 8
 #define	PCRF_AC_XPHC_LBN 0
 #define	PCRF_AC_XPHC_WIDTH 12
-
 
 /*
  * PC_XNPFCC_STAT_REG(24bit):
@@ -2249,7 +2128,6 @@ extern "C" {
 #define	PCRF_AC_XNPHC_LBN 0
 #define	PCRF_AC_XNPHC_WIDTH 12
 
-
 /*
  * PC_XCFCC_STAT_REG(24bit):
  * documentation to be written for sum_PC_XCFCC_STAT_REG
@@ -2262,7 +2140,6 @@ extern "C" {
 #define	PCRF_AC_XCDC_WIDTH 8
 #define	PCRF_AC_XCHC_LBN 0
 #define	PCRF_AC_XCHC_WIDTH 12
-
 
 /*
  * PC_Q_STAT_REG(8bit):
@@ -2279,7 +2156,6 @@ extern "C" {
 #define	PCRF_AC_RCNR_LBN 0
 #define	PCRF_AC_RCNR_WIDTH 1
 
-
 /*
  * PC_VC_XMIT_ARB1_REG(32bit):
  * VC Transmit Arbitration Register 1
@@ -2287,8 +2163,6 @@ extern "C" {
 
 #define	PCR_CC_VC_XMIT_ARB1_REG 0x00000740
 /* sienaa0=pci_f0_config */
-
-
 
 /*
  * PC_VC_XMIT_ARB2_REG(32bit):
@@ -2298,8 +2172,6 @@ extern "C" {
 #define	PCR_CC_VC_XMIT_ARB2_REG 0x00000744
 /* sienaa0=pci_f0_config */
 
-
-
 /*
  * PC_VC0_P_RQ_CTL_REG(32bit):
  * VC0 Posted Receive Queue Control
@@ -2307,8 +2179,6 @@ extern "C" {
 
 #define	PCR_CC_VC0_P_RQ_CTL_REG 0x00000748
 /* sienaa0=pci_f0_config */
-
-
 
 /*
  * PC_VC0_NP_RQ_CTL_REG(32bit):
@@ -2318,8 +2188,6 @@ extern "C" {
 #define	PCR_CC_VC0_NP_RQ_CTL_REG 0x0000074c
 /* sienaa0=pci_f0_config */
 
-
-
 /*
  * PC_VC0_C_RQ_CTL_REG(32bit):
  * VC0 Completion Receive Queue Control
@@ -2327,8 +2195,6 @@ extern "C" {
 
 #define	PCR_CC_VC0_C_RQ_CTL_REG 0x00000750
 /* sienaa0=pci_f0_config */
-
-
 
 /*
  * PC_GEN2_REG(32bit):
@@ -2350,7 +2216,6 @@ extern "C" {
 #define	PCRF_CC_LANE_ENABLE_WIDTH 9
 #define	PCRF_CC_NUM_FTS_LBN 0
 #define	PCRF_CC_NUM_FTS_WIDTH 8
-
 
 #ifdef	__cplusplus
 }

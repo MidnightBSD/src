@@ -1,9 +1,8 @@
 /*-
- * Copyright (c) 2006 M. Warner Losh.  All rights reserved.
  * Copyright (c) 2009 Oleksandr Tymoshenko.  All rights reserved.
  * Copyright (c) 2017 Ruslan Bukin <br@bsdpad.com>
  * Copyright (c) 2018 Ian Lepore.  All rights reserved.
- * All rights reserved.
+ * Copyright (c) 2006 M. Warner Losh <imp@FreeBSD.org>
  *
  * This software was developed by SRI International and the University of
  * Cambridge Computer Laboratory under DARPA/AFRL contract FA8750-10-C-0237
@@ -34,7 +33,6 @@
 /* n25q Quad SPI Flash driver. */
 
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 
 #include <sys/param.h>
@@ -462,7 +460,7 @@ n25q_task(void *arg)
 			    bp->bio_data, bp->bio_bcount);
 			break;
 		default:
-			bp->bio_error = EINVAL;
+			bp->bio_error = EOPNOTSUPP;
 		}
 
 		biodone(bp);

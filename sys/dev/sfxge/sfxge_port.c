@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/limits.h>
 #include <net/ethernet.h>
@@ -193,11 +192,9 @@ sfxge_mac_stat_init(struct sfxge_softc *sc)
 	/* Initialise the named stats */
 	for (id = 0; id < EFX_MAC_NSTATS; id++) {
 		name = efx_mac_stat_name(sc->enp, id);
-		SYSCTL_ADD_PROC(
-			ctx, stat_list,
-			OID_AUTO, name, CTLTYPE_U64|CTLFLAG_RD,
-			sc, id, sfxge_mac_stat_handler, "Q",
-			"");
+		SYSCTL_ADD_PROC(ctx, stat_list, OID_AUTO, name,
+		    CTLTYPE_U64 | CTLFLAG_RD | CTLFLAG_MPSAFE,
+		    sc, id, sfxge_mac_stat_handler, "Q", "");
 	}
 }
 
@@ -307,7 +304,10 @@ static const uint64_t sfxge_link_baudrate[EFX_LINK_NMODES] = {
 	[EFX_LINK_1000HDX]	= IF_Gbps(1),
 	[EFX_LINK_1000FDX]	= IF_Gbps(1),
 	[EFX_LINK_10000FDX]	= IF_Gbps(10),
+	[EFX_LINK_25000FDX]	= IF_Gbps(25),
 	[EFX_LINK_40000FDX]	= IF_Gbps(40),
+	[EFX_LINK_50000FDX]	= IF_Gbps(50),
+	[EFX_LINK_100000FDX]	= IF_Gbps(100),
 };
 
 void
@@ -354,36 +354,35 @@ done:
 	SFXGE_PORT_UNLOCK(port);
 }
 
+static u_int
+sfxge_copy_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint8_t *mcast_addr = arg;
+
+	if (cnt == EFX_MAC_MULTICAST_LIST_MAX)
+		return (0);
+
+	memcpy(mcast_addr + (cnt * EFX_MAC_ADDR_LEN), LLADDR(sdl),
+	    EFX_MAC_ADDR_LEN);
+
+	return (1);
+}
+
 static int
 sfxge_mac_multicast_list_set(struct sfxge_softc *sc)
 {
 	struct ifnet *ifp = sc->ifnet;
 	struct sfxge_port *port = &sc->port;
-	uint8_t *mcast_addr = port->mcast_addrs;
-	struct ifmultiaddr *ifma;
-	struct sockaddr_dl *sa;
 	int rc = 0;
 
 	mtx_assert(&port->lock, MA_OWNED);
 
-	port->mcast_count = 0;
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family == AF_LINK) {
-			if (port->mcast_count == EFX_MAC_MULTICAST_LIST_MAX) {
-				device_printf(sc->dev,
-				    "Too many multicast addresses\n");
-				rc = EINVAL;
-				break;
-			}
-
-			sa = (struct sockaddr_dl *)ifma->ifma_addr;
-			memcpy(mcast_addr, LLADDR(sa), EFX_MAC_ADDR_LEN);
-			mcast_addr += EFX_MAC_ADDR_LEN;
-			++port->mcast_count;
-		}
+	port->mcast_count = if_foreach_llmaddr(ifp, sfxge_copy_maddr,
+	    port->mcast_addrs);
+	if (port->mcast_count == EFX_MAC_MULTICAST_LIST_MAX) {
+		device_printf(sc->dev, "Too many multicast addresses\n");
+		rc = EINVAL;
 	}
-	if_maddr_runlock(ifp);
 
 	if (rc == 0) {
 		rc = efx_mac_multicast_list_set(sc->enp, port->mcast_addrs,
@@ -481,6 +480,7 @@ int
 sfxge_port_start(struct sfxge_softc *sc)
 {
 	uint8_t mac_addr[ETHER_ADDR_LEN];
+	struct epoch_tracker et;
 	struct ifnet *ifp = sc->ifnet;
 	struct sfxge_port *port;
 	efx_nic_t *enp;
@@ -514,10 +514,10 @@ sfxge_port_start(struct sfxge_softc *sc)
 		goto fail3;
 
 	/* Set the unicast address */
-	if_addr_rlock(ifp);
+	NET_EPOCH_ENTER(et);
 	bcopy(LLADDR((struct sockaddr_dl *)ifp->if_addr->ifa_addr),
 	      mac_addr, sizeof(mac_addr));
-	if_addr_runlock(ifp);
+	NET_EPOCH_EXIT(et);
 	if ((rc = efx_mac_addr_set(enp, mac_addr)) != 0)
 		goto fail4;
 
@@ -646,12 +646,10 @@ sfxge_phy_stat_init(struct sfxge_softc *sc)
 		if (!(stat_mask & ((uint64_t)1 << id)))
 			continue;
 		name = efx_phy_stat_name(sc->enp, id);
-		SYSCTL_ADD_PROC(
-			ctx, stat_list,
-			OID_AUTO, name, CTLTYPE_UINT|CTLFLAG_RD,
-			sc, id, sfxge_phy_stat_handler,
-			id == EFX_PHY_STAT_OUI ? "IX" : "IU",
-			"");
+		SYSCTL_ADD_PROC(ctx, stat_list, OID_AUTO, name,
+		    CTLTYPE_UINT | CTLFLAG_RD | CTLFLAG_MPSAFE,
+		    sc, id, sfxge_phy_stat_handler,
+		    id == EFX_PHY_STAT_OUI ? "IX" : "IU", "");
 	}
 }
 
@@ -752,6 +750,8 @@ sfxge_port_init(struct sfxge_softc *sc)
 	struct sysctl_ctx_list *sysctl_ctx;
 	struct sysctl_oid *sysctl_tree;
 	efsys_mem_t *mac_stats_buf, *phy_stats_buf;
+	uint32_t mac_nstats;
+	size_t mac_stats_size;
 	int rc;
 
 	port = &sc->port;
@@ -781,23 +781,27 @@ sfxge_port_init(struct sfxge_softc *sc)
 	 * ifmedia, provide sysctls for it. */
 	port->wanted_fc = EFX_FCNTL_RESPOND | EFX_FCNTL_GENERATE;
 	SYSCTL_ADD_PROC(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree), OID_AUTO,
-	    "wanted_fc", CTLTYPE_UINT|CTLFLAG_RW, sc, 0,
+	    "wanted_fc", CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_MPSAFE, sc, 0,
 	    sfxge_port_wanted_fc_handler, "IU", "wanted flow control mode");
 	SYSCTL_ADD_PROC(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree), OID_AUTO,
-	    "link_fc", CTLTYPE_UINT|CTLFLAG_RD, sc, 0,
+	    "link_fc", CTLTYPE_UINT | CTLFLAG_RD | CTLFLAG_MPSAFE, sc, 0,
 	    sfxge_port_link_fc_handler, "IU", "link flow control mode");
 #endif
 
 	DBGPRINT(sc->dev, "alloc MAC stats");
 	port->mac_stats.decode_buf = malloc(EFX_MAC_NSTATS * sizeof(uint64_t),
 					    M_SFXGE, M_WAITOK | M_ZERO);
-	if ((rc = sfxge_dma_alloc(sc, EFX_MAC_STATS_SIZE, mac_stats_buf)) != 0)
+	mac_nstats = efx_nic_cfg_get(sc->enp)->enc_mac_stats_nstats;
+	mac_stats_size = EFX_P2ROUNDUP(size_t, mac_nstats * sizeof(uint64_t),
+				       EFX_BUF_SIZE);
+	if ((rc = sfxge_dma_alloc(sc, mac_stats_size, mac_stats_buf)) != 0)
 		goto fail2;
 	port->stats_update_period_ms = sfxge_port_stats_update_period_ms(sc);
 	sfxge_mac_stat_init(sc);
 
 	SYSCTL_ADD_PROC(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree), OID_AUTO,
-	    "stats_update_period_ms", CTLTYPE_UINT|CTLFLAG_RW, sc, 0,
+	    "stats_update_period_ms",
+	    CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_MPSAFE, sc, 0,
 	    sfxge_port_stats_update_period_ms_handler, "IU",
 	    "interface statistics refresh period");
 
@@ -831,12 +835,16 @@ static const int sfxge_link_mode[EFX_PHY_MEDIA_NTYPES][EFX_LINK_NMODES] = {
 	[EFX_PHY_MEDIA_QSFP_PLUS] = {
 		/* Don't know the module type, but assume SR for now. */
 		[EFX_LINK_10000FDX]	= IFM_ETHER | IFM_FDX | IFM_10G_SR,
+		[EFX_LINK_25000FDX]	= IFM_ETHER | IFM_FDX | IFM_25G_SR,
 		[EFX_LINK_40000FDX]	= IFM_ETHER | IFM_FDX | IFM_40G_CR4,
+		[EFX_LINK_50000FDX]	= IFM_ETHER | IFM_FDX | IFM_50G_SR,
+		[EFX_LINK_100000FDX]	= IFM_ETHER | IFM_FDX | IFM_100G_SR2,
 	},
 	[EFX_PHY_MEDIA_SFP_PLUS] = {
 		/* Don't know the module type, but assume SX/SR for now. */
 		[EFX_LINK_1000FDX]	= IFM_ETHER | IFM_FDX | IFM_1000_SX,
 		[EFX_LINK_10000FDX]	= IFM_ETHER | IFM_FDX | IFM_10G_SR,
+		[EFX_LINK_25000FDX]	= IFM_ETHER | IFM_FDX | IFM_25G_SR,
 	},
 	[EFX_PHY_MEDIA_BASE_T] = {
 		[EFX_LINK_10HDX]	= IFM_ETHER | IFM_HDX | IFM_10_T,
@@ -892,10 +900,15 @@ sfxge_link_mode_to_phy_cap(efx_link_mode_t mode)
 		return (EFX_PHY_CAP_1000FDX);
 	case EFX_LINK_10000FDX:
 		return (EFX_PHY_CAP_10000FDX);
+	case EFX_LINK_25000FDX:
+		return (EFX_PHY_CAP_25000FDX);
 	case EFX_LINK_40000FDX:
 		return (EFX_PHY_CAP_40000FDX);
+	case EFX_LINK_50000FDX:
+		return (EFX_PHY_CAP_50000FDX);
+	case EFX_LINK_100000FDX:
+		return (EFX_PHY_CAP_100000FDX);
 	default:
-		EFSYS_ASSERT(B_FALSE);
 		return (EFX_PHY_CAP_INVALID);
 	}
 }

@@ -33,7 +33,6 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
 
 #include <sys/param.h>
@@ -70,7 +69,7 @@
  * because of CAM_SCSI2_MAXLUN in cam_xpt.c
  */
 #define SBP_NUM_LUNS 64
-#define SBP_MAXPHYS  MIN(MAXPHYS, (512*1024) /* 512KB */)
+#define SBP_MAXPHYS  (128 * 1024)
 #define SBP_DMA_SIZE PAGE_SIZE
 #define SBP_LOGIN_SIZE sizeof(struct sbp_login_res)
 #define SBP_QUEUE_LEN ((SBP_DMA_SIZE - SBP_LOGIN_SIZE) / sizeof(struct sbp_ocb))
@@ -111,8 +110,8 @@ static int use_doorbell = 0;
 static int sbp_tags = 0;
 
 SYSCTL_DECL(_hw_firewire);
-static SYSCTL_NODE(_hw_firewire, OID_AUTO, sbp, CTLFLAG_RD, 0,
-	"SBP-II Subsystem");
+static SYSCTL_NODE(_hw_firewire, OID_AUTO, sbp, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "SBP-II Subsystem");
 SYSCTL_INT(_debug, OID_AUTO, sbp_debug, CTLFLAG_RWTUN, &debug, 0,
 	"SBP debug flag");
 SYSCTL_INT(_hw_firewire_sbp, OID_AUTO, auto_login, CTLFLAG_RWTUN, &auto_login, 0,
@@ -133,11 +132,7 @@ SYSCTL_INT(_hw_firewire_sbp, OID_AUTO, tags, CTLFLAG_RWTUN, &sbp_tags, 0,
 #define NEED_RESPONSE 0
 
 #define SBP_SEG_MAX rounddown(0xffff, PAGE_SIZE)
-#ifdef __sparc64__ /* iommu */
-#define SBP_IND_MAX howmany(SBP_MAXPHYS, SBP_SEG_MAX)
-#else
 #define SBP_IND_MAX howmany(SBP_MAXPHYS, PAGE_SIZE)
-#endif
 struct sbp_ocb {
 	STAILQ_ENTRY(sbp_ocb)	ocb;
 	union ccb	*ccb;
@@ -990,7 +985,7 @@ END_DEBUG
 	sdev = sbp_next_dev(target, sdev->lun_id + 1);
 	if (sdev == NULL) {
 		SBP_UNLOCK(sbp);
-		free(ccb, M_SBP);
+		xpt_free_ccb(ccb);
 		return;
 	}
 	/* reuse ccb */
@@ -1022,9 +1017,9 @@ SBP_DEBUG(0)
 	device_printf(sdev->target->sbp->fd.dev,
 		"%s:%s\n", __func__, sdev->bustgtlun);
 END_DEBUG
-	ccb = malloc(sizeof(union ccb), M_SBP, M_NOWAIT | M_ZERO);
+	ccb = xpt_alloc_ccb_nowait();
 	if (ccb == NULL) {
-		printf("sbp_cam_scan_target: malloc failed\n");
+		printf("sbp_cam_scan_target: xpt_alloc_ccb_nowait() failed\n");
 		return;
 	}
 	SBP_UNLOCK(target->sbp);
@@ -2509,7 +2504,7 @@ END_DEBUG
 		cpi->initiator_id = SBP_INITIATOR;
 		cpi->bus_id = sim->bus_id;
 		cpi->base_transfer_speed = 400 * 1000 / 8;
-		strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
 		strlcpy(cpi->hba_vid, "SBP", HBA_IDLEN);
 		strlcpy(cpi->dev_name, sim->sim_name, DEV_IDLEN);
 		cpi->unit_number = sim->unit_number;

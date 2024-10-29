@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997, Stefan Esser <se@freebsd.org>
  * Copyright (c) 2000, Michael Smith <msmith@freebsd.org>
@@ -26,7 +26,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  *
  */
 
@@ -161,6 +160,10 @@ void		pci_read_bar(device_t dev, int reg, pci_addr_t *mapp,
 		    pci_addr_t *testvalp, int *bar64);
 struct pci_map *pci_add_bar(device_t dev, int reg, pci_addr_t value,
 		    pci_addr_t size);
+
+struct resource *pci_reserve_map(device_t dev, device_t child, int type,
+		    int *rid, rman_res_t start, rman_res_t end,
+		    rman_res_t count, u_int num, u_int flags);
 
 struct resource *pci_alloc_multi_resource(device_t dev, device_t child,
 		    int type, int *rid, rman_res_t start, rman_res_t end,

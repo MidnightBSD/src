@@ -1,5 +1,5 @@
-#ifndef	_LINUX_JHASH_H_
-#define	_LINUX_JHASH_H_
+#ifndef	_LINUXKPI_LINUX_JHASH_H_
+#define	_LINUXKPI_LINUX_JHASH_H_
 
 #include <asm/types.h>
 
@@ -20,7 +20,6 @@
  *
  * I've modified Bob's hash to be useful in the Linux kernel, and
  * any bugs present are surely my fault.  -DaveM
- *
  */
 
 /* NOTE: Arguments are modified. */
@@ -115,7 +114,6 @@ static inline u32 jhash2(const u32 *k, u32 length, u32 initval)
 	return c;
 }
 
-
 /* A special ultra-optimized versions that knows they are hashing exactly
  * 3, 2 or 1 word(s).
  *
@@ -143,4 +141,4 @@ static inline u32 jhash_1word(u32 a, u32 initval)
 	return jhash_3words(a, 0, 0, initval);
 }
 
-#endif	/* _LINUX_JHASH_H_ */
+#endif	/* _LINUXKPI_LINUX_JHASH_H_ */

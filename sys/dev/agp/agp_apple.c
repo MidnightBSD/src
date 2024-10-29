@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Nathan Whitehorn
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -154,7 +153,7 @@ agp_apple_attach(device_t dev)
 	AGP_SET_APERTURE(dev, sc->aperture);
 
 	/* XXX: U3 scratch page? */
-	
+
 	/* Enable the aperture and TLB. */
 	AGP_FLUSH_TLB(dev);
 
@@ -212,7 +211,7 @@ agp_apple_set_aperture(device_t dev, uint32_t aperture)
 
 	pci_write_config(dev, UNIN_AGP_GART_BASE,
 	    (sc->gatt->ag_physical & 0xfffff000) | aperture, 4);
-	
+
 	return (0);
 }
 
@@ -280,7 +279,6 @@ static device_method_t agp_apple_methods[] = {
 	DEVMETHOD(agp_free_memory,	agp_generic_free_memory),
 	DEVMETHOD(agp_bind_memory,	agp_generic_bind_memory),
 	DEVMETHOD(agp_unbind_memory,	agp_generic_unbind_memory),
-
 	{ 0, 0 }
 };
 

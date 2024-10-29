@@ -23,7 +23,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /*
@@ -1254,7 +1253,6 @@ const u32	bce_COM_b06FwRodata[(0x14/4) + 1] = {
 const u32	bce_COM_b06FwBss[(0xc4/4) + 1] = { 0x0 };
 const u32	bce_COM_b06FwSbss[(0x38/4) + 1] = { 0x0 };
 const u32	bce_COM_b06FwSdata[(0x0/4) + 1] = { 0x0 };
-
 
 int	bce_RXP_b06FwReleaseMajor = 0x6;
 int	bce_RXP_b06FwReleaseMinor = 0x0;
@@ -3121,7 +3119,6 @@ const u32	bce_RXP_b06FwBss[(0x440/4) + 1] = { 0x0 };
 const u32	bce_RXP_b06FwSbss[(0x4c/4) + 1] = { 0x0 };
 const u32	bce_RXP_b06FwSdata[(0x0/4) + 1] = { 0x0 };
 
-
 int	bce_TPAT_b06FwReleaseMajor = 0x6;
 int	bce_TPAT_b06FwReleaseMinor = 0x0;
 int	bce_TPAT_b06FwReleaseFix = 0xf;
@@ -3526,7 +3523,6 @@ const u32	bce_TPAT_b06FwRodata[(0x0/4) + 1] = { 0x0 };
 const u32	bce_TPAT_b06FwBss[(0x450/4) + 1] = { 0x0 };
 const u32	bce_TPAT_b06FwSbss[(0x44/4) + 1] = { 0x0 };
 const u32	bce_TPAT_b06FwSdata[(0x0/4) + 1] = { 0x0 };
-
 
 int	bce_TXP_b06FwReleaseMajor = 0x6;
 int	bce_TXP_b06FwReleaseMinor = 0x0;
@@ -4511,7 +4507,6 @@ const u32	bce_TXP_b06FwRodata[(0x0/4) + 1] = { 0x0 };
 const u32	bce_TXP_b06FwBss[(0x14c/4) + 1] = { 0x0 };
 const u32	bce_TXP_b06FwSbss[(0x68/4) + 1] = { 0x0 };
 const u32	bce_TXP_b06FwSdata[(0x0/4) + 1] = { 0x0 };
-
 
 int	bce_CP_b06FwReleaseMajor = 0x6;
 int	bce_CP_b06FwReleaseMinor = 0x0;
@@ -5952,7 +5947,6 @@ const u32	bce_CP_b06FwBss[(0x5d8/4) + 1] = { 0x0 };
 const u32	bce_CP_b06FwSbss[(0xf1/4) + 1] = { 0x0 };
 const u32	bce_CP_b06FwSdata[(0x0/4) + 1] = { 0x0 };
 
-
 const u32 bce_rv2p_proc1[] = {
     0x00000010, 0xb1800006,
     0x0000001f, 0x0106000f,
@@ -6242,7 +6236,6 @@ const u32 bce_rv2p_proc1[] = {
     0x00000008, 0x2a000007,
     0x00000018, 0x8000feed,
 };
-
 
 u32 bce_rv2p_proc2[] = {
     0x00000010, 0xb1800004,
@@ -6660,7 +6653,6 @@ u32 bce_rv2p_proc2[] = {
     0x00000010, 0x001f0000,
     0x00000018, 0x8000fe68,
 };
-
 
 int	bce_TXP_b09FwReleaseMajor = 0x6;
 int	bce_TXP_b09FwReleaseMinor = 0x0;
@@ -7668,7 +7660,6 @@ const u32	bce_TXP_b09FwBss[(0x24c/4) + 1] = { 0x0 };
 const u32	bce_TXP_b09FwSbss[(0x64/4) + 1] = { 0x0 };
 const u32	bce_TXP_b09FwSdata[(0x0/4) + 1] = { 0x0 };
 
-
 int	bce_TPAT_b09FwReleaseMajor = 0x6;
 int	bce_TPAT_b09FwReleaseMinor = 0x0;
 int	bce_TPAT_b09FwReleaseFix = 0x11;
@@ -7997,7 +7988,6 @@ const u32	bce_TPAT_b09FwRodata[(0x4/4) + 1] = {
 const u32	bce_TPAT_b09FwBss[(0x12b4/4) + 1] = { 0x0 };
 const u32	bce_TPAT_b09FwSbss[(0x3c/4) + 1] = { 0x0 };
 const u32	bce_TPAT_b09FwSdata[(0x0/4) + 1] = { 0x0 };
-
 
 int	bce_COM_b09FwReleaseMajor = 0x6;
 int	bce_COM_b09FwReleaseMinor = 0x0;
@@ -9395,7 +9385,6 @@ const u32	bce_COM_b09FwRodata[(0x38/4) + 1] = {
 const u32	bce_COM_b09FwBss[(0x11c/4) + 1] = { 0x0 };
 const u32	bce_COM_b09FwSbss[(0x30/4) + 1] = { 0x0 };
 const u32	bce_COM_b09FwSdata[(0x0/4) + 1] = { 0x0 };
-
 
 int	bce_RXP_b09FwReleaseMajor = 0x6;
 int	bce_RXP_b09FwReleaseMinor = 0x0;
@@ -11787,7 +11776,6 @@ const u32	bce_RXP_b09FwBss[(0x1bc/4) + 1] = { 0x0 };
 const u32	bce_RXP_b09FwSbss[(0x78/4) + 1] = { 0x0 };
 const u32	bce_RXP_b09FwSdata[(0x0/4) + 1] = { 0x0 };
 
-
 int	bce_CP_b09FwReleaseMajor = 0x6;
 int	bce_CP_b09FwReleaseMinor = 0x0;
 int	bce_CP_b09FwReleaseFix = 0x11;
@@ -13246,7 +13234,6 @@ const u32	bce_CP_b09FwBss[(0x19c/4) + 1] = { 0x0 };
 const u32	bce_CP_b09FwSbss[(0xa8/4) + 1] = { 0x0 };
 const u32	bce_CP_b09FwSdata[(0x0/4) + 1] = { 0x0 };
 
-
 const u32 bce_xi_rv2p_proc1[] = {
     0x00000010, 0xb1800006,
     0x0000001f, 0x05060011,
@@ -13536,7 +13523,6 @@ const u32 bce_xi_rv2p_proc1[] = {
     0x00000008, 0x2a000007,
     0x00000018, 0x8000feed,
 };
-
 
 const u32 bce_xi_rv2p_proc2[] = {
     0x00000010, 0xb1800004,
@@ -14006,7 +13992,6 @@ const u32 bce_xi_rv2p_proc2[] = {
     0x00000018, 0x8000fe35,
 };
 
-
 const u32 bce_xi90_rv2p_proc1[] = {
 	 0x00000010, 0xb1800006,
 	 0x0000001f, 0x03060011,
@@ -14311,7 +14296,6 @@ const u32 bce_xi90_rv2p_proc1[] = {
 	 0x00000008, 0x2a000007,
 	 0x00000018, 0x8000fede,
 };
-
 
 const u32 bce_xi90_rv2p_proc2[] = {
     0x00000010, 0xb1800004,
@@ -14829,7 +14813,6 @@ const u32 bce_xi90_rv2p_proc2[] = {
     0x0000000c, 0x6bd70001,
     0x00000018, 0x8000fe04,
 };
-
 
 /*
  * The RV2P block must be configured for the system

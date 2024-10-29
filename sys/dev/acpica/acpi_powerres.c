@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_acpi.h"
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -658,7 +657,6 @@ acpi_pwr_switch_power(void)
     /* Sweep the list backwards turning things off. */
     TAILQ_FOREACH_REVERSE(rp, &acpi_powerresources, acpi_powerresource_list,
 	ap_link) {
-
 	if (TAILQ_FIRST(&rp->ap_references) != NULL) {
 	    ACPI_DEBUG_PRINT((ACPI_DB_OBJECTS,
 			     "%s has references, not turning off\n",

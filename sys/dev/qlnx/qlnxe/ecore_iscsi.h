@@ -24,7 +24,6 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
 
 #ifndef __ECORE_ISCSI_H__
@@ -184,4 +183,3 @@ ecore_sp_iscsi_conn_clear_sq(struct ecore_hwfn *p_hwfn,
 			     struct ecore_spq_comp_cb *p_comp_addr);
 
 #endif  /*__ECORE_ISCSI_H__*/
-

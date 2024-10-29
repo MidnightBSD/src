@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998, 2001 Nicolas Souchu, Marc Bouget
  * All rights reserved.
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * I2C Bit-Banging over parallel port
  *
@@ -44,7 +43,6 @@
 #include <sys/mutex.h>
 #include <sys/systm.h>
 #include <sys/uio.h>
-
 
 #include <dev/ppbus/ppbconf.h>
 #include "ppbus_if.h"

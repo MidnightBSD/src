@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * driver for RealTek 8305 pseudo PHYs
  */
@@ -135,7 +134,7 @@ rlswitch_attach(device_t dev)
 #ifdef RL_DEBUG
 	rlswitch_phydump(dev);
 #endif
-	
+
 #ifdef RL_VLAN
 	int val;
 

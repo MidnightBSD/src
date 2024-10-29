@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
@@ -34,6 +33,7 @@
 #include <sys/imgact.h>
 #include <sys/linker.h>
 #include <sys/proc.h>
+#include <sys/reg.h>
 #include <sys/sysent.h>
 #include <sys/imgact_elf.h>
 #include <sys/syscall.h>
@@ -185,7 +185,7 @@ elf_is_ifunc_reloc(Elf_Size r_info)
 /* Process one elf relocation with addend. */
 static int
 elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
-    int type, elf_lookup_fn lookup)
+    int type, bool late_ifunc, elf_lookup_fn lookup)
 {
 	Elf64_Addr *where, val;
 	Elf32_Addr *where32, val32;
@@ -225,15 +225,22 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 		panic("unknown reloc type %d\n", type);
 	}
 
+	if (late_ifunc) {
+		KASSERT(type == ELF_RELOC_RELA,
+		    ("Only RELA ifunc relocations are supported"));
+		if (rtype != R_X86_64_IRELATIVE)
+			return (0);
+	}
+
 	switch (rtype) {
 		case R_X86_64_NONE:	/* none */
 			break;
 
-		case R_X86_64_64:		/* S + A */
+		case R_X86_64_64:	/* S + A */
 			error = lookup(lf, symidx, 1, &addr);
 			val = addr + addend;
 			if (error != 0)
-				return -1;
+				return (-1);
 			if (*where != val)
 				*where = val;
 			break;
@@ -245,7 +252,7 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 			where32 = (Elf32_Addr *)where;
 			val32 = (Elf32_Addr)(addr + addend - (Elf_Addr)where);
 			if (error != 0)
-				return -1;
+				return (-1);
 			if (*where32 != val32)
 				*where32 = val32;
 			break;
@@ -255,7 +262,7 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 			val32 = (Elf32_Addr)(addr + addend);
 			where32 = (Elf32_Addr *)where;
 			if (error != 0)
-				return -1;
+				return (-1);
 			if (*where32 != val32)
 				*where32 = val32;
 			break;
@@ -265,14 +272,15 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 			 * There shouldn't be copy relocations in kernel
 			 * objects.
 			 */
-			printf("kldload: unexpected R_COPY relocation\n");
+			printf("kldload: unexpected R_COPY relocation, "
+			    "symbol index %ld\n", symidx);
 			return (-1);
 
 		case R_X86_64_GLOB_DAT:	/* S */
 		case R_X86_64_JMP_SLOT:	/* XXX need addend + offset */
 			error = lookup(lf, symidx, 1, &addr);
 			if (error != 0)
-				return -1;
+				return (-1);
 			if (*where != addr)
 				*where = addr;
 			break;
@@ -292,8 +300,8 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 			break;
 
 		default:
-			printf("kldload: unexpected relocation type %ld\n",
-			       rtype);
+			printf("kldload: unexpected relocation type %ld, "
+			    "symbol index %ld\n", rtype, symidx);
 			return (-1);
 	}
 	return (0);
@@ -304,7 +312,7 @@ elf_reloc(linker_file_t lf, Elf_Addr relocbase, const void *data, int type,
     elf_lookup_fn lookup)
 {
 
-	return (elf_reloc_internal(lf, relocbase, data, type, lookup));
+	return (elf_reloc_internal(lf, relocbase, data, type, false, lookup));
 }
 
 int
@@ -312,7 +320,15 @@ elf_reloc_local(linker_file_t lf, Elf_Addr relocbase, const void *data,
     int type, elf_lookup_fn lookup)
 {
 
-	return (elf_reloc_internal(lf, relocbase, data, type, lookup));
+	return (elf_reloc_internal(lf, relocbase, data, type, false, lookup));
+}
+
+int
+elf_reloc_late(linker_file_t lf, Elf_Addr relocbase, const void *data,
+    int type, elf_lookup_fn lookup)
+{
+
+	return (elf_reloc_internal(lf, relocbase, data, type, true, lookup));
 }
 
 int
@@ -324,6 +340,13 @@ elf_cpu_load_file(linker_file_t lf __unused)
 
 int
 elf_cpu_unload_file(linker_file_t lf __unused)
+{
+
+	return (0);
+}
+
+int
+elf_cpu_parse_dynamic(caddr_t loadbase __unused, Elf_Dyn *dynamic __unused)
 {
 
 	return (0);

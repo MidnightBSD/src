@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "efx.h"
 #include "efx_impl.h"
 
@@ -61,7 +60,7 @@ siena_tx_qcreate(
 	__in		unsigned int index,
 	__in		unsigned int label,
 	__in		efsys_mem_t *esmp,
-	__in		size_t n,
+	__in		size_t ndescs,
 	__in		uint32_t id,
 	__in		uint16_t flags,
 	__in		efx_evq_t *eep,
@@ -72,13 +71,13 @@ static		void
 siena_tx_qdestroy(
 	__in	efx_txq_t *etp);
 
-static	__checkReturn	efx_rc_t
+static	__checkReturn		efx_rc_t
 siena_tx_qpost(
-	__in		efx_txq_t *etp,
-	__in_ecount(n)	efx_buffer_t *eb,
-	__in		unsigned int n,
-	__in		unsigned int completed,
-	__inout		unsigned int *addedp);
+	__in			efx_txq_t *etp,
+	__in_ecount(ndescs)	efx_buffer_t *eb,
+	__in			unsigned int ndescs,
+	__in			unsigned int completed,
+	__inout			unsigned int *addedp);
 
 static			void
 siena_tx_qpush(
@@ -99,13 +98,13 @@ static			void
 siena_tx_qenable(
 	__in	efx_txq_t *etp);
 
-	__checkReturn	efx_rc_t
+	__checkReturn		efx_rc_t
 siena_tx_qdesc_post(
-	__in		efx_txq_t *etp,
-	__in_ecount(n)	efx_desc_t *ed,
-	__in		unsigned int n,
-	__in		unsigned int completed,
-	__inout		unsigned int *addedp);
+	__in			efx_txq_t *etp,
+	__in_ecount(ndescs)	efx_desc_t *ed,
+	__in			unsigned int ndescs,
+	__in			unsigned int completed,
+	__inout			unsigned int *addedp);
 
 	void
 siena_tx_qdesc_dma_create(
@@ -123,7 +122,6 @@ siena_tx_qstats_update(
 #endif
 
 #endif /* EFSYS_OPT_SIENA */
-
 
 #if EFSYS_OPT_SIENA
 static const efx_tx_ops_t	__efx_tx_siena_ops = {
@@ -206,6 +204,33 @@ static const efx_tx_ops_t	__efx_tx_medford_ops = {
 };
 #endif /* EFSYS_OPT_MEDFORD */
 
+#if EFSYS_OPT_MEDFORD2
+static const efx_tx_ops_t	__efx_tx_medford2_ops = {
+	ef10_tx_init,				/* etxo_init */
+	ef10_tx_fini,				/* etxo_fini */
+	ef10_tx_qcreate,			/* etxo_qcreate */
+	ef10_tx_qdestroy,			/* etxo_qdestroy */
+	ef10_tx_qpost,				/* etxo_qpost */
+	ef10_tx_qpush,				/* etxo_qpush */
+	ef10_tx_qpace,				/* etxo_qpace */
+	ef10_tx_qflush,				/* etxo_qflush */
+	ef10_tx_qenable,			/* etxo_qenable */
+	ef10_tx_qpio_enable,			/* etxo_qpio_enable */
+	ef10_tx_qpio_disable,			/* etxo_qpio_disable */
+	ef10_tx_qpio_write,			/* etxo_qpio_write */
+	ef10_tx_qpio_post,			/* etxo_qpio_post */
+	ef10_tx_qdesc_post,			/* etxo_qdesc_post */
+	ef10_tx_qdesc_dma_create,		/* etxo_qdesc_dma_create */
+	NULL,					/* etxo_qdesc_tso_create */
+	ef10_tx_qdesc_tso2_create,		/* etxo_qdesc_tso2_create */
+	ef10_tx_qdesc_vlantci_create,		/* etxo_qdesc_vlantci_create */
+	ef10_tx_qdesc_checksum_create,		/* etxo_qdesc_checksum_create */
+#if EFSYS_OPT_QSTATS
+	ef10_tx_qstats_update,			/* etxo_qstats_update */
+#endif
+};
+#endif /* EFSYS_OPT_MEDFORD2 */
+
 	__checkReturn	efx_rc_t
 efx_tx_init(
 	__in		efx_nic_t *enp)
@@ -244,6 +269,12 @@ efx_tx_init(
 		etxop = &__efx_tx_medford_ops;
 		break;
 #endif /* EFSYS_OPT_MEDFORD */
+
+#if EFSYS_OPT_MEDFORD2
+	case EFX_FAMILY_MEDFORD2:
+		etxop = &__efx_tx_medford2_ops;
+		break;
+#endif /* EFSYS_OPT_MEDFORD2 */
 
 	default:
 		EFSYS_ASSERT(0);
@@ -297,7 +328,7 @@ efx_tx_qcreate(
 	__in		unsigned int index,
 	__in		unsigned int label,
 	__in		efsys_mem_t *esmp,
-	__in		size_t n,
+	__in		size_t ndescs,
 	__in		uint32_t id,
 	__in		uint16_t flags,
 	__in		efx_evq_t *eep,
@@ -325,14 +356,14 @@ efx_tx_qcreate(
 	etp->et_magic = EFX_TXQ_MAGIC;
 	etp->et_enp = enp;
 	etp->et_index = index;
-	etp->et_mask = n - 1;
+	etp->et_mask = ndescs - 1;
 	etp->et_esmp = esmp;
 
 	/* Initial descriptor index may be modified by etxo_qcreate */
 	*addedp = 0;
 
 	if ((rc = etxop->etxo_qcreate(enp, index, label, esmp,
-	    n, id, flags, eep, etp, addedp)) != 0)
+	    ndescs, id, flags, eep, etp, addedp)) != 0)
 		goto fail2;
 
 	enp->en_tx_qcount++;
@@ -366,13 +397,13 @@ efx_tx_qdestroy(
 	EFSYS_KMEM_FREE(enp->en_esip, sizeof (efx_txq_t), etp);
 }
 
-	__checkReturn	efx_rc_t
+	__checkReturn		efx_rc_t
 efx_tx_qpost(
-	__in		efx_txq_t *etp,
-	__in_ecount(n)	efx_buffer_t *eb,
-	__in		unsigned int n,
-	__in		unsigned int completed,
-	__inout		unsigned int *addedp)
+	__in			efx_txq_t *etp,
+	__in_ecount(ndescs)	efx_buffer_t *eb,
+	__in			unsigned int ndescs,
+	__in			unsigned int completed,
+	__inout			unsigned int *addedp)
 {
 	efx_nic_t *enp = etp->et_enp;
 	const efx_tx_ops_t *etxop = enp->en_etxop;
@@ -380,8 +411,7 @@ efx_tx_qpost(
 
 	EFSYS_ASSERT3U(etp->et_magic, ==, EFX_TXQ_MAGIC);
 
-	if ((rc = etxop->etxo_qpost(etp, eb,
-	    n, completed, addedp)) != 0)
+	if ((rc = etxop->etxo_qpost(etp, eb, ndescs, completed, addedp)) != 0)
 		goto fail1;
 
 	return (0);
@@ -557,29 +587,20 @@ fail1:
 	return (rc);
 }
 
-	__checkReturn	efx_rc_t
+	__checkReturn		efx_rc_t
 efx_tx_qdesc_post(
-	__in		efx_txq_t *etp,
-	__in_ecount(n)	efx_desc_t *ed,
-	__in		unsigned int n,
-	__in		unsigned int completed,
-	__inout		unsigned int *addedp)
+	__in			efx_txq_t *etp,
+	__in_ecount(ndescs)	efx_desc_t *ed,
+	__in			unsigned int ndescs,
+	__in			unsigned int completed,
+	__inout			unsigned int *addedp)
 {
 	efx_nic_t *enp = etp->et_enp;
 	const efx_tx_ops_t *etxop = enp->en_etxop;
-	efx_rc_t rc;
 
 	EFSYS_ASSERT3U(etp->et_magic, ==, EFX_TXQ_MAGIC);
 
-	if ((rc = etxop->etxo_qdesc_post(etp, ed,
-	    n, completed, addedp)) != 0)
-		goto fail1;
-
-	return (0);
-
-fail1:
-	EFSYS_PROBE1(fail1, efx_rc_t, rc);
-	return (rc);
+	return (etxop->etxo_qdesc_post(etp, ed, ndescs, completed, addedp));
 }
 
 	void
@@ -620,6 +641,7 @@ efx_tx_qdesc_tso_create(
 efx_tx_qdesc_tso2_create(
 	__in			efx_txq_t *etp,
 	__in			uint16_t ipv4_id,
+	__in			uint16_t outer_ipv4_id,
 	__in			uint32_t tcp_seq,
 	__in			uint16_t mss,
 	__out_ecount(count)	efx_desc_t *edp,
@@ -631,7 +653,8 @@ efx_tx_qdesc_tso2_create(
 	EFSYS_ASSERT3U(etp->et_magic, ==, EFX_TXQ_MAGIC);
 	EFSYS_ASSERT(etxop->etxo_qdesc_tso2_create != NULL);
 
-	etxop->etxo_qdesc_tso2_create(etp, ipv4_id, tcp_seq, mss, edp, count);
+	etxop->etxo_qdesc_tso2_create(etp, ipv4_id, outer_ipv4_id,
+	    tcp_seq, mss, edp, count);
 }
 
 	void
@@ -664,7 +687,6 @@ efx_tx_qdesc_checksum_create(
 	etxop->etxo_qdesc_checksum_create(etp, flags, edp);
 }
 
-
 #if EFSYS_OPT_QSTATS
 			void
 efx_tx_qstats_update(
@@ -679,7 +701,6 @@ efx_tx_qstats_update(
 	etxop->etxo_qstats_update(etp, stat);
 }
 #endif
-
 
 #if EFSYS_OPT_SIENA
 
@@ -746,22 +767,21 @@ siena_tx_init(
 		_NOTE(CONSTANTCONDITION)				\
 	} while (B_FALSE)
 
-static	__checkReturn	efx_rc_t
+static	__checkReturn		efx_rc_t
 siena_tx_qpost(
-	__in		efx_txq_t *etp,
-	__in_ecount(n)	efx_buffer_t *eb,
-	__in		unsigned int n,
-	__in		unsigned int completed,
-	__inout		unsigned int *addedp)
+	__in			efx_txq_t *etp,
+	__in_ecount(ndescs)	efx_buffer_t *eb,
+	__in			unsigned int ndescs,
+	__in			unsigned int completed,
+	__inout			unsigned int *addedp)
 {
 	unsigned int added = *addedp;
 	unsigned int i;
-	int rc = ENOSPC;
 
-	if (added - completed + n > EFX_TXQ_LIMIT(etp->et_mask + 1))
-		goto fail1;
+	if (added - completed + ndescs > EFX_TXQ_LIMIT(etp->et_mask + 1))
+		return (ENOSPC);
 
-	for (i = 0; i < n; i++) {
+	for (i = 0; i < ndescs; i++) {
 		efx_buffer_t *ebp = &eb[i];
 		efsys_dma_addr_t start = ebp->eb_addr;
 		size_t size = ebp->eb_size;
@@ -781,11 +801,6 @@ siena_tx_qpost(
 
 	*addedp = added;
 	return (0);
-
-fail1:
-	EFSYS_PROBE1(fail1, efx_rc_t, rc);
-
-	return (rc);
 }
 
 static		void
@@ -912,7 +927,7 @@ siena_tx_qcreate(
 	__in		unsigned int index,
 	__in		unsigned int label,
 	__in		efsys_mem_t *esmp,
-	__in		size_t n,
+	__in		size_t ndescs,
 	__in		uint32_t id,
 	__in		uint16_t flags,
 	__in		efx_evq_t *eep,
@@ -934,7 +949,8 @@ siena_tx_qcreate(
 	EFSYS_ASSERT(ISP2(encp->enc_txq_max_ndescs));
 	EFX_STATIC_ASSERT(ISP2(EFX_TXQ_MINNDESCS));
 
-	if (!ISP2(n) || (n < EFX_TXQ_MINNDESCS) || (n > EFX_EVQ_MAXNEVS)) {
+	if (!ISP2(ndescs) ||
+	    (ndescs < EFX_TXQ_MINNDESCS) || (ndescs > EFX_EVQ_MAXNEVS)) {
 		rc = EINVAL;
 		goto fail1;
 	}
@@ -945,7 +961,7 @@ siena_tx_qcreate(
 	for (size = 0;
 	    (1 << size) <= (int)(encp->enc_txq_max_ndescs / EFX_TXQ_MINNDESCS);
 	    size++)
-		if ((1 << size) == (int)(n / EFX_TXQ_MINNDESCS))
+		if ((1 << size) == (int)(ndescs / EFX_TXQ_MINNDESCS))
 			break;
 	if (id + (1 << size) >= encp->enc_buftbl_limit) {
 		rc = EINVAL;
@@ -992,24 +1008,24 @@ fail1:
 	return (rc);
 }
 
-	__checkReturn	efx_rc_t
+	__checkReturn		efx_rc_t
 siena_tx_qdesc_post(
-	__in		efx_txq_t *etp,
-	__in_ecount(n)	efx_desc_t *ed,
-	__in		unsigned int n,
-	__in		unsigned int completed,
-	__inout		unsigned int *addedp)
+	__in			efx_txq_t *etp,
+	__in_ecount(ndescs)	efx_desc_t *ed,
+	__in			unsigned int ndescs,
+	__in			unsigned int completed,
+	__inout			unsigned int *addedp)
 {
 	unsigned int added = *addedp;
 	unsigned int i;
 	efx_rc_t rc;
 
-	if (added - completed + n > EFX_TXQ_LIMIT(etp->et_mask + 1)) {
+	if (added - completed + ndescs > EFX_TXQ_LIMIT(etp->et_mask + 1)) {
 		rc = ENOSPC;
 		goto fail1;
 	}
 
-	for (i = 0; i < n; i++) {
+	for (i = 0; i < ndescs; i++) {
 		efx_desc_t *edp = &ed[i];
 		unsigned int id;
 		size_t offset;
@@ -1021,7 +1037,7 @@ siena_tx_qdesc_post(
 	}
 
 	EFSYS_PROBE3(tx_desc_post, unsigned int, etp->et_index,
-		    unsigned int, added, unsigned int, n);
+		    unsigned int, added, unsigned int, ndescs);
 
 	EFX_TX_QSTAT_INCR(etp, TX_POST);
 

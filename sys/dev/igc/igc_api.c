@@ -5,7 +5,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "igc_api.h"
 
 /**

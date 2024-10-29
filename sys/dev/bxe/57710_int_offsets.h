@@ -27,8 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
-
 static const struct iro e1_iro_arr[385] = {
 	{     0x40,      0x0,      0x0,      0x0,      0x0},	// COMMON_SB_SIZE
 	{     0x40,      0x0,      0x0,      0x0,      0x0},	// COMMON_SB_DATA_SIZE

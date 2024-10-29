@@ -30,7 +30,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _NDIS_VAR_H_
@@ -292,7 +291,6 @@ typedef uint8_t ndis_kirql;
 #define	NDIS_PNP_EVENT_QUERY_STOPPED		3
 #define	NDIS_PNP_EVENT_STOPPED			4
 #define	NDIS_PNP_EVENT_PROFILECHANGED		5
-
 
 /* PnP/PM Statistics (Optional). */
 #define	OID_PNP_WAKE_UP_OK			0xFD020200
@@ -673,7 +671,6 @@ typedef struct ndis_80211_enc_indication ndis_80211_enc_indication;
 #define	OID_TCP_TASK_IPSEC_DELETE_SA		0xFC010203
 #define	OID_TCP_SAN_SUPPORT			0xFC010204
 
-
 #define	NDIS_TASK_OFFLOAD_VERSION 1
 
 #define	NDIS_TASK_TCPIP_CSUM			0x00000000
@@ -810,7 +807,6 @@ typedef enum ndis_media_state ndis_media_state;
 #define	NDIS_PACKET_TYPE_ALL_FUNCTIONAL         0x00002000
 #define	NDIS_PACKET_TYPE_FUNCTIONAL             0x00004000
 #define	NDIS_PACKET_TYPE_MAC_FRAME              0x00008000
-
 
 /* Ndis MAC option bits (OID_GEN_MAC_OPTIONS). */
 
@@ -1424,7 +1420,6 @@ struct ndis_map_arg {
  */
 
 struct ndis_miniport_characteristics {
-
 	/* NDIS 3.0 */
 
 	uint8_t			nmc_version_major;

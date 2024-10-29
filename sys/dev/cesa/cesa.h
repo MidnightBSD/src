@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2009-2011 Semihalf.
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_CESA_H_
@@ -193,7 +192,6 @@ struct cesa_sa_desc {
 
 struct cesa_session {
 	uint32_t			cs_config;
-	unsigned int			cs_klen;
 	unsigned int			cs_ivlen;
 	unsigned int			cs_hlen;
 	unsigned int			cs_mblen;
@@ -207,8 +205,6 @@ struct cesa_request {
 	struct cesa_sa_data		*cr_csd;
 	bus_addr_t			cr_csd_paddr;
 	struct cryptop			*cr_crp;
-	struct cryptodesc		*cr_enc;
-	struct cryptodesc		*cr_mac;
 	struct cesa_session		*cr_cs;
 	bus_dmamap_t			cr_dmap;
 	int				cr_dmap_loaded;
@@ -271,8 +267,6 @@ struct cesa_softc {
 struct cesa_chain_info {
 	struct cesa_softc		*cci_sc;
 	struct cesa_request		*cci_cr;
-	struct cryptodesc		*cci_enc;
-	struct cryptodesc		*cci_mac;
 	uint32_t			cci_config;
 	int				cci_error;
 };

@@ -32,7 +32,6 @@
  *    BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
  *    WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  *    OR OTHERWISE), EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /*  *********************************************************************
@@ -69,7 +68,6 @@
 #define	CFE_API_ALL
 #define	cfe_strlen(x)	strlen(x)
 /* End customization. */
-
 
 /*  *********************************************************************
     *  Constants
@@ -122,7 +120,6 @@ typedef struct {
     int64_t fwi_bootarea_pa;		/* PA of boot area */
     int64_t fwi_bootarea_size;	        /* size of boot area */
 } cfe_fwinfo_t;
-
 
 /*
  * cfe_strlen is handled specially: If already defined, it has been

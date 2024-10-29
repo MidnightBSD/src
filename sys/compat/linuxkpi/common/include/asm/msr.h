@@ -22,15 +22,14 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
-#ifndef _ASM_MSR_H_
-#define	_ASM_MSR_H_
+#ifndef _LINUXKPI_ASM_MSR_H_
+#define	_LINUXKPI_ASM_MSR_H_
 
 #include <machine/cpufunc.h>
 
 #define	rdmsrl(msr, val)	((val) = rdmsr(msr))
 #define	rdmsrl_safe(msr, val)	rdmsr_safe(msr, val)
 
-#endif /* _ASM_MSR_H_ */
+#endif /* _LINUXKPI_ASM_MSR_H_ */

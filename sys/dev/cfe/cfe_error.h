@@ -32,7 +32,6 @@
  *    BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
  *    WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  *    OR OTHERWISE), EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /*  *********************************************************************
@@ -46,7 +45,6 @@
     *  Author:  Mitch Lichtenberg
     *  
     ********************************************************************* */
-
 
 #define CFE_OK			 0
 #define CFE_ERR                 -1	/* generic error */

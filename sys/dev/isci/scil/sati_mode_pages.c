@@ -53,7 +53,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /**
  * @file
  * @brief This file contains the mode page constants and data for the mode

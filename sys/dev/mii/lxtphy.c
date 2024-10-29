@@ -2,7 +2,7 @@
 /*	NetBSD: lxtphy.c,v 1.19 2000/02/02 23:34:57 thorpej Exp 	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998, 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -58,7 +58,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * driver for Level One's LXT-970 ethernet 10/100 PHY
  * datasheet from www.level1.com
@@ -202,7 +201,7 @@ lxtphy_status(struct mii_softc *sc)
 	/*
 	 * Get link status from the CSR; we need to read the CSR
 	 * for media type anyhow, and the link status in the CSR
-	 * doens't latch, so fewer register reads are required.
+	 * doesn't latch, so fewer register reads are required.
 	 */
 	csr = PHY_READ(sc, MII_LXTPHY_CSR);
 	if (csr & CSR_LINK)

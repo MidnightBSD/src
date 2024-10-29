@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifdef _KERNEL
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -118,7 +117,6 @@ bhnd_nvram_iobuf_empty(size_t size, size_t capacity)
 		iobuf->buf = &iobuf->data;
 	else
 		iobuf->buf = bhnd_nv_malloc(iobuf->capacity);
-
 
 	if (iobuf->buf == NULL) {
 		bhnd_nv_free(iobuf);
@@ -217,7 +215,6 @@ bhnd_nvram_iobuf_copy_range(struct bhnd_nvram_io *src, size_t offset,
 
 	return (io);
 }
-
 
 static void
 bhnd_nvram_iobuf_free(struct bhnd_nvram_io *io)

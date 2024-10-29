@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 IronPort Systems Inc. <ambrisko@ironport.com>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -35,10 +34,14 @@
 #include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/selinfo.h>
+#include <sys/efi.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
+#if defined(__amd64__) || defined(__i386__)
 #include <machine/pc/bios.h>
+#endif
+#include <dev/smbios/smbios.h>
 
 #ifdef LOCAL_MODULE
 #include <ipmi.h>
@@ -75,8 +78,6 @@ struct ipmi_entry {
 #define	SPACING_32		0x1
 #define	SPACING_16		0x2
 
-typedef void (*smbios_callback_t)(struct smbios_structure_header *, void *);
-
 static struct ipmi_get_info ipmi_info;
 static int ipmi_probed;
 static struct mtx ipmi_info_mtx;
@@ -84,8 +85,6 @@ MTX_SYSINIT(ipmi_info, &ipmi_info_mtx, "ipmi info", MTX_DEF);
 
 static void	ipmi_smbios_probe(struct ipmi_get_info *);
 static int	smbios_cksum(struct smbios_eps *);
-static void	smbios_walk_table(uint8_t *, int, smbios_callback_t,
-		    void *);
 static void	smbios_ipmi_info(struct smbios_structure_header *, void *);
 
 static void
@@ -103,6 +102,7 @@ smbios_ipmi_info(struct smbios_structure_header *h, void *arg)
 	switch (s->interface_type) {
 	case KCS_MODE:
 	case SMIC_MODE:
+	case BT_MODE:
 		info->address = IPMI_BAR_ADDR(s->base_address) |
 		    IPMI_BAM_ADDR_LSB(s->base_address_modifier);
 		info->io_mode = IPMI_BAR_MODE(s->base_address);
@@ -142,31 +142,6 @@ smbios_ipmi_info(struct smbios_structure_header *h, void *arg)
 	info->iface_type = s->interface_type;
 }
 
-static void
-smbios_walk_table(uint8_t *p, int entries, smbios_callback_t cb, void *arg)
-{
-	struct smbios_structure_header *s;
-
-	while (entries--) {
-		s = (struct smbios_structure_header *)p;
-		cb(s, arg);
-
-		/*
-		 * Look for a double-nul after the end of the
-		 * formatted area of this structure.
-		 */
-		p += s->length;
-		while (!(p[0] == 0 && p[1] == 0))
-			p++;
-
-		/*
-		 * Skip over the double-nul to the start of the next
-		 * structure.
-		 */
-		p += 2;
-	}
-}
-
 /*
  * Walk the SMBIOS table looking for an IPMI (type 38) entry.  If we find
  * one, return the parsed data in the passed in ipmi_get_info structure and
@@ -175,15 +150,27 @@ smbios_walk_table(uint8_t *p, int entries, smbios_callback_t cb, void *arg)
 static void
 ipmi_smbios_probe(struct ipmi_get_info *info)
 {
+#ifdef ARCH_MAY_USE_EFI
+	struct uuid efi_smbios;
+	void *addr_efi;
+#endif
 	struct smbios_eps *header;
 	void *table;
 	u_int32_t addr;
 
+	addr = 0;
 	bzero(info, sizeof(struct ipmi_get_info));
 
-	/* Find the SMBIOS table header. */
-	addr = bios_sigsearch(SMBIOS_START, SMBIOS_SIG, SMBIOS_LEN,
-			      SMBIOS_STEP, SMBIOS_OFF);
+#ifdef ARCH_MAY_USE_EFI
+	efi_smbios = (struct uuid)EFI_TABLE_SMBIOS;
+	if (!efi_get_table(&efi_smbios, &addr_efi))
+		addr = (vm_paddr_t)addr_efi;
+#endif
+
+	if (addr == 0)
+		/* Find the SMBIOS table header. */
+		addr = bios_sigsearch(SMBIOS_START, SMBIOS_SIG, SMBIOS_LEN,
+			SMBIOS_STEP, SMBIOS_OFF);
 	if (addr == 0)
 		return;
 

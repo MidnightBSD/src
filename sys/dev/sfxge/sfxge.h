@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -31,7 +31,6 @@
  * The views and conclusions contained in the software and documentation are
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
- *
  */
 
 #ifndef _SFXGE_H
@@ -92,11 +91,6 @@
 #define	IFM_40G_CR4 IFM_UNKNOWN
 #endif
 
-#if (__FreeBSD_version >= 800501 && __FreeBSD_version < 900000) || \
-	__FreeBSD_version >= 900003
-#define	SFXGE_HAVE_DESCRIBE_INTR
-#endif
-
 #ifdef IFM_ETH_RXPAUSE
 #define	SFXGE_HAVE_PAUSE_MEDIAOPTS
 #endif
@@ -113,7 +107,6 @@
 #define	SFXGE_IP_ALIGN	2
 
 #define	SFXGE_ETHERTYPE_LOOPBACK	0x9000	/* Xerox loopback */
-
 
 #define	SFXGE_MAGIC_RESERVED		0x8000
 
@@ -286,6 +279,8 @@ struct sfxge_softc {
 	struct task			task_reset;
 
 	efx_family_t			family;
+	unsigned int			mem_bar;
+
 	caddr_t				vpd_data;
 	size_t				vpd_size;
 	efx_nic_t			*enp;

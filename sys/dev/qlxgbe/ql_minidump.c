@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "ql_os.h"
 
 unsigned int ql83xx_minidump_version_major = 5;
@@ -10963,4 +10962,3 @@ unsigned char ql83xx_minidump[] = {
   0x00, 0x00, 0x00, 0x00, 0x34, 0x39, 0x7b, 0xbf
 };
 unsigned int ql83xx_minidump_len = 131072;
-

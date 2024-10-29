@@ -31,13 +31,14 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_kstack_pages.h"
 
 #include <sys/param.h>
-#include <sys/pcpu.h>
-#include <sys/smp.h>
 #include <sys/systm.h>
+#include <sys/pcpu.h>
+#include <sys/proc.h>
+#include <sys/smp.h>
+#include <sys/sysent.h>
 
 #include <net/vnet.h>
 
@@ -203,7 +204,6 @@ db_qualify(c_db_sym_t sym, char *symtabname)
 	snprintf(tmp, sizeof(tmp), "%s:%s", symtabname, symname);
 	return tmp;
 }
-
 
 bool
 db_eqname(const char *src, const char *dst, int c)
@@ -371,8 +371,21 @@ db_search_symbol(db_addr_t val, db_strategy_t strategy, db_expr_t *offp)
 	unsigned int	diff;
 	size_t		newdiff;
 	int		i;
-	c_db_sym_t	ret = C_DB_SYM_NULL, sym;
+	c_db_sym_t	ret, sym;
 
+	/*
+	 * The kernel will never map the first page, so any symbols in that
+	 * range cannot refer to addresses.  Some third-party assembly files
+	 * define internal constants which appear in their symbol table.
+	 * Avoiding the lookup for those symbols avoids replacing small offsets
+	 * with those symbols during disassembly.
+	 */
+	if (val < PAGE_SIZE) {
+		*offp = 0;
+		return (C_DB_SYM_NULL);
+	}
+
+	ret = C_DB_SYM_NULL;
 	newdiff = diff = val;
 	for (i = 0; i < db_nsymtab; i++) {
 	    sym = X_db_search_symbol(&db_symtabs[i], val, strategy, &newdiff);
@@ -406,7 +419,6 @@ db_symbol_values(c_db_sym_t sym, const char **namep, db_expr_t *valuep)
 	if (valuep)
 		*valuep = value;
 }
-
 
 /*
  * Print a the closest symbol to value
@@ -468,4 +480,18 @@ bool
 db_sym_numargs(c_db_sym_t sym, int *nargp, char **argnames)
 {
 	return (X_db_sym_numargs(db_last_symtab, sym, nargp, argnames));
+}
+
+void
+db_decode_syscall(struct thread *td, u_int number)
+{
+	struct proc *p;
+
+	db_printf(" (%u", number);
+	p = (td != NULL) ? td->td_proc : NULL;
+	if (p != NULL) {
+		db_printf(", %s, %s", p->p_sysent->sv_name,
+		    syscallname(p, number));
+	}
+	db_printf(")");
 }

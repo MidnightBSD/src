@@ -1,6 +1,6 @@
 /* $Id: osm_bsd.c,v 1.36 2010/05/11 03:12:11 lcn Exp $ */
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * HighPoint RAID Driver for FreeBSD
  * Copyright (C) 2005-2011 HighPoint Technologies, Inc.
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 #include <dev/hptnr/hptnr_config.h>
 #include <dev/hptnr/os_bsd.h>
@@ -78,6 +77,11 @@ static int hpt_attach(device_t dev)
 	PVBUS vbus;
 	PVBUS_EXT vbus_ext;
 	
+	if (pci_get_domain(dev) != 0) {
+		device_printf(dev, "does not support PCI domains\n");
+		return (ENXIO);
+	}
+
 	KdPrint(("hpt_attach(%d/%d/%d)", pci_get_bus(dev), pci_get_slot(dev), pci_get_function(dev)));
 
 	him = hpt_match(dev, 1);
@@ -161,7 +165,6 @@ static int hpt_alloc_mem(PVBUS_EXT vbus_ext)
 			f->tag, f->count, f->size, f->count*f->size));
 		for (i=0; i<f->count; i++) {
 			p = (void **)malloc(f->size, M_DEVBUF, M_WAITOK);
-			if (!p)	return (ENXIO);
 			*p = f->head;
 			f->head = p;
 		}
@@ -1385,10 +1388,6 @@ static void hpt_final_init(void *dummy)
 
 		for (i=0; i<os_max_queue_comm; i++) {
 			POS_CMDEXT ext = (POS_CMDEXT)malloc(sizeof(OS_CMDEXT), M_DEVBUF, M_WAITOK);
-			if (!ext) {
-				os_printk("Can't alloc cmdext(%d)", i);
-				return ;
-			}
 			ext->vbus_ext = vbus_ext;
 			ext->next = vbus_ext->cmdext_list;
 			vbus_ext->cmdext_list = ext;
@@ -1607,19 +1606,14 @@ static int hpt_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag, stru
 
 		if (ioctl_args.nInBufferSize) {
 			ioctl_args.lpInBuffer = malloc(ioctl_args.nInBufferSize, M_DEVBUF, M_WAITOK);
-			if (!ioctl_args.lpInBuffer)
-				goto invalid;
 			if (copyin((void*)piop->lpInBuffer,
 					ioctl_args.lpInBuffer, piop->nInBufferSize))
 				goto invalid;
 		}
 	
-		if (ioctl_args.nOutBufferSize) {
+		if (ioctl_args.nOutBufferSize)
 			ioctl_args.lpOutBuffer = malloc(ioctl_args.nOutBufferSize, M_DEVBUF, M_WAITOK | M_ZERO);
-			if (!ioctl_args.lpOutBuffer)
-				goto invalid;
-		}
-		
+
 		hpt_do_ioctl(&ioctl_args);
 	
 		if (ioctl_args.result==HPT_IOCTL_RESULT_OK) {

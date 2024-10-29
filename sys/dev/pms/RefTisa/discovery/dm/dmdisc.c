@@ -504,11 +504,11 @@ dmDownStreamDiscovering(
   }
   else
   {
-    DMLIST_DEQUEUE_FROM_HEAD(&ExpanderList, &(onePortContext->discovery.discoveringExpanderList));;
+    DMLIST_DEQUEUE_FROM_HEAD(&ExpanderList, &(onePortContext->discovery.discoveringExpanderList));
     NextExpander = DMLIST_OBJECT_BASE(dmExpander_t, linkNode, ExpanderList);
     if ( NextExpander != agNULL)
     {
-      DMLIST_ENQUEUE_AT_HEAD(&(NextExpander->linkNode), &(onePortContext->discovery.discoveringExpanderList));;
+      DMLIST_ENQUEUE_AT_HEAD(&(NextExpander->linkNode), &(onePortContext->discovery.discoveringExpanderList));
       DM_DBG3(("dmDownStreamDiscovering tdsaSASDownStreamDiscovering: dequeue head\n"));
       DM_DBG3(("dmDownStreamDiscovering: expander id %d\n", NextExpander->id));
     }
@@ -5617,7 +5617,7 @@ dmSubReportRemovals(
   }
  
   
-  /* this function is called at the end of discovery; reinitalizes oneDeviceData->reported */
+  /* this function is called at the end of discovery; reinitializes oneDeviceData->reported */
   oneDeviceData->reported = agFALSE;
   return;
 }
@@ -5660,7 +5660,7 @@ dmSubReportChanges(
   }
  
   
-  /* this function is called at the end of discovery; reinitalizes oneDeviceData->reported */
+  /* this function is called at the end of discovery; reinitializes oneDeviceData->reported */
   oneDeviceData->reported = agFALSE;
   return;
 }

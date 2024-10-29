@@ -530,8 +530,7 @@ ixgbe_bp_wd_reset(SYSCTL_HANDLER_ARGS)
 			error = IXGBE_BYPASS_FW_WRITE_FAILURE;
 			break;
 		}
-		error = hw->mac.ops.bypass_rw(hw, BYPASS_PAGE_CTL1, &reset_wd);
-		if (error != 0) {
+		if (hw->mac.ops.bypass_rw(hw, BYPASS_PAGE_CTL1, &reset_wd)) {
 			error = IXGBE_ERR_INVALID_ARGUMENT;
 			break;
 		}
@@ -745,13 +744,13 @@ ixgbe_bypass_init(struct ixgbe_softc *sc)
 	 */
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-	    OID_AUTO, "bypass_log", CTLTYPE_INT | CTLFLAG_RW,
+	    OID_AUTO, "bypass_log", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
 	    sc, 0, ixgbe_bp_log, "I", "Bypass Log");
 
 	/* All other setting are hung from the 'bypass' node */
 	bp_node = SYSCTL_ADD_NODE(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-	    OID_AUTO, "bypass", CTLFLAG_RD, NULL, "Bypass");
+	    OID_AUTO, "bypass", CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Bypass");
 
 	bp_list = SYSCTL_CHILDREN(bp_node);
 

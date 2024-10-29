@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Myson Technology Inc.
  * All rights reserved.
@@ -26,7 +26,6 @@
  * SUCH DAMAGE.
  *
  * Written by: yen_cw@myson.com.tw  available at: http://www.myson.com.tw/
- *
  *
  * Myson MTD80x register definitions.
  *
@@ -584,5 +583,3 @@ struct my_softc {
 #define PHY_BMSR_LINKSTAT               0x0004
 #define PHY_BMSR_JABBER                 0x0002
 #define PHY_BMSR_EXTENDED               0x0001
-
-

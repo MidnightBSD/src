@@ -40,7 +40,6 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/aic7xxx/aic7xxx/aic7xxx.h#85 $
- *
  */
 
 #ifndef _AIC7XXX_H_

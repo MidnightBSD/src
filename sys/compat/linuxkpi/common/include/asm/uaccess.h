@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef _ASM_UACCESS_H_
-#define _ASM_UACCESS_H_
+#ifndef _LINUXKPI_ASM_UACCESS_H_
+#define _LINUXKPI_ASM_UACCESS_H_
 
 #include <linux/uaccess.h>
 
@@ -51,12 +50,11 @@ copy_from_user(void *to, const void *from, unsigned long n)
 #define	__copy_from_user(...)	copy_from_user(__VA_ARGS__)
 #define	__copy_in_user(...)	copy_from_user(__VA_ARGS__)
 
-#if defined(LINUXKPI_VERSION) && LINUXKPI_VERSION >= 50000
 #define	user_access_begin(ptr, len) access_ok(ptr, len)
-#else
-#define	user_access_begin() do { } while (0)
-#endif
 #define	user_access_end() do { } while (0)
+
+#define	user_write_access_begin(ptr, len) access_ok(ptr, len)
+#define	user_write_access_end() do { } while (0)
 
 #define	unsafe_get_user(x, ptr, err) do { \
 	if (unlikely(__get_user(x, ptr))) \
@@ -68,4 +66,4 @@ copy_from_user(void *to, const void *from, unsigned long n)
 		goto err; \
 } while (0)
 
-#endif	/* _ASM_UACCESS_H_ */
+#endif	/* _LINUXKPI_ASM_UACCESS_H_ */

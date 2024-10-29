@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 John Baldwin <jhb@FreeBSD.org>
  *
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Simple driver for PCI VGA display devices.  Drivers such as agp(4) and
  * drm(4) should attach as children of this device.
@@ -158,7 +157,6 @@ vga_pci_reset(device_t dev)
 		pci_set_powerstate(dev, PCI_POWERSTATE_D3);
 	pci_set_powerstate(dev, ps);
 }
-
 
 void *
 vga_pci_map_bios(device_t dev, size_t *size)
@@ -778,7 +776,6 @@ static device_method_t vga_pci_methods[] = {
 	DEVMETHOD(pci_release_msi,	vga_pci_release_msi),
 	DEVMETHOD(pci_msi_count,	vga_pci_msi_count),
 	DEVMETHOD(pci_msix_count,	vga_pci_msix_count),
-
 	{ 0, 0 }
 };
 

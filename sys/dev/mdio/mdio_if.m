@@ -39,6 +39,21 @@ METHOD int readreg {
 };
 
 /**
+ * @brief Read register from device on MDIO muxed bus.
+ *
+ * @param dev	MDIO bus device.
+ * @param bus	MDIO bus mux position
+ * @param phy	PHY address.
+ * @param reg	The PHY register offset.
+ */
+METHOD int readreg_mux {
+	device_t		dev;
+	int			bus;
+	int			phy;
+	int			reg;
+};
+
+/**
  * @brief Write register to device on MDIO bus.
  *
  * @param dev	MDIO bus device.
@@ -48,6 +63,23 @@ METHOD int readreg {
  */
 METHOD int writereg {
 	device_t		dev;
+	int			phy;
+	int			reg;
+	int			val;
+};
+
+/**
+ * @brief Write register to device on MDIO muxed bus.
+ *
+ * @param dev	MDIO bus device.
+ * @param bus	MDIO bus mux position
+ * @param phy	PHY address.
+ * @param reg	The PHY register offset.
+ * @param val	The value to write at offset @p reg.
+ */
+METHOD int writereg_mux {
+	device_t		dev;
+	int			bus;
 	int			phy;
 	int			reg;
 	int			val;

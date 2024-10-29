@@ -3,7 +3,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -171,7 +171,7 @@ typedef struct kbdmux_state	kbdmux_state_t;
  *****************************************************************************/
 
 static task_fn_t		kbdmux_kbd_intr;
-static timeout_t		kbdmux_kbd_intr_timo;
+static callout_func_t		kbdmux_kbd_intr_timo;
 static kbd_callback_func_t	kbdmux_kbd_event;
 
 static void
@@ -714,6 +714,9 @@ next_code:
 			evdev_sync(state->ks_evdev);
 		}
 	}
+
+	if (state->ks_evdev != NULL && evdev_is_grabbed(state->ks_evdev))
+		return (NOKEY);
 #endif
 
 	/* return the byte as is for the K_RAW mode */
@@ -1239,6 +1242,7 @@ kbdmux_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 	case OPIO_KEYMAP:	/* set keyboard translation table (compat) */
 	case PIO_KEYMAPENT:	/* set keyboard translation table entry */
 	case PIO_DEADKEYMAP:	/* set accent key translation table */
+	case OPIO_DEADKEYMAP:	/* set accent key translation table (compat) */
 		KBDMUX_LOCK(state);
                 state->ks_accents = 0;
 
@@ -1385,7 +1389,6 @@ kbdmux_modevent(module_t mod, int type, void *data)
 			break;
 
 		if ((sw = kbd_get_switch(KEYBOARD_NAME)) == NULL) {
-			kbd_delete_driver(&kbdmux_kbd_driver);
 			error = ENXIO;
 			break;
 		}
@@ -1393,33 +1396,25 @@ kbdmux_modevent(module_t mod, int type, void *data)
 		kbd = NULL;
 
 		if ((error = (*sw->probe)(0, NULL, 0)) != 0 ||
-		    (error = (*sw->init)(0, &kbd, NULL, 0)) != 0) {
-			kbd_delete_driver(&kbdmux_kbd_driver);
+		    (error = (*sw->init)(0, &kbd, NULL, 0)) != 0)
 			break;
-		}
 
 #ifdef KBD_INSTALL_CDEV
 		if ((error = kbd_attach(kbd)) != 0) {
 			(*sw->term)(kbd);
-			kbd_delete_driver(&kbdmux_kbd_driver);
 			break;
 		}
 #endif
 
-		if ((error = (*sw->enable)(kbd)) != 0) {
-			(*sw->disable)(kbd);
-#ifdef KBD_INSTALL_CDEV
-			kbd_detach(kbd);
-#endif
-			(*sw->term)(kbd);
-			kbd_delete_driver(&kbdmux_kbd_driver);
+		if ((error = (*sw->enable)(kbd)) != 0)
 			break;
-		}
 		break;
 
 	case MOD_UNLOAD:
-		if ((sw = kbd_get_switch(KEYBOARD_NAME)) == NULL)
-			panic("kbd_get_switch(" KEYBOARD_NAME ") == NULL");
+		if ((sw = kbd_get_switch(KEYBOARD_NAME)) == NULL) {
+			error = 0;
+			break;
+		}
 
 		kbd = kbd_get_keyboard(kbd_find_keyboard(KEYBOARD_NAME, 0));
 		if (kbd != NULL) {
@@ -1428,8 +1423,8 @@ kbdmux_modevent(module_t mod, int type, void *data)
 			kbd_detach(kbd);
 #endif
 			(*sw->term)(kbd);
-			kbd_delete_driver(&kbdmux_kbd_driver);
 		}
+		kbd_delete_driver(&kbdmux_kbd_driver);
 		error = 0;
 		break;
 

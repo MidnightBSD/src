@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -194,7 +193,7 @@ amdpm_attach(device_t dev)
 {
 	struct amdpm_softc *amdpm_sc = device_get_softc(dev);
 	u_char val_b;
-	
+
 	/* Enable I/O block access */
 	val_b = pci_read_config(dev, AMDPCI_GEN_CONFIG_PM, 1);
 	pci_write_config(dev, AMDPCI_GEN_CONFIG_PM, val_b | AMDPCI_PMIOEN, 1);
@@ -207,7 +206,7 @@ amdpm_attach(device_t dev)
 		amdpm_sc->rid = NFPCI_PMBASE;
 	amdpm_sc->res = bus_alloc_resource_any(dev, SYS_RES_IOPORT,
 		&amdpm_sc->rid, RF_ACTIVE);
-	
+
 	if (amdpm_sc->res == NULL) {
 		device_printf(dev, "could not map i/o space\n");
 		return (ENXIO);
@@ -277,7 +276,7 @@ static int
 amdpm_abort(struct amdpm_softc *sc)
 {
 	u_short l;
-	
+
 	l = AMDPM_SMBINW(sc, AMDSMB_GLOBAL_ENABLE);
 	AMDPM_SMBOUTW(sc, AMDSMB_GLOBAL_ENABLE, l | AMDSMB_GE_ABORT);
 
@@ -561,7 +560,7 @@ amdpm_bwrite(device_t dev, u_char slave, char cmd, u_char count, char *buf)
 	}
 
 	AMDPM_SMBOUTW(sc, AMDSMB_HSTADDR, slave & ~LSB);
-	
+
 	/*
 	 * Do we have to reset the internal 32-byte buffer?
 	 * Can't see how to do this from the data sheet.
@@ -605,7 +604,7 @@ amdpm_bread(device_t dev, u_char slave, char cmd, u_char *count, char *buf)
 	}
 
 	AMDPM_SMBOUTW(sc, AMDSMB_HSTADDR, slave | LSB);
-	
+
 	AMDPM_SMBOUTB(sc, AMDSMB_HSTCMD, cmd);
 
 	l = AMDPM_SMBINW(sc, AMDSMB_GLOBAL_ENABLE);
@@ -640,7 +639,7 @@ static device_method_t amdpm_methods[] = {
 	DEVMETHOD(device_probe,		amdpm_probe),
 	DEVMETHOD(device_attach,	amdpm_attach),
 	DEVMETHOD(device_detach,	amdpm_detach),
-	
+
 	/* SMBus interface */
 	DEVMETHOD(smbus_callback,	amdpm_callback),
 	DEVMETHOD(smbus_quick,		amdpm_quick),
@@ -652,7 +651,6 @@ static device_method_t amdpm_methods[] = {
 	DEVMETHOD(smbus_readw,		amdpm_readw),
 	DEVMETHOD(smbus_bwrite,		amdpm_bwrite),
 	DEVMETHOD(smbus_bread,		amdpm_bread),
-	
 	{ 0, 0 }
 };
 

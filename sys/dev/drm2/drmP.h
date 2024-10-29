@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef _DRM_P_H_
 #define _DRM_P_H_
 

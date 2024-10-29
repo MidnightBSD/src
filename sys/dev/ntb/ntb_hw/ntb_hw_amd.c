@@ -53,7 +53,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
@@ -80,7 +79,6 @@
 MALLOC_DEFINE(M_AMD_NTB, "amd_ntb_hw", "amd_ntb_hw driver memory allocations");
 
 static const struct amd_ntb_hw_info amd_ntb_hw_info_list[] = {
-
 	{ .vendor_id = NTB_HW_AMD_VENDOR_ID,
 	  .device_id = NTB_HW_AMD_DEVICE_ID1,
 	  .mw_count = 3,
@@ -685,7 +683,6 @@ amd_ntb_peer_spad_write(device_t dev, unsigned int idx, uint32_t val)
 	return (0);
 }
 
-
 /*
  * AMD NTB INIT
  */
@@ -870,7 +867,6 @@ amd_ntb_setup_isr(struct amd_ntb_softc *ntb, uint16_t num_vectors, bool msi,
 		flags |= RF_SHAREABLE;
 
 	for (i = 0; i < num_vectors; i++) {
-
 		/* RID should be 0 for intx */
 		if (intx)
 			ntb->int_info[i].rid = i;
@@ -910,7 +906,7 @@ static int
 amd_ntb_create_msix_vec(struct amd_ntb_softc *ntb, uint32_t max_vectors)
 {
 	uint8_t i;
-	
+
 	ntb->msix_vec = malloc(max_vectors * sizeof(*ntb->msix_vec), M_AMD_NTB,
 	    M_ZERO | M_WAITOK);
 
@@ -1114,10 +1110,10 @@ static void
 print_map_success(struct amd_ntb_softc *ntb, struct amd_ntb_pci_bar_info *bar,
     const char *kind)
 {
-	amd_ntb_printf(0, "Mapped BAR%d v:[%p-%p] p:[%p-%p] (0x%jx bytes) (%s)\n",
+	amd_ntb_printf(0, "Mapped BAR%d v:[%p-%p] p:[0x%jx-0x%jx] (0x%jx bytes) (%s)\n",
 	    PCI_RID2BAR(bar->pci_resource_id), bar->vbase,
-	    (char *)bar->vbase + bar->size - 1, (void *)bar->pbase,
-	    (void *)(bar->pbase + bar->size - 1), (uintmax_t)bar->size, kind);
+	    (char *)bar->vbase + bar->size - 1, (uintmax_t)bar->pbase,
+	    (uintmax_t)(bar->pbase + bar->size - 1), (uintmax_t)bar->size, kind);
 }
 
 static void

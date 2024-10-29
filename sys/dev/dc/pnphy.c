@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Pseudo-driver for media selection on the Lite-On PNIC 82c168
  * chip.  The NWAY support on this chip is horribly broken, so we

@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -68,6 +67,10 @@
 #include <net/if_types.h>
 #include <net/if_var.h>
 #include <net/if_vlan_var.h>
+
+#include <netinet/in.h>
+#include <netinet/udp.h>
+#include <netinet/tcp.h>
 
 #include <machine/bus.h>
 #include <machine/fdt.h>
@@ -634,7 +637,6 @@ vtbe_attach(device_t dev)
 static device_method_t vtbe_methods[] = {
 	DEVMETHOD(device_probe,		vtbe_probe),
 	DEVMETHOD(device_attach,	vtbe_attach),
-
 	{ 0, 0 }
 };
 

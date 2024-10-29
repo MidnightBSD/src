@@ -27,7 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
@@ -43,7 +42,6 @@
 #define OCS_LIST_DEBUG
 
 #if defined(OCS_LIST_DEBUG)
-
 
 #define ocs_list_magic_decl		uint32_t magic;
 #define OCS_LIST_LIST_MAGIC		0xcafe0000
@@ -109,7 +107,6 @@ _ocs_list_init(ocs_list_t *list, uint32_t offset)
 	list->offset = offset;
 }
 #define ocs_list_init(head, type, link)		_ocs_list_init(head, offsetof(type, link))
-
 
 /**
  * @ingroup os
@@ -235,7 +232,6 @@ ocs_list_add_head(ocs_list_t *list, void *item)
 	_ocs_list_insert_link(list, list->next, item2link(list, item));
 }
 
-
 /**
  * @ingroup os
  * @brief Add an item to the tail of the list
@@ -262,7 +258,6 @@ ocs_list_add_tail(ocs_list_t *list, void *item)
 
 	_ocs_list_insert_link(list->prev, list, link);
 }
-
 
 /**
  * @ingroup os

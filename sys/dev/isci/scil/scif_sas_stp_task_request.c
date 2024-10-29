@@ -53,7 +53,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/isci/scil/sati.h>
 #include <dev/isci/scil/scif_sas_logger.h>
 #include <dev/isci/scil/scif_sas_task_request.h>

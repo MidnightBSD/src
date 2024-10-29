@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013-2014 Qlogic Corporation
  * All rights reserved.
@@ -31,8 +31,6 @@
  * File: qls_dump.c
  */
 #include <sys/cdefs.h>
-
-
 #include "qls_os.h"
 #include "qls_hw.h"
 #include "qls_def.h"
@@ -379,7 +377,6 @@ qls_wait_reg_rdy(qla_host_t *ha , uint32_t reg, uint32_t bit, uint32_t err_bit)
 	int count = 10;
 
 	while (count) {
-
 		data = READ_REG32(ha, reg);
 
 		if (data & err_bit)
@@ -437,7 +434,6 @@ qls_wr_mpi_reg(qla_host_t *ha, uint32_t reg, uint32_t data)
 exit_qls_wr_mpi_reg:
         return (ret);
 }
-
 
 #define Q81_TEST_LOGIC_FUNC_PORT_CONFIG 0x1002
 #define Q81_INVALID_NUM		0xFFFFFFFF
@@ -527,7 +523,6 @@ qls_wait_ofunc_reg_rdy(qla_host_t *ha , uint32_t reg, uint32_t bit,
         int count = 10;
 
         while (count) {
-
                 data = qls_rd_ofunc_reg(ha, reg);
 
                 if (data & err_bit)
@@ -684,7 +679,6 @@ qls_rd_serdes_regs(qla_host_t *ha, qls_mpi_coredump_t *mpi_dump)
 		temp = 0;
 
 	if ((temp & Q81_XFI1_POWERED_UP) == Q81_XFI1_POWERED_UP) {
-
 		if (ha->pci_func & 1)
          		xfi_ind_valid = 1; /* NIC 2, so the indirect
 						 (NIC1) xfi is up*/
@@ -693,7 +687,6 @@ qls_rd_serdes_regs(qla_host_t *ha, qls_mpi_coredump_t *mpi_dump)
 	}
 
 	if((temp & Q81_XFI2_POWERED_UP) == Q81_XFI2_POWERED_UP) {
-
 		if(ha->pci_func & 1)
 			xfi_d_valid = 1; /* NIC 2, so the indirect (NIC1)
 						xfi is up */
@@ -854,7 +847,6 @@ qls_get_intr_states(qla_host_t *ha, uint32_t *buf)
 	int i;
 
 	for (i = 0; i < MAX_RX_RINGS; i++, buf++) {
-
 		WRITE_REG32(ha, Q81_CTL_INTR_ENABLE, (0x037f0300 + i));
 
 		*buf = READ_REG32(ha, Q81_CTL_INTR_ENABLE);
@@ -891,7 +883,6 @@ qls_rd_xgmac_regs(qla_host_t *ha, uint32_t *buf, uint32_t o_func)
 	int i;
 
 	for (i = 0; i < Q81_XGMAC_REGISTER_END; i += 4, buf ++) {
-
 		switch (i) {
 		case  Q81_PAUSE_SRC_LO               :
 		case  Q81_PAUSE_SRC_HI               :
@@ -1157,7 +1148,6 @@ qls_rd_xgmac_regs(qla_host_t *ha, uint32_t *buf, uint32_t o_func)
 
 		default:
 			break;
-
 		}
 	}
 	return 0;
@@ -1169,7 +1159,6 @@ qls_get_mpi_regs(qla_host_t *ha, uint32_t *buf, uint32_t offset, uint32_t count)
 	int i, ret = 0;
 
 	for (i = 0; i < count; i++, buf++) {
-
 		ret = qls_rd_mpi_reg(ha, (offset + i), buf);
 
 		if (ret)
@@ -1190,7 +1179,6 @@ qls_get_mpi_shadow_regs(qla_host_t *ha, uint32_t *buf)
 #define Q81_SHADOW_OFFSET 0xb0000000
 
 	for (i = 0; i < Q81_MPI_CORE_SH_REGS_CNT; i++, buf++) {
-
 		ret = qls_wr_mpi_reg(ha,
 				(Q81_CTL_PROC_ADDR_RISC_INT_REG | Q81_RISC_124),
                                 (Q81_SHADOW_OFFSET | i << 20));
@@ -1224,11 +1212,8 @@ qls_get_probe(qla_host_t *ha, uint32_t clock, uint8_t *valid, uint32_t *buf)
 	uint32_t module, mux_sel, probe, lo_val, hi_val;
 
 	for (module = 0; module < Q81_MAX_MODULES; module ++) {
-
 		if (valid[module]) {
-
 			for (mux_sel = 0; mux_sel < Q81_MAX_MUX; mux_sel++) {
-
 				probe = clock | Q81_ADDRESS_REGISTER_ENABLE |
 						mux_sel | (module << 9);
 				WRITE_REG32(ha, Q81_CTL_XG_PROBE_MUX_ADDR,\
@@ -1299,7 +1284,6 @@ qls_get_probe_dump(qla_host_t *ha, uint32_t *buf)
 		0    // 0x1F
 	};
 
-
 	uint8_t pci_clock_valid_modules[0x20] = {
 		1,   // 0x00
 		0,   // 0x01
@@ -1334,7 +1318,6 @@ qls_get_probe_dump(qla_host_t *ha, uint32_t *buf)
 		0,   // 0x1E
 		0    // 0x1F
 	};
-
 
 	uint8_t xgm_clock_valid_modules[0x20] = {
 		1,   // 0x00
@@ -1434,7 +1417,6 @@ qls_get_ridx_registers(qla_host_t *ha, uint32_t *buf)
 			idx_max = 16;
 
 		for (idx = 0; idx < idx_max; idx ++) {
-
 			val = 0x04000000 | (type << 16) | (idx << 8);
 			WRITE_REG32(ha, Q81_CTL_ROUTING_INDEX, val);
 
@@ -1475,7 +1457,6 @@ qls_get_mac_proto_regs(qla_host_t *ha, uint32_t* buf)
 
 	for (type = 0; type < Q81_NUM_TYPES; type ++) {
 		switch (type) {
-
 		case 0: // CAM
 			initial_val = Q81_RS_AND_ADR;
 			max_index = 512;
@@ -1539,9 +1520,7 @@ qls_get_mac_proto_regs(qla_host_t *ha, uint32_t* buf)
 		}
 
 		for (index = 0; index < max_index; index ++) {
-
 			for (offset = 0; offset < max_offset; offset ++) {
-
 				val = initial_val | (type << 16) |
 					(index << 4) | (offset);
 
@@ -1661,7 +1640,6 @@ qls_mpi_core_dump(qla_host_t *ha)
 		qls_rd_xgmac_regs(ha, &mpi_dump->xgmac1[0], 0);
 		qls_rd_xgmac_regs(ha, &mpi_dump->xgmac2[0], 1);
 	}
-
 
 	qls_mpid_seg_hdr(&mpi_dump->xaui1_an_hdr,
 		Q81_XAUI1_AN_SEG_NUM,
@@ -1927,7 +1905,6 @@ qls_mpi_core_dump(qla_host_t *ha)
 		"Sem Registers");
 
 	for(i = 0; i < Q81_MAX_SEMAPHORE_FUNCTIONS ; i ++) {
-
 		reg = Q81_CTL_PROC_ADDR_REG_BLOCK | (i << Q81_FUNCTION_SHIFT) |
 				(Q81_CTL_SEMAPHORE >> 2);
 
@@ -1990,4 +1967,3 @@ qls_mpi_core_dump(qla_host_t *ha)
 
 	return 0;
 }
-

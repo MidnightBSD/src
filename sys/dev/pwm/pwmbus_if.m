@@ -1,5 +1,5 @@
 #-
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2018 Emmanuel Vadot <manu@FreeBSD.org>
 #
@@ -32,14 +32,14 @@ INTERFACE pwmbus;
 
 CODE {
 	static int
-	pwm_default_set_flags(device_t dev, u_int channel, uint32_t flags)
+	pwm_default_set_flags(device_t bus, u_int channel, uint32_t flags)
 	{
 
 		return (EOPNOTSUPP);
 	}
 
 	static int
-	pwm_default_get_flags(device_t dev, u_int channel, uint32_t *flags)
+	pwm_default_get_flags(device_t bus, u_int channel, uint32_t *flags)
 	{
 
 		*flags = 0;
@@ -54,8 +54,8 @@ CODE {
 METHOD int channel_config {
 	device_t bus;
 	u_int channel;
-	unsigned int period;
-	unsigned int duty;
+	u_int period;
+	u_int duty;
 };
 
 #
@@ -65,8 +65,8 @@ METHOD int channel_config {
 METHOD int channel_get_config {
 	device_t bus;
 	u_int channel;
-	unsigned int *period;
-	unsigned int *duty;
+	u_int *period;
+	u_int *duty;
 };
 
 #
@@ -82,7 +82,7 @@ METHOD int channel_set_flags {
 # Get the flags
 #
 METHOD int channel_get_flags {
-	device_t dev;
+	device_t bus;
 	u_int channel;
 	uint32_t *flags;
 } DEFAULT pwm_default_get_flags;

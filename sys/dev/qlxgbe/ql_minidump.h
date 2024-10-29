@@ -27,7 +27,6 @@
 
 /*
  * File: ql_minidump.h
- *
  */
 #ifndef _QL_MINIDUMP_H_
 #define _QL_MINIDUMP_H_
@@ -35,7 +34,6 @@
 #define QL_DBG_STATE_ARRAY_LEN          16
 #define QL_DBG_CAP_SIZE_ARRAY_LEN       8
 #define QL_NO_OF_OCM_WINDOWS            16
-
 
 typedef struct ql_mdump_tmplt_hdr {
         uint32_t  entry_type ;
@@ -249,7 +247,6 @@ typedef struct ql_minidump_entry_cache_s {
             	uint32_t read_addr_cntrl  ;
     	} ;
 } ql_minidump_entry_cache_t ;
-
 
 /*
  * Read OCM Entry Header
@@ -466,4 +463,3 @@ typedef struct ql_minidump_entry_rd_modify_wr_with_poll_s {
 } ql_minidump_entry_rd_modify_wr_with_poll_t;
 
 #endif /* #ifndef _QL_MINIDUMP_H_ */
-

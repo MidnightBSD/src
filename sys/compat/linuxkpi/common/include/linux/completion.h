@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_COMPLETION_H_
-#define	_LINUX_COMPLETION_H_
+#ifndef	_LINUXKPI_LINUX_COMPLETION_H_
+#define	_LINUXKPI_LINUX_COMPLETION_H_
 
 #include <linux/errno.h>
 
@@ -65,4 +64,4 @@ extern int linux_wait_for_timeout_common(struct completion *, int, int);
 extern int linux_try_wait_for_completion(struct completion *);
 extern int linux_completion_done(struct completion *);
 
-#endif					/* _LINUX_COMPLETION_H_ */
+#endif					/* _LINUXKPI_LINUX_COMPLETION_H_ */

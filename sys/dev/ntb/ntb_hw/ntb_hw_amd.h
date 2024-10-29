@@ -40,7 +40,6 @@
  *
  * Contact Information :
  * Rajesh Kumar <rajesh1.kumar@amd.com>
- *
  */
 
 #ifndef	NTB_HW_AMD_H

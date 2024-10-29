@@ -21,7 +21,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef __MLX5_EN_RL_H__
@@ -128,13 +127,14 @@ struct mlx5e_rl_channel_param {
 };
 
 struct mlx5e_rl_channel {
-	struct mlx5e_snd_tag tag;
+	struct m_snd_tag tag;
 	STAILQ_ENTRY(mlx5e_rl_channel) entry;
 	struct mlx5e_sq * volatile sq;
 	struct mlx5e_rl_worker *worker;
 	uint64_t new_rate;
 	uint64_t init_rate;
 	uint64_t last_rate;
+	uint32_t refcount;
 	uint16_t last_burst;
 	uint16_t state;
 };
@@ -155,7 +155,6 @@ struct mlx5e_rl_priv_data {
 	struct mlx5e_rl_channel_param chan_param;
 	struct mlx5e_rl_params param;
 	struct mlx5e_rl_stats stats;
-	struct mlx5_uar sq_uar;
 	struct mlx5e_rl_worker *workers;
 	struct mlx5e_priv *priv;
 	uint64_t *rate_limit_table;
@@ -166,6 +165,7 @@ struct mlx5e_rl_priv_data {
 int mlx5e_rl_init(struct mlx5e_priv *priv);
 void mlx5e_rl_cleanup(struct mlx5e_priv *priv);
 void mlx5e_rl_refresh_sq_inline(struct mlx5e_rl_priv_data *rl);
+
 if_snd_tag_alloc_t mlx5e_rl_snd_tag_alloc;
 if_snd_tag_modify_t mlx5e_rl_snd_tag_modify;
 if_snd_tag_query_t mlx5e_rl_snd_tag_query;

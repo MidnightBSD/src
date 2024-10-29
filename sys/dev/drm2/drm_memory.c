@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/drm2/drmP.h>
 
 #define	vunmap(handle)

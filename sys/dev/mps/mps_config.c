@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011-2015 LSI Corp.
  * Copyright (c) 2013-2015 Avago Technologies
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* TODO Move headers to mpsvar */
 #include <sys/types.h>
 #include <sys/param.h>
@@ -104,7 +103,7 @@ mps_config_get_ioc_pg8(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 		 * If the request returns an error then we need to do a diag
 		 * reset
 		 */ 
-		printf("%s: request for header completed with error %d",
+		printf("%s: request for header completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -126,7 +125,7 @@ mps_config_get_ioc_pg8(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	 * counters to match - Need to review the reply FIFO handling.
 	 */
 	mps_free_command(sc, cm);
-	
+
 	if ((cm = mps_alloc_command(sc)) == NULL) {
 		printf("%s: command alloc failed @ line %d\n", __func__,
 		    __LINE__);
@@ -163,7 +162,7 @@ mps_config_get_ioc_pg8(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 		 * If the request returns an error then we need to do a diag
 		 * reset
 		 */ 
-		printf("%s: request for page completed with error %d",
+		printf("%s: request for page completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -239,7 +238,7 @@ mps_config_get_man_pg10(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply)
 	if (error || (reply == NULL)) {
 		/* FIXME */
 		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for header completed with error %d",
+		printf("%s: poll for header completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -258,7 +257,7 @@ mps_config_get_man_pg10(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply)
 	 * counters to match - Need to review the reply FIFO handling.
 	 */
 	mps_free_command(sc, cm);
-	
+
 	if ((cm = mps_alloc_command(sc)) == NULL) {
 		printf("%s: command alloc failed @ line %d\n", __func__,
 		    __LINE__);
@@ -296,7 +295,7 @@ mps_config_get_man_pg10(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply)
 	if (error || (reply == NULL)) {
 		/* FIXME */
 		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for page completed with error %d",
+		printf("%s: poll for page completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -600,7 +599,7 @@ mps_config_get_dpm_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 		 * If the request returns an error then we need to do a diag
 		 * reset
 		 */ 
-		printf("%s: request for header completed with error %d",
+		printf("%s: request for header completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -661,7 +660,7 @@ mps_config_get_dpm_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 		 * If the request returns an error then we need to do a diag
 		 * reset
 		 */ 
-		printf("%s: request for page completed with error %d",
+		printf("%s: request for page completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -738,7 +737,7 @@ int mps_config_set_dpm_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 		 * If the request returns an error then we need to do a diag
 		 * reset
 		 */ 
-		printf("%s: request for header completed with error %d",
+		printf("%s: request for header completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -801,7 +800,7 @@ int mps_config_set_dpm_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 		 * If the request returns an error then we need to do a diag
 		 * reset
 		 */ 
-		printf("%s: request to write page completed with error %d",
+		printf("%s: request to write page completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -875,7 +874,7 @@ mps_config_get_sas_device_pg0(struct mps_softc *sc, Mpi2ConfigReply_t
 		 * If the request returns an error then we need to do a diag
 		 * reset
 		 */ 
-		printf("%s: request for header completed with error %d",
+		printf("%s: request for header completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -936,7 +935,7 @@ mps_config_get_sas_device_pg0(struct mps_softc *sc, Mpi2ConfigReply_t
 		 * If the request returns an error then we need to do a diag
 		 * reset
 		 */ 
-		printf("%s: request for page completed with error %d",
+		printf("%s: request for page completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -1009,7 +1008,7 @@ mps_config_get_bios_pg3(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 		 * If the request returns an error then we need to do a diag
 		 * reset
 		 */ 
-		printf("%s: request for header completed with error %d",
+		printf("%s: request for header completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -1068,7 +1067,7 @@ mps_config_get_bios_pg3(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 		 * If the request returns an error then we need to do a diag
 		 * reset
 		 */ 
-		printf("%s: request for page completed with error %d",
+		printf("%s: request for page completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -1143,7 +1142,7 @@ mps_config_get_raid_volume_pg0(struct mps_softc *sc, Mpi2ConfigReply_t
 	if (error || (reply == NULL)) {
 		/* FIXME */
 		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for header completed with error %d",
+		printf("%s: poll for header completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -1201,7 +1200,7 @@ mps_config_get_raid_volume_pg0(struct mps_softc *sc, Mpi2ConfigReply_t
 	if (error || (reply == NULL)) {
 		/* FIXME */
 		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for page completed with error %d",
+		printf("%s: poll for page completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -1272,7 +1271,7 @@ mps_config_get_raid_volume_pg1(struct mps_softc *sc, Mpi2ConfigReply_t
 		 * If the request returns an error then we need to do a diag
 		 * reset
 		 */ 
-		printf("%s: request for header completed with error %d",
+		printf("%s: request for header completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -1332,7 +1331,7 @@ mps_config_get_raid_volume_pg1(struct mps_softc *sc, Mpi2ConfigReply_t
 		 * If the request returns an error then we need to do a diag
 		 * reset
 		 */ 
-		printf("%s: request for page completed with error %d",
+		printf("%s: request for page completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -1433,7 +1432,7 @@ mps_config_get_raid_pd_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	if (error || (reply == NULL)) {
 		/* FIXME */
 		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for header completed with error %d",
+		printf("%s: poll for header completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;
@@ -1491,7 +1490,7 @@ mps_config_get_raid_pd_pg0(struct mps_softc *sc, Mpi2ConfigReply_t *mpi_reply,
 	if (error || (reply == NULL)) {
 		/* FIXME */
 		/* If the poll returns error then we need to do diag reset */ 
-		printf("%s: poll for page completed with error %d",
+		printf("%s: poll for page completed with error %d\n",
 		    __func__, error);
 		error = ENXIO;
 		goto out;

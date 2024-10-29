@@ -23,7 +23,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *
  */
 
 /*
@@ -451,8 +450,8 @@ void cudbg_free_handle(IN void *handle);
 
 /**
  *  cudbg_read_flash_data - Read cudbg “flash” header from adapter flash.
- *  			    This will be used by the consumer mainly to
- *  			    know the size of the data in flash.
+ *			    This will be used by the consumer mainly to
+ *			    know the size of the data in flash.
  *  ## Parameters ##
  *  @handle : A pointer returned by cudbg_hello.
  *  @data : A pointer to data/header buffer

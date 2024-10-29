@@ -27,7 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
@@ -173,7 +172,6 @@ ocs_find_vpd(uint8_t *vpddata, uint32_t vpddata_length, const char *key)
 					}
 				/* check for "RV" end */
 				} else if ('R' == rc0 && 'V' == rc1) {
-
 					/* Read the checksum */
 					for (i = 0; i < sublen; i++) {
 						vpdnext(&vpdbuf);

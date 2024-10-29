@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
@@ -124,9 +123,10 @@ static int free_nm_txq_hwq(struct vi_info *, struct sge_nm_txq *);
 
 int
 alloc_nm_rxq(struct vi_info *vi, struct sge_nm_rxq *nm_rxq, int intr_idx,
-    int idx, struct sysctl_oid *oid)
+    int idx)
 {
 	int rc;
+	struct sysctl_oid *oid;
 	struct sysctl_oid_list *children;
 	struct sysctl_ctx_list *ctx;
 	char name[16];
@@ -160,31 +160,27 @@ alloc_nm_rxq(struct vi_info *vi, struct sge_nm_rxq *nm_rxq, int intr_idx,
 	nm_rxq->iq_cntxt_id = INVALID_NM_RXQ_CNTXT_ID;
 
 	ctx = &vi->ctx;
-	children = SYSCTL_CHILDREN(oid);
+	children = SYSCTL_CHILDREN(vi->nm_rxq_oid);
 
 	snprintf(name, sizeof(name), "%d", idx);
 	oid = SYSCTL_ADD_NODE(ctx, children, OID_AUTO, name,
 	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "rx queue");
 	children = SYSCTL_CHILDREN(oid);
 
-	SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "abs_id",
-	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE, &nm_rxq->iq_abs_id,
-	    0, sysctl_uint16, "I", "absolute id of the queue");
-	SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "cntxt_id",
-	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE, &nm_rxq->iq_cntxt_id,
-	    0, sysctl_uint16, "I", "SGE context id of the queue");
-	SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "cidx",
-	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE, &nm_rxq->iq_cidx, 0,
-	    sysctl_uint16, "I", "consumer index");
+	SYSCTL_ADD_U16(ctx, children, OID_AUTO, "abs_id", CTLFLAG_RD,
+	    &nm_rxq->iq_abs_id, 0, "absolute id of the queue");
+	SYSCTL_ADD_U16(ctx, children, OID_AUTO, "cntxt_id", CTLFLAG_RD,
+	    &nm_rxq->iq_cntxt_id, 0, "SGE context id of the queue");
+	SYSCTL_ADD_U16(ctx, children, OID_AUTO, "cidx", CTLFLAG_RD,
+	    &nm_rxq->iq_cidx, 0, "consumer index");
 
 	children = SYSCTL_CHILDREN(oid);
 	oid = SYSCTL_ADD_NODE(ctx, children, OID_AUTO, "fl",
 	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "freelist");
 	children = SYSCTL_CHILDREN(oid);
 
-	SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "cntxt_id",
-	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE, &nm_rxq->fl_cntxt_id,
-	    0, sysctl_uint16, "I", "SGE context id of the freelist");
+	SYSCTL_ADD_U16(ctx, children, OID_AUTO, "cntxt_id", CTLFLAG_RD,
+	    &nm_rxq->fl_cntxt_id, 0, "SGE context id of the freelist");
 	SYSCTL_ADD_UINT(ctx, children, OID_AUTO, "cidx", CTLFLAG_RD,
 	    &nm_rxq->fl_cidx, 0, "consumer index");
 	SYSCTL_ADD_UINT(ctx, children, OID_AUTO, "pidx", CTLFLAG_RD,
@@ -214,8 +210,7 @@ free_nm_rxq(struct vi_info *vi, struct sge_nm_rxq *nm_rxq)
 }
 
 int
-alloc_nm_txq(struct vi_info *vi, struct sge_nm_txq *nm_txq, int iqidx, int idx,
-    struct sysctl_oid *oid)
+alloc_nm_txq(struct vi_info *vi, struct sge_nm_txq *nm_txq, int iqidx, int idx)
 {
 	int rc;
 	size_t len;
@@ -223,7 +218,8 @@ alloc_nm_txq(struct vi_info *vi, struct sge_nm_txq *nm_txq, int iqidx, int idx,
 	struct adapter *sc = pi->adapter;
 	struct netmap_adapter *na = NA(vi->ifp);
 	char name[16];
-	struct sysctl_oid_list *children = SYSCTL_CHILDREN(oid);
+	struct sysctl_oid *oid;
+	struct sysctl_oid_list *children = SYSCTL_CHILDREN(vi->nm_txq_oid);
 
 	len = na->num_tx_desc * EQ_ESIZE + sc->params.sge.spg_len;
 	rc = alloc_ring(sc, len, &nm_txq->desc_tag, &nm_txq->desc_map,
@@ -251,12 +247,10 @@ alloc_nm_txq(struct vi_info *vi, struct sge_nm_txq *nm_txq, int iqidx, int idx,
 
 	SYSCTL_ADD_UINT(&vi->ctx, children, OID_AUTO, "cntxt_id", CTLFLAG_RD,
 	    &nm_txq->cntxt_id, 0, "SGE context id of the queue");
-	SYSCTL_ADD_PROC(&vi->ctx, children, OID_AUTO, "cidx",
-	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE, &nm_txq->cidx, 0,
-	    sysctl_uint16, "I", "consumer index");
-	SYSCTL_ADD_PROC(&vi->ctx, children, OID_AUTO, "pidx",
-	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE, &nm_txq->pidx, 0,
-	    sysctl_uint16, "I", "producer index");
+	SYSCTL_ADD_U16(&vi->ctx, children, OID_AUTO, "cidx", CTLFLAG_RD,
+	    &nm_txq->cidx, 0, "consumer index");
+	SYSCTL_ADD_U16(&vi->ctx, children, OID_AUTO, "pidx", CTLFLAG_RD,
+	    &nm_txq->pidx, 0, "producer index");
 
 	return (rc);
 }
@@ -280,14 +274,17 @@ free_nm_txq(struct vi_info *vi, struct sge_nm_txq *nm_txq)
 }
 
 static int
-alloc_nm_rxq_hwq(struct vi_info *vi, struct sge_nm_rxq *nm_rxq, int cong)
+alloc_nm_rxq_hwq(struct vi_info *vi, struct sge_nm_rxq *nm_rxq)
 {
-	int rc, cntxt_id, i;
+	int rc, cntxt_id;
 	__be32 v;
 	struct adapter *sc = vi->adapter;
+	struct port_info *pi = vi->pi;
 	struct sge_params *sp = &sc->params.sge;
 	struct netmap_adapter *na = NA(vi->ifp);
 	struct fw_iq_cmd c;
+	const int cong_drop = nm_cong_drop;
+	const int cong_map = pi->rx_e_chan_map;
 
 	MPASS(na != NULL);
 	MPASS(nm_rxq->iq_desc != NULL);
@@ -317,19 +314,20 @@ alloc_nm_rxq_hwq(struct vi_info *vi, struct sge_nm_rxq *nm_rxq, int cong)
 	    V_FW_IQ_CMD_TYPE(FW_IQ_TYPE_FL_INT_CAP) |
 	    V_FW_IQ_CMD_VIID(vi->viid) |
 	    V_FW_IQ_CMD_IQANUD(X_UPDATEDELIVERY_INTERRUPT));
-	c.iqdroprss_to_iqesize = htobe16(V_FW_IQ_CMD_IQPCIECH(vi->pi->tx_chan) |
+	c.iqdroprss_to_iqesize = htobe16(V_FW_IQ_CMD_IQPCIECH(pi->tx_chan) |
 	    F_FW_IQ_CMD_IQGTSMODE |
 	    V_FW_IQ_CMD_IQINTCNTTHRESH(0) |
 	    V_FW_IQ_CMD_IQESIZE(ilog2(IQ_ESIZE) - 4));
 	c.iqsize = htobe16(vi->qsize_rxq);
 	c.iqaddr = htobe64(nm_rxq->iq_ba);
-	if (cong >= 0) {
+	if (cong_drop != -1) {
 		c.iqns_to_fl0congen = htobe32(F_FW_IQ_CMD_IQFLINTCONGEN |
-		    V_FW_IQ_CMD_FL0CNGCHMAP(cong) | F_FW_IQ_CMD_FL0CONGCIF |
+		    V_FW_IQ_CMD_FL0CNGCHMAP(cong_map) | F_FW_IQ_CMD_FL0CONGCIF |
 		    F_FW_IQ_CMD_FL0CONGEN);
 	}
 	c.iqns_to_fl0congen |=
 	    htobe32(V_FW_IQ_CMD_FL0HOSTFCMODE(X_HOSTFCMODE_NONE) |
+		V_FW_IQ_CMD_IQTYPE(FW_IQ_IQTYPE_NIC) |
 		F_FW_IQ_CMD_FL0FETCHRO | F_FW_IQ_CMD_FL0DATARO |
 		(fl_pad ? F_FW_IQ_CMD_FL0PADEN : 0) |
 		(black_hole == 2 ? F_FW_IQ_CMD_FL0PACKEN : 0));
@@ -376,29 +374,9 @@ alloc_nm_rxq_hwq(struct vi_info *vi, struct sge_nm_rxq *nm_rxq, int cong)
 	nm_rxq->fl_db_val = V_QID(nm_rxq->fl_cntxt_id) |
 	    sc->chip_params->sge_fl_db;
 
-	if (chip_id(sc) >= CHELSIO_T5 && cong >= 0) {
-		uint32_t param, val;
-
-		param = V_FW_PARAMS_MNEM(FW_PARAMS_MNEM_DMAQ) |
-		    V_FW_PARAMS_PARAM_X(FW_PARAMS_PARAM_DMAQ_CONM_CTXT) |
-		    V_FW_PARAMS_PARAM_YZ(nm_rxq->iq_cntxt_id);
-		if (cong == 0)
-			val = 1 << 19;
-		else {
-			val = 2 << 19;
-			for (i = 0; i < 4; i++) {
-				if (cong & (1 << i))
-					val |= 1 << (i << 2);
-			}
-		}
-
-		rc = -t4_set_params(sc, sc->mbox, sc->pf, 0, 1, &param, &val);
-		if (rc != 0) {
-			/* report error but carry on */
-			device_printf(sc->dev,
-			    "failed to set congestion manager context for "
-			    "ingress queue %d: %d\n", nm_rxq->iq_cntxt_id, rc);
-		}
+	if (chip_id(sc) >= CHELSIO_T5 && cong_drop != -1) {
+		t4_sge_set_conm_context(sc, nm_rxq->iq_cntxt_id, cong_drop,
+		    cong_map);
 	}
 
 	t4_write_reg(sc, sc->sge_gts_reg,
@@ -490,7 +468,7 @@ alloc_nm_txq_hwq(struct vi_info *vi, struct sge_nm_txq *nm_txq)
 		udb += (nm_txq->cntxt_id >> s_qpp) << PAGE_SHIFT;
 		nm_txq->udb_qid = nm_txq->cntxt_id & mask;
 		if (nm_txq->udb_qid >= PAGE_SIZE / UDBS_SEG_SIZE)
-	    		clrbit(&nm_txq->doorbells, DOORBELL_WCWR);
+			clrbit(&nm_txq->doorbells, DOORBELL_WCWR);
 		else {
 			udb += nm_txq->udb_qid << UDBS_SEG_SHIFT;
 			nm_txq->udb_qid = 0;
@@ -752,7 +730,7 @@ cxgbe_netmap_on(struct adapter *sc, struct vi_info *vi, struct ifnet *ifp,
 		if (!nm_kring_pending_on(kring))
 			continue;
 
-		alloc_nm_rxq_hwq(vi, nm_rxq, tnl_cong(vi->pi, nm_cong_drop));
+		alloc_nm_rxq_hwq(vi, nm_rxq);
 		nm_rxq->fl_hwidx = hwidx;
 		slot = netmap_reset(na, NR_RX, i, 0);
 		MPASS(slot != NULL);	/* XXXNM: error check, not assert */
@@ -1047,29 +1025,28 @@ cxgbe_nm_tx(struct adapter *sc, struct sge_nm_txq *nm_txq,
 			nm_txq->pidx = 0;
 		}
 
-		if (npkt == 0 && npkt_remaining == 0) {
+		if (npkt + npkt_remaining == 0) {
 			/* All done. */
-			if (lazy_tx_credit_flush == 0) {
+			if (lazy_tx_credit_flush == 0 ||
+			    NMIDXDIFF(nm_txq, equiqidx) >= nm_txq->sidx / 2) {
 				wr->equiq_to_len16 |= htobe32(F_FW_WR_EQUEQ |
 				    F_FW_WR_EQUIQ);
 				nm_txq->equeqidx = nm_txq->pidx;
 				nm_txq->equiqidx = nm_txq->pidx;
+			} else if (NMIDXDIFF(nm_txq, equeqidx) >= 64) {
+				wr->equiq_to_len16 |= htobe32(F_FW_WR_EQUEQ);
+				nm_txq->equeqidx = nm_txq->pidx;
 			}
 			ring_nm_txq_db(sc, nm_txq);
 			return;
 		}
-
-		if (NMIDXDIFF(nm_txq, equiqidx) >= nm_txq->sidx / 2) {
-			wr->equiq_to_len16 |= htobe32(F_FW_WR_EQUEQ |
-			    F_FW_WR_EQUIQ);
-			nm_txq->equeqidx = nm_txq->pidx;
-			nm_txq->equiqidx = nm_txq->pidx;
-		} else if (NMIDXDIFF(nm_txq, equeqidx) >= 64) {
-			wr->equiq_to_len16 |= htobe32(F_FW_WR_EQUEQ);
-			nm_txq->equeqidx = nm_txq->pidx;
-		}
-		if (NMIDXDIFF(nm_txq, dbidx) >= 2 * SGE_MAX_WR_NDESC)
+		if (NMIDXDIFF(nm_txq, dbidx) >= 2 * SGE_MAX_WR_NDESC) {
+			if (NMIDXDIFF(nm_txq, equeqidx) >= 64) {
+				wr->equiq_to_len16 |= htobe32(F_FW_WR_EQUEQ);
+				nm_txq->equeqidx = nm_txq->pidx;
+			}
 			ring_nm_txq_db(sc, nm_txq);
+		}
 	}
 
 	/* Will get called again. */
@@ -1457,7 +1434,7 @@ service_nm_rxq(struct sge_nm_rxq *nm_rxq)
 	} else if (nframes > 0)
 		netmap_rx_irq(ifp, nm_rxq->nid, &work);
 
-    	t4_write_reg(sc, sc->sge_gts_reg, V_CIDXINC(ndesc) |
+	t4_write_reg(sc, sc->sge_gts_reg, V_CIDXINC(ndesc) |
 	    V_INGRESSQID((u32)nm_rxq->iq_cntxt_id) |
 	    V_SEINTARM(V_QINTR_TIMER_IDX(holdoff_tmr_idx)));
 }

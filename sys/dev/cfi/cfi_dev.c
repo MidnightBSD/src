@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_cfi.h"
 
 #include <sys/param.h>

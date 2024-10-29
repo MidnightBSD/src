@@ -5,6 +5,11 @@ OUTPUT_ARCH(powerpc)
 ENTRY(__start)
 SEARCH_DIR(/usr/lib);
 PROVIDE (__stack = 0);
+PHDRS
+{
+	kernel PT_LOAD;
+	dynamic PT_DYNAMIC;
+}
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
@@ -14,12 +19,13 @@ SECTIONS
 
   .text      :
   {
+    *(.glink)
     *(.text)
     *(.stub)
     /* .gnu.warning sections are handled specially by elf32.em.  */
     *(.gnu.warning)
     *(.gnu.linkonce.t*)
-  } =0
+  } :kernel =0
   _etext = .;
   PROVIDE (etext = .);
 
@@ -70,7 +76,12 @@ SECTIONS
   }
   .data1   : { *(.data1) }
   .got1           : { *(.got1) }
-  .dynamic        : { *(.dynamic) }
+  . = ALIGN(4096);
+  .got            : { *(.got) }
+  .got.plt        : { *(.got.plt) }
+
+
+  .dynamic        : { *(.dynamic) } :kernel :dynamic
   /* Put .ctors and .dtors next to the .got2 section, so that the pointers
      get relocated with -mrelocatable. Also put in the .fixup pointers.
      The current compiler no longer needs this, but keep it around for 2.7.2  */
@@ -86,14 +97,10 @@ SECTIONS
   .fixup          : { *(.fixup) }
                 PROVIDE (_FIXUP_END_ = .);
                 PROVIDE (_GOT2_END_ = .);
-                PROVIDE (_GOT_START_ = .);
-  .got            : { *(.got) }
-  .got.plt        : { *(.got.plt) }
-                PROVIDE (_GOT_END_ = .);
   /* We want the small data sections together, so single-instruction offsets
      can access them all, and initialized data all before uninitialized, so
      we can shorten the on-disk segment size.  */
-  .sdata     : { *(.sdata) }
+  .sdata     : { *(.sdata) } :kernel
   _edata  =  .;
   PROVIDE (edata = .);
   .sbss      :

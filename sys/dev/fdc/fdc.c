@@ -53,7 +53,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_fdc.h"
 
 #include <sys/param.h>
@@ -269,7 +268,8 @@ static driver_filter_t fdc_intr_fast;
 static void fdc_reset(struct fdc_data *);
 static int fd_probe_disk(struct fd_data *, int *);
 
-static SYSCTL_NODE(_debug, OID_AUTO, fdc, CTLFLAG_RW, 0, "fdc driver");
+static SYSCTL_NODE(_debug, OID_AUTO, fdc, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "fdc driver");
 
 static int fifo_threshold = 8;
 SYSCTL_INT(_debug_fdc, OID_AUTO, fifo, CTLFLAG_RW, &fifo_threshold, 0,
@@ -1159,10 +1159,8 @@ fdc_thread(void *arg)
 		mtx_unlock(&fdc->fdc_mtx);
 		i = fdc_worker(fdc);
 		if (i && debugflags & 0x20) {
-			if (fdc->bp != NULL) {
-				g_print_bio(fdc->bp);
-				printf("\n");
-			}
+			if (fdc->bp != NULL)
+				g_print_bio("", fdc->bp, "");
 			printf("Retry line %d\n", retry_line);
 		}
 		fdc->retry += i;
@@ -1897,7 +1895,9 @@ fdc_print_child(device_t me, device_t child)
 static int
 fd_probe(device_t dev)
 {
+#if defined(__i386__) || defined(__amd64__)
 	int	unit;
+#endif
 	int	i;
 	u_int	st0, st3;
 	struct	fd_data *fd;
@@ -1913,7 +1913,6 @@ fd_probe(device_t dev)
 	fd->dev = dev;
 	fd->fdc = fdc;
 	fd->fdsu = fdsu;
-	unit = device_get_unit(dev);
 
 	/* Auto-probe if fdinfo is present, but always allow override. */
 	type = flags & FD_TYPEMASK;
@@ -1927,6 +1926,7 @@ fd_probe(device_t dev)
 	}
 
 #if defined(__i386__) || defined(__amd64__)
+	unit = device_get_unit(dev);
 	if (fd->type == FDT_NONE && (unit == 0 || unit == 1)) {
 		/* Look up what the BIOS thinks we have. */
 		if (unit == 0)

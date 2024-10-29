@@ -22,11 +22,10 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
-#ifndef	_LINUX_SRCU_H_
-#define	_LINUX_SRCU_H_
+#ifndef	_LINUXKPI_LINUX_SRCU_H_
+#define	_LINUXKPI_LINUX_SRCU_H_
 
 #include <linux/compiler.h>
 
@@ -52,4 +51,4 @@ extern void cleanup_srcu_struct(struct srcu_struct *);
 	synchronize_srcu(srcu);			\
 } while (0)
 
-#endif					/* _LINUX_SRCU_H_ */
+#endif					/* _LINUXKPI_LINUX_SRCU_H_ */

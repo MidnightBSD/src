@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm_crtc.h>
 #include <dev/drm2/drm_fourcc.h>

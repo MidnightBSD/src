@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2011-2014 Matteo Landi
  * Copyright (C) 2011-2016 Luigi Rizzo
@@ -192,7 +192,7 @@ ports attached to the switch)
  * 	      always attached to a bridge.
  * 	      Persistent VALE ports must must be created separately, and i
  * 	      then attached like normal NICs. The NIOCREGIF we are examining
- * 	      will find them only if they had previosly been created and
+ * 	      will find them only if they had previously been created and
  * 	      attached (see VALE_CTL below).
  *
  * 	- netmap_pipe_adapter 	      [netmap_pipe.c]
@@ -436,11 +436,13 @@ ports attached to the switch)
 #include <sys/socketvar.h>	/* struct socket */
 #include <sys/malloc.h>
 #include <sys/poll.h>
+#include <sys/proc.h>
 #include <sys/rwlock.h>
 #include <sys/socket.h> /* sockaddrs */
 #include <sys/selinfo.h>
 #include <sys/sysctl.h>
 #include <sys/jail.h>
+#include <sys/epoch.h>
 #include <net/vnet.h>
 #include <net/if.h>
 #include <net/if_var.h>
@@ -537,7 +539,8 @@ int ptnet_vnet_hdr = 1;
 SYSBEGIN(main_init);
 
 SYSCTL_DECL(_dev_netmap);
-SYSCTL_NODE(_dev, OID_AUTO, netmap, CTLFLAG_RW, 0, "Netmap args");
+SYSCTL_NODE(_dev, OID_AUTO, netmap, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "Netmap args");
 SYSCTL_INT(_dev_netmap, OID_AUTO, verbose,
 		CTLFLAG_RW, &netmap_verbose, 0, "Verbose mode");
 #ifdef CONFIG_NETMAP_DEBUG
@@ -973,7 +976,7 @@ static void
 netmap_mem_drop(struct netmap_adapter *na)
 {
 	int last = netmap_mem_deref(na->nm_mem, na);
-	/* if the native allocator had been overrided on regif,
+	/* if the native allocator had been overridden on regif,
 	 * restore it now and drop the temporary one
 	 */
 	if (last && na->nm_mem_prev) {
@@ -1053,7 +1056,7 @@ netmap_do_unregif(struct netmap_priv_d *priv)
 		}
 	}
 
-	/* possibily decrement counter of tx_si/rx_si users */
+	/* possibly decrement counter of tx_si/rx_si users */
 	netmap_unset_ringid(priv);
 	/* delete the nifp */
 	netmap_mem_if_delete(na, priv->np_nifp);
@@ -1135,7 +1138,7 @@ netmap_dtor(void *data)
  *   they will be forwarded to the hw TX rings, saving the application
  *   from doing the same task in user-space.
  *
- * Transparent fowarding can be enabled per-ring, by setting the NR_FORWARD
+ * Transparent forwarding can be enabled per-ring, by setting the NR_FORWARD
  * flag, or globally with the netmap_fwd sysctl.
  *
  * The transfer NIC --> host is relatively easy, just encapsulate
@@ -1155,7 +1158,11 @@ netmap_send_up(struct ifnet *dst, struct mbq *q)
 {
 	struct mbuf *m;
 	struct mbuf *head = NULL, *prev = NULL;
+#ifdef __FreeBSD__
+	struct epoch_tracker et;
 
+	NET_EPOCH_ENTER(et);
+#endif /* __FreeBSD__ */
 	/* Send packets up, outside the lock; head/prev machinery
 	 * is only useful for Windows. */
 	while ((m = mbq_dequeue(q)) != NULL) {
@@ -1167,6 +1174,9 @@ netmap_send_up(struct ifnet *dst, struct mbq *q)
 	}
 	if (head)
 		nm_os_send_up(dst, NULL, head);
+#ifdef __FreeBSD__
+	NET_EPOCH_EXIT(et);
+#endif /* __FreeBSD__ */
 	mbq_fini(q);
 }
 
@@ -1592,7 +1602,7 @@ netmap_get_na(struct nmreq_header *hdr,
 	netmap_adapter_get(ret);
 
 	/*
-	 * if the adapter supports the host rings and it is not alread open,
+	 * if the adapter supports the host rings and it is not already open,
 	 * try to set the number of host rings as requested by the user
 	 */
 	if (((*na)->na_flags & NAF_HOST_RINGS) && (*na)->active_fds == 0) {
@@ -1660,8 +1670,8 @@ netmap_unget_na(struct netmap_adapter *na, struct ifnet *ifp)
 u_int
 nm_txsync_prologue(struct netmap_kring *kring, struct netmap_ring *ring)
 {
-	u_int head = ring->head; /* read only once */
-	u_int cur = ring->cur; /* read only once */
+	u_int head = NM_ACCESS_ONCE(ring->head);
+	u_int cur = NM_ACCESS_ONCE(ring->cur);
 	u_int n = kring->nkr_num_slots;
 
 	nm_prdis(5, "%s kcur %d ktail %d head %d cur %d tail %d",
@@ -1738,8 +1748,8 @@ nm_rxsync_prologue(struct netmap_kring *kring, struct netmap_ring *ring)
 	 * - cur could in principle go back, however it does not matter
 	 *   because we are processing a brand new rxsync()
 	 */
-	cur = kring->rcur = ring->cur;	/* read only once */
-	head = kring->rhead = ring->head;	/* read only once */
+	cur = kring->rcur = NM_ACCESS_ONCE(ring->cur);
+	head = kring->rhead = NM_ACCESS_ONCE(ring->head);
 #if 1 /* kernel sanity checks */
 	NM_FAIL_ON(kring->nr_hwcur >= n || kring->nr_hwtail >= n);
 #endif /* kernel sanity checks */
@@ -2016,7 +2026,7 @@ netmap_krings_get(struct netmap_priv_d *priv)
 			priv->np_qlast[NR_RX]);
 
 	/* first round: check that all the requested rings
-	 * are neither alread exclusively owned, nor we
+	 * are neither already exclusively owned, nor we
 	 * want exclusive ownership when they are already in use
 	 */
 	foreach_selected_ring(priv, t, i, kring) {
@@ -2491,7 +2501,7 @@ netmap_ioctl(struct netmap_priv_d *priv, u_long cmd, caddr_t data,
 		}
 
 		/* Make a kernel-space copy of the user-space nr_body.
-		 * For convenince, the nr_body pointer and the pointers
+		 * For convenience, the nr_body pointer and the pointers
 		 * in the options list will be replaced with their
 		 * kernel-space counterparts. The original pointers are
 		 * saved internally and later restored by nmreq_copyout
@@ -3081,7 +3091,7 @@ nmreq_opt_size_by_type(uint32_t nro_reqtype, uint64_t nro_size)
  * The list of options is copied and the pointers adjusted. The
  * original pointers are saved before the option they belonged.
  *
- * The option table has an entry for every availabe option.  Entries
+ * The option table has an entry for every available option.  Entries
  * for options that have not been passed contain NULL.
  *
  */
@@ -3092,7 +3102,7 @@ nmreq_copyin(struct nmreq_header *hdr, int nr_body_is_user)
 	size_t rqsz, optsz, bufsz;
 	int error = 0;
 	char *ker = NULL, *p;
-	struct nmreq_option **next, *src, **opt_tab;
+	struct nmreq_option **next, *src, **opt_tab, *opt;
 	uint64_t *ptrs;
 
 	if (hdr->nr_reserved) {
@@ -3143,24 +3153,36 @@ nmreq_copyin(struct nmreq_header *hdr, int nr_body_is_user)
 	*ptrs++ = hdr->nr_body;
 	*ptrs++ = hdr->nr_options;
 	p = (char *)ptrs;
-
-	/* copy the body */
-	error = copyin((void *)(uintptr_t)hdr->nr_body, p, rqsz);
-	if (error)
-		goto out_restore;
 	/* overwrite the user pointer with the in-kernel one */
 	hdr->nr_body = (uintptr_t)p;
+	/* prepare the options-list pointers and temporarily terminate
+	 * the in-kernel list, in case we have to jump to out_restore
+	 */
+	next = (struct nmreq_option **)&hdr->nr_options;
+	src = *next;
+	hdr->nr_options = 0;
+
+	/* copy the body */
+	error = copyin(*(void **)ker, p, rqsz);
+	if (error)
+		goto out_restore;
 	p += rqsz;
 	/* start of the options table */
 	opt_tab = (struct nmreq_option **)p;
 	p += sizeof(opt_tab) * NETMAP_REQ_OPT_MAX;
 
 	/* copy the options */
-	next = (struct nmreq_option **)&hdr->nr_options;
-	src = *next;
 	while (src) {
-		struct nmreq_option *opt;
+		struct nmreq_option *nsrc;
 
+		if (p - ker + sizeof(uint64_t*) + sizeof(*src) > bufsz) {
+			error = EMSGSIZE;
+			/* there might be a loop in the list: don't try to
+			 * copyout the options
+			 */
+			hdr->nr_options = 0;
+			goto out_restore;
+		}
 		/* copy the option header */
 		ptrs = (uint64_t *)p;
 		opt = (struct nmreq_option *)(ptrs + 1);
@@ -3168,15 +3190,19 @@ nmreq_copyin(struct nmreq_header *hdr, int nr_body_is_user)
 		if (error)
 			goto out_restore;
 		rqsz += sizeof(*src);
+		p = (char *)(opt + 1);
+
 		/* make a copy of the user next pointer */
 		*ptrs = opt->nro_next;
-		/* overwrite the user pointer with the in-kernel one */
+		/* append the option to the in-kernel list */
 		*next = opt;
-
-		/* initialize the option as not supported.
-		 * Recognized options will update this field.
+		/* temporarily teminate the in-kernel list, in case we have to
+		 * jump to out_restore
 		 */
-		opt->nro_status = EOPNOTSUPP;
+		nsrc = (struct nmreq_option *)opt->nro_next;
+		opt->nro_next = 0;
+
+		opt->nro_status = 0;
 
 		/* check for invalid types */
 		if (opt->nro_reqtype < 1) {
@@ -3184,12 +3210,11 @@ nmreq_copyin(struct nmreq_header *hdr, int nr_body_is_user)
 				nm_prinf("invalid option type: %u", opt->nro_reqtype);
 			opt->nro_status = EINVAL;
 			error = EINVAL;
-			goto next;
+			goto out_restore;
 		}
 
 		if (opt->nro_reqtype >= NETMAP_REQ_OPT_MAX) {
-			/* opt->nro_status is already EOPNOTSUPP */
-			error = EOPNOTSUPP;
+			/* opt->nro_status will be set to EOPNOTSUPP */
 			goto next;
 		}
 
@@ -3202,11 +3227,9 @@ nmreq_copyin(struct nmreq_header *hdr, int nr_body_is_user)
 			opt->nro_status = EINVAL;
 			opt_tab[opt->nro_reqtype]->nro_status = EINVAL;
 			error = EINVAL;
-			goto next;
+			goto out_restore;
 		}
 		opt_tab[opt->nro_reqtype] = opt;
-
-		p = (char *)(opt + 1);
 
 		/* copy the option body */
 		optsz = nmreq_opt_size_by_type(opt->nro_reqtype,
@@ -3230,18 +3253,20 @@ nmreq_copyin(struct nmreq_header *hdr, int nr_body_is_user)
 	next:
 		/* move to next option */
 		next = (struct nmreq_option **)&opt->nro_next;
-		src = *next;
+		src = nsrc;
 	}
-	if (error)
-		nmreq_copyout(hdr, error);
-	return error;
+
+	/* initialize all the options as not supported.  Recognized options
+	 * will update their field.
+	 */
+	for (src = (struct nmreq_option *)hdr->nr_options; src;
+			src = (struct nmreq_option *)src->nro_next) {
+		src->nro_status = EOPNOTSUPP;
+	}
+	return 0;
 
 out_restore:
-	ptrs = (uint64_t *)ker;
-	hdr->nr_body = *ptrs++;
-	hdr->nr_options = *ptrs++;
-	hdr->nr_reserved = 0;
-	nm_os_free(ker);
+	nmreq_copyout(hdr, error);
 out_err:
 	return error;
 }
@@ -4337,7 +4362,9 @@ netmap_init(void)
 	if (error)
 		goto fail;
 
+#if !defined(__FreeBSD__) || defined(KLD_MODULE)
 	nm_prinf("netmap: loaded module");
+#endif
 	return (0);
 fail:
 	netmap_fini();

@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Landon Fuller under sponsorship from
  * the FreeBSD Foundation.
@@ -58,10 +57,8 @@ typedef uint32_t	(bhnd_erom_io_read_t)(struct bhnd_erom_io *eio,
 /** @see bhnd_erom_io_fini() */
 typedef void		(bhnd_erom_io_fini_t)(struct bhnd_erom_io *eio);
 
-
 int			 bhnd_erom_read_chipid(struct bhnd_erom_io *eio,
 			     struct bhnd_chipid *cid);
-
 
 /**
  * Abstract EROM bus I/O support.

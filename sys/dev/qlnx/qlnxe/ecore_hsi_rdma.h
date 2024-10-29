@@ -24,7 +24,6 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
 
 #ifndef __ECORE_HSI_RDMA__
@@ -246,7 +245,6 @@ struct e4_rdma_task_context
 	struct regpair ustorm_st_padding[2] /* padding */;
 	struct e4_ustorm_rdma_task_ag_ctx ustorm_ag_context /* ustorm aggregative context */;
 };
-
 
 struct e5_ystorm_rdma_task_ag_ctx
 {
@@ -482,8 +480,6 @@ struct e5_rdma_task_context
 	struct e5_ustorm_rdma_task_ag_ctx ustorm_ag_context /* ustorm aggregative context */;
 };
 
-
-
 /*
  * rdma function init ramrod data
  */
@@ -495,7 +491,6 @@ struct rdma_close_func_ramrod_data
 	u8 vf_valid;
 	u8 reserved[4];
 };
-
 
 /*
  * rdma function init CNQ parameters
@@ -510,7 +505,6 @@ struct rdma_cnq_params
 	__le16 queue_zone_num /* Queue Zone ID used for CNQ consumer update */;
 	u8 reserved1[6];
 };
-
 
 /*
  * rdma create cq ramrod data
@@ -530,7 +524,6 @@ struct rdma_create_cq_ramrod_data
 	__le16 reserved1;
 };
 
-
 /*
  * rdma deregister tid ramrod data
  */
@@ -539,7 +532,6 @@ struct rdma_deregister_tid_ramrod_data
 	__le32 itid;
 	__le32 reserved;
 };
-
 
 /*
  * rdma destroy cq output params
@@ -551,7 +543,6 @@ struct rdma_destroy_cq_output_params
 	__le32 reserved1;
 };
 
-
 /*
  * rdma destroy cq ramrod data
  */
@@ -559,7 +550,6 @@ struct rdma_destroy_cq_ramrod_data
 {
 	struct regpair output_params_addr;
 };
-
 
 /*
  * RDMA slow path EQ cmd IDs
@@ -580,7 +570,6 @@ enum rdma_event_opcode
 	MAX_RDMA_EVENT_OPCODE
 };
 
-
 /*
  * RDMA FW return code for slow path ramrods
  */
@@ -593,7 +582,6 @@ enum rdma_fw_return_code
 	RDMA_RETURN_NIG_DRAIN_REQ,
 	MAX_RDMA_FW_RETURN_CODE
 };
-
 
 /*
  * rdma function init header
@@ -611,7 +599,6 @@ struct rdma_init_func_hdr
 	__le32 reserved;
 };
 
-
 /*
  * rdma function init ramrod data
  */
@@ -620,7 +607,6 @@ struct rdma_init_func_ramrod_data
 	struct rdma_init_func_hdr params_header;
 	struct rdma_cnq_params cnq_params[NUM_OF_GLOBAL_QUEUES];
 };
-
 
 /*
  * RDMA ramrod command IDs
@@ -640,7 +626,6 @@ enum rdma_ramrod_cmd_id
 	RDMA_RAMROD_DESTROY_SRQ,
 	MAX_RDMA_RAMROD_CMD_ID
 };
-
 
 /*
  * rdma register tid ramrod data
@@ -698,7 +683,6 @@ struct rdma_register_tid_ramrod_data
 	__le32 reserved4[2];
 };
 
-
 /*
  * rdma resize cq output params
  */
@@ -707,7 +691,6 @@ struct rdma_resize_cq_output_params
 	__le32 old_cq_cons /* cq consumer value on old PBL */;
 	__le32 old_cq_prod /* cq producer value on old PBL */;
 };
-
 
 /*
  * rdma resize cq ramrod data
@@ -728,7 +711,6 @@ struct rdma_resize_cq_ramrod_data
 	struct regpair output_params_addr;
 };
 
-
 /*
  * The rdma SRQ context
  */
@@ -736,7 +718,6 @@ struct rdma_srq_context
 {
 	struct regpair temp[8];
 };
-
 
 /*
  * rdma create qp requester ramrod data
@@ -763,7 +744,6 @@ struct rdma_srq_create_ramrod_data
 	struct regpair producers_addr /* SRQ PBL base address */;
 };
 
-
 /*
  * rdma create qp requester ramrod data
  */
@@ -773,7 +753,6 @@ struct rdma_srq_destroy_ramrod_data
 	__le32 reserved;
 };
 
-
 /*
  * rdma create qp requester ramrod data
  */
@@ -782,7 +761,6 @@ struct rdma_srq_modify_ramrod_data
 	struct rdma_srq_id srq_id /* SRQ Index */;
 	__le32 wqe_limit;
 };
-
 
 /*
  * RDMA Tid type enumeration (for register_tid ramrod)
@@ -796,7 +774,6 @@ enum rdma_tid_type
 	MAX_RDMA_TID_TYPE
 };
 
-
 /*
  * The rdma XRC SRQ context
  */
@@ -804,9 +781,6 @@ struct rdma_xrc_srq_context
 {
 	struct regpair temp[9];
 };
-
-
-
 
 struct E4XstormRoceConnAgCtxDqExtLdPart
 {
@@ -1036,7 +1010,6 @@ struct E4XstormRoceConnAgCtxDqExtLdPart
 	__le32 reg4 /* reg4 */;
 };
 
-
 struct e4_mstorm_rdma_conn_ag_ctx
 {
 	u8 byte0 /* cdu_validation */;
@@ -1074,8 +1047,6 @@ struct e4_mstorm_rdma_conn_ag_ctx
 	__le32 reg0 /* reg0 */;
 	__le32 reg1 /* reg1 */;
 };
-
-
 
 struct e4_tstorm_rdma_conn_ag_ctx
 {
@@ -1182,7 +1153,6 @@ struct e4_tstorm_rdma_conn_ag_ctx
 	__le32 reg10 /* reg10 */;
 };
 
-
 struct e4_tstorm_rdma_task_ag_ctx
 {
 	u8 byte0 /* cdu_validation */;
@@ -1263,7 +1233,6 @@ struct e4_tstorm_rdma_task_ag_ctx
 	__le32 reg2 /* reg2 */;
 };
 
-
 struct e4_ustorm_rdma_conn_ag_ctx
 {
 	u8 reserved /* cdu_validation */;
@@ -1333,8 +1302,6 @@ struct e4_ustorm_rdma_conn_ag_ctx
 	__le16 int_timeout /* word2 */;
 	__le16 word3 /* word3 */;
 };
-
-
 
 struct e4_xstorm_rdma_conn_ag_ctx
 {
@@ -1566,7 +1533,6 @@ struct e4_xstorm_rdma_conn_ag_ctx
 	__le32 reg6 /* cf_array1 */;
 };
 
-
 struct e4_ystorm_rdma_conn_ag_ctx
 {
 	u8 byte0 /* cdu_validation */;
@@ -1612,8 +1578,6 @@ struct e4_ystorm_rdma_conn_ag_ctx
 	__le32 reg3 /* reg3 */;
 };
 
-
-
 struct e5_mstorm_rdma_conn_ag_ctx
 {
 	u8 byte0 /* cdu_validation */;
@@ -1651,8 +1615,6 @@ struct e5_mstorm_rdma_conn_ag_ctx
 	__le32 reg0 /* reg0 */;
 	__le32 reg1 /* reg1 */;
 };
-
-
 
 struct e5_tstorm_rdma_conn_ag_ctx
 {
@@ -1775,7 +1737,6 @@ struct e5_tstorm_rdma_conn_ag_ctx
 	__le16 e4_reserved9 /* word4 */;
 };
 
-
 struct e5_tstorm_rdma_task_ag_ctx
 {
 	u8 byte0 /* cdu_validation */;
@@ -1855,7 +1816,6 @@ struct e5_tstorm_rdma_task_ag_ctx
 	__le32 reg1 /* regpair1 */;
 	__le32 reg2 /* reg2 */;
 };
-
 
 struct e5_ustorm_rdma_conn_ag_ctx
 {
@@ -1938,8 +1898,6 @@ struct e5_ustorm_rdma_conn_ag_ctx
 	__le16 int_timeout /* word2 */;
 	__le16 word3 /* word3 */;
 };
-
-
 
 struct e5_xstorm_rdma_conn_ag_ctx
 {
@@ -2171,7 +2129,6 @@ struct e5_xstorm_rdma_conn_ag_ctx
 	__le32 reg6 /* cf_array1 */;
 };
 
-
 struct e5_ystorm_rdma_conn_ag_ctx
 {
 	u8 byte0 /* cdu_validation */;
@@ -2216,6 +2173,5 @@ struct e5_ystorm_rdma_conn_ag_ctx
 	__le32 reg2 /* reg2 */;
 	__le32 reg3 /* reg3 */;
 };
-
 
 #endif /* __ECORE_HSI_RDMA__ */

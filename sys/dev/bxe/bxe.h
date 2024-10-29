@@ -30,7 +30,6 @@
 #define __BXE_H__
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
@@ -54,6 +53,7 @@
 #include <sys/taskqueue.h>
 #include <contrib/zlib/zlib.h>
 
+#include <net/debugnet.h>
 #include <net/if.h>
 #include <net/if_types.h>
 #include <net/if_arp.h>
@@ -69,7 +69,6 @@
 #include <netinet/ip6.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
-#include <netinet/netdump/netdump.h>
 
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
@@ -115,34 +114,6 @@
 
 #define VF_MAC_CREDIT_CNT 0
 #define VF_VLAN_CREDIT_CNT (0)
-
-#if __FreeBSD_version < 800054
-#if defined(__i386__) || defined(__amd64__)
-#define mb()  __asm volatile("mfence;" : : : "memory")
-#define wmb() __asm volatile("sfence;" : : : "memory")
-#define rmb() __asm volatile("lfence;" : : : "memory")
-static __inline void prefetch(void *x)
-{
-    __asm volatile("prefetcht0 %0" :: "m" (*(unsigned long *)x));
-}
-#else
-#define mb()
-#define rmb()
-#define wmb()
-#define prefetch(x)
-#endif
-#endif
-
-#if __FreeBSD_version >= 1000000
-#define PCIR_EXPRESS_DEVICE_STA        PCIER_DEVICE_STA
-#define PCIM_EXP_STA_TRANSACTION_PND   PCIEM_STA_TRANSACTION_PND
-#define PCIR_EXPRESS_LINK_STA          PCIER_LINK_STA
-#define PCIM_LINK_STA_WIDTH            PCIEM_LINK_STA_WIDTH
-#define PCIM_LINK_STA_SPEED            PCIEM_LINK_STA_SPEED
-#define PCIR_EXPRESS_DEVICE_CTL        PCIER_DEVICE_CTL
-#define PCIM_EXP_CTL_MAX_PAYLOAD       PCIEM_CTL_MAX_PAYLOAD
-#define PCIM_EXP_CTL_MAX_READ_REQUEST  PCIEM_CTL_MAX_READ_REQUEST
-#endif
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -707,10 +678,8 @@ struct bxe_fastpath {
 
     //uint8_t segs;
 
-#if __FreeBSD_version >= 800000
 #define BXE_BR_SIZE 4096
     struct buf_ring *tx_br;
-#endif
 }; /* struct bxe_fastpath */
 
 /* sriov XXX */
@@ -1491,29 +1460,8 @@ struct bxe_softc {
 #define BXE_STATS_UNLOCK(sc)      mtx_unlock(&sc->stats_mtx)
 #define BXE_STATS_LOCK_ASSERT(sc) mtx_assert(&sc->stats_mtx, MA_OWNED)
 
-#if __FreeBSD_version < 800000
-#define BXE_MCAST_LOCK(sc)        \
-    do {                          \
-        mtx_lock(&sc->mcast_mtx); \
-        IF_ADDR_LOCK(sc->ifp);  \
-    } while (0)
-#define BXE_MCAST_UNLOCK(sc)        \
-    do {                            \
-        IF_ADDR_UNLOCK(sc->ifp);  \
-        mtx_unlock(&sc->mcast_mtx); \
-    } while (0)
-#else
-#define BXE_MCAST_LOCK(sc)         \
-    do {                           \
-        mtx_lock(&sc->mcast_mtx);  \
-        if_maddr_rlock(sc->ifp); \
-    } while (0)
-#define BXE_MCAST_UNLOCK(sc)         \
-    do {                             \
-        if_maddr_runlock(sc->ifp); \
-        mtx_unlock(&sc->mcast_mtx);  \
-    } while (0)
-#endif
+#define BXE_MCAST_LOCK(sc)	mtx_lock(&sc->mcast_mtx); 
+#define BXE_MCAST_UNLOCK(sc)	mtx_unlock(&sc->mcast_mtx);
 #define BXE_MCAST_LOCK_ASSERT(sc) mtx_assert(&sc->mcast_mtx, MA_OWNED)
 
     int dmae_ready;
@@ -2320,16 +2268,8 @@ void bxe_dump_mem(struct bxe_softc *sc, char *tag,
 void bxe_dump_mbuf_data(struct bxe_softc *sc, char *pTag,
                         struct mbuf *m, uint8_t contents);
 
-#if __FreeBSD_version >= 800000
-#if (__FreeBSD_version >= 1001513 && __FreeBSD_version < 1100000) ||\
-    __FreeBSD_version >= 1100048
 #define BXE_SET_FLOWID(m) M_HASHTYPE_SET(m, M_HASHTYPE_OPAQUE)
 #define BXE_VALID_FLOWID(m) (M_HASHTYPE_GET(m) != M_HASHTYPE_NONE)
-#else
-#define BXE_VALID_FLOWID(m) ((m->m_flags & M_FLOWID) != 0)
-#define BXE_SET_FLOWID(m) m->m_flags |= M_FLOWID
-#endif
-#endif /* #if __FreeBSD_version >= 800000 */
 
 /***********/
 /* INLINES */

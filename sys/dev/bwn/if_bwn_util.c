@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * The Broadcom Wireless LAN controller driver.
  */

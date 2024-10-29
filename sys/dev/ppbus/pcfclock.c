@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Sascha Schumann. All rights reserved.
  *
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_pcfclock.h"
 
 #include <sys/param.h>
@@ -324,7 +323,6 @@ static device_method_t pcfclock_methods[] = {
 	DEVMETHOD(device_identify,	pcfclock_identify),
 	DEVMETHOD(device_probe,		pcfclock_probe),
 	DEVMETHOD(device_attach,	pcfclock_attach),
-
 	{ 0, 0 }
 };
 

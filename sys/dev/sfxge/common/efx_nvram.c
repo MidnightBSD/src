@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "efx.h"
 #include "efx_impl.h"
 
@@ -47,6 +46,7 @@ static const efx_nvram_ops_t	__efx_nvram_siena_ops = {
 	siena_nvram_partn_size,		/* envo_partn_size */
 	siena_nvram_partn_rw_start,	/* envo_partn_rw_start */
 	siena_nvram_partn_read,		/* envo_partn_read */
+	siena_nvram_partn_read,		/* envo_partn_read_backup */
 	siena_nvram_partn_erase,	/* envo_partn_erase */
 	siena_nvram_partn_write,	/* envo_partn_write */
 	siena_nvram_partn_rw_finish,	/* envo_partn_rw_finish */
@@ -57,7 +57,7 @@ static const efx_nvram_ops_t	__efx_nvram_siena_ops = {
 
 #endif	/* EFSYS_OPT_SIENA */
 
-#if EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD
+#if EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD || EFSYS_OPT_MEDFORD2
 
 static const efx_nvram_ops_t	__efx_nvram_ef10_ops = {
 #if EFSYS_OPT_DIAG
@@ -67,6 +67,7 @@ static const efx_nvram_ops_t	__efx_nvram_ef10_ops = {
 	ef10_nvram_partn_size,		/* envo_partn_size */
 	ef10_nvram_partn_rw_start,	/* envo_partn_rw_start */
 	ef10_nvram_partn_read,		/* envo_partn_read */
+	ef10_nvram_partn_read_backup,	/* envo_partn_read_backup */
 	ef10_nvram_partn_erase,		/* envo_partn_erase */
 	ef10_nvram_partn_write,		/* envo_partn_write */
 	ef10_nvram_partn_rw_finish,	/* envo_partn_rw_finish */
@@ -75,7 +76,7 @@ static const efx_nvram_ops_t	__efx_nvram_ef10_ops = {
 	ef10_nvram_buffer_validate,	/* envo_buffer_validate */
 };
 
-#endif	/* EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD */
+#endif	/* EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD || EFSYS_OPT_MEDFORD2 */
 
 	__checkReturn	efx_rc_t
 efx_nvram_init(
@@ -107,6 +108,12 @@ efx_nvram_init(
 		break;
 #endif	/* EFSYS_OPT_MEDFORD */
 
+#if EFSYS_OPT_MEDFORD2
+	case EFX_FAMILY_MEDFORD2:
+		envop = &__efx_nvram_ef10_ops;
+		break;
+#endif	/* EFSYS_OPT_MEDFORD2 */
+
 	default:
 		EFSYS_ASSERT(0);
 		rc = ENOTSUP;
@@ -115,6 +122,8 @@ efx_nvram_init(
 
 	enp->en_envop = envop;
 	enp->en_mod_flags |= EFX_MOD_NVRAM;
+
+	enp->en_nvram_partn_locked = EFX_NVRAM_PARTN_INVALID;
 
 	return (0);
 
@@ -162,8 +171,6 @@ efx_nvram_size(
 	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_NVRAM);
 
-	EFSYS_ASSERT3U(type, <, EFX_NVRAM_NTYPES);
-
 	if ((rc = envop->envo_type_to_partn(enp, type, &partn)) != 0)
 		goto fail1;
 
@@ -196,8 +203,6 @@ efx_nvram_get_version(
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_PROBE);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_NVRAM);
 
-	EFSYS_ASSERT3U(type, <, EFX_NVRAM_NTYPES);
-
 	if ((rc = envop->envo_type_to_partn(enp, type, &partn)) != 0)
 		goto fail1;
 
@@ -228,18 +233,15 @@ efx_nvram_rw_start(
 	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_NVRAM);
 
-	EFSYS_ASSERT3U(type, <, EFX_NVRAM_NTYPES);
-	EFSYS_ASSERT3U(type, !=, EFX_NVRAM_INVALID);
-
-	EFSYS_ASSERT3U(enp->en_nvram_locked, ==, EFX_NVRAM_INVALID);
-
 	if ((rc = envop->envo_type_to_partn(enp, type, &partn)) != 0)
 		goto fail1;
+
+	EFSYS_ASSERT3U(enp->en_nvram_partn_locked, ==, EFX_NVRAM_PARTN_INVALID);
 
 	if ((rc = envop->envo_partn_rw_start(enp, partn, chunk_sizep)) != 0)
 		goto fail2;
 
-	enp->en_nvram_locked = type;
+	enp->en_nvram_partn_locked = partn;
 
 	return (0);
 
@@ -266,15 +268,51 @@ efx_nvram_read_chunk(
 	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_NVRAM);
 
-	EFSYS_ASSERT3U(type, <, EFX_NVRAM_NTYPES);
-	EFSYS_ASSERT3U(type, !=, EFX_NVRAM_INVALID);
+	if ((rc = envop->envo_type_to_partn(enp, type, &partn)) != 0)
+		goto fail1;
 
-	EFSYS_ASSERT3U(enp->en_nvram_locked, ==, type);
+	EFSYS_ASSERT3U(enp->en_nvram_partn_locked, ==, partn);
+
+	if ((rc = envop->envo_partn_read(enp, partn, offset, data, size)) != 0)
+		goto fail2;
+
+	return (0);
+
+fail2:
+	EFSYS_PROBE(fail2);
+fail1:
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
+
+	return (rc);
+}
+
+/*
+ * Read from the backup (writeable) store of an A/B partition.
+ * For non A/B partitions, there is only a single store, and so this
+ * function has the same behaviour as efx_nvram_read_chunk().
+ */
+	__checkReturn		efx_rc_t
+efx_nvram_read_backup(
+	__in			efx_nic_t *enp,
+	__in			efx_nvram_type_t type,
+	__in			unsigned int offset,
+	__out_bcount(size)	caddr_t data,
+	__in			size_t size)
+{
+	const efx_nvram_ops_t *envop = enp->en_envop;
+	uint32_t partn;
+	efx_rc_t rc;
+
+	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
+	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_NVRAM);
 
 	if ((rc = envop->envo_type_to_partn(enp, type, &partn)) != 0)
 		goto fail1;
 
-	if ((rc = envop->envo_partn_read(enp, partn, offset, data, size)) != 0)
+	EFSYS_ASSERT3U(enp->en_nvram_partn_locked, ==, partn);
+
+	if ((rc = envop->envo_partn_read_backup(enp, partn, offset,
+		    data, size)) != 0)
 		goto fail2;
 
 	return (0);
@@ -301,13 +339,10 @@ efx_nvram_erase(
 	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_NVRAM);
 
-	EFSYS_ASSERT3U(type, <, EFX_NVRAM_NTYPES);
-	EFSYS_ASSERT3U(type, !=, EFX_NVRAM_INVALID);
-
-	EFSYS_ASSERT3U(enp->en_nvram_locked, ==, type);
-
 	if ((rc = envop->envo_type_to_partn(enp, type, &partn)) != 0)
 		goto fail1;
+
+	EFSYS_ASSERT3U(enp->en_nvram_partn_locked, ==, partn);
 
 	if ((rc = envop->envo_partn_size(enp, partn, &size)) != 0)
 		goto fail2;
@@ -342,13 +377,10 @@ efx_nvram_write_chunk(
 	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_NVRAM);
 
-	EFSYS_ASSERT3U(type, <, EFX_NVRAM_NTYPES);
-	EFSYS_ASSERT3U(type, !=, EFX_NVRAM_INVALID);
-
-	EFSYS_ASSERT3U(enp->en_nvram_locked, ==, type);
-
 	if ((rc = envop->envo_type_to_partn(enp, type, &partn)) != 0)
 		goto fail1;
+
+	EFSYS_ASSERT3U(enp->en_nvram_partn_locked, ==, partn);
 
 	if ((rc = envop->envo_partn_write(enp, partn, offset, data, size)) != 0)
 		goto fail2;
@@ -366,36 +398,42 @@ fail1:
 	__checkReturn		efx_rc_t
 efx_nvram_rw_finish(
 	__in			efx_nic_t *enp,
-	__in			efx_nvram_type_t type)
+	__in			efx_nvram_type_t type,
+	__out_opt		uint32_t *verify_resultp)
 {
 	const efx_nvram_ops_t *envop = enp->en_envop;
 	uint32_t partn;
+	uint32_t verify_result = 0;
 	efx_rc_t rc;
 
 	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_NVRAM);
 
-	EFSYS_ASSERT3U(type, <, EFX_NVRAM_NTYPES);
-	EFSYS_ASSERT3U(type, !=, EFX_NVRAM_INVALID);
-
-	EFSYS_ASSERT3U(enp->en_nvram_locked, ==, type);
-
 	if ((rc = envop->envo_type_to_partn(enp, type, &partn)) != 0)
 		goto fail1;
 
-	if ((rc = envop->envo_partn_rw_finish(enp, partn)) != 0)
+	EFSYS_ASSERT3U(enp->en_nvram_partn_locked, ==, partn);
+
+	if ((rc = envop->envo_partn_rw_finish(enp, partn, &verify_result)) != 0)
 		goto fail2;
 
-	enp->en_nvram_locked = EFX_NVRAM_INVALID;
+	enp->en_nvram_partn_locked = EFX_NVRAM_PARTN_INVALID;
+
+	if (verify_resultp != NULL)
+		*verify_resultp = verify_result;
 
 	return (0);
 
 fail2:
 	EFSYS_PROBE(fail2);
-	enp->en_nvram_locked = EFX_NVRAM_INVALID;
+	enp->en_nvram_partn_locked = EFX_NVRAM_PARTN_INVALID;
 
 fail1:
 	EFSYS_PROBE1(fail1, efx_rc_t, rc);
+
+	/* Always report verification result */
+	if (verify_resultp != NULL)
+		*verify_resultp = verify_result;
 
 	return (rc);
 }
@@ -414,17 +452,15 @@ efx_nvram_set_version(
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_PROBE);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_NVRAM);
 
-	EFSYS_ASSERT3U(type, <, EFX_NVRAM_NTYPES);
+	if ((rc = envop->envo_type_to_partn(enp, type, &partn)) != 0)
+		goto fail1;
 
 	/*
 	 * The Siena implementation of envo_set_version() will attempt to
-	 * acquire the NVRAM_UPDATE lock for the DYNAMIC_CONFIG sector.
+	 * acquire the NVRAM_UPDATE lock for the DYNAMIC_CONFIG partition.
 	 * Therefore, you can't have already acquired the NVRAM_UPDATE lock.
 	 */
-	EFSYS_ASSERT3U(enp->en_nvram_locked, ==, EFX_NVRAM_INVALID);
-
-	if ((rc = envop->envo_type_to_partn(enp, type, &partn)) != 0)
-		goto fail1;
+	EFSYS_ASSERT3U(enp->en_nvram_partn_locked, ==, EFX_NVRAM_PARTN_INVALID);
 
 	if ((rc = envop->envo_partn_set_version(enp, partn, version)) != 0)
 		goto fail2;
@@ -455,14 +491,11 @@ efx_nvram_validate(
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_PROBE);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_NVRAM);
 
-	EFSYS_ASSERT3U(type, <, EFX_NVRAM_NTYPES);
-
-
 	if ((rc = envop->envo_type_to_partn(enp, type, &partn)) != 0)
 		goto fail1;
 
 	if (envop->envo_buffer_validate != NULL) {
-		if ((rc = envop->envo_buffer_validate(enp, partn,
+		if ((rc = envop->envo_buffer_validate(partn,
 			    partn_data, partn_size)) != 0)
 			goto fail2;
 	}
@@ -477,7 +510,6 @@ fail1:
 	return (rc);
 }
 
-
 void
 efx_nvram_fini(
 	__in		efx_nic_t *enp)
@@ -486,7 +518,7 @@ efx_nvram_fini(
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_PROBE);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_NVRAM);
 
-	EFSYS_ASSERT3U(enp->en_nvram_locked, ==, EFX_NVRAM_INVALID);
+	EFSYS_ASSERT3U(enp->en_nvram_partn_locked, ==, EFX_NVRAM_PARTN_INVALID);
 
 	enp->en_envop = NULL;
 	enp->en_mod_flags &= ~EFX_MOD_NVRAM;
@@ -582,7 +614,7 @@ efx_mcdi_nvram_metadata(
 
 	MCDI_IN_SET_DWORD(req, NVRAM_METADATA_IN_TYPE, partn);
 
-	efx_mcdi_execute(enp, &req);
+	efx_mcdi_execute_quiet(enp, &req);
 
 	if (req.emr_rc != 0) {
 		rc = req.emr_rc;
@@ -913,7 +945,6 @@ fail1:
 	return (rc);
 }
 
-
 /*
  * MC_CMD_NVRAM_UPDATE_FINISH_V2 must be used to support firmware-verified
  * NVRAM updates. Older firmware will ignore the flags field in the request.
@@ -923,13 +954,13 @@ efx_mcdi_nvram_update_finish(
 	__in			efx_nic_t *enp,
 	__in			uint32_t partn,
 	__in			boolean_t reboot,
-	__out_opt		uint32_t *resultp)
+	__out_opt		uint32_t *verify_resultp)
 {
 	const efx_nic_cfg_t *encp = &enp->en_nic_cfg;
 	efx_mcdi_req_t req;
 	EFX_MCDI_DECLARE_BUF(payload, MC_CMD_NVRAM_UPDATE_FINISH_V2_IN_LEN,
 		MC_CMD_NVRAM_UPDATE_FINISH_V2_OUT_LEN);
-	uint32_t result = MC_CMD_NVRAM_VERIFY_RC_UNKNOWN;
+	uint32_t verify_result = MC_CMD_NVRAM_VERIFY_RC_UNKNOWN;
 	efx_rc_t rc;
 
 	req.emr_cmd = MC_CMD_NVRAM_UPDATE_FINISH;
@@ -951,28 +982,27 @@ efx_mcdi_nvram_update_finish(
 		goto fail1;
 	}
 
-	if (encp->enc_fw_verified_nvram_update_required == B_FALSE) {
-		/* Report success if verified updates are not supported. */
-		result = MC_CMD_NVRAM_VERIFY_RC_SUCCESS;
-	} else {
-		/* Firmware-verified NVRAM updates are required */
-		if (req.emr_out_length_used <
-		    MC_CMD_NVRAM_UPDATE_FINISH_V2_OUT_LEN) {
+	if (req.emr_out_length_used < MC_CMD_NVRAM_UPDATE_FINISH_V2_OUT_LEN) {
+		verify_result = MC_CMD_NVRAM_VERIFY_RC_UNKNOWN;
+		if (encp->enc_nvram_update_verify_result_supported) {
+			/* Result of update verification is missing */
 			rc = EMSGSIZE;
 			goto fail2;
 		}
-		result =
+	} else {
+		verify_result =
 		    MCDI_OUT_DWORD(req, NVRAM_UPDATE_FINISH_V2_OUT_RESULT_CODE);
-
-		if (result != MC_CMD_NVRAM_VERIFY_RC_SUCCESS) {
-			/* Mandatory verification failed */
-			rc = EINVAL;
-			goto fail3;
-		}
 	}
 
-	if (resultp != NULL)
-		*resultp = result;
+	if ((encp->enc_nvram_update_verify_result_supported) &&
+	    (verify_result != MC_CMD_NVRAM_VERIFY_RC_SUCCESS)) {
+		/* Update verification failed */
+		rc = EINVAL;
+		goto fail3;
+	}
+
+	if (verify_resultp != NULL)
+		*verify_resultp = verify_result;
 
 	return (0);
 
@@ -984,8 +1014,8 @@ fail1:
 	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	/* Always report verification result */
-	if (resultp != NULL)
-		*resultp = result;
+	if (verify_resultp != NULL)
+		*verify_resultp = verify_result;
 
 	return (rc);
 }
@@ -1025,7 +1055,6 @@ efx_mcdi_nvram_test(
 
 	result = MCDI_OUT_DWORD(req, NVRAM_TEST_OUT_RESULT);
 	if (result == MC_CMD_NVRAM_TEST_FAIL) {
-
 		EFSYS_PROBE1(nvram_test_failure, int, partn);
 
 		rc = (EINVAL);
@@ -1045,6 +1074,5 @@ fail1:
 }
 
 #endif	/* EFSYS_OPT_DIAG */
-
 
 #endif /* EFSYS_OPT_NVRAM || EFSYS_OPT_VPD */

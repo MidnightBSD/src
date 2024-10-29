@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_DMA_ATTR_H_
-#define	_LINUX_DMA_ATTR_H_
+#ifndef	_LINUXKPI_LINUX_DMA_ATTR_H_
+#define	_LINUXKPI_LINUX_DMA_ATTR_H_
 
 #define	DMA_ATTR_WRITE_BARRIER		(1 << 0)
 #define	DMA_ATTR_WEAK_ORDERING		(1 << 1)
@@ -44,7 +43,6 @@
 struct dma_attrs {
 	unsigned long flags;
 };
-
 #define DEFINE_DMA_ATTRS(x) struct dma_attrs x = { }
 
 static inline void
@@ -53,4 +51,4 @@ init_dma_attrs(struct dma_attrs *attrs)
 	attrs->flags = 0;
 }
 
-#endif	/* _LINUX_DMA_ATTR_H_ */
+#endif	/* _LINUXKPI_LINUX_DMA_ATTR_H_ */

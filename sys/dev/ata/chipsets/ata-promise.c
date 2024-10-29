@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/systm.h>
@@ -248,14 +247,6 @@ ata_promise_chipinit(device_t dev)
 	if (!(ctlr->r_res1 = bus_alloc_resource_any(dev, ctlr->r_type1,
 						    &ctlr->r_rid1, RF_ACTIVE)))
 	    goto failnfree;
-
-#ifdef __sparc64__
-	if (ctlr->chip->cfg2 == PR_SX4X &&
-	    !bus_space_map(rman_get_bustag(ctlr->r_res1),
-	    rman_get_bushandle(ctlr->r_res1), rman_get_size(ctlr->r_res1),
-	    BUS_SPACE_MAP_LINEAR, NULL))
-		goto failnfree;
-#endif
 
 	ctlr->r_type2 = SYS_RES_MEMORY;
 	ctlr->r_rid2 = PCIR_BAR(3);
@@ -738,7 +729,6 @@ ata_promise_mio_reset(device_t dev)
     case PR_SATA:
 	if ((ctlr->chip->cfg2 == PR_SATA) ||
 	    ((ctlr->chip->cfg2 == PR_CMBO) && (ch->unit < 2))) {
-
 	    /* mask plug/unplug intr */
 	    ATA_OUTL(ctlr->r_res2, 0x06c, (0x00110000 << ch->unit));
 	}
@@ -752,7 +742,6 @@ ata_promise_mio_reset(device_t dev)
 
 	if ((ctlr->chip->cfg2 == PR_SATA) ||
 	    ((ctlr->chip->cfg2 == PR_CMBO) && (ch->unit < 2))) {
-
 	    if (ata_sata_phy_reset(dev, -1, 1))
 		ata_generic_reset(dev);
 	    else
@@ -785,7 +774,6 @@ ata_promise_mio_reset(device_t dev)
 
 	if ((ctlr->chip->cfg2 == PR_SATA2) ||
 	    ((ctlr->chip->cfg2 == PR_CMBO2) && (ch->unit < 2))) {
-
 	    /* set PHY mode to "improved" */
 	    ATA_OUTL(ctlr->r_res2, 0x414 + (ch->unit << 8),
 		     (ATA_INL(ctlr->r_res2, 0x414 + (ch->unit << 8)) &
@@ -830,7 +818,6 @@ ata_promise_mio_reset(device_t dev)
 	else
 	    ata_generic_reset(dev);
 	break;
-
     }
 }
 

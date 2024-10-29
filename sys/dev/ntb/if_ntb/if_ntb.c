@@ -38,12 +38,12 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
 #include <sys/buf_ring.h>
 #include <sys/bus.h>
+#include <sys/ktr.h>
 #include <sys/limits.h>
 #include <sys/module.h>
 #include <sys/socket.h>
@@ -73,7 +73,8 @@
 				    CSUM_IP_CHECKED | CSUM_IP_VALID | \
 				    CSUM_SCTP_VALID)
 
-static SYSCTL_NODE(_hw, OID_AUTO, if_ntb, CTLFLAG_RW, 0, "if_ntb");
+static SYSCTL_NODE(_hw, OID_AUTO, if_ntb, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "if_ntb");
 
 static unsigned g_if_ntb_num_queues = UINT_MAX;
 SYSCTL_UINT(_hw_if_ntb, OID_AUTO, num_queues, CTLFLAG_RWTUN,
@@ -136,10 +137,6 @@ ntb_net_attach(device_t dev)
 	int i;
 
 	ifp = sc->ifp = if_gethandle(IFT_ETHER);
-	if (ifp == NULL) {
-		printf("ntb: Cannot allocate ifnet structure\n");
-		return (ENOMEM);
-	}
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	if_setdev(ifp, dev);
 

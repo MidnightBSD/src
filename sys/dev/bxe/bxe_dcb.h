@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef BXE_DCB_H
 #define BXE_DCB_H
 

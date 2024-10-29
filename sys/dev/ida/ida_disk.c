@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999,2000 Jonathan Lemon
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -40,6 +39,8 @@
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/cons.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
 
 #include <machine/bus.h>
 #include <sys/rman.h>
@@ -103,6 +104,11 @@ idad_strategy(struct bio *bp)
 		goto bad;
 	}
 
+	if ((bp->bio_cmd != BIO_READ) && (bp->bio_cmd != BIO_WRITE)) {
+		bp->bio_error = EOPNOTSUPP;
+		goto bad;
+	}
+
 	bp->bio_driver1 = drv;
 	ida_submit_buf(drv->controller, bp);
 	return;
@@ -119,7 +125,7 @@ bad:
 }
 
 static int
-idad_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset, size_t length)
+idad_dump(void *arg, void *virtual, off_t offset, size_t length)
 {
 
 	struct idad_softc *drv;

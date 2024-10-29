@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Adrian Chadd <adrian@FreeBSD.org>
  * All rights reserved.
@@ -27,10 +27,8 @@
  * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
- *
  */
 #include <sys/cdefs.h>
-
 /*
  * This module handles LNA diversity for those chips which implement LNA
  * mixing (AR9285/AR9485.)
@@ -98,12 +96,6 @@ ath_lna_div_attach(struct ath_softc *sc)
 
 	ss = malloc(sizeof(struct if_ath_ant_comb_state),
 	    M_TEMP, M_WAITOK | M_ZERO);
-	if (ss == NULL) {
-		device_printf(sc->sc_dev, "%s: failed to allocate\n",
-		    __func__);
-		/* Don't fail at this point */
-		return (0);
-	}
 
 	/* Fetch the hardware configuration */
 	OS_MEMZERO(&div_ant_conf, sizeof(div_ant_conf));

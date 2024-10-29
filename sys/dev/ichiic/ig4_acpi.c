@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_acpi.h"
 
 #include <sys/param.h>
@@ -60,6 +59,7 @@ static char *ig4iic_ids[] = {
 	"808622C1",
 	"AMDI0510",
 	"AMDI0010",
+	"AMD0010",
 	"APMC0D0F",
 	NULL
 };
@@ -67,16 +67,16 @@ static char *ig4iic_ids[] = {
 static int
 ig4iic_acpi_probe(device_t dev)
 {
-
+	int rv;
 
 	if (acpi_disabled("ig4iic"))
 		return (ENXIO);
-
-	if (ACPI_ID_PROBE(device_get_parent(dev), dev, ig4iic_ids) == NULL)
-		return (ENXIO);
+	rv = ACPI_ID_PROBE(device_get_parent(dev), dev, ig4iic_ids, NULL);
+	if (rv > 0)
+		return (rv);
 
 	device_set_desc(dev, "Designware I2C Controller");
-	return (0);
+	return (rv);
 }
 
 static int
@@ -192,3 +192,4 @@ static driver_t ig4iic_acpi_driver = {
 DRIVER_MODULE_ORDERED(ig4iic, acpi, ig4iic_acpi_driver, ig4iic_devclass, 0, 0,
     SI_ORDER_ANY);
 MODULE_DEPEND(ig4iic, acpi, 1, 1, 1);
+ACPI_PNP_INFO(ig4iic_ids);

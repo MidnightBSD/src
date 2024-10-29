@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef _LINUX_NET_IP_H_
-#define	_LINUX_NET_IP_H_
+#ifndef _LINUXKPI_NET_IP_H_
+#define	_LINUXKPI_NET_IP_H_
 
 #include "opt_inet.h"
 
@@ -99,4 +98,4 @@ ip_ib_mc_map(uint32_t addr, const unsigned char *bcast, char *buf)
 	buf[19] = addr & 0xff;
 }
 
-#endif	/* _LINUX_NET_IP_H_ */
+#endif	/* _LINUXKPI_NET_IP_H_ */

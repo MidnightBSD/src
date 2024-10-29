@@ -27,14 +27,12 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
  * @file
  * OCS linux driver common include file
  */
-
 
 #if !defined(__OCS_DRV_FC_H__)
 #define __OCS_DRV_FC_H__
@@ -51,7 +49,6 @@
 #include "ocs_stats.h"
 
 struct ocs_s {
-
 	ocs_os_t ocs_os;
 	char display_name[OCS_DISPLAY_NAME_LENGTH];
 	ocs_rlock_t lock;			/*>> Device wide lock */
@@ -206,6 +203,5 @@ extern int32_t ocs_start_event_processing(ocs_os_t *ocs_os);
 
 #include "ocs_ioctl.h"
 #include "ocs_elxu.h"
-
 
 #endif 

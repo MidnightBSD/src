@@ -1,7 +1,7 @@
 /*	$NetBSD: miivar.h,v 1.8 1999/04/23 04:24:32 thorpej Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998, 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -30,7 +30,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_MII_MIIVAR_H_
@@ -38,6 +37,14 @@
 
 #include <sys/queue.h>
 #include <net/if_var.h>	/* XXX driver API temporary */
+
+#include "opt_platform.h"
+
+#ifdef FDT
+#include <dev/ofw/openfirm.h>
+#include <dev/ofw/ofw_bus.h>
+#include <dev/ofw/ofw_bus_subr.h>
+#endif
 
 /*
  * Media Independent Interface data structure defintions
@@ -133,6 +140,8 @@ typedef struct mii_softc mii_softc_t;
 #define	MIIF_DOPAUSE	0x00000100	/* advertise PAUSE capability */
 #define	MIIF_IS_HPNA	0x00000200	/* is a HomePNA device */
 #define	MIIF_FORCEANEG	0x00000400	/* force auto-negotiation */
+#define	MIIF_RX_DELAY	0x00000800	/* add RX delay */
+#define	MIIF_TX_DELAY	0x00001000	/* add TX delay */
 #define	MIIF_NOMANPAUSE	0x00100000	/* no manual PAUSE selection */
 #define	MIIF_FORCEPAUSE	0x00200000	/* force PAUSE advertisement */
 #define	MIIF_MACPRIV0	0x01000000	/* private to the MAC driver */
@@ -202,6 +211,11 @@ struct mii_attach_args {
 	uint32_t mii_id1;		/* PHY ID register 1 */
 	uint32_t mii_id2;		/* PHY ID register 2 */
 	u_int mii_capmask;		/* capability mask for BMSR */
+#ifdef FDT
+	struct ofw_bus_devinfo obd;
+	struct resource_list rl;
+#endif
+
 };
 typedef struct mii_attach_args mii_attach_args_t;
 
@@ -247,7 +261,13 @@ enum miibus_device_ivars {
 MIIBUS_ACCESSOR(flags,		FLAGS,		u_int)
 
 extern devclass_t	miibus_devclass;
-extern driver_t		miibus_driver;
+DECLARE_CLASS(miibus_driver);
+
+#ifdef FDT
+extern devclass_t	miibus_fdt_devclass;
+DECLARE_CLASS(miibus_fdt_driver);
+#endif
+
 
 int	mii_attach(device_t, device_t *, if_t, ifm_change_cb_t,
 	    ifm_stat_cb_t, int, int, int, int);
@@ -275,6 +295,8 @@ const struct mii_phydesc * mii_phy_match_gen(const struct mii_attach_args *ma,
 int mii_phy_dev_probe(device_t dev, const struct mii_phydesc *mpd, int mrv);
 void mii_phy_dev_attach(device_t dev, u_int flags,
     const struct mii_phy_funcs *mpf, int add_media);
+
+device_attach_t miibus_attach;
 
 void	ukphy_status(struct mii_softc *);
 

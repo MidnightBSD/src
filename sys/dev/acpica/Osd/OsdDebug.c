@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ddb.h"
 #include <sys/param.h>
 #include <sys/kdb.h>

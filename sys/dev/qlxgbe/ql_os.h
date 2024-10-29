@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
@@ -25,7 +25,6 @@
  *  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
- *
  */
 /*
  * File: ql_os.h
@@ -34,6 +33,8 @@
 
 #ifndef _QL_OS_H_
 #define _QL_OS_H_
+
+#include "opt_inet.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -153,13 +154,13 @@ MALLOC_DECLARE(M_QLA83XXBUF);
 		else  \
 			pause(fn, qla_ms_to_hz(msecs)); \
 	}
-	
+
 /*
  * Locks
  */
 #define QLA_LOCK(ha, str, to_ms, no_sleep)	qla_lock(ha, str, to_ms, no_sleep)
 #define QLA_UNLOCK(ha, str)			qla_unlock(ha, str)
- 
+
 /*
  * structure encapsulating a DMA buffer
  */
@@ -172,6 +173,5 @@ struct qla_dma {
         bus_dma_tag_t           dma_tag;
 };
 typedef struct qla_dma qla_dma_t;
-
 
 #endif /* #ifndef _QL_OS_H_ */

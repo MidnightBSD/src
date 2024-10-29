@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-2006 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_SCC_BUS_H_
@@ -41,7 +40,7 @@
 #define	SCC_IVAR_HWMTX		5
 
 /* Hardware class -- the SCC type. */
-#define	SCC_CLASS_SAB82532	0
+#define	SCC_CLASS_UNUSED	0
 #define	SCC_CLASS_Z8530		1
 #define	SCC_CLASS_QUICC		2
 

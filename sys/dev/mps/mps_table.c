@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Yahoo! Inc.
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* Debugging tables for MPT2 */
 
 /* TODO Move headers to mpsvar */
@@ -518,12 +517,10 @@ mps_print_sgl(struct mps_softc *sc, struct mps_command *cm, int offset)
 {
 	MPI2_SGE_SIMPLE64 *sge;
 	MPI2_SGE_CHAIN32 *sgc;
-	MPI2_REQUEST_HEADER *req;
 	struct mps_chain *chain = NULL;
 	char *frame;
 	u_int i = 0, flags;
 
-	req = (MPI2_REQUEST_HEADER *)cm->cm_req;
 	frame = (char *)cm->cm_req;
 	sge = (MPI2_SGE_SIMPLE64 *)&frame[offset * 4];
 	printf("SGL for command %p\n", cm);
@@ -563,4 +560,3 @@ mps_print_scsiio_cmd(struct mps_softc *sc, struct mps_command *cm)
 	req = (MPI2_SCSI_IO_REQUEST *)cm->cm_req;
 	mps_print_sgl(sc, cm, req->SGLOffset0);
 }
-

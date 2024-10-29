@@ -23,7 +23,6 @@
  *  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef __BCM_OSAL_ECORE_PACKAGE
@@ -82,7 +81,7 @@ extern void qlnx_dma_free_coherent(void *ecore_dev, void *v_addr,
                         bus_addr_t phys, uint32_t size);
 
 extern void qlnx_link_update(void *p_hwfn);
-extern void qlnx_barrier(void *p_hwfn);
+extern void qlnx_barrier(void *p_dev);
 
 extern void *qlnx_zalloc(uint32_t size);
 
@@ -90,7 +89,6 @@ extern void qlnx_get_protocol_stats(void *cdev, int proto_type,
 		void *proto_stats);
 
 extern void qlnx_sp_isr(void *arg);
-
 
 extern void qlnx_osal_vf_fill_acquire_resc_req(void *p_hwfn, void *p_resc_req,
 			void *p_sw_info);
@@ -125,7 +123,7 @@ is_power_of_2(unsigned long n)
 {
 	return (n == roundup_pow_of_two(n));
 }
- 
+
 static __inline unsigned long
 rounddown_pow_of_two(unsigned long x)
 {
@@ -225,14 +223,14 @@ typedef struct osal_list_t
 #define OSAL_SPIN_LOCK_ALLOC(p_hwfn, mutex)
 #define OSAL_SPIN_LOCK_DEALLOC(mutex) mtx_destroy(mutex)
 #define OSAL_SPIN_LOCK_INIT(lock) {\
-		mtx_init(lock, __func__, MTX_NETWORK_LOCK, MTX_SPIN); \
+		mtx_init(lock, __func__, "OSAL spin lock", MTX_SPIN); \
 	}
 
 #define OSAL_SPIN_UNLOCK(lock) {\
-		mtx_unlock(lock); \
+		mtx_unlock_spin(lock); \
 	}
 #define OSAL_SPIN_LOCK(lock) {\
-		mtx_lock(lock); \
+		mtx_lock_spin(lock); \
 	}
 
 #define OSAL_MUTEX_ALLOC(p_hwfn, mutex)
@@ -344,7 +342,6 @@ do {							\
         }                                                          \
     } while (0)
 
-
 #define OSAL_LIST_IS_EMPTY(list) \
 	((list)->cnt == 0)
 
@@ -362,7 +359,6 @@ do {							\
           entry != NULL;                                             \
           entry = (type *)tmp_entry,                                         \
           tmp_entry = (entry) ? OSAL_LIST_NEXT(entry, field, type) : NULL)
-
 
 #define OSAL_BAR_SIZE(dev, bar_id) qlnx_pci_bus_get_bar_size(dev, bar_id)
 
@@ -439,7 +435,6 @@ qlnx_log2(uint32_t x)
 #define OSAL_UNLIKELY 
 #define OSAL_NULL NULL
 
-
 #define OSAL_MAX_T(type, __max1, __max2) max_t(type, __max1, __max2)
 #define OSAL_MIN_T(type, __max1, __max2) min_t(type, __max1, __max2)
 
@@ -511,7 +506,6 @@ bitmap_weight(unsigned long *bitmap, unsigned nbits)
 }
 
 #endif
-
 
 #define OSAL_TEST_AND_FLIP_BIT qlnx_test_and_change_bit
 #define OSAL_TEST_AND_CLEAR_BIT test_and_clear_bit

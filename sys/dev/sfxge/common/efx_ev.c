@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "efx.h"
 #include "efx_impl.h"
 #if EFSYS_OPT_MON_MCDI
@@ -52,8 +51,6 @@
 	(EFX_QWORD_FIELD((_qword), EFX_DWORD_0) != 0xffffffff &&	\
 	EFX_QWORD_FIELD((_qword), EFX_DWORD_1) != 0xffffffff)
 
-
-
 #if EFSYS_OPT_SIENA
 
 static	__checkReturn	efx_rc_t
@@ -69,7 +66,7 @@ siena_ev_qcreate(
 	__in		efx_nic_t *enp,
 	__in		unsigned int index,
 	__in		efsys_mem_t *esmp,
-	__in		size_t n,
+	__in		size_t ndescs,
 	__in		uint32_t id,
 	__in		uint32_t us,
 	__in		uint32_t flags,
@@ -119,7 +116,7 @@ static const efx_ev_ops_t	__efx_ev_siena_ops = {
 };
 #endif /* EFSYS_OPT_SIENA */
 
-#if EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD
+#if EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD || EFSYS_OPT_MEDFORD2
 static const efx_ev_ops_t	__efx_ev_ef10_ops = {
 	ef10_ev_init,				/* eevo_init */
 	ef10_ev_fini,				/* eevo_fini */
@@ -132,8 +129,7 @@ static const efx_ev_ops_t	__efx_ev_ef10_ops = {
 	ef10_ev_qstats_update,			/* eevo_qstats_update */
 #endif
 };
-#endif /* EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD */
-
+#endif /* EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD || EFSYS_OPT_MEDFORD2 */
 
 	__checkReturn	efx_rc_t
 efx_ev_init(
@@ -168,6 +164,12 @@ efx_ev_init(
 		eevop = &__efx_ev_ef10_ops;
 		break;
 #endif /* EFSYS_OPT_MEDFORD */
+
+#if EFSYS_OPT_MEDFORD2
+	case EFX_FAMILY_MEDFORD2:
+		eevop = &__efx_ev_ef10_ops;
+		break;
+#endif /* EFSYS_OPT_MEDFORD2 */
 
 	default:
 		EFSYS_ASSERT(0);
@@ -214,13 +216,12 @@ efx_ev_fini(
 	enp->en_mod_flags &= ~EFX_MOD_EV;
 }
 
-
 	__checkReturn	efx_rc_t
 efx_ev_qcreate(
 	__in		efx_nic_t *enp,
 	__in		unsigned int index,
 	__in		efsys_mem_t *esmp,
-	__in		size_t n,
+	__in		size_t ndescs,
 	__in		uint32_t id,
 	__in		uint32_t us,
 	__in		uint32_t flags,
@@ -260,7 +261,7 @@ efx_ev_qcreate(
 	eep->ee_magic = EFX_EVQ_MAGIC;
 	eep->ee_enp = enp;
 	eep->ee_index = index;
-	eep->ee_mask = n - 1;
+	eep->ee_mask = ndescs - 1;
 	eep->ee_flags = flags;
 	eep->ee_esmp = esmp;
 
@@ -275,7 +276,7 @@ efx_ev_qcreate(
 	enp->en_ev_qcount++;
 	*eepp = eep;
 
-	if ((rc = eevop->eevo_qcreate(enp, index, esmp, n, id, us, flags,
+	if ((rc = eevop->eevo_qcreate(enp, index, esmp, ndescs, id, us, flags,
 	    eep)) != 0)
 		goto fail4;
 
@@ -896,7 +897,6 @@ siena_ev_tx(
 	    EFX_QWORD_FIELD(*eqp, FSF_AZ_TX_EV_PKT_ERR) == 0 &&
 	    EFX_QWORD_FIELD(*eqp, FSF_AZ_TX_EV_PKT_TOO_BIG) == 0 &&
 	    EFX_QWORD_FIELD(*eqp, FSF_AZ_TX_EV_WQ_FF_FULL) == 0) {
-
 		id = EFX_QWORD_FIELD(*eqp, FSF_AZ_TX_EV_DESC_PTR);
 		label = EFX_QWORD_FIELD(*eqp, FSF_AZ_TX_EV_Q_LABEL);
 
@@ -1293,7 +1293,7 @@ siena_ev_qcreate(
 	__in		efx_nic_t *enp,
 	__in		unsigned int index,
 	__in		efsys_mem_t *esmp,
-	__in		size_t n,
+	__in		size_t ndescs,
 	__in		uint32_t id,
 	__in		uint32_t us,
 	__in		uint32_t flags,
@@ -1310,7 +1310,8 @@ siena_ev_qcreate(
 	EFX_STATIC_ASSERT(ISP2(EFX_EVQ_MAXNEVS));
 	EFX_STATIC_ASSERT(ISP2(EFX_EVQ_MINNEVS));
 
-	if (!ISP2(n) || (n < EFX_EVQ_MINNEVS) || (n > EFX_EVQ_MAXNEVS)) {
+	if (!ISP2(ndescs) ||
+	    (ndescs < EFX_EVQ_MINNEVS) || (ndescs > EFX_EVQ_MAXNEVS)) {
 		rc = EINVAL;
 		goto fail1;
 	}
@@ -1327,7 +1328,7 @@ siena_ev_qcreate(
 #endif
 	for (size = 0; (1 << size) <= (EFX_EVQ_MAXNEVS / EFX_EVQ_MINNEVS);
 	    size++)
-		if ((1 << size) == (int)(n / EFX_EVQ_MINNEVS))
+		if ((1 << size) == (int)(ndescs / EFX_EVQ_MINNEVS))
 			break;
 	if (id + (1 << size) >= encp->enc_buftbl_limit) {
 		rc = EINVAL;

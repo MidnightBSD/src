@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef ECORE_HSI_H
 #define ECORE_HSI_H
 

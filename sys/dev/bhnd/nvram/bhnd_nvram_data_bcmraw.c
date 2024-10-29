@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifdef _KERNEL
 
 #include <sys/param.h>
@@ -57,7 +56,7 @@
  * The Broadcom NVRAM NUL-delimited ASCII format is used by most
  * Broadcom SoCs.
  * 
- * The NVRAM data is encoded as a stream of of NUL-terminated 'key=value'
+ * The NVRAM data is encoded as a stream of NUL-terminated 'key=value'
  * strings; the end of the stream is denoted by a single extra NUL character.
  */
 

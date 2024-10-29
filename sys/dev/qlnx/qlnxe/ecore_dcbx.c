@@ -29,7 +29,6 @@
  * File : ecore_dcbx.c
  */
 #include <sys/cdefs.h>
-
 #include "bcm_osal.h"
 #include "ecore.h"
 #include "ecore_sp_commands.h"

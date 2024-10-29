@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef _LINUX_SEMAPHORE_H_
-#define _LINUX_SEMAPHORE_H_
+#ifndef _LINUXKPI_LINUX_SEMAPHORE_H_
+#define _LINUXKPI_LINUX_SEMAPHORE_H_
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -66,4 +65,4 @@ init_MUTEX(struct semaphore *sem)
 
 #define	sema_init(...)	linux_sema_init(__VA_ARGS__)
 
-#endif /* _LINUX_SEMAPHORE_H_ */
+#endif /* _LINUXKPI_LINUX_SEMAPHORE_H_ */

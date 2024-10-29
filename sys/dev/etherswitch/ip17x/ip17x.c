@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Luiz Otavio O Souza.
  * Copyright (c) 2011-2012 Stefan Bethke.
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include "opt_platform.h"
@@ -173,12 +172,6 @@ ip17x_attach_phys(struct ip17x_softc *sc)
 		sc->phyport[phy] = port;
 		sc->portphy[port] = phy;
 		sc->ifp[port] = if_alloc(IFT_ETHER);
-		if (sc->ifp[port] == NULL) {
-			device_printf(sc->sc_dev, "couldn't allocate ifnet structure\n");
-			err = ENOMEM;
-			break;
-		}
-
 		sc->ifp[port]->if_softc = sc;
 		sc->ifp[port]->if_flags |= IFF_UP | IFF_BROADCAST |
 		    IFF_DRV_RUNNING | IFF_SIMPLEX;
@@ -557,7 +550,7 @@ ip17x_ifmedia_sts(struct ifnet *ifp, struct ifmediareq *ifmr)
 static int
 ip17x_readreg(device_t dev, int addr)
 {
-	struct ip17x_softc *sc;
+	struct ip17x_softc *sc __diagused;
 
 	sc = device_get_softc(dev);
 	IP17X_LOCK_ASSERT(sc, MA_OWNED);
@@ -569,7 +562,7 @@ ip17x_readreg(device_t dev, int addr)
 static int
 ip17x_writereg(device_t dev, int addr, int value)
 {
-	struct ip17x_softc *sc;
+	struct ip17x_softc *sc __diagused;
 
 	sc = device_get_softc(dev);
 	IP17X_LOCK_ASSERT(sc, MA_OWNED);

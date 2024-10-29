@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef ECORE_INIT_H
 #define ECORE_INIT_H
 

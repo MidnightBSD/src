@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -139,7 +138,7 @@ mtkswitch_reg_read32_mt7621(struct mtkswitch_softc *sc, int reg)
 	low = mtkswitch_phy_read_locked(sc, MTKSWITCH_GLOBAL_PHY,
 	    MTKSWITCH_REG_LO(reg));
 	hi = mtkswitch_phy_read_locked(sc, MTKSWITCH_GLOBAL_PHY,
-	    MTKSWITCH_REG_HI(reg));;
+	    MTKSWITCH_REG_HI(reg));
 	return (low | (hi << 16));
 }
 

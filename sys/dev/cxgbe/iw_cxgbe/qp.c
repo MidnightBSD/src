@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2013 Chelsio, Inc. All rights reserved.
  *
@@ -32,7 +32,6 @@
  * SOFTWARE.
  */
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 
 #ifdef TCP_OFFLOAD
@@ -334,7 +333,7 @@ free_sq_qid:
 }
 
 static int build_immd(struct t4_sq *sq, struct fw_ri_immd *immdp,
-		      struct ib_send_wr *wr, int max, u32 *plenp)
+		      const struct ib_send_wr *wr, int max, u32 *plenp)
 {
 	u8 *dstp, *srcp;
 	u32 plen = 0;
@@ -404,7 +403,7 @@ static int build_isgl(__be64 *queue_start, __be64 *queue_end,
 }
 
 static int build_rdma_send(struct t4_sq *sq, union t4_wr *wqe,
-			   struct ib_send_wr *wr, u8 *len16)
+			   const struct ib_send_wr *wr, u8 *len16)
 {
 	u32 plen;
 	int size;
@@ -471,7 +470,7 @@ static int build_rdma_send(struct t4_sq *sq, union t4_wr *wqe,
 }
 
 static int build_rdma_write(struct t4_sq *sq, union t4_wr *wqe,
-			    struct ib_send_wr *wr, u8 *len16)
+			    const struct ib_send_wr *wr, u8 *len16)
 {
 	u32 plen;
 	int size;
@@ -513,7 +512,7 @@ static int build_rdma_write(struct t4_sq *sq, union t4_wr *wqe,
 	return 0;
 }
 
-static int build_rdma_read(union t4_wr *wqe, struct ib_send_wr *wr, u8 *len16)
+static int build_rdma_read(union t4_wr *wqe, const struct ib_send_wr *wr, u8 *len16)
 {
 	if (wr->num_sge > 1)
 		return -EINVAL;
@@ -544,7 +543,7 @@ static int build_rdma_read(union t4_wr *wqe, struct ib_send_wr *wr, u8 *len16)
 }
 
 static int build_rdma_recv(struct c4iw_qp *qhp, union t4_recv_wr *wqe,
-			   struct ib_recv_wr *wr, u8 *len16)
+			   const struct ib_recv_wr *wr, u8 *len16)
 {
 	int ret;
 
@@ -558,7 +557,7 @@ static int build_rdma_recv(struct c4iw_qp *qhp, union t4_recv_wr *wqe,
 	return 0;
 }
 
-static int build_inv_stag(union t4_wr *wqe, struct ib_send_wr *wr,
+static int build_inv_stag(union t4_wr *wqe, const struct ib_send_wr *wr,
 			  u8 *len16)
 {
 	wqe->inv.stag_inv = cpu_to_be32(wr->ex.invalidate_rkey);
@@ -608,7 +607,7 @@ void c4iw_qp_rem_ref(struct ib_qp *qp)
 	kref_put(&to_c4iw_qp(qp)->kref, queue_qp_free);
 }
 
-static void complete_sq_drain_wr(struct c4iw_qp *qhp, struct ib_send_wr *wr)
+static void complete_sq_drain_wr(struct c4iw_qp *qhp, const struct ib_send_wr *wr)
 {
 	struct t4_cqe cqe = {};
 	struct c4iw_cq *schp;
@@ -638,7 +637,7 @@ static void complete_sq_drain_wr(struct c4iw_qp *qhp, struct ib_send_wr *wr)
 	spin_unlock_irqrestore(&schp->comp_handler_lock, flag);
 }
 
-static void complete_rq_drain_wr(struct c4iw_qp *qhp, struct ib_recv_wr *wr)
+static void complete_rq_drain_wr(struct c4iw_qp *qhp, const struct ib_recv_wr *wr)
 {
 	struct t4_cqe cqe = {};
 	struct c4iw_cq *rchp;
@@ -669,7 +668,7 @@ static void complete_rq_drain_wr(struct c4iw_qp *qhp, struct ib_recv_wr *wr)
 }
 
 static int build_tpte_memreg(struct fw_ri_fr_nsmr_tpte_wr *fr,
-		struct ib_reg_wr *wr, struct c4iw_mr *mhp, u8 *len16)
+		const struct ib_reg_wr *wr, struct c4iw_mr *mhp, u8 *len16)
 {
 	__be64 *p = (__be64 *)fr->pbl;
 
@@ -704,7 +703,7 @@ static int build_tpte_memreg(struct fw_ri_fr_nsmr_tpte_wr *fr,
 }
 
 static int build_memreg(struct t4_sq *sq, union t4_wr *wqe,
-		struct ib_reg_wr *wr, struct c4iw_mr *mhp, u8 *len16,
+		const struct ib_reg_wr *wr, struct c4iw_mr *mhp, u8 *len16,
 		bool dsgl_supported)
 {
 	struct fw_ri_immd *imdp;
@@ -713,7 +712,7 @@ static int build_memreg(struct t4_sq *sq, union t4_wr *wqe,
 	int pbllen = roundup(mhp->mpl_len * sizeof(u64), 32);
 	int rem;
 
-	if (mhp->mpl_len > t4_max_fr_depth(use_dsgl && dsgl_supported))
+	if (mhp->mpl_len > t4_max_fr_depth(&mhp->rhp->rdev, use_dsgl))
 		return -EINVAL;
 	if (wr->mr->page_size > C4IW_MAX_PAGE_SIZE)
 		return -EINVAL;
@@ -771,8 +770,8 @@ static int build_memreg(struct t4_sq *sq, union t4_wr *wqe,
 	return 0;
 }
 
-int c4iw_post_send(struct ib_qp *ibqp, struct ib_send_wr *wr,
-		   struct ib_send_wr **bad_wr)
+int c4iw_post_send(struct ib_qp *ibqp, const struct ib_send_wr *wr,
+		   const struct ib_send_wr **bad_wr)
 {
 	int err = 0;
 	u8 len16 = 0;
@@ -911,8 +910,8 @@ int c4iw_post_send(struct ib_qp *ibqp, struct ib_send_wr *wr,
 	return err;
 }
 
-int c4iw_post_receive(struct ib_qp *ibqp, struct ib_recv_wr *wr,
-		      struct ib_recv_wr **bad_wr)
+int c4iw_post_receive(struct ib_qp *ibqp, const struct ib_recv_wr *wr,
+		      const struct ib_recv_wr **bad_wr)
 {
 	int err = 0;
 	struct c4iw_qp *qhp;
@@ -1126,7 +1125,7 @@ static void post_terminate(struct c4iw_qp *qhp, struct t4_cqe *err_cqe,
 	CTR4(KTR_IW_CXGBE, "%s qhp %p qid 0x%x tid %u", __func__, qhp,
 	    qhp->wq.sq.qid, qhp->ep->hwtid);
 
-	wr = alloc_wrqe(sizeof(*wqe), toep->ofld_txq);
+	wr = alloc_wrqe(sizeof(*wqe), &toep->ofld_txq->wrq);
 	if (wr == NULL)
 		return;
         wqe = wrtod(wr);
@@ -1258,7 +1257,7 @@ rdma_fini(struct c4iw_dev *rhp, struct c4iw_qp *qhp, struct c4iw_ep *ep)
 	CTR5(KTR_IW_CXGBE, "%s qhp %p qid 0x%x ep %p tid %u", __func__, qhp,
 	    qhp->wq.sq.qid, ep, ep->hwtid);
 
-	wr = alloc_wrqe(sizeof(*wqe), toep->ofld_txq);
+	wr = alloc_wrqe(sizeof(*wqe), &toep->ofld_txq->wrq);
 	if (wr == NULL)
 		return (0);
 	wqe = wrtod(wr);
@@ -1352,7 +1351,7 @@ static int rdma_init(struct c4iw_dev *rhp, struct c4iw_qp *qhp)
 	CTR5(KTR_IW_CXGBE, "%s qhp %p qid 0x%x ep %p tid %u", __func__, qhp,
 	    qhp->wq.sq.qid, ep, ep->hwtid);
 
-	wr = alloc_wrqe(sizeof(*wqe), toep->ofld_txq);
+	wr = alloc_wrqe(sizeof(*wqe), &toep->ofld_txq->wrq);
 	if (wr == NULL)
 		return (0);
 	wqe = wrtod(wr);

@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/limits.h>
 
@@ -246,7 +245,7 @@ static struct fortuna_state {
  *
  * (stack_C == C_0; stack_K == K_0; stack_C' == C''; stack_K' == K'.)
  */
-static bool fortuna_concurrent_read __read_frequently = false;
+static bool fortuna_concurrent_read __read_frequently = true;
 
 #ifdef _KERNEL
 static struct sysctl_ctx_list random_clist;
@@ -298,14 +297,14 @@ random_fortuna_init_alg(void *unused __unused)
 	fortuna_state.fs_lasttime = 0;
 	random_fortuna_o = SYSCTL_ADD_NODE(&random_clist,
 		SYSCTL_STATIC_CHILDREN(_kern_random),
-		OID_AUTO, "fortuna", CTLFLAG_RW, 0,
+		OID_AUTO, "fortuna", CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
 		"Fortuna Parameters");
 	SYSCTL_ADD_PROC(&random_clist,
-		SYSCTL_CHILDREN(random_fortuna_o), OID_AUTO,
-		"minpoolsize", CTLTYPE_UINT | CTLFLAG_RWTUN,
-		&fortuna_state.fs_minpoolsize, RANDOM_FORTUNA_DEFPOOLSIZE,
-		random_check_uint_fs_minpoolsize, "IU",
-		"Minimum pool size necessary to cause a reseed");
+	    SYSCTL_CHILDREN(random_fortuna_o), OID_AUTO, "minpoolsize",
+	    CTLTYPE_UINT | CTLFLAG_RWTUN | CTLFLAG_MPSAFE,
+	    &fortuna_state.fs_minpoolsize, RANDOM_FORTUNA_DEFPOOLSIZE,
+	    random_check_uint_fs_minpoolsize, "IU",
+	    "Minimum pool size necessary to cause a reseed");
 	KASSERT(fortuna_state.fs_minpoolsize > 0, ("random: Fortuna threshold must be > 0 at startup"));
 
 	SYSCTL_ADD_BOOL(&random_clist, SYSCTL_CHILDREN(random_fortuna_o),
@@ -357,6 +356,13 @@ random_fortuna_process_event(struct harvest_event *event)
 	 * during accumulation/reseeding and reading/regating.
 	 */
 	pl = event->he_destination % RANDOM_FORTUNA_NPOOLS;
+	/*
+	 * If a VM generation ID changes (clone and play or VM rewind), we want
+	 * to incorporate that as soon as possible.  Override destingation pool
+	 * for immediate next use.
+	 */
+	if (event->he_source == RANDOM_PURE_VMGENID)
+		pl = 0;
 	/*
 	 * We ignore low entropy static/counter fields towards the end of the
 	 * he_event structure in order to increase measurable entropy when

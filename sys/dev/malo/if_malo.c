@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Weongyo Jeong <weongyo@freebsd.org>
  * Copyright (c) 2007 Marvell Semiconductor, Inc.
@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #endif
 
 #include "opt_malo.h"
@@ -63,7 +63,7 @@
 
 #include <dev/malo/if_malo.h>
 
-SYSCTL_NODE(_hw, OID_AUTO, malo, CTLFLAG_RD, 0,
+SYSCTL_NODE(_hw, OID_AUTO, malo, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
     "Marvell 88w8335 driver parameters");
 
 static	int malo_txcoalesce = 8;	/* # tx pkts to q before poking f/w*/
@@ -252,7 +252,7 @@ malo_attach(uint16_t devid, struct malo_softc *sc)
 	taskqueue_start_threads(&sc->malo_tq, 1, PI_NET,
 		"%s taskq", device_get_nameunit(sc->malo_dev));
 
-	TASK_INIT(&sc->malo_rxtask, 0, malo_rx_proc, sc);
+	NET_TASK_INIT(&sc->malo_rxtask, 0, malo_rx_proc, sc);
 	TASK_INIT(&sc->malo_txtask, 0, malo_tx_proc, sc);
 
 	ic->ic_softc = sc;
@@ -1506,49 +1506,46 @@ malo_init(void *arg)
 		ieee80211_start_all(ic);	/* start all vap's */
 }
 
+struct malo_copy_maddr_ctx {
+	uint8_t macs[IEEE80211_ADDR_LEN * MALO_HAL_MCAST_MAX];
+	int nmc;
+};
+
+static u_int
+malo_copy_maddr(void *arg, struct sockaddr_dl *sdl, u_int nmc)
+{
+	struct malo_copy_maddr_ctx *ctx = arg;
+
+	if (ctx->nmc == MALO_HAL_MCAST_MAX)
+		return (0);
+
+	IEEE80211_ADDR_COPY(ctx->macs + (ctx->nmc * IEEE80211_ADDR_LEN),
+	    LLADDR(sdl));
+	ctx->nmc++;
+
+	return (1);
+}
+
 /*
  * Set the multicast filter contents into the hardware.
  */
 static void
 malo_setmcastfilter(struct malo_softc *sc)
 {
+	struct malo_copy_maddr_ctx ctx;
 	struct ieee80211com *ic = &sc->malo_ic;
 	struct ieee80211vap *vap;
-	uint8_t macs[IEEE80211_ADDR_LEN * MALO_HAL_MCAST_MAX];
-	uint8_t *mp;
-	int nmc;
 
-	mp = macs;
-	nmc = 0;
 
 	if (ic->ic_opmode == IEEE80211_M_MONITOR || ic->ic_allmulti > 0 ||
 	    ic->ic_promisc > 0)
 		goto all;
 
-	TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next) {
-		struct ifnet *ifp;
-		struct ifmultiaddr *ifma;
+	ctx.nmc = 0;
+	TAILQ_FOREACH(vap, &ic->ic_vaps, iv_next)
+		if_foreach_llmaddr(vap->iv_ifp, malo_copy_maddr, &ctx);
 
-		ifp = vap->iv_ifp;
-		if_maddr_rlock(ifp);
-		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-			if (ifma->ifma_addr->sa_family != AF_LINK)
-				continue;
-
-			if (nmc == MALO_HAL_MCAST_MAX) {
-				ifp->if_flags |= IFF_ALLMULTI;
-				if_maddr_runlock(ifp);
-				goto all;
-			}
-			IEEE80211_ADDR_COPY(mp,
-			    LLADDR((struct sockaddr_dl *)ifma->ifma_addr));
-
-			mp += IEEE80211_ADDR_LEN, nmc++;
-		}
-		if_maddr_runlock(ifp);
-	}
-
-	malo_hal_setmcast(sc->malo_mh, nmc, macs);
+	malo_hal_setmcast(sc->malo_mh, ctx.nmc, ctx.macs);
 
 all:
 	/*

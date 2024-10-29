@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
-/*  Copyright (c) 2022, Intel Corporation
+/*  Copyright (c) 2024, Intel Corporation
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -115,17 +115,17 @@ DEFINE_CLASS_0(ice_rdma_di, ice_rdma_di_class, ice_rdma_di_methods, sizeof(struc
  *
  * Implements IRDMA_DI_RESET, called by the RDMA client driver to request
  * a reset of an ice driver device.
+ * @return 0 on success
  */
 static int
 ice_rdma_pf_reset(struct ice_rdma_peer *peer)
 {
 	struct ice_softc *sc = ice_rdma_peer_to_sc(peer);
 
-	/*
-	 * Request that the driver re-initialize by bringing the interface
-	 * down and up.
-	 */
-	ice_request_stack_reinit(sc);
+	/* Tell the base driver that RDMA is requesting a PFR */
+	ice_set_state(&sc->state, ICE_STATE_RESET_PFR_REQ);
+
+	/* XXX: Base driver will notify RDMA when it's done */
 
 	return (0);
 }
@@ -137,6 +137,7 @@ ice_rdma_pf_reset(struct ice_rdma_peer *peer)
  *
  * Implements IRDMA_DI_MSIX_INIT, called by the RDMA client driver to
  * initialize the MSI-X resources required for RDMA functionality.
+ * @returns ENOSYS
  */
 static int
 ice_rdma_pf_msix_init(struct ice_rdma_peer *peer,
@@ -157,6 +158,8 @@ ice_rdma_pf_msix_init(struct ice_rdma_peer *peer,
  *                             registration or unregistration
  * @peer: the RDMA peer client structure
  * @res: resources to be registered or unregistered
+ * @returns 0 on success, EINVAL on argument issues, ENOMEM on memory
+ * allocation failure, EXDEV on vsi device mismatch
  */
 static int
 ice_rdma_qset_register_request(struct ice_rdma_peer *peer, struct ice_rdma_qset_update *res)
@@ -240,9 +243,7 @@ ice_rdma_qset_register_request(struct ice_rdma_peer *peer, struct ice_rdma_qset_
 	switch(res->res_type) {
 	case ICE_RDMA_QSET_ALLOC:
 		dcbx_cfg = &hw->port_info->qos_cfg.local_dcbx_cfg;
-		for (i = 0; i < ICE_MAX_TRAFFIC_CLASS; i++) {
-			ena_tc |= BIT(dcbx_cfg->etscfg.prio_table[i]);
-		}
+		ena_tc = ice_dcb_get_tc_map(dcbx_cfg);
 
 		ice_debug(hw, ICE_DBG_RDMA, "%s:%d ena_tc=%x\n", __func__, __LINE__, ena_tc);
 		status = ice_cfg_vsi_rdma(hw->port_info, vsi->idx, ena_tc,
@@ -290,6 +291,7 @@ out:
  *                               when opening or closing rdma driver
  *  @peer: the RDMA peer client structure
  *  @enable: enable or disable the rdma filter
+ *  @return 0 on success, EINVAL on wrong vsi
  */
 static int
 ice_rdma_update_vsi_filter(struct ice_rdma_peer *peer,
@@ -333,6 +335,7 @@ ice_rdma_request_handler(struct ice_rdma_peer *peer,
 
 	switch(req->type) {
 	case ICE_RDMA_EVENT_RESET:
+		ice_rdma_pf_reset(peer);
 		break;
 	case ICE_RDMA_EVENT_QSET_REGISTER:
 		ice_rdma_qset_register_request(peer, &req->res);
@@ -400,6 +403,10 @@ ice_rdma_cp_qos_info(struct ice_hw *hw, struct ice_dcbx_cfg *dcbx_cfg,
 		qos_info->apps[j].prot_id = dcbx_cfg->app[j].prot_id;
 		qos_info->apps[j].selector = dcbx_cfg->app[j].selector;
 	}
+
+	/* Gather DSCP-to-TC mapping and QoS/PFC mode */
+	memcpy(qos_info->dscp_map, dcbx_cfg->dscp_map, sizeof(qos_info->dscp_map));
+	qos_info->pfc_mode = dcbx_cfg->pfc_mode;
 }
 
 /**
@@ -408,6 +415,8 @@ ice_rdma_cp_qos_info(struct ice_hw *hw, struct ice_dcbx_cfg *dcbx_cfg,
  *
  * Verify that the client RDMA driver provided a version that is compatible
  * with the driver interface.
+ * @return 0 on success, ENOTSUP when LAN-RDMA interface version doesn't match,
+ * EINVAL on kobject interface fail.
  */
 static int
 ice_rdma_check_version(struct ice_rdma_info *info)
@@ -475,11 +484,15 @@ ice_rdma_check_version(struct ice_rdma_info *info)
  * The RDMA client driver must provide the version number it expects, along
  * with a pointer to a kobject class that extends the irdma_di_if class, and
  * implements the irdma_if class interface.
+ * @return 0 on success, ECONNREFUSED when RDMA is turned off, EBUSY when irdma
+ * already registered, ENOTSUP when LAN-RDMA interface version doesn't match,
+ * EINVAL on kobject interface fail.
  */
 int
 ice_rdma_register(struct ice_rdma_info *info)
 {
 	struct ice_rdma_entry *entry;
+	struct ice_softc *sc;
 	int err = 0;
 
 	sx_xlock(&ice_rdma.mtx);
@@ -512,6 +525,12 @@ ice_rdma_register(struct ice_rdma_info *info)
 	 */
 	LIST_FOREACH(entry, &ice_rdma.peers, node) {
 		kobj_init((kobj_t)&entry->peer, ice_rdma.peer_class);
+		/* Gather DCB/QOS info into peer */
+		sc = __containerof(entry, struct ice_softc, rdma_entry);
+		memset(&entry->peer.initial_qos_info, 0, sizeof(entry->peer.initial_qos_info));
+		ice_rdma_cp_qos_info(&sc->hw, &sc->hw.port_info->qos_cfg.local_dcbx_cfg,
+				     &entry->peer.initial_qos_info);
+
 		IRDMA_PROBE(&entry->peer);
 		if (entry->initiated)
 			IRDMA_OPEN(&entry->peer);
@@ -530,6 +549,7 @@ return_unlock:
  * Called by the RDMA client driver on unload. Used to de-initialize the RDMA
  * client driver interface and shut down communication between the ice driver
  * and the RDMA client driver.
+ * @return 0 on success, ENOENT when irdma driver wasn't registered
  */
 int
 ice_rdma_unregister(void)
@@ -600,6 +620,8 @@ ice_rdma_exit(void)
  * Notify the client RDMA driver of a new PF device.
  *
  * @pre must be called while holding the ice_rdma mutex.
+ * @return 0 on success and when RDMA feature is not available, EEXIST when
+ * irdma is already attached
  */
 static int
 ice_rdma_pf_attach_locked(struct ice_softc *sc)
@@ -654,6 +676,7 @@ ice_rdma_pf_attach_locked(struct ice_softc *sc)
  * @sc: the ice driver softc
  *
  * Called during PF attach to notify the RDMA client of a new PF.
+ * @return 0 or EEXIST if irdma was already attached
  */
 int
 ice_rdma_pf_attach(struct ice_softc *sc)
@@ -728,6 +751,7 @@ ice_rdma_pf_detach(struct ice_softc *sc)
  *
  * Called by the ice driver when a PF has been initialized. Notifies the RDMA
  * client that a PF is up and ready to operate.
+ * @return 0 on success, propagates IRDMA_OPEN return value
  */
 int
 ice_rdma_pf_init(struct ice_softc *sc)
@@ -756,6 +780,7 @@ ice_rdma_pf_init(struct ice_softc *sc)
  *
  * Called by the ice driver when a PF is stopped. Notifies the RDMA client
  * driver that the PF has stopped and is not ready to operate.
+ * @return 0 on success
  */
 int
 ice_rdma_pf_stop(struct ice_softc *sc)
@@ -854,5 +879,54 @@ ice_rdma_dcb_qos_update(struct ice_softc *sc, struct ice_port_info *pi)
 	sx_xlock(&ice_rdma.mtx);
 	if (sc->rdma_entry.attached && ice_rdma.registered)
 		IRDMA_EVENT_HANDLER(peer, &event);
+	sx_xunlock(&ice_rdma.mtx);
+}
+
+/**
+ *  ice_rdma_notify_pe_intr - notify irdma on incoming interrupts regarding PE
+ *  @sc: the ice driver softc
+ *  @oicr: interrupt cause
+ *
+ *  Pass the information about received interrupt to RDMA driver if it was
+ *  relating to PE. Specifically PE_CRITERR and HMC_ERR.
+ *  The irdma driver shall decide what should be done upon these interrupts.
+ */
+void
+ice_rdma_notify_pe_intr(struct ice_softc *sc, uint32_t oicr)
+{
+	struct ice_rdma_peer *peer = &sc->rdma_entry.peer;
+	struct ice_rdma_event event;
+
+	memset(&event, 0, sizeof(struct ice_rdma_event));
+	event.type = ICE_RDMA_EVENT_CRIT_ERR;
+	event.oicr_reg = oicr;
+
+	sx_xlock(&ice_rdma.mtx);
+	if (sc->rdma_entry.attached && ice_rdma.registered)
+		IRDMA_EVENT_HANDLER(peer, &event);
+	sx_xunlock(&ice_rdma.mtx);
+}
+
+/**
+ *  ice_rdma_notify_reset - notify irdma on incoming pf-reset
+ *  @sc: the ice driver softc
+ *
+ *  Inform irdma driver of an incoming PF reset.
+ *  The irdma driver shall set its state to reset, and avoid using CQP
+ *  anymore. Next step should be to call ice_rdma_pf_stop in order to
+ *  remove resources.
+ */
+void
+ice_rdma_notify_reset(struct ice_softc *sc)
+{
+	struct ice_rdma_peer *peer = &sc->rdma_entry.peer;
+	struct ice_rdma_event event;
+
+	memset(&event, 0, sizeof(struct ice_rdma_event));
+	event.type = ICE_RDMA_EVENT_RESET;
+
+	sx_xlock(&ice_rdma.mtx);
+	if (sc->rdma_entry.attached && ice_rdma.registered)
+	        IRDMA_EVENT_HANDLER(peer, &event);
 	sx_xunlock(&ice_rdma.mtx);
 }

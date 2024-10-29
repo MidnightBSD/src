@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/endian.h>
 
@@ -182,7 +181,6 @@ bhnd_sprom_opcode_fini(bhnd_sprom_opcode_state *state)
 	bhnd_nv_free(state->idx);
 }
 
-
 /**
  * Sort function used to prepare our index for querying; sorts
  * bhnd_sprom_opcode_idx_entry values by variable ID, ascending.
@@ -250,7 +248,6 @@ bhnd_sprom_opcode_index_find(bhnd_sprom_opcode_state *state, const char *name)
 	    bhnd_nvram_opcode_idx_vid_compare));
 }
 
-
 /**
  * Iterate over all index entries in @p state.
  * 
@@ -287,7 +284,6 @@ bhnd_sprom_opcode_index_next(bhnd_sprom_opcode_state *state,
 
 	return (&state->idx[idxpos]);
 }
-
 
 /**
  * Initialize @p entry with the current variable's opcode state.
@@ -543,7 +539,6 @@ bhnd_sprom_opcode_set_bind(bhnd_sprom_opcode_state *state, uint8_t count,
 	return (0);
 }
 
-
 /**
  * Apply and clear the current opcode bind state, if any.
  * 
@@ -641,7 +636,7 @@ bhnd_sprom_opcode_set_type(bhnd_sprom_opcode_state *state, bhnd_nvram_type type)
 		SPROM_OP_BAD(state, "unsupported type: %d\n", type);
 		return (EINVAL);
 	}
-	
+
 	/* Update state */
 	state->var.base_type = base_type;
 	state->var.mask = mask;
@@ -716,7 +711,7 @@ bhnd_sprom_opcode_set_nelem(bhnd_sprom_opcode_state *state, uint8_t nelem)
 		    state->vid);
 		return (ENXIO);
 	}
-	
+
 	/* Cannot exceed the variable's defined array length */
 	if (nelem > var->nelem) {
 		SPROM_OP_BAD(state, "nelem %hhu exceeds %zu length %hhu\n",
@@ -974,7 +969,6 @@ bhnd_sprom_opcode_rewrite_opcode(bhnd_sprom_opcode_state *state,
 		}
 		break;
 
-
 	case SPROM_OPCODE_VAR_STATE_DONE:
 		/* Previously completed variable definition. Discard variable
 		 * state */
@@ -1202,7 +1196,7 @@ bhnd_sprom_opcode_step(bhnd_sprom_opcode_state *state, uint8_t *opcode)
 			error = bhnd_sprom_opcode_apply_scale(state, &val);
 			if (error)
 				return (error);
-	
+
 			/* Adding val must not overflow our offset */
 			if (UINT32_MAX - state->offset < val) {
 				BHND_NV_LOG("offset out of range\n");

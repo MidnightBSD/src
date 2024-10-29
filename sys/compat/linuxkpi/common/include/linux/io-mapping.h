@@ -25,17 +25,17 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
-#ifndef _LINUX_IO_MAPPING_H_
-#define	_LINUX_IO_MAPPING_H_
+#ifndef _LINUXKPI_LINUX_IO_MAPPING_H_
+#define	_LINUXKPI_LINUX_IO_MAPPING_H_
 
 #include <sys/types.h>
 #include <machine/vm.h>
 
 #include <linux/types.h>
 #include <linux/io.h>
+#include <linux/mm.h>
 #include <linux/slab.h>
 
 struct io_mapping {
@@ -44,6 +44,8 @@ struct io_mapping {
 	void *mem;
 	vm_memattr_t attr;
 };
+
+struct io_mapping *io_mapping_create_wc(resource_size_t base, unsigned long size);
 
 static inline struct io_mapping *
 io_mapping_init_wc(struct io_mapping *mapping, resource_size_t base,
@@ -60,17 +62,6 @@ io_mapping_init_wc(struct io_mapping *mapping, resource_size_t base,
 	mapping->attr = VM_MEMATTR_UNCACHEABLE;
 #endif
 	return (mapping);
-}
-
-static inline struct io_mapping *
-io_mapping_create_wc(resource_size_t base, unsigned long size)
-{
-	struct io_mapping *mapping;
-
-	mapping = kmalloc(sizeof(*mapping), GFP_KERNEL);
-	if (mapping == NULL)
-		return (NULL);
-	return (io_mapping_init_wc(mapping, base, size));
 }
 
 static inline void
@@ -101,6 +92,18 @@ io_mapping_unmap_atomic(void *vaddr)
 }
 
 static inline void *
+io_mapping_map_local_wc(struct io_mapping *mapping, unsigned long offset)
+{
+
+	return (io_mapping_map_atomic_wc(mapping, offset));
+}
+
+static inline void
+io_mapping_unmap_local(void *vaddr __unused)
+{
+}
+
+static inline void *
 io_mapping_map_wc(struct io_mapping *mapping, unsigned long offset,
     unsigned long size)
 {
@@ -108,9 +111,20 @@ io_mapping_map_wc(struct io_mapping *mapping, unsigned long offset,
 	return ((char *)mapping->mem + offset);
 }
 
+int lkpi_io_mapping_map_user(struct io_mapping *iomap,
+    struct vm_area_struct *vma, unsigned long addr, unsigned long pfn,
+    unsigned long size);
+
+static inline int
+io_mapping_map_user(struct io_mapping *iomap, struct vm_area_struct *vma,
+    unsigned long addr, unsigned long pfn, unsigned long size)
+{
+	return (lkpi_io_mapping_map_user(iomap, vma, addr, pfn, size));
+}
+
 static inline void
 io_mapping_unmap(void *vaddr)
 {
 }
 
-#endif /* _LINUX_IO_MAPPING_H_ */
+#endif /* _LINUXKPI_LINUX_IO_MAPPING_H_ */

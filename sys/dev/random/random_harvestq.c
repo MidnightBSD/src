@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/ck.h>
@@ -60,6 +59,17 @@
 #include <dev/random/randomdev.h>
 #include <dev/random/random_harvestq.h>
 
+#if defined(RANDOM_ENABLE_ETHER)
+#define _RANDOM_HARVEST_ETHER_OFF 0
+#else
+#define _RANDOM_HARVEST_ETHER_OFF (1u << RANDOM_NET_ETHER)
+#endif
+#if defined(RANDOM_ENABLE_UMA)
+#define _RANDOM_HARVEST_UMA_OFF 0
+#else
+#define _RANDOM_HARVEST_UMA_OFF (1u << RANDOM_UMA)
+#endif
+
 /*
  * Note that random_sources_feed() will also use this to try and split up
  * entropy into a subset of pools per iteration with the goal of feeding
@@ -69,8 +79,6 @@
 
 static void random_kthread(void);
 static void random_sources_feed(void);
-
-static u_int read_rate;
 
 /*
  * Random must initialize much earlier than epoch, but we can initialize the
@@ -106,7 +114,7 @@ struct random_sources {
 static CK_LIST_HEAD(sources_head, random_sources) source_list =
     CK_LIST_HEAD_INITIALIZER(source_list);
 
-SYSCTL_NODE(_kern_random, OID_AUTO, harvest, CTLFLAG_RW, 0,
+SYSCTL_NODE(_kern_random, OID_AUTO, harvest, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "Entropy Device Parameters");
 
 /*
@@ -211,7 +219,7 @@ SYSINIT(random_device_h_proc, SI_SUB_KICK_SCHEDULER, SI_ORDER_ANY, kproc_start,
 static void
 rs_epoch_init(void *dummy __unused)
 {
-	rs_epoch = epoch_alloc(EPOCH_PREEMPT);
+	rs_epoch = epoch_alloc("Random Sources", EPOCH_PREEMPT);
 	epoch_inited = true;
 }
 SYSINIT(rs_epoch_init, SI_SUB_EPOCH, SI_ORDER_ANY, rs_epoch_init, NULL);
@@ -227,33 +235,27 @@ random_sources_feed(void)
 	uint32_t entropy[HARVESTSIZE];
 	struct epoch_tracker et;
 	struct random_sources *rrs;
-	u_int i, n, local_read_rate, npools;
+	u_int i, n, npools;
 	bool rse_warm;
 
 	rse_warm = epoch_inited;
-
-	/*
-	 * Step over all of live entropy sources, and feed their output
-	 * to the system-wide RNG.
-	 */
-	local_read_rate = atomic_readandclear_32(&read_rate);
-	/* Perform at least one read per round */
-	local_read_rate = MAX(local_read_rate, 1);
-	/* But not exceeding RANDOM_KEYSIZE_WORDS */
-	local_read_rate = MIN(local_read_rate, RANDOM_KEYSIZE_WORDS);
 
 	/*
 	 * Evenly-ish distribute pool population across the second based on how
 	 * frequently random_kthread iterates.
 	 *
 	 * For Fortuna, the math currently works out as such:
+	 *
 	 * 64 bits * 4 pools = 256 bits per iteration
 	 * 256 bits * 10 Hz = 2560 bits per second, 320 B/s
 	 *
 	 */
-	npools = howmany(p_random_alg_context->ra_poolcount * local_read_rate,
-	    RANDOM_KTHREAD_HZ);
+	npools = howmany(p_random_alg_context->ra_poolcount, RANDOM_KTHREAD_HZ);
 
+	/*
+	 * Step over all of live entropy sources, and feed their output
+	 * to the system-wide RNG.
+	 */
 	if (rse_warm)
 		epoch_enter_preempt(rs_epoch, &et);
 	CK_LIST_FOREACH(rrs, &source_list, rrs_entries) {
@@ -285,13 +287,17 @@ void
 read_rate_increment(u_int chunk)
 {
 
-	atomic_add_32(&read_rate, chunk);
+	/* Stubbed to maintain KBI; removed in FreeBSD 14.0. */
 }
 
 /* ARGSUSED */
 static int
 random_check_uint_harvestmask(SYSCTL_HANDLER_ARGS)
 {
+	static const u_int user_immutable_mask =
+	    (((1 << ENTROPYSOURCE) - 1) & (-1UL << RANDOM_PURE_START)) |
+	    _RANDOM_HARVEST_ETHER_OFF | _RANDOM_HARVEST_UMA_OFF;
+
 	int error;
 	u_int value, orig_value;
 
@@ -306,12 +312,14 @@ random_check_uint_harvestmask(SYSCTL_HANDLER_ARGS)
 	/*
 	 * Disallow userspace modification of pure entropy sources.
 	 */
-	hc_source_mask = (value & ~RANDOM_HARVEST_PURE_MASK) |
-	    (orig_value & RANDOM_HARVEST_PURE_MASK);
+	hc_source_mask = (value & ~user_immutable_mask) |
+	    (orig_value & user_immutable_mask);
 	return (0);
 }
-SYSCTL_PROC(_kern_random_harvest, OID_AUTO, mask, CTLTYPE_UINT | CTLFLAG_RW,
-    NULL, 0, random_check_uint_harvestmask, "IU", "Entropy harvesting mask");
+SYSCTL_PROC(_kern_random_harvest, OID_AUTO, mask,
+    CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, NULL, 0,
+    random_check_uint_harvestmask, "IU",
+    "Entropy harvesting mask");
 
 /* ARGSUSED */
 static int
@@ -331,7 +339,8 @@ random_print_harvestmask(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 SYSCTL_PROC(_kern_random_harvest, OID_AUTO, mask_bin,
-    CTLTYPE_STRING | CTLFLAG_RD, NULL, 0, random_print_harvestmask, "A",
+    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, 0,
+    random_print_harvestmask, "A",
     "Entropy harvesting mask (printable)");
 
 static const char *random_source_descr[ENTROPYSOURCE] = {
@@ -349,7 +358,6 @@ static const char *random_source_descr[ENTROPYSOURCE] = {
 	[RANDOM_PURE_OCTEON] = "PURE_OCTEON", /* PURE_START */
 	[RANDOM_PURE_SAFE] = "PURE_SAFE",
 	[RANDOM_PURE_GLXSB] = "PURE_GLXSB",
-	[RANDOM_PURE_UBSEC] = "PURE_UBSEC",
 	[RANDOM_PURE_HIFN] = "PURE_HIFN",
 	[RANDOM_PURE_RDRAND] = "PURE_RDRAND",
 	[RANDOM_PURE_NEHEMIAH] = "PURE_NEHEMIAH",
@@ -359,6 +367,7 @@ static const char *random_source_descr[ENTROPYSOURCE] = {
 	[RANDOM_PURE_CCP] = "PURE_CCP",
 	[RANDOM_PURE_DARN] = "PURE_DARN",
 	[RANDOM_PURE_TPM] = "PURE_TPM",
+	[RANDOM_PURE_VMGENID] = "VMGENID",
 	/* "ENTROPYSOURCE" */
 };
 
@@ -391,14 +400,19 @@ random_print_harvestmask_symbolic(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 SYSCTL_PROC(_kern_random_harvest, OID_AUTO, mask_symbolic,
-    CTLTYPE_STRING | CTLFLAG_RD, NULL, 0, random_print_harvestmask_symbolic,
-    "A", "Entropy harvesting mask (symbolic)");
+    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, 0,
+    random_print_harvestmask_symbolic, "A",
+    "Entropy harvesting mask (symbolic)");
 
 /* ARGSUSED */
 static void
 random_harvestq_init(void *unused __unused)
 {
-	hc_source_mask = RANDOM_HARVEST_EVERYTHING_MASK;
+	static const u_int almost_everything_mask =
+	    (((1 << (RANDOM_ENVIRONMENTAL_END + 1)) - 1) &
+	    ~_RANDOM_HARVEST_ETHER_OFF & ~_RANDOM_HARVEST_UMA_OFF);
+
+	hc_source_mask = almost_everything_mask;
 	RANDOM_HARVEST_INIT_LOCK();
 	harvest_context.hc_entropy_ring.in = harvest_context.hc_entropy_ring.out = 0;
 }
@@ -477,6 +491,14 @@ random_harvestq_prime(void *unused __unused)
 			    size);
 		else
 			printf("random: no preloaded entropy cache\n");
+	}
+	size = random_prime_loader_file(RANDOM_PLATFORM_BOOT_ENTROPY_MODULE);
+	if (bootverbose) {
+		if (size > 0)
+			printf("random: read %zu bytes from platform bootloader\n",
+			    size);
+		else
+			printf("random: no platform bootloader entropy\n");
 	}
 }
 SYSINIT(random_device_prime, SI_SUB_RANDOM, SI_ORDER_MIDDLE, random_harvestq_prime, NULL);

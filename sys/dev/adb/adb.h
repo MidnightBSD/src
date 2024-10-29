@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2008 Nathan Whitehorn
  * All rights reserved.
@@ -23,7 +23,6 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef	_POWERPC_ADB_H_
@@ -44,7 +43,7 @@ enum {
 	ADB_DEVICE_MOUSE	= 0x03,
 	ADB_DEVICE_TABLET	= 0x04,
 	ADB_DEVICE_MODEM	= 0x05,
-	
+
 	ADB_DEVICE_MISC		= 0x07
 };
 
@@ -77,4 +76,3 @@ extern devclass_t adb_devclass;
 extern driver_t adb_driver;
 
 #endif
-

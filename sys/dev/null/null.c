@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Mark R. V. Murray & Jeroen C. van Gelderen
  * Copyright (c) 2001-2004 Mark R. V. Murray
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
@@ -81,8 +80,6 @@ static struct cdevsw zero_cdevsw = {
 	.d_flags =	D_MMAP_ANON,
 };
 
-
-
 /* ARGSUSED */
 static int
 full_write(struct cdev *dev __unused, struct uio *uio __unused, int flags __unused)
@@ -105,15 +102,21 @@ static int
 null_ioctl(struct cdev *dev __unused, u_long cmd, caddr_t data __unused,
     int flags __unused, struct thread *td)
 {
+	struct diocskerneldump_arg kda;
 	int error;
 
 	error = 0;
 	switch (cmd) {
-#ifdef COMPAT_FREEBSD11
-	case DIOCSKERNELDUMP_FREEBSD11:
+#ifdef COMPAT_FREEBSD12
+	case DIOCSKERNELDUMP_FREEBSD12:
+		if (cmd == DIOCSKERNELDUMP_FREEBSD12)
+			gone_in(14, "FreeBSD 12.x ABI compat");
+		/* FALLTHROUGH */
 #endif
 	case DIOCSKERNELDUMP:
-		error = clear_dumper(td);
+		bzero(&kda, sizeof(kda));
+		kda.kda_index = KDA_REMOVE_ALL;
+		error = dumper_remove(NULL, &kda);
 		break;
 	case FIONBIO:
 		break;
@@ -147,7 +150,6 @@ zero_ioctl(struct cdev *dev __unused, u_long cmd, caddr_t data __unused,
 	}
 	return (error);
 }
-
 
 /* ARGSUSED */
 static int

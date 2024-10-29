@@ -24,9 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
-
 
 #ifndef __ECORE_MCP_H__
 #define __ECORE_MCP_H__
@@ -53,10 +51,10 @@ struct ecore_mcp_info {
 	/* List for mailbox commands which were sent and wait for a response */
 	osal_list_t cmd_list;
 
-	/* Spinlock used for protecting the access to the mailbox commands list
+	/* Lock used for protecting the access to the mailbox commands list
 	 * and the sending of the commands.
 	 */
-	osal_spinlock_t cmd_lock;
+	osal_mutex_t cmd_lock;
 
 	/* Flag to indicate whether sending a MFW mailbox command is blocked */
 	bool b_block_cmd;
@@ -64,7 +62,7 @@ struct ecore_mcp_info {
 	/* Spinlock used for syncing SW link-changes and link-changes
 	 * originating from attention context.
 	 */
-	osal_spinlock_t link_lock;
+	osal_mutex_t link_lock;
 
 	/* Address of the MCP public area */
 	u32 public_base;

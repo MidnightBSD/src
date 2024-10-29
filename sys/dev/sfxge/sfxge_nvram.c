@@ -28,8 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
-
 #include <sys/types.h>
 #include <sys/malloc.h>
 
@@ -103,11 +101,10 @@ sfxge_nvram_rw(struct sfxge_softc *sc, sfxge_ioc_t *ip, efx_nvram_type_t type,
 
 fail3:
 	free(buf, M_TEMP);
-	efx_nvram_rw_finish(enp, type);
+	efx_nvram_rw_finish(enp, type, NULL);
 fail1:
 	return (rc);
 }
-
 
 static int
 sfxge_nvram_erase(struct sfxge_softc *sc, efx_nvram_type_t type)
@@ -124,7 +121,7 @@ sfxge_nvram_erase(struct sfxge_softc *sc, efx_nvram_type_t type)
 
 	rc = efx_nvram_erase(enp, type);
 
-	efx_nvram_rw_finish(enp, type);
+	efx_nvram_rw_finish(enp, type, NULL);
 	return (rc);
 }
 

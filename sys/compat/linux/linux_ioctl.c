@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1994-1995 Søren Schmidt
  * All rights reserved.
@@ -26,46 +26,31 @@
  * SUCH DAMAGE.
  */
 
-#include "opt_compat.h"
-
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
-#include <sys/systm.h>
-#include <sys/sysproto.h>
-#ifdef COMPAT_LINUX32
-#include <sys/abi_compat.h>
-#endif
 #include <sys/capsicum.h>
 #include <sys/cdio.h>
-#include <sys/dvdio.h>
-#include <sys/conf.h>
-#include <sys/disk.h>
 #include <sys/consio.h>
-#include <sys/ctype.h>
+#include <sys/disk.h>
+#include <sys/dvdio.h>
 #include <sys/fcntl.h>
-#include <sys/file.h>
-#include <sys/filedesc.h>
 #include <sys/filio.h>
 #include <sys/jail.h>
 #include <sys/kbio.h>
+#include <sys/kcov.h>
 #include <sys/kernel.h>
 #include <sys/linker_set.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
+#include <sys/mman.h>
 #include <sys/proc.h>
 #include <sys/sbuf.h>
-#include <sys/socket.h>
 #include <sys/sockio.h>
 #include <sys/soundcard.h>
-#include <sys/stdint.h>
-#include <sys/sx.h>
 #include <sys/sysctl.h>
+#include <sys/sysproto.h>
+#include <sys/sx.h>
 #include <sys/tty.h>
-#include <sys/uio.h>
-#include <sys/types.h>
-#include <sys/mman.h>
-#include <sys/resourcevar.h>
 
 #include <net/if.h>
 #include <net/if_var.h>
@@ -87,7 +72,7 @@
 #include <compat/linux/linux_ioctl.h>
 #include <compat/linux/linux_mib.h>
 #include <compat/linux/linux_socket.h>
-#include <compat/linux/linux_timer.h>
+#include <compat/linux/linux_time.h>
 #include <compat/linux/linux_util.h>
 
 #include <contrib/v4l/videodev.h>
@@ -100,69 +85,43 @@
 
 CTASSERT(LINUX_IFNAMSIZ == IFNAMSIZ);
 
-static linux_ioctl_function_t linux_ioctl_cdrom;
-static linux_ioctl_function_t linux_ioctl_vfat;
-static linux_ioctl_function_t linux_ioctl_console;
-static linux_ioctl_function_t linux_ioctl_hdio;
-static linux_ioctl_function_t linux_ioctl_disk;
-static linux_ioctl_function_t linux_ioctl_socket;
-static linux_ioctl_function_t linux_ioctl_sound;
-static linux_ioctl_function_t linux_ioctl_termio;
-static linux_ioctl_function_t linux_ioctl_private;
-static linux_ioctl_function_t linux_ioctl_drm;
-static linux_ioctl_function_t linux_ioctl_sg;
-static linux_ioctl_function_t linux_ioctl_v4l;
-static linux_ioctl_function_t linux_ioctl_v4l2;
-static linux_ioctl_function_t linux_ioctl_special;
-static linux_ioctl_function_t linux_ioctl_fbsd_usb;
-static linux_ioctl_function_t linux_ioctl_evdev;
+#define	DEFINE_LINUX_IOCTL_SET(shortname, SHORTNAME)		\
+static linux_ioctl_function_t linux_ioctl_ ## shortname;	\
+static struct linux_ioctl_handler shortname ## _handler = {	\
+	.func = linux_ioctl_ ## shortname,			\
+	.low = LINUX_IOCTL_ ## SHORTNAME ## _MIN,		\
+	.high = LINUX_IOCTL_ ## SHORTNAME ## _MAX,		\
+};								\
+DATA_SET(linux_ioctl_handler_set, shortname ## _handler)
 
-static struct linux_ioctl_handler cdrom_handler =
-{ linux_ioctl_cdrom, LINUX_IOCTL_CDROM_MIN, LINUX_IOCTL_CDROM_MAX };
-static struct linux_ioctl_handler vfat_handler =
-{ linux_ioctl_vfat, LINUX_IOCTL_VFAT_MIN, LINUX_IOCTL_VFAT_MAX };
-static struct linux_ioctl_handler console_handler =
-{ linux_ioctl_console, LINUX_IOCTL_CONSOLE_MIN, LINUX_IOCTL_CONSOLE_MAX };
-static struct linux_ioctl_handler hdio_handler =
-{ linux_ioctl_hdio, LINUX_IOCTL_HDIO_MIN, LINUX_IOCTL_HDIO_MAX };
-static struct linux_ioctl_handler disk_handler =
-{ linux_ioctl_disk, LINUX_IOCTL_DISK_MIN, LINUX_IOCTL_DISK_MAX };
-static struct linux_ioctl_handler socket_handler =
-{ linux_ioctl_socket, LINUX_IOCTL_SOCKET_MIN, LINUX_IOCTL_SOCKET_MAX };
-static struct linux_ioctl_handler sound_handler =
-{ linux_ioctl_sound, LINUX_IOCTL_SOUND_MIN, LINUX_IOCTL_SOUND_MAX };
-static struct linux_ioctl_handler termio_handler =
-{ linux_ioctl_termio, LINUX_IOCTL_TERMIO_MIN, LINUX_IOCTL_TERMIO_MAX };
-static struct linux_ioctl_handler private_handler =
-{ linux_ioctl_private, LINUX_IOCTL_PRIVATE_MIN, LINUX_IOCTL_PRIVATE_MAX };
-static struct linux_ioctl_handler drm_handler =
-{ linux_ioctl_drm, LINUX_IOCTL_DRM_MIN, LINUX_IOCTL_DRM_MAX };
-static struct linux_ioctl_handler sg_handler =
-{ linux_ioctl_sg, LINUX_IOCTL_SG_MIN, LINUX_IOCTL_SG_MAX };
-static struct linux_ioctl_handler video_handler =
-{ linux_ioctl_v4l, LINUX_IOCTL_VIDEO_MIN, LINUX_IOCTL_VIDEO_MAX };
-static struct linux_ioctl_handler video2_handler =
-{ linux_ioctl_v4l2, LINUX_IOCTL_VIDEO2_MIN, LINUX_IOCTL_VIDEO2_MAX };
-static struct linux_ioctl_handler fbsd_usb =
-{ linux_ioctl_fbsd_usb, FBSD_LUSB_MIN, FBSD_LUSB_MAX };
-static struct linux_ioctl_handler evdev_handler =
-{ linux_ioctl_evdev, LINUX_IOCTL_EVDEV_MIN, LINUX_IOCTL_EVDEV_MAX };
+DEFINE_LINUX_IOCTL_SET(cdrom, CDROM);
+DEFINE_LINUX_IOCTL_SET(vfat, VFAT);
+DEFINE_LINUX_IOCTL_SET(console, CONSOLE);
+DEFINE_LINUX_IOCTL_SET(hdio, HDIO);
+DEFINE_LINUX_IOCTL_SET(disk, DISK);
+DEFINE_LINUX_IOCTL_SET(socket, SOCKET);
+DEFINE_LINUX_IOCTL_SET(sound, SOUND);
+DEFINE_LINUX_IOCTL_SET(termio, TERMIO);
+DEFINE_LINUX_IOCTL_SET(private, PRIVATE);
+DEFINE_LINUX_IOCTL_SET(drm, DRM);
+DEFINE_LINUX_IOCTL_SET(sg, SG);
+DEFINE_LINUX_IOCTL_SET(v4l, VIDEO);
+DEFINE_LINUX_IOCTL_SET(v4l2, VIDEO2);
+DEFINE_LINUX_IOCTL_SET(fbsd_usb, FBSD_LUSB);
+DEFINE_LINUX_IOCTL_SET(evdev, EVDEV);
+DEFINE_LINUX_IOCTL_SET(kcov, KCOV);
 
-DATA_SET(linux_ioctl_handler_set, cdrom_handler);
-DATA_SET(linux_ioctl_handler_set, vfat_handler);
-DATA_SET(linux_ioctl_handler_set, console_handler);
-DATA_SET(linux_ioctl_handler_set, hdio_handler);
-DATA_SET(linux_ioctl_handler_set, disk_handler);
-DATA_SET(linux_ioctl_handler_set, socket_handler);
-DATA_SET(linux_ioctl_handler_set, sound_handler);
-DATA_SET(linux_ioctl_handler_set, termio_handler);
-DATA_SET(linux_ioctl_handler_set, private_handler);
-DATA_SET(linux_ioctl_handler_set, drm_handler);
-DATA_SET(linux_ioctl_handler_set, sg_handler);
-DATA_SET(linux_ioctl_handler_set, video_handler);
-DATA_SET(linux_ioctl_handler_set, video2_handler);
-DATA_SET(linux_ioctl_handler_set, fbsd_usb);
-DATA_SET(linux_ioctl_handler_set, evdev_handler);
+#undef DEFINE_LINUX_IOCTL_SET
+
+static int linux_ioctl_special(struct thread *, struct linux_ioctl_args *);
+
+/*
+ * Keep sorted by low.
+ */
+static struct linux_ioctl_handler linux_ioctls[] = {
+	{ .func = linux_ioctl_termio, .low = LINUX_IOCTL_TERMIO_MIN,
+	    .high = LINUX_IOCTL_TERMIO_MAX },
+};
 
 #ifdef __i386__
 static TAILQ_HEAD(, linux_ioctl_handler_element) linux_ioctl_handlers =
@@ -264,8 +223,8 @@ linux_ioctl_hdio(struct thread *td, struct linux_ioctl_args *args)
 	default:
 		/* XXX */
 		linux_msg(td,
-			"ioctl fd=%d, cmd=0x%x ('%c',%d) is not implemented",
-			args->fd, (int)(args->cmd & 0xffff),
+			"%s fd=%d, cmd=0x%x ('%c',%d) is not implemented",
+			__func__, args->fd, args->cmd,
 			(int)(args->cmd & 0xff00) >> 8,
 			(int)(args->cmd & 0xff));
 		break;
@@ -707,7 +666,6 @@ linux_ioctl_termio(struct thread *td, struct linux_ioctl_args *args)
 		return (error);
 
 	switch (args->cmd & 0xffff) {
-
 	case LINUX_TCGETS:
 		error = fo_ioctl(fp, TIOCGETA, (caddr_t)&bios, td->td_ucred,
 		    td);
@@ -780,7 +738,15 @@ linux_ioctl_termio(struct thread *td, struct linux_ioctl_args *args)
 		    td));
 		break;
 
-	/* LINUX_TCSBRK */
+	case LINUX_TCSBRK:
+		if (args->arg != 0) {
+			error = (fo_ioctl(fp, TIOCDRAIN, (caddr_t)&bios, td->td_ucred,
+			    td));
+		} else {
+			linux_msg(td, "ioctl TCSBRK arg 0 not implemented");
+			error = ENOIOCTL;
+		}
+		break;
 
 	case LINUX_TCXONC: {
 		switch (args->arg) {
@@ -1037,9 +1003,17 @@ linux_ioctl_termio(struct thread *td, struct linux_ioctl_args *args)
 			    sizeof(int));
 		break;
 	}
+	case LINUX_TIOCGPTPEER:
+		linux_msg(td, "unsupported ioctl TIOCGPTPEER");
+		error = ENOIOCTL;
+		break;
 	case LINUX_TIOCSPTLCK:
-		/* Our unlockpt() does nothing. */
-		error = 0;
+		/*
+		 * Our unlockpt() does nothing. Check that fd refers
+		 * to a pseudo-terminal master device.
+		 */
+		args->cmd = TIOCPTMASTER;
+		error = (sys_ioctl(td, (struct ioctl_args *)args));
 		break;
 	default:
 		error = ENOIOCTL;
@@ -1449,7 +1423,6 @@ linux_ioctl_cdrom(struct thread *td, struct linux_ioctl_args *args)
 	if (error != 0)
 		return (error);
 	switch (args->cmd & 0xffff) {
-
 	case LINUX_CDROMPAUSE:
 		args->cmd = CDIOCPAUSE;
 		error = (sys_ioctl(td, (struct ioctl_args *)args));
@@ -1717,7 +1690,6 @@ linux_ioctl_sound(struct thread *td, struct linux_ioctl_args *args)
 {
 
 	switch (args->cmd & 0xffff) {
-
 	case LINUX_SOUND_MIXER_WRITE_VOLUME:
 		args->cmd = SETDIR(SOUND_MIXER_WRITE_VOLUME);
 		return (sys_ioctl(td, (struct ioctl_args *)args));
@@ -1786,6 +1758,10 @@ linux_ioctl_sound(struct thread *td, struct linux_ioctl_args *args)
 		args->cmd = SETDIR(SOUND_MIXER_WRITE_LINE3);
 		return (sys_ioctl(td, (struct ioctl_args *)args));
 
+	case LINUX_SOUND_MIXER_WRITE_MONITOR:
+		args->cmd = SETDIR(SOUND_MIXER_WRITE_MONITOR);
+		return (sys_ioctl(td, (struct ioctl_args *)args));
+
 	case LINUX_SOUND_MIXER_INFO: {
 		/* Key on encoded length */
 		switch ((args->cmd >> 16) & 0x1fff) {
@@ -1797,7 +1773,7 @@ linux_ioctl_sound(struct thread *td, struct linux_ioctl_args *args)
 			struct linux_old_mixer_info info;
 			bzero(&info, sizeof(info));
 			strncpy(info.id, "OSS", sizeof(info.id) - 1);
-			strncpy(info.name, "MidnightBSD OSS Mixer", sizeof(info.name) - 1);
+			strncpy(info.name, "FreeBSD OSS Mixer", sizeof(info.name) - 1);
 			copyout(&info, (void *)args->arg, sizeof(info));
 			return (0);
 		}
@@ -1975,7 +1951,6 @@ linux_ioctl_sound(struct thread *td, struct linux_ioctl_args *args)
 	case LINUX_SNDCTL_SYNTH_MEMAVL:
 		args->cmd = SNDCTL_SYNTH_MEMAVL;
 		return (sys_ioctl(td, (struct ioctl_args *)args));
-
 	}
 
 	return (ENOIOCTL);
@@ -1995,7 +1970,6 @@ linux_ioctl_console(struct thread *td, struct linux_ioctl_args *args)
 	if (error != 0)
 		return (error);
 	switch (args->cmd & 0xffff) {
-
 	case LINUX_KIOCSOUND:
 		args->cmd = KIOCSOUND;
 		error = (sys_ioctl(td, (struct ioctl_args *)args));
@@ -2120,39 +2094,17 @@ static int
 linux_ioctl_ifname(struct thread *td, struct l_ifreq *uifr)
 {
 	struct l_ifreq ifr;
-	struct ifnet *ifp;
-	int error, ethno, index;
+	int error, ret;
 
 	error = copyin(uifr, &ifr, sizeof(ifr));
 	if (error != 0)
 		return (error);
-
-	CURVNET_SET(TD_TO_VNET(curthread));
-	IFNET_RLOCK();
-	index = 1;	/* ifr.ifr_ifindex starts from 1 */
-	ethno = 0;
-	error = ENODEV;
-	CK_STAILQ_FOREACH(ifp, &V_ifnet, if_link) {
-		if (ifr.ifr_ifindex == index) {
-			if (IFP_IS_ETH(ifp))
-				snprintf(ifr.ifr_name, LINUX_IFNAMSIZ,
-				    "eth%d", ethno);
-			else
-				strlcpy(ifr.ifr_name, ifp->if_xname,
-				    LINUX_IFNAMSIZ);
-			error = 0;
-			break;
-		}
-		if (IFP_IS_ETH(ifp))
-			ethno++;
-		index++;
-	}
-	IFNET_RUNLOCK();
-	if (error == 0)
-		error = copyout(&ifr, uifr, sizeof(ifr));
-	CURVNET_RESTORE();
-
-	return (error);
+	ret = ifname_bsd_to_linux_idx(ifr.ifr_ifindex, ifr.ifr_name,
+	    LINUX_IFNAMSIZ);
+	if (ret > 0)
+		return (copyout(&ifr, uifr, sizeof(ifr)));
+	else
+		return (ENODEV);
 }
 
 /*
@@ -2162,6 +2114,7 @@ linux_ioctl_ifname(struct thread *td, struct l_ifreq *uifr)
 static int
 linux_ifconf(struct thread *td, struct ifconf *uifc)
 {
+	struct epoch_tracker et;
 #ifdef COMPAT_LINUX32
 	struct l_ifconf ifc;
 #else
@@ -2171,19 +2124,19 @@ linux_ifconf(struct thread *td, struct ifconf *uifc)
 	struct ifnet *ifp;
 	struct ifaddr *ifa;
 	struct sbuf *sb;
-	int error, ethno, full = 0, valid_len, max_len;
+	int error, full = 0, valid_len, max_len;
 
 	error = copyin(uifc, &ifc, sizeof(ifc));
 	if (error != 0)
 		return (error);
 
-	max_len = MAXPHYS - 1;
+	max_len = maxphys - 1;
 
 	CURVNET_SET(TD_TO_VNET(td));
 	/* handle the 'request buffer size' case */
 	if ((l_uintptr_t)ifc.ifc_buf == PTROUT(NULL)) {
 		ifc.ifc_len = 0;
-		IFNET_RLOCK();
+		NET_EPOCH_ENTER(et);
 		CK_STAILQ_FOREACH(ifp, &V_ifnet, if_link) {
 			CK_STAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
 				struct sockaddr *sa = ifa->ifa_addr;
@@ -2191,7 +2144,7 @@ linux_ifconf(struct thread *td, struct ifconf *uifc)
 					ifc.ifc_len += sizeof(ifr);
 			}
 		}
-		IFNET_RUNLOCK();
+		NET_EPOCH_EXIT(et);
 		error = copyout(&ifc, uifc, sizeof(ifc));
 		CURVNET_RESTORE();
 		return (error);
@@ -2203,8 +2156,6 @@ linux_ifconf(struct thread *td, struct ifconf *uifc)
 	}
 
 again:
-	/* Keep track of eth interfaces */
-	ethno = 0;
 	if (ifc.ifc_len <= max_len) {
 		max_len = ifc.ifc_len;
 		full = 1;
@@ -2214,16 +2165,13 @@ again:
 	valid_len = 0;
 
 	/* Return all AF_INET addresses of all interfaces */
-	IFNET_RLOCK();
+	NET_EPOCH_ENTER(et);
 	CK_STAILQ_FOREACH(ifp, &V_ifnet, if_link) {
 		int addrs = 0;
 
 		bzero(&ifr, sizeof(ifr));
-		if (IFP_IS_ETH(ifp))
-			snprintf(ifr.ifr_name, LINUX_IFNAMSIZ, "eth%d",
-			    ethno++);
-		else
-			strlcpy(ifr.ifr_name, ifp->if_xname, LINUX_IFNAMSIZ);
+		ifname_bsd_to_linux_ifp(ifp, ifr.ifr_name,
+		    sizeof(ifr.ifr_name));
 
 		/* Walk the address list */
 		CK_STAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
@@ -2250,7 +2198,7 @@ again:
 				valid_len = sbuf_len(sb);
 		}
 	}
-	IFNET_RUNLOCK();
+	NET_EPOCH_EXIT(et);
 
 	if (valid_len != max_len && !full) {
 		sbuf_delete(sb);
@@ -2288,7 +2236,6 @@ linux_gifhwaddr(struct ifnet *ifp, struct l_ifreq *ifr)
 
 	return (copyout(&lsa, &ifr->ifr_hwaddr, sizeof(lsa)));
 }
-
 
  /*
 * If we fault in bsd_to_linux_ifreq() then we will fault when we call
@@ -2345,7 +2292,6 @@ linux_ioctl_socket(struct thread *td, struct linux_ioctl_args *args)
 	}
 
 	switch (args->cmd & 0xffff) {
-
 	case LINUX_FIOGETOWN:
 	case LINUX_FIOSETOWN:
 	case LINUX_SIOCADDMULTI:
@@ -2398,7 +2344,6 @@ linux_ioctl_socket(struct thread *td, struct linux_ioctl_args *args)
 	}
 
 	switch (args->cmd & 0xffff) {
-
 	case LINUX_FIOSETOWN:
 		args->cmd = FIOSETOWN;
 		error = sys_ioctl(td, (struct ioctl_args *)args);
@@ -3574,12 +3519,44 @@ linux_ioctl_evdev(struct thread *td, struct linux_ioctl_args *args)
 	return (sys_ioctl(td, (struct ioctl_args *)args));
 }
 
+static int
+linux_ioctl_kcov(struct thread *td, struct linux_ioctl_args *args)
+{
+	int error;
+
+	error = 0;
+	switch (args->cmd & 0xffff) {
+	case LINUX_KCOV_INIT_TRACE:
+		args->cmd = KIOSETBUFSIZE;
+		break;
+	case LINUX_KCOV_ENABLE:
+		args->cmd = KIOENABLE;
+		if (args->arg == 0)
+			args->arg = KCOV_MODE_TRACE_PC;
+		else if (args->arg == 1)
+			args->arg = KCOV_MODE_TRACE_CMP;
+		else
+			error = EINVAL;
+		break;
+	case LINUX_KCOV_DISABLE:
+		args->cmd = KIODISABLE;
+		break;
+	default:
+		error = ENOTTY;
+		break;
+	}
+
+	if (error == 0)
+		error = sys_ioctl(td, (struct ioctl_args *)args);
+	return (error);
+}
+
 /*
  * main ioctl syscall function
  */
 
-int
-linux_ioctl(struct thread *td, struct linux_ioctl_args *args)
+static int
+linux_ioctl_fallback(struct thread *td, struct linux_ioctl_args *args)
 {
 	struct file *fp;
 	struct linux_ioctl_handler_element *he;
@@ -3627,17 +3604,47 @@ linux_ioctl(struct thread *td, struct linux_ioctl_args *args)
 
 	switch (args->cmd & 0xffff) {
 	case LINUX_BTRFS_IOC_CLONE:
+	case LINUX_F2FS_IOC_GET_FEATURES:
 	case LINUX_FS_IOC_FIEMAP:
 		return (ENOTSUP);
 
 	default:
-		linux_msg(td, "ioctl fd=%d, cmd=0x%x ('%c',%d) is not implemented",
-		    args->fd, (int)(args->cmd & 0xffff),
+		linux_msg(td, "%s fd=%d, cmd=0x%x ('%c',%d) is not implemented",
+		    __func__, args->fd, args->cmd,
 		    (int)(args->cmd & 0xff00) >> 8, (int)(args->cmd & 0xff));
 		break;
 	}
 
 	return (EINVAL);
+}
+
+int
+linux_ioctl(struct thread *td, struct linux_ioctl_args *args)
+{
+	struct linux_ioctl_handler *handler;
+	int error, cmd, i;
+
+	cmd = args->cmd & 0xffff;
+
+	/*
+	 * array of ioctls known at compilation time. Elides a lot of work on
+	 * each call compared to the list variant. Everything frequently used
+	 * should be moved here.
+	 *
+	 * Arguably the magic creating the list should create an array instead.
+	 *
+	 * For now just a linear scan.
+	 */
+	for (i = 0; i < nitems(linux_ioctls); i++) {
+		handler = &linux_ioctls[i];
+		if (cmd >= handler->low && cmd <= handler->high) {
+			error = (*handler->func)(td, args);
+			if (error != ENOIOCTL) {
+				return (error);
+			}
+		}
+	}
+	return (linux_ioctl_fallback(td, args));
 }
 
 int

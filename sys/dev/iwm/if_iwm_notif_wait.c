@@ -67,7 +67,6 @@
  *****************************************************************************/
 
 #include <sys/cdefs.h>
-
 #include "opt_wlan.h"
 #include "opt_iwm.h"
 
@@ -75,8 +74,9 @@
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
-#include <sys/malloc.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
+#include <sys/mutex.h>
 #include <sys/queue.h>
 
 #include <dev/iwm/if_iwm_notif_wait.h>

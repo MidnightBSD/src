@@ -24,8 +24,6 @@
  *
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
- *
- * $FreeBSD: stable/11/sys/ddb/db_access.h 283248 2015-05-21 15:16:18Z pfg $
  */
 
 #ifndef _DDB_DB_ACCESS_H_

@@ -27,8 +27,8 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_acpi.h"
+#include "opt_iommu.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -36,6 +36,8 @@
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
+#include <sys/taskqueue.h>
+#include <sys/tree.h>
 
 #include <contrib/dev/acpica/include/acpi.h>
 #include <contrib/dev/acpica/include/accommon.h>
@@ -47,6 +49,8 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pci_private.h>
+
+#include <dev/iommu/iommu.h>
 
 #include "pcib_if.h"
 #include "pci_if.h"
@@ -330,6 +334,25 @@ acpi_pci_probe(device_t dev)
 }
 
 static void
+acpi_pci_bus_notify_handler(ACPI_HANDLE h, UINT32 notify, void *context)
+{
+	device_t dev;
+
+	dev = context;
+
+	switch (notify) {
+	case ACPI_NOTIFY_BUS_CHECK:
+		bus_topo_lock();
+		BUS_RESCAN(dev);
+		bus_topo_unlock();
+		break;
+	default:
+		device_printf(dev, "unknown notify %#x\n", notify);
+		break;
+	}
+}
+
+static void
 acpi_pci_device_notify_handler(ACPI_HANDLE h, UINT32 notify, void *context)
 {
 	device_t child, dev;
@@ -340,9 +363,9 @@ acpi_pci_device_notify_handler(ACPI_HANDLE h, UINT32 notify, void *context)
 
 	switch (notify) {
 	case ACPI_NOTIFY_DEVICE_CHECK:
-		mtx_lock(&Giant);
+		bus_topo_lock();
 		BUS_RESCAN(dev);
-		mtx_unlock(&Giant);
+		bus_topo_unlock();
 		break;
 	case ACPI_NOTIFY_EJECT_REQUEST:
 		child = acpi_get_device(h);
@@ -351,23 +374,23 @@ acpi_pci_device_notify_handler(ACPI_HANDLE h, UINT32 notify, void *context)
 			    acpi_name(h));
 			return;
 		}
-		mtx_lock(&Giant);
+		bus_topo_lock();
 		error = device_detach(child);
 		if (error) {
-			mtx_unlock(&Giant);
+			bus_topo_unlock();
 			device_printf(dev, "failed to detach %s: %d\n",
 			    device_get_nameunit(child), error);
 			return;
 		}
 		status = acpi_SetInteger(h, "_EJ0", 1);
 		if (ACPI_FAILURE(status)) {
-			mtx_unlock(&Giant);
+			bus_topo_unlock();
 			device_printf(dev, "failed to eject %s: %s\n",
 			    acpi_name(h), AcpiFormatException(status));
 			return;
 		}
 		BUS_RESCAN(dev);
-		mtx_unlock(&Giant);
+		bus_topo_unlock();
 		break;
 	default:
 		device_printf(dev, "unknown notify %#x for %s\n", notify,
@@ -400,9 +423,11 @@ acpi_pci_attach(device_t dev)
 	error = pci_attach(dev);
 	if (error)
 		return (error);
+	AcpiInstallNotifyHandler(acpi_get_handle(dev), ACPI_SYSTEM_NOTIFY,
+	    acpi_pci_bus_notify_handler, dev);
 	AcpiWalkNamespace(ACPI_TYPE_DEVICE, acpi_get_handle(dev), 1,
 	    acpi_pci_install_device_notify_handler, NULL, dev, NULL);
-	
+
 	return (0);
 }
 
@@ -428,19 +453,20 @@ acpi_pci_detach(device_t dev)
 
 	AcpiWalkNamespace(ACPI_TYPE_DEVICE, acpi_get_handle(dev), 1,
 	    acpi_pci_remove_notify_handler, NULL, dev, NULL);
+	AcpiRemoveNotifyHandler(acpi_get_handle(dev), ACPI_SYSTEM_NOTIFY,
+	    acpi_pci_bus_notify_handler);
 	return (pci_detach(dev));
 }
 
-#ifdef ACPI_DMAR
-bus_dma_tag_t dmar_get_dma_tag(device_t dev, device_t child);
+#ifdef IOMMU
 static bus_dma_tag_t
 acpi_pci_get_dma_tag(device_t bus, device_t child)
 {
 	bus_dma_tag_t tag;
 
 	if (device_get_parent(child) == bus) {
-		/* try dmar and return if it works */
-		tag = dmar_get_dma_tag(bus, child);
+		/* try iommu and return if it works */
+		tag = iommu_get_dma_tag(bus, child);
 	} else
 		tag = NULL;
 	if (tag == NULL)
@@ -455,4 +481,3 @@ acpi_pci_get_dma_tag(device_t bus, device_t child)
 	return (pci_get_dma_tag(bus, child));
 }
 #endif
-

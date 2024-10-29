@@ -25,15 +25,13 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_ATOMIC_LONG_H_
-#define	_ATOMIC_LONG_H_
+#ifndef	_LINUXKPI_ASM_ATOMIC_LONG_H_
+#define	_LINUXKPI_ASM_ATOMIC_LONG_H_
 
 #include <linux/compiler.h>
 #include <sys/types.h>
 #include <machine/atomic.h>
-
 #define	ATOMIC_LONG_INIT(x)	{ .counter = (x) }
 
 typedef struct {
@@ -41,7 +39,7 @@ typedef struct {
 } atomic_long_t;
 
 #define	atomic_long_add(i, v)		atomic_long_add_return((i), (v))
-#define	atomic_long_sub(i, v)		atomic_long_add_return(-(i), (v))
+#define	atomic_long_sub(i, v)		atomic_long_sub_return((i), (v))
 #define	atomic_long_inc_return(v)	atomic_long_add_return(1, (v))
 #define	atomic_long_inc_not_zero(v)	atomic_long_add_unless((v), 1, 0)
 
@@ -49,6 +47,12 @@ static inline long
 atomic_long_add_return(long i, atomic_long_t *v)
 {
 	return i + atomic_fetchadd_long(&v->counter, i);
+}
+
+static inline long
+atomic_long_sub_return(long i, atomic_long_t *v)
+{
+	return atomic_fetchadd_long(&v->counter, -i) - i;
 }
 
 static inline void
@@ -78,15 +82,7 @@ atomic_long_dec(atomic_long_t *v)
 static inline long
 atomic_long_xchg(atomic_long_t *v, long val)
 {
-#if defined(__i386__) || defined(__amd64__) || defined(__aarch64__)
 	return atomic_swap_long(&v->counter, val);
-#else
-	long ret = atomic_long_read(v);
-
-	while (!atomic_fcmpset_long(&v->counter, &ret, val))
-		;
-	return (ret);
-#endif
 }
 
 static inline long
@@ -138,4 +134,4 @@ atomic_long_dec_and_test(atomic_long_t *v)
 	return i == 0 ;
 }
 
-#endif	/* _ATOMIC_LONG_H_ */
+#endif	/* _LINUXKPI_ASM_ATOMIC_LONG_H_ */

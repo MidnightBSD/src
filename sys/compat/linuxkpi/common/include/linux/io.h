@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_IO_H_
-#define	_LINUX_IO_H_
+#ifndef	_LINUXKPI_LINUX_IO_H_
+#define	_LINUXKPI_LINUX_IO_H_
 
 #include <sys/endian.h>
 #include <sys/types.h>
@@ -37,11 +36,13 @@
 
 #include <linux/compiler.h>
 #include <linux/types.h>
+#if !defined(__arm__)
+#include <asm/set_memory.h>
+#endif
 
 /*
  * XXX This is all x86 specific.  It should be bus space access.
  */
-
 
 /* rmb and wmb are declared in machine/atomic.h, so should be included first. */
 #ifndef __io_br
@@ -390,11 +391,18 @@ _outb(u_char data, u_int port)
 }
 #endif
 
-#if defined(__i386__) || defined(__amd64__) || defined(__powerpc__) || defined(__aarch64__)
+#if defined(__i386__) || defined(__amd64__) || defined(__powerpc__) || defined(__aarch64__) || defined(__riscv)
 void *_ioremap_attr(vm_paddr_t phys_addr, unsigned long size, int attr);
 #else
 #define	_ioremap_attr(...) NULL
 #endif
+
+struct device;
+static inline void *
+devm_ioremap(struct device *dev, resource_size_t offset, resource_size_t size)
+{
+	return (NULL);
+}
 
 #ifdef VM_MEMATTR_DEVICE
 #define	ioremap_nocache(addr, size)					\
@@ -411,9 +419,13 @@ void *_ioremap_attr(vm_paddr_t phys_addr, unsigned long size, int attr);
 #define	ioremap(addr, size)						\
     _ioremap_attr((addr), (size), VM_MEMATTR_UNCACHEABLE)
 #endif
+#ifdef VM_MEMATTR_WRITE_COMBINING
 #define	ioremap_wc(addr, size)						\
     _ioremap_attr((addr), (size), VM_MEMATTR_WRITE_COMBINING)
-#define	ioremap_wb(addr, size)						\
+#else
+#define	ioremap_wc(addr, size)	ioremap_nocache(addr, size)
+#endif
+#define	ioremap_cache(addr, size)					\
     _ioremap_attr((addr), (size), VM_MEMATTR_WRITE_BACK)
 void iounmap(void *addr);
 
@@ -422,9 +434,9 @@ void iounmap(void *addr);
 #define	memcpy_toio(a, b, c)	memcpy((a), (b), (c))
 
 static inline void
-__iowrite32_copy(void *to, void *from, size_t count)
+__iowrite32_copy(void *to, const void *from, size_t count)
 {
-	uint32_t *src;
+	const uint32_t *src;
 	uint32_t *dst;
 	int i;
 
@@ -433,10 +445,10 @@ __iowrite32_copy(void *to, void *from, size_t count)
 }
 
 static inline void
-__iowrite64_copy(void *to, void *from, size_t count)
+__iowrite64_copy(void *to, const void *from, size_t count)
 {
 #ifdef __LP64__
-	uint64_t *src;
+	const uint64_t *src;
 	uint64_t *dst;
 	int i;
 
@@ -444,6 +456,32 @@ __iowrite64_copy(void *to, void *from, size_t count)
 		__raw_writeq(*src, dst);
 #else
 	__iowrite32_copy(to, from, count * 2);
+#endif
+}
+
+static inline void
+__ioread32_copy(void *to, const void *from, size_t count)
+{
+	const uint32_t *src;
+	uint32_t *dst;
+	int i;
+
+	for (i = 0, src = from, dst = to; i < count; i++, src++, dst++)
+		*dst = __raw_readl(src);
+}
+
+static inline void
+__ioread64_copy(void *to, const void *from, size_t count)
+{
+#ifdef __LP64__
+	const uint64_t *src;
+	uint64_t *dst;
+	int i;
+
+	for (i = 0, src = from, dst = to; i < count; i++, src++, dst++)
+		*dst = __raw_readq(src);
+#else
+	__ioread32_copy(to, from, count * 2);
 #endif
 }
 
@@ -459,7 +497,7 @@ memremap(resource_size_t offset, size_t size, unsigned long flags)
 	void *addr = NULL;
 
 	if ((flags & MEMREMAP_WB) &&
-	    (addr = ioremap_wb(offset, size)) != NULL)
+	    (addr = ioremap_cache(offset, size)) != NULL)
 		goto done;
 	if ((flags & MEMREMAP_WT) &&
 	    (addr = ioremap_wt(offset, size)) != NULL)
@@ -478,4 +516,27 @@ memunmap(void *addr)
 	iounmap(addr);
 }
 
-#endif	/* _LINUX_IO_H_ */
+#define	__MTRR_ID_BASE	1
+int lkpi_arch_phys_wc_add(unsigned long, unsigned long);
+void lkpi_arch_phys_wc_del(int);
+#define	arch_phys_wc_add(...)	lkpi_arch_phys_wc_add(__VA_ARGS__)
+#define	arch_phys_wc_del(...)	lkpi_arch_phys_wc_del(__VA_ARGS__)
+#define	arch_phys_wc_index(x)	\
+	(((x) < __MTRR_ID_BASE) ? -1 : ((x) - __MTRR_ID_BASE))
+
+#if defined(__amd64__) || defined(__i386__) || defined(__aarch64__) || defined(__powerpc__) || defined(__riscv)
+static inline int
+arch_io_reserve_memtype_wc(resource_size_t start, resource_size_t size)
+{
+
+	return (set_memory_wc(start, size >> PAGE_SHIFT));
+}
+
+static inline void
+arch_io_free_memtype_wc(resource_size_t start, resource_size_t size)
+{
+	set_memory_wb(start, size >> PAGE_SHIFT);
+}
+#endif
+
+#endif	/* _LINUXKPI_LINUX_IO_H_ */

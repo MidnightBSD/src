@@ -30,7 +30,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _PE_VAR_H_
@@ -163,7 +162,6 @@ typedef struct image_data_directory image_data_directory;
  */
 
 struct image_optional_header {
-
 	/* Standard fields */
 
 	uint16_t	ioh_magic;
@@ -501,7 +499,6 @@ extern uint32_t x86_stdcall_call(void *, int, ...);
 		x86_stdcall_call(fn, 6, (a), (b), (c), (d), (e), (f))
 
 #endif /* __i386__ */
-
 
 #define	FUNC void(*)(void)
 

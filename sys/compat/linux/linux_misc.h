@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Roman Divacky
  * All rights reserved.
@@ -24,13 +24,12 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _LINUX_MISC_H_
 #define	_LINUX_MISC_H_
 
-#include <sys/sysctl.h>
+#define	LINUX_MAX_PID_NS_LEVEL	32
 
 				/* bits per mask */
 #define	LINUX_NFDBITS		sizeof(l_fd_mask) * 8
@@ -49,19 +48,29 @@
 					 * Second arg is a ptr to return the
 					 * signal.
 					 */
+#define	LINUX_PR_GET_DUMPABLE	3
+#define	LINUX_PR_SET_DUMPABLE	4
 #define	LINUX_PR_GET_KEEPCAPS	7	/* Get drop capabilities on setuid */
 #define	LINUX_PR_SET_KEEPCAPS	8	/* Set drop capabilities on setuid */
 #define	LINUX_PR_SET_NAME	15	/* Set process name. */
 #define	LINUX_PR_GET_NAME	16	/* Get process name. */
+#define	LINUX_PR_GET_SECCOMP	21
+#define	LINUX_PR_SET_SECCOMP	22
+#define	LINUX_PR_CAPBSET_READ	23
+#define	LINUX_PR_SET_NO_NEW_PRIVS	38
+#define	LINUX_PR_SET_PTRACER	1499557217
 
 #define	LINUX_MAX_COMM_LEN	16	/* Maximum length of the process name. */
+
+/* For GET/SET DUMPABLE */
+#define	LINUX_SUID_DUMP_DISABLE	0	/* Don't coredump setuid processes. */
+#define	LINUX_SUID_DUMP_USER	1	/* Dump as user of process. */
+#define	LINUX_SUID_DUMP_ROOT	2	/* Dump as root. */
 
 #define	LINUX_MREMAP_MAYMOVE	1
 #define	LINUX_MREMAP_FIXED	2
 
 #define	LINUX_PATH_MAX		4096
-
-extern const char *linux_kplatform;
 
 /*
  * Non-standard aux entry types used in Linux ELF binaries.
@@ -75,29 +84,21 @@ extern const char *linux_kplatform;
 					 * differ from AT_PLATFORM.
 					 */
 #define	LINUX_AT_RANDOM		25	/* address of random bytes */
+#define	LINUX_AT_HWCAP2		26	/* CPU capabilities, second part */
 #define	LINUX_AT_EXECFN		31	/* filename of program */
 #define	LINUX_AT_SYSINFO	32	/* vsyscall */
 #define	LINUX_AT_SYSINFO_EHDR	33	/* vdso header */
 
 #define	LINUX_AT_RANDOM_LEN	16	/* size of random bytes */
 
+#ifndef LINUX_AT_MINSIGSTKSZ
+#define	LINUX_AT_MINSIGSTKSZ	51	/* min stack size required by the kernel */
+#endif
+
 /* Linux sets the i387 to extended precision. */
 #if defined(__i386__) || defined(__amd64__)
 #define	__LINUX_NPXCW__		0x37f
 #endif
-
-#define	LINUX_CLONE_VM			0x00000100
-#define	LINUX_CLONE_FS			0x00000200
-#define	LINUX_CLONE_FILES		0x00000400
-#define	LINUX_CLONE_SIGHAND		0x00000800
-#define	LINUX_CLONE_PID			0x00001000	/* No longer exist in Linux */
-#define	LINUX_CLONE_VFORK		0x00004000
-#define	LINUX_CLONE_PARENT		0x00008000
-#define	LINUX_CLONE_THREAD		0x00010000
-#define	LINUX_CLONE_SETTLS		0x00080000
-#define	LINUX_CLONE_PARENT_SETTID	0x00100000
-#define	LINUX_CLONE_CHILD_CLEARTID	0x00200000
-#define	LINUX_CLONE_CHILD_SETTID	0x01000000
 
 /* Scheduling policies */
 #define	LINUX_SCHED_OTHER	0
@@ -127,7 +128,6 @@ extern int stclohz;
 #define	LINUX_WCONTINUED	0x00000008
 #define	LINUX_WNOWAIT		0x01000000
 
-
 #define	__WNOTHREAD		0x20000000
 #define	__WALL			0x40000000
 #define	__WCLONE		0x80000000
@@ -136,13 +136,14 @@ extern int stclohz;
 #define	LINUX_P_ALL		0
 #define	LINUX_P_PID		1
 #define	LINUX_P_PGID		2
+#define	LINUX_P_PIDFD		3
 
-#define	LINUX_RLIMIT_LOCKS	RLIM_NLIMITS + 1
-#define	LINUX_RLIMIT_SIGPENDING	RLIM_NLIMITS + 2
-#define	LINUX_RLIMIT_MSGQUEUE	RLIM_NLIMITS + 3
-#define	LINUX_RLIMIT_NICE	RLIM_NLIMITS + 4
-#define	LINUX_RLIMIT_RTPRIO	RLIM_NLIMITS + 5
-#define	LINUX_RLIMIT_RTTIME	RLIM_NLIMITS + 6
+#define	LINUX_RLIMIT_LOCKS	10
+#define	LINUX_RLIMIT_SIGPENDING	11
+#define	LINUX_RLIMIT_MSGQUEUE	12
+#define	LINUX_RLIMIT_NICE	13
+#define	LINUX_RLIMIT_RTPRIO	14
+#define	LINUX_RLIMIT_RTTIME	15
 
 #define	LINUX_RLIM_INFINITY	(~0UL)
 
@@ -153,12 +154,39 @@ extern int stclohz;
 /* Linux syslog flags */
 #define	LINUX_SYSLOG_ACTION_READ_ALL	3
 
-#if defined(__amd64__) && !defined(COMPAT_LINUX32)
+/* Linux seccomp flags */
+#define	LINUX_SECCOMP_GET_ACTION_AVAIL	2
+
+/* Linux /proc/self/oom_score_adj */
+#define	LINUX_OOM_SCORE_ADJ_MIN	-1000
+#define	LINUX_OOM_SCORE_ADJ_MAX	1000
+
+#if defined(__aarch64__) || (defined(__amd64__) && !defined(COMPAT_LINUX32))
 int linux_ptrace_status(struct thread *td, int pid, int status);
 #endif
 void linux_to_bsd_waitopts(int options, int *bsdopts);
-int linux_set_upcall_kse(struct thread *td, register_t stack);
-int linux_set_cloned_tls(struct thread *td, void *desc);
 struct thread	*linux_tdfind(struct thread *, lwpid_t, pid_t);
+
+struct syscall_info {
+	uint8_t op;
+	uint32_t arch;
+	uint64_t instruction_pointer;
+	uint64_t stack_pointer;
+	union {
+		struct {
+			uint64_t nr;
+			uint64_t args[6];
+		} entry;
+		struct {
+			int64_t rval;
+			uint8_t is_error;
+		} exit;
+		struct {
+			uint64_t nr;
+			uint64_t args[6];
+			uint32_t ret_data;
+		} seccomp;
+	};
+};
 
 #endif	/* _LINUX_MISC_H_ */

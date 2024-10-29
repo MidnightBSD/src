@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017 Kyle Evans <kevans@FreeBSD.org>
  *
@@ -41,6 +41,7 @@
 #include <sys/kernel.h>
 #include <sys/kobj.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/rman.h>
 #include <sys/sx.h>
@@ -260,6 +261,21 @@ syscon_get_ofw_node(struct syscon *syscon)
 {
 
 	return (syscon->ofw_node);
+}
+
+int
+syscon_get_by_ofw_node(device_t cdev, phandle_t node, struct syscon **syscon)
+{
+
+	SYSCON_TOPO_SLOCK();
+	*syscon = syscon_find_by_ofw_node(node);
+	if (*syscon == NULL) {
+		SYSCON_TOPO_UNLOCK();
+		device_printf(cdev, "Failed to find syscon node\n");
+		return (ENODEV);
+	}
+	SYSCON_TOPO_UNLOCK();
+	return (0);
 }
 
 int

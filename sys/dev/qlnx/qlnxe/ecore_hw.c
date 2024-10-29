@@ -29,7 +29,6 @@
  * File : ecore_hw.c
  */
 #include <sys/cdefs.h>
-
 #include "bcm_osal.h"
 #include "ecore_hsi_common.h"
 #include "ecore_status.h"

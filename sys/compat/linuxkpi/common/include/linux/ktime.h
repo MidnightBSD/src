@@ -24,11 +24,10 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
-#ifndef _LINUX_KTIME_H
-#define	_LINUX_KTIME_H
+#ifndef _LINUXKPI_LINUX_KTIME_H
+#define	_LINUXKPI_LINUX_KTIME_H
 
 #include <linux/types.h>
 #include <linux/time.h>
@@ -189,6 +188,7 @@ timespec64_to_ns(struct timespec64 *ts)
 #define	ktime_get_ts(ts)		getnanouptime(ts)
 #define	ktime_get_ts64(ts)		getnanouptime(ts)
 #define	ktime_get_raw_ts64(ts)		getnanouptime(ts)
+#define	ktime_get_real_ts64(ts)		getnanotime(ts)
 #define	getrawmonotonic64(ts)		getnanouptime(ts)
 
 static inline int64_t
@@ -217,6 +217,13 @@ ktime_get_boottime(void)
 
 	nanouptime(&ts);
 	return (timespec_to_ktime(ts));
+}
+
+static inline uint64_t
+ktime_get_boottime_ns(void)
+{
+
+	return (ktime_to_ns(ktime_get_boottime()));
 }
 
 static inline ktime_t
@@ -255,4 +262,4 @@ ktime_get_raw_ns(void)
 	return (ktime_to_ns(timespec_to_ktime(ts)));
 }
 
-#endif /* _LINUX_KTIME_H */
+#endif /* _LINUXKPI_LINUX_KTIME_H */

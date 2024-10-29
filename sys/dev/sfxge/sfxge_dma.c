@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -135,6 +134,7 @@ sfxge_dma_free(efsys_mem_t *esmp)
 
 	esmp->esm_addr = 0;
 	esmp->esm_base = NULL;
+	esmp->esm_size = 0;
 }
 
 int
@@ -174,6 +174,7 @@ sfxge_dma_alloc(struct sfxge_softc *sc, bus_size_t len, efsys_mem_t *esmp)
 		goto fail_load_check;
 
 	esmp->esm_base = vaddr;
+	esmp->esm_size = len;
 
 	return (0);
 

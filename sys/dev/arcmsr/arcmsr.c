@@ -87,11 +87,11 @@
 **                                          scatter-gather count large than some number
 ** 1.50.00.03   05/04/2021  Ching Huang     Fixed doorbell status arrived late on ARC-1886
 ** 1.50.00.04   12/08/2021  Ching Huang     Fixed boot up hung under ARC-1886 with no volume created
+** 1.50.00.05   03/23/2023  Ching Huang     Fixed reading buffer empty length error
 ******************************************************************************************
 */
 
 #include <sys/cdefs.h>
-
 #if 0
 #define ARCMSR_DEBUG1			1
 #endif
@@ -143,7 +143,7 @@
 
 #define arcmsr_callout_init(a)	callout_init(a, /*mpsafe*/1);
 
-#define ARCMSR_DRIVER_VERSION	"arcmsr version 1.50.00.04 2021-12-08"
+#define ARCMSR_DRIVER_VERSION	"arcmsr version 1.50.00.05 2023-03-23"
 #include <dev/arcmsr/arcmsr.h>
 /*
 **************************************************************************
@@ -239,12 +239,6 @@ static struct cdevsw arcmsr_cdevsw={
 */
 static int arcmsr_open(struct cdev *dev, int flags, int fmt, struct thread *proc)
 {
-	int	unit = dev2unit(dev);
-	struct AdapterControlBlock *acb = devclass_get_softc(arcmsr_devclass, unit);
-
-	if (acb == NULL) {
-		return ENXIO;
-	}
 	return (0);
 }
 /*
@@ -253,12 +247,6 @@ static int arcmsr_open(struct cdev *dev, int flags, int fmt, struct thread *proc
 */
 static int arcmsr_close(struct cdev *dev, int flags, int fmt, struct thread *proc)
 {
-	int	unit = dev2unit(dev);
-	struct AdapterControlBlock *acb = devclass_get_softc(arcmsr_devclass, unit);
-
-	if (acb == NULL) {
-		return ENXIO;
-	}
 	return 0;
 }
 /*
@@ -267,12 +255,8 @@ static int arcmsr_close(struct cdev *dev, int flags, int fmt, struct thread *pro
 */
 static int arcmsr_ioctl(struct cdev *dev, u_long ioctl_cmd, caddr_t arg, int flags, struct thread *proc)
 {
-	int	unit = dev2unit(dev);
-	struct AdapterControlBlock *acb = devclass_get_softc(arcmsr_devclass, unit);
+	struct AdapterControlBlock *acb = dev->si_drv1;
 
-	if (acb == NULL) {
-		return ENXIO;
-	}
 	return (arcmsr_iop_ioctlcmd(acb, ioctl_cmd, arg));
 }
 /*
@@ -1388,7 +1372,7 @@ static void arcmsr_stop_hba_bgrb(struct AdapterControlBlock *acb)
 	CHIP_REG_WRITE32(HBA_MessageUnit, 
 		0, inbound_msgaddr0, ARCMSR_INBOUND_MESG0_STOP_BGRB);
 	if(!arcmsr_hba_wait_msgint_ready(acb)) {
-		printf("arcmsr%d: wait 'stop adapter background rebulid' timeout \n"
+		printf("arcmsr%d: wait 'stop adapter background rebuild' timeout \n"
 			, acb->pci_unit);
 	}
 }
@@ -1402,7 +1386,7 @@ static void arcmsr_stop_hbb_bgrb(struct AdapterControlBlock *acb)
 	acb->acb_flags &= ~ACB_F_MSG_START_BGRB;
 	WRITE_CHIP_REG32(0, phbbmu->drv2iop_doorbell, ARCMSR_MESSAGE_STOP_BGRB);
 	if(!arcmsr_hbb_wait_msgint_ready(acb)) {
-		printf( "arcmsr%d: wait 'stop adapter background rebulid' timeout \n"
+		printf( "arcmsr%d: wait 'stop adapter background rebuild' timeout \n"
 			, acb->pci_unit);
 	}
 }
@@ -1416,7 +1400,7 @@ static void arcmsr_stop_hbc_bgrb(struct AdapterControlBlock *acb)
 	CHIP_REG_WRITE32(HBC_MessageUnit, 0, inbound_msgaddr0, ARCMSR_INBOUND_MESG0_STOP_BGRB);
 	CHIP_REG_WRITE32(HBC_MessageUnit, 0, inbound_doorbell,ARCMSR_HBCMU_DRV2IOP_MESSAGE_CMD_DONE);
 	if(!arcmsr_hbc_wait_msgint_ready(acb)) {
-		printf("arcmsr%d: wait 'stop adapter background rebulid' timeout \n", acb->pci_unit);
+		printf("arcmsr%d: wait 'stop adapter background rebuild' timeout \n", acb->pci_unit);
 	}
 }
 /*
@@ -1428,7 +1412,7 @@ static void arcmsr_stop_hbd_bgrb(struct AdapterControlBlock *acb)
 	acb->acb_flags &= ~ACB_F_MSG_START_BGRB;
 	CHIP_REG_WRITE32(HBD_MessageUnit, 0, inbound_msgaddr0, ARCMSR_INBOUND_MESG0_STOP_BGRB);
 	if(!arcmsr_hbd_wait_msgint_ready(acb)) {
-		printf("arcmsr%d: wait 'stop adapter background rebulid' timeout \n", acb->pci_unit);
+		printf("arcmsr%d: wait 'stop adapter background rebuild' timeout \n", acb->pci_unit);
 	}
 }
 /*
@@ -1442,7 +1426,7 @@ static void arcmsr_stop_hbe_bgrb(struct AdapterControlBlock *acb)
 	acb->out_doorbell ^= ARCMSR_HBEMU_DRV2IOP_MESSAGE_CMD_DONE;
 	CHIP_REG_WRITE32(HBE_MessageUnit, 0, iobound_doorbell, acb->out_doorbell);
 	if(!arcmsr_hbe_wait_msgint_ready(acb)) {
-		printf("arcmsr%d: wait 'stop adapter background rebulid' timeout \n", acb->pci_unit);
+		printf("arcmsr%d: wait 'stop adapter background rebuild' timeout \n", acb->pci_unit);
 	}
 }
 /*
@@ -1576,8 +1560,10 @@ static void arcmsr_iop2drv_data_wrote_handle(struct AdapterControlBlock *acb)
 	/*check this iop data if overflow my rqbuffer*/
 	ARCMSR_LOCK_ACQUIRE(&acb->qbuffer_lock);
 	prbuffer = arcmsr_get_iop_rqbuffer(acb);
-	my_empty_len = (acb->rqbuf_lastindex - acb->rqbuf_firstindex - 1) &
-		(ARCMSR_MAX_QBUFFER-1);
+	if (acb->rqbuf_lastindex >= acb->rqbuf_firstindex)
+		my_empty_len = (ARCMSR_MAX_QBUFFER - 1) - (acb->rqbuf_lastindex - acb->rqbuf_firstindex);
+	else
+		my_empty_len = acb->rqbuf_firstindex - acb->rqbuf_lastindex - 1;
 	if(my_empty_len >= prbuffer->data_len) {
 		if(arcmsr_Read_iop_rqbuffer_data(acb, prbuffer) == 0)
 			acb->acb_flags |= ACB_F_IOPDATA_OVERFLOW;
@@ -1715,7 +1701,6 @@ static void	arcmsr_rescan_lun(struct AdapterControlBlock *acb, int target, int l
 		return;
 	}
 /*	printf("arcmsr_rescan_lun: Rescan Target=%x, Lun=%x\n", target, lun); */
-	bzero(ccb, sizeof(union ccb));
 	xpt_setup_ccb(&ccb->ccb_h, path, 5);
 	ccb->ccb_h.func_code = XPT_SCAN_LUN;
 	ccb->ccb_h.cbfcnp = arcmsr_rescanLun_cb;
@@ -3388,7 +3373,7 @@ static void arcmsr_start_hba_bgrb(struct AdapterControlBlock *acb)
 	acb->acb_flags |= ACB_F_MSG_START_BGRB;
 	CHIP_REG_WRITE32(HBA_MessageUnit, 0, inbound_msgaddr0, ARCMSR_INBOUND_MESG0_START_BGRB);
 	if(!arcmsr_hba_wait_msgint_ready(acb)) {
-		printf("arcmsr%d: wait 'start adapter background rebulid' timeout \n", acb->pci_unit);
+		printf("arcmsr%d: wait 'start adapter background rebuild' timeout \n", acb->pci_unit);
 	}
 }
 /*
@@ -3401,7 +3386,7 @@ static void arcmsr_start_hbb_bgrb(struct AdapterControlBlock *acb)
 	acb->acb_flags |= ACB_F_MSG_START_BGRB;
 	WRITE_CHIP_REG32(0, phbbmu->drv2iop_doorbell, ARCMSR_MESSAGE_START_BGRB);
 	if(!arcmsr_hbb_wait_msgint_ready(acb)) {
-		printf( "arcmsr%d: wait 'start adapter background rebulid' timeout \n", acb->pci_unit);
+		printf( "arcmsr%d: wait 'start adapter background rebuild' timeout \n", acb->pci_unit);
 	}
 }
 /*
@@ -3414,7 +3399,7 @@ static void arcmsr_start_hbc_bgrb(struct AdapterControlBlock *acb)
 	CHIP_REG_WRITE32(HBC_MessageUnit, 0, inbound_msgaddr0, ARCMSR_INBOUND_MESG0_START_BGRB);
 	CHIP_REG_WRITE32(HBC_MessageUnit, 0, inbound_doorbell, ARCMSR_HBCMU_DRV2IOP_MESSAGE_CMD_DONE);
 	if(!arcmsr_hbc_wait_msgint_ready(acb)) {
-		printf("arcmsr%d: wait 'start adapter background rebulid' timeout \n", acb->pci_unit);
+		printf("arcmsr%d: wait 'start adapter background rebuild' timeout \n", acb->pci_unit);
 	}
 }
 /*
@@ -3426,7 +3411,7 @@ static void arcmsr_start_hbd_bgrb(struct AdapterControlBlock *acb)
 	acb->acb_flags |= ACB_F_MSG_START_BGRB;
 	CHIP_REG_WRITE32(HBD_MessageUnit, 0, inbound_msgaddr0, ARCMSR_INBOUND_MESG0_START_BGRB);
 	if(!arcmsr_hbd_wait_msgint_ready(acb)) {
-		printf("arcmsr%d: wait 'start adapter background rebulid' timeout \n", acb->pci_unit);
+		printf("arcmsr%d: wait 'start adapter background rebuild' timeout \n", acb->pci_unit);
 	}
 }
 /*
@@ -3440,7 +3425,7 @@ static void arcmsr_start_hbe_bgrb(struct AdapterControlBlock *acb)
 	acb->out_doorbell ^= ARCMSR_HBEMU_DRV2IOP_MESSAGE_CMD_DONE;
 	CHIP_REG_WRITE32(HBE_MessageUnit, 0, iobound_doorbell, acb->out_doorbell);
 	if(!arcmsr_hbe_wait_msgint_ready(acb)) {
-		printf("arcmsr%d: wait 'start adapter background rebulid' timeout \n", acb->pci_unit);
+		printf("arcmsr%d: wait 'start adapter background rebuild' timeout \n", acb->pci_unit);
 	}
 }
 /*
@@ -4932,6 +4917,7 @@ irq_alloc_failed:
 */
 static int arcmsr_attach(device_t dev)
 {
+	struct make_dev_args args;
 	struct AdapterControlBlock *acb=(struct AdapterControlBlock *)device_get_softc(dev);
 	u_int32_t unit=device_get_unit(dev);
 	struct ccb_setasync csa;
@@ -5000,7 +4986,13 @@ irqx:
 	xpt_action((union ccb *)&csa);
 	ARCMSR_LOCK_RELEASE(&acb->isr_lock);
 	/* Create the control device.  */
-	acb->ioctl_dev = make_dev(&arcmsr_cdevsw, unit, UID_ROOT, GID_WHEEL /* GID_OPERATOR */, S_IRUSR | S_IWUSR, "arcmsr%d", unit);
+	make_dev_args_init(&args);
+	args.mda_devsw = &arcmsr_cdevsw;
+	args.mda_uid = UID_ROOT;
+	args.mda_gid = GID_WHEEL /* GID_OPERATOR */;
+	args.mda_mode = S_IRUSR | S_IWUSR;
+	args.mda_si_drv1 = acb;
+	(void)make_dev_s(&args, &acb->ioctl_dev, "arcmsr%d", unit);
 		
 	(void)make_dev_alias(acb->ioctl_dev, "arc%d", unit);
 	arcmsr_callout_init(&acb->devmap_callout);

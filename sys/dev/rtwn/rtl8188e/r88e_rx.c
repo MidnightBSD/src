@@ -19,7 +19,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_wlan.h"
 
 #include <sys/param.h>
@@ -239,8 +238,10 @@ r88e_get_rx_stats(struct rtwn_softc *sc, struct ieee80211_rx_stats *rxs,
 
 	if (!sc->sc_ht40) {	/* XXX center channel */
 		rxs->r_flags |= IEEE80211_R_IEEE | IEEE80211_R_FREQ;
+		rxs->r_flags |= IEEE80211_R_BAND;
 		rxs->c_ieee = physt->chan;
 		rxs->c_freq = ieee80211_ieee2mhz(rxs->c_ieee,
 		    IEEE80211_CHAN_2GHZ);
+		rxs->c_band = IEEE80211_CHAN_2GHZ;
 	}
 }

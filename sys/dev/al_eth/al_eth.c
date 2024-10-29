@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -557,7 +556,7 @@ al_dma_map_addr(void *arg, bus_dma_segment_t *segs, int nseg, int error)
 }
 
 static int
-al_dma_alloc_coherent(struct device *dev, bus_dma_tag_t *tag, bus_dmamap_t *map,
+al_dma_alloc_coherent(device_t dev, bus_dma_tag_t *tag, bus_dmamap_t *map,
     bus_addr_t *baddr, void **vaddr, uint32_t size)
 {
 	int ret;
@@ -602,7 +601,7 @@ al_dma_free_coherent(bus_dma_tag_t tag, bus_dmamap_t map, void *vaddr)
 
 static void
 al_eth_mac_table_unicast_add(struct al_eth_adapter *adapter,
-    uint8_t idx, uint8_t *addr, uint8_t udma_mask)
+    uint8_t idx, uint8_t udma_mask)
 {
 	struct al_eth_fwd_mac_table_entry entry = { { 0 } };
 
@@ -1638,10 +1637,8 @@ al_eth_rx_recv_work(void *arg, int pending)
 			al_eth_rx_checksum(rx_ring->adapter, hal_pkt, mbuf);
 		}
 
-#if __FreeBSD_version >= 800000
 		mbuf->m_pkthdr.flowid = qid;
 		M_HASHTYPE_SET(mbuf, M_HASHTYPE_OPAQUE);
-#endif
 
 		/*
 		 * LRO is only for IP/TCP packets and TCP checksum of the packet
@@ -2012,14 +2009,6 @@ al_eth_enable_msix(struct al_eth_adapter *adapter)
 
 	adapter->msix_entries = malloc(msix_vecs*sizeof(*adapter->msix_entries),
 	    M_IFAL, M_ZERO | M_WAITOK);
-
-	if (adapter->msix_entries == NULL) {
-		device_printf_dbg(adapter->dev, "failed to allocate"
-		    " msix_entries %d\n", msix_vecs);
-		rc = ENOMEM;
-		goto exit;
-	}
-
 	/* management vector (GROUP_A) @2*/
 	adapter->msix_entries[AL_ETH_MGMT_IRQ_IDX].entry = 2;
 	adapter->msix_entries[AL_ETH_MGMT_IRQ_IDX].vector = 0;
@@ -2169,7 +2158,6 @@ __al_eth_free_irq(struct al_eth_adapter *adapter)
 			if (rc != 0)
 				device_printf(adapter->dev, "failed to tear "
 				    "down irq: %d\n", irq->vector);
-
 		}
 		irq->requested = 0;
 	}
@@ -2297,7 +2285,7 @@ static int
 al_eth_setup_tx_resources(struct al_eth_adapter *adapter, int qid)
 {
 	struct al_eth_ring *tx_ring = &adapter->tx_ring[qid];
-	struct device *dev = tx_ring->dev;
+	device_t dev = tx_ring->dev;
 	struct al_udma_q_params *q_params = &tx_ring->q_params;
 	int size;
 	int ret;
@@ -2308,9 +2296,6 @@ al_eth_setup_tx_resources(struct al_eth_adapter *adapter, int qid)
 	size = sizeof(struct al_eth_tx_buffer) * tx_ring->sw_count;
 
 	tx_ring->tx_buffer_info = malloc(size, M_IFAL, M_ZERO | M_WAITOK);
-	if (tx_ring->tx_buffer_info == NULL)
-		return (ENOMEM);
-
 	tx_ring->descs_size = tx_ring->hw_count * sizeof(union al_udma_desc);
 	q_params->size = tx_ring->hw_count;
 
@@ -2333,10 +2318,6 @@ al_eth_setup_tx_resources(struct al_eth_adapter *adapter, int qid)
 	mtx_init(&tx_ring->br_mtx, "AlRingMtx", NULL, MTX_DEF);
 	tx_ring->br = buf_ring_alloc(AL_BR_SIZE, M_DEVBUF, M_WAITOK,
 	    &tx_ring->br_mtx);
-	if (tx_ring->br == NULL) {
-		device_printf(dev, "Critical Failure setting up buf ring\n");
-		return (ENOMEM);
-	}
 
 	/* Allocate taskqueues */
 	TASK_INIT(&tx_ring->enqueue_task, 0, al_eth_start_xmit, tx_ring);
@@ -2474,7 +2455,7 @@ static int
 al_eth_setup_rx_resources(struct al_eth_adapter *adapter, unsigned int qid)
 {
 	struct al_eth_ring *rx_ring = &adapter->rx_ring[qid];
-	struct device *dev = rx_ring->dev;
+	device_t dev = rx_ring->dev;
 	struct al_udma_q_params *q_params = &rx_ring->q_params;
 	int size;
 	int ret;
@@ -2485,9 +2466,6 @@ al_eth_setup_rx_resources(struct al_eth_adapter *adapter, unsigned int qid)
 	size += 1;
 
 	rx_ring->rx_buffer_info = malloc(size, M_IFAL, M_ZERO | M_WAITOK);
-	if (rx_ring->rx_buffer_info == NULL)
-		return (ENOMEM);
-
 	rx_ring->descs_size = rx_ring->hw_count * sizeof(union al_udma_desc);
 	q_params->size = rx_ring->hw_count;
 
@@ -2511,7 +2489,7 @@ al_eth_setup_rx_resources(struct al_eth_adapter *adapter, unsigned int qid)
 		return (ENOMEM);
 
 	/* Allocate taskqueues */
-	TASK_INIT(&rx_ring->enqueue_task, 0, al_eth_rx_recv_work, rx_ring);
+	NET_TASK_INIT(&rx_ring->enqueue_task, 0, al_eth_rx_recv_work, rx_ring);
 	rx_ring->enqueue_tq = taskqueue_create_fast("al_rx_enque", M_NOWAIT,
 	    taskqueue_thread_enqueue, &rx_ring->enqueue_tq);
 	taskqueue_start_threads(&rx_ring->enqueue_tq, 1, PI_NET, "%s rxeq",
@@ -2875,6 +2853,30 @@ al_get_counter(struct ifnet *ifp, ift_counter cnt)
 	}
 }
 
+static u_int
+al_count_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	unsigned char *mac;
+
+	mac = LLADDR(sdl);
+	/* default mc address inside mac address */
+	if (mac[3] != 0 && mac[4] != 0 && mac[5] != 1)
+		return (1);
+	else
+		return (0);
+}
+
+static u_int
+al_program_addr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	struct al_eth_adapter *adapter = arg;
+
+	al_eth_mac_table_unicast_add(adapter,
+	    AL_ETH_MAC_TABLE_UNICAST_IDX_BASE + 1 + cnt, 1);
+
+	return (1);
+}
+
 /*
  *  Unicast, Multicast and Promiscuous mode set
  *
@@ -2883,43 +2885,16 @@ al_get_counter(struct ifnet *ifp, ift_counter cnt)
  *  responsible for configuring the hardware for proper unicast, multicast,
  *  promiscuous mode, and all-multi behavior.
  */
-#define	MAX_NUM_MULTICAST_ADDRESSES 32
-#define	MAX_NUM_ADDRESSES           32
-
 static void
 al_eth_set_rx_mode(struct al_eth_adapter *adapter)
 {
 	struct ifnet *ifp = adapter->netdev;
-	struct ifmultiaddr *ifma; /* multicast addresses configured */
-	struct ifaddr *ifua; /* unicast address */
-	int mc = 0;
-	int uc = 0;
+	int mc, uc;
 	uint8_t i;
-	unsigned char *mac;
 
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		if (mc == MAX_NUM_MULTICAST_ADDRESSES)
-			break;
-
-		mac = LLADDR((struct sockaddr_dl *) ifma->ifma_addr);
-		/* default mc address inside mac address */
-		if (mac[3] != 0 && mac[4] != 0 && mac[5] != 1)
-			mc++;
-	}
-	if_maddr_runlock(ifp);
-
-	if_addr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifua, &ifp->if_addrhead, ifa_link) {
-		if (ifua->ifa_addr->sa_family != AF_LINK)
-			continue;
-		if (uc == MAX_NUM_ADDRESSES)
-			break;
-		uc++;
-	}
-	if_addr_runlock(ifp);
+	/* XXXGL: why generic count won't work? */
+	mc = if_foreach_llmaddr(ifp, al_count_maddr, NULL);
+	uc = if_lladdr_count(ifp);
 
 	if ((ifp->if_flags & IFF_PROMISC) != 0) {
 		al_eth_mac_table_promiscuous_set(adapter, true);
@@ -2956,18 +2931,7 @@ al_eth_set_rx_mode(struct al_eth_adapter *adapter)
 			}
 
 			/* set new addresses */
-			i = AL_ETH_MAC_TABLE_UNICAST_IDX_BASE + 1;
-			if_addr_rlock(ifp);
-			CK_STAILQ_FOREACH(ifua, &ifp->if_addrhead, ifa_link) {
-				if (ifua->ifa_addr->sa_family != AF_LINK) {
-					continue;
-				}
-				al_eth_mac_table_unicast_add(adapter, i,
-				    (unsigned char *)ifua->ifa_addr, 1);
-				i++;
-			}
-			if_addr_runlock(ifp);
-
+			if_foreach_lladdr(ifp, al_program_addr, adapter);
 		}
 		al_eth_mac_table_promiscuous_set(adapter, false);
 	}
@@ -3000,7 +2964,7 @@ al_eth_config_rx_fwd(struct al_eth_adapter *adapter)
 	 * MAC address and all broadcast. all the rest will be dropped.
 	 */
 	al_eth_mac_table_unicast_add(adapter, AL_ETH_MAC_TABLE_UNICAST_IDX_BASE,
-	    adapter->mac_addr, 1);
+	    1);
 	al_eth_mac_table_broadcast_add(adapter, AL_ETH_MAC_TABLE_BROADCAST_IDX, 1);
 	al_eth_mac_table_promiscuous_set(adapter, false);
 

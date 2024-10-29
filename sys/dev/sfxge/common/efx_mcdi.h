@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -28,7 +28,6 @@
  * The views and conclusions contained in the software and documentation are
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
- *
  */
 
 #ifndef _SYS_EFX_MCDI_H
@@ -36,6 +35,10 @@
 
 #include "efx.h"
 #include "efx_regs_mcdi.h"
+
+#if EFSYS_OPT_NAMES
+#include "efx_regs_mcdi_strs.h"
+#endif /* EFSYS_OPT_NAMES */
 
 #ifdef	__cplusplus
 extern "C" {
@@ -54,7 +57,7 @@ struct efx_mcdi_req_s {
 	unsigned int	emr_cmd;
 	uint8_t		*emr_in_buf;
 	size_t		emr_in_length;
-	/* Outputs: retcode, buffer, length, and length used*/
+	/* Outputs: retcode, buffer, length, and length used */
 	efx_rc_t	emr_rc;
 	uint8_t		*emr_out_buf;
 	size_t		emr_out_length;
@@ -138,6 +141,15 @@ efx_mcdi_version(
 	__out_opt		uint32_t *buildp,
 	__out_opt		efx_mcdi_boot_t *statusp);
 
+extern	__checkReturn	efx_rc_t
+efx_mcdi_get_capabilities(
+	__in		efx_nic_t *enp,
+	__out_opt	uint32_t *flagsp,
+	__out_opt	uint16_t *rx_dpcpu_fw_idp,
+	__out_opt	uint16_t *tx_dpcpu_fw_idp,
+	__out_opt	uint32_t *flags2p,
+	__out_opt	uint32_t *tso2ncp);
+
 extern	__checkReturn		efx_rc_t
 efx_mcdi_read_assertion(
 	__in			efx_nic_t *enp);
@@ -182,13 +194,12 @@ efx_mcdi_mac_spoofing_supported(
 	__in			efx_nic_t *enp,
 	__out			boolean_t *supportedp);
 
-
 #if EFSYS_OPT_BIST
-#if EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD
+#if EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD || EFSYS_OPT_MEDFORD2
 extern	__checkReturn		efx_rc_t
 efx_mcdi_bist_enable_offline(
 	__in			efx_nic_t *enp);
-#endif /* EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD */
+#endif /* EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD || EFSYS_OPT_MEDFORD2 */
 extern	__checkReturn		efx_rc_t
 efx_mcdi_bist_start(
 	__in			efx_nic_t *enp,
@@ -222,7 +233,6 @@ efx_mcdi_mac_stats_periodic(
 	__in		uint16_t period_ms,
 	__in		boolean_t events);
 
-
 #if EFSYS_OPT_LOOPBACK
 extern	__checkReturn	efx_rc_t
 efx_mcdi_get_loopback_modes(
@@ -233,8 +243,8 @@ extern	__checkReturn	efx_rc_t
 efx_mcdi_phy_module_get_info(
 	__in			efx_nic_t *enp,
 	__in			uint8_t dev_addr,
-	__in			uint8_t offset,
-	__in			uint8_t len,
+	__in			size_t offset,
+	__in			size_t len,
 	__out_bcount(len)	uint8_t *data);
 
 #define	MCDI_IN(_emr, _type, _ofst)					\
@@ -375,6 +385,10 @@ efx_mcdi_phy_module_get_info(
 #define	MCDI_OUT_WORD(_emr, _ofst)					\
 	EFX_WORD_FIELD(*MCDI_OUT2(_emr, efx_word_t, _ofst),		\
 		    EFX_WORD_0)
+
+#define	MCDI_OUT_WORD_FIELD(_emr, _ofst, _field)			\
+	EFX_WORD_FIELD(*MCDI_OUT2(_emr, efx_word_t, _ofst),		\
+		       MC_CMD_ ## _field)
 
 #define	MCDI_OUT_DWORD(_emr, _ofst)					\
 	EFX_DWORD_FIELD(*MCDI_OUT2(_emr, efx_dword_t, _ofst),		\

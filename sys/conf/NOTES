@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/sys/conf/NOTES 347838 2019-05-16 17:48:36Z hselasky $
 #
 # NOTES -- Lines that can be cut/pasted into kernel and hints configs.
 #
@@ -6,8 +5,8 @@
 # 'makeoptions', 'hints', etc. go into the kernel configuration that you
 # run config(8) with.
 #
-# Lines that begin with 'hint.' are NOT for config(8), they go into your
-# hints file.  See /boot/device.hints and/or the 'hints' config(8) directive.
+# Lines that begin with 'envvar hint.' should go into your hints file.
+# See /boot/device.hints and/or the 'hints' config(8) directive.
 #
 # Please use ``make LINT'' to create an old-style LINT file if you want to
 # do kernel test-builds.
@@ -156,17 +155,14 @@ options 	BOOT_TAG=\"\"
 options 	BOOT_TAG_SZ=32
 
 options 	GEOM_BDE		# Disk encryption.
-options 	GEOM_BSD		# BSD disklabels (obsolete, gone in 12)
 options 	GEOM_CACHE		# Disk cache.
 options 	GEOM_CONCAT		# Disk concatenation.
 options 	GEOM_ELI		# Disk encryption.
-options 	GEOM_FOX		# Redundant path mitigation (obsolete, gone in 12)
 options 	GEOM_GATE		# Userland services.
 options 	GEOM_JOURNAL		# Journaling.
 options 	GEOM_LABEL		# Providers labelization.
 options 	GEOM_LINUX_LVM		# Linux LVM2 volumes
 options 	GEOM_MAP		# Map based partitioning
-options 	GEOM_MBR		# DOS/MBR partitioning (obsolete, gone in 12)
 options 	GEOM_MIRROR		# Disk mirroring.
 options 	GEOM_MULTIPATH		# Disk multipath
 options 	GEOM_NOP		# Test class.
@@ -174,20 +170,16 @@ options 	GEOM_PART_APM		# Apple partitioning
 options 	GEOM_PART_BSD		# BSD disklabel
 options 	GEOM_PART_BSD64		# BSD disklabel64
 options 	GEOM_PART_EBR		# Extended Boot Records
-options 	GEOM_PART_EBR_COMPAT	# Backward compatible partition names
 options 	GEOM_PART_GPT		# GPT partitioning
 options 	GEOM_PART_LDM		# Logical Disk Manager
 options 	GEOM_PART_MBR		# MBR partitioning
-options 	GEOM_PART_VTOC8		# SMI VTOC8 disk label
 options 	GEOM_RAID		# Soft RAID functionality.
 options 	GEOM_RAID3		# RAID3 functionality.
 options 	GEOM_SHSEC		# Shared secret.
 options 	GEOM_STRIPE		# Disk striping.
-options 	GEOM_SUNLABEL		# Sun/Solaris partitioning (obsolete, gone in 12)
 options 	GEOM_UZIP		# Read-only compressed disks
 options 	GEOM_VINUM		# Vinum logical volume manager
 options 	GEOM_VIRSTOR		# Virtual storage.
-options 	GEOM_VOL		# Volume names from UFS superblock (obsolete, gone in 12)
 options 	GEOM_ZERO		# Performance testing helper.
 
 #
@@ -294,7 +286,6 @@ options 	SX_NOINLINE
 # PREEMPTION allows the threads that are in the kernel to be preempted by
 #	  higher priority [interrupt] threads.  It helps with interactivity
 #	  and allows interrupt threads to run sooner rather than waiting.
-#	  WARNING! Only tested on amd64 and i386.
 # FULL_PREEMPTION instructs the kernel to preempt non-realtime kernel
 #	  threads.  Its sole use is to expose race conditions and other
 #	  bugs during development.  Enabling this option will reduce

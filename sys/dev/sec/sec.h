@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2008-2009 Semihalf, Piotr Ziecik
  * All rights reserved.
@@ -23,7 +23,6 @@
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef	_SEC_H
@@ -97,6 +96,7 @@ struct sec_hw_desc {
 	uint8_t			shd_iv[SEC_MAX_IV_LEN];
 	uint8_t			shd_key[SEC_MAX_KEY_LEN];
 	uint8_t			shd_mkey[SEC_MAX_KEY_LEN];
+	uint8_t			shd_digest[HASH_MAX_LEN];
 } __packed__;
 
 #define shd_eu_sel0		shd_control.request.eu_sel0
@@ -143,21 +143,17 @@ struct sec_lt {
 };
 
 struct sec_eu_methods {
-	int	(*sem_newsession)(struct sec_softc *sc,
-	    struct sec_session *ses, struct cryptoini *enc,
-	    struct cryptoini *mac);
+	bool	(*sem_newsession)(const struct crypto_session_params *csp);
 	int	(*sem_make_desc)(struct sec_softc *sc,
-	    struct sec_session *ses, struct sec_desc *desc,
-	    struct cryptop *crp, int buftype);
+	    const struct crypto_session_params *csp, struct sec_desc *desc,
+	    struct cryptop *crp);
 };
 
 struct sec_session {
 	struct sec_eu_methods	*ss_eu;
 	uint8_t			ss_key[SEC_MAX_KEY_LEN];
 	uint8_t			ss_mkey[SEC_MAX_KEY_LEN];
-	u_int			ss_klen;
-	u_int			ss_mklen;
-	u_int			ss_ivlen;
+	int			ss_mlen;
 };
 
 struct sec_desc_map_info {
@@ -317,11 +313,6 @@ struct sec_softc {
 #define SEC_FREE_LT_CNT(sc)						\
 	(((sc)->sc_lt_free_cnt - (sc)->sc_lt_alloc_cnt - 1)		\
 	& (SEC_LT_ENTRIES - 1))
-
-/* DMA Maping defines */
-#define SEC_MEMORY		0
-#define SEC_UIO			1
-#define SEC_MBUF		2
 
 /* Size of SEC registers area */
 #define SEC_IO_SIZE		0x10000

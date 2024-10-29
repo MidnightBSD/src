@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: BSD-2-Clause-NetBSD AND BSD-3-Clause */
+/* SPDX-License-Identifier: BSD-2-Clause AND BSD-3-Clause */
 /*	$NetBSD: qatreg.h,v 1.1 2019/11/20 09:37:46 hikaru Exp $	*/
 
 /*
@@ -1549,10 +1549,13 @@ struct flat_buffer_desc {
 	uint64_t phy_buffer;
 };
 
+#define	HW_MAXSEG	32
+
 struct buffer_list_desc {
 	uint64_t resrvd;
 	uint32_t num_buffers;
 	uint32_t reserved;
+	struct flat_buffer_desc flat_bufs[HW_MAXSEG];
 };
 
 /* -------------------------------------------------------------------------- */

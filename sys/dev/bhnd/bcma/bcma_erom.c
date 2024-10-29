@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015-2017 Landon Fuller <landonf@landonf.org>
  * Copyright (c) 2017 The FreeBSD Foundation
@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -77,7 +76,6 @@ static int		 bcma_erom_seek_next(struct bcma_erom *erom,
 			     uint8_t etype);
 static int		 bcma_erom_region_to_port_type(struct bcma_erom *erom,
 			     uint8_t region_type, bhnd_port_type *port_type);
-
 
 static int		 bcma_erom_peek32(struct bcma_erom *erom,
 			     uint32_t *entry);
@@ -301,7 +299,7 @@ bcma_erom_lookup_core_addr(bhnd_erom_t *erom, const struct bhnd_core_match *desc
 		/* Otherwise, seek to next block of region records */
 		while (1) {
 			uint8_t	next_type, next_port;
-	
+
 			if ((error = bcma_erom_skip_sport_region(sc)))
 				return (error);
 
@@ -675,7 +673,7 @@ bcma_erom_seek_matching_core(struct bcma_erom *sc,
 
 		/* Save the core offset */
 		core_offset = bcma_erom_tell(sc);
-	
+
 		/* Parse the core */
 		if ((error = bcma_erom_parse_core(sc, &ec)))
 			return (error);
@@ -743,11 +741,11 @@ bcma_erom_parse_core(struct bcma_erom *erom, struct bcma_erom_core *core)
 	/* Parse CoreDescA */
 	if ((error = bcma_erom_read32(erom, &entry)))
 		return (error);
-	
+
 	/* Handle EOF */
 	if (entry == BCMA_EROM_TABLE_EOF)
 		return (ENOENT);
-	
+
 	if (!BCMA_EROM_ENTRY_IS(entry, CORE)) {
 		EROM_LOG(erom, "Unexpected EROM entry 0x%x (type=%s)\n",
                    entry, bcma_erom_entry_type_name(entry));
@@ -757,7 +755,7 @@ bcma_erom_parse_core(struct bcma_erom *erom, struct bcma_erom_core *core)
 
 	core->vendor = BCMA_EROM_GET_ATTR(entry, COREA_DESIGNER);
 	core->device = BCMA_EROM_GET_ATTR(entry, COREA_ID);
-	
+
 	/* Parse CoreDescB */
 	if ((error = bcma_erom_read32(erom, &entry)))
 		return (error);
@@ -793,7 +791,7 @@ bcma_erom_parse_mport(struct bcma_erom *erom, struct bcma_erom_mport *mport)
 	/* Parse the master port descriptor */
 	if ((error = bcma_erom_read32(erom, &entry)))
 		return (error);
-	
+
 	if (!BCMA_EROM_ENTRY_IS(entry, MPORT))
 		return (EINVAL);
 
@@ -956,7 +954,7 @@ bcma_erom_corecfg_fill_port_regions(struct bcma_erom *erom,
 
 	/* Fetch the list to be populated */
 	sports = bcma_corecfg_get_port_list(corecfg, port_type);
-	
+
 	/* Allocate a new port descriptor */
 	sport = bcma_alloc_sport(port_num, port_type);
 	if (sport == NULL)
@@ -1108,7 +1106,7 @@ bcma_erom_next_corecfg(struct bcma_erom *erom, struct bcma_corecfg **result)
 	    core.device, core.rev);
 	if (cfg == NULL)
 		return (ENOMEM);
-	
+
 	/* These are 5-bit values in the EROM table, and should never be able
 	 * to overflow BCMA_PID_MAX. */
 	KASSERT(core.num_mport <= BCMA_PID_MAX, ("unsupported mport count"));
@@ -1134,7 +1132,7 @@ bcma_erom_next_corecfg(struct bcma_erom *erom, struct bcma_corecfg **result)
 	for (uint8_t i = 0; i < core.num_mport; i++) {
 		struct bcma_mport	*mport;
 		struct bcma_erom_mport	 mpd;
-	
+
 		/* Parse the master port descriptor */
 		error = bcma_erom_parse_mport(erom, &mpd);
 		if (error)
@@ -1153,7 +1151,6 @@ bcma_erom_next_corecfg(struct bcma_erom *erom, struct bcma_corecfg **result)
 		/* Update dinfo */
 		STAILQ_INSERT_TAIL(&cfg->master_ports, mport, mp_link);
 	}
-	
 
 	/*
 	 * Determine whether this is a bridge device; if so, we can
@@ -1183,7 +1180,7 @@ bcma_erom_next_corecfg(struct bcma_erom *erom, struct bcma_corecfg **result)
 			cfg->num_bridge_ports = 0;
 		}
 	}
-	
+
 	/* Device/bridge port descriptors */
 	for (uint8_t sp_num = 0; sp_num < core.num_dport; sp_num++) {
 		error = bcma_erom_corecfg_fill_port_regions(erom, cfg, sp_num,
@@ -1202,7 +1199,6 @@ bcma_erom_next_corecfg(struct bcma_erom *erom, struct bcma_corecfg **result)
 			goto failed;
 	}
 
-	
 	/* Wrapper (aka device management) descriptors (for slave ports). */	
 	for (uint8_t i = 0; i < core.num_swrap; i++) {
 		/* Slave wrapper ports are not numbered distinctly from master
@@ -1249,7 +1245,7 @@ bcma_erom_next_corecfg(struct bcma_erom *erom, struct bcma_corecfg **result)
 
 	*result = cfg;
 	return (0);
-	
+
 failed:
 	if (cfg != NULL)
 		bcma_free_corecfg(cfg);

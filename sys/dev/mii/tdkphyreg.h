@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000,2001 Jonathan Chen.
  * All rights reserved.
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -71,13 +70,11 @@
 #define	INT_CTRL_RXERR	0x4000
 #define	INT_CTRL_JABBER	0x8000
 
-
 #define	MII_DIAG	18
 #define	DIAG_RLOCK	0x0100
 #define	DIAG_RPASS	0x0200
 #define	DIAG_RATE_100	0x0400
 #define	DIAG_DUPLEX	0x0800
 #define	DIAG_NEGFAIL	0x1000
-
 
 #endif

@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * DEC "tulip" clone ethernet driver. Supports the DEC/Intel 21143
  * series chips and several workalikes including the following:
@@ -133,11 +132,6 @@
 #define	DC_USEIOSPACE
 
 #include <dev/dc/if_dcreg.h>
-
-#ifdef __sparc64__
-#include <dev/ofw/openfirm.h>
-#include <machine/ofw_machdep.h>
-#endif
 
 MODULE_DEPEND(dc, pci, 1, 1, 1);
 MODULE_DEPEND(dc, ether, 1, 1, 1);
@@ -961,13 +955,24 @@ dc_mchash_be(const uint8_t *addr)
  * frames. We also sneak the broadcast address into the hash filter since
  * we need that too.
  */
+static u_int
+dc_hash_maddr_21143(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	struct dc_softc *sc = arg;
+	uint32_t h;
+
+	h = dc_mchash_le(sc, LLADDR(sdl));
+	sc->dc_cdata.dc_sbuf[h >> 4] |= htole32(1 << (h & 0xF));
+
+	return (1);
+}
+
 static void
 dc_setfilt_21143(struct dc_softc *sc)
 {
 	uint16_t eaddr[(ETHER_ADDR_LEN+1)/2];
 	struct dc_desc *sframe;
 	uint32_t h, *sp;
-	struct ifmultiaddr *ifma;
 	struct ifnet *ifp;
 	int i;
 
@@ -997,15 +1002,7 @@ dc_setfilt_21143(struct dc_softc *sc)
 	else
 		DC_CLRBIT(sc, DC_NETCFG, DC_NETCFG_RX_ALLMULTI);
 
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		h = dc_mchash_le(sc,
-		    LLADDR((struct sockaddr_dl *)ifma->ifma_addr));
-		sp[h >> 4] |= htole32(1 << (h & 0xF));
-	}
-	if_maddr_runlock(ifp);
+	if_foreach_llmaddr(ifp, dc_hash_maddr_21143, sp);
 
 	if (ifp->if_flags & IFF_BROADCAST) {
 		h = dc_mchash_le(sc, ifp->if_broadcastaddr);
@@ -1035,14 +1032,47 @@ dc_setfilt_21143(struct dc_softc *sc)
 	sc->dc_wdog_timer = 5;
 }
 
+static u_int
+dc_hash_maddr_admtek_be(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint32_t *hashes = arg;
+	int h = 0;
+
+	h = dc_mchash_be(LLADDR(sdl));
+	if (h < 32)
+		hashes[0] |= (1 << h);
+	else
+		hashes[1] |= (1 << (h - 32));
+
+	return (1);
+}
+
+struct dc_hash_maddr_admtek_le_ctx {
+	struct dc_softc *sc;
+	uint32_t hashes[2];
+};
+
+static u_int
+dc_hash_maddr_admtek_le(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	struct dc_hash_maddr_admtek_le_ctx *ctx = arg;
+	int h = 0;
+
+	h = dc_mchash_le(ctx->sc, LLADDR(sdl));
+	if (h < 32)
+		ctx->hashes[0] |= (1 << h);
+	else
+		ctx->hashes[1] |= (1 << (h - 32));
+
+	return (1);
+}
+
 static void
 dc_setfilt_admtek(struct dc_softc *sc)
 {
 	uint8_t eaddr[ETHER_ADDR_LEN];
 	struct ifnet *ifp;
-	struct ifmultiaddr *ifma;
-	int h = 0;
-	uint32_t hashes[2] = { 0, 0 };
+	struct dc_hash_maddr_admtek_le_ctx ctx = { sc, { 0, 0 }};
 
 	ifp = sc->dc_ifp;
 
@@ -1075,25 +1105,13 @@ dc_setfilt_admtek(struct dc_softc *sc)
 		return;
 
 	/* Now program new ones. */
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		if (DC_IS_CENTAUR(sc))
-			h = dc_mchash_le(sc,
-			    LLADDR((struct sockaddr_dl *)ifma->ifma_addr));
-		else
-			h = dc_mchash_be(
-			    LLADDR((struct sockaddr_dl *)ifma->ifma_addr));
-		if (h < 32)
-			hashes[0] |= (1 << h);
-		else
-			hashes[1] |= (1 << (h - 32));
-	}
-	if_maddr_runlock(ifp);
+	if (DC_IS_CENTAUR(sc))
+		if_foreach_llmaddr(ifp, dc_hash_maddr_admtek_le, &ctx);
+	else
+		if_foreach_llmaddr(ifp, dc_hash_maddr_admtek_be, &ctx.hashes);
 
-	CSR_WRITE_4(sc, DC_AL_MAR0, hashes[0]);
-	CSR_WRITE_4(sc, DC_AL_MAR1, hashes[1]);
+	CSR_WRITE_4(sc, DC_AL_MAR0, ctx.hashes[0]);
+	CSR_WRITE_4(sc, DC_AL_MAR1, ctx.hashes[1]);
 }
 
 static void
@@ -1101,8 +1119,6 @@ dc_setfilt_asix(struct dc_softc *sc)
 {
 	uint32_t eaddr[(ETHER_ADDR_LEN+3)/4];
 	struct ifnet *ifp;
-	struct ifmultiaddr *ifma;
-	int h = 0;
 	uint32_t hashes[2] = { 0, 0 };
 
 	ifp = sc->dc_ifp;
@@ -1148,17 +1164,7 @@ dc_setfilt_asix(struct dc_softc *sc)
 		return;
 
 	/* now program new ones */
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		h = dc_mchash_be(LLADDR((struct sockaddr_dl *)ifma->ifma_addr));
-		if (h < 32)
-			hashes[0] |= (1 << h);
-		else
-			hashes[1] |= (1 << (h - 32));
-	}
-	if_maddr_runlock(ifp);
+	if_foreach_llmaddr(ifp, dc_hash_maddr_admtek_be, hashes);
 
 	CSR_WRITE_4(sc, DC_AX_FILTIDX, DC_AX_FILTIDX_MAR0);
 	CSR_WRITE_4(sc, DC_AX_FILTDATA, hashes[0]);
@@ -1166,15 +1172,29 @@ dc_setfilt_asix(struct dc_softc *sc)
 	CSR_WRITE_4(sc, DC_AX_FILTDATA, hashes[1]);
 }
 
+static u_int
+dc_hash_maddr_uli(void *arg, struct sockaddr_dl *sdl, u_int mcnt)
+{
+	uint32_t **sp = arg;
+	uint8_t *ma;
+
+	if (mcnt == DC_ULI_FILTER_NPERF)
+		return (0);
+	ma = LLADDR(sdl);
+	*(*sp)++ = DC_SP_MAC(ma[1] << 8 | ma[0]);
+	*(*sp)++ = DC_SP_MAC(ma[3] << 8 | ma[2]);
+	*(*sp)++ = DC_SP_MAC(ma[5] << 8 | ma[4]);
+
+	return (1);
+}
+
 static void
 dc_setfilt_uli(struct dc_softc *sc)
 {
 	uint8_t eaddr[ETHER_ADDR_LEN];
 	struct ifnet *ifp;
-	struct ifmultiaddr *ifma;
 	struct dc_desc *sframe;
 	uint32_t filter, *sp;
-	uint8_t *ma;
 	int i, mcnt;
 
 	ifp = sc->dc_ifp;
@@ -1208,28 +1228,16 @@ dc_setfilt_uli(struct dc_softc *sc)
 	filter &= ~(DC_NETCFG_RX_PROMISC | DC_NETCFG_RX_ALLMULTI);
 
 	/* Now build perfect filters. */
-	mcnt = 0;
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		if (mcnt >= DC_ULI_FILTER_NPERF) {
-			filter |= DC_NETCFG_RX_ALLMULTI;
-			break;
-		}
-		ma = LLADDR((struct sockaddr_dl *)ifma->ifma_addr);
-		*sp++ = DC_SP_MAC(ma[1] << 8 | ma[0]);
-		*sp++ = DC_SP_MAC(ma[3] << 8 | ma[2]);
-		*sp++ = DC_SP_MAC(ma[5] << 8 | ma[4]);
-		mcnt++;
-	}
-	if_maddr_runlock(ifp);
+	mcnt = if_foreach_llmaddr(ifp, dc_hash_maddr_uli, &sp);
 
-	for (; mcnt < DC_ULI_FILTER_NPERF; mcnt++) {
-		*sp++ = DC_SP_MAC(0xFFFF);
-		*sp++ = DC_SP_MAC(0xFFFF);
-		*sp++ = DC_SP_MAC(0xFFFF);
-	}
+	if (mcnt == DC_ULI_FILTER_NPERF)
+		filter |= DC_NETCFG_RX_ALLMULTI;
+	else
+		for (; mcnt < DC_ULI_FILTER_NPERF; mcnt++) {
+			*sp++ = DC_SP_MAC(0xFFFF);
+			*sp++ = DC_SP_MAC(0xFFFF);
+			*sp++ = DC_SP_MAC(0xFFFF);
+		}
 
 	if (filter & (DC_NETCFG_TX_ON | DC_NETCFG_RX_ON))
 		CSR_WRITE_4(sc, DC_NETCFG,
@@ -1257,12 +1265,22 @@ dc_setfilt_uli(struct dc_softc *sc)
 	sc->dc_wdog_timer = 5;
 }
 
+static u_int
+dc_hash_maddr_xircom(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	struct dc_softc *sc = arg;
+	uint32_t h;
+
+	h = dc_mchash_le(sc, LLADDR(sdl));
+	sc->dc_cdata.dc_sbuf[h >> 4] |= htole32(1 << (h & 0xF));
+	return (1);
+}
+
 static void
 dc_setfilt_xircom(struct dc_softc *sc)
 {
 	uint16_t eaddr[(ETHER_ADDR_LEN+1)/2];
 	struct ifnet *ifp;
-	struct ifmultiaddr *ifma;
 	struct dc_desc *sframe;
 	uint32_t h, *sp;
 	int i;
@@ -1294,15 +1312,7 @@ dc_setfilt_xircom(struct dc_softc *sc)
 	else
 		DC_CLRBIT(sc, DC_NETCFG, DC_NETCFG_RX_ALLMULTI);
 
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		h = dc_mchash_le(sc,
-		    LLADDR((struct sockaddr_dl *)ifma->ifma_addr));
-		sp[h >> 4] |= htole32(1 << (h & 0xF));
-	}
-	if_maddr_runlock(ifp);
+	if_foreach_llmaddr(ifp, dc_hash_maddr_xircom, &sp);
 
 	if (ifp->if_flags & IFF_BROADCAST) {
 		h = dc_mchash_le(sc, ifp->if_broadcastaddr);
@@ -2276,14 +2286,6 @@ dc_attach(device_t dev)
 		break;
 	case DC_TYPE_DM9102:
 		dc_read_eeprom(sc, (caddr_t)&eaddr, DC_EE_NODEADDR, 3, 0);
-#ifdef __sparc64__
-		/*
-		 * If this is an onboard dc(4) the station address read from
-		 * the EEPROM is all zero and we have to get it from the FCode.
-		 */
-		if (eaddr[0] == 0 && (eaddr[1] & ~0xffff) == 0)
-			OF_getetheraddr(dev, (caddr_t)&eaddr);
-#endif
 		break;
 	case DC_TYPE_21143:
 	case DC_TYPE_ASIX:
@@ -2381,11 +2383,6 @@ dc_attach(device_t dev)
 		goto fail;
 
 	ifp = sc->dc_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(dev, "can not if_alloc()\n");
-		error = ENOSPC;
-		goto fail;
-	}
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;

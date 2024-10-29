@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997 Nicolas Souchu
  * All rights reserved.
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * General purpose routines for the IEEE1284-1994 Standard
  */
@@ -41,7 +40,6 @@
 #include <sys/mutex.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
-
 
 #include <dev/ppbus/ppbconf.h>
 #include <dev/ppbus/ppb_1284.h>
@@ -223,7 +221,6 @@ ppb_peripheral_negociate(device_t bus, int mode, int options)
 	/* nibble mode is not supported */
 	if ((r == (char)request_mode) ||
 			(r == NIBBLE_1284_NORMAL)) {
-
 		/* Event 5 - restore direction bit, no data avail */
 		ppb_wctr(bus, (STROBE | nINIT) & ~(SELECTIN));
 		DELAY(1);
@@ -488,7 +485,6 @@ nibble_1284_inbyte(device_t bus, char *buffer)
 	int i, error;
 
 	for (i = 0; i < 2; i++) {
-
 		/* Event 7 - ready to take data (nAUTO low) */
 		ppb_wctr(bus, (nINIT | AUTOFEED) & ~(STROBE | SELECTIN));
 
@@ -554,7 +550,6 @@ spp_1284_read(device_t bus, int mode, char *buffer, int max, int *read)
 	}
 
 	while ((len < max) && !(ppb_rstr(bus) & (nFAULT))) {
-
 		ppb_1284_set_state(bus, PPB_REVERSE_TRANSFER);
 
 #ifdef DEBUG_1284
@@ -743,11 +738,9 @@ ppb_1284_negociate(device_t bus, int mode, int options)
 	/* Event 7 - querying result consider nACK not to misunderstand
 	 * a remote computer terminate sequence */
 	if (options & PPB_EXTENSIBILITY_LINK) {
-
 		/* XXX not fully supported yet */
 		ppb_1284_terminate(bus);
 		return (0);
-
 	}
 	if (request_mode == NIBBLE_1284_NORMAL) {
 		if (do_1284_wait(bus, nACK | SELECT, nACK)) {

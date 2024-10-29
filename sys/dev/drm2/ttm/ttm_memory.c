@@ -26,7 +26,6 @@
  **************************************************************************/
 
 #include <sys/cdefs.h>
-
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/ttm/ttm_memory.h>
 #include <dev/drm2/ttm/ttm_module.h>

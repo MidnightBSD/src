@@ -1,7 +1,6 @@
 /*-
  * Copyright (c) 2018 Emmanuel Vadot <manu@FreeBSD.Org>
  * Copyright (c) 2016 Jared McNeill <jmcneill@invisible.ca>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +22,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -31,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -122,9 +119,6 @@ static void
 cpufreq_dt_opp_to_setting(device_t dev, const struct cpufreq_dt_opp *opp,
     struct cf_setting *set)
 {
-	struct cpufreq_dt_softc *sc;
-
-	sc = device_get_softc(dev);
 
 	memset(set, 0, sizeof(*set));
 	set->freq = opp->freq / 1000000;
@@ -252,7 +246,6 @@ cpufreq_dt_set(device_t dev, const struct cf_setting *set)
 	return (0);
 }
 
-
 static int
 cpufreq_dt_type(device_t dev, int *type)
 {
@@ -309,7 +302,8 @@ cpufreq_dt_identify(driver_t *driver, device_t parent)
 	if (device_find_child(parent, "cpufreq_dt", -1) != NULL)
 		return;
 
-	if (BUS_ADD_CHILD(parent, 0, "cpufreq_dt", -1) == NULL)
+	if (BUS_ADD_CHILD(parent, 0, "cpufreq_dt", device_get_unit(parent))
+	    == NULL)
 		device_printf(parent, "add cpufreq_dt child failed\n");
 }
 
@@ -545,7 +539,6 @@ cpufreq_dt_attach(device_t dev)
 
 	return (0);
 }
-
 
 static device_method_t cpufreq_dt_methods[] = {
 	/* Device interface */

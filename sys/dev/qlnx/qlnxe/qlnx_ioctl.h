@@ -24,7 +24,6 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
 
 #ifndef _QLNX_IOCTL_H_
@@ -75,7 +74,6 @@ struct qlnx_trace {
 	uint32_t	dwords[QLNX_MAX_HW_FUNCS];
 };
 typedef struct qlnx_trace qlnx_trace_t;
-
 
 /*
  * Read driver info
@@ -180,12 +178,10 @@ struct qlnx_perm_mac_addr {
 };
 typedef struct qlnx_perm_mac_addr qlnx_perm_mac_addr_t;
 
-
 /*
  * Read STORM statistics registers
  */
 struct qlnx_storm_stats {
-
 	/* xstorm */
 	uint32_t xstorm_active_cycles;
 	uint32_t xstorm_stall_cycles;
@@ -266,7 +262,6 @@ struct qlnx_lldp_sys_tlvs {
 	uint16_t	buf_size;
 };
 typedef struct qlnx_lldp_sys_tlvs qlnx_lldp_sys_tlvs_t;
-
 
 /*
  * Read grcdump size

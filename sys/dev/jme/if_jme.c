@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008, Pyun YongHyeon <yongari@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -808,12 +807,6 @@ jme_attach(device_t dev)
 		goto fail;
 
 	ifp = sc->jme_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(dev, "cannot allocate ifnet structure.\n");
-		error = ENXIO;
-		goto fail;
-	}
-
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
@@ -883,12 +876,6 @@ jme_attach(device_t dev)
 	/* Create local taskq. */
 	sc->jme_tq = taskqueue_create_fast("jme_taskq", M_WAITOK,
 	    taskqueue_thread_enqueue, &sc->jme_tq);
-	if (sc->jme_tq == NULL) {
-		device_printf(dev, "could not create taskqueue.\n");
-		ether_ifdetach(ifp);
-		error = ENXIO;
-		goto fail;
-	}
 	taskqueue_start_threads(&sc->jme_tq, 1, PI_NET, "%s taskq",
 	    device_get_nameunit(sc->jme_dev));
 
@@ -993,24 +980,24 @@ jme_sysctl_node(struct jme_softc *sc)
 	child = SYSCTL_CHILDREN(device_get_sysctl_tree(sc->jme_dev));
 
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "tx_coal_to",
-	    CTLTYPE_INT | CTLFLAG_RW, &sc->jme_tx_coal_to, 0,
-	    sysctl_hw_jme_tx_coal_to, "I", "jme tx coalescing timeout");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, &sc->jme_tx_coal_to,
+	    0, sysctl_hw_jme_tx_coal_to, "I", "jme tx coalescing timeout");
 
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "tx_coal_pkt",
-	    CTLTYPE_INT | CTLFLAG_RW, &sc->jme_tx_coal_pkt, 0,
-	    sysctl_hw_jme_tx_coal_pkt, "I", "jme tx coalescing packet");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, &sc->jme_tx_coal_pkt,
+	    0, sysctl_hw_jme_tx_coal_pkt, "I", "jme tx coalescing packet");
 
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "rx_coal_to",
-	    CTLTYPE_INT | CTLFLAG_RW, &sc->jme_rx_coal_to, 0,
-	    sysctl_hw_jme_rx_coal_to, "I", "jme rx coalescing timeout");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, &sc->jme_rx_coal_to,
+	    0, sysctl_hw_jme_rx_coal_to, "I", "jme rx coalescing timeout");
 
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "rx_coal_pkt",
-	    CTLTYPE_INT | CTLFLAG_RW, &sc->jme_rx_coal_pkt, 0,
-	    sysctl_hw_jme_rx_coal_pkt, "I", "jme rx coalescing packet");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, &sc->jme_rx_coal_pkt,
+	    0, sysctl_hw_jme_rx_coal_pkt, "I", "jme rx coalescing packet");
 
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "process_limit",
-	    CTLTYPE_INT | CTLFLAG_RW, &sc->jme_process_limit, 0,
-	    sysctl_hw_jme_proc_limit, "I",
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+	    &sc->jme_process_limit, 0, sysctl_hw_jme_proc_limit, "I",
 	    "max number of Rx events to process");
 
 	/* Pull in device tunables. */
@@ -1083,13 +1070,13 @@ jme_sysctl_node(struct jme_softc *sc)
 	if ((sc->jme_flags & JME_FLAG_HWMIB) == 0)
 		return;
 
-	tree = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "stats", CTLFLAG_RD,
-	    NULL, "JME statistics");
+	tree = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "stats",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "JME statistics");
 	parent = SYSCTL_CHILDREN(tree);
 
 	/* Rx statistics. */
-	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "rx", CTLFLAG_RD,
-	    NULL, "Rx MAC statistics");
+	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "rx",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Rx MAC statistics");
 	child = SYSCTL_CHILDREN(tree);
 	JME_SYSCTL_STAT_ADD32(ctx, child, "good_frames",
 	    &stats->rx_good_frames, "Good frames");
@@ -1105,8 +1092,8 @@ jme_sysctl_node(struct jme_softc *sc)
 	    &stats->rx_bad_frames, "Bad frames");
 
 	/* Tx statistics. */
-	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "tx", CTLFLAG_RD,
-	    NULL, "Tx MAC statistics");
+	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "tx",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Tx MAC statistics");
 	child = SYSCTL_CHILDREN(tree);
 	JME_SYSCTL_STAT_ADD32(ctx, child, "good_frames",
 	    &stats->tx_good_frames, "Good frames");
@@ -3235,12 +3222,26 @@ jme_set_vlan(struct jme_softc *sc)
 	CSR_WRITE_4(sc, JME_RXMAC, reg);
 }
 
+static u_int
+jme_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint32_t crc, *mchash = arg;
+
+	crc = ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN);
+
+	/* Just want the 6 least significant bits. */
+	crc &= 0x3f;
+
+	/* Set the corresponding bit in the hash table. */
+	mchash[crc >> 5] |= 1 << (crc & 0x1f);
+
+	return (1);
+}
+
 static void
 jme_set_filter(struct jme_softc *sc)
 {
 	struct ifnet *ifp;
-	struct ifmultiaddr *ifma;
-	uint32_t crc;
 	uint32_t mchash[2];
 	uint32_t rxcfg;
 
@@ -3275,21 +3276,7 @@ jme_set_filter(struct jme_softc *sc)
 	 */
 	rxcfg |= RXMAC_MULTICAST;
 	bzero(mchash, sizeof(mchash));
-
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &sc->jme_ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		crc = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-		    ifma->ifma_addr), ETHER_ADDR_LEN);
-
-		/* Just want the 6 least significant bits. */
-		crc &= 0x3f;
-
-		/* Set the corresponding bit in the hash table. */
-		mchash[crc >> 5] |= 1 << (crc & 0x1f);
-	}
-	if_maddr_runlock(ifp);
+	if_foreach_llmaddr(ifp, jme_hash_maddr, &mchash);
 
 	CSR_WRITE_4(sc, JME_MAR0, mchash[0]);
 	CSR_WRITE_4(sc, JME_MAR1, mchash[1]);

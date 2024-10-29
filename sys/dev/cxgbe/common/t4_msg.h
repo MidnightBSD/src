@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011, 2016 Chelsio Communications, Inc.
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  *
  */
 
@@ -1157,6 +1156,17 @@ struct cpl_tx_data {
 	__be32 flags;
 };
 
+/* cpl_tx_data.len fields */
+#define S_TX_DATA_MSS    16
+#define M_TX_DATA_MSS    0xFFFF
+#define V_TX_DATA_MSS(x) ((x) << S_TX_DATA_MSS)
+#define G_TX_DATA_MSS(x) (((x) >> S_TX_DATA_MSS) & M_TX_DATA_MSS)
+
+#define S_TX_LENGTH    0
+#define M_TX_LENGTH    0xFFFF
+#define V_TX_LENGTH(x) ((x) << S_TX_LENGTH)
+#define G_TX_LENGTH(x) (((x) >> S_TX_LENGTH) & M_TX_LENGTH)
+
 /* cpl_tx_data.flags fields */
 #define S_TX_PROXY    5
 #define V_TX_PROXY(x) ((x) << S_TX_PROXY)
@@ -1203,6 +1213,14 @@ struct cpl_tx_data {
 #define S_T6_TX_FORCE    20
 #define V_T6_TX_FORCE(x) ((x) << S_T6_TX_FORCE)
 #define F_T6_TX_FORCE    V_T6_TX_FORCE(1U)
+
+#define S_TX_BYPASS    21
+#define V_TX_BYPASS(x) ((x) << S_TX_BYPASS)
+#define F_TX_BYPASS    V_TX_BYPASS(1U)
+
+#define S_TX_PUSH    22
+#define V_TX_PUSH(x) ((x) << S_TX_PUSH)
+#define F_TX_PUSH    V_TX_PUSH(1U)
 
 /* additional tx_data_wr.flags fields */
 #define S_TX_CPU_IDX    0
@@ -2842,7 +2860,7 @@ struct ulptx_sgl {
 	__be32 len0;
 	__be64 addr0;
 #if !(defined C99_NOT_SUPPORTED)
-	struct ulptx_sge_pair sge[0];
+	struct ulptx_sge_pair sge[];
 #endif
 };
 
@@ -2856,7 +2874,7 @@ struct ulptx_isgl {
 	__be32 cmd_nisge;
 	__be32 rsvd;
 #if !(defined C99_NOT_SUPPORTED)
-	struct ulptx_isge sge[0];
+	struct ulptx_isge sge[];
 #endif
 };
 

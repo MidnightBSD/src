@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "bnxt.h"
 
 int bnxt_init_sysctl_ctx(struct bnxt_softc *softc);

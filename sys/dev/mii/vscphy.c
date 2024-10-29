@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Microsemi / Vitesse VSC8501 (and similar).
  */

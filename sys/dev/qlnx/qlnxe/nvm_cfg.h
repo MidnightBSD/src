@@ -24,9 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
-
 
 /****************************************************************************
  *
@@ -41,7 +39,6 @@
 
 #ifndef NVM_CFG_H
 #define NVM_CFG_H
-
 
 #define NVM_CFG_version 0x83306
 

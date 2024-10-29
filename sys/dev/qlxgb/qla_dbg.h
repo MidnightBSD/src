@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011-2013 Qlogic Corporation
  * All rights reserved.
@@ -25,7 +25,6 @@
  *  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /*
@@ -44,7 +43,6 @@ extern void qla_dump_buf16(qla_host_t *ha, char *str, void *dbuf,
 		uint32_t len16);
 extern void qla_dump_buf32(qla_host_t *ha, char *str, void *dbuf,
 		uint32_t len32);
-
 
 #define DBG 1
 

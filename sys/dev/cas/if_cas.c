@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2001 Eduardo Horvath.
  * Copyright (c) 2001-2003 Thomas Moestl
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * driver for Sun Cassini/Cassini+ and National Semiconductor DP83065
  * Saturn Gigabit Ethernet controllers
@@ -77,7 +76,7 @@
 #include <netinet/udp.h>
 
 #include <machine/bus.h>
-#if defined(__powerpc__) || defined(__sparc64__)
+#if defined(__powerpc__)
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/openfirm.h>
 #include <machine/ofw_machdep.h>
@@ -191,8 +190,6 @@ cas_attach(struct cas_softc *sc)
 
 	/* Set up ifnet structure. */
 	ifp = sc->sc_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL)
-		return (ENOSPC);
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(sc->sc_dev),
 	    device_get_unit(sc->sc_dev));
@@ -207,15 +204,10 @@ cas_attach(struct cas_softc *sc)
 	callout_init_mtx(&sc->sc_tick_ch, &sc->sc_mtx, 0);
 	callout_init_mtx(&sc->sc_rx_ch, &sc->sc_mtx, 0);
 	/* Create local taskq. */
-	TASK_INIT(&sc->sc_intr_task, 0, cas_intr_task, sc);
+	NET_TASK_INIT(&sc->sc_intr_task, 0, cas_intr_task, sc);
 	TASK_INIT(&sc->sc_tx_task, 1, cas_tx_task, ifp);
 	sc->sc_tq = taskqueue_create_fast("cas_taskq", M_WAITOK,
 	    taskqueue_thread_enqueue, &sc->sc_tq);
-	if (sc->sc_tq == NULL) {
-		device_printf(sc->sc_dev, "could not create taskqueue\n");
-		error = ENXIO;
-		goto fail_ifnet;
-	}
 	error = taskqueue_start_threads(&sc->sc_tq, 1, PI_NET, "%s taskq",
 	    device_get_nameunit(sc->sc_dev));
 	if (error != 0) {
@@ -468,7 +460,6 @@ cas_attach(struct cas_softc *sc)
 	bus_dma_tag_destroy(sc->sc_pdmatag);
  fail_taskq:
 	taskqueue_free(sc->sc_tq);
- fail_ifnet:
 	if_free(ifp);
 	return (error);
 }
@@ -1044,14 +1035,10 @@ cas_init_locked(struct cas_softc *sc)
 
 	/*
 	 * Enable infinite bursts for revisions without PCI issues if
-	 * applicable.  Doing so greatly improves the TX performance on
-	 * !__sparc64__ (on sparc64, setting CAS_INF_BURST improves TX
-	 * performance only marginally but hurts RX throughput quite a bit).
+	 * applicable.  Doing so greatly improves the TX performance.
 	 */
 	CAS_WRITE_4(sc, CAS_INF_BURST,
-#if !defined(__sparc64__)
 	    (sc->sc_flags & CAS_TABORT) == 0 ? CAS_INF_BURST_EN :
-#endif
 	    0);
 
 	/* Set up interrupts. */
@@ -1611,11 +1598,14 @@ cas_tint(struct cas_softc *sc)
 static void
 cas_rint_timeout(void *arg)
 {
+	struct epoch_tracker et;
 	struct cas_softc *sc = arg;
 
 	CAS_LOCK_ASSERT(sc, MA_OWNED);
 
+	NET_EPOCH_ENTER(et);
 	cas_rint(sc);
+	NET_EPOCH_EXIT(et);
 }
 
 static void
@@ -2497,14 +2487,27 @@ cas_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	return (error);
 }
 
+static u_int
+cas_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint32_t crc, *hash = arg;
+
+	crc = ether_crc32_le(LLADDR(sdl), ETHER_ADDR_LEN);
+	/* We just want the 8 most significant bits. */
+	crc >>= 24;
+	/* Set the corresponding bit in the filter. */
+	hash[crc >> 4] |= 1 << (15 - (crc & 15));
+
+	return (1);
+}
+
 static void
 cas_setladrf(struct cas_softc *sc)
 {
 	struct ifnet *ifp = sc->sc_ifp;
-	struct ifmultiaddr *inm;
 	int i;
 	uint32_t hash[16];
-	uint32_t crc, v;
+	uint32_t v;
 
 	CAS_LOCK_ASSERT(sc, MA_OWNED);
 
@@ -2541,23 +2544,8 @@ cas_setladrf(struct cas_softc *sc)
 	 * is the MSB).
 	 */
 
-	/* Clear the hash table. */
 	memset(hash, 0, sizeof(hash));
-
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(inm, &ifp->if_multiaddrs, ifma_link) {
-		if (inm->ifma_addr->sa_family != AF_LINK)
-			continue;
-		crc = ether_crc32_le(LLADDR((struct sockaddr_dl *)
-		    inm->ifma_addr), ETHER_ADDR_LEN);
-
-		/* We just want the 8 most significant bits. */
-		crc >>= 24;
-
-		/* Set the corresponding bit in the filter. */
-		hash[crc >> 4] |= 1 << (15 - (crc & 15));
-	}
-	if_maddr_runlock(ifp);
+	if_foreach_llmaddr(ifp, cas_hash_maddr, &hash);
 
 	v |= CAS_MAC_RX_CONF_HFILTER;
 
@@ -2653,7 +2641,7 @@ cas_pci_attach(device_t dev)
 	char buf[sizeof(CAS_LOCAL_MAC_ADDRESS)];
 	struct cas_softc *sc;
 	int i;
-#if !(defined(__powerpc__) || defined(__sparc64__))
+#if !defined(__powerpc__)
 	u_char enaddr[4][ETHER_ADDR_LEN];
 	u_int j, k, lma, pcs[4], phy;
 #endif
@@ -2697,7 +2685,7 @@ cas_pci_attach(device_t dev)
 
 	CAS_LOCK_INIT(sc, device_get_nameunit(dev));
 
-#if defined(__powerpc__) || defined(__sparc64__)
+#if defined(__powerpc__)
 	OF_getetheraddr(dev, sc->sc_enaddr);
 	if (OF_getprop(ofw_bus_get_node(dev), CAS_PHY_INTERFACE, buf,
 	    sizeof(buf)) > 0 || OF_getprop(ofw_bus_get_node(dev),

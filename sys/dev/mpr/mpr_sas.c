@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* Communications core for Avago Technologies (LSI) MPT3 */
 
 /* TODO Move headers to mprvar */
@@ -68,9 +67,7 @@
 #include <cam/cam_periph.h>
 #include <cam/scsi/scsi_all.h>
 #include <cam/scsi/scsi_message.h>
-#if __FreeBSD_version >= 900026
 #include <cam/scsi/smp_all.h>
-#endif
 
 #include <dev/nvme/nvme.h>
 
@@ -131,23 +128,14 @@ static int mprsas_send_abort(struct mpr_softc *sc, struct mpr_command *tm,
     struct mpr_command *cm);
 static void mprsas_async(void *callback_arg, uint32_t code,
     struct cam_path *path, void *arg);
-#if (__FreeBSD_version < 901503) || \
-    ((__FreeBSD_version >= 1000000) && (__FreeBSD_version < 1000006))
-static void mprsas_check_eedp(struct mpr_softc *sc, struct cam_path *path,
-    struct ccb_getdev *cgd);
-static void mprsas_read_cap_done(struct cam_periph *periph,
-    union ccb *done_ccb);
-#endif
 static int mprsas_send_portenable(struct mpr_softc *sc);
 static void mprsas_portenable_complete(struct mpr_softc *sc,
     struct mpr_command *cm);
 
-#if __FreeBSD_version >= 900026
 static void mprsas_smpio_complete(struct mpr_softc *sc, struct mpr_command *cm);
 static void mprsas_send_smpcmd(struct mprsas_softc *sassc, union ccb *ccb,
     uint64_t sasaddr);
 static void mprsas_action_smpio(struct mprsas_softc *sassc, union ccb *ccb);
-#endif //FreeBSD_version >= 900026
 
 struct mprsas_target *
 mprsas_find_target_by_handle(struct mprsas_softc *sassc, int start,
@@ -182,10 +170,7 @@ mprsas_startup_increment(struct mprsas_softc *sassc)
 			/* just starting, freeze the simq */
 			mpr_dprint(sassc->sc, MPR_INIT,
 			    "%s freezing simq\n", __func__);
-#if (__FreeBSD_version >= 1000039) || \
-    ((__FreeBSD_version < 1000000) && (__FreeBSD_version >= 902502))
 			xpt_hold_boot();
-#endif
 			xpt_freeze_simq(sassc->sim, 1);
 		}
 		mpr_dprint(sassc->sc, MPR_INIT, "%s refcount %u\n", __func__,
@@ -217,12 +202,7 @@ mprsas_startup_decrement(struct mprsas_softc *sassc)
 			    "%s releasing simq\n", __func__);
 			sassc->flags &= ~MPRSAS_IN_STARTUP;
 			xpt_release_simq(sassc->sim, 1);
-#if (__FreeBSD_version >= 1000039) || \
-    ((__FreeBSD_version < 1000000) && (__FreeBSD_version >= 902502))
 			xpt_release_boot();
-#else
-			mprsas_rescan_target(sassc->sc, NULL);
-#endif
 		}
 		mpr_dprint(sassc->sc, MPR_INIT, "%s refcount %u\n", __func__,
 		    sassc->startup_refcount);
@@ -255,7 +235,6 @@ mprsas_alloc_tm(struct mpr_softc *sc)
 void
 mprsas_free_tm(struct mpr_softc *sc, struct mpr_command *tm)
 {
-	int target_id = 0xFFFFFFFF;
 
 	MPR_FUNCTRACE(sc);
 	if (tm == NULL)
@@ -266,13 +245,11 @@ mprsas_free_tm(struct mpr_softc *sc, struct mpr_command *tm)
 	 * free the resources used for freezing the devq.  Must clear the
 	 * INRESET flag as well or scsi I/O will not work.
 	 */
-	if (tm->cm_targ != NULL) {
-		tm->cm_targ->flags &= ~MPRSAS_TARGET_INRESET;
-		target_id = tm->cm_targ->tid;
-	}
 	if (tm->cm_ccb) {
-		mpr_dprint(sc, MPR_INFO, "Unfreezing devq for target ID %d\n",
-		    target_id);
+		mpr_dprint(sc, MPR_XINFO | MPR_RECOVERY,
+		    "Unfreezing devq for target ID %d\n",
+		    tm->cm_targ->tid);
+		tm->cm_targ->flags &= ~MPRSAS_TARGET_INRESET;
 		xpt_release_devq(tm->cm_ccb->ccb_h.path, 1, TRUE);
 		xpt_free_path(tm->cm_ccb->ccb_h.path);
 		xpt_free_ccb(tm->cm_ccb);
@@ -400,7 +377,7 @@ mprsas_remove_volume(struct mpr_softc *sc, struct mpr_command *tm)
 
 	mpr_dprint(sc, MPR_XINFO, "clearing target %u handle 0x%04x\n",
 	    targ->tid, handle);
-	
+
 	/*
 	 * Don't clear target if remove fails because things will get confusing.
 	 * Leave the devname and sasaddr intact so that we know to avoid reusing
@@ -430,6 +407,33 @@ mprsas_remove_volume(struct mpr_softc *sc, struct mpr_command *tm)
 	mprsas_free_tm(sc, tm);
 }
 
+/*
+ * Retry mprsas_prepare_remove() if some previous attempt failed to allocate
+ * high priority command due to limit reached.
+ */
+void
+mprsas_prepare_remove_retry(struct mprsas_softc *sassc)
+{
+	struct mprsas_target *target;
+	int i;
+
+	if ((sassc->flags & MPRSAS_TOREMOVE) == 0)
+		return;
+
+	for (i = 0; i < sassc->maxtargets; i++) {
+		target = &sassc->targets[i];
+		if ((target->flags & MPRSAS_TARGET_TOREMOVE) == 0)
+			continue;
+		if (TAILQ_EMPTY(&sassc->sc->high_priority_req_list))
+			return;
+		target->flags &= ~MPRSAS_TARGET_TOREMOVE;
+		if (target->flags & MPR_TARGET_FLAGS_VOLUME)
+			mprsas_prepare_volume_remove(sassc, target->handle);
+		else
+			mprsas_prepare_remove(sassc, target->handle);
+	}
+	sassc->flags &= ~MPRSAS_TOREMOVE;
+}
 
 /*
  * No Need to call "MPI2_SAS_OP_REMOVE_DEVICE" For Volume removal.
@@ -459,8 +463,8 @@ mprsas_prepare_volume_remove(struct mprsas_softc *sassc, uint16_t handle)
 
 	cm = mprsas_alloc_tm(sc);
 	if (cm == NULL) {
-		mpr_dprint(sc, MPR_ERROR,
-		    "%s: command alloc failure\n", __func__);
+		targ->flags |= MPRSAS_TARGET_TOREMOVE;
+		sassc->flags |= MPRSAS_TOREMOVE;
 		return;
 	}
 
@@ -525,8 +529,8 @@ mprsas_prepare_remove(struct mprsas_softc *sassc, uint16_t handle)
 
 	tm = mprsas_alloc_tm(sc);
 	if (tm == NULL) {
-		mpr_dprint(sc, MPR_ERROR, "%s: command alloc failure\n",
-		    __func__);
+		targ->flags |= MPRSAS_TARGET_TOREMOVE;
+		sassc->flags |= MPRSAS_TOREMOVE;
 		return;
 	}
 
@@ -816,6 +820,8 @@ mpr_attach_sas(struct mpr_softc *sc)
 
 	callout_init(&sassc->discovery_callout, 1 /*mpsafe*/);
 
+	mpr_unlock(sc);
+
 	/*
 	 * Register for async events so we can determine the EEDP
 	 * capabilities of devices.
@@ -830,54 +836,9 @@ mpr_attach_sas(struct mpr_softc *sc)
 	} else {
 		int event;
 
-#if (__FreeBSD_version >= 1000006) || \
-    ((__FreeBSD_version >= 901503) && (__FreeBSD_version < 1000000))
-		event = AC_ADVINFO_CHANGED | AC_FOUND_DEVICE;
-#else
-		event = AC_FOUND_DEVICE;
-#endif
-
-		/*
-		 * Prior to the CAM locking improvements, we can't call
-		 * xpt_register_async() with a particular path specified.
-		 *
-		 * If a path isn't specified, xpt_register_async() will
-		 * generate a wildcard path and acquire the XPT lock while
-		 * it calls xpt_action() to execute the XPT_SASYNC_CB CCB.
-		 * It will then drop the XPT lock once that is done.
-		 * 
-		 * If a path is specified for xpt_register_async(), it will
-		 * not acquire and drop the XPT lock around the call to
-		 * xpt_action().  xpt_action() asserts that the caller
-		 * holds the SIM lock, so the SIM lock has to be held when
-		 * calling xpt_register_async() when the path is specified.
-		 * 
-		 * But xpt_register_async calls xpt_for_all_devices(),
-		 * which calls xptbustraverse(), which will acquire each
-		 * SIM lock.  When it traverses our particular bus, it will
-		 * necessarily acquire the SIM lock, which will lead to a
-		 * recursive lock acquisition.
-		 * 
-		 * The CAM locking changes fix this problem by acquiring
-		 * the XPT topology lock around bus traversal in
-		 * xptbustraverse(), so the caller can hold the SIM lock
-		 * and it does not cause a recursive lock acquisition.
-		 *
-		 * These __FreeBSD_version values are approximate, especially
-		 * for stable/10, which is two months later than the actual
-		 * change.
-		 */
-
-#if (__FreeBSD_version < 1000703) || \
-    ((__FreeBSD_version >= 1100000) && (__FreeBSD_version < 1100002))
-		mpr_unlock(sc);
-		status = xpt_register_async(event, mprsas_async, sc,
-					    NULL);
-		mpr_lock(sc);
-#else
+		event = AC_ADVINFO_CHANGED;
 		status = xpt_register_async(event, mprsas_async, sc,
 					    sassc->path);
-#endif
 
 		if (status != CAM_REQ_CMP) {
 			mpr_dprint(sc, MPR_ERROR,
@@ -894,8 +855,6 @@ mpr_attach_sas(struct mpr_softc *sc)
 		 */
 		mpr_printf(sc, "EEDP capabilities disabled.\n");
 	}
-
-	mpr_unlock(sc);
 
 	mprsas_register_events(sc);
 out:
@@ -930,18 +889,18 @@ mpr_detach_sas(struct mpr_softc *sc)
 	if (sassc->ev_tq != NULL)
 		taskqueue_free(sassc->ev_tq);
 
-	/* Make sure CAM doesn't wedge if we had to bail out early. */
-	mpr_lock(sc);
-
-	while (sassc->startup_refcount != 0)
-		mprsas_startup_decrement(sassc);
-
 	/* Deregister our async handler */
 	if (sassc->path != NULL) {
 		xpt_register_async(0, mprsas_async, sc, sassc->path);
 		xpt_free_path(sassc->path);
 		sassc->path = NULL;
 	}
+
+	/* Make sure CAM doesn't wedge if we had to bail out early. */
+	mpr_lock(sc);
+
+	while (sassc->startup_refcount != 0)
+		mprsas_startup_decrement(sassc);
 
 	if (sassc->flags & MPRSAS_IN_STARTUP)
 		xpt_release_simq(sassc->sim, 1);
@@ -1021,12 +980,7 @@ mprsas_action(struct cam_sim *sim, union ccb *ccb)
 		cpi->version_num = 1;
 		cpi->hba_inquiry = PI_SDTR_ABLE|PI_TAG_ABLE|PI_WIDE_16;
 		cpi->target_sprt = 0;
-#if (__FreeBSD_version >= 1000039) || \
-    ((__FreeBSD_version < 1000000) && (__FreeBSD_version >= 902502))
 		cpi->hba_misc = PIM_NOBUSRESET | PIM_UNMAPPED | PIM_NOSCAN;
-#else
-		cpi->hba_misc = PIM_NOBUSRESET | PIM_UNMAPPED;
-#endif
 		cpi->hba_eng_cnt = 0;
 		cpi->max_target = sassc->maxtargets - 1;
 		cpi->max_lun = 255;
@@ -1122,11 +1076,9 @@ mprsas_action(struct cam_sim *sim, union ccb *ccb)
 	case XPT_SCSI_IO:
 		mprsas_action_scsiio(sassc, ccb);
 		return;
-#if __FreeBSD_version >= 900026
 	case XPT_SMP_IO:
 		mprsas_action_smpio(sassc, ccb);
 		return;
-#endif
 	default:
 		mprsas_set_ccbstatus(ccb, CAM_FUNC_NOTAVAIL);
 		break;
@@ -1265,7 +1217,7 @@ mprsas_tm_timeout(void *data)
 	    "out\n", tm);
 
 	KASSERT(tm->cm_state == MPR_CM_STATE_INQUEUE,
-	    ("command not inqueue\n"));
+	    ("command not inqueue, state = %u\n", tm->cm_state));
 
 	tm->cm_state = MPR_CM_STATE_BUSY;
 	mpr_reinit(sc);
@@ -1275,14 +1227,12 @@ static void
 mprsas_logical_unit_reset_complete(struct mpr_softc *sc, struct mpr_command *tm)
 {
 	MPI2_SCSI_TASK_MANAGE_REPLY *reply;
-	MPI2_SCSI_TASK_MANAGE_REQUEST *req;
 	unsigned int cm_count = 0;
 	struct mpr_command *cm;
 	struct mprsas_target *targ;
 
 	callout_stop(&tm->cm_callout);
 
-	req = (MPI2_SCSI_TASK_MANAGE_REQUEST *)tm->cm_req;
 	reply = (MPI2_SCSI_TASK_MANAGE_REPLY *)tm->cm_reply;
 	targ = tm->cm_targ;
 
@@ -1526,7 +1476,6 @@ mprsas_send_reset(struct mpr_softc *sc, struct mpr_command *tm, uint8_t type)
 	return err;
 }
 
-
 static void
 mprsas_abort_complete(struct mpr_softc *sc, struct mpr_command *tm)
 {
@@ -1725,20 +1674,19 @@ mprsas_scsiio_timeout(void *data)
 		/* target already in recovery, just queue up another
 		 * timedout command to be processed later.
 		 */
-		mpr_dprint(sc, MPR_RECOVERY, "queued timedout cm %p for "
-		    "processing by tm %p\n", cm, targ->tm);
-	}
-	else if ((targ->tm = mprsas_alloc_tm(sc)) != NULL) {
-
-		/* start recovery by aborting the first timedout command */
+		mpr_dprint(sc, MPR_RECOVERY,
+		    "queued timedout cm %p for processing by tm %p\n",
+		    cm, targ->tm);
+	} else if ((targ->tm = mprsas_alloc_tm(sc)) != NULL) {
 		mpr_dprint(sc, MPR_RECOVERY|MPR_INFO,
 		    "Sending abort to target %u for SMID %d\n", targ->tid,
 		    cm->cm_desc.Default.SMID);
 		mpr_dprint(sc, MPR_RECOVERY, "timedout cm %p allocated tm %p\n",
 		    cm, targ->tm);
+
+		/* start recovery by aborting the first timedout command */
 		mprsas_send_abort(sc, targ->tm, cm);
-	}
-	else {
+	} else {
 		/* XXX queue this target up for recovery once a TM becomes
 		 * available.  The firmware only has a limited number of
 		 * HighPriority credits for the high priority requests used
@@ -1776,17 +1724,7 @@ mprsas_build_nvme_unmap(struct mpr_softc *sc, struct mpr_command *cm,
 	uint64_t nvme_dsm_ranges_dma_handle;
 
 	csio = &ccb->csio;
-#if __FreeBSD_version >= 1100103
 	list_len = (scsiio_cdb_ptr(csio)[7] << 8 | scsiio_cdb_ptr(csio)[8]);
-#else
-	if (csio->ccb_h.flags & CAM_CDB_POINTER) {
-		list_len = (ccb->csio.cdb_io.cdb_ptr[7] << 8 |
-		    ccb->csio.cdb_io.cdb_ptr[8]);
-	} else {
-		list_len = (ccb->csio.cdb_io.cdb_bytes[7] << 8 |
-		    ccb->csio.cdb_io.cdb_bytes[8]);
-	}
-#endif
 	if (!list_len) {
 		mpr_dprint(sc, MPR_ERROR, "Parameter list length is Zero\n");
 		return -EINVAL;
@@ -1883,13 +1821,8 @@ mprsas_build_nvme_unmap(struct mpr_softc *sc, struct mpr_command *cm,
 	    MPI26_REQ_DESCRIPT_FLAGS_PCIE_ENCAPSULATED;
 
 	csio->ccb_h.qos.sim_data = sbinuptime();
-#if __FreeBSD_version >= 1000029
 	callout_reset_sbt(&cm->cm_callout, SBT_1MS * ccb->ccb_h.timeout, 0,
 	    mprsas_scsiio_timeout, cm, 0);
-#else //__FreeBSD_version < 1000029
-	callout_reset(&cm->cm_callout, (ccb->ccb_h.timeout * hz) / 1000,
-	    mprsas_scsiio_timeout, cm);
-#endif //__FreeBSD_version >= 1000029
 
 	targ->issued++;
 	targ->outstanding++;
@@ -1902,10 +1835,11 @@ mprsas_build_nvme_unmap(struct mpr_softc *sc, struct mpr_command *cm,
 	mpr_build_nvme_prp(sc, cm, req,
 	    (void *)(uintptr_t)nvme_dsm_ranges_dma_handle, 0, data_length);
 	mpr_map_command(sc, cm);
+	res = 0;
 
 out:
 	free(plist, M_MPR);
-	return 0;
+	return (res);
 }
 
 static void
@@ -1983,12 +1917,13 @@ mprsas_action_scsiio(struct mprsas_softc *sassc, union ccb *ccb)
 	}
 
 	/*
-	 * If target has a reset in progress, freeze the devq and return.  The
-	 * devq will be released when the TM reset is finished.
+	 * If target has a reset in progress, the devq should be frozen.
+	 * Geting here we likely hit a race, so just requeue.
 	 */
 	if (targ->flags & MPRSAS_TARGET_INRESET) {
-		ccb->ccb_h.status = CAM_BUSY | CAM_DEV_QFRZN;
-		mpr_dprint(sc, MPR_INFO, "%s: Freezing devq for target ID %d\n",
+		ccb->ccb_h.status = CAM_REQUEUE_REQ | CAM_DEV_QFRZN;
+		mpr_dprint(sc, MPR_XINFO | MPR_RECOVERY,
+		    "%s: Freezing devq for target ID %d\n",
 		    __func__, targ->tid);
 		xpt_freeze_devq(ccb->ccb_h.path, 1);
 		xpt_done(ccb);
@@ -2013,14 +1948,7 @@ mprsas_action_scsiio(struct mprsas_softc *sassc, union ccb *ccb)
 	/* For NVME device's issue UNMAP command directly to NVME drives by
 	 * constructing equivalent native NVMe DataSetManagement command.
 	 */
-#if __FreeBSD_version >= 1100103
 	scsi_opcode = scsiio_cdb_ptr(csio)[0];
-#else
-	if (csio->ccb_h.flags & CAM_CDB_POINTER)
-		scsi_opcode = csio->cdb_io.cdb_ptr[0];
-	else
-		scsi_opcode = csio->cdb_io.cdb_bytes[0];
-#endif
 	if (scsi_opcode == UNMAP &&
 	    targ->is_nvme &&
 	    (csio->ccb_h.flags & CAM_DATA_MASK) == CAM_DATA_VADDR) {
@@ -2208,13 +2136,8 @@ mprsas_action_scsiio(struct mprsas_softc *sassc, union ccb *ccb)
 	}
 
 	csio->ccb_h.qos.sim_data = sbinuptime();
-#if __FreeBSD_version >= 1000029
 	callout_reset_sbt(&cm->cm_callout, SBT_1MS * ccb->ccb_h.timeout, 0,
 	    mprsas_scsiio_timeout, cm, 0);
-#else //__FreeBSD_version < 1000029
-	callout_reset(&cm->cm_callout, (ccb->ccb_h.timeout * hz) / 1000,
-	    mprsas_scsiio_timeout, cm);
-#endif //__FreeBSD_version >= 1000029
 
 	targ->issued++;
 	targ->outstanding++;
@@ -2244,7 +2167,7 @@ mpr_sc_failed_io_info(struct mpr_softc *sc, struct ccb_scsiio *csio,
 	char *desc_ioc_state = NULL;
 	char *desc_scsi_status = NULL;
 	u32 log_info = le32toh(mpi_reply->IOCLogInfo);
-	
+
 	if (log_info == 0x31170000)
 		return;
 
@@ -2260,7 +2183,7 @@ mpr_sc_failed_io_info(struct mpr_softc *sc, struct ccb_scsiio *csio,
 		    "connector name (%4s)\n", targ->encl_level, targ->encl_slot,
 		    targ->connector_name);
 	}
-	
+
 	/*
 	 * We can add more detail about underflow data here
 	 * TO-DO
@@ -2449,7 +2372,7 @@ mprsas_nvme_trans_status_code(uint16_t nvme_status,
 		}
 		break;
 	}
-	
+
 	returned_sense_len = sizeof(struct scsi_sense_data);
 	if (returned_sense_len < ccb->csio.sense_len)
 		ccb->csio.sense_resid = ccb->csio.sense_len -
@@ -2537,7 +2460,7 @@ mprsas_scsiio_complete(struct mpr_softc *sc, struct mpr_command *cm)
 	if (cm->cm_flags & MPR_CM_FLAGS_ON_RECOVERY) {
 		TAILQ_REMOVE(&cm->cm_targ->timedout_commands, cm, cm_recovery);
 		KASSERT(cm->cm_state == MPR_CM_STATE_BUSY,
-		    ("Not busy for CM_FLAGS_TIMEDOUT: %d\n", cm->cm_state));
+		    ("Not busy for CM_FLAGS_TIMEDOUT: %u\n", cm->cm_state));
 		cm->cm_flags &= ~MPR_CM_FLAGS_ON_RECOVERY;
 		if (cm->cm_reply != NULL)
 			mprsas_log_command(cm, MPR_RECOVERY,
@@ -2591,8 +2514,8 @@ mprsas_scsiio_complete(struct mpr_softc *sc, struct mpr_command *cm)
 		if ((sassc->flags & MPRSAS_QUEUE_FROZEN) == 0) {
 			xpt_freeze_simq(sassc->sim, 1);
 			sassc->flags |= MPRSAS_QUEUE_FROZEN;
-			mpr_dprint(sc, MPR_XINFO, "Error sending command, "
-			    "freezing SIM queue\n");
+			mpr_dprint(sc, MPR_XINFO | MPR_RECOVERY,
+			    "Error sending command, freezing SIM queue\n");
 		}
 	}
 
@@ -2601,14 +2524,7 @@ mprsas_scsiio_complete(struct mpr_softc *sc, struct mpr_command *cm)
 	 * flag, and use it in a few places in the rest of this function for
 	 * convenience. Use the macro if available.
 	 */
-#if __FreeBSD_version >= 1100103
 	scsi_cdb = scsiio_cdb_ptr(csio);
-#else
-	if (csio->ccb_h.flags & CAM_CDB_POINTER)
-		scsi_cdb = csio->cdb_io.cdb_ptr;
-	else
-		scsi_cdb = csio->cdb_io.cdb_bytes;
-#endif
 
 	/*
 	 * If this is a Start Stop Unit command and it was issued by the driver
@@ -2634,7 +2550,7 @@ mprsas_scsiio_complete(struct mpr_softc *sc, struct mpr_command *cm)
 			if (sassc->flags & MPRSAS_QUEUE_FROZEN) {
 				ccb->ccb_h.status |= CAM_RELEASE_SIMQ;
 				sassc->flags &= ~MPRSAS_QUEUE_FROZEN;
-				mpr_dprint(sc, MPR_XINFO,
+				mpr_dprint(sc, MPR_XINFO | MPR_RECOVERY,
 				    "Unfreezing SIM queue\n");
 			}
 		} 
@@ -2896,13 +2812,13 @@ mprsas_scsiio_complete(struct mpr_softc *sc, struct mpr_command *cm)
 
 		break;
 	}
-	
+
 	mpr_sc_failed_io_info(sc, csio, rep, cm->cm_targ);
 
 	if (sassc->flags & MPRSAS_QUEUE_FROZEN) {
 		ccb->ccb_h.status |= CAM_RELEASE_SIMQ;
 		sassc->flags &= ~MPRSAS_QUEUE_FROZEN;
-		mpr_dprint(sc, MPR_XINFO, "Command completed, unfreezing SIM "
+		mpr_dprint(sc, MPR_INFO, "Command completed, unfreezing SIM "
 		    "queue\n");
 	}
 
@@ -2930,7 +2846,6 @@ mprsas_scsiio_complete(struct mpr_softc *sc, struct mpr_command *cm)
 	xpt_done(ccb);
 }
 
-#if __FreeBSD_version >= 900026
 static void
 mprsas_smpio_complete(struct mpr_softc *sc, struct mpr_command *cm)
 {
@@ -3001,15 +2916,11 @@ mprsas_send_smpcmd(struct mprsas_softc *sassc, union ccb *ccb, uint64_t sasaddr)
 	uint8_t *request, *response;
 	MPI2_SMP_PASSTHROUGH_REQUEST *req;
 	struct mpr_softc *sc;
-	struct sglist *sg;
 	int error;
 
 	sc = sassc->sc;
-	sg = NULL;
 	error = 0;
 
-#if (__FreeBSD_version >= 1000028) || \
-    ((__FreeBSD_version >= 902001) && (__FreeBSD_version < 1000000))
 	switch (ccb->ccb_h.flags & CAM_DATA_MASK) {
 	case CAM_DATA_PADDR:
 	case CAM_DATA_SG_PADDR:
@@ -3069,65 +2980,6 @@ mprsas_send_smpcmd(struct mprsas_softc *sassc, union ccb *ccb, uint64_t sasaddr)
 		xpt_done(ccb);
 		return;
 	}
-#else /* __FreeBSD_version < 1000028 */
-	/*
-	 * XXX We don't yet support physical addresses here.
-	 */
-	if (ccb->ccb_h.flags & (CAM_DATA_PHYS|CAM_SG_LIST_PHYS)) {
-		mpr_dprint(sc, MPR_ERROR, "%s: physical addresses not "
-		    "supported\n", __func__);
-		mprsas_set_ccbstatus(ccb, CAM_REQ_INVALID);
-		xpt_done(ccb);
-		return;
-	}
-
-	/*
-	 * If the user wants to send an S/G list, check to make sure they
-	 * have single buffers.
-	 */
-	if (ccb->ccb_h.flags & CAM_SCATTER_VALID) {
-		/*
-		 * The chip does not support more than one buffer for the
-		 * request or response.
-		 */
-	 	if ((ccb->smpio.smp_request_sglist_cnt > 1)
-		  || (ccb->smpio.smp_response_sglist_cnt > 1)) {
-			mpr_dprint(sc, MPR_ERROR, "%s: multiple request or "
-			    "response buffer segments not supported for SMP\n",
-			    __func__);
-			mprsas_set_ccbstatus(ccb, CAM_REQ_INVALID);
-			xpt_done(ccb);
-			return;
-		}
-
-		/*
-		 * The CAM_SCATTER_VALID flag was originally implemented
-		 * for the XPT_SCSI_IO CCB, which only has one data pointer.
-		 * We have two.  So, just take that flag to mean that we
-		 * might have S/G lists, and look at the S/G segment count
-		 * to figure out whether that is the case for each individual
-		 * buffer.
-		 */
-		if (ccb->smpio.smp_request_sglist_cnt != 0) {
-			bus_dma_segment_t *req_sg;
-
-			req_sg = (bus_dma_segment_t *)ccb->smpio.smp_request;
-			request = (uint8_t *)(uintptr_t)req_sg[0].ds_addr;
-		} else
-			request = ccb->smpio.smp_request;
-
-		if (ccb->smpio.smp_response_sglist_cnt != 0) {
-			bus_dma_segment_t *rsp_sg;
-
-			rsp_sg = (bus_dma_segment_t *)ccb->smpio.smp_response;
-			response = (uint8_t *)(uintptr_t)rsp_sg[0].ds_addr;
-		} else
-			response = ccb->smpio.smp_response;
-	} else {
-		request = ccb->smpio.smp_request;
-		response = ccb->smpio.smp_response;
-	}
-#endif /* __FreeBSD_version < 1000028 */
 
 	cm = mpr_alloc_command(sc);
 	if (cm == NULL) {
@@ -3323,7 +3175,6 @@ mprsas_action_smpio(struct mprsas_softc *sassc, union ccb *ccb)
 			    targ->handle, targ->parent_handle);
 			mprsas_set_ccbstatus(ccb, CAM_DEV_NOT_THERE);
 			goto bailout;
-
 		}
 		if (targ->parent_sasaddr == 0x0) {
 			mpr_dprint(sc, MPR_ERROR, "%s: handle %d parent handle "
@@ -3335,7 +3186,6 @@ mprsas_action_smpio(struct mprsas_softc *sassc, union ccb *ccb)
 
 		sasaddr = targ->parent_sasaddr;
 #endif /* OLD_MPR_PROBE */
-
 	}
 
 	if (sasaddr == 0) {
@@ -3352,7 +3202,6 @@ bailout:
 	xpt_done(ccb);
 
 }
-#endif //__FreeBSD_version >= 900026
 
 static void
 mprsas_action_resetdev(struct mprsas_softc *sassc, union ccb *ccb)
@@ -3476,9 +3325,8 @@ mprsas_async(void *callback_arg, uint32_t code, struct cam_path *path,
 
 	sc = (struct mpr_softc *)callback_arg;
 
+	mpr_lock(sc);
 	switch (code) {
-#if (__FreeBSD_version >= 1000006) || \
-    ((__FreeBSD_version >= 901503) && (__FreeBSD_version < 1000000))
 	case AC_ADVINFO_CHANGED: {
 		struct mprsas_target *target;
 		struct mprsas_softc *sassc;
@@ -3499,18 +3347,6 @@ mprsas_async(void *callback_arg, uint32_t code, struct cam_path *path,
 		 */
 		if (buftype != CDAI_TYPE_RCAPLONG)
 			break;
-
-		/*
-		 * See the comment in mpr_attach_sas() for a detailed
-		 * explanation.  In these versions of FreeBSD we register
-		 * for all events and filter out the events that don't
-		 * apply to us.
-		 */
-#if (__FreeBSD_version < 1000703) || \
-    ((__FreeBSD_version >= 1100000) && (__FreeBSD_version < 1100002))
-		if (xpt_path_path_id(path) != sassc->sim->path_id)
-			break;
-#endif
 
 		/*
 		 * We should have a handle for this, but check to make sure.
@@ -3544,17 +3380,11 @@ mprsas_async(void *callback_arg, uint32_t code, struct cam_path *path,
 		}
 
 		bzero(&rcap_buf, sizeof(rcap_buf));
-		bzero(&cdai, sizeof(cdai));
 		xpt_setup_ccb(&cdai.ccb_h, path, CAM_PRIORITY_NORMAL);
 		cdai.ccb_h.func_code = XPT_DEV_ADVINFO;
 		cdai.ccb_h.flags = CAM_DIR_IN;
 		cdai.buftype = CDAI_TYPE_RCAPLONG;
-#if (__FreeBSD_version >= 1100061) || \
-    ((__FreeBSD_version >= 1001510) && (__FreeBSD_version < 1100000))
 		cdai.flags = CDAI_FLAG_NONE;
-#else
-		cdai.flags = 0;
-#endif
 		cdai.bufsiz = sizeof(rcap_buf);
 		cdai.buf = (uint8_t *)&rcap_buf;
 		xpt_action((union ccb *)&cdai);
@@ -3582,235 +3412,22 @@ mprsas_async(void *callback_arg, uint32_t code, struct cam_path *path,
 		}
 		break;
 	}
-#endif
-	case AC_FOUND_DEVICE: {
-		struct ccb_getdev *cgd;
-
-		/*
-		 * See the comment in mpr_attach_sas() for a detailed
-		 * explanation.  In these versions of FreeBSD we register
-		 * for all events and filter out the events that don't
-		 * apply to us.
-		 */
-#if (__FreeBSD_version < 1000703) || \
-    ((__FreeBSD_version >= 1100000) && (__FreeBSD_version < 1100002))
-		if (xpt_path_path_id(path) != sc->sassc->sim->path_id)
-			break;
-#endif
-
-		cgd = arg;
-#if (__FreeBSD_version < 901503) || \
-    ((__FreeBSD_version >= 1000000) && (__FreeBSD_version < 1000006))
-		mprsas_check_eedp(sc, path, cgd);
-#endif
-		break;
-	}
 	default:
 		break;
 	}
+	mpr_unlock(sc);
 }
-
-#if (__FreeBSD_version < 901503) || \
-    ((__FreeBSD_version >= 1000000) && (__FreeBSD_version < 1000006))
-static void
-mprsas_check_eedp(struct mpr_softc *sc, struct cam_path *path,
-    struct ccb_getdev *cgd)
-{
-	struct mprsas_softc *sassc = sc->sassc;
-	struct ccb_scsiio *csio;
-	struct scsi_read_capacity_16 *scsi_cmd;
-	struct scsi_read_capacity_eedp *rcap_buf;
-	path_id_t pathid;
-	target_id_t targetid;
-	lun_id_t lunid;
-	union ccb *ccb;
-	struct cam_path *local_path;
-	struct mprsas_target *target;
-	struct mprsas_lun *lun;
-	uint8_t	found_lun;
-	char path_str[64];
-
-	pathid = cam_sim_path(sassc->sim);
-	targetid = xpt_path_target_id(path);
-	lunid = xpt_path_lun_id(path);
-
-	KASSERT(targetid < sassc->maxtargets, ("Target %d out of bounds in "
-	    "mprsas_check_eedp\n", targetid));
-	target = &sassc->targets[targetid];
-	if (target->handle == 0x0)
-		return;
-
-	/*
-	 * Determine if the device is EEDP capable.
-	 *
-	 * If this flag is set in the inquiry data, the device supports
-	 * protection information, and must support the 16 byte read capacity
-	 * command, otherwise continue without sending read cap 16.
-	 */
-	if ((cgd->inq_data.spc3_flags & SPC3_SID_PROTECT) == 0)
-		return;
-
-	/*
-	 * Issue a READ CAPACITY 16 command.  This info is used to determine if
-	 * the LUN is formatted for EEDP support.
-	 */
-	ccb = xpt_alloc_ccb_nowait();
-	if (ccb == NULL) {
-		mpr_dprint(sc, MPR_ERROR, "Unable to alloc CCB for EEDP "
-		    "support.\n");
-		return;
-	}
-
-	if (xpt_create_path(&local_path, xpt_periph, pathid, targetid, lunid) !=
-	    CAM_REQ_CMP) {
-		mpr_dprint(sc, MPR_ERROR, "Unable to create path for EEDP "
-		    "support.\n");
-		xpt_free_ccb(ccb);
-		return;
-	}
-
-	/*
-	 * If LUN is already in list, don't create a new one.
-	 */
-	found_lun = FALSE;
-	SLIST_FOREACH(lun, &target->luns, lun_link) {
-		if (lun->lun_id == lunid) {
-			found_lun = TRUE;
-			break;
-		}
-	}
-	if (!found_lun) {
-		lun = malloc(sizeof(struct mprsas_lun), M_MPR,
-		    M_NOWAIT | M_ZERO);
-		if (lun == NULL) {
-			mpr_dprint(sc, MPR_ERROR, "Unable to alloc LUN for "
-			    "EEDP support.\n");
-			xpt_free_path(local_path);
-			xpt_free_ccb(ccb);
-			return;
-		}
-		lun->lun_id = lunid;
-		SLIST_INSERT_HEAD(&target->luns, lun, lun_link);
-	}
-
-	xpt_path_string(local_path, path_str, sizeof(path_str));
-	mpr_dprint(sc, MPR_INFO, "Sending read cap: path %s handle %d\n",
-	    path_str, target->handle);
-
-	/*
-	 * Issue a READ CAPACITY 16 command for the LUN.  The
-	 * mprsas_read_cap_done function will load the read cap info into the
-	 * LUN struct.
-	 */
-	rcap_buf = malloc(sizeof(struct scsi_read_capacity_eedp), M_MPR,
-	    M_NOWAIT | M_ZERO);
-	if (rcap_buf == NULL) {
-		mpr_dprint(sc, MPR_ERROR, "Unable to alloc read capacity "
-		    "buffer for EEDP support.\n");
-		xpt_free_path(ccb->ccb_h.path);
-		xpt_free_ccb(ccb);
-		return;
-	}
-	xpt_setup_ccb(&ccb->ccb_h, local_path, CAM_PRIORITY_XPT);
-	csio = &ccb->csio;
-	csio->ccb_h.func_code = XPT_SCSI_IO;
-	csio->ccb_h.flags = CAM_DIR_IN;
-	csio->ccb_h.retry_count = 4;	
-	csio->ccb_h.cbfcnp = mprsas_read_cap_done;
-	csio->ccb_h.timeout = 60000;
-	csio->data_ptr = (uint8_t *)rcap_buf;
-	csio->dxfer_len = sizeof(struct scsi_read_capacity_eedp);
-	csio->sense_len = MPR_SENSE_LEN;
-	csio->cdb_len = sizeof(*scsi_cmd);
-	csio->tag_action = MSG_SIMPLE_Q_TAG;
-
-	scsi_cmd = (struct scsi_read_capacity_16 *)&csio->cdb_io.cdb_bytes;
-	bzero(scsi_cmd, sizeof(*scsi_cmd));
-	scsi_cmd->opcode = 0x9E;
-	scsi_cmd->service_action = SRC16_SERVICE_ACTION;
-	((uint8_t *)scsi_cmd)[13] = sizeof(struct scsi_read_capacity_eedp);
-
-	ccb->ccb_h.ppriv_ptr1 = sassc;
-	xpt_action(ccb);
-}
-
-static void
-mprsas_read_cap_done(struct cam_periph *periph, union ccb *done_ccb)
-{
-	struct mprsas_softc *sassc;
-	struct mprsas_target *target;
-	struct mprsas_lun *lun;
-	struct scsi_read_capacity_eedp *rcap_buf;
-
-	if (done_ccb == NULL)
-		return;
-	
-	/* Driver need to release devq, it Scsi command is
-	 * generated by driver internally.
-	 * Currently there is a single place where driver
-	 * calls scsi command internally. In future if driver
-	 * calls more scsi command internally, it needs to release
-	 * devq internally, since those command will not go back to
-	 * cam_periph.
-	 */
-	if ((done_ccb->ccb_h.status & CAM_DEV_QFRZN) ) {
-        	done_ccb->ccb_h.status &= ~CAM_DEV_QFRZN;
-		xpt_release_devq(done_ccb->ccb_h.path,
-			       	/*count*/ 1, /*run_queue*/TRUE);
-	}
-
-	rcap_buf = (struct scsi_read_capacity_eedp *)done_ccb->csio.data_ptr;
-
-	/*
-	 * Get the LUN ID for the path and look it up in the LUN list for the
-	 * target.
-	 */
-	sassc = (struct mprsas_softc *)done_ccb->ccb_h.ppriv_ptr1;
-	KASSERT(done_ccb->ccb_h.target_id < sassc->maxtargets, ("Target %d out "
-	    "of bounds in mprsas_read_cap_done\n", done_ccb->ccb_h.target_id));
-	target = &sassc->targets[done_ccb->ccb_h.target_id];
-	SLIST_FOREACH(lun, &target->luns, lun_link) {
-		if (lun->lun_id != done_ccb->ccb_h.target_lun)
-			continue;
-
-		/*
-		 * Got the LUN in the target's LUN list.  Fill it in with EEDP
-		 * info. If the READ CAP 16 command had some SCSI error (common
-		 * if command is not supported), mark the lun as not supporting
-		 * EEDP and set the block size to 0.
-		 */
-		if ((mprsas_get_ccbstatus(done_ccb) != CAM_REQ_CMP) ||
-		    (done_ccb->csio.scsi_status != SCSI_STATUS_OK)) {
-			lun->eedp_formatted = FALSE;
-			lun->eedp_block_size = 0;
-			break;
-		}
-
-		if (rcap_buf->protect & 0x01) {
-			mpr_dprint(sassc->sc, MPR_INFO, "LUN %d for target ID "
-			    "%d is formatted for EEDP support.\n",
-			    done_ccb->ccb_h.target_lun,
-			    done_ccb->ccb_h.target_id);
-			lun->eedp_formatted = TRUE;
-			lun->eedp_block_size = scsi_4btoul(rcap_buf->length);
-		}
-		break;
-	}
-
-	// Finished with this CCB and path.
-	free(rcap_buf, M_MPR);
-	xpt_free_path(done_ccb->ccb_h.path);
-	xpt_free_ccb(done_ccb);
-}
-#endif /* (__FreeBSD_version < 901503) || \
-          ((__FreeBSD_version >= 1000000) && (__FreeBSD_version < 1000006)) */
 
 /*
- * Set the INRESET flag for this target so that no I/O will be sent to
- * the target until the reset has completed.  If an I/O request does
- * happen, the devq will be frozen.  The CCB holds the path which is
- * used to release the devq.  The devq is released and the CCB is freed
+ * Freeze the devq and set the INRESET flag so that no I/O will be sent to
+ * the target until the reset has completed.  The CCB holds the path which
+ * is used to release the devq.  The devq is released and the CCB is freed
  * when the TM completes.
+ * We only need to do this when we're entering reset, not at each time we
+ * need to send an abort (which will happen if multiple commands timeout
+ * while we're sending the abort). We do not release the queue for each
+ * command we complete (just at the end when we free the tm), so freezing
+ * it each time doesn't make sense.
  */
 void
 mprsas_prepare_for_tm(struct mpr_softc *sc, struct mpr_command *tm,
@@ -3828,7 +3445,13 @@ mprsas_prepare_for_tm(struct mpr_softc *sc, struct mpr_command *tm,
 		} else {
 			tm->cm_ccb = ccb;
 			tm->cm_targ = target;
-			target->flags |= MPRSAS_TARGET_INRESET;
+			if ((target->flags & MPRSAS_TARGET_INRESET) == 0) {
+				mpr_dprint(sc, MPR_XINFO | MPR_RECOVERY,
+				    "%s: Freezing devq for target ID %d\n",
+				    __func__, target->tid);
+				xpt_freeze_devq(ccb->ccb_h.path, 1);
+				target->flags |= MPRSAS_TARGET_INRESET;
+			}
 		}
 	}
 }

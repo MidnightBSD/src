@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-3-Clause
+ * SPDX-License-Identifier: BSD-2-Clause AND BSD-3-Clause
  *
  * Copyright (c) 1999,2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -53,7 +53,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  *
  */
 
@@ -190,7 +189,6 @@
 #define AMR_BATT_CHARGE_FAIL		0x20
 #define AMR_BATT_CYCLES_EXCEEDED	0x40
 
-
 /********************************************************************************
  ********************************************************************************
                                                            8LD Firmware Interface
@@ -276,7 +274,6 @@ struct amr_enquiry
 #define AMR_SIG_490	0xfff70008
     u_int8_t			res2[844];			/*			X */
 } __packed;
-
 
 /********************************************************************************
  ********************************************************************************
@@ -407,7 +404,6 @@ struct amr_enquiry3
 
     u_int8_t	res1[263];		/* pad to 1024 bytes */
 } __packed;
-
 
 /********************************************************************************
  ********************************************************************************

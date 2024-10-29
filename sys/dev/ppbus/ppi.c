@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997, 1998, 1999 Nicolas Souchu, Michael Smith
  * All rights reserved.
@@ -148,12 +148,8 @@ ppi_identify(driver_t *driver, device_t parent)
 static int
 ppi_probe(device_t dev)
 {
-	struct ppi_data *ppi;
-
 	/* probe is always ok */
 	device_set_desc(dev, "Parallel I/O");
-
-	ppi = DEVTOSOFTC(dev);
 
 	return (0);
 }
@@ -240,7 +236,6 @@ ppiintr(void *arg)
 	ppi_disable_intr(ppidev);
 
 	switch (ppb_1284_get_state(ppbus)) {
-
 	/* accept IEEE1284 negotiation then wakeup a waiting process to
 	 * continue negotiation at process level */
 	case PPB_FORWARD_IDLE:
@@ -379,7 +374,6 @@ ppiread(struct cdev *dev, struct uio *uio, int ioflag)
 		 */
 		if ((ppb_1284_negociate(ppbus,
 			ppi->ppi_mode = PPB_NIBBLE, 0))) {
-
 			/* XXX Wait 2 seconds to let the remote host some
 			 * time to terminate its interrupt
 			 */
@@ -556,7 +550,6 @@ ppiioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags, struct thread *t
 
 	ppb_lock(ppbus);
 	switch (cmd) {
-
 	case PPIGDATA:			/* get data register */
 		*val = ppb_rdtr(ppbus);
 		break;
@@ -614,7 +607,6 @@ static device_method_t ppi_methods[] = {
 	DEVMETHOD(device_probe,		ppi_probe),
 	DEVMETHOD(device_attach,	ppi_attach),
 	DEVMETHOD(device_detach,	ppi_detach),
-
 	{ 0, 0 }
 };
 

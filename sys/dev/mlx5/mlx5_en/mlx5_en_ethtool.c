@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015-2019 Mellanox Technologies. All rights reserved.
+ * Copyright (c) 2015-2021 Mellanox Technologies. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -21,11 +21,13 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
-#include "en.h"
-#include "port_buffer.h"
+#include "opt_rss.h"
+#include "opt_ratelimit.h"
+
+#include <dev/mlx5/mlx5_en/en.h>
+#include <dev/mlx5/mlx5_en/port_buffer.h>
 
 void
 mlx5e_create_stats(struct sysctl_ctx_list *ctx,
@@ -38,11 +40,31 @@ mlx5e_create_stats(struct sysctl_ctx_list *ctx,
 	sysctl_ctx_init(ctx);
 
 	node = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO,
-	    buffer, CTLFLAG_RD, NULL, "Statistics");
+	    buffer, CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Statistics");
 	if (node == NULL)
 		return;
 	for (x = 0; x != num; x++) {
 		SYSCTL_ADD_UQUAD(ctx, SYSCTL_CHILDREN(node), OID_AUTO,
+		    desc[2 * x], CTLFLAG_RD, arg + x, desc[2 * x + 1]);
+	}
+}
+
+void
+mlx5e_create_counter_stats(struct sysctl_ctx_list *ctx,
+    struct sysctl_oid_list *parent, const char *buffer,
+    const char **desc, unsigned num, counter_u64_t *arg)
+{
+	struct sysctl_oid *node;
+	unsigned x;
+
+	sysctl_ctx_init(ctx);
+
+	node = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO,
+	    buffer, CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Statistics");
+	if (node == NULL)
+		return;
+	for (x = 0; x != num; x++) {
+		SYSCTL_ADD_COUNTER_U64(ctx, SYSCTL_CHILDREN(node), OID_AUTO,
 		    desc[2 * x], CTLFLAG_RD, arg + x, desc[2 * x + 1]);
 	}
 }
@@ -1011,11 +1033,6 @@ mlx5e_ethtool_handler(SYSCTL_HANDLER_ARGS)
 		priv->params_ethtool.rx_queue_size =
 		    1 << priv->params.log_rq_size;
 
-		/* update least number of RX WQEs */
-		priv->params.min_rx_wqes = min(
-		    priv->params_ethtool.rx_queue_size - 1,
-		    MLX5E_PARAMS_DEFAULT_MIN_RX_WQES);
-
 		/* restart network interface, if any */
 		if (was_opened)
 			mlx5e_open_locked(priv->ifp);
@@ -1206,10 +1223,16 @@ mlx5e_ethtool_handler(SYSCTL_HANDLER_ARGS)
 		break;
 
 	case MLX5_PARAM_OFFSET(mc_local_lb):
+		/* check if mlx5ib is managing this feature */
+		if (MLX5_CAP_GEN(priv->mdev, port_type) != MLX5_CAP_PORT_TYPE_ETH) {
+			error = EOPNOTSUPP;
+			break;
+		}
+
 		priv->params_ethtool.mc_local_lb =
 		    priv->params_ethtool.mc_local_lb ? 1 : 0;
 
-		if (MLX5_CAP_GEN(priv->mdev, disable_local_lb)) {
+		if (MLX5_CAP_GEN(priv->mdev, disable_local_lb_mc)) {
 			error = mlx5_nic_vport_modify_local_lb(priv->mdev,
 			    MLX5_LOCAL_MC_LB, priv->params_ethtool.mc_local_lb);
 		} else {
@@ -1218,14 +1241,29 @@ mlx5e_ethtool_handler(SYSCTL_HANDLER_ARGS)
 		break;
 
 	case MLX5_PARAM_OFFSET(uc_local_lb):
+		/* check if mlx5ib is managing this feature */
+		if (MLX5_CAP_GEN(priv->mdev, port_type) != MLX5_CAP_PORT_TYPE_ETH) {
+			error = EOPNOTSUPP;
+			break;
+		}
+
 		priv->params_ethtool.uc_local_lb =
 		    priv->params_ethtool.uc_local_lb ? 1 : 0;
 
-		if (MLX5_CAP_GEN(priv->mdev, disable_local_lb)) {
+		if (MLX5_CAP_GEN(priv->mdev, disable_local_lb_uc)) {
 			error = mlx5_nic_vport_modify_local_lb(priv->mdev,
 			    MLX5_LOCAL_UC_LB, priv->params_ethtool.uc_local_lb);
 		} else {
 			error = EOPNOTSUPP;
+		}
+		break;
+
+	case MLX5_PARAM_OFFSET(irq_cpu_base):
+	case MLX5_PARAM_OFFSET(irq_cpu_stride):
+		if (was_opened) {
+			/* network interface must toggled */
+			mlx5e_close_locked(priv->ifp);
+			mlx5e_open_locked(priv->ifp);
 		}
 		break;
 
@@ -1355,7 +1393,7 @@ mlx5e_create_diagnostics(struct mlx5e_priv *priv)
 	/* create root node */
 	node = SYSCTL_ADD_NODE(ctx,
 	    SYSCTL_CHILDREN(priv->sysctl_ifnet), OID_AUTO,
-	    "diagnostics", CTLFLAG_RD, NULL, "Diagnostics");
+	    "diagnostics", CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Diagnostics");
 	if (node == NULL)
 		return;
 
@@ -1392,6 +1430,8 @@ mlx5e_create_ethtool(struct mlx5e_priv *priv)
 	int i;
 
 	/* set some defaults */
+	priv->params_ethtool.irq_cpu_base = -1;	/* disabled */
+	priv->params_ethtool.irq_cpu_stride = 1;
 	priv->params_ethtool.tx_queue_size_max = 1 << MLX5E_PARAMS_MAXIMUM_LOG_SQ_SIZE;
 	priv->params_ethtool.rx_queue_size_max = 1 << MLX5E_PARAMS_MAXIMUM_LOG_RQ_SIZE;
 	priv->params_ethtool.tx_queue_size = 1 << priv->params.log_sq_size;
@@ -1411,7 +1451,8 @@ mlx5e_create_ethtool(struct mlx5e_priv *priv)
 	mlx5e_ethtool_sync_tx_completion_fact(priv);
 
 	/* get default values for local loopback, if any */
-	if (MLX5_CAP_GEN(priv->mdev, disable_local_lb)) {
+	if (MLX5_CAP_GEN(priv->mdev, disable_local_lb_mc) ||
+	    MLX5_CAP_GEN(priv->mdev, disable_local_lb_uc)) {
 		int err;
 		u8 val;
 
@@ -1427,7 +1468,7 @@ mlx5e_create_ethtool(struct mlx5e_priv *priv)
 	/* create root node */
 	node = SYSCTL_ADD_NODE(&priv->sysctl_ctx,
 	    SYSCTL_CHILDREN(priv->sysctl_ifnet), OID_AUTO,
-	    "conf", CTLFLAG_RW, NULL, "Configuration");
+	    "conf", CTLFLAG_RW | CTLFLAG_MPSAFE, NULL, "Configuration");
 	if (node == NULL)
 		return;
 	for (x = 0; x != MLX5E_PARAMS_NUM; x++) {
@@ -1438,10 +1479,13 @@ mlx5e_create_ethtool(struct mlx5e_priv *priv)
 			    mlx5e_params_desc[2 * x], CTLTYPE_U64 | CTLFLAG_RD |
 			    CTLFLAG_MPSAFE, priv, x, &mlx5e_ethtool_handler, "QU",
 			    mlx5e_params_desc[2 * x + 1]);
+		} else if (strcmp(mlx5e_params_desc[2 * x], "hw_lro") == 0) {
+			/* read-only, but tunable parameters */
+			SYSCTL_ADD_PROC(&priv->sysctl_ctx, SYSCTL_CHILDREN(node), OID_AUTO,
+			    mlx5e_params_desc[2 * x], CTLTYPE_U64 | CTLFLAG_RDTUN |
+			    CTLFLAG_MPSAFE, priv, x, &mlx5e_ethtool_handler, "QU",
+			    mlx5e_params_desc[2 * x + 1]);
 		} else {
-#if (__FreeBSD_version < 1100000)
-			char path[64];
-#endif
 			/*
 			 * NOTE: In FreeBSD-11 and newer the
 			 * CTLFLAG_RWTUN flag will take care of
@@ -1452,24 +1496,14 @@ mlx5e_create_ethtool(struct mlx5e_priv *priv)
 			    mlx5e_params_desc[2 * x], CTLTYPE_U64 | CTLFLAG_RWTUN |
 			    CTLFLAG_MPSAFE, priv, x, &mlx5e_ethtool_handler, "QU",
 			    mlx5e_params_desc[2 * x + 1]);
-
-#if (__FreeBSD_version < 1100000)
-			/* compute path for sysctl */
-			snprintf(path, sizeof(path), "dev.mce.%d.conf.%s",
-			    device_get_unit(priv->mdev->pdev->dev.bsddev),
-			    mlx5e_params_desc[2 * x]);
-
-			/* try to fetch tunable, if any */
-			if (TUNABLE_QUAD_FETCH(path, &priv->params_ethtool.arg[x]))
-				mlx5e_ethtool_handler(NULL, priv, x, NULL);
-#endif
 		}
 	}
 
 	/* create fec node */
 	fec_node = SYSCTL_ADD_NODE(&priv->sysctl_ctx,
 	    SYSCTL_CHILDREN(node), OID_AUTO,
-	    "fec", CTLFLAG_RW, NULL, "Forward Error Correction");
+	    "fec", CTLFLAG_RW | CTLFLAG_MPSAFE, NULL,
+	    "Forward Error Correction");
 	if (fec_node == NULL)
 		return;
 
@@ -1531,7 +1565,8 @@ mlx5e_create_ethtool(struct mlx5e_priv *priv)
 	/* create qos node */
 	qos_node = SYSCTL_ADD_NODE(&priv->sysctl_ctx,
 	    SYSCTL_CHILDREN(node), OID_AUTO,
-	    "qos", CTLFLAG_RW, NULL, "Quality Of Service configuration");
+	    "qos", CTLFLAG_RW | CTLFLAG_MPSAFE, NULL,
+	    "Quality Of Service configuration");
 	if (qos_node == NULL)
 		return;
 

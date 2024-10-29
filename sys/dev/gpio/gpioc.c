@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -583,7 +582,7 @@ gpioc_attach(device_t dev)
 		return (err);
 	sc->sc_pin_intr = malloc(sizeof(struct gpioc_pin_intr) * sc->sc_npins,
 	    M_GPIOC, M_WAITOK | M_ZERO);
-	for (int i = 0; i <= sc->sc_npins; i++) {
+	for (int i = 0; i < sc->sc_npins; i++) {
 		sc->sc_pin_intr[i].pin = malloc(sizeof(struct gpiobus_pin),
 		    M_GPIOC, M_WAITOK | M_ZERO);
 		sc->sc_pin_intr[i].sc = sc;
@@ -617,7 +616,7 @@ gpioc_detach(device_t dev)
 	if (sc->sc_ctl_dev)
 		destroy_dev(sc->sc_ctl_dev);
 
-	for (int i = 0; i <= sc->sc_npins; i++) {
+	for (int i = 0; i < sc->sc_npins; i++) {
 		mtx_destroy(&sc->sc_pin_intr[i].mtx);
 		free(sc->sc_pin_intr[i].pin, M_GPIOC);
 	}

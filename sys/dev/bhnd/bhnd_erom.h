@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015-2017 Landon Fuller <landonf@FreeBSD.org>
  * Copyright (c) 2017 The FreeBSD Foundation
@@ -88,7 +88,6 @@ void			 bhnd_erom_io_fini(struct bhnd_erom_io *eio);
 struct bhnd_erom {
 	KOBJ_FIELDS;
 };
-
 
 /** Number of additional bytes to reserve for statically allocated
  *  bhnd_erom instances. */

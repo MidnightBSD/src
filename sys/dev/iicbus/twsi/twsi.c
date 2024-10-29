@@ -38,7 +38,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -245,7 +244,6 @@ twsi_locked_start(device_t dev, struct twsi_softc *sc, int32_t mask,
 	return (IIC_NOERR);
 }
 
-#ifdef EXT_RESOURCES
 #define	TWSI_BAUD_RATE_RAW(C,M,N)	((C)/((10*(M+1))<<(N)))
 #define	ABSSUB(a,b)	(((a) > (b)) ? (a) - (b) : (b) - (a))
 
@@ -280,7 +278,6 @@ twsi_calc_baud_rate(struct twsi_softc *sc, const u_int target,
 
 	return (0);
 }
-#endif /* EXT_RESOURCES */
 
 /*
  * Only slave mode supported, disregard [old]addr
@@ -290,17 +287,13 @@ twsi_reset(device_t dev, u_char speed, u_char addr, u_char *oldaddr)
 {
 	struct twsi_softc *sc;
 	uint32_t param;
-#ifdef EXT_RESOURCES
 	u_int busfreq;
-#endif
 
 	sc = device_get_softc(dev);
 
-#ifdef EXT_RESOURCES
 	busfreq = IICBUS_GET_FREQUENCY(sc->iicbus, speed);
 
 	if (twsi_calc_baud_rate(sc, busfreq, &param) == -1) {
-#endif
 		switch (speed) {
 		case IIC_SLOW:
 		case IIC_FAST:
@@ -314,9 +307,7 @@ twsi_reset(device_t dev, u_char speed, u_char addr, u_char *oldaddr)
 			debugf(sc, "Using IIC_FASTEST/UNKNOWN mode with speed param=%x\n", param);
 			break;
 		}
-#ifdef EXT_RESOURCES
 	}
-#endif
 
 	debugf(sc, "Using clock param=%x\n", param);
 

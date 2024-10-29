@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: BSD-2-Clause-NetBSD AND BSD-3-Clause */
+/* SPDX-License-Identifier: BSD-2-Clause AND BSD-3-Clause */
 /*	$NetBSD: qat_hw17var.h,v 1.1 2019/11/20 09:37:46 hikaru Exp $	*/
 
 /*
@@ -74,7 +74,6 @@ void		qat_hw17_crypto_setup_desc(struct qat_crypto *,
 		    struct qat_session *, struct qat_crypto_desc *);
 void		qat_hw17_crypto_setup_req_params(struct qat_crypto_bank *,
 		    struct qat_session *, struct qat_crypto_desc const *,
-		    struct qat_sym_cookie *, struct cryptodesc *,
-		    struct cryptodesc *);
+		    struct qat_sym_cookie *, struct cryptop *);
 
 #endif

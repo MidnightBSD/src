@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -133,7 +132,7 @@ siba_read_ivar(device_t dev, device_t child, int index, uintptr_t *result)
 	sc = device_get_softc(dev);
 	dinfo = device_get_ivars(child);
 	cfg = &dinfo->core_id.core_info;
-	
+
 	switch (index) {
 	case BHND_IVAR_VENDOR:
 		*result = cfg->vendor;
@@ -1193,7 +1192,7 @@ siba_map_cfg_resources(device_t dev, struct siba_devinfo *dinfo)
 		    num_cfg);
 		return (ENXIO);
 	}
-	
+
 	/* Fetch the core register address space */
 	addrspace = siba_find_addrspace(dinfo, BHND_PORT_DEVICE, 0, 0);
 	if (addrspace == NULL) {
@@ -1259,10 +1258,7 @@ siba_add_child(device_t dev, u_int order, const char *name, int unit)
 static void
 siba_child_deleted(device_t dev, device_t child)
 {
-	struct bhnd_softc	*sc;
 	struct siba_devinfo	*dinfo;
-
-	sc = device_get_softc(dev);
 
 	/* Call required bhnd(4) implementation */
 	bhnd_generic_child_deleted(dev, child);
@@ -1400,7 +1396,7 @@ static device_method_t siba_methods[] = {
 	DEVMETHOD(device_detach,		siba_detach),
 	DEVMETHOD(device_resume,		siba_resume),
 	DEVMETHOD(device_suspend,		siba_suspend),
-	
+
 	/* Bus interface */
 	DEVMETHOD(bus_add_child,		siba_add_child),
 	DEVMETHOD(bus_child_deleted,		siba_child_deleted),

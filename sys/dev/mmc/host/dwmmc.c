@@ -34,13 +34,16 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/conf.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/module.h>
 #include <sys/malloc.h>
+#include <sys/mutex.h>
+#include <sys/proc.h>
 #include <sys/rman.h>
 #include <sys/queue.h>
 #include <sys/taskqueue.h>
@@ -58,18 +61,30 @@
 #include <machine/cpu.h>
 #include <machine/intr.h>
 
-#ifdef EXT_RESOURCES
 #include <dev/extres/clk/clk.h>
-#endif
 
 #include <dev/mmc/host/dwmmc_reg.h>
 #include <dev/mmc/host/dwmmc_var.h>
 
 #include "opt_mmccam.h"
 
+#ifdef MMCCAM
+#include <cam/cam.h>
+#include <cam/cam_ccb.h>
+#include <cam/cam_debug.h>
+#include <cam/cam_sim.h>
+#include <cam/cam_xpt_sim.h>
+
+#include "mmc_sim_if.h"
+#endif
+
 #include "mmcbr_if.h"
 
+#ifdef DEBUG
+#define dprintf(fmt, args...) printf(fmt, ##args)
+#else
 #define dprintf(x, arg...)
+#endif
 
 #define	READ4(_sc, _reg) \
 	bus_read_4((_sc)->res[0], _reg)
@@ -92,8 +107,7 @@
 #define	CARD_INIT_DONE	0x04
 
 #define	DWMMC_DATA_ERR_FLAGS	(SDMMC_INTMASK_DRT | SDMMC_INTMASK_DCRC \
-				|SDMMC_INTMASK_HTO | SDMMC_INTMASK_SBE \
-				|SDMMC_INTMASK_EBE)
+				|SDMMC_INTMASK_SBE | SDMMC_INTMASK_EBE)
 #define	DWMMC_CMD_ERR_FLAGS	(SDMMC_INTMASK_RTO | SDMMC_INTMASK_RCRC \
 				|SDMMC_INTMASK_RE)
 #define	DWMMC_ERR_FLAGS		(DWMMC_DATA_ERR_FLAGS | DWMMC_CMD_ERR_FLAGS \
@@ -119,7 +133,21 @@ struct idmac_desc {
 #define	IDMAC_DESC_SEGS	(PAGE_SIZE / (sizeof(struct idmac_desc)))
 #define	IDMAC_DESC_SIZE	(sizeof(struct idmac_desc) * IDMAC_DESC_SEGS)
 #define	DEF_MSIZE	0x2	/* Burst size of multiple transaction */
-#define	IDMAC_MAX_SIZE	4096
+/*
+ * Size field in DMA descriptor is 13 bits long (up to 4095 bytes),
+ * but must be a multiple of the data bus size.Additionally, we must ensure
+ * that bus_dmamap_load() doesn't additionally fragments buffer (because it
+ * is processed with page size granularity). Thus limit fragment size to half
+ * of page.
+ * XXX switch descriptor format to array and use second buffer pointer for
+ * second half of page
+ */
+#define	IDMAC_MAX_SIZE	2048
+/*
+ * Busdma may bounce buffers, so we must reserve 2 descriptors
+ * (on start and on end) for bounced fragments.
+ */
+#define DWMMC_MAX_DATA	(IDMAC_MAX_SIZE * (IDMAC_DESC_SEGS - 2)) / MMC_SECTOR_SIZE
 
 static void dwmmc_next_operation(struct dwmmc_softc *);
 static int dwmmc_setup_bus(struct dwmmc_softc *, int);
@@ -142,8 +170,11 @@ static void
 dwmmc_get1paddr(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 {
 
+	if (nsegs != 1)
+		panic("%s: nsegs != 1 (%d)\n", __func__, nsegs);
 	if (error != 0)
-		return;
+		panic("%s: error != 0 (%d)\n", __func__, error);
+
 	*(bus_addr_t *)arg = segs[0].ds_addr;
 }
 
@@ -153,15 +184,13 @@ dwmmc_ring_setup(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 	struct dwmmc_softc *sc;
 	int idx;
 
-	if (error != 0)
-		return;
-
 	sc = arg;
-
 	dprintf("nsegs %d seg0len %lu\n", nsegs, segs[0].ds_len);
+	if (error != 0)
+		panic("%s: error != 0 (%d)\n", __func__, error);
 
 	for (idx = 0; idx < nsegs; idx++) {
-		sc->desc_ring[idx].des0 = (DES0_OWN | DES0_DIC | DES0_CH);
+		sc->desc_ring[idx].des0 = DES0_DIC | DES0_CH;
 		sc->desc_ring[idx].des1 = segs[idx].ds_len & DES1_BS1_MASK;
 		sc->desc_ring[idx].des2 = segs[idx].ds_addr;
 
@@ -172,6 +201,8 @@ dwmmc_ring_setup(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 			sc->desc_ring[idx].des0 &= ~(DES0_DIC | DES0_CH);
 			sc->desc_ring[idx].des0 |= DES0_LD;
 		}
+		wmb();
+		sc->desc_ring[idx].des0 |= DES0_OWN;
 	}
 }
 
@@ -254,7 +285,7 @@ dma_setup(struct dwmmc_softc *sc)
 
 	error = bus_dma_tag_create(
 	    bus_get_dma_tag(sc->dev),	/* Parent tag. */
-	    CACHE_LINE_SIZE, 0,		/* alignment, boundary */
+	    8, 0,			/* alignment, boundary */
 	    BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
 	    BUS_SPACE_MAXADDR,		/* highaddr */
 	    NULL, NULL,			/* filter, filterarg */
@@ -285,8 +316,18 @@ static void
 dwmmc_cmd_done(struct dwmmc_softc *sc)
 {
 	struct mmc_command *cmd;
+#ifdef MMCCAM
+	union ccb *ccb;
+#endif
 
+#ifdef MMCCAM
+	ccb = sc->ccb;
+	if (ccb == NULL)
+		return;
+	cmd = &ccb->mmcio.cmd;
+#else
 	cmd = sc->curcmd;
+#endif
 	if (cmd == NULL)
 		return;
 
@@ -416,6 +457,9 @@ dwmmc_handle_card_present(struct dwmmc_softc *sc, bool is_present)
 {
 	bool was_present;
 
+	if (dumping || SCHEDULER_STOPPED())
+		return;
+
 	was_present = sc->child != NULL;
 
 	if (!was_present && is_present) {
@@ -431,6 +475,9 @@ dwmmc_card_task(void *arg, int pending __unused)
 {
 	struct dwmmc_softc *sc = arg;
 
+#ifdef MMCCAM
+	mmc_cam_sim_discover(&sc->mmc_sim);
+#else
 	DWMMC_LOCK(sc);
 
 	if (READ4(sc, SDMMC_CDETECT) == 0) {
@@ -458,6 +505,7 @@ dwmmc_card_task(void *arg, int pending __unused)
 		} else
 			DWMMC_UNLOCK(sc);
 	}
+#endif /* MMCCAM */
 }
 
 static int
@@ -467,9 +515,7 @@ parse_fdt(struct dwmmc_softc *sc)
 	phandle_t node;
 	uint32_t bus_hz = 0;
 	int len;
-#ifdef EXT_RESOURCES
 	int error;
-#endif
 
 	if ((node = ofw_bus_get_node(sc->dev)) == -1)
 		return (ENXIO);
@@ -500,8 +546,6 @@ parse_fdt(struct dwmmc_softc *sc)
 		OF_getencprop(node, "clock-frequency", dts_value, len);
 		bus_hz = dts_value[0];
 	}
-
-#ifdef EXT_RESOURCES
 
 	/* IP block reset is optional */
 	error = hwreset_get_by_ofw_name(sc->dev, 0, "reset", &sc->hwreset);
@@ -609,7 +653,6 @@ parse_fdt(struct dwmmc_softc *sc)
 			goto fail;
 		}
 	}
-#endif /* EXT_RESOURCES */
 
 	if (sc->bus_hz == 0) {
 		device_printf(sc->dev, "No bus speed provided\n");
@@ -627,7 +670,6 @@ dwmmc_attach(device_t dev)
 {
 	struct dwmmc_softc *sc;
 	int error;
-	int slot;
 
 	sc = device_get_softc(dev);
 
@@ -659,14 +701,6 @@ dwmmc_attach(device_t dev)
 
 	device_printf(dev, "Hardware version ID is %04x\n",
 		READ4(sc, SDMMC_VERID) & 0xffff);
-
-	/* XXX: we support operation for slot index 0 only */
-	slot = 0;
-	if (sc->pwren_inverted) {
-		WRITE4(sc, SDMMC_PWREN, (0 << slot));
-	} else {
-		WRITE4(sc, SDMMC_PWREN, (1 << slot));
-	}
 
 	/* Reset all */
 	if (dwmmc_ctrl_reset(sc, (SDMMC_CTRL_RESET |
@@ -720,12 +754,19 @@ dwmmc_attach(device_t dev)
 	TIMEOUT_TASK_INIT(taskqueue_swi_giant, &sc->card_delayed_task, 0,
 		dwmmc_card_task, sc);
 
-	/* 
+#ifdef MMCCAM
+	sc->ccb = NULL;
+	if (mmc_cam_sim_alloc(dev, "dw_mmc", &sc->mmc_sim) != 0) {
+		device_printf(dev, "cannot alloc cam sim\n");
+		dwmmc_detach(dev);
+		return (ENXIO);
+	}
+#endif
+	/*
 	 * Schedule a card detection as we won't get an interrupt
 	 * if the card is inserted when we attach
 	 */
 	dwmmc_card_task(sc, 0);
-
 	return (0);
 }
 
@@ -753,7 +794,6 @@ dwmmc_detach(device_t dev)
 
 	DWMMC_LOCK_DESTROY(sc);
 
-#ifdef EXT_RESOURCES
 	if (sc->hwreset != NULL && hwreset_deassert(sc->hwreset) != 0)
 		device_printf(sc->dev, "cannot deassert reset\n");
 	if (sc->biu != NULL && clk_disable(sc->biu) != 0)
@@ -765,6 +805,9 @@ dwmmc_detach(device_t dev)
 		device_printf(sc->dev, "Cannot disable vmmc regulator\n");
 	if (sc->vqmmc && regulator_disable(sc->vqmmc) != 0)
 		device_printf(sc->dev, "Cannot disable vqmmc regulator\n");
+
+#ifdef MMCCAM
+	mmc_cam_sim_free(&sc->mmc_sim);
 #endif
 
 	return (0);
@@ -804,7 +847,7 @@ dwmmc_setup_bus(struct dwmmc_softc *sc, int freq)
 	tout = 1000;
 	do {
 		if (tout-- < 0) {
-			device_printf(sc->dev, "Failed to update clk");
+			device_printf(sc->dev, "Failed to update clk\n");
 			return (1);
 		}
 	} while (READ4(sc, SDMMC_CMD) & SDMMC_CMD_START);
@@ -835,8 +878,21 @@ dwmmc_update_ios(device_t brdev, device_t reqdev)
 	sc = device_get_softc(brdev);
 	ios = &sc->host.ios;
 
-	dprintf("Setting up clk %u bus_width %d\n",
-		ios->clock, ios->bus_width);
+	dprintf("Setting up clk %u bus_width %d, timing: %d\n",
+		ios->clock, ios->bus_width, ios->timing);
+
+	switch (ios->power_mode) {
+	case power_on:
+		break;
+	case power_off:
+		WRITE4(sc, SDMMC_PWREN, 0);
+		break;
+	case power_up:
+		WRITE4(sc, SDMMC_PWREN, 1);
+		break;
+	}
+
+	mmc_fdt_set_power(&sc->mmc_helper, ios->power_mode);
 
 	if (ios->bus_width == bus_width_8)
 		WRITE4(sc, SDMMC_CTYPE, SDMMC_CTYPE_8BIT);
@@ -920,7 +976,7 @@ dma_prepare(struct dwmmc_softc *sc, struct mmc_command *cmd)
 	reg = READ4(sc, SDMMC_INTMASK);
 	reg &= ~(SDMMC_INTMASK_TXDR | SDMMC_INTMASK_RXDR);
 	WRITE4(sc, SDMMC_INTMASK, reg);
-
+	dprintf("%s: bus_dmamap_load size: %zu\n", __func__, data->len);
 	err = bus_dmamap_load(sc->buf_tag, sc->buf_map,
 		data->data, data->len, dwmmc_ring_setup,
 		sc, BUS_DMA_NOWAIT);
@@ -1040,15 +1096,14 @@ dwmmc_start_cmd(struct dwmmc_softc *sc, struct mmc_command *cmd)
 	uint32_t blksz;
 	uint32_t cmdr;
 
+	dprintf("%s\n", __func__);
 	sc->curcmd = cmd;
 	data = cmd->data;
 
-	if ((sc->hwtype & HWTYPE_MASK) == HWTYPE_ROCKCHIP)
-		dwmmc_setup_bus(sc, sc->host.ios.clock);
-
+#ifndef MMCCAM
 	/* XXX Upper layers don't always set this */
 	cmd->mrq = sc->req;
-
+#endif
 	/* Begin setting up command register. */
 
 	cmdr = cmd->opcode;
@@ -1095,10 +1150,18 @@ dwmmc_start_cmd(struct dwmmc_softc *sc, struct mmc_command *cmd)
 			cmdr |= SDMMC_CMD_DATA_WRITE;
 
 		WRITE4(sc, SDMMC_TMOUT, 0xffffffff);
-		WRITE4(sc, SDMMC_BYTCNT, data->len);
-		blksz = (data->len < MMC_SECTOR_SIZE) ? \
-			 data->len : MMC_SECTOR_SIZE;
-		WRITE4(sc, SDMMC_BLKSIZ, blksz);
+#ifdef MMCCAM
+		if (cmd->data->flags & MMC_DATA_BLOCK_SIZE) {
+			WRITE4(sc, SDMMC_BLKSIZ, cmd->data->block_size);
+			WRITE4(sc, SDMMC_BYTCNT, cmd->data->len);
+		} else
+#endif
+		{
+			WRITE4(sc, SDMMC_BYTCNT, data->len);
+			blksz = (data->len < MMC_SECTOR_SIZE) ? \
+				data->len : MMC_SECTOR_SIZE;
+			WRITE4(sc, SDMMC_BLKSIZ, blksz);
+		}
 
 		if (sc->use_pio) {
 			pio_prepare(sc, cmd);
@@ -1118,11 +1181,23 @@ dwmmc_start_cmd(struct dwmmc_softc *sc, struct mmc_command *cmd)
 static void
 dwmmc_next_operation(struct dwmmc_softc *sc)
 {
+	struct mmc_command *cmd;
+	dprintf("%s\n", __func__);
+#ifdef MMCCAM
+	union ccb *ccb;
+
+	ccb = sc->ccb;
+	if (ccb == NULL)
+		return;
+	cmd = &ccb->mmcio.cmd;
+#else
 	struct mmc_request *req;
 
 	req = sc->req;
 	if (req == NULL)
 		return;
+	cmd = req->cmd;
+#endif
 
 	sc->acd_rcvd = 0;
 	sc->dto_rcvd = 0;
@@ -1139,17 +1214,26 @@ dwmmc_next_operation(struct dwmmc_softc *sc)
 
 	if (sc->flags & PENDING_CMD) {
 		sc->flags &= ~PENDING_CMD;
-		dwmmc_start_cmd(sc, req->cmd);
+		dwmmc_start_cmd(sc, cmd);
 		return;
 	} else if (sc->flags & PENDING_STOP && !sc->use_auto_stop) {
 		sc->flags &= ~PENDING_STOP;
-		dwmmc_start_cmd(sc, req->stop);
+		/// XXX: What to do with this?
+		//dwmmc_start_cmd(sc, req->stop);
 		return;
 	}
 
+#ifdef MMCCAM
+	sc->ccb = NULL;
+	sc->curcmd = NULL;
+	ccb->ccb_h.status =
+		(ccb->mmcio.cmd.error == 0 ? CAM_REQ_CMP : CAM_REQ_CMP_ERR);
+	xpt_done(ccb);
+#else
 	sc->req = NULL;
 	sc->curcmd = NULL;
 	req->done(req);
+#endif
 }
 
 static int
@@ -1163,6 +1247,9 @@ dwmmc_request(device_t brdev, device_t reqdev, struct mmc_request *req)
 
 	DWMMC_LOCK(sc);
 
+#ifdef MMCCAM
+	sc->flags |= PENDING_CMD;
+#else
 	if (sc->req != NULL) {
 		DWMMC_UNLOCK(sc);
 		return (EBUSY);
@@ -1172,12 +1259,14 @@ dwmmc_request(device_t brdev, device_t reqdev, struct mmc_request *req)
 	sc->flags |= PENDING_CMD;
 	if (sc->req->stop)
 		sc->flags |= PENDING_STOP;
+#endif
 	dwmmc_next_operation(sc);
 
 	DWMMC_UNLOCK(sc);
 	return (0);
 }
 
+#ifndef MMCCAM
 static int
 dwmmc_get_ro(device_t brdev, device_t reqdev)
 {
@@ -1215,6 +1304,7 @@ dwmmc_release_host(device_t brdev, device_t reqdev)
 	DWMMC_UNLOCK(sc);
 	return (0);
 }
+#endif	/* !MMCCAM */
 
 static int
 dwmmc_read_ivar(device_t bus, device_t child, int which, uintptr_t *result)
@@ -1266,7 +1356,7 @@ dwmmc_read_ivar(device_t bus, device_t child, int which, uintptr_t *result)
 		*(int *)result = sc->host.caps;
 		break;
 	case MMCBR_IVAR_MAX_DATA:
-		*(int *)result = (IDMAC_MAX_SIZE * IDMAC_DESC_SEGS) / MMC_SECTOR_SIZE;
+		*(int *)result = DWMMC_MAX_DATA;
 		break;
 	case MMCBR_IVAR_TIMING:
 		*(int *)result = sc->host.ios.timing;
@@ -1326,17 +1416,160 @@ dwmmc_write_ivar(device_t bus, device_t child, int which, uintptr_t value)
 	return (0);
 }
 
+#ifdef MMCCAM
+/* Note: this function likely belongs to the specific driver impl */
+static int
+dwmmc_switch_vccq(device_t dev, device_t child)
+{
+	device_printf(dev, "This is a default impl of switch_vccq() that always fails\n");
+	return EINVAL;
+}
+
+static int
+dwmmc_get_tran_settings(device_t dev, struct ccb_trans_settings_mmc *cts)
+{
+	struct dwmmc_softc *sc;
+
+	sc = device_get_softc(dev);
+
+	cts->host_ocr = sc->host.host_ocr;
+	cts->host_f_min = sc->host.f_min;
+	cts->host_f_max = sc->host.f_max;
+	cts->host_caps = sc->host.caps;
+	cts->host_max_data = DWMMC_MAX_DATA;
+	memcpy(&cts->ios, &sc->host.ios, sizeof(struct mmc_ios));
+
+	return (0);
+}
+
+static int
+dwmmc_set_tran_settings(device_t dev, struct ccb_trans_settings_mmc *cts)
+{
+	struct dwmmc_softc *sc;
+	struct mmc_ios *ios;
+	struct mmc_ios *new_ios;
+	int res;
+
+	sc = device_get_softc(dev);
+	ios = &sc->host.ios;
+
+	new_ios = &cts->ios;
+
+	/* Update only requested fields */
+	if (cts->ios_valid & MMC_CLK) {
+		ios->clock = new_ios->clock;
+		if (bootverbose)
+			device_printf(sc->dev, "Clock => %d\n", ios->clock);
+	}
+	if (cts->ios_valid & MMC_VDD) {
+		ios->vdd = new_ios->vdd;
+		if (bootverbose)
+			device_printf(sc->dev, "VDD => %d\n", ios->vdd);
+	}
+	if (cts->ios_valid & MMC_CS) {
+		ios->chip_select = new_ios->chip_select;
+		if (bootverbose)
+			device_printf(sc->dev, "CS => %d\n", ios->chip_select);
+	}
+	if (cts->ios_valid & MMC_BW) {
+		ios->bus_width = new_ios->bus_width;
+		if (bootverbose)
+			device_printf(sc->dev, "Bus width => %d\n", ios->bus_width);
+	}
+	if (cts->ios_valid & MMC_PM) {
+		ios->power_mode = new_ios->power_mode;
+		if (bootverbose)
+			device_printf(sc->dev, "Power mode => %d\n", ios->power_mode);
+	}
+	if (cts->ios_valid & MMC_BT) {
+		ios->timing = new_ios->timing;
+		if (bootverbose)
+			device_printf(sc->dev, "Timing => %d\n", ios->timing);
+	}
+	if (cts->ios_valid & MMC_BM) {
+		ios->bus_mode = new_ios->bus_mode;
+		if (bootverbose)
+			device_printf(sc->dev, "Bus mode => %d\n", ios->bus_mode);
+	}
+	if (cts->ios_valid & MMC_VCCQ) {
+		ios->vccq = new_ios->vccq;
+		if (bootverbose)
+			device_printf(sc->dev, "VCCQ => %d\n", ios->vccq);
+		res = dwmmc_switch_vccq(sc->dev, NULL);
+		device_printf(sc->dev, "VCCQ switch result: %d\n", res);
+	}
+
+	return (dwmmc_update_ios(sc->dev, NULL));
+}
+
+static int
+dwmmc_cam_request(device_t dev, union ccb *ccb)
+{
+	struct dwmmc_softc *sc;
+	struct ccb_mmcio *mmcio;
+
+	sc = device_get_softc(dev);
+	mmcio = &ccb->mmcio;
+
+	DWMMC_LOCK(sc);
+
+#ifdef DEBUG
+	if (__predict_false(bootverbose)) {
+		device_printf(sc->dev, "CMD%u arg %#x flags %#x dlen %u dflags %#x\n",
+			    mmcio->cmd.opcode, mmcio->cmd.arg, mmcio->cmd.flags,
+			    mmcio->cmd.data != NULL ? (unsigned int) mmcio->cmd.data->len : 0,
+			    mmcio->cmd.data != NULL ? mmcio->cmd.data->flags: 0);
+	}
+#endif
+	if (mmcio->cmd.data != NULL) {
+		if (mmcio->cmd.data->len == 0 || mmcio->cmd.data->flags == 0)
+			panic("data->len = %d, data->flags = %d -- something is b0rked",
+			      (int)mmcio->cmd.data->len, mmcio->cmd.data->flags);
+	}
+	if (sc->ccb != NULL) {
+		device_printf(sc->dev, "Controller still has an active command\n");
+		return (EBUSY);
+	}
+	sc->ccb = ccb;
+	DWMMC_UNLOCK(sc);
+	dwmmc_request(sc->dev, NULL, NULL);
+
+	return (0);
+}
+
+static void
+dwmmc_cam_poll(device_t dev)
+{
+	struct dwmmc_softc *sc;
+
+	sc = device_get_softc(dev);
+	dwmmc_intr(sc);
+}
+#endif /* MMCCAM */
+
 static device_method_t dwmmc_methods[] = {
 	/* Bus interface */
 	DEVMETHOD(bus_read_ivar,	dwmmc_read_ivar),
 	DEVMETHOD(bus_write_ivar,	dwmmc_write_ivar),
 
+#ifndef MMCCAM
 	/* mmcbr_if */
 	DEVMETHOD(mmcbr_update_ios,	dwmmc_update_ios),
 	DEVMETHOD(mmcbr_request,	dwmmc_request),
 	DEVMETHOD(mmcbr_get_ro,		dwmmc_get_ro),
 	DEVMETHOD(mmcbr_acquire_host,	dwmmc_acquire_host),
 	DEVMETHOD(mmcbr_release_host,	dwmmc_release_host),
+#endif
+
+#ifdef MMCCAM
+	/* MMCCAM interface */
+	DEVMETHOD(mmc_sim_get_tran_settings,	dwmmc_get_tran_settings),
+	DEVMETHOD(mmc_sim_set_tran_settings,	dwmmc_set_tran_settings),
+	DEVMETHOD(mmc_sim_cam_request,		dwmmc_cam_request),
+	DEVMETHOD(mmc_sim_cam_poll,		dwmmc_cam_poll),
+
+	DEVMETHOD(bus_add_child,		bus_generic_add_child),
+#endif
 
 	DEVMETHOD_END
 };

@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Edward Tomasz Napierala under sponsorship
  * from the FreeBSD Foundation.
@@ -27,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef ISCSI_H
@@ -44,6 +42,7 @@ struct iscsi_outstanding {
 	TAILQ_ENTRY(iscsi_outstanding)	io_next;
 	union ccb			*io_ccb;
 	size_t				io_received;
+	uint32_t			io_datasn;
 	uint32_t			io_initiator_task_tag;
 	uint32_t			io_referenced_task_tag;
 	void				*io_icl_prv;
@@ -67,8 +66,6 @@ struct iscsi_session {
 	uint8_t				is_isid[6];
 	uint16_t			is_tsih;
 	bool				is_immediate_data;
-	int				is_max_recv_data_segment_length;
-	int				is_max_send_data_segment_length;
 	char				is_target_alias[ISCSI_ALIAS_LEN];
 
 	TAILQ_HEAD(, iscsi_outstanding)	is_outstanding;
@@ -132,6 +129,7 @@ struct iscsi_softc {
 	TAILQ_HEAD(, iscsi_session)	sc_sessions;
 	struct cv			sc_cv;
 	unsigned int			sc_last_session_id;
+	bool				sc_unloading;
 	eventhandler_tag		sc_shutdown_pre_eh;
 	eventhandler_tag		sc_shutdown_post_eh;
 };

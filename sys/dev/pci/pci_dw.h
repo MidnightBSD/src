@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 Michal Meloun <mmel@FreeBSD.org>
  *
@@ -25,14 +25,12 @@
  * SUCH DAMAGE.
  *
  *
- *
  */
 
 #ifndef _PCI_DW_H_
 #define	_PCI_DW_H_
 
 #include "pci_dw_if.h"
-
 
 /* DesignWare CIe configuration registers */
 #define	DW_PORT_LINK_CTRL		0x710
@@ -43,7 +41,6 @@
 #define	 PORT_LINK_CAPABLE_8			0x0F
 #define	 PORT_LINK_CAPABLE_16			0x1F
 #define	 PORT_LINK_CAPABLE_32			0x3F
-
 
 #define	DW_GEN2_CTRL			0x80C
 #define	 DIRECT_SPEED_CHANGE			(1 << 17)
@@ -61,10 +58,10 @@
 #define DW_MSI_INTR0_MASK		0x82C
 #define DW_MSI_INTR0_STATUS		0x830
 
-
 #define	DW_MISC_CONTROL_1		0x8BC
 #define	 DBI_RO_WR_EN				(1 << 0)
 
+/* Legacy (pre-4.80) iATU mode */
 #define	DW_IATU_VIEWPORT			0x900
 #define	 IATU_REGION_INBOUND			(1U << 31)
 #define	 IATU_REGION_INDEX(x)			((x) & 0x7)
@@ -82,6 +79,19 @@
 #define	DW_IATU_LWR_TARGET_ADDR		0x918
 #define	DW_IATU_UPPER_TARGET_ADDR	0x91C
 
+/* Modern (4.80+) "unroll" iATU mode */
+#define	DW_IATU_UR_STEP			0x200
+#define	DW_IATU_UR_REG(r, n)		(r) * DW_IATU_UR_STEP + IATU_UR_##n
+#define	 IATU_UR_CTRL1				0x00
+#define	 IATU_UR_CTRL2				0x04
+#define	 IATU_UR_LWR_BASE_ADDR			0x08
+#define	 IATU_UR_UPPER_BASE_ADDR		0x0C
+#define	 IATU_UR_LIMIT_ADDR			0x10
+#define	 IATU_UR_LWR_TARGET_ADDR		0x14
+#define	 IATU_UR_UPPER_TARGET_ADDR		0x18
+
+#define	DW_DEFAULT_IATU_UR_DBI_OFFSET	0x300000
+#define	DW_DEFAULT_IATU_UR_DBI_SIZE	0x1000
 
 struct pci_dw_softc {
 	struct ofw_pci_softc	ofw_pci;	/* Must be first */
@@ -95,15 +105,18 @@ struct pci_dw_softc {
 	struct mtx		mtx;
 	struct resource		*cfg_res;
 
-	struct ofw_pci_range	mem_range;
-	struct ofw_pci_range	pref_mem_range;
 	struct ofw_pci_range	io_range;
+	struct ofw_pci_range	*mem_ranges;
+	int			num_mem_ranges;
 
 	bool			coherent;
 	bus_dma_tag_t		dmat;
 
 	int			num_lanes;
-	int			num_viewport;
+	int			num_out_regions;
+	struct resource		*iatu_ur_res;	/* NB: May be dbi_res */
+	bus_addr_t		iatu_ur_offset;
+	bus_size_t		iatu_ur_size;
 	bus_addr_t		cfg_pa;   	/* PA of config memoty */
 	bus_size_t		cfg_size; 	/* size of config  region */
 
@@ -114,7 +127,6 @@ struct pci_dw_softc {
 };
 
 DECLARE_CLASS(pci_dw_driver);
-
 
 static inline void
 pci_dw_dbi_wr4(device_t dev, u_int reg, uint32_t val)

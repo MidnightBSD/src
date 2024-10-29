@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2015 LSI Corp.
  * Copyright (c) 2013-2015 Avago Technologies
@@ -27,7 +27,6 @@
  * SUCH DAMAGE.
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
- *
  */
 
 /*
@@ -119,7 +118,6 @@ typedef struct _MPI2_HBD_ACTION_REQUEST
 #define MPI2_HBD_MAX_RATE_3_0                   (0x09)
 #define MPI2_HBD_MAX_RATE_6_0                   (0x0A)
 
-
 /* Host Based Discovery Action Reply Message */
 typedef struct _MPI2_HBD_ACTION_REPLY
 {
@@ -139,7 +137,4 @@ typedef struct _MPI2_HBD_ACTION_REPLY
 } MPI2_HBD_ACTION_REPLY, MPI2_POINTER PTR_MPI2_HBD_ACTION_REPLY,
   Mpi2HbdActionReply_t, MPI2_POINTER pMpi2HbdActionReply_t;
 
-
 #endif
-
-

@@ -1,7 +1,7 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2015-2021 Amazon.com, Inc. or its affiliates.
+ * Copyright (c) 2015-2023 Amazon.com, Inc. or its affiliates.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,6 @@
  */
 #include <sys/cdefs.h>
 #include <sys/param.h>
-
 #include "opt_rss.h"
 
 #include "ena_rss.h"
@@ -38,7 +37,10 @@
 static void ena_sysctl_add_wd(struct ena_adapter *);
 static void ena_sysctl_add_stats(struct ena_adapter *);
 static void ena_sysctl_add_eni_metrics(struct ena_adapter *);
+static void ena_sysctl_add_customer_metrics(struct ena_adapter *);
+static void ena_sysctl_add_srd_info(struct ena_adapter *);
 static void ena_sysctl_add_tuneables(struct ena_adapter *);
+static void ena_sysctl_add_irq_affinity(struct ena_adapter *);
 /* Kernel option RSS prevents manipulation of key hash and indirection table. */
 #ifndef RSS
 static void ena_sysctl_add_rss(struct ena_adapter *);
@@ -46,17 +48,82 @@ static void ena_sysctl_add_rss(struct ena_adapter *);
 static int ena_sysctl_buf_ring_size(SYSCTL_HANDLER_ARGS);
 static int ena_sysctl_rx_queue_size(SYSCTL_HANDLER_ARGS);
 static int ena_sysctl_io_queues_nb(SYSCTL_HANDLER_ARGS);
-static int ena_sysctl_eni_metrics_interval(SYSCTL_HANDLER_ARGS);
+static int ena_sysctl_irq_base_cpu(SYSCTL_HANDLER_ARGS);
+static int ena_sysctl_irq_cpu_stride(SYSCTL_HANDLER_ARGS);
+static int ena_sysctl_metrics_interval(SYSCTL_HANDLER_ARGS);
 #ifndef RSS
 static int ena_sysctl_rss_key(SYSCTL_HANDLER_ARGS);
 static int ena_sysctl_rss_indir_table(SYSCTL_HANDLER_ARGS);
 #endif
 
-/* Limit max ENI sample rate to be an hour. */
-#define ENI_METRICS_MAX_SAMPLE_INTERVAL 3600
+/* Limit max ENA sample rate to be an hour. */
+#define ENA_METRICS_MAX_SAMPLE_INTERVAL 3600
 #define ENA_HASH_KEY_MSG_SIZE (ENA_HASH_KEY_SIZE * 2 + 1)
 
-static SYSCTL_NODE(_hw, OID_AUTO, ena, CTLFLAG_RD, 0, "ENA driver parameters");
+#define SYSCTL_GSTRING_LEN 128
+
+#define ENA_METRIC_ENI_ENTRY(stat, desc) { \
+        .name = #stat, \
+        .description = #desc, \
+}
+
+#define ENA_STAT_ENTRY(stat, desc, stat_type) { \
+        .name = #stat, \
+        .description = #desc, \
+        .stat_offset = offsetof(struct ena_admin_##stat_type, stat) / sizeof(u64), \
+}
+
+#define ENA_STAT_ENA_SRD_ENTRY(stat, desc) \
+	ENA_STAT_ENTRY(stat, desc, ena_srd_stats)
+
+struct ena_hw_metrics {
+        char name[SYSCTL_GSTRING_LEN];
+        char description[SYSCTL_GSTRING_LEN];
+};
+
+struct ena_srd_metrics {
+        char name[SYSCTL_GSTRING_LEN];
+        char description[SYSCTL_GSTRING_LEN];
+        int stat_offset;
+};
+
+static const struct ena_srd_metrics ena_srd_stats_strings[] = {
+        ENA_STAT_ENA_SRD_ENTRY(
+	    ena_srd_tx_pkts, Number of packets transmitted over ENA SRD),
+        ENA_STAT_ENA_SRD_ENTRY(
+	    ena_srd_eligible_tx_pkts, Number of packets transmitted or could
+	    have been transmitted over ENA SRD),
+        ENA_STAT_ENA_SRD_ENTRY(
+	    ena_srd_rx_pkts, Number of packets received over ENA SRD),
+        ENA_STAT_ENA_SRD_ENTRY(
+	    ena_srd_resource_utilization, Percentage of the ENA SRD resources
+	    that are in use),
+};
+
+static const struct ena_hw_metrics ena_hw_stats_strings[] = {
+        ENA_METRIC_ENI_ENTRY(
+	    bw_in_allowance_exceeded, Inbound BW allowance exceeded),
+        ENA_METRIC_ENI_ENTRY(
+	    bw_out_allowance_exceeded, Outbound BW allowance exceeded),
+        ENA_METRIC_ENI_ENTRY(
+	    pps_allowance_exceeded, PPS allowance exceeded),
+        ENA_METRIC_ENI_ENTRY(
+	    conntrack_allowance_exceeded, Connection tracking allowance exceeded),
+        ENA_METRIC_ENI_ENTRY(
+	    linklocal_allowance_exceeded, Linklocal packet rate allowance),
+        ENA_METRIC_ENI_ENTRY(
+	    conntrack_allowance_available, Number of available conntracks),
+};
+
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+#endif
+
+#define ENA_CUSTOMER_METRICS_ARRAY_SIZE      ARRAY_SIZE(ena_hw_stats_strings)
+#define ENA_SRD_METRICS_ARRAY_SIZE           ARRAY_SIZE(ena_srd_stats_strings)
+
+static SYSCTL_NODE(_hw, OID_AUTO, ena, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "ENA driver parameters");
 
 /*
  * Logging level for changing verbosity of the output
@@ -95,13 +162,34 @@ SYSCTL_BOOL(_hw_ena, OID_AUTO, force_large_llq_header, CTLFLAG_RDTUN,
 
 int ena_rss_table_size = ENA_RX_RSS_TABLE_SIZE;
 
+int ena_sysctl_allocate_customer_metrics_buffer(struct ena_adapter *adapter)
+{
+	int rc = 0;
+
+	adapter->customer_metrics_array = malloc((sizeof(u64) * ENA_CUSTOMER_METRICS_ARRAY_SIZE),
+	    M_DEVBUF, M_NOWAIT | M_ZERO);
+	if (unlikely(adapter->customer_metrics_array == NULL))
+		rc = ENOMEM;
+
+	return rc;
+}
 void
 ena_sysctl_add_nodes(struct ena_adapter *adapter)
 {
+	struct ena_com_dev *dev = adapter->ena_dev;
+
+	if (ena_com_get_cap(dev, ENA_ADMIN_CUSTOMER_METRICS))
+		ena_sysctl_add_customer_metrics(adapter);
+	else if (ena_com_get_cap(dev, ENA_ADMIN_ENI_STATS))
+		ena_sysctl_add_eni_metrics(adapter);
+
+	if (ena_com_get_cap(adapter->ena_dev, ENA_ADMIN_ENA_SRD_INFO))
+		ena_sysctl_add_srd_info(adapter);
+
 	ena_sysctl_add_wd(adapter);
 	ena_sysctl_add_stats(adapter);
-	ena_sysctl_add_eni_metrics(adapter);
 	ena_sysctl_add_tuneables(adapter);
+	ena_sysctl_add_irq_affinity(adapter);
 #ifndef RSS
 	ena_sysctl_add_rss(adapter);
 #endif
@@ -197,7 +285,7 @@ ena_sysctl_add_stats(struct ena_adapter *adapter)
 		snprintf(namebuf, QUEUE_NAME_LEN, "queue%d", i);
 
 		queue_node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, namebuf,
-		    CTLFLAG_RD, NULL, "Queue Name");
+		    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Queue Name");
 		queue_list = SYSCTL_CHILDREN(queue_node);
 
 		adapter->que[i].oid = queue_node;
@@ -212,7 +300,7 @@ ena_sysctl_add_stats(struct ena_adapter *adapter)
 
 		/* TX specific stats */
 		tx_node = SYSCTL_ADD_NODE(ctx, queue_list, OID_AUTO, "tx_ring",
-		    CTLFLAG_RD, NULL, "TX ring");
+		    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "TX ring");
 		tx_list = SYSCTL_CHILDREN(tx_node);
 
 		tx_stats = &tx_ring->tx_stats;
@@ -253,7 +341,7 @@ ena_sysctl_add_stats(struct ena_adapter *adapter)
 
 		/* RX specific stats */
 		rx_node = SYSCTL_ADD_NODE(ctx, queue_list, OID_AUTO, "rx_ring",
-		    CTLFLAG_RD, NULL, "RX ring");
+		    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "RX ring");
 		rx_list = SYSCTL_CHILDREN(rx_node);
 
 		rx_stats = &rx_ring->rx_stats;
@@ -291,7 +379,7 @@ ena_sysctl_add_stats(struct ena_adapter *adapter)
 
 	/* Stats read from device */
 	hw_node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "hw_stats",
-	    CTLFLAG_RD, NULL, "Statistics from hardware");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Statistics from hardware");
 	hw_list = SYSCTL_CHILDREN(hw_node);
 
 	SYSCTL_ADD_COUNTER_U64(ctx, hw_list, OID_AUTO, "rx_packets", CTLFLAG_RD,
@@ -309,7 +397,7 @@ ena_sysctl_add_stats(struct ena_adapter *adapter)
 
 	/* ENA Admin queue stats */
 	admin_node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "admin_stats",
-	    CTLFLAG_RD, NULL, "ENA Admin Queue statistics");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "ENA Admin Queue statistics");
 	admin_list = SYSCTL_CHILDREN(admin_node);
 
 	SYSCTL_ADD_U64(ctx, admin_list, OID_AUTO, "aborted_cmd", CTLFLAG_RD,
@@ -322,6 +410,81 @@ ena_sysctl_add_stats(struct ena_adapter *adapter)
 	    &admin_stats->out_of_space, 0, "Queue out of space");
 	SYSCTL_ADD_U64(ctx, admin_list, OID_AUTO, "no_completion", CTLFLAG_RD,
 	    &admin_stats->no_completion, 0, "Commands not completed");
+}
+
+static void
+ena_sysctl_add_srd_info(struct ena_adapter *adapter)
+{
+	device_t dev;
+
+	struct sysctl_oid *ena_srd_info;
+	struct sysctl_oid_list *srd_list;
+
+	struct sysctl_ctx_list *ctx;
+	struct sysctl_oid *tree;
+	struct sysctl_oid_list *child;
+
+	struct ena_admin_ena_srd_stats *srd_stats_ptr;
+	struct ena_srd_metrics cur_stat_strings;
+
+	int i;
+
+	dev = adapter->pdev;
+
+	ctx = device_get_sysctl_ctx(dev);
+	tree = device_get_sysctl_tree(dev);
+	child = SYSCTL_CHILDREN(tree);
+
+	ena_srd_info = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "ena_srd_info",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "ENA's SRD information");
+	srd_list = SYSCTL_CHILDREN(ena_srd_info);
+
+	SYSCTL_ADD_U64(ctx, srd_list, OID_AUTO, "ena_srd_mode",
+            CTLFLAG_RD, &adapter->ena_srd_info.flags, 0,
+            "Describes which ENA-express features are enabled");
+
+	srd_stats_ptr = &adapter->ena_srd_info.ena_srd_stats;
+
+	for (i = 0 ; i < ENA_SRD_METRICS_ARRAY_SIZE; i++) {
+		cur_stat_strings = ena_srd_stats_strings[i];
+		SYSCTL_ADD_U64(ctx, srd_list, OID_AUTO, cur_stat_strings.name,
+		    CTLFLAG_RD, (u64 *)srd_stats_ptr + cur_stat_strings.stat_offset,
+		    0, cur_stat_strings.description);
+	}
+}
+
+static void
+ena_sysctl_add_customer_metrics(struct ena_adapter *adapter)
+{
+	device_t dev;
+	struct ena_com_dev *ena_dev;
+
+	struct sysctl_ctx_list *ctx;
+	struct sysctl_oid *tree;
+	struct sysctl_oid_list *child;
+
+	struct sysctl_oid *customer_metric;
+	struct sysctl_oid_list *customer_list;
+
+	int i;
+
+	dev = adapter->pdev;
+	ena_dev = adapter->ena_dev;
+
+	ctx = device_get_sysctl_ctx(dev);
+	tree = device_get_sysctl_tree(dev);
+	child = SYSCTL_CHILDREN(tree);
+	customer_metric = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "customer_metrics",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "ENA's customer metrics");
+	customer_list = SYSCTL_CHILDREN(customer_metric);
+
+	for (i = 0; i < ENA_CUSTOMER_METRICS_ARRAY_SIZE; i++) {
+	        if (ena_com_get_customer_metric_support(ena_dev, i)) {
+	                SYSCTL_ADD_U64(ctx, customer_list, OID_AUTO, ena_hw_stats_strings[i].name,
+	                    CTLFLAG_RD, &adapter->customer_metrics_array[i], 0,
+	                    ena_hw_stats_strings[i].description);
+	         }
+	 }
 }
 
 static void
@@ -364,16 +527,6 @@ ena_sysctl_add_eni_metrics(struct ena_adapter *adapter)
 	SYSCTL_ADD_U64(ctx, eni_list, OID_AUTO, "linklocal_allowance_exceeded",
 	    CTLFLAG_RD, &eni_metrics->linklocal_allowance_exceeded, 0,
 	    "Linklocal packet rate allowance exceeded");
-
-	/*
-	 * Tuneable, which determines how often ENI metrics will be read.
-	 * 0 means it's turned off. Maximum allowed value is limited by:
-	 * ENI_METRICS_MAX_SAMPLE_INTERVAL.
-	 */
-	SYSCTL_ADD_PROC(ctx, eni_list, OID_AUTO, "sample_interval",
-	    CTLTYPE_U16 | CTLFLAG_RW | CTLFLAG_MPSAFE, adapter, 0,
-	    ena_sysctl_eni_metrics_interval, "SU",
-	    "Interval in seconds for updating ENI emetrics. 0 turns off the update.");
 }
 
 static void
@@ -407,6 +560,16 @@ ena_sysctl_add_tuneables(struct ena_adapter *adapter)
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "io_queues_nb",
 	    CTLTYPE_U32 | CTLFLAG_RW | CTLFLAG_MPSAFE, adapter, 0,
 	    ena_sysctl_io_queues_nb, "I", "Number of IO queues.");
+
+	/*
+	 * Tuneable, which determines how often ENA metrics will be read.
+	 * 0 means it's turned off. Maximum allowed value is limited by:
+	 * ENA_METRICS_MAX_SAMPLE_INTERVAL.
+	 */
+	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "stats_sample_interval",
+	    CTLTYPE_U16 | CTLFLAG_RW | CTLFLAG_MPSAFE, adapter, 0,
+	    ena_sysctl_metrics_interval, "SU",
+	    "Interval in seconds for updating Netword interface metrics. 0 turns off the update.");
 }
 
 /* Kernel option RSS prevents manipulation of key hash and indirection table. */
@@ -447,6 +610,36 @@ ena_sysctl_add_rss(struct ena_adapter *adapter)
 	    "RSS indirection table size.");
 }
 #endif /* RSS */
+
+static void
+ena_sysctl_add_irq_affinity(struct ena_adapter *adapter)
+{
+	device_t dev;
+
+	struct sysctl_ctx_list *ctx;
+	struct sysctl_oid *tree;
+	struct sysctl_oid_list *child;
+
+	dev = adapter->pdev;
+
+	ctx = device_get_sysctl_ctx(dev);
+	tree = device_get_sysctl_tree(dev);
+	child = SYSCTL_CHILDREN(tree);
+
+	tree = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "irq_affinity",
+	    CTLFLAG_RW | CTLFLAG_MPSAFE, NULL, "Decide base CPU and stride for irqs affinity.");
+	child = SYSCTL_CHILDREN(tree);
+
+	/* Add base cpu leaf */
+	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "base_cpu",
+	    CTLTYPE_S32 | CTLFLAG_RW | CTLFLAG_MPSAFE, adapter, 0,
+	    ena_sysctl_irq_base_cpu, "I", "Base cpu index for setting irq affinity.");
+
+	/* Add cpu stride leaf */
+	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "cpu_stride",
+	    CTLTYPE_S32 | CTLFLAG_RW | CTLFLAG_MPSAFE, adapter, 0,
+	    ena_sysctl_irq_cpu_stride, "I", "Distance between irqs when setting affinity.");
+}
 
 
 /*
@@ -660,7 +853,7 @@ unlock:
 }
 
 static int
-ena_sysctl_eni_metrics_interval(SYSCTL_HANDLER_ARGS)
+ena_sysctl_metrics_interval(SYSCTL_HANDLER_ARGS)
 {
 	struct ena_adapter *adapter = arg1;
 	uint16_t interval;
@@ -674,37 +867,148 @@ ena_sysctl_eni_metrics_interval(SYSCTL_HANDLER_ARGS)
 
 	error = sysctl_wire_old_buffer(req, sizeof(interval));
 	if (error == 0) {
-		interval = adapter->eni_metrics_sample_interval;
+		interval = adapter->metrics_sample_interval;
 		error = sysctl_handle_16(oidp, &interval, 0, req);
 	}
 	if (error != 0 || req->newptr == NULL)
 		goto unlock;
 
-	if (interval > ENI_METRICS_MAX_SAMPLE_INTERVAL) {
+	if (interval > ENA_METRICS_MAX_SAMPLE_INTERVAL) {
 		ena_log(adapter->pdev, ERR,
-		    "ENI metrics update interval is out of range - maximum allowed value: %d seconds\n",
-		    ENI_METRICS_MAX_SAMPLE_INTERVAL);
+		    "ENA metrics update interval is out of range - maximum allowed value: %d seconds\n",
+		    ENA_METRICS_MAX_SAMPLE_INTERVAL);
 		error = EINVAL;
 		goto unlock;
 	}
 
 	if (interval == 0) {
 		ena_log(adapter->pdev, INFO,
-		    "ENI metrics update is now turned off\n");
+		    "ENA metrics update is now turned off\n");
 		bzero(&adapter->eni_metrics, sizeof(adapter->eni_metrics));
 	} else {
 		ena_log(adapter->pdev, INFO,
-		    "ENI metrics update interval is set to: %" PRIu16
+		    "ENA metrics update interval is set to: %" PRIu16
 		    " seconds\n",
 		    interval);
 	}
 
-	adapter->eni_metrics_sample_interval = interval;
+	adapter->metrics_sample_interval = interval;
 
 unlock:
 	ENA_LOCK_UNLOCK();
 
 	return (0);
+}
+
+static int
+ena_sysctl_irq_base_cpu(SYSCTL_HANDLER_ARGS)
+{
+	struct ena_adapter *adapter = arg1;
+	int irq_base_cpu = 0;
+	int error;
+
+	ENA_LOCK_LOCK();
+	if (unlikely(!ENA_FLAG_ISSET(ENA_FLAG_DEVICE_RUNNING, adapter))) {
+		error = ENODEV;
+		goto unlock;
+	}
+
+	error = sysctl_wire_old_buffer(req, sizeof(irq_base_cpu));
+	if (error == 0) {
+		irq_base_cpu = adapter->irq_cpu_base;
+		error = sysctl_handle_int(oidp, &irq_base_cpu, 0, req);
+	}
+	if (error != 0 || req->newptr == NULL)
+		goto unlock;
+
+	if (irq_base_cpu <= ENA_BASE_CPU_UNSPECIFIED) {
+		ena_log(adapter->pdev, ERR,
+		    "Requested base CPU is less than zero.\n");
+		error = EINVAL;
+		goto unlock;
+	}
+
+	if (irq_base_cpu > mp_ncpus) {
+		ena_log(adapter->pdev, INFO,
+		    "Requested base CPU is larger than the number of available CPUs. \n");
+		error = EINVAL;
+		goto unlock;
+
+	}
+
+	if (irq_base_cpu == adapter->irq_cpu_base) {
+		ena_log(adapter->pdev, INFO,
+		    "Requested IRQ base CPU is equal to current value "
+		    "(%d)\n",
+		    adapter->irq_cpu_base);
+		goto unlock;
+	}
+
+	ena_log(adapter->pdev, INFO,
+	    "Requested new IRQ base CPU: %d, current value: %d\n",
+	    irq_base_cpu, adapter->irq_cpu_base);
+
+	error = ena_update_base_cpu(adapter, irq_base_cpu);
+
+unlock:
+	ENA_LOCK_UNLOCK();
+
+	return (error);
+}
+
+static int
+ena_sysctl_irq_cpu_stride(SYSCTL_HANDLER_ARGS)
+{
+	struct ena_adapter *adapter = arg1;
+	int32_t irq_cpu_stride = 0;
+	int error;
+
+	ENA_LOCK_LOCK();
+	if (unlikely(!ENA_FLAG_ISSET(ENA_FLAG_DEVICE_RUNNING, adapter))) {
+		error = ENODEV;
+		goto unlock;
+	}
+
+	error = sysctl_wire_old_buffer(req, sizeof(irq_cpu_stride));
+	if (error == 0) {
+		irq_cpu_stride = adapter->irq_cpu_stride;
+		error = sysctl_handle_int(oidp, &irq_cpu_stride, 0, req);
+	}
+	if (error != 0 || req->newptr == NULL)
+		goto unlock;
+
+	if (irq_cpu_stride < 0) {
+		ena_log(adapter->pdev, ERR,
+		    "Requested IRQ stride is less than zero.\n");
+		error = EINVAL;
+		goto unlock;
+	}
+
+	if (irq_cpu_stride > mp_ncpus) {
+		ena_log(adapter->pdev, INFO,
+		    "Warning: Requested IRQ stride is larger than the number of available CPUs.\n");
+	}
+
+	if (irq_cpu_stride == adapter->irq_cpu_stride) {
+		ena_log(adapter->pdev, INFO,
+		    "Requested IRQ CPU stride is equal to current value "
+		    "(%u)\n",
+		    adapter->irq_cpu_stride);
+		goto unlock;
+	}
+
+	ena_log(adapter->pdev, INFO,
+	    "Requested new IRQ CPU stride: %u, current value: %u\n",
+	    irq_cpu_stride, adapter->irq_cpu_stride);
+
+	error = ena_update_cpu_stride(adapter, irq_cpu_stride);
+	if (error != 0)
+		goto unlock;
+
+unlock:
+	ENA_LOCK_UNLOCK();
+
+	return (error);
 }
 
 #ifndef RSS

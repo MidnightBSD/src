@@ -28,7 +28,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  * from kbdio.h,v 1.8 1998/09/25 11:55:46 yokota Exp
  */
 
@@ -222,7 +221,7 @@ enum kbdc_device_ivar {
 	KBDC_IVAR_COMPATID, 
 };
 
-typedef caddr_t KBDC;
+typedef atkbdc_softc_t *KBDC;
 
 #define KBDC_RID_KBD	0
 #define KBDC_RID_AUX	1

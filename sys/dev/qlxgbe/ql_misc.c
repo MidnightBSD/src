@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "ql_os.h"
 #include "ql_hw.h"
 #include "ql_def.h"
@@ -101,7 +100,6 @@ ql_rdwr_offchip_mem(qla_host_t *ha, uint64_t addr, q80_offchip_mem_val_t *val,
 {
 	uint32_t count = 100;
 	uint32_t data, step = 0;
-
 
 	if (QL_ERR_INJECT(ha, INJCT_RDWR_OFFCHIPMEM_FAILURE))
 		goto exit_ql_rdwr_offchip_mem;
@@ -202,7 +200,7 @@ ql_rdwr_offchip_mem(qla_host_t *ha, uint64_t addr, q80_offchip_mem_val_t *val,
 		} else 
 			qla_mdelay(__func__, 1);
 	}
-	
+
 exit_ql_rdwr_offchip_mem:
 
 	device_printf(ha->pci_dev,
@@ -641,7 +639,7 @@ ql_wr_flash_buffer(qla_host_t *ha, uint32_t off, uint32_t size, void *buf)
 
 	if (buf == NULL) 
 		return -1;
-	
+
 	if ((data = malloc(size, M_QLA83XXBUF, M_NOWAIT)) == NULL) {
 		device_printf(ha->pci_dev, "%s: malloc failed \n", __func__);
 		rval = -1;
@@ -725,7 +723,7 @@ qla_init_from_flash(qla_host_t *ha)
 	uint32_t data;
 
 	qla_ld_fw_init(ha);
-	
+
 	do {
 		data = READ_REG32(ha, Q8_CMDPEG_STATE);
 
@@ -760,9 +758,7 @@ ql_init_hw(qla_host_t *ha)
         QL_DPRINT1(ha, (dev, "%s: enter\n", __func__));
 
 	if (ha->pci_func & 0x1) {
-
         	while ((ha->pci_func & 0x1) && delay--) {
-
 			val = READ_REG32(ha, Q8_CMDPEG_STATE);
 
 			if (val == 0xFF01) {
@@ -778,7 +774,6 @@ ql_init_hw(qla_host_t *ha)
 		goto ql_init_hw_exit;
 	}
 
-	
 	val = READ_REG32(ha, Q8_CMDPEG_STATE);
 	if (!cold || (val != 0xFF01) || ha->qla_initiate_recovery) {
         	ret = qla_init_from_flash(ha);
@@ -826,7 +821,7 @@ ql_read_mac_addr(qla_host_t *ha)
 	ha->hw.mac_addr[4] = macp[1];
 	ha->hw.mac_addr[3] = macp[2];
 	ha->hw.mac_addr[2] = macp[3];
- 
+
 	macp = (uint8_t *)&mac_hi;
 	ha->hw.mac_addr[1] = macp[0];
 	ha->hw.mac_addr[0] = macp[1];
@@ -867,7 +862,6 @@ qla_wr_list(qla_host_t *ha, q8_ce_hdr_t *ce_hdr)
 	wr_l = (q8_wrl_e_t *)((uint8_t *)ce_hdr + sizeof (q8_ce_hdr_t));
 
 	for (i = 0; i < ce_hdr->opcount; i++, wr_l++) {
-
 		if (ql_rdwr_indreg32(ha, wr_l->addr, &wr_l->value, 0)) {
 			device_printf(ha->pci_dev,
 				"%s: [0x%08x 0x%08x] error\n", __func__,
@@ -891,7 +885,6 @@ qla_rd_wr_list(qla_host_t *ha, q8_ce_hdr_t *ce_hdr)
 	rd_wr_l = (q8_rdwrl_e_t *)((uint8_t *)ce_hdr + sizeof (q8_ce_hdr_t));
 
 	for (i = 0; i < ce_hdr->opcount; i++, rd_wr_l++) {
-
 		if (ql_rdwr_indreg32(ha, rd_wr_l->rd_addr, &data, 1)) {
 			device_printf(ha->pci_dev, "%s: [0x%08x] error\n",
 				__func__, rd_wr_l->rd_addr);
@@ -919,7 +912,6 @@ qla_poll_reg(qla_host_t *ha, uint32_t addr, uint32_t ms_to, uint32_t tmask,
 	uint32_t data;
 
 	while (ms_to) {
-
 		if (ql_rdwr_indreg32(ha, addr, &data, 1)) {
 			device_printf(ha->pci_dev, "%s: [0x%08x] error\n",
 				__func__, addr);
@@ -959,7 +951,6 @@ qla_poll_list(qla_host_t *ha, q8_ce_hdr_t *ce_hdr)
 				break;
 			if (qla_poll_reg(ha, pe->addr, ce_hdr->delay_to,
 				phdr->tmask, phdr->tvalue)) {
-
 				if (ql_rdwr_indreg32(ha, pe->to_addr, &data,
 					1)) {
 					device_printf(ha->pci_dev,
@@ -991,7 +982,6 @@ qla_poll_write_list(qla_host_t *ha, q8_ce_hdr_t *ce_hdr)
 	wr_e = (q8_poll_wr_e_t *)((uint8_t *)phdr + sizeof(q8_poll_hdr_t));
 
 	for (i = 0; i < ce_hdr->opcount; i++, wr_e++) {
-
 		if (ql_rdwr_indreg32(ha, wr_e->dr_addr, &wr_e->dr_value, 0)) {
 			device_printf(ha->pci_dev,
 				"%s: [0x%08x 0x%08x] error\n", __func__,
@@ -1108,7 +1098,6 @@ qla_read_modify_write_list(qla_host_t *ha, q8_ce_hdr_t *ce_hdr)
 					sizeof(q8_rdmwr_hdr_t));
 
 	for (i = 0; i < ce_hdr->opcount; i++, rdmwr_e++) {
-
 		if (qla_rdmwr(ha, rdmwr_e->rd_addr, rdmwr_e->wr_addr,
 			rdmwr_hdr)) {
 			return -1;
@@ -1237,11 +1226,9 @@ qla_load_offchip_mem(qla_host_t *ha, uint64_t addr, uint32_t *data32,
 
         default:
                 break;
-
         }
         return ret;
 }
-
 
 static int
 qla_load_bootldr(qla_host_t *ha)
@@ -1296,7 +1283,6 @@ qla_ld_fw_init(qla_host_t *ha)
 			__func__);
 		return -1;
 	}
-	
 
 	buf = ql83xx_resetseq + hdr->stop_seq_off;
 
@@ -1409,7 +1395,6 @@ ql_start_sequence(qla_host_t *ha, uint16_t index)
         WRITE_REG32(ha, Q8_FW_IMAGE_VALID, 0x12345678);
 #endif /* #ifdef QL_LDFLASH_FW */
 
-
 	index = end_idx;
 	buf = ql83xx_resetseq + hdr->start_seq_off;
 
@@ -1421,4 +1406,3 @@ ql_start_sequence(qla_host_t *ha, uint16_t index)
 
 	return (0);
 }
-

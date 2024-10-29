@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Neelkanth Natu
  * All rights reserved.
@@ -30,8 +30,6 @@
 #include <sys/kenv.h>
 
 #include <dev/cfe/cfe_api.h>
-
-
 #ifndef	CFE_ENV_SIZE
 #define	CFE_ENV_SIZE	PAGE_SIZE	/* default is one page */
 #endif

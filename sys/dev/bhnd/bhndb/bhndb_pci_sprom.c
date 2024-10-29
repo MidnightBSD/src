@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * BHNDB PCI SPROM driver.
  * 
@@ -73,7 +72,6 @@ bhndb_pci_sprom_probe(device_t dev)
 
 	return (BUS_PROBE_NOWILDCARD);
 }
-
 
 static device_method_t bhndb_pci_sprom_methods[] = {
 	/* Device interface */

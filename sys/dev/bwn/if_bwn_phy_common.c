@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_bwn.h"
 #include "opt_wlan.h"
 

@@ -23,8 +23,10 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
+#include "opt_rss.h"
+#include "opt_ratelimit.h"
 
+#include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
@@ -58,6 +60,11 @@ mlx5_fwdump_destroy_dd(struct mlx5_core_dev *mdev)
 	mdev->dump_data = NULL;
 }
 
+static int mlx5_fw_dump_enable = 1;
+SYSCTL_INT(_hw_mlx5, OID_AUTO, fw_dump_enable, CTLFLAG_RDTUN | CTLFLAG_NOFETCH,
+    &mlx5_fw_dump_enable, 0,
+    "Enable fw dump setup and op");
+
 void
 mlx5_fwdump_prep(struct mlx5_core_dev *mdev)
 {
@@ -67,17 +74,27 @@ mlx5_fwdump_prep(struct mlx5_core_dev *mdev)
 	u32 addr, in, out, next_addr;
 
 	mdev->dump_data = NULL;
+
+	TUNABLE_INT_FETCH("hw.mlx5.fw_dump_enable", &mlx5_fw_dump_enable);
+	if (!mlx5_fw_dump_enable) {
+		mlx5_core_warn(mdev,
+		    "Firmware dump administratively prohibited\n");
+		return;
+	}
+
+	DROP_GIANT();
+
 	error = mlx5_vsc_find_cap(mdev);
 	if (error != 0) {
 		/* Inability to create a firmware dump is not fatal. */
 		mlx5_core_warn(mdev,
 		    "Unable to find vendor-specific capability, error %d\n",
 		    error);
-		return;
+		goto pickup_g;
 	}
 	error = mlx5_vsc_lock(mdev);
 	if (error != 0)
-		return;
+		goto pickup_g;
 	error = mlx5_vsc_set_space(mdev, MLX5_VSC_DOMAIN_SCAN_CRSPACE);
 	if (error != 0) {
 		mlx5_core_warn(mdev, "VSC scan space is not supported\n");
@@ -166,6 +183,8 @@ mlx5_fwdump_prep(struct mlx5_core_dev *mdev)
 
 unlock_vsc:
 	mlx5_vsc_unlock(mdev);
+pickup_g:
+	PICKUP_GIANT();
 }
 
 int
@@ -322,11 +341,11 @@ mlx5_fw_reset(struct mlx5_core_dev *mdev)
 	error = -mlx5_set_mfrl_reg(mdev, MLX5_FRL_LEVEL3);
 	if (error == 0) {
 		dev = mdev->pdev->dev.bsddev;
-		mtx_lock(&Giant);
+		bus_topo_lock();
 		bus = device_get_parent(dev);
 		error = BUS_RESET_CHILD(device_get_parent(bus), bus,
 		    DEVF_RESET_DETACH);
-		mtx_unlock(&Giant);
+		bus_topo_unlock();
 	}
 	return (error);
 }

@@ -17,7 +17,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_wlan.h"
 
 #include <sys/param.h>

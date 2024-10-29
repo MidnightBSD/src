@@ -1,6 +1,5 @@
 
 #include <sys/cdefs.h>
-
 #include <dev/drm2/drmP.h>
 
 #include <dev/agp/agpreg.h>

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Chelsio Communications, Inc.
  * All rights reserved.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
@@ -174,12 +173,6 @@ t4_cloner_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 		goto done;
 
 	ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		ifc_free_unit(ifc, unit);
-		rc = ENOMEM;
-		goto done;
-	}
-
 	/* Note that if_xname is not <if_dname><if_dunit>. */
 	strlcpy(ifp->if_xname, name, sizeof(ifp->if_xname));
 	ifp->if_dname = t4_cloner_name;
@@ -288,6 +281,11 @@ t4_get_tracer(struct adapter *sc, struct t4_tracer *t)
 	if (rc)
 		return (rc);
 
+	if (hw_off_limits(sc)) {
+		rc = ENXIO;
+		goto done;
+	}
+
 	for (i = t->idx; i < NTRACE; i++) {
 		if (isset(&sc->tracer_valid, t->idx)) {
 			t4_get_trace_filter(sc, &tp, i, &enabled);
@@ -337,6 +335,11 @@ t4_set_tracer(struct adapter *sc, struct t4_tracer *t)
 	if (rc)
 		return (rc);
 
+	if (hw_off_limits(sc)) {
+		rc = ENXIO;
+		goto done;
+	}
+
 	/*
 	 * If no tracing filter is specified this time then check if the filter
 	 * at the index is valid anyway because it was set previously.  If so
@@ -378,7 +381,8 @@ t4_set_tracer(struct adapter *sc, struct t4_tracer *t)
 			goto done;
 		}
 		tp.port = sc->port[t->tp.port - 4]->tx_chan + 4;
-	}
+	} else
+		tp.port = t->tp.port;
 	tpp = &tp;
 done:
 	if (rc == 0) {

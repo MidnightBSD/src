@@ -1,5 +1,5 @@
 /*******************************************************************************
-SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+SPDX-License-Identifier: BSD-2-Clause
 
 Copyright (c) 2006-2013, Myricom Inc.
 All rights reserved.
@@ -25,7 +25,6 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
-
 
 ***************************************************************************/
 
@@ -77,7 +76,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef IFCAP_TSO
 #define IFCAP_TSO 0
 #endif
- 
+
 #ifndef IFCAP_TSO4
 #define IFCAP_TSO4 0
 #endif
@@ -116,7 +115,6 @@ typedef struct {
 	bus_dma_tag_t dmat;
 	bus_dmamap_t map;
 } mxge_dma_t;
-
 
 typedef struct {
 	mcp_slot_t *entry;
@@ -323,28 +321,6 @@ struct mxge_pkt_info {
 	struct tcphdr *tcp;
 };
 
-
-/* implement our own memory barriers, since bus_space_barrier
-   cannot handle write-combining regions */
-
-#if __FreeBSD_version < 800053
-
-#if defined (__GNUC__)
-  #if #cpu(i386) || defined __i386 || defined i386 || defined __i386__ || #cpu(x86_64) || defined __x86_64__
-    #define wmb()  __asm__ __volatile__ ("sfence;": : :"memory")
-  #elif #cpu(sparc64) || defined sparc64 || defined __sparcv9 
-    #define wmb()  __asm__ __volatile__ ("membar #MemIssue": : :"memory")
-  #elif #cpu(sparc) || defined sparc || defined __sparc__
-    #define wmb()  __asm__ __volatile__ ("stbar;": : :"memory")
-  #else
-    #define wmb() 	/* XXX just to make this compile */
-  #endif
-#else
-  #error "unknown compiler"
-#endif
-
-#endif
-
 static inline void
 mxge_pio_copy(volatile void *to_v, void *from_v, size_t size)
 {
@@ -366,7 +342,6 @@ void mxge_lro_flush(struct mxge_slice_state *ss, struct lro_entry *lro);
 int mxge_lro_rx(struct mxge_slice_state *ss, struct mbuf *m_head,
 		uint32_t csum);
 		
-
 
 /*
   This file uses Myri10GE driver indentation.

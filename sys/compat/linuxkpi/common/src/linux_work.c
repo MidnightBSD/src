@@ -25,12 +25,12 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <linux/workqueue.h>
 #include <linux/wait.h>
 #include <linux/compat.h>
 #include <linux/spinlock.h>
 #include <linux/rcupdate.h>
+#include <linux/irq_work.h>
 
 #include <sys/kernel.h>
 
@@ -57,6 +57,8 @@ struct workqueue_struct *system_long_wq;
 struct workqueue_struct *system_unbound_wq;
 struct workqueue_struct *system_highpri_wq;
 struct workqueue_struct *system_power_efficient_wq;
+
+struct taskqueue *linux_irq_work_tq;
 
 static int linux_default_wq_cpus = 4;
 
@@ -204,7 +206,7 @@ linux_flush_rcu_work(struct rcu_work *rwork)
 
 /*
  * This function queues the given work structure on the given
- * workqueue after a given delay in ticks. It returns non-zero if the
+ * workqueue after a given delay in ticks. It returns true if the
  * work was successfully [re-]queued. Else the work is already pending
  * for completion.
  */
@@ -219,16 +221,19 @@ linux_queue_delayed_work_on(int cpu, struct workqueue_struct *wq,
 		[WORK_ST_EXEC] = WORK_ST_TIMER,		/* start timeout */
 		[WORK_ST_CANCEL] = WORK_ST_TIMER,	/* start timeout */
 	};
+	bool res;
 
 	if (atomic_read(&wq->draining) != 0)
 		return (!work_pending(&dwork->work));
 
+	mtx_lock(&dwork->timer.mtx);
 	switch (linux_update_state(&dwork->work.state, states)) {
 	case WORK_ST_EXEC:
 	case WORK_ST_CANCEL:
-		if (delay == 0 && linux_work_exec_unblock(&dwork->work) != 0) {
+		if (delay == 0 && linux_work_exec_unblock(&dwork->work)) {
 			dwork->timer.expires = jiffies;
-			return (true);
+			res = true;
+			goto out;
 		}
 		/* FALLTHROUGH */
 	case WORK_ST_IDLE:
@@ -238,20 +243,21 @@ linux_queue_delayed_work_on(int cpu, struct workqueue_struct *wq,
 		if (delay == 0) {
 			linux_delayed_work_enqueue(dwork);
 		} else if (unlikely(cpu != WORK_CPU_UNBOUND)) {
-			mtx_lock(&dwork->timer.mtx);
 			callout_reset_on(&dwork->timer.callout, delay,
 			    &linux_delayed_work_timer_fn, dwork, cpu);
-			mtx_unlock(&dwork->timer.mtx);
 		} else {
-			mtx_lock(&dwork->timer.mtx);
 			callout_reset(&dwork->timer.callout, delay,
 			    &linux_delayed_work_timer_fn, dwork);
-			mtx_unlock(&dwork->timer.mtx);
 		}
-		return (true);
+		res = true;
+		break;
 	default:
-		return (false);		/* already on a queue */
+		res = false;
+		break;
 	}
+out:
+	mtx_unlock(&dwork->timer.mtx);
+	return (res);
 }
 
 void
@@ -431,13 +437,17 @@ linux_cancel_delayed_work(struct delayed_work *dwork)
 		[WORK_ST_CANCEL] = WORK_ST_CANCEL,	/* NOP */
 	};
 	struct taskqueue *tq;
+	bool cancelled;
 
+	mtx_lock(&dwork->timer.mtx);
 	switch (linux_update_state(&dwork->work.state, states)) {
 	case WORK_ST_TIMER:
 	case WORK_ST_CANCEL:
-		if (linux_cancel_timer(dwork, 0)) {
+		cancelled = (callout_stop(&dwork->timer.callout) == 1);
+		if (cancelled) {
 			atomic_cmpxchg(&dwork->work.state,
 			    WORK_ST_CANCEL, WORK_ST_IDLE);
+			mtx_unlock(&dwork->timer.mtx);
 			return (true);
 		}
 		/* FALLTHROUGH */
@@ -446,21 +456,23 @@ linux_cancel_delayed_work(struct delayed_work *dwork)
 		if (taskqueue_cancel(tq, &dwork->work.work_task, NULL) == 0) {
 			atomic_cmpxchg(&dwork->work.state,
 			    WORK_ST_CANCEL, WORK_ST_IDLE);
+			mtx_unlock(&dwork->timer.mtx);
 			return (true);
 		}
 		/* FALLTHROUGH */
 	default:
+		mtx_unlock(&dwork->timer.mtx);
 		return (false);
 	}
 }
 
 /*
  * This function cancels the given work structure in a synchronous
- * fashion. It returns non-zero if the work was successfully
+ * fashion. It returns true if the work was successfully
  * cancelled. Else the work was already cancelled.
  */
-bool
-linux_cancel_delayed_work_sync(struct delayed_work *dwork)
+static bool
+linux_cancel_delayed_work_sync_int(struct delayed_work *dwork)
 {
 	static const uint8_t states[WORK_ST_MAX] __aligned(8) = {
 		[WORK_ST_IDLE] = WORK_ST_IDLE,		/* NOP */
@@ -470,39 +482,48 @@ linux_cancel_delayed_work_sync(struct delayed_work *dwork)
 		[WORK_ST_CANCEL] = WORK_ST_IDLE,	/* cancel and drain */
 	};
 	struct taskqueue *tq;
-	bool retval = false;
+	int ret, state;
+	bool cancelled;
 
 	WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, NULL,
 	    "linux_cancel_delayed_work_sync() might sleep");
-retry:
-	switch (linux_update_state(&dwork->work.state, states)) {
+	mtx_lock(&dwork->timer.mtx);
+
+	state = linux_update_state(&dwork->work.state, states);
+	switch (state) {
 	case WORK_ST_IDLE:
-		return (retval);
-	case WORK_ST_EXEC:
-		tq = dwork->work.work_queue->taskqueue;
-		if (taskqueue_cancel(tq, &dwork->work.work_task, NULL) != 0)
-			taskqueue_drain(tq, &dwork->work.work_task);
-		goto retry;	/* work may have restarted itself */
+		mtx_unlock(&dwork->timer.mtx);
+		return (false);
 	case WORK_ST_TIMER:
 	case WORK_ST_CANCEL:
-		if (linux_cancel_timer(dwork, 1)) {
-			/*
-			 * Make sure taskqueue is also drained before
-			 * returning:
-			 */
-			tq = dwork->work.work_queue->taskqueue;
-			taskqueue_drain(tq, &dwork->work.work_task);
-			retval = true;
-			goto retry;
-		}
-		/* FALLTHROUGH */
+		cancelled = (callout_stop(&dwork->timer.callout) == 1);
+
+		tq = dwork->work.work_queue->taskqueue;
+		ret = taskqueue_cancel(tq, &dwork->work.work_task, NULL);
+		mtx_unlock(&dwork->timer.mtx);
+
+		callout_drain(&dwork->timer.callout);
+		taskqueue_drain(tq, &dwork->work.work_task);
+		return (cancelled || (ret != 0));
 	default:
 		tq = dwork->work.work_queue->taskqueue;
-		if (taskqueue_cancel(tq, &dwork->work.work_task, NULL) != 0)
+		ret = taskqueue_cancel(tq, &dwork->work.work_task, NULL);
+		mtx_unlock(&dwork->timer.mtx);
+		if (ret != 0)
 			taskqueue_drain(tq, &dwork->work.work_task);
-		retval = true;
-		goto retry;
+		return (ret != 0);
 	}
+}
+
+bool
+linux_cancel_delayed_work_sync(struct delayed_work *dwork)
+{
+	bool res;
+
+	res = false;
+	while (linux_cancel_delayed_work_sync_int(dwork))
+		res = true;
+	return (res);
 }
 
 /*
@@ -682,3 +703,48 @@ linux_work_uninit(void *arg)
 	system_highpri_wq = NULL;
 }
 SYSUNINIT(linux_work_uninit, SI_SUB_TASKQ, SI_ORDER_THIRD, linux_work_uninit, NULL);
+
+void
+linux_irq_work_fn(void *context, int pending)
+{
+	struct irq_work *irqw = context;
+
+	irqw->func(irqw);
+}
+
+static void
+linux_irq_work_init_fn(void *context, int pending)
+{
+	/*
+	 * LinuxKPI performs lazy allocation of memory structures required by
+	 * current on the first access to it.  As some irq_work clients read
+	 * it with spinlock taken, we have to preallocate td_lkpi_task before
+	 * first call to irq_work_queue().  As irq_work uses a single thread,
+	 * it is enough to read current once at SYSINIT stage.
+	 */
+	if (current == NULL)
+		panic("irq_work taskqueue is not initialized");
+}
+static struct task linux_irq_work_init_task =
+    TASK_INITIALIZER(0, linux_irq_work_init_fn, &linux_irq_work_init_task);
+
+static void
+linux_irq_work_init(void *arg)
+{
+	linux_irq_work_tq = taskqueue_create_fast("linuxkpi_irq_wq",
+	    M_WAITOK, taskqueue_thread_enqueue, &linux_irq_work_tq);
+	taskqueue_start_threads(&linux_irq_work_tq, 1, PWAIT,
+	    "linuxkpi_irq_wq");
+	taskqueue_enqueue(linux_irq_work_tq, &linux_irq_work_init_task);
+}
+SYSINIT(linux_irq_work_init, SI_SUB_TASKQ, SI_ORDER_SECOND,
+    linux_irq_work_init, NULL);
+
+static void
+linux_irq_work_uninit(void *arg)
+{
+	taskqueue_drain_all(linux_irq_work_tq);
+	taskqueue_free(linux_irq_work_tq);
+}
+SYSUNINIT(linux_irq_work_uninit, SI_SUB_TASKQ, SI_ORDER_SECOND,
+    linux_irq_work_uninit, NULL);

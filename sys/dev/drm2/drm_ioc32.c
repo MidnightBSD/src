@@ -23,7 +23,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifdef COMPAT_FREEBSD32
 
 #include <dev/drm2/drmP.h>

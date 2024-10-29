@@ -23,7 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -37,6 +36,7 @@
 #include <sys/systm.h>
 
 #include <dev/evdev/evdev.h>
+#include <dev/evdev/evdev_private.h>
 #include <dev/evdev/input.h>
 
 #define	NONE	KEY_RESERVED
@@ -139,13 +139,13 @@ static uint16_t evdev_at_set1_scancodes[] = {
 	KEY_KP2,	KEY_KP3,	KEY_KP0,	KEY_KPDOT,
 	NONE,		NONE,		KEY_102ND,	KEY_F11,
 	KEY_F12,	NONE,		NONE,		NONE,
-	NONE,		NONE,		NONE,		NONE,
+	NONE,		KEY_F13,	NONE,		NONE,
 	/* 0x60 - 0x7f */
 	NONE,		NONE,		NONE,		NONE,
 	NONE,		NONE,		NONE,		NONE,
 	NONE,		NONE,		NONE,		NONE,
 	NONE,		NONE,		NONE,		NONE,
-	KEY_KATAKANAHIRAGANA,	KEY_HANGEUL,	KEY_HANJA,	KEY_RO,
+	KEY_KATAKANAHIRAGANA,	KEY_HANJA,	KEY_HANGEUL,	KEY_RO,
 	NONE,		NONE,	KEY_ZENKAKUHANKAKU,	KEY_HIRAGANA,
 	KEY_KATAKANA,	KEY_HENKAN,	NONE,		KEY_MUHENKAN,
 	NONE,		KEY_YEN,	KEY_KPCOMMA,	NONE,
@@ -202,6 +202,14 @@ static uint16_t evdev_led_codes[] = {
 	LED_CAPSL,	/* CLKED */
 	LED_NUML,	/* NLKED */
 	LED_SCROLLL,	/* SLKED */
+};
+
+static uint16_t evdev_nfinger_codes[] = {
+	BTN_TOOL_FINGER,
+	BTN_TOOL_DOUBLETAP,
+	BTN_TOOL_TRIPLETAP,
+	BTN_TOOL_QUADTAP,
+	BTN_TOOL_QUINTTAP,
 };
 
 uint16_t
@@ -298,4 +306,36 @@ evdev_push_repeats(struct evdev_dev *evdev, keyboard_t *kbd)
 
 	evdev_push_event(evdev, EV_REP, REP_DELAY, kbd->kb_delay1);
 	evdev_push_event(evdev, EV_REP, REP_PERIOD, kbd->kb_delay2);
+}
+
+void
+evdev_support_nfingers(struct evdev_dev *evdev, int nfingers)
+{
+	int i;
+
+	for (i = 0; i < MIN(nitems(evdev_nfinger_codes), nfingers); i++)
+		evdev_support_key(evdev, evdev_nfinger_codes[i]);
+}
+
+void
+evdev_send_nfingers(struct evdev_dev *evdev, int nfingers)
+{
+	int i;
+
+	EVDEV_LOCK_ASSERT(evdev);
+
+	if (nfingers > nitems(evdev_nfinger_codes))
+		nfingers = nitems(evdev_nfinger_codes);
+
+	for (i = 0; i < nitems(evdev_nfinger_codes); i++)
+		evdev_send_event(evdev, EV_KEY, evdev_nfinger_codes[i],
+			nfingers == i + 1);
+}
+
+void
+evdev_push_nfingers(struct evdev_dev *evdev, int nfingers)
+{
+	EVDEV_ENTER(evdev);
+	evdev_send_nfingers(evdev, nfingers);
+	EVDEV_EXIT(evdev);
 }

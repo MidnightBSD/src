@@ -5,7 +5,7 @@
  */
 
 const char *freebsd32_syscallnames[] = {
-#if !defined(PAD64_REQUIRED) && (defined(__powerpc__) || defined(__mips__))
+#if !defined(PAD64_REQUIRED) && !defined(__amd64__)
 #define PAD64_REQUIRED
 #endif
 	"syscall",			/* 0 = syscall */
@@ -34,7 +34,7 @@ const char *freebsd32_syscallnames[] = {
 	"setuid",			/* 23 = setuid */
 	"getuid",			/* 24 = getuid */
 	"geteuid",			/* 25 = geteuid */
-	"ptrace",			/* 26 = ptrace */
+	"freebsd32_ptrace",			/* 26 = freebsd32_ptrace */
 	"freebsd32_recvmsg",			/* 27 = freebsd32_recvmsg */
 	"freebsd32_sendmsg",			/* 28 = freebsd32_sendmsg */
 	"freebsd32_recvfrom",			/* 29 = freebsd32_recvfrom */
@@ -432,7 +432,7 @@ const char *freebsd32_syscallnames[] = {
 	"freebsd32_getcontext",			/* 421 = freebsd32_getcontext */
 	"freebsd32_setcontext",			/* 422 = freebsd32_setcontext */
 	"freebsd32_swapcontext",			/* 423 = freebsd32_swapcontext */
-	"#424",			/* 424 = swapoff */
+	"#424",			/* 424 = freebsd13_swapoff */
 	"__acl_get_link",			/* 425 = __acl_get_link */
 	"__acl_set_link",			/* 426 = __acl_set_link */
 	"__acl_delete_link",			/* 427 = __acl_delete_link */
@@ -442,8 +442,8 @@ const char *freebsd32_syscallnames[] = {
 	"thr_exit",			/* 431 = thr_exit */
 	"thr_self",			/* 432 = thr_self */
 	"thr_kill",			/* 433 = thr_kill */
-	"#434",			/* 434 = nosys */
-	"#435",			/* 435 = nosys */
+	"compat10.freebsd32_umtx_lock",		/* 434 = freebsd10 freebsd32_umtx_lock */
+	"compat10.freebsd32_umtx_unlock",		/* 435 = freebsd10 freebsd32_umtx_unlock */
 	"jail_attach",			/* 436 = jail_attach */
 	"extattr_list_fd",			/* 437 = extattr_list_fd */
 	"extattr_list_file",			/* 438 = extattr_list_file */
@@ -499,7 +499,7 @@ const char *freebsd32_syscallnames[] = {
 	"freebsd32_ftruncate",			/* 480 = freebsd32_ftruncate */
 #endif
 	"thr_kill2",			/* 481 = thr_kill2 */
-	"shm_open",			/* 482 = shm_open */
+	"compat12.shm_open",		/* 482 = freebsd12 shm_open */
 	"shm_unlink",			/* 483 = shm_unlink */
 	"cpuset",			/* 484 = cpuset */
 #ifdef PAD64_REQUIRED
@@ -530,7 +530,7 @@ const char *freebsd32_syscallnames[] = {
 	"freebsd32_jail_get",			/* 506 = freebsd32_jail_get */
 	"freebsd32_jail_set",			/* 507 = freebsd32_jail_set */
 	"jail_remove",			/* 508 = jail_remove */
-	"closefrom",			/* 509 = closefrom */
+	"compat12.closefrom",		/* 509 = freebsd12 closefrom */
 	"freebsd32_semctl",			/* 510 = freebsd32_semctl */
 	"freebsd32_msgctl",			/* 511 = freebsd32_msgctl */
 	"freebsd32_shmctl",			/* 512 = freebsd32_shmctl */
@@ -603,12 +603,25 @@ const char *freebsd32_syscallnames[] = {
 	"fhlink",			/* 565 = fhlink */
 	"fhlinkat",			/* 566 = fhlinkat */
 	"fhreadlink",			/* 567 = fhreadlink */
-	"#568",			/* 568 = funlinkat */
-	"#569",			/* 569 = copy_file_range */
+	"funlinkat",			/* 568 = funlinkat */
+	"copy_file_range",			/* 569 = copy_file_range */
 	"freebsd32___sysctlbyname",			/* 570 = freebsd32___sysctlbyname */
-	"#571",			/* 571 = shm_open2 */
-	"#572",			/* 572 = shm_rename */
-	"#573",			/* 573 = sigfastblock */
-	"#574",			/* 574 = __realpathat */
+	"shm_open2",			/* 571 = shm_open2 */
+	"shm_rename",			/* 572 = shm_rename */
+	"sigfastblock",			/* 573 = sigfastblock */
+	"__realpathat",			/* 574 = __realpathat */
 	"close_range",			/* 575 = close_range */
+	"rpctls_syscall",			/* 576 = rpctls_syscall */
+	"__specialfd",			/* 577 = __specialfd */
+	"freebsd32_aio_writev",			/* 578 = freebsd32_aio_writev */
+	"freebsd32_aio_readv",			/* 579 = freebsd32_aio_readv */
+	"#580",			/* 580 = fspacectl */
+	"sched_getcpu",			/* 581 = sched_getcpu */
+	"#582",			/* 582 = swapoff */
+	"#583",			/* 583 = kqueuex */
+	"#584",			/* 584 = membarrier */
+	"#585",			/* 585 = timerfd_create */
+	"#586",			/* 586 = timerfd_gettime */
+	"#587",			/* 587 = timerfd_settime */
+	"kcmp",			/* 588 = kcmp */
 };

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2013-2016 Universita` di Pisa
  * All rights reserved.
@@ -717,7 +717,7 @@ do {                                                                    \
 static __inline uint32_t
 nm_vale_rthash(const uint8_t *addr)
 {
-	uint32_t a = 0x9e3779b9, b = 0x9e3779b9, c = 0; // hask key
+	uint32_t a = 0x9e3779b9, b = 0x9e3779b9, c = 0; // hash key
 
 	b += addr[5] << 8;
 	b += addr[4];
@@ -1494,7 +1494,7 @@ nm_vi_destroy(const char *name)
 		goto err;
 	}
 
-	/* also make sure that nobody is using the inferface */
+	/* also make sure that nobody is using the interface */
 	if (NETMAP_OWNED_BY_ANY(&vpna->up) ||
 	    vpna->up.na_refcount > 1 /* any ref besides the one in nm_vi_create()? */) {
 		error = EBUSY;

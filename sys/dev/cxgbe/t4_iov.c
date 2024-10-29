@@ -26,13 +26,16 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
+#include <sys/socket.h>
 #include <sys/systm.h>
+#include <sys/iov.h>
 #include <dev/pci/pcivar.h>
+#include <net/if.h>
+#include <net/if_vlan_var.h>
 
 #ifdef PCI_IOV
 #include <sys/nv.h>
@@ -193,6 +196,7 @@ t4iov_attach(device_t dev)
 {
 	struct t4iov_softc *sc;
 	uint32_t pl_rev, whoami;
+	int error;
 
 	sc = device_get_softc(dev);
 	sc->sc_dev = dev;
@@ -216,10 +220,18 @@ t4iov_attach(device_t dev)
 
 	sc->sc_main = pci_find_dbsf(pci_get_domain(dev), pci_get_bus(dev),
 	    pci_get_slot(dev), 4);
-	if (sc->sc_main == NULL)
+	if (sc->sc_main == NULL) {
+		bus_release_resource(dev, SYS_RES_MEMORY, sc->regs_rid,
+		    sc->regs_res);
 		return (ENXIO);
-	if (T4_IS_MAIN_READY(sc->sc_main) == 0)
-		return (t4iov_attach_child(dev));
+	}
+	if (T4_IS_MAIN_READY(sc->sc_main) == 0) {
+		error = t4iov_attach_child(dev);
+		if (error != 0)
+			bus_release_resource(dev, SYS_RES_MEMORY, sc->regs_rid,
+			    sc->regs_res);
+		return (error);
+	}
 	return (0);
 }
 
@@ -250,6 +262,7 @@ t4iov_attach_child(device_t dev)
 	pf_schema = pci_iov_schema_alloc_node();
 	vf_schema = pci_iov_schema_alloc_node();
 	pci_iov_schema_add_unicast_mac(vf_schema, "mac-addr", 0, NULL);
+	pci_iov_schema_add_vlan(vf_schema, "vlan", 0, 0);
 	error = pci_iov_attach_name(dev, pf_schema, vf_schema, "%s",
 	    device_get_nameunit(pdev));
 	if (error) {
@@ -329,14 +342,15 @@ t4iov_add_vf(device_t dev, uint16_t vfnum, const struct nvlist *config)
 	size_t size;
 	int rc;
 
+	sc = device_get_softc(dev);
+	MPASS(sc->sc_attached);
+	MPASS(sc->sc_main != NULL);
+	adap = device_get_softc(sc->sc_main);
+
 	if (nvlist_exists_binary(config, "mac-addr")) {
 		mac = nvlist_get_binary(config, "mac-addr", &size);
 		bcopy(mac, ma, ETHER_ADDR_LEN);
 
-		sc = device_get_softc(dev);
-		MPASS(sc->sc_attached);
-		MPASS(sc->sc_main != NULL);
-		adap = device_get_softc(sc->sc_main);
 		if (begin_synchronized_op(adap, NULL, SLEEP_OK | INTR_OK,
 		    "t4vfma") != 0)
 			return (ENXIO);
@@ -347,6 +361,29 @@ t4iov_add_vf(device_t dev, uint16_t vfnum, const struct nvlist *config)
 			    "Failed to set VF%d MAC address to "
 			    "%02x:%02x:%02x:%02x:%02x:%02x, rc = %d\n", vfnum,
 			    ma[0], ma[1], ma[2], ma[3], ma[4], ma[5], rc);
+			return (rc);
+		}
+	}
+
+	if (nvlist_exists_number(config, "vlan")) {
+		uint16_t vlan = nvlist_get_number(config, "vlan");
+
+		/* We can't restrict to VID 0 */
+		if (vlan == 0)
+			return (ENOTSUP);
+
+		if (vlan == VF_VLAN_TRUNK)
+			vlan = 0;
+
+		if (begin_synchronized_op(adap, NULL, SLEEP_OK | INTR_OK,
+		    "t4vfvl") != 0)
+			return (ENXIO);
+		rc = t4_set_vlan_acl(adap, sc->pf, vfnum + 1, vlan);
+		end_synchronized_op(adap, 0);
+		if (rc != 0) {
+			device_printf(dev,
+			    "Failed to set VF%d VLAN to %d, rc = %d\n",
+			    vfnum, vlan, rc);
 			return (rc);
 		}
 	}

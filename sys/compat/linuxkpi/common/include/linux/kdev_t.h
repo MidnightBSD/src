@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_KDEV_T_H_
-#define	_LINUX_KDEV_T_H_
+#ifndef	_LINUXKPI_LINUX_KDEV_T_H_
+#define	_LINUXKPI_LINUX_KDEV_T_H_
 
 #include <sys/types.h>
 
@@ -42,4 +41,4 @@ old_encode_dev(dev_t dev)
 	return ((MAJOR(dev) << 8) | MINOR(dev));
 }
 
-#endif	/* _LINUX_KDEV_T_H_ */
+#endif	/* _LINUXKPI_LINUX_KDEV_T_H_ */

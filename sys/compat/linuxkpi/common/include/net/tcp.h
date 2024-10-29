@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef _LINUX_NET_TCP_H_
-#define	_LINUX_NET_TCP_H_
+#ifndef _LINUXKPI_NET_TCP_H_
+#define	_LINUXKPI_NET_TCP_H_
 
 #include <linux/list.h>
 #include <linux/slab.h>
@@ -36,4 +35,4 @@
 
 #include <net/ip.h>
 
-#endif	/* _LINUX_NET_TCP_H_ */
+#endif	/* _LINUXKPI_NET_TCP_H_ */

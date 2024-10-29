@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  *  Copyright (c) 1997-2009 by Matthew Jacob
  *  All rights reserved.
@@ -45,13 +45,9 @@ typedef enum {
 	NT_CLEAR_TASK_SET,
 	NT_LUN_RESET,
 	NT_TARGET_RESET,
-	NT_BUS_RESET,
 	NT_LIP_RESET,
 	NT_LINK_UP,
 	NT_LINK_DOWN,
-	NT_LOGOUT,
-	NT_GLOBAL_LOGOUT,
-	NT_CHANGED,
 	NT_HBA_RESET,
 	NT_QUERY_TASK_SET,
 	NT_QUERY_ASYNC_EVENT,
@@ -74,14 +70,7 @@ typedef struct isp_notify {
 } isp_notify_t;
 
 /*
- * Debug macros
- */
-
-#define	ISP_TDQE(isp, msg, idx, arg)	\
-    if (isp->isp_dblev & ISP_LOGTDEBUG2) isp_print_qentry(isp, msg, idx, arg)
-
-/*
- * Special Constatns
+ * Special Constants
  */
 #define INI_ANY			((uint64_t) -1)
 #define VALID_INI(ini)		(ini != INI_NONE && ini != INI_ANY)

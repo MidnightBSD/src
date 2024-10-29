@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_wlan.h"
 #include "opt_iwn.h"
 
@@ -7518,7 +7517,7 @@ iwn_addba_request(struct ieee80211_node *ni, struct ieee80211_tx_ampdu *tap,
 			break;
 	}
 	if (qid == sc->ntxqs) {
-		DPRINTF(sc, IWN_DEBUG_XMIT, "%s: not free aggregation queue\n",
+		DPRINTF(sc, IWN_DEBUG_XMIT, "%s: no free aggregation queue\n",
 		    __func__);
 		return 0;
 	}

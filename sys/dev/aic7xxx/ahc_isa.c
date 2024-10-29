@@ -38,12 +38,10 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/aic7xxx/aic7xxx_osm.h>
 
 #include <sys/limits.h>		/* For CHAR_BIT*/
 #include <isa/isavar.h>		/* For ISA attach glue */
-
 
 static struct aic7770_identity *ahc_isa_find_device(bus_space_tag_t tag,
 						    bus_space_handle_t bsh);

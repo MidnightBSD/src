@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/ata.h>
@@ -86,7 +85,7 @@ ata_dmainit(device_t dev)
     if (ch->dma.segsize == 0)
 	ch->dma.segsize = 65536;
     if (ch->dma.max_iosize == 0)
-	ch->dma.max_iosize = MIN((ATA_DMA_ENTRIES - 1) * PAGE_SIZE, MAXPHYS);
+	ch->dma.max_iosize = (ATA_DMA_ENTRIES - 1) * PAGE_SIZE;
     if (ch->dma.max_address == 0)
 	ch->dma.max_address = BUS_SPACE_MAXADDR_32BIT;
     if (ch->dma.dma_slots == 0)

@@ -74,7 +74,7 @@ int mlx4_SET_VLAN_FLTR(struct mlx4_dev *dev, struct mlx4_en_priv *priv)
 int mlx4_en_QUERY_PORT(struct mlx4_en_dev *mdev, u8 port)
 {
 	struct mlx4_en_query_port_context *qport_context;
-	struct mlx4_en_priv *priv = netdev_priv(mdev->pndev[port]);
+	struct mlx4_en_priv *priv = mlx4_netdev_priv(mdev->pndev[port]);
 	struct mlx4_en_port_state *state = &priv->port_state;
 	struct mlx4_cmd_mailbox *mailbox;
 	int err;
@@ -149,9 +149,9 @@ static u64 en_stats_adder(__be64 *start, __be64 *next, int num)
 	return ret;
 }
 
-static void mlx4_en_fold_software_stats(struct net_device *dev)
+static void mlx4_en_fold_software_stats(struct ifnet *dev)
 {
-	struct mlx4_en_priv *priv = netdev_priv(dev);
+	struct mlx4_en_priv *priv = mlx4_netdev_priv(dev);
 	struct mlx4_en_dev *mdev = priv->mdev;
 	u64 packets, bytes;
 	int i;
@@ -187,8 +187,8 @@ int mlx4_en_DUMP_ETH_STATS(struct mlx4_en_dev *mdev, u8 port, u8 reset)
 	struct mlx4_counter tmp_vport_stats;
 	struct mlx4_en_stat_out_mbox *mlx4_en_stats;
 	struct mlx4_en_stat_out_flow_control_mbox *flowstats;
-	struct net_device *dev = mdev->pndev[port];
-	struct mlx4_en_priv *priv = netdev_priv(dev);
+	struct ifnet *dev = mdev->pndev[port];
+	struct mlx4_en_priv *priv = mlx4_netdev_priv(dev);
 	struct mlx4_en_vport_stats *vport_stats = &priv->vport_stats;
 	struct mlx4_cmd_mailbox *mailbox;
 	u64 in_mod = reset << 8 | port;
@@ -346,7 +346,6 @@ int mlx4_en_DUMP_ETH_STATS(struct mlx4_en_dev *mdev, u8 port, u8 reset)
 		vport_stats->tx_frames = be64_to_cpu(tmp_vport_stats.tx_frames);
 	}
 
-#if __FreeBSD_version >= 1100000
 	if (reset == 0) {
 		if_inc_counter(dev, IFCOUNTER_IPACKETS,
 		    priv->pkstats.rx_packets - priv->pkstats_last.rx_packets);
@@ -366,17 +365,6 @@ int mlx4_en_DUMP_ETH_STATS(struct mlx4_en_dev *mdev, u8 port, u8 reset)
 		    priv->pkstats.tx_multicast_packets - priv->pkstats_last.tx_multicast_packets);
 	}
 	priv->pkstats_last = priv->pkstats;
-#else
-	dev->if_ipackets        = priv->pkstats.rx_packets;
-	dev->if_opackets        = priv->pkstats.tx_packets;
-	dev->if_ibytes          = priv->pkstats.rx_bytes;
-	dev->if_obytes          = priv->pkstats.tx_bytes;
-	dev->if_ierrors         = priv->pkstats.rx_errors;
-	dev->if_iqdrops         = priv->pkstats.rx_dropped;
-	dev->if_imcasts         = priv->pkstats.rx_multicast_packets;
-	dev->if_omcasts         = priv->pkstats.tx_multicast_packets;
-	dev->if_collisions      = 0;
-#endif
 
 	spin_unlock(&priv->stats_lock);
 
@@ -436,7 +424,7 @@ out:
 
 int mlx4_en_get_vport_stats(struct mlx4_en_dev *mdev, u8 port)
 {
-	struct mlx4_en_priv *priv = netdev_priv(mdev->pndev[port]);
+	struct mlx4_en_priv *priv = mlx4_netdev_priv(mdev->pndev[port]);
 	struct mlx4_counter tmp_vport_stats;
 	struct mlx4_en_vf_stats *vf_stats = &priv->vf_stats;
 	int err, i, counter_index;

@@ -27,7 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
@@ -106,7 +105,5 @@ extern ocs_remote_node_group_t *ocs_remote_node_group_alloc(ocs_node_group_dir_t
 extern void ocs_remote_node_group_free(ocs_remote_node_group_t *node_group);
 extern int ocs_node_group_init(ocs_node_t *node);
 extern void ocs_node_group_free(ocs_node_t *node);
-
-
 
 #endif 

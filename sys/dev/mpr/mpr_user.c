@@ -57,11 +57,9 @@
  * SUCH DAMAGE.
  *
  * Broadcom Inc. (LSI) MPT-Fusion Host Adapter FreeBSD
- *
  */
 
 #include <sys/cdefs.h>
-
 /* TODO Move headers to mprvar */
 #include <sys/types.h>
 #include <sys/param.h>
@@ -708,7 +706,7 @@ mpr_user_command(struct mpr_softc *sc, struct mpr_usr_command *cmd)
 		sz = rpl->MsgLength * 4;
 	else
 		sz = 0;
-	
+
 	if (sz > cmd->rpl_len) {
 		mpr_printf(sc, "%s: user reply buffer (%d) smaller than "
 		    "returned buffer (%d)\n", __func__, cmd->rpl_len, sz);
@@ -716,9 +714,9 @@ mpr_user_command(struct mpr_softc *sc, struct mpr_usr_command *cmd)
 	}	
 
 	mpr_unlock(sc);
-	copyout(rpl, cmd->rpl, sz);
-	if (buf != NULL)
-		copyout(buf, cmd->buf, cmd->len);
+	err = copyout(rpl, cmd->rpl, sz);
+	if (buf != NULL && err == 0)
+		err = copyout(buf, cmd->buf, cmd->len);
 	mpr_dprint(sc, MPR_USER, "%s: reply size %d\n", __func__, sz);
 
 RetFreeUnlocked:
@@ -850,7 +848,7 @@ mpr_user_pass_thru(struct mpr_softc *sc, mpr_pass_thru_t *data)
 		/*
 		 * Copy the reply data and sense data to user space.
 		 */
-		if ((cm != NULL) && (cm->cm_reply != NULL)) {
+		if (err == 0 && cm != NULL && cm->cm_reply != NULL) {
 			rpl = (MPI2_DEFAULT_REPLY *)cm->cm_reply;
 			sz = rpl->MsgLength * 4;
 
@@ -860,8 +858,8 @@ mpr_user_pass_thru(struct mpr_softc *sc, mpr_pass_thru_t *data)
 				    __func__, data->ReplySize, sz);
 			}
 			mpr_unlock(sc);
-			copyout(cm->cm_reply, PTRIN(data->PtrReply),
-			    data->ReplySize);
+			err = copyout(cm->cm_reply, PTRIN(data->PtrReply),
+			    MIN(sz, data->ReplySize));
 			mpr_lock(sc);
 		}
 		mprsas_free_tm(sc, cm);
@@ -1075,7 +1073,7 @@ mpr_user_pass_thru(struct mpr_softc *sc, mpr_pass_thru_t *data)
 	/*
 	 * Copy the reply data and sense data to user space.
 	 */
-	if (cm->cm_reply != NULL) {
+	if (err == 0 && cm->cm_reply != NULL) {
 		rpl = (MPI2_DEFAULT_REPLY *)cm->cm_reply;
 		sz = rpl->MsgLength * 4;
 
@@ -1085,11 +1083,16 @@ mpr_user_pass_thru(struct mpr_softc *sc, mpr_pass_thru_t *data)
 			    data->ReplySize, sz);
 		}
 		mpr_unlock(sc);
-		copyout(cm->cm_reply, PTRIN(data->PtrReply), data->ReplySize);
+		err = copyout(cm->cm_reply, PTRIN(data->PtrReply),
+		    MIN(sz, data->ReplySize));
+		if (err != 0)
+			mpr_dprint(sc, MPR_FAULT, "%s: failed to copy "
+			    "IOCTL data to user space\n", __func__);
 		mpr_lock(sc);
 
-		if ((function == MPI2_FUNCTION_SCSI_IO_REQUEST) ||
-		    (function == MPI2_FUNCTION_RAID_SCSI_IO_PASSTHROUGH)) {
+		if (err == 0 &&
+		    (function == MPI2_FUNCTION_SCSI_IO_REQUEST ||
+		    function == MPI2_FUNCTION_RAID_SCSI_IO_PASSTHROUGH)) {
 			if (((MPI2_SCSI_IO_REPLY *)rpl)->SCSIState &
 			    MPI2_SCSI_STATE_AUTOSENSE_VALID) {
 				sense_len =
@@ -1097,8 +1100,13 @@ mpr_user_pass_thru(struct mpr_softc *sc, mpr_pass_thru_t *data)
 				    SenseCount)), sizeof(struct
 				    scsi_sense_data));
 				mpr_unlock(sc);
-				copyout(cm->cm_sense, (PTRIN(data->PtrReply +
-				    sizeof(MPI2_SCSI_IO_REPLY))), sense_len);
+				err = copyout(cm->cm_sense,
+				    PTRIN(data->PtrReply +
+				    sizeof(MPI2_SCSI_IO_REPLY)), sense_len);
+				if (err != 0)
+					mpr_dprint(sc, MPR_FAULT,
+					    "%s: failed to copy IOCTL data to "
+					    "user space\n", __func__);
 				mpr_lock(sc);
 			}
 		}
@@ -1117,7 +1125,7 @@ mpr_user_pass_thru(struct mpr_softc *sc, mpr_pass_thru_t *data)
 		 * the same IOCTL structure and sense buffers can be used for
 		 * NVMe.
 		 */
-		if (function == MPI2_FUNCTION_NVME_ENCAPSULATED) {
+		if (err == 0 && function == MPI2_FUNCTION_NVME_ENCAPSULATED) {
 			if (cm->nvme_error_response == NULL) {
 				mpr_dprint(sc, MPR_INFO, "NVMe Error Response "
 				    "buffer is NULL. Response data will not be "
@@ -1131,9 +1139,13 @@ mpr_user_pass_thru(struct mpr_softc *sc, mpr_pass_thru_t *data)
 			sz = MIN(le32toh(nvme_error_reply->ErrorResponseCount),
 			    NVME_ERROR_RESPONSE_SIZE);
 			mpr_unlock(sc);
-			copyout(cm->cm_sense,
+			err = copyout(cm->cm_sense,
 			    (PTRIN(data->PtrReply +
 			    sizeof(MPI2_SCSI_IO_REPLY))), sz);
+			if (err != 0)
+				mpr_dprint(sc, MPR_FAULT,
+				    "%s: failed to copy IOCTL data to "
+				    "user space\n", __func__);
 			mpr_lock(sc);
 		}
 	}
@@ -1309,7 +1321,7 @@ mpr_post_fw_diag_buffer(struct mpr_softc *sc,
 	reply = (MPI2_DIAG_BUFFER_POST_REPLY *)cm->cm_reply;
 	if (reply == NULL) {
 		mpr_printf(sc, "%s: reply is NULL, probably due to "
-		    "reinitialization", __func__);
+		    "reinitialization\n", __func__);
 		status = MPR_DIAG_FAILURE;
 		goto done;
 	}
@@ -1403,7 +1415,7 @@ mpr_release_fw_diag_buffer(struct mpr_softc *sc,
 	reply = (MPI2_DIAG_RELEASE_REPLY *)cm->cm_reply;
 	if (reply == NULL) {
 		mpr_printf(sc, "%s: reply is NULL, probably due to "
-		    "reinitialization", __func__);
+		    "reinitialization\n", __func__);
 		status = MPR_DIAG_FAILURE;
 		goto done;
 	}
@@ -1441,6 +1453,7 @@ static int
 mpr_diag_register(struct mpr_softc *sc, mpr_fw_diag_register_t *diag_register,
     uint32_t *return_code)
 {
+	bus_dma_template_t		t;
 	mpr_fw_diagnostic_buffer_t	*pBuffer;
 	struct mpr_busdma_context	*ctx;
 	uint8_t				extended_type, buffer_type, i;
@@ -1503,17 +1516,11 @@ mpr_diag_register(struct mpr_softc *sc, mpr_fw_diag_register_t *diag_register,
 		*return_code = MPR_FW_DIAG_ERROR_NO_BUFFER;
 		return (MPR_DIAG_FAILURE);
 	}
-	if (bus_dma_tag_create( sc->mpr_parent_dmat,    /* parent */
-				1, 0,			/* algnmnt, boundary */
-				BUS_SPACE_MAXADDR_32BIT,/* lowaddr */
-				BUS_SPACE_MAXADDR,	/* highaddr */
-				NULL, NULL,		/* filter, filterarg */
-                                buffer_size,		/* maxsize */
-                                1,			/* nsegments */
-                                buffer_size,		/* maxsegsize */
-                                0,			/* flags */
-                                NULL, NULL,		/* lockfunc, lockarg */
-                                &sc->fw_diag_dmat)) {
+	bus_dma_template_init(&t, sc->mpr_parent_dmat);
+	BUS_DMA_TEMPLATE_FILL(&t, BD_LOWADDR(BUS_SPACE_MAXADDR_32BIT),
+	    BD_MAXSIZE(buffer_size), BD_MAXSEGSIZE(buffer_size),
+	    BD_NSEGMENTS(1));
+	if (bus_dma_template_tag(&t, &sc->fw_diag_dmat)) {
 		mpr_dprint(sc, MPR_ERROR,
 		    "Cannot allocate FW diag buffer DMA tag\n");
 		*return_code = MPR_FW_DIAG_ERROR_NO_BUFFER;
@@ -1539,7 +1546,6 @@ mpr_diag_register(struct mpr_softc *sc, mpr_fw_diag_register_t *diag_register,
 	    sc->fw_diag_buffer, buffer_size, mpr_memaddr_wait_cb,
 	    ctx, 0);
 	if (error == EINPROGRESS) {
-
 		/* XXX KDM */
 		device_printf(sc->mpr_dev, "%s: Deferred bus_dmamap_load\n",
 		    __func__);
@@ -2069,7 +2075,7 @@ mpr_user_event_report(struct mpr_softc *sc, mpr_event_report_t *data)
 	if ((size >= sizeof(sc->recorded_events)) && (status == 0)) {
 		mpr_unlock(sc);
 		if (copyout((void *)sc->recorded_events,
-		    PTRIN(data->PtrEvents), size) != 0)
+		    PTRIN(data->PtrEvents), sizeof(sc->recorded_events)) != 0)
 			status = EFAULT;
 		mpr_lock(sc);
 	} else {

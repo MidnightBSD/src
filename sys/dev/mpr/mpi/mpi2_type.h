@@ -26,7 +26,6 @@
  * SUCH DAMAGE.
  *
  * Broadcom Inc. (LSI) MPT-Fusion Host Adapter FreeBSD
- *
  */
 
 /*
@@ -51,7 +50,6 @@
 
 #ifndef MPI2_TYPE_H
 #define MPI2_TYPE_H
-
 
 /*******************************************************************************
  * Define MPI2_POINTER if it hasn't already been defined. By default
@@ -108,7 +106,6 @@ typedef struct _U64
     U32          High;
 } U64;
 
-
 /*****************************************************************************
 *
 *               Pointer Types
@@ -127,4 +124,3 @@ typedef U64     *PU64;
 #endif
 
 #endif
-

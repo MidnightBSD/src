@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #define BOUNCE_BUFFER_TEST	0
 
 #include <sys/param.h>
@@ -186,10 +185,6 @@ fwohci_pci_probe(device_t dev)
 		device_set_desc(dev, "Adaptec AHA-894x/AIC-5800");
 		return BUS_PROBE_DEFAULT;
 	}
-	if (id == (FW_VENDORID_SUN | FW_DEVICE_PCIO2FW)) {
-		device_set_desc(dev, "Sun PCIO-2");
-		return BUS_PROBE_DEFAULT;
-	}
 	if (pci_get_class(dev) == PCIC_SERIALBUS
 			&& pci_get_subclass(dev) == PCIS_SERIALBUS_FW
 			&& pci_get_progif(dev) == PCI_INTERFACE_OHCI) {
@@ -215,14 +210,6 @@ fwohci_pci_init(device_t self)
 	cmd &= ~PCIM_CMD_MWRICEN;
 #endif
 	pci_write_config(self, PCIR_COMMAND, cmd, 2);
-
-	/*
-	 * Some Sun PCIO-2 FireWire controllers have their intpin register
-	 * bogusly set to 0, although it should be 3. Correct that.
-	 */
-	if (pci_get_devid(self) == (FW_VENDORID_SUN | FW_DEVICE_PCIO2FW) &&
-	    pci_get_intpin(self) == 0)
-		pci_set_intpin(self, 3);
 
 	latency = olatency = pci_read_config(self, PCIR_LATTIMER, 1);
 #define DEF_LATENCY 0x20

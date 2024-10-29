@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011-2015 LSI Corp.
  * Copyright (c) 2013-2015 Avago Technologies
@@ -27,7 +27,6 @@
  * SUCH DAMAGE.
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
- *
  */
 
 #ifndef _MPS_MAPPING_H
@@ -67,7 +66,6 @@ struct _map_topology_change {
 	uint8_t	exp_status;
 	struct _map_phy_change *phy_details;
 };
-
 
 extern int
 mpssas_get_sas_address_for_sata_disk(struct mps_softc *ioc,

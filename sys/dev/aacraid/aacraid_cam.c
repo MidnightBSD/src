@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002-2010 Adaptec, Inc.
  * Copyright (c) 2010-2012 PMC-Sierra, Inc.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * CAM front-end for communicating with non-DASD devices
  */
@@ -48,9 +47,6 @@
 #include <cam/cam_ccb.h>
 #include <cam/cam_debug.h>
 #include <cam/cam_periph.h>
-#if __FreeBSD_version < 801000
-#include <cam/cam_xpt_periph.h>
-#endif
 #include <cam/cam_sim.h>
 #include <cam/cam_xpt_sim.h>
 #include <cam/scsi/scsi_all.h>
@@ -71,11 +67,10 @@
 #include <sys/aac_ioctl.h>
 #include <dev/aacraid/aacraid_debug.h>
 #include <dev/aacraid/aacraid_var.h>
+#include <dev/aacraid/aacraid_endian.h>
 
-#if __FreeBSD_version >= 700025
 #ifndef	CAM_NEW_TRAN_CODE
 #define	CAM_NEW_TRAN_CODE	1
-#endif
 #endif
 
 #ifndef SVPD_SUPPORTED_PAGE_LIST
@@ -92,11 +87,7 @@ struct scsi_vpd_supported_page_list
 #endif
 
 /************************** Version Compatibility *************************/
-#if	__FreeBSD_version < 700031
-#define	aac_sim_alloc(a,b,c,d,e,f,g,h,i)	cam_sim_alloc(a,b,c,d,e,g,h,i)
-#else
 #define	aac_sim_alloc				cam_sim_alloc
-#endif
 
 struct aac_cam {
 	device_t		dev;
@@ -112,10 +103,8 @@ static void aac_cam_action(struct cam_sim *, union ccb *);
 static void aac_cam_poll(struct cam_sim *);
 static void aac_cam_complete(struct aac_command *);
 static void aac_container_complete(struct aac_command *);
-#if __FreeBSD_version >= 700000
 static void aac_cam_rescan(struct aac_softc *sc, uint32_t channel,
 	uint32_t target_id);
-#endif
 static void aac_set_scsi_error(struct aac_softc *sc, union ccb *ccb, 
 	u_int8_t status, u_int8_t key, u_int8_t asc, u_int8_t ascq);
 static int aac_load_map_command_sg(struct aac_softc *, struct aac_command *);
@@ -153,12 +142,8 @@ static void
 aac_set_scsi_error(struct aac_softc *sc, union ccb *ccb, u_int8_t status, 
 	u_int8_t key, u_int8_t asc, u_int8_t ascq)
 {
-#if __FreeBSD_version >= 900000
 	struct scsi_sense_data_fixed *sense = 
 		(struct scsi_sense_data_fixed *)&ccb->csio.sense_data;
-#else
-	struct scsi_sense_data *sense = &ccb->csio.sense_data;
-#endif
 
 	fwprintf(sc, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "Error %d!", status);
 
@@ -178,7 +163,6 @@ aac_set_scsi_error(struct aac_softc *sc, union ccb *ccb, u_int8_t status,
 	}
 }
 
-#if __FreeBSD_version >= 700000
 static void
 aac_cam_rescan(struct aac_softc *sc, uint32_t channel, uint32_t target_id)
 {
@@ -214,7 +198,6 @@ aac_cam_rescan(struct aac_softc *sc, uint32_t channel, uint32_t target_id)
 		break;
 	}
 }
-#endif
 
 static void
 aac_cam_event(struct aac_softc *sc, struct aac_event *event, void *arg)
@@ -326,9 +309,7 @@ aac_cam_attach(device_t dev)
 		return (EIO);
 	}
 
-#if __FreeBSD_version >= 700000
 	inf->aac_sc->cam_rescan_cb = aac_cam_rescan;
-#endif
 	mtx_unlock(&inf->aac_sc->aac_io_lock);
 
 	camsc->sim = sim;
@@ -435,6 +416,7 @@ aac_container_rw_command(struct cam_sim *sim, union ccb *ccb, u_int8_t *cmdp)
 
 	if (sc->flags & AAC_FLAGS_NEW_COMM_TYPE2) {
 		struct aac_raw_io2 *raw;
+		/* NOTE: LE conversion handled at aacraid_map_command_sg() */
 		raw = (struct aac_raw_io2 *)&fib->data[0];
 		bzero(raw, sizeof(struct aac_raw_io2));
 		fib->Header.Command = RawIo2;
@@ -450,6 +432,7 @@ aac_container_rw_command(struct cam_sim *sim, union ccb *ccb, u_int8_t *cmdp)
 			raw->flags = RIO2_IO_TYPE_WRITE | RIO2_SG_FORMAT_IEEE1212;
 	} else if (sc->flags & AAC_FLAGS_RAW_IO) {
 		struct aac_raw_io *raw;
+		/* NOTE: LE conversion handled at aacraid_map_command_sg() */
 		raw = (struct aac_raw_io *)&fib->data[0];
 		bzero(raw, sizeof(struct aac_raw_io));
 		fib->Header.Command = RawIo;
@@ -470,6 +453,7 @@ aac_container_rw_command(struct cam_sim *sim, union ccb *ccb, u_int8_t *cmdp)
 			br->ContainerId = ccb->ccb_h.target_id;
 			br->BlockNumber = blockno;
 			br->ByteCount = cm->cm_datalen;
+			aac_blockread_tole(br);
 			fib->Header.Size += sizeof(struct aac_blockread);
 			cm->cm_sgtable = &br->SgMap;
 		} else {
@@ -480,6 +464,7 @@ aac_container_rw_command(struct cam_sim *sim, union ccb *ccb, u_int8_t *cmdp)
 			bw->BlockNumber = blockno;
 			bw->ByteCount = cm->cm_datalen;
 			bw->Stable = CUNSTABLE;
+			aac_blockwrite_tole(bw);
 			fib->Header.Size += sizeof(struct aac_blockwrite);
 			cm->cm_sgtable = &bw->SgMap;
 		}
@@ -494,6 +479,7 @@ aac_container_rw_command(struct cam_sim *sim, union ccb *ccb, u_int8_t *cmdp)
 			br->BlockNumber = blockno;
 			br->Pad = 0;
 			br->Flags = 0;
+			aac_blockread64_tole(br);
 			fib->Header.Size += sizeof(struct aac_blockread64);
 			cm->cm_sgtable = (struct aac_sg_table *)&br->SgMap64;
 		} else {
@@ -505,6 +491,7 @@ aac_container_rw_command(struct cam_sim *sim, union ccb *ccb, u_int8_t *cmdp)
 			bw->BlockNumber = blockno;
 			bw->Pad = 0;
 			bw->Flags = 0;
+			aac_blockwrite64_tole(bw);
 			fib->Header.Size += sizeof(struct aac_blockwrite64);
 			cm->cm_sgtable = (struct aac_sg_table *)&bw->SgMap64;
 		}
@@ -674,9 +661,10 @@ aac_container_special_command(struct cam_sim *sim, union ccb *ccb,
 				AAC_PM_DRIVERSUP_STOP_UNIT);
 			ccfg->CTCommand.param[1] = co->co_mntobj.ObjectId;
 			ccfg->CTCommand.param[2] = 0;	/* 1 - immediate */
+			aac_cnt_config_tole(ccfg);
 
 			if (aacraid_wait_command(cm) != 0 ||
-				*(u_int32_t *)&fib->data[0] != 0) {
+				le32toh(*(u_int32_t *)&fib->data[0]) != 0) {
 				printf("Power Management: Error start/stop container %d\n", 
 				co->co_mntobj.ObjectId);
 			}
@@ -948,6 +936,7 @@ aac_passthrough_command(struct cam_sim *sim, union ccb *ccb)
 	srb->lun = ccb->ccb_h.target_lun;
 	srb->timeout = ccb->ccb_h.timeout;	/* XXX */
 	srb->retry_limit = 0;
+	aac_srb_tole(srb);
 
 	cm->cm_complete = aac_cam_complete;
 	cm->cm_ccb = ccb;
@@ -1020,9 +1009,7 @@ aac_cam_action(struct cam_sim *sim, union ccb *ccb)
 		cpi->max_lun = 7;	/* Per the controller spec */
 		cpi->initiator_id = camsc->inf->InitiatorBusId;
 		cpi->bus_id = camsc->inf->BusNumber;
-#if __FreeBSD_version >= 800000
-		cpi->maxio = sc->aac_max_sectors << 9;
-#endif
+		cpi->maxio = AAC_MAXIO_SIZE(sc);
 
 		/*
 		 * Resetting via the passthrough or parallel bus scan
@@ -1139,7 +1126,7 @@ aac_container_complete(struct aac_command *cm)
 
 	fwprintf(cm->cm_sc, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 	ccb = cm->cm_ccb;
-	status = ((u_int32_t *)cm->cm_fib->data)[0];
+	status = le32toh(((u_int32_t *)cm->cm_fib->data)[0]);
 
 	if (cm->cm_flags & AAC_CMD_RESET) {
 		ccb->ccb_h.status = CAM_SCSI_BUS_RESET;
@@ -1166,6 +1153,7 @@ aac_cam_complete(struct aac_command *cm)
 	fwprintf(sc, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 	ccb = cm->cm_ccb;
 	srbr = (struct aac_srb_response *)&cm->cm_fib->data[0];
+	aac_srb_response_toh(srbr);
 
 	if (cm->cm_flags & AAC_CMD_FASTRESP) {
 		/* fast response */
@@ -1202,7 +1190,7 @@ aac_cam_complete(struct aac_command *cm)
 				    scsi_sense_len) ? scsi_sense_len :
 				    srbr->sense_len;
 				bcopy(&srbr->sense[0], &ccb->csio.sense_data,
-				    srbr->sense_len);
+				    sense_len);
 				ccb->csio.sense_len = sense_len;
 				ccb->ccb_h.status |= CAM_AUTOSNS_VALID;
 				// scsi_sense_print(&ccb->csio);
@@ -1317,6 +1305,7 @@ aac_cam_reset_bus(struct cam_sim *sim, union ccb *ccb)
 
 	rbc = (struct aac_resetbus *)&vmi->IoctlBuf[0];
 	rbc->BusNumber = camsc->inf->BusNumber - 1;
+	aac_vmioctl_tole(vmi);
 
 	if (aacraid_wait_command(cm) != 0) {
 		device_printf(sc->aac_dev,"Error sending ResetBus command\n");

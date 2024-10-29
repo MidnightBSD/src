@@ -25,16 +25,17 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_SYSFS_H_
-#define	_LINUX_SYSFS_H_
+#ifndef	_LINUXKPI_LINUX_SYSFS_H_
+#define	_LINUXKPI_LINUX_SYSFS_H_
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #include <sys/errno.h>
 
 #include <linux/kobject.h>
+#include <linux/stringify.h>
+#include <linux/mm.h>
 
 struct sysfs_ops {
 	ssize_t (*show)(struct kobject *, struct attribute *, char *);
@@ -56,7 +57,6 @@ struct attribute_group {
 #define	__ATTR_RO(_name)	__ATTR(_name, 0444, _name##_show, NULL)
 #define	__ATTR_WO(_name)	__ATTR(_name, 0200, NULL, _name##_store)
 #define	__ATTR_RW(_name)	__ATTR(_name, 0644, _name##_show, _name##_store)
-
 #define	__ATTR_NULL	{ .attr = { .name = NULL } }
 
 #define	ATTRIBUTE_GROUPS(_name)						\
@@ -245,7 +245,7 @@ sysfs_unmerge_group(struct kobject *kobj, const struct attribute_group *grp)
 	struct attribute **attr;
 	struct sysctl_oid *oidp;
 
-	SLIST_FOREACH(oidp, SYSCTL_CHILDREN(kobj->oidp), oid_link) {
+	SYSCTL_FOREACH(oidp, SYSCTL_CHILDREN(kobj->oidp)) {
 		if (strcmp(oidp->oid_name, grp->name) != 0)
 			continue;
 		for (attr = grp->attrs; *attr != NULL; attr++) {
@@ -294,6 +294,42 @@ sysfs_streq(const char *s1, const char *s2)
 	return (l1 == l2 && strncmp(s1, s2, l1) == 0);
 }
 
+static inline int
+sysfs_emit(char *buf, const char *fmt, ...)
+{
+	va_list args;
+	int i;
+
+	if (!buf || offset_in_page(buf)) {
+		pr_warn("invalid sysfs_emit: buf:%p\n", buf);
+		return (0);
+	}
+
+	va_start(args, fmt);
+	i = vscnprintf(buf, PAGE_SIZE, fmt, args);
+	va_end(args);
+
+	return (i);
+}
+
+static inline int
+sysfs_emit_at(char *buf, int at, const char *fmt, ...)
+{
+	va_list args;
+	int i;
+
+	if (!buf || offset_in_page(buf) || at < 0 || at >= PAGE_SIZE) {
+		pr_warn("invalid sysfs_emit: buf:%p at:%d\n", buf, at);
+		return (0);
+	}
+
+	va_start(args, fmt);
+	i = vscnprintf(buf + at, PAGE_SIZE - at, fmt, args);
+	va_end(args);
+
+	return (i);
+}
+
 #define sysfs_attr_init(attr) do {} while(0)
 
-#endif	/* _LINUX_SYSFS_H_ */
+#endif	/* _LINUXKPI_LINUX_SYSFS_H_ */

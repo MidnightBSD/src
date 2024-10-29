@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Driver for Maxim DS3231[N] real-time clock/calendar.
  */

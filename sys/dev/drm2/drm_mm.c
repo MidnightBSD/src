@@ -27,7 +27,6 @@
  **************************************************************************/
 
 #include <sys/cdefs.h>
-
 /*
  * Generic simple memory manager implementation. Intended to be used as a base
  * class implementation for more advanced memory managers.

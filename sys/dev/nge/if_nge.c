@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * National Semiconductor DP83820/DP83821 gigabit ethernet driver
  * for FreeBSD. Datasheets are available from:
@@ -660,13 +659,33 @@ nge_miibus_statchg(device_t dev)
 		    CSR_READ_4(sc, NGE_GPIO) & ~NGE_GPIO_GP3_OUT);
 }
 
+static u_int
+nge_write_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	struct nge_softc *sc = arg;
+	uint32_t h;
+	int bit, index;
+
+	/*
+	 * From the 11 bits returned by the crc routine, the top 7
+	 * bits represent the 16-bit word in the mcast hash table
+	 * that needs to be updated, and the lower 4 bits represent
+	 * which bit within that byte needs to be set.
+	 */
+	h = ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN) >> 21;
+	index = (h >> 4) & 0x7F;
+	bit = h & 0xF;
+	CSR_WRITE_4(sc, NGE_RXFILT_CTL, NGE_FILTADDR_MCAST_LO + (index * 2));
+	NGE_SETBIT(sc, NGE_RXFILT_DATA, (1 << bit));
+
+	return (1);
+}
+
 static void
 nge_rxfilter(struct nge_softc *sc)
 {
 	struct ifnet *ifp;
-	struct ifmultiaddr *ifma;
-	uint32_t h, i, rxfilt;
-	int bit, index;
+	uint32_t i, rxfilt;
 
 	NGE_LOCK_ASSERT(sc);
 	ifp = sc->nge_ifp;
@@ -719,26 +738,7 @@ nge_rxfilter(struct nge_softc *sc)
 		CSR_WRITE_4(sc, NGE_RXFILT_DATA, 0);
 	}
 
-	/*
-	 * From the 11 bits returned by the crc routine, the top 7
-	 * bits represent the 16-bit word in the mcast hash table
-	 * that needs to be updated, and the lower 4 bits represent
-	 * which bit within that byte needs to be set.
-	 */
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		h = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-		    ifma->ifma_addr), ETHER_ADDR_LEN) >> 21;
-		index = (h >> 4) & 0x7F;
-		bit = h & 0xF;
-		CSR_WRITE_4(sc, NGE_RXFILT_CTL,
-		    NGE_FILTADDR_MCAST_LO + (index * 2));
-		NGE_SETBIT(sc, NGE_RXFILT_DATA, (1 << bit));
-	}
-	if_maddr_runlock(ifp);
-
+	if_foreach_llmaddr(ifp, nge_write_maddr, sc);
 done:
 	CSR_WRITE_4(sc, NGE_RXFILT_CTL, rxfilt);
 	/* Turn the receive filter on. */
@@ -902,11 +902,6 @@ nge_attach(device_t dev)
 	nge_sysctl_node(sc);
 
 	ifp = sc->nge_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(dev, "can not allocate ifnet structure\n");
-		error = ENOSPC;
-		goto fail;
-	}
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
@@ -2650,8 +2645,8 @@ nge_sysctl_node(struct nge_softc *sc)
 	ctx = device_get_sysctl_ctx(sc->nge_dev);
 	child = SYSCTL_CHILDREN(device_get_sysctl_tree(sc->nge_dev));
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "int_holdoff",
-	    CTLTYPE_INT | CTLFLAG_RW, &sc->nge_int_holdoff, 0,
-	    sysctl_hw_nge_int_holdoff, "I", "NGE interrupt moderation");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, &sc->nge_int_holdoff,
+	    0, sysctl_hw_nge_int_holdoff, "I", "NGE interrupt moderation");
 	/* Pull in device tunables. */
 	sc->nge_int_holdoff = NGE_INT_HOLDOFF_DEFAULT;
 	error = resource_int_value(device_get_name(sc->nge_dev),
@@ -2669,13 +2664,13 @@ nge_sysctl_node(struct nge_softc *sc)
 	}
 
 	stats = &sc->nge_stats;
-	tree = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "stats", CTLFLAG_RD,
-	    NULL, "NGE statistics");
+	tree = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "stats",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "NGE statistics");
 	parent = SYSCTL_CHILDREN(tree);
 
 	/* Rx statistics. */
-	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "rx", CTLFLAG_RD,
-	    NULL, "Rx MAC statistics");
+	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "rx",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Rx MAC statistics");
 	child = SYSCTL_CHILDREN(tree);
 	NGE_SYSCTL_STAT_ADD32(ctx, child, "pkts_errs",
 	    &stats->rx_pkts_errs,
@@ -2699,8 +2694,8 @@ nge_sysctl_node(struct nge_softc *sc)
 	    &stats->rx_pause, "Pause frames");
 
 	/* Tx statistics. */
-	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "tx", CTLFLAG_RD,
-	    NULL, "Tx MAC statistics");
+	tree = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "tx",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Tx MAC statistics");
 	child = SYSCTL_CHILDREN(tree);
 	NGE_SYSCTL_STAT_ADD32(ctx, child, "pause",
 	    &stats->tx_pause, "Pause frames");

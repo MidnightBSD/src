@@ -28,10 +28,10 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_acpi.h"
 #include "opt_evdev.h"
 #include <sys/param.h>
+#include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/bus.h>
@@ -126,13 +126,14 @@ static int
 acpi_lid_probe(device_t dev)
 {
     static char *lid_ids[] = { "PNP0C0D", NULL };
+    int rv;
 
-    if (acpi_disabled("lid") ||
-	ACPI_ID_PROBE(device_get_parent(dev), dev, lid_ids) == NULL)
+    if (acpi_disabled("lid"))
 	return (ENXIO);
-
-    device_set_desc(dev, "Control Method Lid Switch");
-    return (0);
+    rv = ACPI_ID_PROBE(device_get_parent(dev), dev, lid_ids, NULL);
+    if (rv <= 0)
+	device_set_desc(dev, "Control Method Lid Switch");
+    return (rv);
 }
 
 static int

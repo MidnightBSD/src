@@ -21,7 +21,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef __MLX5_CORE_H__
@@ -35,9 +34,9 @@
 
 #define DRIVER_NAME "mlx5_core"
 #ifndef DRIVER_VERSION
-#define DRIVER_VERSION "3.6.0"
+#define DRIVER_VERSION "3.7.1"
 #endif
-#define DRIVER_RELDATE "December 2020"
+#define DRIVER_RELDATE "November 2021"
 
 extern int mlx5_core_debug_mask;
 

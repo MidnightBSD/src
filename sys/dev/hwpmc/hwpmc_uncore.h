@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Fabien Thomas
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_HWPMC_UNCORE_H_
@@ -44,7 +43,7 @@ struct pmc_md_ucf_op_pmcallocate {
  * Programmable PMCs.
  */
 struct pmc_md_ucp_op_pmcallocate {
-	uint32_t	pm_ucp_config;
+	uint64_t	pm_ucp_config;
 };
 
 #define	UCP_EVSEL(C)	((C) & 0xFF)
@@ -105,7 +104,7 @@ struct pmc_md_ucf_pmc {
 };
 
 struct pmc_md_ucp_pmc {
-	uint32_t	pm_ucp_evsel;
+	uint64_t	pm_ucp_evsel;
 };
 
 /*

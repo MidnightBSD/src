@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2008 Nathan Whitehorn
  * All rights reserved.
@@ -23,7 +23,6 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
@@ -98,13 +97,13 @@ adb_bus_attach(device_t dev)
 	 * the bus. Enumerating the ADB involves receiving packets,
 	 * which works best with interrupts enabled.
 	 */
-	
+
 	if (config_intrhook_establish(&sc->enum_hook) != 0)
 		return (ENOMEM);
 
 	return (0);
 }
-	
+
 static void
 adb_bus_enumerate(void *xdev)
 {
@@ -126,7 +125,7 @@ adb_bus_enumerate(void *xdev)
 		sc->devinfo[i].address = i;
 		sc->devinfo[i].default_address = 0;
 	}
-	
+
 	/* Reset ADB bus */
 	adb_send_raw_packet_sync(dev,0,ADB_COMMAND_BUS_RESET,0,0,NULL,NULL);
 	DELAY(1500);
@@ -141,7 +140,7 @@ adb_bus_enumerate(void *xdev)
 	    do {
 		reply = adb_send_raw_packet_sync(dev,i,
 			    ADB_COMMAND_TALK,3,0,NULL,NULL);
-	
+
 		if (reply) {
 			/* If we got a response, relocate to next_free */
 			r3 = sc->devinfo[i].register3;
@@ -196,7 +195,6 @@ static int adb_bus_detach(device_t dev)
 {
 	return (bus_generic_detach(dev));
 }
-	
 
 static void
 adb_probe_nomatch(device_t dev, device_t child)
@@ -233,7 +231,7 @@ adb_receive_raw_packet(device_t dev, u_char status, u_char command, int len,
 		ADB_RECEIVE_PACKET(sc->children[addr],status,
 			(command & 0x0f) >> 2,command & 0x03,len,data);
 	}
-	
+
 	return (0);
 }
 
@@ -242,9 +240,9 @@ adb_print_child(device_t dev, device_t child)
 {
 	struct adb_devinfo *dinfo;
 	int retval = 0;
-	
+
 	dinfo = device_get_ivars(child);
-	
+
 	retval += bus_print_child_header(dev,child);
 	printf(" at device %d",dinfo->address);
 	retval += bus_print_child_footer(dev, child);
@@ -261,7 +259,7 @@ adb_send_packet(device_t dev, u_char command, u_char reg, int len, u_char *data)
 
 	sc = device_get_softc(device_get_parent(dev));
 	dinfo = device_get_ivars(dev);
-	
+
 	command_byte |= dinfo->address << 4;
 	command_byte |= command << 2;
 	command_byte |= reg;
@@ -280,7 +278,7 @@ adb_set_autopoll(device_t dev, u_char enable)
 
 	sc = device_get_softc(device_get_parent(dev));
 	dinfo = device_get_ivars(dev);
-	
+
 	mod = enable << dinfo->address;
 	if (enable) {
 		sc->autopoll_mask |= mod;
@@ -322,7 +320,7 @@ adb_send_raw_packet_sync(device_t dev, uint8_t to, uint8_t command,
 	int i = 1;
 
 	sc = device_get_softc(dev);
-	
+
 	command_byte |= to << 4;
 	command_byte |= command << 2;
 	command_byte |= reg;
@@ -409,13 +407,13 @@ adb_write_register(device_t dev, u_char reg, size_t len, void *data)
 	struct adb_softc *sc;
 	struct adb_devinfo *dinfo;
 	size_t result;
-	
+
 	dinfo = device_get_ivars(dev);
 	sc = device_get_softc(device_get_parent(dev));
-	
+
 	result = adb_send_raw_packet_sync(sc->sc_dev,dinfo->address,
 		   ADB_COMMAND_LISTEN, reg, len, (u_char *)data, NULL);
-	
+
 	result = adb_send_raw_packet_sync(sc->sc_dev,dinfo->address,
 	           ADB_COMMAND_TALK, reg, 0, NULL, NULL);
 

@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_COMPAT_H_
-#define	_LINUX_COMPAT_H_
+#ifndef	_LINUXKPI_LINUX_COMPAT_H_
+#define	_LINUXKPI_LINUX_COMPAT_H_
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -46,15 +45,18 @@ static inline void
 linux_set_current(struct thread *td)
 {
 	if (__predict_false(td->td_lkpi_task == NULL))
-		linux_alloc_current(td, M_WAITOK);
+		lkpi_alloc_current(td, M_WAITOK);
 }
 
 static inline int
 linux_set_current_flags(struct thread *td, int flags)
 {
 	if (__predict_false(td->td_lkpi_task == NULL))
-		return (linux_alloc_current(td, flags));
+		return (lkpi_alloc_current(td, flags));
 	return (0);
 }
 
-#endif	/* _LINUX_COMPAT_H_ */
+#define	compat_ptr(x)		((void *)(uintptr_t)x)
+#define	ptr_to_compat(x)	((uintptr_t)x)
+
+#endif	/* _LINUXKPI_LINUX_COMPAT_H_ */

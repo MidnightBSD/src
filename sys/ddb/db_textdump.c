@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007 Robert N. M. Watson
  * All rights reserved.
@@ -59,7 +59,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_config.h"
 
 #include "opt_ddb.h"
@@ -75,7 +74,8 @@
 #include <ddb/ddb.h>
 #include <ddb/db_lex.h>
 
-static SYSCTL_NODE(_debug_ddb, OID_AUTO, textdump, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_debug_ddb, OID_AUTO, textdump,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "DDB textdump options");
 
 /*
@@ -246,7 +246,7 @@ textdump_writeblock(struct dumperinfo *di, off_t offset, char *buffer)
 		return (EIO);
 	if (offset < SIZEOF_METADATA)
 		return (ENOSPC);
-	textdump_error = dump_write(di, buffer, 0, offset + di->mediaoffset,
+	textdump_error = dump_write(di, buffer, offset + di->mediaoffset,
 	    TEXTDUMP_BLOCKSIZE);
 	if (textdump_error)
 		printf("textdump_writeblock: offset %jd, error %d\n", (intmax_t)offset,
@@ -478,7 +478,7 @@ textdump_dumpsys(struct dumperinfo *di)
 #endif
 	if (textdump_do_msgbuf)
 		textdump_dump_msgbuf(di);
-	if (textdump_do_panic && panicstr != NULL)
+	if (textdump_do_panic && KERNEL_PANICKED())
 		textdump_dump_panic(di);
 	if (textdump_do_version)
 		textdump_dump_version(di);
@@ -499,7 +499,7 @@ textdump_dumpsys(struct dumperinfo *di)
 	 * Terminate the dump, report any errors, and clear the pending flag.
 	 */
 	if (textdump_error == 0)
-		(void)dump_write(di, NULL, 0, 0, 0);
+		(void)dump_write(di, NULL, 0, 0);
 	if (textdump_error == ENOSPC)
 		printf("Textdump: Insufficient space on dump partition\n");
 	else if (textdump_error != 0)

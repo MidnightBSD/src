@@ -1,8 +1,7 @@
 #-
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2014 The FreeBSD Foundation
-# All rights reserved.
 #
 # This software was developed by Edward Tomasz Napierala under sponsorship
 # from the FreeBSD Foundation.
@@ -30,14 +29,34 @@
 #
 #
 
+#include <sys/bio.h>
 #include <sys/socket.h>
 #include <dev/iscsi/icl.h>
 
 INTERFACE icl_conn;
 
+CODE {
+	static void null_pdu_queue_cb(struct icl_conn *ic,
+	    struct icl_pdu *ip, icl_pdu_cb cb)
+	{
+		ICL_CONN_PDU_QUEUE(ic, ip);
+		if (cb)
+			cb(ip, 0);
+	}
+};
+
 METHOD size_t pdu_data_segment_length {
 	struct icl_conn *_ic;
 	const struct icl_pdu *_ip;
+};
+
+METHOD int pdu_append_bio {
+	struct icl_conn *_ic;
+	struct icl_pdu *_ip;
+	struct bio *_bp;
+	size_t _offset;
+	size_t _len;
+	int _flags;
 };
 
 METHOD int pdu_append_data {
@@ -46,6 +65,15 @@ METHOD int pdu_append_data {
 	const void *_addr;
 	size_t _len;
 	int _flags;
+};
+
+METHOD void pdu_get_bio {
+	struct icl_conn *_ic;
+	struct icl_pdu *_ip;
+	size_t _pdu_off;
+	struct bio *_bp;
+	size_t _bio_off;
+	size_t _len;
 };
 
 METHOD void pdu_get_data {
@@ -60,6 +88,12 @@ METHOD void pdu_queue {
 	struct icl_conn *_ic;
 	struct icl_pdu *_ip;
 };
+
+METHOD void pdu_queue_cb {
+	struct icl_conn *_ic;
+	struct icl_pdu *_ip;
+	icl_pdu_cb cb;
+} DEFAULT null_pdu_queue_cb;
 
 METHOD void pdu_free {
 	struct icl_conn *_ic;

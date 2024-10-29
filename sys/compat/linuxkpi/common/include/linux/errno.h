@@ -25,14 +25,15 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_ERRNO_H_
-#define	_LINUX_ERRNO_H_
+#ifndef	_LINUXKPI_LINUX_ERRNO_H_
+#define	_LINUXKPI_LINUX_ERRNO_H_
 
 #include <sys/errno.h>
 
 #define	EBADRQC		56	/* Bad request code */
+#define	EBADSLT		57	/* Invalid slot */
+#define	ENOKEY		126	/* Required key not available */
 
 #define	ECHRNG		EDOM
 #define	ETIME		ETIMEDOUT
@@ -43,7 +44,12 @@
 #define	ERESTARTSYS     512
 #define	ENOTSUPP	EOPNOTSUPP
 #define	ENONET		EHOSTDOWN
+#define	EHWPOISON	133	/* Memory page hardware error */
 
+/*
+ * The error numbers below are arbitrary and do not resemble the numbers
+ * used in Linux.  They should not be returned to user space.
+ */
 #define	ERESTARTNOINTR	513
 #define	ERESTARTNOHAND	514
 #define	ERESTART_RESTARTBLOCK 516
@@ -57,5 +63,10 @@
 #define	EBADTYPE	527
 #define	EJUKEBOX	528
 #define	EIOCBQUEUED	529
+#define	ERFKILL		530
+#define	EBADE		531
+#define	ENOMEDIUM	532
+#define	ENOSR		533
+#define	ELNRNG		534
 
-#endif					/* _LINUX_ERRNO_H_ */
+#endif					/* _LINUXKPI_LINUX_ERRNO_H_ */

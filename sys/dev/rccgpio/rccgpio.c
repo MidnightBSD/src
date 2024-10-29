@@ -24,7 +24,6 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-
 /*
  * GPIO driver for the ADI Engineering RCC-VE and RCC-DFF/DFFv2.
  */

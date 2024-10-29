@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2013 Chelsio, Inc. All rights reserved.
  *
@@ -32,7 +32,6 @@
  * SOFTWARE.
  */
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 
 #include <sys/ktr.h>
@@ -260,11 +259,13 @@ static int c4iw_mod_load(void);
 static int c4iw_mod_unload(void);
 static int c4iw_activate(struct adapter *);
 static int c4iw_deactivate(struct adapter *);
+static void c4iw_async_event(struct adapter *);
 
 static struct uld_info c4iw_uld_info = {
 	.uld_id = ULD_IWARP,
 	.activate = c4iw_activate,
 	.deactivate = c4iw_deactivate,
+	.async_event = c4iw_async_event,
 };
 
 static int
@@ -323,6 +324,23 @@ c4iw_deactivate(struct adapter *sc)
 	sc->iwarp_softc = NULL;
 
 	return (0);
+}
+
+static void
+c4iw_async_event(struct adapter *sc)
+{
+	struct c4iw_dev *iwsc = sc->iwarp_softc;
+
+	if (iwsc) {
+		struct ib_event event = {0};
+
+		device_printf(sc->dev,
+			      "iWARP driver received FATAL ERROR event.\n");
+		iwsc->rdev.flags |= T4_FATAL_ERROR;
+		event.event  = IB_EVENT_DEVICE_FATAL;
+		event.device = &iwsc->ibdev;
+		ib_dispatch_event(&event);
+	}
 }
 
 static void

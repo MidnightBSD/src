@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2016 Michael Zhilin <mizhka@gmail.com>
  * All rights reserved.
@@ -106,7 +106,6 @@
 		    fn "bhnd: " fmt "\n", ## __VA_ARGS__);		\
 	} while(0);
 #endif /* BHND_LOGGING > BHND_INFO_LEVEL */
-
 
 #define	_BHND_RAWPRINTFN	printf(
 #define	_BHND_DEVPRINTFN(dev)	device_printf(dev,

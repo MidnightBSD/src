@@ -27,7 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
@@ -199,7 +198,6 @@ struct ocs_xport_s {
 	ocs_timer_t     stats_timer;            /**< Timer for Statistics */
 	ocs_xport_stats_t fc_xport_stats;
 };
-
 
 extern ocs_xport_t *ocs_xport_alloc(ocs_t *ocs);
 extern int32_t ocs_xport_attach(ocs_xport_t *xport);

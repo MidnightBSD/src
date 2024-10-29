@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011-2012 Robert N. M. Watson
  * All rights reserved.
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/cons.h>
@@ -51,7 +50,8 @@
 
 devclass_t	altera_jtag_uart_devclass;
 
-static SYSCTL_NODE(_hw, OID_AUTO, altera_jtag_uart, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_hw, OID_AUTO, altera_jtag_uart,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "Altera JTAG UART configuration knobs");
 
 /*

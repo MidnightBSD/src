@@ -1,7 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- *  Copyright (c) 2009-2018 Alexander Motin <mav@FreeBSD.org>
+ *  Copyright (c) 2009-2020 Alexander Motin <mav@FreeBSD.org>
  *  Copyright (c) 1997-2009 by Matthew Jacob
  *  All rights reserved.
  *
@@ -29,7 +29,7 @@
  *
  */
 /*
- * Soft Definitions for for Qlogic ISP SCSI adapters.
+ * Soft Definitions for Qlogic ISP SCSI adapters.
  */
 
 #ifndef	_ISPVAR_H
@@ -39,7 +39,7 @@
 #include <dev/ic/isp_stds.h>
 #include <dev/ic/ispmbox.h>
 #endif
-#ifdef	__MidnightBSD__
+#ifdef	__FreeBSD__
 #include <dev/isp/isp_stds.h>
 #include <dev/isp/ispmbox.h>
 #endif
@@ -64,13 +64,10 @@ struct ispmdvec {
 	uint32_t	(*dv_rd_reg) (ispsoftc_t *, int);
 	void		(*dv_wr_reg) (ispsoftc_t *, int, uint32_t);
 	int		(*dv_mbxdma) (ispsoftc_t *);
-	int		(*dv_dmaset) (ispsoftc_t *, XS_T *, void *);
-	void		(*dv_dmaclr) (ispsoftc_t *, XS_T *, uint32_t);
+	int		(*dv_send_cmd) (ispsoftc_t *, void *, void *, uint32_t);
 	int		(*dv_irqsetup) (ispsoftc_t *);
 	void		(*dv_dregs) (ispsoftc_t *, const char *);
-	const void *	dv_ispfw;	/* ptr to f/w */
-	uint16_t	dv_conf1;
-	uint16_t	dv_clock;	/* clock frequency */
+	const void *	dv_ispfw;	/* ptr to f/w of ispfw(4)*/
 };
 
 /*
@@ -80,8 +77,7 @@ struct ispmdvec {
 #ifndef	MAX_FC_TARG
 #define	MAX_FC_TARG		1024
 #endif
-#define	ISP_MAX_TARGETS(isp)	(IS_FC(isp)? MAX_FC_TARG : MAX_TARGETS)
-#define	ISP_MAX_LUNS(isp)	(isp)->isp_maxluns
+#define	ISP_MAX_TARGETS(isp)	MAX_FC_TARG
 #define	ISP_MAX_IRQS		3
 
 /*
@@ -100,12 +96,8 @@ struct ispmdvec {
 #define	ISP_MBOXDMASETUP(isp)	\
 	(*(isp)->isp_mdvec->dv_mbxdma)((isp))
 
-#define	ISP_DMASETUP(isp, xs, req)	\
-	(*(isp)->isp_mdvec->dv_dmaset)((isp), (xs), (req))
-
-#define	ISP_DMAFREE(isp, xs, hndl)		\
-	if ((isp)->isp_mdvec->dv_dmaclr)	\
-	    (*(isp)->isp_mdvec->dv_dmaclr)((isp), (xs), (hndl))
+#define	ISP_SEND_CMD(isp, qe, segp, nseg)	\
+	(*(isp)->isp_mdvec->dv_send_cmd)((isp), (qe), (segp), (nseg))
 
 #define	ISP_IRQSETUP(isp)	\
 	(((isp)->isp_mdvec->dv_irqsetup) ? (*(isp)->isp_mdvec->dv_irqsetup)(isp) : 0)
@@ -135,117 +127,36 @@ struct ispmdvec {
 
 /*
  * Request/Response Queue defines and macros.
- * The maximum is defined per platform (and can be based on board type).
  */
 /* This is the size of a queue entry (request and response) */
 #define	QENTRY_LEN			64
-/* Both request and result queue length must be a power of two */
-#define	RQUEST_QUEUE_LEN(x)		MAXISPREQUEST(x)
-#ifdef	ISP_TARGET_MODE
-#define	RESULT_QUEUE_LEN(x)		MAXISPREQUEST(x)
-#else
-#define	RESULT_QUEUE_LEN(x)		\
-	(((MAXISPREQUEST(x) >> 2) < 64)? 64 : MAXISPREQUEST(x) >> 2)
-#endif
-#define	ISP_QUEUE_ENTRY(q, idx)		(((uint8_t *)q) + ((idx) * QENTRY_LEN))
-#define	ISP_QUEUE_SIZE(n)		((n) * QENTRY_LEN)
+/*
+ * Hardware requires queue lengths of at least 8 elements.  Driver requires
+ * lengths to be a power of two, and request queue of at least 256 elements.
+ */
+#define	RQUEST_QUEUE_LEN(x)		8192
+#define	RESULT_QUEUE_LEN(x)		1024
+#define	ATIO_QUEUE_LEN(x)		1024
+#define	ISP_QUEUE_ENTRY(q, idx)		(((uint8_t *)q) + ((size_t)(idx) * QENTRY_LEN))
+#define	ISP_QUEUE_SIZE(n)		((size_t)(n) * QENTRY_LEN)
 #define	ISP_NXT_QENTRY(idx, qlen)	(((idx) + 1) & ((qlen)-1))
-#define	ISP_QFREE(in, out, qlen)	\
-	((in == out)? (qlen - 1) : ((in > out)? \
-	((qlen - 1) - (in - out)) : (out - in - 1)))
+#define	ISP_QFREE(in, out, qlen)	((out - in - 1) & ((qlen) - 1))
 #define	ISP_QAVAIL(isp)	\
 	ISP_QFREE(isp->isp_reqidx, isp->isp_reqodx, RQUEST_QUEUE_LEN(isp))
 
 #define	ISP_ADD_REQUEST(isp, nxti)						\
 	MEMORYBARRIER(isp, SYNC_REQUEST, isp->isp_reqidx, QENTRY_LEN, -1);	\
-	ISP_WRITE(isp, isp->isp_rqstinrp, nxti);				\
+	ISP_WRITE(isp, BIU2400_REQINP, nxti);					\
 	isp->isp_reqidx = nxti
 
 #define	ISP_SYNC_REQUEST(isp)								\
 	MEMORYBARRIER(isp, SYNC_REQUEST, isp->isp_reqidx, QENTRY_LEN, -1);		\
 	isp->isp_reqidx = ISP_NXT_QENTRY(isp->isp_reqidx, RQUEST_QUEUE_LEN(isp));	\
-	ISP_WRITE(isp, isp->isp_rqstinrp, isp->isp_reqidx)
-
-/*
- * SCSI Specific Host Adapter Parameters- per bus, per target
- */
-typedef struct {
-	uint32_t 				: 8,
-			update			: 1,
-			sendmarker		: 1,
-			isp_req_ack_active_neg	: 1,
-			isp_data_line_active_neg: 1,
-			isp_cmd_dma_burst_enable: 1,
-			isp_data_dma_burst_enabl: 1,
-			isp_fifo_threshold	: 3,
-			isp_ptisp		: 1,
-			isp_ultramode		: 1,
-			isp_diffmode		: 1,
-			isp_lvdmode		: 1,
-			isp_fast_mttr		: 1,	/* fast sram */
-			isp_initiator_id	: 4,
-			isp_async_data_setup	: 4;
-	uint16_t	isp_selection_timeout;
-	uint16_t	isp_max_queue_depth;
-	uint8_t		isp_tag_aging;
-	uint8_t		isp_bus_reset_delay;
-	uint8_t		isp_retry_count;
-	uint8_t		isp_retry_delay;
-	struct {
-		uint32_t
-			exc_throttle	:	8,
-					:	1,
-			dev_enable	:	1,	/* ignored */
-			dev_update	:	1,
-			dev_refresh	:	1,
-			actv_offset	:	4,
-			goal_offset	:	4,
-			nvrm_offset	:	4;
-		uint8_t		actv_period;	/* current sync period */
-		uint8_t		goal_period;	/* goal sync period */
-		uint8_t		nvrm_period;	/* nvram sync period */
-		uint16_t	actv_flags;	/* current device flags */
-		uint16_t	goal_flags;	/* goal device flags */
-		uint16_t	nvrm_flags;	/* nvram device flags */
-	} isp_devparam[MAX_TARGETS];
-} sdparam;
-
-/*
- * Device Flags
- */
-#define	DPARM_DISC	0x8000
-#define	DPARM_PARITY	0x4000
-#define	DPARM_WIDE	0x2000
-#define	DPARM_SYNC	0x1000
-#define	DPARM_TQING	0x0800
-#define	DPARM_ARQ	0x0400
-#define	DPARM_QFRZ	0x0200
-#define	DPARM_RENEG	0x0100
-#define	DPARM_NARROW	0x0080
-#define	DPARM_ASYNC	0x0040
-#define	DPARM_PPR	0x0020
-#define	DPARM_DEFAULT	(0xFF00 & ~DPARM_QFRZ)
-#define	DPARM_SAFE_DFLT	(DPARM_DEFAULT & ~(DPARM_WIDE|DPARM_SYNC|DPARM_TQING))
-
-/* technically, not really correct, as they need to be rated based upon clock */
-#define	ISP_80M_SYNCPARMS	0x0c09
-#define	ISP_40M_SYNCPARMS	0x0c0a
-#define	ISP_20M_SYNCPARMS	0x0c0c
-#define	ISP_20M_SYNCPARMS_1040	0x080c
-#define	ISP_10M_SYNCPARMS	0x0c19
-#define	ISP_08M_SYNCPARMS	0x0c25
-#define	ISP_05M_SYNCPARMS	0x0c32
-#define	ISP_04M_SYNCPARMS	0x0c41
+	ISP_WRITE(isp, BIU2400_REQINP, isp->isp_reqidx)
 
 /*
  * Fibre Channel Specifics
  */
-/* These are for non-2K Login Firmware cards */
-#define	FL_ID			0x7e	/* FL_Port Special ID */
-#define	SNS_ID			0x80	/* SNS Server Special ID */
-#define	NPH_MAX			0xfe
-
-/* These are for 2K Login Firmware cards */
 #define	NPH_RESERVED		0x7F0	/* begin of reserved N-port handles */
 #define	NPH_MGT_ID		0x7FA	/* Management Server Special ID */
 #define	NPH_SNS_ID		0x7FC	/* SNS Server Special ID */
@@ -310,9 +221,9 @@ typedef struct {
 	uint32_t	handle;	/* handle associated with this command */
 } isp_hdl_t;
 #define	ISP_HANDLE_FREE		0x00000000
-#define	ISP_HANDLE_CMD_MASK	0x00001fff
-#define	ISP_HANDLE_USAGE_MASK	0x0000e000
-#define	ISP_HANDLE_USAGE_SHIFT	13
+#define	ISP_HANDLE_CMD_MASK	0x00003fff
+#define	ISP_HANDLE_USAGE_MASK	0x0000c000
+#define	ISP_HANDLE_USAGE_SHIFT	14
 #define	ISP_H2HT(hdl)	((hdl & ISP_HANDLE_USAGE_MASK) >> ISP_HANDLE_USAGE_SHIFT)
 #	define	ISP_HANDLE_NONE		0
 #	define	ISP_HANDLE_INITIATOR	1
@@ -321,13 +232,15 @@ typedef struct {
 #define	ISP_HANDLE_SEQ_MASK	0xffff0000
 #define	ISP_HANDLE_SEQ_SHIFT	16
 #define	ISP_H2SEQ(hdl)	((hdl & ISP_HANDLE_SEQ_MASK) >> ISP_HANDLE_SEQ_SHIFT)
-#define	ISP_VALID_HANDLE(c, hdl)	\
+#define	ISP_HANDLE_MAX		(ISP_HANDLE_CMD_MASK + 1)
+#define	ISP_HANDLE_RESERVE	256
+#define	ISP_HANDLE_NUM(isp)	((isp)->isp_maxcmds + ISP_HANDLE_RESERVE)
+#define	ISP_VALID_HANDLE(isp, hdl)	\
 	((ISP_H2HT(hdl) == ISP_HANDLE_INITIATOR || \
 	  ISP_H2HT(hdl) == ISP_HANDLE_TARGET || \
 	  ISP_H2HT(hdl) == ISP_HANDLE_CTRL) && \
-	 ((hdl) & ISP_HANDLE_CMD_MASK) < (c)->isp_maxcmds && \
-	 (hdl) == ((c)->isp_xflist[(hdl) & ISP_HANDLE_CMD_MASK].handle))
-#define	ISP_BAD_HANDLE_INDEX	0xffffffff
+	 ((hdl) & ISP_HANDLE_CMD_MASK) < ISP_HANDLE_NUM(isp) && \
+	 (hdl) == ((isp)->isp_xflist[(hdl) & ISP_HANDLE_CMD_MASK].handle))
 
 
 /*
@@ -448,13 +361,47 @@ typedef struct {
 	uint16_t		isp_loopid;		/* hard loop id */
 	uint16_t		isp_sns_hdl;		/* N-port handle for SNS */
 	uint16_t		isp_lasthdl;		/* only valid for channel 0 */
-	uint16_t		isp_maxalloc;
 	uint16_t		isp_fabric_params;
 	uint16_t		isp_login_hdl;		/* Logging in handle */
 	uint8_t			isp_retry_delay;
 	uint8_t			isp_retry_count;
 	int			isp_use_gft_id;		/* Use GFT_ID */
 	int			isp_use_gff_id;		/* Use GFF_ID */
+
+	uint32_t		flash_data_addr;
+	uint32_t		fw_flashrev[4]; /* Flash F/W revision */
+	uint32_t		fw_ispfwrev[4]; /* ispfw(4) F/W revision */
+	char			fw_version_flash[12];
+	char			fw_version_ispfw[12];
+	char			fw_version_run[12];
+	uint32_t		fw_ability_mask;
+	uint16_t		max_supported_speed;
+
+	/*
+	 * FLT
+	 */
+	uint16_t		flt_length;
+	uint32_t		flt_region_entries;
+	uint32_t		flt_region_flt;
+	uint32_t		flt_region_fdt;
+	uint32_t		flt_region_boot;
+	uint32_t		flt_region_boot_sec;
+	uint32_t		flt_region_fw;
+	uint32_t		flt_region_fw_sec;
+	uint32_t		flt_region_vpd_nvram;
+	uint32_t		flt_region_vpd_nvram_sec;
+	uint32_t		flt_region_vpd;
+	uint32_t		flt_region_vpd_sec;
+	uint32_t		flt_region_nvram;
+	uint32_t		flt_region_nvram_sec;
+	uint32_t		flt_region_npiv_conf;
+	uint32_t		flt_region_gold_fw;
+	uint32_t		flt_region_fcp_prio;
+	uint32_t		flt_region_bootload;
+	uint32_t		flt_region_img_status_pri;
+	uint32_t		flt_region_img_status_sec;
+	uint32_t		flt_region_aux_img_status_pri;
+	uint32_t		flt_region_aux_img_status_sec;
 
 	/*
 	 * Current active WWNN/WWPN
@@ -481,6 +428,41 @@ typedef struct {
 
 	uint8_t			isp_scanscratch[ISP_FC_SCRLEN];
 } fcparam;
+
+/*
+ * Image status
+ */
+struct isp_image_status{
+	uint8_t		image_status_mask;
+	uint16_t	generation;
+	uint8_t		ver_major;
+	uint8_t		ver_minor;
+	uint8_t		bitmap;		/* 28xx only */
+	uint8_t		reserved[2];
+	uint32_t	checksum;
+	uint32_t	signature;
+} __packed;
+
+/* 28xx aux image status bitmap values */
+#define ISP28XX_AUX_IMG_BOARD_CONFIG		0x1
+#define ISP28XX_AUX_IMG_VPD_NVRAM		0x2
+#define ISP28XX_AUX_IMG_NPIV_CONFIG_0_1		0x4
+#define ISP28XX_AUX_IMG_NPIV_CONFIG_2_3		0x8
+#define ISP28XX_AUX_IMG_NVME_PARAMS		0x10
+
+/*
+ * Active regions
+ */
+struct active_regions {
+	uint8_t global;
+	struct {
+		uint8_t	board_config;
+		uint8_t	vpd_nvram;
+		uint8_t	npiv_config_0_1;
+		uint8_t	npiv_config_2_3;
+		uint8_t	nvme_params;
+	} aux;
+};
 
 #define	FW_CONFIG_WAIT		0
 #define	FW_WAIT_LINK		1
@@ -534,48 +516,35 @@ struct ispsoftc {
 	 * may contain some volatile state (e.g., current loop state).
 	 */
 
-	void * 			isp_param;	/* type specific */
-	uint64_t		isp_fwattr;	/* firmware attributes */
+	fcparam			*isp_param;	/* Per-channel storage. */
+	uint16_t		isp_fwattr;	/* firmware attributes */
+	uint16_t		isp_fwattr_h;	/* firmware attributes */
+	uint16_t		isp_fwattr_ext[2]; /* firmware attributes */
 	uint16_t		isp_fwrev[3];	/* Loaded F/W revision */
 	uint16_t		isp_maxcmds;	/* max possible I/O cmds */
+	uint16_t		isp_nchan;	/* number of channels */
+	uint16_t		isp_dblev;	/* debug log mask */
+	uint32_t		isp_did;	/* DID */
 	uint8_t			isp_type;	/* HBA Chip Type */
 	uint8_t			isp_revision;	/* HBA Chip H/W Revision */
 	uint8_t			isp_nirq;	/* number of IRQs */
-	uint16_t		isp_nchan;	/* number of channels */
-	uint32_t		isp_maxluns;	/* maximum luns supported */
-
-	uint32_t		isp_clock	: 8,	/* input clock */
-						: 4,
-				isp_port	: 2,	/* 23XX/24XX only */
-				isp_bustype	: 1,	/* SBus or PCI */
-				isp_loaded_fw	: 1,	/* loaded firmware */
-				isp_dblev	: 16;	/* debug log mask */
-
-
+	uint8_t			isp_port;	/* physical port on a card */
 	uint32_t		isp_confopts;	/* config options */
-
-	uint32_t		isp_rqstinrp;	/* register for REQINP */
-	uint32_t		isp_rqstoutrp;	/* register for REQOUTP */
-	uint32_t		isp_respinrp;	/* register for RESINP */
-	uint32_t		isp_respoutrp;	/* register for RESOUTP */
 
 	/*
 	 * Volatile state
 	 */
-
 	volatile u_int		isp_mboxbsy;	/* mailbox command active */
 	volatile u_int		isp_state;
-	volatile mbreg_t	isp_curmbx;	/* currently active mailbox command */
 	volatile uint32_t	isp_reqodx;	/* index of last ISP pickup */
 	volatile uint32_t	isp_reqidx;	/* index of next request */
-	volatile uint32_t	isp_residx;	/* index of last ISP write */
 	volatile uint32_t	isp_resodx;	/* index of next result */
 	volatile uint32_t	isp_atioodx;	/* index of next ATIO */
 	volatile uint32_t	isp_obits;	/* mailbox command output */
 	volatile uint32_t	isp_serno;	/* rolling serial number */
 	volatile uint16_t	isp_mboxtmp[MAX_MAILBOX];
-	volatile uint16_t	isp_lastmbxcmd;	/* last mbox command sent */
 	volatile uint16_t	isp_seqno;	/* running sequence number */
+	u_int			isp_rqovf;	/* request queue overflow */
 
 	/*
 	 * Active commands are stored here, indexed by handle functions.
@@ -603,20 +572,13 @@ struct ispsoftc {
 #endif
 };
 
-#define	SDPARAM(isp, chan)	(&((sdparam *)(isp)->isp_param)[(chan)])
-#define	FCPARAM(isp, chan)	(&((fcparam *)(isp)->isp_param)[(chan)])
+#define	FCPARAM(isp, chan)	(&(isp)->isp_param[(chan)])
 
 #define	ISP_SET_SENDMARKER(isp, chan, val)	\
-    if (IS_FC(isp)) {				\
-	FCPARAM(isp, chan)->sendmarker = val;	\
-    } else {					\
-	SDPARAM(isp, chan)->sendmarker = val;	\
-    }
+    FCPARAM(isp, chan)->sendmarker = val	\
 
 #define	ISP_TST_SENDMARKER(isp, chan)		\
-    (IS_FC(isp)?				\
-	FCPARAM(isp, chan)->sendmarker != 0 :	\
-	SDPARAM(isp, chan)->sendmarker != 0)
+    (FCPARAM(isp, chan)->sendmarker != 0)
 
 /*
  * ISP Driver Run States
@@ -639,17 +601,18 @@ struct ispsoftc {
 #define	ISP_CFG_NPORT		0x08	/* prefer {N/F}-Port connection */
 #define	ISP_CFG_1GB		0x10	/* force 1Gb connection (23XX only) */
 #define	ISP_CFG_2GB		0x20	/* force 2Gb connection (23XX only) */
-#define	ISP_CFG_NORELOAD	0x80	/* don't download f/w */
 #define	ISP_CFG_NONVRAM		0x40	/* ignore NVRAM */
+#define	ISP_CFG_NORELOAD	0x80	/* don't download f/w */
 #define	ISP_CFG_NOFCTAPE	0x100	/* disable FC-Tape */
 #define	ISP_CFG_FCTAPE		0x200	/* enable FC-Tape */
 #define	ISP_CFG_OWNFSZ		0x400	/* override NVRAM frame size */
 #define	ISP_CFG_OWNLOOPID	0x800	/* override NVRAM loopid */
-#define	ISP_CFG_OWNEXCTHROTTLE	0x1000	/* override NVRAM execution throttle */
 #define	ISP_CFG_4GB		0x2000	/* force 4Gb connection (24XX only) */
 #define	ISP_CFG_8GB		0x4000	/* force 8Gb connection (25XX only) */
 #define	ISP_CFG_16GB		0x8000	/* force 16Gb connection (26XX only) */
 #define	ISP_CFG_32GB		0x10000	/* force 32Gb connection (27XX only) */
+#define	ISP_CFG_64GB		0x20000	/* force 64Gb connection (28XX only) */
+#define	ISP_CFG_FWLOAD_FORCE	0x40000 /* Prefer ispfw(4) even if older */
 
 /*
  * For each channel, the outer layers should know what role that channel
@@ -698,86 +661,36 @@ struct ispsoftc {
 #define	ISP_CODE_ORG			0x1000	/* default f/w code start */
 #define	ISP_CODE_ORG_2300		0x0800	/* ..except for 2300s */
 #define	ISP_CODE_ORG_2400		0x100000 /* ..and 2400s */
-#define	ISP_FW_REV(maj, min, mic)	((maj << 24) | (min << 16) | mic)
-#define	ISP_FW_MAJOR(code)		((code >> 24) & 0xff)
-#define	ISP_FW_MINOR(code)		((code >> 16) & 0xff)
-#define	ISP_FW_MICRO(code)		((code >>  8) & 0xff)
-#define	ISP_FW_REVX(xp)			((xp[0]<<24) | (xp[1] << 16) | xp[2])
+#define	ISP_FW_REV(maj, min, mic)	(((maj) << 16) | ((min) << 8) | (mic))
+#define	ISP_FW_MAJOR(code)		(((code) >> 16) & 0xff)
+#define	ISP_FW_MINOR(code)		(((code) >> 8) & 0xff)
+#define	ISP_FW_MICRO(code)		((code) & 0xff)
+#define	ISP_FW_REVX(xp)			(((xp)[0] << 16) | ((xp)[1] << 8) | (xp)[2])
 #define	ISP_FW_MAJORX(xp)		(xp[0])
 #define	ISP_FW_MINORX(xp)		(xp[1])
 #define	ISP_FW_MICROX(xp)		(xp[2])
 #define	ISP_FW_NEWER_THAN(i, major, minor, micro)		\
- (ISP_FW_REVX((i)->isp_fwrev) > ISP_FW_REV(major, minor, micro))
+	(ISP_FW_REVX(i) > ISP_FW_REV(major, minor, micro))
 #define	ISP_FW_OLDER_THAN(i, major, minor, micro)		\
- (ISP_FW_REVX((i)->isp_fwrev) < ISP_FW_REV(major, minor, micro))
-
-/*
- * Bus (implementation) types
- */
-#define	ISP_BT_PCI		0	/* PCI Implementations */
-#define	ISP_BT_SBUS		1	/* SBus Implementations */
-
-/*
- * If we have not otherwise defined SBus support away make sure
- * it is defined here such that the code is included as default
- */
-#ifndef	ISP_SBUS_SUPPORTED
-#define	ISP_SBUS_SUPPORTED	1
-#endif
+	(ISP_FW_REVX(i) < ISP_FW_REV(major, minor, micro))
+#define	ISP_FW_NEWER_THANX(i, j)		\
+	(ISP_FW_REVX(i) > ISP_FW_REVX(j))
+#define	ISP_FW_OLDER_THANX(i, j)		\
+	(ISP_FW_REVX(i) < ISP_FW_REVX(j))
 
 /*
  * Chip Types
  */
-#define	ISP_HA_SCSI		0xf
-#define	ISP_HA_SCSI_UNKNOWN	0x1
-#define	ISP_HA_SCSI_1020	0x2
-#define	ISP_HA_SCSI_1020A	0x3
-#define	ISP_HA_SCSI_1040	0x4
-#define	ISP_HA_SCSI_1040A	0x5
-#define	ISP_HA_SCSI_1040B	0x6
-#define	ISP_HA_SCSI_1040C	0x7
-#define	ISP_HA_SCSI_1240	0x8
-#define	ISP_HA_SCSI_1080	0x9
-#define	ISP_HA_SCSI_1280	0xa
-#define	ISP_HA_SCSI_10160	0xb
-#define	ISP_HA_SCSI_12160	0xc
-#define	ISP_HA_FC		0xf0
-#define	ISP_HA_FC_2100		0x10
-#define	ISP_HA_FC_2200		0x20
-#define	ISP_HA_FC_2300		0x30
-#define	ISP_HA_FC_2312		0x40
-#define	ISP_HA_FC_2322		0x50
-#define	ISP_HA_FC_2400		0x60
-#define	ISP_HA_FC_2500		0x70
-#define	ISP_HA_FC_2600		0x80
-#define	ISP_HA_FC_2700		0x90
+#define	ISP_HA_FC_2400		0x04
+#define	ISP_HA_FC_2500		0x05
+#define	ISP_HA_FC_2600		0x06
+#define	ISP_HA_FC_2700		0x07
+#define	ISP_HA_FC_2800		0x08
 
-#define	IS_SCSI(isp)	(isp->isp_type & ISP_HA_SCSI)
-#define	IS_1020(isp)	(isp->isp_type < ISP_HA_SCSI_1240)
-#define	IS_1240(isp)	(isp->isp_type == ISP_HA_SCSI_1240)
-#define	IS_1080(isp)	(isp->isp_type == ISP_HA_SCSI_1080)
-#define	IS_1280(isp)	(isp->isp_type == ISP_HA_SCSI_1280)
-#define	IS_10160(isp)	(isp->isp_type == ISP_HA_SCSI_10160)
-#define	IS_12160(isp)	(isp->isp_type == ISP_HA_SCSI_12160)
-
-#define	IS_12X0(isp)	(IS_1240(isp) || IS_1280(isp))
-#define	IS_1X160(isp)	(IS_10160(isp) || IS_12160(isp))
-#define	IS_DUALBUS(isp)	(IS_12X0(isp) || IS_12160(isp))
-#define	IS_ULTRA2(isp)	(IS_1080(isp) || IS_1280(isp) || IS_1X160(isp))
-#define	IS_ULTRA3(isp)	(IS_1X160(isp))
-
-#define	IS_FC(isp)	((isp)->isp_type & ISP_HA_FC)
-#define	IS_2100(isp)	((isp)->isp_type == ISP_HA_FC_2100)
-#define	IS_2200(isp)	((isp)->isp_type == ISP_HA_FC_2200)
-#define	IS_23XX(isp)	((isp)->isp_type >= ISP_HA_FC_2300 && \
-				(isp)->isp_type < ISP_HA_FC_2400)
-#define	IS_2300(isp)	((isp)->isp_type == ISP_HA_FC_2300)
-#define	IS_2312(isp)	((isp)->isp_type == ISP_HA_FC_2312)
-#define	IS_2322(isp)	((isp)->isp_type == ISP_HA_FC_2322)
-#define	IS_24XX(isp)	((isp)->isp_type >= ISP_HA_FC_2400)
 #define	IS_25XX(isp)	((isp)->isp_type >= ISP_HA_FC_2500)
 #define	IS_26XX(isp)	((isp)->isp_type >= ISP_HA_FC_2600)
 #define	IS_27XX(isp)	((isp)->isp_type >= ISP_HA_FC_2700)
+#define	IS_28XX(isp)	((isp)->isp_type >= ISP_HA_FC_2800)
 
 /*
  * DMA related macros
@@ -789,6 +702,36 @@ struct ispsoftc {
 
 #define	DMA_LO32(x)	((uint32_t) (x))
 #define	DMA_HI32(x)	((uint32_t)(((uint64_t)x) >> 32))
+
+/*
+ * function return status codes
+ */
+#define MBS_MASK		0x3fff
+
+#define ISP_SUCCESS		(MBOX_COMMAND_COMPLETE & MBS_MASK)
+#define ISP_INVALID_COMMAND	(MBOX_INVALID_COMMAND & MBS_MASK)
+#define ISP_INTERFACE_ERROR	(MBOX_HOST_INTERFACE_ERROR & MBS_MASK)
+#define ISP_TEST_FAILED		(MBOX_TEST_FAILED & MBS_MASK)
+#define ISP_COMMAND_ERROR	(MBOX_COMMAND_ERROR & MBS_MASK)
+#define ISP_PARAMETER_ERROR	(MBOX_COMMAND_PARAMETER_ERROR & MBS_MASK)
+#define ISP_PORT_ID_USED	(MBOX_PORT_ID_USED & MBS_MASK)
+#define ISP_LOOP_ID_USED	(MBOX_LOOP_ID_USED & MBS_MASK)
+#define ISP_ALL_IDS_IN_USE	(MBOX_ALL_IDS_IN_USE & MBS_MASK)
+#define ISP_NOT_LOGGED_IN	(MBOX_NOT_LOGGED_IN & MBS_MASK)
+
+#define ISP_FUNCTION_TIMEOUT		0x100
+#define ISP_FUNCTION_PARAMETER_ERROR	0x101
+#define ISP_FUNCTION_FAILED		0x102
+#define ISP_MEMORY_ALLOC_FAILED		0x103
+#define ISP_LOCK_TIMEOUT		0x104
+#define ISP_ABORTED			0x105
+#define ISP_SUSPENDED			0x106
+#define ISP_BUSY			0x107
+#define ISP_ALREADY_REGISTERED		0x109
+#define ISP_OS_TIMER_EXPIRED		0x10a
+#define ISP_ERR_NO_QPAIR		0x10b
+#define ISP_ERR_NOT_FOUND		0x10c
+#define ISP_ERR_FROM_FW			0x10d
 
 /*
  * Core System Function Prototypes
@@ -833,8 +776,7 @@ int isp_start(XS_T *);
 /* these values are what isp_start returns */
 #define	CMD_COMPLETE	101	/* command completed */
 #define	CMD_EAGAIN	102	/* busy- maybe retry later */
-#define	CMD_QUEUED	103	/* command has been queued for execution */
-#define	CMD_RQLATER 	104	/* requeue this command later */
+#define	CMD_RQLATER	103	/* requeue this command later */
 
 /*
  * Command Completion Point- Core layers call out from this with completed cmds
@@ -906,8 +848,6 @@ int isp_control(ispsoftc_t *, ispctl_t, ...);
  */
 
 typedef enum {
-	ISPASYNC_NEW_TGT_PARAMS,	/* SPI New Target Parameters */
-	ISPASYNC_BUS_RESET,		/* All Bus Was Reset */
 	ISPASYNC_LOOP_DOWN,		/* FC Loop Down */
 	ISPASYNC_LOOP_UP,		/* FC Loop Up */
 	ISPASYNC_LIP,			/* FC LIP Received */
@@ -995,11 +935,6 @@ void isp_async(ispsoftc_t *, ispasync_t, ...);
  *		various objects so that the ISP's and the system's view
  *		of the same object is consistent.
  *
- *	MBOX_ACQUIRE(ispsoftc_t *)		acquire lock on mailbox regs
- *	MBOX_WAIT_COMPLETE(ispsoftc_t *, mbreg_t *) wait for cmd to be done
- *	MBOX_NOTIFY_COMPLETE(ispsoftc_t *)	notification of mbox cmd donee
- *	MBOX_RELEASE(ispsoftc_t *)		release lock on mailbox regs
- *
  *	FC_SCRATCH_ACQUIRE(ispsoftc_t *, chan)	acquire lock on FC scratch area
  *						return -1 if you cannot
  *	FC_SCRATCH_RELEASE(ispsoftc_t *, chan)	acquire lock on FC scratch area
@@ -1013,9 +948,7 @@ void isp_async(ispsoftc_t *, ispasync_t, ...);
  *
  *	XS_T			Platform SCSI transaction type (i.e., command for HBA)
  *	XS_DMA_ADDR_T		Platform PCI DMA Address Type
- *	XS_GET_DMA_SEG(..)	Get 32 bit dma segment list value
  *	XS_GET_DMA64_SEG(..)	Get 64 bit dma segment list value
- *	XS_NEED_DMA64_SEG(..)	dma segment needs 64 bit storage
  *	XS_ISP(xs)		gets an instance out of an XS_T
  *	XS_CHANNEL(xs)		gets the channel (bus # for DUALBUS cards) ""
  *	XS_TGT(xs)		gets the target ""
@@ -1023,6 +956,8 @@ void isp_async(ispsoftc_t *, ispasync_t, ...);
  *	XS_CDBP(xs)		gets a pointer to the scsi CDB ""
  *	XS_CDBLEN(xs)		gets the CDB's length ""
  *	XS_XFRLEN(xs)		gets the associated data transfer length ""
+ *	XS_XFRIN(xs)		gets IN direction
+ *	XS_XFROUT(xs)		gets OUT direction
  *	XS_TIME(xs)		gets the time (in seconds) for this command
  *	XS_GET_RESID(xs)	gets the current residual count
  *	XS_GET_RESID(xs, resid)	sets the current residual count
@@ -1058,10 +993,8 @@ void isp_async(ispsoftc_t *, ispasync_t, ...);
  *	XS_SENSE_VALID(xs)		indicates whether sense is valid
  *
  *	DEFAULT_FRAMESIZE(ispsoftc_t *)		Default Frame Size
- *	DEFAULT_EXEC_THROTTLE(ispsoftc_t *)	Default Execution Throttle
  *
  *	DEFAULT_ROLE(ispsoftc_t *, int)		Get Default Role for a channel
- *	DEFAULT_IID(ispsoftc_t *, int)		Default SCSI initiator ID
  *	DEFAULT_LOOPID(ispsoftc_t *, int)	Default FC Loop ID
  *
  *		These establish reasonable defaults for each platform.
@@ -1105,7 +1038,7 @@ void isp_async(ispsoftc_t *, ispasync_t, ...);
 /*
  * This function handles new response queue entry appropriate for target mode.
  */
-int isp_target_notify(ispsoftc_t *, void *, uint32_t *);
+int isp_target_notify(ispsoftc_t *, void *, uint32_t *, uint16_t);
 
 /*
  * This function externalizes the ability to acknowledge an Immediate Notify request.
@@ -1116,19 +1049,6 @@ int isp_notify_ack(ispsoftc_t *, void *);
  * This function externalized acknowledging (success/fail) an ABTS frame
  */
 int isp_acknak_abts(ispsoftc_t *, void *, int);
-
-/*
- * General request queue 'put' routine for target mode entries.
- */
-int isp_target_put_entry(ispsoftc_t *isp, void *);
-
-/*
- * General routine to put back an ATIO entry-
- * used for replenishing f/w resource counts.
- * The argument is a pointer to a source ATIO
- * or ATIO2.
- */
-int isp_target_put_atio(ispsoftc_t *, void *);
 
 /*
  * General routine to send a final CTIO for a command- used mostly for

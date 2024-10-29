@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
@@ -25,7 +25,6 @@
  *  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
- *
  */
 /*
  * File: ql_ioctl.h
@@ -279,6 +278,5 @@ typedef struct qla_sp_log qla_sp_log_t;
 
 #define SP_TLOG_FMT_STR_14	\
 	"qla_init_locked [%ld]: \n"
-
 
 #endif /* #ifndef _QL_IOCTL_H_ */

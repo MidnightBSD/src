@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_BITOPS_H_
-#define	_LINUX_BITOPS_H_
+#ifndef	_LINUXKPI_LINUX_BITOPS_H_
+#define	_LINUXKPI_LINUX_BITOPS_H_
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -55,12 +54,18 @@
 #define	GENMASK_ULL(h, l)	(((~0ULL) >> (BITS_PER_LONG_LONG - (h) - 1)) & ((~0ULL) << (l)))
 #define	BITS_PER_BYTE		8
 #define	BITS_PER_TYPE(t)	(sizeof(t) * BITS_PER_BYTE)
+#define	BITS_TO_BYTES(n)	howmany((n), BITS_PER_BYTE)
 
 #define	hweight8(x)	bitcount((uint8_t)(x))
 #define	hweight16(x)	bitcount16(x)
 #define	hweight32(x)	bitcount32(x)
 #define	hweight64(x)	bitcount64(x)
 #define	hweight_long(x)	bitcountl(x)
+
+#define	HWEIGHT8(x)	(bitcount8((uint8_t)(x)) + 1)
+#define	HWEIGHT16(x)	(bitcount16(x) + 1)
+#define	HWEIGHT32(x)	(bitcount32(x) + 1)
+#define	HWEIGHT64(x)	(bitcount64(x) + 1)
 
 static inline int
 __ffs(int mask)
@@ -78,6 +83,12 @@ static inline int
 __ffsl(long mask)
 {
 	return (ffsl(mask) - 1);
+}
+
+static inline unsigned long
+__ffs64(uint64_t mask)
+{
+	return (ffsll(mask) - 1);
 }
 
 static inline int
@@ -271,15 +282,11 @@ find_next_zero_bit(const unsigned long *addr, unsigned long size,
 #define	clear_bit(i, a)							\
     atomic_clear_long(&((volatile unsigned long *)(a))[BIT_WORD(i)], BIT_MASK(i))
 
+#define	clear_bit_unlock(i, a)						\
+    atomic_clear_rel_long(&((volatile unsigned long *)(a))[BIT_WORD(i)], BIT_MASK(i))
+
 #define	test_bit(i, a)							\
     !!(READ_ONCE(((volatile const unsigned long *)(a))[BIT_WORD(i)]) & BIT_MASK(i))
-
-static inline void
-clear_bit_unlock(long bit, volatile unsigned long *var)
-{
-	clear_bit(bit, var);
-	wmb();
-}
 
 static inline int
 test_and_clear_bit(long bit, volatile unsigned long *var)
@@ -410,4 +417,12 @@ sign_extend64(uint64_t value, int index)
 	return ((int64_t)(value << shift) >> shift);
 }
 
-#endif	/* _LINUX_BITOPS_H_ */
+static inline uint32_t
+sign_extend32(uint32_t value, int index)
+{
+	uint8_t shift = 31 - index;
+
+	return ((int32_t)(value << shift) >> shift);
+}
+
+#endif	/* _LINUXKPI_LINUX_BITOPS_H_ */

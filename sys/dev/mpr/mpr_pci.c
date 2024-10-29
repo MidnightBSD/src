@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* PCI/PCI-X/PCIe bus interface for the Avago Tech (LSI) MPT3 controllers */
 
 /* TODO Move headers to mprvar */
@@ -86,7 +85,6 @@ static driver_t mpr_pci_driver = {
 	mpr_methods,
 	sizeof(struct mpr_softc)
 };
-
 
 struct mpr_ident {
 	uint16_t	vendor;
@@ -174,7 +172,6 @@ struct mpr_ident {
 	{ 0, 0, 0, 0, 0, NULL }
 };
 
-
 static devclass_t	mpr_devclass;
 DRIVER_MODULE(mpr, pci, mpr_pci_driver, mpr_devclass, 0, 0);
 MODULE_PNP_INFO("U16:vendor;U16:device;U16:subvendor;U16:subdevice;D:#", pci,
@@ -219,6 +216,7 @@ mpr_pci_probe(device_t dev)
 static int
 mpr_pci_attach(device_t dev)
 {
+	bus_dma_template_t t;
 	struct mpr_softc *sc;
 	struct mpr_ident *m;
 	int error, i;
@@ -266,17 +264,8 @@ mpr_pci_attach(device_t dev)
 	sc->mpr_bhandle = rman_get_bushandle(sc->mpr_regs_resource);
 
 	/* Allocate the parent DMA tag */
-	if (bus_dma_tag_create( bus_get_dma_tag(dev),	/* parent */
-				1, 0,			/* algnmnt, boundary */
-				BUS_SPACE_MAXADDR,	/* lowaddr */
-				BUS_SPACE_MAXADDR,	/* highaddr */
-				NULL, NULL,		/* filter, filterarg */
-				BUS_SPACE_MAXSIZE_32BIT,/* maxsize */
-				BUS_SPACE_UNRESTRICTED,	/* nsegments */
-				BUS_SPACE_MAXSIZE_32BIT,/* maxsegsize */
-				0,			/* flags */
-				NULL, NULL,		/* lockfunc, lockarg */
-				&sc->mpr_parent_dmat)) {
+	bus_dma_template_init(&t, bus_get_dma_tag(dev));
+	if (bus_dma_template_tag(&t, &sc->mpr_parent_dmat)) {
 		mpr_printf(sc, "Cannot allocate parent DMA tag\n");
 		mpr_pci_free(sc);
 		return (ENOMEM);
@@ -496,4 +485,3 @@ mpr_pci_restore(struct mpr_softc *sc)
 	pci_cfg_restore(sc->mpr_dev, dinfo);
 	return (0);
 }
-

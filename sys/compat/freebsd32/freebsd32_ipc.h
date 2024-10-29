@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Doug Rabson
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _COMPAT_FREEBSD32_FREEBSD32_IPC_H_
@@ -44,8 +43,8 @@ struct semid_ds32 {
 	struct ipc_perm32 sem_perm;
 	uint32_t	__sem_base;
 	unsigned short	sem_nsems;
-	int32_t		sem_otime;
-	int32_t		sem_ctime;
+	time32_t	sem_otime;
+	time32_t	sem_ctime;
 };
 
 #ifdef _KERNEL
@@ -58,7 +57,6 @@ struct semid_kernel32 {
 	int32_t			cred;
 };
 #endif /* _KERNEL */
-
 
 union semun32 {
 	int		val;
@@ -75,9 +73,9 @@ struct msqid_ds32 {
 	uint32_t	msg_qbytes;
 	pid_t		msg_lspid;
 	pid_t		msg_lrpid;
-	int32_t		msg_stime;
-	int32_t		msg_rtime;
-	int32_t		msg_ctime;
+	time32_t	msg_stime;
+	time32_t	msg_rtime;
+	time32_t	msg_ctime;
 };
 
 #ifdef _KERNEL
@@ -97,17 +95,17 @@ struct shmid_ds32 {
 	pid_t		shm_lpid;
 	pid_t		shm_cpid;
 	unsigned int	shm_nattch;
-	int32_t		shm_atime;
-	int32_t		shm_dtime;
-	int32_t		shm_ctime;
+	time32_t	shm_atime;
+	time32_t	shm_dtime;
+	time32_t	shm_ctime;
 };
 
 #ifdef _KERNEL
 struct shmid_kernel32 {
-	struct shmid_ds32	 u;
-	int32_t			*object;
-	int32_t			*label;
-	int32_t			*cred;
+	struct shmid_ds32	u;
+	int32_t			object;
+	int32_t			label;
+	int32_t			cred;
 };
 #endif
 
@@ -144,9 +142,9 @@ struct semid_ds32_old {
 	struct ipc_perm32_old sem_perm;
 	uint32_t	__sem_base;
 	unsigned short	sem_nsems;
-	int32_t		sem_otime;
+	time32_t	sem_otime;
 	int32_t		sem_pad1;
-	int32_t		sem_ctime;
+	time32_t	sem_ctime;
 	int32_t		sem_pad2;
 	int32_t		sem_pad3[4];
 };
@@ -160,11 +158,11 @@ struct msqid_ds32_old {
 	uint32_t	msg_qbytes;
 	pid_t		msg_lspid;
 	pid_t		msg_lrpid;
-	int32_t		msg_stime;
+	time32_t	msg_stime;
 	int32_t		msg_pad1;
-	int32_t		msg_rtime;
+	time32_t	msg_rtime;
 	int32_t		msg_pad2;
-	int32_t		msg_ctime;
+	time32_t	msg_ctime;
 	int32_t		msg_pad3;
 	int32_t		msg_pad4[4];
 };
@@ -175,9 +173,9 @@ struct shmid_ds32_old {
 	pid_t		shm_lpid;
 	pid_t		shm_cpid;
 	int16_t		shm_nattch;
-	int32_t		shm_atime;
-	int32_t		shm_dtime;
-	int32_t		shm_ctime;
+	time32_t	shm_atime;
+	time32_t	shm_dtime;
+	time32_t	shm_ctime;
 	uint32_t	shm_internal;
 };
 

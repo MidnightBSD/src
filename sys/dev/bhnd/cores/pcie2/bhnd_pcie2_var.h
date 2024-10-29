@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015 Landon Fuller <landon@landonf.org>
  * All rights reserved.
@@ -49,7 +49,6 @@ int		bhnd_pcie2_generic_detach(device_t dev);
 int		bhnd_pcie2_generic_suspend(device_t dev);
 int		bhnd_pcie2_generic_resume(device_t dev);
 
-
 uint32_t	bhnd_pcie2_read_proto_reg(struct bhnd_pcie2_softc *sc,
 		    uint32_t addr);
 void		bhnd_pcie2_write_proto_reg(struct bhnd_pcie2_softc *sc,
@@ -86,7 +85,6 @@ struct bhnd_pcie2_softc {
 	struct bhnd_resource	*mem_res;	/**< device register block. */
 	int			 mem_rid;	/**< register block RID */
 };
-
 
 #define	BHND_PCIE2_LOCK_INIT(sc) \
 	mtx_init(&(sc)->mtx, device_get_nameunit((sc)->dev), \

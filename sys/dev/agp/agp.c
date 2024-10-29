@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Doug Rabson
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_agp.h"
 
 #include <sys/param.h>
@@ -91,7 +90,6 @@ u_int8_t
 agp_find_caps(device_t dev)
 {
 	int capreg;
-
 
 	if (pci_find_cap(dev, PCIY_AGP, &capreg) != 0)
 		capreg = 0;
@@ -356,7 +354,7 @@ agp_v3_enable(device_t dev, device_t mdev, u_int32_t mode)
 	fw = (AGP_MODE_GET_FW(tstatus)
 	       & AGP_MODE_GET_FW(mstatus)
 	       & AGP_MODE_GET_FW(mode));
-	
+
 	/* Figure out the max rate */
 	rate = (AGP_MODE_GET_RATE(tstatus)
 		& AGP_MODE_GET_RATE(mstatus)
@@ -491,7 +489,7 @@ agp_generic_alloc_memory(device_t dev, int type, vm_size_t size)
 	mem->am_id = sc->as_nextid++;
 	mem->am_size = size;
 	mem->am_type = 0;
-	mem->am_obj = vm_object_allocate(OBJT_DEFAULT, atop(round_page(size)));
+	mem->am_obj = vm_object_allocate(OBJT_SWAP, atop(round_page(size)));
 	mem->am_physical = 0;
 	mem->am_offset = 0;
 	mem->am_is_bound = 0;
@@ -562,7 +560,7 @@ agp_generic_bind_memory(device_t dev, struct agp_memory *mem,
 		i = 0;
 		goto bad;
 	}
-	
+
 	/*
 	 * Bind the individual pages and flush the chipset's
 	 * TLB.
@@ -615,9 +613,7 @@ bad:
 		m = vm_page_lookup(mem->am_obj, OFF_TO_IDX(k));
 		if (k >= i)
 			vm_page_xunbusy(m);
-		vm_page_lock(m);
 		vm_page_unwire(m, PQ_INACTIVE);
-		vm_page_unlock(m);
 	}
 	VM_OBJECT_WUNLOCK(mem->am_obj);
 
@@ -639,7 +635,6 @@ agp_generic_unbind_memory(device_t dev, struct agp_memory *mem)
 		return EINVAL;
 	}
 
-
 	/*
 	 * Unbind the individual pages and flush the chipset's
 	 * TLB. Unwire the pages so they can be swapped.
@@ -652,9 +647,7 @@ agp_generic_unbind_memory(device_t dev, struct agp_memory *mem)
 	VM_OBJECT_WLOCK(mem->am_obj);
 	for (i = 0; i < mem->am_size; i += PAGE_SIZE) {
 		m = vm_page_lookup(mem->am_obj, atop(i));
-		vm_page_lock(m);
 		vm_page_unwire(m, PQ_INACTIVE);
-		vm_page_unlock(m);
 	}
 	VM_OBJECT_WUNLOCK(mem->am_obj);
 
@@ -1002,7 +995,7 @@ agp_bind_pages(device_t dev, vm_page_t *pages, vm_size_t size,
 	mtx_lock(&sc->as_lock);
 	for (i = 0; i < size; i += PAGE_SIZE) {
 		m = pages[OFF_TO_IDX(i)];
-		KASSERT(m->wire_count > 0,
+		KASSERT(vm_page_wired(m),
 		    ("agp_bind_pages: page %p hasn't been wired", m));
 
 		/*

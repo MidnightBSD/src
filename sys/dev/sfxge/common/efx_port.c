@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "efx.h"
 #include "efx_impl.h"
 
@@ -208,6 +207,9 @@ static const char * const __efx_loopback_type_name[] = {
 	"SD_FEP1_5_WS",
 	"SD_FEP_WS",
 	"SD_FES_WS",
+	"AOE_INT_NEAR",
+	"DATA_WS",
+	"FORCE_EXT_LINK",
 };
 
 	__checkReturn	const char *

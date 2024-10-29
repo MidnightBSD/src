@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006-2010 Adaptec, Inc.
  * Copyright (c) 2010-2012 PMC-Sierra, Inc.
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Debugging support.
  */
@@ -304,7 +303,7 @@ aacraid_print_aif(struct aac_softc *sc, struct aac_aif_command *aif)
 		default:
 			status = "unknown status"; break;
 		}		
-	
+
 		device_printf(sc->aac_dev, "JobProgress (%d) - %s (%d, %d)\n",
 			      aif->seqNumber, status,
 			      aif->data.PR[0].currentTick,
@@ -703,7 +702,6 @@ void aacraid_fw_print_mem(struct aac_softc *sc, unsigned long PrintFlags, u_int8
 		 * Bump the offset by 16 for the next line
 		 */
 		Offset += 16;
-
 	}
 
 	/*
@@ -712,4 +710,3 @@ void aacraid_fw_print_mem(struct aac_softc *sc, unsigned long PrintFlags, u_int8
 	if (sc != NULL)
 		sc->FwDebugFlags = DebugFlags;
 }
-

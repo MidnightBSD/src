@@ -22,18 +22,21 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_MACHINE_PSCI_H_
 #define	_MACHINE_PSCI_H_
 
 #include <sys/types.h>
+#include <dev/psci/smccc.h>
 
+#ifdef _KERNEL
 typedef int (*psci_initfn_t)(device_t dev, int default_version);
-typedef int (*psci_callfn_t)(register_t, register_t, register_t, register_t);
+typedef int (*psci_callfn_t)(register_t, register_t, register_t, register_t,
+	register_t, register_t, register_t, register_t,
+	struct arm_smccc_res *res);
 
-extern int psci_present;
+extern bool psci_present;
 
 int	psci_cpu_on(unsigned long, unsigned long, unsigned long);
 void	psci_reset(void);
@@ -46,12 +49,9 @@ static inline int
 psci_call(register_t a, register_t b, register_t c, register_t d)
 {
 
-	return (psci_callfn(a, b, c, d));
+	return (psci_callfn(a, b, c, d, 0, 0, 0, 0, NULL));
 }
-/* One of these handlers will be selected during the boot */
-int	psci_hvc_despatch(register_t, register_t, register_t, register_t);
-int	psci_smc_despatch(register_t, register_t, register_t, register_t);
-
+#endif
 
 /*
  * PSCI return codes.
@@ -101,7 +101,13 @@ int	psci_smc_despatch(register_t, register_t, register_t, register_t);
 
 #define	PSCI_VER_MAJOR(v)		(((v) >> 16) & 0xFF)
 #define	PSCI_VER_MINOR(v)		((v) & 0xFF)
+#define	PSCI_VER(maj, min)		(((maj) << 16) | (min))
 
+#define	PSCI_AFFINITY_INFO_ON		0
+#define	PSCI_AFFINITY_INFO_OFF		1
+#define	PSCI_AFFINITY_INFO_ON_PENDING	2
+
+#ifdef _KERNEL
 enum psci_fn {
 	PSCI_FN_VERSION,
 	PSCI_FN_CPU_SUSPEND,
@@ -115,5 +121,6 @@ enum psci_fn {
 	PSCI_FN_SYSTEM_RESET,
 	PSCI_FN_MAX
 };
+#endif
 
 #endif /* _MACHINE_PSCI_H_ */

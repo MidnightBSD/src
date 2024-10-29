@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: BSD-2-Clause-NetBSD AND BSD-3-Clause */
+/* SPDX-License-Identifier: BSD-2-Clause AND BSD-3-Clause */
 /*	$NetBSD: qat_hw15.c,v 1.1 2019/11/20 09:37:46 hikaru Exp $	*/
 
 /*
@@ -545,16 +545,19 @@ qat_hw15_crypto_setup_cipher_desc(struct qat_crypto_desc *desc,
 
 static void
 qat_hw15_crypto_setup_cipher_config(const struct qat_crypto_desc *desc,
-    const struct qat_session *qs, const uint8_t *key,
+    const struct qat_session *qs, const struct cryptop *crp,
     struct hw_cipher_config *cipher_config)
 {
+	const uint8_t *key;
 	uint8_t *cipher_key;
 
 	cipher_config->val = qat_crypto_load_cipher_session(desc, qs);
 	cipher_config->reserved = 0;
 
 	cipher_key = (uint8_t *)(cipher_config + 1);
-	if (key == NULL)
+	if (crp != NULL && crp->crp_cipher_key != NULL)
+		key = crp->crp_cipher_key;
+	else
 		key = qs->qs_cipher_key;
 	memcpy(cipher_key, key, qs->qs_cipher_klen);
 }
@@ -606,10 +609,11 @@ qat_hw15_crypto_setup_auth_desc(struct qat_crypto_desc *desc,
 
 static void
 qat_hw15_crypto_setup_auth_setup(const struct qat_crypto_desc *desc,
-    const struct qat_session *qs, const uint8_t *key,
+    const struct qat_session *qs, const struct cryptop *crp,
     struct hw_auth_setup *auth_setup)
 {
 	const struct qat_sym_hash_def *hash_def;
+	const uint8_t *key;
 	uint8_t *state1, *state2;
 	uint32_t state_sz, state1_sz, state2_sz, state1_pad_len, state2_pad_len;
 
@@ -652,7 +656,9 @@ qat_hw15_crypto_setup_auth_setup(const struct qat_crypto_desc *desc,
 			auth_setup->auth_counter.counter = 0;
 			break;
 		case HW_AUTH_MODE1:
-			if (key == NULL)
+			if (crp != NULL && crp->crp_auth_key != NULL)
+				key = crp->crp_auth_key;
+			else
 				key = qs->qs_auth_key;
 			if (key != NULL) {
 				qat_crypto_hmac_precompute(desc, key,
@@ -762,8 +768,7 @@ qat_hw15_crypto_setup_desc(struct qat_crypto *qcy, struct qat_session *qs,
 static void
 qat_hw15_crypto_req_setkey(const struct qat_crypto_desc *desc,
     const struct qat_session *qs, struct qat_sym_cookie *qsc,
-    struct fw_la_bulk_req *bulk_req, const struct cryptodesc *enc,
-    const struct cryptodesc *mac)
+    struct fw_la_bulk_req *bulk_req, struct cryptop *crp)
 {
 	struct hw_auth_setup *auth_setup;
 	struct hw_cipher_config *cipher_config;
@@ -777,14 +782,14 @@ qat_hw15_crypto_req_setkey(const struct qat_crypto_desc *desc,
 		case FW_SLICE_CIPHER:
 			cipher_config = (struct hw_cipher_config *)
 			    (cdesc + desc->qcd_cipher_offset);
-			qat_hw15_crypto_setup_cipher_config(desc, qs,
-			    enc->crd_key, cipher_config);
+			qat_hw15_crypto_setup_cipher_config(desc, qs, crp,
+			    cipher_config);
 			break;
 		case FW_SLICE_AUTH:
 			auth_setup = (struct hw_auth_setup *)
 			    (cdesc + desc->qcd_auth_offset);
-			qat_hw15_crypto_setup_auth_setup(desc, qs,
-			    mac->crd_key, auth_setup);
+			qat_hw15_crypto_setup_auth_setup(desc, qs, crp,
+			    auth_setup);
 			break;
 		case FW_SLICE_DRAM_WR:
 			i = MAX_FW_SLICE; /* end of chain */
@@ -800,7 +805,7 @@ qat_hw15_crypto_req_setkey(const struct qat_crypto_desc *desc,
 void
 qat_hw15_crypto_setup_req_params(struct qat_crypto_bank *qcb,
     struct qat_session *qs, struct qat_crypto_desc const *desc,
-    struct qat_sym_cookie *qsc, struct cryptodesc *enc, struct cryptodesc *mac)
+    struct qat_sym_cookie *qsc, struct cryptop *crp)
 {
 	struct qat_sym_bulk_cookie *qsbc;
 	struct fw_la_bulk_req *bulk_req;
@@ -812,7 +817,7 @@ qat_hw15_crypto_setup_req_params(struct qat_crypto_bank *qcb,
 	enum fw_la_cmd_id cmd_id = desc->qcd_cmd_id;
 	enum fw_slice next_slice;
 
-	qsbc = &qsc->u.qsc_bulk_cookie;
+	qsbc = &qsc->qsc_bulk_cookie;
 
 	bulk_req = (struct fw_la_bulk_req *)qsbc->qsbc_msg;
 	memcpy(bulk_req, &desc->qcd_req_cache, QAT_HW15_SESSION_REQ_CACHE_SIZE);
@@ -820,14 +825,19 @@ qat_hw15_crypto_setup_req_params(struct qat_crypto_bank *qcb,
 	bulk_req->comn_hdr.comn_req_flags =
 	    qat_hw15_get_comn_req_flags(qcb->qcb_bank % 2);
 	bulk_req->comn_mid.src_data_addr = qsc->qsc_buffer_list_desc_paddr;
-	bulk_req->comn_mid.dest_data_addr = qsc->qsc_buffer_list_desc_paddr;
+	if (CRYPTO_HAS_OUTPUT_BUFFER(crp)) {
+		bulk_req->comn_mid.dest_data_addr =
+		    qsc->qsc_obuffer_list_desc_paddr;
+	} else {
+		bulk_req->comn_mid.dest_data_addr =
+		    qsc->qsc_buffer_list_desc_paddr;
+	}
 	bulk_req->req_params_addr = qsc->qsc_bulk_req_params_buf_paddr;
 	bulk_req->comn_ftr.next_request_addr = 0;
 	bulk_req->comn_mid.opaque_data = (uint64_t)(uintptr_t)qsc;
-	if (__predict_false(
-	    (enc != NULL && (enc->crd_flags & CRD_F_KEY_EXPLICIT) != 0) ||
-	    (mac != NULL && (mac->crd_flags & CRD_F_KEY_EXPLICIT) != 0))) {
-		qat_hw15_crypto_req_setkey(desc, qs, qsc, bulk_req, enc, mac);
+	if (__predict_false(crp->crp_cipher_key != NULL ||
+	    crp->crp_auth_key != NULL)) {
+		qat_hw15_crypto_req_setkey(desc, qs, qsc, bulk_req, crp);
 	}
 
 	digest_paddr = 0;
@@ -860,7 +870,7 @@ qat_hw15_crypto_setup_req_params(struct qat_crypto_bank *qcb,
 			 * only.
 			 */
 			cipher_req->cipher_off = 0;
-			cipher_req->cipher_len = enc->crd_len;
+			cipher_req->cipher_len = crp->crp_payload_length;
 		}
 		auth_req->curr_id = FW_SLICE_AUTH;
 		if (cmd_id == FW_LA_CMD_HASH_CIPHER || cmd_id == FW_LA_CMD_AUTH)
@@ -872,11 +882,11 @@ qat_hw15_crypto_setup_req_params(struct qat_crypto_bank *qcb,
 		auth_req->auth_res_sz = desc->qcd_auth_sz;
 
 		auth_req->auth_off = 0;
-		auth_req->auth_len = enc->crd_len;
+		auth_req->auth_len = crp->crp_payload_length;
 
 		auth_req->hash_state_sz =
-		    roundup2(mac->crd_len, QAT_AES_GCM_AAD_ALIGN) >> 3;
-		auth_req->u1.aad_addr = mac->crd_len > 0 ?
+		    roundup2(crp->crp_aad_length, QAT_AES_GCM_AAD_ALIGN) >> 3;
+		auth_req->u1.aad_addr = crp->crp_aad_length > 0 ?
 		    qsc->qsc_gcm_aad_paddr : 0;
 
 		/*
@@ -884,7 +894,7 @@ qat_hw15_crypto_setup_req_params(struct qat_crypto_bank *qcb,
 		 * when the AAD length changes between requests in a session and
 		 * is synchronized by qat_process().
 		 */
-		aad_sz = htobe32(mac->crd_len);
+		aad_sz = htobe32(crp->crp_aad_length);
 		aad_szp1 = (uint32_t *)(
 		    __DECONST(uint8_t *, desc->qcd_content_desc) +
 		    desc->qcd_gcm_aad_sz_offset1);
@@ -892,7 +902,7 @@ qat_hw15_crypto_setup_req_params(struct qat_crypto_bank *qcb,
 		    desc->qcd_gcm_aad_sz_offset2;
 		if (__predict_false(*aad_szp1 != aad_sz)) {
 			*aad_szp1 = aad_sz;
-			*aad_szp2 = (uint8_t)roundup2(mac->crd_len,
+			*aad_szp2 = (uint8_t)roundup2(crp->crp_aad_length,
 			    QAT_AES_GCM_AAD_ALIGN);
 			bus_dmamap_sync(qs->qs_desc_mem.qdm_dma_tag,
 			    qs->qs_desc_mem.qdm_dma_map,
@@ -913,9 +923,15 @@ qat_hw15_crypto_setup_req_params(struct qat_crypto_bank *qcb,
 			cipher_req->curr_id = FW_SLICE_CIPHER;
 			cipher_req->next_id = next_slice;
 
-			cipher_req->cipher_off = mac != NULL ?
-			    mac->crd_len - enc->crd_len : 0;
-			cipher_req->cipher_len = enc->crd_len;
+			if (crp->crp_aad_length == 0) {
+				cipher_req->cipher_off = 0;
+			} else if (crp->crp_aad == NULL) {
+				cipher_req->cipher_off =
+				    crp->crp_payload_start - crp->crp_aad_start;
+			} else {
+				cipher_req->cipher_off = crp->crp_aad_length;
+			}
+			cipher_req->cipher_len = crp->crp_payload_length;
 			cipher_req->state_address = qsc->qsc_iv_buf_paddr;
 		}
 		if (cmd_id != FW_LA_CMD_CIPHER) {
@@ -936,7 +952,8 @@ qat_hw15_crypto_setup_req_params(struct qat_crypto_bank *qcb,
 			auth_req->auth_res_address = digest_paddr;
 			auth_req->auth_res_sz = desc->qcd_auth_sz;
 
-			auth_req->auth_len = mac->crd_len;
+			auth_req->auth_len =
+			    crp->crp_payload_length + crp->crp_aad_length;
 			auth_req->auth_off = 0;
 
 			auth_req->hash_state_sz = 0;

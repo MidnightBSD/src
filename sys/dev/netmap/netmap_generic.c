@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2013-2016 Vincenzo Maffione
  * Copyright (C) 2013-2016 Luigi Rizzo
@@ -445,7 +445,7 @@ generic_mbuf_destructor(struct mbuf *m)
 	/*
 	 * First, clear the event mbuf.
 	 * In principle, the event 'm' should match the one stored
-	 * on ring 'r'. However we check it explicitely to stay
+	 * on ring 'r'. However we check it explicitly to stay
 	 * safe against lower layers (qdisc, driver, etc.) changing
 	 * MBUF_TXQ(m) under our feet. If the match is not found
 	 * on 'r', we try to see if it belongs to some other ring.
@@ -664,6 +664,11 @@ generic_netmap_txsync(struct netmap_kring *kring, int flags)
 	if (nm_i != head) {	/* we have new packets to send */
 		struct nm_os_gen_arg a;
 		u_int event = -1;
+#ifdef __FreeBSD__
+		struct epoch_tracker et;
+
+		NET_EPOCH_ENTER(et);
+#endif
 
 		if (gna->txqdisc && nm_kr_txempty(kring)) {
 			/* In txqdisc mode, we ask for a delayed notification,
@@ -771,6 +776,10 @@ generic_netmap_txsync(struct netmap_kring *kring, int flags)
 		/* Update hwcur to the next slot to transmit. Here nm_i
 		 * is not necessarily head, we could break early. */
 		kring->nr_hwcur = nm_i;
+
+#ifdef __FreeBSD__
+		NET_EPOCH_EXIT(et);
+#endif
 	}
 
 	/*
@@ -828,7 +837,7 @@ generic_rx_handler(struct ifnet *ifp, struct mbuf *m)
 		nm_prlim(2, "Warning: driver pushed up big packet "
 				"(size=%d)", (int)MBUF_LEN(m));
 		m_freem(m);
-	} else if (unlikely(mbq_len(&kring->rx_queue) > 1024)) {
+	} else if (unlikely(mbq_len(&kring->rx_queue) > na->num_rx_desc)) {
 		m_freem(m);
 	} else {
 		mbq_safe_enqueue(&kring->rx_queue, m);

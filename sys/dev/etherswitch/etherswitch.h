@@ -13,7 +13,7 @@ extern driver_t         etherswitch_driver;
 #endif /* _KERNEL */
 
 struct etherswitch_reg {
-	uint16_t	reg;
+	uint32_t	reg;
 	uint32_t	val;
 };
 typedef struct etherswitch_reg etherswitch_reg_t;
@@ -63,8 +63,10 @@ typedef struct etherswitch_conf etherswitch_conf_t;
 #define	ETHERSWITCH_PORT_DROPUNTAGGED	(1 << 4)
 #define	ETHERSWITCH_PORT_DOUBLE_TAG	(1 << 5)
 #define	ETHERSWITCH_PORT_INGRESS	(1 << 6)
+#define	ETHERSWITCH_PORT_DROPTAGGED     (1 << 7)
 #define	ETHERSWITCH_PORT_FLAGS_BITS	\
-"\020\1CPUPORT\2STRIPTAG\3ADDTAG\4FIRSTLOCK\5DROPUNTAGGED\6QinQ\7INGRESS"
+"\020\1CPUPORT\2STRIPTAG\3ADDTAG\4FIRSTLOCK\5DROPUNTAGGED\6QinQ\7INGRESS" \
+"\10DROPTAGGED"
 
 #define ETHERSWITCH_PORT_MAX_LEDS 3
 

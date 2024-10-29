@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/systm.h>
@@ -524,4 +523,3 @@ MODULE_PNP_INFO("W32:vendor/device", pci, mvs, mvs_ids,
     nitems(mvs_ids) - 1);
 MODULE_VERSION(mvs, 1);
 MODULE_DEPEND(mvs, cam, 1, 1, 1);
-

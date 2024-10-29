@@ -1,6 +1,6 @@
 /* $Id: os_bsd.c,v 1.13 2010/05/11 03:12:11 lcn Exp $ */
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * HighPoint RAID Driver for FreeBSD
  * Copyright (C) 2005-2011 HighPoint Technologies, Inc. All Rights Reserved.
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <dev/hptnr/hptnr_config.h>
@@ -89,7 +88,7 @@ BUS_ADDRESS get_dmapool_phy_addr(void *osext, void * dmapool_virt_addr)
 
 HPT_U32 pcicfg_read_dword(HPT_U8 bus, HPT_U8 dev, HPT_U8 func, HPT_U8 reg)
 {
-	return (HPT_U32)pci_cfgregread(bus, dev, func, reg, 4);;
+	return (HPT_U32)pci_cfgregread(0, bus, dev, func, reg, 4);
 }/* PCI space access */
 
 void *os_map_pci_bar(

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2012-2013 Intel Corporation
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef __NVME_H__
@@ -59,7 +58,7 @@
 #define NVME_GLOBAL_NAMESPACE_TAG	((uint32_t)0xFFFFFFFF)
 
 /* Cap transfers by the maximum addressable by page-sized PRP (4KB -> 2MB). */
-#define NVME_MAX_XFER_SIZE		MIN(MAXPHYS, (PAGE_SIZE/8*PAGE_SIZE))
+#define NVME_MAX_XFER_SIZE		MIN(maxphys, (PAGE_SIZE/8*PAGE_SIZE))
 
 /* Register field definitions */
 #define NVME_CAP_LO_REG_MQES_SHIFT			(0)
@@ -200,6 +199,7 @@
 #define NVME_STATUS_GET_P(st)				(((st) >> NVME_STATUS_P_SHIFT) & NVME_STATUS_P_MASK)
 #define NVME_STATUS_GET_SC(st)				(((st) >> NVME_STATUS_SC_SHIFT) & NVME_STATUS_SC_MASK)
 #define NVME_STATUS_GET_SCT(st)				(((st) >> NVME_STATUS_SCT_SHIFT) & NVME_STATUS_SCT_MASK)
+#define NVME_STATUS_GET_CRD(st)				(((st) >> NVME_STATUS_CRD_SHIFT) & NVME_STATUS_CRD_MASK)
 #define NVME_STATUS_GET_M(st)				(((st) >> NVME_STATUS_M_SHIFT) & NVME_STATUS_M_MASK)
 #define NVME_STATUS_GET_DNR(st)				(((st) >> NVME_STATUS_DNR_SHIFT) & NVME_STATUS_DNR_MASK)
 
@@ -235,6 +235,35 @@
 /* Asymmetric Namespace Access Reporting */
 #define NVME_CTRLR_DATA_MIC_ANAR_SHIFT			(3)
 #define NVME_CTRLR_DATA_MIC_ANAR_MASK			(0x1)
+
+/** OAES - Optional Asynchronous Events Supported */
+/* supports Namespace Attribute Notices event */
+#define NVME_CTRLR_DATA_OAES_NS_ATTR_SHIFT		(8)
+#define NVME_CTRLR_DATA_OAES_NS_ATTR_MASK		(0x1)
+/* supports Firmware Activation Notices event */
+#define NVME_CTRLR_DATA_OAES_FW_ACTIVATE_SHIFT		(9)
+#define NVME_CTRLR_DATA_OAES_FW_ACTIVATE_MASK		(0x1)
+/* supports Asymmetric Namespace Access Change Notices event */
+#define NVME_CTRLR_DATA_OAES_ASYM_NS_CHANGE_SHIFT	(11)
+#define NVME_CTRLR_DATA_OAES_ASYM_NS_CHANGE_MASK	(0x1)
+/* supports Predictable Latency Event Aggregate Log Change Notices event */
+#define NVME_CTRLR_DATA_OAES_PREDICT_LATENCY_SHIFT	(12)
+#define NVME_CTRLR_DATA_OAES_PREDICT_LATENCY_MASK	(0x1)
+/* supports LBA Status Information Notices event */
+#define NVME_CTRLR_DATA_OAES_LBA_STATUS_SHIFT		(13)
+#define NVME_CTRLR_DATA_OAES_LBA_STATUS_MASK		(0x1)
+/* supports Endurance Group Event Aggregate Log Page Changes Notices event */
+#define NVME_CTRLR_DATA_OAES_ENDURANCE_GROUP_SHIFT	(14)
+#define NVME_CTRLR_DATA_OAES_ENDURANCE_GROUP_MASK	(0x1)
+/* supports Normal NVM Subsystem Shutdown event */
+#define NVME_CTRLR_DATA_OAES_NORMAL_SHUTDOWN_SHIFT	(15)
+#define NVME_CTRLR_DATA_OAES_NORMAL_SHUTDOWN_MASK	(0x1)
+/* supports Zone Descriptor Changed Notices event */
+#define NVME_CTRLR_DATA_OAES_ZONE_DESC_CHANGE_SHIFT	(27)
+#define NVME_CTRLR_DATA_OAES_ZONE_DESC_CHANGE_MASK	(0x1)
+/* supports Discovery Log Page Change Notification event */
+#define NVME_CTRLR_DATA_OAES_LOG_PAGE_CHANGE_SHIFT	(31)
+#define NVME_CTRLR_DATA_OAES_LOG_PAGE_CHANGE_MASK	(0x1)
 
 /** OACS - optional admin command support */
 /* supports security send/receive commands */
@@ -532,6 +561,25 @@ enum nvme_critical_warning_state {
 #define	NVME_SS_PAGE_SSTAT_GDE_SHIFT			(8)
 #define	NVME_SS_PAGE_SSTAT_GDE_MASK			(0x1)
 
+/* Features */
+/* Get Features */
+#define NVME_FEAT_GET_SEL_SHIFT				(8)
+#define NVME_FEAT_GET_SEL_MASK				(0x7)
+#define NVME_FEAT_GET_FID_SHIFT				(0)
+#define NVME_FEAT_GET_FID_MASK				(0xff)
+
+/* Set Features */
+#define NVME_FEAT_SET_SV_SHIFT				(31)
+#define NVME_FEAT_SET_SV_MASK				(0x1)
+#define NVME_FEAT_SET_FID_SHIFT				(0)
+#define NVME_FEAT_SET_FID_MASK				(0xff)
+
+/* Helper macro to combine *_MASK and *_SHIFT defines */
+#define NVMEB(name)	(name##_MASK << name##_SHIFT)
+
+/* Helper macro to extract value from x */
+#define NVMEV(name, x)  (((x) >> name##_SHIFT) & name##_MASK)
+
 /* CC register SHN field values */
 enum shn_value {
 	NVME_SHN_NORMAL		= 0x1,
@@ -616,7 +664,6 @@ struct nvme_command {
 _Static_assert(sizeof(struct nvme_command) == 16 * 4, "bad size for nvme_command");
 
 struct nvme_completion {
-
 	/* dword 0 */
 	uint32_t		cdw0;	/* command-specific */
 
@@ -911,7 +958,6 @@ _Static_assert(sizeof(struct nvme_power_state) == 32, "bad size for nvme_power_s
 #define NVME_FIRMWARE_REVISION_LENGTH	8
 
 struct nvme_controller_data {
-
 	/* bytes 0-255: controller capabilities and features */
 
 	/** pci vendor id */
@@ -1157,7 +1203,6 @@ struct nvme_controller_data {
 _Static_assert(sizeof(struct nvme_controller_data) == 4096, "bad size for nvme_controller_data");
 
 struct nvme_namespace_data {
-
 	/** namespace size */
 	uint64_t		nsze;
 
@@ -1271,7 +1316,6 @@ struct nvme_namespace_data {
 _Static_assert(sizeof(struct nvme_namespace_data) == 4096, "bad size for nvme_namepsace_data");
 
 enum nvme_log_page {
-
 	/* 0x00 - reserved */
 	NVME_LOG_ERROR			= 0x01,
 	NVME_LOG_HEALTH_INFORMATION	= 0x02,
@@ -1284,7 +1328,7 @@ enum nvme_log_page {
 	NVME_LOG_ENDURANCE_GROUP_INFORMATION = 0x09,
 	NVME_LOG_PREDICTABLE_LATENCY_PER_NVM_SET = 0x0a,
 	NVME_LOG_PREDICTABLE_LATENCY_EVENT_AGGREGATE = 0x0b,
-	NVME_LOG_ASYMMETRIC_NAMESPAVE_ACCESS = 0x0c,
+	NVME_LOG_ASYMMETRIC_NAMESPACE_ACCESS = 0x0c,
 	NVME_LOG_PERSISTENT_EVENT_LOG	= 0x0d,
 	NVME_LOG_LBA_STATUS_INFORMATION	= 0x0e,
 	NVME_LOG_ENDURANCE_GROUP_EVENT_AGGREGATE = 0x0f,
@@ -1312,7 +1356,6 @@ enum nvme_log_page {
 };
 
 struct nvme_error_information_entry {
-
 	uint64_t		error_count;
 	uint16_t		sqid;
 	uint16_t		cid;
@@ -1331,7 +1374,6 @@ struct nvme_error_information_entry {
 _Static_assert(sizeof(struct nvme_error_information_entry) == 64, "bad size for nvme_error_information_entry");
 
 struct nvme_health_information_page {
-
 	uint8_t			critical_warning;
 	uint16_t		temperature;
 	uint8_t			available_spare;
@@ -1376,10 +1418,10 @@ struct nvme_health_information_page {
 _Static_assert(sizeof(struct nvme_health_information_page) == 512, "bad size for nvme_health_information_page");
 
 struct nvme_firmware_page {
-
 	uint8_t			afi;
 	uint8_t			reserved[7];
-	uint64_t		revision[7]; /* revisions for 7 slots */
+	/* revisions for 7 slots */
+	uint8_t			revision[7][NVME_FIRMWARE_REVISION_LENGTH];
 	uint8_t			reserved2[448];
 } __packed __aligned(4);
 
@@ -1513,7 +1555,6 @@ _Static_assert(sizeof(struct nvme_resv_status_ext) == 64, "bad size for nvme_res
 #define NVME_TEST_MAX_THREADS	128
 
 struct nvme_io_test {
-
 	enum nvme_nvm_opcode	opc;
 	uint32_t		size;
 	uint32_t		time;	/* in seconds */
@@ -1523,7 +1564,6 @@ struct nvme_io_test {
 };
 
 enum nvme_io_test_flags {
-
 	/*
 	 * Specifies whether dev_refthread/dev_relthread should be
 	 *  called during NVME_BIO_TEST.  Ignored for other test
@@ -1533,7 +1573,6 @@ enum nvme_io_test_flags {
 };
 
 struct nvme_pt_command {
-
 	/*
 	 * cmd is used to specify a passthrough command to a controller or
 	 *  namespace.
@@ -1921,18 +1960,6 @@ void	nvme_health_information_page_swapbytes(
 	s->tmt2tc = le32toh(s->tmt2tc);
 	s->ttftmt1 = le32toh(s->ttftmt1);
 	s->ttftmt2 = le32toh(s->ttftmt2);
-#endif
-}
-
-
-static inline
-void	nvme_firmware_page_swapbytes(struct nvme_firmware_page *s __unused)
-{
-#if _BYTE_ORDER != _LITTLE_ENDIAN
-	int i;
-
-	for (i = 0; i < 7; i++)
-		s->revision[i] = le64toh(s->revision[i]);
 #endif
 }
 

@@ -31,7 +31,6 @@
  * SUCH DAMAGE.
  *
  * $Id: //depot/aic7xxx/freebsd/dev/aic7xxx/aic79xx_osm.h#23 $
- *
  */
 
 #ifndef _AIC79XX_FREEBSD_H_
@@ -42,9 +41,7 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>		/* For device_t */
-#if __FreeBSD_version >= 500000
 #include <sys/endian.h>
-#endif
 #include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
@@ -59,13 +56,8 @@
 
 #include <sys/rman.h>
 
-#if __FreeBSD_version >= 500000
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
-#else
-#include <pci/pcireg.h>
-#include <pci/pcivar.h>
-#endif
 
 #include <cam/cam.h>
 #include <cam/cam_ccb.h>
@@ -262,7 +254,6 @@ int	  ahd_softc_comp(struct ahd_softc *lahd, struct ahd_softc *rahd);
 void	  ahd_sysctl(struct ahd_softc *ahd);
 int	  ahd_detach(device_t);
 #define	ahd_platform_init(arg)
-
 
 /****************************** Interrupts ************************************/
 void			ahd_platform_intr(void *);

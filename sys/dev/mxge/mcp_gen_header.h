@@ -1,5 +1,5 @@
 /*******************************************************************************
-SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+SPDX-License-Identifier: BSD-2-Clause
 
 Copyright (c) 2006-2007, Myricom Inc.
 All rights reserved.
@@ -25,7 +25,6 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
-
 ***************************************************************************/
 
 #ifndef _mcp_gen_header_h
@@ -56,14 +55,12 @@ POSSIBILITY OF SUCH DAMAGE.
    };
 */
 
-
 #define MCP_HEADER_PTR_OFFSET  0x3c
 
 #define MCP_TYPE_MX 0x4d582020 /* "MX  " */
 #define MCP_TYPE_PCIE 0x70636965 /* "PCIE" pcie-only MCP */
 #define MCP_TYPE_ETH 0x45544820 /* "ETH " */
 #define MCP_TYPE_MCP0 0x4d435030 /* "MCP0" */
-
 
 typedef struct mcp_gen_header {
   /* the first 4 fields are filled at compile time */
@@ -98,6 +95,5 @@ typedef struct mcp_gen_header {
     (unsigned int) STRING_SPECS,				\
     256								\
   }
-
 
 #endif /* _mcp_gen_header_h */

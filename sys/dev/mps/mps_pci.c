@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Yahoo! Inc.
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* PCI/PCI-X/PCIe bus interface for the Avago Tech (LSI) MPT2 controllers */
 
 /* TODO Move headers to mpsvar */
@@ -123,8 +122,8 @@ struct mps_ident {
 	    0xffff, 0xffff, 0, "Avago Technologies (LSI) SAS2208" },
 	{ MPI2_MFGPAGE_VENDORID_LSI, MPI2_MFGPAGE_DEVID_SAS2308_1,
 	    0xffff, 0xffff, 0, "Avago Technologies (LSI) SAS2308" },
-	// Add Customer specific vender/subdevice id before generic
-	// (0xffff) vender/subdevice id.
+	// Add Customer specific vendor/subdevice id before generic
+	// (0xffff) vendor/subdevice id.
 	{ MPI2_MFGPAGE_VENDORID_LSI, MPI2_MFGPAGE_DEVID_SAS2308_2,
 	    0x8086, 0x3516, 0, "Intel(R) Integrated RAID Module RMS25JB080" },
 	{ MPI2_MFGPAGE_VENDORID_LSI, MPI2_MFGPAGE_DEVID_SAS2308_2,
@@ -144,6 +143,7 @@ struct mps_ident {
 
 static devclass_t	mps_devclass;
 DRIVER_MODULE(mps, pci, mps_pci_driver, mps_devclass, 0, 0);
+MODULE_DEPEND(mps, cam, 1, 1, 1);
 MODULE_PNP_INFO("U16:vendor;U16:device;U16:subvendor;U16:subdevice", pci, mps,
     mps_identifiers, nitems(mps_identifiers) - 1);
 static struct mps_ident *
@@ -183,6 +183,7 @@ mps_pci_probe(device_t dev)
 static int
 mps_pci_attach(device_t dev)
 {
+	bus_dma_template_t t;
 	struct mps_softc *sc;
 	struct mps_ident *m;
 	int error;
@@ -209,17 +210,8 @@ mps_pci_attach(device_t dev)
 	sc->mps_bhandle = rman_get_bushandle(sc->mps_regs_resource);
 
 	/* Allocate the parent DMA tag */
-	if (bus_dma_tag_create( bus_get_dma_tag(dev),	/* parent */
-				1, 0,			/* algnmnt, boundary */
-				BUS_SPACE_MAXADDR,	/* lowaddr */
-				BUS_SPACE_MAXADDR,	/* highaddr */
-				NULL, NULL,		/* filter, filterarg */
-				BUS_SPACE_MAXSIZE_32BIT,/* maxsize */
-				BUS_SPACE_UNRESTRICTED,	/* nsegments */
-				BUS_SPACE_MAXSIZE_32BIT,/* maxsegsize */
-				0,			/* flags */
-				NULL, NULL,		/* lockfunc, lockarg */
-				&sc->mps_parent_dmat)) {
+	bus_dma_template_init(&t, bus_get_dma_tag(dev));
+	if (bus_dma_template_tag(&t, &sc->mps_parent_dmat)) {
 		mps_printf(sc, "Cannot allocate parent DMA tag\n");
 		mps_pci_free(sc);
 		return (ENOMEM);
@@ -440,4 +432,3 @@ mps_pci_restore(struct mps_softc *sc)
 	pci_cfg_restore(sc->mps_dev, dinfo);
 	return (0);
 }
-

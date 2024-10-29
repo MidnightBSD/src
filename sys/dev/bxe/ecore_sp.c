@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "bxe.h"
 #include "ecore_init.h"
 

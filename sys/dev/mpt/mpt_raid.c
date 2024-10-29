@@ -43,7 +43,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/mpt/mpt.h>
 #include <dev/mpt/mpt_raid.h>
 
@@ -106,7 +105,7 @@ static int mpt_raid_reply_frame_handler(struct mpt_softc *mpt, request_t *req,
 static int mpt_spawn_raid_thread(struct mpt_softc *mpt);
 static void mpt_terminate_raid_thread(struct mpt_softc *mpt);
 static void mpt_raid_thread(void *arg);
-static timeout_t mpt_raid_timer;
+static callout_func_t mpt_raid_timer;
 #if 0
 static void mpt_enable_vol(struct mpt_softc *mpt,
 			   struct mpt_raid_volume *mpt_vol, int enable);
@@ -285,7 +284,7 @@ mpt_raid_attach(struct mpt_softc *mpt)
 		mpt_prt(mpt, "Unable to spawn RAID thread!\n");
 		goto cleanup;
 	}
- 
+
 	MPT_LOCK(mpt);
 	handler.reply_handler = mpt_raid_reply_handler;
 	error = mpt_register_handler(mpt, MPT_HANDLER_REPLY, handler,
@@ -559,7 +558,7 @@ mpt_raid_reply_frame_handler(struct mpt_softc *mpt, request_t *req,
 	reply = (MSG_RAID_ACTION_REPLY *)reply_frame;
 	req->IOCStatus = le16toh(reply->IOCStatus);
 	rap = (MSG_RAID_ACTION_REQUEST *)req->req_vbuf;
-	
+
 	switch (rap->Action) {
 	case MPI_RAID_ACTION_QUIESCE_PHYS_IO:
 		mpt_prt(mpt, "QUIESCE PHYSIO DONE\n");
@@ -674,7 +673,6 @@ mpt_raid_thread(void *arg)
 	firstrun = 1;
 	MPT_LOCK(mpt);
 	while (mpt->shutdwn_raid == 0) {
-
 		if (mpt->raid_wakeup == 0) {
 			mpt_sleep(mpt, &mpt->raid_volumes, PUSER, "idle", 0);
 			continue;
@@ -816,7 +814,7 @@ mpt_is_raid_member(struct mpt_softc *mpt, target_id_t tgt)
 			return (1);
 	}
 	return (0);
-	
+
 }
 
 /* XXX Ignores that there may be multiple buses/IOCs involved. */
@@ -997,7 +995,6 @@ mpt_verify_resync_rate(struct mpt_softc *mpt, struct mpt_raid_volume *mpt_vol)
 	     & MPI_RAIDVOL0_SETTING_PRIORITY_RESYNC;
 	if (vol_pg->ResyncRate != 0
 	 && vol_pg->ResyncRate != mpt->raid_resync_rate) {
-
 		req = mpt_get_request(mpt, /*sleep_ok*/TRUE);
 		if (req == NULL) {
 			mpt_vol_prt(mpt, mpt_vol, "mpt_verify_resync_rate: "
@@ -1385,9 +1382,7 @@ mpt_refresh_raid_data(struct mpt_softc *mpt)
 		mpt_disk->flags |= MPT_RDF_REFERENCED;
 		if ((mpt_disk->flags & (MPT_RDF_ACTIVE|MPT_RDF_UP2DATE))
 		 != (MPT_RDF_ACTIVE|MPT_RDF_UP2DATE)) {
-
 			mpt_refresh_raid_disk(mpt, mpt_disk, ioc_disk);
-
 		}
 		mpt_disk->flags |= MPT_RDF_ACTIVE;
 		mpt->raid_rescan++;
@@ -1421,7 +1416,6 @@ mpt_refresh_raid_data(struct mpt_softc *mpt)
 		  != (MPT_RVF_ACTIVE|MPT_RVF_UP2DATE))
 		 || (vol_pg->VolumeStatus.Flags
 		   & MPI_RAIDVOL0_STATUS_FLAG_RESYNC_IN_PROGRESS) != 0) {
-
 			mpt_refresh_raid_vol(mpt, mpt_vol, ioc_vol);
 		}
 		mpt_vol->flags |= MPT_RVF_ACTIVE;
@@ -1500,7 +1494,6 @@ mpt_refresh_raid_data(struct mpt_softc *mpt)
 		left = MPT_U64_2_SCALAR(mpt_vol->sync_progress.BlocksRemaining);
 		total = MPT_U64_2_SCALAR(mpt_vol->sync_progress.TotalBlocks);
 		if (vol_pg->ResyncRate != 0) {
-
 			prio = ((u_int)vol_pg->ResyncRate * 100000) / 0xFF;
 			mpt_vol_prt(mpt, mpt_vol, "Rate %d.%d%%\n",
 			    prio / 1000, prio % 1000);
@@ -1538,7 +1531,6 @@ mpt_refresh_raid_data(struct mpt_softc *mpt)
 		}
 
 		if ((mpt_disk->flags & MPT_RDF_ANNOUNCED) == 0) {
-
 			mpt_announce_disk(mpt, mpt_disk);
 			mpt_disk->flags |= MPT_RVF_ANNOUNCED;
 		}
@@ -1717,7 +1709,6 @@ mpt_raid_set_vol_mwce(struct mpt_softc *mpt, mpt_raid_mwce_t mwce)
 		mwce = vol_pg->VolumeSettings.Settings
 		     & MPI_RAIDVOL0_SETTING_WRITE_CACHING_ENABLE;
 		if (force_full_resync && resyncing && mwce) {
-
 			/*
 			 * XXX disable/enable volume should force a resync,
 			 *     but we'll need to queice, drain, and restart
@@ -1751,8 +1742,6 @@ mpt_raid_sysctl_vol_member_wce(SYSCTL_HANDLER_ARGS)
 	u_int size;
 	u_int i;
 
-	GIANT_REQUIRED;
-
 	mpt = (struct mpt_softc *)arg1;
 	str = mpt_vol_mwce_strs[mpt->raid_mwce_setting];
 	error = SYSCTL_OUT(req, str, strlen(str) + 1);
@@ -1785,8 +1774,6 @@ mpt_raid_sysctl_vol_resync_rate(SYSCTL_HANDLER_ARGS)
 	u_int raid_resync_rate;
 	int error;
 
-	GIANT_REQUIRED;
-
 	mpt = (struct mpt_softc *)arg1;
 	raid_resync_rate = mpt->raid_resync_rate;
 
@@ -1804,8 +1791,6 @@ mpt_raid_sysctl_vol_queue_depth(SYSCTL_HANDLER_ARGS)
 	struct mpt_softc *mpt;
 	u_int raid_queue_depth;
 	int error;
-
-	GIANT_REQUIRED;
 
 	mpt = (struct mpt_softc *)arg1;
 	raid_queue_depth = mpt->raid_queue_depth;
@@ -1825,19 +1810,19 @@ mpt_raid_sysctl_attach(struct mpt_softc *mpt)
 	struct sysctl_oid *tree = device_get_sysctl_tree(mpt->dev);
 
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-			"vol_member_wce", CTLTYPE_STRING | CTLFLAG_RW, mpt, 0,
-			mpt_raid_sysctl_vol_member_wce, "A",
-			"volume member WCE(On,Off,On-During-Rebuild,NC)");
+	    "vol_member_wce", CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_MPSAFE,
+	    mpt, 0, mpt_raid_sysctl_vol_member_wce, "A",
+	    "volume member WCE(On,Off,On-During-Rebuild,NC)");
 
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-			"vol_queue_depth", CTLTYPE_INT | CTLFLAG_RW, mpt, 0,
-			mpt_raid_sysctl_vol_queue_depth, "I",
-			"default volume queue depth");
+	    "vol_queue_depth", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+	    mpt, 0, mpt_raid_sysctl_vol_queue_depth, "I",
+	    "default volume queue depth");
 
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-			"vol_resync_rate", CTLTYPE_INT | CTLFLAG_RW, mpt, 0,
-			mpt_raid_sysctl_vol_resync_rate, "I",
-			"volume resync priority (0 == NC, 1 - 255)");
+	    "vol_resync_rate", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+	    mpt, 0, mpt_raid_sysctl_vol_resync_rate, "I",
+	    "volume resync priority (0 == NC, 1 - 255)");
 	SYSCTL_ADD_UINT(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
 			"nonoptimal_volumes", CTLFLAG_RD,
 			&mpt->raid_nonopt_volumes, 0,

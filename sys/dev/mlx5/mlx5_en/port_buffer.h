@@ -21,13 +21,12 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef __MLX5_EN_PORT_BUFFER_H__
 #define __MLX5_EN_PORT_BUFFER_H__
 
-#include "en.h"
+#include <dev/mlx5/mlx5_en/en.h>
 #include <dev/mlx5/port.h>
 
 #define MLX5E_MAX_BUFFER 8

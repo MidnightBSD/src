@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -28,13 +28,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/bio.h>
-#if __FreeBSD_version >= 800000
 #include <sys/callout.h>
-#endif
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/taskqueue.h>
@@ -55,38 +52,17 @@
 # define AAC_DRIVER_BUILD 1
 #endif
 
-#if __FreeBSD_version <= 601000
-#define bus_get_dma_tag(x)	NULL
-#endif
-
 /* **************************** NewBUS interrupt Crock ************************/
-#if __FreeBSD_version < 700031
-#define	aac_bus_setup_intr(d, i, f, U, if, ifa, hp)	\
-	bus_setup_intr(d, i, f, if, ifa, hp)
-#else
 #define	aac_bus_setup_intr	bus_setup_intr
-#endif
 
 /* **************************** NewBUS CAM Support ****************************/
-#if __FreeBSD_version < 700049
-#define aac_xpt_bus_register(sim, parent, bus)	\
-	xpt_bus_register(sim, bus)
-#else
 #define aac_xpt_bus_register	xpt_bus_register
-#endif
 
 /**************************** Kernel Thread Support ***************************/
-#if __FreeBSD_version > 800001
 #define aac_kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg) \
 	kproc_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg)
 #define	aac_kthread_exit(status)	\
 	kproc_exit(status)
-#else
-#define aac_kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg) \
-	kthread_create(func, farg, proc_ptr, flags, stackpgs, fmtstr, arg)
-#define	aac_kthread_exit(status)	\
-	kthread_exit(status)
-#endif
 
 /*
  * Driver Parameter Definitions
@@ -257,7 +233,7 @@ struct aac_common {
 
 	/* buffer for text messages from the controller */
 	char		       	ac_printf[AAC_PRINTF_BUFSIZE];
-	
+
 	/* fib for synchronous commands */
 	struct aac_fib		ac_sync_fib;
 
@@ -361,11 +337,7 @@ struct aac_softc
 	void			*aac_intr[AAC_MAX_MSIX]; /* interrupt handle */
 	struct aac_msix_ctx	aac_msix[AAC_MAX_MSIX]; /* context */
 	eventhandler_tag	eh;
-#if __FreeBSD_version >= 800000
 	struct callout	aac_daemontime;		/* clock daemon callout */
-#else	
-	struct callout_handle	timeout_id;	/* timeout handle */
-#endif
 
 	/* controller features, limits and status */
 	int			aac_state;
@@ -497,6 +469,14 @@ struct aac_softc
 };
 
 /*
+ * Max. I/O size in bytes.
+ * Reserve one page for the DMA subsystem, that may need it when the
+ * I/O buffer is not page aligned.
+ */
+#define AAC_MAXIO_SIZE(sc)	MIN(((sc)->aac_max_sectors << 9) - PAGE_SIZE, \
+					maxphys)
+
+/*
  * Event callback mechanism for the driver
  */
 #define AAC_EVENT_NONE		0x00
@@ -581,7 +561,6 @@ struct aac_code_lookup {
 		sc->aac_qstat[qname].q_length = 0;	\
 		sc->aac_qstat[qname].q_max = 0;		\
 	} while (0)
-
 
 #define AACQ_COMMAND_QUEUE(name, index)					\
 static __inline void							\

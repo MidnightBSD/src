@@ -24,11 +24,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
-#ifndef _LINUX_REFCOUNT_H
-#define _LINUX_REFCOUNT_H
+#ifndef _LINUXKPI_LINUX_REFCOUNT_H
+#define _LINUXKPI_LINUX_REFCOUNT_H
 
 #include <linux/atomic.h>
 
@@ -78,4 +77,15 @@ refcount_dec_and_lock_irqsave(refcount_t *ref, spinlock_t *lock,
 	return (false);
 }
 
-#endif /* __LINUX_REFCOUNT_H__ */
+/*
+ * struct kref uses atomic_t and not refcount_t so
+ * we differ from Linux here.
+ */
+static inline bool
+refcount_dec_and_test(atomic_t *r)
+{
+
+	return (atomic_dec_and_test(r));
+}
+
+#endif /* __LINUXKPI_LINUX_REFCOUNT_H__ */

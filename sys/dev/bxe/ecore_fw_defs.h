@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef ECORE_FW_DEFS_H
 #define ECORE_FW_DEFS_H
 

@@ -338,9 +338,9 @@ void mlx4_en_set_num_rx_rings(struct mlx4_en_dev *mdev)
 	}
 }
 
-void mlx4_en_calc_rx_buf(struct net_device *dev)
+void mlx4_en_calc_rx_buf(struct ifnet *dev)
 {
-	struct mlx4_en_priv *priv = netdev_priv(dev);
+	struct mlx4_en_priv *priv = mlx4_netdev_priv(dev);
 	int eff_mtu = dev->if_mtu + ETH_HLEN + VLAN_HLEN + ETH_FCS_LEN +
 	    MLX4_NET_IP_ALIGN;
 
@@ -735,9 +735,9 @@ mlx4_en_rss_hash(__be16 status, int udp_rss)
  * The following calc ensures that when factor==1, it means we are aligned to 64B
  * and we get the real cqe data*/
 #define CQE_FACTOR_INDEX(index, factor) (((index) << (factor)) + (factor))
-int mlx4_en_process_rx_cq(struct net_device *dev, struct mlx4_en_cq *cq, int budget)
+int mlx4_en_process_rx_cq(struct ifnet *dev, struct mlx4_en_cq *cq, int budget)
 {
-	struct mlx4_en_priv *priv = netdev_priv(dev);
+	struct mlx4_en_priv *priv = mlx4_netdev_priv(dev);
 	struct mlx4_cqe *cqe;
 	struct mlx4_en_rx_ring *ring = priv->rx_ring[cq->ring];
 	struct mlx4_en_rx_mbuf *mb_list;
@@ -866,19 +866,21 @@ out:
 /* Rx CQ polling - called by NAPI */
 static int mlx4_en_poll_rx_cq(struct mlx4_en_cq *cq, int budget)
 {
-        struct net_device *dev = cq->dev;
-        int done;
+	struct ifnet *dev = cq->dev;
+	struct epoch_tracker et;
+	int done;
 
-        done = mlx4_en_process_rx_cq(dev, cq, budget);
-        cq->tot_rx += done;
+	NET_EPOCH_ENTER(et);
+	done = mlx4_en_process_rx_cq(dev, cq, budget);
+	NET_EPOCH_EXIT(et);
+	cq->tot_rx += done;
 
-        return done;
-
+	return done;
 }
 void mlx4_en_rx_irq(struct mlx4_cq *mcq)
 {
 	struct mlx4_en_cq *cq = container_of(mcq, struct mlx4_en_cq, mcq);
-	struct mlx4_en_priv *priv = netdev_priv(cq->dev);
+	struct mlx4_en_priv *priv = mlx4_netdev_priv(cq->dev);
         int done;
 
         // Shoot one within the irq context 
@@ -895,6 +897,7 @@ void mlx4_en_rx_irq(struct mlx4_cq *mcq)
 
 void mlx4_en_rx_que(void *context, int pending)
 {
+	struct epoch_tracker et;
         struct mlx4_en_cq *cq;
 	struct thread *td;
 
@@ -905,8 +908,10 @@ void mlx4_en_rx_que(void *context, int pending)
 	sched_bind(td, cq->curr_poll_rx_cpu_id);
 	thread_unlock(td);
 
+	NET_EPOCH_ENTER(et);
         while (mlx4_en_poll_rx_cq(cq, MLX4_EN_RX_BUDGET)
                         == MLX4_EN_RX_BUDGET);
+	NET_EPOCH_EXIT(et);
         mlx4_en_arm_cq(cq->dev->if_softc, cq);
 }
 

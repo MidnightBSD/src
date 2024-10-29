@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/isci/isci.h>
 
 #include <sys/conf.h>
@@ -411,7 +410,6 @@ int isci_controller_allocate_memory(struct ISCI_CONTROLLER *controller)
 	int error;
 	device_t device =  controller->isci->device;
 	uint32_t max_segment_size = isci_io_request_get_max_io_size();
-	uint32_t status = 0;
 	struct ISCI_MEMORY *uncached_controller_memory =
 	    &controller->uncached_controller_memory;
 	struct ISCI_MEMORY *cached_controller_memory =
@@ -476,12 +474,15 @@ int isci_controller_allocate_memory(struct ISCI_CONTROLLER *controller)
 	 *  will enable better performance than creating the DMA maps every time we get
 	 *  an I/O.
 	 */
-	status = bus_dma_tag_create(bus_get_dma_tag(device), 0x1,
+	error = bus_dma_tag_create(bus_get_dma_tag(device), 0x1,
 	    ISCI_DMA_BOUNDARY, BUS_SPACE_MAXADDR, BUS_SPACE_MAXADDR,
 	    NULL, NULL, isci_io_request_get_max_io_size(),
 	    SCI_MAX_SCATTER_GATHER_ELEMENTS, max_segment_size, 0,
 	    busdma_lock_mutex, &controller->lock,
 	    &controller->buffer_dma_tag);
+
+	if (error != 0)
+	    return (error);
 
 	sci_pool_initialize(controller->request_pool);
 
@@ -582,21 +583,6 @@ void isci_controller_domain_discovery_complete(
 			/* Unfreeze simq to allow initial scan to proceed. */
 			xpt_release_simq(isci_controller->sim, TRUE);
 
-#if __FreeBSD_version < 800000
-			/* When driver is loaded after boot, we need to
-			 *  explicitly rescan here for versions <8.0, because
-			 *  CAM only automatically scans new buses at boot
-			 *  time.
-			 */
-			union ccb *ccb = xpt_alloc_ccb_nowait();
-
-			xpt_create_path(&ccb->ccb_h.path, NULL,
-			    cam_sim_path(isci_controller->sim),
-			    CAM_TARGET_WILDCARD, CAM_LUN_WILDCARD);
-
-			xpt_rescan(ccb);
-#endif
-
 			if (next_index < driver->controller_count) {
 				/*  There are more controllers that need to
 				 *   start.  So start the next one.
@@ -688,14 +674,12 @@ void isci_action(struct cam_sim *sim, union ccb *ccb)
 			cpi->hba_eng_cnt = 0;
 			cpi->max_target = SCI_MAX_REMOTE_DEVICES - 1;
 			cpi->max_lun = ISCI_MAX_LUN;
-#if __FreeBSD_version >= 800102
 			cpi->maxio = isci_io_request_get_max_io_size();
-#endif
 			cpi->unit_number = cam_sim_unit(sim);
 			cpi->bus_id = bus;
 			cpi->initiator_id = SCI_MAX_REMOTE_DEVICES;
 			cpi->base_transfer_speed = 300000;
-			strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
+			strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
 			strlcpy(cpi->hba_vid, "Intel Corp.", HBA_IDLEN);
 			strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 			cpi->transport = XPORT_SAS;
@@ -751,11 +735,9 @@ void isci_action(struct cam_sim *sim, union ccb *ccb)
 		}
 		isci_io_request_execute_scsi_io(ccb, controller);
 		break;
-#if __FreeBSD_version >= 900026
 	case XPT_SMP_IO:
 		isci_io_request_execute_smp_io(ccb, controller);
 		break;
-#endif
 	case XPT_SET_TRAN_SETTINGS:
 		ccb->ccb_h.status &= ~CAM_STATUS_MASK;
 		ccb->ccb_h.status |= CAM_REQ_CMP;

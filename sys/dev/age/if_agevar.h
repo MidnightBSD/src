@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008, Pyun YongHyeon <yongari@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_IF_AGEVAR_H
@@ -247,7 +246,6 @@ struct age_softc {
 #define AGE_LOCK(_sc)		mtx_lock(&(_sc)->age_mtx)
 #define AGE_UNLOCK(_sc)		mtx_unlock(&(_sc)->age_mtx)
 #define AGE_LOCK_ASSERT(_sc)	mtx_assert(&(_sc)->age_mtx, MA_OWNED)
-
 
 #define	AGE_COMMIT_MBOX(_sc)						\
 do {									\

@@ -388,6 +388,7 @@ struct ixgbe_softc {
 
 	/* Info about the interface */
 	int			advertise;	/* link speeds */
+	int			enable_aim;	/* adaptive interrupt moderation */
 	bool			link_active;
 	u16			num_segs;
 	u32			link_speed;
@@ -432,6 +433,10 @@ struct ixgbe_softc {
 
 	/* Bypass */
 	struct ixgbe_bp_data	bypass;
+
+	/* Firmware error check */
+	int                     recovery_mode;
+	struct callout          fw_mode_timer;
 
 	/* Misc stats maintained by the driver */
 	unsigned long		dropped_pkts;

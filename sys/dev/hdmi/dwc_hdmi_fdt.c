@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * HDMI core module
  */

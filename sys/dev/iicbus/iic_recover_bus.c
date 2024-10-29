@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Helper code to recover a hung i2c bus by bit-banging a recovery sequence.
  *

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-2006 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_SCC_BFE_H_
@@ -112,8 +111,8 @@ struct scc_class {
 };
 
 extern struct scc_class scc_quicc_class;
-extern struct scc_class scc_sab82532_class;
-extern struct scc_class scc_z8530_class;
+extern struct scc_class scc_z8530_escc_class;
+extern struct scc_class scc_z8530_legacy_class;
 
 struct scc_softc {
 	KOBJ_FIELDS;

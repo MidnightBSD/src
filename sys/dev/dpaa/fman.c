@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -453,13 +452,6 @@ fman_attach(device_t dev)
 		device_printf(dev, "could not allocate interrupt.\n");
 		goto err;
 	}
-
-	/*
-	 * XXX: Fix FMan interrupt. This is workaround for the issue with
-	 * interrupts directed to multiple CPUs by the interrupts subsystem.
-	 * Workaround is to bind the interrupt to only one CPU0.
-	 */
-	XX_FmanFixIntr(rman_get_start(sc->irq_res));
 
 	sc->err_irq_rid = 1;
 	sc->err_irq_res = bus_alloc_resource_any(dev, SYS_RES_IRQ,

@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * SiS 900/SiS 7016 fast ethernet PCI NIC driver. Datasheets are
  * available from http://www.sis.com.tw.
@@ -693,13 +692,29 @@ sis_rxfilter(struct sis_softc *sc)
 		sis_rxfilter_sis(sc);
 }
 
+static u_int
+sis_write_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	struct sis_softc *sc = arg;
+	uint32_t h;
+	int bit, index;
+
+	h = sis_mchash(sc, LLADDR(sdl));
+	index = h >> 3;
+	bit = h & 0x1F;
+	CSR_WRITE_4(sc, SIS_RXFILT_CTL, NS_FILTADDR_FMEM_LO + index);
+	if (bit > 0xF)
+		bit -= 0x10;
+	SIS_SETBIT(sc, SIS_RXFILT_DATA, (1 << bit));
+
+	return (1);
+}
+
 static void
 sis_rxfilter_ns(struct sis_softc *sc)
 {
 	struct ifnet		*ifp;
-	struct ifmultiaddr	*ifma;
-	uint32_t		h, i, filter;
-	int			bit, index;
+	uint32_t		i, filter;
 
 	ifp = sc->sis_ifp;
 	filter = CSR_READ_4(sc, SIS_RXFILT_CTL);
@@ -742,21 +757,7 @@ sis_rxfilter_ns(struct sis_softc *sc)
 			CSR_WRITE_4(sc, SIS_RXFILT_DATA, 0);
 		}
 
-		if_maddr_rlock(ifp);
-		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-			if (ifma->ifma_addr->sa_family != AF_LINK)
-				continue;
-			h = sis_mchash(sc,
-			    LLADDR((struct sockaddr_dl *)ifma->ifma_addr));
-			index = h >> 3;
-			bit = h & 0x1F;
-			CSR_WRITE_4(sc, SIS_RXFILT_CTL, NS_FILTADDR_FMEM_LO +
-			    index);
-			if (bit > 0xF)
-				bit -= 0x10;
-			SIS_SETBIT(sc, SIS_RXFILT_DATA, (1 << bit));
-		}
-		if_maddr_runlock(ifp);
+		if_foreach_llmaddr(ifp, sis_write_maddr, sc);
 	}
 
 	/* Turn the receive filter on */
@@ -764,13 +765,29 @@ sis_rxfilter_ns(struct sis_softc *sc)
 	CSR_READ_4(sc, SIS_RXFILT_CTL);
 }
 
+struct sis_hash_maddr_ctx {
+	struct sis_softc *sc;
+	uint16_t hashes[16];
+};
+
+static u_int
+sis_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	struct sis_hash_maddr_ctx *ctx = arg;
+	uint32_t h;
+
+	h = sis_mchash(ctx->sc, LLADDR(sdl));
+	ctx->hashes[h >> 4] |= 1 << (h & 0xf);
+
+	return (1);
+}
+
 static void
 sis_rxfilter_sis(struct sis_softc *sc)
 {
 	struct ifnet		*ifp;
-	struct ifmultiaddr	*ifma;
-	uint32_t		filter, h, i, n;
-	uint16_t		hashes[16];
+	struct sis_hash_maddr_ctx ctx;
+	uint32_t		filter, i, n;
 
 	ifp = sc->sis_ifp;
 
@@ -795,31 +812,21 @@ sis_rxfilter_sis(struct sis_softc *sc)
 		if (ifp->if_flags & IFF_PROMISC)
 			filter |= SIS_RXFILTCTL_ALLPHYS;
 		for (i = 0; i < n; i++)
-			hashes[i] = ~0;
+			ctx.hashes[i] = ~0;
 	} else {
 		for (i = 0; i < n; i++)
-			hashes[i] = 0;
-		i = 0;
-		if_maddr_rlock(ifp);
-		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-			if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-			h = sis_mchash(sc,
-			    LLADDR((struct sockaddr_dl *)ifma->ifma_addr));
-			hashes[h >> 4] |= 1 << (h & 0xf);
-			i++;
-		}
-		if_maddr_runlock(ifp);
-		if (i > n) {
+			ctx.hashes[i] = 0;
+		ctx.sc = sc;
+		if (if_foreach_llmaddr(ifp, sis_hash_maddr, &ctx) > n) {
 			filter |= SIS_RXFILTCTL_ALLMULTI;
 			for (i = 0; i < n; i++)
-				hashes[i] = ~0;
+				ctx.hashes[i] = ~0;
 		}
 	}
 
 	for (i = 0; i < n; i++) {
 		CSR_WRITE_4(sc, SIS_RXFILT_CTL, (4 + i) << 16);
-		CSR_WRITE_4(sc, SIS_RXFILT_DATA, hashes[i]);
+		CSR_WRITE_4(sc, SIS_RXFILT_DATA, ctx.hashes[i]);
 	}
 
 	/* Turn the receive filter on */
@@ -891,9 +898,8 @@ sis_attach(device_t dev)
 	u_char			eaddr[ETHER_ADDR_LEN];
 	struct sis_softc	*sc;
 	struct ifnet		*ifp;
-	int			error = 0, pmc, waittime = 0;
+	int			error = 0, pmc;
 
-	waittime = 0;
 	sc = device_get_softc(dev);
 
 	sc->sis_dev = dev;
@@ -1019,7 +1025,7 @@ sis_attach(device_t dev)
 			 * time we access it, we need to set SIS_EECMD_REQ.
 			 */
 			SIO_SET(SIS_EECMD_REQ);
-			for (waittime = 0; waittime < SIS_TIMEOUT;
+			for (int waittime = 0; waittime < SIS_TIMEOUT;
 			    waittime++) {
 				/* Force EEPROM to idle state. */
 				sis_eeprom_idle(sc);
@@ -1051,11 +1057,6 @@ sis_attach(device_t dev)
 		goto fail;
 
 	ifp = sc->sis_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(dev, "can not if_alloc()\n");
-		error = ENOSPC;
-		goto fail;
-	}
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;

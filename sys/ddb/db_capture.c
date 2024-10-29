@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007 Robert N. M. Watson
  * All rights reserved.
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ddb.h"
 
 #include <sys/param.h>
@@ -81,7 +80,8 @@ static int db_capture_inprogress;	/* DDB capture currently in progress. */
 struct sx db_capture_sx;		/* Lock against user thread races. */
 SX_SYSINIT(db_capture_sx, &db_capture_sx, "db_capture_sx");
 
-static SYSCTL_NODE(_debug_ddb, OID_AUTO, capture, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_debug_ddb, OID_AUTO, capture,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "DDB capture options");
 
 SYSCTL_UINT(_debug_ddb_capture, OID_AUTO, bufoff, CTLFLAG_RD,
@@ -165,7 +165,7 @@ sysctl_debug_ddb_capture_bufsize(SYSCTL_HANDLER_ARGS)
 	return (0);
 }
 SYSCTL_PROC(_debug_ddb_capture, OID_AUTO, bufsize,
-    CTLTYPE_UINT | CTLFLAG_RWTUN | CTLFLAG_NOFETCH,
+    CTLTYPE_UINT | CTLFLAG_RWTUN | CTLFLAG_NOFETCH | CTLFLAG_MPSAFE,
     0, 0, sysctl_debug_ddb_capture_bufsize, "IU",
     "Size of DDB capture buffer");
 
@@ -191,8 +191,10 @@ sysctl_debug_ddb_capture_data(SYSCTL_HANDLER_ARGS)
 	ch = '\0';
 	return (SYSCTL_OUT(req, &ch, sizeof(ch)));
 }
-SYSCTL_PROC(_debug_ddb_capture, OID_AUTO, data, CTLTYPE_STRING | CTLFLAG_RD,
-    NULL, 0, sysctl_debug_ddb_capture_data, "A", "DDB capture data");
+SYSCTL_PROC(_debug_ddb_capture, OID_AUTO, data,
+    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, 0,
+    sysctl_debug_ddb_capture_data, "A",
+    "DDB capture data");
 
 /*
  * Routines for capturing DDB output into a fixed-size buffer.  These are

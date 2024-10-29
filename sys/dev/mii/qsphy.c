@@ -2,7 +2,7 @@
 /*	NetBSD: qsphy.c,v 1.19 2000/02/02 23:34:57 thorpej Exp 	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD AND BSD-2-Clause
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998, 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -32,7 +32,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 /*-
  * Copyright (c) 1997 Manuel Bouyer.  All rights reserved.
  *
@@ -58,7 +58,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * driver for Quality Semiconductor's QS6612 ethernet 10/100 PHY
  * datasheet from www.qualitysemi.com

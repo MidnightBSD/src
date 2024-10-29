@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/drm2/ttm/ttm_lock.h>
 #include <dev/drm2/ttm/ttm_module.h>
 

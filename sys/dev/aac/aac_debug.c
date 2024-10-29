@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2001 Scott Long
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Debugging support.
  */
@@ -391,7 +390,7 @@ aac_print_aif(struct aac_softc *sc, struct aac_aif_command *aif)
 		default:
 			status = "unknown status"; break;
 		}		
-	
+
 		device_printf(sc->aac_dev, "JobProgress (%d) - %s (%d, %d)\n",
 			      aif->seqNumber, status,
 			      aif->data.PR[0].currentTick,

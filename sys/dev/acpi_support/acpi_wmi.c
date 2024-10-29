@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Driver for acpi-wmi mapping, provides an interface for vendor specific
  * implementations (e.g. HP and Acer laptops).
@@ -61,6 +60,7 @@ ACPI_MODULE_NAME("ACPI_WMI");
 #define ACPI_WMI_REGFLAG_METHOD		0x2	/* GUID flag: Method call */
 #define ACPI_WMI_REGFLAG_STRING		0x4	/* GUID flag: String */
 #define ACPI_WMI_REGFLAG_EVENT		0x8	/* GUID flag: Event */
+#define ACPI_WMI_BMOF_UUID "05901221-D566-11D1-B2F0-00A0C9062910"
 
 /*
  * acpi_wmi driver private structure
@@ -73,6 +73,8 @@ struct acpi_wmi_softc {
 	struct sbuf	wmistat_sbuf;	/* sbuf for /dev/wmistat output */
 	pid_t		wmistat_open_pid; /* pid operating on /dev/wmistat */
 	int		wmistat_bufptr;	/* /dev/wmistat ptr to buffer position */
+	char 	        *mofbuf;
+
 	TAILQ_HEAD(wmi_info_list_head, wmi_info) wmi_info_list;
 };
 
@@ -93,7 +95,6 @@ enum event_generation_state {
 	EVENT_GENERATION_OFF = 0
 };
 
-
 /*
  * Information about one entry in _WDG.
  * List of those is used to lookup information by GUID.
@@ -104,7 +105,6 @@ struct wmi_info {
 	ACPI_NOTIFY_HANDLER	event_handler;/* client provided event handler */
 	void			*event_handler_user_data; /* ev handler cookie  */
 };
-
 
 ACPI_SERIAL_DECL(acpi_wmi, "ACPI-WMI Mapping");
 
@@ -164,7 +164,6 @@ static struct cdevsw wmistat_cdevsw = {
 	.d_name = "wmistat",
 };
 
-
 static device_method_t acpi_wmi_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,	acpi_wmi_probe),
@@ -208,12 +207,15 @@ ACPI_PNP_INFO(wmi_ids);
 static int
 acpi_wmi_probe(device_t dev)
 {
-	if (acpi_disabled("wmi") ||
-	    ACPI_ID_PROBE(device_get_parent(dev), dev, wmi_ids) == NULL)
-		return (ENXIO);
-	device_set_desc(dev, "ACPI-WMI mapping");
+	int rv; 
 
-	return (0);
+	if (acpi_disabled("wmi"))
+		return (ENXIO);
+	rv = ACPI_ID_PROBE(device_get_parent(dev), dev, wmi_ids, NULL);
+	if (rv <= 0)
+		device_set_desc(dev, "ACPI-WMI mapping");
+
+	return (rv);
 }
 
 /*
@@ -242,7 +244,7 @@ acpi_wmi_attach(device_t dev)
 	if ((sc->ec_dev = devclass_get_device(devclass_find("acpi_ec"), 0))
 	    == NULL)
 		device_printf(dev, "cannot find EC device\n");
-	else if (ACPI_FAILURE((status = AcpiInstallNotifyHandler(sc->wmi_handle,
+	if (ACPI_FAILURE((status = AcpiInstallNotifyHandler(sc->wmi_handle,
 		    ACPI_DEVICE_NOTIFY, acpi_wmi_notify_handler, sc))))
 		device_printf(sc->wmi_dev, "couldn't install notify handler - %s\n",
 		    AcpiFormatException(status));
@@ -271,6 +273,29 @@ acpi_wmi_attach(device_t dev)
 	}
 	ACPI_SERIAL_END(acpi_wmi);
 
+	if (acpi_wmi_provides_guid_string_method(dev, ACPI_WMI_BMOF_UUID)) {
+		ACPI_BUFFER out = { ACPI_ALLOCATE_BUFFER, NULL };
+		ACPI_OBJECT *obj;
+
+		device_printf(dev, "Embedded MOF found\n");
+		status = acpi_wmi_get_block_method(dev,  ACPI_WMI_BMOF_UUID,
+		    0, &out);
+		if (ACPI_SUCCESS(status)) {
+			obj = out.Pointer;
+			if (obj && obj->Type == ACPI_TYPE_BUFFER) {
+				SYSCTL_ADD_OPAQUE(device_get_sysctl_ctx(dev),
+				    SYSCTL_CHILDREN(
+				        device_get_sysctl_tree(dev)),
+				    OID_AUTO, "bmof", 
+				    CTLFLAG_RD | CTLFLAG_MPSAFE,
+				    obj->Buffer.Pointer,
+				    obj->Buffer.Length,
+				    "A", "MOF Blob");
+			}
+		}
+		sc->mofbuf = out.Pointer;
+	}
+		
 	if (ret == 0) {
 		bus_generic_probe(dev);
 		ret = bus_generic_attach(dev);
@@ -318,12 +343,12 @@ acpi_wmi_detach(device_t dev)
 		sc->wmistat_open_pid = 0;
 		destroy_dev(sc->wmistat_dev_t);
 		ret = 0;
+		AcpiOsFree(sc->mofbuf);
 	}
 	ACPI_SERIAL_END(acpi_wmi);
 
 	return (ret);
 }
-
 
 /*
  * Check if the given GUID string (human readable format
@@ -674,6 +699,8 @@ acpi_wmi_ec_handler(UINT32 function, ACPI_PHYSICAL_ADDRESS address,
 		return (AE_BAD_PARAMETER);
 	if (address + (width / 8) - 1 > 0xFF)
 		return (AE_BAD_ADDRESS);
+	if (sc->ec_dev == NULL)
+		return (AE_NOT_FOUND);
 	if (function == ACPI_READ)
 		*value = 0;
 	ec_addr = address;
@@ -771,7 +798,7 @@ acpi_wmi_toggle_we_event_generation(device_t dev, struct wmi_info *winfo,
 	params[0].Integer.Value = state==EVENT_GENERATION_ON?1:0;
 	input.Pointer = params;
 	input.Count = 1;
-	
+
 	UINT8 hi = ((UINT8) winfo->ginfo.oid[0]) >> 4;
 	UINT8 lo = ((UINT8) winfo->ginfo.oid[0]) & 0xf;
 	method[2] = (hi > 9 ? hi + 55: hi + 48);
@@ -948,7 +975,7 @@ acpi_wmi_wmistat_read(struct cdev *dev, struct uio *buf, int flag)
 	if (dev == NULL || dev->si_drv1 == NULL)
 		return (EBADF);
 	sc = dev->si_drv1;
-	
+
 	ACPI_SERIAL_BEGIN(acpi_wmi);
 	if (sc->wmistat_bufptr == -1) {
 		ret = EBADF;

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998, 2001 Nicolas Souchu
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * I2C bus IP driver
  */
@@ -165,8 +164,6 @@ icattach(device_t dev)
 	struct ifnet *ifp;
 
 	ifp = sc->ic_ifp = if_alloc(IFT_PARA);
-	if (ifp == NULL)
-		return (ENOSPC);
 
 	mtx_init(&sc->ic_lock, device_get_nameunit(dev), MTX_NETWORK_LOCK,
 	    MTX_DEF);
@@ -308,9 +305,13 @@ icintr(device_t dev, int event, char *ptr)
 		BPF_TAP(sc->ic_ifp, sc->ic_ifbuf, len + ICHDRLEN);
 		top = m_devget(sc->ic_ifbuf + ICHDRLEN, len, 0, sc->ic_ifp, 0);
 		if (top) {
+			struct epoch_tracker et;
+
 			mtx_unlock(&sc->ic_lock);
 			M_SETFIB(top, sc->ic_ifp->if_fib);
+			NET_EPOCH_ENTER(et);
 			netisr_dispatch(NETISR_IP, top);
+			NET_EPOCH_EXIT(et);
 			mtx_lock(&sc->ic_lock);
 		}
 		break;
@@ -367,7 +368,7 @@ icoutput(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
 	if (dst->sa_family == AF_UNSPEC)
 		bcopy(dst->sa_data, &hdr, sizeof(hdr));
 	else 
-		hdr = dst->sa_family;
+		hdr = RO_GET_FAMILY(ro, dst);
 
 	mtx_lock(&sc->ic_lock);
 	ifp->if_drv_flags |= IFF_DRV_RUNNING;

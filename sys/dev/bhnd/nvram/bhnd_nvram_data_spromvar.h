@@ -129,7 +129,7 @@ struct bhnd_sprom_opcode_state {
 
 	/** Current SPROM revision range */
 	bitstr_t			 bit_decl(revs, SPROM_OP_REV_MAX);
-	
+
 	const uint8_t			*input;		/**< opcode input position */
 
 	/* State preserved across variable definitions */

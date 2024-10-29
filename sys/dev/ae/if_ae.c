@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Stanislav Sedov <stas@FreeBSD.org>.
  * All rights reserved.
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -165,7 +164,6 @@ static device_method_t ae_methods[] = {
 	DEVMETHOD(miibus_readreg,	ae_miibus_readreg),
 	DEVMETHOD(miibus_writereg,	ae_miibus_writereg),
 	DEVMETHOD(miibus_statchg,	ae_miibus_statchg),
-
 	{ NULL, NULL }
 };
 static driver_t ae_driver = {
@@ -313,7 +311,7 @@ ae_attach(device_t dev)
 			goto fail;
 		}
 	}
-	
+
 	ae_init_tunables(sc);
 
 	ae_phy_reset(sc);		/* Reset PHY. */
@@ -330,12 +328,6 @@ ae_attach(device_t dev)
 		goto fail;
 
 	ifp = sc->ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(dev, "could not allocate ifnet structure.\n");
-		error = ENXIO;
-		goto fail;
-	}
-
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
@@ -373,12 +365,6 @@ ae_attach(device_t dev)
 	 */
 	sc->tq = taskqueue_create_fast("ae_taskq", M_WAITOK,
             taskqueue_thread_enqueue, &sc->tq);
-	if (sc->tq == NULL) {
-		device_printf(dev, "could not create taskqueue.\n");
-		ether_ifdetach(ifp);
-		error = ENXIO;
-		goto fail;
-	}
 	taskqueue_start_threads(&sc->tq, 1, PI_NET, "%s taskq",
 	    device_get_nameunit(sc->dev));
 
@@ -398,7 +384,7 @@ ae_attach(device_t dev)
 fail:
 	if (error != 0)
 		ae_detach(dev);
-	
+
 	return (error);
 }
 
@@ -418,13 +404,13 @@ ae_init_tunables(ae_softc_t *sc)
 	ctx = device_get_sysctl_ctx(sc->dev);
 	root = device_get_sysctl_tree(sc->dev);
 	stats = SYSCTL_ADD_NODE(ctx, SYSCTL_CHILDREN(root), OID_AUTO, "stats",
-	    CTLFLAG_RD, NULL, "ae statistics");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "ae statistics");
 
 	/*
 	 * Receiver statistcics.
 	 */
 	stats_rx = SYSCTL_ADD_NODE(ctx, SYSCTL_CHILDREN(stats), OID_AUTO, "rx",
-	    CTLFLAG_RD, NULL, "Rx MAC statistics");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Rx MAC statistics");
 	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_rx), "bcast",
 	    "broadcast frames", &ae_stats->rx_bcast);
 	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_rx), "mcast",
@@ -450,7 +436,7 @@ ae_init_tunables(ae_softc_t *sc)
 	 * Receiver statistcics.
 	 */
 	stats_tx = SYSCTL_ADD_NODE(ctx, SYSCTL_CHILDREN(stats), OID_AUTO, "tx",
-	    CTLFLAG_RD, NULL, "Tx MAC statistics");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Tx MAC statistics");
 	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_tx), "bcast",
 	    "broadcast frames", &ae_stats->tx_bcast);
 	AE_SYSCTL(ctx, SYSCTL_CHILDREN(stats_tx), "mcast",
@@ -502,7 +488,7 @@ ae_reset(ae_softc_t *sc)
 	AE_WRITE_4(sc, AE_MASTER_REG, AE_MASTER_SOFT_RESET);
 	bus_barrier(sc->mem[0], AE_MASTER_REG, 4,
 	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
-	
+
 	/*
 	 * Wait for reset to complete.
 	 */
@@ -1021,7 +1007,7 @@ ae_get_vpd_eaddr(ae_softc_t *sc, uint32_t *eaddr)
 
 	if (found < 2)
 		return (ENOENT);
-	
+
 	eaddr[1] &= 0xffff;	/* Only last 2 bytes are used. */
 	if (AE_CHECK_EADDR_VALID(eaddr) != 0) {
 		if (bootverbose)
@@ -1287,7 +1273,7 @@ static void
 ae_powersave_disable(ae_softc_t *sc)
 {
 	uint32_t val;
-	
+
 	AE_LOCK_ASSERT(sc);
 
 	AE_PHY_WRITE(sc, AE_PHY_DBG_ADDR, 0);
@@ -1303,7 +1289,7 @@ static void
 ae_powersave_enable(ae_softc_t *sc)
 {
 	uint32_t val;
-	
+
 	AE_LOCK_ASSERT(sc);
 
 	/*
@@ -1429,7 +1415,7 @@ static unsigned int
 ae_tx_avail_size(ae_softc_t *sc)
 {
 	unsigned int avail;
-	
+
 	if (sc->txd_cur >= sc->txd_ack)
 		avail = AE_TXD_BUFSIZE_DEFAULT - (sc->txd_cur - sc->txd_ack);
 	else
@@ -1450,7 +1436,7 @@ ae_encap(ae_softc_t *sc, struct mbuf **m_head)
 
 	m0 = *m_head;
 	len = m0->m_pkthdr.len;
-	
+
 	if ((sc->flags & AE_FLAG_TXAVAIL) == 0 ||
 	    len + sizeof(ae_txd_t) + 3 > ae_tx_avail_size(sc)) {
 #ifdef AE_DEBUG
@@ -1598,7 +1584,7 @@ ae_link_task(void *arg, int pending)
 		AE_UNLOCK(sc);	/* XXX: could happen? */
 		return;
 	}
-	
+
 	sc->flags &= ~AE_FLAG_LINK;
 	if ((mii->mii_media_status & (IFM_AVALID | IFM_ACTIVE)) ==
 	    (IFM_AVALID | IFM_ACTIVE)) {
@@ -2030,12 +2016,21 @@ ae_rxvlan(ae_softc_t *sc)
 	AE_WRITE_4(sc, AE_MAC_REG, val);
 }
 
+static u_int
+ae_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint32_t crc, *mchash = arg;
+
+	crc = ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN);
+	mchash[crc >> 31] |= 1 << ((crc >> 26) & 0x1f);
+
+	return (1);
+}
+
 static void
 ae_rxfilter(ae_softc_t *sc)
 {
 	struct ifnet *ifp;
-	struct ifmultiaddr *ifma;
-	uint32_t crc;
 	uint32_t mchash[2];
 	uint32_t rxcfg;
 
@@ -2071,15 +2066,7 @@ ae_rxfilter(ae_softc_t *sc)
 	 * Load multicast tables.
 	 */
 	bzero(mchash, sizeof(mchash));
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-		if (ifma->ifma_addr->sa_family != AF_LINK)
-			continue;
-		crc = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-			ifma->ifma_addr), ETHER_ADDR_LEN);
-		mchash[crc >> 31] |= 1 << ((crc >> 26) & 0x1f);
-	}
-	if_maddr_runlock(ifp);
+	if_foreach_llmaddr(ifp, ae_hash_maddr, &mchash);
 	AE_WRITE_4(sc, AE_REG_MHT0, mchash[0]);
 	AE_WRITE_4(sc, AE_REG_MHT1, mchash[1]);
 	AE_WRITE_4(sc, AE_MAC_REG, rxcfg);

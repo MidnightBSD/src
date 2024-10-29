@@ -1,8 +1,8 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2003-2008 M. Warner Losh.  All Rights Reserved.
  * Copyright (c) 2000,2001 Jonathan Chen.  All rights reserved.
+ * Copyright (c) 2003-2008 M. Warner Losh <imp@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,8 +27,8 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
+#include <sys/eventhandler.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
@@ -55,7 +55,8 @@
 #include "pcib_if.h"
 
 /* sysctl vars */
-static SYSCTL_NODE(_hw, OID_AUTO, cardbus, CTLFLAG_RD, 0, "CardBus parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, cardbus, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "CardBus parameters");
 
 int    cardbus_debug = 0;
 SYSCTL_INT(_hw_cardbus, OID_AUTO, debug, CTLFLAG_RWTUN,
@@ -196,7 +197,7 @@ cardbus_attach_card(device_t cbdev)
 	domain = pcib_get_domain(cbdev);
 	bus = pcib_get_bus(cbdev);
 	slot = 0;
-	mtx_lock(&Giant);
+	bus_topo_lock();
 	/* For each function, set it up and try to attach a driver to it */
 	for (func = 0; func <= cardbusfunchigh; func++) {
 		struct cardbus_devinfo *dinfo;
@@ -230,7 +231,7 @@ cardbus_attach_card(device_t cbdev)
 		else
 			pci_cfg_save(dinfo->pci.cfg.dev, &dinfo->pci, 1);
 	}
-	mtx_unlock(&Giant);
+	bus_topo_unlock();
 	if (cardattached > 0)
 		return (0);
 /*	POWER_DISABLE_SOCKET(brdev, cbdev); */
@@ -253,10 +254,11 @@ cardbus_detach_card(device_t cbdev)
 {
 	int err = 0;
 
+	bus_topo_lock();
 	err = bus_generic_detach(cbdev);
-	if (err)
-		return (err);
-	err = device_delete_children(cbdev);
+	if (err == 0)
+		err = device_delete_children(cbdev);
+	bus_topo_unlock();
 	if (err)
 		return (err);
 
@@ -357,7 +359,6 @@ static device_method_t cardbus_methods[] = {
 
 	/* PCI interface */
 	DEVMETHOD(pci_alloc_devinfo,	cardbus_alloc_devinfo),
-
 	{0,0}
 };
 

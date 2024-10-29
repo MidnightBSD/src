@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 
 #include <sys/param.h>
@@ -704,7 +703,7 @@ cqspi_attach(device_t dev)
 	}
 
 	/* Setup xDMA interrupt handlers. */
-	error = xdma_setup_intr(sc->xchan_tx, cqspi_xdma_tx_intr,
+	error = xdma_setup_intr(sc->xchan_tx, 0, cqspi_xdma_tx_intr,
 	    sc, &sc->ih_tx);
 	if (error) {
 		device_printf(sc->dev,
@@ -712,7 +711,7 @@ cqspi_attach(device_t dev)
 		return (ENXIO);
 	}
 
-	error = xdma_setup_intr(sc->xchan_rx, cqspi_xdma_rx_intr,
+	error = xdma_setup_intr(sc->xchan_rx, 0, cqspi_xdma_rx_intr,
 	    sc, &sc->ih_rx);
 	if (error) {
 		device_printf(sc->dev,
@@ -720,9 +719,9 @@ cqspi_attach(device_t dev)
 		return (ENXIO);
 	}
 
-	xdma_prep_sg(sc->xchan_tx, TX_QUEUE_SIZE, MAXPHYS, 8, 16, 0,
+	xdma_prep_sg(sc->xchan_tx, TX_QUEUE_SIZE, maxphys, 8, 16, 0,
 	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR);
-	xdma_prep_sg(sc->xchan_rx, TX_QUEUE_SIZE, MAXPHYS, 8, 16, 0,
+	xdma_prep_sg(sc->xchan_rx, TX_QUEUE_SIZE, maxphys, 8, 16, 0,
 	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR);
 
 	cqspi_init(sc);

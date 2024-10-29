@@ -38,7 +38,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef MRSAS_IOCTL_H
 #define	MRSAS_IOCTL_H
 
@@ -86,7 +85,6 @@
 #define	SCSI_SENSE_BUFFERSIZE	96
 
 #define	MEGAMFI_RAW_FRAME_SIZE	128
-
 
 #pragma pack(1)
 struct mrsas_iocpacket {

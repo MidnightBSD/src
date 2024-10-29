@@ -27,7 +27,6 @@
  **************************************************************************/
 
 #include <sys/cdefs.h>
-
 /*
  * Simple open hash tab implementation.
  *

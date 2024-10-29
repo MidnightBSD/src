@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/systm.h>
@@ -66,7 +65,6 @@ static int ata_serverworks_status(device_t dev);
 #define SWKS_66		1
 #define SWKS_100	2
 #define SWKS_MIO	3
-
 
 /*
  * ServerWorks chipset support functions
@@ -234,7 +232,7 @@ ata_serverworks_ch_attach(device_t dev)
 	 * The status register must be read as a long to fill the other
 	 * registers.
 	 */
-	
+
 	ch->hw.status = ata_serverworks_status;
 	ch->flags |= ATA_STATUS_IS_LONG;
     }

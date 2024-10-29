@@ -386,6 +386,7 @@ static int mlx4_dev_cap(struct mlx4_dev *dev, struct mlx4_dev_cap *dev_cap)
 		}
 	}
 
+	dev->caps.map_clock_to_user  = dev_cap->map_clock_to_user;
 	dev->caps.uar_page_size	     = PAGE_SIZE;
 	dev->caps.num_uars	     = dev_cap->uar_size / PAGE_SIZE;
 	dev->caps.local_ca_ack_delay = dev_cap->local_ca_ack_delay;
@@ -1871,6 +1872,11 @@ int mlx4_get_internal_clock_params(struct mlx4_dev *dev,
 
 	if (mlx4_is_slave(dev))
 		return -ENOTSUPP;
+
+	if (!dev->caps.map_clock_to_user) {
+		mlx4_dbg(dev, "Map clock to user is not supported.\n");
+		return -EOPNOTSUPP;
+	}
 
 	if (!params)
 		return -EINVAL;
@@ -3781,7 +3787,7 @@ static int mlx4_init_one(struct pci_dev *pdev, const struct pci_device_id *id)
 		return ret;
 	} else {
 		device_set_desc(pdev->dev.bsddev, mlx4_description);
-		pci_save_state(pdev->dev.bsddev);
+		pci_save_state(pdev);
 	}
 
 	snprintf(dev->fw_str, sizeof(dev->fw_str), "%d.%d.%d",
@@ -3792,7 +3798,8 @@ static int mlx4_init_one(struct pci_dev *pdev, const struct pci_device_id *id)
 	ctx = &dev->hw_ctx;
 	sysctl_ctx_init(ctx);
 	node = SYSCTL_ADD_NODE(ctx,SYSCTL_CHILDREN(pdev->dev.kobj.oidp),
-	    OID_AUTO, "hw" , CTLFLAG_RD, 0, "mlx4 dev hw information");
+	    OID_AUTO, "hw" , CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+	    "mlx4 dev hw information");
 	if (node != NULL) {
 		node_list = SYSCTL_CHILDREN(node);
 		SYSCTL_ADD_STRING(ctx, node_list, OID_AUTO,

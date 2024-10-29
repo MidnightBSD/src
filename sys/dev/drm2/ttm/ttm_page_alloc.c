@@ -39,10 +39,10 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/ttm/ttm_bo_driver.h>
 #include <dev/drm2/ttm/ttm_page_alloc.h>
+#include <sys/eventhandler.h>
 #include <vm/vm_pageout.h>
 
 #define NUM_PAGES_TO_ALLOC		(PAGE_SIZE/sizeof(vm_page_t))
@@ -130,7 +130,7 @@ ttm_vm_page_free(vm_page_t m)
 {
 
 	KASSERT(m->object == NULL, ("ttm page %p is owned", m));
-	KASSERT(m->wire_count == 1, ("ttm lost wire %p", m));
+	KASSERT(vm_page_wired(m), ("ttm lost wire %p", m));
 	KASSERT((m->flags & PG_FICTITIOUS) != 0, ("ttm lost fictitious %p", m));
 	KASSERT((m->oflags & VPO_UNMANAGED) == 0, ("ttm got unmanaged %p", m));
 	m->flags &= ~PG_FICTITIOUS;
@@ -161,8 +161,8 @@ ttm_vm_page_alloc_dma32(int req, vm_memattr_t memattr)
 	int tries;
 
 	for (tries = 0; ; tries++) {
-		p = vm_page_alloc_contig(NULL, 0, req, 1, 0, 0xffffffff,
-		    PAGE_SIZE, 0, memattr);
+		p = vm_page_alloc_noobj_contig(req, 1, 0, 0xffffffff, PAGE_SIZE,
+		    0, memattr);
 		if (p != NULL || tries > 2)
 			return (p);
 		if (!vm_page_reclaim_contig(req, 1, 0, 0xffffffff,
@@ -176,12 +176,7 @@ ttm_vm_page_alloc_any(int req, vm_memattr_t memattr)
 {
 	vm_page_t p;
 
-	while (1) {
-		p = vm_page_alloc(NULL, 0, req);
-		if (p != NULL)
-			break;
-		vm_wait(NULL);
-	}
+	p = vm_page_alloc_noobj(req | VM_ALLOC_WAITOK);
 	pmap_page_set_memattr(p, memattr);
 	return (p);
 }
@@ -194,7 +189,7 @@ ttm_vm_page_alloc(int flags, enum ttm_caching_state cstate)
 	int req;
 
 	memattr = ttm_caching_state_to_vm(cstate);
-	req = VM_ALLOC_NORMAL | VM_ALLOC_WIRED | VM_ALLOC_NOOBJ;
+	req = VM_ALLOC_WIRED;
 	if ((flags & TTM_PAGE_FLAG_ZERO_ALLOC) != 0)
 		req |= VM_ALLOC_ZERO;
 

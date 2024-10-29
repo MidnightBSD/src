@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_iscsi_initiator.h"
 
 #include <sys/param.h>
@@ -105,11 +104,7 @@ iscsi_r2t(isc_session_t *sp, pduq_t *opq, pduq_t *pq)
 
 			 while((wpq = pdu_alloc(sp->isc, M_NOWAIT)) == NULL) {
 			      sdebug(2, "waiting...");
-#if __FreeBSD_version >= 700000
 			      pause("isc_r2t", 5*hz);
-#else
-			      tsleep(sp->isc, 0, "isc_r2t", 5*hz);
-#endif
 			 }
 		    }
 		    cmd = &wpq->pdu.ipdu.data_out;
@@ -251,7 +246,7 @@ _scsi_done(isc_session_t *sp, u_int response, u_int status, union ccb *ccb, pduq
      }
      sdebug(5, "ccb_h->status=%x", ccb_h->status);
 
-     XPT_DONE(sp, ccb);
+     xpt_done(ccb);
 }
 
 /*
@@ -411,8 +406,8 @@ iscsi_reject(isc_session_t *sp, pduq_t *opq, pduq_t *pq)
      debug_called(8);
      //XXX: check RFC 10.17.1 (page 176)
      ccb->ccb_h.status = CAM_REQ_ABORTED;
-     XPT_DONE(sp, ccb);
- 
+     xpt_done(ccb);
+
      pdu_free(sp->isc, opq);
 }
 
@@ -470,11 +465,7 @@ scsi_encap(struct cam_sim *sim, union ccb *ccb)
 		 sp->isc->npdu_max, sp->isc->npdu_alloc);
 	  while((pq = pdu_alloc(sp->isc, M_NOWAIT)) == NULL) {
 	       sdebug(2, "waiting...");
-#if __FreeBSD_version >= 700000
 	       pause("isc_encap", 5*hz);
-#else
-	       tsleep(sp->isc, 0, "isc_encap", 5*hz);
-#endif
 	  }
      }
      cmd = &pq->pdu.ipdu.scsi_req;

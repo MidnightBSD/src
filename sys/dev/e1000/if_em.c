@@ -1,8 +1,9 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
  *
+ * Copyright (c) 2001-2024, Intel Corporation
  * Copyright (c) 2016 Nicole Graziano <nicole@nextbsd.org>
- * All rights reserved.
+ * Copyright (c) 2024 Kevin Bowling <kbowling@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,8 +37,8 @@
 /*********************************************************************
  *  Driver version:
  *********************************************************************/
-char em_driver_version[] = "7.7.8-fbsd";
-char igb_driver_version[] = "2.5.19-fbsd";
+static const char em_driver_version[] = "7.7.8-fbsd";
+static const char igb_driver_version[] = "2.5.28-fbsd";
 
 /*********************************************************************
  *  PCI Device ID Table
@@ -49,7 +50,7 @@ char igb_driver_version[] = "2.5.19-fbsd";
  *  { Vendor ID, Device ID, SubVendor ID, SubDevice ID, String Index }
  *********************************************************************/
 
-static pci_vendor_info_t em_vendor_info_array[] =
+static const pci_vendor_info_t em_vendor_info_array[] =
 {
 	/* Intel(R) - lem-class legacy devices */
 	PVID(0x8086, E1000_DEV_ID_82540EM, "Intel(R) Legacy PRO/1000 MT 82540EM"),
@@ -214,7 +215,7 @@ static pci_vendor_info_t em_vendor_info_array[] =
 	PVID_END
 };
 
-static pci_vendor_info_t igb_vendor_info_array[] =
+static const pci_vendor_info_t igb_vendor_info_array[] =
 {
 	/* Intel(R) - igb-class devices */
 	PVID(0x8086, E1000_DEV_ID_82575EB_COPPER, "Intel(R) PRO/1000 82575EB (Copper)"),
@@ -329,9 +330,12 @@ static int	em_sysctl_debug_info(SYSCTL_HANDLER_ARGS);
 static int	em_get_rs(SYSCTL_HANDLER_ARGS);
 static void	em_print_debug_info(struct e1000_softc *);
 static int 	em_is_valid_ether_addr(u8 *);
+static void	em_newitr(struct e1000_softc *, struct em_rx_queue *,
+    struct tx_ring *, struct rx_ring *);
+static bool	em_automask_tso(if_ctx_t);
 static int	em_sysctl_int_delay(SYSCTL_HANDLER_ARGS);
 static void	em_add_int_delay_sysctl(struct e1000_softc *, const char *,
-		    const char *, struct em_int_delay_info *, int, int);
+    const char *, struct em_int_delay_info *, int, int);
 /* Management and WOL Support */
 static void	em_init_manageability(struct e1000_softc *);
 static void	em_release_manageability(struct e1000_softc *);
@@ -353,6 +357,7 @@ static void	em_enable_vectors_82574(if_ctx_t);
 
 static int	em_set_flowcntl(SYSCTL_HANDLER_ARGS);
 static int	em_sysctl_eee(SYSCTL_HANDLER_ARGS);
+static int	igb_sysctl_dmac(SYSCTL_HANDLER_ARGS);
 static void	em_if_led_func(if_ctx_t, int);
 
 static int	em_get_regs(SYSCTL_HANDLER_ARGS);
@@ -499,15 +504,13 @@ static driver_t igb_if_driver = {
 #define EM_TICKS_TO_USECS(ticks)	((1024 * (ticks) + 500) / 1000)
 #define EM_USECS_TO_TICKS(usecs)	((1000 * (usecs) + 512) / 1024)
 
-#define MAX_INTS_PER_SEC	8000
-#define DEFAULT_ITR		(1000000000/(MAX_INTS_PER_SEC * 256))
-
 /* Allow common code without TSO */
 #ifndef CSUM_TSO
 #define CSUM_TSO	0
 #endif
 
-static SYSCTL_NODE(_hw, OID_AUTO, em, CTLFLAG_RD, 0, "EM driver parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, em, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "EM driver parameters");
 
 static int em_disable_crc_stripping = 0;
 SYSCTL_INT(_hw_em, OID_AUTO, disable_crc_stripping, CTLFLAG_RDTUN,
@@ -533,17 +536,14 @@ static int em_smart_pwr_down = false;
 SYSCTL_INT(_hw_em, OID_AUTO, smart_pwr_down, CTLFLAG_RDTUN, &em_smart_pwr_down,
     0, "Set to true to leave smart power down enabled on newer adapters");
 
+static bool em_unsupported_tso = false;
+SYSCTL_BOOL(_hw_em, OID_AUTO, unsupported_tso, CTLFLAG_RDTUN,
+    &em_unsupported_tso, 0, "Allow unsupported em(4) TSO configurations");
+
 /* Controls whether promiscuous also shows bad packets */
 static int em_debug_sbp = false;
 SYSCTL_INT(_hw_em, OID_AUTO, sbp, CTLFLAG_RDTUN, &em_debug_sbp, 0,
     "Show bad packets in promiscuous mode");
-
-/* How many packets rxeof tries to clean at a time */
-static int em_rx_process_limit = 100;
-SYSCTL_INT(_hw_em, OID_AUTO, rx_process_limit, CTLFLAG_RDTUN,
-    &em_rx_process_limit, 0,
-    "Maximum number of received packets to process "
-    "at a time, -1 means unlimited");
 
 /* Energy efficient ethernet - default to OFF */
 static int eee_setting = 1;
@@ -551,13 +551,20 @@ SYSCTL_INT(_hw_em, OID_AUTO, eee_setting, CTLFLAG_RDTUN, &eee_setting, 0,
     "Enable Energy Efficient Ethernet");
 
 /*
+ * AIM: Adaptive Interrupt Moderation
+ * which means that the interrupt rate is varied over time based on the
+ * traffic for that interrupt vector
+ */
+static int em_enable_aim = 1;
+SYSCTL_INT(_hw_em, OID_AUTO, enable_aim, CTLFLAG_RWTUN, &em_enable_aim,
+    0, "Enable adaptive interrupt moderation (1=normal, 2=lowlatency)");
+
+/*
 ** Tuneable Interrupt rate
 */
-static int em_max_interrupt_rate = 8000;
+static int em_max_interrupt_rate = EM_INTS_DEFAULT;
 SYSCTL_INT(_hw_em, OID_AUTO, max_interrupt_rate, CTLFLAG_RDTUN,
     &em_max_interrupt_rate, 0, "Maximum interrupts per second");
-
-
 
 /* Global used in WOL setup with multiport cards */
 static int global_quad_port_a = 0;
@@ -781,19 +788,21 @@ em_set_num_queues(if_ctx_t ctx)
 	return (maxqueues);
 }
 
-#define	LEM_CAPS							\
-    IFCAP_HWCSUM | IFCAP_VLAN_MTU | IFCAP_VLAN_HWTAGGING |		\
-    IFCAP_VLAN_HWCSUM | IFCAP_WOL | IFCAP_VLAN_HWFILTER
+#define LEM_CAPS \
+    IFCAP_HWCSUM | IFCAP_VLAN_MTU | IFCAP_VLAN_HWTAGGING | \
+    IFCAP_VLAN_HWCSUM | IFCAP_WOL | IFCAP_VLAN_HWFILTER | IFCAP_TSO4 | \
+    IFCAP_LRO | IFCAP_VLAN_HWTSO | IFCAP_JUMBO_MTU | IFCAP_HWCSUM_IPV6
 
-#define	EM_CAPS								\
-    IFCAP_HWCSUM | IFCAP_VLAN_MTU | IFCAP_VLAN_HWTAGGING |		\
-    IFCAP_VLAN_HWCSUM | IFCAP_WOL | IFCAP_VLAN_HWFILTER | IFCAP_TSO4 |	\
-    IFCAP_LRO | IFCAP_VLAN_HWTSO
+#define EM_CAPS \
+    IFCAP_HWCSUM | IFCAP_VLAN_MTU | IFCAP_VLAN_HWTAGGING | \
+    IFCAP_VLAN_HWCSUM | IFCAP_WOL | IFCAP_VLAN_HWFILTER | IFCAP_TSO4 | \
+    IFCAP_LRO | IFCAP_VLAN_HWTSO | IFCAP_JUMBO_MTU | IFCAP_HWCSUM_IPV6 | \
+    IFCAP_TSO6
 
-#define	IGB_CAPS							\
-    IFCAP_HWCSUM | IFCAP_VLAN_MTU | IFCAP_VLAN_HWTAGGING |		\
-    IFCAP_VLAN_HWCSUM | IFCAP_WOL | IFCAP_VLAN_HWFILTER | IFCAP_TSO4 |	\
-    IFCAP_LRO | IFCAP_VLAN_HWTSO | IFCAP_JUMBO_MTU | IFCAP_HWCSUM_IPV6 |\
+#define IGB_CAPS \
+    IFCAP_HWCSUM | IFCAP_VLAN_MTU | IFCAP_VLAN_HWTAGGING | \
+    IFCAP_VLAN_HWCSUM | IFCAP_WOL | IFCAP_VLAN_HWFILTER | IFCAP_TSO4 | \
+    IFCAP_LRO | IFCAP_VLAN_HWTSO | IFCAP_JUMBO_MTU | IFCAP_HWCSUM_IPV6 | \
     IFCAP_TSO6
 
 /*********************************************************************
@@ -826,8 +835,6 @@ em_if_attach_pre(if_ctx_t ctx)
 	sc->media = iflib_get_media(ctx);
 	hw = &sc->hw;
 
-	sc->tx_process_limit = scctx->isc_ntxd[0];
-
 	/* Determine hardware and mac info */
 	em_identify_hardware(ctx);
 
@@ -839,6 +846,11 @@ em_if_attach_pre(if_ctx_t ctx)
 	    CTLTYPE_INT | CTLFLAG_RW, sc, 0,
 	    em_sysctl_nvm_info, "I", "NVM Information");
 
+	sc->enable_aim = em_enable_aim;
+	SYSCTL_ADD_INT(ctx_list, child, OID_AUTO, "enable_aim",
+	    CTLFLAG_RW, &sc->enable_aim, 0,
+		"Interrupt Moderation (1=normal, 2=lowlatency)");
+
 	SYSCTL_ADD_PROC(ctx_list, child, OID_AUTO, "fw_version",
 	    CTLTYPE_STRING | CTLFLAG_RD, sc, 0,
 	    em_sysctl_print_fw_version, "A",
@@ -849,16 +861,22 @@ em_if_attach_pre(if_ctx_t ctx)
 	    em_sysctl_debug_info, "I", "Debug Information");
 
 	SYSCTL_ADD_PROC(ctx_list, child, OID_AUTO, "fc",
-	    CTLTYPE_INT | CTLFLAG_RW, sc, 0,
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, sc, 0,
 	    em_set_flowcntl, "I", "Flow Control");
 
 	SYSCTL_ADD_PROC(ctx_list, child, OID_AUTO, "reg_dump",
-	    CTLTYPE_STRING | CTLFLAG_RD, sc, 0,
+	    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_NEEDGIANT, sc, 0,
 	    em_get_regs, "A", "Dump Registers");
 
 	SYSCTL_ADD_PROC(ctx_list, child, OID_AUTO, "rs_dump",
-	    CTLTYPE_INT | CTLFLAG_RW, sc, 0,
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, sc, 0,
 	    em_get_rs, "I", "Dump RS indexes");
+
+	if (hw->mac.type >= e1000_i350) {
+		SYSCTL_ADD_PROC(ctx_list, child, OID_AUTO, "dmac",
+		    CTLTYPE_INT | CTLFLAG_RW, sc, 0,
+		    igb_sysctl_dmac, "I", "DMA Coalesce");
+	}
 
 	scctx->isc_tx_nsegments = EM_MAX_SCATTER;
 	scctx->isc_nrxqsets_max = scctx->isc_ntxqsets_max = em_set_num_queues(ctx);
@@ -885,9 +903,7 @@ em_if_attach_pre(if_ctx_t ctx)
 		** use a different BAR, so we need to keep
 		** track of which is used.
 		*/
-		scctx->isc_msix_bar = PCIR_BAR(EM_MSIX_BAR);
-		if (pci_read_config(dev, scctx->isc_msix_bar, 4) == 0)
-			scctx->isc_msix_bar += 4;
+		scctx->isc_msix_bar = pci_msix_table_bar(dev);
 	} else if (hw->mac.type >= em_mac_min) {
 		scctx->isc_txqsizes[0] = roundup2(scctx->isc_ntxd[0]* sizeof(struct e1000_tx_desc), EM_DBA_ALIGN);
 		scctx->isc_rxqsizes[0] = roundup2(scctx->isc_nrxd[0] * sizeof(union e1000_rx_desc_extended), EM_DBA_ALIGN);
@@ -898,30 +914,25 @@ em_if_attach_pre(if_ctx_t ctx)
 		scctx->isc_tx_tso_size_max = EM_TSO_SIZE;
 		scctx->isc_tx_tso_segsize_max = EM_TSO_SEG_SIZE;
 		scctx->isc_capabilities = scctx->isc_capenable = EM_CAPS;
+		scctx->isc_tx_csum_flags = CSUM_TCP | CSUM_UDP | CSUM_IP_TSO |
+		    CSUM_IP6_TCP | CSUM_IP6_UDP;
+
+		/* Disable TSO on all em(4) until ring stalls can be debugged */
+		scctx->isc_capenable &= ~IFCAP_TSO;
+
 		/*
-		 * For EM-class devices, don't enable IFCAP_{TSO4,VLAN_HWTSO}
-		 * by default as we don't have workarounds for all associated
-		 * silicon errata.  E. g., with several MACs such as 82573E,
-		 * TSO only works at Gigabit speed and otherwise can cause the
-		 * hardware to hang (which also would be next to impossible to
-		 * work around given that already queued TSO-using descriptors
-		 * would need to be flushed and vlan(4) reconfigured at runtime
-		 * in case of a link speed change).  Moreover, MACs like 82579
-		 * still can hang at Gigabit even with all publicly documented
-		 * TSO workarounds implemented.  Generally, the penality of
-		 * these workarounds is rather high and may involve copying
-		 * mbuf data around so advantages of TSO lapse.  Still, TSO may
-		 * work for a few MACs of this class - at least when sticking
-		 * with Gigabit - in which case users may enable TSO manually.
+		 * Disable TSO on SPT due to errata that downclocks DMA performance
+		 * i218-i219 Specification Update 1.5.4.5
 		 */
-		scctx->isc_capenable &= ~(IFCAP_TSO4 | IFCAP_VLAN_HWTSO);
-		scctx->isc_tx_csum_flags = CSUM_TCP | CSUM_UDP | CSUM_IP_TSO;
+		if (hw->mac.type == e1000_pch_spt)
+			scctx->isc_capenable &= ~IFCAP_TSO;
+
 		/*
 		 * We support MSI-X with 82574 only, but indicate to iflib(4)
 		 * that it shall give MSI at least a try with other devices.
 		 */
 		if (hw->mac.type == e1000_82574) {
-			scctx->isc_msix_bar = PCIR_BAR(EM_MSIX_BAR);
+			scctx->isc_msix_bar = pci_msix_table_bar(dev);;
 		} else {
 			scctx->isc_msix_bar = -1;
 			scctx->isc_disable_msix = 1;
@@ -931,17 +942,50 @@ em_if_attach_pre(if_ctx_t ctx)
 		scctx->isc_rxqsizes[0] = roundup2((scctx->isc_nrxd[0] + 1) * sizeof(struct e1000_rx_desc), EM_DBA_ALIGN);
 		scctx->isc_txd_size[0] = sizeof(struct e1000_tx_desc);
 		scctx->isc_rxd_size[0] = sizeof(struct e1000_rx_desc);
-		scctx->isc_tx_csum_flags = CSUM_TCP | CSUM_UDP;
 		scctx->isc_txrx = &lem_txrx;
-		scctx->isc_capabilities = LEM_CAPS;
-		if (hw->mac.type < e1000_82543)
-			scctx->isc_capabilities &= ~(IFCAP_HWCSUM|IFCAP_VLAN_HWCSUM);
+		scctx->isc_tx_tso_segments_max = EM_MAX_SCATTER;
+		scctx->isc_tx_tso_size_max = EM_TSO_SIZE;
+		scctx->isc_tx_tso_segsize_max = EM_TSO_SEG_SIZE;
+		scctx->isc_capabilities = scctx->isc_capenable = LEM_CAPS;
+		if (em_unsupported_tso)
+			scctx->isc_capabilities |= IFCAP_TSO6;
+		scctx->isc_tx_csum_flags = CSUM_TCP | CSUM_UDP | CSUM_IP_TSO |
+		    CSUM_IP6_TCP | CSUM_IP6_UDP;
+
+		/* Disable TSO on all lem(4) until ring stalls can be debugged */
+		scctx->isc_capenable &= ~IFCAP_TSO;
+
 		/* 82541ER doesn't do HW tagging */
-		if (hw->device_id == E1000_DEV_ID_82541ER || hw->device_id == E1000_DEV_ID_82541ER_LOM)
+		if (hw->device_id == E1000_DEV_ID_82541ER ||
+		    hw->device_id == E1000_DEV_ID_82541ER_LOM) {
 			scctx->isc_capabilities &= ~IFCAP_VLAN_HWTAGGING;
+			scctx->isc_capenable = scctx->isc_capabilities;
+		}
+		/* This is the first e1000 chip and it does not do offloads */
+		if (hw->mac.type == e1000_82542) {
+			scctx->isc_capabilities &= ~(IFCAP_HWCSUM | IFCAP_VLAN_HWCSUM |
+			    IFCAP_HWCSUM_IPV6 | IFCAP_VLAN_HWTAGGING |
+			    IFCAP_VLAN_HWFILTER | IFCAP_TSO | IFCAP_VLAN_HWTSO);
+			scctx->isc_capenable = scctx->isc_capabilities;
+		}
+		/* These can't do TSO for various reasons */
+		if (hw->mac.type < e1000_82544 || hw->mac.type == e1000_82547 ||
+		    hw->mac.type == e1000_82547_rev_2) {
+			scctx->isc_capabilities &= ~(IFCAP_TSO | IFCAP_VLAN_HWTSO);
+			scctx->isc_capenable = scctx->isc_capabilities;
+		}
+		/* XXXKB: No IPv6 before this? */
+		if (hw->mac.type < e1000_82545){
+			scctx->isc_capabilities &= ~IFCAP_HWCSUM_IPV6;
+			scctx->isc_capenable = scctx->isc_capabilities;
+		}
+		/* "PCI/PCI-X SDM 4.0" page 33 (b) - FDX requirement on these chips */
+		if (hw->mac.type == e1000_82547 || hw->mac.type == e1000_82547_rev_2)
+			scctx->isc_capenable &= ~(IFCAP_HWCSUM | IFCAP_VLAN_HWCSUM |
+			    IFCAP_HWCSUM_IPV6);
+
 		/* INTx only */
 		scctx->isc_msix_bar = 0;
-		scctx->isc_capenable = scctx->isc_capabilities;
 	}
 
 	/* Setup PCI resources */
@@ -1005,27 +1049,26 @@ em_if_attach_pre(if_ctx_t ctx)
 	e1000_get_bus_info(hw);
 
 	/* Set up some sysctls for the tunable interrupt delays */
-	em_add_int_delay_sysctl(sc, "rx_int_delay",
-	    "receive interrupt delay in usecs", &sc->rx_int_delay,
-	    E1000_REGISTER(hw, E1000_RDTR), em_rx_int_delay_dflt);
-	em_add_int_delay_sysctl(sc, "tx_int_delay",
-	    "transmit interrupt delay in usecs", &sc->tx_int_delay,
-	    E1000_REGISTER(hw, E1000_TIDV), em_tx_int_delay_dflt);
-	em_add_int_delay_sysctl(sc, "rx_abs_int_delay",
-	    "receive interrupt delay limit in usecs",
-	    &sc->rx_abs_int_delay,
-	    E1000_REGISTER(hw, E1000_RADV),
-	    em_rx_abs_int_delay_dflt);
-	em_add_int_delay_sysctl(sc, "tx_abs_int_delay",
-	    "transmit interrupt delay limit in usecs",
-	    &sc->tx_abs_int_delay,
-	    E1000_REGISTER(hw, E1000_TADV),
-	    em_tx_abs_int_delay_dflt);
-	em_add_int_delay_sysctl(sc, "itr",
-	    "interrupt delay limit in usecs/4",
-	    &sc->tx_itr,
-	    E1000_REGISTER(hw, E1000_ITR),
-	    DEFAULT_ITR);
+	if (hw->mac.type < igb_mac_min) {
+		em_add_int_delay_sysctl(sc, "rx_int_delay",
+		    "receive interrupt delay in usecs", &sc->rx_int_delay,
+		    E1000_REGISTER(hw, E1000_RDTR), em_rx_int_delay_dflt);
+		em_add_int_delay_sysctl(sc, "tx_int_delay",
+		    "transmit interrupt delay in usecs", &sc->tx_int_delay,
+		    E1000_REGISTER(hw, E1000_TIDV), em_tx_int_delay_dflt);
+	}
+	if (hw->mac.type >= e1000_82540 && hw->mac.type < igb_mac_min) {
+		em_add_int_delay_sysctl(sc, "rx_abs_int_delay",
+		    "receive interrupt delay limit in usecs", &sc->rx_abs_int_delay,
+		    E1000_REGISTER(hw, E1000_RADV), em_rx_abs_int_delay_dflt);
+		em_add_int_delay_sysctl(sc, "tx_abs_int_delay",
+		    "transmit interrupt delay limit in usecs", &sc->tx_abs_int_delay,
+		    E1000_REGISTER(hw, E1000_TADV), em_tx_abs_int_delay_dflt);
+		em_add_int_delay_sysctl(sc, "itr",
+		    "interrupt delay limit in usecs/4", &sc->tx_itr,
+		    E1000_REGISTER(hw, E1000_ITR),
+			EM_INTS_TO_ITR(em_max_interrupt_rate));
+	}
 
 	hw->mac.autoneg = DO_AUTO_NEG;
 	hw->phy.autoneg_wait_to_complete = false;
@@ -1056,7 +1099,7 @@ em_if_attach_pre(if_ctx_t ctx)
 	hw->mac.report_tx_early = 1;
 
 	/* Allocate multicast array memory. */
-	sc->mta = malloc(sizeof(u8) * ETH_ADDR_LEN *
+	sc->mta = malloc(sizeof(u8) * ETHER_ADDR_LEN *
 	    MAX_NUM_MULTICAST_ADDRESSES, M_DEVBUF, M_NOWAIT);
 	if (sc->mta == NULL) {
 		device_printf(dev, "Can not allocate multicast setup array\n");
@@ -1064,15 +1107,21 @@ em_if_attach_pre(if_ctx_t ctx)
 		goto err_late;
 	}
 
+	/* Clear the IFCAP_TSO auto mask */
+	sc->tso_automasked = 0;
+
 	/* Check SOL/IDER usage */
 	if (e1000_check_reset_block(hw))
 		device_printf(dev, "PHY reset is blocked"
 			      " due to SOL/IDER session.\n");
 
 	/* Sysctl for setting Energy Efficient Ethernet */
-	hw->dev_spec.ich8lan.eee_disable = eee_setting;
+	if (hw->mac.type < igb_mac_min)
+		hw->dev_spec.ich8lan.eee_disable = eee_setting;
+	else
+		hw->dev_spec._82575.eee_disable = eee_setting;
 	SYSCTL_ADD_PROC(ctx_list, child, OID_AUTO, "eee_control",
-	    CTLTYPE_INT | CTLFLAG_RW, sc, 0,
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, sc, 0,
 	    em_sysctl_eee, "I", "Disable Energy Efficient Ethernet");
 
 	/*
@@ -1335,7 +1384,6 @@ em_if_init(if_ctx_t ctx)
 		    E1000_RAR_ENTRIES - 1);
 	}
 
-
 	/* Initialize the hardware */
 	em_reset(ctx);
 	em_if_update_admin_status(ctx);
@@ -1408,6 +1456,159 @@ em_if_init(if_ctx_t ctx)
 	}
 }
 
+enum itr_latency_target {
+	itr_latency_disabled = 0,
+	itr_latency_lowest = 1,
+	itr_latency_low = 2,
+	itr_latency_bulk = 3
+};
+/*********************************************************************
+ *
+ *  Helper to calculate next (E)ITR value for AIM
+ *
+ *********************************************************************/
+static void
+em_newitr(struct e1000_softc *sc, struct em_rx_queue *que,
+    struct tx_ring *txr, struct rx_ring *rxr)
+{
+	struct e1000_hw *hw = &sc->hw;
+	u32 newitr;
+	u32 bytes;
+	u32 bytes_packets;
+	u32 packets;
+	u8 nextlatency;
+
+	/* Idle, do nothing */
+	if ((txr->tx_bytes == 0) && (rxr->rx_bytes == 0))
+		return;
+
+	newitr = 0;
+
+	if (sc->enable_aim) {
+		nextlatency = rxr->rx_nextlatency;
+
+		/* Use half default (4K) ITR if sub-gig */
+		if (sc->link_speed != 1000) {
+			newitr = EM_INTS_4K;
+			goto em_set_next_itr;
+		}
+		/* Want at least enough packet buffer for two frames to AIM */
+		if (sc->shared->isc_max_frame_size * 2 > (sc->pba << 10)) {
+			newitr = em_max_interrupt_rate;
+			sc->enable_aim = 0;
+			goto em_set_next_itr;
+		}
+
+		/* Get the largest values from the associated tx and rx ring */
+		if (txr->tx_bytes && txr->tx_packets) {
+			bytes = txr->tx_bytes;
+			bytes_packets = txr->tx_bytes/txr->tx_packets;
+			packets = txr->tx_packets;
+		}
+		if (rxr->rx_bytes && rxr->rx_packets) {
+			bytes = max(bytes, rxr->rx_bytes);
+			bytes_packets = max(bytes_packets, rxr->rx_bytes/rxr->rx_packets);
+			packets = max(packets, rxr->rx_packets);
+		}
+
+		/* Latency state machine */
+		switch (nextlatency) {
+		case itr_latency_disabled: /* Bootstrapping */
+			nextlatency = itr_latency_low;
+			break;
+		case itr_latency_lowest: /* 70k ints/s */
+			/* TSO and jumbo frames */
+			if (bytes_packets > 8000)
+				nextlatency = itr_latency_bulk;
+			else if ((packets < 5) && (bytes > 512))
+				nextlatency = itr_latency_low;
+			break;
+		case itr_latency_low: /* 20k ints/s */
+			if (bytes > 10000) {
+				/* Handle TSO */
+				if (bytes_packets > 8000)
+					nextlatency = itr_latency_bulk;
+				else if ((packets < 10) || (bytes_packets > 1200))
+					nextlatency = itr_latency_bulk;
+				else if (packets > 35)
+					nextlatency = itr_latency_lowest;
+			} else if (bytes_packets > 2000) {
+				nextlatency = itr_latency_bulk;
+			} else if (packets < 3 && bytes < 512) {
+				nextlatency = itr_latency_lowest;
+			}
+			break;
+		case itr_latency_bulk: /* 4k ints/s */
+			if (bytes > 25000) {
+				if (packets > 35)
+					nextlatency = itr_latency_low;
+			} else if (bytes < 1500)
+				nextlatency = itr_latency_low;
+			break;
+		default:
+			nextlatency = itr_latency_low;
+			device_printf(sc->dev, "Unexpected newitr transition %d\n",
+			    nextlatency);
+			break;
+		}
+
+		/* Trim itr_latency_lowest for default AIM setting */
+		if (sc->enable_aim == 1 && nextlatency == itr_latency_lowest)
+			nextlatency = itr_latency_low;
+
+		/* Request new latency */
+		rxr->rx_nextlatency = nextlatency;
+	} else {
+		/* We may have toggled to AIM disabled */
+		nextlatency = itr_latency_disabled;
+		rxr->rx_nextlatency = nextlatency;
+	}
+
+	/* ITR state machine */
+	switch(nextlatency) {
+	case itr_latency_lowest:
+		newitr = EM_INTS_70K;
+		break;
+	case itr_latency_low:
+		newitr = EM_INTS_20K;
+		break;
+	case itr_latency_bulk:
+		newitr = EM_INTS_4K;
+		break;
+	case itr_latency_disabled:
+	default:
+		newitr = em_max_interrupt_rate;
+		break;
+	}
+
+em_set_next_itr:
+	if (hw->mac.type >= igb_mac_min) {
+		newitr = IGB_INTS_TO_EITR(newitr);
+
+		if (hw->mac.type == e1000_82575)
+			newitr |= newitr << 16;
+		else
+			newitr |= E1000_EITR_CNT_IGNR;
+
+		if (newitr != que->itr_setting) {
+			que->itr_setting = newitr;
+			E1000_WRITE_REG(hw, E1000_EITR(que->msix), que->itr_setting);
+		}
+	} else {
+		newitr = EM_INTS_TO_ITR(newitr);
+
+		if (newitr != que->itr_setting) {
+			que->itr_setting = newitr;
+			if (hw->mac.type == e1000_82574 && que->msix) {
+				E1000_WRITE_REG(hw,
+				    E1000_EITR_82574(que->msix), que->itr_setting);
+			} else {
+				E1000_WRITE_REG(hw, E1000_ITR, que->itr_setting);
+			}
+		}
+	}
+}
+
 /*********************************************************************
  *
  *  Fast Legacy/MSI Combined Interrupt Service routine
@@ -1417,10 +1618,14 @@ int
 em_intr(void *arg)
 {
 	struct e1000_softc *sc = arg;
+	struct e1000_hw *hw = &sc->hw;
+	struct em_rx_queue *que = &sc->rx_queues[0];
+	struct tx_ring *txr = &sc->tx_queues[0].txr;
+	struct rx_ring *rxr = &que->rxr;
 	if_ctx_t ctx = sc->ctx;
 	u32 reg_icr;
 
-	reg_icr = E1000_READ_REG(&sc->hw, E1000_ICR);
+	reg_icr = E1000_READ_REG(hw, E1000_ICR);
 
 	/* Hot eject? */
 	if (reg_icr == 0xffffffff)
@@ -1434,7 +1639,7 @@ em_intr(void *arg)
 	 * Starting with the 82571 chip, bit 31 should be used to
 	 * determine whether the interrupt belongs to us.
 	 */
-	if (sc->hw.mac.type >= e1000_82571 &&
+	if (hw->mac.type >= e1000_82571 &&
 	    (reg_icr & E1000_ICR_INT_ASSERTED) == 0)
 		return FILTER_STRAY;
 
@@ -1452,6 +1657,15 @@ em_intr(void *arg)
 
 	if (reg_icr & E1000_ICR_RXO)
 		sc->rx_overruns++;
+
+	if (hw->mac.type >= e1000_82540)
+		em_newitr(sc, que, txr, rxr);
+
+	/* Reset state */
+	txr->tx_bytes = 0;
+	txr->tx_packets = 0;
+	rxr->rx_bytes = 0;
+	rxr->rx_packets = 0;
 
 	return (FILTER_SCHEDULE_THREAD);
 }
@@ -1505,8 +1719,19 @@ static int
 em_msix_que(void *arg)
 {
 	struct em_rx_queue *que = arg;
+	struct e1000_softc *sc = que->sc;
+	struct tx_ring *txr = &sc->tx_queues[que->msix].txr;
+	struct rx_ring *rxr = &que->rxr;
 
 	++que->irqs;
+
+	em_newitr(sc, que, txr, rxr);
+
+	/* Reset state */
+	txr->tx_bytes = 0;
+	txr->tx_packets = 0;
+	rxr->rx_bytes = 0;
+	rxr->rx_packets = 0;
 
 	return (FILTER_SCHEDULE_THREAD);
 }
@@ -1681,7 +1906,7 @@ em_if_set_promisc(if_ctx_t ctx, int flags)
 	if (flags & IFF_ALLMULTI)
 		mcnt = MAX_NUM_MULTICAST_ADDRESSES;
 	else
-		mcnt = if_multiaddr_count(ifp, MAX_NUM_MULTICAST_ADDRESSES);
+		mcnt = min(if_llmaddr_count(ifp), MAX_NUM_MULTICAST_ADDRESSES);
 
 	if (mcnt < MAX_NUM_MULTICAST_ADDRESSES)
 		reg_rctl &= (~E1000_RCTL_MPE);
@@ -1706,6 +1931,19 @@ em_if_set_promisc(if_ctx_t ctx, int flags)
 	return (0);
 }
 
+static u_int
+em_copy_maddr(void *arg, struct sockaddr_dl *sdl, u_int idx)
+{
+	u8 *mta = arg;
+
+	if (idx == MAX_NUM_MULTICAST_ADDRESSES)
+		return (0);
+
+	bcopy(LLADDR(sdl), &mta[idx * ETHER_ADDR_LEN], ETHER_ADDR_LEN);
+
+	return (1);
+}
+
 /*********************************************************************
  *  Multicast Update
  *
@@ -1724,7 +1962,7 @@ em_if_multi_set(if_ctx_t ctx)
 	IOCTL_DEBUGOUT("em_set_multi: begin");
 
 	mta = sc->mta;
-	bzero(mta, sizeof(u8) * ETH_ADDR_LEN * MAX_NUM_MULTICAST_ADDRESSES);
+	bzero(mta, sizeof(u8) * ETHER_ADDR_LEN * MAX_NUM_MULTICAST_ADDRESSES);
 
 	if (sc->hw.mac.type == e1000_82542 &&
 	    sc->hw.revision_id == E1000_REVISION_2) {
@@ -1736,7 +1974,7 @@ em_if_multi_set(if_ctx_t ctx)
 		msec_delay(5);
 	}
 
-	if_multiaddr_array(ifp, mta, &mcnt, MAX_NUM_MULTICAST_ADDRESSES);
+	mcnt = if_foreach_llmaddr(ifp, em_copy_maddr, mta);
 
 	if (mcnt < MAX_NUM_MULTICAST_ADDRESSES)
 		e1000_update_mc_addr_list(&sc->hw, mta, mcnt);
@@ -1790,6 +2028,7 @@ em_if_update_admin_status(if_ctx_t ctx)
 	struct e1000_hw *hw = &sc->hw;
 	device_t dev = iflib_get_dev(ctx);
 	u32 link_check, thstat, ctrl;
+	bool automasked = false;
 
 	link_check = thstat = ctrl = 0;
 	/* Get the cached link value or read phy for real */
@@ -1867,8 +2106,14 @@ em_if_update_admin_status(if_ctx_t ctx)
 			sc->flags |= IGB_MEDIA_RESET;
 			em_reset(ctx);
 		}
-		iflib_link_state_change(ctx, LINK_STATE_UP,
-		    IF_Mbps(sc->link_speed));
+		/* Only do TSO on gigabit Ethernet for older chips due to errata */
+		if (hw->mac.type < igb_mac_min)
+			automasked = em_automask_tso(ctx);
+
+		/* Automasking resets the interface, so don't mark it up yet */
+		if (!automasked)
+			iflib_link_state_change(ctx, LINK_STATE_UP,
+			    IF_Mbps(sc->link_speed));
 	} else if (!link_check && (sc->link_active == 1)) {
 		sc->link_speed = 0;
 		sc->link_duplex = 0;
@@ -2234,18 +2479,19 @@ igb_configure_queues(struct e1000_softc *sc)
 		break;
 	}
 
-	/* Set the starting interrupt rate */
-	if (em_max_interrupt_rate > 0)
-		newitr = (4000000 / em_max_interrupt_rate) & 0x7FFC;
+	/* Set the igb starting interrupt rate */
+	if (em_max_interrupt_rate > 0) {
+		newitr = IGB_INTS_TO_EITR(em_max_interrupt_rate);
 
-	if (hw->mac.type == e1000_82575)
-		newitr |= newitr << 16;
-	else
-		newitr |= E1000_EITR_CNT_IGNR;
+		if (hw->mac.type == e1000_82575)
+			newitr |= newitr << 16;
+		else
+			newitr |= E1000_EITR_CNT_IGNR;
 
-	for (int i = 0; i < sc->rx_num_queues; i++) {
-		rx_que = &sc->rx_queues[i];
-		E1000_WRITE_REG(hw, E1000_EITR(rx_que->msix), newitr);
+		for (int i = 0; i < sc->rx_num_queues; i++) {
+			rx_que = &sc->rx_queues[i];
+			E1000_WRITE_REG(hw, E1000_EITR(rx_que->msix), newitr);
+		}
 	}
 
 	return;
@@ -2832,6 +3078,9 @@ em_reset(if_ctx_t ctx)
 	if (hw->mac.type >= igb_mac_min)
 		igb_init_dmac(sc, pba);
 
+	/* Save the final PBA off if it needs to be used elsewhere i.e. AIM */
+	sc->pba = pba;
+
 	E1000_WRITE_REG(hw, E1000_VET, ETHERTYPE_VLAN);
 	e1000_get_phy_info(hw);
 	e1000_check_for_link(hw);
@@ -3221,12 +3470,16 @@ em_initialize_transmit_unit(if_ctx_t ctx)
 		tipg |= DEFAULT_82543_TIPG_IPGR2 << E1000_TIPG_IPGR2_SHIFT;
 	}
 
-	E1000_WRITE_REG(hw, E1000_TIPG, tipg);
-	E1000_WRITE_REG(hw, E1000_TIDV, sc->tx_int_delay.value);
+	if (hw->mac.type < igb_mac_min) {
+		E1000_WRITE_REG(hw, E1000_TIPG, tipg);
+		E1000_WRITE_REG(hw, E1000_TIDV, sc->tx_int_delay.value);
 
-	if(hw->mac.type >= e1000_82540)
-		E1000_WRITE_REG(hw, E1000_TADV,
-		    sc->tx_abs_int_delay.value);
+		if (sc->tx_int_delay.value > 0)
+			sc->txd_cmd |= E1000_TXD_CMD_IDE;
+	}
+
+	if (hw->mac.type >= e1000_82540)
+		E1000_WRITE_REG(hw, E1000_TADV, sc->tx_abs_int_delay.value);
 
 	if (hw->mac.type == e1000_82571 || hw->mac.type == e1000_82572) {
 		tarc = E1000_READ_REG(hw, E1000_TARC(0));
@@ -3251,16 +3504,13 @@ em_initialize_transmit_unit(if_ctx_t ctx)
 			E1000_WRITE_REG(hw, E1000_TARC(0), tarc);
 	}
 
-	if (sc->tx_int_delay.value > 0)
-		sc->txd_cmd |= E1000_TXD_CMD_IDE;
-
 	/* Program the Transmit Control Register */
 	tctl = E1000_READ_REG(hw, E1000_TCTL);
 	tctl &= ~E1000_TCTL_CT;
 	tctl |= (E1000_TCTL_PSP | E1000_TCTL_RTLC | E1000_TCTL_EN |
 		   (E1000_COLLISION_THRESHOLD << E1000_CT_SHIFT));
 
-	if (hw->mac.type >= e1000_82571)
+	if (hw->mac.type >= e1000_82571 && hw->mac.type < igb_mac_min)
 		tctl |= E1000_TCTL_MULR;
 
 	/* This write will effectively turn on the transmit unit. */
@@ -3328,17 +3578,27 @@ em_initialize_receive_unit(if_ctx_t ctx)
 	if (!em_disable_crc_stripping)
 		rctl |= E1000_RCTL_SECRC;
 
-	if (hw->mac.type >= e1000_82540) {
-		E1000_WRITE_REG(hw, E1000_RADV,
-		    sc->rx_abs_int_delay.value);
+	/* lem/em default interrupt moderation */
+	if (hw->mac.type < igb_mac_min) {
+		if (hw->mac.type >= e1000_82540) {
+			E1000_WRITE_REG(hw, E1000_RADV, sc->rx_abs_int_delay.value);
 
-		/*
-		 * Set the interrupt throttling rate. Value is calculated
-		 * as DEFAULT_ITR = 1/(MAX_INTS_PER_SEC * 256ns)
+			/* Set the default interrupt throttling rate */
+			E1000_WRITE_REG(hw, E1000_ITR,
+			    EM_INTS_TO_ITR(em_max_interrupt_rate));
+		}
+
+		/* XXX TEMPORARY WORKAROUND: on some systems with 82573
+		 * long latencies are observed, like Lenovo X60. This
+		 * change eliminates the problem, but since having positive
+		 * values in RDTR is a known source of problems on other
+		 * platforms another solution is being sought.
 		 */
-		E1000_WRITE_REG(hw, E1000_ITR, DEFAULT_ITR);
+		if (hw->mac.type == e1000_82573)
+			E1000_WRITE_REG(hw, E1000_RDTR, 0x20);
+		else
+			E1000_WRITE_REG(hw, E1000_RDTR, sc->rx_int_delay.value);
 	}
-	E1000_WRITE_REG(hw, E1000_RDTR, sc->rx_int_delay.value);
 
 	if (hw->mac.type >= em_mac_min) {
 		uint32_t rfctl;
@@ -3353,7 +3613,7 @@ em_initialize_receive_unit(if_ctx_t ctx)
 		if (hw->mac.type == e1000_82574) {
 			for (int i = 0; i < 4; i++)
 				E1000_WRITE_REG(hw, E1000_EITR_82574(i),
-				    DEFAULT_ITR);
+				    EM_INTS_TO_ITR(em_max_interrupt_rate));
 			/* Disable accelerated acknowledge */
 			rfctl |= E1000_RFCTL_ACK_DIS;
 		}
@@ -3387,16 +3647,6 @@ em_initialize_receive_unit(if_ctx_t ctx)
 			em_initialize_rss_mapping(sc);
 	}
 	E1000_WRITE_REG(hw, E1000_RXCSUM, rxcsum);
-
-	/*
-	 * XXX TEMPORARY WORKAROUND: on some systems with 82573
-	 * long latencies are observed, like Lenovo X60. This
-	 * change eliminates the problem, but since having positive
-	 * values in RDTR is a known source of problems on other
-	 * platforms another solution is being sought.
-	 */
-	if (hw->mac.type == e1000_82573)
-		E1000_WRITE_REG(hw, E1000_RDTR, 0x20);
 
 	for (i = 0, que = sc->rx_queues; i < sc->rx_num_queues; i++, que++) {
 		struct rx_ring *rxr = &que->rxr;
@@ -3690,6 +3940,7 @@ em_if_intr_enable(if_ctx_t ctx)
 		E1000_WRITE_REG(hw, EM_EIAC, sc->ims);
 		ims_mask |= sc->ims;
 	}
+
 	E1000_WRITE_REG(hw, E1000_IMS, ims_mask);
 	E1000_WRITE_FLUSH(hw);
 }
@@ -3847,6 +4098,35 @@ em_is_valid_ether_addr(u8 *addr)
 	}
 
 	return (true);
+}
+
+static bool
+em_automask_tso(if_ctx_t ctx)
+{
+	struct e1000_softc *sc = iflib_get_softc(ctx);
+	if_softc_ctx_t scctx = iflib_get_softc_ctx(ctx);
+	if_t ifp = iflib_get_ifp(ctx);
+
+	if (!em_unsupported_tso && sc->link_speed &&
+	    sc->link_speed != SPEED_1000 && scctx->isc_capenable & IFCAP_TSO) {
+		device_printf(sc->dev, "Disabling TSO for 10/100 Ethernet.\n");
+		sc->tso_automasked = scctx->isc_capenable & IFCAP_TSO;
+		scctx->isc_capenable &= ~IFCAP_TSO;
+		if_setcapenablebit(ifp, 0, IFCAP_TSO);
+		/* iflib_init_locked handles ifnet hwassistbits */
+		iflib_request_reset(ctx);
+		return true;
+	} else if (sc->link_speed == SPEED_1000 && sc->tso_automasked) {
+		device_printf(sc->dev, "Re-enabling TSO for GbE.\n");
+		scctx->isc_capenable |= sc->tso_automasked;
+		if_setcapenablebit(ifp, sc->tso_automasked, 0);
+		sc->tso_automasked = 0;
+		/* iflib_init_locked handles ifnet hwassistbits */
+		iflib_request_reset(ctx);
+		return true;
+	}
+
+	return false;
 }
 
 /*
@@ -4232,6 +4512,10 @@ em_update_stats_counters(struct e1000_softc *sc)
 	sc->stats.roc += E1000_READ_REG(&sc->hw, E1000_ROC);
 	sc->stats.rjc += E1000_READ_REG(&sc->hw, E1000_RJC);
 
+	sc->stats.mgprc += E1000_READ_REG(&sc->hw, E1000_MGTPRC);
+	sc->stats.mgpdc += E1000_READ_REG(&sc->hw, E1000_MGTPDC);
+	sc->stats.mgptc += E1000_READ_REG(&sc->hw, E1000_MGTPTC);
+
 	sc->stats.tor += E1000_READ_REG(&sc->hw, E1000_TORH);
 	sc->stats.tot += E1000_READ_REG(&sc->hw, E1000_TOTH);
 
@@ -4300,7 +4584,7 @@ em_if_get_counter(if_ctx_t ctx, ift_counter cnt)
  * @ctx: iflib context
  * @event: event code to check
  *
- * Defaults to returning true for unknown events.
+ * Defaults to returning false for unknown events.
  *
  * @returns true if iflib needs to reinit the interface
  */
@@ -4309,9 +4593,8 @@ em_if_needs_restart(if_ctx_t ctx __unused, enum iflib_restart_event event)
 {
 	switch (event) {
 	case IFLIB_RESTART_VLAN_CONFIG:
-		return (false);
 	default:
-		return (true);
+		return (false);
 	}
 }
 
@@ -4325,6 +4608,57 @@ em_sysctl_reg_handler(SYSCTL_HANDLER_ARGS)
 	sc = oidp->oid_arg1;
 	val = E1000_READ_REG(&sc->hw, oidp->oid_arg2);
 	return (sysctl_handle_int(oidp, &val, 0, req));
+}
+
+/* Per queue holdoff interrupt rate handler */
+static int
+em_sysctl_interrupt_rate_handler(SYSCTL_HANDLER_ARGS)
+{
+	struct em_rx_queue *rque;
+	struct em_tx_queue *tque;
+	struct e1000_hw *hw;
+	int error;
+	u32 reg, usec, rate;
+
+	bool tx = oidp->oid_arg2;
+
+	if (tx) {
+		tque = oidp->oid_arg1;
+		hw = &tque->sc->hw;
+		if (hw->mac.type >= igb_mac_min)
+			reg = E1000_READ_REG(hw, E1000_EITR(tque->me));
+		else if (hw->mac.type == e1000_82574 && tque->msix)
+			reg = E1000_READ_REG(hw, E1000_EITR_82574(tque->me));
+		else
+			reg = E1000_READ_REG(hw, E1000_ITR);
+	} else {
+		rque = oidp->oid_arg1;
+		hw = &rque->sc->hw;
+		if (hw->mac.type >= igb_mac_min)
+			reg = E1000_READ_REG(hw, E1000_EITR(rque->msix));
+		else if (hw->mac.type == e1000_82574 && rque->msix)
+			reg = E1000_READ_REG(hw, E1000_EITR_82574(rque->msix));
+		else
+			reg = E1000_READ_REG(hw, E1000_ITR);
+	}
+
+	if (hw->mac.type < igb_mac_min) {
+		if (reg > 0)
+			rate = EM_INTS_TO_ITR(reg);
+		else
+			rate = 0;
+	} else {
+		usec = (reg & IGB_QVECTOR_MASK);
+		if (usec > 0)
+			rate = IGB_INTS_TO_EITR(usec);
+		else
+			rate = 0;
+	}
+
+	error = sysctl_handle_int(oidp, &rate, 0, req);
+	if (error || !req->newptr)
+		return error;
+	return 0;
 }
 
 /*
@@ -4362,13 +4696,13 @@ em_add_hw_stats(struct e1000_softc *sc)
 			CTLFLAG_RD, &sc->watchdog_events,
 			"Watchdog timeouts");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "device_control",
-			CTLTYPE_UINT | CTLFLAG_RD, sc, E1000_CTRL,
-			em_sysctl_reg_handler, "IU",
-			"Device Control Register");
+	    CTLTYPE_UINT | CTLFLAG_RD,
+	    sc, E1000_CTRL, em_sysctl_reg_handler, "IU",
+	    "Device Control Register");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "rx_control",
-			CTLTYPE_UINT | CTLFLAG_RD, sc, E1000_RCTL,
-			em_sysctl_reg_handler, "IU",
-			"Receiver Control Register");
+	    CTLTYPE_UINT | CTLFLAG_RD,
+	    sc, E1000_RCTL, em_sysctl_reg_handler, "IU",
+	    "Receiver Control Register");
 	SYSCTL_ADD_UINT(ctx, child, OID_AUTO, "fc_high_water",
 			CTLFLAG_RD, &sc->hw.fc.high_water, 0,
 			"Flow Control High Watermark");
@@ -4380,19 +4714,22 @@ em_add_hw_stats(struct e1000_softc *sc)
 		struct tx_ring *txr = &tx_que->txr;
 		snprintf(namebuf, QUEUE_NAME_LEN, "queue_tx_%d", i);
 		queue_node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, namebuf,
-					    CTLFLAG_RD, NULL, "TX Queue Name");
+		    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "TX Queue Name");
 		queue_list = SYSCTL_CHILDREN(queue_node);
 
+		SYSCTL_ADD_PROC(ctx, queue_list, OID_AUTO, "interrupt_rate",
+		    CTLTYPE_UINT | CTLFLAG_RD, tx_que,
+		    true, em_sysctl_interrupt_rate_handler,
+		    "IU", "Interrupt Rate");
+
 		SYSCTL_ADD_PROC(ctx, queue_list, OID_AUTO, "txd_head",
-				CTLTYPE_UINT | CTLFLAG_RD, sc,
-				E1000_TDH(txr->me),
-				em_sysctl_reg_handler, "IU",
-				"Transmit Descriptor Head");
+		    CTLTYPE_UINT | CTLFLAG_RD, sc,
+		    E1000_TDH(txr->me), em_sysctl_reg_handler, "IU",
+		    "Transmit Descriptor Head");
 		SYSCTL_ADD_PROC(ctx, queue_list, OID_AUTO, "txd_tail",
-				CTLTYPE_UINT | CTLFLAG_RD, sc,
-				E1000_TDT(txr->me),
-				em_sysctl_reg_handler, "IU",
-				"Transmit Descriptor Tail");
+		    CTLTYPE_UINT | CTLFLAG_RD, sc,
+		    E1000_TDT(txr->me), em_sysctl_reg_handler, "IU",
+		    "Transmit Descriptor Tail");
 		SYSCTL_ADD_ULONG(ctx, queue_list, OID_AUTO, "tx_irq",
 				CTLFLAG_RD, &txr->tx_irq,
 				"Queue MSI-X Transmit Interrupts");
@@ -4402,19 +4739,22 @@ em_add_hw_stats(struct e1000_softc *sc)
 		struct rx_ring *rxr = &rx_que->rxr;
 		snprintf(namebuf, QUEUE_NAME_LEN, "queue_rx_%d", j);
 		queue_node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, namebuf,
-					    CTLFLAG_RD, NULL, "RX Queue Name");
+		    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "RX Queue Name");
 		queue_list = SYSCTL_CHILDREN(queue_node);
 
+		SYSCTL_ADD_PROC(ctx, queue_list, OID_AUTO, "interrupt_rate",
+		    CTLTYPE_UINT | CTLFLAG_RD, rx_que,
+		    false, em_sysctl_interrupt_rate_handler,
+		    "IU", "Interrupt Rate");
+
 		SYSCTL_ADD_PROC(ctx, queue_list, OID_AUTO, "rxd_head",
-				CTLTYPE_UINT | CTLFLAG_RD, sc,
-				E1000_RDH(rxr->me),
-				em_sysctl_reg_handler, "IU",
-				"Receive Descriptor Head");
+		    CTLTYPE_UINT | CTLFLAG_RD, sc,
+		    E1000_RDH(rxr->me), em_sysctl_reg_handler, "IU",
+		    "Receive Descriptor Head");
 		SYSCTL_ADD_PROC(ctx, queue_list, OID_AUTO, "rxd_tail",
-				CTLTYPE_UINT | CTLFLAG_RD, sc,
-				E1000_RDT(rxr->me),
-				em_sysctl_reg_handler, "IU",
-				"Receive Descriptor Tail");
+		    CTLTYPE_UINT | CTLFLAG_RD, sc,
+		    E1000_RDT(rxr->me), em_sysctl_reg_handler, "IU",
+		    "Receive Descriptor Tail");
 		SYSCTL_ADD_ULONG(ctx, queue_list, OID_AUTO, "rx_irq",
 				CTLFLAG_RD, &rxr->rx_irq,
 				"Queue MSI-X Receive Interrupts");
@@ -4423,7 +4763,7 @@ em_add_hw_stats(struct e1000_softc *sc)
 	/* MAC stats get their own sub node */
 
 	stat_node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "mac_stats",
-				    CTLFLAG_RD, NULL, "Statistics");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Statistics");
 	stat_list = SYSCTL_CHILDREN(stat_node);
 
 	SYSCTL_ADD_UQUAD(ctx, stat_list, OID_AUTO, "excess_coll",
@@ -4453,6 +4793,9 @@ em_add_hw_stats(struct e1000_softc *sc)
 	SYSCTL_ADD_UQUAD(ctx, stat_list, OID_AUTO, "missed_packets",
 			CTLFLAG_RD, &sc->stats.mpc,
 			"Missed Packets");
+	SYSCTL_ADD_UQUAD(ctx, stat_list, OID_AUTO, "recv_length_errors",
+			CTLFLAG_RD, &sc->stats.rlec,
+			"Receive Length Errors");
 	SYSCTL_ADD_UQUAD(ctx, stat_list, OID_AUTO, "recv_no_buff",
 			CTLFLAG_RD, &sc->stats.rnbc,
 			"Receive No Buffers");
@@ -4493,6 +4836,18 @@ em_add_hw_stats(struct e1000_softc *sc)
 	SYSCTL_ADD_UQUAD(ctx, stat_list, OID_AUTO, "xoff_txd",
 			CTLFLAG_RD, &sc->stats.xofftxc,
 			"XOFF Transmitted");
+	SYSCTL_ADD_UQUAD(ctx, stat_list, OID_AUTO, "unsupported_fc_recvd",
+			CTLFLAG_RD, &sc->stats.fcruc,
+			"Unsupported Flow Control Received");
+	SYSCTL_ADD_UQUAD(ctx, stat_list, OID_AUTO, "mgmt_pkts_recvd",
+			CTLFLAG_RD, &sc->stats.mgprc,
+			"Management Packets Received");
+	SYSCTL_ADD_UQUAD(ctx, stat_list, OID_AUTO, "mgmt_pkts_drop",
+			CTLFLAG_RD, &sc->stats.mgpdc,
+			"Management Packets Dropped");
+	SYSCTL_ADD_UQUAD(ctx, stat_list, OID_AUTO, "mgmt_pkts_txd",
+			CTLFLAG_RD, &sc->stats.mgptc,
+			"Management Packets Transmitted");
 
 	/* Packet Reception Stats */
 	SYSCTL_ADD_UQUAD(ctx, stat_list, OID_AUTO, "total_pkts_recvd",
@@ -4574,7 +4929,7 @@ em_add_hw_stats(struct e1000_softc *sc)
 	/* Interrupt Stats */
 
 	int_node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "interrupts",
-				    CTLFLAG_RD, NULL, "Interrupt Statistics");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Interrupt Statistics");
 	int_list = SYSCTL_CHILDREN(int_node);
 
 	SYSCTL_ADD_UQUAD(ctx, int_list, OID_AUTO, "asserts",
@@ -4839,7 +5194,7 @@ em_add_int_delay_sysctl(struct e1000_softc *sc, const char *name,
 	info->value = value;
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(sc->dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(sc->dev)),
-	    OID_AUTO, name, CTLTYPE_INT|CTLFLAG_RW,
+	    OID_AUTO, name, CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
 	    info, 0, em_sysctl_int_delay, "I", description);
 }
 
@@ -4885,6 +5240,55 @@ em_set_flowcntl(SYSCTL_HANDLER_ARGS)
 }
 
 /*
+ * Manage DMA Coalesce:
+ * Control values:
+ * 	0/1 - off/on
+ *	Legal timer values are:
+ *	250,500,1000-10000 in thousands
+ */
+static int
+igb_sysctl_dmac(SYSCTL_HANDLER_ARGS)
+{
+	struct e1000_softc *sc = (struct e1000_softc *) arg1;
+	int error;
+
+	error = sysctl_handle_int(oidp, &sc->dmac, 0, req);
+
+	if ((error) || (req->newptr == NULL))
+		return (error);
+
+	switch (sc->dmac) {
+		case 0:
+			/* Disabling */
+			break;
+		case 1: /* Just enable and use default */
+			sc->dmac = 1000;
+			break;
+		case 250:
+		case 500:
+		case 1000:
+		case 2000:
+		case 3000:
+		case 4000:
+		case 5000:
+		case 6000:
+		case 7000:
+		case 8000:
+		case 9000:
+		case 10000:
+			/* Legal values - allow */
+			break;
+		default:
+			/* Do nothing, illegal value */
+			sc->dmac = 0;
+			return (EINVAL);
+	}
+	/* Reinit the interface */
+	em_if_init(sc->ctx);
+	return (error);
+}
+
+/*
  * Manage Energy Efficient Ethernet:
  * Control values:
  *     0/1 - enabled/disabled
@@ -4895,11 +5299,17 @@ em_sysctl_eee(SYSCTL_HANDLER_ARGS)
 	struct e1000_softc *sc = (struct e1000_softc *) arg1;
 	int error, value;
 
-	value = sc->hw.dev_spec.ich8lan.eee_disable;
+	if (sc->hw.mac.type < igb_mac_min)
+		value = sc->hw.dev_spec.ich8lan.eee_disable;
+	else
+		value = sc->hw.dev_spec._82575.eee_disable;
 	error = sysctl_handle_int(oidp, &value, 0, req);
 	if (error || req->newptr == NULL)
 		return (error);
-	sc->hw.dev_spec.ich8lan.eee_disable = (value != 0);
+	if (sc->hw.mac.type < igb_mac_min)
+		sc->hw.dev_spec.ich8lan.eee_disable = (value != 0);
+	else
+		sc->hw.dev_spec._82575.eee_disable = (value != 0);
 	em_if_init(sc->ctx);
 
 	return (0);

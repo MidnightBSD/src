@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -28,7 +28,6 @@
  * The views and conclusions contained in the software and documentation are
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
- *
  */
 
 #ifndef _SYS_SIENA_IMPL_H
@@ -42,6 +41,14 @@
 #ifdef	__cplusplus
 extern "C" {
 #endif
+
+#ifndef EFX_TXQ_DC_SIZE
+#define	EFX_TXQ_DC_SIZE 1 /* 16 descriptors */
+#endif
+#ifndef EFX_RXQ_DC_SIZE
+#define	EFX_RXQ_DC_SIZE 3 /* 64 descriptors */
+#endif
+#define	EFX_TXQ_DC_NDESCS(_dcsize)	(8 << (_dcsize))
 
 #define	SIENA_NVRAM_CHUNK 0x80
 
@@ -155,7 +162,8 @@ siena_nvram_partn_lock(
 extern	__checkReturn		efx_rc_t
 siena_nvram_partn_unlock(
 	__in			efx_nic_t *enp,
-	__in			uint32_t partn);
+	__in			uint32_t partn,
+	__out_opt		uint32_t *verify_resultp);
 
 extern	__checkReturn		efx_rc_t
 siena_nvram_get_dynamic_cfg(
@@ -227,7 +235,8 @@ siena_nvram_partn_write(
 extern	__checkReturn		efx_rc_t
 siena_nvram_partn_rw_finish(
 	__in			efx_nic_t *enp,
-	__in			uint32_t partn);
+	__in			uint32_t partn,
+	__out_opt		uint32_t *verify_resultp);
 
 extern	__checkReturn		efx_rc_t
 siena_nvram_partn_get_version(

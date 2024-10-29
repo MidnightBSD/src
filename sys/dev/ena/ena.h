@@ -1,7 +1,7 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2015-2020 Amazon.com, Inc. or its affiliates.
+ * Copyright (c) 2015-2023 Amazon.com, Inc. or its affiliates.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,6 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
 
 #ifndef ENA_H
@@ -39,8 +38,8 @@
 #include "ena-com/ena_eth_com.h"
 
 #define ENA_DRV_MODULE_VER_MAJOR	2
-#define ENA_DRV_MODULE_VER_MINOR	6
-#define ENA_DRV_MODULE_VER_SUBMINOR	3
+#define ENA_DRV_MODULE_VER_MINOR	7
+#define ENA_DRV_MODULE_VER_SUBMINOR	0
 
 #define ENA_DRV_MODULE_NAME		"ena"
 
@@ -70,6 +69,7 @@
 #define ENA_DEFAULT_RING_SIZE		1024
 #define ENA_MIN_RING_SIZE		256
 
+#define ENA_BASE_CPU_UNSPECIFIED 	-1
 /*
  * Refill Rx queue when number of required descriptors is above
  * QUEUE_SIZE / ENA_RX_REFILL_THRESH_DIVIDER or ENA_RX_REFILL_THRESH_PACKET
@@ -202,9 +202,7 @@ struct ena_irq {
 	void *cookie;
 	unsigned int vector;
 	bool requested;
-#ifdef RSS
 	int cpu;
-#endif
 	char name[ENA_IRQNAME_SIZE];
 };
 
@@ -217,10 +215,8 @@ struct ena_que {
 	struct taskqueue *cleanup_tq;
 
 	uint32_t id;
-#ifdef RSS
 	int cpu;
 	cpuset_t cpu_mask;
-#endif
 	int domain;
 	struct sysctl_oid *oid;
 };
@@ -325,6 +321,7 @@ struct ena_ring {
 		uint8_t tx_max_header_size;
 		/* The maximum (and default) mbuf size for the Rx descriptor. */
 		uint16_t rx_mbuf_sz;
+
 	};
 
 	uint8_t first_interrupt;
@@ -448,6 +445,12 @@ struct ena_adapter {
 
 	ena_state_t flags;
 
+	/* IRQ CPU affinity */
+	int irq_cpu_base;
+	uint32_t irq_cpu_stride;
+
+	uint8_t rss_enabled;
+
 	/* Queue will represent one TX and one RX ring */
 	struct ena_que que[ENA_MAX_NUM_IO_QUEUES]
 	    __aligned(CACHE_LINE_SIZE);
@@ -477,13 +480,15 @@ struct ena_adapter {
 	uint32_t missing_tx_threshold;
 	bool disable_meta_caching;
 
-	uint16_t eni_metrics_sample_interval;
-	uint16_t eni_metrics_sample_interval_cnt;
+	uint16_t metrics_sample_interval;
+	uint16_t metrics_sample_interval_cnt;
 
 	/* Statistics */
 	struct ena_stats_dev dev_stats;
 	struct ena_hw_stats hw_stats;
 	struct ena_admin_eni_stats eni_metrics;
+	struct ena_admin_ena_srd_info ena_srd_info;
+	uint64_t *customer_metrics_array;
 
 	enum ena_regs_reset_reason_types reset_reason;
 };
@@ -524,7 +529,8 @@ int	ena_update_buf_ring_size(struct ena_adapter *adapter,
 int	ena_update_queue_size(struct ena_adapter *adapter, uint32_t new_tx_size,
     uint32_t new_rx_size);
 int	ena_update_io_queue_nb(struct ena_adapter *adapter, uint32_t new_num);
-
+int     ena_update_base_cpu(struct ena_adapter *adapter, int new_num);
+int     ena_update_cpu_stride(struct ena_adapter *adapter, uint32_t new_num);
 static inline int
 ena_mbuf_count(struct mbuf *mbuf)
 {

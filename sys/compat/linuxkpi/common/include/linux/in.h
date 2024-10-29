@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_IN_H_
-#define	_LINUX_IN_H_
+#ifndef	_LINUXKPI_LINUX_IN_H_
+#define	_LINUXKPI_LINUX_IN_H_
 
 #include "opt_inet.h"
 
@@ -43,4 +42,4 @@
 #define	ipv4_is_multicast(be)	IN_MULTICAST(ntohl(be))
 #define	ipv4_is_lbcast(be)	((be) == INADDR_BROADCAST)
 
-#endif	/* _LINUX_IN_H_ */
+#endif	/* _LINUXKPI_LINUX_IN_H_ */

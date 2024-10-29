@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012, 2015 Chelsio Communications, Inc.
  * All rights reserved.
@@ -28,9 +28,9 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
+#include "opt_kern_tls.h"
 #include "opt_ratelimit.h"
 
 #ifdef TCP_OFFLOAD
@@ -65,6 +65,8 @@
 #include <vm/vm_map.h>
 #include <vm/vm_page.h>
 
+#include <dev/iscsi/iscsi_proto.h>
+
 #include "common/common.h"
 #include "common/t4_msg.h"
 #include "common/t4_regs.h"
@@ -74,28 +76,6 @@
 
 static void	t4_aiotx_cancel(struct kaiocb *job);
 static void	t4_aiotx_queue_toep(struct socket *so, struct toepcb *toep);
-
-static size_t
-aiotx_mbuf_pgoff(struct mbuf *m)
-{
-	struct aiotx_buffer *ab;
-
-	MPASS(IS_AIOTX_MBUF(m));
-	ab = m->m_ext.ext_arg1;
-	return ((ab->ps.offset + (uintptr_t)m->m_ext.ext_arg2) % PAGE_SIZE);
-}
-
-static vm_page_t *
-aiotx_mbuf_pages(struct mbuf *m)
-{
-	struct aiotx_buffer *ab;
-	int npages;
-
-	MPASS(IS_AIOTX_MBUF(m));
-	ab = m->m_ext.ext_arg1;
-	npages = (ab->ps.offset + (uintptr_t)m->m_ext.ext_arg2) / PAGE_SIZE;
-	return (ab->ps.pages + npages);
-}
 
 void
 send_flowc_wr(struct toepcb *toep, struct tcpcb *tp)
@@ -122,13 +102,13 @@ send_flowc_wr(struct toepcb *toep, struct tcpcb *tp)
 		nparams++;
 	if (toep->params.tc_idx != -1) {
 		MPASS(toep->params.tc_idx >= 0 &&
-		    toep->params.tc_idx < sc->chip_params->nsched_cls);
+		    toep->params.tc_idx < sc->params.nsched_cls);
 		nparams++;
 	}
 
 	flowclen = sizeof(*flowc) + nparams * sizeof(struct fw_flowc_mnemval);
 
-	wr = alloc_wrqe(roundup2(flowclen, 16), toep->ofld_txq);
+	wr = alloc_wrqe(roundup2(flowclen, 16), &toep->ofld_txq->wrq);
 	if (wr == NULL) {
 		/* XXX */
 		panic("%s: allocation failure.", __func__);
@@ -209,7 +189,7 @@ update_tx_rate_limit(struct adapter *sc, struct toepcb *toep, u_int Bps)
 		rc = t4_reserve_cl_rl_kbps(sc, port_id, kbps, &tc_idx);
 		if (rc != 0)
 			return (rc);
-		MPASS(tc_idx >= 0 && tc_idx < sc->chip_params->nsched_cls);
+		MPASS(tc_idx >= 0 && tc_idx < sc->params.nsched_cls);
 	}
 
 	if (toep->params.tc_idx != tc_idx) {
@@ -222,7 +202,8 @@ update_tx_rate_limit(struct adapter *sc, struct toepcb *toep, u_int Bps)
 		    fw_flowc_mnemval);
 		flowclen16 = howmany(flowclen, 16);
 		if (toep->tx_credits < flowclen16 || toep->txsd_avail == 0 ||
-		    (wr = alloc_wrqe(roundup2(flowclen, 16), toep->ofld_txq)) == NULL) {
+		    (wr = alloc_wrqe(roundup2(flowclen, 16),
+		    &toep->ofld_txq->wrq)) == NULL) {
 			if (tc_idx >= 0)
 				t4_release_cl_rl(sc, port_id, tc_idx);
 			return (ENOMEM);
@@ -286,7 +267,7 @@ send_reset(struct adapter *sc, struct toepcb *toep, uint32_t snd_nxt)
 	KASSERT(toep->flags & TPF_FLOWC_WR_SENT,
 	    ("%s: flowc_wr not sent for tid %d.", __func__, tid));
 
-	wr = alloc_wrqe(sizeof(*req), toep->ofld_txq);
+	wr = alloc_wrqe(sizeof(*req), &toep->ofld_txq->wrq);
 	if (wr == NULL) {
 		/* XXX */
 		panic("%s: allocation failure.", __func__);
@@ -412,6 +393,9 @@ make_established(struct toepcb *toep, uint32_t iss, uint32_t irs, uint16_t opt)
 	send_flowc_wr(toep, tp);
 
 	soisconnected(so);
+
+	if (ulp_mode(toep) == ULP_MODE_TLS)
+		tls_establish(toep);
 }
 
 int
@@ -508,7 +492,7 @@ t4_close_conn(struct adapter *sc, struct toepcb *toep)
 	KASSERT(toep->flags & TPF_FLOWC_WR_SENT,
 	    ("%s: flowc_wr not sent for tid %u.", __func__, tid));
 
-	wr = alloc_wrqe(sizeof(*req), toep->ofld_txq);
+	wr = alloc_wrqe(sizeof(*req), &toep->ofld_txq->wrq);
 	if (wr == NULL) {
 		/* XXX */
 		panic("%s: allocation failure.", __func__);
@@ -532,38 +516,44 @@ t4_close_conn(struct adapter *sc, struct toepcb *toep)
 
 #define MAX_OFLD_TX_CREDITS (SGE_MAX_WR_LEN / 16)
 #define MIN_OFLD_TX_CREDITS (howmany(sizeof(struct fw_ofld_tx_data_wr) + 1, 16))
+#define MIN_ISO_TX_CREDITS  (howmany(sizeof(struct cpl_tx_data_iso), 16))
+#define MIN_TX_CREDITS(iso)						\
+	(MIN_OFLD_TX_CREDITS + ((iso) ? MIN_ISO_TX_CREDITS : 0))
 
 /* Maximum amount of immediate data we could stuff in a WR */
 static inline int
-max_imm_payload(int tx_credits)
+max_imm_payload(int tx_credits, int iso)
 {
+	const int iso_cpl_size = iso ? sizeof(struct cpl_tx_data_iso) : 0;
 	const int n = 1;	/* Use no more than one desc for imm. data WR */
 
 	KASSERT(tx_credits >= 0 &&
 		tx_credits <= MAX_OFLD_TX_CREDITS,
 		("%s: %d credits", __func__, tx_credits));
 
-	if (tx_credits < MIN_OFLD_TX_CREDITS)
+	if (tx_credits < MIN_TX_CREDITS(iso))
 		return (0);
 
 	if (tx_credits >= (n * EQ_ESIZE) / 16)
-		return ((n * EQ_ESIZE) - sizeof(struct fw_ofld_tx_data_wr));
+		return ((n * EQ_ESIZE) - sizeof(struct fw_ofld_tx_data_wr) -
+		    iso_cpl_size);
 	else
-		return (tx_credits * 16 - sizeof(struct fw_ofld_tx_data_wr));
+		return (tx_credits * 16 - sizeof(struct fw_ofld_tx_data_wr) -
+		    iso_cpl_size);
 }
 
 /* Maximum number of SGL entries we could stuff in a WR */
 static inline int
-max_dsgl_nsegs(int tx_credits)
+max_dsgl_nsegs(int tx_credits, int iso)
 {
 	int nseg = 1;	/* ulptx_sgl has room for 1, rest ulp_tx_sge_pair */
-	int sge_pair_credits = tx_credits - MIN_OFLD_TX_CREDITS;
+	int sge_pair_credits = tx_credits - MIN_TX_CREDITS(iso);
 
 	KASSERT(tx_credits >= 0 &&
 		tx_credits <= MAX_OFLD_TX_CREDITS,
 		("%s: %d credits", __func__, tx_credits));
 
-	if (tx_credits < MIN_OFLD_TX_CREDITS)
+	if (tx_credits < MIN_TX_CREDITS(iso))
 		return (0);
 
 	nseg += 2 * (sge_pair_credits * 16 / 24);
@@ -574,12 +564,13 @@ max_dsgl_nsegs(int tx_credits)
 }
 
 static inline void
-write_tx_wr(void *dst, struct toepcb *toep, unsigned int immdlen,
-    unsigned int plen, uint8_t credits, int shove, int ulp_submode)
+write_tx_wr(void *dst, struct toepcb *toep, int fw_wr_opcode,
+    unsigned int immdlen, unsigned int plen, uint8_t credits, int shove,
+    int ulp_submode)
 {
 	struct fw_ofld_tx_data_wr *txwr = dst;
 
-	txwr->op_to_immdlen = htobe32(V_WR_OP(FW_OFLD_TX_DATA_WR) |
+	txwr->op_to_immdlen = htobe32(V_WR_OP(fw_wr_opcode) |
 	    V_FW_WR_IMMDLEN(immdlen));
 	txwr->flowid_len16 = htobe32(V_FW_WR_FLOWID(toep->tid) |
 	    V_FW_WR_LEN16(credits));
@@ -620,13 +611,9 @@ write_tx_sgl(void *dst, struct mbuf *start, struct mbuf *stop, int nsegs, int n)
 
 	i = -1;
 	for (m = start; m != stop; m = m->m_next) {
-		if (IS_AIOTX_MBUF(m))
-			rc = sglist_append_vmpages(&sg, aiotx_mbuf_pages(m),
-			    aiotx_mbuf_pgoff(m), m->m_len);
-#if IFCAP_NOMAP != 0
-		else if (m->m_flags & M_NOMAP)
-			rc = sglist_append_mb_ext_pgs(&sg, m);
-#endif
+		if (m->m_flags & M_EXTPG)
+			rc = sglist_append_mbuf_epg(&sg, m,
+			    mtod(m, vm_offset_t), m->m_len);
 		else
 			rc = sglist_append(&sg, mtod(m, void *), m->m_len);
 		if (__predict_false(rc != 0))
@@ -688,7 +675,7 @@ t4_push_frames(struct adapter *sc, struct toepcb *toep, int drop)
 	struct sockbuf *sb = &so->so_snd;
 	int tx_credits, shove, compl, sowwakeup;
 	struct ofld_tx_sdesc *txsd;
-	bool aiotx_mbuf_seen;
+	bool nomap_mbuf_seen;
 
 	INP_WLOCK_ASSERT(inp);
 	KASSERT(toep->flags & TPF_FLOWC_WR_SENT,
@@ -727,8 +714,8 @@ t4_push_frames(struct adapter *sc, struct toepcb *toep, int drop)
 	txsd = &toep->txsd[toep->txsd_pidx];
 	do {
 		tx_credits = min(toep->tx_credits, MAX_OFLD_TX_CREDITS);
-		max_imm = max_imm_payload(tx_credits);
-		max_nsegs = max_dsgl_nsegs(tx_credits);
+		max_imm = max_imm_payload(tx_credits, 0);
+		max_nsegs = max_dsgl_nsegs(tx_credits, 0);
 
 		SOCKBUF_LOCK(sb);
 		sowwakeup = drop;
@@ -741,20 +728,27 @@ t4_push_frames(struct adapter *sc, struct toepcb *toep, int drop)
 		plen = 0;
 		nsegs = 0;
 		max_nsegs_1mbuf = 0; /* max # of SGL segments in any one mbuf */
-		aiotx_mbuf_seen = false;
+		nomap_mbuf_seen = false;
 		for (m = sndptr; m != NULL; m = m->m_next) {
 			int n;
 
 			if ((m->m_flags & M_NOTAVAIL) != 0)
 				break;
-			if (IS_AIOTX_MBUF(m))
-				n = sglist_count_vmpages(aiotx_mbuf_pages(m),
-				    aiotx_mbuf_pgoff(m), m->m_len);
-#if IFCAP_NOMAP != 0
-			else if (m->m_flags & M_NOMAP)
-				n = sglist_count_mb_ext_pgs(m);
+			if (m->m_flags & M_EXTPG) {
+#ifdef KERN_TLS
+				if (m->m_epg_tls != NULL) {
+					toep->flags |= TPF_KTLS;
+					if (plen == 0) {
+						SOCKBUF_UNLOCK(sb);
+						t4_push_ktls(sc, toep, 0);
+						return;
+					}
+					break;
+				}
 #endif
-			else
+				n = sglist_count_mbuf_epg(m,
+				    mtod(m, vm_offset_t), m->m_len);
+			} else
 				n = sglist_count(mtod(m, void *), m->m_len);
 
 			nsegs += n;
@@ -781,8 +775,8 @@ t4_push_frames(struct adapter *sc, struct toepcb *toep, int drop)
 				break;
 			}
 
-			if (IS_AIOTX_MBUF(m))
-				aiotx_mbuf_seen = true;
+			if (m->m_flags & M_EXTPG)
+				nomap_mbuf_seen = true;
 			if (max_nsegs_1mbuf < n)
 				max_nsegs_1mbuf = n;
 			sb_sndptr = m;	/* new sb->sb_sndptr if all goes well */
@@ -832,12 +826,12 @@ t4_push_frames(struct adapter *sc, struct toepcb *toep, int drop)
 			panic("%s: excess tx.", __func__);
 
 		shove = m == NULL && !(tp->t_flags & TF_MORETOCOME);
-		if (plen <= max_imm && !aiotx_mbuf_seen) {
+		if (plen <= max_imm && !nomap_mbuf_seen) {
 
 			/* Immediate data tx */
 
 			wr = alloc_wrqe(roundup2(sizeof(*txwr) + plen, 16),
-					toep->ofld_txq);
+					&toep->ofld_txq->wrq);
 			if (wr == NULL) {
 				/* XXX: how will we recover from this? */
 				toep->flags |= TPF_TX_SUSPENDED;
@@ -845,7 +839,8 @@ t4_push_frames(struct adapter *sc, struct toepcb *toep, int drop)
 			}
 			txwr = wrtod(wr);
 			credits = howmany(wr->wr_len, 16);
-			write_tx_wr(txwr, toep, plen, plen, credits, shove, 0);
+			write_tx_wr(txwr, toep, FW_OFLD_TX_DATA_WR, plen, plen,
+			    credits, shove, 0);
 			m_copydata(sndptr, 0, plen, (void *)(txwr + 1));
 			nsegs = 0;
 		} else {
@@ -855,7 +850,8 @@ t4_push_frames(struct adapter *sc, struct toepcb *toep, int drop)
 
 			wr_len = sizeof(*txwr) + sizeof(struct ulptx_sgl) +
 			    ((3 * (nsegs - 1)) / 2 + ((nsegs - 1) & 1)) * 8;
-			wr = alloc_wrqe(roundup2(wr_len, 16), toep->ofld_txq);
+			wr = alloc_wrqe(roundup2(wr_len, 16),
+			    &toep->ofld_txq->wrq);
 			if (wr == NULL) {
 				/* XXX: how will we recover from this? */
 				toep->flags |= TPF_TX_SUSPENDED;
@@ -863,7 +859,8 @@ t4_push_frames(struct adapter *sc, struct toepcb *toep, int drop)
 			}
 			txwr = wrtod(wr);
 			credits = howmany(wr_len, 16);
-			write_tx_wr(txwr, toep, 0, plen, credits, shove, 0);
+			write_tx_wr(txwr, toep, FW_OFLD_TX_DATA_WR, 0, plen,
+			    credits, shove, 0);
 			write_tx_sgl(txwr + 1, sndptr, m, nsegs,
 			    max_nsegs_1mbuf);
 			if (wr_len & 0xf) {
@@ -939,20 +936,224 @@ rqdrop_locked(struct mbufq *q, int plen)
 	}
 }
 
+/*
+ * Not a bit in the TCB, but is a bit in the ulp_submode field of the
+ * CPL_TX_DATA flags field in FW_ISCSI_TX_DATA_WR.
+ */
+#define	ULP_ISO		G_TX_ULP_SUBMODE(F_FW_ISCSI_TX_DATA_WR_ULPSUBMODE_ISO)
+
+static void
+write_tx_data_iso(void *dst, u_int ulp_submode, uint8_t flags, uint16_t mss,
+    int len, int npdu)
+{
+	struct cpl_tx_data_iso *cpl;
+	unsigned int burst_size;
+	unsigned int last;
+
+	/*
+	 * The firmware will set the 'F' bit on the last PDU when
+	 * either condition is true:
+	 *
+	 * - this large PDU is marked as the "last" slice
+	 *
+	 * - the amount of data payload bytes equals the burst_size
+	 *
+	 * The strategy used here is to always set the burst_size
+	 * artificially high (len includes the size of the template
+	 * BHS) and only set the "last" flag if the original PDU had
+	 * 'F' set.
+	 */
+	burst_size = len;
+	last = !!(flags & CXGBE_ISO_F);
+
+	cpl = (struct cpl_tx_data_iso *)dst;
+	cpl->op_to_scsi = htonl(V_CPL_TX_DATA_ISO_OP(CPL_TX_DATA_ISO) |
+	    V_CPL_TX_DATA_ISO_FIRST(1) | V_CPL_TX_DATA_ISO_LAST(last) |
+	    V_CPL_TX_DATA_ISO_CPLHDRLEN(0) |
+	    V_CPL_TX_DATA_ISO_HDRCRC(!!(ulp_submode & ULP_CRC_HEADER)) |
+	    V_CPL_TX_DATA_ISO_PLDCRC(!!(ulp_submode & ULP_CRC_DATA)) |
+	    V_CPL_TX_DATA_ISO_IMMEDIATE(0) |
+	    V_CPL_TX_DATA_ISO_SCSI(CXGBE_ISO_TYPE(flags)));
+
+	cpl->ahs_len = 0;
+	cpl->mpdu = htons(DIV_ROUND_UP(mss, 4));
+	cpl->burst_size = htonl(DIV_ROUND_UP(burst_size, 4));
+	cpl->len = htonl(len);
+	cpl->reserved2_seglen_offset = htonl(0);
+	cpl->datasn_offset = htonl(0);
+	cpl->buffer_offset = htonl(0);
+	cpl->reserved3 = 0;
+}
+
+static struct wrqe *
+write_iscsi_mbuf_wr(struct toepcb *toep, struct mbuf *sndptr)
+{
+	struct mbuf *m;
+	struct fw_ofld_tx_data_wr *txwr;
+	struct cpl_tx_data_iso *cpl_iso;
+	void *p;
+	struct wrqe *wr;
+	u_int plen, nsegs, credits, max_imm, max_nsegs, max_nsegs_1mbuf;
+	u_int adjusted_plen, imm_data, ulp_submode;
+	struct inpcb *inp = toep->inp;
+	struct tcpcb *tp = intotcpcb(inp);
+	int tx_credits, shove, npdu, wr_len;
+	uint16_t iso_mss;
+	static const u_int ulp_extra_len[] = {0, 4, 4, 8};
+	bool iso, nomap_mbuf_seen;
+
+	M_ASSERTPKTHDR(sndptr);
+
+	tx_credits = min(toep->tx_credits, MAX_OFLD_TX_CREDITS);
+	if (mbuf_raw_wr(sndptr)) {
+		plen = sndptr->m_pkthdr.len;
+		KASSERT(plen <= SGE_MAX_WR_LEN,
+		    ("raw WR len %u is greater than max WR len", plen));
+		if (plen > tx_credits * 16)
+			return (NULL);
+
+		wr = alloc_wrqe(roundup2(plen, 16), &toep->ofld_txq->wrq);
+		if (__predict_false(wr == NULL))
+			return (NULL);
+
+		m_copydata(sndptr, 0, plen, wrtod(wr));
+		return (wr);
+	}
+
+	iso = mbuf_iscsi_iso(sndptr);
+	max_imm = max_imm_payload(tx_credits, iso);
+	max_nsegs = max_dsgl_nsegs(tx_credits, iso);
+	iso_mss = mbuf_iscsi_iso_mss(sndptr);
+
+	plen = 0;
+	nsegs = 0;
+	max_nsegs_1mbuf = 0; /* max # of SGL segments in any one mbuf */
+	nomap_mbuf_seen = false;
+	for (m = sndptr; m != NULL; m = m->m_next) {
+		int n;
+
+		if (m->m_flags & M_EXTPG)
+			n = sglist_count_mbuf_epg(m, mtod(m, vm_offset_t),
+			    m->m_len);
+		else
+			n = sglist_count(mtod(m, void *), m->m_len);
+
+		nsegs += n;
+		plen += m->m_len;
+
+		/*
+		 * This mbuf would send us _over_ the nsegs limit.
+		 * Suspend tx because the PDU can't be sent out.
+		 */
+		if ((nomap_mbuf_seen || plen > max_imm) && nsegs > max_nsegs)
+			return (NULL);
+
+		if (m->m_flags & M_EXTPG)
+			nomap_mbuf_seen = true;
+		if (max_nsegs_1mbuf < n)
+			max_nsegs_1mbuf = n;
+	}
+
+	if (__predict_false(toep->flags & TPF_FIN_SENT))
+		panic("%s: excess tx.", __func__);
+
+	/*
+	 * We have a PDU to send.  All of it goes out in one WR so 'm'
+	 * is NULL.  A PDU's length is always a multiple of 4.
+	 */
+	MPASS(m == NULL);
+	MPASS((plen & 3) == 0);
+	MPASS(sndptr->m_pkthdr.len == plen);
+
+	shove = !(tp->t_flags & TF_MORETOCOME);
+
+	/*
+	 * plen doesn't include header and data digests, which are
+	 * generated and inserted in the right places by the TOE, but
+	 * they do occupy TCP sequence space and need to be accounted
+	 * for.
+	 */
+	ulp_submode = mbuf_ulp_submode(sndptr);
+	MPASS(ulp_submode < nitems(ulp_extra_len));
+	npdu = iso ? howmany(plen - ISCSI_BHS_SIZE, iso_mss) : 1;
+	adjusted_plen = plen + ulp_extra_len[ulp_submode] * npdu;
+	if (iso)
+		adjusted_plen += ISCSI_BHS_SIZE * (npdu - 1);
+	wr_len = sizeof(*txwr);
+	if (iso)
+		wr_len += sizeof(struct cpl_tx_data_iso);
+	if (plen <= max_imm && !nomap_mbuf_seen) {
+		/* Immediate data tx */
+		imm_data = plen;
+		wr_len += plen;
+		nsegs = 0;
+	} else {
+		/* DSGL tx */
+		imm_data = 0;
+		wr_len += sizeof(struct ulptx_sgl) +
+		    ((3 * (nsegs - 1)) / 2 + ((nsegs - 1) & 1)) * 8;
+	}
+
+	wr = alloc_wrqe(roundup2(wr_len, 16), &toep->ofld_txq->wrq);
+	if (wr == NULL) {
+		/* XXX: how will we recover from this? */
+		return (NULL);
+	}
+	txwr = wrtod(wr);
+	credits = howmany(wr->wr_len, 16);
+
+	if (iso) {
+		write_tx_wr(txwr, toep, FW_ISCSI_TX_DATA_WR,
+		    imm_data + sizeof(struct cpl_tx_data_iso),
+		    adjusted_plen, credits, shove, ulp_submode | ULP_ISO);
+		cpl_iso = (struct cpl_tx_data_iso *)(txwr + 1);
+		MPASS(plen == sndptr->m_pkthdr.len);
+		write_tx_data_iso(cpl_iso, ulp_submode,
+		    mbuf_iscsi_iso_flags(sndptr), iso_mss, plen, npdu);
+		p = cpl_iso + 1;
+	} else {
+		write_tx_wr(txwr, toep, FW_OFLD_TX_DATA_WR, imm_data,
+		    adjusted_plen, credits, shove, ulp_submode);
+		p = txwr + 1;
+	}
+
+	if (imm_data != 0) {
+		m_copydata(sndptr, 0, plen, p);
+	} else {
+		write_tx_sgl(p, sndptr, m, nsegs, max_nsegs_1mbuf);
+		if (wr_len & 0xf) {
+			uint64_t *pad = (uint64_t *)((uintptr_t)txwr + wr_len);
+			*pad = 0;
+		}
+	}
+
+	KASSERT(toep->tx_credits >= credits,
+	    ("%s: not enough credits: credits %u "
+		"toep->tx_credits %u tx_credits %u nsegs %u "
+		"max_nsegs %u iso %d", __func__, credits,
+		toep->tx_credits, tx_credits, nsegs, max_nsegs, iso));
+
+	tp->snd_nxt += adjusted_plen;
+	tp->snd_max += adjusted_plen;
+
+	counter_u64_add(toep->ofld_txq->tx_iscsi_pdus, npdu);
+	counter_u64_add(toep->ofld_txq->tx_iscsi_octets, plen);
+	if (iso)
+		counter_u64_add(toep->ofld_txq->tx_iscsi_iso_wrs, 1);
+
+	return (wr);
+}
+
 void
 t4_push_pdus(struct adapter *sc, struct toepcb *toep, int drop)
 {
 	struct mbuf *sndptr, *m;
-	struct fw_ofld_tx_data_wr *txwr;
+	struct fw_wr_hdr *wrhdr;
 	struct wrqe *wr;
-	u_int plen, nsegs, credits, max_imm, max_nsegs, max_nsegs_1mbuf;
-	u_int adjusted_plen, ulp_submode;
+	u_int plen, credits;
 	struct inpcb *inp = toep->inp;
-	struct tcpcb *tp = intotcpcb(inp);
-	int tx_credits, shove;
 	struct ofld_tx_sdesc *txsd = &toep->txsd[toep->txsd_pidx];
 	struct mbufq *pduq = &toep->ulp_pduq;
-	static const u_int ulp_extra_len[] = {0, 4, 4, 8};
 
 	INP_WLOCK_ASSERT(inp);
 	KASSERT(toep->flags & TPF_FLOWC_WR_SENT,
@@ -973,102 +1174,44 @@ t4_push_pdus(struct adapter *sc, struct toepcb *toep, int drop)
 		return;
 	}
 
-	if (drop)
+	if (drop) {
+		struct socket *so = inp->inp_socket;
+		struct sockbuf *sb = &so->so_snd;
+		int sbu;
+
+		/*
+		 * An unlocked read is ok here as the data should only
+		 * transition from a non-zero value to either another
+		 * non-zero value or zero.  Once it is zero it should
+		 * stay zero.
+		 */
+		if (__predict_false(sbused(sb)) > 0) {
+			SOCKBUF_LOCK(sb);
+			sbu = sbused(sb);
+			if (sbu > 0) {
+				/*
+				 * The data transmitted before the
+				 * tid's ULP mode changed to ISCSI is
+				 * still in so_snd.  Incoming credits
+				 * should account for so_snd first.
+				 */
+				sbdrop_locked(sb, min(sbu, drop));
+				drop -= min(sbu, drop);
+			}
+			sowwakeup_locked(so);	/* unlocks so_snd */
+		}
 		rqdrop_locked(&toep->ulp_pdu_reclaimq, drop);
+	}
 
 	while ((sndptr = mbufq_first(pduq)) != NULL) {
-		M_ASSERTPKTHDR(sndptr);
-
-		tx_credits = min(toep->tx_credits, MAX_OFLD_TX_CREDITS);
-		max_imm = max_imm_payload(tx_credits);
-		max_nsegs = max_dsgl_nsegs(tx_credits);
-
-		plen = 0;
-		nsegs = 0;
-		max_nsegs_1mbuf = 0; /* max # of SGL segments in any one mbuf */
-		for (m = sndptr; m != NULL; m = m->m_next) {
-			int n = sglist_count(mtod(m, void *), m->m_len);
-
-			nsegs += n;
-			plen += m->m_len;
-
-			/*
-			 * This mbuf would send us _over_ the nsegs limit.
-			 * Suspend tx because the PDU can't be sent out.
-			 */
-			if (plen > max_imm && nsegs > max_nsegs) {
-				toep->flags |= TPF_TX_SUSPENDED;
-				return;
-			}
-
-			if (max_nsegs_1mbuf < n)
-				max_nsegs_1mbuf = n;
+		wr = write_iscsi_mbuf_wr(toep, sndptr);
+		if (wr == NULL) {
+			toep->flags |= TPF_TX_SUSPENDED;
+			return;
 		}
 
-		if (__predict_false(toep->flags & TPF_FIN_SENT))
-			panic("%s: excess tx.", __func__);
-
-		/*
-		 * We have a PDU to send.  All of it goes out in one WR so 'm'
-		 * is NULL.  A PDU's length is always a multiple of 4.
-		 */
-		MPASS(m == NULL);
-		MPASS((plen & 3) == 0);
-		MPASS(sndptr->m_pkthdr.len == plen);
-
-		shove = !(tp->t_flags & TF_MORETOCOME);
-		ulp_submode = mbuf_ulp_submode(sndptr);
-		MPASS(ulp_submode < nitems(ulp_extra_len));
-
-		/*
-		 * plen doesn't include header and data digests, which are
-		 * generated and inserted in the right places by the TOE, but
-		 * they do occupy TCP sequence space and need to be accounted
-		 * for.
-		 */
-		adjusted_plen = plen + ulp_extra_len[ulp_submode];
-		if (plen <= max_imm) {
-
-			/* Immediate data tx */
-
-			wr = alloc_wrqe(roundup2(sizeof(*txwr) + plen, 16),
-					toep->ofld_txq);
-			if (wr == NULL) {
-				/* XXX: how will we recover from this? */
-				toep->flags |= TPF_TX_SUSPENDED;
-				return;
-			}
-			txwr = wrtod(wr);
-			credits = howmany(wr->wr_len, 16);
-			write_tx_wr(txwr, toep, plen, adjusted_plen, credits,
-			    shove, ulp_submode);
-			m_copydata(sndptr, 0, plen, (void *)(txwr + 1));
-			nsegs = 0;
-		} else {
-			int wr_len;
-
-			/* DSGL tx */
-			wr_len = sizeof(*txwr) + sizeof(struct ulptx_sgl) +
-			    ((3 * (nsegs - 1)) / 2 + ((nsegs - 1) & 1)) * 8;
-			wr = alloc_wrqe(roundup2(wr_len, 16), toep->ofld_txq);
-			if (wr == NULL) {
-				/* XXX: how will we recover from this? */
-				toep->flags |= TPF_TX_SUSPENDED;
-				return;
-			}
-			txwr = wrtod(wr);
-			credits = howmany(wr_len, 16);
-			write_tx_wr(txwr, toep, 0, adjusted_plen, credits,
-			    shove, ulp_submode);
-			write_tx_sgl(txwr + 1, sndptr, m, nsegs,
-			    max_nsegs_1mbuf);
-			if (wr_len & 0xf) {
-				uint64_t *pad = (uint64_t *)
-				    ((uintptr_t)txwr + wr_len);
-				*pad = 0;
-			}
-		}
-
+		plen = sndptr->m_pkthdr.len;
+		credits = howmany(wr->wr_len, 16);
 		KASSERT(toep->tx_credits >= credits,
 			("%s: not enough credits", __func__));
 
@@ -1079,15 +1222,18 @@ t4_push_pdus(struct adapter *sc, struct toepcb *toep, int drop)
 		toep->tx_credits -= credits;
 		toep->tx_nocompl += credits;
 		toep->plen_nocompl += plen;
-		if (toep->tx_credits <= toep->tx_total * 3 / 8 &&
+
+		/*
+		 * Ensure there are enough credits for a full-sized WR
+		 * as page pod WRs can be full-sized.
+		 */
+		if (toep->tx_credits <= SGE_MAX_WR_LEN * 5 / 4 &&
 		    toep->tx_nocompl >= toep->tx_total / 4) {
-			txwr->op_to_immdlen |= htobe32(F_FW_WR_COMPL);
+			wrhdr = wrtod(wr);
+			wrhdr->hi |= htobe32(F_FW_WR_COMPL);
 			toep->tx_nocompl = 0;
 			toep->plen_nocompl = 0;
 		}
-
-		tp->snd_nxt += adjusted_plen;
-		tp->snd_max += adjusted_plen;
 
 		toep->flags |= TPF_TX_DATA_SENT;
 		if (toep->tx_credits < MIN_OFLD_TX_CREDITS)
@@ -1111,6 +1257,18 @@ t4_push_pdus(struct adapter *sc, struct toepcb *toep, int drop)
 		t4_close_conn(sc, toep);
 }
 
+static inline void
+t4_push_data(struct adapter *sc, struct toepcb *toep, int drop)
+{
+
+	if (ulp_mode(toep) == ULP_MODE_ISCSI)
+		t4_push_pdus(sc, toep, drop);
+	else if (toep->flags & TPF_KTLS)
+		t4_push_ktls(sc, toep, drop);
+	else
+		t4_push_frames(sc, toep, drop);
+}
+
 int
 t4_tod_output(struct toedev *tod, struct tcpcb *tp)
 {
@@ -1125,12 +1283,7 @@ t4_tod_output(struct toedev *tod, struct tcpcb *tp)
 	    ("%s: inp %p dropped.", __func__, inp));
 	KASSERT(toep != NULL, ("%s: toep is NULL", __func__));
 
-	if (ulp_mode(toep) == ULP_MODE_ISCSI)
-		t4_push_pdus(sc, toep, 0);
-	else if (tls_tx_key(toep))
-		t4_push_tls_records(sc, toep, 0);
-	else
-		t4_push_frames(sc, toep, 0);
+	t4_push_data(sc, toep, 0);
 
 	return (0);
 }
@@ -1150,14 +1303,8 @@ t4_send_fin(struct toedev *tod, struct tcpcb *tp)
 	KASSERT(toep != NULL, ("%s: toep is NULL", __func__));
 
 	toep->flags |= TPF_SEND_FIN;
-	if (tp->t_state >= TCPS_ESTABLISHED) {
-		if (ulp_mode(toep) == ULP_MODE_ISCSI)
-			t4_push_pdus(sc, toep, 0);
-		else if (tls_tx_key(toep))
-			t4_push_tls_records(sc, toep, 0);
-		else
-			t4_push_frames(sc, toep, 0);
-	}
+	if (tp->t_state >= TCPS_ESTABLISHED)
+		t4_push_data(sc, toep, 0);
 
 	return (0);
 }
@@ -1222,7 +1369,7 @@ do_peer_close(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 	KASSERT(toep->tid == tid, ("%s: toep tid mismatch", __func__));
 
 	CURVNET_SET(toep->vnet);
-	INP_INFO_RLOCK_ET(&V_tcbinfo, et);
+	NET_EPOCH_ENTER(et);
 	INP_WLOCK(inp);
 	tp = intotcpcb(inp);
 
@@ -1234,8 +1381,6 @@ do_peer_close(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 	if (toep->flags & TPF_ABORT_SHUTDOWN)
 		goto done;
 
-	tp->rcv_nxt++;	/* FIN */
-
 	so = inp->inp_socket;
 	socantrcvmore(so);
 	if (ulp_mode(toep) == ULP_MODE_TCPDDP) {
@@ -1246,16 +1391,26 @@ do_peer_close(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 		DDP_UNLOCK(toep);
 	}
 
-	if (ulp_mode(toep) != ULP_MODE_RDMA) {
-		KASSERT(tp->rcv_nxt == be32toh(cpl->rcv_nxt),
-	    		("%s: rcv_nxt mismatch: %u %u", __func__, tp->rcv_nxt,
-	    		be32toh(cpl->rcv_nxt)));
+	if (ulp_mode(toep) == ULP_MODE_RDMA ||
+	    (ulp_mode(toep) == ULP_MODE_ISCSI && chip_id(sc) >= CHELSIO_T6)) {
+		/*
+		 * There might be data received via DDP before the FIN
+		 * not reported to the driver.  Just assume the
+		 * sequence number in the CPL is correct as the
+		 * sequence number of the FIN.
+		 */
+	} else {
+		KASSERT(tp->rcv_nxt + 1 == be32toh(cpl->rcv_nxt),
+		    ("%s: rcv_nxt mismatch: %u %u", __func__, tp->rcv_nxt,
+		    be32toh(cpl->rcv_nxt)));
 	}
+
+	tp->rcv_nxt = be32toh(cpl->rcv_nxt);
 
 	switch (tp->t_state) {
 	case TCPS_SYN_RECEIVED:
 		tp->t_starttime = ticks;
-		/* FALLTHROUGH */ 
+		/* FALLTHROUGH */
 
 	case TCPS_ESTABLISHED:
 		tcp_state_change(tp, TCPS_CLOSE_WAIT);
@@ -1266,9 +1421,10 @@ do_peer_close(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 		break;
 
 	case TCPS_FIN_WAIT_2:
+		restore_so_proto(so, inp->inp_vflag & INP_IPV6);
 		tcp_twstart(tp);
 		INP_UNLOCK_ASSERT(inp);	 /* safe, we have a ref on the inp */
-		INP_INFO_RUNLOCK_ET(&V_tcbinfo, et);
+		NET_EPOCH_EXIT(et);
 		CURVNET_RESTORE();
 
 		INP_WLOCK(inp);
@@ -1281,7 +1437,7 @@ do_peer_close(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 	}
 done:
 	INP_WUNLOCK(inp);
-	INP_INFO_RUNLOCK_ET(&V_tcbinfo, et);
+	NET_EPOCH_EXIT(et);
 	CURVNET_RESTORE();
 	return (0);
 }
@@ -1311,7 +1467,7 @@ do_close_con_rpl(struct sge_iq *iq, const struct rss_header *rss,
 	KASSERT(toep->tid == tid, ("%s: toep tid mismatch", __func__));
 
 	CURVNET_SET(toep->vnet);
-	INP_INFO_RLOCK_ET(&V_tcbinfo, et);
+	NET_EPOCH_ENTER(et);
 	INP_WLOCK(inp);
 	tp = intotcpcb(inp);
 
@@ -1326,10 +1482,11 @@ do_close_con_rpl(struct sge_iq *iq, const struct rss_header *rss,
 
 	switch (tp->t_state) {
 	case TCPS_CLOSING:	/* see TCPS_FIN_WAIT_2 in do_peer_close too */
+		restore_so_proto(so, inp->inp_vflag & INP_IPV6);
 		tcp_twstart(tp);
 release:
 		INP_UNLOCK_ASSERT(inp);	/* safe, we have a ref on the  inp */
-		INP_INFO_RUNLOCK_ET(&V_tcbinfo, et);
+		NET_EPOCH_EXIT(et);
 		CURVNET_RESTORE();
 
 		INP_WLOCK(inp);
@@ -1354,19 +1511,19 @@ release:
 	}
 done:
 	INP_WUNLOCK(inp);
-	INP_INFO_RUNLOCK_ET(&V_tcbinfo, et);
+	NET_EPOCH_EXIT(et);
 	CURVNET_RESTORE();
 	return (0);
 }
 
 void
-send_abort_rpl(struct adapter *sc, struct sge_wrq *ofld_txq, int tid,
+send_abort_rpl(struct adapter *sc, struct sge_ofld_txq *ofld_txq, int tid,
     int rst_status)
 {
 	struct wrqe *wr;
 	struct cpl_abort_rpl *cpl;
 
-	wr = alloc_wrqe(sizeof(*cpl), ofld_txq);
+	wr = alloc_wrqe(sizeof(*cpl), &ofld_txq->wrq);
 	if (wr == NULL) {
 		/* XXX */
 		panic("%s: allocation failure.", __func__);
@@ -1406,7 +1563,7 @@ do_abort_req(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 	const struct cpl_abort_req_rss *cpl = (const void *)(rss + 1);
 	unsigned int tid = GET_TID(cpl);
 	struct toepcb *toep = lookup_tid(sc, tid);
-	struct sge_wrq *ofld_txq = toep->ofld_txq;
+	struct sge_ofld_txq *ofld_txq = toep->ofld_txq;
 	struct inpcb *inp;
 	struct tcpcb *tp;
 	struct epoch_tracker et;
@@ -1431,7 +1588,7 @@ do_abort_req(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 
 	inp = toep->inp;
 	CURVNET_SET(toep->vnet);
-	INP_INFO_RLOCK_ET(&V_tcbinfo, et);	/* for tcp_close */
+	NET_EPOCH_ENTER(et);	/* for tcp_close */
 	INP_WLOCK(inp);
 
 	tp = intotcpcb(inp);
@@ -1465,7 +1622,7 @@ do_abort_req(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 
 	final_cpl_received(toep);
 done:
-	INP_INFO_RUNLOCK_ET(&V_tcbinfo, et);
+	NET_EPOCH_EXIT(et);
 	CURVNET_RESTORE();
 	send_abort_rpl(sc, ofld_txq, tid, CPL_ABORT_NO_RST);
 	return (0);
@@ -1519,7 +1676,7 @@ do_rx_data(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 	struct socket *so;
 	struct sockbuf *sb;
 	struct epoch_tracker et;
-	int len, rx_credits;
+	int len;
 	uint32_t ddp_placed = 0;
 
 	if (__predict_false(toep->flags & TPF_SYNQE)) {
@@ -1589,12 +1746,12 @@ do_rx_data(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 		INP_WUNLOCK(inp);
 
 		CURVNET_SET(toep->vnet);
-		INP_INFO_RLOCK_ET(&V_tcbinfo, et);
+		NET_EPOCH_ENTER(et);
 		INP_WLOCK(inp);
 		tp = tcp_drop(tp, ECONNRESET);
 		if (tp)
 			INP_WUNLOCK(inp);
-		INP_INFO_RUNLOCK_ET(&V_tcbinfo, et);
+		NET_EPOCH_EXIT(et);
 		CURVNET_RESTORE();
 
 		return (0);
@@ -1608,7 +1765,7 @@ do_rx_data(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 	    sb->sb_hiwat < V_tcp_autorcvbuf_max &&
 	    len > (sbspace(sb) / 8 * 7)) {
 		unsigned int hiwat = sb->sb_hiwat;
-		unsigned int newsize = min(hiwat + V_tcp_autorcvbuf_inc,
+		unsigned int newsize = min(hiwat + sc->tt.autorcvbuf_inc,
 		    V_tcp_autorcvbuf_max);
 
 		if (!sbreserve_locked(sb, newsize, so, NULL))
@@ -1651,12 +1808,7 @@ do_rx_data(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 	}
 
 	sbappendstream_locked(sb, m, 0);
-	rx_credits = sbspace(sb) > tp->rcv_wnd ? sbspace(sb) - tp->rcv_wnd : 0;
-	if (rx_credits > 0 && sbused(sb) + tp->rcv_wnd < sb->sb_lowat) {
-		rx_credits = send_rx_credits(sc, toep, rx_credits);
-		tp->rcv_wnd += rx_credits;
-		tp->rcv_adv += rx_credits;
-	}
+	t4_rcvd_locked(&toep->td->tod, tp);
 
 	if (ulp_mode(toep) == ULP_MODE_TCPDDP && toep->ddp.waiting_count > 0 &&
 	    sbavail(sb) != 0) {
@@ -1749,10 +1901,6 @@ do_fw4_ack(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 		credits -= txsd->tx_credits;
 		toep->tx_credits += txsd->tx_credits;
 		plen += txsd->plen;
-		if (txsd->iv_buffer) {
-			free(txsd->iv_buffer, M_CXGBE);
-			txsd->iv_buffer = NULL;
-		}
 		txsd++;
 		toep->txsd_avail++;
 		KASSERT(toep->txsd_avail <= toep->txsd_total,
@@ -1776,12 +1924,7 @@ do_fw4_ack(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 #endif
 		toep->flags &= ~TPF_TX_SUSPENDED;
 		CURVNET_SET(toep->vnet);
-		if (ulp_mode(toep) == ULP_MODE_ISCSI)
-			t4_push_pdus(sc, toep, plen);
-		else if (tls_tx_key(toep))
-			t4_push_tls_records(sc, toep, plen);
-		else
-			t4_push_frames(sc, toep, plen);
+		t4_push_data(sc, toep, plen);
 		CURVNET_RESTORE();
 	} else if (plen > 0) {
 		struct sockbuf *sb = &so->so_snd;
@@ -1790,13 +1933,12 @@ do_fw4_ack(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 		SOCKBUF_LOCK(sb);
 		sbu = sbused(sb);
 		if (ulp_mode(toep) == ULP_MODE_ISCSI) {
-
 			if (__predict_false(sbu > 0)) {
 				/*
-				 * The data trasmitted before the tid's ULP mode
-				 * changed to ISCSI is still in so_snd.
-				 * Incoming credits should account for so_snd
-				 * first.
+				 * The data transmitted before the
+				 * tid's ULP mode changed to ISCSI is
+				 * still in so_snd.  Incoming credits
+				 * should account for so_snd first.
 				 */
 				sbdrop_locked(sb, min(sbu, plen));
 				plen -= min(sbu, plen);
@@ -1809,12 +1951,6 @@ do_fw4_ack(struct sge_iq *iq, const struct rss_header *rss, struct mbuf *m)
 			    tid, plen);
 #endif
 			sbdrop_locked(sb, plen);
-			if (tls_tx_key(toep)) {
-				struct tls_ofld_info *tls_ofld = &toep->tls;
-
-				MPASS(tls_ofld->sb_off >= plen);
-				tls_ofld->sb_off -= plen;
-			}
 			if (!TAILQ_EMPTY(&toep->aiotx_jobq))
 				t4_aiotx_queue_toep(so, toep);
 			sowwakeup_locked(so);	/* unlocks so_snd */
@@ -1854,7 +1990,7 @@ t4_set_tcb_field(struct adapter *sc, struct sge_wrq *wrq, struct toepcb *toep,
 	req->word_cookie = htobe16(V_WORD(word) | V_COOKIE(cookie));
 	req->mask = htobe64(mask);
 	req->val = htobe64(val);
-	if ((wrq->eq.flags & EQ_TYPEMASK) == EQ_OFLD) {
+	if (wrq->eq.type == EQ_OFLD) {
 		txsd = &toep->txsd[toep->txsd_pidx];
 		txsd->tx_credits = howmany(sizeof(*req), 16);
 		txsd->plen = 0;
@@ -1897,71 +2033,86 @@ t4_uninit_cpl_io_handlers(void)
 }
 
 /*
- * Use the 'backend3' field in AIO jobs to store the amount of data
- * sent by the AIO job so far and the 'backend4' field to hold an
- * error that should be reported when the job is completed.
+ * Use the 'backend1' field in AIO jobs to hold an error that should
+ * be reported when the job is completed, the 'backend3' field to
+ * store the amount of data sent by the AIO job so far, and the
+ * 'backend4' field to hold a reference count on the job.
+ *
+ * Each unmapped mbuf holds a reference on the job as does the queue
+ * so long as the job is queued.
  */
+#define	aio_error	backend1
 #define	aio_sent	backend3
-#define	aio_error	backend4
+#define	aio_refs	backend4
 
 #define	jobtotid(job)							\
 	(((struct toepcb *)(so_sototcpcb((job)->fd_file->f_data)->t_toe))->tid)
-	
+
 static void
-free_aiotx_buffer(struct aiotx_buffer *ab)
+aiotx_free_job(struct kaiocb *job)
 {
-	struct kaiocb *job;
 	long status;
 	int error;
 
-	if (refcount_release(&ab->refcount) == 0)
+	if (refcount_release(&job->aio_refs) == 0)
 		return;
 
-	job = ab->job;
-	error = job->aio_error;
+	error = (intptr_t)job->aio_error;
 	status = job->aio_sent;
-	vm_page_unhold_pages(ab->ps.pages, ab->ps.npages);
-	free(ab, M_CXGBE);
 #ifdef VERBOSE_TRACES
 	CTR5(KTR_CXGBE, "%s: tid %d completed %p len %ld, error %d", __func__,
 	    jobtotid(job), job, status, error);
 #endif
-	if (error == ECANCELED && status != 0)
+	if (error != 0 && status != 0)
 		error = 0;
 	if (error == ECANCELED)
 		aio_cancel(job);
 	else if (error)
 		aio_complete(job, -1, error);
-	else
+	else {
+		job->msgsnd = 1;
 		aio_complete(job, status, 0);
+	}
 }
 
 static void
-t4_aiotx_mbuf_free(struct mbuf *m)
+aiotx_free_pgs(struct mbuf *m)
 {
-	struct aiotx_buffer *ab = m->m_ext.ext_arg1;
+	struct kaiocb *job;
+	vm_page_t pg;
 
+	M_ASSERTEXTPG(m);
+	job = m->m_ext.ext_arg1;
 #ifdef VERBOSE_TRACES
 	CTR3(KTR_CXGBE, "%s: completed %d bytes for tid %d", __func__,
-	    m->m_len, jobtotid(ab->job));
+	    m->m_len, jobtotid(job));
 #endif
-	free_aiotx_buffer(ab);
+
+	for (int i = 0; i < m->m_epg_npgs; i++) {
+		pg = PHYS_TO_VM_PAGE(m->m_epg_pa[i]);
+		vm_page_unwire(pg, PQ_ACTIVE);
+	}
+
+	aiotx_free_job(job);
 }
 
 /*
- * Hold the buffer backing an AIO request and return an AIO transmit
- * buffer.
+ * Allocate a chain of unmapped mbufs describing the next 'len' bytes
+ * of an AIO job.
  */
-static int
-hold_aio(struct kaiocb *job)
+static struct mbuf *
+alloc_aiotx_mbuf(struct kaiocb *job, int len)
 {
-	struct aiotx_buffer *ab;
 	struct vmspace *vm;
+	vm_page_t pgs[MBUF_PEXT_MAX_PGS];
+	struct mbuf *m, *top, *last;
 	vm_map_t map;
-	vm_offset_t start, end, pgoff;
-	int n;
+	vm_offset_t start;
+	int i, mlen, npages, pgoff;
 
-	MPASS(job->backend1 == NULL);
+	KASSERT(job->aio_sent + len <= job->uaiocb.aio_nbytes,
+	    ("%s(%p, %d): request to send beyond end of buffer", __func__,
+	    job, len));
 
 	/*
 	 * The AIO subsystem will cancel and drain all requests before
@@ -1970,35 +2121,59 @@ hold_aio(struct kaiocb *job)
 	 */
 	vm = job->userproc->p_vmspace;
 	map = &vm->vm_map;
-	start = (uintptr_t)job->uaiocb.aio_buf;
+	start = (uintptr_t)job->uaiocb.aio_buf + job->aio_sent;
 	pgoff = start & PAGE_MASK;
-	end = round_page(start + job->uaiocb.aio_nbytes);
-	start = trunc_page(start);
-	n = atop(end - start);
 
-	ab = malloc(sizeof(*ab) + n * sizeof(vm_page_t), M_CXGBE, M_WAITOK |
-	    M_ZERO);
-	refcount_init(&ab->refcount, 1);
-	ab->ps.pages = (vm_page_t *)(ab + 1);
-	ab->ps.npages = vm_fault_quick_hold_pages(map, start, end - start,
-	    VM_PROT_WRITE, ab->ps.pages, n);
-	if (ab->ps.npages < 0) {
-		free(ab, M_CXGBE);
-		return (EFAULT);
+	top = NULL;
+	last = NULL;
+	while (len > 0) {
+		mlen = imin(len, MBUF_PEXT_MAX_PGS * PAGE_SIZE - pgoff);
+		KASSERT(mlen == len || ((start + mlen) & PAGE_MASK) == 0,
+		    ("%s: next start (%#jx + %#x) is not page aligned",
+		    __func__, (uintmax_t)start, mlen));
+
+		npages = vm_fault_quick_hold_pages(map, start, mlen,
+		    VM_PROT_WRITE, pgs, nitems(pgs));
+		if (npages < 0)
+			break;
+
+		m = mb_alloc_ext_pgs(M_WAITOK, aiotx_free_pgs);
+		m->m_epg_1st_off = pgoff;
+		m->m_epg_npgs = npages;
+		if (npages == 1) {
+			KASSERT(mlen + pgoff <= PAGE_SIZE,
+			    ("%s: single page is too large (off %d len %d)",
+			    __func__, pgoff, mlen));
+			m->m_epg_last_len = mlen;
+		} else {
+			m->m_epg_last_len = mlen - (PAGE_SIZE - pgoff) -
+			    (npages - 2) * PAGE_SIZE;
+		}
+		for (i = 0; i < npages; i++)
+			m->m_epg_pa[i] = VM_PAGE_TO_PHYS(pgs[i]);
+
+		m->m_len = mlen;
+		m->m_ext.ext_size = npages * PAGE_SIZE;
+		m->m_ext.ext_arg1 = job;
+		refcount_acquire(&job->aio_refs);
+
+#ifdef VERBOSE_TRACES
+		CTR5(KTR_CXGBE, "%s: tid %d, new mbuf %p for job %p, npages %d",
+		    __func__, jobtotid(job), m, job, npages);
+#endif
+
+		if (top == NULL)
+			top = m;
+		else
+			last->m_next = m;
+		last = m;
+
+		len -= mlen;
+		start += mlen;
+		pgoff = 0;
 	}
 
-	KASSERT(ab->ps.npages == n,
-	    ("hold_aio: page count mismatch: %d vs %d", ab->ps.npages, n));
-
-	ab->ps.offset = pgoff;
-	ab->ps.len = job->uaiocb.aio_nbytes;
-	ab->job = job;
-	job->backend1 = ab;
-#ifdef VERBOSE_TRACES
-	CTR5(KTR_CXGBE, "%s: tid %d, new pageset %p for job %p, npages %d",
-	    __func__, jobtotid(job), &ab->ps, job, ab->ps.npages);
-#endif
-	return (0);
+	return (top);
 }
 
 static void
@@ -2006,17 +2181,16 @@ t4_aiotx_process_job(struct toepcb *toep, struct socket *so, struct kaiocb *job)
 {
 	struct sockbuf *sb;
 	struct file *fp;
-	struct aiotx_buffer *ab;
 	struct inpcb *inp;
 	struct tcpcb *tp;
 	struct mbuf *m;
-	int error;
+	u_int sent;
+	int error, len;
 	bool moretocome, sendmore;
 
 	sb = &so->so_snd;
 	SOCKBUF_UNLOCK(sb);
 	fp = job->fd_file;
-	ab = job->backend1;
 	m = NULL;
 
 #ifdef MAC
@@ -2025,27 +2199,16 @@ t4_aiotx_process_job(struct toepcb *toep, struct socket *so, struct kaiocb *job)
 		goto out;
 #endif
 
-	if (ab == NULL) {
-		error = hold_aio(job);
-		if (error != 0)
-			goto out;
-		ab = job->backend1;
-	}
-
 	/* Inline sosend_generic(). */
 
-	job->msgsnd = 1;
-
-	error = sblock(sb, SBL_WAIT);
+	error = SOCK_IO_SEND_LOCK(so, SBL_WAIT);
 	MPASS(error == 0);
 
 sendanother:
-	m = m_get(M_WAITOK, MT_DATA);
-
 	SOCKBUF_LOCK(sb);
 	if (so->so_snd.sb_state & SBS_CANTSENDMORE) {
 		SOCKBUF_UNLOCK(sb);
-		sbunlock(sb);
+		SOCK_IO_SEND_UNLOCK(so);
 		if ((so->so_options & SO_NOSIGPIPE) == 0) {
 			PROC_LOCK(job->userproc);
 			kern_psignal(job->userproc, SIGPIPE);
@@ -2058,12 +2221,12 @@ sendanother:
 		error = so->so_error;
 		so->so_error = 0;
 		SOCKBUF_UNLOCK(sb);
-		sbunlock(sb);
+		SOCK_IO_SEND_UNLOCK(so);
 		goto out;
 	}
 	if ((so->so_state & SS_ISCONNECTED) == 0) {
 		SOCKBUF_UNLOCK(sb);
-		sbunlock(sb);
+		SOCK_IO_SEND_UNLOCK(so);
 		error = ENOTCONN;
 		goto out;
 	}
@@ -2076,13 +2239,13 @@ sendanother:
 		 */
 		if (!aio_set_cancel_function(job, t4_aiotx_cancel)) {
 			SOCKBUF_UNLOCK(sb);
-			sbunlock(sb);
+			SOCK_IO_SEND_UNLOCK(so);
 			error = ECANCELED;
 			goto out;
 		}
 		TAILQ_INSERT_HEAD(&toep->aiotx_jobq, job, list);
 		SOCKBUF_UNLOCK(sb);
-		sbunlock(sb);
+		SOCK_IO_SEND_UNLOCK(so);
 		goto out;
 	}
 
@@ -2090,14 +2253,14 @@ sendanother:
 	 * Write as much data as the socket permits, but no more than a
 	 * a single sndbuf at a time.
 	 */
-	m->m_len = sbspace(sb);
-	if (m->m_len > ab->ps.len - job->aio_sent) {
-		m->m_len = ab->ps.len - job->aio_sent;
+	len = sbspace(sb);
+	if (len > job->uaiocb.aio_nbytes - job->aio_sent) {
+		len = job->uaiocb.aio_nbytes - job->aio_sent;
 		moretocome = false;
 	} else
 		moretocome = true;
-	if (m->m_len > toep->params.sndbuf) {
-		m->m_len = toep->params.sndbuf;
+	if (len > toep->params.sndbuf) {
+		len = toep->params.sndbuf;
 		sendmore = true;
 	} else
 		sendmore = false;
@@ -2105,7 +2268,14 @@ sendanother:
 	if (!TAILQ_EMPTY(&toep->aiotx_jobq))
 		moretocome = true;
 	SOCKBUF_UNLOCK(sb);
-	MPASS(m->m_len != 0);
+	MPASS(len != 0);
+
+	m = alloc_aiotx_mbuf(job, len);
+	if (m == NULL) {
+		SOCK_IO_SEND_UNLOCK(so);
+		error = EFAULT;
+		goto out;
+	}
 
 	/* Inlined tcp_usr_send(). */
 
@@ -2113,17 +2283,15 @@ sendanother:
 	INP_WLOCK(inp);
 	if (inp->inp_flags & (INP_TIMEWAIT | INP_DROPPED)) {
 		INP_WUNLOCK(inp);
-		sbunlock(sb);
+		SOCK_IO_SEND_UNLOCK(so);
 		error = ECONNRESET;
 		goto out;
 	}
 
-	refcount_acquire(&ab->refcount);
-	m_extadd(m, NULL, ab->ps.len, t4_aiotx_mbuf_free, ab,
-	    (void *)(uintptr_t)job->aio_sent, 0, EXT_NET_DRV);
-	m->m_ext.ext_flags |= EXT_FLAG_AIOTX;
-	job->aio_sent += m->m_len;
-	
+	sent = m_length(m, NULL);
+	job->aio_sent += sent;
+	counter_u64_add(toep->ofld_txq->tx_aio_octets, sent);
+
 	sbappendstream(sb, m, 0);
 	m = NULL;
 
@@ -2139,14 +2307,14 @@ sendanother:
 	INP_WUNLOCK(inp);
 	if (sendmore)
 		goto sendanother;
-	sbunlock(sb);
+	SOCK_IO_SEND_UNLOCK(so);
 
 	if (error)
 		goto out;
 
 	/*
-	 * If this is a non-blocking socket and the request has not
-	 * been fully completed, requeue it until the socket is ready
+	 * If this is a blocking socket and the request has not been
+	 * fully completed, requeue it until the socket is ready
 	 * again.
 	 */
 	if (job->aio_sent < job->uaiocb.aio_nbytes &&
@@ -2162,25 +2330,21 @@ sendanother:
 	}
 
 	/*
-	 * If the request will not be requeued, drop a reference on
-	 * the aiotx buffer.  Any mbufs in flight should still
-	 * contain a reference, but this drops the reference that the
-	 * job owns while it is waiting to queue mbufs to the socket.
+	 * If the request will not be requeued, drop the queue's
+	 * reference to the job.  Any mbufs in flight should still
+	 * hold a reference, but this drops the reference that the
+	 * queue owns while it is waiting to queue mbufs to the
+	 * socket.
 	 */
-	free_aiotx_buffer(ab);
+	aiotx_free_job(job);
+	counter_u64_add(toep->ofld_txq->tx_aio_jobs, 1);
 
 out:
 	if (error) {
-		if (ab != NULL) {
-			job->aio_error = error;
-			free_aiotx_buffer(ab);
-		} else {
-			MPASS(job->aio_sent == 0);
-			aio_complete(job, -1, error);
-		}
+		job->aio_error = (void *)(intptr_t)error;
+		aiotx_free_job(job);
 	}
-	if (m != NULL)
-		m_free(m);
+	m_freem(m);
 	SOCKBUF_LOCK(sb);
 }
 
@@ -2231,7 +2395,6 @@ t4_aiotx_queue_toep(struct socket *so, struct toepcb *toep)
 static void
 t4_aiotx_cancel(struct kaiocb *job)
 {
-	struct aiotx_buffer *ab;
 	struct socket *so;
 	struct sockbuf *sb;
 	struct tcpcb *tp;
@@ -2248,11 +2411,8 @@ t4_aiotx_cancel(struct kaiocb *job)
 		TAILQ_REMOVE(&toep->aiotx_jobq, job, list);
 	SOCKBUF_UNLOCK(sb);
 
-	ab = job->backend1;
-	if (ab != NULL)
-		free_aiotx_buffer(ab);
-	else
-		aio_cancel(job);
+	job->aio_error = (void *)(intptr_t)ECANCELED;
+	aiotx_free_job(job);
 }
 
 int
@@ -2278,6 +2438,7 @@ t4_aio_queue_aiotx(struct socket *so, struct kaiocb *job)
 #endif
 	if (!aio_set_cancel_function(job, t4_aiotx_cancel))
 		panic("new job was cancelled");
+	refcount_init(&job->aio_refs, 1);
 	TAILQ_INSERT_TAIL(&toep->aiotx_jobq, job, list);
 	if (sowriteable(so))
 		t4_aiotx_queue_toep(so, toep);

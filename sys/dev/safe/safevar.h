@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Sam Leffler, Errno Consulting
  * Copyright (c) 2003 Global Technology Associates, Inc.
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 #ifndef _SAFE_SAFEVAR_H_
 #define	_SAFE_SAFEVAR_H_
@@ -74,10 +73,6 @@ struct safe_dma_alloc {
  * where each is mapped for DMA.
  */
 struct safe_operand {
-	union {
-		struct mbuf *m;
-		struct uio *io;
-	} u;
 	bus_dmamap_t		map;
 	bus_size_t		mapsize;
 	int			nsegs;
@@ -108,22 +103,18 @@ struct safe_ringentry {
 
 	struct safe_operand	re_src;		/* source operand */
 	struct safe_operand	re_dst;		/* destination operand */
+	struct mbuf		*re_dst_m;
 
 	int			unused;
 	int			re_flags;
-#define	SAFE_QFLAGS_COPYOUTIV	0x1		/* copy back on completion */
 #define	SAFE_QFLAGS_COPYOUTICV	0x2		/* copy back on completion */
 };
 
-#define	re_src_m	re_src.u.m
-#define	re_src_io	re_src.u.io
 #define	re_src_map	re_src.map
 #define	re_src_nsegs	re_src.nsegs
 #define	re_src_segs	re_src.segs
 #define	re_src_mapsize	re_src.mapsize
 
-#define	re_dst_m	re_dst.u.m
-#define	re_dst_io	re_dst.u.io
 #define	re_dst_map	re_dst.map
 #define	re_dst_nsegs	re_dst.nsegs
 #define	re_dst_segs	re_dst.segs
@@ -137,7 +128,6 @@ struct safe_session {
 	u_int32_t	ses_mlen;		/* hmac length in bytes */
 	u_int32_t	ses_hminner[5];		/* hmac inner state */
 	u_int32_t	ses_hmouter[5];		/* hmac outer state */
-	u_int32_t	ses_iv[4];		/* DES/3DES/AES iv */
 };
 
 struct safe_softc {
@@ -156,6 +146,7 @@ struct safe_softc {
 	int			sc_suspended;
 	int			sc_needwakeup;	/* notify crypto layer */
 	int32_t			sc_cid;		/* crypto tag */
+	uint32_t		sc_devinfo;
 	struct safe_dma_alloc	sc_ringalloc;	/* PE ring allocation state */
 	struct safe_ringentry	*sc_ring;	/* PE ring */
 	struct safe_ringentry	*sc_ringtop;	/* PE ring top */

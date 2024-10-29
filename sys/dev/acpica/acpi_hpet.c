@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_acpi.h"
 
 #if defined(__amd64__)
@@ -172,7 +171,8 @@ hpet_vdso_timehands32(struct vdso_timehands32 *vdso_th32,
 	vdso_th32->th_algo = VDSO_TH_ALGO_X86_HPET;
 	vdso_th32->th_x86_shift = 0;
 	vdso_th32->th_x86_hpet_idx = device_get_unit(sc->dev);
-	vdso_th32->th_x86_pvc_last_systime = 0;
+	vdso_th32->th_x86_pvc_last_systime[0] = 0;
+	vdso_th32->th_x86_pvc_last_systime[1] = 0;
 	vdso_th32->th_x86_pvc_stable_mask = 0;
 	bzero(vdso_th32->th_res, sizeof(vdso_th32->th_res));
 	return (sc->mmap_allow != 0);
@@ -454,16 +454,18 @@ hpet_identify(driver_t *driver, device_t parent)
 static int
 hpet_probe(device_t dev)
 {
-	ACPI_FUNCTION_TRACE((char *)(uintptr_t) __func__);
+	int rv;
 
+	ACPI_FUNCTION_TRACE((char *)(uintptr_t) __func__);
 	if (acpi_disabled("hpet") || acpi_hpet_disabled)
 		return (ENXIO);
-	if (acpi_get_handle(dev) != NULL &&
-	    ACPI_ID_PROBE(device_get_parent(dev), dev, hpet_ids) == NULL)
-		return (ENXIO);
-
-	device_set_desc(dev, "High Precision Event Timer");
-	return (0);
+	if (acpi_get_handle(dev) != NULL)
+		rv = ACPI_ID_PROBE(device_get_parent(dev), dev, hpet_ids, NULL);
+	else
+		rv = 0;
+	if (rv <= 0)
+		device_set_desc(dev, "High Precision Event Timer");
+	return (rv);
 }
 
 static int
@@ -474,6 +476,7 @@ hpet_attach(device_t dev)
 	struct make_dev_args mda;
 	int i, j, num_msi, num_timers, num_percpu_et, num_percpu_t, cur_cpu;
 	int pcpu_master, error;
+	rman_res_t hpet_region_size;
 	static int maxhpetet = 0;
 	uint32_t val, val2, cvectors, dvectors;
 	uint16_t vendor, rev;
@@ -490,10 +493,11 @@ hpet_attach(device_t dev)
 	if (sc->mem_res == NULL)
 		return (ENOMEM);
 
-	/* Validate that we can access the whole region. */
-	if (rman_get_size(sc->mem_res) < HPET_MEM_WIDTH) {
+	hpet_region_size = rman_get_size(sc->mem_res);
+	/* Validate that the region is big enough for the control registers. */
+	if (hpet_region_size < HPET_MEM_MIN_WIDTH) {
 		device_printf(dev, "memory region width %jd too small\n",
-		    rman_get_size(sc->mem_res));
+		    hpet_region_size);
 		bus_free_resource(dev, SYS_RES_MEMORY, sc->mem_res);
 		return (ENXIO);
 	}
@@ -523,6 +527,18 @@ hpet_attach(device_t dev)
 	 */
 	if (vendor == HPET_VENDID_AMD && rev < 0x10 && num_timers > 0)
 		num_timers--;
+	/*
+	 * Now validate that the region is big enough to address all counters.
+	 */
+	if (hpet_region_size < HPET_TIMER_CAP_CNF(num_timers)) {
+		device_printf(dev,
+		    "memory region width %jd too small for %d timers\n",
+		    hpet_region_size, num_timers);
+		hpet_disable(sc);
+		bus_free_resource(dev, SYS_RES_MEMORY, sc->mem_res);
+		return (ENXIO);
+	}
+
 	sc->num_timers = num_timers;
 	if (bootverbose) {
 		device_printf(dev,
@@ -629,7 +645,7 @@ hpet_attach(device_t dev)
 	 * The only way to use HPET there is to specify IRQs manually
 	 * and/or use legacy_route. Legacy_route mode works on both.
 	 */
-	if (vm_guest)
+	if (vm_guest != VM_GUEST_NO)
 		sc->allowed_irqs = 0x00000000;
 	/* Let user override. */
 	resource_int_value(device_get_name(dev), device_get_unit(dev),

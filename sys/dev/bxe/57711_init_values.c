@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-
+/* clang-format off */
 
 /*
 * This file contains an array of operations needed to initialize the chip:

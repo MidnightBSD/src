@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/lock.h>
@@ -62,6 +61,28 @@ linux_hrtimer_active(struct hrtimer *hrtimer)
 	mtx_unlock(&hrtimer->mtx);
 
 	return (ret);
+}
+
+/*
+ * Try to cancel active hrtimer.
+ * Return 1 if timer was active and cancellation succeeded, 0 if timer was
+ * inactive, or -1 if the timer is being serviced and can't be cancelled.
+ */
+int
+linux_hrtimer_try_to_cancel(struct hrtimer *hrtimer)
+{
+	int ret;
+
+	mtx_lock(&hrtimer->mtx);
+	ret = callout_stop(&hrtimer->callout);
+	mtx_unlock(&hrtimer->mtx);
+	if (ret > 0) {
+		return (1);
+	} else if (ret < 0) {
+		return (0);
+	} else {
+		return (-1);
+	}
 }
 
 /*
@@ -119,4 +140,3 @@ linux_hrtimer_forward_now(struct hrtimer *hrtimer, ktime_t interval)
 	    nstosbt(hrtimer->precision), hrtimer_call_handler, hrtimer, 0);
 	mtx_unlock(&hrtimer->mtx);
 }
-

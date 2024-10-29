@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef ECORE_SP_H
 #define ECORE_SP_H
 
@@ -74,9 +73,6 @@ typedef volatile int ecore_atomic_t;
 #ifndef __bool_true_false_are_defined
 #ifndef __cplusplus
 #define bool _Bool
-#if __STDC_VERSION__ < 199901L && __GNUC__ < 3 && !defined(__INTEL_COMPILER)
-typedef _Bool bool;
-#endif
 #endif /* !__cplusplus */
 #endif /* !__bool_true_false_are_defined$ */
 

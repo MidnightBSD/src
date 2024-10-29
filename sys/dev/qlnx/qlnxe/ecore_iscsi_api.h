@@ -24,7 +24,6 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
 
 #ifndef __ECORE_ISCSI_API_H__
@@ -274,7 +273,6 @@ void ecore_iscsi_release_connection(struct ecore_hwfn *p_hwfn,
 enum _ecore_status_t
 ecore_iscsi_terminate_connection(struct ecore_hwfn *p_hwfn,
 				 struct ecore_iscsi_conn *p_conn);
-
 
 /**
  * @brief ecore_iscsi_update_connection - updates previously 

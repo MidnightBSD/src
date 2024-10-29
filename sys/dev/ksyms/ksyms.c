@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008-2009, Stacey Son <sson@freebsd.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -193,6 +192,7 @@ ksyms_add(linker_file_t lf, void *arg)
 	size_t len, numsyms, strsz, symsz;
 	linker_symval_t symval;
 	int error, i, nsyms;
+	bool fixup;
 
 	buf = malloc(SYMBLKSZ, M_KSYMS, M_WAITOK);
 	to = arg;
@@ -202,6 +202,12 @@ ksyms_add(linker_file_t lf, void *arg)
 	numsyms =  LINKER_SYMTAB_GET(lf, &symtab);
 	strsz = LINKER_STRTAB_GET(lf, &strtab);
 	symsz = numsyms * sizeof(Elf_Sym);
+
+#ifdef RELOCATABLE_KERNEL
+	fixup = true;
+#else
+	fixup = lf->id > 1;
+#endif
 
 	while (symsz > 0) {
 		len = min(SYMBLKSZ, symsz);
@@ -216,7 +222,7 @@ ksyms_add(linker_file_t lf, void *arg)
 		nsyms = len / sizeof(Elf_Sym);
 		for (i = 0; i < nsyms; i++) {
 			symp[i].st_name += to->to_stridx;
-			if (lf->id > 1 && LINKER_SYMBOL_VALUES(lf,
+			if (fixup && LINKER_SYMBOL_VALUES(lf,
 			    (c_linker_sym_t)&symtab[i], &symval) == 0) {
 				symp[i].st_value = (uintptr_t)symval.value;
 			}
@@ -476,7 +482,7 @@ ksyms_mmap_single(struct cdev *dev, vm_ooffset_t *offset, vm_size_t size,
 	if (error != 0)
 		return (error);
 
-	if (*offset < 0 || *offset >= round_page(sc->sc_objsz) ||
+	if (*offset >= round_page(sc->sc_objsz) ||
 	    size > round_page(sc->sc_objsz) - *offset ||
 	    (nprot & ~PROT_READ) != 0)
 		return (EINVAL);

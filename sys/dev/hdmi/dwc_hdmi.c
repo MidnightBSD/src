@@ -25,13 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * HDMI core module
  */
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/malloc.h>

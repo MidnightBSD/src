@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_NET_NETEVENT_H_
-#define	_LINUX_NET_NETEVENT_H_
+#ifndef	_LINUXKPI_NET_NETEVENT_H_
+#define	_LINUXKPI_NET_NETEVENT_H_
 
 #include <sys/types.h>
 #include <sys/eventhandler.h>
@@ -71,4 +70,4 @@ unregister_netevent_notifier(struct notifier_block *nb)
 	return (0);
 }
 
-#endif /* _LINUX_NET_NETEVENT_H_ */
+#endif /* _LINUXKPI_NET_NETEVENT_H_ */

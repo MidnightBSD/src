@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2008 Nathan Whitehorn
  * All rights reserved.
@@ -23,7 +23,6 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef	_POWERPC_ADBVAR_H_
@@ -35,13 +34,12 @@ enum {
 	ADB_COMMAND_BUS_RESET = 0
 };
 
-
 struct adb_softc {
 	device_t	sc_dev;
 	device_t	parent;
 
 	struct intr_config_hook enum_hook;
-	
+
 	volatile int 	sync_packet;
 	volatile int	packet_reply;
 

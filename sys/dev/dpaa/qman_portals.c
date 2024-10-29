@@ -26,7 +26,6 @@
 
 #include "opt_platform.h"
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -146,8 +145,7 @@ qman_portal_setup(struct qman_softc *qsc)
 
 		/* Not inititialized and "owned" by another thread */
 		thread_lock(curthread);
-		mi_switch(SW_VOL, NULL);
-		thread_unlock(curthread);
+		mi_switch(SW_VOL);
 	}
 
 	/* Map portal registers */

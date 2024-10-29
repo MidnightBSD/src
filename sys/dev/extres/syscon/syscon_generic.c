@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015 Michal Meloun
  * All rights reserved.
@@ -40,6 +40,7 @@
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/rman.h>
 
 #include <machine/bus.h>
@@ -153,6 +154,9 @@ syscon_generic_probe(device_t dev)
 		return (ENXIO);
 
 	device_set_desc(dev, "syscon");
+	if (!bootverbose)
+		device_quiet(dev);
+
 	return (BUS_PROBE_GENERIC);
 }
 

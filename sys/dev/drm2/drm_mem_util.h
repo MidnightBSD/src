@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef _DRM_MEM_UTIL_H_
 #define _DRM_MEM_UTIL_H_
 

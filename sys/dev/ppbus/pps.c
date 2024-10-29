@@ -17,7 +17,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/lock.h>
 #include <sys/kernel.h>
@@ -336,7 +335,6 @@ static device_method_t pps_methods[] = {
 	DEVMETHOD(device_identify,	ppsidentify),
 	DEVMETHOD(device_probe,		ppsprobe),
 	DEVMETHOD(device_attach,	ppsattach),
-
 	{ 0, 0 }
 };
 

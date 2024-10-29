@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005-2011 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
@@ -24,12 +24,14 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
  | $Id: iscsivar.h 743 2009-08-08 10:54:53Z danny $
  */
+#include <sys/lock.h>
+#include <sys/mutex.h>
+
 #define ISCSI_MAX_LUNS		128	// don't touch this
 #if ISCSI_MAX_LUNS > 8
 /*
@@ -264,39 +266,6 @@ int	iscsi_requeue(isc_session_t *sp);
 /*
  | inlines
  */
-#ifdef _CAM_CAM_XPT_SIM_H
-
-#if __FreeBSD_version <  600000
-#define CAM_LOCK(arg)
-#define CAM_ULOCK(arg)
-
-static __inline void
-XPT_DONE(isc_session_t *sp, union ccb *ccb)
-{
-     mtx_lock(&Giant);
-     xpt_done(ccb);
-     mtx_unlock(&Giant);
-}
-#elif __FreeBSD_version >= 700000
-#define CAM_LOCK(arg)	mtx_lock(&arg->cam_mtx)
-#define CAM_UNLOCK(arg)	mtx_unlock(&arg->cam_mtx)
-
-static __inline void
-XPT_DONE(isc_session_t *sp, union ccb *ccb)
-{
-     CAM_LOCK(sp);
-     xpt_done(ccb);
-     CAM_UNLOCK(sp);
-}
-#else
-//__FreeBSD_version >= 600000
-#define CAM_LOCK(arg)
-#define CAM_UNLOCK(arg)
-#define XPT_DONE(ignore, arg)	xpt_done(arg)
-#endif
-
-#endif /* _CAM_CAM_XPT_SIM_H */
-
 static __inline pduq_t *
 pdu_alloc(struct isc_softc *isc, int wait)
 {

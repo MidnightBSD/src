@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/unistd.h>
@@ -796,7 +795,6 @@ _x86_64_call6(void *fn, uint64_t a, uint64_t b, uint64_t c, uint64_t d,
 	return (ret);
 }
 #endif /* __amd64__ */
-
 
 #ifdef __i386__
 

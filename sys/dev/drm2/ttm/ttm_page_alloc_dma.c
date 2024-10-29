@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #define pr_fmt(fmt) "[TTM] " fmt
 
 #include <linux/dma-mapping.h>

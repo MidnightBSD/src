@@ -26,7 +26,6 @@
  * The views and conclusions contained in the software and documentation are
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of the FreeBSD Project.
- *
  */
 
 #ifndef _SYS_HUNT_IMPL_H
@@ -60,7 +59,6 @@ extern "C" {
 #define	HUNT_PIOBUF_SIZE	(ER_DZ_TX_PIOBUF_SIZE)
 
 #define	HUNT_MIN_PIO_ALLOC_SIZE	(HUNT_PIOBUF_SIZE / 32)
-
 
 /* NIC */
 

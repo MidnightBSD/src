@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 IronPort Systems
  * All rights reserved.
@@ -27,22 +27,23 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_mfi.h"
 
 #include <sys/param.h>
-#include <sys/systm.h>
-#include <sys/kernel.h>
-#include <sys/selinfo.h>
-#include <sys/module.h>
-#include <sys/malloc.h>
-#include <sys/sysctl.h>
-#include <sys/uio.h>
-
 #include <sys/bio.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/disk.h>
+#include <sys/kernel.h>
+#include <sys/lock.h>
+#include <sys/malloc.h>
+#include <sys/module.h>
+#include <sys/mutex.h>
+#include <sys/selinfo.h>
+#include <sys/sysctl.h>
+#include <sys/systm.h>
+#include <sys/uio.h>
+
 #include <geom/geom_disk.h>
 
 #include <vm/vm.h>
@@ -319,7 +320,7 @@ mfi_disk_complete(struct bio *bio)
 }
 
 static int
-mfi_disk_dump(void *arg, void *virt, vm_offset_t phys, off_t offset, size_t len)
+mfi_disk_dump(void *arg, void *virt, off_t offset, size_t len)
 {
 	struct mfi_disk *sc;
 	struct mfi_softc *parent_sc;

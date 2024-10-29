@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 Nicolas Souchu
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  *
  */
 #ifndef __PPB_MSQ_H
@@ -110,7 +109,6 @@
 #define MS_RSET(reg,assert,clear) { MS_OP_RSET, {{ (reg) }, { (assert) }, { (clear) }}}
 #define MS_RASSERT(reg,byte)	  { MS_OP_RASSERT, { { (reg) }, { (byte) }}}
 #define MS_RCLR(reg,clear)	  { MS_OP_RSET, {{ (reg) }, { MS_ASSERT_NONE }, { (clear) }}}
-
 #define MS_RFETCH(reg,mask,ptr) { MS_OP_RFETCH, {{ (reg) }, { (mask) }, { (ptr) }}}
 
 /* trigger the port with array[char, delay,...] */
@@ -126,7 +124,6 @@
 #define MS_DASS(byte) MS_RASSERT(MS_REG_DTR,byte)
 #define MS_SASS(byte) MS_RASSERT(MS_REG_STR,byte)
 #define MS_CASS(byte) MS_RASSERT(MS_REG_CTR,byte)
-
 #define MS_SET(accum)		{ MS_OP_SET, {{ (accum) }}}
 #define MS_BRSET(mask,offset)	{ MS_OP_BRSET, {{ (mask) }, { (offset) }}}
 #define MS_DBRA(offset)		{ MS_OP_DBRA, {{ (offset) }}}

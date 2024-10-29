@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/sys/conf/options 346725 2019-04-26 01:58:36Z mw $
 #
 #        On the handling of kernel options
 #
@@ -42,7 +41,6 @@ AHD_DEBUG		opt_aic79xx.h
 AHD_DEBUG_OPTS		opt_aic79xx.h
 AHD_TMODE_ENABLE	opt_aic79xx.h	
 AHD_REG_PRETTY_PRINT	opt_aic79xx.h
-ADW_ALLOW_MEMIO		opt_adw.h
 
 TWA_DEBUG		opt_twa.h
 
@@ -56,17 +54,19 @@ DDB_CAPTURE_DEFAULTBUFSIZE	opt_ddb.h
 DDB_CAPTURE_MAXBUFSIZE	opt_ddb.h
 DDB_CTF		opt_ddb.h
 DDB_NUMSYM	opt_ddb.h
+EARLY_PRINTF	opt_global.h
 FULL_BUF_TRACKING	opt_global.h
 GDB
 KDB		opt_global.h
 KDB_TRACE	opt_kdb.h
 KDB_UNATTENDED	opt_kdb.h
 KLD_DEBUG	opt_kld.h
+NUM_CORE_FILES	opt_global.h
+QUEUE_MACRO_DEBUG_TRACE	opt_global.h
+QUEUE_MACRO_DEBUG_TRASH	opt_global.h
 SYSCTL_DEBUG	opt_sysctl.h
-EARLY_PRINTF	opt_global.h
 TEXTDUMP_PREFERRED	opt_ddb.h
 TEXTDUMP_VERBOSE	opt_ddb.h
-NUM_CORE_FILES	opt_global.h
 TSLOG	opt_global.h
 TSLOGSIZE	opt_global.h
 
@@ -89,6 +89,7 @@ COMPAT_FREEBSD7	opt_global.h
 COMPAT_FREEBSD9	opt_global.h
 COMPAT_FREEBSD10	opt_global.h
 COMPAT_FREEBSD11	opt_global.h
+COMPAT_FREEBSD12	opt_global.h
 COMPAT_CLOUDABI32	opt_dontuse.h
 COMPAT_CLOUDABI64	opt_dontuse.h
 COMPAT_LINUXKPI	opt_dontuse.h
@@ -96,27 +97,24 @@ _COMPAT_LINUX32	opt_compat.h	# XXX: make sure opt_compat.h exists
 COMPILING_LINT	opt_global.h
 CY_PCI_FASTINTR
 DEADLKRES	opt_watchdog.h
+EXPERIMENTAL	opt_global.h
 EXT_RESOURCES	opt_global.h
 DIRECTIO
-FILEMON		opt_dontuse.h
 FFCLOCK
 FULL_PREEMPTION	opt_sched.h
 GZIO		opt_gzio.h
 IMAGACT_BINMISC		opt_dontuse.h
 IPI_PREEMPTION	opt_sched.h
 GEOM_BDE	opt_geom.h
-GEOM_BSD	opt_geom.h
 GEOM_CACHE	opt_geom.h
 GEOM_CONCAT	opt_geom.h
 GEOM_ELI	opt_geom.h
-GEOM_FOX	opt_geom.h
 GEOM_GATE	opt_geom.h
 GEOM_JOURNAL	opt_geom.h
 GEOM_LABEL	opt_geom.h
 GEOM_LABEL_GPT	opt_geom.h
 GEOM_LINUX_LVM	opt_geom.h
 GEOM_MAP	opt_geom.h
-GEOM_MBR	opt_geom.h
 GEOM_MIRROR	opt_geom.h
 GEOM_MOUNTVER	opt_geom.h
 GEOM_MULTIPATH	opt_geom.h
@@ -125,21 +123,17 @@ GEOM_PART_APM	opt_geom.h
 GEOM_PART_BSD	opt_geom.h
 GEOM_PART_BSD64	opt_geom.h
 GEOM_PART_EBR	opt_geom.h
-GEOM_PART_EBR_COMPAT	opt_geom.h
 GEOM_PART_GPT	opt_geom.h
 GEOM_PART_LDM	opt_geom.h
 GEOM_PART_MBR	opt_geom.h
-GEOM_PART_VTOC8	opt_geom.h
 GEOM_RAID	opt_geom.h
 GEOM_RAID3	opt_geom.h
 GEOM_SHSEC	opt_geom.h
 GEOM_STRIPE	opt_geom.h
-GEOM_SUNLABEL	opt_geom.h
 GEOM_UZIP	opt_geom.h
 GEOM_UZIP_DEBUG	opt_geom.h
 GEOM_VINUM	opt_geom.h
 GEOM_VIRSTOR	opt_geom.h
-GEOM_VOL	opt_geom.h
 GEOM_ZERO	opt_geom.h
 IFLIB		opt_iflib.h
 KDTRACE_HOOKS	opt_global.h
@@ -161,6 +155,7 @@ MAC_NONE	opt_dontuse.h
 MAC_NTPD	opt_dontuse.h
 MAC_PARTITION	opt_dontuse.h
 MAC_PORTACL	opt_dontuse.h
+MAC_PRIORITY	opt_dontuse.h
 MAC_SEEOTHERUIDS	opt_dontuse.h
 MAC_STATIC	opt_mac.h
 MAC_STUB	opt_dontuse.h
@@ -183,10 +178,9 @@ NEW_PCIB	opt_global.h
 NO_ADAPTIVE_MUTEXES	opt_adaptive_mutexes.h
 NO_ADAPTIVE_RWLOCKS
 NO_ADAPTIVE_SX
-NO_EVENTTIMERS		opt_timer.h
 NO_OBSOLETE_CODE	opt_global.h
 NO_SYSCTL_DESCR	opt_global.h
-NSWBUF_MIN	opt_swap.h
+NSWBUF_MIN	opt_param.h
 MBUF_PACKET_ZONE_DISABLE	opt_global.h
 PANIC_REBOOT_WAIT_TIME	opt_panic.h
 PCI_HP		opt_pci.h
@@ -201,7 +195,6 @@ SCHED_STATS	opt_sched.h
 SCHED_ULE	opt_sched.h
 SLEEPQUEUE_PROFILING
 SLHCI_DEBUG	opt_slhci.h
-SPX_HACK
 STACK		opt_stack.h
 SUIDDIR
 MSGMNB		opt_sysvipc.h
@@ -232,6 +225,14 @@ UMTX_CHAINS	opt_global.h
 VERBOSE_SYSINIT
 ZSTDIO		opt_zstdio.h
 
+# Sanitizers
+COVERAGE	opt_global.h
+KASAN		opt_global.h
+KCOV
+KCSAN		opt_global.h
+KMSAN		opt_global.h
+KUBSAN		opt_global.h
+
 # POSIX kernel options
 P1003_1B_MQUEUE			opt_posix.h
 P1003_1B_SEMAPHORES		opt_posix.h
@@ -251,7 +252,6 @@ FDESCFS		opt_dontuse.h
 FFS		opt_dontuse.h
 FUSEFS		opt_dontuse.h
 MSDOSFS		opt_dontuse.h
-NANDFS		opt_dontuse.h
 NULLFS		opt_dontuse.h
 PROCFS		opt_dontuse.h
 PSEUDOFS	opt_dontuse.h
@@ -320,8 +320,12 @@ NFS_ROOT	opt_nfsroot.h
 # SMB/CIFS requester
 NETSMB		opt_netsmb.h
 
+# Enable debugnet(4) networking support.
+DEBUGNET 	opt_global.h
 # Enable netdump(4) client support.
 NETDUMP 	opt_global.h
+# Enable netgdb(4) support.
+NETGDB 		opt_global.h
 
 # Options used only in subr_param.c.
 HZ		opt_param.h
@@ -376,23 +380,12 @@ SCSI_PT_DEFAULT_TIMEOUT	opt_pt.h
 SES_ENABLE_PASSTHROUGH	opt_ses.h
 
 # Options used in dev/sym/ (Symbios SCSI driver).
-SYM_SETUP_LP_PROBE_MAP	opt_sym.h	#-Low Priority Probe Map (bits)
-					# Allows the ncr to take precedence
-					# 1 (1<<0) -> 810a, 860
-					# 2 (1<<1) -> 825a, 875, 885, 895
-					# 4 (1<<2) -> 895a, 896, 1510d 
 SYM_SETUP_SCSI_DIFF	opt_sym.h	#-HVD support for 825a, 875, 885
 					# disabled:0 (default), enabled:1
 SYM_SETUP_PCI_PARITY	opt_sym.h	#-PCI parity checking
 					# disabled:0, enabled:1 (default)
 SYM_SETUP_MAX_LUN	opt_sym.h	#-Number of LUNs supported
 					# default:8, range:[1..64]
-
-# Options used only in dev/ncr/*
-SCSI_NCR_DEBUG		opt_ncr.h
-SCSI_NCR_MAX_SYNC	opt_ncr.h
-SCSI_NCR_MAX_WIDE	opt_ncr.h
-SCSI_NCR_MYADDR		opt_ncr.h
 
 # Options used only in dev/isp/*
 ISP_TARGET_MODE		opt_isp.h
@@ -431,6 +424,7 @@ RATELIMIT		opt_ratelimit.h
 RATELIMIT_DEBUG		opt_ratelimit.h
 INET			opt_inet.h
 INET6			opt_inet6.h
+STATS			opt_global.h
 IPDIVERT
 IPFILTER		opt_ipfilter.h
 IPFILTER_DEFAULT_BLOCK	opt_ipfilter.h
@@ -448,6 +442,7 @@ IPSEC			opt_ipsec.h
 IPSEC_DEBUG		opt_ipsec.h
 IPSEC_SUPPORT		opt_ipsec.h
 IPSTEALTH
+KERN_TLS
 KRPC
 LIBALIAS
 LIBMCHAIN
@@ -456,9 +451,11 @@ MBUF_STRESS_TEST
 MROUTING		opt_mrouting.h
 NFSLOCKD
 PCBGROUP		opt_pcbgroup.h
+NETLINK
 PF_DEFAULT_TO_DROP	opt_pf.h
-RADIX_MPATH		opt_mpath.h
+ROUTE_MPATH		opt_route.h
 ROUTETABLES		opt_route.h
+FIB_ALGO		opt_route.h
 RSS			opt_rss.h
 SLIP_IFF_OPTS		opt_slip.h
 TCPDEBUG
@@ -514,6 +511,7 @@ NETGRAPH_BLUETOOTH_UBTBCMFW	opt_netgraph.h
 NETGRAPH_BPF		opt_netgraph.h
 NETGRAPH_BRIDGE		opt_netgraph.h
 NETGRAPH_CAR		opt_netgraph.h
+NETGRAPH_CHECKSUM	opt_netgraph.h
 NETGRAPH_CISCO		opt_netgraph.h
 NETGRAPH_DEFLATE	opt_netgraph.h
 NETGRAPH_DEVICE		opt_netgraph.h
@@ -568,16 +566,10 @@ DRM_DEBUG		opt_drm.h
 TI_SF_BUF_JUMBO		opt_ti.h
 TI_JUMBO_HDRSPLIT	opt_ti.h
 
-# DPT driver debug flags
-DPT_MEASURE_PERFORMANCE	opt_dpt.h
-DPT_RESET_HBA		opt_dpt.h
-
 # Misc debug flags.  Most of these should probably be replaced with
 # 'DEBUG', and then let people recompile just the interesting modules
 # with 'make CC="cc -DDEBUG"'.
-CLUSTERDEBUG		opt_debug_cluster.h
 DEBUG_1284		opt_ppb_1284.h
-VP0_DEBUG		opt_vpo.h
 LPT_DEBUG		opt_lpt.h
 PLIP_DEBUG		opt_plip.h
 LOCKF_DEBUG		opt_debug_lockf.h
@@ -608,7 +600,7 @@ INVARIANTS		opt_global.h
 KASSERT_PANIC_OPTIONAL	opt_global.h
 MAXCPU			opt_global.h
 MAXMEMDOM		opt_global.h
-MAXPHYS			opt_global.h
+MAXPHYS			opt_maxphys.h
 MCLSHIFT		opt_global.h
 MUTEX_NOINLINE		opt_global.h
 LOCK_PROFILING		opt_global.h
@@ -651,26 +643,8 @@ NFS_MINDIRATTRTIMO	opt_nfs.h
 NFS_MAXDIRATTRTIMO	opt_nfs.h
 NFS_DEBUG		opt_nfs.h
 
-# For the Bt848/Bt848A/Bt849/Bt878/Bt879 driver
-OVERRIDE_CARD			opt_bktr.h
-OVERRIDE_TUNER			opt_bktr.h
-OVERRIDE_DBX			opt_bktr.h
-OVERRIDE_MSP			opt_bktr.h
-BROOKTREE_SYSTEM_DEFAULT	opt_bktr.h
-BROOKTREE_ALLOC_PAGES		opt_bktr.h
-BKTR_OVERRIDE_CARD		opt_bktr.h
-BKTR_OVERRIDE_TUNER		opt_bktr.h
-BKTR_OVERRIDE_DBX		opt_bktr.h
-BKTR_OVERRIDE_MSP		opt_bktr.h
-BKTR_SYSTEM_DEFAULT		opt_bktr.h
-BKTR_ALLOC_PAGES		opt_bktr.h
-BKTR_USE_PLL			opt_bktr.h	
-BKTR_GPIO_ACCESS		opt_bktr.h
-BKTR_NO_MSP_RESET		opt_bktr.h
-BKTR_430_FX_MODE		opt_bktr.h
-BKTR_SIS_VIA_MODE		opt_bktr.h
-BKTR_USE_FREEBSD_SMBUS		opt_bktr.h
-BKTR_NEW_MSP34XX_DRIVER		opt_bktr.h
+# TMPFS options
+TMPFS_PAGES_MINRESERVED		opt_tmpfs.h
 
 # Options for uart(4)
 UART_PPS_ON_CTS		opt_uart.h
@@ -722,13 +696,17 @@ WITNESS_SKIPSPIN	opt_witness.h
 WITNESS_COUNT		opt_witness.h
 OPENSOLARIS_WITNESS	opt_global.h
 
+EPOCH_TRACE		opt_global.h
+
 # options for ACPI support
 ACPI_DEBUG		opt_acpi.h
 ACPI_MAX_TASKS		opt_acpi.h
 ACPI_MAX_THREADS	opt_acpi.h
-ACPI_DMAR		opt_acpi.h
 DEV_ACPI		opt_acpi.h
 ACPI_EARLY_EPYC_WAR	opt_acpi.h
+
+# options for IOMMU support
+IOMMU			opt_iommu.h
 
 # ISA support
 DEV_ISA			opt_isa.h
@@ -742,14 +720,8 @@ DEV_PCI			opt_pci.h
 DEV_PF			opt_pf.h
 DEV_PFLOG		opt_pf.h
 DEV_PFSYNC		opt_pf.h
-DEV_RANDOM		opt_global.h
 DEV_SPLASH		opt_splash.h
 DEV_VLAN		opt_vlan.h
-
-# ed driver
-ED_HPP			opt_ed.h
-ED_3C503		opt_ed.h
-ED_SIC			opt_ed.h
 
 # bce driver
 BCE_DEBUG		opt_bce.h
@@ -757,11 +729,6 @@ BCE_NVRAM_WRITE_SUPPORT	opt_bce.h
 
 SOCKBUF_DEBUG		opt_global.h
 
-
-# options for ubsec driver
-UBSEC_DEBUG		opt_ubsec.h
-UBSEC_RNDTEST		opt_ubsec.h
-UBSEC_NO_RNG		opt_ubsec.h
 
 # options for hifn driver
 HIFN_DEBUG		opt_hifn.h
@@ -779,6 +746,7 @@ SC_CUT_SPACES2TABS	opt_syscons.h
 SC_CUT_SEPCHARS		opt_syscons.h
 SC_DEBUG_LEVEL		opt_syscons.h
 SC_DFLT_FONT		opt_syscons.h
+SC_DFLT_TERM		opt_syscons.h
 SC_DISABLE_KDBKEY	opt_syscons.h
 SC_DISABLE_REBOOT	opt_syscons.h
 SC_HISTORY_SIZE		opt_syscons.h
@@ -792,6 +760,9 @@ SC_NO_HISTORY		opt_syscons.h
 SC_NO_MODE_CHANGE	opt_syscons.h
 SC_NO_SUSPEND_VTYSWITCH	opt_syscons.h
 SC_NO_SYSMOUSE		opt_syscons.h
+SC_NO_TERM_DUMB		opt_syscons.h
+SC_NO_TERM_SC		opt_syscons.h
+SC_NO_TERM_TEKEN	opt_syscons.h
 SC_NORM_ATTR		opt_syscons.h
 SC_NORM_REV_ATTR	opt_syscons.h
 SC_PIXEL_MODE		opt_syscons.h
@@ -840,7 +811,6 @@ ATH_DEBUG_ALQ		opt_ath.h
 ATH_KTR_INTR_DEBUG	opt_ath.h
 
 # options for the Atheros hal
-AH_SUPPORT_AR5416	opt_ah.h
 # XXX For now, this breaks non-AR9130 chipsets, so only use it
 # XXX when actually targeting AR9130.
 AH_SUPPORT_AR9130	opt_ah.h
@@ -867,6 +837,12 @@ AH_INTERRUPT_DEBUGGING	opt_ah.h
 # AR5416 and later interrupt mitigation
 # XXX do not use this for AR9130
 AH_AR5416_INTERRUPT_MITIGATION	opt_ah.h
+
+# options for the Altera mSGDMA driver (altera_msgdma)
+ALTERA_MSGDMA_DESC_STD		opt_altera_msgdma.h
+ALTERA_MSGDMA_DESC_EXT		opt_altera_msgdma.h
+ALTERA_MSGDMA_DESC_PF_STD	opt_altera_msgdma.h
+ALTERA_MSGDMA_DESC_PF_EXT	opt_altera_msgdma.h
 
 # options for the Broadcom BCM43xx driver (bwi)
 BWI_DEBUG		opt_bwi.h
@@ -920,7 +896,6 @@ HWPMC_MIPS_BACKTRACE 	opt_hwpmc_hooks.h
 # 802.11 support layer
 IEEE80211_DEBUG		opt_wlan.h
 IEEE80211_DEBUG_REFCNT	opt_wlan.h
-IEEE80211_AMPDU_AGE	opt_wlan.h
 IEEE80211_SUPPORT_MESH	opt_wlan.h
 IEEE80211_SUPPORT_SUPERG	opt_wlan.h
 IEEE80211_SUPPORT_TDMA	opt_wlan.h
@@ -984,6 +959,8 @@ RACCT_DEFAULT_TO_DISABLED	opt_global.h
 RCTL		opt_global.h
 
 # Random number generator(s)
+# Alternative RNG algorithm.
+RANDOM_FENESTRASX	opt_global.h
 # With this, no entropy processor is loaded, but the entropy
 # harvesting infrastructure is present. This means an entropy
 # processor may be loaded as a module.
@@ -1023,9 +1000,21 @@ EKCD		opt_ekcd.h
 
 # NVME options
 NVME_USE_NVD	opt_nvme.h
+NVME_2X_RESET	opt_nvme.h
 
 # amdsbwd options
 AMDSBWD_DEBUG	opt_amdsbwd.h
+
+# gcov support
+GCOV		opt_global.h
+LINDEBUGFS
+
+# options for HID support
+HID_DEBUG	opt_hid.h
+IICHID_DEBUG	opt_hid.h
+IICHID_SAMPLING	opt_hid.h
+HKBD_DFLT_KEYMAP	opt_hkbd.h
+HIDRAW_MAKE_UHID_ALIAS	opt_hid.h
 
 # kenv options
 # The early kernel environment (loader environment, config(8)-provided static)

@@ -24,9 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
-
 
 #ifndef __ETH_COMMON__
 #define __ETH_COMMON__ 
@@ -103,8 +101,6 @@
 /* GFS constants */
 #define ETH_GFT_TRASHCAN_VPORT         0x1FF          /* GFT drop flow vport number */
 
-
-
 /*
  * Destination port mode
  */
@@ -117,7 +113,6 @@ enum dest_port_mode
 	MAX_DEST_PORT_MODE
 };
 
-
 /*
  * Ethernet address type
  */
@@ -129,7 +124,6 @@ enum eth_addr_type
 	UNKNOWN_ADDRESS,
 	MAX_ETH_ADDR_TYPE
 };
-
 
 struct eth_tx_1st_bd_flags
 {
@@ -213,7 +207,6 @@ struct eth_edpm_fw_data
 	__le32 reserved;
 };
 
-
 /*
  * tunneling parsing flags
  */
@@ -275,7 +268,6 @@ struct eth_fast_path_rx_reg_cqe
 	struct eth_pmd_flow_flags pmd_flags /* CQE valid and toggle bits */;
 };
 
-
 /*
  * TPA-continue ETH Rx FP CQE.
  */
@@ -290,7 +282,6 @@ struct eth_fast_path_rx_tpa_cont_cqe
 	u8 reserved3[3];
 	struct eth_pmd_flow_flags pmd_flags /* CQE valid and toggle bits */;
 };
-
 
 /*
  * TPA-end ETH Rx FP CQE . 
@@ -310,7 +301,6 @@ struct eth_fast_path_rx_tpa_end_cqe
 	u8 reserved2 /* FW reserved. */;
 	struct eth_pmd_flow_flags pmd_flags /* CQE valid and toggle bits */;
 };
-
 
 /*
  * TPA-start ETH Rx FP CQE.
@@ -340,7 +330,6 @@ struct eth_fast_path_rx_tpa_start_cqe
 	struct eth_pmd_flow_flags pmd_flags /* CQE valid and toggle bits */;
 };
 
-
 /*
  * The L4 pseudo checksum mode for Ethernet
  */
@@ -351,13 +340,10 @@ enum eth_l4_pseudo_checksum_mode
 	MAX_ETH_L4_PSEUDO_CHECKSUM_MODE
 };
 
-
-
 struct eth_rx_bd
 {
 	struct regpair addr /* single continues buffer */;
 };
-
 
 /*
  * regular ETH Rx SP CQE
@@ -385,7 +371,6 @@ union eth_rx_cqe
 	struct eth_slow_path_rx_cqe slow_path /* SP CQE */;
 };
 
-
 /*
  * ETH Rx CQE type
  */
@@ -400,7 +385,6 @@ enum eth_rx_cqe_type
 	MAX_ETH_RX_CQE_TYPE
 };
 
-
 /*
  * Wrapper for PD RX CQE - used in order to cover full cache line when writing CQE
  */
@@ -409,7 +393,6 @@ struct eth_rx_pmd_cqe
 	union eth_rx_cqe cqe /* CQE data itself */;
 	u8 reserved[ETH_RX_CQE_GAP];
 };
-
 
 /*
  * Eth RX Tunnel Type
@@ -422,8 +405,6 @@ enum eth_rx_tunn_type
 	ETH_RX_TUNN_VXLAN /* VXLAN Tunnel. */,
 	MAX_ETH_RX_TUNN_TYPE
 };
-
-
 
 /*
  * Aggregation end reason.
@@ -441,8 +422,6 @@ enum eth_tpa_end_reason
 	MAX_ETH_TPA_END_REASON
 };
 
-
-
 /*
  * The first tx bd of a given packet
  */
@@ -453,8 +432,6 @@ struct eth_tx_1st_bd
 	struct eth_tx_data_1st_bd data /* Parsing information data. */;
 };
 
-
-
 /*
  * The second tx bd of a given packet
  */
@@ -464,7 +441,6 @@ struct eth_tx_2nd_bd
 	__le16 nbytes /* Number of bytes in this BD. */;
 	struct eth_tx_data_2nd_bd data /* Parsing information data. */;
 };
-
 
 /*
  * The parsing information data for the third tx bd of a given packet.
@@ -495,7 +471,6 @@ struct eth_tx_3rd_bd
 	struct eth_tx_data_3rd_bd data /* Parsing information data. */;
 };
 
-
 /*
  * Complementary information for the regular tx bd of a given packet.
  */
@@ -522,7 +497,6 @@ struct eth_tx_bd
 	struct eth_tx_data_bd data /* Complementary information. */;
 };
 
-
 union eth_tx_bd_types
 {
 	struct eth_tx_1st_bd first_bd /* The first tx bd of a given packet */;
@@ -530,11 +504,6 @@ union eth_tx_bd_types
 	struct eth_tx_3rd_bd third_bd /* The third tx bd of a given packet */;
 	struct eth_tx_bd reg_bd /* The common non-special bd */;
 };
-
-
-
-
-
 
 /*
  * Eth Tx Tunnel Type
@@ -548,7 +517,6 @@ enum eth_tx_tunn_type
 	MAX_ETH_TX_TUNN_TYPE
 };
 
-
 /*
  * Ystorm Queue Zone
  */
@@ -557,7 +525,6 @@ struct xstorm_eth_queue_zone
 	struct coalescing_timeset int_coalescing_timeset /* Tx interrupt coalescing TimeSet */;
 	u8 reserved[7];
 };
-
 
 /*
  * ETH doorbell data
@@ -578,7 +545,6 @@ struct eth_db_data
 	u8 agg_flags /* bit for every DQ counter flags in CM context that DQ can increment */;
 	__le16 bd_prod;
 };
-
 
 /*
  * RSS hash type

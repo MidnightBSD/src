@@ -45,7 +45,7 @@
 /************************************************************************
  * Driver version
  ************************************************************************/
-char ixgbe_driver_version[] = "4.0.1-k";
+static const char ixgbe_driver_version[] = "4.0.1-k";
 
 /************************************************************************
  * PCI Device ID Table
@@ -56,7 +56,7 @@ char ixgbe_driver_version[] = "4.0.1-k";
  *
  *   { Vendor ID, Device ID, SubVendor ID, SubDevice ID, String Index }
  ************************************************************************/
-static pci_vendor_info_t ixgbe_vendor_info_array[] =
+static const pci_vendor_info_t ixgbe_vendor_info_array[] =
 {
   PVID(IXGBE_INTEL_VENDOR_ID, IXGBE_DEV_ID_82598AF_DUAL_PORT,  "Intel(R) 82598EB AF (Dual Fiber)"),
   PVID(IXGBE_INTEL_VENDOR_ID, IXGBE_DEV_ID_82598AF_SINGLE_PORT,  "Intel(R) 82598EB AF (Fiber)"),
@@ -75,6 +75,7 @@ static pci_vendor_info_t ixgbe_vendor_info_array[] =
   PVID(IXGBE_INTEL_VENDOR_ID, IXGBE_DEV_ID_82599_XAUI_LOM,  "Intel(R) X520 82599 (XAUI/BX4)"),
   PVID(IXGBE_INTEL_VENDOR_ID, IXGBE_DEV_ID_82599_CX4,  "Intel(R) X520 82599 (Dual CX4)"),
   PVID(IXGBE_INTEL_VENDOR_ID, IXGBE_DEV_ID_82599_T3_LOM,  "Intel(R) X520-T 82599 LOM"),
+  PVID(IXGBE_INTEL_VENDOR_ID, IXGBE_DEV_ID_82599_LS,  "Intel(R) X520 82599 LS"),
   PVID(IXGBE_INTEL_VENDOR_ID, IXGBE_DEV_ID_82599_COMBO_BACKPLANE,  "Intel(R) X520 82599 (Combined Backplane)"),
   PVID(IXGBE_INTEL_VENDOR_ID, IXGBE_DEV_ID_82599_BACKPLANE_FCOE,  "Intel(R) X520 82599 (Backplane w/FCoE)"),
   PVID(IXGBE_INTEL_VENDOR_ID, IXGBE_DEV_ID_82599_SFP_SF2,  "Intel(R) X520 82599 (Dual SFP+)"),
@@ -171,6 +172,7 @@ static void ixgbe_add_media_types(if_ctx_t);
 static void ixgbe_update_stats_counters(struct ixgbe_softc *);
 static void ixgbe_config_link(if_ctx_t);
 static void ixgbe_get_slot_info(struct ixgbe_softc *);
+static void ixgbe_fw_mode_timer(void *);
 static void ixgbe_check_wol_support(struct ixgbe_softc *);
 static void ixgbe_enable_rx_drop(struct ixgbe_softc *);
 static void ixgbe_disable_rx_drop(struct ixgbe_softc *);
@@ -282,7 +284,8 @@ static device_method_t ixgbe_if_methods[] = {
  * TUNEABLE PARAMETERS:
  */
 
-static SYSCTL_NODE(_hw, OID_AUTO, ix, CTLFLAG_RD, 0, "IXGBE driver parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, ix, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "IXGBE driver parameters");
 static driver_t ixgbe_if_driver = {
   "ixgbe_if", ixgbe_if_methods, sizeof(struct ixgbe_softc)
 };
@@ -340,6 +343,16 @@ SYSCTL_INT(_hw_ix, OID_AUTO, enable_fdir, CTLFLAG_RDTUN, &ixgbe_enable_fdir, 0,
 static int ixgbe_enable_rss = 1;
 SYSCTL_INT(_hw_ix, OID_AUTO, enable_rss, CTLFLAG_RDTUN, &ixgbe_enable_rss, 0,
     "Enable Receive-Side Scaling (RSS)");
+
+/*
+ * AIM: Adaptive Interrupt Moderation
+ * which means that the interrupt rate
+ * is varied over time based on the
+ * traffic for that interrupt vector
+ */
+static int ixgbe_enable_aim = false;
+SYSCTL_INT(_hw_ix, OID_AUTO, enable_aim, CTLFLAG_RWTUN, &ixgbe_enable_aim, 0,
+    "Enable adaptive interrupt moderation");
 
 #if 0
 /* Keep running tab on them for sanity check */
@@ -868,6 +881,7 @@ ixgbe_if_attach_pre(if_ctx_t ctx)
 	struct ixgbe_hw *hw;
 	int             error = 0;
 	u32             ctrl_ext;
+	size_t i;
 
 	INIT_DEBUGOUT("ixgbe_attach: begin");
 
@@ -908,8 +922,20 @@ ixgbe_if_attach_pre(if_ctx_t ctx)
 		goto err_pci;
 	}
 
-	if (hw->mbx.ops.init_params)
-		hw->mbx.ops.init_params(hw);
+	if (hw->mac.ops.fw_recovery_mode && hw->mac.ops.fw_recovery_mode(hw)) {
+		device_printf(dev, "Firmware recovery mode detected. Limiting "
+		    "functionality.\nRefer to the Intel(R) Ethernet Adapters "
+		    "and Devices User Guide for details on firmware recovery "
+		    "mode.");
+		error = ENOSYS;
+		goto err_pci;
+	}
+
+	/* 82598 Does not support SR-IOV, initialize everything else */
+	if (hw->mac.type >= ixgbe_mac_82599_vf) {
+		for (i = 0; i < sc->num_vfs; i++)
+			hw->mbx.ops[i].init_params(hw);
+	}
 
 	hw->allow_unsupported_sfp = allow_unsupported_sfp;
 
@@ -1117,6 +1143,17 @@ ixgbe_if_attach_post(if_ctx_t ctx)
 	/* Add sysctls */
 	ixgbe_add_device_sysctls(ctx);
 
+	/* Init recovery mode timer and state variable */
+	if (sc->feat_en & IXGBE_FEATURE_RECOVERY_MODE) {
+		sc->recovery_mode = 0;
+
+		/* Set up the timer callout */
+		callout_init(&sc->fw_mode_timer, true);
+
+		/* Start the task */
+		callout_reset(&sc->fw_mode_timer, hz, ixgbe_fw_mode_timer, sc);
+	}
+
 	return (0);
 err:
 	return (error);
@@ -1236,7 +1273,7 @@ ixgbe_if_i2c_req(if_ctx_t ctx, struct ifi2creq *req)
  * @ctx: iflib context
  * @event: event code to check
  *
- * Defaults to returning true for unknown events.
+ * Defaults to returning false for unknown events.
  *
  * @returns true if iflib needs to reinit the interface
  */
@@ -1245,9 +1282,8 @@ ixgbe_if_needs_restart(if_ctx_t ctx __unused, enum iflib_restart_event event)
 {
 	switch (event) {
 	case IFLIB_RESTART_VLAN_CONFIG:
-		return (false);
 	default:
-		return (true);
+		return (false);
 	}
 }
 
@@ -1617,7 +1653,7 @@ ixgbe_add_hw_stats(struct ixgbe_softc *sc)
 		struct tx_ring *txr = &tx_que->txr;
 		snprintf(namebuf, QUEUE_NAME_LEN, "queue%d", i);
 		queue_node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, namebuf,
-		    CTLFLAG_RD, NULL, "Queue Name");
+		    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Queue Name");
 		queue_list = SYSCTL_CHILDREN(queue_node);
 
 		SYSCTL_ADD_PROC(ctx, queue_list, OID_AUTO, "txd_head",
@@ -1637,11 +1673,12 @@ ixgbe_add_hw_stats(struct ixgbe_softc *sc)
 		struct rx_ring *rxr = &rx_que->rxr;
 		snprintf(namebuf, QUEUE_NAME_LEN, "queue%d", i);
 		queue_node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, namebuf,
-		    CTLFLAG_RD, NULL, "Queue Name");
+		    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Queue Name");
 		queue_list = SYSCTL_CHILDREN(queue_node);
 
 		SYSCTL_ADD_PROC(ctx, queue_list, OID_AUTO, "interrupt_rate",
-		    CTLTYPE_UINT | CTLFLAG_RW, &sc->rx_queues[i], 0,
+		    CTLTYPE_UINT | CTLFLAG_RW,
+		    &sc->rx_queues[i], 0,
 		    ixgbe_sysctl_interrupt_rate_handler, "IU",
 		    "Interrupt Rate");
 		SYSCTL_ADD_UQUAD(ctx, queue_list, OID_AUTO, "irqs",
@@ -1666,7 +1703,7 @@ ixgbe_add_hw_stats(struct ixgbe_softc *sc)
 	/* MAC stats get their own sub node */
 
 	stat_node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "mac_stats",
-	    CTLFLAG_RD, NULL, "MAC Statistics");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "MAC Statistics");
 	stat_list = SYSCTL_CHILDREN(stat_node);
 
 	SYSCTL_ADD_UQUAD(ctx, stat_list, OID_AUTO, "rx_errs",
@@ -1780,6 +1817,10 @@ ixgbe_sysctl_tdh_handler(SYSCTL_HANDLER_ARGS)
 	if (!txr)
 		return (0);
 
+
+	if (atomic_load_acq_int(&txr->sc->recovery_mode))
+		return (EPERM);
+
 	val = IXGBE_READ_REG(&txr->sc->hw, IXGBE_TDH(txr->me));
 	error = sysctl_handle_int(oidp, &val, 0, req);
 	if (error || !req->newptr)
@@ -1802,6 +1843,9 @@ ixgbe_sysctl_tdt_handler(SYSCTL_HANDLER_ARGS)
 
 	if (!txr)
 		return (0);
+
+	if (atomic_load_acq_int(&txr->sc->recovery_mode))
+		return (EPERM);
 
 	val = IXGBE_READ_REG(&txr->sc->hw, IXGBE_TDT(txr->me));
 	error = sysctl_handle_int(oidp, &val, 0, req);
@@ -1826,6 +1870,9 @@ ixgbe_sysctl_rdh_handler(SYSCTL_HANDLER_ARGS)
 	if (!rxr)
 		return (0);
 
+	if (atomic_load_acq_int(&rxr->sc->recovery_mode))
+		return (EPERM);
+
 	val = IXGBE_READ_REG(&rxr->sc->hw, IXGBE_RDH(rxr->me));
 	error = sysctl_handle_int(oidp, &val, 0, req);
 	if (error || !req->newptr)
@@ -1848,6 +1895,9 @@ ixgbe_sysctl_rdt_handler(SYSCTL_HANDLER_ARGS)
 
 	if (!rxr)
 		return (0);
+
+	if (atomic_load_acq_int(&rxr->sc->recovery_mode))
+		return (EPERM);
 
 	val = IXGBE_READ_REG(&rxr->sc->hw, IXGBE_RDT(rxr->me));
 	error = sysctl_handle_int(oidp, &val, 0, req);
@@ -2066,7 +2116,6 @@ ixgbe_if_msix_intr_assign(if_ctx_t ctx, int msix)
 	struct ix_rx_queue *rx_que = sc->rx_queues;
 	struct ix_tx_queue *tx_que;
 	int                error, rid, vector = 0;
-	int                cpu_id = 0;
 	char               buf[16];
 
 	/* Admin Que is vector 0*/
@@ -2086,25 +2135,6 @@ ixgbe_if_msix_intr_assign(if_ctx_t ctx, int msix)
 		}
 
 		rx_que->msix = vector;
-		if (sc->feat_en & IXGBE_FEATURE_RSS) {
-			/*
-			 * The queue ID is used as the RSS layer bucket ID.
-			 * We look up the queue ID -> RSS CPU ID and select
-			 * that.
-			 */
-			cpu_id = rss_getcpu(i % rss_getnumbuckets());
-		} else {
-			/*
-			 * Bind the MSI-X vector, and thus the
-			 * rings to the corresponding cpu.
-			 *
-			 * This just happens to match the default RSS
-			 * round-robin bucket -> queue -> CPU allocation.
-			 */
-			if (sc->num_rx_queues > 1)
-				cpu_id = i;
-		}
-
 	}
 	for (int i = 0; i < sc->num_tx_queues; i++) {
 		snprintf(buf, sizeof(buf), "txq%d", i);
@@ -2135,6 +2165,69 @@ fail:
 	return (error);
 } /* ixgbe_if_msix_intr_assign */
 
+static inline void
+ixgbe_perform_aim(struct ixgbe_softc *sc, struct ix_rx_queue *que)
+{
+	uint32_t newitr = 0;
+	struct rx_ring *rxr = &que->rxr;
+	/* FIXME struct tx_ring *txr = ... ->txr; */
+
+	/*
+	 * Do Adaptive Interrupt Moderation:
+	 *  - Write out last calculated setting
+	 *  - Calculate based on average size over
+	 *    the last interval.
+	 */
+	if (que->eitr_setting) {
+		IXGBE_WRITE_REG(&sc->hw, IXGBE_EITR(que->msix),
+		    que->eitr_setting);
+	}
+
+	que->eitr_setting = 0;
+	/* Idle, do nothing */
+	if (rxr->bytes == 0) {
+		/* FIXME && txr->bytes == 0 */
+		return;
+	}
+
+	if ((rxr->bytes) && (rxr->packets))
+		newitr = rxr->bytes / rxr->packets;
+	/* FIXME for transmit accounting
+	 * if ((txr->bytes) && (txr->packets))
+	 * 	newitr = txr->bytes/txr->packets;
+	 * if ((rxr->bytes) && (rxr->packets))
+	 * 	newitr = max(newitr, (rxr->bytes / rxr->packets));
+	 */
+
+	newitr += 24; /* account for hardware frame, crc */
+	/* set an upper boundary */
+	newitr = min(newitr, 3000);
+
+	/* Be nice to the mid range */
+	if ((newitr > 300) && (newitr < 1200)) {
+		newitr = (newitr / 3);
+	} else {
+		newitr = (newitr / 2);
+	}
+
+	if (sc->hw.mac.type == ixgbe_mac_82598EB) {
+		newitr |= newitr << 16;
+	} else {
+		newitr |= IXGBE_EITR_CNT_WDIS;
+	}
+
+	/* save for next interrupt */
+	que->eitr_setting = newitr;
+
+	/* Reset state */
+	/* FIXME txr->bytes = 0; */
+	/* FIXME txr->packets = 0; */
+	rxr->bytes = 0;
+	rxr->packets = 0;
+
+	return;
+}
+
 /*********************************************************************
  * ixgbe_msix_que - MSI-X Queue Interrupt Service routine
  **********************************************************************/
@@ -2151,6 +2244,11 @@ ixgbe_msix_que(void *arg)
 
 	ixgbe_disable_queue(sc, que->msix);
 	++que->irqs;
+
+	/* Check for AIM */
+	if (sc->enable_aim) {
+		ixgbe_perform_aim(sc, que);
+	}
 
 	return (FILTER_SCHEDULE_THREAD);
 } /* ixgbe_msix_que */
@@ -2432,7 +2530,7 @@ ixgbe_if_promisc_set(if_ctx_t ctx, int flags)
 	if (ifp->if_flags & IFF_ALLMULTI)
 		mcnt = MAX_NUM_MULTICAST_ADDRESSES;
 	else {
-		mcnt = if_multiaddr_count(ifp, MAX_NUM_MULTICAST_ADDRESSES);
+		mcnt = min(if_llmaddr_count(ifp), MAX_NUM_MULTICAST_ADDRESSES);
 	}
 	if (mcnt < MAX_NUM_MULTICAST_ADDRESSES)
 		rctl &= (~IXGBE_FCTRL_MPE);
@@ -2581,6 +2679,9 @@ ixgbe_sysctl_interrupt_rate_handler(SYSCTL_HANDLER_ARGS)
 	int                error;
 	unsigned int       reg, usec, rate;
 
+	if (atomic_load_acq_int(&que->sc->recovery_mode))
+		return (EPERM);
+
 	reg = IXGBE_READ_REG(&que->sc->hw, IXGBE_EITR(que->msix));
 	usec = ((reg & 0x0FF8) >> 3);
 	if (usec > 0)
@@ -2620,12 +2721,18 @@ ixgbe_add_device_sysctls(if_ctx_t ctx)
 
 	/* Sysctls for all devices */
 	SYSCTL_ADD_PROC(ctx_list, child, OID_AUTO, "fc",
-	    CTLTYPE_INT | CTLFLAG_RW, sc, 0, ixgbe_sysctl_flowcntl, "I",
+	    CTLTYPE_INT | CTLFLAG_RW,
+	    sc, 0, ixgbe_sysctl_flowcntl, "I",
 	    IXGBE_SYSCTL_DESC_SET_FC);
 
 	SYSCTL_ADD_PROC(ctx_list, child, OID_AUTO, "advertise_speed",
-	    CTLTYPE_INT | CTLFLAG_RW, sc, 0, ixgbe_sysctl_advertise, "I",
+	    CTLTYPE_INT | CTLFLAG_RW,
+	    sc, 0, ixgbe_sysctl_advertise, "I",
 	    IXGBE_SYSCTL_DESC_ADV_SPEED);
+
+	sc->enable_aim = ixgbe_enable_aim;
+	SYSCTL_ADD_INT(ctx_list, child, OID_AUTO, "enable_aim", CTLFLAG_RW,
+	    &sc->enable_aim, 0, "Interrupt Moderation");
 
 	SYSCTL_ADD_PROC(ctx_list, child, OID_AUTO, "fw_version",
 	    CTLTYPE_STRING | CTLFLAG_RD, sc, 0,
@@ -2634,7 +2741,8 @@ ixgbe_add_device_sysctls(if_ctx_t ctx)
 #ifdef IXGBE_DEBUG
 	/* testing sysctls (for all devices) */
 	SYSCTL_ADD_PROC(ctx_list, child, OID_AUTO, "power_state",
-	    CTLTYPE_INT | CTLFLAG_RW, sc, 0, ixgbe_sysctl_power_state,
+	    CTLTYPE_INT | CTLFLAG_RW,
+	    sc, 0, ixgbe_sysctl_power_state,
 	    "I", "PCI Power State");
 
 	SYSCTL_ADD_PROC(ctx_list, child, OID_AUTO, "print_rss_config",
@@ -2644,7 +2752,8 @@ ixgbe_add_device_sysctls(if_ctx_t ctx)
 	/* for X550 series devices */
 	if (hw->mac.type >= ixgbe_mac_X550)
 		SYSCTL_ADD_PROC(ctx_list, child, OID_AUTO, "dmac",
-		    CTLTYPE_U16 | CTLFLAG_RW, sc, 0, ixgbe_sysctl_dmac,
+		    CTLTYPE_U16 | CTLFLAG_RW,
+		    sc, 0, ixgbe_sysctl_dmac,
 		    "I", "DMA Coalesce");
 
 	/* for WoL-capable devices */
@@ -2654,7 +2763,8 @@ ixgbe_add_device_sysctls(if_ctx_t ctx)
 		    ixgbe_sysctl_wol_enable, "I", "Enable/Disable Wake on LAN");
 
 		SYSCTL_ADD_PROC(ctx_list, child, OID_AUTO, "wufc",
-		    CTLTYPE_U32 | CTLFLAG_RW, sc, 0, ixgbe_sysctl_wufc,
+		    CTLTYPE_U32 | CTLFLAG_RW,
+		    sc, 0, ixgbe_sysctl_wufc,
 		    "I", "Enable/Disable Wake Up Filters");
 	}
 
@@ -2664,15 +2774,17 @@ ixgbe_add_device_sysctls(if_ctx_t ctx)
 		struct sysctl_oid_list *phy_list;
 
 		phy_node = SYSCTL_ADD_NODE(ctx_list, child, OID_AUTO, "phy",
-		    CTLFLAG_RD, NULL, "External PHY sysctls");
+		    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "External PHY sysctls");
 		phy_list = SYSCTL_CHILDREN(phy_node);
 
 		SYSCTL_ADD_PROC(ctx_list, phy_list, OID_AUTO, "temp",
-		    CTLTYPE_U16 | CTLFLAG_RD, sc, 0, ixgbe_sysctl_phy_temp,
+		    CTLTYPE_U16 | CTLFLAG_RD,
+		    sc, 0, ixgbe_sysctl_phy_temp,
 		    "I", "Current External PHY Temperature (Celsius)");
 
 		SYSCTL_ADD_PROC(ctx_list, phy_list, OID_AUTO,
-		    "overtemp_occurred", CTLTYPE_U16 | CTLFLAG_RD, sc, 0,
+		    "overtemp_occurred",
+		    CTLTYPE_U16 | CTLFLAG_RD, sc, 0,
 		    ixgbe_sysctl_phy_overtemp_occurred, "I",
 		    "External PHY High Temperature Event Occurred");
 	}
@@ -2742,6 +2854,8 @@ ixgbe_if_detach(if_ctx_t ctx)
 	ctrl_ext = IXGBE_READ_REG(&sc->hw, IXGBE_CTRL_EXT);
 	ctrl_ext &= ~IXGBE_CTRL_EXT_DRV_LOAD;
 	IXGBE_WRITE_REG(&sc->hw, IXGBE_CTRL_EXT, ctrl_ext);
+
+	callout_drain(&sc->fw_mode_timer);
 
 	ixgbe_free_pci_resources(ctx);
 	free(sc->mta, M_IXGBE);
@@ -3312,18 +3426,15 @@ ixgbe_config_delay_values(struct ixgbe_softc *sc)
  *
  *   Called whenever multicast address list is updated.
  ************************************************************************/
-static int
-ixgbe_mc_filter_apply(void *arg, struct ifmultiaddr *ifma, int idx)
+static u_int
+ixgbe_mc_filter_apply(void *arg, struct sockaddr_dl *sdl, u_int idx)
 {
 	struct ixgbe_softc *sc = arg;
 	struct ixgbe_mc_addr *mta = sc->mta;
 
-	if (ifma->ifma_addr->sa_family != AF_LINK)
-		return (0);
 	if (idx == MAX_NUM_MULTICAST_ADDRESSES)
 		return (0);
-	bcopy(LLADDR((struct sockaddr_dl *)ifma->ifma_addr),
-	    mta[idx].addr, IXGBE_ETH_LENGTH_OF_ADDRESS);
+	bcopy(LLADDR(sdl), mta[idx].addr, IXGBE_ETH_LENGTH_OF_ADDRESS);
 	mta[idx].vmdq = sc->pool;
 
 	return (1);
@@ -3336,15 +3447,15 @@ ixgbe_if_multi_set(if_ctx_t ctx)
 	struct ixgbe_mc_addr *mta;
 	struct ifnet         *ifp = iflib_get_ifp(ctx);
 	u8                   *update_ptr;
-	int                  mcnt = 0;
 	u32                  fctrl;
+	u_int		     mcnt;
 
 	IOCTL_DEBUGOUT("ixgbe_if_multi_set: begin");
 
 	mta = sc->mta;
 	bzero(mta, sizeof(*mta) * MAX_NUM_MULTICAST_ADDRESSES);
 
-	mcnt = if_multi_apply(iflib_get_ifp(ctx), ixgbe_mc_filter_apply, sc);
+	mcnt = if_foreach_llmaddr(iflib_get_ifp(ctx), ixgbe_mc_filter_apply, sc);
 
 	if (mcnt < MAX_NUM_MULTICAST_ADDRESSES) {
 		update_ptr = (u8 *)mta;
@@ -3411,6 +3522,34 @@ ixgbe_if_timer(if_ctx_t ctx, uint16_t qid)
 	iflib_admin_intr_deferred(ctx);
 
 } /* ixgbe_if_timer */
+
+/************************************************************************
+ * ixgbe_fw_mode_timer - FW mode timer routine
+ ************************************************************************/
+static void
+ixgbe_fw_mode_timer(void *arg)
+{
+	struct ixgbe_softc *sc = arg;
+	struct ixgbe_hw *hw = &sc->hw;
+
+	if (ixgbe_fw_recovery_mode(hw)) {
+		if (atomic_cmpset_acq_int(&sc->recovery_mode, 0, 1)) {
+			/* Firmware error detected, entering recovery mode */
+			device_printf(sc->dev, "Firmware recovery mode detected. Limiting"
+			    " functionality. Refer to the Intel(R) Ethernet Adapters"
+			    " and Devices User Guide for details on firmware recovery"
+			    " mode.\n");
+
+			if (hw->adapter_stopped == FALSE)
+				ixgbe_if_stop(sc->ctx);
+		}
+	} else
+		atomic_cmpset_acq_int(&sc->recovery_mode, 1, 0);
+
+
+	callout_reset(&sc->fw_mode_timer, hz,
+	    ixgbe_fw_mode_timer, sc);
+} /* ixgbe_fw_mode_timer */
 
 /************************************************************************
  * ixgbe_sfp_probe
@@ -3863,7 +4002,7 @@ ixgbe_intr(void *arg)
 	}
 
 	/* Check for fan failure */
-	if ((hw->device_id == IXGBE_DEV_ID_82598AT) &&
+	if ((sc->feat_en & IXGBE_FEATURE_FAN_FAIL) &&
 	    (eicr & IXGBE_EICR_GPI_SDP1)) {
 		device_printf(sc->dev,
 		    "\nCRITICAL: FAN FAILURE!! REPLACE IMMEDIATELY!!\n");
@@ -4057,6 +4196,9 @@ ixgbe_sysctl_advertise(SYSCTL_HANDLER_ARGS)
 	int            error, advertise;
 
 	sc = (struct ixgbe_softc *)arg1;
+	if (atomic_load_acq_int(&sc->recovery_mode))
+		return (EPERM);
+
 	advertise = sc->advertise;
 
 	error = sysctl_handle_int(oidp, &advertise, 0, req);
@@ -4408,6 +4550,9 @@ ixgbe_sysctl_print_rss_config(SYSCTL_HANDLER_ARGS)
 	int             error = 0, reta_size;
 	u32             reg;
 
+	if (atomic_load_acq_int(&sc->recovery_mode))
+		return (EPERM);
+
 	buf = sbuf_new_for_sysctl(NULL, NULL, 128, req);
 	if (!buf) {
 		device_printf(dev, "Could not allocate sbuf for output.\n");
@@ -4463,6 +4608,9 @@ ixgbe_sysctl_phy_temp(SYSCTL_HANDLER_ARGS)
 	struct ixgbe_hw *hw = &sc->hw;
 	u16             reg;
 
+	if (atomic_load_acq_int(&sc->recovery_mode))
+		return (EPERM);
+
 	if (hw->device_id != IXGBE_DEV_ID_X550EM_X_10G_T) {
 		device_printf(iflib_get_dev(sc->ctx),
 		    "Device has no supported external thermal sensor.\n");
@@ -4494,6 +4642,9 @@ ixgbe_sysctl_phy_overtemp_occurred(SYSCTL_HANDLER_ARGS)
 	struct ixgbe_softc  *sc = (struct ixgbe_softc *)arg1;
 	struct ixgbe_hw *hw = &sc->hw;
 	u16             reg;
+
+	if (atomic_load_acq_int(&sc->recovery_mode))
+		return (EPERM);
 
 	if (hw->device_id != IXGBE_DEV_ID_X550EM_X_10G_T) {
 		device_printf(iflib_get_dev(sc->ctx),
@@ -4531,6 +4682,9 @@ ixgbe_sysctl_eee_state(SYSCTL_HANDLER_ARGS)
 	struct ifnet   *ifp = iflib_get_ifp(sc->ctx);
 	int            curr_eee, new_eee, error = 0;
 	s32            retval;
+
+	if (atomic_load_acq_int(&sc->recovery_mode))
+		return (EPERM);
 
 	curr_eee = new_eee = !!(sc->feat_en & IXGBE_FEATURE_EEE);
 
@@ -4596,15 +4750,20 @@ ixgbe_init_device_features(struct ixgbe_softc *sc)
 			sc->feat_cap |= IXGBE_FEATURE_BYPASS;
 		break;
 	case ixgbe_mac_X550:
+		sc->feat_cap |= IXGBE_FEATURE_RECOVERY_MODE;
 		sc->feat_cap |= IXGBE_FEATURE_TEMP_SENSOR;
 		sc->feat_cap |= IXGBE_FEATURE_SRIOV;
 		sc->feat_cap |= IXGBE_FEATURE_FDIR;
 		break;
 	case ixgbe_mac_X550EM_x:
+		sc->feat_cap |= IXGBE_FEATURE_RECOVERY_MODE;
 		sc->feat_cap |= IXGBE_FEATURE_SRIOV;
 		sc->feat_cap |= IXGBE_FEATURE_FDIR;
+		if (sc->hw.device_id == IXGBE_DEV_ID_X550EM_X_KR)
+			sc->feat_cap |= IXGBE_FEATURE_EEE;
 		break;
 	case ixgbe_mac_X550EM_a:
+		sc->feat_cap |= IXGBE_FEATURE_RECOVERY_MODE;
 		sc->feat_cap |= IXGBE_FEATURE_SRIOV;
 		sc->feat_cap |= IXGBE_FEATURE_FDIR;
 		sc->feat_cap &= ~IXGBE_FEATURE_LEGACY_IRQ;
@@ -4640,6 +4799,9 @@ ixgbe_init_device_features(struct ixgbe_softc *sc)
 	/* Thermal Sensor */
 	if (sc->feat_cap & IXGBE_FEATURE_TEMP_SENSOR)
 		sc->feat_en |= IXGBE_FEATURE_TEMP_SENSOR;
+	/* Recovery mode */
+	if (sc->feat_cap & IXGBE_FEATURE_RECOVERY_MODE)
+		sc->feat_en |= IXGBE_FEATURE_RECOVERY_MODE;
 
 	/* Enabled via global sysctl... */
 	/* Flow Director */
@@ -4691,14 +4853,42 @@ static void
 ixgbe_sbuf_fw_version(struct ixgbe_hw *hw, struct sbuf *buf)
 {
 	struct ixgbe_nvm_version nvm_ver = {0};
-	uint16_t phyfw = 0;
-	int status;
 	const char *space = "";
 
+	ixgbe_get_nvm_version(hw, &nvm_ver); /* NVM version */
 	ixgbe_get_oem_prod_version(hw, &nvm_ver); /* OEM's NVM version */
-	ixgbe_get_orom_version(hw, &nvm_ver); /* Option ROM */
 	ixgbe_get_etk_id(hw, &nvm_ver); /* eTrack identifies a build in Intel's SCM */
-	status = ixgbe_get_phy_firmware_version(hw, &phyfw);
+	ixgbe_get_orom_version(hw, &nvm_ver); /* Option ROM */
+
+	/* FW version */
+	if ((nvm_ver.phy_fw_maj == 0x0 &&
+	    nvm_ver.phy_fw_min == 0x0 &&
+	    nvm_ver.phy_fw_id == 0x0) ||
+		(nvm_ver.phy_fw_maj == 0xF &&
+	    nvm_ver.phy_fw_min == 0xFF &&
+	    nvm_ver.phy_fw_id == 0xF)) {
+		/* If major, minor and id numbers are set to 0,
+		 * reading FW version is unsupported. If major number
+		 * is set to 0xF, minor is set to 0xFF and id is set
+		 * to 0xF, this means that number read is invalid. */
+	} else
+		sbuf_printf(buf, "fw %d.%d.%d ",
+		    nvm_ver.phy_fw_maj, nvm_ver.phy_fw_min, nvm_ver.phy_fw_id);
+
+	/* NVM version */
+	if ((nvm_ver.nvm_major == 0x0 &&
+	    nvm_ver.nvm_minor == 0x0 &&
+	    nvm_ver.nvm_id == 0x0) ||
+		(nvm_ver.nvm_major == 0xF &&
+	    nvm_ver.nvm_minor == 0xFF &&
+	    nvm_ver.nvm_id == 0xF)) {
+		/* If major, minor and id numbers are set to 0,
+		 * reading NVM version is unsupported. If major number
+		 * is set to 0xF, minor is set to 0xFF and id is set
+		 * to 0xF, this means that number read is invalid. */
+	} else
+		sbuf_printf(buf, "nvm %x.%02x.%x ",
+		    nvm_ver.nvm_major, nvm_ver.nvm_minor, nvm_ver.nvm_id);
 
 	if (nvm_ver.oem_valid) {
 		sbuf_printf(buf, "NVM OEM V%d.%d R%d", nvm_ver.oem_major,
@@ -4713,13 +4903,9 @@ ixgbe_sbuf_fw_version(struct ixgbe_hw *hw, struct sbuf *buf)
 	}
 
 	if (nvm_ver.etk_id != ((NVM_VER_INVALID << NVM_ETK_SHIFT) |
-	    NVM_VER_INVALID)) {
+	    NVM_VER_INVALID | 0xFFFFFFFF)) {
 		sbuf_printf(buf, "%seTrack 0x%08x", space, nvm_ver.etk_id);
-		space = " ";
 	}
-
-	if (phyfw != 0 && status == IXGBE_SUCCESS)
-		sbuf_printf(buf, "%sPHY FW V%d", space, phyfw);
 } /* ixgbe_sbuf_fw_version */
 
 /************************************************************************

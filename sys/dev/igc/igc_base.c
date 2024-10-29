@@ -5,7 +5,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "igc_hw.h"
 #include "igc_i225.h"
 #include "igc_mac.h"

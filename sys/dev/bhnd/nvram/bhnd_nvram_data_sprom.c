@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/endian.h>
 
 #ifdef _KERNEL
@@ -256,7 +255,7 @@ bhnd_nvram_sprom_ident(struct bhnd_nvram_io *io,
 
 					return (ENXIO);
 			}
-	
+
 			continue;
 		}
 
@@ -313,7 +312,7 @@ bhnd_nvram_sprom_getvar_direct(struct bhnd_nvram_io *io, const char *name,
 	/* Look up the variable definition and ID */
 	if ((var = bhnd_nvram_find_vardefn(name)) == NULL)
 		return (ENOENT);
-	
+
 	vid = bhnd_nvram_get_vardefn_id(var);
 
 	/* Identify the SPROM image layout */
@@ -331,7 +330,7 @@ bhnd_nvram_sprom_getvar_direct(struct bhnd_nvram_io *io, const char *name,
 		bhnd_sprom_opcode_idx_entry	entry;
 		union bhnd_nvram_sprom_storage	storage;
 		bhnd_nvram_val			val;
-	
+
 		/* Fetch the variable's entry state */
 		if ((error = bhnd_sprom_opcode_init_entry(&state, &entry)))
 			return (error);
@@ -508,7 +507,7 @@ bhnd_nvram_sprom_write_var(bhnd_sprom_opcode_state *state,
 
 		if (enc_nelem != nelem) {
 			const char *type_name;
-	
+
 			type_name = bhnd_nvram_type_name(var_base_type);
 			BHND_NV_LOG("invalid %s property value '%s[%zu]': "
 			    "required %s[%zu]", var->name, type_name,
@@ -525,7 +524,7 @@ bhnd_nvram_sprom_write_var(bhnd_sprom_opcode_state *state,
 		BHND_NV_LOG("variable seek failed: %d\n", error);
 		return (error);
 	}
-	
+
 	ipos = 0;
 	while ((error = bhnd_sprom_opcode_next_binding(state)) == 0) {
 		bhnd_sprom_opcode_bind	*binding;
@@ -743,7 +742,7 @@ bhnd_nvram_sprom_serialize(bhnd_nvram_data_class *cls, bhnd_nvram_plist *props,
 		BHND_NV_LOG("error writing CRC value: %d\n", error);
 		goto finished;
 	}
-	
+
 	/*
 	 * Success!
 	 */
@@ -751,7 +750,7 @@ bhnd_nvram_sprom_serialize(bhnd_nvram_data_class *cls, bhnd_nvram_plist *props,
 
 finished:
 	bhnd_sprom_opcode_fini(&state);
-	
+
 	if (io != NULL)
 		bhnd_nvram_io_free(io);
 
@@ -1262,7 +1261,6 @@ bhnd_nvram_sprom_read_var(struct bhnd_sprom_opcode_state *state,
 	return (bhnd_nvram_val_init(val, var->fmt, inp, ilen, var->type,
 	    BHND_NVRAM_VAL_BORROW_DATA));
 }
-
 
 /**
  * Common variable decoding; fetches and decodes variable to @p val,

@@ -116,6 +116,7 @@ struct amdtemp_softc {
 #define	DEVICEID_AMD_HOSTB17H_M60H_ROOT	0x1630
 #define	DEVICEID_AMD_HOSTB19H_M10H_ROOT	0x14a4
 #define	DEVICEID_AMD_HOSTB19H_M60H_ROOT	0x14d8
+#define	DEVICEID_AMD_HOSTB19H_M70H_ROOT	0x14e8
 
 static const struct amdtemp_product {
 	uint16_t	amdtemp_vendorid;
@@ -142,6 +143,7 @@ static const struct amdtemp_product {
 	{ VENDORID_AMD,	DEVICEID_AMD_HOSTB17H_M60H_ROOT, false },
 	{ VENDORID_AMD,	DEVICEID_AMD_HOSTB19H_M10H_ROOT, false },
 	{ VENDORID_AMD,	DEVICEID_AMD_HOSTB19H_M60H_ROOT, false },
+	{ VENDORID_AMD,	DEVICEID_AMD_HOSTB19H_M70H_ROOT, false },
 };
 
 /*
@@ -443,7 +445,7 @@ amdtemp_attach(device_t dev)
 			erratum319 = 1;
 			break;
 		case 1:	/* Socket AM2+ or AM3 */
-			if ((pci_cfgregread(
+			if ((pci_cfgregread(pci_get_domain(dev),
 			    pci_get_bus(dev), pci_get_slot(dev), 2,
 			    AMDTEMP_DRAM_CONF_HIGH, 2) &
 			    AMDTEMP_DRAM_MODE_DDR3) != 0 || model > 0x04 ||
@@ -772,7 +774,7 @@ amdtemp_gettemp15hm60h(device_t dev, amdsensor_t sensor)
 {
 	struct amdtemp_softc *sc = device_get_softc(dev);
 	uint32_t val;
-	int error __diagused;
+	int error;
 
 	error = amdsmn_read(sc->sc_smn, AMDTEMP_15H_M60H_REPTMP_CTRL, &val);
 	KASSERT(error == 0, ("amdsmn_read"));
@@ -784,7 +786,7 @@ amdtemp_gettemp17h(device_t dev, amdsensor_t sensor)
 {
 	struct amdtemp_softc *sc = device_get_softc(dev);
 	uint32_t val;
-	int error __diagused;
+	int error;
 
 	switch (sensor) {
 	case CORE0_SENSOR0:
@@ -875,6 +877,7 @@ amdtemp_probe_ccd_sensors19h(device_t dev, uint32_t model)
 		_Static_assert((int)NUM_CCDS >= 12, "");
 		break;
 	case 0x60 ... 0x6f: /* Zen4 Ryzen "Raphael" */
+	case 0x70 ... 0x7f: /* Zen4 Ryzen "Phoenix" */
 		sc->sc_temp_base = AMDTEMP_ZEN4_CCD_TMP_BASE;
 		maxreg = 8;
 		_Static_assert((int)NUM_CCDS >= 8, "");

@@ -90,7 +90,6 @@
 #ifndef MPI_INIT_H
 #define MPI_INIT_H
 
-
 /*****************************************************************************
 *
 *               S C S I    I n i t i a t o r    M e s s a g e s
@@ -120,7 +119,6 @@ typedef struct _MSG_SCSI_IO_REQUEST
     SGE_IO_UNION            SGL;                /* 30h */
 } MSG_SCSI_IO_REQUEST, MPI_POINTER PTR_MSG_SCSI_IO_REQUEST,
   SCSIIORequest_t, MPI_POINTER pSCSIIORequest_t;
-
 
 /* SCSI IO MsgFlags bits */
 
@@ -171,7 +169,6 @@ typedef struct _MSG_SCSI_IO_REQUEST
 #define MPI_SCSIIO_CONTROL_ABORT_TASK_SET       (0x00020000)
 #define MPI_SCSIIO_CONTROL_RESERVED2            (0x00010000)
 
-
 /* SCSI IO reply structure */
 typedef struct _MSG_SCSI_IO_REPLY
 {
@@ -196,7 +193,6 @@ typedef struct _MSG_SCSI_IO_REPLY
 } MSG_SCSI_IO_REPLY, MPI_POINTER PTR_MSG_SCSI_IO_REPLY,
   SCSIIOReply_t, MPI_POINTER pSCSIIOReply_t;
 
-
 /* SCSI IO Reply SCSIStatus values (SAM-2 status codes) */
 
 #define MPI_SCSI_STATUS_SUCCESS                 (0x00)
@@ -213,7 +209,6 @@ typedef struct _MSG_SCSI_IO_REPLY
 #define MPI_SCSI_STATUS_FCPEXT_DEVICE_LOGGED_OUT    (0x80)
 #define MPI_SCSI_STATUS_FCPEXT_NO_LINK              (0x81)
 #define MPI_SCSI_STATUS_FCPEXT_UNASSIGNED           (0x82)
-
 
 /* SCSI IO Reply SCSIState values */
 
@@ -236,7 +231,6 @@ typedef struct _MSG_SCSI_IO_REPLY
 #define MPI_SCSI_RSP_INFO_SPI_LQ_INVALID_TYPE   (0x06000000)
 
 #define MPI_SCSI_TASKTAG_UNKNOWN                (0xFFFF)
-
 
 /****************************************************************************/
 /*  SCSI IO 32 messages and associated structures                           */
@@ -402,7 +396,6 @@ typedef struct _MSG_SCSI_IO32_REQUEST
 #define MPI_SCSIIO32_EEDPFLAGS_INC_SEC_REFTAG       (0x4000)
 #define MPI_SCSIIO32_EEDPFLAGS_INC_PRI_REFTAG       (0x8000)
 
-
 /* SCSIIO32 IO reply structure */
 typedef struct _MSG_SCSIIO32_IO_REPLY
 {
@@ -427,7 +420,6 @@ typedef struct _MSG_SCSIIO32_IO_REPLY
     U32                     BidirectionalTransferCount; /* 24h */
 } MSG_SCSIIO32_IO_REPLY, MPI_POINTER PTR_MSG_SCSIIO32_IO_REPLY,
   SCSIIO32Reply_t, MPI_POINTER pSCSIIO32Reply_t;
-
 
 /****************************************************************************/
 /*  SCSI Task Management messages                                           */
@@ -498,7 +490,6 @@ typedef struct _MSG_SCSI_TASK_MGMT_REPLY
 #define MPI_SCSITASKMGMT_RSP_TM_INVALID_LUN             (0x09)
 #define MPI_SCSITASKMGMT_RSP_IO_QUEUED_ON_IOC           (0x80)
 
-
 /****************************************************************************/
 /*  SCSI Enclosure Processor messages                                       */
 /****************************************************************************/
@@ -554,7 +545,6 @@ typedef struct _MSG_SEP_REQUEST
 #define MPI_SEP_REQ_SLOTSTATUS_A_ENABLE_BYPASS          (0x08000000)
 #define MPI_SEP_REQ_SLOTSTATUS_DEV_OFF                  (0x10000000)
 #define MPI_SEP_REQ_SLOTSTATUS_SWAP_RESET               (0x80000000)
-
 
 typedef struct _MSG_SEP_REPLY
 {

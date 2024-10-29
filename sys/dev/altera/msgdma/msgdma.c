@@ -31,7 +31,6 @@
 /* Altera mSGDMA driver. */
 
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -59,6 +58,7 @@
 
 #include <dev/xdma/xdma.h>
 #include "xdma_if.h"
+#include "opt_altera_msgdma.h"
 
 #include <dev/altera/msgdma/msgdma.h>
 
@@ -356,11 +356,6 @@ msgdma_desc_alloc(struct msgdma_softc *sc, struct msgdma_channel *chan,
 	/* Descriptors. */
 	chan->descs = malloc(nsegments * sizeof(struct msgdma_desc *),
 	    M_DEVBUF, (M_WAITOK | M_ZERO));
-	if (chan->descs == NULL) {
-		device_printf(sc->dev,
-		    "%s: Can't allocate memory.\n", __func__);
-		return (-1);
-	}
 	chan->dma_map = malloc(nsegments * sizeof(bus_dmamap_t),
 	    M_DEVBUF, (M_WAITOK | M_ZERO));
 	chan->descs_phys = malloc(nsegments * sizeof(bus_dma_segment_t),
@@ -397,7 +392,6 @@ msgdma_desc_alloc(struct msgdma_softc *sc, struct msgdma_channel *chan,
 	return (0);
 }
 
-
 static int
 msgdma_channel_alloc(device_t dev, struct xdma_channel *xchan)
 {
@@ -412,7 +406,8 @@ msgdma_channel_alloc(device_t dev, struct xdma_channel *xchan)
 		if (chan->used == 0) {
 			chan->xchan = xchan;
 			xchan->chan = (void *)chan;
-			xchan->caps |= XCHAN_CAP_BUSDMA;
+			if ((xchan->caps & XCHAN_CAP_IOMMU) == 0)
+				xchan->caps |= XCHAN_CAP_BUSDMA;
 			chan->index = i;
 			chan->sc = sc;
 			chan->used = 1;
@@ -469,8 +464,8 @@ msgdma_channel_submit_sg(device_t dev, struct xdma_channel *xchan,
 	struct msgdma_channel *chan;
 	struct msgdma_desc *desc;
 	struct msgdma_softc *sc;
-	uint32_t src_addr_lo;
-	uint32_t dst_addr_lo;
+	bus_addr_t src_addr_lo;
+	bus_addr_t dst_addr_lo;
 	uint32_t len;
 	uint32_t tmp;
 	int i;
@@ -480,14 +475,18 @@ msgdma_channel_submit_sg(device_t dev, struct xdma_channel *xchan,
 	chan = (struct msgdma_channel *)xchan->chan;
 
 	for (i = 0; i < sg_n; i++) {
-		src_addr_lo = (uint32_t)sg[i].src_addr;
-		dst_addr_lo = (uint32_t)sg[i].dst_addr;
+		src_addr_lo = sg[i].src_addr;
+		dst_addr_lo = sg[i].dst_addr;
 		len = (uint32_t)sg[i].len;
 
 		dprintf("%s: src %x dst %x len %d\n", __func__,
 		    src_addr_lo, dst_addr_lo, len);
 
 		desc = chan->descs[chan->idx_head];
+#if defined(ALTERA_MSGDMA_DESC_EXT) || defined(ALTERA_MSGDMA_DESC_PF_EXT)
+		desc->read_hi = htole32(src_addr_lo >> 32);
+		desc->write_hi = htole32(dst_addr_lo >> 32);
+#endif
 		desc->read_lo = htole32(src_addr_lo);
 		desc->write_lo = htole32(dst_addr_lo);
 		desc->length = htole32(len);

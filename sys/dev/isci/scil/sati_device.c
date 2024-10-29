@@ -53,7 +53,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /**
  * @file
  * @brief This file contains all of the defintions for the SATI remote

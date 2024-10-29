@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2020 Rubicon Communications, LLC (Netgate)
  *
@@ -22,7 +22,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _SAFEXCEL_REGS_H_
@@ -33,7 +32,6 @@
 #define	EIP201_VERSION_LE			0x36c9
 #define	SAFEXCEL_REG_LO16(_reg)			((_reg) & 0xffff)
 #define	SAFEXCEL_REG_HI16(_reg)			(((_reg) >> 16) & 0xffff)
-
 
 /* HIA, Command Descriptor Ring Manager */
 #define	CDR_BASE_ADDR_LO(x)			(0x0 + ((x) << 12))

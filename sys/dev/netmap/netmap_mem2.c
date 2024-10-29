@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2012-2014 Matteo Landi
  * Copyright (C) 2012-2016 Luigi Rizzo
@@ -163,7 +163,7 @@ struct netmap_mem_d {
 
 	u_int flags;
 #define NETMAP_MEM_FINALIZED	0x1	/* preallocation done */
-#define NETMAP_MEM_HIDDEN	0x8	/* beeing prepared */
+#define NETMAP_MEM_HIDDEN	0x8	/* being prepared */
 	int lasterr;		/* last error for curr config */
 	int active;		/* active users */
 	int refcount;
@@ -171,7 +171,7 @@ struct netmap_mem_d {
 	struct netmap_obj_pool pools[NETMAP_POOLS_NR];
 
 	nm_memid_t nm_id;	/* allocator identifier */
-	int nm_grp;	/* iommu groupd id */
+	int nm_grp;	/* iommu group id */
 
 	/* list of all existing allocators, sorted by nm_id */
 	struct netmap_mem_d *prev, *next;
@@ -307,7 +307,7 @@ netmap_mem_rings_delete(struct netmap_adapter *na)
 
 static int netmap_mem_map(struct netmap_obj_pool *, struct netmap_adapter *);
 static int netmap_mem_unmap(struct netmap_obj_pool *, struct netmap_adapter *);
-static int nm_mem_check_group(struct netmap_mem_d *, bus_dma_tag_t);
+static int nm_mem_assign_group(struct netmap_mem_d *, bus_dma_tag_t);
 static void nm_mem_release_id(struct netmap_mem_d *);
 
 nm_memid_t
@@ -355,7 +355,7 @@ int
 netmap_mem_finalize(struct netmap_mem_d *nmd, struct netmap_adapter *na)
 {
 	int lasterr = 0;
-	if (nm_mem_check_group(nmd, na->pdev) < 0) {
+	if (nm_mem_assign_group(nmd, na->pdev) < 0) {
 		return ENOMEM;
 	}
 
@@ -724,7 +724,7 @@ netmap_mem_find(nm_memid_t id)
 }
 
 static int
-nm_mem_check_group(struct netmap_mem_d *nmd, bus_dma_tag_t dev)
+nm_mem_assign_group(struct netmap_mem_d *nmd, bus_dma_tag_t dev)
 {
 	int err = 0, id;
 	id = nm_iommu_group_id(dev);
@@ -847,7 +847,7 @@ netmap_mem2_ofstophys(struct netmap_mem_d* nmd, vm_ooffset_t offset)
  *
  *		2a - cycle all the objects in every pool, get the list
  *				of the physical address descriptors
- *		2b - calculate the offset in the array of pages desciptor in the
+ *		2b - calculate the offset in the array of pages descriptor in the
  *				main MDL
  *		2c - copy the descriptors of the object in the main MDL
  *
@@ -1399,7 +1399,7 @@ netmap_finalize_obj_allocator(struct netmap_obj_pool *p)
 
 	if (p->lut) {
 		/* if the lut is already there we assume that also all the
-		 * clusters have already been allocated, possibily by somebody
+		 * clusters have already been allocated, possibly by somebody
 		 * else (e.g., extmem). In the latter case, the alloc_done flag
 		 * will remain at zero, so that we will not attempt to
 		 * deallocate the clusters by ourselves in
@@ -1903,7 +1903,7 @@ netmap_mem2_rings_create(struct netmap_adapter *na)
 			u_int len, ndesc;
 
 			if (ring || (!kring->users && !(kring->nr_kflags & NKR_NEEDRING))) {
-				/* uneeded, or already created by somebody else */
+				/* unneeded, or already created by somebody else */
 				if (netmap_debug & NM_DEBUG_MEM)
 					nm_prinf("NOT creating ring %s (ring %p, users %d neekring %d)",
 						kring->name, ring, kring->users, kring->nr_kflags & NKR_NEEDRING);

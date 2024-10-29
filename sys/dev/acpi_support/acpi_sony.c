@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_acpi.h"
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -113,11 +112,11 @@ static char    *sny_id[] = {"SNY5001", NULL};
 static int
 acpi_sony_probe(device_t dev)
 {
-	int ret = ENXIO;
+	int ret;
 
-	if (ACPI_ID_PROBE(device_get_parent(dev), dev, sny_id)) {
+	ret = ACPI_ID_PROBE(device_get_parent(dev), dev, sny_id, NULL);
+	if (ret <= 0) {
 		device_set_desc(dev, "Sony notebook controller");
-		ret = 0;
 	}
 	return (ret);
 }
@@ -136,14 +135,14 @@ acpi_sony_attach(device_t dev)
 			SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 			    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
 			    i, acpi_sony_oids[i].nodename ,
-			    CTLTYPE_INT | CTLFLAG_RW,
+			    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
 			    dev, i, sysctl_acpi_sony_gen_handler, "I",
 			    acpi_sony_oids[i].comment);
 		} else {
 			SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 			    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
 			    i, acpi_sony_oids[i].nodename ,
-			    CTLTYPE_INT | CTLFLAG_RD,
+			    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE,
 			    dev, i, sysctl_acpi_sony_gen_handler, "I",
 			    acpi_sony_oids[i].comment);
 		}

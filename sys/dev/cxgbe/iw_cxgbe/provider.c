@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2013, 2016 Chelsio, Inc. All rights reserved.
  *
@@ -32,7 +32,6 @@
  * SOFTWARE.
  */
 #include <sys/cdefs.h>
-
 #define	LINUXKPI_PARAM_PREFIX iw_cxgbe_
 
 #include "opt_inet.h"
@@ -347,8 +346,7 @@ c4iw_query_device(struct ib_device *ibdev, struct ib_device_attr *props,
 	props->max_mr = c4iw_num_stags(&dev->rdev);
 	props->max_pd = T4_MAX_NUM_PD;
 	props->local_ca_ack_delay = 0;
-	props->max_fast_reg_page_list_len =
-		t4_max_fr_depth(sc->params.ulptx_memwrite_dsgl && use_dsgl);
+	props->max_fast_reg_page_list_len = t4_max_fr_depth(&dev->rdev, use_dsgl);
 
 	return (0);
 }

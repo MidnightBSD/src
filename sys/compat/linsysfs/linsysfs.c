@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 IronPort Systems
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/ctype.h>
@@ -621,8 +620,8 @@ linsysfs_init(PFS_INIT_ARGS)
 	struct pfs_node *pci;
 	struct pfs_node *scsi;
 	struct pfs_node *net;
-	struct pfs_node *power_supply;
 	struct pfs_node *devdir, *chardev;
+	struct pfs_node *kernel;
 	devclass_t devclass;
 	device_t dev;
 
@@ -630,11 +629,14 @@ linsysfs_init(PFS_INIT_ARGS)
 
 	root = pi->pi_root;
 
+	/* /sys/bus/... */
+	dir = pfs_create_dir(root, "bus", NULL, NULL, NULL, 0);
+
 	/* /sys/class/... */
 	class = pfs_create_dir(root, "class", NULL, NULL, NULL, 0);
 	scsi = pfs_create_dir(class, "scsi_host", NULL, NULL, NULL, 0);
 	drm = pfs_create_dir(class, "drm", NULL, NULL, NULL, 0);
-	power_supply = pfs_create_dir(class, "power_supply", NULL, NULL, NULL, 0);
+	pfs_create_dir(class, "power_supply", NULL, NULL, NULL, 0);
 
 	/* /sys/class/net/.. */
 	net = pfs_create_dir(class, "net", NULL, NULL, NULL, 0);
@@ -670,6 +672,11 @@ linsysfs_init(PFS_INIT_ARGS)
 
 	linsysfs_listcpus(cpu);
 	linsysfs_listnics(net);
+
+	/* /sys/kernel */
+	kernel = pfs_create_dir(root, "kernel", NULL, NULL, NULL, 0);
+	/* /sys/kernel/debug, mountpoint for lindebugfs. */
+	pfs_create_dir(kernel, "debug", NULL, NULL, NULL, 0);
 
 	return (0);
 }

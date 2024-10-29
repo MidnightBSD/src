@@ -24,7 +24,6 @@
    THE SOFTWARE.
    */
 #include <sys/cdefs.h>
-
 #include "osdep.h"
 #include "fastlz.h"
 

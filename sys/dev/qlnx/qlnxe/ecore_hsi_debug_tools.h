@@ -24,7 +24,6 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
 
 #ifndef __ECORE_HSI_DEBUG_TOOLS__
@@ -32,7 +31,6 @@
 /****************************************/
 /* Debug Tools HSI constants and macros */
 /****************************************/
-
 
 enum block_addr
 {
@@ -127,7 +125,6 @@ enum block_addr
 	MAX_BLOCK_ADDR
 };
 
-
 enum block_id
 {
 	BLOCK_GRC,
@@ -221,7 +218,6 @@ enum block_id
 	MAX_BLOCK_ID
 };
 
-
 /*
  * binary debug buffer types
  */
@@ -246,7 +242,6 @@ enum bin_dbg_buffer_type
 	MAX_BIN_DBG_BUFFER_TYPE
 };
 
-
 /*
  * Attention bit mapping
  */
@@ -258,7 +253,6 @@ struct dbg_attn_bit_mapping
 #define DBG_ATTN_BIT_MAPPING_IS_UNUSED_BIT_CNT_MASK  0x1 /* if set, the val field indicates the number of consecutive unused attention bits */
 #define DBG_ATTN_BIT_MAPPING_IS_UNUSED_BIT_CNT_SHIFT 15
 };
-
 
 /*
  * Attention block per-type data
@@ -279,7 +273,6 @@ struct dbg_attn_block
 {
 	struct dbg_attn_block_type_data per_type_data[2] /* attention block per-type data. Count must match the number of elements in dbg_attn_type. */;
 };
-
 
 /*
  * Attention register result
@@ -312,8 +305,6 @@ struct dbg_attn_block_result
 	struct dbg_attn_reg_result reg_results[15] /* result data for each register in the block in which at least one attention bit is set */;
 };
 
-
-
 /*
  * mode header
  */
@@ -342,8 +333,6 @@ struct dbg_attn_reg
 	u32 mask_address /* MASK attention register GRC address (in dwords) */;
 };
 
-
-
 /*
  * attention types
  */
@@ -353,7 +342,6 @@ enum dbg_attn_type
 	ATTN_TYPE_PARITY,
 	MAX_DBG_ATTN_TYPE
 };
-
 
 /*
  * Debug Bus block data
@@ -365,7 +353,6 @@ struct dbg_bus_block
 	u16 lines_offset /* Offset of this blocks lines in the Debug Bus lines array. */;
 };
 
-
 /*
  * Debug Bus block user data
  */
@@ -375,7 +362,6 @@ struct dbg_bus_block_user_data
 	u8 has_latency_events /* Indicates if this block has a latency events debug line (0/1). */;
 	u16 names_offset /* Offset of this blocks lines in the debug bus line name offsets array. */;
 };
-
 
 /*
  * Block Debug line data
@@ -392,7 +378,6 @@ struct dbg_bus_line
 	u8 group_sizes /* Four 2-bit values, indicating the size of each group minus 1 (i.e. value=0 means size=1, value=1 means size=2, etc), starting from lsb. The sizes are in dwords (if is_256b=0) or in qwords (if is_256b=1). */;
 };
 
-
 /*
  * condition header for registers dump
  */
@@ -402,7 +387,6 @@ struct dbg_dump_cond_hdr
 	u8 block_id /* block ID */;
 	u8 data_size /* size in dwords of the data following this header */;
 };
-
 
 /*
  * memory data for registers dump
@@ -423,7 +407,6 @@ struct dbg_dump_mem
 #define DBG_DUMP_MEM_RESERVED_SHIFT     25
 };
 
-
 /*
  * register data for registers dump
  */
@@ -438,7 +421,6 @@ struct dbg_dump_reg
 #define DBG_DUMP_REG_LENGTH_SHIFT   24
 };
 
-
 /*
  * split header for registers dump
  */
@@ -451,7 +433,6 @@ struct dbg_dump_split_hdr
 #define DBG_DUMP_SPLIT_HDR_SPLIT_TYPE_ID_SHIFT 24
 };
 
-
 /*
  * condition header for idle check
  */
@@ -460,7 +441,6 @@ struct dbg_idle_chk_cond_hdr
 	struct dbg_mode_hdr mode /* Mode header */;
 	u16 data_size /* size in dwords of the data following this header */;
 };
-
 
 /*
  * Idle Check condition register
@@ -479,7 +459,6 @@ struct dbg_idle_chk_cond_reg
 	u8 start_entry /* index of the first entry to check */;
 };
 
-
 /*
  * Idle Check info register
  */
@@ -496,7 +475,6 @@ struct dbg_idle_chk_info_reg
 	struct dbg_mode_hdr mode /* Mode header */;
 };
 
-
 /*
  * Idle Check register
  */
@@ -505,7 +483,6 @@ union dbg_idle_chk_reg
 	struct dbg_idle_chk_cond_reg cond_reg /* condition register */;
 	struct dbg_idle_chk_info_reg info_reg /* info register */;
 };
-
 
 /*
  * Idle Check result header
@@ -520,7 +497,6 @@ struct dbg_idle_chk_result_hdr
 	u8 reserved;
 };
 
-
 /*
  * Idle Check result register header
  */
@@ -534,7 +510,6 @@ struct dbg_idle_chk_result_reg_hdr
 	u8 start_entry /* index of the first checked entry */;
 	u16 size /* register size in dwords */;
 };
-
 
 /*
  * Idle Check rule
@@ -552,7 +527,6 @@ struct dbg_idle_chk_rule
 	u16 imm_offset /* offset of this rules immediate values in the immediate values array (in dwords) */;
 };
 
-
 /*
  * Idle Check rule parsing data
  */
@@ -565,7 +539,6 @@ struct dbg_idle_chk_rule_parsing_data
 #define DBG_IDLE_CHK_RULE_PARSING_DATA_STR_OFFSET_SHIFT 1
 };
 
-
 /*
  * idle check severity types
  */
@@ -576,8 +549,6 @@ enum dbg_idle_chk_severity_types
 	IDLE_CHK_SEVERITY_WARNING /* idle check failure should cause a warning */,
 	MAX_DBG_IDLE_CHK_SEVERITY_TYPES
 };
-
-
 
 /*
  * Debug Bus block data
@@ -596,7 +567,6 @@ struct dbg_bus_block_data
 	u8 line_num /* Debug line number to select */;
 	u8 hw_id /* HW ID associated with the block */;
 };
-
 
 /*
  * Debug Bus Clients
@@ -625,7 +595,6 @@ enum dbg_bus_clients
 	MAX_DBG_BUS_CLIENTS
 };
 
-
 /*
  * Debug Bus constraint operation types
  */
@@ -643,7 +612,6 @@ enum dbg_bus_constraint_ops
 	DBG_BUS_CONSTRAINT_OP_GEC /* greater than or equal (cyclic) */,
 	MAX_DBG_BUS_CONSTRAINT_OPS
 };
-
 
 /*
  * Debug Bus trigger state data
@@ -749,7 +717,6 @@ struct dbg_bus_data
 	struct dbg_bus_storm_data storms[6] /* Debug Bus data for each block */;
 };
 
-
 /*
  * Debug bus filter types
  */
@@ -762,7 +729,6 @@ enum dbg_bus_filter_types
 	MAX_DBG_BUS_FILTER_TYPES
 };
 
-
 /*
  * Debug bus frame modes
  */
@@ -773,8 +739,6 @@ enum dbg_bus_frame_modes
 	DBG_BUS_FRAME_MODE_8HW_0ST=4 /* 8 HW dwords, 0 Storm dwords */,
 	MAX_DBG_BUS_FRAME_MODES
 };
-
-
 
 /*
  * Debug bus other engine mode
@@ -789,8 +753,6 @@ enum dbg_bus_other_engine_modes
 	MAX_DBG_BUS_OTHER_ENGINE_MODES
 };
 
-
-
 /*
  * Debug bus post-trigger recording types
  */
@@ -800,7 +762,6 @@ enum dbg_bus_post_trigger_types
 	DBG_BUS_POST_TRIGGER_DROP /* drop data after trigger */,
 	MAX_DBG_BUS_POST_TRIGGER_TYPES
 };
-
 
 /*
  * Debug bus pre-trigger recording types
@@ -813,7 +774,6 @@ enum dbg_bus_pre_trigger_types
 	MAX_DBG_BUS_PRE_TRIGGER_TYPES
 };
 
-
 /*
  * Debug bus SEMI frame modes
  */
@@ -823,7 +783,6 @@ enum dbg_bus_semi_frame_modes
 	DBG_BUS_SEMI_FRAME_MODE_4SLOW_0FAST=3 /* 4 slow dwords, 0 fast dwords */,
 	MAX_DBG_BUS_SEMI_FRAME_MODES
 };
-
 
 /*
  * Debug bus states
@@ -836,11 +795,6 @@ enum dbg_bus_states
 	DBG_BUS_STATE_STOPPED /* debug bus recording has stopped */,
 	MAX_DBG_BUS_STATES
 };
-
-
-
-
-
 
 /*
  * Debug Bus Storm modes
@@ -859,7 +813,6 @@ enum dbg_bus_storm_modes
 	MAX_DBG_BUS_STORM_MODES
 };
 
-
 /*
  * Debug bus target IDs
  */
@@ -871,8 +824,6 @@ enum dbg_bus_targets
 	MAX_DBG_BUS_TARGETS
 };
 
-
-
 /*
  * GRC Dump data
  */
@@ -883,7 +834,6 @@ struct dbg_grc_data
 	u16 reserved2;
 	u32 param_val[48] /* Value of each GRC parameter. Array size must match the enum dbg_grc_params. */;
 };
-
 
 /*
  * Debug GRC params
@@ -934,7 +884,6 @@ enum dbg_grc_params
 	MAX_DBG_GRC_PARAMS
 };
 
-
 /*
  * Debug reset registers
  */
@@ -950,7 +899,6 @@ enum dbg_reset_regs
 	DBG_RESET_REG_MISC_PL_PDA_VAUX,
 	MAX_DBG_RESET_REGS
 };
-
 
 /*
  * Debug status codes
@@ -1014,7 +962,6 @@ enum dbg_status
 	MAX_DBG_STATUS
 };
 
-
 /*
  * Debug Storms IDs
  */
@@ -1028,7 +975,6 @@ enum dbg_storms
 	DBG_PSTORM_ID,
 	MAX_DBG_STORMS
 };
-
 
 /*
  * Idle Check data
@@ -1057,6 +1003,5 @@ struct dbg_tools_data
 	u8 use_dmae /* Indicates if DMAE should be used */;
 	u32 num_regs_read /* Numbers of registers that were read since last log */;
 };
-
 
 #endif /* __ECORE_HSI_DEBUG_TOOLS__ */

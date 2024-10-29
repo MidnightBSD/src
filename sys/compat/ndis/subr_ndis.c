@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * This file implements a translation layer between the BSD networking
  * infrasturcture and Windows(R) NDIS network driver modules. A Windows
@@ -48,7 +47,6 @@
  * _stdcall calling convention, since that's what the Windows object code
  * expects.
  */
-
 
 #include <sys/ctype.h>
 #include <sys/param.h>
@@ -1730,7 +1728,6 @@ NdisAllocatePacketPool(status, pool, descnum, protrsvdlen)
 	packets = ExAllocatePoolWithTag(NonPagedPool, p->np_cnt *
 	    p->np_len, 0);
 
-
 	if (packets == NULL) {
 		ExFreePool(p);
 		*status = NDIS_STATUS_RESOURCES;
@@ -1842,7 +1839,6 @@ NdisAllocatePacket(status, packet, pool)
 		*status = NDIS_STATUS_RESOURCES;
 		return;
 	}
-
 
 	bzero((char *)pkt, sizeof(ndis_packet));
 
@@ -2213,7 +2209,7 @@ ndis_intr(iobj, arg)
 		    sc->ndis_block->nmb_miniportadapterctx);
 		call_isr = 1;
 	}
- 
+
 	if (call_isr)
 		IoRequestDpc(sc->ndis_block->nmb_deviceobj, NULL, sc);
 
@@ -2844,7 +2840,7 @@ NdisOpenFile(status, filehandle, filelength, filename, highestaddr)
 
 	/* Get the file size. */
 	VOP_GETATTR(nd.ni_vp, vap, td->td_ucred);
-	VOP_UNLOCK(nd.ni_vp, 0);
+	VOP_UNLOCK(nd.ni_vp);
 
 	fh->nf_vp = nd.ni_vp;
 	fh->nf_map = NULL;
@@ -3370,6 +3366,5 @@ image_patch_table ndis_functbl[] = {
 	{ NULL, (FUNC)dummy, NULL, 0, WINDRV_WRAP_STDCALL },
 
 	/* End of list. */
-
 	{ NULL, NULL, NULL }
 };

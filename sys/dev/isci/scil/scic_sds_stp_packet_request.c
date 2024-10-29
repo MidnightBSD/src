@@ -53,7 +53,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #if !defined(DISABLE_ATAPI)
 
 #include <dev/isci/scil/scic_sds_stp_packet_request.h>

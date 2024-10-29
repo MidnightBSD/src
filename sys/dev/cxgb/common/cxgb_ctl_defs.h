@@ -5,7 +5,6 @@
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the LICENSE file included in this
  * release for licensing terms and conditions.
- *
  */
 
 #ifndef _CXGB3_OFFLOAD_CTL_DEFS_H
@@ -123,7 +122,7 @@ struct rdma_info {
 	unsigned int udbell_len; /* user doorbell region length */
 	unsigned long udbell_physbase;  /* user doorbell physical start addr */
 	void *kdb_addr;  /* kernel doorbell register address */
-	struct device *pdev;    /* associated PCI device */
+	device_t pdev;   /* associated PCI device */
 };
 
 /*

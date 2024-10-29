@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <linux/compat.h>
 #include <linux/kthread.h>
 #include <linux/sched.h>
@@ -141,7 +140,6 @@ linux_kthread_setup_and_run(struct thread *td, linux_task_fn_t *task_fn, void *a
 	sched_prio(td, PI_SWI(SWI_NET));
 	/* put thread into run-queue */
 	sched_add(td, SRQ_BORING);
-	thread_unlock(td);
 
 	return (task);
 }
@@ -164,4 +162,20 @@ linux_kthread_fn(void *arg __unused)
 		complete(&task->exited);
 	}
 	kthread_exit();
+}
+
+void
+lkpi_kthread_work_fn(void *context, int pending __unused)
+{
+	struct kthread_work *work = context;
+
+	work->func(work);
+}
+
+void
+lkpi_kthread_worker_init_fn(void *context, int pending __unused)
+{
+	struct kthread_worker *worker = context;
+
+	worker->task = current;
 }

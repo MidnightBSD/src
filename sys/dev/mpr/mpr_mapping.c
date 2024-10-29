@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* TODO Move headers to mprvar */
 #include <sys/types.h>
 #include <sys/param.h>
@@ -500,7 +499,7 @@ _mapping_get_free_ir_mt_idx(struct mpr_softc *sc)
 		    "free entry in the mapping table for a Volume. The mapping "
 		    "table is probably corrupt.\n", __func__);
 	}
-	
+
 	return high_idx;
 }
 
@@ -560,7 +559,6 @@ _mapping_get_dpm_idx_from_id(struct mpr_softc *sc, u64 id, u32 phy_bits)
 
 	return MPR_DPM_BAD_IDX;
 }
-
 
 /**
  * _mapping_get_free_dpm_idx - get first available DPM index
@@ -777,7 +775,7 @@ _mapping_add_to_removal_table(struct mpr_softc *sc, u16 dpm_idx)
 	for (i = 0; i < sc->max_devices; i++, remove_entry++) {
 		if (remove_entry->dpm_entry_num != MPR_DPM_BAD_IDX)
 			continue;
- 
+
 		mpr_dprint(sc, MPR_MAPPING, "%s: Adding DPM entry %d to table "
 		    "for removal.\n", __func__, dpm_idx);
 		remove_entry->dpm_entry_num = dpm_idx;
@@ -1707,7 +1705,6 @@ _mapping_add_new_device(struct mpr_softc *sc,
 		} else if ((ioc_pg8_flags &
 		    MPI2_IOCPAGE8_FLAGS_MASK_MAPPING_MODE) ==
 		    MPI2_IOCPAGE8_FLAGS_DEVICE_PERSISTENCE_MAPPING) {
-
 			/*
 			 * Get the mapping table index for this device. If it's
 			 * not in the mapping table yet, find a free entry if
@@ -1965,7 +1962,6 @@ _mapping_add_new_pcie_device(struct mpr_softc *sc,
 		} else if ((ioc_pg8_flags &
 		    MPI2_IOCPAGE8_FLAGS_MASK_MAPPING_MODE) ==
 		    MPI2_IOCPAGE8_FLAGS_DEVICE_PERSISTENCE_MAPPING) {
-
 			/*
 			 * Get the mapping table index for this device. If it's
 			 * not in the mapping table yet, find a free entry if
@@ -2279,7 +2275,6 @@ _mapping_process_dpm_pg0(struct mpr_softc *sc)
 		}
 		if ((ioc_pg8_flags & MPI2_IOCPAGE8_FLAGS_MASK_MAPPING_MODE) ==
 		    MPI2_IOCPAGE8_FLAGS_ENCLOSURE_SLOT_MAPPING) {
-
 			/*
 			 * The dev_idx for an enclosure is the start index. If
 			 * the start index is within the controller's default
@@ -2355,7 +2350,6 @@ _mapping_process_dpm_pg0(struct mpr_softc *sc)
 		} else if ((ioc_pg8_flags &
 		    MPI2_IOCPAGE8_FLAGS_MASK_MAPPING_MODE) ==
 		    MPI2_IOCPAGE8_FLAGS_DEVICE_PERSISTENCE_MAPPING) {
-
 			/*
 			 * Device mapping, so simply copy the DPM entries to the
 			 * mapping table, but check for a corrupt mapping table
@@ -2588,7 +2582,7 @@ mpr_mapping_initialize(struct mpr_softc *sc)
 	mpr_dprint(sc, MPR_MAPPING, "%s: Mapping table has a max of %d entries "
 	    "and DPM has a max of %d entries.\n", __func__, sc->max_devices,
 	    sc->max_dpm_entries);
-	
+
 	if (ioc_pg8_flags & MPI2_IOCPAGE8_FLAGS_DISABLE_PERSISTENT_MAPPING)
 		sc->is_dpm_enable = 0;
 

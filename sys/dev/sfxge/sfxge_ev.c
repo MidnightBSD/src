@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
@@ -493,18 +492,16 @@ sfxge_evq_stat_init(struct sfxge_evq *evq)
 
 	snprintf(name, sizeof(name), "%u", evq->index);
 	evq_stats_node = SYSCTL_ADD_NODE(ctx,
-					 SYSCTL_CHILDREN(sc->evqs_stats_node),
-					 OID_AUTO, name, CTLFLAG_RD, NULL, "");
+	    SYSCTL_CHILDREN(sc->evqs_stats_node), OID_AUTO, name,
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "");
 	if (evq_stats_node == NULL)
 		return (ENOMEM);
 
 	for (id = 0; id < EV_NQSTATS; id++) {
-		SYSCTL_ADD_PROC(
-			ctx, SYSCTL_CHILDREN(evq_stats_node),
-			OID_AUTO, efx_ev_qstat_name(sc->enp, id),
-			CTLTYPE_U64|CTLFLAG_RD,
-			evq, id, sfxge_evq_stat_handler, "Q",
-			"");
+		SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(evq_stats_node),
+		    OID_AUTO, efx_ev_qstat_name(sc->enp, id),
+		    CTLTYPE_U64 | CTLFLAG_RD | CTLFLAG_MPSAFE, evq, id,
+		    sfxge_evq_stat_handler, "Q", "");
 	}
 
 	return (0);
@@ -563,11 +560,9 @@ sfxge_ev_stat_init(struct sfxge_softc *sc)
 	for (id = 0; id < EV_NQSTATS; id++) {
 		snprintf(name, sizeof(name), "ev_%s",
 			 efx_ev_qstat_name(sc->enp, id));
-		SYSCTL_ADD_PROC(
-			ctx, stat_list,
-			OID_AUTO, name, CTLTYPE_U64|CTLFLAG_RD,
-			sc, id, sfxge_ev_stat_handler, "Q",
-			"");
+		SYSCTL_ADD_PROC(ctx, stat_list, OID_AUTO, name,
+		    CTLTYPE_U64 | CTLFLAG_RD | CTLFLAG_MPSAFE,
+		    sc, id, sfxge_ev_stat_handler, "Q", "");
 	}
 }
 
@@ -677,7 +672,6 @@ static const efx_ev_callbacks_t sfxge_ev_callbacks = {
 	.eec_timer		= sfxge_ev_timer,
 	.eec_link_change	= sfxge_ev_link_change,
 };
-
 
 int
 sfxge_ev_qpoll(struct sfxge_evq *evq)
@@ -1003,14 +997,15 @@ sfxge_ev_init(struct sfxge_softc *sc)
 	 */
 	sc->ev_moderation = SFXGE_MODERATION;
 	SYSCTL_ADD_PROC(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree),
-			OID_AUTO, "int_mod", CTLTYPE_UINT|CTLFLAG_RW,
-			sc, 0, sfxge_int_mod_handler, "IU",
-			"sfxge interrupt moderation (us)");
+	    OID_AUTO, "int_mod", CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+	    sc, 0, sfxge_int_mod_handler, "IU",
+	    "sfxge interrupt moderation (us)");
 
 #if EFSYS_OPT_QSTATS
 	sc->evqs_stats_node = SYSCTL_ADD_NODE(
-		device_get_sysctl_ctx(sc->dev), SYSCTL_CHILDREN(sc->stats_node),
-		OID_AUTO, "evq", CTLFLAG_RD, NULL, "Event queues stats");
+	    device_get_sysctl_ctx(sc->dev), SYSCTL_CHILDREN(sc->stats_node),
+	    OID_AUTO, "evq", CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
+	    "Event queues stats");
 	if (sc->evqs_stats_node == NULL) {
 		rc = ENOMEM;
 		goto fail_evqs_stats_node;

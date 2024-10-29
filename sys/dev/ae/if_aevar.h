@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Stanislav Sedov <stas@FreeBSD.org>.
  * All rights reserved.
@@ -23,7 +23,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef IF_AEVAR_H
@@ -122,7 +121,7 @@ typedef struct ae_softc	{
 	struct task		int_task;
 	struct task		link_task;
 	struct taskqueue	*tq;
-	
+
 	/* DMA tags. */
 	bus_dma_tag_t		dma_parent_tag;
 	bus_dma_tag_t		dma_rxd_tag;
@@ -135,7 +134,7 @@ typedef struct ae_softc	{
 	bus_addr_t		dma_rxd_busaddr;
 	bus_addr_t		dma_txd_busaddr;
 	bus_addr_t		dma_txs_busaddr;
-	
+
 	char			*rxd_base_dma;	/* Start of allocated area. */
 	ae_rxd_t		*rxd_base;	/* Start of RxD ring. */
 	char			*txd_base;	/* Start of TxD ring. */

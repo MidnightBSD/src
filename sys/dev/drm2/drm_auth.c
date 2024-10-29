@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/drm2/drmP.h>
 
 static struct mtx drm_magic_lock;

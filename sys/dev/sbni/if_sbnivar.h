@@ -23,7 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -62,7 +61,6 @@ struct sbni_flags {
 	u_int	fixed_rate	: 1;
 };
 
-
 #ifdef _KERNEL	/* to avoid compile this decls with sbniconfig */
 
 struct sbni_softc {
@@ -80,7 +78,7 @@ struct sbni_softc {
 
 	struct	mbuf *rx_buf_p;		/* receive buffer ptr */
 	struct	mbuf *tx_buf_p;		/* transmit buffer ptr */
-	
+
 	u_int	pktlen;			/* length of transmitting pkt */
 	u_int	framelen;		/* current frame length */
 	u_int	maxframe;		/* maximum valid frame length */
@@ -127,7 +125,7 @@ struct sbni_softc {
 
 void	sbni_intr(void *);
 int	sbni_probe(struct sbni_softc *);
-int	sbni_attach(struct sbni_softc *, int, struct sbni_flags);
+void	sbni_attach(struct sbni_softc *, int, struct sbni_flags);
 void	sbni_detach(struct sbni_softc *);
 void	sbni_release_resources(struct sbni_softc *);
 
@@ -146,7 +144,6 @@ struct sbni_softc	*connect_to_master(struct sbni_softc *);
 #define	SIOCSHWFLAGS	_IOWR('i', 61, struct ifreq)	/* set flags */
 #define SIOCGINSTATS	_IOWR('i', 60, struct ifreq)	/* get internal stats */
 #define SIOCRINSTATS	_IOWR('i', 63, struct ifreq)	/* reset internal stats */
-
 
 /*
  * CRC-32 stuff

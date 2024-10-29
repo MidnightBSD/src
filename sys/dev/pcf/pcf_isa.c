@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004 Joerg Wunsch
  *
@@ -30,7 +30,6 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-
 /*
  * Hardware driver for a Philips PCF8584 I2C bus controller sitting
  * on a generic ISA bus.

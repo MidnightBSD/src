@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013, 2016 Chelsio Communications, Inc.
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  *
  */
 
@@ -22615,6 +22614,10 @@
 #define M_TXPDUSIZEADJ    0xffU
 #define V_TXPDUSIZEADJ(x) ((x) << S_TXPDUSIZEADJ)
 #define G_TXPDUSIZEADJ(x) (((x) >> S_TXPDUSIZEADJ) & M_TXPDUSIZEADJ)
+
+#define S_ENABLECBYP    21
+#define V_ENABLECBYP(x) ((x) << S_ENABLECBYP)
+#define F_ENABLECBYP    V_ENABLECBYP(1U)
 
 #define S_LIMITEDTRANSMIT    20
 #define M_LIMITEDTRANSMIT    0xfU

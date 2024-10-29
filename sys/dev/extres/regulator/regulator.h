@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_EXTRES_REGULATOR_H_
@@ -33,8 +32,8 @@
 #include <sys/sysctl.h>
 #ifdef FDT
 #include <dev/ofw/ofw_bus.h>
-#endif
 #include "regnode_if.h"
+#endif
 
 SYSCTL_DECL(_hw_regulator);
 

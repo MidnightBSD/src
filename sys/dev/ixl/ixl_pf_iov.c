@@ -38,8 +38,6 @@ static void	ixl_vf_map_vsi_queue(struct i40e_hw *hw, struct ixl_vf *vf, int qnum
 static void	ixl_vf_disable_queue_intr(struct i40e_hw *hw, uint32_t vfint_reg);
 static void	ixl_vf_unregister_intr(struct i40e_hw *hw, uint32_t vpint_reg);
 
-static bool	ixl_zero_mac(const uint8_t *addr);
-
 static int	ixl_vc_opcode_level(uint16_t opcode);
 
 static int	ixl_vf_mac_valid(struct ixl_vf *vf, const uint8_t *addr);
@@ -1013,20 +1011,11 @@ ixl_vf_disable_queues_msg(struct ixl_pf *pf, struct ixl_vf *vf,
 	ixl_send_vf_ack(pf, vf, VIRTCHNL_OP_DISABLE_QUEUES);
 }
 
-static bool
-ixl_zero_mac(const uint8_t *addr)
-{
-	uint8_t zero[ETHER_ADDR_LEN] = {0, 0, 0, 0, 0, 0};
-
-	return (!ixl_ether_is_equal(addr, zero));
-}
-
-
 static int
 ixl_vf_mac_valid(struct ixl_vf *vf, const uint8_t *addr)
 {
 
-	if (ixl_zero_mac(addr) || ETHER_IS_BROADCAST(addr))
+	if (ETHER_IS_ZERO(addr) || ETHER_IS_BROADCAST(addr))
 		return (EINVAL);
 
 	/*
@@ -1095,7 +1084,7 @@ ixl_vf_del_mac_msg(struct ixl_pf *pf, struct ixl_vf *vf, void *msg,
 
 	for (i = 0; i < addr_list->num_elements; i++) {
 		addr = &addr_list->list[i];
-		if (ixl_zero_mac(addr->addr) || ETHER_IS_BROADCAST(addr->addr)) {
+		if (ETHER_IS_ZERO(addr->addr) || ETHER_IS_BROADCAST(addr->addr)) {
 			i40e_send_vf_nack(pf, vf,
 			    VIRTCHNL_OP_DEL_ETH_ADDR, I40E_ERR_PARAM);
 			return;

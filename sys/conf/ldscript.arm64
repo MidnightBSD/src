@@ -5,7 +5,7 @@ SEARCH_DIR(/usr/lib);
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
-  . = kernbase + SIZEOF_HEADERS;
+  . = text_start; /* This is set using --defsym= on the command line. */
   .text      :
   {
     *(.text)
@@ -111,8 +111,13 @@ SECTIONS
    *(.dynbss)
    *(.bss)
    *(COMMON)
+   . = ALIGN(8);
+   __bss_end = .;
+   /* A section for the initial page table, it doesn't need to be in the
+      kernel file, however unlike normal .bss entries should not be zeroed
+      out as we use it before the .bss section is cleared. */
+   *(.init_pagetable)
   }
-  . = ALIGN(8);
   _end = . ;
   PROVIDE (end = .);
   /* Stabs debugging sections.  */

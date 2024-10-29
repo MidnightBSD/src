@@ -30,9 +30,9 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/efi.h>
+#include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/linker.h>
 #include <sys/lock.h>
@@ -40,6 +40,7 @@
 #include <sys/mutex.h>
 #include <sys/clock.h>
 #include <sys/proc.h>
+#include <sys/reboot.h>
 #include <sys/rwlock.h>
 #include <sys/sched.h>
 #include <sys/sysctl.h>
@@ -56,6 +57,7 @@
 #include <vm/vm_map.h>
 
 static struct efi_systbl *efi_systbl;
+static eventhandler_tag efi_shutdown_tag;
 /*
  * The following pointers point to tables in the EFI runtime service data pages.
  * Care should be taken to make sure that we've properly entered the EFI runtime
@@ -105,6 +107,11 @@ efi_status_to_errno(efi_status status)
 }
 
 static struct mtx efi_lock;
+static SYSCTL_NODE(_hw, OID_AUTO, efi, CTLFLAG_RWTUN | CTLFLAG_MPSAFE, NULL,
+    "EFI");
+static bool efi_poweroff = true;
+SYSCTL_BOOL(_hw_efi, OID_AUTO, poweroff, CTLFLAG_RWTUN, &efi_poweroff, 0,
+    "If true, use EFI runtime services to power off in preference to ACPI");
 
 static bool
 efi_is_in_map(struct efi_md *map, int ndesc, int descsz, vm_offset_t addr)
@@ -123,6 +130,19 @@ efi_is_in_map(struct efi_md *map, int ndesc, int descsz, vm_offset_t addr)
 	}
 
 	return (false);
+}
+
+static void
+efi_shutdown_final(void *dummy __unused, int howto)
+{
+
+	/*
+	 * On some systems, ACPI S5 is missing or does not function properly.
+	 * When present, shutdown via EFI Runtime Services instead, unless
+	 * disabled.
+	 */
+	if ((howto & RB_POWEROFF) != 0 && efi_poweroff)
+		(void)efi_reset_system(EFI_RESET_SHUTDOWN);
 }
 
 static int
@@ -213,6 +233,12 @@ efi_init(void)
 	}
 #endif
 
+	/*
+	 * We use SHUTDOWN_PRI_LAST - 1 to trigger after IPMI, but before ACPI.
+	 */
+	efi_shutdown_tag = EVENTHANDLER_REGISTER(shutdown_final,
+	    efi_shutdown_final, NULL, SHUTDOWN_PRI_LAST - 1);
+
 	return (0);
 }
 
@@ -223,6 +249,8 @@ efi_uninit(void)
 	/* Most likely disabled by tunable */
 	if (efi_runtime == NULL)
 		return;
+	if (efi_shutdown_tag != NULL)
+		EVENTHANDLER_DEREGISTER(shutdown_final, efi_shutdown_tag);
 	efi_destroy_1t1_map();
 
 	efi_systbl = NULL;
@@ -241,6 +269,11 @@ efi_rt_ok(void)
 	return (0);
 }
 
+/*
+ * The fpu_kern_enter() call in allows firmware to use FPU, as
+ * mandated by the specification.  It also enters a critical section,
+ * giving us neccessary protection against context switches.
+ */
 static int
 efi_enter(void)
 {
@@ -424,16 +457,24 @@ efi_get_time_capabilities(struct efi_tmcap *tmcap)
 }
 
 int
-efi_reset_system(void)
+efi_reset_system(enum efi_reset type)
 {
 	struct efirt_callinfo ec;
 
+	switch (type) {
+	case EFI_RESET_COLD:
+	case EFI_RESET_WARM:
+	case EFI_RESET_SHUTDOWN:
+		break;
+	default:
+		return (EINVAL);
+	}
 	if (efi_runtime == NULL)
 		return (ENXIO);
 	bzero(&ec, sizeof(ec));
 	ec.ec_name = "rt_reset";
 	ec.ec_argcnt = 4;
-	ec.ec_arg1 = (uintptr_t)EFI_RESET_WARM;
+	ec.ec_arg1 = (uintptr_t)type;
 	ec.ec_arg2 = (uintptr_t)0;
 	ec.ec_arg3 = (uintptr_t)0;
 	ec.ec_arg4 = (uintptr_t)NULL;

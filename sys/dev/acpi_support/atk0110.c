@@ -18,7 +18,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <machine/_inttypes.h>
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -121,12 +120,14 @@ static char* aibs_hids[] = {
 static int
 aibs_probe(device_t dev)
 {
-	if (acpi_disabled("aibs") ||
-	    ACPI_ID_PROBE(device_get_parent(dev), dev, aibs_hids) == NULL)
-		return (ENXIO);
+	int rv;
 
-	device_set_desc(dev, "ASUSTeK AI Booster (ACPI ASOC ATK0110)");
-	return (0);
+	if (acpi_disabled("aibs"))
+		return (ENXIO);
+	rv = ACPI_ID_PROBE(device_get_parent(dev), dev, aibs_hids, NULL);
+	if (rv <= 0 )
+		device_set_desc(dev, "ASUSTeK AI Booster (ACPI ASOC ATK0110)");
+	return (rv);
 }
 
 static int
@@ -231,7 +232,7 @@ aibs_sensor_added(struct aibs_softc *sc, struct sysctl_oid *so,
 #endif
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(sc->sc_dev),
 	    SYSCTL_CHILDREN(so), idx, sysctl_name,
-	    CTLTYPE_INT | CTLFLAG_RD, sc, (uintptr_t)sensor,
+	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE, sc, (uintptr_t)sensor,
 	    sc->sc_ggrp_method ? aibs_sysctl_ggrp : aibs_sysctl,
 	    sensor->t == AIBS_SENS_TYPE_TEMP ? "IK" : "I", descr);
 }
@@ -316,7 +317,8 @@ aibs_attach_ggrp(struct aibs_softc *sc)
 			/* sysctl subtree for sensors of this type */
 			*so = SYSCTL_ADD_NODE(device_get_sysctl_ctx(sc->sc_dev),
 			    SYSCTL_CHILDREN(device_get_sysctl_tree(sc->sc_dev)),
-			    sensor->t, name, CTLFLAG_RD, NULL, NULL);
+			    sensor->t, name, CTLFLAG_RD | CTLFLAG_MPSAFE,
+			    NULL, NULL);
 		}
 		aibs_sensor_added(sc, *so, name, *s_idx, sensor, descr);
 		*s_idx += 1;
@@ -412,7 +414,7 @@ aibs_attach_sif(struct aibs_softc *sc, int st)
 	/* sysctl subtree for sensors of this type */
 	*so = SYSCTL_ADD_NODE(device_get_sysctl_ctx(sc->sc_dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(sc->sc_dev)), st,
-	    node, CTLFLAG_RD, NULL, NULL);
+	    node, CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, NULL);
 
 	for (i = 0, o++; i < n; i++, o++) {
 		const char	*descr;

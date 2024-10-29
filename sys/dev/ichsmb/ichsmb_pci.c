@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Support for the SMBus controller logical device which is part of the
  * Intel 81801AA/AB/BA/CA/DC/EB (ICH/ICH[02345]) I/O controller hub chips.
@@ -104,52 +103,112 @@
 #define	ID_LEWISBURG2			0xa223
 #define	ID_KABYLAKE			0xa2a3
 #define	ID_CANNONLAKE			0xa323
+#define	ID_COMETLAKE			0x02a3
+#define	ID_COMETLAKE2			0x06a3
+#define	ID_TIGERLAKE			0xa0a3
+#define	ID_TIGERLAKE2			0x43a3
+#define	ID_GEMINILAKE			0x31d4
+#define	ID_ALDERLAKE			0x7aa3
+#define	ID_ALDERLAKE2			0x51a3
+#define	ID_ALDERLAKE3			0x54a3
 
-static const struct ichsmb_device {
-	uint16_t	id;
-	const char	*name;
-} ichsmb_devices[] = {
-	{ ID_82801AA,	"Intel 82801AA (ICH) SMBus controller"		},
-	{ ID_82801AB,	"Intel 82801AB (ICH0) SMBus controller"		},
-	{ ID_82801BA,	"Intel 82801BA (ICH2) SMBus controller"		},
-	{ ID_82801CA,	"Intel 82801CA (ICH3) SMBus controller"		},
-	{ ID_82801DC,	"Intel 82801DC (ICH4) SMBus controller"		},
-	{ ID_82801EB,	"Intel 82801EB (ICH5) SMBus controller"		},
-	{ ID_82801FB,	"Intel 82801FB (ICH6) SMBus controller"		},
-	{ ID_82801GB,	"Intel 82801GB (ICH7) SMBus controller"		},
-	{ ID_82801H,	"Intel 82801H (ICH8) SMBus controller"		},
-	{ ID_82801I,	"Intel 82801I (ICH9) SMBus controller"		},
-	{ ID_82801GB,	"Intel 82801GB (ICH7) SMBus controller"		},
-	{ ID_82801H,	"Intel 82801H (ICH8) SMBus controller"		},
-	{ ID_82801I,	"Intel 82801I (ICH9) SMBus controller"		},
-	{ ID_EP80579,	"Intel EP80579 SMBus controller"		},
-	{ ID_82801JI,	"Intel 82801JI (ICH10) SMBus controller"	},
-	{ ID_82801JD,	"Intel 82801JD (ICH10) SMBus controller"	},
-	{ ID_PCH,	"Intel PCH SMBus controller"			},
-	{ ID_6300ESB,	"Intel 6300ESB (ICH) SMBus controller"		},
-	{ ID_631xESB,	"Intel 631xESB/6321ESB (ESB2) SMBus controller"	},
-	{ ID_DH89XXCC,	"Intel DH89xxCC SMBus controller"		},
-	{ ID_PATSBURG,	"Intel Patsburg SMBus controller"		},
-	{ ID_CPT,	"Intel Cougar Point SMBus controller"		},
-	{ ID_PPT,	"Intel Panther Point SMBus controller"		},
-	{ ID_AVOTON,	"Intel Avoton SMBus controller"			},
-	{ ID_LPT,	"Intel Lynx Point SMBus controller"		},
-	{ ID_LPTLP,	"Intel Lynx Point-LP SMBus controller"		},
-	{ ID_WCPT,	"Intel Wildcat Point SMBus controller"		},
-	{ ID_WCPTLP,	"Intel Wildcat Point-LP SMBus controller"	},
-	{ ID_BAYTRAIL,	"Intel Baytrail SMBus controller"		},
-	{ ID_BRASWELL,	"Intel Braswell SMBus controller"		},
-	{ ID_COLETOCRK,	"Intel Coleto Creek SMBus controller"		},
-	{ ID_WELLSBURG,	"Intel Wellsburg SMBus controller"		},
-	{ ID_SRPT,	"Intel Sunrise Point-H SMBus controller"	},
-	{ ID_SRPTLP,	"Intel Sunrise Point-LP SMBus controller"	},
-	{ ID_DENVERTON,	"Intel Denverton SMBus controller"		},
-	{ ID_BROXTON,	"Intel Broxton SMBus controller"		},
-	{ ID_LEWISBURG,	"Intel Lewisburg SMBus controller"		},
-	{ ID_LEWISBURG2,"Intel Lewisburg SMBus controller"		},
-	{ ID_KABYLAKE,	"Intel Kaby Lake SMBus controller"		},
-	{ ID_CANNONLAKE,"Intel Cannon Lake SMBus controller"		},
-	{ 0, NULL },
+static const struct pci_device_table ichsmb_devices[] = {
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_82801AA),
+	  PCI_DESCR("Intel 82801AA (ICH) SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_82801AB),
+	  PCI_DESCR("Intel 82801AB (ICH0) SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_82801BA),
+	  PCI_DESCR("Intel 82801BA (ICH2) SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_82801CA),
+	  PCI_DESCR("Intel 82801CA (ICH3) SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_82801DC),
+	  PCI_DESCR("Intel 82801DC (ICH4) SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_82801EB),
+	  PCI_DESCR("Intel 82801EB (ICH5) SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_82801FB),
+	  PCI_DESCR("Intel 82801FB (ICH6) SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_82801GB),
+	  PCI_DESCR("Intel 82801GB (ICH7) SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_82801H),
+	  PCI_DESCR("Intel 82801H (ICH8) SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_82801I),
+	  PCI_DESCR("Intel 82801I (ICH9) SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_82801GB),
+	  PCI_DESCR("Intel 82801GB (ICH7) SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_82801H),
+	  PCI_DESCR("Intel 82801H (ICH8) SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_82801I),
+	  PCI_DESCR("Intel 82801I (ICH9) SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_EP80579),
+	  PCI_DESCR("Intel EP80579 SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_82801JI),
+	  PCI_DESCR("Intel 82801JI (ICH10) SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_82801JD),
+	  PCI_DESCR("Intel 82801JD (ICH10) SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_PCH),
+	  PCI_DESCR("Intel PCH SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_6300ESB),
+	  PCI_DESCR("Intel 6300ESB (ICH) SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_631xESB),
+	  PCI_DESCR("Intel 631xESB/6321ESB (ESB2) SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_DH89XXCC),
+	  PCI_DESCR("Intel DH89xxCC SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_PATSBURG),
+	  PCI_DESCR("Intel Patsburg SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_CPT),
+	  PCI_DESCR("Intel Cougar Point SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_PPT),
+	  PCI_DESCR("Intel Panther Point SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_AVOTON),
+	  PCI_DESCR("Intel Avoton SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_LPT),
+	  PCI_DESCR("Intel Lynx Point SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_LPTLP),
+	  PCI_DESCR("Intel Lynx Point-LP SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_WCPT),
+	  PCI_DESCR("Intel Wildcat Point SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_WCPTLP),
+	  PCI_DESCR("Intel Wildcat Point-LP SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_BAYTRAIL),
+	  PCI_DESCR("Intel Baytrail SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_BRASWELL),
+	  PCI_DESCR("Intel Braswell SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_COLETOCRK),
+	  PCI_DESCR("Intel Coleto Creek SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_WELLSBURG),
+	  PCI_DESCR("Intel Wellsburg SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_SRPT),
+	  PCI_DESCR("Intel Sunrise Point-H SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_SRPTLP),
+	  PCI_DESCR("Intel Sunrise Point-LP SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_DENVERTON),
+	  PCI_DESCR("Intel Denverton SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_BROXTON),
+	  PCI_DESCR("Intel Broxton SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_LEWISBURG),
+	  PCI_DESCR("Intel Lewisburg SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_LEWISBURG2),
+	  PCI_DESCR("Intel Lewisburg SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_KABYLAKE),
+	  PCI_DESCR("Intel Kaby Lake SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_CANNONLAKE),
+	  PCI_DESCR("Intel Cannon Lake SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_COMETLAKE),
+	  PCI_DESCR("Intel Comet Lake SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_COMETLAKE2),
+	  PCI_DESCR("Intel Comet Lake SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_TIGERLAKE),
+	  PCI_DESCR("Intel Tiger Lake SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_TIGERLAKE2),
+	  PCI_DESCR("Intel Tiger Lake SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_GEMINILAKE),
+	  PCI_DESCR("Intel Gemini Lake SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_ALDERLAKE),
+	  PCI_DESCR("Intel Alder Lake SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_ALDERLAKE2),
+	  PCI_DESCR("Intel Alder Lake SMBus controller") },
+	{ PCI_DEV(PCI_VENDOR_INTEL, ID_ALDERLAKE3),
+	  PCI_DESCR("Intel Alder Lake SMBus controller") },
 };
 
 /* Internal functions */
@@ -196,19 +255,14 @@ DRIVER_MODULE(ichsmb, pci, ichsmb_pci_driver, ichsmb_pci_devclass, 0, 0);
 static int
 ichsmb_pci_probe(device_t dev)
 {
-	const struct ichsmb_device *device;
+	const struct pci_device_table *tbl;
 
-	if (pci_get_vendor(dev) != PCI_VENDOR_INTEL)
+	tbl = PCI_MATCH(dev, ichsmb_devices);
+	if (tbl == NULL)
 		return (ENXIO);
 
-	for (device = ichsmb_devices; device->name != NULL; device++) {
-		if (pci_get_device(dev) == device->id) {
-			device_set_desc(dev, device->name);
-			return (ichsmb_probe(dev));
-		}
-	}
-
-	return (ENXIO);
+	device_set_desc(dev, tbl->descr);
+	return (ichsmb_probe(dev));
 }
 
 static int
@@ -264,3 +318,4 @@ fail:
 MODULE_DEPEND(ichsmb, pci, 1, 1, 1);
 MODULE_DEPEND(ichsmb, smbus, SMBUS_MINVER, SMBUS_PREFVER, SMBUS_MAXVER);
 MODULE_VERSION(ichsmb, 1);
+PCI_PNP_INFO(ichsmb_devices);

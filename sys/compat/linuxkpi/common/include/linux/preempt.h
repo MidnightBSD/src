@@ -22,11 +22,10 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
-#ifndef _LINUX_PREEMPT_H_
-#define	_LINUX_PREEMPT_H_
+#ifndef _LINUXKPI_LINUX_PREEMPT_H_
+#define	_LINUXKPI_LINUX_PREEMPT_H_
 
 #include <linux/hardirq.h>
 #include <linux/list.h>
@@ -39,4 +38,4 @@
 #define	preempt_disable()	critical_enter()
 #define	preempt_enable()	critical_exit()
 
-#endif					/* _LINUX_PREEMPT_H_ */
+#endif					/* _LINUXKPI_LINUX_PREEMPT_H_ */

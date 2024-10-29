@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997-2000 Nicolas Souchu
  * Copyright (c) 2001 Alcove - Nicolas Souchu
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -75,7 +74,6 @@ static device_method_t ppc_isa_methods[] = {
 	DEVMETHOD(ppbus_ecp_sync,	ppc_ecp_sync),
 	DEVMETHOD(ppbus_read,		ppc_read),
 	DEVMETHOD(ppbus_write,		ppc_isa_write),
-
 	{ 0, 0 }
 };
 
@@ -233,7 +231,6 @@ ppc_isa_write(device_t dev, char *buf, int len, int how)
 
 	/* wait for an empty fifo */
 	while (!(r_ecr(ppc) & PPC_FIFO_EMPTY)) {
-
 		for (spin=100; spin; spin--)
 			if (r_ecr(ppc) & PPC_FIFO_EMPTY)
 				goto fifo_empty;

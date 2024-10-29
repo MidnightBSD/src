@@ -71,13 +71,11 @@
 #ifndef MPI_RAID_H
 #define MPI_RAID_H
 
-
 /******************************************************************************
 *
 *        R A I D    M e s s a g e s
 *
 *******************************************************************************/
-
 
 /****************************************************************************/
 /* RAID Action Request                                                      */
@@ -99,7 +97,6 @@ typedef struct _MSG_RAID_ACTION
     SGE_SIMPLE_UNION        ActionDataSGE;      /* 14h */
 } MSG_RAID_ACTION_REQUEST, MPI_POINTER PTR_MSG_RAID_ACTION_REQUEST,
   MpiRaidActionRequest_t , MPI_POINTER pMpiRaidActionRequest_t;
-
 
 /* RAID Action request Action values */
 
@@ -154,7 +151,6 @@ typedef struct _MSG_RAID_ACTION
 #define MPI_RAID_ACTION_ADATA_MASK_FW_UPDATE_TIMEOUT    (0x0000FF00)
 #define MPI_RAID_ACTION_ADATA_SHIFT_FW_UPDATE_TIMEOUT   (8)
 
-
 /* RAID Action reply message */
 
 typedef struct _MSG_RAID_ACTION_REPLY
@@ -176,14 +172,12 @@ typedef struct _MSG_RAID_ACTION_REPLY
 } MSG_RAID_ACTION_REPLY, MPI_POINTER PTR_MSG_RAID_ACTION_REPLY,
   MpiRaidActionReply_t, MPI_POINTER pMpiRaidActionReply_t;
 
-
 /* RAID Volume reply ActionStatus values */
 
 #define MPI_RAID_ACTION_ASTATUS_SUCCESS             (0x0000)
 #define MPI_RAID_ACTION_ASTATUS_INVALID_ACTION      (0x0001)
 #define MPI_RAID_ACTION_ASTATUS_FAILURE             (0x0002)
 #define MPI_RAID_ACTION_ASTATUS_IN_PROGRESS         (0x0003)
-
 
 /* RAID Volume reply RAID Volume Indicator structure */
 
@@ -193,7 +187,6 @@ typedef struct _MPI_RAID_VOL_INDICATOR
     U64                     BlocksRemaining;    /* 08h */
 } MPI_RAID_VOL_INDICATOR, MPI_POINTER PTR_MPI_RAID_VOL_INDICATOR,
   MpiRaidVolIndicator_t, MPI_POINTER pMpiRaidVolIndicator_t;
-
 
 /****************************************************************************/
 /* SCSI IO RAID Passthrough Request                                         */
@@ -219,7 +212,6 @@ typedef struct _MSG_SCSI_IO_RAID_PT_REQUEST
 } MSG_SCSI_IO_RAID_PT_REQUEST, MPI_POINTER PTR_MSG_SCSI_IO_RAID_PT_REQUEST,
   SCSIIORaidPassthroughRequest_t, MPI_POINTER pSCSIIORaidPassthroughRequest_t;
 
-
 /* SCSI IO RAID Passthrough reply structure */
 
 typedef struct _MSG_SCSI_IO_RAID_PT_REPLY
@@ -243,7 +235,6 @@ typedef struct _MSG_SCSI_IO_RAID_PT_REPLY
 } MSG_SCSI_IO_RAID_PT_REPLY, MPI_POINTER PTR_MSG_SCSI_IO_RAID_PT_REPLY,
   SCSIIORaidPassthroughReply_t, MPI_POINTER pSCSIIORaidPassthroughReply_t;
 
-
 /****************************************************************************/
 /* Mailbox reqeust structure */
 /****************************************************************************/
@@ -263,7 +254,6 @@ typedef struct _MSG_MAILBOX_REQUEST
 } MSG_MAILBOX_REQUEST, MPI_POINTER PTR_MSG_MAILBOX_REQUEST,
   MailboxRequest_t, MPI_POINTER pMailboxRequest_t;
 
-
 /* Mailbox reply structure */
 typedef struct _MSG_MAILBOX_REPLY
 {
@@ -282,6 +272,3 @@ typedef struct _MSG_MAILBOX_REPLY
   MailboxReply_t, MPI_POINTER pMailboxReply_t;
 
 #endif
-
-
-

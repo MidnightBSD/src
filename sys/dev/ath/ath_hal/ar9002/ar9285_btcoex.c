@@ -16,7 +16,6 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
  */
 
 #include "opt_ah.h"
@@ -55,7 +54,7 @@ ar9285BTCoexAntennaDiversity(struct ath_hal *ah)
 	    !! (ahp->ah_btCoexFlag & HAL_BT_COEX_FLAG_ANT_DIV_ENABLE));
 
 	if ((ahp->ah_btCoexFlag & HAL_BT_COEX_FLAG_ANT_DIV_ALLOW) ||
-	    (AH5212(ah)->ah_diversity != HAL_ANT_VARIABLE)) {
+	    (AH5212(ah)->ah_diversity == AH_TRUE)) {
 	if ((ahp->ah_btCoexFlag & HAL_BT_COEX_FLAG_ANT_DIV_ENABLE) &&
 	     (AH5212(ah)->ah_antControl == HAL_ANT_VARIABLE)) {
 		/* Enable antenna diversity */

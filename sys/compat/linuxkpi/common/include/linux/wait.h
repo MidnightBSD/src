@@ -26,11 +26,10 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
-#ifndef _LINUX_WAIT_H_
-#define	_LINUX_WAIT_H_
+#ifndef _LINUXKPI_LINUX_WAIT_H_
+#define	_LINUXKPI_LINUX_WAIT_H_
 
 #include <linux/compiler.h>
 #include <linux/list.h>
@@ -309,4 +308,4 @@ bool linux_wake_up_state(struct task_struct *, unsigned int);
 #define	wake_up_process(task)		linux_wake_up_state(task, TASK_NORMAL)
 #define	wake_up_state(task, state)	linux_wake_up_state(task, state)
 
-#endif /* _LINUX_WAIT_H_ */
+#endif /* _LINUXKPI_LINUX_WAIT_H_ */

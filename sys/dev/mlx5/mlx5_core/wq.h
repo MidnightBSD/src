@@ -21,7 +21,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef __MLX5_WQ_H__
@@ -31,8 +30,6 @@
 
 struct mlx5_wq_param {
 	int		linear;
-	int		buf_numa_node;
-	int		db_numa_node;
 };
 
 struct mlx5_wq_ctrl {

@@ -40,7 +40,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "efx.h"
 #include "efx_impl.h"
 
@@ -108,7 +107,6 @@
 		_c -= EFX_HASH_ROTATE(_b, 24);				\
 	_NOTE(CONSTANTCONDITION)					\
 	} while (B_FALSE)
-
 
 /* Produce a 32-bit hash from 32-bit aligned input */
 	__checkReturn		uint32_t

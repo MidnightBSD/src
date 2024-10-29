@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef __DEV_NVDIMM_VAR_H__
@@ -79,7 +78,7 @@ _Static_assert(sizeof(struct nvdimm_label) == 256, "Incorrect layout");
 
 typedef uint32_t nfit_handle_t;
 
-enum nvdimm_root_ivar {
+enum nvdimm_acpi_ivar {
 	NVDIMM_ROOT_IVAR_ACPI_HANDLE,
 	NVDIMM_ROOT_IVAR_DEVICE_HANDLE,
 	NVDIMM_ROOT_IVAR_MAX,
@@ -87,10 +86,6 @@ enum nvdimm_root_ivar {
 __BUS_ACCESSOR(nvdimm_root, acpi_handle, NVDIMM_ROOT, ACPI_HANDLE, ACPI_HANDLE)
 __BUS_ACCESSOR(nvdimm_root, device_handle, NVDIMM_ROOT, DEVICE_HANDLE,
     nfit_handle_t)
-
-struct nvdimm_root_dev {
-	SLIST_HEAD(, SPA_mapping) spas;
-};
 
 struct nvdimm_dev {
 	device_t	nv_dev;
@@ -118,6 +113,7 @@ enum SPA_mapping_type {
 
 struct nvdimm_spa_dev {
 	int			spa_domain;
+	vm_memattr_t		spa_memattr;
 	uint64_t		spa_phys_base;
 	uint64_t		spa_len;
 	uint64_t		spa_efi_mem_flags;
@@ -132,7 +128,6 @@ struct g_spa {
 	struct g_provider	*spa_p;
 	struct bio_queue_head	spa_g_queue;
 	struct mtx		spa_g_mtx;
-	struct mtx		spa_g_stat_mtx;
 	struct devstat		*spa_g_devstat;
 	struct proc		*spa_g_proc;
 	bool			spa_g_proc_run;
@@ -169,12 +164,14 @@ void acpi_nfit_get_flush_addrs(ACPI_TABLE_NFIT *nfitbl, nfit_handle_t dimm,
     uint64_t ***listp, int *countp);
 void acpi_nfit_get_memory_maps_by_dimm(ACPI_TABLE_NFIT *nfitbl,
     nfit_handle_t dimm, ACPI_NFIT_MEMORY_MAP ***listp, int *countp);
+enum SPA_mapping_type nvdimm_spa_type_from_name(const char *);
 enum SPA_mapping_type nvdimm_spa_type_from_uuid(struct uuid *);
+bool nvdimm_spa_type_user_accessible(enum SPA_mapping_type);
 struct nvdimm_dev *nvdimm_find_by_handle(nfit_handle_t nv_handle);
 int nvdimm_spa_init(struct SPA_mapping *spa, ACPI_NFIT_SYSTEM_ADDRESS *nfitaddr,
     enum SPA_mapping_type spa_type);
 void nvdimm_spa_fini(struct SPA_mapping *spa);
-int nvdimm_spa_dev_init(struct nvdimm_spa_dev *dev, const char *name);
+int nvdimm_spa_dev_init(struct nvdimm_spa_dev *dev, const char *name, int unit);
 void nvdimm_spa_dev_fini(struct nvdimm_spa_dev *dev);
 int nvdimm_create_namespaces(struct SPA_mapping *spa, ACPI_TABLE_NFIT *nfitbl);
 void nvdimm_destroy_namespaces(struct SPA_mapping *spa);

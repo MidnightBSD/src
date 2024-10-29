@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2009, M. Warner Losh
- * All rights reserved.
+ * Copyright (c) 2009 M. Warner Losh <imp@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +26,6 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-
 /*
  * driver for internal phy in the AX88x9x chips.
  */

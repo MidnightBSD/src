@@ -53,7 +53,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/isci/scil/sci_base_remote_device.h>
 
 void sci_base_remote_device_construct(

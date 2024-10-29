@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997, Stefan Esser <se@freebsd.org>
  * Copyright (c) 2000, Michael Smith <msmith@freebsd.org>
@@ -29,21 +29,25 @@
  */
 
 #include <sys/cdefs.h>
-
+#include "opt_acpi.h"
+#include "opt_iommu.h"
 #include "opt_bus.h"
 
 #include <sys/param.h>
-#include <sys/systm.h>
-#include <sys/malloc.h>
-#include <sys/module.h>
+#include <sys/conf.h>
+#include <sys/endian.h>
+#include <sys/eventhandler.h>
+#include <sys/fcntl.h>
+#include <sys/kernel.h>
 #include <sys/limits.h>
 #include <sys/linker.h>
-#include <sys/fcntl.h>
-#include <sys/conf.h>
-#include <sys/kernel.h>
+#include <sys/malloc.h>
+#include <sys/module.h>
 #include <sys/queue.h>
 #include <sys/sysctl.h>
-#include <sys/endian.h>
+#include <sys/systm.h>
+#include <sys/taskqueue.h>
+#include <sys/tree.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -73,6 +77,8 @@
 #include <dev/usb/controller/ehcireg.h>
 #include <dev/usb/controller/ohcireg.h>
 #include <dev/usb/controller/uhcireg.h>
+
+#include <dev/iommu/iommu.h>
 
 #include "pcib_if.h"
 #include "pci_if.h"
@@ -218,7 +224,8 @@ static device_method_t pci_methods[] = {
 DEFINE_CLASS_0(pci, pci_driver, pci_methods, sizeof(struct pci_softc));
 
 static devclass_t pci_devclass;
-DRIVER_MODULE(pci, pcib, pci_driver, pci_devclass, pci_modevent, NULL);
+EARLY_DRIVER_MODULE(pci, pcib, pci_driver, pci_devclass, pci_modevent, NULL,
+    BUS_PASS_BUS);
 MODULE_VERSION(pci, 1);
 
 static char	*pci_vendordata;
@@ -271,13 +278,6 @@ static const struct pci_quirk pci_quirks[] = {
 	{ 0x74501022, PCI_QUIRK_DISABLE_MSI,	0,	0 },
 
 	/*
-	 * MSI-X allocation doesn't work properly for devices passed through
-	 * by VMware up to at least ESXi 5.1.
-	 */
-	{ 0x079015ad, PCI_QUIRK_DISABLE_MSIX,	0,	0 }, /* PCI/PCI-X */
-	{ 0x07a015ad, PCI_QUIRK_DISABLE_MSIX,	0,	0 }, /* PCIe */
-
-	/*
 	 * Some virtualization environments emulate an older chipset
 	 * but support MSI just fine.  QEMU uses the Intel 82440.
 	 */
@@ -320,7 +320,6 @@ static const struct pci_quirk pci_quirks[] = {
 	 * expected place.
 	 */
 	{ 0x98741002, PCI_QUIRK_REALLOC_BAR,	0, 	0 },
-
 	{ 0 }
 };
 
@@ -335,7 +334,8 @@ uint32_t pci_numdevs = 0;
 static int pcie_chipset, pcix_chipset;
 
 /* sysctl vars */
-SYSCTL_NODE(_hw, OID_AUTO, pci, CTLFLAG_RD, 0, "PCI bus tuning parameters");
+SYSCTL_NODE(_hw, OID_AUTO, pci, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "PCI bus tuning parameters");
 
 static int pci_enable_io_modes = 1;
 SYSCTL_INT(_hw_pci, OID_AUTO, enable_io_modes, CTLFLAG_RWTUN,
@@ -344,7 +344,7 @@ SYSCTL_INT(_hw_pci, OID_AUTO, enable_io_modes, CTLFLAG_RWTUN,
     " enable these bits correctly.  We'd like to do this all the time, but"
     " there are some peripherals that this causes problems with.");
 
-static int pci_do_realloc_bars = 0;
+static int pci_do_realloc_bars = 1;
 SYSCTL_INT(_hw_pci, OID_AUTO, realloc_bars, CTLFLAG_RWTUN,
     &pci_do_realloc_bars, 0,
     "Attempt to allocate a new range for any BARs whose original "
@@ -419,6 +419,11 @@ SYSCTL_INT(_hw_pci, OID_AUTO, clear_aer_on_attach, CTLFLAG_RWTUN,
     &pci_clear_aer_on_attach, 0,
     "Clear port and device AER state on driver attach");
 
+static bool pci_enable_mps_tune = true;
+SYSCTL_BOOL(_hw_pci, OID_AUTO, enable_mps_tune, CTLFLAG_RWTUN,
+    &pci_enable_mps_tune, 1,
+    "Enable tuning of MPS(maximum payload size)." );
+
 static int
 pci_has_quirk(uint32_t devid, int quirk)
 {
@@ -445,18 +450,18 @@ pci_find_bsf(uint8_t bus, uint8_t slot, uint8_t func)
 device_t
 pci_find_dbsf(uint32_t domain, uint8_t bus, uint8_t slot, uint8_t func)
 {
-	struct pci_devinfo *dinfo;
+	struct pci_devinfo *dinfo = NULL;
 
 	STAILQ_FOREACH(dinfo, &pci_devq, pci_links) {
 		if ((dinfo->cfg.domain == domain) &&
 		    (dinfo->cfg.bus == bus) &&
 		    (dinfo->cfg.slot == slot) &&
 		    (dinfo->cfg.func == func)) {
-			return (dinfo->cfg.dev);
+			break;
 		}
 	}
 
-	return (NULL);
+	return (dinfo != NULL ? dinfo->cfg.dev : NULL);
 }
 
 /* Find a device_t by vendor/device ID */
@@ -482,6 +487,28 @@ pci_find_class(uint8_t class, uint8_t subclass)
 	struct pci_devinfo *dinfo;
 
 	STAILQ_FOREACH(dinfo, &pci_devq, pci_links) {
+		if (dinfo->cfg.baseclass == class &&
+		    dinfo->cfg.subclass == subclass) {
+			return (dinfo->cfg.dev);
+		}
+	}
+
+	return (NULL);
+}
+
+device_t
+pci_find_class_from(uint8_t class, uint8_t subclass, device_t from)
+{
+	struct pci_devinfo *dinfo;
+	bool found = false;
+
+	STAILQ_FOREACH(dinfo, &pci_devq, pci_links) {
+		if (from != NULL && found == false) {
+			if (from != dinfo->cfg.dev)
+				continue;
+			found = true;
+			continue;
+		}
 		if (dinfo->cfg.baseclass == class &&
 		    dinfo->cfg.subclass == subclass) {
 			return (dinfo->cfg.dev);
@@ -658,11 +685,12 @@ pci_read_device(device_t pcib, device_t bus, int d, int b, int s, int f)
 	uint16_t vid, did;
 
 	vid = REG(PCIR_VENDOR, 2);
-	did = REG(PCIR_DEVICE, 2);
-	if (vid != 0xffff)
-		return (pci_fill_devinfo(pcib, bus, d, b, s, f, vid, did));
+	if (vid == PCIV_INVALID)
+		return (NULL);
 
-	return (NULL);
+	did = REG(PCIR_DEVICE, 2);
+
+	return (pci_fill_devinfo(pcib, bus, d, b, s, f, vid, did));
 }
 
 struct pci_devinfo *
@@ -770,7 +798,6 @@ pci_ea_fill_info(device_t pcib, pcicfgregs *cfg)
 		ptr += 4;
 
 	for (a = 0; a < num_ent; a++) {
-
 		eae = malloc(sizeof(*eae), M_DEVBUF, M_WAITOK | M_ZERO);
 		eae->eae_cfg_offset = cfg->ea.ea_location + ptr;
 
@@ -1070,6 +1097,7 @@ pci_read_vpd(device_t pcib, pcicfgregs *cfg)
 	int alloc, off;		/* alloc/off for RO/W arrays */
 	int cksumvalid;
 	int dflen;
+	int firstrecord;
 	uint8_t byte;
 	uint8_t byte2;
 
@@ -1085,14 +1113,16 @@ pci_read_vpd(device_t pcib, pcicfgregs *cfg)
 	alloc = off = 0;	/* shut up stupid gcc */
 	dflen = 0;		/* shut up stupid gcc */
 	cksumvalid = -1;
+	firstrecord = 1;
 	while (state >= 0) {
 		if (vpd_nextbyte(&vrs, &byte)) {
+			pci_printf(cfg, "VPD read timed out\n");
 			state = -2;
 			break;
 		}
 #if 0
-		printf("vpd: val: %#x, off: %d, bytesinval: %d, byte: %#hhx, " \
-		    "state: %d, remain: %d, name: %#x, i: %d\n", vrs.val,
+		pci_printf(cfg, "vpd: val: %#x, off: %d, bytesinval: %d, byte: "
+		    "%#hhx, state: %d, remain: %d, name: %#x, i: %d\n", vrs.val,
 		    vrs.off, vrs.bytesinval, byte, state, remain, name, i);
 #endif
 		switch (state) {
@@ -1113,6 +1143,15 @@ pci_read_vpd(device_t pcib, pcicfgregs *cfg)
 				remain = byte & 0x7;
 				name = (byte >> 3) & 0xf;
 			}
+			if (firstrecord) {
+				if (name != 0x2) {
+					pci_printf(cfg, "VPD data does not " \
+					    "start with ident (%#x)\n", name);
+					state = -2;
+					break;
+				}
+				firstrecord = 0;
+			}
 			if (vrs.off + remain - vrs.bytesinval > 0x8000) {
 				pci_printf(cfg,
 				    "VPD data overflow, remain %#x\n", remain);
@@ -1121,6 +1160,19 @@ pci_read_vpd(device_t pcib, pcicfgregs *cfg)
 			}
 			switch (name) {
 			case 0x2:	/* String */
+				if (cfg->vpd.vpd_ident != NULL) {
+					pci_printf(cfg,
+					    "duplicate VPD ident record\n");
+					state = -2;
+					break;
+				}
+				if (remain > 255) {
+					pci_printf(cfg,
+					    "VPD ident length %d exceeds 255\n",
+					    remain);
+					state = -2;
+					break;
+				}
 				cfg->vpd.vpd_ident = malloc(remain + 1,
 				    M_DEVBUF, M_WAITOK);
 				i = 0;
@@ -1146,7 +1198,8 @@ pci_read_vpd(device_t pcib, pcicfgregs *cfg)
 				state = 5;
 				break;
 			default:	/* Invalid data, abort */
-				state = -1;
+				pci_printf(cfg, "invalid VPD name: %#x\n", name);
+				state = -2;
 				break;
 			}
 			break;
@@ -1184,8 +1237,7 @@ pci_read_vpd(device_t pcib, pcicfgregs *cfg)
 				 * if this happens, we can't trust the rest
 				 * of the VPD.
 				 */
-				pci_printf(cfg, "bad keyword length: %d\n",
-				    dflen);
+				pci_printf(cfg, "invalid VPD RV record");
 				cksumvalid = 0;
 				state = -1;
 				break;
@@ -1301,9 +1353,14 @@ pci_read_vpd(device_t pcib, pcicfgregs *cfg)
 			state = -1;
 			break;
 		}
+
+		if (cfg->vpd.vpd_ident == NULL || cfg->vpd.vpd_ident[0] == '\0') {
+			pci_printf(cfg, "no valid vpd ident found\n");
+			state = -2;
+		}
 	}
 
-	if (cksumvalid == 0 || state < -1) {
+	if (cksumvalid <= 0 || state < -1) {
 		/* read-only data bad, clean up */
 		if (cfg->vpd.vpd_ros != NULL) {
 			for (off = 0; cfg->vpd.vpd_ros[off].value; off++)
@@ -2380,7 +2437,6 @@ pci_remap_intr_method(device_t bus, device_t dev, u_int irq)
 	 * data registers and apply the results.
 	 */
 	if (cfg->msi.msi_alloc > 0) {
-
 		/* If we don't have any active handlers, nothing to do. */
 		if (cfg->msi.msi_handlers == 0)
 			return (0);
@@ -2408,6 +2464,8 @@ pci_remap_intr_method(device_t bus, device_t dev, u_int irq)
 	 * through all the slots that use this IRQ and update them.
 	 */
 	if (cfg->msix.msix_alloc > 0) {
+		bool found = false;
+
 		for (i = 0; i < cfg->msix.msix_alloc; i++) {
 			mv = &cfg->msix.msix_vectors[i];
 			if (mv->mv_irq == irq) {
@@ -2427,9 +2485,10 @@ pci_remap_intr_method(device_t bus, device_t dev, u_int irq)
 					pci_enable_msix(dev, j, addr, data);
 					pci_unmask_msix(dev, j);
 				}
+				found = true;
 			}
 		}
-		return (ENOENT);
+		return (found ? 0 : ENOENT);
 	}
 
 	return (ENOENT);
@@ -2610,7 +2669,6 @@ pci_alloc_msi_method(device_t dev, device_t child, int *count)
 			device_printf(child, "using IRQs %d", irqs[0]);
 			run = 0;
 			for (i = 1; i < actual; i++) {
-
 				/* Still in a run? */
 				if (irqs[i] == irqs[i - 1] + 1) {
 					run = 1;
@@ -3144,6 +3202,16 @@ pci_bar_enabled(device_t dev, struct pci_map *pm)
 	if (PCIR_IS_BIOS(&dinfo->cfg, pm->pm_reg) &&
 	    !(pm->pm_value & PCIM_BIOS_ENABLE))
 		return (0);
+#ifdef PCI_IOV
+	if ((dinfo->cfg.flags & PCICFG_VF) != 0) {
+		struct pcicfg_iov *iov;
+
+		iov = dinfo->cfg.iov;
+		cmd = pci_read_config(iov->iov_pf,
+		    iov->iov_pos + PCIR_SRIOV_CTL, 2);
+		return ((cmd & PCIM_SRIOV_VF_MSE) != 0);
+	}
+#endif
 	cmd = pci_read_config(dev, PCIR_COMMAND, 2);
 	if (PCIR_IS_BIOS(&dinfo->cfg, pm->pm_reg) || PCI_BAR_MEM(pm->pm_value))
 		return ((cmd & PCIM_CMD_MEMEN) != 0);
@@ -3894,7 +3962,6 @@ pci_add_resources_ea(device_t bus, device_t dev, int alloc_iov)
 		return;
 
 	STAILQ_FOREACH(ea, &dinfo->cfg.ea.ea_entries, eae_link) {
-
 		/*
 		 * TODO: Ignore EA-BAR if is not enabled.
 		 *   Currently the EA implementation supports
@@ -4125,6 +4192,10 @@ pci_add_children(device_t dev, int domain, int busno)
 		pcifunchigh = 0;
 		f = 0;
 		DELAY(1);
+
+		/* If function 0 is not present, skip to the next slot. */
+		if (REG(PCIR_VENDOR, 2) == PCIV_INVALID)
+			continue;
 		hdrtype = REG(PCIR_HDRTYPE, 1);
 		if ((hdrtype & PCIM_HDRTYPE) > PCI_MAXHDRTYPE)
 			continue;
@@ -4166,7 +4237,7 @@ pci_rescan_method(device_t dev)
 	for (s = 0; s <= maxslots; s++) {
 		/* If function 0 is not present, skip to the next slot. */
 		f = 0;
-		if (REG(PCIR_VENDOR, 2) == 0xffff)
+		if (REG(PCIR_VENDOR, 2) == PCIV_INVALID)
 			continue;
 		pcifunchigh = 0;
 		hdrtype = REG(PCIR_HDRTYPE, 1);
@@ -4175,7 +4246,7 @@ pci_rescan_method(device_t dev)
 		if (hdrtype & PCIM_MFDEV)
 			pcifunchigh = PCIB_MAXFUNCS(pcib);
 		for (f = 0; f <= pcifunchigh; f++) {
-			if (REG(PCIR_VENDOR, 2) == 0xffff)
+			if (REG(PCIR_VENDOR, 2) == PCIV_INVALID)
 				continue;
 
 			/*
@@ -4388,7 +4459,8 @@ pci_add_child(device_t bus, struct pci_devinfo *dinfo)
 	pci_cfg_restore(dev, dinfo);
 	pci_print_verbose(dinfo);
 	pci_add_resources(bus, dev, 0, 0);
-	pcie_setup_mps(dev);
+	if (pci_enable_mps_tune)
+		pcie_setup_mps(dev);
 	pci_child_added(dinfo->cfg.dev);
 
 	if (pci_clear_aer_on_attach)
@@ -5039,7 +5111,12 @@ pci_child_detached(device_t dev, device_t child)
 	if (resource_list_release_active(rl, dev, child, SYS_RES_IRQ) != 0)
 		pci_printf(&dinfo->cfg, "Device leaked IRQ resources\n");
 	if (dinfo->cfg.msi.msi_alloc != 0 || dinfo->cfg.msix.msix_alloc != 0) {
-		pci_printf(&dinfo->cfg, "Device leaked MSI vectors\n");
+		if (dinfo->cfg.msi.msi_alloc != 0)
+			pci_printf(&dinfo->cfg, "Device leaked %d MSI "
+			    "vectors\n", dinfo->cfg.msi.msi_alloc);
+		else
+			pci_printf(&dinfo->cfg, "Device leaked %d MSI-X "
+			    "vectors\n", dinfo->cfg.msix.msix_alloc);
 		(void)pci_release_msi(child);
 	}
 	if (resource_list_release_active(rl, dev, child, SYS_RES_MEMORY) != 0)
@@ -5333,7 +5410,6 @@ DB_SHOW_COMMAND(pciregs, db_pci_dump)
 	     dinfo = STAILQ_FIRST(devlist_head);
 	     (dinfo != NULL) && (error == 0) && (i < pci_numdevs) && !db_pager_quit;
 	     dinfo = STAILQ_NEXT(dinfo, pci_links), i++) {
-
 		/* Populate pd_name and pd_unit */
 		name = NULL;
 		if (dinfo->cfg.dev)
@@ -5355,7 +5431,7 @@ DB_SHOW_COMMAND(pciregs, db_pci_dump)
 }
 #endif /* DDB */
 
-static struct resource *
+struct resource *
 pci_reserve_map(device_t dev, device_t child, int type, int *rid,
     rman_res_t start, rman_res_t end, rman_res_t count, u_int num,
     u_int flags)
@@ -5583,7 +5659,7 @@ pci_release_resource(device_t dev, device_t child, int type, int rid,
 {
 	struct pci_devinfo *dinfo;
 	struct resource_list *rl;
-	pcicfgregs *cfg;
+	pcicfgregs *cfg __unused;
 
 	if (device_get_parent(child) != dev)
 		return (BUS_RELEASE_RESOURCE(device_get_parent(dev), child,
@@ -5593,7 +5669,7 @@ pci_release_resource(device_t dev, device_t child, int type, int rid,
 	cfg = &dinfo->cfg;
 
 #ifdef PCI_IOV
-	if (dinfo->cfg.flags & PCICFG_VF) {
+	if (cfg->flags & PCICFG_VF) {
 		switch (type) {
 		/* VFs can't have I/O BARs. */
 		case SYS_RES_IOPORT:
@@ -5757,6 +5833,25 @@ pci_get_resource_list (device_t dev, device_t child)
 	return (&dinfo->resources);
 }
 
+#ifdef IOMMU
+bus_dma_tag_t
+pci_get_dma_tag(device_t bus, device_t dev)
+{
+	bus_dma_tag_t tag;
+	struct pci_softc *sc;
+
+	if (device_get_parent(dev) == bus) {
+		/* try iommu and return if it works */
+		tag = iommu_get_dma_tag(bus, dev);
+	} else
+		tag = NULL;
+	if (tag == NULL) {
+		sc = device_get_softc(bus);
+		tag = sc->sc_dma_tag;
+	}
+	return (tag);
+}
+#else
 bus_dma_tag_t
 pci_get_dma_tag(device_t bus, device_t dev)
 {
@@ -5764,6 +5859,7 @@ pci_get_dma_tag(device_t bus, device_t dev)
 
 	return (sc->sc_dma_tag);
 }
+#endif
 
 uint32_t
 pci_read_config_method(device_t dev, device_t child, int reg, int width)

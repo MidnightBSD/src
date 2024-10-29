@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000,2001 Jonathan Chen.
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -60,7 +59,6 @@
 /*
  * Register definitions for PCI to Cardbus Bridge chips
  */
-
 
 /* PCI header registers */
 #define	CBBR_SOCKBASE				0x10	/* len=4 */
@@ -186,7 +184,6 @@
 # define TOPIC97_REG_CTRL_RI_DISABLE  0x00000004
 # define TOPIC97_REG_CTRL_CAUDIO_OFF  0x00000002
 # define TOPIC_REG_CTRL_CAUDIO_INVERT 0x00000001
-
 
 /* Socket definitions */
 #define	CBB_SOCKET_EVENT_CSTS		0x01	/* Card Status Change */

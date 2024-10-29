@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_MODULEPARAM_H_
-#define	_LINUX_MODULEPARAM_H_
+#ifndef	_LINUXKPI_LINUX_MODULEPARAM_H_
+#define	_LINUXKPI_LINUX_MODULEPARAM_H_
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -89,6 +88,15 @@
 	LINUXKPI_PARAM_NAME(name), LINUXKPI_PARAM_PERM(perm), &(var), 0, \
 	LINUXKPI_PARAM_DESC(name)))
 
+#define	LINUXKPI_PARAM_bint(name, var, perm)				\
+	LINUXKPI_PARAM_int(name, var, perm)
+
+#define	LINUXKPI_PARAM_hexint(name, var, perm)				\
+	extern const char LINUXKPI_PARAM_DESC(name)[];			\
+	LINUXKPI_PARAM_PASS(SYSCTL_UINT(LINUXKPI_PARAM_PARENT, OID_AUTO, \
+	LINUXKPI_PARAM_NAME(name), LINUXKPI_PARAM_PERM(perm), &(var), 0, \
+	LINUXKPI_PARAM_DESC(name)))
+
 #define	LINUXKPI_PARAM_long(name, var, perm)				\
 	extern const char LINUXKPI_PARAM_DESC(name)[];			\
 	LINUXKPI_PARAM_PASS(SYSCTL_LONG(LINUXKPI_PARAM_PARENT, OID_AUTO, \
@@ -98,6 +106,12 @@
 #define	LINUXKPI_PARAM_ulong(name, var, perm)				\
 	extern const char LINUXKPI_PARAM_DESC(name)[];			\
 	LINUXKPI_PARAM_PASS(SYSCTL_ULONG(LINUXKPI_PARAM_PARENT, OID_AUTO, \
+	LINUXKPI_PARAM_NAME(name), LINUXKPI_PARAM_PERM(perm), &(var), 0, \
+	LINUXKPI_PARAM_DESC(name)))
+
+#define	LINUXKPI_PARAM_charp(name, var, perm)				\
+	extern const char LINUXKPI_PARAM_DESC(name)[];			\
+	LINUXKPI_PARAM_PASS(SYSCTL_STRING(LINUXKPI_PARAM_PARENT, OID_AUTO, \
 	LINUXKPI_PARAM_NAME(name), LINUXKPI_PARAM_PERM(perm), &(var), 0, \
 	LINUXKPI_PARAM_DESC(name)))
 
@@ -129,4 +143,4 @@
 
 SYSCTL_DECL(_compat_linuxkpi);
 
-#endif					/* _LINUX_MODULEPARAM_H_ */
+#endif					/* _LINUXKPI_LINUX_MODULEPARAM_H_ */

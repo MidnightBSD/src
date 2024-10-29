@@ -115,16 +115,10 @@ static void mthca_arbel_init_srq_context(struct mthca_dev *dev,
 					 struct mthca_srq *srq,
 					 struct mthca_arbel_srq_context *context)
 {
-	int logsize, max;
+	int logsize;
 
 	memset(context, 0, sizeof *context);
-
-	/*
-	 * Put max in a temporary variable to work around gcc bug
-	 * triggered by ilog2() on sparc64.
-	 */
-	max = srq->max;
-	logsize = ilog2(max);
+	logsize = ilog2(srq->max);
 	context->state_logsize_srqn = cpu_to_be32(logsize << 24 | srq->srqn);
 	context->lkey = cpu_to_be32(srq->mr.ibmr.lkey);
 	context->db_index = cpu_to_be32(srq->db_index);
@@ -472,8 +466,8 @@ void mthca_free_srq_wqe(struct mthca_srq *srq, u32 wqe_addr)
 	spin_unlock(&srq->lock);
 }
 
-int mthca_tavor_post_srq_recv(struct ib_srq *ibsrq, struct ib_recv_wr *wr,
-			      struct ib_recv_wr **bad_wr)
+int mthca_tavor_post_srq_recv(struct ib_srq *ibsrq, const struct ib_recv_wr *wr,
+			      const struct ib_recv_wr **bad_wr)
 {
 	struct mthca_dev *dev = to_mdev(ibsrq->device);
 	struct mthca_srq *srq = to_msrq(ibsrq);
@@ -572,8 +566,8 @@ int mthca_tavor_post_srq_recv(struct ib_srq *ibsrq, struct ib_recv_wr *wr,
 	return err;
 }
 
-int mthca_arbel_post_srq_recv(struct ib_srq *ibsrq, struct ib_recv_wr *wr,
-			      struct ib_recv_wr **bad_wr)
+int mthca_arbel_post_srq_recv(struct ib_srq *ibsrq, const struct ib_recv_wr *wr,
+			      const struct ib_recv_wr **bad_wr)
 {
 	struct mthca_dev *dev = to_mdev(ibsrq->device);
 	struct mthca_srq *srq = to_msrq(ibsrq);

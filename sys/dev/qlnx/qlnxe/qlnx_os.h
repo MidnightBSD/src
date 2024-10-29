@@ -24,7 +24,6 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
 
 /*
@@ -137,12 +136,12 @@ MALLOC_DECLARE(M_QLNXBUF);
 		else  \
 			pause(fn, qlnx_ms_to_hz(msecs)); \
 	}
-	
+
 /*
  * Locks
  */
-#define QLNX_LOCK(ha)		mtx_lock(&ha->hw_lock)
-#define QLNX_UNLOCK(ha)		mtx_unlock(&ha->hw_lock)
+#define QLNX_LOCK(ha)		sx_xlock(&ha->hw_lock)
+#define QLNX_UNLOCK(ha)		sx_xunlock(&ha->hw_lock)
 
 /*
  * structure encapsulating a DMA buffer
@@ -156,6 +155,5 @@ struct qlnx_dma {
         bus_dma_tag_t           dma_tag;
 };
 typedef struct qlnx_dma qlnx_dma_t;
-
 
 #endif /* #ifndef _QLNX_OS_H_ */

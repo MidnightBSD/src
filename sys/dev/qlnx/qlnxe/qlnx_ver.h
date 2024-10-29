@@ -24,9 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
-
 
 /*
  * File: qlnx_ver.h
@@ -39,4 +37,3 @@
 #define QLNX_VERSION_MAJOR      2
 #define QLNX_VERSION_MINOR      0
 #define QLNX_VERSION_BUILD      112
-

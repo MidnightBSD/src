@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -140,7 +139,7 @@ randomdev_wait_until_seeded(bool interruptible)
 		if (spamcount == 0)
 			printf("random: %s unblock wait\n", __func__);
 		spamcount = (spamcount + 1) % 100;
-		error = tsleep(__DECONST(void*, p_random_alg_context), slpflags, "randseed",
+		error = tsleep(p_random_alg_context, slpflags, "randseed",
 		    hz / 10);
 		if (error == ERESTART || error == EINTR) {
 			KASSERT(interruptible,
@@ -186,7 +185,6 @@ int
 	if (error != 0)
 		return (error);
 
-	read_rate_increment(howmany(uio->uio_resid + 1, sizeof(uint32_t)));
 	total_read = 0;
 
 	/* Easy to deal with the trivial 0 byte case. */
@@ -224,7 +222,7 @@ int
 		 */
 		if (error == 0 && uio->uio_resid != 0 &&
 		    total_read % sigchk_period == 0) {
-			error = tsleep_sbt(__DECONST(void*, p_random_alg_context), PCATCH,
+			error = tsleep_sbt(p_random_alg_context, PCATCH,
 			    "randrd", SBT_1NS, 0, C_HARDCLOCK);
 			/* Squash tsleep timeout condition */
 			if (error == EWOULDBLOCK)
@@ -240,8 +238,7 @@ int
 	if (error == ERESTART || error == EINTR)
 		error = 0;
 
-	explicit_bzero(random_buf, bufsize);
-	free(random_buf, M_ENTROPY);
+	zfree(random_buf, M_ENTROPY);
 	return (error);
 }
 
@@ -286,7 +283,6 @@ void
 
 		(void)randomdev_wait_until_seeded(SEEDWAIT_UNINTERRUPTIBLE);
 	}
-	read_rate_increment(roundup2(len, sizeof(uint32_t)));
 	p_random_alg_context->ra_read(random_buf, len);
 }
 
@@ -370,10 +366,12 @@ randomdev_unblock(void)
 {
 
 	selwakeuppri(&rsel, PUSER);
-	wakeup(__DECONST(void*, p_random_alg_context));
+	wakeup(p_random_alg_context);
 	printf("random: unblocking device.\n");
+#ifndef RANDOM_FENESTRASX
 	/* Do random(9) a favour while we are about it. */
 	(void)atomic_cmpset_int(&arc4rand_iniseed_state, ARC4_ENTR_NONE, ARC4_ENTR_HAVE);
+#endif
 }
 
 /* ARGSUSED */

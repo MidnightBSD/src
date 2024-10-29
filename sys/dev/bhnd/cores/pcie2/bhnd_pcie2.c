@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015 Landon Fuller <landon@landonf.org>
  * All rights reserved.
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Broadcom Common PCIe-G2 Support.
  * 
@@ -130,7 +129,7 @@ bhnd_pcie2_generic_detach(device_t dev)
 		return (error);
 
 	bhnd_release_resource(dev, SYS_RES_MEMORY, sc->mem_rid, sc->mem_res);
-	
+
 	BHND_PCIE2_LOCK_DESTROY(sc);
 
 	return (0);
@@ -153,7 +152,7 @@ bhnd_pcie2_add_child(device_t dev, u_int order, const char *name, int unit)
 {
 	struct bhnd_pcie2_devinfo	*dinfo;
 	device_t			 child;
-	
+
 	child = device_add_child_ordered(dev, order, name, unit);
 	if (child == NULL)
 		return (NULL);
@@ -165,7 +164,7 @@ bhnd_pcie2_add_child(device_t dev, u_int order, const char *name, int unit)
 	}
 
 	resource_list_init(&dinfo->resources);
-	
+
 	device_set_ivars(child, dinfo);
 	return (child);
 }
@@ -279,7 +278,7 @@ static device_method_t bhnd_pcie2_methods[] = {
 	DEVMETHOD(bus_deactivate_resource,      bus_generic_deactivate_resource),
 	DEVMETHOD(bus_adjust_resource,          bus_generic_adjust_resource),
 	DEVMETHOD(bus_release_resource,		bus_generic_rl_release_resource),
-	
+
 	DEVMETHOD_END
 };
 

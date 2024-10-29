@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015-2016 Landon Fuller <landon@landonf.org>
  * Copyright (c) 2016 Michael Zhilin <mizhka@gmail.com>
@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Broadcom ChipCommon driver.
  * 
@@ -78,7 +77,6 @@ static const struct bhnd_device chipc_devices[] = {
 	BHND_DEVICE_END
 };
 
-
 /* Device quirks table */
 static struct bhnd_device_quirk chipc_quirks[] = {
 	/* HND OTP controller revisions */
@@ -89,7 +87,7 @@ static struct bhnd_device_quirk chipc_quirks[] = {
 	/* IPX OTP controller revisions */
 	BHND_CORE_QUIRK	(HWREV_EQ (21),		CHIPC_QUIRK_OTP_IPX),
 	BHND_CORE_QUIRK	(HWREV_GTE(23),		CHIPC_QUIRK_OTP_IPX),
-	
+
 	BHND_CORE_QUIRK	(HWREV_GTE(32),		CHIPC_QUIRK_SUPPORTS_SPROM),
 	BHND_CORE_QUIRK	(HWREV_GTE(35),		CHIPC_QUIRK_SUPPORTS_CAP_EXT),
 	BHND_CORE_QUIRK	(HWREV_GTE(49),		CHIPC_QUIRK_IPX_OTPL_SIZE),
@@ -224,7 +222,7 @@ chipc_attach(device_t dev)
 		goto failed;
 
 	return (0);
-	
+
 failed:
 	device_delete_children(sc->dev);
 
@@ -520,7 +518,6 @@ chipc_read_caps(struct chipc_softc *sc, struct chipc_caps *caps)
 		caps->flash_type = CHIPC_NFLASH_4706;
 	}
 
-
 	/* Determine NVRAM source. Must occur after the SPROM/OTP/flash
 	 * capability flags have been populated. */
 	caps->nvram_src = chipc_find_nvram_src(sc, caps);
@@ -622,11 +619,8 @@ chipc_child_location_str(device_t dev, device_t child, char *buf,
 static device_t
 chipc_add_child(device_t dev, u_int order, const char *name, int unit)
 {
-	struct chipc_softc	*sc;
 	struct chipc_devinfo	*dinfo;
 	device_t		 child;
-
-	sc = device_get_softc(dev);
 
 	child = device_add_child_ordered(dev, order, name, unit);
 	if (child == NULL)
@@ -672,7 +666,6 @@ chipc_get_resource_list(device_t dev, device_t child)
 	struct chipc_devinfo *dinfo = device_get_ivars(child);
 	return (&dinfo->resources);
 }
-
 
 /* Allocate region records for the given port, and add the port's memory
  * range to the mem_rman */
@@ -970,7 +963,7 @@ chipc_adjust_resource(device_t dev, device_t child, int type,
 	struct chipc_softc		*sc;
 	struct chipc_region		*cr;
 	struct rman			*rm;
-	
+
 	sc = device_get_softc(dev);
 
 	/* Handled by parent bus? */
@@ -984,7 +977,7 @@ chipc_adjust_resource(device_t dev, device_t child, int type,
 	cr = chipc_find_region(sc, rman_get_start(r), rman_get_end(r));
 	if (cr == NULL)
 		return (EINVAL);
-	
+
 	if (end <= start)
 		return (EINVAL);
 
@@ -1030,7 +1023,7 @@ chipc_try_activate_resource(struct chipc_softc *sc, device_t child, int type,
 	cr = chipc_find_region(sc, r_start, r_end);
 	if (cr == NULL)
 		return (EINVAL);
-	
+
 	/* Calculate subregion offset within the chipc region */
 	cr_offset = r_start - cr->cr_addr;
 
@@ -1069,7 +1062,7 @@ chipc_activate_bhnd_resource(device_t dev, device_t child, int type,
 	int			 error;
 
 	sc = device_get_softc(dev);
-	
+
 	/* Delegate non-locally managed resources to parent */
 	rm = chipc_get_rman(sc, type);
 	if (rm == NULL || !rman_is_region_manager(r->res, rm)) {
@@ -1169,13 +1162,13 @@ chipc_should_enable_muxed_sprom(struct chipc_softc *sc)
 	if (!CHIPC_QUIRK(sc, MUX_SPROM))
 		return (true);
 
-	mtx_lock(&Giant);	/* for newbus */
+	bus_topo_lock();
 
 	parent = device_get_parent(sc->dev);
 	hostb = bhnd_bus_find_hostb_device(parent);
 
 	if ((error = device_get_children(parent, &devs, &devcount))) {
-		mtx_unlock(&Giant);
+		bus_topo_unlock();
 		return (false);
 	}
 
@@ -1198,7 +1191,7 @@ chipc_should_enable_muxed_sprom(struct chipc_softc *sc)
 	}
 
 	free(devs, M_TEMP);
-	mtx_unlock(&Giant);
+	bus_topo_unlock();
 	return (result);
 }
 
@@ -1265,7 +1258,6 @@ chipc_disable_sprom(device_t dev)
 	default:
 		break;
 	}
-
 
 	CHIPC_UNLOCK(sc);
 }

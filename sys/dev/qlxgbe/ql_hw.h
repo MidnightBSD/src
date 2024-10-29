@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
@@ -25,7 +25,6 @@
  *  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
- *
  */
 /*
  * File: ql_hw.h
@@ -264,8 +263,6 @@
 #define Q8_MBX_SET_PORT_CONFIG			0x0066
 #define Q8_MBX_GET_PORT_CONFIG			0x0067
 #define Q8_MBX_GET_LINK_STATUS			0x0068
-
-
 
 /*
  * Mailbox Command Response
@@ -924,7 +921,6 @@ typedef struct _q80_idc_ack_rsp {
 	uint16_t	regcnt_status;
 } __packed q80_idc_ack_rsp_t;
 
-
 /*
  * Set Port Configuration command
  * Used to set Ethernet Standard Pause values
@@ -1082,7 +1078,6 @@ typedef struct _q80_get_link_status_rsp {
 
 } __packed q80_get_link_status_rsp_t;
 
-
 /*
  * Transmit Related Definitions
  */
@@ -1208,7 +1203,6 @@ typedef struct _q80_tx_cmd {
 #define Q8_TX_CMD_TSO_ALIGN		2
 #define Q8_TX_MAX_NON_TSO_SEGS		62
 
-
 /*
  * Receive Related Definitions
  */
@@ -1222,7 +1216,6 @@ typedef struct _q80_tx_cmd {
 #define NUM_TX_RINGS		MAX_SDS_RINGS
 #endif /* #ifdef QL_ENABLE_ISCSI_TLV */
 #define MAX_RDS_RINGS           MAX_SDS_RINGS /* Max# of Rcv Descriptor Rings */
-
 
 typedef struct _q80_rq_sds_ring {
 	uint64_t paddr; /* physical addr of status ring in system memory */
@@ -1309,7 +1302,6 @@ typedef struct _q80_rcv_cntxt_destroy_rsp {
 	uint16_t	regcnt_status;
 } __packed q80_rcv_cntxt_destroy_rsp_t;
 
-
 /*
  * Add Receive Rings
  */
@@ -1354,7 +1346,6 @@ typedef struct _q80_rq_map_sds_to_rds {
         q80_sds_rds_map_e_t     sds_rds[MAX_SDS_TO_RDS_MAP];
 } __packed q80_rq_map_sds_to_rds_t;
 
-
 typedef struct _q80_rsp_map_sds_to_rds {
         uint16_t                opcode;
         uint16_t                regcnt_status;
@@ -1362,7 +1353,6 @@ typedef struct _q80_rsp_map_sds_to_rds {
         uint16_t                num_rings;
         q80_sds_rds_map_e_t     sds_rds[MAX_SDS_TO_RDS_MAP];
 } __packed q80_rsp_map_sds_to_rds_t;
-
 
 /*
  * Receive Descriptor corresponding to each entry in the receive ring
@@ -1433,7 +1423,6 @@ typedef struct _q80_stat_desc {
 #define Q8_SGL_LRO_STAT_TS(data)                ((data >> 40) & 0x1)
 #define Q8_SGL_LRO_STAT_PUSH_BIT(data)          ((data >> 41) & 0x1)
 
-
 /*
  * definitions specific to opcode 0x05 data[1]
  */
@@ -1461,7 +1450,6 @@ typedef struct _q80_stat_desc {
 /* The number of descriptors should be a power of 2 */
 #define NUM_TX_DESCRIPTORS		1024
 #define NUM_STATUS_DESCRIPTORS		1024
-
 
 #define NUM_RX_DESCRIPTORS	2048
 
@@ -1607,7 +1595,6 @@ typedef struct _qla_hw {
 			fdt_valid	:1;
 	} flags;
 
-
 	volatile uint16_t	link_speed;
 	volatile uint16_t	cable_length;
 	volatile uint32_t	cable_oui;
@@ -1629,7 +1616,7 @@ typedef struct _qla_hw {
 	uint32_t	num_tx_rings;
 
         qla_dmabuf_t	dma_buf;
-	
+
 	/* Transmit Side */
 
 	qla_hw_tx_cntxt_t tx_cntxt[NUM_TX_RINGS];
@@ -1678,7 +1665,7 @@ typedef struct _qla_hw {
 
 	uint32_t	max_tx_segs;
 	uint32_t	min_lro_pkt_size;
-	
+
 	uint32_t        enable_hw_lro;
 	uint32_t        enable_soft_lro;
 	uint32_t        enable_9kb;
@@ -1738,7 +1725,6 @@ typedef struct _qla_hw {
 		bus_write_4((ha->pci_reg), (ha->hw.intr_src[i]), 0);
 
 #define QL_BUFFER_ALIGN                16
-
 
 /*
  * Flash Configuration 

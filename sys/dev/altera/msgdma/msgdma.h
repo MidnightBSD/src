@@ -26,8 +26,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
+
+#include "opt_altera_msgdma.h"
 
 /* Altera mSGDMA registers. */
 #define	DMA_STATUS		0x00
@@ -74,15 +75,36 @@
 #define	WRITE4_DESC(_sc, _reg, _val)	\
 	bus_space_write_4(_sc->bst_d, _sc->bsh_d, _reg, htole32(_val))
 
-/* Prefetcher-disabled descriptor format. */
-struct msgdma_desc_nonpf {
-	uint32_t src_addr;
-	uint32_t dst_addr;
+#if defined(ALTERA_MSGDMA_DESC_STD)
+
+/* Standard descriptor format with prefetcher disabled. */
+struct msgdma_desc {
+	uint32_t read_lo;
+	uint32_t write_lo;
 	uint32_t length;
 	uint32_t control;
 };
 
-/* Prefetcher-enabled descriptor format. */
+#elif defined(ALTERA_MSGDMA_DESC_EXT)
+
+/* Extended descriptor format with prefetcher disabled. */
+struct msgdma_desc {
+	uint32_t read_lo;
+	uint32_t write_lo;
+	uint32_t length;
+	uint8_t write_burst;
+	uint8_t read_burst;
+	uint16_t seq_num;
+	uint16_t write_stride;
+	uint16_t read_stride;
+	uint32_t read_hi;
+	uint32_t write_hi;
+	uint32_t control;
+};
+
+#elif defined(ALTERA_MSGDMA_DESC_PF_STD)
+
+/* Standard descriptor format with prefetcher enabled. */
 struct msgdma_desc {
 	uint32_t read_lo;
 	uint32_t write_lo;
@@ -93,3 +115,34 @@ struct msgdma_desc {
 	uint32_t reserved;
 	uint32_t control;
 };
+
+#elif defined(ALTERA_MSGDMA_DESC_PF_EXT)
+
+/* Extended descriptor format with prefetcher enabled. */
+struct msgdma_desc {
+	uint32_t read_lo;
+	uint32_t write_lo;
+	uint32_t length;
+	uint32_t next;
+	uint32_t transferred;
+	uint32_t status;
+	uint32_t reserved;
+	uint8_t write_burst;
+	uint8_t read_burst;
+	uint16_t seq_num;
+	uint16_t write_stride;
+	uint16_t read_stride;
+	uint32_t read_hi;
+	uint32_t write_hi;
+	uint32_t next_hi;
+	uint32_t reserved1;
+	uint32_t reserved2;
+	uint32_t reserved3;
+	uint32_t control;
+};
+
+#else
+
+#error	"mSGDMA descriptor format (kernel option) is not set."
+
+#endif

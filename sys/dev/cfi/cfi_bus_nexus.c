@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 SRI International
  * Copyright (c) 2009 Roelof Jonkman, Carlson Wireless Inc.
@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -71,7 +70,6 @@ static device_method_t cfi_nexus_methods[] = {
 	DEVMETHOD(device_probe,		cfi_nexus_probe),
 	DEVMETHOD(device_attach,	cfi_nexus_attach),
 	DEVMETHOD(device_detach,	cfi_detach),
-
 	{0, 0}
 };
 

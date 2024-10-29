@@ -1,7 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
- *
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013-2014 Qlogic Corporation
  * All rights reserved.
@@ -34,9 +32,6 @@
  * Author : David C Somayajulu, Qlogic Corporation, Aliso Viejo, CA 92656.
  */
 #include <sys/cdefs.h>
-
-
-
 #include "qls_os.h"
 #include "qls_hw.h"
 #include "qls_def.h"
@@ -44,7 +39,6 @@
 #include "qls_ver.h"
 #include "qls_glbl.h"
 #include "qls_dbg.h"
-
 
 static void
 qls_tx_comp(qla_host_t *ha, uint32_t txr_idx, q81_tx_mac_comp_t *tx_comp)
@@ -89,7 +83,6 @@ qls_replenish_rx(qla_host_t *ha, uint32_t r_idx)
 	sbq_e = rxr->sbq_vaddr;
 
         while (count--) {
-
 		rxb = &rxr->rx_buf[rxr->sbq_next];
 
 		if (rxb->m_head == NULL) {
@@ -116,7 +109,6 @@ qls_replenish_rx(qla_host_t *ha, uint32_t r_idx)
 		}
 
                 if (rxr->sbq_free == 16) {
-
 			rxr->sbq_in += 16;
 			rxr->sbq_in = rxr->sbq_in & (NUM_RX_DESCRIPTORS - 1);
 			rxr->sbq_free = 0;
@@ -134,12 +126,16 @@ qls_rx_comp(qla_host_t *ha, uint32_t rxr_idx, uint32_t cq_idx, q81_rx_t *cq_e)
 	device_t	dev = ha->pci_dev;
 	struct mbuf     *mp = NULL;
 	struct ifnet	*ifp = ha->ifp;
+#if defined(INET) || defined(INET6)
 	struct lro_ctrl	*lro;
+#endif
 	struct ether_vlan_header *eh;
 
 	rxr = &ha->rx_ring[rxr_idx];
 
+#if defined(INET) || defined(INET6)
 	lro = &rxr->lro;
+#endif
 
 	rxb = &rxr->rx_buf[rxr->rx_next];
 
@@ -148,7 +144,6 @@ qls_rx_comp(qla_host_t *ha, uint32_t rxr_idx, uint32_t cq_idx, q81_rx_t *cq_e)
 		return -1;
 	}
 	if (rxb->paddr != cq_e->b_paddr) {
-
 		device_printf(dev,
 			"%s: (rxb->paddr != cq_e->b_paddr)[%p, %p] \n",
 			__func__, (void *)rxb->paddr, (void *)cq_e->b_paddr);
@@ -163,7 +158,6 @@ qls_rx_comp(qla_host_t *ha, uint32_t rxr_idx, uint32_t cq_idx, q81_rx_t *cq_e)
 	rxr->rx_int++;
 
 	if ((cq_e->flags1 & Q81_RX_FLAGS1_ERR_MASK) == 0) {
-
 		mp = rxb->m_head;
 		rxb->m_head = NULL;
 
@@ -206,9 +200,12 @@ qls_rx_comp(qla_host_t *ha, uint32_t rxr_idx, uint32_t cq_idx, q81_rx_t *cq_e)
 			}
 			if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 
+#if defined(INET) || defined(INET6)
 			if (lro->lro_cnt && (tcp_lro_rx(lro, mp, 0) == 0)) {
 				/* LRO packet has been successfully queued */
-			} else {
+			} else
+#endif
+			{
 				(*ifp->if_input)(ifp, mp);
 			}
 		}
@@ -234,21 +231,20 @@ qls_cq_isr(qla_host_t *ha, uint32_t cq_idx)
 	q81_cq_e_t *cq_e, *cq_b;
 	uint32_t i, cq_comp_idx;
 	int ret = 0, tx_comp_done = 0;
-	struct lro_ctrl	*lro;
+#if defined(INET) || defined(INET6)
+	struct lro_ctrl	*lro = &ha->rx_ring[cq_idx].lro;
+#endif
 
 	cq_b = ha->rx_ring[cq_idx].cq_base_vaddr;
-	lro = &ha->rx_ring[cq_idx].lro;
 
 	cq_comp_idx = *(ha->rx_ring[cq_idx].cqi_vaddr);
 
 	i = ha->rx_ring[cq_idx].cq_next;
 
 	while (i != cq_comp_idx) {
-
 		cq_e = &cq_b[i];
 
 		switch (cq_e->opcode) {
-
                 case Q81_IOCB_TX_MAC:
                 case Q81_IOCB_TX_TSO:
                         qls_tx_comp(ha, cq_idx, (q81_tx_mac_comp_t *)cq_e);
@@ -257,7 +253,7 @@ qls_cq_isr(qla_host_t *ha, uint32_t cq_idx)
 
 		case Q81_IOCB_RX:
 			ret = qls_rx_comp(ha, cq_idx, i, (q81_rx_t *)cq_e);
-	
+
 			break;
 
 		case Q81_IOCB_MPI:
@@ -289,7 +285,9 @@ qls_cq_isr(qla_host_t *ha, uint32_t cq_idx)
                 }
 	}
 
+#if defined(INET) || defined(INET6)
 	tcp_lro_flush_all(lro);
+#endif
 
 	ha->rx_ring[cq_idx].cq_next = cq_comp_idx;
 
@@ -310,7 +308,6 @@ qls_mbx_isr(qla_host_t *ha)
 	device_t dev = ha->pci_dev;
 
 	if (qls_mbx_rd_reg(ha, 0, &data) == 0) {
-
 		if ((data & 0xF000) == 0x4000) {
 			ha->mbox[0] = data;
 			for (i = 1; i < Q81_NUM_MBX_REGISTERS; i++) {
@@ -320,9 +317,8 @@ qls_mbx_isr(qla_host_t *ha)
 			}
 			ha->mbx_done = 1;
 		} else if ((data & 0xF000) == 0x8000) {
-
 			/* we have an AEN */
-	
+
 			ha->aen[0] = data;
 			for (i = 1; i < Q81_NUM_AEN_REGISTERS; i++) {
 				if (qls_mbx_rd_reg(ha, i, &data))
@@ -338,7 +334,6 @@ qls_mbx_isr(qla_host_t *ha)
 				ha->aen[6], ha->aen[7], ha->aen[8]);
 
 			switch ((ha->aen[0] & 0xFFFF)) {
-
 			case 0x8011:
 				ha->link_up = 1;
 				break;
@@ -354,7 +349,6 @@ qls_mbx_isr(qla_host_t *ha)
 			case 0x8131:
 				ha->link_hw_info = 0;
 				break;
-
 			}
 		} 
 	}
@@ -396,4 +390,3 @@ qls_isr(void *arg)
 
 	return;
 }
-

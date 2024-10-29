@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 
 #include <sys/param.h>
@@ -143,6 +142,8 @@ gpioleds_detach_led(struct gpioled *led)
 static int
 gpioled_probe(device_t dev)
 {
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
 	if (!ofw_bus_is_compatible(dev, "gpio-leds"))
 		return (ENXIO);
 

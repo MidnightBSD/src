@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 
 #ifdef _KERNEL
@@ -164,7 +163,7 @@ bhnd_nvram_value_nelem(const void *inp, size_t ilen, bhnd_nvram_type itype,
 			/* Determine string length */
 			slen = strnlen(p, nleft);
 			nleft -= slen;
-	
+
 			/* Advance input */
 			p += slen;
 
@@ -363,7 +362,6 @@ bhnd_nvram_value_size(const void *inp, size_t ilen, bhnd_nvram_type itype,
 	/* Quiesce gcc4.2 */
 	BHND_NV_PANIC("bhnd nvram type %u unknown", itype);
 }
-
 
 /**
  * Format a string representation of @p inp using @p fmt, with, writing the

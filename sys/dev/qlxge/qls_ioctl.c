@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013-2014 Qlogic Corporation
  * All rights reserved.
@@ -31,8 +31,6 @@
  * Author : David C Somayajulu, Qlogic Corporation, Aliso Viejo, CA 92656.
  */
 #include <sys/cdefs.h>
-
-
 #include "qls_os.h"
 #include "qls_hw.h"
 #include "qls_def.h"
@@ -94,7 +92,6 @@ qls_eioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 	pci_dev= ha->pci_dev;
 
         switch(cmd) {
-
 	case QLA_MPI_DUMP:
 		mpi_dump = (qls_mpi_dump_t *)data;
 
@@ -118,7 +115,6 @@ qls_eioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 						__func__, rval);
 				}
 			}
-
 		}
 		
 		break;
@@ -128,4 +124,3 @@ qls_eioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 
         return rval;
 }
-

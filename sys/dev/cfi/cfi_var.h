@@ -33,7 +33,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_CFI_VAR_H_
@@ -79,6 +78,9 @@ struct cfi_softc {
 	u_int		sc_wrbufsz;
 	u_int		sc_wrofs;
 	u_int		sc_writing;
+
+	u_int		sc_manid;
+	u_int		sc_devid;
 };
 
 extern char cfi_driver_name[];

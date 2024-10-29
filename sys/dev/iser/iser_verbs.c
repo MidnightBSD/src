@@ -212,8 +212,6 @@ iser_create_device_ib_res(struct iser_device *device)
 
 	device->comps = malloc(device->comps_used * sizeof(*device->comps),
 		M_ISER_VERBS, M_WAITOK | M_ZERO);
-	if (!device->comps)
-		goto comps_err;
 
 	max_cqe = min(ISER_MAX_CQ_LEN, ib_dev->attrs.max_cqe);
 
@@ -280,7 +278,6 @@ cq_err:
 	ib_dealloc_pd(device->pd);
 pd_err:
 	free(device->comps, M_ISER_VERBS);
-comps_err:
 	ISER_ERR("failed to allocate an IB resource");
 	return (1);
 }
@@ -343,11 +340,6 @@ iser_create_fastreg_desc(struct ib_device *ib_device, struct ib_pd *pd)
 	int ret;
 
 	desc = malloc(sizeof(*desc), M_ISER_VERBS, M_WAITOK | M_ZERO);
-	if (!desc) {
-		ISER_ERR("Failed to allocate a new fastreg descriptor");
-		return (NULL);
-	}
-
 	ret = iser_alloc_reg_res(ib_device, pd, &desc->rsc);
 	if (ret) {
 		ISER_ERR("failed to allocate reg_resources");
@@ -509,9 +501,6 @@ iser_device_find_by_ib_device(struct rdma_cm_id *cma_id)
 			goto inc_refcnt;
 
 	device = malloc(sizeof *device, M_ISER_VERBS, M_WAITOK | M_ZERO);
-	if (device == NULL)
-		goto out;
-
 	/* assign this device to the device */
 	device->ib_device = cma_id->device;
 	/* init the device and link it into ig device list */
@@ -613,8 +602,8 @@ int
 iser_conn_terminate(struct iser_conn *iser_conn)
 {
 	struct ib_conn *ib_conn = &iser_conn->ib_conn;
-	struct ib_send_wr *bad_send_wr;
-	struct ib_recv_wr *bad_recv_wr;
+	const struct ib_send_wr *bad_send_wr;
+	const struct ib_recv_wr *bad_recv_wr;
 	int err = 0;
 
 	/* terminate the iser conn only if the conn state is UP */
@@ -859,7 +848,8 @@ iser_cma_handler(struct rdma_cm_id *cma_id, struct rdma_cm_event *event)
 int
 iser_post_recvl(struct iser_conn *iser_conn)
 {
-	struct ib_recv_wr rx_wr, *rx_wr_failed;
+	const struct ib_recv_wr *rx_wr_failed;
+	struct ib_recv_wr rx_wr;
 	struct ib_conn *ib_conn = &iser_conn->ib_conn;
 	struct ib_sge	  sge;
 	int ib_ret;
@@ -886,7 +876,8 @@ iser_post_recvl(struct iser_conn *iser_conn)
 int
 iser_post_recvm(struct iser_conn *iser_conn, int count)
 {
-	struct ib_recv_wr *rx_wr, *rx_wr_failed;
+	const struct ib_recv_wr *rx_wr_failed;
+	struct ib_recv_wr *rx_wr;
 	int i, ib_ret;
 	struct ib_conn *ib_conn = &iser_conn->ib_conn;
 	unsigned int my_rx_head = iser_conn->rx_desc_head;
@@ -924,7 +915,8 @@ int iser_post_send(struct ib_conn *ib_conn, struct iser_tx_desc *tx_desc,
 		   bool signal)
 {
 	int		  ib_ret;
-	struct ib_send_wr send_wr, *send_wr_failed;
+	const struct ib_send_wr *send_wr_failed;
+	struct ib_send_wr send_wr;
 
 	ib_dma_sync_single_for_device(ib_conn->device->ib_device,
 				      tx_desc->dma_addr, ISER_HEADERS_LEN,

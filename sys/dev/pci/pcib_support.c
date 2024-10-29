@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Support functions for the PCI:PCI bridge driver.  This has to be in a
  * separate file because kernel configurations end up referencing the functions
@@ -78,4 +77,3 @@ pcib_decode_rid(device_t pcib, uint16_t rid, int *bus, int *slot,
 	*slot = PCI_RID2SLOT(rid);
 	*func = PCI_RID2FUNC(rid);
 }
-

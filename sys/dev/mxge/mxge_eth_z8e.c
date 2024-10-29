@@ -14,7 +14,7 @@
 static int
 mxge_eth_z8e_fw_modevent(module_t mod, int type, void *unused)
 {
-	const struct firmware *fp, *parent;
+	const struct firmware *fp;
 	int error;
 	switch (type) {
 	case MOD_LOAD:
@@ -24,7 +24,6 @@ mxge_eth_z8e_fw_modevent(module_t mod, int type, void *unused)
 				       eth_z8e_uncompressed_length, NULL);
 		if (fp == NULL)
 			goto fail_0;
-		parent = fp;
 		return (0);
 	fail_0:
 		return (ENXIO);
@@ -43,4 +42,3 @@ static moduledata_t mxge_eth_z8e_fw_mod = {
 DECLARE_MODULE(mxge_eth_z8e_fw, mxge_eth_z8e_fw_mod, SI_SUB_DRIVERS, SI_ORDER_FIRST);
 MODULE_VERSION(mxge_eth_z8e_fw, 1);
 MODULE_DEPEND(mxge_eth_z8e_fw, firmware, 1, 1, 1);
-

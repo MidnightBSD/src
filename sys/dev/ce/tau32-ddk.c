@@ -22,7 +22,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef __noinline
 #	ifdef __GNUC__
 #	   if __GNUC__ >= 3

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,15 +32,16 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_mfi.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
-#include <sys/selinfo.h>
+#include <sys/lock.h>
 #include <sys/module.h>
 #include <sys/malloc.h>
+#include <sys/mutex.h>
+#include <sys/selinfo.h>
 #include <sys/sysctl.h>
 #include <sys/uio.h>
 
@@ -263,8 +264,7 @@ mfi_syspd_strategy(struct bio *bio)
 }
 
 static int
-mfi_syspd_dump(void *arg, void *virt, vm_offset_t phys, off_t offset,
-    size_t len)
+mfi_syspd_dump(void *arg, void *virt, off_t offset, size_t len)
 {
 	struct mfi_system_pd *sc;
 	struct mfi_softc *parent_sc;

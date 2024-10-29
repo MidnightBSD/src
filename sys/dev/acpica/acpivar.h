@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _ACPIVAR_H_
@@ -34,7 +33,7 @@
 
 #include "acpi_if.h"
 #include "bus_if.h"
-#include <sys/eventhandler.h>
+#include <sys/_eventhandler.h>
 #ifdef INTRNG
 #include <sys/intr.h>
 #endif
@@ -56,7 +55,6 @@ struct acpi_softc {
     int			acpi_enabled;
     int			acpi_sstate;
     int			acpi_sleep_disabled;
-    int			acpi_resources_reserved;
 
     struct sysctl_ctx_list acpi_sysctl_ctx;
     struct sysctl_oid	*acpi_sysctl_tree;
@@ -88,6 +86,9 @@ struct acpi_device {
     void			*ad_private;
     int				ad_flags;
     int				ad_cls_class;
+
+    ACPI_BUFFER			dsd;	/* Device Specific Data */
+    const ACPI_OBJECT	*dsd_pkg;
 
     /* Resources */
     struct resource_list	ad_rl;
@@ -230,6 +231,18 @@ extern int	acpi_quirks;
 #define ACPI_Q_TIMER		(1 << 1)
 #define ACPI_Q_MADT_IRQ0	(1 << 2)
 
+#if defined(__amd64__) || defined(__i386__)
+/*
+ * Certain Intel BIOSes have buggy AML that specify an IRQ that is
+ * edge-sensitive and active-lo.  Normally, edge-sensitive IRQs should
+ * be active-hi.  If this value is non-zero, edge-sensitive ISA IRQs
+ * are forced to be active-hi instead.  At least some AMD systems use
+ * active-lo edge-sensitive ISA IRQs, so this setting is only enabled
+ * by default on systems with Intel CPUs.
+ */
+extern int	acpi_override_isa_irq_polarity;
+#endif
+
 /*
  * Plug and play information for device matching.  Matching table format
  * is compatible with ids parameter of ACPI_ID_PROBE bus method.
@@ -349,6 +362,8 @@ BOOLEAN		acpi_DeviceIsPresent(device_t dev);
 BOOLEAN		acpi_BatteryIsPresent(device_t dev);
 ACPI_STATUS	acpi_GetHandleInScope(ACPI_HANDLE parent, char *path,
 		    ACPI_HANDLE *result);
+ACPI_STATUS	acpi_GetProperty(device_t dev, ACPI_STRING propname,
+		    const ACPI_OBJECT **value);
 ACPI_BUFFER	*acpi_AllocBuffer(int size);
 ACPI_STATUS	acpi_ConvertBufferToInteger(ACPI_BUFFER *bufp,
 		    UINT32 *number);
@@ -362,10 +377,15 @@ ACPI_STATUS	acpi_FindIndexedResource(ACPI_BUFFER *buf, int index,
 		    ACPI_RESOURCE **resp);
 ACPI_STATUS	acpi_AppendBufferResource(ACPI_BUFFER *buf,
 		    ACPI_RESOURCE *res);
-UINT8		acpi_DSMQuery(ACPI_HANDLE h, uint8_t *uuid, int revision);
-ACPI_STATUS	acpi_EvaluateDSM(ACPI_HANDLE handle, uint8_t *uuid,
-		    int revision, uint64_t function, union acpi_object *package,
+UINT64		acpi_DSMQuery(ACPI_HANDLE h, const uint8_t *uuid,
+		    int revision);
+ACPI_STATUS	acpi_EvaluateDSM(ACPI_HANDLE handle, const uint8_t *uuid,
+		    int revision, UINT64 function, ACPI_OBJECT *package,
 		    ACPI_BUFFER *out_buf);
+ACPI_STATUS	acpi_EvaluateDSMTyped(ACPI_HANDLE handle,
+		    const uint8_t *uuid, int revision, UINT64 function,
+		    ACPI_OBJECT *package, ACPI_BUFFER *out_buf,
+		    ACPI_OBJECT_TYPE type);
 ACPI_STATUS	acpi_EvaluateOSC(ACPI_HANDLE handle, uint8_t *uuid,
 		    int revision, int count, uint32_t *caps_in,
 		    uint32_t *caps_out, bool query);
@@ -385,7 +405,17 @@ int		acpi_bus_alloc_gas(device_t dev, int *type, int *rid,
 void		acpi_walk_subtables(void *first, void *end,
 		    acpi_subtable_handler *handler, void *arg);
 BOOLEAN		acpi_has_hid(ACPI_HANDLE handle);
-BOOLEAN		acpi_MatchHid(ACPI_HANDLE h, const char *hid);
+int		acpi_MatchHid(ACPI_HANDLE h, const char *hid);
+#define ACPI_MATCHHID_NOMATCH 0
+#define ACPI_MATCHHID_HID 1
+#define ACPI_MATCHHID_CID 2
+
+static __inline bool
+acpi_HasProperty(device_t dev, ACPI_STRING propname)
+{
+
+	return ACPI_SUCCESS(acpi_GetProperty(dev, propname, NULL));
+}
 
 struct acpi_parse_resource_set {
     void	(*set_init)(device_t dev, void *arg, void **context);
@@ -438,6 +468,8 @@ typedef void (*acpi_event_handler_t)(void *, int);
 
 EVENTHANDLER_DECLARE(acpi_sleep_event, acpi_event_handler_t);
 EVENTHANDLER_DECLARE(acpi_wakeup_event, acpi_event_handler_t);
+EVENTHANDLER_DECLARE(acpi_acad_event, acpi_event_handler_t);
+EVENTHANDLER_DECLARE(acpi_video_event, acpi_event_handler_t);
 
 /* Device power control. */
 ACPI_STATUS	acpi_pwr_wake_enable(ACPI_HANDLE consumer, int enable);
@@ -565,7 +597,12 @@ int		acpi_get_domain(device_t dev, device_t child, int *domain);
  * ARM specific ACPI interfaces, relating to IORT table.
  */
 int	acpi_iort_map_pci_msi(u_int seg, u_int rid, u_int *xref, u_int *devid);
+int	acpi_iort_map_pci_smmuv3(u_int seg, u_int rid, u_int *xref, u_int *devid);
 int	acpi_iort_its_lookup(u_int its_id, u_int *xref, int *pxm);
+int	acpi_iort_map_named_msi(const char *devname, u_int rid, u_int *xref,
+	    u_int *devid);
+int	acpi_iort_map_named_smmuv3(const char *devname, u_int rid, u_int *xref,
+	    u_int *devid);
 #endif
 #endif /* _KERNEL */
 #endif /* !_ACPIVAR_H_ */

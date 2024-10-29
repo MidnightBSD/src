@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Landon Fuller under sponsorship from
  * the FreeBSD Foundation.
@@ -27,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _BHND_BHND_PRIVATE_H_
@@ -95,7 +93,7 @@ struct bhnd_core_clkctl {
 
 #define	BHND_CLKCTL_WRITE_4(_clkctl, _val)	\
 	bhnd_bus_write_4((_clkctl)->cc_res, (_clkctl)->cc_res_offset, (_val))
-	
+
 #define	BHND_CLKCTL_SET_4(_clkctl, _val, _mask)	\
 	BHND_CLKCTL_WRITE_4((_clkctl),		\
 	    ((_val) & (_mask)) | (BHND_CLKCTL_READ_4(_clkctl) & ~(_mask)))

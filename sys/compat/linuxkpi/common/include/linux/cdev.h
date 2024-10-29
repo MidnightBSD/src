@@ -2,7 +2,7 @@
  * Copyright (c) 2010 Isilon Systems, Inc.
  * Copyright (c) 2010 iX Systems, Inc.
  * Copyright (c) 2010 Panasas, Inc.
- * Copyright (c) 2013-2016 Mellanox Technologies, Ltd.
+ * Copyright (c) 2013-2021 Mellanox Technologies, Ltd.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_CDEV_H_
-#define	_LINUX_CDEV_H_
+#ifndef	_LINUXKPI_LINUX_CDEV_H_
+#define	_LINUXKPI_LINUX_CDEV_H_
 
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
@@ -37,6 +36,7 @@
 
 #include <asm/atomic-long.h>
 
+struct device;
 struct file_operations;
 struct inode;
 struct module;
@@ -55,6 +55,8 @@ struct linux_cdev {
 	u_int		siref;
 };
 
+struct linux_cdev *cdev_alloc(void);
+
 static inline void
 cdev_init(struct linux_cdev *cdev, const struct file_operations *ops)
 {
@@ -62,17 +64,6 @@ cdev_init(struct linux_cdev *cdev, const struct file_operations *ops)
 	kobject_init(&cdev->kobj, &linux_cdev_static_ktype);
 	cdev->ops = ops;
 	cdev->refs = 1;
-}
-
-static inline struct linux_cdev *
-cdev_alloc(void)
-{
-	struct linux_cdev *cdev;
-
-	cdev = kzalloc(sizeof(struct linux_cdev), M_WAITOK);
-	kobject_init(&cdev->kobj, &linux_cdev_ktype);
-	cdev->refs = 1;
-	return (cdev);
 }
 
 static inline void
@@ -134,18 +125,22 @@ cdev_add_ext(struct linux_cdev *cdev, dev_t dev, uid_t uid, gid_t gid, int mode)
 	return (0);
 }
 
-void linux_destroy_dev(struct linux_cdev *);
-
 static inline void
 cdev_del(struct linux_cdev *cdev)
 {
-
-	linux_destroy_dev(cdev);
 	kobject_put(&cdev->kobj);
 }
 
 struct linux_cdev *linux_find_cdev(const char *name, unsigned major, unsigned minor);
 
+int linux_cdev_device_add(struct linux_cdev *, struct device *);
+void linux_cdev_device_del(struct linux_cdev *, struct device *);
+
+#define	cdev_device_add(...)		\
+  linux_cdev_device_add(__VA_ARGS__)
+#define	cdev_device_del(...)		\
+  linux_cdev_device_del(__VA_ARGS__)
+
 #define	cdev	linux_cdev
 
-#endif	/* _LINUX_CDEV_H_ */
+#endif	/* _LINUXKPI_LINUX_CDEV_H_ */

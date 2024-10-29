@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2008 Nathan Whitehorn
  * All rights reserved.
@@ -23,13 +23,14 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/lock.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/mouse.h>
@@ -104,7 +105,6 @@ static device_method_t adb_mouse_methods[] = {
 
 	/* ADB interface */
 	DEVMETHOD(adb_receive_packet,	adb_mouse_receive_packet),
-
 	{ 0, 0 }
 };
 
@@ -142,7 +142,7 @@ adb_mouse_probe(device_t dev)
 	device_set_desc(dev,"ADB Mouse");
 	return (0);
 }
-	
+
 static int 
 adb_mouse_attach(device_t dev) 
 {
@@ -327,8 +327,8 @@ adb_init_trackpad(device_t dev)
 	ctx = device_get_sysctl_ctx(dev);
 	tree = device_get_sysctl_tree(dev);
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO, "tapping",
-			CTLTYPE_INT | CTLFLAG_RW, sc, 0, adb_tapping_sysctl,
-			"I", "Tapping the pad causes button events");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, sc, 0,
+	    adb_tapping_sysctl, "I", "Tapping the pad causes button events");
 	return;
 }
 
@@ -506,13 +506,11 @@ ams_read(struct cdev *dev, struct uio *uio, int flag)
 	if (!sc->packet_read_len) {
 		if (sc->xdelta == 0 && sc->ydelta == 0 && 
 		   sc->buttons == sc->last_buttons) {
-
 			if (flag & O_NONBLOCK) {
 				mtx_unlock(&sc->sc_mtx);
 				return EWOULDBLOCK;
 			}
 
-	
 			/* Otherwise, block on new data */
 			error = cv_wait_sig(&sc->sc_cv, &sc->sc_mtx);
 			if (error) {
@@ -554,7 +552,6 @@ ams_read(struct cdev *dev, struct uio *uio, int flag)
 
 		sc->packet[7] = ~((uint8_t)(sc->buttons >> 3)) & 0x7f;
 
-
 		sc->last_buttons = sc->buttons;
 		sc->xdelta = 0;
 		sc->ydelta = 0;
@@ -575,7 +572,6 @@ ams_read(struct cdev *dev, struct uio *uio, int flag)
 
 	return (error);
 }
-
 
 static int
 ams_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, 
@@ -613,12 +609,12 @@ ams_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag,
 			sc->mode.packetsize = 5;
 			break;
 		}
-	
+
 		return EINVAL;
 	case MOUSE_GETLEVEL:
 		*(int *)addr = sc->mode.level;
 		break;
-	
+
 	case MOUSE_GETSTATUS: {
 		mousestatus_t *status = (mousestatus_t *) addr;
 
@@ -643,7 +639,6 @@ ams_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag,
 		sc->last_buttons = sc->buttons;
 
 		mtx_unlock(&sc->sc_mtx);
-
 		break; }
 	default:
 		return ENOTTY;

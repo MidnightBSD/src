@@ -25,10 +25,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_LINUX_WORKQUEUE_H_
-#define	_LINUX_WORKQUEUE_H_
+#ifndef	_LINUXKPI_LINUX_WORKQUEUE_H_
+#define	_LINUXKPI_LINUX_WORKQUEUE_H_
 
 #include <linux/types.h>
 #include <linux/kernel.h>
@@ -97,11 +96,12 @@ struct delayed_work {
 
 #define	DECLARE_DELAYED_WORK(name, fn)					\
 	struct delayed_work name;					\
-	static void name##_init(void *arg)				\
+	static void __linux_delayed_ ## name ## _init(void *arg)	\
 	{								\
 		linux_init_delayed_work(&name, fn);			\
 	}								\
-	SYSINIT(name, SI_SUB_LOCK, SI_ORDER_SECOND, name##_init, NULL)
+	SYSINIT(name, SI_SUB_LOCK, SI_ORDER_SECOND,			\
+	    __linux_delayed_ ## name##_init, NULL)
 
 static inline struct delayed_work *
 to_delayed_work(struct work_struct *work)
@@ -254,4 +254,4 @@ extern struct work_struct *linux_current_work(void);
 extern bool linux_queue_rcu_work(struct workqueue_struct *wq, struct rcu_work *rwork);
 extern bool linux_flush_rcu_work(struct rcu_work *rwork);
 
-#endif					/* _LINUX_WORKQUEUE_H_ */
+#endif					/* _LINUXKPI_LINUX_WORKQUEUE_H_ */

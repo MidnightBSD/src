@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-2-Clause
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 IronPort Systems
  * All rights reserved.
@@ -56,7 +56,6 @@
 #define _MFIVAR_H
 
 #include <sys/cdefs.h>
-
 #include <sys/lock.h>
 #include <sys/sx.h>
 
@@ -591,7 +590,6 @@ mfi_print_sense(struct mfi_softc *sc, void *sense)
 	device_printf(sc->mfi_dev, "sense error %d, sense_key %d, "
 	    "asc %d, ascq %d\n", error, key, asc, ascq);
 }
-
 
 #define MFI_WRITE4(sc, reg, val)	bus_space_write_4((sc)->mfi_btag, \
 	sc->mfi_bhandle, (reg), (val))

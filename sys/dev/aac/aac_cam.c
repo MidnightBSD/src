@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Adaptec, Inc.
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * CAM front-end for communicating with non-DASD devices
  */
@@ -142,7 +141,6 @@ aac_cam_rescan(struct aac_softc *sc, uint32_t channel, uint32_t target_id)
 		break;
 	}
 }
-
 
 static void
 aac_cam_event(struct aac_softc *sc, struct aac_event *event, void *arg)

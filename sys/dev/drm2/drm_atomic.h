@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 typedef u_int		atomic_t;
 typedef uint64_t	atomic64_t;
 

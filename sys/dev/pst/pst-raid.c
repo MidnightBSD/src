@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001,2002,2003 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -213,6 +212,7 @@ pst_start(struct pst_softc *psc)
     struct pst_request *request;
     struct bio *bp;
     u_int32_t mfa;
+    int error;
 
     if (psc->iop->outstanding < (I2O_IOP_OUTBOUND_FRAME_COUNT - 1) &&
 	(bp = bioq_first(&psc->queue))) {
@@ -230,8 +230,8 @@ pst_start(struct pst_softc *psc)
 	    request->psc = psc;
 	    request->mfa = mfa;
 	    request->bp = bp;
-	    if (pst_rw(request)) {
-		biofinish(request->bp, NULL, EIO);
+	    if ((error = pst_rw(request)) != 0) {
+		biofinish(request->bp, NULL, error);
 		iop_free_mfa(request->psc->iop, request->mfa);
 		psc->iop->outstanding--;
 		free(request, M_PSTRAID);
@@ -285,7 +285,7 @@ pst_rw(struct pst_request *request)
 	break;
     default:
 	printf("pst: unknown command type 0x%02x\n", request->bp->bio_cmd);
-	return -1;
+	return EOPNOTSUPP;
     }
     msg->initiator_context = (u_int32_t)pst_done;
     msg->transaction_context = (u_int32_t)request;
@@ -295,7 +295,7 @@ pst_rw(struct pst_request *request)
 
     if (!iop_create_sgl((struct i2o_basic_message *)msg, request->bp->bio_data,
 			request->bp->bio_bcount, sgl_flag))
-	return -1;
+	return EIO;
 
     request->psc->iop->reg->iqueue = request->mfa;
 
@@ -308,6 +308,7 @@ static void
 pst_timeout(void *arg)
 {
     struct pst_request *request;
+    int error;
 
     request = arg;
     printf("pst: timeout mfa=0x%08x cmd=0x%02x\n",
@@ -320,9 +321,9 @@ pst_timeout(void *arg)
 	request->psc->iop->outstanding--;
 	return;
     }
-    if (pst_rw(request)) {
+    if ((error = pst_rw(request)) != 0) {
 	iop_free_mfa(request->psc->iop, request->mfa);
-	biofinish(request->bp, NULL, EIO);
+	biofinish(request->bp, NULL, error);
 	request->psc->iop->outstanding--;
     }
 }
@@ -362,7 +363,7 @@ static device_method_t pst_methods[] = {
     DEVMETHOD(device_attach,	pst_attach),
     { 0, 0 }
 };
-	
+
 static driver_t pst_driver = {
     "pst",
     pst_methods,

@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_kstack_pages.h"
 
 #include <sys/param.h>
@@ -41,7 +40,6 @@
 #include <sys/proc.h>
 #include <sys/sysent.h>
 #include <sys/systm.h>
-#include <sys/_kstack_cache.h>
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 #include <vm/pmap.h>
@@ -54,6 +52,7 @@
 
 static void	dumpthread(volatile struct proc *p, volatile struct thread *td,
 		    int all);
+static void	db_ps_proc(struct proc *p);
 static int	ps_mode;
 
 /*
@@ -105,146 +104,155 @@ dump_args(volatile struct proc *p)
 void
 db_ps(db_expr_t addr, bool hasaddr, db_expr_t count, char *modif)
 {
-	volatile struct proc *p, *pp;
-	volatile struct thread *td;
-	struct ucred *cred;
-	struct pgrp *pgrp;
-	char state[9];
-	int np, rflag, sflag, dflag, lflag, wflag;
+	struct proc *p;
+	int i;
 
 	ps_mode = modif[0] == 'a' ? PRINT_ARGS : PRINT_NONE;
-	np = nprocs;
-
-	if (!LIST_EMPTY(&allproc))
-		p = LIST_FIRST(&allproc);
-	else
-		p = &proc0;
 
 #ifdef __LP64__
 	db_printf("  pid  ppid  pgrp   uid  state   wmesg   wchan               cmd\n");
 #else
 	db_printf("  pid  ppid  pgrp   uid  state   wmesg   wchan       cmd\n");
 #endif
-	while (--np >= 0 && !db_pager_quit) {
-		if (p == NULL) {
-			db_printf("oops, ran out of processes early!\n");
-			break;
+
+	if (!LIST_EMPTY(&allproc))
+		p = LIST_FIRST(&allproc);
+	else
+		p = &proc0;
+	for (; p != NULL && !db_pager_quit; p = LIST_NEXT(p, p_list))
+		db_ps_proc(p);
+
+	/*
+	 * Processes such as zombies not in allproc.
+	 */
+	for (i = 0; i <= pidhash && !db_pager_quit; i++) {
+		LIST_FOREACH(p, &pidhashtbl[i], p_hash) {
+			if (p->p_list.le_prev == NULL)
+				db_ps_proc(p);
 		}
-		pp = p->p_pptr;
-		if (pp == NULL)
-			pp = p;
+	}
+}
 
-		cred = p->p_ucred;
-		pgrp = p->p_pgrp;
-		db_printf("%5d %5d %5d %5d ", p->p_pid, pp->p_pid,
-		    pgrp != NULL ? pgrp->pg_id : 0,
-		    cred != NULL ? cred->cr_ruid : 0);
+static void
+db_ps_proc(struct proc *p)
+{
+	volatile struct proc *pp;
+	volatile struct thread *td;
+	struct ucred *cred;
+	struct pgrp *pgrp;
+	char state[9];
+	int rflag, sflag, dflag, lflag, wflag;
 
-		/* Determine our primary process state. */
-		switch (p->p_state) {
-		case PRS_NORMAL:
-			if (P_SHOULDSTOP(p))
-				state[0] = 'T';
-			else {
-				/*
-				 * One of D, L, R, S, W.  For a
-				 * multithreaded process we will use
-				 * the state of the thread with the
-				 * highest precedence.  The
-				 * precendence order from high to low
-				 * is R, L, D, S, W.  If no thread is
-				 * in a sane state we use '?' for our
-				 * primary state.
-				 */
-				rflag = sflag = dflag = lflag = wflag = 0;
-				FOREACH_THREAD_IN_PROC(p, td) {
-					if (td->td_state == TDS_RUNNING ||
-					    td->td_state == TDS_RUNQ ||
-					    td->td_state == TDS_CAN_RUN)
-						rflag++;
-					if (TD_ON_LOCK(td))
-						lflag++;
-					if (TD_IS_SLEEPING(td)) {
-						if (!(td->td_flags & TDF_SINTR))
-							dflag++;
-						else
-							sflag++;
-					}
-					if (TD_AWAITING_INTR(td))
-						wflag++;
+	pp = p->p_pptr;
+	if (pp == NULL)
+		pp = p;
+
+	cred = p->p_ucred;
+	pgrp = p->p_pgrp;
+	db_printf("%5d %5d %5d %5d ", p->p_pid, pp->p_pid,
+	    pgrp != NULL ? pgrp->pg_id : 0,
+	    cred != NULL ? cred->cr_ruid : 0);
+
+	/* Determine our primary process state. */
+	switch (p->p_state) {
+	case PRS_NORMAL:
+		if (P_SHOULDSTOP(p))
+			state[0] = 'T';
+		else {
+			/*
+			 * One of D, L, R, S, W.  For a
+			 * multithreaded process we will use
+			 * the state of the thread with the
+			 * highest precedence.  The
+			 * precendence order from high to low
+			 * is R, L, D, S, W.  If no thread is
+			 * in a sane state we use '?' for our
+			 * primary state.
+			 */
+			rflag = sflag = dflag = lflag = wflag = 0;
+			FOREACH_THREAD_IN_PROC(p, td) {
+				if (td->td_state == TDS_RUNNING ||
+				    td->td_state == TDS_RUNQ ||
+				    td->td_state == TDS_CAN_RUN)
+					rflag++;
+				if (TD_ON_LOCK(td))
+					lflag++;
+				if (TD_IS_SLEEPING(td)) {
+					if (!(td->td_flags & TDF_SINTR))
+						dflag++;
+					else
+						sflag++;
 				}
-				if (rflag)
-					state[0] = 'R';
-				else if (lflag)
-					state[0] = 'L';
-				else if (dflag)
-					state[0] = 'D';
-				else if (sflag)
-					state[0] = 'S';
-				else if (wflag)
-					state[0] = 'W';
-				else
-					state[0] = '?';
+				if (TD_AWAITING_INTR(td))
+					wflag++;
 			}
-			break;
-		case PRS_NEW:
-			state[0] = 'N';
-			break;
-		case PRS_ZOMBIE:
-			state[0] = 'Z';
-			break;
-		default:
-			state[0] = 'U';
-			break;
+			if (rflag)
+				state[0] = 'R';
+			else if (lflag)
+				state[0] = 'L';
+			else if (dflag)
+				state[0] = 'D';
+			else if (sflag)
+				state[0] = 'S';
+			else if (wflag)
+				state[0] = 'W';
+			else
+				state[0] = '?';
 		}
-		state[1] = '\0';
+		break;
+	case PRS_NEW:
+		state[0] = 'N';
+		break;
+	case PRS_ZOMBIE:
+		state[0] = 'Z';
+		break;
+	default:
+		state[0] = 'U';
+		break;
+	}
+	state[1] = '\0';
 
-		/* Additional process state flags. */
-		if (!(p->p_flag & P_INMEM))
-			strlcat(state, "W", sizeof(state));
-		if (p->p_flag & P_TRACED)
-			strlcat(state, "X", sizeof(state));
-		if (p->p_flag & P_WEXIT && p->p_state != PRS_ZOMBIE)
-			strlcat(state, "E", sizeof(state));
-		if (p->p_flag & P_PPWAIT)
-			strlcat(state, "V", sizeof(state));
-		if (p->p_flag & P_SYSTEM || p->p_lock > 0)
-			strlcat(state, "L", sizeof(state));
-		if (p->p_pgrp != NULL && p->p_session != NULL &&
-		    SESS_LEADER(p))
-			strlcat(state, "s", sizeof(state));
-		/* Cheated here and didn't compare pgid's. */
-		if (p->p_flag & P_CONTROLT)
-			strlcat(state, "+", sizeof(state));
-		if (cred != NULL && jailed(cred))
-			strlcat(state, "J", sizeof(state));
-		db_printf(" %-6.6s ", state);
-		if (p->p_flag & P_HADTHREADS) {
+	/* Additional process state flags. */
+	if (!(p->p_flag & P_INMEM))
+		strlcat(state, "W", sizeof(state));
+	if (p->p_flag & P_TRACED)
+		strlcat(state, "X", sizeof(state));
+	if (p->p_flag & P_WEXIT && p->p_state != PRS_ZOMBIE)
+		strlcat(state, "E", sizeof(state));
+	if (p->p_flag & P_PPWAIT)
+		strlcat(state, "V", sizeof(state));
+	if (p->p_flag & P_SYSTEM || p->p_lock > 0)
+		strlcat(state, "L", sizeof(state));
+	if (p->p_pgrp != NULL && p->p_session != NULL &&
+	    SESS_LEADER(p))
+		strlcat(state, "s", sizeof(state));
+	/* Cheated here and didn't compare pgid's. */
+	if (p->p_flag & P_CONTROLT)
+		strlcat(state, "+", sizeof(state));
+	if (cred != NULL && jailed(cred))
+		strlcat(state, "J", sizeof(state));
+	db_printf(" %-6.6s ", state);
+	if (p->p_flag & P_HADTHREADS) {
 #ifdef __LP64__
-			db_printf(" (threaded)                  ");
+		db_printf(" (threaded)                  ");
 #else
-			db_printf(" (threaded)          ");
+		db_printf(" (threaded)          ");
 #endif
-			if (p->p_flag & P_SYSTEM)
-				db_printf("[");
-			db_printf("%s", p->p_comm);
-			if (p->p_flag & P_SYSTEM)
-				db_printf("]");
-			if (ps_mode == PRINT_ARGS) {
-				db_printf(" ");
-				dump_args(p);
-			}
-			db_printf("\n");
+		if (p->p_flag & P_SYSTEM)
+			db_printf("[");
+		db_printf("%s", p->p_comm);
+		if (p->p_flag & P_SYSTEM)
+			db_printf("]");
+		if (ps_mode == PRINT_ARGS) {
+			db_printf(" ");
+			dump_args(p);
 		}
-		FOREACH_THREAD_IN_PROC(p, td) {
-			dumpthread(p, td, p->p_flag & P_HADTHREADS);
-			if (db_pager_quit)
-				break;
-		}
-
-		p = LIST_NEXT(p, p_list);
-		if (p == NULL && np > 0)
-			p = LIST_FIRST(&zombproc);
+		db_printf("\n");
+	}
+	FOREACH_THREAD_IN_PROC(p, td) {
+		dumpthread(p, td, p->p_flag & P_HADTHREADS);
+		if (db_pager_quit)
+			break;
 	}
 }
 
@@ -253,8 +261,8 @@ dumpthread(volatile struct proc *p, volatile struct thread *td, int all)
 {
 	char state[9], wprefix;
 	const char *wmesg;
-	void *wchan;
-	
+	const void *wchan;
+
 	if (all) {
 		db_printf("%6d                  ", td->td_tid);
 		switch (td->td_state) {
@@ -337,8 +345,8 @@ DB_SHOW_COMMAND(thread, db_show_thread)
 {
 	struct thread *td;
 	struct lock_object *lock;
+	u_int delta;
 	bool comma;
-	int delta;
 
 	/* Determine which thread to examine. */
 	if (have_addr)
@@ -351,6 +359,7 @@ DB_SHOW_COMMAND(thread, db_show_thread)
 	db_printf(" proc (pid %d): %p\n", td->td_proc->p_pid, td->td_proc);
 	if (td->td_name[0] != '\0')
 		db_printf(" name: %s\n", td->td_name);
+	db_printf(" pcb: %p\n", td->td_pcb);
 	db_printf(" stack: %p-%p\n", (void *)td->td_kstack,
 	    (void *)(td->td_kstack + td->td_kstack_pages * PAGE_SIZE - 1));
 	db_printf(" flags: %#x ", td->td_flags);
@@ -419,14 +428,14 @@ DB_SHOW_COMMAND(thread, db_show_thread)
 	db_printf(" priority: %d\n", td->td_priority);
 	db_printf(" container lock: %s (%p)\n", lock->lo_name, lock);
 	if (td->td_swvoltick != 0) {
-		delta = (u_int)ticks - (u_int)td->td_swvoltick;
-		db_printf(" last voluntary switch: %d ms ago\n",
-		    1000 * delta / hz);
+		delta = ticks - td->td_swvoltick;
+		db_printf(" last voluntary switch: %u.%03u s ago\n",
+		    delta / hz, (delta % hz) * 1000 / hz);
 	}
 	if (td->td_swinvoltick != 0) {
-		delta = (u_int)ticks - (u_int)td->td_swinvoltick;
-		db_printf(" last involuntary switch: %d ms ago\n",
-		    1000 * delta / hz);
+		delta = ticks - td->td_swinvoltick;
+		db_printf(" last involuntary switch: %u.%03u s ago\n",
+		    delta / hz, (delta % hz) * 1000 / hz);
 	}
 }
 
@@ -474,12 +483,14 @@ DB_SHOW_COMMAND(proc, db_show_proc)
 		    p->p_leader);
 	if (p->p_sysent != NULL)
 		db_printf(" ABI: %s\n", p->p_sysent->sv_name);
+	db_printf(" flag: %#x ", p->p_flag);
+	db_printf(" flag2: %#x\n", p->p_flag2);
 	if (p->p_args != NULL) {
 		db_printf(" arguments: ");
 		dump_args(p);
 		db_printf("\n");
 	}
-	db_printf(" repear: %p reapsubtree: %d\n",
+	db_printf(" reaper: %p reapsubtree: %d\n",
 	    p->p_reaper, p->p_reapsubtree);
 	db_printf(" sigparent: %d\n", p->p_sigparent);
 	db_printf(" vmspace: %p\n", p->p_vmspace);
@@ -501,9 +512,7 @@ void
 db_findstack_cmd(db_expr_t addr, bool have_addr, db_expr_t dummy3 __unused,
     char *dummy4 __unused)
 {
-	struct proc *p;
 	struct thread *td;
-	struct kstack_cache_entry *ks_ce;
 	vm_offset_t saddr;
 
 	if (have_addr)
@@ -513,21 +522,9 @@ db_findstack_cmd(db_expr_t addr, bool have_addr, db_expr_t dummy3 __unused,
 		return;
 	}
 
-	FOREACH_PROC_IN_SYSTEM(p) {
-		FOREACH_THREAD_IN_PROC(p, td) {
-			if (td->td_kstack <= saddr && saddr < td->td_kstack +
-			    PAGE_SIZE * td->td_kstack_pages) {
-				db_printf("Thread %p\n", td);
-				return;
-			}
-		}
-	}
-
-	for (ks_ce = kstack_cache; ks_ce != NULL;
-	     ks_ce = ks_ce->next_ks_entry) {
-		if ((vm_offset_t)ks_ce <= saddr && saddr < (vm_offset_t)ks_ce +
-		    PAGE_SIZE * kstack_pages) {
-			db_printf("Cached stack %p\n", ks_ce);
+	for (td = kdb_thr_first(); td != NULL; td = kdb_thr_next(td)) {
+		if (kstack_contains(td, saddr, 1)) {
+			db_printf("Thread %p\n", td);
 			return;
 		}
 	}

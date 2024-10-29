@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/systm.h>
@@ -81,7 +80,7 @@ static void mvs_legacy_intr(device_t dev, int poll);
 static void mvs_crbq_intr(device_t dev);
 static void mvs_begin_transaction(device_t dev, union ccb *ccb);
 static void mvs_legacy_execute_transaction(struct mvs_slot *slot);
-static void mvs_timeout(struct mvs_slot *slot);
+static void mvs_timeout(void *arg);
 static void mvs_dmasetprd(void *arg,
 	bus_dma_segment_t *segs, int nsegs, int error);
 static void mvs_requeue_frozen(device_t dev);
@@ -369,8 +368,7 @@ mvs_dmainit(device_t dev)
 	if (bus_dma_tag_create(bus_get_dma_tag(dev), 2, MVS_EPRD_MAX,
 	    BUS_SPACE_MAXADDR, BUS_SPACE_MAXADDR,
 	    NULL, NULL,
-	    MVS_SG_ENTRIES * PAGE_SIZE * MVS_MAX_SLOTS,
-	    MVS_SG_ENTRIES, MVS_EPRD_MAX,
+	    MVS_SG_ENTRIES * PAGE_SIZE, MVS_SG_ENTRIES, MVS_EPRD_MAX,
 	    0, busdma_lock_mutex, &ch->mtx, &ch->dma.data_tag)) {
 		goto error;
 	}
@@ -437,6 +435,7 @@ mvs_slotsalloc(device_t dev)
 		slot->dev = dev;
 		slot->slot = i;
 		slot->state = MVS_SLOT_EMPTY;
+		slot->eprd_offset = MVS_EPRD_OFFSET + MVS_EPRD_SIZE * i;
 		slot->ccb = NULL;
 		callout_init_mtx(&slot->timeout, &ch->mtx, 0);
 
@@ -928,7 +927,6 @@ mvs_legacy_intr(device_t dev, int poll)
 		ireason = ATA_INB(ch->r_mem,ATA_IREASON);
 		switch ((ireason & (ATA_I_CMD | ATA_I_IN)) |
 			(status & ATA_S_DRQ)) {
-
 		case ATAPI_P_CMDOUT:
 		    device_printf(dev, "ATAPI CMDOUT\n");
 		    /* Return wait for interrupt */
@@ -1180,7 +1178,6 @@ mvs_tfd_write(device_t dev, union ccb *ccb)
 	ATA_OUTB(ch->r_mem, ATA_COMMAND, cmd->command);
 }
 
-
 /* Must be called with channel locked. */
 static void
 mvs_begin_transaction(device_t dev, union ccb *ccb)
@@ -1287,8 +1284,7 @@ mvs_dmasetprd(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 	} else {
 		slot->dma.addr = 0;
 		/* Get a piece of the workspace for this EPRD */
-		eprd = (struct mvs_eprd *)
-		    (ch->dma.workrq + MVS_EPRD_OFFSET + (MVS_EPRD_SIZE * slot->slot));
+		eprd = (struct mvs_eprd *)(ch->dma.workrq + slot->eprd_offset);
 		/* Fill S/G table */
 		for (i = 0; i < nsegs; i++) {
 			eprd[i].prdbal = htole32(segs[i].ds_addr);
@@ -1406,8 +1402,7 @@ mvs_legacy_execute_transaction(struct mvs_slot *slot)
 		DELAY(10);
 		if (ch->basic_dma) {
 			/* Start basic DMA. */
-			eprd = ch->dma.workrq_bus + MVS_EPRD_OFFSET +
-			    (MVS_EPRD_SIZE * slot->slot);
+			eprd = ch->dma.workrq_bus + slot->eprd_offset;
 			ATA_OUTL(ch->r_mem, DMA_DTLBA, eprd);
 			ATA_OUTL(ch->r_mem, DMA_DTHBA, (eprd >> 16) >> 16);
 			ATA_OUTL(ch->r_mem, DMA_C, DMA_C_START |
@@ -1417,7 +1412,7 @@ mvs_legacy_execute_transaction(struct mvs_slot *slot)
 	}
 	/* Start command execution timeout */
 	callout_reset_sbt(&slot->timeout, SBT_1MS * ccb->ccb_h.timeout, 0,
-	    (timeout_t*)mvs_timeout, slot, 0);
+	    mvs_timeout, slot, 0);
 }
 
 /* Must be called with channel locked. */
@@ -1434,7 +1429,7 @@ mvs_execute_transaction(struct mvs_slot *slot)
 	int i;
 
 	/* Get address of the prepared EPRD */
-	eprd = ch->dma.workrq_bus + MVS_EPRD_OFFSET + (MVS_EPRD_SIZE * slot->slot);
+	eprd = ch->dma.workrq_bus + slot->eprd_offset;
 	/* Prepare CRQB. Gen IIe uses different CRQB format. */
 	if (ch->quirks & MVS_Q_GENIIE) {
 		crqb2e = (struct mvs_crqb_gen2e *)
@@ -1532,7 +1527,7 @@ mvs_execute_transaction(struct mvs_slot *slot)
 	    ch->dma.workrq_bus + MVS_CRQB_OFFSET + (MVS_CRQB_SIZE * ch->out_idx));
 	/* Start command execution timeout */
 	callout_reset_sbt(&slot->timeout, SBT_1MS * ccb->ccb_h.timeout, 0,
-	    (timeout_t*)mvs_timeout, slot, 0);
+	    mvs_timeout, slot, 0);
 	return;
 }
 
@@ -1571,14 +1566,15 @@ mvs_rearm_timeout(device_t dev)
 			continue;
 		callout_reset_sbt(&slot->timeout,
 		    SBT_1MS * slot->ccb->ccb_h.timeout / 2, 0,
-		    (timeout_t*)mvs_timeout, slot, 0);
+		    mvs_timeout, slot, 0);
 	}
 }
 
 /* Locked by callout mechanism. */
 static void
-mvs_timeout(struct mvs_slot *slot)
+mvs_timeout(void *arg)
 {
+	struct mvs_slot *slot = arg;
 	device_t dev = slot->dev;
 	struct mvs_channel *ch = device_get_softc(dev);
 
@@ -2423,7 +2419,7 @@ mvsaction(struct cam_sim *sim, union ccb *ccb)
 		cpi->transport_version = XPORT_VERSION_UNSPECIFIED;
 		cpi->protocol = PROTO_ATA;
 		cpi->protocol_version = PROTO_VERSION_UNSPECIFIED;
-		cpi->maxio = MAXPHYS;
+		cpi->maxio = maxphys;
 		if ((ch->quirks & MVS_Q_SOC) == 0) {
 			cpi->hba_vendor = pci_get_vendor(parent);
 			cpi->hba_device = pci_get_device(parent);
@@ -2455,4 +2451,3 @@ mvspoll(struct cam_sim *sim)
 		mvs_reset_to(ch->dev);
 	}
 }
-

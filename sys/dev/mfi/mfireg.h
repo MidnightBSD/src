@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-2-Clause
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 IronPort Systems
  * All rights reserved.
@@ -56,7 +56,6 @@
 #define _MFIREG_H
 
 #include <sys/cdefs.h>
-
 /*
  * MegaRAID SAS MFI firmware definitions
  *
@@ -305,7 +304,6 @@ typedef enum {
 #define MR_INTERNAL_MFI_FRAMES_SMID             1
 #define MR_CTRL_EVENT_WAIT_SMID                 2
 #define MR_INTERNAL_DRIVER_RESET_SMID           3
-
 
 /* MFI Status codes */
 typedef enum {
@@ -1544,7 +1542,6 @@ typedef struct _MPI2_SCSI_IO_VENDOR_UNIQUE {
 #define MPI2_HEADER_VERSION ((MPI2_HEADER_VERSION_UNIT << 8) |		\
 					MPI2_HEADER_VERSION_DEV)
 
-
 /* IOCInit Request message */
 struct MPI2_IOC_INIT_REQUEST {
 	uint8_t		WhoInit;                        /* 0x00 */
@@ -1684,7 +1681,6 @@ typedef struct {
 	uint32_t	TransferLength;             /* 0x1C */
 } MPI2_SCSI_IO_CDB_EEDP32;
 
-
 typedef union _MPI2_IEEE_SGE_CHAIN_UNION {
 	struct MPI2_IEEE_SGE_SIMPLE32	Chain32;
 	struct MPI2_IEEE_SGE_SIMPLE64	Chain64;
@@ -1708,7 +1704,6 @@ typedef union {
 	MPI2_SGE_SIMPLE_UNION	SGE;
 } MPI2_SCSI_IO_CDB_UNION;
 
-
 /* MPI 2.5 SGLs */
 
 #define MPI25_IEEE_SGE_FLAGS_END_OF_LIST        (0x40)
@@ -1722,7 +1717,6 @@ typedef struct _MPI25_IEEE_SGE_CHAIN64 {
 } MPI25_IEEE_SGE_CHAIN64, *pMpi25IeeeSgeChain64_t;
 
 /* use MPI2_IEEE_SGE_FLAGS_ defines for the Flags field */
-
 
 /********/
 
@@ -1813,7 +1807,6 @@ union mfi_mpi2_request_descriptor {
 	struct mfi_mpi2_request_scsi_target	scsi_target;
 	uint64_t				words;
 };
-
 
 struct mfi_mpi2_reply_header {
 	uint8_t		ReplyFlags;                 /* 0x00 */

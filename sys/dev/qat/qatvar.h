@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: BSD-2-Clause-NetBSD AND BSD-3-Clause */
+/* SPDX-License-Identifier: BSD-2-Clause AND BSD-3-Clause */
 /*	$NetBSD: qatvar.h,v 1.2 2020/03/14 18:08:39 ad Exp $	*/
 
 /*
@@ -68,13 +68,11 @@
 
 #define QAT_NSYMREQ	256
 #define QAT_NSYMCOOKIE	((QAT_NSYMREQ * 2 + 1) * 2)
-#define QAT_NASYMREQ	64
-#define QAT_BATCH_SUBMIT_FREE_SPACE	2
 
 #define QAT_EV_NAME_SIZE		32
 #define QAT_RING_NAME_SIZE		32
 
-#define QAT_MAXSEG			32	/* max segments for sg dma */
+#define QAT_MAXSEG			HW_MAXSEG /* max segments for sg dma */
 #define QAT_MAXLEN			65535	/* IP_MAXPACKET */
 
 #define QAT_HB_INTERVAL			500	/* heartbeat msec */
@@ -241,7 +239,7 @@ struct qat_ae {
 	u_int qae_free_addr;		/* free micro-store address */
 	u_int qae_free_size;		/* free micro-store size */
 	u_int qae_live_ctx_mask;	/* live context mask */
-	u_int qae_ustore_dram_addr;	/* mirco-store DRAM address */
+	u_int qae_ustore_dram_addr;	/* micro-store DRAM address */
 	u_int qae_reload_size;		/* reloadable code size */
 
 	/* aefw */
@@ -518,7 +516,7 @@ struct qat_sym_hash_def {
 
 struct qat_sym_bulk_cookie {
 	uint8_t qsbc_req_params_buf[QAT_SYM_REQ_PARAMS_SIZE_PADDED];
-	/* memory block reserved for request params
+	/* memory block reserved for request params, QAT 1.5 only
 	 * NOTE: Field must be correctly aligned in memory for access by QAT
 	 * engine */
 	struct qat_crypto *qsbc_crypto;
@@ -538,40 +536,38 @@ struct qat_sym_bulk_cookie {
 		HASH_CONTENT_DESC_SIZE + CIPHER_CONTENT_DESC_SIZE,	\
 		QAT_OPTIMAL_ALIGN)
 
+enum qat_sym_dma {
+	QAT_SYM_DMA_AADBUF = 0,
+	QAT_SYM_DMA_BUF,
+	QAT_SYM_DMA_OBUF,
+	QAT_SYM_DMA_COUNT,
+};
+
+struct qat_sym_dmamap {
+	bus_dmamap_t qsd_dmamap;
+	bus_dma_tag_t qsd_dma_tag;
+};
+
 struct qat_sym_cookie {
-	union qat_sym_cookie_u {
-		/* should be 64byte aligned */
-		struct qat_sym_bulk_cookie qsc_bulk_cookie;
-						/* symmetric bulk cookie */
-#ifdef notyet
-		struct qat_sym_key_cookie qsc_key_cookie;
-						/* symmetric key cookie */
-		struct qat_sym_nrbg_cookie qsc_nrbg_cookie;
-						/* symmetric NRBG cookie */
-#endif
-	} u;
+	struct qat_sym_bulk_cookie qsc_bulk_cookie;
 
 	/* should be 64-byte aligned */
 	struct buffer_list_desc qsc_buf_list;
-	struct flat_buffer_desc qsc_flat_bufs[QAT_MAXSEG]; /* should be here */
+	struct buffer_list_desc qsc_obuf_list;
 
-	bus_dmamap_t qsc_self_dmamap;	/* self DMA mapping and
-					   end of DMA region */
+	bus_dmamap_t qsc_self_dmamap;
 	bus_dma_tag_t qsc_self_dma_tag;
 
 	uint8_t qsc_iv_buf[EALG_MAX_BLOCK_LEN];
 	uint8_t qsc_auth_res[QAT_SYM_HASH_BUFFER_LEN];
 	uint8_t qsc_gcm_aad[QAT_GCM_AAD_SIZE_MAX];
 	uint8_t qsc_content_desc[CONTENT_DESC_MAX_SIZE];
-	struct cryptodesc *qsc_enc;
-	struct cryptodesc *qsc_mac;
 
-	bus_dmamap_t qsc_buf_dmamap;	/* qsc_flat_bufs DMA mapping */
-	bus_dma_tag_t qsc_buf_dma_tag;
-	void *qsc_buf;
+	struct qat_sym_dmamap qsc_dma[QAT_SYM_DMA_COUNT];
 
 	bus_addr_t qsc_bulk_req_params_buf_paddr;
 	bus_addr_t qsc_buffer_list_desc_paddr;
+	bus_addr_t qsc_obuffer_list_desc_paddr;
 	bus_addr_t qsc_iv_buf_paddr;
 	bus_addr_t qsc_auth_res_paddr;
 	bus_addr_t qsc_gcm_aad_paddr;
@@ -579,7 +575,7 @@ struct qat_sym_cookie {
 };
 
 CTASSERT(offsetof(struct qat_sym_cookie,
-    u.qsc_bulk_cookie.qsbc_req_params_buf) % QAT_OPTIMAL_ALIGN == 0);
+    qsc_bulk_cookie.qsbc_req_params_buf) % QAT_OPTIMAL_ALIGN == 0);
 CTASSERT(offsetof(struct qat_sym_cookie, qsc_buf_list) % QAT_OPTIMAL_ALIGN == 0);
 
 #define MAX_CIPHER_SETUP_BLK_SZ						\
@@ -615,7 +611,6 @@ struct qat_crypto_desc {
 	uint8_t qcd_req_cache[QAT_MSG_SIZE_TO_BYTES(QAT_MAX_MSG_SIZE)];
 } __aligned(QAT_OPTIMAL_ALIGN);
 
-/* should be aligned to 64bytes */
 struct qat_session {
 	struct qat_crypto_desc *qs_dec_desc;	/* should be at top of struct*/
 	/* decrypt or auth then decrypt or auth */
@@ -635,7 +630,6 @@ struct qat_session {
 	const uint8_t *qs_auth_key;
 	int qs_auth_klen;
 	int qs_auth_mlen;
-	int qs_ivlen;
 
 	uint32_t qs_status;
 #define QAT_SESSION_STATUS_ACTIVE	(1 << 0)
@@ -690,7 +684,7 @@ struct qat_hw {
 	size_t qhw_crypto_opaque_offset;
 	void (*qhw_crypto_setup_req_params)(struct qat_crypto_bank *,
 	    struct qat_session *, struct qat_crypto_desc const *,
-	    struct qat_sym_cookie *, struct cryptodesc *, struct cryptodesc *);
+	    struct qat_sym_cookie *, struct cryptop *);
 	void (*qhw_crypto_setup_desc)(struct qat_crypto *, struct qat_session *,
 	    struct qat_crypto_desc *);
 

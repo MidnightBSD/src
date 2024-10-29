@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-2-Clause
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 IronPort Systems
  * All rights reserved.
@@ -53,7 +53,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_mfi.h"
 
 #include <sys/param.h>
@@ -129,7 +128,8 @@ static int mfi_check_command_pre(struct mfi_softc *sc, struct mfi_command *cm);
 static void mfi_check_command_post(struct mfi_softc *sc, struct mfi_command *cm);
 static int mfi_check_for_sscd(struct mfi_softc *sc, struct mfi_command *cm);
 
-SYSCTL_NODE(_hw, OID_AUTO, mfi, CTLFLAG_RD, 0, "MFI driver parameters");
+SYSCTL_NODE(_hw, OID_AUTO, mfi, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "MFI driver parameters");
 static int	mfi_event_locale = MFI_EVT_LOCALE_ALL;
 SYSCTL_INT(_hw_mfi, OID_AUTO, event_locale, CTLFLAG_RWTUN, &mfi_event_locale,
            0, "event message locale");
@@ -360,7 +360,6 @@ mfi_addr_cb(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 	*addr = segs[0].ds_addr;
 }
 
-
 int
 mfi_attach(struct mfi_softc *sc)
 {
@@ -420,7 +419,6 @@ mfi_attach(struct mfi_softc *sc)
 		sc->mfi_issue_cmd = mfi_issue_cmd_ppc;
 	}
 
-
 	/* Before we get too far, see if the firmware is working */
 	if ((error = mfi_transition_firmware(sc)) != 0) {
 		device_printf(sc->mfi_dev, "Firmware not in READY state, "
@@ -457,7 +455,7 @@ mfi_attach(struct mfi_softc *sc)
 	/*
 	 * Get information needed for sizing the contiguous memory for the
 	 * frame pool.  Size down the sgl parameter since we know that
-	 * we will never need more than what's required for MAXPHYS.
+	 * we will never need more than what's required for MFI_MAXPHYS.
 	 * It would be nice if these constants were available at runtime
 	 * instead of compile time.
 	 */
@@ -1328,7 +1326,6 @@ mfi_shutdown(struct mfi_softc *sc)
 	struct mfi_command *cm;
 	int error;
 
-
 	if (sc->mfi_aen_cm != NULL) {
 		sc->cm_aen_abort = 1;
 		mfi_abort(sc, &sc->mfi_aen_cm);
@@ -1426,9 +1423,9 @@ mfi_syspdprobe(struct mfi_softc *sc)
 		if (found == 0) {
 			printf("DELETE\n");
 			mtx_unlock(&sc->mfi_io_lock);
-			mtx_lock(&Giant);
+			bus_topo_lock();
 			device_delete_child(sc->mfi_dev, syspd->pd_dev);
-			mtx_unlock(&Giant);
+			bus_topo_unlock();
 			mtx_lock(&sc->mfi_io_lock);
 		}
 	}
@@ -1586,9 +1583,9 @@ mfi_decode_evt(struct mfi_softc *sc, struct mfi_evt_detail *detail)
 			KASSERT(ld != NULL, ("volume dissappeared"));
 			*/
 			if (ld != NULL) {
-				mtx_lock(&Giant);
+				bus_topo_lock();
 				device_delete_child(sc->mfi_dev, ld->ld_dev);
-				mtx_unlock(&Giant);
+				bus_topo_unlock();
 			}
 		}
 		break;
@@ -1603,11 +1600,11 @@ mfi_decode_evt(struct mfi_softc *sc, struct mfi_evt_detail *detail)
 				    pd_link) {
 					if (syspd->pd_id ==
 					    detail->args.pd.device_id) {
-						mtx_lock(&Giant);
+						bus_topo_lock();
 						device_delete_child(
 						    sc->mfi_dev,
 						    syspd->pd_dev);
-						mtx_unlock(&Giant);
+						bus_topo_unlock();
 						break;
 					}
 				}
@@ -1924,11 +1921,11 @@ mfi_add_ld_complete(struct mfi_command *cm)
 	mfi_release_command(cm);
 
 	mtx_unlock(&sc->mfi_io_lock);
-	mtx_lock(&Giant);
+	bus_topo_lock();
 	if ((child = device_add_child(sc->mfi_dev, "mfid", -1)) == NULL) {
 		device_printf(sc->mfi_dev, "Failed to add logical disk\n");
 		free(ld_info, M_MFIBUF);
-		mtx_unlock(&Giant);
+		bus_topo_unlock();
 		mtx_lock(&sc->mfi_io_lock);
 		return;
 	}
@@ -1936,7 +1933,7 @@ mfi_add_ld_complete(struct mfi_command *cm)
 	device_set_ivars(child, ld_info);
 	device_set_desc(child, "MFI Logical Disk");
 	bus_generic_attach(sc->mfi_dev);
-	mtx_unlock(&Giant);
+	bus_topo_unlock();
 	mtx_lock(&sc->mfi_io_lock);
 }
 
@@ -2012,11 +2009,11 @@ mfi_add_sys_pd_complete(struct mfi_command *cm)
 	mfi_release_command(cm);
 
 	mtx_unlock(&sc->mfi_io_lock);
-	mtx_lock(&Giant);
+	bus_topo_lock();
 	if ((child = device_add_child(sc->mfi_dev, "mfisyspd", -1)) == NULL) {
 		device_printf(sc->mfi_dev, "Failed to add system pd\n");
 		free(pd_info, M_MFIBUF);
-		mtx_unlock(&Giant);
+		bus_topo_unlock();
 		mtx_lock(&sc->mfi_io_lock);
 		return;
 	}
@@ -2024,7 +2021,7 @@ mfi_add_sys_pd_complete(struct mfi_command *cm)
 	device_set_ivars(child, pd_info);
 	device_set_desc(child, "MFI System PD");
 	bus_generic_attach(sc->mfi_dev);
-	mtx_unlock(&Giant);
+	bus_topo_unlock();
 	mtx_lock(&sc->mfi_io_lock);
 }
 
@@ -2151,7 +2148,9 @@ mfi_build_syspdio(struct mfi_softc *sc, struct bio *bio)
 		break;
 	default:
 		/* TODO: what about BIO_DELETE??? */
-		panic("Unsupported bio command %x\n", bio->bio_cmd);
+		biofinish(bio, NULL, EOPNOTSUPP);
+		mfi_enqueue_free(cm);
+		return (NULL);
 	}
 
 	/* Cheat with the sector length to avoid a non-constant division */
@@ -2210,7 +2209,9 @@ mfi_build_ldio(struct mfi_softc *sc, struct bio *bio)
 		break;
 	default:
 		/* TODO: what about BIO_DELETE??? */
-		panic("Unsupported bio command %x\n", bio->bio_cmd);
+		biofinish(bio, NULL, EOPNOTSUPP);
+		mfi_enqueue_free(cm);
+		return (NULL);
 	}
 
 	/* Cheat with the sector length to avoid a non-constant division */
@@ -2518,7 +2519,6 @@ mfi_std_send_frame(struct mfi_softc *sc, struct mfi_command *cm)
 
 	return (0);
 }
-
 
 void
 mfi_complete(struct mfi_softc *sc, struct mfi_command *cm)
@@ -2830,9 +2830,9 @@ mfi_check_command_post(struct mfi_softc *sc, struct mfi_command *cm)
 		KASSERT(ld != NULL, ("volume dissappeared"));
 		if (cm->cm_frame->header.cmd_status == MFI_STAT_OK) {
 			mtx_unlock(&sc->mfi_io_lock);
-			mtx_lock(&Giant);
+			bus_topo_lock();
 			device_delete_child(sc->mfi_dev, ld->ld_dev);
-			mtx_unlock(&Giant);
+			bus_topo_unlock();
 			mtx_lock(&sc->mfi_io_lock);
 		} else
 			mfi_disk_enable(ld);
@@ -2840,11 +2840,11 @@ mfi_check_command_post(struct mfi_softc *sc, struct mfi_command *cm)
 	case MFI_DCMD_CFG_CLEAR:
 		if (cm->cm_frame->header.cmd_status == MFI_STAT_OK) {
 			mtx_unlock(&sc->mfi_io_lock);
-			mtx_lock(&Giant);
+			bus_topo_lock();
 			TAILQ_FOREACH_SAFE(ld, &sc->mfi_ld_tqh, ld_link, ldn) {
 				device_delete_child(sc->mfi_dev, ld->ld_dev);
 			}
-			mtx_unlock(&Giant);
+			bus_topo_unlock();
 			mtx_lock(&sc->mfi_io_lock);
 		} else {
 			TAILQ_FOREACH(ld, &sc->mfi_ld_tqh, ld_link)
@@ -2926,7 +2926,6 @@ mfi_check_for_sscd(struct mfi_softc *sc, struct mfi_command *cm)
 
 		mfi_release_command(ld_cm);
 		free(ld_info, M_MFIBUF);
-
 	}
 	return error;
 }
@@ -3025,7 +3024,6 @@ mfi_user_command(struct mfi_softc *sc, struct mfi_ioc_passthru *ioc)
 	void *ioc_buf = NULL;
 	uint32_t context;
 	int error = 0, locked;
-
 
 	if (ioc->buf_size > 0) {
 		if (ioc->buf_size > 1024 * 1024)
@@ -3637,11 +3635,8 @@ out:
 		mfi_aen_entry = malloc(sizeof(struct mfi_aen), M_MFIBUF,
 		    M_WAITOK);
 		mtx_lock(&sc->mfi_io_lock);
-		if (mfi_aen_entry != NULL) {
-			mfi_aen_entry->p = curproc;
-			TAILQ_INSERT_TAIL(&sc->mfi_aen_pids, mfi_aen_entry,
-			    aen_link);
-		}
+		mfi_aen_entry->p = curproc;
+		TAILQ_INSERT_TAIL(&sc->mfi_aen_pids, mfi_aen_entry, aen_link);
 		error = mfi_aen_register(sc, l_aen.laen_seq_num,
 		    l_aen.laen_class_locale);
 

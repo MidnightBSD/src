@@ -21,11 +21,10 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
-#ifndef _LINUX_HRTIMER_H_
-#define	_LINUX_HRTIMER_H_
+#ifndef _LINUXKPI_LINUX_HRTIMER_H_
+#define	_LINUXKPI_LINUX_HRTIMER_H_
 
 #include <sys/_callout.h>
 #include <sys/_mutex.h>
@@ -52,6 +51,7 @@ struct hrtimer {
 };
 
 #define	hrtimer_active(hrtimer)	linux_hrtimer_active(hrtimer)
+#define	hrtimer_try_to_cancel(hrtimer)	linux_hrtimer_try_to_cancel(hrtimer)
 #define	hrtimer_cancel(hrtimer)	linux_hrtimer_cancel(hrtimer)
 
 #define	hrtimer_init(hrtimer, clock, mode) do {			\
@@ -78,6 +78,7 @@ struct hrtimer {
 } while (0)
 
 bool	linux_hrtimer_active(struct hrtimer *);
+int	linux_hrtimer_try_to_cancel(struct hrtimer *);
 int	linux_hrtimer_cancel(struct hrtimer *);
 void	linux_hrtimer_init(struct hrtimer *);
 void	linux_hrtimer_set_expires(struct hrtimer *, ktime_t);
@@ -85,4 +86,4 @@ void	linux_hrtimer_start(struct hrtimer *, ktime_t);
 void	linux_hrtimer_start_range_ns(struct hrtimer *, ktime_t, int64_t);
 void	linux_hrtimer_forward_now(struct hrtimer *, ktime_t);
 
-#endif /* _LINUX_HRTIMER_H_ */
+#endif /* _LINUXKPI_LINUX_HRTIMER_H_ */

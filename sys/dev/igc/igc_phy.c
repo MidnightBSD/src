@@ -5,7 +5,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "igc_api.h"
 
 static s32 igc_wait_autoneg(struct igc_hw *hw);

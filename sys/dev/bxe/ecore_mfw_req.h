@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef ECORE_MFW_REQ_H
 #define ECORE_MFW_REQ_H
 

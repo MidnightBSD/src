@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_bus.h"
 
 #include <sys/param.h>
@@ -37,8 +36,10 @@
 #include <sys/ioccom.h>
 #include <sys/iov.h>
 #include <sys/linker.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/pciio.h>
 #include <sys/queue.h>
 #include <sys/rman.h>
@@ -80,7 +81,6 @@ static u_long pci_iov_max_config = 1024 * 1024;
 SYSCTL_ULONG(_hw_pci, OID_AUTO, iov_max_config, CTLFLAG_RWTUN,
     &pci_iov_max_config, 0, "Maximum allowed size of SR-IOV configuration.");
 
-
 #define IOV_READ(d, r, w) \
 	pci_read_config((d)->cfg.dev, (d)->cfg.iov->iov_pos + r, w)
 
@@ -115,7 +115,6 @@ int
 pci_iov_attach_method(device_t bus, device_t dev, nvlist_t *pf_schema,
     nvlist_t *vf_schema, const char *name)
 {
-	device_t pcib;
 	struct pci_devinfo *dinfo;
 	struct pcicfg_iov *iov;
 	nvlist_t *schema;
@@ -124,9 +123,8 @@ pci_iov_attach_method(device_t bus, device_t dev, nvlist_t *pf_schema,
 	int iov_pos;
 
 	dinfo = device_get_ivars(dev);
-	pcib = device_get_parent(bus);
 	schema = NULL;
-	
+
 	error = pci_find_extcap(dev, PCIZ_SRIOV, &iov_pos);
 
 	if (error != 0)
@@ -149,6 +147,7 @@ pci_iov_attach_method(device_t bus, device_t dev, nvlist_t *pf_schema,
 		error = EBUSY;
 		goto cleanup;
 	}
+	iov->iov_pf = dev;
 	iov->iov_pos = iov_pos;
 
 	schema = pci_iov_build_schema(&pf_schema, &vf_schema);
@@ -169,7 +168,7 @@ pci_iov_attach_method(device_t bus, device_t dev, nvlist_t *pf_schema,
 		error = ENOMEM;
 		goto cleanup;
 	}
-	
+
 	dinfo->cfg.iov = iov;
 	iov->iov_cdev->si_drv1 = dinfo;
 	mtx_unlock(&Giant);
@@ -733,6 +732,7 @@ pci_iov_config(struct cdev *cdev, struct pci_iov_arg *arg)
 
 	/* We don't yet support allocating extra bus numbers for VFs. */
 	if (pci_get_bus(dev) != PCI_RID2BUS(last_rid)) {
+		device_printf(dev, "not enough PCIe bus numbers for VFs\n");
 		error = ENOSPC;
 		goto out;
 	}
@@ -1081,4 +1081,3 @@ pci_vf_release_mem_resource(device_t dev, device_t child, int rid,
 
 	return (rman_release_resource(r));
 }
-

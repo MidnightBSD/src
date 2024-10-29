@@ -32,16 +32,16 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
-#include <sys/systm.h>
+#include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
-#include <sys/kernel.h>
+#include <sys/mutex.h>
 #include <sys/queue.h>
 #include <sys/sbuf.h>
 #include <sys/sysctl.h>
-#include <sys/types.h>
+#include <sys/systm.h>
 
 #include <sys/bus.h>
 #include <machine/bus.h>
@@ -61,7 +61,8 @@
 #define PCCARDDEBUG
 
 /* sysctl vars */
-static SYSCTL_NODE(_hw, OID_AUTO, pccard, CTLFLAG_RD, 0, "PCCARD parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, pccard, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "PCCARD parameters");
 
 int	pccard_debug = 0;
 SYSCTL_INT(_hw_pccard, OID_AUTO, debug, CTLFLAG_RWTUN,
@@ -132,7 +133,6 @@ static const struct pccard_product *
 pccard_do_product_lookup(device_t bus, device_t dev,
 			 const struct pccard_product *tab, size_t ent_size,
 			 pccard_product_match_fn matchfn);
-
 
 static int
 pccard_ccr_read(struct pccard_function *pf, int ccr)
@@ -236,7 +236,7 @@ pccard_attach_card(device_t dev)
 	DEVPRINTF((dev, "Card has %d functions. pccard_mfc is %d\n", i + 1,
 	    pccard_mfc(sc)));
 
-	mtx_lock(&Giant);
+	bus_topo_lock();
 	STAILQ_FOREACH(pf, &sc->card.pf_head, pf_list) {
 		if (STAILQ_EMPTY(&pf->cfe_head))
 			continue;
@@ -249,7 +249,7 @@ pccard_attach_card(device_t dev)
 		pf->dev = child;
 		pccard_probe_and_attach_child(dev, child, pf);
 	}
-	mtx_unlock(&Giant);
+	bus_topo_unlock();
 	return (0);
 }
 
@@ -264,7 +264,7 @@ pccard_probe_and_attach_child(device_t dev, device_t child,
 	 * In NetBSD, the drivers are responsible for activating each
 	 * function of a card and selecting the config to use.  In
 	 * FreeBSD, all that's done automatically in the typical lazy
-	 * way we do device resoruce allocation (except we pick the
+	 * way we do device resource allocation (except we pick the
 	 * cfe up front).  This is the biggest depature from the
 	 * inherited NetBSD model, apart from the FreeBSD resource code.
 	 *
@@ -452,7 +452,7 @@ pccard_select_cfe(device_t dev, int entry)
 {
 	struct pccard_ivar *devi = PCCARD_IVAR(dev);
 	struct pccard_function *pf = devi->pf;
-	
+
 	pccard_function_init(pf, entry);
 	return (pf->cfe ? 0 : ENOMEM);
 }
@@ -1256,7 +1256,7 @@ static void
 pccard_intr(void *arg)
 {
 	struct pccard_function *pf = (struct pccard_function*) arg;
-	
+
 	pf->intr_handler(pf->intr_handler_arg);	
 }
 
@@ -1272,13 +1272,16 @@ pccard_setup_intr(device_t dev, device_t child, struct resource *irq,
 
 	if (pf->intr_filter != NULL || pf->intr_handler != NULL)
 		panic("Only one interrupt handler per function allowed");
-	err = bus_generic_setup_intr(dev, child, irq, flags, pccard_filter, 
-	    intr ? pccard_intr : NULL, pf, cookiep);
-	if (err != 0)
-		return (err);
 	pf->intr_filter = filt;
 	pf->intr_handler = intr;
 	pf->intr_handler_arg = arg;
+	err = bus_generic_setup_intr(dev, child, irq, flags, pccard_filter,
+	    intr ? pccard_intr : NULL, pf, cookiep);
+	if (err != 0) {
+		pf->intr_filter = NULL;
+		pf->intr_handler = NULL;
+		return (err);
+	}
 	pf->intr_handler_cookie = *cookiep;
 	if (pccard_mfc(sc)) {
 		pccard_ccr_write(pf, PCCARD_CCR_OPTION,
@@ -1426,7 +1429,6 @@ pccard_ccr_write_impl(device_t brdev, device_t child, uint32_t offset,
 	return 0;
 }
 
-
 static device_method_t pccard_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		pccard_probe),
@@ -1465,7 +1467,6 @@ static device_method_t pccard_methods[] = {
 	DEVMETHOD(card_attr_write,	pccard_attr_write_impl),
 	DEVMETHOD(card_ccr_read,	pccard_ccr_read_impl),
 	DEVMETHOD(card_ccr_write,	pccard_ccr_write_impl),
-
 	{ 0, 0 }
 };
 

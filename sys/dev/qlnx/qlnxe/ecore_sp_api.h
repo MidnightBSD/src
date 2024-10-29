@@ -24,7 +24,6 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
 
 #ifndef __ECORE_SP_API_H__
@@ -49,7 +48,6 @@ struct ecore_spq_comp_cb {
 			 u8 fw_return_code);
 	void	*cookie;
 };
-
 
 /**
  * @brief ecore_eth_cqe_completion - handles the completion of a

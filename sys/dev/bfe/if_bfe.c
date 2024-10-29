@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Stuart Walsh<stu@ipng.org.uk>
  * and Duncan Barclay<dmlb@dmlb.org>
@@ -26,9 +26,7 @@
  * SUCH DAMAGE.
  */
 
-
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -477,16 +475,11 @@ bfe_attach(device_t dev)
 
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
-	    "stats", CTLTYPE_INT | CTLFLAG_RW, sc, 0, sysctl_bfe_stats,
-	    "I", "Statistics");
+	    "stats", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, sc, 0,
+	    sysctl_bfe_stats, "I", "Statistics");
 
 	/* Set up ifnet structure */
 	ifp = sc->bfe_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(dev, "failed to if_alloc()\n");
-		error = ENOSPC;
-		goto fail;
-	}
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
@@ -822,7 +815,7 @@ bfe_list_newbuf(struct bfe_softc *sc, int c)
 	rx_header->len = 0;
 	rx_header->flags = 0;
 	bus_dmamap_sync(sc->bfe_rxmbuf_tag, r->bfe_map, BUS_DMASYNC_PREREAD);
-	
+
 	ctrl = segs[0].ds_len & BFE_DESC_LEN;
 	KASSERT(ctrl > ETHER_MAX_LEN + 32, ("%s: buffer size too small(%d)!",
 	    __func__, ctrl));
@@ -1079,13 +1072,21 @@ bfe_cam_write(struct bfe_softc *sc, u_char *data, int index)
 	bfe_wait_bit(sc, BFE_CAM_CTRL, BFE_CAM_BUSY, 10000, 1);
 }
 
+static u_int
+bfe_write_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	struct bfe_softc *sc = arg;
+
+	bfe_cam_write(sc, LLADDR(sdl), cnt + 1);
+
+	return (1);
+}
+
 static void
 bfe_set_rx_mode(struct bfe_softc *sc)
 {
 	struct ifnet *ifp = sc->bfe_ifp;
-	struct ifmultiaddr  *ifma;
 	u_int32_t val;
-	int i = 0;
 
 	BFE_LOCK_ASSERT(sc);
 
@@ -1101,22 +1102,14 @@ bfe_set_rx_mode(struct bfe_softc *sc)
 	else
 		val |= BFE_RXCONF_DBCAST;
 
-
 	CSR_WRITE_4(sc, BFE_CAM_CTRL, 0);
-	bfe_cam_write(sc, IF_LLADDR(sc->bfe_ifp), i++);
+	bfe_cam_write(sc, IF_LLADDR(sc->bfe_ifp), 0);
 
 	if (ifp->if_flags & IFF_ALLMULTI)
 		val |= BFE_RXCONF_ALLMULTI;
 	else {
 		val &= ~BFE_RXCONF_ALLMULTI;
-		if_maddr_rlock(ifp);
-		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-			if (ifma->ifma_addr->sa_family != AF_LINK)
-				continue;
-			bfe_cam_write(sc,
-			    LLADDR((struct sockaddr_dl *)ifma->ifma_addr), i++);
-		}
-		if_maddr_runlock(ifp);
+		if_foreach_llmaddr(ifp, bfe_write_maddr, sc);
 	}
 
 	CSR_WRITE_4(sc, BFE_RXCONF, val);
@@ -1404,7 +1397,7 @@ bfe_rxeof(struct bfe_softc *sc)
 		/*
 		 * Rx status should be read from mbuf such that we can't
 		 * delay bus_dmamap_sync(9). This hardware limiation
-		 * results in inefficent mbuf usage as bfe(4) couldn't
+		 * results in inefficient mbuf usage as bfe(4) couldn't
 		 * reuse mapped buffer from errored frame. 
 		 */
 		if (bfe_list_newbuf(sc, cons) != 0) {
@@ -1479,7 +1472,6 @@ bfe_intr(void *xsc)
 		bfe_txeof(sc);
 
 	if (istat & BFE_ISTAT_ERRORS) {
-
 		if (istat & BFE_ISTAT_DSCE) {
 			device_printf(sc->bfe_dev, "Descriptor Error\n");
 			bfe_stop(sc);

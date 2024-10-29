@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011, David E. O'Brien.
  * Copyright (c) 2009-2011, Juniper Networks, Inc.
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/eventhandler.h>
 #include <sys/filedesc.h>
 #include <sys/imgact.h>
@@ -128,8 +127,7 @@ filemon_event_process_exec(void *arg __unused, struct proc *p,
 		/* If the credentials changed then cease tracing. */
 		if (imgp->newcred != NULL &&
 		    imgp->credential_setid &&
-		    priv_check_cred(filemon->cred,
-		    PRIV_DEBUG_DIFFCRED, 0) != 0) {
+		    priv_check_cred(filemon->cred, PRIV_DEBUG_DIFFCRED) != 0) {
 			/*
 			 * It may have changed to NULL already, but
 			 * will not be re-attached by anything else.
@@ -148,7 +146,8 @@ filemon_event_process_exec(void *arg __unused, struct proc *p,
 }
 
 static void
-_filemon_wrapper_openat(struct thread *td, char *upath, int flags, int fd)
+_filemon_wrapper_openat(struct thread *td, const char *upath, int flags,
+    int fd)
 {
 	int error;
 	struct file *fp;
@@ -184,9 +183,8 @@ _filemon_wrapper_openat(struct thread *td, char *upath, int flags, int fd)
 			 * than nothing.
 			 */
 			if (getvnode(td, fd,
-			    cap_rights_init(&rights, CAP_LOOKUP), &fp) == 0) {
-				vn_fullpath(td, fp->f_vnode, &atpath,
-				    &freepath);
+			    cap_rights_init_one(&rights, CAP_LOOKUP), &fp) == 0) {
+				vn_fullpath(fp->f_vnode, &atpath, &freepath);
 			}
 		}
 		if (flags & O_RDWR) {
@@ -261,7 +259,8 @@ copyfail:
 }
 
 static void
-_filemon_wrapper_link(struct thread *td, char *upath1, char *upath2)
+_filemon_wrapper_link(struct thread *td, const char *upath1,
+    const char *upath2)
 {
 	struct filemon *filemon;
 	int error;

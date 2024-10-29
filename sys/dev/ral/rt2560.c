@@ -17,7 +17,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*-
  * Ralink Technology RT2560 chipset driver
  * http://www.ralinktech.com/
@@ -340,7 +339,7 @@ rt2560_detach(void *xsc)
 {
 	struct rt2560_softc *sc = xsc;
 	struct ieee80211com *ic = &sc->sc_ic;
-	
+
 	rt2560_stop(sc);
 
 	ieee80211_ifdetach(ic);
@@ -2449,7 +2448,6 @@ rt2560_read_config(struct rt2560_softc *sc)
 	DPRINTF(sc, "rssi correction %d, calibrate 0x%02x\n",
 		 sc->rssi_corr, val);
 }
-
 
 static void
 rt2560_scan_start(struct ieee80211com *ic)

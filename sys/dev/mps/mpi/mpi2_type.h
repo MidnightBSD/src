@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006-2015 LSI Corp.
  * Copyright (c) 2013-2015 Avago Technologies
@@ -27,7 +27,6 @@
  * SUCH DAMAGE.
  *
  * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
- *
  */
 
 /*
@@ -53,7 +52,6 @@
 #ifndef MPI2_TYPE_H
 #define MPI2_TYPE_H
 
-
 /*******************************************************************************
  * Define MPI2_POINTER if it hasn't already been defined. By default
  * MPI2_POINTER is defined to be a near pointer. MPI2_POINTER can be defined as
@@ -77,7 +75,7 @@ typedef unsigned char   U8;
 typedef signed   short  S16;
 typedef unsigned short  U16;
 
-#ifdef	__MidnightBSD__
+#ifdef	__FreeBSD__
 
 typedef int32_t  S32;
 typedef uint32_t U32;
@@ -109,7 +107,6 @@ typedef struct _U64
     U32          High;
 } U64;
 
-
 /*****************************************************************************
 *
 *               Pointer Types
@@ -128,4 +125,3 @@ typedef U64     *PU64;
 #endif
 
 #endif
-

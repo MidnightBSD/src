@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_acpi.h"
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -169,14 +168,11 @@ acpi_battery_get_battinfo(device_t dev, struct acpi_battinfo *battinfo)
 	    dev_idx = i;
 
 	/*
-	 * Be sure we can get various info from the battery.  Note that
-	 * acpi_BatteryIsPresent() is not enough because smart batteries only
-	 * return that the device is present.
+	 * Be sure we can get various info from the battery.
 	 */
-	if (!acpi_BatteryIsPresent(batt_dev) ||
-	    ACPI_BATT_GET_STATUS(batt_dev, &bst[i]) != 0 ||
+	if (ACPI_BATT_GET_STATUS(batt_dev, &bst[i]) != 0 ||
 	    ACPI_BATT_GET_INFO(batt_dev, bix, sizeof(*bix)) != 0)
-	    continue;
+		continue;
 
 	/* If a battery is not installed, we sometimes get strange values. */
 	if (!acpi_battery_bst_valid(&bst[i]) ||
@@ -270,7 +266,14 @@ acpi_battery_get_battinfo(device_t dev, struct acpi_battinfo *battinfo)
      */
     if (valid_units > 0) {
 	if (dev == NULL) {
-	    battinfo->cap = (total_cap * 100) / total_lfcap;
+	    /*
+	     * Avoid division by zero if none of the batteries had valid
+	     * capacity info.
+	     */
+	    if (total_lfcap > 0)
+		battinfo->cap = (total_cap * 100) / total_lfcap;
+	    else
+		battinfo->cap = 0;
 	    battinfo->min = total_min;
 	    battinfo->state = batt_stat;
 	    battinfo->rate = valid_rate;
@@ -492,31 +495,31 @@ acpi_battery_init(void)
 
     sysctl_ctx_init(&acpi_battery_sysctl_ctx);
     acpi_battery_sysctl_tree = SYSCTL_ADD_NODE(&acpi_battery_sysctl_ctx,
-	SYSCTL_CHILDREN(sc->acpi_sysctl_tree), OID_AUTO, "battery", CTLFLAG_RD,
-	0, "battery status and info");
+	SYSCTL_CHILDREN(sc->acpi_sysctl_tree), OID_AUTO, "battery",
+	CTLFLAG_RD | CTLFLAG_MPSAFE, 0, "battery status and info");
     SYSCTL_ADD_PROC(&acpi_battery_sysctl_ctx,
 	SYSCTL_CHILDREN(acpi_battery_sysctl_tree),
-	OID_AUTO, "life", CTLTYPE_INT | CTLFLAG_RD,
+	OID_AUTO, "life", CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 	&acpi_battery_battinfo.cap, 0, acpi_battery_sysctl, "I",
 	"percent capacity remaining");
     SYSCTL_ADD_PROC(&acpi_battery_sysctl_ctx,
 	SYSCTL_CHILDREN(acpi_battery_sysctl_tree),
-	OID_AUTO, "time", CTLTYPE_INT | CTLFLAG_RD,
+	OID_AUTO, "time", CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 	&acpi_battery_battinfo.min, 0, acpi_battery_sysctl, "I",
 	"remaining time in minutes");
     SYSCTL_ADD_PROC(&acpi_battery_sysctl_ctx,
 	SYSCTL_CHILDREN(acpi_battery_sysctl_tree),
-	OID_AUTO, "rate", CTLTYPE_INT | CTLFLAG_RD,
+	OID_AUTO, "rate", CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 	&acpi_battery_battinfo.rate, 0, acpi_battery_sysctl, "I",
 	"present rate in mW");
     SYSCTL_ADD_PROC(&acpi_battery_sysctl_ctx,
 	SYSCTL_CHILDREN(acpi_battery_sysctl_tree),
-	OID_AUTO, "state", CTLTYPE_INT | CTLFLAG_RD,
+	OID_AUTO, "state", CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 	&acpi_battery_battinfo.state, 0, acpi_battery_sysctl, "I",
 	"current status flags");
     SYSCTL_ADD_PROC(&acpi_battery_sysctl_ctx,
 	SYSCTL_CHILDREN(acpi_battery_sysctl_tree),
-	OID_AUTO, "units", CTLTYPE_INT | CTLFLAG_RD,
+	OID_AUTO, "units", CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 	NULL, 0, acpi_battery_units_sysctl, "I", "number of batteries");
     SYSCTL_ADD_INT(&acpi_battery_sysctl_ctx,
 	SYSCTL_CHILDREN(acpi_battery_sysctl_tree),

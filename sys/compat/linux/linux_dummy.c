@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2013 Dmitry Chagin
- * All rights reserved.
+ * Copyright (c) 2013 Dmitry Chagin <dchagin@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,11 +26,9 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/sdt.h>
 #include <sys/systm.h>
+#include <sys/sdt.h>
 #include <sys/proc.h>
 
 /*
@@ -60,7 +57,6 @@ UNIMPLEMENTED(query_module);	/* Added in Linux 2.2 removed in 2.6. */
 UNIMPLEMENTED(security);
 UNIMPLEMENTED(vserver);
 
-DUMMY(sendfile);
 DUMMY(setfsuid);
 DUMMY(setfsgid);
 DUMMY(vhangup);
@@ -101,8 +97,6 @@ DUMMY(perf_event_open);
 DUMMY(fanotify_init);
 DUMMY(fanotify_mark);
 /* Linux 2.6.39: */
-DUMMY(name_to_handle_at);
-DUMMY(open_by_handle_at);
 DUMMY(clock_adjtime);
 /* Linux 3.0: */
 DUMMY(setns);
@@ -115,9 +109,6 @@ DUMMY(kcmp);
 DUMMY(finit_module);
 DUMMY(sched_setattr);
 DUMMY(sched_getattr);
-/* Linux 3.17: */
-DUMMY(memfd_create);
-DUMMY(seccomp);
 /* Linux 3.18: */
 DUMMY(bpf);
 /* Linux 3.19: */
@@ -128,8 +119,6 @@ DUMMY(userfaultfd);
 DUMMY(membarrier);
 /* Linux 4.4: */
 DUMMY(mlock2);
-/* Linux 4.5: */
-DUMMY(copy_file_range);
 /* Linux 4.6: */
 DUMMY(preadv2);
 DUMMY(pwritev2);
@@ -137,6 +126,24 @@ DUMMY(pwritev2);
 DUMMY(pkey_mprotect);
 DUMMY(pkey_alloc);
 DUMMY(pkey_free);
+DUMMY(open_tree);
+DUMMY(move_mount);
+DUMMY(fsopen);
+DUMMY(fsconfig);
+DUMMY(fsmount);
+DUMMY(fspick);
+DUMMY(pidfd_open);
+DUMMY(openat2);
+DUMMY(pidfd_getfd);
+DUMMY(process_madvise);
+DUMMY(mount_setattr);
+/* Linux 4.18: */
+DUMMY(io_pgetevents);
+/* Linux 5.0: */
+DUMMY(pidfd_send_signal);
+DUMMY(io_uring_setup);
+DUMMY(io_uring_enter);
+DUMMY(io_uring_register);
 
 #define DUMMY_XATTR(s)						\
 int								\

@@ -21,7 +21,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /*
@@ -44,6 +43,10 @@
 #define	XENON_SLOT_EMMC_CTRL			0x0130
 #define	 XENON_ENABLE_DATA_STROBE		(1 << 24)
 #define	 XENON_ENABLE_RESP_STROBE		(1 << 25)
+
+/* Custom HS200 / HS400 Mode Select values in SDHCI_HOST_CONTROL2 register. */
+#define	XENON_CTRL2_MMC_HS200			0x5
+#define	XENON_CTRL2_MMC_HS400			0x6
 
 /* eMMC PHY */
 #define	XENON_EMMC_PHY_REG_BASE			0x170
@@ -95,5 +98,34 @@
 
 #define	XENON_EMMC_PHY_LOGIC_TIMING_ADJUST	(XENON_EMMC_PHY_REG_BASE + 0x18)
 #define	 XENON_LOGIC_TIMING_VALUE		0x00AA8977
+
+DECLARE_CLASS(sdhci_xenon_driver);
+
+struct sdhci_xenon_softc {
+	device_t	dev;		/* Controller device */
+	int		slot_id;	/* Controller ID */
+
+	struct resource	*mem_res;	/* Memory resource */
+	struct resource *irq_res;	/* IRQ resource */
+	void		*intrhand;	/* Interrupt handle */
+
+	struct sdhci_slot *slot;	/* SDHCI internal data */
+
+	uint8_t		znr;		/* PHY ZNR */
+	uint8_t		zpr;		/* PHY ZPR */
+	bool		slow_mode;	/* PHY slow mode */
+	bool		wp_inverted;
+	bool		skip_regulators; /* Don't switch regulators */
+
+	regulator_t	vmmc_supply;
+	regulator_t	vqmmc_supply;
+
+#ifdef FDT
+	struct sdhci_fdt_gpio *gpio;	/* GPIO pins for CD detection. */
+#endif
+};
+
+device_attach_t sdhci_xenon_attach;
+device_detach_t sdhci_xenon_detach;
 
 #endif	/* _SDHCI_XENON_H_ */

@@ -101,7 +101,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -572,14 +571,27 @@ msk_miibus_statchg(device_t dev)
 	}
 }
 
+static u_int
+msk_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint32_t *mchash = arg;
+	uint32_t crc;
+
+	crc = ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN);
+	/* Just want the 6 least significant bits. */
+	crc &= 0x3f;
+	/* Set the corresponding bit in the hash table. */
+	mchash[crc >> 5] |= 1 << (crc & 0x1f);
+
+	return (1);
+}
+
 static void
 msk_rxfilter(struct msk_if_softc *sc_if)
 {
 	struct msk_softc *sc;
 	struct ifnet *ifp;
-	struct ifmultiaddr *ifma;
 	uint32_t mchash[2];
-	uint32_t crc;
 	uint16_t mode;
 
 	sc = sc_if->msk_softc;
@@ -598,18 +610,7 @@ msk_rxfilter(struct msk_if_softc *sc_if)
 		mchash[1] = 0xffff;
 	} else {
 		mode |= GM_RXCR_UCF_ENA;
-		if_maddr_rlock(ifp);
-		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-			if (ifma->ifma_addr->sa_family != AF_LINK)
-				continue;
-			crc = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-			    ifma->ifma_addr), ETHER_ADDR_LEN);
-			/* Just want the 6 least significant bits. */
-			crc &= 0x3f;
-			/* Set the corresponding bit in the hash table. */
-			mchash[crc >> 5] |= 1 << (crc & 0x1f);
-		}
-		if_maddr_runlock(ifp);
+		if_foreach_llmaddr(ifp, msk_hash_maddr, mchash);
 		if (mchash[0] != 0 || mchash[1] != 0)
 			mode |= GM_RXCR_MCF_ENA;
 	}
@@ -1629,11 +1630,6 @@ msk_attach(device_t dev)
 	msk_rx_dma_jalloc(sc_if);
 
 	ifp = sc_if->msk_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(sc_if->msk_if_dev, "can not if_alloc()\n");
-		error = ENOSPC;
-		goto fail;
-	}
 	ifp->if_softc = sc_if;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
@@ -1795,7 +1791,8 @@ mskc_attach(device_t dev)
 
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-	    OID_AUTO, "process_limit", CTLTYPE_INT | CTLFLAG_RW,
+	    OID_AUTO, "process_limit",
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
 	    &sc->msk_process_limit, 0, sysctl_hw_msk_proc_limit, "I",
 	    "max number of Rx events to process");
 
@@ -3371,6 +3368,7 @@ msk_txeof(struct msk_if_softc *sc_if, int idx)
 static void
 msk_tick(void *xsc_if)
 {
+	struct epoch_tracker et;
 	struct msk_if_softc *sc_if;
 	struct mii_data *mii;
 
@@ -3383,7 +3381,9 @@ msk_tick(void *xsc_if)
 	mii_tick(mii);
 	if ((sc_if->msk_flags & MSK_FLAG_LINK) == 0)
 		msk_miibus_statchg(sc_if->msk_if_dev);
+	NET_EPOCH_ENTER(et);
 	msk_handle_events(sc_if->msk_softc);
+	NET_EPOCH_EXIT(et);
 	msk_watchdog(sc_if);
 	callout_reset(&sc_if->msk_tick_ch, hz, msk_tick, sc_if);
 }
@@ -4294,17 +4294,16 @@ msk_stop(struct msk_if_softc *sc_if)
  * lower 16 bits should be the last operation.
  */
 #define	MSK_READ_MIB32(x, y)					\
-	(((uint32_t)GMAC_READ_2(sc, x, (y) + 4)) << 16) +	\
-	(uint32_t)GMAC_READ_2(sc, x, y)
+	((((uint32_t)GMAC_READ_2(sc, x, (y) + 4)) << 16) +	\
+	(uint32_t)GMAC_READ_2(sc, x, y))
 #define	MSK_READ_MIB64(x, y)					\
-	(((uint64_t)MSK_READ_MIB32(x, (y) + 8)) << 32) +	\
-	(uint64_t)MSK_READ_MIB32(x, y)
+	((((uint64_t)MSK_READ_MIB32(x, (y) + 8)) << 32) +	\
+	(uint64_t)MSK_READ_MIB32(x, y))
 
 static void
 msk_stats_clear(struct msk_if_softc *sc_if)
 {
 	struct msk_softc *sc;
-	uint32_t reg;
 	uint16_t gmac;
 	int i;
 
@@ -4316,7 +4315,7 @@ msk_stats_clear(struct msk_if_softc *sc_if)
 	GMAC_WRITE_2(sc, sc_if->msk_port, GM_PHY_ADDR, gmac | GM_PAR_MIB_CLR);
 	/* Read all MIB Counters with Clear Mode set. */
 	for (i = GM_RXF_UC_OK; i <= GM_TXE_FIFO_UR; i += sizeof(uint32_t))
-		reg = MSK_READ_MIB32(sc_if->msk_port, i);
+		(void)MSK_READ_MIB32(sc_if->msk_port, i);
 	/* Clear MIB Clear Counter Mode. */
 	gmac &= ~GM_PAR_MIB_CLR;
 	GMAC_WRITE_2(sc, sc_if->msk_port, GM_PHY_ADDR, gmac);
@@ -4329,7 +4328,6 @@ msk_stats_update(struct msk_if_softc *sc_if)
 	struct ifnet *ifp;
 	struct msk_hw_stats *stats;
 	uint16_t gmac;
-	uint32_t reg;
 
 	MSK_IF_LOCK_ASSERT(sc_if);
 
@@ -4353,7 +4351,6 @@ msk_stats_update(struct msk_if_softc *sc_if)
 	    MSK_READ_MIB32(sc_if->msk_port, GM_RXF_MC_OK);
 	stats->rx_crc_errs +=
 	    MSK_READ_MIB32(sc_if->msk_port, GM_RXF_FCS_ERR);
-	reg = MSK_READ_MIB32(sc_if->msk_port, GM_RXF_SPARE1);
 	stats->rx_good_octets +=
 	    MSK_READ_MIB64(sc_if->msk_port, GM_RXO_OK_LO);
 	stats->rx_bad_octets +=
@@ -4380,10 +4377,8 @@ msk_stats_update(struct msk_if_softc *sc_if)
 	    MSK_READ_MIB32(sc_if->msk_port, GM_RXF_LNG_ERR);
 	stats->rx_pkts_jabbers +=
 	    MSK_READ_MIB32(sc_if->msk_port, GM_RXF_JAB_PKT);
-	reg = MSK_READ_MIB32(sc_if->msk_port, GM_RXF_SPARE2);
 	stats->rx_fifo_oflows +=
 	    MSK_READ_MIB32(sc_if->msk_port, GM_RXE_FIFO_OV);
-	reg = MSK_READ_MIB32(sc_if->msk_port, GM_RXF_SPARE3);
 
 	/* Tx stats. */
 	stats->tx_ucast_frames +=
@@ -4410,7 +4405,6 @@ msk_stats_update(struct msk_if_softc *sc_if)
 	    MSK_READ_MIB32(sc_if->msk_port, GM_TXF_1518B);
 	stats->tx_pkts_1519_max +=
 	    MSK_READ_MIB32(sc_if->msk_port, GM_TXF_MAX_SZ);
-	reg = MSK_READ_MIB32(sc_if->msk_port, GM_TXF_SPARE1);
 	stats->tx_colls +=
 	    MSK_READ_MIB32(sc_if->msk_port, GM_TXF_COL);
 	stats->tx_late_colls +=
@@ -4474,11 +4468,13 @@ msk_sysctl_stat64(SYSCTL_HANDLER_ARGS)
 #undef MSK_READ_MIB64
 
 #define MSK_SYSCTL_STAT32(sc, c, o, p, n, d) 				\
-	SYSCTL_ADD_PROC(c, p, OID_AUTO, o, CTLTYPE_UINT | CTLFLAG_RD, 	\
+	SYSCTL_ADD_PROC(c, p, OID_AUTO, o,				\
+	    CTLTYPE_UINT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,	 	\
 	    sc, offsetof(struct msk_hw_stats, n), msk_sysctl_stat32,	\
 	    "IU", d)
 #define MSK_SYSCTL_STAT64(sc, c, o, p, n, d) 				\
-	SYSCTL_ADD_PROC(c, p, OID_AUTO, o, CTLTYPE_U64 | CTLFLAG_RD, 	\
+	SYSCTL_ADD_PROC(c, p, OID_AUTO, o,				\
+	    CTLTYPE_U64 | CTLFLAG_RD | CTLFLAG_NEEDGIANT,	 	\
 	    sc, offsetof(struct msk_hw_stats, n), msk_sysctl_stat64,	\
 	    "QU", d)
 
@@ -4492,11 +4488,11 @@ msk_sysctl_node(struct msk_if_softc *sc_if)
 	ctx = device_get_sysctl_ctx(sc_if->msk_if_dev);
 	child = SYSCTL_CHILDREN(device_get_sysctl_tree(sc_if->msk_if_dev));
 
-	tree = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "stats", CTLFLAG_RD,
-	    NULL, "MSK Statistics");
+	tree = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "stats",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "MSK Statistics");
 	schild = SYSCTL_CHILDREN(tree);
-	tree = SYSCTL_ADD_NODE(ctx, schild, OID_AUTO, "rx", CTLFLAG_RD,
-	    NULL, "MSK RX Statistics");
+	tree = SYSCTL_ADD_NODE(ctx, schild, OID_AUTO, "rx",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "MSK RX Statistics");
 	child = SYSCTL_CHILDREN(tree);
 	MSK_SYSCTL_STAT32(sc_if, ctx, "ucast_frames",
 	    child, rx_ucast_frames, "Good unicast frames");
@@ -4533,8 +4529,8 @@ msk_sysctl_node(struct msk_if_softc *sc_if)
 	MSK_SYSCTL_STAT32(sc_if, ctx, "overflows",
 	    child, rx_fifo_oflows, "FIFO overflows");
 
-	tree = SYSCTL_ADD_NODE(ctx, schild, OID_AUTO, "tx", CTLFLAG_RD,
-	    NULL, "MSK TX Statistics");
+	tree = SYSCTL_ADD_NODE(ctx, schild, OID_AUTO, "tx",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "MSK TX Statistics");
 	child = SYSCTL_CHILDREN(tree);
 	MSK_SYSCTL_STAT32(sc_if, ctx, "ucast_frames",
 	    child, tx_ucast_frames, "Unicast frames");

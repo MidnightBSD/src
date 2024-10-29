@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * ChangeLog:
  *  2001-11-16	Torsten Duwe <duwe@caldera.de>

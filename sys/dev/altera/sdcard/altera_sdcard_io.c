@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Robert N. M. Watson
  * All rights reserved.
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/condvar.h>
@@ -292,8 +291,12 @@ recheck:
 }
 
 static void
-altera_sdcard_io_start_internal(struct altera_sdcard_softc *sc, struct bio *bp)
+altera_sdcard_io_start_internal(struct altera_sdcard_softc *sc,
+    struct bio **bpp)
 {
+	struct bio *bp;
+
+	bp = *bpp;
 
 	switch (bp->bio_cmd) {
 	case BIO_READ:
@@ -311,8 +314,8 @@ altera_sdcard_io_start_internal(struct altera_sdcard_softc *sc, struct bio *bp)
 		break;
 
 	default:
-		panic("%s: unsupported I/O operation %d", __func__,
-		    bp->bio_cmd);
+		biofinish(bp, NULL, EOPNOTSUPP);
+		*bpp = NULL;
 	}
 }
 
@@ -331,7 +334,7 @@ altera_sdcard_io_start(struct altera_sdcard_softc *sc, struct bio *bp)
 	 */
 	KASSERT(bp->bio_bcount == ALTERA_SDCARD_SECTORSIZE,
 	    ("%s: I/O size not %d", __func__, ALTERA_SDCARD_SECTORSIZE));
-	altera_sdcard_io_start_internal(sc, bp);
+	altera_sdcard_io_start_internal(sc, &bp);
 	sc->as_currentbio = bp;
 	sc->as_retriesleft = ALTERA_SDCARD_RETRY_LIMIT;
 }
@@ -405,7 +408,7 @@ altera_sdcard_io_complete(struct altera_sdcard_softc *sc, uint16_t asr)
 		 */
 		if (sc->as_retriesleft != 0) {
 			sc->as_flags |= ALTERA_SDCARD_FLAG_IOERROR;
-			altera_sdcard_io_start_internal(sc, bp);
+			altera_sdcard_io_start_internal(sc, &bp);
 			return (0);
 		}
 		sc->as_flags &= ~ALTERA_SDCARD_FLAG_IOERROR;

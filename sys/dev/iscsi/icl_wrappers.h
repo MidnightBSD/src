@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Edward Tomasz Napierala under sponsorship
  * from the FreeBSD Foundation.
@@ -27,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -38,6 +36,7 @@
 #ifndef ICL_WRAPPERS_H
 #define	ICL_WRAPPERS_H
 
+#include <sys/bio.h>
 #include <sys/kobj.h>
 
 #include <dev/iscsi/icl.h>
@@ -58,10 +57,27 @@ icl_pdu_data_segment_length(const struct icl_pdu *ip)
 }
 
 static inline int
+icl_pdu_append_bio(struct icl_pdu *ip, struct bio *bp, size_t offset,
+    size_t len, int flags)
+{
+
+	return (ICL_CONN_PDU_APPEND_BIO(ip->ip_conn, ip, bp, offset, len,
+	    flags));
+}
+
+static inline int
 icl_pdu_append_data(struct icl_pdu *ip, const void *addr, size_t len, int flags)
 {
 
 	return (ICL_CONN_PDU_APPEND_DATA(ip->ip_conn, ip, addr, len, flags));
+}
+
+static inline void
+icl_pdu_get_bio(struct icl_pdu *ip, size_t pdu_off, struct bio *bp,
+    size_t bio_off, size_t len)
+{
+
+	ICL_CONN_PDU_GET_BIO(ip->ip_conn, ip, pdu_off, bp, bio_off, len);
 }
 
 static inline void
@@ -76,6 +92,13 @@ icl_pdu_queue(struct icl_pdu *ip)
 {
 
 	ICL_CONN_PDU_QUEUE(ip->ip_conn, ip);
+}
+
+static inline void
+icl_pdu_queue_cb(struct icl_pdu *ip, icl_pdu_cb cb)
+{
+
+	ICL_CONN_PDU_QUEUE_CB(ip->ip_conn, ip, cb);
 }
 
 static inline void

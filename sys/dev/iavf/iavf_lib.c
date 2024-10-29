@@ -42,41 +42,6 @@
 
 static void iavf_init_hw(struct iavf_hw *hw, device_t dev);
 static u_int iavf_mc_filter_apply(void *arg, struct sockaddr_dl *sdl, u_int cnt);
-static bool iavf_zero_mac(const uint8_t *addr);
-static u_int iavf_llmaddr_count(if_t ifp);
-
-/**
- * iavf_zero_mac - Check if MAC address is 0 or not
- *
- * Returns true if MAC address is all 0's
- */
-static bool
-iavf_zero_mac(const uint8_t *addr)
-{
-	uint8_t zero[ETHER_ADDR_LEN] = {0, 0, 0, 0, 0, 0};
-
-	return (cmp_etheraddr(addr, zero));
-}
-
-/**
- * iavf_llmaddr_count - Return count of multicast MAC addresses in ifp
- *
- * Similar to "if_llmaddr_count()" found in newer FreeBSD versions
- */
-static u_int
-iavf_llmaddr_count(if_t ifp)
-{
-	struct ifmultiaddr *ifma;
-	int count = 0;
-
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link)
-		if (ifma->ifma_addr->sa_family == AF_LINK)
-			count++;
-	if_maddr_runlock(ifp);
-
-	return (count);
-}
 
 /**
  * iavf_msec_pause - Pause for at least the specified number of milliseconds
@@ -546,7 +511,7 @@ iavf_get_vsi_res_from_vf_res(struct iavf_sc *sc)
 
 	for (int i = 0; i < sc->vf_res->num_vsis; i++) {
 		/* XXX: We only use the first VSI we find */
-		if (sc->vf_res->vsi_res[i].vsi_type == IAVF_VSI_SRIOV)
+		if (sc->vf_res->vsi_res[i].vsi_type == VIRTCHNL_VSI_SRIOV)
 			sc->vsi_res = &sc->vf_res->vsi_res[i];
 	}
 	if (!sc->vsi_res) {
@@ -574,7 +539,7 @@ iavf_set_mac_addresses(struct iavf_sc *sc)
 	u8 addr[ETHER_ADDR_LEN];
 
 	/* If no mac address was assigned just make a random one */
-	if (iavf_zero_mac(hw->mac.addr)) {
+	if (ETHER_IS_ZERO(hw->mac.addr)) {
 		arc4rand(&addr, sizeof(addr), 0);
 		addr[0] &= 0xFE;
 		addr[0] |= 0x02;
@@ -1249,7 +1214,7 @@ iavf_config_promisc(struct iavf_sc *sc, int flags)
 	sc->promisc_flags = 0;
 
 	if (flags & IFF_ALLMULTI ||
-		iavf_llmaddr_count(ifp) >= MAX_MULTICAST_ADDR)
+		if_llmaddr_count(ifp) == MAX_MULTICAST_ADDR)
 		sc->promisc_flags |= FLAG_VF_MULTICAST_PROMISC;
 	if (flags & IFF_PROMISC)
 		sc->promisc_flags |= FLAG_VF_UNICAST_PROMISC;
@@ -1321,7 +1286,7 @@ iavf_multi_set(struct iavf_sc *sc)
 
 	IOCTL_DEBUGOUT("iavf_multi_set: begin");
 
-	mcnt = iavf_llmaddr_count(ifp);
+	mcnt = if_llmaddr_count(ifp);
 	if (__predict_false(mcnt == MAX_MULTICAST_ADDR)) {
 		/* Delete MC filters and enable mulitcast promisc instead */
 		iavf_init_multi(sc);

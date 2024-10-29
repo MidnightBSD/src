@@ -40,7 +40,6 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/aic7xxx/aic7xxx/aic79xx.h#107 $
- *
  */
 
 #ifndef _AIC79XX_H_
@@ -287,7 +286,7 @@ typedef enum {
 	 */
 	AHD_NONPACKFIFO_BUG	= 0x4000,
 	/*
-	 * Writing to a DFF SCBPTR register may fail if concurent with
+	 * Writing to a DFF SCBPTR register may fail if concurrent with
 	 * a hardware write to the other DFF SCBPTR register.  This is
 	 * not currently a concern in our sequencer since all chips with
 	 * this bug have the AHD_NONPACKFIFO_BUG and all writes of concern

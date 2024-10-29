@@ -1,5 +1,5 @@
 /*******************************************************************************
-SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+SPDX-License-Identifier: BSD-2-Clause
 
 Copyright (c) 2006-2009, Myricom Inc.
 All rights reserved.
@@ -25,7 +25,6 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
-
 ***************************************************************************/
 
 #ifndef _myri10ge_mcp_h
@@ -99,8 +98,6 @@ struct mcp_cmd_response {
 };
 typedef struct mcp_cmd_response mcp_cmd_response_t;
 
-
-
 /* 
    flags used in mcp_kreq_ether_send_t:
 
@@ -115,7 +112,6 @@ typedef struct mcp_cmd_response mcp_cmd_response_t;
    The  MXGEFW_FLAGS_ALIGN_ODD must be set if the cumulative
    length of all previous segments was odd.
 */
-
 
 #define MXGEFW_FLAGS_SMALL      0x1
 #define MXGEFW_FLAGS_TSO_HDR    0x1
@@ -159,7 +155,6 @@ struct mcp_kreq_ether_recv {
 };
 typedef struct mcp_kreq_ether_recv mcp_kreq_ether_recv_t;
 
-
 /* Commands */
 
 #define	MXGEFW_BOOT_HANDOFF	0xfc0000
@@ -187,7 +182,6 @@ enum myri10ge_mcp_cmd_type {
   /* get the version number of the current firmware..
      (may be available in the eeprom strings..? */
   MXGEFW_GET_MCP_VERSION = 2,
-
 
   /* Parameters which must be set by the driver before it can
      issue MXGEFW_CMD_ETHERNET_UP. They persist until the next
@@ -450,7 +444,6 @@ enum myri10ge_mcp_cmd_type {
 };
 typedef enum myri10ge_mcp_cmd_type myri10ge_mcp_cmd_type_t;
 
-
 enum myri10ge_mcp_cmd_status {
   MXGEFW_CMD_OK = 0,
   MXGEFW_CMD_UNKNOWN = 1,
@@ -469,7 +462,6 @@ enum myri10ge_mcp_cmd_status {
   MXGEFW_CMD_ERROR_BAD_PCIE_LINK = 14
 };
 typedef enum myri10ge_mcp_cmd_status myri10ge_mcp_cmd_status_t;
-
 
 #define MXGEFW_OLD_IRQ_DATA_LEN 40
 

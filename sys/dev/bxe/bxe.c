@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #define BXE_DRIVER_VERSION "1.78.91"
 
 #include "bxe.h"
@@ -56,14 +55,6 @@
 #ifndef CSUM_TCP_IPV6
 #define CSUM_TCP_IPV6 0
 #define CSUM_UDP_IPV6 0
-#endif
-
-/*
- * pci_find_cap was added in r219865. Re-define this at pci_find_extcap
- * for older kernels that don't include this changeset.
- */
-#if __FreeBSD_version < 900035
-#define pci_find_cap pci_find_extcap
 #endif
 
 #define BXE_DEF_SB_ATT_IDX 0x0001
@@ -236,7 +227,7 @@ MODULE_DEPEND(bxe, pci, 1, 1, 1);
 MODULE_DEPEND(bxe, ether, 1, 1, 1);
 DRIVER_MODULE(bxe, pci, bxe_driver, bxe_devclass, 0, 0);
 
-NETDUMP_DEFINE(bxe);
+DEBUGNET_DEFINE(bxe);
 
 /* resources needed for unloading a previously loaded device */
 
@@ -257,7 +248,8 @@ static int load_count[2][3] = { {0} }; /* per-path: 0-common, 1-port0, 2-port1 *
 
 /* Tunable device values... */
 
-SYSCTL_NODE(_hw, OID_AUTO, bxe, CTLFLAG_RD, 0, "bxe driver parameters");
+SYSCTL_NODE(_hw, OID_AUTO, bxe, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "bxe driver parameters");
 
 /* Debug */
 unsigned long bxe_debug = 0;
@@ -2526,7 +2518,7 @@ bxe_probe(device_t dev)
 
             /* Print out the device identity. */
             snprintf(descbuf, BXE_DEVDESC_MAX,
-                     "%s (%c%d) BXE v:%s\n", t->bxe_name,
+                     "%s (%c%d) BXE v:%s", t->bxe_name,
                      (((pci_read_config(dev, PCIR_REVID, 4) &
                         0xf0) >> 4) + 'A'),
                      (pci_read_config(dev, PCIR_REVID, 4) & 0xf),
@@ -3104,11 +3096,9 @@ bxe_tpa_stop(struct bxe_softc          *sc,
         /* assign packet to this interface interface */
         if_setrcvif(m, ifp);
 
-#if __FreeBSD_version >= 800000
         /* specify what RSS queue was used for this flow */
         m->m_pkthdr.flowid = fp->index;
         BXE_SET_FLOWID(m);
-#endif
 
         if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
         fp->eth_q_stats.rx_tpa_pkts++;
@@ -3393,11 +3383,9 @@ bxe_rxeof(struct bxe_softc    *sc,
             m->m_flags |= M_VLANTAG;
         }
 
-#if __FreeBSD_version >= 800000
         /* specify what RSS queue was used for this flow */
         m->m_pkthdr.flowid = fp->index;
         BXE_SET_FLOWID(m);
-#endif
 
 next_rx:
 
@@ -4747,7 +4735,6 @@ bxe_dump_mbuf(struct bxe_softc *sc,
 
     while (m) {
 
-#if __FreeBSD_version >= 1000000
         BLOGD(sc, DBG_MBUF,
               "%02d: mbuf=%p m_len=%d m_flags=0x%b m_data=%p\n",
               i, m, m->m_len, m->m_flags, M_FLAG_BITS, m->m_data);
@@ -4758,26 +4745,6 @@ bxe_dump_mbuf(struct bxe_softc *sc,
                    i, m->m_pkthdr.len, m->m_flags, M_FLAG_BITS,
                    (int)m->m_pkthdr.csum_flags, CSUM_BITS);
         }
-#else
-        BLOGD(sc, DBG_MBUF,
-              "%02d: mbuf=%p m_len=%d m_flags=0x%b m_data=%p\n",
-              i, m, m->m_len, m->m_flags,
-              "\20\1M_EXT\2M_PKTHDR\3M_EOR\4M_RDONLY", m->m_data);
-
-        if (m->m_flags & M_PKTHDR) {
-             BLOGD(sc, DBG_MBUF,
-                   "%02d: - m_pkthdr: tot_len=%d flags=0x%b csum_flags=%b\n",
-                   i, m->m_pkthdr.len, m->m_flags,
-                   "\20\12M_BCAST\13M_MCAST\14M_FRAG"
-                   "\15M_FIRSTFRAG\16M_LASTFRAG\21M_VLANTAG"
-                   "\22M_PROMISC\23M_NOFREE",
-                   (int)m->m_pkthdr.csum_flags,
-                   "\20\1CSUM_IP\2CSUM_TCP\3CSUM_UDP\4CSUM_IP_FRAGS"
-                   "\5CSUM_FRAGMENT\6CSUM_TSO\11CSUM_IP_CHECKED"
-                   "\12CSUM_IP_VALID\13CSUM_DATA_VALID"
-                   "\14CSUM_PSEUDO_HDR");
-        }
-#endif /* #if __FreeBSD_version >= 1000000 */
 
         if (m->m_flags & M_EXT) {
             switch (m->m_ext.ext_type) {
@@ -5161,9 +5128,7 @@ bxe_tx_encap(struct bxe_fastpath *fp, struct mbuf **m_head)
 
     sc = fp->sc;
 
-#if __FreeBSD_version >= 800000
     M_ASSERTPKTHDR(*m_head);
-#endif /* #if __FreeBSD_version >= 800000 */
 
     m0 = *m_head;
     rc = defragged = nbds = ovlan = vlan_off = total_pkt_size = 0;
@@ -5669,8 +5634,6 @@ bxe_tx_start(if_t ifp)
     BXE_FP_TX_UNLOCK(fp);
 }
 
-#if __FreeBSD_version >= 901504
-
 static int
 bxe_tx_mq_start_locked(struct bxe_softc    *sc,
                        if_t                ifp,
@@ -5857,8 +5820,6 @@ bxe_mq_flush(struct ifnet *ifp)
 
     if_qflush(ifp);
 }
-
-#endif /* FreeBSD_version >= 901504 */
 
 static uint16_t
 bxe_cid_ilt_lines(struct bxe_softc *sc)
@@ -6219,7 +6180,6 @@ bxe_free_fp_buffers(struct bxe_softc *sc)
     for (i = 0; i < sc->num_queues; i++) {
         fp = &sc->fp[i];
 
-#if __FreeBSD_version >= 901504
         if (fp->tx_br != NULL) {
             /* just in case bxe_mq_flush() wasn't called */
             if (mtx_initialized(&fp->tx_mtx)) {
@@ -6231,7 +6191,6 @@ bxe_free_fp_buffers(struct bxe_softc *sc)
                 BXE_FP_TX_UNLOCK(fp);
             }
         }
-#endif
 
         /* free all RX buffers */
         bxe_free_rx_bd_chain(fp);
@@ -9240,7 +9199,7 @@ bxe_interrupt_attach(struct bxe_softc *sc)
         fp = &sc->fp[i];
         snprintf(fp->tq_name, sizeof(fp->tq_name),
                  "bxe%d_fp%d_tq", sc->unit, i);
-        TASK_INIT(&fp->tq_task, 0, bxe_handle_fp_tq, fp);
+        NET_TASK_INIT(&fp->tq_task, 0, bxe_handle_fp_tq, fp);
         TASK_INIT(&fp->tx_task, 0, bxe_tx_mq_start_deferred, fp);
         fp->tq = taskqueue_create(fp->tq_name, M_NOWAIT,
                                   taskqueue_thread_enqueue,
@@ -11313,9 +11272,7 @@ bxe_get_q_flags(struct bxe_softc    *sc,
 
     if (if_getcapenable(sc->ifp) & IFCAP_LRO) {
         bxe_set_bit(ECORE_Q_FLG_TPA, &flags);
-#if __FreeBSD_version >= 800000
         bxe_set_bit(ECORE_Q_FLG_TPA_IPV6, &flags);
-#endif
     }
 
     if (leading) {
@@ -12064,26 +12021,30 @@ bxe_initial_phy_init(struct bxe_softc *sc,
     return (rc);
 }
 
-/* must be called under IF_ADDR_LOCK */
+static u_int
+bxe_push_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+    struct ecore_mcast_list_elem *mc_mac = arg;
+
+    mc_mac += cnt;
+    mc_mac->mac = (uint8_t *)LLADDR(sdl);
+
+    return (1);
+}
+
 static int
 bxe_init_mcast_macs_list(struct bxe_softc                 *sc,
                          struct ecore_mcast_ramrod_params *p)
 {
     if_t ifp = sc->ifp;
-    int mc_count = 0;
-    struct ifmultiaddr *ifma;
+    int mc_count;
     struct ecore_mcast_list_elem *mc_mac;
-
-    CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-        if (ifma->ifma_addr->sa_family != AF_LINK) {
-            continue;
-        }
-
-        mc_count++;
-    }
 
     ECORE_LIST_INIT(&p->mcast_list);
     p->mcast_list_len = 0;
+
+    /* XXXGL: multicast count may change later */
+    mc_count = if_llmaddr_count(ifp);
 
     if (!mc_count) {
         return (0);
@@ -12096,20 +12057,15 @@ bxe_init_mcast_macs_list(struct bxe_softc                 *sc,
         return (-1);
     }
     bzero(mc_mac, (sizeof(*mc_mac) * mc_count));
+    if_foreach_llmaddr(ifp, bxe_push_maddr, mc_mac);
 
-    CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
-        if (ifma->ifma_addr->sa_family != AF_LINK) {
-            continue;
-        }
-
-        mc_mac->mac = (uint8_t *)LLADDR((struct sockaddr_dl *)ifma->ifma_addr);
-        ECORE_LIST_PUSH_TAIL(&mc_mac->link, &p->mcast_list);
-
+    for (int i = 0; i < mc_count; i ++) {
+        ECORE_LIST_PUSH_TAIL(&mc_mac[i].link, &p->mcast_list);
         BLOGD(sc, DBG_LOAD,
               "Setting MCAST %02X:%02X:%02X:%02X:%02X:%02X and mc_count %d\n",
-              mc_mac->mac[0], mc_mac->mac[1], mc_mac->mac[2],
-              mc_mac->mac[3], mc_mac->mac[4], mc_mac->mac[5], mc_count);
-       mc_mac++;
+              mc_mac[i].mac[0], mc_mac[i].mac[1], mc_mac[i].mac[2],
+              mc_mac[i].mac[3], mc_mac[i].mac[4], mc_mac[i].mac[5],
+              mc_count);
     }
 
     p->mcast_list_len = mc_count;
@@ -12170,69 +12126,59 @@ bxe_set_mc_list(struct bxe_softc *sc)
     return (rc);
 }
 
+struct bxe_set_addr_ctx {
+   struct bxe_softc *sc;
+   unsigned long ramrod_flags;
+   int rc;
+};
+
+static u_int
+bxe_set_addr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+    struct bxe_set_addr_ctx *ctx = arg;
+    struct ecore_vlan_mac_obj *mac_obj = &ctx->sc->sp_objs->mac_obj;
+    int rc;
+
+    if (ctx->rc < 0)
+	return (0);
+
+    rc = bxe_set_mac_one(ctx->sc, (uint8_t *)LLADDR(sdl), mac_obj, TRUE,
+                         ECORE_UC_LIST_MAC, &ctx->ramrod_flags);
+
+    /* do not treat adding same MAC as an error */
+    if (rc == -EEXIST)
+	BLOGD(ctx->sc, DBG_SP, "Failed to schedule ADD operations (EEXIST)\n");
+    else if (rc < 0) {
+            BLOGE(ctx->sc, "Failed to schedule ADD operations (%d)\n", rc);
+            ctx->rc = rc;
+    }
+
+    return (1);
+}
+
 static int
 bxe_set_uc_list(struct bxe_softc *sc)
 {
     if_t ifp = sc->ifp;
     struct ecore_vlan_mac_obj *mac_obj = &sc->sp_objs->mac_obj;
-    struct ifaddr *ifa;
-    unsigned long ramrod_flags = 0;
+    struct bxe_set_addr_ctx ctx = { sc, 0, 0 };
     int rc;
-
-#if __FreeBSD_version < 800000
-    IF_ADDR_LOCK(ifp);
-#else
-    if_addr_rlock(ifp);
-#endif
 
     /* first schedule a cleanup up of old configuration */
     rc = bxe_del_all_macs(sc, mac_obj, ECORE_UC_LIST_MAC, FALSE);
     if (rc < 0) {
         BLOGE(sc, "Failed to schedule delete of all ETH MACs (%d)\n", rc);
-#if __FreeBSD_version < 800000
-        IF_ADDR_UNLOCK(ifp);
-#else
-        if_addr_runlock(ifp);
-#endif
         return (rc);
     }
 
-    ifa = if_getifaddr(ifp); /* XXX Is this structure */
-    while (ifa) {
-        if (ifa->ifa_addr->sa_family != AF_LINK) {
-            ifa = CK_STAILQ_NEXT(ifa, ifa_link);
-            continue;
-        }
-
-        rc = bxe_set_mac_one(sc, (uint8_t *)LLADDR((struct sockaddr_dl *)ifa->ifa_addr),
-                             mac_obj, TRUE, ECORE_UC_LIST_MAC, &ramrod_flags);
-        if (rc == -EEXIST) {
-            BLOGD(sc, DBG_SP, "Failed to schedule ADD operations (EEXIST)\n");
-            /* do not treat adding same MAC as an error */
-            rc = 0;
-        } else if (rc < 0) {
-            BLOGE(sc, "Failed to schedule ADD operations (%d)\n", rc);
-#if __FreeBSD_version < 800000
-            IF_ADDR_UNLOCK(ifp);
-#else
-            if_addr_runlock(ifp);
-#endif
-            return (rc);
-        }
-
-        ifa = CK_STAILQ_NEXT(ifa, ifa_link);
-    }
-
-#if __FreeBSD_version < 800000
-    IF_ADDR_UNLOCK(ifp);
-#else
-    if_addr_runlock(ifp);
-#endif
+    if_foreach_lladdr(ifp, bxe_set_addr, &ctx);
+    if (ctx.rc < 0)
+	return (ctx.rc);
 
     /* Execute the pending commands */
-    bit_set(&ramrod_flags, RAMROD_CONT);
+    bit_set(&ctx.ramrod_flags, RAMROD_CONT);
     return (bxe_set_mac_one(sc, NULL, mac_obj, FALSE /* don't care */,
-                            ECORE_UC_LIST_MAC, &ramrod_flags));
+                            ECORE_UC_LIST_MAC, &ctx.ramrod_flags));
 }
 
 static void
@@ -12251,7 +12197,7 @@ bxe_set_rx_mode(struct bxe_softc *sc)
     if (if_getflags(ifp) & IFF_PROMISC) {
         rx_mode = BXE_RX_MODE_PROMISC;
     } else if ((if_getflags(ifp) & IFF_ALLMULTI) ||
-               ((if_getamcount(ifp) > BXE_MAX_MULTICAST) &&
+               (if_llmaddr_count(ifp) > BXE_MAX_MULTICAST &&
                 CHIP_IS_E1(sc))) {
         rx_mode = BXE_RX_MODE_ALLMULTI;
     } else {
@@ -12585,7 +12531,7 @@ bxe_parity_recover(struct bxe_softc *sc)
                          error_unrecovered++;
                          sc->recovery_state = BXE_RECOVERY_FAILED;
                          sc->state = BXE_STATE_ERROR;
-                         BLOGE(sc, "Recovery is NOT successfull, "
+                         BLOGE(sc, "Recovery is NOT successful, "
                             " state=0x%x recovery_state=0x%x error=%x\n",
                             sc->state, sc->recovery_state, sc->error_status);
                          sc->error_status = 0;
@@ -12593,7 +12539,7 @@ bxe_parity_recover(struct bxe_softc *sc)
                          sc->recovery_state =
                              BXE_RECOVERY_DONE;
                          error_recovered++;
-                         BLOGI(sc, "Recovery is successfull from errors %x,"
+                         BLOGI(sc, "Recovery is successful from errors %x,"
                             " state=0x%x"
                             " recovery_state=0x%x \n", sc->error_status,
                             sc->state, sc->recovery_state);
@@ -13043,7 +12989,7 @@ bxe_init(void *xsc)
     BXE_CORE_UNLOCK(sc);
 }
 
-static int
+static void
 bxe_init_ifnet(struct bxe_softc *sc)
 {
     if_t ifp;
@@ -13063,10 +13009,7 @@ bxe_init_ifnet(struct bxe_softc *sc)
 	BLOGI(sc, "IFMEDIA flags : %x\n", sc->ifmedia.ifm_media);
 
     /* allocate the ifnet structure */
-    if ((ifp = if_gethandle(IFT_ETHER)) == NULL) {
-        BLOGE(sc, "Interface allocation failed!\n");
-        return (ENXIO);
-    }
+    ifp = if_gethandle(IFT_ETHER);
 
     if_setsoftc(ifp, sc);
     if_initname(ifp, device_get_name(sc->dev), device_get_unit(sc->dev));
@@ -13074,13 +13017,8 @@ bxe_init_ifnet(struct bxe_softc *sc)
     if_setioctlfn(ifp, bxe_ioctl);
     if_setstartfn(ifp, bxe_tx_start);
     if_setgetcounterfn(ifp, bxe_get_counter);
-#if __FreeBSD_version >= 901504
     if_settransmitfn(ifp, bxe_tx_mq_start);
     if_setqflushfn(ifp, bxe_mq_flush);
-#endif
-#ifdef FreeBSD8_0
-    if_settimer(ifp, 0);
-#endif
     if_setinitfn(ifp, bxe_init);
     if_setmtu(ifp, sc->mtu);
     if_sethwassist(ifp, (CSUM_IP      |
@@ -13091,13 +13029,6 @@ bxe_init_ifnet(struct bxe_softc *sc)
                         CSUM_UDP_IPV6));
 
     capabilities =
-#if __FreeBSD_version < 700000
-        (IFCAP_VLAN_MTU       |
-         IFCAP_VLAN_HWTAGGING |
-         IFCAP_HWCSUM         |
-         IFCAP_JUMBO_MTU      |
-         IFCAP_LRO);
-#else
         (IFCAP_VLAN_MTU       |
          IFCAP_VLAN_HWTAGGING |
          IFCAP_VLAN_HWTSO     |
@@ -13109,7 +13040,6 @@ bxe_init_ifnet(struct bxe_softc *sc)
          IFCAP_TSO4           |
          IFCAP_TSO6           |
          IFCAP_WOL_MAGIC);
-#endif
     if_setcapabilitiesbit(ifp, capabilities, 0); /* XXX */
     if_setcapenable(ifp, if_getcapabilities(ifp));
     if_setbaudrate(ifp, IF_Gbps(10));
@@ -13123,10 +13053,8 @@ bxe_init_ifnet(struct bxe_softc *sc)
     /* attach to the Ethernet interface list */
     ether_ifattach(ifp, sc->link_params.mac_addr);
 
-    /* Attach driver netdump methods. */
-    NETDUMP_SET(ifp, bxe);
-
-    return (0);
+    /* Attach driver debugnet methods. */
+    DEBUGNET_SET(ifp, bxe);
 }
 
 static void
@@ -13270,8 +13198,8 @@ bxe_pcie_capability_read(struct bxe_softc *sc,
 static uint8_t
 bxe_is_pcie_pending(struct bxe_softc *sc)
 {
-    return (bxe_pcie_capability_read(sc, PCIR_EXPRESS_DEVICE_STA, 2) &
-            PCIM_EXP_STA_TRANSACTION_PND);
+    return (bxe_pcie_capability_read(sc, PCIER_DEVICE_STA, 2) &
+            PCIEM_STA_TRANSACTION_PND);
 }
 
 /*
@@ -13295,7 +13223,7 @@ bxe_probe_pci_caps(struct bxe_softc *sc)
         }
     }
 
-    link_status = bxe_pcie_capability_read(sc, PCIR_EXPRESS_LINK_STA, 2);
+    link_status = bxe_pcie_capability_read(sc, PCIER_LINK_STA, 2);
 
     /* handle PCIe 2.0 workarounds for 57710 */
     if (CHIP_IS_E1(sc)) {
@@ -13305,16 +13233,16 @@ bxe_probe_pci_caps(struct bxe_softc *sc)
 
         /* workaround for 57710 errata E4_57710_27488 */
         sc->devinfo.pcie_link_width =
-            ((link_status & PCIM_LINK_STA_WIDTH) >> 4);
+            ((link_status & PCIEM_LINK_STA_WIDTH) >> 4);
         if (sc->devinfo.pcie_link_speed > 1) {
             sc->devinfo.pcie_link_width =
-                ((link_status & PCIM_LINK_STA_WIDTH) >> 4) >> 1;
+                ((link_status & PCIEM_LINK_STA_WIDTH) >> 4) >> 1;
         }
     } else {
         sc->devinfo.pcie_link_speed =
-            (link_status & PCIM_LINK_STA_SPEED);
+            (link_status & PCIEM_LINK_STA_SPEED);
         sc->devinfo.pcie_link_width =
-            ((link_status & PCIM_LINK_STA_WIDTH) >> 4);
+            ((link_status & PCIEM_LINK_STA_WIDTH) >> 4);
     }
 
     BLOGD(sc, DBG_LOAD, "PCIe link speed=%d width=%d\n",
@@ -16004,7 +15932,7 @@ static void bxe_force_link_reset(struct bxe_softc *sc)
 static int
 bxe_sysctl_pauseparam(SYSCTL_HANDLER_ARGS)
 {
-        struct bxe_softc *sc = (struct bxe_softc *)arg1;;
+        struct bxe_softc *sc = (struct bxe_softc *)arg1;
         uint32_t cfg_idx = bxe_get_link_cfg_idx(sc);
         int rc = 0;
         int error;
@@ -16116,7 +16044,6 @@ bxe_add_sysctls(struct bxe_softc *sc)
 
     sc->debug = bxe_debug;
 
-#if __FreeBSD_version >= 900000
     SYSCTL_ADD_STRING(ctx, children, OID_AUTO, "bc_version",
                       CTLFLAG_RD, sc->devinfo.bc_ver_str, 0,
                       "bootcode version");
@@ -16135,26 +16062,6 @@ bxe_add_sysctls(struct bxe_softc *sc)
     SYSCTL_ADD_ULONG(ctx, children, OID_AUTO, "debug",
                     CTLFLAG_RW, &sc->debug,
                     "debug logging mode");
-#else
-    SYSCTL_ADD_STRING(ctx, children, OID_AUTO, "bc_version",
-                      CTLFLAG_RD, &sc->devinfo.bc_ver_str, 0,
-                      "bootcode version");
-    SYSCTL_ADD_STRING(ctx, children, OID_AUTO, "fw_version",
-                      CTLFLAG_RD, &sc->fw_ver_str, 0,
-                      "firmware version");
-    SYSCTL_ADD_STRING(ctx, children, OID_AUTO, "mf_mode",
-                      CTLFLAG_RD, &sc->mf_mode_str, 0,
-                      "multifunction mode");
-    SYSCTL_ADD_STRING(ctx, children, OID_AUTO, "mac_addr",
-                      CTLFLAG_RD, &sc->mac_addr_str, 0,
-                      "mac address");
-    SYSCTL_ADD_STRING(ctx, children, OID_AUTO, "pci_link",
-                      CTLFLAG_RD, &sc->pci_link_str, 0,
-                      "pci link status");
-    SYSCTL_ADD_UINT(ctx, children, OID_AUTO, "debug",
-                    CTLFLAG_RW, &sc->debug, 0,
-                    "debug logging mode");
-#endif /* #if __FreeBSD_version >= 900000 */
 
     sc->trigger_grcdump = 0;
     SYSCTL_ADD_UINT(ctx, children, OID_AUTO, "trigger_grcdump",
@@ -16173,44 +16080,41 @@ bxe_add_sysctls(struct bxe_softc *sc)
                     CTLFLAG_RW, &sc->rx_budget, 0,
                     "rx processing budget");
 
-   SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "pause_param",
-                    CTLTYPE_UINT | CTLFLAG_RW, sc, 0,
-                    bxe_sysctl_pauseparam, "IU",
-                    "need pause frames- DEF:0/TX:1/RX:2/BOTH:3/AUTO:4/AUTOTX:5/AUTORX:6/AUTORXTX:7/NONE:8");
+    SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "pause_param",
+        CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_MPSAFE, sc, 0,
+        bxe_sysctl_pauseparam, "IU",
+        "need pause frames- DEF:0/TX:1/RX:2/BOTH:3/AUTO:4/AUTOTX:5/AUTORX:6/AUTORXTX:7/NONE:8");
 
 
     SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "state",
-                    CTLTYPE_UINT | CTLFLAG_RW, sc, 0,
-                    bxe_sysctl_state, "IU", "dump driver state");
+        CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_MPSAFE, sc, 0,
+        bxe_sysctl_state, "IU", "dump driver state");
 
     for (i = 0; i < BXE_NUM_ETH_STATS; i++) {
         SYSCTL_ADD_PROC(ctx, children, OID_AUTO,
-                        bxe_eth_stats_arr[i].string,
-                        CTLTYPE_U64 | CTLFLAG_RD, sc, i,
-                        bxe_sysctl_eth_stat, "LU",
-                        bxe_eth_stats_arr[i].string);
+            bxe_eth_stats_arr[i].string,
+            CTLTYPE_U64 | CTLFLAG_RD | CTLFLAG_MPSAFE, sc, i,
+            bxe_sysctl_eth_stat, "LU", bxe_eth_stats_arr[i].string);
     }
 
     /* add a new parent node for all queues "dev.bxe.#.queue" */
     queue_top = SYSCTL_ADD_NODE(ctx, children, OID_AUTO, "queue",
-                                CTLFLAG_RD, NULL, "queue");
+        CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "queue");
     queue_top_children = SYSCTL_CHILDREN(queue_top);
 
     for (i = 0; i < sc->num_queues; i++) {
         /* add a new parent node for a single queue "dev.bxe.#.queue.#" */
         snprintf(queue_num_buf, sizeof(queue_num_buf), "%d", i);
         queue = SYSCTL_ADD_NODE(ctx, queue_top_children, OID_AUTO,
-                                queue_num_buf, CTLFLAG_RD, NULL,
-                                "single queue");
+            queue_num_buf, CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "single queue");
         queue_children = SYSCTL_CHILDREN(queue);
 
         for (j = 0; j < BXE_NUM_ETH_Q_STATS; j++) {
             q_stat = ((i << 16) | j);
             SYSCTL_ADD_PROC(ctx, queue_children, OID_AUTO,
-                            bxe_eth_q_stats_arr[j].string,
-                            CTLTYPE_U64 | CTLFLAG_RD, sc, q_stat,
-                            bxe_sysctl_eth_q_stat, "LU",
-                            bxe_eth_q_stats_arr[j].string);
+                 bxe_eth_q_stats_arr[j].string,
+                 CTLTYPE_U64 | CTLFLAG_RD | CTLFLAG_MPSAFE, sc, q_stat,
+                 bxe_sysctl_eth_q_stat, "LU", bxe_eth_q_stats_arr[j].string);
         }
     }
 }
@@ -16218,8 +16122,6 @@ bxe_add_sysctls(struct bxe_softc *sc)
 static int
 bxe_alloc_buf_rings(struct bxe_softc *sc)
 {
-#if __FreeBSD_version >= 901504
-
     int i;
     struct bxe_fastpath *fp;
 
@@ -16232,15 +16134,13 @@ bxe_alloc_buf_rings(struct bxe_softc *sc)
         if (fp->tx_br == NULL)
             return (-1);
     }
-#endif
+
     return (0);
 }
 
 static void
 bxe_free_buf_rings(struct bxe_softc *sc)
 {
-#if __FreeBSD_version >= 901504
-
     int i;
     struct bxe_fastpath *fp;
 
@@ -16253,8 +16153,6 @@ bxe_free_buf_rings(struct bxe_softc *sc)
             fp->tx_br = NULL;
         }
     }
-
-#endif
 }
 
 static void
@@ -16340,7 +16238,7 @@ bxe_attach(device_t dev)
     bxe_init_mutexes(sc);
 
     /* prepare the periodic callout */
-    callout_init(&sc->periodic_callout, 0);
+    callout_init(&sc->periodic_callout, 1);
 
     /* prepare the chip taskqueue */
     sc->chip_tq_flags = CHIP_TQ_NONE;
@@ -16382,12 +16280,7 @@ bxe_attach(device_t dev)
     bxe_get_phy_info(sc);
 
     /* initialize the FreeBSD ifnet interface */
-    if (bxe_init_ifnet(sc) != 0) {
-        bxe_release_mutexes(sc);
-        bxe_deallocate_bars(sc);
-        pci_disable_busmaster(dev);
-        return (ENXIO);
-    }
+    bxe_init_ifnet(sc);
 
     if (bxe_add_cdev(sc) != 0) {
         if (sc->ifp != NULL) {
@@ -16758,14 +16651,14 @@ bxe_init_pxp(struct bxe_softc *sc)
     uint16_t devctl;
     int r_order, w_order;
 
-    devctl = bxe_pcie_capability_read(sc, PCIR_EXPRESS_DEVICE_CTL, 2);
+    devctl = bxe_pcie_capability_read(sc, PCIER_DEVICE_CTL, 2);
 
     BLOGD(sc, DBG_LOAD, "read 0x%08x from devctl\n", devctl);
 
-    w_order = ((devctl & PCIM_EXP_CTL_MAX_PAYLOAD) >> 5);
+    w_order = ((devctl & PCIEM_CTL_MAX_PAYLOAD) >> 5);
 
     if (sc->mrrs == -1) {
-        r_order = ((devctl & PCIM_EXP_CTL_MAX_READ_REQUEST) >> 12);
+        r_order = ((devctl & PCIEM_CTL_MAX_READ_REQUEST) >> 12);
     } else {
         BLOGD(sc, DBG_LOAD, "forcing read order to %d\n", sc->mrrs);
         r_order = sc->mrrs;
@@ -19532,27 +19425,27 @@ bxe_eioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
     return (rval);
 }
 
-#ifdef NETDUMP
+#ifdef DEBUGNET
 static void
-bxe_netdump_init(struct ifnet *ifp, int *nrxr, int *ncl, int *clsize)
+bxe_debugnet_init(struct ifnet *ifp, int *nrxr, int *ncl, int *clsize)
 {
 	struct bxe_softc *sc;
 
 	sc = if_getsoftc(ifp);
 	BXE_CORE_LOCK(sc);
 	*nrxr = sc->num_queues;
-	*ncl = NETDUMP_MAX_IN_FLIGHT;
+	*ncl = DEBUGNET_MAX_IN_FLIGHT;
 	*clsize = sc->fp[0].mbuf_alloc_size;
 	BXE_CORE_UNLOCK(sc);
 }
 
 static void
-bxe_netdump_event(struct ifnet *ifp __unused, enum netdump_ev event __unused)
+bxe_debugnet_event(struct ifnet *ifp __unused, enum debugnet_ev event __unused)
 {
 }
 
 static int
-bxe_netdump_transmit(struct ifnet *ifp, struct mbuf *m)
+bxe_debugnet_transmit(struct ifnet *ifp, struct mbuf *m)
 {
 	struct bxe_softc *sc;
 	int error;
@@ -19569,7 +19462,7 @@ bxe_netdump_transmit(struct ifnet *ifp, struct mbuf *m)
 }
 
 static int
-bxe_netdump_poll(struct ifnet *ifp, int count)
+bxe_debugnet_poll(struct ifnet *ifp, int count)
 {
 	struct bxe_softc *sc;
 	int i;
@@ -19584,4 +19477,4 @@ bxe_netdump_poll(struct ifnet *ifp, int count)
 	(void)bxe_txeof(sc, &sc->fp[0]);
 	return (0);
 }
-#endif /* NETDUMP */
+#endif /* DEBUGNET */

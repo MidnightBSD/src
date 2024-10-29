@@ -154,48 +154,46 @@ lio_add_hw_stats(struct lio *lio)
 			  oct_dev->fw_info.lio_firmware_version, 0,
 			  "Firmware version");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "stats_interval",
-			CTLTYPE_INT | CTLFLAG_RW, lio, 0,
-			lio_set_stats_interval,	"I",
-			"Set Stats Updation Timer in milli seconds");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, lio, 0,
+	    lio_set_stats_interval, "I",
+	    "Set Stats Updation Timer in milli seconds");
 	SYSCTL_ADD_UQUAD(ctx, child, OID_AUTO, "link_state_changes",
 			 CTLFLAG_RD, &lio->link_changes, "Link Change Counter");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "eeprom-dump",
 			CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE, lio, 0,
 			lio_get_eeprom, "A", "EEPROM information");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "fc",
-			CTLTYPE_INT | CTLFLAG_RW, lio, 0,
-			lio_get_set_pauseparam, "I",
-			"Get and set pause parameters.\n" \
-			"0 - off\n" \
-			"1 - rx pause\n" \
-			"2 - tx pause \n" \
-			"3 - rx and tx pause");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, lio, 0,
+	    lio_get_set_pauseparam, "I",
+	    "Get and set pause parameters.\n" \
+	    "0 - off\n" \
+	    "1 - rx pause\n" \
+	    "2 - tx pause \n" \
+	    "3 - rx and tx pause");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "register-dump",
-			CTLTYPE_STRING | CTLFLAG_RD,
-			lio, 0, lio_get_regs, "A",
-			"Dump registers in raw format");
+	    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_NEEDGIANT, lio, 0,
+	    lio_get_regs, "A", "Dump registers in raw format");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "fwmsglevel",
-			CTLTYPE_INT | CTLFLAG_RW, lio, 0,
-			lio_get_set_fwmsglevel,
-			"I", "Get or set firmware message level");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, lio, 0,
+	    lio_get_set_fwmsglevel, "I", "Get or set firmware message level");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "rxq_descriptors",
-			CTLTYPE_INT | CTLFLAG_RW, lio, LIO_SET_RING_RX,
-			lio_set_ringparam, "I", "Set RX ring parameter");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, lio, LIO_SET_RING_RX,
+	    lio_set_ringparam, "I", "Set RX ring parameter");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "txq_descriptors",
-			CTLTYPE_INT | CTLFLAG_RW, lio, LIO_SET_RING_TX,
-			lio_set_ringparam, "I", "Set TX ring parameter");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, lio, LIO_SET_RING_TX,
+	    lio_set_ringparam, "I", "Set TX ring parameter");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "max_rxq_descriptors",
-			CTLTYPE_INT | CTLFLAG_RD, lio, LIO_SET_RING_RX,
-			lio_get_ringparam, "I", "Max RX descriptors");
+	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT, lio, LIO_SET_RING_RX,
+	    lio_get_ringparam, "I", "Max RX descriptors");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "max_txq_descriptors",
-			CTLTYPE_INT | CTLFLAG_RD, lio, LIO_SET_RING_TX,
-			lio_get_ringparam, "I", "Max TX descriptors");
+	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT, lio, LIO_SET_RING_TX,
+	    lio_get_ringparam, "I", "Max TX descriptors");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "active_queues",
-			CTLTYPE_INT | CTLFLAG_RW, lio, 0, lio_set_channels,
-			"I", "Set channels information");
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, lio, 0,
+	    lio_set_channels, "I", "Set channels information");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "max_queues",
-			CTLTYPE_INT | CTLFLAG_RD, lio, 0, lio_get_channels,
-			"I", "Get channels information");
+	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT, lio, 0,
+	    lio_get_channels, "I", "Get channels information");
 	SYSCTL_ADD_UINT(ctx, child, OID_AUTO, "tx_budget",
 			CTLFLAG_RW, &oct_dev->tx_budget,
 			0, "TX process pkt budget");
@@ -205,7 +203,7 @@ lio_add_hw_stats(struct lio *lio)
 
 	/* IRQ Coalescing Parameters */
 	root_node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "coalesce",
-				    CTLFLAG_RD, NULL, "Get and Set Coalesce");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Get and Set Coalesce");
 
 	root_list = SYSCTL_CHILDREN(root_node);
 
@@ -270,13 +268,13 @@ lio_add_hw_stats(struct lio *lio)
 			"QU", NULL);
 
 	/* Root Node of all the Stats */
-	root_node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "stats", CTLFLAG_RD,
-				    NULL, "Root Node of all the Stats");
+	root_node = SYSCTL_ADD_NODE(ctx, child, OID_AUTO, "stats",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Root Node of all the Stats");
 	root_list = SYSCTL_CHILDREN(root_node);
 
 	/* Firmware Tx Stats */
-	stat_node = SYSCTL_ADD_NODE(ctx, root_list, OID_AUTO, "fwtx",CTLFLAG_RD,
-				    NULL, "Firmware Tx Statistics");
+	stat_node = SYSCTL_ADD_NODE(ctx, root_list, OID_AUTO, "fwtx",
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Firmware Tx Statistics");
 	stat_list = SYSCTL_CHILDREN(stat_node);
 
 	SYSCTL_ADD_UQUAD(ctx, stat_list, OID_AUTO, "tx_total_sent", CTLFLAG_RD,
@@ -316,7 +314,7 @@ lio_add_hw_stats(struct lio *lio)
 
 	/* MAC Tx Stats */
 	stat_node = SYSCTL_ADD_NODE(ctx, root_list, OID_AUTO, "mactx",
-				    CTLFLAG_RD, NULL, "MAC Tx Statistics");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "MAC Tx Statistics");
 	stat_list = SYSCTL_CHILDREN(stat_node);
 
 	SYSCTL_ADD_UQUAD(ctx, stat_list, OID_AUTO, "mac_tx_total_pkts",
@@ -369,7 +367,7 @@ lio_add_hw_stats(struct lio *lio)
 
 	/* Firmware Rx Stats */
 	stat_node = SYSCTL_ADD_NODE(ctx, root_list, OID_AUTO, "fwrx",
-				    CTLFLAG_RD, NULL, "Firmware Rx Statistics");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Firmware Rx Statistics");
 	stat_list = SYSCTL_CHILDREN(stat_node);
 
 	SYSCTL_ADD_UQUAD(ctx, stat_list, OID_AUTO, "rx_total_rcvd", CTLFLAG_RD,
@@ -436,7 +434,7 @@ lio_add_hw_stats(struct lio *lio)
 			 "Firmware Rx Packets Forward Rate");
 	/* MAC Rx Stats */
 	stat_node = SYSCTL_ADD_NODE(ctx, root_list, OID_AUTO, "macrx",
-				    CTLFLAG_RD, NULL, "MAC Rx Statistics");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "MAC Rx Statistics");
 	stat_list = SYSCTL_CHILDREN(stat_node);
 
 	SYSCTL_ADD_UQUAD(ctx, stat_list, OID_AUTO, "mac_rx_total_rcvd",
@@ -483,7 +481,7 @@ lio_add_hw_stats(struct lio *lio)
 
 		snprintf(namebuf, QUEUE_NAME_LEN, "tx-%d", i);
 		queue_node = SYSCTL_ADD_NODE(ctx, root_list, OID_AUTO, namebuf,
-					     CTLFLAG_RD, NULL, "Input Queue Name");
+		    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Input Queue Name");
 		queue_list = SYSCTL_CHILDREN(queue_node);
 
 		/* packets to network port */
@@ -566,8 +564,7 @@ lio_add_hw_stats(struct lio *lio)
 
 		snprintf(namebuf, QUEUE_NAME_LEN, "rx-%d", i);
 		queue_node = SYSCTL_ADD_NODE(ctx, root_list, OID_AUTO, namebuf,
-					     CTLFLAG_RD, NULL,
-					     "Output Queue Name");
+		    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Output Queue Name");
 		queue_list = SYSCTL_CHILDREN(queue_node);
 
 		/* packets send to TCP/IP network stack */
@@ -746,9 +743,6 @@ lio_get_regs(SYSCTL_HANDLER_ARGS)
 	}
 	regbuf = malloc(sizeof(char) * LIO_REGDUMP_LEN_XXXX, M_DEVBUF,
 			M_WAITOK | M_ZERO);
-
-	if (regbuf == NULL)
-		return (error);
 
 	switch (oct->chip_id) {
 	case LIO_CN23XX_PF_VID:

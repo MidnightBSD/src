@@ -26,10 +26,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef _LINUX_KREF_H_
-#define _LINUX_KREF_H_
+#ifndef _LINUXKPI_LINUX_KREF_H_
+#define _LINUXKPI_LINUX_KREF_H_
 
 #include <sys/types.h>
 #include <sys/refcount.h>
@@ -42,6 +41,7 @@
 #include <asm/atomic.h>
 
 struct kref {
+	/* XXX In Linux this is a refcount_t */
 	atomic_t refcount;
 };
 
@@ -90,7 +90,6 @@ kref_put_lock(struct kref *kref, void (*rel)(struct kref *kref),
 	return (0);
 }
 
-
 static inline int
 kref_sub(struct kref *kref, unsigned int count,
     void (*rel)(struct kref *kref))
@@ -128,4 +127,4 @@ static inline int kref_put_mutex(struct kref *kref,
 	return 0;
 }
 
-#endif /* _LINUX_KREF_H_ */
+#endif /* _LINUXKPI_LINUX_KREF_H_ */

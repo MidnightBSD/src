@@ -53,7 +53,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_hn.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
@@ -82,6 +81,7 @@
 #include <sys/taskqueue.h>
 #include <sys/buf_ring.h>
 #include <sys/eventhandler.h>
+#include <sys/epoch.h>
 
 #include <machine/atomic.h>
 #include <machine/in_cksum.h>
@@ -591,12 +591,16 @@ SYSCTL_INT(_hw_hn, OID_AUTO, tx_agg_pkts, CTLFLAG_RDTUN,
     &hn_tx_agg_pkts, 0, "Packet transmission aggregation packet limit");
 
 /* VF list */
-SYSCTL_PROC(_hw_hn, OID_AUTO, vflist, CTLFLAG_RD | CTLTYPE_STRING,
-    0, 0, hn_vflist_sysctl, "A", "VF list");
+SYSCTL_PROC(_hw_hn, OID_AUTO, vflist,
+    CTLFLAG_RD | CTLTYPE_STRING | CTLFLAG_NEEDGIANT, 0, 0,
+    hn_vflist_sysctl, "A",
+    "VF list");
 
 /* VF mapping */
-SYSCTL_PROC(_hw_hn, OID_AUTO, vfmap, CTLFLAG_RD | CTLTYPE_STRING,
-    0, 0, hn_vfmap_sysctl, "A", "VF mapping");
+SYSCTL_PROC(_hw_hn, OID_AUTO, vfmap,
+    CTLFLAG_RD | CTLTYPE_STRING | CTLFLAG_NEEDGIANT, 0, 0,
+    hn_vfmap_sysctl, "A",
+    "VF mapping");
 
 /* Transparent VF */
 static int			hn_xpnt_vf = 1;
@@ -1107,7 +1111,8 @@ static int
 hn_ifmedia_upd(struct ifnet *ifp __unused)
 {
 
-	return EOPNOTSUPP;
+	/* Ignore since autoselect is the only defined and valid media */
+	return (0);
 }
 
 static void
@@ -2878,7 +2883,11 @@ static void
 hn_chan_rollup(struct hn_rx_ring *rxr, struct hn_tx_ring *txr)
 {
 #if defined(INET) || defined(INET6)
+	struct epoch_tracker et;
+
+	NET_EPOCH_ENTER(et);
 	tcp_lro_flush_all(&rxr->hn_lro);
+	NET_EPOCH_EXIT(et);
 #endif
 
 	/*
@@ -7454,6 +7463,7 @@ static void
 hn_nvs_handle_rxbuf(struct hn_rx_ring *rxr, struct vmbus_channel *chan,
     const struct vmbus_chanpkt_hdr *pkthdr)
 {
+	struct epoch_tracker et;
 	const struct vmbus_chanpkt_rxbuf *pkt;
 	const struct hn_nvs_hdr *nvs_hdr;
 	int count, i, hlen;
@@ -7491,6 +7501,7 @@ hn_nvs_handle_rxbuf(struct hn_rx_ring *rxr, struct vmbus_channel *chan,
 		return;
 	}
 
+	NET_EPOCH_ENTER(et);
 	/* Each range represents 1 RNDIS pkt that contains 1 Ethernet frame */
 	for (i = 0; i < count; ++i) {
 		int ofs, len;
@@ -7506,6 +7517,7 @@ hn_nvs_handle_rxbuf(struct hn_rx_ring *rxr, struct vmbus_channel *chan,
 		rxr->rsc.is_last = (i == (count - 1));
 		hn_rndis_rxpkt(rxr, rxr->hn_rxbuf + ofs, len);
 	}
+	NET_EPOCH_EXIT(et);
 
 	/*
 	 * Ack the consumed RXBUF associated w/ this channel packet,

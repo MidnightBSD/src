@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2012-2014 Intel Corporation
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
@@ -49,7 +48,6 @@ struct nvme_consumer nvme_consumer[NVME_MAX_CONSUMERS];
 #define	INVALID_CONSUMER_ID	0xFFFF
 
 int32_t		nvme_retry_count;
-
 
 MALLOC_DEFINE(M_NVME, "nvme", "nvme(4) memory allocations");
 
@@ -100,7 +98,7 @@ nvme_dump_command(struct nvme_command *cmd)
 void
 nvme_dump_completion(struct nvme_completion *cpl)
 {
-	uint8_t p, sc, sct, m, dnr;
+	uint8_t p, sc, sct, crd, m, dnr;
 	uint16_t status;
 
 	status = le16toh(cpl->status);
@@ -108,13 +106,14 @@ nvme_dump_completion(struct nvme_completion *cpl)
 	p = NVME_STATUS_GET_P(status);
 	sc = NVME_STATUS_GET_SC(status);
 	sct = NVME_STATUS_GET_SCT(status);
+	crd = NVME_STATUS_GET_CRD( status);
 	m = NVME_STATUS_GET_M(status);
 	dnr = NVME_STATUS_GET_DNR(status);
 
 	printf("cdw0:%08x sqhd:%04x sqid:%04x "
-	    "cid:%04x p:%x sc:%02x sct:%x m:%x dnr:%x\n",
+	    "cid:%04x p:%x sc:%02x sct:%x crd:%x m:%x dnr:%x\n",
 	    le32toh(cpl->cdw0), le16toh(cpl->sqhd), le16toh(cpl->sqid),
-	    cpl->cid, p, sc, sct, m, dnr);
+	    cpl->cid, p, sc, sct, crd, m, dnr);
 }
 
 int

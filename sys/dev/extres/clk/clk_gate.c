@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
-
 #include <sys/param.h>
 #include <sys/conf.h>
 #include <sys/bus.h>
@@ -52,6 +50,7 @@
 
 static int clknode_gate_init(struct clknode *clk, device_t dev);
 static int clknode_gate_set_gate(struct clknode *clk, bool enable);
+static int clknode_gate_get_gate(struct clknode *clk, bool *enable);
 struct clknode_gate_sc {
 	uint32_t	offset;
 	uint32_t	shift;
@@ -59,13 +58,13 @@ struct clknode_gate_sc {
 	uint32_t	on_value;
 	uint32_t	off_value;
 	int		gate_flags;
-	bool		ungated;
 };
 
 static clknode_method_t clknode_gate_methods[] = {
 	/* Device interface */
 	CLKNODEMETHOD(clknode_init,	clknode_gate_init),
 	CLKNODEMETHOD(clknode_set_gate,	clknode_gate_set_gate),
+	CLKNODEMETHOD(clknode_get_gate,	clknode_gate_get_gate),
 	CLKNODEMETHOD_END
 };
 DEFINE_CLASS_1(clknode_gate, clknode_gate_class, clknode_gate_methods,
@@ -74,18 +73,7 @@ DEFINE_CLASS_1(clknode_gate, clknode_gate_class, clknode_gate_methods,
 static int
 clknode_gate_init(struct clknode *clk, device_t dev)
 {
-	uint32_t reg;
-	struct clknode_gate_sc *sc;
-	int rv;
 
-	sc = clknode_get_softc(clk);
-	DEVICE_LOCK(clk);
-	rv = RD4(clk, sc->offset, &reg);
-	DEVICE_UNLOCK(clk);
-	if (rv != 0)
-		return (rv);
-	reg = (reg >> sc->shift) & sc->mask;
-	sc->ungated = reg == sc->on_value ? 1 : 0;
 	clknode_init_parent_idx(clk, 0);
 	return(0);
 }
@@ -98,16 +86,33 @@ clknode_gate_set_gate(struct clknode *clk, bool enable)
 	int rv;
 
 	sc = clknode_get_softc(clk);
-	sc->ungated = enable;
 	DEVICE_LOCK(clk);
 	rv = MD4(clk, sc->offset, sc->mask << sc->shift,
-	    (sc->ungated ? sc->on_value : sc->off_value) << sc->shift);
+	    (enable ? sc->on_value : sc->off_value) << sc->shift);
 	if (rv != 0) {
 		DEVICE_UNLOCK(clk);
 		return (rv);
 	}
 	RD4(clk, sc->offset, &reg);
 	DEVICE_UNLOCK(clk);
+	return(0);
+}
+
+static int
+clknode_gate_get_gate(struct clknode *clk, bool *enabled)
+{
+	uint32_t reg;
+	struct clknode_gate_sc *sc;
+	int rv;
+
+	sc = clknode_get_softc(clk);
+	DEVICE_LOCK(clk);
+	rv = RD4(clk, sc->offset, &reg);
+	DEVICE_UNLOCK(clk);
+	if (rv != 0)
+		return (rv);
+	reg = (reg >> sc->shift) & sc->mask;
+	*enabled = reg == sc->on_value;
 	return(0);
 }
 

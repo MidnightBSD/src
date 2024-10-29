@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017 Tom Jones <tj@enoti.me>
  * All rights reserved.
@@ -43,7 +43,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -342,12 +341,14 @@ static char *chvgpio_hids[] = {
 static int
 chvgpio_probe(device_t dev)
 {
-    if (acpi_disabled("chvgpio") ||
-    ACPI_ID_PROBE(device_get_parent(dev), dev, chvgpio_hids) == NULL)
+    int rv;
+    
+    if (acpi_disabled("chvgpio"))
         return (ENXIO);
-
-    device_set_desc(dev, "Intel Cherry View GPIO");
-    return (0);
+    rv = ACPI_ID_PROBE(device_get_parent(dev), dev, chvgpio_hids, NULL);
+    if (rv <= 0)
+	device_set_desc(dev, "Intel Cherry View GPIO");
+    return (rv);
 }
 
 static int

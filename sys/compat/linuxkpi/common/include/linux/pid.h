@@ -22,11 +22,10 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
-#ifndef	_LINUX_PID_H_
-#define	_LINUX_PID_H_
+#ifndef	_LINUXKPI_LINUX_PID_H_
+#define	_LINUXKPI_LINUX_PID_H_
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -66,4 +65,4 @@ struct task_struct;
 extern struct task_struct *linux_pid_task(pid_t);
 extern struct task_struct *linux_get_pid_task(pid_t);
 
-#endif					/* _LINUX_PID_H_ */
+#endif					/* _LINUXKPI_LINUX_PID_H_ */

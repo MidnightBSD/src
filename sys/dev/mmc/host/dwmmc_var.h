@@ -26,17 +26,18 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef DEV_MMC_HOST_DWMMC_VAR_H
 #define DEV_MMC_HOST_DWMMC_VAR_H
 
-#ifdef EXT_RESOURCES
 #include <dev/extres/clk/clk.h>
 #include <dev/extres/hwreset/hwreset.h>
 #include <dev/extres/regulator/regulator.h>
-#endif
+
+#include "opt_mmccam.h"
+
+#include <cam/mmc/mmc_sim.h>
 
 enum {
 	HWTYPE_NONE,
@@ -51,15 +52,19 @@ struct dwmmc_softc {
 	device_t		dev;
 	void			*intr_cookie;
 	struct mmc_host		host;
-	struct mmc_fdt_helper	mmc_helper;
+	struct mmc_helper	mmc_helper;
 	struct mtx		sc_mtx;
+#ifdef MMCCAM
+	union ccb *		ccb;
+	struct mmc_sim		mmc_sim;
+#else
 	struct mmc_request	*req;
+#endif
 	struct mmc_command	*curcmd;
 	uint32_t		flags;
 	uint32_t		hwtype;
 	uint32_t		use_auto_stop;
 	uint32_t		use_pio;
-	uint32_t		pwren_inverted;
 	device_t		child;
 	struct task		card_task;	/* Card presence check task */
 	struct timeout_task	card_delayed_task;/* Card insert delayed task */
@@ -83,13 +88,11 @@ struct dwmmc_softc {
 	uint32_t		sdr_timing;
 	uint32_t		ddr_timing;
 
-#ifdef EXT_RESOURCES
 	clk_t			biu;
 	clk_t			ciu;
 	hwreset_t		hwreset;
 	regulator_t		vmmc;
 	regulator_t		vqmmc;
-#endif
 };
 
 DECLARE_CLASS(dwmmc_driver);

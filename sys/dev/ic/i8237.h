@@ -1,6 +1,5 @@
 /*
  * Intel 8237 DMA Controller
- *
  */
 
 #define	DMA37MD_SINGLE	0x40	/* single pass mode */

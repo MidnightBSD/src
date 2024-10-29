@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/endian.h>
 
 #ifdef _KERNEL
@@ -123,7 +122,6 @@ bhnd_nvram_btxt_probe(struct bhnd_nvram_io *io)
 	return (BHND_NVRAM_DATA_PROBE_MAYBE);
 }
 
-
 /**
  * Parser states for bhnd_nvram_bcm_getvar_direct_common().
  */
@@ -202,7 +200,6 @@ bhnd_nvram_btxt_getvar_direct(struct bhnd_nvram_io *io, const char *name,
 				/* Start name matching */
 				pstate = BTXT_PARSE_KEY;
 			}
-
 
 			break;
 
@@ -453,7 +450,7 @@ bhnd_nvram_btxt_init(struct bhnd_nvram_btxt *btxt, struct bhnd_nvram_io *src)
 	int			 error;
 
 	BHND_NV_ASSERT(btxt->data == NULL, ("btxt data already allocated"));
-	
+
 	if ((btxt->data = bhnd_nvram_iobuf_copy(src)) == NULL)
 		return (ENOMEM);
 
@@ -494,7 +491,7 @@ bhnd_nvram_btxt_init(struct bhnd_nvram_btxt *btxt, struct bhnd_nvram_io *src)
 		    &line_len, &env_len);
 		if (error)
 			return (error);
-	
+
 		/* EOF? */
 		if (env_len == 0) {
 			BHND_NV_ASSERT(io_offset == io_size,
@@ -679,9 +676,9 @@ bhnd_nvram_btxt_getvar_ptr(struct bhnd_nvram_data *nv, void *cookiep,
 	size_t			 io_offset, io_size;
 	size_t			 line_len, env_len;
 	int			 error;
-	
+
 	btxt = (struct bhnd_nvram_btxt *)nv;
-	
+
 	io_size = bhnd_nvram_io_getsize(btxt->data);
 	io_offset = bhnd_nvram_btxt_cookiep_to_offset(btxt, cookiep);
 
@@ -725,9 +722,9 @@ bhnd_nvram_btxt_getvar_name(struct bhnd_nvram_data *nv, void *cookiep)
 	const void		*ptr;
 	size_t			 io_offset, io_size;
 	int			 error;
-	
+
 	btxt = (struct bhnd_nvram_btxt *)nv;
-	
+
 	io_size = bhnd_nvram_io_getsize(btxt->data);
 	io_offset = bhnd_nvram_btxt_cookiep_to_offset(btxt, cookiep);
 
@@ -900,7 +897,7 @@ bhnd_nvram_btxt_seek_next(struct bhnd_nvram_io *io, size_t *offset)
 		/* Skip entire comment line */
 		if (c == '#') {
 			size_t line_off = *offset + (p - baseptr);
-	
+
 			if ((error = bhnd_nvram_btxt_seek_eol(io, &line_off)))
 				return (error);
 

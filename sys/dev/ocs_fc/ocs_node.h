@@ -27,7 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
@@ -37,7 +36,6 @@
 
 #if !defined(__OCS_NODE_H__)
 #define __OCS_NODE_H__
-
 
 #define node_sm_trace()  \
 	do { \
@@ -212,7 +210,6 @@ extern void ocs_node_save_sparms(ocs_node_t *node, void *payload);
 extern void ocs_node_post_event(ocs_node_t *node, ocs_sm_event_t evt, void *arg);
 extern void ocs_node_transition(ocs_node_t *node, ocs_sm_function_t state, void *data);
 extern void *__ocs_node_common(const char *funcname, ocs_sm_ctx_t *ctx, ocs_sm_event_t evt, void *arg);
-
 
 extern void ocs_node_initiate_cleanup(ocs_node_t *node);
 extern int ocs_ddump_node(ocs_textbuf_t *textbuf, ocs_node_t *node);

@@ -24,7 +24,6 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
 
 #ifndef __RDMA_COMMON__
@@ -56,13 +55,11 @@
 
 #define RDMA_TASK_TYPE (PROTOCOLID_ROCE)
 
-
 struct rdma_srq_id
 {
         __le16 srq_idx /* SRQ index */;
         __le16 opaque_fid;
 };
-
 
 struct rdma_srq_producers
 {
@@ -77,7 +74,6 @@ struct rdma_cnqe
 {
 	struct regpair cq_handle;
 };
-
 
 struct rdma_cqe_responder
 {
@@ -147,9 +143,6 @@ union rdma_cqe
 	struct rdma_cqe_common cmn;
 };
 
-
-
-
 /*
  * CQE requester status enumeration
  */
@@ -170,8 +163,6 @@ enum rdma_cqe_requester_status_enum
 	MAX_RDMA_CQE_REQUESTER_STATUS_ENUM
 };
 
-
-
 /*
  * CQE responder status enumeration
  */
@@ -188,7 +179,6 @@ enum rdma_cqe_responder_status_enum
 	MAX_RDMA_CQE_RESPONDER_STATUS_ENUM
 };
 
-
 /*
  * CQE type enumeration
  */
@@ -201,7 +191,6 @@ enum rdma_cqe_type
 	MAX_RDMA_CQE_TYPE
 };
 
-
 /*
  * DIF Block size options
  */
@@ -212,7 +201,6 @@ enum rdma_dif_block_size
 	MAX_RDMA_DIF_BLOCK_SIZE
 };
 
-
 /*
  * DIF CRC initial value
  */
@@ -222,7 +210,6 @@ enum rdma_dif_crc_seed
 	RDMA_DIF_CRC_SEED_FFFF=1,
 	MAX_RDMA_DIF_CRC_SEED
 };
-
 
 /*
  * RDMA DIF Error Result Structure
@@ -245,7 +232,6 @@ struct rdma_dif_error_result
 	u8 reserved1[55] /* Pad to 64 bytes to ensure efficient word line writing. */;
 };
 
-
 /*
  * DIF IO direction
  */
@@ -256,7 +242,6 @@ enum rdma_dif_io_direction_flg
 	MAX_RDMA_DIF_IO_DIRECTION_FLG
 };
 
-
 /*
  * RDMA DIF Runt Result Structure
  */
@@ -265,7 +250,6 @@ struct rdma_dif_runt_result
 	__le16 guard_tag /* CRC result of received IO. */;
 	__le16 reserved[3];
 };
-
 
 /*
  * memory window type enumeration
@@ -276,7 +260,6 @@ enum rdma_mw_type
 	RDMA_MW_TYPE_2A,
 	MAX_RDMA_MW_TYPE
 };
-
 
 struct rdma_rq_sge
 {
@@ -290,7 +273,6 @@ struct rdma_rq_sge
 #define RDMA_RQ_SGE_RESERVED0_MASK  0x7
 #define RDMA_RQ_SGE_RESERVED0_SHIFT 29
 };
-
 
 struct rdma_sq_atomic_wqe
 {
@@ -322,7 +304,6 @@ struct rdma_sq_atomic_wqe
 	struct regpair swap_data /* Swap or add data */;
 };
 
-
 /*
  * First element (16 bytes) of atomic wqe
  */
@@ -349,7 +330,6 @@ struct rdma_sq_atomic_wqe_1st
 	u8 prev_wqe_size /* Previous WQE size in 16B chunks */;
 };
 
-
 /*
  * Second element (16 bytes) of atomic wqe
  */
@@ -360,7 +340,6 @@ struct rdma_sq_atomic_wqe_2nd
 	__le32 reserved2;
 };
 
-
 /*
  * Third element (16 bytes) of atomic wqe
  */
@@ -369,7 +348,6 @@ struct rdma_sq_atomic_wqe_3rd
 	struct regpair cmp_data /* Data to compare in case of ATOMIC_CMP_AND_SWAP */;
 	struct regpair swap_data /* Swap or add data */;
 };
-
 
 struct rdma_sq_bind_wqe
 {
@@ -418,7 +396,6 @@ struct rdma_sq_bind_wqe
 	__le32 reserved4;
 };
 
-
 /*
  * First element (16 bytes) of bind wqe
  */
@@ -443,7 +420,6 @@ struct rdma_sq_bind_wqe_1st
 	u8 wqe_size /* Size of WQE in 16B chunks */;
 	u8 prev_wqe_size /* Previous WQE size in 16B chunks */;
 };
-
 
 /*
  * Second element (16 bytes) of bind wqe
@@ -477,7 +453,6 @@ struct rdma_sq_bind_wqe_2nd
 	__le32 reserved4;
 };
 
-
 /*
  * Structure with only the SQ WQE common fields. Size is of one SQ element (16B)
  */
@@ -501,7 +476,6 @@ struct rdma_sq_common_wqe
 	u8 wqe_size /* Size of WQE in 16B chunks including all SGEs or inline data. In case there are SGEs: set to number of SGEs + 1. In case of inline data: set to the whole number of 16B which contain the inline data + 1. */;
 	u8 prev_wqe_size /* Previous WQE size in 16B chunks */;
 };
-
 
 struct rdma_sq_fmr_wqe
 {
@@ -577,7 +551,6 @@ struct rdma_sq_fmr_wqe
 	__le32 Reserved5;
 };
 
-
 /*
  * First element (16 bytes) of fmr wqe
  */
@@ -604,7 +577,6 @@ struct rdma_sq_fmr_wqe_1st
 	u8 wqe_size /* Size of WQE in 16B chunks */;
 	u8 prev_wqe_size /* Previous WQE size in 16B chunks */;
 };
-
 
 /*
  * Second element (16 bytes) of fmr wqe
@@ -639,7 +611,6 @@ struct rdma_sq_fmr_wqe_2nd
 	struct regpair pbl_addr /* Address of PBL */;
 };
 
-
 /*
  * Third element (16 bytes) of fmr wqe
  */
@@ -669,7 +640,6 @@ struct rdma_sq_fmr_wqe_3rd
 	__le32 Reserved5;
 };
 
-
 struct rdma_sq_local_inv_wqe
 {
 	struct regpair reserved;
@@ -693,7 +663,6 @@ struct rdma_sq_local_inv_wqe
 	u8 wqe_size /* Size of WQE in 16B chunks */;
 	u8 prev_wqe_size /* Previous WQE size in 16B chunks */;
 };
-
 
 struct rdma_sq_rdma_wqe
 {
@@ -734,7 +703,6 @@ struct rdma_sq_rdma_wqe
 	u8 reserved2[3];
 };
 
-
 /*
  * First element (16 bytes) of rdma wqe
  */
@@ -765,7 +733,6 @@ struct rdma_sq_rdma_wqe_1st
 	u8 prev_wqe_size /* Previous WQE size in 16B chunks */;
 };
 
-
 /*
  * Second element (16 bytes) of rdma wqe
  */
@@ -784,7 +751,6 @@ struct rdma_sq_rdma_wqe_2nd
 #define RDMA_SQ_RDMA_WQE_2ND_RESERVED1_SHIFT             3
 	u8 reserved2[3];
 };
-
 
 /*
  * SQ WQE req type enumeration
@@ -805,7 +771,6 @@ enum rdma_sq_req_type
 	RDMA_SQ_REQ_TYPE_INVALID,
 	MAX_RDMA_SQ_REQ_TYPE
 };
-
 
 struct rdma_sq_send_wqe
 {
@@ -833,7 +798,6 @@ struct rdma_sq_send_wqe
 	__le32 reserved1[4];
 };
 
-
 struct rdma_sq_send_wqe_1st
 {
 	__le32 inv_key_or_imm_data /* the r_key to invalidate in case of SEND_WITH_INVALIDATE, or the immediate data in case of SEND_WITH_IMM */;
@@ -857,12 +821,10 @@ struct rdma_sq_send_wqe_1st
 	u8 prev_wqe_size /* Previous WQE size in 16B chunks */;
 };
 
-
 struct rdma_sq_send_wqe_2st
 {
 	__le32 reserved1[4];
 };
-
 
 struct rdma_sq_sge
 {
@@ -870,7 +832,6 @@ struct rdma_sq_sge
 	struct regpair addr;
 	__le32 l_key;
 };
-
 
 struct rdma_srq_wqe_header
 {
@@ -895,9 +856,6 @@ union rdma_srq_elm
 	struct rdma_srq_sge sge;
 };
 
-
-
-
 /*
  * Rdma doorbell data for flags update
  */
@@ -908,7 +866,6 @@ struct rdma_pwm_flags_data
 	u8 reserved;
 };
 
-
 /*
  * Rdma doorbell data for SQ and RQ
  */
@@ -918,13 +875,11 @@ struct rdma_pwm_val16_data
 	__le16 value /* aggregated value to update */;
 };
 
-
 union rdma_pwm_val16_data_union
 {
 	struct rdma_pwm_val16_data as_struct /* Parameters field */;
 	__le32 as_dword;
 };
-
 
 /*
  * Rdma doorbell data for CQ
@@ -946,7 +901,6 @@ struct rdma_pwm_val32_data
 #define RDMA_PWM_VAL32_DATA_RESERVED_SHIFT           5
 	__le32 value /* aggregated value to update */;
 };
-
 
 union rdma_pwm_val32_data_union
 {

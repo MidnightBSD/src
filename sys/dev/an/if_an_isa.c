@@ -40,7 +40,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 
 #ifdef INET

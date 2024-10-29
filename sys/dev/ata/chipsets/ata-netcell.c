@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 - 2008 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/systm.h>
@@ -89,11 +88,11 @@ static int
 ata_netcell_ch_attach(device_t dev)
 {
     struct ata_channel *ch = device_get_softc(dev);
- 
+
     /* setup the usual register normal pci style */
     if (ata_pci_ch_attach(dev))
 	return ENXIO;
- 
+
     /* the NetCell only supports 16 bit PIO transfers */
     ch->flags |= ATA_USE_16BIT;
     /* It is a hardware RAID without cable. */

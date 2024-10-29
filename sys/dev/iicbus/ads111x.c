@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 
 #include <sys/param.h>
@@ -406,16 +405,18 @@ ads111x_setup_channel(struct ads111x_softc *sc, int chan, int gainidx, int ratei
 	devtree = device_get_sysctl_tree(sc->dev);
 	snprintf(chanstr, sizeof(chanstr), "%d", chan);
 	chantree = SYSCTL_ADD_NODE(ctx, SYSCTL_CHILDREN(devtree), OID_AUTO,
-	    chanstr, CTLFLAG_RD, NULL, "channel data");
+	    chanstr, CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "channel data");
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(chantree), OID_AUTO,
-	    "gain_index", CTLTYPE_INT | CTLFLAG_RWTUN, sc, chan,
-	    ads111x_sysctl_gainidx, "I", "programmable gain amp setting, 0-7");
+	    "gain_index", CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_NEEDGIANT,
+	    sc, chan, ads111x_sysctl_gainidx, "I",
+	    "programmable gain amp setting, 0-7");
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(chantree), OID_AUTO,
-	    "rate_index", CTLTYPE_INT | CTLFLAG_RWTUN, sc, chan,
-	    ads111x_sysctl_rateidx, "I", "sample rate setting, 0-7");
+	    "rate_index", CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_NEEDGIANT,
+	    sc, chan, ads111x_sysctl_rateidx, "I", "sample rate setting, 0-7");
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(chantree), OID_AUTO,
-	    "voltage", CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_SKIP, sc, chan,
-	    ads111x_sysctl_voltage, "I", "sampled voltage in microvolts");
+	    "voltage",
+	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_SKIP | CTLFLAG_NEEDGIANT, sc,
+	    chan, ads111x_sysctl_voltage, "I", "sampled voltage in microvolts");
 
 	c->configured = true;
 }
@@ -453,12 +454,15 @@ ads111x_add_channels(struct ads111x_softc *sc)
 	name = device_get_name(sc->dev);
 	unit = device_get_unit(sc->dev);
 	for (chan = 0; chan < sc->chipinfo->numchan; ++chan) {
+		char resname[16];
 		found = false;
 		gainidx = DEFAULT_GAINIDX;
 		rateidx = DEFAULT_RATEIDX;
-		if (resource_int_value(name, unit, "gain_index", &gainidx) == 0)
+		snprintf(resname, sizeof(resname), "%d.gain_index", chan);
+		if (resource_int_value(name, unit, resname, &gainidx) == 0)
 			found = true;
-		if (resource_int_value(name, unit, "rate_index", &gainidx) == 0)
+		snprintf(resname, sizeof(resname), "%d.rate_index", chan);
+		if (resource_int_value(name, unit, resname, &rateidx) == 0)
 			found = true;
 		if (found) {
 			ads111x_setup_channel(sc, chan, gainidx, rateidx);
@@ -519,7 +523,11 @@ ads111x_probe(device_t dev)
 	info = ads111x_find_chipinfo(dev);
 	if (info != NULL) {
 		device_set_desc(dev, info->name);
+#ifdef FDT
 		return (BUS_PROBE_DEFAULT);
+#else
+		return (BUS_PROBE_NOWILDCARD);
+#endif
 	}
 
 	return (ENXIO);
@@ -555,13 +563,13 @@ ads111x_attach(device_t dev)
 	ctx = device_get_sysctl_ctx(dev);
 	tree = device_get_sysctl_tree(dev);
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-	    "config", CTLTYPE_INT | CTLFLAG_RWTUN, sc, 0,
+	    "config", CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_NEEDGIANT, sc, 0,
 	    ads111x_sysctl_config, "I", "configuration register word");
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-	    "lo_thresh", CTLTYPE_INT | CTLFLAG_RWTUN, sc, 0,
+	    "lo_thresh", CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_NEEDGIANT, sc, 0,
 	    ads111x_sysctl_lothresh, "I", "comparator low threshold");
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-	    "hi_thresh", CTLTYPE_INT | CTLFLAG_RWTUN, sc, 0,
+	    "hi_thresh", CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_NEEDGIANT, sc, 0,
 	    ads111x_sysctl_hithresh, "I", "comparator high threshold");
 
 	/* Set up channels based on metadata or default config. */

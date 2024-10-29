@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <contrib/dev/acpica/include/acpi.h>
 
 void

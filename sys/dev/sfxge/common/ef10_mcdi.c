@@ -29,19 +29,16 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "efx.h"
 #include "efx_impl.h"
 
-
-#if EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD
+#if EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD || EFSYS_OPT_MEDFORD2
 
 #if EFSYS_OPT_MCDI
 
 #ifndef WITH_MCDI_V2
 #error "WITH_MCDI_V2 required for EF10 MCDIv2 commands."
 #endif
-
 
 	__checkReturn	efx_rc_t
 ef10_mcdi_init(
@@ -54,7 +51,8 @@ ef10_mcdi_init(
 	efx_rc_t rc;
 
 	EFSYS_ASSERT(enp->en_family == EFX_FAMILY_HUNTINGTON ||
-		    enp->en_family == EFX_FAMILY_MEDFORD);
+	    enp->en_family == EFX_FAMILY_MEDFORD ||
+	    enp->en_family == EFX_FAMILY_MEDFORD2);
 	EFSYS_ASSERT(enp->en_features & EFX_FEATURE_MCDI_DMA);
 
 	/*
@@ -132,7 +130,7 @@ ef10_mcdi_get_timeout(
 	case MC_CMD_NVRAM_ERASE:
 	case MC_CMD_LICENSING_V3:
 	case MC_CMD_NVRAM_UPDATE_FINISH:
-		if (encp->enc_fw_verified_nvram_update_required != B_FALSE) {
+		if (encp->enc_nvram_update_verify_result_supported != B_FALSE) {
 			/*
 			 * Potentially longer running commands, which firmware
 			 * may choose to process in a background thread.
@@ -161,7 +159,8 @@ ef10_mcdi_send_request(
 	unsigned int pos;
 
 	EFSYS_ASSERT(enp->en_family == EFX_FAMILY_HUNTINGTON ||
-		    enp->en_family == EFX_FAMILY_MEDFORD);
+	    enp->en_family == EFX_FAMILY_MEDFORD ||
+	    enp->en_family == EFX_FAMILY_MEDFORD2);
 
 	/* Write the header */
 	for (pos = 0; pos < hdr_len; pos += sizeof (efx_dword_t)) {
@@ -212,13 +211,17 @@ ef10_mcdi_read_response(
 {
 	const efx_mcdi_transport_t *emtp = enp->en_mcdi.em_emtp;
 	efsys_mem_t *esmp = emtp->emt_dma_mem;
-	unsigned int pos;
+	unsigned int pos = 0;
 	efx_dword_t data;
+	size_t remaining = length;
 
-	for (pos = 0; pos < length; pos += sizeof (efx_dword_t)) {
+	while (remaining > 0) {
+		size_t chunk = MIN(remaining, sizeof (data));
+
 		EFSYS_MEM_READD(esmp, offset + pos, &data);
-		memcpy((uint8_t *)bufferp + pos, &data,
-		    MIN(sizeof (data), length - pos));
+		memcpy((uint8_t *)bufferp + pos, &data, chunk);
+		pos += chunk;
+		remaining -= chunk;
 	}
 }
 
@@ -280,7 +283,8 @@ ef10_mcdi_feature_supported(
 	efx_rc_t rc;
 
 	EFSYS_ASSERT(enp->en_family == EFX_FAMILY_HUNTINGTON ||
-		    enp->en_family == EFX_FAMILY_MEDFORD);
+	    enp->en_family == EFX_FAMILY_MEDFORD ||
+	    enp->en_family == EFX_FAMILY_MEDFORD2);
 
 	/*
 	 * Use privilege mask state at MCDI attach.
@@ -341,4 +345,4 @@ fail1:
 
 #endif	/* EFSYS_OPT_MCDI */
 
-#endif	/* EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD */
+#endif	/* EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD || EFSYS_OPT_MEDFORD2 */

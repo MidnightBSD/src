@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011-2013 Qlogic Corporation
  * All rights reserved.
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "qla_os.h"
 #include "qla_reg.h"
 #include "qla_hw.h"
@@ -93,7 +92,6 @@ qla_eioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 	pci_dev= ha->pci_dev;
 
         switch(cmd) {
-
         case QLA_RDWR_REG:
 
                 rv = (qla_reg_val_t *)data;
@@ -124,7 +122,6 @@ qla_eioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
                         rval = ENXIO;
                 break;
 
-
 	case QLA_ERASE_FLASH:
 		if (qla_erase_flash(ha, ((qla_erase_flash_t *)data)->off,
 			((qla_erase_flash_t *)data)->size))
@@ -146,4 +143,3 @@ qla_eioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 
         return rval;
 }
-

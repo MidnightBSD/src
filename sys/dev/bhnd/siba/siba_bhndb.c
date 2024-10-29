@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>
@@ -188,7 +187,7 @@ siba_bhndb_suspend_child(device_t dev, device_t child)
 
 	/* Suspend resource references to the child's config registers */
 	siba_bhndb_suspend_cfgblocks(dev, dinfo);
-	
+
 	return (0);
 }
 
@@ -290,7 +289,7 @@ DEFINE_CLASS_2(bhnd, siba_bhndb_driver, siba_bhndb_methods,
     sizeof(struct siba_softc), bhnd_bhndb_driver, siba_driver);
 
 DRIVER_MODULE(siba_bhndb, bhndb, siba_bhndb_driver, bhnd_devclass, NULL, NULL);
- 
+
 MODULE_VERSION(siba_bhndb, 1);
 MODULE_DEPEND(siba_bhndb, siba, 1, 1, 1);
 MODULE_DEPEND(siba_bhndb, bhnd, 1, 1, 1);

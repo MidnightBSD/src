@@ -73,21 +73,7 @@ KMODISLOADED?=	/sbin/kldstat -q -n
 OBJCOPY?=	objcopy
 
 .include "kmod.opts.mk"
-
-# Search for kernel source tree in standard places.
-.if empty(KERNBUILDDIR)
-.if !defined(SYSDIR)
-.for _dir in ${SRCTOP:D${SRCTOP}/sys} \
-    ${.CURDIR}/../.. ${.CURDIR}/../../.. /sys /usr/src/sys
-.if !defined(SYSDIR) && exists(${_dir}/kern/)
-SYSDIR=	${_dir:tA}
-.endif
-.endfor
-.endif
-.if !defined(SYSDIR) || !exists(${SYSDIR}/kern/)
-.error "can't find kernel source tree"
-.endif
-.endif
+.include <bsd.sysdir.mk>
 
 .SUFFIXES: .out .o .c .cc .cxx .C .y .l .s .S .m
 
@@ -101,15 +87,16 @@ __KLD_SHARED=no
 .if !empty(CFLAGS:M-O[23s]) && empty(CFLAGS:M-fno-strict-aliasing)
 CFLAGS+=	-fno-strict-aliasing
 .endif
-.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} < 50000
-WERROR?=	-Wno-error
-.else
 WERROR?=	-Werror
-.endif
 
 LINUXKPI_GENSRCS+= \
+	backlight_if.h \
 	bus_if.h \
 	device_if.h \
+	iicbus_if.h \
+	iicbb_if.h \
+	lkpi_iic_if.c \
+	lkpi_iic_if.h \
 	pci_if.h \
 	pci_iov_if.h \
 	pcib_if.h \
@@ -117,6 +104,10 @@ LINUXKPI_GENSRCS+= \
 	usb_if.h \
 	opt_usb.h \
 	opt_stack.h
+
+LINUXKPI_INCLUDES+= \
+	-I${SYSDIR}/compat/linuxkpi/common/include \
+	-I${SYSDIR}/compat/linuxkpi/dummy/include
 
 CFLAGS+=	${WERROR}
 CFLAGS+=	-D_KERNEL
@@ -130,6 +121,9 @@ NOSTDINC=	-nostdinc
 CFLAGS:=	${CFLAGS:N-I*} ${NOSTDINC} ${INCLMAGIC} ${CFLAGS:M-I*}
 .if defined(KERNBUILDDIR)
 CFLAGS+=	-DHAVE_KERNEL_OPTION_HEADERS -include ${KERNBUILDDIR}/opt_global.h
+.else
+SRCS+=		opt_global.h
+CFLAGS+=	-include ${.OBJDIR}/opt_global.h
 .endif
 
 # Add -I paths for system headers.  Individual module makefiles don't
@@ -152,18 +146,24 @@ CFLAGS.gcc+= --param large-function-growth=1000
 # share/mk/src.sys.mk, but the following is important for out-of-tree modules
 # (e.g. ports).
 CFLAGS+=	-fno-common
-LDFLAGS+=	-d -warn-common
+.if ${LINKER_TYPE} != "lld" || ${LINKER_VERSION} < 140000
+# lld >= 14 warns that -d is deprecated, and will be removed.
+LDFLAGS+=	-d
+.endif
+LDFLAGS+=	-warn-common
 
 .if defined(LINKER_FEATURES) && ${LINKER_FEATURES:Mbuild-id}
 LDFLAGS+=	--build-id=sha1
 .endif
 
 CFLAGS+=	${DEBUG_FLAGS}
-.if ${MACHINE_CPUARCH} == amd64
+.if ${MACHINE_CPUARCH} == aarch64 || ${MACHINE_CPUARCH} == amd64 || \
+    ${MACHINE_CPUARCH} == riscv
 CFLAGS+=	-fno-omit-frame-pointer -mno-omit-leaf-frame-pointer
 .endif
 
-.if ${MACHINE_CPUARCH} == "aarch64" || ${MACHINE_CPUARCH} == "riscv"
+.if ${MACHINE_CPUARCH} == "aarch64" || ${MACHINE_CPUARCH} == "riscv" || \
+    ${MACHINE_CPUARCH} == "powerpc"
 CFLAGS+=	-fPIC
 .endif
 
@@ -177,17 +177,17 @@ LDFLAGS+=	--no-relax
 # Temporary workaround for PR 196407, which contains the fascinating details.
 # Don't allow clang to use fpu instructions or registers in kernel modules.
 .if ${MACHINE_CPUARCH} == arm
-.if ${COMPILER_VERSION} < 30800
-CFLAGS.clang+=	-mllvm -arm-use-movt=0
-.else
 CFLAGS.clang+=	-mno-movt
-.endif
 CFLAGS.clang+=	-mfpu=none
 CFLAGS+=	-funwind-tables
 .endif
 
 .if ${MACHINE_CPUARCH} == powerpc
 CFLAGS+=	-mlongcall -fno-omit-frame-pointer
+.if ${LINKER_TYPE} == "lld"
+# TOC optimization in LLD (9.0) currently breaks kernel modules, so disable it
+LDFLAGS+=	--no-toc-optimize
+.endif
 .endif
 
 .if ${MACHINE_CPUARCH} == mips
@@ -207,19 +207,13 @@ SRCS+=	${KMOD:S/$/.c/}
 CLEANFILES+=	${KMOD:S/$/.c/}
 
 .for _firmw in ${FIRMWS}
-${_firmw:C/\:.*$/.fwo/:T}:	${_firmw:C/\:.*$//}
+${_firmw:C/\:.*$/.fwo/:T}:	${_firmw:C/\:.*$//} ${SYSDIR}/kern/firmw.S
 	@${ECHO} ${_firmw:C/\:.*$//} ${.ALLSRC:M*${_firmw:C/\:.*$//}}
-	@if [ -e ${_firmw:C/\:.*$//} ]; then			\
-		${LD} -b binary --no-warn-mismatch ${_LDFLAGS}	\
-		    -m ${LD_EMULATION} -r -d			\
-		    -o ${.TARGET} ${_firmw:C/\:.*$//};		\
-	else							\
-		ln -s ${.ALLSRC:M*${_firmw:C/\:.*$//}} ${_firmw:C/\:.*$//}; \
-		${LD} -b binary --no-warn-mismatch ${_LDFLAGS}	\
-		    -m ${LD_EMULATION} -r -d			\
-		    -o ${.TARGET} ${_firmw:C/\:.*$//};		\
-		rm ${_firmw:C/\:.*$//};				\
-	fi
+	${CC:N${CCACHE_BIN}} -c -x assembler-with-cpp -DLOCORE 	\
+	    ${CFLAGS} ${WERROR} 				\
+	    -DFIRMW_FILE="${.ALLSRC:M*${_firmw:C/\:.*$//}}" 	\
+	    -DFIRMW_SYMBOL="${_firmw:C/\:.*$//:C/[-.\/@]/_/g}"	\
+	    ${SYSDIR}/kern/firmw.S -o ${.TARGET}
 
 OBJS+=	${_firmw:C/\:.*$/.fwo/:T}
 .endfor
@@ -236,7 +230,7 @@ OBJS+=	${SRCS:N*.h:R:S/$/.o/g}
 PROG=	${KMOD}.ko
 .endif
 
-.if !defined(DEBUG_FLAGS)
+.if !defined(DEBUG_FLAGS) || ${MK_SPLIT_KERNEL_DEBUG} == "no"
 FULLPROG=	${PROG}
 .else
 FULLPROG=	${PROG}.full
@@ -261,12 +255,17 @@ EXPORT_SYMS?=	NO
 CLEANFILES+=	export_syms
 .endif
 
+.if exists(${SYSDIR}/conf/ldscript.kmod.${MACHINE})
+LDSCRIPT_FLAGS?= -T ${SYSDIR}/conf/ldscript.kmod.${MACHINE}
+.endif
+
 .if ${__KLD_SHARED} == yes
 ${KMOD}.kld: ${OBJS}
 .else
 ${FULLPROG}: ${OBJS}
 .endif
-	${LD} -m ${LD_EMULATION} ${_LDFLAGS} -r -d -o ${.TARGET} ${OBJS}
+	${LD} -m ${LD_EMULATION} ${_LDFLAGS} ${LDSCRIPT_FLAGS} -r \
+	    -o ${.TARGET} ${OBJS}
 .if ${MK_CTF} != "no"
 	${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${OBJS}
 .endif
@@ -275,7 +274,7 @@ ${FULLPROG}: ${OBJS}
 .if ${EXPORT_SYMS} == NO
 	:> export_syms
 .elif !exists(${.CURDIR}/${EXPORT_SYMS})
-	echo -n "${EXPORT_SYMS:@s@$s${.newline}@}" > export_syms
+	printf '%s' "${EXPORT_SYMS:@s@$s${.newline}@}" > export_syms
 .else
 	grep -v '^#' < ${EXPORT_SYMS} > export_syms
 .endif
@@ -291,15 +290,7 @@ ${FULLPROG}: ${OBJS}
 	${OBJCOPY} --strip-debug ${.TARGET}
 .endif
 
-.if ${COMPILER_TYPE} == "clang" || \
-    (${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 60000)
-_MAP_DEBUG_PREFIX= yes
-.endif
-
 _ILINKS=machine
-.if ${MACHINE} != ${MACHINE_CPUARCH} && ${MACHINE} != "arm64"
-_ILINKS+=${MACHINE_CPUARCH}
-.endif
 .if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
 _ILINKS+=x86
 .endif
@@ -317,12 +308,10 @@ beforebuild: ${_ILINKS}
 .if !exists(${.OBJDIR}/${_link})
 OBJS_DEPEND_GUESS+=	${_link}
 .endif
-.if defined(_MAP_DEBUG_PREFIX)
 .if ${_link} == "machine"
 CFLAGS+= -fdebug-prefix-map=./machine=${SYSDIR}/${MACHINE}/include
 .else
 CFLAGS+= -fdebug-prefix-map=./${_link}=${SYSDIR}/${_link}/include
-.endif
 .endif
 .endfor
 
@@ -335,13 +324,13 @@ ${_ILINKS}:
 	*) \
 		path=${SYSDIR}/${.TARGET:T}/include ;; \
 	esac ; \
-	path=`(cd $$path && /bin/pwd)` ; \
+	path=`realpath $$path`; \
 	${ECHO} ${.TARGET:T} "->" $$path ; \
 	ln -fns $$path ${.TARGET:T}
 
 CLEANFILES+= ${PROG} ${KMOD}.kld ${OBJS}
 
-.if defined(DEBUG_FLAGS)
+.if defined(DEBUG_FLAGS) && ${MK_SPLIT_KERNEL_DEBUG} != "no"
 CLEANFILES+= ${FULLPROG} ${PROG}.debug
 .endif
 
@@ -360,7 +349,7 @@ _kmodinstall: .PHONY
 	${INSTALL} -T release -o ${KMODOWN} -g ${KMODGRP} -m ${KMODMODE} \
 	    ${_INSTALLFLAGS} ${PROG} ${DESTDIR}${KMODDIR}/
 .if defined(DEBUG_FLAGS) && !defined(INSTALL_NODEBUG) && ${MK_KERNEL_SYMBOLS} != "no"
-	${INSTALL} -T debug -o ${KMODOWN} -g ${KMODGRP} -m ${KMODMODE} \
+	${INSTALL} -T dbg -o ${KMODOWN} -g ${KMODGRP} -m ${KMODMODE} \
 	    ${_INSTALLFLAGS} ${PROG}.debug ${DESTDIR}${KERN_DEBUGDIR}${KMODDIR}/
 .endif
 
@@ -372,8 +361,8 @@ afterinstall: _kldxref
 .ORDER: _installlinks _kldxref
 _kldxref: .PHONY
 	@if type kldxref >/dev/null 2>&1; then \
-		${ECHO} kldxref ${DESTDIR}${KMODDIR}; \
-		kldxref ${DESTDIR}${KMODDIR}; \
+		${ECHO} ${KLDXREF_CMD} ${DESTDIR}${KMODDIR}; \
+		${KLDXREF_CMD} ${DESTDIR}${KMODDIR}; \
 	fi
 .endif
 .endif # !target(realinstall)
@@ -413,6 +402,12 @@ ${_src}:
 .endif
 .endfor
 .endif
+
+# Add the sanitizer C flags
+CFLAGS+=	${SAN_CFLAGS}
+
+# Add the gcov flags
+CFLAGS+=	${GCOV_CFLAGS}
 
 # Respect configuration-specific C flags.
 CFLAGS+=	${ARCH_FLAGS} ${CONF_CFLAGS}
@@ -493,6 +488,18 @@ usbdevs_data.h: ${SYSDIR}/tools/usbdevs2h.awk ${SYSDIR}/dev/usb/usbdevs
 	${AWK} -f ${SYSDIR}/tools/usbdevs2h.awk ${SYSDIR}/dev/usb/usbdevs -d
 .endif
 
+.if !empty(SRCS:Msdiodevs.h)
+CLEANFILES+=	sdiodevs.h
+sdiodevs.h: ${SYSDIR}/tools/sdiodevs2h.awk ${SYSDIR}/dev/sdio/sdiodevs
+	${AWK} -f ${SYSDIR}/tools/sdiodevs2h.awk ${SYSDIR}/dev/sdio/sdiodevs -h
+.endif
+
+.if !empty(SRCS:Msdiodevs_data.h)
+CLEANFILES+=	sdiodevs_data.h
+sdiodevs_data.h: ${SYSDIR}/tools/sdiodevs2h.awk ${SYSDIR}/dev/sdio/sdiodevs
+	${AWK} -f ${SYSDIR}/tools/sdiodevs2h.awk ${SYSDIR}/dev/sdio/sdiodevs -d
+.endif
+
 .if !empty(SRCS:Macpi_quirks.h)
 CLEANFILES+=	acpi_quirks.h
 acpi_quirks.h: ${SYSDIR}/tools/acpi_quirks2h.awk ${SYSDIR}/dev/acpica/acpi_quirks
@@ -535,6 +542,20 @@ OBJS_DEPEND_GUESS+= ${SRCS:M*.h}
 .if defined(KERNBUILDDIR)
 OBJS_DEPEND_GUESS+= opt_global.h
 .endif
+
+ZINCDIR=${SYSDIR}/contrib/openzfs/include
+OPENZFS_CFLAGS=     \
+	-D_SYS_VMEM_H_  \
+	-D__KERNEL__ \
+	-nostdinc \
+	-DSMP \
+	-I${ZINCDIR}  \
+	-I${ZINCDIR}/os/freebsd \
+	-I${ZINCDIR}/os/freebsd/spl \
+	-I${ZINCDIR}/os/freebsd/zfs \
+	-I${SYSDIR}/cddl/compat/opensolaris \
+	-I${SYSDIR}/cddl/contrib/opensolaris/uts/common \
+	-include ${ZINCDIR}/os/freebsd/spl/sys/ccompile.h
 
 .include <bsd.dep.mk>
 .include <bsd.clang-analyze.mk>

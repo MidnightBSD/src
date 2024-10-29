@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Device driver for Granch SBNI12 leased line adapters
  *
@@ -58,7 +57,6 @@
  *
  * Written with reference to NE2000 driver developed by David Greenman.
  */
- 
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -115,7 +113,7 @@ static void	send_frame_header(struct sbni_softc *, u_int32_t *);
 static void	set_initial_values(struct sbni_softc *, struct sbni_flags);
 
 static u_int32_t	calc_crc32(u_int32_t, caddr_t, u_int);
-static timeout_t	sbni_timeout;
+static callout_func_t	sbni_timeout;
 
 static __inline u_char	sbni_inb(struct sbni_softc *, enum sbni_reg);
 static __inline void	sbni_outb(struct sbni_softc *, enum sbni_reg, u_char);
@@ -168,7 +166,6 @@ sbni_outsb(struct sbni_softc *sc, u_char *from, u_int len)
 	    sc->io_off + DAT, from, len);
 }
 
-
 /*
 	Valid combinations in CSR0 (for probing):
 
@@ -194,7 +191,6 @@ sbni_outsb(struct sbni_softc *sc, u_char *from, u_int len)
 
 #define VALID_DECODER	(2 + 8 + 0x10 + 0x20 + 0x80 + 0x100 + 0x200)
 
-
 int
 sbni_probe(struct sbni_softc *sc)
 {
@@ -213,19 +209,16 @@ sbni_probe(struct sbni_softc *sc)
 	return (ENXIO);
 }
 
-
 /*
  * Install interface into kernel networking data structures
  */
-int
+void
 sbni_attach(struct sbni_softc *sc, int unit, struct sbni_flags flags)
 {
 	struct ifnet *ifp;
 	u_char csr0;
    
 	ifp = sc->ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL)
-		return (ENOMEM);
 	sbni_outb(sc, CSR0, 0);
 	set_initial_values(sc, flags);
 
@@ -254,7 +247,6 @@ sbni_attach(struct sbni_softc *sc, int unit, struct sbni_flags flags)
 		printf("auto\n");
 	else
 		printf("%d (fixed)\n", sc->cur_rxl_index);
-	return (0);
 }
 
 void
@@ -340,7 +332,6 @@ sbni_start_locked(struct ifnet *ifp)
 		prepare_to_send(sc);
 }
 
-
 static void
 sbni_stop(struct sbni_softc *sc)
 {
@@ -401,7 +392,6 @@ sbni_intr(void *arg)
 	} while (repeat);
 }
 
-
 static void
 handle_channel(struct sbni_softc *sc)
 {
@@ -440,7 +430,6 @@ handle_channel(struct sbni_softc *sc)
 
 	sbni_outb(sc, CSR0, sbni_inb(sc, CSR0) | EN_INT);
 }
-
 
 /*
  * Routine returns 1 if it need to acknoweledge received frame.
@@ -481,7 +470,6 @@ recv_frame(struct sbni_softc *sc)
 	return (!frame_ok || framelen > 4);
 }
 
-
 static void
 send_frame(struct sbni_softc *sc)
 {
@@ -490,7 +478,6 @@ send_frame(struct sbni_softc *sc)
 
 	crc = CRC32_INITIAL;
 	if (sc->state & FL_NEED_RESEND) {
-
 		/* if frame was sended but not ACK'ed - resend it */
 		if (sc->trans_errors) {
 			sc->trans_errors--;
@@ -511,7 +498,6 @@ send_frame(struct sbni_softc *sc)
 	 * frame sended then in prepare_to_send next frame
 	 */
 
-
 	if (sc->framelen) {
 		download_data(sc, &crc);
 		sc->in_stats.all_tx_number++;
@@ -529,7 +515,6 @@ do_send:
 		sbni_outb(sc, CSR0, csr0 | TR_REQ);
 	}
 }
-
 
 static void
 download_data(struct sbni_softc *sc, u_int32_t *crc_p)
@@ -587,7 +572,6 @@ do_copy:
 	} while (pos < sc->framelen);
 }
 
-
 static int
 upload_data(struct sbni_softc *sc, u_int framelen, u_int frameno,
 	    u_int is_first, u_int32_t crc)
@@ -600,7 +584,6 @@ upload_data(struct sbni_softc *sc, u_int framelen, u_int frameno,
 	}
 
 	if (sc->wait_frameno == frameno) {
-
 		if (sc->inppos + framelen  <=  ETHER_MAX_LEN) {
 			frame_ok = append_frame_to_pkt(sc, framelen, crc);
 
@@ -629,7 +612,6 @@ upload_data(struct sbni_softc *sc, u_int framelen, u_int frameno,
 	return (frame_ok);
 }
 
-
 static __inline void	send_complete(struct sbni_softc *);
 
 static __inline void
@@ -639,7 +621,6 @@ send_complete(struct sbni_softc *sc)
 	sc->tx_buf_p = NULL;
 	if_inc_counter(sc->ifp, IFCOUNTER_OPACKETS, 1);
 }
-
 
 static void
 interpret_ack(struct sbni_softc *sc, u_int ack)
@@ -662,7 +643,6 @@ interpret_ack(struct sbni_softc *sc, u_int ack)
 
 	sc->state &= ~FL_WAIT_ACK;
 }
-
 
 /*
  * Glue received frame with previous fragments of packet.
@@ -693,7 +673,6 @@ append_frame_to_pkt(struct sbni_softc *sc, u_int framelen, u_int32_t crc)
 
 	return (1);
 }
-
 
 /*
  * Prepare to start output on adapter. Current priority must be set to splimp
@@ -745,7 +724,6 @@ prepare_to_send(struct sbni_softc *sc)
 	BPF_MTAP(sc->ifp, sc->tx_buf_p);
 }
 
-
 static void
 drop_xmit_queue(struct sbni_softc *sc)
 {
@@ -771,7 +749,6 @@ drop_xmit_queue(struct sbni_softc *sc)
 	sc->state &= ~(FL_WAIT_ACK | FL_NEED_RESEND);
 	sc->ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 }
-
 
 static void
 send_frame_header(struct sbni_softc *sc, u_int32_t *crc_p)
@@ -806,7 +783,6 @@ send_frame_header(struct sbni_softc *sc, u_int32_t *crc_p)
 	*crc_p = crc;
 }
 
-
 /*
  * if frame tail not needed (incorrect number or received twice),
  * it won't store, but CRC will be calculated
@@ -820,7 +796,6 @@ skip_tail(struct sbni_softc *sc, u_int tail_len, u_int32_t crc)
 
 	return (crc == CRC32_REMAINDER);
 }
-
 
 static int
 check_fhdr(struct sbni_softc *sc, u_int *framelen, u_int *frameno,
@@ -856,7 +831,6 @@ check_fhdr(struct sbni_softc *sc, u_int *framelen, u_int *frameno,
 	*crc_p = crc;
 	return (1);
 }
-
 
 static int
 get_rx_buf(struct sbni_softc *sc)
@@ -894,7 +868,6 @@ get_rx_buf(struct sbni_softc *sc)
 	return (1);
 }
 
-
 static void
 indicate_pkt(struct sbni_softc *sc)
 {
@@ -929,7 +902,6 @@ sbni_timeout(void *xsc)
 
 	csr0 = sbni_inb(sc, CSR0);
 	if (csr0 & RC_CHK) {
-
 		if (sc->timer_ticks) {
 			if (csr0 & (RC_RDY | BU_EMP))
 				/* receiving not active */
@@ -1004,7 +976,6 @@ set_initial_values(struct sbni_softc *sc, struct sbni_flags flags)
 	}
 }
 
-
 #ifdef SBNI_DUAL_COMPOUND
 void
 sbni_add(struct sbni_softc *sc)
@@ -1041,7 +1012,6 @@ connect_to_master(struct sbni_softc *sc)
 
 #endif	/* SBNI_DUAL_COMPOUND */
 
-
 /* Receive level auto-selection */
 
 static void
@@ -1064,7 +1034,6 @@ change_level(struct sbni_softc *sc)
 	sc->prev_rxl_rcvd = sc->cur_rxl_rcvd;
 	sc->cur_rxl_rcvd  = 0;
 }
-
 
 static void
 timeout_change_level(struct sbni_softc *sc)

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Andriy Gapon <avg@FreeBSD.org>
  * All rights reserved.
@@ -47,10 +47,10 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_amdsbwd.h"
 
 #include <sys/param.h>
+#include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/systm.h>
@@ -129,7 +129,6 @@ static driver_t		amdsbwd_driver = {
 };
 
 DRIVER_MODULE(amdsbwd, isa, amdsbwd_driver, amdsbwd_devclass, NULL, NULL);
-
 
 static uint8_t
 pmio_read(struct resource *res, uint8_t reg)
@@ -277,7 +276,6 @@ amdsbwd_identify(driver_t *driver, device_t parent)
 	if (child == NULL)
 		device_printf(parent, "add amdsbwd child failed\n");
 }
-
 
 static void
 amdsbwd_probe_sb7xx(device_t dev, struct resource *pmres, uint32_t *addr)

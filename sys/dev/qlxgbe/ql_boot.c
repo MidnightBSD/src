@@ -29,7 +29,6 @@
  * File: ql_boot.c
  */
 #include <sys/cdefs.h>
-
 #include "ql_os.h"
 
 unsigned int ql83xx_bootloader_version_major = 5;
@@ -10961,4 +10960,3 @@ unsigned char ql83xx_bootloader[] = {
   0x00, 0x00, 0x00, 0x00, 0x9b, 0x64, 0x92, 0x0e
 };
 unsigned int ql83xx_bootloader_len = 131072;
-

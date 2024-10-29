@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2016 Landon Fuller <landonf@FreeBSD.org>
  * Copyright (c) 2017 The FreeBSD Foundation
@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kobj.h>
@@ -310,7 +309,6 @@ bhnd_erom_read_chipid(struct bhnd_erom_io *eio, struct bhnd_chipid *cid)
 
 	return (0);
 }
-
 
 /**
  * Attempt to map @p size bytes at @p addr, replacing any existing

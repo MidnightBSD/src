@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Jonathan Lemon
  * Copyright (c) 1999 Michael Smith
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Disk driver for Mylex DAC960 RAID adapters.
  */
@@ -153,6 +152,11 @@ mlxd_strategy(struct bio *bp)
     if (sc == NULL) {
 	bp->bio_error = EINVAL;
 	bp->bio_flags |= BIO_ERROR;
+	goto bad;
+    }
+
+    if ((bp->bio_cmd != BIO_READ) && (bp->bio_cmd != BIO_WRITE)) {
+	bp->bio_error = EOPNOTSUPP;
 	goto bad;
     }
 

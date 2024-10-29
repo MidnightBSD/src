@@ -26,7 +26,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _COMPAT_FREEBSD32_FREEBSD32_UTIL_H_
@@ -111,13 +110,16 @@ int    syscall32_helper_unregister(struct syscall_helper_data *sd);
 
 struct iovec32;
 struct rusage32;
-register_t *freebsd32_copyout_strings(struct image_params *imgp);
+int	freebsd32_copyout_strings(struct image_params *imgp,
+	    uintptr_t *stack_base);
 int	freebsd32_copyiniov(struct iovec32 *iovp, u_int iovcnt,
 	    struct iovec **iov, int error);
+int	freebsd32_copyinuio(struct iovec32 *iovp, u_int iovcnt,
+	    struct uio **uiop);
 void	freebsd32_rusage_out(const struct rusage *s, struct rusage32 *s32);
 
 struct image_args;
-int freebsd32_exec_copyin_args(struct image_args *args, char *fname,
+int freebsd32_exec_copyin_args(struct image_args *args, const char *fname,
 	    enum uio_seg segflg, u_int32_t *argv, u_int32_t *envv);
 
 #endif /* !_COMPAT_FREEBSD32_FREEBSD32_UTIL_H_ */

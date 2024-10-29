@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010-2016 Solarflare Communications Inc.
  * All rights reserved.
@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_rss.h"
 
 #include <sys/param.h>
@@ -194,18 +193,15 @@ sfxge_intr_bus_enable(struct sfxge_softc *sc)
 			    sc->evq[index], &table[index].eih_tag)) != 0) {
 			goto fail;
 		}
-#ifdef SFXGE_HAVE_DESCRIBE_INTR
 		if (intr->n_alloc > 1)
 			bus_describe_intr(sc->dev, table[index].eih_res,
 			    table[index].eih_tag, "%d", index);
-#endif
 #ifdef RSS
 		bus_bind_intr(sc->dev, table[index].eih_res,
 			      rss_getcpu(index));
 #else
 		bus_bind_intr(sc->dev, table[index].eih_res, index);
 #endif
-
 	}
 
 	return (0);

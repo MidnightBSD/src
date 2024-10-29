@@ -53,7 +53,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/isci/scil/sci_util.h>
 
 void scic_word_copy_with_swap(

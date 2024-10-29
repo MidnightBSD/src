@@ -22,10 +22,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef	_ASM_ATOMIC64_H_
-#define	_ASM_ATOMIC64_H_
+#ifndef	_LINUXKPI_ASM_ATOMIC64_H_
+#define	_LINUXKPI_ASM_ATOMIC64_H_
 
 #include <linux/compiler.h>
 #include <sys/types.h>
@@ -34,7 +33,6 @@
 typedef struct {
 	volatile int64_t counter;
 } atomic64_t;
-
 #define	ATOMIC64_INIT(x)	{ .counter = (x) }
 
 /*------------------------------------------------------------------------*
@@ -51,6 +49,12 @@ typedef struct {
 #define	atomic64_inc_and_test(v)	(atomic64_add_return(1, (v)) == 0)
 #define	atomic64_dec_return(v)		atomic64_sub_return(1, (v))
 #define	atomic64_inc_not_zero(v)	atomic64_add_unless((v), 1, 0)
+
+static inline int64_t
+atomic64_fetch_add(int64_t i, atomic64_t *v)
+{
+	return (atomic_fetchadd_64(&v->counter, i));
+}
 
 static inline int64_t
 atomic64_add_return(int64_t i, atomic64_t *v)
@@ -145,4 +149,4 @@ atomic64_cmpxchg(atomic64_t *v, int64_t old, int64_t new)
 	return (ret);
 }
 
-#endif					/* _ASM_ATOMIC64_H_ */
+#endif					/* _LINUXKPI_ASM_ATOMIC64_H_ */

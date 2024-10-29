@@ -1,8 +1,8 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Bernd Walter.  All rights reserved.
- * Copyright (c) 2006 M. Warner Losh.  All rights reserved.
+ * Copyright (c) 2006 M. Warner Losh <imp@FreeBSD.org>
  * Copyright (c) 2017 Marius Strobl <marius@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -54,7 +54,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bio.h>
@@ -155,7 +154,8 @@ static const char *errmsg[] =
 	"NO MEMORY"
 };
 
-static SYSCTL_NODE(_hw, OID_AUTO, mmcsd, CTLFLAG_RD, NULL, "mmcsd driver");
+static SYSCTL_NODE(_hw, OID_AUTO, mmcsd, CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
+    "mmcsd driver");
 
 static int mmcsd_cache = 1;
 SYSCTL_INT(_hw_mmcsd, OID_AUTO, cache, CTLFLAG_RDTUN, &mmcsd_cache, 0,
@@ -171,8 +171,7 @@ static int mmcsd_shutdown(device_t dev);
 
 /* disk routines */
 static int mmcsd_close(struct disk *dp);
-static int mmcsd_dump(void *arg, void *virtual, vm_offset_t physical,
-    off_t offset, size_t length);
+static int mmcsd_dump(void *arg, void *virtual, off_t offset, size_t length);
 static int mmcsd_getattr(struct bio *);
 static int mmcsd_ioctl_disk(struct disk *disk, u_long cmd, void *data,
     int fflag, struct thread *td);
@@ -1376,8 +1375,7 @@ unpause:
 }
 
 static int
-mmcsd_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset,
-    size_t length)
+mmcsd_dump(void *arg, void *virtual, off_t offset, size_t length)
 {
 	struct bio bp;
 	daddr_t block, end;
@@ -1430,7 +1428,7 @@ mmcsd_task(void *arg)
 	struct mmcsd_softc *sc;
 	struct bio *bp;
 	device_t dev, mmcbus;
-	int err, sz;
+	int bio_error, err, sz;
 
 	part = arg;
 	sc = part->sc;
@@ -1438,6 +1436,7 @@ mmcsd_task(void *arg)
 	mmcbus = sc->mmcbus;
 
 	while (1) {
+		bio_error = 0;
 		MMCSD_DISK_LOCK(part);
 		do {
 			if (part->running == 0)
@@ -1479,18 +1478,18 @@ mmcsd_task(void *arg)
 			if (block < part->eend && end > part->eblock)
 				part->eblock = part->eend = 0;
 			block = mmcsd_rw(part, bp);
-		} else if (bp->bio_cmd == BIO_DELETE) {
+		} else if (bp->bio_cmd == BIO_DELETE)
 			block = mmcsd_delete(part, bp);
-		}
+		else
+			bio_error = EOPNOTSUPP;
 release:
 		MMCBUS_RELEASE_BUS(mmcbus, dev);
 		if (block < end) {
-			bp->bio_error = EIO;
+			bp->bio_error = (bio_error == 0) ? EIO : bio_error;
 			bp->bio_resid = (end - block) * sz;
 			bp->bio_flags |= BIO_ERROR;
-		} else {
+		} else
 			bp->bio_resid = 0;
-		}
 		biodone(bp);
 	}
 out:

@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <machine/bus.h>
@@ -269,7 +268,7 @@ proto_busdma_md_load_callback(void *arg, bus_dma_segment_t *segs, int nseg,
     bus_size_t sz, int error)
 {
 	struct proto_callback_bundle *pcb = arg;
- 
+
 	pcb->ioc->u.md.bus_nsegs = nseg;
 	pcb->ioc->u.md.bus_addr = segs[0].ds_addr;
 }

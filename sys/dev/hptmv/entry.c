@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-2005 HighPoint Technologies, Inc.
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
- 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -2007,16 +2006,10 @@ hpt_attach(device_t dev)
 	}
 
 
-	if((ccb = (union ccb *)malloc(sizeof(*ccb), M_DEVBUF, M_WAITOK)) != (union ccb*)NULL)
-	{
-		bzero(ccb, sizeof(*ccb));
-		ccb->ccb_h.pinfo.priority = 1;
-		ccb->ccb_h.pinfo.index = CAM_UNQUEUED_INDEX;
-	}
-	else
-	{
-		return ENOMEM;
-	}
+	ccb = xpt_alloc_ccb();
+	ccb->ccb_h.pinfo.priority = 1;
+	ccb->ccb_h.pinfo.index = CAM_UNQUEUED_INDEX;
+
 	/*
 	 * Create the device queue for our SIM(s).
 	 */
@@ -2064,7 +2057,7 @@ hpt_attach(device_t dev)
 	ccb->csa.callback = hpt_async;
 	ccb->csa.callback_arg = hpt_vsim;
 	xpt_action((union ccb *)ccb);
-	free(ccb, M_DEVBUF);
+	xpt_free_ccb(ccb);
 
 	if (device_get_unit(dev) == 0) {
 		/* Start the work thread.  XXX */
@@ -2326,7 +2319,7 @@ hpt_action(struct cam_sim *sim, union ccb *ccb)
 
 			cpi->bus_id = cam_sim_bus(sim);
 			cpi->base_transfer_speed = 3300;
-			strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
+			strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
 			strlcpy(cpi->hba_vid, "HPT   ", HBA_IDLEN);
 			strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 			cpi->unit_number = cam_sim_unit(sim);

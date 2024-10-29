@@ -2,7 +2,7 @@
  * FreeBSD/CAM specific routines for LSI '909 FC  adapters.
  * FreeBSD Version.
  *
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-3-Clause
+ * SPDX-License-Identifier: BSD-2-Clause AND BSD-3-Clause
  *
  * Copyright (c)  2000, 2001 by Greg Ansley
  *
@@ -96,7 +96,6 @@
  * OWNER OR CONTRIBUTOR IS ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-
 #include <dev/mpt/mpt.h>
 #include <dev/mpt/mpt_cam.h>
 #include <dev/mpt/mpt_raid.h>
@@ -112,7 +111,7 @@
 #include <sys/sysctl.h>
 
 static void mpt_poll(struct cam_sim *);
-static timeout_t mpt_timeout;
+static callout_func_t mpt_timeout;
 static void mpt_action(struct cam_sim *, union ccb *);
 static int
 mpt_get_spi_settings(struct mpt_softc *, struct ccb_trans_settings *);
@@ -424,7 +423,6 @@ mpt_read_config_info_fc(struct mpt_softc *mpt)
 		 mpt->mpt_fcport_page0.Header.PageLength,
 		 mpt->mpt_fcport_page0.Header.PageNumber,
 		 mpt->mpt_fcport_page0.Header.PageType);
-
 
 	rv = mpt_read_cur_cfg_page(mpt, 0, &mpt->mpt_fcport_page0.Header,
 	    sizeof(mpt->mpt_fcport_page0), FALSE, 5000);
@@ -1367,7 +1365,6 @@ bad:
 		goto out;
 	}
 
-
 	flags = MPI_SGE_FLAGS_SIMPLE_ELEMENT | MPI_SGE_FLAGS_64_BIT_ADDRESSING;
 	if (istgt == 0) {
 		if ((ccb->ccb_h.flags & CAM_DIR_MASK) == CAM_DIR_OUT) {
@@ -1759,7 +1756,6 @@ bad:
 		goto out;
 	}
 
-
 	flags = MPI_SGE_FLAGS_SIMPLE_ELEMENT;
 	if (istgt == 0) {
 		if ((ccb->ccb_h.flags & CAM_DIR_MASK) == CAM_DIR_OUT) {
@@ -1887,11 +1883,8 @@ bad:
 		chain_list_addr = trq->req_pbuf;
 		chain_list_addr += cur_off;
 
-
-
 		ce->Address = htole32(chain_list_addr);
 		ce->Flags = MPI_SGE_FLAGS_CHAIN_ELEMENT;
-
 
 		/*
 		 * If we have more than a frame's worth of segments left,
@@ -2859,7 +2852,6 @@ mpt_fc_els_reply_handler(struct mpt_softc *mpt, request_t *req,
 		return (TRUE);
 	}
 
-
 	rctl = (le32toh(rp->Rctl_Did) & MPI_FC_RCTL_MASK) >> MPI_FC_RCTL_SHIFT;
 	type = (le32toh(rp->Type_Fctl) & MPI_FC_TYPE_MASK) >> MPI_FC_TYPE_SHIFT;
 
@@ -3105,7 +3097,6 @@ XXXX
 			if ((sstate & MPI_SCSI_STATE_AUTOSENSE_FAILED) != 0)
 				mpt_set_ccb_status(ccb, CAM_AUTOSENSE_FAIL);
 		} else if ((sstate & MPI_SCSI_STATE_RESPONSE_INFO_VALID) != 0) {
-
 			/* XXX Handle SPI-Packet and FCP-2 response info. */
 			mpt_set_ccb_status(ccb, CAM_REQ_CMP_ERR);
 		} else
@@ -4232,7 +4223,6 @@ mpt_add_target_commands(struct mpt_softc *mpt)
 		mpt_post_target_command(mpt, req, i);
 	}
 
-
 	if (i == 0) {
 		mpt_lprt(mpt, MPT_PRT_ERROR, "could not add any target bufs\n");
 		free(mpt->tgt_cmd_ptrs, M_DEVBUF);
@@ -4477,7 +4467,6 @@ mpt_scsi_tgt_local(struct mpt_softc *mpt, request_t *cmd_req,
 		return;
 	}
 	tgt->is_local = 1;
-
 
 	memset(req->req_vbuf, 0, MPT_RQSL(mpt));
 	ta = req->req_vbuf;
@@ -5035,7 +5024,6 @@ mpt_scsi_tgt_atio(struct mpt_softc *mpt, request_t *req, uint32_t reply_desc)
 		return;
 	}
 
-
 	atiop = (struct ccb_accept_tio *) STAILQ_FIRST(&trtp->atios);
 	if (atiop == NULL) {
 		mpt_lprt(mpt, MPT_PRT_WARN,
@@ -5073,7 +5061,7 @@ mpt_scsi_tgt_atio(struct mpt_softc *mpt, request_t *req, uint32_t reply_desc)
 		mpt_prtc(mpt, " itag %x tag %x rdesc %x dl=%u\n",
 		    tgt->itag, tgt->tag_id, tgt->reply_desc, tgt->resid);
 	}
-	
+
 	xpt_done((union ccb *)atiop);
 }
 

@@ -22,11 +22,10 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
-#ifndef _LINUX_BITMAP_H_
-#define	_LINUX_BITMAP_H_
+#ifndef _LINUXKPI_LINUX_BITMAP_H_
+#define	_LINUXKPI_LINUX_BITMAP_H_
 
 #include <linux/bitops.h>
 #include <linux/slab.h>
@@ -350,4 +349,4 @@ bitmap_free(const unsigned long *bitmap)
 	kfree(bitmap);
 }
 
-#endif					/* _LINUX_BITMAP_H_ */
+#endif					/* _LINUXKPI_LINUX_BITMAP_H_ */

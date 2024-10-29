@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -205,7 +204,6 @@ radix_tree_insert(struct radix_tree_root *root, unsigned long index, void *item)
 
 	/* expand radix tree as needed */
 	while (radix_max(root) < index) {
-
 		/* check if the radix tree is getting too big */
 		if (root->height == RADIX_TREE_MAX_HEIGHT) {
 			radix_tree_clean_root_node(root);
@@ -310,7 +308,6 @@ radix_tree_store(struct radix_tree_root *root, unsigned long index, void **ppite
 
 	/* expand radix tree as needed */
 	while (radix_max(root) < index) {
-
 		/* check if the radix tree is getting too big */
 		if (root->height == RADIX_TREE_MAX_HEIGHT) {
 			radix_tree_clean_root_node(root);

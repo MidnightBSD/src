@@ -146,7 +146,6 @@ usb_linux_lookup_id(const struct usb_device_id *id, struct usb_attach_arg *uaa)
 	 * array:
 	 */
 	for (; id->match_flags; id++) {
-
 		if ((id->match_flags & USB_DEVICE_ID_MATCH_VENDOR) &&
 		    (id->idVendor != uaa->info.idVendor)) {
 			continue;
@@ -221,7 +220,7 @@ usb_linux_probe(device_t dev)
 	mtx_lock(&Giant);
 	LIST_FOREACH(udrv, &usb_linux_driver_list, linux_driver_list) {
 		if (usb_linux_lookup_id(udrv->id_table, uaa)) {
-			err = 0;
+			err = BUS_PROBE_DEFAULT;
 			break;
 		}
 	}
@@ -341,12 +340,15 @@ usb_linux_suspend(device_t dev)
 {
 	struct usb_linux_softc *sc = device_get_softc(dev);
 	struct usb_driver *udrv = usb_linux_get_usb_driver(sc);
+	pm_message_t pm_msg;
 	int err;
 
+	err = 0;
 	if (udrv && udrv->suspend) {
-		err = (udrv->suspend) (sc->sc_ui, 0);
+		pm_msg.event = 0;				/* XXX */
+		err = (udrv->suspend) (sc->sc_ui, pm_msg);
 	}
-	return (0);
+	return (-err);
 }
 
 /*------------------------------------------------------------------------*
@@ -361,10 +363,10 @@ usb_linux_resume(device_t dev)
 	struct usb_driver *udrv = usb_linux_get_usb_driver(sc);
 	int err;
 
-	if (udrv && udrv->resume) {
+	err = 0;
+	if (udrv && udrv->resume)
 		err = (udrv->resume) (sc->sc_ui);
-	}
-	return (0);
+	return (-err);
 }
 
 /*------------------------------------------------------------------------*
@@ -512,7 +514,6 @@ usb_unlink_urb_sub(struct urb *urb, uint8_t drain)
 	uhe = urb->endpoint;
 
 	if (urb->bsd_urb_list.tqe_prev) {
-
 		/* not started yet, just remove it from the queue */
 		TAILQ_REMOVE(&uhe->bsd_urb_list, urb, bsd_urb_list);
 		urb->bsd_urb_list.tqe_prev = NULL;
@@ -527,7 +528,6 @@ usb_unlink_urb_sub(struct urb *urb, uint8_t drain)
 			(urb->complete) (urb);
 		}
 	} else {
-
 		/*
 		 * If the URB is not on the URB list, then check if one of
 		 * the FreeBSD USB transfer are processing the current URB.
@@ -793,7 +793,6 @@ usb_setup_endpoint(struct usb_device *dev,
 	memset(cfg, 0, sizeof(cfg));
 
 	if (type == UE_ISOCHRONOUS) {
-
 		/*
 		 * Isochronous transfers are special in that they don't fit
 		 * into the BULK/INTR/CONTROL transfer model.
@@ -880,7 +879,6 @@ usb_linux_create_usb_device(struct usb_device *udev, device_t dev)
 	 * and one pass to initialize all the allocated memory structures.
 	 */
 	for (pass = 0; pass < 2; pass++) {
-
 		iface_no_curr = 0xFFFF;
 		niface_total = 0;
 		iface_index = 0;
@@ -892,7 +890,6 @@ usb_linux_create_usb_device(struct usb_device *udev, device_t dev)
 		 * descriptor pointer provided by the FreeBSD USB stack.
 		 */
 		while ((desc = usb_desc_foreach(cd, desc))) {
-
 			/*
 			 * Build up a tree according to the descriptors we
 			 * find:
@@ -951,7 +948,6 @@ usb_linux_create_usb_device(struct usb_device *udev, device_t dev)
 		}
 
 		if (pass == 0) {
-
 			size = (sizeof(*p_uhe) * nedesc) +
 			    (sizeof(*p_ui) * iface_index) +
 			    (sizeof(*p_uhi) * niface_total);
@@ -1172,7 +1168,9 @@ repeat:
 	LIST_FOREACH(sc, &usb_linux_attached_list, sc_attached_list) {
 		if (sc->sc_udrv == drv) {
 			mtx_unlock(&Giant);
+			bus_topo_lock();
 			device_detach(sc->sc_fbsd_dev);
+			bus_topo_unlock();
 			goto repeat;
 		}
 	}
@@ -1191,15 +1189,14 @@ usb_linux_free_device(struct usb_device *dev)
 {
 	struct usb_host_endpoint *uhe;
 	struct usb_host_endpoint *uhe_end;
-	int err;
 
 	uhe = dev->linux_endpoint_start;
 	uhe_end = dev->linux_endpoint_end;
 	while (uhe != uhe_end) {
-		err = usb_setup_endpoint(dev, uhe, 0);
+		usb_setup_endpoint(dev, uhe, 0);
 		uhe++;
 	}
-	err = usb_setup_endpoint(dev, &dev->ep0, 0);
+	usb_setup_endpoint(dev, &dev->ep0, 0);
 	free(dev->linux_endpoint_start, M_USBDEV);
 }
 
@@ -1282,7 +1279,6 @@ usb_linux_cleanup_interface(struct usb_device *dev, struct usb_interface *iface)
 	struct usb_host_interface *uhi_end;
 	struct usb_host_endpoint *uhe;
 	struct usb_host_endpoint *uhe_end;
-	int err;
 
 	uhi = iface->altsetting;
 	uhi_end = iface->altsetting + iface->num_altsetting;
@@ -1290,7 +1286,7 @@ usb_linux_cleanup_interface(struct usb_device *dev, struct usb_interface *iface)
 		uhe = uhi->endpoint;
 		uhe_end = uhi->endpoint + uhi->desc.bNumEndpoints;
 		while (uhe != uhe_end) {
-			err = usb_setup_endpoint(dev, uhe, 0);
+			usb_setup_endpoint(dev, uhe, 0);
 			uhe++;
 		}
 		uhi++;
@@ -1351,7 +1347,6 @@ usb_linux_isoc_callback(struct usb_xfer *xfer, usb_error_t error)
 	case USB_ST_TRANSFERRED:
 
 		if (urb->bsd_isread) {
-
 			/* copy in data with regard to the URB */
 
 			offset = 0;
@@ -1407,7 +1402,6 @@ usb_linux_isoc_callback(struct usb_xfer *xfer, usb_error_t error)
 tr_setup:
 
 		if (xfer->priv_fifo == NULL) {
-
 			/* get next transfer */
 			urb = TAILQ_FIRST(&uhe->bsd_urb_list);
 			if (urb == NULL) {
@@ -1436,7 +1430,6 @@ tr_setup:
 			usbd_xfer_set_frame_data(xfer, 0, urb->transfer_buffer, 0);
 		}
 		if (!(urb->bsd_isread)) {
-
 			/* copy out data with regard to the URB */
 
 			offset = 0;
@@ -1452,7 +1445,6 @@ tr_setup:
 				offset += uipd->length;
 			}
 		} else {
-
 			/*
 			 * compute the transfer length into the "offset"
 			 * variable
@@ -1498,7 +1490,6 @@ tr_setup:
 			return;
 		}
 		goto tr_setup;
-
 	}
 }
 
@@ -1529,7 +1520,6 @@ usb_linux_non_isoc_callback(struct usb_xfer *xfer, usb_error_t error)
 	case USB_ST_TRANSFERRED:
 
 		if (xfer->flags_int.control_xfr) {
-
 			/* don't transfer the setup packet again: */
 
 			usbd_xfer_set_frame_len(xfer, 0, 0);
@@ -1581,7 +1571,6 @@ tr_setup:
 		xfer->timeout = urb->timeout;
 
 		if (xfer->flags_int.control_xfr) {
-
 			/*
 			 * USB control transfers need special handling.
 			 * First copy in the header, then copy in data!
@@ -1603,7 +1592,6 @@ tr_setup:
 			urb->bsd_length_rem = ptr[6] | (ptr[7] << 8);
 
 		} else {
-
 			/* setup data transfer direction */
 
 			urb->bsd_length_rem = urb->transfer_buffer_length;

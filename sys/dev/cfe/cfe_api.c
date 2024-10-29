@@ -49,7 +49,6 @@
     ********************************************************************* */
 
 #include <sys/cdefs.h>
-
 #include <dev/cfe/cfe_api.h>
 #include <dev/cfe/cfe_api_int.h>
 

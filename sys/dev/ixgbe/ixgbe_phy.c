@@ -462,8 +462,7 @@ enum ixgbe_phy_type ixgbe_get_phy_type_from_id(u32 phy_id)
 	case TN1010_PHY_ID:
 		phy_type = ixgbe_phy_tn;
 		break;
-	case X550_PHY_ID2:
-	case X550_PHY_ID3:
+	case X550_PHY_ID:
 	case X540_PHY_ID:
 		phy_type = ixgbe_phy_aq;
 		break;
@@ -588,7 +587,7 @@ void ixgbe_restart_auto_neg(struct ixgbe_hw *hw)
 }
 
 /**
- * ixgbe_read_phy_mdi - Reads a value from a specified PHY register without
+ * ixgbe_read_phy_reg_mdi - Reads a value from a specified PHY register without
  * the SWFW lock
  * @hw: pointer to hardware structure
  * @reg_addr: 32 bit address of PHY register to read
@@ -1301,6 +1300,7 @@ s32 ixgbe_identify_sfp_module_generic(struct ixgbe_hw *hw)
 	u8 cable_tech = 0;
 	u8 cable_spec = 0;
 	u16 enforce_sfp = 0;
+	static bool warned_once = false;
 
 	DEBUGFUNC("ixgbe_identify_sfp_module_generic");
 
@@ -1487,7 +1487,12 @@ s32 ixgbe_identify_sfp_module_generic(struct ixgbe_hw *hw)
 				hw->phy.type = ixgbe_phy_sfp_intel;
 				break;
 			default:
-				hw->phy.type = ixgbe_phy_sfp_unknown;
+				if (cable_tech & IXGBE_SFF_DA_PASSIVE_CABLE)
+					hw->phy.type = ixgbe_phy_sfp_passive_unknown;
+				else if (cable_tech & IXGBE_SFF_DA_ACTIVE_CABLE)
+					hw->phy.type = ixgbe_phy_sfp_active_unknown;
+				else
+					hw->phy.type = ixgbe_phy_sfp_unknown;
 				break;
 			}
 		}
@@ -1495,10 +1500,6 @@ s32 ixgbe_identify_sfp_module_generic(struct ixgbe_hw *hw)
 		/* Allow any DA cable vendor */
 		if (cable_tech & (IXGBE_SFF_DA_PASSIVE_CABLE |
 			IXGBE_SFF_DA_ACTIVE_CABLE)) {
-			if (cable_tech & IXGBE_SFF_DA_PASSIVE_CABLE)
-				hw->phy.type = ixgbe_phy_sfp_passive_unknown;
-			else if (cable_tech & IXGBE_SFF_DA_ACTIVE_CABLE)
-				hw->phy.type = ixgbe_phy_sfp_active_unknown;
 			status = IXGBE_SUCCESS;
 			goto out;
 		}
@@ -1535,13 +1536,16 @@ s32 ixgbe_identify_sfp_module_generic(struct ixgbe_hw *hw)
 				status = IXGBE_SUCCESS;
 			} else {
 				if (hw->allow_unsupported_sfp == true) {
-					EWARN(hw,
-						"WARNING: Intel (R) Network Connections are quality tested using Intel (R) Ethernet Optics. "
-						"Using untested modules is not supported and may cause unstable operation or damage to the module or the adapter. "
-						"Intel Corporation is not responsible for any harm caused by using untested modules.\n");
+					if (!warned_once)
+						EWARN(hw,
+							"WARNING: Intel (R) Network Connections are quality tested using Intel (R) Ethernet Optics. "
+							"Using untested modules is not supported and may cause unstable operation or damage to the module or the adapter. "
+							"Intel Corporation is not responsible for any harm caused by using untested modules.\n");
+					warned_once = true;
 					status = IXGBE_SUCCESS;
 				} else {
-					DEBUGOUT("SFP+ module not supported\n");
+					DEBUGOUT
+					    ("SFP+ module not supported\n");
 					hw->phy.type =
 						ixgbe_phy_sfp_unsupported;
 					status = IXGBE_ERR_SFP_NOT_SUPPORTED;
@@ -1646,6 +1650,7 @@ s32 ixgbe_identify_qsfp_module_generic(struct ixgbe_hw *hw)
 	u8 cable_length = 0;
 	u8 device_tech = 0;
 	bool active_cable = false;
+	static bool warned_once = false;
 
 	DEBUGFUNC("ixgbe_identify_qsfp_module_generic");
 
@@ -1791,10 +1796,12 @@ s32 ixgbe_identify_qsfp_module_generic(struct ixgbe_hw *hw)
 				status = IXGBE_SUCCESS;
 			} else {
 				if (hw->allow_unsupported_sfp == true) {
-					EWARN(hw,
-						"WARNING: Intel (R) Network Connections are quality tested using Intel (R) Ethernet Optics. "
-						"Using untested modules is not supported and may cause unstable operation or damage to the module or the adapter. "
-						"Intel Corporation is not responsible for any harm caused by using untested modules.\n");
+					if (!warned_once)
+						EWARN(hw,
+							"WARNING: Intel (R) Network Connections are quality tested using Intel (R) Ethernet Optics. "
+							"Using untested modules is not supported and may cause unstable operation or damage to the module or the adapter. "
+							"Intel Corporation is not responsible for any harm caused by using untested modules.\n");
+					warned_once = true;
 					status = IXGBE_SUCCESS;
 				} else {
 					DEBUGOUT("QSFP module not supported\n");

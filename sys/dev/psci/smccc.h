@@ -27,7 +27,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_PSCI_SMCCC_H_
@@ -48,6 +47,21 @@
 #define	SMCCC_32BIT_CALL	0
 #define	SMCCC_64BIT_CALL	1
 
+#define	SMCCC_ARM_ARCH_CALLS		0
+#define	SMCCC_CPU_SERVICE_CALLS		1
+#define	SMCCC_SIP_SERVICE_CALLS		2
+#define	SMCCC_OEM_SERVICE_CALLS		3
+#define	SMCCC_STD_SECURE_SERVICE_CALLS	4
+#define	SMCCC_STD_HYP_SERVICE_CALLS	5
+#define	SMCCC_VENDOR_HYP_SERVICE_CALLS	6
+
+struct arm_smccc_res {
+	register_t a0;
+	register_t a1;
+	register_t a2;
+	register_t a3;
+};
+
 /*
  * Arm Architecture Calls.
  * These are documented in the document ARM DEN 0070A.
@@ -66,9 +80,15 @@
 #define	SMCCC_RET_NOT_SUPPORTED		-1
 #define	SMCCC_RET_NOT_REQUIRED		-2
 
+void smccc_init(void);
+uint32_t smccc_get_version(void);
 int32_t smccc_arch_features(uint32_t);
 int smccc_arch_workaround_1(void);
 int smccc_arch_workaround_2(int);
 
+int arm_smccc_smc(register_t, register_t, register_t, register_t, register_t,
+    register_t, register_t, register_t, struct arm_smccc_res *res);
+int arm_smccc_hvc(register_t, register_t, register_t, register_t, register_t,
+    register_t, register_t, register_t, struct arm_smccc_res *res);
 
 #endif /* _PSCI_SMCCC_H_ */

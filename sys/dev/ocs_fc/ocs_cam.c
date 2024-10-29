@@ -27,7 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
@@ -45,6 +44,7 @@
 #include "ocs.h"
 #include "ocs_scsi.h"
 #include "ocs_device.h"
+#include <sys/sbuf.h>
 
 /* Default IO timeout value for initiators is 30 seconds */
 #define OCS_CAM_IO_TIMEOUT	30
@@ -55,6 +55,27 @@ typedef struct {
 	uint32_t sgl_count;
 	int32_t rc;
 } ocs_dmamap_load_arg_t;
+
+struct ocs_scsi_status_desc {
+	ocs_scsi_io_status_e status;
+	const char *desc;
+} ocs_status_desc[] = {
+	{ OCS_SCSI_STATUS_GOOD, "Good" },
+	{ OCS_SCSI_STATUS_ABORTED, "Aborted" },
+	{ OCS_SCSI_STATUS_ERROR, "Error" },
+	{ OCS_SCSI_STATUS_DIF_GUARD_ERROR, "DIF Guard Error" },
+	{ OCS_SCSI_STATUS_DIF_REF_TAG_ERROR, "DIF REF Tag Error" },
+	{ OCS_SCSI_STATUS_DIF_APP_TAG_ERROR, "DIF App Tag Error" },
+	{ OCS_SCSI_STATUS_DIF_UNKNOWN_ERROR, "DIF Unknown Error" },
+	{ OCS_SCSI_STATUS_PROTOCOL_CRC_ERROR, "Proto CRC Error" },
+	{ OCS_SCSI_STATUS_NO_IO, "No IO" },
+	{ OCS_SCSI_STATUS_ABORT_IN_PROGRESS, "Abort in Progress" },
+	{ OCS_SCSI_STATUS_CHECK_RESPONSE, "Check Response" },
+	{ OCS_SCSI_STATUS_COMMAND_TIMEOUT, "Command Timeout" },
+	{ OCS_SCSI_STATUS_TIMEDOUT_AND_ABORTED, "Timed out and Aborted" },
+	{ OCS_SCSI_STATUS_SHUTDOWN, "Shutdown" },
+	{ OCS_SCSI_STATUS_NEXUS_LOST, "Nexus Lost" }
+};
 
 static void ocs_action(struct cam_sim *, union ccb *);
 static void ocs_poll(struct cam_sim *);
@@ -131,7 +152,7 @@ ocs_attach_port(ocs_t *ocs, int chan)
 		cam_sim_free(sim, FALSE);
 		return 1;
 	}
-	
+
 	fcp->ocs = ocs;
 	fcp->sim  = sim;
 	fcp->path = path;
@@ -170,7 +191,7 @@ ocs_detach_port(ocs_t *ocs, int32_t chan)
 			fcp->sim = NULL;
 		mtx_unlock(&ocs->sim_lock);
 	}
-	
+
 	return 0;
 }
 
@@ -198,7 +219,7 @@ ocs_cam_attach(ocs_t *ocs)
 			goto detach_port;
 		}
 	}
-	
+
 	ocs->io_high_watermark = max_io;
 	ocs->io_in_use = 0;
 	return 0;
@@ -321,7 +342,6 @@ void
 ocs_scsi_tgt_del_domain(ocs_domain_t *domain)
 {
 }
-
 
 /**
  * @ingroup scsi_api_target
@@ -492,7 +512,6 @@ ocs_scsi_del_initiator(ocs_node_t *node, ocs_scsi_del_initiator_reason_e reason)
 	adc->arrived = 0;
 	xpt_async(AC_CONTRACT, fcp->path, &ac);
 
-
 	if (reason == OCS_SCSI_INITIATOR_MISSING) {
 		return OCS_SCSI_CALL_COMPLETE;
 	}
@@ -565,7 +584,6 @@ int32_t ocs_scsi_recv_cmd(ocs_io_t *io, uint64_t lun, uint8_t *cdb,
 	}
 
 	if (atio) {
-
 		STAILQ_REMOVE_HEAD(&trsrc->atio, sim_links.stqe);
 
 		atio->ccb_h.status = CAM_CDB_RECVD;
@@ -702,7 +720,6 @@ int32_t ocs_scsi_recv_tmf(ocs_io_t *tmfio, uint64_t lun, ocs_scsi_tmf_cmd_e cmd,
 		goto ocs_scsi_recv_tmf_out;
 	}
 
-
 	tmfio->tgt_io.app = abortio;
 
 	STAILQ_REMOVE_HEAD(&trsrc->inot, sim_links.stqe);
@@ -776,7 +793,7 @@ int32_t ocs_scsi_recv_tmf(ocs_io_t *tmfio, uint64_t lun, ocs_scsi_tmf_cmd_e cmd,
 		abortio->tgt_io.flags |= OCS_CAM_IO_F_ABORT_DEV;
 		rc = ocs_scsi_tgt_abort_io(abortio, ocs_io_abort_cb, tmfio);
 	}
-	
+
 ocs_scsi_recv_tmf_out:
 	return rc;
 }
@@ -815,7 +832,6 @@ ocs_scsi_ini_del_device(ocs_t *ocs)
 
 	return 0;
 }
-
 
 /**
  * @ingroup scsi_api_initiator
@@ -962,7 +978,7 @@ ocs_tgt_find(ocs_fcport *fcp, ocs_node_t *node)
 {
 	ocs_fc_target_t *tgt = NULL;
 	uint32_t i;
-	
+
 	for (i = 0; i < OCS_MAX_TARGETS; i++) {
 		tgt = &fcp->tgt[i];
 
@@ -973,7 +989,7 @@ ocs_tgt_find(ocs_fcport *fcp, ocs_node_t *node)
 			return i;
 		}
 	}
-	
+
 	return -1;
 }
 
@@ -999,12 +1015,12 @@ uint32_t
 ocs_update_tgt(ocs_node_t *node, ocs_fcport *fcp, uint32_t tgt_id)
 {
 	ocs_fc_target_t *tgt = NULL;
-	
+
 	tgt = &fcp->tgt[tgt_id];
 
 	tgt->node_id = node->instance_index;
 	tgt->state = OCS_TGT_STATE_VALID;
-	
+
 	tgt->port_id = node->rnode.fc_id;
 	tgt->wwpn = ocs_node_get_wwpn(node);
 	tgt->wwnn = ocs_node_get_wwnn(node);
@@ -1055,7 +1071,7 @@ ocs_scsi_new_target(ocs_node_t *node)
 	}
 
 	i = ocs_tgt_find(fcp, node);
-	
+
 	if (i < 0) {
 		ocs_add_new_tgt(node, fcp);
 		return 0;
@@ -1074,7 +1090,7 @@ ocs_delete_target(ocs_t *ocs, ocs_fcport *fcp, int tgt)
 		device_printf(ocs->dev, "%s: calling with NULL sim\n", __func__); 
 		return;
 	}
-	
+
 	if (CAM_REQ_CMP == xpt_create_path(&cpath, NULL, cam_sim_path(fcp->sim),
 				tgt, CAM_LUN_WILDCARD)) {
 		xpt_async(AC_LOST_DEVICE, cpath, NULL);
@@ -1164,15 +1180,24 @@ ocs_scsi_del_target(ocs_node_t *node, ocs_scsi_del_target_reason_e reason)
 	struct ocs_softc *ocs = node->ocs;
 	ocs_fcport	*fcp = NULL;
 	ocs_fc_target_t *tgt = NULL;
-	uint32_t	tgt_id;
+	int32_t	tgt_id;
+
+	if (ocs == NULL) {
+		ocs_log_err(ocs,"OCS is NULL \n");
+		return -1;
+	}
 
 	fcp = node->sport->tgt_data;
 	if (fcp == NULL) {
 		ocs_log_err(ocs,"FCP is NULL \n");
-		return 0;
+		return -1;
 	}
 
 	tgt_id = ocs_tgt_find(fcp, node);
+	if (tgt_id == -1) {
+		ocs_log_err(ocs,"target is invalid\n");
+		return -1;
+	}
 
 	tgt = &fcp->tgt[tgt_id];
 
@@ -1180,14 +1205,13 @@ ocs_scsi_del_target(ocs_node_t *node, ocs_scsi_del_target_reason_e reason)
 	if(!ocs->attached) {
 		ocs_delete_target(ocs, fcp, tgt_id);
 	} else {
-	
 		tgt->state = OCS_TGT_STATE_LOST;
 		tgt->gone_timer = 30;
 		if (!callout_active(&fcp->ldt)) {
 			callout_reset(&fcp->ldt, hz, ocs_ldt, fcp);
 		}
 	}
-	
+
 	return 0;
 }
 
@@ -1495,7 +1519,7 @@ static int32_t ocs_scsi_initiator_io_cb(ocs_io_t *io,
 		 * If we've already got a SCSI error, prefer that because it
 		 * will have more detail.
 		 */
-		 if ((rsp->residual < 0) && (ccb_status == CAM_REQ_CMP)) {
+		if ((rsp->residual < 0) && (ccb_status == CAM_REQ_CMP)) {
 			ccb_status = CAM_DATA_RUN_ERR;
 		}
 
@@ -1515,7 +1539,60 @@ static int32_t ocs_scsi_initiator_io_cb(ocs_io_t *io,
 			ocs_memcpy(&csio->sense_data, rsp->sense_data, sense_len);
 		}
 	} else if (scsi_status != OCS_SCSI_STATUS_GOOD) {
-		ccb_status = CAM_REQ_CMP_ERR;
+		const char *err_desc = NULL;
+		char err_str[224];
+		struct sbuf sb;
+		size_t i;
+
+		sbuf_new(&sb, err_str, sizeof(err_str), 0);
+
+		xpt_path_sbuf(ccb->ccb_h.path, &sb);
+
+		for (i = 0; i < (sizeof(ocs_status_desc) /
+		     sizeof(ocs_status_desc[0])); i++) {
+			if (scsi_status == ocs_status_desc[i].status) {
+				err_desc = ocs_status_desc[i].desc;
+				break;
+			}
+		}
+		if (ccb->ccb_h.func_code == XPT_SCSI_IO) {
+			scsi_command_string(&ccb->csio, &sb);
+			sbuf_printf(&sb, "length %d ", ccb->csio.dxfer_len);
+		}
+		sbuf_printf(&sb, "error status %d (%s)\n", scsi_status,
+		    (err_desc != NULL) ? err_desc : "Unknown");
+		sbuf_finish(&sb);
+		printf("%s", sbuf_data(&sb));
+
+		switch (scsi_status) {
+		case OCS_SCSI_STATUS_ABORTED:
+		case OCS_SCSI_STATUS_ABORT_IN_PROGRESS:
+			ccb_status = CAM_REQ_ABORTED;
+			break;
+		case OCS_SCSI_STATUS_DIF_GUARD_ERROR:
+		case OCS_SCSI_STATUS_DIF_REF_TAG_ERROR:
+		case OCS_SCSI_STATUS_DIF_APP_TAG_ERROR:
+		case OCS_SCSI_STATUS_DIF_UNKNOWN_ERROR:
+		case OCS_SCSI_STATUS_PROTOCOL_CRC_ERROR:
+			ccb_status = CAM_IDE;
+			break;
+		case OCS_SCSI_STATUS_ERROR:
+		case OCS_SCSI_STATUS_NO_IO:
+			ccb_status = CAM_REQ_CMP_ERR;
+			break;
+		case OCS_SCSI_STATUS_COMMAND_TIMEOUT:
+		case OCS_SCSI_STATUS_TIMEDOUT_AND_ABORTED:
+			ccb_status = CAM_CMD_TIMEOUT;
+			break;
+		case OCS_SCSI_STATUS_SHUTDOWN:
+		case OCS_SCSI_STATUS_NEXUS_LOST:
+			ccb_status = CAM_SCSI_IT_NEXUS_LOST;
+			break;
+		default:
+			ccb_status = CAM_REQ_CMP_ERR;
+			break;
+		}
+
 	} else {
 		ccb_status = CAM_REQ_CMP;
 	}
@@ -1738,7 +1815,6 @@ ocs_target_io(struct ocs_softc *ocs, union ccb *ccb)
 					" are 0 \n", __func__);
 		ocs_set_ccb_status(ccb, CAM_REQ_INVALID);
 		rc = 1;
-
 	}
 
 	if (rc) {
@@ -1786,13 +1862,9 @@ ocs_initiator_io(struct ocs_softc *ocs, union ccb *ccb)
 	ocs_io_t *io = NULL;
 	ocs_scsi_sgl_t *sgl;
 	int32_t flags, sgl_count;
+	ocs_fcport	*fcp;
 
-	ocs_fcport	*fcp = NULL;
 	fcp = FCPORT(ocs, cam_sim_bus(xpt_path_sim((ccb)->ccb_h.path)));
-	if (fcp == NULL) {
-		device_printf(ocs->dev, "%s: fcp is NULL\n", __func__);
-		return -1;
-	}
 
 	if (fcp->tgt[ccb_h->target_id].state == OCS_TGT_STATE_LOST) {
 		device_printf(ocs->dev, "%s: device LOST %d\n", __func__,
@@ -1845,7 +1917,11 @@ ocs_initiator_io(struct ocs_softc *ocs, union ccb *ccb)
 	} else if (ccb->ccb_h.timeout == CAM_TIME_DEFAULT) {
 		io->timeout = OCS_CAM_IO_TIMEOUT;
 	} else {
-		io->timeout = ccb->ccb_h.timeout;
+		if (ccb->ccb_h.timeout < 1000)
+			io->timeout = 1;
+		else {
+			io->timeout = ccb->ccb_h.timeout / 1000;
+		}
 	}
 
 	switch (csio->tag_action) {
@@ -1937,7 +2013,7 @@ ocs_fcp_change_role(struct ocs_softc *ocs, ocs_fcport *fcp, uint32_t new_role)
 		
 		return 0;
 	}
-	
+
 	if ((fcp->role != KNOB_ROLE_NONE)){
 		fcp->role = new_role;
 		vport->enable_ini = (new_role & KNOB_ROLE_INITIATOR)? 1:0;
@@ -1947,7 +2023,7 @@ ocs_fcp_change_role(struct ocs_softc *ocs, ocs_fcport *fcp, uint32_t new_role)
 	}
 
 	fcp->role = new_role;
-	
+
 	vport->enable_ini = (new_role & KNOB_ROLE_INITIATOR)? 1:0;
 	vport->enable_tgt = (new_role & KNOB_ROLE_TARGET)? 1:0;
 
@@ -2276,8 +2352,11 @@ ocs_action(struct cam_sim *sim, union ccb *ccb)
 	}
 	case XPT_RESET_BUS:
 		if (ocs_xport_control(ocs->xport, OCS_XPORT_PORT_OFFLINE) == 0) {
-			ocs_xport_control(ocs->xport, OCS_XPORT_PORT_ONLINE);
-
+			rc = ocs_xport_control(ocs->xport, OCS_XPORT_PORT_ONLINE);
+			if (rc) {
+				ocs_log_debug(ocs, "Failed to bring port online"
+								" : %d\n", rc);
+			}
 			ocs_set_ccb_status(ccb, CAM_REQ_CMP);
 		} else {
 			ocs_set_ccb_status(ccb, CAM_REQ_CMP_ERR);
@@ -2630,7 +2709,7 @@ ocs_abort_atio(struct ocs_softc *ocs, union ccb *ccb)
 	aio->tgt_io.flags |= OCS_CAM_IO_F_ABORT_CAM;
 	ocs_target_io_free(aio);
 	ocs_set_ccb_status(ccb, CAM_REQ_CMP);
-	
+
 	return;
 }
 
@@ -2821,7 +2900,7 @@ ocs_get_crn(ocs_node_t *node, uint8_t *crn, uint64_t lun)
 	if (lcrn->lun != lun) {
 		return (1);
 	}	
-	
+
 	if (lcrn->crnseed == 0)
 		lcrn->crnseed = 1;
 
@@ -2834,7 +2913,7 @@ ocs_del_crn(ocs_node_t *node)
 {
 	uint32_t i;
 	struct ocs_lun_crn *lcrn = NULL;
-	
+
 	for(i = 0; i < OCS_MAX_LUN; i++) {
 		lcrn = node->ini_node.lun_crn[i];
 		if (lcrn) {

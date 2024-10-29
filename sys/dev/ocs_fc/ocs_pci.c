@@ -27,7 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #define OCS_COPYRIGHT "Copyright (C) 2017 Broadcom. All rights reserved."
@@ -177,7 +176,6 @@ ocs_map_bars(device_t dev, struct ocs_softc *ocs)
 	return 0;
 }
 
-
 static int
 ocs_setup_params(struct ocs_softc *ocs)
 {
@@ -215,7 +213,6 @@ ocs_setup_params(struct ocs_softc *ocs)
 	if (!ocs->config_ini && !ocs->config_tgt) {
 		device_printf(ocs->dev, "Unsupported, both initiator and target mode disabled.\n");
 		return 1;
-
         }
 
 	if (0 == resource_int_value(device_get_name(ocs->dev), device_get_unit(ocs->dev),
@@ -327,7 +324,6 @@ ocs_setup_params(struct ocs_softc *ocs)
 		}
 	}
 
-
 	if (0 == resource_int_value(device_get_name(ocs->dev), device_get_unit(ocs->dev),
 				    "external_loopback", &i)) {
 		device_printf(ocs->dev, "external_loopback = %d\n", i);
@@ -356,7 +352,7 @@ ocs_setup_params(struct ocs_softc *ocs)
 	ocs->rq_selection_policy = 0;
 	ocs->rr_quanta = 1;
 	ocs->filter_def = "0,0,0,0";
-	
+
 	return 0;
 }
 
@@ -465,7 +461,7 @@ ocs_device_attach(ocs_t *ocs)
 	}
 
 	ocs->attached = true;
-	
+
 	return 0;
 
 fail_xport_online:
@@ -508,7 +504,7 @@ ocs_pci_attach(device_t dev)
 	int			instance;
 
 	instance = device_get_unit(dev);
-	
+
 	ocs = (struct ocs_softc *)device_get_softc(dev);
 	if (NULL == ocs) {
 		device_printf(dev, "cannot allocate softc\n");
@@ -644,7 +640,7 @@ ocs_device_detach(ocs_t *ocs)
                 }
 
 		ocs_cam_detach(ocs);
-		ocs_free(ocs, ocs->fcports, sizeof(ocs->fcports));
+		ocs_free(ocs, ocs->fcports, sizeof(*(ocs->fcports)));
 
 		for (i = 0; (io = ocs_io_get_instance(ocs, i)); i++) {
 			if (bus_dmamap_destroy(ocs->buf_dmat, io->tgt_io.dmap)) {
@@ -654,12 +650,10 @@ ocs_device_detach(ocs_t *ocs)
 		bus_dma_tag_destroy(ocs->dmat);
                 ocs_xport_free(ocs->xport);
                 ocs->xport = NULL;
-
         }
 
         return 0;
 }
-
 
 /**
  * @brief Detach the driver from the given device
@@ -834,7 +828,6 @@ ocs_intr_setup(struct ocs_softc *ocs)
 
 	return 0;
 }
-
 
 /**
  * @brief Detach an interrupt handler
@@ -1013,4 +1006,3 @@ static devclass_t ocs_devclass;
 
 DRIVER_MODULE(ocs_fc, pci, ocs_driver, ocs_devclass, 0, 0);
 MODULE_VERSION(ocs_fc, 1);
-

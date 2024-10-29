@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * driver for RealTek 8139 internal PHYs
  */

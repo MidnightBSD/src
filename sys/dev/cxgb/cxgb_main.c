@@ -1,5 +1,5 @@
 /**************************************************************************
-SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+SPDX-License-Identifier: BSD-2-Clause
 
 Copyright (c) 2007-2009, Chelsio Inc.
 All rights reserved.
@@ -29,7 +29,6 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 
 #include <sys/param.h>
@@ -57,6 +56,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <sys/proc.h>
 
 #include <net/bpf.h>
+#include <net/debugnet.h>
 #include <net/ethernet.h>
 #include <net/if.h>
 #include <net/if_var.h>
@@ -73,7 +73,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
-#include <netinet/netdump/netdump.h>
 
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
@@ -217,7 +216,7 @@ static devclass_t	cxgb_port_devclass;
 DRIVER_MODULE(cxgb, cxgbc, cxgb_port_driver, cxgb_port_devclass, 0, 0);
 MODULE_VERSION(cxgb, 1);
 
-NETDUMP_DEFINE(cxgb);
+DEBUGNET_DEFINE(cxgb);
 
 static struct mtx t3_list_lock;
 static SLIST_HEAD(, adapter) t3_list;
@@ -237,7 +236,8 @@ static SLIST_HEAD(, uld_info) t3_uld_list;
  */
 static int msi_allowed = 2;
 
-SYSCTL_NODE(_hw, OID_AUTO, cxgb, CTLFLAG_RD, 0, "CXGB driver parameters");
+SYSCTL_NODE(_hw, OID_AUTO, cxgb, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "CXGB driver parameters");
 SYSCTL_INT(_hw_cxgb, OID_AUTO, msi_allowed, CTLFLAG_RDTUN, &msi_allowed, 0,
     "MSI-X, MSI, INTx selector");
 
@@ -852,6 +852,8 @@ setup_sge_qsets(adapter_t *sc)
 		}
 	}
 
+	sc->nqsets = qset_idx;
+
 	return (0);
 }
 
@@ -1016,11 +1018,6 @@ cxgb_port_attach(device_t dev)
 
 	/* Allocate an ifnet object and set it up */
 	ifp = p->ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(dev, "Cannot allocate ifnet\n");
-		return (ENOMEM);
-	}
-	
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_init = cxgb_init;
 	ifp->if_softc = p;
@@ -1038,6 +1035,9 @@ cxgb_port_attach(device_t dev)
 	ifp->if_capenable = CXGB_CAP_ENABLE;
 	ifp->if_hwassist = CSUM_TCP | CSUM_UDP | CSUM_IP | CSUM_TSO |
 	    CSUM_UDP_IPV6 | CSUM_TCP_IPV6;
+	ifp->if_hw_tsomax = IP_MAXPACKET;
+	ifp->if_hw_tsomaxsegcount = 36;
+	ifp->if_hw_tsomaxsegsize = 65536;
 
 	/*
 	 * Disable TSO on 4-port - it isn't supported by the firmware.
@@ -1050,8 +1050,8 @@ cxgb_port_attach(device_t dev)
 
 	ether_ifattach(ifp, p->hw_addr);
 
-	/* Attach driver netdump methods. */
-	NETDUMP_SET(ifp, cxgb);
+	/* Attach driver debugnet methods. */
+	DEBUGNET_SET(ifp, cxgb);
 
 #ifdef DEFAULT_JUMBO
 	if (sc->params.nports <= 2)
@@ -2480,9 +2480,7 @@ set_eeprom(struct port_info *pi, const uint8_t *data, int len, int offset)
 	aligned_len = (len + (offset & 3) + 3) & ~3;
 
 	if (aligned_offset != offset || aligned_len != len) {
-		buf = malloc(aligned_len, M_DEVBUF, M_WAITOK|M_ZERO);		   
-		if (!buf)
-			return (ENOMEM);
+		buf = malloc(aligned_len, M_DEVBUF, M_WAITOK | M_ZERO);
 		err = t3_seeprom_read(adapter, aligned_offset, (u32 *)buf);
 		if (!err && aligned_len > 4)
 			err = t3_seeprom_read(adapter,
@@ -3589,9 +3587,9 @@ cxgbc_mod_event(module_t mod, int cmd, void *arg)
 	return (rc);
 }
 
-#ifdef NETDUMP
+#ifdef DEBUGNET
 static void
-cxgb_netdump_init(struct ifnet *ifp, int *nrxr, int *ncl, int *clsize)
+cxgb_debugnet_init(struct ifnet *ifp, int *nrxr, int *ncl, int *clsize)
 {
 	struct port_info *pi;
 	adapter_t *adap;
@@ -3599,25 +3597,25 @@ cxgb_netdump_init(struct ifnet *ifp, int *nrxr, int *ncl, int *clsize)
 	pi = if_getsoftc(ifp);
 	adap = pi->adapter;
 	ADAPTER_LOCK(adap);
-	*nrxr = SGE_QSETS;
+	*nrxr = adap->nqsets;
 	*ncl = adap->sge.qs[0].fl[1].size;
 	*clsize = adap->sge.qs[0].fl[1].buf_size;
 	ADAPTER_UNLOCK(adap);
 }
 
 static void
-cxgb_netdump_event(struct ifnet *ifp, enum netdump_ev event)
+cxgb_debugnet_event(struct ifnet *ifp, enum debugnet_ev event)
 {
 	struct port_info *pi;
 	struct sge_qset *qs;
 	int i;
 
 	pi = if_getsoftc(ifp);
-	if (event == NETDUMP_START)
-		for (i = 0; i < SGE_QSETS; i++) {
+	if (event == DEBUGNET_START)
+		for (i = 0; i < pi->adapter->nqsets; i++) {
 			qs = &pi->adapter->sge.qs[i];
 
-			/* Need to reinit after netdump_mbuf_dump(). */
+			/* Need to reinit after debugnet_mbuf_start(). */
 			qs->fl[0].zone = zone_pack;
 			qs->fl[1].zone = zone_clust;
 			qs->lro.enabled = 0;
@@ -3625,7 +3623,7 @@ cxgb_netdump_event(struct ifnet *ifp, enum netdump_ev event)
 }
 
 static int
-cxgb_netdump_transmit(struct ifnet *ifp, struct mbuf *m)
+cxgb_debugnet_transmit(struct ifnet *ifp, struct mbuf *m)
 {
 	struct port_info *pi;
 	struct sge_qset *qs;
@@ -3636,11 +3634,11 @@ cxgb_netdump_transmit(struct ifnet *ifp, struct mbuf *m)
 		return (ENOENT);
 
 	qs = &pi->adapter->sge.qs[pi->first_qset];
-	return (cxgb_netdump_encap(qs, &m));
+	return (cxgb_debugnet_encap(qs, &m));
 }
 
 static int
-cxgb_netdump_poll(struct ifnet *ifp, int count)
+cxgb_debugnet_poll(struct ifnet *ifp, int count)
 {
 	struct port_info *pi;
 	adapter_t *adap;
@@ -3651,9 +3649,9 @@ cxgb_netdump_poll(struct ifnet *ifp, int count)
 		return (ENOENT);
 
 	adap = pi->adapter;
-	for (i = 0; i < SGE_QSETS; i++)
-		(void)cxgb_netdump_poll_rx(adap, &adap->sge.qs[i]);
-	(void)cxgb_netdump_poll_tx(&adap->sge.qs[pi->first_qset]);
+	for (i = 0; i < adap->nqsets; i++)
+		(void)cxgb_debugnet_poll_rx(adap, &adap->sge.qs[i]);
+	(void)cxgb_debugnet_poll_tx(&adap->sge.qs[pi->first_qset]);
 	return (0);
 }
-#endif /* NETDUMP */
+#endif /* DEBUGNET */

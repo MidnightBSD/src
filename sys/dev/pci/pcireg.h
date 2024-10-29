@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 1997, Stefan Esser <se@freebsd.org>
- * All rights reserved.
+ * Copyright 1997, Stefan Esser <se@freebsd.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +24,10 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- *
  */
+
+#ifndef __PCI_PCIREG_H
+#define	__PCI_PCIREG_H
 
 /*
  * PCIM_xxx: mask to locate subfield in register
@@ -1075,6 +1076,13 @@
 #define	PCIR_SRIOV_BARS		0x24
 #define	PCIR_SRIOV_BAR(x)	(PCIR_SRIOV_BARS + (x) * 4)
 
+/* Extended Capability Vendor-Specific definitions */
+#define PCIR_VSEC_HEADER	0x04
+#define PCIR_VSEC_ID(hdr)	((hdr) & 0xffff)
+#define PCIR_VSEC_REV(hdr)	(((hdr) & 0xf0000) >> 16)
+#define PCIR_VSEC_LENGTH(hdr)	(((hdr) & 0xfff00000) >> 20)
+#define PCIR_VSEC_DATA		0x08
+
 /*
  * PCI Express Firmware Interface definitions
  */
@@ -1091,3 +1099,82 @@
 #define	PCIM_OSC_CTL_PCIE_PME		0x04	/* PCIe Native Power Mgt Events */
 #define	PCIM_OSC_CTL_PCIE_AER		0x08	/* PCIe Advanced Error Reporting */
 #define	PCIM_OSC_CTL_PCIE_CAP_STRUCT	0x10	/* Various Capability Structures */
+
+/* Access Control Services (ACS) definitions */
+#define	PCIR_ACS_CAP	0x4
+#define	PCIM_ACS_SOURCE_VALIDATION		0x0001
+#define	PCIM_ACS_TRANSLATION_BLOCKING		0x0002
+#define	PCIM_ACS_P2P_REQ_REDIRECT		0x0004
+#define	PCIM_ACS_P2P_CMP_REDIRECT		0x0008
+#define	PCIM_ACS_P2P_UPSTREAM_FORWARDING	0x0010
+#define	PCIM_ACS_P2P_EGRESS_CTL			0x0020
+#define	PCIM_ACS_P2P_DIRECT_TRANSLATED		0x0040
+#define	PCIM_ACS_ENHANCED_CAP			0x0080
+#define	PCIM_ACS_EGRESS_CTL_VECTOR_SIZE		0xff00
+#define	PCIR_ACS_CTL	0x6
+#define	PCIM_ACS_SOURCE_VALIDATION_ENABLE	0x0001
+#define	PCIM_ACS_TRANSLATION_BLOCKING_ENABLE	0x0002
+#define	PCIM_ACS_P2P_REQ_REDIRECT_ENABLE	0x0004
+#define	PCIM_ACS_P2P_CMP_REDIRECT_ENABLE	0x0008
+#define	PCIM_ACS_P2P_UPSTREAM_FORWARDING_ENABLE	0x0010
+#define	PCIM_ACS_P2P_EGRESS_CTL_ENABLE		0x0020
+#define	PCIM_ACS_P2P_DIRECT_TRANSLATED_ENABLE	0x0040
+#define	PCIM_ACS_IO_REQ_BLOCKING_ENABLE		0x0080
+#define	PCIM_ACS_DSP_MEM_TGT_ACC_CTL		0x0300
+#define	PCIM_ACS_USP_MEM_TGT_ACC_CTL		0x0c00
+#define	PCIM_ACS_UNCLAIMED_REQ_REDIRECT_CTL	0x1000
+#define	PCIR_ACS_EGRESS_CONTROL_VECTOR	0x8
+
+/*
+ * AMD IOMMU Base Capability
+ * From AMD I/O Virtualization Technology (IOMMU) Specification
+ * Publication # 48882 Revision: 3.09-PUB Date: October 2023
+ */
+#define	PCIR_AMDIOMMU_CAP_HEADER	0x0000
+#define	PCIR_AMDIOMMU_BASE_LOW		0x0004
+#define	PCIR_AMDIOMMU_BASE_HIGH		0x0008
+#define	PCIR_AMDIOMMU_RANGE		0x000c
+#define	PCIR_AMDIOMMU_MISC0		0x0010
+#define	PCIR_AMDIOMMU_MISC1		0x0014
+
+#define	PCIM_AMDIOMMU_CAP_CAPEXT	(1 << 28)
+#define	PCIM_AMDIOMMU_CAP_EFR		(1 << 27)
+#define	PCIM_AMDIOMMU_CAP_NPCACHE	(1 << 26)
+#define	PCIM_AMDIOMMU_CAP_HTTUN		(1 << 25)
+#define	PCIM_AMDIOMMU_CAP_IOTLB		(1 << 24)
+#define	PCIM_AMDIOMMU_CAP_REV_MASK	(0x1f << 19)
+#define	PCIM_AMDIOMMU_CAP_REV_VAL	(0x1 << 19)
+#define	PCIM_AMDIOMMU_CAP_TYPE_MASK	(7 << 16)
+#define	PCIM_AMDIOMMU_CAP_TYPE_VAL	(0x3 << 16)
+
+#define	PCIM_AMDIOMMU_BASE_LOW_EN	0x00000001
+#define	PCIM_AMDIOMMU_BASE_LOW_ADDRM	0xffffc000
+
+#define	PCIM_AMDIOMMU_RANGE_UNITID_MASK		0x1f
+#define	PCIM_AMDIOMMU_RANGE_RNGVALID		(1 << 7)
+#define	PCIM_AMDIOMMU_RANGE_BUSNUM_MASK		(0xffffu << 8)
+#define	PCIM_AMDIOMMU_RANGE_FIRSTDEV_MASK	(0xffffu << 16)
+#define	PCIM_AMDIOMMU_RANGE_LASTDEV_MASK	(0xffffu << 24)
+
+#define	PCIM_AMDIOMMU_MISC0_MSINUMPPR_MASK	(0x1f << 27)
+#define	PCIM_AMDIOMMU_MISC0_HTATSRESV		(1 << 22)
+#define	PCIM_AMDIOMMU_MISC0_VASIZE_MASK		(0x7f << 15)
+#define	PCIM_AMDIOMMU_MISC0_PASIZE_MASK		(0x7f << 8)
+#define	PCIM_AMDIOMMU_MISC0_GVASIZE_MASK	(0x3 << 5)
+#define	PCIM_AMDIOMMU_MISC0_MSINUM_MASK		0x1f
+
+#define	PCIM_AMDIOMMU_MISC0_VASIZE_32		(0x20 << 15)
+#define	PCIM_AMDIOMMU_MISC0_VASIZE_40		(0x28 << 15)
+#define	PCIM_AMDIOMMU_MISC0_VASIZE_48		(0x30 << 15)
+#define	PCIM_AMDIOMMU_MISC0_VASIZE_64		(0x40 << 15)
+
+#define	PCIM_AMDIOMMU_MISC0_PASIZE_40		(0x28 << 8)
+#define	PCIM_AMDIOMMU_MISC0_PASIZE_48		(0x30 << 8)
+#define	PCIM_AMDIOMMU_MISC0_PASIZE_52		(0x34 << 8)
+
+#define	PCIM_AMDIOMMU_MISC0_GVASIZE_48		(0x2 << 5)
+#define	PCIM_AMDIOMMU_MISC0_GVASIZE_57		(0x3 << 5)
+
+#define	PCIM_AMDIOMMU_MISC1_MSINUMGA_MASK 0x1f	
+
+#endif	/* __PCI_PCIREG_H */

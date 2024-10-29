@@ -32,10 +32,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
+#include <sys/eventhandler.h>
 #include <sys/kdb.h>
 #include <gdb/gdb.h>
 #include <sys/kernel.h>
@@ -100,7 +100,8 @@ static u_int poll_idle = DCONS_POLL_HZ * DCONS_POLL_IDLE;
 
 static struct dcons_softc sc[DCONS_NPORT];
 
-static SYSCTL_NODE(_kern, OID_AUTO, dcons, CTLFLAG_RD, 0, "Dumb Console");
+static SYSCTL_NODE(_kern, OID_AUTO, dcons, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "Dumb Console");
 SYSCTL_INT(_kern_dcons, OID_AUTO, poll_hz, CTLFLAG_RW, &poll_hz, 0,
 				"dcons polling rate");
 
@@ -321,14 +322,14 @@ dcons_drv_init(int stage)
 		 * Allow read/write access to dcons buffer.
 		 */
 		for (pa = trunc_page(addr); pa < addr + size; pa += PAGE_SIZE)
-			*vtopte(PMAP_MAP_LOW + pa) |= PG_RW;
+			pmap_ksetrw(PMAP_MAP_LOW + pa);
 		invltlb();
 #endif
 		/* XXX P to V */
 #ifdef __amd64__
 		dg.buf = (struct dcons_buf *)(vm_offset_t)(KERNBASE + addr);
 #else /* __i386__ */
-		dg.buf = (struct dcons_buf *)((vm_offset_t)PMAP_MAP_LOW +
+		dg.buf = (struct dcons_buf *)(vm_offset_t)(PMAP_MAP_LOW +
 		    addr);
 #endif
 		dg.size = size;

@@ -25,11 +25,17 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-#ifndef _ASM_IO_H_
-#define _ASM_IO_H_
+#ifndef _LINUXKPI_ASM_IO_H_
+#define _LINUXKPI_ASM_IO_H_
+
+#include <sys/param.h>
+
+#include <vm/vm.h>
+#include <vm/pmap.h>
 
 #include <linux/io.h>
 
-#endif	/* _ASM_IO_H_ */
+#define	virt_to_phys(x)		vtophys(x)
+
+#endif	/* _LINUXKPI_ASM_IO_H_ */

@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 static void	aic_recovery_thread(void *arg);
 
 void
@@ -62,7 +61,7 @@ void
 aic_platform_timeout(void *arg)
 {
 	struct	scb *scb;
-	
+
 	scb = (struct scb *)arg; 
 	aic_lock(scb->aic_softc);
 	aic_timeout(scb);
@@ -127,23 +126,5 @@ aic_recovery_thread(void *arg)
 void
 aic_calc_geometry(struct ccb_calc_geometry *ccg, int extended)
 {
-#if __FreeBSD_version >= 500000
 	cam_calc_geometry(ccg, extended);
-#else
-	uint32_t size_mb;
-	uint32_t secs_per_cylinder;
-
-	size_mb = ccg->volume_size / ((1024L * 1024L) / ccg->block_size);
-	if (size_mb > 1024 && extended) {
-		ccg->heads = 255;
-		ccg->secs_per_track = 63;
-	} else {
-		ccg->heads = 64;
-		ccg->secs_per_track = 32;
-	}
-	secs_per_cylinder = ccg->heads * ccg->secs_per_track;
-	ccg->cylinders = ccg->volume_size / secs_per_cylinder;
-	ccg->ccb_h.status = CAM_REQ_CMP;
-#endif
 }
-

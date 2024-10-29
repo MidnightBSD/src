@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2016 Michael Zhilin <mizhka@gmail.com>
  * All rights reserved.
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -77,7 +76,6 @@ static device_method_t chipc_cfi_methods[] = {
 	DEVMETHOD(device_probe,		chipc_cfi_probe),
 	DEVMETHOD(device_attach,	chipc_cfi_attach),
 	DEVMETHOD(device_detach,	cfi_detach),
-
 	{0, 0}
 };
 

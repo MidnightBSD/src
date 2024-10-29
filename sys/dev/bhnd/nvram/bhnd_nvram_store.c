@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/hash.h>
 #include <sys/limits.h>
@@ -198,7 +197,6 @@ bhnd_nvram_store_parse_new(struct bhnd_nvram_store **store,
 	struct bhnd_nvram_data	*data;
 	int			 error;
 
-
 	/* Try to parse the data */
 	if ((error = bhnd_nvram_data_new(cls, &data, io)))
 		return (error);
@@ -219,7 +217,7 @@ bhnd_nvram_store_parse_new(struct bhnd_nvram_store **store,
 void
 bhnd_nvram_store_free(struct bhnd_nvram_store *sc)
 {
-	
+
 	/* Clean up alias hash table */
 	for (size_t i = 0; i < nitems(sc->aliases); i++) {
 		bhnd_nvstore_alias *alias, *anext;
@@ -383,7 +381,6 @@ bhnd_nvstore_parse_data(struct bhnd_nvram_store *sc)
 	return (0);
 }
 
-
 /**
  * Parse and register path and path alias entries for all declarations found in
  * the NVRAM data backing @p nvram.
@@ -432,7 +429,6 @@ bhnd_nvstore_parse_path_entries(struct bhnd_nvram_store *sc)
 
 	return (0);
 }
-
 
 /**
  * Merge exported per-path variables (uncommitted, committed, or both) into 
@@ -627,14 +623,13 @@ bhnd_nvram_store_export_child(struct bhnd_nvram_store *sc,
 	const char		*relpath;
 	char			*prefix, *namebuf;
 	size_t			 prefix_len, relpath_len;
-	size_t			 namebuf_size, num_props;
+	size_t			 namebuf_size;
 	bool			 emit_compact_devpath;
 	int			 error;
 
 	BHND_NVSTORE_LOCK_ASSERT(sc, MA_OWNED);
 
 	prefix = NULL;
-	num_props = 0;
 	path_vars = NULL;
 	namebuf = NULL;
 
@@ -705,7 +700,7 @@ bhnd_nvram_store_export_child(struct bhnd_nvram_store *sc,
 			error = ENOMEM;
 			goto finished;
 		}
-	
+
 		prefix_len = len;
 	} else if (relpath_len > 0) {
 		int len;
@@ -833,7 +828,7 @@ bhnd_nvram_store_export(struct bhnd_nvram_store *sc, const char *path,
 	void			*cookiep;
 	size_t			 num_dpath_flags;
 	int			 error;
-	
+
 	*props = NULL;
 	unordered = NULL;
 	num_dpath_flags = 0;
@@ -960,7 +955,7 @@ bhnd_nvram_store_export(struct bhnd_nvram_store *sc, const char *path,
 		/* Append to ordered result */
 		if ((error = bhnd_nvram_plist_append(*props, prop)))
 			goto failed;
-	
+
 		/* Remove from unordered list */
 		bhnd_nvram_plist_remove(unordered, name);
 	}

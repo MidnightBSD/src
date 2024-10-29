@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011-2013 Qlogic Corporation
  * All rights reserved.
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "qla_os.h"
 #include "qla_reg.h"
 #include "qla_hw.h"
@@ -41,7 +40,6 @@
 #include "qla_ver.h"
 #include "qla_glbl.h"
 #include "qla_dbg.h"
-
 
 uint32_t dbg_level = 0 ;
 /*
@@ -156,7 +154,7 @@ void qla_dump_buf8(qla_host_t *ha, char *msg, void *dbuf, uint32_t len)
 	buf = dbuf;
 
 	device_printf(dev, "%s: %s 0x%x dump start\n", __func__, msg, len);
-	
+
 	while (len >= 16) {
 		device_printf(dev,"0x%08x:"
 			" %02x %02x %02x %02x %02x %02x %02x %02x"
@@ -259,6 +257,6 @@ void qla_dump_buf8(qla_host_t *ha, char *msg, void *dbuf, uint32_t len)
 	default:
 		break;
 	}
-	
+
 	device_printf(dev, "%s: %s dump end\n", __func__, msg);
 }

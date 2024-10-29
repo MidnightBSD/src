@@ -28,14 +28,12 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef __PCIB_PRIVATE_H__
 #define	__PCIB_PRIVATE_H__
 
-#include <sys/_callout.h>
-#include <sys/_task.h>
+#include <sys/taskqueue.h>
 
 #ifdef NEW_PCIB
 /*
@@ -134,17 +132,24 @@ struct pcib_softc
     uint16_t	pcie_link_sta;
     uint16_t	pcie_slot_sta;
     uint32_t	pcie_slot_cap;
+    struct resource *pcie_mem;
     struct resource *pcie_irq;
     void	*pcie_ihand;
     struct task	pcie_hp_task;
-    struct callout pcie_ab_timer;
-    struct callout pcie_cc_timer;
-    struct callout pcie_dll_timer;
+    struct timeout_task pcie_ab_task;
+    struct timeout_task pcie_cc_task;
+    struct timeout_task pcie_dll_task;
+    struct mtx	*pcie_hp_lock;
 };
+
+#define PCIB_HP_LOCK(sc)	mtx_lock((sc)->pcie_hp_lock)
+#define PCIB_HP_UNLOCK(sc)	mtx_unlock((sc)->pcie_hp_lock)
+#define PCIB_HP_LOCK_ASSERT(sc)	mtx_assert((sc)->pcie_hp_lock, MA_OWNED)
 
 #define	PCIB_SUPPORTED_ARI_VER	1
 
-typedef uint32_t pci_read_config_fn(int b, int s, int f, int reg, int width);
+typedef uint32_t pci_read_config_fn(int d, int b, int s, int f, int reg,
+    int width);
 
 int		host_pcib_get_busno(pci_read_config_fn read_config, int bus,
     int slot, int func, uint8_t *busnum);
@@ -169,19 +174,9 @@ void		pcib_bridge_init(device_t dev);
 #ifdef NEW_PCIB
 const char	*pcib_child_name(device_t child);
 #endif
-int		pcib_child_present(device_t dev, device_t child);
 int		pcib_detach(device_t dev);
 int		pcib_read_ivar(device_t dev, device_t child, int which, uintptr_t *result);
 int		pcib_write_ivar(device_t dev, device_t child, int which, uintptr_t value);
-struct resource *pcib_alloc_resource(device_t dev, device_t child, int type, int *rid, 
-					    rman_res_t start, rman_res_t end,
-					    rman_res_t count, u_int flags);
-#ifdef NEW_PCIB
-int		pcib_adjust_resource(device_t bus, device_t child, int type,
-    struct resource *r, rman_res_t start, rman_res_t end);
-int		pcib_release_resource(device_t dev, device_t child, int type, int rid,
-    struct resource *r);
-#endif
 int		pcib_maxslots(device_t dev);
 int		pcib_maxfuncs(device_t dev);
 int		pcib_route_interrupt(device_t pcib, device_t dev, int pin);

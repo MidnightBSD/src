@@ -87,7 +87,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_wlan.h"
 #include "opt_iwm.h"
 

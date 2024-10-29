@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifdef _KERNEL
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -73,11 +72,11 @@ _Static_assert(CHACHA_STATELEN == RANDOM_BLOCKSIZE, "");
  * unaccelerated AES-ICM; reseeding is much cheaper than computing AES key
  * schedules.
  */
-bool random_chachamode __read_frequently = false;
+bool random_chachamode __read_frequently = true;
 #ifdef _KERNEL
 SYSCTL_BOOL(_kern_random, OID_AUTO, use_chacha20_cipher, CTLFLAG_RDTUN,
     &random_chachamode, 0,
-    "If non-zero, use the ChaCha20 cipher for randomdev PRF (13.0+ default). "
+    "If non-zero, use the ChaCha20 cipher for randomdev PRF (default). "
     "If zero, use AES-ICM cipher for randomdev PRF (12.x default).");
 #endif
 

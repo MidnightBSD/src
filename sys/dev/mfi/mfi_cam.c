@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 2007 Scott Long
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_mfi.h"
 
 #include <sys/param.h>
@@ -297,9 +296,9 @@ mfip_cam_rescan(struct mfi_softc *sc, uint32_t tid)
 	struct cam_sim *sim;
 	device_t mfip_dev;
 
-	mtx_lock(&Giant);
+	bus_topo_lock();
 	mfip_dev = device_find_child(sc->mfi_dev, "mfip", -1);
-	mtx_unlock(&Giant);
+	bus_topo_unlock();
 	if (mfip_dev == NULL) {
 		device_printf(sc->mfi_dev, "Couldn't find mfip child device!\n");
 		return;
@@ -473,4 +472,3 @@ mfip_cam_poll(struct cam_sim *sim)
 
 	mfisc->mfi_intr_ptr(mfisc);
 }
-
