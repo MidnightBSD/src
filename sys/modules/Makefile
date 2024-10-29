@@ -62,6 +62,8 @@ SUBDIR=	\
 	${_atlantic} \
 	${_autofs} \
 	${_auxio} \
+	axgbe \
+	backlight \
 	${_bce} \
 	${_bcm283x_clkman} \
 	${_bcm283x_pwm} \

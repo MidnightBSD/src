@@ -1,6 +1,7 @@
 /*-
  * Copyright (c) 2014, Bryan Venteicher <bryanv@FreeBSD.org>
  * All rights reserved.
+ * Copyright (c) 2020, Chelsio Communications.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +29,6 @@
 #include "opt_inet6.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/eventhandler.h>
 #include <sys/kernel.h>
@@ -59,6 +59,8 @@
 #include <net/if_types.h>
 #include <net/if_vxlan.h>
 #include <net/netisr.h>
+#include <net/route.h>
+#include <net/route/nhop.h>
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -69,6 +71,8 @@
 #include <netinet/ip_var.h>
 #include <netinet/udp.h>
 #include <netinet/udp_var.h>
+#include <netinet/in_fib.h>
+#include <netinet6/in6_fib.h>
 
 #include <netinet6/ip6_var.h>
 #include <netinet6/scope6_var.h>
@@ -76,12 +80,25 @@
 struct vxlan_softc;
 LIST_HEAD(vxlan_softc_head, vxlan_softc);
 
+struct sx vxlan_sx;
+SX_SYSINIT(vxlan, &vxlan_sx, "VXLAN global start/stop lock");
+
 struct vxlan_socket_mc_info {
 	union vxlan_sockaddr		 vxlsomc_saddr;
 	union vxlan_sockaddr		 vxlsomc_gaddr;
 	int				 vxlsomc_ifidx;
 	int				 vxlsomc_users;
 };
+
+/*
+ * The maximum MTU of encapsulated ethernet frame within IPv4/UDP packet.
+ */
+#define VXLAN_MAX_MTU	(IP_MAXPACKET - \
+		60 /* Maximum IPv4 header len */ - \
+		sizeof(struct udphdr) - \
+		sizeof(struct vxlan_header) - \
+		ETHER_HDR_LEN - ETHER_VLAN_ENCAP_LEN)
+#define VXLAN_BASIC_IFCAPS (IFCAP_LINKSTATE | IFCAP_JUMBO_MTU)
 
 #define VXLAN_SO_MC_MAX_GROUPS		32
 
@@ -136,10 +153,14 @@ LIST_HEAD(vxlan_ftable_head, vxlan_ftable_entry);
 struct vxlan_statistics {
 	uint32_t	ftable_nospace;
 	uint32_t	ftable_lock_upgrade_failed;
+	counter_u64_t	txcsum;
+	counter_u64_t	tso;
+	counter_u64_t	rxcsum;
 };
 
 struct vxlan_softc {
 	struct ifnet			*vxl_ifp;
+	int				 vxl_reqcap;
 	u_int				 vxl_fibnum;
 	struct vxlan_socket		*vxl_sock;
 	uint32_t			 vxl_vni;
@@ -149,6 +170,7 @@ struct vxlan_softc {
 #define VXLAN_FLAG_INIT		0x0001
 #define VXLAN_FLAG_TEARDOWN	0x0002
 #define VXLAN_FLAG_LEARN	0x0004
+#define VXLAN_FLAG_USER_MTU	0x0008
 
 	uint32_t			 vxl_port_hash_key;
 	uint16_t			 vxl_min_port;
@@ -184,6 +206,10 @@ struct vxlan_softc {
 	char				 vxl_mc_ifname[IFNAMSIZ];
 	LIST_ENTRY(vxlan_softc)		 vxl_entry;
 	LIST_ENTRY(vxlan_softc)		 vxl_ifdetach_list;
+
+	/* For rate limiting errors on the tx fast path. */
+	struct timeval err_time;
+	int err_pps;
 };
 
 #define VXLAN_RLOCK(_sc, _p)	rm_rlock(&(_sc)->vxl_lock, (_p))
@@ -288,7 +314,10 @@ static int	vxlan_setup_multicast_interface(struct vxlan_softc *);
 
 static int	vxlan_setup_multicast(struct vxlan_softc *);
 static int	vxlan_setup_socket(struct vxlan_softc *);
-static void	vxlan_setup_interface(struct vxlan_softc *);
+#ifdef INET6
+static void	vxlan_setup_zero_checksum_port(struct vxlan_softc *);
+#endif
+static void	vxlan_setup_interface_hdrlen(struct vxlan_softc *);
 static int	vxlan_valid_init_config(struct vxlan_softc *);
 static void	vxlan_init_wait(struct vxlan_softc *);
 static void	vxlan_init_complete(struct vxlan_softc *);
@@ -338,9 +367,13 @@ static void	vxlan_rcv_udp_packet(struct mbuf *, int, struct inpcb *,
 static int	vxlan_input(struct vxlan_socket *, uint32_t, struct mbuf **,
 		    const struct sockaddr *);
 
+static void	vxlan_stats_alloc(struct vxlan_softc *);
+static void	vxlan_stats_free(struct vxlan_softc *);
 static void	vxlan_set_default_config(struct vxlan_softc *);
 static int	vxlan_set_user_config(struct vxlan_softc *,
 		     struct ifvxlanparam *);
+static int	vxlan_set_reqcap(struct vxlan_softc *, struct ifnet *, int);
+static void	vxlan_set_hwcaps(struct vxlan_softc *);
 static int	vxlan_clone_create(struct if_clone *, int, caddr_t);
 static void	vxlan_clone_destroy(struct ifnet *);
 
@@ -390,13 +423,28 @@ static LIST_HEAD(, vxlan_socket) vxlan_socket_list;
 static eventhandler_tag vxlan_ifdetach_event_tag;
 
 SYSCTL_DECL(_net_link);
-SYSCTL_NODE(_net_link, OID_AUTO, vxlan, CTLFLAG_RW, 0,
+SYSCTL_NODE(_net_link, OID_AUTO, vxlan, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "Virtual eXtensible Local Area Network");
 
 static int vxlan_legacy_port = 0;
 TUNABLE_INT("net.link.vxlan.legacy_port", &vxlan_legacy_port);
 static int vxlan_reuse_port = 0;
 TUNABLE_INT("net.link.vxlan.reuse_port", &vxlan_reuse_port);
+
+/*
+ * This macro controls the default upper limitation on nesting of vxlan
+ * tunnels. By default it is 3, as the overhead of IPv6 vxlan tunnel is 70
+ * bytes, this will create at most 210 bytes overhead and the most inner
+ * tunnel's MTU will be 1290 which will meet IPv6 minimum MTU size 1280.
+ * Be careful to configure the tunnels when raising the limit. A large
+ * number of nested tunnels can introduce system crash.
+ */
+#ifndef MAX_VXLAN_NEST
+#define MAX_VXLAN_NEST	3
+#endif
+static int max_vxlan_nesting = MAX_VXLAN_NEST;
+SYSCTL_INT(_net_link_vxlan, OID_AUTO, max_nesting, CTLFLAG_RW,
+    &max_vxlan_nesting, 0, "Max nested tunnels");
 
 /* Default maximum number of addresses in the forwarding table. */
 #ifndef VXLAN_FTABLE_MAX
@@ -1546,10 +1594,48 @@ out:
 	return (error);
 }
 
+#ifdef INET6
 static void
-vxlan_setup_interface(struct vxlan_softc *sc)
+vxlan_setup_zero_checksum_port(struct vxlan_softc *sc)
+{
+
+	if (!VXLAN_SOCKADDR_IS_IPV6(&sc->vxl_src_addr))
+		return;
+
+	MPASS(sc->vxl_src_addr.in6.sin6_port != 0);
+	MPASS(sc->vxl_dst_addr.in6.sin6_port != 0);
+
+	if (sc->vxl_src_addr.in6.sin6_port != sc->vxl_dst_addr.in6.sin6_port) {
+		if_printf(sc->vxl_ifp, "port %d in src address does not match "
+		    "port %d in dst address, rfc6935_port (%d) not updated.\n",
+		    ntohs(sc->vxl_src_addr.in6.sin6_port),
+		    ntohs(sc->vxl_dst_addr.in6.sin6_port),
+		    V_zero_checksum_port);
+		return;
+	}
+
+	if (V_zero_checksum_port != 0) {
+		if (V_zero_checksum_port !=
+		    ntohs(sc->vxl_src_addr.in6.sin6_port)) {
+			if_printf(sc->vxl_ifp, "rfc6935_port is already set to "
+			    "%d, cannot set it to %d.\n", V_zero_checksum_port,
+			    ntohs(sc->vxl_src_addr.in6.sin6_port));
+		}
+		return;
+	}
+
+	V_zero_checksum_port = ntohs(sc->vxl_src_addr.in6.sin6_port);
+	if_printf(sc->vxl_ifp, "rfc6935_port set to %d\n",
+	    V_zero_checksum_port);
+}
+#endif
+
+static void
+vxlan_setup_interface_hdrlen(struct vxlan_softc *sc)
 {
 	struct ifnet *ifp;
+
+	VXLAN_LOCK_WASSERT(sc);
 
 	ifp = sc->vxl_ifp;
 	ifp->if_hdrlen = ETHER_HDR_LEN + sizeof(struct vxlanudphdr);
@@ -1558,6 +1644,9 @@ vxlan_setup_interface(struct vxlan_softc *sc)
 		ifp->if_hdrlen += sizeof(struct ip);
 	else if (VXLAN_SOCKADDR_IS_IPV6(&sc->vxl_dst_addr) != 0)
 		ifp->if_hdrlen += sizeof(struct ip6_hdr);
+
+	if ((sc->vxl_flags & VXLAN_FLAG_USER_MTU) == 0)
+		ifp->if_mtu = ETHERMTU - ifp->if_hdrlen;
 }
 
 static int
@@ -1646,9 +1735,11 @@ vxlan_init(void *xsc)
 	sc = xsc;
 	ifp = sc->vxl_ifp;
 
+	sx_xlock(&vxlan_sx);
 	VXLAN_WLOCK(sc);
 	if (ifp->if_drv_flags & IFF_DRV_RUNNING) {
 		VXLAN_WUNLOCK(sc);
+		sx_xunlock(&vxlan_sx);
 		return;
 	}
 	sc->vxl_flags |= VXLAN_FLAG_INIT;
@@ -1657,10 +1748,12 @@ vxlan_init(void *xsc)
 	if (vxlan_valid_init_config(sc) != 0)
 		goto out;
 
-	vxlan_setup_interface(sc);
-
 	if (vxlan_setup_socket(sc) != 0)
 		goto out;
+
+#ifdef INET6
+	vxlan_setup_zero_checksum_port(sc);
+#endif
 
 	/* Initialize the default forwarding entry. */
 	vxlan_ftable_entry_init(sc, &sc->vxl_default_fe, empty_mac,
@@ -1673,8 +1766,12 @@ vxlan_init(void *xsc)
 	VXLAN_WUNLOCK(sc);
 
 	if_link_state_change(ifp, LINK_STATE_UP);
+
+	EVENTHANDLER_INVOKE(vxlan_start, ifp, sc->vxl_src_addr.in4.sin_family,
+	    ntohs(sc->vxl_src_addr.in4.sin_port));
 out:
 	vxlan_init_complete(sc);
+	sx_xunlock(&vxlan_sx);
 }
 
 static void
@@ -1716,11 +1813,11 @@ vxlan_teardown_locked(struct vxlan_softc *sc)
 	struct ifnet *ifp;
 	struct vxlan_socket *vso;
 
-	ifp = sc->vxl_ifp;
-
+	sx_assert(&vxlan_sx, SA_XLOCKED);
 	VXLAN_LOCK_WASSERT(sc);
 	MPASS(sc->vxl_flags & VXLAN_FLAG_TEARDOWN);
 
+	ifp = sc->vxl_ifp;
 	ifp->if_flags &= ~IFF_UP;
 	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 	callout_stop(&sc->vxl_callout);
@@ -1729,6 +1826,8 @@ vxlan_teardown_locked(struct vxlan_softc *sc)
 
 	VXLAN_WUNLOCK(sc);
 	if_link_state_change(ifp, LINK_STATE_DOWN);
+	EVENTHANDLER_INVOKE(vxlan_stop, ifp, sc->vxl_src_addr.in4.sin_family,
+	    ntohs(sc->vxl_src_addr.in4.sin_port));
 
 	if (vso != NULL) {
 		vxlan_socket_remove_softc(vso, sc);
@@ -1758,15 +1857,18 @@ static void
 vxlan_teardown(struct vxlan_softc *sc)
 {
 
+	sx_xlock(&vxlan_sx);
 	VXLAN_WLOCK(sc);
 	if (sc->vxl_flags & VXLAN_FLAG_TEARDOWN) {
 		vxlan_teardown_wait(sc);
 		VXLAN_WUNLOCK(sc);
+		sx_xunlock(&vxlan_sx);
 		return;
 	}
 
 	sc->vxl_flags |= VXLAN_FLAG_TEARDOWN;
 	vxlan_teardown_locked(sc);
+	sx_xunlock(&vxlan_sx);
 }
 
 static void
@@ -1898,6 +2000,7 @@ vxlan_ctrl_set_local_addr(struct vxlan_softc *sc, void *arg)
 	VXLAN_WLOCK(sc);
 	if (vxlan_can_change_config(sc)) {
 		vxlan_sockaddr_in_copy(&sc->vxl_src_addr, &vxlsa->sa);
+		vxlan_set_hwcaps(sc);
 		error = 0;
 	} else
 		error = EBUSY;
@@ -1927,6 +2030,7 @@ vxlan_ctrl_set_remote_addr(struct vxlan_softc *sc, void *arg)
 	VXLAN_WLOCK(sc);
 	if (vxlan_can_change_config(sc)) {
 		vxlan_sockaddr_in_copy(&sc->vxl_dst_addr, &vxlsa->sa);
+		vxlan_setup_interface_hdrlen(sc);
 		error = 0;
 	} else
 		error = EBUSY;
@@ -2054,6 +2158,7 @@ vxlan_ctrl_set_multicast_if(struct vxlan_softc * sc, void *arg)
 	VXLAN_WLOCK(sc);
 	if (vxlan_can_change_config(sc)) {
 		strlcpy(sc->vxl_mc_ifname, cmd->vxlcmd_ifname, IFNAMSIZ);
+		vxlan_set_hwcaps(sc);
 		error = 0;
 	} else
 		error = EBUSY;
@@ -2269,6 +2374,25 @@ vxlan_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		error = ifmedia_ioctl(ifp, ifr, &sc->vxl_media, cmd);
 		break;
 
+	case SIOCSIFMTU:
+		if (ifr->ifr_mtu < ETHERMIN || ifr->ifr_mtu > VXLAN_MAX_MTU) {
+			error = EINVAL;
+		} else {
+			VXLAN_WLOCK(sc);
+			ifp->if_mtu = ifr->ifr_mtu;
+			sc->vxl_flags |= VXLAN_FLAG_USER_MTU;
+			VXLAN_WUNLOCK(sc);
+		}
+		break;
+
+	case SIOCSIFCAP:
+		VXLAN_WLOCK(sc);
+		error = vxlan_set_reqcap(sc, ifp, ifr->ifr_reqcap);
+		if (error == 0)
+			vxlan_set_hwcaps(sc);
+		VXLAN_WUNLOCK(sc);
+		break;
+
 	case SIOCGTUNFIB:
 		VXLAN_RLOCK(sc, &tracker);
 		ifr->ifr_fib = sc->vxl_fibnum;
@@ -2339,6 +2463,48 @@ vxlan_encap_header(struct vxlan_softc *sc, struct mbuf *m, int ipoff,
 }
 #endif
 
+/*
+ * Return the CSUM_INNER_* equivalent of CSUM_* caps.
+ */
+static uint32_t
+csum_flags_to_inner_flags(uint32_t csum_flags_in, const uint32_t encap)
+{
+	uint32_t csum_flags = encap;
+	const uint32_t v4 = CSUM_IP | CSUM_IP_UDP | CSUM_IP_TCP;
+
+	/*
+	 * csum_flags can request either v4 or v6 offload but not both.
+	 * tcp_output always sets CSUM_TSO (both CSUM_IP_TSO and CSUM_IP6_TSO)
+	 * so those bits are no good to detect the IP version.  Other bits are
+	 * always set with CSUM_TSO and we use those to figure out the IP
+	 * version.
+	 */
+	if (csum_flags_in & v4) {
+		if (csum_flags_in & CSUM_IP)
+			csum_flags |= CSUM_INNER_IP;
+		if (csum_flags_in & CSUM_IP_UDP)
+			csum_flags |= CSUM_INNER_IP_UDP;
+		if (csum_flags_in & CSUM_IP_TCP)
+			csum_flags |= CSUM_INNER_IP_TCP;
+		if (csum_flags_in & CSUM_IP_TSO)
+			csum_flags |= CSUM_INNER_IP_TSO;
+	} else {
+#ifdef INVARIANTS
+		const uint32_t v6 = CSUM_IP6_UDP | CSUM_IP6_TCP;
+
+		MPASS((csum_flags_in & v6) != 0);
+#endif
+		if (csum_flags_in & CSUM_IP6_UDP)
+			csum_flags |= CSUM_INNER_IP6_UDP;
+		if (csum_flags_in & CSUM_IP6_TCP)
+			csum_flags |= CSUM_INNER_IP6_TCP;
+		if (csum_flags_in & CSUM_IP6_TSO)
+			csum_flags |= CSUM_INNER_IP6_TSO;
+	}
+
+	return (csum_flags);
+}
+
 static int
 vxlan_encap4(struct vxlan_softc *sc, const union vxlan_sockaddr *fvxlsa,
     struct mbuf *m)
@@ -2349,6 +2515,11 @@ vxlan_encap4(struct vxlan_softc *sc, const union vxlan_sockaddr *fvxlsa,
 	struct in_addr srcaddr, dstaddr;
 	uint16_t srcport, dstport;
 	int plen, mcast, error;
+	struct route route, *ro;
+	struct sockaddr_in *sin;
+	uint32_t csum_flags;
+
+	NET_EPOCH_ASSERT();
 
 	ifp = sc->vxl_ifp;
 	srcaddr = sc->vxl_src_addr.in4.sin_addr;
@@ -2379,7 +2550,57 @@ vxlan_encap4(struct vxlan_softc *sc, const union vxlan_sockaddr *fvxlsa,
 	mcast = (m->m_flags & (M_MCAST | M_BCAST)) ? 1 : 0;
 	m->m_flags &= ~(M_MCAST | M_BCAST);
 
-	error = ip_output(m, NULL, NULL, 0, sc->vxl_im4o, NULL);
+	m->m_pkthdr.csum_flags &= CSUM_FLAGS_TX;
+	if (m->m_pkthdr.csum_flags != 0) {
+		/*
+		 * HW checksum (L3 and/or L4) or TSO has been requested.  Look
+		 * up the ifnet for the outbound route and verify that the
+		 * outbound ifnet can perform the requested operation on the
+		 * inner frame.
+		 */
+		bzero(&route, sizeof(route));
+		ro = &route;
+		sin = (struct sockaddr_in *)&ro->ro_dst;
+		sin->sin_family = AF_INET;
+		sin->sin_len = sizeof(*sin);
+		sin->sin_addr = ip->ip_dst;
+		ro->ro_nh = fib4_lookup(M_GETFIB(m), ip->ip_dst, 0, NHR_NONE,
+		    0);
+		if (ro->ro_nh == NULL) {
+			m_freem(m);
+			if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
+			return (EHOSTUNREACH);
+		}
+
+		csum_flags = csum_flags_to_inner_flags(m->m_pkthdr.csum_flags,
+		    CSUM_ENCAP_VXLAN);
+		if ((csum_flags & ro->ro_nh->nh_ifp->if_hwassist) !=
+		    csum_flags) {
+			if (ppsratecheck(&sc->err_time, &sc->err_pps, 1)) {
+				const struct ifnet *nh_ifp = ro->ro_nh->nh_ifp;
+
+				if_printf(ifp, "interface %s is missing hwcaps "
+				    "0x%08x, csum_flags 0x%08x -> 0x%08x, "
+				    "hwassist 0x%08x\n", nh_ifp->if_xname,
+				    csum_flags & ~(uint32_t)nh_ifp->if_hwassist,
+				    m->m_pkthdr.csum_flags, csum_flags,
+				    (uint32_t)nh_ifp->if_hwassist);
+			}
+			m_freem(m);
+			if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
+			return (ENXIO);
+		}
+		m->m_pkthdr.csum_flags = csum_flags;
+		if (csum_flags &
+		    (CSUM_INNER_IP | CSUM_INNER_IP_UDP | CSUM_INNER_IP6_UDP |
+		    CSUM_INNER_IP_TCP | CSUM_INNER_IP6_TCP)) {
+			counter_u64_add(sc->vxl_stats.txcsum, 1);
+			if (csum_flags & CSUM_INNER_TSO)
+				counter_u64_add(sc->vxl_stats.tso, 1);
+		}
+	} else
+		ro = NULL;
+	error = ip_output(m, NULL, ro, 0, sc->vxl_im4o, NULL);
 	if (error == 0) {
 		if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 		if_inc_counter(ifp, IFCOUNTER_OBYTES, plen);
@@ -2405,6 +2626,11 @@ vxlan_encap6(struct vxlan_softc *sc, const union vxlan_sockaddr *fvxlsa,
 	const struct in6_addr *srcaddr, *dstaddr;
 	uint16_t srcport, dstport;
 	int plen, mcast, error;
+	struct route_in6 route, *ro;
+	struct sockaddr_in6 *sin6;
+	uint32_t csum_flags;
+
+	NET_EPOCH_ASSERT();
 
 	ifp = sc->vxl_ifp;
 	srcaddr = &sc->vxl_src_addr.in6.sin6_addr;
@@ -2431,22 +2657,67 @@ vxlan_encap6(struct vxlan_softc *sc, const union vxlan_sockaddr *fvxlsa,
 
 	vxlan_encap_header(sc, m, sizeof(struct ip6_hdr), srcport, dstport);
 
-	/*
-	 * XXX BMV We need support for RFC6935 before we can send and
-	 * receive IPv6 UDP packets with a zero checksum.
-	 */
-	{
+	mcast = (m->m_flags & (M_MCAST | M_BCAST)) ? 1 : 0;
+	m->m_flags &= ~(M_MCAST | M_BCAST);
+
+	ro = NULL;
+	m->m_pkthdr.csum_flags &= CSUM_FLAGS_TX;
+	if (m->m_pkthdr.csum_flags != 0) {
+		/*
+		 * HW checksum (L3 and/or L4) or TSO has been requested.  Look
+		 * up the ifnet for the outbound route and verify that the
+		 * outbound ifnet can perform the requested operation on the
+		 * inner frame.
+		 */
+		bzero(&route, sizeof(route));
+		ro = &route;
+		sin6 = (struct sockaddr_in6 *)&ro->ro_dst;
+		sin6->sin6_family = AF_INET6;
+		sin6->sin6_len = sizeof(*sin6);
+		sin6->sin6_addr = ip6->ip6_dst;
+		ro->ro_nh = fib6_lookup(M_GETFIB(m), &ip6->ip6_dst, 0,
+		    NHR_NONE, 0);
+		if (ro->ro_nh == NULL) {
+			m_freem(m);
+			if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
+			return (EHOSTUNREACH);
+		}
+
+		csum_flags = csum_flags_to_inner_flags(m->m_pkthdr.csum_flags,
+		    CSUM_ENCAP_VXLAN);
+		if ((csum_flags & ro->ro_nh->nh_ifp->if_hwassist) !=
+		    csum_flags) {
+			if (ppsratecheck(&sc->err_time, &sc->err_pps, 1)) {
+				const struct ifnet *nh_ifp = ro->ro_nh->nh_ifp;
+
+				if_printf(ifp, "interface %s is missing hwcaps "
+				    "0x%08x, csum_flags 0x%08x -> 0x%08x, "
+				    "hwassist 0x%08x\n", nh_ifp->if_xname,
+				    csum_flags & ~(uint32_t)nh_ifp->if_hwassist,
+				    m->m_pkthdr.csum_flags, csum_flags,
+				    (uint32_t)nh_ifp->if_hwassist);
+			}
+			m_freem(m);
+			if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
+			return (ENXIO);
+		}
+		m->m_pkthdr.csum_flags = csum_flags;
+		if (csum_flags &
+		    (CSUM_INNER_IP | CSUM_INNER_IP_UDP | CSUM_INNER_IP6_UDP |
+		    CSUM_INNER_IP_TCP | CSUM_INNER_IP6_TCP)) {
+			counter_u64_add(sc->vxl_stats.txcsum, 1);
+			if (csum_flags & CSUM_INNER_TSO)
+				counter_u64_add(sc->vxl_stats.tso, 1);
+		}
+	} else if (ntohs(dstport) != V_zero_checksum_port) {
 		struct udphdr *hdr = mtodo(m, sizeof(struct ip6_hdr));
+
 		hdr->uh_sum = in6_cksum_pseudo(ip6,
 		    m->m_pkthdr.len - sizeof(struct ip6_hdr), IPPROTO_UDP, 0);
 		m->m_pkthdr.csum_flags = CSUM_UDP_IPV6;
 		m->m_pkthdr.csum_data = offsetof(struct udphdr, uh_sum);
 	}
-
-	mcast = (m->m_flags & (M_MCAST | M_BCAST)) ? 1 : 0;
-	m->m_flags &= ~(M_MCAST | M_BCAST);
-
-	error = ip6_output(m, NULL, NULL, 0, sc->vxl_im6o, NULL, NULL);
+	error = ip6_output(m, NULL, ro, 0, sc->vxl_im6o, NULL, NULL);
 	if (error == 0) {
 		if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 		if_inc_counter(ifp, IFCOUNTER_OBYTES, plen);
@@ -2462,6 +2733,7 @@ vxlan_encap6(struct vxlan_softc *sc, const union vxlan_sockaddr *fvxlsa,
 #endif
 }
 
+#define MTAG_VXLAN_LOOP	0x7876706c /* vxlp */
 static int
 vxlan_transmit(struct ifnet *ifp, struct mbuf *m)
 {
@@ -2486,6 +2758,13 @@ vxlan_transmit(struct ifnet *ifp, struct mbuf *m)
 		VXLAN_RUNLOCK(sc, &tracker);
 		m_freem(m);
 		return (ENETDOWN);
+	}
+	if (__predict_false(if_tunnel_check_nesting(ifp, m, MTAG_VXLAN_LOOP,
+	    max_vxlan_nesting) != 0)) {
+		VXLAN_RUNLOCK(sc, &tracker);
+		m_freem(m);
+		if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
+		return (ELOOP);
 	}
 
 	if ((m->m_flags & (M_BCAST | M_MCAST)) == 0)
@@ -2548,7 +2827,7 @@ vxlan_rcv_udp_packet(struct mbuf *m, int offset, struct inpcb *inpcb,
 	 * the behavior of the Linux implementation.
 	 */
 	if (vxh->vxlh_flags != htonl(VXLAN_HDR_FLAGS_VALID_VNI) ||
-	    vxh->vxlh_vni & ~htonl(VXLAN_VNI_MASK))
+	    vxh->vxlh_vni & ~VXLAN_VNI_MASK)
 		goto out;
 
 	vni = ntohl(vxh->vxlh_vni) >> VXLAN_HDR_VNI_SHIFT;
@@ -2574,12 +2853,16 @@ vxlan_input(struct vxlan_socket *vso, uint32_t vni, struct mbuf **m0,
 	struct ether_header *eh;
 	int error;
 
+	m = *m0;
+
+	if (m->m_pkthdr.len < ETHER_HDR_LEN)
+		return (EINVAL);
+
 	sc = vxlan_socket_lookup_softc(vso, vni);
 	if (sc == NULL)
 		return (ENOENT);
 
 	ifp = sc->vxl_ifp;
-	m = *m0;
 	if (m->m_len < ETHER_HDR_LEN &&
 	    (m = m_pullup(m, ETHER_HDR_LEN)) == NULL) {
 		*m0 = NULL;
@@ -2603,14 +2886,56 @@ vxlan_input(struct vxlan_socket *vso, uint32_t vni, struct mbuf **m0,
 	m_clrprotoflags(m);
 	m->m_pkthdr.rcvif = ifp;
 	M_SETFIB(m, ifp->if_fib);
+	if (((ifp->if_capenable & IFCAP_RXCSUM &&
+	    m->m_pkthdr.csum_flags & CSUM_INNER_L3_CALC) ||
+	    (ifp->if_capenable & IFCAP_RXCSUM_IPV6 &&
+	    !(m->m_pkthdr.csum_flags & CSUM_INNER_L3_CALC)))) {
+		uint32_t csum_flags = 0;
+
+		if (m->m_pkthdr.csum_flags & CSUM_INNER_L3_CALC)
+			csum_flags |= CSUM_L3_CALC;
+		if (m->m_pkthdr.csum_flags & CSUM_INNER_L3_VALID)
+			csum_flags |= CSUM_L3_VALID;
+		if (m->m_pkthdr.csum_flags & CSUM_INNER_L4_CALC)
+			csum_flags |= CSUM_L4_CALC;
+		if (m->m_pkthdr.csum_flags & CSUM_INNER_L4_VALID)
+			csum_flags |= CSUM_L4_VALID;
+		m->m_pkthdr.csum_flags = csum_flags;
+		counter_u64_add(sc->vxl_stats.rxcsum, 1);
+	} else {
+		/* clear everything */
+		m->m_pkthdr.csum_flags = 0;
+		m->m_pkthdr.csum_data = 0;
+	}
 
 	if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
-	error = netisr_queue_src(NETISR_ETHER, 0, m);
+	(*ifp->if_input)(ifp, m);
 	*m0 = NULL;
+	error = 0;
 
 out:
 	vxlan_release(sc);
 	return (error);
+}
+
+static void
+vxlan_stats_alloc(struct vxlan_softc *sc)
+{
+	struct vxlan_statistics *stats = &sc->vxl_stats;
+
+	stats->txcsum = counter_u64_alloc(M_WAITOK);
+	stats->tso = counter_u64_alloc(M_WAITOK);
+	stats->rxcsum = counter_u64_alloc(M_WAITOK);
+}
+
+static void
+vxlan_stats_free(struct vxlan_softc *sc)
+{
+	struct vxlan_statistics *stats = &sc->vxl_stats;
+
+	counter_u64_free(stats->txcsum);
+	counter_u64_free(stats->tso);
+	counter_u64_free(stats->rxcsum);
 }
 
 static void
@@ -2733,6 +3058,142 @@ vxlan_set_user_config(struct vxlan_softc *sc, struct ifvxlanparam *vxlp)
 }
 
 static int
+vxlan_set_reqcap(struct vxlan_softc *sc, struct ifnet *ifp, int reqcap)
+{
+	int mask = reqcap ^ ifp->if_capenable;
+
+	/* Disable TSO if tx checksums are disabled. */
+	if (mask & IFCAP_TXCSUM && !(reqcap & IFCAP_TXCSUM) &&
+	    reqcap & IFCAP_TSO4) {
+		reqcap &= ~IFCAP_TSO4;
+		if_printf(ifp, "tso4 disabled due to -txcsum.\n");
+	}
+	if (mask & IFCAP_TXCSUM_IPV6 && !(reqcap & IFCAP_TXCSUM_IPV6) &&
+	    reqcap & IFCAP_TSO6) {
+		reqcap &= ~IFCAP_TSO6;
+		if_printf(ifp, "tso6 disabled due to -txcsum6.\n");
+	}
+
+	/* Do not enable TSO if tx checksums are disabled. */
+	if (mask & IFCAP_TSO4 && reqcap & IFCAP_TSO4 &&
+	    !(reqcap & IFCAP_TXCSUM)) {
+		if_printf(ifp, "enable txcsum first.\n");
+		return (EAGAIN);
+	}
+	if (mask & IFCAP_TSO6 && reqcap & IFCAP_TSO6 &&
+	    !(reqcap & IFCAP_TXCSUM_IPV6)) {
+		if_printf(ifp, "enable txcsum6 first.\n");
+		return (EAGAIN);
+	}
+
+	sc->vxl_reqcap = reqcap;
+	return (0);
+}
+
+/*
+ * A VXLAN interface inherits the capabilities of the vxlandev or the interface
+ * hosting the vxlanlocal address.
+ */
+static void
+vxlan_set_hwcaps(struct vxlan_softc *sc)
+{
+	struct epoch_tracker et;
+	struct ifnet *p;
+	struct ifaddr *ifa;
+	u_long hwa;
+	int cap, ena;
+	bool rel;
+	struct ifnet *ifp = sc->vxl_ifp;
+
+	/* reset caps */
+	ifp->if_capabilities &= VXLAN_BASIC_IFCAPS;
+	ifp->if_capenable &= VXLAN_BASIC_IFCAPS;
+	ifp->if_hwassist = 0;
+
+	NET_EPOCH_ENTER(et);
+	CURVNET_SET(ifp->if_vnet);
+
+	rel = false;
+	p = NULL;
+	if (sc->vxl_mc_ifname[0] != '\0') {
+		rel = true;
+		p = ifunit_ref(sc->vxl_mc_ifname);
+	} else if (vxlan_sockaddr_in_any(&sc->vxl_src_addr) == 0) {
+		if (sc->vxl_src_addr.sa.sa_family == AF_INET) {
+			struct sockaddr_in in4 = sc->vxl_src_addr.in4;
+
+			in4.sin_port = 0;
+			ifa = ifa_ifwithaddr((struct sockaddr *)&in4);
+			if (ifa != NULL)
+				p = ifa->ifa_ifp;
+		} else if (sc->vxl_src_addr.sa.sa_family == AF_INET6) {
+			struct sockaddr_in6 in6 = sc->vxl_src_addr.in6;
+
+			in6.sin6_port = 0;
+			ifa = ifa_ifwithaddr((struct sockaddr *)&in6);
+			if (ifa != NULL)
+				p = ifa->ifa_ifp;
+		}
+	}
+	if (p == NULL)
+		goto done;
+
+	cap = ena = hwa = 0;
+
+	/* checksum offload */
+	if (p->if_capabilities & IFCAP_VXLAN_HWCSUM)
+		cap |= p->if_capabilities & (IFCAP_HWCSUM | IFCAP_HWCSUM_IPV6);
+	if (p->if_capenable & IFCAP_VXLAN_HWCSUM) {
+		ena |= sc->vxl_reqcap & p->if_capenable &
+		    (IFCAP_HWCSUM | IFCAP_HWCSUM_IPV6);
+		if (ena & IFCAP_TXCSUM) {
+			if (p->if_hwassist & CSUM_INNER_IP)
+				hwa |= CSUM_IP;
+			if (p->if_hwassist & CSUM_INNER_IP_UDP)
+				hwa |= CSUM_IP_UDP;
+			if (p->if_hwassist & CSUM_INNER_IP_TCP)
+				hwa |= CSUM_IP_TCP;
+		}
+		if (ena & IFCAP_TXCSUM_IPV6) {
+			if (p->if_hwassist & CSUM_INNER_IP6_UDP)
+				hwa |= CSUM_IP6_UDP;
+			if (p->if_hwassist & CSUM_INNER_IP6_TCP)
+				hwa |= CSUM_IP6_TCP;
+		}
+	}
+
+	/* hardware TSO */
+	if (p->if_capabilities & IFCAP_VXLAN_HWTSO) {
+		cap |= p->if_capabilities & IFCAP_TSO;
+		if (p->if_hw_tsomax > IP_MAXPACKET - ifp->if_hdrlen)
+			ifp->if_hw_tsomax = IP_MAXPACKET - ifp->if_hdrlen;
+		else
+			ifp->if_hw_tsomax = p->if_hw_tsomax;
+		/* XXX: tsomaxsegcount decrement is cxgbe specific  */
+		ifp->if_hw_tsomaxsegcount = p->if_hw_tsomaxsegcount - 1;
+		ifp->if_hw_tsomaxsegsize = p->if_hw_tsomaxsegsize;
+	}
+	if (p->if_capenable & IFCAP_VXLAN_HWTSO) {
+		ena |= sc->vxl_reqcap & p->if_capenable & IFCAP_TSO;
+		if (ena & IFCAP_TSO) {
+			if (p->if_hwassist & CSUM_INNER_IP_TSO)
+				hwa |= CSUM_IP_TSO;
+			if (p->if_hwassist & CSUM_INNER_IP6_TSO)
+				hwa |= CSUM_IP6_TSO;
+		}
+	}
+
+	ifp->if_capabilities |= cap;
+	ifp->if_capenable |= ena;
+	ifp->if_hwassist |= hwa;
+	if (rel)
+		if_rele(p);
+done:
+	CURVNET_RESTORE();
+	NET_EPOCH_EXIT(et);
+}
+
+static int
 vxlan_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 {
 	struct vxlan_softc *sc;
@@ -2756,11 +3217,8 @@ vxlan_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	}
 
 	ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		error = ENOSPC;
-		goto fail;
-	}
 
+	vxlan_stats_alloc(sc);
 	sc->vxl_ifp = ifp;
 	rm_init(&sc->vxl_lock, "vxlanrm");
 	callout_init_rw(&sc->vxl_callout, &sc->vxl_lock, 0);
@@ -2776,8 +3234,10 @@ vxlan_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	ifp->if_ioctl = vxlan_ioctl;
 	ifp->if_transmit = vxlan_transmit;
 	ifp->if_qflush = vxlan_qflush;
-	ifp->if_capabilities |= IFCAP_LINKSTATE;
-	ifp->if_capenable |= IFCAP_LINKSTATE;
+	ifp->if_capabilities = VXLAN_BASIC_IFCAPS;
+	ifp->if_capenable = VXLAN_BASIC_IFCAPS;
+	sc->vxl_reqcap = -1;
+	vxlan_set_hwcaps(sc);
 
 	ifmedia_init(&sc->vxl_media, 0, vxlan_media_change, vxlan_media_status);
 	ifmedia_add(&sc->vxl_media, IFM_ETHER | IFM_AUTO, 0, NULL);
@@ -2787,7 +3247,10 @@ vxlan_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	ether_ifattach(ifp, sc->vxl_hwaddr.octet);
 
 	ifp->if_baudrate = 0;
-	ifp->if_hdrlen = 0;
+
+	VXLAN_WLOCK(sc);
+	vxlan_setup_interface_hdrlen(sc);
+	VXLAN_WUNLOCK(sc);
 
 	return (0);
 
@@ -2815,6 +3278,7 @@ vxlan_clone_destroy(struct ifnet *ifp)
 
 	vxlan_sysctl_destroy(sc);
 	rm_destroy(&sc->vxl_lock);
+	vxlan_stats_free(sc);
 	free(sc, M_VXLAN);
 }
 
@@ -3072,10 +3536,10 @@ vxlan_sysctl_setup(struct vxlan_softc *sc)
 	sysctl_ctx_init(ctx);
 	sc->vxl_sysctl_node = SYSCTL_ADD_NODE(ctx,
 	    SYSCTL_STATIC_CHILDREN(_net_link_vxlan), OID_AUTO, namebuf,
-	    CTLFLAG_RD, NULL, "");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "");
 
 	node = SYSCTL_ADD_NODE(ctx, SYSCTL_CHILDREN(sc->vxl_sysctl_node),
-	    OID_AUTO, "ftable", CTLFLAG_RD, NULL, "");
+	    OID_AUTO, "ftable", CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "");
 	SYSCTL_ADD_UINT(ctx, SYSCTL_CHILDREN(node), OID_AUTO, "count",
 	    CTLFLAG_RD, &sc->vxl_ftable_cnt, 0,
 	    "Number of entries in forwarding table");
@@ -3091,7 +3555,7 @@ vxlan_sysctl_setup(struct vxlan_softc *sc)
 	    "Dump the forwarding table entries");
 
 	node = SYSCTL_ADD_NODE(ctx, SYSCTL_CHILDREN(sc->vxl_sysctl_node),
-	    OID_AUTO, "stats", CTLFLAG_RD, NULL, "");
+	    OID_AUTO, "stats", CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "");
 	SYSCTL_ADD_UINT(ctx, SYSCTL_CHILDREN(node), OID_AUTO,
 	    "ftable_nospace", CTLFLAG_RD, &stats->ftable_nospace, 0,
 	    "Fowarding table reached maximum entries");
@@ -3099,6 +3563,15 @@ vxlan_sysctl_setup(struct vxlan_softc *sc)
 	    "ftable_lock_upgrade_failed", CTLFLAG_RD,
 	    &stats->ftable_lock_upgrade_failed, 0,
 	    "Forwarding table update required lock upgrade");
+
+	SYSCTL_ADD_COUNTER_U64(ctx, SYSCTL_CHILDREN(node), OID_AUTO, "txcsum",
+	    CTLFLAG_RD, &stats->txcsum,
+	    "# of times hardware assisted with tx checksum");
+	SYSCTL_ADD_COUNTER_U64(ctx, SYSCTL_CHILDREN(node), OID_AUTO, "tso",
+	    CTLFLAG_RD, &stats->tso, "# of times hardware assisted with TSO");
+	SYSCTL_ADD_COUNTER_U64(ctx, SYSCTL_CHILDREN(node), OID_AUTO, "rxcsum",
+	    CTLFLAG_RD, &stats->rxcsum,
+	    "# of times hardware assisted with rx checksum");
 }
 
 static void
@@ -3143,10 +3616,12 @@ vxlan_ifdetach_event(void *arg __unused, struct ifnet *ifp)
 	LIST_FOREACH_SAFE(sc, &list, vxl_ifdetach_list, tsc) {
 		LIST_REMOVE(sc, vxl_ifdetach_list);
 
+		sx_xlock(&vxlan_sx);
 		VXLAN_WLOCK(sc);
 		if (sc->vxl_flags & VXLAN_FLAG_INIT)
 			vxlan_init_wait(sc);
 		vxlan_teardown_locked(sc);
+		sx_xunlock(&vxlan_sx);
 	}
 }
 

@@ -1,7 +1,7 @@
 /*	$NetBSD: fpu_extern.h,v 1.3 2005/12/11 12:18:42 christos Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1995 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -53,4 +53,3 @@ u_int fpu_ftoi(struct fpemu *, struct fpn *);
 u_int fpu_ftox(struct fpemu *, struct fpn *, u_int *);
 u_int fpu_ftos(struct fpemu *, struct fpn *);
 u_int fpu_ftod(struct fpemu *, struct fpn *, u_int *);
-

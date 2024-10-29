@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Nathan Whitehorn
  * All rights reserved.
@@ -28,13 +28,13 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/module.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/cpu.h>
+#include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
 
@@ -110,4 +110,3 @@ vcoregpio_post_change(device_t dev, const struct cf_level *level)
 		macgpio_write(dev, GPIO_DDR_OUTPUT | 0);
 	}
 }
-

@@ -31,13 +31,15 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/module.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
+#include <sys/eventhandler.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
 #include <sys/clock.h>
 #include <sys/reboot.h>
 
@@ -146,10 +148,10 @@ cuda_attach(device_t dev)
 	volatile int i;
 	uint8_t reg;
 	phandle_t node,child;
-	
+
 	sc = device_get_softc(dev);
 	sc->sc_dev = dev;
-	
+
 	sc->sc_memrid = 0;
 	sc->sc_memr = bus_alloc_resource_any(dev, SYS_RES_MEMORY, 
 	    &sc->sc_memrid, RF_ACTIVE);
@@ -441,7 +443,7 @@ cuda_send_inbound(struct cuda_softc *sc)
 	struct cuda_packet *pkt;
 
 	dev = sc->sc_dev;
-	
+
 	mtx_lock(&sc->sc_mutex);
 
 	while ((pkt = STAILQ_FIRST(&sc->sc_inq)) != NULL) {
@@ -795,4 +797,3 @@ cuda_settime(device_t dev, struct timespec *ts)
 
 	return (0);
 }
-

@@ -1,6 +1,5 @@
 /*-
  * This file is in the public domain since it's just boilerplate.
- *
  */
 
 #ifndef __RISCV_INCLUDE_EFI_H_

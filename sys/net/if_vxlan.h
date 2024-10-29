@@ -22,7 +22,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _NET_IF_VXLAN_H_
@@ -141,5 +140,12 @@ struct ifvxlancmd {
 	union vxlan_sockaddr	vxlcmd_sa;
 	char			vxlcmd_ifname[IFNAMSIZ];
 };
+
+#ifdef _KERNEL
+typedef void (*vxlan_event_handler_t)(void *, struct ifnet *, sa_family_t,
+    u_int);
+EVENTHANDLER_DECLARE(vxlan_start, vxlan_event_handler_t);
+EVENTHANDLER_DECLARE(vxlan_stop, vxlan_event_handler_t);
+#endif
 
 #endif /* _NET_IF_VXLAN_H_ */

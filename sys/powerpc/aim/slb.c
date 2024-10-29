@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Nathan Whitehorn
  * All rights reserved.
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -46,6 +45,9 @@
 #include <machine/md_var.h>
 #include <machine/platform.h>
 #include <machine/vmparam.h>
+#include <machine/trap.h>
+
+#include "mmu_oea64.h"
 
 uintptr_t moea64_get_unique_vsid(void);
 void moea64_release_vsid(uint64_t vsid);
@@ -95,7 +97,6 @@ esid2idx(uint64_t esid, int level)
  */
 #define uad_baseok(ua)                          \
 	(esid2base(ua->ua_base, ua->ua_level) == ua->ua_base)
-
 
 static inline uint64_t
 esid2base(uint64_t esid, int level)
@@ -217,7 +218,10 @@ kernel_va_to_slbv(vm_offset_t va)
 
 		if (mem_valid(DMAP_TO_PHYS(va), 0) == 0)
 			slbv |= SLBV_L;
-	}
+	} else if (moea64_large_page_size != 0 &&
+	    va >= (vm_offset_t)vm_page_array &&
+	    va <= (uintptr_t)(&vm_page_array[vm_page_array_size]))
+		slbv |= SLBV_L;
 		
 	return (slbv);
 }
@@ -412,6 +416,7 @@ slb_alloc_tree(void)
 	struct slbtnode *root;
 
 	root = uma_zalloc(slbt_zone, M_NOWAIT | M_ZERO);
+	KASSERT(root != NULL, ("unhandled NULL case"));
 	root->ua_level = UAD_ROOT_LEVEL;
 
 	return (root);
@@ -493,19 +498,18 @@ slb_uma_real_alloc(uma_zone_t zone, vm_size_t bytes, int domain,
 		realmax = platform_real_maxaddr();
 
 	*flags = UMA_SLAB_PRIV;
-	m = vm_page_alloc_contig_domain(NULL, 0, domain,
-	    malloc2vm_flags(wait) | VM_ALLOC_NOOBJ | VM_ALLOC_WIRED,
-	    1, 0, realmax, PAGE_SIZE, PAGE_SIZE, VM_MEMATTR_DEFAULT);
+	m = vm_page_alloc_noobj_contig_domain(domain, malloc2vm_flags(wait) |
+	    VM_ALLOC_WIRED, 1, 0, realmax, PAGE_SIZE, PAGE_SIZE,
+	    VM_MEMATTR_DEFAULT);
 	if (m == NULL)
 		return (NULL);
 
-	va = (void *)PHYS_TO_DMAP(VM_PAGE_TO_PHYS(m));
-
-	if (!hw_direct_map)
+	if (hw_direct_map)
+		va = (void *)PHYS_TO_DMAP(VM_PAGE_TO_PHYS(m));
+	else {
+		va = (void *)(VM_PAGE_TO_PHYS(m) | DMAP_BASE_ADDRESS);
 		pmap_kenter((vm_offset_t)va, VM_PAGE_TO_PHYS(m));
-
-	if ((wait & M_ZERO) && (m->flags & PG_ZERO) == 0)
-		bzero(va, PAGE_SIZE);
+	}
 
 	return (va);
 }
@@ -513,12 +517,12 @@ slb_uma_real_alloc(uma_zone_t zone, vm_size_t bytes, int domain,
 static void
 slb_zone_init(void *dummy)
 {
-
 	slbt_zone = uma_zcreate("SLB tree node", sizeof(struct slbtnode),
-	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, UMA_ZONE_VM);
+	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR,
+	    UMA_ZONE_CONTIG | UMA_ZONE_VM);
 	slb_cache_zone = uma_zcreate("SLB cache",
 	    (n_slbs + 1)*sizeof(struct slb *), NULL, NULL, NULL, NULL,
-	    UMA_ALIGN_PTR, UMA_ZONE_VM);
+	    UMA_ALIGN_PTR, UMA_ZONE_CONTIG | UMA_ZONE_VM);
 
 	if (platform_real_maxaddr() != VM_MAX_ADDRESS) {
 		uma_zone_set_allocf(slb_cache_zone, slb_uma_real_alloc);
@@ -529,11 +533,92 @@ slb_zone_init(void *dummy)
 struct slb **
 slb_alloc_user_cache(void)
 {
-	return (uma_zalloc(slb_cache_zone, M_ZERO));
+	return (uma_zalloc(slb_cache_zone, M_WAITOK | M_ZERO));
 }
 
 void
 slb_free_user_cache(struct slb **slb)
 {
 	uma_zfree(slb_cache_zone, slb);
+}
+
+/* Handle kernel SLB faults -- runs in real mode, all seat belts off */
+void
+handle_kernel_slb_spill(int type, register_t dar, register_t srr0)
+{
+	struct slb *slbcache;
+	uint64_t slbe, slbv;
+	uint64_t esid, addr;
+	int i;
+
+	addr = (type == EXC_ISE) ? srr0 : dar;
+	slbcache = PCPU_GET(aim.slb);
+	esid = (uintptr_t)addr >> ADDR_SR_SHFT;
+	slbe = (esid << SLBE_ESID_SHIFT) | SLBE_VALID;
+
+	/* See if the hardware flushed this somehow (can happen in LPARs) */
+	for (i = 0; i < n_slbs; i++)
+		if (slbcache[i].slbe == (slbe | (uint64_t)i))
+			return;
+
+	/* Not in the map, needs to actually be added */
+	slbv = kernel_va_to_slbv(addr);
+	if (slbcache[USER_SLB_SLOT].slbe == 0) {
+		for (i = 0; i < n_slbs; i++) {
+			if (i == USER_SLB_SLOT)
+				continue;
+			if (!(slbcache[i].slbe & SLBE_VALID))
+				goto fillkernslb;
+		}
+
+		if (i == n_slbs)
+			slbcache[USER_SLB_SLOT].slbe = 1;
+	}
+
+	/* Sacrifice a random SLB entry that is not the user entry */
+	i = mftb() % n_slbs;
+	if (i == USER_SLB_SLOT)
+		i = (i+1) % n_slbs;
+
+fillkernslb:
+	/* Write new entry */
+	slbcache[i].slbv = slbv;
+	slbcache[i].slbe = slbe | (uint64_t)i;
+
+	/* Trap handler will restore from cache on exit */
+}
+
+int 
+handle_user_slb_spill(pmap_t pm, vm_offset_t addr)
+{
+	struct slb *user_entry;
+	uint64_t esid;
+	int i;
+
+	if (pm->pm_slb == NULL)
+		return (-1);
+
+	esid = (uintptr_t)addr >> ADDR_SR_SHFT;
+
+	PMAP_LOCK(pm);
+	user_entry = user_va_to_slb_entry(pm, addr);
+
+	if (user_entry == NULL) {
+		/* allocate_vsid auto-spills it */
+		(void)allocate_user_vsid(pm, esid, 0);
+	} else {
+		/*
+		 * Check that another CPU has not already mapped this.
+		 * XXX: Per-thread SLB caches would be better.
+		 */
+		for (i = 0; i < pm->pm_slb_len; i++)
+			if (pm->pm_slb[i] == user_entry)
+				break;
+
+		if (i == pm->pm_slb_len)
+			slb_insert_user(pm, user_entry);
+	}
+	PMAP_UNLOCK(pm);
+
+	return (0);
 }

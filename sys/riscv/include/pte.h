@@ -31,7 +31,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_PTE_H_
@@ -43,22 +42,24 @@ typedef	uint64_t	pt_entry_t;		/* page table entry */
 typedef	uint64_t	pn_t;			/* page number */
 #endif
 
-/* Level 0 table, 512GiB per entry */
+/* Level 0 table, 512GiB per entry, SV48 only */
 #define	L0_SHIFT	39
+#define	L0_SIZE		(1UL << L0_SHIFT)
+#define	L0_OFFSET	(L0_SIZE - 1)
 
 /* Level 1 table, 1GiB per entry */
 #define	L1_SHIFT	30
-#define	L1_SIZE 	(1 << L1_SHIFT)
+#define	L1_SIZE 	(1UL << L1_SHIFT)
 #define	L1_OFFSET 	(L1_SIZE - 1)
 
 /* Level 2 table, 2MiB per entry */
 #define	L2_SHIFT	21
-#define	L2_SIZE 	(1 << L2_SHIFT)
+#define	L2_SIZE 	(1UL << L2_SHIFT)
 #define	L2_OFFSET 	(L2_SIZE - 1)
 
 /* Level 3 table, 4KiB per entry */
 #define	L3_SHIFT	12
-#define	L3_SIZE 	(1 << L3_SHIFT)
+#define	L3_SIZE 	(1UL << L3_SHIFT)
 #define	L3_OFFSET 	(L3_SIZE - 1)
 
 #define	Ln_ENTRIES_SHIFT 9
@@ -81,6 +82,9 @@ typedef	uint64_t	pn_t;			/* page number */
 #define	PTE_KERN	(PTE_V | PTE_R | PTE_W | PTE_A | PTE_D)
 #define	PTE_PROMOTE	(PTE_V | PTE_RWX | PTE_D | PTE_A | PTE_G | PTE_U | \
 			 PTE_SW_MANAGED | PTE_SW_WIRED)
+
+/* Bits 63 - 54 are reserved for future use. */
+#define PTE_HI_MASK	0xFFC0000000000000ULL
 
 #define	PTE_PPN0_S	10
 #define	PTE_PPN1_S	19

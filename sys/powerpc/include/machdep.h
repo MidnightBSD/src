@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011-2012 Semihalf
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _POWERPC_MACHDEP_H_
@@ -34,6 +33,5 @@ void booke_disable_l2_cache(void);
 void booke_enable_l1_cache(void);
 void booke_enable_l2_cache(void);
 void booke_enable_bpred(void);
-void booke_init_tlb(vm_paddr_t);
 
 #endif /* _POWERPC_MACHDEP_H_ */

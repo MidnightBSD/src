@@ -34,7 +34,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -50,9 +49,7 @@
 #ifndef _NETINET_CC_CC_H_
 #define _NETINET_CC_CC_H_
 
-#if !defined(_KERNEL)
-#error "no user-serviceable parts inside"
-#endif
+#ifdef _KERNEL
 
 /* Global CC vars. */
 extern STAILQ_HEAD(cc_head, cc_algo) cc_list;
@@ -92,21 +89,27 @@ struct cc_var {
 		struct sctp_nets	*sctp;
 	} ccvc;
 	uint16_t	nsegs; /* # segments coalesced into current chain. */
+	uint8_t		labc;  /* Dont use system abc use passed in */
 };
 
 /* cc_var flags. */
 #define	CCF_ABC_SENTAWND	0x0001	/* ABC counted cwnd worth of bytes? */
 #define	CCF_CWND_LIMITED	0x0002	/* Are we currently cwnd limited? */
-#define	CCF_UNUSED1		0x0004	/* unused */
+#define	CCF_USE_LOCAL_ABC       0x0004  /* Dont use the system l_abc val */
 #define	CCF_ACKNOW		0x0008	/* Will this ack be sent now? */
 #define	CCF_IPHDR_CE		0x0010	/* Does this packet set CE bit? */
 #define	CCF_TCPHDR_CWR		0x0020	/* Does this packet set CWR bit? */
+#define	CCF_MAX_CWND		0x0040	/* Have we reached maximum cwnd? */
+#define	CCF_CHG_MAX_CWND	0x0080	/* Cubic max_cwnd changed, for K */
+#define	CCF_USR_IWND		0x0100	/* User specified initial window */
+#define	CCF_USR_IWND_INIT_NSEG	0x0200	/* Convert segs to bytes on conn init */
 
 /* ACK types passed to the ack_received() hook. */
 #define	CC_ACK		0x0001	/* Regular in sequence ACK. */
 #define	CC_DUPACK	0x0002	/* Duplicate ACK. */
 #define	CC_PARTIALACK	0x0004	/* Not yet. */
 #define	CC_SACK		0x0008	/* Not yet. */
+#endif /* _KERNEL */
 
 /*
  * Congestion signal types passed to the cong_signal() hook. The highest order 8
@@ -120,6 +123,7 @@ struct cc_var {
 
 #define	CC_SIGPRIVMASK	0xFF000000	/* Mask to check if sig is private. */
 
+#ifdef _KERNEL
 /*
  * Structure to hold data and function pointers that together represent a
  * congestion control algorithm.
@@ -183,4 +187,5 @@ extern struct rwlock cc_list_lock;
 
 #define CC_ALGOOPT_LIMIT	2048
 
+#endif /* _KERNEL */
 #endif /* _NETINET_CC_CC_H_ */

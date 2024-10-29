@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2011-2016 Universita` di Pisa
  * All rights reserved.
@@ -54,7 +54,7 @@
  * To compute the next index in a circular ring you can use
  *	i = nm_ring_next(ring, i);
  *
- * To ease porting apps from pcap to netmap we supply a few fuctions
+ * To ease porting apps from pcap to netmap we supply a few functions
  * that can be called to open, close, read and write on netmap in a way
  * similar to libpcap. Note that the read/write function depend on
  * an ioctl()/select()/poll() being issued to refill rings or push
@@ -122,13 +122,11 @@
 	( ((char *)(buf) - ((char *)(ring) + (ring)->buf_ofs) ) / \
 		(ring)->nr_buf_size )
 
-
 static inline uint32_t
 nm_ring_next(struct netmap_ring *r, uint32_t i)
 {
 	return ( unlikely(i + 1 == r->num_slots) ? 0 : i + 1);
 }
-
 
 /*
  * Return 1 if we have pending transmissions in the tx ring.
@@ -295,9 +293,6 @@ struct nm_desc {
 #define IS_NETMAP_DESC(d)	((d) && P2NMD(d)->self == P2NMD(d))
 #define NETMAP_FD(d)		(P2NMD(d)->fd)
 
-
-
-
 /*
  * The callback, invoked on each received packet. Same as libpcap
  */
@@ -309,7 +304,7 @@ typedef void (*nm_cb_t)(u_char *, const struct nm_pkthdr *, const u_char *d);
  * nm_open() opens a file descriptor, binds to a port and maps memory.
  *
  * ifname	(netmap:foo or vale:foo) is the port name
- *		a suffix can indicate the follwing:
+ *		a suffix can indicate the following:
  *		^		bind the host (sw) ring pair
  *		*		bind host and NIC ring pairs
  *		-NN		bind individual NIC ring pair
@@ -353,7 +348,6 @@ enum {
 	NM_OPEN_ARG3 =		0x400000,
 	NM_OPEN_RING_CFG =	0x800000, /* tx|rx rings|slots */
 };
-
 
 /*
  * nm_close()	closes and restores the port to its previous state
@@ -434,7 +428,6 @@ win_remove_fd_record(int fd)
 		break;
 	}
 }
-
 
 HANDLE
 win_get_netmap_handle(int fd)
@@ -688,7 +681,7 @@ nm_parse(const char *ifname, struct nm_desc *d, char *err)
 				nr_flags = NR_REG_PIPE_MASTER;
 				p_state = P_GETNUM;
 				break;
-			case '}': /* pipe (slave endoint) */
+			case '}': /* pipe (slave endpoint) */
 				nr_flags = NR_REG_PIPE_SLAVE;
 				p_state = P_GETNUM;
 				break;
@@ -922,7 +915,6 @@ nm_open(const char *ifname, const struct nmreq *req,
 		goto fail;
 	}
 
-
 #ifdef DEBUG_NETMAP_USER
     { /* debugging code */
 	int i;
@@ -953,7 +945,6 @@ fail:
 		errno = EINVAL;
 	return NULL;
 }
-
 
 static int
 nm_close(struct nm_desc *d)
@@ -1067,7 +1058,6 @@ nm_inject(struct nm_desc *d, const void *buf, size_t size)
 	}
 	return 0; /* fail */
 }
-
 
 /*
  * Same prototype as pcap_dispatch(), only need to cast.

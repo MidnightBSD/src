@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 Justin Hibbits
  * Copyright (c) 2009 Nathan Whitehorn
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -69,7 +68,6 @@ static device_method_t pmufreq_methods[] = {
 	DEVMETHOD(cpufreq_drv_get,	pmufreq_get),
 	DEVMETHOD(cpufreq_drv_type,	pmufreq_type),
 	DEVMETHOD(cpufreq_drv_settings,	pmufreq_settings),
-
 	{0, 0}
 };
 
@@ -219,4 +217,3 @@ pmufreq_type(device_t dev, int *type)
 	*type = CPUFREQ_TYPE_ABSOLUTE;
 	return (0);
 }
-

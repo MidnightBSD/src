@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD AND BSD-4-Clause
+ * SPDX-License-Identifier: BSD-2-Clause AND BSD-4-Clause
  *
  * Copyright (c) 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -111,7 +111,6 @@ struct bat {
 
 #define	BATL(pa, wimg, pp)						\
 	(((pa) & BAT_PBS) | (wimg) | (pp))
-
 
 /* Lower BAT bits (PowerPC 601): */
 #define	BAT601_PBN	0xfffe0000	/* physical block number */

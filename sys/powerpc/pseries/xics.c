@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 2011 Nathan Whitehorn
  *
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 
 #include <sys/param.h>
@@ -35,7 +34,9 @@
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
+#include <sys/mutex.h>
 #include <sys/smp.h>
 
 #include <vm/vm.h>
@@ -60,24 +61,22 @@
 #define XICP_IPI	2
 #define MAX_XICP_IRQS	(1<<24)	/* 24-bit XIRR field */
 
-#define	XIVE_XICS_MODE_EMU	0
-#define	XIVE_XICS_MODE_EXP	1
-
 static int	xicp_probe(device_t);
 static int	xicp_attach(device_t);
 static int	xics_probe(device_t);
 static int	xics_attach(device_t);
 
-static void	xicp_bind(device_t dev, u_int irq, cpuset_t cpumask);
+static void	xicp_bind(device_t dev, u_int irq, cpuset_t cpumask, void **priv);
 static void	xicp_dispatch(device_t, struct trapframe *);
-static void	xicp_enable(device_t, u_int, u_int);
-static void	xicp_eoi(device_t, u_int);
+static void	xicp_enable(device_t, u_int, u_int, void **priv);
+static void	xicp_eoi(device_t, u_int, void *priv);
 static void	xicp_ipi(device_t, u_int);
-static void	xicp_mask(device_t, u_int);
-static void	xicp_unmask(device_t, u_int);
+static void	xicp_mask(device_t, u_int, void *priv);
+static void	xicp_unmask(device_t, u_int, void *priv);
 
 #ifdef POWERNV
-void	xicp_smp_cpu_startup(void);
+extern void (*powernv_smp_ap_extra_init)(void);
+static void	xicp_smp_cpu_startup(void);
 #endif
 
 static device_method_t  xicp_methods[] = {
@@ -105,6 +104,12 @@ static device_method_t  xics_methods[] = {
 	DEVMETHOD_END
 };
 
+struct xicp_intvec {
+	int irq;
+	int vector;
+	int cpu;
+};
+
 struct xicp_softc {
 	struct mtx sc_mtx;
 	struct resource *mem[MAXCPU];
@@ -117,12 +122,9 @@ struct xicp_softc {
 	int ibm_set_xive;
 
 	/* XXX: inefficient -- hash table? tree? */
-	struct {
-		int irq;
-		int vector;
-		int cpu;
-	} intvecs[256];
+	struct xicp_intvec intvecs[256];
 	int nintvecs;
+	int ipi_vec;
 	bool xics_emu;
 };
 
@@ -142,7 +144,7 @@ static driver_t xics_driver = {
 /* We can only pass physical addresses into OPAL.  Kernel stacks are in the KVA,
  * not in the direct map, so we need to somehow extract the physical address.
  * However, pmap_kextract() takes locks, which is forbidden in a critical region
- * (which PMAP_DISPATCH() operates in).  The kernel is mapped into the Direct
+ * (which PIC_DISPATCH() operates in).  The kernel is mapped into the Direct
  * Map (0xc000....), and the CPU implicitly drops the top two bits when doing
  * real address by nature that the bus width is smaller than 64-bits.  Placing
  * cpu_xirr into the DMAP lets us take advantage of this and avoids the
@@ -234,7 +236,7 @@ xicp_attach(device_t dev)
 			 * compatibility mode.
 			 */
 			sc->xics_emu = true;
-			opal_call(OPAL_XIVE_RESET, XIVE_XICS_MODE_EMU);
+			opal_call(OPAL_XIVE_RESET, OPAL_XIVE_XICS_MODE_EMU);
 #endif
 	} else {
 		sc->cpu_range[0] = 0;
@@ -276,6 +278,11 @@ xicp_attach(device_t dev)
 	    1 /* Number of IPIs */, FALSE);
 	root_pic = dev;
 
+#ifdef POWERNV
+	if (sc->xics_emu)
+		powernv_smp_ap_extra_init = xicp_smp_cpu_startup;
+#endif
+
 	return (0);
 }
 
@@ -291,20 +298,37 @@ xics_attach(device_t dev)
 	return (0);
 }
 
+static __inline struct xicp_intvec *
+xicp_setup_priv(struct xicp_softc *sc, u_int irq, void **priv)
+{
+	if (*priv == NULL) {
+		KASSERT(sc->nintvecs + 1 < nitems(sc->intvecs),
+			("Too many XICP interrupts"));
+		mtx_lock(&sc->sc_mtx);
+		*priv = &sc->intvecs[sc->nintvecs++];
+		mtx_unlock(&sc->sc_mtx);
+	}
+
+	return (*priv);
+}
+
 /*
  * PIC I/F methods.
  */
 
 static void
-xicp_bind(device_t dev, u_int irq, cpuset_t cpumask)
+xicp_bind(device_t dev, u_int irq, cpuset_t cpumask, void **priv)
 {
 	struct xicp_softc *sc = device_get_softc(dev);
+	struct xicp_intvec *iv;
 	cell_t status, cpu;
-	int ncpus, i, error;
+	int ncpus, i, error = -1;
 
 	/* Ignore IPIs */
 	if (irq == MAX_XICP_IRQS)
 		return;
+
+	iv = xicp_setup_priv(sc, irq, priv);
 
 	/*
 	 * This doesn't appear to actually support affinity groups, so pick a
@@ -323,17 +347,9 @@ xicp_bind(device_t dev, u_int irq, cpuset_t cpumask)
 			break;
 		ncpus++;
 	}
-	
-	cpu = pcpu_find(cpu)->pc_hwref;
 
-	/* XXX: super inefficient */
-	for (i = 0; i < sc->nintvecs; i++) {
-		if (sc->intvecs[i].irq == irq) {
-			sc->intvecs[i].cpu = cpu;
-			break;
-		}
-	}
-	KASSERT(i < sc->nintvecs, ("Binding non-configured interrupt"));
+	cpu = pcpu_find(cpu)->pc_hwref;
+	iv->cpu = cpu;
 
 	if (rtas_exists())
 		error = rtas_call_method(sc->ibm_set_xive, 3, 1, irq, cpu,
@@ -397,49 +413,49 @@ xicp_dispatch(device_t dev, struct trapframe *tf)
 			else
 				phyp_hcall(H_IPI, (uint64_t)(PCPU_GET(hwref)),
 				    0xff);
+			i = sc->ipi_vec;
+		} else {
+			/* XXX: super inefficient */
+			for (i = 0; i < sc->nintvecs; i++) {
+				if (sc->intvecs[i].irq == xirr)
+					break;
+			}
+			KASSERT(i < sc->nintvecs, ("Unmapped XIRR"));
 		}
 
-		/* XXX: super inefficient */
-		for (i = 0; i < sc->nintvecs; i++) {
-			if (sc->intvecs[i].irq == xirr)
-				break;
-		}
-
-		KASSERT(i < sc->nintvecs, ("Unmapped XIRR"));
 		powerpc_dispatch_intr(sc->intvecs[i].vector, tf);
 	}
 }
 
 static void
-xicp_enable(device_t dev, u_int irq, u_int vector)
+xicp_enable(device_t dev, u_int irq, u_int vector, void **priv)
 {
 	struct xicp_softc *sc;
+	struct xicp_intvec *intr;
 	cell_t status, cpu;
 
 	sc = device_get_softc(dev);
 
-	KASSERT(sc->nintvecs + 1 < nitems(sc->intvecs),
-		("Too many XICP interrupts"));
-
 	/* Bind to this CPU to start: distrib. ID is last entry in gserver# */
 	cpu = PCPU_GET(hwref);
 
-	mtx_lock(&sc->sc_mtx);
-	sc->intvecs[sc->nintvecs].irq = irq;
-	sc->intvecs[sc->nintvecs].vector = vector;
-	sc->intvecs[sc->nintvecs].cpu = cpu;
-	mb();
-	sc->nintvecs++;
-	mtx_unlock(&sc->sc_mtx);
+	intr = xicp_setup_priv(sc, irq, priv);
 
-	/* IPIs are also enabled */
-	if (irq == MAX_XICP_IRQS)
+	intr->irq = irq;
+	intr->vector = vector;
+	intr->cpu = cpu;
+	mb();
+
+	/* IPIs are also enabled.  Stash off the vector index */
+	if (irq == MAX_XICP_IRQS) {
+		sc->ipi_vec = intr - sc->intvecs;
 		return;
+	}
 
 	if (rtas_exists()) {
 		rtas_call_method(sc->ibm_set_xive, 3, 1, irq, cpu,
 		    XICP_PRIORITY, &status);
-		xicp_unmask(dev, irq);
+		xicp_unmask(dev, irq, intr);
 #ifdef POWERNV
 	} else {
 		status = opal_call(OPAL_SET_XIVE, irq, cpu << 2, XICP_PRIORITY);
@@ -453,7 +469,7 @@ xicp_enable(device_t dev, u_int irq, u_int vector)
 }
 
 static void
-xicp_eoi(device_t dev, u_int irq)
+xicp_eoi(device_t dev, u_int irq, void *priv)
 {
 #ifdef POWERNV
 	struct xicp_softc *sc;
@@ -499,7 +515,7 @@ xicp_ipi(device_t dev, u_int cpu)
 }
 
 static void
-xicp_mask(device_t dev, u_int irq)
+xicp_mask(device_t dev, u_int irq, void *priv)
 {
 	struct xicp_softc *sc = device_get_softc(dev);
 	cell_t status;
@@ -511,21 +527,16 @@ xicp_mask(device_t dev, u_int irq)
 		rtas_call_method(sc->ibm_int_off, 1, 1, irq, &status);
 #ifdef POWERNV
 	} else {
-		int i;
+		struct xicp_intvec *ivec = priv;
 
-		for (i = 0; i < sc->nintvecs; i++) {
-			if (sc->intvecs[i].irq == irq) {
-				break;
-			}
-		}
-		KASSERT(i < sc->nintvecs, ("Masking unconfigured interrupt"));
-		opal_call(OPAL_SET_XIVE, irq, sc->intvecs[i].cpu << 2, 0xff);
+		KASSERT(ivec != NULL, ("Masking unconfigured interrupt"));
+		opal_call(OPAL_SET_XIVE, irq, ivec->cpu << 2, 0xff);
 #endif
 	}
 }
 
 static void
-xicp_unmask(device_t dev, u_int irq)
+xicp_unmask(device_t dev, u_int irq, void *priv)
 {
 	struct xicp_softc *sc = device_get_softc(dev);
 	cell_t status;
@@ -537,23 +548,17 @@ xicp_unmask(device_t dev, u_int irq)
 		rtas_call_method(sc->ibm_int_on, 1, 1, irq, &status);
 #ifdef POWERNV
 	} else {
-		int i;
+		struct xicp_intvec *ivec = priv;
 
-		for (i = 0; i < sc->nintvecs; i++) {
-			if (sc->intvecs[i].irq == irq) {
-				break;
-			}
-		}
-		KASSERT(i < sc->nintvecs, ("Unmasking unconfigured interrupt"));
-		opal_call(OPAL_SET_XIVE, irq, sc->intvecs[i].cpu << 2,
-		    XICP_PRIORITY);
+		KASSERT(ivec != NULL, ("Unmasking unconfigured interrupt"));
+		opal_call(OPAL_SET_XIVE, irq, ivec->cpu << 2, XICP_PRIORITY);
 #endif
 	}
 }
 
 #ifdef POWERNV
 /* This is only used on POWER9 systems with the XIVE's XICS emulation. */
-void
+static void
 xicp_smp_cpu_startup(void)
 {
 	struct xicp_softc *sc;

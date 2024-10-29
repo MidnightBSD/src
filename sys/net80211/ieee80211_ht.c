@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -41,7 +41,7 @@
 #include <sys/malloc.h>
 #include <sys/systm.h> 
 #include <sys/endian.h>
- 
+
 #include <sys/socket.h>
 
 #include <net/if.h>
@@ -134,22 +134,25 @@ const struct ieee80211_mcs_rates ieee80211_htrates[IEEE80211_HTRATE_MAXSIZE] = {
 };
 
 static	int ieee80211_ampdu_age = -1;	/* threshold for ampdu reorder q (ms) */
-SYSCTL_PROC(_net_wlan, OID_AUTO, ampdu_age, CTLTYPE_INT | CTLFLAG_RW,
-	&ieee80211_ampdu_age, 0, ieee80211_sysctl_msecs_ticks, "I",
-	"AMPDU max reorder age (ms)");
+SYSCTL_PROC(_net_wlan, OID_AUTO, ampdu_age,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    &ieee80211_ampdu_age, 0, ieee80211_sysctl_msecs_ticks, "I",
+    "AMPDU max reorder age (ms)");
 
 static	int ieee80211_recv_bar_ena = 1;
 SYSCTL_INT(_net_wlan, OID_AUTO, recv_bar, CTLFLAG_RW, &ieee80211_recv_bar_ena,
 	    0, "BAR frame processing (ena/dis)");
 
 static	int ieee80211_addba_timeout = -1;/* timeout for ADDBA response */
-SYSCTL_PROC(_net_wlan, OID_AUTO, addba_timeout, CTLTYPE_INT | CTLFLAG_RW,
-	&ieee80211_addba_timeout, 0, ieee80211_sysctl_msecs_ticks, "I",
-	"ADDBA request timeout (ms)");
+SYSCTL_PROC(_net_wlan, OID_AUTO, addba_timeout,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    &ieee80211_addba_timeout, 0, ieee80211_sysctl_msecs_ticks, "I",
+    "ADDBA request timeout (ms)");
 static	int ieee80211_addba_backoff = -1;/* backoff after max ADDBA requests */
-SYSCTL_PROC(_net_wlan, OID_AUTO, addba_backoff, CTLTYPE_INT | CTLFLAG_RW,
-	&ieee80211_addba_backoff, 0, ieee80211_sysctl_msecs_ticks, "I",
-	"ADDBA request backoff (ms)");
+SYSCTL_PROC(_net_wlan, OID_AUTO, addba_backoff,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    &ieee80211_addba_backoff, 0, ieee80211_sysctl_msecs_ticks, "I",
+    "ADDBA request backoff (ms)");
 static	int ieee80211_addba_maxtries = 3;/* max ADDBA requests before backoff */
 SYSCTL_INT(_net_wlan, OID_AUTO, addba_maxtries, CTLFLAG_RW,
 	&ieee80211_addba_maxtries, 0, "max ADDBA requests sent before backoff");
@@ -491,7 +494,7 @@ ieee80211_decap_amsdu(struct ieee80211_node *ni, struct mbuf *m)
 		}
 		if (m->m_pkthdr.len == framelen)
 			break;
-		n = m_split(m, framelen, M_NOWAIT);
+		n = m_split(m, framelen, IEEE80211_M_NOWAIT);
 		if (n == NULL) {
 			IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_ANY,
 			    ni->ni_macaddr, "a-msdu",
@@ -518,7 +521,7 @@ ampdu_rx_purge_slot(struct ieee80211_rx_ampdu *rap, int i)
 	struct mbuf *m;
 
 	/* Walk the queue, removing frames as appropriate */
-	while (mbufq_len(&rap->rxa_mq[i]) != 0) {
+	for (;;) {
 		m = mbufq_dequeue(&rap->rxa_mq[i]);
 		if (m == NULL)
 			break;
@@ -568,7 +571,7 @@ ampdu_rx_add_slot(struct ieee80211_rx_ampdu *rap, int off, int tid,
 	/*
 	 * Get the rxs of the final mbuf in the slot, if one exists.
 	 */
-	if (mbufq_len(&rap->rxa_mq[off]) != 0) {
+	if (!mbufq_empty(&rap->rxa_mq[off])) {
 		rxs_final = ieee80211_get_rx_params_ptr(mbufq_last(&rap->rxa_mq[off]));
 	}
 
@@ -598,7 +601,7 @@ ampdu_rx_add_slot(struct ieee80211_rx_ampdu *rap, int off, int tid,
 	 * If the list is empty OR we have determined we can put more
 	 * driver decap'ed AMSDU frames in here, then insert.
 	 */
-	if ((mbufq_len(&rap->rxa_mq[off]) == 0) || (toss_dup == 0)) {
+	if (mbufq_empty(&rap->rxa_mq[off]) || (toss_dup == 0)) {
 		if (mbufq_enqueue(&rap->rxa_mq[off], m) != 0) {
 			IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_INPUT | IEEE80211_MSG_11N,
 			    ni->ni_macaddr,
@@ -813,7 +816,7 @@ ampdu_dispatch_slot(struct ieee80211_rx_ampdu *rap, struct ieee80211_node *ni,
 	struct mbuf *m;
 	int n = 0;
 
-	while (mbufq_len(&rap->rxa_mq[i]) != 0) {
+	for (;;) {
 		m = mbufq_dequeue(&rap->rxa_mq[i]);
 		if (m == NULL)
 			break;
@@ -1076,7 +1079,7 @@ again:
 			/*
 			 * Dispatch as many packets as we can.
 			 */
-			KASSERT((mbufq_len(&rap->rxa_mq[0]) == 0), ("unexpected dup"));
+			KASSERT(mbufq_empty(&rap->rxa_mq[0]), ("unexpected dup"));
 			ampdu_dispatch(ni, m);
 			ampdu_rx_dispatch(rap, ni);
 			return CONSUMED;
@@ -1932,12 +1935,12 @@ ieee80211_vht_get_vhtflags(struct ieee80211_node *ni, uint32_t htflags)
 	uint32_t vhtflags = 0;
 
 	vhtflags = 0;
-	if (ni->ni_flags & IEEE80211_NODE_VHT && vap->iv_flags_vht & IEEE80211_FVHT_VHT) {
+	if (ni->ni_flags & IEEE80211_NODE_VHT && vap->iv_vht_flags & IEEE80211_FVHT_VHT) {
 		if ((ni->ni_vht_chanwidth == IEEE80211_VHT_CHANWIDTH_160MHZ) &&
 		    /* XXX 2 means "160MHz and 80+80MHz", 1 means "160MHz" */
-		    (_IEEE80211_MASKSHIFT(vap->iv_vhtcaps,
+		    (_IEEE80211_MASKSHIFT(vap->iv_vht_cap.vht_cap_info,
 		     IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_MASK) >= 1) &&
-		    (vap->iv_flags_vht & IEEE80211_FVHT_USEVHT160)) {
+		    (vap->iv_vht_flags & IEEE80211_FVHT_USEVHT160)) {
 			vhtflags = IEEE80211_CHAN_VHT160;
 			/* Mirror the HT40 flags */
 			if (htflags == IEEE80211_CHAN_HT40U) {
@@ -1947,9 +1950,9 @@ ieee80211_vht_get_vhtflags(struct ieee80211_node *ni, uint32_t htflags)
 			}
 		} else if ((ni->ni_vht_chanwidth == IEEE80211_VHT_CHANWIDTH_80P80MHZ) &&
 		    /* XXX 2 means "160MHz and 80+80MHz" */
-		    (_IEEE80211_MASKSHIFT(vap->iv_vhtcaps,
+		    (_IEEE80211_MASKSHIFT(vap->iv_vht_cap.vht_cap_info,
 		     IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_MASK) == 2) &&
-		    (vap->iv_flags_vht & IEEE80211_FVHT_USEVHT80P80)) {
+		    (vap->iv_vht_flags & IEEE80211_FVHT_USEVHT80P80)) {
 			vhtflags = IEEE80211_CHAN_VHT80P80;
 			/* Mirror the HT40 flags */
 			if (htflags == IEEE80211_CHAN_HT40U) {
@@ -1958,7 +1961,7 @@ ieee80211_vht_get_vhtflags(struct ieee80211_node *ni, uint32_t htflags)
 				vhtflags |= IEEE80211_CHAN_HT40D;
 			}
 		} else if ((ni->ni_vht_chanwidth == IEEE80211_VHT_CHANWIDTH_80MHZ) &&
-		    (vap->iv_flags_vht & IEEE80211_FVHT_USEVHT80)) {
+		    (vap->iv_vht_flags & IEEE80211_FVHT_USEVHT80)) {
 			vhtflags = IEEE80211_CHAN_VHT80;
 			/* Mirror the HT40 flags */
 			if (htflags == IEEE80211_CHAN_HT40U) {
@@ -1976,11 +1979,11 @@ ieee80211_vht_get_vhtflags(struct ieee80211_node *ni, uint32_t htflags)
 			 * 'ht40' as that flag.
 			 */
 			if ((htflags == IEEE80211_CHAN_HT40U) &&
-			    (vap->iv_flags_vht & IEEE80211_FVHT_USEVHT40)) {
+			    (vap->iv_vht_flags & IEEE80211_FVHT_USEVHT40)) {
 				vhtflags = IEEE80211_CHAN_VHT40U
 				    | IEEE80211_CHAN_HT40U;
 			} else if (htflags == IEEE80211_CHAN_HT40D &&
-			    (vap->iv_flags_vht & IEEE80211_FVHT_USEVHT40)) {
+			    (vap->iv_vht_flags & IEEE80211_FVHT_USEVHT40)) {
 				vhtflags = IEEE80211_CHAN_VHT40D
 				    | IEEE80211_CHAN_HT40D;
 			} else if (htflags == IEEE80211_CHAN_HT20) {
@@ -2347,7 +2350,7 @@ ieee80211_addba_response(struct ieee80211_node *ni,
 	int status, int baparamset, int batimeout)
 {
 	struct ieee80211vap *vap = ni->ni_vap;
-	int bufsiz, tid;
+	int bufsiz;
 
 	/* XXX locking */
 	addba_stop_timeout(tap);
@@ -2356,7 +2359,9 @@ ieee80211_addba_response(struct ieee80211_node *ni,
 		/* XXX override our request? */
 		tap->txa_wnd = (bufsiz == 0) ?
 		    IEEE80211_AGGR_BAWMAX : min(bufsiz, IEEE80211_AGGR_BAWMAX);
+#ifdef __notyet__
 		tid = _IEEE80211_MASKSHIFT(baparamset, IEEE80211_BAPS_TID);
+#endif
 		tap->txa_flags |= IEEE80211_AGGR_RUNNING;
 		tap->txa_attempts = 0;
 		/* TODO: this should be a vap flag */
@@ -2482,16 +2487,20 @@ ht_recv_action_ba_addba_response(struct ieee80211_node *ni,
 	struct ieee80211_tx_ampdu *tap;
 	uint8_t dialogtoken, policy;
 	uint16_t baparamset, batimeout, code;
-	int tid, bufsiz;
-	int amsdu;
+	int tid;
+#ifdef IEEE80211_DEBUG
+	int amsdu, bufsiz;
+#endif
 
 	dialogtoken = frm[2];
 	code = le16dec(frm+3);
 	baparamset = le16dec(frm+5);
 	tid = _IEEE80211_MASKSHIFT(baparamset, IEEE80211_BAPS_TID);
+#ifdef IEEE80211_DEBUG
 	bufsiz = _IEEE80211_MASKSHIFT(baparamset, IEEE80211_BAPS_BUFSIZ);
-	policy = _IEEE80211_MASKSHIFT(baparamset, IEEE80211_BAPS_POLICY);
 	amsdu = !! _IEEE80211_MASKSHIFT(baparamset, IEEE80211_BAPS_AMSDU);
+#endif
+	policy = _IEEE80211_MASKSHIFT(baparamset, IEEE80211_BAPS_POLICY);
 	batimeout = le16dec(frm+7);
 
 	tap = &ni->ni_tx_ampdu[tid];
@@ -2559,11 +2568,16 @@ ht_recv_action_ba_delba(struct ieee80211_node *ni,
 	struct ieee80211com *ic = ni->ni_ic;
 	struct ieee80211_rx_ampdu *rap;
 	struct ieee80211_tx_ampdu *tap;
-	uint16_t baparamset, code;
+	uint16_t baparamset;
+#ifdef IEEE80211_DEBUG
+	uint16_t code;
+#endif
 	int tid;
 
 	baparamset = le16dec(frm+2);
+#ifdef IEEE80211_DEBUG
 	code = le16dec(frm+4);
+#endif
 
 	tid = _IEEE80211_MASKSHIFT(baparamset, IEEE80211_DELBAPS_TID);
 
@@ -2908,7 +2922,6 @@ ieee80211_send_bar(struct ieee80211_node *ni,
 	uint16_t barctl, barseqctl;
 	uint8_t *frm;
 	int tid, ret;
-
 
 	IEEE80211_NOTE(tap->txa_ni->ni_vap, IEEE80211_MSG_11N,
 	    tap->txa_ni,

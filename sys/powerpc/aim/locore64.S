@@ -22,7 +22,6 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #include "assym.inc"
@@ -64,7 +63,7 @@ TOC_ENTRY(tmpstk)
 TOC_ENTRY(can_wakeup)
 
 #ifdef KDB
-#define TRAPSTKSZ       4096            /* 4k trap stack */
+#define TRAPSTKSZ       8192            /* 8k trap stack */
 GLOBAL(trapstk)
         .space        TRAPSTKSZ
 TOC_ENTRY(trapstk)
@@ -80,6 +79,9 @@ TOC_ENTRY(trapstk)
  */
 	.section ".text.kboot", "x", @progbits
 kbootentry:
+#ifdef __LITTLE_ENDIAN__
+	RETURN_TO_NATIVE_ENDIAN
+#endif
 	b __start
 . = kbootentry + 0x40	/* Magic address used in platform layer */
 	.global smp_spin_sem
@@ -131,7 +133,11 @@ btext:
  * r7: Magic cookie (0xfb5d104d) to indicate that r6 has loader metadata
  */
 	.text
-ASENTRY_NOPROF(__start)
+_NAKED_ENTRY(__start)
+
+#ifdef	__LITTLE_ENDIAN__
+	RETURN_TO_NATIVE_ENDIAN
+#endif
 	/* Set 64-bit mode if not yet set before branching to C */
 	mfmsr	%r20
 	li	%r21,1
@@ -197,6 +203,69 @@ ASENTRY_NOPROF(__start)
 
 	/* Unreachable */
 	b	.
+_END(__start)
+
+ASENTRY_NOPROF(__restartkernel_virtual)
+	/*
+	 * When coming in via this entry point, we need to alter the SLB to
+	 * shadow the segment register emulation entries in DMAP space.
+	 * We need to do this dance because we are running with virtual-mode
+	 * OpenFirmware and have not yet taken over the MMU.
+	 *
+	 * Assumptions:
+	 * 1) The kernel is currently identity-mapped.
+	 * 2) We are currently executing at an address compatible with
+	 *    real mode.
+	 * 3) The first 16 SLB entries are emulating SRs.
+	 * 4) The rest of the SLB is not in use.
+	 * 5) OpenFirmware is not manipulating the SLB at runtime.
+	 * 6) We are running on 64-bit AIM.
+	 *
+	 * Tested on a G5.
+	 */
+	mfmsr	%r14
+	/* Switch to real mode because we are about to mess with the SLB. */
+	andi.	%r14, %r14, ~(PSL_DR|PSL_IR|PSL_ME|PSL_RI)@l
+	mtmsr	%r14
+	isync
+	/* Prepare variables for later use. */
+	li	%r14, 0
+	li	%r18, 0
+	oris	%r18, %r18, 0xc000
+	sldi	%r18, %r18, 32		/* r18: 0xc000000000000000 */
+1:
+	/*
+	 * Loop over the first 16 SLB entries.
+	 * Offset the SLBE into the DMAP, add 16 to the index, and write
+	 * it back to the SLB.
+	 */
+	/* XXX add more safety checks */
+	slbmfev	%r15, %r14
+	slbmfee	%r16, %r14
+	or	%r16, %r16, %r14	/* index is 0-15 */
+	ori	%r16, %r16, 0x10	/* add 16 to index. */
+	or	%r16, %r16, %r18	/* SLBE DMAP offset */
+	rldicr	%r17, %r16, 0, 37	/* Invalidation SLBE */
+
+	isync
+	slbie	%r17
+	/* isync */
+	slbmte	%r15, %r16
+	isync
+	addi	%r14, %r14, 1
+	cmpdi	%r14, 16
+	blt	1b
+
+	/*
+	 * Now that we are set up with a temporary direct map, we can
+	 * continue with __restartkernel. Translation will be switched
+	 * back on at the rfid, at which point we will be executing from
+	 * the temporary direct map we just installed, until the kernel
+	 * takes over responsibility for the MMU.
+	 */
+	bl	__restartkernel
+	nop
+ASEND(__restartkernel_virtual)
 
 ASENTRY_NOPROF(__restartkernel)
 	/*
@@ -213,5 +282,6 @@ ASENTRY_NOPROF(__restartkernel)
 	rfid
 2:	bl	__start
 	nop
+ASEND(__restartkernel)
 
 #include <powerpc/aim/trap_subr64.S>

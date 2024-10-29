@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003, 2005 Ryuichiro Imura
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
@@ -130,7 +129,6 @@ iconv_xlat16_conv(void *d2p, const char **inbuf,
 	dst = *outbuf;
 
 	while(ir > 0 && or > 0) {
-
 		inlen = 0;
 		code = 0;
 

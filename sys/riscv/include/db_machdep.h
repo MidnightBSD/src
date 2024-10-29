@@ -30,7 +30,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_MACHINE_DB_MACHDEP_H_
@@ -40,7 +39,7 @@
 #include <machine/frame.h>
 #include <machine/trap.h>
 
-#define	T_BREAKPOINT	(EXCP_BREAKPOINT)
+#define	T_BREAKPOINT	(SCAUSE_BREAKPOINT)
 #define	T_WATCHPOINT	(0)
 
 typedef vm_offset_t	db_addr_t;

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Justin Hibbits
  *
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -101,7 +100,6 @@ static device_method_t pmcr_methods[] = {
 	DEVMETHOD(cpufreq_drv_get,	pmcr_get),
 	DEVMETHOD(cpufreq_drv_type,	pmcr_type),
 	DEVMETHOD(cpufreq_drv_settings,	pmcr_settings),
-
 	{0, 0}
 };
 
@@ -173,6 +171,7 @@ pmcr_settings(device_t dev, struct cf_setting *sets, int *count)
 	for (i = 0; i < npstates; i++) {
 		sets[i].freq = pstate_freqs[i];
 		sets[i].spec[0] = pstate_ids[i];
+		sets[i].spec[1] = i;
 		sets[i].dev = dev;
 	}
 	*count = npstates;
@@ -184,17 +183,15 @@ static int
 pmcr_set(device_t dev, const struct cf_setting *set)
 {
 	register_t pmcr;
-	
+
 	if (set == NULL)
 		return (EINVAL);
 
-	if (set->spec[0] < 0 || set->spec[0] > npstates)
+	if (set->spec[1] < 0 || set->spec[1] >= npstates)
 		return (EINVAL);
 
-	pmcr = ((long)pstate_ids[set->spec[0]] << PMCR_LOWERPS_SHIFT) &
-	    PMCR_LOWERPS_MASK;
-	pmcr |= ((long)pstate_ids[set->spec[0]] << PMCR_UPPERPS_SHIFT) &
-	    PMCR_UPPERPS_MASK;
+	pmcr = ((long)set->spec[0] << PMCR_LOWERPS_SHIFT) & PMCR_LOWERPS_MASK;
+	pmcr |= ((long)set->spec[0] << PMCR_UPPERPS_SHIFT) & PMCR_UPPERPS_MASK;
 	pmcr |= PMCR_VERSION_1;
 
 	mtspr(SPR_PMCR, pmcr);
@@ -227,6 +224,7 @@ pmcr_get(device_t dev, struct cf_setting *set)
 		return (EINVAL);
 
 	set->spec[0] = pstate;
+	set->spec[1] = i;
 	set->freq = pstate_freqs[i];
 
 	set->dev = dev;
@@ -244,4 +242,3 @@ pmcr_type(device_t dev, int *type)
 	*type = CPUFREQ_TYPE_ABSOLUTE;
 	return (0);
 }
-

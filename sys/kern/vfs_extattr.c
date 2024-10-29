@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999-2001 Robert N. M. Watson
  * All rights reserved.
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/capsicum.h>
@@ -81,7 +80,7 @@ sys_extattrctl(struct thread *td, struct extattrctl_args *uap)
 	struct vnode *filename_vp;
 	struct nameidata nd;
 	struct mount *mp, *mp_writable;
-	char attrname[EXTATTR_MAXNAMELEN];
+	char attrname[EXTATTR_MAXNAMELEN + 1];
 	int error;
 
 	AUDIT_ARG_CMD(uap->cmd);
@@ -91,7 +90,7 @@ sys_extattrctl(struct thread *td, struct extattrctl_args *uap)
 	 * invoke the VFS call so as to pass in NULL there if needed.
 	 */
 	if (uap->attrname != NULL) {
-		error = copyinstr(uap->attrname, attrname, EXTATTR_MAXNAMELEN,
+		error = copyinstr(uap->attrname, attrname, sizeof(attrname),
 		    NULL);
 		if (error)
 			return (error);
@@ -123,7 +122,7 @@ sys_extattrctl(struct thread *td, struct extattrctl_args *uap)
 		mp = NULL;
 		goto out;
 	}
-	VOP_UNLOCK(nd.ni_vp, 0);
+	VOP_UNLOCK(nd.ni_vp);
 	error = vn_start_write(nd.ni_vp, &mp_writable, V_WAIT | PCATCH);
 	NDFREE(&nd, NDF_NO_VP_UNLOCK);
 	if (error)
@@ -212,7 +211,7 @@ extattr_set_vp(struct vnode *vp, int attrnamespace, const char *attrname,
 #ifdef MAC
 done:
 #endif
-	VOP_UNLOCK(vp, 0);
+	VOP_UNLOCK(vp);
 	vn_finished_write(mp);
 	return (error);
 }
@@ -230,19 +229,19 @@ int
 sys_extattr_set_fd(struct thread *td, struct extattr_set_fd_args *uap)
 {
 	struct file *fp;
-	char attrname[EXTATTR_MAXNAMELEN];
+	char attrname[EXTATTR_MAXNAMELEN + 1];
 	cap_rights_t rights;
 	int error;
 
 	AUDIT_ARG_FD(uap->fd);
 	AUDIT_ARG_VALUE(uap->attrnamespace);
-	error = copyinstr(uap->attrname, attrname, EXTATTR_MAXNAMELEN, NULL);
+	error = copyinstr(uap->attrname, attrname, sizeof(attrname), NULL);
 	if (error)
 		return (error);
 	AUDIT_ARG_TEXT(attrname);
 
-	error = getvnode(td, uap->fd,
-	    cap_rights_init(&rights, CAP_EXTATTR_SET), &fp);
+	error = getvnode_path(td, uap->fd,
+	    cap_rights_init_one(&rights, CAP_EXTATTR_SET), &fp);
 	if (error)
 		return (error);
 
@@ -292,11 +291,11 @@ kern_extattr_set_path(struct thread *td, const char *path, int attrnamespace,
     const char *uattrname, void *data, size_t nbytes, int follow)
 {
 	struct nameidata nd;
-	char attrname[EXTATTR_MAXNAMELEN];
+	char attrname[EXTATTR_MAXNAMELEN + 1];
 	int error;
 
 	AUDIT_ARG_VALUE(attrnamespace);
-	error = copyinstr(uattrname, attrname, EXTATTR_MAXNAMELEN, NULL);
+	error = copyinstr(uattrname, attrname, sizeof(attrname), NULL);
 	if (error)
 		return (error);
 	AUDIT_ARG_TEXT(attrname);
@@ -380,7 +379,7 @@ extattr_get_vp(struct vnode *vp, int attrnamespace, const char *attrname,
 #ifdef MAC
 done:
 #endif
-	VOP_UNLOCK(vp, 0);
+	VOP_UNLOCK(vp);
 	return (error);
 }
 
@@ -397,19 +396,19 @@ int
 sys_extattr_get_fd(struct thread *td, struct extattr_get_fd_args *uap)
 {
 	struct file *fp;
-	char attrname[EXTATTR_MAXNAMELEN];
+	char attrname[EXTATTR_MAXNAMELEN + 1];
 	cap_rights_t rights;
 	int error;
 
 	AUDIT_ARG_FD(uap->fd);
 	AUDIT_ARG_VALUE(uap->attrnamespace);
-	error = copyinstr(uap->attrname, attrname, EXTATTR_MAXNAMELEN, NULL);
+	error = copyinstr(uap->attrname, attrname, sizeof(attrname), NULL);
 	if (error)
 		return (error);
 	AUDIT_ARG_TEXT(attrname);
 
-	error = getvnode(td, uap->fd,
-	    cap_rights_init(&rights, CAP_EXTATTR_GET), &fp);
+	error = getvnode_path(td, uap->fd,
+	    cap_rights_init_one(&rights, CAP_EXTATTR_GET), &fp);
 	if (error)
 		return (error);
 
@@ -457,11 +456,11 @@ kern_extattr_get_path(struct thread *td, const char *path, int attrnamespace,
     const char *uattrname, void *data, size_t nbytes, int follow)
 {
 	struct nameidata nd;
-	char attrname[EXTATTR_MAXNAMELEN];
+	char attrname[EXTATTR_MAXNAMELEN + 1];
 	int error;
 
 	AUDIT_ARG_VALUE(attrnamespace);
-	error = copyinstr(uattrname, attrname, EXTATTR_MAXNAMELEN, NULL);
+	error = copyinstr(uattrname, attrname, sizeof(attrname), NULL);
 	if (error)
 		return (error);
 	AUDIT_ARG_TEXT(attrname);
@@ -516,7 +515,7 @@ extattr_delete_vp(struct vnode *vp, int attrnamespace, const char *attrname,
 #ifdef MAC
 done:
 #endif
-	VOP_UNLOCK(vp, 0);
+	VOP_UNLOCK(vp);
 	vn_finished_write(mp);
 	return (error);
 }
@@ -532,19 +531,19 @@ int
 sys_extattr_delete_fd(struct thread *td, struct extattr_delete_fd_args *uap)
 {
 	struct file *fp;
-	char attrname[EXTATTR_MAXNAMELEN];
+	char attrname[EXTATTR_MAXNAMELEN + 1];
 	cap_rights_t rights;
 	int error;
 
 	AUDIT_ARG_FD(uap->fd);
 	AUDIT_ARG_VALUE(uap->attrnamespace);
-	error = copyinstr(uap->attrname, attrname, EXTATTR_MAXNAMELEN, NULL);
+	error = copyinstr(uap->attrname, attrname, sizeof(attrname), NULL);
 	if (error)
 		return (error);
 	AUDIT_ARG_TEXT(attrname);
 
-	error = getvnode(td, uap->fd,
-	    cap_rights_init(&rights, CAP_EXTATTR_DELETE), &fp);
+	error = getvnode_path(td, uap->fd,
+	    cap_rights_init_one(&rights, CAP_EXTATTR_DELETE), &fp);
 	if (error)
 		return (error);
 
@@ -589,11 +588,11 @@ kern_extattr_delete_path(struct thread *td, const char *path, int attrnamespace,
     const char *uattrname, int follow)
 {
 	struct nameidata nd;
-	char attrname[EXTATTR_MAXNAMELEN];
+	char attrname[EXTATTR_MAXNAMELEN + 1];
 	int error;
 
 	AUDIT_ARG_VALUE(attrnamespace);
-	error = copyinstr(uattrname, attrname, EXTATTR_MAXNAMELEN, NULL);
+	error = copyinstr(uattrname, attrname, sizeof(attrname), NULL);
 	if (error)
 		return(error);
 	AUDIT_ARG_TEXT(attrname);
@@ -632,8 +631,6 @@ extattr_list_vp(struct vnode *vp, int attrnamespace, void *data,
 	if (nbytes > IOSIZE_MAX)
 		return (EINVAL);
 
-	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
-
 	auiop = NULL;
 	sizep = NULL;
 	cnt = 0;
@@ -652,27 +649,27 @@ extattr_list_vp(struct vnode *vp, int attrnamespace, void *data,
 	} else
 		sizep = &size;
 
+	vn_lock(vp, LK_SHARED | LK_RETRY);
+
 #ifdef MAC
 	error = mac_vnode_check_listextattr(td->td_ucred, vp, attrnamespace);
-	if (error)
-		goto done;
+	if (error) {
+		VOP_UNLOCK(vp);
+		return (error);
+	}
 #endif
 
 	error = VOP_LISTEXTATTR(vp, attrnamespace, auiop, sizep,
 	    td->td_ucred, td);
+	VOP_UNLOCK(vp);
 
 	if (auiop != NULL) {
 		cnt -= auio.uio_resid;
 		td->td_retval[0] = cnt;
 	} else
 		td->td_retval[0] = size;
-#ifdef MAC
-done:
-#endif
-	VOP_UNLOCK(vp, 0);
 	return (error);
 }
-
 
 #ifndef _SYS_SYSPROTO_H_
 struct extattr_list_fd_args {
@@ -691,8 +688,8 @@ sys_extattr_list_fd(struct thread *td, struct extattr_list_fd_args *uap)
 
 	AUDIT_ARG_FD(uap->fd);
 	AUDIT_ARG_VALUE(uap->attrnamespace);
-	error = getvnode(td, uap->fd,
-	    cap_rights_init(&rights, CAP_EXTATTR_LIST), &fp);
+	error = getvnode_path(td, uap->fd,
+	    cap_rights_init_one(&rights, CAP_EXTATTR_LIST), &fp);
 	if (error)
 		return (error);
 

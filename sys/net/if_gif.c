@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
@@ -116,7 +115,7 @@ VNET_DEFINE_STATIC(struct if_clone *, gif_cloner);
 #define	V_gif_cloner	VNET(gif_cloner)
 
 SYSCTL_DECL(_net_link);
-static SYSCTL_NODE(_net_link, IFT_GIF, gif, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_net_link, IFT_GIF, gif, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "Generic Tunnel Interface");
 #ifndef MAX_GIF_NEST
 /*
@@ -292,7 +291,7 @@ gif_transmit(struct ifnet *ifp, struct mbuf *m)
 	uint8_t proto, ecn;
 	int error;
 
-	GIF_RLOCK();
+	NET_EPOCH_ASSERT();
 #ifdef MAC
 	error = mac_ifnet_check_transmit(ifp, m);
 	if (error) {
@@ -390,7 +389,6 @@ gif_transmit(struct ifnet *ifp, struct mbuf *m)
 err:
 	if (error)
 		if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
-	GIF_RUNLOCK();
 	return (error);
 }
 
@@ -400,17 +398,19 @@ gif_qflush(struct ifnet *ifp __unused)
 
 }
 
-
 int
 gif_output(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
 	struct route *ro)
 {
 	uint32_t af;
 
+	KASSERT(ifp->if_bridge == NULL,
+	    ("%s: unexpectedly called with bridge attached", __func__));
+
 	if (dst->sa_family == AF_UNSPEC)
-		bcopy(dst->sa_data, &af, sizeof(af));
+		memcpy(&af, dst->sa_data, sizeof(af));
 	else
-		af = dst->sa_family;
+		af = RO_GET_FAMILY(ro, dst);
 	/*
 	 * Now save the af in the inbound pkt csum data, this is a cheat since
 	 * we are using the inbound csum_data field to carry the af over to
@@ -434,6 +434,8 @@ gif_input(struct mbuf *m, struct ifnet *ifp, int proto, uint8_t ecn)
 	struct ether_header *eh;
 	struct ifnet *oldifp;
 	int isr, n, af;
+
+	NET_EPOCH_ASSERT();
 
 	if (ifp == NULL) {
 		/* just in case */
@@ -720,4 +722,3 @@ gif_delete_tunnel(struct gif_softc *sc)
 	GIF2IFP(sc)->if_drv_flags &= ~IFF_DRV_RUNNING;
 	if_link_state_change(GIF2IFP(sc), LINK_STATE_DOWN);
 }
-

@@ -23,7 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -37,7 +36,8 @@
 
 SYSCTL_DECL(_security_mac);
 
-static SYSCTL_NODE(_security_mac, OID_AUTO, ntpd, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_security_mac, OID_AUTO, ntpd,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "mac_ntpd policy controls");
 
 static int ntpd_enabled = 1;

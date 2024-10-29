@@ -10,6 +10,7 @@ SUBDIR=	async \
 	bpf \
 	bridge \
 	car \
+	checksum \
 	cisco \
 	deflate \
 	device \
@@ -29,6 +30,7 @@ SUBDIR=	async \
 	ksocket \
 	l2tp \
 	lmi \
+	macfilter \
 	${_mppc} \
 	nat \
 	netflow \

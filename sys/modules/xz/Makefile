@@ -18,4 +18,6 @@ CFLAGS+= \
 	-I${SRCTOP}/sys/contrib/xz-embedded/linux/lib/xz \
 	-I${SRCTOP}/sys/contrib/xz-embedded/linux/include/linux
 
+EXPORT_SYMS=	YES
+
 .include <bsd.kmod.mk>

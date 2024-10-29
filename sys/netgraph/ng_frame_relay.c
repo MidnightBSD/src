@@ -36,7 +36,6 @@
  * OF SUCH DAMAGE.
  *
  * Author: Julian Elischer <julian@freebsd.org>
- *
  * $Whistle: ng_frame_relay.c,v 1.20 1999/11/01 09:24:51 julian Exp $
  */
 
@@ -251,7 +250,6 @@ ngfrm_newhook(node_p node, hook_p hook, const char *name)
 	 */
 	if (strncmp(name, NG_FRAMERELAY_HOOK_DLCI,
 	    strlen(NG_FRAMERELAY_HOOK_DLCI)) != 0) {
-
 		/* It must be the downstream connection */
 		if (strcmp(name, NG_FRAMERELAY_HOOK_DOWNSTREAM) != 0)
 			return EINVAL;

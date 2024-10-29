@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/malloc.h>
 #include <sys/kobj.h>
@@ -41,19 +40,10 @@
 #include "kcrypto.h"
 
 static struct krb5_encryption_class *krb5_encryption_classes[] = {
-	&krb5_des_encryption_class,
-	&krb5_des3_encryption_class,
 	&krb5_aes128_encryption_class,
 	&krb5_aes256_encryption_class,
-	&krb5_arcfour_encryption_class,
-	&krb5_arcfour_56_encryption_class,
 	NULL
 };
-
-struct timeval krb5_warn_interval = { .tv_sec = 3600, .tv_usec = 0 };
-SYSCTL_TIMEVAL_SEC(_kern, OID_AUTO, kgssapi_warn_interval, CTLFLAG_RW,
-    &krb5_warn_interval,
-    "Delay in seconds between warnings of deprecated KGSSAPI crypto.");
 
 struct krb5_encryption_class *
 krb5_find_encryption_class(int etype)

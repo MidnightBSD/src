@@ -25,7 +25,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef ATA_DBDMA_H
@@ -53,4 +52,3 @@ struct ata_dbdma_channel {
 void ata_dbdma_dmainit(device_t dev);
 
 #endif /* ATA_DBDMA_H */
-

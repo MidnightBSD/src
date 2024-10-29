@@ -39,7 +39,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Memory special file
  */
@@ -97,9 +96,11 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 	struct vm_page m;
 	vm_page_t marr;
 	vm_size_t cnt;
+	ssize_t orig_resid;
 
 	cnt = 0;
 	error = 0;
+	orig_resid = uio->uio_resid;
 
 	while (uio->uio_resid > 0 && !error) {
 		iov = uio->uio_iov;
@@ -111,9 +112,9 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 			continue;
 		}
 		if (dev2unit(dev) == CDEV_MINOR_MEM) {
-kmem_direct_mapped:	v = uio->uio_offset;
+			v = uio->uio_offset;
 
-			off = uio->uio_offset & PAGE_MASK;
+kmem_direct_mapped:	off = v & PAGE_MASK;
 			cnt = PAGE_SIZE - ((vm_offset_t)iov->iov_base &
 			    PAGE_MASK);
 			cnt = min(cnt, PAGE_SIZE - off);
@@ -123,7 +124,7 @@ kmem_direct_mapped:	v = uio->uio_offset;
 				error = EFAULT;
 				break;
 			}
-	
+
 			if (hw_direct_map && !pmap_dev_direct_mapped(v, cnt)) {
 				error = uiomove((void *)PHYS_TO_DMAP(v), cnt,
 				    uio);
@@ -136,8 +137,11 @@ kmem_direct_mapped:	v = uio->uio_offset;
 		else if (dev2unit(dev) == CDEV_MINOR_KMEM) {
 			va = uio->uio_offset;
 
-			if ((va < VM_MIN_KERNEL_ADDRESS) || (va > virtual_end))
+			if (hw_direct_map &&
+			    ((va < VM_MIN_KERNEL_ADDRESS) || (va > virtual_end))) {
+				v = DMAP_TO_PHYS(va);
 				goto kmem_direct_mapped;
+			}
 
 			va = trunc_page(uio->uio_offset);
 			eva = round_page(uio->uio_offset
@@ -148,24 +152,34 @@ kmem_direct_mapped:	v = uio->uio_offset;
 			 * so that we don't create any zero-fill pages.
 			 */
 
-			for (; va < eva; va += PAGE_SIZE)
-				if (pmap_extract(kernel_pmap, va) == 0)
-					return (EFAULT);
+			for (; va < eva; va += PAGE_SIZE) {
+				if (pmap_extract(kernel_pmap, va) == 0) {
+					error = EFAULT;
+					break;
+				}
+			}
+			if (error != 0)
+				break;
 
 			prot = (uio->uio_rw == UIO_READ)
 			    ? VM_PROT_READ : VM_PROT_WRITE;
 
 			va = uio->uio_offset;
-			if (kernacc((void *) va, iov->iov_len, prot)
-			    == FALSE)
-				return (EFAULT);
+			if (((va >= VM_MIN_KERNEL_ADDRESS) && (va <= virtual_end)) &&
+			    !kernacc((void *) va, iov->iov_len, prot)) {
+				error = EFAULT;
+				break;
+			}
 
 			error = uiomove((void *)va, iov->iov_len, uio);
-
-			continue;
 		}
 	}
-
+	/*
+	 * Don't return error if any byte was written.  Read and write
+	 * can return error only if no i/o was performed.
+	 */
+	if (uio->uio_resid != orig_resid)
+		error = 0;
 	return (error);
 }
 
@@ -269,7 +283,7 @@ memioctl_md(struct cdev *dev __unused, u_long cmd, caddr_t data, int flags,
 	int nd, error = 0;
 	struct mem_range_op *mo = (struct mem_range_op *)data;
 	struct mem_range_desc *md;
-	
+
 	/* is this for us? */
 	if ((cmd != MEMRANGE_GET) &&
 	    (cmd != MEMRANGE_SET))
@@ -314,4 +328,3 @@ memioctl_md(struct cdev *dev __unused, u_long cmd, caddr_t data, int flags,
 	}
 	return (error);
 }
-

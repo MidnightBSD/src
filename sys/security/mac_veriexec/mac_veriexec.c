@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2011, 2012, 2013, 2015, 2016, Juniper Networks, Inc.
+ * Copyright (c) 2011, 2012, 2013, 2015, 2016, 2019 Juniper Networks, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -75,7 +75,7 @@ static int sysctl_mac_veriexec_db(SYSCTL_HANDLER_ARGS);
 
 SYSCTL_DECL(_security_mac);
 
-SYSCTL_NODE(_security_mac, OID_AUTO, veriexec, CTLFLAG_RW, 0,
+SYSCTL_NODE(_security_mac, OID_AUTO, veriexec, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "MAC/veriexec policy controls");
 
 int	mac_veriexec_debug;
@@ -84,11 +84,13 @@ SYSCTL_INT(_security_mac_veriexec, OID_AUTO, debug, CTLFLAG_RW,
 
 static int	mac_veriexec_state;
 SYSCTL_PROC(_security_mac_veriexec, OID_AUTO, state,
-    CTLTYPE_STRING | CTLFLAG_RD, 0, 0, sysctl_mac_veriexec_state, "A",
+    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
+    0, 0, sysctl_mac_veriexec_state, "A",
     "Verified execution subsystem state");
 
 SYSCTL_PROC(_security_mac_veriexec, OID_AUTO, db,
-    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_SKIP, 0, 0, sysctl_mac_veriexec_db,
+    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_SKIP | CTLFLAG_NEEDGIANT,
+    0, 0, sysctl_mac_veriexec_db,
     "A", "Verified execution fingerprint database");
 
 static int mac_veriexec_slot;
@@ -192,7 +194,8 @@ mac_veriexec_vfs_mounted(void *arg __unused, struct mount *mp,
 
 	SLOT_SET(mp->mnt_label, va.va_fsid);
 #ifdef MAC_DEBUG
-	MAC_VERIEXEC_DBG(3, "set fsid to %u for mount %p", va.va_fsid, mp);
+	MAC_VERIEXEC_DBG(3, "set fsid to %ju for mount %p",
+	    (uintmax_t)va.va_fsid, mp);
 #endif
 }
 
@@ -215,7 +218,8 @@ mac_veriexec_vfs_unmounted(void *arg __unused, struct mount *mp,
 
 	fsid = SLOT(mp->mnt_label);
 	if (fsid) {
-		MAC_VERIEXEC_DBG(3, "fsid %u, cleaning up mount", fsid);
+		MAC_VERIEXEC_DBG(3, "fsid %ju, cleaning up mount",
+		    (uintmax_t)fsid);
 		mac_veriexec_metadata_unmounted(fsid, td);
 	}
 }
@@ -378,9 +382,9 @@ mac_veriexec_kld_check_load(struct ucred *cred, struct vnode *vp,
 		 * kldload should fail unless there is a valid fingerprint
 		 * registered.
 		 */
-		MAC_VERIEXEC_DBG(2, "fingerprint status is %d for dev %u, "
-			"file %lu.%lu\n", status, va.va_fsid, va.va_fileid,
-			 va.va_gen);
+		MAC_VERIEXEC_DBG(2, "fingerprint status is %d for dev %ju, "
+		    "file %ju.%ju\n", status, (uintmax_t)va.va_fsid,
+		    (uintmax_t)va.va_fileid, (uintmax_t)va.va_gen);
 		return (EAUTH);
 	}
 
@@ -419,6 +423,23 @@ mac_veriexec_priv_check(struct ucred *cred, int priv)
 		break;
 	}
 	return (0);
+}
+
+static int
+mac_veriexec_sysctl_check(struct ucred *cred, struct sysctl_oid *oidp,
+    void *arg1, int arg2, struct sysctl_req *req)
+{
+	struct sysctl_oid *oid;
+
+	/* If we are not enforcing veriexec, nothing for us to check */
+	if ((mac_veriexec_state & VERIEXEC_STATE_ENFORCE) == 0)
+		return (0);
+
+	oid = oidp;
+	if (oid->oid_kind & CTLFLAG_SECURE) {
+		return (EPERM);		/* XXX call mac_veriexec_priv_check? */
+	}
+	return 0;
 }
 
 /**
@@ -491,8 +512,8 @@ mac_veriexec_check_vp(struct ucred *cred, struct vnode *vp, accmode_t accmode)
 		case FINGERPRINT_INDIRECT:
 			MAC_VERIEXEC_DBG(2,
 			    "attempted write to fingerprinted file for dev "
-			    "%u, file %lu.%lu\n", va.va_fsid,
-			    va.va_fileid, va.va_gen);
+			    "%ju, file %ju.%ju\n", (uintmax_t)va.va_fsid,
+			    (uintmax_t)va.va_fileid, (uintmax_t)va.va_gen);
 			return (EPERM);
 		default:
 			break;
@@ -512,8 +533,9 @@ mac_veriexec_check_vp(struct ucred *cred, struct vnode *vp, accmode_t accmode)
 			 * fingerprint registered. 
 			 */
 			MAC_VERIEXEC_DBG(2, "fingerprint status is %d for dev "
-			    "%u, file %lu.%lu\n", status, va.va_fsid,
-			    va.va_fileid, va.va_gen);
+			    "%ju, file %ju.%ju\n", status,
+			    (uintmax_t)va.va_fsid, (uintmax_t)va.va_fileid,
+			    (uintmax_t)va.va_gen);
 			return (EAUTH);
 		}
 	}
@@ -633,8 +655,8 @@ mac_veriexec_syscall(struct thread *td, int call, void *arg)
 	switch (call) {
 	case MAC_VERIEXEC_CHECK_FD_SYSCALL:
 		/* Get the vnode associated with the file descriptor passed */
-		error = getvnode(td, (uintptr_t) arg, cap_rights_init(&rights,
-		    CAP_READ), &fp);
+		error = getvnode(td, (uintptr_t) arg,
+		    cap_rights_init_one(&rights, CAP_READ), &fp);
 		if (error)
 			return (error);
 		if (fp->f_type != DTYPE_VNODE) {
@@ -670,13 +692,14 @@ mac_veriexec_syscall(struct thread *td, int call, void *arg)
 		    ((va.va_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) == 0), td);
 check_done:
 		/* Release the lock we obtained earlier */
-		VOP_UNLOCK(img.vp, 0);
+		VOP_UNLOCK(img.vp);
 cleanup_file:
 		fdrop(fp, td);
 		break;
 	case MAC_VERIEXEC_CHECK_PATH_SYSCALL:
 		/* Look up the path to get the vnode */
-		NDINIT(&nd, LOOKUP, FOLLOW | LOCKLEAF | AUDITVNODE1,
+		NDINIT(&nd, LOOKUP,
+		    FOLLOW | LOCKLEAF | LOCKSHARED | AUDITVNODE1,
 		    UIO_USERSPACE, arg, td);
 		error = namei(&nd);
 		if (error != 0)
@@ -696,12 +719,13 @@ cleanup_file:
 static struct mac_policy_ops mac_veriexec_ops =
 {
 	.mpo_init = mac_veriexec_init,
-	.mpo_syscall = mac_veriexec_syscall,
 	.mpo_kld_check_load = mac_veriexec_kld_check_load,
 	.mpo_mount_destroy_label = mac_veriexec_mount_destroy_label,
 	.mpo_mount_init_label = mac_veriexec_mount_init_label,
 	.mpo_priv_check = mac_veriexec_priv_check,
 	.mpo_proc_check_debug = mac_veriexec_proc_check_debug,
+	.mpo_syscall = mac_veriexec_syscall,
+	.mpo_system_check_sysctl = mac_veriexec_sysctl_check,
 	.mpo_vnode_check_exec = mac_veriexec_vnode_check_exec,
 	.mpo_vnode_check_open = mac_veriexec_vnode_check_open,
 	.mpo_vnode_check_setmode = mac_veriexec_vnode_check_setmode,
@@ -714,6 +738,22 @@ MAC_POLICY_SET(&mac_veriexec_ops, mac_veriexec, MAC_VERIEXEC_FULLNAME,
     MPC_LOADTIME_FLAG_NOTLATE, &mac_veriexec_slot);
 MODULE_VERSION(mac_veriexec, 1);
 
+static struct vnode *
+mac_veriexec_bottom_vnode(struct vnode *vp)
+{
+	struct vnode *ldvp = NULL;
+
+	/*
+	 * XXX This code is bogus. nullfs is not the only stacking
+	 * filesystem. Less bogus code would add a VOP to reach bottom
+	 * vnode and would not make assumptions how to get there.
+	 */
+	if (vp->v_mount != NULL &&
+	    strcmp(vp->v_mount->mnt_vfc->vfc_name, "nullfs") == 0)
+		ldvp = NULLVPTOLOWERVP(vp);
+	return (ldvp);
+}
+
 /**
  * @brief Get the fingerprint status set on a vnode.
  *
@@ -725,6 +765,7 @@ fingerprint_status_t
 mac_veriexec_get_fingerprint_status(struct vnode *vp)
 {
 	fingerprint_status_t fps;
+	struct vnode *ldvp;
 
 	fps = SLOT(vp->v_label);
 	switch (fps) {
@@ -734,12 +775,9 @@ mac_veriexec_get_fingerprint_status(struct vnode *vp)
 		break;
 	default:
 		/* we may need to recurse */
-		if (strcmp(vp->v_tag, "null") == 0) {
-			struct vnode *ldvp;
-
-			ldvp = NULLVPTOLOWERVP(vp);
+		ldvp = mac_veriexec_bottom_vnode(vp);
+		if (ldvp != NULL)
 			return mac_veriexec_get_fingerprint_status(ldvp);
-		}
 		break;
 	}
 	return fps;
@@ -785,12 +823,11 @@ void
 mac_veriexec_set_fingerprint_status(struct vnode *vp,
     fingerprint_status_t fp_status)
 {
+	struct vnode *ldvp;
 
 	/* recurse until we find the real storage */
-	if (strcmp(vp->v_tag, "null") == 0) {
-		struct vnode *ldvp;
-
-		ldvp = NULLVPTOLOWERVP(vp);
+	ldvp = mac_veriexec_bottom_vnode(vp);
+	if (ldvp != NULL) {
 		mac_veriexec_set_fingerprint_status(ldvp, fp_status);
 		return;
 	}
@@ -822,9 +859,18 @@ mac_veriexec_set_state(int state)
 int
 mac_veriexec_proc_is_trusted(struct ucred *cred, struct proc *p)
 {
-	int error, flags;
+	int already_locked, error, flags;
+
+	/* Make sure we lock the process if we do not already have the lock */
+	already_locked = PROC_LOCKED(p);
+	if (!already_locked)
+		PROC_LOCK(p);
 
 	error = mac_veriexec_metadata_get_executable_flags(cred, p, &flags, 0);
+
+	/* Unlock the process if we locked it previously */
+	if (!already_locked)
+		PROC_UNLOCK(p);
 
 	/* Any errors, deny access */
 	if (error != 0)

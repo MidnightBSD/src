@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Doug Rabson
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <kgssapi/gssapi.h>
 
@@ -173,5 +172,3 @@ gss_OID GSS_KRB5_NT_MACHINE_UID_NAME = &GSS_C_NT_MACHINE_UID_NAME_storage;
  * this type is "GSS_KRB5_NT_STRING_UID_NAME".
  */
 gss_OID GSS_KRB5_NT_STRING_UID_NAME = &GSS_C_NT_STRING_UID_NAME_storage;
-
-

@@ -1,5 +1,4 @@
 
-
 SYSDIR?=${SRCTOP}/sys
 .include "${SYSDIR}/conf/kern.opts.mk"
 
@@ -50,5 +49,7 @@ SRCS+= device_if.h bus_if.h pci_if.h
 cleanfirmware: clean
 CLEANFILES= ${GENSRCS}
 .endif
+
+EXPORT_SYMS=	YES
 
 .include <bsd.kmod.mk>

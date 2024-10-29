@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1996 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -42,19 +42,12 @@
  * timezone instead of UTC and so on.
  *
  * All that code should go here for service.
- *
  */
 
 #ifndef _SYS_CLOCK_H_
 #define _SYS_CLOCK_H_
 
 #ifdef _KERNEL		/* No user serviceable parts */
-
-/*
- * Timezone info from settimeofday(2), usually not used
- */
-extern int tz_minuteswest;
-extern int tz_dsttime;
 
 int utc_offset(void);
 

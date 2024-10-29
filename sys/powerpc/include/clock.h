@@ -2,7 +2,6 @@
  * Kernel interface to machine-dependent clock driver.
  * Garrett Wollman, September 1994.
  * This file is in the public domain.
- *
  */
 
 #ifndef _MACHINE_CLOCK_H_

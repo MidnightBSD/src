@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007-2009 Robert N. M. Watson
  * Copyright (c) 2010-2011 Juniper Networks, Inc.
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * netisr is a packet dispatch service, allowing synchronous (directly
  * dispatched) and asynchronous (deferred dispatch) processing of packets by
@@ -126,7 +125,8 @@ static struct rmlock	netisr_rmlock;
 #define	NETISR_WUNLOCK()	rm_wunlock(&netisr_rmlock)
 /* #define	NETISR_LOCKING */
 
-static SYSCTL_NODE(_net, OID_AUTO, isr, CTLFLAG_RW, 0, "netisr");
+static SYSCTL_NODE(_net, OID_AUTO, isr, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "netisr");
 
 /*-
  * Three global direct dispatch policies are supported:
@@ -151,7 +151,8 @@ static SYSCTL_NODE(_net, OID_AUTO, isr, CTLFLAG_RW, 0, "netisr");
 #define	NETISR_DISPATCH_POLICY_MAXSTR	20 /* Used for temporary buffers. */
 static u_int	netisr_dispatch_policy = NETISR_DISPATCH_POLICY_DEFAULT;
 static int	sysctl_netisr_dispatch_policy(SYSCTL_HANDLER_ARGS);
-SYSCTL_PROC(_net_isr, OID_AUTO, dispatch, CTLTYPE_STRING | CTLFLAG_RWTUN,
+SYSCTL_PROC(_net_isr, OID_AUTO, dispatch,
+    CTLTYPE_STRING | CTLFLAG_RWTUN | CTLFLAG_NEEDGIANT,
     0, 0, sysctl_netisr_dispatch_policy, "A",
     "netisr dispatch policy");
 
@@ -342,19 +343,34 @@ static int
 sysctl_netisr_dispatch_policy(SYSCTL_HANDLER_ARGS)
 {
 	char tmp[NETISR_DISPATCH_POLICY_MAXSTR];
+	size_t len;
 	u_int dispatch_policy;
 	int error;
 
 	netisr_dispatch_policy_to_str(netisr_dispatch_policy, tmp,
 	    sizeof(tmp));
-	error = sysctl_handle_string(oidp, tmp, sizeof(tmp), req);
-	if (error == 0 && req->newptr != NULL) {
-		error = netisr_dispatch_policy_from_str(tmp,
-		    &dispatch_policy);
-		if (error == 0 && dispatch_policy == NETISR_DISPATCH_DEFAULT)
-			error = EINVAL;
-		if (error == 0)
-			netisr_dispatch_policy = dispatch_policy;
+	/*
+	 * netisr is initialised very early during the boot when malloc isn't
+	 * available yet so we can't use sysctl_handle_string() to process
+	 * any non-default value that was potentially set via loader.
+	 */
+	if (req->newptr != NULL) {
+		len = req->newlen - req->newidx;
+		if (len >= NETISR_DISPATCH_POLICY_MAXSTR)
+			return (EINVAL);
+		error = SYSCTL_IN(req, tmp, len);
+		if (error == 0) {
+			tmp[len] = '\0';
+			error = netisr_dispatch_policy_from_str(tmp,
+			    &dispatch_policy);
+			if (error == 0 &&
+			    dispatch_policy == NETISR_DISPATCH_DEFAULT)
+				error = EINVAL;
+			if (error == 0)
+				netisr_dispatch_policy = dispatch_policy;
+		}
+	} else {
+		error = sysctl_handle_string(oidp, tmp, sizeof(tmp), req);
 	}
 	return (error);
 }
@@ -674,7 +690,7 @@ netisr_register_vnet(const struct netisr_handler *nhp)
 	KASSERT(netisr_proto[proto].np_handler != NULL,
 	    ("%s(%u): protocol not registered for %s", __func__, proto,
 	    nhp->nh_name));
-	
+
 	V_netisr_enable[proto] = 1;
 	NETISR_WUNLOCK();
 }
@@ -742,7 +758,7 @@ netisr_unregister_vnet(const struct netisr_handler *nhp)
 	KASSERT(netisr_proto[proto].np_handler != NULL,
 	    ("%s(%u): protocol not registered for %s", __func__, proto,
 	    nhp->nh_name));
-	
+
 	V_netisr_enable[proto] = 0;
 
 	netisr_drain_proto_vnet(curvnet, proto);
@@ -838,6 +854,7 @@ netisr_select_cpuid(struct netisr_proto *npp, u_int dispatch_policy,
 	    ("%s: invalid policy %u for %s", __func__, npp->np_policy,
 	    npp->np_name));
 
+	MPASS((m->m_pkthdr.csum_flags & CSUM_SND_TAG) == 0);
 	ifp = m->m_pkthdr.rcvif;
 	if (ifp != NULL)
 		*cpuidp = nws_array[(ifp->if_index + source) % nws_count];
@@ -1088,6 +1105,7 @@ netisr_dispatch_src(u_int proto, uintptr_t source, struct mbuf *m)
 	int dosignal, error;
 	u_int cpuid, dispatch_policy;
 
+	NET_EPOCH_ASSERT();
 	KASSERT(proto < NETISR_MAXPROT,
 	    ("%s: invalid proto %u", __func__, proto));
 #ifdef NETISR_LOCKING
@@ -1244,7 +1262,7 @@ netisr_start_swi(u_int cpuid, struct pcpu *pc)
 	nwsp->nws_cpu = cpuid;
 	snprintf(swiname, sizeof(swiname), "netisr %u", cpuid);
 	error = swi_add(&nwsp->nws_intr_event, swiname, swi_net, nwsp,
-	    SWI_NET, INTR_MPSAFE, &nwsp->nws_swi_cookie);
+	    SWI_NET, INTR_TYPE_NET | INTR_MPSAFE, &nwsp->nws_swi_cookie);
 	if (error)
 		panic("%s: swi_add %d", __func__, error);
 	pc->pc_netisr = nwsp->nws_intr_event;

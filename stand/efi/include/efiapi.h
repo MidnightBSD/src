@@ -1,4 +1,3 @@
-/* $FreeBSD: stable/11/stand/efi/include/efiapi.h 346482 2019-04-21 04:26:02Z kevans $ */
 #ifndef _EFI_API_H
 #define _EFI_API_H
 
@@ -438,7 +437,7 @@ VOID
     IN EFI_STATUS               ResetStatus,
     IN UINTN                    DataSize,
     IN CHAR16                   *ResetData OPTIONAL
-    );
+    ) __dead2;
 
 typedef
 EFI_STATUS

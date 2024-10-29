@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* Add compatibility bits for FreeBSD. */
 #define PTS_COMPAT
 /* Add pty(4) compat bits. */
@@ -59,7 +58,6 @@
 #include <sys/syscall.h>
 #include <sys/syscallsubr.h>
 #include <sys/sysctl.h>
-#include <sys/sysent.h>
 #include <sys/sysproto.h>
 #include <sys/systm.h>
 #include <sys/tty.h>
@@ -273,15 +271,14 @@ ptsdev_ioctl(struct file *fp, u_long cmd, void *data,
 		return (0);
 	case FIONREAD:
 		tty_lock(tp);
-		if (psc->pts_flags & PTS_FINISHED) {
-			/* Force read() to be called. */
-			*(int *)data = 1;
-		} else {
-			*(int *)data = ttydisc_getc_poll(tp);
-		}
+		*(int *)data = ttydisc_getc_poll(tp);
 		tty_unlock(tp);
 		return (0);
-	case FIODGNAME: {
+	case FIODGNAME:
+#ifdef COMPAT_FREEBSD32
+	case FIODGNAME_32:
+#endif
+	{
 		struct fiodgname_arg *fgn;
 		const char *p;
 		int i;
@@ -292,7 +289,7 @@ ptsdev_ioctl(struct file *fp, u_long cmd, void *data,
 		i = strlen(p) + 1;
 		if (i > fgn->len)
 			return (EINVAL);
-		return copyout(p, fgn->buf, i);
+		return (copyout(p, fiodgname_buf_get_ptr(fgn, cmd), i));
 	}
 
 	/*
@@ -614,6 +611,7 @@ static struct fileops ptsdev_ops = {
 	.fo_chown	= invfo_chown,
 	.fo_sendfile	= invfo_sendfile,
 	.fo_fill_kinfo	= ptsdev_fill_kinfo,
+	.fo_cmp		= file_kcmp_generic,
 	.fo_flags	= DFLAG_PASSABLE,
 };
 

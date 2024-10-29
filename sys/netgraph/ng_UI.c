@@ -36,7 +36,6 @@
  * OF SUCH DAMAGE.
  *
  * Author: Julian Elischer <julian@freebsd.org>
- *
  * $Whistle: ng_UI.c,v 1.14 1999/11/01 09:24:51 julian Exp $
  */
 
@@ -47,7 +46,6 @@
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/errno.h>
-
 
 #include <netgraph/ng_message.h>
 #include <netgraph/netgraph.h>
@@ -241,4 +239,3 @@ ng_UI_disconnect(hook_p hook)
 	}
 	return (0);
 }
-

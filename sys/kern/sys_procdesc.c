@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009, 2016 Robert N. M. Watson
  * All rights reserved.
@@ -60,13 +60,11 @@
  *
  * Open questions:
  *
- * - How to handle ptrace(2)?
  * - Will we want to add a pidtoprocdesc(2) system call to allow process
  *   descriptors to be created for processes without pdfork(2)?
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/capsicum.h>
 #include <sys/fcntl.h>
@@ -92,13 +90,14 @@
 
 FEATURE(process_descriptors, "Process Descriptors");
 
-static uma_zone_t procdesc_zone;
+MALLOC_DEFINE(M_PROCDESC, "procdesc", "process descriptors");
 
 static fo_poll_t	procdesc_poll;
 static fo_kqfilter_t	procdesc_kqfilter;
 static fo_stat_t	procdesc_stat;
 static fo_close_t	procdesc_close;
 static fo_fill_kinfo_t	procdesc_fill_kinfo;
+static fo_cmp_t		procdesc_cmp;
 
 static struct fileops procdesc_ops = {
 	.fo_read = invfo_rdwr,
@@ -113,24 +112,9 @@ static struct fileops procdesc_ops = {
 	.fo_chown = invfo_chown,
 	.fo_sendfile = invfo_sendfile,
 	.fo_fill_kinfo = procdesc_fill_kinfo,
+	.fo_cmp = procdesc_cmp,
 	.fo_flags = DFLAG_PASSABLE,
 };
-
-/*
- * Initialize with VFS so that process descriptors are available along with
- * other file descriptor types.  As long as it runs before init(8) starts,
- * there shouldn't be a problem.
- */
-static void
-procdesc_init(void *dummy __unused)
-{
-
-	procdesc_zone = uma_zcreate("procdesc", sizeof(struct procdesc),
-	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, 0);
-	if (procdesc_zone == NULL)
-		panic("procdesc_init: procdesc_zone not initialized");
-}
-SYSINIT(vfs, SI_SUB_VFS, SI_ORDER_ANY, procdesc_init, NULL);
 
 /*
  * Return a locked process given a process descriptor, or ESRCH if it has
@@ -229,7 +213,7 @@ procdesc_new(struct proc *p, int flags)
 {
 	struct procdesc *pd;
 
-	pd = uma_zalloc(procdesc_zone, M_WAITOK | M_ZERO);
+	pd = malloc(sizeof(*pd), M_PROCDESC, M_WAITOK | M_ZERO);
 	pd->pd_proc = p;
 	pd->pd_pid = p->p_pid;
 	p->p_procdesc = pd;
@@ -290,7 +274,7 @@ procdesc_free(struct procdesc *pd)
 
 		knlist_destroy(&pd->pd_selinfo.si_note);
 		PROCDESC_LOCK_DESTROY(pd);
-		uma_zfree(procdesc_zone, pd);
+		free(pd, M_PROCDESC);
 	}
 }
 
@@ -573,4 +557,16 @@ procdesc_fill_kinfo(struct file *fp, struct kinfo_file *kif,
 	pdp = fp->f_data;
 	kif->kf_un.kf_proc.kf_pid = pdp->pd_pid;
 	return (0);
+}
+
+static int
+procdesc_cmp(struct file *fp1, struct file *fp2, struct thread *td)
+{
+	struct procdesc *pdp1, *pdp2;
+
+	if (fp2->f_type != DTYPE_PROCDESC)
+		return (3);
+	pdp1 = fp1->f_data;
+	pdp2 = fp2->f_data;
+	return (kcmp_cmp((uintptr_t)pdp1->pd_pid, (uintptr_t)pdp2->pd_pid));
 }

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * IEEE 802.11 MAC ACL support.
  *

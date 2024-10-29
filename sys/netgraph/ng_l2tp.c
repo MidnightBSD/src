@@ -35,7 +35,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * Author: Archie Cobbs <archie@freebsd.org>
- *
  */
 
 /*
@@ -53,6 +52,7 @@
 #include <sys/mbuf.h>
 #include <sys/malloc.h>
 #include <sys/errno.h>
+#include <sys/epoch.h>
 #include <sys/libkern.h>
 
 #include <net/vnet.h>
@@ -1261,7 +1261,6 @@ static void
 ng_l2tp_seq_reset(priv_p priv)
 {
 	struct l2tp_seq *const seq = &priv->seq;
-	hook_p hook;
 	int i;
 
 	SEQ_LOCK_ASSERT(seq);
@@ -1278,7 +1277,7 @@ ng_l2tp_seq_reset(priv_p priv)
 	}
 
 	/* Reset session hooks' sequence number states */
-	NG_NODE_FOREACH_HOOK(priv->node, ng_l2tp_reset_session, NULL, hook);
+	NG_NODE_FOREACH_HOOK(priv->node, ng_l2tp_reset_session, NULL);
 
 	/* Reset node's sequence number state */
 	seq->ns = 0;
@@ -1406,16 +1405,19 @@ ng_l2tp_seq_xack_timeout(void *arg)
 {
 	const node_p node = arg;
 	const priv_p priv = NG_NODE_PRIVATE(node);
+	struct epoch_tracker et;
 	struct l2tp_seq *const seq = &priv->seq;
 
 	SEQ_LOCK_ASSERT(seq);
 	MPASS(!callout_pending(&seq->xack_timer));
 	MPASS(callout_active(&seq->xack_timer));
 
+	NET_EPOCH_ENTER(et);
 	CURVNET_SET(node->nd_vnet);
 	/* Send a ZLB */
 	ng_l2tp_xmit_ctrl(priv, NULL, seq->ns);
 	CURVNET_RESTORE();
+	NET_EPOCH_EXIT(et);
 
 	/* callout_deactivate() is not needed here 
 	    as callout_stop() was called by ng_l2tp_xmit_ctrl() */
@@ -1430,6 +1432,7 @@ ng_l2tp_seq_rack_timeout(void *arg)
 {
 	const node_p node = arg;
 	const priv_p priv = NG_NODE_PRIVATE(node);
+	struct epoch_tracker et;
 	struct l2tp_seq *const seq = &priv->seq;
 	struct mbuf *m;
 	u_int delay;
@@ -1439,6 +1442,7 @@ ng_l2tp_seq_rack_timeout(void *arg)
 	MPASS(!callout_pending(&seq->rack_timer));
 	MPASS(callout_active(&seq->rack_timer));
 
+	NET_EPOCH_ENTER(et);
 	CURVNET_SET(node->nd_vnet);
 
 	priv->stats.xmitRetransmits++;
@@ -1469,6 +1473,7 @@ ng_l2tp_seq_rack_timeout(void *arg)
 		ng_l2tp_xmit_ctrl(priv, m, seq->ns++);
 
 	CURVNET_RESTORE();
+	NET_EPOCH_EXIT(et);
 
 	/* callout_deactivate() is not needed here 
 	    as ng_callout() is getting called each time */

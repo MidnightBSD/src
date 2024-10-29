@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2010
  *	Swinburne University of Technology, Melbourne, Australia
@@ -53,7 +53,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/khelp.h>
@@ -464,21 +463,21 @@ chd_qthresh_handler(SYSCTL_HANDLER_ARGS)
 }
 
 SYSCTL_DECL(_net_inet_tcp_cc_chd);
-SYSCTL_NODE(_net_inet_tcp_cc, OID_AUTO, chd, CTLFLAG_RW, NULL,
+SYSCTL_NODE(_net_inet_tcp_cc, OID_AUTO, chd, CTLFLAG_RW | CTLFLAG_MPSAFE, NULL,
     "CAIA Hamilton delay-based congestion control related settings");
 
 SYSCTL_PROC(_net_inet_tcp_cc_chd, OID_AUTO, loss_fair,
-    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW,
+    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
     &VNET_NAME(chd_loss_fair), 1, &chd_loss_fair_handler,
     "IU", "Flag to enable shadow window functionality.");
 
 SYSCTL_PROC(_net_inet_tcp_cc_chd, OID_AUTO, pmax,
-    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW,
+    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
     &VNET_NAME(chd_pmax), 5, &chd_pmax_handler,
     "IU", "Per RTT maximum backoff probability as a percentage");
 
 SYSCTL_PROC(_net_inet_tcp_cc_chd, OID_AUTO, queue_threshold,
-    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW,
+    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
     &VNET_NAME(chd_qthresh), 20, &chd_qthresh_handler,
     "IU", "Queueing congestion threshold in ticks");
 

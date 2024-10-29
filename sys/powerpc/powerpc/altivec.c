@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/proc.h>
 #include <sys/systm.h>
@@ -167,12 +166,7 @@ save_vec(struct thread *td)
 void
 save_vec_nodrop(struct thread *td)
 {
-	struct thread *vtd;
 
-	vtd = PCPU_GET(vecthread);
-	if (td != vtd) {
-		return;
-	}
-
-	save_vec_int(td);
+	if (td == PCPU_GET(vecthread))
+		save_vec_int(td);
 }

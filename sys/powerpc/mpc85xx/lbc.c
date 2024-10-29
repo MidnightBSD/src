@@ -36,7 +36,6 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/ktr.h>
@@ -109,7 +108,6 @@ static device_method_t lbc_methods[] = {
 	DEVMETHOD(ofw_bus_get_name,	ofw_bus_gen_get_name),
 	DEVMETHOD(ofw_bus_get_node,	ofw_bus_gen_get_node),
 	DEVMETHOD(ofw_bus_get_type,	ofw_bus_gen_get_type),
-
 	{ 0, 0 }
 };
 
@@ -383,14 +381,13 @@ fdt_lbc_reg_decode(phandle_t node, struct lbc_softc *sc,
 
 	regptr = reg;
 	for (i = 0; i < tuples; i++) {
-
 		bank = fdt_data_get((void *)reg, 1);
 		di->di_bank = bank;
 		reg += 1;
 
 		/* Get address/size. */
 		start = count = 0;
-		for (j = 0; j < addr_cells; j++) {
+		for (j = 0; j < addr_cells - 1; j++) {
 			start <<= 32;
 			start |= reg[j];
 		}
@@ -561,7 +558,6 @@ lbc_attach(device_t dev)
 	start = 0;
 	size = 0;
 	for (i = 0; i < tuples; i++) {
-
 		/* The first cell is the bank (chip select) number. */
 		bank = fdt_data_get(ranges, 1);
 		if (bank < 0 || bank > LBC_DEV_MAX) {
@@ -622,7 +618,6 @@ lbc_attach(device_t dev)
 	 * Walk the localbus and add direct subordinates as our children.
 	 */
 	for (child = OF_child(node); child != 0; child = OF_peer(child)) {
-
 		di = malloc(sizeof(*di), M_LBC, M_WAITOK | M_ZERO);
 
 		if (ofw_bus_gen_setup_devinfo(&di->di_ofw, child) != 0) {

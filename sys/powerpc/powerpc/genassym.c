@@ -63,6 +63,7 @@ ASSYM(PC_TEMPSAVE, offsetof(struct pcpu, pc_tempsave));
 ASSYM(PC_DISISAVE, offsetof(struct pcpu, pc_disisave));
 ASSYM(PC_DBSAVE, offsetof(struct pcpu, pc_dbsave));
 ASSYM(PC_RESTORE, offsetof(struct pcpu, pc_restore));
+ASSYM(PC_FLAGS, offsetof(struct pcpu, pc_flags));
 
 #if defined(BOOKE)
 ASSYM(PC_BOOKE_CRITSAVE, offsetof(struct pcpu, pc_booke.critsave));
@@ -105,6 +106,7 @@ ASSYM(TLBSAVE_BOOKE_R31, TLBSAVE_BOOKE_R31*sizeof(register_t));
 
 ASSYM(MTX_LOCK, offsetof(struct mtx, mtx_lock));
 
+ASSYM(PC_FLAG_NOSRS, PC_FLAG_NOSRS);
 #if defined(AIM)
 ASSYM(USER_ADDR, USER_ADDR);
 #ifdef __powerpc64__
@@ -121,7 +123,7 @@ ASSYM(USER_SR, USER_SR);
 #endif
 #elif defined(BOOKE)
 #ifdef __powerpc64__
-ASSYM(PM_PP2D, offsetof(struct pmap, pm_pp2d));
+ASSYM(PM_ROOT, offsetof(struct pmap, pm_root));
 #else
 ASSYM(PM_PDIR, offsetof(struct pmap, pm_pdir));
 #endif
@@ -195,6 +197,8 @@ ASSYM(CF_SIZE, sizeof(struct callframe));
 ASSYM(PCB_CONTEXT, offsetof(struct pcb, pcb_context));
 ASSYM(PCB_CR, offsetof(struct pcb, pcb_cr));
 ASSYM(PCB_DSCR, offsetof(struct pcb, pcb_dscr));
+ASSYM(PCB_FSCR, offsetof(struct pcb, pcb_fscr));
+ASSYM(PCB_TAR, offsetof(struct pcb, pcb_tar));
 ASSYM(PCB_SP, offsetof(struct pcb, pcb_sp));
 ASSYM(PCB_TOC, offsetof(struct pcb, pcb_toc));
 ASSYM(PCB_LR, offsetof(struct pcb, pcb_lr));
@@ -203,11 +207,19 @@ ASSYM(PCB_FLAGS, offsetof(struct pcb, pcb_flags));
 ASSYM(PCB_FPU, PCB_FPU);
 ASSYM(PCB_VEC, PCB_VEC);
 ASSYM(PCB_CDSCR, PCB_CDSCR);
+ASSYM(PCB_CFSCR, PCB_CFSCR);
 
 ASSYM(PCB_AIM_USR_VSID, offsetof(struct pcb, pcb_cpu.aim.usr_vsid));
 ASSYM(PCB_BOOKE_DBCR0, offsetof(struct pcb, pcb_cpu.booke.dbcr0));
 
 ASSYM(PCB_VSCR, offsetof(struct pcb, pcb_vec.vscr));
+
+ASSYM(PCB_EBB_EBBHR, offsetof(struct pcb, pcb_ebb.ebbhr));
+ASSYM(PCB_EBB_EBBRR, offsetof(struct pcb, pcb_ebb.ebbrr));
+ASSYM(PCB_EBB_BESCR, offsetof(struct pcb, pcb_ebb.bescr));
+
+ASSYM(PCB_LMON_LMRR, offsetof(struct pcb, pcb_lm.lmrr));
+ASSYM(PCB_LMON_LMSER, offsetof(struct pcb, pcb_lm.lmser));
 
 ASSYM(TD_LOCK, offsetof(struct thread, td_lock));
 ASSYM(TD_PROC, offsetof(struct thread, td_proc));
@@ -267,4 +279,3 @@ ASSYM(PSL_FP, PSL_FP);
 ASSYM(PSL_ME, PSL_ME);
 ASSYM(PSL_PR, PSL_PR);
 ASSYM(PSL_PMM, PSL_PMM);
-

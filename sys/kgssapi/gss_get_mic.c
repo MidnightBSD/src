@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/kobj.h>
@@ -87,4 +86,3 @@ gss_get_mic_mbuf(OM_uint32 *minor_status, const gss_ctx_id_t ctx,
 
 	return (KGSS_GET_MIC(ctx, minor_status, qop_req, m, micp));
 }
-

@@ -36,7 +36,6 @@
  * OF SUCH DAMAGE.
  *
  * Author: Julian Elischer <julian@freebsd.org>
- *
  * $Whistle: ng_cisco.c,v 1.25 1999/11/01 09:24:51 julian Exp $
  */
 
@@ -570,7 +569,6 @@ drop:
 	NG_FREE_ITEM(item);
 	return (error);
 }
-
 
 /*
  * Send keepalive packets, every 10 seconds.

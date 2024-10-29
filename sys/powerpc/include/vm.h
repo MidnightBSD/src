@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Alan L. Cox <alc@cs.rice.edu>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_VM_H_
@@ -40,5 +39,7 @@
 #define	VM_MEMATTR_WRITE_BACK		0x08
 #define	VM_MEMATTR_WRITE_THROUGH	0x10
 #define	VM_MEMATTR_PREFETCHABLE		0x20
+
+#define	VM_MEMATTR_DEVICE		VM_MEMATTR_DEFAULT
 
 #endif /* !_MACHINE_VM_H_ */

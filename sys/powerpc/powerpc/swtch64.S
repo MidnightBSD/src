@@ -77,8 +77,10 @@ TOC_ENTRY(blocked_lock)
 ENTRY(cpu_throw)
 	mr	%r13, %r4
 	li	%r14,0	/* Tell cpu_switchin not to release a thread */
+	li	%r18,0	/* No old pcb flags.  The old thread is extinguished. */
 
 	b	cpu_switchin
+END(cpu_throw)
 
 /*
  * void cpu_switch(struct thread *old,
@@ -86,6 +88,10 @@ ENTRY(cpu_throw)
  *		   struct mutex *mtx); 
  *
  * Switch to a new thread saving the current state in the old thread.
+ *
+ * Internally clobbers (not visible outside of this file):
+ * r18	- old thread pcb_flags
+ * r19	- new thread pcb_flags
  */
 ENTRY(cpu_switch)
 	ld	%r6,TD_PCB(%r3)		/* Get the old thread's PCB ptr */
@@ -125,11 +131,36 @@ ENTRY(cpu_switch)
 	stdu	%r1,-48(%r1)
 
 	lwz	%r18, PCB_FLAGS(%r17)
+	andi.	%r7, %r18, PCB_CFSCR
+	beq	1f
+	mfspr	%r6, SPR_FSCR
+	std	%r6, PCB_FSCR(%r17)
+save_ebb:
+	andi.	%r0, %r6, FSCR_EBB
+	beq	save_lm
+	mfspr	%r7, SPR_EBBHR
+	std	%r7, PCB_EBB_EBBHR(%r17)
+	mfspr	%r7, SPR_EBBRR
+	std	%r7, PCB_EBB_EBBRR(%r17)
+	mfspr	%r7, SPR_BESCR
+	std	%r7, PCB_EBB_BESCR(%r17)
+save_lm:
+	andi.	%r0, %r6, FSCR_LM
+	beq	save_tar
+	mfspr	%r7, SPR_LMRR
+	std	%r7, PCB_LMON_LMRR(%r17)
+	mfspr	%r7, SPR_LMSER
+	std	%r7, PCB_LMON_LMSER(%r17)
+save_tar:
+	andi.	%r0, %r6, FSCR_TAR
+	beq	1f
+	mfspr	%r7, SPR_TAR
+	std	%r7, PCB_TAR(%r17)
+1:
 	andi.	%r7, %r18, PCB_CDSCR
 	beq	.L0
-	/* Custom DSCR was set. Reseting it to enter kernel */
-	li	%r6, 0x0
-	mtspr   SPR_DSCR, %r6
+	mfspr	%r6, SPR_DSCRP
+	std	%r6, PCB_DSCR(%r17)
 
 .L0:
 	/* Save FPU context if needed */
@@ -200,11 +231,41 @@ blocked_loop:
 	nop
 
 .L31:
-	/* Restore Custom DSCR if needed */
-	andi.	%r6, %r19, PCB_CDSCR
-	beq	.L4
+	/* Load custom DSCR on PowerISA 2.06+ CPUs. */
+	/* Load changed FSCR on PowerISA 2.07+ CPUs. */
+	or	%r18,%r18,%r19
+	/* Restore Custom DSCR if needed (zeroes if in old but not new) */
+	andi.	%r6, %r18, PCB_CDSCR
+	beq	.L32
 	ld	%r7, PCB_DSCR(%r17)	/* Load the DSCR register*/
-	mtspr	SPR_DSCR, %r7
+	mtspr	SPR_DSCRP, %r7
+.L32:
+	/* Restore FSCR if needed (zeroes if in old but not new) */
+	andi.	%r6, %r18, PCB_CFSCR
+	beq	.L4
+	ld	%r7, PCB_FSCR(%r17)	/* Load the FSCR register*/
+	mtspr	SPR_FSCR, %r7
+restore_ebb:
+	andi.	%r0, %r7, FSCR_EBB
+	beq	restore_lm
+	ld	%r6, PCB_EBB_EBBHR(%r17)
+	mtspr	SPR_EBBHR, %r6
+	ld	%r6, PCB_EBB_EBBRR(%r17)
+	mtspr	SPR_EBBRR, %r6
+	ld	%r6, PCB_EBB_BESCR(%r17)
+	mtspr	SPR_BESCR, %r6
+restore_lm:
+	andi.	%r0, %r7, FSCR_LM
+	beq	restore_tar
+	ld	%r6, PCB_LMON_LMRR(%r17)
+	mtspr	SPR_LMRR, %r6
+	ld	%r6, PCB_LMON_LMSER(%r17)
+	mtspr	SPR_LMSER, %r6
+restore_tar:
+	andi.	%r0, %r7, FSCR_TAR
+	beq	.L4
+	ld	%r6, PCB_TAR(%r17)
+	mtspr	SPR_TAR, %r6
 
 	/* thread to restore is in r3 */
 .L4:
@@ -243,6 +304,7 @@ blocked_loop:
 	 */
 	stdcx.	%r1, 0, %r3
 	blr
+END(cpu_switch)
 
 /*
  * savectx(pcb)
@@ -277,6 +339,7 @@ ENTRY(savectx)
 	mflr	%r4			/* Save the link register */
 	std	%r4,PCB_LR(%r3)
 	blr
+END(savectx)
 
 /*
  * fork_trampoline()
@@ -297,3 +360,4 @@ ENTRY_NOPROF(fork_trampoline)
 					   a frame pointer/saved LR */
 	bl	trapexit
 	nop
+END(fork_trampoline)

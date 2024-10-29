@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Alexander V. Chernikov <melifaro@ipfw.ru>
  * All rights reserved.
@@ -24,11 +24,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet6.h"
 #include "opt_route.h"
 #include <sys/param.h>
@@ -234,8 +232,6 @@ export9_send(priv_p priv, fib_export_p fe, item_p item, struct netflow_v9_packet
 	return (error);
 }
 
-
-
 /* Add V9 record to dgram. */
 int
 export9_add(item_p item, struct netflow_v9_packet_opt *t, struct flow_entry *fle)
@@ -411,16 +407,15 @@ get_export9_dgram(priv_p priv, fib_export_p fe, struct netflow_v9_packet_opt **t
 		t->count = 0;
 		t->mtu = mtu;
 		t->flow_header = m->m_len;
-	
+
 		/*
 		 * Check if we need to insert templates into packet
 		 */
 		
 		struct netflow_v9_flowset_header	*fl;
-	
+
 		if ((time_uptime >= priv->templ_time + fe->templ_last_ts) ||
 				(fe->sent_packets >= priv->templ_packets + fe->templ_last_pkt)) {
-
 			fe->templ_last_ts = time_uptime;
 			fe->templ_last_pkt = fe->sent_packets;
 
@@ -429,7 +424,6 @@ get_export9_dgram(priv_p priv, fib_export_p fe, struct netflow_v9_packet_opt **t
 			t->flow_header = m->m_len;
 			t->count += priv->flowset_records[0];
 		}
-
 	}
 
 	*tt = t;
@@ -490,4 +484,3 @@ ng_netflow_copyv9info(priv_p priv, struct ng_netflow_v9info *i)
 	i->templ_packets = priv->templ_packets;
 	i->mtu = priv->mtu;
 }
-

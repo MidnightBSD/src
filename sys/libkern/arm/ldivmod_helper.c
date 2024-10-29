@@ -1,5 +1,5 @@
 /*
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2012 Andrew Turner
  * All rights reserved.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <libkern/quad.h>
 
 /*

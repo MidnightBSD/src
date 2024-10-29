@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/kobj.h>
@@ -95,4 +94,3 @@ gss_unwrap_mbuf(OM_uint32 *minor_status,
 
 	return (KGSS_UNWRAP(ctx, minor_status, mp, conf_state, qop_state));
 }
-

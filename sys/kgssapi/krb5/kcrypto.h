@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/_iovec.h>
@@ -94,13 +93,8 @@ struct krb5_key_state {
 	void			*ks_priv;
 };
 
-extern struct krb5_encryption_class krb5_des_encryption_class;
-extern struct krb5_encryption_class krb5_des3_encryption_class;
 extern struct krb5_encryption_class krb5_aes128_encryption_class;
 extern struct krb5_encryption_class krb5_aes256_encryption_class;
-extern struct krb5_encryption_class krb5_arcfour_encryption_class;
-extern struct krb5_encryption_class krb5_arcfour_56_encryption_class;
-extern struct timeval krb5_warn_interval;
 
 static __inline void
 krb5_set_key(struct krb5_key_state *ks, const void *keydata)

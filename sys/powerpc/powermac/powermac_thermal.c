@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2011 Nathan Whitehorn
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
@@ -87,7 +86,7 @@ fan_management_proc(void)
 	/* Nothing to manage? */
 	if (SLIST_EMPTY(&fans))
 		kproc_exit(0);
-	
+
 	while (1) {
 		pmac_therm_manage_fans();
 		pause("pmac_therm", hz);
@@ -216,4 +215,3 @@ pmac_thermal_sensor_register(struct pmac_therm *sensor)
 
 	SLIST_INSERT_HEAD(&sensors, list_entry, entries);
 }
-

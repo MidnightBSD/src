@@ -4,7 +4,7 @@
 # For more information on this file, please read the handbook section on
 # Kernel Configuration Files:
 #
-#    https://www.FreeBSD.org/doc/en_US.ISO8859-1/books/handbook/kernelconfig-config.html
+#    https://docs.freebsd.org/en/books/handbook/kernelconfig/#kernelconfig-config
 #
 # The handbook is also available locally in /usr/share/doc/handbook
 # if you've installed the doc distribution, otherwise always see the
@@ -37,11 +37,10 @@ options 	PREEMPTION		#Enable kernel thread preemption
 options 	VIMAGE			# Subsystem virtualization, e.g. VNET
 options 	INET			#InterNETworking
 options 	INET6			#IPv6 communications protocols
-options 	IPSEC			# IP (v4/v6) security
 options 	IPSEC_SUPPORT		# Allow kldload of ipsec and tcpmd5
 options 	TCP_HHOOK		# hhook(9) framework for TCP
 options 	TCP_RFC7413		# TCP Fast Open
-options 	SCTP			#Stream Control Transmission Protocol
+options 	SCTP_SUPPORT		# Allow kldload of SCTP
 options 	FFS			#Berkeley Fast Filesystem
 options 	SOFTUPDATES		#Enable FFS soft updates support
 options 	UFS_ACL			#Support for access control lists
@@ -57,6 +56,7 @@ options 	MSDOSFS			#MSDOS Filesystem
 options 	CD9660			#ISO 9660 Filesystem
 options 	PROCFS			#Process filesystem (requires PSEUDOFS)
 options 	PSEUDOFS		#Pseudo-filesystem framework
+options 	TMPFS			#Efficient memory filesystem
 options 	GEOM_PART_APM		#Apple Partition Maps.
 options 	GEOM_PART_GPT		#GUID Partition Tables.
 options 	GEOM_LABEL		#Provides labelization
@@ -67,6 +67,7 @@ options 	COMPAT_FREEBSD7		#Compatible with FreeBSD7
 options 	COMPAT_FREEBSD9		# Compatible with FreeBSD9
 options 	COMPAT_FREEBSD10	# Compatible with FreeBSD10
 options 	COMPAT_FREEBSD11	# Compatible with FreeBSD11
+options 	COMPAT_FREEBSD12	# Compatible with FreeBSD12
 options 	SCSI_DELAY=5000		#Delay (in ms) before probing SCSI 
 options 	KTRACE			#ktrace(1) syscall trace support
 options 	STACK			#stack(9) support
@@ -94,6 +95,7 @@ options 	KDB_TRACE		# Print a stack trace for a panic.
 options 	EKCD			# Support for encrypted kernel dumps
 options 	GZIO			# gzip-compressed kernel and user dumps
 options 	ZSTDIO			# zstd-compressed kernel and user dumps
+options 	DEBUGNET		# debugnet networking
 options 	NETDUMP			# netdump(4) client support
 
 # Make an SMP-capable kernel by default
@@ -145,7 +147,6 @@ device		fwe		# Ethernet over FireWire (non-standard!)
 # PCI Ethernet NICs that use the common MII bus controller code.
 device		miibus		# MII bus support
 device		bge		# Broadcom BCM570xx Gigabit Ethernet
-device		bm		# Apple BMAC Ethernet
 device		gem		# Sun GEM/Sun ERI/Apple GMAC
 device		dc		# DEC/Intel 21143 and various workalikes
 device		fxp		# Intel EtherExpress PRO/100B (82557, 82558)
@@ -153,7 +154,6 @@ device		fxp		# Intel EtherExpress PRO/100B (82557, 82558)
 # Pseudo devices.
 device		crypto		# core crypto support
 device		loop		# Network loopback
-device		random		# Entropy device
 device		ether		# Ethernet support
 device		vlan		# 802.1Q VLAN support
 device		tuntap		# Packet tunnel.
@@ -190,7 +190,6 @@ device		kue		# Kawasaki LSI USB Ethernet
 
 # Wireless NIC cards
 options 	IEEE80211_SUPPORT_MESH
-options 	AH_SUPPORT_AR5416
 
 # Misc
 device		iicbus		# I2C bus code
@@ -222,3 +221,15 @@ device		snd_uaudio	# USB Audio
 options 	EVDEV_SUPPORT		# evdev support in legacy drivers
 device		evdev			# input event device support
 device		uinput			# install /dev/uinput cdev
+
+# VirtIO support
+device		virtio			# Generic VirtIO bus (required)
+device		virtio_pci		# VirtIO PCI device
+device		vtnet			# VirtIO Ethernet device
+device		virtio_blk		# VirtIO Block device
+device		virtio_scsi		# VirtIO SCSI device
+device		virtio_balloon		# VirtIO Memory Balloon device
+
+# HID support
+options 	HID_DEBUG		# enable debug msgs
+device		hid			# Generic HID support

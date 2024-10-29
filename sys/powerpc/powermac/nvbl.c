@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Justin Hibbits
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/systm.h>
@@ -51,7 +50,6 @@
 #define  NVIDIA_PMC_OFF         (NVIDIA_MMIO_PMC + 0x10f0)
 #define   NVIDIA_PMC_BL_SHIFT    (16)
 #define   NVIDIA_PMC_BL_EN       (1U << 31)
-
 
 struct nvbl_softc {
 	device_t	 dev;
@@ -143,8 +141,8 @@ nvbl_attach(device_t dev)
 	tree = device_get_sysctl_tree(dev);
 
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-			"level", CTLTYPE_INT | CTLFLAG_RW, sc, 0,
-			nvbl_sysctl, "I", "Backlight level (0-100)");
+	    "level", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, sc, 0,
+	    nvbl_sysctl, "I", "Backlight level (0-100)");
 
 	return (0);
 }

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2010 Andreas Tobler
  * All rights reserved.
@@ -23,7 +23,6 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef	_PSERIES_PHYP_HVCALL_H_
@@ -169,6 +168,23 @@
 #define H_PP1 (1UL<<(63-62))
 #define H_PP2 (1UL<<(63-63))
 
+/* H_SET_MODE resource identifiers from 14.5.4.3.5. */
+#define	H_SET_MODE_RSRC_CIABR		0x1	/* All versions */
+#define	H_SET_MODE_RSRC_DAWR0		0x2	/* All versions */
+#define	H_SET_MODE_RSRC_INTR_TRANS_MODE	0x3	/* All versions */
+#define	H_SET_MODE_RSRC_ILE		0x4	/* PAPR 2.8 / ISA 2.07 */
+#define	H_SET_MODE_RSRC_DAWR1		0x5	/* ISA 3.1 Future support */
+
+/* H_REGISTER_PROC_TBL identifiers. */
+#define	PROC_TABLE_OP_MASK	0x18
+#define	PROC_TABLE_DEREG	0x10
+#define	PROC_TABLE_NEW		0x18
+#define	PROC_TABLE_TYPE_MASK	0x06
+#define	PROC_TABLE_HPT_SLB	0x00
+#define	PROC_TABLE_GTSE		0x01
+#define	PROC_TABLE_HPT_PT	0x02
+#define	PROC_TABLE_RADIX	0x04
+
 /* pSeries hypervisor opcodes. */
 #define H_REMOVE		0x04
 #define H_ENTER			0x08
@@ -313,7 +329,9 @@
 #define H_SET_MODE		0x31C
 /* Reserved ... */
 #define H_GET_DMA_XLATES_L	0x324
-#define MAX_HCALL_OPCODE	H_GET_DMA_XLATES_L
+/* Reserved ... */
+#define H_REGISTER_PROC_TBL	0x37c
+#define MAX_HCALL_OPCODE	H_REGISTER_PROC_TBL
 
 int64_t phyp_hcall(uint64_t opcode, ...);
 int64_t phyp_pft_hcall(uint64_t opcode, uint64_t flags, uint64_t pteidx,
@@ -321,4 +339,3 @@ int64_t phyp_pft_hcall(uint64_t opcode, uint64_t flags, uint64_t pteidx,
     uint64_t *r6);
 
 #endif /* _PSERIES_PHYP_HVCALL_H_ */
-

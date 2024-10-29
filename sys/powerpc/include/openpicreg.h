@@ -139,4 +139,3 @@
 
 #define OPENPIC_PCPU_EOI(cpu)			\
 	(OPENPIC_PCPU_BASE(cpu) + OPENPIC_EOI)
-

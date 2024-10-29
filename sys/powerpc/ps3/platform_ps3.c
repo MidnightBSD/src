@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Nathan Whitehorn
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -115,7 +114,7 @@ ps3_probe(platform_t plat)
 	root = OF_finddevice("/");
 	if (OF_getprop(root, "compatible", compatible, sizeof(compatible)) <= 0)
                 return (BUS_PROBE_NOWILDCARD);
-	
+
 	if (strncmp(compatible, "sony,ps3", sizeof(compatible)) != 0)
 		return (BUS_PROBE_NOWILDCARD);
 
@@ -281,7 +280,7 @@ ps3_real_maxaddr(platform_t plat)
 		    ppe_id, lv1_repository_string("rm_size"),
 		    &rm_maxaddr, &junk);
 	}
-	
+
 	return (rm_maxaddr);
 }
 
@@ -290,4 +289,3 @@ ps3_cpu_idle(sbintime_t sbt)
 {
 	lv1_pause(0);
 }
-

@@ -1,6 +1,5 @@
 /*
  * Playstation 3 LV1 hypercall interface
- *
  */
 
 #include <sys/types.h>

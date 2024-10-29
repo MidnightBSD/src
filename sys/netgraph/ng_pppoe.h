@@ -36,7 +36,6 @@
  * OF SUCH DAMAGE.
  *
  * Author: Julian Elischer <julian@freebsd.org>
- *
  * $Whistle: ng_pppoe.h,v 1.7 1999/10/16 10:16:43 julian Exp $
  */
 
@@ -239,7 +238,6 @@ struct pppoe_hdr{
 	u_int16_t length;
 }__packed;
 
-
 struct pppoe_full_hdr {
 	struct  ether_header eh;
 	struct pppoe_hdr ph;
@@ -284,4 +282,3 @@ struct maxptag {
 /* for PADT */
 
 #endif /* _NETGRAPH_NG_PPPOE_H_ */
-

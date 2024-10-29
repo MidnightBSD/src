@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Marcel Moolenaar
  * Copyright (c) 2001 Benno Rice
@@ -27,7 +27,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_ATOMIC_H_
@@ -226,7 +225,6 @@ _ATOMIC_ADD(long)
 	__atomic_clear_##type(p, v, t);				\
     }								\
     /* _ATOMIC_CLEAR */
-
 
 _ATOMIC_CLEAR(int)
 _ATOMIC_CLEAR(long)
@@ -513,7 +511,7 @@ atomic_load_acq_##TYPE(volatile u_##TYPE *p)			\
 	u_##TYPE v;						\
 								\
 	v = *p;							\
-	mb();							\
+	powerpc_lwsync();					\
 	return (v);						\
 }								\
 								\
@@ -653,7 +651,7 @@ atomic_cmpset_int(volatile u_int* p, u_int cmpval, u_int newval)
 	__asm __volatile (
 		"1:\tlwarx %0, 0, %2\n\t"	/* load old value */
 		"cmplw %3, %0\n\t"		/* compare */
-		"bne 2f\n\t"			/* exit if not equal */
+		"bne- 2f\n\t"			/* exit if not equal */
 		"stwcx. %4, 0, %2\n\t"      	/* attempt to store */
 		"bne- 1b\n\t"			/* spin if failed */
 		"li %0, 1\n\t"			/* success - retval = 1 */
@@ -677,12 +675,12 @@ atomic_cmpset_long(volatile u_long* p, u_long cmpval, u_long newval)
 	    #ifdef __powerpc64__
 		"1:\tldarx %0, 0, %2\n\t"	/* load old value */
 		"cmpld %3, %0\n\t"		/* compare */
-		"bne 2f\n\t"			/* exit if not equal */
+		"bne- 2f\n\t"			/* exit if not equal */
 		"stdcx. %4, 0, %2\n\t"		/* attempt to store */
 	    #else
 		"1:\tlwarx %0, 0, %2\n\t"	/* load old value */
 		"cmplw %3, %0\n\t"		/* compare */
-		"bne 2f\n\t"			/* exit if not equal */
+		"bne- 2f\n\t"			/* exit if not equal */
 		"stwcx. %4, 0, %2\n\t"		/* attempt to store */
 	    #endif
 		"bne- 1b\n\t"			/* spin if failed */
@@ -725,12 +723,15 @@ atomic_cmpset_long(volatile u_long* p, u_long cmpval, u_long newval)
 ATOMIC_CMPSET_ACQ_REL(int);
 ATOMIC_CMPSET_ACQ_REL(long);
 
-
+#ifdef ISA_206_ATOMICS
 #define	atomic_cmpset_8		atomic_cmpset_char
+#endif
 #define	atomic_cmpset_acq_8	atomic_cmpset_acq_char
 #define	atomic_cmpset_rel_8	atomic_cmpset_rel_char
 
+#ifdef ISA_206_ATOMICS
 #define	atomic_cmpset_16	atomic_cmpset_short
+#endif
 #define	atomic_cmpset_acq_16	atomic_cmpset_acq_short
 #define	atomic_cmpset_rel_16	atomic_cmpset_rel_short
 
@@ -818,7 +819,7 @@ atomic_fcmpset_int(volatile u_int *p, u_int *cmpval, u_int newval)
 	__asm __volatile (
 		"lwarx %0, 0, %3\n\t"		/* load old value */
 		"cmplw %4, %0\n\t"		/* compare */
-		"bne 1f\n\t"			/* exit if not equal */
+		"bne- 1f\n\t"			/* exit if not equal */
 		"stwcx. %5, 0, %3\n\t"      	/* attempt to store */
 		"bne- 1f\n\t"			/* exit if failed */
 		"li %0, 1\n\t"			/* success - retval = 1 */
@@ -843,12 +844,12 @@ atomic_fcmpset_long(volatile u_long *p, u_long *cmpval, u_long newval)
 	    #ifdef __powerpc64__
 		"ldarx %0, 0, %3\n\t"		/* load old value */
 		"cmpld %4, %0\n\t"		/* compare */
-		"bne 1f\n\t"			/* exit if not equal */
+		"bne- 1f\n\t"			/* exit if not equal */
 		"stdcx. %5, 0, %3\n\t"		/* attempt to store */
 	    #else
 		"lwarx %0, 0, %3\n\t"		/* load old value */
 		"cmplw %4, %0\n\t"		/* compare */
-		"bne 1f\n\t"			/* exit if not equal */
+		"bne- 1f\n\t"			/* exit if not equal */
 		"stwcx. %5, 0, %3\n\t"		/* attempt to store */
 	    #endif
 		"bne- 1f\n\t"			/* exit if failed */
@@ -893,11 +894,15 @@ atomic_fcmpset_long(volatile u_long *p, u_long *cmpval, u_long newval)
 ATOMIC_FCMPSET_ACQ_REL(int);
 ATOMIC_FCMPSET_ACQ_REL(long);
 
+#ifdef ISA_206_ATOMICS
 #define	atomic_fcmpset_8	atomic_fcmpset_char
+#endif
 #define	atomic_fcmpset_acq_8	atomic_fcmpset_acq_char
 #define	atomic_fcmpset_rel_8	atomic_fcmpset_rel_char
 
+#ifdef ISA_206_ATOMICS
 #define	atomic_fcmpset_16	atomic_fcmpset_short
+#endif
 #define	atomic_fcmpset_acq_16	atomic_fcmpset_acq_short
 #define	atomic_fcmpset_rel_16	atomic_fcmpset_rel_short
 
@@ -987,6 +992,117 @@ atomic_swap_64(volatile u_long *p, u_long v)
 #define	atomic_swap_ptr(p,v)	atomic_swap_32((volatile u_int *)(p), v)
 #endif
 
+static __inline int
+atomic_testandset_int(volatile u_int *p, u_int v)
+{
+	u_int m = (1u << (v & 0x1f));
+	u_int res;
+	u_int tmp;
+
+	__asm __volatile(
+	"1:	lwarx	%0,0,%3\n"
+	"	and	%1,%0,%4\n"
+	"	or	%0,%0,%4\n"
+	"	stwcx.	%0,0,%3\n"
+	"	bne-	1b\n"
+	: "=&r"(tmp), "=&r"(res), "+m"(*p)
+	: "r"(p), "r"(m)
+	: "cr0", "memory");
+
+	return (res != 0);
+}
+
+static __inline int
+atomic_testandclear_int(volatile u_int *p, u_int v)
+{
+	u_int m = (1u << (v & 0x1f));
+	u_int res;
+	u_int tmp;
+
+	__asm __volatile(
+	"1:	lwarx	%0,0,%3\n"
+	"	and	%1,%0,%4\n"
+	"	andc	%0,%0,%4\n"
+	"	stwcx.	%0,0,%3\n"
+	"	bne-	1b\n"
+	: "=&r"(tmp), "=&r"(res), "+m"(*p)
+	: "r"(p), "r"(m)
+	: "cr0", "memory");
+
+	return (res != 0);
+}
+
+#ifdef __powerpc64__
+static __inline int
+atomic_testandset_long(volatile u_long *p, u_int v)
+{
+	u_long m = (1ul << (v & 0x3f));
+	u_long res;
+	u_long tmp;
+
+	__asm __volatile(
+	"1:	ldarx	%0,0,%3\n"
+	"	and	%1,%0,%4\n"
+	"	or	%0,%0,%4\n"
+	"	stdcx.	%0,0,%3\n"
+	"	bne-	1b\n"
+	: "=&r"(tmp), "=&r"(res), "+m"(*(volatile u_long *)p)
+	: "r"(p), "r"(m)
+	: "cr0", "memory");
+
+	return (res != 0);
+}
+
+static __inline int
+atomic_testandclear_long(volatile u_long *p, u_int v)
+{
+	u_long m = (1ul << (v & 0x3f));
+	u_long res;
+	u_long tmp;
+
+	__asm __volatile(
+	"1:	ldarx	%0,0,%3\n"
+	"	and	%1,%0,%4\n"
+	"	andc	%0,%0,%4\n"
+	"	stdcx.	%0,0,%3\n"
+	"	bne-	1b\n"
+	: "=&r"(tmp), "=&r"(res), "+m"(*p)
+	: "r"(p), "r"(m)
+	: "cr0", "memory");
+
+	return (res != 0);
+}
+#else
+static __inline int
+atomic_testandset_long(volatile u_long *p, u_int v)
+{
+	return (atomic_testandset_int((volatile u_int *)p, v));
+}
+
+static __inline int
+atomic_testandclear_long(volatile u_long *p, u_int v)
+{
+	return (atomic_testandclear_int((volatile u_int *)p, v));
+}
+#endif
+
+#define	atomic_testandclear_32	atomic_testandclear_int
+#define	atomic_testandset_32	atomic_testandset_int
+
+static __inline int
+atomic_testandset_acq_long(volatile u_long *p, u_int v)
+{
+	u_int a = atomic_testandset_long(p, v);
+	__ATOMIC_ACQ();
+	return (a);
+}
+
+#define	atomic_testandclear_int		atomic_testandclear_int
+#define	atomic_testandset_int		atomic_testandset_int
+#define	atomic_testandclear_long	atomic_testandclear_long
+#define	atomic_testandset_long		atomic_testandset_long
+#define	atomic_testandset_acq_long	atomic_testandset_acq_long
+
 static __inline void
 atomic_thread_fence_acq(void)
 {
@@ -1017,6 +1133,10 @@ atomic_thread_fence_seq_cst(void)
 
 #ifndef ISA_206_ATOMICS
 #include <sys/_atomic_subword.h>
+#define	atomic_cmpset_char	atomic_cmpset_8
+#define	atomic_cmpset_short	atomic_cmpset_16
+#define	atomic_fcmpset_char	atomic_fcmpset_8
+#define	atomic_fcmpset_short	atomic_fcmpset_16
 #endif
 
 /* These need sys/_atomic_subword.h on non-ISA-2.06-atomic platforms. */

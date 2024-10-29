@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2010 Nathan Whitehorn
  * Copyright (C) 2011 glevand <geoffrey.levand@mail.ru>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/systm.h>
@@ -421,7 +420,7 @@ ps3cdrom_action(struct cam_sim *sim, union ccb *ccb)
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->unit_number = cam_sim_unit(sim);
 		cpi->base_transfer_speed = 150000;
-		strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
 		strlcpy(cpi->hba_vid, "Sony", HBA_IDLEN);
 		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->transport = XPORT_SPI;
@@ -505,7 +504,6 @@ ps3cdrom_intr(void *arg)
 
 			if (!ps3cdrom_decode_lv1_status(status, &sense_key,
 			    &asc, &ascq)) {
-
 				CAM_DEBUG(ccb->ccb_h.path, CAM_DEBUG_TRACE,
 				   ("sense key 0x%02x asc 0x%02x ascq 0x%02x\n",
 				    sense_key, asc, ascq));
@@ -639,7 +637,7 @@ ps3cdrom_transfer(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 		    LV1_STORAGE_SEND_ATAPI_COMMAND, vtophys(&atapi_cmd),
 		    sizeof(atapi_cmd), atapi_cmd.buf, atapi_cmd.arglen,
 		    &xp->x_tag);
-	
+
 		break;
 		}
 	}

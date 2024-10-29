@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/libkern.h>
 #include <sys/param.h>
 

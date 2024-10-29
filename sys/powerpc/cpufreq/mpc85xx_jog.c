@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -87,7 +86,6 @@ static device_method_t mpc85xx_jog_methods[] = {
 	DEVMETHOD(cpufreq_drv_get,	mpc85xx_jog_get),
 	DEVMETHOD(cpufreq_drv_type,	mpc85xx_jog_type),
 	DEVMETHOD(cpufreq_drv_settings,	mpc85xx_jog_settings),
-
 	{0, 0}
 };
 
@@ -153,7 +151,7 @@ mpc85xx_jog_identify(driver_t *driver, device_t parent)
 	compat = mpc85xx_jog_devcompat();
 	if (compat == NULL)
 		return;
-	
+
 	/*
 	 * We attach a child for every CPU since settings need to
 	 * be performed on every CPU in the SMP case.
@@ -199,7 +197,7 @@ mpc85xx_jog_attach(device_t dev)
 	OF_getencprop(cpu, "reg", &sc->cpu, sizeof(sc->cpu));
 
 	reg = ccsr_read4(GUTS_PORPLLSR);
-	
+
 	/*
 	 * Assume power-on PLL is the highest PLL config supported on the
 	 * board.
@@ -289,7 +287,7 @@ mpc85xx_jog_set(device_t dev, const struct cf_setting *set)
 {
 	struct mpc85xx_jog_softc *sc;
 	struct jog_rv_args args;
-	
+
 	if (set == NULL)
 		return (EINVAL);
 
@@ -322,7 +320,7 @@ mpc85xx_jog_get(device_t dev, struct cf_setting *set)
 	freq = PMJCR_GET_CORE_MULT(pmjcr, sc->cpu);
 	freq *= mpc85xx_get_system_clock();
 	freq /= MHZ;
-	
+
 	set->freq = freq;
 	set->dev = dev;
 
@@ -339,4 +337,3 @@ mpc85xx_jog_type(device_t dev, int *type)
 	*type = CPUFREQ_TYPE_ABSOLUTE;
 	return (0);
 }
-

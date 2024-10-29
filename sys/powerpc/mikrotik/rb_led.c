@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/module.h>
@@ -112,7 +111,7 @@ rbled_attach(device_t dev)
 
 	if (OF_getprop(node, "user_led", gp, sizeof(gp)) <= 0)
 		return (ENXIO);
-	
+
 	sc->sc_gpio = OF_device_from_xref(gp[0]);
 	if (sc->sc_gpio == NULL) {
 		device_printf(dev, "No GPIO resource found!\n");

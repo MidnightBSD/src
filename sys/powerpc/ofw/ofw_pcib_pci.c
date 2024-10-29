@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/module.h>
@@ -85,7 +84,8 @@ struct ofw_pcib_softc {
 
 DEFINE_CLASS_1(pcib, ofw_pcib_pci_driver, ofw_pcib_pci_methods,
     sizeof(struct ofw_pcib_softc), pcib_driver);
-DRIVER_MODULE(ofw_pcib, pci, ofw_pcib_pci_driver, pcib_devclass, 0, 0);
+EARLY_DRIVER_MODULE(ofw_pcib, pci, ofw_pcib_pci_driver, pcib_devclass, 0, 0,
+    BUS_PASS_BUS);
 
 static int
 ofw_pcib_pci_probe(device_t dev)
@@ -171,4 +171,3 @@ ofw_pcib_pci_route_interrupt(device_t bridge, device_t dev, int intpin)
 	return (PCIB_ROUTE_INTERRUPT(device_get_parent(device_get_parent(
 	    bridge)), bridge, intpin));
 }
-

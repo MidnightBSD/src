@@ -21,7 +21,6 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 #include <machine/asm.h>
 
@@ -35,12 +34,18 @@
 ASENTRY(phyp_hcall)
 	mflr	%r0
 	std	%r0,16(%r1)
+#if defined(_CALL_ELF) && _CALL_ELF == 2
+	ld	%r11,96(%r1)		/* Last couple args into volatile regs*/
+	ld	%r12,104(%r1)
+#else
 	ld	%r11,112(%r1)		/* Last couple args into volatile regs*/
 	ld	%r12,120(%r1)
+#endif
 	hc				/* invoke the hypervisor */
 	ld	%r0,16(%r1)
 	mtlr	%r0
 	blr				/* return r3 = status */
+ASEND(phyp_hcall)
 
 /*
  * PFT HV calls take a special ABI (see PAPR 14.5.4.1)
@@ -66,4 +71,4 @@ ASENTRY(phyp_pft_hcall)
 	ld	%r0,16(%r1)
 	mtlr	%r0
 	blr				/* return r3 = status */
-
+ASEND(phyp_pft_hcall)

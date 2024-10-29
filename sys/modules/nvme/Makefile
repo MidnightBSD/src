@@ -22,4 +22,6 @@ SRCS =	nvme.c			\
 	opt_nvme.h		\
 	pci_if.h
 
+EXPORT_SYMS=	YES
+
 .include <bsd.kmod.mk>

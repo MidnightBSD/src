@@ -24,9 +24,7 @@
 # SUCH DAMAGE.
 #
 
-S=     ${SRCTOP}/sys
-
-.PATH: $S/dev/usb $S/dev/usb/controller
+.PATH: ${SRCTOP}/sys/dev/usb ${SRCTOP}/sys/dev/usb/controller
 
 KMOD=	usb
 SRCS=	bus_if.h device_if.h usb_if.h usb_if.c vnode_if.h \
@@ -41,5 +39,7 @@ SRCS=	bus_if.h device_if.h usb_if.h usb_if.c vnode_if.h \
 .if !empty(OPT_FDT)
 SRCS+=	usb_fdt_support.c ofw_bus_if.h
 .endif
+
+EXPORT_SYMS=	YES
 
 .include <bsd.kmod.mk>

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Marcel Moolenaar
  * Copyright (c) 2009 Nathan Whitehorn
@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-
+#include <sys/endian.h>
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -96,7 +96,7 @@ static platform_method_t chrp_methods[] = {
 	PLATFORMMETHOD(platform_mem_regions,	chrp_mem_regions),
 	PLATFORMMETHOD(platform_real_maxaddr,	chrp_real_maxaddr),
 	PLATFORMMETHOD(platform_timebase_freq,	chrp_timebase_freq),
-	
+
 	PLATFORMMETHOD(platform_smp_ap_init,	chrp_smp_ap_init),
 	PLATFORMMETHOD(platform_smp_first_cpu,	chrp_smp_first_cpu),
 	PLATFORMMETHOD(platform_smp_next_cpu,	chrp_smp_next_cpu),
@@ -108,7 +108,6 @@ static platform_method_t chrp_methods[] = {
 #endif
 
 	PLATFORMMETHOD(platform_reset,		chrp_reset),
-
 	{ 0, 0 }
 };
 
@@ -132,17 +131,29 @@ chrp_probe(platform_t plat)
 static int
 chrp_attach(platform_t plat)
 {
+	int quiesce;
 #ifdef __powerpc64__
 	int i;
+#if BYTE_ORDER == LITTLE_ENDIAN
+	int result;
+#endif
 
 	/* XXX: check for /rtas/ibm,hypertas-functions? */
 	if (!(mfmsr() & PSL_HV)) {
 		struct mem_region *phys, *avail;
 		int nphys, navail;
-		mem_regions(&phys, &nphys, &avail, &navail);
-		realmaxaddr = phys[0].mr_size;
+		vm_offset_t off;
 
-		pmap_mmu_install("mmu_phyp", BUS_PROBE_SPECIFIC);
+		mem_regions(&phys, &nphys, &avail, &navail);
+
+		realmaxaddr = 0;
+		for (i = 0; i < nphys; i++) {
+			off = phys[i].mr_start + phys[i].mr_size;
+			realmaxaddr = MAX(off, realmaxaddr);
+		}
+
+		if (!radix_mmu)
+			pmap_mmu_install("mmu_phyp", BUS_PROBE_SPECIFIC);
 		cpu_idle_hook = phyp_cpu_idle;
 
 		/* Set up important VPA fields */
@@ -162,12 +173,33 @@ chrp_attach(platform_t plat)
 
 		/* Set up hypervisor CPU stuff */
 		chrp_smp_ap_init(plat);
+
+#if BYTE_ORDER == LITTLE_ENDIAN
+		/*
+		 * Ask the hypervisor to update the LPAR ILE bit.
+		 *
+		 * This involves all processors reentering the hypervisor
+		 * so the change appears simultaneously in all processors.
+		 * This can take a long time.
+		 */
+		for(;;) {
+			result = phyp_hcall(H_SET_MODE, 1UL,
+			    H_SET_MODE_RSRC_ILE, 0, 0);
+			if (result == H_SUCCESS)
+				break;
+			DELAY(1000);
+		}
+#endif
+
 	}
 #endif
 	chrp_cpuref_init();
 
 	/* Some systems (e.g. QEMU) need Open Firmware to stand down */
-	ofw_quiesce();
+	quiesce = 1;
+	TUNABLE_INT_FETCH("debug.quiesce_ofw", &quiesce);
+	if (quiesce)
+		ofw_quiesce();
 
 	return (0);
 }
@@ -210,7 +242,6 @@ parse_drconf_memory(struct mem_region *ofmem, int *msz,
 
 	len = OF_getproplen(phandle, "ibm,dynamic-memory");
 	if (len > 0) {
-
 		/* We have to use a variable length array on the stack
 		   since we have very limited stack space.
 		*/
@@ -226,7 +257,7 @@ parse_drconf_memory(struct mem_region *ofmem, int *msz,
 
 		/* First address, in arr[1], arr[2]*/
 		dmem = &arr[1];
-	
+
 		for (i = 0; i < idx; i++) {
 			base = ((uint64_t)dmem[0] << 32) + dmem[1];
 			dmem += 4;
@@ -404,7 +435,7 @@ chrp_cpuref_init(void)
 	/* /chosen/cpu */
 	if (OF_getproplen(chosen, "cpu") == sizeof(ihandle_t)) {
 		OF_getprop(chosen, "cpu", &ibsp, sizeof(ibsp));
-		pbsp = OF_instance_to_package(ibsp);
+		pbsp = OF_instance_to_package(be32toh(ibsp));
 		if (pbsp != -1)
 			get_cpu_reg(pbsp, &bsp_reg);
 	}
@@ -460,7 +491,6 @@ chrp_cpuref_init(void)
 
 	return (0);
 }
-
 
 #ifdef SMP
 static int
@@ -583,4 +613,3 @@ chrp_smp_ap_init(platform_t platform)
 {
 }
 #endif
-

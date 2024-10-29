@@ -27,8 +27,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 /*
  * Common routines for the DMA engine on both the Apple Kauai and MacIO
  * ATA controllers.
@@ -174,7 +172,7 @@ ata_dbdma_stop(struct ata_request *request)
 	struct ata_dbdma_channel *sc = device_get_softc(request->parent);
 
 	uint16_t status;
-	
+
 	status = dbdma_get_chan_status(sc->dbdma);
 
 	dbdma_pause(sc->dbdma);

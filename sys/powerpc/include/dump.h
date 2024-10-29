@@ -23,7 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_DUMP_H_
@@ -34,8 +33,14 @@
 #define	DUMPSYS_MD_PA_NPAIRS	(PHYS_AVAIL_SZ + 1)
 #define	DUMPSYS_NUM_AUX_HDRS	0
 
+/* How often to check the dump progress bar? */
+#define	DUMPSYS_PB_CHECK_BITS	20	/* Every 1MB */
+
 void dumpsys_pa_init(void);
 void dumpsys_unmap_chunk(vm_paddr_t, size_t, void *);
+size_t dumpsys_scan_pmap(struct bitset *);
+void *dumpsys_dump_pmap_init(unsigned blkpgs);
+void *dumpsys_dump_pmap(void *ctx, void *buf, u_long *nbytes);
 
 static inline struct dump_pa *
 dumpsys_pa_next(struct dump_pa *p)

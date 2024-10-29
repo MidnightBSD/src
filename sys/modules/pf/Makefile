@@ -21,4 +21,6 @@ opt_global.h:
 .endif
 .endif
 
+EXPORT_SYMS=	YES
+
 .include <bsd.kmod.mk>

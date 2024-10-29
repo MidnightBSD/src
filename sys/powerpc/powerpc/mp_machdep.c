@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Marcel Moolenaar
  * All rights reserved.
@@ -27,13 +27,13 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/ktr.h>
 #include <sys/bus.h>
 #include <sys/cpuset.h>
+#include <sys/domainset.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
@@ -63,7 +63,6 @@
 volatile static int ap_awake;
 volatile static u_int ap_letgo;
 volatile static u_quad_t ap_timebase;
-static u_int ipi_msg_cnt[32];
 static struct mtx ap_boot_mtx;
 struct pcb stoppcbs[MAXCPU];
 
@@ -75,8 +74,8 @@ machdep_ap_bootstrap(void)
 	__asm __volatile("msync; isync");
 
 	while (ap_letgo == 0)
-		__asm __volatile("or 27,27,27");
-	__asm __volatile("or 6,6,6");
+		nop_prio_vlow();
+	nop_prio_medium();
 
 	/*
 	 * Set timebase as soon as possible to meet an implicit rendezvous
@@ -97,7 +96,11 @@ machdep_ap_bootstrap(void)
 	/* Serialize console output and AP count increment */
 	mtx_lock_spin(&ap_boot_mtx);
 	ap_awake++;
-	printf("SMP: AP CPU #%d launched\n", PCPU_GET(cpuid));
+	if (bootverbose)
+		printf("SMP: AP CPU #%d launched\n", PCPU_GET(cpuid));
+	else
+		printf("%s%d%s", ap_awake == 2 ? "Launching APs: " : "",
+		    PCPU_GET(cpuid), ap_awake == mp_ncpus ? "\n" : " ");
 	mtx_unlock_spin(&ap_boot_mtx);
 
 	while(smp_started == 0)
@@ -144,7 +147,7 @@ cpu_mp_start(void)
 {
 	struct cpuref bsp, cpu;
 	struct pcpu *pc;
-	int error;
+	int domain, error;
 
 	error = platform_smp_get_bsp(&bsp);
 	KASSERT(error == 0, ("Don't know BSP"));
@@ -161,12 +164,18 @@ cpu_mp_start(void)
 			    cpu.cr_cpuid);
 			goto next;
 		}
+
+		if (vm_ndomains > 1)
+			domain = cpu.cr_domain;
+		else
+			domain = 0;
+
 		if (cpu.cr_cpuid != bsp.cr_cpuid) {
 			void *dpcpu;
 
 			pc = &__pcpu[cpu.cr_cpuid];
-			dpcpu = (void *)kmem_malloc(DPCPU_SIZE, M_WAITOK |
-			    M_ZERO);
+			dpcpu = (void *)kmem_malloc_domainset(DOMAINSET_PREF(domain),
+			    DPCPU_SIZE, M_WAITOK | M_ZERO);
 			pcpu_init(pc, cpu.cr_cpuid, sizeof(*pc));
 			dpcpu_init(dpcpu, cpu.cr_cpuid);
 		} else {
@@ -174,7 +183,12 @@ cpu_mp_start(void)
 			pc->pc_cpuid = bsp.cr_cpuid;
 			pc->pc_bsp = 1;
 		}
+		pc->pc_domain = domain;
 		pc->pc_hwref = cpu.cr_hwref;
+
+		CPU_SET(pc->pc_cpuid, &cpuset_domain[pc->pc_domain]);
+		KASSERT(pc->pc_domain < MAXMEMDOM, ("bad domain value %d\n",
+		    pc->pc_domain));
 		CPU_SET(pc->pc_cpuid, &all_cpus);
 next:
 		error = platform_smp_next_cpu(&cpu);
@@ -198,7 +212,7 @@ cpu_mp_announce(void)
 		pc = pcpu_find(i);
 		if (pc == NULL)
 			continue;
-		printf("cpu%d: dev=%x", i, (int)pc->pc_hwref);
+		printf("cpu%d: dev=%x domain=%d ", i, (int)pc->pc_hwref, pc->pc_domain);
 		if (pc->pc_bsp)
 			printf(" (BSP)");
 		printf("\n");
@@ -229,6 +243,7 @@ cpu_mp_unleash(void *dummy)
 				printf("Waking up CPU %d (dev=%x)\n",
 				    pc->pc_cpuid, (int)pc->pc_hwref);
 
+			pc->pc_flags = PCPU_GET(flags); /* Copy cached CPU flags */
 			ret = platform_smp_start_cpu(pc);
 			if (ret == 0) {
 				timeout = 2000;	/* wait 2sec for the AP */
@@ -253,7 +268,7 @@ cpu_mp_unleash(void *dummy)
 	/* Provide our current DEC and TB values for APs */
 	ap_timebase = mftb() + 10;
 	__asm __volatile("msync; isync");
-	
+
 	/* Let APs continue */
 	atomic_store_rel_int(&ap_letgo, 1);
 
@@ -291,7 +306,6 @@ powerpc_ipi_handler(void *arg)
 		return (FILTER_STRAY);
 	while ((msg = ffs(ipimask) - 1) != -1) {
 		ipimask &= ~(1u << msg);
-		ipi_msg_cnt[msg]++;
 		switch (msg) {
 		case IPI_AST:
 			CTR1(KTR_SMP, "%s: IPI_AST", __func__);
@@ -314,7 +328,6 @@ powerpc_ipi_handler(void *arg)
 			    __func__);
 			cpuid = PCPU_GET(cpuid);
 			savectx(&stoppcbs[cpuid]);
-			savectx(PCPU_GET(curpcb));
 			CPU_SET_ATOMIC(cpuid, &stopped_cpus);
 			while (!CPU_ISSET(cpuid, &started_cpus))
 				cpu_spinwait();

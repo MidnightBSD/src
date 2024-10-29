@@ -43,21 +43,22 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
+#include <sys/gsb_crc32.h>
 
 #ifdef _KERNEL
 #include <sys/libkern.h>
 #include <sys/systm.h>
-#include <sys/gsb_crc32.h>
 
 #if defined(__amd64__) || defined(__i386__)
 #include <machine/md_var.h>
 #include <machine/specialreg.h>
+#include <x86/ifunc.h>
 #endif
 
 #if defined(__aarch64__)
-#include <machine/cpu.h>
+#include <machine/armreg.h>
+#include <machine/ifunc.h>
 #endif
 #endif /* _KERNEL */
 
@@ -214,11 +215,13 @@ static const uint32_t crc32Table[256] = {
 	0xBE2DA0A5L, 0x4C4623A6L, 0x5F16D052L, 0xAD7D5351L
 };
 
-static uint32_t
+#ifndef TESTING
+static
+#endif
+uint32_t
 singletable_crc32c(uint32_t crc, const void *buf, size_t size)
 {
 	const uint8_t *p = buf;
-
 
 	while (size--)
 		crc = crc32Table[(crc ^ *p++) & 0xff] ^ (crc >> 8);
@@ -226,6 +229,7 @@ singletable_crc32c(uint32_t crc, const void *buf, size_t size)
 	return crc;
 }
 
+#ifndef _STANDALONE
 
 /*
  * Copyright (c) 2004-2006 Intel Corporation - All Rights Reserved
@@ -293,8 +297,6 @@ static const uint32_t sctp_crc_tableil8_o32[256] =
  * end of the CRC lookup table crc_tableil8_o32
  */
 
-
-
 /*
  * The following CRC lookup table was generated automagically using the
  * following model parameters:
@@ -348,8 +350,6 @@ static const uint32_t sctp_crc_tableil8_o40[256] =
 /*
  * end of the CRC lookup table crc_tableil8_o40
  */
-
-
 
 /*
  * The following CRC lookup table was generated automagically using the
@@ -405,8 +405,6 @@ static const uint32_t sctp_crc_tableil8_o48[256] =
  * end of the CRC lookup table crc_tableil8_o48
  */
 
-
-
 /*
  * The following CRC lookup table was generated automagically using the
  * following model parameters:
@@ -460,8 +458,6 @@ static const uint32_t sctp_crc_tableil8_o56[256] =
 /*
  * end of the CRC lookup table crc_tableil8_o56
  */
-
-
 
 /*
  * The following CRC lookup table was generated automagically using the
@@ -517,8 +513,6 @@ static const uint32_t sctp_crc_tableil8_o64[256] =
  * end of the CRC lookup table crc_tableil8_o64
  */
 
-
-
 /*
  * The following CRC lookup table was generated automagically using the
  * following model parameters:
@@ -572,8 +566,6 @@ static const uint32_t sctp_crc_tableil8_o72[256] =
 /*
  * end of the CRC lookup table crc_tableil8_o72
  */
-
-
 
 /*
  * The following CRC lookup table was generated automagically using the
@@ -629,8 +621,6 @@ static const uint32_t sctp_crc_tableil8_o80[256] =
  * end of the CRC lookup table crc_tableil8_o80
  */
 
-
-
 /*
  * The following CRC lookup table was generated automagically using the
  * following model parameters:
@@ -684,7 +674,6 @@ static const uint32_t sctp_crc_tableil8_o88[256] =
 /*
  * end of the CRC lookup table crc_tableil8_o88
  */
-
 
 static uint32_t
 crc32c_sb8_64_bit(uint32_t crc,
@@ -743,10 +732,13 @@ crc32c_sb8_64_bit(uint32_t crc,
 	return crc;
 }
 
-static uint32_t
+#ifndef TESTING
+static
+#endif
+uint32_t
 multitable_crc32c(uint32_t crc32c,
-    const unsigned char *buffer,
-    unsigned int length)
+    const void *buffer,
+    size_t length)
 {
 	uint32_t to_even_word;
 
@@ -757,33 +749,52 @@ multitable_crc32c(uint32_t crc32c,
 	return (crc32c_sb8_64_bit(crc32c, buffer, length, to_even_word));
 }
 
-uint32_t
-calculate_crc32c(uint32_t crc32c,
-    const unsigned char *buffer,
-    unsigned int length)
+static uint32_t
+table_crc32c(uint32_t crc32c, const unsigned char *buffer, unsigned int length)
 {
-#ifdef _KERNEL
-#if defined(__amd64__) || defined(__i386__)
-	if ((cpu_feature2 & CPUID2_SSE42) != 0) {
-		return (sse42_crc32c(crc32c, buffer, length));
-	} else
-#endif
-#if defined(__aarch64__)
-	uint64_t reg;
-
-	/*
-	 * We only test for CRC32 support on the CPU with index 0 assuming that
-	 * this applies to all CPUs.
-	 */
-	reg = READ_SPECIALREG(id_aa64isar0_el1);
-	if (ID_AA64ISAR0_CRC32(reg) != ID_AA64ISAR0_CRC32_NONE) {
-		return (armv8_crc32c(crc32c, buffer, length));
-	} else
-#endif
-#endif /* _KERNEL */
 	if (length < 4) {
 		return (singletable_crc32c(crc32c, buffer, length));
 	} else {
 		return (multitable_crc32c(crc32c, buffer, length));
 	}
 }
+
+#if defined(_KERNEL) && defined(__aarch64__)
+DEFINE_IFUNC(, uint32_t, calculate_crc32c,
+    (uint32_t crc32c, const unsigned char *buffer, unsigned int length))
+{
+	uint64_t reg;
+
+	if (get_kernel_reg(ID_AA64ISAR0_EL1, &reg)) {
+		if (ID_AA64ISAR0_CRC32_VAL(reg) >= ID_AA64ISAR0_CRC32_BASE)
+			return (armv8_crc32c);
+	}
+
+	return (table_crc32c);
+}
+#elif defined(_KERNEL) && (defined(__amd64__) || defined(__i386__))
+DEFINE_IFUNC(, uint32_t, calculate_crc32c,
+    (uint32_t crc32c, const unsigned char *buffer, unsigned int length))
+{
+	if ((cpu_feature2 & CPUID2_SSE42) != 0)
+		return (sse42_crc32c);
+
+	return (table_crc32c);
+}
+#else
+uint32_t
+calculate_crc32c(uint32_t crc32c,
+    const unsigned char *buffer,
+    unsigned int length)
+{
+	return (table_crc32c(crc32c, buffer, length));
+}
+#endif /* _KERNEL && __aarch64__ */
+
+#else
+uint32_t
+calculate_crc32c(uint32_t crc32c, const unsigned char *buffer, unsigned int length)
+{
+	return (singletable_crc32c(crc32c, buffer, length));
+}
+#endif

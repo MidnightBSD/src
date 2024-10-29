@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Marcel Moolenaar
  * All rights reserved.
@@ -27,13 +27,13 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>
 #include <sys/pcpu.h>
 #include <sys/proc.h>
+#include <sys/sched.h>
 #include <sys/smp.h>
 
 #include <machine/bus.h>
@@ -102,6 +102,12 @@ cpudep_ap_early_bootstrap(void)
 
 			mtspr(SPR_LPCR, lpcr);
 			isync();
+
+			/*
+			 * Nuke FSCR, to be managed on a per-process basis
+			 * later.
+			 */
+			mtspr(SPR_FSCR, 0);
 		}
 #endif
 		break;
@@ -127,6 +133,7 @@ cpudep_ap_bootstrap(void)
 #endif
 	pcpup->pc_curpcb = pcpup->pc_curthread->td_pcb;
 	sp = pcpup->pc_curpcb->pcb_sp;
+	schedinit_ap();
 
 	return (sp);
 }
@@ -304,9 +311,6 @@ cpudep_ap_setup()
 
 	vers = mfpvr() >> 16;
 
-	/* The following is needed for restoring from sleep. */
-	platform_smp_timebase_sync(0, 1);
-
 	switch(vers) {
 	case IBM970:
 	case IBM970FX:
@@ -418,4 +422,3 @@ cpudep_ap_setup()
 		break;
 	}
 }
-

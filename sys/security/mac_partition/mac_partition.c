@@ -35,7 +35,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -64,7 +63,8 @@
 
 SYSCTL_DECL(_security_mac);
 
-static SYSCTL_NODE(_security_mac, OID_AUTO, partition, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_security_mac, OID_AUTO, partition,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "TrustedBSD mac_partition policy controls");
 
 static int	partition_enabled = 1;
@@ -127,7 +127,7 @@ partition_cred_check_relabel(struct ucred *cred, struct label *newlabel)
 		 * partition in the first place, but this didn't interact
 		 * well with sendmail.
 		 */
-		error = priv_check_cred(cred, PRIV_MAC_PARTITION, 0);
+		error = priv_check_cred(cred, PRIV_MAC_PARTITION);
 	}
 
 	return (error);

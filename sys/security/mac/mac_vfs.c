@@ -43,7 +43,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_mac.h"
 
 #include <sys/param.h>
@@ -371,7 +370,7 @@ MAC_CHECK_PROBE_DEFINE3(vnode_check_access, "struct ucred *",
     "struct vnode *", "accmode_t");
 
 int
-mac_vnode_check_access(struct ucred *cred, struct vnode *vp, accmode_t accmode)
+mac_vnode_check_access_impl(struct ucred *cred, struct vnode *vp, accmode_t accmode)
 {
 	int error;
 
@@ -564,13 +563,15 @@ MAC_CHECK_PROBE_DEFINE3(vnode_check_lookup, "struct ucred *",
     "struct vnode *", "struct componentname *");
 
 int
-mac_vnode_check_lookup(struct ucred *cred, struct vnode *dvp,
+mac_vnode_check_lookup_impl(struct ucred *cred, struct vnode *dvp,
     struct componentname *cnp)
 {
 	int error;
 
 	ASSERT_VOP_LOCKED(dvp, "mac_vnode_check_lookup");
 
+	if ((cnp->cn_flags & NOMACCHECK) != 0)
+		return (0);
 	MAC_POLICY_CHECK(vnode_check_lookup, cred, dvp, dvp->v_label, cnp);
 	MAC_CHECK_PROBE3(vnode_check_lookup, error, cred, dvp, cnp);
 
@@ -581,7 +582,7 @@ MAC_CHECK_PROBE_DEFINE4(vnode_check_mmap, "struct ucred *", "struct vnode *",
     "int", "int");
 
 int
-mac_vnode_check_mmap(struct ucred *cred, struct vnode *vp, int prot,
+mac_vnode_check_mmap_impl(struct ucred *cred, struct vnode *vp, int prot,
     int flags)
 {
 	int error;
@@ -628,7 +629,7 @@ MAC_CHECK_PROBE_DEFINE3(vnode_check_open, "struct ucred *", "struct vnode *",
     "accmode_t");
 
 int
-mac_vnode_check_open(struct ucred *cred, struct vnode *vp, accmode_t accmode)
+mac_vnode_check_open_impl(struct ucred *cred, struct vnode *vp, accmode_t accmode)
 {
 	int error;
 
@@ -663,7 +664,7 @@ MAC_CHECK_PROBE_DEFINE3(vnode_check_read, "struct ucred *", "struct ucred *",
     "struct vnode *");
 
 int
-mac_vnode_check_read(struct ucred *active_cred, struct ucred *file_cred,
+mac_vnode_check_read_impl(struct ucred *active_cred, struct ucred *file_cred,
     struct vnode *vp)
 {
 	int error;
@@ -698,7 +699,7 @@ MAC_CHECK_PROBE_DEFINE2(vnode_check_readlink, "struct ucred *",
     "struct vnode *");
 
 int
-mac_vnode_check_readlink(struct ucred *cred, struct vnode *vp)
+mac_vnode_check_readlink_impl(struct ucred *cred, struct vnode *vp)
 {
 	int error;
 
@@ -888,7 +889,7 @@ MAC_CHECK_PROBE_DEFINE3(vnode_check_stat, "struct ucred *", "struct ucred *",
     "struct vnode *");
 
 int
-mac_vnode_check_stat(struct ucred *active_cred, struct ucred *file_cred,
+mac_vnode_check_stat_impl(struct ucred *active_cred, struct ucred *file_cred,
     struct vnode *vp)
 {
 	int error;
@@ -926,7 +927,7 @@ MAC_CHECK_PROBE_DEFINE3(vnode_check_write, "struct ucred *",
     "struct ucred *", "struct vnode *");
 
 int
-mac_vnode_check_write(struct ucred *active_cred, struct ucred *file_cred,
+mac_vnode_check_write_impl(struct ucred *active_cred, struct ucred *file_cred,
     struct vnode *vp)
 {
 	int error;
@@ -1067,3 +1068,12 @@ vn_setlabel(struct vnode *vp, struct label *intlabel, struct ucred *cred)
 
 	return (0);
 }
+
+#ifdef DEBUG_VFS_LOCKS
+void
+mac_vnode_assert_locked(struct vnode *vp, const char *func)
+{
+
+	ASSERT_VOP_LOCKED(vp, func);
+}
+#endif

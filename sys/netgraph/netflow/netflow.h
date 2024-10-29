@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010-2011 Alexander V. Chernikov <melifaro@ipfw.ru>
  * Copyright (c) 2004 Gleb Smirnoff <glebius@FreeBSD.org>
@@ -143,7 +143,6 @@ struct netflow_v5_export_dgram {
 	struct netflow_v5_header	header;
 	struct netflow_v5_record	r[NETFLOW_V5_MAX_RECORDS];
 } __attribute__((__packed__));
-
 
 /* RFC3954 field definitions */
 #define NETFLOW_V9_FIELD_IN_BYTES		1	/* Input bytes count for a flow. Default 4, can be 8 */

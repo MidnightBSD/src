@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Michael Lorenz
  * Copyright (c) 2008 Nathan Whitehorn
@@ -25,7 +25,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  *
  */
 
@@ -120,7 +119,6 @@ enum {
 #define PMU_PWR_BATT_FULL	(1 << 5)
 #define PMU_PWR_PCHARGE_RESET	(1 << 6)
 #define PMU_PWR_BATT_EXIST	(1 << 7)
-
 
 /* I2C related definitions */
 #define PMU_I2C_MODE_SIMPLE	0

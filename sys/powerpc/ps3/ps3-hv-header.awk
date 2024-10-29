@@ -7,7 +7,6 @@
 # Invoke like so: awk -f ps3-hv-header.awk < ps3-hvcall.master > ps3-hv.h
 #
 
-
 !/HVCALL.*/ && (!/#.*/ || /#define.*/ || /#include.*/) {
 	print($0);
 }

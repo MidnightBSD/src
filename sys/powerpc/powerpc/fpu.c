@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/proc.h>
 #include <sys/systm.h>
@@ -47,7 +46,7 @@
 static void
 save_fpu_int(struct thread *td)
 {
-	int	msr;
+	register_t msr;
 	struct	pcb *pcb;
 
 	pcb = td->td_pcb;
@@ -78,7 +77,7 @@ save_fpu_int(struct thread *td)
 	#undef SFP
 	} else {
 	#define SFP(n)   __asm ("stfd " #n ", 0(%0)" \
-			:: "b"(&pcb->pcb_fpu.fpr[n]));
+			:: "b"(&pcb->pcb_fpu.fpr[n].fpr));
 		SFP(0);		SFP(1);		SFP(2);		SFP(3);
 		SFP(4);		SFP(5);		SFP(6);		SFP(7);
 		SFP(8);		SFP(9);		SFP(10);	SFP(11);
@@ -101,7 +100,7 @@ save_fpu_int(struct thread *td)
 void
 enable_fpu(struct thread *td)
 {
-	int	msr;
+	register_t msr;
 	struct	pcb *pcb;
 	struct	trapframe *tf;
 
@@ -163,7 +162,7 @@ enable_fpu(struct thread *td)
 	#undef LFP
 	} else {
 	#define LFP(n)   __asm ("lfd " #n ", 0(%0)" \
-			:: "b"(&pcb->pcb_fpu.fpr[n]));
+			:: "b"(&pcb->pcb_fpu.fpr[n].fpr));
 		LFP(0);		LFP(1);		LFP(2);		LFP(3);
 		LFP(4);		LFP(5);		LFP(6);		LFP(7);
 		LFP(8);		LFP(9);		LFP(10);	LFP(11);
@@ -203,12 +202,60 @@ save_fpu(struct thread *td)
 void
 save_fpu_nodrop(struct thread *td)
 {
-	struct thread *ftd;
 
-	ftd = PCPU_GET(fputhread);
-	if (td != ftd) {
-		return;
-	}
-
-	save_fpu_int(td);
+	if (td == PCPU_GET(fputhread))
+		save_fpu_int(td);
 }
+
+/*
+ * Clear Floating-Point Status and Control Register
+ */
+void
+cleanup_fpscr()
+{
+	register_t msr;
+
+	msr = mfmsr();
+	mtmsr(msr | PSL_FP);
+	mtfsf(0);
+
+	isync();
+	mtmsr(msr);
+}
+
+/*
+ * Get the current fp exception
+ */
+u_int
+get_fpu_exception(struct thread *td)
+{
+	register_t msr;
+	u_int ucode;
+	register_t reg;
+
+	critical_enter();
+
+	msr = mfmsr();
+	mtmsr(msr | PSL_FP);
+
+	reg = mffs();
+
+	isync();
+	mtmsr(msr);
+
+	critical_exit();
+
+	if (reg & FPSCR_ZX)
+		ucode = FPE_FLTDIV;
+	else if (reg & FPSCR_OX)
+		ucode = FPE_FLTOVF;
+	else if (reg & FPSCR_UX)
+		ucode = FPE_FLTUND;
+	else if (reg & FPSCR_XX)
+		ucode = FPE_FLTRES;
+	else
+		ucode = FPE_FLTINV;
+
+	return ucode;
+}
+

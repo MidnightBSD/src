@@ -15,7 +15,6 @@
  */
 
 #include <machine/asm.h>
-
 /* 
  * stack is aligned as there's a possibility of branching to L_overflow
  * which makes a C call

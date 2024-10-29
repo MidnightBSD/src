@@ -25,7 +25,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -64,8 +63,9 @@
  */
 
 SYSCTL_DECL(_net_link_generic);
-static SYSCTL_NODE(_net_link_generic, IFMIB_SYSTEM, system, CTLFLAG_RW, 0,
-	    "Variables global to all interfaces");
+static SYSCTL_NODE(_net_link_generic, IFMIB_SYSTEM, system,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "Variables global to all interfaces");
 
 SYSCTL_INT(_net_link_generic_system, IFMIB_IFCOUNT, ifcount,
 	CTLFLAG_VNET | CTLFLAG_RD, &VNET_NAME(if_index), 0,
@@ -79,6 +79,7 @@ sysctl_ifdata(SYSCTL_HANDLER_ARGS) /* XXX bad syntax! */
 	u_int namelen = arg2;
 	struct ifnet *ifp;
 	struct ifmibdata ifmd;
+	struct epoch_tracker et;
 	size_t dlen;
 	char *dbuf;
 
@@ -86,7 +87,9 @@ sysctl_ifdata(SYSCTL_HANDLER_ARGS) /* XXX bad syntax! */
 		return EINVAL;
 	if (name[0] <= 0)
 		return (ENOENT);
+	NET_EPOCH_ENTER(et);
 	ifp = ifnet_byindex_ref(name[0]);
+	NET_EPOCH_EXIT(et);
 	if (ifp == NULL)
 		return (ENOENT);
 
@@ -117,10 +120,6 @@ sysctl_ifdata(SYSCTL_HANDLER_ARGS) /* XXX bad syntax! */
 		error = SYSCTL_OUT(req, ifp->if_linkmib, ifp->if_linkmiblen);
 		if (error || !req->newptr)
 			goto out;
-
-		error = SYSCTL_IN(req, ifp->if_linkmib, ifp->if_linkmiblen);
-		if (error)
-			goto out;
 		break;
 
 	case IFDATA_DRIVERNAME:
@@ -146,6 +145,6 @@ out:
 	return error;
 }
 
-static SYSCTL_NODE(_net_link_generic, IFMIB_IFDATA, ifdata, CTLFLAG_RW,
-	    sysctl_ifdata, "Interface table");
-
+static SYSCTL_NODE(_net_link_generic, IFMIB_IFDATA, ifdata,
+    CTLFLAG_RD | CTLFLAG_MPSAFE, sysctl_ifdata,
+    "Interface table");

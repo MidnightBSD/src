@@ -107,12 +107,14 @@
 	.globl	name; \
 	.section ".opd","aw"; \
 	.p2align 3; \
-	name: \
+name: \
 	.quad	DOT_LABEL(name),.TOC.@tocbase,0; \
 	.previous; \
 	.p2align 4; \
 	TYPE_ENTRY(name) \
-DOT_LABEL(name):
+DOT_LABEL(name): \
+	.cfi_startproc
+#define	_NAKED_ENTRY(name)	_ENTRY(name)
 #else
 #define	_ENTRY(name) \
 	.text; \
@@ -120,12 +122,24 @@ DOT_LABEL(name):
 	.globl	name; \
 	.type	name,@function; \
 name: \
+	.cfi_startproc; \
 	addis	%r2, %r12, (.TOC.-name)@ha; \
 	addi	%r2, %r2, (.TOC.-name)@l; \
+	.localentry name, .-name;
+
+/* "Naked" function entry.  No TOC prologue for ELFv2. */
+#define	_NAKED_ENTRY(name) \
+	.text; \
+	.p2align 4; \
+	.globl	name; \
+	.type	name,@function; \
+name: \
+	.cfi_startproc; \
 	.localentry name, .-name;
 #endif
 
 #define	_END(name) \
+	.cfi_endproc; \
 	.long	0; \
 	.byte	0,0,0,0,0,0,0,0; \
 	END_SIZE(name)
@@ -142,8 +156,13 @@ name: \
 	.p2align 4; \
 	.globl	name; \
 	.type	name,@function; \
-	name:
-#define	_END(name)
+name: \
+	.cfi_startproc
+#define	_END(name) \
+	.cfi_endproc; \
+	.size	name, . - name
+
+#define _NAKED_ENTRY(name)	_ENTRY(name)
 
 #define	LOAD_ADDR(reg, var) \
 	lis	reg, var@ha; \
@@ -173,6 +192,7 @@ name: \
 # define	_PROF_PROLOGUE
 #endif
 
+#define	ASEND(y)	_END(ASMNAME(y))
 #define	ASENTRY(y)	_ENTRY(ASMNAME(y)); _PROF_PROLOGUE
 #define	END(y)		_END(CNAME(y))
 #define	ENTRY(y)	_ENTRY(CNAME(y)); _PROF_PROLOGUE
@@ -180,6 +200,46 @@ name: \
 
 #define	ASENTRY_NOPROF(y)	_ENTRY(ASMNAME(y))
 #define	ENTRY_NOPROF(y)		_ENTRY(CNAME(y))
+
+/* Load NIA without affecting branch prediction */
+#define	LOAD_LR_NIA	bcl	20, 31, .+4
+
+/*
+ * Magic sequence to return to native endian.
+ * Overwrites r0 and r11.
+ *
+ * The encoding of the instruction "tdi 0, %r0, 0x48" in opposite endian
+ * happens to be "b . + 8". This is useful because we can write a sequence
+ * of instructions that can execute in either endian.
+ *
+ * Use a sequence of handcoded instructions that switches contexts to the
+ * instruction following the sequence, but with the correct PSL_LE bit.
+ *
+ * The same sequence works for both BE and LE because the xori will flip
+ * the bit to the other state, and the code only runs when running in the
+ * wrong endian.
+ *
+ * This sequence is NMI-reentrant.
+ *
+ * Do not change the length of this sequence without looking at the users,
+ * this is used in size-constrained places like the reset vector!
+ */
+#define	RETURN_TO_NATIVE_ENDIAN						  \
+	tdi	0, %r0, 0x48;	/* Endian swapped: b . + 8		*/\
+	b	1f;		/* Will fall through to here if correct */\
+	.long	0xa600607d;	/* mfmsr %r11				*/\
+	.long	0x00000038;	/* li %r0, 0				*/\
+	.long	0x6401617d;	/* mtmsrd %r0, 1 (L=1 EE,RI bits only)	*/\
+	.long	0x01006b69;	/* xori %r11, %r11, 0x1 (PSL_LE)	*/\
+	.long	0xa602087c;	/* mflr %r0				*/\
+	.long	0x05009f42;	/* LOAD_LR_NIA				*/\
+	.long	0xa6037b7d;	/* 0: mtsrr1 %r11			*/\
+	.long	0xa602687d;	/* mflr	%r11				*/\
+	.long	0x18006b39;	/* addi	%r11, %r11, (1f - 0b)		*/\
+	.long	0xa6037a7d;	/* mtsrr0 %r11				*/\
+	.long	0xa603087c;	/* mtlr %r0				*/\
+	.long	0x2400004c;	/* rfid					*/\
+1:	/* RETURN_TO_NATIVE_ENDIAN */
 
 #define	ASMSTR		.asciz
 

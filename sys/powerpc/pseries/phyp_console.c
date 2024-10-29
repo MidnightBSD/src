@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2011 by Nathan Whitehorn. All rights reserved.
  *
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-
+#include <sys/endian.h>
 #include <sys/param.h>
 #include <sys/kdb.h>
 #include <sys/kernel.h>
@@ -107,7 +107,7 @@ static driver_t uart_phyp_driver = {
 	uart_phyp_methods,
 	sizeof(struct uart_phyp_softc),
 };
- 
+
 DRIVER_MODULE(uart_phyp, vdevice, uart_phyp_driver, uart_devclass, 0, 0);
 
 static cn_probe_t uart_phyp_cnprobe;
@@ -221,7 +221,7 @@ uart_phyp_cnprobe(struct consdev *cp)
 	cp->cn_pri = CN_NORMAL;
 	console_sc = &sc;
 	return;
-	
+
 fail:
 	cp->cn_pri = CN_DEAD;
 	return;
@@ -286,17 +286,22 @@ uart_phyp_get(struct uart_phyp_softc *sc, void *buffer, size_t bufsize)
 {
 	int err;
 	int hdr = 0;
+	uint64_t i, j;
 
 	uart_lock(&sc->sc_mtx);
 	if (sc->inbuflen == 0) {
 		err = phyp_pft_hcall(H_GET_TERM_CHAR, sc->vtermid,
 		    0, 0, 0, &sc->inbuflen, &sc->phyp_inbuf.u64[0],
 		    &sc->phyp_inbuf.u64[1]);
+#if BYTE_ORDER == LITTLE_ENDIAN
+		sc->phyp_inbuf.u64[0] = be64toh(sc->phyp_inbuf.u64[0]);
+		sc->phyp_inbuf.u64[1] = be64toh(sc->phyp_inbuf.u64[1]);
+#endif
 		if (err != H_SUCCESS) {
 			uart_unlock(&sc->sc_mtx);
 			return (-1);
 		}
-		hdr = 1; 
+		hdr = 1;
 	}
 
 	if (sc->inbuflen == 0) {
@@ -304,15 +309,35 @@ uart_phyp_get(struct uart_phyp_softc *sc, void *buffer, size_t bufsize)
 		return (0);
 	}
 
-	if (bufsize > sc->inbuflen)
-		bufsize = sc->inbuflen;
-
 	if ((sc->protocol == HVTERMPROT) && (hdr == 1)) {
 		sc->inbuflen = sc->inbuflen - 4;
 		/* The VTERM protocol has a 4 byte header, skip it here. */
 		memmove(&sc->phyp_inbuf.str[0], &sc->phyp_inbuf.str[4],
 		    sc->inbuflen);
 	}
+
+	/*
+	 * Since version 2.11.0, QEMU became bug-compatible with
+	 * PowerVM's vty implementation, by inserting a \0 after
+	 * every \r going to the guest. Guests are expected to
+	 * workaround this issue by removing every \0 immediately
+	 * following a \r.
+	 */
+	if (hdr == 1) {
+		for (i = 0, j = 0; i < sc->inbuflen; i++, j++) {
+			if (i > j)
+				sc->phyp_inbuf.str[j] = sc->phyp_inbuf.str[i];
+
+			if (sc->phyp_inbuf.str[i] == '\r' &&
+			    i < sc->inbuflen - 1 &&
+			    sc->phyp_inbuf.str[i + 1] == '\0')
+				i++;
+		}
+		sc->inbuflen -= i - j;
+	}
+
+	if (bufsize > sc->inbuflen)
+		bufsize = sc->inbuflen;
 
 	memcpy(buffer, sc->phyp_inbuf.str, bufsize);
 	sc->inbuflen -= bufsize;
@@ -358,8 +383,8 @@ uart_phyp_put(struct uart_phyp_softc *sc, void *buffer, size_t bufsize)
 	}
 
 	do {
-	    err = phyp_hcall(H_PUT_TERM_CHAR, sc->vtermid, len, cbuf.u64[0],
-			    cbuf.u64[1]);
+	    err = phyp_hcall(H_PUT_TERM_CHAR, sc->vtermid, len, htobe64(cbuf.u64[0]),
+			    htobe64(cbuf.u64[1]));
 		DELAY(100);
 	} while (err == H_BUSY);
 
@@ -409,7 +434,7 @@ uart_phyp_ttyoutwakeup(struct tty *tp)
 	int len;
 
 	sc = tty_softc(tp);
-	
+
 	while ((len = ttydisc_getc(tp, buffer, sizeof(buffer))) != 0)
 		uart_phyp_put(sc, buffer, len);
 }
@@ -431,4 +456,3 @@ uart_phyp_intr(void *v)
 	if (sc->irqres == NULL)
 		callout_reset(&sc->callout, sc->polltime, uart_phyp_intr, sc);
 }
-

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005-2007 Nate Lawson (SDG)
  * All rights reserved.
@@ -24,13 +24,12 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SYS_CPU_H_
 #define _SYS_CPU_H_
 
-#include <sys/eventhandler.h>
+#include <sys/_eventhandler.h>
 
 /*
  * CPU device support.
@@ -119,11 +118,16 @@ TAILQ_HEAD(cf_level_lst, cf_level);
  * information about settings but rely on another machine-dependent driver
  * for actually performing the frequency transition (e.g., ACPI performance
  * states of type "functional fixed hardware.")
+ *
+ * The "uncached" flag tells CPUFREQ_DRV_GET to try obtaining the real
+ * instantaneous frequency from the underlying hardware regardless of cached
+ * state. It is probably a bug to not combine this with "info only"
  */
 #define CPUFREQ_TYPE_MASK	0xffff
 #define CPUFREQ_TYPE_RELATIVE	(1<<0)
 #define CPUFREQ_TYPE_ABSOLUTE	(1<<1)
 #define CPUFREQ_FLAG_INFO_ONLY	(1<<16)
+#define CPUFREQ_FLAG_UNCACHED	(1<<17)
 
 /*
  * When setting a level, the caller indicates the priority of this request.

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Marcel Moolenaar
  * Copyright (c) 2009 Nathan Whitehorn
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -67,14 +66,16 @@ static int powermac_smp_get_bsp(platform_t, struct cpuref *cpuref);
 static int powermac_smp_start_cpu(platform_t, struct pcpu *cpu);
 static void powermac_smp_timebase_sync(platform_t, u_long tb, int ap);
 static void powermac_reset(platform_t);
+#ifndef __powerpc64__
 static void powermac_sleep(platform_t);
+#endif
 
 static platform_method_t powermac_methods[] = {
 	PLATFORMMETHOD(platform_probe, 		powermac_probe),
 	PLATFORMMETHOD(platform_attach,		powermac_attach),
 	PLATFORMMETHOD(platform_mem_regions,	powermac_mem_regions),
 	PLATFORMMETHOD(platform_timebase_freq,	powermac_timebase_freq),
-	
+
 	PLATFORMMETHOD(platform_smp_first_cpu,	powermac_smp_first_cpu),
 	PLATFORMMETHOD(platform_smp_next_cpu,	powermac_smp_next_cpu),
 	PLATFORMMETHOD(platform_smp_get_bsp,	powermac_smp_get_bsp),
@@ -82,7 +83,9 @@ static platform_method_t powermac_methods[] = {
 	PLATFORMMETHOD(platform_smp_timebase_sync, powermac_smp_timebase_sync),
 
 	PLATFORMMETHOD(platform_reset,		powermac_reset),
+#ifndef __powerpc64__
 	PLATFORMMETHOD(platform_sleep,		powermac_sleep),
+#endif
 
 	PLATFORMMETHOD_END
 };
@@ -108,7 +111,7 @@ powermac_probe(platform_t plat)
 		return (ENXIO);
 
 	compatlen = OF_getprop(root, "compatible", compat, sizeof(compat));
-	
+
 	for (curstr = compat; curstr < compat + compatlen;
 	    curstr += strlen(curstr) + 1) {
 		if (strncmp(curstr, "MacRISC", 7) == 0)
@@ -192,7 +195,6 @@ powermac_attach(platform_t plat)
 	phandle_t rootnode;
 	char model[32];
 
-
 	/*
 	 * Quiesce Open Firmware on PowerMac11,2 and 12,1. It is
 	 * necessary there to shut down a background thread doing fan
@@ -230,7 +232,6 @@ powermac_timebase_freq(platform_t plat, struct cpuref *cpuref)
 
 	return (ticks);
 }
-
 
 static int
 powermac_smp_fill_cpuref(struct cpuref *cpuref, phandle_t cpu)
@@ -405,11 +406,17 @@ powermac_reset(platform_t platform)
 	OF_reboot();
 }
 
+#ifndef __powerpc64__
 void
 powermac_sleep(platform_t platform)
 {
+	/* Only supports MPC745x for now. */
+	if (!MPC745X_P(mfspr(SPR_PVR) >> 16)) {
+		printf("sleep only supported for G4 PowerMac hardware.\n");
+		return;
+	}
 
 	*(unsigned long *)0x80 = 0x100;
-	cpu_sleep();
+	mpc745x_sleep();
 }
-
+#endif

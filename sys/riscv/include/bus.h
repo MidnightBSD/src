@@ -61,7 +61,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * From: sys/arm/include/bus.h
- *
  */
 
 #ifndef _MACHINE_BUS_H_
@@ -87,7 +86,6 @@
 
 #define	BUS_SPACE_BARRIER_READ	0x01
 #define	BUS_SPACE_BARRIER_WRITE	0x02
-
 
 struct bus_space {
 	/* cookie */
@@ -255,7 +253,6 @@ struct bus_space {
 			    bus_size_t, const u_int64_t *, bus_size_t);
 };
 
-
 /*
  * Utility macros; INTERNAL USE ONLY.
  */
@@ -281,7 +278,6 @@ struct bus_space {
 #define	__bs_nonsingle_s(type, sz, t, h, o, a, c)			\
 	(*(t)->__bs_opname_s(type,sz))((t)->bs_cookie, h, o, a, c)
 
-
 /*
  * Mapping and unmapping operations.
  */
@@ -291,7 +287,6 @@ struct bus_space {
 	(*(t)->bs_unmap)((t)->bs_cookie, (h), (s))
 #define	bus_space_subregion(t, h, o, s, hp)				\
 	(*(t)->bs_subregion)((t)->bs_cookie, (h), (o), (s), (hp))
-
 
 /*
  * Allocation and deallocation operations.
@@ -307,8 +302,6 @@ struct bus_space {
  */
 #define	bus_space_barrier(t, h, o, l, f)				\
 	(*(t)->bs_barrier)((t)->bs_cookie, (h), (o), (l), (f))
-
-
 
 /*
  * Bus read (single) operations.
@@ -344,7 +337,6 @@ struct bus_space {
 #define	bus_space_read_multi_stream_8(t, h, o, a, c)			\
 	__bs_nonsingle_s(rm,8,(t),(h),(o),(a),(c))
 
-
 /*
  * Bus read region operations.
  */
@@ -366,7 +358,6 @@ struct bus_space {
 #define	bus_space_read_region_stream_8(t, h, o, a, c)			\
 	__bs_nonsingle_s(rr,8,(t),(h),(o),(a),(c))
 
-
 /*
  * Bus write (single) operations.
  */
@@ -379,7 +370,6 @@ struct bus_space {
 #define	bus_space_write_stream_2(t, h, o, v)	__bs_ws_s(2,(t),(h),(o),(v))
 #define	bus_space_write_stream_4(t, h, o, v)	__bs_ws_s(4,(t),(h),(o),(v))
 #define	bus_space_write_stream_8(t, h, o, v)	__bs_ws_s(8,(t),(h),(o),(v))
-
 
 /*
  * Bus write multiple operations.
@@ -402,7 +392,6 @@ struct bus_space {
 #define	bus_space_write_multi_stream_8(t, h, o, a, c)			\
 	__bs_nonsingle_s(wm,8,(t),(h),(o),(a),(c))
 
-
 /*
  * Bus write region operations.
  */
@@ -424,7 +413,6 @@ struct bus_space {
 #define	bus_space_write_region_stream_8(t, h, o, a, c)			\
 	__bs_nonsingle_s(wr,8,(t),(h),(o),(a),(c))
 
-
 /*
  * Set multiple operations.
  */
@@ -436,7 +424,6 @@ struct bus_space {
 	__bs_set(sm,4,(t),(h),(o),(v),(c))
 #define	bus_space_set_multi_8(t, h, o, v, c)				\
 	__bs_set(sm,8,(t),(h),(o),(v),(c))
-
 
 /*
  * Set region operations.
@@ -450,7 +437,6 @@ struct bus_space {
 #define	bus_space_set_region_8(t, h, o, v, c)				\
 	__bs_set(sr,8,(t),(h),(o),(v),(c))
 
-
 /*
  * Copy operations.
  */
@@ -462,6 +448,34 @@ struct bus_space {
 	__bs_copy(4, t, h1, o1, h2, o2, c)
 #define	bus_space_copy_region_8(t, h1, o1, h2, o2, c)				\
 	__bs_copy(8, t, h1, o1, h2, o2, c)
+
+#define BUS_PEEK_FUNC(width, type)					\
+	static inline int						\
+	bus_space_peek_##width(bus_space_tag_t tag,			\
+	    bus_space_handle_t hnd, bus_size_t offset, type *value)	\
+	{								\
+		type tmp;						\
+		tmp = bus_space_read_##width(tag, hnd, offset);		\
+		*value = (type)tmp;					\
+		return (0);						\
+	}
+BUS_PEEK_FUNC(1, uint8_t)
+BUS_PEEK_FUNC(2, uint16_t)
+BUS_PEEK_FUNC(4, uint32_t)
+BUS_PEEK_FUNC(8, uint64_t)
+
+#define BUS_POKE_FUNC(width, type)					\
+	static inline int						\
+	bus_space_poke_##width(bus_space_tag_t tag,			\
+	    bus_space_handle_t hnd, bus_size_t offset, type value)	\
+	{								\
+		bus_space_write_##width(tag, hnd, offset, value);	\
+		return (0); 						\
+	}
+BUS_POKE_FUNC(1, uint8_t)
+BUS_POKE_FUNC(2, uint16_t)
+BUS_POKE_FUNC(4, uint32_t)
+BUS_POKE_FUNC(8, uint64_t)
 
 #include <machine/bus_dma.h>
 

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2002 Benno Rice.
  * All rights reserved.
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/module.h>
@@ -100,7 +99,8 @@ static devclass_t	uninorth_devclass;
 
 DEFINE_CLASS_1(pcib, uninorth_driver, uninorth_methods,
     sizeof(struct uninorth_softc), ofw_pci_driver);
-DRIVER_MODULE(uninorth, ofwbus, uninorth_driver, uninorth_devclass, 0, 0);
+EARLY_DRIVER_MODULE(uninorth, ofwbus, uninorth_driver, uninorth_devclass, 0, 0,
+    BUS_PASS_BUS);
 
 static int
 uninorth_probe(device_t dev)
@@ -126,7 +126,7 @@ uninorth_probe(device_t dev)
 		device_set_desc(dev, "IBM CPC945 PCI Express Root");
 		return (0);
 	}
-	
+
 	return (ENXIO);
 }
 
@@ -276,4 +276,3 @@ uninorth_enable_config(struct uninorth_softc *sc, u_int bus, u_int slot,
 
 	return (1);
 }
-

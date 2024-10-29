@@ -3,7 +3,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -38,4 +38,3 @@
 int ng_l2cap_receive (ng_l2cap_con_p);
 
 #endif /* ndef _NETGRAPH_L2CAP_EVNT_H_ */
-

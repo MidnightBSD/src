@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008-2012 Semihalf.
  * All rights reserved.
@@ -28,7 +28,6 @@
 
 #include "opt_platform.h"
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -67,7 +66,8 @@
 extern void *ap_pcpu;
 extern vm_paddr_t kernload;		/* Kernel physical load address */
 extern uint8_t __boot_page[];		/* Boot page body */
-extern uint32_t bp_kernload;
+extern vm_paddr_t bp_kernload;		/* Boot page copy of kernload */
+extern vm_offset_t bp_virtaddr;		/* Virtual address of boot page */
 extern vm_offset_t __startkernel;
 
 struct cpu_release {
@@ -353,10 +353,12 @@ mpc85xx_smp_start_cpu_epapr(platform_t plat, struct pcpu *pc)
 	pmap_kenter(rel_page, rel_pa & ~PAGE_MASK);
 	rel = (struct cpu_release *)rel_va;
 	bptr = pmap_kextract((uintptr_t)__boot_page);
+
 	cpu_flush_dcache(__DEVOLATILE(struct cpu_release *,rel), sizeof(*rel));
-	rel->pir = pc->pc_cpuid; __asm __volatile("sync");
-	rel->entry_h = (bptr >> 32);
-	rel->entry_l = bptr; __asm __volatile("sync");
+	rel->pir = pc->pc_cpuid; __asm __volatile("sync" ::: "memory");
+	rel->entry_h = (bptr >> 32); __asm __volatile("sync" ::: "memory");
+	cpu_flush_dcache(__DEVOLATILE(struct cpu_release *,rel), sizeof(*rel));
+	rel->entry_l = bptr & 0xffffffff; __asm __volatile("sync" ::: "memory");
 	cpu_flush_dcache(__DEVOLATILE(struct cpu_release *,rel), sizeof(*rel));
 	if (bootverbose)
 		printf("Waking up CPU %d via CPU release page %p\n",
@@ -396,11 +398,13 @@ mpc85xx_smp_start_cpu(platform_t plat, struct pcpu *pc)
 		cpuid = pc->pc_cpuid + 24;
 	}
 	bp_kernload = kernload;
+	bp_virtaddr = (vm_offset_t)&__boot_page;
 	/*
-	 * bp_kernload is in the boot page.  Sync the cache because ePAPR
-	 * booting has the other core(s) already running.
+	 * bp_kernload and bp_virtaddr are in the boot page.  Sync the cache
+	 * because ePAPR booting has the other core(s) already running.
 	 */
 	cpu_flush_dcache(&bp_kernload, sizeof(bp_kernload));
+	cpu_flush_dcache(&bp_virtaddr, sizeof(bp_virtaddr));
 
 	ap_pcpu = pc;
 	__asm __volatile("msync; isync");
@@ -516,15 +520,14 @@ mpc85xx_reset(platform_t plat)
 	 */
 	ccsr_write4(OCP85XX_RSTCR, 2);
 
-	/* Clear DBCR0, disables debug interrupts and events. */
-	mtspr(SPR_DBCR0, 0);
+	mtmsr(mfmsr() & ~PSL_DE);
+
+	/* Enable debug interrupts and issue reset. */
+	mtspr(SPR_DBCR0, DBCR0_IDM | DBCR0_RST_SYSTEM);
 	__asm __volatile("isync");
 
 	/* Enable Debug Interrupts in MSR. */
 	mtmsr(mfmsr() | PSL_DE);
-
-	/* Enable debug interrupts and issue reset. */
-	mtspr(SPR_DBCR0, mfspr(SPR_DBCR0) | DBCR0_IDM | DBCR0_RST_SYSTEM);
 
 	printf("Reset failed...\n");
 	while (1)
@@ -564,7 +567,6 @@ dummy_freeze(device_t dev, bool freeze)
 	/* Nothing to do here, move along. */
 }
 
-
 /* QorIQ Run control/power management timebase management. */
 
 #define	RCPM_CTBENR	0x00000084
@@ -578,7 +580,7 @@ mpc85xx_rcpm_freeze_timebase(device_t dev, bool freeze)
 	struct mpc85xx_rcpm_softc *sc;
 
 	sc = device_get_softc(dev);
-	
+
 	if (freeze)
 		bus_write_4(sc->sc_mem, RCPM_CTBENR, 0);
 	else
@@ -629,7 +631,6 @@ static driver_t mpc85xx_rcpm_driver = {
 EARLY_DRIVER_MODULE(mpc85xx_rcpm, simplebus, mpc85xx_rcpm_driver,
 	mpc85xx_rcpm_devclass, 0, 0, BUS_PASS_BUS);
 
-
 /* "Global utilities" power management/Timebase management. */
 
 #define	GUTS_DEVDISR	0x00000070
@@ -647,7 +648,7 @@ mpc85xx_guts_freeze_timebase(device_t dev, bool freeze)
 	uint32_t devdisr;
 
 	sc = device_get_softc(dev);
-	
+
 	devdisr = bus_read_4(sc->sc_mem, GUTS_DEVDISR);
 	if (freeze)
 		bus_write_4(sc->sc_mem, GUTS_DEVDISR,

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_SMP_H_
@@ -51,6 +50,7 @@ void	ipi_selected(cpuset_t cpus, int ipi);
 struct cpuref {
 	uintptr_t	cr_hwref;
 	u_int		cr_cpuid;
+	u_int		cr_domain;
 };
 
 void	pmap_cpu_bootstrap(int);

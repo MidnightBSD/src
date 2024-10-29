@@ -40,12 +40,13 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/cpu.h>
+#include <sys/cpuset.h>
 #include <sys/kernel.h>
+#include <sys/ktr.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
@@ -69,8 +70,6 @@
 #endif
 
 #define	MP_BOOTSTACK_SIZE	(kstack_pages * PAGE_SIZE)
-
-boolean_t ofw_cpu_reg(phandle_t node, u_int, cell_t *);
 
 uint32_t __riscv_boot_ap[MAXCPU];
 
@@ -191,7 +190,7 @@ static void
 release_aps(void *dummy __unused)
 {
 	cpuset_t mask;
-	int cpu, i;
+	int i;
 
 	if (mp_ncpus == 1)
 		return;
@@ -210,13 +209,8 @@ release_aps(void *dummy __unused)
 	sbi_send_ipi(mask.__bits);
 
 	for (i = 0; i < 2000; i++) {
-		if (smp_started) {
-			for (cpu = 0; cpu <= mp_maxid; cpu++) {
-				if (CPU_ABSENT(cpu))
-					continue;
-			}
+		if (atomic_load_acq_int(&smp_started))
 			return;
-		}
 		DELAY(1000);
 	}
 
@@ -252,13 +246,7 @@ init_secondary(uint64_t hart)
 	/* Initialize curthread */
 	KASSERT(PCPU_GET(idlethread) != NULL, ("no idle thread"));
 	pcpup->pc_curthread = pcpup->pc_idlethread;
-
-	/*
-	 * Identify current CPU. This is necessary to setup
-	 * affinity registers and to provide support for
-	 * runtime chip identification.
-	 */
-	identify_cpu();
+	schedinit_ap();
 
 	/* Enable software interrupts */
 	riscv_unmask_ipi();
@@ -270,6 +258,9 @@ init_secondary(uint64_t hart)
 
 	/* Enable external (PLIC) interrupts */
 	csr_set(sie, SIE_SEIE);
+
+	/* Activate this hart in the kernel pmap. */
+	CPU_SET_ATOMIC(hart, &kernel_pmap->pm_active);
 
 	/* Activate process 0's pmap. */
 	pmap_activate_boot(vmspace_pmap(proc0.p_vmspace));
@@ -285,10 +276,8 @@ init_secondary(uint64_t hart)
 
 	mtx_unlock_spin(&ap_boot_mtx);
 
-	/*
-	 * Assert that smp_after_idle_runnable condition is reasonable.
-	 */
-	MPASS(PCPU_GET(curpcb) == NULL);
+	if (bootverbose)
+		printf("Secondary CPU %u fully online\n", cpuid);
 
 	/* Enter the scheduler */
 	sched_throw(NULL);
@@ -300,17 +289,25 @@ init_secondary(uint64_t hart)
 static void
 smp_after_idle_runnable(void *arg __unused)
 {
-	struct pcpu *pc;
 	int cpu;
 
+	if (mp_ncpus == 1)
+		return;
+
+	KASSERT(smp_started != 0, ("%s: SMP not started yet", __func__));
+
+	/*
+	 * Wait for all APs to handle an interrupt.  After that, we know that
+	 * the APs have entered the scheduler at least once, so the boot stacks
+	 * are safe to free.
+	 */
+	smp_rendezvous(smp_no_rendezvous_barrier, NULL,
+	    smp_no_rendezvous_barrier, NULL);
+
 	for (cpu = 1; cpu <= mp_maxid; cpu++) {
-		if (bootstacks[cpu] != NULL) {
-			pc = pcpu_find(cpu);
-			while ((void *)atomic_load_ptr(&pc->pc_curpcb) == NULL)
-				cpu_spinwait();
+		if (bootstacks[cpu] != NULL)
 			kmem_free((vm_offset_t)bootstacks[cpu],
 			    MP_BOOTSTACK_SIZE);
-		}
 	}
 }
 SYSINIT(smp_after_idle_runnable, SI_SUB_SMP, SI_ORDER_ANY,
@@ -323,7 +320,7 @@ ipi_handler(void *arg)
 	u_int cpu, ipi;
 	int bit;
 
-	sbi_clear_ipi();
+	csr_clear(sip, SIP_SSIP);
 
 	cpu = PCPU_GET(cpuid);
 
@@ -403,6 +400,20 @@ cpu_mp_probe(void)
 
 #ifdef FDT
 static boolean_t
+cpu_check_mmu(u_int id __unused, phandle_t node, u_int addr_size __unused,
+    pcell_t *reg __unused)
+{
+	char type[32];
+
+	/* Check if this hart supports MMU. */
+	if (OF_getprop(node, "mmu-type", (void *)type, sizeof(type)) == -1 ||
+	    strncmp(type, "riscv,none", 10) == 0)
+		return (0);
+
+	return (1);
+}
+
+static boolean_t
 cpu_init_fdt(u_int id, phandle_t node, u_int addr_size, pcell_t *reg)
 {
 	struct pcpu *pcpup;
@@ -412,8 +423,7 @@ cpu_init_fdt(u_int id, phandle_t node, u_int addr_size, pcell_t *reg)
 	int naps;
 	int error;
 
-	/* Check if this hart supports MMU. */
-	if (OF_getproplen(node, "mmu-type") < 0)
+	if (!cpu_check_mmu(id, node, addr_size, reg))
 		return (0);
 
 	KASSERT(id < MAXCPU, ("Too many CPUs"));
@@ -480,7 +490,8 @@ cpu_init_fdt(u_int id, phandle_t node, u_int addr_size, pcell_t *reg)
 	naps = atomic_load_int(&aps_started);
 	bootstack = (char *)bootstacks[cpuid] + MP_BOOTSTACK_SIZE;
 
-	printf("Starting CPU %u (hart %lx)\n", cpuid, hart);
+	if (bootverbose)
+		printf("Starting CPU %u (hart %lx)\n", cpuid, hart);
 	atomic_store_32(&__riscv_boot_ap[hart], 1);
 
 	/* Wait for the AP to switch to its boot stack. */
@@ -498,6 +509,7 @@ cpu_init_fdt(u_int id, phandle_t node, u_int addr_size, pcell_t *reg)
 void
 cpu_mp_start(void)
 {
+	u_int cpu;
 
 	mtx_init(&ap_boot_mtx, "ap boot", NULL, MTX_SPIN);
 
@@ -513,23 +525,29 @@ cpu_mp_start(void)
 	case CPUS_UNKNOWN:
 		break;
 	}
+
+	CPU_FOREACH(cpu) {
+		/* Already identified. */
+		if (cpu == 0)
+			continue;
+
+		identify_cpu(cpu);
+	}
 }
 
 /* Introduce rest of cores to the world */
 void
 cpu_mp_announce(void)
 {
-}
+	u_int cpu;
 
-static boolean_t
-cpu_check_mmu(u_int id, phandle_t node, u_int addr_size, pcell_t *reg)
-{
+	CPU_FOREACH(cpu) {
+		/* Already announced. */
+		if (cpu == 0)
+			continue;
 
-	/* Check if this hart supports MMU. */
-	if (OF_getproplen(node, "mmu-type") < 0)
-		return (0);
-
-	return (1);
+		printcpuinfo(cpu);
+	}
 }
 
 void

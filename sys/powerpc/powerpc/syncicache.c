@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #if	defined(_KERNEL) || defined(_STANDALONE)
 #include <sys/time.h>
@@ -68,4 +67,3 @@ __syncicache(void *from, int len)
 	} while ((len -= cacheline_size) > 0);
 	__asm __volatile ("sync; isync");
 }
-

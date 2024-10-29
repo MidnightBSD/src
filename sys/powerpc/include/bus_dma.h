@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Scott Long
  * All rights reserved.
@@ -32,8 +32,6 @@
 #include <sys/bus_dma.h>
 #include <sys/bus_dma_internal.h>
 
-struct device;
-
-int bus_dma_tag_set_iommu(bus_dma_tag_t, struct device *iommu, void *cookie);
+int bus_dma_tag_set_iommu(bus_dma_tag_t, device_t iommu, void *cookie);
 
 #endif /* _POWERPC_BUS_DMA_H_ */

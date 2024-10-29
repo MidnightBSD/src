@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/fcntl.h>
 #include <sys/filio.h>
@@ -43,6 +42,9 @@
 #include <sys/ttydefaults.h>
 #include <sys/uio.h>
 #include <sys/vnode.h>
+
+#include <teken/teken.h>
+#include <teken/teken_wcwidth.h>
 
 /*
  * Standard TTYDISC `termios' line discipline.
@@ -79,8 +81,13 @@ SYSCTL_ULONG(_kern, OID_AUTO, tty_nout, CTLFLAG_RD,
 /* Character is alphanumeric. */
 #define CTL_ALNUM(c)	(((c) >= '0' && (c) <= '9') || \
     ((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z'))
+/* Character is UTF8-encoded. */
+#define CTL_UTF8(c) (!!((c) & 0x80))
+/* Character is a UTF8 continuation byte. */
+#define CTL_UTF8_CONT(c) (((c) & 0xc0) == 0x80)
 
 #define	TTY_STACKBUF	256
+#define UTF8_STACKBUF 4
 
 void
 ttydisc_open(struct tty *tp)
@@ -94,6 +101,7 @@ ttydisc_close(struct tty *tp)
 
 	/* Clean up our flags when leaving the discipline. */
 	tp->t_flags &= ~(TF_STOPPED|TF_HIWAT|TF_ZOMBIE);
+	tp->t_termios.c_lflag &= ~FLUSHO;
 
 	/*
 	 * POSIX states that we must drain output and flush input on
@@ -105,15 +113,20 @@ ttydisc_close(struct tty *tp)
 		ttyhook_close(tp);
 }
 
-static int
-ttydisc_read_canonical(struct tty *tp, struct uio *uio, int ioflag)
+/*
+ * Populate our break array; it should likely be at least 4 bytes in size to
+ * allow for \n, VEOF, and VEOL.
+ */
+static void
+ttydisc_read_break(struct tty *tp, char *breakc, size_t breaksz)
 {
-	char breakc[4] = { CNL }; /* enough to hold \n, VEOF and VEOL. */
-	int error;
-	size_t clen, flen = 0, n = 1;
-	unsigned char lastc = _POSIX_VDISABLE;
+	size_t n = 0;
 
+	MPASS(breaksz != 0);
+
+	breakc[n++] = CNL;
 #define BREAK_ADD(c) do { \
+	MPASS(n < breaksz - 1);	/* NUL terminated */	\
 	if (tp->t_termios.c_cc[c] != _POSIX_VDISABLE)	\
 		breakc[n++] = tp->t_termios.c_cc[c];	\
 } while (0)
@@ -121,7 +134,70 @@ ttydisc_read_canonical(struct tty *tp, struct uio *uio, int ioflag)
 	BREAK_ADD(VEOF);
 	BREAK_ADD(VEOL);
 #undef BREAK_ADD
+
 	breakc[n] = '\0';
+}
+
+size_t
+ttydisc_bytesavail(struct tty *tp)
+{
+	size_t clen;
+	char breakc[4];
+	unsigned char lastc = _POSIX_VDISABLE;
+
+	clen = ttyinq_bytescanonicalized(&tp->t_inq);
+	if (!CMP_FLAG(l, ICANON) || clen == 0)
+		return (clen);
+
+	ttydisc_read_break(tp, &breakc[0], sizeof(breakc));
+	clen = ttyinq_findchar(&tp->t_inq, breakc, clen, &lastc);
+
+	/*
+	 * We might have a partial line canonicalized in the input queue if we,
+	 * for instance, switched to ICANON after taking some input in raw mode.
+	 * In this case, read(2) will block because we only have a partial line.
+	 */
+	if (lastc == _POSIX_VDISABLE)
+		return (0);
+
+	/* If VEOF was our terminal, it must be discarded (not counted). */
+	if (CMP_CC(VEOF, lastc))
+		clen--;
+
+	return (clen);
+}
+
+void
+ttydisc_canonicalize(struct tty *tp)
+{
+	char breakc[4];
+
+	/*
+	 * If we're in non-canonical mode, it's as easy as just canonicalizing
+	 * the current partial line.
+	 */
+	if (!CMP_FLAG(l, ICANON)) {
+		ttyinq_canonicalize(&tp->t_inq);
+		return;
+	}
+
+	/*
+	 * For canonical mode, we need to rescan the buffer for the last EOL
+	 * indicator.
+	 */
+	ttydisc_read_break(tp, &breakc[0], sizeof(breakc));
+	ttyinq_canonicalize_break(&tp->t_inq, breakc);
+}
+
+static int
+ttydisc_read_canonical(struct tty *tp, struct uio *uio, int ioflag)
+{
+	char breakc[4]; /* enough to hold \n, VEOF and VEOL. */
+	int error;
+	size_t clen, flen = 0;
+	unsigned char lastc = _POSIX_VDISABLE;
+
+	ttydisc_read_break(tp, &breakc[0], sizeof(breakc));
 
 	do {
 		error = tty_wait_background(tp, curthread, SIGTTIN);
@@ -146,7 +222,7 @@ ttydisc_read_canonical(struct tty *tp, struct uio *uio, int ioflag)
 		 * cause the TTY layer to return data in chunks using
 		 * the blocksize (except the first and last blocks).
 		 */
-		clen = ttyinq_findchar(&tp->t_inq, breakc, uio->uio_resid,
+		clen = ttyinq_findchar(&tp->t_inq, breakc, uio->uio_resid + 1,
 		    &lastc);
 
 		/* No more data. */
@@ -162,10 +238,20 @@ ttydisc_read_canonical(struct tty *tp, struct uio *uio, int ioflag)
 			continue;
 		}
 
-		/* Don't send the EOF char back to userspace. */
+		/*
+		 * Don't send the EOF char back to userspace.  Our above call to
+		 * ttyinq_findchar overreads by 1 character in case we would
+		 * otherwise be leaving an EOF for the next read().  We'll trim
+		 * clen back down to uio_resid whether we find our EOF or not.
+		 */
 		if (CMP_CC(VEOF, lastc))
 			flen = 1;
 
+		/*
+		 * Trim clen back down to the buffer size, since we had
+		 * intentionally over-read.
+		 */
+		clen = MIN(uio->uio_resid + flen, clen);
 		MPASS(flen <= clen);
 
 		/* Read and throw away the EOF character. */
@@ -473,6 +559,12 @@ ttydisc_write(struct tty *tp, struct uio *uio, int ioflag)
 
 		MPASS(oblen == 0);
 
+		if (CMP_FLAG(l, FLUSHO)) {
+			uio->uio_offset += uio->uio_resid;
+			uio->uio_resid = 0;
+			return (0);
+		}
+
 		/* Step 1: read data. */
 		obstart = ob;
 		nlen = MIN(uio->uio_resid, sizeof ob);
@@ -493,6 +585,12 @@ ttydisc_write(struct tty *tp, struct uio *uio, int ioflag)
 		/* Step 2: process data. */
 		do {
 			unsigned int plen, wlen;
+
+			if (CMP_FLAG(l, FLUSHO)) {
+				uio->uio_offset += uio->uio_resid;
+				uio->uio_resid = 0;
+				return (0);
+			}
 
 			/* Search for special characters for post processing. */
 			if (CMP_FLAG(o, OPOST)) {
@@ -627,6 +725,9 @@ ttydisc_modem(struct tty *tp, int open)
 static int
 ttydisc_echo_force(struct tty *tp, char c, int quote)
 {
+
+	if (CMP_FLAG(l, FLUSHO))
+		return 0;
 
 	if (CMP_FLAG(o, OPOST) && CTL_ECHO(c, quote)) {
 		/*
@@ -785,6 +886,80 @@ ttydisc_rubchar(struct tty *tp)
 				ttyoutq_write_nofrag(&tp->t_outq,
 				    "\b\b\b\b\b\b\b\b", tablen);
 				return (0);
+			} else if ((tp->t_termios.c_iflag & IUTF8) != 0 &&
+			    CTL_UTF8(c)) {
+				uint8_t bytes[UTF8_STACKBUF] = { 0 };
+				int curidx = UTF8_STACKBUF - 1, cwidth = 1,
+				    nb = 0;
+				teken_char_t codepoint;
+
+				/* Save current byte. */
+				bytes[curidx] = c;
+				curidx--;
+				nb++;
+				/* Loop back through inq until we hit the
+				 * leading byte. */
+				while (CTL_UTF8_CONT(c) && nb < UTF8_STACKBUF) {
+					/*
+					 * Check if we've reached the beginning
+					 * of the line.
+					 */
+					if (ttyinq_peekchar(&tp->t_inq, &c,
+					    &quote) != 0)
+						break;
+					ttyinq_unputchar(&tp->t_inq);
+					bytes[curidx] = c;
+					curidx--;
+					nb++;
+				}
+				/*
+				 * Shift array so that the leading
+				 * byte ends up at idx 0.
+				 */
+				if (nb < UTF8_STACKBUF)
+					memmove(&bytes[0], &bytes[curidx + 1],
+					    nb * sizeof(uint8_t));
+				/* Check for malformed UTF8 characters. */
+				if (nb == UTF8_STACKBUF &&
+				    CTL_UTF8_CONT(bytes[0])) {
+					/*
+					 * Place all bytes back into the inq and
+					 * delete the last byte only.
+					 */
+					ttyinq_write(&tp->t_inq, bytes,
+					    UTF8_STACKBUF, 0);
+					ttyinq_unputchar(&tp->t_inq);
+				} else {
+					/* Find codepoint and width. */
+					codepoint =
+					    teken_utf8_bytes_to_codepoint(bytes,
+						nb);
+					if (codepoint ==
+						TEKEN_UTF8_INVALID_CODEPOINT ||
+					    (cwidth = teken_wcwidth(
+						 codepoint)) == -1) {
+						/*
+						 * Place all bytes back into the
+						 * inq and fall back to
+						 * default behaviour.
+						 */
+						cwidth = 1;
+						ttyinq_write(&tp->t_inq, bytes,
+						    nb, 0);
+						ttyinq_unputchar(&tp->t_inq);
+					}
+				}
+				tp->t_column -= cwidth;
+				/*
+				 * Delete character by punching
+				 * 'cwidth' spaces over it.
+				 */
+				if (cwidth == 1)
+					ttyoutq_write_nofrag(&tp->t_outq,
+					    "\b \b", 3);
+				else if (cwidth == 2)
+					ttyoutq_write_nofrag(&tp->t_outq,
+					    "\b\b  \b\b", 6);
 			} else {
 				/*
 				 * Remove a regular character by
@@ -878,8 +1053,10 @@ ttydisc_rint(struct tty *tp, char c, int flags)
 	}
 
 	/* Allow any character to perform a wakeup. */
-	if (CMP_FLAG(i, IXANY))
+	if (CMP_FLAG(i, IXANY)) {
 		tp->t_flags &= ~TF_STOPPED;
+		tp->t_termios.c_lflag &= ~FLUSHO;
+	}
 
 	/* Remove the top bit. */
 	if (CMP_FLAG(i, ISTRIP))
@@ -904,6 +1081,18 @@ ttydisc_rint(struct tty *tp, char c, int flags)
 			}
 			tp->t_flags |= TF_LITERAL;
 			return (0);
+		}
+		/* Discard processing */
+		if (CMP_CC(VDISCARD, c)) {
+			if (CMP_FLAG(l, FLUSHO)) {
+				tp->t_termios.c_lflag &= ~FLUSHO;
+			} else {
+				tty_flush(tp, FWRITE);
+				ttydisc_echo(tp, c, 0);
+				if (tp->t_inq.ti_end > 0)
+					ttydisc_reprint(tp);
+				tp->t_termios.c_lflag |= FLUSHO;
+			}
 		}
 	}
 
@@ -1250,17 +1439,27 @@ ttydisc_getc_poll(struct tty *tp)
  */
 
 int
-tty_putchar(struct tty *tp, char c)
+tty_putstrn(struct tty *tp, const char *p, size_t n)
 {
+	size_t i;
+
 	tty_assert_locked(tp);
 
 	if (tty_gone(tp))
 		return (-1);
 
-	ttydisc_echo_force(tp, c, 0);
+	for (i = 0; i < n; i++)
+		ttydisc_echo_force(tp, p[i], 0);
+
 	tp->t_writepos = tp->t_column;
 	ttyinq_reprintpos_set(&tp->t_inq);
 
 	ttydevsw_outwakeup(tp);
 	return (0);
+}
+
+int
+tty_putchar(struct tty *tp, char c)
+{
+	return (tty_putstrn(tp, &c, 1));
 }

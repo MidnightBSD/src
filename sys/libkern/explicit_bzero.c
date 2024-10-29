@@ -5,7 +5,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifdef _KERNEL
 #include <sys/libkern.h>
 #else

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet6.h"
 
 #include <sys/param.h>
@@ -413,7 +412,7 @@ krb5_import(gss_ctx_id_t ctx,
 	size_t len = context_token->length;
 	uint32_t flags;
 	int i;
-	
+
 	/*
 	 * We support heimdal 0.6 and heimdal 1.1
 	 */
@@ -898,7 +897,7 @@ krb5_get_mic_old(struct krb5_context *kc, struct mbuf *m,
 	mic->m_next = NULL;
 	mlast->m_next = NULL;
 	m_free(tm);
-	
+
 	/*
 	 * SND_SEQ:
 	 *
@@ -2112,7 +2111,6 @@ kgssapi_krb5_modevent(module_t mod, int type, void *data)
 		kgss_uninstall_mech(&krb5_mech_oid);
 		break;
 	}
-
 
 	return (0);
 }

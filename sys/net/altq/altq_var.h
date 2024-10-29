@@ -63,7 +63,7 @@ struct acc_filter {
 #endif
 #define	ACC_GET_HINDEX(handle) ((handle) >> 20)
 
-#if (__MidnightBSD_version > 1000)
+#if (__FreeBSD_version > 500000)
 #define ACC_LOCK_INIT(ac)	mtx_init(&(ac)->acc_mtx, "classifier", MTX_DEF)
 #define ACC_LOCK_DESTROY(ac)	mtx_destroy(&(ac)->acc_mtx)
 #define ACC_LOCK(ac)		mtx_lock(&(ac)->acc_mtx)
@@ -79,7 +79,7 @@ struct acc_classifier {
 	u_int32_t			acc_fbmask;
 	LIST_HEAD(filt, acc_filter)	acc_filters[ACC_FILTER_TABLESIZE];
 
-#if (__MidnightBSD_version > 1000)
+#if (__FreeBSD_version > 500000)
 	struct	mtx acc_mtx;
 #endif
 };
@@ -163,14 +163,14 @@ typedef u_long ioctlcmd_t;
 /* use callout */
 #include <sys/callout.h>
 
-#if (__MidnightBSD_version > 1000)
+#if (__FreeBSD_version > 500000)
 #define	CALLOUT_INIT(c)		callout_init((c), 0)
 #else
 #define	CALLOUT_INIT(c)		callout_init((c))
 #endif
 #define	CALLOUT_RESET(c,t,f,a)	callout_reset((c),(t),(f),(a))
 #define	CALLOUT_STOP(c)		callout_stop((c))
-#if !defined(CALLOUT_INITIALIZER) && (__MidnightBSD_version < 1000)
+#if !defined(CALLOUT_INITIALIZER) && (__FreeBSD_version < 600000)
 #define	CALLOUT_INITIALIZER	{ { { NULL } }, 0, NULL, NULL, 0 }
 #endif
 

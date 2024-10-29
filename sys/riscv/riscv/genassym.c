@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/assym.h>
@@ -54,10 +53,14 @@
 #include <machine/cpufunc.h>
 #include <machine/pte.h>
 #include <machine/intr.h>
+#include <machine/machdep.h>
+#include <machine/vmparam.h>
 
 ASSYM(KERNBASE, KERNBASE);
 ASSYM(VM_MAXUSER_ADDRESS, VM_MAXUSER_ADDRESS);
 ASSYM(VM_MAX_KERNEL_ADDRESS, VM_MAX_KERNEL_ADDRESS);
+ASSYM(VM_EARLY_DTB_ADDRESS, VM_EARLY_DTB_ADDRESS);
+ASSYM(PMAP_MAPDEV_EARLY_SIZE, PMAP_MAPDEV_EARLY_SIZE);
 ASSYM(TDF_ASTPENDING, TDF_ASTPENDING);
 ASSYM(TDF_NEEDRESCHED, TDF_NEEDRESCHED);
 
@@ -83,7 +86,7 @@ ASSYM(TD_FRAME, offsetof(struct thread, td_frame));
 ASSYM(TD_MD, offsetof(struct thread, td_md));
 ASSYM(TD_LOCK, offsetof(struct thread, td_lock));
 
-ASSYM(TF_SIZE, sizeof(struct trapframe));
+ASSYM(TF_SIZE, roundup2(sizeof(struct trapframe), STACKALIGNBYTES + 1));
 ASSYM(TF_RA, offsetof(struct trapframe, tf_ra));
 ASSYM(TF_SP, offsetof(struct trapframe, tf_sp));
 ASSYM(TF_GP, offsetof(struct trapframe, tf_gp));
@@ -95,3 +98,12 @@ ASSYM(TF_SEPC, offsetof(struct trapframe, tf_sepc));
 ASSYM(TF_STVAL, offsetof(struct trapframe, tf_stval));
 ASSYM(TF_SCAUSE, offsetof(struct trapframe, tf_scause));
 ASSYM(TF_SSTATUS, offsetof(struct trapframe, tf_sstatus));
+
+ASSYM(RISCV_BOOTPARAMS_SIZE, sizeof(struct riscv_bootparams));
+ASSYM(RISCV_BOOTPARAMS_KERN_L1PT, offsetof(struct riscv_bootparams, kern_l1pt));
+ASSYM(RISCV_BOOTPARAMS_KERN_PHYS, offsetof(struct riscv_bootparams, kern_phys));
+ASSYM(RISCV_BOOTPARAMS_KERN_STACK, offsetof(struct riscv_bootparams,
+    kern_stack));
+ASSYM(RISCV_BOOTPARAMS_DTBP_VIRT, offsetof(struct riscv_bootparams, dtbp_virt));
+ASSYM(RISCV_BOOTPARAMS_DTBP_PHYS, offsetof(struct riscv_bootparams, dtbp_phys));
+ASSYM(RISCV_BOOTPARAMS_MODULEP, offsetof(struct riscv_bootparams, modulep));

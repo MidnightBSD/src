@@ -95,7 +95,6 @@ device		pci
 # Pseudo devices
 device		ether		# Ethernet support
 device		loop		# Network loopback
-device		random		# Entropy device
 device		bpf		# Berkeley packet filter
 device		md		# Memory "disks"
 

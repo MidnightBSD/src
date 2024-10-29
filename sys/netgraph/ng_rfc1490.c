@@ -36,7 +36,6 @@
  * OF SUCH DAMAGE.
  *
  * Author: Julian Elischer <julian@freebsd.org>
- *
  * $Whistle: ng_rfc1490.c,v 1.22 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -485,4 +484,3 @@ ng_rfc1490_disconnect(hook_p hook)
 		panic("%s", __func__);
 	return (0);
 }
-

@@ -13,6 +13,9 @@ SRCS+=	agp_amd64.c
 .if ${MACHINE_CPUARCH} == "amd64"
 SRCS+=	agp_amd64.c agp_i810.c agp_via.c
 .endif
+.if ${MACHINE_CPUARCH} == "powerpc"
+SRCS+=  agp_apple.c
+.endif
 SRCS+=	device_if.h bus_if.h agp_if.h pci_if.h
 SRCS+=	opt_agp.h
 

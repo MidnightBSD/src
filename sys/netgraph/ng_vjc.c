@@ -37,7 +37,6 @@
  * OF SUCH DAMAGE.
  *
  * Author: Archie Cobbs <archie@freebsd.org>
- *
  * $Whistle: ng_vjc.c,v 1.17 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -610,4 +609,3 @@ ng_vjc_pulluphdrs(struct mbuf *m, int knownTCP)
 		m = m_pullup(m, ihlen + thlen);
 	return (m);
 }
-

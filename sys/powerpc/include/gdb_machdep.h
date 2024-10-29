@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_GDB_MACHDEP_H_
@@ -35,10 +34,43 @@
 #define	PPC_GDB_NREGS4	(70 + 1)
 #define	PPC_GDB_NREGS8	(1 + 32)
 #define	PPC_GDB_NREGS16	0
+
 #else
+/*
+ *   0 - 32*GPR(4/8)
+ *  32 - 32*FPR(8)
+ *  64 - PC, PS (4/8)
+ *  66 - CR (4)
+ *  67 - LR, CTR (4/8)
+ *  69 - XER, FPSCR (4)
+ *  71 - 32*VR(16)
+ * 103 - VSCR, VRSAVE (4)
+ */
+
+#define	PPC_REGNUM_R0	0
+#define	PPC_REGNUM_R31	(PPC_REGNUM_R0 + 31)
+#define	PPC_REGNUM_FR0	32
+#define	PPC_REGNUM_FR31	(PPC_REGNUM_FR0 + 31)
+#define	PPC_REGNUM_PC	64
+#define	PPC_REGNUM_PS	65
+#define	PPC_REGNUM_CR	66
+#define	PPC_REGNUM_LR	67
+#define	PPC_REGNUM_CTR	68
+#define	PPC_REGNUM_XER	69
+#define	PPC_REGNUM_FPSCR 70
+#define	PPC_REGNUM_VR0	71
+#define	PPC_REGNUM_VR31	(PPC_REGNUM_VR0 + 31)
+
 #define	PPC_GDB_NREGS0	0
+
+#ifdef __powerpc64__
+#define	PPC_GDB_NREGS4	5
+#define	PPC_GDB_NREGS8	(64 + 4)
+#else
 #define	PPC_GDB_NREGS4	(32 + 7 + 2)
 #define	PPC_GDB_NREGS8	32
+#endif
+
 #define	PPC_GDB_NREGS16	32
 #endif
 
@@ -60,9 +92,15 @@ gdb_cpu_regsz(int regnum)
 	if (regnum == 71 || regnum >= 73)
 		return (8);
 #else
-	if (regnum >= 32 && regnum <= 63)
+#ifdef __powerpc64__
+	if ((regnum >= PPC_REGNUM_R0 && regnum <= PPC_REGNUM_PS) ||
+	    regnum == PPC_REGNUM_LR || regnum == PPC_REGNUM_CTR)
 		return (8);
-	if (regnum >= 71 && regnum <= 102)
+#else
+	if (regnum >= PPC_REGNUM_FR0 && regnum <= PPC_REGNUM_FR31)
+		return (8);
+#endif
+	if (regnum >= PPC_REGNUM_VR0 && regnum <= PPC_REGNUM_VR31)
 		return (16);
 #endif
 	return (4);
@@ -88,8 +126,15 @@ gdb_end_write(void *arg __unused)
 
 }
 
+static __inline void
+gdb_cpu_stop_reason(int type __unused, int code __unused)
+{
+
+}
+
 void *gdb_cpu_getreg(int, size_t *);
 void gdb_cpu_setreg(int, void *);
 int gdb_cpu_signal(int, int);
+void gdb_cpu_do_offsets(void);
 
 #endif /* !_MACHINE_GDB_MACHDEP_H_ */

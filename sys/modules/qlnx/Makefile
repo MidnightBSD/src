@@ -36,5 +36,6 @@ SYSDIR?=${SRCTOP}/sys
 
 SUBDIR=qlnxe
 SUBDIR+=qlnxev
+SUBDIR+=qlnxr
 
 .include <bsd.subdir.mk>

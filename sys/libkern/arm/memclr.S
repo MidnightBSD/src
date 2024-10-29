@@ -26,7 +26,6 @@
  */
 
 #include <machine/asm.h>
-
 /*
  * This implements
  *  void __aeabi_memclr4(void *dest, size_t len)

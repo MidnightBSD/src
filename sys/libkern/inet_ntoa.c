@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 
@@ -46,5 +45,3 @@ inet_ntoa_r(struct in_addr ina, char *buf)
 		ucp[3] & 0xff);
 	return buf;
 }
-
-

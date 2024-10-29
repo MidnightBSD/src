@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -168,11 +167,11 @@ plic_intr(void *arg)
 	sc = arg;
 	cpu = PCPU_GET(cpuid);
 
+	/* Claim any pending interrupt. */
 	pending = RD4(sc, PLIC_CLAIM(sc, cpu));
 	if (pending) {
 		tf = curthread->td_intr_frame;
 		plic_irq_dispatch(sc, pending, tf);
-		WR4(sc, PLIC_CLAIM(sc, cpu), pending);
 	}
 
 	return (FILTER_HANDLED);
@@ -383,7 +382,17 @@ plic_pre_ithread(device_t dev, struct intr_irqsrc *isrc)
 static void
 plic_post_ithread(device_t dev, struct intr_irqsrc *isrc)
 {
+	struct plic_softc *sc;
+	struct plic_irqsrc *src;
+	uint32_t cpu;
 
+	sc = device_get_softc(dev);
+	src = (struct plic_irqsrc *)isrc;
+
+	cpu = CPU_FFS(&isrc->isrc_cpu) - 1;
+
+	/* Complete the interrupt. */
+	WR4(sc, PLIC_CLAIM(sc, cpu), src->irq);
 	plic_enable_intr(dev, isrc);
 }
 
@@ -391,14 +400,7 @@ static int
 plic_setup_intr(device_t dev, struct intr_irqsrc *isrc,
     struct resource *res, struct intr_map_data *data)
 {
-	struct plic_softc *sc;
-	struct plic_irqsrc *src;
-
-	sc = device_get_softc(dev);
-	src = (struct plic_irqsrc *)isrc;
-
-	/* Bind to the boot CPU for now. */
-	CPU_SET(PCPU_GET(cpuid), &isrc->isrc_cpu);
+	CPU_ZERO(&isrc->isrc_cpu);
 	plic_bind_intr(dev, isrc);
 
 	return (0);
@@ -450,6 +452,7 @@ static device_method_t plic_methods[] = {
 	DEVMETHOD(pic_map_intr,		plic_map_intr),
 	DEVMETHOD(pic_pre_ithread,	plic_pre_ithread),
 	DEVMETHOD(pic_post_ithread,	plic_post_ithread),
+	DEVMETHOD(pic_post_filter,	plic_post_ithread),
 	DEVMETHOD(pic_setup_intr,	plic_setup_intr),
 	DEVMETHOD(pic_bind_intr,	plic_bind_intr),
 

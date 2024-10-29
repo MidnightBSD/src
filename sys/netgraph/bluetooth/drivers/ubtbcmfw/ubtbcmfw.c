@@ -3,7 +3,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003-2009 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -175,7 +175,6 @@ static const STRUCT_USB_HOST_ID ubtbcmfw_devs[] = {
 /* Broadcom BCM2033 devices only */
 	{ USB_VPI(USB_VENDOR_BROADCOM, USB_PRODUCT_BROADCOM_BCM2033, 0) },
 };
-
 
 DRIVER_MODULE(ubtbcmfw, uhub, ubtbcmfw_driver, ubtbcmfw_devclass, NULL, 0);
 MODULE_DEPEND(ubtbcmfw, usb, 1, 1, 1);

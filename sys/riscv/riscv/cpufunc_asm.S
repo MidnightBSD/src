@@ -33,7 +33,6 @@
  */
 
 #include <machine/asm.h>
-
 	.text
 	.align	2
 

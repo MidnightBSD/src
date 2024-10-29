@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Nathan Whitehorn
  * All rights reserved.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/module.h>
@@ -291,4 +290,3 @@ smusat_sensor_sysctl(SYSCTL_HANDLER_ARGS)
 
 	return (error);
 }
-

@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/gmon.h>
 #ifdef _KERNEL
@@ -57,7 +56,8 @@
  * both frompcindex and frompc.  Any reasonable, modern compiler will
  * perform this optimization.
  */
-_MCOUNT_DECL(uintfptr_t frompc, uintfptr_t selfpc)	/* _mcount; may be static, inline, etc */
+/* _mcount; may be static, inline, etc */
+_MCOUNT_DECL(uintfptr_t frompc, uintfptr_t selfpc)
 {
 #ifdef GUPROF
 	int delta;
@@ -235,7 +235,6 @@ _MCOUNT_DECL(uintfptr_t frompc, uintfptr_t selfpc)	/* _mcount; may be static, in
 			*frompcindex = toindex;
 			goto done;
 		}
-
 	}
 done:
 #ifdef _KERNEL
@@ -290,7 +289,7 @@ mexitcount(uintfptr_t selfpc)
 #endif
 
 void
-empty_loop()
+empty_loop(void)
 {
 	int i;
 
@@ -299,13 +298,13 @@ empty_loop()
 }
 
 void
-nullfunc()
+nullfunc(void)
 {
 	__asm __volatile("");
 }
 
 void
-nullfunc_loop()
+nullfunc_loop(void)
 {
 	int i;
 

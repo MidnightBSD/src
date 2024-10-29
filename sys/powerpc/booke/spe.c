@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/proc.h>
 #include <sys/systm.h>
@@ -82,7 +81,7 @@ save_vec_int(struct thread *td)
 #undef EVSTDW
 
 	__asm ( "evxor 0,0,0\n"
-		"evaddumiaaw 0,0\n"
+		"evmwumiaa 0,0,0\n"
 		"evstdd 0,0(%0)" :: "b"(&pcb->pcb_vec.spare[0]));
 	pcb->pcb_vec.vscr = mfspr(SPR_SPEFSCR);
 
@@ -175,21 +174,26 @@ save_vec(struct thread *td)
 
 /*
  * Save SPE state without dropping ownership.  This will only save state if
- * the current vector-thread is `td'.
+ * the current vector-thread is `td'.  This is used for taking core dumps, so
+ * don't leak kernel information; overwrite the low words of each vector with
+ * their real value, taken from the thread's trap frame, unconditionally.
  */
 void
 save_vec_nodrop(struct thread *td)
 {
-	struct thread *vtd;
+	struct pcb *pcb;
+	int i;
 
-	vtd = PCPU_GET(vecthread);
-	if (td != vtd) {
-		return;
+	if (td == PCPU_GET(vecthread))
+		save_vec_int(td);
+
+	pcb = td->td_pcb;
+
+	for (i = 0; i < 32; i++) {
+		pcb->pcb_vec.vr[i][1] =
+		    td->td_frame ? td->td_frame->fixreg[i] : 0;
 	}
-
-	save_vec_int(td);
 }
-
 
 #define	SPE_INST_MASK	0x31f
 #define	EADD	0x200
@@ -425,7 +429,7 @@ spe_save_reg_high(int reg)
 {
 	uint32_t vec[2];
 #define EVSTDW(n)   case n: __asm __volatile ("evstdw %1,0(%0)" \
-		:: "b"(vec), "n"(n)); break;
+		:: "b"(vec), "n"(n) : "memory"); break;
 	switch (reg) {
 	EVSTDW(0);	EVSTDW(1);	EVSTDW(2);	EVSTDW(3);
 	EVSTDW(4);	EVSTDW(5);	EVSTDW(6);	EVSTDW(7);
@@ -478,7 +482,7 @@ spe_handle_fpdata(struct trapframe *frame)
 	uint32_t msr;
 
 	err = fueword32((void *)frame->srr0, &instr);
-	
+
 	if (err != 0)
 		return;
 		/* Fault. */;
@@ -571,6 +575,7 @@ spe_handle_fpdata(struct trapframe *frame)
 			frame->fixreg[rd] = frame->fixreg[ra] ^ (1U << 31);
 			break;
 		case EFSCFD:
+			mtmsr(msr | PSL_VEC);
 			spe_explode(&fpemu, &fpemu.fe_f3, DOUBLE,
 			    spe_save_reg_high(rb), frame->fixreg[rb]);
 			result = &fpemu.fe_f3;

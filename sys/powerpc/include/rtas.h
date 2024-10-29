@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_RTAS_H_
@@ -59,4 +58,3 @@ cell_t rtas_token_lookup(const char *method);
 #define	RTAS_VENDOR_ERROR_BEGIN		-9004
 
 #endif /* _MACHINE_RTAS_H_ */
-

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Marcel Moolenaar
  *
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -240,7 +239,6 @@ atpic_isa_attach(device_t dev)
 		    sc->sc_rid[ATPIC_MASTER], sc->sc_res[ATPIC_MASTER]);
 	return (error);
 }
-
 
 /*
  * PIC interface.

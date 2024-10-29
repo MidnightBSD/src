@@ -67,7 +67,7 @@
 	lwzu	sr,PM_SR(pmap); \
 	RESTORE_SRS(pmap,sr) \
 	/* Restore SR 12 */ \
-	lwz	sr,12*4(pmap);	mtsr	12,sr
+	lwz	sr,12*4(pmap);	mtsr	12,sr; isync
 
 /*
  * Kernel SRs are loaded directly from kernel_pmap_
@@ -301,10 +301,8 @@ CNAME(restorebridgesize) = .-CNAME(restorebridge)
  */
 	.globl	CNAME(rstcode), CNAME(rstcodeend)
 CNAME(rstcode):
-	bl	1f
-	.long	cpu_reset
-1:	mflr	%r31
-	lwz	%r31,0(%r31)
+	lwz	%r31, TRAP_GENTRAP(0)
+	addi	%r31, %r31, (cpu_reset - generictrap)
 	mtlr	%r31
 	blrl
 CNAME(rstcodeend):
@@ -349,7 +347,7 @@ CNAME(trapcode):
 	mtsprg1	%r1			/* save SP */
 	mflr	%r1			/* Save the old LR in r1 */
 	mtsprg2 %r1			/* And then in SPRG2 */
-	lwz	%r1, TRAP_GENTRAP(0)	/* Get branch address */
+	lwz	%r1, TRAP_ENTRY(0)	/* Get branch address */
 	mtlr	%r1
 	li	%r1, 0xe0		/* How to get the vector from LR */
 	blrl				/* LR & (0xff00 | r1) is exception # */
@@ -383,10 +381,8 @@ CNAME(alitrap):
 	mtcr	%r31
 
 	/* Jump to s_trap */
-	bl	1f
-	.long	s_trap
-1:	mflr	%r31
-	lwz	%r31,0(%r31)
+	lwz	%r31, TRAP_GENTRAP(0)
+	addi	%r31, %r31, (s_trap - generictrap)
 	mtlr	%r31
 	blrl
 CNAME(aliend):
@@ -429,7 +425,7 @@ instr_sec_hash:
 	bne do_isi			/* if so, go to ISI interrupt */
 	mfspr %r2, SPR_HASH2		/* get the second pointer */
 	ori %r3, %r3, 0x0040		/* change the compare value */
-	addi %r1, %r0, 8		/* load 8 for counter */
+	addi %r1, 0, 8			/* load 8 for counter */
 	addi %r2, %r2, -8		/* pre dec for update on load */
 	b im0				/* try second hash */
 
@@ -651,10 +647,8 @@ CNAME(dsitrap):
 	mflr	%r28			/* save LR (SP already saved) */
 
 	/* Jump to disitrap */
-	bl	4f
-	.long	disitrap
-4:	mflr	%r1
-	lwz	%r1,0(%r1)
+	lwz	%r1, TRAP_GENTRAP(0)
+	addi	%r1, %r1, (disitrap - generictrap)
 	mtlr	%r1
 	blrl
 CNAME(dsiend):
@@ -798,6 +792,7 @@ CNAME(trapexit):
 	mfmsr	%r3
 	andi.	%r3,%r3,~PSL_EE@l
 	mtmsr	%r3
+	isync
 /* Test AST pending: */
 	lwz	%r5,FRAME_SRR1+8(%r1)
 	mtcr	%r5
@@ -912,7 +907,7 @@ CNAME(dblow):
         mflr	%r1			/* save LR */
 	mtsprg2 %r1			/* And then in SPRG2 */
 
-	lwz	%r1, TRAP_GENTRAP(0)	/* Get branch address */
+	lwz	%r1, TRAP_ENTRY(0)	/* Get branch address */
 	mtlr	%r1
 	li	%r1, 0			/* How to get the vector from LR */
 	blrl				/* LR & (0xff00 | r1) is exception # */
@@ -927,10 +922,8 @@ CNAME(dblow):
         mflr	%r28					/* save LR */
 
 	/* Jump to dbtrap */
-	bl	2f
-	.long	dbtrap
-2:	mflr	%r1
-	lwz	%r1,0(%r1)
+	lwz	%r1, TRAP_GENTRAP(0)
+	addi	%r1, %r1, (dbtrap - generictrap)
 	mtlr	%r1
 	blrl
 CNAME(dbend):

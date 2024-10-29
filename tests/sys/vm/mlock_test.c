@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 Mark Johnston <markj@FreeBSD.org>
  *
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/mman.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>

@@ -45,6 +45,10 @@ struct mdthread {
 };
 
 struct mdproc {
+	/*
+	 * Avoid empty structs because they are undefined behavior.
+	 */
+	long	md_spare;
 };
 
 #ifdef __powerpc64__
@@ -54,11 +58,11 @@ struct mdproc {
 #define	KINFO_PROC_SIZE 816
 #endif
 
+#define	MAXARGS		8
 struct syscall_args {
 	u_int code;
 	struct sysent *callp;
-	register_t args[10];
-	int narg;
+	register_t args[MAXARGS];
 };
 
 #ifdef _KERNEL

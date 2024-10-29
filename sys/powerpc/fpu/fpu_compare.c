@@ -50,12 +50,10 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/systm.h>
 
 #include <machine/fpu.h>
-#include <machine/reg.h>
 
 #include <powerpc/fpu/fpu_arith.h>
 #include <powerpc/fpu/fpu_emu.h>

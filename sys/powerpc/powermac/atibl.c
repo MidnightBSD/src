@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Justin Hibbits
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/systm.h>
@@ -159,7 +158,7 @@ atibl_attach(device_t dev)
 	tree = device_get_sysctl_tree(dev);
 
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-	    "level", CTLTYPE_INT | CTLFLAG_RW, sc, 0,
+	    "level", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, sc, 0,
 	    atibl_sysctl, "I", "Backlight level (0-100)");
 
 	return (0);

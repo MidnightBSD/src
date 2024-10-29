@@ -3,9 +3,9 @@
 
 KMOD=	if_infiniband
 SRCS=	if_infiniband.c \
-	device_if.h \
-	bus_if.h \
 	opt_inet.h \
 	opt_inet6.h
+
+EXPORT_SYMS=	YES
 
 .include <bsd.kmod.mk>

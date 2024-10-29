@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
@@ -23,7 +23,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -40,6 +39,9 @@
 #include <sys/fcntl.h>
 #include <sys/sysent.h>
 #include <sys/imgact_elf.h>
+#include <sys/jail.h>
+#include <sys/reg.h>
+#include <sys/smp.h>
 #include <sys/syscall.h>
 #include <sys/sysctl.h>
 #include <sys/signalvar.h>
@@ -53,8 +55,9 @@
 #include <machine/cpu.h>
 #include <machine/fpu.h>
 #include <machine/elf.h>
-#include <machine/reg.h>
 #include <machine/md_var.h>
+
+#include <powerpc/powerpc/elf_common.c>
 
 #ifdef __powerpc64__
 #include <compat/freebsd32/freebsd32_proto.h>
@@ -63,7 +66,8 @@
 extern const char *freebsd32_syscallnames[];
 static void ppc32_fixlimit(struct rlimit *rl, int which);
 
-static SYSCTL_NODE(_compat, OID_AUTO, ppc32, CTLFLAG_RW, 0, "32-bit mode");
+static SYSCTL_NODE(_compat, OID_AUTO, ppc32, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "32-bit mode");
 
 #define PPC32_MAXDSIZ (1024*1024*1024)
 static u_long ppc32_maxdsiz = PPC32_MAXDSIZ;
@@ -73,6 +77,8 @@ SYSCTL_ULONG(_compat_ppc32, OID_AUTO, maxdsiz, CTLFLAG_RWTUN, &ppc32_maxdsiz,
 u_long ppc32_maxssiz = PPC32_MAXSSIZ;
 SYSCTL_ULONG(_compat_ppc32, OID_AUTO, maxssiz, CTLFLAG_RWTUN, &ppc32_maxssiz,
              0, "");
+#else
+static void ppc32_runtime_resolve(void);
 #endif
 
 struct sysentvec elf32_freebsd_sysvec = {
@@ -82,16 +88,16 @@ struct sysentvec elf32_freebsd_sysvec = {
 #else
 	.sv_table	= sysent,
 #endif
-	.sv_mask	= 0,
-	.sv_errsize	= 0,
-	.sv_errtbl	= NULL,
-	.sv_transtrap	= NULL,
 	.sv_fixup	= __elfN(freebsd_fixup),
+	.sv_copyout_auxargs = __elfN(powerpc_copyout_auxargs),
 	.sv_sendsig	= sendsig,
 	.sv_sigcode	= sigcode32,
 	.sv_szsigcode	= &szsigcode32,
 	.sv_name	= "FreeBSD ELF32",
 	.sv_coredump	= __elfN(coredump),
+	.sv_elf_core_osabi = ELFOSABI_FREEBSD,
+	.sv_elf_core_abi_vendor = FREEBSD_ABI_VENDOR,
+	.sv_elf_core_prepare_notes = __elfN(prepare_notes),
 	.sv_imgact_try	= NULL,
 	.sv_minsigstksz	= MINSIGSTKSZ,
 	.sv_minuser	= VM_MIN_ADDRESS,
@@ -100,6 +106,7 @@ struct sysentvec elf32_freebsd_sysvec = {
 	.sv_maxuser	= VM_MAXUSER_ADDRESS32,
 	.sv_usrstack	= FREEBSD32_USRSTACK,
 	.sv_psstrings	= FREEBSD32_PS_STRINGS,
+	.sv_psstringssz	= sizeof(struct freebsd32_ps_strings),
 	.sv_copyout_strings = freebsd32_copyout_strings,
 	.sv_setregs	= ppc32_setregs,
 	.sv_syscallnames = freebsd32_syscallnames,
@@ -108,13 +115,15 @@ struct sysentvec elf32_freebsd_sysvec = {
 	.sv_maxuser	= VM_MAXUSER_ADDRESS,
 	.sv_usrstack	= USRSTACK,
 	.sv_psstrings	= PS_STRINGS,
+	.sv_psstringssz	= sizeof(struct ps_strings),
 	.sv_copyout_strings = exec_copyout_strings,
 	.sv_setregs	= exec_setregs,
 	.sv_syscallnames = syscallnames,
 	.sv_fixlimit	= NULL,
 #endif
 	.sv_maxssiz	= NULL,
-	.sv_flags	= SV_ABI_FREEBSD | SV_ILP32 | SV_SHP | SV_ASLR,
+	.sv_flags	= SV_ABI_FREEBSD | SV_ILP32 | SV_SHP | SV_ASLR |
+			    SV_TIMEKEEP | SV_RNG_SEED_VER | SV_SIGSYS,
 	.sv_set_syscall_retval = cpu_set_syscall_retval,
 	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
 	.sv_shared_page_base = FREEBSD32_SHAREDPAGE,
@@ -124,6 +133,10 @@ struct sysentvec elf32_freebsd_sysvec = {
 	.sv_trap	= NULL,
 	.sv_hwcap	= &cpu_features,
 	.sv_hwcap2	= &cpu_features2,
+	.sv_onexec_old	= exec_onexec_old,
+	.sv_onexit	= exit_onexit,
+	.sv_regset_begin = SET_BEGIN(__elfN(regset)),
+	.sv_regset_end  = SET_LIMIT(__elfN(regset)),
 };
 INIT_SYSENTVEC(elf32_sysvec, &elf32_freebsd_sysvec);
 
@@ -213,10 +226,10 @@ elf32_dump_thread(struct thread *td, void *dst, size_t *off)
 
 #ifndef __powerpc64__
 bool
-elf_is_ifunc_reloc(Elf_Size r_info __unused)
+elf_is_ifunc_reloc(Elf_Size r_info)
 {
 
-	return (false);
+	return (ELF_R_TYPE(r_info) == R_PPC_IRELATIVE);
 }
 
 /* Process one elf relocation with addend. */
@@ -227,7 +240,7 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 	Elf_Addr *where;
 	Elf_Half *hwhere;
 	Elf_Addr addr;
-	Elf_Addr addend;
+	Elf_Addr addend, val;
 	Elf_Word rtype, symidx;
 	const Elf_Rela *rela;
 	int error;
@@ -249,21 +262,20 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 	}
 
 	switch (rtype) {
-
 	case R_PPC_NONE:
 		break;
 
 	case R_PPC_ADDR32: /* word32 S + A */
 		error = lookup(lf, symidx, 1, &addr);
 		if (error != 0)
-			return -1;
+			return (-1);
 		*where = elf_relocaddr(lf, addr + addend);
 			break;
 
 	case R_PPC_ADDR16_LO: /* #lo(S) */
 		error = lookup(lf, symidx, 1, &addr);
 		if (error != 0)
-			return -1;
+			return (-1);
 		/*
 		 * addend values are sometimes relative to sections
 		 * (i.e. .rodata) in rela, where in reality they
@@ -278,7 +290,7 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 	case R_PPC_ADDR16_HA: /* #ha(S) */
 		error = lookup(lf, symidx, 1, &addr);
 		if (error != 0)
-			return -1;
+			return (-1);
 		/*
 		 * addend values are sometimes relative to sections
 		 * (i.e. .rodata) in rela, where in reality they
@@ -295,12 +307,33 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 		*where = elf_relocaddr(lf, relocbase + addend);
 		break;
 
+	case R_PPC_JMP_SLOT: /* PLT jump slot entry */
+		/*
+		 * We currently only support Secure-PLT jump slots.
+		 * Given that we reject BSS-PLT modules during load, we
+		 * don't need to check again.
+		 * The method we are using here is equivilent to
+		 * LD_BIND_NOW.
+		 */
+		error = lookup(lf, symidx, 1, &addr);
+		if (error != 0)
+			return (-1);
+		*where = elf_relocaddr(lf, addr + addend);
+		break;
+
+	case R_PPC_IRELATIVE:
+		addr = relocbase + addend;
+		val = ((Elf32_Addr (*)(void))addr)();
+		if (*where != val)
+			*where = val;
+		break;
+
 	default:
-		printf("kldload: unexpected relocation type %d\n",
-		    (int) rtype);
-		return -1;
+		printf("kldload: unexpected relocation type %d, "
+		    "symbol index %d\n", (int)rtype, symidx);
+		return (-1);
 	}
-	return(0);
+	return (0);
 }
 
 void
@@ -355,6 +388,7 @@ elf_reloc_local(linker_file_t lf, Elf_Addr relocbase, const void *data,
 int
 elf_cpu_load_file(linker_file_t lf)
 {
+
 	/* Only sync the cache for non-kernel modules */
 	if (lf->id != 1)
 		__syncicache(lf->address, lf->size);
@@ -365,6 +399,47 @@ int
 elf_cpu_unload_file(linker_file_t lf __unused)
 {
 
+	return (0);
+}
+
+static void
+ppc32_runtime_resolve()
+{
+
+	/*
+	 * Since we don't support lazy binding, panic immediately if anyone
+	 * manages to call the runtime resolver.
+	 */
+	panic("kldload: Runtime resolver was called unexpectedly!");
+}
+
+int
+elf_cpu_parse_dynamic(caddr_t loadbase, Elf_Dyn *dynamic)
+{
+	Elf_Dyn *dp;
+	bool has_plt = false;
+	bool secure_plt = false;
+	Elf_Addr *got;
+
+	for (dp = dynamic; dp->d_tag != DT_NULL; dp++) {
+		switch (dp->d_tag) {
+		case DT_PPC_GOT:
+			secure_plt = true;
+			got = (Elf_Addr *)(loadbase + dp->d_un.d_ptr);
+			/* Install runtime resolver canary. */
+			got[1] = (Elf_Addr)ppc32_runtime_resolve;
+			got[2] = (Elf_Addr)0;
+			break;
+		case DT_PLTGOT:
+			has_plt = true;
+			break;
+		}
+	}
+
+	if (has_plt && !secure_plt) {
+		printf("kldload: BSS-PLT modules are not supported.\n");
+		return (-1);
+	}
 	return (0);
 }
 #endif

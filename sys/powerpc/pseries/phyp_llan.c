@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 2013 Nathan Whitehorn
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/sockio.h>
@@ -156,14 +155,23 @@ llan_attach(device_t dev)
 	struct llan_softc *sc;
 	phandle_t node;
 	int error, i;
+	ssize_t len;
 
 	sc = device_get_softc(dev);
 	sc->dev = dev;
 
 	/* Get firmware properties */
 	node = ofw_bus_get_node(dev);
-	OF_getprop(node, "local-mac-address", sc->mac_address,
+	len = OF_getprop(node, "local-mac-address", sc->mac_address,
 	    sizeof(sc->mac_address));
+	/* If local-mac-address property has only 6 bytes (ETHER_ADDR_LEN)
+	 * instead of 8 (sizeof(sc->mac_address)), then its value must be
+	 * shifted 2 bytes to the right. */
+	if (len == ETHER_ADDR_LEN) {
+		bcopy(sc->mac_address, &sc->mac_address[2], len);
+		/* Zero out the first 2 bytes. */
+		bzero(sc->mac_address, 2);
+	}
 	OF_getencprop(node, "reg", &sc->unit, sizeof(sc->unit));
 
 	mtx_init(&sc->io_lock, "llan", NULL, MTX_DEF);
@@ -179,7 +187,7 @@ llan_attach(device_t dev)
 		return (ENXIO);
 	}
 
-	bus_setup_intr(dev, sc->irq, INTR_TYPE_MISC | INTR_MPSAFE |
+	bus_setup_intr(dev, sc->irq, INTR_TYPE_NET | INTR_MPSAFE |
 	    INTR_ENTROPY, NULL, llan_intr, sc, &sc->irq_cookie);
 
 	/* Setup DMA */
@@ -385,8 +393,6 @@ restart:
 		/* llan_add_rxbuf does DMA sync and unload as well as requeue */
 		if (llan_add_rxbuf(sc, rx) != 0) {
 			if_inc_counter(sc->ifp, IFCOUNTER_IERRORS, 1);
-			phyp_hcall(H_ADD_LOGICAL_LAN_BUFFER, sc->unit,
-			    rx->rx_bufdesc);
 			continue;
 		}
 
@@ -426,7 +432,7 @@ llan_send_packet(void *xsc, bus_dma_segment_t *segs, int nsegs,
 {
 	struct llan_softc *sc = xsc;
 	uint64_t bufdescs[6];
-	int i;
+	int i, err;
 
 	bzero(bufdescs, sizeof(bufdescs));
 
@@ -436,7 +442,7 @@ llan_send_packet(void *xsc, bus_dma_segment_t *segs, int nsegs,
 		bufdescs[i] |= segs[i].ds_addr;
 	}
 
-	phyp_hcall(H_SEND_LOGICAL_LAN, sc->unit, bufdescs[0],
+	err = phyp_hcall(H_SEND_LOGICAL_LAN, sc->unit, bufdescs[0],
 	    bufdescs[1], bufdescs[2], bufdescs[3], bufdescs[4], bufdescs[5], 0);
 	/*
 	 * The hypercall returning implies completion -- or that the call will
@@ -444,6 +450,10 @@ llan_send_packet(void *xsc, bus_dma_segment_t *segs, int nsegs,
 	 * H_BUSY based on the continuation token in R4. For now, just drop
 	 * the packet in such cases.
 	 */
+	if (err == H_SUCCESS)
+		if_inc_counter(sc->ifp, IFCOUNTER_OPACKETS, 1);
+	else
+		if_inc_counter(sc->ifp, IFCOUNTER_OERRORS, 1);
 }
 
 static void
@@ -496,28 +506,28 @@ llan_start(struct ifnet *ifp)
 	mtx_unlock(&sc->io_lock);
 }
 
+static u_int
+llan_set_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	struct llan_softc *sc = arg;
+	uint64_t macaddr = 0;
+
+	memcpy((uint8_t *)&macaddr + 2, LLADDR(sdl), 6);
+	phyp_hcall(H_MULTICAST_CTRL, sc->unit, LLAN_ADD_MULTICAST, macaddr);
+
+	return (1);
+}
+
 static int
 llan_set_multicast(struct llan_softc *sc)
 {
 	struct ifnet *ifp = sc->ifp;
-	struct ifmultiaddr *inm;
-	uint64_t macaddr;
 
 	mtx_assert(&sc->io_lock, MA_OWNED);
 
 	phyp_hcall(H_MULTICAST_CTRL, sc->unit, LLAN_CLEAR_MULTICAST, 0);
 
-	if_maddr_rlock(ifp);
-	CK_STAILQ_FOREACH(inm, &ifp->if_multiaddrs, ifma_link) {
-		if (inm->ifma_addr->sa_family != AF_LINK)
-			continue;
-
-		memcpy((uint8_t *)&macaddr + 2,
-		    LLADDR((struct sockaddr_dl *)inm->ifma_addr), 6);
-		phyp_hcall(H_MULTICAST_CTRL, sc->unit, LLAN_ADD_MULTICAST,
-		    macaddr);
-	}
-	if_maddr_runlock(ifp);
+	if_foreach_llmaddr(ifp, llan_set_maddr, sc);
 
 	return (0);
 }
@@ -548,4 +558,3 @@ llan_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 
 	return (err);
 }
-

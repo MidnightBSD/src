@@ -1,0 +1,10 @@
+# MALTA64 -- 64-bit kernel config for MALTA endian-little boards
+#
+ 
+ident		MALTA64
+
+include		"std.MALTA"
+ 
+machine		mips mips64el
+ 
+makeoptions 	KERNLOADADDR=0xffffffff80100000

@@ -23,13 +23,11 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -128,4 +126,3 @@ DRIVER_MODULE(opal_i2cm, powernv_xscom, opal_i2cm_driver, opal_i2cm_devclass, NU
     NULL);
 DRIVER_MODULE(opal_i2cm, powernv_centaur, opal_i2cm_driver, opal_i2cm_devclass, NULL,
     NULL);
-

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019-2021 IKS Service GmbH
  *
@@ -25,7 +25,6 @@
  * SUCH DAMAGE.
  *
  * Author: Lutz Donnerhacke <lutz@donnerhacke.de>
- *
  */
 
 #ifndef _NETGRAPH_NG_VLAN_ROTATE_H_

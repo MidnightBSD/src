@@ -86,11 +86,6 @@ disc_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 
 	sc = malloc(sizeof(struct disc_softc), M_DISC, M_WAITOK | M_ZERO);
 	ifp = sc->sc_ifp = if_alloc(IFT_LOOP);
-	if (ifp == NULL) {
-		free(sc, M_DISC);
-		return (ENOSPC);
-	}
-
 	ifp->if_softc = sc;
 	if_initname(ifp, discname, unit);
 	ifp->if_mtu = DSMTU;
@@ -184,7 +179,7 @@ discoutput(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
 	if (dst->sa_family == AF_UNSPEC)
 		bcopy(dst->sa_data, &af, sizeof(af));
 	else
-		af = dst->sa_family;
+		af = RO_GET_FAMILY(ro, dst);
 
 	if (bpf_peers_present(ifp->if_bpf))
 		bpf_mtap2(ifp->if_bpf, &af, sizeof(af), m);

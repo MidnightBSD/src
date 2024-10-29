@@ -1,6 +1,5 @@
 
 MODULES		 =
-MODULES		+= cuseeme
 MODULES		+= dummy
 MODULES		+= ftp
 MODULES		+= irc

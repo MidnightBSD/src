@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-4-Clause AND BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-4-Clause AND BSD-2-Clause
  *
  * Copyright (c) 2001 Matt Thomas.
  * Copyright (c) 2001 Tsubai Masanari.
@@ -65,10 +65,13 @@
 #include <sys/conf.h>
 #include <sys/cpu.h>
 #include <sys/kernel.h>
+#include <sys/ktr.h>
+#include <sys/lock.h>
 #include <sys/proc.h>
 #include <sys/sysctl.h>
 #include <sys/sched.h>
 #include <sys/smp.h>
+#include <sys/endian.h>
 
 #include <machine/bus.h>
 #include <machine/cpu.h>
@@ -167,29 +170,26 @@ static const struct cputab models[] = {
 	   PPC_FEATURE_64 | PPC_FEATURE_HAS_ALTIVEC | PPC_FEATURE_HAS_FPU |
 	   PPC_FEATURE_SMT | PPC_FEATURE_ICACHE_SNOOP | PPC_FEATURE_ARCH_2_05 |
 	   PPC_FEATURE_ARCH_2_06 | PPC_FEATURE_HAS_VSX | PPC_FEATURE_TRUE_LE,
-	   PPC_FEATURE2_ARCH_2_07 | PPC_FEATURE2_HTM | PPC_FEATURE2_DSCR | 
-	   PPC_FEATURE2_ISEL | PPC_FEATURE2_TAR | PPC_FEATURE2_HAS_VEC_CRYPTO |
-	   PPC_FEATURE2_HTM_NOSC, cpu_powerx_setup },
+	   PPC_FEATURE2_ARCH_2_07 | PPC_FEATURE2_DSCR | PPC_FEATURE2_ISEL |
+	   PPC_FEATURE2_TAR | PPC_FEATURE2_HAS_VEC_CRYPTO, cpu_powerx_setup },
         { "IBM POWER8NVL",	IBMPOWER8NVL,	REVFMT_MAJMIN,
 	   PPC_FEATURE_64 | PPC_FEATURE_HAS_ALTIVEC | PPC_FEATURE_HAS_FPU |
 	   PPC_FEATURE_SMT | PPC_FEATURE_ICACHE_SNOOP | PPC_FEATURE_ARCH_2_05 |
 	   PPC_FEATURE_ARCH_2_06 | PPC_FEATURE_HAS_VSX | PPC_FEATURE_TRUE_LE,
-	   PPC_FEATURE2_ARCH_2_07 | PPC_FEATURE2_HTM | PPC_FEATURE2_DSCR | 
-	   PPC_FEATURE2_ISEL | PPC_FEATURE2_TAR | PPC_FEATURE2_HAS_VEC_CRYPTO |
-	   PPC_FEATURE2_HTM_NOSC, cpu_powerx_setup },
+	   PPC_FEATURE2_ARCH_2_07 | PPC_FEATURE2_DSCR | PPC_FEATURE2_ISEL |
+	   PPC_FEATURE2_TAR | PPC_FEATURE2_HAS_VEC_CRYPTO, cpu_powerx_setup },
         { "IBM POWER8",		IBMPOWER8,	REVFMT_MAJMIN,
 	   PPC_FEATURE_64 | PPC_FEATURE_HAS_ALTIVEC | PPC_FEATURE_HAS_FPU |
 	   PPC_FEATURE_SMT | PPC_FEATURE_ICACHE_SNOOP | PPC_FEATURE_ARCH_2_05 |
 	   PPC_FEATURE_ARCH_2_06 | PPC_FEATURE_HAS_VSX | PPC_FEATURE_TRUE_LE,
-	   PPC_FEATURE2_ARCH_2_07 | PPC_FEATURE2_HTM | PPC_FEATURE2_DSCR | 
-	   PPC_FEATURE2_ISEL | PPC_FEATURE2_TAR | PPC_FEATURE2_HAS_VEC_CRYPTO |
-	   PPC_FEATURE2_HTM_NOSC, cpu_powerx_setup },
+	   PPC_FEATURE2_ARCH_2_07 | PPC_FEATURE2_DSCR | PPC_FEATURE2_ISEL |
+	   PPC_FEATURE2_TAR | PPC_FEATURE2_HAS_VEC_CRYPTO, cpu_powerx_setup },
         { "IBM POWER9",		IBMPOWER9,	REVFMT_MAJMIN,
 	   PPC_FEATURE_64 | PPC_FEATURE_HAS_ALTIVEC | PPC_FEATURE_HAS_FPU |
 	   PPC_FEATURE_SMT | PPC_FEATURE_ICACHE_SNOOP | PPC_FEATURE_ARCH_2_05 |
 	   PPC_FEATURE_ARCH_2_06 | PPC_FEATURE_HAS_VSX | PPC_FEATURE_TRUE_LE,
-	   PPC_FEATURE2_ARCH_2_07 | PPC_FEATURE2_HTM | PPC_FEATURE2_DSCR |
-	   PPC_FEATURE2_ISEL | PPC_FEATURE2_TAR | PPC_FEATURE2_HAS_VEC_CRYPTO |
+	   PPC_FEATURE2_ARCH_2_07 | PPC_FEATURE2_DSCR | PPC_FEATURE2_EBB |
+	   PPC_FEATURE2_ISEL | PPC_FEATURE2_TAR | PPC_FEATURE2_HAS_VEC_CRYPTO | 
 	   PPC_FEATURE2_ARCH_3_00 | PPC_FEATURE2_HAS_IEEE128 |
 	   PPC_FEATURE2_DARN, cpu_powerx_setup },
         { "Motorola PowerPC 7400",	MPC7400,	REVFMT_MAJMIN,
@@ -239,7 +239,7 @@ static void	cpu_6xx_print_cacheinfo(u_int, uint16_t);
 static int	cpu_feature_bit(SYSCTL_HANDLER_ARGS);
 
 static char model[64];
-SYSCTL_STRING(_hw, HW_MODEL, model, CTLFLAG_RD, model, 0, "");
+SYSCTL_STRING(_hw, HW_MODEL, model, CTLFLAG_RD | CTLFLAG_CAPRD, model, 0, "");
 
 static const struct cputab	*cput;
 
@@ -255,10 +255,10 @@ register_t	lpcr = LPCR_LPES;
 #endif
 
 /* Provide some user-friendly aliases for bits in cpu_features */
-SYSCTL_PROC(_hw, OID_AUTO, floatingpoint, CTLTYPE_INT | CTLFLAG_RD,
-    0, PPC_FEATURE_HAS_FPU, cpu_feature_bit, "I",
-    "Floating point instructions executed in hardware");
-SYSCTL_PROC(_hw, OID_AUTO, altivec, CTLTYPE_INT | CTLFLAG_RD,
+SYSCTL_PROC(_hw, OID_AUTO, floatingpoint,
+    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE, 0, PPC_FEATURE_HAS_FPU,
+    cpu_feature_bit, "I", "Floating point instructions executed in hardware");
+SYSCTL_PROC(_hw, OID_AUTO, altivec, CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE,
     0, PPC_FEATURE_HAS_ALTIVEC, cpu_feature_bit, "I", "CPU supports Altivec");
 
 /*
@@ -283,7 +283,6 @@ cpu_feature_setup()
 	cpu_features |= cp->features;
 	cpu_features2 |= cp->features2;
 }
-
 
 void
 cpu_setup(u_int cpuid)
@@ -359,6 +358,7 @@ cpu_est_clockrate(int cpu_id, uint64_t *cps)
 	uint16_t	vers;
 	register_t	msr;
 	phandle_t	cpu, dev, root;
+	uint32_t	freq32;
 	int		res  = 0;
 	char		buf[8];
 
@@ -376,12 +376,13 @@ cpu_est_clockrate(int cpu_id, uint64_t *cps)
 		case MPC7410:
 		case MPC7447A:
 		case MPC7448:
-			mtspr(SPR_MMCR0, SPR_MMCR0_FC);
-			mtspr(SPR_PMC1, 0);
-			mtspr(SPR_MMCR0, SPR_MMCR0_PMC1SEL(PMCN_CYCLES));
+			mtspr(SPR_MMCR0_74XX, SPR_MMCR0_FC);
+			mtspr(SPR_PMC1_74XX, 0);
+			mtspr(SPR_MMCR0_74XX,
+			    SPR_MMCR0_74XX_PMC1SEL(PMCN_CYCLES));
 			DELAY(1000);
-			*cps = (mfspr(SPR_PMC1) * 1000) + 4999;
-			mtspr(SPR_MMCR0, SPR_MMCR0_FC);
+			*cps = (mfspr(SPR_PMC1_74XX) * 1000) + 4999;
+			mtspr(SPR_MMCR0_74XX, SPR_MMCR0_FC);
 
 			mtmsr(msr);
 			return (0);
@@ -389,18 +390,17 @@ cpu_est_clockrate(int cpu_id, uint64_t *cps)
 		case IBM970FX:
 		case IBM970MP:
 			isync();
-			mtspr(SPR_970MMCR0, SPR_MMCR0_FC);
+			mtspr(SPR_MMCR0, SPR_MMCR0_FC);
 			isync();
-			mtspr(SPR_970MMCR1, 0);
-			mtspr(SPR_970MMCRA, 0);
-			mtspr(SPR_970PMC1, 0);
-			mtspr(SPR_970MMCR0,
-			    SPR_970MMCR0_PMC1SEL(PMC970N_CYCLES));
+			mtspr(SPR_MMCR1, 0);
+			mtspr(SPR_MMCRA, 0);
+			mtspr(SPR_PMC1, 0);
+			mtspr(SPR_MMCR0, SPR_MMCR0_PMC1SEL(PMC970N_CYCLES));
 			isync();
 			DELAY(1000);
 			powerpc_sync();
-			mtspr(SPR_970MMCR0, SPR_MMCR0_FC);
-			*cps = (mfspr(SPR_970PMC1) * 1000) + 4999;
+			mtspr(SPR_MMCR0, SPR_MMCR0_FC);
+			*cps = (mfspr(SPR_PMC1) * 1000) + 4999;
 
 			mtmsr(msr);
 			return (0);
@@ -429,10 +429,11 @@ cpu_est_clockrate(int cpu_id, uint64_t *cps)
 				return (ENOENT);
 			if (OF_getprop(cpu, "ibm,extended-clock-frequency",
 			    cps, sizeof(*cps)) >= 0) {
+				*cps = be64toh(*cps);
 				return (0);
-			} else if (OF_getprop(cpu, "clock-frequency", cps, 
-			    sizeof(cell_t)) >= 0) {
-				*cps >>= 32;
+			} else if (OF_getencprop(cpu, "clock-frequency",
+			    &freq32, sizeof(freq32)) >= 0) {
+				*cps = freq32;
 				return (0);
 			} else {
 				return (ENOENT);
@@ -504,7 +505,6 @@ cpu_6xx_setup(int cpuid, uint16_t vers)
 			hid0 |= HID0_EMCP | HID0_BTIC | HID0_SGE | HID0_BHT;
 			hid0 |= HID0_EIEC;
 			break;
-
 	}
 
 	mtspr(SPR_HID0, hid0);
@@ -530,7 +530,6 @@ cpu_6xx_setup(int cpuid, uint16_t vers)
 	if (cpu_idle_hook == NULL)
 		cpu_idle_hook = cpu_idle_60x;
 }
-
 
 static void
 cpu_6xx_print_cacheinfo(u_int cpuid, uint16_t vers)
@@ -668,6 +667,9 @@ cpu_powerx_setup(int cpuid, uint16_t vers)
 	if ((mfmsr() & PSL_HV) == 0)
 		return;
 
+	/* Nuke the FSCR, to disable all facilities. */
+	mtspr(SPR_FSCR, 0);
+
 	/* Configure power-saving */
 	switch (vers) {
 	case IBMPOWER8:
@@ -753,8 +755,9 @@ cpu_idle_60x(sbintime_t sbt)
 	case MPC7450:
 	case MPC7455:
 	case MPC7457:
+		/* 0x7e00066c: dssall */
 		__asm __volatile("\
-			    dssall; sync; mtmsr %0; isync"
+			    .long 0x7e00066c; sync; mtmsr %0; isync"
 			    :: "r"(msr | PSL_POW));
 		break;
 	default:
@@ -794,7 +797,6 @@ cpu_idle_booke(sbintime_t sbt)
 static void
 cpu_idle_powerx(sbintime_t sbt)
 {
-
 	/* Sleeping when running on one cpu gives no advantages - avoid it */
 	if (smp_started == 0)
 		return;
@@ -823,7 +825,8 @@ cpu_idle_power9(sbintime_t sbt)
 	/* Suspend external interrupts until stop instruction completes. */
 	mtmsr(msr &  ~PSL_EE);
 	/* Set the stop state to lowest latency, wake up to next instruction */
-	mtspr(SPR_PSSCR, 0);
+	/* Set maximum transition level to 2, for deepest lossless sleep. */
+	mtspr(SPR_PSSCR, (2 << PSSCR_MTL_S) | (0 << PSSCR_RL_S));
 	/* "stop" instruction (PowerISA 3.0) */
 	__asm __volatile (".long 0x4c0002e4");
 	/*
@@ -831,7 +834,7 @@ cpu_idle_power9(sbintime_t sbt)
 	 * the wake up.
 	 */
 	mtmsr(msr);
-	
+
 }
 #endif
 

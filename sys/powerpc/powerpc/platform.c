@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Peter Grehan
  * Copyright (c) 2009 Nathan Whitehorn
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Dispatch platform calls to the appropriate platform implementation
  * through a previously registered kernel object.
@@ -47,13 +46,17 @@
 #include <sys/types.h>
 
 #include <vm/vm.h>
+#include <vm/vm_param.h>
 #include <vm/vm_page.h>
+#include <vm/vm_phys.h>
 
 #include <machine/cpu.h>
 #include <machine/md_var.h>
+#include <machine/ofw_machdep.h>
 #include <machine/platform.h>
 #include <machine/platformvar.h>
 #include <machine/smp.h>
+#include <machine/vmparam.h>
 
 #include "platform_if.h"
 
@@ -66,9 +69,12 @@ static char plat_name[64] = "";
 SYSCTL_STRING(_hw, OID_AUTO, platform, CTLFLAG_RDTUN,
     plat_name, 0, "Platform currently in use");
 
+static struct mem_affinity mem_info[VM_PHYSSEG_MAX + 1];
+static int vm_locality_table[MAXMEMDOM * MAXMEMDOM];
 static struct mem_region pregions[PHYS_AVAIL_SZ];
+static struct numa_mem_region numa_pregions[PHYS_AVAIL_SZ];
 static struct mem_region aregions[PHYS_AVAIL_SZ];
-static int npregions, naregions;
+static int nnumapregions, npregions, naregions;
 
 /*
  * Memory region utilities: determine if two regions overlap,
@@ -109,6 +115,54 @@ mr_cmp(const void *a, const void *b)
 		return (1);
 	else
 		return (0);
+}
+
+void
+numa_mem_regions(struct numa_mem_region **phys, int *physsz)
+{
+	struct mem_affinity *mi;
+	int i, j, maxdom, ndomain, offset;
+
+	nnumapregions = 0;
+	PLATFORM_NUMA_MEM_REGIONS(plat_obj, numa_pregions, &nnumapregions);
+
+	if (physsz != NULL)
+		*physsz = nnumapregions;
+	if (phys != NULL)
+		*phys = numa_pregions;
+	if (physsz == NULL || phys == NULL) {
+		printf("unset value\n");
+		return;
+	}
+	maxdom = 0;
+	for (i = 0; i < nnumapregions; i++)
+		if (numa_pregions[i].mr_domain > maxdom)
+			maxdom = numa_pregions[i].mr_domain;
+
+	mi = mem_info;
+	for (i = 0; i < nnumapregions; i++, mi++) {
+		mi->start = numa_pregions[i].mr_start;
+		mi->end = numa_pregions[i].mr_start + numa_pregions[i].mr_size;
+		mi->domain = numa_pregions[i].mr_domain;
+	}
+	offset = 0;
+	vm_locality_table[offset] = 10;
+	ndomain = maxdom + 1;
+	if (ndomain > 1) {
+		for (i = 0; i < ndomain; i++) {
+			for (j = 0; j < ndomain; j++) {
+				/*
+				 * Not sure what these values should actually be
+				 */
+				if (i == j)
+					vm_locality_table[offset] = 10;
+				else
+					vm_locality_table[offset] = 21;
+				offset++;
+			}
+		}
+	}
+	vm_phys_register_domains(ndomain, mem_info, vm_locality_table);
 }
 
 void
@@ -251,9 +305,15 @@ platform_smp_probe_threads(void)
 struct cpu_group *
 cpu_topo(void)
 {
-        return (PLATFORM_SMP_TOPO(plat_obj));
+	return (PLATFORM_SMP_TOPO(plat_obj));
 }
 #endif
+
+int
+platform_node_numa_domain(phandle_t node)
+{
+	return (PLATFORM_NODE_NUMA_DOMAIN(plat_obj, node));
+}
 
 /*
  * Reset back to firmware.
@@ -341,4 +401,3 @@ platform_probe_and_attach()
 
 	PLATFORM_ATTACH(plat_obj);
 }
-

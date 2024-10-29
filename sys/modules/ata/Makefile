@@ -1,6 +1,5 @@
 
 SUBDIR = atacore
-SUBDIR += atacard
 SUBDIR += ataisa
 SUBDIR += atapci 
 

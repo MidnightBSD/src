@@ -30,7 +30,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_CPUFUNC_H_
@@ -118,13 +117,6 @@ extern int64_t icache_line_size;
 #define	cpu_idcache_wbinv_range(a, s)
 #define	cpu_icache_sync_range(a, s)
 #define	cpu_icache_sync_range_checked(a, s)
-
-static __inline void
-load_satp(uint64_t val)
-{
-
-	__asm __volatile("csrw satp, %0" :: "r"(val));
-}
 
 #define	cpufunc_nullop()		riscv_nullop()
 

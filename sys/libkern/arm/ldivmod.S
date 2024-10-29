@@ -26,7 +26,6 @@
  */
 
 #include <machine/asm.h>
-
 /*
  * These calculate:
  * q = n / m 

@@ -48,7 +48,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ifmedia.h"
 
 #include <sys/param.h>
@@ -214,7 +213,6 @@ ifmedia_ioctl(struct ifnet *ifp, struct ifreq *ifr, struct ifmedia *ifm,
 		return (EINVAL);
 
 	switch (cmd) {
-
 	/*
 	 * Set the current media.
 	 */
@@ -370,7 +368,7 @@ ifmedia_baudrate(int mword)
 	/* Not known. */
 	return (0);
 }
- 
+
 #ifdef IFMEDIA_DEBUG
 static const struct ifmedia_description ifm_type_descriptions[] =
     IFM_TYPE_DESCRIPTIONS;

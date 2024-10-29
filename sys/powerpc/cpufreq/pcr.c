@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Nathan Whitehorn
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -64,7 +63,6 @@ static device_method_t pcr_methods[] = {
 	DEVMETHOD(cpufreq_drv_get,	pcr_get),
 	DEVMETHOD(cpufreq_drv_type,	pcr_type),
 	DEVMETHOD(cpufreq_drv_settings,	pcr_settings),
-
 	{0, 0}
 };
 
@@ -265,7 +263,7 @@ pcr_set(device_t dev, const struct cf_setting *set)
 	struct pcr_softc *sc;
 	register_t pcr, msr;
 	uint64_t psr;
-	
+
 	if (set == NULL)
 		return (EINVAL);
 	sc = device_get_softc(dev);
@@ -341,4 +339,3 @@ pcr_type(device_t dev, int *type)
 	*type = CPUFREQ_TYPE_RELATIVE;
 	return (0);
 }
-

@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Rui Paulo under sponsorship from the
  * FreeBSD Foundation.
@@ -119,7 +118,6 @@ static void	hwmp_peerdown(struct ieee80211_node *);
 static struct timeval ieee80211_hwmp_preqminint = { 0, 100000 };
 static struct timeval ieee80211_hwmp_perrminint = { 0, 100000 };
 
-
 /* NB: the Target Address set in a Proactive PREQ is the broadcast address. */
 static const uint8_t	broadcastaddr[IEEE80211_ADDR_LEN] =
 	{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
@@ -153,39 +151,46 @@ struct ieee80211_hwmp_state {
 	uint8_t			hs_maxhops;	/* max hop count */
 };
 
-static SYSCTL_NODE(_net_wlan, OID_AUTO, hwmp, CTLFLAG_RD, 0,
+static SYSCTL_NODE(_net_wlan, OID_AUTO, hwmp, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
     "IEEE 802.11s HWMP parameters");
 static int	ieee80211_hwmp_targetonly = 0;
 SYSCTL_INT(_net_wlan_hwmp, OID_AUTO, targetonly, CTLFLAG_RW,
     &ieee80211_hwmp_targetonly, 0, "Set TO bit on generated PREQs");
 static int	ieee80211_hwmp_pathtimeout = -1;
-SYSCTL_PROC(_net_wlan_hwmp, OID_AUTO, pathlifetime, CTLTYPE_INT | CTLFLAG_RW,
+SYSCTL_PROC(_net_wlan_hwmp, OID_AUTO, pathlifetime,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
     &ieee80211_hwmp_pathtimeout, 0, ieee80211_sysctl_msecs_ticks, "I",
     "path entry lifetime (ms)");
 static int	ieee80211_hwmp_maxpreq_retries = -1;
-SYSCTL_PROC(_net_wlan_hwmp, OID_AUTO, maxpreq_retries, CTLTYPE_INT | CTLFLAG_RW,
+SYSCTL_PROC(_net_wlan_hwmp, OID_AUTO, maxpreq_retries,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
     &ieee80211_hwmp_maxpreq_retries, 0, ieee80211_sysctl_msecs_ticks, "I",
     "maximum number of preq retries");
 static int	ieee80211_hwmp_net_diameter_traversaltime = -1;
 SYSCTL_PROC(_net_wlan_hwmp, OID_AUTO, net_diameter_traversal_time,
-    CTLTYPE_INT | CTLFLAG_RW, &ieee80211_hwmp_net_diameter_traversaltime, 0,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+    &ieee80211_hwmp_net_diameter_traversaltime, 0,
     ieee80211_sysctl_msecs_ticks, "I",
     "estimate traversal time across the MBSS (ms)");
 static int	ieee80211_hwmp_roottimeout = -1;
-SYSCTL_PROC(_net_wlan_hwmp, OID_AUTO, roottimeout, CTLTYPE_INT | CTLFLAG_RW,
+SYSCTL_PROC(_net_wlan_hwmp, OID_AUTO, roottimeout,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
     &ieee80211_hwmp_roottimeout, 0, ieee80211_sysctl_msecs_ticks, "I",
     "root PREQ timeout (ms)");
 static int	ieee80211_hwmp_rootint = -1;
-SYSCTL_PROC(_net_wlan_hwmp, OID_AUTO, rootint, CTLTYPE_INT | CTLFLAG_RW,
+SYSCTL_PROC(_net_wlan_hwmp, OID_AUTO, rootint,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
     &ieee80211_hwmp_rootint, 0, ieee80211_sysctl_msecs_ticks, "I",
     "root interval (ms)");
 static int	ieee80211_hwmp_rannint = -1;
-SYSCTL_PROC(_net_wlan_hwmp, OID_AUTO, rannint, CTLTYPE_INT | CTLFLAG_RW,
+SYSCTL_PROC(_net_wlan_hwmp, OID_AUTO, rannint,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
     &ieee80211_hwmp_rannint, 0, ieee80211_sysctl_msecs_ticks, "I",
     "root announcement interval (ms)");
 static struct timeval ieee80211_hwmp_rootconfint = { 0, 0 };
 static int	ieee80211_hwmp_rootconfint_internal = -1;
-SYSCTL_PROC(_net_wlan_hwmp, OID_AUTO, rootconfint, CTLTYPE_INT | CTLFLAG_RD,
+SYSCTL_PROC(_net_wlan_hwmp, OID_AUTO, rootconfint,
+    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE,
     &ieee80211_hwmp_rootconfint_internal, 0, ieee80211_sysctl_msecs_ticks, "I",
     "root confirmation interval (ms) (read-only)");
 
@@ -204,10 +209,10 @@ static struct ieee80211_mesh_proto_path mesh_proto_hwmp = {
 	.mpp_newstate	= hwmp_newstate,
 	.mpp_privlen	= sizeof(struct ieee80211_hwmp_route),
 };
-SYSCTL_PROC(_net_wlan_hwmp, OID_AUTO, inact, CTLTYPE_INT | CTLFLAG_RW,
-	&mesh_proto_hwmp.mpp_inact, 0, ieee80211_sysctl_msecs_ticks, "I",
-	"mesh route inactivity timeout (ms)");
-
+SYSCTL_PROC(_net_wlan_hwmp, OID_AUTO, inact,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    &mesh_proto_hwmp.mpp_inact, 0, ieee80211_sysctl_msecs_ticks, "I",
+    "mesh route inactivity timeout (ms)");
 
 static void
 ieee80211_hwmp_init(void)
@@ -640,7 +645,7 @@ hwmp_send_action(struct ieee80211vap *vap,
 	}
 
 	m->m_pkthdr.len = m->m_len = frm - mtod(m, uint8_t *);
-	M_PREPEND(m, sizeof(struct ieee80211_frame), M_NOWAIT);
+	M_PREPEND(m, sizeof(struct ieee80211_frame), IEEE80211_M_NOWAIT);
 	if (m == NULL) {
 		ieee80211_free_node(ni);
 		vap->iv_stats.is_tx_nobuf++;
@@ -1393,7 +1398,7 @@ hwmp_recv_prep(struct ieee80211vap *vap, struct ieee80211_node *ni,
 
 	/*
 	 * Check if we received a PREP w/ AE and store target external address.
-	 * We may store target external address if recevied PREP w/ AE
+	 * We may store target external address if received PREP w/ AE
 	 * and we are not final destination
 	 */
 	if (prep->prep_flags & IEEE80211_MESHPREP_FLAGS_AE) {
@@ -1833,7 +1838,7 @@ hwmp_send_rann(struct ieee80211vap *vap,
 	 *     [6] addr3 = sa
 	 *     [1] action
 	 *     [1] category
-	 *     [tlv] root annoucement
+	 *     [tlv] root announcement
 	 */
 	rann->rann_ie = IEEE80211_ELEMID_MESHRANN;
 	rann->rann_len = IEEE80211_MESHRANN_BASE_SZ;
@@ -1868,7 +1873,6 @@ hwmp_rediscover_cb(void *arg)
 	}
 
 	hr->hr_preqretries++;
-
 
 	IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_HWMP, rt->rt_dest,
 	    "start path rediscovery , target seq %u", hr->hr_seq);
@@ -1923,8 +1927,8 @@ hwmp_discover(struct ieee80211vap *vap,
 		if (rt == NULL) {
 			rt = ieee80211_mesh_rt_add(vap, dest);
 			if (rt == NULL) {
-				IEEE80211_NOTE(vap, IEEE80211_MSG_HWMP,
-				    ni, "unable to add discovery path to %6D",
+				IEEE80211_DPRINTF(vap, IEEE80211_MSG_HWMP,
+				    "unable to add discovery path to %6D",
 				    dest, ":");
 				vap->iv_stats.is_mesh_rtaddfailed++;
 				goto done;
@@ -2014,6 +2018,7 @@ done:
 			 */
 			IEEE80211_NOTE_MAC(vap, IEEE80211_MSG_HWMP, dest,
 			    "%s", "queue frame until path found");
+			MPASS((m->m_pkthdr.csum_flags & CSUM_SND_TAG) == 0);
 			m->m_pkthdr.rcvif = (void *)(uintptr_t)
 			    ieee80211_mac_hash(ic, dest);
 			/* XXX age chosen randomly */

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Andreas Tobler
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/systm.h>
@@ -599,7 +598,7 @@ fcu_attach_fans(device_t dev)
 	ctx = device_get_sysctl_ctx(dev);
 	fanroot_oid = SYSCTL_ADD_NODE(ctx,
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO, "fans",
-	    CTLFLAG_RD, 0, "FCU Fan Information");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, 0, "FCU Fan Information");
 
 	/* Now we can fill the properties into the allocated struct. */
 	sc->sc_nfans = fcu_fill_fan_prop(dev);
@@ -619,8 +618,8 @@ fcu_attach_fans(device_t dev)
 
 		if (sc->sc_fans[i].type == FCU_FAN_RPM) {
 			oid = SYSCTL_ADD_NODE(ctx, SYSCTL_CHILDREN(fanroot_oid),
-					      OID_AUTO, sysctl_name,
-					      CTLFLAG_RD, 0, "Fan Information");
+			    OID_AUTO, sysctl_name, CTLFLAG_RD | CTLFLAG_MPSAFE,
+			    0, "Fan Information");
 			SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(oid), OID_AUTO,
 				       "minrpm", CTLFLAG_RD,
 				       &(sc->sc_fans[i].fan.min_rpm), 0,
@@ -631,16 +630,16 @@ fcu_attach_fans(device_t dev)
 				       "Maximum allowed RPM");
 			/* I use i to pass the fan id. */
 			SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(oid), OID_AUTO,
-					"rpm", CTLTYPE_INT | CTLFLAG_RW, dev, i,
-					fcu_fanrpm_sysctl, "I", "Fan RPM");
+			    "rpm", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+			    dev, i, fcu_fanrpm_sysctl, "I", "Fan RPM");
 		} else {
 			fcu_fan_get_pwm(dev, &sc->sc_fans[i],
 					&sc->sc_fans[i].setpoint,
 					&sc->sc_fans[i].rpm);
 
 			oid = SYSCTL_ADD_NODE(ctx, SYSCTL_CHILDREN(fanroot_oid),
-					      OID_AUTO, sysctl_name,
-					      CTLFLAG_RD, 0, "Fan Information");
+			    OID_AUTO, sysctl_name, CTLFLAG_RD | CTLFLAG_MPSAFE,
+			    0, "Fan Information");
 			SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(oid), OID_AUTO,
 				       "minpwm", CTLFLAG_RD,
 				       &(sc->sc_fans[i].fan.min_rpm), 0,
@@ -653,13 +652,13 @@ fcu_attach_fans(device_t dev)
 			 * of info I want to display/modify.
 			 */
 			SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(oid), OID_AUTO,
-					"pwm", CTLTYPE_INT | CTLFLAG_RW, dev,
-					FCU_PWM_SYSCTL_PWM | i,
-					fcu_fanrpm_sysctl, "I", "Fan PWM in %");
+			    "pwm", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+			    dev, FCU_PWM_SYSCTL_PWM | i, fcu_fanrpm_sysctl, "I",
+			    "Fan PWM in %");
 			SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(oid), OID_AUTO,
-					"rpm", CTLTYPE_INT | CTLFLAG_RD, dev,
-					FCU_PWM_SYSCTL_RPM | i,
-					fcu_fanrpm_sysctl, "I", "Fan RPM");
+			    "rpm", CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
+			    dev, FCU_PWM_SYSCTL_RPM | i, fcu_fanrpm_sysctl, "I",
+			    "Fan RPM");
 		}
 	}
 

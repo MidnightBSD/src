@@ -36,7 +36,6 @@
  * OF SUCH DAMAGE.
  *
  * Author: Archie Cobbs <archie@freebsd.org>
- *
  * $Whistle: ng_pptpgre.c,v 1.7 1999/12/08 00:10:06 archie Exp $
  */
 
@@ -144,7 +143,8 @@ typedef u_int64_t		pptptime_t;
 #define SESSHASHSIZE		0x0020
 #define SESSHASH(x)		(((x) ^ ((x) >> 8)) & (SESSHASHSIZE - 1))
 
-SYSCTL_NODE(_net_graph, OID_AUTO, pptpgre, CTLFLAG_RW, 0, "PPTPGRE");
+SYSCTL_NODE(_net_graph, OID_AUTO, pptpgre, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "PPTPGRE");
 
 /*
  * Reorder queue maximum length. Zero disables reorder.
@@ -383,7 +383,7 @@ ng_pptpgre_newhook(node_p node, hook_p hook, const char *name)
 		hpriv = malloc(sizeof(*hpriv), M_NETGRAPH, M_NOWAIT | M_ZERO);
 		if (hpriv == NULL)
 			return (ENOMEM);
-	
+
 		/* Initialize state */
 		mtx_init(&hpriv->mtx, "ng_pptp", NULL, MTX_DEF);
 		ng_callout_init(&hpriv->sackTimer);
@@ -598,7 +598,6 @@ ng_pptpgre_xmit(hpriv_p hpriv, item_p item)
 	}
 	/* Check if there's data */
 	if (m != NULL) {
-
 		/* Check if windowing is enabled */
 		if (hpriv->conf.enableWindowing) {
 			/* Is our transmit window full? */

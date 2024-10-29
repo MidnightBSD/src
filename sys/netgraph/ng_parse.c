@@ -174,7 +174,6 @@ ng_parse_getDefault(const struct ng_parse_type *type, u_char *buf, int *buflen)
 	return (*func)(type, buf, buf, buflen);
 }
 
-
 /************************************************************************
 			STRUCTURE TYPE
  ************************************************************************/
@@ -1900,4 +1899,3 @@ ng_get_getAlign_method(const struct ng_parse_type *t)
 		t = t->supertype;
 	return (t ? t->getAlign : NULL);
 }
-

@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_watchdog.h"
 
 #include <sys/param.h>

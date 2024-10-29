@@ -35,18 +35,19 @@
 extern long Maxmem;
 extern char sigcode[];
 extern int szsigcode;
-extern uint64_t *vm_page_dump;
-extern int vm_page_dump_size;
 extern u_long elf_hwcap;
 extern register_t mvendorid;
 extern register_t marchid;
 extern register_t mimpid;
+extern u_int mmu_caps;
+
+/* Supervisor-mode extension support */
+extern bool has_sstc;
+extern bool has_sscofpmf;
 
 struct dumperinfo;
+struct minidumpstate;
 
-void busdma_swi(void);
-void dump_add_page(vm_paddr_t);
-void dump_drop_page(vm_paddr_t);
-int minidumpsys(struct dumperinfo *);
+int cpu_minidumpsys(struct dumperinfo *, const struct minidumpstate *);
 
 #endif /* !_MACHINE_MD_VAR_H_ */

@@ -3,7 +3,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001-2003 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -338,4 +338,3 @@ int  ng_btsocket_rfcomm_sockaddr   (struct socket *, struct sockaddr **);
 #endif /* _KERNEL */
 
 #endif /* _NETGRAPH_BTSOCKET_RFCOMM_H_ */
-

@@ -36,7 +36,6 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
  */
 #include "opt_altq.h"
 #include "opt_inet.h"
@@ -244,7 +243,6 @@ codel_dequeue(struct ifaltq *ifq, int op)
 
 	if (op == ALTDQ_POLL)
 		return (qhead(cif->cl_q));
-
 
 	m = codel_getq(&cif->codel, cif->cl_q);
 	if (m != NULL) {

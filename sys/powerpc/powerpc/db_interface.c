@@ -1,7 +1,6 @@
 /*	$NetBSD: db_interface.c,v 1.20 2002/05/13 20:30:09 matt Exp $ */
 /*	$OpenBSD: db_interface.c,v 1.2 1996/12/28 06:21:50 rahnds Exp $	*/
 
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/cons.h>
@@ -90,4 +89,5 @@ db_show_mdpcpu(struct pcpu *pc)
 
 	db_printf("PPC: hwref   = %#zx\n", pc->pc_hwref);
 	db_printf("PPC: ipimask = %#x\n", pc->pc_ipimask);
+	db_printf("PPC: flags   = %#x\n", pc->pc_flags);
 }

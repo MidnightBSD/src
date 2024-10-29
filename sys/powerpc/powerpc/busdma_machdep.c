@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997, 1998 Justin T. Gibbs.
  * All rights reserved.
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -72,8 +71,8 @@ struct bus_dma_tag {
 	bus_dma_filter_t *filter;
 	void		 *filterarg;
 	bus_size_t	  maxsize;
-	u_int		  nsegments;
 	bus_size_t	  maxsegsz;
+	u_int		  nsegments;
 	int		  flags;
 	int		  ref_count;
 	int		  map_count;
@@ -93,8 +92,6 @@ struct bounce_page {
 	bus_size_t	datacount;	/* client data count */
 	STAILQ_ENTRY(bounce_page) links;
 };
-
-int busdma_swi_pending;
 
 struct bounce_zone {
 	STAILQ_ENTRY(bounce_zone) links;
@@ -118,8 +115,10 @@ static struct mtx bounce_lock;
 static int total_bpages;
 static int busdma_zonecount;
 static STAILQ_HEAD(, bounce_zone) bounce_zone_list;
+static void *busdma_ih;
 
-static SYSCTL_NODE(_hw, OID_AUTO, busdma, CTLFLAG_RD, 0, "Busdma parameters");
+static SYSCTL_NODE(_hw, OID_AUTO, busdma, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "Busdma parameters");
 SYSCTL_INT(_hw_busdma, OID_AUTO, total_bpages, CTLFLAG_RD, &total_bpages, 0,
 	   "Total bounce pages");
 
@@ -171,7 +170,7 @@ run_filter(bus_dma_tag_t dmat, bus_addr_t paddr)
 		    paddr > dmat->lowaddr && paddr <= dmat->highaddr)
 			retval = 1;
 		if (dmat->filter == NULL &&
-		    (paddr & (dmat->alignment - 1)) != 0)
+		    !vm_addr_align_ok(paddr, dmat->alignment))
 			retval = 1;
 		if (dmat->filter != NULL &&
 		    (*dmat->filter)(dmat->filterarg, paddr) != 0)
@@ -184,9 +183,7 @@ run_filter(bus_dma_tag_t dmat, bus_addr_t paddr)
 
 /*
  * Convenience function for manipulating driver locks from busdma (during
- * busdma_swi, for example).  Drivers that don't provide their own locks
- * should specify &Giant to dmat->lockfuncarg.  Drivers that use their own
- * non-mutex locking scheme don't have to use this at all.
+ * busdma_swi, for example).
  */
 void
 busdma_lock_mutex(void *arg, bus_dma_lock_op_t op)
@@ -241,6 +238,10 @@ bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 	if (maxsegsz == 0) {
 		return (EINVAL);
 	}
+
+	/* Filters are deprecated, emit a warning. */
+	if (filter != NULL || filterarg != NULL)
+		printf("Warning: use of filters is deprecated; see busdma(9)\n");
 
 	/* Return a NULL tag on failure */
 	*dmat = NULL;
@@ -328,7 +329,7 @@ bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 		/* Performed initial allocation */
 		newtag->flags |= BUS_DMA_MIN_ALLOC_COMP;
 	}
-	
+
 	if (error != 0) {
 		free(newtag, M_DEVBUF);
 	} else {
@@ -337,6 +338,26 @@ bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 	CTR4(KTR_BUSDMA, "%s returned tag %p tag flags 0x%x error %d",
 	    __func__, newtag, (newtag != NULL ? newtag->flags : 0), error);
 	return (error);
+}
+
+void
+bus_dma_template_clone(bus_dma_template_t *t, bus_dma_tag_t dmat)
+{
+
+	if (t == NULL || dmat == NULL)
+		return;
+
+	t->parent = dmat->parent;
+	t->alignment = dmat->alignment;
+	t->boundary = dmat->boundary;
+	t->lowaddr = dmat->lowaddr;
+	t->highaddr = dmat->highaddr;
+	t->maxsize = dmat->maxsize;
+	t->nsegments = dmat->nsegments;
+	t->maxsegsize = dmat->maxsegsz;
+	t->flags = dmat->flags;
+	t->lockfunc = dmat->lockfunc;
+	t->lockfuncarg = dmat->lockfuncarg;
 }
 
 int
@@ -349,14 +370,13 @@ bus_dma_tag_set_domain(bus_dma_tag_t dmat, int domain)
 int
 bus_dma_tag_destroy(bus_dma_tag_t dmat)
 {
-	bus_dma_tag_t dmat_copy;
+	bus_dma_tag_t dmat_copy __unused;
 	int error;
 
 	error = 0;
 	dmat_copy = dmat;
 
 	if (dmat != NULL) {
-
 		if (dmat->map_count != 0) {
 			error = EBUSY;
 			goto out;
@@ -403,14 +423,12 @@ bus_dmamap_create(bus_dma_tag_t dmat, int flags, bus_dmamap_t *mapp)
 		return (ENOMEM);
 	}
 
-
 	/*
 	 * Bouncing might be required if the driver asks for an active
 	 * exclusion region, a data alignment that is stricter than 1, and/or
 	 * an active address boundary.
 	 */
 	if (dmat->flags & BUS_DMA_COULD_BOUNCE) {
-
 		/* Must bounce */
 		struct bounce_zone *bz;
 		int maxpages;
@@ -492,7 +510,6 @@ bus_dmamap_destroy(bus_dma_tag_t dmat, bus_dmamap_t map)
 	return (0);
 }
 
-
 /*
  * Allocate a piece of memory that can be efficiently mapped into
  * bus device space based on the constraints lited in the dma tag.
@@ -514,11 +531,9 @@ bus_dmamem_alloc(bus_dma_tag_t dmat, void** vaddr, int flags,
 
 	if (flags & BUS_DMA_ZERO)
 		mflags |= M_ZERO;
-#ifdef NOTYET
 	if (flags & BUS_DMA_NOCACHE)
 		attr = VM_MEMATTR_UNCACHEABLE;
 	else
-#endif
 		attr = VM_MEMATTR_DEFAULT;
 
 	/* 
@@ -550,7 +565,7 @@ bus_dmamem_alloc(bus_dma_tag_t dmat, void** vaddr, int flags,
 		CTR4(KTR_BUSDMA, "%s: tag %p tag flags 0x%x error %d",
 		    __func__, dmat, dmat->flags, ENOMEM);
 		return (ENOMEM);
-	} else if (vtophys(*vaddr) & (dmat->alignment - 1)) {
+	} else if (!vm_addr_align_ok(vtophys(*vaddr), dmat->alignment)) {
 		printf("bus_dmamem_alloc failed to align memory properly.\n");
 	}
 	CTR4(KTR_BUSDMA, "%s: tag %p tag flags 0x%x error %d",
@@ -675,18 +690,13 @@ static int
 _bus_dmamap_addseg(bus_dma_tag_t dmat, bus_dmamap_t map, bus_addr_t curaddr,
 		   bus_size_t sgsize, bus_dma_segment_t *segs, int *segp)
 {
-	bus_addr_t baddr, bmask;
 	int seg;
 
 	/*
 	 * Make sure we don't cross any boundaries.
 	 */
-	bmask = ~(dmat->boundary - 1);
-	if (dmat->boundary > 0) {
-		baddr = (curaddr + dmat->boundary) & bmask;
-		if (sgsize > (baddr - curaddr))
-			sgsize = (baddr - curaddr);
-	}
+	if (!vm_addr_bound_ok(curaddr, sgsize, dmat->boundary))
+		sgsize = roundup2(curaddr, dmat->boundary) - curaddr;
 
 	/*
 	 * Insert chunk into a segment, coalescing with
@@ -700,8 +710,8 @@ _bus_dmamap_addseg(bus_dma_tag_t dmat, bus_dmamap_t map, bus_addr_t curaddr,
 	} else {
 		if (curaddr == segs[seg].ds_addr + segs[seg].ds_len &&
 		    (segs[seg].ds_len + sgsize) <= dmat->maxsegsz &&
-		    (dmat->boundary == 0 ||
-		     (segs[seg].ds_addr & bmask) == (curaddr & bmask)))
+		    vm_addr_bound_ok(segs[seg].ds_addr,
+		    segs[seg].ds_len + sgsize, dmat->boundary))
 			segs[seg].ds_len += sgsize;
 		else {
 			if (++seg >= dmat->nsegments)
@@ -909,7 +919,6 @@ bus_dmamap_sync(bus_dma_tag_t dmat, bus_dmamap_t map, bus_dmasync_op_t op)
 	vm_offset_t datavaddr, tempvaddr;
 
 	if ((bpage = STAILQ_FIRST(&map->bpages)) != NULL) {
-
 		/*
 		 * Handle data bouncing.  We might also
 		 * want to add support for invalidating
@@ -1022,7 +1031,7 @@ alloc_bounce_zone(bus_dma_tag_t dmat)
 	sysctl_ctx_init(&bz->sysctl_tree);
 	bz->sysctl_tree_top = SYSCTL_ADD_NODE(&bz->sysctl_tree,
 	    SYSCTL_STATIC_CHILDREN(_hw_busdma), OID_AUTO, bz->zoneid,
-	    CTLFLAG_RD, 0, "");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, 0, "");
 	if (bz->sysctl_tree_top == NULL) {
 		sysctl_ctx_free(&bz->sysctl_tree);
 		return (0);	/* XXX error code? */
@@ -1165,6 +1174,7 @@ free_bounce_page(bus_dma_tag_t dmat, struct bounce_page *bpage)
 {
 	struct bus_dmamap *map;
 	struct bounce_zone *bz;
+	bool schedule_swi;
 
 	bz = dmat->bounce_zone;
 	bpage->datavaddr = 0;
@@ -1179,6 +1189,7 @@ free_bounce_page(bus_dma_tag_t dmat, struct bounce_page *bpage)
 		bpage->busaddr &= ~PAGE_MASK;
 	}
 
+	schedule_swi = false;
 	mtx_lock(&bounce_lock);
 	STAILQ_INSERT_HEAD(&bz->bounce_page_list, bpage, links);
 	bz->free_bpages++;
@@ -1188,16 +1199,17 @@ free_bounce_page(bus_dma_tag_t dmat, struct bounce_page *bpage)
 			STAILQ_REMOVE_HEAD(&bounce_map_waitinglist, links);
 			STAILQ_INSERT_TAIL(&bounce_map_callbacklist,
 					   map, links);
-			busdma_swi_pending = 1;
 			bz->total_deferred++;
-			swi_sched(vm_ih, 0);
+			schedule_swi = true;
 		}
 	}
 	mtx_unlock(&bounce_lock);
+	if (schedule_swi)
+		swi_sched(busdma_ih, 0);
 }
 
-void
-busdma_swi(void)
+static void
+busdma_swi(void *dummy __unused)
 {
 	bus_dma_tag_t dmat;
 	struct bus_dmamap *map;
@@ -1217,6 +1229,16 @@ busdma_swi(void)
 	mtx_unlock(&bounce_lock);
 }
 
+static void
+start_busdma_swi(void *dummy __unused)
+{
+	if (swi_add(NULL, "busdma", busdma_swi, NULL, SWI_BUSDMA, INTR_MPSAFE,
+	    &busdma_ih))
+		panic("died while creating busdma swi ithread");
+}
+SYSINIT(start_busdma_swi, SI_SUB_SOFTINTR, SI_ORDER_ANY, start_busdma_swi,
+    NULL);
+
 int
 bus_dma_tag_set_iommu(bus_dma_tag_t tag, device_t iommu, void *cookie)
 {
@@ -1225,4 +1247,3 @@ bus_dma_tag_set_iommu(bus_dma_tag_t tag, device_t iommu, void *cookie)
 
 	return (0);
 }
-

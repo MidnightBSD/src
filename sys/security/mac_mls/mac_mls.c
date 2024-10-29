@@ -37,7 +37,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -92,7 +91,8 @@
 
 SYSCTL_DECL(_security_mac);
 
-static SYSCTL_NODE(_security_mac, OID_AUTO, mls, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_security_mac, OID_AUTO, mls,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "TrustedBSD mac_mls policy controls");
 
 static int	mls_label_size = sizeof(struct mac_mls);
@@ -2376,7 +2376,7 @@ mls_sysvshm_check_shmat(struct ucred *cred, struct shmid_kernel *shmsegptr,
 		if (!mls_dominate_effective(obj, subj))
 			return (EACCES);
 	}
-	
+
 	return (0);
 }
 
@@ -3369,7 +3369,6 @@ static struct mac_policy_ops mls_ops =
 	.mpo_sysvshm_create = mls_sysvshm_create,
 	.mpo_sysvshm_destroy_label = mls_destroy_label,
 	.mpo_sysvshm_init_label = mls_init_label,
-
 
 	.mpo_system_check_acct = mls_system_check_acct,
 	.mpo_system_check_auditctl = mls_system_check_auditctl,

@@ -4,7 +4,7 @@
 # For more information on this file, please read the handbook section on
 # Kernel Configuration Files:
 #
-#    https://www.FreeBSD.org/doc/en_US.ISO8859-1/books/handbook/kernelconfig-config.html
+#    https://docs.freebsd.org/en/books/handbook/kernelconfig/#kernelconfig-config
 #
 # The handbook is also available locally in /usr/share/doc/handbook
 # if you've installed the doc distribution, otherwise always see the
@@ -29,18 +29,25 @@ makeoptions	WITH_CTF=1
 options 	POWERMAC		#NewWorld Apple PowerMacs
 options 	PS3			#Sony Playstation 3
 options 	MAMBO			#IBM Mambo Full System Simulator
+options		QEMU			#QEMU processor emulator
 options 	PSERIES			#PAPR-compliant systems (e.g. IBM p)
 options 	POWERNV			#Non-virtualized OpenPOWER systems
 
 options		FDT			#Flattened Device Tree
 options 	SCHED_ULE		#ULE scheduler
+options 	NUMA			#Non-Uniform Memory Architecture support
 options 	PREEMPTION		#Enable kernel thread preemption
 options 	VIMAGE			# Subsystem virtualization, e.g. VNET
 options 	INET			#InterNETworking
 options 	INET6			#IPv6 communications protocols
+options 	IPSEC_SUPPORT		# Allow kldload of ipsec and tcpmd5
+options		NETLINK			# netlink(4) support
+options		ROUTE_MPATH		# Multipath routing support
+options 	TCP_OFFLOAD		# TCP offload
+options 	TCP_BLACKBOX		# Enhanced TCP event logging
 options 	TCP_HHOOK		# hhook(9) framework for TCP
 options 	TCP_RFC7413		# TCP Fast Open
-options 	SCTP			#Stream Control Transmission Protocol
+options 	SCTP_SUPPORT		# Allow kldload of SCTP
 options 	FFS			#Berkeley Fast Filesystem
 options 	SOFTUPDATES		#Enable FFS soft updates support
 options 	UFS_ACL			#Support for access control lists
@@ -48,6 +55,7 @@ options 	UFS_DIRHASH		#Improve performance on big directories
 options 	UFS_GJOURNAL		#Enable gjournal-based UFS journaling
 options 	QUOTA			#Enable disk quotas for UFS
 options 	MD_ROOT			#MD is a potential root device
+options 	MD_ROOT_MEM		#Enable use of initrd as MD root
 options 	NFSCL			#Network Filesystem Client
 options 	NFSD			#Network Filesystem Server
 options 	NFSLOCKD		#Network Lock Manager
@@ -56,6 +64,7 @@ options 	MSDOSFS			#MSDOS Filesystem
 options 	CD9660			#ISO 9660 Filesystem
 options 	PROCFS			#Process filesystem (requires PSEUDOFS)
 options 	PSEUDOFS		#Pseudo-filesystem framework
+options 	TMPFS			#Efficient memory filesystem
 options 	GEOM_PART_APM		#Apple Partition Maps.
 options 	GEOM_PART_GPT		#GUID Partition Tables.
 options 	GEOM_LABEL		#Provides labelization
@@ -66,6 +75,7 @@ options 	COMPAT_FREEBSD7		#Compatible with FreeBSD7
 options 	COMPAT_FREEBSD9		# Compatible with FreeBSD9
 options 	COMPAT_FREEBSD10	# Compatible with FreeBSD10
 options 	COMPAT_FREEBSD11	# Compatible with FreeBSD11
+options 	COMPAT_FREEBSD12	# Compatible with FreeBSD12
 options 	SCSI_DELAY=5000		#Delay (in ms) before probing SCSI 
 options 	KTRACE			#ktrace(1) syscall trace support
 options 	STACK			#stack(9) support
@@ -82,6 +92,9 @@ options 	MAC			# TrustedBSD MAC Framework
 options 	KDTRACE_HOOKS		# Kernel DTrace hooks
 options 	DDB_CTF			# Kernel ELF linker loads CTF data
 options 	INCLUDE_CONFIG_FILE     # Include this file in kernel
+options 	RACCT			# Resource accounting framework
+options 	RACCT_DEFAULT_TO_DISABLED # Set kern.racct.enable=0 by default
+options 	RCTL			# Resource limits
 
 # Debugging support.  Always need this:
 options 	KDB			# Enable kernel debugger support.
@@ -91,6 +104,7 @@ options 	KDB_TRACE		# Print a stack trace for a panic.
 options 	EKCD			# Support for encrypted kernel dumps
 options 	GZIO			# gzip-compressed kernel and user dumps
 options 	ZSTDIO			# zstd-compressed kernel and user dumps
+options 	DEBUGNET		# debugnet networking
 options 	NETDUMP			# netdump(4) client support
 
 # Make an SMP-capable kernel by default
@@ -116,20 +130,25 @@ options		NVME_USE_NVD=0	# prefer the cam(4) based nda(4) driver
 device		nvd		# expose NVMe namespaces as disks, depends on nvme
 
 # SCSI Controllers
+device		aacraid		# Adaptec by PMC RAID
 device		ahc		# AHA2940 and onboard AIC7xxx devices
 options 	AHC_ALLOW_MEMIO	# Attempt to use memory mapped I/O
 device		isp		# Qlogic family
 device		ispfw		# Firmware module for Qlogic host adapters
+device		mrsas		# LSI/Avago MegaRAID SAS/SATA, 6Gb/s and 12Gb/s
 device		mpt		# LSI-Logic MPT-Fusion
 device		mps		# LSI-Logic MPT-Fusion 2
+device		mpr		# LSI SAS3008 MPT-Fusion SAS-3
 device		sym		# NCR/Symbios/LSI Logic 53C8XX/53C1010/53C1510D
 
 # ATA/SCSI peripherals
 device		scbus		# SCSI bus (required for ATA/SCSI)
+device		ch		# SCSI media changers
 device		da		# Direct Access (disks)
 device		sa		# Sequential Access (tape etc)
 device		cd		# CD
 device		pass		# Passthrough device (direct ATA/SCSI access)
+device		ses		# Enclosure Service (SES and SAF-TE)
 
 # vt is the default console driver, resembling an SCO console
 device		vt		# Core console driver
@@ -161,8 +180,8 @@ device		re		# RealTek 8139C+/8169/8169S/8110S
 device		rl		# RealTek 8129/8139
 
 # Pseudo devices.
+device		crypto		# core crypto support
 device		loop		# Network loopback
-device		random		# Entropy device
 device		ether		# Ethernet support
 device		vlan		# 802.1Q VLAN support
 device		tuntap		# Packet tunnel.
@@ -186,10 +205,8 @@ device		usb		# USB Bus (required)
 device		uhid		# "Human Interface Devices"
 device		ukbd		# Keyboard
 options 	KBD_INSTALL_CDEV # install a CDEV entry in /dev
-device		ulpt		# Printer
 device		umass		# Disks/Mass storage - Requires scbus and da0
 device		ums		# Mouse
-device		urio		# Diamond Rio 500 MP3 player
 # USB Ethernet
 device		aue		# ADMtek USB Ethernet
 device		axe		# ASIX Electronics USB Ethernet
@@ -198,8 +215,19 @@ device		cue		# CATC USB Ethernet
 device		kue		# Kawasaki LSI USB Ethernet
 
 # Wireless NIC cards
-options 	IEEE80211_SUPPORT_MESH
-options 	AH_SUPPORT_AR5416
+device		wlan		# 802.11 support
+options		IEEE80211_SUPPORT_MESH	# enable 802.11s draft support
+options		IEEE80211_DEBUG	# enable debug msgs
+device		wlan_wep	# 802.11 WEP support
+device		wlan_ccmp	# 802.11 CCMP support
+device		wlan_tkip	# 802.11 TKIP support
+device		wlan_amrr	# AMRR transmit rate control algorithm
+device		ath		# Atheros NICs
+device		ath_pci		# Atheros pci/cardbus glue
+device		ath_hal		# pci/cardbus chip support
+options		AH_AR5416_INTERRUPT_MITIGATION	# AR5416 interrupt mitigation
+options		ATH_ENABLE_11N	# Enable 802.11n support for AR5416 and later
+device		ath_rate_sample	# SampleRate tx rate control for ath
 
 # FireWire support
 device		firewire	# FireWire bus code
@@ -219,6 +247,7 @@ device		powermac_nvram	# Open Firmware configuration NVRAM
 device		smu		# Apple System Management Unit
 device		atibl		# ATI-based backlight driver for PowerBooks/iBooks
 device		nvbl		# nVidia-based backlight driver for PowerBooks/iBooks
+device		opalflash	# PowerNV embedded flash memory
 
 # ADB support
 device		adb
@@ -230,7 +259,22 @@ device		snd_ai2s	# Apple I2S audio
 device		snd_hda		# Intel High Definition Audio
 device		snd_uaudio	# USB Audio
 
+# Netmap provides direct access to TX/RX rings on supported NICs
+device		netmap		# netmap(4) support
+
 # evdev interface
 options 	EVDEV_SUPPORT		# evdev support in legacy drivers
 device		evdev			# input event device support
 device		uinput			# install /dev/uinput cdev
+
+# VirtIO support
+device          virtio                  # Generic VirtIO bus (required)
+device          virtio_pci              # VirtIO PCI device
+device          vtnet                   # VirtIO Ethernet device
+device          virtio_blk              # VirtIO Block device
+device          virtio_scsi             # VirtIO SCSI device
+device          virtio_balloon          # VirtIO Memory Balloon device
+
+# HID support
+options 	HID_DEBUG		# enable debug msgs
+device		hid			# Generic HID support

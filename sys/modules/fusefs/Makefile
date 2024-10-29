@@ -6,7 +6,4 @@ SRCS=	vnode_if.h \
 	fuse_node.c fuse_io.c fuse_device.c fuse_ipc.c fuse_file.c \
 	fuse_vfsops.c fuse_vnops.c fuse_internal.c fuse_main.c
 
-# Symlink for backwards compatibility with systems installed at 2.x or older
-SYMLINKS=	${KMOD}.ko ${KMODDIR}/fuse.ko
-
 .include <bsd.kmod.mk>

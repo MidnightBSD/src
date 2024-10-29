@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017 Jason A. Harmening.
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _BUS_DMA_INTERNAL_H_
@@ -57,4 +56,3 @@ void	_bus_dmamap_waitok(bus_dma_tag_t dmat, bus_dmamap_t map,
 	    void *callback_arg);
 
 #endif /* !_BUS_DMA_INTERNAL_H_ */
-

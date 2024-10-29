@@ -30,12 +30,10 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- *
  * ATM call control and API
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -492,10 +490,8 @@ ng_ccatm_rcvmsg(node_p node, item_p item, hook_p lasthook)
 	NGI_GET_MSG(item, msg);
 
 	switch (msg->header.typecookie) {
-
 	  case NGM_CCATM_COOKIE:
 		switch (msg->header.cmd) {
-
 		  case NGM_CCATM_DUMP:
 			if (priv->dump)
 				error = ng_ccatm_dump(node);
@@ -769,14 +765,12 @@ ng_ccatm_rcvmsg(node_p node, item_p item, hook_p lasthook)
 		  default:
 			error = EINVAL;
 			break;
-
 		}
 		break;
 
 	  default:
 		error = EINVAL;
 		break;
-
 	}
 
 	NG_RESPOND_MSG(error, node, item, resp);
@@ -1181,7 +1175,6 @@ ng_ccatm_mod_event(module_t mod, int event, void *data)
 	int error = 0;
 
 	switch (event) {
-
 	  case MOD_LOAD:
 		break;
 

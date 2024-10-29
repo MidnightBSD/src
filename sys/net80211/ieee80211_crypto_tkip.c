@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * IEEE 802.11i TKIP crypto support.
  *
@@ -208,13 +207,12 @@ tkip_encap(struct ieee80211_key *k, struct mbuf *m)
 	if ((! is_mgmt) && (k->wk_flags & IEEE80211_KEY_NOIV))
 		return 1;
 
-
 	hdrlen = ieee80211_hdrspace(ic, mtod(m, void *));
 
 	/*
 	 * Copy down 802.11 header and add the IV, KeyID, and ExtIV.
 	 */
-	M_PREPEND(m, tkip.ic_header, M_NOWAIT);
+	M_PREPEND(m, tkip.ic_header, IEEE80211_M_NOWAIT);
 	if (m == NULL)
 		return 0;
 	ivp = mtod(m, uint8_t *);
@@ -789,24 +787,20 @@ wep_decrypt(u8 *key, struct mbuf *m, u_int off, size_t data_len)
 	return 0;
 }
 
-
 static __inline u32 rotl(u32 val, int bits)
 {
 	return (val << bits) | (val >> (32 - bits));
 }
-
 
 static __inline u32 rotr(u32 val, int bits)
 {
 	return (val >> bits) | (val << (32 - bits));
 }
 
-
 static __inline u32 xswap(u32 val)
 {
 	return ((val & 0x00ff00ff) << 8) | ((val & 0xff00ff00) >> 8);
 }
-
 
 #define michael_block(l, r)	\
 do {				\
@@ -820,7 +814,6 @@ do {				\
 	l += r;			\
 } while (0)
 
-
 static __inline u32 get_le32_split(u8 b0, u8 b1, u8 b2, u8 b3)
 {
 	return b0 | (b1 << 8) | (b2 << 16) | (b3 << 24);
@@ -830,7 +823,6 @@ static __inline u32 get_le32(const u8 *p)
 {
 	return get_le32_split(p[0], p[1], p[2], p[3]);
 }
-
 
 static __inline void put_le32(u8 *p, u32 v)
 {
@@ -868,7 +860,7 @@ michael_mic_hdr(const struct ieee80211_frame *wh0, uint8_t hdr[16])
 		break;
 	}
 
-	if (wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_QOS) {
+	if (wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_QOS_DATA) {
 		const struct ieee80211_qosframe *qwh =
 			(const struct ieee80211_qosframe *) wh;
 		hdr[12] = qwh->i_qos[0] & IEEE80211_QOS_TID;

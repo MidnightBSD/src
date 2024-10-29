@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-2009 University of Zagreb
  * Copyright (c) 2006-2009 FreeBSD Foundation
@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ddb.h"
 #include "opt_kdb.h"
 
@@ -240,7 +239,6 @@ vnet_alloc(void)
 	SDT_PROBE1(vnet, functions, vnet_alloc, entry, __LINE__);
 	vnet = malloc(sizeof(struct vnet), M_VNET, M_WAITOK | M_ZERO);
 	vnet->vnet_magic_n = VNET_MAGIC_N;
-	vnet->vnet_state = 0;
 	SDT_PROBE2(vnet, functions, vnet_alloc, alloc, __LINE__, vnet);
 
 	/*
@@ -284,6 +282,9 @@ vnet_destroy(struct vnet *vnet)
 	VNET_LIST_WLOCK();
 	LIST_REMOVE(vnet, vnet_le);
 	VNET_LIST_WUNLOCK();
+
+	/* Signal that VNET is being shutdown. */
+	vnet->vnet_shutdown = true;
 
 	CURVNET_SET_QUIET(vnet);
 	sx_xlock(&ifnet_detach_sxlock);
@@ -502,11 +503,13 @@ vnet_register_sysinit(void *arg)
 	 * Invoke the constructor on all the existing vnets when it is
 	 * registered.
 	 */
+	VNET_LIST_RLOCK();
 	VNET_FOREACH(vnet) {
 		CURVNET_SET_QUIET(vnet);
 		vs->func(vs->arg);
 		CURVNET_RESTORE();
 	}
+	VNET_LIST_RUNLOCK();
 	VNET_SYSINIT_WUNLOCK();
 }
 
@@ -558,6 +561,7 @@ vnet_deregister_sysuninit(void *arg)
 	 * deregistered.
 	 */
 	VNET_SYSINIT_WLOCK();
+	VNET_LIST_RLOCK();
 	VNET_FOREACH(vnet) {
 		CURVNET_SET_QUIET(vnet);
 		vs->func(vs->arg);
@@ -567,6 +571,7 @@ vnet_deregister_sysuninit(void *arg)
 	/* Remove the destructor from the global list of vnet destructors. */
 	TAILQ_REMOVE(&vnet_destructors, vs, link);
 	VNET_SYSINIT_WUNLOCK();
+	VNET_LIST_RUNLOCK();
 }
 
 /*
@@ -717,6 +722,7 @@ db_vnet_print(struct vnet *vnet)
 	db_printf(" vnet_data_base = %#jx\n",
 	    (uintmax_t)vnet->vnet_data_base);
 	db_printf(" vnet_state     = %#08x\n", vnet->vnet_state);
+	db_printf(" vnet_shutdown  = %#03x\n", vnet->vnet_shutdown);
 	db_printf("\n");
 }
 

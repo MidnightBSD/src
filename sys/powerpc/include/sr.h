@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2002 Benno Rice.
  * All rights reserved.
@@ -23,7 +23,6 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_SR_H_
@@ -52,7 +51,7 @@
 #define	KERNEL2_SEGMENT	(0xfffff0 + KERNEL2_SR)
 #define	EMPTY_SEGMENT	0xfffff0
 #ifdef __powerpc64__
-#define	USER_ADDR	0xeffffffff0000000UL
+#define	USER_ADDR	0xc00ffffff0000000UL
 #else
 #define	USER_ADDR	((uintptr_t)USER_SR << ADDR_SR_SHFT)
 #endif

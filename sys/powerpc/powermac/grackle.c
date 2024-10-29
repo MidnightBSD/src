@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/module.h>
@@ -151,7 +150,6 @@ grackle_read_config(device_t dev, u_int bus, u_int slot, u_int func, u_int reg,
 	caoff = sc->sc_data + (reg & 0x03);
 
 	if (grackle_enable_config(sc, bus, slot, func, reg) != 0) {
-
 		/*
 		 * Config probes to non-existent devices on the
 		 * secondary bus generates machine checks. Be sure
@@ -310,7 +308,6 @@ static device_method_t grackle_hb_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,         grackle_hb_probe),
 	DEVMETHOD(device_attach,        grackle_hb_attach),
-
 	{ 0, 0 }
 };
 

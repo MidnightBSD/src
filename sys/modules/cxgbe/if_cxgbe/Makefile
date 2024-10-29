@@ -1,6 +1,8 @@
 #
 #
 
+.include <kmod.opts.mk>
+
 CXGBE=	${SRCTOP}/sys/dev/cxgbe
 .PATH: ${CXGBE} ${CXGBE}/common ${CXGBE}/crypto ${CXGBE}/cudbg
 
@@ -10,6 +12,7 @@ SRCS+=	device_if.h
 SRCS+=	opt_ddb.h
 SRCS+=	opt_inet.h
 SRCS+=	opt_inet6.h
+SRCS+=	opt_kern_tls.h
 SRCS+=	opt_ofed.h
 SRCS+=	opt_ratelimit.h
 SRCS+=	opt_rss.h
@@ -19,6 +22,9 @@ SRCS+=	t4_filter.c
 SRCS+=	t4_hw.c
 SRCS+=	t4_if.c t4_if.h
 SRCS+=	t4_iov.c
+.if ${KERN_OPTS:MKERN_TLS} != ""
+SRCS+=	t6_kern_tls.c
+.endif
 SRCS+=	t4_keyctx.c
 SRCS+=	t4_l2t.c
 SRCS+=	t4_main.c
@@ -36,5 +42,7 @@ SRCS+=  fastlz_api.c
 SRCS+=  fastlz.c
 
 CFLAGS+= -I${CXGBE}
+
+EXPORT_SYMS=	YES
 
 .include <bsd.kmod.mk>

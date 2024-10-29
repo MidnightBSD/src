@@ -36,7 +36,6 @@
  * OF SUCH DAMAGE.
  *
  * Author: Archie Cobbs <archie@freebsd.org>
- *
  * $Whistle: ng_ksocket.c,v 1.1 1999/11/16 20:04:40 archie Exp $
  */
 
@@ -153,6 +152,10 @@ static const struct ng_ksocket_alias ng_ksocket_protos[] = {
 
 /* Helper functions */
 static int	ng_ksocket_accept(priv_p);
+static int	ng_ksocket_listen_upcall(struct socket *so, void *arg,
+    int waitflag);
+static void	ng_ksocket_listen_upcall2(node_p node, hook_p hook,
+    void *arg1, int arg2);
 static int	ng_ksocket_incoming(struct socket *so, void *arg, int waitflag);
 static int	ng_ksocket_parse(const struct ng_ksocket_alias *aliases,
 			const char *s, int family);
@@ -582,7 +585,6 @@ ng_ksocket_newhook(node_p node, hook_p hook, const char *name0)
 			return (error);
 
 		/* XXX call soreserve() ? */
-
 	}
 
 	/* OK */
@@ -698,6 +700,12 @@ ng_ksocket_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			/* Listen */
 			so->so_state |= SS_NBIO;
 			error = solisten(so, *((int32_t *)msg->data), td);
+			if (error == 0) {
+				SOLISTEN_LOCK(so);
+				solisten_upcall_set(so,
+				    ng_ksocket_listen_upcall, priv);
+				SOLISTEN_UNLOCK(so);
+			}
 			break;
 		    }
 
@@ -718,11 +726,15 @@ ng_ksocket_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			/*
 			 * If a connection is already complete, take it.
 			 * Otherwise let the upcall function deal with
-			 * the connection when it comes in.
+			 * the connection when it comes in.  Don't return
+			 * EWOULDBLOCK, per ng_ksocket(4) documentation.
 			 */
 			error = ng_ksocket_accept(priv);
-			if (error != 0 && error != EWOULDBLOCK)
+			if (error == EWOULDBLOCK)
+				error = 0;
+			if (error != 0)
 				ERROUT(error);
+
 			priv->response_token = msg->header.token;
 			raddr = priv->response_addr = NGI_RETADDR(item);
 			break;
@@ -932,17 +944,24 @@ static int
 ng_ksocket_shutdown(node_p node)
 {
 	const priv_p priv = NG_NODE_PRIVATE(node);
+	struct socket *so = priv->so;
 	priv_p embryo;
 
 	/* Close our socket (if any) */
 	if (priv->so != NULL) {
-		SOCKBUF_LOCK(&priv->so->so_rcv);
-		soupcall_clear(priv->so, SO_RCV);
-		SOCKBUF_UNLOCK(&priv->so->so_rcv);
-		SOCKBUF_LOCK(&priv->so->so_snd);
-		soupcall_clear(priv->so, SO_SND);
-		SOCKBUF_UNLOCK(&priv->so->so_snd);
-		soclose(priv->so);
+		if (SOLISTENING(so)) {
+			SOLISTEN_LOCK(so);
+			solisten_upcall_set(so, NULL, NULL);
+			SOLISTEN_UNLOCK(so);
+		} else {
+			SOCKBUF_LOCK(&priv->so->so_rcv);
+			soupcall_clear(priv->so, SO_RCV);
+			SOCKBUF_UNLOCK(&priv->so->so_rcv);
+			SOCKBUF_LOCK(&priv->so->so_snd);
+			soupcall_clear(priv->so, SO_SND);
+			SOCKBUF_UNLOCK(&priv->so->so_snd);
+		}
+		soclose(so);
 		priv->so = NULL;
 	}
 
@@ -1015,7 +1034,6 @@ ng_ksocket_incoming(struct socket *so, void *arg, int waitflag)
 	return (SU_OK);
 }
 
-
 /*
  * When incoming data is appended to the socket, we get notified here.
  * This is also called whenever a significant event occurs for the socket.
@@ -1060,10 +1078,6 @@ ng_ksocket_incoming2(node_p node, hook_p hook, void *arg1, int arg2)
 			priv->flags &= ~KSF_CONNECTING;
 		}
 	}
-
-	/* Check whether a pending accept operation has completed */
-	if (priv->flags & KSF_ACCEPTING)
-		(void )ng_ksocket_accept(priv);
 
 	/*
 	 * If we don't have a hook, we must handle data events later.  When
@@ -1247,6 +1261,25 @@ out:
 	return (0);
 }
 
+static int
+ng_ksocket_listen_upcall(struct socket *so, void *arg, int waitflag)
+{
+	priv_p priv = arg;
+	int wait = ((waitflag & M_WAITOK) ? NG_WAITOK : 0) | NG_QUEUE;
+
+	ng_send_fn1(priv->node, NULL, &ng_ksocket_listen_upcall2, priv, 0,
+	    wait);
+	return (SU_OK);
+}
+
+static void
+ng_ksocket_listen_upcall2(node_p node, hook_p hook, void *arg1, int arg2)
+{
+	const priv_p priv = NG_NODE_PRIVATE(node);
+
+	(void )ng_ksocket_accept(priv);
+}
+
 /*
  * Parse out either an integer value or an alias.
  */
@@ -1270,4 +1303,3 @@ ng_ksocket_parse(const struct ng_ksocket_alias *aliases,
 		return (-1);
 	return (val);
 }
-

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999-2000, Vitaly V Belekhov
  * All rights reserved.
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  *
  */
 
@@ -165,7 +164,7 @@ static int
 ng_split_disconnect(hook_p hook)
 {
 	hook_p		*localhook = NG_HOOK_PRIVATE(hook);
-	
+
 	KASSERT(localhook != NULL, ("%s: null info", __func__));
 	*localhook = NULL;
 	if ((NG_NODE_NUMHOOKS(NG_HOOK_NODE(hook)) == 0)

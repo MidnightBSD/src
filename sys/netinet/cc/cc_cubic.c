@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008-2010 Lawrence Stewart <lstewart@freebsd.org>
  * Copyright (c) 2010 The FreeBSD Foundation
@@ -48,7 +48,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/limits.h>
@@ -156,6 +155,7 @@ cubic_ack_received(struct cc_var *ccv, uint16_t type)
 				cubic_data->flags &= ~(CUBICFLAG_RTO_EVENT |
 						       CUBICFLAG_IN_SLOWSTART);
 				cubic_data->max_cwnd = CCV(ccv, snd_cwnd);
+				cubic_data->t_last_cong = ticks;
 				cubic_data->K = 0;
 			} else if (cubic_data->flags & (CUBICFLAG_IN_SLOWSTART |
 						 CUBICFLAG_IN_APPLIMIT)) {
@@ -245,7 +245,6 @@ cubic_after_idle(struct cc_var *ccv)
 	newreno_cc_algo.after_idle(ccv);
 	cubic_data->t_last_cong = ticks;
 }
-
 
 static void
 cubic_cb_destroy(struct cc_var *ccv)
@@ -482,7 +481,6 @@ cubic_ssthresh_update(struct cc_var *ccv, uint32_t maxseg)
 	}
 	CCV(ccv, snd_ssthresh) = max(ssthresh, 2 * maxseg);
 }
-
 
 DECLARE_CC_MODULE(cubic, &cubic_cc_algo);
 MODULE_VERSION(cubic, 1);

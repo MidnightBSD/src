@@ -39,8 +39,6 @@
 #include <machine/asm.h>
 #include <machine/riscvreg.h>
 #include <machine/pte.h>
-
-
 #ifdef FPE
 .macro __fpe_state_save p
 	/*
@@ -150,7 +148,6 @@ ENTRY(fpe_state_save)
 	__fpe_state_save a0
 	ret
 END(fpe_state_save)
-#endif /* FPE */
 
 /*
  * void
@@ -204,6 +201,7 @@ ENTRY(fpe_state_clear)
 
 	ret
 END(fpe_state_clear)
+#endif /* FPE */
 	
 /*
  * void cpu_throw(struct thread *old __unused, struct thread *new)
@@ -368,8 +366,6 @@ ENTRY(cpu_switch)
 #endif
 
 	ret
-.Lcpu_switch_panic_str:
-	.asciz "cpu_switch: %p\0"
 END(cpu_switch)
 
 /*

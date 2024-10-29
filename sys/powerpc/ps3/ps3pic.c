@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 2010 Nathan Whitehorn
  *
@@ -23,7 +23,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -50,11 +49,11 @@ static int	ps3pic_probe(device_t);
 static int	ps3pic_attach(device_t);
 
 static void	ps3pic_dispatch(device_t, struct trapframe *);
-static void	ps3pic_enable(device_t, u_int, u_int);
-static void	ps3pic_eoi(device_t, u_int);
+static void	ps3pic_enable(device_t, u_int, u_int, void **);
+static void	ps3pic_eoi(device_t, u_int, void *);
 static void	ps3pic_ipi(device_t, u_int);
-static void	ps3pic_mask(device_t, u_int);
-static void	ps3pic_unmask(device_t, u_int);
+static void	ps3pic_mask(device_t, u_int, void *);
+static void	ps3pic_unmask(device_t, u_int, void *);
 
 struct ps3pic_softc {
 	volatile uint64_t *bitmap_thread0;
@@ -182,18 +181,18 @@ ps3pic_dispatch(device_t dev, struct trapframe *tf)
 }
 
 static void
-ps3pic_enable(device_t dev, u_int irq, u_int vector)
+ps3pic_enable(device_t dev, u_int irq, u_int vector, void **priv)
 {
 	struct ps3pic_softc *sc;
 
 	sc = device_get_softc(dev);
 	sc->sc_vector[irq] = vector;
 
-	ps3pic_unmask(dev, irq);
+	ps3pic_unmask(dev, irq, priv);
 }
 
 static void
-ps3pic_eoi(device_t dev, u_int irq)
+ps3pic_eoi(device_t dev, u_int irq, void *priv)
 {
 	uint64_t ppe;
 	int thread;
@@ -214,7 +213,7 @@ ps3pic_ipi(device_t dev, u_int cpu)
 }
 
 static void
-ps3pic_mask(device_t dev, u_int irq)
+ps3pic_mask(device_t dev, u_int irq, void *priv)
 {
 	struct ps3pic_softc *sc;
 	uint64_t ppe;
@@ -234,7 +233,7 @@ ps3pic_mask(device_t dev, u_int irq)
 }
 
 static void
-ps3pic_unmask(device_t dev, u_int irq)
+ps3pic_unmask(device_t dev, u_int irq, void *priv)
 {
 	struct ps3pic_softc *sc;
 	uint64_t ppe;

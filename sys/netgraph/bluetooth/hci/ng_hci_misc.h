@@ -3,7 +3,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -56,4 +56,3 @@ int               ng_hci_con_timeout            (ng_hci_unit_con_p);
 int               ng_hci_con_untimeout          (ng_hci_unit_con_p);
 
 #endif /* ndef _NETGRAPH_HCI_MISC_H_ */
-

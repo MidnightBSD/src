@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004 Poul-Henning Kamp
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -77,7 +76,7 @@ typedef int b_sync_t(struct bufobj *, int waitfor);
 typedef void b_bdflush_t(struct bufobj *, struct buf *);
 
 struct buf_ops {
-	char		*bop_name;
+	const char	*bop_name;
 	b_write_t	*bop_write;
 	b_strategy_t	*bop_strategy;
 	b_sync_t	*bop_sync;
@@ -103,7 +102,7 @@ struct bufobj {
 	void		*bo_private;	/* private pointer */
 	struct bufv	bo_clean;	/* i Clean buffers */
 	struct bufv	bo_dirty;	/* i Dirty buffers */
-	long		bo_numoutput;	/* i Writes in progress */
+	int		bo_numoutput;	/* i Writes in progress */
 	u_int		bo_flag;	/* i Flags */
 	int		bo_domain;	/* - Clean queue affinity */
 	int		bo_bsize;	/* - Block size for i/o */
@@ -116,6 +115,7 @@ struct bufobj {
 #define	BO_ONWORKLST	(1 << 0)	/* On syncer work-list */
 #define	BO_WWAIT	(1 << 1)	/* Wait for output to complete */
 #define	BO_DEAD		(1 << 2)	/* Dead; only with INVARIANTS */
+#define	BO_NOBUFS	(1 << 3)	/* No bufs allowed */
 
 #define	BO_LOCKPTR(bo)		(&(bo)->bo_lock)
 #define	BO_LOCK(bo)		rw_wlock(BO_LOCKPTR((bo)))
@@ -126,7 +126,7 @@ struct bufobj {
 #define	ASSERT_BO_LOCKED(bo)	rw_assert(BO_LOCKPTR((bo)), RA_LOCKED)
 #define	ASSERT_BO_UNLOCKED(bo)	rw_assert(BO_LOCKPTR((bo)), RA_UNLOCKED)
 
-void bufobj_init(struct bufobj *bo, void *private);
+void bufobj_init(struct bufobj *bo, void *priv);
 void bufobj_wdrop(struct bufobj *bo);
 void bufobj_wref(struct bufobj *bo);
 void bufobj_wrefl(struct bufobj *bo);

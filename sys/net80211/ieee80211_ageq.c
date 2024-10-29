@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * IEEE 802.11 age queue support.
  */
@@ -36,7 +35,7 @@
 #include <sys/systm.h> 
 #include <sys/kernel.h>
 #include <sys/malloc.h>
- 
+
 #include <sys/socket.h>
 
 #include <net/if.h>

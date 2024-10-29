@@ -26,7 +26,6 @@
  */
 
 #include <machine/asm.h>
-
 /*
  * This implements
  *  void __aeabi_memset(void *dest, size_t len, int c)

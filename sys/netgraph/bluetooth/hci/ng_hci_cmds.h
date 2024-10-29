@@ -3,7 +3,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -45,4 +45,3 @@ int  ng_hci_process_command_status   (ng_hci_unit_p, struct mbuf *);
 void ng_hci_process_command_timeout  (node_p, hook_p, void *, int);
 
 #endif /* ndef _NETGRAPH_HCI_CMDS_H_ */
-

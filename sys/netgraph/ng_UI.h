@@ -36,7 +36,6 @@
  * OF SUCH DAMAGE.
  *
  * Author: Julian Elischer <julian@freebsd.org>
- *
  * $Whistle: ng_UI.h,v 1.6 1999/01/20 00:54:15 archie Exp $
  */
 
@@ -52,4 +51,3 @@
 #define NG_UI_HOOK_UPSTREAM	"upstream"
 
 #endif /* _NETGRAPH_NG_UI_H_ */
-

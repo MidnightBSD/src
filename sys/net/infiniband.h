@@ -21,7 +21,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef __INFINIBAND_H__
@@ -60,6 +59,8 @@ struct infiniband_address {
 
 #ifdef _KERNEL
 
+#include <sys/_eventhandler.h>
+
 struct ifnet;
 struct mbuf;
 
@@ -67,12 +68,10 @@ extern void infiniband_ifattach(struct ifnet *, const uint8_t *hwaddr, const uin
 extern void infiniband_ifdetach(struct ifnet *);
 extern void infiniband_bpf_mtap(struct ifnet *, struct mbuf *);
 
-#ifdef _SYS_EVENTHANDLER_H_
 /* new infiniband interface attached event */
 typedef void (*infiniband_ifattach_event_handler_t)(void *, struct ifnet *);
 
 EVENTHANDLER_DECLARE(infiniband_ifattach_event, infiniband_ifattach_event_handler_t);
-#endif
 
 #endif
 

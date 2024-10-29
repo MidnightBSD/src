@@ -98,12 +98,10 @@ device  	mmc
 device  	mmcsd
 device		pass
 device		pci
-device		random
 #device		rl
 device		scbus
 device		scc
 device  	sdhci
-device		sec
 device  	spibus
 device  	spigen
 device		tuntap
@@ -114,3 +112,14 @@ device		ehci
 device		umass
 device		usb
 device		vlan
+
+# Desktop related
+device  	vt
+device  	fbd
+options 	KBD_INSTALL_CDEV
+device  	ukbd
+device  	ums
+
+# HID support
+options 	HID_DEBUG	# enable debug msgs
+device		hid		# Generic HID support

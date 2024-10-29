@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * mapping routines for old line discipline (yuck)
  */

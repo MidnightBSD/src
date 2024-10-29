@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  *	NetBSD: ki2c.c,v 1.11 2007/12/06 17:00:33 ad Exp
  *	Id: ki2c.c,v 1.7 2002/10/05 09:56:05 tsubai Exp
  */
@@ -136,7 +135,6 @@ static device_method_t kiic_methods[] = {
 
 	/* ofw_bus interface */
 	DEVMETHOD(ofw_bus_get_node,	kiic_get_node),
-
 	{ 0, 0 }
 };
 
@@ -174,7 +172,7 @@ kiic_attach(device_t self)
 
 	bzero(sc, sizeof(*sc));
 	sc->sc_dev = self;
-	
+
 	node = ofw_bus_get_node(self);
 	if (node == 0 || node == -1) {
 		return (EINVAL);
@@ -235,7 +233,7 @@ kiic_attach(device_t self)
 
 	kiic_setmode(sc, I2C_STDMODE);
 	kiic_setspeed(sc, I2C_100kHz);		/* XXX rate */
-	
+
 	kiic_writereg(sc, IER, I2C_INT_DATA | I2C_INT_ADDR | I2C_INT_STOP);
 
 	if (bootverbose)
@@ -442,4 +440,3 @@ kiic_get_node(device_t bus, device_t dev)
 		
 	return sc->sc_node;
 }
-

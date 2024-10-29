@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/hash.h>
@@ -128,4 +127,3 @@ murmur3_32_hash32(const uint32_t *data, size_t count, uint32_t seed)
 	hash ^= hash >> 16;
 	return (hash);
 }
-

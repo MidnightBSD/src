@@ -36,7 +36,6 @@
  * OF SUCH DAMAGE.
  *
  * Author: Julian Elischer <julian@freebsd.org>
- *
  * $Whistle: ng_pppoe.c,v 1.10 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -47,6 +46,7 @@
 #include <sys/mbuf.h>
 #include <sys/malloc.h>
 #include <sys/errno.h>
+#include <sys/epoch.h>
 #include <sys/socket.h>
 #include <sys/sysctl.h>
 #include <sys/syslog.h>
@@ -320,8 +320,6 @@ static	int	pppoe_send_event(sessp sp, enum cmd cmdid);
  * Some basic utilities  from the Linux version with author's permission.*
  * Author:	Michal Ostrowski <mostrows@styx.uwaterloo.ca>		 *
  ************************************************************************/
-
-
 
 /*
  * Return the location where the next tag can be put
@@ -778,6 +776,7 @@ ng_pppoe_connect(hook_p hook)
 static int
 ng_pppoe_rcvmsg(node_p node, item_p item, hook_p lasthook)
 {
+	struct epoch_tracker et;
 	priv_p privp = NG_NODE_PRIVATE(node);
 	struct ngpppoe_init_data *ourmsg = NULL;
 	struct ng_mesg *resp = NULL;
@@ -997,7 +996,9 @@ ng_pppoe_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			neg->service.hdr.tag_len = htons((uint16_t)srvlen);
 			bcopy(ourmsg->data + srvpos, neg->service.data, srvlen);
 			neg->service_len = srvlen;
+			NET_EPOCH_ENTER(et);
 			pppoe_start(sp);
+			NET_EPOCH_EXIT(et);
 			break;
 		    }
 		case NGM_PPPOE_LISTEN:
@@ -1183,8 +1184,10 @@ ng_pppoe_rcvmsg(node_p node, item_p item, hook_p lasthook)
 				m->m_pkthdr.len = m->m_len = sizeof(*wh) + sizeof(*tag) +
 				    ourmsg->data_len;
 				wh->ph.length = htons(sizeof(*tag) + ourmsg->data_len);
+				NET_EPOCH_ENTER(et);
 				NG_SEND_DATA_ONLY(error,
 				    privp->ethernet_hook, m);
+				NET_EPOCH_EXIT(et);
 			}
 			break;
 		    }
@@ -1226,8 +1229,10 @@ ng_pppoe_rcvmsg(node_p node, item_p item, hook_p lasthook)
 				m->m_pkthdr.len = m->m_len = sizeof(*wh) + sizeof(*tag) +
 				    ourmsg->data_len;
 				wh->ph.length = htons(sizeof(*tag) + ourmsg->data_len);
+				NET_EPOCH_ENTER(et);
 				NG_SEND_DATA_ONLY(error,
 				    privp->ethernet_hook, m);
+				NET_EPOCH_EXIT(et);
 			}
 			break;
 		    }
@@ -2052,6 +2057,7 @@ ng_pppoe_disconnect(hook_p hook)
 				log(LOG_NOTICE, "ng_pppoe[%x]: session out of "
 				    "mbufs\n", node->nd_ID);
 			else {
+				struct epoch_tracker et;
 				struct pppoe_full_hdr *wh;
 				struct pppoe_tag *tag;
 				int	msglen = strlen(SIGNOFF);
@@ -2082,8 +2088,11 @@ ng_pppoe_disconnect(hook_p hook)
 				m->m_pkthdr.len = m->m_len = sizeof(*wh) + sizeof(*tag) +
 				    msglen;
 				wh->ph.length = htons(sizeof(*tag) + msglen);
+
+				NET_EPOCH_ENTER(et);
 				NG_SEND_DATA_ONLY(error,
 					privp->ethernet_hook, m);
+				NET_EPOCH_EXIT(et);
 			}
 		}
 		if (sp->state == PPPOE_LISTENING)
@@ -2205,7 +2214,7 @@ scan_tags(sessp	sp, const struct pppoe_hdr* ph)
 	}
 	return NULL;
 }
-	
+
 static	int
 pppoe_send_event(sessp sp, enum cmd cmdid)
 {

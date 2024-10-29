@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_ipsec.h"
@@ -665,6 +664,10 @@ ipsec_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 			break;
 		}
 		saidx = ipsec_getsaidx(sc, IPSEC_DIR_OUTBOUND, sc->family);
+		if (saidx == NULL) {
+			error = ENXIO;
+			break;
+		}
 		switch (cmd) {
 #ifdef INET
 		case SIOCGIFPSRCADDR:
@@ -782,6 +785,8 @@ ipsec_set_running(struct ipsec_softc *sc)
 	int localip;
 
 	saidx = ipsec_getsaidx(sc, IPSEC_DIR_OUTBOUND, sc->family);
+	if (saidx == NULL)
+		return;
 	localip = 0;
 	switch (sc->family) {
 #ifdef INET
@@ -812,13 +817,17 @@ ipsec_srcaddr(void *arg __unused, const struct sockaddr *sa,
 {
 	struct ipsec_softc *sc;
 	struct secasindex *saidx;
+	struct ipsec_iflist *iflist;
 
 	/* Check that VNET is ready */
 	if (V_ipsec_idhtbl == NULL)
 		return;
 
-	MPASS(in_epoch(net_epoch_preempt));
-	CK_LIST_FOREACH(sc, ipsec_srchash(sa), srchash) {
+	NET_EPOCH_ASSERT();
+	iflist = ipsec_srchash(sa);
+	if (iflist == NULL)
+		return;
+	CK_LIST_FOREACH(sc, iflist, srchash) {
 		if (sc->family == 0)
 			continue;
 		saidx = ipsec_getsaidx(sc, IPSEC_DIR_OUTBOUND, sa->sa_family);
@@ -1002,7 +1011,6 @@ ipsec_set_addresses(struct ifnet *ifp, struct sockaddr *src,
 		    key_sockaddrcmp(&saidx->src.sa, src, 0) == 0 &&
 		    key_sockaddrcmp(&saidx->dst.sa, dst, 0) == 0)
 			return (0); /* Nothing has been changed. */
-
 	}
 	/* If reqid is not set, generate new one. */
 	if (ipsec_init_reqid(sc) != 0)
@@ -1014,12 +1022,18 @@ static int
 ipsec_set_tunnel(struct ipsec_softc *sc, struct sockaddr *src,
     struct sockaddr *dst, uint32_t reqid)
 {
+	struct ipsec_iflist *iflist;
 	struct secpolicy *sp[IPSEC_SPCOUNT];
 	int i;
 
 	sx_assert(&ipsec_ioctl_sx, SA_XLOCKED);
 
 	/* Allocate SP with new addresses. */
+	iflist = ipsec_srchash(src);
+	if (iflist == NULL) {
+		sc->ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
+		return (EAFNOSUPPORT);
+	}
 	if (ipsec_newpolicies(sc, sp, src, dst, reqid) == 0) {
 		/* Add new policies to SPDB */
 		if (key_register_ifnet(sp, IPSEC_SPCOUNT) != 0) {
@@ -1032,7 +1046,7 @@ ipsec_set_tunnel(struct ipsec_softc *sc, struct sockaddr *src,
 		for (i = 0; i < IPSEC_SPCOUNT; i++)
 			sc->sp[i] = sp[i];
 		sc->family = src->sa_family;
-		CK_LIST_INSERT_HEAD(ipsec_srchash(src), sc, srchash);
+		CK_LIST_INSERT_HEAD(iflist, sc, srchash);
 	} else {
 		sc->ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 		return (ENOMEM);

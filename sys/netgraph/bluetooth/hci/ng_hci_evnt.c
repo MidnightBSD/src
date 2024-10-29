@@ -3,7 +3,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -82,7 +82,7 @@ static int le_event		      (ng_hci_unit_p, struct mbuf *);
 /*
  * Process HCI event packet
  */
- 
+
 int
 ng_hci_process_event(ng_hci_unit_p unit, struct mbuf *event)
 {
@@ -380,7 +380,7 @@ le_advertizing_report(ng_hci_unit_p unit, struct mbuf *event)
 	ng_hci_neighbor_p		 n = NULL;
 	bdaddr_t			 bdaddr;
 	int				 error = 0;
-	u_int8_t event_type;
+	int				 num_reports = 0;
 	u_int8_t addr_type;
 
 	NG_HCI_M_PULLUP(event, sizeof(*ep));
@@ -388,14 +388,20 @@ le_advertizing_report(ng_hci_unit_p unit, struct mbuf *event)
 		return (ENOBUFS);
 
 	ep = mtod(event, ng_hci_le_advertising_report_ep *);
+	num_reports = ep->num_reports;
 	m_adj(event, sizeof(*ep));
+	ep = NULL;
 
-	for (; ep->num_reports > 0; ep->num_reports --) {
+	for (; num_reports > 0; num_reports --) {
+		/* event_type */
+		m_adj(event, sizeof(u_int8_t));
+
 		/* Get remote unit address */
 		NG_HCI_M_PULLUP(event, sizeof(u_int8_t));
-		event_type = *mtod(event, u_int8_t *);
-		m_adj(event, sizeof(u_int8_t));
-		NG_HCI_M_PULLUP(event, sizeof(u_int8_t));
+		if (event == NULL) {
+			error = ENOBUFS;
+			goto out;
+		}
 		addr_type = *mtod(event, u_int8_t *);
 		m_adj(event, sizeof(u_int8_t));
 
@@ -551,7 +557,6 @@ static int le_connection_complete(ng_hci_unit_p unit, struct mbuf *event)
 		 * supported link modes. Enable Role switch as well if
 		 * device supports it.
 		 */
-
 	}
 
 out:
@@ -565,7 +570,7 @@ static int le_connection_update(ng_hci_unit_p unit, struct mbuf *event)
 {
 	int error = 0;
 	/*TBD*/
-	
+
 	NG_FREE_M(event);
 	return error;
 
@@ -1179,7 +1184,7 @@ mode_change(ng_hci_unit_p unit, struct mbuf *event)
 	ng_hci_mode_change_ep	*ep = NULL;
 	ng_hci_unit_con_p	 con = NULL;
 	int			 error = 0;
-	
+
 	NG_HCI_M_PULLUP(event, sizeof(*ep));
 	if (event == NULL)
 		return (ENOBUFS);
@@ -1389,4 +1394,3 @@ out:
 
 	return (error);
 } /* page_scan_rep_mode_change */
-

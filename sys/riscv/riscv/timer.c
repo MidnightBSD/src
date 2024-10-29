@@ -39,106 +39,98 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
-#include <sys/malloc.h>
-#include <sys/rman.h>
 #include <sys/timeet.h>
 #include <sys/timetc.h>
+#include <sys/vdso.h>
 #include <sys/watchdog.h>
 
-#include <sys/proc.h>
-
-#include <machine/bus.h>
-#include <machine/cpu.h>
+#include <machine/cpufunc.h>
 #include <machine/intr.h>
-#include <machine/asm.h>
-#include <machine/trap.h>
+#include <machine/md_var.h>
 #include <machine/sbi.h>
 
-#include <dev/fdt/fdt_common.h>
-#include <dev/ofw/ofw_bus.h>
-#include <dev/ofw/ofw_bus_subr.h>
 #include <dev/ofw/openfirm.h>
-
-#define	TIMER_COUNTS		0x00
-#define	TIMER_MTIMECMP(cpu)	(cpu * 8)
 
 struct riscv_timer_softc {
 	void			*ih;
 	uint32_t		clkfreq;
 	struct eventtimer	et;
 };
-
 static struct riscv_timer_softc *riscv_timer_sc = NULL;
 
-static timecounter_get_t riscv_timer_get_timecount;
+static timecounter_get_t riscv_timer_tc_get_timecount;
+static timecounter_fill_vdso_timehands_t riscv_timer_tc_fill_vdso_timehands;
 
 static struct timecounter riscv_timer_timecount = {
 	.tc_name           = "RISC-V Timecounter",
-	.tc_get_timecount  = riscv_timer_get_timecount,
+	.tc_get_timecount  = riscv_timer_tc_get_timecount,
 	.tc_poll_pps       = NULL,
 	.tc_counter_mask   = ~0u,
 	.tc_frequency      = 0,
 	.tc_quality        = 1000,
+	.tc_fill_vdso_timehands = riscv_timer_tc_fill_vdso_timehands,
 };
 
 static inline uint64_t
-get_cycles(void)
+get_timecount(void)
 {
-	uint64_t cycles;
 
-	__asm __volatile("rdtime %0" : "=r" (cycles));
-
-	return (cycles);
+	return (rdtime());
 }
 
-static long
-get_counts(struct riscv_timer_softc *sc)
+static inline void
+set_timecmp(uint64_t timecmp)
 {
-	uint64_t counts;
 
-	counts = get_cycles();
-
-	return (counts);
+	if (has_sstc)
+		csr_write(stimecmp, timecmp);
+	else
+		sbi_set_timer(timecmp);
 }
 
-static unsigned
-riscv_timer_get_timecount(struct timecounter *tc)
+static u_int
+riscv_timer_tc_get_timecount(struct timecounter *tc __unused)
 {
-	struct riscv_timer_softc *sc;
 
-	sc = tc->tc_priv;
+	return (get_timecount());
+}
 
-	return (get_counts(sc));
+static uint32_t
+riscv_timer_tc_fill_vdso_timehands(struct vdso_timehands *vdso_th,
+    struct timecounter *tc)
+{
+	vdso_th->th_algo = VDSO_TH_ALGO_RISCV_RDTIME;
+	bzero(vdso_th->th_res, sizeof(vdso_th->th_res));
+	return (1);
 }
 
 static int
-riscv_timer_start(struct eventtimer *et, sbintime_t first, sbintime_t period)
+riscv_timer_et_start(struct eventtimer *et, sbintime_t first, sbintime_t period)
 {
 	uint64_t counts;
 
 	if (first != 0) {
 		counts = ((uint32_t)et->et_frequency * first) >> 32;
-		sbi_set_timer(get_cycles() + counts);
+		set_timecmp(get_timecount() + counts);
 		csr_set(sie, SIE_STIE);
 
 		return (0);
 	}
 
 	return (EINVAL);
-
 }
 
 static int
-riscv_timer_stop(struct eventtimer *et)
+riscv_timer_et_stop(struct eventtimer *et)
 {
 
-	/* TODO */
+	/* Disable timer interrupts. */
+	csr_clear(sie, SIE_STIE);
 
 	return (0);
 }
@@ -200,7 +192,7 @@ riscv_timer_attach(device_t dev)
 	int error;
 
 	sc = device_get_softc(dev);
-	if (riscv_timer_sc)
+	if (riscv_timer_sc != NULL)
 		return (ENXIO);
 
 	if (device_get_unit(dev) != 0)
@@ -232,10 +224,12 @@ riscv_timer_attach(device_t dev)
 	sc->et.et_frequency = sc->clkfreq;
 	sc->et.et_min_period = (0x00000002LLU << 32) / sc->et.et_frequency;
 	sc->et.et_max_period = (0xfffffffeLLU << 32) / sc->et.et_frequency;
-	sc->et.et_start = riscv_timer_start;
-	sc->et.et_stop = riscv_timer_stop;
+	sc->et.et_start = riscv_timer_et_start;
+	sc->et.et_stop = riscv_timer_et_stop;
 	sc->et.et_priv = sc;
 	et_register(&sc->et);
+
+	set_cputicker(get_timecount, sc->clkfreq, false);
 
 	return (0);
 }
@@ -293,10 +287,10 @@ DELAY(int usec)
 	else
 		counts = usec * counts_per_usec;
 
-	first = get_counts(riscv_timer_sc);
+	first = get_timecount();
 
 	while (counts > 0) {
-		last = get_counts(riscv_timer_sc);
+		last = get_timecount();
 		counts -= (int64_t)(last - first);
 		first = last;
 	}

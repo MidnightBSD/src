@@ -35,7 +35,6 @@
  * DAMAGE.
  *
  * Author: Dave Chapeskie
- *
  */
 
 #ifndef _NETGRAPH_NG_SOURCE_H_

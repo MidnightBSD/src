@@ -10,5 +10,6 @@ SRCS+=	\
 	clock_if.h \
 	device_if.h \
 	ofw_bus_if.h \
+	syscon_if.h \
 
 .include <bsd.kmod.mk>

@@ -1,0 +1,8 @@
+#
+
+machine		mips mipsel
+
+makeoptions	INTRNG
+options		INTRNG
+
+files		"../broadcom/files.broadcom"

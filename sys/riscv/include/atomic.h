@@ -30,7 +30,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_MACHINE_ATOMIC_H_
@@ -42,6 +41,12 @@
 #define	mb()	fence()
 #define	rmb()	fence()
 #define	wmb()	fence()
+
+static __inline int atomic_cmpset_8(__volatile uint8_t *, uint8_t, uint8_t);
+static __inline int atomic_fcmpset_8(__volatile uint8_t *, uint8_t *, uint8_t);
+static __inline int atomic_cmpset_16(__volatile uint16_t *, uint16_t, uint16_t);
+static __inline int atomic_fcmpset_16(__volatile uint16_t *, uint16_t *,
+    uint16_t);
 
 #define	ATOMIC_ACQ_REL(NAME, WIDTH)					\
 static __inline  void							\
@@ -57,6 +62,65 @@ atomic_##NAME##_rel_##WIDTH(__volatile uint##WIDTH##_t *p, uint##WIDTH##_t v)\
 	fence();							\
 	atomic_##NAME##_##WIDTH(p, v);					\
 }
+
+#define	ATOMIC_CMPSET_ACQ_REL(WIDTH)					\
+static __inline  int							\
+atomic_cmpset_acq_##WIDTH(__volatile uint##WIDTH##_t *p,		\
+    uint##WIDTH##_t cmpval, uint##WIDTH##_t newval)			\
+{									\
+	int retval;							\
+									\
+	retval = atomic_cmpset_##WIDTH(p, cmpval, newval);		\
+	fence();							\
+	return (retval);						\
+}									\
+									\
+static __inline  int							\
+atomic_cmpset_rel_##WIDTH(__volatile uint##WIDTH##_t *p,		\
+    uint##WIDTH##_t cmpval, uint##WIDTH##_t newval)			\
+{									\
+	fence();							\
+	return (atomic_cmpset_##WIDTH(p, cmpval, newval));		\
+}
+
+#define	ATOMIC_FCMPSET_ACQ_REL(WIDTH)					\
+static __inline  int							\
+atomic_fcmpset_acq_##WIDTH(__volatile uint##WIDTH##_t *p,		\
+    uint##WIDTH##_t *cmpval, uint##WIDTH##_t newval)			\
+{									\
+	int retval;							\
+									\
+	retval = atomic_fcmpset_##WIDTH(p, cmpval, newval);		\
+	fence();							\
+	return (retval);						\
+}									\
+									\
+static __inline  int							\
+atomic_fcmpset_rel_##WIDTH(__volatile uint##WIDTH##_t *p,		\
+    uint##WIDTH##_t *cmpval, uint##WIDTH##_t newval)			\
+{									\
+	fence();							\
+	return (atomic_fcmpset_##WIDTH(p, cmpval, newval));		\
+}
+
+ATOMIC_CMPSET_ACQ_REL(8);
+ATOMIC_FCMPSET_ACQ_REL(8);
+ATOMIC_CMPSET_ACQ_REL(16);
+ATOMIC_FCMPSET_ACQ_REL(16);
+
+#define	atomic_cmpset_char		atomic_cmpset_8
+#define	atomic_cmpset_acq_char		atomic_cmpset_acq_8
+#define	atomic_cmpset_rel_char		atomic_cmpset_rel_8
+#define	atomic_fcmpset_char		atomic_fcmpset_8
+#define	atomic_fcmpset_acq_char		atomic_fcmpset_acq_8
+#define	atomic_fcmpset_rel_char		atomic_fcmpset_rel_8
+
+#define	atomic_cmpset_short		atomic_cmpset_16
+#define	atomic_cmpset_acq_short		atomic_cmpset_acq_16
+#define	atomic_cmpset_rel_short		atomic_cmpset_rel_16
+#define	atomic_fcmpset_short		atomic_fcmpset_16
+#define	atomic_fcmpset_acq_short	atomic_fcmpset_acq_16
+#define	atomic_fcmpset_rel_short	atomic_fcmpset_rel_16
 
 static __inline void
 atomic_add_32(volatile uint32_t *p, uint32_t val)
@@ -189,47 +253,8 @@ ATOMIC_ACQ_REL(clear, 32)
 ATOMIC_ACQ_REL(add, 32)
 ATOMIC_ACQ_REL(subtract, 32)
 
-static __inline int
-atomic_cmpset_acq_32(volatile uint32_t *p, uint32_t cmpval, uint32_t newval)
-{
-	int res;
-
-	res = atomic_cmpset_32(p, cmpval, newval);
-
-	fence();
-
-	return (res);
-}
-
-static __inline int
-atomic_cmpset_rel_32(volatile uint32_t *p, uint32_t cmpval, uint32_t newval)
-{
-
-	fence();
-
-	return (atomic_cmpset_32(p, cmpval, newval));
-}
-
-static __inline int
-atomic_fcmpset_acq_32(volatile uint32_t *p, uint32_t *cmpval, uint32_t newval)
-{
-	int res;
-
-	res = atomic_fcmpset_32(p, cmpval, newval);
-
-	fence();
-
-	return (res);
-}
-
-static __inline int
-atomic_fcmpset_rel_32(volatile uint32_t *p, uint32_t *cmpval, uint32_t newval)
-{
-
-	fence();
-
-	return (atomic_fcmpset_32(p, cmpval, newval));
-}
+ATOMIC_CMPSET_ACQ_REL(32);
+ATOMIC_FCMPSET_ACQ_REL(32);
 
 static __inline uint32_t
 atomic_load_acq_32(volatile uint32_t *p)
@@ -261,7 +286,7 @@ atomic_store_rel_32(volatile uint32_t *p, uint32_t val)
 #define	atomic_subtract_acq_int	atomic_subtract_acq_32
 
 #define	atomic_add_rel_int	atomic_add_rel_32
-#define	atomic_clear_rel_int	atomic_add_rel_32
+#define	atomic_clear_rel_int	atomic_clear_rel_32
 #define	atomic_cmpset_rel_int	atomic_cmpset_rel_32
 #define	atomic_fcmpset_rel_int	atomic_fcmpset_rel_32
 #define	atomic_set_rel_int	atomic_set_rel_32
@@ -438,47 +463,8 @@ ATOMIC_ACQ_REL(clear, 64)
 ATOMIC_ACQ_REL(add, 64)
 ATOMIC_ACQ_REL(subtract, 64)
 
-static __inline int
-atomic_cmpset_acq_64(volatile uint64_t *p, uint64_t cmpval, uint64_t newval)
-{
-	int res;
-
-	res = atomic_cmpset_64(p, cmpval, newval);
-
-	fence();
-
-	return (res);
-}
-
-static __inline int
-atomic_cmpset_rel_64(volatile uint64_t *p, uint64_t cmpval, uint64_t newval)
-{
-
-	fence();
-
-	return (atomic_cmpset_64(p, cmpval, newval));
-}
-
-static __inline int
-atomic_fcmpset_acq_64(volatile uint64_t *p, uint64_t *cmpval, uint64_t newval)
-{
-	int res;
-
-	res = atomic_fcmpset_64(p, cmpval, newval);
-
-	fence();
-
-	return (res);
-}
-
-static __inline int
-atomic_fcmpset_rel_64(volatile uint64_t *p, uint64_t *cmpval, uint64_t newval)
-{
-
-	fence();
-
-	return (atomic_fcmpset_64(p, cmpval, newval));
-}
+ATOMIC_CMPSET_ACQ_REL(64);
+ATOMIC_FCMPSET_ACQ_REL(64);
 
 static __inline uint64_t
 atomic_load_acq_64(volatile uint64_t *p)
@@ -502,7 +488,7 @@ atomic_store_rel_64(volatile uint64_t *p, uint64_t val)
 }
 
 #define	atomic_add_acq_long		atomic_add_acq_64
-#define	atomic_clear_acq_long		atomic_add_acq_64
+#define	atomic_clear_acq_long		atomic_clear_acq_64
 #define	atomic_cmpset_acq_long		atomic_cmpset_acq_64
 #define	atomic_fcmpset_acq_long		atomic_fcmpset_acq_64
 #define	atomic_load_acq_long		atomic_load_acq_64
@@ -510,7 +496,7 @@ atomic_store_rel_64(volatile uint64_t *p, uint64_t val)
 #define	atomic_subtract_acq_long	atomic_subtract_acq_64
 
 #define	atomic_add_acq_ptr		atomic_add_acq_64
-#define	atomic_clear_acq_ptr		atomic_add_acq_64
+#define	atomic_clear_acq_ptr		atomic_clear_acq_64
 #define	atomic_cmpset_acq_ptr		atomic_cmpset_acq_64
 #define	atomic_fcmpset_acq_ptr		atomic_fcmpset_acq_64
 #define	atomic_load_acq_ptr		atomic_load_acq_64
@@ -565,5 +551,7 @@ atomic_thread_fence_seq_cst(void)
 #define	atomic_set_rel_ptr		atomic_set_rel_64
 #define	atomic_subtract_rel_ptr		atomic_subtract_rel_64
 #define	atomic_store_rel_ptr		atomic_store_rel_64
+
+#include <sys/_atomic_subword.h>
 
 #endif /* _MACHINE_ATOMIC_H_ */

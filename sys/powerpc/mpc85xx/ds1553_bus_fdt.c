@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2006-2008 Semihalf, Grzegorz Bernacki
  * All rights reserved.
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -63,7 +62,6 @@ static device_method_t rtc_methods[] = {
 	/* clock interface */
 	DEVMETHOD(clock_gettime,	ds1553_gettime),
 	DEVMETHOD(clock_settime,	ds1553_settime),
-
 	{ 0, 0 }
 };
 

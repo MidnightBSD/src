@@ -46,7 +46,7 @@
 #include <sys/lock.h>
 #include <sys/rmlock.h>
 #include <sys/tree.h>
-#include <sys/seq.h>
+#include <sys/seqc.h>
 #include <vm/uma.h>
 
 #include <net/radix.h>
@@ -55,6 +55,7 @@
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
+#include <netinet/sctp.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp6.h>
 #endif
@@ -86,7 +87,7 @@ struct pf_counter_u64_pcpu {
 struct pf_counter_u64 {
 	struct pf_counter_u64_pcpu *pfcu64_pcpu;
 	u_int64_t pfcu64_value;
-	seq_t	pfcu64_seqc;
+	seqc_t	pfcu64_seqc;
 };
 
 static inline int
@@ -95,7 +96,7 @@ pf_counter_u64_init(struct pf_counter_u64 *pfcu64, int flags)
 
 	pfcu64->pfcu64_value = 0;
 	pfcu64->pfcu64_seqc = 0;
-	pfcu64->pfcu64_pcpu = uma_zalloc_pcpu(pcpu_zone_64, flags | M_ZERO);
+	pfcu64->pfcu64_pcpu = uma_zalloc_pcpu(pcpu_zone_8, flags | M_ZERO);
 	if (__predict_false(pfcu64->pfcu64_pcpu == NULL))
 		return (ENOMEM);
 	return (0);
@@ -105,7 +106,7 @@ static inline void
 pf_counter_u64_deinit(struct pf_counter_u64 *pfcu64)
 {
 
-	uma_zfree_pcpu(pcpu_zone_64, pfcu64->pfcu64_pcpu);
+	uma_zfree_pcpu(pcpu_zone_8, pfcu64->pfcu64_pcpu);
 }
 
 static inline void
@@ -152,7 +153,7 @@ pf_counter_u64_periodic(struct pf_counter_u64 *pfcu64)
 	int cpu;
 
 	MPASS(curthread->td_critnest > 0);
-	seq_write_begin(&pfcu64->pfcu64_seqc);
+	seqc_write_begin(&pfcu64->pfcu64_seqc);
 	sum = pfcu64->pfcu64_value;
 	CPU_FOREACH(cpu) {
 		pcpu = zpcpu_get_cpu(pfcu64->pfcu64_pcpu, cpu);
@@ -161,7 +162,7 @@ pf_counter_u64_periodic(struct pf_counter_u64 *pfcu64)
 		pcpu->snapshot = val;
 	}
 	pfcu64->pfcu64_value = sum;
-	seq_write_end(&pfcu64->pfcu64_seqc);
+	seqc_write_end(&pfcu64->pfcu64_seqc);
 	return (sum);
 }
 
@@ -170,18 +171,18 @@ pf_counter_u64_fetch(const struct pf_counter_u64 *pfcu64)
 {
 	struct pf_counter_u64_pcpu *pcpu;
 	u_int64_t sum;
-	seq_t seqc;
+	seqc_t seqc;
 	int cpu;
 
 	for (;;) {
-		seqc = seq_load(&pfcu64->pfcu64_seqc);
+		seqc = seqc_read(&pfcu64->pfcu64_seqc);
 		sum = 0;
 		CPU_FOREACH(cpu) {
 			pcpu = zpcpu_get_cpu(pfcu64->pfcu64_pcpu, cpu);
 			sum += (uint32_t)(atomic_load_int(&pcpu->current) -pcpu->snapshot);
 		}
 		sum += pfcu64->pfcu64_value;
-		if (seq_consistent(&pfcu64->pfcu64_seqc, seqc))
+		if (seqc_consistent(&pfcu64->pfcu64_seqc, seqc))
 			break;
 	}
 	return (sum);
@@ -194,13 +195,13 @@ pf_counter_u64_zero_protected(struct pf_counter_u64 *pfcu64)
 	int cpu;
 
 	MPASS(curthread->td_critnest > 0);
-	seq_write_begin(&pfcu64->pfcu64_seqc);
+	seqc_write_begin(&pfcu64->pfcu64_seqc);
 	CPU_FOREACH(cpu) {
 		pcpu = zpcpu_get_cpu(pfcu64->pfcu64_pcpu, cpu);
 		pcpu->snapshot = atomic_load_int(&pcpu->current);
 	}
 	pfcu64->pfcu64_value = 0;
-	seq_write_end(&pfcu64->pfcu64_seqc);
+	seqc_write_end(&pfcu64->pfcu64_seqc);
 }
 
 static inline void
@@ -329,8 +330,8 @@ struct pfi_dynaddr {
 		mtx_unlock(_s->lock);					\
 	} while (0)
 #else
-#define	PF_STATE_LOCK(s)	mtx_lock(s->lock)
-#define	PF_STATE_UNLOCK(s)	mtx_unlock(s->lock)
+#define	PF_STATE_LOCK(s)	mtx_lock((s)->lock)
+#define	PF_STATE_UNLOCK(s)	mtx_unlock((s)->lock)
 #endif
 
 #ifdef INVARIANTS
@@ -699,7 +700,10 @@ struct pf_state_scrub {
 #define PFSS_DATA_NOTS	0x0080		/* no timestamp on data packets	*/
 	u_int8_t	pfss_ttl;	/* stashed TTL			*/
 	u_int8_t	pad;
-	u_int32_t	pfss_ts_mod;	/* timestamp modulation		*/
+	union {
+		u_int32_t	pfss_ts_mod;	/* timestamp modulation		*/
+		u_int32_t	pfss_v_tag;	/* SCTP verification tag	*/
+	};
 };
 
 struct pf_state_host {
@@ -1279,6 +1283,9 @@ struct pfi_kkif {
 #define PFI_IFLAG_SKIP		0x0100	/* skip filtering on interface */
 
 #ifdef _KERNEL
+struct pf_sctp_multihome_job;
+TAILQ_HEAD(pf_sctp_multihome_jobs, pf_sctp_multihome_job);
+
 struct pf_pdesc {
 	struct {
 		int	 done;
@@ -1289,6 +1296,7 @@ struct pf_pdesc {
 	union pf_headers {
 		struct tcphdr		tcp;
 		struct udphdr		udp;
+		struct sctphdr		sctp;
 		struct icmp		icmp;
 #ifdef INET6
 		struct icmp6_hdr	icmp6;
@@ -1318,7 +1326,34 @@ struct pf_pdesc {
 	u_int8_t	 dir;		/* direction */
 	u_int8_t	 sidx;		/* key index for source */
 	u_int8_t	 didx;		/* key index for destination */
+#define PFDESC_SCTP_INIT	0x0001
+#define PFDESC_SCTP_INIT_ACK	0x0002
+#define PFDESC_SCTP_COOKIE	0x0004
+#define PFDESC_SCTP_COOKIE_ACK	0x0008
+#define PFDESC_SCTP_ABORT	0x0010
+#define PFDESC_SCTP_SHUTDOWN	0x0020
+#define PFDESC_SCTP_SHUTDOWN_COMPLETE	0x0040
+#define PFDESC_SCTP_DATA	0x0080
+#define PFDESC_SCTP_ASCONF	0x0100
+#define PFDESC_SCTP_HEARTBEAT	0x0200
+#define PFDESC_SCTP_HEARTBEAT_ACK	0x0400
+#define PFDESC_SCTP_OTHER	0x0800
+#define PFDESC_SCTP_ADD_IP	0x1000
+	u_int16_t	 sctp_flags;
+	u_int32_t	 sctp_initiate_tag;
+
+	struct pf_sctp_multihome_jobs	sctp_multihome_jobs;
 };
+
+struct pf_sctp_multihome_job {
+	TAILQ_ENTRY(pf_sctp_multihome_job)	next;
+	struct pf_pdesc				 pd;
+	struct pf_addr				 src;
+	struct pf_addr				 dst;
+	struct mbuf				*m;
+	int					 op;
+};
+
 #endif
 
 /* flags for RDR options */
@@ -1653,7 +1688,6 @@ struct pfioc_iface {
 	int	 pfiio_flags;
 };
 
-
 /*
  * ioctl operations
  */
@@ -1817,8 +1851,10 @@ struct pf_idhash {
 };
 
 extern u_long		pf_ioctl_maxcount;
-extern u_long		pf_hashmask;
-extern u_long		pf_srchashmask;
+VNET_DECLARE(u_long, pf_hashmask);
+#define V_pf_hashmask	VNET(pf_hashmask)
+VNET_DECLARE(u_long, pf_srchashmask);
+#define V_pf_srchashmask	VNET(pf_srchashmask)
 #define	PF_HASHSIZ	(131072)
 #define	PF_SRCHASHSIZ	(PF_HASHSIZ/4)
 VNET_DECLARE(struct pf_keyhash *, pf_keyhash);
@@ -1828,7 +1864,7 @@ VNET_DECLARE(struct pf_idhash *, pf_idhash);
 VNET_DECLARE(struct pf_srchash *, pf_srchash);
 #define	V_pf_srchash	VNET(pf_srchash)
 
-#define PF_IDHASH(s)	(be64toh((s)->id) % (pf_hashmask + 1))
+#define PF_IDHASH(s)	(be64toh((s)->id) % (V_pf_hashmask + 1))
 
 VNET_DECLARE(void *, pf_swi_cookie);
 #define V_pf_swi_cookie	VNET(pf_swi_cookie)
@@ -1985,6 +2021,11 @@ void	pf_addr_inc(struct pf_addr *, sa_family_t);
 int	pf_refragment6(struct ifnet *, struct mbuf **, struct m_tag *);
 #endif /* INET6 */
 
+int	pf_multihome_scan_init(struct mbuf *, int, int, struct pf_pdesc *,
+	    struct pfi_kkif *);
+int	pf_multihome_scan_asconf(struct mbuf *, int, int, struct pf_pdesc *,
+	    struct pfi_kkif *);
+
 u_int32_t	pf_new_isn(struct pf_kstate *);
 void   *pf_pull_hdr(struct mbuf *, int, void *, int, u_short *, u_short *,
 	    sa_family_t);
@@ -2013,6 +2054,10 @@ int	pf_normalize_tcp_init(struct mbuf *, int, struct pf_pdesc *,
 int	pf_normalize_tcp_stateful(struct mbuf *, int, struct pf_pdesc *,
 	    u_short *, struct tcphdr *, struct pf_kstate *,
 	    struct pf_state_peer *, struct pf_state_peer *, int *);
+int	pf_normalize_sctp_init(struct mbuf *, int, struct pf_pdesc *,
+	    struct pf_state_peer *, struct pf_state_peer *);
+int	pf_normalize_sctp(int, struct pfi_kkif *, struct mbuf *, int,
+	    int, void *, struct pf_pdesc *);
 u_int32_t
 	pf_state_expires(const struct pf_kstate *);
 void	pf_purge_expired_fragments(void);
@@ -2132,7 +2177,6 @@ VNET_DECLARE(struct pf_kanchor,			 pf_main_anchor);
 #define	V_pf_main_anchor			 VNET(pf_main_anchor)
 #define pf_main_ruleset	V_pf_main_anchor.ruleset
 
-int			 pf_get_ruleset_number(u_int8_t);
 void			 pf_init_kruleset(struct pf_kruleset *);
 int			 pf_kanchor_setup(struct pf_krule *,
 			    const struct pf_kruleset *, const char *);
@@ -2180,7 +2224,7 @@ struct pf_krule		*pf_get_translation(struct pf_pdesc *, struct mbuf *,
 			    struct pf_addr *, struct pf_addr *,
 			    uint16_t, uint16_t, struct pf_kanchor_stackframe *);
 
-struct pf_state_key	*pf_state_key_setup(struct pf_pdesc *, struct pf_addr *,
+struct pf_state_key	*pf_state_key_setup(struct pf_pdesc *, struct mbuf *, int, struct pf_addr *,
 			    struct pf_addr *, u_int16_t, u_int16_t);
 struct pf_state_key	*pf_state_key_clone(struct pf_state_key *);
 

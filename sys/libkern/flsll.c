@@ -31,7 +31,6 @@
 
 #include <sys/cdefs.h>
 #include <sys/libkern.h>
-
 /*
  * Find Last Set bit
  */

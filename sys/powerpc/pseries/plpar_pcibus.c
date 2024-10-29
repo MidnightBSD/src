@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -77,7 +76,7 @@ static int
 plpar_pcibus_probe(device_t dev)
 {
 	phandle_t rtas;
- 
+
 	if (ofw_bus_get_node(dev) == -1 || !rtas_exists())
 		return (ENXIO);
 
@@ -111,4 +110,3 @@ plpar_pcibus_get_dma_tag(device_t dev, device_t child)
 
 	return (dinfo->opd_dma_tag);
 }
-

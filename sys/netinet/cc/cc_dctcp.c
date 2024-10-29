@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
@@ -108,7 +107,7 @@ dctcp_ack_received(struct cc_var *ccv, uint16_t type)
 
 	dctcp_data = ccv->cc_data;
 
-	if (CCV(ccv, t_flags) & TF_ECN_PERMIT) {
+	if (CCV(ccv, t_flags2) & TF2_ECN_PERMIT) {
 		/*
 		 * DCTCP doesn't treat receipt of ECN marked packet as a
 		 * congestion event. Thus, DCTCP always executes the ACK
@@ -165,7 +164,7 @@ dctcp_after_idle(struct cc_var *ccv)
 {
 	struct dctcp *dctcp_data;
 
-	if (CCV(ccv, t_flags) & TF_ECN_PERMIT) {
+	if (CCV(ccv, t_flags2) & TF2_ECN_PERMIT) {
 		dctcp_data = ccv->cc_data;
 
 		/* Initialize internal parameters after idle time */
@@ -231,7 +230,7 @@ dctcp_cong_signal(struct cc_var *ccv, uint32_t type)
 	struct dctcp *dctcp_data;
 	u_int cwin, mss;
 
-	if (CCV(ccv, t_flags) & TF_ECN_PERMIT) {
+	if (CCV(ccv, t_flags2) & TF2_ECN_PERMIT) {
 		dctcp_data = ccv->cc_data;
 		cwin = CCV(ccv, snd_cwnd);
 		mss = tcp_maxseg(ccv->ccvc.tcp);
@@ -301,7 +300,7 @@ dctcp_conn_init(struct cc_var *ccv)
 
 	dctcp_data = ccv->cc_data;
 
-	if (CCV(ccv, t_flags) & TF_ECN_PERMIT)
+	if (CCV(ccv, t_flags2) & TF2_ECN_PERMIT)
 		dctcp_data->save_sndnxt = CCV(ccv, snd_nxt);
 }
 
@@ -313,7 +312,7 @@ dctcp_post_recovery(struct cc_var *ccv)
 {
 	newreno_cc_algo.post_recovery(ccv);
 
-	if (CCV(ccv, t_flags) & TF_ECN_PERMIT)
+	if (CCV(ccv, t_flags2) & TF2_ECN_PERMIT)
 		dctcp_update_alpha(ccv);
 }
 
@@ -340,13 +339,13 @@ dctcp_ecnpkt_handler(struct cc_var *ccv)
 		if (!dctcp_data->ce_prev) {
 			acknow = 1;
 			dctcp_data->ce_prev = 1;
-			CCV(ccv, t_flags2) |= TF_ECN_SND_ECE;
+			CCV(ccv, t_flags2) |= TF2_ECN_SND_ECE;
 		}
 	} else {
 		if (dctcp_data->ce_prev) {
 			acknow = 1;
 			dctcp_data->ce_prev = 0;
-			CCV(ccv, t_flags2) &= ~TF_ECN_SND_ECE;
+			CCV(ccv, t_flags2) &= ~TF2_ECN_SND_ECE;
 		}
 	}
 
@@ -447,23 +446,24 @@ dctcp_slowstart_handler(SYSCTL_HANDLER_ARGS)
 }
 
 SYSCTL_DECL(_net_inet_tcp_cc_dctcp);
-SYSCTL_NODE(_net_inet_tcp_cc, OID_AUTO, dctcp, CTLFLAG_RW, NULL,
+SYSCTL_NODE(_net_inet_tcp_cc, OID_AUTO, dctcp,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, NULL,
     "dctcp congestion control related settings");
 
 SYSCTL_PROC(_net_inet_tcp_cc_dctcp, OID_AUTO, alpha,
-    CTLFLAG_VNET|CTLTYPE_UINT|CTLFLAG_RW, &VNET_NAME(dctcp_alpha), 0,
-    &dctcp_alpha_handler,
-    "IU", "dctcp alpha parameter at start of session");
+    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    &VNET_NAME(dctcp_alpha), 0, &dctcp_alpha_handler, "IU",
+    "dctcp alpha parameter at start of session");
 
 SYSCTL_PROC(_net_inet_tcp_cc_dctcp, OID_AUTO, shift_g,
-    CTLFLAG_VNET|CTLTYPE_UINT|CTLFLAG_RW, &VNET_NAME(dctcp_shift_g), 4,
-    &dctcp_shift_g_handler,
-    "IU", "dctcp shift parameter");
+    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    &VNET_NAME(dctcp_shift_g), 4, &dctcp_shift_g_handler, "IU",
+    "dctcp shift parameter");
 
 SYSCTL_PROC(_net_inet_tcp_cc_dctcp, OID_AUTO, slowstart,
-    CTLFLAG_VNET|CTLTYPE_UINT|CTLFLAG_RW, &VNET_NAME(dctcp_slowstart), 0,
-    &dctcp_slowstart_handler,
-    "IU", "half CWND reduction after the first slow start");
+    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    &VNET_NAME(dctcp_slowstart), 0, &dctcp_slowstart_handler, "IU",
+    "half CWND reduction after the first slow start");
 
 DECLARE_CC_MODULE(dctcp, &dctcp_cc_algo);
 MODULE_VERSION(dctcp, 1);

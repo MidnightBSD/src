@@ -23,17 +23,18 @@
  */
 
 #include <sys/cdefs.h>
-
+#include <sys/endian.h>
 #include <sys/param.h>
-#include <sys/kdb.h>
-#include <sys/kernel.h>
-#include <sys/priv.h>
-#include <sys/systm.h>
-#include <sys/module.h>
-#include <sys/types.h>
 #include <sys/conf.h>
 #include <sys/cons.h>
+#include <sys/kdb.h>
+#include <sys/kernel.h>
+#include <sys/lock.h>
+#include <sys/module.h>
+#include <sys/mutex.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
+#include <sys/systm.h>
 #include <sys/tty.h>
 
 #include <vm/vm.h>
@@ -108,7 +109,7 @@ static driver_t uart_opal_driver = {
 	uart_opal_methods,
 	sizeof(struct uart_opal_softc),
 };
- 
+
 DRIVER_MODULE(uart_opal, opalcons, uart_opal_driver, uart_devclass, 0, 0);
 
 static int uart_opal_getc(struct uart_opal_softc *sc);
@@ -155,7 +156,7 @@ uart_opal_real_map_outbuffer(uint64_t *bufferp, uint64_t *lenp)
 	*bufferp = (uint64_t)opalcons_buffer.tmpbuf;
 	*lenp = (uint64_t)&opalcons_buffer.size;
 }
-	
+
 static void
 uart_opal_real_unmap_outbuffer(uint64_t *len)
 {
@@ -166,6 +167,24 @@ uart_opal_real_unmap_outbuffer(uint64_t *len)
 	mtx_assert(&opalcons_buffer.mtx, MA_OWNED);
 	*len = opalcons_buffer.size;
 	mtx_unlock_spin(&opalcons_buffer.mtx);
+}
+
+static int64_t
+uart_opal_console_write_buffer_space(int vtermid)
+{
+	int64_t buffer_space_val = 0;
+	vm_paddr_t buffer_space_ptr;
+
+	if (pmap_bootstrapped)
+		buffer_space_ptr = vtophys(&buffer_space_val);
+	else
+		buffer_space_ptr = (vm_paddr_t)&buffer_space_val;
+
+	if (opal_call(OPAL_CONSOLE_WRITE_BUFFER_SPACE, vtermid,
+	    buffer_space_ptr) != OPAL_SUCCESS)
+		return (-1);
+
+	return (be64toh(buffer_space_val));
 }
 
 static int
@@ -235,7 +254,7 @@ uart_opal_cnprobe(struct consdev *cp)
 	/* Check if OF has an active stdin/stdout */
 	if (OF_getprop(chosen, "linux,stdout-path", buf, sizeof(buf)) <= 0)
 		goto fail;
-	
+
 	input = OF_finddevice(buf);
 	if (input == -1)
 		goto fail;
@@ -251,7 +270,7 @@ uart_opal_cnprobe(struct consdev *cp)
 	cp->cn_arg = console_sc;
 	stdout_cp = cp;
 	return;
-	
+
 fail:
 	cp->cn_pri = CN_DEAD;
 	return;
@@ -321,7 +340,7 @@ uart_opal_get(struct uart_opal_softc *sc, void *buffer, size_t bufsize)
 	int hdr = 0;
 
 	if (sc->protocol == OPAL_RAW) {
-		uint64_t len = bufsize;
+		uint64_t len = htobe64(bufsize);
 		uint64_t olen = (uint64_t)&len;
 		uint64_t obuf = (uint64_t)buffer;
 
@@ -334,7 +353,7 @@ uart_opal_get(struct uart_opal_softc *sc, void *buffer, size_t bufsize)
 		if (err != OPAL_SUCCESS)
 			return (-1);
 
-		bufsize = len;
+		bufsize = be64toh(len);
 	} else {
 		uart_lock(&sc->sc_mtx);
 		if (sc->inbuflen == 0) {
@@ -345,6 +364,7 @@ uart_opal_get(struct uart_opal_softc *sc, void *buffer, size_t bufsize)
 				return (-1);
 			}
 			hdr = 1; 
+			sc->inbuflen = be64toh(sc->inbuflen);
 		}
 
 		if (sc->inbuflen == 0) {
@@ -389,7 +409,9 @@ uart_opal_put(struct uart_opal_softc *sc, void *buffer, size_t bufsize)
 		len = bufsize;
 
 		uart_opal_real_map_outbuffer(&obuf, &olen);
+		*(uint64_t*)olen = htobe64(*(uint64_t*)olen);
 		err = opal_call(OPAL_CONSOLE_WRITE, sc->vtermid, olen, obuf);
+		*(uint64_t*)olen = be64toh(*(uint64_t*)olen);
 		uart_opal_real_unmap_outbuffer(&len);
 	} else {
 		uart_lock(&sc->sc_mtx);
@@ -404,7 +426,9 @@ uart_opal_put(struct uart_opal_softc *sc, void *buffer, size_t bufsize)
 		len = 4 + bufsize;
 
 		uart_opal_real_map_outbuffer(&obuf, &olen);
+		*(uint64_t*)olen = htobe64(*(uint64_t*)olen);
 		err = opal_call(OPAL_CONSOLE_WRITE, sc->vtermid, olen, obuf);
+		*(uint64_t*)olen = be64toh(*(uint64_t*)olen);
 		uart_opal_real_unmap_outbuffer(&len);
 
 		uart_unlock(&sc->sc_mtx);
@@ -412,12 +436,12 @@ uart_opal_put(struct uart_opal_softc *sc, void *buffer, size_t bufsize)
 		len -= 4;
 	}
 
-#if 0
-	if (err != OPAL_SUCCESS)
-		len = 0;
-#endif
+	if (err == OPAL_SUCCESS)
+		return (len);
+	else if (err == OPAL_BUSY_EVENT)
+		return(0);
 
-	return (len);
+	return (-1);
 }
 
 static int
@@ -473,11 +497,28 @@ uart_opal_ttyoutwakeup(struct tty *tp)
 	struct uart_opal_softc *sc;
 	char buffer[8];
 	int len;
+	int64_t buffer_space;
 
 	sc = tty_softc(tp);
 
-	while ((len = ttydisc_getc(tp, buffer, sizeof(buffer))) != 0)
-		uart_opal_put(sc, buffer, len);
+	while ((len = ttydisc_getc(tp, buffer, sizeof(buffer))) != 0) {
+		int bytes_written = 0;
+		while (bytes_written == 0) {
+			buffer_space = uart_opal_console_write_buffer_space(sc->vtermid);
+			if (buffer_space == -1)
+				/* OPAL failure or invalid terminal */
+				break;
+			else if (buffer_space >= len)
+				bytes_written = uart_opal_put(sc, buffer, len);
+
+			if (bytes_written == 0)
+				/* OPAL must be busy, poll and retry */
+				opal_call(OPAL_POLL_EVENTS, NULL);
+			else if (bytes_written == -1)
+				/* OPAL failure or invalid terminal */
+				break;
+		}
+	}
 }
 
 static void
@@ -571,4 +612,3 @@ static driver_t opalcons_driver = {
 static devclass_t opalcons_devclass;
 
 DRIVER_MODULE(opalcons, opal, opalcons_driver, opalcons_devclass, 0, 0);
-

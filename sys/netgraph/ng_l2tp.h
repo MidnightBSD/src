@@ -35,7 +35,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * Author: Archie Cobbs <archie@freebsd.org>
- *
  */
 
 #ifndef _NETGRAPH_NG_L2TP_H_

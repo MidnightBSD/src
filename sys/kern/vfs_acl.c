@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999-2006, 2016-2017 Robert N. M. Watson
  * All rights reserved.
@@ -40,7 +40,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/sysproto.h>
@@ -56,7 +55,6 @@
 #include <sys/file.h>
 #include <sys/filedesc.h>
 #include <sys/proc.h>
-#include <sys/sysent.h>
 #include <sys/acl.h>
 
 #include <security/audit/audit.h>
@@ -65,7 +63,6 @@
 CTASSERT(ACL_MAX_ENTRIES >= OLDACL_MAX_ENTRIES);
 
 MALLOC_DEFINE(M_ACL, "acl", "Access Control Lists");
-
 
 static int	kern___acl_aclcheck_path(struct thread *td, const char *path,
 		    acl_type_t type, struct acl *aclp, int follow);
@@ -89,7 +86,7 @@ acl_copy_oldacl_into_acl(const struct oldacl *source, struct acl *dest)
 
 	if (source->acl_cnt < 0 || source->acl_cnt > OLDACL_MAX_ENTRIES)
 		return (EINVAL);
-	
+
 	bzero(dest, sizeof(*dest));
 
 	dest->acl_cnt = source->acl_cnt;
@@ -149,7 +146,7 @@ acl_copyin(const void *user_acl, struct acl *kernel_acl, acl_type_t type)
 		error = copyin(user_acl, &old, sizeof(old));
 		if (error != 0)
 			break;
-		acl_copy_oldacl_into_acl(&old, kernel_acl);
+		error = acl_copy_oldacl_into_acl(&old, kernel_acl);
 		break;
 
 	default:
@@ -252,7 +249,7 @@ vacl_set_acl(struct thread *td, struct vnode *vp, acl_type_t type,
 #ifdef MAC
 out_unlock:
 #endif
-	VOP_UNLOCK(vp, 0);
+	VOP_UNLOCK(vp);
 	vn_finished_write(mp);
 out:
 	acl_free(inkernelacl);
@@ -284,7 +281,7 @@ vacl_get_acl(struct thread *td, struct vnode *vp, acl_type_t type,
 #ifdef MAC
 out:
 #endif
-	VOP_UNLOCK(vp, 0);
+	VOP_UNLOCK(vp);
 	if (error == 0)
 		error = acl_copyout(inkernelacl, aclp, type);
 	acl_free(inkernelacl);
@@ -315,7 +312,7 @@ vacl_delete(struct thread *td, struct vnode *vp, acl_type_t type)
 #ifdef MAC
 out:
 #endif
-	VOP_UNLOCK(vp, 0);
+	VOP_UNLOCK(vp);
 	vn_finished_write(mp);
 	return (error);
 }
@@ -435,8 +432,8 @@ sys___acl_get_fd(struct thread *td, struct __acl_get_fd_args *uap)
 	int error;
 
 	AUDIT_ARG_FD(uap->filedes);
-	error = getvnode(td, uap->filedes,
-	    cap_rights_init(&rights, CAP_ACL_GET), &fp);
+	error = getvnode_path(td, uap->filedes,
+	    cap_rights_init_one(&rights, CAP_ACL_GET), &fp);
 	if (error == 0) {
 		error = vacl_get_acl(td, fp->f_vnode, uap->type, uap->aclp);
 		fdrop(fp, td);
@@ -456,7 +453,7 @@ sys___acl_set_fd(struct thread *td, struct __acl_set_fd_args *uap)
 
 	AUDIT_ARG_FD(uap->filedes);
 	error = getvnode(td, uap->filedes,
-	    cap_rights_init(&rights, CAP_ACL_SET), &fp);
+	    cap_rights_init_one(&rights, CAP_ACL_SET), &fp);
 	if (error == 0) {
 		error = vacl_set_acl(td, fp->f_vnode, uap->type, uap->aclp);
 		fdrop(fp, td);
@@ -512,7 +509,7 @@ sys___acl_delete_fd(struct thread *td, struct __acl_delete_fd_args *uap)
 
 	AUDIT_ARG_FD(uap->filedes);
 	error = getvnode(td, uap->filedes,
-	    cap_rights_init(&rights, CAP_ACL_DELETE), &fp);
+	    cap_rights_init_one(&rights, CAP_ACL_DELETE), &fp);
 	if (error == 0) {
 		error = vacl_delete(td, fp->f_vnode, uap->type);
 		fdrop(fp, td);
@@ -568,8 +565,8 @@ sys___acl_aclcheck_fd(struct thread *td, struct __acl_aclcheck_fd_args *uap)
 	int error;
 
 	AUDIT_ARG_FD(uap->filedes);
-	error = getvnode(td, uap->filedes,
-	    cap_rights_init(&rights, CAP_ACL_CHECK), &fp);
+	error = getvnode_path(td, uap->filedes,
+	    cap_rights_init_one(&rights, CAP_ACL_CHECK), &fp);
 	if (error == 0) {
 		error = vacl_aclcheck(td, fp->f_vnode, uap->type, uap->aclp);
 		fdrop(fp, td);

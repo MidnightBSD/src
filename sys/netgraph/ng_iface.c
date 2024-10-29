@@ -36,7 +36,6 @@
  * OF SUCH DAMAGE.
  *
  * Author: Archie Cobbs <archie@freebsd.org>
- *
  * $Whistle: ng_iface.c,v 1.33 1999/11/01 09:24:51 julian Exp $
  */
 
@@ -92,7 +91,7 @@ static MALLOC_DEFINE(M_NETGRAPH_IFACE, "netgraph_iface", "netgraph iface node");
 #define M_NETGRAPH_IFACE M_NETGRAPH
 #endif
 
-static SYSCTL_NODE(_net_graph, OID_AUTO, iface, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_net_graph, OID_AUTO, iface, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "Point to point netgraph interface");
 VNET_DEFINE_STATIC(int, ng_iface_max_nest) = 2;
 #define	V_ng_iface_max_nest	VNET(ng_iface_max_nest)
@@ -286,7 +285,6 @@ ng_iface_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 	ng_iface_print_ioctl(ifp, command, data);
 #endif
 	switch (command) {
-
 	/* These two are mostly handled at a higher layer */
 	case SIOCSIFADDR:
 		ifp->if_flags |= IFF_UP;
@@ -371,7 +369,7 @@ ng_iface_output(struct ifnet *ifp, struct mbuf *m,
 	if (dst->sa_family == AF_UNSPEC)
 		bcopy(dst->sa_data, &af, sizeof(af));
 	else
-		af = dst->sa_family;
+		af = RO_GET_FAMILY(ro, dst);
 
 	/* Berkeley packet filter */
 	ng_iface_bpftap(ifp, m, af);
@@ -525,10 +523,6 @@ ng_iface_constructor(node_p node)
 	/* Allocate node and interface private structures */
 	priv = malloc(sizeof(*priv), M_NETGRAPH_IFACE, M_WAITOK | M_ZERO);
 	ifp = if_alloc(IFT_PROPVIRTUAL);
-	if (ifp == NULL) {
-		free(priv, M_NETGRAPH_IFACE);
-		return (ENOMEM);
-	}
 
 	rm_init(&priv->lock, "ng_iface private rmlock");
 
@@ -624,7 +618,6 @@ ng_iface_rcvmsg(node_p node, item_p item, hook_p lasthook)
 		case NGM_IFACE_POINT2POINT:
 		case NGM_IFACE_BROADCAST:
 		    {
-
 			/* Deny request if interface is UP */
 			if ((ifp->if_flags & IFF_UP) != 0)
 				return (EBUSY);
@@ -687,6 +680,7 @@ ng_iface_rcvdata(hook_p hook, item_p item)
 	const priv_p priv = NG_NODE_PRIVATE(NG_HOOK_NODE(hook));
 	const iffam_p iffam = get_iffam_from_hook(priv, hook);
 	struct ifnet *const ifp = priv->ifp;
+	struct epoch_tracker et;
 	struct mbuf *m;
 	int isr;
 
@@ -729,7 +723,9 @@ ng_iface_rcvdata(hook_p hook, item_p item)
 	random_harvest_queue(m, sizeof(*m), RANDOM_NET_NG);
 	M_SETFIB(m, ifp->if_fib);
 	CURVNET_SET(ifp->if_vnet);
+	NET_EPOCH_ENTER(et);
 	netisr_dispatch(isr, m);
+	NET_EPOCH_EXIT(et);
 	CURVNET_RESTORE();
 	return (0);
 }

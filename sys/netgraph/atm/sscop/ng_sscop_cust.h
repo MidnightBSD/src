@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -27,7 +27,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  *
  * Customisation of the SSCOP code to ng_sscop.
  */
@@ -131,7 +130,6 @@ T##_func(node_p node, hook_p hook, void *arg1, int arg2)		\
 	    "timer_" #T " expired"));					\
 	sscop_signal(sscop, SIG_T_##N, NULL);				\
 }
-
 
 /*
  * Message queues

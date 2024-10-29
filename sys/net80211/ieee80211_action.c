@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #endif
 
 /*
@@ -40,7 +40,7 @@
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/systm.h> 
- 
+
 #include <sys/socket.h>
 
 #include <net/if.h>

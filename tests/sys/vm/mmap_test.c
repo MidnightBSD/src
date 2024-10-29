@@ -22,8 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/tests/sys/vm/mmap_test.c 313233 2017-02-04 16:58:06Z ngie $
  */
 
 #include <sys/param.h>
@@ -34,6 +32,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -54,6 +53,12 @@ static const struct {
 
 #define	MAP_AT_ZERO	"security.bsd.map_at_zero"
 
+#ifdef __LP64__
+#define ALLOW_WX "kern.elf64.allow_wx"
+#else
+#define ALLOW_WX "kern.elf32.allow_wx"
+#endif
+
 ATF_TC_WITHOUT_HEAD(mmap__map_at_zero);
 ATF_TC_BODY(mmap__map_at_zero, tc)
 {
@@ -61,6 +66,8 @@ ATF_TC_BODY(mmap__map_at_zero, tc)
 	size_t len;
 	unsigned int i;
 	int map_at_zero;
+	bool allow_wx;
+	int prot_flags;
 
 	len = sizeof(map_at_zero);
 	if (sysctlbyname(MAP_AT_ZERO, &map_at_zero, &len, NULL, 0) == -1) {
@@ -69,13 +76,27 @@ ATF_TC_BODY(mmap__map_at_zero, tc)
 		return;
 	}
 
+	len = sizeof(allow_wx);
+	if (sysctlbyname(ALLOW_WX, &allow_wx, &len, NULL, 0) == -1) {
+		if (errno == ENOENT) {
+			/* Allow W+X if sysctl isn't present */
+			allow_wx = true;
+		} else {
+			atf_tc_skip("sysctl for %s failed: %s\n", ALLOW_WX,
+			    strerror(errno));
+			return;
+		}
+	}
+
 	/* Normalize to 0 or 1 for array access. */
 	map_at_zero = !!map_at_zero;
 
 	for (i = 0; i < nitems(map_at_zero_tests); i++) {
+		prot_flags = PROT_READ | PROT_WRITE;
+		if (allow_wx)
+			prot_flags |= PROT_EXEC;
 		p = mmap((void *)map_at_zero_tests[i].addr, PAGE_SIZE,
-		    PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_FIXED,
-		    -1, 0);
+		    prot_flags, MAP_ANON | MAP_FIXED, -1, 0);
 		if (p == MAP_FAILED) {
 			ATF_CHECK_MSG(map_at_zero_tests[i].ok[map_at_zero] == 0,
 			    "mmap(%p, ...) failed", map_at_zero_tests[i].addr);
@@ -259,6 +280,21 @@ ATF_TC_BODY(mmap__dev_zero_shared, tc)
 	close(fd);
 }
 
+ATF_TC_WITHOUT_HEAD(mmap__write_only);
+ATF_TC_BODY(mmap__write_only, tc)
+{
+	void *p;
+	int pagesize;
+
+	ATF_REQUIRE((pagesize = getpagesize()) > 0);
+	p = mmap(NULL, pagesize, PROT_WRITE, MAP_ANON, -1, 0);
+	ATF_REQUIRE(p != MAP_FAILED);
+
+	*(volatile uint32_t *)p = 0x12345678;
+
+	munmap(p, pagesize);
+}
+
 ATF_TP_ADD_TCS(tp)
 {
 
@@ -266,6 +302,7 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, mmap__bad_arguments);
 	ATF_TP_ADD_TC(tp, mmap__dev_zero_private);
 	ATF_TP_ADD_TC(tp, mmap__dev_zero_shared);
+	ATF_TP_ADD_TC(tp, mmap__write_only);
 
 	return (atf_no_error());
 }

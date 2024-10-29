@@ -5,6 +5,6 @@ KMOD	= random_fortuna
 SRCS	= randomdev.c hash.c fortuna.c
 SRCS	+= opt_param.h bus_if.h device_if.h
 SRCS	+= opt_ddb.h
-CFLAGS	+= -DDEV_RANDOM -DRANDOM_LOADABLE
+CFLAGS	+= -DRANDOM_LOADABLE
 
 .include <bsd.kmod.mk>

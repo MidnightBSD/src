@@ -1,4 +1,3 @@
-/* $FreeBSD: stable/11/stand/efi/include/efi.h 346482 2019-04-21 04:26:02Z kevans $ */
 /*++
 
 Copyright (c)  1999 - 2002 Intel Corporation. All rights reserved
@@ -60,11 +59,13 @@ Revision History
 #include "efitcp.h"
 #include "efipoint.h"
 #include "efiuga.h"
+#include <sys/types.h>
 
 /*
  * Global variables
  */
 extern EFI_LOADED_IMAGE *boot_img;
+extern bool boot_services_active;
 
 /*
  * FreeBSD UUID

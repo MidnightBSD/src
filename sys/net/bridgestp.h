@@ -68,7 +68,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * OpenBSD: if_bridge.h,v 1.14 2001/03/22 03:48:29 jason Exp
- *
  */
 
 /*
@@ -176,7 +175,6 @@
 #define	BSTP_INFO_MINE		2
 #define	BSTP_INFO_AGED		3
 #define	BSTP_INFO_DISABLED	4
-
 
 #define	BSTP_MESSAGE_AGE_INCR	(1 * 256)	/* in 256ths of a second */
 #define	BSTP_TICK_VAL		(1 * 256)	/* in 256ths of a second */

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008-2009 Semihalf, Rafal Jaworowski
  * All rights reserved.
@@ -27,13 +27,13 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>
 #include <sys/pcpu.h>
 #include <sys/proc.h>
+#include <sys/sched.h>
 #include <sys/smp.h>
 
 #include <machine/pcb.h>
@@ -84,6 +84,7 @@ cpudep_ap_bootstrap(void)
 #endif
 	pcpup->pc_curpcb = pcpup->pc_curthread->td_pcb;
 	sp = pcpup->pc_curpcb->pcb_sp;
+	schedinit_ap();
 
 	/* XXX shouldn't the pcb_sp be checked/forced for alignment here?? */
 

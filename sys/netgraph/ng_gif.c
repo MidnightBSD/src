@@ -63,7 +63,6 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
- *
  */
 
 /*
@@ -592,4 +591,3 @@ ng_gif_mod_event(module_t mod, int event, void *data)
 	}
 	return (error);
 }
-

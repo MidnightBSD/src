@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #endif
 
 /*
@@ -340,7 +340,7 @@ adhoc_input(struct ieee80211_node *ni, struct mbuf *m,
 		wh = mtod(m, struct ieee80211_frame *);
 		type = IEEE80211_FC0_TYPE_DATA;
 		dir = wh->i_fc[1] & IEEE80211_FC1_DIR_MASK;
-		subtype = IEEE80211_FC0_SUBTYPE_QOS;
+		subtype = IEEE80211_FC0_SUBTYPE_QOS_DATA;
 		hdrspace = ieee80211_hdrspace(ic, wh);	/* XXX optimize? */
 		goto resubmit_ampdu;
 	}
@@ -521,7 +521,7 @@ adhoc_input(struct ieee80211_node *ni, struct mbuf *m,
 		/*
 		 * Save QoS bits for use below--before we strip the header.
 		 */
-		if (subtype == IEEE80211_FC0_SUBTYPE_QOS)
+		if (subtype == IEEE80211_FC0_SUBTYPE_QOS_DATA)
 			qos = ieee80211_getqos(wh)[0];
 		else
 			qos = 0;
@@ -1008,7 +1008,6 @@ ahdemo_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
 {
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211com *ic = ni->ni_ic;
-	struct ieee80211_frame *wh;
 
 	/*
 	 * Process management frames when scanning; useful for doing
@@ -1017,7 +1016,11 @@ ahdemo_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
 	if (ic->ic_flags & IEEE80211_F_SCAN)
 		adhoc_recv_mgmt(ni, m0, subtype, rxs, rssi, nf);
 	else {
+#ifdef IEEE80211_DEBUG
+		struct ieee80211_frame *wh;
+
 		wh = mtod(m0, struct ieee80211_frame *);
+#endif
 		switch (subtype) {
 		case IEEE80211_FC0_SUBTYPE_ASSOC_REQ:
 		case IEEE80211_FC0_SUBTYPE_ASSOC_RESP:

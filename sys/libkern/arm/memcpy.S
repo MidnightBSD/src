@@ -26,7 +26,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY_NP(__aeabi_memcpy)
 EENTRY_NP(__aeabi_memcpy4)
 EENTRY_NP(__aeabi_memcpy8)

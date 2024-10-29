@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * Copyright (c) 2014, 2018 Andrey V. Elsukov <ae@FreeBSD.org>
@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_rss.h"
@@ -117,7 +116,7 @@ static int	gre_output(struct ifnet *, struct mbuf *,
 static void	gre_delete_tunnel(struct gre_softc *);
 
 SYSCTL_DECL(_net_link);
-static SYSCTL_NODE(_net_link, IFT_TUNNEL, gre, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_net_link, IFT_TUNNEL, gre, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "Generic Routing Encapsulation");
 #ifndef MAX_GRE_NEST
 /*
@@ -412,7 +411,7 @@ gre_delete_tunnel(struct gre_softc *sc)
 	if ((gs = sc->gre_so) != NULL && CK_LIST_EMPTY(&gs->list)) {
 		CK_LIST_REMOVE(gs, chain);
 		soclose(gs->so);
-		epoch_call(net_epoch_preempt, &gs->epoch_ctx, gre_sofree);
+		NET_EPOCH_CALL(gre_sofree, &gs->epoch_ctx);
 		sc->gre_so = NULL;
 	}
 	GRE2IFP(sc)->if_drv_flags &= ~IFF_DRV_RUNNING;
@@ -612,7 +611,7 @@ gre_output(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
 	if (dst->sa_family == AF_UNSPEC)
 		bcopy(dst->sa_data, &af, sizeof(af));
 	else
-		af = dst->sa_family;
+		af = RO_GET_FAMILY(ro, dst);
 	/*
 	 * Now save the af in the inbound pkt csum data, this is a cheat since
 	 * we are using the inbound csum_data field to carry the af over to

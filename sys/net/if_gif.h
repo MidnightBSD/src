@@ -93,11 +93,7 @@ struct etherip_header {
 } __packed;
 
 #define ETHERIP_VERSION			0x3
-/* mbuf adjust factor to force 32-bit alignment of IP header */
-#define	ETHERIP_ALIGN		2
 
-#define	GIF_RLOCK()	struct epoch_tracker gif_et; epoch_enter_preempt(net_epoch_preempt, &gif_et)
-#define	GIF_RUNLOCK()	epoch_exit_preempt(net_epoch_preempt, &gif_et)
 #define	GIF_WAIT()	epoch_wait_preempt(net_epoch_preempt)
 
 /* Prototypes */

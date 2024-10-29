@@ -1,7 +1,7 @@
 /*	$NetBSD: ieee8023ad_lacp.c,v 1.3 2005/12/11 12:24:54 christos Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c)2005 YAMAMOTO Takashi,
  * Copyright (c)2008 Andrew Thompson <thompsa@FreeBSD.org>
@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-
+#include "opt_kern_tls.h"
 #include "opt_ratelimit.h"
 
 #include <sys/param.h>
@@ -197,7 +197,8 @@ static void	lacp_dprintf(const struct lacp_port *, const char *, ...)
 
 VNET_DEFINE_STATIC(int, lacp_debug);
 #define	V_lacp_debug	VNET(lacp_debug)
-SYSCTL_NODE(_net_link_lagg, OID_AUTO, lacp, CTLFLAG_RD, 0, "ieee802.3ad");
+SYSCTL_NODE(_net_link_lagg, OID_AUTO, lacp, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "ieee802.3ad");
 SYSCTL_INT(_net_link_lagg_lacp, OID_AUTO, debug, CTLFLAG_RWTUN | CTLFLAG_VNET,
     &VNET_NAME(lacp_debug), 0, "Enable LACP debug logging (1=debug, 2=trace)");
 
@@ -205,7 +206,6 @@ VNET_DEFINE_STATIC(int, lacp_default_strict_mode) = 1;
 SYSCTL_INT(_net_link_lagg_lacp, OID_AUTO, default_strict_mode,
     CTLFLAG_RWTUN | CTLFLAG_VNET, &VNET_NAME(lacp_default_strict_mode), 0,
     "LACP strict protocol compliance default");
-
 #define LACP_DPRINTF(a) if (V_lacp_debug & 0x01) { lacp_dprintf a ; }
 #define LACP_TRACE(a) if (V_lacp_debug & 0x02) { lacp_dprintf(a,"%s\n",__func__); }
 #define LACP_TPRINTF(a) if (V_lacp_debug & 0x04) { lacp_dprintf a ; }
@@ -606,7 +606,7 @@ lacp_req(struct lagg_softc *sc, void *data)
 	struct lacp_aggregator *la;
 
 	bzero(req, sizeof(struct lacp_opreq));
-	
+
 	/*
 	 * If the LACP softc is NULL, return with the opreq structure full of
 	 * zeros.  It is normal for the softc to be NULL while the lagg is
@@ -831,31 +831,48 @@ lacp_stop(struct lagg_softc *sc)
 }
 
 struct lagg_port *
-lacp_select_tx_port(struct lagg_softc *sc, struct mbuf *m)
+lacp_select_tx_port_by_hash(struct lagg_softc *sc, uint32_t hash,
+    uint8_t numa_domain, int *err)
 {
 	struct lacp_softc *lsc = LACP_SOFTC(sc);
 	struct lacp_portmap *pm;
 	struct lacp_port *lp;
-	uint32_t hash;
+	struct lacp_port **map;
+	int count;
 
 	if (__predict_false(lsc->lsc_suppress_distributing)) {
 		LACP_DPRINTF((NULL, "%s: waiting transit\n", __func__));
+		*err = ENOBUFS;
 		return (NULL);
 	}
 
 	pm = &lsc->lsc_pmap[lsc->lsc_activemap];
 	if (pm->pm_count == 0) {
 		LACP_DPRINTF((NULL, "%s: no active aggregator\n", __func__));
+		*err = ENETDOWN;
 		return (NULL);
 	}
 
-	if ((sc->sc_opts & LAGG_OPT_USE_FLOWID) &&
-	    M_HASHTYPE_GET(m) != M_HASHTYPE_NONE)
-		hash = m->m_pkthdr.flowid >> sc->flowid_shift;
-	else
-		hash = m_ether_tcpip_hash(sc->sc_flags, m, lsc->lsc_hashkey);
-	hash %= pm->pm_count;
-	lp = pm->pm_map[hash];
+#ifdef NUMA
+	if ((sc->sc_opts & LAGG_OPT_USE_NUMA) &&
+	    pm->pm_num_dom > 1 && numa_domain < MAXMEMDOM) {
+		count = pm->pm_numa[numa_domain].count;
+		if (count > 0) {
+			map = pm->pm_numa[numa_domain].map;
+		} else {
+			/* No ports on this domain; use global hash. */
+			map = pm->pm_map;
+			count = pm->pm_count;
+		}
+	} else
+#endif
+	{
+		map = pm->pm_map;
+		count = pm->pm_count;
+	}
+
+	hash %= count;
+	lp = map[hash];
 
 	KASSERT((lp->lp_state & LACP_STATE_DISTRIBUTING) != 0,
 	    ("aggregated port is not distributing"));
@@ -863,33 +880,22 @@ lacp_select_tx_port(struct lagg_softc *sc, struct mbuf *m)
 	return (lp->lp_lagg);
 }
 
-#ifdef RATELIMIT
 struct lagg_port *
-lacp_select_tx_port_by_hash(struct lagg_softc *sc, uint32_t flowid)
+lacp_select_tx_port(struct lagg_softc *sc, struct mbuf *m, int *err)
 {
 	struct lacp_softc *lsc = LACP_SOFTC(sc);
-	struct lacp_portmap *pm;
-	struct lacp_port *lp;
 	uint32_t hash;
+	uint8_t numa_domain;
 
-	if (__predict_false(lsc->lsc_suppress_distributing)) {
-		LACP_DPRINTF((NULL, "%s: waiting transit\n", __func__));
-		return (NULL);
-	}
+	if ((sc->sc_opts & LAGG_OPT_USE_FLOWID) &&
+	    M_HASHTYPE_GET(m) != M_HASHTYPE_NONE)
+		hash = m->m_pkthdr.flowid >> sc->flowid_shift;
+	else
+		hash = m_ether_tcpip_hash(sc->sc_flags, m, lsc->lsc_hashkey);
 
-	pm = &lsc->lsc_pmap[lsc->lsc_activemap];
-	if (pm->pm_count == 0) {
-		LACP_DPRINTF((NULL, "%s: no active aggregator\n", __func__));
-		return (NULL);
-	}
-
-	hash = flowid >> sc->flowid_shift;
-	hash %= pm->pm_count;
-	lp = pm->pm_map[hash];
-
-	return (lp->lp_lagg);
+	numa_domain = m->m_pkthdr.numa_domain;
+	return (lacp_select_tx_port_by_hash(sc, hash, numa_domain, err));
 }
-#endif
 
 /*
  * lacp_suppress_distributing: drop transmit packets for a while
@@ -912,7 +918,8 @@ lacp_suppress_distributing(struct lacp_softc *lsc, struct lacp_aggregator *la)
 	/* send a marker frame down each port to verify the queues are empty */
 	LIST_FOREACH(lp, &lsc->lsc_ports, lp_next) {
 		lp->lp_flags |= LACP_PORT_MARK;
-		lacp_xmit_marker(lp);
+		if (lacp_xmit_marker(lp) != 0)
+			lp->lp_flags &= ~LACP_PORT_MARK;
 	}
 
 	/* set a timeout for the marker frames */
@@ -1045,6 +1052,10 @@ lacp_update_portmap(struct lacp_softc *lsc)
 	uint64_t speed;
 	u_int newmap;
 	int i;
+#ifdef NUMA
+	int count;
+	uint8_t domain;
+#endif
 
 	newmap = lsc->lsc_activemap == 0 ? 1 : 0;
 	p = &lsc->lsc_pmap[newmap];
@@ -1055,12 +1066,30 @@ lacp_update_portmap(struct lacp_softc *lsc)
 	if (la != NULL && la->la_nports > 0) {
 		p->pm_count = la->la_nports;
 		i = 0;
-		TAILQ_FOREACH(lp, &la->la_ports, lp_dist_q)
+		TAILQ_FOREACH(lp, &la->la_ports, lp_dist_q) {
 			p->pm_map[i++] = lp;
+#ifdef NUMA
+			domain = lp->lp_ifp->if_numa_domain;
+			if (domain >= MAXMEMDOM)
+				continue;
+			count = p->pm_numa[domain].count;
+			p->pm_numa[domain].map[count] = lp;
+			p->pm_numa[domain].count++;
+#endif
+		}
 		KASSERT(i == p->pm_count, ("Invalid port count"));
+
+#ifdef NUMA
+		for (i = 0; i < MAXMEMDOM; i++) {
+			if (p->pm_numa[i].count != 0)
+				p->pm_num_dom++;
+		}
+#endif
 		speed = lacp_aggregator_bandwidth(la);
 	}
 	sc->sc_ifp->if_baudrate = speed;
+	EVENTHANDLER_INVOKE(ifnet_event, sc->sc_ifp,
+	    IFNET_EVENT_UPDATE_BAUDRATE);
 
 	/* switch the active portmap over */
 	atomic_store_rel_int(&lsc->lsc_activemap, newmap);
@@ -1078,7 +1107,6 @@ lacp_compose_key(struct lacp_port *lp)
 	uint16_t key;
 
 	if ((lp->lp_state & LACP_STATE_AGGREGATION) == 0) {
-
 		/*
 		 * non-aggregatable links should have unique keys.
 		 *
@@ -1191,6 +1219,7 @@ lacp_compose_key(struct lacp_port *lp)
 		case IFM_40G_CR4:
 		case IFM_40G_SR4:
 		case IFM_40G_LR4:
+		case IFM_40G_LM4:
 		case IFM_40G_XLPPI:
 		case IFM_40G_KR4:
 		case IFM_40G_XLAUI:
@@ -1649,7 +1678,6 @@ lacp_sm_ptx_tx_schedule(struct lacp_port *lp)
 
 	if (!(lp->lp_state & LACP_STATE_ACTIVITY) &&
 	    !(lp->lp_partner.lip_state & LACP_STATE_ACTIVITY)) {
-
 		/*
 		 * NO_PERIODIC
 		 */

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997,1998,2003 Doug Rabson
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SYS_BUS_H_
@@ -61,6 +60,21 @@ typedef enum device_state {
 } device_state_t;
 
 /**
+ * @brief Device proprty types.
+ *
+ * Those are used by bus logic to encode requested properties,
+ * e.g. in DT all properties are stored as BE and need to be converted
+ * to host endianness.
+ */
+typedef enum device_property_type {
+	DEVICE_PROP_ANY = 0,
+	DEVICE_PROP_BUFFER = 1,
+	DEVICE_PROP_UINT32 = 2,
+	DEVICE_PROP_UINT64 = 3,
+	DEVICE_PROP_HANDLE = 4,
+} device_property_type_t;
+
+/**
  * @brief Device information exported to userspace.
  * The strings are placed one after the other, separated by NUL characters.
  * Fields should be added after the last one and order maintained for compatibility
@@ -89,7 +103,6 @@ struct u_device {
 #define	DF_QUIET	0x10		/* don't print verbose attach message */
 #define	DF_DONENOMATCH	0x20		/* don't execute DEVICE_NOMATCH again */
 #define	DF_EXTERNALSOFTC 0x40		/* softc not allocated by us */
-#define	DF_REBID	0x80		/* Can rebid after attach */
 #define	DF_SUSPENDED	0x100		/* Device is suspended. */
 #define	DF_QUIET_CHILDREN 0x200		/* Default to quiet for all my children */
 #define	DF_ATTACHED_ONCE 0x400		/* Has been attached at least once */
@@ -149,24 +162,10 @@ struct devreq {
 
 #ifdef _KERNEL
 
-#include <sys/eventhandler.h>
+#include <sys/_eventhandler.h>
 #include <sys/kobj.h>
 #include <sys/systm.h>
-
-/**
- * devctl hooks.  Typically one should use the devctl_notify
- * hook to send the message.  However, devctl_queue_data is also
- * included in case devctl_notify isn't sufficiently general.
- */
-boolean_t devctl_process_running(void);
-void devctl_notify_f(const char *__system, const char *__subsystem,
-    const char *__type, const char *__data, int __flags);
-void devctl_notify(const char *__system, const char *__subsystem,
-    const char *__type, const char *__data);
-void devctl_queue_data_f(char *__data, int __flags);
-void devctl_queue_data(char *__data);
-struct sbuf;
-void devctl_safe_quote_sb(struct sbuf *__sb, const char *__src);
+#include <sys/devctl.h>
 
 /**
  * Device name parsers.  Hook to allow device enumerators to map
@@ -251,17 +250,17 @@ typedef void driver_intr_t(void*);
 
 /**
  * @brief Interrupt type bits.
- * 
- * These flags are used both by newbus interrupt
- * registration (nexus.c) and also in struct intrec, which defines
- * interrupt properties.
  *
- * XXX We should probably revisit this and remove the vestiges of the
- * spls implicit in names like INTR_TYPE_TTY. In the meantime, don't
- * confuse things by renaming them (Grog, 18 July 2000).
+ * These flags may be passed by drivers to bus_setup_intr(9) when
+ * registering a new interrupt handler. The field is overloaded to
+ * specify both the interrupt's type and any special properties.
  *
- * Buses which do interrupt remapping will want to change their type
- * to reflect what sort of devices are underneath.
+ * The INTR_TYPE* bits will be passed to intr_priority(9) to determine the
+ * scheduling priority of the handler's ithread. For the specific priority
+ * values assigned to each type, see sys/priority.h.
+ *
+ * Buses may choose to modify or augment these flags as appropriate,
+ * e.g. nexus may apply INTR_EXCL.
  */
 enum intr_type {
 	INTR_TYPE_TTY = 1,
@@ -324,7 +323,7 @@ struct resource_map {
 	bus_size_t r_size;
 	void	*r_vaddr;
 };
-	
+
 /**
  * @brief Optional properties of a resource mapping request.
  */
@@ -419,6 +418,8 @@ void	root_bus_configure(void);
  * Useful functions for implementing buses.
  */
 
+struct _cpuset;
+
 int	bus_generic_activate_resource(device_t dev, device_t child, int type,
 				      int rid, struct resource *r);
 device_t
@@ -453,6 +454,9 @@ bus_dma_tag_t
 bus_space_tag_t
 	bus_generic_get_bus_tag(device_t dev, device_t child);
 int	bus_generic_get_domain(device_t dev, device_t child, int *domain);
+ssize_t	bus_generic_get_property(device_t dev, device_t child,
+				 const char *propname, void *propvalue,
+				 size_t size, device_property_type_t type);
 struct resource_list *
 	bus_generic_get_resource_list (device_t, device_t);
 int	bus_generic_map_resource(device_t dev, device_t child, int type,
@@ -618,6 +622,7 @@ int	device_is_quiet(device_t dev);
 device_t device_lookup_by_name(const char *name);
 int	device_print_prettyname(device_t dev);
 int	device_printf(device_t dev, const char *, ...) __printflike(2, 3);
+int	device_log(device_t dev, int pri, const char *, ...) __printflike(3, 4);
 int	device_probe(device_t dev);
 int	device_probe_and_attach(device_t dev);
 int	device_probe_child(device_t bus, device_t dev);
@@ -628,6 +633,7 @@ void	device_set_desc(device_t dev, const char* desc);
 void	device_set_desc_copy(device_t dev, const char* desc);
 int	device_set_devclass(device_t dev, const char *classname);
 int	device_set_devclass_fixed(device_t dev, const char *classname);
+bool	device_is_devclass_fixed(device_t dev);
 int	device_set_driver(device_t dev, driver_t *driver);
 void	device_set_flags(device_t dev, u_int32_t flags);
 void	device_set_softc(device_t dev, void *softc);
@@ -637,6 +643,9 @@ int	device_set_unit(device_t dev, int unit);	/* XXX DONT USE XXX */
 int	device_shutdown(device_t dev);
 void	device_unbusy(device_t dev);
 void	device_verbose(device_t dev);
+ssize_t	device_get_property(device_t dev, const char *prop, void *val,
+    size_t sz, device_property_type_t type);
+bool device_has_property(device_t dev, const char *prop);
 
 /*
  * Access functions for devclass.
@@ -743,6 +752,14 @@ extern int bus_current_pass;
 void	bus_set_pass(int pass);
 
 /**
+ * Routines to lock / unlock the newbus lock.
+ * Must be taken out to interact with newbus.
+ */
+void bus_topo_lock(void);
+void bus_topo_unlock(void);
+struct mtx * bus_topo_mtx(void);
+
+/**
  * Shorthands for constructing method tables.
  */
 #define	DEVMETHOD	KOBJMETHOD
@@ -770,14 +787,17 @@ struct driver_module_data {
 	int		dmd_pass;
 };
 
-#define	EARLY_DRIVER_MODULE_ORDERED(name, busname, driver, devclass,	\
+#define	_DRIVER_MODULE_MACRO(_1, _2, _3, _4, _5, _6, _7, _8, NAME, ...)	\
+	NAME
+
+#define	_EARLY_DRIVER_MODULE_ORDERED(name, busname, driver, devclass,	\
     evh, arg, order, pass)						\
-									\
+								\
 static struct driver_module_data name##_##busname##_driver_mod = {	\
 	evh, arg,							\
 	#busname,							\
 	(kobj_class_t) &driver,						\
-	&devclass,							\
+	devclass,							\
 	pass								\
 };									\
 									\
@@ -789,18 +809,56 @@ static moduledata_t name##_##busname##_mod = {				\
 DECLARE_MODULE(name##_##busname, name##_##busname##_mod,		\
 	       SI_SUB_DRIVERS, order)
 
-#define	EARLY_DRIVER_MODULE(name, busname, driver, devclass, evh, arg, pass) \
-	EARLY_DRIVER_MODULE_ORDERED(name, busname, driver, devclass,	\
+#define	EARLY_DRIVER_MODULE_ORDERED7(name, busname, driver, evh, arg,	\
+    order, pass)							\
+	_EARLY_DRIVER_MODULE_ORDERED(name, busname, driver, NULL, evh,	\
+	    arg, order, pass)
+
+#define	EARLY_DRIVER_MODULE_ORDERED8(name, busname, driver, devclass,	\
+    evh, arg, order, pass)						\
+	_EARLY_DRIVER_MODULE_ORDERED(name, busname, driver, &devclass,	\
+	    evh, arg, order, pass)
+
+#define	EARLY_DRIVER_MODULE_ORDERED(...)				\
+	_DRIVER_MODULE_MACRO(__VA_ARGS__, EARLY_DRIVER_MODULE_ORDERED8,	\
+	    EARLY_DRIVER_MODULE_ORDERED7)(__VA_ARGS__)
+
+#define	EARLY_DRIVER_MODULE7(name, busname, driver, devclass, evh, arg, pass) \
+	EARLY_DRIVER_MODULE_ORDERED8(name, busname, driver, devclass,	\
 	    evh, arg, SI_ORDER_MIDDLE, pass)
 
-#define	DRIVER_MODULE_ORDERED(name, busname, driver, devclass, evh, arg,\
+#define	EARLY_DRIVER_MODULE6(name, busname, driver, evh, arg, pass)	\
+	EARLY_DRIVER_MODULE_ORDERED7(name, busname, driver, evh, arg,	\
+	    SI_ORDER_MIDDLE, pass)
+
+#define	EARLY_DRIVER_MODULE(...)					\
+	_DRIVER_MODULE_MACRO(__VA_ARGS__, INVALID,			\
+	    EARLY_DRIVER_MODULE7, EARLY_DRIVER_MODULE6)(__VA_ARGS__)
+
+#define	DRIVER_MODULE_ORDERED7(name, busname, driver, devclass, evh, arg,\
     order)								\
-	EARLY_DRIVER_MODULE_ORDERED(name, busname, driver, devclass,	\
+	EARLY_DRIVER_MODULE_ORDERED8(name, busname, driver, devclass,	\
 	    evh, arg, order, BUS_PASS_DEFAULT)
 
-#define	DRIVER_MODULE(name, busname, driver, devclass, evh, arg)	\
-	EARLY_DRIVER_MODULE(name, busname, driver, devclass, evh, arg,	\
+#define	DRIVER_MODULE_ORDERED6(name, busname, driver, evh, arg, order)	\
+	EARLY_DRIVER_MODULE_ORDERED7(name, busname, driver, evh, arg,	\
+	    order, BUS_PASS_DEFAULT)
+
+#define	DRIVER_MODULE_ORDERED(...)					\
+	_DRIVER_MODULE_MACRO(__VA_ARGS__, INVALID,			\
+	    DRIVER_MODULE_ORDERED7, DRIVER_MODULE_ORDERED6)(__VA_ARGS__)
+
+#define	DRIVER_MODULE6(name, busname, driver, devclass, evh, arg)	\
+	EARLY_DRIVER_MODULE7(name, busname, driver, devclass, evh, arg,	\
 	    BUS_PASS_DEFAULT)
+
+#define	DRIVER_MODULE5(name, busname, driver, evh, arg)			\
+	EARLY_DRIVER_MODULE6(name, busname, driver, evh, arg,		\
+	    BUS_PASS_DEFAULT)
+
+#define	DRIVER_MODULE(...)						\
+	_DRIVER_MODULE_MACRO(__VA_ARGS__, INVALID, INVALID,		\
+	    DRIVER_MODULE6, DRIVER_MODULE5)(__VA_ARGS__)
 
 /**
  * Generic ivar accessor generation macros for bus drivers
@@ -810,7 +868,7 @@ DECLARE_MODULE(name##_##busname, name##_##busname##_mod,		\
 static __inline type varp ## _get_ ## var(device_t dev)			\
 {									\
 	uintptr_t v;							\
-	int e;								\
+	int e __diagused;						\
 	e = BUS_READ_IVAR(device_get_parent(dev), dev,			\
 	    ivarp ## _IVAR_ ## ivar, &v);				\
 	KASSERT(e == 0, ("%s failed for %s on bus %s, error = %d",	\
@@ -822,7 +880,7 @@ static __inline type varp ## _get_ ## var(device_t dev)			\
 static __inline void varp ## _set_ ## var(device_t dev, type t)		\
 {									\
 	uintptr_t v = (uintptr_t) t;					\
-	int e;								\
+	int e __diagused;						\
 	e = BUS_WRITE_IVAR(device_get_parent(dev), dev,			\
 	    ivarp ## _IVAR_ ## ivar, v);				\
 	KASSERT(e == 0, ("%s failed for %s on bus %s, error = %d",	\
@@ -837,6 +895,10 @@ static __inline void varp ## _set_ ## var(device_t dev, type t)		\
 
 #define bus_barrier(r, o, l, f) \
 	bus_space_barrier((r)->r_bustag, (r)->r_bushandle, (o), (l), (f))
+#define bus_poke_1(r, o, v) \
+	bus_space_poke_1((r)->r_bustag, (r)->r_bushandle, (o), (v))
+#define bus_peek_1(r, o, vp) \
+	bus_space_peek_1((r)->r_bustag, (r)->r_bushandle, (o), (vp))
 #define bus_read_1(r, o) \
 	bus_space_read_1((r)->r_bustag, (r)->r_bushandle, (o))
 #define bus_read_multi_1(r, o, d, c) \
@@ -869,6 +931,10 @@ static __inline void varp ## _set_ ## var(device_t dev, type t)		\
 	bus_space_write_multi_stream_1((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_write_region_stream_1(r, o, d, c) \
 	bus_space_write_region_stream_1((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
+#define bus_poke_2(r, o, v) \
+	bus_space_poke_2((r)->r_bustag, (r)->r_bushandle, (o), (v))
+#define bus_peek_2(r, o, vp) \
+	bus_space_peek_2((r)->r_bustag, (r)->r_bushandle, (o), (vp))
 #define bus_read_2(r, o) \
 	bus_space_read_2((r)->r_bustag, (r)->r_bushandle, (o))
 #define bus_read_multi_2(r, o, d, c) \
@@ -901,6 +967,10 @@ static __inline void varp ## _set_ ## var(device_t dev, type t)		\
 	bus_space_write_multi_stream_2((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_write_region_stream_2(r, o, d, c) \
 	bus_space_write_region_stream_2((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
+#define bus_poke_4(r, o, v) \
+	bus_space_poke_4((r)->r_bustag, (r)->r_bushandle, (o), (v))
+#define bus_peek_4(r, o, vp) \
+	bus_space_peek_4((r)->r_bustag, (r)->r_bushandle, (o), (vp))
 #define bus_read_4(r, o) \
 	bus_space_read_4((r)->r_bustag, (r)->r_bushandle, (o))
 #define bus_read_multi_4(r, o, d, c) \
@@ -933,6 +1003,10 @@ static __inline void varp ## _set_ ## var(device_t dev, type t)		\
 	bus_space_write_multi_stream_4((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_write_region_stream_4(r, o, d, c) \
 	bus_space_write_region_stream_4((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
+#define bus_poke_8(r, o, v) \
+	bus_space_poke_8((r)->r_bustag, (r)->r_bushandle, (o), (v))
+#define bus_peek_8(r, o, vp) \
+	bus_space_peek_8((r)->r_bustag, (r)->r_bushandle, (o), (vp))
 #define bus_read_8(r, o) \
 	bus_space_read_8((r)->r_bustag, (r)->r_bushandle, (o))
 #define bus_read_multi_8(r, o, d, c) \

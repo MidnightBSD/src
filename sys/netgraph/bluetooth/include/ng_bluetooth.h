@@ -3,7 +3,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -230,4 +230,3 @@ u_int32_t      bluetooth_sco_rtx_timeout       (void);
 #define BDADDR_LE_RANDOM 2
 
 #endif /* _NETGRAPH_BLUETOOTH_H_ */
-

@@ -1,5 +1,4 @@
 
-
 .PATH:	${SRCTOP}/sys/dev/aic7xxx
 KMOD=	ahc_pci
 

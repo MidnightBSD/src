@@ -36,7 +36,6 @@
  * OF SUCH DAMAGE.
  *
  * Author: Archie Cobbs <archie@freebsd.org>
- *
  */
 
 #ifndef _NETGRAPH_NG_BRIDGE_H_
@@ -48,8 +47,8 @@
  * Please note: There is no API support!
  * You canno create new messages using the old API but messages conforming the
  * old ABI are understood.
+ * Define NGM_BRIDGE_TABLE_ABI to enable this in 13.x
  */
-#define	NGM_BRIDGE_TABLE_ABI
 
 /* Node type name and magic cookie */
 #define NG_BRIDGE_NODE_TYPE		"bridge"
@@ -207,4 +206,3 @@ enum {
 };
 
 #endif /* _NETGRAPH_NG_BRIDGE_H_ */
-

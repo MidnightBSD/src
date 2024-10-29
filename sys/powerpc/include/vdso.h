@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 2012 Konstantin Belousov <kib@FreeBSD.ORG>.
  * All rights reserved.
@@ -23,7 +23,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _POWERPC_VDSO_H
@@ -31,6 +30,8 @@
 
 #define	VDSO_TIMEHANDS_MD			\
 	uint32_t	th_res[8];
+
+#define	VDSO_TH_ALGO_PPC_TB	VDSO_TH_ALGO_1
 
 #ifdef _KERNEL
 #ifdef COMPAT_FREEBSD32

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 2008 by Nathan Whitehorn. All rights reserved.
  *
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/module.h>
@@ -97,4 +96,3 @@ mambobus_attach(device_t dev)
 	bus_generic_probe(dev);
 	return (bus_generic_attach(dev));
 }
-

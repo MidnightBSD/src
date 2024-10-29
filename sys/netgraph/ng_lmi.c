@@ -36,7 +36,6 @@
  * OF SUCH DAMAGE.
  *
  * Author: Julian Elischer <julian@freebsd.org>
- *
  * $Whistle: ng_lmi.c,v 1.38 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -1076,4 +1075,3 @@ nglmi_disconnect(hook_p hook)
 		ng_rmnode_self(NG_HOOK_NODE(hook));
 	return (0);
 }
-

@@ -47,7 +47,7 @@
  */
 union instr {
 	int	i_int;			/* as a whole */
- 
+
 	/*
 	 * Any instruction type.
 	 */
@@ -154,7 +154,6 @@ union instr {
 		u_int	i_xo:4;
 		u_int	i_rc:1;
 	} i_mds;
-
 
 	/*
 	 * Format S
@@ -384,4 +383,3 @@ union instr {
 #define	FTYPE_INT	0	/* data = 32-bit signed integer */
 #define	FTYPE_SNG	1	/* data = 32-bit float */
 #define	FTYPE_DBL	2	/* data = 64-bit double */
-

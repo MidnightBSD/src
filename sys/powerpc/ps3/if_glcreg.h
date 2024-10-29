@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2010 Nathan Whitehorn
  * All rights reserved.
@@ -23,7 +23,6 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _POWERPC_PS3_IF_GLCREG_H
@@ -37,7 +36,7 @@ struct glc_dmadesc;
 /*
  * software state for transmit job mbufs (may be elements of mbuf chains)
  */
- 
+
 struct glc_txsoft {
 	struct mbuf *txs_mbuf;		/* head of our mbuf chain */
 	bus_dmamap_t txs_dmamap;	/* our DMA map */
@@ -95,7 +94,7 @@ struct glc_softc {
 	struct glc_txsq	sc_txdirtyq;
 
 	/* Reception */
-	
+
 	bus_dma_tag_t	sc_rxdma_tag;
 	struct glc_rxsoft sc_rxsoft[GLC_MAX_RX_PACKETS];
 	struct glc_dmadesc *sc_rxdmadesc;
@@ -158,4 +157,3 @@ struct glc_dmadesc {
 };
 
 #endif /* _POWERPC_PS3_IF_GLCREG_H */
-

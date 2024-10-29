@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013, Nathan Whitehorn <nwhitehorn@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -214,7 +213,7 @@ phyp_iommu_map(device_t dev, bus_dma_segment_t *segs, int *nsegs,
 
 	return (0);
 }
-	
+
 int
 phyp_iommu_unmap(device_t dev, bus_dma_segment_t *segs, int nsegs, void *cookie)
 {
@@ -243,4 +242,3 @@ phyp_iommu_unmap(device_t dev, bus_dma_segment_t *segs, int nsegs, void *cookie)
 
 	return (0);
 }
-

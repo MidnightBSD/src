@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Nathan Whitehorn
  * All rights reserved
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _POWERPC_POWERMAC_DBDMAVAR_H_
@@ -63,12 +62,11 @@ struct dbdma_channel {
 	bus_dmamap_t		sc_dmamap;
 	uint32_t		sc_saved_regs[5];
 };
-	
 
 /*
    DBDMA registers are found at 0x8000 + n*0x100 in the macio register space,
    and are laid out as follows within each block: 
-	
+
    Address:			Description:		Length (bytes):
    0x000 			Channel Control 	4
    0x004 			Channel Status		4

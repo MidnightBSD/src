@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2010 Nathan Whitehorn
  * All rights reserved.
@@ -23,7 +23,6 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -82,7 +81,6 @@ static device_method_t glc_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		glc_probe),
 	DEVMETHOD(device_attach,	glc_attach),
-
 	{ 0, 0 }
 };
 
@@ -503,12 +501,31 @@ glc_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	return (err);
 }
 
+static u_int
+glc_add_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	struct glc_softc *sc = arg;
+	uint64_t addr;
+
+	/*
+	 * Filter can only hold 32 addresses, so fall back to
+	 * the IFF_ALLMULTI case if we have too many. +1 is for
+	 * broadcast.
+	 */
+	if (cnt + 1 == 32)
+		return (0);
+
+	addr = 0;
+	memcpy(&((uint8_t *)(&addr))[2], LLADDR(sdl), ETHER_ADDR_LEN);
+	lv1_net_add_multicast_address(sc->sc_bus, sc->sc_dev, addr, 0);
+
+	return (1);
+}
+
 static void
 glc_set_multicast(struct glc_softc *sc)
 {
 	struct ifnet *ifp = sc->sc_ifp;
-	struct ifmultiaddr *inm;
-	uint64_t addr;
 	int naddrs;
 
 	/* Clear multicast filter */
@@ -521,30 +538,10 @@ glc_set_multicast(struct glc_softc *sc)
 	if ((ifp->if_flags & IFF_ALLMULTI) != 0) {
 		lv1_net_add_multicast_address(sc->sc_bus, sc->sc_dev, 0, 1);
 	} else {
-		if_maddr_rlock(ifp);
-		naddrs = 1; /* Include broadcast */
-		CK_STAILQ_FOREACH(inm, &ifp->if_multiaddrs, ifma_link) {
-			if (inm->ifma_addr->sa_family != AF_LINK)
-				continue;
-			addr = 0;
-			memcpy(&((uint8_t *)(&addr))[2],
-			    LLADDR((struct sockaddr_dl *)inm->ifma_addr),
-			    ETHER_ADDR_LEN);
-
-			lv1_net_add_multicast_address(sc->sc_bus, sc->sc_dev,
-			    addr, 0);
-
-			/*
-			 * Filter can only hold 32 addresses, so fall back to
-			 * the IFF_ALLMULTI case if we have too many.
-			 */
-			if (++naddrs >= 32) {
-				lv1_net_add_multicast_address(sc->sc_bus,
-				    sc->sc_dev, 0, 1);
-				break;
-			}
-		}
-		if_maddr_runlock(ifp);
+		naddrs = if_foreach_llmaddr(ifp, glc_add_maddr, sc);
+		if (naddrs + 1 == 32)
+			lv1_net_add_multicast_address(sc->sc_bus,
+			    sc->sc_dev, 0, 1);
 	}
 }
 
@@ -590,7 +587,7 @@ static int
 glc_add_rxbuf_dma(struct glc_softc *sc, int idx)
 {
 	struct glc_rxsoft *rxs = &sc->sc_rxsoft[idx];
-	
+
 	bzero(&sc->sc_rxdmadesc[idx], sizeof(sc->sc_rxdmadesc[idx]));
 	sc->sc_rxdmadesc[idx].paddr = rxs->segment.ds_addr;
 	sc->sc_rxdmadesc[idx].len = rxs->segment.ds_len;
@@ -639,7 +636,7 @@ glc_encap(struct glc_softc *sc, struct mbuf **m_head, bus_addr_t *pktdesc)
 		}
 		*m_head = m;
 	}
-	
+
 	err = bus_dmamap_load_mbuf_sg(sc->sc_txdma_tag, txs->txs_dmamap,
 	    *m_head, segs, &nsegs, BUS_DMA_NOWAIT);
 	if (err != 0) {
@@ -959,4 +956,3 @@ glc_media_change(struct ifnet *ifp)
 
 	return (result ? EIO : 0);
 }
-

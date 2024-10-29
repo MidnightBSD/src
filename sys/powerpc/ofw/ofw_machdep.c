@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -42,6 +41,7 @@
 #include <sys/conf.h>
 #include <sys/disk.h>
 #include <sys/fcntl.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/smp.h>
 #include <sys/stat.h>
@@ -58,6 +58,7 @@
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 #include <vm/vm_page.h>
+#include <vm/vm_phys.h>
 
 #include <machine/bus.h>
 #include <machine/cpu.h>
@@ -84,6 +85,9 @@ char		save_trap_of[0x2f00];            /* EXC_LAST */
 int		ofwcall(void *);
 static int	openfirmware(void *args);
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wfortify-source"
+
 __inline void
 ofw_save_trap_vec(char *save_trap_vec)
 {
@@ -104,6 +108,8 @@ ofw_restore_trap_vec(char *restore_trap_vec)
 	__syncicache((void *)PHYS_TO_DMAP(EXC_RSVD), EXC_LAST - EXC_RSVD);
 }
 
+#pragma clang diagnostic pop
+
 /*
  * Saved SPRG0-3 from OpenFirmware. Will be restored prior to the callback.
  */
@@ -114,7 +120,7 @@ ofw_sprg_prepare(void)
 {
 	if (ofw_real_mode)
 		return;
-	
+
 	/*
 	 * Assume that interrupt are disabled at this point, or
 	 * SPRG1-3 could be trashed
@@ -146,7 +152,7 @@ ofw_sprg_restore(void)
 {
 	if (ofw_real_mode)
 		return;
-	
+
 	/*
 	 * Note that SPRG1-3 contents are irrelevant. They are scratch
 	 * registers used in the early portion of trap handling when
@@ -221,9 +227,57 @@ parse_ofw_memory(phandle_t node, const char *prop, struct mem_region *output)
 
 		j++;
 	}
-	sz = j*sizeof(output[0]);
 
-	return (sz);
+	return (j);
+}
+
+static int
+parse_numa_ofw_memory(phandle_t node, const char *prop,
+    struct numa_mem_region *output)
+{
+	cell_t address_cells, size_cells;
+	cell_t OFmem[4 * PHYS_AVAIL_SZ];
+	int sz, i, j;
+	phandle_t phandle;
+
+	sz = 0;
+
+	/*
+	 * Get #address-cells from root node, defaulting to 1 if it cannot
+	 * be found.
+	 */
+	phandle = OF_finddevice("/");
+	if (OF_getencprop(phandle, "#address-cells", &address_cells,
+	    sizeof(address_cells)) < (ssize_t)sizeof(address_cells))
+		address_cells = 1;
+	if (OF_getencprop(phandle, "#size-cells", &size_cells,
+	    sizeof(size_cells)) < (ssize_t)sizeof(size_cells))
+		size_cells = 1;
+
+	/*
+	 * Get memory.
+	 */
+	if (node == -1 || (sz = OF_getencprop(node, prop,
+	    OFmem, sizeof(OFmem))) <= 0)
+		panic("Physical memory map not found");
+
+	i = 0;
+	j = 0;
+	while (i < sz/sizeof(cell_t)) {
+		output[j].mr_start = OFmem[i++];
+		if (address_cells == 2) {
+			output[j].mr_start <<= 32;
+			output[j].mr_start += OFmem[i++];
+		}
+		output[j].mr_size = OFmem[i++];
+		if (size_cells == 2) {
+			output[j].mr_size <<= 32;
+			output[j].mr_size += OFmem[i++];
+		}
+		j++;
+	}
+
+	return (j);
 }
 
 #ifdef FDT
@@ -407,6 +461,45 @@ excise_fdt_reserved(struct mem_region *avail, int asz)
  * The available regions need not take the kernel into account.
  */
 void
+ofw_numa_mem_regions(struct numa_mem_region *memp, int *memsz)
+{
+	phandle_t phandle;
+	int count, msz;
+	char name[31];
+	struct numa_mem_region *curmemp;
+
+	msz = 0;
+	/*
+	 * Get memory from all the /memory nodes.
+	 */
+	for (phandle = OF_child(OF_peer(0)); phandle != 0;
+	    phandle = OF_peer(phandle)) {
+		if (OF_getprop(phandle, "name", name, sizeof(name)) <= 0)
+			continue;
+		if (strncmp(name, "memory@", strlen("memory@")) != 0)
+			continue;
+
+		count = parse_numa_ofw_memory(phandle, "reg", &memp[msz]);
+		if (count == 0)
+			continue;
+		curmemp = &memp[msz];
+		MPASS(count == 1);
+		curmemp->mr_domain = platform_node_numa_domain(phandle);
+		if (bootverbose)
+			printf("%s %#jx-%#jx domain(%ju)\n",
+			    name, (uintmax_t)curmemp->mr_start,
+			    (uintmax_t)curmemp->mr_start + curmemp->mr_size,
+			    (uintmax_t)curmemp->mr_domain);
+		msz += count;
+	}
+	*memsz = msz;
+}
+/*
+ * This is called during powerpc_init, before the system is really initialized.
+ * It shall provide the total and the available regions of RAM.
+ * The available regions need not take the kernel into account.
+ */
+void
 ofw_mem_regions(struct mem_region *memp, int *memsz,
 		struct mem_region *availp, int *availsz)
 {
@@ -429,7 +522,7 @@ ofw_mem_regions(struct mem_region *memp, int *memsz,
 			continue;
 
 		res = parse_ofw_memory(phandle, "reg", &memp[msz]);
-		msz += res/sizeof(struct mem_region);
+		msz += res;
 
 		/*
 		 * On POWER9 Systems we might have both linux,usable-memory and
@@ -445,7 +538,7 @@ ofw_mem_regions(struct mem_region *memp, int *memsz,
 			    &availp[asz]);
 		else
 			res = parse_ofw_memory(phandle, "reg", &availp[asz]);
-		asz += res/sizeof(struct mem_region);
+		asz += res;
 	}
 
 #ifdef FDT
@@ -477,6 +570,10 @@ OF_initial_setup(void *fdt_ptr, void *junk, int (*openfirm)(void *))
 	ofmsr[0] = mfmsr();
 	#ifdef __powerpc64__
 	ofmsr[0] &= ~PSL_SF;
+	#ifdef __LITTLE_ENDIAN__
+	/* Assume OFW is BE. */
+	ofmsr[0] &= ~PSL_LE;
+	#endif
 	#else
 	__asm __volatile("mfsprg0 %0" : "=&r"(ofmsr[1]));
 	#endif
@@ -550,7 +647,7 @@ OF_bootstrap()
 		 * of its auto-remapping function once the kernel is loaded.
 		 * This is a dirty hack, but what we have.
 		 */
-#ifdef _LITTLE_ENDIAN
+#ifdef __LITTLE_ENDIAN__
 		fdt_bt = &bs_le_tag;
 #else
 		fdt_bt = &bs_be_tag;
@@ -774,4 +871,3 @@ OF_decode_addr(phandle_t dev, int regno, bus_space_tag_t *tag,
 
 	return (bus_space_map(*tag, addr, size, flags, handle));
 }
-

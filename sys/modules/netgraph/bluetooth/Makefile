@@ -5,7 +5,6 @@ SUBDIR=	\
 	hci	\
 	l2cap	\
 	socket	\
-	bt3c	\
 	ubt	\
 	ubtbcmfw
 

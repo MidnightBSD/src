@@ -1,7 +1,7 @@
 /*	$NetBSD: ieee8023ad_impl.h,v 1.2 2005/12/10 23:21:39 elad Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c)2005 YAMAMOTO Takashi,
  * All rights reserved.
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -196,8 +195,15 @@ enum lacp_mux_state {
 
 #define	LACP_MAX_PORTS		32
 
+struct lacp_numa {
+	int			count;
+	struct lacp_port	*map[LACP_MAX_PORTS];
+};
+
 struct lacp_portmap {
 	int			pm_count;
+	int			pm_num_dom;
+	struct lacp_numa	pm_numa[MAXMEMDOM];
 	struct lacp_port	*pm_map[LACP_MAX_PORTS];
 };
 
@@ -285,10 +291,10 @@ struct lacp_softc {
 #define LACP_LOCK_ASSERT(_lsc)		mtx_assert(&(_lsc)->lsc_mtx, MA_OWNED)
 
 struct mbuf	*lacp_input(struct lagg_port *, struct mbuf *);
-struct lagg_port *lacp_select_tx_port(struct lagg_softc *, struct mbuf *);
-#ifdef RATELIMIT
-struct lagg_port *lacp_select_tx_port_by_hash(struct lagg_softc *, uint32_t);
-#endif
+struct lagg_port *lacp_select_tx_port(struct lagg_softc *, struct mbuf *,
+    int *);
+struct lagg_port *lacp_select_tx_port_by_hash(struct lagg_softc *, uint32_t,
+    uint8_t, int *);
 void		lacp_attach(struct lagg_softc *);
 void		lacp_detach(void *);
 void		lacp_init(struct lagg_softc *);

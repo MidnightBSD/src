@@ -19,7 +19,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*-
  * Naive implementation of the Adaptive Multi Rate Retry algorithm:
  *
@@ -133,8 +132,9 @@ amrr_init(struct ieee80211vap *vap)
 static void
 amrr_deinit(struct ieee80211vap *vap)
 {
-	IEEE80211_FREE(vap->iv_rs, M_80211_RATECTL);
 	KASSERT(nrefs > 0, ("imbalanced attach/detach"));
+	IEEE80211_FREE(vap->iv_rs, M_80211_RATECTL);
+	vap->iv_rs = NULL;	/* guard */
 	nrefs--;		/* XXX locking */
 }
 
@@ -464,8 +464,8 @@ amrr_sysctlattach(struct ieee80211vap *vap,
 		return;
 
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-	    "amrr_rate_interval", CTLTYPE_INT | CTLFLAG_RW, vap,
-	    0, amrr_sysctl_interval, "I", "amrr operation interval (ms)");
+	    "amrr_rate_interval", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+	    vap, 0, amrr_sysctl_interval, "I", "amrr operation interval (ms)");
 	/* XXX bounds check values */
 	SYSCTL_ADD_UINT(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
 	    "amrr_max_sucess_threshold", CTLFLAG_RW,

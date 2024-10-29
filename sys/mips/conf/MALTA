@@ -1,0 +1,10 @@
+# MALTA -- Kernel config for MALTA endian-big boards
+#
+ 
+ident		MALTA
+
+include		"std.MALTA"
+ 
+machine		mips mips
+ 
+makeoptions	KERNLOADADDR=0x80100000

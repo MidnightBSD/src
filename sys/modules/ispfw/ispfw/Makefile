@@ -24,7 +24,6 @@
 # SUCH DAMAGE.
 #
 
-
 .PATH: ${SRCTOP}/sys/dev/ispfw
 
 KMOD=	ispfw

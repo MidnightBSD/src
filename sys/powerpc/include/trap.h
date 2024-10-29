@@ -102,13 +102,15 @@
 #define	EXC_SPFPD	0x2f30		/* SPE Floating-point Data */
 #define	EXC_SPFPR	0x2f40		/* SPE Floating-point Round */
 
+/* POWER8 */
+#define EXC_SOFT_PATCH	0x1500		/* POWER8 Soft Patch Exception */
+
 #define	EXC_LAST	0x2f00		/* Last possible exception vector */
 
 #define	EXC_AST		0x3000		/* Fake AST vector */
 
 /* Trap was in user mode */
 #define	EXC_USER	0x10000
-
 
 /*
  * EXC_ALI sets bits in the DSISR and DAR to provide enough
@@ -143,8 +145,9 @@
 #define EXC_DTRACE	0x7ffff808
 
 /* Magic pointer to store TOC base and other info for trap handlers on ppc64 */
-#define TRAP_GENTRAP	0x1f0
-#define TRAP_TOCBASE	0x1f8
+#define	TRAP_ENTRY	0x1e8
+#define	TRAP_GENTRAP	0x1f0
+#define	TRAP_TOCBASE	0x1f8
 
 #ifndef LOCORE
 struct	trapframe;

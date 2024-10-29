@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Paycounter, Inc.
  * Author: Alfred Perlstein <alfred@paycounter.com>, <alfred@FreeBSD.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #define ACCEPT_FILTER_MOD
 
 #include <sys/param.h>
@@ -57,8 +56,9 @@ ACCEPT_FILTER_DEFINE(accf_http, "httpready", sohashttpget, NULL, NULL, 1);
 
 static int parse_http_version = 1;
 
-static SYSCTL_NODE(_net_inet_accf, OID_AUTO, http, CTLFLAG_RW, 0,
-"HTTP accept filter");
+static SYSCTL_NODE(_net_inet_accf, OID_AUTO, http,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "HTTP accept filter");
 SYSCTL_INT(_net_inet_accf_http, OID_AUTO, parsehttpversion, CTLFLAG_RW,
     &parse_http_version, 1,
     "Parse http version so that non 1.x requests work");
@@ -270,7 +270,6 @@ fallout:
 	DPRINT("fallout");
 	return (SU_ISCONNECTED);
 }
-
 
 #define NCHRS 3
 

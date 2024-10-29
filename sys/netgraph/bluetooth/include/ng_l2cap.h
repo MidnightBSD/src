@@ -3,7 +3,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -82,7 +82,6 @@
 #define NG_L2CAP_FIRST_CID	0x0040	/* dynamically alloc. (start) */
 #define NG_L2CAP_LAST_CID	0xffff	/* dynamically alloc. (end) */
 #define NG_L2CAP_LELAST_CID	0x007f
-
 
 /* L2CAP MTU */
 #define NG_L2CAP_MTU_LE_MINIMAM		23
@@ -704,4 +703,3 @@ typedef struct {
 typedef u_int16_t	ng_l2cap_node_auto_discon_ep;
 
 #endif /* ndef _NETGRAPH_L2CAP_H_ */
-

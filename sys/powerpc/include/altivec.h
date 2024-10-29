@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Nathan Whitehorn
  * All rights reserved
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_MACHINE_ALTIVEC_H_
@@ -38,4 +37,3 @@ void    save_vec(struct thread *);
 void    save_vec_nodrop(struct thread *);
 
 #endif	/* _MACHINE_ALTIVEC_H_ */
-

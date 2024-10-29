@@ -25,7 +25,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -65,11 +64,11 @@ static int	hrowpic_probe(device_t);
 static int	hrowpic_attach(device_t);
 
 static void	hrowpic_dispatch(device_t, struct trapframe *);
-static void	hrowpic_enable(device_t, u_int, u_int);
-static void	hrowpic_eoi(device_t, u_int);
+static void	hrowpic_enable(device_t, u_int, u_int, void **);
+static void	hrowpic_eoi(device_t, u_int, void *);
 static void	hrowpic_ipi(device_t, u_int);
-static void	hrowpic_mask(device_t, u_int);
-static void	hrowpic_unmask(device_t, u_int);
+static void	hrowpic_mask(device_t, u_int, void *);
+static void	hrowpic_unmask(device_t, u_int, void *);
 
 static device_method_t  hrowpic_methods[] = {
 	/* Device interface */
@@ -236,7 +235,7 @@ hrowpic_dispatch(device_t dev, struct trapframe *tf)
 }
 
 static void
-hrowpic_enable(device_t dev, u_int irq, u_int vector)
+hrowpic_enable(device_t dev, u_int irq, u_int vector, void **priv __unused)
 {
 	struct hrowpic_softc *sc;
 
@@ -246,7 +245,7 @@ hrowpic_enable(device_t dev, u_int irq, u_int vector)
 }
 
 static void
-hrowpic_eoi(device_t dev, u_int irq)
+hrowpic_eoi(device_t dev, u_int irq, void *priv __unused)
 {
 	struct hrowpic_softc *sc;
 	int bank;
@@ -263,7 +262,7 @@ hrowpic_ipi(device_t dev, u_int irq)
 }
 
 static void
-hrowpic_mask(device_t dev, u_int irq)
+hrowpic_mask(device_t dev, u_int irq, void *priv __unused)
 {
 	struct hrowpic_softc *sc;
 
@@ -272,7 +271,7 @@ hrowpic_mask(device_t dev, u_int irq)
 }
 
 static void
-hrowpic_unmask(device_t dev, u_int irq)
+hrowpic_unmask(device_t dev, u_int irq, void *priv __unused)
 {
 	struct hrowpic_softc *sc;
 

@@ -3,7 +3,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -86,6 +86,5 @@ int  ng_btsocket_hci_raw_send       (struct socket *, int, struct mbuf *,
 int  ng_btsocket_hci_raw_sockaddr   (struct socket *, struct sockaddr **);
 
 #endif /* _KERNEL */
- 
-#endif /* ndef _NETGRAPH_BTSOCKET_HCI_RAW_H_ */
 
+#endif /* ndef _NETGRAPH_BTSOCKET_HCI_RAW_H_ */

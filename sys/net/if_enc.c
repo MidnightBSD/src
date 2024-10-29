@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 The FreeBSD Project.
  * Copyright (c) 2015 Andrey V. Elsukov <ae@FreeBSD.org>
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include "opt_inet.h"
@@ -96,7 +95,7 @@ static int	enc_output(struct ifnet *, struct mbuf *,
     const struct sockaddr *, struct route *);
 static int	enc_clone_create(struct if_clone *, int, caddr_t);
 static void	enc_clone_destroy(struct ifnet *);
-static int	enc_add_hhooks(struct enc_softc *);
+static void	enc_add_hhooks(struct enc_softc *);
 static void	enc_remove_hhooks(struct enc_softc *);
 
 static const char encname[] = "enc";
@@ -120,9 +119,12 @@ VNET_DEFINE_STATIC(int, bpf_mask_out) = IPSEC_ENC_BEFORE | IPSEC_ENC_AFTER;
 #define	V_filter_mask_out	VNET(filter_mask_out)
 #define	V_bpf_mask_out		VNET(bpf_mask_out)
 
-static SYSCTL_NODE(_net, OID_AUTO, enc, CTLFLAG_RW, 0, "enc sysctl");
-static SYSCTL_NODE(_net_enc, OID_AUTO, in, CTLFLAG_RW, 0, "enc input sysctl");
-static SYSCTL_NODE(_net_enc, OID_AUTO, out, CTLFLAG_RW, 0, "enc output sysctl");
+static SYSCTL_NODE(_net, OID_AUTO, enc, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "enc sysctl");
+static SYSCTL_NODE(_net_enc, OID_AUTO, in, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "enc input sysctl");
+static SYSCTL_NODE(_net_enc, OID_AUTO, out, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "enc output sysctl");
 SYSCTL_INT(_net_enc_in, OID_AUTO, ipsec_filter_mask,
     CTLFLAG_RW | CTLFLAG_VNET, &VNET_NAME(filter_mask_in), 0,
     "IPsec input firewall filter mask");
@@ -160,10 +162,6 @@ enc_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	sc = malloc(sizeof(struct enc_softc), M_DEVBUF,
 	    M_WAITOK | M_ZERO);
 	ifp = sc->sc_ifp = if_alloc(IFT_ENC);
-	if (ifp == NULL) {
-		free(sc, M_DEVBUF);
-		return (ENOSPC);
-	}
 	if (V_enc_sc != NULL) {
 		if_free(ifp);
 		free(sc, M_DEVBUF);
@@ -214,7 +212,7 @@ enc_bpftap(struct ifnet *ifp, struct mbuf *m, const struct secasvar *sav,
 	else if (hhook_type == HHOOK_TYPE_IPSEC_OUT &&
 	    (enc & V_bpf_mask_out) == 0)
 		return;
-	if (bpf_peers_present(ifp->if_bpf) == 0)
+	if (!bpf_peers_present(ifp->if_bpf))
 		return;
 	hdr.af = af;
 	hdr.spi = sav->spi;
@@ -285,24 +283,24 @@ enc_hhook(int32_t hhook_type, int32_t hhook_id, void *udata, void *ctx_data,
 	switch (hhook_id) {
 #ifdef INET
 	case AF_INET:
-		ph = &V_inet_pfil_hook;
+		ph = V_inet_pfil_head;
 		break;
 #endif
 #ifdef INET6
 	case AF_INET6:
-		ph = &V_inet6_pfil_hook;
+		ph = V_inet6_pfil_head;
 		break;
 #endif
 	default:
 		ph = NULL;
 	}
-	if (ph == NULL || !PFIL_HOOKED(ph))
+	if (ph == NULL || (pdir == PFIL_OUT && !PFIL_HOOKED_OUT(ph)) ||
+	    (pdir == PFIL_IN && !PFIL_HOOKED_IN(ph)))
 		return (0);
 	/* Make a packet looks like it was received on enc(4) */
 	rcvif = (*ctx->mp)->m_pkthdr.rcvif;
 	(*ctx->mp)->m_pkthdr.rcvif = ifp;
-	if (pfil_run_hooks(ph, ctx->mp, ifp, pdir, 0, ctx->inp) != 0 ||
-	    *ctx->mp == NULL) {
+	if (pfil_run_hooks(ph, ctx->mp, ifp, pdir, ctx->inp) != PFIL_PASS) {
 		*ctx->mp = NULL; /* consumed by filter */
 		return (EACCES);
 	}
@@ -312,13 +310,12 @@ enc_hhook(int32_t hhook_type, int32_t hhook_id, void *udata, void *ctx_data,
 	return (0);
 }
 
-static int
+static void
 enc_add_hhooks(struct enc_softc *sc)
 {
 	struct hookinfo hki;
-	int error;
+	int error __diagused;
 
-	error = EPFNOSUPPORT;
 	hki.hook_func = enc_hhook;
 	hki.hook_helper = NULL;
 	hki.hook_udata = sc;
@@ -327,28 +324,23 @@ enc_add_hhooks(struct enc_softc *sc)
 	hki.hook_type = HHOOK_TYPE_IPSEC_IN;
 	error = hhook_add_hook(V_ipsec_hhh_in[HHOOK_IPSEC_INET],
 	    &hki, HHOOK_WAITOK);
-	if (error != 0)
-		return (error);
+	MPASS(error == 0);
 	hki.hook_type = HHOOK_TYPE_IPSEC_OUT;
 	error = hhook_add_hook(V_ipsec_hhh_out[HHOOK_IPSEC_INET],
 	    &hki, HHOOK_WAITOK);
-	if (error != 0)
-		return (error);
+	MPASS(error == 0);
 #endif
 #ifdef INET6
 	hki.hook_id = AF_INET6;
 	hki.hook_type = HHOOK_TYPE_IPSEC_IN;
 	error = hhook_add_hook(V_ipsec_hhh_in[HHOOK_IPSEC_INET6],
 	    &hki, HHOOK_WAITOK);
-	if (error != 0)
-		return (error);
+	MPASS(error == 0);
 	hki.hook_type = HHOOK_TYPE_IPSEC_OUT;
 	error = hhook_add_hook(V_ipsec_hhh_out[HHOOK_IPSEC_INET6],
 	    &hki, HHOOK_WAITOK);
-	if (error != 0)
-		return (error);
+	MPASS(error == 0);
 #endif
-	return (error);
 }
 
 static void
@@ -391,8 +383,7 @@ vnet_enc_init_proto(void *unused __unused)
 {
 	KASSERT(V_enc_sc != NULL, ("%s: V_enc_sc is %p\n", __func__, V_enc_sc));
 
-	if (enc_add_hhooks(V_enc_sc) != 0)
-		enc_clone_destroy(V_enc_sc->sc_ifp);
+	enc_add_hhooks(V_enc_sc);
 }
 VNET_SYSINIT(vnet_enc_init_proto, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_ANY,
     vnet_enc_init_proto, NULL);

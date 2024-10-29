@@ -7,10 +7,12 @@ SRCS= \
 mlx5_alloc.c \
 mlx5_cmd.c \
 mlx5_cq.c \
+mlx5_diag_cnt.c \
 mlx5_diagnostics.c \
 mlx5_eq.c \
 mlx5_eswitch.c \
 mlx5_fs_cmd.c \
+mlx5_fs_tcp.c \
 mlx5_fs_tree.c \
 mlx5_fw.c \
 mlx5_fwdump.c \
@@ -26,6 +28,7 @@ mlx5_port.c \
 mlx5_qp.c \
 mlx5_rl.c \
 mlx5_srq.c \
+mlx5_tls.c \
 mlx5_transobj.c \
 mlx5_uar.c \
 mlx5_vport.c \
@@ -36,7 +39,7 @@ SRCS+=	${LINUXKPI_GENSRCS}
 SRCS+=	opt_inet.h opt_inet6.h opt_rss.h opt_ratelimit.h
 
 CFLAGS+= -I${SRCTOP}/sys/ofed/include
-CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include
+CFLAGS+= ${LINUXKPI_INCLUDES}
 
 .if defined(CONFIG_BUILD_FPGA)
 SRCS+= \
@@ -47,6 +50,8 @@ SRCS+= \
 	mlx5fpga_xfer.c \
 	mlx5fpga_ipsec.c
 .endif
+
+EXPORT_SYMS=	YES
 
 .include <bsd.kmod.mk>
 

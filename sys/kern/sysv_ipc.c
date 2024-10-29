@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_sysvipc.h"
 
 #include <sys/param.h>
@@ -49,29 +48,26 @@
 #include <sys/proc.h>
 #include <sys/ucred.h>
 
+#ifndef SYSVSHM
 void (*shmfork_hook)(struct proc *, struct proc *) = NULL;
 void (*shmexit_hook)(struct vmspace *) = NULL;
 
 /* called from kern_fork.c */
 void
-shmfork(p1, p2)
-	struct proc *p1, *p2;
+shmfork(struct proc *p1, struct proc *p2)
 {
-
 	if (shmfork_hook != NULL)
 		shmfork_hook(p1, p2);
-	return;
 }
 
 /* called from kern_exit.c */
 void
 shmexit(struct vmspace *vm)
 {
-
 	if (shmexit_hook != NULL)
 		shmexit_hook(vm);
-	return;
 }
+#endif
 
 /*
  * Check for IPC permission.

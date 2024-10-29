@@ -3,7 +3,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -409,4 +409,3 @@ ng_l2cap_process_command_timeout(node_p node, hook_p hook, void *arg1, int arg2)
 
 	ng_l2cap_free_cmd(cmd);
 } /* ng_l2cap_process_command_timeout */
-

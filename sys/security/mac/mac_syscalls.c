@@ -43,7 +43,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_mac.h"
 
 #include <sys/param.h>
@@ -58,7 +57,6 @@
 #include <sys/systm.h>
 #include <sys/sysctl.h>
 #include <sys/sysproto.h>
-#include <sys/sysent.h>
 #include <sys/vnode.h>
 #include <sys/mount.h>
 #include <sys/file.h>
@@ -252,7 +250,8 @@ sys___mac_get_fd(struct thread *td, struct __mac_get_fd_args *uap)
 	}
 
 	buffer = malloc(mac.m_buflen, M_MACTEMP, M_WAITOK | M_ZERO);
-	error = fget(td, uap->fd, cap_rights_init(&rights, CAP_MAC_GET), &fp);
+	error = fget(td, uap->fd, cap_rights_init_one(&rights, CAP_MAC_GET),
+	    &fp);
 	if (error)
 		goto out;
 
@@ -267,7 +266,7 @@ sys___mac_get_fd(struct thread *td, struct __mac_get_fd_args *uap)
 		intlabel = mac_vnode_label_alloc();
 		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 		mac_vnode_copy_label(vp->v_label, intlabel);
-		VOP_UNLOCK(vp, 0);
+		VOP_UNLOCK(vp);
 		error = mac_vnode_externalize_label(intlabel, elements,
 		    buffer, mac.m_buflen);
 		mac_vnode_label_free(intlabel);
@@ -410,7 +409,8 @@ sys___mac_set_fd(struct thread *td, struct __mac_set_fd_args *uap)
 		return (error);
 	}
 
-	error = fget(td, uap->fd, cap_rights_init(&rights, CAP_MAC_SET), &fp);
+	error = fget(td, uap->fd, cap_rights_init_one(&rights, CAP_MAC_SET),
+	    &fp);
 	if (error)
 		goto out;
 
@@ -435,7 +435,7 @@ sys___mac_set_fd(struct thread *td, struct __mac_set_fd_args *uap)
 		}
 		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 		error = vn_setlabel(vp, intlabel, td->td_ucred);
-		VOP_UNLOCK(vp, 0);
+		VOP_UNLOCK(vp);
 		vn_finished_write(mp);
 		mac_vnode_label_free(intlabel);
 		break;

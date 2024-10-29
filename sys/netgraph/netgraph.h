@@ -36,7 +36,6 @@
  * OF SUCH DAMAGE.
  *
  * Author: Julian Elischer <julian@freebsd.org>
- *
  * $Whistle: netgraph.h,v 1.29 1999/11/01 07:56:13 julian Exp $
  */
 
@@ -75,7 +74,6 @@
 #else	/* NETGRAPH_DEBUG */ /*----------------------------------------------*/
 #define NG_ABI_VERSION	_NG_ABI_VERSION
 #endif	/* NETGRAPH_DEBUG */ /*----------------------------------------------*/
-
 
 /*
  * Forward references for the basic structures so we can
@@ -309,7 +307,6 @@ _ng_hook_hi_stack(hook_p hook, char * file, int line)
 	_NG_HOOK_HI_STACK(hook);
 }
 
-
 #define	NG_HOOK_REF(hook)		_ng_hook_ref(hook, _NN_)
 #define NG_HOOK_NAME(hook)		_ng_hook_name(hook, _NN_)
 #define NG_HOOK_UNREF(hook)		_ng_hook_unref(hook, _NN_)
@@ -430,13 +427,11 @@ void	ng_unref_node(node_p node); /* don't move this */
  * iterator will stop and return a pointer to the hook that returned 0.
  */
 typedef	int	ng_fn_eachhook(hook_p hook, void* arg);
-#define _NG_NODE_FOREACH_HOOK(node, fn, arg, rethook)			\
+#define _NG_NODE_FOREACH_HOOK(node, fn, arg)				\
 	do {								\
 		hook_p _hook;						\
-		(rethook) = NULL;					\
 		LIST_FOREACH(_hook, &((node)->nd_hooks), hk_hooks) {	\
 			if ((fn)(_hook, arg) == 0) {			\
-				(rethook) = _hook;			\
 				break;					\
 			}						\
 		}							\
@@ -457,7 +452,7 @@ static __inline int _ng_node_is_valid(node_p node, char *file, int line);
 static __inline int _ng_node_not_valid(node_p node, char *file, int line);
 static __inline int _ng_node_numhooks(node_p node, char *file, int line);
 static __inline void _ng_node_force_writer(node_p node, char *file, int line);
-static __inline hook_p _ng_node_foreach_hook(node_p node,
+static __inline void _ng_node_foreach_hook(node_p node,
 			ng_fn_eachhook *fn, void *arg, char *file, int line);
 static __inline void _ng_node_revive(node_p node, char *file, int line);
 
@@ -570,14 +565,12 @@ _ng_node_revive(node_p node, char *file, int line)
 	_NG_NODE_REVIVE(node);
 }
 
-static __inline hook_p
+static __inline void
 _ng_node_foreach_hook(node_p node, ng_fn_eachhook *fn, void *arg,
 						char *file, int line)
 {
-	hook_p hook;
 	_chknode(node, file, line);
-	_NG_NODE_FOREACH_HOOK(node, fn, arg, hook);
-	return (hook);
+	_NG_NODE_FOREACH_HOOK(node, fn, arg);
 }
 
 #define NG_NODE_NAME(node)		_ng_node_name(node, _NN_)	
@@ -594,10 +587,8 @@ _ng_node_foreach_hook(node_p node, ng_fn_eachhook *fn, void *arg,
 #define NG_NODE_REALLY_DIE(node) 	_ng_node_really_die(node, _NN_)
 #define NG_NODE_NUMHOOKS(node)		_ng_node_numhooks(node, _NN_)
 #define NG_NODE_REVIVE(node)		_ng_node_revive(node, _NN_)
-#define NG_NODE_FOREACH_HOOK(node, fn, arg, rethook)			      \
-	do {								      \
-		rethook = _ng_node_foreach_hook(node, fn, (void *)arg, _NN_); \
-	} while (0)
+#define NG_NODE_FOREACH_HOOK(node, fn, arg)				\
+	_ng_node_foreach_hook(node, fn, (void *)arg, _NN_)
 
 #else	/* NETGRAPH_DEBUG */ /*----------------------------------------------*/
 
@@ -615,8 +606,8 @@ _ng_node_foreach_hook(node_p node, ng_fn_eachhook *fn, void *arg,
 #define NG_NODE_REALLY_DIE(node) 	_NG_NODE_REALLY_DIE(node)
 #define NG_NODE_NUMHOOKS(node)		_NG_NODE_NUMHOOKS(node)	
 #define NG_NODE_REVIVE(node)		_NG_NODE_REVIVE(node)
-#define NG_NODE_FOREACH_HOOK(node, fn, arg, rethook)			\
-		_NG_NODE_FOREACH_HOOK(node, fn, arg, rethook)
+#define NG_NODE_FOREACH_HOOK(node, fn, arg)				\
+	_NG_NODE_FOREACH_HOOK(node, fn, arg)
 #endif	/* NETGRAPH_DEBUG */ /*----------------------------------------------*/
 
 /***********************************************************************
@@ -879,7 +870,7 @@ _ngi_hook(item_p item, char *file, int line)
 
 #define NGI_QUEUED_READER(i)	((i)->el_flags & NGQF_QREADER)
 #define NGI_QUEUED_WRITER(i)	(((i)->el_flags & NGQF_QMODE) == NGQF_QWRITER)
-	
+
 /**********************************************************************
 * Data macros.  Send, manipulate and free.
 **********************************************************************/
@@ -1039,7 +1030,6 @@ _ngi_hook(item_p item, char *file, int line)
 		(item) = NULL;						\
 	} while (0)
 
-
 /***********************************************************************
  ******** Structures Definitions and Macros for defining a node  *******
  ***********************************************************************
@@ -1076,7 +1066,6 @@ struct ng_cmdlist {
  * for other reasons (e.g. device output queuing).
  */
 struct ng_type {
-
 	u_int32_t	version; 	/* must equal NG_API_VERSION */
 	const char	*name;		/* Unique type name */
 	modeventhand_t	mod_event;	/* Module event handler (optional) */

@@ -3,7 +3,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -85,4 +85,3 @@ static const struct ng_cmdlist	ng_l2cap_cmdlist[] = {
 };
 
 #endif /* ndef _NETGRAPH_L2CAP_PRSE_H_ */
-

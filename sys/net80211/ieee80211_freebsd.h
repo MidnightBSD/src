@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -23,7 +23,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 #ifndef _NET80211_IEEE80211_FREEBSD_H_
 #define _NET80211_IEEE80211_FREEBSD_H_
@@ -38,6 +37,8 @@
 #include <sys/sysctl.h>
 #include <sys/taskqueue.h>
 #include <sys/time.h>
+
+#include <net/debugnet.h>
 
 /*
  * priv(9) NET80211 checks.
@@ -164,7 +165,7 @@ typedef struct mtx ieee80211_psq_lock_t;
 	IF_UNLOCK(ifq);						\
 } while (0)
 #endif /* IF_PREPEND_LIST */
- 
+
 /*
  * Age queue definitions.
  */
@@ -356,7 +357,7 @@ struct ieee80211com;
 int	ieee80211_parent_xmitpkt(struct ieee80211com *, struct mbuf *);
 int	ieee80211_vap_xmitpkt(struct ieee80211vap *, struct mbuf *);
 
-void	get_random_bytes(void *, size_t);
+void	net80211_get_random_bytes(void *, size_t);
 
 void	ieee80211_sysctl_attach(struct ieee80211com *);
 void	ieee80211_sysctl_detach(struct ieee80211com *);
@@ -504,6 +505,36 @@ typedef int ieee80211_ioctl_setfunc(struct ieee80211vap *,
     struct ieee80211req *);
 SET_DECLARE(ieee80211_ioctl_setset, ieee80211_ioctl_setfunc);
 #define	IEEE80211_IOCTL_SET(_name, _set) TEXT_SET(ieee80211_ioctl_setset, _set)
+
+#ifdef DEBUGNET
+typedef void debugnet80211_init_t(struct ieee80211com *, int *nrxr, int *ncl,
+    int *clsize);
+typedef void debugnet80211_event_t(struct ieee80211com *, enum debugnet_ev);
+typedef int debugnet80211_poll_t(struct ieee80211com *, int);
+
+struct debugnet80211_methods {
+	debugnet80211_init_t		*dn8_init;
+	debugnet80211_event_t		*dn8_event;
+	debugnet80211_poll_t		*dn8_poll;
+};
+
+#define	DEBUGNET80211_DEFINE(driver)					\
+	static debugnet80211_init_t driver##_debugnet80211_init;		\
+	static debugnet80211_event_t driver##_debugnet80211_event;	\
+	static debugnet80211_poll_t driver##_debugnet80211_poll;		\
+									\
+	static struct debugnet80211_methods driver##_debugnet80211_methods = { \
+		.dn8_init = driver##_debugnet80211_init,			\
+		.dn8_event = driver##_debugnet80211_event,		\
+		.dn8_poll = driver##_debugnet80211_poll,			\
+	}
+#define DEBUGNET80211_SET(ic, driver)					\
+	(ic)->ic_debugnet_meth = &driver##_debugnet80211_methods
+#else
+#define DEBUGNET80211_DEFINE(driver)
+#define DEBUGNET80211_SET(ic, driver)
+#endif /* DEBUGNET */
+
 #endif /* _KERNEL */
 
 /* XXX this stuff belongs elsewhere */

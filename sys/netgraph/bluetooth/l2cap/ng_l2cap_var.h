@@ -3,7 +3,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -121,7 +121,7 @@ typedef struct ng_l2cap_con {
 	u_int8_t			 ident;      /* last allocated ident */
 	uint8_t				 linktype;
 	uint8_t				 encryption;
-	
+
 	TAILQ_HEAD(, ng_l2cap_cmd)	 cmd_list;   /* pending L2CAP cmds */
 
 	struct mbuf			*tx_pkt;     /* xmitted L2CAP packet */
@@ -192,4 +192,3 @@ typedef struct ng_l2cap_cmd {
 typedef ng_l2cap_cmd_t *		ng_l2cap_cmd_p;
 
 #endif /* ndef _NETGRAPH_L2CAP_VAR_H_ */
-

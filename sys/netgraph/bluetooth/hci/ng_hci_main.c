@@ -3,7 +3,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -754,7 +754,7 @@ ng_hci_drv_rcvdata(hook_p hook, item_p item)
 		} else
 			NG_FWD_ITEM_HOOK(error, item, unit->sco);
 		break;
-	
+
 	case NG_HCI_EVENT_PKT:
 		NG_HCI_STAT_EVNT_RECV(unit->stat);
 
@@ -1100,4 +1100,3 @@ drop:
 
 	return (error);
 } /* ng_hci_raw_rcvdata */
-

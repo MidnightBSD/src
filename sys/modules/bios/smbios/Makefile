@@ -1,6 +1,6 @@
 #
 
-.PATH:  ${SRCTOP}/sys/x86/bios
+.PATH:  ${SRCTOP}/sys/dev/smbios
 
 KMOD=	smbios
 SRCS=	smbios.c \

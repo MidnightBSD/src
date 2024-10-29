@@ -24,11 +24,12 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/types.h>
+#include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
+#include <sys/endian.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -37,19 +38,65 @@
 #include <machine/trap.h>
 #include "opal.h"
 
+struct opal_hmi_event {
+	uint8_t 	version;
+	uint8_t 	severity;
+	uint8_t 	type;
+	uint8_t 	disposition;
+	uint8_t 	rsvd_1[4];
+	uint64_t	hmer;
+	uint64_t	tfmr;
+	union {
+		struct {
+			uint8_t 	xstop_type;
+			uint8_t 	rsvd_2[3];
+			uint32_t	xstop_reason;
+			union {
+				uint32_t	pir;
+				uint32_t	chip_id;
+			};
+		};
+	};
+};
+
+#define	HMI_DISP_RECOVERED	0
+#define	HMI_DISP_NOT_RECOVERED	1
+
+static void
+opal_hmi_event_handler(void *unused, struct opal_msg *msg)
+{
+	struct opal_hmi_event	evt;
+
+	memcpy(&evt, &msg->params, sizeof(evt));
+	printf("Hypervisor Maintenance Event received"
+	    "(Severity %d, type %d, HMER: %016lx).\n",
+	    evt.severity, evt.type, evt.hmer);
+
+	if (evt.disposition == HMI_DISP_NOT_RECOVERED)
+		panic("Unrecoverable hypervisor maintenance exception on CPU %d",
+		    evt.pir);
+
+	return;
+}
+
 static int
 opal_hmi_handler2(struct trapframe *frame)
 {
-	int64_t flags;
+	/*
+	 * Use DMAP preallocated pcpu memory to handle
+	 * the phys flags pointer.
+	 */
+	uint64_t *flags = PCPU_PTR(aim.opal_hmi_flags);
 	int err;
 
-	err = opal_call(OPAL_HANDLE_HMI2, vtophys(&flags));
+	*flags = 0;
+	err = opal_call(OPAL_HANDLE_HMI2, DMAP_TO_PHYS((vm_offset_t)flags));
 
-	/* XXX: At some point, handle the flags outvar. */
-	if (err == OPAL_SUCCESS) {
-		mtspr(SPR_HMER, 0);
+	if (be64toh(*flags) & OPAL_HMI_FLAGS_TOD_TB_FAIL)
+		panic("TOD/TB recovery failure");
+
+	if (err == OPAL_SUCCESS)
 		return (0);
-	}
 
 	printf("HMI handler failed!  OPAL error code: %d\n", err);
 
@@ -63,10 +110,8 @@ opal_hmi_handler(struct trapframe *frame)
 
 	err = opal_call(OPAL_HANDLE_HMI);
 
-	if (err == OPAL_SUCCESS) {
-		mtspr(SPR_HMER, 0);
+	if (err == OPAL_SUCCESS)
 		return (0);
-	}
 
 	printf("HMI handler failed!  OPAL error code: %d\n", err);
 
@@ -89,8 +134,11 @@ opal_setup_hmi(void *data)
 		return;
 	}
 
+	EVENTHANDLER_REGISTER(OPAL_HMI_EVT, opal_hmi_event_handler, NULL,
+	    EVENTHANDLER_PRI_ANY);
+
 	if (bootverbose)
 		printf("Installed OPAL HMI handler.\n");
 }
 
-SYSINIT(opal_setup_hmi, SI_SUB_HYPERVISOR, SI_ORDER_ANY, opal_setup_hmi, NULL);
+SYSINIT(opal_setup_hmi, SI_SUB_CPU, SI_ORDER_ANY, opal_setup_hmi, NULL);

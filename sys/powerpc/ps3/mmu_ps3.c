@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2010 Nathan Whitehorn
  * All rights reserved.
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/ktr.h>
@@ -50,8 +49,6 @@
 
 #include <powerpc/aim/mmu_oea64.h>
 
-#include "mmu_if.h"
-#include "moea64_if.h"
 #include "ps3-hvcall.h"
 
 #define VSID_HASH_MASK		0x0000007fffffffffUL
@@ -65,39 +62,46 @@ static uint64_t mps3_vas_id;
  * Kernel MMU interface
  */
 
-static void	mps3_bootstrap(mmu_t mmup, vm_offset_t kernelstart,
+static void	mps3_install(void);
+static void	mps3_bootstrap(vm_offset_t kernelstart,
 		    vm_offset_t kernelend);
-static void	mps3_cpu_bootstrap(mmu_t mmup, int ap);
-static int64_t	mps3_pte_synch(mmu_t, struct pvo_entry *);
-static int64_t	mps3_pte_clear(mmu_t, struct pvo_entry *, uint64_t ptebit);
-static int64_t	mps3_pte_unset(mmu_t, struct pvo_entry *);
-static int	mps3_pte_insert(mmu_t, struct pvo_entry *);
+static void	mps3_cpu_bootstrap(int ap);
+static int64_t	mps3_pte_synch(struct pvo_entry *);
+static int64_t	mps3_pte_clear(struct pvo_entry *, uint64_t ptebit);
+static int64_t	mps3_pte_unset(struct pvo_entry *);
+static int64_t	mps3_pte_insert(struct pvo_entry *);
 
-
-static mmu_method_t mps3_methods[] = {
-        MMUMETHOD(mmu_bootstrap,	mps3_bootstrap),
-        MMUMETHOD(mmu_cpu_bootstrap,	mps3_cpu_bootstrap),
-
-	MMUMETHOD(moea64_pte_synch,	mps3_pte_synch),
-	MMUMETHOD(moea64_pte_clear,	mps3_pte_clear),
-	MMUMETHOD(moea64_pte_unset,	mps3_pte_unset),
-	MMUMETHOD(moea64_pte_insert,	mps3_pte_insert),
-
-        { 0, 0 }
+static struct pmap_funcs mps3_methods = {
+	.install = mps3_install,
+        .bootstrap = mps3_bootstrap,
+        .cpu_bootstrap = mps3_cpu_bootstrap,
 };
 
-MMU_DEF_INHERIT(ps3_mmu, "mmu_ps3", mps3_methods, 0, oea64_mmu);
+static struct moea64_funcs mps3_funcs = {
+	.pte_synch = mps3_pte_synch,
+	.pte_clear = mps3_pte_clear,
+	.pte_unset = mps3_pte_unset,
+	.pte_insert = mps3_pte_insert,
+};
+
+MMU_DEF_INHERIT(ps3_mmu, "mmu_ps3", mps3_methods, oea64_mmu);
 
 static struct mtx mps3_table_lock;
 
 static void
-mps3_bootstrap(mmu_t mmup, vm_offset_t kernelstart, vm_offset_t kernelend)
+mps3_install()
+{
+	moea64_ops = &mps3_funcs;
+}
+
+static void
+mps3_bootstrap(vm_offset_t kernelstart, vm_offset_t kernelend)
 {
 	uint64_t final_pteg_count;
 
 	mtx_init(&mps3_table_lock, "page table", NULL, MTX_DEF);
 
-	moea64_early_bootstrap(mmup, kernelstart, kernelend);
+	moea64_early_bootstrap(kernelstart, kernelend);
 
 	/* In case we had a page table already */
 	lv1_destruct_virtual_address_space(0);
@@ -113,12 +117,12 @@ mps3_bootstrap(mmu_t mmup, vm_offset_t kernelstart, vm_offset_t kernelend)
 
 	moea64_pteg_count = final_pteg_count / sizeof(struct lpteg);
 
-	moea64_mid_bootstrap(mmup, kernelstart, kernelend);
-	moea64_late_bootstrap(mmup, kernelstart, kernelend);
+	moea64_mid_bootstrap(kernelstart, kernelend);
+	moea64_late_bootstrap(kernelstart, kernelend);
 }
 
 static void
-mps3_cpu_bootstrap(mmu_t mmup, int ap)
+mps3_cpu_bootstrap(int ap)
 {
 	struct slb *slb = PCPU_GET(aim.slb);
 	register_t seg0;
@@ -154,7 +158,7 @@ static int64_t
 mps3_pte_synch_locked(struct pvo_entry *pvo)
 {
 	uint64_t halfbucket[4], rcbits;
-	
+
 	PTESYNC();
 	lv1_read_htab_entries(mps3_vas_id, pvo->pvo_pte.slot & ~0x3UL,
 	    &halfbucket[0], &halfbucket[1], &halfbucket[2], &halfbucket[3],
@@ -178,7 +182,7 @@ mps3_pte_synch_locked(struct pvo_entry *pvo)
 }
 
 static int64_t
-mps3_pte_synch(mmu_t mmu, struct pvo_entry *pvo)
+mps3_pte_synch(struct pvo_entry *pvo)
 {
 	int64_t retval;
 
@@ -190,7 +194,7 @@ mps3_pte_synch(mmu_t mmu, struct pvo_entry *pvo)
 }
 
 static int64_t
-mps3_pte_clear(mmu_t mmu, struct pvo_entry *pvo, uint64_t ptebit)
+mps3_pte_clear(struct pvo_entry *pvo, uint64_t ptebit)
 {
 	int64_t refchg;
 	struct lpte pte;
@@ -216,27 +220,27 @@ mps3_pte_clear(mmu_t mmu, struct pvo_entry *pvo, uint64_t ptebit)
 }
 
 static int64_t
-mps3_pte_unset(mmu_t mmu, struct pvo_entry *pvo)
+mps3_pte_unset(struct pvo_entry *pvo)
 {
 	int64_t refchg;
 
 	mtx_lock(&mps3_table_lock);
 	refchg = mps3_pte_synch_locked(pvo);
 	if (refchg < 0) {
-		moea64_pte_overflow--;
+		STAT_MOEA64(moea64_pte_overflow--);
 		mtx_unlock(&mps3_table_lock);
 		return (-1);
 	}
 	/* XXX: race on RC bits between unset and sync. Anything to do? */
 	lv1_write_htab_entry(mps3_vas_id, pvo->pvo_pte.slot, 0, 0);
 	mtx_unlock(&mps3_table_lock);
-	moea64_pte_valid--;
+	STAT_MOEA64(moea64_pte_valid--);
 
 	return (refchg & (LPTE_REF | LPTE_CHG));
 }
 
-static int
-mps3_pte_insert(mmu_t mmu, struct pvo_entry *pvo)
+static int64_t
+mps3_pte_insert(struct pvo_entry *pvo)
 {
 	int result;
 	struct lpte pte, evicted;
@@ -271,15 +275,14 @@ mps3_pte_insert(mmu_t mmu, struct pvo_entry *pvo)
 		pvo->pvo_vaddr |= PVO_HID;
 	pvo->pvo_pte.slot = index;
 
-	moea64_pte_valid++;
+	STAT_MOEA64(moea64_pte_valid++);
 
 	if (evicted.pte_hi) {
 		KASSERT((evicted.pte_hi & (LPTE_WIRED | LPTE_LOCKED)) == 0,
 		    ("Evicted a wired PTE"));
-		moea64_pte_valid--;
-		moea64_pte_overflow++;
+		STAT_MOEA64(moea64_pte_valid--);
+		STAT_MOEA64(moea64_pte_overflow++);
 	}
 
 	return (0);
 }
-

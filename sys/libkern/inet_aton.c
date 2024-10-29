@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 Charles Mott <cm@linktel.net>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/ctype.h>
 #include <sys/limits.h>
@@ -93,12 +92,10 @@ inet_aton(const char *cp, struct in_addr *addr)
 				gotend = 1;
 				break;
 			} else {
-
 				/* Invalid character, then fail. */
 				return (0);
 			}
 		}
-
 	}
 
 	/* Concoct the address according to the number of parts specified. */
@@ -134,4 +131,3 @@ inet_aton(const char *cp, struct in_addr *addr)
 		addr->s_addr = htonl(val);
 	return (1);
 }
-

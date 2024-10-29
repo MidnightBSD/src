@@ -36,7 +36,6 @@
 #include "opt_platform.h"
 
 #include <sys/param.h>
-
 #include <vm/vm.h>
 #include <vm/pmap.h>
 

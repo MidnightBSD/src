@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -29,7 +29,6 @@
  * SUCH DAMAGE.
  *
  * Customisation of the SSCFU code to ng_sscfu.
- *
  */
 #include <sys/param.h>
 #include <sys/types.h>
@@ -81,7 +80,6 @@
 
 #endif
 
-
 /*
  * Signal queues
  */
@@ -118,7 +116,6 @@ ng_sscfu_sigq_get(struct sscfu_sigq *q)					\
 	}								\
 	TAILQ_INIT(Q);							\
     } while (0)
-
 
 /*
  * Message buffers

@@ -3,7 +3,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001-2009 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -150,6 +150,11 @@ static ng_connect_t	ng_ubt_connect;
 static ng_disconnect_t	ng_ubt_disconnect;
 static ng_rcvmsg_t	ng_ubt_rcvmsg;
 static ng_rcvdata_t	ng_ubt_rcvdata;
+
+static int ng_usb_isoc_enable = 1;
+
+SYSCTL_INT(_net_bluetooth, OID_AUTO, usb_isoc_enable, CTLFLAG_RWTUN | CTLFLAG_MPSAFE,
+    &ng_usb_isoc_enable, 0, "enable isochronous transfers");
 
 /* Queue length */
 static const struct ng_parse_struct_field	ng_ubt_node_qlen_type_fields[] =
@@ -431,6 +436,13 @@ static const STRUCT_USB_HOST_ID ubt_ignore_devs[] =
 	{ USB_VPI(USB_VENDOR_INTEL2, 0x0025, 0) },
 	{ USB_VPI(USB_VENDOR_INTEL2, 0x0026, 0) },
 	{ USB_VPI(USB_VENDOR_INTEL2, 0x0029, 0) },
+
+	/*
+	 * Some Intel controllers are not yet supported by ng_ubt_intel and
+	 * should be ignored.
+	 */
+	{ USB_VPI(USB_VENDOR_INTEL2, 0x0032, 0) },
+	{ USB_VPI(USB_VENDOR_INTEL2, 0x0033, 0) },
 };
 
 /* List of supported bluetooth devices */
@@ -562,7 +574,6 @@ ubt_do_hci_request(struct usb_device *udev, struct ubt_hci_cmd *cmd,
 	error = usbd_transfer_setup(udev, &iface_index, xfer,
 	    &ubt_probe_config, 1, evt, &mtx);
 	if (error == USB_ERR_NORMAL_COMPLETION) {
-
 		mtx_lock(&mtx);
 		usbd_transfer_start(*xfer);
 
@@ -595,22 +606,31 @@ static int
 ubt_probe(device_t dev)
 {
 	struct usb_attach_arg	*uaa = device_get_ivars(dev);
-	int error;
+	const struct usb_device_id *id;
 
 	if (uaa->usb_mode != USB_MODE_HOST)
-		return (ENXIO);
-
-	if (uaa->info.bIfaceIndex != 0)
 		return (ENXIO);
 
 	if (usbd_lookup_id_by_uaa(ubt_ignore_devs,
 			sizeof(ubt_ignore_devs), uaa) == 0)
 		return (ENXIO);
 
-	error = usbd_lookup_id_by_uaa(ubt_devs, sizeof(ubt_devs), uaa);
-	if (error == 0)
+	id = usbd_lookup_id_by_info(ubt_devs,
+	    sizeof(ubt_devs), &uaa->info);
+	if (id == NULL)
+		return (ENXIO);
+
+	if (uaa->info.bIfaceIndex != 0) {
+		/* make sure we are matching the interface */
+		if (id->match_flag_int_class &&
+		    id->match_flag_int_subclass &&
+		    id->match_flag_int_protocol)
+			return (BUS_PROBE_GENERIC);
+		else
+			return (ENXIO);
+	} else {
 		return (BUS_PROBE_GENERIC);
-	return (error);
+	}
 } /* ubt_probe */
 
 /*
@@ -625,15 +645,31 @@ ubt_attach(device_t dev)
 	struct ubt_softc		*sc = device_get_softc(dev);
 	struct usb_endpoint_descriptor	*ed;
 	struct usb_interface_descriptor *id;
-	struct usb_interface		*iface;
+	struct usb_interface		*iface[2];
 	uint32_t			wMaxPacketSize;
 	uint8_t				alt_index, i, j;
-	uint8_t				iface_index[2] = { 0, 1 };
+	uint8_t				iface_index[2];
 
 	device_set_usb_desc(dev);
 
+	iface_index[0] = uaa->info.bIfaceIndex;
+	iface_index[1] = uaa->info.bIfaceIndex + 1;
+
+	iface[0] = usbd_get_iface(uaa->device, iface_index[0]);
+	iface[1] = usbd_get_iface(uaa->device, iface_index[1]);
+
 	sc->sc_dev = dev;
 	sc->sc_debug = NG_UBT_WARN_LEVEL;
+
+	/*
+	 * Sanity checks.
+	 */
+
+	if (iface[0] == NULL || iface[1] == NULL ||
+	    iface[0]->idesc == NULL || iface[1]->idesc == NULL) {
+		UBT_ALERT(sc, "could not get two interfaces\n");
+		return (ENXIO);
+	}
 
 	/* 
 	 * Create Netgraph node
@@ -705,17 +741,16 @@ ubt_attach(device_t dev)
 	while ((ed = (struct usb_endpoint_descriptor *)usb_desc_foreach(
 	    usbd_get_config_descriptor(uaa->device), 
 	    (struct usb_descriptor *)ed))) {
-
 		if ((ed->bDescriptorType == UDESC_INTERFACE) &&
 		    (ed->bLength >= sizeof(*id))) {
 			id = (struct usb_interface_descriptor *)ed;
-			i = id->bInterfaceNumber;
+			i = (id->bInterfaceNumber == iface[1]->idesc->bInterfaceNumber);
 			j = id->bAlternateSetting;
 		}
 
 		if ((ed->bDescriptorType == UDESC_ENDPOINT) &&
 		    (ed->bLength >= sizeof(*ed)) &&
-		    (i == 1)) {
+		    (i != 0)) {
 			uint32_t temp;
 
 			temp = usbd_get_max_frame_length(
@@ -729,34 +764,23 @@ ubt_attach(device_t dev)
 
 	/* Set alt configuration on interface #1 only if we found it */
 	if (wMaxPacketSize > 0 &&
-	    usbd_set_alt_interface_index(uaa->device, 1, alt_index)) {
+	    usbd_set_alt_interface_index(uaa->device, iface_index[1], alt_index)) {
 		UBT_ALERT(sc, "could not set alternate setting %d " \
 			"for interface 1!\n", alt_index);
 		goto detach;
 	}
 
 	/* Setup transfers for both interfaces */
-	if (usbd_transfer_setup(uaa->device, iface_index, sc->sc_xfer,
-			ubt_config, UBT_N_TRANSFER, sc, &sc->sc_if_mtx)) {
+	if (usbd_transfer_setup(uaa->device, iface_index, sc->sc_xfer, ubt_config,
+			ng_usb_isoc_enable ? UBT_N_TRANSFER : UBT_IF_1_ISOC_DT_RD1,
+			sc, &sc->sc_if_mtx)) {
 		UBT_ALERT(sc, "could not allocate transfers\n");
 		goto detach;
 	}
 
-	/* Claim all interfaces belonging to the Bluetooth part */
-	for (i = 1;; i++) {
-		iface = usbd_get_iface(uaa->device, i);
-		if (iface == NULL)
-			break;
-		id = usbd_get_interface_descriptor(iface);
+	/* Claim second interface belonging to the Bluetooth part */
+	usbd_set_parent_iface(uaa->device, iface_index[1], uaa->info.bIfaceIndex);
 
-		if ((id != NULL) &&
-		    (id->bInterfaceClass == UICLASS_WIRELESS) &&
-		    (id->bInterfaceSubClass == UISUBCLASS_RF) &&
-		    (id->bInterfaceProtocol == UIPROTO_BLUETOOTH)) {
-			usbd_set_parent_iface(uaa->device, i,
-			    uaa->info.bIfaceIndex);
-		}
-	}
 	return (0); /* success */
 
 detach:
@@ -1680,7 +1704,7 @@ ng_ubt_disconnect(hook_p hook)
 
 	return (0);
 } /* ng_ubt_disconnect */
-	
+
 /*
  * Process control message.
  * Netgraph context.
@@ -2001,5 +2025,6 @@ DRIVER_MODULE(ng_ubt, uhub, ubt_driver, ubt_devclass, ubt_modevent, 0);
 MODULE_VERSION(ng_ubt, NG_BLUETOOTH_VERSION);
 MODULE_DEPEND(ng_ubt, netgraph, NG_ABI_VERSION, NG_ABI_VERSION, NG_ABI_VERSION);
 MODULE_DEPEND(ng_ubt, ng_hci, NG_BLUETOOTH_VERSION, NG_BLUETOOTH_VERSION, NG_BLUETOOTH_VERSION);
+MODULE_DEPEND(ng_ubt, ng_bluetooth, NG_BLUETOOTH_VERSION, NG_BLUETOOTH_VERSION, NG_BLUETOOTH_VERSION);
 MODULE_DEPEND(ng_ubt, usb, 1, 1, 1);
 USB_PNP_HOST_INFO(ubt_devs);

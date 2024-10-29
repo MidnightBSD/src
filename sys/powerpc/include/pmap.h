@@ -27,7 +27,6 @@
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 /*-
  * Copyright (C) 1995, 1996 Wolfgang Solfrank.
@@ -74,11 +73,33 @@
 #include <machine/pte.h>
 #include <machine/slb.h>
 #include <machine/tlb.h>
+#include <machine/vmparam.h>
+#ifdef __powerpc64__
+#include <vm/vm_radix.h>
+#endif
+
+/*
+ * The radix page table structure is described by levels 1-4.
+ * See Fig 33. on p. 1002 of Power ISA v3.0B
+ *
+ * Page directories and tables must be size aligned.
+ */
+
+/* Root page directory - 64k   -- each entry covers 512GB */
+typedef uint64_t pml1_entry_t;
+/* l2 page directory - 4k      -- each entry covers 1GB */
+typedef uint64_t pml2_entry_t;
+/* l3 page directory - 4k      -- each entry covers 2MB */
+typedef uint64_t pml3_entry_t;
+/* l4 page directory - 256B/4k -- each entry covers 64k/4k */
+typedef uint64_t pml4_entry_t;
+
+typedef uint64_t pt_entry_t;
 
 struct pmap;
 typedef struct pmap *pmap_t;
 
-#if defined(AIM)
+#define	PMAP_ENTER_QUICK_LOCKED	0x10000000
 
 #if !defined(NPMAPS)
 #define	NPMAPS		32768
@@ -91,11 +112,14 @@ struct pvo_entry {
 #ifndef __powerpc64__
 	LIST_ENTRY(pvo_entry) pvo_olink;	/* Link to overflow entry */
 #endif
-	RB_ENTRY(pvo_entry) pvo_plink;	/* Link to pmap entries */
+	union {
+		RB_ENTRY(pvo_entry) pvo_plink;	/* Link to pmap entries */
+		SLIST_ENTRY(pvo_entry) pvo_dlink; /* Link to delete enty */
+	};
 	struct {
 #ifndef __powerpc64__
 		/* 32-bit fields */
-		struct	pte pte;
+		pte_t	    pte;
 #endif
 		/* 64-bit fields */
 		uintptr_t   slot;
@@ -107,6 +131,7 @@ struct pvo_entry {
 	uint64_t	pvo_vpn;		/* Virtual page number */
 };
 LIST_HEAD(pvo_head, pvo_entry);
+SLIST_HEAD(pvo_dlist, pvo_entry);
 RB_HEAD(pvo_tree, pvo_entry);
 int pvo_vaddr_compare(struct pvo_entry *, struct pvo_entry *);
 RB_PROTOTYPE(pvo_tree, pvo_entry, pvo_plink, pvo_vaddr_compare);
@@ -121,8 +146,8 @@ RB_PROTOTYPE(pvo_tree, pvo_entry, pvo_plink, pvo_vaddr_compare);
 #define	PVO_MANAGED		0x020UL		/* PVO entry is managed */
 #define	PVO_BOOTSTRAP		0x080UL		/* PVO entry allocated during
 						   bootstrap */
-#define PVO_DEAD		0x100UL		/* waiting to be deleted */
-#define PVO_LARGE		0x200UL		/* large page */
+#define	PVO_DEAD		0x100UL		/* waiting to be deleted */
+#define	PVO_LARGE		0x200UL		/* large page */
 #define	PVO_VADDR(pvo)		((pvo)->pvo_vaddr & ~ADDR_POFF)
 #define	PVO_PTEGIDX_GET(pvo)	((pvo)->pvo_vaddr & PVO_PTEGIDX_MASK)
 #define	PVO_PTEGIDX_ISSET(pvo)	((pvo)->pvo_vaddr & PVO_PTEGIDX_VALID)
@@ -135,28 +160,102 @@ RB_PROTOTYPE(pvo_tree, pvo_entry, pvo_plink, pvo_vaddr_compare);
 struct	pmap {
 	struct		pmap_statistics	pm_stats;
 	struct	mtx	pm_mtx;
-	
-    #ifdef __powerpc64__
-	struct slbtnode	*pm_slb_tree_root;
-	struct slb	**pm_slb;
-	int		pm_slb_len;
-    #else
-	register_t	pm_sr[16];
-    #endif
 	cpuset_t	pm_active;
+	union {
+		struct {
+		    #ifdef __powerpc64__
+			struct slbtnode	*pm_slb_tree_root;
+			struct slb	**pm_slb;
+			int		pm_slb_len;
+		    #else
+			register_t	pm_sr[16];
+		    #endif
 
-	struct pmap	*pmap_phys;
-	struct pvo_tree pmap_pvo;
+			struct pmap	*pmap_phys;
+			struct pvo_tree pmap_pvo;
+		};
+#ifdef __powerpc64__
+		/* Radix support */
+		struct {
+			pml1_entry_t	*pm_pml1;	/* KVA of root page directory */
+			struct vm_radix	 pm_radix;	/* spare page table pages */
+			TAILQ_HEAD(,pv_chunk)	pm_pvchunk;	/* list of mappings in pmap */
+			uint64_t	pm_pid; /* PIDR value */
+			int pm_flags;
+		};
+#endif
+		struct {
+			/* TID to identify this pmap entries in TLB */
+			tlbtid_t	pm_tid[MAXCPU];
+
+#ifdef __powerpc64__
+			/*
+			 * Page table directory,
+			 * array of pointers to page directories.
+			 */
+			pte_t ****pm_root;
+#else
+			/*
+			 * Page table directory,
+			 * array of pointers to page tables.
+			 */
+			pte_t		**pm_pdir;
+
+			/* List of allocated ptbl bufs (ptbl kva regions). */
+			TAILQ_HEAD(, ptbl_buf)	pm_ptbl_list;
+#endif
+		};
+	} __aligned(CACHE_LINE_SIZE);
+};
+
+/*
+ * pv_entries are allocated in chunks per-process.  This avoids the
+ * need to track per-pmap assignments.
+ */
+#define	_NPCM	2
+#define	_NPCPV	126
+#define	PV_CHUNK_HEADER							\
+	pmap_t			pc_pmap;				\
+	TAILQ_ENTRY(pv_chunk)	pc_list;				\
+	uint64_t		pc_map[_NPCM];	/* bitmap; 1 = free */	\
+	TAILQ_ENTRY(pv_chunk)	pc_lru;
+
+struct pv_entry {
+	pmap_t pv_pmap;
+	vm_offset_t pv_va;
+	TAILQ_ENTRY(pv_entry) pv_link;
+};
+typedef struct pv_entry *pv_entry_t;
+
+struct pv_chunk_header {
+	PV_CHUNK_HEADER
+};
+struct pv_chunk {
+	PV_CHUNK_HEADER
+	uint64_t	reserved;
+	struct pv_entry		pc_pventry[_NPCPV];
 };
 
 struct	md_page {
-	volatile int32_t mdpg_attrs;
-	vm_memattr_t	 mdpg_cache_attrs;
-	struct	pvo_head mdpg_pvoh;
+	union {
+		struct {
+			volatile int32_t mdpg_attrs;
+			vm_memattr_t	 mdpg_cache_attrs;
+			struct	pvo_head mdpg_pvoh;
+			int		pv_gen;   /* (p) */
+		};
+		struct {
+			int			pv_tracked;
+		};
+	};
+	TAILQ_HEAD(, pv_entry)	pv_list;  /* (p) */
 };
 
+#ifdef AIM
 #define	pmap_page_get_memattr(m)	((m)->md.mdpg_cache_attrs)
-#define	pmap_page_is_mapped(m)	(!LIST_EMPTY(&(m)->md.mdpg_pvoh))
+#else
+#define	pmap_page_get_memattr(m)	VM_MEMATTR_DEFAULT
+#endif /* AIM */
 
 /*
  * Return the VSID corresponding to a given virtual address.
@@ -181,56 +280,6 @@ void     slb_free_tree(pmap_t pm);
 struct slb **slb_alloc_user_cache(void);
 void	slb_free_user_cache(struct slb **);
 
-#elif defined(BOOKE)
-
-struct pmap {
-	struct pmap_statistics	pm_stats;	/* pmap statistics */
-	struct mtx		pm_mtx;		/* pmap mutex */
-	tlbtid_t		pm_tid[MAXCPU];	/* TID to identify this pmap entries in TLB */
-	cpuset_t		pm_active;	/* active on cpus */
-
-#ifdef __powerpc64__
-	/* Page table directory, array of pointers to page directories. */
-	pte_t **pm_pp2d[PP2D_NENTRIES];
-
-	/* List of allocated pdir bufs (pdir kva regions). */
-	TAILQ_HEAD(, ptbl_buf)	pm_pdir_list;
-#else
-	/* Page table directory, array of pointers to page tables. */
-	pte_t			*pm_pdir[PDIR_NENTRIES];
-#endif
-
-	/* List of allocated ptbl bufs (ptbl kva regions). */
-	TAILQ_HEAD(, ptbl_buf)	pm_ptbl_list;
-};
-
-struct pv_entry {
-	pmap_t pv_pmap;
-	vm_offset_t pv_va;
-	TAILQ_ENTRY(pv_entry) pv_link;
-};
-typedef struct pv_entry *pv_entry_t;
-
-struct md_page {
-	TAILQ_HEAD(, pv_entry) pv_list;
-	int	pv_tracked;
-};
-
-#define	pmap_page_get_memattr(m)	VM_MEMATTR_DEFAULT
-#define	pmap_page_is_mapped(m)	(!TAILQ_EMPTY(&(m)->md.pv_list))
-
-#else
-/*
- * Common pmap members between AIM and BOOKE.
- * libkvm needs pm_stats at the same location between both, as it doesn't define
- * AIM nor BOOKE, and is expected to work across all.
- */
-struct pmap {
-	struct pmap_statistics	pm_stats;	/* pmap statistics */
-	struct mtx		pm_mtx;		/* pmap mutex */
-};
-#endif /* AIM */
-
 extern	struct pmap kernel_pmap_store;
 #define	kernel_pmap	(&kernel_pmap_store)
 
@@ -242,13 +291,15 @@ extern	struct pmap kernel_pmap_store;
 #define	PMAP_LOCK_DESTROY(pmap)	mtx_destroy(&(pmap)->pm_mtx)
 #define	PMAP_LOCK_INIT(pmap)	mtx_init(&(pmap)->pm_mtx, \
 				    (pmap == kernel_pmap) ? "kernelpmap" : \
-				    "pmap", NULL, MTX_DEF)
+				    "pmap", NULL, MTX_DEF | MTX_DUPOK)
 #define	PMAP_LOCKED(pmap)	mtx_owned(&(pmap)->pm_mtx)
 #define	PMAP_MTX(pmap)		(&(pmap)->pm_mtx)
 #define	PMAP_TRYLOCK(pmap)	mtx_trylock(&(pmap)->pm_mtx)
 #define	PMAP_UNLOCK(pmap)	mtx_unlock(&(pmap)->pm_mtx)
 
-#define	pmap_page_is_write_mapped(m)	(((m)->aflags & PGA_WRITEABLE) != 0)
+#define	pmap_page_is_write_mapped(m)	(((m)->a.flags & PGA_WRITEABLE) != 0)
+
+#define	pmap_vm_page_alloc_check(m)
 
 void		pmap_bootstrap(vm_offset_t, vm_offset_t);
 void		pmap_kenter(vm_offset_t va, vm_paddr_t pa);
@@ -267,25 +318,35 @@ void		pmap_deactivate(struct thread *);
 vm_paddr_t	pmap_kextract(vm_offset_t);
 int		pmap_dev_direct_mapped(vm_paddr_t, vm_size_t);
 boolean_t	pmap_mmu_install(char *name, int prio);
+void		pmap_mmu_init(void);
+const char	*pmap_mmu_name(void);
+bool		pmap_ps_enabled(pmap_t pmap);
+int		pmap_nofault(pmap_t pmap, vm_offset_t va, vm_prot_t flags);
+boolean_t	pmap_page_is_mapped(vm_page_t m);
+#define	pmap_map_delete(pmap, sva, eva)	pmap_remove(pmap, sva, eva)
+
+void		pmap_page_array_startup(long count);
 
 #define	vtophys(va)	pmap_kextract((vm_offset_t)(va))
 
-#define PHYS_AVAIL_SZ	256	/* Allows up to 16GB Ram on pSeries with
-				 * logical memory block size of 64MB.
-				 * For more Ram increase the lmb or this value.
-				 */
-
-extern	vm_paddr_t phys_avail[PHYS_AVAIL_SZ];
 extern	vm_offset_t virtual_avail;
 extern	vm_offset_t virtual_end;
+extern	caddr_t crashdumpmap;
 
 extern	vm_offset_t msgbuf_phys;
 
 extern	int pmap_bootstrapped;
+extern	int radix_mmu;
+extern	int superpages_enabled;
 
+#ifdef AIM
+void pmap_early_io_map_init(void);
+#endif
 vm_offset_t pmap_early_io_map(vm_paddr_t pa, vm_size_t size);
 void pmap_early_io_unmap(vm_offset_t va, vm_size_t size);
 void pmap_track_page(pmap_t pmap, vm_offset_t va);
+void pmap_page_print_mappings(vm_page_t m);
+void pmap_tlbie_all(void);
 
 static inline int
 pmap_vmspace_copy(pmap_t dst_pmap __unused, pmap_t src_pmap __unused)

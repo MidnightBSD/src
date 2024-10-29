@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997, Stefan Esser <se@freebsd.org>
  * Copyright (c) 2000, Michael Smith <msmith@freebsd.org>
@@ -30,13 +30,13 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
 #include <sys/libkern.h>
 #include <sys/module.h>
 #include <sys/pciio.h>
+#include <sys/smp.h>
 
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
@@ -79,6 +79,8 @@ static device_method_t ofw_pcibus_methods[] = {
 	DEVMETHOD(bus_child_deleted,	ofw_pcibus_child_deleted),
 	DEVMETHOD(bus_child_pnpinfo_str, ofw_pcibus_child_pnpinfo_str_method),
 	DEVMETHOD(bus_rescan,		bus_null_rescan),
+	DEVMETHOD(bus_get_cpus,		ofw_pcibus_get_cpus),
+	DEVMETHOD(bus_get_domain,	ofw_pcibus_get_domain),
 
 	/* PCI interface */
 	DEVMETHOD(pci_alloc_devinfo,	ofw_pcibus_alloc_devinfo),
@@ -99,7 +101,8 @@ static devclass_t pci_devclass;
 
 DEFINE_CLASS_1(pci, ofw_pcibus_driver, ofw_pcibus_methods,
     sizeof(struct pci_softc), pci_driver);
-DRIVER_MODULE(ofw_pcibus, pcib, ofw_pcibus_driver, pci_devclass, 0, 0);
+EARLY_DRIVER_MODULE(ofw_pcibus, pcib, ofw_pcibus_driver, pci_devclass, 0, 0,
+    BUS_PASS_BUS);
 MODULE_VERSION(ofw_pcibus, 1);
 MODULE_DEPEND(ofw_pcibus, pci, 1, 1, 1);
 
@@ -289,7 +292,7 @@ ofw_pcibus_child_deleted(device_t dev, device_t child)
 {
 	struct ofw_pcibus_devinfo *dinfo;
 
-	dinfo = device_get_ivars(dev);
+	dinfo = device_get_ivars(child);
 	ofw_bus_gen_destroy_devinfo(&dinfo->opd_obdinfo);
 	pci_child_deleted(dev, child);
 }
@@ -307,7 +310,7 @@ ofw_pcibus_child_pnpinfo_str_method(device_t cbdev, device_t child, char *buf,
 
 	return (0);
 }
-	
+
 static int
 ofw_pcibus_assign_interrupt(device_t dev, device_t child)
 {
@@ -319,12 +322,12 @@ ofw_pcibus_assign_interrupt(device_t dev, device_t child)
 
 	if (node == -1) {
 		/* Non-firmware enumerated child, use standard routing */
-	
+
 		intr[0] = pci_get_intpin(child);
 		return (PCIB_ROUTE_INTERRUPT(device_get_parent(dev), child, 
 		    intr[0]));
 	}
-	
+
 	/*
 	 * Try to determine the node's interrupt parent so we know which
 	 * PIC to use.
@@ -338,7 +341,7 @@ ofw_pcibus_assign_interrupt(device_t dev, device_t child)
 	if (iparent != -1)
 		OF_getencprop(OF_node_from_xref(iparent), "#interrupt-cells",
 		    &icells, sizeof(icells));
-	
+
 	/*
 	 * Any AAPL,interrupts property gets priority and is
 	 * fully specified (i.e. does not need routing)
@@ -357,7 +360,7 @@ ofw_pcibus_assign_interrupt(device_t dev, device_t child)
 		/* No property: our best guess is the intpin. */
 		intr[0] = pci_get_intpin(child);
 	}
-	
+
 	/*
 	 * If we got intr from a property, it may or may not be an intpin.
 	 * For on-board devices, it frequently is not, and is completely out
@@ -380,3 +383,46 @@ ofw_pcibus_get_devinfo(device_t bus, device_t dev)
 	return (&dinfo->opd_obdinfo);
 }
 
+int
+ofw_pcibus_get_cpus(device_t dev, device_t child, enum cpu_sets op, size_t setsize,
+    cpuset_t *cpuset)
+{
+	int d, error;
+
+	d = platform_node_numa_domain(ofw_bus_get_node(dev));
+
+	switch (op) {
+	case LOCAL_CPUS:
+		if (setsize != sizeof(cpuset_t))
+			return (EINVAL);
+		*cpuset = cpuset_domain[d];
+		return (0);
+	case INTR_CPUS:
+		error = bus_generic_get_cpus(dev, child, op, setsize, cpuset);
+		if (error != 0)
+			return (error);
+		if (setsize != sizeof(cpuset_t))
+			return (EINVAL);
+		CPU_AND(cpuset, cpuset, &cpuset_domain[d]);
+		return (0);
+	default:
+		return (bus_generic_get_cpus(dev, child, op, setsize, cpuset));
+	}
+	return (0);
+}
+
+/*
+ * Fetch the NUMA domain for the given device 'dev'.
+ *
+ * If a device has a _PXM method, map that to a NUMA domain.
+ * Otherwise, pass the request up to the parent.
+ * If there's no matching domain or the domain cannot be
+ * determined, return ENOENT.
+ */
+int
+ofw_pcibus_get_domain(device_t dev, device_t child, int *domain)
+{
+	*domain = platform_node_numa_domain(ofw_bus_get_node(child));
+
+	return (0);
+}

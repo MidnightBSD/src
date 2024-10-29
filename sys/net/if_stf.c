@@ -96,6 +96,7 @@
 #include <net/if_var.h>
 #include <net/if_clone.h>
 #include <net/route.h>
+#include <net/route/nhop.h>
 #include <net/netisr.h>
 #include <net/if_types.h>
 #include <net/vnet.h>
@@ -121,7 +122,8 @@
 #include <security/mac/mac_framework.h>
 
 SYSCTL_DECL(_net_link);
-static SYSCTL_NODE(_net_link, IFT_STF, stf, CTLFLAG_RW, 0, "6to4 Interface");
+static SYSCTL_NODE(_net_link, IFT_STF, stf, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "6to4 Interface");
 
 static int stf_permit_rfc1918 = 0;
 SYSCTL_INT(_net_link_stf, OID_AUTO, permit_rfc1918, CTLFLAG_RWTUN,
@@ -216,11 +218,6 @@ stf_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 
 	sc = malloc(sizeof(struct stf_softc), M_STF, M_WAITOK | M_ZERO);
 	ifp = STF2IFP(sc) = if_alloc(IFT_STF);
-	if (ifp == NULL) {
-		free(sc, M_STF);
-		ifc_free_unit(ifc, unit);
-		return (ENOSPC);
-	}
 	ifp->if_softc = sc;
 	sc->sc_fibnum = curthread->td_proc->p_fibnum;
 
@@ -384,7 +381,8 @@ stf_getsrcifa6(struct ifnet *ifp, struct in6_addr *addr, struct in6_addr *mask)
 	struct sockaddr_in6 *sin6;
 	struct in_addr in;
 
-	if_addr_rlock(ifp);
+	NET_EPOCH_ASSERT();
+
 	CK_STAILQ_FOREACH(ia, &ifp->if_addrhead, ifa_link) {
 		if (ia->ifa_addr->sa_family != AF_INET6)
 			continue;
@@ -405,10 +403,8 @@ stf_getsrcifa6(struct ifnet *ifp, struct in6_addr *addr, struct in6_addr *mask)
 
 		*addr = sin6->sin6_addr;
 		*mask = ia6->ia_prefixmask.sin6_addr;
-		if_addr_runlock(ifp);
 		return (0);
 	}
-	if_addr_runlock(ifp);
 
 	return (ENOENT);
 }
@@ -464,7 +460,7 @@ stf_output(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
 		}
 	}
 	ip6 = mtod(m, struct ip6_hdr *);
-	tos = (ntohl(ip6->ip6_flow) >> 20) & 0xff;
+	tos = IPV6_TRAFFIC_CLASS(ip6);
 
 	/*
 	 * Pickup the right outer dst addr from the list of candidates.
@@ -578,12 +574,14 @@ stf_checkaddr4(struct stf_softc *sc, struct in_addr *in, struct ifnet *inifp)
 	 * perform ingress filter
 	 */
 	if (sc && (STF2IFP(sc)->if_flags & IFF_LINK2) == 0 && inifp) {
-		struct nhop4_basic nh4;
+		struct nhop_object *nh;
 
-		if (fib4_lookup_nh_basic(sc->sc_fibnum, *in, 0, 0, &nh4) != 0)
+		NET_EPOCH_ASSERT();
+		nh = fib4_lookup(sc->sc_fibnum, *in, 0, 0, 0);
+		if (nh == NULL)
 			return (-1);
 
-		if (nh4.nh_ifp != inifp)
+		if (nh->nh_ifp != inifp)
 			return (-1);
 	}
 
@@ -622,6 +620,8 @@ in_stf_input(struct mbuf *m, int off, int proto, void *arg)
 	struct ip6_hdr *ip6;
 	u_int8_t otos, itos;
 	struct ifnet *ifp;
+
+	NET_EPOCH_ASSERT();
 
 	if (proto != IPPROTO_IPV6) {
 		m_freem(m);
@@ -670,7 +670,7 @@ in_stf_input(struct mbuf *m, int off, int proto, void *arg)
 		return (IPPROTO_DONE);
 	}
 
-	itos = (ntohl(ip6->ip6_flow) >> 20) & 0xff;
+	itos = IPV6_TRAFFIC_CLASS(ip6);
 	if ((ifp->if_flags & IFF_LINK1) != 0)
 		ip_ecn_egress(ECN_ALLOWED, &otos, &itos);
 	else

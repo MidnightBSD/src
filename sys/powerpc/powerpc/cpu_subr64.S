@@ -23,7 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include "assym.inc"
@@ -70,7 +69,11 @@ ENTRY(enter_idle_powerx)
 
 	/* Set MSR */
 	li	%r3,0
+#ifdef __LITTLE_ENDIAN__
+	ori	%r3,%r3,(PSL_ME | PSL_RI | PSL_LE)
+#else
 	ori	%r3,%r3,(PSL_ME | PSL_RI)
+#endif
 	li	%r8,0x9			/* PSL_SF and PSL_HV */
 	insrdi	%r3,%r8,4,0
 	mtsrr1	%r3
@@ -91,3 +94,4 @@ power_save_sequence:
 	bne	2b
 	nap
 	b	.
+END(enter_idle_powerx)

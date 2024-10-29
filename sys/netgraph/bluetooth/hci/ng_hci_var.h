@@ -3,7 +3,7 @@
  */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -218,4 +218,3 @@ typedef struct ng_hci_neighbor {
 typedef ng_hci_neighbor_t *		ng_hci_neighbor_p;
        
 #endif /* ndef _NETGRAPH_HCI_VAR_H_ */
-

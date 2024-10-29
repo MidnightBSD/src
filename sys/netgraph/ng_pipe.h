@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-2008 University of Zagreb
  * Copyright (c) 2007-2008 FreeBSD Foundation
@@ -28,7 +28,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _NETGRAPH_PIPE_H_
@@ -42,7 +41,7 @@
 #define NG_PIPE_HOOK_UPPER	"upper"
 #define NG_PIPE_HOOK_LOWER	"lower"
 
-#define MAX_FSIZE 16384	/* Largest supported frame size, in bytes, for BER */
+#define MAX_FSIZE 65536	/* Largest supported frame size, in bytes, for BER */
 #define MAX_OHSIZE 256	/* Largest supported dummy-framing size, in bytes */
 
 /* Statistics structure for one hook */

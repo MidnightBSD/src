@@ -32,16 +32,17 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/protosw.h>
 #include <sys/domain.h>
 #include <sys/eventhandler.h>
+#include <sys/epoch.h>
 #include <sys/mbuf.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
+#include <sys/rmlock.h>
 #include <sys/socketvar.h>
 #include <sys/systm.h>
 
@@ -71,6 +72,14 @@ static struct callout pfslow_callout;
 
 static void	pffasttimo(void *);
 static void	pfslowtimo(void *);
+
+static struct rmlock pftimo_lock;
+RM_SYSINIT(pftimo_lock, &pftimo_lock, "pftimo");
+
+static LIST_HEAD(, protosw) pffast_list =
+    LIST_HEAD_INITIALIZER(pffast_list);
+static LIST_HEAD(, protosw) pfslow_list =
+    LIST_HEAD_INITIALIZER(pfslow_list);
 
 struct domain *domains;		/* registered protocol domains */
 int domain_init_status = 0;
@@ -173,8 +182,27 @@ domain_init(void *arg)
 
 	if (dp->dom_init)
 		(*dp->dom_init)();
-	for (pr = dp->dom_protosw; pr < dp->dom_protoswNPROTOSW; pr++)
+	for (pr = dp->dom_protosw; pr < dp->dom_protoswNPROTOSW; pr++) {
 		protosw_init(pr);
+
+		/*
+		 * Note that with VIMAGE enabled, domain_init() will be
+		 * re-invoked for each new vnet that's created.  The below lists
+		 * are intended to be system-wide, so avoid altering global
+		 * state for non-default vnets.
+		 */
+		if (IS_DEFAULT_VNET(curvnet)) {
+			rm_wlock(&pftimo_lock);
+			if (pr->pr_fasttimo != NULL)
+				LIST_INSERT_HEAD(&pffast_list, pr,
+				    pr_fasttimos);
+			if (pr->pr_slowtimo != NULL)
+				LIST_INSERT_HEAD(&pfslow_list, pr,
+				    pr_slowtimos);
+			rm_wunlock(&pftimo_lock);
+		}
+	}
+
 	/*
 	 * update global information about maximums
 	 */
@@ -235,6 +263,29 @@ domain_add(void *data)
 		printf("WARNING: attempt to domain_add(%s) after "
 		    "domainfinalize()\n", dp->dom_name);
 #endif
+	mtx_unlock(&dom_mtx);
+}
+
+void
+domain_remove(void *data)
+{
+	struct domain *dp = (struct domain *)data;
+
+	if (dp->dom_family != PF_NETLINK)
+		return;
+
+	mtx_lock(&dom_mtx);
+	if (domains == dp) {
+		domains = dp->dom_next;
+	} else {
+		struct domain *curr;
+		for (curr = domains; curr != NULL; curr = curr->dom_next) {
+			if (curr->dom_next == dp) {
+				curr->dom_next = dp->dom_next;
+				break;
+			}
+		}
+	}
 	mtx_unlock(&dom_mtx);
 }
 
@@ -379,6 +430,13 @@ pf_proto_register(int family, struct protosw *npr)
 	/* Copy the new struct protosw over the spacer. */
 	bcopy(npr, fpr, sizeof(*fpr));
 
+	rm_wlock(&pftimo_lock);
+	if (fpr->pr_fasttimo != NULL)
+		LIST_INSERT_HEAD(&pffast_list, fpr, pr_fasttimos);
+	if (fpr->pr_slowtimo != NULL)
+		LIST_INSERT_HEAD(&pfslow_list, fpr, pr_slowtimos);
+	rm_wunlock(&pftimo_lock);
+
 	/* Job is done, no more protection required. */
 	mtx_unlock(&dom_mtx);
 
@@ -439,6 +497,13 @@ pf_proto_unregister(int family, int protocol, int type)
 		return (EPROTONOSUPPORT);
 	}
 
+	rm_wlock(&pftimo_lock);
+	if (dpr->pr_fasttimo != NULL)
+		LIST_REMOVE(dpr, pr_fasttimos);
+	if (dpr->pr_slowtimo != NULL)
+		LIST_REMOVE(dpr, pr_slowtimos);
+	rm_wunlock(&pftimo_lock);
+
 	/* De-orbit the protocol and make the slot available again. */
 	dpr->pr_type = 0;
 	dpr->pr_domain = dp;
@@ -466,57 +531,44 @@ pfctlinput(int cmd, struct sockaddr *sa)
 	struct domain *dp;
 	struct protosw *pr;
 
+	NET_EPOCH_ASSERT();
+
 	for (dp = domains; dp; dp = dp->dom_next)
 		for (pr = dp->dom_protosw; pr < dp->dom_protoswNPROTOSW; pr++)
 			if (pr->pr_ctlinput)
 				(*pr->pr_ctlinput)(cmd, sa, (void *)0);
 }
 
-void
-pfctlinput2(int cmd, struct sockaddr *sa, void *ctlparam)
-{
-	struct domain *dp;
-	struct protosw *pr;
-
-	if (!sa)
-		return;
-	for (dp = domains; dp; dp = dp->dom_next) {
-		/*
-		 * the check must be made by xx_ctlinput() anyways, to
-		 * make sure we use data item pointed to by ctlparam in
-		 * correct way.  the following check is made just for safety.
-		 */
-		if (dp->dom_family != sa->sa_family)
-			continue;
-
-		for (pr = dp->dom_protosw; pr < dp->dom_protoswNPROTOSW; pr++)
-			if (pr->pr_ctlinput)
-				(*pr->pr_ctlinput)(cmd, sa, ctlparam);
-	}
-}
-
 static void
 pfslowtimo(void *arg)
 {
-	struct domain *dp;
+	struct rm_priotracker tracker;
+	struct epoch_tracker et;
 	struct protosw *pr;
 
-	for (dp = domains; dp; dp = dp->dom_next)
-		for (pr = dp->dom_protosw; pr < dp->dom_protoswNPROTOSW; pr++)
-			if (pr->pr_slowtimo)
-				(*pr->pr_slowtimo)();
-	callout_reset(&pfslow_callout, hz/2, pfslowtimo, NULL);
+	rm_rlock(&pftimo_lock, &tracker);
+	NET_EPOCH_ENTER(et);
+	LIST_FOREACH(pr, &pfslow_list, pr_slowtimos) {
+		(*pr->pr_slowtimo)();
+	}
+	NET_EPOCH_EXIT(et);
+	rm_runlock(&pftimo_lock, &tracker);
+	callout_reset(&pfslow_callout, hz / PR_SLOWHZ, pfslowtimo, NULL);
 }
 
 static void
 pffasttimo(void *arg)
 {
-	struct domain *dp;
+	struct rm_priotracker tracker;
+	struct epoch_tracker et;
 	struct protosw *pr;
 
-	for (dp = domains; dp; dp = dp->dom_next)
-		for (pr = dp->dom_protosw; pr < dp->dom_protoswNPROTOSW; pr++)
-			if (pr->pr_fasttimo)
-				(*pr->pr_fasttimo)();
-	callout_reset(&pffast_callout, hz/5, pffasttimo, NULL);
+	rm_rlock(&pftimo_lock, &tracker);
+	NET_EPOCH_ENTER(et);
+	LIST_FOREACH(pr, &pffast_list, pr_fasttimos) {
+		(*pr->pr_fasttimo)();
+	}
+	NET_EPOCH_EXIT(et);
+	rm_runlock(&pftimo_lock, &tracker);
+	callout_reset(&pffast_callout, hz / PR_FASTHZ, pffasttimo, NULL);
 }

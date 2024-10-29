@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Vadim Goncharov <vadimnuclight@tpu.ru>
  * All rights reserved.
@@ -28,7 +28,6 @@
  *
  * Portions Copyright (c) 1999 Whistle Communications, Inc.
  * (ng_bpf by Archie Cobbs <archie@freebsd.org>)
- *
  */
 
 /*
@@ -259,7 +258,7 @@ NETGRAPH_INIT(tag, &typestruct);
  * One could ask why to have this structures at all when we have
  * ng_tag_hookinfo initialized to zero and don't need in and out structures
  * at all to operate.  Unfortunatelly, we have to return thisHook field
- * in response to messages so the fastest and simpliest way is to have
+ * in response to messages so the fastest and simplest way is to have
  * this default structures and initialize thisHook once at hook creation
  * rather than to do it on every response.
  */
@@ -542,7 +541,7 @@ ng_tag_rcvdata(hook_p hook, item_p item)
 			tag = m_tag_locate(m, cookie, type, tag);
 		}
 	}
-	
+
 	/* See if we got a match and find destination hook. */
 	if (found) {
 #ifdef NG_TAG_DEBUG
@@ -566,11 +565,11 @@ ng_tag_rcvdata(hook_p hook, item_p item)
 	dhip->stats.xmitOctets += totlen;
 	dhip->stats.xmitFrames++;
 #endif
-	
+
 	cookie = dhip->out_tag_cookie;
 	type = dhip->out_tag_id;
 	tag_len = dhip->out_tag_len;
-	
+
 	if ((cookie != 0) || (type != 0)) {
 		tag = m_tag_alloc(cookie, type, tag_len, M_NOWAIT);
 		/* XXX may be free the mbuf if tag allocation failed? */
@@ -583,7 +582,7 @@ ng_tag_rcvdata(hook_p hook, item_p item)
 			m_tag_prepend(m, tag);
 		}
 	}
-	
+
 	NG_FWD_ITEM_HOOK(error, item, dest);
 	return (error);
 }
@@ -714,4 +713,3 @@ ng_tag_setdata_out(hook_p hook, const struct ng_tag_hookout *hp0)
 	hip->out_tag_data = (void*)(hip->out->tag_data);
 	return (0);
 }
-

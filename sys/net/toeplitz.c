@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 
 #include <net/rss_config.h>

@@ -23,7 +23,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -117,9 +116,9 @@ powerpc_interrupt(struct trapframe *framep)
 		critical_enter();
 		KASSERT(pmc_intr != NULL, ("Performance exception, but no handler!"));
 		(*pmc_intr)(framep);
+		critical_exit();
 		if (pmc_hook && (PCPU_GET(curthread)->td_pflags & TDP_CALLCHAIN))
 			pmc_hook(PCPU_GET(curthread), PMC_FN_USER_CALLCHAIN, framep);
-		critical_exit();
 		break;
 #endif
 

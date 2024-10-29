@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_capsicum.h"
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -56,7 +55,9 @@
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/syscallsubr.h>
+#ifdef COMPAT_43
 #include <sys/sysent.h>
+#endif
 #include <sys/uio.h>
 #include <sys/un.h>
 #include <sys/unpcb.h>
@@ -337,7 +338,7 @@ kern_accept4(struct thread *td, int s, struct sockaddr **name,
 	if (error != 0)
 		return (error);
 	head = headfp->f_data;
-	if ((head->so_options & SO_ACCEPTCONN) == 0) {
+	if (!SOLISTENING(head)) {
 		error = EINVAL;
 		goto done;
 	}
@@ -456,9 +457,7 @@ sys_accept4(td, uap)
 
 #ifdef COMPAT_OLDSOCK
 int
-oaccept(td, uap)
-	struct thread *td;
-	struct accept_args *uap;
+oaccept(struct thread *td, struct oaccept_args *uap)
 {
 
 	return (accept1(td, uap->s, uap->name, uap->anamelen,
@@ -485,7 +484,7 @@ kern_connectat(struct thread *td, int dirfd, int fd, struct sockaddr *sa)
 {
 	struct socket *so;
 	struct file *fp;
-	int error, interrupted = 0;
+	int error;
 
 #ifdef CAPABILITY_MODE
 	if (IN_CAPABILITY_MODE(td) && (dirfd == AT_FDCWD))
@@ -512,10 +511,7 @@ kern_connectat(struct thread *td, int dirfd, int fd, struct sockaddr *sa)
 	if (error != 0)
 		goto bad;
 #endif
-	if (dirfd == AT_FDCWD)
-		error = soconnect(so, sa, td);
-	else
-		error = soconnectat(dirfd, so, sa, td);
+	error = soconnectat(dirfd, so, sa, td);
 	if (error != 0)
 		goto bad;
 	if ((so->so_state & SS_NBIO) && (so->so_state & SS_ISCONNECTING)) {
@@ -526,11 +522,8 @@ kern_connectat(struct thread *td, int dirfd, int fd, struct sockaddr *sa)
 	while ((so->so_state & SS_ISCONNECTING) && so->so_error == 0) {
 		error = msleep(&so->so_timeo, &so->so_lock, PSOCK | PCATCH,
 		    "connec", 0);
-		if (error != 0) {
-			if (error == EINTR || error == ERESTART)
-				interrupted = 1;
+		if (error != 0)
 			break;
-		}
 	}
 	if (error == 0) {
 		error = so->so_error;
@@ -538,8 +531,6 @@ kern_connectat(struct thread *td, int dirfd, int fd, struct sockaddr *sa)
 	}
 	SOCK_UNLOCK(so);
 bad:
-	if (!interrupted)
-		so->so_state &= ~SS_ISCONNECTING;
 	if (error == ERESTART)
 		error = EINTR;
 done1:
@@ -828,7 +819,7 @@ sys_sendto(struct thread *td, struct sendto_args *uap)
 	struct msghdr msg;
 	struct iovec aiov;
 
-	msg.msg_name = uap->to;
+	msg.msg_name = __DECONST(void *, uap->to);
 	msg.msg_namelen = uap->tolen;
 	msg.msg_iov = &aiov;
 	msg.msg_iovlen = 1;
@@ -837,7 +828,7 @@ sys_sendto(struct thread *td, struct sendto_args *uap)
 	if (SV_PROC_FLAG(td->td_proc, SV_AOUT))
 		msg.msg_flags = 0;
 #endif
-	aiov.iov_base = uap->buf;
+	aiov.iov_base = __DECONST(void *, uap->buf);
 	aiov.iov_len = uap->len;
 	return (sendit(td, uap->s, &msg, uap->flags));
 }
@@ -853,7 +844,7 @@ osend(struct thread *td, struct osend_args *uap)
 	msg.msg_namelen = 0;
 	msg.msg_iov = &aiov;
 	msg.msg_iovlen = 1;
-	aiov.iov_base = uap->buf;
+	aiov.iov_base = __DECONST(void *, uap->buf);
 	aiov.iov_len = uap->len;
 	msg.msg_control = 0;
 	msg.msg_flags = 0;
@@ -971,7 +962,8 @@ kern_recvit(struct thread *td, int s, struct msghdr *mp, enum uio_seg fromseg,
 		AUDIT_ARG_SOCKADDR(td, AT_FDCWD, fromsa);
 #ifdef KTRACE
 	if (ktruio != NULL) {
-		ktruio->uio_resid = len - auio.uio_resid;
+		/* MSG_TRUNC can trigger underflow of uio_resid. */
+		ktruio->uio_resid = MIN(len - auio.uio_resid, len);
 		ktrgenio(s, UIO_READ, ktruio, error);
 	}
 #endif
@@ -1234,7 +1226,7 @@ sys_setsockopt(struct thread *td, struct setsockopt_args *uap)
 }
 
 int
-kern_setsockopt(struct thread *td, int s, int level, int name, void *val,
+kern_setsockopt(struct thread *td, int s, int level, int name, const void *val,
     enum uio_seg valseg, socklen_t valsize)
 {
 	struct socket *so;
@@ -1250,7 +1242,7 @@ kern_setsockopt(struct thread *td, int s, int level, int name, void *val,
 	sopt.sopt_dir = SOPT_SET;
 	sopt.sopt_level = level;
 	sopt.sopt_name = name;
-	sopt.sopt_val = val;
+	sopt.sopt_val = __DECONST(void *, val);
 	sopt.sopt_valsize = valsize;
 	switch (valseg) {
 	case UIO_USERSPACE:
@@ -1557,7 +1549,7 @@ sockargs(struct mbuf **mp, char *buf, socklen_t buflen, int type)
 }
 
 int
-getsockaddr(struct sockaddr **namp, caddr_t uaddr, size_t len)
+getsockaddr(struct sockaddr **namp, const struct sockaddr *uaddr, size_t len)
 {
 	struct sockaddr *sa;
 	int error;

@@ -1,7 +1,6 @@
 /*
  * Fundamental constants relating to ethernet.
  *
- *
  */
 
 #ifndef _NET_ETHERNET_H_
@@ -70,9 +69,14 @@ struct ether_addr {
 } __packed;
 
 #define	ETHER_IS_MULTICAST(addr) (*(addr) & 0x01) /* is address mcast/bcast? */
+#define	ETHER_IS_IPV6_MULTICAST(addr) \
+	(((addr)[0] == 0x33) && ((addr)[1] == 0x33))
 #define	ETHER_IS_BROADCAST(addr) \
 	(((addr)[0] & (addr)[1] & (addr)[2] & \
 	  (addr)[3] & (addr)[4] & (addr)[5]) == 0xff)
+#define	ETHER_IS_ZERO(addr) \
+	(((addr)[0] | (addr)[1] | (addr)[2] | \
+	  (addr)[3] | (addr)[4] | (addr)[5]) == 0x00)
 
 /*
  * 802.1q Virtual LAN header.
@@ -417,11 +421,14 @@ struct ether_vlan_header {
 
 #ifdef _KERNEL
 
+#include <sys/_eventhandler.h>
+
 struct ifnet;
 struct mbuf;
 struct route;
 struct sockaddr;
 struct bpf_if;
+struct ether_8021q_tag;
 
 extern	uint32_t ether_crc32_le(const uint8_t *, size_t);
 extern	uint32_t ether_crc32_be(const uint8_t *, size_t);
@@ -439,16 +446,21 @@ extern	int  ether_output_frame(struct ifnet *, struct mbuf *);
 extern	char *ether_sprintf(const u_int8_t *);
 void	ether_vlan_mtap(struct bpf_if *, struct mbuf *,
 	    void *, u_int);
-struct mbuf  *ether_vlanencap(struct mbuf *, uint16_t);
-bool	ether_8021q_frame(struct mbuf **mp, struct ifnet *ife, struct ifnet *p,
-	    uint16_t vid, uint8_t pcp);
+struct mbuf  *ether_vlanencap_proto(struct mbuf *, uint16_t, uint16_t);
+bool	ether_8021q_frame(struct mbuf **mp, struct ifnet *ife,
+		struct ifnet *p, const struct ether_8021q_tag *);
 void	ether_gen_addr(struct ifnet *ifp, struct ether_addr *hwaddr);
+void	ether_gen_addr_byname(const char *nameunit, struct ether_addr *hwaddr);
 
-#ifdef _SYS_EVENTHANDLER_H_
+static __inline struct mbuf *ether_vlanencap(struct mbuf *m, uint16_t tag)
+{
+
+	return ether_vlanencap_proto(m, tag, ETHERTYPE_VLAN);
+}
+
 /* new ethernet interface attached event */
 typedef void (*ether_ifattach_event_handler_t)(void *, struct ifnet *);
 EVENTHANDLER_DECLARE(ether_ifattach_event, ether_ifattach_event_handler_t);
-#endif
 
 #else /* _KERNEL */
 

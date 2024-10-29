@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011-2012 Semihalf.
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/cdefs.h>
 #include <sys/types.h>
 #include <sys/param.h>
@@ -50,12 +49,6 @@ extern void icache_inval(void);
 extern void l2cache_enable(void);
 extern void l2cache_inval(void);
 extern void bpred_enable(void);
-
-void
-booke_init_tlb(vm_paddr_t fdt_immr_pa)
-{
-
-}
 
 void
 booke_enable_l1_cache(void)
@@ -96,7 +89,17 @@ booke_enable_l2_cache(void)
 	if ((((mfpvr() >> 16) & 0xFFFF) == FSL_E500mc) ||
 	    (((mfpvr() >> 16) & 0xFFFF) == FSL_E5500)) {
 		csr = mfspr(SPR_L2CSR0);
-		if ((csr & L2CSR0_L2E) == 0) {
+		/*
+		 * Don't actually attempt to manipulate the L2 cache if
+		 * L2CFG0 is zero.
+		 *
+		 * Any chip with a working L2 cache will have a nonzero
+		 * L2CFG0, as it will have a nonzero L2CSIZE field.
+		 *
+		 * This fixes waiting forever for cache enable in qemu,
+		 * which does not implement the L2 cache.
+		 */
+		if (mfspr(SPR_L2CFG0) != 0 && (csr & L2CSR0_L2E) == 0) {
 			l2cache_inval();
 			l2cache_enable();
 		}
@@ -123,4 +126,16 @@ booke_enable_bpred(void)
 void
 booke_disable_l2_cache(void)
 {
+}
+
+/* Return 0 on handled success, otherwise signal number. */
+int
+cpu_machine_check(struct thread *td, struct trapframe *frame, int *ucode)
+{
+	register_t mcsr;
+
+	mcsr = mfspr(SPR_MCSR);
+
+	*ucode = BUS_OBJERR;
+	return (SIGBUS);
 }

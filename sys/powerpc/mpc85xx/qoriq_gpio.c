@@ -22,11 +22,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
@@ -64,7 +62,6 @@
 #define	GPIO_GPIER	0xc
 #define	GPIO_GPIMR	0x10
 #define	GPIO_GPICR	0x14
-
 
 struct qoriq_gpio_softc {
 	device_t	dev;
@@ -207,7 +204,7 @@ qoriq_gpio_pin_toggle(device_t dev, uint32_t pin)
 	val = bus_read_4(sc->sc_mem, GPIO_GPDAT);
 	val ^= (1 << (31 - pin));
 	bus_write_4(sc->sc_mem, GPIO_GPDAT, val);
-	
+
 	GPIO_UNLOCK(sc);
 
 	return (0);

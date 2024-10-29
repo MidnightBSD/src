@@ -41,7 +41,6 @@ static char *rcsid = "$NetBSD: bcopy.c,v 1.2 1997/04/16 22:09:41 thorpej Exp $";
 #endif
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #ifdef _KERNEL
 #include <sys/systm.h>
@@ -153,4 +152,3 @@ void
 
 	memcpy(dst0, src0, length);
 }
-

@@ -23,7 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_DUMP_H_
@@ -35,6 +34,9 @@
 /* 20 phys_avail entry pairs correspond to 10 pa's */
 #define	DUMPSYS_MD_PA_NPAIRS	10
 #define	DUMPSYS_NUM_AUX_HDRS	0
+
+/* How often to check the dump progress bar? */
+#define	DUMPSYS_PB_CHECK_BITS	22	/* Every 4MB */
 
 static inline void
 dumpsys_pa_init(void)

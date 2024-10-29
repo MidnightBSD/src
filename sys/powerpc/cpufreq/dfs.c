@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Nathan Whitehorn
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -61,7 +60,6 @@ static device_method_t dfs_methods[] = {
 	DEVMETHOD(cpufreq_drv_get,	dfs_get),
 	DEVMETHOD(cpufreq_drv_type,	dfs_type),
 	DEVMETHOD(cpufreq_drv_settings,	dfs_settings),
-
 	{0, 0}
 };
 
@@ -169,7 +167,7 @@ static int
 dfs_set(device_t dev, const struct cf_setting *set)
 {
 	register_t hid1;
-	
+
 	if (set == NULL)
 		return (EINVAL);
 
@@ -180,7 +178,7 @@ dfs_set(device_t dev, const struct cf_setting *set)
 		hid1 |= HID1_DFS2;
 	else if (set->freq == 2500)
 		hid1 |= HID1_DFS4;
-	
+
 	/*
 	 * Now set the HID1 register with new values. Calling sequence
 	 * taken from page 2-26 of the MPC7450 family CPU manual.
@@ -228,4 +226,3 @@ dfs_type(device_t dev, int *type)
 	*type = CPUFREQ_TYPE_RELATIVE;
 	return (0);
 }
-

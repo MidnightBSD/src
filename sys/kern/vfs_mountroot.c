@@ -40,10 +40,10 @@
 #include "opt_rootdevname.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/conf.h>
 #include <sys/cons.h>
+#include <sys/eventhandler.h>
 #include <sys/fcntl.h>
 #include <sys/jail.h>
 #include <sys/kernel.h>
@@ -62,7 +62,6 @@
 #include <sys/sysproto.h>
 #include <sys/sx.h>
 #include <sys/sysctl.h>
-#include <sys/sysent.h>
 #include <sys/systm.h>
 #include <sys/vnode.h>
 
@@ -235,27 +234,13 @@ root_mounted(void)
 static void
 set_rootvnode(void)
 {
-	struct proc *p;
 
 	if (VFS_ROOT(TAILQ_FIRST(&mountlist), LK_EXCLUSIVE, &rootvnode))
-		panic("Cannot find root vnode");
+		panic("set_rootvnode: Cannot find root vnode");
 
-	VOP_UNLOCK(rootvnode, 0);
+	VOP_UNLOCK(rootvnode);
 
-	p = curthread->td_proc;
-	FILEDESC_XLOCK(p->p_fd);
-
-	if (p->p_fd->fd_cdir != NULL)
-		vrele(p->p_fd->fd_cdir);
-	p->p_fd->fd_cdir = rootvnode;
-	VREF(rootvnode);
-
-	if (p->p_fd->fd_rdir != NULL)
-		vrele(p->p_fd->fd_rdir);
-	p->p_fd->fd_rdir = rootvnode;
-	VREF(rootvnode);
-
-	FILEDESC_XUNLOCK(p->p_fd);
+	pwd_set_rootvnode();
 }
 
 static int
@@ -304,6 +289,7 @@ vfs_mountroot_devfs(struct thread *td, struct mount **mpp)
 
 		*mpp = mp;
 		rootdevmp = mp;
+		vfs_op_exit(mp);
 	}
 
 	set_rootvnode();
@@ -337,16 +323,18 @@ vfs_mountroot_shuffle(struct thread *td, struct mount *mpdevfs)
 	TAILQ_INSERT_TAIL(&mountlist, mpdevfs, mnt_list);
 	mtx_unlock(&mountlist_mtx);
 
-	cache_purgevfs(mporoot, true);
+	cache_purgevfs(mporoot);
 	if (mporoot != mpdevfs)
-		cache_purgevfs(mpdevfs, true);
+		cache_purgevfs(mpdevfs);
 
-	VFS_ROOT(mporoot, LK_EXCLUSIVE, &vporoot);
+	if (VFS_ROOT(mporoot, LK_EXCLUSIVE, &vporoot))
+		panic("vfs_mountroot_shuffle: Cannot find root vnode");
 
 	VI_LOCK(vporoot);
 	vporoot->v_iflag &= ~VI_MOUNT;
-	VI_UNLOCK(vporoot);
+	vn_irflag_unset_locked(vporoot, VIRF_MOUNTPOINT);
 	vporoot->v_mountedhere = NULL;
+	VI_UNLOCK(vporoot);
 	mporoot->mnt_flag &= ~MNT_ROOTFS;
 	mporoot->mnt_vnodecovered = NULL;
 	vput(vporoot);
@@ -354,7 +342,7 @@ vfs_mountroot_shuffle(struct thread *td, struct mount *mpdevfs)
 	/* Set up the new rootvnode, and purge the cache */
 	mpnroot->mnt_vnodecovered = NULL;
 	set_rootvnode();
-	cache_purgevfs(rootvnode->v_mount, true);
+	cache_purgevfs(rootvnode->v_mount);
 
 	if (mporoot != mpdevfs) {
 		/* Remount old root under /.mount or /mnt */
@@ -376,11 +364,14 @@ vfs_mountroot_shuffle(struct thread *td, struct mount *mpdevfs)
 				error = vinvalbuf(vp, V_SAVE, 0, 0);
 			if (!error) {
 				cache_purge(vp);
+				VI_LOCK(vp);
 				mporoot->mnt_vnodecovered = vp;
+				vn_irflag_set_locked(vp, VIRF_MOUNTPOINT);
 				vp->v_mountedhere = mporoot;
 				strlcpy(mporoot->mnt_stat.f_mntonname,
 				    fspath, MNAMELEN);
-				VOP_UNLOCK(vp, 0);
+				VI_UNLOCK(vp);
+				VOP_UNLOCK(vp);
 			} else
 				vput(vp);
 		}
@@ -403,12 +394,18 @@ vfs_mountroot_shuffle(struct thread *td, struct mount *mpdevfs)
 			vpdevfs = mpdevfs->mnt_vnodecovered;
 			if (vpdevfs != NULL) {
 				cache_purge(vpdevfs);
+				VI_LOCK(vpdevfs);
+				vn_irflag_unset_locked(vpdevfs, VIRF_MOUNTPOINT);
 				vpdevfs->v_mountedhere = NULL;
+				VI_UNLOCK(vpdevfs);
 				vrele(vpdevfs);
 			}
+			VI_LOCK(vp);
 			mpdevfs->mnt_vnodecovered = vp;
+			vn_irflag_set_locked(vp, VIRF_MOUNTPOINT);
 			vp->v_mountedhere = mpdevfs;
-			VOP_UNLOCK(vp, 0);
+			VI_UNLOCK(vp);
+			VOP_UNLOCK(vp);
 		} else
 			vput(vp);
 	}
@@ -420,7 +417,7 @@ vfs_mountroot_shuffle(struct thread *td, struct mount *mpdevfs)
 	if (mporoot == mpdevfs) {
 		vfs_unbusy(mpdevfs);
 		/* Unlink the no longer needed /dev/dev -> / symlink */
-		error = kern_unlinkat(td, AT_FDCWD, "/dev/dev",
+		error = kern_funlinkat(td, AT_FDCWD, "/dev/dev", FD_NONE,
 		    UIO_SYSSPACE, 0, 0);
 		if (error)
 			printf("mountroot: unable to unlink /dev/dev "
@@ -596,7 +593,7 @@ parse_dir_md(char **conf)
 	free(tok, M_TEMP);
 
 	/* Get file status. */
-	error = kern_statat(td, 0, AT_FDCWD, path, UIO_SYSSPACE, &sb, NULL);
+	error = kern_statat(td, 0, AT_FDCWD, path, UIO_SYSSPACE, &sb);
 	if (error)
 		goto out;
 
@@ -971,7 +968,7 @@ vfs_mountroot_readconf(struct thread *td, struct sbuf *sb)
 		ofs += len - resid;
 	}
 
-	VOP_UNLOCK(nd.ni_vp, 0);
+	VOP_UNLOCK(nd.ni_vp);
 	vn_close(nd.ni_vp, FREAD, td->td_ucred, td);
 	return (error);
 }
@@ -986,6 +983,8 @@ vfs_mountroot_wait(void)
 	TSENTER();
 
 	curfail = 0;
+	lastfail.tv_sec = 0;
+	ppsratecheck(&lastfail, &curfail, 1);
 	while (1) {
 		g_waitidle();
 		mtx_lock(&root_holds_mtx);
@@ -1004,6 +1003,7 @@ vfs_mountroot_wait(void)
 		    hz);
 		TSUNWAIT("root mount");
 	}
+	g_waitidle();
 
 	TSEXIT();
 }
@@ -1038,6 +1038,8 @@ vfs_mountroot_wait_if_neccessary(const char *fs, const char *dev)
 	 * to behave exactly as it used to work before.
 	 */
 	vfs_mountroot_wait();
+	if (parse_mount_dev_present(dev))
+		return (0);
 	printf("mountroot: waiting for device %s...\n", dev);
 	delay = hz / 10;
 	timeout = root_mount_timeout * hz;
@@ -1060,7 +1062,7 @@ vfs_mountroot(void)
 	struct thread *td;
 	time_t timebase;
 	int error;
-	
+
 	mtx_assert(&Giant, MA_NOTOWNED);
 
 	TSENTER();

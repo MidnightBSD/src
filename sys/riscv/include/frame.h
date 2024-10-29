@@ -30,7 +30,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_FRAME_H_
@@ -56,11 +55,6 @@ struct trapframe {
 	uint64_t tf_sstatus;
 	uint64_t tf_stval;
 	uint64_t tf_scause;
-};
-
-struct riscv_frame {
-	struct riscv_frame	*f_frame;
-	u_long			f_retaddr;
 };
 
 /*

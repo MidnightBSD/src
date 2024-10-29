@@ -56,7 +56,6 @@
  * for example.
  */
 
-
 #ifndef FPE_USE_ASM
 
 /* set up for extended-precision arithemtic */

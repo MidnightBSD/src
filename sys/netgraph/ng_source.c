@@ -39,7 +39,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * This node is used for high speed packet geneneration.  It queues
  * all data received on its 'input' hook and when told to start via

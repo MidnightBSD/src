@@ -48,7 +48,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/systm.h>
 
@@ -219,7 +218,6 @@ fpu_explode(struct fpemu *fe, struct fpn *fp, int type, int reg)
 	fp->fp_sign = s >> 31;
 	fp->fp_sticky = 0;
 	switch (type) {
-
 	case FTYPE_LNG:
 		s = fpu_xtof(fp, l);
 		break;

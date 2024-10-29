@@ -37,7 +37,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -91,7 +90,8 @@
 
 SYSCTL_DECL(_security_mac);
 
-static SYSCTL_NODE(_security_mac, OID_AUTO, biba, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_security_mac, OID_AUTO, biba,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "TrustedBSD mac_biba policy controls");
 
 static int	biba_label_size = sizeof(struct mac_biba);
@@ -1924,6 +1924,7 @@ biba_priv_check(struct ucred *cred, int priv)
 	 */
 	case PRIV_SEEOTHERGIDS:
 	case PRIV_SEEOTHERUIDS:
+	case PRIV_SEEJAILPROC:
 		break;
 
 	/*
@@ -1973,6 +1974,7 @@ biba_priv_check(struct ucred *cred, int priv)
 	case PRIV_SCHED_SETPOLICY:
 	case PRIV_SCHED_SET:
 	case PRIV_SCHED_SETPARAM:
+	case PRIV_SCHED_IDPRIO:
 
 	/*
 	 * More IPC privileges.
@@ -2743,7 +2745,7 @@ biba_sysvshm_check_shmat(struct ucred *cred, struct shmid_kernel *shmsegptr,
 		if (!biba_dominate_effective(subj, obj))
 			return (EACCES);
 	}
-	
+
 	return (0);
 }
 

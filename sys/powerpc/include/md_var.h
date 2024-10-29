@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 Doug Rabson
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_MD_VAR_H_
@@ -40,10 +39,13 @@ extern	int	szsigcode32;
 #ifdef __powerpc64__
 extern	char	sigcode64[], sigcode64_elfv2[];
 extern	int	szsigcode64, szsigcode64_elfv2;
+
+struct	dumperinfo;
+struct	minidumpstate;
+int	cpu_minidumpsys(struct dumperinfo *, const struct minidumpstate *);
 #endif
 
 extern	long	Maxmem;
-extern	int	busdma_swi_pending;
 
 extern	vm_offset_t	kstack0;
 extern	vm_offset_t	kstack0_phys;
@@ -54,8 +56,6 @@ extern  int hw_direct_map;
 
 void	__syncicache(void *, int);
 
-void	busdma_swi(void);
-int	is_physical_memory(vm_offset_t addr);
 int	mem_valid(vm_offset_t addr, int len);
 
 void	decr_init(void);

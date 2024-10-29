@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011-2014 Nathan Whitehorn
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -110,7 +109,7 @@ ps3fb_probe(struct vt_device *vd)
 	root = OF_finddevice("/");
 	if (OF_getprop(root, "compatible", compatible, sizeof(compatible)) <= 0)
                 return (CN_DEAD);
-	
+
 	if (strncmp(compatible, "sony,ps3", sizeof(compatible)) != 0)
 		return (CN_DEAD);
 
@@ -172,7 +171,7 @@ ps3fb_init(struct vt_device *vd)
 	bzero(linux_video_mode, sizeof(linux_video_mode));
 	TUNABLE_STR_FETCH("video", linux_video_mode, sizeof(linux_video_mode));
 	sscanf(linux_video_mode, "ps3fb:mode:%d", &linux_video_mode_num);
-	
+
 	switch (linux_video_mode_num) {
 	case 1:
 	case 2:
@@ -209,7 +208,7 @@ ps3fb_init(struct vt_device *vd)
 		sc->fb_info.fb_width = 1920;
 		break;
 	}
-	
+
 	/* Allow explicitly-specified values for us to override everything */
 	TUNABLE_INT_FETCH("hw.ps3fb.height", &sc->fb_info.fb_height);
 	TUNABLE_INT_FETCH("hw.ps3fb.width", &sc->fb_info.fb_width);
@@ -240,4 +239,3 @@ ps3fb_init(struct vt_device *vd)
 
 	return (CN_INTERNAL);
 }
-

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/kernel.h>
@@ -484,7 +483,6 @@ ngatm_handler(module_t mod, int what, void *arg)
 	int error = 0;
 
 	switch (what) {
-
 	  case MOD_LOAD:
 		uni_msg_init();
 		break;

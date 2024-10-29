@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007-2008
  *	Swinburne University of Technology, Melbourne, Australia.
@@ -49,7 +49,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/libkern.h>
@@ -316,14 +315,16 @@ cc_modevent(module_t mod, int event_type, void *data)
 SYSINIT(cc, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_FIRST, cc_init, NULL);
 
 /* Declare sysctl tree and populate it. */
-SYSCTL_NODE(_net_inet_tcp, OID_AUTO, cc, CTLFLAG_RW, NULL,
+SYSCTL_NODE(_net_inet_tcp, OID_AUTO, cc, CTLFLAG_RW | CTLFLAG_MPSAFE, NULL,
     "Congestion control related settings");
 
 SYSCTL_PROC(_net_inet_tcp_cc, OID_AUTO, algorithm,
-    CTLFLAG_VNET | CTLTYPE_STRING | CTLFLAG_RW,
-    NULL, 0, cc_default_algo, "A", "Default congestion control algorithm");
+    CTLFLAG_VNET | CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_MPSAFE,
+    NULL, 0, cc_default_algo, "A",
+    "Default congestion control algorithm");
 
-SYSCTL_PROC(_net_inet_tcp_cc, OID_AUTO, available, CTLTYPE_STRING|CTLFLAG_RD,
+SYSCTL_PROC(_net_inet_tcp_cc, OID_AUTO, available,
+    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
     NULL, 0, cc_list_available, "A",
     "List available congestion control algorithms");
 

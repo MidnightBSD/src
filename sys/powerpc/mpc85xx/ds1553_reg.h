@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2006-2008 Semihalf, Grzegorz Bernacki
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _DEV_RTC_DS1553_H_
@@ -84,7 +83,6 @@
 #define DS1553_MASK_SECONDS		0x7f
 
 struct ds1553_softc {
-
 	bus_space_tag_t		sc_bst;	/* bus space tag */
 	bus_space_handle_t	sc_bsh;	/* bus space handle */
 

@@ -1,7 +1,7 @@
 /*-
  * ng_tcpmss.c
  *
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004, Alexey Popov <lollypop@flexuser.ru>
  * All rights reserved.
@@ -30,7 +30,6 @@
  *
  * This software includes fragments of the following programs:
  *	tcpmssd		Ruslan Ermilov <ru@FreeBSD.org>
- *
  */
 
 /*
@@ -141,7 +140,6 @@ static struct ng_type ng_tcpmss_typestruct = {
 };
 
 NETGRAPH_INIT(tcpmss, &ng_tcpmss_typestruct);
-
 #define	ERROUT(x)	{ error = (x); goto done; }
 
 /*
@@ -328,7 +326,7 @@ ng_tcpmss_rcvdata(hook_p hook, item_p item)
 	/* Check SYN packet and has options. */
 	if (!(tcp->th_flags & TH_SYN) || tcphlen == sizeof(struct tcphdr))
 		goto send;
-	
+
 	/* Update SYN stats. */
 	priv->stats.SYNPkts++;
 

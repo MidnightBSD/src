@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Robert N. M. Watson
  * All rights reserved.
@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/mbuf.h>
 #include <sys/socket.h>
@@ -125,6 +124,23 @@ ifdead_snd_tag_free(struct m_snd_tag *pmt)
 {
 }
 
+static void
+ifdead_ratelimit_query(struct ifnet *ifp __unused,
+      struct if_ratelimit_query_results *q)
+{
+	/*
+	 * This guy does not support
+	 * this interface. Not sure
+	 * why we would specify a
+	 * flag on the interface
+	 * that says we do.
+	 */
+	q->rate_table = NULL;
+	q->flags = RT_NOSUPPORT;
+	q->max_flows = 0;
+	q->number_of_rates = 0;
+}
+
 void
 if_dead(struct ifnet *ifp)
 {
@@ -141,4 +157,5 @@ if_dead(struct ifnet *ifp)
 	ifp->if_snd_tag_modify = ifdead_snd_tag_modify;
 	ifp->if_snd_tag_query = ifdead_snd_tag_query;
 	ifp->if_snd_tag_free = ifdead_snd_tag_free;
+	ifp->if_ratelimit_query = ifdead_ratelimit_query;
 }

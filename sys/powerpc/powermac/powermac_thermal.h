@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2011 Nathan Whitehorn
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _POWERPC_POWERMAC_POWERMAC_THERMAL_H
@@ -34,7 +33,7 @@
 
 struct pmac_fan {
 	int min_rpm, max_rpm, default_rpm;
-	
+
 	char name[32];
 	int zone;
 
@@ -44,7 +43,7 @@ struct pmac_fan {
 
 struct pmac_therm {
 	int target_temp, max_temp;	/* Tenths of a degree K */
-	
+
 	char name[32];
 	int zone;
 

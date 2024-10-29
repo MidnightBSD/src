@@ -16,4 +16,6 @@ SRCS+=	\
 	pwmbus_if.c \
 	pwmbus_if.h \
 
+EXPORT_SYMS=	YES
+
 .include <bsd.kmod.mk>

@@ -203,34 +203,6 @@ cpu_exit(struct thread *td)
 }
 
 /*
- * Software interrupt handler for queued VM system processing.
- */
-void
-swi_vm(void *dummy)
-{
-
-	if (busdma_swi_pending != 0)
-		busdma_swi();
-}
-
-/*
- * Tell whether this address is in some physical memory region.
- * Currently used by the kernel coredump code in order to avoid
- * dumping the ``ISA memory hole'' which could cause indefinite hangs,
- * or other unpredictable behaviour.
- */
-int
-is_physical_memory(vm_offset_t addr)
-{
-
-	/*
-	 * stuff other tests for known memory-mapped devices (PCI?)
-	 * here
-	 */
-	return (1);
-}
-
-/*
  * CPU threading functions related to the VM layer. These could be used
  * to map the SLB bits required for the kernel stack instead of forcing a
  * fixed-size KVA.
@@ -261,4 +233,14 @@ cpu_procctl(struct thread *td __unused, int idtype __unused, id_t id __unused,
 {
 
 	return (EINVAL);
+}
+
+void
+cpu_sync_core(void)
+{
+	/*
+	 * Linux performs "rfi" there.  Our rendezvous IPI handler on
+	 * the target cpu does "rfi" before and lwsync/sync after the
+	 * action, which is stronger than required.
+	 */
 }

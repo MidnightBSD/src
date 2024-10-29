@@ -23,7 +23,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 #ifndef __IFLIB_H_
 #define __IFLIB_H_
@@ -130,12 +129,14 @@ typedef struct if_pkt_info {
 	uint8_t			ipi_mflags;	/* packet mbuf flags */
 
 	uint32_t		ipi_tcp_seq;	/* tcp seqno */
-	uint32_t		ipi_tcp_sum;	/* tcp csum */
+	uint8_t			ipi_ip_tos;	/* IP ToS field data */
+	uint8_t			__spare0__;
+	uint16_t		__spare1__;
 } *if_pkt_info_t;
 
 typedef struct if_irq {
 	struct resource  *ii_res;
-	int               ii_rid;
+	int               __spare0__;
 	void             *ii_tag;
 } *if_irq_t;
 
@@ -164,15 +165,15 @@ typedef struct pci_vendor_info {
 	uint32_t	pvi_subdevice_id;
 	uint32_t	pvi_rev_id;
 	uint32_t	pvi_class_mask;
-	caddr_t		pvi_name;
+	const char	*pvi_name;
 } pci_vendor_info_t;
-
 #define PVID(vendor, devid, name) {vendor, devid, 0, 0, 0, 0, name}
 #define PVID_OEM(vendor, devid, svid, sdevid, revid, name) {vendor, devid, svid, sdevid, revid, 0, name}
 #define PVID_END {0, 0, 0, 0, 0, 0, NULL}
 
-#define IFLIB_PNP_DESCR "U32:vendor;U32:device;U32:subvendor;U32:subdevice;" \
-    "U32:revision;U32:class;D:#"
+/* No drivers in tree currently match on anything except vendor:device. */
+#define IFLIB_PNP_DESCR "U32:vendor;U32:device;U32:#;U32:#;" \
+    "U32:#;U32:#;D:#"
 #define IFLIB_PNP_INFO(b, u, t) \
     MODULE_PNP_INFO(IFLIB_PNP_DESCR, b, u, t, nitems(t) - 1)
 
@@ -187,15 +188,15 @@ typedef struct if_txrx {
 	void (*ift_rxd_flush) (void *, uint16_t qsidx, uint8_t flidx, qidx_t pidx);
 	int (*ift_legacy_intr) (void *);
 	qidx_t (*ift_txq_select) (void *, struct mbuf *);
+	qidx_t (*ift_txq_select_v2) (void *, struct mbuf *, if_pkt_info_t);
 } *if_txrx_t;
 
 typedef struct if_softc_ctx {
 	int isc_vectors;
 	int isc_nrxqsets;
 	int isc_ntxqsets;
-	uint8_t isc_min_tx_latency; /* disable doorbell update batching */
-	uint8_t isc_rx_mvec_enable; /* generate mvecs on rx */
-	uint32_t isc_txrx_budget_bytes_max;
+	uint16_t __spare0__;
+	uint32_t __spare1__;
 	int isc_msix_bar;		/* can be model specific - initialize in attach_pre */
 	int isc_tx_nsegments;		/* can be model specific - initialize in attach_pre */
 	int isc_ntxd[8];
@@ -217,7 +218,7 @@ typedef struct if_softc_ctx {
 	int isc_rss_table_mask;
 	int isc_nrxqsets_max;
 	int isc_ntxqsets_max;
-	uint32_t isc_tx_qdepth;
+	uint32_t __spare2__;
 
 	iflib_intr_mode_t isc_intr;
 	uint16_t isc_rxd_buf_size[8]; /* set at init time by driver, 0
@@ -227,9 +228,16 @@ typedef struct if_softc_ctx {
 	uint16_t isc_min_frame_size; /* set at init time by driver, only used if
 					IFLIB_NEED_ETHER_PAD is set. */
 	uint32_t isc_pause_frames;   /* set by driver for iflib_timer to detect */
-	pci_vendor_info_t isc_vendor_info;	/* set by iflib prior to attach_pre */
+	uint32_t __spare3__;
+	uint32_t __spare4__;
+	uint32_t __spare5__;
+	uint32_t __spare6__;
+	uint32_t __spare7__;
+	uint32_t __spare8__;
+	caddr_t __spare9__;
 	int isc_disable_msix;
 	if_txrx_t isc_txrx;
+	struct ifmedia *isc_media;
 } *if_softc_ctx_t;
 
 /*
@@ -249,7 +257,7 @@ struct if_shared_ctx {
 	int isc_admin_intrcnt;		/* # of admin/link interrupts */
 
 	/* fields necessary for probe */
-	pci_vendor_info_t *isc_vendor_info;
+	const pci_vendor_info_t *isc_vendor_info;
 	const char *isc_driver_version;
 	/* optional function to transform the read values to match the table*/
 	void (*isc_parse_devinfo) (uint16_t *device_id, uint16_t *subvendor_id,
@@ -265,7 +273,7 @@ struct if_shared_ctx {
 	int isc_nfl __aligned(CACHE_LINE_SIZE);
 	int isc_ntxqs;			/* # of tx queues per tx qset - usually 1 */
 	int isc_nrxqs;			/* # of rx queues per rx qset - intel 1, chelsio 2, broadcom 3 */
-	int isc_rx_process_limit;
+	int __spare0__;
 	int isc_tx_reclaim_thresh;
 	int isc_flags;
 	const char *isc_name;
@@ -306,11 +314,6 @@ typedef enum {
 	IFLIB_INTR_IOV,
 } iflib_intr_type_t;
 
-#ifndef ETH_ADDR_LEN
-#define ETH_ADDR_LEN 6
-#endif
-
-
 /*
  * Interface has a separate completion queue for RX
  */
@@ -347,22 +350,10 @@ typedef enum {
  * Driver needs frames padded to some minimum length
  */
 #define IFLIB_NEED_ETHER_PAD	0x100
-/*
- * Packets can be freed immediately after encap
- */
-#define IFLIB_TXD_ENCAP_PIO	0x00200
-/*
- * Use RX completion handler
- */
-#define IFLIB_RX_COMPLETION	0x00400
-/*
- * Skip refilling cluster free lists
- */
-#define IFLIB_SKIP_CLREFILL	0x00800
-/*
- * Don't reset on hang
- */
-#define IFLIB_NO_HANG_RESET	0x01000
+#define	IFLIB_SPARE7		0x200
+#define	IFLIB_SPARE6		0x400
+#define	IFLIB_SPARE5		0x800
+#define	IFLIB_SPARE4		0x1000
 /*
  * Don't need/want most of the niceties of
  * queue management
@@ -380,6 +371,10 @@ typedef enum {
  * Interface needs admin task to ignore interface up/down status
  */
 #define IFLIB_ADMIN_ALWAYS_RUN	0x10000
+/*
+ * Driver will pass the media
+ */
+#define IFLIB_DRIVER_MEDIA	0x20000
 /*
  * When using a single hardware interrupt for the interface, only process RX
  * interrupts instead of doing combined RX/TX processing.
@@ -399,7 +394,19 @@ typedef enum {
  * Driver can set its own TX queue selection function
  * as ift_txq_select in struct if_txrx
  */
-#define IFLIB_FEATURE_QUEUE_SELECT	1203508
+#define IFLIB_FEATURE_QUEUE_SELECT	1300527
+/*
+ * Driver can set its own TX queue selection function
+ * as ift_txq_select_v2 in struct if_txrx. This includes
+ * having iflib send L3+ extra header information to the
+ * function.
+ */
+#define IFLIB_FEATURE_QUEUE_SELECT_V2	1301509
+/*
+ * Driver can create subinterfaces with their own Tx/Rx queues
+ * that all share a single device (or commonly, port)
+ */
+#define IFLIB_FEATURE_SUB_INTERFACES	1303503
 
 /*
  * These enum values are used in iflib_needs_restart to indicate to iflib
@@ -447,7 +454,6 @@ int iflib_device_shutdown(device_t);
  */
 int iflib_device_probe_vendor(device_t);
 
-
 int iflib_device_iov_init(device_t, uint16_t, const nvlist_t *);
 void iflib_device_iov_uninit(device_t);
 int iflib_device_iov_add_vf(device_t, uint16_t, const nvlist_t *);
@@ -459,53 +465,57 @@ int iflib_device_iov_add_vf(device_t, uint16_t, const nvlist_t *);
 int iflib_device_register(device_t dev, void *softc, if_shared_ctx_t sctx, if_ctx_t *ctxp);
 int iflib_device_deregister(if_ctx_t);
 
-
-
-int iflib_irq_alloc(if_ctx_t, if_irq_t, int, driver_filter_t, void *filter_arg, driver_intr_t, void *arg, const char *name);
+int iflib_irq_alloc(if_ctx_t, if_irq_t, int, driver_filter_t, void *filter_arg,
+		    driver_intr_t, void *arg, const char *name);
 int iflib_irq_alloc_generic(if_ctx_t ctx, if_irq_t irq, int rid,
 			    iflib_intr_type_t type, driver_filter_t *filter,
 			    void *filter_arg, int qid, const char *name);
-void iflib_softirq_alloc_generic(if_ctx_t ctx, if_irq_t irq, iflib_intr_type_t type,  void *arg, int qid, const char *name);
+void iflib_softirq_alloc_generic(if_ctx_t ctx, if_irq_t irq,
+				 iflib_intr_type_t type,  void *arg, int qid,
+				 const char *name);
 
 void iflib_irq_free(if_ctx_t ctx, if_irq_t irq);
 
-void iflib_io_tqg_attach(struct grouptask *gt, void *uniq, int cpu, char *name);
+void iflib_io_tqg_attach(struct grouptask *gt, void *uniq, int cpu,
+    const char *name);
 
 void iflib_config_gtask_init(void *ctx, struct grouptask *gtask,
 			     gtask_fn_t *fn, const char *name);
-
 void iflib_config_gtask_deinit(struct grouptask *gtask);
-
-
 
 void iflib_tx_intr_deferred(if_ctx_t ctx, int txqid);
 void iflib_rx_intr_deferred(if_ctx_t ctx, int rxqid);
 void iflib_admin_intr_deferred(if_ctx_t ctx);
 void iflib_iov_intr_deferred(if_ctx_t ctx);
 
-
 void iflib_link_state_change(if_ctx_t ctx, int linkstate, uint64_t baudrate);
 
 int iflib_dma_alloc(if_ctx_t ctx, int size, iflib_dma_info_t dma, int mapflags);
 int iflib_dma_alloc_align(if_ctx_t ctx, int size, int align, iflib_dma_info_t dma, int mapflags);
 void iflib_dma_free(iflib_dma_info_t dma);
-
 int iflib_dma_alloc_multi(if_ctx_t ctx, int *sizes, iflib_dma_info_t *dmalist, int mapflags, int count);
 
 void iflib_dma_free_multi(iflib_dma_info_t *dmalist, int count);
 
-
 struct sx *iflib_ctx_lock_get(if_ctx_t);
-struct mtx *iflib_qset_lock_get(if_ctx_t, uint16_t);
 
 void iflib_led_create(if_ctx_t ctx);
 
 void iflib_add_int_delay_sysctl(if_ctx_t, const char *, const char *,
 								if_int_delay_info_t, int, int);
+uint16_t iflib_get_extra_msix_vectors_sysctl(if_ctx_t ctx);
 
 /*
  * Pseudo device support
  */
 if_pseudo_t iflib_clone_register(if_shared_ctx_t);
 void iflib_clone_deregister(if_pseudo_t);
+
+/*
+ * Sub-interface support
+ */
+int iflib_irq_alloc_generic_subctx(if_ctx_t ctx, if_ctx_t subctx, if_irq_t irq,
+				   int rid, iflib_intr_type_t type,
+				   driver_filter_t *filter, void *filter_arg,
+				   int qid, const char *name);
 #endif /*  __IFLIB_H_ */

@@ -1,5 +1,4 @@
 
-
 .PATH:	${SRCTOP}/sys/dev/ppbus
 KMOD=	ppi
 SRCS=	bus_if.h device_if.h ppbus_if.h \

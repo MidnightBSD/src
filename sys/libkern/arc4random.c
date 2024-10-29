@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2017 The FreeBSD Foundation
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -39,10 +37,14 @@
 #include <sys/smp.h>
 #include <sys/time.h>
 
+#include <machine/cpu.h>
+
 #include <crypto/chacha20/chacha.h>
 #include <crypto/sha2/sha256.h>
 #include <dev/random/randomdev.h>
-#include <machine/cpu.h>
+#ifdef RANDOM_FENESTRASX
+#include <dev/random/fenestrasX/fx_pub.h>
+#endif
 
 #define	CHACHA20_RESEED_BYTES	65536
 #define	CHACHA20_RESEED_SECONDS	300
@@ -51,7 +53,9 @@
 
 CTASSERT(CHACHA20_KEYBYTES*8 >= CHACHA_MINKEYLEN);
 
+#ifndef RANDOM_FENESTRASX
 int arc4rand_iniseed_state = ARC4_ENTR_NONE;
+#endif
 
 MALLOC_DEFINE(M_CHACHA20RANDOM, "chacha20random", "chacha20random structures");
 
@@ -61,6 +65,9 @@ struct chacha20_s {
 	time_t t_reseed;
 	u_int8_t m_buffer[CHACHA20_BUFFER_SIZE];
 	struct chacha_ctx ctx;
+#ifdef RANDOM_FENESTRASX
+	uint64_t seed_version;
+#endif
 } __aligned(CACHE_LINE_SIZE);
 
 static struct chacha20_s *chacha20inst = NULL;
@@ -78,7 +85,10 @@ chacha20_randomstir(struct chacha20_s *chacha20)
 {
 	struct timeval tv_now;
 	u_int8_t key[CHACHA20_KEYBYTES];
+#ifdef RANDOM_FENESTRASX
+	uint64_t seed_version;
 
+#else
 	if (__predict_false(random_bypass_before_seeding && !is_random_seeded())) {
 		SHA256_CTX ctx;
 		uint64_t cc;
@@ -105,6 +115,10 @@ chacha20_randomstir(struct chacha20_s *chacha20)
 		    "make sure 256 bits is still 256 bits");
 		SHA256_Final(key, &ctx);
 	} else {
+#endif
+#ifdef RANDOM_FENESTRASX
+		read_random_key(key, CHACHA20_KEYBYTES, &seed_version);
+#else
 		/*
 		* If the loader(8) did not have an entropy stash from the
 		* previous shutdown to load, then we will block.  The answer is
@@ -116,6 +130,7 @@ chacha20_randomstir(struct chacha20_s *chacha20)
 		*/
 		read_random(key, CHACHA20_KEYBYTES);
 	}
+#endif
 	getmicrouptime(&tv_now);
 	mtx_lock(&chacha20->mtx);
 	chacha_keysetup(&chacha20->ctx, key, CHACHA20_KEYBYTES*8);
@@ -123,6 +138,9 @@ chacha20_randomstir(struct chacha20_s *chacha20)
 	/* Reset for next reseed cycle. */
 	chacha20->t_reseed = tv_now.tv_sec + CHACHA20_RESEED_SECONDS;
 	chacha20->numbytes = 0;
+#ifdef RANDOM_FENESTRASX
+	chacha20->seed_version = seed_version;
+#endif
 	mtx_unlock(&chacha20->mtx);
 }
 
@@ -172,17 +190,33 @@ arc4rand(void *ptr, u_int len, int reseed)
 	u_int length;
 	u_int8_t *p;
 
-	if (reseed || atomic_cmpset_int(&arc4rand_iniseed_state, ARC4_ENTR_HAVE, ARC4_ENTR_SEED))
+#ifdef RANDOM_FENESTRASX
+	if (__predict_false(reseed))
+#else
+	if (__predict_false(reseed ||
+	    (arc4rand_iniseed_state == ARC4_ENTR_HAVE &&
+	    atomic_cmpset_int(&arc4rand_iniseed_state, ARC4_ENTR_HAVE, ARC4_ENTR_SEED))))
+#endif
 		CHACHA20_FOREACH(chacha20)
 			chacha20_randomstir(chacha20);
 
-	chacha20 = &chacha20inst[curcpu];
 	getmicrouptime(&tv);
+	chacha20 = &chacha20inst[curcpu];
 	/* We may get unlucky and be migrated off this CPU, but that is expected to be infrequent */
 	if ((chacha20->numbytes > CHACHA20_RESEED_BYTES) || (tv.tv_sec > chacha20->t_reseed))
 		chacha20_randomstir(chacha20);
 
 	mtx_lock(&chacha20->mtx);
+#ifdef RANDOM_FENESTRASX
+	if (__predict_false(
+	    atomic_load_acq_64(&fxrng_root_generation) != chacha20->seed_version
+	    )) {
+		mtx_unlock(&chacha20->mtx);
+		chacha20_randomstir(chacha20);
+		mtx_lock(&chacha20->mtx);
+	}
+#endif
+
 	p = ptr;
 	while (len) {
 		length = MIN(CHACHA20_BUFFER_SIZE, len);
